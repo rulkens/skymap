@@ -4,7 +4,7 @@ import { percentile } from '../../utils/perf/percentile';
 import type { StellarStreamMetaEntry } from '../@types/StellarStreamMetaEntry';
 import type { StreamParticles } from '../@types/StreamParticles';
 import type { VasilievStar } from '../@types/VasilievStar';
-import { centrelineMpc } from './centrelineMpc';
+import { streamCentreline } from './streamCentreline';
 import { sagittariusCentrelines } from './sagittariusCentrelines';
 
 const MPC_TO_KPC = 1e3;
@@ -28,6 +28,8 @@ export function sagittariusMeta(
       Math.hypot(v[0] - anchorMpc[0]!, v[1] - anchorMpc[1]!, v[2] - anchorMpc[2]!) * MPC_TO_KPC,
   );
   const { leadingKpc, trailingKpc, widthKpc } = sagittariusCentrelines(stars);
+  const leading = streamCentreline(leadingKpc, widthKpc);
+  const trailing = streamCentreline(trailingKpc, widthKpc);
   let [near, far] = [Infinity, 0];
   for (let i = 0; i < p.luminosity.length; i++) {
     const [x, y, z] = p.positionsMpc.subarray(i * 3, i * 3 + 3);
@@ -54,10 +56,7 @@ export function sagittariusMeta(
     stellarMass: null,
     anchorMpc: [anchorMpc[0]!, anchorMpc[1]!, anchorMpc[2]!],
     // One line, leading tip to trailing tip through the remnant both arms start at.
-    centrelineMpc: [
-      ...centrelineMpc(leadingKpc, widthKpc).reverse(),
-      ...centrelineMpc(trailingKpc, widthKpc).slice(1),
-    ],
-    ribbonWidthKpc: widthKpc,
+    centrelineMpc: [...leading.centrelineMpc.reverse(), ...trailing.centrelineMpc.slice(1)],
+    ribbonWidthKpc: Math.max(leading.ribbonWidthKpc, trailing.ribbonWidthKpc),
   };
 }

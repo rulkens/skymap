@@ -48,10 +48,10 @@ export const TRACK_SIZE_KPC: readonly [number, number] = [0.05, 0.3];
 export const TRACK_END_FADE_SLOPE = 8;
 export const TRACK_SEED = 0x4753_5452n;
 /**
- * A pick centreline stays within the larger of half the stream's width and this share of its
- * length of the track: lean (~5 points for most streams) yet on the stream at any zoom.
+ * A pick centreline keeps at most this many points (per Sagittarius arm): lean geometry; where
+ * it cannot reach half the stream's width, the ribbon widens instead (`streamCentreline`).
  */
-export const CENTRELINE_LENGTH_TOLERANCE = 0.01;
+export const CENTRELINE_MAX_POINTS = 16;
 
 /**
  * A two-anchor approximation of an old population's light, linear in [Fe/H] between them and flat

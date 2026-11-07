@@ -175,7 +175,7 @@ describe('pickFrameContext', () => {
     expect(ctx?.snapshot.focusPickId).toBe(42);
   });
 
-  it('carries the recession blend, not the sphere’s, mid fade-through (sphere at 0)', () => {
+  it('carries the recession blend, not the sphere’s', () => {
     const ctx = pickFrameContext(
       makeState({
         lastFocus: { uniforms: ZERO_FOCUS, blend: 1, ref: { type: 'stellarStream', slug: 'gd-1' } },

@@ -4,6 +4,6 @@ import type { Vec3 } from '../../../src/@types/math/Vec3';
 export type SagittariusCentrelines = {
   readonly leadingKpc: Vec3[];
   readonly trailingKpc: Vec3[];
-  /** The median arm bin's RMS spread about its mean: the width the pick ribbon spans. */
+  /** The median arm bin's RMS spread about its mean: the arms' width, the pick ribbon's floor. */
   readonly widthKpc: number;
 };

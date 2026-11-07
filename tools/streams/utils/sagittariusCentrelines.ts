@@ -11,6 +11,8 @@ import { distance3 } from '../../../src/utils/math/distance3';
 import { dot3 } from '../../../src/utils/math/dot3';
 import { normalize3 } from '../../../src/utils/math/normalize3';
 import { raDecDistToEqCart } from '../../../src/utils/math/raDecDistToEqCart';
+import { SCALE_UNITS } from '../../../src/data/scaleUnits';
+import { meanPoint3 } from '../../utils/math/meanPoint3';
 import { median } from '../../utils/perf/median';
 import { percentile } from '../../utils/perf/percentile';
 import type { SagittariusCentrelines } from '../@types/SagittariusCentrelines';
@@ -22,19 +24,14 @@ import {
   SGR_ARM_SPLIT_V0_KMS,
 } from '../data/streamsBuild.constants';
 
-const KPC_PER_MPC = 1e3;
-
-const mean = (points: readonly Readonly<Vec3>[]): Vec3 =>
-  [0, 1, 2].map((c) => points.reduce((sum, p) => sum + p[c]!, 0) / points.length) as Vec3;
-
 export function sagittariusCentrelines(stars: readonly VasilievStar[]): SagittariusCentrelines {
   const galactic = (s: VasilievStar): Vec3 => [s.x, s.y, s.z];
   const helioKpc = (s: VasilievStar): Vec3 =>
     raDecDistToEqCart({
       raHours: s.ra / 15,
       decDeg: s.dec,
-      distMpc: s.distanceKpc / KPC_PER_MPC,
-    }).map((mpc) => mpc * KPC_PER_MPC) as Vec3;
+      distMpc: s.distanceKpc * SCALE_UNITS.KPC_TO_MPC,
+    }).map((mpc) => mpc / SCALE_UNITS.KPC_TO_MPC) as Vec3;
   const energy = (s: VasilievStar): number =>
     0.5 * (s.vx ** 2 + s.vy ** 2 + s.vz ** 2) +
     SGR_ARM_SPLIT_V0_KMS ** 2 * Math.log(Math.hypot(s.x, s.y, s.z));
@@ -50,12 +47,12 @@ export function sagittariusCentrelines(stars: readonly VasilievStar[]): Sagittar
       [0, 0, 0],
     ),
   );
-  const toRemnant = mean(bound.map(galactic));
+  const toRemnant = meanPoint3(bound.map(galactic));
   const inPlane = dot3(toRemnant, normal);
   const e1 = normalize3(toRemnant.map((v, c) => v - inPlane * normal[c]!) as Vec3);
   // normal × r points along the motion, so +angle is ahead of the remnant.
   const e2 = cross3(normal, e1);
-  const remnantKpc = mean(bound.map(helioKpc));
+  const remnantKpc = meanPoint3(bound.map(helioKpc));
 
   const spreads: number[] = [];
   const arm = (leading: boolean): Vec3[] => {
@@ -82,7 +79,7 @@ export function sagittariusCentrelines(stars: readonly VasilievStar[]): Sagittar
     const points = bins
       .filter((b) => b.length >= SGR_ARM_BIN_MIN)
       .map((b) => {
-        const centre = mean(b);
+        const centre = meanPoint3(b);
         const rms = Math.sqrt(b.reduce((sum, p) => sum + distance3(p, centre) ** 2, 0) / b.length);
         spreads.push(rms);
         return centre;

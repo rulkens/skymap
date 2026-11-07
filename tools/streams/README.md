@@ -48,11 +48,13 @@ across reruns over the same inputs. On 2026-11-07 it wrote 128,419 particles in 
   mass-to-light range stay out, and Sagittarius has none. The build fails if a row names no built
   stream.
 - **Pick centrelines**: the meta row's `centrelineMpc` and `ribbonWidthKpc` feed the app's pick
-  ribbons. A galstreams track is simplified (Douglas–Peucker) to stay within the larger of half its
-  width and 1% of its length; Sagittarius has no track, so `sagittariusCentrelines` derives one per
-  arm from the full snapshot (orbital plane from its total angular momentum, arms split by orbital
-  energy against the remnant's, binned by angle from the remnant) and the meta joins them through
-  the remnant. On 2026-11-07: 394 segments over the 83 streams, Sagittarius 13 points.
+  ribbons. A galstreams track is simplified (Douglas–Peucker, worst span first) toward half its
+  width, at most 16 points; where the cap leaves the track farther from the line, the ribbon widens
+  to the measured gap, so the drawn stream always takes the click. Sagittarius has no track, so
+  `sagittariusCentrelines` derives one per arm from the full snapshot (orbital plane from its total
+  angular momentum, arms split by orbital energy against the remnant's, binned by angle from the
+  remnant); each arm is simplified the same way and the meta joins them through the remnant. On
+  2026-11-07: 556 segments over the 83 streams, median 7 points, at most 16.
 - **Frame**: heliocentric J2000 equatorial, Mpc, as everywhere in skymap.
 
 Tunables (particle budget, sizes, luminosities, seeds) live in

@@ -27,6 +27,6 @@ export type StellarStreamMeta = {
   readonly anchorMpc: readonly [number, number, number];
   /** The stream simplified to a few points for its pick ribbon; Sagittarius's arms joined at the remnant. */
   readonly centrelineMpc: readonly (readonly [number, number, number])[];
-  /** The pick ribbon's full width, defaulted where `widthDeg` is null; never shown. */
+  /** The pick ribbon's full width: the stream's (defaulted where `widthDeg` is null), widened to hold its track; never shown. */
   readonly ribbonWidthKpc: number;
 };

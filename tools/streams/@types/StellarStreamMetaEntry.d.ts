@@ -24,8 +24,8 @@ export type StellarStreamMetaEntry = {
   /** Published stellar mass and its citation; null where none is published as one value. */
   stellarMass: StreamStellarMass | null;
   anchorMpc: readonly [number, number, number];
-  /** The track simplified for picking (`centrelineMpc`); Sagittarius's arms joined at the remnant. */
+  /** The track simplified for picking (`streamCentreline`); Sagittarius's arms joined at the remnant. */
   centrelineMpc: Vec3[];
-  /** The pick ribbon's full width along the centreline, defaulted and floored; never shown. */
+  /** The pick ribbon's full width: the stream's, widened to hold its track; never shown. */
   ribbonWidthKpc: number;
 };

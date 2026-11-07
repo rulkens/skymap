@@ -8,7 +8,9 @@ import { useFetchMock } from '../../../../setup/fetchMock';
 const bin = () =>
   encodeStellarStreams({ particleCount: 2, streamCount: 2, records: new Float32Array(20) });
 const metaJson = (length: number) =>
-  JSON.stringify(Array.from({ length }, (_, i) => ({ id: `s${i}`, names: [`S${i}`] })));
+  JSON.stringify(
+    Array.from({ length }, (_, i) => ({ id: `s${i}`, names: [`S${i}`], centrelineMpc: [] })),
+  );
 
 const signal = new AbortController().signal;
 const noProgress = () => {};
@@ -28,6 +30,13 @@ describe('stellar streams pair check', () => {
     await expect(stellarStreamsMetaFetcher(() => 2)(undefined, signal, noProgress)).rejects.toThrow(
       /length mismatch.*npm run build-stellar-streams/,
     );
+  });
+
+  it('rejects a meta from before the pick centrelines by name, not as a TypeError at commit', async () => {
+    fetch.mock.mockResolvedValue(new Response(JSON.stringify([{ id: 's0', names: ['S0'] }])));
+    await expect(
+      stellarStreamsMetaFetcher(() => null)(undefined, signal, noProgress),
+    ).rejects.toThrow(/predates centrelineMpc/);
   });
 
   it('accepts a bin with no meta yet', async () => {

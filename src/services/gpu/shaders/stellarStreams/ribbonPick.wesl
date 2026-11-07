@@ -42,6 +42,8 @@ fn vs(
   // A corner behind the eye takes the front end's width: its own, metres away, would be vast.
   let ownFront = worldToClip(u.cam, select(aRel, bRel, isB)).w > 0.0;
   let hw = halfWidthPx(select(aRel, bRel, select(!isB, isB, ownFront)), halfWidthMpc);
+  // A walked corner keeps the front end's depth, so a ribbon through the eye stamps a little far:
+  // it can only lose a depth test it should have won, never steal a nearer pick.
   let q = expandSegmentQuad(u.cam, aRel, bRel, corner, hw);
   // Each end overruns by its half-width, so a bend leaves no gap between segments.
   let overrun = q.tangent * (corner.x * 2.0 - 1.0) * hw / (u.cam.viewportPx * 0.5);

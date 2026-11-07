@@ -16,9 +16,12 @@ const VIEW = {
   viewportPx: [8, 8],
 } as unknown as SlabView;
 const ctxOf = (focusPickId: number | null) =>
-  ({ drawPxPerRad: 1000, snapshot: { focusPickId, focusBlend: 1 } }) as unknown as FrameView;
+  ({
+    drawPxPerRad: 1000,
+    snapshot: { focusPickId, focusBlend: focusPickId === null ? 0 : 1 },
+  }) as unknown as FrameView;
 
-function pickedStream(focusPickId: number | null): number {
+function pickedStream(focusPickId: number | null): number | undefined {
   const ribbonPick = { draw: vi.fn() };
   const runtime = { ribbonPick, pickCode: PICK_CODE } as unknown as StellarStreamsRuntime;
   stellarStreamsPass(runtime).drawPick!(
@@ -28,12 +31,16 @@ function pickedStream(focusPickId: number | null): number {
     STATE,
     1,
   );
-  return ribbonPick.draw.mock.calls[0]![5];
+  return ribbonPick.draw.mock.calls[0]?.[5];
 }
 
 describe('stellarStreamsPass picking', () => {
   it('stamps every ribbon at rest, and only the focused stream’s under its focus', () => {
     expect(pickedStream(null)).toBe(-1);
     expect(pickedStream(packSelection(PICK_CODE, 4 + PICK_SENTINEL_OFFSET))).toBe(4);
+  });
+
+  it('stamps none while another kind’s focus recedes the streams', () => {
+    expect(pickedStream(packSelection(PICK_CODE + 1, 4 + PICK_SENTINEL_OFFSET))).toBeUndefined();
   });
 });

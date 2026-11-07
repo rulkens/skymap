@@ -15,7 +15,7 @@ import { streamTintRgb } from '../utils/streamTintRgb';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { isKind } from '../../../../utils/selection/isKind';
-import { isPickableUnderFocus } from '../../../../utils/structure/isPickableUnderFocus';
+import { isSubjectPickableUnderFocus } from '../../../../utils/structure/isSubjectPickableUnderFocus';
 import {
   STELLAR_STREAM_LABEL_ALPHA,
   STELLAR_STREAM_LABEL_MIN_PX,
@@ -51,11 +51,9 @@ export function produceStellarStreamLabels(
         alignX: 'center',
         alignY: 'center',
         declutterPriority: lengthPx,
-        pickId:
-          subjectId === ctx.snapshot.focusPickId ||
-          isPickableUnderFocus(m.anchorMpc, ctx.snapshot.focus)
-            ? subjectId
-            : undefined,
+        pickId: isSubjectPickableUnderFocus(subjectId, m.anchorMpc, ctx.snapshot)
+          ? subjectId
+          : undefined,
         subjectId,
       };
       return [label];

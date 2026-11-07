@@ -4,6 +4,8 @@ import { decodeStellarStreams } from '../../../src/layers/stellarStreams/catalog
 import type { VasilievStar } from '../../../tools/streams/@types/VasilievStar';
 import { buildStellarStreams } from '../../../tools/streams/buildStellarStreams';
 import { galstreamsTrackFixture as track } from '../../helpers/streams/galstreamsTrackFixture';
+import { maxDistanceToPolyline } from '../../../tools/utils/math/maxDistanceToPolyline';
+import { trackPositionsKpc } from '../../../tools/streams/utils/trackPositionsKpc';
 
 const stars: VasilievStar[] = Array.from({ length: 50 }, (_, i) => ({
   x: 17,
@@ -57,5 +59,27 @@ describe('buildStellarStreams', () => {
     const a = new Uint8Array(buildStellarStreams(stars, tracks).bin);
     const b = new Uint8Array(buildStellarStreams(stars, tracks).bin);
     expect(Buffer.from(a).equals(Buffer.from(b))).toBe(true);
+  });
+
+  it('every track lies inside its pick ribbon, a wiggle the point cap cannot follow included', () => {
+    const wiggly = track({
+      name: 'Pal5',
+      ref: 'a',
+      points: 400,
+      spanDeg: 300,
+      dec: Array.from({ length: 400 }, (_, i) => 4 * Math.sin(i * 0.7)),
+    });
+    const smooth = track({ name: 'GD-1', ref: 'b' });
+    const { meta } = buildStellarStreams(stars, [wiggly, smooth]);
+    for (const t of [wiggly, smooth]) {
+      const m = meta.find((e) => e.names[0] === t.name)!;
+      const lineKpc = m.centrelineMpc.map(
+        (p) => p.map((v) => v * 1000) as [number, number, number],
+      );
+      const gapKpc = maxDistanceToPolyline(trackPositionsKpc(t), lineKpc);
+      expect(gapKpc).toBeLessThanOrEqual(m.ribbonWidthKpc / 2);
+    }
+    // The wiggle outruns the cap, so its ribbon had to widen past the stream's own width.
+    expect(meta.find((e) => e.id === 'pal5')!.ribbonWidthKpc).toBeGreaterThan(1);
   });
 });

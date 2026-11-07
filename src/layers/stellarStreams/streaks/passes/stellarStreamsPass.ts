@@ -3,7 +3,7 @@
  * shell, it lands after the Milky Way's dust multiply, so halo streams in front of the disc are
  * not darkened by it. Core hands the fade; a focus recedes every stream but its own. The haze
  * look draws at half res in `stellarStreamsHazePass`. The pick stamps static centreline ribbons
- * under the same gate, only the focused stream's while one is focused.
+ * under the same gate: only the focused stream's while one is focused, none under another focus.
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
@@ -40,13 +40,16 @@ export function stellarStreamsPass(runtime: StellarStreamsRuntime): ContentPass<
 
     // The same windowed `vp`/`viewportPx` as `draw`, so the ribbon lands under the streaks.
     drawPick(pass, view, ctx) {
+      const { recede, focusedStream } = stellarStreamsFocus(ctx, runtime.pickCode);
+      // Another kind's focus recedes the streams, and what a focus recedes takes no clicks.
+      if (focusedStream < 0 && recede < 1) return;
       runtime.ribbonPick.draw(
         pass,
         narrowMat4(rebaseViewProj(view.slab.vp, view.camPos)),
         view.viewportPx,
         ctx.drawPxPerRad,
         view.camPos,
-        stellarStreamsFocus(ctx, runtime.pickCode).focusedStream,
+        focusedStream,
       );
     },
   };

@@ -31,4 +31,13 @@ describe('simplifyPolyline', () => {
     const worst = Math.max(...arc.map((p) => distanceToPolyline(p, line)));
     expect(worst).toBeLessThanOrEqual(0.4 + 1e-3);
   });
+
+  it('stops at maxPoints, keeping the worst strays first', () => {
+    const line = simplifyPolyline(arc, 0, 6);
+    expect(line).toHaveLength(6);
+    expect(line[0]).toEqual(arc[0]);
+    expect(line.at(-1)).toEqual(arc.at(-1));
+    // Worst-first keeps the arc's shape: well inside its 10-unit radius even at six points.
+    expect(Math.max(...arc.map((p) => distanceToPolyline(p, line)))).toBeLessThan(1);
+  });
 });
