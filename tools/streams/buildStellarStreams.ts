@@ -46,7 +46,7 @@ export function buildStellarStreams(
   const sources = [sgr, ...picked.map(({ t }) => trackParticles(orientTrackByMotion(t), rng))];
   const meta = [
     sagittariusMeta(stars, sgr),
-    ...picked.map(({ t }, i) => streamMetaEntry(t, sources[i + 1]!.luminosity.length)),
+    ...picked.map(({ t }, i) => streamMetaEntry(t, sources[i + 1]!)),
   ];
   const ids = meta.map((m) => m.id);
   if (new Set(ids).size !== ids.length) throw new Error(`buildStellarStreams: duplicate slug`);

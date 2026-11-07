@@ -46,6 +46,13 @@ describe('produceStellarStreamLabels', () => {
     expect(long!.declutterPriority!).toBeGreaterThan(short!.declutterPriority!);
   });
 
+  it('a high-colourT stream gets a warmer caption than a low one', () => {
+    const [sgr, gd1] = produce([SAGITTARIUS, GD_1]);
+    expect(sgr!.color![0] - sgr!.color![2]).toBeGreaterThan(gd1!.color![0] - gd1!.color![2]);
+    expect(Math.max(...sgr!.color!.slice(0, 3))).toBe(1);
+    expect(sgr!.color![3]).toBe(0.85);
+  });
+
   describe('the apparent-length gate', () => {
     // 4 kpc at 100 kpc is 40 px at 1000 px/rad: under the 150 px floor.
     const far = { ...SHORT, anchorMpc: [0.1, 0, 0] as const };

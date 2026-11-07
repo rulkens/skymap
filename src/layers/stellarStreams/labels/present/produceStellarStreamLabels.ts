@@ -11,11 +11,13 @@ import type { Label2D } from '../../../../@types/rendering/Label2D';
 import type { LayerScreenLabel } from '../../../../@types/engine/layer/LayerScreenLabel';
 import type { StellarStreamsRuntime } from '../../@types/StellarStreamsRuntime';
 import type { StellarStreamRef } from '../../selection/@types/StellarStreamRef';
+import { streamTintRgb } from '../../streaks/utils/streamTintRgb';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { isKind } from '../../../../utils/selection/isKind';
 import { isPickableUnderFocus } from '../../../../utils/structure/isPickableUnderFocus';
 import {
+  STELLAR_STREAM_LABEL_ALPHA,
   STELLAR_STREAM_LABEL_MIN_PX,
   STELLAR_STREAM_LABEL_STYLE,
 } from '../data/stellarStreamLabelStyle.constants';
@@ -44,6 +46,7 @@ export function produceStellarStreamLabels(
         pixelSize: 0,
         worldPos: [x - cx, y - cy, z - cz],
         ...STELLAR_STREAM_LABEL_STYLE,
+        color: [...streamTintRgb(m.colourT), STELLAR_STREAM_LABEL_ALPHA],
         fadeAlpha: fade,
         alignX: 'center',
         alignY: 'center',

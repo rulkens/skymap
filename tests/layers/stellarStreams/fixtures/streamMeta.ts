@@ -10,6 +10,7 @@ export const SAGITTARIUS: StellarStreamMeta = {
   distanceKpc: [6.4, 162.3],
   widthDeg: null,
   particleCount: 60000,
+  colourT: 0.55,
   anchorMpc: [0.0056, -0.0225, -0.0137],
 };
 
@@ -23,6 +24,7 @@ export const GD_1: StellarStreamMeta = {
   distanceKpc: [7.2, 10.1],
   widthDeg: 0.2,
   particleCount: 700,
+  colourT: 0.2,
   anchorMpc: [-0.004, 0.006, 0.005],
 };
 

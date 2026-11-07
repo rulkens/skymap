@@ -1,3 +1,4 @@
+import { arrayMean } from '../../../src/utils/math/arrayMean';
 import { raDecDistToEqCart } from '../../../src/utils/math/raDecDistToEqCart';
 import { percentile } from '../../utils/perf/percentile';
 import type { StellarStreamMetaEntry } from '../@types/StellarStreamMetaEntry';
@@ -40,6 +41,7 @@ export function sagittariusMeta(
     distanceKpc: [near, far],
     widthDeg: null,
     particleCount: p.luminosity.length,
+    colourT: arrayMean(p.colourT),
     anchorMpc: [anchorMpc[0]!, anchorMpc[1]!, anchorMpc[2]!],
   };
 }

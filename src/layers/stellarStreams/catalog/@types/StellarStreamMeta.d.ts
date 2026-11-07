@@ -12,5 +12,7 @@ export type StellarStreamMeta = {
   /** null for the N-body stream and for tracks with no catalogued width. */
   readonly widthDeg: number | null;
   readonly particleCount: number;
+  /** Mean particle colourT, 0 (blue horizontal branch) to 1 (red giant); tints the caption. */
+  readonly colourT: number;
   readonly anchorMpc: readonly [number, number, number];
 };

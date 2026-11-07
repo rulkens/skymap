@@ -11,5 +11,7 @@ export type StellarStreamMetaEntry = {
   /** null for the N-body stream and for tracks whose master-log width is unset. */
   widthDeg: number | null;
   particleCount: number;
+  /** Mean of the emitted particles' colourT: tints the stream's caption like its streaks. */
+  colourT: number;
   anchorMpc: readonly [number, number, number];
 };
