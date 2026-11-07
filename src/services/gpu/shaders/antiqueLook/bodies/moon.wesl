@@ -12,7 +12,9 @@ import package::antiqueLook::engraving::crossHatch;
 // darkening), falling only toward the terminator. Paper from 0.6.
 const LS_GROUND = vec2<f32>(-0.08, 0.6);
 // Relief ratio at full shade .. at none; past 1 + RATIO_BRIGHT a sunward slope is paper.
-const RATIO_DARK = vec2<f32>(0.25, 0.9);
+// The shade starts at 0.75, not near 1: a slope barely off the ground's light would
+// print its first lines one by one, a rain of loose dashes across the highlands.
+const RATIO_DARK = vec2<f32>(0.25, 0.75);
 const RATIO_BRIGHT: f32 = 0.6;
 // 2.3-unit lines at most (55% ink): the night side leaves room for the maria.
 const MOON_SHADE_CAP: f32 = 0.72;
@@ -25,7 +27,8 @@ const MARE_BODY_TONE: f32 = 0.40;
 const MARE_CORE_TONE: f32 = 0.13;
 // = MARS_HATCH, level across the disc: lines that bow with the globe draw a target.
 const MARE_HATCH: f32 = 3.2;
-// = WALL_PERIOD in `fsMoonPrint`: eight of the plate's HATCH lines.
+// = WALL_PERIOD in `fsMoonPrint`: eight hatch lines at the default spacing
+// (ANTIQUE_TUNING_DEFAULTS.hatchUnits, 4.2); it needn't follow the slider.
 const WALL_PERIOD: f32 = 33.6;
 
 // tone: the globe's on the Moon's ladder, a slope darker than its ground pulled toward
