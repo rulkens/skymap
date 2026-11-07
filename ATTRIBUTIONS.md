@@ -1596,11 +1596,34 @@ The surface tile manifests under `public/data/images/earth-tiles/` and
 - **Upstream:** <https://www.ncei.noaa.gov/products/etopo-global-relief-model>;
   the tiles are on `www.ngdc.noaa.gov`.
 - **Enters skymap:** `npm run fetch-height` → `data/raw/etopo/` →
-  `build-surface-tiles` → `earth-tiles/…/height/`.
+  `build-surface-tiles` → `earth-tiles/…/height/`; and `build-antique-earth` →
+  the molehills of `public/antique/earth-1690.bin`.
 - **Modified:** Yes. Re-gridded, quantised to 0.1 m; water flattened to its
   shore level.
 - **Checked:** 2026-10-07: <https://www.ncei.noaa.gov/access/metadata/landing-page/bin/iso?id=gov.noaa.ngdc.mgg.dem:etopo_2022>,
   <https://www.ncei.noaa.gov/products/etopo-global-relief-model>
+
+### Natural Earth (rivers of the antique map)
+
+<!-- attribution: id=natural-earth; keys=naturalearth.* -->
+
+- **What:** The 1:10m rivers and lake centrelines, world and European
+  supplement (`ne_10m_rivers_lake_centerlines`, `ne_10m_rivers_europe`).
+- **By:** Natural Earth; primary authors Tom Patterson and Nathaniel Vaughn
+  Kelso.
+- **Licence:** Public domain. The terms of use: "All versions of Natural
+  Earth raster + vector map data found on this website are in the public
+  domain."
+- **Use:** Free, no credit asked
+- **Attribution:** None required. The terms suggest "Made with Natural
+  Earth."
+- **Upstream:** <https://www.naturalearthdata.com/>; the GeoJSON comes from
+  `raw.githubusercontent.com` (nvkelso/natural-earth-vector, tag v5.1.2).
+- **Enters skymap:** `npm run fetch-natural-earth` → `data/raw/naturalearth/` →
+  `build-antique-earth` → `public/antique/earth-1690.bin`.
+- **Modified:** Yes. Canals and intermittent rivers dropped, pieces chained
+  and simplified, widths and reveal levels derived.
+- **Checked:** 2026-11-07: <https://www.naturalearthdata.com/about/terms-of-use/>
 
 ### Terrain Tiles "skadi" (1 arc-second heights)
 

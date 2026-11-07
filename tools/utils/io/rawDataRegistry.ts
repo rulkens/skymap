@@ -1345,6 +1345,56 @@ export const RAW_DATA = {
       'Provenance for ETOPO 2022 — upstream URL, registration convention, NoData, licence, fetch date.',
   },
 
+  // ─── Natural Earth (public domain) — the antique Earth map's rivers ─────
+
+  'naturalearth.rivers-lake-centerlines': {
+    path: 'data/raw/naturalearth/ne_10m_rivers_lake_centerlines.geojson',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Natural Earth 1:10m rivers and lake centrelines (v5.1.2), GeoJSON LineStrings with scalerank, min_zoom, featurecla, rivernum, name. The antique Earth map draws its rivers from these.',
+    upstream:
+      'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/f1890d9f152c896d250a77557a5751a93d494776/geojson/ne_10m_rivers_lake_centerlines.geojson',
+    fetcher: 'tools/fetch/fetchNaturalEarth.ts',
+    readme: 'naturalearth.readme',
+  },
+  'naturalearth.rivers-europe': {
+    path: 'data/raw/naturalearth/ne_10m_rivers_europe.geojson',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Natural Earth 1:10m supplementary European rivers (v5.1.2, scalerank 10-12), same schema as the world layer: the antique map’s finest European river detail.',
+    upstream:
+      'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/f1890d9f152c896d250a77557a5751a93d494776/geojson/ne_10m_rivers_europe.geojson',
+    fetcher: 'tools/fetch/fetchNaturalEarth.ts',
+    readme: 'naturalearth.readme',
+  },
+  'naturalearth.admin-1': {
+    path: 'data/raw/naturalearth/ne_10m_admin_1_states_provinces.geojson',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Natural Earth 1:10m admin-1 states and provinces (v5.1.2), GeoJSON polygons with iso_3166_2, adm0_a3, geonunit, name. The antique Earth map dissolves them into its 1690 realms.',
+    upstream:
+      'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/f1890d9f152c896d250a77557a5751a93d494776/geojson/ne_10m_admin_1_states_provinces.geojson',
+    fetcher: 'tools/fetch/fetchNaturalEarth.ts',
+    readme: 'naturalearth.readme',
+  },
+  'naturalearth.sha256': {
+    path: 'data/raw/naturalearth/naturalearth.sha256',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'SHA-256 sidecar for the Natural Earth layers (one `<hex>  <filename>` line each); the fetcher refuses a download that differs.',
+    fetcher: 'tools/fetch/fetchNaturalEarth.ts',
+  },
+  'naturalearth.readme': {
+    path: 'data/raw/naturalearth/README.md',
+    kind: 'file',
+    source: 'committed',
+    description: 'Provenance for the Natural Earth layers — pinned commit, URLs, licence, fetch date.',
+  },
+
   // ─── Mars surface sources — fetched by hand, no fetchers ───────────────
   // Strip-layout upstream files are read through tiled COG copies (README
   // records the gdal_translate line); worktrees reach them via leaf symlinks.

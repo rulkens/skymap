@@ -447,6 +447,12 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
       'The height of Earth’s land everywhere: the relief you see when you come down to the ground.',
     scene: 'earth-and-its-surface',
   },
+  'natural-earth': {
+    description:
+      'Public-domain map data: the world’s rivers at a scale of 1 to 10 million, and more of Europe’s.',
+    shows: 'The rivers engraved on Earth in the antique atlas look.',
+    scene: 'earth-and-its-surface',
+  },
   skadi: {
     description: 'Heights at 1 arc-second under the regions where Earth has sharper imagery.',
     shows: 'The height of the ground under the regions that have sharper imagery.',

@@ -32,9 +32,6 @@ export type AntiqueLookGpu = {
   /** Instanced, one quad per placed ornament, max-blended into two rows (`decor.wesl`). */
   readonly decor: { readonly pipeline: GPURenderPipeline; readonly layout: GPUBindGroupLayout };
   readonly plate: { readonly pipeline: GPURenderPipeline; readonly layout: GPUBindGroupLayout };
-  /** The engraved ground's fall line, noise and stroke (`relief.wesl`). */
-  readonly relief: { readonly pipeline: GPURenderPipeline; readonly layout: GPUBindGroupLayout };
-  readonly reliefUniforms: GPUBuffer;
   readonly uniforms: GPUBuffer;
   readonly ornaments: GPUBuffer;
   readonly digits: GPUBuffer;

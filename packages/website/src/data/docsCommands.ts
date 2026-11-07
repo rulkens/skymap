@@ -65,6 +65,7 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
           'fetch-hyperleda',
           'fetch-local-bubble',
           'fetch-milliquas',
+          'fetch-natural-earth',
           'fetch-skraafoto',
           'fetch-structures',
           'fetch-textures',
@@ -185,6 +186,11 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         scripts: ['pack-ornaments'],
         does: 'Packs the engraved ornaments of the antique atlas look, title and all, into the one picture the app loads.',
         manual: 'tools/antique/packOrnaments.ts',
+      },
+      {
+        scripts: ['build-antique-earth'],
+        does: 'Writes the antique atlas look’s Earth map, its rivers and molehills, from the Natural Earth rivers and the ETOPO heights.',
+        manual: 'tools/antique/earth/buildAntiqueEarth.ts',
       },
       {
         scripts: ['record-tour', 'record-clip'],

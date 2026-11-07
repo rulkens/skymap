@@ -5,7 +5,6 @@
  */
 
 import type { FrameView } from '../engine/frame/FrameView';
-import type { SampledDepth } from '../engine/frame/SampledDepth';
 import type { EngineState } from '../engine/state/EngineState';
 import type { GpuTimingService } from '../gpu/timing/GpuTimingService';
 import type { Renderer } from './Renderer';
@@ -24,8 +23,6 @@ export type AntiqueLook = Renderer & {
       readonly print: GPUTextureView;
       readonly overlay: GPUTextureView | null;
       readonly swap: GPUTextureView;
-      /** foreground:0's depth and the body row that wrote it: the relief pass's ground. */
-      readonly bodyDepth: SampledDepth;
     },
     timing: GpuTimingService,
   ): void;

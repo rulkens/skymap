@@ -99,5 +99,4 @@ export const ANTIQUE_TARGETS = {
   landBlur: 'antique-land-blur',
   lines: 'antique-lines',
   geography: 'antique-geography',
-  relief: 'antique-relief',
 } as const;

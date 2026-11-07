@@ -36,7 +36,6 @@ import package::antiqueLook::plateBodies::PRINT_MOON;
 import package::antiqueLook::bodies::earth::EarthPrintIn;
 import package::antiqueLook::bodies::earth::earthPrint;
 import package::antiqueLook::bodies::mars::marsPrint;
-import package::antiqueLook::bodies::mars::marsRelief;
 import package::antiqueLook::bodies::moon::moonTone;
 import package::antiqueLook::graticule::graticule;
 import package::antiqueLook::graticule::frameLonLat;
@@ -75,8 +74,6 @@ import package::antiqueLook::pigments::pigmentAt;
 @group(0) @binding(18) var structureGlowTex: texture_2d<f32>;
 // Earth's c.1690 geography (`earth/antiqueMap/*.wesl`): r realm code, g border band, b line ink, a signs.
 @group(0) @binding(19) var geographyTex: texture_2d<f32>;
-// The engraved ground (`relief.wesl`): a 0 off it, and wherever the pass did not run.
-@group(0) @binding(20) var reliefTex: texture_2d<f32>;
 
 // The border's numbering, placed per frame by `placeAntiqueNumerals`.
 struct Glyph {
@@ -97,8 +94,6 @@ struct AntiqueLettering {
 const INK: vec3<f32> = vec3<f32>(0.17, 0.13, 0.10);
 const FLAG_BODIES: u32 = 1u;
 const FLAG_CAPTIONS: u32 = 2u;
-// The relief row holds Mars ground this frame (`relief.wesl`).
-const FLAG_RELIEF: u32 = 16u;
 // `depthEdge`'s second difference of depth over the nearest tap's depth.
 const DEPTH_JUMP: f32 = 0.05;
 // Sheet layout in print units: bare margin with the plate mark in it, then the
@@ -516,8 +511,6 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     var form = vec3<f32>(dot(p, n), along, 1.0);
     var lines = 0.0;
     var print = PRINT_PLAIN;
-    let relief = texel(reliefTex, ip);
-    let ground = (u.flags & FLAG_RELIEF) != 0u && relief.a != 0.0;
     if (hit.t < 1e30) {
       let b = plate.items[hit.index];
       let radius = b.centre.w;
@@ -554,7 +547,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
       }
       lines = max(lines, inkLine(hit.edgeUnits, 1.1, pxUnits));
     } else {
-      tone = select(1.0 - smoothstep(0.015, 0.17, bodyLight(uv)), 0.0, ground);
+      tone = 1.0 - smoothstep(0.015, 0.17, bodyLight(uv));
     }
     bodyInk = max(crossHatch(form, p, tone, HATCH, u.hatchAngle, pxUnits), lines);
     let cover = body * frame.y;
@@ -567,12 +560,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     } else if (print == PRINT_MARS) {
       let mars = marsPrint(col, cover, landShare, p, pxUnits);
       col = mars.col;
-      // A marking is a globe's feature: on the engraved ground the relief speaks.
-      bodyInk = max(bodyInk, select(mars.ink, 0.0, ground));
-    }
-    if (ground) {
-      let around = luma(textureSampleLevel(washTex, linear, uv, 0.0).rgb);
-      bodyInk = max(bodyInk, marsRelief(reliefTex, linear, px, relief, u.unit, luma(src), around));
+      bodyInk = max(bodyInk, mars.ink);
     }
     bodyInk *= body;
   }
