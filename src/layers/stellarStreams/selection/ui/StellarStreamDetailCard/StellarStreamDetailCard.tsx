@@ -57,11 +57,6 @@ function StellarStreamDetailCard({
             value={`[Fe/H] ${target.metallicity.feh.toFixed(2).replace('-', '\u2212')} (${target.metallicity.ref})`}
           />
         )}
-        <CardRow label="Particles drawn" value={target.particleCount.toLocaleString()} />
-      </div>
-      <div className={styles.cardSection}>
-        <CardRow label="Source" value={facts.sourceLine(target.reference)} />
-        <CardRow label="Licence" value={facts.licence} />
       </div>
     </div>
   );
