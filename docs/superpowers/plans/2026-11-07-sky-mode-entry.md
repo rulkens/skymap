@@ -141,7 +141,7 @@ InfoCard Focus and `F` keep `requestFocus`.
 
 - [x] Test `a palette pick still selects and flies` (through the saga).
 - [x] Commit.
-- [ ] Salvage from `origin/sky-mode` commit `976f7a650`:
+- [x] Salvage from `origin/sky-mode` commit `976f7a650`:
       `git checkout origin/sky-mode -- src/utils/geo/parseLatLonQuery.ts src/utils/geo/parseCompassDegrees.ts src/utils/geo/parseLonLatInput.ts src/@types/scene/CompassDegrees.d.ts tests/utils/geo/parseLatLonQuery.test.ts tests/utils/geo/parseCompassDegrees.test.ts`
       plus `docs/backlog/2026-10-28-survey-sky-overlays-hips.md` and its `docs/BACKLOG.md` line (from the
       branch's `docs/BACKLOG.md`). Run their tests. Commit ("salvage lat/lon parsers from the sky-mode draft").
