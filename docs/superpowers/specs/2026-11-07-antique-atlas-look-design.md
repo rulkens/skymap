@@ -92,8 +92,11 @@ paper tile 2.2 MB, ornament atlas ~1.1 MB) are fetched from `public/antique/` th
   weather), caption leader stems and the selection rings.
 - Labels (`label2DDirector`, rules in `data/labels/antiqueLabelRules.ts`): period names where
   one existed (Nubecula Minor, Saturnus, Nebula in Cingulo Andromedae, Argo Navis…), modern and
-  post-1690 names hidden (digits, spacecraft, voids, moons found after 1690, Lacaille's
-  constellations), the selected subject always kept. A star with no period name keeps its
+  post-1690 names hidden (digits, spacecraft, moons found after 1690, Lacaille's
+  constellations), the selected subject always kept. The cosmic web's superclusters, clusters
+  and walls take Latin names (Attractor Magnus, Murus Hydrae…); the voids (VACVVM LOCALE,
+  VACVVM SCVLPTORIS) show only in the cosmos regime, past `ANTIQUE_REGIME_MPC[1]` (owner
+  ruling, 2026-11-07). A star with no period name keeps its
   modern one in the star italic (owner ruling, 2026-11-07).
 - The camera's roll (`StepInputs.northUp`, `northUpArm`): held at zero in the world arm, so
   the orientation frame's pole is up (owner ruling, 2026-11-07, the crude form: no projection).

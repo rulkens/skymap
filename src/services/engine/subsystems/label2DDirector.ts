@@ -133,6 +133,7 @@ import { whitenColor } from '../../../utils/labels/whitenColor';
 import { encodeSelectionPick } from '../../../utils/selection/encodeSelectionPick';
 import { visibilityEntryOf } from '../../../utils/visibility/visibilityEntryOf';
 import { antiqueLookOn } from '../../../utils/render/antiqueLookOn';
+import { ANTIQUE_REGIME_MPC } from '../../../data/rendering/antiqueLook';
 import { antiqueLabel } from '../../../utils/labels/antiqueLabel';
 import { ANTIQUE_LABEL_RULES } from '../../../data/labels/antiqueLabelRules';
 import { ANTIQUE_LABEL_STYLE } from '../../../data/labels/antiqueLabelStyle';
@@ -800,10 +801,12 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     labelName: LabelName | undefined,
     isTitle: (label: Label2D) => boolean,
     hasFont: (font: FontId) => boolean,
+    cosmos: boolean,
   ): Label2D[] {
     const rule = labelName === undefined ? undefined : ANTIQUE_LABEL_RULES[labelName];
     const out: Label2D[] = [];
     for (const l of labels) {
+      if (!cosmos && rule?.cosmosOnly?.includes(l.id) && !isTitle(l)) continue;
       const shown = antiqueLabel(l, rule, isTitle(l), hasFont);
       if (shown !== null) out.push(shown);
     }
@@ -865,10 +868,13 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
       keptPicks.includes(l.subjectId) &&
       !isKeyOf(ANTIQUE_AREA_LETTERING, l.id);
     const hasFont = (font: FontId) => state.gpu.fontAtlases?.metricsByFont[font] !== undefined;
+    const cosmos = Math.hypot(...ctx.drawCamPos) > ANTIQUE_REGIME_MPC[1];
     for (const p of producers) {
       const out = p.produceLabels(state, ctx);
       if (out.awake) anyAwake = true;
-      const produced = antique ? toAntique(out.labels, p.label, isTitle, hasFont) : out.labels;
+      const produced = antique
+        ? toAntique(out.labels, p.label, isTitle, hasFont, cosmos)
+        : out.labels;
       if (p.label === undefined || atRest) {
         for (const l of produced) mergedLabels.push(l);
         continue;

@@ -1218,6 +1218,36 @@ describe('label2DDirector', () => {
     expect(lineStub.setLines.mock.calls.map((c) => (c[0] as unknown[]).length)).toEqual([1, 0]);
   });
 
+  it('the antique look names a void only past the star-chart regime', () => {
+    const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
+    const labelStub = makeLabelStub();
+    dir.attachRenderers(labelStub as never, makeLineStub() as never, defaultMeasure);
+    const voidLabel: Label2D = { ...SAMPLE_LABEL, id: 'void-local-void', text: 'Local Void' };
+    dir.registerProducer({
+      id: 'structures',
+      label: 'structure',
+      produceLabels: () => ({ labels: [voidLabel], awake: false }),
+    });
+    const state = {
+      ...makeState(),
+      settings: { antique: { enabled: true } },
+    } as unknown as EngineState;
+    const ctxAt = (drawCamPos: readonly number[]) =>
+      ({
+        ...makeCtx(0),
+        drawCamPos,
+        snapshot: { nowMs: 0, focusBlend: 0 },
+      }) as unknown as FrameView;
+
+    dir.runFrame(state, ctxAt([0, 0, 0.01]));
+    dir.runFrame(state, ctxAt([0, 0, 0.1]));
+
+    expect(flushedLabels(labelStub).map((f) => f.map((l) => l.text))).toEqual([
+      [],
+      ['VACVVM LOCALE'],
+    ]);
+  });
+
   it("a place name on the focused Earth keeps Earth's emphasis and never takes its title", () => {
     const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
     const labelStub = makeLabelStub();

@@ -16,4 +16,6 @@ export type AntiqueLabelRule = {
   readonly letteringOf?: Readonly<Record<string, AntiqueLettering>>;
   /** Label id → its period name, or null to hide it. */
   readonly names: Readonly<Record<string, string | null>>;
+  /** Label ids named only in the cosmos regime, past `ANTIQUE_REGIME_MPC[1]` (`label2DDirector`). */
+  readonly cosmosOnly?: readonly string[];
 };
