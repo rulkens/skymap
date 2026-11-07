@@ -187,7 +187,7 @@ function walk(effect: Effect, atSec: number, acc: Accum): number {
         startSec: atSec,
         endSec: atSec + effect.over,
         to: effect.to,
-        ease: effect.ease,
+        curve: { kind: 'ease', ease: effect.ease },
         space: effect.space,
         // Conditional so an untagged endpoint compiles to the byte-identical
         // segment it always did — `frame` absent, not `frame: undefined`.
@@ -204,7 +204,7 @@ function walk(effect: Effect, atSec: number, acc: Accum): number {
         startSec: atSec,
         endSec: atSec + effect.over,
         to: effect.to,
-        ease: effect.ease,
+        curve: { kind: 'ease', ease: effect.ease },
         space: 'lin',
         ...(effect.frame !== undefined ? { frame: effect.frame } : {}),
       });
@@ -223,7 +223,7 @@ function walk(effect: Effect, atSec: number, acc: Accum): number {
         startSec: atSec,
         endSec: atSec + effect.over,
         to: effect.by,
-        ease: effect.ease,
+        curve: { kind: 'ease', ease: effect.ease },
         space: CHANNEL_SPACE[effect.ch],
         ...(effect.loop !== undefined ? { loop: effect.loop } : {}),
       });

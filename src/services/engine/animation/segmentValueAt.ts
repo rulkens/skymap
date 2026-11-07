@@ -7,22 +7,30 @@
  */
 
 import type { BaseSegment } from '../../../@types/animation/compiledClip/BaseSegment';
+import type { SegmentCurve } from '../../../@types/animation/compiledClip/SegmentCurve';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { EASE } from './ease';
 import { lerpChannel } from './lerpChannel';
+
+function curveProgress(curve: SegmentCurve, u: number): number {
+  switch (curve.kind) {
+    case 'ease':
+      return EASE[curve.ease](u);
+  }
+}
 
 export function segmentValueAt<V extends number | Vec3>(seg: BaseSegment, from: V, t: number): V {
   const dur = seg.endSec - seg.startSec;
   if (seg.segKind === 'tween') {
     if (t >= seg.endSec) return seg.to as V;
     const localT = dur > 0 ? (t - seg.startSec) / dur : 1;
-    return lerpChannel(seg.channel, seg.space, from, seg.to as V, EASE[seg.ease](localT));
+    return lerpChannel(seg.channel, seg.space, from, seg.to as V, curveProgress(seg.curve, localT));
   }
   const start = from as number;
   const by = seg.to as number;
   if (t < seg.endSec) {
     const localT = dur > 0 ? (t - seg.startSec) / dur : 1;
-    return (start + by * EASE[seg.ease](localT)) as V;
+    return (start + by * curveProgress(seg.curve, localT)) as V;
   }
   if (!seg.loop) return (start + by) as V;
   return (start + by * (dur > 0 ? (t - seg.startSec) / dur : 1)) as V;
