@@ -19,7 +19,7 @@
  * `Vec3`/selection ref. They are rewritten by `resolveClipFoci` before
  * `compileClip` runs; `compileClip` throws if it ever sees one unresolved.
  *
- * The four structural nodes (`hold`, `wait`, `seq`, `all`, `fork`) compose
+ * The five structural nodes (`hold`, `wait`, `seq`, `all`, `fork`) compose
  * effects without nesting types: a `seq` holds a `children: Effect[]`, which can
  * itself contain `all`s and `fork`s. This recursive shape is the only reason
  * `Effect` is NOT a `.d.ts` of mutually-exclusive primitives — the self-reference
@@ -34,7 +34,8 @@
  *     distinction is INTENT — `wait` offsets a following cue, `hold` is the beat
  *     itself.
  *
- *   - `seq` — play children IN ORDER; each starts when the previous ends.
+ *   - `seq` — play children IN ORDER; each starts when the previous ends, or
+ *     `overlap` seconds before it when the seq sets one.
  *
  *   - `all` — play children CONCURRENTLY; the block ends when the LONGEST child
  *     ends. The single-writer rule (one base writer per channel) is enforced here
@@ -70,6 +71,7 @@ import type { PathWaypoint } from './PathWaypoint';
 import type { Ease } from './Ease';
 import type { SplineConfig } from './SplineConfig';
 import type { PassByConfig } from './PassByConfig';
+import type { SeqOverlap } from './SeqOverlap';
 import type { Vec3 } from '../math/Vec3';
 import type { GeodesicTuning } from '../camera/focusMotion/GeodesicTuning';
 
@@ -79,7 +81,7 @@ export type Effect =
   | FocusBoundEffect
   | { readonly kind: 'hold'; readonly sec: number }
   | { readonly kind: 'wait'; readonly sec: number }
-  | { readonly kind: 'seq'; readonly children: Effect[] }
+  | { readonly kind: 'seq'; readonly children: Effect[]; readonly overlap?: SeqOverlap }
   | { readonly kind: 'all'; readonly children: Effect[] }
   | { readonly kind: 'fork'; readonly child: Effect }
   | {

@@ -25,10 +25,13 @@ import {
   flyPath,
   atPoint,
   geodesic,
+  spin,
 } from '../../../../../src/services/engine/animation/effectHelpers';
 import { easedFocusClip } from '../../../../../src/services/engine/camera/clips/easedFocusClip';
 import { DEFAULT_GEODESIC_TUNING } from '../../../../../src/data/camera/focusMoveDefaults';
 import { compileClip } from '../../../../../src/services/engine/animation/compileClip';
+import { lerpInSpace } from '../../../../../src/services/engine/animation/channelSpace';
+import { wrapRad } from '../../../../../src/utils/math/wrapRad';
 import { resolveClipFoci } from '../../../../../src/services/engine/animation/resolveClipFoci';
 import { neighbourhoodFlythrough } from '../../../../../src/data/animation/tours/grandTour/neighbourhoodFlythrough';
 import { relErr } from '../../../../support/relErr';
@@ -620,5 +623,164 @@ describe('evaluateClip fov channel', () => {
     };
 
     expect(evaluateClip(data, 0.5).fov).toBe(0.3);
+  });
+});
+
+describe('blending seq: crossfade', () => {
+  const FROM_100: CameraPose = { ...START, distance: 100 };
+  const data: ClipData = {
+    start: FROM_100,
+    timeline: [seq([dollyTo(400, 4, 'linear'), dollyTo(200, 4, 'linear')], { overlap: 2 })],
+  };
+  const lnD = (clip: ClipData, t: number) => Math.log(evaluateClip(clip, t).distance);
+  const samples = (endSec: number, dt: number) =>
+    Array.from({ length: Math.floor(endSec / dt) + 1 }, (_, i) => i * dt);
+
+  it('value and velocity are continuous at both window ends', () => {
+    const h = 1e-4;
+    for (const t of [2, 4]) {
+      const left = (lnD(data, t) - lnD(data, t - h)) / h;
+      const right = (lnD(data, t + h) - lnD(data, t)) / h;
+      expect(Math.abs(left - right)).toBeLessThan(1e-3);
+    }
+    expect(evaluateClip(data, 2).distance).toBeCloseTo(lerpInSpace('log', 100, 400, 0.5), 9);
+    expect(evaluateClip(data, 4).distance).toBeCloseTo(lerpInSpace('log', 400, 200, 0.5), 9);
+  });
+
+  it('a reversal turns inside the window without overshoot', () => {
+    for (let i = 0; i < 64; i++) {
+      const d = evaluateClip(data, (6 * i) / 63).distance;
+      expect(d).toBeGreaterThanOrEqual(100 - 1e-9);
+      expect(d).toBeLessThanOrEqual(400 + 1e-9);
+    }
+    const slope = (t: number) => (lnD(data, t + 1e-4) - lnD(data, t - 1e-4)) / 2e-4;
+    expect(slope(1)).toBeGreaterThan(0);
+    expect(slope(5)).toBeLessThan(0);
+  });
+
+  it("the incoming plan starts from the outgoing plan's end", () => {
+    expect(evaluateClip(data, 6).distance).toBeCloseTo(200, 9);
+    expect(evaluateClip(data, 5).distance).toBeCloseTo(lerpInSpace('log', 400, 200, 0.75), 9);
+  });
+
+  it('a yaw crossfade across ±π never jumps', () => {
+    const yawClip: ClipData = {
+      start: { ...FROM_100, yaw: 0 },
+      timeline: [
+        seq([tween('yaw', { to: 3.0, over: 4 }), tween('yaw', { to: -3.0, over: 4 })], {
+          overlap: 1,
+        }),
+      ],
+    };
+    // Up to just before the end: past it a tween holds its raw `to`, 2π away.
+    const ts = samples(6.99, 0.01);
+    for (let i = 1; i < ts.length; i++) {
+      const step = evaluateClip(yawClip, ts[i]!).yaw - evaluateClip(yawClip, ts[i - 1]!).yaw;
+      expect(Math.abs(step)).toBeLessThan(0.05);
+    }
+  });
+
+  // Steps are wrapped: a 2πk step where a tween's raw `to` takes over is the same
+  // orientation, and plain seqs have it too.
+  const yawSteps = (timeline: ClipData['timeline'], endSec: number) => {
+    const clip: ClipData = { start: { ...FROM_100, yaw: 0 }, timeline };
+    const ts = samples(endSec, 0.01);
+    return ts
+      .slice(1)
+      .map((t, i) => wrapRad(evaluateClip(clip, t).yaw - evaluateClip(clip, ts[i]!).yaw));
+  };
+
+  it('angles mix unwrapped when the two plans are more than π apart', () => {
+    const steps = yawSteps(
+      [
+        seq(
+          [
+            tween('yaw', { to: 3, over: 4, ease: 'linear' }),
+            tween('yaw', { to: 6, over: 2, ease: 'easeOutCubic' }),
+          ],
+          { overlap: 2 },
+        ),
+      ],
+      4,
+    );
+    for (const step of steps) expect(Math.abs(step)).toBeLessThan(0.05);
+  });
+
+  it('two full-turn spins blend without turning backwards', () => {
+    const spinTurn = () => spin('yaw', { by: 2 * Math.PI, over: 4, ease: 'linear' });
+    const steps = yawSteps([seq([spinTurn(), spinTurn()], { overlap: 2 })], 6);
+    for (const step of steps) {
+      expect(Math.abs(step)).toBeLessThan(0.05);
+      expect(step).toBeGreaterThan(0);
+    }
+  });
+
+  it('nested overlapping seqs classify their own joins', () => {
+    const inner = seq([dollyTo(200, 4, 'linear'), dollyTo(300, 4, 'linear')], { overlap: 2 });
+    const nested: ClipData = {
+      start: FROM_100,
+      timeline: [seq([dollyTo(400, 4, 'linear'), inner], { overlap: 2 })],
+    };
+    const blends = compileClip(nested).baseTracks.distance.map((s) => s.blendIn);
+    expect(blends).toEqual([undefined, { startSec: 2, endSec: 4 }, { startSec: 4, endSec: 6 }]);
+    const ts = samples(8, 0.01);
+    for (let i = 1; i < ts.length; i++) {
+      expect(Math.abs(lnD(nested, ts[i]!) - lnD(nested, ts[i - 1]!))).toBeLessThan(0.05);
+    }
+  });
+});
+
+describe('blending seq: matched join', () => {
+  const FROM_150: CameraPose = { ...START, distance: 150 };
+  const clipOf = (timeline: ClipData['timeline']): ClipData => ({ start: FROM_150, timeline });
+  const lnD = (clip: ClipData, t: number) => Math.log(evaluateClip(clip, t).distance);
+  // One-sided d ln D/dt: `h` > 0 looks forward, `h` < 0 back.
+  const speed = (clip: ClipData, t: number, h: number) => (lnD(clip, t + h) - lnD(clip, t)) / h;
+  const central = (clip: ClipData, t: number) => (lnD(clip, t + 1e-4) - lnD(clip, t - 1e-4)) / 2e-4;
+  const dollies = (to: [number, number], opts?: { overlap: number }) =>
+    clipOf([seq([dollyTo(to[0], 4), dollyTo(to[1], 4)], opts)]);
+
+  it('the join speed is the harmonic mean of the two average speeds', () => {
+    const clip = dollies([300, 900], { overlap: 0 });
+    expect(Math.abs(speed(clip, 4, -1e-3) - 0.2125)).toBeLessThan(1e-3);
+    expect(Math.abs(speed(clip, 4, 1e-3) - 0.2125)).toBeLessThan(1e-3);
+  });
+
+  it('a reversal stops at the join', () => {
+    expect(Math.abs(central(dollies([300, 150], { overlap: 0 }), 4))).toBeLessThan(1e-3);
+  });
+
+  it('the join is never faster than twice the slower average', () => {
+    const slower = Math.LN2 / 4;
+    for (const ratio of [1, 4, 20]) {
+      const join = speed(dollies([300, 300 * 2 ** ratio], { overlap: 0 }), 4, -1e-4);
+      expect(join).toBeGreaterThanOrEqual(slower - 1e-3);
+      expect(join).toBeLessThanOrEqual(2 * slower + 1e-3);
+    }
+  });
+
+  it("an outer end keeps its ease's end speed", () => {
+    const outer = (ease: 'easeInOutCubic' | 'linear') =>
+      speed(clipOf([seq([dollyTo(300, 4, ease), dollyTo(900, 4)], { overlap: 0 })]), 0, 1e-4);
+    expect(Math.abs(outer('easeInOutCubic'))).toBeLessThan(1e-3);
+    expect(Math.abs(outer('linear') - Math.LN2 / 4)).toBeLessThan(1e-3);
+  });
+
+  it('a plain seq still rests at the join', () => {
+    expect(Math.abs(central(dollies([300, 900]), 4))).toBeLessThan(1e-3);
+  });
+
+  it('a target join matches speed and stops at a reversal', () => {
+    const targetSpeed = (clip: ClipData, h: number) => {
+      const [a, b] = [evaluateClip(clip, 4).target, evaluateClip(clip, 4 + h).target];
+      return Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]) / Math.abs(h);
+    };
+    const moves = (to: Vec3) =>
+      clipOf([seq([moveTarget([3, 0, 0], 4), moveTarget(to, 4)], { overlap: 0 })]);
+    // The harmonic mean of 0.75 and 1.5 units/s.
+    expect(Math.abs(targetSpeed(moves([9, 0, 0]), -1e-4) - 1)).toBeLessThan(1e-3);
+    expect(Math.abs(targetSpeed(moves([9, 0, 0]), 1e-4) - 1)).toBeLessThan(1e-3);
+    expect(targetSpeed(moves([0, 0, 0]), -1e-4)).toBeLessThan(1e-3);
+    expect(targetSpeed(moves([0, 0, 0]), 1e-4)).toBeLessThan(1e-3);
   });
 });
