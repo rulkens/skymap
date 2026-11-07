@@ -26,6 +26,7 @@ import { watchOrientationChangeSaga } from '../state/camera/watchOrientationChan
 import { watchFlyToLonLatSaga } from '../state/camera/watchFlyToLonLatSaga';
 import { watchZoomLimitSaga } from '../state/camera/watchZoomLimitSaga';
 import { watchTakeoverSaga } from '../state/takeover/watchTakeoverSaga';
+import { watchEnterSkyHereSaga } from '../state/sky/watchEnterSkyHereSaga';
 import { watchKeyboardEventsSaga } from '../state/input/watchKeyboardEventsSaga';
 import { watchInputWakeSaga } from '../state/input/watchInputWakeSaga';
 import { watchLogCameraStateSaga } from '../state/camera/watchLogCameraStateSaga';
@@ -53,6 +54,7 @@ export function* mainSaga() {
     watchFlyToLonLatSaga(),
     watchZoomLimitSaga(),
     watchTakeoverSaga(),
+    watchEnterSkyHereSaga(),
     watchKeyboardEventsSaga(),
     watchInputWakeSaga(),
     watchLogCameraStateSaga(),

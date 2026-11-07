@@ -33,6 +33,8 @@ import { parseRemoteCommand } from '../../utils/remote/parseRemoteCommand';
 import { runRemoteCommand } from '../../utils/remote/runRemoteCommand';
 import { REMOTE_MENU } from './remoteMenu';
 import { selectDomeStatus } from './selectDomeStatus';
+import { selectSkyEntry } from '../sky/selectSkyEntry';
+import { selectSkyHost } from '../sky/selectSkyHost';
 import { selectToggleRows } from '../settings/selectToggleRows';
 import { selectLayerSwitchRows } from '../settings/selectLayerSwitchRows';
 import { parseRemoteMessage } from '../../utils/remote/parseRemoteMessage';
@@ -186,6 +188,7 @@ export function* remoteReceiverSaga(
             selectStructureSearchList(state),
             selectLayerSearchRows(state),
             message.query,
+            { hereOpen: selectSkyEntry(state) !== null, host: selectSkyHost(state) },
           );
           const matches = remoteSearchMatches(ranked);
           const { requestId } = message;

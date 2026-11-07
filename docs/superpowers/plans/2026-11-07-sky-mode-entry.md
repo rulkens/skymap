@@ -295,9 +295,9 @@ to the HUD (store field on the sky takeover or a small slice; builder's choice, 
 `selectSkyEntry` holds; "Sky from <place>" beside each `EARTH_PLACES` match; a `parseLatLonQuery` hit gives
 "Sky from 52.37° N 4.89° E" on the current terrain host, else Earth. All map to `enterSky`.
 
-- [ ] Tests: `a typed lat, lon yields a sky row`; `a place match yields its sky row beside the fly-to`;
+- [x] Tests: `a typed lat, lon yields a sky row`; `a place match yields its sky row beside the fly-to`;
       `Sky from here is listed only when entry is available`.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 11: Entry button, `s`, and the sky HUD
 

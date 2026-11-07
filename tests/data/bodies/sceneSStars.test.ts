@@ -19,6 +19,10 @@ import { Source } from '../../../src/data/source';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import type { StarRowFixture } from '../../support/selectionResolverOver';
 import { testPickCode } from '../../support/testPickCode';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+import type { PaletteSkyContext } from '../../../src/@types/palette/PaletteSkyContext';
+
+const NO_SKY: PaletteSkyContext = { hereOpen: false, host: asSceneBodyId('earth') };
 
 /** The seeded star arms read no store data, so an empty fixture suffices — the
  *  star row needs no survey catalog to resolve a seed. */
@@ -67,12 +71,12 @@ describe('SCENE_S_STARS', () => {
       source: Source.SStar,
       index: SCENE_S_STARS.findIndex((star) => star.id === 's2'),
     });
-    const s2Rows = rankPaletteMatches([], [], [], starRows, 'S2').filter(
+    const s2Rows = rankPaletteMatches([], [], [], starRows, 'S2', NO_SKY).filter(
       (row) => row.kind === 'layer' && row.entry.id === s2Id,
     );
     expect(s2Rows).toHaveLength(1);
 
-    const siriusRows = rankPaletteMatches([], [], [], starRows, 'Sirius');
+    const siriusRows = rankPaletteMatches([], [], [], starRows, 'Sirius', NO_SKY);
     expect(siriusRows[0]).toMatchObject({ kind: 'layer', entry: { id: 'star-sirius' } });
   });
 });
