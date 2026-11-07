@@ -284,7 +284,7 @@ export function createRenderTargets(
       // caption occlusion pass reads (its alpha, via lib/sceneDepth.wesl).
       // Both usage flags are required on the same texture — WebGPU
       // descriptors don't support re-tagging after creation.
-      usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+      usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING | (spec.usage ?? 0),
     });
     textures.set(spec.id, texture);
     views.set(spec.id, texture.createView());
@@ -418,6 +418,11 @@ export function createRenderTargets(
         throw new Error(`renderTargets: no allocated view for target '${id}'`);
       }
       return view;
+    },
+    textureOf(id: string): GPUTexture {
+      const texture = textures.get(id);
+      if (!texture) throw new Error(`renderTargets: no allocated texture for target '${id}'`);
+      return texture;
     },
     cubeViewOf(id: string): GPUTextureView {
       const view = cubeViews.get(id);

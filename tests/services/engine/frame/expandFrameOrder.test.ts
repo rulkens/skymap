@@ -521,7 +521,7 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     expect(on).toContain('procedural-disks');
   });
 
-  it("draws the look's own passes only with the look on: land map, geography and the Moon's print on the body row, galaxy then star points into the print points", () => {
+  it("draws the look's own passes only with the look on: land map, geography, the Moon's print and relief on the body row, galaxy then star points into the print points", () => {
     const lookSteps = (steps: readonly FrameStep[]) =>
       steps.filter((step) => namesOf(step).some((name) => ANTIQUE_ONLY_PASSES.includes(name)));
     const rows = { lens: [], insideAtmosphere: [], surfaceMask: [3] };
@@ -529,6 +529,7 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     expect(lookSteps(program({ antique: true, bodyRowSlabs: rows }))).toMatchObject([
       { kind: 'render', target: ANTIQUE_TARGETS.land, slab: 3 },
       { kind: 'render', target: ANTIQUE_TARGETS.geography, slab: 3 },
+      { kind: 'render', target: ANTIQUE_TARGETS.moon, slab: 3 },
       { kind: 'render', target: ANTIQUE_TARGETS.relief, slab: 3 },
       { kind: 'render', target: ANTIQUE_TARGETS.printPoints, slab: COSMO, depth: 'clear' },
       { kind: 'render', target: ANTIQUE_TARGETS.printPoints, slab: NEAR0, depth: 'clear' },

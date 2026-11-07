@@ -22,6 +22,8 @@ export type AntiqueUniformInput = {
   /** The relief row holds engraved ground: its body's print code (`antiqueReliefInput`),
    * or null. */
   readonly relief: number | null;
+  /** The Moon's own row was drawn this frame and copied into the plate's `moon` layer. */
+  readonly moon: boolean;
   /** The overlay row holds this frame's captions. */
   readonly captions: boolean;
   /** The scanned paper tile and stain mask have landed. */

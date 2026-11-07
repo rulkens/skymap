@@ -76,6 +76,7 @@ describe('antique look records ↔ WGSL structs', () => {
       bodies: true,
       depthCover: true,
       relief: null,
+      moon: false,
       captions: false,
       paper: true,
       rays: { tl: [1011, 0, 0], tr: [1012, 0, 0], bl: [1013, 0, 0], br: [1014, 0, 0] },

@@ -82,4 +82,9 @@ export type RenderTargetSpec = {
    * track it.
    */
   allocateWhen?: (state: EngineState, isAllocated: boolean) => boolean;
+  /**
+   * Usage flags OR'd onto every row's RENDER_ATTACHMENT | TEXTURE_BINDING: COPY_SRC /
+   * COPY_DST for a row copied into another (`antique-moon` into a layer of `antique-full`).
+   */
+  usage?: GPUTextureUsageFlags;
 };

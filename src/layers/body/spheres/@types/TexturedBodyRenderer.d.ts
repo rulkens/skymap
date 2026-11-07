@@ -66,7 +66,7 @@ export type TexturedBodyRenderer = Renderer & {
    */
   drawAlbedoMask(pass: GPURenderPassEncoder, bodyId: BodyTextureId, uniforms: Float32Array): void;
   /**
-   * Draw the antique Moon print (`fsMoonPrint`) into an `ANTIQUE_RELIEF_FORMAT` target
+   * Draw the antique Moon print (`fsMoonPrint`) into an `ANTIQUE_MOON_FORMAT` target
    * with no depth: `uniforms` as for `draw` (its own slot), `craters` the
    * `packMoonPrint` record.
    */
@@ -75,5 +75,16 @@ export type TexturedBodyRenderer = Renderer & {
     bodyId: BodyTextureId,
     uniforms: Float32Array,
     craters: ArrayBuffer,
+  ): void;
+  /**
+   * Draw the Moon's ground relief (`fsMoonRelief`) into an `ANTIQUE_RELIEF_FORMAT`
+   * target with no depth: `uniforms` as for `drawMoonPrint`, `record` its
+   * `ANTIQUE_MOON_RELIEF_BYTES` record (unit, focal px, radius m).
+   */
+  drawMoonRelief(
+    pass: GPURenderPassEncoder,
+    bodyId: BodyTextureId,
+    uniforms: Float32Array,
+    record: ArrayBuffer,
   ): void;
 };

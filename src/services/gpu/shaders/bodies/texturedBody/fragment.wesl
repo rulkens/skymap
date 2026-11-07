@@ -52,6 +52,8 @@ import package::lib::limbDarkening::limbDarkening;
 import package::lib::normalMap::perturbNormal;
 import package::antiqueLook::engraving::inkLine;
 import package::lib::util::hash21Hq;
+import package::antiqueLook::bodies::moonRow::encodeMoonRow;
+import package::antiqueLook::groundNoise::groundNoiseAt;
 
 @group(0) @binding(0) var<uniform> u: TexturedBodyUniforms;
 @group(0) @binding(1) var bodySampler: sampler;
@@ -78,6 +80,15 @@ struct MoonPrint {
   craters: array<MoonCrater, 40>,
 };
 @group(1) @binding(0) var<uniform> moon: MoonPrint;
+// The Moon relief pass's record (`moonReliefPass.ts`): device px per print unit, px per
+// radian, the sphere's radius in metres.
+struct MoonRelief {
+  unit: f32,
+  focalPx: f32,
+  radiusM: f32,
+  _p0: f32,
+};
+@group(1) @binding(1) var<uniform> moonRelief: MoonRelief;
 
 // Colour + analytic depth. No '@builtin(position)' anywhere in this struct --
 // the entry point's position comes in through 'TexturedBodyVSOut', and a second
@@ -179,12 +190,11 @@ fn fs(in: TexturedBodyVSOut) -> FSOut {
   return out;
 }
 
-// ── The antique Moon (`moon-print` pass, the look's `antique-relief` row) ─────
-// r sqrt(linear luma) blurred over ~7 screen px, never finer than a 1024-texel mip
-// (the maria: below ~10 km the albedo is ejecta, not a mare's shape); g 2 + the
-// terrain's light, 0 where no Moon; b rim ink, + 2 on a bright crater floor; a
-// sqrt(luma) over ~24 px (never under ~170 km), the wide
-// support the plate's mare threshold asks before a faint patch counts as sea.
+// ── The antique Moon (`moon-print` into `antique-moon`, `moon-relief` into `antique-relief`)
+// The Moon's row (`moonRow.wesl`): the albedo blurred over ~7 screen px, never finer than
+// a 1024-texel mip (below ~10 km the albedo is ejecta, not a mare's shape); the terrain's
+// light; rim ink and a bright floor; the albedo over ~24 px (never under ~170 km), the
+// wide support the plate's mare threshold asks before a faint patch counts as sea.
 
 const MARE_MIP_TEXELS: f32 = 1024.0;
 // Screen footprints (px) of the mare's taps and of its wide support.
@@ -307,6 +317,54 @@ fn fsMoonPrint(in: TexturedBodyVSOut) -> @location(0) vec4<f32> {
   // A crater floor brighter than any sea keeps the plate's mare lines off it (b + 2).
   let fine = mareTap(uv, grad.ddx, grad.ddy, 1.0, MARE_MIP_TEXELS);
   let clear = select(0.0, 2.0, rims.z > 0.5 && fine * fine > BRIGHT_FLOOR);
-  return vec4<f32>(mareAlbedo(uv, grad.ddx, grad.ddy), 2.0 + clamp(lit, -1.5, 1.5), rims.x * day + clear,
+  return encodeMoonRow(mareAlbedo(uv, grad.ddx, grad.ddy), lit, rims.x * day, rims.z > 0.5 && fine * fine > BRIGHT_FLOOR,
     mareTap(uv, grad.ddx, grad.ddy, MARE_WIDE_PX, MARE_WIDE_TEXELS));
+}
+
+// The Moon's ground in the shared relief row (`relief.wesl`'s contract), from the normal
+// map at SLOPE_GAIN: rg the screen fall line, b the ground noise, a a hachure's weight on
+// a slope past RELIEF_SLOPE.x (both flanks of a rim, so the plate draws its crest), a hint
+// of stipple weight on flats (ground, so a crest between flanks still prints), 0 by night
+// and where a print unit spans more ground than RELIEF_M.y (the full disc).
+const RELIEF_SLOPE = vec2<f32>(0.12, 0.5);
+const RELIEF_STROKE: f32 = 0.3;
+const RELIEF_M = vec2<f32>(1200.0, 3000.0);
+const RELIEF_FLAT: f32 = 0.01;
+
+@fragment
+fn fsMoonRelief(in: TexturedBodyVSOut) -> @location(0) vec4<f32> {
+  let rd = normalize(in.localPos - u.camPosLocal);
+  let surface = hitUnitSphere(u.camPosLocal, rd, u.camAltitudeSq);
+  let ng = surface.point;
+  let uv = equirectUvFromDir(ng);
+  let grad = equirectUvGradients(uv);
+  let dNdx = dpdx(ng);
+  let dNdy = dpdy(ng);
+  if (!surface.hit) {
+    discard;
+  }
+  let metresPerUnit = surface.t * moonRelief.radiusM * moonRelief.unit / moonRelief.focalPx;
+  let resolved = smoothstep(RELIEF_M.y, RELIEF_M.x, metresPerUnit);
+  if (resolved <= 0.0) {
+    return vec4<f32>(0.0);
+  }
+  let T = normalize(cross(vec3<f32>(0.0, 0.0, 1.0), ng));
+  let b = exp2(RELIEF_BIAS);
+  let n = perturbNormal(ng, T, textureSampleGrad(normalTexture, bodySampler, uv, grad.ddx * b, grad.ddy * b).rg);
+  let up = dot(n, ng);
+  // The normal leans downhill: its tangent part is the fall line on the ground.
+  let downhill = (n - up * ng) * SLOPE_GAIN;
+  let slope = smoothstep(RELIEF_SLOPE.x, RELIEF_SLOPE.y, atan2(length(downhill), up));
+  // Onto the screen through the normal's own px derivatives (least squares in the plane).
+  let gxx = dot(dNdx, dNdx);
+  let gxy = dot(dNdx, dNdy);
+  let gyy = dot(dNdy, dNdy);
+  let rhs = vec2<f32>(dot(downhill, dNdx), dot(downhill, dNdy));
+  let onScreen = vec2<f32>(gyy * rhs.x - gxy * rhs.y, gxx * rhs.y - gxy * rhs.x);
+  let fall = select(vec2<f32>(0.0), onScreen / max(length(onScreen), 1e-12), length(downhill) > 1e-4);
+  let noise = groundNoiseAt(ng * moonRelief.radiusM, vec3<i32>(0), metresPerUnit);
+  let flat = dot(ng, u.sunDirLocal);
+  let day = smoothstep(-0.02, 0.06, flat + SLOPE_GAIN * (dot(n, u.sunDirLocal) - flat));
+  let stroke = select(-RELIEF_FLAT, slope, slope > RELIEF_STROKE) * resolved * day;
+  return vec4<f32>(fall, noise, stroke);
 }

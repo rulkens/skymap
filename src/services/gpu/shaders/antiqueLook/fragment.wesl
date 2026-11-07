@@ -49,6 +49,7 @@ import package::antiqueLook::bodies::moon::MoonTone;
 import package::antiqueLook::bodies::moon::moonInk;
 import package::antiqueLook::bodies::moon::moonToneAlong;
 import package::antiqueLook::bodies::moon::moonShade;
+import package::antiqueLook::bodies::moon::moonAt;
 import package::antiqueLook::graticule::graticule;
 import package::antiqueLook::graticule::frameLonLat;
 import package::antiqueLook::graticule::globeNormal;
@@ -71,11 +72,13 @@ import package::antiqueLook::pigments::pigmentAt;
 @group(0) @binding(5) var quarterTex: texture_2d_array<f32>;
 @group(0) @binding(6) var lowTex: texture_2d_array<f32>;
 // Full res, rgba8: the baked sheet; star ink (`glyphs.wesl`, `web.wesl`); the decor
-// (`decor.wesl`: r figure ink, g plate ink, b clear, a wash) and its hue.
+// (`decor.wesl`: r figure ink, g plate ink, b clear, a wash) and its hue; the Moon's own
+// row (`moonRow.wesl`), copied in from its pass.
 const PAPER_LAYER: i32 = 0;
 const STAR_INK_LAYER: i32 = 1;
 const DECOR_LAYER: i32 = 2;
 const DECOR_HUE_LAYER: i32 = 3;
+const MOON_LAYER: i32 = 4;
 // Quarter res, rgba16f: the wash; `nebula.wesl`'s fields (x the band's light, w the
 // lane reference); `landBlur.wesl`'s x Σ weight·land share, y Σ weight.
 const WASH_LAYER: i32 = 0;
@@ -121,6 +124,8 @@ const FLAG_CAPTIONS: u32 = 2u;
 // code in the flags from this bit: inside the relief shell the globe has no record.
 const FLAG_RELIEF: u32 = 16u;
 const RELIEF_PRINT_SHIFT: u32 = 8u;
+// The Moon's own row holds this frame's Moon (`MOON_LAYER`).
+const FLAG_MOON: u32 = 32u;
 // `depthEdge`'s second difference of depth over the nearest tap's depth.
 const DEPTH_JUMP: f32 = 0.05;
 // Sheet layout in print units: bare margin with the plate mark in it, then the
@@ -594,6 +599,8 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     var spotQPerUnit = 1.0;
     var jupiterShade = 0.0;
     var moon = MoonTone(0.0, 0.0, 0.0);
+    let moonLayer = select(-1, MOON_LAYER, (u.flags & FLAG_MOON) != 0u);
+    var moonTexel = vec4<f32>(0.0);
     let relief = texel(reliefTex, ip);
     let ground = (u.flags & FLAG_RELIEF) != 0u && relief.a != 0.0 && rowOn(HIDE_RELIEF) > 0.0;
     if (hit.t < 1e30) {
@@ -615,7 +622,8 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
         print = printOf(b);
         tone = formTone(hit.ndl, hit.ndv);
         if (print == PRINT_MOON) {
-          moon = moonToneAlong(reliefTex, ip, vec2<f32>(n.y, -n.x) * u.unit, hit.ndl, hit.ndv, relief.g, luma(src));
+          moonTexel = moonAt(fullTex, moonLayer, ip);
+          moon = moonToneAlong(fullTex, moonLayer, ip, vec2<f32>(n.y, -n.x) * u.unit, hit.ndl, hit.ndv, moonTexel.g, luma(src));
           tone = moon.tone;
         }
         // The ring's shadow on the ball is one solid stroke, not hatching.
@@ -655,7 +663,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
       tone = select(1.0 - smoothstep(0.015, 0.17, bodyLight(uv)), 0.0, ground);
     }
     // The Moon's own row (`fsMoonPrint`): g 0 where it did not run.
-    let moonRow = print == PRINT_MOON && relief.g > 0.0;
+    let moonRow = print == PRINT_MOON && moonTexel.g > 0.0;
     var hatch = 0.0;
     if (moonRow) {
       hatch = moonShade(form, tone, pxUnits);
@@ -682,7 +690,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
       col = jupiter.col;
       bodyInk = max(bodyInk, jupiter.ink);
     } else if (moonRow) {
-      bodyInk = max(bodyInk, moonInk(reliefTex, px, u.unit, moon, relief.b));
+      bodyInk = max(bodyInk, moonInk(fullTex, moonLayer, px, u.unit, moon, moonTexel.b));
     }
     if (ground) {
       let around = luma(textureSampleLevel(quarterTex, linear, uv, WASH_LAYER, 0.0).rgb);

@@ -1,9 +1,9 @@
 /**
  * moonPrintPass: the antique look's engraving inputs for the Moon (`fsMoonPrint`: the
- * maria's albedo, the relief ratio, crater rims and wall bands), drawn into the look's
- * `antique-relief` row on the Moon's `surfaceMask` line. The rings are picked here
- * each frame (`pickMoonCraters`) from the baked table, the named ones first. Listed in `ANTIQUE_ONLY_PASSES`,
- * so it never draws with the look off.
+ * maria's albedo, the terrain's light, crater rims), drawn into the look's `antique-moon`
+ * row on the Moon's `surfaceMask` line. The rings are picked here each frame
+ * (`pickMoonCraters`) from the baked table, the named ones first. Listed in
+ * `ANTIQUE_ONLY_PASSES`, so it never draws with the look off.
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';

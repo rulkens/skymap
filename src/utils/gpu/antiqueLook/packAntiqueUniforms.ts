@@ -11,6 +11,7 @@ const FLAG_CAPTIONS = 2;
 const FLAG_PAPER = 4;
 const FLAG_DEPTH_COVER = 8;
 const FLAG_RELIEF = 16;
+const FLAG_MOON = 32;
 // The engraved ground's print code rides above the flags (`fragment.wesl` RELIEF_PRINT_SHIFT).
 const RELIEF_PRINT_SHIFT = 8;
 
@@ -28,6 +29,7 @@ export function packAntiqueUniforms(
     (input.captions ? FLAG_CAPTIONS : 0) |
     (input.paper ? FLAG_PAPER : 0) |
     (input.depthCover ? FLAG_DEPTH_COVER : 0) |
+    (input.moon ? FLAG_MOON : 0) |
     (input.relief === null ? 0 : FLAG_RELIEF | (input.relief << RELIEF_PRINT_SHIFT));
   const { tl, tr, bl, br } = input.rays;
   [tl, tr, bl, br].forEach((ray, i) => f32.set(ray, 4 + i * 4));

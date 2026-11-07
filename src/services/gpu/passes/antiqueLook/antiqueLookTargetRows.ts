@@ -14,6 +14,7 @@ import {
   ANTIQUE_GEOGRAPHY_FORMAT,
   ANTIQUE_LAND_FORMAT,
   ANTIQUE_LOW_LAYERS,
+  ANTIQUE_MOON_FORMAT,
   ANTIQUE_PRINT_CELL_UNITS,
   ANTIQUE_PRINT_POINTS_DEPTH,
   ANTIQUE_PRINT_POINTS_FORMAT,
@@ -51,7 +52,8 @@ export function antiqueLookTargetRows(swapFormat: GPUTextureFormat): readonly Re
   return [
     row(ANTIQUE_TARGETS.print, swapFormat, 1),
     row(ANTIQUE_TARGETS.overlay, swapFormat, 1),
-    layered(ANTIQUE_TARGETS.full, 'rgba8unorm', 1, ANTIQUE_FULL_LAYERS),
+    // Its `moon` layer is copied in from `antique-moon`, which a frame section draws.
+    { ...layered(ANTIQUE_TARGETS.full, 'rgba8unorm', 1, ANTIQUE_FULL_LAYERS), usage: GPUTextureUsage.COPY_DST },
     layered(ANTIQUE_TARGETS.quarter, HDR_TARGET_FORMAT, ANTIQUE_CELL, ANTIQUE_QUARTER_LAYERS),
     layered(ANTIQUE_TARGETS.low, HDR_TARGET_FORMAT, ANTIQUE_CELL * 4, ANTIQUE_LOW_LAYERS),
     // The structure markers, moved off the print (ANTIQUE_MOVED_PASSES).
@@ -69,5 +71,6 @@ export function antiqueLookTargetRows(swapFormat: GPUTextureFormat): readonly Re
     // The moved passes' own pipelines are built for HDR, so their row is too.
     row(ANTIQUE_TARGETS.lines, HDR_TARGET_FORMAT, 1),
     row(ANTIQUE_TARGETS.relief, ANTIQUE_RELIEF_FORMAT, 1),
+    { ...row(ANTIQUE_TARGETS.moon, ANTIQUE_MOON_FORMAT, 1), usage: GPUTextureUsage.COPY_SRC },
   ];
 }

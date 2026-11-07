@@ -262,13 +262,20 @@ export const SCENE: FrameSection = {
       slab: 'surfaceMask',
       passes: ['earth-antique-map'],
     },
-    // The Moon's engraving inputs (maria, relief, rims), in the row Mars's relief
-    // fills in `stylize`: never both in one frame, as no plate shows both close up.
+    // The Moon's own engraving inputs (maria, rims), which the look copies into a layer
+    // of its own; then its ground's relief, in the row Mars's relief fills in `stylize`:
+    // never both in one frame, as no plate shows both close up.
+    {
+      kind: 'render',
+      target: 'antique-moon',
+      slab: 'surfaceMask',
+      passes: ['moon-print'],
+    },
     {
       kind: 'render',
       target: 'antique-relief',
       slab: 'surfaceMask',
-      passes: ['moon-print'],
+      passes: ['moon-relief'],
     },
     // The look's glyphs come from the catalogues: every galaxy point, then every naked-eye
     // star, as one point each, the brightest per cell kept by depth; a star's clear

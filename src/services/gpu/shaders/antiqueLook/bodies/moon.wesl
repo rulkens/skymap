@@ -1,13 +1,13 @@
 // antiqueLook/bodies/moon.wesl — the Moon as Grimaldi engraved it for Riccioli (1651),
-// from its own pass's relief row (`texturedBody/fragment.wesl` `fsMoonPrint`): r the
-// albedo over ~7 px, g 2 + the terrain's light (0 = no Moon), b rim ink (+2 inside a
-// bright-floored crater), a the albedo over ~24 px. Darkness is line WIDTH at a constant pitch, never a line count or a
+// from its own row (`moonRow.wesl`, the plate's `moon` layer; a negative layer: the pass
+// did not run). Darkness is line WIDTH at a constant pitch, never a line count or a
 // grey: every line of a family is cut once its tone starts, so no density steps
 // (barcodes) and no grey where lines crowd. The maria are level lines, the highlands
 // paper; no coast, no wash (owner ruling). The shade follows the terrain's light, so
 // the terminator is ragged with lit peaks and crater shadows.
 
 import package::lib::util::hash21Hq;
+import package::antiqueLook::bodies::moonRow::decodeMoonRow;
 
 // Lommel–Seeliger brightness 2·L/(L + ndv) on the terrain's light L: ~1 across the
 // whole full disc (no limb darkening), falling only at the terminator. Paper from 0.16
@@ -71,13 +71,20 @@ const SHADE_DASH: f32 = 10.0;
 const SEEN_LUMA = vec2<f32>(0.04, 0.09);
 const SEEN_CAP: f32 = 0.5;
 
-fn moonToneAlong(field: texture_2d<f32>, ip: vec2<i32>, along: vec2<f32>, ndl: f32, ndv: f32,
-                 row: f32, plain: f32) -> MoonTone {
-  let here = moonTone(ndl, ndv, row);
+fn moonAt(field: texture_2d_array<f32>, layer: i32, ip: vec2<i32>) -> vec4<f32> {
+  if (layer < 0) {
+    return vec4<f32>(0.0);
+  }
   let size = vec2<i32>(textureDimensions(field));
+  return decodeMoonRow(textureLoad(field, clamp(ip, vec2<i32>(0), size - 1), layer, 0));
+}
+
+fn moonToneAlong(field: texture_2d_array<f32>, layer: i32, ip: vec2<i32>, along: vec2<f32>, ndl: f32,
+                 ndv: f32, row: f32, plain: f32) -> MoonTone {
+  let here = moonTone(ndl, ndv, row);
   let o = vec2<i32>(round(along * SHADE_DASH));
-  let ahead = moonTone(ndl, ndv, textureLoad(field, clamp(ip + o, vec2<i32>(0), size - 1), 0).g).tone;
-  let behind = moonTone(ndl, ndv, textureLoad(field, clamp(ip - o, vec2<i32>(0), size - 1), 0).g).tone;
+  let ahead = moonTone(ndl, ndv, moonAt(field, layer, ip + o).g).tone;
+  let behind = moonTone(ndl, ndv, moonAt(field, layer, ip - o).g).tone;
   let cap = mix(MOON_SHADE_CAP, SEEN_CAP, smoothstep(SEEN_LUMA.x, SEEN_LUMA.y, plain));
   return MoonTone(min(min(here.tone, 0.5 * (ahead + behind)), cap), here.shade, here.litSlope);
 }
@@ -104,16 +111,14 @@ fn moonShade(form: vec3<f32>, tone: f32, pxUnits: f32) -> f32 {
 // read along the line's own centre row (the mask is the line's, not the pixel's), a
 // patch admitted as sea only with the wide albedo's support (a threshold with
 // hysteresis), ends staggered and tapered.
-fn moonMare(field: texture_2d<f32>, px: vec2<f32>, unit: f32, moon: MoonTone) -> f32 {
+fn moonMare(field: texture_2d_array<f32>, layer: i32, px: vec2<f32>, unit: f32, moon: MoonTone) -> f32 {
   let pitch = max(round(MOON_PITCH * unit), 3.0);
   let k = floor(px.y / pitch);
   let yc = k * pitch + floor(0.5 * pitch) + 0.5;
-  let size = vec2<i32>(textureDimensions(field));
   var near = 0.0;
   var wide = 0.0;
   for (var j = -2; j <= 2; j++) {
-    let at = vec2<i32>(i32(px.x + f32(j) * MARE_TAP_UNITS * unit), i32(yc));
-    let s = textureLoad(field, clamp(at, vec2<i32>(0), size - 1), 0);
+    let s = moonAt(field, layer, vec2<i32>(i32(px.x + f32(j) * MARE_TAP_UNITS * unit), i32(yc)));
     // Off the disc reads as highland, so a sea at the limb still ends in a taper.
     near += select(0.7, s.r, s.g > 0.0);
     wide += select(0.7, s.a, s.g > 0.0);
@@ -135,8 +140,8 @@ fn moonMare(field: texture_2d<f32>, px: vec2<f32>, unit: f32, moon: MoonTone) ->
 // The plate's Moon arm: the mare lines (cleared inside a bright-floored crater, as the
 // pass flags it in b's 2s place: Aristarchus, Copernicus) under the rims, which drop out
 // in the deepest shade, where a line in a solid reads as mush.
-fn moonInk(field: texture_2d<f32>, px: vec2<f32>, unit: f32, moon: MoonTone, b: f32) -> f32 {
+fn moonInk(field: texture_2d_array<f32>, layer: i32, px: vec2<f32>, unit: f32, moon: MoonTone, b: f32) -> f32 {
   let clear = step(1.5, b);
   let rims = (b - 2.0 * clear) * (1.0 - smoothstep(0.88, 0.98, moon.shade));
-  return max(moonMare(field, px, unit, moon) * (1.0 - clear), rims);
+  return max(moonMare(field, layer, px, unit, moon) * (1.0 - clear), rims);
 }

@@ -52,6 +52,11 @@ export type RenderTargets = {
    */
   viewOf(id: string): GPUTextureView;
   /**
+   * The texture behind `viewOf`, for a copy into or out of a row whose spec asks
+   * COPY_SRC / COPY_DST (`RenderTargetSpec.usage`). Same lifetime and throws as `viewOf`.
+   */
+  textureOf(id: string): GPUTexture;
+  /**
    * A `dimension: 'cube'` view over a row whose spec declares
    * `fixedSizePx.layers === 6` (today, only `'sky-cubemap'`) — `viewOf`'s
    * default view on a >1-layer texture is `2d-array`, which a

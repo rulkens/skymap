@@ -25,6 +25,9 @@ export const ANTIQUE_MOON_RIM_REACH = 1.35;
 /** `MoonPrint` in `texturedBody/fragment.wesl`: a 16-byte header, then two vec4 per crater. */
 export const ANTIQUE_MOON_PRINT_BYTES = 16 + ANTIQUE_MOON_MAX_CRATERS * 32;
 
+/** `MoonRelief` in `texturedBody/fragment.wesl`: unit, focal px, radius m, a pad. */
+export const ANTIQUE_MOON_RELIEF_BYTES = 16;
+
 /** The sphere the crater bake measured arcs on (LOLA's reference radius): its km
  * radii turn back into arcs on this, not on the drawn datum. */
 export const ANTIQUE_MOON_TABLE_RADIUS_KM = 1737.4;

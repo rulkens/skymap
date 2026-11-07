@@ -23,7 +23,10 @@ import {
   ANTIQUE_TARGETS,
   ANTIQUE_UNIFORM_BYTES,
 } from '../../../../data/rendering/antiqueLook';
-import { ANTIQUE_PLATE_BODIES_BYTES } from '../../../../data/rendering/antiquePlateBodies';
+import {
+  ANTIQUE_BODY_PRINT_CODES,
+  ANTIQUE_PLATE_BODIES_BYTES,
+} from '../../../../data/rendering/antiquePlateBodies';
 import { ANTIQUE_ORNAMENTS } from '../../../../data/rendering/antiqueOrnaments';
 import { ANTIQUE_ORNAMENT_ATLAS } from '../../../../data/rendering/antiqueOrnamentAtlas';
 import { packAntiqueUniforms } from '../../../../utils/gpu/antiqueLook/packAntiqueUniforms';
@@ -137,6 +140,10 @@ export function createAntiqueLook(init: {
     const webDensity = ctx.snapshot.renderedTargets.has(WEB_DENSITY) && cosmos > 0;
 
     const relief = hasBodies ? antiqueReliefInput(state, ctx, io.bodyDepth, unitPx) : null;
+    // The Moon's passes drew its own row and its ground's relief (a frame section's rows).
+    const moonPrinted = ctx.snapshot.renderedTargets.has(ANTIQUE_TARGETS.moon);
+    const moonRelief =
+      relief === null && ctx.snapshot.renderedTargets.has(ANTIQUE_TARGETS.relief);
     const globe = antiqueTitleGlobe(ctx, basis, unitPx);
     packAntiqueUniforms(
       {
@@ -144,7 +151,8 @@ export function createAntiqueLook(init: {
         unitPx,
         bodies: hasBodies,
         depthCover,
-        relief: relief?.print ?? null,
+        relief: relief?.print ?? (moonRelief ? ANTIQUE_BODY_PRINT_CODES.moon : null),
+        moon: moonPrinted,
         captions: io.overlay !== null,
         paper: paperAssets !== null,
         rays,
@@ -321,6 +329,15 @@ export function createAntiqueLook(init: {
         io.bodyDepth.view,
         { buffer: g.reliefUniforms },
       ]);
+    }
+    // The plate's arrays are written only here, so the Moon's row is copied into its layer.
+    if (moonPrinted) {
+      const { width, height } = targets.sizeOf(ANTIQUE_TARGETS.moon);
+      encoder.copyTextureToTexture(
+        { texture: targets.textureOf(ANTIQUE_TARGETS.moon) },
+        { texture: targets.textureOf(ANTIQUE_TARGETS.full), origin: [0, 0, ANTIQUE_FULL_LAYERS.moon] },
+        [width, height, 1],
+      );
     }
     // One instance per print-points texel; the shader drops those holding no star.
     const cells = printed ? targets.sizeOf(ANTIQUE_TARGETS.printPoints) : { width: 1, height: 1 };

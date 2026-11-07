@@ -63,6 +63,7 @@ export const ANTIQUE_ONLY_PASSES: readonly string[] = [
   'earth-antique-map',
   'body-albedo-mask',
   'moon-print',
+  'moon-relief',
   'star-points-print',
   'star-catalog-print',
   'galaxy-points-print',
@@ -91,6 +92,10 @@ export const ANTIQUE_LAND_FORMAT: GPUTextureFormat = 'rg8unorm';
  * proximity (the outline-colour band), b line ink, a sign ink. */
 export const ANTIQUE_GEOGRAPHY_FORMAT: GPUTextureFormat = 'rgba8unorm';
 
+/** The Moon's own row (`antiqueLook/bodies/moonRow.wesl`), copied into the plate's
+ * `moon` layer, so it takes that array's format. */
+export const ANTIQUE_MOON_FORMAT: GPUTextureFormat = 'rgba8unorm';
+
 /** The print-points row (`antiqueLook/printPoint.wesl`): xy NDC and a magnitude need
  * floats; its depth ranks the points in a texel by magnitude. */
 export const ANTIQUE_PRINT_POINTS_FORMAT: GPUTextureFormat = 'rgba16float';
@@ -110,12 +115,13 @@ export const ANTIQUE_TARGETS = {
   lines: 'antique-lines',
   geography: 'antique-geography',
   relief: 'antique-relief',
+  moon: 'antique-moon',
 } as const;
 
 /** The layers of the plate's array rows, one row per size and format (full res rgba8,
  * ¼ res and 1/16 res rgba16float), mirrored by the `*_LAYER` constants in fragment.wesl.
  * A new row the look writes and the plate reads is a layer here, never a plate binding:
  * WebGPU allows a stage 16 sampled textures and a phone may offer no more. */
-export const ANTIQUE_FULL_LAYERS = { paper: 0, starInk: 1, decor: 2, decorHue: 3 } as const;
+export const ANTIQUE_FULL_LAYERS = { paper: 0, starInk: 1, decor: 2, decorHue: 3, moon: 4 } as const;
 export const ANTIQUE_QUARTER_LAYERS = { wash: 0, nebula: 1, landBlur: 2 } as const;
 export const ANTIQUE_LOW_LAYERS = { glow: 0, structureGlow: 1 } as const;
