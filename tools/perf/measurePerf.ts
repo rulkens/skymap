@@ -109,6 +109,8 @@ type PerfOptions = {
   /** Measure each scenario at ALL tiers and print a per-pass comparison table,
    *  instead of the single-tier run. Conflicts with --tier and --sweep. */
   compareTiers: boolean;
+  /** Extra URL gates (`--gate antique` → `?perf&antique`), to measure an opt-in mode. */
+  gates: string[];
 };
 
 /**
@@ -126,6 +128,7 @@ function parseArgs(argv: readonly string[]): PerfOptions {
     sweep: false,
     tier: null,
     compareTiers: false,
+    gates: [],
   };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -141,7 +144,8 @@ function parseArgs(argv: readonly string[]): PerfOptions {
       arg === '--dpr' ||
       arg === '--frames' ||
       arg === '--url' ||
-      arg === '--tier'
+      arg === '--tier' ||
+      arg === '--gate'
     ) {
       const value = argv[++i];
       if (value === undefined) throw new Error(`${arg} requires a value`);
@@ -161,6 +165,7 @@ function parseArgs(argv: readonly string[]): PerfOptions {
         }
       }
       if (arg === '--url') options.url = value.replace(/\/$/, '');
+      if (arg === '--gate') options.gates.push(value);
       if (arg === '--tier') {
         if (!TIER_LADDER.includes(value as Tier)) {
           throw new Error(`unknown tier '${value}' (known: ${TIER_LADDER.join(', ')})`);
@@ -169,7 +174,7 @@ function parseArgs(argv: readonly string[]): PerfOptions {
       }
     } else {
       throw new Error(
-        `unknown flag '${arg}' (known: --scenario, --dpr, --frames, --url, --tier, --json, --sweep, --compare-tiers)`,
+        `unknown flag '${arg}' (known: --scenario, --dpr, --frames, --url, --tier, --gate, --json, --sweep, --compare-tiers)`,
       );
     }
   }
@@ -195,13 +200,18 @@ function parseArgs(argv: readonly string[]): PerfOptions {
  * collapse them to a summary, and JSON mode surfaces them raw. The returned
  * array is live, so callers read it AFTER sampling.
  */
+/** The page the harness boots: `?perf` plus any `--gate` flags. */
+function perfPageUrl(options: PerfOptions): string {
+  return `${options.url}/?perf${options.gates.map((gate) => `&${gate}`).join('')}`;
+}
+
 async function bootPerfPage(
   context: BrowserContext,
   url: string,
 ): Promise<{ page: Page; slotGroups: Record<string, string>; pageErrors: string[] }> {
   const page = await context.newPage();
   const pageErrors = collectPageErrors(page);
-  await bootHookedPage(page, `${url}/?perf`);
+  await bootHookedPage(page, url);
   await warnIfWrongCheckout(page);
   const slotGroups = (await page.evaluate(
     () =>
@@ -298,7 +308,7 @@ async function measureScenario(
     deviceScaleFactor: options.dpr,
   });
   try {
-    const { page, slotGroups, pageErrors } = await bootPerfPage(context, options.url);
+    const { page, slotGroups, pageErrors } = await bootPerfPage(context, perfPageUrl(options));
     // Apply --tier (if any) before sampling, then read the actual tier back for
     // the report — see applyTier.
     const tier = await applyTier(page, options.tier);
@@ -382,7 +392,7 @@ async function measureSweep(
       deviceScaleFactor: options.dpr,
     });
     try {
-      const boot = await bootPerfPage(context, options.url);
+      const boot = await bootPerfPage(context, perfPageUrl(options));
       tier = await applyTier(boot.page, options.tier);
       const samples = await sampleStrategy(boot.page, 'merged', scenario.pose, options.frames);
       mergedByScale.push(statsOf(samples));
@@ -466,7 +476,7 @@ async function measureTierCompare(
       deviceScaleFactor: options.dpr,
     });
     try {
-      const boot = await bootPerfPage(context, options.url);
+      const boot = await bootPerfPage(context, perfPageUrl(options));
       // Always hot-swap, even to `medium`: a uniform code path, no per-tier
       // branch. applyTier's same-tier no-op resolves fast after the debounce.
       await applyTier(boot.page, tier);
