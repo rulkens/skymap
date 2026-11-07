@@ -20,6 +20,7 @@ import { ANTIQUE_REGIME_MPC } from '../../../data/rendering/antiqueLook';
 import { raDecDistToCartesian } from '../../math/raDecDistToCartesian';
 import { rotateVec3ByTightMat3 } from '../../math/rotateVec3ByTightMat3';
 import { projectDirToPx } from '../../camera/projection/projectDirToPx';
+import { sheetAnchorCentre } from '../../render/sheetAnchorCentre';
 import { rayThroughPx } from '../../camera/projection/rayThroughPx';
 import { smoothstep } from '../../math/smoothstep';
 import { screenNorthAngle } from '../../camera/projection/screenNorthAngle';
@@ -94,13 +95,7 @@ export function placeAntiqueOrnaments(input: {
         smoothstep(SKY_FADE_IN[0], SKY_FADE_IN[1], share) *
         (1 - smoothstep(SKY_FADE_OUT[0], SKY_FADE_OUT[1], share));
     } else {
-      const [ix, iy] = anchor.insetUnits;
-      const left = anchor.corner === 'topLeft' || anchor.corner === 'bottomLeft';
-      const top = anchor.corner === 'topLeft' || anchor.corner === 'topRight';
-      centre = [
-        left ? ix * unitPx : size.width - ix * unitPx,
-        top ? iy * unitPx : size.height - iy * unitPx,
-      ];
+      centre = sheetAnchorCentre(anchor, size.width, size.height, unitPx);
       widthPx = anchor.sizeUnits * unitPx;
       dir = rayThroughPx(centre, basis, frustum, size);
     }
