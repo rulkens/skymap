@@ -70,7 +70,8 @@ struct MoonCrater {
   cosReach: f32,
   // 1 for a crater the look names: ringed at full weight under the size cut.
   named: f32,
-  _p1: f32,
+  // 1 for a rayed crater thrown on a sea (its blanket, `craterRims`).
+  onSea: f32,
 };
 struct MoonPrint {
   count: u32,
@@ -264,56 +265,30 @@ fn crescentInk(theta: f32, gTheta: f32, q: f32, rimUnits: f32, pxUnits: f32, see
   return inkLine(d, w, pxUnits) * step(0.5 * pxUnits, w) * step(-0.05, t);
 }
 
-// A rayed crater's ejecta (weight over 1: Copernicus, Keplerus, Aristarchus) brightens the
-// ground it fell on for ~300 km, which then reads as highland: the row takes the ground
-// round it, the two darkest of 8 taps on each of three circles 4, 6 and 8 radii out (the
-// dark between and beyond the rays), fading out over BLANKET radii, where the shore follows
-// the albedo, so a crater thrown on a sea sits in that sea. x that ground (sqrt luma), y
-// its reach 0..1.
+// A rayed crater's ejecta brightens the ground it fell on for ~300 km, which then reads as
+// highland: round a crater the look knows was thrown on a sea (`onSea`: Copernicus,
+// Keplerus, Aristarchus) the row takes that sea's ground, MARE_GROUND, fading out over
+// BLANKET radii, where the shore follows the albedo, so the crater sits in its sea.
 const BLANKET = vec2<f32>(2.5, 7.0);
-// The taps' mip: the albedo over ~40 km.
-const BLANKET_TEXELS: f32 = 256.0;
+const MARE_GROUND: f32 = 0.34;
 
-fn blanketGround(n: vec3<f32>) -> vec2<f32> {
-  var ground = 1.0;
-  var reach = 0.0;
-  let lod = log2(f32(textureDimensions(bodyTexture).x) / BLANKET_TEXELS);
-  for (var i = 0u; i < moon.count; i++) {
-    let cr = moon.craters[i];
-    let cosPsi = dot(n, cr.c);
-    let here = 1.0 - smoothstep(BLANKET.x, BLANKET.y, acos(clamp(cosPsi, -1.0, 1.0)) / cr.rho);
-    if (cr.weight < 1.05 || here <= 0.0) {
-      continue;
-    }
-    let e1 = normalize(cross(vec3<f32>(0.0, 0.0, 1.0), cr.c));
-    let e2 = cross(cr.c, e1);
-    var d0 = 1.0;
-    var d1 = 1.0;
-    for (var k = 0; k < 24; k++) {
-      let a = f32(4 + 2 * (k / 8)) * cr.rho;
-      let t = f32(k) * 0.7853982 + f32(k / 8) * 0.39;
-      let p = cr.c * cos(a) + (e1 * cos(t) + e2 * sin(t)) * sin(a);
-      let rgb = textureSampleLevel(bodyTexture, bodySampler, equirectUvFromDir(p), lod).rgb;
-      let s = sqrt(dot(rgb, vec3<f32>(0.2126, 0.7152, 0.0722)));
-      d1 = min(d1, max(d0, s));
-      d0 = min(d0, s);
-    }
-    ground = min(ground, 0.5 * (d0 + d1));
-    reach = max(reach, here);
-  }
-  return vec2<f32>(ground, reach);
-}
 
 // x rim ink (the nearest live ring's line, every crescent), y inside a crater's floor
-// (0..1). n the geometric normal, dNdx/dNdy its screen derivatives, rd the eye's ray.
+// (0..1), z the reach of a sea crater's blanket (0..1). n the geometric normal, dNdx/dNdy its screen derivatives, rd the eye's ray.
 fn craterRims(n: vec3<f32>, dNdx: vec3<f32>, dNdy: vec3<f32>, sun: vec3<f32>, rd: vec3<f32>,
-              unitsPerRad: f32, pxUnits: f32) -> vec2<f32> {
-  // The youngest ring holding the point inside 0.97 of its rim (1 - cos psi ~ psi² / 2).
+              unitsPerRad: f32, pxUnits: f32) -> vec3<f32> {
+  // The youngest ring holding the point inside 0.97 of its rim (small angles: psi² ~
+  // 2 (1 - cos psi)), and the blanket's reach.
   var youngest = -1.0;
+  var blanket = 0.0;
   for (var i = 0u; i < moon.count; i++) {
-    let cr = moon.craters[i];
-    if (1.0 - dot(n, cr.c) < 0.47 * cr.rho * cr.rho) {
-      youngest = max(youngest, craterYouth(cr));
+    let rho = moon.craters[i].rho;
+    let psi2 = 2.0 * (1.0 - dot(n, moon.craters[i].c));
+    if (psi2 < 0.94 * rho * rho) {
+      youngest = max(youngest, craterYouth(moon.craters[i]));
+    }
+    if (moon.craters[i].onSea > 0.0 && psi2 < BLANKET.y * BLANKET.y * rho * rho) {
+      blanket = max(blanket, 1.0 - smoothstep(BLANKET.x, BLANKET.y, sqrt(max(psi2, 0.0)) / rho));
     }
   }
   var ink = 0.0;
@@ -374,7 +349,7 @@ fn craterRims(n: vec3<f32>, dNdx: vec3<f32>, dNdy: vec3<f32>, sun: vec3<f32>, rd
       ink = inkLine(d, width, pxUnits) * smoothstep(0.05, 0.25, w) * smoothstep(gap - 0.06, gap + 0.06, arc);
     }
   }
-  return vec2<f32>(max(ink, crescent), inFloor);
+  return vec3<f32>(max(ink, crescent), inFloor, blanket);
 }
 
 @fragment
@@ -401,15 +376,15 @@ fn fsMoonPrint(in: TexturedBodyVSOut) -> @location(0) vec4<f32> {
   let day = smoothstep(-0.02, 0.06, lit);
   // A crater floor brighter than any sea keeps the plate's mare lines off it (b + 2).
   let fine = mareTap(uv, grad.ddx, grad.ddy, 1.0, MARE_MIP_TEXELS, MARE_CAP_KM);
-  let blanket = blanketGround(ng);
+  let blanket = rims.z;
   let albedo = mareAlbedo(uv, grad.ddx, grad.ddy);
   let wide = mareTap(uv, grad.ddx, grad.ddy, MARE_WIDE_PX, MARE_WIDE_TEXELS, MARE_WIDE_CAP_KM);
   // The blanket keeps the albedo's own swell over its ground, so the sea's lines still vary.
-  let thrownOn = min(albedo, blanket.x + 0.6 * (albedo - wide));
+  let thrownOn = min(albedo, MARE_GROUND + 0.6 * (albedo - wide));
   // A dark floor passes the plate's wide support, which keeps a walled plain's floor paper.
   let support = select(wide, min(wide, fine), rims.y > 0.5 && fine * fine < DARK_FLOOR);
-  return encodeMoonRow(mix(albedo, thrownOn, blanket.y), lit, rims.x * day,
-    rims.y > 0.5 && fine * fine > BRIGHT_FLOOR, mix(support, min(support, blanket.x), blanket.y));
+  return encodeMoonRow(mix(albedo, thrownOn, blanket), lit, rims.x * day,
+    rims.y > 0.5 && fine * fine > BRIGHT_FLOOR, mix(support, min(support, MARE_GROUND), blanket));
 }
 
 // The Moon's ground in the shared relief row (`relief.wesl`'s contract), from the normal
@@ -431,14 +406,18 @@ const RING_INNER: f32 = 0.97;
 const RING_FLANK: f32 = 1.3;
 const RELIEF_STEEP: f32 = 0.8;
 
-// The nearest ring's psi / rho at n (small angles: psi ~ sqrt(2 (1 - cos psi))).
-fn nearestRing(n: vec3<f32>) -> f32 {
-  var q = 1e9;
+// x inside a ring to RING_INNER of its radius, y within RING_FLANK of one (small angles:
+// psi² ~ 2 (1 - cos psi)).
+fn ringZone(n: vec3<f32>) -> vec2<bool> {
+  var inner = false;
+  var flank = false;
   for (var i = 0u; i < moon.count; i++) {
-    let cr = moon.craters[i];
-    q = min(q, sqrt(max(2.0 * (1.0 - dot(n, cr.c)), 0.0)) / cr.rho);
+    let rho = moon.craters[i].rho;
+    let psi2 = 2.0 * (1.0 - dot(n, moon.craters[i].c));
+    inner = inner || psi2 < RING_INNER * RING_INNER * rho * rho;
+    flank = flank || psi2 < RING_FLANK * RING_FLANK * rho * rho;
   }
-  return q;
+  return vec2<bool>(inner, flank);
 }
 
 @fragment
@@ -475,8 +454,8 @@ fn fsMoonRelief(in: TexturedBodyVSOut) -> @location(0) vec4<f32> {
   let noise = groundNoiseAt(ng * moon.radiusM, vec3<i32>(0), metresPerUnit);
   let flat = dot(ng, u.sunDirLocal);
   let day = smoothstep(-0.02, 0.06, flat + SLOPE_GAIN * (dot(n, u.sunDirLocal) - flat));
-  let q = nearestRing(ng);
-  let onRing = q < RING_INNER || (q < RING_FLANK && slope > RELIEF_STEEP);
+  let zone = ringZone(ng);
+  let onRing = zone.x || (zone.y && slope > RELIEF_STEEP);
   let stroke = select(-RELIEF_FLAT, slope, slope > RELIEF_STROKE && onRing) * resolved * day;
   return vec4<f32>(fall, noise, stroke);
 }

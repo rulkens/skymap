@@ -26,6 +26,7 @@ import { namedMoonCraters } from '../present/namedMoonCraters';
 import { pickMoonCraters } from '../present/pickMoonCraters';
 import { reweighMoonCraters } from '../present/reweighMoonCraters';
 import { ANTIQUE_MOON_CRATER_WEIGHTS } from '../data/antiqueMoonCraterWeights';
+import { ANTIQUE_MOON_SEA_CRATERS } from '../data/antiqueMoonSeaCraters';
 import { texturedBodyUniforms } from '../present/texturedBodyUniforms';
 import { packMoonPrint } from '../render/packMoonPrint';
 
@@ -38,6 +39,9 @@ export function moonPrintPass(runtime: BodyRuntime): ContentPass {
   const named = namedMoonCraters(baked, ANTIQUE_MOON_PLACES, ANTIQUE_MOON_TABLE_RADIUS_KM);
   const table = reweighMoonCraters(baked, named, ANTIQUE_MOON_CRATER_WEIGHTS);
   const namedRows = new Set(named.map((n) => n.index));
+  const seaRows = new Set(
+    named.filter((n) => ANTIQUE_MOON_SEA_CRATERS.has(n.id)).map((n) => n.index),
+  );
   const radiusM = innerBoundRadiusM(
     SCENE_CELESTIAL_BODIES.find((b) => b.id === ANTIQUE_MOON_HOST)!.surface,
   );
@@ -67,7 +71,7 @@ export function moonPrintPass(runtime: BodyRuntime): ContentPass {
         },
         named,
       );
-      packMoonPrint(table, picked, unitPx, ctx.drawPxPerRad, radiusM, bytes, namedRows);
+      packMoonPrint(table, picked, unitPx, ctx.drawPxPerRad, radiusM, bytes, namedRows, seaRows);
       runtime.texturedBodyRenderer.drawMoonPrint(pass, record.bodyId, record.uniforms, bytes);
     },
   };
