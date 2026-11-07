@@ -4,10 +4,10 @@ import { distanceMpc } from '../../../../utils/math/distanceMpc';
 import { selectionDriver } from '../../../../utils/selection/selectionDriver';
 import { publishBodyDistanceGate } from './publishBodyDistanceGate';
 
-/** Camera to focused-body distance for the InfoCard; null unless an orbital body in this frame's map is focused. */
+/** Camera to focused-body distance for the InfoCard, on ready frames only; null unless an orbital body in this frame's map is focused. */
 export const bodyDistanceReadoutRow: FrameReadoutRow = {
   publish: (frame, dispatch) => {
-    if (!publishBodyDistanceGate(frame.nowMs)) return;
+    if (!frame.isReady || !publishBodyDistanceGate(frame.nowMs)) return;
     const focusId = selectionDriver(frame.focusRow)?.poseId ?? null;
     const bodyState = focusId === null ? undefined : frame.bodyStates.get(focusId);
     dispatch(

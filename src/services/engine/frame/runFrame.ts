@@ -138,25 +138,24 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     bodyStates,
   });
 
-  // Ahead of the ready gate, as the scale bar always was: rows read the camera, not the snapshot.
-  if (state.booted) {
-    const frame: FrameReadoutCtx = {
-      nowMs,
-      canvasCssPx: { width: deps.canvas.clientWidth, height: deps.canvas.clientHeight },
-      camPosMpc: cam.position,
-      fovYRad: cam.fovYRad,
-      altitudeMpc: input.altitudeMpc,
-      focusRow: state.selectionRows.focus,
-      bodyStates,
-    };
-    for (const row of FRAME_READOUT_ROWS) row.publish(frame, deps.cb.store.dispatch);
-  }
-
   // Minted here so `renderFrame` gets the SAME mutable `Set`; passes see only the
   // `ReadonlySet` on `snapshot.renderedTargets`.
   const renderedTargets = new Set<string>();
   // The 'not ready' branch is the window before cam + GPU handles populate.
   const snapshot = deriveFrameContext(state, input, renderedTargets);
+  // Ahead of the ready return: each row gates on `booted`/`isReady` itself.
+  const frame: FrameReadoutCtx = {
+    nowMs,
+    booted: state.booted,
+    isReady: snapshot.isReady,
+    canvasCssPx: { width: deps.canvas.clientWidth, height: deps.canvas.clientHeight },
+    camPosMpc: cam.position,
+    fovYRad: cam.fovYRad,
+    altitudeMpc: input.altitudeMpc,
+    focusRow: state.selectionRows.focus,
+    bodyStates,
+  };
+  for (const row of FRAME_READOUT_ROWS) row.publish(frame, deps.cb.store.dispatch);
   if (!snapshot.isReady) {
     // Bootstrap populates the handles without waking any channel: keep polling.
     state.subsystems.scheduler.requestRender();
