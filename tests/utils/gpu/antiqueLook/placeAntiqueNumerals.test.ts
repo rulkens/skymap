@@ -4,7 +4,8 @@
  * samples have to be unwrapped before crossings are found. A ruling that lands
  * exactly on a sample (the view centre here) is set once. Over a ruled globe the
  * border reads the globe's own longitude, counted from its prime meridian, and
- * never interpolates a number across the horizon where the frames switch.
+ * never interpolates a number across the horizon where the frames switch. A side
+ * number stays inside the strip the plate shader inks numbers in, however long.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -22,17 +23,19 @@ import {
   ANTIQUE_NUMERAL_INSET_UNITS,
   ANTIQUE_NUMERAL_UNITS,
 } from '../../../../src/data/rendering/antiqueLook';
+import { ANTIQUE_SIDE_NUMERAL_REACH_UNITS } from '../../../../src/data/rendering/antiqueRulings';
+import { readShaderSource } from '../../../../tools/utils/wgsl/readShaderSource';
 
 const FRUSTUM = { tanLeft: -1.0264, tanRight: 1.0264, tanDown: -0.5774, tanUp: 0.5774 };
 const NARROW = { tanLeft: -0.3, tanRight: 0.3, tanDown: -0.17, tanUp: 0.17 };
 const SIZE = { width: 1600, height: 900 };
-// Digit d sits at x = 10·d on a 100 × 10 sheet, so a glyph's rect names its digit.
+// Digit d sits at x = 10·d on a 120 × 10 sheet, then ° and ’, so a glyph's rect names it.
 const SHEET = {
-  width: 100,
+  width: 120,
   height: 10,
   baseline: 0.8,
   glyphs: Object.fromEntries(
-    [...'0123456789'].map((d, i) => [d, { x: i * 10, y: 0, w: 10, h: 10 }]),
+    [...'0123456789°’'].map((d, i) => [d, { x: i * 10, y: 0, w: 10, h: 10 }]),
   ),
 };
 
@@ -81,7 +84,7 @@ function topNumbers(
     .sort((p, q) => p.centrePx[0] - q.centrePx[0]);
   const numbers: { left: number; right: number; text: string }[] = [];
   for (const g of glyphs) {
-    const digit = String(Math.round(g.rect[0] * 10));
+    const digit = String(Math.round(g.rect[0] * 12));
     const last = numbers[numbers.length - 1];
     // A number's digits abut; a gap starts the next number.
     if (last && Math.abs(last.right - (g.centrePx[0] - g.halfPx[0])) < 1e-6) {
@@ -142,6 +145,41 @@ describe('placeAntiqueNumerals', () => {
     expect(at('20')).toBeGreaterThan(0);
     expect(Math.abs(at('15'))).toBeLessThan(Math.abs(at('20')));
     expect(numbers.map((n) => n.text)).not.toContain('180');
+  });
+
+  it('keeps a long side number on the plate, inside the strip numbers are inked in', () => {
+    // Dec 52.25°–52.75° at 5′: no whole degree, so the first left number carries "52°20’".
+    const a = (52.5 * Math.PI) / 180;
+    const basis: ViewBasis = {
+      forward: [Math.cos(a), 0, Math.sin(a)],
+      right: [0, -1, 0],
+      up: [-Math.sin(a), 0, Math.cos(a)],
+    };
+    const tan = Math.tan((0.25 * Math.PI) / 180);
+    const frustum = { tanLeft: -tan * 1.78, tanRight: tan * 1.78, tanDown: -tan, tanUp: tan };
+    const glyphs = placeAntiqueNumerals({
+      basis,
+      frustum,
+      size: SIZE,
+      unitPx: 1,
+      rulings: { sky: frame(5 / 60), globe: null },
+      sheet: SHEET,
+    });
+    // Clear of the top and bottom rows, whose minutes sit a little off their line.
+    const rows = ANTIQUE_NUMERAL_INSET_UNITS + ANTIQUE_NUMERAL_UNITS;
+    const isLeft = (g: AntiqueGlyphInstance) =>
+      g.centrePx[0] < SIZE.width / 4 && g.centrePx[1] > rows && g.centrePx[1] < SIZE.height - rows;
+    const left = glyphs.filter(isLeft);
+    // The plate shader inks numbers only within its reach of the edge.
+    const reach = readShaderSource('src/services/gpu/shaders/antiqueLook/fragment.wesl').match(
+      /NUMERAL_SIDE_REACH: f32 = ([\d.]+)/,
+    );
+    expect(Number(reach?.[1])).toBe(ANTIQUE_SIDE_NUMERAL_REACH_UNITS);
+    expect(left.some((g) => Math.round(g.rect[0] * 12) === 10)).toBe(true); // the carry's °
+    for (const g of left) {
+      expect(g.centrePx[0] - g.halfPx[0]).toBeGreaterThan(ANTIQUE_LADDER_UNITS);
+      expect(g.centrePx[0] + g.halfPx[0]).toBeLessThan(ANTIQUE_SIDE_NUMERAL_REACH_UNITS + 1e-9);
+    }
   });
 
   it('never numbers a crossing interpolated across the horizon', () => {

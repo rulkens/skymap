@@ -52,5 +52,9 @@ export const ANTIQUE_GLOBE_RULINGS: readonly {
 export const ANTIQUE_GLOBE_NET_COVERAGE = [0.05, 0.3] as const;
 export const ANTIQUE_GLOBE_NET_KM_PER_UNIT = [0.5, 2] as const;
 
+/** A side number runs inward from the inner rule and ends within this many print units of
+ * the plate's edge (shrunk to fit if longer): the plate shader's `NUMERAL_SIDE_REACH`. */
+export const ANTIQUE_SIDE_NUMERAL_REACH_UNITS = 100;
+
 /** A border number's minutes are set smaller than its degrees, as the maps set them. */
 export const ANTIQUE_MINUTE_SCALE = 11 / 15;

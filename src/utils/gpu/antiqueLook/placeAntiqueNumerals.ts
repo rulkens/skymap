@@ -21,6 +21,7 @@ import {
   ANTIQUE_NUMERAL_INSET_UNITS,
   ANTIQUE_NUMERAL_UNITS,
 } from '../../../data/rendering/antiqueLook';
+import { ANTIQUE_SIDE_NUMERAL_REACH_UNITS } from '../../../data/rendering/antiqueRulings';
 import { rayThroughPx } from '../../camera/projection/rayThroughPx';
 import { formatAntiqueDegrees } from './formatAntiqueDegrees';
 import { rulingLonLat } from './rulingLonLat';
@@ -121,6 +122,7 @@ export function placeAntiqueNumerals(input: {
         input.sheet,
         out,
       );
+      if (!edge.lon) fitSideNumber(out, before, edge.text[0] > 0, size.width, unitPx);
       const axis = edge.lon ? 0 : 1;
       const set = out.slice(before);
       const start = Math.min(...set.map((g) => g.centrePx[axis] - g.halfPx[axis]));
@@ -133,4 +135,36 @@ export function placeAntiqueNumerals(input: {
     }
   }
   return out;
+}
+
+/** A side number's glyphs (from `before` on) moved to start half a numeral short of the
+ * numerals' inset and run inward, shrunk about that start if they would pass the reach. */
+function fitSideNumber(
+  out: AntiqueGlyphInstance[],
+  before: number,
+  fromLeft: boolean,
+  width: number,
+  unitPx: number,
+): void {
+  const set = out.slice(before);
+  if (set.length === 0) return;
+  const start = (ANTIQUE_NUMERAL_INSET_UNITS - ANTIQUE_NUMERAL_UNITS / 2) * unitPx;
+  const room = ANTIQUE_SIDE_NUMERAL_REACH_UNITS * unitPx - start;
+  const lo = Math.min(...set.map((g) => g.centrePx[0] - g.halfPx[0]));
+  const hi = Math.max(...set.map((g) => g.centrePx[0] + g.halfPx[0]));
+  const k = Math.min(1, room / (hi - lo));
+  const anchor = fromLeft ? lo : hi;
+  const to = fromLeft ? start : width - start;
+  const y = set.reduce((sum, g) => sum + g.centrePx[1], 0) / set.length;
+  out.splice(
+    before,
+    set.length,
+    ...set.map(
+      (g): AntiqueGlyphInstance => ({
+        ...g,
+        centrePx: [to + (g.centrePx[0] - anchor) * k, y + (g.centrePx[1] - y) * k],
+        halfPx: [g.halfPx[0] * k, g.halfPx[1] * k],
+      }),
+    ),
+  );
 }

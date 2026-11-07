@@ -114,6 +114,8 @@ const DEPTH_JUMP: f32 = 0.05;
 const PLATE: f32 = 15.0;
 const MARGIN: f32 = 30.0;
 const BAND: f32 = 7.0;
+// A side number runs inward up to this far from the sheet's edge: ANTIQUE_SIDE_NUMERAL_REACH_UNITS.
+const NUMERAL_SIDE_REACH: f32 = 100.0;
 // Hatch spacing on bodies, print units.
 const HATCH: f32 = 4.2;
 // A constellation line's alpha at full cover: its BASE_ALPHA (constellations/fragment.wesl).
@@ -612,8 +614,9 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let lettered = max(scene * (1.0 - captionHalo), captions);
   // The border's digits only exist along the edges: skip their loop elsewhere.
   var numerals = 0.0;
-  let edgeUnits = min(min(p.x, u.res.x / u.unit - p.x), min(p.y, u.res.y / u.unit - p.y));
-  if (edgeUnits < MARGIN + BAND + 30.0) {
+  let sideUnits = min(p.x, u.res.x / u.unit - p.x);
+  let rowUnits = min(p.y, u.res.y / u.unit - p.y);
+  if (rowUnits < MARGIN + BAND + 30.0 || sideUnits < NUMERAL_SIDE_REACH) {
     numerals = numeralInk(px) * (1.0 - ornament.b);
   }
   let content = max(lettered, max(ornament.g, numerals));
