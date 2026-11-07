@@ -76,6 +76,7 @@ import { HDR_TARGET_FORMAT, FOREGROUND_DEPTH_FORMAT } from '../../data/renderTar
 import { reducedTargetSize } from '../../utils/gpu/reducedTargetSize';
 import { captureRowAllocateWhen } from '../../utils/gpu/captureRowAllocateWhen';
 import { depthClearValueFor } from '../../utils/gpu/depthClearValueFor';
+import { antiqueLookTargetRows } from './passes/antiqueLook/antiqueLookTargetRows';
 
 const OPAQUE_BLACK: GPUColor = { r: 0, g: 0, b: 0, a: 1 };
 // Below `DEFAULT_BLOOM_THRESHOLD` (2.0 raw HDR), so the matte's background never blooms.
@@ -182,6 +183,7 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
       clearValue: { r: 0, g: 0, b: 0, a: 1 },
       allocateWhen: (state) => state.viewRig === 'dome',
     },
+    ...antiqueLookTargetRows(swapFormat),
     {
       id: 'swap',
       format: swapFormat,

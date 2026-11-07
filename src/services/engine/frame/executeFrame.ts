@@ -436,6 +436,27 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         pass.end();
         break;
       }
+      case 'stylize': {
+        // Like `bloom`, the look opens its own ordered passes; it writes the swap
+        // chain whole, so no first-touch bookkeeping applies to its intermediates.
+        if (!touched.has(step.source)) break;
+        const look = state.gpu.antiqueLook;
+        if (!look) throw new Error('executeFrame: antiqueLook missing for stylize step');
+        look.encode(
+          encoder,
+          ctx,
+          state,
+          {
+            print: viewFor(step.source, ctx, swapView),
+            // An untouched overlay row holds last frame's captions.
+            overlay: touched.has(step.overlay) ? viewFor(step.overlay, ctx, swapView) : null,
+            swap: viewFor('swap', ctx, swapView),
+          },
+          timing,
+        );
+        touched.add('swap');
+        break;
+      }
       case 'bloom': {
         // The bloom sub-pipeline runs its own strictly-ordered passes (bright →
         // downsample×4 → upsample×4 → fold), so unlike a `'render'` step it does

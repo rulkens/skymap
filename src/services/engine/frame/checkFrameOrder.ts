@@ -69,6 +69,8 @@ const STEP_FACTS: {
   // The dest is a VIEW's own output, not a named target row, so only the
   // source enters the declared-target check.
   copy: (spec) => ({ ...NONE, targets: [spec.source] }),
+  // Its dest is always the swap chain; both inputs must be declared rows.
+  stylize: (spec) => ({ ...NONE, targets: [spec.source, spec.overlay] }),
 };
 
 export function checkFrameOrder(

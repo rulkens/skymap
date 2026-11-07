@@ -44,6 +44,7 @@ describe('timedSlotGroupsOf', () => {
       expandFrameOrder(order, [fakePass('planets')], {
         tone: TONE,
         bloomEnabled: false,
+        antique: false,
         foregroundChain: [NEAR0, 2, 3],
         captureFaces: new Map(),
         bodyRowSlabs: { lens: [], insideAtmosphere: [] },

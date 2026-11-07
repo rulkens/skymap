@@ -1,0 +1,189 @@
+// antiqueLook/fragment.wesl — the plate: the tone-mapped frame re-cut as an
+// engraved, hand-coloured chart on the baked sheet.
+//
+// Two regimes, split by foreground:0's alpha. Sky is INVERTED, as on every
+// period chart: bare paper where space is empty, a glyph per star (from the
+// suppressed quarter-res peaks), and the low band of light — glows, nebulae,
+// structure discs — as a pigment wash with stipple and contour lines, never as
+// solid ink. Bodies are engraved the classic way: shadow hatched, lit side
+// paper, colour washed in, oceans waterlined, limb outlined.
+
+import package::antiqueLook::io::AntiqueUniforms;
+import package::antiqueLook::io::VSOut;
+import package::antiqueLook::paper::vnoise;
+import package::antiqueLook::engraving::crossHatch;
+import package::antiqueLook::engraving::stipple;
+import package::antiqueLook::engraving::starGlyph;
+import package::antiqueLook::graticule::graticule;
+import package::antiqueLook::graticule::raDec;
+import package::antiqueLook::graticule::niceStep;
+import package::antiqueLook::pigments::luma;
+import package::antiqueLook::pigments::nearestPigment;
+import package::antiqueLook::pigments::chromaOf;
+import package::antiqueLook::pigments::applyWash;
+
+@group(0) @binding(0) var printTex: texture_2d<f32>;
+@group(0) @binding(1) var overlayTex: texture_2d<f32>;
+@group(0) @binding(2) var bodyTex: texture_2d<f32>;
+@group(0) @binding(3) var<uniform> u: AntiqueUniforms;
+@group(0) @binding(4) var paperTex: texture_2d<f32>;
+@group(0) @binding(5) var washTex: texture_2d<f32>;
+@group(0) @binding(6) var starTex: texture_2d<f32>;
+@group(0) @binding(7) var linear: sampler;
+@group(0) @binding(8) var glowTex: texture_2d<f32>;
+
+// Warm carbon-black copperplate ink, as a transmittance: it multiplies the sheet.
+const INK: vec3<f32> = vec3<f32>(0.17, 0.13, 0.10);
+const FLAG_BODIES: u32 = 1u;
+const FLAG_CAPTIONS: u32 = 2u;
+// Sheet layout in print units: bare margin, plate mark inside it, then the neatline band.
+const PLATE: f32 = 9.0;
+const MARGIN: f32 = 18.0;
+const BAND: f32 = 7.0;
+const CELL: f32 = 4.0;
+// Star contrast below this prints nothing: the paper floor.
+const STAR_FLOOR: f32 = 0.2;
+
+fn texel(t: texture_2d<f32>, ip: vec2<i32>) -> vec4<f32> {
+  let size = vec2<i32>(textureDimensions(t));
+  return textureLoad(t, clamp(ip, vec2<i32>(0), size - 1), 0);
+}
+
+fn bodyCover(ip: vec2<i32>) -> f32 {
+  return select(0.0, texel(bodyTex, ip).a, (u.flags & FLAG_BODIES) != 0u);
+}
+
+// A tent over five bilinear taps: the 1/16 texels' diamonds smoothed out of the contours.
+fn glowAt(uv: vec2<f32>) -> vec3<f32> {
+  let t = 1.0 / vec2<f32>(textureDimensions(glowTex));
+  var sum = textureSampleLevel(glowTex, linear, uv, 0.0).rgb * 2.0;
+  sum += textureSampleLevel(glowTex, linear, uv + vec2<f32>(t.x, t.y) * 0.75, 0.0).rgb;
+  sum += textureSampleLevel(glowTex, linear, uv + vec2<f32>(-t.x, t.y) * 0.75, 0.0).rgb;
+  sum += textureSampleLevel(glowTex, linear, uv + vec2<f32>(t.x, -t.y) * 0.75, 0.0).rgb;
+  sum += textureSampleLevel(glowTex, linear, uv + vec2<f32>(-t.x, -t.y) * 0.75, 0.0).rgb;
+  return sum / 6.0;
+}
+
+fn viewRay(uv: vec2<f32>) -> vec3<f32> {
+  let top = mix(u.rayTL.xyz, u.rayTR.xyz, uv.x);
+  let bottom = mix(u.rayBL.xyz, u.rayBR.xyz, uv.x);
+  return normalize(mix(top, bottom, uv.y));
+}
+
+// Gather the suppressed peaks of the 5×5 cells around this pixel; each stamps a
+// glyph sized by its contrast: a dot for a faint star, six rays for a bright one.
+fn starInk(px: vec2<f32>) -> f32 {
+  let cell = vec2<i32>(px / CELL);
+  var ink = 0.0;
+  for (var j = -2; j <= 2; j++) {
+    for (var i = -2; i <= 2; i++) {
+      let s = texel(starTex, cell + vec2<i32>(i, j));
+      if (s.z < STAR_FLOOR) {
+        continue;
+      }
+      let k = clamp((s.z - STAR_FLOOR) / (1.0 - STAR_FLOOR), 0.0, 1.0);
+      let r = (0.55 + 2.6 * sqrt(k)) * u.unit;
+      ink = max(ink, starGlyph(px - s.xy, r, smoothstep(0.55, 0.85, k)));
+    }
+  }
+  return ink;
+}
+
+// Neatline: heavy outer rule, hairline inner rule, and the degree ladder between —
+// cells inked by the parity of the coordinate each edge cuts. x: ink, y: inside.
+fn neatline(px: vec2<f32>, uv: vec2<f32>) -> vec2<f32> {
+  let p = px / u.unit;
+  let size = u.res / u.unit;
+  let inset = min(min(p.x, size.x - p.x), min(p.y, size.y - p.y)) - MARGIN;
+  let outer = 1.0 - smoothstep(0.0, 0.5, abs(inset + 0.9) - 0.9);
+  let inner = 1.0 - smoothstep(0.0, 0.4, abs(inset - BAND) - 0.3);
+  let rd = raDec(viewRay(uv));
+  let horizontalEdge = min(p.y, size.y - p.y) < min(p.x, size.x - p.x);
+  let coord = select(rd.y, rd.x, horizontalEdge);
+  let perPx = max(fwidth(coord), 1e-5);
+  let cell = niceStep(perPx, 14.0 * u.unit);
+  let ladder = f32(i32(floor(coord / cell)) % 2 == 0) * step(1.6, inset) * step(inset, BAND - 0.6);
+  return vec2<f32>(max(max(outer, inner), ladder), smoothstep(BAND, BAND + 0.6, inset));
+}
+
+// The plate mark: the copper plate's bevel pressed into the sheet, lit from the top left.
+fn plateMark(px: vec2<f32>) -> f32 {
+  let p = px / u.unit;
+  let size = u.res / u.unit;
+  let dx = min(p.x, size.x - p.x) - PLATE;
+  let dy = min(p.y, size.y - p.y) - PLATE;
+  let d = min(dx, dy);
+  let lit = select(select(-1.0, 1.0, p.y < size.y * 0.5), select(-1.0, 1.0, p.x < size.x * 0.5), dx < dy);
+  let bevel = 1.0 - smoothstep(0.0, 1.2, abs(d));
+  // Inside the plate the paper was pressed flat and kept a whisper of plate tone.
+  return bevel * lit * 0.06 - step(0.0, d) * 0.025;
+}
+
+@fragment
+fn fs(in: VSOut) -> @location(0) vec4<f32> {
+  let px = in.pos.xy;
+  let ip = vec2<i32>(px);
+  let p = px / u.unit;
+  let uv = in.uv;
+
+  let sheet = texel(paperTex, ip);
+  let src = texel(printTex, ip).rgb;
+  let body = bodyCover(ip);
+  let sky = 1.0 - body;
+  let frame = neatline(px, uv);
+  let low = textureSampleLevel(washTex, linear, uv, 0.0);
+
+  var col = sheet.rgb * (1.0 + plateMark(px));
+
+  // Hand colour, a little off the engraved line as a colourist's brush was.
+  let slip = (vec2<f32>(vnoise(p * 0.018 + 3.0), vnoise(p * 0.018 + 9.0)) - 0.5) * 0.012;
+  let glowSlip = glowAt(uv + slip);
+  let glowL = luma(glowSlip);
+  let skyWash = smoothstep(0.035, 0.35, glowL) * clamp(0.2 + chromaOf(glowSlip) * 2.0, 0.0, 0.5);
+  let bodyWash = clamp(chromaOf(src) * 2.2, 0.0, 0.7);
+  let washAmt = mix(skyWash, bodyWash, body) * frame.y;
+  col = applyWash(col, nearestPigment(mix(glowSlip, src, body)), washAmt);
+
+  // Sky: glyphs for stars; the smooth band as sparse stipple and, where it is
+  // bright, isophote contours (the Herschel-era way of drawing a nebula).
+  let lowL = luma(glowAt(uv));
+  let iso = log2(max(lowL, 1e-4)) * 1.6;
+  let isoPx = abs(fract(iso + 0.5) - 0.5) / max(fwidth(iso), 1e-4);
+  let contour = (1.0 - smoothstep(0.35 * u.unit, 0.35 * u.unit + 1.0, isoPx)) * smoothstep(0.08, 0.14, lowL) * 0.7;
+  let dots = stipple(p, 2.2, smoothstep(0.05, 0.6, lowL) * 0.45);
+  let skyInk = max(starInk(px), max(dots, contour)) * sky;
+  let rulings = graticule(viewRay(uv), u.unit) * sky * 0.75;
+
+  // Bodies: land hatched by darkness, oceans paper by day with waterlines along
+  // the coast, the night side crossed throughout; the limb gets one firm line.
+  let l = luma(src);
+  let land = clamp(low.a, 0.0, 1.0);
+  // Ocean by hue, not brightness: tone-mapped seas are dark but always blue-led.
+  let ocean = smoothstep(0.06, 0.22, (src.b - max(src.r, src.g * 0.92)) / max(src.b, 0.04));
+  let night = 1.0 - smoothstep(0.03, 0.18, l);
+  let landTone = pow(1.0 - clamp(l * 1.25, 0.0, 1.0), 1.5);
+  let tone = mix(landTone, night * 0.95, ocean);
+  let hatchInk = crossHatch(p, tone, 3.2, 0.35);
+  let waterline = select(0.0, 1.0, low.a >= 0.0) * ocean * (1.0 - night);
+  let wl = land * 6.0;
+  let wlPx = abs(fract(wl + 0.5) - 0.5) / max(fwidth(wl), 1e-4);
+  let waterInk = (1.0 - smoothstep(0.35 * u.unit, 0.35 * u.unit + 1.0, wlPx)) * step(0.02, land) * waterline;
+  let o = i32(round(u.unit));
+  let gx = bodyCover(ip + vec2<i32>(o, 0)) - bodyCover(ip - vec2<i32>(o, 0));
+  let gy = bodyCover(ip + vec2<i32>(0, o)) - bodyCover(ip - vec2<i32>(0, o));
+  let limb = smoothstep(0.25, 0.7, length(vec2<f32>(gx, gy)));
+  let bodyInk = max(hatchInk, waterInk * 0.8) * body;
+
+  var captions = 0.0;
+  if ((u.flags & FLAG_CAPTIONS) != 0u) {
+    let ov = texel(overlayTex, ip);
+    captions = ov.a * (0.45 + 0.55 * luma(ov.rgb / max(ov.a, 1e-3)));
+  }
+
+  let content = max(max(bodyInk, limb), max(skyInk, max(rulings, captions)));
+  var ink = max(content * frame.y, frame.x);
+  // Paper tooth: the burr breaks thin lines where the sheet dips.
+  ink *= 0.78 + 0.22 * smoothstep(0.2, 0.6, sheet.a);
+  col *= mix(vec3<f32>(1.0), INK, ink);
+  return vec4<f32>(col, 1.0);
+}

@@ -40,6 +40,7 @@ function program(over: Partial<FrameInputs> = {}): readonly FrameStep[] {
   return expandFrameOrder(FRAME_ORDER, PASSES, {
     tone: TONE,
     bloomEnabled: false,
+    antique: false,
     foregroundChain: [NEAR0],
     captureFaces: new Map(),
     bodyRowSlabs: { lens: [], insideAtmosphere: [] },

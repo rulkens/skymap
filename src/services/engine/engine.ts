@@ -180,6 +180,7 @@ export function createEngine(
       // the mesh slot family's commit/onRelease call its setMesh/clearMesh.
       meshBodyRenderer: null,
       cubeFaceBlitRenderer: null,
+      antiqueLook: null,
       domeResampleRenderer: null,
       bodyPickRenderer: null,
       orbitTrailRenderer: null,

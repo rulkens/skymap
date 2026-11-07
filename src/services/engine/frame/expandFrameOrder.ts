@@ -22,6 +22,12 @@ import { depthKeyOf } from '../../../utils/render/depthKeyOf';
 export type FrameInputs = {
   readonly tone: ToneMap;
   readonly bloomEnabled: boolean;
+  /**
+   * The antique look is on: the tone-map lands in `print` and the overlay
+   * lines in `overlay` instead of `swap`, and the `stylize` line inks both
+   * onto the swap chain.
+   */
+  readonly antique: boolean;
   readonly foregroundChain: readonly number[];
   /**
    * Faces each capture re-bakes this frame — empty or absent for a capture
@@ -47,6 +53,15 @@ function merge(
   tone: ToneMap | null,
 ): FrameStep {
   return { kind: 'composite', step: { source, dest, blend, tone } };
+}
+
+/**
+ * Under a look the swap chain belongs to `stylize` alone: the scene goes to
+ * `print`, the captions to their own transparent `overlay` row so the look can
+ * ink them as lettering rather than treat them as scene light.
+ */
+function lookTarget(target: string, as: 'print' | 'overlay', frame: FrameInputs): string {
+  return frame.antique && target === 'swap' ? as : target;
 }
 
 /**
@@ -88,7 +103,7 @@ const EXPAND_STEP: { [K in FrameStepSpec['kind']]: ExpandStep<K> } = {
   render: (spec, passes, frame) =>
     (typeof spec.slab === 'number' ? [spec.slab] : frame.bodyRowSlabs[spec.slab]).map((slab) => ({
       kind: 'render',
-      target: spec.target,
+      target: lookTarget(spec.target, 'overlay', frame),
       slab,
       passes: resolvePassNames(spec.passes, passes),
       ...(spec.depth === undefined ? {} : { depth: spec.depth }),
@@ -110,8 +125,12 @@ const EXPAND_STEP: { [K in FrameStepSpec['kind']]: ExpandStep<K> } = {
     ),
   composite: (spec) => [merge(spec.source, spec.dest, 'over', null)],
   bloom: (_spec, _passes, frame) => (frame.bloomEnabled ? [{ kind: 'bloom' }] : []),
-  tonemap: (spec, _passes, frame) => [merge(spec.source, spec.dest, 'replace', frame.tone)],
+  tonemap: (spec, _passes, frame) => [
+    merge(spec.source, lookTarget(spec.dest, 'print', frame), 'replace', frame.tone),
+  ],
   copy: (spec) => [{ kind: 'copy', source: spec.source }],
+  stylize: (spec, _passes, frame) =>
+    frame.antique ? [{ kind: 'stylize', source: spec.source, overlay: spec.overlay }] : [],
 };
 
 /** A render step with nothing left to draw never opens a pass. */

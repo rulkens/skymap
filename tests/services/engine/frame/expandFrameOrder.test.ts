@@ -55,6 +55,7 @@ function program(over: Partial<FrameInputs> = {}): readonly FrameStep[] {
   return expandFrameOrder(FRAME_ORDER, COMPOSED_PASSES, {
     tone: TONE,
     bloomEnabled: false,
+    antique: false,
     foregroundChain: [NEAR0],
     captureFaces: new Map(),
     bodyRowSlabs: { lens: [], insideAtmosphere: [] },
@@ -81,6 +82,7 @@ describe('expandFrameOrder', () => {
     const program = expandFrameOrder(FRAME_ORDER, COMPOSED_PASSES, {
       tone: TONE,
       bloomEnabled: true,
+      antique: false,
       foregroundChain: [NEAR0],
       captureFaces: new Map(),
       bodyRowSlabs: { lens: [], insideAtmosphere: [] },
@@ -124,6 +126,7 @@ describe('expandFrameOrder', () => {
     const program = expandFrameOrder(FRAME_ORDER, COMPOSED_PASSES, {
       tone: TONE,
       bloomEnabled: true,
+      antique: false,
       foregroundChain: [NEAR0],
       captureFaces: new Map(),
       bodyRowSlabs: { lens: [2], insideAtmosphere: [] },
@@ -140,6 +143,7 @@ describe('expandFrameOrder', () => {
     const program = expandFrameOrder(FRAME_ORDER, withoutZoa, {
       tone: TONE,
       bloomEnabled: true,
+      antique: false,
       foregroundChain: [NEAR0],
       captureFaces: new Map(),
       bodyRowSlabs: { lens: [], insideAtmosphere: [] },
@@ -163,6 +167,7 @@ describe('expandFrameOrder', () => {
       {
         tone: TONE,
         bloomEnabled: false,
+        antique: false,
         foregroundChain: [],
         captureFaces: new Map(),
         bodyRowSlabs: { lens: [], insideAtmosphere: [] },
@@ -234,6 +239,7 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     const steps = expandFrameOrder(order, [fakePass('sky'), fakePass('stars'), fakePass('mesh')], {
       tone: TONE,
       bloomEnabled: false,
+      antique: false,
       foregroundChain: [],
       captureFaces: new Map([['probe', [{ face: 4, bodySlabs: [3, 2] }]]]),
       bodyRowSlabs: { lens: [], insideAtmosphere: [] },
@@ -263,6 +269,7 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     const steps = expandFrameOrder(order, [fakePass('sky'), fakePass('stars'), fakePass('mesh')], {
       tone: TONE,
       bloomEnabled: false,
+      antique: false,
       foregroundChain: [],
       captureFaces: new Map([['sgrAStar', [skyFace(0)]]]),
       bodyRowSlabs: { lens: [], insideAtmosphere: [] },
@@ -328,6 +335,7 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     return expandFrameOrder(order, ['stars', 'a', 'b', 'd'].map(fakePass), {
       tone: TONE,
       bloomEnabled: false,
+      antique: false,
       foregroundChain: chain,
       captureFaces: new Map(),
       bodyRowSlabs: { lens: [], insideAtmosphere: [] },

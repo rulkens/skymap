@@ -94,6 +94,7 @@ export function makeSettingsFixture(
 ): EngineSettingsState {
   return {
     orientation: DEFAULT_ORIENTATION,
+    antique: { enabled: false },
     cameraControls: DEFAULT_CAMERA_CONTROLS,
     focusMoves: DEFAULT_FOCUS_MOVES,
     galaxyCatalogs: {

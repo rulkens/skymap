@@ -325,5 +325,8 @@ export const OVERLAYS: FrameSection = {
       depth: { sample: 'foreground:0' },
       passes: ['near0-selection-ring', 'labels-near', 'clip-path-debug'],
     },
+    // The antique look inks the scene and the captions onto the swap chain. Emits
+    // nothing with the look off, when the lines above write `swap` directly.
+    { kind: 'stylize', source: 'print', overlay: 'overlay' },
   ],
 };

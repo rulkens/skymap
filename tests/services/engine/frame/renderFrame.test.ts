@@ -390,6 +390,7 @@ function makeInput(
     filamentIntensity: 1,
     cosmicWebDensityEnabled: false,
     bloomEnabled: false,
+    antique: false,
     ...(overrides.settings ?? {}),
   };
 
@@ -835,6 +836,7 @@ describe('renderFrame', () => {
     const options = {
       tone: { exposure: 1, curve: ToneMapCurve.Reinhard, hdrKnee: 0, hdrHeadroom: 0 },
       bloomEnabled: false,
+      antique: false,
       foregroundChain: foregroundChainOrder(fx.input.canvas.slabs),
       captureFaces: new Map(),
       bodyRowSlabs: bodyRowSlabs(fx.input.canvas),
