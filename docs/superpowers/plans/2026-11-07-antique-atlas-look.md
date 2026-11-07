@@ -267,6 +267,17 @@ Owner ruling 2026-11-07: keep the generic galaxy engraving with these names; the
 - [x] The Zone of Avoidance ruled lightest in the line hierarchy, its pitch and weight wandering by hand (`web.wesl`).
 - [ ] Panel r9 (cartographer 6, historian 6, art 5.5, fidelity 5; r7 galaxies 4.6). Open: the bar and nucleus are no brighter than the arms in the look's print, so they print no darker; the stipple's cell grid shows at 1x; M51's spiral at its default size; dense-field dots cap at one per print cell, not catalogue density; curved arm names; Latin names for post-1690 objects.
 
+### Task 33: The Moon engraved as Riccioli's plate (Moon review r3)
+**Files:** `shaders/bodies/texturedBody/fragment.wesl` (`fsMoonPrint`, `fsMoonRelief`), `shaders/antiqueLook/{bodies/moon,fragment}.wesl`,
+`layers/body/spheres/{data/antiqueMoon*,present/{pickMoonCraters,binMoonCraters},render/{packMoonPrint,texturedBodyRenderer},passes/moon*Pass}.ts`,
+`layers/body/labels/{present/produceAntiqueMoonPlaces,utils/placeAntiqueCraterName}.ts`, `data/labels/antiqueMoonPlaceReveal.ts`
+- [x] Crescents of tapered hachures on each ring's Sun-side wall, sided rims, an older ring yielding inside a younger; relief hachures only on the rings.
+- [x] Clavius' floor chain; ~60 rings on the full disc, 40 in a close-up; Plato and Grimaldi dark-floored.
+- [x] Copernicus, Keplerus and Aristarchus sit in their seas (`ANTIQUE_MOON_SEA_CRATERS`); mare holes bridged, line ends calmer.
+- [x] Crater names beside the rim, sized by print weight; a wider knock-out on Moon plates; five more headline craters.
+- [x] Rings binned by screen tile: the Tycho close-up at dpr 2 costs 22.8 ms a frame (23.6 before the round, 50 at its worst).
+- [ ] Open: Plato, Aristarchus, Posidonius, Aristoteles and Petavius still lose the full-disc declutter (MARE IMBRIVM's name sits on Plato's ring); the terminator's flecks and moiré.
+
 ## Definition of Done
 
 **Deliverables:** the `stylize` FRAME_ORDER line and `antiqueLook` pass; the `antique` settings
