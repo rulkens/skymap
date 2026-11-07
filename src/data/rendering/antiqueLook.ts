@@ -21,8 +21,8 @@ export const ANTIQUE_GLYPH_BYTES = 16 + ANTIQUE_MAX_GLYPHS * 32;
 /** The border in print units from the canvas edge: the ladder's centre line
  * (`MARGIN` + `BAND` / 2 in `fragment.wesl`) is what the numbering reads. */
 export const ANTIQUE_LADDER_UNITS = 33.5;
-export const ANTIQUE_NUMERAL_INSET_UNITS = 48;
-export const ANTIQUE_NUMERAL_UNITS = 15;
+export const ANTIQUE_NUMERAL_INSET_UNITS = 50;
+export const ANTIQUE_NUMERAL_UNITS = 22;
 
 /** RA/Dec ruling intervals (degrees) the plate picks from, ~`GAP` units apart at its centre. */
 export const ANTIQUE_RULING_STEPS_DEG = [1, 2, 5, 10, 15, 20, 30, 45, 90] as const;

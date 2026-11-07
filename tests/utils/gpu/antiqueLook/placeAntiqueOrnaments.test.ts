@@ -124,6 +124,16 @@ describe('placeAntiqueOrnaments', () => {
     expect(near.centrePx[0]).toBeCloseTo(far.centrePx[0], 3);
   });
 
+  it('withdraws a sky figure that would run under a clearing sheet ornament', () => {
+    const cartouche: AntiqueOrnament = {
+      ...skyRow({ facesNorth: false, clearsBeneath: true }),
+      anchor: { kind: 'sheet', corner: 'topLeft', insetUnits: [800, 450], sizeUnits: 300 },
+    };
+    // Straight ahead, the figure lands on the cartouche placed at the canvas centre.
+    expect(place([cartouche, skyRow({})])).toHaveLength(1);
+    expect(place([skyRow({})])).toHaveLength(1);
+  });
+
   it('fades a sky row out while it is too small to read', () => {
     expect(place([skyRow({ anchor: { kind: 'sky', lonDeg: 0, latDeg: 0, sizeDeg: 3 } })])).toEqual(
       [],

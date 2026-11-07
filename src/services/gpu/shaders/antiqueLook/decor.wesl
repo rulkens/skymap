@@ -62,7 +62,9 @@ fn fs(in: DecorOut) -> DecorInk {
   let clear = max(s.g, smoothstep(0.05, 0.3, s.r)) * o * clears;
   let wash = max(s.b, s.g * 0.28) * o;
   var out: DecorInk;
-  out.ink = vec4<f32>(ink * (1.0 - clears), ink * clears, clear, wash);
+  // Constellation figures are light hatching (Hevelius), so the stars on them
+  // stay readable: about 60% ink. Clearing ornaments print full.
+  out.ink = vec4<f32>(ink * 0.62 * (1.0 - clears), ink * clears, clear, wash);
   out.hue = vec4<f32>(pigmentAt(orn.items[in.item].pigment) * step(0.01, wash), 0.0);
   return out;
 }

@@ -18,7 +18,7 @@ import package::antiqueLook::engraving::coastHalo;
 import package::antiqueLook::graticule::graticule;
 import package::antiqueLook::graticule::raDec;
 import package::antiqueLook::pigments::luma;
-import package::antiqueLook::pigments::nearestPigment;
+import package::antiqueLook::pigments::regionPigment;
 import package::antiqueLook::pigments::chromaOf;
 import package::antiqueLook::pigments::applyWash;
 import package::antiqueLook::pigments::pigmentAt;
@@ -245,7 +245,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // Only a glow with a hue of its own is coloured; a grey one keeps just its line
   // (a grey glow washed in ochre read as scorched paper).
   let skyWash = band * 0.45 * focus * smoothstep(0.03, 0.12, chromaOf(hue));
-  col = applyWash(col, nearestPigment(hue), skyWash * sky * frame.y);
+  col = applyWash(col, regionPigment(hue), skyWash * sky * frame.y);
 
   let ornament = texel(decorTex, ip);
   col = mix(col, paperTone, ornament.b);
@@ -269,8 +269,9 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     contour = onEdge * stipple(p, 2.3, 0.4);
   }
   var dots = 0.0;
-  if (lowL > 0.18) {
-    dots = stipple(p, 2.2, smoothstep(0.18, 0.8, lowL) * 0.3);
+  // Light stipple fills a glow between its dotted edges, as Bayer filled the Via Lactea.
+  if (lowL > GLOW_EDGE) {
+    dots = stipple(p, 2.2, smoothstep(GLOW_EDGE, 0.8, lowL) * 0.3);
   }
   let skyInk = max(star.x, max(dots, contour) * clear) * sky;
   // The rulings were cut by hand too: their ink load wanders along their length.
@@ -301,8 +302,9 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     // Seas a pale smalt, pooled darker along the shore; land in the hue of its light.
     // The colourist's sea stops a little off the cut coast, by a slow wander.
     let washShare = clamp(textureSampleLevel(washTex, linear, uv + slip * 0.6, 0.0).a, 0.0, 1.0);
-    let seaWash = (0.3 + 0.18 * near) * (1.0 - smoothstep(0.35, 0.65, washShare));
-    let landWash = 0.32 * (1.0 - ocean);
+    let seaWash = (0.14 + 0.1 * near) * (1.0 - smoothstep(0.35, 0.65, washShare));
+    // Land in Dutch outline colour: a band along each coast fading inward to paper.
+    let landWash = 0.5 * smoothstep(0.35, 0.6, washShare) * (1.0 - smoothstep(0.62, 0.9, washShare));
     col = applyWash(col, pigmentAt(5.0), seaWash * body * frame.y);
     // Land in gamboge, the Dutch colourist's yellow, whatever its photograph's hue.
     col = applyWash(col, pigmentAt(2.0), landWash * body * frame.y);

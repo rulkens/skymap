@@ -20,6 +20,7 @@ import { ANTIQUE_REGIME_MPC } from '../../../data/rendering/antiqueLook';
 import { raDecDistToCartesian } from '../../math/raDecDistToCartesian';
 import { rotateVec3ByTightMat3 } from '../../math/rotateVec3ByTightMat3';
 import { projectDirToPx } from '../../camera/projection/projectDirToPx';
+import { overlapShare } from '../../render/overlapShare';
 import { sheetAnchorCentre } from '../../render/sheetAnchorCentre';
 import { rayThroughPx } from '../../camera/projection/rayThroughPx';
 import { smoothstep } from '../../math/smoothstep';
@@ -28,8 +29,9 @@ import { onScreenShare } from '../../render/onScreenShare';
 import { offScreen } from '../../render/offScreen';
 
 const DEG = Math.PI / 180;
+
 /** A sky ornament shows between these on-screen widths, as a share of the canvas height. */
-const SKY_FADE_IN = [0.12, 0.22] as const;
+const SKY_FADE_IN = [0.12, 0.13] as const;
 const SKY_FADE_OUT = [0.9, 1.4] as const;
 
 export function placeAntiqueOrnaments(input: {
@@ -47,6 +49,7 @@ export function placeAntiqueOrnaments(input: {
   const cosmos = smoothstep(ANTIQUE_REGIME_MPC[0], ANTIQUE_REGIME_MPC[1], camDistMpc);
   const pxPerTan = size.height / (frustum.tanUp - frustum.tanDown);
   const placed: AntiqueOrnamentInstance[] = [];
+  const reserved: { centre: readonly [number, number]; half: readonly [number, number] }[] = [];
 
   for (const row of input.ornaments) {
     const rect = atlas.sprites[row.sprite];
@@ -103,8 +106,13 @@ export function placeAntiqueOrnaments(input: {
     // A sky figure mostly off the plate reads as a cropped stray claw: fade it
     // out unless at least about half of it is on screen.
     if (anchor.kind !== 'sheet')
-      opacity *= smoothstep(0.35, 0.6, onScreenShare(centre, half, size));
+      opacity *= smoothstep(0.55, 0.6, onScreenShare(centre, half, size));
     if (opacity <= 0.003 || offScreen(centre, half, size)) continue;
+    // An engraving is on the plate or not: a beast that would run under a
+    // cartouche is withdrawn rather than shown cut off or faded.
+    if (anchor.kind !== 'sheet' && reserved.some((r) => overlapShare(centre, half, r) > 0.15))
+      continue;
+    if (anchor.kind === 'sheet' && row.clearsBeneath) reserved.push({ centre, half });
     // A negative half-width flips the sprite in the shader (local x runs backwards).
     if (row.mirrored) half[0] = -half[0];
     const north = row.facesNorth ? screenNorthAngle(dir, centre, basis, frustum, size) : 0;

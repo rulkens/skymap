@@ -37,6 +37,25 @@ fn nearestPigment(c: vec3<f32>) -> vec3<f32> {
   return best;
 }
 
+// The outline colours a Dutch colourist laid on regions: verdigris, gamboge,
+// carmine or smalt, by hue. Ochre and red lead read as browning (tea-stain) there.
+fn regionPigment(c: vec3<f32>) -> vec3<f32> {
+  let chroma = c - vec3<f32>(luma(c));
+  let len = max(length(chroma), 1e-3);
+  let picks = array<i32, 4>(0, 2, 4, 5);
+  var best = PIGMENTS[4];
+  var bestDot = -2.0;
+  for (var i = 0; i < 4; i++) {
+    let pc = PIGMENTS[picks[i]] - vec3<f32>(luma(PIGMENTS[picks[i]]));
+    let d = dot(chroma / len, normalize(pc));
+    if (d > bestDot) {
+      bestDot = d;
+      best = PIGMENTS[picks[i]];
+    }
+  }
+  return best;
+}
+
 fn pigmentAt(index: f32) -> vec3<f32> {
   return PIGMENTS[clamp(i32(index), 0, PIGMENT_COUNT - 1)];
 }
