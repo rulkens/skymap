@@ -18,6 +18,7 @@ export const PRELUDE: FrameSection = {
     { kind: 'plan', name: 'flow' },
     { kind: 'plan', name: 'star-catalog' },
     { kind: 'plan', name: 'milky-way' },
+    { kind: 'plan', name: 'stellar-streams' },
     { kind: 'plan', name: 'satellites' },
     // Once for every view: a dome's faces share one atlas, so one cut spans them all.
     { kind: 'plan', name: 'surface-tiles' },
@@ -134,6 +135,14 @@ export const SCENE: FrameSection = {
     // so cost drops by the divisor squared). Precedes the hdr NEAR0 step, where its
     // consumer `milky-way-upsample` and the dust that extincts it live.
     { kind: 'render', target: 'mw-aggregate', slab: NEAR0, passes: ['milky-way-aggregate'] },
+    // The streams' wide haze at half res, same reasoning; composited by
+    // `stellar-streams-haze-upsample` on the hdr NEAR0 line below.
+    {
+      kind: 'render',
+      target: 'stellar-streams-haze',
+      slab: NEAR0,
+      passes: ['stellar-streams-haze'],
+    },
     // Near-field HDR roster. NEAR0 because COSMO's 0.01 Mpc near plane would clip these
     // kpc-to-parsec anchors; it accumulates into the SAME hdr target, ahead of the one
     // tone-map.
@@ -162,6 +171,8 @@ export const SCENE: FrameSection = {
         'milky-way-upsample',
         'milky-way',
         'local-bubble',
+        'stellar-streams-haze-upsample',
+        'stellar-streams',
         'light-time-spheres',
         'star-points',
         'star-catalog',

@@ -11,6 +11,10 @@ import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriv
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { STRONG_RECESSION } from '../../../../../src/data/strongRecession';
 import { milkyWayPickId } from '../../../../../src/layers/milkyWay/picking/present/milkyWayPickId';
+import { FOCUS_DIM_FLOOR } from '../../../../../src/data/focusDimFloor';
+import { RECEDE_ALL_FOCUS_SPHERE } from '../../../../../src/data/selection/recedeAllFocusSphere';
+import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/structureFocusSubsystem';
+import type { FocusUniformsValue } from '../../../../../src/@types/rendering/FocusUniformsValue';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
@@ -26,10 +30,13 @@ const PX_PER_RAD = CANVAS.height / (2 * Math.tan(FOV_Y_RAD / 2));
 
 function makeCtx(
   camPosMpc: Vec3,
-  focus = { focusBlend: 0, focusPickId: null as number | null },
+  focus: { focusBlend: number; focusPickId: number | null; focus?: FocusUniformsValue } = {
+    focusBlend: 0,
+    focusPickId: null,
+  },
 ): FrameView {
   return {
-    snapshot: { nowMs: 0, simDays: CONST_J2000, ...focus },
+    snapshot: { nowMs: 0, simDays: CONST_J2000, focus: ZERO_FOCUS, ...focus },
     drawCamPos: camPosMpc,
     drawPxPerRad: PX_PER_RAD,
     vp: new Float32Array(16) as unknown as Mat4,
@@ -44,6 +51,18 @@ describe('deriveMilkyWayCloudAlpha — focus emphasis', () => {
       deriveMilkyWayCloudAlpha(makeCtx(awayFromGc, { focusBlend: 1, focusPickId }), 1, PICK_CODE);
     expect(alphaWithFocus(null)).toBeCloseTo(STRONG_RECESSION);
     expect(alphaWithFocus(milkyWayPickId(PICK_CODE))).toBe(1);
+  });
+
+  it('outside the focus sphere the disk also dims by the focus fade, as the galaxies do', () => {
+    const r0 = Math.hypot(GALACTIC_CENTRE_POS[0], GALACTIC_CENTRE_POS[1], GALACTIC_CENTRE_POS[2]);
+    const awayFromGc = GALACTIC_CENTRE_POS.map((c) => (-c / r0) * 0.005) as unknown as Vec3;
+    const focus = { ...RECEDE_ALL_FOCUS_SPHERE, blend: 1 };
+    const alpha = deriveMilkyWayCloudAlpha(
+      makeCtx(awayFromGc, { focusBlend: 1, focusPickId: null, focus }),
+      1,
+      PICK_CODE,
+    );
+    expect(alpha).toBeCloseTo(STRONG_RECESSION * FOCUS_DIM_FLOOR);
   });
 });
 

@@ -6,7 +6,7 @@ import type { Vec3 } from '../math/Vec3';
  * byte layout). Produced each frame by structureFocusSubsystem and packed
  * into the points pipeline's singleton focus buffer.
  *
- * At rest (no structure focused) every field is zero — `blend: 0` makes the
+ * At rest (no sphere focused) every field is zero — `blend: 0` makes the
  * shader's per-vertex multiplier collapse to 1.0, so center/radius are
  * don't-cares.
  */

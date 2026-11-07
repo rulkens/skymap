@@ -12,6 +12,10 @@ import { GALACTIC_CENTRE_ANCHOR } from '../../../../../src/data/places/galacticC
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../../src/data/selectionEncoding';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { makeSlab } from '../../../../fixtures/makeSlab';
+import { RECEDE_ALL_FOCUS_SPHERE } from '../../../../../src/data/selection/recedeAllFocusSphere';
+import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/structureFocusSubsystem';
+import { FOCUS_DIM_FLOOR } from '../../../../../src/data/focusDimFloor';
+import type { FocusUniformsValue } from '../../../../../src/@types/rendering/FocusUniformsValue';
 import type { BlackHolesRuntime } from '../../../../../src/layers/blackHoles/@types/BlackHolesRuntime';
 import type { BodyState } from '../../../../../src/@types/scene/BodyState';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
@@ -44,8 +48,12 @@ const FROM_EARTH: Vec3 = [0, 0, 0];
 // 50 AU out: inside the band's full edge (100 AU), where the lens has taken over.
 const INSIDE_BAND: Vec3 = [ANCHOR[0] + 50 * SCALE_UNITS.AU_TO_MPC, ANCHOR[1], ANCHOR[2]];
 
-function makeCtx(camPos: Vec3): FrameView {
+// A focus nothing lies inside: a stream's, fully faded in.
+const RECEDE_ALL: FocusUniformsValue = { ...RECEDE_ALL_FOCUS_SPHERE, blend: 1 };
+
+function makeCtx(camPos: Vec3, focus: FocusUniformsValue = ZERO_FOCUS): FrameView {
   return {
+    snapshot: { focus },
     cam: { distance: 1e-6 },
     drawCamPos: camPos,
     drawPxPerRad: 600,
@@ -79,10 +87,10 @@ function makePass() {
 
 const PASS_STUB = {} as GPURenderPassEncoder;
 
-function stampedIds(camPos: Vec3): number[] {
+function stampedIds(camPos: Vec3, focus: FocusUniformsValue = ZERO_FOCUS): number[] {
   const { pass } = makePass();
   const { state, drawPoints } = makeState();
-  const ctx = makeCtx(camPos);
+  const ctx = makeCtx(camPos, focus);
   if (!pass.pickEnabled!(state, ctx, makeView(camPos))) return [];
   pass.drawPick!(PASS_STUB, makeView(camPos), ctx, state);
   return drawPoints.mock.calls.flatMap(([, args]) =>
@@ -114,5 +122,14 @@ describe('blackHoleMarkerPass', () => {
 
   it('far-field pick follows the marker', () => {
     expect(stampedIds(FROM_EARTH)).toEqual([HOLE_ID]);
+  });
+
+  it('a focus sphere that leaves the hole outside dims its marker and takes it out of the pick', () => {
+    const { state } = makeState();
+    const { pass, markerRenderer } = makePass();
+    pass.draw(PASS_STUB, makeView(FROM_EARTH), makeCtx(FROM_EARTH, RECEDE_ALL), state);
+    const [, instances] = markerRenderer.draw.mock.calls[0]!;
+    expect(instances[6]).toBeCloseTo(BLACK_HOLES[0]!.glintBaseIntensity * FOCUS_DIM_FLOOR, 6);
+    expect(stampedIds(FROM_EARTH, RECEDE_ALL)).toEqual([]);
   });
 });

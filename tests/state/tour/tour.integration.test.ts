@@ -35,6 +35,7 @@ import type { SlabView } from '../../../src/@types/engine/frame/SlabView';
 import { makeGalaxyCatalogItems } from '../../fixtures/makeGalaxyCatalogItems';
 import { galaxyRowRuntime } from '../../support/layerPickCodes';
 import { milkyWayPickCode } from '../../support/layerPickCodes';
+import { ZERO_FOCUS } from '../../../src/services/engine/subsystems/structureFocusSubsystem';
 
 // `clipOpacityOf` answers `factor` for every call. Typed rather than bare
 // `vi.fn()`, which fails tsc.
@@ -170,7 +171,7 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
   // `galaxyPointRenderer` rides `state.gpu` now (D13), not this ctx.
   function makeDrawCtx(nowMs: number, camPos: Readonly<[number, number, number]>): FrameView {
     return {
-      snapshot: { nowMs, focusBlend: 0 },
+      snapshot: { nowMs, focusBlend: 0, focus: ZERO_FOCUS },
       drawCamPos: camPos,
       fovYRad: FOV_Y_RAD,
       canvasSize: CANVAS,

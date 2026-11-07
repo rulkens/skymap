@@ -1,40 +1,23 @@
 /**
- * structureFocusSubsystem — focus-driven structure "focus mode".
- *
- * When any structure is focused, everything outside its sphere fades to ~8%
- * alpha over ~400 ms (the shaders do the per-vertex test; this subsystem only
- * supplies the centre, radius, and the smoothstep blend). Every category
- * behaves identically; voids are just an underdense case of the same rule. See
- * `StructureFocusSubsystem.d.ts` for the rationale (focus as single
- * source of truth; GPU re-derivation instead of a CPU member list).
- *
- * ### Why a `focusedId` separate from the display target
- *
- * `update` runs every frame with the live focused structure. The fade-in and
- * fade-out must each fire once, on the transition — re-calling
- * `fade.fadeTo` every frame would reset the ramp's clock and the blend
- * would never advance. `focusedId` records the id we are fading *toward*
- * (null = fading out / at rest), so a frame matching it is a no-op.
- *
- * The display target (`active`) stays latched through the fade-out so
- * `produceFocusUniforms` keeps emitting the correct centre/radius until
- * the blend reaches 0; only then is it dropped.
- *
- * ### Wake contract
- *
- * The fade controller here is private (`createFadeController`, not the
- * shared `FadeRegistry`), so `update` is this channel's sole mouth: it
- * wakes the scheduler when a transition starts, in either direction —
- * runFrame can early-return before the `stillAnimating` tail, which would
- * otherwise strand the ramp. Steady frames hit the early-return and rely
- * on `isAwake` to keep the loop alive.
+ * structureFocusSubsystem — focus mode: one 400 ms blend for whichever receding row is focused,
+ * and its sphere on a ramp of its own. A switch to a different sphere fades through: the old one
+ * fades out, then the new one in, so the per-vertex dim never pops (a structure's ball and a
+ * stream's recede-all sphere included). `update` runs every frame but fades only on a transition
+ * (re-calling `fadeTo` would reset the ramp's clock). Ref and sphere stay latched through their
+ * fade-outs, outlasting `selection.focus`. Both blends scale by how shown the subject's kind is,
+ * so a focus whose subject has faded from view (out of its band, switched off) recedes nothing.
+ * The fade controllers are private (no `FadeRegistry` wake), so `update` wakes the scheduler on
+ * each transition; steady frames rely on `isAwake`.
  */
 
 import { createFadeController } from '../../animation/fadeController';
+import { refKey } from '../../../utils/selection/refKey';
+import { sameFocusSphere } from '../../../utils/structure/sameFocusSphere';
 import type { StructureFocusSubsystem } from '../../../@types/engine/subsystems/StructureFocusSubsystem';
-import type { StructureInfo } from '../../../@types/data/structure/StructureInfo';
+import type { FocusSubject } from '../../../@types/engine/subsystems/FocusSubject';
+import type { FocusFrame } from '../../../@types/engine/subsystems/FocusFrame';
 import type { FocusUniformsValue } from '../../../@types/rendering/FocusUniformsValue';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { FocusSphere } from '../../../@types/rendering/FocusSphere';
 import type { SelectionRefBase } from '../../../@types/engine/selection/SelectionRefBase';
 
 /** Focus fade duration in ms. */
@@ -53,94 +36,83 @@ export const ZERO_FOCUS: FocusUniformsValue = {
   blend: 0,
 };
 
-/** The latched display target while focus is active or fading out. */
-type ActiveFocus = {
-  readonly ref: SelectionRefBase;
-  readonly center: Vec3;
-  readonly apparentRadiusMpc: number;
-  readonly physicalRadiusMpc: number;
-};
+const AT_REST: FocusFrame = { uniforms: ZERO_FOCUS, blend: 0, ref: null };
 
 export function createStructureFocusSubsystem(
   deps: { readonly requestRender: () => void },
   initialNowMs: number = performance.now(),
 ): StructureFocusSubsystem {
   const fade = createFadeController(0, initialNowMs);
-  // The structure we emit centre/radius for. Latched through fade-out.
-  let active: ActiveFocus | null = null;
-  // The id we are currently fading toward; null = fading out / at rest.
-  let focusedId: string | null = null;
-  let lastProduced: FocusUniformsValue = ZERO_FOCUS;
-  let lastRef: SelectionRefBase | null = null;
+  const sphereFade = createFadeController(0, initialNowMs);
+  // What we emit for, each latched through its own fade-out; `queued` fades in once `sphere` is out.
+  let ref: SelectionRefBase | null = null;
+  let sphere: FocusSphere | null = null;
+  let queued: FocusSphere | null = null;
+  // The ref we are currently fading toward; null = fading out / at rest.
+  let focusedKey: string | null = null;
+  let last: FocusFrame = AT_REST;
 
-  function update(structure: StructureInfo | null, nowMs: number): void {
-    // null drives a fade-out. Groups share the same fade band mechanic as
-    // clusters — R0 > Rh gives a real band.
-    let next: ActiveFocus | null = null;
-    if (structure !== null) {
-      // Pass the structure's two real radii; the shader ramps the fade
-      // across the [physical, apparent] band (and supplies a soft band of
-      // its own when the two are equal — SC/void have no wider extent).
-      next = {
-        ref: { type: 'structure', id: structure.id },
-        center: [structure.worldPos[0], structure.worldPos[1], structure.worldPos[2]],
-        apparentRadiusMpc: structure.apparentRadiusMpc ?? structure.physicalRadiusMpc,
-        physicalRadiusMpc: structure.physicalRadiusMpc,
-      };
-    }
-
-    const targetId = structure?.id ?? null;
-    // No transition → no re-fade (covers same focused structure every frame AND
+  function update(subject: FocusSubject | null, nowMs: number): void {
+    const targetKey = subject === null ? null : refKey(subject.ref);
+    // No transition → no re-fade (covers the same subject every frame AND
     // an already-in-flight fade-out being re-observed every frame).
-    if (targetId === focusedId) return;
+    if (targetKey === focusedKey) return;
 
-    focusedId = targetId;
-    if (next !== null) {
-      active = next;
-      fade.fadeTo(1, FOCUS_FADE_DURATION_MS, nowMs);
+    focusedKey = targetKey;
+    fade.fadeTo(subject === null ? 0 : 1, FOCUS_FADE_DURATION_MS, nowMs);
+    if (subject !== null) ref = subject.ref;
+    const sphereChanges =
+      subject !== null &&
+      sphere !== null &&
+      sphereFade.currentOpacity(nowMs) > 0 &&
+      !sameFocusSphere(sphere, subject.sphere);
+    if (subject === null || sphereChanges) {
+      queued = subject?.sphere ?? null;
+      sphereFade.fadeTo(0, FOCUS_FADE_DURATION_MS, nowMs);
     } else {
-      // Keep `active` latched so the shader keeps the correct predicate
-      // until blend settles at 0 (dropped lazily in produceFocusUniforms).
-      fade.fadeTo(0, FOCUS_FADE_DURATION_MS, nowMs);
+      queued = null;
+      sphere = subject.sphere;
+      sphereFade.fadeTo(1, FOCUS_FADE_DURATION_MS, nowMs);
     }
-    // Essential wake: private fade controller — no FadeRegistry wake covers it.
+    // Essential wake: private fade controllers — no FadeRegistry wake covers them.
     deps.requestRender();
   }
 
-  function produceFocusUniforms(nowMs: number): FocusUniformsValue {
+  function produceFocus(nowMs: number, shownOf: (ref: SelectionRefBase) => number): FocusFrame {
     const blend = fade.currentOpacity(nowMs);
-    if (active !== null && blend === 0 && !fade.isAnimating(nowMs)) {
-      active = null;
+    const sphereBlend = sphereFade.currentOpacity(nowMs);
+    if (blend === 0 && !fade.isAnimating(nowMs)) ref = null;
+    if (sphereBlend === 0 && !sphereFade.isAnimating(nowMs)) {
+      sphere = queued;
+      if (queued !== null) sphereFade.fadeTo(1, FOCUS_FADE_DURATION_MS, nowMs);
+      queued = null;
     }
-    lastRef = active?.ref ?? null;
-    lastProduced =
-      active === null
-        ? ZERO_FOCUS
-        : {
-            center: active.center,
-            apparentRadiusMpc: active.apparentRadiusMpc,
-            physicalRadiusMpc: active.physicalRadiusMpc,
-            blend,
-          };
-    return lastProduced;
+    if (ref === null && sphere === null) return (last = AT_REST);
+    const shown = ref === null ? 1 : shownOf(ref);
+    last = {
+      uniforms: sphere === null ? ZERO_FOCUS : { ...sphere, blend: sphereBlend * shown },
+      blend: blend * shown,
+      ref,
+    };
+    return last;
   }
 
   function isAwake(nowMs: number): boolean {
-    return fade.isAnimating(nowMs);
+    return fade.isAnimating(nowMs) || sphereFade.isAnimating(nowMs) || queued !== null;
   }
 
   return {
     id: 'structureFocus',
     update,
-    produceFocusUniforms,
-    lastFocusUniforms: () => lastProduced,
-    lastFocusRef: () => lastRef,
+    produceFocus,
+    lastFocus: () => last,
     isAwake,
     destroy(): void {
-      active = null;
-      focusedId = null;
-      lastProduced = ZERO_FOCUS;
-      lastRef = null;
+      ref = null;
+      sphere = null;
+      queued = null;
+      focusedKey = null;
+      last = AT_REST;
     },
   };
 }

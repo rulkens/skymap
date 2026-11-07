@@ -44,6 +44,7 @@ import type { SourceType } from '../../../../src/@types/data/SourceType';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 import { INITIAL_SETTINGS } from '../../../../src/state/settings/initialSettings';
 import { galaxyRowRuntime } from '../../../support/layerPickCodes';
+import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
 
 // `descriptorFor` returns a DISTINCT descriptor per slot, with the stub querySet tagged
 // `{ _stub: slot }`, so assertions can tell which slot's descriptor landed on which pass.
@@ -273,9 +274,10 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     slabBodyCandidates: [],
     bodyStates: new Map(),
     nowMs: 0,
-    // The handed value's recession factor lerps on this; production seeds it
-    // to 0 in frameContext, and an absent one yields NaN alphas here.
+    // The handed value's recession factor lerps on this, and the sphere dim reads
+    // `focus`; production seeds both at rest in frameContext.
     focusBlend: 0,
+    focus: ZERO_FOCUS,
     renderTargets,
     renderedTargets,
     skyCapturesInBand: new Set(),

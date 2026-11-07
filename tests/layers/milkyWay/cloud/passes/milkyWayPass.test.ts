@@ -15,6 +15,10 @@ import {
   MILKY_WAY_FADE_GONE_PX,
 } from '../../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import { MILKY_WAY_RADIUS_MPC } from '../../../../../src/data/milkyWay/milkyWayRadiusMpc';
+import { MILKY_WAY_CENTER_WORLD } from '../../../../../src/data/milkyWay/galacticCenter';
+import { RECEDE_ALL_FOCUS_SPHERE } from '../../../../../src/data/selection/recedeAllFocusSphere';
+import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/structureFocusSubsystem';
+import type { FocusUniformsValue } from '../../../../../src/@types/rendering/FocusUniformsValue';
 
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
@@ -38,9 +42,9 @@ const STATE = { settings: { milkyWay: { enabled: true } } } as unknown as Engine
 // 720-px viewport, 60° fovY, tangent-exact.
 const MW_PX_PER_RAD = 720 / (2 * Math.tan(Math.PI / 3 / 2));
 
-function makeCtx(camPos: Readonly<Vec3>): FrameView {
+function makeCtx(camPos: Readonly<Vec3>, focus: FocusUniformsValue = ZERO_FOCUS): FrameView {
   return {
-    snapshot: { nowMs: 0, focusBlend: 0 },
+    snapshot: { nowMs: 0, focusBlend: focus.blend, focusPickId: null, focus },
     cam: { distance: Math.hypot(...camPos) },
     drawCamPos: camPos,
     drawPxPerRad: MW_PX_PER_RAD,
@@ -50,6 +54,22 @@ function makeCtx(camPos: Readonly<Vec3>): FrameView {
 }
 
 describe('milkyWayPass pick vs draw', () => {
+  it('a focus sphere that leaves the disc outside takes it out of the pick, not the draw', () => {
+    const outside = [0, 0, 0.15] as const satisfies Vec3;
+    const recedeAll = makeCtx(outside, { ...RECEDE_ALL_FOCUS_SPHERE, blend: 1 });
+    expect(PASS.enabled(STATE, recedeAll, VIEW_STUB, 1)).toBe(true);
+    expect(PASS.pickEnabled!(STATE, recedeAll, VIEW_STUB, 1)).toBe(false);
+
+    // A sphere holding the Galactic Centre leaves it a target.
+    const holding = {
+      center: MILKY_WAY_CENTER_WORLD,
+      apparentRadiusMpc: 1,
+      physicalRadiusMpc: 0.5,
+    };
+    const inside = makeCtx(outside, { ...holding, blend: 1 });
+    expect(PASS.pickEnabled!(STATE, inside, VIEW_STUB, 1)).toBe(true);
+  });
+
   it('keeps drawing but stops taking clicks once the camera is inside the disc', () => {
     // Well inside the impostor: the disc is DRAWN at full strength here.
     const inside = makeCtx([0, 0, 0.02]);

@@ -13,7 +13,8 @@
  * BP−RP ramp here. This function and `starCatalog/tint.wesl`'s `starTint` are
  * two evaluations of ONE ramp and must be kept in lockstep: any change to the
  * anchors or breakpoints in the WESL must be mirrored here (and vice versa),
- * and the tests in `starTintFromBpRp.test.ts` guard the shared values.
+ * and `starTint.parity.test.ts` reads the WESL to guard the shared values. The
+ * stellar-stream captions use it too, matching the streaks `streams.wesl` tints.
  *
  * ## Anchors and breakpoints (copied VERBATIM from tint.wesl:48-58)
  *

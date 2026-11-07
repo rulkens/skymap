@@ -1,18 +1,26 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createStructureFocusSubsystem } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
-import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
+import {
+  createStructureFocusSubsystem,
+  ZERO_FOCUS,
+} from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
+import type { FocusSubject } from '../../../../src/@types/engine/subsystems/FocusSubject';
+import type { FocusSphere } from '../../../../src/@types/rendering/FocusSphere';
+import { RECEDE_ALL_FOCUS_SPHERE } from '../../../../src/data/selection/recedeAllFocusSphere';
 
-function makeCluster(overrides: Record<string, unknown> = {}): StructureInfo {
+function makeCluster(id = 'virgo', sphere: Partial<FocusSphere> = {}): FocusSubject {
   return {
-    id: 'virgo',
-    name: 'Virgo Cluster',
-    category: 'galaxy-cluster',
-    worldPos: [10, 0, 0],
-    physicalRadiusMpc: 2,
-    featured: true,
-    ...overrides,
-  } as unknown as StructureInfo;
+    ref: { type: 'structure', id },
+    sphere: { center: [10, 0, 0], apparentRadiusMpc: 2, physicalRadiusMpc: 2, ...sphere },
+  };
 }
+
+const STREAM: FocusSubject = {
+  ref: { type: 'stellarStream', slug: 'cetus-palca' },
+  sphere: RECEDE_ALL_FOCUS_SPHERE,
+};
+
+// Every subject's kind fully shown: the focus ramps as its fades alone say.
+const SHOWN = () => 1;
 
 // Factory helper — passes a no-op wake function for tests that don't inspect it.
 function makeStructureFocus(initialNowMs = 0) {
@@ -20,69 +28,115 @@ function makeStructureFocus(initialNowMs = 0) {
 }
 
 describe('structureFocusSubsystem', () => {
-  it('update with a cluster structure fades blend 0→1 with correct center/radii', () => {
+  it('a subject with a sphere fades sphere and blend 0→1 together, with its centre/radii', () => {
     const sub = makeStructureFocus(0);
-    sub.update(makeCluster({ worldPos: [3, 4, 5], physicalRadiusMpc: 7 }), 0);
-    const mid = sub.produceFocusUniforms(200);
+    sub.update(makeCluster('virgo', { center: [3, 4, 5], apparentRadiusMpc: 5 }), 0);
+    const mid = sub.produceFocus(200, SHOWN);
     expect(mid.blend).toBeGreaterThan(0);
     expect(mid.blend).toBeLessThan(1);
-    const settled = sub.produceFocusUniforms(500);
+    expect(mid.uniforms.blend).toBe(mid.blend);
+    const settled = sub.produceFocus(500, SHOWN);
     expect(settled.blend).toBe(1);
-    expect(settled.center).toEqual([3, 4, 5]);
-    // No apparent extent → apparent falls back to physical; both radii equal.
-    expect(settled.apparentRadiusMpc).toBe(7);
-    expect(settled.physicalRadiusMpc).toBe(7);
+    expect(settled.uniforms).toEqual({
+      center: [3, 4, 5],
+      apparentRadiusMpc: 5,
+      physicalRadiusMpc: 2,
+      blend: 1,
+    });
+    expect(settled.ref).toEqual({ type: 'structure', id: 'virgo' });
   });
 
-  it('lastFocusUniforms returns the produced value without advancing the fade', () => {
+  it('lastFocus returns the produced value without advancing the fade', () => {
     const sub = makeStructureFocus(0);
-    expect(sub.lastFocusUniforms().blend).toBe(0);
+    expect(sub.lastFocus().blend).toBe(0);
     sub.update(makeCluster(), 0);
-    const mid = sub.produceFocusUniforms(200);
-    expect(sub.lastFocusUniforms()).toBe(mid);
+    const mid = sub.produceFocus(200, SHOWN);
+    expect(sub.lastFocus()).toBe(mid);
   });
 
-  it('emits apparent (fade outer edge) and physical (core) radii independently', () => {
-    const sub = makeStructureFocus(0);
-    sub.update(makeCluster({ physicalRadiusMpc: 2, apparentRadiusMpc: 5 }), 0);
-    const settled = sub.produceFocusUniforms(500);
-    expect(settled.apparentRadiusMpc).toBe(5);
-    expect(settled.physicalRadiusMpc).toBe(2);
-  });
-
-  it('update(null) after a cluster fades blend 1→0 (and stays settling under per-frame calls)', () => {
+  it('update(null) fades blend 1→0 keeping the ref latched, without restarting per frame', () => {
     const sub = makeStructureFocus(0);
     sub.update(makeCluster(), 0);
-    sub.produceFocusUniforms(500); // settle at 1
+    sub.produceFocus(500, SHOWN); // settle at 1
     sub.update(null, 500);
-    const mid = sub.produceFocusUniforms(600);
+    const mid = sub.produceFocus(600, SHOWN);
     expect(mid.blend).toBeGreaterThan(0);
     expect(mid.blend).toBeLessThan(1);
+    expect(mid.ref).toEqual({ type: 'structure', id: 'virgo' });
     // Next frame: selection still null. Must NOT restart the fade-out clock.
     sub.update(null, 600);
-    expect(sub.produceFocusUniforms(900).blend).toBe(0);
+    const settled = sub.produceFocus(900, SHOWN);
+    expect(settled.blend).toBe(0);
+    expect(settled.ref).toBeNull();
   });
 
-  it('update with the same structure id is idempotent across frames (no re-fade restart)', () => {
+  it('the same ref re-observed each frame does not restart the ramp, even as a fresh object', () => {
     const sub = makeStructureFocus(0);
-    const structure = makeCluster();
-    sub.update(structure, 0);
-    sub.produceFocusUniforms(100); // mid fade-in
-    // Same selection re-observed each frame must not reset the ramp.
-    sub.update(structure, 100);
-    sub.update(structure, 200);
-    expect(sub.produceFocusUniforms(500).blend).toBe(1);
+    sub.update(makeCluster(), 0);
+    sub.produceFocus(100, SHOWN); // mid fade-in
+    sub.update(makeCluster(), 100);
+    sub.update(makeCluster(), 200);
+    expect(sub.produceFocus(500, SHOWN).blend).toBe(1);
   });
 
-  it('replacing the focused structure does not pass through blend 0', () => {
+  it('structure → stream fades the sphere out, then the recede-all sphere in, the blend holding at 1', () => {
     const sub = makeStructureFocus(0);
-    sub.update(makeCluster({ id: 'virgo', worldPos: [10, 0, 0] }), 0);
-    sub.produceFocusUniforms(500); // settle at 1
-    sub.update(makeCluster({ id: 'coma', worldPos: [-10, 0, 0] }), 600);
-    expect(sub.produceFocusUniforms(601).blend).toBeCloseTo(1, 5);
-    const settled = sub.produceFocusUniforms(1000);
-    expect(settled.center).toEqual([-10, 0, 0]);
-    expect(settled.blend).toBe(1);
+    sub.update(makeCluster('virgo'), 0);
+    sub.produceFocus(500, SHOWN); // settle at 1
+    sub.update(STREAM, 500);
+    const out = sub.produceFocus(700, SHOWN);
+    expect(out.blend).toBe(1);
+    expect(out.ref).toEqual(STREAM.ref);
+    expect(out.uniforms.center).toEqual([10, 0, 0]);
+    expect(out.uniforms.blend).toBeGreaterThan(0);
+    expect(out.uniforms.blend).toBeLessThan(1);
+    // Faded out, the recede-all sphere still waiting: the loop must not sleep through the hand-off.
+    expect(sub.isAwake(900)).toBe(true);
+    const handOff = sub.produceFocus(900, SHOWN);
+    expect(handOff.uniforms).toEqual({ ...RECEDE_ALL_FOCUS_SPHERE, blend: 0 });
+    const into = sub.produceFocus(1100, SHOWN);
+    expect(into.uniforms.blend).toBeGreaterThan(0);
+    expect(into.uniforms.blend).toBeLessThan(1);
+    expect(sub.produceFocus(1300, SHOWN).uniforms).toEqual({
+      ...RECEDE_ALL_FOCUS_SPHERE,
+      blend: 1,
+    });
+  });
+
+  it('structure → structure fades through 0 too, never snapping the bright region across', () => {
+    const sub = makeStructureFocus(0);
+    sub.update(makeCluster('virgo'), 0);
+    sub.produceFocus(500, SHOWN);
+    sub.update(makeCluster('coma', { center: [-10, 0, 0] }), 600);
+    expect(sub.produceFocus(800, SHOWN).uniforms.center).toEqual([10, 0, 0]);
+    sub.produceFocus(1000, SHOWN);
+    const settled = sub.produceFocus(1400, SHOWN);
+    expect(settled.uniforms.center).toEqual([-10, 0, 0]);
+    expect(settled.uniforms.blend).toBe(1);
+  });
+
+  it('stream → stream keeps the recede-all sphere at full, a value-equal copy included', () => {
+    const sub = makeStructureFocus(0);
+    sub.update(STREAM, 0);
+    sub.produceFocus(500, SHOWN);
+    sub.update(
+      { ref: { type: 'stellarStream', slug: 'gd-1' }, sphere: { ...RECEDE_ALL_FOCUS_SPHERE } },
+      500,
+    );
+    expect(sub.produceFocus(700, SHOWN).uniforms.blend).toBe(1);
+  });
+
+  it("scales both blends by the latched subject's shown value, and lastFocus is the scaled frame", () => {
+    const sub = makeStructureFocus(0);
+    sub.update(STREAM, 0);
+    const hidden = sub.produceFocus(500, () => 0);
+    expect(hidden.blend).toBe(0);
+    expect(hidden.uniforms.blend).toBe(0);
+    expect(hidden.ref).toEqual(STREAM.ref);
+    expect(sub.lastFocus()).toBe(hidden);
+    const half = sub.produceFocus(600, (ref) => (ref.type === 'stellarStream' ? 0.5 : 1));
+    expect(half.blend).toBe(0.5);
+    expect(half.uniforms.blend).toBe(0.5);
   });
 
   it('isAwake is true mid-fade and false at rest', () => {
@@ -90,32 +144,18 @@ describe('structureFocusSubsystem', () => {
     expect(sub.isAwake(0)).toBe(false);
     sub.update(makeCluster(), 0);
     expect(sub.isAwake(200)).toBe(true);
-    sub.produceFocusUniforms(500);
+    sub.produceFocus(500, SHOWN);
     expect(sub.isAwake(500)).toBe(false);
   });
 
-  it('update wakes the scheduler on focus transition', () => {
+  it('update wakes the scheduler on each transition, never on steady frames', () => {
     const requestRender = vi.fn();
     const sub = createStructureFocusSubsystem({ requestRender }, 0);
-    const rec = makeCluster();
-    // Fade-in toward a new id: one wake.
-    sub.update(rec, 0);
+    sub.update(makeCluster(), 0);
+    sub.update(makeCluster(), 16);
+    sub.update(makeCluster(), 32);
     expect(requestRender).toHaveBeenCalledTimes(1);
-    // Fade-out toward null: a second wake.
     sub.update(null, 100);
     expect(requestRender).toHaveBeenCalledTimes(2);
-  });
-
-  it('steady focused frames do not re-wake', () => {
-    const requestRender = vi.fn();
-    const sub = createStructureFocusSubsystem({ requestRender }, 0);
-    const rec = makeCluster();
-    sub.update(rec, 0); // transition — one wake
-    requestRender.mockClear();
-    // Same id re-observed each frame must hit the early-return, not wake.
-    sub.update(rec, 16);
-    sub.update(rec, 32);
-    sub.update(rec, 48);
-    expect(requestRender).toHaveBeenCalledTimes(0);
   });
 });
