@@ -18,6 +18,9 @@ import { PROBE_SPHERE_GO_TO_BUTTONS } from '../data/probeSphereGoToButtons';
 import { BODY_FOCUS_PREFIX } from '../../../../services/url/bodyFocusId';
 import { requestSelect } from '../../../../state/selection/requestSelect';
 import { requestFocus } from '../../../../state/selection/requestFocus';
+import { setVisibility } from '../../../../state/settings/setVisibilityAction';
+import DebugSlider from '../../../../components/DebugPanel/DebugSlider';
+import { setMeshSelfBounce } from '../../../../state/settings/core/debugSlice';
 import type { HexString } from '../../../../@types/math/HexString';
 
 function ProbeSpheresTuningSectionContainer(): React.ReactElement {
@@ -30,6 +33,7 @@ function ProbeSpheresTuningSectionContainer(): React.ReactElement {
       ),
     [dispatch],
   );
+  const selfBounce = useAppSelector((s) => s.settings.debug.meshSelfBounce);
   const hex = linearRgbToHex(probeSpheres.color);
 
   return (
@@ -47,6 +51,11 @@ function ProbeSpheresTuningSectionContainer(): React.ReactElement {
             className={sectionStyles.button}
             onClick={() => {
               const focusId = `${BODY_FOCUS_PREFIX}${id}`;
+              // Focus never reveals a Layer: an off section would fly to an undrawn sphere.
+              dispatch(setVisibility({ cluster: 'probeSpheres', field: 'enabled', on: true }));
+              dispatch(
+                setVisibility({ cluster: 'probeSpheres', field: 'enabled', on: true, item: id }),
+              );
               dispatch(requestSelect(focusId));
               dispatch(requestFocus({ id: focusId, transition: 'fly' }));
             }}
@@ -55,6 +64,16 @@ function ProbeSpheresTuningSectionContainer(): React.ReactElement {
           </button>
         ))}
       </div>
+      <DebugSlider
+        label="Self-bounce (all meshes)"
+        value={selfBounce}
+        min={0}
+        max={0.2}
+        step={0.005}
+        readout={selfBounce.toFixed(3)}
+        title="Fill light a sunlit mesh bounces onto itself, as a fraction of sunlight"
+        onChange={(value) => dispatch(setMeshSelfBounce(value))}
+      />
       <label className={sliderStyles.root}>
         <span className={sliderStyles.label}>Colour</span>
         <span className={sliderStyles.readout}>{hex}</span>

@@ -1,7 +1,8 @@
 // meshBody/fragment.wesl — the mesh body's material: baked TBN relief over a
 // GGX metal/dielectric blend, lit by the Sun as a sphere light and by the
-// body's own reflection probe as its environment. The probe is the ambient;
-// 'u.ambient' adds a uniform fill only when a site shot asks (0 otherwise).
+// body's own reflection probe as its environment. 'u.ambient' is a uniform fill:
+// the body's self-bounce ('MESH_SELF_BOUNCE', which no probe of its own carries)
+// plus a site shot's extra.
 //
 // LANDMINE -- there is no shadow map and no self-shadowing term. Occlusion of
 // the sun by the host is the CPU-side scalar 'u.sunVisibleFraction' and nothing
