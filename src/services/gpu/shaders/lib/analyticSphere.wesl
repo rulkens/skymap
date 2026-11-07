@@ -147,7 +147,10 @@ struct UvGradients {
 // it is a cancellation f32 cannot do (header): the textured path supplies f64.
 fn hitUnitSphere(ro: vec3<f32>, rd: vec3<f32>, originAltitudeSq: f32) -> SphereHit {
   let b = dot(ro, rd);
-  let discr = b * b - originAltitudeSq;
+  // Near the surface 'b * b - originAltitudeSq' wins (f64 altitude, small b at the
+  // horizon); far out b*b ~ |ro|^2 swamps f32 and the closest-approach form wins.
+  let h = ro - b * rd;
+  let discr = select(1.0 - dot(h, h), b * b - originAltitudeSq, originAltitudeSq < 1.0);
   let s = sqrt(max(discr, 0.0));
   // The far root plainly; the near root as 'c / (-b + s)', which is the same
   // number as '-b - s' without its cancellation -- and that cancellation is
