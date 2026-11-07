@@ -1,7 +1,8 @@
 /**
- * createAntiqueLookGpu — the look's five full-screen pipelines (paper bake,
- * reduce, glow, peaks, plate) with their bind-group layouts, and its fixed
- * uniform buffers. Binding order is each shader's `@binding` order.
+ * createAntiqueLookGpu — the look's seven pipelines (full-screen paper bake,
+ * reduce, glow, peaks and plate; instanced glyphs and decor) with their
+ * bind-group layouts, and its fixed uniform buffers. Binding order is each
+ * shader's `@binding` order. Target formats must match `antiqueLookTargetRows`.
  */
 
 import vsCode from '../../shaders/antiqueLook/vertex.wesl?static';
@@ -110,7 +111,7 @@ export function createAntiqueLookGpu(
     fragment: {
       module: glyphsModule,
       entryPoint: 'fs',
-      targets: [{ format: HDR_TARGET_FORMAT, blend: { color: max, alpha: max } }],
+      targets: [{ format: 'rgba8unorm', blend: { color: max, alpha: max } }],
     },
     primitive: { topology: 'triangle-strip' },
   });

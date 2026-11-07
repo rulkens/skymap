@@ -2,7 +2,8 @@
  * antiqueLookTargetRows — the render-target rows the antique look owns, all
  * held only while it draws (`antiqueLookOn`). `print` and `overlay` take the
  * swap format so every pipeline built for `swap` draws into them unchanged;
- * the quarter-res rows are rgba16float because `peaks` stores pixel positions.
+ * the quarter-res rows are rgba16float because `peaks` stores pixel positions;
+ * `star-ink` holds two 0..1 channels, so 8 bits each.
  */
 
 import type { RenderTargetSpec } from '../../../../@types/engine/frame/RenderTargetSpec';
@@ -29,7 +30,7 @@ export function antiqueLookTargetRows(swapFormat: GPUTextureFormat): readonly Re
     row(ANTIQUE_TARGETS.glow, HDR_TARGET_FORMAT, ANTIQUE_CELL * 4),
     row(ANTIQUE_TARGETS.peaks, HDR_TARGET_FORMAT, ANTIQUE_CELL),
     row(ANTIQUE_TARGETS.stars, HDR_TARGET_FORMAT, ANTIQUE_CELL),
-    row(ANTIQUE_TARGETS.starInk, HDR_TARGET_FORMAT, 1),
+    row(ANTIQUE_TARGETS.starInk, 'rgba8unorm', 1),
     row(ANTIQUE_TARGETS.decor, 'rgba8unorm', 1),
     row(ANTIQUE_TARGETS.decorHue, 'rgba8unorm', 1),
   ];

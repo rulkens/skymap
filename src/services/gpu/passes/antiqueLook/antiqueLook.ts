@@ -1,15 +1,11 @@
 /**
- * antiqueLook — the `stylize` step: four full-screen passes, in order.
- *   1. paper  — the sheet, baked only when its row was (re)allocated or the
- *               scanned paper landed;
- *   2. reduce — print → quarter-res `wash` (low band) + `peaks` (MRT);
- *   3. glow   — `wash` → 1/16-res `glow`, the low band past star scale;
- *   4. peaks  — non-maximum suppression → `stars`;
- *   5. glyphs — one instanced quad per star cell, scattered into `star-ink`;
- *      decor  — one instanced quad per placed ornament, into `decor`/`decor-hue`;
- *   6. plate  — everything inked onto the swap chain.
- * Everything GPU-side is built on the look's first frame, not at boot: most
- * sessions never open it. The look itself lives in `shaders/antiqueLook/`.
+ * antiqueLook — the `stylize` step, its passes in order: paper (the sheet, baked
+ * only when its row was reallocated or the scan landed), reduce (print →
+ * quarter-res `wash` + `peaks`), glow (`wash` → 1/16-res), peaks (suppression →
+ * `stars`), glyphs and decor (instanced scatters into `star-ink` and
+ * `decor`/`decor-hue`), plate (all of it inked onto the swap chain). One
+ * `stylize` timing slot spans them, as `runBloom`'s does. GPU objects are built
+ * on the look's first frame, not at boot: most sessions never open it.
  */
 
 import { createAntiqueLookGpu } from './createAntiqueLookGpu';
@@ -34,7 +30,6 @@ import { terminatorHatchAngle } from '../../../../utils/gpu/antiqueLook/terminat
 import { asSceneBodyId } from '../../../../utils/scene/asSceneBodyId';
 import { viewBasis } from '../../../../utils/camera/projection/viewBasis';
 import { viewCornerRays } from '../../../../utils/camera/projection/viewCornerRays';
-import { timestampSpread } from '../../../../utils/gpu/timestampSpread';
 import type { AntiqueLook } from '../../../../@types/rendering/AntiqueLook';
 import type { AntiqueLookGpu } from '../../../../@types/rendering/AntiqueLookGpu';
 import type { AntiqueSheetAssets } from '../../../../@types/rendering/AntiqueSheetAssets';
@@ -68,12 +63,12 @@ export function createAntiqueLook(init: {
     targets: readonly GPUTextureView[],
     stage: { pipeline: GPURenderPipeline; layout: GPUBindGroupLayout },
     resources: readonly GPUBindingResource[],
-    timestamps: { timestampWrites?: GPURenderPassTimestampWrites } = {},
+    timestampWrites?: GPURenderPassTimestampWrites,
   ): void {
     const pass = encoder.beginRenderPass({
       label: `antique-look-${label}`,
       colorAttachments: targets.map((view) => ({ view, loadOp: 'clear', storeOp: 'store' })),
-      ...timestamps,
+      ...(timestampWrites ? { timestampWrites } : {}),
     });
     pass.setPipeline(stage.pipeline);
     // Rebuilt per encode: every source view is recreated on resize.
@@ -117,7 +112,7 @@ export function createAntiqueLook(init: {
         bodies: hasBodies,
         captions: io.overlay !== null,
         paper: paperAssets !== null,
-        rays: viewCornerRays(basis, ctx.frustum),
+        rays: viewCornerRays(basis, ctx.frustum, size),
         seed: PAPER_SEED,
         rulings,
         hatchAngle: terminatorHatchAngle(ctx.bodyPose(SUN)),
@@ -162,17 +157,35 @@ export function createAntiqueLook(init: {
     const decorHue = targets.viewOf(ANTIQUE_TARGETS.decorHue);
     // foreground:0 keeps last frame's bodies when nothing drew one this frame.
     const bodies = hasBodies ? targets.viewOf('foreground:0') : g.empty;
+    // The slot's begin rides whichever pass opens first (the paper bake is
+    // usually skipped), its end the plate; both write the one query pair.
+    const ts = timing.descriptorFor('stylize');
+    const begin = ts && {
+      querySet: ts.querySet,
+      beginningOfPassWriteIndex: ts.beginningOfPassWriteIndex,
+    };
+    const end = ts && { querySet: ts.querySet, endOfPassWriteIndex: ts.endOfPassWriteIndex };
 
-    if (paper !== bakedPaper) {
-      fullScreen(encoder, 'paper', [paper], g.paper, [
-        uniforms,
-        paperAssets?.tile.createView() ?? g.empty,
-        paperAssets?.stains.createView() ?? g.empty,
-        g.repeatSampler,
-      ]);
+    const bakesPaper = paper !== bakedPaper;
+    if (bakesPaper) {
+      fullScreen(
+        encoder,
+        'paper',
+        [paper],
+        g.paper,
+        [uniforms, paperAssets?.tile ?? g.empty, paperAssets?.stains ?? g.empty, g.repeatSampler],
+        begin,
+      );
       bakedPaper = paper;
     }
-    fullScreen(encoder, 'reduce', [wash, peaks], g.reduce, [io.print, bodies]);
+    fullScreen(
+      encoder,
+      'reduce',
+      [wash, peaks],
+      g.reduce,
+      [io.print, bodies],
+      bakesPaper ? undefined : begin,
+    );
     fullScreen(encoder, 'glow', [glow], g.glow, [wash]);
     fullScreen(encoder, 'peaks', [stars], g.peaks, [peaks, uniforms]);
     // One instance per quarter-res cell (an upper bound: the shader drops the rest).
@@ -213,7 +226,7 @@ export function createAntiqueLook(init: {
           entries: [
             { binding: 0, resource: uniforms },
             { binding: 1, resource: { buffer: g.ornaments } },
-            { binding: 2, resource: atlas.createView() },
+            { binding: 2, resource: atlas },
             { binding: 3, resource: g.clampSampler },
           ],
         }),
@@ -239,9 +252,9 @@ export function createAntiqueLook(init: {
         decor,
         decorHue,
         { buffer: g.digits },
-        glyphs?.texture.createView() ?? g.empty,
+        glyphs?.view ?? g.empty,
       ],
-      timestampSpread(timing, 'stylize'),
+      end,
     );
   }
 

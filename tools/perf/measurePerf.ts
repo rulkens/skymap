@@ -190,6 +190,11 @@ function parseArgs(argv: readonly string[]): PerfOptions {
   return options;
 }
 
+/** The page the harness boots: `?perf` plus any `--gate` flags. */
+function perfPageUrl(options: PerfOptions): string {
+  return `${options.url}/?perf${options.gates.map((gate) => `&${gate}`).join('')}`;
+}
+
 /**
  * bootPerfPage — open a page, collect page errors, boot the `__skymapPerf`
  * hook (see bootHookedPage), and read the `slotGroups` map. Shared by
@@ -200,11 +205,6 @@ function parseArgs(argv: readonly string[]): PerfOptions {
  * collapse them to a summary, and JSON mode surfaces them raw. The returned
  * array is live, so callers read it AFTER sampling.
  */
-/** The page the harness boots: `?perf` plus any `--gate` flags. */
-function perfPageUrl(options: PerfOptions): string {
-  return `${options.url}/?perf${options.gates.map((gate) => `&${gate}`).join('')}`;
-}
-
 async function bootPerfPage(
   context: BrowserContext,
   url: string,

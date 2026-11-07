@@ -181,11 +181,8 @@
 }
 
 .floating .readout {
-  box-sizing: border-box;
   padding: var(--space-2) var(--space-3);
-  /* Twenty figures wide whatever the face, so proportional digits never reflow the pill;
-   * ScaleBar's width calc assumes this box. A monospace face fills it exactly. */
-  min-width: calc(20ch + 20 * var(--letter-spacing-tight) + 2 * var(--space-3));
+  min-width: var(--time-readout-min-width);
 }
 
 /*

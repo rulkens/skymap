@@ -4,7 +4,7 @@
  * view of them that fills in as each lands. `onLanded` fires per asset: the
  * render loop may be asleep at rest, and an asset landing is a reason to draw;
  * the paper also invalidates the baked sheet. A failure leaves that asset null
- * and the plate draws without it.
+ * and the plate draws without it. Anything landing after `destroy` is dropped.
  */
 
 import type { AntiqueSheetAssets } from '../../../../@types/rendering/AntiqueSheetAssets';
@@ -18,8 +18,10 @@ export function loadAntiqueSheetAssets(
   let paper: AntiqueSheetAssets['paper'] = null;
   let ornaments: AntiqueSheetAssets['ornaments'] = null;
   let glyphs: AntiqueSheetAssets['glyphs'] = null;
+  let destroyed = false;
+  const textures: GPUTexture[] = [];
 
-  const upload = (label: string, bitmap: ImageBitmap): GPUTexture => {
+  const upload = (label: string, bitmap: ImageBitmap): GPUTextureView => {
     const texture = device.createTexture({
       label,
       size: [bitmap.width, bitmap.height],
@@ -34,13 +36,19 @@ export function loadAntiqueSheetAssets(
       bitmap.height,
     ]);
     bitmap.close();
-    return texture;
+    textures.push(texture);
+    return texture.createView();
+  };
+  const stillWanted = (...bitmaps: ImageBitmap[]): boolean => {
+    if (destroyed) bitmaps.forEach((bitmap) => bitmap.close());
+    return !destroyed;
   };
   const warn = (what: string) => (error: unknown) =>
     console.warn(`antique look: ${what} unavailable`, error);
 
   Promise.all([fetchAntiqueBitmap('paper.webp'), fetchAntiqueBitmap('stains.webp')])
     .then(([tile, stains]) => {
+      if (!stillWanted(tile, stains)) return;
       paper = {
         tile: upload('antique-look-paper-tile', tile),
         stains: upload('antique-look-stains', stains),
@@ -50,13 +58,18 @@ export function loadAntiqueSheetAssets(
     .catch(warn('scanned paper'));
   fetchAntiqueBitmap('ornaments.png')
     .then((bitmap) => {
+      if (!stillWanted(bitmap)) return;
       ornaments = upload('antique-look-ornament-atlas', bitmap);
       onLanded('ornaments');
     })
     .catch(warn('ornaments'));
   buildAntiqueGlyphSheet()
-    .then((sheet) => {
-      glyphs = { texture: upload('antique-look-glyph-sheet', sheet.bitmap), sheet };
+    .then(({ bitmap, width, height, glyphs: rects }) => {
+      if (!stillWanted(bitmap)) return;
+      glyphs = {
+        view: upload('antique-look-glyph-sheet', bitmap),
+        sheet: { width, height, glyphs: rects },
+      };
       onLanded('glyphs');
     })
     .catch(warn('border numbering'));
@@ -72,10 +85,9 @@ export function loadAntiqueSheetAssets(
       return glyphs;
     },
     destroy() {
-      paper?.tile.destroy();
-      paper?.stains.destroy();
-      ornaments?.destroy();
-      glyphs?.texture.destroy();
+      destroyed = true;
+      paper = ornaments = glyphs = null;
+      textures.forEach((texture) => texture.destroy());
     },
   };
 }

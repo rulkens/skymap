@@ -129,6 +129,9 @@
   --font-family-mono: 'Antique Figures', 'IM Fell DW Pica', 'IM Fell English', Georgia, serif;
   /* Clock and scale keep Fell's own old-style figures, period-correct for a single readout. */
   --font-family-figures: 'IM Fell DW Pica', 'IM Fell English', Georgia, serif;
+  /* Fell's figures are proportional: twenty monospace-wide cells keep the clock pill from
+   * reflowing each minute, and match the width ScaleBar's calc assumes. */
+  --time-readout-min-width: calc(20ch + 20 * var(--letter-spacing-tight));
   --font-family-display: 'Antique Figures', 'IM Fell English', Georgia, serif;
   /* Small capitals: the SC face sets lowercase as small caps, so labels go lowercase. */
   --font-family-label: 'IM Fell English SC', Georgia, serif;

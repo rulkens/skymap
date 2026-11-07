@@ -12,8 +12,8 @@ import type { Renderer } from './Renderer';
 export type AntiqueLook = Renderer & {
   /**
    * Opens its own passes in order (paper bake when the sheet was reallocated,
-   * reduce, peak suppression, plate), the way `runBloom` does. `overlay` null
-   * ⇒ no captions this frame.
+   * reduce, glow, peak suppression, glyphs, decor, plate), the way `runBloom`
+   * does. `overlay` null ⇒ no captions this frame.
    */
   encode(
     encoder: GPUCommandEncoder,
