@@ -4,12 +4,13 @@
  * off the higher-ranked ones' names (`verticalClearance`), craters on
  * their floors or beside their rims (`placeAntiqueCraterName`), all faded in with the
  * disc (`ANTIQUE_MOON_PLACE_REVEAL.discPx`). The producer owns each name's px and side,
- * which `antiqueLabel` keeps; the director declutters seas first, then by `rank`. With
+ * which `antiqueLabel` keeps; the director declutters by band (seas first), then `rank`. With
  * the look off it returns before any work. A name carries the Moon as subject, so it
  * recedes with it.
  */
 
 import type { Label2D } from '../../../../@types/rendering/Label2D';
+import type { AntiqueMoonPlace } from '../../../../@types/rendering/AntiqueMoonPlace';
 import type { LayerScreenLabel } from '../../../../@types/engine/layer/LayerScreenLabel';
 import type { BodyRuntime } from '../../@types/BodyRuntime';
 import { ANTIQUE_MOON_PLACES } from '../../../../data/labels/antiqueMoonPlaces';
@@ -36,9 +37,18 @@ import { rectRoomInCircle } from '../../../../utils/math/rectRoomInCircle';
 import type { ScreenRectPx } from '../../../../@types/rendering/ScreenRectPx';
 
 const NONE = { labels: [], awake: false } as const;
-// Above every rank, so rank 1 carries the highest priority within the row; a sea or Terra
-// a whole ceiling over every crater, as Riccioli's plate prints every sea first.
+// Above every rank, so rank 1 carries the highest priority within its band. The bands, a
+// ceiling apart: Riccioli's plate prints every sea first, then the craters a reader looks
+// for first, then the bays, lakes, marshes and Terrae, then every other crater.
 const RANK_CEILING = 1000;
+const HEADLINE_CRATERS: ReadonlySet<string> = new Set(
+  ['tycho', 'copernicus', 'plato', 'aristarchus', 'kepler', 'ptolemaeus'].map(
+    (n) => `moonPlace-${n}`,
+  ),
+);
+const SEA = /^(Mare|Oceanus)\b/;
+const bandOf = (place: AntiqueMoonPlace): number =>
+  place.kind === 'crater' ? (HEADLINE_CRATERS.has(place.id) ? 2 : 0) : SEA.test(place.name) ? 3 : 1;
 // The director's antique pad (`ANTIQUE_LABEL_DECLUTTER`, 8) and a margin for the set
 // glyphs over `antiqueNameBoxPx`'s estimate.
 const SEA_PAD_PX = 16;
@@ -122,10 +132,7 @@ export function produceAntiqueMoonPlaces(
         // Engraved over the disc it names; the placement already keeps it on the lit side.
         occludeWeight: 0,
         declutterPriority:
-          priority * CAPTION_PRIORITY_SCALE +
-          (place.kind === 'crater' ? 0 : RANK_CEILING) +
-          RANK_CEILING -
-          place.rank,
+          priority * CAPTION_PRIORITY_SCALE + (bandOf(place) + 1) * RANK_CEILING - place.rank,
         subjectId,
       });
     });

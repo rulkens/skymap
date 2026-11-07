@@ -44,16 +44,25 @@ function fullDiscLabels() {
 
 describe('produceAntiqueMoonPlaces', () => {
   // Riccioli's plate prints every sea; craters come second (lead's ruling, 2026-11-07):
-  // Procellarum lost the full disc to Keplerus and Aristarchus, ranked above it.
-  it('ranks every sea and Terra above every crater in the declutter', () => {
+  // Procellarum lost the full disc to Keplerus and Aristarchus, ranked above it. The
+  // headline craters keep their names over the bays, the Terrae and every other crater
+  // (Copernicus lost its name to Sinus Aestuum).
+  it('declutters seas first, then the headline craters, then the bays, Terrae and the rest', () => {
     const labels = fullDiscLabels();
-    const isCrater = new Set(
-      ANTIQUE_MOON_PLACES.filter((p) => p.kind === 'crater').map((p) => p.id),
+    const sea = new Set(
+      ANTIQUE_MOON_PLACES.filter((p) => /^(Mare|Oceanus)\b/.test(p.name)).map((p) => p.id),
     );
-    const ranks = (crater: boolean) =>
-      labels.filter((l) => isCrater.has(l.id) === crater).map((l) => l.declutterPriority!);
-    expect(ranks(true).length).toBeGreaterThan(0);
-    expect(Math.min(...ranks(false))).toBeGreaterThan(Math.max(...ranks(true)));
+    const headline = ['tycho', 'copernicus', 'plato', 'aristarchus', 'kepler', 'ptolemaeus'].map(
+      (n) => `moonPlace-${n}`,
+    );
+    const ranks = (keep: (id: string) => boolean) =>
+      labels.filter((l) => keep(l.id)).map((l) => l.declutterPriority!);
+    const seas = ranks((id) => sea.has(id));
+    const heads = ranks((id) => headline.includes(id));
+    const rest = ranks((id) => !sea.has(id) && !headline.includes(id));
+    expect(heads.length).toBeGreaterThan(0);
+    expect(Math.min(...seas)).toBeGreaterThan(Math.max(...heads));
+    expect(Math.min(...heads)).toBeGreaterThan(Math.max(...rest));
   });
 
   it("names the five great seas on the full disc, the limb's foreshortening notwithstanding", () => {
