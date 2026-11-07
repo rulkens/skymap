@@ -223,7 +223,8 @@ function sortByDeclutterPriorityDesc(labels: readonly Label2D[]): number[] {
  * leader lives on the label object, so there is no separate line-side filter
  * to run.  Under the antique look (`antique`) a lifted name is judged just off
  * its glyph's rim, where `applyLift` engraves it, and a name never prints across
- * the disc of a body nearer than its own subject (a star over a planet's limb).  Returns a fresh array in original input order (deterministic,
+ * the disc of a body nearer than its own subject (a star over a planet's limb;
+ * `farIds` are the captions that name no depth yet stand beyond every globe).  Returns a fresh array in original input order (deterministic,
  * sort-independent).
  */
 function declutterByBboxOverlap(
@@ -233,6 +234,7 @@ function declutterByBboxOverlap(
   projection: Label2DProjection,
   padPx: number,
   antique: boolean,
+  farIds: ReadonlySet<string>,
 ): Label2D[] {
   const { pxPerRad } = projection;
   // `labelScreenRect` is the shared CPU twin of the vertex shader's em clamp —
@@ -259,14 +261,14 @@ function declutterByBboxOverlap(
         : [p.screenPx[0], p.screenPx[1] - proposedLiftPx(label.lift.subjectSizePx)];
     return labelScreenRect({ label, bbox, screenPx, clipW: p.clipW, pxPerRad });
   });
-  const discs = antique ? bodyDiscs(labels, projected) : [];
+  const discs = antique ? bodyDiscs(labels, projected, pxPerRad) : [];
 
   const order = sortByDeclutterPriorityDesc(labels);
   const accepted: number[] = [];
   for (const i of order) {
     const rect = rects[i];
     if (projected[i]!.onScreen && rect) {
-      const nearKm = labels[i]!.occludeNearKm ?? -Infinity;
+      const nearKm = labels[i]!.occludeNearKm ?? (farIds.has(labels[i]!.id) ? Infinity : -Infinity);
       const behindDisc = discs.some(
         (d) => d.index !== i && nearKm > d.centreKm && rectMeetsCircle(rect, d.centre, d.radius),
       );
@@ -301,6 +303,7 @@ function declutterByBboxOverlap(
 function bodyDiscs(
   labels: readonly Label2D[],
   projected: readonly Label2DProjected[],
+  pxPerRad: number,
 ): ScreenBodyDisc[] {
   const discs: ScreenBodyDisc[] = [];
   labels.forEach((label, index) => {
@@ -309,7 +312,11 @@ function bodyDiscs(
     if (!centre || !lift || occludeNearKm === undefined || worldEmMpc === undefined) return;
     if (lift.subjectSizePx < 1) return;
     const centreKm = occludeNearKm + worldEmMpc * SCALE_UNITS.MPC_TO_M * SCALE_UNITS.M_TO_KM;
-    discs.push({ index, centre, radius: lift.subjectSizePx / 2, centreKm });
+    // `subjectSizePx` is the small-angle size (f·r/d); a near sphere's limb on the
+    // image plane lies at f·tan(asin(r/d)), up to ~9% wider at 22° (Pleiades clipped on the Moon).
+    const sinHalf = Math.min(lift.subjectSizePx / 2 / pxPerRad, 0.99);
+    const radius = lift.subjectSizePx / 2 / Math.sqrt(1 - sinHalf * sinHalf);
+    discs.push({ index, centre, radius, centreKm });
   });
   return discs;
 }
@@ -509,6 +516,7 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     labels: readonly Label2D[],
     ctx: FrameView,
     antique: boolean,
+    farIds: ReadonlySet<string>,
   ): DeclutterResult {
     const projection = config.project(ctx);
     const projected = projectLabels(labels, projection);
@@ -523,6 +531,7 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
           projection,
           policy.padPx,
           antique,
+          farIds,
         );
         break;
       case 'screenSeparation':
@@ -922,6 +931,9 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
       !isKeyOf(ANTIQUE_AREA_LETTERING, l.id) &&
       !isKeyOf(ANTIQUE_PLACE_LETTERING, l.id);
     const hasFont = (font: FontId) => state.gpu.fontAtlases?.metricsByFont[font] !== undefined;
+    // Star and cluster captions name no depth, yet stand beyond every globe: the
+    // antique cull keeps them off a globe's disc (a name with no depth never would).
+    const farIds = new Set<string>();
     const cosmos = Math.hypot(...ctx.drawCamPos) > ANTIQUE_REGIME_MPC[1];
     for (const p of producers) {
       const out = p.produceLabels(state, ctx);
@@ -929,6 +941,9 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
       const produced = antique
         ? toAntique(out.labels, p.label, isTitle, hasFont, cosmos)
         : out.labels;
+      if (antique && (p.label === 'starCatalog' || p.label === 'structure')) {
+        for (const l of produced) if (l.occludeNearKm === undefined) farIds.add(l.id);
+      }
       if (p.label === undefined || atRest) {
         for (const l of produced) mergedLabels.push(l);
         continue;
@@ -943,7 +958,7 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     // Cross-producer declutter — producers emit every candidate (no internal
     // declutter); the director de-collides them together here. A culled
     // label's leader is culled with it by construction.
-    const declutterResult = declutter(mergedLabels, ctx, antique);
+    const declutterResult = declutter(mergedLabels, ctx, antique, farIds);
 
     // Appear/disappear envelope — animated alphas feed `signatureOf` below,
     // so mid-ramp frames re-upload and settled frames skip, with no extra

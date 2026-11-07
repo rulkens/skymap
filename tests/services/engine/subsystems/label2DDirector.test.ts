@@ -1188,6 +1188,43 @@ describe('label2DDirector', () => {
         dir.runFrame(makeState(), makeNear0Ctx(16));
         expect(dir.labels().map((l) => l.id)).toContain('denebola');
       });
+      it("keeps a star or cluster caption off a nearer globe's disc though it names no depth", () => {
+        // "Pleiades" clipped on the Moon's limb: cluster captions carry no `occludeNearKm`,
+        // so the cull took them for nearer than every globe. A place name (no depth either) stays.
+        const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
+        dir.attachRenderers(makeLabelStub() as never, makeLineStub() as never, () => ({
+          minX: 0,
+          minY: -100,
+          maxX: 600,
+          maxY: 0,
+        }));
+        const rest = (nowMs: number) =>
+          ({ ...makeNear0Ctx(nowMs), snapshot: { nowMs, focusBlend: 0 } }) as FrameView;
+        const onDisc = { fadeAlpha: 1, declutterPriority: 10 * CAPTION_PRIORITY_SCALE };
+        const cluster: Label2D = {
+          ...SAMPLE_LABEL,
+          ...onDisc,
+          id: 'open-cluster-pleiades',
+          worldPos: [-0.1, -0.3, 0],
+        };
+        const place: Label2D = {
+          ...SAMPLE_LABEL,
+          ...onDisc,
+          id: 'olympus',
+          worldPos: [0.3, 0.1, 0],
+        };
+        const far = (label: Label2D) => ({
+          ...makeProducer('f', [label]),
+          label: 'structure' as const,
+        });
+        dir.registerProducer(makeProducer('p', [planet, place]));
+        dir.registerProducer(far(cluster));
+        dir.runFrame(antique(), rest(0));
+        expect(dir.labels().map((l) => l.id)).toEqual(['mars', 'olympus']);
+
+        dir.runFrame(makeState(), rest(16));
+        expect(dir.labels().map((l) => l.id)).toContain('open-cluster-pleiades');
+      });
     });
 
     it('smoothstepRamp keeps flushing a remembered emission until the ramp hits 0 (mirrors the exponential absence test above)', () => {
