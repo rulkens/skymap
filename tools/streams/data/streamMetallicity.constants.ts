@@ -4,16 +4,18 @@
  * Harris 1996 (2010 edition), `mwgc.dat` Part II, https://physics.mcmaster.ca/~harris/mwgc.dat.
  * Streams in S5 take the mean CaT [Fe/H] of Li et al. 2022, ApJ 928, 30, Table 1
  * (https://arxiv.org/abs/2110.06950); S5's one AAU and one Jhelum value cover their galstreams
- * components. Streams missing here take the table's median (`streamMetallicity`).
+ * components. `ref` is each source's requested citation. Streams missing here take the median.
+ * The build fails on a key that names no built stream.
  */
 import type { StreamMetallicity } from '../@types/StreamMetallicity';
 
-const HARRIS = 'Harris 2010';
-const S5 = 'Li et al. 2022';
+const HARRIS = 'Harris 1996, 2010 ed.';
+const S5 = 'Li+ 2022';
 
 export const STREAM_METALLICITY: Readonly<Record<string, StreamMetallicity>> = {
   M2: { feh: -1.65, ref: HARRIS }, // NGC 7089
   'M3-Svol': { feh: -1.5, ref: HARRIS }, // NGC 5272
+  Svol: { feh: -1.5, ref: HARRIS }, // master_log names Yang 2023's M3 track (M3-Y23) M3-Svol
   M30: { feh: -2.27, ref: HARRIS }, // NGC 7099
   M5: { feh: -1.29, ref: HARRIS }, // NGC 5904
   M68: { feh: -2.23, ref: HARRIS }, // NGC 4590
@@ -31,6 +33,8 @@ export const STREAM_METALLICITY: Readonly<Record<string, StreamMetallicity>> = {
   NGC6362: { feh: -0.99, ref: HARRIS },
   NGC6397: { feh: -2.02, ref: HARRIS },
   'OmegaCen-Fimbulthul': { feh: -1.53, ref: HARRIS }, // NGC 5139
+  // master_log files the Fimbulthul-I24 track under the stream OmegaCen-Fimbulthul.
+  Fimbulthul: { feh: -1.53, ref: HARRIS },
   Pal15: { feh: -2.07, ref: HARRIS },
   Pal5: { feh: -1.41, ref: HARRIS },
   '300S': { feh: -1.26, ref: S5 },
@@ -45,6 +49,7 @@ export const STREAM_METALLICITY: Readonly<Record<string, StreamMetallicity>> = {
   'Jhelum-a': { feh: -1.83, ref: S5 },
   'Jhelum-b': { feh: -1.83, ref: S5 },
   Indus: { feh: -1.96, ref: S5 },
+  'Cetus-Palca': { feh: -2.02, ref: S5 }, // S5 "Palca"
   Elqui: { feh: -2.22, ref: S5 },
   Turranburra: { feh: -2.18, ref: S5 },
 };

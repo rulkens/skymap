@@ -1,3 +1,5 @@
+import type { StreamMetallicity } from './StreamMetallicity';
+
 /** One row of stellar_streams_meta.json; array position = stream index in the bin. */
 export type StellarStreamMetaEntry = {
   /** Slug: lowercase, non-alphanumerics → '-', e.g. 'gd-1', 'sagittarius'. */
@@ -13,9 +15,7 @@ export type StellarStreamMetaEntry = {
   particleCount: number;
   /** Mean of the emitted particles' colourT: tints the stream's caption like its streaks. */
   colourT: number;
-  /** Measured [Fe/H]; null when the table's median stood in, and for Sagittarius's gradient. */
-  feh: number | null;
-  /** Where `feh` was measured, e.g. 'Harris 2010'; null exactly when `feh` is. */
-  fehRef: string | null;
+  /** Measured [Fe/H] and its citation; null when the median stood in, and for Sagittarius's gradient. */
+  metallicity: StreamMetallicity | null;
   anchorMpc: readonly [number, number, number];
 };

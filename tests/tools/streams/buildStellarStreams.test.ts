@@ -38,8 +38,8 @@ describe('buildStellarStreams', () => {
   it('the meta carries a measured [Fe/H] with its source, and none for a defaulted stream', () => {
     const { meta } = buildStellarStreams(stars, tracks);
     const byId = (id: string) => meta.find((m) => m.id === id)!;
-    expect([byId('pal5').feh, byId('pal5').fehRef]).toEqual([-1.41, 'Harris 2010']);
-    expect([byId('gd-1').feh, byId('gd-1').fehRef]).toEqual([null, null]);
+    expect(byId('pal5').metallicity).toEqual({ feh: -1.41, ref: 'Harris 1996, 2010 ed.' });
+    expect(byId('gd-1').metallicity).toBeNull();
   });
 
   it('a rebuild over the same inputs is byte-identical', () => {

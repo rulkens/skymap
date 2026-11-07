@@ -1,5 +1,5 @@
-/** A stream's [Fe/H] and where it was measured; `ref` null means the curated table's median stood in. */
+/** A stream's measured [Fe/H] and the citation shown beside it on the card. */
 export type StreamMetallicity = {
   readonly feh: number;
-  readonly ref: string | null;
+  readonly ref: string;
 };

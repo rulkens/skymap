@@ -18,6 +18,8 @@
 // so a picked star matches the point it rose out of. The two are one ramp with
 // two evaluations — any edit to the anchors or breakpoints here MUST be
 // mirrored there (its tests guard the shared values), and vice versa.
+// stellarStreams/streams.wesl tints stream streaks with this ramp and the stream
+// captions use the CPU twin, so an edit here recolours both, together.
 //
 // A separate, intentionally independent CPU path colours the hand-seeded
 // foreground scene stars: temperatureToLinearRgb turns each star's kelvin

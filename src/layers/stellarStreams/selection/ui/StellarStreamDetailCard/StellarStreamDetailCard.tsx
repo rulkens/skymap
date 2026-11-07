@@ -51,10 +51,10 @@ function StellarStreamDetailCard({
         <CardRow label={facts.sizeLabel} value={`${Math.round(target.lengthKpc)} kpc`} />
         <CardRow label="Distance" value={formatKpcRange(target.distanceKpc)} />
         <CardRow label="Width" value={target.widthDeg === null ? '—' : `${target.widthDeg}°`} />
-        {target.feh !== null && (
+        {target.metallicity && (
           <CardRow
             label="Metallicity"
-            value={`[Fe/H] ${target.feh.toFixed(2).replace('-', '\u2212')} (${target.fehRef})`}
+            value={`[Fe/H] ${target.metallicity.feh.toFixed(2).replace('-', '\u2212')} (${target.metallicity.ref})`}
           />
         )}
         <CardRow label="Particles drawn" value={target.particleCount.toLocaleString()} />

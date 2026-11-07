@@ -77,13 +77,14 @@ packed record (Q7).
 
 - **Sagittarius.** Seeded uniform subsample of `stars.txt` to `SGR_PARTICLE_BUDGET = 60_000`. Position from
   `ra, dec, distance` via `raDecDistToEqCart`. Tangent = `normalize(galToEq([vx, vy, vz]))` (the snapshot's
-  galactocentric axes are galactic axes). Brightness from density only (equal-mass particles); colour t from
-  `Tstrip`: recent and bound lean orange, old lean blue, plus light jitter (Q3). Size from a per-source range.
+  galactocentric axes are galactic axes). Brightness from density only (equal-mass particles); colour from a
+  sampled star mix at the [Fe/H] of each star's `Tstrip` (X8FX, amends Q3). Size from a per-source range.
 - **galstreams.** One track per stream: the master log's `On` track, else any track with real distances;
   skip placeholder-distance tracks, non-`st` kinds and galstreams' own Sagittarius. Orient each track to its
   proper motions (rv 0 where missing). Particles evenly along the track with Gaussian cross-track scatter of
   the measured `width_phi2` (default 0.3°), count `clip(L·60·max(1, w/0.3), 300, 30000)`; end fade over the
-  last eighth; per-particle brightness and colour jitter; **no along-track waves** (Q2).
+  last eighth; per-particle brightness jitter; colour from a sampled star mix at the stream's [Fe/H] (X8FX,
+  amends Q3); **no along-track waves** (Q2).
 - Stream order: Sagittarius first, then by slug, so ids are stable across rebuilds; particles emitted per stream.
 - Deterministic: one seeded RNG; a rebuild over the same raw files is byte-identical.
 

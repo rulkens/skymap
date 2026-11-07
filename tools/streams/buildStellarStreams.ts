@@ -21,6 +21,7 @@ import { splitmix64Rng } from '../utils/random/splitmix64Rng';
 import type { GalstreamsTrack } from './@types/GalstreamsTrack';
 import type { StellarStreamMetaEntry } from './@types/StellarStreamMetaEntry';
 import type { VasilievStar } from './@types/VasilievStar';
+import { STREAM_METALLICITY } from './data/streamMetallicity.constants';
 import { SGR_SEED, TRACK_SEED } from './data/streamsBuild.constants';
 import { orientTrackByMotion } from './utils/orientTrackByMotion';
 import { pickStreamTracks } from './utils/pickStreamTracks';
@@ -29,6 +30,7 @@ import { readVasilievStars } from './utils/readVasilievStars';
 import { sagittariusMeta } from './utils/sagittariusMeta';
 import { sagittariusParticles } from './utils/sagittariusParticles';
 import { streamMetaEntry } from './utils/streamMetaEntry';
+import { streamFeh } from './utils/streamFeh';
 import { streamMetallicity } from './utils/streamMetallicity';
 import { streamSlug } from './utils/streamSlug';
 import { trackParticles } from './utils/trackParticles';
@@ -47,7 +49,7 @@ export function buildStellarStreams(
   const sources = [
     sgr,
     ...picked.map(({ t, metallicity }) =>
-      trackParticles(orientTrackByMotion(t), metallicity.feh, rng),
+      trackParticles(orientTrackByMotion(t), streamFeh(metallicity), rng),
     ),
   ];
   const meta = [
@@ -73,6 +75,14 @@ export function buildStellarStreams(
 function main(): void {
   const stars = readVasilievStars(rawDataPath('vasiliev2021.stars'));
   const tracks = readGalstreamsTracks(rawDataPath('galstreams.dir'));
+  // A galstreams rename on refetch would otherwise drop a measured stream to the median unseen.
+  const built = new Set(pickStreamTracks(tracks).map((t) => t.name));
+  const stale = Object.keys(STREAM_METALLICITY).filter((name) => !built.has(name));
+  if (stale.length > 0) {
+    throw new Error(
+      `buildStellarStreams: metallicity rows name no built stream: ${stale.join(', ')}`,
+    );
+  }
   const { bin, meta } = buildStellarStreams(stars, tracks);
   mkdirSync(OUT_DIR, { recursive: true });
   writeFileSync(join(OUT_DIR, 'stellar-streams.bin'), Buffer.from(bin));

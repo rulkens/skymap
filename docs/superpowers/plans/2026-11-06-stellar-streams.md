@@ -644,8 +644,9 @@ Task 13 re-runs (perf, eye check) after Task 17.
 **Observable behaviours (smoke)**
 - Off at boot; switching "Stellar streams" on in Labels & guides shows nothing near the Sun, fades in between
   4 and 10 kpc, and is gone past the foreground gate.
-- Streaks drift along each stream's motion; Sagittarius colour runs orange near the remnant to blue in old
-  debris; no along-track brightness waves on the galstreams streams.
+- Streaks drift along each stream's motion; Sagittarius runs from an orange core to yellow-orange arms;
+  galstreams streams are pale yellow-white, shaded by metallicity; no along-track brightness waves on the
+  galstreams streams.
 - The render loop sleeps when streams are off, out of band, or both looks' flow are 0.
 - Debug panel "Stellar streams" sliders change the look live; Reset restores it.
 - Hover a stream: preview card; click: detail card with name, kind line, length, distance range, width,

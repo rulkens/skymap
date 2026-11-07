@@ -14,7 +14,7 @@ const KPC_TO_MPC = 1e-3;
 export function streamMetaEntry(
   track: GalstreamsTrack,
   particles: StreamParticles,
-  metallicity: StreamMetallicity,
+  metallicity: StreamMetallicity | null,
 ): StellarStreamMetaEntry {
   const points = trackPositionsKpc(track);
   const cumulative = cumulativeLengths(points);
@@ -32,9 +32,7 @@ export function streamMetaEntry(
     widthDeg: track.widthDeg,
     particleCount: particles.luminosity.length,
     colourT: arrayMean(particles.colourT),
-    // A defaulted median coloured the particles but is no measurement: the card must not show it.
-    feh: metallicity.ref === null ? null : metallicity.feh,
-    fehRef: metallicity.ref,
+    metallicity,
     anchorMpc: [mid[0] * KPC_TO_MPC, mid[1] * KPC_TO_MPC, mid[2] * KPC_TO_MPC],
   };
 }

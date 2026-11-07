@@ -14,9 +14,7 @@ export type StellarStreamMeta = {
   readonly particleCount: number;
   /** Mean particle colourT (Gaia BP−RP over `STREAM_BP_RP_RANGE`); tints the caption. */
   readonly colourT: number;
-  /** Measured [Fe/H]; null when the build defaulted it (never shown) and for Sagittarius. */
-  readonly feh: number | null;
-  /** Where `feh` was measured, e.g. 'Harris 2010'; null exactly when `feh` is. */
-  readonly fehRef: string | null;
+  /** Measured [Fe/H] and its citation; null when the build defaulted it (never shown) and for Sagittarius. */
+  readonly metallicity: { readonly feh: number; readonly ref: string } | null;
   readonly anchorMpc: readonly [number, number, number];
 };

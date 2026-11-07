@@ -35,12 +35,12 @@ across reruns over the same inputs. On 2026-11-07 it wrote 128,419 particles in 
   stream's [Fe/H] (metal-poor: more BHB light, bluer giants), linear between two anchors read off MIST
   v1.2 isochrones at log age 10.10. A galstreams stream's [Fe/H] comes from
   [`data/streamMetallicity.constants.ts`](data/streamMetallicity.constants.ts): Harris (1996, 2010
-  edition) for streams named after their globular cluster, S5 (Li et al. 2022) for the streams it
-  measured, the table's median (−1.83) for the rest. Sagittarius runs from −0.57 when bound to −1.13
+  edition) for streams galstreams ties to a globular cluster, S5 (Li et al. 2022) for the streams it
+  measured, the table's median (−1.83) for the rest; the build fails if a row names no built stream. Sagittarius runs from −0.57 when bound to −1.13
   for debris stripped 2.7 Gyr ago (after Hayes et al. 2020). The bin stores the colour as Gaia BP−RP
   (`bvToBpRp`) over `STREAM_BP_RP_RANGE`, and the shader tints it with the star catalogue's
   `starTint`, so stream stars and catalogue stars share one colour scale. The meta row carries
-  `feh`/`fehRef` only for measured values; a defaulted median is never shown.
+  `metallicity` (value and citation) only for measured values; a defaulted median is never shown.
 - **Frame**: heliocentric J2000 equatorial, Mpc, as everywhere in skymap.
 
 Tunables (particle budget, sizes, luminosities, seeds) live in

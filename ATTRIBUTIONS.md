@@ -947,7 +947,7 @@ unclear, and no entry here reads them as a licence.
 
 <!-- attribution: id=harris-gc -->
 
-- **What:** The [Fe/H] of 21 globular clusters whose streams skymap draws
+- **What:** The [Fe/H] of 19 globular clusters whose streams skymap draws
   (`mwgc.dat` Part II, December 2010 revision).
 - **By:** William E. Harris. Harris 1996, AJ 112, 1487 (2010 edition).
 - **Licence:** The file's own notice: "THE DATA IN THIS CATALOG ARE SUPPLIED

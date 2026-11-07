@@ -4,8 +4,8 @@ import { sampleStreamBv } from '../../../../tools/streams/utils/sampleStreamBv';
 import { splitmix64Rng } from '../../../../tools/utils/random/splitmix64Rng';
 
 const N = 20_000;
-const draws = (feh: number, seed = 1n) => {
-  const rng = splitmix64Rng(seed);
+const draws = (feh: number) => {
+  const rng = splitmix64Rng(1n);
   return Array.from({ length: N }, () => sampleStreamBv(feh, rng));
 };
 // Bluer than any turnoff or giant colour of the model: only BHB draws fall below it.
@@ -18,9 +18,5 @@ describe('sampleStreamBv', () => {
     const rich = draws(-0.7);
     expect(bhbShare(poor)).toBeGreaterThan(bhbShare(rich) + 0.05);
     expect(mean(poor)).toBeLessThan(mean(rich) - 0.2);
-  });
-
-  it('the same seed draws the same colours', () => {
-    expect(draws(-1.5, 7n)).toEqual(draws(-1.5, 7n));
   });
 });

@@ -34,7 +34,7 @@ describe('StellarStreamDetailCard', () => {
 
   it('a measured [Fe/H] gets a Metallicity row with its source; a defaulted one gets none', () => {
     renderCard(SHORT);
-    expect(screen.getByText('[Fe/H] \u22121.41 (Harris 2010)')).toBeTruthy();
+    expect(screen.getByText('[Fe/H] \u22121.41 (Harris 1996, 2010 ed.)')).toBeTruthy();
     cleanup();
     renderCard(SAGITTARIUS);
     expect(screen.queryByText('Metallicity')).toBeNull();
