@@ -11,7 +11,7 @@ export type AntiqueOrnament = {
   readonly sprite: string;
   readonly anchor: AntiqueOrnamentAnchor;
   /**
-   * `stars`: inside the Galaxy, where the sky is a star chart; `cosmos`: out
+   * `stars`: near the Sun, where the constellations still outline (`ANTIQUE_FIGURE_VANTAGE_MPC`); `cosmos`: out
    * among the galaxies, where the Zone of Avoidance is real terra incognita.
    */
   readonly regime: 'stars' | 'cosmos' | 'always';

@@ -108,6 +108,12 @@ describe('placeAntiqueOrnaments', () => {
     expect(place(rows, NORTH_UP, 5)).toHaveLength(1);
   });
 
+  it('withdraws a constellation figure from a vantage its stars no longer outline (Sgr A*, 8 kpc out)', () => {
+    const figure = [skyRow({ regime: 'stars' })];
+    expect(place(figure, NORTH_UP, 5e-6).map((p) => p.opacity)).toEqual([1]);
+    expect(place(figure, NORTH_UP, 0.008)).toEqual([]);
+  });
+
   it('mirrors a globe-view figure by flipping its width, not its place', () => {
     const [plain] = place([skyRow({})]);
     const [mirrored] = place([skyRow({ mirrored: true })]);

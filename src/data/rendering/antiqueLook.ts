@@ -14,6 +14,10 @@ export const ANTIQUE_PRINT_CELL_UNITS = 4;
 /** Camera distance from the Sun (Mpc) over which ornaments go from star chart to cosmos. */
 export const ANTIQUE_REGIME_MPC = [0.003, 0.03] as const;
 
+/** Camera distance from the Sun (Mpc, 10 to 50 pc) over which a constellation figure fades:
+ * past it the figure's stars have moved apart and no longer outline it. */
+export const ANTIQUE_FIGURE_VANTAGE_MPC = [1e-5, 5e-5] as const;
+
 /** Sizes of io.wesl `AntiqueUniforms`, ornaments.wesl `AntiqueOrnaments` and fragment.wesl
  * `AntiqueLettering` (each list: a 16-byte header, then fixed rows). */
 export const ANTIQUE_UNIFORM_BYTES = 288;

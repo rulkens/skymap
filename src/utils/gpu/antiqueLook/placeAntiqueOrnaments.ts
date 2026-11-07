@@ -4,7 +4,7 @@
  * Sky-anchored rows project through the view and turn with the sky (their up to
  * celestial north on screen); sheet rows sit at a corner. Each fades in only
  * while it is a sensible size on screen and while the camera is in its regime
- * (inside the Galaxy for the star chart, out among the galaxies for the Zone of
+ * (near the Sun for a constellation, out among the galaxies for the Zone of
  * Avoidance), so nothing pops and nothing balloons past the plate.
  */
 
@@ -18,6 +18,7 @@ import type { Vec3 } from '../../../@types/math/Vec3';
 import type { ScreenRectPx } from '../../../@types/rendering/ScreenRectPx';
 import { GAL_TO_EQ_MATRIX } from '../../../data/superGalacticTransform';
 import {
+  ANTIQUE_FIGURE_VANTAGE_MPC,
   ANTIQUE_NUMERAL_INSET_UNITS,
   ANTIQUE_REGIME_MPC,
 } from '../../../data/rendering/antiqueLook';
@@ -63,6 +64,8 @@ export function placeAntiqueOrnaments(input: {
   const { atlas, basis, frustum, size, unitPx } = input;
   const camDistMpc = Math.hypot(input.camPosMpc[0], input.camPosMpc[1], input.camPosMpc[2]);
   const cosmos = smoothstep(ANTIQUE_REGIME_MPC[0], ANTIQUE_REGIME_MPC[1], camDistMpc);
+  const nearSun =
+    1 - smoothstep(ANTIQUE_FIGURE_VANTAGE_MPC[0], ANTIQUE_FIGURE_VANTAGE_MPC[1], camDistMpc);
   const pxPerTan = size.height / (frustum.tanUp - frustum.tanDown);
   const placed: AntiqueOrnamentInstance[] = [];
   const reserved: { centre: readonly [number, number]; half: readonly [number, number] }[] = [];
@@ -74,7 +77,7 @@ export function placeAntiqueOrnaments(input: {
   for (const row of input.ornaments) {
     const rect = atlas.sprites[row.sprite];
     if (rect === undefined) continue;
-    const regime = row.regime === 'always' ? 1 : row.regime === 'cosmos' ? cosmos : 1 - cosmos;
+    const regime = row.regime === 'always' ? 1 : row.regime === 'cosmos' ? cosmos : nearSun;
     if (regime <= 0) continue;
     const aspect = rect.h / rect.w;
     const uv = [
