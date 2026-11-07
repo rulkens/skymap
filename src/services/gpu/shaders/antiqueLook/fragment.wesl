@@ -597,10 +597,10 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     var lines = 0.0;
     var print = PRINT_PLAIN;
     var latForm = form;
-    var lat = 0.0;
     var spotQ = 1e3;
     var spotQPerUnit = 1.0;
     var jupiterShade = 0.0;
+    var jupiterBands = vec3<f32>(0.0, 1.0, 0.0); // xy across the bands (screen, unit), z disc px
     var moon = MoonTone(0.0, 0.0, 0.0);
     let moonLayer = select(-1, MOON_LAYER, (u.flags & FLAG_MOON) != 0u);
     var moonTexel = vec4<f32>(0.0);
@@ -642,11 +642,11 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
           form = vec3<f32>(phase, along, length(vec2<f32>(dx, dy)) * u.unit);
         }
         if (print == PRINT_MARS || print == PRINT_JUPITER) {
-          lat = ballLatitude(viewRay(uv), b);
-          let lats = vec3<f32>(lat, ballLatitude(rayX, b), ballLatitude(rayY, b));
+          let lats = vec3<f32>(ballLatitude(viewRay(uv), b), ballLatitude(rayX, b), ballLatitude(rayY, b));
           // Jupiter's bands keep an even spacing on the page: the height along the pole.
           let h = select(lats, sin(lats), print == PRINT_JUPITER);
           latForm = vec3<f32>(radius * h.x, along, length(h.yz - h.x) * radius * u.unit);
+          jupiterBands = vec3<f32>((h.yz - h.x) / max(length(h.yz - h.x), 1e-9), radius * u.unit);
         }
         // Jupiter lays its shade in its bands' own lines (`jupiterPrint`).
         if (print == PRINT_JUPITER) {
@@ -688,8 +688,8 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
       // A marking is a globe's feature: on the engraved ground the relief speaks.
       bodyInk = max(bodyInk, select(mars.ink, 0.0, ground));
     } else if (print == PRINT_JUPITER) {
-      let jupiter = jupiterPrint(col, cover, JupiterPrintIn(latForm, u.tune.x, lat, jupiterShade, hit.ndv,
-        spotQ, spotQPerUnit, p, pxUnits));
+      let jupiter = jupiterPrint(col, cover, JupiterPrintIn(latForm, u.tune.x, jupiterShade, spotQ, spotQPerUnit,
+        p, pxUnits, hit.ndv, uv, 1.0 / u.res, jupiterBands.xy, jupiterBands.z), quarterTex, linear, WASH_LAYER);
       col = jupiter.col;
       bodyInk = max(bodyInk, jupiter.ink);
     } else if (moonRow) {
