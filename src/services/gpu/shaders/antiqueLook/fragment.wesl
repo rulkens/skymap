@@ -128,6 +128,7 @@ const FLAG_RELIEF: u32 = 16u;
 const RELIEF_PRINT_SHIFT: u32 = 8u;
 // The Moon's own row holds this frame's Moon (`MOON_LAYER`).
 const FLAG_MOON: u32 = 32u;
+const MOON_HALO_GROW: f32 = 1.5;
 // `depthEdge`'s second difference of depth over the nearest tap's depth.
 const DEPTH_JUMP: f32 = 0.05;
 // Sheet layout in print units: bare margin with the plate mark in it, then the
@@ -720,7 +721,9 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     let ov = texel(overlayTex, ip);
     captions = smoothstep(0.03, 0.2, ov.a) * smoothstep(0.3, 0.6, luma(ov.rgb / max(ov.a, 1e-3)));
     if (scene > 0.0 || any(col != paperTone)) {
-      let halo = max(captionHalo(overlayTex, ip, u.unit, ov.a), captionBridge(overlayTex, ip, u.unit));
+      // A Moon plate's names sit on mare lines as dense as any work: a wider knock-out.
+      let haloUnit = u.unit * select(1.0, MOON_HALO_GROW, (u.flags & FLAG_MOON) != 0u);
+      let halo = max(captionHalo(overlayTex, ip, haloUnit, ov.a), captionBridge(overlayTex, ip, u.unit));
       col = mix(col, paperTone, halo);
       scene *= 1.0 - halo;
     }

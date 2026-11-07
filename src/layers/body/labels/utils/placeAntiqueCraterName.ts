@@ -1,10 +1,11 @@
 /**
  * placeAntiqueCraterName — a crater's name, revealed once the crater spans
  * `craterPx[0] · craterPx[1]^rank` px, so one rank ladder both declutters and reveals.
- * It sits on the floor, halfway to the south wall to clear a central peak, when it
- * spans at most `insideFrac` of the crater; else just right of the rim, flipping left
- * when that box would leave the disc or its far end is dark. Beside, not below: in a
- * north-south chain a name below one crater reads as the next one's. Null when no
+ * It sits just right of the rim, never on the floor (where it read as the crater's own
+ * feature), flipping left when that box would leave the disc or its far end is dark.
+ * Beside, not below: in a north-south chain a name below one crater reads as the next
+ * one's, though it may step up or down beside the rim (`slackPx`). Its size follows its
+ * rim's print `weight` (Tycho's the heaviest). Null when no
  * side fits or the crater is out of sight.
  */
 
@@ -26,6 +27,7 @@ export function placeAntiqueCraterName(
   place: Extract<AntiqueMoonPlace, { kind: 'crater' }>,
   view: AntiqueBodyView,
   lettering: AntiquePlaceLettering,
+  weight = 1,
 ): AntiqueNamePlacement | null {
   const reveal = ANTIQUE_MOON_PLACE_REVEAL;
   const [sunLo, sunHi] = reveal.sunCos.crater;
@@ -42,8 +44,10 @@ export function placeAntiqueCraterName(
     smoothstep(reveal.facing[0], reveal.facing[1], facing);
   // A great walled plain carries its name a size up, as an engraver lettered one.
   const grow = reveal.craterTypeGrow;
+  const { perWeight, range } = reveal.craterWeightType;
   const px = Math.round(
-    lettering.px + (grow.px - lettering.px) * smoothstep(grow.fromPx, grow.toPx, diameterPx),
+    (lettering.px + (grow.px - lettering.px) * smoothstep(grow.fromPx, grow.toPx, diameterPx)) *
+      Math.min(Math.max(1 + perWeight * (weight - 1), range[0]), range[1]),
   );
   const box = antiqueNameBoxPx(
     place.name,
@@ -57,24 +61,9 @@ export function placeAntiqueCraterName(
   const rimLonDeg = rimDeg / Math.max(Math.cos(degToRad(lat)), 0.1);
   const rimE = view.project(lat, lon + rimLonDeg);
   const rimW = view.project(lat, lon - rimLonDeg);
-  const rimN = view.project(lat + rimDeg, lon);
-  const rimS = view.project(lat - rimDeg, lon);
-  if (!rimE || !rimW || !rimN || !rimS) return null;
+  if (!rimE || !rimW) return null;
 
   const sunAt = view.sunCos(lat, lon);
-  if (
-    box.width <= reveal.insideFrac * Math.abs(rimE[0] - rimW[0]) &&
-    box.height <= reveal.insideFrac * Math.abs(rimS[1] - rimN[1])
-  ) {
-    const yPx = centre[1] + reveal.floorDrop * (rimS[1] - centre[1]);
-    return {
-      xPx: centre[0],
-      yPx,
-      alignX: 'center',
-      px,
-      alpha: shown * smoothstep(sunLo, sunHi, sunAt),
-    };
-  }
 
   // Screen sides, not compass ones: whichever rim point lands right is the right side.
   const eastIsRight = rimE[0] >= rimW[0];
@@ -97,7 +86,8 @@ export function placeAntiqueCraterName(
       rectRoomInCircle(rect, view.discCentrePx, view.discRadiusPx) >= DISC_MARGIN_PX;
     if (onDisc && sunFar > sunLo) {
       const alpha = shown * smoothstep(sunLo, sunHi, sunFar);
-      return { xPx, yPx: centre[1], alignX: right ? 'left' : 'right', px, alpha };
+      const slackPx = Math.max(0, diameterPx / 2 - box.height / 2);
+      return { xPx, yPx: centre[1], alignX: right ? 'left' : 'right', px, alpha, slackPx };
     }
   }
   return null;

@@ -17,12 +17,10 @@ export const ANTIQUE_MOON_PLACE_REVEAL = {
   facing: [0.06, 0.12],
   craterPx: [3.5, 1.035],
   revealGrow: 1.15,
-  // A crater name fits on the floor when it spans at most this share of the crater as
-  // seen; it then sits this share of the way from the centre to the south wall.
-  insideFrac: 0.55,
-  floorDrop: 0.5,
   gapPx: 2,
   // Crater diameter (px) over which its italic grows from its lettering's px to `px`.
   craterTypeGrow: { fromPx: 120, toPx: 320, px: 18 },
+  // A crater name's size per unit of its rim's print weight over 1, within `range`.
+  craterWeightType: { perWeight: 0.5, range: [0.85, 1.15] },
   lineEm: 1.15,
 } as const;

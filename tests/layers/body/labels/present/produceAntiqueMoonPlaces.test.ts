@@ -52,9 +52,19 @@ describe('produceAntiqueMoonPlaces', () => {
     const sea = new Set(
       ANTIQUE_MOON_PLACES.filter((p) => /^(Mare|Oceanus)\b/.test(p.name)).map((p) => p.id),
     );
-    const headline = ['tycho', 'copernicus', 'plato', 'aristarchus', 'kepler', 'ptolemaeus'].map(
-      (n) => `moonPlace-${n}`,
-    );
+    const headline = [
+      'tycho',
+      'copernicus',
+      'plato',
+      'aristarchus',
+      'kepler',
+      'ptolemaeus',
+      'grimaldi',
+      'posidonius',
+      'aristoteles',
+      'petavius',
+      'langrenus',
+    ].map((n) => `moonPlace-${n}`);
     const ranks = (keep: (id: string) => boolean) =>
       labels.filter((l) => keep(l.id)).map((l) => l.declutterPriority!);
     const seas = ranks((id) => sea.has(id));

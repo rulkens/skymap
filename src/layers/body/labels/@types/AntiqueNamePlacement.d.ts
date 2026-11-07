@@ -11,6 +11,7 @@ export type AntiqueNamePlacement = {
   readonly alignX: LabelAlignX;
   readonly px: number;
   readonly alpha: number;
-  /** A sea's or Terra's name only: how far up or down it may still move inside its extent. */
+  /** How far up or down it may still move: a sea's or Terra's inside its extent, a crater's
+   * beside its rim. */
   readonly slackPx?: number;
 };

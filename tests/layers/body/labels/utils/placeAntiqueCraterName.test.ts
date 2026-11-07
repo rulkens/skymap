@@ -21,13 +21,20 @@ const crater = (
 });
 
 describe('placeAntiqueCraterName', () => {
-  it('sets a name on the floor, below the centre, once the crater is wide enough to hold it', () => {
+  it('sets a name beside the rim even where the floor could hold it, never on the floor', () => {
     const view = orthographicMoonView(4000);
     const at = placeAntiqueCraterName(crater('Clavius', 0, 230, 12), view, LETTERING)!;
-    expect(at.alignX).toBe('center');
-    expect(at.xPx).toBeCloseTo(800);
-    expect(at.yPx).toBeGreaterThan(450);
+    expect(at.alignX).toBe('left');
+    expect(at.xPx).toBeGreaterThan(view.project(0, 115 / 1737 / (Math.PI / 180))![0]);
     expect(at.alpha).toBe(1);
+  });
+
+  it('sizes a name by the print weight of its rim: a fresh crater larger, a worn one smaller', () => {
+    const view = orthographicMoonView(400);
+    const px = (weight: number) =>
+      placeAntiqueCraterName(crater('Tycho', 0, 85, 1), view, LETTERING, weight)!.px;
+    expect(px(1.3)).toBeGreaterThan(px(1));
+    expect(px(0.4)).toBeLessThan(px(1));
   });
 
   it('sets it right of the east rim when the crater is too small to hold it', () => {
@@ -55,7 +62,7 @@ describe('placeAntiqueCraterName', () => {
     expect(at.alpha).toBe(1);
   });
 
-  it('keeps no name on the night side, on the floor or beside', () => {
+  it('keeps no name on the night side', () => {
     const night = sunOverLon(180);
     for (const radiusPx of [400, 4000]) {
       const at = placeAntiqueCraterName(
