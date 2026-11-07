@@ -35,6 +35,8 @@ import type { TerrainHeightAtLookup } from '../../camera/terrain/TerrainHeightAt
 import type { GatedOrbitTrailGroup } from '../frame/GatedOrbitTrailGroup';
 import type { RenderTargetSpec } from '../frame/RenderTargetSpec';
 import type { UiState } from '../../ui/UiState';
+import type { CoverId } from '../../layout/CoverId';
+import type { ViewCover } from '../../layout/ViewCover';
 
 export type EngineState = {
   settings: EngineSettingsState;
@@ -48,6 +50,8 @@ export type EngineState = {
   selectionRows: SelectionRowsState;
   /** A getter onto `store.getState().ui`, the same shape as `selection` above. */
   ui: UiState;
+  /** A getter onto `store.getState().viewCover`: every panel's row, not only the lens covers. */
+  viewCover: Partial<Record<CoverId, ViewCover>>;
   picking: EnginePickingState;
   gpu: EngineGpuHandles;
   subsystems: EngineSubsystemHandles;

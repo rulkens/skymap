@@ -10,7 +10,7 @@
  */
 
 import { useCallback } from 'react';
-import type { ReactNode } from 'react';
+import type { ReactNode, Ref } from 'react';
 import cx from 'classnames';
 import { targetEq } from '../../services/engine/helpers/targetEq';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -32,9 +32,11 @@ export type InfoCardProps = {
   onFocus?: (target: FocusableTargetBase) => void;
   /** The pinned card's Close (×); same as Esc. */
   onClose?: () => void;
+  /** The desktop stack wrapper, for its view cover. */
+  ref?: Ref<HTMLDivElement>;
 };
 
-function InfoCard({ hovered, selected, onFocus, onClose }: InfoCardProps): ReactNode {
+function InfoCard({ hovered, selected, onFocus, onClose, ref }: InfoCardProps): ReactNode {
   const isMobile = useIsMobile();
   // Bound here so a card never rebuilds its target's identity; stable across hover changes.
   const focusSelected = useCallback(() => {
@@ -64,7 +66,7 @@ function InfoCard({ hovered, selected, onFocus, onClose }: InfoCardProps): React
   const Compact = compactTarget ? detailCardFor(DETAIL_CARD, compactTarget).Compact : null;
 
   return (
-    <div className={cx(styles.root, 'infoCardStack')}>
+    <div ref={ref} className={cx(styles.root, 'infoCardStack')}>
       {selected && Detail && (
         <Detail target={selected} isPinned onFocus={onFocusSelected} onClose={onClose} />
       )}

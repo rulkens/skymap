@@ -1,7 +1,7 @@
 /**
- * useViewCover — measures how far a resting panel reaches in from `edge` and
- * hands it to `onCover`, re-measured on resize, `null` when `active` turns
- * false or the panel unmounts. `active` is "is it showing", never "does it
+ * useViewCover — measures how far a resting panel reaches in from `edge`, and
+ * its span along that edge, and hands both to `onCover`, re-measured on
+ * resize, `null` when `active` turns false or the panel unmounts. `active` is "is it showing", never "does it
  * have a rect": faded UI keeps its DOM size. `onCover` must be stable: a new
  * one clears and re-reports the cover.
  */
@@ -21,7 +21,7 @@ export function useViewCover(
     const el = ref.current;
     if (!active || !el) return;
 
-    let lastReachPx: number | null = null;
+    let last: ViewCover | null = null;
     const measure = () => {
       // Judged in the resting layout: inside a scrolled column (the phone
       // exhibit) the rect moves with the scroll, so a re-measure would jump.
@@ -38,10 +38,20 @@ export function useViewCover(
         bottom: window.innerHeight - rect.top - scrollY,
         left: rect.right + scrollX,
       }[edge];
+      const alongY = edge === 'left' || edge === 'right';
+      const spanPx: [number, number] = alongY
+        ? [Math.round(rect.top + scrollY), Math.round(rect.bottom + scrollY)]
+        : [Math.round(rect.left + scrollX), Math.round(rect.right + scrollX)];
       const reachPx = Math.round(reach);
-      if (reachPx === lastReachPx) return;
-      lastReachPx = reachPx;
-      onCover({ edge, reachPx });
+      if (
+        last?.reachPx === reachPx &&
+        last.spanPx[0] === spanPx[0] &&
+        last.spanPx[1] === spanPx[1]
+      ) {
+        return;
+      }
+      last = { edge, reachPx, spanPx };
+      onCover(last);
     };
 
     measure();

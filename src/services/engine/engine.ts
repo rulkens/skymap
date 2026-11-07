@@ -143,6 +143,9 @@ export function createEngine(
     get ui() {
       return store.getState().ui;
     },
+    get viewCover() {
+      return store.getState().viewCover;
+    },
     picking: {
       // Pick-throttle state only; hover/select live on the Redux `selection` slice.
       pickInFlight: false,

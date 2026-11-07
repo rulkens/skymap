@@ -5,7 +5,7 @@
  * about live in the dock; a full-screen pill joins the right-aligned cluster.
  */
 
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useRef } from 'react';
 import SearchTrigger from '../SearchTrigger/SearchTrigger';
 import HomeButton from '../HomeButton/HomeButton';
 import AboutPill from '../Splash/AboutPill';
@@ -13,10 +13,15 @@ import AutoRotateToggleContainer from './AutoRotateToggleContainer';
 import FullscreenToggleContainer from './FullscreenToggleContainer';
 import TourDebugPillContainer from './TourDebugPillContainer';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { selectPaletteOpen, selectSplashVisible } from '../../state/ui/selectors';
+import {
+  selectPaletteOpen,
+  selectSplashVisible,
+  selectUiStackHidden,
+} from '../../state/ui/selectors';
 import { setPaletteOpen, reopenSplash } from '../../state/ui/uiSlice';
 import { goHome } from '../../state/selection/goHome';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { useViewCoverRow } from '../../hooks/useViewCoverRow';
 import { hasUrlGate } from '../../utils/url/hasUrlGate';
 import styles from './TopBarContainer.module.css';
 
@@ -35,6 +40,9 @@ function TopBarContainer(): React.ReactElement {
   const splashVisible = useAppSelector(selectSplashVisible);
   const hidden = paletteOpen || splashVisible;
   const isMobile = useIsMobile();
+  const uiStackHidden = useAppSelector(selectUiStackHidden);
+  const rootRef = useRef<HTMLDivElement>(null);
+  useViewCoverRow(rootRef, 'topBar', 'top', !isMobile && !hidden && !uiStackHidden);
 
   const openPalette = useCallback(() => dispatch(setPaletteOpen(true)), [dispatch]);
   // "Home" flies to Earth — the viewer's literal starting point, not just our
@@ -44,7 +52,7 @@ function TopBarContainer(): React.ReactElement {
   const reopenSplashScreen = useCallback(() => dispatch(reopenSplash()), [dispatch]);
 
   return (
-    <div className={styles.root}>
+    <div ref={rootRef} className={styles.root}>
       {!isMobile && <SearchTrigger onClick={openPalette} hidden={hidden} />}
       {!isMobile && <HomeButton onClick={goHomeCb} hidden={hidden} />}
       <AutoRotateToggleContainer hidden={hidden} />

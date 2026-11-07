@@ -22,13 +22,23 @@ describe('watchWakeSaga before the saga context exists', () => {
     });
     const task = sagaMiddleware.run(watchWakeSaga);
 
-    store.dispatch(viewCoverSet({ id: 'phoneBottom', cover: { edge: 'bottom', reachPx: 120 } }));
+    store.dispatch(
+      viewCoverSet({
+        id: 'phoneBottom',
+        cover: { edge: 'bottom', reachPx: 120, spanPx: [0, 400] },
+      }),
+    );
     expect(task.isRunning()).toBe(true);
 
     const requestRender = vi.fn();
     sagaMiddleware.setContext({ reconcile: { requestRender } });
     store.dispatch(sagaContextRegistered());
-    store.dispatch(viewCoverSet({ id: 'phoneBottom', cover: { edge: 'bottom', reachPx: 140 } }));
+    store.dispatch(
+      viewCoverSet({
+        id: 'phoneBottom',
+        cover: { edge: 'bottom', reachPx: 140, spanPx: [0, 400] },
+      }),
+    );
 
     expect(requestRender).toHaveBeenCalledTimes(1);
   });

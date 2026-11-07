@@ -8,10 +8,11 @@
  * renders only canvas + tour overlay; the rest is absent from the DOM.
  */
 
-import { Suspense, useLayoutEffect } from 'react';
+import { Suspense, useLayoutEffect, useRef } from 'react';
 import cx from 'classnames';
 import { useEngine } from '../../hooks/useEngine';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { useViewCoverRow } from '../../hooks/useViewCoverRow';
 import LoadingBarContainer from '../containers/LoadingBarContainer';
 import StatusBarContainer from '../containers/StatusBarContainer';
 import ScaleBarContainer from '../containers/ScaleBarContainer';
@@ -53,6 +54,8 @@ export function App(): React.ReactElement {
   const paletteOpen = useAppSelector(selectPaletteOpen);
   const uiStackHidden = useAppSelector(selectUiStackHidden);
   const debugPanelOpen = useAppSelector(selectDebugPanelOpen);
+  const leftStackRef = useRef<HTMLDivElement>(null);
+  useViewCoverRow(leftStackRef, 'leftStack', 'left', !isMobile && !uiStackHidden);
 
   // A running tour or exhibit hides the HUD stack (derived, not a `setUiHidden`
   // write). A registry clip keeps the HUD: the debug panel's Stop must stay in reach.
@@ -115,7 +118,7 @@ export function App(): React.ReactElement {
             </Suspense>
             <ScaleBarContainer />
             <TimeBarContainer hidden={paletteOpen || splashVisible} />
-            <div className={appStyles.leftStack}>
+            <div ref={leftStackRef} className={appStyles.leftStack}>
               <NavigationPanel />
               <Suspense>
                 <LazySettingsPanelContainer />

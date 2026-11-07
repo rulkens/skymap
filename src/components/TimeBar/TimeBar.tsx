@@ -10,7 +10,7 @@
  * CompactInfoTip, not InfoTip: the pill's `backdrop-filter` traps fixed descendants.
  */
 
-import { useCallback, useEffect, useRef, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, type ReactNode, type Ref } from 'react';
 import cx from 'classnames';
 import Button from '../common/Button/Button';
 import CompactInfoTip from '../common/CompactInfoTip/CompactInfoTip';
@@ -98,6 +98,7 @@ export type TimeBarProps = {
   // Phone row variant: a full-width row in flow with every control always
   // visible at a fixed place. The dock's Time item opens and closes it.
   readonly row?: boolean;
+  readonly ref?: Ref<HTMLDivElement>;
 };
 
 function TimeBar({
@@ -116,6 +117,7 @@ function TimeBar({
   hidden = false,
   holdControlsOpen = false,
   row = false,
+  ref,
 }: TimeBarProps): ReactNode {
   const slowerHold = useHoldRepeat(onSlower, slowerDisabled);
   const fasterHold = useHoldRepeat(onFaster, fasterDisabled);
@@ -127,6 +129,7 @@ function TimeBar({
     // full expanded width, so sweeping the cursor into the empty region left of
     // the readout still wakes the reveal. The chrome lives on the inner .pill.
     <div
+      ref={ref}
       className={cx(
         styles.root,
         row ? styles.row : styles.floating,

@@ -43,13 +43,25 @@ afterEach(() => {
 });
 
 describe('useViewCover', () => {
-  it('reports the reach from its edge', () => {
+  it('reports the reach from its edge and the span along it', () => {
     vi.stubGlobal('innerHeight', 1000);
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
       top: 859.6,
+      left: 20.4,
+      right: 300.2,
     } as DOMRect);
     const { onCover } = setup('bottom', true);
-    expect(onCover).toHaveBeenLastCalledWith({ edge: 'bottom', reachPx: 140 });
+    expect(onCover).toHaveBeenLastCalledWith({ edge: 'bottom', reachPx: 140, spanPx: [20, 300] });
+  });
+
+  it("measures a side panel's span down from the top", () => {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      top: 500,
+      bottom: 900,
+      right: 320,
+    } as DOMRect);
+    const { onCover } = setup('left', true);
+    expect(onCover).toHaveBeenLastCalledWith({ edge: 'left', reachPx: 320, spanPx: [500, 900] });
   });
 
   it('reports the same reach from a scrolled column as from an unscrolled one', () => {
@@ -57,13 +69,15 @@ describe('useViewCover', () => {
     const reachAt = (scrollTop: number) => {
       vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
         top: 600 - scrollTop,
+        left: 0,
+        right: 400,
       } as DOMRect);
       const onCover = vi.fn<OnCover>();
       render(<ScrolledPanel scrollTop={scrollTop} onCover={onCover} />).unmount();
       return onCover.mock.calls[0]?.[0];
     };
-    expect(reachAt(0)).toEqual({ edge: 'bottom', reachPx: 400 });
-    expect(reachAt(250)).toEqual({ edge: 'bottom', reachPx: 400 });
+    expect(reachAt(0)).toEqual({ edge: 'bottom', reachPx: 400, spanPx: [0, 400] });
+    expect(reachAt(250)).toEqual({ edge: 'bottom', reachPx: 400, spanPx: [0, 400] });
   });
 
   it('reports null when it turns inactive', () => {
