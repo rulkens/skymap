@@ -24,6 +24,7 @@ import { sceneBodyPartition } from './sceneBodyPartition';
 import { sceneBodyStates } from './sceneBodyStates';
 import type { PositionedId } from '../../../@types/scene/PositionedId';
 import { ALL_CUBE_FACES } from '../../../data/rendering/cubemapCaptures';
+import { captureTimingSlotName } from './timing/captureTimingSlotName';
 
 export function scheduleProbeCapture(input: {
   readonly state: EngineState;
@@ -34,7 +35,8 @@ export function scheduleProbeCapture(input: {
   runtime.subject = null;
   runtime.due = false;
   const renderer = state.gpu.meshBodyRenderer;
-  if (renderer === null) return null;
+  if (renderer === null || state.settings.debug.disabledPasses[captureTimingSlotName('probe')])
+    return null;
 
   // The oldest refresh wins, a never-refreshed body oldest of all — so N bodies
   // resolving at once cycle through the one in-flight probe in turn.

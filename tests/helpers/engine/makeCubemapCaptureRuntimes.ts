@@ -21,6 +21,7 @@ export function makeCubemapCaptureRuntimes(
         lastAnchorDistanceMpc: Number.POSITIVE_INFINITY,
         bakedSettings: null,
         bakedContentVersion: null,
+        lastBakeAtMs: null,
         ...overrides[key],
       },
     ]),
