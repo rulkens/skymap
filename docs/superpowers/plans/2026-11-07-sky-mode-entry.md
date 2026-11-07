@@ -124,8 +124,8 @@ purity ratchet), tests only if a row's gating logic moves (`publishBodyDistanceG
 where `FrameReadoutCtx` carries what the two current blocks read. `runFrame` walks the table once per booted
 frame. `engineScaleChanged` and `engineBodyDistanceReported` and their reducers are unchanged.
 
-- [ ] Move both blocks into rows; no new test (routing change; the existing scale/body-distance tests pin it).
-- [ ] Commit.
+- [x] Move both blocks into rows; no new test (routing change; the existing scale/body-distance tests pin it).
+- [x] Commit.
 
 ### Task 4: A palette pick requests a view; salvage and archive
 
