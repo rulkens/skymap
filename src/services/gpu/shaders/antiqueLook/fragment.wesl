@@ -156,10 +156,10 @@ const STRUCTURE_CORE: f32 = 0.18;
 // densest stipple, so paper shows between the dots up to the core; the dust lanes'
 // cross-hatch spacing in print units.
 const GALAXY_EDGE: f32 = 0.10;
-const RELIEF_GAIN: f32 = 2.5;
+const RELIEF_GAIN: f32 = 1.5;
 const GALAXY_STIPPLE_MAX: f32 = 0.85;
 const LANE_HATCH: f32 = 2.4;
-const GALAXY_WASH: f32 = 0.22;
+const GALAXY_WASH: f32 = 0.15;
 
 fn texel(t: texture_2d<f32>, ip: vec2<i32>) -> vec4<f32> {
   let size = vec2<i32>(textureDimensions(t));
@@ -269,8 +269,8 @@ fn galaxyEngraving(ip: vec2<i32>, uv: vec2<f32>, src: vec3<f32>, neb: vec4<f32>,
   let lxs = neb.x;
   let lc = clamp(log((lxs + 0.02) / (lowL + 0.02)), -1.5, 1.5);
   // Lanes: the print eroded by a one-unit cross loses its stars but keeps a
-  // lane, a notch below the band's local max; or a warm notch, since dust
-  // reddens (warmth alone is a yellow bar or bulge, not dust).
+  // lane, a notch below the band's local max. (A warm-notch test inked the edges
+  // of a yellow bulge as dust.)
   let o = i32(round(u.unit));
   var ero = luma(src);
   var sum = src;
@@ -286,23 +286,23 @@ fn galaxyEngraving(ip: vec2<i32>, uv: vec2<f32>, src: vec3<f32>, neb: vec4<f32>,
   // The band's light, sharpened by the print's own around this pixel (its stars and
   // point galaxies are off the print under the look), so an arm keeps its edge.
   let light = mix(lxs, luma(mean), 0.5);
-  let ramp = smoothstep(GALAXY_EDGE - 0.02, 0.9, light);
-  let tone = min(ramp * clamp(1.0 + RELIEF_GAIN * lc, 0.2, 2.0), 1.0) * GALAXY_STIPPLE_MAX;
-  let warmPrint = (mean.r - mean.b) / max(mean.r + mean.g + mean.b, 0.05);
-  let warmBand = (hue.r - hue.b) / max(hue.r + hue.g + hue.b, 0.05);
-  let red = smoothstep(0.035, 0.08, warmPrint - warmBand) * smoothstep(0.10, 0.25, notch);
-  let lane = max(smoothstep(0.30, 0.55, notch), red) * smoothstep(0.18, 0.30, lxs);
+  // The print under the look peaks near 0.75 (no stars, no point galaxies on it).
+  let ramp = smoothstep(GALAXY_EDGE - 0.04, 0.75, light);
+  let fine = clamp(log((luma(mean) + 0.02) / (lxs + 0.02)), -1.0, 1.0);
+  let tone = min(pow(ramp, 0.8) * clamp(1.0 + RELIEF_GAIN * (lc + fine), 0.3, 1.5), 1.0) * GALAXY_STIPPLE_MAX;
+  // The nucleus: the stipple closes up to near solid, never a flat blot.
+  let core = smoothstep(0.55, 0.75, min(lxs, luma(mean)));
+  let lane = smoothstep(0.30, 0.55, notch) * smoothstep(0.18, 0.30, lxs) * (1.0 - core);
   // Two straight sets 30° either side of the plate's hatch angle: a lozenge net,
   // a texture of its own beside the stipple.
   let a = u.hatchAngle;
   let d1 = dot(p, vec2<f32>(cos(a + 0.5236), sin(a + 0.5236))) / LANE_HATCH;
   let d2 = dot(p, vec2<f32>(cos(a - 0.5236), sin(a - 0.5236))) / LANE_HATCH;
-  let net = max(inkLine(abs(fract(d1) - 0.5) * LANE_HATCH, 0.45, pxUnits),
-                inkLine(abs(fract(d2) - 0.5) * LANE_HATCH, 0.45, pxUnits));
-  // The nucleus: the stipple closes up to near solid, never a flat blot.
-  let core = smoothstep(0.90, 0.99, min(lxs, luma(mean)));
-  let dots = stipple(p, 1.6, mix(tone, 0.92, core));
-  let ink = max(dots * (1.0 - lane), net * lane) * big;
+  let net = max(inkLine(abs(fract(d1) - 0.5) * LANE_HATCH, 0.6, pxUnits),
+                inkLine(abs(fract(d2) - 0.5) * LANE_HATCH, 0.6, pxUnits));
+  // A cell under 3 device px would alias the dots into a maze.
+  let dots = stipple(p, max(1.6, 3.0 * pxUnits), mix(tone, 0.95, core));
+  let ink = max(dots * (1.0 - lane), 0.6 * net * lane) * big;
   let chroma = max(hue.r, max(hue.g, hue.b)) - min(hue.r, min(hue.g, hue.b));
   let wash = GALAXY_WASH * smoothstep(GALAXY_EDGE, GALAXY_EDGE + 0.1, lxs) * smoothstep(0.03, 0.10, chroma) * big;
   return vec3<f32>(ink, wash, smoothstep(-0.04, 0.06, hue.r - hue.b));
