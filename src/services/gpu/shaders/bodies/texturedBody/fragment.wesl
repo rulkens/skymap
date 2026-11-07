@@ -349,8 +349,7 @@ fn fsMoonRelief(in: TexturedBodyVSOut) -> @location(0) vec4<f32> {
     return vec4<f32>(0.0);
   }
   let T = normalize(cross(vec3<f32>(0.0, 0.0, 1.0), ng));
-  let b = exp2(RELIEF_BIAS);
-  let n = perturbNormal(ng, T, textureSampleGrad(normalTexture, bodySampler, uv, grad.ddx * b, grad.ddy * b).rg);
+  let n = perturbNormal(ng, T, textureSampleGrad(normalTexture, bodySampler, uv, grad.ddx, grad.ddy).rg);
   let up = dot(n, ng);
   // The normal leans downhill: its tangent part is the fall line on the ground.
   let downhill = (n - up * ng) * SLOPE_GAIN;

@@ -73,6 +73,19 @@ const SHADE_DASH: f32 = 10.0;
 // display luma over SEEN_LUMA) prints at SEEN_CAP, lighter than the night it shows black.
 const SEEN_LUMA = vec2<f32>(0.04, 0.09);
 const SEEN_CAP: f32 = 0.5;
+// Ground in full shadow (a crater's shadow near the terminator) keeps its stroke however
+// short, so shadows reach into the day as the plain shows them.
+const SHADOW_KEEP = vec2<f32>(0.85, 0.98);
+// The shade lines turn this far off the plate's hatch, which runs along the terminator:
+// crossing it, each line ends where its own ground goes dark, so the edge is the relief's.
+const MOON_HATCH_TURN: f32 = 0.7854;
+
+// The shade lines' screen family (phase, along, |d phase / d unit|) at `p` (print units).
+fn moonForm(p: vec2<f32>, hatchAngle: f32) -> vec3<f32> {
+  let a = hatchAngle + MOON_HATCH_TURN;
+  let n = vec2<f32>(-sin(a), cos(a));
+  return vec3<f32>(dot(p, n), dot(p, vec2<f32>(n.y, -n.x)), 1.0);
+}
 
 fn moonAt(field: texture_2d_array<f32>, layer: i32, ip: vec2<i32>) -> vec4<f32> {
   if (layer < 0) {
@@ -82,14 +95,16 @@ fn moonAt(field: texture_2d_array<f32>, layer: i32, ip: vec2<i32>) -> vec4<f32> 
   return decodeMoonRow(textureLoad(field, clamp(ip, vec2<i32>(0), size - 1), layer, 0));
 }
 
-fn moonToneAlong(field: texture_2d_array<f32>, layer: i32, ip: vec2<i32>, along: vec2<f32>, ndl: f32,
-                 ndv: f32, row: f32, plain: f32) -> MoonTone {
+fn moonToneAlong(field: texture_2d_array<f32>, layer: i32, ip: vec2<i32>, hatchAngle: f32, unit: f32,
+                 ndl: f32, ndv: f32, row: f32, plain: f32) -> MoonTone {
   let here = moonTone(ndl, ndv, row);
-  let o = vec2<i32>(round(along * SHADE_DASH));
+  let a = hatchAngle + MOON_HATCH_TURN;
+  let o = vec2<i32>(round(vec2<f32>(cos(a), sin(a)) * unit * SHADE_DASH));
   let ahead = moonTone(ndl, ndv, moonAt(field, layer, ip + o).g).tone;
   let behind = moonTone(ndl, ndv, moonAt(field, layer, ip - o).g).tone;
   let cap = mix(MOON_SHADE_CAP, SEEN_CAP, smoothstep(SEEN_LUMA.x, SEEN_LUMA.y, plain));
-  return MoonTone(min(min(here.tone, 0.5 * (ahead + behind)), cap), here.shade, here.litSlope);
+  let eroded = max(0.5 * (ahead + behind), here.tone * smoothstep(SHADOW_KEEP.x, SHADOW_KEEP.y, here.shade));
+  return MoonTone(min(min(here.tone, eroded), cap), here.shade, here.litSlope);
 }
 
 // The shade's lines along `form` (phase, along, |d phase / d unit|): all cut from

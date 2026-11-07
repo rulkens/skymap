@@ -50,6 +50,7 @@ import package::antiqueLook::bodies::moon::moonInk;
 import package::antiqueLook::bodies::moon::moonToneAlong;
 import package::antiqueLook::bodies::moon::moonShade;
 import package::antiqueLook::bodies::moon::moonAt;
+import package::antiqueLook::bodies::moon::moonForm;
 import package::antiqueLook::bodies::moon::moonRelief;
 import package::antiqueLook::graticule::graticule;
 import package::antiqueLook::graticule::frameLonLat;
@@ -624,7 +625,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
         tone = formTone(hit.ndl, hit.ndv);
         if (print == PRINT_MOON) {
           moonTexel = moonAt(fullTex, moonLayer, ip);
-          moon = moonToneAlong(fullTex, moonLayer, ip, vec2<f32>(n.y, -n.x) * u.unit, hit.ndl, hit.ndv, moonTexel.g, luma(src));
+          moon = moonToneAlong(fullTex, moonLayer, ip, u.hatchAngle, u.unit, hit.ndl, hit.ndv, moonTexel.g, luma(src));
           tone = moon.tone;
         }
         // The ring's shadow on the ball is one solid stroke, not hatching.
@@ -667,7 +668,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     let moonRow = print == PRINT_MOON && moonTexel.g > 0.0;
     var hatch = 0.0;
     if (moonRow) {
-      hatch = moonShade(form, tone, pxUnits);
+      hatch = moonShade(moonForm(p, u.hatchAngle), tone, pxUnits);
     } else {
       hatch = crossHatch(form, p, tone, u.tune.x, u.hatchAngle, pxUnits);
     }
