@@ -19,7 +19,8 @@ this list is what shipped.
 - **Sagittarius** (§4.2): still-bound remnant particles capped at 10 % of the 60,000 (a uniform pick made it
   56 % and the core burned white). Its focus frames `frameRadiusKpc`, the 90th-percentile reach of the debris,
   not half the 275 kpc extent; galstreams streams frame half their length.
-- **Focus framing capped** (§5.6): a stream's `frameRadiusKpc` is cut (`cappedFrameRadiusKpc`) so the focus camera stays within 61 kpc of the Sun, where the out band is ≥ 0.95; Sagittarius frames 11.9 kpc (was 55.3), Orphan-Chenab 14.9 (49.1). A floor keeps the camera ≥ 9.2 kpc from the Sun (in band full-on) on the Sun side, and wins where it clashes with the cap (anchors beyond ~26 kpc).
+- **Focus framing capped** (§5.6): a stream's `frameRadiusKpc` is cut (`cappedFrameRadiusKpc`) so the focus camera stays within 61 kpc of the Sun, where the out band is ≥ 0.95; Sagittarius frames 12.5 kpc (was 55.3), Orphan-Chenab 14.9 (49.1), GD-1 8.3 with the near-Sun floor applied. A floor keeps the camera ≥ 9.2 kpc from the Sun (in band full-on) on the Sun side, and wins where it clashes with the cap (anchors beyond ~26 kpc).
+- **A focused stream brightens** (§5.6): its streaks and haze multiply by its meta `focusBoost`, ramped in by the focus blend: the target surface brightness (6, about Sagittarius's arms) over the stream's sprite flux per track area (length plus one flow loop), clamped to [1, 5]; Sagittarius 1, GD-1 4.1, Orphan-Chenab 2.9, NGC 6397 2.2.
 - **Captions** (§5.5): a stream is named once its length spans 150 px, at 35–150 px like the Milky Way
   structure captions, tinted by the stream's mean particle colour (BP−RP spread ×6, saturation ×2).
 - **Colours** (§4.2): each particle samples a star type (giant, turnoff, BHB) by its stream's [Fe/H] and takes

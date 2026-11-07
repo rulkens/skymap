@@ -1,5 +1,6 @@
 import { arrayMean } from '../../../src/utils/math/arrayMean';
 import { raDecDistToEqCart } from '../../../src/utils/math/raDecDistToEqCart';
+import { cumulativeLengths } from '../../utils/math/cumulativeLengths';
 import { percentile } from '../../utils/perf/percentile';
 import type { StellarStreamMetaEntry } from '../@types/StellarStreamMetaEntry';
 import type { StreamParticles } from '../@types/StreamParticles';
@@ -9,6 +10,7 @@ import { streamArticleFields } from './streamArticleFields';
 import { streamCentreline } from './streamCentreline';
 import { cappedFrameRadiusKpc } from './cappedFrameRadiusKpc';
 import { sagittariusCentrelines } from './sagittariusCentrelines';
+import { streamFocusBoost } from './streamFocusBoost';
 
 const MPC_TO_KPC = 1e3;
 /** The extent ignores the farthest 1% of the snapshot, so one stray particle cannot set it. */
@@ -56,6 +58,12 @@ export function sagittariusMeta(
     widthDeg: null,
     particleCount: p.luminosity.length,
     colourT: arrayMean(p.colourT),
+    // Its arms' arc length, not the extent: the debris lies along them.
+    focusBoost: streamFocusBoost(
+      p,
+      [leadingKpc, trailingKpc].reduce((sum, arm) => sum + (cumulativeLengths(arm).at(-1) ?? 0), 0),
+      widthKpc,
+    ),
     // A gradient along the debris, not one value (`sagittariusFeh`).
     metallicity: null,
     // Published values are ranges or limits (see streamStellarMass.constants).

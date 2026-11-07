@@ -19,9 +19,10 @@ struct Uniforms {
   minPx: f32,
   timeSec: f32,
   flow: f32,
-  // Every stream but this one (attr.w; −1 = none) draws at 'recede': a focus recedes the rest.
+  // Every stream but this one (attr.w; −1 = none) draws at 'recede', this one at 'focusBoost'.
   focusedStream: f32,
   recede: f32,
+  focusBoost: f32,
 };
 
 struct VSOut {
@@ -79,7 +80,7 @@ fn placeStreak(
   let envelope = smoothstep(0.0, 0.2, phase) * smoothstep(1.0, 0.8, phase) / 0.8;
   let lum = attr.y * area / (1.0 + lPx / (1.25 * rPx)) * select(1.0, envelope, u.flow > 0.0);
   let bpRp = mix(STREAM_BP_RP_RANGE.x, STREAM_BP_RP_RANGE.y, attr.z);
-  let emphasis = select(u.recede, 1.0, attr.w == u.focusedStream);
+  let emphasis = select(u.recede, u.focusBoost, attr.w == u.focusedStream);
   out.colour = starTint(bpRp) * lum * u.intensity * emphasis;
   return out;
 }

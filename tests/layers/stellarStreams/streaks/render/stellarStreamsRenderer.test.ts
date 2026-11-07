@@ -40,7 +40,7 @@ function setup() {
     which: 'streak' | 'haze',
     look: StellarStreamsLook,
     opacity: number,
-    focus: StellarStreamsFocus = { recede: 1, focusedStream: -1 },
+    focus: StellarStreamsFocus = { recede: 1, focusedStream: -1, focusBoost: 1 },
   ) =>
     renderer.draw(
       pass as unknown as GPURenderPassEncoder,
@@ -76,13 +76,17 @@ describe('createStellarStreamsRenderer draw', () => {
     );
   });
 
-  it('writes the focused stream and the recede factor after the look lanes, where the WGSL reads them', () => {
+  it('writes the focused stream, the recede factor and the focus boost after the look lanes, where the WGSL reads them', () => {
     const { writeBuffer, draw } = setup();
-    draw('streak', STELLAR_STREAMS_LOOKS.streak, 1, { recede: 0.15, focusedStream: 12 });
+    draw('streak', STELLAR_STREAMS_LOOKS.streak, 1, {
+      recede: 0.15,
+      focusedStream: 12,
+      focusBoost: 2.5,
+    });
     const block = writeBuffer.mock.calls[0]![2];
-    // focusedStream at byte 116, recede at 120: right after flow, inside the 128-byte block.
-    expect(Array.from(block.subarray(INTENSITY + 6, INTENSITY + 8))).toEqual(
-      [12, 0.15].map(Math.fround),
+    // focusedStream at byte 116, recede at 120, focusBoost at 124: the 128-byte block's last lanes.
+    expect(Array.from(block.subarray(INTENSITY + 6, INTENSITY + 9))).toEqual(
+      [12, 0.15, 2.5].map(Math.fround),
     );
     expect(block.byteLength).toBe(128);
   });

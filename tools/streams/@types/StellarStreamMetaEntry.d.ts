@@ -22,6 +22,8 @@ export type StellarStreamMetaEntry = {
   particleCount: number;
   /** Mean of the emitted particles' colourT: tints the stream's caption like its streaks. */
   colourT: number;
+  /** What a full focus multiplies this stream's brightness by (`streamFocusBoost`), 1 or more. */
+  focusBoost: number;
   /** Measured [Fe/H] and its citation; null when the median stood in, and for Sagittarius's gradient. */
   metallicity: StreamMetallicity | null;
   /** Published stellar mass and its citation; null where none is published as one value. */

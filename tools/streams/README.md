@@ -61,6 +61,10 @@ across reruns over the same inputs. On 2026-11-07 it wrote 128,419 particles in 
   angular momentum, arms split by orbital energy against the remnant's, binned by angle from the
   remnant); each arm is simplified the same way and the meta joins them through the remnant. On
   2026-11-07: 556 segments over the 83 streams, median 7 points, at most 16.
+- **Focus boost**: the meta row's `focusBoost` is what a full focus multiplies the stream's brightness by
+  (`streamFocusBoost`): a target surface brightness over the stream's summed sprite flux (luminosity ×
+  size²) per track area, the length grown by one streak flow loop, clamped to [1, 5]. On 2026-11-07: 5
+  streams at 1 (Sagittarius among them), 21 at the cap, median 3.6.
 - **Frame**: heliocentric J2000 equatorial, Mpc, as everywhere in skymap.
 
 Tunables (particle budget, sizes, luminosities, seeds) live in

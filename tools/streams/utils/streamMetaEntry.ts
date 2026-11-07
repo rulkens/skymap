@@ -14,6 +14,7 @@ import { trackPositionsKpc } from './trackPositionsKpc';
 import { trackWidthKpc } from './trackWidthKpc';
 import { streamCentreline } from './streamCentreline';
 import { cappedFrameRadiusKpc } from './cappedFrameRadiusKpc';
+import { streamFocusBoost } from './streamFocusBoost';
 
 /** The meta row of a galstreams stream; its label and focus sit at the track's midpoint by length. */
 export function streamMetaEntry(
@@ -27,6 +28,7 @@ export function streamMetaEntry(
   const lengthKpc = cumulative[cumulative.length - 1]!;
   const mid = pointAlongPolyline(points, cumulative, lengthKpc / 2).point;
   const name = track.name.replace(/_/g, ' ');
+  const widthKpc = trackWidthKpc(track);
   return {
     id: streamSlug(name),
     names: [name],
@@ -39,6 +41,7 @@ export function streamMetaEntry(
     widthDeg: track.widthDeg,
     particleCount: particles.luminosity.length,
     colourT: arrayMean(particles.colourT),
+    focusBoost: streamFocusBoost(particles, lengthKpc, widthKpc),
     metallicity,
     stellarMass: streamStellarMass(track.name),
     anchorMpc: [
@@ -46,6 +49,6 @@ export function streamMetaEntry(
       mid[1] * SCALE_UNITS.KPC_TO_MPC,
       mid[2] * SCALE_UNITS.KPC_TO_MPC,
     ],
-    ...streamCentreline(points, trackWidthKpc(track)),
+    ...streamCentreline(points, widthKpc),
   };
 }

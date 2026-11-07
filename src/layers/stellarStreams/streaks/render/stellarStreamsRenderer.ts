@@ -22,7 +22,7 @@ import {
 } from '../../../../services/gpu/lib/cameraUniforms';
 import { STELLAR_STREAMS_RECORD_F32 } from '../../catalog/data/stellarStreamsFormat.constants';
 
-// The WGSL struct's 124 bytes rounded up to its 16-byte alignment.
+// The WGSL struct's size, already a multiple of its 16-byte alignment.
 const UNIFORMS_BYTES = 128;
 // f32 slots after the camera prefix; `Uniforms` in streams.wesl must agree.
 const EYE = CAMERA_UNIFORM_BYTES / 4;
@@ -34,6 +34,7 @@ const TIME_SEC = INTENSITY + 4;
 const FLOW = INTENSITY + 5;
 const FOCUSED_STREAM = INTENSITY + 6;
 const RECEDE = INTENSITY + 7;
+const FOCUS_BOOST = INTENSITY + 8;
 const SLOT_OF = { streak: 0, haze: 1 } as const;
 
 export function createStellarStreamsRenderer(
@@ -118,6 +119,7 @@ export function createStellarStreamsRenderer(
     scratch[FLOW] = look.flow;
     scratch[FOCUSED_STREAM] = focus.focusedStream;
     scratch[RECEDE] = focus.recede;
+    scratch[FOCUS_BOOST] = focus.focusBoost;
     device.queue.writeBuffer(slot.buffer, 0, scratch);
     return slot.bindGroup;
   }

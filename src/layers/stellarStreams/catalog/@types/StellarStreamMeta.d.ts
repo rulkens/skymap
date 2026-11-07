@@ -19,6 +19,8 @@ export type StellarStreamMeta = {
   readonly particleCount: number;
   /** Mean particle colourT (Gaia BP−RP over `STREAM_BP_RP_RANGE`); tints the caption. */
   readonly colourT: number;
+  /** What a full focus multiplies this stream's streaks and haze by: 1 for the brightest, more for dim ones. */
+  readonly focusBoost: number;
   /** Measured [Fe/H] and its citation; null when the build defaulted it (never shown) and for Sagittarius. */
   readonly metallicity: { readonly feh: number; readonly ref: string } | null;
   /** Published stellar mass (M☉) and its citation; `partial` = measured over part of the stream, shown "≥". */
