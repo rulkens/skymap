@@ -582,7 +582,16 @@ describe('stepCameraRuntime — the openspace scheme', () => {
     const stale = h.store.getState().camera.base;
     if (!isWorldArm(live) || !isWorldArm(stale)) throw new Error('expected the world arm');
     expect(Math.abs(live.pose.yaw - stale.pose.yaw)).toBeGreaterThan(1e-3);
-    stepWith(h, [{ kind: 'zoom', factor: 1.2, duringGesture: false, cursorPx: null }]);
+    stepWith(h, [
+      {
+        kind: 'zoom',
+        factor: 1.2,
+        duringGesture: false,
+        cursorPx: null,
+        firstEventMs: 0,
+        lastEventMs: 0,
+      },
+    ]);
     const after = h.state.cameraRuntime.register.pose;
     if (!isWorldArm(after)) throw new Error('expected the world arm');
     // The coast keeps turning by a frame's worth; a snap back lands on the base's yaw.
@@ -691,7 +700,16 @@ describe('stepCameraRuntime — the openspace scheme', () => {
         lastNowMs: nextNow(h) - dtS * 1000,
       },
     };
-    const out = stepWith(h, [{ kind: 'zoom', factor: 1.25, duringGesture: false, cursorPx: null }]);
+    const out = stepWith(h, [
+      {
+        kind: 'zoom',
+        factor: 1.25,
+        duringGesture: false,
+        cursorPx: null,
+        firstEventMs: 0,
+        lastEventMs: 0,
+      },
+    ]);
     const lenses = out.actions.filter((a) => setFovYRad.match(a)).map((a) => a.payload as number);
     expect(lenses).toHaveLength(2);
     expect(lenses[1]).toBeCloseTo(lens * 1.25 * 1.1, 9);
@@ -731,7 +749,14 @@ describe('stepCameraRuntime — the openspace scheme', () => {
     h.store.dispatch(inputGestureStarted({ source: 'canvas', intent: 'navOrbit' }));
     stepWith(h, [
       { kind: 'gestureStart' },
-      { kind: 'zoom', factor: 1.5, duringGesture: true, cursorPx: null },
+      {
+        kind: 'zoom',
+        factor: 1.5,
+        duringGesture: true,
+        cursorPx: null,
+        firstEventMs: 0,
+        lastEventMs: 0,
+      },
     ]);
     const pinched = worldOf(h.state.cameraRuntime.register.pose).distance;
 

@@ -49,12 +49,13 @@ export function replayInput(
     readonly gesture: MemOf[CameraArmKind];
     readonly tilt: TiltMemory;
     readonly follow: FollowMemory | null;
+    /** The last wheel notch's device-event time, ms (`−∞` before one). */
     readonly lastWheelMs: number;
   },
   steps: readonly RawInputStep[],
   args: {
     readonly ctx: CameraArmCtx;
-    /** The step clock, ms: the wheel quiet and the spin epoch read it. */
+    /** The step clock, ms, for the spin epoch. */
     readonly nowMs: number;
     readonly rootState: RootState;
     readonly winnerLastFrame: DriverId;
@@ -232,10 +233,12 @@ export function replayInput(
         break;
 
       case 'zoom': {
-        // Every zoom step restarts the quiet, swallowed or not: a tail that ran into a clip or
-        // a floor is still a tail.
-        const fresh = nowMs - lastWheelMs >= FRESH_WHEEL_PAUSE_MS;
-        lastWheelMs = nowMs;
+        // On the EVENT clock: a frame hitch inside a momentum tail must not read as quiet.
+        // Every zoom step restarts the quiet, swallowed or not: a tail that ran into a clip
+        // or a floor is still a tail.
+        const { firstEventMs, lastEventMs, ...zoom } = step;
+        const fresh = firstEventMs - lastWheelMs >= FRESH_WHEEL_PAUSE_MS;
+        lastWheelMs = lastEventMs;
         // The settles are priced per unit of zoom, not per step (user ruling
         // 2026-09-10): a trackpad twitch must not spend a mouse notch's decay.
         const logZoom = Math.abs(Math.log(step.factor));
@@ -252,7 +255,7 @@ export function replayInput(
         // view: an at-rest notch would zoom that stale pose and snap back to it.
         // It rides the live register instead, as a held gesture's does.
         const notch: InputStep = {
-          ...step,
+          ...zoom,
           duringGesture: args.navOwns || step.duringGesture,
           fresh,
         };

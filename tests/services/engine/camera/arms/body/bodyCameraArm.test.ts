@@ -30,6 +30,9 @@ import { bodyFixedEyeM } from '../../../../../../src/utils/camera/surfaceFrame/b
 import { normalize3 } from '../../../../../../src/utils/math/normalize3';
 import { skySpotRadial } from '../../../../../../src/utils/geo/skySpotRadial';
 import { earthArm } from '../../../../../fixtures/earthArm';
+import { cursorRayBodyLocal } from '../../../../../../src/utils/camera/terrain/cursorRayBodyLocal';
+import { raySphereRoots } from '../../../../../../src/utils/math/raySphereRoots';
+import type { Vec2 } from '../../../../../../src/@types/math/Vec2';
 import type { CameraArmCtx } from '../../../../../../src/@types/camera/arms/CameraArmCtx';
 import type { FramedPose } from '../../../../../../src/@types/camera/pose/FramedPose';
 import type { InputStep } from '../../../../../../src/@types/camera/input/InputStep';
@@ -102,11 +105,13 @@ describe('the body arm’s floor push', () => {
       pose: { ...pose, eyeRelAnchorM: [eye[0] * s - a[0], eye[1] * s - a[1], eye[2] * s - a[2]] },
     };
   };
+  /** Off the optical centre, so an anchor taken at the centre would be metres away. */
+  const CURSOR_PX: Vec2 = [80, 30];
   const notch = (factor: number, fresh: boolean): InputStep => ({
     kind: 'zoom',
     factor,
     duringGesture: false,
-    cursorPx: [50, 50],
+    cursorPx: CURSOR_PX,
     fresh,
   });
   const pushOf = (framed: FramedPose<'body'>, input: InputStep) =>
@@ -116,12 +121,19 @@ describe('the body arm’s floor push', () => {
     const framed = standing(0);
     const pushed = pushOf(framed, notch(0.8, true));
     if (pushed?.edge !== 'in') throw new Error('expected a floor push');
-    // Looking at the centre, the centre pixel's anchor is the datum point under the eye.
-    const nadir = normalize3(bodyFixedEyeM(framed.pose));
-    for (let i = 0; i < 3; i++) expect(pushed.pointLocalM[i]).toBeCloseTo(nadir[i]! * EARTH_R_M, 0);
+    // Where the cursor pixel's ray meets the (datum-only) ground.
+    const ray = cursorRayBodyLocal(framed.pose, CURSOR_PX, ctx.viewportPx, ctx.frustum);
+    const t = raySphereRoots(ray.originM, ray.dir, [0, 0, 0], EARTH_R_M)![0];
+    const underCursor = [0, 1, 2].map((i) => ray.originM[i]! + ray.dir[i]! * t);
+    const nadir = normalize3(bodyFixedEyeM(framed.pose)).map((c) => c * EARTH_R_M);
+    const gap = (p: readonly number[]) =>
+      Math.hypot(...p.map((c, i) => c - pushed.pointLocalM[i]!));
+    expect(gap(underCursor)).toBeLessThan(0.5);
+    expect(gap(nadir)).toBeGreaterThan(2);
     expect(pushed.spot.body).toBe(EARTH_ID);
     const radial = skySpotRadial(pushed.spot);
-    for (let i = 0; i < 3; i++) expect(radial[i]).toBeCloseTo(nadir[i]!, 9);
+    const along = normalize3(pushed.pointLocalM);
+    for (let i = 0; i < 3; i++) expect(radial[i]).toBeCloseTo(along[i]!, 9);
   });
 
   it('a zoom-in that starts above the floor reports nothing', () => {

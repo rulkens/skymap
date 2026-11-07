@@ -32,7 +32,8 @@ export type CameraArmRow<K extends CameraArmKind> = {
    * `fovYRad` is present only when the step changes the lens (radians); the drain
    * dispatches it, and later steps read it back as `ctx.fovYRad`. `pushed` is a
    * fresh notch against the arm's zoom limit; the drain only reports it
-   * (`zoomLimitPushed`), and `watchZoomLimitSaga` decides what it starts.
+   * (`zoomLimitPushed`), and `watchZoomLimitSaga` decides what it starts — a
+   * played lift owns the camera from the next frame.
    */
   step(
     memory: MemOf[K],

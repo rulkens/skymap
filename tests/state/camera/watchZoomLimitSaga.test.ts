@@ -27,7 +27,7 @@ function build() {
 }
 
 describe('watchZoomLimitSaga', () => {
-  it('a fresh wheel-out at the widest lens reports edge out with a lift clip; the saga plays it', () => {
+  it("an out push plays its lift under the store's orientation", () => {
     const store = build();
     store.dispatch(zoomLimitPushed({ edge: 'out', lift: LIFT }));
     expect(store.getState().camera.clip).toEqual({ data: LIFT, frame: 'galactic' });

@@ -201,7 +201,15 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
     if (held === null) return;
     const dx = (px[0] - held.lastPx[0]) / canvasSize;
     const dy = (px[1] - held.lastPx[1]) / canvasSize;
-    const motion = { intent: held.intent, dx, dy, ratio: 1, at: unitOf(px), held: true };
+    const motion = {
+      intent: held.intent,
+      dx,
+      dy,
+      ratio: 1,
+      at: unitOf(px),
+      held: true,
+      eventMs: now,
+    };
     store.dispatch(inputMoved({ source: 'canvas', motion: [motion] }));
     held.lastPx = px;
   };
@@ -219,6 +227,7 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
       ratio,
       at: unitOf(cursorPx),
       held: held !== null,
+      eventMs: now,
     } as const;
     store.dispatch(inputMoved({ source: 'canvas', motion: [motion] }));
   };

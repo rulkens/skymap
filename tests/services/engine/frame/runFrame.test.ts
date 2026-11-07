@@ -268,6 +268,7 @@ describe('runFrame — the input drain runs before the produce step', () => {
       ratio: 1,
       at: { x: 1.5, y: 1 },
       held: true,
+      eventMs: 0,
     } as const;
     store.dispatch(inputMoved({ source: 'canvas', motion: [motion] }));
 

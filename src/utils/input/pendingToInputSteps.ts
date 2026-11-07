@@ -28,6 +28,8 @@ export function pendingToInputSteps(
         factor: step.ratio,
         duringGesture: step.held,
         cursorPx: step.at === null ? null : unitToViewPx(step.at, viewPx),
+        firstEventMs: step.firstEventMs,
+        lastEventMs: step.eventMs,
       });
     } else if (step.intent === 'orbit' || step.intent === 'pan' || step.intent === 'tilt') {
       // A drag always carries its pointer: the body arm casts a ray through it.

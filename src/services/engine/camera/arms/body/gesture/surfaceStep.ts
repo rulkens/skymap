@@ -31,8 +31,8 @@ export function surfaceStep(
   readonly pose: BodyFixedPose;
   readonly gesture: SurfaceGestureMemory;
   readonly tilt: TiltMemory;
-  /** A zoom's anchor (`surfaceZoomStep`), for the arm's floor push; absent on every other step. */
-  readonly zoomAnchorM?: Readonly<Vec3> | null;
+  /** A zoom's anchor (`surfaceZoomStep`), for the arm's floor push; null on every other step. */
+  readonly zoomAnchorM: Readonly<Vec3> | null;
 } {
   const {
     viewportPx,
@@ -70,7 +70,9 @@ export function surfaceStep(
   }
   // The press and release reach the memory at `replayInput`'s two gesture
   // edges; nothing latches here from idle.
-  if (step.kind !== 'drag' || prev.gesture === null) return { pose: arm, gesture: prev, tilt };
+  if (step.kind !== 'drag' || prev.gesture === null) {
+    return { pose: arm, gesture: prev, tilt, zoomAnchorM: null };
+  }
   const gesture =
     prev.gesture === 'down'
       ? latchSurfaceGesture(
@@ -98,5 +100,6 @@ export function surfaceStep(
     pose: settled.pose,
     gesture: { gesture: { ...gesture, mode, prevPixel: step.endPx } },
     tilt: settled.tilt,
+    zoomAnchorM: null,
   };
 }

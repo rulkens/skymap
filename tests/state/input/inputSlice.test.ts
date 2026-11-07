@@ -37,23 +37,24 @@ const orbit = (over: Partial<Motion> = {}): Motion => ({
   ratio: 1,
   at: { x: 0.5, y: 0.5 },
   held: true,
+  eventMs: 0,
   ...over,
 });
 
 describe('inputSlice', () => {
-  it('consecutive same-source same-intent motion merges: dx and dy add, ratio multiplies, at is the newest', () => {
+  it('consecutive same-source same-intent motion merges: dx and dy add, ratio multiplies, at and eventMs are the newest, firstEventMs the oldest', () => {
     const store = build();
     store.dispatch(inputGestureStarted({ source: 'canvas', intent: 'orbit' }));
     store.dispatch(
       inputMoved({
         source: 'canvas',
         motion: [
-          orbit({ ratio: 2 }),
-          orbit({ dx: 0.3, dy: 0.4, ratio: 3, at: { x: 0.1, y: 0.9 } }),
+          orbit({ ratio: 2, eventMs: 10 }),
+          orbit({ dx: 0.3, dy: 0.4, ratio: 3, at: { x: 0.1, y: 0.9 }, eventMs: 20 }),
         ],
       }),
     );
-    store.dispatch(inputMoved({ source: 'canvas', motion: [orbit()] }));
+    store.dispatch(inputMoved({ source: 'canvas', motion: [orbit({ eventMs: 30 })] }));
     expect(selectPendingInput(store.getState())).toEqual([
       { kind: 'start', source: 'canvas' },
       expect.objectContaining({
@@ -62,6 +63,8 @@ describe('inputSlice', () => {
         dy: expect.closeTo(0.8),
         ratio: 6,
         at: { x: 0.5, y: 0.5 },
+        firstEventMs: 10,
+        eventMs: 30,
       }),
     ]);
   });

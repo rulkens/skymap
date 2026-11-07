@@ -76,9 +76,16 @@ const inputSlice = createSlice({
             dy: tail.dy + m.dy,
             ratio: tail.ratio * m.ratio,
             at: m.at,
+            eventMs: m.eventMs,
           };
         } else {
-          input.pending.push({ kind: 'motion', source, aspect: record.aspect, ...m });
+          input.pending.push({
+            kind: 'motion',
+            source,
+            aspect: record.aspect,
+            firstEventMs: m.eventMs,
+            ...m,
+          });
         }
       }
     },

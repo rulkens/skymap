@@ -8,8 +8,8 @@
  * two zoom owners: pointer down ⇒ the gesture register renders, at rest ⇒ the
  * store `base` does. `cursorPx` is where the wheel fired, in the same absolute
  * pixels; `null` for a pinch, which has two contacts and no single cursor.
- * `fresh` is the drain's one call (`replayInput`): the notch came after
- * `FRESH_WHEEL_PAUSE_MS` of wheel quiet, so it starts a scroll, not a tail. A
+ * `fresh` is decided once by the drain (`replayInput`): the notch's device event
+ * came after `FRESH_WHEEL_PAUSE_MS` of wheel quiet, so it starts a scroll. A
  * `navDrag` is the navigator's pointer motion in CSS pixels; no arm reads it.
  */
 

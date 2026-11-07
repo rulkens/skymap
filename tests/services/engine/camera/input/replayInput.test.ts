@@ -92,11 +92,14 @@ function ctxOf(
   };
 }
 
-const atRestZoom = (factor: number): RawInputStep => ({
+/** `eventMs` is the notch's device-event time, the clock freshness reads. */
+const atRestZoom = (factor: number, eventMs = 0): RawInputStep => ({
   kind: 'zoom',
   factor,
   duringGesture: false,
   cursorPx: [500, 500],
+  firstEventMs: eventMs,
+  lastEventMs: eventMs,
 });
 
 /** Geocentric range of a body arm, metres — the anchor is the body centre. */
@@ -277,6 +280,7 @@ describe('replayInput', () => {
       pose,
       gesture: prev,
       tilt,
+      zoomAnchorM: null,
     }));
 
     const next = replayInput(
@@ -295,31 +299,55 @@ describe('replayInput', () => {
     expect(next.register.pose).toBe(arm.pose);
   });
 
-  it('a wheel notch after 250 ms of quiet is fresh; one inside it is not', () => {
-    const store = makeStore();
+  describe('wheel freshness', () => {
     const sky: FramedCameraPose = {
       frame: { sky: { body: asSceneBodyId('earth'), lonRad: 0.2, latRad: 0.9 } },
       pose: { azimuthRad: 1, altitudeRad: 0.3 },
     };
-    store.dispatch(commitCameraPose(sky));
-    const step = vi.spyOn(skyCameraArm, 'step');
-    const drain = (nowMs: number, notches: number) =>
-      replayInput(
-        { register: sky, gesture: null, tilt: EMPTY_TILT_MEMORY, follow: null, lastWheelMs: 1000 },
-        Array.from({ length: notches }, () => atRestZoom(1.01)),
-        ctxOf(store, { nowMs }),
-      );
-    const freshness = () =>
-      step.mock.calls.map(([, , , input]) => input.kind === 'zoom' && input.fresh);
+    const setup = () => {
+      const store = makeStore();
+      store.dispatch(commitCameraPose(sky));
+      const step = vi.spyOn(skyCameraArm, 'step');
+      const drain = (lastWheelMs: number, notches: readonly RawInputStep[], nowMs = 0) =>
+        replayInput(
+          { register: sky, gesture: null, tilt: EMPTY_TILT_MEMORY, follow: null, lastWheelMs },
+          notches,
+          ctxOf(store, { nowMs }),
+        );
+      const freshness = () =>
+        step.mock.calls.map(([, , , input]) => input.kind === 'zoom' && input.fresh);
+      return { drain, freshness };
+    };
 
-    expect(drain(1000 + FRESH_WHEEL_PAUSE_MS - 1, 1).lastWheelMs).toBe(
-      1000 + FRESH_WHEEL_PAUSE_MS - 1,
-    );
-    expect(freshness()).toEqual([false]);
-    step.mockClear();
-    // The second notch of the same drain follows the first by 0 ms: a tail.
-    drain(1000 + FRESH_WHEEL_PAUSE_MS, 2);
-    expect(freshness()).toEqual([true, false]);
+    it('a wheel notch after 250 ms of quiet is fresh; one inside it is not', () => {
+      const { drain, freshness } = setup();
+      const quiet = 1000 + FRESH_WHEEL_PAUSE_MS;
+      expect(drain(1000, [atRestZoom(1.01, quiet - 1)]).lastWheelMs).toBe(quiet - 1);
+      drain(1000, [atRestZoom(1.01, quiet), atRestZoom(1.01, quiet + 16)]);
+      expect(freshness()).toEqual([false, true, false]);
+    });
+
+    it('a frame hitch inside a momentum tail does not make a notch fresh', () => {
+      const { drain, freshness } = setup();
+      // 30 ms apart as events, drained 400 ms apart as frames.
+      const first = drain(-Infinity, [atRestZoom(1.01, 1000)], 1000);
+      drain(first.lastWheelMs, [atRestZoom(1.01, 1030)], 1400);
+      expect(freshness()).toEqual([true, false]);
+    });
+
+    it('a folded run is judged by its first event and leaves its last as the clock', () => {
+      const { drain, freshness } = setup();
+      const run: RawInputStep = {
+        kind: 'zoom',
+        factor: 1.01,
+        duringGesture: false,
+        cursorPx: [500, 500],
+        firstEventMs: 1000,
+        lastEventMs: 1600,
+      };
+      expect(drain(900, [run]).lastWheelMs).toBe(1600);
+      expect(freshness()).toEqual([false]);
+    });
   });
 
   it('a fresh wheel-out at the widest lens reports edge out with a lift clip, and starts none', () => {
@@ -414,7 +442,16 @@ describe('replayInput', () => {
         follow: null,
         lastWheelMs: -Infinity,
       },
-      [{ kind: 'zoom', factor: f, duringGesture: false, cursorPx: [700, 500] }],
+      [
+        {
+          kind: 'zoom',
+          factor: f,
+          duringGesture: false,
+          cursorPx: [700, 500],
+          firstEventMs: 0,
+          lastEventMs: 0,
+        },
+      ],
       ctxOf(store),
     );
 
@@ -792,7 +829,14 @@ describe('replayInput', () => {
       },
       [
         { kind: 'gestureStart' },
-        { kind: 'zoom', factor: Math.exp(0.1), duringGesture: true, cursorPx: [500, 500] },
+        {
+          kind: 'zoom',
+          factor: Math.exp(0.1),
+          duringGesture: true,
+          cursorPx: [500, 500],
+          firstEventMs: 0,
+          lastEventMs: 0,
+        },
       ],
       ctxOf(store),
     );
@@ -820,7 +864,14 @@ describe('replayInput', () => {
       },
       [
         { kind: 'gestureStart' },
-        { kind: 'zoom', factor: 1e-6, duringGesture: true, cursorPx: null },
+        {
+          kind: 'zoom',
+          factor: 1e-6,
+          duringGesture: true,
+          cursorPx: null,
+          firstEventMs: 0,
+          lastEventMs: 0,
+        },
       ],
       ctxOf(store),
     );
