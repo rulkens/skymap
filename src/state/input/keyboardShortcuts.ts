@@ -30,6 +30,7 @@ import { logCameraState } from '../camera/logCameraState';
 import { goHome } from '../selection/goHome';
 import { focusSelected } from '../selection/focusSelected';
 import { clearSelection } from '../selection/selectionSlice';
+import { selectSelectedRef } from '../selection/selectors';
 import { selectTourActive } from '../tour/selectors';
 import { advanceTour, prevBeat, togglePause } from '../tour/tourActions';
 import { exitTakeover } from '../takeover/takeoverActions';
@@ -52,9 +53,16 @@ export const KEYBOARD_SHORTCUTS: readonly KeyboardShortcut[] = [
     run: (s) => (selectPaletteOpen(s) ? null : setPaletteOpen(true)),
     preventDefault: true,
   },
-  // `exitTakeover` ends whatever runs — a tour, an exhibit, a registry clip, or
-  // the debug path replay — and is a no-op when nothing does.
-  { keys: 'escape', run: () => [clearSelection(), exitTakeover()] },
+  // An open card closes first (R11). Otherwise `exitTakeover` ends whatever runs — a tour, an
+  // exhibit, a registry clip, sky mode, or the debug path replay — as the person's own leave,
+  // so sky mode restores (or lifts off when standing with no takeover); nothing running, a no-op.
+  {
+    keys: 'escape',
+    run: (s) =>
+      selectSelectedRef(s) !== null
+        ? clearSelection()
+        : [clearSelection(), exitTakeover({ restore: true })],
+  },
   { keys: 'f', run: () => focusSelected() },
   { keys: 'h,e', run: () => goHome() },
   { keys: 'tab', run: () => toggleUiHidden(), preventDefault: true },

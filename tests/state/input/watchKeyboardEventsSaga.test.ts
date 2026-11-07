@@ -109,7 +109,7 @@ describe('watchKeyboardEventsSaga', () => {
     await flush();
 
     const after = recorded.slice(before);
-    expect(after).toEqual([clearSelection(), exitTakeover()]);
+    expect(after).toEqual([clearSelection(), exitTakeover({ restore: true })]);
   });
 
   it("runs a running exhibit's kind shortcut ahead of the global row", async () => {

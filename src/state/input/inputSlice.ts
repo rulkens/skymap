@@ -90,6 +90,10 @@ const inputSlice = createSlice({
       }
     },
 
+    inputLiftOffRequested: (input) => {
+      input.pending.push({ kind: 'liftOff' });
+    },
+
     inputHovered: (input, action: PayloadAction<{ source: SourceId; at: UnitPoint | null }>) => {
       if (input.owner !== null) return;
       input.pick.hover = { at: action.payload.at, seq: ++input.pickSeq };
@@ -121,6 +125,7 @@ export const {
   inputGestureStarted,
   inputGestureEnded,
   inputMoved,
+  inputLiftOffRequested,
   inputHovered,
   inputTapped,
   inputConsumed,

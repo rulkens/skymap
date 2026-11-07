@@ -3,7 +3,7 @@
  * live ground at the tag's spot, looking by azimuth and altitude. Only a tag
  * enters it (`engage` is null). Every drag looks and the wheel changes the
  * lens, which the arm hands back as `fovYRad` beside an unmoved pose; a fresh
- * wheel-out at the widest lens reports a push carrying the exit lift.
+ * wheel-out at the widest lens, or a `liftOff` step, reports a push carrying the exit lift.
  */
 
 import type { ClimbRow } from '../@types/ClimbRow';
@@ -55,6 +55,14 @@ export const skyCameraArm: ClimbRow<'sky'> = {
       ];
       const pose = skyLookedPose(framed.pose, dragPx, ctx.fovYRad, ctx.viewportPx[1]);
       return { pose, memory, tilt };
+    }
+    if (input.kind === 'liftOff') {
+      return {
+        pose: framed.pose,
+        memory,
+        tilt,
+        pushed: { edge: 'out', lift: skyExitLift(framed, ctx) },
+      };
     }
     if (input.kind !== 'zoom') return { pose: framed.pose, memory, tilt };
     const fovYRad = skyZoomedLens(ctx.fovYRad, input.factor);

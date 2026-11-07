@@ -251,12 +251,12 @@ it with the same `pushed: { edge: 'out', lift }` as a widest-lens wheel-out, so 
 the engine (Task 2's ruling). Esc: `selection open ? clearSelection() : exitTakeover({ restore: true })`. Hash: sky
 is named by no hash.
 
-- [ ] Tests: `Leave restores the entry camera and focus`; `lift-off ends it without restoring`;
+- [x] Tests: `Leave restores the entry camera and focus`; `lift-off ends it without restoring`;
       `a tour start ends it without restoring`; `a hash change ends it without restoring`;
       `re-entry keeps the first restore` (Review focus 4); `Esc with a card open clears the selection and keeps the takeover`;
       `a push at the floor enters at the cursor anchor`; `a push within 250 ms does not enter`;
       `Leave while standing with no takeover lifts off`.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 9: Search while standing
 

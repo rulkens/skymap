@@ -224,6 +224,7 @@ export function replayInput(
       }
 
       case 'drag':
+      case 'liftOff':
         stepRegister(step);
         break;
 

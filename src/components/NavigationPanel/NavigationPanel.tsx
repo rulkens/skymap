@@ -15,7 +15,7 @@ const ROWS: ReadonlyArray<{ key: string; action: string }> = [
   { key: 'Wheel', action: 'zoom' },
   { key: 'H', action: 'home view' },
   { key: 'F', action: 'focus selected' },
-  { key: 'Esc', action: 'clear selection' },
+  { key: 'Esc', action: 'close card, then leave' },
   // `/` is the fallback for keyboards without a meta key.
   { key: '⌘K / Ctrl+K / /', action: 'search galaxies' },
 ];

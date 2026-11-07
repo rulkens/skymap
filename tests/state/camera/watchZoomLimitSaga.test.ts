@@ -1,6 +1,7 @@
 /**
  * watchZoomLimitSaga — a sky wheel-out push plays the arm's lift under the orientation the store
- * holds; a floor push starts nothing yet.
+ * holds; a floor push enters sky mode unless a show runs; Leave while standing with no takeover
+ * queues the lift-off step.
  */
 import { describe, it, expect } from 'vitest';
 import createSagaMiddleware from 'redux-saga';
@@ -11,19 +12,30 @@ import { watchZoomLimitSaga } from '../../../src/state/camera/watchZoomLimitSaga
 import { zoomLimitPushed } from '../../../src/state/camera/zoomLimitPushed';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+import { enterSky } from '../../../src/state/sky/enterSky';
+import { exitTakeover, takeoverStarted } from '../../../src/state/takeover/takeoverActions';
+import { engineSkyViewReported } from '../../../src/state/engine/engineSlice';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
+import type { Action, Middleware } from '@reduxjs/toolkit';
 
 const LIFT: ClipData = { start: 'live', timeline: [] };
 
+const SPOT = { body: asSceneBodyId('earth'), lonRad: 0, latRad: 0 };
+
 function build() {
   const sagas = createSagaMiddleware();
+  const seen: Action[] = [];
+  const recorder: Middleware = () => (next) => (action) => {
+    seen.push(action as Action);
+    return next(action);
+  };
   const store = configureStore({
     reducer: rootReducer,
-    middleware: (getDefault) => getDefault().concat(sagas),
+    middleware: (getDefault) => getDefault().concat(sagas).concat(recorder),
   });
   sagas.run(watchZoomLimitSaga);
   store.dispatch(setOrientation('galactic'));
-  return store;
+  return Object.assign(store, { seen });
 }
 
 describe('watchZoomLimitSaga', () => {
@@ -33,15 +45,35 @@ describe('watchZoomLimitSaga', () => {
     expect(store.getState().camera.clip).toEqual({ data: LIFT, frame: 'galactic' });
   });
 
-  it('a floor push starts nothing', () => {
+  it('a floor push enters sky mode at its anchor', () => {
+    const store = build();
+    store.dispatch(zoomLimitPushed({ edge: 'in', spot: SPOT, pointLocalM: [6_371_000, 0, 0] }));
+    expect(store.seen).toContainEqual(enterSky({ spot: SPOT, pointLocalM: [6_371_000, 0, 0] }));
+  });
+
+  it('a floor push during a show does not enter', () => {
+    const store = build();
+    store.dispatch(takeoverStarted({ kind: 'tour', id: 'grandTour' }));
+    store.dispatch(zoomLimitPushed({ edge: 'in', spot: SPOT, pointLocalM: [6_371_000, 0, 0] }));
+    expect(store.seen.map((a) => a.type)).not.toContain(enterSky.type);
+  });
+
+  it('Leave while standing with no takeover lifts off', () => {
     const store = build();
     store.dispatch(
-      zoomLimitPushed({
-        edge: 'in',
-        spot: { body: asSceneBodyId('earth'), lonRad: 0, latRad: 0 },
-        pointLocalM: [6_371_000, 0, 0],
-      }),
+      engineSkyViewReported({ spot: SPOT, azimuthRad: 0, altitudeRad: 0, fovYRad: 1 }),
     );
-    expect(store.getState().camera.clip).toBeNull();
+    store.dispatch(exitTakeover({ restore: true }));
+    expect(store.getState().input.pending).toEqual([{ kind: 'liftOff' }]);
+  });
+
+  it('a plain exit, or Leave while not standing, queues nothing', () => {
+    const store = build();
+    store.dispatch(exitTakeover({ restore: true }));
+    store.dispatch(
+      engineSkyViewReported({ spot: SPOT, azimuthRad: 0, altitudeRad: 0, fovYRad: 1 }),
+    );
+    store.dispatch(exitTakeover());
+    expect(store.getState().input.pending).toEqual([]);
   });
 });
