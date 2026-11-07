@@ -33,8 +33,8 @@ export const ANTIQUE_ORNAMENT_BYTES = 16 + ANTIQUE_MAX_ORNAMENTS * 64;
  * numbering reads, the numbers sit just inside the inner rule.
  */
 export const ANTIQUE_LADDER_UNITS = 33.5;
-export const ANTIQUE_NUMERAL_INSET_UNITS = 46;
-export const ANTIQUE_NUMERAL_UNITS = 11;
+export const ANTIQUE_NUMERAL_INSET_UNITS = 48;
+export const ANTIQUE_NUMERAL_UNITS = 15;
 
 /** RA/Dec ruling intervals (degrees) the plate picks from, ~`GAP` units apart at its centre. */
 export const ANTIQUE_RULING_STEPS_DEG = [1, 2, 5, 10, 15, 20, 30, 45, 90] as const;

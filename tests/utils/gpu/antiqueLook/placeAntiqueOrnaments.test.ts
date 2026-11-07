@@ -28,6 +28,7 @@ function skyRow(over: Partial<AntiqueOrnament> & { lonDeg?: number }): AntiqueOr
     pigment: 0,
     opacity: 1,
     clearsBeneath: false,
+    mirrored: false,
     ...over,
   };
 }
@@ -73,6 +74,19 @@ describe('placeAntiqueOrnaments', () => {
     const rows = [skyRow({ id: 's', regime: 'stars' }), skyRow({ id: 'c', regime: 'cosmos' })];
     expect(place(rows, NORTH_UP, 0).map((p) => p.opacity)).toEqual([1]);
     expect(place(rows, NORTH_UP, 5)).toHaveLength(1);
+  });
+
+  it('mirrors a globe-view figure by flipping its width, not its place', () => {
+    const [plain] = place([skyRow({})]);
+    const [mirrored] = place([skyRow({ mirrored: true })]);
+    expect(mirrored!.halfPx[0]).toBeCloseTo(-plain!.halfPx[0], 6);
+    expect(mirrored!.centrePx).toEqual(plain!.centrePx);
+  });
+
+  it('drops a sky figure that is mostly off the plate', () => {
+    // Centred just past the right edge: well under the ~0.6 on-screen share it needs.
+    const [edge] = place([skyRow({ lonDeg: -50 })]);
+    expect(edge === undefined || edge.opacity < 0.5).toBe(true);
   });
 
   it('fades a sky row out while it is too small to read', () => {

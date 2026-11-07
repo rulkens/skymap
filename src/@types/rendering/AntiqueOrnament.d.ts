@@ -25,4 +25,6 @@ export type AntiqueOrnament = {
   readonly opacity: number;
   /** Clears the plate beneath its fill to bare paper (a cartouche), or lets it show (a figure). */
   readonly clearsBeneath: boolean;
+  /** Drawn left-for-right: a globe-view figure (Hevelius) on a sky-view plate. */
+  readonly mirrored: boolean;
 };

@@ -19,6 +19,7 @@ const beast = (
   latDeg: number,
   sizeDeg: number,
   pigment: number,
+  mirrored = false,
 ): AntiqueOrnament => ({
   id,
   sprite,
@@ -27,25 +28,28 @@ const beast = (
   facesNorth: true,
   rotationDeg: 0,
   pigment,
-  opacity: 0.85,
+  opacity: 0.8,
   clearsBeneath: false,
+  mirrored,
 });
 
 export const ANTIQUE_ORNAMENTS: readonly AntiqueOrnament[] = [
   {
     id: 'cartouche',
     sprite: 'cartouche',
-    anchor: { kind: 'sheet', corner: 'topLeft', insetUnits: [215, 130], sizeUnits: 380 },
+    anchor: { kind: 'sheet', corner: 'topLeft', insetUnits: [240, 178], sizeUnits: 380 },
     regime: 'always',
     facesNorth: false,
     rotationDeg: 0,
     pigment: 2,
     opacity: 1,
     clearsBeneath: true,
+    mirrored: false,
   },
   // Constellation figures, at each figure's centre (J2000 RA/Dec, degrees). Only
   // beasts drawn without a sea under them: the sky has no waves.
-  beast('cetus', 'cetus', 'stars', 'equatorial', 25, -8, 36, 5),
+  // Hevelius drew his figures as seen from outside the globe: a sky-view plate mirrors them.
+  beast('cetus', 'cetus', 'stars', 'equatorial', 25, -8, 36, 5, true),
   beast('draco', 'dragon', 'stars', 'equatorial', 255, 64, 34, 1),
   beast('hydra', 'seaSerpent', 'stars', 'equatorial', 150, -18, 44, 0),
   // Out among the galaxies the Zone of Avoidance is an uncharted ocean, and the

@@ -83,9 +83,13 @@ export function placeAntiqueOrnaments(input: {
       widthPx = anchor.sizeUnits * unitPx;
       dir = rayThroughPx(centre, basis, frustum, size);
     }
-    if (opacity <= 0.003) continue;
     const half: [number, number] = [widthPx * 0.5, widthPx * 0.5 * aspect];
-    if (offScreen(centre, half, size)) continue;
+    // A sky figure mostly off the plate reads as a cropped stray claw: fade it
+    // out unless at least about half of it is on screen.
+    if (anchor.kind === 'sky') opacity *= smoothstep(0.35, 0.6, onScreenShare(centre, half, size));
+    if (opacity <= 0.003 || offScreen(centre, half, size)) continue;
+    // A negative half-width flips the sprite in the shader (local x runs backwards).
+    if (row.mirrored) half[0] = -half[0];
     const north = row.facesNorth ? screenNorthAngle(dir, centre, basis, frustum, size) : 0;
     placed.push({
       centrePx: centre,
@@ -120,6 +124,16 @@ function screenNorthAngle(
   );
   if (ahead === null) return 0;
   return Math.atan2(-(ahead.x - at[0]), -(ahead.y - at[1]));
+}
+
+function onScreenShare(
+  c: readonly [number, number],
+  half: readonly [number, number],
+  size: Size,
+): number {
+  const w = Math.max(0, Math.min(size.width, c[0] + half[0]) - Math.max(0, c[0] - half[0]));
+  const h = Math.max(0, Math.min(size.height, c[1] + half[1]) - Math.max(0, c[1] - half[1]));
+  return (w * h) / (4 * half[0] * half[1]);
 }
 
 function offScreen(

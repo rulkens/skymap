@@ -12,6 +12,8 @@
 import package::antiqueLook::io::AntiqueUniforms;
 import package::antiqueLook::io::VSOut;
 import package::antiqueLook::paper::vnoise;
+import package::lib::math::rot2;
+import package::lib::util::hash21Hq;
 import package::antiqueLook::engraving::crossHatch;
 import package::antiqueLook::engraving::stipple;
 import package::antiqueLook::engraving::starGlyph;
@@ -65,7 +67,7 @@ const MARGIN: f32 = 30.0;
 const BAND: f32 = 7.0;
 const CELL: f32 = 4.0;
 // Star contrast below this prints nothing: the paper floor (about naked-eye depth).
-const STAR_FLOOR: f32 = 0.42;
+const STAR_FLOOR: f32 = 0.5;
 // Hatch spacing on bodies, print units.
 const HATCH: f32 = 5.0;
 // Glow levels: the outline-colour boundary, and one inner contour.
@@ -99,7 +101,7 @@ fn glowAt(uv: vec2<f32>) -> vec3<f32> {
   for (var k = 0; k < 8; k++) {
     let a = f32(k) * 0.7853982;
     let w = select(1.0, 2.0, (k & 1) == 0);
-    sum += textureSampleLevel(glowTex, linear, uv + vec2<f32>(cos(a), sin(a)) * t * 1.1, 0.0).rgb * w;
+    sum += textureSampleLevel(glowTex, linear, uv + vec2<f32>(cos(a), sin(a)) * t * 2.0, 0.0).rgb * w;
   }
   return sum / 16.0;
 }
@@ -111,7 +113,7 @@ fn glowHue(uv: vec2<f32>) -> vec3<f32> {
   var sum = vec3<f32>(0.0);
   for (var k = 0; k < 8; k++) {
     let a = f32(k) * 0.7853982;
-    sum += textureSampleLevel(glowTex, linear, uv + vec2<f32>(cos(a), sin(a)) * t * 2.5, 0.0).rgb;
+    sum += textureSampleLevel(glowTex, linear, uv + vec2<f32>(cos(a), sin(a)) * t * 4.0, 0.0).rgb;
   }
   return sum / 8.0;
 }
@@ -176,6 +178,24 @@ fn numeralInk(px: vec2<f32>) -> f32 {
   return ink;
 }
 
+// A body's light at the terminator's scale — nine quarter-res taps ~6 cells
+// apart, body cells only (wash.a >= 0) — so albedo (dark forest, bright desert,
+// a sea glint) never reads as shade, and a thin ring is not darkened by the sky.
+fn bodyLight(uv: vec2<f32>) -> f32 {
+  let t = 6.0 / vec2<f32>(textureDimensions(washTex));
+  let c = textureSampleLevel(washTex, linear, uv, 0.0).rgb;
+  var light = max(c.r, max(c.g, c.b)) * 2.0;
+  var weight = 2.0;
+  for (var k = 0; k < 8; k++) {
+    let a = f32(k) * 0.7853982;
+    let s = textureSampleLevel(washTex, linear, uv + vec2<f32>(cos(a), sin(a)) * t, 0.0);
+    let w = step(0.0, s.a);
+    light += max(s.r, max(s.g, s.b)) * w;
+    weight += w;
+  }
+  return light / weight;
+}
+
 // How near the coast an ocean pixel lies, from the quarter-res land share: land
 // within ~3 cells counts fully, within ~7 cells half. 1 at the shore, 0 far out.
 fn coastNear(uv: vec2<f32>) -> f32 {
@@ -195,8 +215,8 @@ fn coastNear(uv: vec2<f32>) -> f32 {
 // brightest class adds a glory of short ticks. y: the knock-out halo (1.3×).
 fn starInk(px: vec2<f32>) -> vec2<f32> {
   let cell = vec2<i32>(px / CELL);
-  let radii = array<f32, 6>(0.8, 1.4, 2.6, 3.6, 4.8, 7.0);
-  let rayCounts = array<f32, 6>(0.0, 0.0, 5.0, 6.0, 6.0, 8.0);
+  let radii = array<f32, 6>(0.8, 1.4, 2.6, 3.6, 5.2, 10.0);
+  let rayCounts = array<f32, 6>(0.0, 0.0, 6.0, 6.0, 8.0, 12.0);
   var ink = 0.0;
   var knock = 0.0;
   for (var j = -2; j <= 2; j++) {
@@ -205,13 +225,14 @@ fn starInk(px: vec2<f32>) -> vec2<f32> {
       if (s.z < STAR_FLOOR) {
         continue;
       }
-      let k = clamp((s.w - 0.05) / 0.6, 0.0, 1.0);
+      let k = clamp((s.w - 0.07) / 0.85, 0.0, 1.0);
       let rank = min(i32(k * 6.0), 5);
       let r = radii[rank] * u.unit;
       let rays = select(0.0, rayCounts[rank], r >= 3.0);
-      let glory = select(0.0, 1.0, rank == 5 && k > 0.97 && r >= 6.0);
-      let q = px - s.xy;
-      ink = max(ink, starGlyph(q, r, rays, glory));
+      let glory = select(0.0, 1.0, rank == 5 && k > 0.9 && r >= 6.0);
+      // Each star punched by hand: its own turn, and a slight unevenness of size.
+      let q = rot2(px - s.xy, hash21Hq(floor(s.xy)) * 6.2831853);
+      ink = max(ink, starGlyph(q, r * (0.92 + 0.16 * hash21Hq(floor(s.xy) + 7.1)), rays, glory));
       knock = max(knock, 1.0 - smoothstep(1.3 * r, 1.3 * r + 1.0, length(q)));
     }
   }
@@ -227,8 +248,14 @@ fn neatline(px: vec2<f32>, uv: vec2<f32>) -> vec2<f32> {
   let inset = min(min(p.x, size.x - p.x), min(p.y, size.y - p.y)) - MARGIN;
   let outer = 1.0 - smoothstep(0.0, 0.5, abs(inset + 1.0) - 1.0);
   let inner = 1.0 - smoothstep(0.0, 0.4, abs(inset - BAND) - 0.3);
-  let rd = raDec(viewRay(uv));
   let horizontalEdge = min(p.y, size.y - p.y) < min(p.x, size.x - p.x);
+  // Read the coordinate on the band's centre line, not at this pixel, so each
+  // chequer cell is square to the edge instead of cut along the iso-line.
+  let mid = MARGIN + BAND * 0.5;
+  let alongY = select(size.y - mid, mid, p.y < size.y * 0.5) / size.y;
+  let alongX = select(size.x - mid, mid, p.x < size.x * 0.5) / size.x;
+  let onLine = select(vec2<f32>(alongX, uv.y), vec2<f32>(uv.x, alongY), horizontalEdge);
+  let rd = raDec(viewRay(onLine));
   let coord = select(rd.y, rd.x, horizontalEdge);
   let cell = select(u.decStep, u.raStep, horizontalEdge) / 5.0;
   let ladder = f32(i32(floor(coord / cell)) % 2 == 0) * step(1.6, inset) * step(inset, BAND - 0.6);
@@ -244,9 +271,11 @@ fn plateMark(px: vec2<f32>) -> f32 {
   let half = size * 0.5 - vec2<f32>(PLATE + radius);
   let q = abs(p - size * 0.5) - half;
   let d = -(length(max(q, vec2<f32>(0.0))) + min(max(q.x, q.y), 0.0) - radius);
-  let toLight = dot(normalize(p - size * 0.5), vec2<f32>(-0.6, -0.8));
-  let bevel = 1.0 - smoothstep(0.0, 1.4, abs(d));
-  return bevel * sign(toLight) * 0.13 - smoothstep(0.0, 2.0, d) * 0.035;
+  // Embossed, not printed: a light ridge beside a dark one, swapped on the sides
+  // facing away from the light; inside, only a whisper of plate tone.
+  let toLight = sign(dot(normalize(p - size * 0.5), vec2<f32>(-0.6, -0.8)));
+  let ridge = exp(-pow((d + 0.6) / 0.55, 2.0)) - exp(-pow((d - 0.6) / 0.55, 2.0));
+  return ridge * toLight * 0.11 - smoothstep(0.0, 2.0, d) * 0.012;
 }
 
 @fragment
@@ -275,10 +304,10 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // Colour gathers on the subject at the plate's centre and thins toward its
   // edges (to ~30%), so the eye lands on the subject, not the margins.
   let focus = 1.0 - 0.7 * smoothstep(0.18, 0.62, length((uv - 0.5) * vec2<f32>(u.res.x / u.res.y, 1.0)) * 0.9);
-  let skyWash = band * 0.42 * focus * clamp(0.6 + chromaOf(hue) * 3.0, 0.0, 1.0);
-  let bodyWash = clamp(chromaOf(src) * 1.8, 0.0, 0.45);
+  // Only a glow with a hue of its own is coloured; a grey one keeps just its line
+  // (a grey glow washed in ochre read as scorched paper).
+  let skyWash = band * 0.45 * focus * smoothstep(0.03, 0.12, chromaOf(hue));
   col = applyWash(col, nearestPigment(hue), skyWash * sky * frame.y);
-  col = applyWash(col, nearestPigment(src), bodyWash * body * frame.y);
 
   let ornament = ornamentLayer(px);
   col = mix(col, paperTone, ornament.clear);
@@ -297,24 +326,32 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   );
   let dots = stipple(p, 2.2, smoothstep(0.18, 0.8, lowL) * 0.3);
   let skyInk = max(star.x, max(dots, contour * 0.8) * clear) * sky;
-  let rulings = graticule(viewRay(uv), u.unit, u.raStep, u.decStep) * sky * clear;
+  // The rulings were cut by hand too: their ink load wanders along their length.
+  let rulings = graticule(viewRay(uv), u.unit, u.raStep, u.decStep) * sky * clear * (0.7 + 0.45 * vnoise(p * 0.045));
 
-  // Bodies: hatching parallel to the terminator, its width carrying a smoothed
-  // tone (so a line swells into shadow instead of breaking into dashes); land by
-  // darkness, seas pale by day with the coast halo; the night crossed throughout.
+  // Bodies, as a globe-maker engraved them: land and sea left as paper and
+  // washed, every coast cut as one continuous line with the hatched halo off
+  // it, and hatching (parallel to the terminator, swelling into shadow,
+  // crossed past it) for the shade alone, read at the terminator's scale.
   let lowBody = textureSampleLevel(washTex, linear, uv, 0.0).rgb;
-  let l = mix(luma(lowBody), luma(src), 0.35);
-  let ocean = smoothstep(0.06, 0.22, (src.b - max(src.r, src.g * 0.92)) / max(src.b, 0.04));
-  let night = 1.0 - smoothstep(0.04, 0.16, max(lowBody.r, max(lowBody.g, lowBody.b)));
-  let landTone = max(pow(1.0 - clamp(l * 1.8, 0.0, 1.0), 1.6), night);
-  let tone = mix(landTone, night, ocean);
+  let light = bodyLight(uv);
+  let tone = 1.0 - smoothstep(0.015, 0.17, light);
   let hatchInk = crossHatch(p, tone, HATCH, u.hatchAngle);
-  let halo = coastHalo(p, coastNear(uv), 2.4) * ocean * (1.0 - night);
+  let landShare = clamp(textureSampleLevel(washTex, linear, uv, 0.0).a, 0.0, 1.0);
+  let ocean = 1.0 - smoothstep(0.35, 0.65, landShare);
+  let coastPx = abs(landShare - 0.5) / max(fwidth(landShare), 1e-4);
+  let coast = (1.0 - smoothstep(0.55 * u.unit, 0.55 * u.unit + 1.0, coastPx));
+  let halo = coastHalo(p, coastNear(uv), 2.4) * ocean * (1.0 - tone);
+  // Seas a pale smalt, pooled darker along the shore; land in the hue of its light.
+  let seaWash = (0.3 + 0.18 * coastNear(uv)) * ocean;
+  let landWash = clamp(chromaOf(lowBody) * 1.6, 0.0, 0.4) * (1.0 - ocean);
+  col = applyWash(col, pigmentAt(5.0), seaWash * body * frame.y);
+  col = applyWash(col, nearestPigment(lowBody), landWash * body * frame.y);
   let o = i32(round(u.unit));
   let gx = bodyCover(ip + vec2<i32>(o, 0)) - bodyCover(ip - vec2<i32>(o, 0));
   let gy = bodyCover(ip + vec2<i32>(0, o)) - bodyCover(ip - vec2<i32>(0, o));
   let limb = smoothstep(0.25, 0.7, length(vec2<f32>(gx, gy)));
-  let bodyInk = max(hatchInk, halo * 0.85) * body;
+  let bodyInk = max(max(hatchInk, coast), halo * 0.85) * body;
 
   // Captions at full ink, each on its own paper halo (a 2.5-unit knock-out of
   // everything engraved beneath it), as an engraver lettered over the work.
@@ -325,7 +362,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     // for a black sky) feeds the paper halo instead of thickening the type.
     let ov = texel(overlayTex, ip);
     captions = smoothstep(0.03, 0.2, ov.a) * smoothstep(0.3, 0.6, luma(ov.rgb / max(ov.a, 1e-3)));
-    let reach = 2.5 * u.unit;
+    let reach = 3.5 * u.unit;
     for (var k = 0; k < 8; k++) {
       let a = f32(k) * 0.7853982;
       let tap = ip + vec2<i32>(round(vec2<f32>(cos(a), sin(a)) * reach));

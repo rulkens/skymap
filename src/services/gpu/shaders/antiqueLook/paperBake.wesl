@@ -31,7 +31,9 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // The scan's margin is pinned to sRGB (243, 226, 204); a plate sits a shade darker.
   var col = tile.rgb * 0.95;
   col = mix(col, TONED, stain.r * 0.6);
-  col = mix(col, FOX, stain.g * 0.75);
+  // Foxing gathers where damp got in — the edges — and is rare mid-sheet.
+  let edge = min(min(in.uv.x, 1.0 - in.uv.x), min(in.uv.y, 1.0 - in.uv.y));
+  col = mix(col, FOX, stain.g * 0.45 * mix(1.0, 0.25, smoothstep(0.03, 0.18, edge)));
   col = mix(col, TIDE, stain.b * 0.45);
   return vec4<f32>(col, tile.a);
 }

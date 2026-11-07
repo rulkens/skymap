@@ -29,6 +29,7 @@ fn fs(in: VSOut) -> ReduceOut {
   // A frame without bodies binds a 1×1 empty texture here, hence its own clamp.
   let bodySize = vec2<i32>(textureDimensions(bodyTex));
   var sum = vec3<f32>(0.0);
+  var light = 0.0;
   var land = 0.0;
   var bodyCount = 0.0;
   var best = -1.0;
@@ -38,7 +39,11 @@ fn fs(in: VSOut) -> ReduceOut {
       let q = min(origin + vec2<i32>(i, j), size - 1);
       let c = textureLoad(printTex, q, 0).rgb;
       let body = textureLoad(bodyTex, min(q, bodySize - 1), 0).a;
-      sum += c;
+      // Sky light is capped per texel before it is averaged: a star is a point and
+      // belongs to the glyphs, so it must not raise a glow (and a contour) round itself.
+      let skyCap = c * min(1.0, 0.25 / max(luma(c), 1e-3));
+      sum += select(skyCap, c, body > 0.5);
+      light += luma(c) * (1.0 - body);
       land += body * landness(c);
       bodyCount += body;
       let l = luma(c) * (1.0 - body);
@@ -52,6 +57,7 @@ fn fs(in: VSOut) -> ReduceOut {
   var o: ReduceOut;
   // Sky blocks report land −1 so the waterlines stop at the limb, not mid-space.
   o.wash = vec4<f32>(sum / n, select(-1.0, land / max(bodyCount, 1e-3), bodyCount > 8.0));
-  o.peak = vec4<f32>(bestAt, best, luma(sum / n));
+  // w: the block's uncapped sky light — a star's size is read from the area it lights.
+  o.peak = vec4<f32>(bestAt, best, light / n);
   return o;
 }
