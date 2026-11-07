@@ -67,13 +67,15 @@ function StellarStreamDetailCard({
         )}
       </div>
       {target.wikipediaTitle && (
-        <div className={styles.cardSection}>
-          <WikipediaRow title={target.wikipediaTitle} />
-        </div>
+        <>
+          <div className={styles.cardSection}>
+            <WikipediaRow title={target.wikipediaTitle} />
+          </div>
+          <div className={styles.cardSection}>
+            <DescriptionBlock text={target.description} />
+          </div>
+        </>
       )}
-      <div className={styles.cardSection}>
-        <DescriptionBlock text={target.description} />
-      </div>
     </div>
   );
 }

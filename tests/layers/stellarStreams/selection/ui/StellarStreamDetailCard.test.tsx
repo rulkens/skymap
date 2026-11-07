@@ -65,5 +65,6 @@ describe('StellarStreamDetailCard', () => {
     cleanup();
     renderCard(GD_1);
     expect(screen.queryByText('Learn more')).toBeNull();
+    expect(screen.queryByText(GD_1.description)).toBeNull();
   });
 });

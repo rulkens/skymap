@@ -13,7 +13,7 @@ const cachePath = () => join(mkdtempSync(join(tmpdir(), 'streamwiki-')), 'cache.
 describe('readStreamWikipedia', () => {
   it('a cached summary is used without a fetch', async () => {
     const path = cachePath();
-    writeFileSync(path, JSON.stringify({ 'GD-1': body('GD-1', 'A stream.') }));
+    writeFileSync(path, JSON.stringify({ 'GD-1': JSON.parse(body('GD-1', 'A stream.')) }));
     const fetchBody = vi.fn();
     const out = await readStreamWikipedia(rows, path, fetchBody, 0);
     expect(out).toEqual({ 'GD-1': { title: 'GD-1', extract: 'A stream.' } });
@@ -28,7 +28,9 @@ describe('readStreamWikipedia', () => {
       'https://en.wikipedia.org/api/rest_v1/page/summary/GD-1',
     );
     expect(out['GD-1']!.extract).toBe('Fetched.');
-    expect(JSON.parse(readFileSync(path, 'utf8'))['GD-1']).toBe(body('GD-1', 'Fetched.'));
+    expect(JSON.parse(readFileSync(path, 'utf8'))['GD-1']).toEqual(
+      JSON.parse(body('GD-1', 'Fetched.')),
+    );
   });
 
   it('a page that is not a standard article fails the build', async () => {
