@@ -7,60 +7,87 @@
 import package::antiqueLook::plateBodies::BodyPrint;
 import package::antiqueLook::engraving::crossHatch;
 import package::antiqueLook::engraving::inkLine;
+import package::antiqueLook::engraving::stipple;
 import package::antiqueLook::paper::vnoise;
 import package::antiqueLook::pigments::applyWash;
 import package::antiqueLook::pigments::pigmentAt;
 
-// Belts in degrees of latitude: south edge, north edge, darkness, edge softness;
-// darkness is smoothstep(0.62, 0.27) of the zonal luma, so the South Equatorial
-// (0.35–0.43) prints lighter than the North (0.27).
-const BELTS = array<vec4<f32>, 3>(
-  vec4<f32>(-19.5, -7.5, 0.65, 1.5),
-  vec4<f32>(6.5, 17.5, 1.0, 1.5),
-  vec4<f32>(22.0, 25.0, 0.65, 1.0),
+// Belts in degrees of latitude: south edge, north edge, tone. A belt's darkness is
+// its line weight (`crossHatch` widens lines past tone 0.5), ranked by the plain
+// texture's zonal luma: the North Equatorial (0.27), the South Equatorial's southern
+// half (0.35) then northern (0.42), the North Temperate (0.37).
+const BELTS = array<vec3<f32>, 4>(
+  vec3<f32>(-19.5, -14.5, 0.66),
+  vec3<f32>(-16.0, -7.5, 0.5),
+  vec3<f32>(6.5, 17.5, 0.7),
+  vec3<f32>(22.0, 25.0, 0.48),
 );
-// The polar dusk deepens from these latitudes (S, N) to 45°, up to this darkness.
-const POLES = vec3<f32>(-29.0, 30.0, 0.75);
-const BELT_TONE: f32 = 0.6;
-const BELT_HATCH: f32 = 3.2;
-// The spot's oval out to its pale collar on the plain texture, radians east and north.
+// The temperate dusk: from these latitudes (S, N) at 0.5, deepening by 0.12 to 45°.
+const DUSK = vec2<f32>(-31.0, 31.0);
+// Past 58° the rings would close on the pole as a target: there they break up and give
+// way to flicks of stipple drawn out along the latitude.
+const CAP = vec2<f32>(58.0, 70.0);
+// The shade lays thin strokes over a zone and swells a belt's own.
+const SHADE = vec3<f32>(0.46, 0.3, 0.79); // zone share, belt swell, cap below the crossing set
+// The spot's oval out to its pale collar on the plain texture, radians east and north;
+// its north side drawn flatter, as the plain texture has it.
 const SPOT_AXES = vec2<f32>(0.155, 0.084);
-// Its tone from the core (heavy lines, never crossed) out to the rim.
-const SPOT_TONE = vec2<f32>(0.76, 0.36);
-const SPOT_COLLAR: f32 = 1.35;
+const SPOT_NORTH_POWER: f32 = 2.35;
+const SPOT_TONE = vec2<f32>(0.58, 0.36); // core, rim
+const SPOT_COLLAR: f32 = 1.2;
 const SPOT_WASH: f32 = 0.3;
 
-// Elliptical radius of the Red Spot at the ball normal `n`: 1 on its outline, in its
-// tangent plane at the spot's centre `spot` (`pole` the north pole). Far side: huge.
+struct JupiterPrintIn {
+  form: vec3<f32>, // along the bands (the shade's family too)
+  spacing: f32,
+  lat: f32, // radians
+  shade: f32, // the plate's form tone
+  ndv: f32,
+  spotQ: f32, // `redSpotRadius`
+  qPerUnit: f32, // its change per print unit
+  p: vec2<f32>,
+  pxUnits: f32,
+}
+
+// Radius of the Red Spot at the ball normal `n`, 1 on its outline, in its tangent plane
+// at the spot's centre `spot` (`pole` the north pole). Far side: huge.
 fn redSpotRadius(n: vec3<f32>, pole: vec3<f32>, spot: vec3<f32>) -> f32 {
   let east = normalize(cross(pole, spot));
   let facing = dot(n, spot);
-  let off = vec2<f32>(dot(n, east), dot(n, cross(spot, east))) / max(facing, 1e-3);
-  return select(1e3, length(off / SPOT_AXES), facing > 0.2);
+  let o = abs(vec2<f32>(dot(n, east), dot(n, cross(spot, east))) / max(facing, 1e-3) / SPOT_AXES);
+  let e = select(2.0, SPOT_NORTH_POWER, dot(n, cross(spot, east)) > 0.0);
+  return select(1e3, pow(pow(o.x, e) + pow(o.y, e), 1.0 / e), facing > 0.2);
 }
 
-fn beltDarkness(latDeg: f32) -> f32 {
-  var dark = POLES.z * max(smoothstep(POLES.y, 45.0, latDeg), smoothstep(POLES.x, -45.0, latDeg));
-  for (var i = 0; i < 3; i++) {
+// Edges are sharp, so a belt's strokes start whole, never as one broken arriving line.
+fn beltTone(latDeg: f32) -> f32 {
+  let south = step(latDeg, DUSK.x) * (0.5 + 0.12 * smoothstep(DUSK.x, -45.0, latDeg));
+  let north = step(DUSK.y, latDeg) * (0.5 + 0.12 * smoothstep(DUSK.y, 45.0, latDeg));
+  var tone = max(south, north);
+  for (var i = 0; i < 4; i++) {
     let b = BELTS[i];
-    dark = max(dark, b.z * smoothstep(b.x - b.w, b.x + b.w, latDeg) * (1.0 - smoothstep(b.y - b.w, b.y + b.w, latDeg)));
+    tone = max(tone, b.z * step(b.x, latDeg) * step(latDeg, b.y));
   }
-  return dark;
+  return tone;
 }
 
-// `form` hatches along the latitude `lat` (radians); `q` is `redSpotRadius`, `qPerUnit`
-// its change per print unit; `cover` scales the wash.
-fn jupiterPrint(col: vec3<f32>, cover: f32, form: vec3<f32>, lat: f32, q: f32, qPerUnit: f32,
-                p: vec2<f32>, pxUnits: f32) -> BodyPrint {
-  var tone = BELT_TONE * beltDarkness(degrees(lat)) * smoothstep(1.0, SPOT_COLLAR, q);
+fn jupiterPrint(col: vec3<f32>, cover: f32, j: JupiterPrintIn) -> BodyPrint {
+  let q = j.spotQ * (1.0 + 0.05 * (vnoise(j.p * 0.008) - 0.5));
   let inside = 1.0 - smoothstep(0.97, 1.0, q);
-  tone = max(tone, mix(SPOT_TONE.x, SPOT_TONE.y, smoothstep(0.35, 0.95, q)) * inside);
-  var ink = crossHatch(form, p, tone, BELT_HATCH, 0.0, pxUnits);
+  let latDeg = degrees(j.lat);
+  let cap = smoothstep(CAP.x, CAP.y, abs(latDeg));
+  // The burin lifts out toward the lit limb.
+  var belt = beltTone(latDeg) * smoothstep(1.0, SPOT_COLLAR, q) * mix(smoothstep(0.05, 0.3, j.ndv), 1.0, j.shade);
+  belt = max(belt, mix(SPOT_TONE.x, SPOT_TONE.y, smoothstep(0.35, 0.95, q)) * inside);
+  let swell = select(0.0, belt + SHADE.y * j.shade, belt > 0.0);
+  let tone = min(max(SHADE.x * j.shade, swell), SHADE.z) * (1.0 - cap);
+  var ink = crossHatch(j.form, j.p, tone, j.spacing, 0.0, j.pxUnits);
+  ink = max(ink, stipple(j.p * vec2<f32>(0.6, 1.0), 2.2, cap * (0.3 + 0.35 * j.shade)));
   // The outline cut with the burin's pressure wandering along it.
-  let width = 1.2 + 0.9 * vnoise(p * 0.04);
-  ink = max(ink, inkLine(abs(q - 1.0) / max(qPerUnit, 1e-6), width, pxUnits));
+  let width = 1.2 + 0.9 * vnoise(j.p * 0.04);
+  ink = max(ink, inkLine(abs(q - 1.0) / max(j.qPerUnit, 1e-6), width, j.pxUnits));
   // A flat wash laid by hand: its edge wanders over the outline and it pools unevenly.
-  let edge = 1.0 + 0.06 * (vnoise(p * 0.05) - 0.3);
-  let wash = (1.0 - smoothstep(edge - 0.04, edge, q)) * (0.8 + 0.4 * vnoise(p * 0.02 + 7.0));
+  let edge = 1.0 + 0.06 * (vnoise(j.p * 0.05) - 0.3);
+  let wash = (1.0 - smoothstep(edge - 0.04, edge, q)) * (0.8 + 0.4 * vnoise(j.p * 0.02 + 7.0));
   return BodyPrint(applyWash(col, pigmentAt(4.0), SPOT_WASH * wash * cover), ink);
 }

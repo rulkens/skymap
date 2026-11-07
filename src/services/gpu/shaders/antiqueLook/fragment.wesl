@@ -42,6 +42,7 @@ import package::antiqueLook::bodies::earth::earthPrint;
 import package::antiqueLook::bodies::earth::earthRelief;
 import package::antiqueLook::bodies::mars::marsPrint;
 import package::antiqueLook::ground::groundRelief;
+import package::antiqueLook::bodies::jupiter::JupiterPrintIn;
 import package::antiqueLook::bodies::jupiter::jupiterPrint;
 import package::antiqueLook::bodies::jupiter::redSpotRadius;
 import package::antiqueLook::bodies::moon::MoonTone;
@@ -564,6 +565,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     var lat = 0.0;
     var spotQ = 1e3;
     var spotQPerUnit = 1.0;
+    var jupiterShade = 0.0;
     var moon = MoonTone(0.0, 0.0, 0.0);
     let relief = texel(reliefTex, ip);
     let ground = (u.flags & FLAG_RELIEF) != 0u && relief.a != 0.0 && rowOn(HIDE_RELIEF) > 0.0;
@@ -610,8 +612,15 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
         }
         if (print == PRINT_MARS || print == PRINT_JUPITER) {
           lat = ballLatitude(viewRay(uv), b);
-          let dLat = vec2<f32>(ballLatitude(rayX, b), ballLatitude(rayY, b)) - lat;
-          latForm = vec3<f32>(radius * lat, along, length(dLat) * radius * u.unit);
+          let lats = vec3<f32>(lat, ballLatitude(rayX, b), ballLatitude(rayY, b));
+          // Jupiter's bands keep an even spacing on the page: the height along the pole.
+          let h = select(lats, sin(lats), print == PRINT_JUPITER);
+          latForm = vec3<f32>(radius * h.x, along, length(h.yz - h.x) * radius * u.unit);
+        }
+        // Jupiter lays its shade in its bands' own lines (`jupiterPrint`).
+        if (print == PRINT_JUPITER) {
+          jupiterShade = tone;
+          tone = 0.0;
         }
         if (print == PRINT_JUPITER && b.spot.w > 0.0) {
           let c = b.centre.xyz;
@@ -639,7 +648,8 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
       // A marking is a globe's feature: on the engraved ground the relief speaks.
       bodyInk = max(bodyInk, select(mars.ink, 0.0, ground));
     } else if (print == PRINT_JUPITER) {
-      let jupiter = jupiterPrint(col, cover, latForm, lat, spotQ, spotQPerUnit, p, pxUnits);
+      let jupiter = jupiterPrint(col, cover, JupiterPrintIn(latForm, u.tune.x, lat, jupiterShade, hit.ndv,
+        spotQ, spotQPerUnit, p, pxUnits));
       col = jupiter.col;
       bodyInk = max(bodyInk, jupiter.ink);
     } else if (print == PRINT_MOON && relief.g > 0.0) {
