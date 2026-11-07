@@ -4,8 +4,9 @@
 // has water edges.
 
 import package::antiqueLook::plateBodies::BodyPrint;
-import package::antiqueLook::engraving::fallLines;
-import package::antiqueLook::engraving::quantileCut;
+import package::antiqueLook::engraving::isoLines;
+import package::antiqueLook::engraving::ISO_K;
+import package::antiqueLook::engraving::ISO_SPACING;
 import package::antiqueLook::engraving::seaDistance;
 import package::antiqueLook::engraving::waterLines;
 import package::antiqueLook::pigments::applyWash;
@@ -64,32 +65,41 @@ fn earthPrint(col: vec3<f32>, cover: f32, e: EarthPrintIn) -> BodyPrint {
   return BodyPrint(washed, max(lines * (1.0 - signPaper), signInk));
 }
 
-// Its ground up close (`relief.wesl`'s texel `relief`), as a 1690 prospect drew a mountain:
-// the shade side hatched down the fall line, a second set along the contours in the
-// deepest shade, the lit side and the plains left paper. Below the mesh's ~km facets the
-// relief lives in the imagery's own shading, so where the plain render `plain` is darker
-// than its surroundings `around` (gullies, cliffs, buttes) a slope's hatching thickens;
-// an engraver toned what he saw. No stipple: flats and sea are paper, as Dutch plates
-// left plains, and the sea is the coast's and the water lines'.
+// Its ground up close (`relief.wesl`'s texel `relief`, b its height phase), cut as the
+// engravers of the 1600s shaded a form: lines that follow it round (Mellan's Moon, 1635;
+// Merian's mountains), evenly spaced and swelling with the shade, the lit side and the
+// plains left paper. Not contours: no line exists where the slope is lit. Below the mesh's
+// ~km facets the relief lives in the imagery's own shading, so where the plain render
+// `plain` is darker than its surroundings `around` a shaded slope cuts heavier; an engraver
+// toned what he saw. The sea is the coast's and the water lines'.
 const EARTH_SHADE_INK: f32 = 0.75;
-const EARTH_DETAIL_INK: f32 = 0.45;
-// No face inks more than this share, so overlapping strokes never clot to solid black.
-const EARTH_INK_CAP: f32 = 0.42;
+const EARTH_DETAIL_INK: f32 = 0.3;
+// The shade's share over which lines arrive and swell to their full width.
+const EARTH_SHADE_BAND = vec2<f32>(0.12, 0.42);
 
-fn earthRelief(field: texture_2d<f32>, samp: sampler, px: vec2<f32>, relief: vec4<f32>, unit: f32,
-               plain: f32, around: f32) -> f32 {
+fn earthRelief(field: texture_2d<f32>, px: vec2<f32>, relief: vec4<f32>, unit: f32, plain: f32, around: f32) -> f32 {
   if (relief.a <= 0.0) {
     return 0.0;
   }
   let detail = clamp((around - plain) / max(around, 1e-3) * 2.0, 0.0, 1.0);
-  let share = min(EARTH_SHADE_INK * relief.a + EARTH_DETAIL_INK * detail * min(relief.a * 4.0, 1.0), EARTH_INK_CAP);
-  if (share <= 0.0) {
+  let share = EARTH_SHADE_INK * relief.a + EARTH_DETAIL_INK * detail * min(relief.a * 4.0, 1.0);
+  let tone = 0.85 * smoothstep(EARTH_SHADE_BAND.x, EARTH_SHADE_BAND.y, share);
+  let ip = vec2<i32>(px);
+  let hx = wrapStep(textureLoad(field, ip + vec2<i32>(1, 0), 0).b, textureLoad(field, ip - vec2<i32>(1, 0), 0).b);
+  let hy = wrapStep(textureLoad(field, ip + vec2<i32>(0, 1), 0).b, textureLoad(field, ip - vec2<i32>(0, 1), 0).b);
+  let hPerUnit = 0.5 * length(vec2<f32>(hx, hy)) * unit;
+  // A face seen edge-on crowds even the coarsest lines past ISO_SPACING: fade them rather
+  // than alias. A zero tone would still leave isoLines' sub-pixel hairline.
+  let crowd = hPerUnit * ISO_K * ISO_SPACING;
+  let keep = smoothstep(0.0, 0.15, tone) * (1.0 - smoothstep(1.0, 2.0, crowd));
+  if (keep <= 0.0) {
     return 0.0;
   }
-  var ink = quantileCut(fallLines(field, samp, px, unit, false), share);
-  let deep = smoothstep(0.55, 0.8, relief.a);
-  if (deep > 0.0) {
-    ink = max(ink, quantileCut(fallLines(field, samp, px, unit, true), 0.3 * deep));
-  }
-  return ink;
+  return min(isoLines(relief.b, max(hPerUnit, 1e-6), tone, 1.0 / unit), 1.0) * keep;
+}
+
+// The step between two height phases across their wrap.
+fn wrapStep(a: f32, b: f32) -> f32 {
+  let d = a - b;
+  return d - round(d);
 }

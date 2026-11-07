@@ -49,5 +49,6 @@ export function packAntiqueRelief(
   f32[53] = input.body.slopeInk;
   f32[54] = input.body.wideNormal ? 1 : 0;
   f32[55] = input.reveal;
+  f32[56] = input.body.hatch === 'contour' ? 1 : 0;
   return out;
 }
