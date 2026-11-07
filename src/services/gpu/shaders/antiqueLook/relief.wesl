@@ -14,6 +14,7 @@
 // | 224 contour: b holds the height phase instead of the noise (`AntiqueReliefBody.hatch`) |
 
 import package::antiqueLook::io::VSOut;
+import package::antiqueLook::groundNoise::groundNoiseAt;
 
 struct ReliefUniforms {
   invVp: mat4x4<f32>,
@@ -40,16 +41,12 @@ struct ReliefUniforms {
 @group(0) @binding(0) var depthTex: texture_2d<f32>;
 @group(0) @binding(1) var<uniform> r: ReliefUniforms;
 
-// Mirrors ANTIQUE_RELIEF_ANCHOR_LOG2 (data/rendering/antiqueRelief.ts).
-const ANCHOR_LOG2: i32 = 12;
 const RELIEF_HALO: f32 = -2.0;
 // The normal's stencil, print units: wide enough to smooth the mesh's facets.
 const NORMAL_UNITS: f32 = 1.5;
 // A paper gap this wide behind every nearer profile, at this relative depth step.
 const HALO_UNITS: f32 = 3.0;
 const HALO_JUMP: f32 = 0.035;
-// The noise's lattice in print units: its convolved streaks come ~2 of these apart.
-const NOISE_UNITS: f32 = 1.9;
 // Exaggerated slope (radians) over which a face goes from flat (stipple) to steep.
 const SLOPE_FLAT: f32 = 0.12;
 const SLOPE_STEEP: f32 = 0.5;
@@ -117,31 +114,6 @@ fn screenDir(p: vec3<f32>, v: vec3<f32>) -> vec2<f32> {
   return step / max(length(step), 1e-12);
 }
 
-fn pcg3(c: vec3<i32>) -> f32 {
-  var v = vec3<u32>(c) * 1664525u + 1013904223u;
-  v.x += v.y * v.z;
-  v.y += v.z * v.x;
-  v.z += v.x * v.y;
-  v ^= v >> vec3<u32>(16u);
-  v.x += v.y * v.z;
-  return f32(v.x) * (2.0 / 4294967295.0) - 1.0;
-}
-
-// Value noise on a 2^j m lattice, its cells counted from the body's centre: the
-// anchor's whole cells come in as integers, so f32 only carries the remainder.
-fn groundNoise(q: vec3<f32>, j: i32) -> f32 {
-  let g = q / exp2(f32(j));
-  let c = floor(g);
-  let f = g - c;
-  let s = f * f * (3.0 - 2.0 * f);
-  let base = vec3<i32>(c) + r.anchorCells * (1i << u32(ANCHOR_LOG2 - j));
-  let x00 = mix(pcg3(base), pcg3(base + vec3<i32>(1, 0, 0)), s.x);
-  let x10 = mix(pcg3(base + vec3<i32>(0, 1, 0)), pcg3(base + vec3<i32>(1, 1, 0)), s.x);
-  let x01 = mix(pcg3(base + vec3<i32>(0, 0, 1)), pcg3(base + vec3<i32>(1, 0, 1)), s.x);
-  let x11 = mix(pcg3(base + vec3<i32>(0, 1, 1)), pcg3(base + vec3<i32>(1, 1, 1)), s.x);
-  return mix(mix(x00, x10, s.y), mix(x01, x11, s.y), s.z);
-}
-
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let ip = vec2<i32>(in.pos.xy);
@@ -203,12 +175,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     fall = screenDir(p, normalize(downhill) * (0.01 * t));
   }
 
-  // Two lattice octaves round NOISE_UNITS of screen, blended at constant contrast.
-  let jf = log2(t * r.radPerPx * NOISE_UNITS * r.unit);
-  let j0 = clamp(i32(floor(jf)), -6, ANCHOR_LOG2 - 1);
-  let w = clamp(jf - f32(j0), 0.0, 1.0);
-  let q = r.eyeFromAnchor + p;
-  let noise = (groundNoise(q, j0) * (1.0 - w) + groundNoise(q, j0 + 1) * w) / sqrt((1.0 - w) * (1.0 - w) + w * w);
+  let noise = groundNoiseAt(r.eyeFromAnchor + p, r.anchorCells, t * r.radPerPx * r.unit);
   let hb = select(noise, fract(length(r.eyeRelBody + p) / HEIGHT_PHASE_M), r.contour > 0.5);
   // Hachures fade in as a body's far relief signs fade out (`revealDetail`).
   return vec4<f32>(fall, hb, select(-fade, stroke * r.reveal, stroke > 0.0));
