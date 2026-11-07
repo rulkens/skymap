@@ -2,8 +2,8 @@
 // streak billboard: a Gaussian smeared along its projected orbital tangent, so a
 // stream reads as flowing debris rather than dots. Surface brightness is held
 // constant while resolved; below 'minPx' the sprite clamps and dims by area, so
-// distant streams stay smooth haze instead of aliasing sparkle. 'vsPick'/'fsPick'
-// stamp the same quads into the pick target, at least 'minHalfAcrossPx' wide.
+// distant streams stay smooth haze instead of aliasing sparkle. Picking is the
+// centreline ribbons' (ribbonPick.wesl), not these quads.
 
 import package::lib::camera::CameraUniforms;
 import package::lib::camera::worldToClip;
@@ -18,9 +18,6 @@ struct Uniforms {
   minPx: f32,
   timeSec: f32,
   flow: f32,
-  // packSelection(code, PICK_SENTINEL_OFFSET); zero on the visual draws.
-  pickBase: u32,
-  minHalfAcrossPx: f32,
   // Every stream but this one (attr.w; −1 = none) draws at 'recede': a focus recedes the rest.
   focusedStream: f32,
   recede: f32,
@@ -31,11 +28,6 @@ struct VSOut {
   @location(0) uvPx: vec2<f32>,
   @location(1) @interpolate(flat) shape: vec2<f32>,
   @location(2) @interpolate(flat) colour: vec3<f32>,
-};
-
-struct PickOut {
-  @builtin(position) clipPos: vec4<f32>,
-  @location(0) @interpolate(flat) word: u32,
 };
 
 @group(0) @binding(0) var<uniform> u: Uniforms;
@@ -80,7 +72,7 @@ fn placeStreak(
     if (lPx > 1e-3) { axis = d / lPx; }
   }
   let perp = vec2<f32>(-axis.y, axis.x);
-  let halfAcross = max(2.0 * rPx, u.minHalfAcrossPx);
+  let halfAcross = 2.0 * rPx;
   let halfAlong = lPx + halfAcross;
   let offPx = axis * c.x * halfAlong + perp * c.y * halfAcross;
   out.clipPos = c0 + vec4<f32>(offPx * 2.0 / u.cam.viewportPx * c0.w, 0.0, 0.0);
@@ -104,25 +96,6 @@ fn vs(
   @location(2) attr: vec4<f32>,
 ) -> VSOut {
   return placeStreak(vi, ii, pos, tangent, attr);
-}
-
-@vertex
-fn vsPick(
-  @builtin(vertex_index) vi: u32,
-  @builtin(instance_index) ii: u32,
-  @location(0) pos: vec3<f32>,
-  @location(1) tangent: vec3<f32>,
-  @location(2) attr: vec4<f32>,
-) -> PickOut {
-  var out: PickOut;
-  out.clipPos = placeStreak(vi, ii, pos, tangent, attr).clipPos;
-  out.word = u.pickBase + u32(attr.w);
-  return out;
-}
-
-@fragment
-fn fsPick(input: PickOut) -> @location(0) u32 {
-  return input.word;
 }
 
 @fragment

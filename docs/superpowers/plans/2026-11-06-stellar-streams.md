@@ -720,8 +720,8 @@ are two, ordered, and pass near the remnant; ribbon builder skips/clips behind-c
 the clip lives there); a stream focus makes `isPickableUnderFocus` false for a galaxy far away and true for
 nothing but the focused stream's caption; switching structure→stream fades.
 
-- [ ] No Layer contract change.
-- [ ] Commit (rebuilt data is gitignored).
+- [x] No Layer contract change.
+- [x] Commit (rebuilt data is gitignored).
 
 Task 13 re-runs (perf, eye check) after Task 20.
 

@@ -7,6 +7,7 @@ import type { StellarStreamsRuntime } from '../../../../../src/layers/stellarStr
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import { GD_1, SAGITTARIUS, SHORT, STREAM_META } from '../../fixtures/streamMeta';
+import { RECEDE_ALL_FOCUS_SPHERE } from '../../../../../src/data/selection/recedeAllFocusSphere';
 
 const ZERO_FOCUS = { center: [0, 0, 0], apparentRadiusMpc: 0, physicalRadiusMpc: 0, blend: 0 };
 const CTX = {
@@ -39,6 +40,21 @@ describe('produceStellarStreamLabels', () => {
         row.encodePick({ type: 'stellarStream', slug: STREAM_META[i]!.id }),
       );
     }
+  });
+
+  it('a stream focus leaves only its own caption pickable', () => {
+    const row = stellarStreamsSelectionRow(runtimeOf(STREAM_META));
+    const focusPickId = row.encodePick({ type: 'stellarStream', slug: GD_1.id });
+    const ctx = {
+      ...CTX,
+      snapshot: { focus: { ...RECEDE_ALL_FOCUS_SPHERE, blend: 1 }, focusPickId },
+    } as unknown as FrameView;
+    const labels = produceStellarStreamLabels(runtimeOf(STREAM_META))(
+      { selection: NO_SELECTION } as unknown as EngineState,
+      ctx,
+      1,
+    ).labels;
+    expect(labels.filter((l) => l.pickId !== undefined).map((l) => l.id)).toEqual(['stream:gd-1']);
   });
 
   it('a longer stream outranks a shorter one at equal distance', () => {

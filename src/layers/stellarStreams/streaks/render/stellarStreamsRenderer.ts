@@ -3,8 +3,8 @@
  * stream particle (40-byte records: pos xyz Mpc, unit tangent xyz, size Mpc,
  * luminosity, colour t, stream id), drawn once per look per frame — sharp streaks
  * full-res, the wide haze into its half-res target — each look through its own
- * 144-byte uniform block, since two `writeBuffer`s into one buffer before submit
- * would leave only the last. The pick draws the streak look alone, through a third.
+ * 128-byte uniform block, since two `writeBuffer`s into one buffer before submit
+ * would leave only the last.
  */
 
 import type { StellarStreamsRenderer } from '../@types/StellarStreamsRenderer';
@@ -20,13 +20,10 @@ import {
   CAMERA_UNIFORM_BYTES,
   writeCameraPrefix,
 } from '../../../../services/gpu/lib/cameraUniforms';
-import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { STELLAR_STREAMS_RECORD_F32 } from '../../catalog/data/stellarStreamsFormat.constants';
-import { STELLAR_STREAMS_PICK_MIN_ACROSS_PX } from '../data/stellarStreamsPickMinAcrossPx.constants';
-import { createStellarStreamsPickPipeline } from './stellarStreamsPickPipeline';
 
-// The WGSL struct's 132 bytes rounded up to its 16-byte alignment.
-const UNIFORMS_BYTES = 144;
+// The WGSL struct's 124 bytes rounded up to its 16-byte alignment.
+const UNIFORMS_BYTES = 128;
 // f32 slots after the camera prefix; `Uniforms` in streams.wesl must agree.
 const EYE = CAMERA_UNIFORM_BYTES / 4;
 const INTENSITY = EYE + 3;
@@ -35,19 +32,13 @@ const STRETCH = INTENSITY + 2;
 const MIN_PX = INTENSITY + 3;
 const TIME_SEC = INTENSITY + 4;
 const FLOW = INTENSITY + 5;
-const PICK_BASE = INTENSITY + 6;
-const MIN_HALF_ACROSS_PX = INTENSITY + 7;
-const FOCUSED_STREAM = INTENSITY + 8;
-const RECEDE = INTENSITY + 9;
+const FOCUSED_STREAM = INTENSITY + 6;
+const RECEDE = INTENSITY + 7;
 const SLOT_OF = { streak: 0, haze: 1 } as const;
-const PICK_SLOT = 2;
-// The pick stamp is shape only, so it never recedes.
-const AT_REST: StellarStreamsFocus = { recede: 1, focusedStream: -1 };
 
 export function createStellarStreamsRenderer(
   device: GPUDevice,
   targetFormat: GPUTextureFormat,
-  pickCode: number,
 ): StellarStreamsRenderer {
   const module = createShaderModuleWithDevLog(device, streamsCode, 'stellar-streams');
   const bgl = device.createBindGroupLayout({
@@ -60,7 +51,7 @@ export function createStellarStreamsRenderer(
       },
     ],
   });
-  const slots = [0, 1, PICK_SLOT].map((i) => {
+  const slots = [0, 1].map((i) => {
     const buffer = device.createBuffer({
       label: `stellar-streams-uniforms-${i}`,
       size: UNIFORMS_BYTES,
@@ -74,28 +65,25 @@ export function createStellarStreamsRenderer(
     return { buffer, bindGroup };
   });
   const scratch = new Float32Array(UNIFORMS_BYTES / 4);
-  const scratchU32 = new Uint32Array(scratch.buffer);
 
-  const layout = device.createPipelineLayout({ bindGroupLayouts: [bgl] });
-  const vertex: GPUVertexState = {
-    module,
-    entryPoint: 'vs',
-    buffers: [
-      {
-        arrayStride: STELLAR_STREAMS_RECORD_F32 * 4,
-        stepMode: 'instance',
-        attributes: [
-          { shaderLocation: 0, offset: 0, format: 'float32x3' },
-          { shaderLocation: 1, offset: 12, format: 'float32x3' },
-          { shaderLocation: 2, offset: 24, format: 'float32x4' },
-        ],
-      },
-    ],
-  };
   const pipeline = device.createRenderPipeline({
     label: 'stellar-streams-pipeline',
-    layout,
-    vertex,
+    layout: device.createPipelineLayout({ bindGroupLayouts: [bgl] }),
+    vertex: {
+      module,
+      entryPoint: 'vs',
+      buffers: [
+        {
+          arrayStride: STELLAR_STREAMS_RECORD_F32 * 4,
+          stepMode: 'instance',
+          attributes: [
+            { shaderLocation: 0, offset: 0, format: 'float32x3' },
+            { shaderLocation: 1, offset: 12, format: 'float32x3' },
+            { shaderLocation: 2, offset: 24, format: 'float32x4' },
+          ],
+        },
+      ],
+    },
     fragment: {
       module,
       entryPoint: 'fs',
@@ -103,13 +91,10 @@ export function createStellarStreamsRenderer(
     },
     primitive: { topology: 'triangle-strip' },
   });
-  const pickPipeline = createStellarStreamsPickPipeline(device, layout, vertex);
-  const pickBase = packSelection(pickCode, PICK_SENTINEL_OFFSET);
 
   let instances: GPUBuffer | null = null;
   let count = 0;
 
-  // `pickBase` and the across floor stay zero on the visual draws (the fill), so those are unchanged.
   function writeLook(
     slotIndex: number,
     rebasedVp: Float32Array,
@@ -133,10 +118,6 @@ export function createStellarStreamsRenderer(
     scratch[FLOW] = look.flow;
     scratch[FOCUSED_STREAM] = focus.focusedStream;
     scratch[RECEDE] = focus.recede;
-    if (slotIndex === PICK_SLOT) {
-      scratchU32[PICK_BASE] = pickBase;
-      scratch[MIN_HALF_ACROSS_PX] = STELLAR_STREAMS_PICK_MIN_ACROSS_PX / 2;
-    }
     device.queue.writeBuffer(slot.buffer, 0, scratch);
     return slot.bindGroup;
   }
@@ -174,27 +155,6 @@ export function createStellarStreamsRenderer(
           look,
           intensity,
           focus,
-        ),
-      );
-      pass.draw(4, count);
-    },
-    drawPick(pass, rebasedVp, viewportPx, pxPerRad, eye, timeSec, look) {
-      // An invisible look takes no clicks.
-      if (instances === null || look.intensity <= 0) return;
-      pass.setPipeline(pickPipeline);
-      pass.setVertexBuffer(0, instances);
-      pass.setBindGroup(
-        0,
-        writeLook(
-          PICK_SLOT,
-          rebasedVp,
-          viewportPx,
-          pxPerRad,
-          eye,
-          timeSec,
-          look,
-          look.intensity,
-          AT_REST,
         ),
       );
       pass.draw(4, count);

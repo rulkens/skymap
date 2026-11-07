@@ -24,7 +24,7 @@ function setup() {
     createBindGroup: vi.fn(() => ({})),
     queue: { writeBuffer },
   } as unknown as GPUDevice;
-  const renderer = createStellarStreamsRenderer(device, 'rgba16float', 7);
+  const renderer = createStellarStreamsRenderer(device, 'rgba16float');
   renderer.upload({
     records: new Float32Array(10),
     particleCount: 1,
@@ -76,15 +76,15 @@ describe('createStellarStreamsRenderer draw', () => {
     );
   });
 
-  it('writes the focused stream and the recede factor after the pick lanes, where the WGSL reads them', () => {
+  it('writes the focused stream and the recede factor after the look lanes, where the WGSL reads them', () => {
     const { writeBuffer, draw } = setup();
     draw('streak', STELLAR_STREAMS_LOOKS.streak, 1, { recede: 0.15, focusedStream: 12 });
     const block = writeBuffer.mock.calls[0]![2];
-    // focusedStream at byte 124, recede at 128: past minHalfAcrossPx, inside the 144-byte block.
-    expect(Array.from(block.subarray(INTENSITY + 8, INTENSITY + 10))).toEqual(
+    // focusedStream at byte 116, recede at 120: right after flow, inside the 128-byte block.
+    expect(Array.from(block.subarray(INTENSITY + 6, INTENSITY + 8))).toEqual(
       [12, 0.15].map(Math.fround),
     );
-    expect(block.byteLength).toBe(144);
+    expect(block.byteLength).toBe(128);
   });
 
   it('draws nothing when the look or the fade is 0', () => {

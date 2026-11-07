@@ -2,8 +2,8 @@
  * stellarStreamsPass — the streak look, additive on NEAR0 right after `local-bubble`: like the
  * shell, it lands after the Milky Way's dust multiply, so halo streams in front of the disc are
  * not darkened by it. Core hands the fade; a focus recedes every stream but its own. The haze
- * look draws at half res in `stellarStreamsHazePass`. Only the streaks stamp picks: the haze is
- * wide and faint, and would take clicks far off the stream.
+ * look draws at half res in `stellarStreamsHazePass`. The pick stamps static centreline ribbons
+ * under the same gate, only the focused stream's while one is focused.
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
@@ -38,16 +38,15 @@ export function stellarStreamsPass(runtime: StellarStreamsRuntime): ContentPass<
       );
     },
 
-    // The same windowed `vp`/`viewportPx` and clock as `draw`, so the stamp lands under the streak.
-    drawPick(pass, view, ctx, state) {
-      runtime.renderer.drawPick(
+    // The same windowed `vp`/`viewportPx` as `draw`, so the ribbon lands under the streaks.
+    drawPick(pass, view, ctx) {
+      runtime.ribbonPick.draw(
         pass,
         narrowMat4(rebaseViewProj(view.slab.vp, view.camPos)),
         view.viewportPx,
         ctx.drawPxPerRad,
         view.camPos,
-        stellarStreamsClockSec(ctx),
-        state.settings.stellarStreams.streak,
+        stellarStreamsFocus(ctx, runtime.pickCode).focusedStream,
       );
     },
   };

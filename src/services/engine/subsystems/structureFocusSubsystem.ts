@@ -1,16 +1,16 @@
 /**
  * structureFocusSubsystem — focus mode: one 400 ms blend for whichever receding row is focused,
- * and a sphere of its own ramp, so a switch between a sphere subject and a sphereless one fades
- * the per-vertex dim instead of popping it. `update` runs every frame but fades only on a
- * transition (re-calling `fadeTo` would reset the ramp's clock). Ref and sphere each stay latched
- * through their fade-out, outlasting `selection.focus` until their blend reaches 0. The fade
- * controllers are private (no `FadeRegistry` wake), so `update` wakes the scheduler on each
- * transition — runFrame can early-return before its `stillAnimating` tail; steady frames rely on
- * `isAwake`.
+ * and its sphere on a ramp of its own. A switch to a different sphere fades through: the old one
+ * fades out, then the new one in, so the per-vertex dim never pops (a structure's ball and a
+ * stream's recede-all sphere included). `update` runs every frame but fades only on a transition
+ * (re-calling `fadeTo` would reset the ramp's clock). Ref and sphere stay latched through their
+ * fade-outs, outlasting `selection.focus`. The fade controllers are private (no `FadeRegistry`
+ * wake), so `update` wakes the scheduler on each transition; steady frames rely on `isAwake`.
  */
 
 import { createFadeController } from '../../animation/fadeController';
 import { refKey } from '../../../utils/selection/refKey';
+import { sameFocusSphere } from '../../../utils/structure/sameFocusSphere';
 import type { StructureFocusSubsystem } from '../../../@types/engine/subsystems/StructureFocusSubsystem';
 import type { FocusSubject } from '../../../@types/engine/subsystems/FocusSubject';
 import type { FocusFrame } from '../../../@types/engine/subsystems/FocusFrame';
@@ -42,9 +42,10 @@ export function createStructureFocusSubsystem(
 ): StructureFocusSubsystem {
   const fade = createFadeController(0, initialNowMs);
   const sphereFade = createFadeController(0, initialNowMs);
-  // What we emit for, each latched through its own fade-out.
+  // What we emit for, each latched through its own fade-out; `queued` fades in once `sphere` is out.
   let ref: SelectionRefBase | null = null;
   let sphere: FocusSphere | null = null;
+  let queued: FocusSphere | null = null;
   // The ref we are currently fading toward; null = fading out / at rest.
   let focusedKey: string | null = null;
   let last: FocusFrame = AT_REST;
@@ -56,10 +57,21 @@ export function createStructureFocusSubsystem(
     if (targetKey === focusedKey) return;
 
     focusedKey = targetKey;
-    if (subject !== null) ref = subject.ref;
     fade.fadeTo(subject === null ? 0 : 1, FOCUS_FADE_DURATION_MS, nowMs);
-    if (subject?.sphere) sphere = subject.sphere;
-    sphereFade.fadeTo(subject?.sphere ? 1 : 0, FOCUS_FADE_DURATION_MS, nowMs);
+    if (subject !== null) ref = subject.ref;
+    const sphereChanges =
+      subject !== null &&
+      sphere !== null &&
+      sphereFade.currentOpacity(nowMs) > 0 &&
+      !sameFocusSphere(sphere, subject.sphere);
+    if (subject === null || sphereChanges) {
+      queued = subject?.sphere ?? null;
+      sphereFade.fadeTo(0, FOCUS_FADE_DURATION_MS, nowMs);
+    } else {
+      queued = null;
+      sphere = subject.sphere;
+      sphereFade.fadeTo(1, FOCUS_FADE_DURATION_MS, nowMs);
+    }
     // Essential wake: private fade controllers — no FadeRegistry wake covers them.
     deps.requestRender();
   }
@@ -68,7 +80,11 @@ export function createStructureFocusSubsystem(
     const blend = fade.currentOpacity(nowMs);
     const sphereBlend = sphereFade.currentOpacity(nowMs);
     if (blend === 0 && !fade.isAnimating(nowMs)) ref = null;
-    if (sphereBlend === 0 && !sphereFade.isAnimating(nowMs)) sphere = null;
+    if (sphereBlend === 0 && !sphereFade.isAnimating(nowMs)) {
+      sphere = queued;
+      if (queued !== null) sphereFade.fadeTo(1, FOCUS_FADE_DURATION_MS, nowMs);
+      queued = null;
+    }
     last =
       ref === null && sphere === null
         ? AT_REST
@@ -81,7 +97,7 @@ export function createStructureFocusSubsystem(
   }
 
   function isAwake(nowMs: number): boolean {
-    return fade.isAnimating(nowMs) || sphereFade.isAnimating(nowMs);
+    return fade.isAnimating(nowMs) || sphereFade.isAnimating(nowMs) || queued !== null;
   }
 
   return {
@@ -93,6 +109,7 @@ export function createStructureFocusSubsystem(
     destroy(): void {
       ref = null;
       sphere = null;
+      queued = null;
       focusedKey = null;
       last = AT_REST;
     },

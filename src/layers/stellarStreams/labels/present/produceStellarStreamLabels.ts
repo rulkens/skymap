@@ -3,8 +3,8 @@
  * NEAR0 director's f32 matrix has no room for absolute Mpc). Only streams at least
  * `STELLAR_STREAM_LABEL_MIN_PX` long on screen get one (83 crowd the halo), unless hovered or
  * selected; ranked by that apparent length, so the declutter keeps the long streams. The pick word
- * is the streak stamp's, so a click on a caption resolves through the selection row unchanged.
- * Nothing until the meta lands.
+ * is the ribbons', so a click on a caption resolves through the selection row unchanged. A stream
+ * focus recedes every other caption out of the pick, its own staying. Nothing until the meta lands.
  */
 
 import type { Label2D } from '../../../../@types/rendering/Label2D';
@@ -51,7 +51,11 @@ export function produceStellarStreamLabels(
         alignX: 'center',
         alignY: 'center',
         declutterPriority: lengthPx,
-        pickId: isPickableUnderFocus(m.anchorMpc, ctx.snapshot.focus) ? subjectId : undefined,
+        pickId:
+          subjectId === ctx.snapshot.focusPickId ||
+          isPickableUnderFocus(m.anchorMpc, ctx.snapshot.focus)
+            ? subjectId
+            : undefined,
         subjectId,
       };
       return [label];

@@ -3,9 +3,13 @@ import type { RecedingFocusRow } from '../../../../@types/engine/selection/Reced
 import type { StellarStreamMeta } from '../../catalog/@types/StellarStreamMeta';
 
 /**
- * The meta entry, placed: `positionMpc` is its anchor, `radiusMpc` half its length. Its focus
- * recedes the rest with no sphere: none fits a long thin stream, and one would dim the wrong stars.
+ * The meta entry, placed (`positionMpc` its anchor, `radiusMpc` half its length), without the pick
+ * geometry. Its focus recedes everything else (`RECEDE_ALL_FOCUS_SPHERE`): no sphere fits a long
+ * thin stream, and one would leave the wrong galaxies and stars bright.
  */
-export type StellarStreamSelectionRow = Omit<StellarStreamMeta, 'anchorMpc'> &
+export type StellarStreamSelectionRow = Omit<
+  StellarStreamMeta,
+  'anchorMpc' | 'centrelineMpc' | 'ribbonWidthKpc'
+> &
   PlacedRow &
-  RecedingFocusRow & { readonly type: 'stellarStream'; readonly focusSphere: null };
+  RecedingFocusRow & { readonly type: 'stellarStream' };

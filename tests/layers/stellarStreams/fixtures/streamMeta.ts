@@ -15,6 +15,12 @@ export const SAGITTARIUS: StellarStreamMeta = {
   metallicity: null,
   stellarMass: null,
   anchorMpc: [0.0056, -0.0225, -0.0137],
+  centrelineMpc: [
+    [0.002, -0.03, -0.02],
+    [0.0056, -0.0225, -0.0137],
+    [0.01, -0.06, -0.04],
+  ],
+  ribbonWidthKpc: 5,
 };
 
 export const GD_1: StellarStreamMeta = {
@@ -32,6 +38,11 @@ export const GD_1: StellarStreamMeta = {
   metallicity: null,
   stellarMass: { massMsun: 2e4, ref: 'Koposov+ 2010', partial: true },
   anchorMpc: [-0.004, 0.006, 0.005],
+  centrelineMpc: [
+    [-0.006, 0.005, 0.004],
+    [-0.004, 0.006, 0.005],
+  ],
+  ribbonWidthKpc: 0.04,
 };
 
 export const SHORT: StellarStreamMeta = {

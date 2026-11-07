@@ -4,8 +4,9 @@ import type { FocusFrame } from './FocusFrame';
 
 /**
  * StructureFocusSubsystem — owns focus mode: when a receding row (`RecedingFocusRow`) is focused,
- * entries with `recession` dim over ~400 ms, and a structure's sphere also dims everything
- * outside it. Every receding kind shares one blend; the sphere fades on a ramp of its own.
+ * entries with `recession` dim over ~400 ms, and its sphere dims everything outside it (all of it,
+ * for a stream). Every receding kind shares one blend; the sphere fades on a ramp of its own,
+ * through 0 when the focus moves to a different sphere.
  *
  * ### Focus-driven, not imperative
  *
@@ -28,7 +29,8 @@ export type StructureFocusSubsystem = {
 
   /**
    * Per-frame state sync. Diffs the subject's ref against the currently active one:
-   *   - changed to a subject: latch it, fade toward 1 over 400 ms.
+   *   - changed to a subject: latch it, fade toward 1 over 400 ms (a different sphere fades the
+   *     shown one out first, then its own in).
    *   - changed to null: fade toward 0, keeping the last subject until blend settles at 0.
    *   - unchanged ref: no-op (no re-fade).
    *

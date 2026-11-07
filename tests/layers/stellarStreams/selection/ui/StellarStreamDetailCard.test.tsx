@@ -8,6 +8,7 @@ import { stellarStreamsSelectionKinds } from '../../../../../src/layers/stellarS
 import type { StellarStreamSelectionRow } from '../../../../../src/layers/stellarStreams/selection/@types/StellarStreamSelectionRow';
 import type { StellarStreamMeta } from '../../../../../src/layers/stellarStreams/catalog/@types/StellarStreamMeta';
 import { GD_1, SAGITTARIUS, SHORT } from '../../fixtures/streamMeta';
+import { RECEDE_ALL_FOCUS_SPHERE } from '../../../../../src/data/selection/recedeAllFocusSphere';
 
 function rowOf({ anchorMpc, ...rest }: StellarStreamMeta): StellarStreamSelectionRow {
   return {
@@ -15,7 +16,7 @@ function rowOf({ anchorMpc, ...rest }: StellarStreamMeta): StellarStreamSelectio
     type: 'stellarStream',
     positionMpc: [anchorMpc[0], anchorMpc[1], anchorMpc[2]],
     radiusMpc: 0.137,
-    focusSphere: null,
+    focusSphere: RECEDE_ALL_FOCUS_SPHERE,
   };
 }
 const renderCard = (meta: StellarStreamMeta) =>

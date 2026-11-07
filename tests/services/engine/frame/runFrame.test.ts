@@ -9,6 +9,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
+import { RECEDE_ALL_FOCUS_SPHERE } from '../../../../src/data/selection/recedeAllFocusSphere';
 
 // Mocked so the FPS-wiring fixtures don't drive the real demand table and the dedicated test can
 // assert the per-frame call (runFrame calls it every tick so any state change re-derives loads).
@@ -922,7 +923,7 @@ describe('runFrame — the label-director wake fold', () => {
     expect(settled.focusPickId).toBeNull();
   });
 
-  it('a focused stream ramps the blend under its own pick word, the sphere staying at rest', () => {
+  it('a focused stream ramps the blend under its own pick word, its recede-all sphere with it', () => {
     const STREAM_WORD = 7;
     const base = makeReadyState(
       () => false,
@@ -932,7 +933,7 @@ describe('runFrame — the label-director wake fold', () => {
     const state = {
       ...base,
       selection: { hover: null, select: null, focus: stream },
-      selectionRows: { focus: { type: 'stellarStream', focusSphere: null } },
+      selectionRows: { focus: { type: 'stellarStream', focusSphere: RECEDE_ALL_FOCUS_SPHERE } },
       selectionKindRows: [{ type: 'stellarStream', encodePick: () => STREAM_WORD }],
       subsystems: {
         ...base.subsystems,
@@ -948,7 +949,7 @@ describe('runFrame — the label-director wake fold', () => {
       .snapshot;
     expect(snapshot.focusBlend).toBe(1);
     expect(snapshot.focusPickId).toBe(STREAM_WORD);
-    expect(snapshot.focus.blend).toBe(0);
+    expect(snapshot.focus).toEqual({ ...RECEDE_ALL_FOCUS_SPHERE, blend: 1 });
   });
 });
 
