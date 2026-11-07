@@ -6,15 +6,24 @@
 // suppressed quarter-res peaks), and the low band of light — glows, nebulae,
 // structure discs — as Dutch outline colour: a crisp boundary line with a band
 // of wash fading inward and plain paper inside, never solid ink. Bodies are
-// engraved the classic way: hatching parallel to the terminator, swelling into
-// shadow, crossed at 45° on the night side; seas left pale with a coast halo.
+// engraved the classic way: burin lines bowing with the globe, swelling into
+// shadow, crossed only in the deepest; seas left pale with water lines off Earth's coasts.
 
 import package::antiqueLook::io::AntiqueUniforms;
 import package::antiqueLook::io::VSOut;
 import package::antiqueLook::paper::vnoise;
 import package::antiqueLook::engraving::crossHatch;
 import package::antiqueLook::engraving::stipple;
-import package::antiqueLook::engraving::coastHalo;
+import package::antiqueLook::engraving::formTone;
+import package::antiqueLook::engraving::ringLines;
+import package::antiqueLook::engraving::seaDistance;
+import package::antiqueLook::engraving::waterLines;
+import package::antiqueLook::engraving::inkLine;
+import package::antiqueLook::plateBodies::PlateBodies;
+import package::antiqueLook::plateBodies::BodyHit;
+import package::antiqueLook::plateBodies::castPlateBody;
+import package::antiqueLook::plateBodies::ballTheta;
+import package::antiqueLook::plateBodies::ringRho;
 import package::antiqueLook::graticule::graticule;
 import package::antiqueLook::graticule::raDec;
 import package::antiqueLook::pigments::luma;
@@ -39,6 +48,9 @@ import package::antiqueLook::pigments::pigmentAt;
 @group(0) @binding(12) var glyphTex: texture_2d<f32>;
 // The constellation figures, moved off the HDR roster (ANTIQUE_MOVED_PASSES).
 @group(0) @binding(13) var linesTex: texture_2d<f32>;
+@group(0) @binding(14) var<uniform> plate: PlateBodies;
+// `landBlur.wesl`'s output: x Σ weight·land share, y Σ weight.
+@group(0) @binding(15) var landBlurTex: texture_2d<f32>;
 
 // The border's numbering, placed per frame by `placeAntiqueNumerals`.
 struct Glyph {
@@ -65,7 +77,7 @@ const PLATE: f32 = 15.0;
 const MARGIN: f32 = 30.0;
 const BAND: f32 = 7.0;
 // Hatch spacing on bodies, print units.
-const HATCH: f32 = 5.0;
+const HATCH: f32 = 4.2;
 // A constellation line's alpha at full cover: its BASE_ALPHA (constellations/fragment.wesl).
 const LINE_ALPHA: f32 = 0.5;
 // Glow levels: the outline-colour boundary, and one inner contour.
@@ -153,22 +165,17 @@ fn bodyLight(uv: vec2<f32>) -> f32 {
   return light / weight;
 }
 
-// How near the coast an ocean pixel lies, from the quarter-res land share: land
-// within ~3 cells counts fully, within ~7 cells half. 1 at the shore, 0 far out.
-// How near the other side of a coast is: x land seen from the sea, y sea seen
-// from the land (sky cells, alpha -1, count as neither).
-fn coastNear(uv: vec2<f32>) -> vec2<f32> {
-  let t = 1.0 / vec2<f32>(textureDimensions(washTex));
-  var near = vec2<f32>(0.0);
-  for (var k = 0; k < 8; k++) {
-    let a = f32(k) * 0.7853982;
-    let dir = vec2<f32>(cos(a), sin(a)) * t;
-    let close = textureSampleLevel(washTex, linear, uv + dir * 3.0, 0.0).a;
-    let far = textureSampleLevel(washTex, linear, uv + dir * 7.0, 0.0).a;
-    near = max(near, vec2<f32>(clamp(close, 0.0, 1.0), select(0.0, 1.0 - close, close >= 0.0)));
-    near = max(near, 0.5 * vec2<f32>(clamp(far, 0.0, 1.0), select(0.0, 1.0 - far, far >= 0.0)));
+// The nearest recorded body along the ray.
+fn castPlateBodies(ray: vec3<f32>) -> BodyHit {
+  var best = BodyHit(1e30, 0.0, 0.0, 0.0, 0.0, false, false, false, 1e30, 0u);
+  for (var i = 0u; i < min(plate.count, 4u); i++) {
+    var h = castPlateBody(ray, plate.items[i]);
+    if (h.t < best.t) {
+      h.index = i;
+      best = h;
+    }
   }
-  return near;
+  return best;
 }
 
 // Neatline: heavy outer rule, hairline inner rule, and between them the degree
@@ -297,37 +304,87 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let lines = min(texel(linesTex, ip).a / LINE_ALPHA, 1.0) * sky * clear * 0.75;
 
   // Bodies, as a globe-maker engraved them: land and sea left as paper and
-  // washed, every coast cut as one continuous line with the hatched halo off
-  // it, and hatching (parallel to the terminator, swelling into shadow,
-  // crossed past it) for the shade alone, read at the terminator's scale.
-  // The land share's derivative is taken here, in uniform control flow; the
-  // rest of the body work runs only where a body is.
+  // washed, every coast cut as one continuous line with water lines off it,
+  // and burin hatching for the shade alone. A recorded body (`plate`) is cast
+  // analytically, so its lines bow with the globe and its tone is read off the
+  // form; any other body keeps straight lines on the light at the terminator's
+  // scale. Derivatives are taken here, in uniform control flow; the rest of
+  // the body work runs only where a body is.
   let wash = textureSampleLevel(washTex, linear, uv, 0.0);
   let landShare = clamp(wash.a, 0.0, 1.0);
   let landPerPx = max(fwidth(landShare), 1e-4);
+  let landBlur = textureSampleLevel(landBlurTex, linear, uv, 0.0).xy;
+  let blurredShare = landBlur.x / max(landBlur.y, 1e-4);
+  let seaD = seaDistance(blurredShare);
+  let seaPerUnit = length(vec2<f32>(dpdx(seaD), dpdy(seaD))) * u.unit;
   let o = i32(round(u.unit));
   let gx = bodyCover(ip + vec2<i32>(o, 0)) - bodyCover(ip - vec2<i32>(o, 0));
   let gy = bodyCover(ip + vec2<i32>(0, o)) - bodyCover(ip - vec2<i32>(0, o));
   let limb = smoothstep(0.25, 0.7, length(vec2<f32>(gx, gy)));
   var bodyInk = 0.0;
   if (body > 0.0) {
-    let tone = 1.0 - smoothstep(0.015, 0.17, bodyLight(uv));
-    let hatchInk = crossHatch(p, tone, HATCH, u.hatchAngle, 1.0 / u.unit);
-    let ocean = 1.0 - smoothstep(0.35, 0.65, landShare);
-    let coastPx = abs(landShare - 0.5) / landPerPx;
-    let coast = 1.0 - smoothstep(0.55 * u.unit, 0.55 * u.unit + 1.0, coastPx);
-    let shore = coastNear(uv);
-    let near = shore.x;
-    let halo = coastHalo(p, near, 2.4) * ocean * (1.0 - tone);
-    // Seas a pale smalt, pooled darker along the shore; land in the hue of its light.
-    // The colourist's sea stops a little off the cut coast, by a slow wander.
-    let washShare = clamp(textureSampleLevel(washTex, linear, uv + slip * 0.6, 0.0).a, 0.0, 1.0);
-    let seaWash = (0.14 + 0.1 * near) * (1.0 - smoothstep(0.35, 0.65, washShare));
-    // Land in Dutch outline colour: a band along each coast fading inward to paper.
-    let landWash = 0.5 * smoothstep(0.35, 0.6, washShare) * shore.y;
-    col = applyWash(col, pigmentAt(5.0), seaWash * body * frame.y);
-    col = applyWash(col, pigmentAt(2.0), landWash * body * frame.y);
-    bodyInk = max(max(hatchInk, coast), halo * 0.85) * body;
+    let pxUnits = 1.0 / u.unit;
+    let n = vec2<f32>(-sin(u.hatchAngle), cos(u.hatchAngle));
+    let along = dot(p, vec2<f32>(n.y, -n.x));
+    let hit = castPlateBodies(viewRay(uv));
+    var tone = 0.0;
+    var form = vec3<f32>(dot(p, n), along, 1.0);
+    var lines = 0.0;
+    var land = false;
+    if (hit.t < 1e30) {
+      let b = plate.items[hit.index];
+      let radius = b.centre.w;
+      // Gradients from two more casts a pixel over: no dpdx inside this branch.
+      let rayX = viewRay(uv + vec2<f32>(1.0 / u.res.x, 0.0));
+      let rayY = viewRay(uv + vec2<f32>(0.0, 1.0 / u.res.y));
+      if (hit.onRing) {
+        // Paper, but for the ball's shadow, hatched ALONG the ring as concentric ellipses.
+        let rhoPerUnit = length(vec2<f32>(ringRho(rayX, b), ringRho(rayY, b)) - hit.rho) * u.unit;
+        tone = select(0.0, 0.6, hit.ballShadow);
+        form = vec3<f32>(hit.rho * radius, along, rhoPerUnit * radius);
+        lines = ringLines(hit.rho, rhoPerUnit, b.ringEdges, p, pxUnits);
+      } else {
+        // Half the screen line, half the Sun's parallel: lines bow with the globe
+        // yet still cross the tone's contours, so they taper at both ends. `n`
+        // points away from the Sun, as the arc grows: the halves add, never cancel.
+        let phase = 0.5 * dot(p, n) + 0.5 * radius * hit.theta;
+        let screenStep = 0.5 * n * pxUnits;
+        let dx = screenStep.x + 0.5 * radius * (ballTheta(rayX, b) - hit.theta);
+        let dy = screenStep.y + 0.5 * radius * (ballTheta(rayY, b) - hit.theta);
+        form = vec3<f32>(phase, along, length(vec2<f32>(dx, dy)) * u.unit);
+        tone = formTone(hit.ndl, hit.ndv);
+        // The ring's shadow on the ball is one solid stroke, not hatching.
+        if (hit.ringShadow) {
+          tone = max(tone, 0.85);
+          lines = 0.95;
+        }
+      }
+      lines = max(lines, inkLine(hit.edgeUnits, 1.1, pxUnits));
+      land = b.sun.w > 0.5;
+    } else {
+      tone = 1.0 - smoothstep(0.015, 0.17, bodyLight(uv));
+    }
+    bodyInk = max(crossHatch(form, p, tone, HATCH, u.hatchAngle, pxUnits), lines);
+    // Land and sea only where Earth's ocean mask fed the share: elsewhere it is a
+    // colour guess, which called Saturn's limb a coast.
+    if (land) {
+      let ocean = 1.0 - smoothstep(0.35, 0.65, landShare);
+      let coastPx = abs(landShare - 0.5) / landPerPx;
+      let coast = 1.0 - smoothstep(0.55 * u.unit, 0.55 * u.unit + 1.0, coastPx);
+      let water = waterLines(p, seaD, seaPerUnit, pxUnits) * ocean * (1.0 - smoothstep(0.35, 0.8, tone));
+      // Seas a pale smalt, pooled darker along the shore; land in Dutch outline
+      // colour, a band along each coast fading inward to paper. The colourist's
+      // wash stops a little off the cut coast, by a slow wander.
+      let washShare = clamp(textureSampleLevel(washTex, linear, uv + slip * 0.6, 0.0).a, 0.0, 1.0);
+      let near = clamp(1.0 - seaD / 16.0, 0.0, 1.0);
+      let inland = seaDistance(1.0 - blurredShare);
+      let seaWash = (0.14 + 0.1 * near) * (1.0 - smoothstep(0.35, 0.65, washShare));
+      let landWash = 0.5 * smoothstep(0.35, 0.6, washShare) * clamp(1.0 - inland / 14.0, 0.0, 1.0);
+      col = applyWash(col, pigmentAt(5.0), seaWash * body * frame.y);
+      col = applyWash(col, pigmentAt(2.0), landWash * body * frame.y);
+      bodyInk = max(max(bodyInk, coast), water * 0.9);
+    }
+    bodyInk *= body;
   }
 
   // Captions at full ink, each on its own paper halo (a 2.5-unit knock-out of

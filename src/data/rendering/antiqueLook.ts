@@ -74,5 +74,7 @@ export const ANTIQUE_TARGETS = {
   decor: 'antique-decor',
   decorHue: 'antique-decor-hue',
   land: 'antique-land',
+  landBlurAcross: 'antique-land-blur-across',
+  landBlur: 'antique-land-blur',
   lines: 'antique-lines',
 } as const;

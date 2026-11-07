@@ -1,6 +1,6 @@
 /**
- * createAntiqueLookGpu — the look's six pipelines (full-screen paper bake,
- * reduce, glow and plate; instanced glyphs and decor) with their
+ * createAntiqueLookGpu — the look's eight pipelines (full-screen paper bake,
+ * reduce, glow, the land blur's two halves and plate; instanced glyphs and decor) with their
  * bind-group layouts, and its fixed uniform buffers. Binding order is each
  * shader's `@binding` order. Target formats must match `antiqueLookTargetRows`.
  */
@@ -12,12 +12,14 @@ import glowCode from '../../shaders/antiqueLook/glow.wesl?static';
 import glyphsCode from '../../shaders/antiqueLook/glyphs.wesl?static';
 import decorCode from '../../shaders/antiqueLook/decor.wesl?static';
 import plateCode from '../../shaders/antiqueLook/fragment.wesl?static';
+import landBlurCode from '../../shaders/antiqueLook/landBlur.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import {
   ANTIQUE_GLYPH_BYTES,
   ANTIQUE_ORNAMENT_BYTES,
   ANTIQUE_UNIFORM_BYTES,
 } from '../../../../data/rendering/antiqueLook';
+import { ANTIQUE_PLATE_BODIES_BYTES } from '../../../../data/rendering/antiquePlateBodies';
 import { HDR_TARGET_FORMAT } from '../../../../data/renderTargetFormats';
 import type { AntiqueLookGpu } from '../../../../@types/rendering/AntiqueLookGpu';
 
@@ -39,6 +41,7 @@ export function createAntiqueLookGpu(
     code: string,
     bindings: readonly Omit<GPUBindGroupLayoutEntry, 'binding' | 'visibility'>[],
     formats: readonly GPUTextureFormat[],
+    entryPoint = 'fs',
   ): { pipeline: GPURenderPipeline; layout: GPUBindGroupLayout } => {
     const layout = device.createBindGroupLayout({
       label: `antique-look-${label}-bgl`,
@@ -57,7 +60,7 @@ export function createAntiqueLookGpu(
       vertex,
       fragment: {
         module: createShaderModuleWithDevLog(device, code, `antiqueLook.${label}`),
-        entryPoint: 'fs',
+        entryPoint,
         targets: formats.map((format) => ({ format })),
       },
       primitive: { topology: 'triangle-list' },
@@ -90,6 +93,7 @@ export function createAntiqueLookGpu(
   const uniforms = buffer('uniforms', ANTIQUE_UNIFORM_BYTES);
   const ornaments = buffer('ornaments', ANTIQUE_ORNAMENT_BYTES);
   const digits = buffer('digits', ANTIQUE_GLYPH_BYTES);
+  const plateBodies = buffer('plate-bodies', ANTIQUE_PLATE_BODIES_BYTES);
   // Star glyphs scatter: their own vertex stage, a strip per instance, MAX blend
   // so overlapping glyphs and halos keep the stronger, never sum.
   const glyphsModule = createShaderModuleWithDevLog(device, glyphsCode, 'antiqueLook.glyphs');
@@ -149,6 +153,20 @@ export function createAntiqueLookGpu(
     paper: stage('paper', paperCode, [UNIFORM, TEXTURE, TEXTURE, SAMPLER], ['rgba8unorm']),
     reduce: stage('reduce', reduceCode, [TEXTURE, TEXTURE, TEXTURE], [HDR_TARGET_FORMAT]),
     glow: stage('glow', glowCode, [TEXTURE], [HDR_TARGET_FORMAT]),
+    landBlurAcross: stage(
+      'land-blur-across',
+      landBlurCode,
+      [TEXTURE, UNIFORM],
+      ['rg16float'],
+      'fsAcross',
+    ),
+    landBlurDown: stage(
+      'land-blur-down',
+      landBlurCode,
+      [TEXTURE, UNIFORM],
+      ['rg16float'],
+      'fsDown',
+    ),
     plate: stage(
       'plate',
       plateCode,
@@ -167,6 +185,8 @@ export function createAntiqueLookGpu(
         UNIFORM, // border digits
         TEXTURE, // glyph sheet
         TEXTURE, // constellation lines
+        UNIFORM, // plate bodies
+        TEXTURE, // land blur
       ],
       [targetFormat],
     ),
@@ -175,6 +195,7 @@ export function createAntiqueLookGpu(
     glyphs: { pipeline: glyphsPipeline, layout: glyphsLayout },
     decor: { pipeline: decorPipeline, layout: decorLayout },
     digits,
+    plateBodies,
     clampSampler: sampler('clamp', 'clamp-to-edge'),
     repeatSampler: sampler('repeat', 'repeat'),
     empty: emptyTexture.createView(),
@@ -182,6 +203,7 @@ export function createAntiqueLookGpu(
       uniforms.destroy();
       ornaments.destroy();
       digits.destroy();
+      plateBodies.destroy();
       emptyTexture.destroy();
     },
   };

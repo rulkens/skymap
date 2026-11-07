@@ -1,8 +1,9 @@
 /**
  * antiqueLook — the `stylize` step, its passes in order: paper (the sheet, baked
  * only when its row was reallocated or the scan landed), reduce (print →
- * quarter-res `wash`), glow (`wash` → 1/16-res), glyphs (from the star Layer's
- * `print-points`) and decor (instanced scatters into `star-ink` and
+ * quarter-res `wash`), glow (`wash` → 1/16-res), land blur (`wash.a` →
+ * `land-blur`, across then down, only under Earth's land map), glyphs (from the
+ * star Layer's `print-points`) and decor (instanced scatters into `star-ink` and
  * `decor`/`decor-hue`), plate (all of it inked onto the swap chain). One
  * `stylize` timing slot spans them, as `runBloom`'s does. GPU objects are built
  * on the look's first frame, not at boot: most sessions never open it.
@@ -17,9 +18,12 @@ import {
   ANTIQUE_TARGETS,
   ANTIQUE_UNIFORM_BYTES,
 } from '../../../../data/rendering/antiqueLook';
+import { ANTIQUE_PLATE_BODIES_BYTES } from '../../../../data/rendering/antiquePlateBodies';
 import { ANTIQUE_ORNAMENTS } from '../../../../data/rendering/antiqueOrnaments';
 import { ANTIQUE_ORNAMENT_ATLAS } from '../../../../data/rendering/antiqueOrnamentAtlas';
 import { packAntiqueUniforms } from '../../../../utils/gpu/antiqueLook/packAntiqueUniforms';
+import { packAntiquePlateBodies } from '../../../../utils/gpu/antiqueLook/packAntiquePlateBodies';
+import { antiquePlateBodies } from './antiquePlateBodies';
 import { packAntiqueOrnaments } from '../../../../utils/gpu/antiqueLook/packAntiqueOrnaments';
 import { packAntiqueGlyphs } from '../../../../utils/gpu/antiqueLook/packAntiqueGlyphs';
 import { placeAntiqueOrnaments } from '../../../../utils/gpu/antiqueLook/placeAntiqueOrnaments';
@@ -55,6 +59,7 @@ export function createAntiqueLook(init: {
   const uniformBytes = new ArrayBuffer(ANTIQUE_UNIFORM_BYTES);
   const ornamentBytes = new ArrayBuffer(ANTIQUE_ORNAMENT_BYTES);
   const glyphBytes = new ArrayBuffer(ANTIQUE_GLYPH_BYTES);
+  const plateBodyBytes = new ArrayBuffer(ANTIQUE_PLATE_BODIES_BYTES);
 
   function fullScreen(
     encoder: GPUCommandEncoder,
@@ -144,6 +149,9 @@ export function createAntiqueLook(init: {
             sheet: glyphs.sheet,
           });
     device.queue.writeBuffer(g.digits, 0, packAntiqueGlyphs(digits, glyphBytes));
+    const landMapped = ctx.snapshot.renderedTargets.has(ANTIQUE_TARGETS.land);
+    const plateBodies = hasBodies ? antiquePlateBodies(state, ctx, unitPx, landMapped) : [];
+    device.queue.writeBuffer(g.plateBodies, 0, packAntiquePlateBodies(plateBodies, plateBodyBytes));
 
     const uniforms = { buffer: g.uniforms };
     const paper = targets.viewOf(ANTIQUE_TARGETS.paper);
@@ -155,9 +163,9 @@ export function createAntiqueLook(init: {
     // foreground:0 keeps last frame's bodies when nothing drew one this frame.
     const bodies = hasBodies ? targets.viewOf('foreground:0') : g.empty;
     // Earth's land map, when its globe drew this frame; elsewhere land is read from colour.
-    const land = ctx.snapshot.renderedTargets.has(ANTIQUE_TARGETS.land)
-      ? targets.viewOf(ANTIQUE_TARGETS.land)
-      : g.empty;
+    const land = landMapped ? targets.viewOf(ANTIQUE_TARGETS.land) : g.empty;
+    const landBlurAcross = targets.viewOf(ANTIQUE_TARGETS.landBlurAcross);
+    const landBlur = targets.viewOf(ANTIQUE_TARGETS.landBlur);
     // The catalogue's naked-eye stars, when a star pass printed this frame.
     const printed = ctx.snapshot.renderedTargets.has(ANTIQUE_TARGETS.printPoints);
     const points = printed ? targets.viewOf(ANTIQUE_TARGETS.printPoints) : g.empty;
@@ -194,6 +202,11 @@ export function createAntiqueLook(init: {
       bakesPaper ? undefined : begin,
     );
     fullScreen(encoder, 'glow', [glow], g.glow, [wash]);
+    // Only Earth's mapped land is read (a record's land flag), so no map, no blur.
+    if (landMapped) {
+      fullScreen(encoder, 'land-blur-across', [landBlurAcross], g.landBlurAcross, [wash, uniforms]);
+      fullScreen(encoder, 'land-blur-down', [landBlur], g.landBlurDown, [landBlurAcross, uniforms]);
+    }
     // One instance per print-points texel; the shader drops those holding no star.
     const cells = printed ? targets.sizeOf(ANTIQUE_TARGETS.printPoints) : { width: 1, height: 1 };
     const glyphPass = encoder.beginRenderPass({
@@ -261,6 +274,8 @@ export function createAntiqueLook(init: {
         { buffer: g.digits },
         glyphs?.view ?? g.empty,
         lines,
+        { buffer: g.plateBodies },
+        landBlur,
       ],
       end,
     );
