@@ -87,7 +87,9 @@ import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import type { Writable } from 'node:stream';
 import { tourRegistry } from '../../src/data/animation/tours/tourRegistry';
-import { clipRegistry } from '../../src/data/animation/clips/clipRegistry';
+import { clipFactories, clipRegistry } from '../../src/data/animation/clips/clipRegistry';
+import { encodeFramedPose } from '../../src/utils/url/encodeFramedPose';
+import { unixMsToJulianDays } from '../../src/utils/time/unixMsToJulianDays';
 import { FOLD_SETTLE_MS } from '../../src/state/tour/foldSettleMs';
 import type { Tour } from '../../src/@types/animation/tour/Tour';
 import type { TourId } from '../../src/@types/animation/tour/TourId';
@@ -836,12 +838,17 @@ async function main(): Promise<void> {
     // The pin is the SIM clock, resolved once before anything spawns so the URL
     // and the banner name the same instant (module header: two clocks).
     const simTime = options.simTime ?? new Date();
-    const captureUrl = buildCaptureUrl({ base: options.url, simTime, dome: options.dome });
 
     // Resolve the subject up front so an id typo fails before any process spawns.
     let take: Take;
     let frameCap: number;
     let subjectLine: string;
+    // A clip's authored start pose, as the boot URL's `pose=`: the page then loads
+    // and settles THERE before frame 0 (scale-gated asset demand loads a survey
+    // only near its band, so a clip jumping far from Earth would open mid-load).
+    // Read off the factory at the pinned instant, since a body-relative start
+    // moves with the clock; `'live'` and absent starts leave the boot pose alone.
+    let startPose: string | undefined;
     // Set only for a `loop: true` clip; printed after the banner below and
     // threaded onto `take` so captureTake's frame loop can stop on count
     // instead of polling the never-resolving clip-end status.
@@ -857,6 +864,10 @@ async function main(): Promise<void> {
       // POSE depends on the instant, its authored durations do not.
       frameCap = clipFrameCap(clip.data, options.fps);
       subjectLine = `clip '${clip.id}' — ${clip.label}`;
+      const pinned = clipFactories[clip.id](unixMsToJulianDays(simTime.getTime()));
+      if (pinned.data.start !== undefined && pinned.data.start !== 'live') {
+        startPose = encodeFramedPose({ frame: 'absolute', pose: pinned.data.start });
+      }
 
       let loopFrames: number | undefined;
       if (clip.data.loop === true) {
@@ -899,6 +910,12 @@ async function main(): Promise<void> {
         `tour '${tour.id}' beats ${beats.from}..${beats.to} ` +
         `(${slicedBeats.length} of ${tour.beats.length})`;
     }
+    const captureUrl = buildCaptureUrl({
+      base: options.url,
+      simTime,
+      dome: options.dome,
+      pose: startPose,
+    });
 
     // Default output name = take + size + fps + timestamp, so successive
     // default-flag takes (or a smoke against a different tour) never silently

@@ -176,6 +176,13 @@ The rest (`tourXxx`) are grand-tour beats: they exist to be stitched into a
 tour's timeline, not played alone, so film them as a windowed tour take
 (`npm run record-tour -- grandTour --beats a..b`) instead.
 
+A clip with an authored `start` pose boots the page at that pose (the boot URL
+carries it as `pose=`), so the scene loads and settles there before frame 0.
+Asset demand is scale-gated: a survey loads only near its band, so a clip that
+jumps from the Earth boot pose to 500 Mpc would otherwise open on a half-loaded
+catalog and its first frame, the autoplay poster, would be the one wrong frame.
+A `'live'` or absent start keeps the Earth boot pose.
+
 A clip take is always played whole — `--beats` windows a tour and is rejected
 alongside `--clip`.
 
