@@ -45,6 +45,8 @@ export function placeAntiqueOrnaments(input: {
   readonly unitPx: number;
   /** The eye in the world frame, Mpc from the Sun. */
   readonly camPosMpc: Readonly<Vec3>;
+  /** Tab's hidden-UI mode: sheet-anchored title chrome (the cartouche) goes, the map's figures stay. */
+  readonly chromeHidden: boolean;
 }): readonly AntiqueOrnamentInstance[] {
   const { atlas, basis, frustum, size, unitPx } = input;
   const camDistMpc = Math.hypot(input.camPosMpc[0], input.camPosMpc[1], input.camPosMpc[2]);
@@ -70,6 +72,7 @@ export function placeAntiqueOrnaments(input: {
       (rect.y + rect.h) / atlas.height,
     ] as const;
     const anchor = row.anchor;
+    if (input.chromeHidden && anchor.kind === 'sheet') continue;
 
     let centre: [number, number];
     let widthPx: number;

@@ -151,6 +151,7 @@ export function createAntiqueLook(init: {
             size,
             unitPx,
             camPosMpc: ctx.drawCamPos,
+            chromeHidden: state.ui.uiHidden,
           });
     device.queue.writeBuffer(g.ornaments, 0, packAntiqueOrnaments(placed, ornamentBytes));
     const digits =

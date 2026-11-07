@@ -48,7 +48,12 @@ function skyRow(over: Partial<AntiqueOrnament> & { lonDeg?: number }): AntiqueOr
   };
 }
 
-function place(rows: readonly AntiqueOrnament[], basis = NORTH_UP, camDistMpc = 0) {
+function place(
+  rows: readonly AntiqueOrnament[],
+  basis = NORTH_UP,
+  camDistMpc = 0,
+  chromeHidden = false,
+) {
   const camPosMpc = [camDistMpc, 0, 0] as [number, number, number];
   return placeAntiqueOrnaments({
     ornaments: rows,
@@ -58,6 +63,7 @@ function place(rows: readonly AntiqueOrnament[], basis = NORTH_UP, camDistMpc = 
     size: SIZE,
     unitPx: 1,
     camPosMpc,
+    chromeHidden,
   });
 }
 
@@ -99,6 +105,15 @@ describe('placeAntiqueOrnaments', () => {
     expect(mirrored!.centrePx).toEqual(plain!.centrePx);
   });
 
+  it('withdraws a sheet-anchored title when the UI is hidden, keeping the sky figures', () => {
+    const title = skyRow({
+      anchor: { kind: 'sheet', corner: 'topLeft', insetUnits: [100, 100], sizeUnits: 100 },
+      facesNorth: false,
+    });
+    expect(place([title, skyRow({})], NORTH_UP, 0, false)).toHaveLength(2);
+    expect(place([title, skyRow({})], NORTH_UP, 0, true)).toHaveLength(1);
+  });
+
   it('drops a sky figure that is mostly off the plate', () => {
     // Centred just past the right edge: well under the ~0.6 on-screen share it needs.
     const [edge] = place([skyRow({ lonDeg: -50 })]);
@@ -120,6 +135,7 @@ describe('placeAntiqueOrnaments', () => {
         frustum: FRUSTUM,
         size: SIZE,
         unitPx: 1,
+        chromeHidden: false,
         camPosMpc: GALACTIC_CENTRE.map((c) => c * camX) as [number, number, number],
       })[0]!;
     // Halfway to it, it should look about twice as wide and stay where it was.
@@ -143,6 +159,7 @@ describe('placeAntiqueOrnaments', () => {
         frustum: FRUSTUM,
         size: SIZE,
         unitPx,
+        chromeHidden: false,
         camPosMpc: [0, 0, 0],
       });
     // The border is 50 print units deep: at 8 px a unit it reaches 400 px in,
@@ -165,6 +182,7 @@ describe('placeAntiqueOrnaments', () => {
         frustum: FRUSTUM,
         size: SIZE,
         unitPx: 1,
+        chromeHidden: false,
         camPosMpc: [0, 0, 0],
       });
     const ahead: ViewBasis = (() => {
