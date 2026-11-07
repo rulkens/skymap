@@ -59,6 +59,7 @@ function place(
   camDistMpc = 0,
   chromeHidden = false,
   title: { rect: readonly [number, number, number, number]; weight: number } | null = null,
+  covers: readonly { x0: number; y0: number; x1: number; y1: number }[] = [],
 ) {
   const camPosMpc = [camDistMpc, 0, 0] as [number, number, number];
   return placeAntiqueOrnaments({
@@ -70,6 +71,7 @@ function place(
     unitPx: 1,
     camPosMpc,
     chromeHidden,
+    covers,
     title,
   });
 }
@@ -140,6 +142,20 @@ describe('placeAntiqueOrnaments', () => {
     expect(place([cartouche], NORTH_UP, 0, false, null)).toHaveLength(1);
   });
 
+  it('moves the cartouche off an open panel, and its title with it', () => {
+    const cartouche = skyRow({
+      sprite: 'cartouche',
+      anchor: { kind: 'sheet', corner: 'topLeft', insetUnits: [200, 200], sizeUnits: 100 },
+      facesNorth: false,
+      clearsBeneath: true,
+    });
+    const panel = { x0: 0, y0: 0, x1: 400, y1: 400 };
+    const title = { rect: [0, 0, 1, 1] as const, weight: 1 };
+    const [frame, set] = place([cartouche], NORTH_UP, 0, false, title, [panel]);
+    expect(frame!.centrePx[0]).toBeGreaterThan(SIZE.width / 2);
+    expect(set!.centrePx[0]).toBeCloseTo(frame!.centrePx[0]);
+  });
+
   it('drops a sky figure that is mostly off the plate', () => {
     // Centred just past the right edge: well under the ~0.6 on-screen share it needs.
     const [edge] = place([skyRow({ lonDeg: -50 })]);
@@ -162,6 +178,7 @@ describe('placeAntiqueOrnaments', () => {
         size: SIZE,
         unitPx: 1,
         chromeHidden: false,
+        covers: [],
         title: null,
         camPosMpc: GALACTIC_CENTRE.map((c) => c * camX) as [number, number, number],
       })[0]!;
@@ -187,6 +204,7 @@ describe('placeAntiqueOrnaments', () => {
         size: SIZE,
         unitPx,
         chromeHidden: false,
+        covers: [],
         title: null,
         camPosMpc: [0, 0, 0],
       });
@@ -211,6 +229,7 @@ describe('placeAntiqueOrnaments', () => {
         size: SIZE,
         unitPx: 1,
         chromeHidden: false,
+        covers: [],
         title: null,
         camPosMpc: [0, 0, 0],
       });

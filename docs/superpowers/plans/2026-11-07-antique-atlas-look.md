@@ -224,7 +224,7 @@ Owner ruling 2026-11-07: keep the generic galaxy engraving with these names; the
 `src/utils/gpu/antiqueLook/{antiquePlateTitle,fitAntiqueTitle,drawAntiqueTitle,buildAntiqueGlyphSheet,placeAntiqueOrnaments}.ts`,
 `passes/antiqueLook/antiqueTitleGlobe.ts`, `decor.wesl`, `ornaments.wesl`, `tools/antique/packOrnaments.ts`
 - [x] Per-plate cartouche titles set at runtime on the lettering sheet (the cartouche sprite baked blank): the sky, the universe, the Earth (world, continent, the Seventeen Provinces, Holland by ground scale), Moon, Mars, Jupiter and Saturn; a change passes through a blank cartouche.
-- [ ] The cartouche takes the free corner from the view covers (desktop panels report rects); labels keep off panels.
+- [x] The cartouche takes the free corner from the view covers (desktop panels report rects, 4f36bc19b), shrinking into its corner when none is free; labels keep off panels.
 - [ ] Flat hand-colour washes (borders, cartouche, figures), sparing and uneven.
 - [ ] Line weights: border > ruling > orbits > hatching; hand-irregular dashes.
 

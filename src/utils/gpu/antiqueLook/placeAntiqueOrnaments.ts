@@ -15,6 +15,7 @@ import type { AntiqueOrnamentAtlas } from '../../../@types/rendering/AntiqueOrna
 import type { AntiqueOrnamentInstance } from '../../../@types/rendering/AntiqueOrnamentInstance';
 import type { Size } from '../../../@types/rendering/Size';
 import type { Vec3 } from '../../../@types/math/Vec3';
+import type { ScreenRectPx } from '../../../@types/rendering/ScreenRectPx';
 import { GAL_TO_EQ_MATRIX } from '../../../data/superGalacticTransform';
 import {
   ANTIQUE_NUMERAL_INSET_UNITS,
@@ -30,6 +31,7 @@ import { smoothstep } from '../../math/smoothstep';
 import { screenNorthAngle } from '../../camera/projection/screenNorthAngle';
 import { onScreenShare } from '../../render/onScreenShare';
 import { offScreen } from '../../render/offScreen';
+import { antiqueSheetAnchor } from './antiqueSheetAnchor';
 
 const DEG = Math.PI / 180;
 
@@ -51,6 +53,8 @@ export function placeAntiqueOrnaments(input: {
   /** Tab's hidden-UI mode: sheet-anchored title chrome (the cartouche) goes, the map's figures stay. */
   readonly chromeHidden: boolean;
   /** The plate's title (`antiquePlateTitle`): its block on the lettering sheet, normalised, and strength. */
+  /** The open UI panels, device px: a clearing sheet ornament (the cartouche) moves off them. */
+  readonly covers: readonly ScreenRectPx[];
   readonly title: {
     readonly rect: readonly [number, number, number, number];
     readonly weight: number;
@@ -79,8 +83,11 @@ export function placeAntiqueOrnaments(input: {
       (rect.x + rect.w) / atlas.width,
       (rect.y + rect.h) / atlas.height,
     ] as const;
-    const anchor = row.anchor;
-    if (input.chromeHidden && anchor.kind === 'sheet') continue;
+    if (input.chromeHidden && row.anchor.kind === 'sheet') continue;
+    const anchor =
+      row.anchor.kind === 'sheet' && row.clearsBeneath
+        ? antiqueSheetAnchor(row.anchor, aspect, [size.width, size.height], unitPx, input.covers)
+        : row.anchor;
 
     let centre: [number, number];
     let widthPx: number;

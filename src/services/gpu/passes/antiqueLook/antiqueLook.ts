@@ -38,6 +38,7 @@ import { packAntiqueGlyphs } from '../../../../utils/gpu/antiqueLook/packAntique
 import { placeAntiqueOrnaments } from '../../../../utils/gpu/antiqueLook/placeAntiqueOrnaments';
 import { antiquePlateTitle } from '../../../../utils/gpu/antiqueLook/antiquePlateTitle';
 import { antiqueTitleGlobe } from './antiqueTitleGlobe';
+import { viewCoverRectsPx } from '../../../../utils/layout/viewCoverRectsPx';
 import { placeAntiqueNumerals } from '../../../../utils/gpu/antiqueLook/placeAntiqueNumerals';
 import { antiquePlateRulings } from './antiquePlateRulings';
 import { terminatorHatchAngle } from '../../../../utils/gpu/antiqueLook/terminatorHatchAngle';
@@ -183,6 +184,11 @@ export function createAntiqueLook(init: {
             unitPx,
             camPosMpc: ctx.drawCamPos,
             chromeHidden: state.ui.uiHidden,
+            covers: viewCoverRectsPx(
+              state.viewCover,
+              [size.width, size.height],
+              globalThis.innerWidth || size.width,
+            ),
             title: titleOnSheet,
           });
     device.queue.writeBuffer(g.ornaments, 0, packAntiqueOrnaments(placed, ornamentBytes));

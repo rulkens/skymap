@@ -27,6 +27,7 @@ function makeState(): EngineState {
     subsystems: { fades: { fadeTo: vi.fn() } },
     selection: { hover: null, select: null },
     ui: { uiHidden: false },
+    viewCover: {},
     selectionKindRows: [],
     settings: { antique: { enabled: false } },
     viewRig: 'mono',

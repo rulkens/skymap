@@ -142,6 +142,7 @@ import { ANTIQUE_PLACE_LETTERING } from '../../../data/labels/antiquePlaceLetter
 import { ANTIQUE_LABEL_DECLUTTER } from '../../../data/labels/antiqueLabelDeclutter';
 import { isKeyOf } from '../../../utils/object/isKeyOf';
 import { antiquePlateKeepOut } from '../../../utils/labels/antiquePlateKeepOut';
+import { viewCoverRectsPx } from '../../../utils/layout/viewCoverRectsPx';
 import { emphasisOf } from '../presentation/emphasisOf';
 import {
   HOVERED_LABEL_WHITEN,
@@ -823,8 +824,8 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
   }
 
   /**
-   * Under the antique look, drop a name that runs within an em of the neatline
-   * or onto the cartouche (`antiquePlateKeepOut`); the subject's name stays. Runs
+   * Under the antique look, drop a name that runs within an em of the neatline,
+   * onto the cartouche or under an open panel (`antiquePlateKeepOut`); the subject's name stays. Runs
    * on the final, lifted set, so it judges where the ink is drawn.
    */
   function clearOfPlate(
@@ -832,10 +833,16 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     ctx: FrameView,
     isTitle: (label: Label2D) => boolean,
     chromeHidden: boolean,
+    covered: EngineState['viewCover'],
   ): readonly Label2D[] {
     const projection = config.project(ctx);
     const projected = projectLabels(labels, projection);
-    const { inner, keepOut } = antiquePlateKeepOut(projection.viewportPx, chromeHidden);
+    const covers = viewCoverRectsPx(
+      covered,
+      projection.viewportPx,
+      globalThis.innerWidth || projection.viewportPx[0],
+    );
+    const { inner, keepOut } = antiquePlateKeepOut(projection.viewportPx, chromeHidden, covers);
     return labels.filter((label, i) => {
       const { screenPx, clipW } = projected[i]!;
       const bbox = screenPx ? measureText!(label) : null;
@@ -920,7 +927,9 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     // `config.lift` is null): runs over survivors only, after the envelope
     // has resolved the final alpha for each.
     const lifted = applyLift(highlighted, ctx, antique);
-    const labels = antique ? clearOfPlate(lifted, ctx, isTitle, state.ui.uiHidden) : lifted;
+    const labels = antique
+      ? clearOfPlate(lifted, ctx, isTitle, state.ui.uiHidden, state.viewCover)
+      : lifted;
 
     // Flush contract: one MarkerLine per surviving leader-carrying label,
     // derived from the FINAL (post-declutter, post-envelope, post-lift) set.
