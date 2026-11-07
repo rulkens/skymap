@@ -110,6 +110,12 @@ export const DOCS_DEBUG_SECTIONS: readonly DocsDebugSection[] = [
     file: 'src/layers/probeSpheres/spheres/ui/ProbeSpheresTuningSectionContainer.tsx',
   },
   {
+    heading: 'Antique look',
+    shows:
+      'Live knobs for the antique atlas look: hatch spacing and angle, how strong the sky wash, ink and lines print, the border wash, the paper tint, the light over the ground relief, which frame the sky rulings follow, and a switch for each row of the plate. Its title reads “(off)” while the look is off, and the knobs then move nothing. A button copies the values to paste in as the new defaults.',
+    file: `${PANEL}/AntiqueTuningSection/AntiqueTuningSection.tsx`,
+  },
+  {
     heading: 'Debug Overlays',
     shows:
       'Two pictures laid over the scene: the buffer a click is looked up in, and the stand-in shapes of the orbit trails.',

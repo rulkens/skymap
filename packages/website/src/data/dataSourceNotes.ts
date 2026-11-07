@@ -461,6 +461,12 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
       'The old borders the antique atlas look’s realms of 1690 follow where no modern line does.',
     scene: 'earth-and-its-surface',
   },
+  'iau-gazetteer-moon': {
+    description:
+      'The Moon’s named features as points with diameters, from the International Astronomical Union and the USGS.',
+    shows: 'The craters ringed and named on the Moon in the antique atlas look.',
+    scene: 'the-moon',
+  },
   skadi: {
     description: 'Heights at 1 arc-second under the regions where Earth has sharper imagery.',
     shows: 'The height of the ground under the regions that have sharper imagery.',
