@@ -13,9 +13,12 @@ import type { AntiqueBodyView } from '../@types/AntiqueBodyView';
 import type { AntiqueNamePlacement } from '../@types/AntiqueNamePlacement';
 import { ANTIQUE_MOON_PLACE_REVEAL } from '../../../../data/labels/antiqueMoonPlaceReveal';
 import { smoothstep } from '../../../../utils/math/smoothstep';
+import { rectRoomInCircle } from '../../../../utils/math/rectRoomInCircle';
 import { antiqueNameBoxPx } from './antiqueNameBoxPx';
 import { visibleSurfacePx } from './visibleSurfacePx';
 import { sunCosAlong } from './sunCosAlong';
+
+const LIMB_CLEAR_PX = 10;
 
 export function placeAntiqueAreaName(
   place: Extract<AntiqueMoonPlace, { kind: 'mare' | 'terra' }>,
@@ -35,7 +38,22 @@ export function placeAntiqueAreaName(
 
   const { px, cut, trackingEm = 0 } = lettering;
   const box = antiqueNameBoxPx(place.name, cut, trackingEm, px, lineEm);
-  const roomPx = Math.min(Math.abs(e[0] - w[0]) - box.width, Math.abs(n[1] - s[1]) - box.height);
+  const rect = {
+    x0: centre[0] - box.width / 2,
+    y0: centre[1] - box.height / 2,
+    x1: centre[0] + box.width / 2,
+    y1: centre[1] + box.height / 2,
+  };
+  // Inside the extent, and inside the disc: an extent's corners can droop below the
+  // limb's curve, so a name near it is faded out before its box reaches the limb.
+  const discRoomPx = view.discCentrePx
+    ? rectRoomInCircle(rect, view.discCentrePx, view.discRadiusPx) - LIMB_CLEAR_PX
+    : Infinity;
+  const roomPx = Math.min(
+    Math.abs(e[0] - w[0]) - box.width,
+    Math.abs(n[1] - s[1]) - box.height,
+    discRoomPx,
+  );
   const halfKm = box.width / 2 / view.pxPerKm(lat, lon);
   const sun = Math.min(
     view.sunCos(lat, lon),

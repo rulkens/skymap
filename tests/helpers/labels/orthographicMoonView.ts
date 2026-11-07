@@ -9,22 +9,26 @@ const normal = (latDeg: number, lonDeg: number): Vec3 => {
   const lon = (lonDeg * Math.PI) / 180;
   return [Math.cos(lat) * Math.cos(lon), Math.cos(lat) * Math.sin(lon), Math.sin(lat)];
 };
+const dot = (a: Vec3, b: Vec3): number => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 
 /**
- * The Moon seen from far out along body-fixed +X (longitude 0 faces the eye), north up,
+ * The Moon seen from far out over latitude `eyeLatDeg` on the prime meridian, north up,
  * east to the right, `radiusPx` across: an orthographic stand-in for `antiqueBodyView`.
  */
-export function orthographicMoonView(radiusPx: number, toSun: Vec3 = [1, 0, 0]): AntiqueBodyView {
+export function orthographicMoonView(
+  radiusPx: number,
+  toSun: Vec3 = [1, 0, 0],
+  eyeLatDeg = 0,
+): AntiqueBodyView {
+  const eye = normal(eyeLatDeg, 0);
+  const up = normal(eyeLatDeg + 90, 0);
   return {
     project: (latDeg, lonDeg) => {
       const n = normal(latDeg, lonDeg);
-      return [CENTRE[0] + radiusPx * n[1], CENTRE[1] - radiusPx * n[2]];
+      return [CENTRE[0] + radiusPx * n[1], CENTRE[1] - radiusPx * dot(n, up)];
     },
-    facing: (latDeg, lonDeg) => normal(latDeg, lonDeg)[0],
-    sunCos: (latDeg, lonDeg) => {
-      const n = normal(latDeg, lonDeg);
-      return n[0] * toSun[0] + n[1] * toSun[1] + n[2] * toSun[2];
-    },
+    facing: (latDeg, lonDeg) => dot(normal(latDeg, lonDeg), eye),
+    sunCos: (latDeg, lonDeg) => dot(normal(latDeg, lonDeg), toSun),
     pxPerKm: () => radiusPx / RADIUS_KM,
     discCentrePx: [CENTRE[0], CENTRE[1]],
     discRadiusPx: radiusPx,

@@ -15,7 +15,7 @@ import type { AntiqueNamePlacement } from '../@types/AntiqueNamePlacement';
 import { ANTIQUE_MOON_PLACE_REVEAL } from '../../../../data/labels/antiqueMoonPlaceReveal';
 import { smoothstep } from '../../../../utils/math/smoothstep';
 import { degToRad } from '../../../../utils/math/degToRad';
-import { rectInsideCircle } from '../../../../utils/math/rectInsideCircle';
+import { rectRoomInCircle } from '../../../../utils/math/rectRoomInCircle';
 import { antiqueNameBoxPx } from './antiqueNameBoxPx';
 import { sunCosAlong } from './sunCosAlong';
 
@@ -94,7 +94,7 @@ export function placeAntiqueCraterName(
     );
     const onDisc =
       view.discCentrePx === null ||
-      rectInsideCircle(rect, view.discCentrePx, view.discRadiusPx - DISC_MARGIN_PX);
+      rectRoomInCircle(rect, view.discCentrePx, view.discRadiusPx) >= DISC_MARGIN_PX;
     if (onDisc && sunFar > sunLo) {
       const alpha = shown * smoothstep(sunLo, sunHi, sunFar);
       return { xPx, yPx: centre[1], alignX: right ? 'left' : 'right', px, alpha };
