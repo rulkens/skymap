@@ -582,7 +582,52 @@ card's galstreams source line wraps; it becomes the track reference alone (`fu20
 - [x] No Layer contract member added or widened (STOP and report if the hover/selection read needs one).
 - [x] Commit.
 
-Task 13 re-runs (perf, eye check) after Task 16.
+### Task 17: Realistic stream colours from metallicity and a sampled star mix (owner ruling X8FX, amends Q3)
+
+**Why:** the owner asked for realistic colours. Streams are old (10–13 Gyr), metal-poor populations: light from
+red giants and turnoff stars plus some blue horizontal-branch (BHB) stars, so integrated colour runs from
+B−V ≈ 0.6 (metal-poor globular-cluster streams) to ≈ 0.9 (metal-rich dwarf debris). Today's colour is a
+stylised random blue-to-amber mix because galstreams and the Vasiliev snapshot carry no metallicity. Brightness
+stays density-only (Q3 unchanged); only colour changes.
+
+**Rulings:** (1) per-stream [Fe/H] from a committed curated table: Harris (1996, 2010 edition) [Fe/H] for streams
+whose progenitor globular cluster is known (stream name = cluster: Pal 5, NGC 5466, M68, NGC 3201, M5, M3,
+NGC 1261, NGC 2298, NGC 2808, NGC 288, …), and the S5 survey (Li et al. 2022, ApJ 928, 30; arXiv:2110.06950)
+spectroscopic [Fe/H] for the streams it measured; every other stream uses the table's median. (2) Each particle
+samples a star type — giant, turnoff, BHB — with fractions and per-type B−V that depend on the stream's [Fe/H]
+(metal-poor → more BHB, bluer giants). (3) Sagittarius: strip time maps to a [Fe/H] gradient (bound core
+≈ −0.5 → oldest debris ≈ −1.2; cite the source used) and samples the same population model.
+
+**Files:**
+- Create: `tools/streams/data/streamMetallicity.constants.ts` — rows `{ name, feh, ref }` keyed by the galstreams
+  `Name`; header cites both sources with URLs. **Every value is copied from the fetched primary source**
+  (Harris `mwgc.dat` 2010 edition; the Li+2022 table on arXiv), never from memory; list in the report which
+  source line each value came from.
+- Create: `tools/streams/utils/` — one function per file: the population sampler (`[Fe/H]`, rng → B−V), the
+  Sgr strip-time → [Fe/H] map, and the stream → [Fe/H] lookup (table or median). The population model's anchors
+  (fractions and B−V per type at [Fe/H] −2.2 and −0.5, linear between) go in `streamsBuild.constants.ts` with
+  a one-line source (an old-population isochrone, e.g. MIST 12 Gyr); comments say it is a two-anchor
+  approximation.
+- Modify: `trackParticles.ts`, `sagittariusParticles.ts` (colourT now encodes B−V linearly over a fixed range,
+  named constants), the meta rows (`feh: number | null` — measured values only, null for median-defaulted;
+  `fehRef: string | null`), the runtime meta type + parser.
+- Modify: `streams.wesl` — colour from B−V. **Reuse the star layer's existing B−V/Teff → RGB function** if a
+  shared one exists (stream stars then match catalogue stars on screen); else a fixed ramp of real star
+  colours. The caption tint (`streamTintRgb` or as landed) uses the same mapping in TS, kept pinned to the
+  shader by the existing text-equality test (update it).
+- Modify: the detail card — a "Metallicity" row `[Fe/H] −2.2 (Harris 2010)` when `feh` is measured, absent
+  otherwise (never display a defaulted value).
+- Modify: `tools/streams/README.md`, `ATTRIBUTIONS.md` (Harris catalogue, S5), `docs/DATA.md` if it lists the
+  stream inputs; rebuild with `npm run build-stellar-streams` (byte-identical on a second run). No bin version
+  bump: nothing has shipped (the bin has never been synced to R2).
+- Test: the sampler (metal-poor stream has a higher BHB share and lower mean B−V than a metal-rich one; same
+  seed → same output), the lookup (table hit vs median), the Sgr map (monotone, endpoints), the card row
+  present/absent.
+
+- [ ] No Layer contract change. Brightness untouched.
+- [ ] Commit (code; the rebuilt data is gitignored).
+
+Task 13 re-runs (perf, eye check) after Task 17.
 
 ---
 
