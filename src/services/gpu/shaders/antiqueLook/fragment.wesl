@@ -685,7 +685,8 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
       if ((u.flags >> RELIEF_PRINT_SHIFT) == PRINT_EARTH) {
         bodyInk = max(bodyInk, earthRelief(reliefTex, px, relief, u.unit, luma(src), around));
       } else {
-        bodyInk = max(bodyInk, groundRelief(reliefTex, linear, px, relief, u.unit, luma(src), quarterTex, WASH_LAYER));
+        bodyInk = max(bodyInk, groundRelief(reliefTex, linear, px, relief, u.unit, u.hatchAngle,
+          luma(src), quarterTex, WASH_LAYER));
       }
     }
     bodyInk *= body;

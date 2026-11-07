@@ -1,11 +1,11 @@
 // antiqueLook/relief.wesl — the ground's relief for the plate's shadow hachures, per
-// pixel of the engraved body's depth: rg the strokes' screen direction (the fall line, or
-// the light's), b a noise pinned to the ground (the plate convolves it along that line,
-// `engraving.wesl` `fallLines`), a the stroke: > 0 a hachure's weight (per `slopeInk`,
-// the slope or the shade's share), -1..0 a flat's stipple weight, RELIEF_HALO paper behind
-// a nearer profile, 0 off the ground (the empty texture reads the same). The normal is the
-// depth's, vertically exaggerated, lit by the real Sun on the ground and from orbit by the
-// plate light: the Sun's azimuth at a raking elevation, as Hevelius lit his Moon.
+// pixel of the engraved body's depth: rg the screen fall line, b a noise pinned to the
+// ground (the plate convolves it along that line, `engraving.wesl` `fallLines`), a the
+// stroke: > 0 a hachure's weight (per `slopeInk`, the slope or the shade's share), -1..0
+// a flat's stipple weight, RELIEF_HALO paper behind a nearer profile, 0 off the ground
+// (the empty texture reads the same). The normal is the depth's, vertically exaggerated,
+// lit by the real Sun on the ground and from orbit by the plate light: the Sun's azimuth
+// at a raking elevation, as Hevelius lit his Moon.
 //
 // | 0 invVp: NDC → eye-relative body-fixed m | 64 vp | 128 eyeFromAnchor, m; 140 orbit |
 // | 144 anchorCells (i32); 156 exaggeration | 160 sun; 172 radPerPx | 176 eyeRelBody; 188 unit |
@@ -68,8 +68,10 @@ const WIDE_MAX_PX: i32 = 48;
 // A contour body's b: its radius over this period, whose fraction `isoLines` cuts at
 // power-of-two steps (2048 m down to 8 m), so a whole period wraps onto every step.
 const HEIGHT_PHASE_M: f32 = 2048.0;
-// Slope share over which a `slopeInk` body's strokes turn from the light to the fall line.
-const LIGHT_SLOPE: vec2<f32> = vec2<f32>(0.5, 0.9);
+// A body its plain render inks (`slopeInk`) trusts its depth for form only past this slope
+// share and below orbit, where the mesh is km facets; elsewhere its ground is a flat,
+// hatched along the plate's light angle (owner ruling: the light sets the direction).
+const TRUSTED_SLOPE: f32 = 0.6;
 
 fn depthAt(ip: vec2<i32>) -> f32 {
   let size = vec2<i32>(textureDimensions(depthTex));
@@ -175,7 +177,8 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let near = clamp(log(30.0 * max(-dot(p, up), 1e-3) / t) / log(30.0), 0.0, 1.0);
   let fade = 0.45 + 0.55 * near;
   let cellStencils = cellPx / f32(wide);
-  let landform = slope > STROKE_SLOPE && cellStencils < FACET_STENCILS.y;
+  let trusted = r.slopeInk < 0.5 || (slope > TRUSTED_SLOPE && r.orbit < 0.5);
+  let landform = slope > STROKE_SLOPE && cellStencils < FACET_STENCILS.y && trusted;
   let stroke = select(0.0, mix(0.6 * tone, slope, r.slopeInk) * fade
     * (1.0 - smoothstep(FACET_STENCILS.x, FACET_STENCILS.y, cellStencils)), landform);
 
@@ -198,16 +201,6 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   var fall = vec2<f32>(0.0);
   if (length(downhill) > 1e-5) {
     fall = screenDir(p, normalize(downhill) * (0.01 * t));
-  }
-  // A body its plain render inks (`slopeInk`) strokes along the light where its depth
-  // can't be trusted for form: from orbit (km mesh facets) and on gentle ground; only a
-  // steep landform up close keeps its fall line (owner ruling: the light sets direction).
-  let alongLight = r.slopeInk * max(r.orbit, 1.0 - smoothstep(LIGHT_SLOPE.x, LIGHT_SLOPE.y, slope));
-  if (alongLight > 0.0) {
-    var lit = screenDir(p, l * (0.01 * t));
-    lit = select(lit, -lit, dot(lit, fall) < 0.0);
-    let mixed = mix(fall, lit, alongLight);
-    fall = mixed / max(length(mixed), 1e-6);
   }
 
   // Two lattice octaves round NOISE_UNITS of screen, blended at constant contrast.
