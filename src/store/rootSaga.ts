@@ -19,6 +19,7 @@ import { watchSelectionRowsSaga } from '../state/selectionRows/watchSelectionRow
 import { watchSelectionWakeSaga } from '../state/selection/watchSelectionWakeSaga';
 import { watchSelectionRevealSaga } from '../state/selection/watchSelectionRevealSaga';
 import { watchRequestFocusSaga } from '../state/selection/watchRequestFocusSaga';
+import { watchRequestViewSaga } from '../state/selection/watchRequestViewSaga';
 import { watchRequestSelectSaga } from '../state/selection/watchRequestSelectSaga';
 import { watchFocusTweenSaga } from '../state/selection/watchFocusTweenSaga';
 import { watchOrientationChangeSaga } from '../state/camera/watchOrientationChangeSaga';
@@ -45,6 +46,7 @@ export function* mainSaga() {
     watchSelectionWakeSaga(),
     watchSelectionRevealSaga(),
     watchRequestFocusSaga(),
+    watchRequestViewSaga(),
     watchRequestSelectSaga(),
     watchFocusTweenSaga(),
     watchOrientationChangeSaga(),
