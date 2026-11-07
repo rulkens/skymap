@@ -151,7 +151,7 @@ imports the encoder (the satellites precedent). A version or magic mismatch reje
 **`stellar_streams_meta.json`** — `writeMetaSidecar` shape, array position = stream index:
 
 ```ts
-type StellarStreamMetaEntry = {
+type StellarStreamMeta = { // the runtime type, `catalog/@types/StellarStreamMeta.d.ts`; the build returns it too (one type, no tools mirror)
   id: string; // slug, e.g. 'gd-1', 'sagittarius'; the URL id
   names: string[];
   description: string;
