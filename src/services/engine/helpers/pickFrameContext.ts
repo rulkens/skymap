@@ -42,12 +42,10 @@ export function pickFrameContext(state: EngineState, canvas: HTMLCanvasElement):
   if (!snapshot.isReady) return null;
   // The drawn frame's focus, not a fresh one: a pick must exclude exactly what
   // that frame dimmed, and producing a new value would tick the focus fade.
-  snapshot.focus = state.subsystems.structureFocus.lastFocusUniforms();
-  snapshot.focusBlend = snapshot.focus.blend;
-  snapshot.focusPickId = encodeSelectionPick(
-    state.selectionKindRows,
-    state.subsystems.structureFocus.lastFocusRef(),
-  );
+  const focus = state.subsystems.structureFocus.lastFocus();
+  snapshot.focus = focus.uniforms;
+  snapshot.focusBlend = focus.blend;
+  snapshot.focusPickId = encodeSelectionPick(state.selectionKindRows, focus.ref);
   return deriveView(
     snapshot,
     cam,

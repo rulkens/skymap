@@ -1,18 +1,19 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createStructureFocusSubsystem } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
-import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
+import {
+  createStructureFocusSubsystem,
+  ZERO_FOCUS,
+} from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
+import type { FocusSubject } from '../../../../src/@types/engine/subsystems/FocusSubject';
+import type { FocusSphere } from '../../../../src/@types/rendering/FocusSphere';
 
-function makeCluster(overrides: Record<string, unknown> = {}): StructureInfo {
+function makeCluster(id = 'virgo', sphere: Partial<FocusSphere> = {}): FocusSubject {
   return {
-    id: 'virgo',
-    name: 'Virgo Cluster',
-    category: 'galaxy-cluster',
-    worldPos: [10, 0, 0],
-    physicalRadiusMpc: 2,
-    featured: true,
-    ...overrides,
-  } as unknown as StructureInfo;
+    ref: { type: 'structure', id },
+    sphere: { center: [10, 0, 0], apparentRadiusMpc: 2, physicalRadiusMpc: 2, ...sphere },
+  };
 }
+
+const STREAM: FocusSubject = { ref: { type: 'stellarStream', slug: 'cetus-palca' }, sphere: null };
 
 // Factory helper — passes a no-op wake function for tests that don't inspect it.
 function makeStructureFocus(initialNowMs = 0) {
@@ -20,69 +21,77 @@ function makeStructureFocus(initialNowMs = 0) {
 }
 
 describe('structureFocusSubsystem', () => {
-  it('update with a cluster structure fades blend 0→1 with correct center/radii', () => {
+  it('a subject with a sphere fades sphere and blend 0→1 together, with its centre/radii', () => {
     const sub = makeStructureFocus(0);
-    sub.update(makeCluster({ worldPos: [3, 4, 5], physicalRadiusMpc: 7 }), 0);
-    const mid = sub.produceFocusUniforms(200);
+    sub.update(makeCluster('virgo', { center: [3, 4, 5], apparentRadiusMpc: 5 }), 0);
+    const mid = sub.produceFocus(200);
     expect(mid.blend).toBeGreaterThan(0);
     expect(mid.blend).toBeLessThan(1);
-    const settled = sub.produceFocusUniforms(500);
+    expect(mid.uniforms.blend).toBe(mid.blend);
+    const settled = sub.produceFocus(500);
     expect(settled.blend).toBe(1);
-    expect(settled.center).toEqual([3, 4, 5]);
-    // No apparent extent → apparent falls back to physical; both radii equal.
-    expect(settled.apparentRadiusMpc).toBe(7);
-    expect(settled.physicalRadiusMpc).toBe(7);
+    expect(settled.uniforms).toEqual({
+      center: [3, 4, 5],
+      apparentRadiusMpc: 5,
+      physicalRadiusMpc: 2,
+      blend: 1,
+    });
+    expect(settled.ref).toEqual({ type: 'structure', id: 'virgo' });
   });
 
-  it('lastFocusUniforms returns the produced value without advancing the fade', () => {
+  it('a subject with no sphere ramps the blend and names its ref, the sphere staying at rest', () => {
     const sub = makeStructureFocus(0);
-    expect(sub.lastFocusUniforms().blend).toBe(0);
+    sub.update(STREAM, 0);
+    const settled = sub.produceFocus(500);
+    expect(settled.blend).toBe(1);
+    expect(settled.ref).toEqual(STREAM.ref);
+    expect(settled.uniforms).toBe(ZERO_FOCUS);
+  });
+
+  it('lastFocus returns the produced value without advancing the fade', () => {
+    const sub = makeStructureFocus(0);
+    expect(sub.lastFocus().blend).toBe(0);
     sub.update(makeCluster(), 0);
-    const mid = sub.produceFocusUniforms(200);
-    expect(sub.lastFocusUniforms()).toBe(mid);
+    const mid = sub.produceFocus(200);
+    expect(sub.lastFocus()).toBe(mid);
   });
 
-  it('emits apparent (fade outer edge) and physical (core) radii independently', () => {
-    const sub = makeStructureFocus(0);
-    sub.update(makeCluster({ physicalRadiusMpc: 2, apparentRadiusMpc: 5 }), 0);
-    const settled = sub.produceFocusUniforms(500);
-    expect(settled.apparentRadiusMpc).toBe(5);
-    expect(settled.physicalRadiusMpc).toBe(2);
-  });
-
-  it('update(null) after a cluster fades blend 1→0 (and stays settling under per-frame calls)', () => {
+  it('update(null) fades blend 1→0 keeping the ref latched, without restarting per frame', () => {
     const sub = makeStructureFocus(0);
     sub.update(makeCluster(), 0);
-    sub.produceFocusUniforms(500); // settle at 1
+    sub.produceFocus(500); // settle at 1
     sub.update(null, 500);
-    const mid = sub.produceFocusUniforms(600);
+    const mid = sub.produceFocus(600);
     expect(mid.blend).toBeGreaterThan(0);
     expect(mid.blend).toBeLessThan(1);
+    expect(mid.ref).toEqual({ type: 'structure', id: 'virgo' });
     // Next frame: selection still null. Must NOT restart the fade-out clock.
     sub.update(null, 600);
-    expect(sub.produceFocusUniforms(900).blend).toBe(0);
+    const settled = sub.produceFocus(900);
+    expect(settled.blend).toBe(0);
+    expect(settled.ref).toBeNull();
   });
 
-  it('update with the same structure id is idempotent across frames (no re-fade restart)', () => {
+  it('the same ref re-observed each frame does not restart the ramp, even as a fresh object', () => {
     const sub = makeStructureFocus(0);
-    const structure = makeCluster();
-    sub.update(structure, 0);
-    sub.produceFocusUniforms(100); // mid fade-in
-    // Same selection re-observed each frame must not reset the ramp.
-    sub.update(structure, 100);
-    sub.update(structure, 200);
-    expect(sub.produceFocusUniforms(500).blend).toBe(1);
+    sub.update(makeCluster(), 0);
+    sub.produceFocus(100); // mid fade-in
+    sub.update(makeCluster(), 100);
+    sub.update(makeCluster(), 200);
+    expect(sub.produceFocus(500).blend).toBe(1);
   });
 
-  it('replacing the focused structure does not pass through blend 0', () => {
+  it('replacing the subject does not pass through blend 0, and a stream drops the sphere', () => {
     const sub = makeStructureFocus(0);
-    sub.update(makeCluster({ id: 'virgo', worldPos: [10, 0, 0] }), 0);
-    sub.produceFocusUniforms(500); // settle at 1
-    sub.update(makeCluster({ id: 'coma', worldPos: [-10, 0, 0] }), 600);
-    expect(sub.produceFocusUniforms(601).blend).toBeCloseTo(1, 5);
-    const settled = sub.produceFocusUniforms(1000);
-    expect(settled.center).toEqual([-10, 0, 0]);
-    expect(settled.blend).toBe(1);
+    sub.update(makeCluster('virgo'), 0);
+    sub.produceFocus(500); // settle at 1
+    sub.update(makeCluster('coma', { center: [-10, 0, 0] }), 600);
+    expect(sub.produceFocus(601).blend).toBeCloseTo(1, 5);
+    expect(sub.produceFocus(1000).uniforms.center).toEqual([-10, 0, 0]);
+    sub.update(STREAM, 1000);
+    const stream = sub.produceFocus(1001);
+    expect(stream.blend).toBeCloseTo(1, 5);
+    expect(stream.uniforms.blend).toBe(0);
   });
 
   it('isAwake is true mid-fade and false at rest', () => {
@@ -90,32 +99,18 @@ describe('structureFocusSubsystem', () => {
     expect(sub.isAwake(0)).toBe(false);
     sub.update(makeCluster(), 0);
     expect(sub.isAwake(200)).toBe(true);
-    sub.produceFocusUniforms(500);
+    sub.produceFocus(500);
     expect(sub.isAwake(500)).toBe(false);
   });
 
-  it('update wakes the scheduler on focus transition', () => {
+  it('update wakes the scheduler on each transition, never on steady frames', () => {
     const requestRender = vi.fn();
     const sub = createStructureFocusSubsystem({ requestRender }, 0);
-    const rec = makeCluster();
-    // Fade-in toward a new id: one wake.
-    sub.update(rec, 0);
+    sub.update(makeCluster(), 0);
+    sub.update(makeCluster(), 16);
+    sub.update(makeCluster(), 32);
     expect(requestRender).toHaveBeenCalledTimes(1);
-    // Fade-out toward null: a second wake.
     sub.update(null, 100);
     expect(requestRender).toHaveBeenCalledTimes(2);
-  });
-
-  it('steady focused frames do not re-wake', () => {
-    const requestRender = vi.fn();
-    const sub = createStructureFocusSubsystem({ requestRender }, 0);
-    const rec = makeCluster();
-    sub.update(rec, 0); // transition — one wake
-    requestRender.mockClear();
-    // Same id re-observed each frame must hit the early-return, not wake.
-    sub.update(rec, 16);
-    sub.update(rec, 32);
-    sub.update(rec, 48);
-    expect(requestRender).toHaveBeenCalledTimes(0);
   });
 });

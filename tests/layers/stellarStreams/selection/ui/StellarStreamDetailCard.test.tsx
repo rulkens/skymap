@@ -15,6 +15,7 @@ function rowOf({ anchorMpc, ...rest }: StellarStreamMeta): StellarStreamSelectio
     type: 'stellarStream',
     positionMpc: [anchorMpc[0], anchorMpc[1], anchorMpc[2]],
     radiusMpc: 0.137,
+    focusSphere: null,
   };
 }
 const renderCard = (meta: StellarStreamMeta) =>

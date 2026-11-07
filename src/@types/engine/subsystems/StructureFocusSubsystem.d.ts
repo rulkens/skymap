@@ -1,20 +1,19 @@
-import type { StructureInfo } from '../../data/structure/StructureInfo';
-import type { FocusUniformsValue } from '../../rendering/FocusUniformsValue';
 import type { Destroyable } from '../../rendering/Destroyable';
-import type { SelectionRefBase } from '../selection/SelectionRefBase';
+import type { FocusSubject } from './FocusSubject';
+import type { FocusFrame } from './FocusFrame';
 
 /**
- * StructureFocusSubsystem — owns structure "focus mode": when any structure is
- * focused, everything outside its sphere fades to ~8% alpha over ~400 ms so the
- * structure pops out. Every category behaves identically.
+ * StructureFocusSubsystem — owns focus mode: when a receding row (`RecedingFocusRow`) is focused,
+ * entries with `recession` dim over ~400 ms, and a structure's sphere also dims everything
+ * outside it. Every receding kind behaves identically.
  *
  * ### Focus-driven, not imperative
  *
  * The selection subsystem's `focused()` slot is the single source of
- * truth ("a structure is focused" *is* "focus active"). So instead of
+ * truth ("a receding row is focused" *is* "focus active"). So instead of
  * scattering focusOn / clearFocus calls across every focus-mutating
- * site, this subsystem exposes one per-frame `update(focusedStructure, now)`
- * that diffs the focused structure's id against the currently-active id and
+ * site, this subsystem exposes one per-frame `update(subject, now)`
+ * that diffs the subject's ref against the currently-active one and
  * drives the fade. No call sites to keep in sync.
  *
  * ### GPU re-derives membership
@@ -28,37 +27,25 @@ export type StructureFocusSubsystem = {
   readonly id: 'structureFocus';
 
   /**
-   * Per-frame state sync. Diffs `focusedStructure?.id` against the currently
-   * active id:
-   *   - changed to a focus-eligible structure (cluster | supercluster | void):
-   *     latch center/radius, fade toward 1 over 400 ms.
-   *   - changed to null OR a non-eligible structure (famousGalaxy): fade toward
-   *     0, keeping the last center/radius until blend settles at 0.
-   *   - unchanged id: no-op (no re-fade).
+   * Per-frame state sync. Diffs the subject's ref against the currently active one:
+   *   - changed to a subject: latch it, fade toward 1 over 400 ms.
+   *   - changed to null: fade toward 0, keeping the last subject until blend settles at 0.
+   *   - unchanged ref: no-op (no re-fade).
    *
    * Also wakes the render scheduler on any transition — callers never follow
    * up with `requestRender`.
    */
-  update(focusedStructure: StructureInfo | null, nowMs: number): void;
+  update(subject: FocusSubject | null, nowMs: number): void;
+
+  /** Ticks the fade and returns this frame's focus. At rest: zero sphere, blend 0, no ref. */
+  produceFocus(nowMs: number): FocusFrame;
 
   /**
-   * Pure read: ticks the fade and returns the live uniform value. At
-   * rest (no structure focused) returns an all-zero value (blend=0).
+   * The value the last `produceFocus` returned, without ticking the fade: what a pick between
+   * frames must test against, since it hit-tests the frame that was drawn. Its `ref` is not
+   * `selection.focus`, which clears at the start of the fade-out.
    */
-  produceFocusUniforms(nowMs: number): FocusUniformsValue;
-
-  /**
-   * The value the last `produceFocusUniforms` returned, without ticking the
-   * fade: what a pick between frames must test against, since it hit-tests the
-   * frame that was drawn.
-   */
-  lastFocusUniforms(): FocusUniformsValue;
-
-  /**
-   * The structure that value is about: latched through the fade-out, null once the
-   * blend settles at 0. Not `selection.focus`, which clears at the start of the fade-out.
-   */
-  lastFocusRef(): SelectionRefBase | null;
+  lastFocus(): FocusFrame;
 
   /** True only while the fade is animating (drives render-on-demand). */
   isAwake(nowMs: number): boolean;

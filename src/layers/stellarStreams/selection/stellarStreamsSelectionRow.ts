@@ -37,6 +37,7 @@ export function stellarStreamsSelectionRow(
         type: 'stellarStream',
         positionMpc: [anchorMpc[0], anchorMpc[1], anchorMpc[2]],
         radiusMpc: entry.frameRadiusKpc * SCALE_UNITS.KPC_TO_MPC,
+        focusSphere: null,
       };
     },
     focusId: {

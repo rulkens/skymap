@@ -200,6 +200,7 @@ function makeState(): EngineState {
     // Read unconditionally by `runFrame`'s NEAR0 altitude line, before the
     // ready gate.
     selectionRows: { focus: null },
+    selection: { hover: null, select: null, focus: null },
   } as unknown as EngineState;
 }
 
@@ -898,8 +899,14 @@ describe('runFrame — the label-director wake fold', () => {
     } as unknown as EngineState;
     // Virgo was focused and settled; the focus is already cleared (the fixture's
     // focus row is null), so the frames below tick its fade-out.
-    structureFocus.update({ id: 'virgo', worldPos: [1, 0, 0], physicalRadiusMpc: 2 } as never, 0);
-    structureFocus.produceFocusUniforms(500);
+    structureFocus.update(
+      {
+        ref: { type: 'structure', id: 'virgo' },
+        sphere: { center: [1, 0, 0], apparentRadiusMpc: 2, physicalRadiusMpc: 2 },
+      },
+      0,
+    );
+    structureFocus.produceFocus(500);
     const deps = makeCamDeps(state);
     const snapshotAt = (nowMs: number) => {
       runFrame(state, deps, nowMs);
@@ -913,6 +920,35 @@ describe('runFrame — the label-director wake fold', () => {
     const settled = snapshotAt(1100);
     expect(settled.focusBlend).toBe(0);
     expect(settled.focusPickId).toBeNull();
+  });
+
+  it('a focused stream ramps the blend under its own pick word, the sphere staying at rest', () => {
+    const STREAM_WORD = 7;
+    const base = makeReadyState(
+      () => false,
+      () => false,
+    );
+    const stream = { type: 'stellarStream', slug: 'cetus-palca' };
+    const state = {
+      ...base,
+      selection: { hover: null, select: null, focus: stream },
+      selectionRows: { focus: { type: 'stellarStream', focusSphere: null } },
+      selectionKindRows: [{ type: 'stellarStream', encodePick: () => STREAM_WORD }],
+      subsystems: {
+        ...base.subsystems,
+        scheduler: { requestRender: vi.fn(), requestIdleFrame: vi.fn() },
+        structureFocus: createStructureFocusSubsystem({ requestRender: vi.fn() }, 0),
+      },
+    } as unknown as EngineState;
+    const deps = makeCamDeps(state);
+    runFrame(state, deps, 0);
+    runFrame(state, deps, 500);
+
+    const snapshot = vi.mocked(state.subsystems.cosmoLabelDirector.runFrame).mock.lastCall![1]
+      .snapshot;
+    expect(snapshot.focusBlend).toBe(1);
+    expect(snapshot.focusPickId).toBe(STREAM_WORD);
+    expect(snapshot.focus.blend).toBe(0);
   });
 });
 
@@ -954,13 +990,11 @@ describe('runFrame — the planner keep-ticking fold', () => {
         hiResFamous: null,
         structureFocus: {
           update: vi.fn(),
-          produceFocusUniforms: vi.fn(() => ({
-            center: [1, 2, 3],
-            apparentRadiusMpc: 1,
-            physicalRadiusMpc: 1,
+          produceFocus: vi.fn(() => ({
+            uniforms: { center: [1, 2, 3], apparentRadiusMpc: 1, physicalRadiusMpc: 1, blend: 0.5 },
             blend: 0.5,
+            ref: null,
           })),
-          lastFocusRef: () => null,
           isAwake: () => false,
         },
         fades: { tick: vi.fn(), opacityOf: () => 0, isAnyAnimating: () => false },
