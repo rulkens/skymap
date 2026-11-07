@@ -286,6 +286,11 @@
   --exhibit-ramp-rule: 0 0 0 0.8px var(--antique-ink);
   --exhibit-ramp-blend: multiply;
   --exhibit-ramp-opacity: 0.8;
+  /* The search bar's key chip: a keycap printed as a small ruled box, like the exhibit's Esc. */
+  --key-chip-ground: var(--antique-slip);
+  --key-chip-border: 1px solid var(--antique-ink);
+  --key-chip-color: var(--antique-ink);
+  --key-chip-font: var(--font-family-mono);
   /* The Voyager timeline: ink for the marks, rubric for the play button, thumb and chosen tab. */
   --timeline-mark: var(--antique-ink);
   --timeline-select: var(--antique-rubric);

@@ -68,8 +68,10 @@
   flex-shrink: 0;
   padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-sm);
-  background: var(--surface-badge);
-  color: var(--color-fg-dim);
+  background: var(--key-chip-ground, var(--surface-badge));
+  border: var(--key-chip-border, 0);
+  color: var(--key-chip-color, var(--color-fg-dim));
+  font-family: var(--key-chip-font, inherit);
   font-size: var(--font-size-xs);
   letter-spacing: var(--letter-spacing-wide);
 }
