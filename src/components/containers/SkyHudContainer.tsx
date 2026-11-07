@@ -20,11 +20,17 @@ import { julianDaysToUnixMs } from '../../utils/time/julianDaysToUnixMs';
 import { unixMsToJulianDays } from '../../utils/time/unixMsToJulianDays';
 import { placeLabel } from '../../utils/places/placeLabel';
 import { headingLabel } from '../../utils/sky/headingLabel';
-import { sunAltitudeAt } from '../../utils/sky/sunAltitudeAt';
+import { altAzFromSpot } from '../../utils/sky/altAzFromSpot';
+import { declinationAt } from '../../utils/sky/declinationAt';
+import { neverRises } from '../../utils/sky/neverRises';
 import { tonightAt } from '../../utils/sky/tonightAt';
 import { radToDeg } from '../../utils/math/radToDeg';
+import { deriveBodyStates } from '../../services/engine/frame/deriveBodyStates';
+import type { Vec3 } from '../../@types/math/Vec3';
 
 const MS_PER_MINUTE = 60_000;
+/** The Sun is the heliocentric origin. */
+const SUN_MPC: Vec3 = [0, 0, 0];
 
 export type SkyHudContainerProps = {
   readonly phone: boolean;
@@ -39,10 +45,13 @@ function SkyHudContainer({ phone }: SkyHudContainerProps): ReactNode {
   const instant = useSimInstant(time);
   const spot = view?.spot ?? null;
 
-  const sunUp = useMemo(
-    () => spot !== null && sunAltitudeAt(spot, unixMsToJulianDays(instant.getTime())) > 0,
-    [spot, instant],
-  );
+  // Up, and setting today: under the midnight sun there is no tonight to skip to.
+  const sunSets = useMemo(() => {
+    if (spot === null) return false;
+    const bodies = deriveBodyStates(unixMsToJulianDays(instant.getTime()));
+    const sunAlt = altAzFromSpot(spot, SUN_MPC, bodies).altitudeRad;
+    return sunAlt > 0 && !neverRises(-declinationAt(spot.body, SUN_MPC, bodies), spot.latRad);
+  }, [spot, instant]);
 
   const jumpTo = useCallback(
     (simDays: number) => {
@@ -78,7 +87,7 @@ function SkyHudContainer({ phone }: SkyHudContainerProps): ReactNode {
       azimuthDeg={radToDeg(view.azimuthRad)}
       heading={headingLabel(view.azimuthRad, view.altitudeRad)}
       onLeave={onLeave}
-      onSkipToTonight={sunUp ? onSkipToTonight : null}
+      onSkipToTonight={sunSets ? onSkipToTonight : null}
       onSkipToRise={risesLater ? onSkipToRise : null}
       riseNote={riseNote}
     />

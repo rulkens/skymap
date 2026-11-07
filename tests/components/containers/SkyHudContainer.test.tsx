@@ -23,11 +23,11 @@ import type { SkySpot } from '../../../src/@types/camera/pose/SkySpot';
 const SPOT: SkySpot = { body: asSceneBodyId('earth'), lonRad: 0.2186, latRad: 0.9716 };
 const NOON = unixMsToJulianDays(Date.UTC(2026, 10, 7, 12));
 
-function mount() {
+function mount(spot = SPOT, simDays = NOON) {
   const store = configureStore({ reducer: rootReducer });
-  store.dispatch(goLive({ simDays: NOON, nowMs: performance.now() }));
+  store.dispatch(goLive({ simDays, nowMs: performance.now() }));
   store.dispatch(
-    engineSkyViewReported({ spot: SPOT, azimuthRad: Math.PI, altitudeRad: 0.6, fovYRad: 1 }),
+    engineSkyViewReported({ spot, azimuthRad: Math.PI, altitudeRad: 0.6, fovYRad: 1 }),
   );
   const dispatch = vi.spyOn(store, 'dispatch');
   render(
@@ -68,6 +68,13 @@ describe('SkyHudContainer', () => {
     expect(time.anchor.simDays).toBeGreaterThan(NOON);
     expect(time.anchor.simDays).toBeLessThan(NOON + 1);
     expect(radToDeg(sunAltitudeAt(SPOT, time.anchor.simDays))).toBeCloseTo(-18, 1);
+    expect(screen.queryByRole('button', { name: 'Skip to tonight' })).toBeNull();
+  });
+
+  it('under the midnight sun there is no tonight to skip to', () => {
+    const tromso: SkySpot = { body: asSceneBodyId('earth'), lonRad: 0.3295, latRad: 1.2147 };
+    mount(tromso, unixMsToJulianDays(Date.UTC(2026, 5, 21, 12)));
+    expect(hud()).not.toBeNull();
     expect(screen.queryByRole('button', { name: 'Skip to tonight' })).toBeNull();
   });
 

@@ -14,6 +14,7 @@ import type { PositionedId } from '../../@types/scene/PositionedId';
 import { deriveBodyStates } from '../../services/engine/frame/deriveBodyStates';
 import { altAzFromSpot } from '../../utils/sky/altAzFromSpot';
 import { framedLensRad } from '../../utils/sky/framedLensRad';
+import { declinationAt } from '../../utils/sky/declinationAt';
 import { neverRises } from '../../utils/sky/neverRises';
 import { nextRiseAt } from '../../utils/sky/nextRiseAt';
 import { spotWorldMpc } from '../../utils/sky/spotWorldMpc';
@@ -42,10 +43,7 @@ export function skyLookFor(
   }
   const fixed = distanceMpc > SKY_FIXED_BEYOND_MPC;
   if (fixed) {
-    // Seen from the host's north pole, a target's altitude is its declination.
-    const pole: SkySpot = { body: spot.body, lonRad: 0, latRad: Math.PI / 2 };
-    const declinationRad = altAzFromSpot(pole, row.positionMpc, bodies).altitudeRad;
-    if (neverRises(declinationRad, spot.latRad)) {
+    if (neverRises(declinationAt(spot.body, row.positionMpc, bodies), spot.latRad)) {
       return { kind: 'belowHorizon', azimuthRad: now.azimuthRad, riseAt: null, neverRises: true };
     }
   }
