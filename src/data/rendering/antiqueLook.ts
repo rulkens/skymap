@@ -36,12 +36,14 @@ export const ANTIQUE_RULING_STEPS_DEG = [1, 2, 5, 10, 15, 20, 30, 45, 90] as con
 export const ANTIQUE_RULING_GAP_UNITS = 120;
 
 /** Passes no period plate shows: cloud shells (no 1600s globe drew weather), leader
- * stems (an engraved name sits beside its glyph), selection rings. */
+ * stems (an engraved name sits beside its glyph), selection rings, and the density's
+ * upsample: the plate reads that row itself as isobaths, never as print to engrave. */
 export const ANTIQUE_HIDDEN_PASSES: readonly string[] = [
   'cloud-shell',
   'marker-lines',
   'selection-ring',
   'near0-selection-ring',
+  'cosmic-web-density-upsample',
 ];
 
 /** Passes that exist only for the look: they draw nothing with it off. */

@@ -16,6 +16,7 @@ import glyphsCode from '../../shaders/antiqueLook/glyphs.wesl?static';
 import decorCode from '../../shaders/antiqueLook/decor.wesl?static';
 import plateCode from '../../shaders/antiqueLook/fragment.wesl?static';
 import landBlurCode from '../../shaders/antiqueLook/landBlur.wesl?static';
+import webCode from '../../shaders/antiqueLook/web.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import {
   ANTIQUE_GLYPH_BYTES,
@@ -50,6 +51,7 @@ export function createAntiqueLookGpu(
     bindings: readonly Omit<GPUBindGroupLayoutEntry, 'binding' | 'visibility'>[],
     formats: readonly GPUTextureFormat[],
     entryPoint = 'fs',
+    targets: GPUColorTargetState[] = formats.map((format) => ({ format })),
   ): { pipeline: GPURenderPipeline; layout: GPUBindGroupLayout } => {
     const layout = device.createBindGroupLayout({
       label: `antique-look-${label}-bgl`,
@@ -69,7 +71,7 @@ export function createAntiqueLookGpu(
       fragment: {
         module: createShaderModuleWithDevLog(device, code, `antiqueLook.${label}`),
         entryPoint,
-        targets: formats.map((format) => ({ format })),
+        targets,
       },
       primitive: { topology: 'triangle-list' },
     });
@@ -151,6 +153,10 @@ export function createAntiqueLookGpu(
     },
     primitive: { topology: 'triangle-strip' },
   });
+  // The web chart rides the glyphs' pass and target, max-blended into the b and a they leave 0.
+  const web = stage('web', webCode, [TEXTURE, SAMPLER, UNIFORM], [], 'fs', [
+    { format: 'rgba8unorm', blend: { color: max, alpha: max } },
+  ]);
   const decorModule = createShaderModuleWithDevLog(device, decorCode, 'antiqueLook.decor');
   const both = GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT;
   const decorLayout = device.createBindGroupLayout({
@@ -241,6 +247,7 @@ export function createAntiqueLookGpu(
     uniforms,
     ornaments,
     glyphs: { pipeline: glyphsPipeline, layout: glyphsLayout },
+    web,
     decor: { pipeline: decorPipeline, layout: decorLayout },
     digits,
     plateBodies,

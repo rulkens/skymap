@@ -27,6 +27,7 @@ export function packAntiqueUniforms(
     (input.depthCover ? FLAG_DEPTH_COVER : 0);
   const { tl, tr, bl, br } = input.rays;
   [tl, tr, bl, br].forEach((ray, i) => f32.set(ray, 4 + i * 4));
+  f32[7] = input.web;
   f32[20] = input.seed;
   f32[21] = input.rulings.raDeg;
   f32[22] = input.rulings.decDeg;

@@ -7,6 +7,7 @@
 // | 12     | flags   | bit0 bodies · bit1 captions · bit2 paper assets loaded · |
 // |        |         | bit3 `bodies` holds depth (`cover.wesl`)                 |
 // | 16..79 | ray*    | world (equatorial) view-ray at the four corners, xyz     |
+// | 28     | web     | rayTL.w: how far the cosmic web is charted, 0..1         |
 // | 80     | seed    | per-session paper seed                                   |
 // | 84     | raStep  | RA ruling interval, degrees (one for the whole plate)    |
 // | 88     | decStep | Dec ruling interval, degrees                             |

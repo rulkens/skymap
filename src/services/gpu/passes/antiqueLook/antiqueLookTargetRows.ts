@@ -3,7 +3,7 @@
  * held only while it draws (`antiqueLookOn`). `print` and `overlay` take the
  * swap format so every pipeline built for `swap` draws into them unchanged;
  * `print-points` is sized in print units, so it holds the same cells at any
- * DPR; `star-ink` holds two 0..1 channels, so 8 bits each.
+ * DPR; `star-ink` holds 0..1 channels (glyphs, then the web chart), so 8 bits each.
  */
 
 import type { RenderTargetSpec } from '../../../../@types/engine/frame/RenderTargetSpec';

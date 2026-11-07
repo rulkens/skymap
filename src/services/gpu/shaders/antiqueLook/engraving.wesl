@@ -141,6 +141,20 @@ fn stipple(p: vec2<f32>, cell: f32, tone: f32) -> f32 {
   return ink * step(0.02, tone);
 }
 
+// Jittered dots of one radius, each kept with probability `share`: density
+// shows as dot count, thinning to bare paper, where `stipple` swells the dots.
+fn scatter(p: vec2<f32>, cell: f32, share: f32, radius: f32) -> f32 {
+  let c = floor(p / cell - 0.5);
+  var ink = 0.0;
+  for (var k = 0; k < 4; k++) {
+    let kc = c + vec2<f32>(f32(k & 1), f32(k >> 1u));
+    let centre = (kc + 0.2 + 0.6 * vec2<f32>(hash21Hq(kc), hash21Hq(kc + 17.3))) * cell;
+    let kept = step(hash21Hq(kc + 41.7), share);
+    ink = max(ink, kept * (1.0 - smoothstep(radius - 0.45, radius + 0.45, length(p - centre))));
+  }
+  return ink;
+}
+
 // Iso-lines of a scalar field, after Mellan's single swelling line: ISO_K lines
 // per unit of `h`, refined by octaves so they stay ~ISO_SPACING units apart at any
 // gradient. Lines sit at integer multiples, so octave n+1 holds every line of n

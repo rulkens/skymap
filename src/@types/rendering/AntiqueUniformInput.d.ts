@@ -27,4 +27,6 @@ export type AntiqueUniformInput = {
   readonly rulings: AntiqueRulings;
   /** Body hatch direction, screen radians (`terminatorHatchAngle`). */
   readonly hatchAngle: number;
+  /** How far the cosmic web is charted, 0..1: the cosmos regime, and 0 with no density drawn. */
+  readonly web: number;
 };

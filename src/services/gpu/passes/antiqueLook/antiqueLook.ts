@@ -16,6 +16,7 @@ import {
   ANTIQUE_GLYPH_BYTES,
   ANTIQUE_ORNAMENT_BYTES,
   ANTIQUE_REFERENCE_HEIGHT_CSS,
+  ANTIQUE_REGIME_MPC,
   ANTIQUE_TARGETS,
   ANTIQUE_UNIFORM_BYTES,
 } from '../../../../data/rendering/antiqueLook';
@@ -32,6 +33,7 @@ import { placeAntiqueNumerals } from '../../../../utils/gpu/antiqueLook/placeAnt
 import { antiqueGraticuleSteps } from '../../../../utils/gpu/antiqueLook/antiqueGraticuleSteps';
 import { terminatorHatchAngle } from '../../../../utils/gpu/antiqueLook/terminatorHatchAngle';
 import { asSceneBodyId } from '../../../../utils/scene/asSceneBodyId';
+import { smoothstep } from '../../../../utils/math/smoothstep';
 import { bodyRowSlabs } from '../../../engine/frame/bodyRowSlabs';
 import { viewBasis } from '../../../../utils/camera/projection/viewBasis';
 import { viewCornerRays } from '../../../../utils/camera/projection/viewCornerRays';
@@ -45,6 +47,9 @@ import type { Renderer } from '../../../../@types/rendering/Renderer';
 
 /** The terminator is read off the Sun's pose relative to the eye. */
 const SUN = asSceneBodyId('sun');
+
+/** The cosmicWebDensity Layer's raymarch row, which `web.wesl` charts as isobaths. */
+const WEB_DENSITY = 'cosmic-web-density';
 
 /** A fixed seed keeps the sheet identical across reloads: a print does not change. */
 const PAPER_SEED = 17.0;
@@ -113,6 +118,10 @@ export function createAntiqueLook(init: {
     const depthCover = hasBodies && bodyRowSlabs(ctx).insideAtmosphere.length > 0;
     const { paper: paperAssets, ornaments: atlas, glyphs } = assets;
     const rays = viewCornerRays(basis, ctx.frustum, size);
+    const [x, y, z] = ctx.drawCamPos;
+    const cosmos = smoothstep(ANTIQUE_REGIME_MPC[0], ANTIQUE_REGIME_MPC[1], Math.hypot(x, y, z));
+    // The density raymarch, when it drew this frame: charted in the cosmos only (`web.wesl`).
+    const webDensity = ctx.snapshot.renderedTargets.has(WEB_DENSITY) && cosmos > 0;
 
     packAntiqueUniforms(
       {
@@ -126,6 +135,7 @@ export function createAntiqueLook(init: {
         seed: PAPER_SEED,
         rulings,
         hatchAngle: terminatorHatchAngle(ctx.bodyPose(SUN)),
+        web: webDensity ? cosmos : 0,
       },
       uniformBytes,
     );
@@ -263,6 +273,22 @@ export function createAntiqueLook(init: {
       }),
     );
     glyphPass.draw(4, cells.width * cells.height);
+    if (webDensity) {
+      glyphPass.setPipeline(g.web.pipeline);
+      glyphPass.setBindGroup(
+        0,
+        device.createBindGroup({
+          label: 'antique-look-web-bg',
+          layout: g.web.layout,
+          entries: [
+            { binding: 0, resource: targets.viewOf(WEB_DENSITY) },
+            { binding: 1, resource: g.clampSampler },
+            { binding: 2, resource: uniforms },
+          ],
+        }),
+      );
+      glyphPass.draw(3);
+    }
     glyphPass.end();
     const decorPass = encoder.beginRenderPass({
       label: 'antique-look-decor',

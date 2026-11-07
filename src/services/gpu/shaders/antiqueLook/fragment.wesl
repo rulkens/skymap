@@ -447,7 +447,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
 
   // Sky: glyphs for stars, the galaxy engraving, and on wider faint light the
   // boundary line and one inner contour of the low band. Star glyphs were scattered by glyphs.wesl: x ink, y paper knock-out.
-  let star = texel(starInkTex, ip).xy;
+  let star = texel(starInkTex, ip);
   let clear = 1.0 - star.y;
   // A glow's edge is dotted, as Bayer and de Wit drew a nebula's: a solid
   // ragged line here would read as a coast.
@@ -459,7 +459,9 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   if (onEdge > 0.0) {
     contour = onEdge * stipple(p, 2.3, 0.4);
   }
-  let skyInk = max(star.x, max(galaxy.x, contour) * clear) * sky;
+  // The web chart (`web.wesl`): z its ink, w how much of a field galaxy its voids
+  // lift; an engraved (big) galaxy is a subject, never lifted.
+  let skyInk = max(star.x, max(max(galaxy.x * max(1.0 - star.w, big), star.z), contour) * clear) * sky;
   // The rulings were cut by hand too: their ink load wanders along their length.
   let rulings = graticule(viewRay(uv), u.unit, u.raStep, u.decStep) * sky * clear * (0.7 + 0.45 * vnoise(p * 0.045));
   // Constellation figures and orbits as a fine rule, a shade lighter than the
