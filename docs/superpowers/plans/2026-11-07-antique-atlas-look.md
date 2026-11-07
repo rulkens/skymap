@@ -21,11 +21,12 @@ scratchpad, the grades in the PR description.
 **Files:** `src/services/gpu/passes/antiqueLook/{antiqueLook,antiqueLookTargetRows,createAntiqueLookGpu,loadAntiqueSheetAssets}.ts`,
 `src/@types/rendering/{AntiqueLook,AntiqueLookGpu,AntiqueSheetAssets}.d.ts`, `src/services/gpu/renderTargets.ts`,
 `src/services/engine/gpuHandles/gpuHandleRegistry.ts`, `src/@types/engine/handles/EngineGpuHandles.d.ts`
-- [x] Rows `print`, `overlay`, `antique-paper`, `-wash`, `-glow`, `-peaks`, `-stars`, all `allocateWhen: antiqueLookOn`.
+- [x] Rows `print`, `overlay`, `antique-paper`, `-wash`, `-glow`, `-peaks`, `-stars`, `-star-ink`, `-decor`, `-decor-hue`, all `allocateWhen: antiqueLookOn`.
+- [x] Passes paper, reduce, glow, peaks, then the instanced glyphs and decor scatters, then the plate; one `stylize` timing slot across them.
 - [x] Pipelines, buffers and assets built on the look's first frame.
 
 ### Task 3: The plate shaders
-**Files:** `src/services/gpu/shaders/antiqueLook/*.wesl`, `src/@types/rendering/AntiqueUniformInput.d.ts`,
+**Files:** `src/services/gpu/shaders/antiqueLook/*.wesl`, `src/@types/rendering/{AntiqueUniformInput,AntiqueRulings}.d.ts`,
 `src/utils/gpu/antiqueLook/packAntiqueUniforms.ts`, `src/utils/camera/projection/{viewBasis,viewCornerRays,projectDirToPx,rayThroughPx}.ts` · review: yes
 - [x] Paper bake, quarter-res reduce (capped sky light), 1/16 glow, peak suppression (line rejection, DPR-stable reach), plate.
 - [x] Sky inverted: six-class star ladder with knock-out; Dutch outline colour; boundary + one inner contour.
@@ -35,12 +36,13 @@ scratchpad, the grades in the PR description.
 
 ### Task 4: Ornaments and lettering
 **Files:** `src/data/rendering/{antiqueOrnaments,antiqueOrnamentAtlas}.ts`, `src/@types/rendering/AntiqueOrnament*.d.ts`,
-`src/utils/gpu/antiqueLook/{placeAntiqueOrnaments,packAntiqueOrnaments,placeAntiqueNumerals,packAntiqueGlyphs,buildAntiqueGlyphSheet,fetchAntiqueBitmap}.ts`,
+`src/utils/gpu/antiqueLook/{placeAntiqueOrnaments,packAntiqueOrnaments,placeAntiqueNumerals,setAntiqueDigits,packAntiqueGlyphs,buildAntiqueGlyphSheet,fetchAntiqueBitmap}.ts`,
+`src/utils/render/{onScreenShare,offScreen}.ts`, `src/utils/camera/projection/screenNorthAngle.ts`,
 `tools/antique/packOrnaments.ts`, `data/antique/`, `public/antique/` · review: yes
 - [x] Sheet and sky anchors, regime split, mirrored figures, off-plate fade.
 - [x] Test `puts a sky row straight ahead at the canvas centre, upright, at its angular width` (+ north-left turn, east-left, regime, mirror, off-plate, too-small).
 - [x] Border numbered at the ruling crossings in IM Fell.
-- [ ] Re-pack with the c.1690 Dutch cartouche / ship / whale once sourced (round 3).
+- [x] Re-pack with the c.1690 Dutch cartouche / ship / whale once sourced (round 3).
 
 ### Task 5: Paper
 **Files:** `tools/antique/paper/`, `public/antique/{paper,stains}.webp`, `src/services/gpu/shaders/antiqueLook/paperBake.wesl`

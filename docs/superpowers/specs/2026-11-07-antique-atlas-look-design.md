@@ -50,23 +50,27 @@ imprint reads "Amstelodami, ex officina Skymapiana, Anno MDCXC", and there is no
 | 2 | reduce | `antique-wash`, `antique-peaks` rgba16f (MRT) | 1/4 | block mean colour + land share; brightest sky texel |
 | 3 | glow | `antique-glow` rgba16f | 1/16 | the low band past star scale |
 | 4 | peaks | `antique-stars` rgba16f | 1/4 | non-max suppression; contrast over local mean |
-| 5 | plate | swap | full | everything below |
+| 5 | glyphs | `antique-star-ink` rgba8 | full | one instanced quad per quarter-res cell, max-blended: glyph ink r, knock-out g |
+| 6 | decor | `antique-decor`, `antique-decor-hue` rgba8 (MRT) | full | one instanced quad per placed ornament: figure ink, plate ink, clear, wash; and the wash pigment |
+| 7 | plate | swap | full | everything below |
 
 All rows are `allocateWhen: antiqueLookOn` (`antiqueLookTargetRows.ts`), and the pipelines,
 buffers and assets are built on the look's first frame (`createAntiqueLookGpu`,
-`loadAntiqueSheetAssets`), so a session that never opens it allocates nothing. Assets (~4 MB:
-paper tile 2.2 MB, ornament atlas 1.8 MB) are fetched from `public/antique/` then.
+`loadAntiqueSheetAssets`), so a session that never opens it allocates nothing. Assets (~3.4 MB:
+paper tile 2.2 MB, ornament atlas ~1.1 MB) are fetched from `public/antique/` then.
 
 ### The plate: two regimes split by `foreground:0` alpha
 
 - **Sky is inverted** (every period chart): empty space is bare paper; each surviving peak stamps
-  a glyph from the Bayer/Flamsteed ladder (dot → 5 → 6 → 8 → 12 rays → glory) sized by contrast,
+  a glyph from the Bayer/Flamsteed ladder (dots for the faintest two classes, then 6 and 8 rays,
+  12 for the brightest) sized by contrast,
   with a paper knock-out 1.3× its size; the low band becomes a pigment wash with a Dutch
-  outline-colour band and pooled rim, sparse stipple for bright extended light, and isophote
-  contours at doublings (Hevelius' wavy Milky Way edge). Never solid ink from a glow.
+  outline-colour band and pooled rim, sparse stipple for bright extended light, and two
+  contours, the boundary and one inner one (Hevelius' wavy Milky Way edge). Never solid ink from
+  a glow.
 - **Bodies are engraved**: ink ∝ darkness via tone-width hatching parallel to the terminator
   (one direction per frame, across the Sun's on-screen direction — a per-pixel direction cannot
-  keep a hatch's phase), crossed at 45° for lozenges, width from a smoothed tone so lines swell
+  keep a hatch's phase), crossed at about 50° for lozenges, width from a smoothed tone so lines swell
   rather than break; night found by the brightest channel, seas by hue and left pale with the
   hatched coast halo, one firm limb line from the alpha gradient.
 - **Rulings**: RA/Dec graticule per pixel from the four corner rays (`viewCornerRays`; the world
@@ -80,7 +84,7 @@ paper tile 2.2 MB, ornament atlas 1.8 MB) are fetched from `public/antique/` the
 ### What the look hides and renames
 
 - `ANTIQUE_HIDDEN_PASSES` (filtered in `expandFrameOrder`): cloud shells (no period globe drew
-  weather) and caption leader stems.
+  weather), caption leader stems and the selection rings.
 - Labels (`label2DDirector`, rules in `data/labels/antiqueLabelRules.ts`): period names where
   one existed (Nubecula Minor, Saturnus, Nebula in Cingulo Andromedae, Argo Navis…), modern and
   post-1690 names hidden (digits, spacecraft, voids, moons found after 1690, Lacaille's
@@ -91,16 +95,14 @@ paper tile 2.2 MB, ornament atlas 1.8 MB) are fetched from `public/antique/` the
 - Source art: genuine public-domain engravings (Commons PD-Art scans; provenance per sprite),
   packed by a tool into one atlas whose channels are **ink, fill, wash** (greyscale each); the
   hue comes from the instance's pigment, so ornaments stay inside the palette.
-- **Sheet-anchored**: the cartouche (Ortelius strapwork, title engraved in IM Fell by the
-  packer, Latin with period V-for-U).
+- **Sheet-anchored**: the cartouche (Frederik de Wit's, c.1680; title engraved in IM Fell by
+  the packer, Latin with period V-for-U).
 - **Sky-anchored**: inside the Galaxy, constellation figures over their own stars (Hevelius'
   Cetus, a Kircher dragon as Draco, an Aldrovandi serpent as Hydra) — stars print over them
   with their knock-out halos and they take a light wash; out among the galaxies, sea-chart
   fauna and a ship in the Zone of Avoidance, the band behind the galactic plane where the
   catalogs are genuinely empty (the honest *terra incognita*). Projected per frame through the
   view basis; faded out when too large or too small on screen.
-- "HIC SVNT DRACONES" appears at most once and only attributed (Hunt–Lenox globe), never as a
-  generic period label.
 
 ## Ground preparation
 
