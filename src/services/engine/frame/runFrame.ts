@@ -37,6 +37,7 @@ import { encodeSelectionPick } from '../../../utils/selection/encodeSelectionPic
 import { pendingToInputSteps } from '../../../utils/input/pendingToInputSteps';
 import { selectPendingInput } from '../../../state/input/selectors';
 import { selectViewCoverPx } from '../../../state/viewCover/selectors';
+import { selectSkyEntryFacts, selectSkyView } from '../../../state/engine/selectors';
 import { NO_INSETS_PX } from '../../../data/layout/noInsetsPx';
 import { inputConsumed } from '../../../state/input/inputSlice';
 import { isKind } from '../../../utils/selection/isKind';
@@ -163,6 +164,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     altitudeMpc: input.altitudeMpc,
     focusRow: state.selectionRows.focus,
     bodyStates,
+    lastSkyEntry: selectSkyEntryFacts(stored),
+    lastSkyView: selectSkyView(stored),
   };
   for (const row of FRAME_READOUT_ROWS) row.publish(frame, deps.cb.store.dispatch);
   if (!snapshot.isReady) {

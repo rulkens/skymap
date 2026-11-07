@@ -4,7 +4,7 @@ import { isSkyArm } from '../../camera/arms/sky/isSkyArm';
 import { SKY_VIEW_STEP_RAD } from '../../../../data/sky/skyViewStepRad';
 import { roundToMultiple } from '../../../../utils/math/roundToMultiple';
 import { wrapRadPositive } from '../../../../utils/math/wrapRadPositive';
-import { skyViewNewsGate } from './skyViewNewsGate';
+import { skyViewChanged } from '../../../../utils/sky/skyViewChanged';
 
 /** The standing view while the authored frame is `sky` (D9: the frame alone says you stand), else null. */
 export const skyViewReadoutRow: FrameReadoutRow = {
@@ -19,6 +19,6 @@ export const skyViewReadoutRow: FrameReadoutRow = {
           fovYRad: roundToMultiple(frame.fovYRad, SKY_VIEW_STEP_RAD),
         }
       : null;
-    if (skyViewNewsGate(view)) dispatch(engineSkyViewReported(view));
+    if (skyViewChanged(frame.lastSkyView, view)) dispatch(engineSkyViewReported(view));
   },
 };

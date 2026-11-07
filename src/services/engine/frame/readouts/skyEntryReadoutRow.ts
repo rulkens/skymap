@@ -3,7 +3,7 @@ import { engineSkyEntryReported } from '../../../../state/engine/engineSlice';
 import { isBodyArm } from '../../camera/arms/body/isBodyArm';
 import { skyEntryFactsAt } from '../../../../utils/sky/skyEntryFactsAt';
 import { NO_SKY_ENTRY } from '../../../../data/sky/noSkyEntry';
-import { skyEntryNewsGate } from './skyEntryNewsGate';
+import { skyEntryChanged } from '../../../../utils/sky/skyEntryChanged';
 
 /** Where "Look up from here" would stand, from the booted frame's authored pose on its host. */
 export const skyEntryReadoutRow: FrameReadoutRow = {
@@ -20,6 +20,6 @@ export const skyEntryReadoutRow: FrameReadoutRow = {
             frame.fovYRad,
           )
         : NO_SKY_ENTRY;
-    if (skyEntryNewsGate(facts)) dispatch(engineSkyEntryReported(facts));
+    if (skyEntryChanged(frame.lastSkyEntry, facts)) dispatch(engineSkyEntryReported(facts));
   },
 };

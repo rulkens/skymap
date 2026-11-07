@@ -5,6 +5,8 @@ import type { PositionedId } from '../../scene/PositionedId';
 import type { SelectionRowBase } from '../selection/SelectionRowBase';
 import type { FramedCameraPose } from '../../camera/pose/FramedCameraPose';
 import type { ViewFrustum } from '../../camera/projection/ViewFrustum';
+import type { SkyEntryFacts } from '../SkyEntryFacts';
+import type { SkyView } from '../SkyView';
 import type { HostBody } from '../../../services/engine/camera/arms/@types/HostBody';
 
 /**
@@ -32,4 +34,8 @@ export type FrameReadoutCtx = {
   readonly altitudeMpc: number;
   readonly focusRow: SelectionRowBase | null;
   readonly bodyStates: ReadonlyMap<PositionedId, BodyState>;
+  /** This engine's stored sky-entry facts at frame start: a row dispatches only news against it. */
+  readonly lastSkyEntry: SkyEntryFacts;
+  /** This engine's stored standing view at frame start, read the same way. */
+  readonly lastSkyView: SkyView;
 };
