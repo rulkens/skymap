@@ -124,6 +124,18 @@ Open for the owner: reflected light lightens Earth's night side near the limb (t
 
 Open for the owner: the Sombrero and the Clouds still don't read (a content gap, per the spike); dense field clumps near M51 print as small stippled patches.
 
+### Task 16: Mars and Moon in the look (owner approval 2026-11-07; rulings "own shaders", "Earth has water edges, Mars and Moon don't")
+**Files:** `src/services/gpu/shaders/antiqueLook/{cover,reduce,glyphs,fragment,plateBodies,landBlur,engraving}.wesl`,
+`src/services/gpu/shaders/antiqueLook/bodies/{earth,mars,moon}.wesl`, `src/services/gpu/shaders/bodies/texturedBody/fragment.wesl`,
+`src/layers/body/spheres/{passes/bodyAlbedoMaskPass,present/texturedBodyUniforms,present/ringRatios}.ts`,
+`src/data/rendering/{antiqueAlbedoMask,antiquePlateBodies}.ts`, `src/@types/rendering/AntiqueBodyPrint.d.ts`
+- [x] Inside an atmosphere the look reads body coverage from foreground:0's depth, not its alpha (the day sky's alpha is ~1), via a uniform flag; surface views keep rulings, stars and horizon.
+- [x] A depth second-difference contour inks occluding edges inside an atmosphere: the rover, crater rims, skylines.
+- [x] `body-albedo-mask` draws Mars's albedo (a lightness ramp about mean − 0.7σ of its map) into the land row on its `surfaceMask` line; the `landness()` colour guess is gone; land is read with a body-masked bilinear, so no false coast rings a limb.
+- [x] Per-body print modules behind a record code (`ANTIQUE_BODY_PRINTS`, parity-tested): Earth's coasts and water moved to `bodies/earth.wesl`; Mars's dark markings are a level burin family of their own plus a red-lead wash, with no coast or water; the Moon is a stub (its convention belongs to the Moon lead).
+
+Open: the depth cover holds only the last body row's depth, so a second globe in a surface sky (the Moon from Earth's ground) reads as sky.
+
 ## Definition of Done
 
 **Deliverables:** the `stylize` FRAME_ORDER line and `antiqueLook` pass; the `antique` settings
