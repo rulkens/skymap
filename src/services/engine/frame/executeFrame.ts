@@ -451,6 +451,7 @@ export function executeFrame(args: ExecuteFrameArgs): void {
             // An untouched overlay row holds last frame's captions.
             overlay: touched.has(step.overlay) ? viewFor(step.overlay, ctx, swapView) : null,
             swap: viewFor('swap', ctx, swapView),
+            bodyDepth: sampledDepthFor('foreground:0', lastDepthClear, ctx.snapshot.renderTargets),
           },
           timing,
         );

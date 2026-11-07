@@ -18,6 +18,7 @@ import {
   ANTIQUE_STRUCTURE_CELL,
   ANTIQUE_TARGETS,
 } from '../../../../data/rendering/antiqueLook';
+import { ANTIQUE_RELIEF_FORMAT } from '../../../../data/rendering/antiqueRelief';
 import { HDR_TARGET_FORMAT } from '../../../../data/renderTargetFormats';
 import { antiqueLookOn } from '../../../../utils/render/antiqueLookOn';
 
@@ -63,5 +64,6 @@ export function antiqueLookTargetRows(swapFormat: GPUTextureFormat): readonly Re
     row(ANTIQUE_TARGETS.landBlur, 'rg16float', ANTIQUE_CELL),
     // The moved passes' own pipelines are built for HDR, so their row is too.
     row(ANTIQUE_TARGETS.lines, HDR_TARGET_FORMAT, 1),
+    row(ANTIQUE_TARGETS.relief, ANTIQUE_RELIEF_FORMAT, 1),
   ];
 }

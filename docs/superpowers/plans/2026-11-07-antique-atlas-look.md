@@ -159,6 +159,15 @@ Owner ruling 2026-11-07: keep the generic galaxy engraving with these names; the
 - [ ] Latin names for the web (Laniakea, Perseus-Pisces, Virgo, Coma Berenices, Attractor Magnus, Murus Hydrae); VACVVM LOCALE and VACVVM SCVLPTORIS only past `ANTIQUE_REGIME_MPC[1]`; a cluster glyph from the structures row.
 - [ ] The Zone of Avoidance ruled as a named hatched band, so it no longer reads as a void.
 
+### Task 19: Mars terrain engraved, treatment (d) (owner rulings 2026-11-07: shadow hachures, halo, stipple, thinning; Hevelius plate light from orbit)
+**Files:** `src/services/gpu/shaders/antiqueLook/{relief,engraving,fragment}.wesl`, `src/services/gpu/shaders/antiqueLook/bodies/mars.wesl`,
+`src/data/rendering/{antiqueRelief,antiqueLook}.ts`, `src/services/gpu/passes/antiqueLook/{antiqueLook,antiqueReliefInput,antiqueLookTargetRows,createAntiqueLookGpu}.ts`,
+`src/utils/gpu/antiqueLook/packAntiqueRelief.ts`, `src/@types/rendering/{AntiqueReliefInput,AntiqueLook,AntiqueLookGpu}.d.ts`, `src/services/engine/frame/executeFrame.ts`
+- [x] A look-only relief pass reads foreground:0's depth through the row that wrote it (the stylize step now gets `sampledDepthFor('foreground:0')`), and writes per pixel the screen fall line, a noise pinned to the ground (anchor cells as integers, so f32 never carries the body radius) and the stroke share; the depth normal is exaggerated ×2 on the ground, ×3 from orbit.
+- [x] Plate light: from orbit the real Sun's azimuth at 18° over each point's horizon; the ground keeps the real Sun (blend over 8–25 km altitude).
+- [x] The plate's Mars module cuts hachures by line-integral convolution of that noise along the fall line (12 taps each way, stopping at halos), a contour-wise second set in the deepest shade, stipple on the flats from the plain render's darkness, dotted at the ground noise's peaks; lines thin with range over eye height; a paper halo behind every nearer profile.
+- [x] The albedo marking and the generic light hatching yield to the relief on the engraved ground; the land blur runs only under an Earth record.
+
 ### Task 20: The ruling follows the frame (owner rulings 2026-11-07: ecliptic default as Hevelius; Earth numbered from the Pico de Teide)
 **Files:** `src/services/gpu/shaders/antiqueLook/{graticule,fragment,io}.wesl`, `src/data/rendering/antiqueRulings.ts`,
 `src/services/gpu/passes/antiqueLook/antiquePlateRulings.ts`, `src/utils/gpu/antiqueLook/{rulingLonLat,antiqueGraticuleSteps,antiqueGlobeCastable,antiqueGlobeCoverage,placeAntiqueNumerals,formatAntiqueDegrees,setAntiqueDigits,packAntiqueUniforms}.ts`,

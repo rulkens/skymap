@@ -26,6 +26,9 @@ import { ANTIQUE_ORNAMENT_ATLAS } from '../../../../data/rendering/antiqueOrname
 import { packAntiqueUniforms } from '../../../../utils/gpu/antiqueLook/packAntiqueUniforms';
 import { packAntiquePlateBodies } from '../../../../utils/gpu/antiqueLook/packAntiquePlateBodies';
 import { antiquePlateBodies } from './antiquePlateBodies';
+import { antiqueReliefInput } from './antiqueReliefInput';
+import { packAntiqueRelief } from '../../../../utils/gpu/antiqueLook/packAntiqueRelief';
+import { ANTIQUE_RELIEF_UNIFORM_BYTES } from '../../../../data/rendering/antiqueRelief';
 import { packAntiqueOrnaments } from '../../../../utils/gpu/antiqueLook/packAntiqueOrnaments';
 import { packAntiqueGlyphs } from '../../../../utils/gpu/antiqueLook/packAntiqueGlyphs';
 import { placeAntiqueOrnaments } from '../../../../utils/gpu/antiqueLook/placeAntiqueOrnaments';
@@ -67,6 +70,7 @@ export function createAntiqueLook(init: {
   const ornamentBytes = new ArrayBuffer(ANTIQUE_ORNAMENT_BYTES);
   const glyphBytes = new ArrayBuffer(ANTIQUE_GLYPH_BYTES);
   const plateBodyBytes = new ArrayBuffer(ANTIQUE_PLATE_BODIES_BYTES);
+  const reliefBytes = new ArrayBuffer(ANTIQUE_RELIEF_UNIFORM_BYTES);
 
   function fullScreen(
     encoder: GPUCommandEncoder,
@@ -99,7 +103,7 @@ export function createAntiqueLook(init: {
     encoder: GPUCommandEncoder,
     ctx: FrameView,
     state: EngineState,
-    io: { print: GPUTextureView; overlay: GPUTextureView | null; swap: GPUTextureView },
+    io: Parameters<AntiqueLook['encode']>[3],
     timing: GpuTimingService,
   ): void {
     gpu ??= createAntiqueLookGpu(device, targetFormat);
@@ -123,12 +127,14 @@ export function createAntiqueLook(init: {
     // The density raymarch, when it drew this frame: charted in the cosmos only (`web.wesl`).
     const webDensity = ctx.snapshot.renderedTargets.has(WEB_DENSITY) && cosmos > 0;
 
+    const relief = hasBodies ? antiqueReliefInput(state, ctx, io.bodyDepth, unitPx) : null;
     packAntiqueUniforms(
       {
         size,
         unitPx,
         bodies: hasBodies,
         depthCover,
+        relief: relief !== null,
         captions: io.overlay !== null,
         paper: paperAssets !== null,
         rays,
@@ -168,6 +174,9 @@ export function createAntiqueLook(init: {
     const landMapped = ctx.snapshot.renderedTargets.has(ANTIQUE_TARGETS.land);
     const plateBodies = hasBodies ? antiquePlateBodies(state, ctx, unitPx, landMapped, rays) : [];
     device.queue.writeBuffer(g.plateBodies, 0, packAntiquePlateBodies(plateBodies, plateBodyBytes));
+    if (relief !== null) {
+      device.queue.writeBuffer(g.reliefUniforms, 0, packAntiqueRelief(relief, reliefBytes));
+    }
 
     const uniforms = { buffer: g.uniforms };
     const paper = targets.viewOf(ANTIQUE_TARGETS.paper);
@@ -248,10 +257,17 @@ export function createAntiqueLook(init: {
     );
     floorPass.dispatchWorkgroups(1);
     floorPass.end();
-    // Only mapped land is read (a record's land flag), so no map, no blur.
-    if (landMapped) {
+    // Only Earth's coasts read the blur, and only off a mapped record.
+    if (landMapped && plateBodies.some((b) => b.print === 'earth')) {
       fullScreen(encoder, 'land-blur-across', [landBlurAcross], g.landBlurAcross, [wash, uniforms]);
       fullScreen(encoder, 'land-blur-down', [landBlur], g.landBlurDown, [landBlurAcross, uniforms]);
+    }
+    const reliefView = relief === null ? g.empty : targets.viewOf(ANTIQUE_TARGETS.relief);
+    if (relief !== null) {
+      fullScreen(encoder, 'relief', [reliefView], g.relief, [
+        io.bodyDepth.view,
+        { buffer: g.reliefUniforms },
+      ]);
     }
     // One instance per print-points texel; the shader drops those holding no star.
     const cells = printed ? targets.sizeOf(ANTIQUE_TARGETS.printPoints) : { width: 1, height: 1 };
@@ -344,6 +360,7 @@ export function createAntiqueLook(init: {
         ctx.snapshot.renderedTargets.has(ANTIQUE_TARGETS.geography)
           ? targets.viewOf(ANTIQUE_TARGETS.geography)
           : g.empty,
+        reliefView,
       ],
       end,
     );

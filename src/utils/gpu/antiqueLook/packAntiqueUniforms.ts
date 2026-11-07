@@ -10,6 +10,7 @@ const FLAG_BODIES = 1;
 const FLAG_CAPTIONS = 2;
 const FLAG_PAPER = 4;
 const FLAG_DEPTH_COVER = 8;
+const FLAG_RELIEF = 16;
 
 export function packAntiqueUniforms(
   input: AntiqueUniformInput,
@@ -24,7 +25,8 @@ export function packAntiqueUniforms(
     (input.bodies ? FLAG_BODIES : 0) |
     (input.captions ? FLAG_CAPTIONS : 0) |
     (input.paper ? FLAG_PAPER : 0) |
-    (input.depthCover ? FLAG_DEPTH_COVER : 0);
+    (input.depthCover ? FLAG_DEPTH_COVER : 0) |
+    (input.relief ? FLAG_RELIEF : 0);
   const { tl, tr, bl, br } = input.rays;
   [tl, tr, bl, br].forEach((ray, i) => f32.set(ray, 4 + i * 4));
   f32[7] = input.web;
