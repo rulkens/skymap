@@ -282,7 +282,10 @@ export function createAntiqueLook(init: {
       fullScreen(encoder, 'land-blur-across', [landBlurAcross], g.landBlurAcross, [wash, uniforms]);
       fullScreen(encoder, 'land-blur-down', [landBlur], g.landBlurDown, [landBlurAcross, uniforms]);
     }
-    const reliefView = relief === null ? g.empty : targets.viewOf(ANTIQUE_TARGETS.relief);
+    // Mars's relief pass below fills the row, or the Moon's own pass drew into it.
+    const reliefWritten =
+      relief !== null || ctx.snapshot.renderedTargets.has(ANTIQUE_TARGETS.relief);
+    const reliefView = reliefWritten ? targets.viewOf(ANTIQUE_TARGETS.relief) : g.empty;
     if (relief !== null) {
       fullScreen(encoder, 'relief', [reliefView], g.relief, [
         io.bodyDepth.view,

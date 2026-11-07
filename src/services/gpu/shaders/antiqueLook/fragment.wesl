@@ -39,7 +39,11 @@ import package::antiqueLook::bodies::earth::EarthPrintIn;
 import package::antiqueLook::bodies::earth::earthPrint;
 import package::antiqueLook::bodies::mars::marsPrint;
 import package::antiqueLook::bodies::mars::marsRelief;
+import package::antiqueLook::bodies::moon::MoonTone;
+import package::antiqueLook::bodies::moon::moonMare;
+import package::antiqueLook::bodies::moon::moonRims;
 import package::antiqueLook::bodies::moon::moonTone;
+import package::antiqueLook::bodies::moon::moonWallForm;
 import package::antiqueLook::graticule::graticule;
 import package::antiqueLook::graticule::frameLonLat;
 import package::antiqueLook::graticule::globeNormal;
@@ -534,6 +538,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     var lines = 0.0;
     var print = PRINT_PLAIN;
     var marsForm = form;
+    var moon = MoonTone(0.0, 0.0, 0.0);
     let relief = texel(reliefTex, ip);
     let ground = (u.flags & FLAG_RELIEF) != 0u && relief.a != 0.0;
     if (hit.t < 1e30) {
@@ -554,8 +559,11 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
         // points away from the Sun, as the arc grows: the halves add, never cancel.
         print = printOf(b);
         tone = formTone(hit.ndl, hit.ndv);
+        // The Moon's own row (`fsMoonPrint`) holds its relief: g 0 where it did not run.
+        let moonRow = print == PRINT_MOON && relief.g > 0.0;
         if (print == PRINT_MOON) {
-          tone = moonTone(tone);
+          moon = moonTone(hit.ndl, hit.ndv, relief.g);
+          tone = moon.tone;
         }
         // The ring's shadow on the ball is one solid stroke, not hatching.
         if (hit.ringShadow) {
@@ -568,6 +576,11 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
           let dx = screenStep.x + 0.5 * radius * (ballTheta(rayX, b) - hit.theta);
           let dy = screenStep.y + 0.5 * radius * (ballTheta(rayY, b) - hit.theta);
           form = vec3<f32>(phase, along, length(vec2<f32>(dx, dy)) * u.unit);
+        }
+        if (moonRow) {
+          form = moonWallForm(form, relief.a, texel(reliefTex, ip + vec2<i32>(1, 0)).a,
+            texel(reliefTex, ip + vec2<i32>(0, 1)).a, texel(reliefTex, ip - vec2<i32>(1, 0)).a,
+            texel(reliefTex, ip - vec2<i32>(0, 1)).a, u.unit);
         }
         if (print == PRINT_MARS) {
           let lat = ballLatitude(viewRay(uv), b);
@@ -592,6 +605,8 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
       col = mars.col;
       // A marking is a globe's feature: on the engraved ground the relief speaks.
       bodyInk = max(bodyInk, select(mars.ink, 0.0, ground));
+    } else if (print == PRINT_MOON && relief.g > 0.0) {
+      bodyInk = max(bodyInk, max(moonMare(relief.r, moon.litSlope, p, pxUnits), moonRims(relief.b, moon.shade)));
     }
     if (ground) {
       let around = luma(textureSampleLevel(quarterTex, linear, uv, WASH_LAYER, 0.0).rgb);
