@@ -20,8 +20,8 @@ applies.
 | dragon | _Mundus Subterraneus_, winged dragon | Athanasius Kircher (1602–1680); Commons tags the attribution "Kircher?" | 1665 | [link](<https://commons.wikimedia.org/wiki/File:Kircher,_Athanasius_%E2%80%94_Mundus_Subterraneus_%E2%80%94_Winged_dragon_(on_the_ground)_%E2%80%94_1665.jpg>) | PD-Art (PD-old-100) | 1282×614 (orig.) | [8, 5, 1237, 614] |
 | seaSerpent | _Serpentum et Draconum Historiae_, "Draconis alati figura ex Pareo" | Ulisse Aldrovandi (1522–1605), ed. Bartolomeo Ambrosini (d. 1657) | 1640 | [link](https://commons.wikimedia.org/wiki/File:Ulyssis_Aldrovandi_BHL41765473.jpg) | PD-scan (PD-old-70-expired), Biodiversity Heritage Library | 4624×2933 (orig.) | [325, 506, 4389, 2908] |
 
-The cartouche's title is engraved at pack time in IM FELL English (`fonts/`, © Igino Marini, SIL Open
-Font License 1.1, `fonts/OFL-IMFell.txt`).
+The cartouche's title is engraved at pack time in IM FELL English (`data/raw/fonts/`, © Igino Marini, SIL Open
+Font License 1.1, `data/raw/fonts/OFL-IMFell.txt`).
 
 ## Processing
 

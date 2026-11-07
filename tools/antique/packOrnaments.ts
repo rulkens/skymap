@@ -5,11 +5,12 @@
  * Channels: R ink density, G fill (the solid silhouette the plate is cleared to
  * paper under), B wash (the alpha of `<id>.colour.png` when a sprite has one).
  * Inputs: data/antique/sprites/<id>.png (black RGB, ink in alpha), optional
- * <id>.colour.png (RGB hue, alpha saturation), the IM Fell TTFs in
- * data/antique/fonts/; provenance in data/antique/PROVENANCE.md.
+ * <id>.colour.png (RGB hue, alpha saturation), the IM Fell TTFs in the raw
+ * fonts dir (shared with the label atlases); provenance in data/antique/PROVENANCE.md.
  */
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { type Font, parse } from 'opentype.js';
@@ -21,6 +22,7 @@ import { closeMaskDisc } from '../utils/image/closeMaskDisc';
 import { dilateMaskDisc } from '../utils/image/dilateMaskDisc';
 import { fillMaskHoles } from '../utils/image/fillMaskHoles';
 import { gaussianBlurFloat32 } from '../utils/image/gaussianBlurFloat32';
+import { rawDataPath } from '../utils/io/rawDataRegistry';
 import { shelfPack } from '../utils/image/shelfPack';
 import type { OrnamentSprite } from './@types/OrnamentSprite';
 
@@ -130,7 +132,7 @@ async function engraveTitle(ink: Uint8Array, w: number, h: number): Promise<void
   const ry = CARTOUCHE_OVAL.ry * ih;
   for (const line of TITLE_LINES) {
     const face = parse(
-      new Uint8Array(readFileSync(`${ROOT}data/antique/fonts/${line.file}`)).buffer,
+      new Uint8Array(readFileSync(join(rawDataPath('fonts.dir'), line.file))).buffer,
     );
     const chord = 2 * rx * Math.sqrt(1 - line.dy * line.dy) * TITLE_CHORD_FILL;
     const cap = face.getPath('H', 0, 0, 1).getBoundingBox();
