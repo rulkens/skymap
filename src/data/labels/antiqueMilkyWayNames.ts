@@ -58,8 +58,8 @@ export const ANTIQUE_MILKY_WAY_NAMES: readonly AntiqueMilkyWayName[] = [
     cut: 'spacedItalic',
     at: { azimuthDeg: 165, radiusKpc: 8.1 },
   },
-  // The bar named past its tip; the bulge on its sunward side, clear of the arm names.
-  { id: 'mwName-bar', name: 'Trabs', cut: 'spacedItalic', at: { azimuthDeg: 27, radiusKpc: 3.2 } },
+  // Bar and bulge named on their sunward side, past the bar's near tip and clear of the arms.
+  { id: 'mwName-bar', name: 'Trabs', cut: 'spacedItalic', at: { azimuthDeg: 207, radiusKpc: 4 } },
   {
     id: 'mwName-bulge',
     name: 'Nucleus',
