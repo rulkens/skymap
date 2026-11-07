@@ -19,15 +19,20 @@ import { resolvePassNames } from './resolvePassNames';
 import { COSMO, NEAR0, isBodySlabIndex } from './slabs';
 import { depthKeyOf } from '../../../utils/render/depthKeyOf';
 import { lookTarget } from '../../../utils/render/lookTarget';
-import { ANTIQUE_HIDDEN_PASSES, ANTIQUE_ONLY_PASSES } from '../../../data/rendering/antiqueLook';
+import {
+  ANTIQUE_HIDDEN_PASSES,
+  ANTIQUE_MOVED_PASSES,
+  ANTIQUE_ONLY_PASSES,
+} from '../../../data/rendering/antiqueLook';
 
 export type FrameInputs = {
   readonly tone: ToneMap;
   readonly bloomEnabled: boolean;
   /**
    * The antique look is on: the tone-map lands in `print` and the overlay
-   * lines in `overlay` instead of `swap`, and the `stylize` line inks both
-   * onto the swap chain.
+   * lines in `overlay` instead of `swap`, the `ANTIQUE_MOVED_PASSES` leave
+   * their line for rows of their own, and the `stylize` line inks it all onto
+   * the swap chain.
    */
   readonly antique: boolean;
   readonly foregroundChain: readonly number[];
@@ -94,14 +99,33 @@ const EXPAND_STEP: { [K in FrameStepSpec['kind']]: ExpandStep<K> } = {
       ]),
     ),
   render: (spec, passes, frame) =>
-    (typeof spec.slab === 'number' ? [spec.slab] : frame.bodyRowSlabs[spec.slab]).map((slab) => ({
-      kind: 'render',
-      target: lookTarget(spec.target, 'overlay', frame.antique),
-      slab,
-      passes: resolvePassNames(spec.passes, passes),
-      ...(spec.depth === undefined ? {} : { depth: spec.depth }),
-      ...(spec.slot === undefined ? {} : { slot: spec.slot }),
-    })),
+    (typeof spec.slab === 'number' ? [spec.slab] : frame.bodyRowSlabs[spec.slab]).flatMap(
+      (slab) => {
+        const roster = resolvePassNames(spec.passes, passes);
+        const moved = frame.antique
+          ? roster.filter((pass) => ANTIQUE_MOVED_PASSES[pass.name] !== undefined)
+          : [];
+        // Moved passes go FIRST, so the line after this one can still merge back.
+        return [
+          ...moved.map(
+            (pass): FrameStep => ({
+              kind: 'render',
+              target: ANTIQUE_MOVED_PASSES[pass.name]!,
+              slab,
+              passes: [pass],
+            }),
+          ),
+          {
+            kind: 'render',
+            target: lookTarget(spec.target, 'overlay', frame.antique),
+            slab,
+            passes: roster.filter((pass) => !moved.includes(pass)),
+            ...(spec.depth === undefined ? {} : { depth: spec.depth }),
+            ...(spec.slot === undefined ? {} : { slot: spec.slot }),
+          },
+        ];
+      },
+    ),
   foreground: (spec, passes, frame) =>
     frame.foregroundChain.flatMap((slab): readonly FrameStep[] =>
       isBodySlabIndex(slab)

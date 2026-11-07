@@ -88,7 +88,7 @@ export const ANTIQUE_PRINT_CELL_UNITS = 4;   // one print-point texel per 4 prin
 - [x] Modern names shown where no period name exists; period names kept where they do.
 
 ### Task 12: Constellation lines engraved
-- [ ] With the look on, the constellation pass draws into its own target; the plate inks it as a fine rule behind bodies, stars knocked out of it.
+- [x] With the look on, the constellation pass draws into its own target; the plate inks it as a fine rule behind bodies, stars knocked out of it.
 
 ## Definition of Done
 

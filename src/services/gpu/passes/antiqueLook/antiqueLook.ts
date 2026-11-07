@@ -161,6 +161,9 @@ export function createAntiqueLook(init: {
     const land = ctx.snapshot.renderedTargets.has(ANTIQUE_TARGETS.land)
       ? targets.viewOf(ANTIQUE_TARGETS.land)
       : g.empty;
+    const lines = ctx.snapshot.renderedTargets.has(ANTIQUE_TARGETS.lines)
+      ? targets.viewOf(ANTIQUE_TARGETS.lines)
+      : g.empty;
     // The slot's begin rides whichever pass opens first (the paper bake is
     // usually skipped), its end the plate; both write the one query pair.
     const ts = timing.descriptorFor('stylize');
@@ -257,6 +260,7 @@ export function createAntiqueLook(init: {
         decorHue,
         { buffer: g.digits },
         glyphs?.view ?? g.empty,
+        lines,
       ],
       end,
     );

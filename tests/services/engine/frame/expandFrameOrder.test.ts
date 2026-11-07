@@ -422,7 +422,9 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
   });
 
   it('a render line with a BodyRowSource slab expands once per resolved row', () => {
-    const steps = program({ bodyRowSlabs: { lens: [3, 2], insideAtmosphere: [], surfaceMask: [] } });
+    const steps = program({
+      bodyRowSlabs: { lens: [3, 2], insideAtmosphere: [], surfaceMask: [] },
+    });
     expect(
       steps
         .filter((step) => step.kind === 'render' && step.slab >= 2)
@@ -499,6 +501,23 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     expect(landSteps(program({ antique: true, bodyRowSlabs: rows }))).toMatchObject([
       { kind: 'render', target: ANTIQUE_TARGETS.land, slab: 3 },
     ]);
+  });
+
+  it("moves the constellations off the hdr roster onto the look's lines row only with the look on", () => {
+    const stepsDrawing = (steps: readonly FrameStep[]) =>
+      steps
+        .filter((step) => namesOf(step).includes('constellations'))
+        .map((step) => (step.kind === 'render' ? [step.target, step.slab, namesOf(step)] : null));
+    expect(stepsDrawing(program())).toEqual([
+      ['hdr', NEAR0, expect.arrayContaining(['star-catalog', 'constellations'])],
+    ]);
+    expect(stepsDrawing(program({ antique: true }))).toEqual([
+      [ANTIQUE_TARGETS.lines, NEAR0, ['constellations']],
+    ]);
+    // The roster it left still merges with the post-lensing line, as without the look.
+    const hdrNear0 = (steps: readonly FrameStep[]) =>
+      steps.filter((s) => s.kind === 'render' && s.target === 'hdr' && s.slab === NEAR0).length;
+    expect(hdrNear0(program({ antique: true }))).toBe(hdrNear0(program()));
   });
 
   it('with the look off nothing is rerouted and no stylize step runs', () => {

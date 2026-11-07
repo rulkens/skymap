@@ -40,6 +40,12 @@ export const ANTIQUE_HIDDEN_PASSES: readonly string[] = [
 /** Passes that exist only for the look: they draw nothing with it off. */
 export const ANTIQUE_ONLY_PASSES: readonly string[] = ['earth-ocean-mask'];
 
+/** Passes the look moves off their line onto a row of its own, which the plate inks
+ * as line work: the quarter-res reduce would average a 1-px line away. */
+export const ANTIQUE_MOVED_PASSES: Readonly<Record<string, string>> = {
+  constellations: 'antique-lines',
+};
+
 /** The land row's format: r land share, g covered (`earth/fragment.wesl` `fsOceanMask`). */
 export const ANTIQUE_LAND_FORMAT: GPUTextureFormat = 'rg8unorm';
 
@@ -56,4 +62,5 @@ export const ANTIQUE_TARGETS = {
   decor: 'antique-decor',
   decorHue: 'antique-decor-hue',
   land: 'antique-land',
+  lines: 'antique-lines',
 } as const;

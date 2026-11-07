@@ -38,5 +38,7 @@ export function antiqueLookTargetRows(swapFormat: GPUTextureFormat): readonly Re
     row(ANTIQUE_TARGETS.decor, 'rgba8unorm', 1),
     row(ANTIQUE_TARGETS.decorHue, 'rgba8unorm', 1),
     row(ANTIQUE_TARGETS.land, ANTIQUE_LAND_FORMAT, 1),
+    // The moved passes' own pipelines are built for HDR, so their row is too.
+    row(ANTIQUE_TARGETS.lines, HDR_TARGET_FORMAT, 1),
   ];
 }

@@ -172,6 +172,7 @@ export function createAntiqueLookGpu(
         TEXTURE, // decor hue
         UNIFORM, // border digits
         TEXTURE, // glyph sheet
+        TEXTURE, // constellation lines
       ],
       [targetFormat],
     ),

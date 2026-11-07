@@ -37,6 +37,8 @@ import package::antiqueLook::pigments::pigmentAt;
 @group(0) @binding(10) var decorHueTex: texture_2d<f32>;
 @group(0) @binding(11) var<uniform> lettering: AntiqueLettering;
 @group(0) @binding(12) var glyphTex: texture_2d<f32>;
+// The constellation figures, moved off the HDR roster (ANTIQUE_MOVED_PASSES).
+@group(0) @binding(13) var linesTex: texture_2d<f32>;
 
 // The border's numbering, placed per frame by `placeAntiqueNumerals`.
 struct Glyph {
@@ -64,6 +66,8 @@ const MARGIN: f32 = 30.0;
 const BAND: f32 = 7.0;
 // Hatch spacing on bodies, print units.
 const HATCH: f32 = 5.0;
+// A constellation line's alpha at full cover: its BASE_ALPHA (constellations/fragment.wesl).
+const LINE_ALPHA: f32 = 0.5;
 // Glow levels: the outline-colour boundary, and one inner contour.
 const GLOW_EDGE: f32 = 0.13;
 const GLOW_CORE: f32 = 0.4;
@@ -289,6 +293,8 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let skyInk = max(star.x, max(dots, contour) * clear) * sky;
   // The rulings were cut by hand too: their ink load wanders along their length.
   let rulings = graticule(viewRay(uv), u.unit, u.raStep, u.decStep) * sky * clear * (0.7 + 0.45 * vnoise(p * 0.045));
+  // Constellation figures as a fine rule, a shade lighter than the rulings.
+  let lines = min(texel(linesTex, ip).a / LINE_ALPHA, 1.0) * sky * clear * 0.75;
 
   // Bodies, as a globe-maker engraved them: land and sea left as paper and
   // washed, every coast cut as one continuous line with the hatched halo off
@@ -342,7 +348,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   }
 
   let figure = ornament.r * clear * sky;
-  let scene = max(max(max(bodyInk, limb), max(skyInk, rulings)), figure) * (1.0 - ornament.b);
+  let scene = max(max(max(bodyInk, limb), max(skyInk, max(rulings, lines))), figure) * (1.0 - ornament.b);
   let lettered = max(scene * (1.0 - captionHalo), captions);
   // The border's digits only exist along the edges: skip their loop elsewhere.
   var numerals = 0.0;
