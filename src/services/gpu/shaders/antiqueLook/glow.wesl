@@ -2,7 +2,8 @@
 // mean of a 4×4 block of `wash` (1/16 of the print). At this scale a star is a
 // rounding error and only true extended light — nebulae, the Milky Way,
 // structure discs, dense galaxy fields — survives to drive stipple and contours.
-// Alpha: how coherent the block's isophotes are, 0..1 (see `fs`).
+// Alpha: how coherent the block's isophotes are, 0..1 (see `fs`), or −1 where
+// the block holds no sky, which the field floor (`skyFloor.wesl`) skips.
 
 import package::antiqueLook::io::VSOut;
 import package::antiqueLook::pigments::luma;
@@ -45,5 +46,5 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     }
   }
   let coherence = sqrt((jxx - jyy) * (jxx - jyy) + 4.0 * jxy * jxy) / max(jxx + jyy, 1e-9);
-  return vec4<f32>(sum / max(n, 1.0), coherence);
+  return vec4<f32>(sum / max(n, 1.0), select(-1.0, coherence, n > 0.0));
 }
