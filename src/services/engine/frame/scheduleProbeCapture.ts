@@ -10,6 +10,7 @@
 
 import type { CaptureFace } from '../../../@types/engine/frame/CaptureFace';
 import type { CubeFace } from '../../../@types/rendering/CubeFace';
+import type { CubemapCaptureKey } from '../../../@types/rendering/CubemapCaptureKey';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { MeshPresentation } from '../../../@types/scene/MeshPresentation';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
@@ -24,11 +25,11 @@ import { sceneBodyPartition } from './sceneBodyPartition';
 import { sceneBodyStates } from './sceneBodyStates';
 import type { PositionedId } from '../../../@types/scene/PositionedId';
 import { ALL_CUBE_FACES } from '../../../data/rendering/cubemapCaptures';
-import { captureTimingSlotName } from './timing/captureTimingSlotName';
 
 export function scheduleProbeCapture(input: {
   readonly state: EngineState;
   readonly ctx: FrameView;
+  readonly captureOn: (key: CubemapCaptureKey) => boolean;
 }): ReadonlyMap<CubeFace, CaptureFace> | null {
   const { state, ctx } = input;
   const runtime = state.cubemapCaptures.probe;
@@ -36,8 +37,7 @@ export function scheduleProbeCapture(input: {
   runtime.due = false;
   runtime.refreshOwedInMs = null;
   const renderer = state.gpu.meshBodyRenderer;
-  if (renderer === null || state.settings.debug.disabledPasses[captureTimingSlotName('probe')])
-    return null;
+  if (renderer === null || !input.captureOn('probe')) return null;
 
   // The oldest refresh wins, a never-refreshed body oldest of all — so N bodies
   // resolving at once cycle through the one in-flight probe in turn.
