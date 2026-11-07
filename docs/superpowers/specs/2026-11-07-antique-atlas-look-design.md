@@ -17,11 +17,14 @@ glyph, contour and wash is derived from the rendered frame, nothing is painted o
 
 Research (session scratchpad `research/cartography.md`, 40-item checklist) is explicit that
 mixing periods is the strongest tell of a fake. Monsters, coloured cartouches and outline-colour
-bands exist together only in the **mid-17th-century Dutch** look, so that is the look:
-Cellarius' *Harmonia Macrocosmica* (Amsterdam, 1660) for the sky and the planets, Blaeu for the
-Earth. Consequences: coasts get the hatched halo (water-lining is 18th-century), regions get
-outline colour (not German area washes), the cartouche is coloured, lettering is IM Fell
-(digitised from 17th-century Fell types).
+bands exist together only in the **17th-century Dutch** look, so that is the look: the
+Amsterdam trade of c.1690 (Cellarius' *Harmonia Macrocosmica* reissued by Valk & Schenk, Blaeu
+for the Earth). c.1690 rather than 1660 because the Hevelius Cetus (1690) is the best figure we
+have; older ornaments (Ortelius 1590) read as re-used plates, which the trade routinely did.
+Consequences: coasts get the hatched halo (water-lining is 18th-century), regions get outline
+colour (not German area washes), lettering is IM Fell (digitised from Fell types, c.1670), the
+imprint reads "Amstelodami, ex officina Skymapiana, Anno MDCXC", and there is no compass rose
+(no celestial chart carried one).
 
 ## Architecture
 
@@ -49,8 +52,10 @@ outline colour (not German area washes), the cartouche is coloured, lettering is
 | 4 | peaks | `antique-stars` rgba16f | 1/4 | non-max suppression; contrast over local mean |
 | 5 | plate | swap | full | everything below |
 
-All rows are `allocateWhen: antiqueLookOn` (`antiqueLookTargetRows.ts`), so a session that never
-opens the look allocates nothing.
+All rows are `allocateWhen: antiqueLookOn` (`antiqueLookTargetRows.ts`), and the pipelines,
+buffers and assets are built on the look's first frame (`createAntiqueLookGpu`,
+`loadAntiqueSheetAssets`), so a session that never opens it allocates nothing. Assets (~4 MB:
+paper tile 2.2 MB, ornament atlas 1.8 MB) are fetched from `public/antique/` then.
 
 ### The plate: two regimes split by `foreground:0` alpha
 
@@ -59,9 +64,11 @@ opens the look allocates nothing.
   with a paper knock-out 1.3× its size; the low band becomes a pigment wash with a Dutch
   outline-colour band and pooled rim, sparse stipple for bright extended light, and isophote
   contours at doublings (Hevelius' wavy Milky Way edge). Never solid ink from a glow.
-- **Bodies are engraved**: ink ∝ darkness via tone-width hatching (crossing set past 0.42, a
-  third past 0.75), night found by the brightest channel, seas by hue, the hatched coast halo
-  from the quarter-res land share, one firm limb line from the alpha gradient.
+- **Bodies are engraved**: ink ∝ darkness via tone-width hatching parallel to the terminator
+  (one direction per frame, across the Sun's on-screen direction — a per-pixel direction cannot
+  keep a hatch's phase), crossed at 45° for lozenges, width from a smoothed tone so lines swell
+  rather than break; night found by the brightest channel, seas by hue and left pale with the
+  hatched coast halo, one firm limb line from the alpha gradient.
 - **Rulings**: RA/Dec graticule per pixel from the four corner rays (`viewCornerRays`; the world
   frame is equatorial), spacing following the zoom; equator and ecliptic as chequered graduated
   bands; the neatline's degree ladder inked by the parity of the coordinate the edge cuts.
@@ -70,17 +77,28 @@ opens the look allocates nothing.
 - **Colour** is always one of seven period pigments (`pigments.wesl`), applied as transmittance,
   offset from the line by a smooth misregistration field.
 
+### What the look hides and renames
+
+- `ANTIQUE_HIDDEN_PASSES` (filtered in `expandFrameOrder`): cloud shells (no period globe drew
+  weather) and caption leader stems.
+- Labels (`label2DDirector`, rules in `data/labels/antiqueLabelRules.ts`): period names where
+  one existed (Nubecula Minor, Saturnus, Nebula in Cingulo Andromedae, Argo Navis…), modern and
+  post-1690 names hidden (digits, spacecraft, voids, moons found after 1690, Lacaille's
+  constellations), the selected subject always kept.
+
 ### Ornaments (compositing)
 
 - Source art: genuine public-domain engravings (Commons PD-Art scans; provenance per sprite),
   packed by a tool into one atlas whose channels are **ink, fill, wash** (greyscale each); the
   hue comes from the instance's pigment, so ornaments stay inside the palette.
-- **Sheet-anchored**: the cartouche (title in IM Fell, Latin with period V-for-U) and the compass
-  rose (rotated each frame to celestial north at its position).
-- **Sky-anchored**: the sky's own beasts — sea monsters and dragons placed at sky directions in
-  the Zone of Avoidance, the band behind the galactic plane where the catalogs are genuinely
-  empty (the honest *terra incognita*), each with its own wave strokes. Projected per frame on
-  the CPU from the corner-ray basis; faded out when too large or too small on screen.
+- **Sheet-anchored**: the cartouche (Ortelius strapwork, title engraved in IM Fell by the
+  packer, Latin with period V-for-U).
+- **Sky-anchored**: inside the Galaxy, constellation figures over their own stars (Hevelius'
+  Cetus, a Kircher dragon as Draco, an Aldrovandi serpent as Hydra) — stars print over them
+  with their knock-out halos and they take a light wash; out among the galaxies, sea-chart
+  fauna and a ship in the Zone of Avoidance, the band behind the galactic plane where the
+  catalogs are genuinely empty (the honest *terra incognita*). Projected per frame through the
+  view basis; faded out when too large or too small on screen.
 - "HIC SVNT DRACONES" appears at most once and only attributed (Hunt–Lenox globe), never as a
   generic period label.
 
