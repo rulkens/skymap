@@ -1,8 +1,9 @@
 /**
  * The pick keeps what the eye can ring and nothing else: the far side and craters
  * under the size cut drop, a big crater whose centre is just past the limb stays
- * (its near rim shows), off-screen craters drop, and a crowded view keeps the 128
- * largest, largest first.
+ * (its near rim shows), off-screen craters drop, a crowded view keeps one ring per
+ * 8000 units² of visible disc (named craters whose name shows first, then the largest),
+ * and a close-up stops at the cap.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -11,6 +12,11 @@ import { mat4 } from 'wgpu-matrix';
 import type { MoonCraterView } from '../../../../../src/layers/body/spheres/@types/MoonCraterView';
 import { moonCraterTable } from '../../../../../src/layers/body/spheres/present/moonCraterTable';
 import { pickMoonCraters } from '../../../../../src/layers/body/spheres/present/pickMoonCraters';
+import { visibleDiscAreaPx } from '../../../../../src/layers/body/spheres/present/visibleDiscAreaPx';
+import {
+  ANTIQUE_MOON_MAX_CRATERS,
+  ANTIQUE_MOON_RING_AREA_UNITS,
+} from '../../../../../src/layers/body/spheres/data/antiqueMoonPrint';
 
 const R_KM = 1737.4;
 const W = 1600;
@@ -49,12 +55,30 @@ describe('pickMoonCraters', () => {
     expect(pickMoonCraters(table, view(1.5, 10))).toEqual([0]);
   });
 
-  it('keeps the 128 largest, largest first', () => {
+  const crowd = (n: number): number[] => {
     const rows: number[] = [];
-    for (let i = 0; i < 200; i++) rows.push((i % 20) * 0.01, Math.floor(i / 20) * 0.01, 50 + i, 1);
-    const picked = pickMoonCraters(moonCraterTable(rows, R_KM), view(4));
-    expect(picked).toHaveLength(128);
+    for (let i = 0; i < n; i++) rows.push((i % 20) * 0.01, Math.floor(i / 20) * 0.01, 50 + i, 1);
+    return rows;
+  };
+
+  it('spends one ring per 8000 units² of visible disc, largest first', () => {
+    const v = view(4);
+    const picked = pickMoonCraters(moonCraterTable(crowd(200), R_KM), v);
+    expect(picked).toHaveLength(Math.round(visibleDiscAreaPx(v) / ANTIQUE_MOON_RING_AREA_UNITS));
     expect(picked[0]).toBe(199);
-    expect(picked[127]).toBe(72);
+  });
+
+  it('rings a named crater whose name shows before larger ones, not one too small to name', () => {
+    const picked = pickMoonCraters(moonCraterTable(crowd(200), R_KM), view(4), [
+      { index: 3, revealPx: 10 },
+      { index: 5, revealPx: 1e4 },
+    ]);
+    expect(picked[0]).toBe(3);
+    expect(picked).not.toContain(5);
+  });
+
+  it('stops at the cap in a close-up', () => {
+    const picked = pickMoonCraters(moonCraterTable(crowd(400), R_KM), view(1.3, 20));
+    expect(picked).toHaveLength(ANTIQUE_MOON_MAX_CRATERS);
   });
 });

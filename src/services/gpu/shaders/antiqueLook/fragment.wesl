@@ -45,10 +45,9 @@ import package::antiqueLook::bodies::jupiter::JupiterPrintIn;
 import package::antiqueLook::bodies::jupiter::jupiterPrint;
 import package::antiqueLook::bodies::jupiter::redSpotRadius;
 import package::antiqueLook::bodies::moon::MoonTone;
-import package::antiqueLook::bodies::moon::moonMare;
-import package::antiqueLook::bodies::moon::moonRims;
-import package::antiqueLook::bodies::moon::moonTone;
-import package::antiqueLook::bodies::moon::moonWallForm;
+import package::antiqueLook::bodies::moon::moonInk;
+import package::antiqueLook::bodies::moon::moonToneAlong;
+import package::antiqueLook::bodies::moon::moonShade;
 import package::antiqueLook::graticule::graticule;
 import package::antiqueLook::graticule::frameLonLat;
 import package::antiqueLook::graticule::globeNormal;
@@ -611,10 +610,8 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
         // points away from the Sun, as the arc grows: the halves add, never cancel.
         print = printOf(b);
         tone = formTone(hit.ndl, hit.ndv);
-        // The Moon's own row (`fsMoonPrint`) holds its relief: g 0 where it did not run.
-        let moonRow = print == PRINT_MOON && relief.g > 0.0;
         if (print == PRINT_MOON) {
-          moon = moonTone(hit.ndl, hit.ndv, relief.g);
+          moon = moonToneAlong(reliefTex, ip, vec2<f32>(n.y, -n.x) * u.unit, hit.ndl, hit.ndv, relief.g, luma(src));
           tone = moon.tone;
         }
         // The ring's shadow on the ball is one solid stroke, not hatching.
@@ -628,11 +625,6 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
           let dx = screenStep.x + 0.5 * radius * (ballTheta(rayX, b) - hit.theta);
           let dy = screenStep.y + 0.5 * radius * (ballTheta(rayY, b) - hit.theta);
           form = vec3<f32>(phase, along, length(vec2<f32>(dx, dy)) * u.unit);
-        }
-        if (moonRow) {
-          form = moonWallForm(form, relief.a, texel(reliefTex, ip + vec2<i32>(1, 0)).a,
-            texel(reliefTex, ip + vec2<i32>(0, 1)).a, texel(reliefTex, ip - vec2<i32>(1, 0)).a,
-            texel(reliefTex, ip - vec2<i32>(0, 1)).a, u.unit);
         }
         if (print == PRINT_MARS || print == PRINT_JUPITER) {
           lat = ballLatitude(viewRay(uv), b);
@@ -658,7 +650,15 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     } else {
       tone = select(1.0 - smoothstep(0.015, 0.17, bodyLight(uv)), 0.0, ground);
     }
-    bodyInk = max(crossHatch(form, p, tone, u.tune.x, u.hatchAngle, pxUnits) * rowOn(HIDE_HATCHING), lines);
+    // The Moon's own row (`fsMoonPrint`): g 0 where it did not run.
+    let moonRow = print == PRINT_MOON && relief.g > 0.0;
+    var hatch = 0.0;
+    if (moonRow) {
+      hatch = moonShade(form, tone, pxUnits);
+    } else {
+      hatch = crossHatch(form, p, tone, u.tune.x, u.hatchAngle, pxUnits);
+    }
+    bodyInk = max(hatch * rowOn(HIDE_HATCHING), lines);
     // A clearing ornament (the cartouche) keeps its field paper over a globe's washes too.
     let cover = body * frame.y * (1.0 - ornament.b);
     if (print == PRINT_EARTH) {
@@ -677,8 +677,8 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
         spotQ, spotQPerUnit, p, pxUnits));
       col = jupiter.col;
       bodyInk = max(bodyInk, jupiter.ink);
-    } else if (print == PRINT_MOON && relief.g > 0.0) {
-      bodyInk = max(bodyInk, max(moonMare(relief.r, moon.litSlope, p, pxUnits), moonRims(relief.b, moon.shade)));
+    } else if (moonRow) {
+      bodyInk = max(bodyInk, moonInk(reliefTex, px, u.unit, moon, relief.b));
     }
     if (ground) {
       let around = luma(textureSampleLevel(quarterTex, linear, uv, WASH_LAYER, 0.0).rgb);
