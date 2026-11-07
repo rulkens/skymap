@@ -12,6 +12,7 @@ import { rootReducer } from '../../../src/store/rootReducer';
 import { engineSkyViewReported } from '../../../src/state/engine/engineSlice';
 import { exitTakeover, takeoverStarted } from '../../../src/state/takeover/takeoverActions';
 import { skyBelowHorizonSet } from '../../../src/state/sky/skySlice';
+import { skyClockTo } from '../../../src/state/sky/skyClockTo';
 import { goLive } from '../../../src/state/time/timeSlice';
 import { selectTimeState } from '../../../src/state/time/selectors';
 import { sunAltitudeAt } from '../../../src/utils/sky/sunAltitudeAt';
@@ -56,9 +57,22 @@ describe('SkyHudContainer', () => {
     expect(dispatch).toHaveBeenCalledWith(exitTakeover({ restore: true }));
   });
 
-  it('Skip to tonight from live mode lands manual, paused, at the target', () => {
+  it('Skip to tonight asks the clock to sweep to astronomical dusk', () => {
+    const { dispatch } = mount();
+    fireEvent.click(screen.getByRole('button', { name: 'Skip to tonight' }));
+
+    const asked = dispatch.mock.calls.map(([a]) => a).find(skyClockTo.match);
+    expect(asked).toBeDefined();
+    expect(asked!.payload.simDays).toBeGreaterThan(NOON);
+    expect(asked!.payload.simDays).toBeLessThan(NOON + 1);
+    expect(radToDeg(sunAltitudeAt(SPOT, asked!.payload.simDays))).toBeCloseTo(-18, 1);
+  });
+
+  it('under reduced motion Skip to tonight jumps: manual, paused, at the target', () => {
+    vi.stubGlobal('matchMedia', () => ({ matches: true }));
     const { store } = mount();
     fireEvent.click(screen.getByRole('button', { name: 'Skip to tonight' }));
+    vi.unstubAllGlobals();
 
     const time = selectTimeState(store.getState());
     expect(time.mode).toBe('manual');
@@ -76,13 +90,15 @@ describe('SkyHudContainer', () => {
     expect(screen.queryByRole('button', { name: 'Skip to tonight' })).toBeNull();
   });
 
-  it('Skip to when it rises jumps to the rise and then withdraws', () => {
+  it('Skip to when it rises jumps to the rise and then withdraws (reduced motion)', () => {
+    vi.stubGlobal('matchMedia', () => ({ matches: true }));
     const { store } = mount();
     const riseAt = NOON + 0.3;
     act(() => {
       store.dispatch(skyBelowHorizonSet({ riseAt, neverRises: false }));
     });
     fireEvent.click(screen.getByRole('button', { name: 'Skip to when it rises' }));
+    vi.unstubAllGlobals();
 
     const time = selectTimeState(store.getState());
     expect(time.paused).toBe(true);

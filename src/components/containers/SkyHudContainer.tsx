@@ -2,7 +2,8 @@
  * SkyHudContainer — store boundary for the sky HUD. Shown while the camera stands (the sky view
  * readout, D9) and no tour, exhibit or registry clip has the screen. It deliberately ignores
  * camera clips: a search head-turn is one, and the HUD must not blink for it. The clock skips
- * land manual and paused (`manualPausedAtActions`), so the Time bar's "Now" undoes them.
+ * sweep the clock there (`skyClockTo`) and land manual and paused, so the Time bar's "Now"
+ * undoes them; under reduced motion they jump instead.
  */
 
 import { memo, useCallback, useMemo, type ReactNode } from 'react';
@@ -15,6 +16,7 @@ import { selectSkyBelowHorizon } from '../../state/sky/selectSkyBelowHorizon';
 import { selectTimeState } from '../../state/time/selectors';
 import { exitTakeover } from '../../state/takeover/takeoverActions';
 import { manualPausedAtActions } from '../../state/time/enterManualPausedAt';
+import { skyClockTo } from '../../state/sky/skyClockTo';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { julianDaysToUnixMs } from '../../utils/time/julianDaysToUnixMs';
 import { unixMsToJulianDays } from '../../utils/time/unixMsToJulianDays';
@@ -55,6 +57,10 @@ function SkyHudContainer({ phone }: SkyHudContainerProps): ReactNode {
 
   const jumpTo = useCallback(
     (simDays: number) => {
+      if (!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+        dispatch(skyClockTo({ simDays }));
+        return;
+      }
       for (const action of manualPausedAtActions(new Date(julianDaysToUnixMs(simDays)))) {
         dispatch(action);
       }
