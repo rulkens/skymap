@@ -505,6 +505,85 @@ into this branch. Read the landed shape in `src/@types/loading/AssetWiringRow.d.
   links.
 - [ ] Commit.
 
+### Task 14: Haze look at half resolution (perf-gate follow-up, owner ruling 1c)
+
+**Why:** Task 13's perf gate measured ~30 ms GPU added at `milky-way-outside` with streams on; the haze
+look is the cost (fill-bound, sweep exponent 0.60; haze at sizeScale 0.01 drops hdr·NEAR0 to 8.1 ms). The
+owner ruled: draw the haze into a reduced-resolution target and upsample it, as the Milky Way does with
+`mw-aggregate`. Target: `stellar-streams` (+ its upsample) ≤ ~4 ms at milky-way-outside, look as close to
+today's as possible. The streak look and the pick stay full res.
+
+**Files:**
+- Create: `src/layers/stellarStreams/streaks/render/stellarStreamsHazeTarget.ts` (a `RenderTargetSpec`, id
+  `stellar-streams-haze`, `HDR_TARGET_FORMAT`, `depth: null`, clear 0; scale divisor 2 — copy the
+  `milkyWayAggregateTarget.ts` shape)
+- Create: `src/layers/stellarStreams/streaks/passes/stellarStreamsHazePass.ts` (draws the haze look only, into
+  the haze target; viewport = `sizeOf('stellar-streams-haze')`, pxPerRad scaled by `vh / canvasSize.height`
+  exactly as `milkyWayAggregatePass.ts` does, so `minPx` stays in the target's pixels)
+- Create: `src/layers/stellarStreams/streaks/passes/stellarStreamsHazeUpsamplePass.ts` (via
+  `createUpsamplePass`, like `milkyWayUpsamplePass.ts`; one `createAdditiveUpsample` handle on the runtime,
+  destroyed in `destroy`)
+- Modify: `stellarStreamsPass.ts` (streak look only), `stellarStreamsRenderer.ts` (draw one look per call
+  instead of both), the Layer's `layer.ts` (`renderTargets`, passes), `create.ts` / `destroy.ts`, the runtime
+  type
+- Modify: `src/data/rendering/frameSections.ts` — a `{ kind: 'render', target: 'stellar-streams-haze', slab:
+  NEAR0, passes: ['stellar-streams-haze'] }` row beside `mw-aggregate`, and `stellar-streams-haze-upsample`
+  in the hdr NEAR0 list immediately before `stellar-streams` (both after the dust multiply, see the pass
+  header)
+- Test: the frame-section/pass-name tests that pin the roster; a renderer test that a haze-only call writes
+  the haze look's uniforms and skips when its intensity is 0
+
+**Interfaces:**
+- Consumes: `StellarStreamsLook` (`intensity`, `sizeScale`, `stretch`, `minPx`, `flow`), core `fade`.
+- Produces: renderer `draw(pass, vp, viewportPx, pxPerRad, camPos, clockSec, look, opacity)` (one look);
+  pass names `stellar-streams-haze`, `stellar-streams-haze-upsample`.
+
+- [ ] Haze target + passes + roster rows; all three passes share one enabled predicate (data loaded, look
+  intensity > 0) so producer and consumer cannot disagree.
+- [ ] Haze `minPx` reads in the half-res target's pixels: halve nothing by hand, the viewport/pxPerRad scaling
+  does it — say so in the target header.
+- [ ] `npm run typecheck && npm test` green; commit.
+
+### Task 15: Cap Sagittarius's bound share (owner ruling Q-remnant a, amends Q7)
+
+**Why:** 56% of the 60k subsample is the still-bound remnant (~33k particles in a few kpc), which blows the
+core out to white. Cap bound particles (`tStripGyr === 0`) at 10% of `SGR_PARTICLE_BUDGET`; the rest of the
+budget is debris, so the tails gain density. Total stays 60k.
+
+**Files:**
+- Modify: `tools/streams/data/streamsBuild.constants.ts` (`SGR_BOUND_SHARE = 0.1`)
+- Modify: `tools/streams/utils/sagittariusParticles.ts` (seeded pick per class: bound up to the cap, unbound
+  for the rest; file order and determinism preserved; header says why)
+- Modify: `tools/streams/README.md`, `public/data/stellar-streams/v1/*` rebuilt with `npm run
+  build-stellar-streams` (byte-identical on a second run)
+- Test: `tests/tools/streams/utils/sagittariusParticles.test.ts` — bound count = min(cap, bound rows); total
+  = min(budget, rows); same seed → same picks; with fewer unbound rows than the remainder, bound fills the
+  rest (budget is never underspent)
+
+- [ ] `sagittariusMeta` keeps reading the full snapshot (anchor + lengthKpc unchanged) — assert in the test.
+- [ ] Rebuild, check the 128,419 total holds, commit code and data separately.
+
+### Task 16: Caption only long-enough streams; short card source line (owner ruling Q-labels a)
+
+**Why:** 83 captions crowd the halo. A caption shows only when the stream's apparent length on screen is at
+least `STELLAR_STREAM_LABEL_MIN_PX` (start at 80 px), or when that stream is hovered or selected. The detail
+card's galstreams source line wraps; it becomes the track reference alone (`fu2018 track`) — the meta
+`description` already credits galstreams (Mateu 2023).
+
+**Files:**
+- Modify: `src/layers/stellarStreams/labels/present/produceStellarStreamLabels.ts` (filter by the apparent
+  length the declutter priority already computes; read hover/selection from the snapshot the way another
+  Layer's label producer does — find it, don't invent a new channel)
+- Modify: `src/layers/stellarStreams/labels/data/stellarStreamLabelStyle.constants.ts` (the threshold)
+- Modify: `src/layers/stellarStreams/selection/data/stellarStreamSourceFacts.constants.ts`
+- Test: a short far stream gets no caption; the same stream hovered or selected gets one; a long one always
+  does
+
+- [ ] No Layer contract member added or widened (STOP and report if the hover/selection read needs one).
+- [ ] Commit.
+
+Task 13 re-runs (perf, eye check) after Task 16.
+
 ---
 
 ## Definition of Done
