@@ -54,9 +54,10 @@ button.header {
 }
 
 .title {
+  font-family: var(--font-family-label);
   font-size: var(--font-size-sm);
   letter-spacing: var(--letter-spacing-widest);
-  text-transform: uppercase;
+  text-transform: var(--label-case);
   color: var(--color-fg-dim);
   transition: var(--transition-color);
 }

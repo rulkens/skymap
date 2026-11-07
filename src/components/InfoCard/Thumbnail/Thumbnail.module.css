@@ -8,7 +8,7 @@
   height: var(--thumbnail-size);
   border-radius: var(--radius-lg);
   /* A notch above --border-default: mid-tone galaxy backgrounds would swallow a fainter rim. */
-  border: 1px solid rgba(160, 200, 255, 0.2);
+  border: 1px solid color-mix(in srgb, var(--border-control) 80%, transparent);
   flex-shrink: 0;
   object-fit: cover;
   display: block;

@@ -55,10 +55,11 @@
 }
 
 .pillToggle:checked::before {
-  /* Thumb keeps its off-state colour — only the track changes between on and
-   * off.  A black thumb on the accent-link track read as a hole cut out of
-   * the pill rather than a moving knob. */
+  /* By default the thumb keeps its off-state colour — only the track changes.
+   * A black thumb on the accent-link track read as a hole cut out of the pill
+   * rather than a moving knob. A look with a dark on-track sets a light thumb. */
   transform: translateX(12px);
+  background: var(--toggle-thumb-on);
 }
 
 .pillToggle:focus-visible {

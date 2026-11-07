@@ -23,7 +23,7 @@
   -webkit-backdrop-filter: blur(var(--blur-card));
   backdrop-filter: blur(var(--blur-card));
   border: 1px solid var(--border-card);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   box-shadow: var(--shadow-card);
 
   color: var(--color-fg-dim);

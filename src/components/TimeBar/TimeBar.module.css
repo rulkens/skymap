@@ -12,7 +12,7 @@
 .root {
   display: flex;
   color: var(--color-fg-base);
-  font: var(--font-size-md) / var(--line-height-tight) var(--font-family-mono);
+  font: var(--font-size-md) / var(--line-height-tight) var(--font-family-figures);
   font-variant-numeric: tabular-nums;
   user-select: none;
   transition:
@@ -176,7 +176,7 @@
   -webkit-backdrop-filter: blur(var(--blur-card));
   backdrop-filter: blur(var(--blur-card));
   border: 1px solid var(--border-card);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   box-shadow: var(--shadow-card);
 }
 

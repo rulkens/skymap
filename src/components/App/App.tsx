@@ -8,7 +8,7 @@
  * renders only canvas + tour overlay; the rest is absent from the DOM.
  */
 
-import { Suspense } from 'react';
+import { Suspense, useLayoutEffect } from 'react';
 import cx from 'classnames';
 import { useEngine } from '../../hooks/useEngine';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -34,6 +34,7 @@ import ExhibitOverlayContainer from '../containers/ExhibitOverlayContainer';
 import { isCinemaMode } from '../../utils/url/isCinemaMode';
 import { selectTourActive } from '../../state/tour/selectors';
 import { selectTakeoverSource } from '../../state/takeover/selectors';
+import { selectAntiqueEnabled } from '../../state/settings/selectors';
 import {
   selectPaletteOpen,
   selectUiStackHidden,
@@ -60,6 +61,17 @@ export function App(): React.ReactElement {
 
   // Only "is it up" lives here; the rest of the splash state stays in SplashContainer.
   const splashVisible = useAppSelector(selectSplashVisible);
+
+  // The chrome follows the canvas into the antique look: `styles/antique.css` keys its
+  // tokens off this attribute. A layout effect, so no frame paints the dark chrome.
+  const antique = useAppSelector(selectAntiqueEnabled);
+  useLayoutEffect(() => {
+    if (!antique) return;
+    document.documentElement.dataset.look = 'antique';
+    return () => {
+      delete document.documentElement.dataset.look;
+    };
+  }, [antique]);
 
   // Shared by both return branches. The engine owns this canvas's GPU context;
   // `id="c"` matches the fullscreen CSS rule in index.html.

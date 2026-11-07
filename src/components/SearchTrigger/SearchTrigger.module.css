@@ -17,7 +17,7 @@
   backdrop-filter: blur(var(--blur-card));
 
   border: 1px solid var(--border-card);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   box-shadow: var(--shadow-card);
 
   /* The icon's colour; the text spans set their own. */

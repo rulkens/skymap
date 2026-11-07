@@ -28,6 +28,7 @@
   backdrop-filter: blur(var(--blur-panel));
   border: 1px solid var(--border-default);
   border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-panel);
 
   color: var(--color-fg-base);
   font: var(--font-size-md) / var(--line-height-base) var(--font-family-mono);
@@ -157,9 +158,10 @@
  * the cursor + focus-visible outline on the parent <button>.
  */
 .title {
+  font-family: var(--font-family-label);
   font-size: var(--font-size-sm);
   letter-spacing: var(--letter-spacing-widest);
-  text-transform: uppercase;
+  text-transform: var(--label-case);
   color: var(--color-fg-dim);
 }
 

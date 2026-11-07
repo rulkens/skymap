@@ -1,0 +1,115 @@
+/*
+ * antique.css — the HUD printed on the antique atlas's sheet: opaque paper panels, iron-gall
+ * ink, a double-rule frame, IM Fell type. `App` stamps `data-look="antique"` on <html> while
+ * settings.antique is on; everything here re-points tokens, so a component reads no look.
+ * Ink is the canvas pass's `INK` (shaders/antiqueLook/fragment.wesl). Every text token
+ * clears 4.5:1 on --antique-paper; the faintest, --color-fg-ghost, sits at 4.9:1.
+ */
+
+/* IM Fell (OFL, public/fonts/antique/OFL-IMFell.txt). Pica has no italic of its own;
+ * the English italic is its period companion, so it is declared as Pica's italic. */
+@font-face {
+  font-family: 'IM Fell DW Pica';
+  font-display: swap;
+  src: url('/fonts/antique/IMFellDWPica-Regular.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'IM Fell DW Pica';
+  font-style: italic;
+  font-display: swap;
+  src: url('/fonts/antique/IMFellEnglish-Italic.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'IM Fell English';
+  font-display: swap;
+  src: url('/fonts/antique/IMFellEnglish-Regular.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'IM Fell English SC';
+  font-display: swap;
+  src: url('/fonts/antique/IMFellEnglishSC-Regular.woff2') format('woff2');
+}
+
+/* Fell's old-style figures set 1 and 0 like ı and o, unreadable in data rows; this face
+ * lends its lining digits to every Fell stack. Baskerville is contemporary with the
+ * atlases; the rest are its stand-ins where it is missing. */
+@font-face {
+  font-family: 'Antique Figures';
+  src:
+    local('Baskerville'), local('Baskerville Old Face'), local('Times New Roman'),
+    local('Liberation Serif');
+  unicode-range: U+0030-0039;
+}
+
+:root[data-look='antique'] {
+  --antique-paper: rgb(239, 226, 194);
+  --antique-ink: rgb(43, 33, 24);
+  --antique-rubric: #8b2316;
+
+  /* Fell's x-height is ~0.44em against the system mono's ~0.53em; matching it keeps
+   * every token size legible without resizing a box. Mono readouts are unchanged. */
+  font-size-adjust: 0.526;
+
+  --color-fg: var(--antique-ink);
+  --color-fg-base: #33281d;
+  --color-fg-muted: #46372a;
+  --color-fg-subtle: #4c3c2d;
+  --color-fg-tertiary: #574533;
+  --color-fg-dim: #66513c;
+  --color-fg-faint: #6a553f;
+  --color-fg-ghost: #725c45;
+  --color-fg-label: #66513c;
+  --color-fg-key: #66513c;
+  --color-pinned: var(--antique-rubric);
+
+  --color-accent: var(--antique-rubric);
+  --color-accent-control: #46372a;
+  --color-accent-link: var(--antique-ink);
+  --color-accent-link-strong: var(--antique-rubric);
+  --color-accent-bright: var(--antique-ink);
+
+  --surface-panel: rgb(239 226 194 / 0.97);
+  --surface-card-strong: rgb(239 226 194 / 0.97);
+  --surface-card-soft: rgb(239 226 194 / 0.95);
+  --surface-soft: rgb(239 226 194 / 0.95);
+  --surface-control: rgb(43 33 24 / 0.05);
+  --surface-control-hover: rgb(43 33 24 / 0.11);
+  --surface-control-active: rgb(43 33 24 / 0.17);
+  --surface-badge: rgb(43 33 24 / 0.07);
+  --surface-scrim: rgb(43 33 24 / 0.35);
+
+  --border-default: rgb(43 33 24 / 0.85);
+  --border-card: rgb(43 33 24 / 0.85);
+  --border-control: rgb(43 33 24 / 0.6);
+  --border-divider: rgb(43 33 24 / 0.3);
+  --border-section: rgb(43 33 24 / 0.25);
+  --border-hover: var(--antique-ink);
+  --focus-ring: var(--antique-rubric);
+
+  /* The engraver's frame: the border is the outer hairline, this paints a 2px paper gap
+   * and a fainter inner rule inside it. No drop shadow; the sheet is flat. */
+  --shadow-card: inset 0 0 0 2px var(--antique-paper), inset 0 0 0 3px rgb(43 33 24 / 0.55);
+  --shadow-panel: var(--shadow-card);
+  --gradient-accent-bar: none;
+  --toggle-thumb-on: var(--antique-paper);
+
+  --blur-panel: 0px;
+  --blur-card: 0px;
+
+  --radius-xs: 0;
+  --radius-sm: 0;
+  --radius-md: 1px;
+  --radius-lg: 1px;
+  --radius-xl: 0;
+  --radius-2xl: 0;
+  --radius-pill: 0;
+
+  --font-family-mono: 'Antique Figures', 'IM Fell DW Pica', 'IM Fell English', Georgia, serif;
+  --font-family-display: 'Antique Figures', 'IM Fell English', Georgia, serif;
+  /* Small capitals: the SC face sets lowercase as small caps, so labels go lowercase. */
+  --font-family-label: 'IM Fell English SC', Georgia, serif;
+  --label-case: lowercase;
+}

@@ -41,7 +41,8 @@
 }
 
 .caption {
-  text-transform: uppercase;
+  font-family: var(--font-family-label);
+  text-transform: var(--label-case);
   letter-spacing: var(--letter-spacing-mid);
   font-weight: 500;
   /* Subtler than the value so the eye reaches the tier name first. */

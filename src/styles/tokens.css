@@ -4,8 +4,8 @@
  * Raw rgba/hex values appear here once; CSS modules reference the semantic name
  * (`--surface-panel`) or the scalar rung (`--space-4`). A deviation (the scale bar's
  * softer surface) stays inline in its component so it is visible where it is used.
- * Not here: component layout (thumbnail sizes, palette dimensions), shader colours,
- * and the pinned-badge gold `#ffd97a` — one use, and a token would imply a reusable accent.
+ * Not here: component layout (thumbnail sizes, palette dimensions) and shader colours.
+ * The app's antique look (antique.css) re-points these tokens; the website never sets it.
  */
 
 /* Self-hosted (no Google Fonts request): subset to Latin + general
@@ -54,6 +54,12 @@
   --color-fg-ghost: rgba(160, 180, 230, 0.4);
 
   --color-fg-label: rgba(160, 180, 230, 0.55);
+
+  /* Navigation cheat-sheet keys: a touch brighter and bluer than --color-fg-label. */
+  --color-fg-key: rgba(180, 200, 240, 0.55);
+
+  /* The PINNED badge: the one warm accent against the blue palette. Not for reuse. */
+  --color-pinned: #ffd97a;
 
   /* ── Accent (interactive highlights) ─────────────────────────────────── */
 
@@ -109,6 +115,12 @@
 
   --shadow-card-inset: rgba(160, 200, 255, 0.06);
 
+  /* The left-stack panels and scale bar carry no shadow; a look may give them a frame. */
+  --shadow-panel: none;
+
+  /* A switch's thumb when on: the off colour, so only the track changes. */
+  --toggle-thumb-on: var(--color-fg-muted);
+
   /* ── Decorative gradient: the "starlight" line on the top edge of glass surfaces ── */
   --color-accent-gradient-mid: rgba(180, 220, 255, 0.7);
   --color-accent-gradient-edge: rgba(120, 180, 255, 0.45);
@@ -123,8 +135,15 @@
   );
 
   /* ── Typography ─────────────────────────────────────────────────────── */
-  /* System mono (no webfont round-trip): `ui-monospace` is SF Mono / Cascadia Mono / the Linux Mono. */
-  --font-family-mono: ui-monospace, 'SF Mono', Menlo, monospace;
+  /* System mono (no webfont round-trip): `ui-monospace` is SF Mono / Cascadia Mono / the Linux Mono.
+   * `--font-family-mono` is the panels' text face; `--font-family-figures` is for readouts
+   * that update in place (clock, scale), which must keep fixed-width digits under any look. */
+  --font-family-figures: ui-monospace, 'SF Mono', Menlo, monospace;
+  --font-family-mono: var(--font-family-figures);
+
+  /* Panel headings, eyebrows and badges. */
+  --font-family-label: var(--font-family-mono);
+  --label-case: uppercase;
 
   /* Display serif: the face baked into the MSDF label atlas (src/data/fonts.ts), for marquee text echoing the in-scene labels. */
   --font-family-display: 'Cormorant Garamond', ui-serif, Georgia, serif;
@@ -172,6 +191,7 @@
   --radius-lg: 6px; /* thumbnails */
   --radius-xl: 8px; /* panels */
   --radius-2xl: 10px; /* info cards */
+  --radius-pill: 999px; /* search pill, round buttons, clock pill */
 
   /* ── Layout primitives ──────────────────────────────────────────────── */
 

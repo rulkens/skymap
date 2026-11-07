@@ -16,7 +16,7 @@
  * plus the readout's letter-spacing, wrapped by 17px of inset per side (readout
  * 6px pad + pill 10px pad + pill 1px border) = 34px. This panel uses the SAME
  * mono font + font-size, so `ch` and `em` here resolve to identical glyph
- * metrics — the two boxes match by construction (border-box, so the panel's own
+ * metrics — both use --font-family-figures — the two boxes match by construction (border-box, so the panel's own
  * padding + border stay inside this width). If the clock format, the
  * readout/pill padding, or the readout letter-spacing changes, this calc
  * follows. The inline-width scaleLine reads in real px within the box; see the
@@ -35,21 +35,18 @@
   /* Vendor-prefixed first, standard last — see Panel.module.css for why. */
   -webkit-backdrop-filter: blur(var(--blur-panel));
   backdrop-filter: blur(var(--blur-panel));
-  /*
-   * Border opacity is one notch lower than the canonical panel border
-   * (`--border-default` is 0.16; here we use a custom 0.14 because the
-   * softer surface tint pulls the perceived border up — matching opacity
-   * would make it feel "louder" than panels).  Kept inline rather than
-   * promoted to a token because it's the only consumer.
-   */
-  border: 1px solid rgba(160, 200, 255, 0.14);
-  /* Same corner curvature as the TimeBar pill below: its 999px full-round on a
-   * --time-toolbar-height box renders as a half-height radius, so the rail's two
-   * chromes read as one family without turning this taller panel into a stadium. */
-  border-radius: calc(var(--time-toolbar-height) / 2);
+  /* One notch under the panel border (0.16 → 0.14): the softer surface tint
+   * pulls the perceived border up, so matching opacity would read louder. */
+  border: 1px solid color-mix(in srgb, var(--border-default) 87.5%, transparent);
+  /* Same corner curvature as the TimeBar pill below: its full-round pill radius
+   * on a --time-toolbar-height box renders as a half-height radius, so the rail's
+   * two chromes read as one family without turning this taller panel into a
+   * stadium. `min` follows a look that squares the pill. */
+  border-radius: min(var(--radius-pill), calc(var(--time-toolbar-height) / 2));
+  box-shadow: var(--shadow-panel);
 
   color: var(--color-fg-base);
-  font: var(--font-size-md) / var(--line-height-tight) var(--font-family-mono);
+  font: var(--font-size-md) / var(--line-height-tight) var(--font-family-figures);
   font-variant-numeric: tabular-nums;
   text-align: right;
   user-select: none;

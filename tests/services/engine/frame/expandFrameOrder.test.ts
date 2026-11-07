@@ -454,6 +454,35 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     expect(on.filter((step) => step.kind !== 'bloom')).toEqual(off);
   });
 
+  it('the antique look moves every swap write to its own rows and inks them last', () => {
+    // A swap line left unrouted would draw straight over the plate, or under it
+    // and be wiped; the stylize step must be the frame's only swap writer.
+    const on = program({ antique: true });
+    const swapWriters = on.filter(
+      (step) =>
+        (step.kind === 'render' && step.target === 'swap') ||
+        (step.kind === 'composite' && step.step.dest === 'swap'),
+    );
+    expect(swapWriters).toEqual([]);
+    expect(on.find((step) => step.kind === 'composite' && step.step.tone !== null)).toMatchObject({
+      step: { source: 'hdr', dest: 'print' },
+    });
+    expect(on.some((step) => step.kind === 'render' && step.target === 'overlay')).toBe(true);
+    expect(on.at(-1)).toEqual({ kind: 'stylize', source: 'print', overlay: 'overlay' });
+  });
+
+  it('with the look off nothing is rerouted and no stylize step runs', () => {
+    const off = program();
+    expect(off.some((step) => step.kind === 'stylize')).toBe(false);
+    expect(
+      off.some(
+        (step) =>
+          (step.kind === 'render' && (step.target === 'print' || step.target === 'overlay')) ||
+          (step.kind === 'composite' && step.step.dest === 'print'),
+      ),
+    ).toBe(false);
+  });
+
   it('every render step references only slabs present in deriveSlabs’ table', () => {
     // A render step naming an index outside that table throws in `slabViewOf`
     // the moment it runs, so a typo'd `slab` in FRAME_ORDER is a frame-1 crash.

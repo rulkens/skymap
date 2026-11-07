@@ -62,10 +62,11 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: var(--space-5);
+  font-family: var(--font-family-label);
   font-size: var(--font-size-sm);
   letter-spacing: var(--letter-spacing-widest);
   color: var(--color-fg-faint);
-  text-transform: uppercase;
+  text-transform: var(--label-case);
 }
 
 /* Lookback time line */

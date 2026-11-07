@@ -124,25 +124,21 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: var(--space-5);
+  font-family: var(--font-family-label);
   font-size: var(--font-size-sm);
   letter-spacing: var(--letter-spacing-widest);
   color: var(--color-fg-faint);
-  text-transform: uppercase;
+  text-transform: var(--label-case);
 }
 
 /* PINNED badge — hidden by default; shown via .pinned modifier on root */
 .pinnedBadge {
   display: none;
-  /*
-   * Warm gold — the only non-blue accent in the entire UI, used here
-   * to signal "this is the user's selected pin" against the cosmic-blue
-   * palette.  Promoting to a token would mislead future readers into
-   * treating it as reusable; kept inline.
-   */
-  color: #ffd97a;
+  color: var(--color-pinned);
+  font-family: var(--font-family-label);
   font-size: var(--font-size-sm);
   letter-spacing: var(--letter-spacing-max);
-  text-transform: uppercase;
+  text-transform: var(--label-case);
 }
 
 /* Show the badge when the root element carries the .pinned modifier */
@@ -166,9 +162,10 @@
   background: var(--surface-badge);
   border: 1px solid var(--border-control);
   color: var(--color-accent-bright);
+  font-family: var(--font-family-label);
   font-size: var(--font-size-xs);
   letter-spacing: var(--letter-spacing-wider);
-  text-transform: uppercase;
+  text-transform: var(--label-case);
 }
 
 /* ── SDSS designation headline ────────────────────────────────────────────── */
@@ -404,10 +401,11 @@ details:not([open]) > .detailsSummary::before {
   background: var(--surface-control);
   color: var(--color-fg);
   font: inherit;
+  font-family: var(--font-family-label);
   font-size: var(--font-size-sm);
   letter-spacing: var(--letter-spacing-mid);
   cursor: pointer;
-  text-transform: uppercase;
+  text-transform: var(--label-case);
 }
 
 @media (hover: hover) {
