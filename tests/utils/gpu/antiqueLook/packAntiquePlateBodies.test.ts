@@ -23,13 +23,15 @@ const saturn: AntiquePlateBody = {
   radiusUnits: 120,
   sun: [0, 0.6, 0.8],
   print: 'plain',
-  ring: { normal: [0, 0, 1], lines: [1.28, 1.58, 2.06, 2.35], outer: 2.41 },
+  pole: [0, 0, 1],
+  ring: { lines: [1.28, 1.58, 2.06, 2.35], outer: 2.41 },
 };
 const earth: AntiquePlateBody = {
   centre: [4, 5, 6],
   radiusUnits: 300,
   sun: [1, 0, 0],
   print: 'earth',
+  pole: [0, 0.6, 0.8],
   ring: null,
 };
 
@@ -45,11 +47,14 @@ describe('packAntiquePlateBodies', () => {
     expect(SHADER).toContain(`items: array<PlateBody, ${ANTIQUE_PLATE_BODY_CAPACITY}>`);
   });
 
+  // A ringless body still carries its pole: the Mars print hatches along its latitude.
   it('writes each record at its slot', () => {
     const out = packAntiquePlateBodies([earth, saturn]);
     const f32 = new Float32Array(out);
     expect(new Uint32Array(out)[0]).toBe(2);
-    expect([...f32.slice(4, 20)]).toEqual([4, 5, 6, 300, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0]);
+    expect([...f32.slice(4, 20)]).toEqual(
+      [4, 5, 6, 300, 1, 0, 0, 1, 0, 0.6, 0.8, 0, 0, 0, 0, 0].map(Math.fround),
+    );
     expect([...f32.slice(20, 36)]).toEqual(
       [1, 2, 3, 120, 0, 0.6, 0.8, 0, 0, 0, 1, 2.41, 1.28, 1.58, 2.06, 2.35].map(Math.fround),
     );

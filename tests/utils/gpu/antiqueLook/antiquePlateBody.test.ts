@@ -1,5 +1,5 @@
 /**
- * antiquePlateBody — the ring normal is the orientation's pole COLUMN (a row
+ * antiquePlateBody — the pole (a ring's normal) is the orientation's pole COLUMN (a row
  * tilts Saturn's ring the wrong way), the Sun points from the body toward the
  * Sun, the apparent radius is the silhouette cone's (not the bare 1/d), ring
  * radii are in the drawn radius, and an eye inside the relief shell (plus the
@@ -58,7 +58,7 @@ describe('antiquePlateBody', () => {
     expect(body.centre[2]).toBeCloseTo(2, 9);
     expect(body.radiusUnits).toBeCloseTo(800 / Math.sqrt(3), 6);
     expect(body.sun).toEqual([-1, 0, 0]);
-    expect(body.ring!.normal).toEqual([0, -S, C]);
+    expect(body.pole).toEqual([0, -S, C]);
     expect(body.ring!.lines[0]).toBeCloseTo(74_500 / 58_232, 9);
     expect(body.ring!.outer).toBeCloseTo(140_220 / 58_232, 9);
   });

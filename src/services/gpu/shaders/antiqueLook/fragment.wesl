@@ -27,6 +27,7 @@ import package::antiqueLook::plateBodies::PlateBodies;
 import package::antiqueLook::plateBodies::BodyHit;
 import package::antiqueLook::plateBodies::castPlateBody;
 import package::antiqueLook::plateBodies::ballTheta;
+import package::antiqueLook::plateBodies::ballLatitude;
 import package::antiqueLook::plateBodies::ringRho;
 import package::antiqueLook::plateBodies::printOf;
 import package::antiqueLook::plateBodies::PRINT_PLAIN;
@@ -531,6 +532,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     var form = vec3<f32>(dot(p, n), along, 1.0);
     var lines = 0.0;
     var print = PRINT_PLAIN;
+    var marsForm = form;
     let relief = texel(reliefTex, ip);
     let ground = (u.flags & FLAG_RELIEF) != 0u && relief.a != 0.0;
     if (hit.t < 1e30) {
@@ -566,6 +568,11 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
           let dy = screenStep.y + 0.5 * radius * (ballTheta(rayY, b) - hit.theta);
           form = vec3<f32>(phase, along, length(vec2<f32>(dx, dy)) * u.unit);
         }
+        if (print == PRINT_MARS) {
+          let lat = ballLatitude(viewRay(uv), b);
+          let dLat = vec2<f32>(ballLatitude(rayX, b), ballLatitude(rayY, b)) - lat;
+          marsForm = vec3<f32>(radius * lat, along, length(dLat) * radius * u.unit);
+        }
       }
       lines = max(lines, inkLine(hit.edgeUnits, 1.1, pxUnits));
     } else {
@@ -580,7 +587,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
       col = earth.col;
       bodyInk = max(bodyInk, earth.ink);
     } else if (print == PRINT_MARS) {
-      let mars = marsPrint(col, cover, landShare, p, pxUnits);
+      let mars = marsPrint(col, cover, landShare, marsForm, p, pxUnits);
       col = mars.col;
       // A marking is a globe's feature: on the engraved ground the relief speaks.
       bodyInk = max(bodyInk, select(mars.ink, 0.0, ground));

@@ -16,5 +16,7 @@ export type AntiquePlateBody = {
   readonly sun: Readonly<Vec3>;
   /** Its print convention; one that reads the land row is `plain` when that did not draw. */
   readonly print: AntiqueBodyPrint;
+  /** North pole, unit: a ring's plane normal, and the latitude a print hatches along. */
+  readonly pole: Readonly<Vec3>;
   readonly ring: AntiquePlateRing | null;
 };

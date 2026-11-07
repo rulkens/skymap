@@ -1,7 +1,7 @@
 /**
  * antiquePlateBody — one globe as the plate casts it: eye-relative in its own
  * radii (from f64 Mpc, so no cancellation reaches the GPU), world axes, with
- * its Sun, its ring (the host's pole is the ring normal) and its apparent
+ * its Sun, its pole (a ring's plane normal), its ring and its apparent
  * radius in print units. Null where `antiqueGlobeCastable` says a sphere cast
  * would draw a false horizon, so a surface view keeps the plain path.
  */
@@ -50,11 +50,11 @@ export function antiquePlateBody(input: {
     radiusUnits: input.unitsPerRad / Math.sqrt(d * d - 1),
     sun: [toSun[0] / sunDistance, toSun[1] / sunDistance, toSun[2] / sunDistance],
     print: input.print,
+    pole: [m[6], m[7], m[8]],
     ring:
       ringKm === null
         ? null
         : {
-            normal: [m[6], m[7], m[8]],
             lines: [
               ringKm[0] * kmToRadii,
               ringKm[1] * kmToRadii,

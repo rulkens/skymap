@@ -45,6 +45,16 @@ const NOISE_UNITS: f32 = 1.9;
 // Exaggerated slope (radians) over which a face goes from flat (stipple) to steep.
 const SLOPE_FLAT: f32 = 0.12;
 const SLOPE_STEEP: f32 = 0.5;
+// Below this share of the steep slope ground is a flat: stipple, never strokes.
+const STROKE_SLOPE: f32 = 0.3;
+// The finest height model's cell (HiRISE, m). Where one cell spans this many normal
+// stencils the slope is a mesh facet's, not a landform's: no strokes, so the ground at
+// a rover's wheels does not streak toward the eye.
+const DTM_CELL_M: f32 = 1.0;
+const FACET_STENCILS: vec2<f32> = vec2<f32>(4.0, 16.0);
+// Real slope (radians) past which a face is no ground the DTM holds (a rover, a lander):
+// left to the plate's own body print.
+const MESH_SLOPE: f32 = 1.0;
 
 fn depthAt(ip: vec2<i32>) -> f32 {
   let size = vec2<i32>(textureDimensions(depthTex));
@@ -110,6 +120,9 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   n = select(n, -n, dot(n, p) > 0.0);
   let up = normalize(r.eyeRelBody + p);
   let nu = dot(n, up);
+  if (nu < cos(MESH_SLOPE)) {
+    return vec4<f32>(0.0);
+  }
   let nex = normalize(r.exaggeration * (n - nu * up) / max(nu, 0.2) + up);
 
   // Shade against how flat ground there is lit, so a plain prints as paper.
@@ -123,7 +136,10 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let t = length(p);
   let near = clamp(log(30.0 * max(-dot(p, up), 1e-3) / t) / log(30.0), 0.0, 1.0);
   let fade = 0.45 + 0.55 * near;
-  let stroke = select(0.0, (0.05 + 0.16 * slope + 0.6 * tone) * fade, slope > 0.05 || tone > 0.1);
+  let cellStencils = DTM_CELL_M / (t * r.radPerPx * f32(o));
+  let landform = slope > STROKE_SLOPE && cellStencils < FACET_STENCILS.y;
+  let stroke = select(0.0, (0.05 + 0.16 * slope + 0.6 * tone) * fade
+    * (1.0 - smoothstep(FACET_STENCILS.x, FACET_STENCILS.y, cellStencils)), landform);
 
   // Paper behind a nearer profile: a tap nearer (deeper reversed-Z) than this
   // surface's own plane would put it.

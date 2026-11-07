@@ -7,7 +7,7 @@
 struct PlateBody {
   centre: vec4<f32>, // xyz eye→centre / radius (world); w apparent radius, print units
   sun: vec4<f32>, // xyz centre→Sun, unit; w its print convention, a PRINT_* code
-  ring: vec4<f32>, // xyz ring-plane normal; w ring texture's outer edge (radii), 0 = no ring
+  ring: vec4<f32>, // xyz the north pole (a ring's plane normal); w ring texture's outer edge (radii), 0 = no ring
   ringEdges: vec4<f32>, // C inner, B inner, Cassini mid, A outer (radii)
 }
 
@@ -69,6 +69,11 @@ fn subsolarArc(n: vec3<f32>, l: vec3<f32>) -> f32 {
 
 fn ballTheta(ray: vec3<f32>, b: PlateBody) -> f32 {
   return subsolarArc(ballNormal(ray, b.centre.xyz), b.sun.xyz);
+}
+
+// Latitude, radians, of where the ray meets the ball (`ring.xyz` the pole).
+fn ballLatitude(ray: vec3<f32>, b: PlateBody) -> f32 {
+  return asin(clamp(dot(ballNormal(ray, b.centre.xyz), b.ring.xyz), -1.0, 1.0));
 }
 
 fn ringRho(ray: vec3<f32>, b: PlateBody) -> f32 {

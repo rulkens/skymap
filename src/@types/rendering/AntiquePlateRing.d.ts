@@ -3,11 +3,7 @@
  * body's radii (the radius its sphere is drawn at), world (equatorial) axes.
  */
 
-import type { Vec3 } from '../math/Vec3';
-
 export type AntiquePlateRing = {
-  /** The ring plane's normal: the host's pole, unit. */
-  readonly normal: Readonly<Vec3>;
   /** The engraved ellipses: C inner, B inner, Cassini mid, A outer. */
   readonly lines: readonly [number, number, number, number];
   /** The ring texture's outer edge: coverage up to here is ring, not a line. */
