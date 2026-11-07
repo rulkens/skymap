@@ -49,6 +49,10 @@ function joinSlopes(a: Vec3, b: Vec3): { readonly out: number; readonly in: numb
   return { out: (2 * sb) / (sa + sb), in: (2 * sa) / (sa + sb) };
 }
 
+// Float slack for "abutting": starts reached by arithmetic ((3.15 - 0.7) + 0.7)
+// land a few ULP off the end they meet.
+const ABUT_EPS = 1e-9;
+
 export function resolveSeqJoins(
   baseSegs: readonly BaseSegment[],
   composites: readonly CompositeTrack[],
@@ -115,8 +119,8 @@ export function resolveSeqJoins(
     for (let k = 1; k < writers.length; k++) {
       const [a, b] = [writers[k - 1]!, writers[k]!];
       const prefix = joinOf(a, b);
-      if (prefix === null || b.startSec > a.endSec) continue;
-      const abut = b.startSec === a.endSec;
+      if (prefix === null || b.startSec > a.endSec + ABUT_EPS) continue;
+      const abut = Math.abs(b.startSec - a.endSec) <= ABUT_EPS;
       const zeroLength = a.endSec === a.startSec || b.endSec === b.startSec;
       if (abut && zeroLength) continue;
       if (!('segKind' in a) || !('segKind' in b)) {
@@ -147,7 +151,12 @@ export function resolveSeqJoins(
             : frameChangeIn(a, b);
       if (changeSec !== undefined) {
         const what = abut ? `join at ${b.startSec}s` : `blend [${b.startSec},${a.endSec})`;
-        throw new Error(`${prefix}the '${ch}' ${what} crosses a frame change at ${changeSec}s`);
+        // A join reads the outgoing span at compile time; only a zero-length snap
+        // at the leg start lets it (plan D3 converts nothing at run time).
+        const remedy = abut ? `; snap '${ch}' at ${changeSec}s so the join can read its span` : '';
+        throw new Error(
+          `${prefix}the '${ch}' ${what} crosses a frame change at ${changeSec}s${remedy}`,
+        );
       }
       if (!abut) {
         resolved[segIndex.get(b)!] = { ...b, blendIn: { startSec: b.startSec, endSec: a.endSec } };
@@ -168,7 +177,8 @@ export function resolveSeqJoins(
   const outer = (slope: number, join: number) =>
     Math.min(Math.max(slope, 0), Math.sqrt(9 - join * join));
   for (const [seg, { m0, m1 }] of joins) {
-    const ends = seg.curve.kind === 'ease' ? easeEndSlopes(seg.curve.ease) : { start: 0, end: 0 };
+    if (seg.curve.kind !== 'ease') throw new Error('a joined segment compiles with an ease curve');
+    const ends = easeEndSlopes(seg.curve.ease);
     const i = segIndex.get(seg)!;
     resolved[i] = {
       ...resolved[i]!,

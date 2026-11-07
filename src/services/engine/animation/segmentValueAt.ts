@@ -3,7 +3,7 @@
  * starting from `from`. Shared by the runtime base walk and compile-time readers,
  * so its value at `endSec` is THE segment's planned end. A tween moves to `to`;
  * a spin adds its delta `to` onto `from`. Past `endSec` a tween holds `to`, a
- * finite spin holds `from + by`, and a `loop` spin keeps turning at `by` per window.
+ * finite spin holds `from + to`, and a `loop` spin keeps turning at `to` per window.
  */
 
 import type { BaseSegment } from '../../../@types/animation/compiledClip/BaseSegment';

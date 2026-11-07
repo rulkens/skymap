@@ -257,9 +257,9 @@ Each channel crosses a join by its own writers' windows, not by the overlap numb
 
 | windows on the channel                  | result                 |
 | --------------------------------------- | ---------------------- |
-| overlapping                             | crossfade              |
-| abutting, in a seq with `overlap` set   | velocity-matched join  |
-| a gap, or a seq without `overlap`       | rest, as before        |
+| overlapping                           | crossfade             |
+| abutting, in a seq with `overlap` set | velocity-matched join |
+| a gap, or a seq without `overlap`     | rest, as before       |
 
 A channel written on one side of a join just runs; channels on different steps run
 together through the overlap.
@@ -269,17 +269,20 @@ the channel's space. Value and velocity stay continuous, and the mix never overs
 either plan. The incoming move starts from the outgoing one's planned end. A reversal
 turns around inside the window.
 
-**Matched join.** Where a channel's two writers touch (every join of `overlap: 0`),
-both moves keep their windows but the stop between them goes. Both curves become cubic Hermite, meeting at the harmonic mean of
-their average speeds: never faster than twice the slower move, and zero at a reversal.
+**Matched join.** Where a channel's two writers touch (written on both sides of the
+join, neither of zero length), both moves keep their windows but the stop between them
+goes. Both curves become cubic Hermite, meeting at the harmonic mean of their average
+speeds: never faster than twice the slower move, and zero at a reversal.
 The outer ends keep their ease's end speed.
 
 **Rules.** Each is a compile error naming the seq and the join, never a clamp:
 overlaps are finite and ≥ 0, and an array has one per join; an overlap fits inside both
 neighbouring steps, and step i−1 never reaches step i+1; at most two writers are live
 on a channel, and the incoming move may not end before the outgoing one; no blend or
-join across a change of reference frame; both sides of a join use the same space; no
-composite move (`flyPath`, `geodesic`) or looping spin in a blend or join; and cues
+join across a change of reference frame (a join whose outgoing move opens a frame
+leg needs a zero-length `over: 0` snap of that channel at the leg start so it can read its
+span); both sides of a join use the same space; no composite move (`flyPath`,
+`geodesic`) or looping spin in a blend or join; and cues
 that set the same thing must still fire in written order. `all` keeps one writer per
 channel. `rate` and `oscillate` layers shift with their step and are not blended.
 

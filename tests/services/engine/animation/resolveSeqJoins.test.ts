@@ -94,6 +94,28 @@ describe('resolveSeqJoins', () => {
       ],
       /'log' into 'lin'/,
     ],
+    [
+      'three writers live on one channel',
+      [
+        seq([seq([dollyTo(300, 4), dollyTo(600, 4)], { overlap: 2 }), dollyTo(900, 6)], {
+          overlap: 3,
+        }),
+      ],
+      /three writers are live on 'distance'/,
+    ],
+    [
+      'a leg another channel opens inside the outgoing window',
+      [
+        all([
+          seq([dollyTo(300, 4), dollyTo(900, 4)], { overlap: 2 }),
+          seq([
+            wait(3),
+            tween('yaw', { to: 0.5, over: 0.5, frame: { body: asSceneBodyId('earth') } }),
+          ]),
+        ]),
+      ],
+      /crosses a frame change at 3s/,
+    ],
   ])('throws on %s', (_name, timeline, reason) => {
     expect(() => compile(timeline)).toThrow(/seq at 0s, join 1/);
     expect(() => compile(timeline)).toThrow(reason);
@@ -113,6 +135,21 @@ describe('resolveSeqJoins', () => {
       seq([dollyTo(300, 2), dollyTo(900, 2)], { overlap: 0 }),
     ];
     expect(() => compile(timeline)).toThrow(/seq at 2s, join 1: .*crosses a frame change at 1s/);
+  });
+
+  it('a join whose outgoing move opens a frame leg names the snap remedy', () => {
+    const bodyYaw = tween('yaw', { to: 0.5, over: 2, frame: { body: asSceneBodyId('earth') } });
+    const timeline = [seq([bodyYaw, tween('yaw', { to: 1, over: 2 })], { overlap: 0 })];
+    expect(() => compile(timeline)).toThrow(
+      /join at 2s crosses a frame change at 0s; snap 'yaw' at 0s so the join can read its span/,
+    );
+  });
+
+  it('a start reached by float arithmetic still abuts (a matched join, not a crossfade)', () => {
+    const early = seq([dollyTo(300, 3.15), seq([wait(0.7), dollyTo(900, 4)])], { overlap: 0.7 });
+    const { distance } = compile([early]).baseTracks;
+    expect(distance.map((g) => g.curve.kind)).toEqual(['hermite', 'hermite']);
+    expect(distance.every((g) => g.blendIn === undefined)).toBe(true);
   });
 
   it("a 'live' start compiles", () => {
