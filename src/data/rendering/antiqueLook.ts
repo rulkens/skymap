@@ -22,6 +22,9 @@ export const ANTIQUE_ORNAMENT_BYTES = 16 + ANTIQUE_MAX_ORNAMENTS * 64;
 export const ANTIQUE_MAX_GLYPHS = 96;
 export const ANTIQUE_GLYPH_BYTES = 16 + ANTIQUE_MAX_GLYPHS * 32;
 
+/** `skyFloor.wesl`'s output, one f32 padded to WebGPU's 16-byte minimum binding size. */
+export const ANTIQUE_SKY_FLOOR_BYTES = 16;
+
 /** The border in print units from the canvas edge: the ladder's centre line
  * (`MARGIN` + `BAND` / 2 in `fragment.wesl`) is what the numbering reads. */
 export const ANTIQUE_LADDER_UNITS = 33.5;
@@ -71,6 +74,7 @@ export const ANTIQUE_TARGETS = {
   paper: 'antique-paper',
   wash: 'antique-wash',
   glow: 'antique-glow',
+  nebula: 'antique-nebula',
   printPoints: 'antique-print-points',
   starInk: 'antique-star-ink',
   decor: 'antique-decor',

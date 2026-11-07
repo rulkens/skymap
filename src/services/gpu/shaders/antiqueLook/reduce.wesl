@@ -13,6 +13,9 @@ import package::antiqueLook::pigments::luma;
 @group(0) @binding(2) var landTex: texture_2d<f32>;
 
 const CELL: i32 = 4;
+// How far over its dimmest texel a sky block's mean may sit. At 1.5 foreground
+// stars leaked into a bright disc and grew iso-line bubbles; at 1.15 arms join up.
+const FLOOR_K: f32 = 1.15;
 
 // Where no land map covers (bodies other than Earth), land is guessed from
 // colour: oceans read blue-dominant on every body texture we draw.
@@ -54,7 +57,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // brightness: a per-texel cap had flattened a galaxy's arms and gaps alike.
   let skyCount = max(n - bodyCount, 0.0);
   var skyMean = skySum / max(skyCount, 1.0);
-  let floorL = select(0.0, skyDimmest * 1.5 + 0.01, skyCount > 0.0);
+  let floorL = select(0.0, skyDimmest * FLOOR_K + 0.01, skyCount > 0.0);
   skyMean *= min(1.0, floorL / max(luma(skyMean), 1e-4));
   let sum = bodySum + skyMean * skyCount;
   // Sky blocks report land −1 so the coast halo stop at the limb, not mid-space.

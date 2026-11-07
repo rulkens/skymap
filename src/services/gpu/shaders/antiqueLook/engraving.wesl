@@ -133,6 +133,29 @@ fn stipple(p: vec2<f32>, cell: f32, tone: f32) -> f32 {
   return ink * step(0.02, tone);
 }
 
+// Iso-lines of a scalar field, after Mellan's single swelling line: ISO_K lines
+// per unit of `h`, refined by octaves so they stay ~ISO_SPACING units apart at any
+// gradient. Lines sit at integer multiples, so octave n+1 holds every line of n
+// and the blend only fades the in-between ones: nothing pops on a zoom. Half-width
+// swells with `tone` to ISO_WIDTH of the spacing (72% cover: paper always shows).
+const ISO_K: f32 = 4.0;
+const ISO_SPACING: f32 = 3.4;
+const ISO_WIDTH: f32 = 0.36;
+
+fn isoLines(h: f32, hPerUnit: f32, tone: f32, pxUnits: f32) -> f32 {
+  let o = clamp(log2(1.0 / (ISO_K * hPerUnit * ISO_SPACING)), 0.0, 6.0);
+  let o0 = floor(o);
+  let hw = tone * ISO_SPACING * ISO_WIDTH;
+  var ink = 0.0;
+  for (var n = 0; n < 2; n++) {
+    let k = ISO_K * exp2(o0 + f32(n));
+    let d = abs(fract(h * k + 0.5) - 0.5) / (k * hPerUnit);
+    let weight = select(1.0 - (o - o0), o - o0, n == 1);
+    ink += weight * (1.0 - smoothstep(hw - 0.5 * pxUnits, hw + 0.5 * pxUnits, d));
+  }
+  return ink;
+}
+
 // A star glyph centred at the origin, after the Bayer/Flamsteed ladder: a disc
 // for the faintest, then `rays` tapered points over a small core (from 8 up,
 // alternate rays run short). `glory` adds a ring of ticks. `r` = ray length.

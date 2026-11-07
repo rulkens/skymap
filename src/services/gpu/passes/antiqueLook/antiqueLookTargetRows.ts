@@ -41,6 +41,7 @@ export function antiqueLookTargetRows(swapFormat: GPUTextureFormat): readonly Re
     row(ANTIQUE_TARGETS.paper, 'rgba8unorm', 1),
     row(ANTIQUE_TARGETS.wash, HDR_TARGET_FORMAT, ANTIQUE_CELL),
     row(ANTIQUE_TARGETS.glow, HDR_TARGET_FORMAT, ANTIQUE_CELL * 4),
+    row(ANTIQUE_TARGETS.nebula, HDR_TARGET_FORMAT, ANTIQUE_CELL),
     row(
       ANTIQUE_TARGETS.printPoints,
       ANTIQUE_PRINT_POINTS_FORMAT,

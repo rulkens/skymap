@@ -1,7 +1,8 @@
 /**
  * antiqueLook — the `stylize` step, its passes in order: paper (the sheet, baked
  * only when its row was reallocated or the scan landed), reduce (print →
- * quarter-res `wash`), glow (`wash` → 1/16-res), land blur (`wash.a` →
+ * quarter-res `wash`), glow (`wash` → 1/16-res), nebula (`wash` → the galaxy
+ * engraving's quarter-res fields), sky floor (glow → one f32, compute), land blur (`wash.a` →
  * `land-blur`, across then down, only under Earth's land map), glyphs (from the
  * star Layer's `print-points`) and decor (instanced scatters into `star-ink` and
  * `decor`/`decor-hue`), plate (all of it inked onto the swap chain). One
@@ -157,6 +158,7 @@ export function createAntiqueLook(init: {
     const paper = targets.viewOf(ANTIQUE_TARGETS.paper);
     const wash = targets.viewOf(ANTIQUE_TARGETS.wash);
     const glow = targets.viewOf(ANTIQUE_TARGETS.glow);
+    const nebula = targets.viewOf(ANTIQUE_TARGETS.nebula);
     const starInk = targets.viewOf(ANTIQUE_TARGETS.starInk);
     const decor = targets.viewOf(ANTIQUE_TARGETS.decor);
     const decorHue = targets.viewOf(ANTIQUE_TARGETS.decorHue);
@@ -202,6 +204,22 @@ export function createAntiqueLook(init: {
       bakesPaper ? undefined : begin,
     );
     fullScreen(encoder, 'glow', [glow], g.glow, [wash]);
+    fullScreen(encoder, 'nebula', [nebula], g.nebula, [wash, g.clampSampler]);
+    const floorPass = encoder.beginComputePass({ label: 'antique-look-sky-floor' });
+    floorPass.setPipeline(g.skyFloor.pipeline);
+    floorPass.setBindGroup(
+      0,
+      device.createBindGroup({
+        label: 'antique-look-sky-floor-bg',
+        layout: g.skyFloor.layout,
+        entries: [
+          { binding: 0, resource: glow },
+          { binding: 1, resource: { buffer: g.skyFloorBuffer } },
+        ],
+      }),
+    );
+    floorPass.dispatchWorkgroups(1);
+    floorPass.end();
     // Only Earth's mapped land is read (a record's land flag), so no map, no blur.
     if (landMapped) {
       fullScreen(encoder, 'land-blur-across', [landBlurAcross], g.landBlurAcross, [wash, uniforms]);
@@ -276,6 +294,8 @@ export function createAntiqueLook(init: {
         lines,
         { buffer: g.plateBodies },
         landBlur,
+        nebula,
+        { buffer: g.skyFloorBuffer },
       ],
       end,
     );

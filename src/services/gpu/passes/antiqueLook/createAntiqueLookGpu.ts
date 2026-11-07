@@ -1,7 +1,7 @@
 /**
- * createAntiqueLookGpu — the look's eight pipelines (full-screen paper bake,
- * reduce, glow, the land blur's two halves and plate; instanced glyphs and decor) with their
- * bind-group layouts, and its fixed uniform buffers. Binding order is each
+ * createAntiqueLookGpu — the look's ten pipelines (full-screen paper bake,
+ * reduce, glow, nebula, the land blur's two halves and plate; instanced glyphs and
+ * decor; the sky-floor compute) with their bind-group layouts, and its fixed buffers. Binding order is each
  * shader's `@binding` order. Target formats must match `antiqueLookTargetRows`.
  */
 
@@ -9,6 +9,8 @@ import vsCode from '../../shaders/antiqueLook/vertex.wesl?static';
 import paperCode from '../../shaders/antiqueLook/paperBake.wesl?static';
 import reduceCode from '../../shaders/antiqueLook/reduce.wesl?static';
 import glowCode from '../../shaders/antiqueLook/glow.wesl?static';
+import nebulaCode from '../../shaders/antiqueLook/nebula.wesl?static';
+import skyFloorCode from '../../shaders/antiqueLook/skyFloor.wesl?static';
 import glyphsCode from '../../shaders/antiqueLook/glyphs.wesl?static';
 import decorCode from '../../shaders/antiqueLook/decor.wesl?static';
 import plateCode from '../../shaders/antiqueLook/fragment.wesl?static';
@@ -17,6 +19,7 @@ import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import {
   ANTIQUE_GLYPH_BYTES,
   ANTIQUE_ORNAMENT_BYTES,
+  ANTIQUE_SKY_FLOOR_BYTES,
   ANTIQUE_UNIFORM_BYTES,
 } from '../../../../data/rendering/antiqueLook';
 import { ANTIQUE_PLATE_BODIES_BYTES } from '../../../../data/rendering/antiquePlateBodies';
@@ -26,6 +29,7 @@ import type { AntiqueLookGpu } from '../../../../@types/rendering/AntiqueLookGpu
 const TEXTURE = { texture: { sampleType: 'float' } } as const;
 const UNIFORM = { buffer: { type: 'uniform' } } as const;
 const SAMPLER = { sampler: { type: 'filtering' } } as const;
+const STORAGE = { buffer: { type: 'read-only-storage' } } as const;
 
 export function createAntiqueLookGpu(
   device: GPUDevice,
@@ -94,6 +98,29 @@ export function createAntiqueLookGpu(
   const ornaments = buffer('ornaments', ANTIQUE_ORNAMENT_BYTES);
   const digits = buffer('digits', ANTIQUE_GLYPH_BYTES);
   const plateBodies = buffer('plate-bodies', ANTIQUE_PLATE_BODIES_BYTES);
+  const skyFloorBuffer = device.createBuffer({
+    label: 'antique-look-sky-floor',
+    size: ANTIQUE_SKY_FLOOR_BYTES,
+    usage: GPUBufferUsage.STORAGE,
+  });
+  const skyFloorLayout = device.createBindGroupLayout({
+    label: 'antique-look-sky-floor-bgl',
+    entries: [
+      { binding: 0, visibility: GPUShaderStage.COMPUTE, ...TEXTURE },
+      { binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+    ],
+  });
+  const skyFloorPipeline = device.createComputePipeline({
+    label: 'antique-look-sky-floor',
+    layout: device.createPipelineLayout({
+      label: 'antique-look-sky-floor-layout',
+      bindGroupLayouts: [skyFloorLayout],
+    }),
+    compute: {
+      module: createShaderModuleWithDevLog(device, skyFloorCode, 'antiqueLook.skyFloor'),
+      entryPoint: 'cs',
+    },
+  });
   // Star glyphs scatter: their own vertex stage, a strip per instance, MAX blend
   // so overlapping glyphs and halos keep the stronger, never sum.
   const glyphsModule = createShaderModuleWithDevLog(device, glyphsCode, 'antiqueLook.glyphs');
@@ -153,6 +180,8 @@ export function createAntiqueLookGpu(
     paper: stage('paper', paperCode, [UNIFORM, TEXTURE, TEXTURE, SAMPLER], ['rgba8unorm']),
     reduce: stage('reduce', reduceCode, [TEXTURE, TEXTURE, TEXTURE], [HDR_TARGET_FORMAT]),
     glow: stage('glow', glowCode, [TEXTURE], [HDR_TARGET_FORMAT]),
+    nebula: stage('nebula', nebulaCode, [TEXTURE, SAMPLER], [HDR_TARGET_FORMAT]),
+    skyFloor: { pipeline: skyFloorPipeline, layout: skyFloorLayout },
     landBlurAcross: stage(
       'land-blur-across',
       landBlurCode,
@@ -187,6 +216,8 @@ export function createAntiqueLookGpu(
         TEXTURE, // constellation lines
         UNIFORM, // plate bodies
         TEXTURE, // land blur
+        TEXTURE, // nebula
+        STORAGE, // sky floor
       ],
       [targetFormat],
     ),
@@ -196,6 +227,7 @@ export function createAntiqueLookGpu(
     decor: { pipeline: decorPipeline, layout: decorLayout },
     digits,
     plateBodies,
+    skyFloorBuffer,
     clampSampler: sampler('clamp', 'clamp-to-edge'),
     repeatSampler: sampler('repeat', 'repeat'),
     empty: emptyTexture.createView(),
@@ -204,6 +236,7 @@ export function createAntiqueLookGpu(
       ornaments.destroy();
       digits.destroy();
       plateBodies.destroy();
+      skyFloorBuffer.destroy();
       emptyTexture.destroy();
     },
   };

@@ -7,6 +7,10 @@ export type AntiqueLookGpu = {
   readonly paper: { readonly pipeline: GPURenderPipeline; readonly layout: GPUBindGroupLayout };
   readonly reduce: { readonly pipeline: GPURenderPipeline; readonly layout: GPUBindGroupLayout };
   readonly glow: { readonly pipeline: GPURenderPipeline; readonly layout: GPUBindGroupLayout };
+  /** The galaxy engraving's quarter-res fields (`nebula.wesl`). */
+  readonly nebula: { readonly pipeline: GPURenderPipeline; readonly layout: GPUBindGroupLayout };
+  /** One workgroup: the glow's 30th-percentile luma into `skyFloorBuffer` (`skyFloor.wesl`). */
+  readonly skyFloor: { readonly pipeline: GPUComputePipeline; readonly layout: GPUBindGroupLayout };
   /** The land share's separable blur (`landBlur.wesl`), across then down. */
   readonly landBlurAcross: {
     readonly pipeline: GPURenderPipeline;
@@ -26,6 +30,8 @@ export type AntiqueLookGpu = {
   readonly digits: GPUBuffer;
   /** `PlateBodies` (`plateBodies.wesl`): the globes the plate ray-casts. */
   readonly plateBodies: GPUBuffer;
+  /** Written by the sky-floor compute, read by the plate in the same submit. */
+  readonly skyFloorBuffer: GPUBuffer;
   readonly clampSampler: GPUSampler;
   readonly repeatSampler: GPUSampler;
   /** All zeros: bound in place of a missing overlay, foreground:0 or asset. */
