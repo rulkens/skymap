@@ -151,14 +151,18 @@ fn bodyLight(uv: vec2<f32>) -> f32 {
 
 // How near the coast an ocean pixel lies, from the quarter-res land share: land
 // within ~3 cells counts fully, within ~7 cells half. 1 at the shore, 0 far out.
-fn coastNear(uv: vec2<f32>) -> f32 {
+// How near the other side of a coast is: x land seen from the sea, y sea seen
+// from the land (sky cells, alpha -1, count as neither).
+fn coastNear(uv: vec2<f32>) -> vec2<f32> {
   let t = 1.0 / vec2<f32>(textureDimensions(washTex));
-  var near = 0.0;
+  var near = vec2<f32>(0.0);
   for (var k = 0; k < 8; k++) {
     let a = f32(k) * 0.7853982;
     let dir = vec2<f32>(cos(a), sin(a)) * t;
-    near = max(near, clamp(textureSampleLevel(washTex, linear, uv + dir * 3.0, 0.0).a, 0.0, 1.0));
-    near = max(near, 0.5 * clamp(textureSampleLevel(washTex, linear, uv + dir * 7.0, 0.0).a, 0.0, 1.0));
+    let close = textureSampleLevel(washTex, linear, uv + dir * 3.0, 0.0).a;
+    let far = textureSampleLevel(washTex, linear, uv + dir * 7.0, 0.0).a;
+    near = max(near, vec2<f32>(clamp(close, 0.0, 1.0), select(0.0, 1.0 - close, close >= 0.0)));
+    near = max(near, 0.5 * vec2<f32>(clamp(far, 0.0, 1.0), select(0.0, 1.0 - far, far >= 0.0)));
   }
   return near;
 }
@@ -249,7 +253,9 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
 
   let ornament = texel(decorTex, ip);
   col = mix(col, paperTone, ornament.b);
-  col = applyWash(col, max(texel(decorHueTex, ip).rgb, vec3<f32>(1e-3)), ornament.a * 0.55 * frame.y);
+  // Figures lie on the sky, behind any body; only a clearing ornament covers one.
+  let behind = max(sky, ornament.b);
+  col = applyWash(col, max(texel(decorHueTex, ip).rgb, vec3<f32>(1e-3)), ornament.a * 0.55 * behind * frame.y);
 
   // Sky: glyphs for stars; the boundary line and one inner contour on the low
   // band; sparse stipple only where it is truly bright (the Milky Way's core).
@@ -298,16 +304,16 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     let ocean = 1.0 - smoothstep(0.35, 0.65, landShare);
     let coastPx = abs(landShare - 0.5) / landPerPx;
     let coast = 1.0 - smoothstep(0.55 * u.unit, 0.55 * u.unit + 1.0, coastPx);
-    let near = coastNear(uv);
+    let shore = coastNear(uv);
+    let near = shore.x;
     let halo = coastHalo(p, near, 2.4) * ocean * (1.0 - tone);
     // Seas a pale smalt, pooled darker along the shore; land in the hue of its light.
     // The colourist's sea stops a little off the cut coast, by a slow wander.
     let washShare = clamp(textureSampleLevel(washTex, linear, uv + slip * 0.6, 0.0).a, 0.0, 1.0);
     let seaWash = (0.14 + 0.1 * near) * (1.0 - smoothstep(0.35, 0.65, washShare));
     // Land in Dutch outline colour: a band along each coast fading inward to paper.
-    let landWash = 0.5 * smoothstep(0.35, 0.6, washShare) * (1.0 - smoothstep(0.62, 0.9, washShare));
+    let landWash = 0.5 * smoothstep(0.35, 0.6, washShare) * shore.y;
     col = applyWash(col, pigmentAt(5.0), seaWash * body * frame.y);
-    // Land in gamboge, the Dutch colourist's yellow, whatever its photograph's hue.
     col = applyWash(col, pigmentAt(2.0), landWash * body * frame.y);
     bodyInk = max(max(hatchInk, coast), halo * 0.85) * body;
   }
@@ -329,7 +335,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     }
   }
 
-  let figure = ornament.r * clear;
+  let figure = ornament.r * clear * sky;
   let scene = max(max(max(bodyInk, limb), max(skyInk, rulings)), figure) * (1.0 - ornament.b);
   let lettered = max(scene * (1.0 - captionHalo), captions);
   // The border's digits only exist along the edges: skip their loop elsewhere.
