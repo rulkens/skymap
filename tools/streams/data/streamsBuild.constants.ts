@@ -22,6 +22,16 @@ export const SGR_FEH_OLD_STRIP_GYR = 2.7;
 export const SGR_LUMINOSITY = 1;
 export const SGR_SIZE_KPC: readonly [number, number] = [0.25, 0.6];
 export const SGR_SEED = 0x5347_5221n;
+/**
+ * Sagittarius's centrelines split the debris into arms by orbital energy in a logarithmic halo
+ * of this circular speed, km/s: leading debris is more bound than the remnant, trailing less.
+ */
+export const SGR_ARM_SPLIT_V0_KMS = 220;
+/** Each arm bins out to this percentile of its angle from the remnant; the sparse tail would bend the end. */
+export const SGR_ARM_EXTENT_PERCENTILE = 95;
+export const SGR_ARM_BINS = 16;
+/** A bin with fewer particles averages noise, not the arm. */
+export const SGR_ARM_BIN_MIN = 50;
 
 export const TRACK_LUMINOSITY = 0.8;
 /** Particles per kpc of track at the reference width; wider streams get proportionally more. */
@@ -37,6 +47,11 @@ export const TRACK_SIZE_KPC: readonly [number, number] = [0.05, 0.3];
 /** End fade reaches full brightness 1/8 of the track in from each end. */
 export const TRACK_END_FADE_SLOPE = 8;
 export const TRACK_SEED = 0x4753_5452n;
+/**
+ * A pick centreline stays within the larger of half the stream's width and this share of its
+ * length of the track: lean (~5 points for most streams) yet on the stream at any zoom.
+ */
+export const CENTRELINE_LENGTH_TOLERANCE = 0.01;
 
 /**
  * A two-anchor approximation of an old population's light, linear in [Fe/H] between them and flat

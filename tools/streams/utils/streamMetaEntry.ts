@@ -8,6 +8,8 @@ import type { StreamMetallicity } from '../@types/StreamMetallicity';
 import { streamSlug } from './streamSlug';
 import { streamStellarMass } from './streamStellarMass';
 import { trackPositionsKpc } from './trackPositionsKpc';
+import { trackWidthKpc } from './trackWidthKpc';
+import { centrelineMpc } from './centrelineMpc';
 
 const KPC_TO_MPC = 1e-3;
 
@@ -22,6 +24,7 @@ export function streamMetaEntry(
   const lengthKpc = cumulative[cumulative.length - 1]!;
   const mid = pointAlongPolyline(points, cumulative, lengthKpc / 2).point;
   const name = track.name.replace(/_/g, ' ');
+  const widthKpc = trackWidthKpc(track);
   return {
     id: streamSlug(name),
     names: [name],
@@ -37,5 +40,7 @@ export function streamMetaEntry(
     metallicity,
     stellarMass: streamStellarMass(track.name),
     anchorMpc: [mid[0] * KPC_TO_MPC, mid[1] * KPC_TO_MPC, mid[2] * KPC_TO_MPC],
+    centrelineMpc: centrelineMpc(points, widthKpc),
+    ribbonWidthKpc: widthKpc,
   };
 }

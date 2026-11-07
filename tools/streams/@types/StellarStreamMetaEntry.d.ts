@@ -1,3 +1,4 @@
+import type { Vec3 } from '../../../src/@types/math/Vec3';
 import type { StreamMetallicity } from './StreamMetallicity';
 import type { StreamStellarMass } from './StreamStellarMass';
 
@@ -23,4 +24,8 @@ export type StellarStreamMetaEntry = {
   /** Published stellar mass and its citation; null where none is published as one value. */
   stellarMass: StreamStellarMass | null;
   anchorMpc: readonly [number, number, number];
+  /** The track simplified for picking (`centrelineMpc`); Sagittarius's arms joined at the remnant. */
+  centrelineMpc: Vec3[];
+  /** The pick ribbon's full width along the centreline, defaulted and floored; never shown. */
+  ribbonWidthKpc: number;
 };

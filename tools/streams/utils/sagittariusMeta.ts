@@ -4,6 +4,8 @@ import { percentile } from '../../utils/perf/percentile';
 import type { StellarStreamMetaEntry } from '../@types/StellarStreamMetaEntry';
 import type { StreamParticles } from '../@types/StreamParticles';
 import type { VasilievStar } from '../@types/VasilievStar';
+import { centrelineMpc } from './centrelineMpc';
+import { sagittariusCentrelines } from './sagittariusCentrelines';
 
 const MPC_TO_KPC = 1e3;
 /** The extent ignores the farthest 1% of the snapshot, so one stray particle cannot set it. */
@@ -25,6 +27,7 @@ export function sagittariusMeta(
     (v) =>
       Math.hypot(v[0] - anchorMpc[0]!, v[1] - anchorMpc[1]!, v[2] - anchorMpc[2]!) * MPC_TO_KPC,
   );
+  const { leadingKpc, trailingKpc, widthKpc } = sagittariusCentrelines(stars);
   let [near, far] = [Infinity, 0];
   for (let i = 0; i < p.luminosity.length; i++) {
     const [x, y, z] = p.positionsMpc.subarray(i * 3, i * 3 + 3);
@@ -50,5 +53,11 @@ export function sagittariusMeta(
     // Published values are ranges or limits (see streamStellarMass.constants).
     stellarMass: null,
     anchorMpc: [anchorMpc[0]!, anchorMpc[1]!, anchorMpc[2]!],
+    // One line, leading tip to trailing tip through the remnant both arms start at.
+    centrelineMpc: [
+      ...centrelineMpc(leadingKpc, widthKpc).reverse(),
+      ...centrelineMpc(trailingKpc, widthKpc).slice(1),
+    ],
+    ribbonWidthKpc: widthKpc,
   };
 }
