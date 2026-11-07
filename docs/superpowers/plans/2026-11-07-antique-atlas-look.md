@@ -185,6 +185,11 @@ Owner ruling 2026-11-07: keep the generic galaxy engraving with these names; the
 - [ ] Earth labels cut by their text rects, not their anchors.
 - [ ] Five-reviewer loop (cartographer, map designer, historian, art critic, fidelity) to ≥ 8.
 
+### Task 23: Plate textures packed into arrays (owner GO 2026-11-07)
+**Files:** `src/data/rendering/antiqueLook.ts`, `src/services/gpu/passes/antiqueLook/{antiqueLook,antiqueLookTargetRows,createAntiqueLookGpu}.ts`,
+`src/services/gpu/shaders/antiqueLook/fragment.wesl`, `tests/services/gpu/shaders/antiquePlateBindings.parity.test.ts`
+- [x] The nine rows the look writes and the plate reads become layers of `antique-full` (rgba8), `antique-quarter` and `antique-low` (rgba16f): the plate samples 10 textures, budget 12, a new row is a layer (62ece682d).
+
 ## Definition of Done
 
 **Deliverables:** the `stylize` FRAME_ORDER line and `antiqueLook` pass; the `antique` settings
