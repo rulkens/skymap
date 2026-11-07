@@ -1,6 +1,9 @@
 /** The antique Moon pass (`moon-print`, `texturedBody/fragment.wesl` `fsMoonPrint`):
  * its crater rings and the uniform record it loops over. */
 
+/** The body the pass prints. */
+export const ANTIQUE_MOON_HOST = 'moon';
+
 /** The rings one frame prints, most: the full disc needs ~60, a close-up's cut
  * leaves 150–300 candidates, and the largest are the ones a reader names. */
 export const ANTIQUE_MOON_MAX_CRATERS = 128;

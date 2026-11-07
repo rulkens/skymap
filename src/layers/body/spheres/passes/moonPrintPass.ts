@@ -14,23 +14,27 @@ import { SCENE_CELESTIAL_BODIES } from '../../../../data/bodies/sceneCelestialBo
 import { composeBodySlabMvp } from '../../../../utils/camera/bodyCompose/composeBodySlabMvp';
 import { bodySlabCamLocal } from '../../../../utils/camera/bodyCompose/bodySlabCamLocal';
 import { innerBoundRadiusM } from '../../../../utils/occlusion/innerBoundRadiusM';
-import { ANTIQUE_MOON_PRINT_BYTES, ANTIQUE_MOON_TABLE_RADIUS_KM } from '../data/antiqueMoonPrint';
+import {
+  ANTIQUE_MOON_HOST,
+  ANTIQUE_MOON_PRINT_BYTES,
+  ANTIQUE_MOON_TABLE_RADIUS_KM,
+} from '../data/antiqueMoonPrint';
 import { moonCraterTable } from '../present/moonCraterTable';
 import { pickMoonCraters } from '../present/pickMoonCraters';
 import { texturedBodyUniforms } from '../present/texturedBodyUniforms';
 import { packMoonPrint } from '../render/packMoonPrint';
 
-const MOON = 'moon';
-
 export function moonPrintPass(runtime: BodyRuntime): ContentPass {
   const table = moonCraterTable(ANTIQUE_MOON_CRATERS, ANTIQUE_MOON_TABLE_RADIUS_KM);
-  const radiusM = innerBoundRadiusM(SCENE_CELESTIAL_BODIES.find((b) => b.id === MOON)!.surface);
+  const radiusM = innerBoundRadiusM(
+    SCENE_CELESTIAL_BODIES.find((b) => b.id === ANTIQUE_MOON_HOST)!.surface,
+  );
   const bytes = new ArrayBuffer(ANTIQUE_MOON_PRINT_BYTES);
   return {
     name: 'moon-print',
 
     enabled(_state, _ctx, view) {
-      return view.slab.frame.kind === 'body-m' && view.slab.frame.hostId === MOON;
+      return view.slab.frame.kind === 'body-m' && view.slab.frame.hostId === ANTIQUE_MOON_HOST;
     },
 
     draw(pass, view, ctx, state) {

@@ -1475,9 +1475,33 @@ countries.
 - **Attribution:** "Please give credit for this item to: NASA's Scientific
   Visualization Studio".
 - **Upstream:** <https://svs.gsfc.nasa.gov/4720>
-- **Enters skymap:** `npm run fetch-textures` → `bakeNormalMap.ts`.
-- **Modified:** Yes. Turned into a normal map.
+- **Enters skymap:** `npm run fetch-textures` → `bakeNormalMap.ts`, and
+  `tools/antique/moon/bakeMoonCraters.ts` (crater rim radii and depths).
+- **Modified:** Yes. Turned into a normal map; sampled for the crater table.
 - **Checked:** 2026-10-07: <https://svs.gsfc.nasa.gov/4720>
+
+### IAU / USGS: Gazetteer of Planetary Nomenclature (Moon)
+
+<!-- attribution: id=iau-gazetteer-moon; keys=iau.moon-nomenclature,iau.readme -->
+
+- **What:** The Moon's named features as centre points with diameters; the
+  antique look's crater table is baked from its craters.
+- **By:** International Astronomical Union (IAU) Working Group for Planetary
+  System Nomenclature and the USGS Astrogeology Science Center.
+- **Licence:** The download's metadata: use constraints "Public domain.", data
+  credit "International Astronomical Union (IAU) and United States Geologic
+  Survey (USGS)".
+- **Use:** Free, no credit asked
+- **Attribution:** None asked. Ours: "IAU / USGS Gazetteer of Planetary
+  Nomenclature".
+- **Upstream:** <https://planetarynames.wr.usgs.gov/GIS_Downloads>
+- **Enters skymap:** downloaded by hand →
+  `tools/antique/moon/bakeMoonCraters.ts` →
+  `src/data/rendering/antiqueMoonCraters.generated.ts`.
+- **Modified:** Yes. Craters of 12 km or more, radii snapped to the LOLA rim
+  crest, a print weight from their depth.
+- **Checked:** 2026-11-07: <https://planetarynames.wr.usgs.gov/GIS_Downloads>,
+  the zip's `metadata_nomenclature_points_MOON.xml`
 
 ## Earth imagery and terrain
 
