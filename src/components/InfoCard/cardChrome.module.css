@@ -37,7 +37,7 @@
   overflow-wrap: break-word;
 
   /* Glassmorphism — strong variant for the "loud" card */
-  background: var(--surface-card-strong);
+  background: var(--sheet-ground, var(--surface-card-strong));
   /* Vendor-prefixed first, standard last — see Panel.module.css for why. */
   -webkit-backdrop-filter: blur(var(--blur-card));
   backdrop-filter: blur(var(--blur-card));

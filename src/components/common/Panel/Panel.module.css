@@ -1,13 +1,13 @@
 /*
  * Panel.module.css — the shared card chrome of the left-stack panels (Navigation, Settings).
- * Every value is a token. The `--frame-*`, `--framed-*` and `--panel-title-*` hooks are
- * unset in the plain look (each falls back to today's value); the antique look fills them
- * (styles/antique.css, utils/antiqueChrome/antiqueChromeCss) to draw an engraved frame with
- * the title astride its top rule (framedTitle.module.css).
+ * Every value is a token. The `--sheet-ground`, `--frame-*`, `--framed-*` and `--panel-title-*`
+ * hooks are unset in the plain look (each falls back to today's value); the antique look fills
+ * them (styles/antique.css, utils/antiqueChrome/antiqueChromeCss) to draw laid paper in an
+ * engraved frame with the title astride its top rule (framedTitle.module.css).
  */
 
 .panel {
-  background: var(--surface-panel);
+  background: var(--sheet-ground, var(--surface-panel));
   /* Prefixed first: esbuild keeps the last of two adjacent duplicates, and Firefox reads only the standard one. */
   -webkit-backdrop-filter: blur(var(--blur-panel));
   backdrop-filter: blur(var(--blur-panel));

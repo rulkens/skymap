@@ -5,6 +5,9 @@
  * `--antique-ink` and `--antique-slip`; a test holds them together.
  */
 import type { EngravedFrameParams } from '../../@types/ui/antiqueChrome/EngravedFrameParams';
+import type { FoxingParams } from '../../@types/ui/antiqueChrome/FoxingParams';
+import type { InkWearParams } from '../../@types/ui/antiqueChrome/InkWearParams';
+import type { PaperParams } from '../../@types/ui/antiqueChrome/PaperParams';
 
 /** The canvas pass's `INK` (shaders/antiqueLook/fragment.wesl). */
 export const ANTIQUE_CHROME_INK = '#2b2118';
@@ -28,6 +31,42 @@ export const INSET_FRAME: EngravedFrameParams = {
   band: 3,
   cell: 5,
   ornament: 0,
+};
+
+/** The slips' laid paper, toned rag brown. Mottle and fibre swing both ways round the slip, so its mean (and the ink's contrast) holds. */
+export const PANEL_PAPER: PaperParams = {
+  size: 256,
+  tone: '#7a5a34',
+  grain: 0.75,
+  grainStrength: 0.16,
+  mottle: 0.011,
+  mottleStrength: 0.12,
+  wirePitch: 2.2,
+  wireAlpha: 0.03,
+  chainPitch: 64,
+  chainAlpha: 0.035,
+};
+
+/** Larger than any panel, so the percentage offset that varies the spots by panel size never repeats one. */
+export const PANEL_FOXING: FoxingParams = {
+  width: 720,
+  height: 560,
+  spots: 14,
+  core: 2.6,
+  halo: 16,
+  coreAlpha: 0.38,
+  haloAlpha: 0.13,
+  tideAlpha: 0.07,
+  tone: '#94582a',
+};
+
+/** The frames' and tablets' uneven printing: a hair off true, a break now and then. */
+export const INK_WEAR: InkWearParams = {
+  wobble: 0.9,
+  wobbleFrequency: 0.35,
+  grain: 0.28,
+  thinAt: 0.66,
+  breakSpan: 0.18,
 };
 
 /** The colourist's box (shaders/antiqueLook/pigments.wesl): gamboge marks hover and press, verdigris what is on. */
