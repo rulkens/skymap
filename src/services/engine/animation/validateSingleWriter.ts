@@ -33,6 +33,8 @@
  * Windows are HALF-OPEN: `[startSec, endSec)`. Two segments that TOUCH at an
  * endpoint (e.g. `[0, 4)` and `[4, 8)`) do NOT overlap — a `seq` of two ramps
  * must pass cleanly. The predicate is `a.startSec < b.endSec && b.startSec < a.endSec`.
+ * The one legal overlap is a crossfade from an overlapping `seq`: the later
+ * segment's `blendIn` names exactly the shared window, and never three at once.
  *
  * ### How it is called
  *
@@ -62,18 +64,32 @@ export function validateSingleWriter(baseTracks: Record<Channel, BaseSegment[]>)
   for (const ch of Object.keys(baseTracks) as Channel[]) {
     const segs = baseTracks[ch];
     // Segments are pre-sorted by startSec ascending (compileClip guarantees
-    // this). Consecutive-pair scan is sufficient by contrapositive: if segment i
-    // does NOT overlap i+1, then segs[i].endSec <= segs[i+1].startSec, so by
-    // sorted order segs[i] cannot overlap i+2 or any later segment either.
+    // this). A blend pair keeps `a.end <= b.end`, so once segment i clears i+2
+    // it clears every later one too: checking i+1 and i+2 is complete.
     for (let i = 0; i < segs.length - 1; i++) {
       const a = segs[i]!;
       const b = segs[i + 1]!;
+      const c = segs[i + 2];
+      if (c !== undefined && a.startSec < c.endSec && c.startSec < a.endSec) {
+        throw new Error(
+          `three writers live at once on channel '${ch}': ` +
+            `[${a.startSec},${a.endSec}) still runs at ${c.startSec}`,
+        );
+      }
       // Half-open overlap: [a.start, a.end) ∩ [b.start, b.end) is non-empty
       // iff a.start < b.end AND b.start < a.end.
-      if (a.startSec < b.endSec && b.startSec < a.endSec) {
+      if (!(a.startSec < b.endSec && b.startSec < a.endSec)) continue;
+      if (b.blendIn === undefined) {
         throw new Error(
           `single-writer violation on channel '${ch}': ` +
             `[${a.startSec},${a.endSec}) overlaps [${b.startSec},${b.endSec})`,
+        );
+      }
+      const { startSec, endSec } = b.blendIn;
+      if (startSec !== b.startSec || endSec !== a.endSec || a.endSec > b.endSec) {
+        throw new Error(
+          `blend window [${startSec},${endSec}) on channel '${ch}' does not match ` +
+            `the overlap of [${a.startSec},${a.endSec}) and [${b.startSec},${b.endSec})`,
         );
       }
     }

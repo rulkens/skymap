@@ -54,14 +54,14 @@
  * ### Single-writer check
  *
  * After building `baseTracks`, `compileClip` calls `validateSingleWriter` to
- * assert that no two base writers overlap on any channel. Any clash throws
+ * assert that no two base writers overlap on any channel, except the crossfade
+ * pairs `resolveSeqJoins` marked in an overlapping `seq`. Any clash throws
  * immediately at registration time, before the `CompiledClip` is returned.
  */
 
 import type { ClipData } from '../../../@types/animation/ClipData';
 import type { CompiledClip } from '../../../@types/animation/compiledClip/CompiledClip';
 import type { Effect } from '../../../@types/animation/Effect';
-import type { Channel } from '../../../@types/animation/Channel';
 import type { CameraPose } from '../../../@types/camera/pose/CameraPose';
 import type { Mat3 } from '../../../@types/math/Mat3';
 import { CHANNEL_SPACE } from './channelSpace';
@@ -72,6 +72,8 @@ import { buildGeodesicTrack } from './buildGeodesicTrack';
 import { hasDuration } from './hasDuration';
 import { validateSeqOverlap } from './validateSeqOverlap';
 import { validateSeqCueOrder } from './validateSeqCueOrder';
+import { resolveSeqJoins } from './resolveSeqJoins';
+import { baseTracksOf } from './baseTracksOf';
 import type { SeqOverlap } from '../../../@types/animation/SeqOverlap';
 import type { SeqSteps } from '../../../@types/animation/SeqSteps';
 import type { StepSpan } from '../../../@types/animation/StepSpan';
@@ -89,9 +91,6 @@ import type { SceneCue } from '../../../@types/animation/compiledClip/SceneCue';
 // ---------------------------------------------------------------------------
 
 const ZERO_POSE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 0 };
-
-// Every channel, used to build the initial baseTracks record.
-const ALL_CHANNELS: Channel[] = ['distance', 'yaw', 'pitch', 'roll', 'target', 'fov'];
 
 // ---------------------------------------------------------------------------
 // Mutable accumulator — threaded through the recursive walk.
@@ -467,16 +466,12 @@ export function compileClip(data: ClipData, frameBasis?: Mat3): CompiledClip {
 
   // After the walk, so a segment walked before the composite it follows (an
   // earlier `all` sibling) still picks it up.
-  const baseSegs = acc.baseSegs.map((seg) => continuedFromComposite(seg, acc));
-
-  // Build baseTracks as Record<Channel, BaseSegment[]> with an entry for
-  // every channel (sorted ascending by startSec within each channel).
-  const baseTracks = Object.fromEntries(
-    ALL_CHANNELS.map((ch) => [
-      ch,
-      baseSegs.filter((s) => s.channel === ch).sort((a, b) => a.startSec - b.startSec),
-    ]),
-  ) as Record<Channel, BaseSegment[]>;
+  const baseSegs = resolveSeqJoins(
+    acc.baseSegs.map((seg) => continuedFromComposite(seg, acc)),
+    acc.compositeTracks,
+    acc.seqs,
+  );
+  const baseTracks = baseTracksOf(baseSegs);
 
   validateSingleWriter(baseTracks);
   validateCompositeExclusivity(baseTracks, acc.compositeTracks);

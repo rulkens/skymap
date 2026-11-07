@@ -230,3 +230,40 @@ describe('validateSingleWriter via compileClip integration', () => {
     ).not.toThrow();
   });
 });
+
+describe('validateSingleWriter blend pairs', () => {
+  const seg = (
+    startSec: number,
+    endSec: number,
+    blendIn?: { startSec: number; endSec: number },
+  ): BaseSegment => ({
+    segKind: 'tween',
+    channel: 'distance',
+    startSec,
+    endSec,
+    to: 300,
+    curve: { kind: 'ease', ease: 'linear' },
+    space: 'log',
+    ...(blendIn !== undefined ? { blendIn } : {}),
+  });
+  const tracksOf = (...segs: BaseSegment[]) => ({ ...emptyTracks(), distance: segs });
+
+  it('an overlap with a matching blendIn passes', () => {
+    const tracks = tracksOf(seg(0, 4), seg(2, 6, { startSec: 2, endSec: 4 }));
+    expect(() => validateSingleWriter(tracks)).not.toThrow();
+  });
+
+  it('a blendIn that does not match the overlap throws', () => {
+    const tracks = tracksOf(seg(0, 4), seg(2, 6, { startSec: 1, endSec: 4 }));
+    expect(() => validateSingleWriter(tracks)).toThrow(/'distance'.*does not match/);
+  });
+
+  it('three live writers throw', () => {
+    const tracks = tracksOf(
+      seg(0, 4),
+      seg(1, 6, { startSec: 1, endSec: 4 }),
+      seg(3, 8, { startSec: 3, endSec: 6 }),
+    );
+    expect(() => validateSingleWriter(tracks)).toThrow(/three writers.*'distance'/);
+  });
+});

@@ -9,7 +9,8 @@
  *   final[ch](t) = base[ch](t)  +  ∫₀ᵗ vel[ch]  +  osc[ch](t)
  *
  * **Base layer** (`baseTracks`): absolute tweens and delta spins. Only one
- * writer per channel per window (enforced at compile time). Between segments
+ * writer per channel per window (enforced at compile time), two only where an
+ * overlapping `seq` crossfades them (the incoming one's `blendIn`). Between segments
  * the channel holds its most recent value.
  *
  * **Velocity layer** (`velTracks`): closed-form integral of `rate` ramps. A
@@ -106,6 +107,9 @@ import type { TerrainHeightAtLookup } from '../../../../@types/camera/terrain/Te
 import { compileClip } from '../../animation/compileClip';
 import { EASE } from '../../animation/ease';
 import { segmentValueAt } from '../../animation/segmentValueAt';
+import { lerpChannel } from '../../animation/lerpChannel';
+import { CHANNEL_SPACE } from '../../animation/channelSpace';
+import { smootherstep } from '../../../../utils/math/smootherstep';
 import { foldToWorld } from '../arms/foldToWorld';
 import { rowFor } from '../arms/rowFor';
 import { sameFrame } from '../arms/sameFrame';
@@ -116,6 +120,9 @@ import type { VelRamp } from '../../../../@types/animation/compiledClip/VelRamp'
 import type { CompositeTrack } from '../../../../@types/animation/compiledClip/CompositeTrack';
 import type { CompositeSample } from '../../../../@types/animation/compiledClip/CompositeSample';
 import type { PositionedId } from '../../../../@types/scene/PositionedId';
+import type { FrameLeg } from '../../../../@types/animation/compiledClip/FrameLeg';
+import { buildFrameLegs } from '../../animation/buildFrameLegs';
+import { legIndexAt } from '../../animation/legIndexAt';
 
 // ---------------------------------------------------------------------------
 // Module-level compile cache — keyed on ClipData reference identity.
@@ -358,13 +365,31 @@ function evaluateBaseTrack<V extends number | Vec3>(
   window: LegWindow,
 ): V {
   let runningVal = startVal;
-  for (const seg of segments) {
+  for (let i = 0; i < segments.length; i++) {
+    const seg = segments[i]!;
     if (outsideLeg(seg, window)) continue;
     if (t < seg.startSec) return runningVal;
     // An explicit `from` (a segment continuing a composite) overrides the base chain.
-    const value = segmentValueAt(seg, (seg.from ?? runningVal) as V, t);
-    if (t < seg.endSec) return value;
-    runningVal = value;
+    const from = (seg.from ?? runningVal) as V;
+    const value = segmentValueAt(seg, from, t);
+    if (t >= seg.endSec) {
+      runningVal = value;
+      continue;
+    }
+    const next = segments[i + 1];
+    if (next?.blendIn === undefined || t < next.startSec) return value;
+    // Crossfade: the incoming plan starts from this one's PLANNED end, as it will
+    // once this segment ends; smootherstep keeps value and velocity continuous.
+    const { startSec, endSec } = next.blendIn;
+    const inFrom = (next.from ?? segmentValueAt(seg, from, seg.endSec)) as V;
+    const w = smootherstep((t - startSec) / (endSec - startSec));
+    return lerpChannel(
+      seg.channel,
+      CHANNEL_SPACE[seg.channel],
+      value,
+      segmentValueAt(next, inFrom, t),
+      w,
+    );
   }
   return runningVal;
 }
@@ -411,54 +436,19 @@ function governingCompositeAt(
 /** The pose a frame leg starts from, and the second it starts at. */
 type LegOrigin = { readonly atSec: number; readonly leg: number; readonly pose: CameraPose };
 
-type FrameLeg = {
-  readonly frame: PoseFrame;
-  readonly startSec: number;
-  /** The endpoint that opened the leg — the memo key for its converted start. */
-  readonly anchor: BaseSegment | null;
-};
-
 const legsCache = new WeakMap<CompiledClip, readonly FrameLeg[]>();
 
 // Keyed on the PLAYBACK, not the compiled clip: replaying the same `ClipData`
 // must re-convert against the bodies where they are now.
 const legStartCache = new WeakMap<object, Map<BaseSegment, CameraPose>>();
 
-function runsOn(seg: BaseSegment): number {
-  return seg.endSec > seg.startSec ? 1 : 0;
-}
-
 function frameLegsOf(compiled: CompiledClip): readonly FrameLeg[] {
   const cached = legsCache.get(compiled);
   if (cached !== undefined) return cached;
-
-  // `'tween'` only: reading a relative `spin`'s absent tag as `'absolute'` sent
-  // an earth-framed pose back through the Mpc seam mid-orbit.
-  // The lens is frame-free (`fovYRadAt`): its untagged tween must not open an absolute leg.
-  const segments = Object.entries(compiled.baseTracks)
-    .flatMap(([ch, track]) => (ch === 'fov' ? [] : track))
-    .filter((seg) => seg.segKind === 'tween')
-    // At a shared instant a zero-length snap sorts first, so the leg that runs
-    // on from it owns the instant; track order would hide one leg forever.
-    .sort((a, b) => a.startSec - b.startSec || runsOn(a) - runsOn(b));
-  const legs: FrameLeg[] = [{ frame: 'absolute', startSec: -Infinity, anchor: null }];
-  for (const seg of segments) {
-    const frame = seg.frame ?? 'absolute';
-    if (!sameFrame(frame, legs[legs.length - 1]!.frame)) {
-      legs.push({ frame, startSec: seg.startSec, anchor: seg });
-    }
-    if (runsOn(seg) === 0) snapLeg.set(seg, legs.length - 1);
-  }
+  const { legs, snapLegs } = buildFrameLegs(compiled.baseTracks);
+  for (const [seg, leg] of snapLegs) snapLeg.set(seg, leg);
   legsCache.set(compiled, legs);
   return legs;
-}
-
-function legIndexAt(legs: readonly FrameLeg[], t: number): number {
-  let index = 0;
-  for (let i = 1; i < legs.length; i++) {
-    if (legs[i]!.startSec <= t) index = i;
-  }
-  return index;
 }
 
 type FrameDeps = {

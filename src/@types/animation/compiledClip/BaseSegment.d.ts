@@ -25,7 +25,8 @@ import type { Vec3 } from '../../math/Vec3';
  * `CHANNEL_SPACE[ch]`). `curve` wraps the action's `ease`.
  *
  * Segments in `baseTracks[channel]` are ordered by `startSec` ascending and
- * non-overlapping (guaranteed by `validateSingleWriter`, Task 5).
+ * overlap only as a blend pair: the later one carries `blendIn` over the shared
+ * window (guaranteed by `resolveSeqJoins` and `validateSingleWriter`).
  */
 export type BaseSegment = {
   readonly segKind: 'tween' | 'spin';
@@ -43,4 +44,7 @@ export type BaseSegment = {
    *  its `by`-delta sweep after `endSec` (the perpetual looping orbit idiom).
    *  The evaluator (Task 6) reads this to gate completion logic. */
   readonly loop?: boolean;
+  /** Set only on the incoming segment of an overlapping `seq` join:
+   *  `[startSec, outgoing.endSec)`, the window the evaluator crossfades over. */
+  readonly blendIn?: { readonly startSec: number; readonly endSec: number };
 };
