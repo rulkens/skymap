@@ -1,7 +1,7 @@
 // antiqueLook/bodies/jupiter.wesl — Jupiter as the 1660s telescopes showed it: a few
 // smooth belts of hatching along the latitude, denser on the darker belt, dusky poles,
 // and the spot Hooke (1664) and Cassini (1665) recorded as a hatched oval with a firm
-// outline, set off by a paper collar and laid with a thin carmine wash. The belts sit
+// outline, set off by a paper collar and laid with a thin rose-madder wash. The belts sit
 // where the plain texture's zonal mean darkens; its storms are past a period telescope.
 
 import package::antiqueLook::plateBodies::BodyPrint;
@@ -16,12 +16,12 @@ import package::antiqueLook::pigments::pigmentAt;
 // its line weight (`crossHatch` widens lines past tone 0.5), ranked by the plain
 // texture's zonal luma: the North Equatorial (0.27), the South Equatorial's southern
 // half (0.35) then northern (0.42), the North Temperate (0.37).
-const BELTS = array<vec3<f32>, 4>(
-  vec3<f32>(-19.5, -14.5, 0.66),
-  vec3<f32>(-16.0, -7.5, 0.5),
-  vec3<f32>(6.5, 17.5, 0.7),
-  vec3<f32>(22.0, 25.0, 0.48),
-);
+// Named, not an array: a runtime index into a constant array is rejected by stricter
+// WGSL compilers (naga, WebKit), and an invalid pipeline drops the whole frame.
+const SEB_SOUTH = vec3<f32>(-19.5, -14.5, 0.66);
+const SEB_NORTH = vec3<f32>(-16.0, -7.5, 0.5);
+const NEB = vec3<f32>(6.5, 17.5, 0.7);
+const NTB = vec3<f32>(22.0, 25.0, 0.48);
 // The temperate dusk: from these latitudes (S, N) at 0.56, deepening by 0.1 to 45°.
 const DUSK = vec2<f32>(-31.0, 31.0);
 // Past 58° the rings would close on the pole as a target: there they break up and give
@@ -36,6 +36,7 @@ const SPOT_NORTH_POWER: f32 = 2.35;
 const SPOT_TONE = vec2<f32>(0.58, 0.36); // core, rim
 const SPOT_COLLAR: f32 = 1.2;
 const SPOT_WASH: f32 = 0.3;
+const ROSE_MADDER: f32 = 7.0; // `pigments.wesl`
 
 struct JupiterPrintIn {
   form: vec3<f32>, // along the bands (the shade's family too)
@@ -64,11 +65,12 @@ fn beltTone(latDeg: f32) -> f32 {
   let south = step(latDeg, DUSK.x) * (0.56 + 0.1 * smoothstep(DUSK.x, -45.0, latDeg));
   let north = step(DUSK.y, latDeg) * (0.56 + 0.1 * smoothstep(DUSK.y, 45.0, latDeg));
   var tone = max(south, north);
-  for (var i = 0; i < 4; i++) {
-    let b = BELTS[i];
-    tone = max(tone, b.z * step(b.x, latDeg) * step(latDeg, b.y));
-  }
-  return tone;
+  return max(max(tone, max(band(SEB_SOUTH, latDeg), band(SEB_NORTH, latDeg))),
+             max(band(NEB, latDeg), band(NTB, latDeg)));
+}
+
+fn band(b: vec3<f32>, latDeg: f32) -> f32 {
+  return b.z * step(b.x, latDeg) * step(latDeg, b.y);
 }
 
 fn jupiterPrint(col: vec3<f32>, cover: f32, j: JupiterPrintIn) -> BodyPrint {
@@ -89,6 +91,6 @@ fn jupiterPrint(col: vec3<f32>, cover: f32, j: JupiterPrintIn) -> BodyPrint {
   ink = max(ink, inkLine(abs(q - 1.0) / max(j.qPerUnit, 1e-6), width, j.pxUnits));
   // A flat wash laid by hand: its edge wanders over the outline and it pools unevenly.
   let edge = 1.0 + 0.06 * (vnoise(j.p * 0.05) - 0.3);
-  let wash = (1.0 - smoothstep(edge - 0.04, edge, q)) * (0.8 + 0.4 * vnoise(j.p * 0.02 + 7.0));
-  return BodyPrint(applyWash(col, pigmentAt(4.0), SPOT_WASH * wash * cover), ink);
+  let wash = (1.0 - smoothstep(edge - 0.04, edge, q)) * (0.7 + 0.6 * vnoise(j.p * 0.035));
+  return BodyPrint(applyWash(col, pigmentAt(ROSE_MADDER), SPOT_WASH * wash * cover), ink);
 }
