@@ -77,7 +77,7 @@ label rules; `styles/antique.css`.
 - Toggling the Display switch on and off swaps looks live, with no reload and no black frame.
 - Saturn: "Saturnus" and *Saturni Satelles*; the Milky Way core as an outline line.
 - Look off: identical to main; no `antique-*` target allocated, no asset fetched.
-- `npm run perf -- --gate antique`: the look within the spec's 2 ms.
+- `npm run perf -- --gate antique`: the look's `stylize` slot at the cost the spec records (~3.5 ms at 1400×900 @2×).
 
 **Deferral boundary:** Flamsteed/Bode constellation figures for every constellation (backlog
 `2026-09-14-antique-atlas-constellation-figures`); the dome rig; a second period look; true

@@ -118,7 +118,11 @@ target name; a second look would make it a table.
 - The four reviewers each grade the current shots ≥ 8/10, against the cartography checklist
   (`research/cartography.md` §9) for the cartographer, period accuracy for the historian.
 - Look off: frames byte-identical to main (no step, no allocation).
-- The look costs ≤ 2 ms GPU at 1600×900 @2× on the M-series perf poses (`npm run perf`).
+- The look's GPU cost, measured with `npm run perf -- --gate antique` (the `stylize` slot spans
+  all its passes): 3.2–3.6 ms at 1400×900 @2× on M-series (local-group, solar-system), down from
+  ~9 ms before the glyphs and ornaments were scattered. The 2 ms first set here is not met; the
+  open levers are merging the glyph and decor scatter passes into one MRT pass and skipping the
+  limb taps off-body.
 - No modern UI bleed with the look on: the app chrome takes the sheet's theme.
 
 ## Out of scope
