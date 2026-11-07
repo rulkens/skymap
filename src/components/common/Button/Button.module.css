@@ -8,7 +8,6 @@
  * without per-consumer wiring.
  */
 .root {
-  composes: tablet from '../tablet.module.css';
   font: inherit;
   letter-spacing: var(--letter-spacing-mid);
   padding: var(--space-3) var(--space-5);
@@ -39,6 +38,11 @@
   cursor: not-allowed;
 }
 
+/* Every variant but the text-only ghost is drawn as a tablet where a look sets one. */
+.tablet {
+  composes: tablet from '../tablet.module.css';
+}
+
 .root:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
@@ -66,11 +70,6 @@
   text-decoration: underline;
   font-size: 12px;
   letter-spacing: 0;
-}
-
-/* Two classes: a text button is never a tablet, whichever module the bundler emits last. */
-.root.ghost {
-  border-image: none;
 }
 
 .ghost:hover:not(:disabled),

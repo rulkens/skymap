@@ -5,7 +5,8 @@
  * stays full ink on every wash. Inert in the plain look: every source falls back to none.
  */
 
-.tablet {
+/* Doubled: outranks a composing rule's `border` shorthand, which resets border-image. */
+.tablet.tablet {
   border-image: var(--tablet-image, none);
 }
 
@@ -24,10 +25,10 @@
 }
 
 @media (forced-colors: active) {
-  .tablet,
-  .tablet:hover,
-  .tablet:active,
-  .tablet[aria-pressed='true'] {
+  .tablet.tablet,
+  .tablet.tablet:hover,
+  .tablet.tablet:active,
+  .tablet.tablet[aria-pressed='true'] {
     border-image: none;
   }
 }
