@@ -6,7 +6,6 @@
 
 import package::antiqueLook::io::AntiqueUniforms;
 import package::antiqueLook::cover::coverOf;
-import package::antiqueLook::engraving::starGlyph;
 import package::lib::math::rot2;
 import package::lib::util::hash21Hq;
 
@@ -18,8 +17,31 @@ import package::lib::util::hash21Hq;
 struct GlyphOut {
   @builtin(position) pos: vec4<f32>,
   @location(0) @interpolate(flat) centre: vec2<f32>,
-  // x: ray length (device px), y: rays, z: glory, w: turn (radians).
+  // x: ray length (device px), y: rays, w: turn (radians).
   @location(1) @interpolate(flat) shape: vec4<f32>,
+}
+
+// A star glyph centred at the origin, `r` its ray length (device px): a disc
+// for the faint, else a solid core half the reach with `rays` straight wedges
+// tapering to points, alternate ones short from 8 up (Bode). Wedges, not a
+// lobed outline: a cos^n lobe thinned below a pixel, so every star read as its core.
+fn starGlyph(q: vec2<f32>, r: f32, rays: f32) -> f32 {
+  let d = length(q);
+  if (rays <= 0.0) {
+    return 1.0 - smoothstep(r - 0.45, r + 0.45, d);
+  }
+  let core = 0.5 * r;
+  let sector = 6.2831853 / rays;
+  let turns = (atan2(q.y, q.x) + 1.5707963) / sector;
+  let k = round(turns);
+  let phi = abs(turns - k) * sector;
+  let along = d * cos(phi);
+  let across = d * sin(phi);
+  let short = rays >= 8.0 && (i32(k) & 1) == 1;
+  let tip = select(r, core + 0.55 * (r - core), short);
+  let halfWidth = 0.7 * core * clamp((tip - along) / (tip - 0.5 * core), 0.0, 1.0);
+  let wedge = 1.0 - smoothstep(halfWidth - 0.4, halfWidth + 0.4, across);
+  return max(1.0 - smoothstep(core - 0.45, core + 0.45, d), wedge * step(0.0, along));
 }
 
 @vertex
@@ -41,23 +63,22 @@ fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32) -> Glyph
   if (coverOf(textureLoad(bodyTex, min(vec2<i32>(centre), bodyDims - 1), 0), u.flags) > 0.5) {
     return o;
   }
-  // Six classes of the Bayer/Flamsteed ladder by apparent magnitude, one per
-  // magnitude: dots for the faintest two (m 5 and 4), then 6, 6 and 8 rays, and
-  // 8 long with 8 short for m 0 and brighter (a ring of ticks round a star read
-  // as a modern marker).
-  let radii = array<f32, 6>(0.8, 1.4, 2.6, 3.6, 5.2, 10.0);
-  let rayCounts = array<f32, 6>(0.0, 0.0, 6.0, 6.0, 8.0, 16.0);
-  let rank = 5 - clamp(i32(round(s.z)), 0, 5);
+  // Seven classes by apparent magnitude, one per whole magnitude as Hevelius
+  // and Flamsteed graded theirs: dots for the faintest three (m 5, 4, 3), then
+  // 6, 8 and 8 rays, and 8 long with 8 short for Sirius and Canopus. A rayed
+  // star's core (half its reach) outgrows the largest dot, so every step reads.
+  let radii = array<f32, 7>(1.0, 1.5, 2.1, 4.4, 5.4, 6.6, 8.0);
+  let rayCounts = array<f32, 7>(0.0, 0.0, 0.0, 6.0, 8.0, 8.0, 16.0);
+  let rank = 5 - clamp(i32(round(s.z)), -1, 5);
   // Each star punched by hand: its own turn, and a slight unevenness of size.
   let r = radii[rank] * u.unit * (0.92 + 0.16 * hash21Hq(floor(centre) + 7.1));
-  let rays = select(0.0, rayCounts[rank], r >= 3.0);
-  let glory = 0.0;
+  let rays = rayCounts[rank];
   let reach = 1.5 * r + 2.0;
   let corner = vec2<f32>(f32(vi & 1u), f32((vi >> 1u) & 1u)) * 2.0 - 1.0;
   let px = centre + corner * reach;
   o.pos = vec4<f32>(px.x / u.res.x * 2.0 - 1.0, 1.0 - px.y / u.res.y * 2.0, 0.0, 1.0);
   o.centre = centre;
-  o.shape = vec4<f32>(r, rays, glory, hash21Hq(floor(centre)) * 6.2831853);
+  o.shape = vec4<f32>(r, rays, 0.0, hash21Hq(floor(centre)) * 6.2831853);
   return o;
 }
 
@@ -65,7 +86,7 @@ fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32) -> Glyph
 fn fs(in: GlyphOut) -> @location(0) vec4<f32> {
   let q = rot2(in.pos.xy - in.centre, in.shape.w);
   let r = in.shape.x;
-  let ink = starGlyph(q, r, in.shape.y, in.shape.z);
+  let ink = starGlyph(q, r, in.shape.y);
   let knock = 1.0 - smoothstep(1.3 * r, 1.3 * r + 1.0, length(q));
   return vec4<f32>(ink, knock, 0.0, 0.0);
 }

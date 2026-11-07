@@ -62,8 +62,8 @@ describe('antique star class from the catalogue', () => {
     expect(apparent(1.0, (100 * PC_TO_MPC) ** 2)).toBeCloseTo(6.0, 5);
   });
 
-  it('puts the named stars on the ladder by their apparent magnitude', () => {
-    expect(classOf(1.42, 2.64)).toBe(5); // Sirius, m −1.46
+  it('puts the named stars on the seven-step ladder by their apparent magnitude', () => {
+    expect(classOf(1.42, 2.64)).toBe(6); // Sirius, m −1.46
     expect(classOf(-2.77, 42.8)).toBe(5); // Achernar, m 0.46
     expect(classOf(1.72, 7.7)).toBe(4); // Fomalhaut, m 1.16
     expect(classOf(-3.64, 132.6)).toBe(3); // Polaris, m 1.98

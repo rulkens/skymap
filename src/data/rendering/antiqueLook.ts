@@ -32,9 +32,14 @@ export const ANTIQUE_NUMERAL_INSET_UNITS = 50;
 export const ANTIQUE_NUMERAL_UNITS = 22;
 
 /** Passes no period plate shows: cloud shells (no 1600s globe drew weather), leader
- * stems (an engraved name sits beside its glyph), selection rings, and the density's
- * upsample: the plate reads that row itself as isobaths, never as print to engrave. */
+ * stems (an engraved name sits beside its glyph), selection rings, the density's
+ * upsample (the plate reads that row itself as isobaths, never as print to engrave),
+ * and the resolved stars' sprites: a star prints only as its catalogue glyph
+ * (`glyphs.wesl`), since bloom and the plate's glow filters ringed each sprite in
+ * dotted halos. The unresolved aggregate (`star-upsample`) still feeds the print. */
 export const ANTIQUE_HIDDEN_PASSES: readonly string[] = [
+  'star-points',
+  'star-catalog',
   'cloud-shell',
   'marker-lines',
   'selection-ring',

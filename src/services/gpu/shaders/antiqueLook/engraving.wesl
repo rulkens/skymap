@@ -178,25 +178,6 @@ fn isoLines(h: f32, hPerUnit: f32, tone: f32, pxUnits: f32) -> f32 {
   return ink;
 }
 
-// A star glyph centred at the origin, after the Bayer/Flamsteed ladder: a disc
-// for the faintest, then `rays` tapered points over a small core (from 8 up,
-// alternate rays run short). `glory` adds a ring of ticks. `r` = ray length.
-fn starGlyph(q: vec2<f32>, r: f32, rays: f32, glory: f32) -> f32 {
-  let d = length(q);
-  let a = atan2(q.y, q.x) + 1.5707963;
-  // Alternate rays run short when there are 8 or more (4 long + 4 short, Bode).
-  let lobe = abs(cos(0.5 * rays * a));
-  let alt = cos(0.25 * rays * a);
-  let spike = pow(lobe, 10.0 + rays) * select(1.0, select(0.62, 1.0, alt * alt > 0.5), rays >= 8.0);
-  let core = r * select(1.0, 0.38, rays > 0.0);
-  let edge = core + (r - core) * spike;
-  var ink = 1.0 - smoothstep(edge - 0.45, edge + 0.45, d);
-  let ticks = pow(abs(cos(12.0 * a)), 24.0);
-  let ring = smoothstep(1.12 * r, 1.2 * r, d) * (1.0 - smoothstep(1.42 * r, 1.5 * r, d));
-  ink = max(ink, ticks * ring * glory);
-  return ink;
-}
-
 // Hachures by line-integral convolution (Cabral & Leedom 1993): `field.b`, a noise
 // pinned to the ground, averaged along the streamline of the screen fall line
 // `field.rg`, FALL_TAPS each way FALL_STEP print units apart, tent-weighted. A streamline stops

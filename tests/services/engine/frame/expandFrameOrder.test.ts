@@ -493,6 +493,18 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     }
   });
 
+  it('the antique look draws resolved stars only as glyphs, while the star aggregate keeps its hdr line', () => {
+    const hdrNames = (steps: readonly FrameStep[]) =>
+      steps.flatMap((step) => (step.kind === 'render' && step.target === 'hdr' ? namesOf(step) : []));
+    const on = hdrNames(program({ antique: true }));
+    const off = hdrNames(program());
+    for (const resolved of ['star-points', 'star-catalog']) {
+      expect(off, resolved).toContain(resolved);
+      expect(on, resolved).not.toContain(resolved);
+    }
+    expect(on).toContain('star-upsample');
+  });
+
   it("draws the look's own passes only with the look on: land map, geography and the Moon's print on the body row, star points on NEAR0", () => {
     const lookSteps = (steps: readonly FrameStep[]) =>
       steps.filter((step) => namesOf(step).some((name) => ANTIQUE_ONLY_PASSES.includes(name)));
