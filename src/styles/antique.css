@@ -203,6 +203,32 @@
   --slider-pointer-bottom: -3px;
   /* Room for the half-cartouche above each panel. */
   --left-stack-gap: calc(var(--space-4) + var(--title-cartouche-height) / 2);
+  /* The splash's dark vignette becomes a paper wash laid over the plate, its white type ink. */
+  --splash-scrim: radial-gradient(
+    ellipse at 20% 90%,
+    rgb(247 239 218 / 0.96) 0%,
+    rgb(247 239 218 / 0.9) 30%,
+    rgb(247 239 218 / 0.5) 55%,
+    transparent 75%
+  );
+  --splash-scrim-phone: linear-gradient(
+    to top,
+    rgb(247 239 218 / 0.96) 0%,
+    rgb(247 239 218 / 0.9) 60%,
+    rgb(247 239 218 / 0.15) 100%
+  );
+  --splash-strong: var(--antique-ink);
+  --splash-rule: rgb(43 33 24 / 0.5);
+  --splash-rule-faint: rgb(43 33 24 / 0.3);
+  /* The phone's scale legend: ink knocked out of the plate's lines, as an engraver clears
+   * the hatching round his lettering. */
+  --scale-bracket-halo:
+    1px 0 var(--antique-paper), -1px 0 var(--antique-paper), 0 1px var(--antique-paper),
+    0 -1px var(--antique-paper), 1px 1px var(--antique-paper), -1px -1px var(--antique-paper),
+    1px -1px var(--antique-paper), -1px 1px var(--antique-paper),
+    0 0 var(--space-2) var(--antique-paper), 0 0 var(--space-2) var(--antique-paper);
+  --scale-bracket-mark-halo: drop-shadow(1px 0 var(--antique-paper))
+    drop-shadow(-1px 0 var(--antique-paper)) drop-shadow(0 -1px var(--antique-paper));
 }
 
 /* The `font` shorthand resets font-size-adjust, and every panel and card root sets one;

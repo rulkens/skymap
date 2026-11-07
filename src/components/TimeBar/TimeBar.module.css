@@ -172,12 +172,14 @@
   flex-direction: row-reverse;
   height: var(--time-toolbar-height);
   padding: var(--space-3) var(--space-5);
-  background: var(--surface-card-soft);
+  /* The antique look draws the pill as an engraved tablet, like the ScaleBar above it. */
+  background: var(--framed-control-ground, var(--surface-card-soft));
   -webkit-backdrop-filter: blur(var(--blur-card));
   backdrop-filter: blur(var(--blur-card));
   border: 1px solid var(--border-card);
+  border-image: var(--tablet-image, none);
   border-radius: var(--radius-pill);
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--framed-shadow, var(--shadow-card));
 }
 
 .floating .readout {
@@ -323,6 +325,12 @@
   min-height: var(--touch-target);
   padding: 0;
   white-space: nowrap;
+}
+
+@media (forced-colors: active) {
+  .floating .pill {
+    border-image: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

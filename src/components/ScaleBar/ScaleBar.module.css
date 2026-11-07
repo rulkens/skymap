@@ -31,7 +31,8 @@
   box-sizing: border-box;
   padding: var(--space-4) var(--space-6) var(--space-5);
 
-  background: var(--surface-soft);
+  /* The antique look draws the box as an engraved tablet, which paints its own paper. */
+  background: var(--framed-control-ground, var(--surface-soft));
   /* Vendor-prefixed first, standard last — see Panel.module.css for why. */
   -webkit-backdrop-filter: blur(var(--blur-panel));
   backdrop-filter: blur(var(--blur-panel));
@@ -43,7 +44,8 @@
    * two chromes read as one family without turning this taller panel into a
    * stadium. `min` follows a look that squares the pill. */
   border-radius: min(var(--radius-pill), calc(var(--time-toolbar-height) / 2));
-  box-shadow: var(--shadow-panel);
+  border-image: var(--tablet-image, none);
+  box-shadow: var(--framed-shadow, var(--shadow-panel));
 
   color: var(--color-fg-base);
   font: var(--font-size-md) / var(--line-height-tight) var(--font-family-figures);
@@ -75,4 +77,10 @@
   border-right: 1px solid var(--color-accent-bright);
   border-bottom: 1px solid var(--color-accent-bright);
   box-sizing: border-box;
+}
+
+@media (forced-colors: active) {
+  .scaleBar {
+    border-image: none;
+  }
 }

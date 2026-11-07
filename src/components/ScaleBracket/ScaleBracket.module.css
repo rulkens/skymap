@@ -13,10 +13,13 @@
   align-items: flex-start;
   gap: var(--space-2);
   color: var(--color-fg-muted);
-  /* A dark halo stands in for a scrim: the label sits on the bare canvas, stars included. */
-  text-shadow:
+  /* A dark halo stands in for a scrim: the label sits on the bare canvas, stars included.
+   * The antique look's halo is paper: ink lettering knocked out of the plate's lines. */
+  text-shadow: var(
+    --scale-bracket-halo,
     0 0 var(--space-2) var(--shadow-card-outer),
-    0 0 var(--space-1) var(--shadow-card-outer);
+    0 0 var(--space-1) var(--shadow-card-outer)
+  );
   font: var(--font-size-md) / var(--line-height-tight) var(--font-family-mono);
   font-variant-numeric: tabular-nums;
   user-select: none;
@@ -39,7 +42,7 @@
   box-sizing: border-box;
   border: 1px solid var(--color-fg-muted);
   border-top: none;
-  filter: drop-shadow(0 0 var(--space-1) var(--shadow-card-outer));
+  filter: var(--scale-bracket-mark-halo, drop-shadow(0 0 var(--space-1) var(--shadow-card-outer)));
 }
 
 @media (prefers-reduced-motion: reduce) {

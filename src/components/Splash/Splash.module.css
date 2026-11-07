@@ -6,6 +6,9 @@
  * stays clear so the Milky Way + "You are here" marker remain
  * visible behind the splash. Mobile reflows to a full-width column
  * with a bottom-half linear vignette.
+ * The `--splash-*` hooks are unset in the plain look; the antique look
+ * (styles/antique.css) turns the vignette into a paper wash and the
+ * white type into ink.
  */
 
 .root {
@@ -21,12 +24,15 @@
 .vignette {
   position: absolute;
   inset: 0;
-  background: radial-gradient(
-    ellipse at 20% 90%,
-    rgba(0, 0, 0, 0.85) 0%,
-    rgba(0, 0, 0, 0.6) 25%,
-    rgba(0, 0, 0, 0.2) 50%,
-    transparent 70%
+  background: var(
+    --splash-scrim,
+    radial-gradient(
+      ellipse at 20% 90%,
+      rgba(0, 0, 0, 0.85) 0%,
+      rgba(0, 0, 0, 0.6) 25%,
+      rgba(0, 0, 0, 0.2) 50%,
+      transparent 70%
+    )
   );
   pointer-events: none;
 }
@@ -87,7 +93,7 @@
   line-height: 1.04;
   letter-spacing: 0.005em;
   margin: 0;
-  color: #ffffff;
+  color: var(--splash-strong, #ffffff);
   position: relative;
   padding-bottom: 8px;
 }
@@ -153,7 +159,7 @@
   font-size: 12px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: #ffffff;
+  color: var(--splash-strong, #ffffff);
   background: none;
   border: none;
   padding: 8px 0;
@@ -172,7 +178,7 @@
   right: 36px;
   bottom: 0;
   height: 1px;
-  background: rgba(255, 255, 255, 0.4);
+  background: var(--splash-rule, rgba(255, 255, 255, 0.4));
   transition: height 0.18s ease-out, background 0.18s ease-out;
 }
 .cta .arrow {
@@ -212,7 +218,7 @@
   display: block;
   width: 32px;
   height: 1px;
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--splash-rule-faint, rgba(255, 255, 255, 0.2));
   margin-bottom: 4px;
 }
 .footer a {
@@ -228,11 +234,14 @@
 /* ── Mobile ─────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .vignette {
-    background: linear-gradient(
-      to top,
-      rgba(0, 0, 0, 0.85) 0%,
-      rgba(0, 0, 0, 0.5) 50%,
-      rgba(0, 0, 0, 0.15) 100%
+    background: var(
+      --splash-scrim-phone,
+      linear-gradient(
+        to top,
+        rgba(0, 0, 0, 0.85) 0%,
+        rgba(0, 0, 0, 0.5) 50%,
+        rgba(0, 0, 0, 0.15) 100%
+      )
     );
   }
   .column {
