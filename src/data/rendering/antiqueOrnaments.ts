@@ -54,12 +54,12 @@ export const ANTIQUE_ORNAMENTS: readonly AntiqueOrnament[] = [
     clearsBeneath: true,
     mirrored: false,
   },
-  // Constellation figures at each figure's centre (J2000 RA/Dec, degrees), only
-  // beasts drawn without a sea under them. Hevelius drew his figures as seen
-  // from outside the globe, so a sky-view plate mirrors his Cetus.
+  // Hevelius' constellation figures (1690) at each figure's centre (J2000 RA/Dec,
+  // degrees). He drew them as seen from outside the globe, so a sky-view plate
+  // mirrors them.
   beast('cetus', 'stars', 25, -8, 36, 5, true),
-  beast('dragon', 'stars', 255, 64, 34, 1),
-  beast('seaSerpent', 'stars', 150, -18, 44, 0),
+  beast('dragon', 'stars', 255, 64, 34, 1, true),
+  beast('seaSerpent', 'stars', 150, -18, 44, 0, true),
   // Places in the Zone of Avoidance: galactic longitude, distance, size (Mpc).
   voyager('seaMonster', 60, 30, 18, 0),
   voyager('whale', 150, 45, 22, 5),
