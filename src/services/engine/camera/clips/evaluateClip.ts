@@ -104,10 +104,8 @@ import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { Mat3 } from '../../../../@types/math/Mat3';
 import type { TerrainHeightAtLookup } from '../../../../@types/camera/terrain/TerrainHeightAtLookup';
 import { compileClip } from '../../animation/compileClip';
-import { lerpInSpace } from '../../animation/channelSpace';
 import { EASE } from '../../animation/ease';
-import { lerpAngleShortest } from '../../../../utils/math/lerpAngleShortest';
-import { lerp } from '../../../../utils/math/lerp';
+import { segmentValueAt } from '../../animation/segmentValueAt';
 import { foldToWorld } from '../arms/foldToWorld';
 import { rowFor } from '../arms/rowFor';
 import { sameFrame } from '../arms/sameFrame';
@@ -348,129 +346,38 @@ function outsideLeg(seg: BaseSegment, window: LegWindow): boolean {
 }
 
 /**
- * evaluateBaseScalar — evaluate the base layer for a scalar channel at time t.
- *
- * Walks the channel's segments in order, accumulating the "running value" that
- * each completed segment leaves. Applies the active or last segment to t.
- *
- * For `yaw` and `roll`, the interpolation uses `lerpAngleShortest` instead of
- * `lerpInSpace` to prevent multi-revolution artifacts when the user has
- * accumulated a large yaw from prior dragging.
+ * evaluateBaseTrack — the base layer for one channel at time t: walks the
+ * segments in order, folding each ended one into the running value, then
+ * applies the active segment. An ended loop spin folds at `t`, so it keeps
+ * turning. Holds a previous segment's `to` by reference: copy before handing out.
  */
-function evaluateBaseScalar(
-  segments: BaseSegment[],
-  startVal: number,
-  channel: Channel,
+function evaluateBaseTrack<V extends number | Vec3>(
+  segments: readonly BaseSegment[],
+  startVal: V,
   t: number,
   window: LegWindow,
-): number {
-  if (segments.length === 0) return startVal;
-
+): V {
   let runningVal = startVal;
-
-  for (let i = 0; i < segments.length; i++) {
-    const seg = segments[i]!;
+  for (const seg of segments) {
     if (outsideLeg(seg, window)) continue;
-
-    if (t < seg.startSec) {
-      // Before this segment starts — running value from prior segments is the result.
-      return runningVal;
-    }
-
+    if (t < seg.startSec) return runningVal;
     // An explicit `from` (a segment continuing a composite) overrides the base chain.
-    const segStart = seg.from !== undefined ? (seg.from as number) : runningVal;
-
-    if (seg.segKind === 'tween') {
-      const to = seg.to as number;
-
-      if (t >= seg.endSec) {
-        // Segment is complete — hold at `to`.
-        runningVal = to;
-      } else {
-        // Active segment — apply eased interpolation.
-        const dur = seg.endSec - seg.startSec;
-        const localT = dur > 0 ? (t - seg.startSec) / dur : 1;
-        const e = EASE[seg.ease](localT);
-
-        if (channel === 'yaw' || channel === 'roll') {
-          return lerpAngleShortest(segStart, to, e);
-        }
-        return lerpInSpace(seg.space, segStart, to, e);
-      }
-    } else {
-      // spin segment: additive delta onto runningVal.
-      const by = seg.to as number;
-
-      if (seg.loop && t >= seg.endSec) {
-        // Perpetual loop: linear continuation — same delta per full window.
-        const dur = seg.endSec - seg.startSec;
-        const totalProgress = dur > 0 ? (t - seg.startSec) / dur : 1;
-        runningVal = segStart + by * totalProgress;
-      } else if (t >= seg.endSec) {
-        // Finite spin complete — hold at segStart + full delta.
-        runningVal = segStart + by;
-      } else {
-        // Active spin window.
-        const dur = seg.endSec - seg.startSec;
-        const localT = dur > 0 ? (t - seg.startSec) / dur : 1;
-        const e = EASE[seg.ease](localT);
-        return segStart + by * e;
-      }
-    }
+    const value = segmentValueAt(seg, (seg.from ?? runningVal) as V, t);
+    if (t < seg.endSec) return value;
+    runningVal = value;
   }
-
-  // All segments have ended — return the accumulated held value.
   return runningVal;
 }
 
-/**
- * evaluateBaseVec3 — evaluate the base layer for the `target` Vec3 channel.
- *
- * `target` only ever has `'tween'`/`setVec` segments (never spin). `seg.space`
- * is intentionally ignored here: world-space coordinates are always interpolated
- * component-wise in linear space (log-space and additive-angle semantics are
- * undefined for signed 3D positions).
- */
-function evaluateBaseVec3(
-  segments: BaseSegment[],
+/** The `target` walk, copied out: the pose owns a fresh triple each call. */
+function evaluateBaseTarget(
+  segments: readonly BaseSegment[],
   startVal: Vec3,
   t: number,
   window: LegWindow,
 ): Vec3 {
-  if (segments.length === 0) return [startVal[0], startVal[1], startVal[2]];
-
-  // Compute component-wise running Vec3.
-  let rx = startVal[0];
-  let ry = startVal[1];
-  let rz = startVal[2];
-
-  for (let i = 0; i < segments.length; i++) {
-    const seg = segments[i]!;
-    if (outsideLeg(seg, window)) continue;
-
-    if (t < seg.startSec) {
-      return [rx, ry, rz];
-    }
-
-    const from = seg.from !== undefined ? (seg.from as Vec3) : ([rx, ry, rz] as Vec3);
-
-    const to = seg.to as Vec3;
-
-    if (t >= seg.endSec) {
-      // Segment complete — hold at `to`.
-      rx = to[0];
-      ry = to[1];
-      rz = to[2];
-    } else {
-      // Active tween — linear component-wise lerp.
-      const dur = seg.endSec - seg.startSec;
-      const localT = dur > 0 ? (t - seg.startSec) / dur : 1;
-      const e = EASE[seg.ease](localT);
-      return [lerp(from[0], to[0], e), lerp(from[1], to[1], e), lerp(from[2], to[2], e)];
-    }
-  }
-
-  return [rx, ry, rz];
+  const [x, y, z] = evaluateBaseTrack(segments, startVal, t, window);
+  return [x, y, z];
 }
 
 // ---------------------------------------------------------------------------
@@ -667,16 +574,14 @@ function evaluateBaseAt(
     return sampled[ch];
   };
   return {
-    roll: evaluateBaseScalar(baseTracks['roll'], start.roll ?? 0, 'roll', t, window),
+    roll: evaluateBaseTrack(baseTracks['roll'], start.roll ?? 0, t, window),
     target:
-      fromComposite('target') ?? evaluateBaseVec3(baseTracks['target'], start.target, t, window),
-    yaw: fromComposite('yaw') ?? evaluateBaseScalar(baseTracks['yaw'], start.yaw, 'yaw', t, window),
-    pitch:
-      fromComposite('pitch') ??
-      evaluateBaseScalar(baseTracks['pitch'], start.pitch, 'pitch', t, window),
+      fromComposite('target') ?? evaluateBaseTarget(baseTracks['target'], start.target, t, window),
+    yaw: fromComposite('yaw') ?? evaluateBaseTrack(baseTracks['yaw'], start.yaw, t, window),
+    pitch: fromComposite('pitch') ?? evaluateBaseTrack(baseTracks['pitch'], start.pitch, t, window),
     distance:
       fromComposite('distance') ??
-      evaluateBaseScalar(baseTracks['distance'], start.distance, 'distance', t, window),
+      evaluateBaseTrack(baseTracks['distance'], start.distance, t, window),
   };
 }
 
@@ -695,7 +600,7 @@ function fovYRadAt(compiled: CompiledClip, t: number): number | undefined {
   // concrete start without `fov` is authored, so it opens at the default, not
   // at whatever the viewer had dialled in.
   const start = compiled.start.fov ?? DEFAULT_FOV_Y_RAD;
-  const base = evaluateBaseScalar(compiled.baseTracks['fov'], start, 'fov', t, WHOLE_CLIP);
+  const base = evaluateBaseTrack(compiled.baseTracks['fov'], start, t, WHOLE_CLIP);
   return base + velDisplacement(compiled, 'fov', t) + oscOffset(compiled, 'fov', t);
 }
 

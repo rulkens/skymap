@@ -10,6 +10,7 @@
 import type { BaseSegment } from '../../../@types/animation/compiledClip/BaseSegment';
 import type { CompositeSample } from '../../../@types/animation/compiledClip/CompositeSample';
 import type { CompositeTrack } from '../../../@types/animation/compiledClip/CompositeTrack';
+import { segmentValueAt } from './segmentValueAt';
 
 export function channelValueAt<C extends keyof CompositeSample>(
   ch: C,
@@ -29,15 +30,9 @@ export function channelValueAt<C extends keyof CompositeSample>(
     byComposite = !('segKind' in w);
     if (!('segKind' in w)) {
       value = w.sample(w.endSec - w.startSec)[ch]!;
-    } else if (w.segKind === 'tween') {
-      value = w.to as typeof value;
     } else {
-      // Additive, as the evaluator folds it: a looping spin keeps turning past
-      // its window, at its own rate.
-      const dur = w.endSec - w.startSec;
-      const progress = w.loop && dur > 0 ? (atSec - w.startSec) / dur : 1;
-      const from = (w.from ?? value) as number;
-      value = (from + (w.to as number) * progress) as typeof value;
+      // Folded at `atSec`, as the evaluator does: a looping spin keeps turning.
+      value = segmentValueAt(w, w.from ?? value, atSec) as typeof value;
     }
   }
   return { value, byComposite };
