@@ -36,6 +36,7 @@ import { selectTimeState } from '../../../../src/state/time/selectors';
 import { selectPendingInput } from '../../../../src/state/input/selectors';
 import { inputConsumed } from '../../../../src/state/input/inputSlice';
 import { pendingToInputSteps } from '../../../../src/utils/input/pendingToInputSteps';
+import { watchZoomLimitSaga } from '../../../../src/state/camera/watchZoomLimitSaga';
 import { pivotFraming } from '../../../../src/services/engine/camera/framing/pivotRadiusMpc';
 import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
 import { eyeMpcOf } from '../../../../src/utils/camera/orbitPose/eyeMpcOf';
@@ -974,7 +975,11 @@ describe('the sky exit lift', () => {
 
   /** Every displayed pose from the lift's start to its hand-off, and the clip it ran. */
   const lift = () => {
-    const h = makeCameraSimHarness({ focusBody: 'earth', realClipPlayer: true });
+    const h = makeCameraSimHarness({
+      focusBody: 'earth',
+      realClipPlayer: true,
+      sagas: [watchZoomLimitSaga],
+    });
     h.frame(2);
     h.store.dispatch(
       commitCameraPose({ frame: { sky: SKY }, pose: { azimuthRad: AZIMUTH, altitudeRad: 0.4 } }),
@@ -1019,7 +1024,11 @@ describe('the sky exit lift', () => {
   });
 
   it('carries the wheel quiet across frames: a streaming scroll stops at the widest lens', () => {
-    const h = makeCameraSimHarness({ focusBody: 'earth', realClipPlayer: true });
+    const h = makeCameraSimHarness({
+      focusBody: 'earth',
+      realClipPlayer: true,
+      sagas: [watchZoomLimitSaga],
+    });
     h.frame(2);
     h.store.dispatch(
       commitCameraPose({ frame: { sky: SKY }, pose: { azimuthRad: AZIMUTH, altitudeRad: 0.4 } }),

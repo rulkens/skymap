@@ -109,10 +109,10 @@ The body arm reports `edge: 'in'` for a fresh zoom-in notch whose eye **starts**
 point. `watchZoomLimitSaga`: on `edge: 'out'` put `clipStarted({ data: lift, frame: <orientation> })`
 (what `replayInput.ts:118` did); on `edge: 'in'` do nothing yet (Task 8 wires it).
 
-- [ ] Test `a fresh wheel-out at the widest lens reports edge out with a lift clip; the saga plays it`.
-- [ ] Test `a fresh zoom-in that starts at the floor reports edge in at the cursor anchor`.
-- [ ] Test `a zoom-in that starts above the floor reports nothing`; `a non-fresh notch at the floor reports nothing`.
-- [ ] Commit.
+- [x] Test `a fresh wheel-out at the widest lens reports edge out with a lift clip; the saga plays it`.
+- [x] Test `a fresh zoom-in that starts at the floor reports edge in at the cursor anchor`.
+- [x] Test `a zoom-in that starts above the floor reports nothing`; `a non-fresh notch at the floor reports nothing`.
+- [x] Commit.
 
 ### Task 3: Frame readouts become rows
 

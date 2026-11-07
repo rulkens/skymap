@@ -11,6 +11,9 @@ import { configureStore } from '@reduxjs/toolkit';
 import { replayInput } from '../../../../../src/services/engine/camera/input/replayInput';
 import { skyCameraArm } from '../../../../../src/services/engine/camera/arms/sky/skyCameraArm';
 import { FRESH_WHEEL_PAUSE_MS } from '../../../../../src/data/input/freshWheelPauseMs';
+import { LENS_MAX_DEG } from '../../../../../src/data/camera/lensMaxDeg';
+import { degToRad } from '../../../../../src/utils/math/degToRad';
+import { zoomLimitPushed } from '../../../../../src/state/camera/zoomLimitPushed';
 import { isBodyArm } from '../../../../../src/services/engine/camera/arms/body/isBodyArm';
 import * as surfaceStepModule from '../../../../../src/services/engine/camera/arms/body/gesture/surfaceStep';
 import { EMPTY_SURFACE_GESTURE_MEMORY } from '../../../../../src/services/engine/camera/arms/body/gesture/surfaceStep';
@@ -317,6 +320,35 @@ describe('replayInput', () => {
     // The second notch of the same drain follows the first by 0 ms: a tail.
     drain(1000 + FRESH_WHEEL_PAUSE_MS, 2);
     expect(freshness()).toEqual([true, false]);
+  });
+
+  it('a fresh wheel-out at the widest lens reports edge out with a lift clip, and starts none', () => {
+    const store = makeStore();
+    store.dispatch(
+      commitCameraPose({
+        frame: { sky: { body: asSceneBodyId('earth'), lonRad: 0.2, latRad: 0.9 } },
+        pose: { azimuthRad: 1, altitudeRad: 0.3 },
+      }),
+    );
+    store.dispatch(setFovYRad(degToRad(LENS_MAX_DEG)));
+    const next = replayInput(
+      {
+        register: store.getState().camera.base,
+        gesture: null,
+        tilt: EMPTY_TILT_MEMORY,
+        follow: null,
+        lastWheelMs: -Infinity,
+      },
+      [atRestZoom(1.1)],
+      ctxOf(store),
+    );
+
+    expect(next.actions).toHaveLength(1);
+    const [pushed] = next.actions;
+    if (!zoomLimitPushed.match(pushed) || pushed.payload.edge !== 'out') {
+      throw new Error('expected one zoomLimitPushed out');
+    }
+    expect(pushed.payload.lift.timeline.length).toBeGreaterThan(0);
   });
 
   it('two lens notches in one drain compound', () => {

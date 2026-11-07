@@ -8,9 +8,9 @@ import type { PoseOf } from '../../../../../@types/camera/arms/PoseOf';
 import type { CameraArmBasisCtx } from '../../../../../@types/camera/arms/CameraArmBasisCtx';
 import type { CameraArmChannels } from './CameraArmChannels';
 import type { CameraArmCtx } from '../../../../../@types/camera/arms/CameraArmCtx';
-import type { ClipData } from '../../../../../@types/animation/ClipData';
 import type { HostBody } from './HostBody';
 import type { TiltMemory } from '../../../../../@types/camera/orientation/TiltMemory';
+import type { ZoomLimitPush } from '../../../../../@types/camera/arms/ZoomLimitPush';
 
 /** One arm's table row: its kind, how to resolve its current host body, its empty memory, its channel pair, its input step and its nudge. */
 export type CameraArmRow<K extends CameraArmKind> = {
@@ -30,9 +30,9 @@ export type CameraArmRow<K extends CameraArmKind> = {
    * rather than inside it: it is keyed by HOST, not by frame (spec §3-P4), so a
    * frame change must not wipe it, and only a tilt-authoring drag writes it.
    * `fovYRad` is present only when the step changes the lens (radians); the drain
-   * dispatches it, and later steps read it back as `ctx.fovYRad`. `clip` is a
-   * flight the step starts (the sky exit); the drain plays it under the
-   * orientation its absolute start was captured in.
+   * dispatches it, and later steps read it back as `ctx.fovYRad`. `pushed` is a
+   * fresh notch against the arm's zoom limit; the drain only reports it
+   * (`zoomLimitPushed`), and `watchZoomLimitSaga` decides what it starts.
    */
   step(
     memory: MemOf[K],
@@ -45,7 +45,7 @@ export type CameraArmRow<K extends CameraArmKind> = {
     readonly memory: MemOf[K];
     readonly tilt: TiltMemory;
     readonly fovYRad?: number;
-    readonly clip?: ClipData;
+    readonly pushed?: ZoomLimitPush;
   };
   /**
    * One frame's pixel-free motion in this arm's own frame, at the equivalent

@@ -9,6 +9,7 @@
  */
 
 import { configureStore } from '@reduxjs/toolkit';
+import createSagaMiddleware from 'redux-saga';
 
 import { rootReducer } from '../../../src/store/rootReducer';
 import { composeControlSchemes } from '../../../src/services/engine/camera/composeControlSchemes';
@@ -62,6 +63,7 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
     bootHR = 10,
     neutralDistance = 100,
     realClipPlayer = false,
+    sagas = [],
   } = options;
   const fovYRad = (fovDeg * Math.PI) / 180;
 
@@ -72,7 +74,12 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
     distance: neutralDistance,
   };
 
-  const store = configureStore({ reducer: rootReducer });
+  const sagaMiddleware = createSagaMiddleware();
+  const store = configureStore({
+    reducer: rootReducer,
+    middleware: (getDefault) => getDefault().concat(sagaMiddleware),
+  });
+  for (const saga of sagas) sagaMiddleware.run(saga);
   store.dispatch(setSimDays({ simDays: CONST_J2000, nowMs: 0 }));
   store.dispatch(pause({ nowMs: 0 }));
   // Dispatched before the seed below, matching production's boot order —

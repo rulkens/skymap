@@ -42,7 +42,7 @@ export function nudgedSurfacePose(
           tilt.rememberedTiltRad,
           ctx.tuning,
           ctx.focusPivotM,
-        );
+        ).pose;
   let settled = { pose: zoomed, tilt };
   if (orbit !== undefined || look !== undefined) {
     let moved = zoomed;

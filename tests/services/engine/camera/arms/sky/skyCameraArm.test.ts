@@ -293,7 +293,7 @@ describe('the sky arm', () => {
     );
     expect(out.pose).toBe(start.pose);
     expect(out.fovYRad).toBeUndefined();
-    expect(out.clip).toBeUndefined();
+    expect(out.pushed).toBeUndefined();
     const edge = ROW.step(
       ROW.emptyMemory,
       EMPTY_TILT_MEMORY,
@@ -349,20 +349,18 @@ describe('the sky exit lift', () => {
       withLens(degToRad(119)),
     );
     expect(reaching.fovYRad).toBe(LENS_MAX);
-    expect(reaching.clip).toBeUndefined();
+    expect(reaching.pushed).toBeUndefined();
     const out = ROW.step(reaching.memory, EMPTY_TILT_MEMORY, start, wheel(1.1), atMax);
     expect(out.pose).toBe(start.pose);
     expect(out.fovYRad).toBeUndefined();
-    expect(out.clip).toBeDefined();
+    expect(out.pushed?.edge).toBe('out');
   });
 
   it('a wheel-out tail at the widest lens stays; only a fresh notch lifts', () => {
-    expect(
-      ROW.step(ROW.emptyMemory, EMPTY_TILT_MEMORY, start, wheel(1.1, false), atMax).clip,
-    ).toBeUndefined();
-    expect(
-      ROW.step(ROW.emptyMemory, EMPTY_TILT_MEMORY, start, wheel(1.1), atMax).clip,
-    ).toBeDefined();
+    const notch = (fresh: boolean) =>
+      ROW.step(ROW.emptyMemory, EMPTY_TILT_MEMORY, start, wheel(1.1, fresh), atMax).pushed;
+    expect(notch(false)).toBeUndefined();
+    expect(notch(true)?.edge).toBe('out');
   });
 
   // −430 m is the Dead Sea: an eye standing there is inside the datum sphere.
@@ -370,7 +368,9 @@ describe('the sky exit lift', () => {
     'the exit lift ends above the spot looking down at the default lens — terrain %d m',
     (terrainM) => {
       const ctx = withLens(LENS_MAX, terrainM);
-      const lift = ROW.step(ROW.emptyMemory, EMPTY_TILT_MEMORY, start, wheel(1.1), ctx).clip!;
+      const pushed = ROW.step(ROW.emptyMemory, EMPTY_TILT_MEMORY, start, wheel(1.1), ctx).pushed;
+      if (pushed?.edge !== 'out') throw new Error('expected the sky exit push');
+      const { lift } = pushed;
       const at = (sec: number) =>
         evaluateFramedClip(lift, sec, {
           bodies: ctx.bodies,

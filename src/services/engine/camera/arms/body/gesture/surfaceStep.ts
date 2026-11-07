@@ -12,6 +12,7 @@ import type { InputStep } from '../../../../../../@types/camera/input/InputStep'
 import type { SurfaceStepCtx } from '../@types/SurfaceStepCtx';
 import type { SurfaceGestureMemory } from '../../../../../../@types/camera/arms/SurfaceGestureMemory';
 import type { TiltMemory } from '../../../../../../@types/camera/orientation/TiltMemory';
+import type { Vec3 } from '../../../../../../@types/math/Vec3';
 import { draggedSurfacePose } from './utils/draggedSurfacePose';
 import { latchSurfaceGesture } from './utils/latchSurfaceGesture';
 import { settledDragPose } from './utils/settledDragPose';
@@ -30,6 +31,8 @@ export function surfaceStep(
   readonly pose: BodyFixedPose;
   readonly gesture: SurfaceGestureMemory;
   readonly tilt: TiltMemory;
+  /** A zoom's anchor (`surfaceZoomStep`), for the arm's floor push; absent on every other step. */
+  readonly zoomAnchorM?: Readonly<Vec3> | null;
 } {
   const {
     viewportPx,
@@ -45,28 +48,25 @@ export function surfaceStep(
     tuning,
   } = ctx;
   if (step.kind === 'zoom') {
-    return {
-      pose: surfaceZoomStep(
-        arm,
-        prev.gesture === 'down' ? null : prev.gesture,
-        step.factor,
-        step.cursorPx,
-        viewportPx,
-        frustum,
-        fovYRad,
-        bodyRadiusM,
-        standoffRadii,
-        groundRadiusAtM,
-        innerBoundRadiusM,
-        outerBoundRadiusM,
-        sceneUpLocal,
-        tilt.rememberedTiltRad,
-        tuning,
-        focusPivotM,
-      ),
-      gesture: prev,
-      tilt,
-    };
+    const zoomed = surfaceZoomStep(
+      arm,
+      prev.gesture === 'down' ? null : prev.gesture,
+      step.factor,
+      step.cursorPx,
+      viewportPx,
+      frustum,
+      fovYRad,
+      bodyRadiusM,
+      standoffRadii,
+      groundRadiusAtM,
+      innerBoundRadiusM,
+      outerBoundRadiusM,
+      sceneUpLocal,
+      tilt.rememberedTiltRad,
+      tuning,
+      focusPivotM,
+    );
+    return { pose: zoomed.pose, gesture: prev, tilt, zoomAnchorM: zoomed.anchorM };
   }
   // The press and release reach the memory at `replayInput`'s two gesture
   // edges; nothing latches here from idle.

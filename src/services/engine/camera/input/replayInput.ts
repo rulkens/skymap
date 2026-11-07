@@ -25,11 +25,8 @@ import { FRESH_WHEEL_PAUSE_MS } from '../../../../data/input/freshWheelPauseMs';
 import { absoluteArm } from '../../../../utils/camera/arms/absoluteArm';
 import { bodyMovesThisFrame } from '../../../../utils/scene/bodyMovesThisFrame';
 import { selectFocusRow } from '../../../../state/selection/selectors';
-import cameraReducer, {
-  clipStarted,
-  commitCameraPose,
-  setFovYRad,
-} from '../../../../state/camera/cameraSlice';
+import cameraReducer, { commitCameraPose, setFovYRad } from '../../../../state/camera/cameraSlice';
+import { zoomLimitPushed } from '../../../../state/camera/zoomLimitPushed';
 
 import type { ClimbableKind } from '../@types/ClimbableKind';
 import type { DriverId } from '../../../../@types/engine/camera/DriverId';
@@ -121,10 +118,7 @@ export function replayInput(
     gestureMemory = stepped.memory;
     tilt = stepped.tilt;
     if (stepped.fovYRad !== undefined) emit(setFovYRad(stepped.fovYRad));
-    // While it plays, the clip swallows every pose-moving step (`stepRegister`).
-    if (stepped.clip !== undefined) {
-      emit(clipStarted({ data: stepped.clip, frame: rootState.settings.orientation }));
-    }
+    if (stepped.pushed !== undefined) emit(zoomLimitPushed(stepped.pushed));
     return { frame: framed.frame, pose: stepped.pose };
   };
 

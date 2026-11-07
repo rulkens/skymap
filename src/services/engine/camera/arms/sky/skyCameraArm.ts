@@ -3,7 +3,7 @@
  * live ground at the tag's spot, looking by azimuth and altitude. Only a tag
  * enters it (`engage` is null). Every drag looks and the wheel changes the
  * lens, which the arm hands back as `fovYRad` beside an unmoved pose; a fresh
- * wheel-out at the widest lens lifts the eye out by a clip.
+ * wheel-out at the widest lens reports a push carrying the exit lift.
  */
 
 import type { ClimbRow } from '../@types/ClimbRow';
@@ -60,11 +60,11 @@ export const skyCameraArm: ClimbRow<'sky'> = {
     const fovYRad = skyZoomedLens(ctx.fovYRad, input.factor);
     // The pose stays by reference, so `replayInput` commits no pose for a lens notch.
     if (fovYRad !== ctx.fovYRad) return { pose: framed.pose, memory, tilt, fovYRad };
-    // A wheel-out the widest lens ate whole lifts the eye out (spec §6.1), but only from a
-    // fresh scroll: a trackpad's momentum tail reaching the stop stays. No release: the
-    // clip owns the display, and its end commit (a body-arm pose) leaves the sky.
+    // A wheel-out the widest lens ate whole pushes the limit, but only from a fresh
+    // scroll: a trackpad's momentum tail reaching the stop stays. The lift rides the push
+    // as a value; once played, its end commit (a body-arm pose) leaves the sky.
     return input.factor > 1 && input.fresh
-      ? { pose: framed.pose, memory, tilt, clip: skyExitLift(framed, ctx) }
+      ? { pose: framed.pose, memory, tilt, pushed: { edge: 'out', lift: skyExitLift(framed, ctx) } }
       : { pose: framed.pose, memory, tilt };
   },
 
