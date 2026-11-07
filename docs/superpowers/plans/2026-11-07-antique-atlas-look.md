@@ -168,9 +168,9 @@ Owner ruling 2026-11-07: keep the generic galaxy engraving with these names; the
 - [x] Plate light: from orbit the real Sun's azimuth at 18° over each point's horizon; the ground keeps the real Sun (blend over 8–25 km altitude).
 - [x] The plate's Mars module cuts hachures by line-integral convolution of that noise along the fall line (12 taps each way, stopping at halos), a contour-wise second set in the deepest shade, stipple on the flats from the plain render's darkness, dotted at the ground noise's peaks; lines thin with range over eye height; a paper halo behind every nearer profile.
 - [x] The albedo marking and the generic light hatching yield to the relief on the engraved ground; the land blur runs only under an Earth record.
-- [x] Follow-up (owner rulings: ink vs light, 8 taps): the plain render's shade sets where ink goes and how much (`ground.wesl` `groundRelief`, shared with the Moon next); strokes run along the light from orbit and on gentle ground (the km mesh's facets scattered them), a steep landform up close keeps its fall line; fall lines 8 taps each way 2.25 units apart, the same reach; the albedo mask skipped inside the relief shell (no salmon paper).
-- [x] Shade-edge outlines from the plain wash and crest lines from the fall field; ink capped at half the paper.
-- [ ] Review panel to ≥ 7 (engraver, cartographer, art critic, fidelity).
+- [x] Follow-up (owner rulings: ink vs light, 8 taps): the plain render's shade sets where ink goes and how much, the light the direction (`ground.wesl` `groundRelief`, shared with the Moon's close-ups): shade hatched in one family at the plate's hatch angle, toned from the smooth wash; only a steep landform below orbit (the mesh there is km facets) keeps fall-line hachures, cut with 8 taps each way 2.25 units apart (12 at 1.5 before, same reach); the albedo mask skipped inside the relief shell (no salmon paper).
+- [x] Lines: lit crests (rims, ridges, ripples) from the wash's Hessian, crests the depth resolves from the fall field.
+- [ ] Review panel to ≥ 7 (engraver, cartographer, art critic, fidelity): plateaued at 4.9 → 5.1 → 4.6 → 4.0; open: a closed rim at orbit (the mesh there is km facets, so only the wash's lit crest draws it), percy-low's lit ground near-empty.
 
 ### Task 20: The ruling follows the frame (owner rulings 2026-11-07: ecliptic default as Hevelius; Earth numbered from the Pico de Teide)
 **Files:** `src/services/gpu/shaders/antiqueLook/{graticule,fragment,io}.wesl`, `src/data/rendering/antiqueRulings.ts`,

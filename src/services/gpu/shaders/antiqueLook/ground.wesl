@@ -3,7 +3,7 @@
 // plain render says where ink goes and how much (its luma `plain` darker than the local
 // wash or the plains round it, so a crater's shaded floor inks as well as a cast shadow),
 // the light the direction: shade is hatched in one family at the plate's hatch angle (lines
-// arriving and swelling with the tone, crossed only in deep shadow, as on the globes). A
+// arriving and swelling with the tone, never closing to solid black, as on the globes). A
 // steep landform the depth resolves (`relief.a` > 0) is hachured down its fall line
 // instead, with a line on its crest; lit flats take a light stipple dotted where the
 // ground's own noise peaks, so the dots stay on the ground as it moves.
@@ -16,9 +16,11 @@ import package::antiqueLook::engraving::quantileCut;
 import package::antiqueLook::pigments::luma;
 
 const GROUND_NOISE_SIGMA: f32 = 0.43;
+// No hachure share past this, so paper always shows between the fall lines.
 const GROUND_INK_CAP: f32 = 0.5;
 // Darkness under the reference over which the shade's ink comes in; the hatch tone it
-// reaches (`crossHatch`: lines from 0.06, wider from 0.5, crossed past 0.8) and spacing.
+// reaches (`crossHatch`: lines from 0.06, wider from 0.5, crossed past 0.8) and spacing,
+// so the deepest shade keeps a quarter of its paper.
 const GROUND_SHADE: vec2<f32> = vec2<f32>(0.1, 0.5);
 const GROUND_TONE: f32 = 0.8;
 const GROUND_HATCH: f32 = 3.6;
@@ -27,6 +29,8 @@ const GROUND_SURROUND: vec2<f32> = vec2<f32>(0.07, 0.2);
 // The plain render's luma below which ground is shade wherever it lies (lit Martian
 // ground prints ~0.25 in the print): a valley dark all round still inks, as the plain shows.
 const GROUND_LIT_LUMA: f32 = 0.2;
+// The print's luma from black to lit ground: the hatching's absolute tone ramp.
+const GROUND_TONE_LUMA: vec2<f32> = vec2<f32>(0.03, 0.3);
 // The lit crest's curvature (luma over the plains' per unit²) over which its line comes in,
 // the span it is measured across (units), and how much brighter than the plains it stands.
 const GROUND_CREST: vec2<f32> = vec2<f32>(0.004, 0.008);
@@ -54,9 +58,11 @@ fn groundRelief(field: texture_2d<f32>, samp: sampler, px: vec2<f32>, relief: ve
   let reference = max(max(around, mean), GROUND_LIT_LUMA);
   let dark = clamp(1.0 - plain / reference, 0.0, 1.0);
   let shade = smoothstep(GROUND_SHADE.x, GROUND_SHADE.y, dark);
-  // The hatching's tone from the smooth wash, so its lines arrive and leave by rank, each
-  // tapering out, instead of flickering with the plain render's pixel grain.
-  let washShade = smoothstep(GROUND_SHADE.x, GROUND_SHADE.y, clamp(1.0 - around / max(mean, GROUND_LIT_LUMA), 0.0, 1.0));
+  // The hatching's tone also from the smooth wash, so where the plain render's grain
+  // drops out its lines still arrive and leave by rank, each tapering out.
+  // Graded on the absolute tone too, so mid-dark ground takes a light single hatch.
+  let washShade = max(smoothstep(GROUND_SHADE.x, GROUND_SHADE.y, clamp(1.0 - around / max(mean, GROUND_LIT_LUMA), 0.0, 1.0)),
+                      1.0 - smoothstep(GROUND_TONE_LUMA.x, GROUND_TONE_LUMA.y, around));
   let weight = min(abs(relief.a) * 1.5, 1.0);
   // A crest is too flat to be a landform itself: its line is sought on every pixel.
   var ink = fallCrest(field, samp, px, unit);
@@ -69,7 +75,7 @@ fn groundRelief(field: texture_2d<f32>, samp: sampler, px: vec2<f32>, relief: ve
     let p = px / unit;
     let n = vec2<f32>(-sin(hatchAngle), cos(hatchAngle));
     let form = vec3<f32>(dot(p, n), dot(p, vec2<f32>(n.y, -n.x)), 1.0);
-    ink = max(ink, crossHatch(form, p, GROUND_TONE * washShade * weight, GROUND_HATCH, hatchAngle, 1.0 / unit));
+    ink = max(ink, crossHatch(form, p, GROUND_TONE * max(washShade, shade) * weight, GROUND_HATCH, hatchAngle, 1.0 / unit));
     let density = (0.06 + 0.3 * dark) * 0.3 * weight * (1.0 - shade);
     ink = max(ink, quantileCut(relief.b / GROUND_NOISE_SIGMA, density));
   }
