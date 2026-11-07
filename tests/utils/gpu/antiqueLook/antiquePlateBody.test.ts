@@ -2,7 +2,8 @@
  * antiquePlateBody — the ring normal is the orientation's pole COLUMN (a row
  * tilts Saturn's ring the wrong way), the Sun points from the body toward the
  * Sun, the apparent radius is the silhouette cone's (not the bare 1/d), ring
- * radii are in the drawn radius, and an eye inside the body gets no record.
+ * radii are in the drawn radius, and an eye inside the relief shell (plus the
+ * margin) gets no record: a sphere cast there drew a false horizon on Mars.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -24,6 +25,7 @@ const at = (eye: Vec3) =>
     positionMpc: [0, 0, 0],
     orientation: TILT,
     radiusM: RADIUS_M,
+    outerRadiusM: RADIUS_M + 20_000,
     land: false,
     ringKm: [74_500, 92_000, 119_875, 136_775, 140_220],
     eyeMpc: eye,
@@ -42,7 +44,10 @@ describe('antiquePlateBody', () => {
     expect(body.ring!.outer).toBeCloseTo(140_220 / 58_232, 9);
   });
 
-  it('records nothing for an eye inside the body', () => {
+  it('records nothing for an eye inside or just above the relief', () => {
     expect(at([0, 0.5 * R_MPC, 0])).toBeNull();
+    // 4 km over the highest peak: above the sphere, still under the margin.
+    expect(at([0, (RADIUS_M + 24_000) / SCALE_UNITS.MPC_TO_M, 0])).toBeNull();
+    expect(at([0, 1.1 * R_MPC, 0])).not.toBeNull();
   });
 });

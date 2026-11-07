@@ -17,6 +17,7 @@ import { SCENE_EARTH } from '../../../../data/bodies/sceneEarth';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { antiquePlateBody } from '../../../../utils/gpu/antiqueLook/antiquePlateBody';
 import { innerBoundRadiusM } from '../../../../utils/occlusion/innerBoundRadiusM';
+import { outerBoundRadiusM } from '../../../../utils/occlusion/outerBoundRadiusM';
 import { bodyApparentDiameterPx } from '../../../../utils/scene/bodyApparentDiameterPx';
 import { isPlanetBody } from '../../../../utils/scene/isPlanetBody';
 import { sceneBodyPresentation } from '../../../engine/frame/sceneBodyPresentation';
@@ -37,6 +38,7 @@ export function antiquePlateBodies(
       positionMpc,
       orientation: states.get(id)!.orientation,
       radiusM: innerBoundRadiusM(surface),
+      outerRadiusM: outerBoundRadiusM(surface),
       land,
       ringKm:
         ring && lines

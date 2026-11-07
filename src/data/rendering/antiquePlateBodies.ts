@@ -5,6 +5,10 @@ export const ANTIQUE_PLATE_BODY_CAPACITY = 4;
 /** The `PlateBodies` uniform: a 16-byte count header, then 64 bytes per record. */
 export const ANTIQUE_PLATE_BODIES_BYTES = 16 + ANTIQUE_PLATE_BODY_CAPACITY * 64;
 
+/** A globe is cast only from beyond its highest peak's radius times this; nearer,
+ * its relief is the horizon and the sphere is not. */
+export const ANTIQUE_PLATE_RELIEF_MARGIN = 1.02;
+
 /** The ring edges the plate engraves past the C ring's inner edge (that one is the
  * `SCENE_RINGS` row's), km, keyed by host body. Saturn's: B inner, the Cassini
  * division's middle, A outer. A ring without a row here is not engraved. */
