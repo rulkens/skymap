@@ -27,11 +27,14 @@ const renderCard = (meta: StellarStreamMeta) =>
   );
 
 describe('StellarStreamDetailCard', () => {
-  it('the detail card shows the N-body kind line for Sagittarius and the width dash', () => {
+  it('the detail card shows the N-body kind line for Sagittarius, and no Width row without a width', () => {
     renderCard(SAGITTARIUS);
     expect(screen.getByText('Dwarf-galaxy debris, N-body model')).toBeTruthy();
     expect(screen.getByText('Extent')).toBeTruthy();
-    expect(screen.getByText('—')).toBeTruthy();
+    expect(screen.queryByText('Width')).toBeNull();
+    cleanup();
+    renderCard(GD_1);
+    expect(screen.getByText('0.2°')).toBeTruthy();
   });
 
   it('a measured [Fe/H] gets a Metallicity row with its source; a defaulted one gets none', () => {

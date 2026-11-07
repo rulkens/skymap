@@ -1,6 +1,6 @@
 /**
- * StellarStreamDetailCard — the panel for a selected stream: what kind of debris it is, its size,
- * distance and width, and its measured metallicity and published stellar mass where there are
+ * StellarStreamDetailCard — the panel for a selected stream: what kind of debris it is, its size
+ * and distance, and its width, measured metallicity and published stellar mass where there are
  * such. Every value is the meta row, so the card shows before the particles load.
  */
 
@@ -50,7 +50,7 @@ function StellarStreamDetailCard({
       <div className={styles.cardSection}>
         <CardRow label={facts.sizeLabel} value={`${Math.round(target.lengthKpc)} kpc`} />
         <CardRow label="Distance" value={formatKpcRange(target.distanceKpc)} />
-        <CardRow label="Width" value={target.widthDeg === null ? '—' : `${target.widthDeg}°`} />
+        {target.widthDeg !== null && <CardRow label="Width" value={`${target.widthDeg}°`} />}
         {target.metallicity && (
           <CardRow
             label="Metallicity"
