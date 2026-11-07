@@ -71,7 +71,8 @@ export function loadAntiqueSheetAssets(
     .then(({ bitmap, ...sheet }) => {
       if (!stillWanted(bitmap)) return;
       glyphs = {
-        view: upload('antique-look-glyph-sheet', bitmap),
+        // Mipped: a title block prints minified on a small canvas.
+        view: upload('antique-look-glyph-sheet', bitmap, true),
         sheet,
       };
       onLanded('glyphs');

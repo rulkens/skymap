@@ -14,6 +14,8 @@ import package::antiqueLook::pigments::pigmentAt;
 @group(0) @binding(1) var<uniform> orn: AntiqueOrnaments;
 @group(0) @binding(2) var atlas: texture_2d<f32>;
 @group(0) @binding(3) var linear: sampler;
+// The lettering sheet (`buildAntiqueGlyphSheet`): a cartouche's title, ink in r.
+@group(0) @binding(4) var letteringTex: texture_2d<f32>;
 
 /** INK's transmittance (the plate's darkest stroke) and a figure's darkest coverage. */
 const INK_T: f32 = 0.136;
@@ -55,7 +57,12 @@ fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32) -> Decor
 fn fs(in: DecorOut) -> DecorInk {
   let rect = orn.items[in.item].rect;
   let uv = mix(rect.xy, rect.zw, in.local * 0.5 + 0.5);
-  let s = textureSampleLevel(atlas, linear, uv, 0.0);
+  // A title's ink stands in for the atlas's: it clears and inks the plate, unwashed.
+  let s = select(
+    textureSampleLevel(atlas, linear, uv, 0.0),
+    vec4<f32>(textureSample(letteringTex, linear, uv).r, 0.0, 0.0, 0.0),
+    orn.items[in.item].lettering > 0.5,
+  );
   let edge = max(abs(in.local.x), abs(in.local.y));
   let o = orn.items[in.item].opacity * (1.0 - smoothstep(0.9, 1.0, edge));
   let clears = orn.items[in.item].clears;

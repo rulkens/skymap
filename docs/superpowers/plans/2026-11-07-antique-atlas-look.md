@@ -219,6 +219,15 @@ Owner ruling 2026-11-07: keep the generic galaxy engraving with these names; the
 - [x] 16 maria, 5 Terrae and 69 craters in the 1651 spelling; seas fitted across their extent as seen and moved inward off the limb, craters on the floor or right of the rim (left at the limb or terminator), one rank ladder for reveal and declutter, none at night; Earth's box estimate shares the measured advance.
 - Open: Procellarum is culled by Aristarchus at full Moon (rank 5 beats 6 under the 8 px rect pad); Earth keeps its own producer (a generic body producer would need a callback spec for little shared code).
 
+### Task 28: A title for every plate, hand-colouring, a hierarchy of lines (review 7 #5)
+**Files:** `src/data/rendering/{antiqueTitles,antiqueTitleRegions,antiqueGlobeTitles}.ts`,
+`src/utils/gpu/antiqueLook/{antiquePlateTitle,fitAntiqueTitle,drawAntiqueTitle,buildAntiqueGlyphSheet,placeAntiqueOrnaments}.ts`,
+`passes/antiqueLook/antiqueTitleGlobe.ts`, `decor.wesl`, `ornaments.wesl`, `tools/antique/packOrnaments.ts`
+- [x] Per-plate cartouche titles set at runtime on the lettering sheet (the cartouche sprite baked blank): the sky, the universe, the Earth (world, continent, the Seventeen Provinces, Holland by ground scale), Moon, Mars, Jupiter and Saturn; a change passes through a blank cartouche.
+- [ ] The cartouche takes the free corner from the view covers (desktop panels report rects); labels keep off panels.
+- [ ] Flat hand-colour washes (borders, cartouche, figures), sparing and uneven.
+- [ ] Line weights: border > ruling > orbits > hatching; hand-irregular dashes.
+
 ## Definition of Done
 
 **Deliverables:** the `stylize` FRAME_ORDER line and `antiqueLook` pass; the `antique` settings

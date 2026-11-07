@@ -11,6 +11,7 @@
 // | +28    | clears  | 1 = the fill clears the plate beneath to paper  |
 // | +32    | rect    | atlas u0, v0, u1, v1                            |
 // | +48    | pigment | index into PIGMENTS                             |
+// | +52    | lettering | 1 = rect is on the lettering sheet (a title)  |
 
 struct Ornament {
   centre: vec2<f32>,
@@ -20,7 +21,7 @@ struct Ornament {
   clears: f32,
   rect: vec4<f32>,
   pigment: f32,
-  _pad0: f32,
+  lettering: f32,
   _pad1: f32,
   _pad2: f32,
 }

@@ -174,6 +174,7 @@ export function createAntiqueLookGpu(
       { binding: 1, visibility: both, ...UNIFORM },
       { binding: 2, visibility: GPUShaderStage.FRAGMENT, ...TEXTURE },
       { binding: 3, visibility: GPUShaderStage.FRAGMENT, ...SAMPLER },
+      { binding: 4, visibility: GPUShaderStage.FRAGMENT, ...TEXTURE },
     ],
   });
   const decorPipeline = device.createRenderPipeline({

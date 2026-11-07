@@ -14,7 +14,12 @@ import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTi
 import { cross3 } from '../../../../src/utils/math/cross3';
 import { normalize3 } from '../../../../src/utils/math/normalize3';
 
-const ATLAS = { width: 100, height: 100, sprites: { beast: { x: 0, y: 0, w: 100, h: 50 } } };
+const ATLAS = {
+  width: 100,
+  height: 100,
+  sprites: { beast: { x: 0, y: 0, w: 100, h: 50 }, cartouche: { x: 0, y: 50, w: 50, h: 50 } },
+  cartoucheOval: { cx: 0.5, cy: 0.6, rx: 0.3, ry: 0.25 },
+};
 const FRUSTUM = { tanLeft: -1.0264, tanRight: 1.0264, tanDown: -0.5774, tanUp: 0.5774 };
 const SIZE = { width: 1600, height: 900 };
 // Looking at RA 0, Dec 0 with north up: east (+y) is on the left, as on any sky chart.
@@ -53,6 +58,7 @@ function place(
   basis = NORTH_UP,
   camDistMpc = 0,
   chromeHidden = false,
+  title: { rect: readonly [number, number, number, number]; weight: number } | null = null,
 ) {
   const camPosMpc = [camDistMpc, 0, 0] as [number, number, number];
   return placeAntiqueOrnaments({
@@ -64,6 +70,7 @@ function place(
     unitPx: 1,
     camPosMpc,
     chromeHidden,
+    title,
   });
 }
 
@@ -114,6 +121,25 @@ describe('placeAntiqueOrnaments', () => {
     expect(place([title, skyRow({})], NORTH_UP, 0, true)).toHaveLength(1);
   });
 
+  it("sets the plate's title from the lettering sheet in the cartouche's interior, at its strength", () => {
+    const cartouche = skyRow({
+      sprite: 'cartouche',
+      anchor: { kind: 'sheet', corner: 'topLeft', insetUnits: [200, 200], sizeUnits: 100 },
+      facesNorth: false,
+      clearsBeneath: true,
+    });
+    const rect = [0.1, 0.2, 0.3, 0.4] as const;
+    const [frame, title] = place([cartouche], NORTH_UP, 0, false, { rect, weight: 0.4 });
+    expect(frame!.lettering).toBe(false);
+    expect(title).toMatchObject({ lettering: true, opacity: 0.4, rect: [...rect], rotation: 0 });
+    // The interior's centre sits 0.1 of the sprite's height below its middle.
+    expect(title!.centrePx[0]).toBeCloseTo(frame!.centrePx[0]);
+    expect(title!.centrePx[1]).toBeCloseTo(frame!.centrePx[1] + 0.1 * 2 * frame!.halfPx[1]);
+    expect(title!.halfPx[0]).toBeCloseTo(0.3 * 2 * frame!.halfPx[0]);
+    expect(title!.halfPx[1]).toBeCloseTo(0.25 * 2 * frame!.halfPx[1]);
+    expect(place([cartouche], NORTH_UP, 0, false, null)).toHaveLength(1);
+  });
+
   it('drops a sky figure that is mostly off the plate', () => {
     // Centred just past the right edge: well under the ~0.6 on-screen share it needs.
     const [edge] = place([skyRow({ lonDeg: -50 })]);
@@ -136,6 +162,7 @@ describe('placeAntiqueOrnaments', () => {
         size: SIZE,
         unitPx: 1,
         chromeHidden: false,
+        title: null,
         camPosMpc: GALACTIC_CENTRE.map((c) => c * camX) as [number, number, number],
       })[0]!;
     // Halfway to it, it should look about twice as wide and stay where it was.
@@ -160,6 +187,7 @@ describe('placeAntiqueOrnaments', () => {
         size: SIZE,
         unitPx,
         chromeHidden: false,
+        title: null,
         camPosMpc: [0, 0, 0],
       });
     // The border is 50 print units deep: at 8 px a unit it reaches 400 px in,
@@ -183,6 +211,7 @@ describe('placeAntiqueOrnaments', () => {
         size: SIZE,
         unitPx: 1,
         chromeHidden: false,
+        title: null,
         camPosMpc: [0, 0, 0],
       });
     const ahead: ViewBasis = (() => {

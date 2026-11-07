@@ -5,16 +5,15 @@
  * Channels: R ink density, G fill (the solid silhouette the plate is cleared to
  * paper under), B wash (the alpha of `<id>.colour.png` when a sprite has one;
  * the cartouche's frame).
+ * The cartouche's interior is left blank: each plate sets its own title there
+ * at runtime (`buildAntiqueGlyphSheet`), so the module records the interior oval.
  * Inputs: data/antique/sprites/<id>.png (black RGB, ink in alpha), optional
- * <id>.colour.png (RGB hue, alpha saturation), the IM Fell TTFs in the raw
- * fonts dir (shared with the label atlases); provenance in data/antique/PROVENANCE.md.
+ * <id>.colour.png (RGB hue, alpha saturation); provenance in data/antique/PROVENANCE.md.
  */
 
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-import { type Font, parse } from 'opentype.js';
 import sharp from 'sharp';
 
 import { smoothstep } from '../../src/utils/math/smoothstep';
@@ -23,12 +22,8 @@ import { closeMaskDisc } from '../utils/image/closeMaskDisc';
 import { dilateMaskDisc } from '../utils/image/dilateMaskDisc';
 import { fillMaskHoles } from '../utils/image/fillMaskHoles';
 import { gaussianBlurFloat32 } from '../utils/image/gaussianBlurFloat32';
-import { rawDataPath } from '../utils/io/rawDataRegistry';
 import { shelfPack } from '../utils/image/shelfPack';
 import type { OrnamentSprite } from './@types/OrnamentSprite';
-import type { PlacedTitleLine } from './@types/PlacedTitleLine';
-import type { TitleGroup } from './@types/TitleGroup';
-import type { TitleLine } from './@types/TitleLine';
 
 const SPRITE_IDS = [
   'cartouche',
@@ -65,51 +60,6 @@ const FILL_BLUR_SIGMA_PX = 1.5;
  * detected: the interior opens upward between the crest scrolls, so a flood leaks.
  */
 const CARTOUCHE_OVAL = { cx: 0.504, cy: 0.502, rx: 0.318, ry: 0.31 } as const;
-const ROMAN = 'IMFellEnglish-Regular.ttf';
-const ITALIC = 'IMFellEnglish-Italic.ttf';
-/**
- * The title block, top to bottom: each group's style and the ways its text may
- * break into lines. `cap` is cap height relative to the first group, `tracking`
- * letter-spacing in em. A line too wide for the interior's chord is condensed to
- * `minSqueeze` before the block shrinks, as engravers cut it; of every
- * combination of breaks the packer keeps the one that lets the block grow largest.
- */
-const TITLE_GROUPS: readonly TitleGroup[] = [
-  {
-    style: { file: ROMAN, cap: 1, tracking: 0.14, minSqueeze: 0.85 },
-    breaks: [['NOVA ET ACCVRATISSIMA']],
-  },
-  {
-    style: { file: ROMAN, cap: 1.6, tracking: 0, minSqueeze: 0.72 },
-    breaks: [['TOTIVS VNIVERSI TABVLA'], ['TOTIVS VNIVERSI', 'TABVLA']],
-  },
-  {
-    style: { file: ITALIC, cap: 0.85, tracking: 0, minSqueeze: 0.85 },
-    breaks: [
-      ['Amstelodami, ex officina Skymapiana, Anno MDCXC'],
-      ['Amstelodami, ex officina Skymapiana,', 'Anno MDCXC'],
-    ],
-  },
-  {
-    style: { file: ITALIC, cap: 0.7, tracking: 0, minSqueeze: 0.85 },
-    breaks: [
-      ['Cum Privilegio Ordinum Hollandiae et Westfrisiae'],
-      ['Cum Privilegio Ordinum', 'Hollandiae et Westfrisiae'],
-    ],
-  },
-];
-const TITLE_LAYOUTS: readonly (readonly TitleLine[])[] = TITLE_GROUPS.reduce<TitleLine[][]>(
-  (layouts, { style, breaks }) =>
-    layouts.flatMap((head) =>
-      breaks.map((texts) => [...head, ...texts.map((text) => ({ ...style, text }))]),
-    ),
-  [[]],
-);
-/** Share of the interior's height the title block may fill, and its leading in first-line caps. */
-const TITLE_HEIGHT_FILL = 0.7;
-const TITLE_LEADING = 0.5;
-/** Fraction of the interior's chord a title line may span: keeps it inside the rule. */
-const TITLE_CHORD_FILL = 0.92;
 /** Ink-density band pushed to paper/ink, so scanned greys read as engraved lines. */
 const INK_PUSH = [0.3, 0.65] as const;
 /**
@@ -167,103 +117,10 @@ function insideOval(x: number, y: number, w: number, h: number, scale: number): 
   return u * u + v * v <= 1;
 }
 
-/**
- * Lays one title layout out at first-line cap height `c1` px: each line's em
- * size, condensing, and top edge (block centred on the interior). `undefined`
- * when the block is taller than its share or a line will not fit its chord.
- */
-function layTitle(
-  layout: readonly TitleLine[],
-  faces: ReadonlyMap<string, Font>,
-  c1: number,
-  rx: number,
-  ry: number,
-): PlacedTitleLine[] | undefined {
-  const metrics = layout.map((line) => {
-    const face = faces.get(line.file)!;
-    const cap = face.getPath('H', 0, 0, 1).getBoundingBox();
-    const box = face.getPath(line.text, 0, 0, 1, { letterSpacing: line.tracking }).getBoundingBox();
-    const em = (line.cap * c1) / (cap.y2 - cap.y1);
-    return { line, em, width: (box.x2 - box.x1) * em, height: (box.y2 - box.y1) * em };
-  });
-  const gap = TITLE_LEADING * c1;
-  const total = metrics.reduce((sum, m) => sum + m.height, 0) + gap * (metrics.length - 1);
-  if (total > TITLE_HEIGHT_FILL * 2 * ry) return undefined;
-  let top = -total / 2;
-  const placed: PlacedTitleLine[] = [];
-  for (const m of metrics) {
-    const far = Math.max(Math.abs(top), Math.abs(top + m.height)) / ry;
-    const chord = 2 * rx * Math.sqrt(Math.max(0, 1 - far * far)) * TITLE_CHORD_FILL;
-    const squeeze = Math.min(1, chord / m.width);
-    if (squeeze < m.line.minSqueeze) return undefined;
-    placed.push({ line: m.line, em: m.em, squeeze, top });
-    top += m.height + gap;
-  }
-  return placed;
-}
-
-/** Engraves the largest-fitting title into `ink` inside the interior, erasing specks first. */
-async function engraveTitle(ink: Uint8Array, w: number, h: number): Promise<void> {
+/** Erases the interior's specks, so the plate's title is set on clean paper. */
+function clearInterior(ink: Uint8Array, w: number, h: number): void {
   for (let y = 0; y < h; y++)
     for (let x = 0; x < w; x++) if (insideOval(x, y, w, h, 0.95)) ink[y * w + x] = 0;
-  const iw = w - 2 * PAD_PX;
-  const ih = h - 2 * PAD_PX;
-  const rx = CARTOUCHE_OVAL.rx * iw;
-  const ry = CARTOUCHE_OVAL.ry * ih;
-  const faces = new Map(
-    [ROMAN, ITALIC].map((file) => [
-      file,
-      parse(new Uint8Array(readFileSync(join(rawDataPath('fonts.dir'), file))).buffer),
-    ]),
-  );
-  let best: { c1: number; lines: PlacedTitleLine[] } | undefined;
-  for (const layout of TITLE_LAYOUTS) {
-    let lo = 0;
-    let hi = ry;
-    for (let k = 0; k < 30; k++) {
-      const mid = (lo + hi) / 2;
-      if (layTitle(layout, faces, mid, rx, ry)) lo = mid;
-      else hi = mid;
-    }
-    const lines = layTitle(layout, faces, lo, rx, ry);
-    if (lines && (!best || lo > best.c1)) best = { c1: lo, lines };
-  }
-  if (!best) throw new Error('packOrnaments: the title does not fit the cartouche');
-  for (const { line, em, squeeze, top } of best.lines) {
-    const glyphs = await rasterizeLine(faces.get(line.file)!, line, em, squeeze);
-    const x0 = Math.round(PAD_PX + CARTOUCHE_OVAL.cx * iw - glyphs.width / 2);
-    const y0 = Math.round(PAD_PX + CARTOUCHE_OVAL.cy * ih + top);
-    for (let y = 0; y < glyphs.height; y++)
-      for (let x = 0; x < glyphs.width; x++) {
-        const i = (y0 + y) * w + x0 + x;
-        ink[i] = Math.max(ink[i]!, glyphs.data[y * glyphs.width + x]!);
-      }
-  }
-}
-
-/**
- * One title line as two-level ink (engraved, no grey), `sizePx` the em size,
- * condensed by `squeeze`, cropped to its ink box. Drawn from the font's outlines
- * rather than sharp's `text` input: on macOS that goes through CoreText, which
- * ignores `fontfile` and falls back to sans.
- */
-async function rasterizeLine(
-  face: Font,
-  line: TitleLine,
-  sizePx: number,
-  squeeze: number,
-): Promise<GreyRaster> {
-  const path = face.getPath(line.text, 0, 0, sizePx, { letterSpacing: line.tracking });
-  const { x1, y1, x2, y2 } = path.getBoundingBox();
-  const width = Math.ceil((x2 - x1) * squeeze);
-  const height = Math.ceil(y2 - y1);
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><path transform="scale(${squeeze} 1) translate(${-x1} ${-y1})" d="${path.toPathData(3)}"/></svg>`;
-  const { data } = await sharp(Buffer.from(svg))
-    .ensureAlpha()
-    .extractChannel(3)
-    .raw()
-    .toBuffer({ resolveWithObject: true });
-  return { data: Uint8Array.from(data, (v) => (v >= 110 ? 255 : 0)), width, height };
 }
 
 async function buildSprite(id: (typeof SPRITE_IDS)[number]): Promise<OrnamentSprite> {
@@ -274,7 +131,7 @@ async function buildSprite(id: (typeof SPRITE_IDS)[number]): Promise<OrnamentSpr
     width: w,
     height: h,
   } = await loadInk(id, figure ? FIGURE_INK_PUSH : INK_PUSH, side);
-  if (id === 'cartouche') await engraveTitle(ink, w, h);
+  if (id === 'cartouche') clearInterior(ink, w, h);
   // The silhouette reads the unpushed ink: faint wave and hatch lines still hold it together.
   const { data: density } = await loadInk(id, undefined, side);
   const solid = fillMaskHoles(
@@ -350,6 +207,11 @@ async function main(): Promise<void> {
     const { x, y, w, h } = rects[k]!;
     return `    ${id}: { x: ${x}, y: ${y}, w: ${w}, h: ${h} },`;
   });
+  // The interior, renormalised from the unpadded source to the padded sprite the plate draws.
+  const card = sprites[SPRITE_IDS.indexOf('cartouche')]!;
+  const along = (c: number, side: number) => ((PAD_PX + c * (side - 2 * PAD_PX)) / side).toFixed(4);
+  const across = (r: number, side: number) => ((r * (side - 2 * PAD_PX)) / side).toFixed(4);
+  const { cx, cy, rx, ry } = CARTOUCHE_OVAL;
   writeFileSync(
     `${ROOT}${OUT_TS}`,
     `/**
@@ -366,6 +228,7 @@ export const ANTIQUE_ORNAMENT_ATLAS: AntiqueOrnamentAtlas = {
   sprites: {
 ${rows.join('\n')}
   },
+  cartoucheOval: { cx: ${along(cx, card.w)}, cy: ${along(cy, card.h)}, rx: ${across(rx, card.w)}, ry: ${across(ry, card.h)} },
 };
 `,
   );

@@ -16,7 +16,10 @@ import type { AntiqueOrnamentInstance } from '../../../@types/rendering/AntiqueO
 import type { Size } from '../../../@types/rendering/Size';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { GAL_TO_EQ_MATRIX } from '../../../data/superGalacticTransform';
-import { ANTIQUE_NUMERAL_INSET_UNITS, ANTIQUE_REGIME_MPC } from '../../../data/rendering/antiqueLook';
+import {
+  ANTIQUE_NUMERAL_INSET_UNITS,
+  ANTIQUE_REGIME_MPC,
+} from '../../../data/rendering/antiqueLook';
 import { raDecDistToCartesian } from '../../math/raDecDistToCartesian';
 import { rotateVec3ByTightMat3 } from '../../math/rotateVec3ByTightMat3';
 import { projectDirToPx } from '../../camera/projection/projectDirToPx';
@@ -47,6 +50,11 @@ export function placeAntiqueOrnaments(input: {
   readonly camPosMpc: Readonly<Vec3>;
   /** Tab's hidden-UI mode: sheet-anchored title chrome (the cartouche) goes, the map's figures stay. */
   readonly chromeHidden: boolean;
+  /** The plate's title (`antiquePlateTitle`): its block on the lettering sheet, normalised, and strength. */
+  readonly title: {
+    readonly rect: readonly [number, number, number, number];
+    readonly weight: number;
+  } | null;
 }): readonly AntiqueOrnamentInstance[] {
   const { atlas, basis, frustum, size, unitPx } = input;
   const camDistMpc = Math.hypot(input.camPosMpc[0], input.camPosMpc[1], input.camPosMpc[2]);
@@ -116,12 +124,15 @@ export function placeAntiqueOrnaments(input: {
     // out unless at least about half of it is on screen. The neatline may crop a
     // constellation figure, as on Hevelius' plates, but a sea beast sails whole
     // inside the numbered border or not at all.
-    if (anchor.kind === 'sky')
-      opacity *= smoothstep(0.55, 0.6, onScreenShare(centre, half, size));
+    if (anchor.kind === 'sky') opacity *= smoothstep(0.55, 0.6, onScreenShare(centre, half, size));
     if (anchor.kind === 'space') {
       const inset = ANTIQUE_NUMERAL_INSET_UNITS * unitPx;
       const plate = { width: size.width - 2 * inset, height: size.height - 2 * inset };
-      opacity *= smoothstep(0.97, 0.995, onScreenShare([centre[0] - inset, centre[1] - inset], half, plate));
+      opacity *= smoothstep(
+        0.97,
+        0.995,
+        onScreenShare([centre[0] - inset, centre[1] - inset], half, plate),
+      );
     }
     if (opacity <= 0.003 || offScreen(centre, half, size)) continue;
     // An engraving is on the plate or not: a beast that would run under a
@@ -143,7 +154,25 @@ export function placeAntiqueOrnaments(input: {
       clearsBeneath: row.clearsBeneath,
       pigment: row.pigment,
       rect: [uv[0], uv[1], uv[2], uv[3]],
+      lettering: false,
     });
+    // The title is set level in the cartouche's blank interior, lettering-sheet ink on its paper.
+    if (row.sprite === 'cartouche' && input.title !== null) {
+      const oval = atlas.cartoucheOval;
+      placed.push({
+        centrePx: [
+          centre[0] + (oval.cx - 0.5) * 2 * Math.abs(half[0]),
+          centre[1] + (oval.cy - 0.5) * 2 * half[1],
+        ],
+        halfPx: [oval.rx * 2 * Math.abs(half[0]), oval.ry * 2 * half[1]],
+        rotation: 0,
+        opacity: opacity * input.title.weight,
+        clearsBeneath: true,
+        pigment: row.pigment,
+        rect: [...input.title.rect],
+        lettering: true,
+      });
+    }
   }
   return placed;
 }

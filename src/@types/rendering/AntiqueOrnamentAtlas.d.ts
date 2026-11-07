@@ -11,4 +11,11 @@ export type AntiqueOrnamentAtlas = {
       { readonly x: number; readonly y: number; readonly w: number; readonly h: number }
     >
   >;
+  /** The cartouche's blank interior, normalised to its sprite: where a plate's title is set. */
+  readonly cartoucheOval: {
+    readonly cx: number;
+    readonly cy: number;
+    readonly rx: number;
+    readonly ry: number;
+  };
 };

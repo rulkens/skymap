@@ -1,0 +1,99 @@
+import { describe, expect, it } from 'vitest';
+
+import { ANTIQUE_REFERENCE_HEIGHT_CSS } from '../../../../src/data/rendering/antiqueLook';
+import { antiquePlateTitle } from '../../../../src/utils/gpu/antiqueLook/antiquePlateTitle';
+
+// A globe whose radius is `share` of the plate's half-height, its ground at `kmPerUnit`.
+const globe = (id: string, share: number, coverage = 0.2, kmPerUnit = 50) => ({
+  id,
+  radiusUnits: (share * ANTIQUE_REFERENCE_HEIGHT_CSS) / 2,
+  kmPerUnit,
+  coverage,
+});
+const ground = (kmPerUnit: number) => globe('earth', 2.5, 1, kmPerUnit);
+const ON = [0, 0] as const;
+const AMSTERDAM = [4.9, 52.4] as const;
+
+describe('antiquePlateTitle', () => {
+  it('titles the chart by regime, blank halfway through the change', () => {
+    expect(antiquePlateTitle({ cosmos: 0, globe: null, centreLonLat: null })).toEqual({
+      key: 'coelum',
+      weight: 1,
+    });
+    expect(antiquePlateTitle({ cosmos: 1, globe: null, centreLonLat: null })).toEqual({
+      key: 'universe',
+      weight: 1,
+    });
+    expect(
+      antiquePlateTitle({ cosmos: 0.5, globe: null, centreLonLat: null })?.weight ?? 0,
+    ).toBeCloseTo(0);
+  });
+
+  it('gives a globe its own title once it fills the plate, and never two at once', () => {
+    expect(antiquePlateTitle({ cosmos: 0, globe: globe('moon', 0.6), centreLonLat: ON })).toEqual({
+      key: 'luna',
+      weight: 1,
+    });
+    expect(antiquePlateTitle({ cosmos: 0, globe: globe('moon', 0.1), centreLonLat: ON })?.key).toBe(
+      'coelum',
+    );
+    expect(
+      antiquePlateTitle({ cosmos: 0, globe: globe('moon', 0.4), centreLonLat: ON })?.weight ?? 0,
+    ).toBeCloseTo(0);
+    // A globe without a title of its own leaves the chart's.
+    expect(
+      antiquePlateTitle({ cosmos: 0, globe: globe('neptune', 3), centreLonLat: ON })?.key,
+    ).toBe('coelum');
+  });
+
+  it('leaves the sky its chart title when the globe lies beside the centre', () => {
+    // On the ground looking up: the globe is vast, but the centre ray misses it and it fills little.
+    expect(
+      antiquePlateTitle({ cosmos: 0, globe: globe('earth', 900, 0.1), centreLonLat: null })?.key,
+    ).toBe('coelum');
+    expect(
+      antiquePlateTitle({ cosmos: 0, globe: globe('moon', 0.6, 0.15), centreLonLat: null })?.key,
+    ).toBe('coelum');
+  });
+
+  it("names the Earth's region under the plate's centre as the globe magnifies", () => {
+    expect(
+      antiquePlateTitle({ cosmos: 0, globe: globe('earth', 0.8, 0.5, 20), centreLonLat: AMSTERDAM })
+        ?.key,
+    ).toBe('orbis');
+    expect(antiquePlateTitle({ cosmos: 0, globe: ground(4), centreLonLat: AMSTERDAM })?.key).toBe(
+      'europa',
+    );
+    expect(antiquePlateTitle({ cosmos: 0, globe: ground(1), centreLonLat: AMSTERDAM })?.key).toBe(
+      'belgium',
+    );
+    expect(antiquePlateTitle({ cosmos: 0, globe: ground(0.1), centreLonLat: AMSTERDAM })?.key).toBe(
+      'hollandia',
+    );
+    expect(antiquePlateTitle({ cosmos: 0, globe: ground(4), centreLonLat: [-90, 40] })?.key).toBe(
+      'americaSeptentrionalis',
+    );
+    // Open ocean has no region: the world map's title holds.
+    expect(antiquePlateTitle({ cosmos: 0, globe: ground(4), centreLonLat: [-35, 30] })?.key).toBe(
+      'orbis',
+    );
+    // Off the globe (the centre ray misses it) there is no region either.
+    expect(
+      antiquePlateTitle({ cosmos: 0, globe: globe('earth', 3, 0.8, 4), centreLonLat: null })?.key,
+    ).toBe('orbis');
+  });
+
+  it('crosses a region edge through a blank cartouche rather than swapping titles', () => {
+    const at = (lon: number) =>
+      antiquePlateTitle({ cosmos: 0, globe: ground(4), centreLonLat: [lon, 50] });
+    expect(at(10)).toEqual({ key: 'europa', weight: 1 });
+    expect(at(38)?.weight ?? 0).toBeLessThan(0.05);
+    expect(at(39.9)?.key).toBe('orbis');
+  });
+
+  it('wraps longitude, so the antimeridian side of a box still matches', () => {
+    expect(
+      antiquePlateTitle({ cosmos: 0, globe: ground(4), centreLonLat: [100 + 360, 40] })?.key,
+    ).toBe('asia');
+  });
+});

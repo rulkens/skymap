@@ -19,4 +19,5 @@ export const ANTIQUE_ORNAMENT_ATLAS: AntiqueOrnamentAtlas = {
     seaMonster: { x: 4, y: 1716, w: 660, h: 336 },
     seaHorse: { x: 1023, y: 1052, w: 660, h: 479 },
   },
+  cartoucheOval: { cx: 0.5039, cy: 0.5019, rx: 0.3076, ry: 0.3005 },
 };
