@@ -379,29 +379,33 @@ fn scatterStep(
 // the sun, both projected off the up axis; it is what makes the LUT symmetric
 // about the sun and lets the fragment index it from any camera orientation.
 
-// skyViewLutParamsToUv — (viewZenithCos, lightViewCos) -> uv, the fragment side.
+// The zenith is an ANGLE in, out and between, never a cosine: from far out the
+// disc is a cone ~1e-4 rad round the nadir, where cos sits within a few f32 ulps
+// of -1 and acos(cos) has two or three values left (the narrow-lens speckle).
+// beta takes atan2 for the same reason.
+
+// skyViewLutParamsToUv — (viewZenithAngle, lightViewCos) -> uv, the fragment side.
 // 'intersectsGround' picks the above/below-horizon half.
 fn skyViewLutParamsToUv(
   bottomRadius: f32,
   viewHeight: f32,
-  viewZenithCos: f32,
+  viewZenithAngle: f32,
   lightViewCos: f32,
   intersectsGround: bool,
 ) -> vec2<f32> {
   let vHorizon = sqrt(max(0.0, viewHeight * viewHeight - bottomRadius * bottomRadius));
-  let cosBeta = vHorizon / max(1e-6, viewHeight);
-  let beta = acos(clamp(cosBeta, -1.0, 1.0));
+  let beta = atan2(bottomRadius, vHorizon);
   let zenithHorizonAngle = PI - beta;
 
   var uvY: f32;
   if (!intersectsGround) {
-    var coord = acos(clamp(viewZenithCos, -1.0, 1.0)) / max(1e-6, zenithHorizonAngle);
+    var coord = viewZenithAngle / max(1e-6, zenithHorizonAngle);
     coord = 1.0 - coord;
     coord = sqrt(max(0.0, coord));
     coord = 1.0 - coord;
     uvY = coord * 0.5;
   } else {
-    var coord = (acos(clamp(viewZenithCos, -1.0, 1.0)) - zenithHorizonAngle) / max(1e-6, beta);
+    var coord = (viewZenithAngle - zenithHorizonAngle) / max(1e-6, beta);
     coord = sqrt(max(0.0, coord));
     uvY = coord * 0.5 + 0.5;
   }
@@ -410,29 +414,28 @@ fn skyViewLutParamsToUv(
   return vec2<f32>(uvX, uvY);
 }
 
-// skyViewLutUvToParams — uv -> (viewZenithCos, lightViewCos), the bake side.
-// Inverts the horizon-split sqrt warp above. Returns vec2(viewZenithCos,
+// skyViewLutUvToParams — uv -> (viewZenithAngle, lightViewCos), the bake side.
+// Inverts the horizon-split sqrt warp above. Returns vec2(viewZenithAngle,
 // lightViewCos).
 fn skyViewLutUvToParams(bottomRadius: f32, viewHeight: f32, uv: vec2<f32>) -> vec2<f32> {
   let vHorizon = sqrt(max(0.0, viewHeight * viewHeight - bottomRadius * bottomRadius));
-  let cosBeta = vHorizon / max(1e-6, viewHeight);
-  let beta = acos(clamp(cosBeta, -1.0, 1.0));
+  let beta = atan2(bottomRadius, vHorizon);
   let zenithHorizonAngle = PI - beta;
 
-  var viewZenithCos: f32;
+  var viewZenithAngle: f32;
   if (uv.y < 0.5) {
     var coord = 2.0 * uv.y;
     coord = 1.0 - coord;
     coord = coord * coord;
     coord = 1.0 - coord;
-    viewZenithCos = cos(zenithHorizonAngle * coord);
+    viewZenithAngle = zenithHorizonAngle * coord;
   } else {
     var coord = uv.y * 2.0 - 1.0;
     coord = coord * coord;
-    viewZenithCos = cos(zenithHorizonAngle + beta * coord);
+    viewZenithAngle = zenithHorizonAngle + beta * coord;
   }
 
   let coordX = uv.x * uv.x;
   let lightViewCos = -(coordX * 2.0 - 1.0);
-  return vec2<f32>(viewZenithCos, lightViewCos);
+  return vec2<f32>(viewZenithAngle, lightViewCos);
 }
