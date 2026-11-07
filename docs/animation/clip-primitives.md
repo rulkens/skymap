@@ -220,7 +220,7 @@ whichever orientation frame is live at clip start, the same mechanism
 live-pose dependency — `forward` alone determines the aim, there is no subject
 to look up and no orbit target read. That is what makes it (not `lookAtId`)
 the right tool for a pose that must be reproducible regardless of where the
-camera happened to be before the clip started: `openingTitle`'s cold open uses
+camera happened to be before the clip started: `youAreHere`'s cold open uses
 it for exactly this reason — a `lookAtId` there would silently depend on
 whatever pose the viewer wandered into before the tour started. `over: 0` is a
 legal snap, same as `aimAt`.

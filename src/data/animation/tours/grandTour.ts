@@ -1,12 +1,12 @@
 /**
  * grandTour — "The Long Way Out": the full narrated powers-of-ten journey from
- * the Milky Way to the edge of the observable universe and back. Launched from
- * the splash Tour button. See `docs/tour/` (goal, script, stages).
+ * a park in Copenhagen to the edge of the observable universe and back. Launched
+ * from the splash Tour button. See `docs/tour/` (goal, script, stages).
  *
  * Built beat-by-beat in a live-tuning loop — beats are added and their pacing
- * dialled by eye. The opening beats anchor on the `milkyWay` singleton, which
- * resolves with NO catalog data loaded, so the tour always establishes even on
- * an unlinked worktree.
+ * dialled by eye. The opening stands on Earth and the Milky Way beat anchors on
+ * the `milkyWay` singleton; neither needs catalog data, so the tour establishes
+ * even on an unlinked worktree.
  *
  * This file is the storyboard — beat order, captions, dwell lengths. Each
  * beat's choreography lives in its own clip file under `./grandTour/`, so a
@@ -15,7 +15,11 @@
 
 import type { Tour } from '../../../@types/animation/tour/Tour';
 import { dwellDrift } from '../../../state/tour/dwellDrift';
-import { openingTitle } from './grandTour/openingTitle';
+import { parkOpening, parkOpeningDwell } from './grandTour/parkOpening';
+import { youAreHereEarth, youAreHereEarthDwell } from './grandTour/youAreHereEarth';
+import { earthAndMoon, earthAndMoonDwell } from './grandTour/earthAndMoon';
+import { solarSystem, solarSystemDwell } from './grandTour/solarSystem';
+import { stellarNeighbourhood, stellarNeighbourhoodDwell } from './grandTour/stellarNeighbourhood';
 import { youAreHere, youAreHereDwell } from './grandTour/youAreHere';
 import { approachM31, approachM31Dwell } from './grandTour/approachM31';
 import { localGroup, localGroupDwell } from './grandTour/localGroup';
@@ -35,20 +39,67 @@ export const grandTour: Tour = {
   label: 'The Long Way Out',
   beats: [
     {
-      enterClip: openingTitle,
+      enterClip: parkOpening,
       caption: {
         title: 'The Long Way Out',
-        lines: ['From home to the edge of the observable universe, and back.'],
+        lines: [
+          'From home to the edge of the observable universe, and back.',
+          'Night falls, and the band of the Milky Way comes out overhead.',
+        ],
       },
-      dwellClip: dwellDrift(8, { cruiseRate: (Math.PI * 2) / 120 }),
+      dwellClip: parkOpeningDwell,
+    },
+    {
+      enterClip: youAreHereEarth,
+      caption: {
+        title: 'You are here',
+        lines: [
+          'Earth, our home planet, nearly 13,000 kilometres across.',
+          'All eight billion of us live on it.',
+        ],
+      },
+      dwellClip: youAreHereEarthDwell,
+    },
+    {
+      enterClip: earthAndMoon,
+      caption: {
+        title: 'Earth and Moon',
+        lines: [
+          'Thirty Earths would fit in the gap between us and the Moon.',
+          'Light crosses it in just over a second.',
+        ],
+      },
+      dwellClip: earthAndMoonDwell,
+    },
+    {
+      enterClip: solarSystem,
+      caption: {
+        title: 'The Solar System',
+        lines: [
+          'Sunlight reaches Earth in eight minutes.',
+          'It takes four hours to reach Neptune, the farthest planet.',
+        ],
+      },
+      dwellClip: solarSystemDwell,
+    },
+    {
+      enterClip: stellarNeighbourhood,
+      caption: {
+        title: 'Our stellar neighbourhood',
+        lines: [
+          'Proxima Centauri, the nearest star after the Sun.',
+          'Its light travels for more than four years to reach us.',
+        ],
+      },
+      dwellClip: stellarNeighbourhoodDwell,
     },
     {
       enterClip: youAreHere,
       caption: {
-        title: 'You are here',
+        title: 'The Milky Way',
         lines: [
-          'The Milky Way, our home galaxy.',
-          'A hundred billion stars, and the Sun is one of them.',
+          'Hundreds of billions of stars, and the Sun is one of them.',
+          'Light takes a hundred thousand years to cross our galaxy.',
         ],
       },
       dwellClip: youAreHereDwell,

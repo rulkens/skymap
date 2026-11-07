@@ -1,0 +1,21 @@
+# Facts — Stage 17: Home again
+
+> Candidate "did you know?" facts. Every fact has a real, retrieved source.
+> **On screen** = shown / inferable at this framing? **New feature** = what the
+> renderer would need to ground a fact it can't show.
+>
+> **This stage shows:** the rush home through the Milky Way's disc, then the
+> night side of Earth from 2,000 km over Copenhagen, where the tour began. These
+> candidates were gathered when the stage landed on the Milky Way. Facts
+> needing a sub-galactic scale tier (e.g. the Sun's vertical bobbing) were
+> dropped — we're not building that tier. The MW–Andromeda collision and the
+> ~630 km/s CMB motion live at their proper stages (06 and 13).
+
+## Candidate 1 — RELEVANT AS A CLOSER
+- **Fact:** Gaia has directly measured the Solar System's gentle fall toward the centre of the Milky Way. By watching how the apparent motions of 1.6 million distant quasars are deflected, astronomers detected our acceleration as a tiny 5-microarcsecond-per-year swing — about 0.23 nanometres per second squared — pointing within a few degrees of the Galactic Centre.
+- **Why surprising / lesser-known:** Everyone knows the Sun *orbits* the galaxy; almost no one knows the *curving* of that orbit has actually been measured — from the deflection of the most distant objects in the sky.
+- **Source:** "Acceleration of the solar system" (Gaia EDR3) — ESA Gaia/Cosmos, 2021. https://www.cosmos.esa.int/web/gaia/edr3-acceleration-solar-system
+- **Recency:** 2021
+- **Confidence:** high — official ESA Gaia page; values quoted directly.
+- **On screen:** Not shown directly — the Sun's tiny acceleration inside the galaxy isn't visible — but the subject (our galaxy, our motion within it) is exactly what's framed, so it lands as a reflective closer about *our* place. Best fit for the "home again" beat.
+- **New feature:** none required (a reflective fact about the galaxy we're looking at). Optionally mark the Sun's position + a tiny acceleration arrow on the impostor.

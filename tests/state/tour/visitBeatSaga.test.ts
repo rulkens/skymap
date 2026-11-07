@@ -53,6 +53,10 @@ import { flyAndFocusOnClip } from '../../../src/state/tour/flyAndFocusOnClip';
 import { dwellDrift } from '../../../src/state/tour/dwellDrift';
 import { focusId } from '../../../src/utils/animation/focusId';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
+import { clockTo } from '../../../src/state/tour/clockTo';
+import { watchClockToSaga } from '../../../src/state/tour/watchClockToSaga';
+import { pause, setSimDays } from '../../../src/state/time/timeSlice';
+import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import { installAppSelectionKinds } from '../../support/installAppSelectionKinds';
 
 installAppSelectionKinds();
@@ -402,6 +406,35 @@ describe('visitBeatSaga', () => {
     store.dispatch(advanceTour());
     const outcome = await task.toPromise();
     expect(outcome).toBe('next');
+  });
+
+  it('the tour pause holds a timed clockTo mid-run', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date', 'performance'] });
+    const JD = 2_460_000;
+    // The dwell stands in for a clip whose `scene(clockTo(…))` cue fires as it starts.
+    let dispatch: (action: ReturnType<typeof clockTo>) => void = () => {};
+    let n = 0;
+    const playClip = vi.fn<(clip: ClipData) => Promise<void>>().mockImplementation(() => {
+      if (++n === 1) return Promise.resolve();
+      dispatch(clockTo({ simDays: JD + 1, overSec: 30 }));
+      return new Promise<void>(() => {});
+    });
+    const { store, sagaMiddleware } = buildStore({ playClip });
+    dispatch = store.dispatch;
+    sagaMiddleware.run(watchClockToSaga);
+    store.dispatch(setSimDays({ simDays: JD, nowMs: performance.now() }));
+    store.dispatch(pause({ nowMs: performance.now() }));
+    const at = () => deriveSimDays(store.getState().time, performance.now());
+    const beat: BeatData = { ...milkyWayBeat, enterClip: narrationClip, dwellClip: dwellDrift(60) };
+
+    sagaMiddleware.run(visitBeatSaga, beat, 0);
+    await vi.advanceTimersByTimeAsync(5_000);
+    store.dispatch(togglePause());
+    const held = at();
+    await vi.advanceTimersByTimeAsync(10_000);
+
+    expect(held).toBeGreaterThan(JD);
+    expect(at()).toBe(held);
   });
 
   // ── (8) advanceTour while paused resolves to 'next' ───────────────────────

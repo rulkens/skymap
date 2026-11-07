@@ -46,6 +46,16 @@
  * so the two together is an authoring error caught at clip-build time: same
  * "named knob, not a silent pick" stance as the ramp/cruise mixup above.
  *
+ * `flowIn` makes the yaw enter already turning at `cruiseRate` (a velocity
+ * hold, easing to rest over the final `rampSec`) instead of from rest: the
+ * beat's enter clip spins up to the same rate with `dwellLeadIn`, so the camera
+ * never stops where the enter clip lands.
+ *
+ * `coastMpcPerSec` does the same for the zoom: the dwell enters still moving
+ * out at that speed and eases to rest over the whole dwell, which adds
+ * `coastMpcPerSec × durationSec / 2` to the range. The enter clip lands short of
+ * the beat's view by that much, so the dwell ends on the view.
+ *
  * ### Finite, and that's fine
  *
  * The clip ends (at `durationSec`) rather than looping forever. The dwell saga
@@ -56,7 +66,15 @@
 
 import type { ClipData } from '../../@types/animation/ClipData';
 import type { FocusId } from '../../@types/animation/FocusId';
-import { all, oscillate, spin, spinToId } from '../../services/engine/animation/effectHelpers';
+import {
+  all,
+  oscillate,
+  rate,
+  seq,
+  spin,
+  spinToId,
+  wait,
+} from '../../services/engine/animation/effectHelpers';
 
 // Yaw's average orbit speed (rad/s — 2π over 45s) and the pitch-bob fade length
 // (s), both overridable. Pitch is a gentle bob: PITCH_AMP radians peak,
@@ -68,12 +86,24 @@ const PITCH_PERIOD = 14;
 
 export function dwellDrift(
   durationSec: number,
-  opts?: { rampSec?: number; cruiseRate?: number; spinTo?: FocusId; turns?: number },
+  opts?: {
+    rampSec?: number;
+    cruiseRate?: number;
+    spinTo?: FocusId;
+    turns?: number;
+    flowIn?: boolean;
+    coastMpcPerSec?: number;
+  },
 ): ClipData {
   if (opts?.spinTo !== undefined && opts?.cruiseRate !== undefined) {
     throw new Error(
       'dwellDrift: spinTo and cruiseRate are mutually exclusive — spinTo replaces the yaw ' +
         'layer cruiseRate would have sized. Drop one.',
+    );
+  }
+  if (opts?.spinTo !== undefined && opts?.flowIn === true) {
+    throw new Error(
+      'dwellDrift: flowIn holds a cruiseRate spin; it cannot enter a spinTo bearing.',
     );
   }
   const rampSec = opts?.rampSec ?? DEFAULT_RAMP_SEC;
@@ -92,8 +122,13 @@ export function dwellDrift(
   // AVERAGE angular speed `cruiseRate`) or, with `spinTo`, an unresolved
   // bearing-to-subject spin left for resolveClipFoci to size at play time.
   // Same ease and duration either way — only the source of `by` differs.
-  const yaw =
-    opts?.spinTo !== undefined
+  const yaw = opts?.flowIn
+    ? seq([
+        rate('yaw', { to: cruiseRate, over: 0 }),
+        wait(durationSec - fade),
+        rate('yaw', { to: 0, over: fade, ease: 'easeInOutSine' }),
+      ])
+    : opts?.spinTo !== undefined
       ? spinToId(opts.spinTo, { over: durationSec, turns: opts.turns, ease: 'easeInOutCubic' })
       : spin('yaw', { by: cruiseRate * durationSec, over: durationSec, ease: 'easeInOutCubic' });
 
@@ -105,6 +140,14 @@ export function dwellDrift(
         // Pitch: eased oscillation — a bob whose amplitude fades in/out over the
         // window, zero-mean and cycle-fitted so it returns to centre on the cut.
         oscillate('pitch', { amp: PITCH_AMP, period, over: durationSec, fade }),
+        ...(opts?.coastMpcPerSec !== undefined
+          ? [
+              seq([
+                rate('distance', { to: opts.coastMpcPerSec, over: 0 }),
+                rate('distance', { to: 0, over: durationSec, ease: 'easeInOutSine' }),
+              ]),
+            ]
+          : []),
       ]),
     ],
   };

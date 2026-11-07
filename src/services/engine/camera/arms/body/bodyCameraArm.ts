@@ -57,6 +57,7 @@ function surfaceStepCtxOf(host: HostBody, ctx: CameraArmCtx): SurfaceStepCtx {
 export const bodyCameraArm: ClimbRow<'body'> = {
   kind: 'body',
   parent: 'absolute',
+  pinsEye: false,
   emptyMemory: EMPTY_SURFACE_GESTURE_MEMORY,
 
   /**

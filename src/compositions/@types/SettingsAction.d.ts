@@ -4,15 +4,18 @@
  * no reconcile saga handles; widen it as a tour beat needs a new knob.
  *
  * `setGalaxyCatalogVisible` is here because the `'survey'` layer key fans over
- * ALL catalogs, and the tour's opening strips just milliquas.
+ * ALL catalogs, and the tour's opening strips just milliquas. `clockTo` is the one
+ * non-settings knob: Earth beats set and run their own date.
  */
 
 import type { setFlow, setFlowEnabled } from '../../layers/flow/state/flow/slice';
 import type { setGalaxyCatalogVisible } from '../../layers/galaxyCatalog/state/galaxyCatalogs/slice';
 import type { setLabelsFocusedOnly } from '../../state/settings/core/labelsSlice';
+import type { clockTo } from '../../state/tour/clockTo';
 
 export type SettingsAction =
   | ReturnType<typeof setFlowEnabled>
   | ReturnType<typeof setFlow>
   | ReturnType<typeof setGalaxyCatalogVisible>
-  | ReturnType<typeof setLabelsFocusedOnly>;
+  | ReturnType<typeof setLabelsFocusedOnly>
+  | ReturnType<typeof clockTo>;

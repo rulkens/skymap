@@ -433,12 +433,12 @@ export const FACTS: readonly Fact[] = [
   {
     id: 'grand-tour-steps',
     about: 'app',
-    text: '“The Long Way Out” has 14 captioned steps, from the Milky Way to the edge of the observable universe and back.',
+    text: '“The Long Way Out” has 18 captioned steps, from a park in Copenhagen to the edge of the observable universe and back to Earth.',
     short:
-      '“The Long Way Out” is a tour in 14 captioned steps, out to the edge of the observable universe and back.',
+      '“The Long Way Out” is a tour in 18 captioned steps, from a park in Copenhagen out to the edge of the observable universe and back.',
     source: `${REPO_BLOB}/src/data/animation/tours/grandTour.ts`,
     sourceLabel: 'the tour, in the Skymap repository',
-    checked: CHECKED,
+    checked: '2026-11-06',
   },
   // The Features page sets one of these large beside each place it shows.
   {

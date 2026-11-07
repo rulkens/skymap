@@ -24,7 +24,7 @@
  * gate (the neighbourhood-beat lesson): only the supercluster ring category
  * is lit, and every survey has been hidden since the web pull-back, so no
  * other label family can join — except the Milky Way label, lit since the
- * "You are here" beat, which gets an explicit hide to keep the frame to
+ * Milky Way beat, which gets an explicit hide to keep the frame to
  * supercluster names alone. The web layers (volume, supercluster rings)
  * stay lit from the previous beat — the flow must read as motion THROUGH
  * the same density field, not a separate overlay.

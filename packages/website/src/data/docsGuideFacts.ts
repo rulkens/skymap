@@ -383,10 +383,10 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'clock-hidden',
     about: 'app',
-    text: 'During a tour or an exhibit the clock is hidden with the rest of the interface. It keeps running, and its keys still work.',
+    text: 'During a tour or an exhibit the clock is hidden with the rest of the interface, and its keys still work. An exhibit leaves it running. A tour stops it, sets the date its steps need, and puts it back as it was when the tour ends.',
     source: `${REPO_BLOB}/src/components/App/App.tsx`,
     sourceLabel: `what the app shows during a tour or an exhibit, ${IN_REPO}`,
-    checked: CHECKED,
+    checked: '2026-11-06',
   },
   {
     id: 'link-time-write',
@@ -438,10 +438,18 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'tour-long-way-steps',
     about: 'app',
-    text: 'The shortest of the 14 steps of “The Long Way Out” takes 7 seconds and the longest, Meeting the neighbours, 41.',
+    text: 'The shortest of the 18 steps of “The Long Way Out”, Our neighbourhood, takes 12 seconds and the longest, Meeting the neighbours, 41.',
     source: `${REPO_BLOB}/src/data/animation/tours/grandTour.ts`,
     sourceLabel: `the tour’s steps, ${IN_REPO}`,
-    checked: CHECKED,
+    checked: '2026-11-06',
+  },
+  {
+    id: 'tour-earth-opening',
+    about: 'app',
+    text: '“The Long Way Out” starts on the ground in Søndermarken, a park in Copenhagen, on 5 September 2026. The clock runs from midday into the night, the camera rises to the whole Earth and pulls out past the Moon, the planets and the nearest stars to the Milky Way. The last step comes back down over Copenhagen.',
+    source: `${REPO_BLOB}/src/data/animation/tours/grandTour.ts`,
+    sourceLabel: `the tour’s steps, ${IN_REPO}`,
+    checked: '2026-11-06',
   },
   {
     id: 'tour-web-showcase',
@@ -478,10 +486,10 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
   {
     id: 'tour-caption',
     about: 'app',
-    text: 'Each step has a caption: the tour’s name with the step’s number, like “The Long Way Out · 03 / 14”, a heading, and a sentence or two. It comes up when the camera has arrived.',
+    text: 'Each step has a caption at the foot of the screen: a small heading, and below it a sentence or two shown one at a time. It comes up when the camera has arrived.',
     source: `${REPO_BLOB}/src/components/TourOverlay/TourCaption.tsx`,
     sourceLabel: `the tour’s caption, ${IN_REPO}`,
-    checked: CHECKED,
+    checked: '2026-11-06',
   },
   {
     id: 'tour-rail',
@@ -577,14 +585,6 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
     text: 'An exhibit link can carry a date as well, as in exhibit=solarSystem&t=2020-12-21T18:00:00Z, and opens with the clock paused there.',
     source: `${REPO_BLOB}/src/state/navigation/navigateSaga.ts`,
     sourceLabel: `how the app opens what a link names, ${IN_REPO}`,
-    checked: CHECKED,
-  },
-  {
-    id: 'tour-earth-start-planned',
-    about: 'app',
-    text: 'A start at Earth for “The Long Way Out”, with steps for the solar system and the nearby stars before the Milky Way, is on the list of planned work. Today the tour begins at the Milky Way.',
-    source: `${REPO_BLOB}/docs/BACKLOG.md`,
-    sourceLabel: `the list of planned work, ${IN_REPO}`,
     checked: CHECKED,
   },
   // Sharing a view.

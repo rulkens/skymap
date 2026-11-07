@@ -25,6 +25,7 @@ import { SKY_EXIT_PAUSE_MS } from './data/skyExitPauseMs';
 export const skyCameraArm: ClimbRow<'sky'> = {
   kind: 'sky',
   parent: 'body',
+  pinsEye: true,
   emptyMemory: EMPTY_SKY_WHEEL_MEMORY,
 
   channels: {
