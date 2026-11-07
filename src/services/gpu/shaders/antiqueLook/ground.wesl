@@ -11,6 +11,7 @@
 import package::antiqueLook::engraving::crossHatch;
 import package::antiqueLook::engraving::fallCrest;
 import package::antiqueLook::engraving::fallLines;
+import package::antiqueLook::engraving::inkLine;
 import package::antiqueLook::engraving::quantileCut;
 import package::antiqueLook::pigments::luma;
 
@@ -18,11 +19,16 @@ const GROUND_NOISE_SIGMA: f32 = 0.43;
 const GROUND_INK_CAP: f32 = 0.5;
 // Darkness under the reference over which the shade's ink comes in; the hatch tone it
 // reaches (`crossHatch`: lines from 0.06, wider from 0.5, crossed past 0.8) and spacing.
-const GROUND_SHADE: vec2<f32> = vec2<f32>(0.06, 0.4);
-const GROUND_TONE: f32 = 0.85;
+const GROUND_SHADE: vec2<f32> = vec2<f32>(0.1, 0.5);
+const GROUND_TONE: f32 = 0.95;
 const GROUND_HATCH: f32 = 3.0;
 // The plains' two rings, in screen heights: past a big crater's wall at mid range.
 const GROUND_SURROUND: vec2<f32> = vec2<f32>(0.07, 0.2);
+// The lit crest's curvature (luma over the plains' per unit²) over which its line comes in,
+// the span it is measured across (units), and how much brighter than the plains it stands.
+const GROUND_CREST: vec2<f32> = vec2<f32>(0.002, 0.005);
+const GROUND_CREST_SPAN: f32 = 6.0;
+const GROUND_CREST_LIT: vec2<f32> = vec2<f32>(1.05, 1.25);
 
 fn washLuma(wash: texture_2d_array<f32>, samp: sampler, uv: vec2<f32>, layer: i32) -> f32 {
   return luma(textureSampleLevel(wash, samp, uv, layer, 0.0).rgb);
@@ -45,6 +51,9 @@ fn groundRelief(field: texture_2d<f32>, samp: sampler, px: vec2<f32>, relief: ve
   let reference = max(max(around, mean), 1e-3);
   let dark = clamp(1.0 - plain / reference, 0.0, 1.0);
   let shade = smoothstep(GROUND_SHADE.x, GROUND_SHADE.y, dark);
+  // The hatching's tone from the smooth wash, so its lines arrive and leave by rank, each
+  // tapering out, instead of flickering with the plain render's pixel grain.
+  let washShade = smoothstep(GROUND_SHADE.x, GROUND_SHADE.y, clamp(1.0 - around / max(mean, 1e-3), 0.0, 1.0));
   let weight = min(abs(relief.a) * 1.5, 1.0);
   // A crest is too flat to be a landform itself: its line is sought on every pixel.
   var ink = fallCrest(field, samp, px, unit);
@@ -57,9 +66,33 @@ fn groundRelief(field: texture_2d<f32>, samp: sampler, px: vec2<f32>, relief: ve
     let p = px / unit;
     let n = vec2<f32>(-sin(hatchAngle), cos(hatchAngle));
     let form = vec3<f32>(dot(p, n), dot(p, vec2<f32>(n.y, -n.x)), 1.0);
-    ink = max(ink, crossHatch(form, p, GROUND_TONE * shade * weight, GROUND_HATCH, hatchAngle, 1.0 / unit));
+    ink = max(ink, crossHatch(form, p, GROUND_TONE * washShade * weight, GROUND_HATCH, hatchAngle, 1.0 / unit));
     let density = (0.06 + 0.3 * dark) * 0.3 * weight * (1.0 - shade);
     ink = max(ink, quantileCut(relief.b / GROUND_NOISE_SIGMA, density));
   }
-  return ink;
+  // The lit crest (a crater's rim, a ridge catching the light): a bright ridge in the
+  // wash, from its Hessian over GROUND_CREST_SPAN units (a patch narrower draws none):
+  // the centre a Newton step |gradient · v| / |λ| across, for the most negative curvature
+  // λ and its direction v; drawn where the wash bends down that hard and stands brighter
+  // than the plains round it, so the terrain's mottle draws no line.
+  let o = GROUND_CREST_SPAN * unit / res;
+  let e = washLuma(wash, samp, uv + vec2<f32>(o.x, 0.0), layer);
+  let w = washLuma(wash, samp, uv - vec2<f32>(o.x, 0.0), layer);
+  let so = washLuma(wash, samp, uv + vec2<f32>(0.0, o.y), layer);
+  let no = washLuma(wash, samp, uv - vec2<f32>(0.0, o.y), layer);
+  let se = washLuma(wash, samp, uv + o, layer);
+  let nw = washLuma(wash, samp, uv - o, layer);
+  let sw = washLuma(wash, samp, uv + vec2<f32>(-o.x, o.y), layer);
+  let ne = washLuma(wash, samp, uv + vec2<f32>(o.x, -o.y), layer);
+  let k = 1.0 / (GROUND_CREST_SPAN * GROUND_CREST_SPAN * max(mean, 1e-3));
+  let hxx = (e + w - 2.0 * around) * k;
+  let hyy = (so + no - 2.0 * around) * k;
+  let hxy = (se + nw - sw - ne) * 0.25 * k;
+  let lambda = 0.5 * (hxx + hyy) - sqrt(0.25 * (hxx - hyy) * (hxx - hyy) + hxy * hxy);
+  let across = normalize(vec2<f32>(hxy, lambda - hxx) + vec2<f32>(1e-6, 0.0));
+  let gradient = vec2<f32>(e - w, so - no) * (GROUND_CREST_SPAN * 0.5 * k);
+  let off = abs(dot(gradient, across)) / max(-lambda, 1e-5);
+  let crest = smoothstep(GROUND_CREST.x, GROUND_CREST.y, -lambda)
+    * smoothstep(GROUND_CREST_LIT.x, GROUND_CREST_LIT.y, around / max(mean, 1e-3));
+  return max(ink, inkLine(off, 1.4, 1.0 / unit) * crest);
 }
