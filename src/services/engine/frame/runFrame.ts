@@ -45,6 +45,7 @@ import { selectViewCoverPx } from '../../../state/viewCover/selectors';
 import { NO_INSETS_PX } from '../../../data/layout/noInsetsPx';
 import { inputConsumed } from '../../../state/input/inputSlice';
 import { isKind } from '../../../utils/selection/isKind';
+import { antiqueLookOn } from '../../../utils/render/antiqueLookOn';
 import type { StructureInfo } from '../../../@types/data/structure/StructureInfo';
 
 /**
@@ -114,6 +115,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     terrainHeightAt: state.terrainHeightAt,
     clipEpoch,
     schemes: deps.controlSchemes,
+    northUp: antiqueLookOn(state),
   });
   // The runtime is installed BEFORE any action reaches the store (ruled): a
   // listener fired by a commit sees this frame's register, not last frame's.

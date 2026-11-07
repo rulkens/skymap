@@ -12,6 +12,7 @@
 import type { UnknownAction } from '@reduxjs/toolkit';
 
 import type { CameraPose } from '../../../@types/camera/pose/CameraPose';
+import type { FramedCameraPose } from '../../../@types/camera/pose/FramedCameraPose';
 import type { CameraProjection } from '../../../@types/camera/projection/CameraProjection';
 import type { CameraRuntime } from '../../../@types/engine/state/CameraRuntime';
 import type { DriverId } from '../../../@types/engine/camera/DriverId';
@@ -33,6 +34,7 @@ import { frameKey } from './arms/frameKey';
 import { nudgeCameraArm } from './arms/nudgeCameraArm';
 import { rowFor } from './arms/rowFor';
 import { isWorldArm } from './arms/world/isWorldArm';
+import { northUpArm } from './arms/world/northUpArm';
 import { resolveFrameBasis } from './orientation/resolveFrameBasis';
 import { NEAR_CLIP_MPC, FAR_CLIP_MPC } from './framing/cameraFraming';
 import { projectFramePose } from '../frame/projectFramePose';
@@ -80,6 +82,7 @@ export function stepCameraRuntime(
     terrainHeightAt,
     clipEpoch,
     schemes,
+    northUp,
   } = inputs;
   const controls = rawStored.settings.cameraControls;
   const drivers = schemes[controls.scheme].drivers;
@@ -98,7 +101,7 @@ export function stepCameraRuntime(
   // replay so every stage below reads a `base` already valid in the frame
   // `settings.orientation` names, and pushed first into `actions` so it lands
   // as this frame's own commit (never as an outside one — see `external` above).
-  const orientationActions: UnknownAction[] = [];
+  const loopCommits: UnknownAction[] = [];
   let stored = rawStored;
   if (rawStored.settings.orientation !== prev.orientation && isWorldArm(rawStored.camera.base)) {
     const reencodeAction = commitCameraPose(
@@ -110,8 +113,17 @@ export function stepCameraRuntime(
         ),
       ),
     );
-    orientationActions.push(reencodeAction);
+    loopCommits.push(reencodeAction);
     stored = { ...rawStored, camera: cameraReducer(rawStored.camera, reencodeAction) };
+  }
+  // The north-up hold levels `base` the same way, so every row below reads a
+  // level pose and the look, turned off, leaves free roll where the image stands.
+  const level = northUp ? northUpArm : (framed: FramedCameraPose) => framed;
+  const levelBase = level(stored.camera.base);
+  if (levelBase !== stored.camera.base) {
+    const levelAction = commitCameraPose(levelBase);
+    loopCommits.push(levelAction);
+    stored = { ...stored, camera: cameraReducer(stored.camera, levelAction) };
   }
   const focus = stored.selectionRows.focus;
   // A row framing a body no focus names (the mission's craft) stands it in as the pivot: the
@@ -208,7 +220,7 @@ export function stepCameraRuntime(
         ...replayCtx,
         fovYRad: rootState.camera.fovYRad,
       });
-  const actions: UnknownAction[] = [...orientationActions, ...drained.actions];
+  const actions: UnknownAction[] = [...loopCommits, ...drained.actions];
   // Where `next.base`'s fold picks up below — everything before this index is
   // already folded into `rootState.camera`.
   const tailStart = actions.length;
@@ -335,9 +347,11 @@ export function stepCameraRuntime(
   const foldCtx: CameraArmCtx = { ...armFields, upBasis };
   // The fold reads the SAME intent the drivers resolved against: the edge
   // commit above is not visible to this frame's regime read.
+  // Levelled here too: a frame's own roll writes (a notch's band roll, a clip's
+  // roll track) reach `base` only after this frame draws.
   const projected = projectFramePose({
-    render: edge.render ?? pose,
-    authoredOverride: edge.authoredOverride,
+    render: level(edge.render ?? pose),
+    authoredOverride: edge.authoredOverride && level(edge.authoredOverride),
     pivotsOnFocusedBody: winner.pivotsOnFocusedBody ?? false,
     focus,
     follow: memory,
