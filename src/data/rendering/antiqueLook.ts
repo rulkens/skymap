@@ -46,10 +46,16 @@ export const ANTIQUE_GLYPH_BYTES = 16 + ANTIQUE_MAX_GLYPHS * 32;
 
 /**
  * Passes the antique look does not draw: no period plate shows them. Cloud
- * shells (no globe of the 1600s drew weather) and caption leader stems (an
- * engraved name sits beside its glyph, unattached).
+ * shells (no globe of the 1600s drew weather), caption leader stems (an
+ * engraved name sits beside its glyph) and the modern selection rings (the
+ * subject is marked by the largest name instead).
  */
-export const ANTIQUE_HIDDEN_PASSES: readonly string[] = ['cloud-shell', 'marker-lines'];
+export const ANTIQUE_HIDDEN_PASSES: readonly string[] = [
+  'cloud-shell',
+  'marker-lines',
+  'selection-ring',
+  'near0-selection-ring',
+];
 
 export const ANTIQUE_TARGETS = {
   /** The tone-mapped scene, in the swap format. */
