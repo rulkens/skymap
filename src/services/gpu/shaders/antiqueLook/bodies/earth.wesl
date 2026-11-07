@@ -48,13 +48,14 @@ fn earthPrint(col: vec3<f32>, cover: f32, e: EarthPrintIn) -> BodyPrint {
   let near = clamp(1.0 - e.seaD / 16.0, 0.0, 1.0);
   let inland = seaDistance(1.0 - e.blurredShare);
   let seaWash = (0.03 + 0.17 * pow(near, 1.5)) * (1.0 - smoothstep(0.35, 0.65, e.washShare));
-  // Each realm takes its own pigment along its coasts and its borders alike.
+  // Each realm takes its own pigment along its coasts and its borders alike;
+  // land no realm claims stays paper (a generic ochre band read as foxing).
   let code = i32(round(e.geo.r * 255.0));
   let realm = code >= 1 && code <= 7;
   let land = smoothstep(0.35, 0.6, e.washShare);
   let coastBand = clamp(1.0 - inland / 14.0, 0.0, 1.0);
-  let band = select(coastBand, max(coastBand, e.geo.g * e.geo.g), realm);
-  let pigment = select(pigmentAt(2.0), pigmentAt(f32(code - 1)), realm);
+  let band = select(0.0, max(coastBand, e.geo.g * e.geo.g), realm);
+  let pigment = pigmentAt(f32(max(code - 1, 0)));
   var washed = applyWash(col, pigmentAt(5.0), seaWash * cover);
   washed = applyWash(washed, pigment, 0.5 * land * band * cover);
   // A sign's alpha is half its paper plus half its ink (`sign.wesl`): the paper clears
