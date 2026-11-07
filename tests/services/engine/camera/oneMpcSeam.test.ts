@@ -71,6 +71,14 @@ const SCALE_UNITS_ALLOW_LIST: ReadonlyMap<string, string> = new Map([
     'label-anchor precedent — lifts a lat/lon on the datum sphere to the Mpc world point the 2D label director projects (a screen anchor, not a slab MVP)',
   ],
   [
+    'src/layers/body/labels/present/antiqueBodyView.ts',
+    "label-anchor precedent — the Moon names' view of their body: the eye-to-centre vector in body radii, and the Mpc label anchor on a px ray (a screen anchor, not a slab MVP)",
+  ],
+  [
+    'src/layers/body/labels/present/produceAntiqueMoonPlaces.ts',
+    "label-anchor precedent — the Moon's radius in Mpc as its names' worldEmMpc, as produceAntiqueEarthPlaces does (a screen anchor, not a slab MVP)",
+  ],
+  [
     'src/layers/body/rings/passes/ringsPass.ts',
     'cull/fade precedent — bridges the ring outer radius/distance to Mpc to call the shared apparentSizePx sub-pixel cull (outside the body-slab path)',
   ],
