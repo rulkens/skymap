@@ -2,11 +2,8 @@
  * antiquePlateBody — one globe as the plate casts it: eye-relative in its own
  * radii (from f64 Mpc, so no cancellation reaches the GPU), world axes, with
  * its Sun, its ring (the host's pole is the ring normal) and its apparent
- * radius in print units. Null when the eye is within ANTIQUE_PLATE_RELIEF_MARGIN
- * of its relief and the frame shows a horizon: a sphere cast near the ground
- * draws a false horizon under the real skyline, so a surface view keeps the
- * plain path. A frame whose four corners all fall on the globe has no horizon
- * to get wrong, so a low map view over Earth still prints.
+ * radius in print units. Null where `antiqueGlobeCastable` says a sphere cast
+ * would draw a false horizon, so a surface view keeps the plain path.
  */
 
 import type { Mat3 } from '../../../@types/math/Mat3';
@@ -14,7 +11,7 @@ import type { Vec3 } from '../../../@types/math/Vec3';
 import type { AntiquePlateBody } from '../../../@types/rendering/AntiquePlateBody';
 import type { AntiqueBodyPrint } from '../../../@types/rendering/AntiqueBodyPrint';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
-import { ANTIQUE_PLATE_RELIEF_MARGIN } from '../../../data/rendering/antiquePlateBodies';
+import { antiqueGlobeCastable } from './antiqueGlobeCastable';
 
 export function antiquePlateBody(input: {
   readonly positionMpc: Readonly<Vec3>;
@@ -41,15 +38,8 @@ export function antiquePlateBody(input: {
     (p[1] - eye[1]) * toRadii,
     (p[2] - eye[2]) * toRadii,
   ];
+  if (!antiqueGlobeCastable({ ...input, centre })) return null;
   const d = Math.hypot(...centre);
-  if (d * radiusM < input.outerRadiusM) return null;
-  // A ray meets the unit sphere ahead when its closest approach to the centre is under 1.
-  const meets = (r: Readonly<Vec3>) => {
-    const along = centre[0] * r[0] + centre[1] * r[1] + centre[2] * r[2];
-    return along > 0 && d * d - along * along < 1;
-  };
-  const nearGround = d * radiusM < input.outerRadiusM * ANTIQUE_PLATE_RELIEF_MARGIN;
-  if (nearGround && !input.cornerRays.every(meets)) return null;
   const toSun: Vec3 = [sun[0] - p[0], sun[1] - p[1], sun[2] - p[2]];
   const sunDistance = Math.hypot(...toSun);
   if (sunDistance === 0) return null;

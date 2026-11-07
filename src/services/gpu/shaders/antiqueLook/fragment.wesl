@@ -38,7 +38,9 @@ import package::antiqueLook::bodies::earth::earthPrint;
 import package::antiqueLook::bodies::mars::marsPrint;
 import package::antiqueLook::bodies::moon::moonTone;
 import package::antiqueLook::graticule::graticule;
-import package::antiqueLook::graticule::raDec;
+import package::antiqueLook::graticule::frameLonLat;
+import package::antiqueLook::graticule::globeNormal;
+import package::antiqueLook::graticule::skyCircles;
 import package::antiqueLook::pigments::luma;
 import package::antiqueLook::pigments::regionPigment;
 import package::antiqueLook::pigments::chromaOf;
@@ -330,8 +332,9 @@ fn castPlateBodies(ray: vec3<f32>) -> BodyHit {
 }
 
 // Neatline: heavy outer rule, hairline inner rule, and between them the degree
-// ladder in fifths of the plate's ruling interval, so its chequer registers
-// with the rulings and the numbers. x: ink, y: inside the plate.
+// ladder in the cells of the ruling frame under it (a globe's where the band
+// lies over one, else the sky's), so its chequer registers with the rulings and
+// the numbers (`placeAntiqueNumerals` picks the same way). x: ink, y: inside the plate.
 fn neatline(px: vec2<f32>, uv: vec2<f32>) -> vec2<f32> {
   let p = px / u.unit;
   let size = u.res / u.unit;
@@ -348,9 +351,13 @@ fn neatline(px: vec2<f32>, uv: vec2<f32>) -> vec2<f32> {
     let alongY = select(size.y - mid, mid, p.y < size.y * 0.5) / size.y;
     let alongX = select(size.x - mid, mid, p.x < size.x * 0.5) / size.x;
     let onLine = select(vec2<f32>(alongX, uv.y), vec2<f32>(uv.x, alongY), horizontalEdge);
-    let rd = raDec(viewRay(onLine));
-    let coord = select(rd.y, rd.x, horizontalEdge);
-    let cell = select(u.decStep, u.raStep, horizontalEdge) / 5.0;
+    let ray = viewRay(onLine);
+    let g = globeNormal(u.globe, ray);
+    let onGlobe = u.globe.steps.x > 0.0 && g.w > 0.0;
+    let ll = select(frameLonLat(u.sky, ray), frameLonLat(u.globe, g.xyz), onGlobe);
+    let steps = select(u.sky.steps, u.globe.steps, onGlobe);
+    let coord = select(ll.y, ll.x, horizontalEdge);
+    let cell = select(steps.w, steps.z, horizontalEdge);
     ladder = f32(i32(floor(coord / cell)) % 2 == 0);
   }
   return vec2<f32>(max(max(outer, inner), ladder), smoothstep(BAND, BAND + 0.6, inset));
@@ -463,7 +470,17 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // lift; an engraved (big) galaxy is a subject, never lifted.
   let skyInk = max(star.x, max(max(galaxy.x * max(1.0 - star.w, big), star.z), contour) * clear) * sky;
   // The rulings were cut by hand too: their ink load wanders along their length.
-  let rulings = graticule(viewRay(uv), u.unit, u.raStep, u.decStep) * sky * clear * (0.7 + 0.45 * vnoise(p * 0.045));
+  let ray = viewRay(uv);
+  let skyRulings = max(graticule(frameLonLat(u.sky, ray), u.sky.steps, u.unit), skyCircles(ray, u.sky, u.unit));
+  // A globe's net, on its own pixels: clear of its town signs and molehills (their paper, as
+  // `bodies/earth.wesl` reads it), crossing its borders and rivers as the maps' did.
+  var globeRulings = 0.0;
+  if (u.globe.lon90.w > 0.0) {
+    let g = globeNormal(u.globe, ray);
+    let signs = clamp(2.0 * texel(geographyTex, ip).a, 0.0, 1.0);
+    globeRulings = graticule(frameLonLat(u.globe, g.xyz), u.globe.steps, u.unit) * g.w * u.globe.lon90.w * (1.0 - signs);
+  }
+  let rulings = (skyRulings * sky * clear + globeRulings * body) * (0.7 + 0.45 * vnoise(p * 0.045));
   // Constellation figures and orbits as a fine rule, a shade lighter than the
   // rulings: only a line's core inks, so a trail drawn wide still cuts thin.
   let lines = smoothstep(0.55, 0.95, texel(linesTex, ip).a / LINE_ALPHA) * sky * clear * 0.7;

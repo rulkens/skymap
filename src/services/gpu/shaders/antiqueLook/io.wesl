@@ -9,9 +9,18 @@
 // | 16..79 | ray*    | world (equatorial) view-ray at the four corners, xyz     |
 // | 28     | web     | rayTL.w: how far the cosmic web is charted, 0..1         |
 // | 80     | seed    | per-session paper seed                                   |
-// | 84     | raStep  | RA ruling interval, degrees (one for the whole plate)    |
-// | 88     | decStep | Dec ruling interval, degrees                             |
-// | 92     | hatch   | body hatch angle, radians: parallel to the terminator    |
+// | 84     | hatch   | body hatch angle, radians: parallel to the terminator    |
+// | 96     | sky     | the sky's ruling frame (`RulingFrame`, 80 bytes)         |
+// | 176    | globe   | a globe's ruling frame; all zero when none is ruled      |
+
+// One frame the plate is ruled and numbered in (`AntiqueRulingFrame`), axes in world.
+struct RulingFrame {
+  lon0: vec4<f32>, // xyz the axis at longitude 0; w degrees added before ruling (prime meridian)
+  lon90: vec4<f32>, // xyz the axis at longitude 90° east; w the interior net's ink, 0..1
+  pole: vec4<f32>, // xyz the north pole
+  globe: vec4<f32>, // xyz eye → the globe's centre, in its radii (a globe's frame only)
+  steps: vec4<f32>, // degrees: lon, lat interval; lon, lat ladder cell. 0 = no frame
+}
 
 struct AntiqueUniforms {
   res: vec2<f32>,
@@ -22,9 +31,9 @@ struct AntiqueUniforms {
   rayBL: vec4<f32>,
   rayBR: vec4<f32>,
   seed: f32,
-  raStep: f32,
-  decStep: f32,
   hatchAngle: f32,
+  sky: RulingFrame,
+  globe: RulingFrame,
 }
 
 struct VSOut {

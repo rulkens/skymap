@@ -30,7 +30,7 @@ import { packAntiqueOrnaments } from '../../../../utils/gpu/antiqueLook/packAnti
 import { packAntiqueGlyphs } from '../../../../utils/gpu/antiqueLook/packAntiqueGlyphs';
 import { placeAntiqueOrnaments } from '../../../../utils/gpu/antiqueLook/placeAntiqueOrnaments';
 import { placeAntiqueNumerals } from '../../../../utils/gpu/antiqueLook/placeAntiqueNumerals';
-import { antiqueGraticuleSteps } from '../../../../utils/gpu/antiqueLook/antiqueGraticuleSteps';
+import { antiquePlateRulings } from './antiquePlateRulings';
 import { terminatorHatchAngle } from '../../../../utils/gpu/antiqueLook/terminatorHatchAngle';
 import { asSceneBodyId } from '../../../../utils/scene/asSceneBodyId';
 import { smoothstep } from '../../../../utils/math/smoothstep';
@@ -112,12 +112,12 @@ export function createAntiqueLook(init: {
     const size = ctx.canvasSize;
     const unitPx = size.height / ANTIQUE_REFERENCE_HEIGHT_CSS;
     const basis = viewBasis(ctx.cam);
-    const rulings = antiqueGraticuleSteps(basis, ctx.frustum, size, unitPx);
     const hasBodies = ctx.snapshot.renderedTargets.has('foreground:0');
     // Inside an atmosphere the day sky fills foreground:0's alpha; its depth tells body from sky.
     const depthCover = hasBodies && bodyRowSlabs(ctx).insideAtmosphere.length > 0;
     const { paper: paperAssets, ornaments: atlas, glyphs } = assets;
     const rays = viewCornerRays(basis, ctx.frustum, size);
+    const rulings = antiquePlateRulings(state, ctx, { basis, rays, unitPx }, hasBodies);
     const [x, y, z] = ctx.drawCamPos;
     const cosmos = smoothstep(ANTIQUE_REGIME_MPC[0], ANTIQUE_REGIME_MPC[1], Math.hypot(x, y, z));
     // The density raymarch, when it drew this frame: charted in the cosmos only (`web.wesl`).

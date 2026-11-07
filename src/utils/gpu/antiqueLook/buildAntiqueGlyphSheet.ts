@@ -1,5 +1,5 @@
 /**
- * buildAntiqueGlyphSheet — sets the border's digits in IM Fell DW Pica (OFL,
+ * buildAntiqueGlyphSheet — sets the border's digits and degree marks in IM Fell DW Pica (OFL,
  * digitised from the Fell types cut c. 1670) on a canvas, ink in the red
  * channel to match the ornament atlas. Runs once, when the look first draws.
  */
@@ -8,7 +8,8 @@ import type { AntiqueGlyphSheet } from '../../../@types/rendering/AntiqueGlyphSh
 
 const FAMILY = 'IM Fell DW Pica';
 const FONT_URL = '/fonts/antique/IMFellDWPica-Regular.woff2';
-const GLYPHS = '0123456789';
+// Digits, and the marks of degrees and minutes (the face has no prime; its apostrophe serves).
+const GLYPHS = '0123456789°’';
 const EM = 64;
 
 export async function buildAntiqueGlyphSheet(): Promise<AntiqueGlyphSheet> {
@@ -38,6 +39,7 @@ export async function buildAntiqueGlyphSheet(): Promise<AntiqueGlyphSheet> {
     bitmap: canvas.transferToImageBitmap(),
     width: canvas.width,
     height: canvas.height,
+    baseline: (pad + ascent) / lineH,
     glyphs,
   };
 }

@@ -1,5 +1,5 @@
 /**
- * packAntiqueUniforms — `AntiqueUniformInput` into the 96-byte record
+ * packAntiqueUniforms — `AntiqueUniformInput` into the record
  * `shaders/antiqueLook/io.wesl` declares; that file's table is the byte map.
  */
 
@@ -29,8 +29,16 @@ export function packAntiqueUniforms(
   [tl, tr, bl, br].forEach((ray, i) => f32.set(ray, 4 + i * 4));
   f32[7] = input.web;
   f32[20] = input.seed;
-  f32[21] = input.rulings.raDeg;
-  f32[22] = input.rulings.decDeg;
-  f32[23] = input.hatchAngle;
+  f32[21] = input.hatchAngle;
+  // The sky's and a globe's `RulingFrame`, 20 floats each; no globe packs as zeros.
+  [input.rulings.sky, input.rulings.globe].forEach((frame, i) => {
+    const at = 24 + i * 20;
+    f32.fill(0, at, at + 20);
+    if (frame === null) return;
+    const { axes: a, lon, lat } = frame;
+    f32.set([a[0], a[1], a[2], frame.lonOffsetDeg, a[3], a[4], a[5], frame.net], at);
+    f32.set([a[6], a[7], a[8], 0, ...(frame.globeCentre ?? [0, 0, 0])], at + 8);
+    f32.set([lon.stepDeg, lat.stepDeg, lon.cellDeg, lat.cellDeg], at + 16);
+  });
   return out;
 }

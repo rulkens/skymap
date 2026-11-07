@@ -4,7 +4,7 @@
  */
 
 import type { ViewCornerRays } from '../camera/projection/ViewCornerRays';
-import type { AntiqueRulings } from './AntiqueRulings';
+import type { AntiquePlateRulings } from './AntiquePlateRulings';
 import type { Size } from './Size';
 
 export type AntiqueUniformInput = {
@@ -23,8 +23,8 @@ export type AntiqueUniformInput = {
   readonly paper: boolean;
   readonly rays: ViewCornerRays;
   readonly seed: number;
-  /** One RA / Dec ruling interval for the whole plate, degrees (`antiqueGraticuleSteps`). */
-  readonly rulings: AntiqueRulings;
+  /** The plate's ruling frames (`antiquePlateRulings`). */
+  readonly rulings: AntiquePlateRulings;
   /** Body hatch direction, screen radians (`terminatorHatchAngle`). */
   readonly hatchAngle: number;
   /** How far the cosmic web is charted, 0..1: the cosmos regime, and 0 with no density drawn. */

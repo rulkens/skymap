@@ -1,16 +1,39 @@
-// antiqueLook/graticule.wesl — the celestial rulings, per pixel from the view ray.
-// The world frame is equatorial (+z the north pole, RA = atan2(y, x)), so the
-// ray IS the chart coordinate. Widths are in device px; spacing follows the
-// zoom so rulings stay ~a hand's width apart, as on a printed plate.
+// antiqueLook/graticule.wesl — the rulings, per pixel, in a ruling frame (`io.wesl`
+// `RulingFrame`): the sky's read off the view ray, a globe's off where the ray
+// meets it. Widths are in device px; each frame has one interval for the whole
+// plate (`antiqueGraticuleSteps`), so meridians run edge to edge and meet the
+// border's numbers.
+
+import package::antiqueLook::io::RulingFrame;
+import package::antiqueLook::plateBodies::ballNormal;
 
 const DEG: f32 = 57.29577951;
 // Ecliptic north pole (RA 270°, Dec 66.56°) — J2000 obliquity 23.44°.
 const ECLIPTIC_POLE: vec3<f32> = vec3<f32>(0.0, -0.39777716, 0.91748206);
+// The sky's two great circles as frames: longitude from the vernal equinox (+x).
+const EQUATORIAL: RulingFrame = RulingFrame(
+  vec4<f32>(1.0, 0.0, 0.0, 0.0), vec4<f32>(0.0, 1.0, 0.0, 0.0), vec4<f32>(0.0, 0.0, 1.0, 0.0),
+  vec4<f32>(0.0), vec4<f32>(0.0),
+);
+const ECLIPTIC: RulingFrame = RulingFrame(
+  vec4<f32>(1.0, 0.0, 0.0, 0.0), vec4<f32>(0.0, 0.91748206, 0.39777716, 0.0),
+  vec4<f32>(ECLIPTIC_POLE, 0.0), vec4<f32>(0.0), vec4<f32>(0.0),
+);
 
-// x = RA [0,360), y = Dec [-90,90], both degrees.
-fn raDec(d: vec3<f32>) -> vec2<f32> {
-  let ra = atan2(d.y, d.x) * DEG;
-  return vec2<f32>(select(ra, ra + 360.0, ra < 0.0), asin(clamp(d.z, -1.0, 1.0)) * DEG);
+// x longitude from the frame's prime meridian, [0, 360); y latitude; degrees.
+// `d` is a sky ray or a globe's surface normal. `rulingLonLat.ts` is the CPU twin.
+fn frameLonLat(f: RulingFrame, d: vec3<f32>) -> vec2<f32> {
+  let lon = atan2(dot(d, f.lon90.xyz), dot(d, f.lon0.xyz)) * DEG + f.lon0.w;
+  return vec2<f32>(lon - 360.0 * floor(lon / 360.0), asin(clamp(dot(d, f.pole.xyz), -1.0, 1.0)) * DEG);
+}
+
+// Where a view ray meets a globe frame's ball: xyz the surface normal (on a miss,
+// the closest approach's, so derivatives stay smooth past the limb), w 1 on a hit.
+fn globeNormal(f: RulingFrame, ray: vec3<f32>) -> vec4<f32> {
+  let c = f.globe.xyz;
+  let bc = dot(ray, c);
+  let off = c - bc * ray;
+  return vec4<f32>(ballNormal(ray, c), f32(bc > 0.0 && dot(off, off) < 1.0));
 }
 
 // Coverage of the rulings `coord = k·step`, `halfPx` wide either side.
@@ -32,28 +55,32 @@ fn graduatedCircle(lat: f32, lon: f32, latPerPx: f32, cellDeg: f32, gapPx: f32, 
   return max(rules, cellOn * inside);
 }
 
-// RA/Dec rulings, one interval each for the whole plate (`raStep`, `decStep`,
-// chosen on the CPU so no meridian starts or stops mid-field), plus graduated
-// equator and ecliptic. Line weights rise rulings < bands < neatline.
-fn graticule(d: vec3<f32>, unitPx: f32, raStep: f32, decStep: f32) -> f32 {
-  let rd = raDec(d);
-  // RA's derivative jumps at its 0/360 seam; the shifted copy is continuous there.
-  let raPerPx = min(fwidth(rd.x), fwidth(fract(rd.x / 360.0 + 0.5) * 360.0));
-  let decPerPx = fwidth(rd.y);
-  // Meridians crowd at the poles: past one fixed parallel only every third runs on.
-  let meridian = raStep * select(1.0, 3.0, abs(rd.y) > 75.0);
-  let thin = 0.36 * unitPx;
-  var ink = max(ruling(rd.x, meridian, thin, raPerPx), ruling(rd.y, decStep, thin, decPerPx)) * 0.8;
+fn band(ll: vec2<f32>, cellDeg: f32, unitPx: f32) -> f32 {
+  return graduatedCircle(ll.y, ll.x, fwidth(ll.y), cellDeg, 3.6 * unitPx, 0.34 * unitPx) * 0.9;
+}
 
-  let gap = 3.6 * unitPx;
-  let rule = 0.34 * unitPx;
-  let cell = max(raStep / 5.0, 1.0);
-  ink = max(ink, graduatedCircle(rd.y, rd.x, decPerPx, cell, gap, rule) * 0.9);
-  let beta = asin(clamp(dot(d, ECLIPTIC_POLE), -1.0, 1.0)) * DEG;
-  // Ecliptic longitude from the vernal equinox (+x), counted toward the summer solstice.
-  let east = normalize(cross(ECLIPTIC_POLE, vec3<f32>(1.0, 0.0, 0.0)));
-  var lambda = atan2(dot(d, east), dot(d, vec3<f32>(1.0, 0.0, 0.0))) * DEG;
-  lambda = select(lambda, lambda + 360.0, lambda < 0.0);
-  ink = max(ink, graduatedCircle(beta, lambda, fwidth(beta), cell, gap, rule) * 0.9);
+// A frame's meridians and parallels at its intervals (`steps` xy), and its
+// equator as a band graduated in its ladder's cells (z). Line weights rise
+// rulings < bands < neatline.
+fn graticule(ll: vec2<f32>, steps: vec4<f32>, unitPx: f32) -> f32 {
+  // Longitude's derivative jumps at its 0/360 seam; the shifted copy is continuous there.
+  let lonPerPx = min(fwidth(ll.x), fwidth(fract(ll.x / 360.0 + 0.5) * 360.0));
+  // Meridians crowd at the poles: past one fixed parallel only every third runs on.
+  let meridian = steps.x * select(1.0, 3.0, abs(ll.y) > 75.0);
+  let thin = 0.36 * unitPx;
+  let ink = max(ruling(ll.x, meridian, thin, lonPerPx), ruling(ll.y, steps.y, thin, fwidth(ll.y))) * 0.8;
+  return max(ink, band(ll, steps.z, unitPx));
+}
+
+// The sky's equator and ecliptic, graduated whichever frame rules it; a circle
+// that is already the frame's own equator is not cut twice.
+fn skyCircles(ray: vec3<f32>, f: RulingFrame, unitPx: f32) -> f32 {
+  var ink = 0.0;
+  if (f.pole.z < 0.9999) {
+    ink = band(frameLonLat(EQUATORIAL, ray), f.steps.z, unitPx);
+  }
+  if (dot(f.pole.xyz, ECLIPTIC_POLE) < 0.9999) {
+    ink = max(ink, band(frameLonLat(ECLIPTIC, ray), f.steps.z, unitPx));
+  }
   return ink;
 }

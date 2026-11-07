@@ -16,7 +16,7 @@ export const ANTIQUE_REGIME_MPC = [0.003, 0.03] as const;
 
 /** Sizes of io.wesl `AntiqueUniforms`, ornaments.wesl `AntiqueOrnaments` and fragment.wesl
  * `AntiqueLettering` (each list: a 16-byte header, then fixed rows). */
-export const ANTIQUE_UNIFORM_BYTES = 96;
+export const ANTIQUE_UNIFORM_BYTES = 256;
 export const ANTIQUE_MAX_ORNAMENTS = 16;
 export const ANTIQUE_ORNAMENT_BYTES = 16 + ANTIQUE_MAX_ORNAMENTS * 64;
 export const ANTIQUE_MAX_GLYPHS = 96;
@@ -30,10 +30,6 @@ export const ANTIQUE_SKY_FLOOR_BYTES = 16;
 export const ANTIQUE_LADDER_UNITS = 33.5;
 export const ANTIQUE_NUMERAL_INSET_UNITS = 50;
 export const ANTIQUE_NUMERAL_UNITS = 22;
-
-/** RA/Dec ruling intervals (degrees) the plate picks from, ~`GAP` units apart at its centre. */
-export const ANTIQUE_RULING_STEPS_DEG = [1, 2, 5, 10, 15, 20, 30, 45, 90] as const;
-export const ANTIQUE_RULING_GAP_UNITS = 120;
 
 /** Passes no period plate shows: cloud shells (no 1600s globe drew weather), leader
  * stems (an engraved name sits beside its glyph), selection rings, and the density's

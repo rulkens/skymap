@@ -33,10 +33,11 @@ function primitive(type: string): WgslTypeLayout {
   return layout;
 }
 
-function layoutOf(file: string, struct: string) {
+/** A struct's layout; a member of another struct type declared in the same file nests. */
+function layoutOf(file: string, struct: string): ReturnType<typeof layoutWgslStruct> {
   return layoutWgslStruct(
     parseWgslStructFields(readShaderSource(`${DIR}/${file}`), struct),
-    primitive,
+    (type) => wgslPrimitiveLayout(type) ?? layoutOf(file, type).layout,
   );
 }
 
@@ -77,7 +78,24 @@ describe('antique look records ↔ WGSL structs', () => {
       paper: true,
       rays: { tl: [1011, 0, 0], tr: [1012, 0, 0], bl: [1013, 0, 0], br: [1014, 0, 0] },
       seed: 1021,
-      rulings: { raDeg: 1022, decDeg: 1023 },
+      rulings: {
+        sky: {
+          axes: [1031, 1032, 1033, 1034, 1035, 1036, 1037, 1038, 1039],
+          lonOffsetDeg: 1040,
+          globeCentre: null,
+          net: 1041,
+          lon: { stepDeg: 1042, cellDeg: 1043 },
+          lat: { stepDeg: 1044, cellDeg: 1045 },
+        },
+        globe: {
+          axes: [1051, 1052, 1053, 1054, 1055, 1056, 1057, 1058, 1059],
+          lonOffsetDeg: 1060,
+          globeCentre: [1062, 1063, 1064],
+          net: 1061,
+          lon: { stepDeg: 1065, cellDeg: 1066 },
+          lat: { stepDeg: 1067, cellDeg: 1068 },
+        },
+      },
       hatchAngle: 1024,
       web: 1025,
     });
@@ -89,13 +107,30 @@ describe('antique look records ↔ WGSL structs', () => {
       rayBL: 1013,
       rayBR: 1014,
       seed: 1021,
-      raStep: 1022,
-      decStep: 1023,
       hatchAngle: 1024,
     };
-    expect([...offsets.keys()].sort()).toEqual([...Object.keys(sentinel), 'flags'].sort());
+    expect([...offsets.keys()].sort()).toEqual(
+      [...Object.keys(sentinel), 'flags', 'sky', 'globe'].sort(),
+    );
     for (const [member, value] of Object.entries(sentinel))
       expect(offsetOf(packed, value), member).toBe(offsets.get(member));
+    // Each ruling frame member by member: axes in the xyz lanes, the rest in w and `steps`.
+    const frame = layoutOf('io.wesl', 'RulingFrame').offsets;
+    const lane = (slot: 'sky' | 'globe', member: string, i: number) =>
+      offsets.get(slot)! + frame.get(member)! + i * 4;
+    for (const [slot, base] of [
+      ['sky', 1030],
+      ['globe', 1050],
+    ] as const) {
+      expect(offsetOf(packed, base + 1)).toBe(lane(slot, 'lon0', 0));
+      expect(offsetOf(packed, base + 4)).toBe(lane(slot, 'lon90', 0));
+      expect(offsetOf(packed, base + 7)).toBe(lane(slot, 'pole', 0));
+      expect(offsetOf(packed, base + 10)).toBe(lane(slot, 'lon0', 3));
+      expect(offsetOf(packed, base + 11)).toBe(lane(slot, 'lon90', 3));
+    }
+    expect(offsetOf(packed, 1062)).toBe(lane('globe', 'globe', 0));
+    for (const [i, value] of [1065, 1067, 1066, 1068].entries())
+      expect(offsetOf(packed, value)).toBe(lane('globe', 'steps', i));
     // The web weight rides rayTL's spare w lane (io.wesl's table).
     expect(offsetOf(packed, 1025)).toBe(offsets.get('rayTL')! + 12);
     // bodies (bit 0), paper (bit 2) and depth cover, the bit cover.wesl tests.

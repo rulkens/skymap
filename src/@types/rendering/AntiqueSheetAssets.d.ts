@@ -13,7 +13,7 @@ export type AntiqueSheetAssets = {
   readonly glyphs: {
     readonly view: GPUTextureView;
     /** The bitmap is closed on upload, so only its layout is kept. */
-    readonly sheet: Pick<AntiqueGlyphSheet, 'width' | 'height' | 'glyphs'>;
+    readonly sheet: Omit<AntiqueGlyphSheet, 'bitmap'>;
   } | null;
   destroy(): void;
 };

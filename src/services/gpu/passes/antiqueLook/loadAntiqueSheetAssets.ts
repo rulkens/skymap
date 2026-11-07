@@ -68,11 +68,11 @@ export function loadAntiqueSheetAssets(
     })
     .catch(warn('ornaments'));
   buildAntiqueGlyphSheet()
-    .then(({ bitmap, width, height, glyphs: rects }) => {
+    .then(({ bitmap, ...sheet }) => {
       if (!stillWanted(bitmap)) return;
       glyphs = {
         view: upload('antique-look-glyph-sheet', bitmap),
-        sheet: { width, height, glyphs: rects },
+        sheet,
       };
       onLanded('glyphs');
     })
