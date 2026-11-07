@@ -32,6 +32,7 @@ import TourOverlayContainer from '../containers/TourOverlayContainer';
 import TourBeatRailContainer from '../containers/TourBeatRailContainer';
 import ExhibitOverlayContainer from '../containers/ExhibitOverlayContainer';
 import { isCinemaMode } from '../../utils/url/isCinemaMode';
+import { antiqueChromeCss } from '../../utils/antiqueChrome/antiqueChromeCss';
 import { selectTourActive } from '../../state/tour/selectors';
 import { selectTakeoverSource } from '../../state/takeover/selectors';
 import { selectAntiqueEnabled } from '../../state/settings/selectors';
@@ -63,13 +64,18 @@ export function App(): React.ReactElement {
   const splashVisible = useAppSelector(selectSplashVisible);
 
   // The chrome follows the canvas into the antique look: `styles/antique.css` keys its
-  // tokens off this attribute. A layout effect, so no frame paints the dark chrome.
+  // tokens off this attribute, and the engraved frames' generated image tokens ride in
+  // beside it. A layout effect, so no frame paints the dark chrome.
   const antique = useAppSelector(selectAntiqueEnabled);
   useLayoutEffect(() => {
     if (!antique) return;
     document.documentElement.dataset.look = 'antique';
+    const chrome = document.createElement('style');
+    chrome.textContent = antiqueChromeCss();
+    document.head.append(chrome);
     return () => {
       delete document.documentElement.dataset.look;
+      chrome.remove();
     };
   }, [antique]);
 
