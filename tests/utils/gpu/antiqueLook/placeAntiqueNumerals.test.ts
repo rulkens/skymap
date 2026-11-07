@@ -10,7 +10,11 @@ import { describe, it, expect } from 'vitest';
 import { placeAntiqueNumerals } from '../../../../src/utils/gpu/antiqueLook/placeAntiqueNumerals';
 import type { ViewBasis } from '../../../../src/@types/camera/projection/ViewBasis';
 import type { AntiqueGlyphInstance } from '../../../../src/@types/rendering/AntiqueGlyphInstance';
-import { ANTIQUE_NUMERAL_INSET_UNITS } from '../../../../src/data/rendering/antiqueLook';
+import {
+  ANTIQUE_LADDER_UNITS,
+  ANTIQUE_NUMERAL_INSET_UNITS,
+  ANTIQUE_NUMERAL_UNITS,
+} from '../../../../src/data/rendering/antiqueLook';
 
 const FRUSTUM = { tanLeft: -1.0264, tanRight: 1.0264, tanDown: -0.5774, tanUp: 0.5774 };
 const SIZE = { width: 1600, height: 900 };
@@ -33,16 +37,21 @@ function lookingAt(raDeg: number): ViewBasis {
   };
 }
 
-/** The top border's numbers, left to right. */
-function topLabels(raDeg: number): string[] {
-  const glyphs = placeAntiqueNumerals({
+/** The top border's digit glyphs. */
+function topGlyphs(raDeg: number, stepDeg = 15): AntiqueGlyphInstance[] {
+  return placeAntiqueNumerals({
     basis: lookingAt(raDeg),
     frustum: FRUSTUM,
     size: SIZE,
     unitPx: 1,
-    rulings: { raDeg: 15, decDeg: 15 },
+    rulings: { raDeg: stepDeg, decDeg: stepDeg },
     sheet: SHEET,
   }).filter((g) => Math.abs(g.centrePx[1] - ANTIQUE_NUMERAL_INSET_UNITS) < 1e-6);
+}
+
+/** The top border's numbers, left to right. */
+function topLabels(raDeg: number): string[] {
+  const glyphs = topGlyphs(raDeg);
   const numbers: { x: number; text: string }[] = [];
   let last: AntiqueGlyphInstance | undefined;
   for (const g of glyphs) {
@@ -74,5 +83,23 @@ describe('placeAntiqueNumerals', () => {
     expect(at('180')).toBeGreaterThan(0);
     expect(at('195')).toBe(at('180') - 1);
     expect(at('165')).toBe(at('180') + 1);
+  });
+
+  it('sets no number near a corner, where two edges would collide', () => {
+    // Rulings every 2° (~35 px apart) leave no gap wide enough to miss the
+    // corner by chance; the leftmost digit still stands clear of it.
+    const leftmost = Math.min(...topGlyphs(0, 2).map((g) => g.centrePx[0] - g.halfPx[0]));
+    expect(leftmost).toBeGreaterThan(ANTIQUE_LADDER_UNITS + 20);
+  });
+
+  it('lets a number wait for room rather than run into its neighbour', () => {
+    // At 2° the crossings come ~35 px apart, closer than numbers 22 px tall can
+    // stand: between glyphs there is either none (one number's own) or a clear gap.
+    const glyphs = topGlyphs(0, 2).sort((p, q) => p.centrePx[0] - q.centrePx[0]);
+    const gaps = glyphs
+      .slice(1)
+      .map((g, i) => g.centrePx[0] - g.halfPx[0] - (glyphs[i]!.centrePx[0] + glyphs[i]!.halfPx[0]));
+    expect(gaps.some((gap) => gap > 1)).toBe(true);
+    expect(gaps.every((gap) => Math.abs(gap) < 1e-6 || gap > 0.5 * ANTIQUE_NUMERAL_UNITS)).toBe(true);
   });
 });

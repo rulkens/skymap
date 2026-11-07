@@ -199,7 +199,8 @@ fn neatline(px: vec2<f32>, uv: vec2<f32>) -> vec2<f32> {
 fn plateMark(px: vec2<f32>) -> f32 {
   let p = px / u.unit;
   let size = u.res / u.unit;
-  let radius = 8.0;
+  // A plate's corners were filed only slightly round: more reads as a UI card.
+  let radius = 2.0;
   let half = size * 0.5 - vec2<f32>(PLATE + radius);
   let q = abs(p - size * 0.5) - half;
   let d = -(length(max(q, vec2<f32>(0.0))) + min(max(q.x, q.y), 0.0) - radius);
@@ -342,7 +343,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   var numerals = 0.0;
   let edgeUnits = min(min(p.x, u.res.x / u.unit - p.x), min(p.y, u.res.y / u.unit - p.y));
   if (edgeUnits < MARGIN + BAND + 30.0) {
-    numerals = numeralInk(px);
+    numerals = numeralInk(px) * (1.0 - ornament.b);
   }
   let content = max(lettered, max(ornament.g, numerals));
   var ink = max(content * frame.y, frame.x);

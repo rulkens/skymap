@@ -17,12 +17,18 @@ import {
   ANTIQUE_LADDER_UNITS,
   ANTIQUE_MAX_GLYPHS,
   ANTIQUE_NUMERAL_INSET_UNITS,
+  ANTIQUE_NUMERAL_UNITS,
 } from '../../../data/rendering/antiqueLook';
 import { rayThroughPx } from '../../camera/projection/rayThroughPx';
 import { wrapRad } from '../../math/wrapRad';
 import { setAntiqueDigits } from './setAntiqueDigits';
 
 const SAMPLES = 96;
+// No number within this many print units of a corner, where two edges' numbers meet.
+const CORNER_CLEAR_UNITS = 40;
+// Space kept between neighbouring numbers on an edge, in numeral heights: where
+// meridians converge, the next number waits for room.
+const NUMBER_GAP = 0.6;
 const DEG = 180 / Math.PI;
 
 export function placeAntiqueNumerals(input: {
@@ -73,6 +79,10 @@ export function placeAntiqueNumerals(input: {
       points.push(p);
     }
     const step = edge.ra ? input.rulings.raDeg : input.rulings.decDeg;
+    const edgeLen = Math.hypot(edge.to[0] - edge.from[0], edge.to[1] - edge.from[1]);
+    const clear = CORNER_CLEAR_UNITS * unitPx;
+    // How far along the edge's axis the previous number reaches.
+    let lastReach = -Infinity;
     for (let i = 0; i < SAMPLES; i++) {
       const a = values[i]!;
       const b = values[i + 1]!;
@@ -81,12 +91,23 @@ export function placeAntiqueNumerals(input: {
       if (k * step > Math.max(a, b)) continue;
       const value = k * step;
       const t = (value - a) / (b - a);
+      const along = ((i + t) / SAMPLES) * edgeLen;
+      if (along < clear || along > edgeLen - clear) continue;
       const at: [number, number] = [
         points[i]![0] + (points[i + 1]![0] - points[i]![0]) * t + edge.text[0],
         points[i]![1] + (points[i + 1]![1] - points[i]![1]) * t + edge.text[1],
       ];
       const label = edge.ra ? String(((value % 360) + 360) % 360) : String(Math.abs(value));
+      const before = out.length;
       setAntiqueDigits(label, at, unitPx, input.sheet, out);
+      const axis = edge.ra ? 0 : 1;
+      const set = out.slice(before);
+      const start = Math.min(...set.map((g) => g.centrePx[axis] - g.halfPx[axis]));
+      if (start < lastReach + NUMBER_GAP * ANTIQUE_NUMERAL_UNITS * unitPx) {
+        out.length = before;
+        continue;
+      }
+      lastReach = Math.max(...set.map((g) => g.centrePx[axis] + g.halfPx[axis]));
       if (out.length >= ANTIQUE_MAX_GLYPHS) return out.slice(0, ANTIQUE_MAX_GLYPHS);
     }
   }
