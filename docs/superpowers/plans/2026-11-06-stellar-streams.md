@@ -627,7 +627,64 @@ samples a star type — giant, turnoff, BHB — with fractions and per-type B−
 - [x] No Layer contract change. Brightness untouched.
 - [x] Commit (code; the rebuilt data is gitignored).
 
-Task 13 re-runs (perf, eye check) after Task 17.
+### Task 18: The rest recedes when a stream is focused (owner ruling 92rh)
+
+**Why:** focusing a structure recedes the rest of the scene; focusing a stream does nothing today, so a thin
+stream crossing a brighter one (Cetus-Palca over Cetus) reads as the wrong place. Owner ruled: other streams
+and the rest of the scene recede, like structures, and approved a core change to the shared focus ramp.
+
+**Mechanism today (traced):** `runFrame.ts:205-216` feeds `structureFocus.update` only when the focus row is a
+`structure`; it publishes `snapshot.focus` (spatial sphere uniforms), `snapshot.focusBlend` (400 ms ramp) and
+`snapshot.focusPickId`. `emphasisOf(entry, snapshot, pickId?)` (`presentation/emphasisOf.ts`) turns
+`focusBlend` into a recede factor for entries with `recession`, exempting `pickId === focusPickId`; the 2D label
+director applies it per label via `subjectId`; passes multiply `fade * emphasisOf(...)` themselves.
+
+**Rulings:** (1) Core: the focus subsystem accepts any focused row with a position and radius, publishing the
+blend and the pick id for it. The SPATIAL sphere (`snapshot.focus` centre/radii) stays structure-only — a long
+thin stream's half-length sphere would dim the wrong galaxies and stars — so a stream focus publishes the
+zero-blend sphere while `focusBlend`/`focusPickId` ramp. Name the split so it reads as data (e.g. the row
+kind's facts or the row itself says whether it has a spatial focus), not a `type === 'stellarStream'` branch in
+core. `ActiveFocus.ref` carries the real ref, not a hardcoded `structure`. Check `pickFrameContext.ts` (mirrors
+it) and the `focus` SceneEffect doc. (2) Streams: `recession: 'mild'` on the `stellarStream` label entry and
+`'strong'` on the `stellarStreams` show entry; the passes multiply `emphasisOf` like `constellationsPass`, but
+the focused stream is exempt per particle: a uniform carries the focused stream index (or −1) and the shader
+keeps that index at full brightness while the others take the recede factor (stream index is already
+`attr.w`; the uniform block has a free `_p0` slot). Haze and streak both. Pick unchanged.
+
+**Files:** `src/services/engine/frame/runFrame.ts`, `src/services/engine/subsystems/structureFocusSubsystem.ts`,
+its type, `pickFrameContext.ts`, `src/layers/stellarStreams/visibility.ts`, both stream passes, the renderer +
+its type, `streams.wesl`. No Layer contract change (`recession` already exists).
+
+**Tests:** focusing a stream ramps `focusBlend` and sets `focusPickId` to that stream's pick word while the
+spatial sphere stays at zero blend; focusing a structure behaves exactly as before (existing tests stay
+green); the streams pass writes the focused index and the recede factor (−1 / 1 at rest); a non-stream focus
+(e.g. a structure) still recedes the streams via the show entry.
+
+- [ ] Commit.
+
+### Task 19: Stellar mass on the card, where published (owner ruling 92rh)
+
+**Why:** the owner wants an idea of how many stars a stream holds. No catalogue lists star counts; papers give
+stellar masses (or luminosities M_V) for some streams. Owner ruled: show **stellar mass in M☉ where known**,
+nothing otherwise.
+
+**Rulings:** a committed curated table `tools/streams/data/streamStellarMass.constants.ts`, rows
+`{ name, massMsun, ref }` keyed by galstreams `Name` (Sagittarius keyed by its id), every value copied from a
+fetched primary source (paper table or text; arXiv source preferred), never from memory — STOP rather than
+guess. A published M_V may be converted to mass only with a stated mass-to-light ratio for an old population
+and a cited source for that ratio; mark such rows `derived` and say so on the card ("≈"). Meta gains
+`stellarMass: { massMsun, ref, derived } | null`. Card row "Stellar mass" formatted like `2 × 10⁴ M☉ (de Boer
+2018)` — with "≈" when derived — and absent when null. Build throws on a table key matching no stream (same
+guard as the metallicity table). ATTRIBUTIONS rows for each new source; website data-source notes if the
+website test forces them.
+
+**Files:** the table, the meta builders + types (tools and src), the card, ATTRIBUTIONS, tools/streams/README.
+
+**Tests:** card row present/absent/≈; the formatter (one util file) for mantissa × 10^n; the build guard.
+
+- [ ] Commit (rebuilt data is gitignored).
+
+Task 13 re-runs (perf, eye check) after Task 19.
 
 ---
 
