@@ -1,4 +1,5 @@
 import { arrayMean } from '../../../src/utils/math/arrayMean';
+import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { cumulativeLengths } from '../../utils/math/cumulativeLengths';
 import { pointAlongPolyline } from '../../utils/math/pointAlongPolyline';
 import type { GalstreamsTrack } from '../@types/GalstreamsTrack';
@@ -12,8 +13,6 @@ import { streamStellarMass } from './streamStellarMass';
 import { trackPositionsKpc } from './trackPositionsKpc';
 import { trackWidthKpc } from './trackWidthKpc';
 import { streamCentreline } from './streamCentreline';
-
-const KPC_TO_MPC = 1e-3;
 
 /** The meta row of a galstreams stream; its label and focus sit at the track's midpoint by length. */
 export function streamMetaEntry(
@@ -44,7 +43,11 @@ export function streamMetaEntry(
     colourT: arrayMean(particles.colourT),
     metallicity,
     stellarMass: streamStellarMass(track.name),
-    anchorMpc: [mid[0] * KPC_TO_MPC, mid[1] * KPC_TO_MPC, mid[2] * KPC_TO_MPC],
+    anchorMpc: [
+      mid[0] * SCALE_UNITS.KPC_TO_MPC,
+      mid[1] * SCALE_UNITS.KPC_TO_MPC,
+      mid[2] * SCALE_UNITS.KPC_TO_MPC,
+    ],
     ...streamCentreline(points, trackWidthKpc(track)),
   };
 }
