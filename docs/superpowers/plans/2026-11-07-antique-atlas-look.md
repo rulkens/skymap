@@ -212,6 +212,12 @@ Owner ruling 2026-11-07: keep the generic galaxy engraving with these names; the
 `io.wesl` (`tune`, `tint`, `hidden`), `fragment.wesl` (`HIDE_*`, `rowOn`)
 - [x] Hatch spacing and angle, sky wash, ink density, relief light, paper tint, sky ruling frame, a switch per plate row; Reset, and Copy of the moved knobs; defaults print the plate as before (653c0f990).
 
+### Task 27: The Moon named as Riccioli named it (recipe: moon/names/RECIPE.md)
+**Files:** `src/data/labels/{antiqueMoonPlaces,antiqueMoonPlaceReveal,antiquePlaceLettering,antiqueLabelStyle}.ts`,
+`src/layers/body/labels/{present/produceAntiqueMoonPlaces,present/antiqueBodyView,utils/*}.ts`, `src/utils/labels/antiqueLabel.ts`
+- [x] 16 maria, 5 Terrae and 69 craters in the 1651 spelling; seas fitted across their extent as seen and moved inward off the limb, craters on the floor or right of the rim (left at the limb or terminator), one rank ladder for reveal and declutter, none at night; Earth's box estimate shares the measured advance.
+- Open: Procellarum is culled by Aristarchus at full Moon (rank 5 beats 6 under the 8 px rect pad); Earth keeps its own producer (a generic body producer would need a callback spec for little shared code).
+
 ## Definition of Done
 
 **Deliverables:** the `stylize` FRAME_ORDER line and `antiqueLook` pass; the `antique` settings
