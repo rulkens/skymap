@@ -24,7 +24,7 @@ const METRICS = parseFontMetrics({
 });
 
 describe('textLayoutOf', () => {
-  const metricsByFont = { cormorant: METRICS };
+  const metricsByFont = { cormorant: METRICS, imFell: METRICS, imFellItalic: METRICS };
 
   it('keys the memo on alignment, not just the text', () => {
     const left = textLayoutOf(metricsByFont, { text: 'A', font: 'cormorant', alignX: 'left' });
@@ -39,8 +39,8 @@ describe('textLayoutOf', () => {
 
   it('does not share entries between metrics records', () => {
     const label = { text: 'AA', font: 'cormorant' } as const;
-    expect(textLayoutOf({ cormorant: METRICS }, label)).not.toBe(
-      textLayoutOf({ cormorant: METRICS }, label),
+    expect(textLayoutOf({ ...metricsByFont }, label)).not.toBe(
+      textLayoutOf({ ...metricsByFont }, label),
     );
   });
 });

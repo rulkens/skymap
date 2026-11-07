@@ -114,6 +114,9 @@ const ASCII_PRINTABLE = Array.from({ length: 95 }, (_, i) => String.fromCodePoin
  */
 const UNIT_SYMBOLS = '°±µ';
 
+/** What a name needs and nothing more: letters, space, apostrophe, hyphen, full stop. */
+const NAME_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz '-.";
+
 /**
  * The registry.  Adding a font is a three-step config change:
  *   1. Drop the TTF under `data/raw/fonts/`.
@@ -127,6 +130,19 @@ export const FONTS = {
   cormorant: {
     ttf: 'CormorantGaramond-SemiBold.ttf',
     charset: ASCII_PRINTABLE + UNIT_SYMBOLS,
+  },
+  // The antique look's lettering: an engraver cut no bold, so roman capitals
+  // for places and bodies, italic for stars.
+  // Name glyphs only, digits kept for a focused catalog name and Ö for BOÖTES:
+  // every font loads at boot whether the look is on or not, so its atlas stays lean.
+  imFell: {
+    ttf: 'IMFellEnglish-Regular.ttf',
+    charset: NAME_LETTERS + '0123456789Ö',
+  },
+  // Letters only: the italic's wide swashes overflow one page with all of ASCII.
+  imFellItalic: {
+    ttf: 'IMFellEnglish-Italic.ttf',
+    charset: NAME_LETTERS,
   },
 } as const satisfies Readonly<Record<string, FontConfig>>;
 

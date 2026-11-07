@@ -8,6 +8,8 @@
 export type AntiqueLabelRule = {
   /** What a label whose id `names` does not list does: keep its own text, or hide. */
   readonly unlisted: 'keep' | 'hide';
+  /** How the engraver cuts it: italic as named (stars), or letter-spaced roman capitals. */
+  readonly lettering: 'italic' | 'capitals';
   /** Label id → its period name, or null to hide it. */
   readonly names: Readonly<Record<string, string | null>>;
 };

@@ -51,6 +51,7 @@ export function layoutLabel(
   metrics: FontMetrics,
   alignX: LabelAlignX = 'left',
   alignY: LabelAlignY = 'baseline',
+  trackingPx = 0,
 ): GlyphQuad[] {
   const quads: GlyphQuad[] = [];
 
@@ -82,17 +83,18 @@ export function layoutLabel(
         uvU1: g.uv.u1,
         uvV1: g.uv.v1,
       });
-      penX += g.advance;
+      penX += g.advance + trackingPx;
       prevCodepoint = cp;
     }
 
     // After the line's layout pass, `penX` holds its total advance width
-    // (sum of glyph advances + kerning).  Apply the alignment shift by
-    // subtracting a fraction of that width from the LINE's glyphs only.
-    // Skipping the loop for the no-op 'left' case keeps the common path
-    // allocation-free (no second pass over the quads array).
+    // (sum of glyph advances + kerning + tracking, which adds nothing after the
+    // last glyph).  Apply the alignment shift by subtracting a fraction of that
+    // width from the LINE's glyphs only.  Skipping the loop for the no-op 'left'
+    // case keeps the common path allocation-free (no second pass over the quads array).
     if (alignX !== 'left') {
-      const shift = alignX === 'center' ? penX * 0.5 : penX;
+      const width = quads.length > lineStart ? penX - trackingPx : penX;
+      const shift = alignX === 'center' ? width * 0.5 : width;
       for (let i = lineStart; i < quads.length; i++) {
         quads[i]!.localOffsetX -= shift;
       }

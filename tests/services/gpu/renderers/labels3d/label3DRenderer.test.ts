@@ -36,7 +36,11 @@ const FIXTURE_METRICS = parseFontMetrics({
 });
 
 const FIXTURE_ATLASES: LoadedFontAtlases = {
-  metricsByFont: { cormorant: FIXTURE_METRICS },
+  metricsByFont: {
+    cormorant: FIXTURE_METRICS,
+    imFell: FIXTURE_METRICS,
+    imFellItalic: FIXTURE_METRICS,
+  },
   bitmaps: [],
 };
 

@@ -13,6 +13,7 @@ import type { LabelName } from '../../@types/animation/LabelName';
 export const ANTIQUE_LABEL_RULES: Readonly<Partial<Record<LabelName, AntiqueLabelRule>>> = {
   body: {
     unlisted: 'hide',
+    lettering: 'capitals',
     names: {
       'sceneBody-earth': 'Terra',
       'sceneBody-moon': 'Luna',
@@ -36,6 +37,7 @@ export const ANTIQUE_LABEL_RULES: Readonly<Partial<Record<LabelName, AntiqueLabe
   },
   starCatalog: {
     unlisted: 'keep',
+    lettering: 'italic',
     names: {
       'sceneBody-sun': 'Sol',
       // Named after 1690: discoverers, navigators' coinages, 2016+ IAU adoptions
@@ -74,6 +76,7 @@ export const ANTIQUE_LABEL_RULES: Readonly<Partial<Record<LabelName, AntiqueLabe
   },
   constellations: {
     unlisted: 'keep',
+    lettering: 'capitals',
     names: {
       Carina: 'Argo Navis',
       Puppis: null,
@@ -96,9 +99,10 @@ export const ANTIQUE_LABEL_RULES: Readonly<Partial<Record<LabelName, AntiqueLabe
       Telescopium: null,
     },
   },
-  milkyWay: { unlisted: 'keep', names: { milkyWay: 'Via Lactea' } },
+  milkyWay: { unlisted: 'keep', lettering: 'capitals', names: { milkyWay: 'Via Lactea' } },
   famousGalaxy: {
     unlisted: 'hide',
+    lettering: 'capitals',
     names: {
       'famous-lmc': 'Nubecula Major',
       'famous-smc': 'Nubecula Minor',
@@ -108,6 +112,7 @@ export const ANTIQUE_LABEL_RULES: Readonly<Partial<Record<LabelName, AntiqueLabe
   },
   structure: {
     unlisted: 'hide',
+    lettering: 'capitals',
     names: {
       'open-cluster-pleiades': 'Pleiades',
       'open-cluster-hyades': 'Hyades',
@@ -115,7 +120,7 @@ export const ANTIQUE_LABEL_RULES: Readonly<Partial<Record<LabelName, AntiqueLabe
       'nebula-orion': 'Nebula in Ense Orionis',
     },
   },
-  missions: { unlisted: 'hide', names: {} },
-  blackHole: { unlisted: 'hide', names: {} },
-  lightTime: { unlisted: 'hide', names: {} },
+  missions: { unlisted: 'hide', lettering: 'capitals', names: {} },
+  blackHole: { unlisted: 'hide', lettering: 'capitals', names: {} },
+  lightTime: { unlisted: 'hide', lettering: 'capitals', names: {} },
 };

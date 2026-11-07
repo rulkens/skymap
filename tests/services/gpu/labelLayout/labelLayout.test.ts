@@ -51,6 +51,15 @@ describe('layoutLabel', () => {
     expect(quads[1]!.localOffsetX).toBeCloseTo(25 + -1 + 0); // A.advance + kerning + B.xoffset
   });
 
+  it('tracking spaces glyphs apart but centres on the inked run, not a trailing gap', () => {
+    const plain = layoutLabel('AB', metrics, 'center');
+    const tracked = layoutLabel('AB', metrics, 'center', 'baseline', 10);
+    expect(tracked[1]!.localOffsetX - tracked[0]!.localOffsetX).toBeCloseTo(
+      plain[1]!.localOffsetX - plain[0]!.localOffsetX + 10,
+    );
+    expect(tracked[0]!.localOffsetX).toBeCloseTo(plain[0]!.localOffsetX - 5);
+  });
+
   it('skips glyphs not in the atlas', () => {
     const quads = layoutLabel('A中B', metrics);
     expect(quads).toHaveLength(2); // 中 dropped silently

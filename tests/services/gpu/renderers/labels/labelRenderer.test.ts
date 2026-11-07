@@ -32,7 +32,11 @@ const FIXTURE_METRICS = parseFontMetrics({
 // LoadedFontAtlases shape: one entry per registered FontId; bitmaps
 // array stays empty so the renderer's GPU upload branch is skipped.
 const FIXTURE_ATLASES: LoadedFontAtlases = {
-  metricsByFont: { cormorant: FIXTURE_METRICS },
+  metricsByFont: {
+    cormorant: FIXTURE_METRICS,
+    imFell: FIXTURE_METRICS,
+    imFellItalic: FIXTURE_METRICS,
+  },
   bitmaps: [],
 };
 

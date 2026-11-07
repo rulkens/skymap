@@ -119,6 +119,8 @@ export type Label2D = {
    * the shader falls back to `worldPos`, where the two already coincide.
    */
   readonly occludeSubjectPos?: Vec3;
+  /** Extra space after each glyph, in em; default 0. The antique look letter-spaces its capitals. */
+  readonly trackingEm?: number;
   /**
    * Horizontal alignment of the text relative to `worldPos`.
    * Default 'left' (text extends rightward from the anchor).

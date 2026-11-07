@@ -135,6 +135,7 @@ import { antiqueLookOn } from '../../../utils/render/antiqueLookOn';
 import { antiqueLabel } from '../../../utils/labels/antiqueLabel';
 import { ANTIQUE_LABEL_RULES } from '../../../data/labels/antiqueLabelRules';
 import { ANTIQUE_LABEL_STYLE } from '../../../data/labels/antiqueLabelStyle';
+import { antiquePlateKeepOut } from '../../../utils/labels/antiquePlateKeepOut';
 import { emphasisOf } from '../presentation/emphasisOf';
 import {
   HOVERED_LABEL_WHITEN,
@@ -806,6 +807,37 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     return out;
   }
 
+  /**
+   * Under the antique look, drop a name that runs within an em of the neatline
+   * or onto the cartouche (`antiquePlateKeepOut`); the subject's name stays. Runs
+   * on the final, lifted set, so it judges where the ink is drawn.
+   */
+  function clearOfPlate(
+    labels: readonly Label2D[],
+    ctx: FrameView,
+    keptPicks: readonly (number | null)[],
+  ): readonly Label2D[] {
+    const projection = config.project(ctx);
+    const projected = projectLabels(labels, projection);
+    const { inner, keepOut } = antiquePlateKeepOut(projection.viewportPx);
+    return labels.filter((label, i) => {
+      const { screenPx, clipW } = projected[i]!;
+      const bbox = screenPx ? measureText!(label) : null;
+      if (!screenPx || !bbox) return true;
+      if (label.subjectId !== undefined && keptPicks.includes(label.subjectId)) return true;
+      const r = labelScreenRect({ label, bbox, screenPx, clipW, pxPerRad: projection.pxPerRad });
+      const em = r.y1 - r.y0; // the ink's height stands in for the em
+      const inField =
+        r.x0 >= inner.x0 + em &&
+        r.y0 >= inner.y0 + em &&
+        r.x1 <= inner.x1 - em &&
+        r.y1 <= inner.y1 - em;
+      return (
+        inField && !keepOut.some((k) => r.x0 < k.x1 && r.x1 > k.x0 && r.y0 < k.y1 && r.y1 > k.y0)
+      );
+    });
+  }
+
   function runFrame(state: EngineState, ctx: FrameView): boolean {
     if (!labelRenderer || !lineRenderer) return false;
 
@@ -861,7 +893,8 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     // Lift stage (NEAR0 only — a no-op array pass-through when
     // `config.lift` is null): runs over survivors only, after the envelope
     // has resolved the final alpha for each.
-    const labels = applyLift(highlighted, ctx, antique);
+    const lifted = applyLift(highlighted, ctx, antique);
+    const labels = antique ? clearOfPlate(lifted, ctx, keptPicks) : lifted;
 
     // Flush contract: one MarkerLine per surviving leader-carrying label,
     // derived from the FINAL (post-declutter, post-envelope, post-lift) set.
