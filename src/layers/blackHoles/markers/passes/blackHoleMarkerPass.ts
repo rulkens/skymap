@@ -7,6 +7,7 @@
  * with a rebased vp, the same f64 seam as `bodyGlintsPass`.
  * `drawPick` stamps each hole while its marker shows (`blackHolePickable`);
  * inside the band, where only the caption shows, the caption takes the click.
+ * Outside a focus sphere the marker dims and leaves the pick, like the stars.
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
@@ -23,6 +24,7 @@ import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { blackHoleAnchorId } from '../present/blackHoleAnchorId';
 import { blackHoleMarkerBrightness } from '../present/blackHoleMarkerBrightness';
 import { blackHolePickable } from '../present/blackHolePickable';
+import { focusAlphaMultiplier } from '../../../../utils/structure/focusAlphaMultiplier';
 
 export function blackHoleMarkerPass(runtime: BlackHolesRuntime): ContentPass {
   // Reused across frames: the hot path allocates nothing.
@@ -58,7 +60,7 @@ export function blackHoleMarkerPass(runtime: BlackHolesRuntime): ContentPass {
         staging[base + 3] = row.glintTint[0];
         staging[base + 4] = row.glintTint[1];
         staging[base + 5] = row.glintTint[2];
-        staging[base + 6] = brightness;
+        staging[base + 6] = brightness * focusAlphaMultiplier(positionMpc, ctx.snapshot.focus);
         count++;
       }
       if (count === 0) return;
