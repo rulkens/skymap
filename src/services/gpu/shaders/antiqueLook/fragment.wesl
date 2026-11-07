@@ -22,6 +22,8 @@ import package::antiqueLook::pigments::luma;
 import package::antiqueLook::pigments::nearestPigment;
 import package::antiqueLook::pigments::chromaOf;
 import package::antiqueLook::pigments::applyWash;
+import package::antiqueLook::pigments::pigmentAt;
+import package::antiqueLook::ornaments::AntiqueOrnaments;
 
 @group(0) @binding(0) var printTex: texture_2d<f32>;
 @group(0) @binding(1) var overlayTex: texture_2d<f32>;
@@ -32,6 +34,8 @@ import package::antiqueLook::pigments::applyWash;
 @group(0) @binding(6) var starTex: texture_2d<f32>;
 @group(0) @binding(7) var linear: sampler;
 @group(0) @binding(8) var glowTex: texture_2d<f32>;
+@group(0) @binding(9) var<uniform> orn: AntiqueOrnaments;
+@group(0) @binding(10) var ornamentTex: texture_2d<f32>;
 
 // Warm carbon-black copperplate ink, as a transmittance: it multiplies the sheet.
 const INK: vec3<f32> = vec3<f32>(0.17, 0.13, 0.10);
@@ -69,6 +73,31 @@ fn viewRay(uv: vec2<f32>) -> vec3<f32> {
   let top = mix(u.rayTL.xyz, u.rayTR.xyz, uv.x);
   let bottom = mix(u.rayBL.xyz, u.rayBR.xyz, uv.x);
   return normalize(mix(top, bottom, uv.y));
+}
+
+// The ornaments covering this pixel. x: ink, y: clear-to-paper, z: wash, w: pigment.
+fn ornamentLayer(px: vec2<f32>) -> vec4<f32> {
+  var acc = vec4<f32>(0.0, 0.0, 0.0, 0.0);
+  for (var i = 0u; i < orn.count; i++) {
+    let d = px - orn.items[i].centre;
+    let rot = orn.items[i].rot;
+    // Screen y runs down, so a counter-clockwise turn by θ sends the sprite's
+    // right to (cos θ, −sin θ) and its down to (sin θ, cos θ).
+    let local = vec2<f32>(dot(d, vec2<f32>(rot.x, -rot.y)), dot(d, vec2<f32>(rot.y, rot.x))) / orn.items[i].half;
+    if (abs(local.x) > 1.0 || abs(local.y) > 1.0) {
+      continue;
+    }
+    let rect = orn.items[i].rect;
+    let s = textureSampleLevel(ornamentTex, linear, mix(rect.xy, rect.zw, local * 0.5 + 0.5), 0.0);
+    let o = orn.items[i].opacity;
+    acc.x = max(acc.x, s.r * o);
+    acc.y = max(acc.y, s.g * o * orn.items[i].clears);
+    if (s.b * o > acc.z) {
+      acc.z = s.b * o;
+      acc.w = orn.items[i].pigment;
+    }
+  }
+  return acc;
 }
 
 // How near the coast an ocean pixel lies, from the quarter-res land share: land
@@ -168,6 +197,11 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let washAmt = mix(skyWash, bodyWash, body) * frame.y;
   col = applyWash(col, nearestPigment(mix(glowSlip, src, body)), washAmt);
 
+  // Ornaments: a cartouche's fill takes the plate back to bare paper beneath it.
+  let ornament = ornamentLayer(px);
+  col = mix(col, sheet.rgb * (1.0 + plateMark(px)), ornament.y);
+  col = applyWash(col, pigmentAt(ornament.w), ornament.z * 0.6 * frame.y);
+
   // Sky: glyphs for stars; the smooth band as sparse stipple and, where it is
   // bright, isophote contours (the Herschel-era way of drawing a nebula).
   let lowL = luma(glowAt(uv));
@@ -204,7 +238,8 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     captions = ov.a * (0.45 + 0.55 * luma(ov.rgb / max(ov.a, 1e-3)));
   }
 
-  let content = max(max(bodyInk, limb), max(skyInk, max(rulings, captions)));
+  let scene = max(max(bodyInk, limb), max(skyInk, rulings)) * (1.0 - ornament.y);
+  let content = max(max(scene, captions), ornament.x);
   var ink = max(content * frame.y, frame.x);
   // Paper tooth: the burr breaks thin lines where the sheet dips.
   ink *= 0.78 + 0.22 * smoothstep(0.2, 0.6, sheet.a);

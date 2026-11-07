@@ -16,6 +16,17 @@ export const ANTIQUE_REFERENCE_HEIGHT_CSS = 900;
  */
 export const ANTIQUE_CELL = 4;
 
+/**
+ * Camera distance from the Sun (Mpc) over which ornaments cross from the star
+ * chart (inside the Galaxy) to the cosmos (out among the galaxies, where the
+ * Zone of Avoidance is real terra incognita): 3 kpc → 30 kpc.
+ */
+export const ANTIQUE_REGIME_MPC = [0.003, 0.03] as const;
+
+/** `AntiqueOrnaments` in `fragment.wesl`: a 16-byte header, then 64-byte rows. */
+export const ANTIQUE_MAX_ORNAMENTS = 16;
+export const ANTIQUE_ORNAMENT_BYTES = 16 + ANTIQUE_MAX_ORNAMENTS * 64;
+
 export const ANTIQUE_TARGETS = {
   /** The tone-mapped scene, in the swap format. */
   print: 'print',

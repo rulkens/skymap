@@ -1,21 +1,15 @@
 /**
- * viewCornerRays — the camera's four corner rays in world axes, from the same
- * forward/roll/up basis `computeViewProj` builds its view matrix from, so a
- * pixel's reconstructed ray lands where the scene drew it. Directions only:
- * no position enters, so no Mpc-scale value is ever narrowed.
+ * viewCornerRays — the four corner rays of a view in world axes. Directions
+ * only: no position enters, so no Mpc-scale value is ever narrowed.
  */
 
-import type { OrbitCamera } from '../../../@types/camera/orbitCamera/OrbitCamera';
+import type { ViewBasis } from '../../../@types/camera/projection/ViewBasis';
 import type { ViewFrustum } from '../../../@types/camera/projection/ViewFrustum';
 import type { ViewCornerRays } from '../../../@types/camera/projection/ViewCornerRays';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import { imagePlaneBasis } from '../orbitPose/imagePlaneBasis';
-import { frameUp } from '../orbitPose/frameUp';
-import { orbitForwardOf } from '../orbitPose/orbitForwardOf';
 
-export function viewCornerRays(cam: OrbitCamera, frustum: ViewFrustum): ViewCornerRays {
-  const f = orbitForwardOf(cam);
-  const { right, up } = imagePlaneBasis(f, cam.roll ?? 0, frameUp(cam.upBasis));
+export function viewCornerRays(basis: ViewBasis, frustum: ViewFrustum): ViewCornerRays {
+  const { forward: f, right, up } = basis;
   const ray = (tx: number, ty: number): Vec3 => [
     f[0] + right[0] * tx + up[0] * ty,
     f[1] + right[1] * tx + up[1] * ty,

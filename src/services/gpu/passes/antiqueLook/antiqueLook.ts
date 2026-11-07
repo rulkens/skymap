@@ -17,12 +17,19 @@ import peaksCode from '../../shaders/antiqueLook/peaks.wesl?static';
 import plateCode from '../../shaders/antiqueLook/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import {
+  ANTIQUE_ORNAMENT_BYTES,
   ANTIQUE_REFERENCE_HEIGHT_CSS,
   ANTIQUE_TARGETS,
   ANTIQUE_UNIFORM_BYTES,
 } from '../../../../data/rendering/antiqueLook';
 import { HDR_TARGET_FORMAT } from '../../../../data/renderTargetFormats';
+import { ANTIQUE_ORNAMENTS } from '../../../../data/rendering/antiqueOrnaments';
+import { ANTIQUE_ORNAMENT_ATLAS } from '../../../../data/rendering/antiqueOrnamentAtlas';
 import { packAntiqueUniforms } from '../../../../utils/gpu/antiqueLook/packAntiqueUniforms';
+import { packAntiqueOrnaments } from '../../../../utils/gpu/antiqueLook/packAntiqueOrnaments';
+import { placeAntiqueOrnaments } from '../../../../utils/gpu/antiqueLook/placeAntiqueOrnaments';
+import { fetchAntiqueBitmap } from '../../../../utils/gpu/antiqueLook/fetchAntiqueBitmap';
+import { viewBasis } from '../../../../utils/camera/projection/viewBasis';
 import { viewCornerRays } from '../../../../utils/camera/projection/viewCornerRays';
 import { timestampSpread } from '../../../../utils/gpu/timestampSpread';
 import type { AntiqueLook } from '../../../../@types/rendering/AntiqueLook';
@@ -97,6 +104,8 @@ export function createAntiqueLook(init: {
     'texture', // stars
     'sampler',
     'texture', // glow
+    'uniform', // ornaments
+    'texture', // ornament atlas
   ]);
   const paperPipeline = pipelineOf('paper', paperCode, paperLayout, ['rgba8unorm']);
   const reducePipeline = pipelineOf('reduce', reduceCode, reduceLayout, [
@@ -130,6 +139,41 @@ export function createAntiqueLook(init: {
   const emptyView = emptyTexture.createView();
   // The sheet is screen-locked, so it is re-baked only when its row is reallocated.
   let bakedPaper: GPUTextureView | null = null;
+  const ornamentBuffer = device.createBuffer({
+    label: 'antique-look-ornaments',
+    size: ANTIQUE_ORNAMENT_BYTES,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+  const ornamentBytes = new ArrayBuffer(ANTIQUE_ORNAMENT_BYTES);
+  // Fetched on the look's first frame, not at boot: most sessions never open it.
+  // Until it lands (or if it fails) the plate draws with no ornaments.
+  let ornamentAtlas: GPUTexture | null = null;
+  let ornamentRequested = false;
+
+  function requestOrnamentAtlas(wake: () => void): void {
+    ornamentRequested = true;
+    fetchAntiqueBitmap('ornaments.png')
+      .then((bitmap) => {
+        const texture = device.createTexture({
+          label: 'antique-look-ornament-atlas',
+          size: [bitmap.width, bitmap.height],
+          format: 'rgba8unorm',
+          usage:
+            GPUTextureUsage.TEXTURE_BINDING |
+            GPUTextureUsage.COPY_DST |
+            GPUTextureUsage.RENDER_ATTACHMENT,
+        });
+        device.queue.copyExternalImageToTexture({ source: bitmap }, { texture }, [
+          bitmap.width,
+          bitmap.height,
+        ]);
+        bitmap.close();
+        ornamentAtlas = texture;
+        // The loop may be asleep at rest; the atlas landing is a reason to draw.
+        wake();
+      })
+      .catch((error: unknown) => console.warn('antique look: ornaments unavailable', error));
+  }
 
   function fullScreen(
     encoder: GPUCommandEncoder,
@@ -161,24 +205,40 @@ export function createAntiqueLook(init: {
   function encode(
     encoder: GPUCommandEncoder,
     ctx: FrameView,
-    _state: EngineState,
+    state: EngineState,
     io: { print: GPUTextureView; overlay: GPUTextureView | null; swap: GPUTextureView },
     timing: GpuTimingService,
   ): void {
     const targets = ctx.snapshot.renderTargets;
     const size = ctx.canvasSize;
+    const unitPx = size.height / ANTIQUE_REFERENCE_HEIGHT_CSS;
+    const basis = viewBasis(ctx.cam);
     packAntiqueUniforms(
       {
         size,
-        unitPx: size.height / ANTIQUE_REFERENCE_HEIGHT_CSS,
+        unitPx,
         bodies: ctx.snapshot.renderedTargets.has('foreground:0'),
         captions: io.overlay !== null,
-        rays: viewCornerRays(ctx.cam, ctx.frustum),
+        rays: viewCornerRays(basis, ctx.frustum),
         seed: PAPER_SEED,
       },
       uniformBytes,
     );
     device.queue.writeBuffer(uniformBuffer, 0, uniformBytes);
+    if (!ornamentRequested) requestOrnamentAtlas(() => state.subsystems.scheduler.requestRender());
+    const placed =
+      ornamentAtlas === null
+        ? []
+        : placeAntiqueOrnaments({
+            ornaments: ANTIQUE_ORNAMENTS,
+            atlas: ANTIQUE_ORNAMENT_ATLAS,
+            basis,
+            frustum: ctx.frustum,
+            size,
+            unitPx,
+            camDistMpc: Math.hypot(...ctx.drawCamPos),
+          });
+    device.queue.writeBuffer(ornamentBuffer, 0, packAntiqueOrnaments(placed, ornamentBytes));
     const uniforms = { buffer: uniformBuffer };
     const paper = targets.viewOf(ANTIQUE_TARGETS.paper);
     const wash = targets.viewOf(ANTIQUE_TARGETS.wash);
@@ -202,13 +262,27 @@ export function createAntiqueLook(init: {
       [io.swap],
       platePipeline,
       plateLayout,
-      [io.print, io.overlay ?? emptyView, bodies, uniforms, paper, wash, stars, sampler, glow],
+      [
+        io.print,
+        io.overlay ?? emptyView,
+        bodies,
+        uniforms,
+        paper,
+        wash,
+        stars,
+        sampler,
+        glow,
+        { buffer: ornamentBuffer },
+        ornamentAtlas?.createView() ?? emptyView,
+      ],
       timestampSpread(timing, 'stylize'),
     );
   }
 
   function destroy(): void {
     uniformBuffer.destroy();
+    ornamentBuffer.destroy();
+    ornamentAtlas?.destroy();
     emptyTexture.destroy();
   }
 

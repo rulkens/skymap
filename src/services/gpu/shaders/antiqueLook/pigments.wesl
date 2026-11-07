@@ -37,6 +37,10 @@ fn nearestPigment(c: vec3<f32>) -> vec3<f32> {
   return best;
 }
 
+fn pigmentAt(index: f32) -> vec3<f32> {
+  return PIGMENTS[clamp(i32(index), 0, PIGMENT_COUNT - 1)];
+}
+
 fn chromaOf(c: vec3<f32>) -> f32 {
   return max(c.r, max(c.g, c.b)) - min(c.r, min(c.g, c.b));
 }
