@@ -1,4 +1,4 @@
-/** Canals are post-1690 and dropped, by class and by name, but a named ancient branch stays. */
+/** Canals are post-1690 and dropped, by class, name or (when nameless) id, but a named ancient branch stays. */
 
 import { describe, it, expect } from 'vitest';
 
@@ -20,6 +20,7 @@ describe('isPre1690River', () => {
       { featurecla: 'River', name: 'Dortmund-Ems Kanal' },
       { featurecla: 'River', name: 'Noordhollandsch Kanaal' },
       { featurecla: 'River', name: 'North Channel' },
+      { featurecla: 'River', name: null, ne_id: 1159127783 },
     ];
     expect(kept.map(isPre1690River)).toEqual(kept.map(() => true));
     expect(dropped.map(isPre1690River)).toEqual(dropped.map(() => false));

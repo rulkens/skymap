@@ -4,6 +4,7 @@ export type NaturalEarthRiverFeature = {
   readonly properties: {
     readonly featurecla?: string | null;
     readonly name?: string | null;
+    readonly ne_id?: number | null;
     readonly rivernum?: number | null;
     readonly scalerank: number;
     readonly min_zoom: number;
