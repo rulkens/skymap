@@ -69,7 +69,7 @@ describe('timedSlotGroupsOf', () => {
       { kind: 'render', target: 'foo', slab: COSMO, passes: [fakePass('x')] },
     ];
     const groups = timedSlotGroupsOf(steps);
-    expect(groups.map((g) => g.title)).toEqual(['Composites & pick', 'foo·COSMO']);
+    expect(groups.map((g) => g.title)).toEqual(['Overlays', 'Composites & pick', 'foo·COSMO']);
     const fallback = groups.find((g) => g.title === 'foo·COSMO')!;
     // The pass row, then the step's own group-key row (name === groupKey).
     expect(fallback.rows).toEqual([

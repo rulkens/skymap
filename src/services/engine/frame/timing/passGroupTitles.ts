@@ -67,6 +67,8 @@ export const PASS_GROUP_TITLES: Readonly<Record<string, string>> = {
   bloom: 'Bloom',
   'swap·COSMO': 'Overlays',
   'swap·NEAR0': 'Overlays',
+  // The antique look inks the finished frame; it reads as the last overlay.
+  stylize: 'Overlays',
   composite: 'Composites & pick',
   pick: 'Composites & pick',
 };
