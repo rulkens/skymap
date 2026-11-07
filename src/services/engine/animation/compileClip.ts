@@ -69,6 +69,11 @@ import { validateSingleWriter } from './validateSingleWriter';
 import { validateCompositeExclusivity } from './validateCompositeExclusivity';
 import { buildPathTrack } from './buildPathTrack';
 import { buildGeodesicTrack } from './buildGeodesicTrack';
+import { hasDuration } from './hasDuration';
+import { validateSeqOverlap } from './validateSeqOverlap';
+import type { SeqOverlap } from '../../../@types/animation/SeqOverlap';
+import type { SeqSteps } from '../../../@types/animation/SeqSteps';
+import type { StepSpan } from '../../../@types/animation/StepSpan';
 import { channelValueAt } from './channelValueAt';
 import type { CompositeSample } from '../../../@types/animation/compiledClip/CompositeSample';
 import type { BaseSegment } from '../../../@types/animation/compiledClip/BaseSegment';
@@ -97,6 +102,7 @@ type Accum = {
   readonly oscTracks: OscTrack[];
   readonly cues: SceneCue[];
   readonly compositeTracks: CompositeTrack[];
+  readonly seqs: SeqSteps[];
   // The resolved clip start pose — the seed of every channel's running value, so
   // a composite leaf can start from where the camera is (`startPoseAt`).
   readonly start: CameraPose;
@@ -139,6 +145,62 @@ function continuedFromComposite(seg: BaseSegment, acc: Accum): BaseSegment {
   return byComposite ? { ...seg, from: value } : seg;
 }
 
+// A seq with `overlap`: step k+1 (with a duration) starts `overlap[k]` before
+// step k ends. Zero-length children wait for the next step with a duration and
+// fire at its start (at the seq end when none follows), so they never count as joins.
+function walkOverlappedSeq(
+  children: readonly Effect[],
+  overlap: SeqOverlap,
+  atSec: number,
+  acc: Accum,
+): number {
+  const joins = Math.max(children.filter(hasDuration).length - 1, 0);
+  // Rule 1 needs only the join count (infinite steps make rule 2 vacuous); rule 2
+  // needs the real durations, so it runs again after the walk.
+  const per = validateSeqOverlap(atSec, overlap, Array(joins + 1).fill(Infinity));
+  const lens = () => [acc.baseSegs.length, acc.compositeTracks.length, acc.cues.length] as const;
+  const span = (a: readonly number[], b: readonly number[]): StepSpan => ({
+    segs: [a[0]!, b[0]!],
+    composites: [a[1]!, b[1]!],
+    cues: [a[2]!, b[2]!],
+  });
+  const steps: StepSpan[] = [];
+  const durs: number[] = [];
+  let pendingFrom = lens();
+  let pending: Effect[] = [];
+  let endSec = atSec;
+  let first = true;
+  const flush = (startSec: number) => {
+    for (const child of pending) walk(child, startSec, acc);
+    pending = [];
+  };
+  for (const child of children) {
+    if (!hasDuration(child)) {
+      pending.push(child);
+      continue;
+    }
+    const j = durs.length - 1;
+    const startSec = first ? atSec : endSec - per[j]!;
+    first = false;
+    flush(startSec);
+    const dur = walk(child, startSec, acc);
+    if (dur <= 0) throw new Error(`seq at ${atSec}s: a step with a duration compiled to ${dur}s`);
+    durs.push(dur);
+    endSec = startSec + dur;
+    const after = lens();
+    steps.push(span(pendingFrom, after));
+    pendingFrom = after;
+  }
+  flush(endSec);
+  const end = lens();
+  if (end[0] !== pendingFrom[0] || end[1] !== pendingFrom[1] || end[2] !== pendingFrom[2]) {
+    steps.push(span(pendingFrom, end));
+  }
+  acc.seqs.push({ startSec: atSec, steps });
+  validateSeqOverlap(atSec, overlap, durs);
+  return endSec - atSec;
+}
+
 // ---------------------------------------------------------------------------
 // Core recursive walk.
 //
@@ -151,6 +213,9 @@ function walk(effect: Effect, atSec: number, acc: Accum): number {
   switch (effect.kind) {
     // --- Structural: sequential composition ---
     case 'seq': {
+      if (effect.overlap !== undefined) {
+        return walkOverlappedSeq(effect.children, effect.overlap, atSec, acc);
+      }
       let cursor = atSec;
       for (const child of effect.children) {
         cursor += walk(child, cursor, acc);
@@ -382,6 +447,7 @@ export function compileClip(data: ClipData, frameBasis?: Mat3): CompiledClip {
     oscTracks: [],
     cues: [],
     compositeTracks: [],
+    seqs: [],
     start,
     frameBasis,
   };
