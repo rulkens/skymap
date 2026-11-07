@@ -10,8 +10,10 @@ export function destroy(runtime: StarCatalogRuntime): void {
   for (const stream of runtime.chunkStreams.values()) stream.destroy();
   runtime.chunkStreams.clear();
   runtime.aggregateUpsample.destroy();
+  runtime.starPointPrintRenderer.destroy();
   runtime.starPointRenderer.destroy();
   runtime.starRenderer.destroy();
+  runtime.starCatalogPrintRenderer.destroy();
   runtime.pickRenderer.destroy();
   runtime.renderer.destroy();
 }

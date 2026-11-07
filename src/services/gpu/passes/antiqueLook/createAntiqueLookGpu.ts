@@ -1,6 +1,6 @@
 /**
- * createAntiqueLookGpu — the look's seven pipelines (full-screen paper bake,
- * reduce, glow, peaks and plate; instanced glyphs and decor) with their
+ * createAntiqueLookGpu — the look's six pipelines (full-screen paper bake,
+ * reduce, glow and plate; instanced glyphs and decor) with their
  * bind-group layouts, and its fixed uniform buffers. Binding order is each
  * shader's `@binding` order. Target formats must match `antiqueLookTargetRows`.
  */
@@ -9,7 +9,6 @@ import vsCode from '../../shaders/antiqueLook/vertex.wesl?static';
 import paperCode from '../../shaders/antiqueLook/paperBake.wesl?static';
 import reduceCode from '../../shaders/antiqueLook/reduce.wesl?static';
 import glowCode from '../../shaders/antiqueLook/glow.wesl?static';
-import peaksCode from '../../shaders/antiqueLook/peaks.wesl?static';
 import glyphsCode from '../../shaders/antiqueLook/glyphs.wesl?static';
 import decorCode from '../../shaders/antiqueLook/decor.wesl?static';
 import plateCode from '../../shaders/antiqueLook/fragment.wesl?static';
@@ -99,6 +98,7 @@ export function createAntiqueLookGpu(
     entries: [
       { binding: 0, visibility: GPUShaderStage.VERTEX, ...TEXTURE },
       { binding: 1, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, ...UNIFORM },
+      { binding: 2, visibility: GPUShaderStage.VERTEX, ...TEXTURE },
     ],
   });
   const max: GPUBlendComponent = { srcFactor: 'one', dstFactor: 'one', operation: 'max' };
@@ -147,14 +147,8 @@ export function createAntiqueLookGpu(
 
   return {
     paper: stage('paper', paperCode, [UNIFORM, TEXTURE, TEXTURE, SAMPLER], ['rgba8unorm']),
-    reduce: stage(
-      'reduce',
-      reduceCode,
-      [TEXTURE, TEXTURE, TEXTURE],
-      [HDR_TARGET_FORMAT, HDR_TARGET_FORMAT],
-    ),
+    reduce: stage('reduce', reduceCode, [TEXTURE, TEXTURE, TEXTURE], [HDR_TARGET_FORMAT]),
     glow: stage('glow', glowCode, [TEXTURE], [HDR_TARGET_FORMAT]),
-    peaks: stage('peaks', peaksCode, [TEXTURE, UNIFORM], [HDR_TARGET_FORMAT]),
     plate: stage(
       'plate',
       plateCode,

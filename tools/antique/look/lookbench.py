@@ -1,6 +1,6 @@
 """lookbench: the antique look beside the plain render of the same view, for quick iteration.
 
-  shoot <set> [--views a,b|name=hash] [--dpr 1] [--url URL] [--only antique|plain]
+  shoot <set> [--views a;b|name=hash] [--dpr 1] [--url URL] [--only antique|plain]
   sheet <set> · compare <before> <after> · crop <set> <view> x0,y0,x1,y1 [--other <set>]
 
 Views live in views.json with pinned times, so Earth's face and Saturn's phase repeat. Output
@@ -27,7 +27,8 @@ def views(selected):
     if not selected:
         return table
     picked = {}
-    for item in selected.split(','):
+    # ';' between views: a pose link carries commas of its own.
+    for item in selected.split(';'):
         name, _, link = item.partition('=')
         if link:
             picked[name] = link

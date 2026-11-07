@@ -2,14 +2,18 @@
  * antiqueLookTargetRows — the render-target rows the antique look owns, all
  * held only while it draws (`antiqueLookOn`). `print` and `overlay` take the
  * swap format so every pipeline built for `swap` draws into them unchanged;
- * the quarter-res rows are rgba16float because `peaks` stores pixel positions;
- * `star-ink` holds two 0..1 channels, so 8 bits each.
+ * `print-points` is sized in print units, so it holds the same cells at any
+ * DPR; `star-ink` holds two 0..1 channels, so 8 bits each.
  */
 
 import type { RenderTargetSpec } from '../../../../@types/engine/frame/RenderTargetSpec';
 import {
   ANTIQUE_CELL,
   ANTIQUE_LAND_FORMAT,
+  ANTIQUE_PRINT_CELL_UNITS,
+  ANTIQUE_PRINT_POINTS_DEPTH,
+  ANTIQUE_PRINT_POINTS_FORMAT,
+  ANTIQUE_REFERENCE_HEIGHT_CSS,
   ANTIQUE_TARGETS,
 } from '../../../../data/rendering/antiqueLook';
 import { HDR_TARGET_FORMAT } from '../../../../data/renderTargetFormats';
@@ -18,10 +22,15 @@ import { antiqueLookOn } from '../../../../utils/render/antiqueLookOn';
 const TRANSPARENT: GPUColor = { r: 0, g: 0, b: 0, a: 0 };
 
 export function antiqueLookTargetRows(swapFormat: GPUTextureFormat): readonly RenderTargetSpec[] {
-  const row = (id: string, format: GPUTextureFormat, scale: number): RenderTargetSpec => ({
+  const row = (
+    id: string,
+    format: GPUTextureFormat,
+    scale: RenderTargetSpec['scale'],
+    depth: GPUTextureFormat | null = null,
+  ): RenderTargetSpec => ({
     id,
     format,
-    depth: null,
+    depth,
     scale,
     clearValue: TRANSPARENT,
     allocateWhen: antiqueLookOn,
@@ -32,8 +41,12 @@ export function antiqueLookTargetRows(swapFormat: GPUTextureFormat): readonly Re
     row(ANTIQUE_TARGETS.paper, 'rgba8unorm', 1),
     row(ANTIQUE_TARGETS.wash, HDR_TARGET_FORMAT, ANTIQUE_CELL),
     row(ANTIQUE_TARGETS.glow, HDR_TARGET_FORMAT, ANTIQUE_CELL * 4),
-    row(ANTIQUE_TARGETS.peaks, HDR_TARGET_FORMAT, ANTIQUE_CELL),
-    row(ANTIQUE_TARGETS.stars, HDR_TARGET_FORMAT, ANTIQUE_CELL),
+    row(
+      ANTIQUE_TARGETS.printPoints,
+      ANTIQUE_PRINT_POINTS_FORMAT,
+      (_state, canvas) => (ANTIQUE_PRINT_CELL_UNITS * canvas.height) / ANTIQUE_REFERENCE_HEIGHT_CSS,
+      ANTIQUE_PRINT_POINTS_DEPTH,
+    ),
     row(ANTIQUE_TARGETS.starInk, 'rgba8unorm', 1),
     row(ANTIQUE_TARGETS.decor, 'rgba8unorm', 1),
     row(ANTIQUE_TARGETS.decorHue, 'rgba8unorm', 1),

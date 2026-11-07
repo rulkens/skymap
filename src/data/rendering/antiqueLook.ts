@@ -3,9 +3,13 @@
 /** Canvas height (CSS px) at which a print unit is one CSS px: the plate scales with the window. */
 export const ANTIQUE_REFERENCE_HEIGHT_CSS = 900;
 
-/** One quarter-res cell per 4×4 print texels: scales the quarter-res rows and sets the
- * glyph pass's instance count; mirrored as `CELL` in `reduce.wesl`. */
+/** One quarter-res cell per 4×4 print texels: scales the quarter-res rows; mirrored as
+ * `CELL` in `reduce.wesl`. */
 export const ANTIQUE_CELL = 4;
+
+/** One print-point texel (one star glyph at most) per 4×4 PRINT UNITS, not device px,
+ * so a retina plate carries the same stars as a 1× one. */
+export const ANTIQUE_PRINT_CELL_UNITS = 4;
 
 /** Camera distance from the Sun (Mpc) over which ornaments go from star chart to cosmos. */
 export const ANTIQUE_REGIME_MPC = [0.003, 0.03] as const;
@@ -38,7 +42,11 @@ export const ANTIQUE_HIDDEN_PASSES: readonly string[] = [
 ];
 
 /** Passes that exist only for the look: they draw nothing with it off. */
-export const ANTIQUE_ONLY_PASSES: readonly string[] = ['earth-ocean-mask'];
+export const ANTIQUE_ONLY_PASSES: readonly string[] = [
+  'earth-ocean-mask',
+  'star-points-print',
+  'star-catalog-print',
+];
 
 /** Passes the look moves off their line onto a row of its own, which the plate inks
  * as line work: the quarter-res reduce would average a 1-px line away. */
@@ -49,6 +57,11 @@ export const ANTIQUE_MOVED_PASSES: Readonly<Record<string, string>> = {
 /** The land row's format: r land share, g covered (`earth/fragment.wesl` `fsOceanMask`). */
 export const ANTIQUE_LAND_FORMAT: GPUTextureFormat = 'rg8unorm';
 
+/** The print-points row (`antiqueLook/printPoint.wesl`): xy NDC and a magnitude need
+ * floats; its depth ranks the points in a texel by magnitude. */
+export const ANTIQUE_PRINT_POINTS_FORMAT: GPUTextureFormat = 'rgba16float';
+export const ANTIQUE_PRINT_POINTS_DEPTH: GPUTextureFormat = 'depth32float';
+
 /** The look's row ids; each row's channels are documented by the shader that writes it. */
 export const ANTIQUE_TARGETS = {
   print: 'print',
@@ -56,8 +69,7 @@ export const ANTIQUE_TARGETS = {
   paper: 'antique-paper',
   wash: 'antique-wash',
   glow: 'antique-glow',
-  peaks: 'antique-peaks',
-  stars: 'antique-stars',
+  printPoints: 'antique-print-points',
   starInk: 'antique-star-ink',
   decor: 'antique-decor',
   decorHue: 'antique-decor-hue',

@@ -10,6 +10,7 @@
  */
 
 import type { EngineState } from '../state/EngineState';
+import type { Size } from '../../rendering/Size';
 
 export type RenderTargetSpec = {
   /** e.g. 'hdr' | 'cosmic-web-density' | 'foreground:0' | 'swap' | 'pick:cosmo' | 'pick:near0'. */
@@ -20,11 +21,12 @@ export type RenderTargetSpec = {
   depth: GPUTextureFormat | null;
   /**
    * Downsample divisor: 1 = full resolution; 3 = volume's. A FUNCTION for a row
-   * whose divisor is a live setting (`mw-aggregate`) — `reconcile` resolves it
+   * whose divisor is a live setting (`mw-aggregate`) or follows the canvas
+   * (`antique-print-points`, a fixed count of print units) — `reconcile` resolves it
    * every frame and reallocates only when the resulting pixel size moved, so a
    * knob-driven row needs no rebuild path of its own.
    */
-  scale: number | ((state: EngineState) => number);
+  scale: number | ((state: EngineState, canvas: Size) => number);
   /**
    * First-touch colour clear, read by `executeFrame`/`runBloom`: the first
    * pass opened against this target in a frame clears to this colour; later

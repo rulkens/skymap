@@ -48,13 +48,16 @@ imprint reads "Amstelodami, ex officina Skymapiana, Anno MDCXC", and there is no
 
 | # | Pass | Writes | Res | Notes |
 |---|------|--------|-----|-------|
+| 0 | star print (FRAME_ORDER, star Layer) | `antique-print-points` rgba16f + depth32f | 1 texel per 4 print units | each naked-eye star (m ≤ 5.75) of the cut's leaves and the seeded stars as one point: NDC xy, apparent magnitude; depth keeps the brightest per texel |
 | 1 | paper bake | `antique-paper` rgba8 | full | sheet albedo rgb + relief a; only when the row is reallocated |
-| 2 | reduce | `antique-wash`, `antique-peaks` rgba16f (MRT) | 1/4 | block mean colour + land share; brightest sky texel |
+| 2 | reduce | `antique-wash` rgba16f | 1/4 | block mean colour + land share |
 | 3 | glow | `antique-glow` rgba16f | 1/16 | the low band past star scale |
-| 4 | peaks | `antique-stars` rgba16f | 1/4 | non-max suppression; contrast over local mean |
-| 5 | glyphs | `antique-star-ink` rgba8 | full | one instanced quad per quarter-res cell, max-blended: glyph ink r, knock-out g |
-| 6 | decor | `antique-decor`, `antique-decor-hue` rgba8 (MRT) | full | one instanced quad per placed ornament: figure ink, plate ink, clear, wash; and the wash pigment |
-| 7 | plate | swap | full | everything below |
+| 4 | glyphs | `antique-star-ink` rgba8 | full | one instanced quad per print-points texel, max-blended: glyph ink r, knock-out g; a star on a body never prints |
+| 5 | decor | `antique-decor`, `antique-decor-hue` rgba8 (MRT) | full | one instanced quad per placed ornament: figure ink, plate ink, clear, wash; and the wash pigment |
+| 6 | plate | swap | full | everything below |
+
+Pass 0 is two look-only star Layer passes (`star-catalog-print`, `star-points-print`, in
+`ANTIQUE_ONLY_PASSES`) on a `FRAME_ORDER` line of their own; the rest run inside `stylize`.
 
 All rows are `allocateWhen: antiqueLookOn` (`antiqueLookTargetRows.ts`), and the pipelines,
 buffers and assets are built on the look's first frame (`createAntiqueLookGpu`,
@@ -63,9 +66,9 @@ paper tile 2.2 MB, ornament atlas ~1.1 MB) are fetched from `public/antique/` th
 
 ### The plate: two regimes split by `foreground:0` alpha
 
-- **Sky is inverted** (every period chart): empty space is bare paper; each surviving peak stamps
+- **Sky is inverted** (every period chart): empty space is bare paper; each printed star stamps
   a glyph from the Bayer/Flamsteed ladder (dots for the faintest two classes, then 6 and 8 rays,
-  12 for the brightest) sized by contrast,
+  16 for the brightest), one class per apparent magnitude (class 5 − round(m)),
   with a paper knock-out 1.3× its size; the low band becomes a pigment wash with a Dutch
   outline-colour band and pooled rim, sparse stipple for bright extended light, and two
   contours, the boundary and one inner one (Hevelius' wavy Milky Way edge). Never solid ink from
@@ -134,9 +137,10 @@ Where the grades stand (2026-11-07): round 1 all 5; rounds 4 to 6 all 6 from eve
 so the ≥ 8 criterion is not met. What the reviewers agree caps the grade needs more than
 shader tuning:
 
-- **Star glyphs by magnitude.** The glyph count and size follow device pixels (about 3× the
-  stars at 2×), since peaks and their light are measured per quarter-res device cell. The
-  fix is a reduce at a fixed print-cell size, or glyphs from the star catalogue itself.
+- **Star glyphs by magnitude.** Addressed (2026-11-07, route B): glyphs now come from the
+  star catalogue at a fixed print-cell size, so count and class no longer follow device pixels.
+  Galaxy views lose their image-detected galaxy dots until the galaxy Layer prints into the
+  same row (phase 2).
 - **Engraving that follows the form.** Hatching along a globe's parallels, a globe
   graticule, and water lines offset from the coast need a surface-parameter target from the
   body shaders. Saturn's ring needs its own id to be hatched lighter than the ball.

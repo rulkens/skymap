@@ -1,7 +1,7 @@
 /**
  * create — the star family's whole construction, in dependency order: the
- * four renderers (the pick renderer must follow the visual renderer — it
- * borrows its exposed BGLs), the boot-seeded point renderer, the survey
+ * renderers (the pick and print twins must follow the visual renderer — they
+ * borrow its exposed BGLs), the boot-seeded point renderer, the survey
  * slots, and the famous-star meta sidecar. The three seeded catalogs' counts
  * are the first yields of `starCatalogSourceCounts`, not a call from here.
  */
@@ -21,8 +21,10 @@ import { positionedSeededStars } from './seededStars/present/positionedSeededSta
 
 import { createStarCatalogRenderer } from './survey/render/starCatalogRenderer';
 import { createStarCatalogPickRenderer } from './survey/render/starCatalogPickRenderer';
+import { createStarCatalogPrintRenderer } from './survey/render/starCatalogPrintRenderer';
 import { createStarRenderer } from './resolvedStars/render/starRenderer';
 import { createStarPointRenderer } from './seededStars/render/starPointRenderer';
+import { createStarPointPrintRenderer } from './seededStars/render/starPointPrintRenderer';
 import { createStarAggregateUpsample } from './survey/render/starAggregateUpsample';
 import type { OctreePoolHost } from '../../@types/octree/OctreePoolHost';
 import { createStarCatalogSlot } from './survey/load/starCatalogSlot';
@@ -58,6 +60,7 @@ export function create(deps: LayerCoreDeps<StarCatalogFacts>): StarCatalogRuntim
     SLAB_REVERSED_Z[NEAR0]!,
     pickCodes.pickCodeOf(Source.GaiaStars),
   );
+  const starCatalogPrintRenderer = createStarCatalogPrintRenderer(device, renderer.pickResources());
   const starRenderer = createStarRenderer(
     device,
     HDR_TARGET_FORMAT,
@@ -79,6 +82,8 @@ export function create(deps: LayerCoreDeps<StarCatalogFacts>): StarCatalogRuntim
     // re-uploads every real frame, so this is overwritten before the first draw.
     0,
   );
+
+  const starPointPrintRenderer = createStarPointPrintRenderer(device);
 
   const aggregateUpsample = createStarAggregateUpsample(device, HDR_TARGET_FORMAT);
 
@@ -111,6 +116,8 @@ export function create(deps: LayerCoreDeps<StarCatalogFacts>): StarCatalogRuntim
     pickCodes,
     renderer,
     pickRenderer,
+    starCatalogPrintRenderer,
+    starPointPrintRenderer,
     starRenderer,
     starPointRenderer,
     aggregateUpsample,

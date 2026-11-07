@@ -85,9 +85,9 @@ const MATTE_WHITE: GPUColor = { r: 1, g: 1, b: 1, a: 1 };
 /** `farDepthView`'s placeholder texture — 1 texel is enough, every read is the same far value. */
 const FAR_DEPTH_PLACEHOLDER_PX = 1;
 
-/** A row's divisor for this state — constant rows ignore the state entirely. */
-function resolveScale(spec: RenderTargetSpec, state: EngineState): number {
-  return typeof spec.scale === 'function' ? spec.scale(state) : spec.scale;
+/** A row's divisor for this state and canvas — constant rows ignore both. */
+function resolveScale(spec: RenderTargetSpec, state: EngineState, canvas: Size): number {
+  return typeof spec.scale === 'function' ? spec.scale(state, canvas) : spec.scale;
 }
 
 /**
@@ -377,7 +377,7 @@ export function createRenderTargets(
       const fixed = spec.fixedSizePx ? resolveFixedSize(spec.fixedSizePx, s) : 0;
       const [width, height] = spec.fixedSizePx
         ? [fixed, fixed]
-        : reducedTargetSize(canvas.width, canvas.height, resolveScale(spec, s));
+        : reducedTargetSize(canvas.width, canvas.height, resolveScale(spec, s, canvas));
       const held = sizes.get(spec.id);
       if (held !== undefined && held.width === width && held.height === height) continue;
       allocate(spec, width, height);

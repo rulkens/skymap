@@ -1,8 +1,8 @@
 // antiqueLook/reduce.wesl — one quarter-res cell per 4×4 block of the print.
-// Splits the frame by frequency: `wash` carries the block's mean colour (the
-// low band — glows become watercolour, never ink) and, in alpha, how much of
-// the block is land on a body; `peak` carries the block's brightest sky texel
-// (device px position, luminance) for the star-glyph scatter.
+// `wash` carries the block's mean colour (the low band: glows become
+// watercolour, never ink) and, in alpha, how much of the block is land on a
+// body. Stars are not read from here: their glyphs come from the catalogue
+// (printPoint.wesl).
 
 import package::antiqueLook::io::VSOut;
 import package::antiqueLook::pigments::luma;
@@ -11,11 +11,6 @@ import package::antiqueLook::pigments::luma;
 @group(0) @binding(1) var bodyTex: texture_2d<f32>;
 // Earth's land map (r land share, g covered), or a 1×1 empty texture.
 @group(0) @binding(2) var landTex: texture_2d<f32>;
-
-struct ReduceOut {
-  @location(0) wash: vec4<f32>,
-  @location(1) peak: vec4<f32>,
-}
 
 const CELL: i32 = 4;
 
@@ -26,7 +21,7 @@ fn landness(c: vec3<f32>) -> f32 {
 }
 
 @fragment
-fn fs(in: VSOut) -> ReduceOut {
+fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let origin = vec2<i32>(in.pos.xy) * CELL;
   let size = vec2<i32>(textureDimensions(printTex));
   // A frame without bodies binds a 1×1 empty texture here, hence its own clamp.
@@ -35,11 +30,8 @@ fn fs(in: VSOut) -> ReduceOut {
   var bodySum = vec3<f32>(0.0);
   var skySum = vec3<f32>(0.0);
   var skyDimmest = 1e9;
-  var light = 0.0;
   var land = 0.0;
   var bodyCount = 0.0;
-  var best = -1.0;
-  var bestAt = vec2<f32>(0.0);
   for (var j = 0; j < CELL; j++) {
     for (var i = 0; i < CELL; i++) {
       let q = min(origin + vec2<i32>(i, j), size - 1);
@@ -50,15 +42,9 @@ fn fs(in: VSOut) -> ReduceOut {
       if (body < 0.5) {
         skyDimmest = min(skyDimmest, luma(c));
       }
-      light += luma(c) * (1.0 - body);
       let mapped = textureLoad(landTex, min(q, landSize - 1), 0).rg;
       land += body * select(landness(c), mapped.r, mapped.g > 0.5);
       bodyCount += body;
-      let l = luma(c) * (1.0 - body);
-      if (l > best) {
-        best = l;
-        bestAt = vec2<f32>(q) + 0.5;
-      }
     }
   }
   let n = f32(CELL * CELL);
@@ -71,10 +57,6 @@ fn fs(in: VSOut) -> ReduceOut {
   let floorL = select(0.0, skyDimmest * 1.5 + 0.01, skyCount > 0.0);
   skyMean *= min(1.0, floorL / max(luma(skyMean), 1e-4));
   let sum = bodySum + skyMean * skyCount;
-  var o: ReduceOut;
   // Sky blocks report land −1 so the coast halo stop at the limb, not mid-space.
-  o.wash = vec4<f32>(sum / n, select(-1.0, land / max(bodyCount, 1e-3), bodyCount > 8.0));
-  // w: the block's uncapped sky light — a star's size is read from the area it lights.
-  o.peak = vec4<f32>(bestAt, best, light / n);
-  return o;
+  return vec4<f32>(sum / n, select(-1.0, land / max(bodyCount, 1e-3), bodyCount > 8.0));
 }

@@ -1,8 +1,8 @@
 /**
  * antiqueLook — the `stylize` step, its passes in order: paper (the sheet, baked
  * only when its row was reallocated or the scan landed), reduce (print →
- * quarter-res `wash` + `peaks`), glow (`wash` → 1/16-res), peaks (suppression →
- * `stars`), glyphs and decor (instanced scatters into `star-ink` and
+ * quarter-res `wash`), glow (`wash` → 1/16-res), glyphs (from the star Layer's
+ * `print-points`) and decor (instanced scatters into `star-ink` and
  * `decor`/`decor-hue`), plate (all of it inked onto the swap chain). One
  * `stylize` timing slot spans them, as `runBloom`'s does. GPU objects are built
  * on the look's first frame, not at boot: most sessions never open it.
@@ -11,7 +11,6 @@
 import { createAntiqueLookGpu } from './createAntiqueLookGpu';
 import { loadAntiqueSheetAssets } from './loadAntiqueSheetAssets';
 import {
-  ANTIQUE_CELL,
   ANTIQUE_GLYPH_BYTES,
   ANTIQUE_ORNAMENT_BYTES,
   ANTIQUE_REFERENCE_HEIGHT_CSS,
@@ -149,8 +148,6 @@ export function createAntiqueLook(init: {
     const uniforms = { buffer: g.uniforms };
     const paper = targets.viewOf(ANTIQUE_TARGETS.paper);
     const wash = targets.viewOf(ANTIQUE_TARGETS.wash);
-    const peaks = targets.viewOf(ANTIQUE_TARGETS.peaks);
-    const stars = targets.viewOf(ANTIQUE_TARGETS.stars);
     const glow = targets.viewOf(ANTIQUE_TARGETS.glow);
     const starInk = targets.viewOf(ANTIQUE_TARGETS.starInk);
     const decor = targets.viewOf(ANTIQUE_TARGETS.decor);
@@ -161,6 +158,9 @@ export function createAntiqueLook(init: {
     const land = ctx.snapshot.renderedTargets.has(ANTIQUE_TARGETS.land)
       ? targets.viewOf(ANTIQUE_TARGETS.land)
       : g.empty;
+    // The catalogue's naked-eye stars, when a star pass printed this frame.
+    const printed = ctx.snapshot.renderedTargets.has(ANTIQUE_TARGETS.printPoints);
+    const points = printed ? targets.viewOf(ANTIQUE_TARGETS.printPoints) : g.empty;
     const lines = ctx.snapshot.renderedTargets.has(ANTIQUE_TARGETS.lines)
       ? targets.viewOf(ANTIQUE_TARGETS.lines)
       : g.empty;
@@ -188,15 +188,14 @@ export function createAntiqueLook(init: {
     fullScreen(
       encoder,
       'reduce',
-      [wash, peaks],
+      [wash],
       g.reduce,
       [io.print, bodies, land],
       bakesPaper ? undefined : begin,
     );
     fullScreen(encoder, 'glow', [glow], g.glow, [wash]);
-    fullScreen(encoder, 'peaks', [stars], g.peaks, [peaks, uniforms]);
-    // One instance per quarter-res cell (an upper bound: the shader drops the rest).
-    const cells = Math.ceil(size.width / ANTIQUE_CELL) * Math.ceil(size.height / ANTIQUE_CELL);
+    // One instance per print-points texel; the shader drops those holding no star.
+    const cells = printed ? targets.sizeOf(ANTIQUE_TARGETS.printPoints) : { width: 1, height: 1 };
     const glyphPass = encoder.beginRenderPass({
       label: 'antique-look-glyphs',
       colorAttachments: [{ view: starInk, loadOp: 'clear', storeOp: 'store' }],
@@ -208,12 +207,13 @@ export function createAntiqueLook(init: {
         label: 'antique-look-glyphs-bg',
         layout: g.glyphs.layout,
         entries: [
-          { binding: 0, resource: stars },
+          { binding: 0, resource: points },
           { binding: 1, resource: uniforms },
+          { binding: 2, resource: bodies },
         ],
       }),
     );
-    glyphPass.draw(4, cells);
+    glyphPass.draw(4, cells.width * cells.height);
     glyphPass.end();
     const decorPass = encoder.beginRenderPass({
       label: 'antique-look-decor',

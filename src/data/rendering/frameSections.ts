@@ -254,6 +254,15 @@ export const SCENE: FrameSection = {
       slab: 'surfaceMask',
       passes: ['earth-ocean-mask'],
     },
+    // The look's star glyphs come from the catalogue: every naked-eye star as one point,
+    // the brightest per cell kept by its depth. Look-only, like the land row above.
+    {
+      kind: 'render',
+      target: 'antique-print-points',
+      slab: NEAR0,
+      depth: 'clear',
+      passes: ['star-points-print', 'star-catalog-print'],
+    },
     // Bodies join HDR in LINEAR space before the tone-map, so one tone curve covers
     // stars, galaxies and bodies (no seam at the Sun's limb); hence a composite, not a
     // second tone-mapped pass.
