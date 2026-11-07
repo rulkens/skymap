@@ -49,7 +49,7 @@ function Button({
       type={type}
       className={cx(
         styles.root,
-        variant !== 'ghost' && styles.tablet,
+        variant === 'secondary' && styles.tablet,
         variant === 'primary' && styles.primary,
         variant === 'ghost' && styles.ghost,
         className,

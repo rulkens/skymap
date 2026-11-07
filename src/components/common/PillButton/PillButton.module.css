@@ -20,7 +20,7 @@
   justify-content: center;
   padding: 0;
 
-  background: var(--surface-card-soft);
+  background: var(--framed-control-ground, var(--surface-card-soft));
   -webkit-backdrop-filter: blur(var(--blur-card));
   backdrop-filter: blur(var(--blur-card));
   border: 1px solid var(--border-card);
@@ -40,7 +40,7 @@
 
 .root:hover,
 .root:focus-visible {
-  background: var(--surface-card-strong);
+  background: var(--framed-control-ground, var(--surface-card-strong));
   border-color: var(--border-hover);
   color: var(--color-accent);
 }

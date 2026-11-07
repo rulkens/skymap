@@ -12,7 +12,7 @@
   align-items: center;
   gap: var(--space-5);
 
-  background: var(--surface-card-soft);
+  background: var(--framed-control-ground, var(--surface-card-soft));
   -webkit-backdrop-filter: blur(var(--blur-card));
   backdrop-filter: blur(var(--blur-card));
 
@@ -41,7 +41,7 @@
 
 .trigger:hover,
 .trigger:focus-visible {
-  background: var(--surface-card-strong);
+  background: var(--framed-control-ground, var(--surface-card-strong));
   border-color: var(--border-hover);
   color: var(--color-accent);
   outline: none;

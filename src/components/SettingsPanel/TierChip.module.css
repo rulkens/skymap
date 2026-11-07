@@ -19,7 +19,7 @@
    * here would steal vertical space from the title strip. */
   padding: var(--space-1) var(--space-3);
   border: 1px solid var(--border-control);
-  background: var(--surface-control);
+  background: var(--framed-control-ground, var(--surface-control));
   border-radius: var(--radius-md);
   font: inherit;
   font-size: var(--font-size-sm);
@@ -32,7 +32,7 @@
 }
 
 .chip:hover {
-  background: var(--surface-control-hover);
+  background: var(--framed-control-ground, var(--surface-control-hover));
   color: var(--color-fg);
 }
 

@@ -413,7 +413,7 @@ details:not([open]) > .detailsSummary::before {
   padding: var(--space-1) var(--space-4);
   border: 1px solid var(--border-control);
   border-radius: var(--radius-md);
-  background: var(--surface-control);
+  background: var(--framed-control-ground, var(--surface-control));
   color: var(--color-fg);
   font: inherit;
   font-family: var(--font-family-label);
@@ -425,13 +425,13 @@ details:not([open]) > .detailsSummary::before {
 
 @media (hover: hover) {
   .focusButton:hover {
-    background: var(--surface-control-hover);
+    background: var(--framed-control-ground, var(--surface-control-hover));
     border-color: var(--border-hover);
   }
 }
 
 .focusButton:active {
-  background: var(--surface-control-active);
+  background: var(--framed-control-ground, var(--surface-control-active));
 }
 
 /* ── Close button (only visible when the card is pinned) ──────────────────── */
@@ -470,12 +470,12 @@ details:not([open]) > .detailsSummary::before {
 
 @media (hover: hover) {
   .closeButton:hover {
-    background: var(--surface-control);
+    background: var(--framed-control-ground, var(--surface-control));
     border-color: var(--border-control);
     color: var(--color-fg);
   }
 }
 
 .closeButton:active {
-  background: var(--surface-control-active);
+  background: var(--framed-control-ground, var(--surface-control-active));
 }

@@ -144,6 +144,9 @@
    * the drop rule, and its corner slices set the smallest box it can draw. */
   --antique-title-size: 15px;
   --framed-shadow: none;
+  /* Tablets and cartouches paint their own ground: the element's background would show
+   * outside their incurved corners and rolled ends. */
+  --framed-control-ground: transparent;
   --framed-min-height: calc(2 * var(--frame-slice));
   --framed-flank-display: block;
   --framed-overhang: calc((var(--title-cartouche-height) - var(--frame-border)) / 2);
