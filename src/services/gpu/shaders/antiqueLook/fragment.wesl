@@ -165,12 +165,16 @@ const STRUCTURE_EDGE: f32 = 0.05;
 const STRUCTURE_CORE: f32 = 0.18;
 // The galaxy engraving, in the print's luma: where its stipple starts; the print
 // luma its tone's log scale starts from, and that scale's power (over 1 the arms
-// stay a step under the bar); the tone an inter-arm gap keeps; the dust lanes'
-// hatch spacing in print units.
+// and inner disc stay steps under the bar); the tone an inter-arm gap keeps; the
+// most a 1/16 surroundings counts for its relief (the bar's glare lifts it, which
+// left the bright disc round the bar paper); the densest tone short of the bar, which
+// alone (the print's white) closes up; the dust lanes' hatch spacing in print units.
 const GALAXY_EDGE: f32 = 0.10;
 const GALAXY_FLOOR: f32 = 0.07;
-const GALAXY_SB_POW: f32 = 1.3;
+const GALAXY_SB_POW: f32 = 1.5;
 const GALAXY_GAP: f32 = 0.08;
+const GALAXY_RELIEF_CAP: f32 = 0.65;
+const GALAXY_DISC_MAX: f32 = 0.62;
 const LANE_HATCH: f32 = 2.6;
 const GALAXY_WASH: f32 = 0.15;
 
@@ -271,14 +275,14 @@ fn washHue(uv: vec2<f32>) -> vec3<f32> {
   return sum / 16.0;
 }
 
-// A resolved galaxy's stipple tone from the print (`light`, its 1/16 surroundings
-// `lowL`, the unsharpened `nucleus`): surface brightness on a log scale, so the bar
-// outweighs the arms, times the light's relief over its surroundings, so an
-// inter-arm gap keeps GALAXY_GAP of it. The print peaks near 0.75 off the bar.
+// A resolved galaxy's stipple tone from its `light`, the 1/16 surroundings `lowL` and
+// the print's own pixel `nucleus`: surface brightness on a log scale, times the light's
+// relief over its surroundings, so an inter-arm gap keeps GALAXY_GAP of it. Only the
+// print's white (the bar, unblurred, so it keeps its shape) closes up past GALAXY_DISC_MAX.
 fn galaxyTone(light: f32, lowL: f32, nucleus: f32) -> f32 {
   let sb = pow(clamp(log(max(light, 1e-3) / GALAXY_FLOOR) / -log(GALAXY_FLOOR), 0.0, 1.0), GALAXY_SB_POW);
-  let relief = smoothstep(-0.2, 0.35, log((light + 0.02) / (lowL + 0.02)));
-  return max(sb * mix(GALAXY_GAP, 1.0, relief), smoothstep(0.8, 1.0, nucleus));
+  let relief = smoothstep(-0.2, 0.35, log((light + 0.02) / (min(lowL, GALAXY_RELIEF_CAP) + 0.02)));
+  return max(min(sb * mix(GALAXY_GAP, 1.0, relief), GALAXY_DISC_MAX), smoothstep(0.94, 1.0, nucleus));
 }
 
 // A galaxy stippled as an engraver dotted a nebula: dots denser with its surface
@@ -298,7 +302,7 @@ fn galaxyEngraving(ip: vec2<i32>, uv: vec2<f32>, src: vec3<f32>, neb: vec4<f32>,
   let mean = luma(sum / 5.0);
   // The band's light, sharpened by the print's own round this pixel, so an arm keeps its edge.
   let light = mix(lxs, mean, 0.5);
-  let tone = galaxyTone(light, lowL, min(lxs, mean));
+  let tone = galaxyTone(light, lowL, mean);
   // Dust: a hole well under its surroundings where those are bright (the inner disc),
   // not an outer inter-arm gap, which stays paper.
   let lane = smoothstep(-0.2, -0.6, log((light + 0.02) / (lowL + 0.02))) * smoothstep(0.3, 0.45, lowL);

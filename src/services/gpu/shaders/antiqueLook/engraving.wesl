@@ -155,16 +155,18 @@ fn scatter(p: vec2<f32>, cell: f32, share: f32, radius: f32) -> f32 {
   return ink;
 }
 
-// Dots that thin out by count to bare paper, then swell until they merge, so a
-// tone reads up to near solid where `stipple`'s one dot per cell leaves paper.
+// Dots that thin out by count to bare paper, then swell until they nearly merge, so
+// a tone reads up to a dense core where `stipple`'s one dot per cell leaves paper;
+// each dot's size varies by a quarter either way, as a punch's did.
 fn stippleDense(p: vec2<f32>, cell: f32, tone: f32, pxUnits: f32) -> f32 {
   let c = floor(p / cell - 0.5);
-  let r = cell * (0.3 + 0.42 * smoothstep(0.45, 1.0, tone));
+  let r0 = cell * (0.3 + 0.36 * smoothstep(0.45, 1.0, tone));
   var ink = 0.0;
   for (var k = 0; k < 4; k++) {
     let kc = c + vec2<f32>(f32(k & 1), f32(k >> 1u));
     let centre = (kc + 0.1 + 0.8 * vec2<f32>(hash21Hq(kc), hash21Hq(kc + 17.3))) * cell;
     let kept = step(0.55 * hash21Hq(kc + 41.7), tone);
+    let r = r0 * (0.75 + 0.5 * hash21Hq(kc + 63.1));
     ink = max(ink, kept * (1.0 - smoothstep(r - 0.5 * pxUnits, r + 0.5 * pxUnits, length(p - centre))));
   }
   return ink * step(0.02, tone);

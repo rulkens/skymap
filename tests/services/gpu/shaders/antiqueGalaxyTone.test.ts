@@ -19,6 +19,7 @@ const clamp = (x: number, lo: number, hi: number) => Math.min(Math.max(x, lo), h
 const SHIMS = {
   log: Math.log,
   max: Math.max,
+  min: Math.min,
   pow: Math.pow,
   clamp,
   mix: (a: number, b: number, t: number) => a + (b - a) * t,
@@ -33,7 +34,7 @@ function galaxyToneFromShader(): (light: number, lowL: number, nucleus: number) 
   const body = /fn galaxyTone\(light: f32, lowL: f32, nucleus: f32\) -> f32 \{([\s\S]*?)\n\}/.exec(plate)?.[1];
   if (body === undefined) throw new Error('fragment.wesl lacks galaxyTone');
   const consts = Object.fromEntries(
-    ['GALAXY_FLOOR', 'GALAXY_GAP', 'GALAXY_SB_POW'].map((name) => [name, weslF32(plate, name)]),
+    ['GALAXY_FLOOR', 'GALAXY_GAP', 'GALAXY_SB_POW', 'GALAXY_RELIEF_CAP', 'GALAXY_DISC_MAX'].map((name) => [name, weslF32(plate, name)]),
   );
   const scope = { ...SHIMS, ...consts };
   const fn = new Function(...Object.keys(scope), 'light', 'lowL', 'nucleus', body.replace(/\blet\b/g, 'const'));
@@ -54,6 +55,10 @@ describe('antique galaxy stipple tone', () => {
   it('keeps an arm readable and its inter-arm gap near paper', () => {
     expect(arm).toBeGreaterThan(0.45);
     expect(gap).toBeLessThan(0.12);
+  });
+
+  it("keeps the bright inner disc a medium stipple under the bar's glare", () => {
+    expect(tone(0.7, 0.9, 0.7)).toBeGreaterThan(0.4);
   });
 
   it('keeps a faint outer arm over its darker surroundings', () => {
