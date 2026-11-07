@@ -11,6 +11,8 @@
 export const ANTIQUE_MOON_PLACE_REVEAL = {
   discPx: [200, 250],
   fitPx: [-8, 2],
+  // A mare's name shrinks to this share of its type before a narrow sea drops it.
+  areaShrink: 0.72,
   sunCos: { area: [0.06, 0.12], crater: [0, 0.05] },
   facing: [0.06, 0.12],
   craterPx: [3.5, 1.035],

@@ -37,6 +37,7 @@ import { packAntiqueOrnaments } from '../../../../utils/gpu/antiqueLook/packAnti
 import { packAntiqueGlyphs } from '../../../../utils/gpu/antiqueLook/packAntiqueGlyphs';
 import { placeAntiqueOrnaments } from '../../../../utils/gpu/antiqueLook/placeAntiqueOrnaments';
 import { antiquePlateTitle } from '../../../../utils/gpu/antiqueLook/antiquePlateTitle';
+import { antiqueMoonSubject } from './antiqueMoonSubject';
 import { antiqueTitleGlobe } from './antiqueTitleGlobe';
 import { viewCoverRectsPx } from '../../../../utils/layout/viewCoverRectsPx';
 import { placeAntiqueNumerals } from '../../../../utils/gpu/antiqueLook/placeAntiqueNumerals';
@@ -136,6 +137,7 @@ export function createAntiqueLook(init: {
     const webDensity = ctx.snapshot.renderedTargets.has(WEB_DENSITY) && cosmos > 0;
 
     const relief = hasBodies ? antiqueReliefInput(state, ctx, io.bodyDepth, unitPx) : null;
+    const globe = antiqueTitleGlobe(ctx, basis, unitPx);
     packAntiqueUniforms(
       {
         size,
@@ -153,11 +155,11 @@ export function createAntiqueLook(init: {
         web: webDensity ? cosmos : 0,
         eye: ctx.drawCamPos,
         tune: antiquePlateTune(tuning),
+        subject: antiqueMoonSubject(globe),
       },
       uniformBytes,
     );
     device.queue.writeBuffer(g.uniforms, 0, uniformBytes);
-    const globe = antiqueTitleGlobe(ctx, basis, unitPx);
     const title = antiquePlateTitle({ cosmos, globe, centreLonLat: globe?.centreLonLat ?? null });
     const block = title && glyphs ? glyphs.sheet.titles[title.key] : null;
     const titleOnSheet =

@@ -26,6 +26,14 @@ describe('placeAntiqueAreaName', () => {
     expect(at.alpha).toBe(1);
   });
 
+  it('sets a name smaller in a sea too narrow for its type, down to a floor', () => {
+    const narrow = placeAntiqueAreaName(crisiumAt(0), orthographicMoonView(200), LETTERING)!;
+    expect(narrow.alpha).toBe(1);
+    expect(narrow.px).toBeLessThan(LETTERING.px);
+    expect(narrow.px).toBeGreaterThanOrEqual(0.72 * LETTERING.px);
+    expect(placeAntiqueAreaName(crisiumAt(0), orthographicMoonView(110), LETTERING)!.alpha).toBe(0);
+  });
+
   it('drops the name when the limb foreshortens the mare to a sliver, though its anchor is in sight', () => {
     // Anchor 84° east: still facing the eye, but the far edge is clipped at the limb.
     const at = placeAntiqueAreaName(crisiumAt(84), orthographicMoonView(800), LETTERING);

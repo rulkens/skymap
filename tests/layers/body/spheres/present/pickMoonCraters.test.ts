@@ -47,7 +47,8 @@ describe('pickMoonCraters', () => {
       [0, 70, 5, 1], // near the limb but tiny
     ];
     const table = moonCraterTable(rows.flat(), R_KM);
-    expect(pickMoonCraters(table, view(4))).toEqual([3, 0]);
+    // The limb crater, edge-on, ranks after the face-on one for all its size.
+    expect(pickMoonCraters(table, view(4))).toEqual([0, 3]);
   });
 
   it('drops craters off the screen of a narrow view', () => {
@@ -75,6 +76,12 @@ describe('pickMoonCraters', () => {
     ]);
     expect(picked[0]).toBe(3);
     expect(picked).not.toContain(5);
+  });
+
+  it('ranks a crater wider than the frame below one that fits it', () => {
+    // At 1.3 radii in a 20° view the frame is ~180 km tall: the 400 km crater shows an arc.
+    const table = moonCraterTable([0, 0, 200, 1, 0, 0.5, 80, 1], R_KM);
+    expect(pickMoonCraters(table, view(1.3, 20))).toEqual([1, 0]);
   });
 
   it('stops at the cap in a close-up', () => {

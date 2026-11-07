@@ -194,14 +194,14 @@ const MARE_WIDE_PX: f32 = 24.0;
 // The wide support never finer than ~170 km: a walled plain's dark floor (Clavius) is no sea.
 const MARE_WIDE_TEXELS: f32 = 64.0;
 // Mips over the hardware LOD: relief read at the hatching's scale, not the pixel's.
-const RELIEF_BIAS: f32 = 1.5;
+const RELIEF_BIAS: f32 = 1.0;
 // The normal-map bake's slopes are ~0.4 of LOLA's (gain 8 over an 8-bit height).
 const SLOPE_GAIN: f32 = 2.4;
 // Mirror ANTIQUE_MOON_RIM_UNITS (layers/body/spheres/data/antiqueMoonPrint.ts).
 const RIM_MIN_UNITS: f32 = 8.0;
 const RIM_FULL_UNITS: f32 = 14.0;
 const NAMED_MIN_UNITS: f32 = 7.0;
-// The Sun-side inner wall (0.55 < psi/rho < 0.95) faces away from the Sun: its light
+// The Sun-side inner wall (0.4 < psi/rho < 0.95) faces away from the Sun: its light
 // falls toward CRESCENT_LIGHT, so the plate hatches it as a crescent.
 const CRESCENT_LIGHT: f32 = 0.04;
 // Linear albedo over which a crater's floor is no sea (the plate's MARE_SHORE).
@@ -256,8 +256,8 @@ fn craterRims(n: vec3<f32>, dNdx: vec3<f32>, dNdy: vec3<f32>, sun: vec3<f32>, un
     let sunward = dot(off / sinPsi, st);
     let q = psi / rho;
     inFloor = max(inFloor, 1.0 - smoothstep(0.75, 0.85, q));
-    crescent = max(crescent, smoothstep(0.55, 0.8, q) * (1.0 - smoothstep(0.9, 1.0, q))
-      * smoothstep(0.1, 0.7, sunward) * tilt * smoothstep(0.3, 0.6, cr.weight));
+    crescent = max(crescent, smoothstep(0.4, 0.7, q) * (1.0 - smoothstep(0.92, 1.0, q))
+      * smoothstep(-0.1, 0.6, sunward) * tilt * smoothstep(0.3, 0.6, cr.weight));
     // |grad psi| per px: d psi = -dot(c, dN) / sin psi.
     let gPx = length(vec2<f32>(dot(cr.c, dNdx), dot(cr.c, dNdy))) / sinPsi;
     let d = abs(psi - rho) / max(gPx, 1e-9) * pxUnits;

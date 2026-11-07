@@ -38,4 +38,7 @@ export type AntiqueUniformInput = {
   readonly eye: Readonly<Vec3>;
   /** The debug panel's knobs (`antiquePlateTune`). */
   readonly tune: AntiquePlateTune;
+  /** How far the Moon is the plate's subject, 0..1 (`antiqueMoonSubject`): the chart's
+   * rulings, border keys, numerals, trails and figures fade by it. */
+  readonly subject: number;
 };

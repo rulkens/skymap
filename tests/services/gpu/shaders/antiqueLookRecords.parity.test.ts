@@ -110,6 +110,7 @@ describe('antique look records ↔ WGSL structs', () => {
         tint: [1074, 1075, 1076],
         hidden: 0b101,
       },
+      subject: 1079,
     });
     const sentinel: Record<string, number> = {
       res: 1001,
@@ -123,6 +124,7 @@ describe('antique look records ↔ WGSL structs', () => {
       tune: 1071,
       tint: 1074,
       borderWash: 1078,
+      subject: 1079,
     };
     expect([...offsets.keys()].sort()).toEqual(
       [...Object.keys(sentinel), 'flags', 'sky', 'globe', 'hidden'].sort(),

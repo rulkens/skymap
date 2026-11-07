@@ -1,29 +1,36 @@
 /**
- * visibleDiscAreaPx — device px² of the Moon's disc inside the frame, the crater
- * pick's budget: the disc as the circle of its silhouette's angular radius round the
- * projected centre (exact on the view axis, near enough off it), counted on a coarse
- * grid of the frame. The whole frame when the centre is behind the eye.
+ * visibleDiscAreaPx — device px² of the Moon inside the frame, the crater pick's
+ * budget: a coarse grid of the frame's rays, each tested against the unit sphere. A
+ * circle round the projected centre is no stand-in near the surface, where the
+ * horizon's ellipse runs far off the frame (earthrise: 1% of the true ground).
  */
 
+import { mat4 } from 'wgpu-matrix';
 import type { MoonCraterView } from '../@types/MoonCraterView';
 
 const GRID = 32;
+const Z = 0.5;
 
 export function visibleDiscAreaPx(view: MoonCraterView): number {
-  const { widthPx: w, heightPx: h, mvp: m } = view;
-  const dist = Math.hypot(view.eye[0], view.eye[1], view.eye[2]);
-  const cw = m[15]!;
-  if (cw <= 0 || dist <= 1) return w * h;
-  const cx = (0.5 + (0.5 * m[12]!) / cw) * w;
-  const cy = (0.5 - (0.5 * m[13]!) / cw) * h;
-  const r = view.pxPerRad * Math.tan(Math.asin(1 / dist));
+  const inv = mat4.inverse(Float32Array.from(view.mvp));
+  const [ex, ey, ez] = view.eye;
+  const e2 = ex * ex + ey * ey + ez * ez;
   let inside = 0;
   for (let j = 0; j < GRID; j++) {
     for (let i = 0; i < GRID; i++) {
-      const x = ((i + 0.5) / GRID) * w - cx;
-      const y = ((j + 0.5) / GRID) * h - cy;
-      if (x * x + y * y <= r * r) inside++;
+      const x = ((i + 0.5) / GRID) * 2 - 1;
+      const y = 1 - ((j + 0.5) / GRID) * 2;
+      // The pixel's point at mid depth, local axes (finite under a reversed or infinite
+      // projection too): the ray runs from the eye through it.
+      const w = inv[3]! * x + inv[7]! * y + inv[11]! * Z + inv[15]!;
+      const dx = (inv[0]! * x + inv[4]! * y + inv[8]! * Z + inv[12]!) / w - ex;
+      const dy = (inv[1]! * x + inv[5]! * y + inv[9]! * Z + inv[13]!) / w - ey;
+      const dz = (inv[2]! * x + inv[6]! * y + inv[10]! * Z + inv[14]!) / w - ez;
+      const b = ex * dx + ey * dy + ez * dz;
+      const d2 = dx * dx + dy * dy + dz * dz;
+      // Hits when the ray heads toward the sphere and its closest approach is under 1.
+      if (b < 0 && e2 - (b * b) / d2 <= 1) inside++;
     }
   }
-  return (inside / (GRID * GRID)) * w * h;
+  return (inside / (GRID * GRID)) * view.widthPx * view.heightPx;
 }

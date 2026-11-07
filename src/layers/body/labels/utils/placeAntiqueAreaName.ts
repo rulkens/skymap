@@ -1,7 +1,8 @@
 /**
  * placeAntiqueAreaName — a mare's or Terra's name centred on its anchor, shown while
- * its box fits the extent as the eye sees it and both its ends are lit. The extent is
- * measured across the four mid-edge points, each walked back from past the limb
+ * its box (set smaller, to a floor, in a narrow sea) fits the extent as the eye sees
+ * it and both its ends are lit. The extent is measured across the four mid-edge
+ * points, each walked back from past the limb
  * (`visibleSurfacePx`), so a plain foreshortened to a sliver at the limb drops its
  * name; testing the box's ends, not just its centre, keeps a name from straddling the
  * terminator into the hatched night. Null when the anchor is out of sight.
@@ -26,7 +27,7 @@ export function placeAntiqueAreaName(
   view: AntiqueBodyView,
   lettering: AntiquePlaceLettering,
 ): AntiqueNamePlacement | null {
-  const { fitPx, sunCos, lineEm } = ANTIQUE_MOON_PLACE_REVEAL;
+  const { fitPx, sunCos, lineEm, areaShrink } = ANTIQUE_MOON_PLACE_REVEAL;
   const { latDeg: lat, lonDeg: lon } = place;
   const [south, north, west, east] = place.extentDeg;
   if (view.facing(lat, lon) <= 0) return null;
@@ -37,7 +38,14 @@ export function placeAntiqueAreaName(
   const n = visibleSurfacePx(view, north, lon, lat, lon);
   if (!centre || !w || !e || !s || !n) return null;
 
-  const { px, cut, trackingEm = 0 } = lettering;
+  const { cut, trackingEm = 0 } = lettering;
+  // A sea narrower than its name sets it smaller, down to `areaShrink` of the type.
+  const full = antiqueNameBoxPx(place.name, cut, trackingEm, lettering.px, lineEm);
+  const fit = Math.min(
+    (Math.abs(e[0] - w[0]) - fitPx[1]) / full.width,
+    (Math.abs(n[1] - s[1]) - fitPx[1]) / full.height,
+  );
+  const px = lettering.px * Math.min(1, Math.max(areaShrink, fit));
   const box = antiqueNameBoxPx(place.name, cut, trackingEm, px, lineEm);
   const extentRoomPx = Math.min(
     Math.abs(e[0] - w[0]) - box.width,

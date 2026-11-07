@@ -29,3 +29,20 @@ fn captionHalo(overlay: texture_2d<f32>, ip: vec2<i32>, unit: f32, centreAlpha: 
   }
   return smoothstep(0.05, 0.3, a);
 }
+
+// Letter spacing wider than the halo (a sea's spaced capitals, MARE TRANQVILLITATIS)
+// leaves the work showing between letters: a pixel with lettering within BRIDGE units
+// on both sides along the line of type is cleared too, so a word sits on one knock-out.
+const BRIDGE = vec3<f32>(2.0, 4.5, 7.5);
+
+fn captionBridge(overlay: texture_2d<f32>, ip: vec2<i32>, unit: f32) -> f32 {
+  let last = vec2<i32>(textureDimensions(overlay)) - 1;
+  var left = 0.0;
+  var right = 0.0;
+  for (var k = 0; k < 3; k++) {
+    let o = vec2<i32>(i32(round(BRIDGE[k] * unit)), 0);
+    left = max(left, textureLoad(overlay, clamp(ip - o, vec2<i32>(0), last), 0).a);
+    right = max(right, textureLoad(overlay, clamp(ip + o, vec2<i32>(0), last), 0).a);
+  }
+  return smoothstep(0.05, 0.3, min(left, right));
+}

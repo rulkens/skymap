@@ -35,6 +35,7 @@ export function packAntiqueUniforms(
   [11, 15, 19].forEach((lane, i) => (f32[lane] = input.eye[i]!));
   f32[20] = input.seed;
   f32[21] = input.hatchAngle;
+  f32[23] = input.subject;
   // The sky's and a globe's `RulingFrame`, 20 floats each; no globe packs as zeros.
   [input.rulings.sky, input.rulings.globe].forEach((frame, i) => {
     const at = 24 + i * 20;

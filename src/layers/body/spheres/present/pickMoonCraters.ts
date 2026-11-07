@@ -2,7 +2,8 @@
  * pickMoonCraters — the craters the Moon pass rings this frame: facing the eye (a
  * centre just past the horizon still shows its near rim), on screen within 0.7 of its
  * own diameter, and at least the rim size cut across (a named crater its smaller own).
- * Every named crater whose name shows comes first, then the largest by apparent diameter, to one ring per
+ * Every named crater whose name shows comes first, then the largest as seen (foreshortened;
+ * one wider than the frame ranked down), to one ring per
  * `ANTIQUE_MOON_RING_AREA_UNITS` of visible disc, at most `ANTIQUE_MOON_MAX_CRATERS`.
  * Indices into the table.
  */
@@ -27,7 +28,9 @@ export function pickMoonCraters(
   const { centres, rho } = table;
   const [ex, ey, ez] = view.eye;
   const m = view.mvp;
-  const sizeOf = (i: number, minPx: number): number => {
+  // Apparent diameter (px), or 0 when not ringed; `seen` instead the ring's mean axis, its
+  // foreshortening counted, so a near crater outranks a bigger one edge-on at the horizon.
+  const sizeOf = (i: number, minPx: number, seen = false): number => {
     const cx = centres[3 * i]!;
     const cy = centres[3 * i + 1]!;
     const cz = centres[3 * i + 2]!;
@@ -38,8 +41,8 @@ export function pickMoonCraters(
     const dPx = (2 * rho[i]! * view.pxPerRad) / dist;
     if (dPx < minPx) return 0;
     // sine of the eye's elevation over the crater's horizon, against its reach
-    if (-(cx * vx + cy * vy + cz * vz) / dist <= -Math.sin(ANTIQUE_MOON_RIM_REACH * rho[i]!))
-      return 0;
+    const sinEl = -(cx * vx + cy * vy + cz * vz) / dist;
+    if (sinEl <= -Math.sin(ANTIQUE_MOON_RIM_REACH * rho[i]!)) return 0;
     const w = m[3]! * cx + m[7]! * cy + m[11]! * cz + m[15]!;
     if (w <= 0) return 0;
     const x = (0.5 + (0.5 * (m[0]! * cx + m[4]! * cy + m[8]! * cz + m[12]!)) / w) * view.widthPx;
@@ -47,7 +50,7 @@ export function pickMoonCraters(
     const margin = 0.7 * dPx;
     if (x < -margin || x > view.widthPx + margin || y < -margin || y > view.heightPx + margin)
       return 0;
-    return dPx;
+    return seen ? dPx * Math.sqrt(Math.max(sinEl, 0.02)) : dPx;
   };
 
   const budget = Math.min(
@@ -63,10 +66,11 @@ export function pickMoonCraters(
   const sizePx: number[] = [];
   for (let i = 0; i < table.count; i++) {
     if (chosen.has(i)) continue;
-    const dPx = sizeOf(i, ANTIQUE_MOON_RIM_UNITS[0] * view.unitPx);
+    const dPx = sizeOf(i, ANTIQUE_MOON_RIM_UNITS[0] * view.unitPx, true);
     if (dPx <= 0) continue;
     rest.push(i);
-    sizePx.push(dPx);
+    // One wider than the frame shows only an arc of its rim: it ranks as if that much smaller.
+    sizePx.push(dPx <= view.heightPx ? dPx : view.heightPx ** 2 / dPx);
   }
   const order = rest.map((_, k) => k).sort((a, b) => sizePx[b]! - sizePx[a]!);
   return [...chosen, ...order.slice(0, budget - chosen.size).map((k) => rest[k]!)];

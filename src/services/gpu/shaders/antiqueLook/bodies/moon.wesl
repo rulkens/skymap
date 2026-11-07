@@ -16,7 +16,7 @@ import package::lib::util::hash21Hq;
 const LS_GROUND = vec2<f32>(-0.03, 0.16);
 // By day a slope turned from the Sun, its light over the smooth ground's (full shade
 // .. none), prints up to SLOPE_TONE: crater walls and hills, never the night's weight.
-const SLOPE_RATIO = vec2<f32>(0.1, 0.45);
+const SLOPE_RATIO = vec2<f32>(0.15, 0.55);
 const SLOPE_TONE: f32 = 0.62;
 // Shade lines start at this tone (below it a slope barely off the ground's light would
 // print a rain of loose dashes) and reach their widest at the cap.
@@ -54,7 +54,9 @@ fn moonTone(ndl: f32, ndv: f32, row: f32) -> MoonTone {
   let brightness = 2.0 * lit / max(abs(lit) + max(ndv, 0.02), 1e-4);
   let ground = clamp(1.0 - smoothstep(LS_GROUND.x, LS_GROUND.y, brightness)
                      - 0.5 * rim * smoothstep(0.05, -0.25, lit), 0.0, 1.0);
-  let slope = SLOPE_TONE * smoothstep(SLOPE_RATIO.y, SLOPE_RATIO.x, lit / max(ndl, 0.05)) * step(0.0, ndl);
+  // Faded out before the smooth terminator, where the ratio's divisor vanishes: a uniform
+  // band of it ending at ndl = 0 printed a ruler-straight edge the relief could not break.
+  let slope = SLOPE_TONE * smoothstep(SLOPE_RATIO.y, SLOPE_RATIO.x, lit / max(ndl, 0.05)) * smoothstep(0.03, 0.12, ndl);
   let shade = max(ground, slope);
   return MoonTone(min(shade, MOON_SHADE_CAP), shade, smoothstep(0.1, 0.28, lit - ndl));
 }
@@ -62,7 +64,7 @@ fn moonTone(ndl: f32, ndv: f32, row: f32) -> MoonTone {
 // A shade line runs at least 2 × SHADE_DASH units: the tone is eroded along the line
 // (`along`: device px per unit along it), so a slope too short for a stroke prints none
 // and a stroke's ends taper.
-const SHADE_DASH: f32 = 8.0;
+const SHADE_DASH: f32 = 10.0;
 
 // Night the plain render still shows (its ambient light on the albedo's baked relief,
 // display luma over SEEN_LUMA) prints at SEEN_CAP, lighter than the night it shows black.

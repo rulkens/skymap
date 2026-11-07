@@ -11,6 +11,7 @@
 // convention, in its module under `bodies/` (Earth's coasts, Mars's markings).
 
 import package::antiqueLook::captionHalo::captionHalo;
+import package::antiqueLook::captionHalo::captionBridge;
 import package::antiqueLook::io::AntiqueUniforms;
 import package::antiqueLook::io::VSOut;
 import package::antiqueLook::cover::coverOf;
@@ -407,7 +408,8 @@ fn neatline(px: vec2<f32>, uv: vec2<f32>) -> vec2<f32> {
     let steps = select(u.sky.steps, u.globe.steps, onGlobe);
     let coord = select(ll.y, ll.x, horizontalEdge);
     let cell = select(steps.w, steps.z, horizontalEdge);
-    ladder = handCell(coord, cell);
+    // A Moon plate's border keeps its rules but drops the chart's graduation (`u.subject`).
+    ladder = handCell(coord, cell) * (1.0 - u.subject);
   }
   return vec2<f32>(max(max(outer, inner), ladder), smoothstep(BAND, BAND + 0.6, inset));
 }
@@ -492,7 +494,9 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   col = applyWash(col, pigmentAt(5.0), galaxyWash * (1.0 - galaxy.z)); // smalt
   col = applyWash(col, pigmentAt(2.0), galaxyWash * galaxy.z); // gamboge
 
-  let figures = rowOn(HIDE_FIGURES);
+  // On a Moon plate the chart's figures, rulings, trails and numerals fade (`u.subject`).
+  let chart = 1.0 - u.subject;
+  let figures = rowOn(HIDE_FIGURES) * chart;
   let ornament = layerTexel(fullTex, DECOR_LAYER, ip) * vec4<f32>(figures, 1.0, 1.0, figures);
   col = mix(col, paperTone, ornament.b);
   // Figures lie on the sky, behind any body; only a clearing ornament covers one.
@@ -539,7 +543,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     let signs = clamp(2.0 * texel(geographyTex, ip).a, 0.0, 1.0);
     globeRulings = graticule(frameLonLat(u.globe, g.xyz), u.globe.steps, u.unit) * g.w * u.globe.lon90.w * (1.0 - signs);
   }
-  let rulings = (skyRulings * sky * clear + globeRulings * body) * (0.7 + 0.45 * vnoise(p * 0.045)) * rowOn(HIDE_RULINGS);
+  let rulings = (skyRulings * sky * clear * chart + globeRulings * body) * (0.7 + 0.45 * vnoise(p * 0.045)) * rowOn(HIDE_RULINGS);
   // Constellation figures and orbits as a fine rule under the rulings' weight
   // (`u.tune.w`, 0.45 by default, against the rulings' 0.56–0.92).
   // Ink follows a thin line's coverage, so a slanted one stays whole: a
@@ -556,7 +560,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
         textureSampleLevel(linesTex, linear, uv - vec2<f32>(0.0, r.y), 0.0).a));
     lineCover = smoothstep(0.2, 0.9, lineCover);
   }
-  let lines = lineCover * (0.75 + 0.4 * vnoise(p * 0.06 + 5.0)) * sky * clear * u.tune.w * rowOn(HIDE_LINES);
+  let lines = lineCover * (0.75 + 0.4 * vnoise(p * 0.06 + 5.0)) * sky * clear * u.tune.w * rowOn(HIDE_LINES) * chart;
 
   // Bodies: burin hatching for the shade, and each recorded body's own
   // convention from its module (`printOf`). A recorded body (`plate`) is cast
@@ -704,7 +708,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     let ov = texel(overlayTex, ip);
     captions = smoothstep(0.03, 0.2, ov.a) * smoothstep(0.3, 0.6, luma(ov.rgb / max(ov.a, 1e-3)));
     if (scene > 0.0 || any(col != paperTone)) {
-      let halo = captionHalo(overlayTex, ip, u.unit, ov.a);
+      let halo = max(captionHalo(overlayTex, ip, u.unit, ov.a), captionBridge(overlayTex, ip, u.unit));
       col = mix(col, paperTone, halo);
       scene *= 1.0 - halo;
     }
@@ -715,7 +719,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let sideUnits = min(p.x, u.res.x / u.unit - p.x);
   let rowUnits = min(p.y, u.res.y / u.unit - p.y);
   if (rowUnits < MARGIN + BAND + 30.0 || sideUnits < NUMERAL_SIDE_REACH) {
-    numerals = numeralInk(px) * (1.0 - ornament.b);
+    numerals = numeralInk(px) * (1.0 - ornament.b) * chart;
   }
   let content = max(lettered, max(ornament.g, numerals));
   var ink = max(content * frame.y, frame.x);
