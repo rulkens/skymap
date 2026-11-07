@@ -280,10 +280,10 @@ to the HUD (store field on the sky takeover or a small slice; builder's choice, 
 `clamp(3 × 2·atan(r/d), 0.5°, current)`; star rows (`starCatalog`) half the current, min 10°, never wider.
 **The body you stand on, or the Sun-system body hosting the spot, falls back to `requestFocus` (fly).**
 
-- [ ] Tests: `a pick while standing keeps focus and the sky frame`; `M31 frames at about 3 × its diameter`;
+- [x] Tests: `a pick while standing keeps focus and the sky frame`; `M31 frames at about 3 × its diameter`;
       `a star halves the lens down to 10°`; `a target below the horizon faces its rise azimuth`;
       `searching the host body flies` (Review focus 1).
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 10: Palette rows
 

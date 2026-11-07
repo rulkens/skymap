@@ -49,6 +49,7 @@ describe('sunAltitudeAt', () => {
       Math.sin(spot.latRad),
     ];
     const expected = Math.asin(dot3(d, radial));
-    expect(sunAltitudeAt(spot, jd)).toBeCloseTo(expected, 6);
+    // From the centre, not the ground: the Sun's parallax at Mars is ~1.3e-5 rad.
+    expect(sunAltitudeAt(spot, jd)).toBeCloseTo(expected, 4);
   });
 });

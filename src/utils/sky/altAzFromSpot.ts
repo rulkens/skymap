@@ -1,9 +1,8 @@
 /**
  * altAzFromSpot — where a world-frame target stands in a spot's sky: compass
- * azimuth (0 = north, π/2 = east, the convention of `refAzimuthOf`) and altitude.
- * The direction is taken from the host's centre, not the spot: the surface
- * offset is ~1e-4 rad even for the Sun, and a body target is never close enough
- * for it to matter at sky-readout precision.
+ * azimuth (0 = north, π/2 = east, the convention of `refAzimuthOf`) and altitude,
+ * seen from the spot on the datum sphere: from the host's centre the Moon would sit
+ * up to a degree off (two of its diameters), and an Earth satellite anywhere.
  */
 
 import type { SkySpot } from '../../@types/camera/pose/SkySpot';
@@ -12,6 +11,7 @@ import type { PositionedId } from '../../@types/scene/PositionedId';
 import { siteEyeFrame } from '../../services/engine/camera/arms/utils/siteEyeFrame';
 import { deriveBodyStates } from '../../services/engine/frame/deriveBodyStates';
 import { skySpotRadial } from '../geo/skySpotRadial';
+import { spotWorldMpc } from './spotWorldMpc';
 import { dot3 } from '../math/dot3';
 import { normalize3 } from '../math/normalize3';
 
@@ -22,10 +22,11 @@ export function altAzFromSpot(
 ): { azimuthRad: number; altitudeRad: number } {
   const host = deriveBodyStates(simDays).get(spot.body as unknown as PositionedId);
   if (host === undefined) throw new Error(`altAzFromSpot: no state for '${spot.body}'`);
+  const eye = spotWorldMpc(spot, host);
   const w = normalize3([
-    targetWorldMpc[0] - host.positionMpc[0],
-    targetWorldMpc[1] - host.positionMpc[1],
-    targetWorldMpc[2] - host.positionMpc[2],
+    targetWorldMpc[0] - eye[0],
+    targetWorldMpc[1] - eye[1],
+    targetWorldMpc[2] - eye[2],
   ]);
   // Rᵀ·w: the world direction in the host's body-fixed axes (R is local → world).
   const m = host.orientation;
