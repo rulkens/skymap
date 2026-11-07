@@ -3,7 +3,7 @@ import type { FocusSubject } from './FocusSubject';
 import type { FocusFrame } from './FocusFrame';
 
 /**
- * StructureFocusSubsystem — owns focus mode: when a receding row (`RecedingFocusRow`) is focused,
+ * RecedingFocusSubsystem — owns focus mode: when a receding row (`RecedingFocusRow`) is focused,
  * entries with `recession` dim over ~400 ms, and its sphere dims everything outside it (all of it,
  * for a stream). Every receding kind shares one blend; the sphere fades on a ramp of its own,
  * through 0 when the focus moves to a different sphere.
@@ -24,8 +24,8 @@ import type { FocusFrame } from './FocusFrame';
  * — it only supplies center, radius, and the smoothstep blend. (The pure
  * `structureMembership` fn is the CPU count for the InfoCard row.)
  */
-export type StructureFocusSubsystem = {
-  readonly id: 'structureFocus';
+export type RecedingFocusSubsystem = {
+  readonly id: 'recedingFocus';
 
   /**
    * Per-frame state sync. Diffs the subject's ref against the currently active one:

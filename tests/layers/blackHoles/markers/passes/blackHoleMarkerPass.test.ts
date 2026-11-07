@@ -13,7 +13,7 @@ import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../../src/data/sel
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import { RECEDE_ALL_FOCUS_SPHERE } from '../../../../../src/data/selection/recedeAllFocusSphere';
-import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/structureFocusSubsystem';
+import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/recedingFocusSubsystem';
 import { FOCUS_DIM_FLOOR } from '../../../../../src/data/focusDimFloor';
 import type { FocusUniformsValue } from '../../../../../src/@types/rendering/FocusUniformsValue';
 import type { BlackHolesRuntime } from '../../../../../src/layers/blackHoles/@types/BlackHolesRuntime';

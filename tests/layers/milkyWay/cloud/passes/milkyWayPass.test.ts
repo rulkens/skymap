@@ -17,7 +17,7 @@ import {
 import { MILKY_WAY_RADIUS_MPC } from '../../../../../src/data/milkyWay/milkyWayRadiusMpc';
 import { MILKY_WAY_CENTER_WORLD } from '../../../../../src/data/milkyWay/galacticCenter';
 import { RECEDE_ALL_FOCUS_SPHERE } from '../../../../../src/data/selection/recedeAllFocusSphere';
-import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/structureFocusSubsystem';
+import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/recedingFocusSubsystem';
 import type { FocusUniformsValue } from '../../../../../src/@types/rendering/FocusUniformsValue';
 
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';

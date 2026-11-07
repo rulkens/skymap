@@ -37,7 +37,7 @@ import { makeBodyItems } from '../../../../fixtures/makeBodyItems';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
-import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/structureFocusSubsystem';
+import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/recedingFocusSubsystem';
 import type { FocusUniformsValue } from '../../../../../src/@types/rendering/FocusUniformsValue';
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';

@@ -3,7 +3,7 @@
  * inputs and vote awake for `NODE_FADE_MS` after they last changed.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { ZERO_FOCUS } from '../../../src/services/engine/subsystems/structureFocusSubsystem';
+import { ZERO_FOCUS } from '../../../src/services/engine/subsystems/recedingFocusSubsystem';
 
 import { planOctreeChunks } from '../../../src/utils/octree/planOctreeChunks';
 import { starCatalogPlanner } from '../../../src/layers/starCatalog/frame';

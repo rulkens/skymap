@@ -1,4 +1,4 @@
-import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/structureFocusSubsystem';
+import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/recedingFocusSubsystem';
 import { describe, expect, it, vi } from 'vitest';
 import { mat4 } from 'wgpu-matrix';
 import { produceMilkyWayLabel as produceMilkyWayLabelFor } from '../../../../../src/layers/milkyWay/card/present/produceMilkyWayLabel';

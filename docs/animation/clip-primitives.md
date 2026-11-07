@@ -418,7 +418,7 @@ handed value = fade(FadeRegistry)  ×  recession(entry, focus blend)  ×  clip(c
   label entry with `of` also takes its thing's clip, so `fade(['constellations'], 0, 2)`
   dims the names with the lines.
 
-> **Galaxy points carry one extra factor, off this product.** Under structure focus
+> **Galaxy points carry one extra factor, off this product.** Under receding focus
 > the points shader multiplies each galaxy's alpha by a per-vertex **isolation**
 > factor: non-members of the focused structure ramp to 0.08, members stay 1.0. It is
 > geometric (distance from the structure centre vs its radius), driven by the same

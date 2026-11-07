@@ -633,7 +633,7 @@ samples a star type — giant, turnoff, BHB — with fractions and per-type B−
 stream crossing a brighter one (Cetus-Palca over Cetus) reads as the wrong place. Owner ruled: other streams
 and the rest of the scene recede, like structures, and approved a core change to the shared focus ramp.
 
-**Mechanism today (traced):** `runFrame.ts:205-216` feeds `structureFocus.update` only when the focus row is a
+**Mechanism today (traced):** `runFrame.ts:205-216` feeds `recedingFocus.update` only when the focus row is a
 `structure`; it publishes `snapshot.focus` (spatial sphere uniforms), `snapshot.focusBlend` (400 ms ramp) and
 `snapshot.focusPickId`. `emphasisOf(entry, snapshot, pickId?)` (`presentation/emphasisOf.ts`) turns
 `focusBlend` into a recede factor for entries with `recession`, exempting `pickId === focusPickId`; the 2D label
@@ -651,7 +651,7 @@ the focused stream is exempt per particle: a uniform carries the focused stream 
 keeps that index at full brightness while the others take the recede factor (stream index is already
 `attr.w`; the uniform block has a free `_p0` slot). Haze and streak both. Pick unchanged.
 
-**Files:** `src/services/engine/frame/runFrame.ts`, `src/services/engine/subsystems/structureFocusSubsystem.ts`,
+**Files:** `src/services/engine/frame/runFrame.ts`, `src/services/engine/subsystems/recedingFocusSubsystem.ts`,
 its type, `pickFrameContext.ts`, `src/layers/stellarStreams/visibility.ts`, both stream passes, the renderer +
 its type, `streams.wesl`. No Layer contract change (`recession` already exists).
 

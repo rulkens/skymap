@@ -13,7 +13,7 @@ import { STRONG_RECESSION } from '../../../../../src/data/strongRecession';
 import { milkyWayPickId } from '../../../../../src/layers/milkyWay/picking/present/milkyWayPickId';
 import { FOCUS_DIM_FLOOR } from '../../../../../src/data/focusDimFloor';
 import { RECEDE_ALL_FOCUS_SPHERE } from '../../../../../src/data/selection/recedeAllFocusSphere';
-import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/structureFocusSubsystem';
+import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/recedingFocusSubsystem';
 import type { FocusUniformsValue } from '../../../../../src/@types/rendering/FocusUniformsValue';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';

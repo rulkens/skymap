@@ -88,12 +88,12 @@ export type ReadyFrameContext = {
    * (`ctx.snapshot.renderTargets.viewOf('cosmic-web-density')`) never reach back into `state`.
    */
   renderTargets: RenderTargets;
-  /** The focus sphere (structureFocus.produceFocus, ticked once/frame); blend 0 if none. */
+  /** The focus sphere (recedingFocus.produceFocus, ticked once/frame); blend 0 if none. */
   focus: FocusUniformsValue;
   /** Focus recession blend 0→1, for any receding subject, from the same tick. */
   focusBlend: number;
   /**
-   * The subject `focusBlend` is about (structureFocus's latched one, so it outlasts
+   * The subject `focusBlend` is about (recedingFocus's latched one, so it outlasts
    * `selection.focus` through the fade-out), encoded as the pick word its own geometry
    * and label stamp; null at blend 0. Set with the blend, from the same tick.
    * `emphasisOf` compares records against it.

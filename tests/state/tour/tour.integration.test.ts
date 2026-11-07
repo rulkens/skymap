@@ -35,7 +35,7 @@ import type { SlabView } from '../../../src/@types/engine/frame/SlabView';
 import { makeGalaxyCatalogItems } from '../../fixtures/makeGalaxyCatalogItems';
 import { galaxyRowRuntime } from '../../support/layerPickCodes';
 import { milkyWayPickCode } from '../../support/layerPickCodes';
-import { ZERO_FOCUS } from '../../../src/services/engine/subsystems/structureFocusSubsystem';
+import { ZERO_FOCUS } from '../../../src/services/engine/subsystems/recedingFocusSubsystem';
 
 // `clipOpacityOf` answers `factor` for every call. Typed rather than bare
 // `vi.fn()`, which fails tsc.
