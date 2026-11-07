@@ -60,7 +60,7 @@ function StellarStreamDetailCard({
         {target.stellarMass && (
           <CardRow
             label="Stellar mass"
-            value={`${target.stellarMass.derived ? '≈ ' : ''}${formatScientific(target.stellarMass.massMsun)} M☉ (${target.stellarMass.ref})`}
+            value={`${target.stellarMass.partial ? '≥ ' : ''}${formatScientific(target.stellarMass.massMsun)} M☉ (${target.stellarMass.ref})`}
           />
         )}
       </div>

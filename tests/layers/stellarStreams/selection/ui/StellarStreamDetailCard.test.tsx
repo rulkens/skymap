@@ -41,12 +41,12 @@ describe('StellarStreamDetailCard', () => {
     expect(screen.queryByText('Metallicity')).toBeNull();
   });
 
-  it('a published stellar mass gets a Stellar mass row, "≈" when we derived it; none gets no row', () => {
+  it('a published stellar mass gets a Stellar mass row, "≥" when partial; none gets no row', () => {
     renderCard(GD_1);
-    expect(screen.getByText('2 × 10⁴ M☉ (Koposov+ 2010)')).toBeTruthy();
+    expect(screen.getByText('≥ 2 × 10⁴ M☉ (Koposov+ 2010)')).toBeTruthy();
     cleanup();
-    renderCard({ ...GD_1, stellarMass: { massMsun: 1.4e3, ref: 'X+ 2020', derived: true } });
-    expect(screen.getByText('≈ 1.4 × 10³ M☉ (X+ 2020)')).toBeTruthy();
+    renderCard({ ...GD_1, stellarMass: { massMsun: 1.4e3, ref: 'X+ 2020', partial: false } });
+    expect(screen.getByText('1.4 × 10³ M☉ (X+ 2020)')).toBeTruthy();
     cleanup();
     renderCard(SAGITTARIUS);
     expect(screen.queryByText('Stellar mass')).toBeNull();

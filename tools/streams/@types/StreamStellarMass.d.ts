@@ -2,6 +2,6 @@
 export type StreamStellarMass = {
   readonly massMsun: number;
   readonly ref: string;
-  /** Converted by us from a published luminosity at a cited mass-to-light ratio; the card prefixes "≈". */
-  readonly derived: boolean;
+  /** Measured over only part of the stream, so the whole holds more; the card prefixes "≥". */
+  readonly partial: boolean;
 };

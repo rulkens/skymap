@@ -30,7 +30,7 @@ export const GD_1: StellarStreamMeta = {
   particleCount: 700,
   colourT: 0.2,
   metallicity: null,
-  stellarMass: { massMsun: 2e4, ref: 'Koposov+ 2010', derived: false },
+  stellarMass: { massMsun: 2e4, ref: 'Koposov+ 2010', partial: true },
   anchorMpc: [-0.004, 0.006, 0.005],
 };
 

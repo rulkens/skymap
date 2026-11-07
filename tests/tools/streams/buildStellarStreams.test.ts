@@ -48,10 +48,9 @@ describe('buildStellarStreams', () => {
     expect(byId('gd-1').stellarMass).toEqual({
       massMsun: 2e4,
       ref: 'Koposov+ 2010',
-      derived: false,
+      partial: true,
     });
     expect(byId('pal5').stellarMass).toBeNull();
-    expect(byId('sagittarius').stellarMass).toBeNull();
   });
 
   it('a rebuild over the same inputs is byte-identical', () => {

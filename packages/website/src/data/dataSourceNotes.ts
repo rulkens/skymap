@@ -655,7 +655,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
   },
   shipp2018: {
     description:
-      'The stellar masses of eight streams seen in the Dark Energy Survey, from Shipp and colleagues, 2018.',
+      'The stellar masses of seven streams seen in the Dark Energy Survey, from Shipp and colleagues, 2018.',
   },
   koposov2010: {
     description:

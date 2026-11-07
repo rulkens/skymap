@@ -1008,11 +1008,11 @@ unclear, and no entry here reads them as a licence.
 
 <!-- attribution: id=shipp2018 -->
 
-- **What:** The stellar masses of eight streams, from the paper's table of
+- **What:** The stellar masses of seven streams, from the paper's table of
   derived parameters.
 - **By:** Shipp et al. 2018, "Stellar Streams Discovered in the Dark Energy
   Survey", ApJ 862, 114.
-- **Licence:** A published paper; eight of its numbers used.
+- **Licence:** A published paper; seven of its numbers used.
 - **Use:** Reference only
 - **Attribution:** Cite the paper, doi:10.3847/1538-4357/aacdab.
 - **Upstream:** <https://arxiv.org/abs/1801.03097>
@@ -1020,7 +1020,7 @@ unclear, and no entry here reads them as a licence.
   `tools/streams/data/streamStellarMass.constants.ts` → the stream card's
   Stellar mass row.
 - **Modified:** No values changed. Each is the mass inside the DES
-  footprint, not the whole stream.
+  footprint; the four streams that run past it show as lower bounds.
 - **Checked:** 2026-11-07: <https://arxiv.org/e-print/1801.03097> (the
   source's table "Derived parameters of stellar streams").
 - **Not verified:** the journal's terms.

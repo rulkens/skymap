@@ -41,12 +41,12 @@ across reruns over the same inputs. On 2026-11-07 it wrote 128,419 particles in 
   (`bvToBpRp`) over `STREAM_BP_RP_RANGE`, and the shader tints it with the star catalogue's
   `starTint`, so stream stars and catalogue stars share one colour scale. The meta row carries
   `metallicity` (value and citation) only for measured values; a defaulted median is never shown.
-- **Stellar mass**: the meta row's `stellarMass` (M☉, citation, `derived`) comes from
+- **Stellar mass**: the meta row's `stellarMass` (M☉, citation, `partial`) comes from
   [`data/streamStellarMass.constants.ts`](data/streamStellarMass.constants.ts), one published value per
-  stream (14 of 83 on 2026-11-07), and the card shows it where present. Ranges and limits stay out,
-  so Sagittarius has none. `derived` marks a mass we converted from a published luminosity at a cited
-  mass-to-light ratio (the card prefixes "≈"); no row needs it yet. The build fails if a row names no
-  built stream.
+  stream (13 of 83 on 2026-11-07), and the card shows it where present. `partial` marks a mass
+  measured over only part of the stream (the card prefixes "≥"). Values resting on an assumed
+  mass-to-light range stay out, and Sagittarius has none. The build fails if a row names no built
+  stream.
 - **Frame**: heliocentric J2000 equatorial, Mpc, as everywhere in skymap.
 
 Tunables (particle budget, sizes, luminosities, seeds) live in
