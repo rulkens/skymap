@@ -378,7 +378,7 @@ fn bodyLight(uv: vec2<f32>) -> f32 {
 
 // The nearest recorded body along the ray.
 fn castPlateBodies(ray: vec3<f32>) -> BodyHit {
-  var best = BodyHit(1e30, 0.0, 0.0, 0.0, 0.0, false, false, false, 1e30, 0u);
+  var best = BodyHit(1e30, 0.0, 0.0, 0.0, 0.0, false, 0.0, false, 1e30, 0u);
   for (var i = 0u; i < min(plate.count, 4u); i++) {
     var h = castPlateBody(ray, plate.items[i]);
     if (h.t < best.t) {
@@ -615,7 +615,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
       if (hit.onRing) {
         // Paper, but for the ball's shadow, hatched ALONG the ring as concentric ellipses.
         let rhoPerUnit = length(vec2<f32>(ringRho(rayX, b), ringRho(rayY, b)) - hit.rho) * u.unit;
-        tone = select(0.0, 0.6, hit.ballShadow);
+        tone = 0.6 * hit.ballShadow;
         form = vec3<f32>(hit.rho * radius, along, rhoPerUnit * radius);
         lines = ringLines(hit.rho, rhoPerUnit, b.ringEdges, p, pxUnits);
       } else {

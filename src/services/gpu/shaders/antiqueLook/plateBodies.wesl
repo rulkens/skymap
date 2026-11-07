@@ -49,7 +49,7 @@ struct BodyHit {
   theta: f32, // arc from the subsolar point, radians
   rho: f32, // ring-plane radius of the ray, radii (0 without a ring)
   onRing: bool,
-  ballShadow: bool, // a ring point in the ball's shadow
+  ballShadow: f32, // a ring point in the ball's shadow: 0 outside, 1 past the umbra's soft edge
   ringShadow: bool, // a ball point in the ring's shadow
   edgeUnits: f32, // screen distance to the ball's outline, print units; 1e30 where the ring hides it
   index: u32, // the record's slot, set by the caller that ranks the hits
@@ -84,7 +84,7 @@ fn ringRho(ray: vec3<f32>, b: PlateBody) -> f32 {
 }
 
 fn castPlateBody(ray: vec3<f32>, b: PlateBody) -> BodyHit {
-  var h = BodyHit(1e30, 0.0, 0.0, 0.0, 0.0, false, false, false, 1e30, 0u);
+  var h = BodyHit(1e30, 0.0, 0.0, 0.0, 0.0, false, 0.0, false, 1e30, 0u);
   let c = b.centre.xyz;
   let l = b.sun.xyz;
   let e = b.ringEdges;
@@ -114,7 +114,9 @@ fn castPlateBody(ray: vec3<f32>, b: PlateBody) -> BodyHit {
   if (h.onRing) {
     let pr = tRing * ray - c;
     let pl = dot(pr, l);
-    h.ballShadow = pl < 0.0 && length(pr - pl * l) < 1.0;
+    // Hatching thins to nothing at the cylinder's edge, as burin lines taper, so the
+    // shadow is a soft-edged wedge, not a block with cut sides.
+    h.ballShadow = select(0.0, smoothstep(0.0, 0.4, 1.0 - length(pr - pl * l)), pl < 0.0);
   } else if (b.ring.w > 0.0) {
     let tt = -dot(n, b.ring.xyz) / dot(l, b.ring.xyz);
     let r = length(n + tt * l);
