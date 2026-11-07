@@ -42,10 +42,8 @@ export function skyLookFor(
     };
   }
   const fixed = distanceMpc > SKY_FIXED_BEYOND_MPC;
-  if (fixed) {
-    if (neverRises(declinationAt(spot.body, row.positionMpc, bodies), spot.latRad)) {
-      return { kind: 'belowHorizon', azimuthRad: now.azimuthRad, riseAt: null, neverRises: true };
-    }
+  if (fixed && neverRises(declinationAt(spot.body, row.positionMpc, bodies), spot.latRad)) {
+    return { kind: 'belowHorizon', azimuthRad: now.azimuthRad, riseAt: null, neverRises: true };
   }
   const poseId = fixed ? null : (selectionDriver(row)?.poseId ?? null);
   const targetAt = (at: ReadonlyMap<PositionedId, BodyState>) =>

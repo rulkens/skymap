@@ -16,7 +16,6 @@ export const skyViewReadoutRow: FrameReadoutRow = {
           spot: framed.frame.sky,
           azimuthRad: wrapRadPositive(roundToMultiple(framed.pose.azimuthRad, SKY_VIEW_STEP_RAD)),
           altitudeRad: roundToMultiple(framed.pose.altitudeRad, SKY_VIEW_STEP_RAD),
-          fovYRad: roundToMultiple(frame.fovYRad, SKY_VIEW_STEP_RAD),
         }
       : null;
     if (skyViewChanged(frame.lastSkyView, view)) dispatch(engineSkyViewReported(view));

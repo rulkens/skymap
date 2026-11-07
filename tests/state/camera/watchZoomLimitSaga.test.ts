@@ -60,9 +60,7 @@ describe('watchZoomLimitSaga', () => {
 
   it('Leave while standing with no takeover lifts off', () => {
     const store = build();
-    store.dispatch(
-      engineSkyViewReported({ spot: SPOT, azimuthRad: 0, altitudeRad: 0, fovYRad: 1 }),
-    );
+    store.dispatch(engineSkyViewReported({ spot: SPOT, azimuthRad: 0, altitudeRad: 0 }));
     store.dispatch(exitTakeover({ restore: true }));
     expect(store.getState().input.pending).toEqual([{ kind: 'liftOff' }]);
   });
@@ -70,9 +68,7 @@ describe('watchZoomLimitSaga', () => {
   it('a plain exit, or Leave while not standing, queues nothing', () => {
     const store = build();
     store.dispatch(exitTakeover({ restore: true }));
-    store.dispatch(
-      engineSkyViewReported({ spot: SPOT, azimuthRad: 0, altitudeRad: 0, fovYRad: 1 }),
-    );
+    store.dispatch(engineSkyViewReported({ spot: SPOT, azimuthRad: 0, altitudeRad: 0 }));
     store.dispatch(exitTakeover());
     expect(store.getState().input.pending).toEqual([]);
   });

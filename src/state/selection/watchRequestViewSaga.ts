@@ -19,14 +19,12 @@ import { selectTimeState } from '../time/selectors';
 import { liveCameraRuntimeSaga } from '../navigation/liveCameraRuntimeSaga';
 import { skyLookFor } from '../sky/skyLookFor';
 import { skyBelowHorizonSet } from '../sky/skySlice';
+import { skyArmCtxSaga } from '../sky/skyArmCtxSaga';
 import { all, tween } from '../../services/engine/animation/effectHelpers';
-import { deriveBodyStates } from '../../services/engine/frame/deriveBodyStates';
 import { rowFor } from '../../services/engine/camera/arms/rowFor';
-import { datumOnlyTerrainHeight } from '../../utils/camera/terrain/datumOnlyTerrainHeight';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { isUnderfoot } from '../../utils/sky/isUnderfoot';
 import { wrapRad } from '../../utils/math/wrapRad';
-import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { SKY_BELOW_HORIZON_LOOK_RAD } from '../../data/sky/skyBelowHorizonLookRad';
 import { SKY_LOOK_SEC } from '../../data/sky/skyLookSec';
 import type { Effect } from '../../@types/animation/Effect';
@@ -71,14 +69,8 @@ export function* watchRequestViewSaga() {
     );
 
     const orientation = yield* select(selectOrientation);
-    const basis = ORIENTATION_FRAMES[orientation];
     const frame = { sky: view.spot };
-    const ctx = {
-      bodies: deriveBodyStates(simDays),
-      poseBasis: basis,
-      upBasis: basis,
-      terrainHeightAt: datumOnlyTerrainHeight,
-    };
+    const ctx = yield* call(skyArmCtxSaga, 0);
     // The clip's yaw leg opens on the start pose read in the sky frame, exactly as here, and
     // lerps plainly, so the shortest turn is measured from that same reading.
     const fromYaw = rowFor(frame).channels.encode(runtime.from, frame, ctx).yaw;

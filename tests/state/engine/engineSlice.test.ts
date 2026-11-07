@@ -91,7 +91,6 @@ describe('engineSlice — engineSkyViewReported', () => {
     spot: { body: 'earth', lonRad: 0.2, latRad: 0.9 },
     azimuthRad: 1,
     altitudeRad: 0.3,
-    fovYRad: 1,
   };
 
   it('returns the same state reference for an equal view in a fresh record', () => {

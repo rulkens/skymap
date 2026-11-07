@@ -206,7 +206,7 @@ review: yes
 
 ```ts
 type SkyEntryFacts = { readonly spot: SkySpot | null; readonly pointLocalM: Vec3 | null; readonly altitudeM: number };
-type SkyView = { readonly spot: SkySpot; readonly azimuthRad: number; readonly altitudeRad: number; readonly fovYRad: number } | null;
+type SkyView = { readonly spot: SkySpot; readonly azimuthRad: number; readonly altitudeRad: number } | null;
 selectSkyEntry(state: RootState): SkyEntryFacts['spot'] // non-null only when the gate holds
 ```
 

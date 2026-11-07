@@ -123,7 +123,6 @@ function stand(store: ReturnType<typeof build>['store']) {
       spot: COPENHAGEN,
       azimuthRad: START_AZ,
       altitudeRad: 0.3,
-      fovYRad: LENS,
     }),
   );
 }

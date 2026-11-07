@@ -5,8 +5,7 @@
  */
 
 import { CATEGORY_DISPLAY_INFO } from '../../data/structure/categoryDisplayInfo';
-import { latLonLabel } from '../geo/latLonLabel';
-import { radToDeg } from '../math/radToDeg';
+import { spotLatLonLabel } from '../places/spotLatLonLabel';
 import type { PaletteRowLabel } from '../../@types/palette/PaletteRowLabel';
 import type { ScoredRow } from '../../@types/palette/ScoredRow';
 
@@ -30,10 +29,7 @@ export function paletteRowLabel(row: ScoredRow): PaletteRowLabel {
       return { name: row.entry.names[0] ?? UNNAMED, kind: 'Object' };
     case 'sky': {
       const { spot, place } = row;
-      const where =
-        spot === 'here'
-          ? 'here'
-          : (place?.names[0] ?? latLonLabel(radToDeg(spot.lonRad), radToDeg(spot.latRad)));
+      const where = spot === 'here' ? 'here' : (place?.names[0] ?? spotLatLonLabel(spot));
       return { name: `Sky from ${where}`, kind: 'Sky' };
     }
   }
