@@ -81,7 +81,9 @@ function makeState(): EngineState {
     selectionKindRows: [],
     // The seed tables `sceneOccluderBodies` reads for the captions' depth gate.
     gpu: {},
+    viewRig: 'mono',
     settings: {
+      antique: { enabled: false },
       labels: { focusedOnly: false },
       bodies: { items: makeBodyItems() },
       starCatalogs: {

@@ -131,6 +131,7 @@ describe('labelsNearPass.enabled', () => {
       subsystems: {},
       selection: { hover: null, select: null },
       selectionKindRows: [],
+      settings: { antique: { enabled: false } },
     } as unknown as EngineState;
     const layerState = makeState(labelRenderer, lineRenderer, dir);
 

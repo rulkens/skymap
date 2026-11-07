@@ -114,6 +114,7 @@ import type { Label2DProjection } from '../../../@types/rendering/Label2DProject
 import type { Label2DProjected } from '../../../@types/rendering/Label2DProjected';
 import type { ScreenRectPx } from '../../../@types/rendering/ScreenRectPx';
 import type { Vec2 } from '../../../@types/math/Vec2';
+import type { LabelName } from '../../../@types/animation/LabelName';
 import { projectLabels } from '../../../utils/labels/projectLabels';
 import { smoothstep } from '../../../utils/math/smoothstep';
 import {
@@ -130,6 +131,9 @@ import { proposedLiftPx } from '../../../utils/labels/proposedLiftPx';
 import { whitenColor } from '../../../utils/labels/whitenColor';
 import { encodeSelectionPick } from '../../../utils/selection/encodeSelectionPick';
 import { visibilityEntryOf } from '../../../utils/visibility/visibilityEntryOf';
+import { antiqueLookOn } from '../../../utils/render/antiqueLookOn';
+import { antiqueLabel } from '../../../utils/labels/antiqueLabel';
+import { ANTIQUE_LABEL_RULES } from '../../../data/labels/antiqueLabelRules';
 import { emphasisOf } from '../presentation/emphasisOf';
 import {
   HOVERED_LABEL_WHITEN,
@@ -777,6 +781,22 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     });
   }
 
+  /** The antique look's names (`antiqueLabel`); the focused or selected subject keeps one. */
+  function toAntique(
+    labels: readonly Label2D[],
+    labelName: LabelName | undefined,
+    keptPicks: readonly (number | null)[],
+  ): Label2D[] {
+    const rule = labelName === undefined ? undefined : ANTIQUE_LABEL_RULES[labelName];
+    const out: Label2D[] = [];
+    for (const l of labels) {
+      const kept = l.subjectId !== undefined && keptPicks.includes(l.subjectId);
+      const shown = antiqueLabel(l, rule, kept);
+      if (shown !== null) out.push(shown);
+    }
+    return out;
+  }
+
   function runFrame(state: EngineState, ctx: FrameView): boolean {
     if (!labelRenderer || !lineRenderer) return false;
 
@@ -788,15 +808,23 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     let anyAwake = false;
     // At blend 0 every emphasis is exactly 1, so the resting frame skips the lookups.
     const atRest = ctx.snapshot.focusBlend === 0;
+    const antique = antiqueLookOn(state);
+    const keptPicks = antique
+      ? [
+          encodeSelectionPick(state.selectionKindRows, state.selection.focus),
+          encodeSelectionPick(state.selectionKindRows, state.selection.select),
+        ]
+      : [];
     for (const p of producers) {
       const out = p.produceLabels(state, ctx);
       if (out.awake) anyAwake = true;
+      const produced = antique ? toAntique(out.labels, p.label, keptPicks) : out.labels;
       if (p.label === undefined || atRest) {
-        for (const l of out.labels) mergedLabels.push(l);
+        for (const l of produced) mergedLabels.push(l);
         continue;
       }
       const entry = visibilityEntryOf(state.visibilityEntries, `label:${p.label}`);
-      for (const l of out.labels) {
+      for (const l of produced) {
         const emphasis = emphasisOf(entry, ctx.snapshot, l.subjectId);
         mergedLabels.push(emphasis === 1 ? l : { ...l, fadeAlpha: (l.fadeAlpha ?? 1) * emphasis });
       }
@@ -828,9 +856,12 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
 
     // Flush contract: one MarkerLine per surviving leader-carrying label,
     // derived from the FINAL (post-declutter, post-envelope, post-lift) set.
-    const lines = synthesizeLines(labels);
+    // An engraved name has no leader. The NEAR0 leaders draw inside `labels-near`,
+    // so hiding the marker-lines pass alone would leave them standing.
+    const lines = antique ? [] : synthesizeLines(labels);
 
-    const sig = signatureOf(labels);
+    // A period name keeps its label's id, so the look toggle alone must re-flush.
+    const sig = (antique ? 'antique:' : '') + signatureOf(labels);
     if (sig !== prevSignature) {
       labelRenderer.setLabels(labels);
       flushedLabels = labels;

@@ -27,6 +27,8 @@ function makeState(): EngineState {
     subsystems: { fades: { fadeTo: vi.fn() } },
     selection: { hover: null, select: null },
     selectionKindRows: [],
+    settings: { antique: { enabled: false } },
+    viewRig: 'mono',
   } as unknown as EngineState;
 }
 
@@ -1185,5 +1187,33 @@ describe('label2DDirector', () => {
       expect(measure).not.toHaveBeenCalled();
       expect(labelStub.setLabels).toHaveBeenLastCalledWith([constellationLike]);
     });
+  });
+
+  it('the antique look renames, drops leaders, and re-flushes on the toggle alone', () => {
+    const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
+    const labelStub = makeLabelStub();
+    const lineStub = makeLineStub();
+    dir.attachRenderers(labelStub as never, lineStub as never, defaultMeasure);
+    const sun: Label2D = {
+      ...SAMPLE_LABEL,
+      id: 'sceneBody-sun',
+      text: 'Sun',
+      leader: SAMPLE_LEADER,
+    };
+    dir.registerProducer({
+      id: 'stars',
+      label: 'starCatalog',
+      produceLabels: () => ({ labels: [sun], awake: false }),
+    });
+    const antiqueState = (enabled: boolean) =>
+      ({ ...makeState(), settings: { antique: { enabled } } }) as unknown as EngineState;
+
+    const ctx = { ...makeCtx(0), snapshot: { nowMs: 0, focusBlend: 0 } } as unknown as FrameView;
+
+    dir.runFrame(antiqueState(false), ctx);
+    dir.runFrame(antiqueState(true), ctx);
+
+    expect(flushedLabels(labelStub).map((f) => f.map((l) => l.text))).toEqual([['Sun'], ['Sol']]);
+    expect(lineStub.setLines.mock.calls.map((c) => (c[0] as unknown[]).length)).toEqual([1, 0]);
   });
 });
