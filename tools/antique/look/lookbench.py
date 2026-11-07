@@ -39,6 +39,13 @@ def views(selected):
     return picked
 
 
+def shot_names(folder, selected):
+    """Views already shot into a set, one-offs included: sheets read the folder, not views.json."""
+    if selected:
+        return [item.partition('=')[0] for item in selected.split(';')]
+    return sorted({p.name.rsplit('-', 1)[0] for p in (OUT / folder).glob('*-antique.png')})
+
+
 def shoot(args):
     folder = OUT / args.set
     folder.mkdir(parents=True, exist_ok=True)
@@ -53,7 +60,12 @@ def shoot(args):
             if kind == 'plain':
                 cmd.append('--hide-labels')
             result = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True)
-            print(out if result.returncode == 0 else f'FAILED {name} {kind}: {result.stderr[-400:]}')
+            if result.returncode == 0:
+                print(out)
+                continue
+            # A shot that never settled still writes what was on screen: keep it out of sheets.
+            out.unlink(missing_ok=True)
+            print(f'FAILED {name} {kind}: {result.stderr[-400:]}')
 
 
 def side_by_side(images, labels, out):
@@ -81,7 +93,7 @@ def load(folder, name, kind, width=None):
 
 
 def sheet(args):
-    for name in views(args.views):
+    for name in shot_names(args.set, args.views):
         pair = [load(args.set, name, 'plain', 1200), load(args.set, name, 'antique', 1200)]
         if None in pair:
             continue
@@ -91,7 +103,7 @@ def sheet(args):
 
 def compare(args):
     folder = OUT / args.after
-    for name in views(args.views):
+    for name in shot_names(args.after, args.views):
         pair = [load(args.before, name, 'antique', 1200), load(args.after, name, 'antique', 1200)]
         if None in pair:
             continue
