@@ -21,6 +21,6 @@ export const ANTIQUE_MOON_PLACE_REVEAL = {
   floorDrop: 0.5,
   gapPx: 2,
   // Crater diameter (px) over which its italic grows from its lettering's px to `px`.
-  craterTypeGrow: { fromPx: 140, toPx: 320, px: 15 },
+  craterTypeGrow: { fromPx: 120, toPx: 320, px: 18 },
   lineEm: 1.15,
 } as const;

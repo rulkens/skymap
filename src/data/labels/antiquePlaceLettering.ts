@@ -20,7 +20,7 @@ const MOON_LETTERING_OF_KIND = {
   mare: { cut: 'spacedItalic', px: 13, centred: true, trackingEm: 0.15 },
   terra: { cut: 'capitals', px: 12, centred: true, trackingEm: 0.5 },
   // Not centred: its producer sets it on the floor, or right or left of the rim.
-  crater: { cut: 'italic', px: 12, centred: false },
+  crater: { cut: 'italic', px: 13, centred: false },
 } as const satisfies Record<string, AntiquePlaceLettering>;
 
 export const ANTIQUE_PLACE_LETTERING: Readonly<Record<string, AntiquePlaceLettering>> = {
