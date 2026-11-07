@@ -11,8 +11,7 @@ import { useAppSelector } from '../../store/hooks';
 import { selectScale, selectSkyView } from '../../state/engine/selectors';
 import { selectFovYRad } from '../../state/camera/selectors';
 import { useRecentlyChanged } from '../../hooks/useRecentlyChanged';
-import { fieldLabel } from '../../utils/sky/fieldLabel';
-import { spotLatLonLabel } from '../../utils/places/spotLatLonLabel';
+import { standingReadout } from '../../utils/sky/standingReadout';
 
 const SCALE_VISIBLE_MS = 2000;
 
@@ -20,8 +19,7 @@ function ScaleBracketContainer(): React.ReactElement {
   const scale = useAppSelector(selectScale);
   const view = useAppSelector(selectSkyView);
   const fovYRad = useAppSelector(selectFovYRad);
-  const standing =
-    view === null ? null : { field: fieldLabel(fovYRad), spot: spotLatLonLabel(view.spot) };
+  const standing = standingReadout(view, fovYRad);
   const changing = useRecentlyChanged(
     standing === null ? `${scale.label}|${scale.widthPx}` : standing.field,
     SCALE_VISIBLE_MS,

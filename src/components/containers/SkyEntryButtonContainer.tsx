@@ -11,8 +11,7 @@ import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectSkyEntry } from '../../state/sky/selectSkyEntry';
 import { enterSkyHere } from '../../state/sky/enterSkyHere';
 import { placeLabel } from '../../utils/places/placeLabel';
-import { latLonLabel } from '../../utils/geo/latLonLabel';
-import { radToDeg } from '../../utils/math/radToDeg';
+import { spotLatLonLabel } from '../../utils/places/spotLatLonLabel';
 
 export type SkyEntryButtonContainerProps = {
   readonly phone: boolean;
@@ -38,7 +37,7 @@ function SkyEntryButtonContainer({ phone }: SkyEntryButtonContainerProps): React
       {!phone && previewing && spot !== null && place !== null && (
         <SkyEntryPreview
           place={place.near ? place.text : null}
-          coordinates={latLonLabel(radToDeg(spot.lonRad), radToDeg(spot.latRad))}
+          coordinates={spotLatLonLabel(spot)}
         />
       )}
       <SkyEntryButton

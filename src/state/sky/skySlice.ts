@@ -9,8 +9,9 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import { enterSky } from './enterSky';
 import { engineSkyViewReported } from '../engine/engineSlice';
 import type { SkyBelowHorizon } from '../../@types/sky/SkyBelowHorizon';
+import type { SkySliceState } from '../../@types/store/SkySliceState';
 
-const initialState: { belowHorizon: SkyBelowHorizon | null } = { belowHorizon: null };
+const initialState: SkySliceState = { belowHorizon: null };
 
 const skySlice = createSlice({
   name: 'sky',

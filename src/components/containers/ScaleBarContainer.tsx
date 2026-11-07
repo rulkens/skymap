@@ -9,15 +9,13 @@ import ScaleBar from '../ScaleBar/ScaleBar';
 import { useAppSelector } from '../../store/hooks';
 import { selectScale, selectSkyView } from '../../state/engine/selectors';
 import { selectFovYRad } from '../../state/camera/selectors';
-import { fieldLabel } from '../../utils/sky/fieldLabel';
-import { spotLatLonLabel } from '../../utils/places/spotLatLonLabel';
+import { standingReadout } from '../../utils/sky/standingReadout';
 
 function ScaleBarContainer(): React.ReactElement {
   const scale = useAppSelector(selectScale);
   const view = useAppSelector(selectSkyView);
   const fovYRad = useAppSelector(selectFovYRad);
-  const standing =
-    view === null ? null : { field: fieldLabel(fovYRad), spot: spotLatLonLabel(view.spot) };
+  const standing = standingReadout(view, fovYRad);
   return <ScaleBar scale={scale} standing={standing} />;
 }
 

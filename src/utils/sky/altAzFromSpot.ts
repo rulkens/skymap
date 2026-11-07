@@ -11,6 +11,7 @@ import type { SkySpot } from '../../@types/camera/pose/SkySpot';
 import type { Vec3 } from '../../@types/math/Vec3';
 import type { PositionedId } from '../../@types/scene/PositionedId';
 import type { BodyState } from '../../@types/scene/BodyState';
+import type { AltAz } from '../../@types/sky/AltAz';
 import { siteEyeFrame } from '../../services/engine/camera/arms/utils/siteEyeFrame';
 import { skySpotRadial } from '../geo/skySpotRadial';
 import { spotWorldMpc } from './spotWorldMpc';
@@ -21,7 +22,7 @@ export function altAzFromSpot(
   spot: SkySpot,
   targetWorldMpc: Readonly<Vec3>,
   bodies: ReadonlyMap<PositionedId, BodyState>,
-): { azimuthRad: number; altitudeRad: number } {
+): AltAz {
   const host = bodies.get(spot.body as unknown as PositionedId);
   if (host === undefined) throw new Error(`altAzFromSpot: no state for '${spot.body}'`);
   const eye = spotWorldMpc(spot, host);

@@ -7,10 +7,11 @@
 import type { ReactNode } from 'react';
 import type { ScaleInfo } from '../../@types/engine/ScaleInfo';
 import styles from './ScaleBar.module.css';
+import type { StandingReadout } from '../../@types/sky/StandingReadout';
 
 export type ScaleBarProps = {
   readonly scale: ScaleInfo;
-  readonly standing: { readonly field: string; readonly spot: string } | null;
+  readonly standing: StandingReadout | null;
 };
 
 function ScaleBar({ scale, standing }: ScaleBarProps): ReactNode {

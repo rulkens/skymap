@@ -9,10 +9,11 @@ import type { ReactNode } from 'react';
 import cx from 'classnames';
 import type { ScaleInfo } from '../../@types/engine/ScaleInfo';
 import styles from './ScaleBracket.module.css';
+import type { StandingReadout } from '../../@types/sky/StandingReadout';
 
 export type ScaleBracketProps = {
   readonly scale: ScaleInfo;
-  readonly standing: { readonly field: string; readonly spot: string } | null;
+  readonly standing: StandingReadout | null;
   readonly visible: boolean;
 };
 
