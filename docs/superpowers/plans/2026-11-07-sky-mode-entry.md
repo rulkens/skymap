@@ -173,15 +173,15 @@ neverRises(declinationRad: number, latitudeRad: number): boolean
 Build alt/az from the spot's ENU frame and the body's orientation the way `skyPoseFromBodyArm.ts:17-27` and
 `sunDirLocal` do; sample then bisect for the two searches.
 
-- [ ] Test `sun altitude at Copenhagen matches a reference` — two instants (noon and 22:00 UTC, 2026-11-07),
+- [x] Test `sun altitude at Copenhagen matches a reference` — two instants (noon and 22:00 UTC, 2026-11-07),
       reference values taken from the NOAA solar calculator, cited in the test, tolerance 0.3°.
-- [ ] Test `next astronomical dark at Copenhagen matches a reference` (same source, tolerance 2 min) and
+- [x] Test `next astronomical dark at Copenhagen matches a reference` (same source, tolerance 2 min) and
       `returns null for a white night` (Copenhagen, 2026-06-21, −18°).
-- [ ] Test `neverRises` for the Southern Cross from 55.7° N (true) and Vega from 55.7° N (false).
-- [ ] Test `altAzFromSpot at lat 89.9° returns finite values` (Review focus 2).
-- [ ] Test `sun altitude on Mars uses Mars's rotation` — one Mars instant against a value derived in the test
+- [x] Test `neverRises` for the Southern Cross from 55.7° N (true) and Vega from 55.7° N (false).
+- [x] Test `altAzFromSpot at lat 89.9° returns finite values` (Review focus 2).
+- [x] Test `sun altitude on Mars uses Mars's rotation` — one Mars instant against a value derived in the test
       from the IAU rotation elements already in `orientationForBody`.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 6: Place names
 
