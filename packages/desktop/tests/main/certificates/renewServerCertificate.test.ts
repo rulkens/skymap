@@ -1,0 +1,54 @@
+import { mkdtempSync, rmSync } from 'node:fs';
+import type { Server } from 'node:https';
+import type { AddressInfo } from 'node:net';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { connect } from 'node:tls';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import type { PemPair } from '../../../src/main/certificates/@types/PemPair';
+import { ensureCa } from '../../../src/main/certificates/ensureCa';
+import { ensureLeaf } from '../../../src/main/certificates/ensureLeaf';
+import { renewServerCertificate } from '../../../src/main/certificates/renewServerCertificate';
+import { startAppServer } from '../../../src/main/server/startAppServer';
+
+// 127.0.0.1 stands in for a LAN address the machine gained after launch (a DHCP change).
+let root: string;
+let server: Server;
+let ca: PemPair;
+const certDir = () => join(root, 'certs');
+const before = { hostnames: ['localhost'], ips: [] };
+
+beforeAll(async () => {
+  root = mkdtempSync(join(tmpdir(), 'renew-'));
+  ca = await ensureCa(certDir());
+  const tls = await ensureLeaf(certDir(), ca, before);
+  server = await startAppServer({ dist: root, data: root, caPem: tls.ca }, tls, 0);
+});
+afterAll(async () => {
+  await new Promise((resolve) => server.close(resolve).closeAllConnections());
+  rmSync(root, { recursive: true, force: true });
+});
+
+/** Whether a client that trusts only the CA accepts the server by this IP. */
+function trustedAt(ip: string, ca: string): Promise<boolean> {
+  const { port } = server.address() as AddressInfo;
+  return new Promise((resolve) => {
+    const socket = connect({ host: ip, port, ca }, () => {
+      socket.destroy();
+      resolve(true);
+    });
+    socket.on('error', () => resolve(false));
+  });
+}
+
+describe('renewServerCertificate', () => {
+  it('serves a reissued leaf naming a new address without a restart', async () => {
+    const current = await ensureLeaf(certDir(), ca, before);
+    expect(await trustedAt('127.0.0.1', current.ca)).toBe(false);
+    const after = { ...before, ips: ['127.0.0.1'] };
+    const renewed = await renewServerCertificate(server, certDir(), ca, after, current);
+    expect(renewed.cert).not.toBe(current.cert);
+    expect(renewed.ca).toBe(current.ca);
+    expect(await trustedAt('127.0.0.1', current.ca)).toBe(true);
+  });
+});

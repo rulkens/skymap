@@ -198,7 +198,7 @@ These are user-facing rows only (developer tooling counts developers as its user
 
 | Item | What it would add for a user | Status | Evidence | Last activity | Blockers or open decisions |
 | --- | --- | --- | --- | --- | --- |
-| Desktop app that runs offline | A Mac and Windows app that downloads all data once and then runs with no network, for museum and kiosk machines. | designed, not started | `docs/superpowers/specs/2026-09-19-desktop-offline-app-design.md`; `docs/superpowers/plans/2026-09-19-desktop-offline-app.md` (0 of 36 steps ticked); no `packages/` folder exists; font prerequisite shipped in #768 | 2026-09-20 | Set aside by the owner on 2026-09-20 (session notes). Plan Task 1 must first show that the Cloudflare build does not have to install Electron. Unsigned builds only; no Linux, no auto-update. |
+| Desktop app that runs offline | A Mac and Windows app that downloads all data once and then runs with no network, for museum and kiosk machines. | designed, not started | `docs/superpowers/specs/completed/2026-09-19-desktop-offline-app-design.md`; `docs/superpowers/plans/completed/2026-09-19-desktop-offline-app.md` (0 of 36 steps ticked); no `packages/` folder exists; font prerequisite shipped in #768 | 2026-09-20 | Set aside by the owner on 2026-09-20 (session notes). Plan Task 1 must first show that the Cloudflare build does not have to install Electron. Unsigned builds only; no Linux, no auto-update. |
 
 ## Performance and devices
 

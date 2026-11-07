@@ -1,6 +1,6 @@
 # SDD ledger — plan: docs/superpowers/plans/2026-11-03-relay-issues-room-codes.md
 
-Spec: docs/superpowers/specs/2026-09-19-desktop-offline-app-design.md. Branch worktree-electron-kiosk-dome-app is the prep PR (owner, ask rdD3). Execution: lean SDD (owner).
+Spec: docs/superpowers/specs/completed/2026-09-19-desktop-offline-app-design.md. Branch worktree-electron-kiosk-dome-app is the prep PR (owner, ask rdD3). Execution: lean SDD (owner).
 Ruling: parallelism = this plan alone; the feature plan is written meanwhile, not executed — owner chose "now, while prep runs" — cost if wrong: none.
 Ruling: perf gate OFF — renderer untouched (standing desktop-app ruling) — cost if wrong: an unmeasured saga cost, negligible.
 

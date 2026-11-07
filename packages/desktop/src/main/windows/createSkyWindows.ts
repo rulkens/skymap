@@ -1,0 +1,154 @@
+import { app, screen } from 'electron';
+import type { BrowserWindow, Display, Rectangle } from 'electron';
+import type { DisplayInfo } from '../../@types/DisplayInfo';
+import type { Overlay } from '../sky/@types/Overlay';
+import type { SkyWindows } from './@types/SkyWindows';
+import type { SkyWindowsDeps } from './@types/SkyWindowsDeps';
+import { SKY_WINDOWED_CHANNEL } from '../../data/skyWindowedChannel';
+import { fillDisplay } from './fillDisplay';
+import { isControlKey } from './utils/isControlKey';
+import { isFullScreenKey } from './utils/isFullScreenKey';
+import { listDisplays } from './utils/listDisplays';
+import { openSkyWindow } from './openSkyWindow';
+import { placeWindows } from './utils/placeWindows';
+import { setFullScreen as setFull } from './utils/setFullScreen';
+import { showWindowButtons } from './utils/showWindowButtons';
+import { windowBounds } from './utils/windowBounds';
+import { showTestGrid } from '../sky/showTestGrid';
+
+/**
+ * Keeps the one sky window on the display placeWindows picks, with the control window on another
+ * (or floating above the sky on a single screen), and holds the test grid laid over it. A sky taken
+ * out of full screen stays a window until put back: display changes leave it where it is.
+ */
+export function createSkyWindows(deps: SkyWindowsDeps): SkyWindows {
+  const {
+    control,
+    windowed,
+    mayClose,
+    setup,
+    onClosed,
+    onFullScreen,
+    left,
+    remember,
+    showControl,
+  } = deps;
+  let sky: BrowserWindow | null = null;
+  // A launch, and a sky reopened after a crash, come back as the sky was left (owner ruling).
+  let full = !windowed && left.full;
+  let lastBounds = left.bounds;
+  let saving: ReturnType<typeof setTimeout> | undefined;
+  // Moves and resizes come in bursts (a drag polls every 16 ms); the file is written once it settles.
+  const save = (): void => {
+    clearTimeout(saving);
+    saving = setTimeout(() => remember({ full, bounds: lastBounds }), 500);
+  };
+  const workAreas = (): Rectangle[] => screen.getAllDisplays().map((d) => d.workArea);
+  let grid: Overlay | null = null;
+  const current = (): BrowserWindow | null => (sky !== null && !sky.isDestroyed() ? sky : null);
+  // The list can change between two reads, so the primary stands in for a display just removed.
+  const displayOf = (info: DisplayInfo): Display =>
+    screen.getAllDisplays().find((d) => d.id === info.id) ?? screen.getPrimaryDisplay();
+  // A --windowed dev run's sky has its frame; only a show's sky gets the drag strip.
+  const tellSky = (win: BrowserWindow): void =>
+    win.webContents.send(SKY_WINDOWED_CHANNEL, !windowed && !full);
+  const fills = (win: BrowserWindow, b: Rectangle): boolean => {
+    const a = win.getBounds();
+    return a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
+  };
+
+  const place = (): ReturnType<SkyWindows['place']> => {
+    const placement = placeWindows(setup().display, listDisplays());
+    if (placement === null) return null;
+    const open = current();
+    const bounds = displayOf(placement.sky).bounds;
+    // A work-area change also lands here; refilling a sky already in place makes it jump.
+    if (open && full && !fills(open, bounds)) fillDisplay(open, bounds);
+    control.setAlwaysOnTop(placement.control === null && full, 'screen-saver');
+    // Moved only when it is not on its display: a window the operator placed stays where it is.
+    const home = displayOf(placement.control ?? placement.sky);
+    if (screen.getDisplayMatching(control.getBounds()).id !== home.id) {
+      const { x, y, width, height } = home.workArea;
+      const [w = 0, h = 0] = control.getSize();
+      control.setPosition(Math.round(x + (width - w) / 2), Math.round(y + (height - h) / 2));
+    }
+    return placement;
+  };
+
+  const open = (): BrowserWindow => {
+    const existing = current();
+    if (existing) return existing;
+    const at = placeWindows(setup().display, listDisplays())?.sky;
+    const display = at ? displayOf(at) : screen.getPrimaryDisplay();
+    const asWindow =
+      windowed || full ? null : windowBounds(lastBounds, workAreas(), display.workArea);
+    const win = openSkyWindow(display, windowed, asWindow);
+    win.on('closed', onClosed);
+    const track = (): void => {
+      if (full || windowed || win.isDestroyed()) return;
+      lastBounds = win.getBounds();
+      save();
+    };
+    win.on('move', track);
+    win.on('resize', track);
+    win.webContents.on('before-input-event', (event, input) => {
+      if (isControlKey(input, process.platform)) {
+        event.preventDefault();
+        showControl();
+        return;
+      }
+      if (windowed || !isFullScreenKey(input, process.platform)) return;
+      event.preventDefault();
+      setFullScreen(!full);
+    });
+    if (!windowed) {
+      // Close quits only from a window the operator made (owner ruling): in full screen it is a
+      // visitor's Alt+F4 or Cmd+W, refused until the app quits by its own way.
+      win.on('close', (event) => {
+        if (mayClose()) return;
+        event.preventDefault();
+        if (!full) app.quit();
+      });
+      // The green button (a zoom, as the window is not fullscreenable) and Windows' maximize.
+      win.on('maximize', () => {
+        win.unmaximize();
+        setFullScreen(true);
+      });
+    }
+    showWindowButtons(win, !full);
+    // Every page the sky loads gets a fresh preload, which starts with the strip hidden.
+    win.webContents.on('dom-ready', () => tellSky(win));
+    onFullScreen(full);
+    return (sky = win);
+  };
+
+  const setFullScreen = (on: boolean): void => {
+    const win = current();
+    if (windowed || win === null || on === full) return;
+    full = on;
+    showWindowButtons(win, !on);
+    tellSky(win);
+    // Back in: place() fills the sky's display, as for any sky not filling it.
+    if (!on) {
+      setFull(win, false);
+      const home = screen.getDisplayMatching(win.getBounds()).workArea;
+      win.setBounds(windowBounds(lastBounds, workAreas(), home));
+    }
+    place();
+    onFullScreen(full);
+    save();
+  };
+
+  const setTestGrid = (on: boolean): boolean => {
+    void grid?.close().catch(() => {});
+    grid = null;
+    if (!on) return false;
+    const win = open();
+    const shownOn = screen.getDisplayMatching(win.getBounds()).id;
+    const number = listDisplays().find((d) => d.id === shownOn)?.number ?? 1;
+    grid = showTestGrid(win, setup().mode, number);
+    return true;
+  };
+
+  return { place, open, current, setTestGrid, setFullScreen };
+}

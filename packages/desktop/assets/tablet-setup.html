@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self'; connect-src https:"
+    />
+    <title>Connect to Skymap</title>
+    <!--
+      Served on plain HTTP by startTabletSetupServer, so a tablet meets no warning before it trusts the
+      computer. It checks trust by fetching from the HTTPS server, and only then links to the remote.
+      The room code arrives after #, which the browser never sends.
+    -->
+    <style>
+      :root {
+        color-scheme: dark;
+        --ink: #f2f4f8;
+        --dim: #a7b0c0;
+        --line: #2a3346;
+        --panel: #131a29;
+        --accent: #8ec5ff;
+        --ok: #7fdc9a;
+        font:
+          17px/1.5 system-ui,
+          -apple-system,
+          sans-serif;
+      }
+      body {
+        margin: 0;
+        background: #0b1020;
+        color: var(--ink);
+      }
+      main {
+        box-sizing: border-box;
+        max-width: 36rem;
+        margin: 0 auto;
+        padding: max(24px, env(safe-area-inset-top)) 20px max(32px, env(safe-area-inset-bottom));
+      }
+      h1 {
+        margin: 0 0 4px;
+        font-size: 1.6rem;
+        font-weight: 600;
+      }
+      .lead {
+        margin: 0 0 24px;
+        color: var(--dim);
+      }
+      section {
+        margin-bottom: 16px;
+        padding: 20px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--panel);
+      }
+      section.done {
+        border-color: rgba(127, 220, 154, 0.5);
+      }
+      h2 {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        margin: 0 0 12px;
+        font-size: 1.15rem;
+        font-weight: 600;
+      }
+      .num {
+        display: grid;
+        flex: none;
+        place-items: center;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: var(--line);
+        font-size: 0.95rem;
+      }
+      .done .num {
+        background: var(--ok);
+        color: #0b1020;
+      }
+      ol {
+        margin: 12px 0;
+        padding-left: 1.4em;
+      }
+      li + li {
+        margin-top: 8px;
+      }
+      .button {
+        display: block;
+        box-sizing: border-box;
+        width: 100%;
+        min-height: 52px;
+        padding: 14px 18px;
+        border: 0;
+        border-radius: 12px;
+        background: var(--accent);
+        color: #0b1020;
+        font: inherit;
+        font-weight: 600;
+        text-align: center;
+        text-decoration: none;
+      }
+      .button[aria-disabled='true'] {
+        background: var(--line);
+        color: var(--dim);
+        pointer-events: none;
+      }
+      .status {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin: 16px 0 0;
+        color: var(--dim);
+      }
+      .status::before {
+        content: '';
+        flex: none;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--dim);
+        animation: pulse 1.4s ease-in-out infinite;
+      }
+      .status.ok {
+        color: var(--ok);
+      }
+      .status.ok::before {
+        background: var(--ok);
+        animation: none;
+      }
+      @keyframes pulse {
+        50% {
+          opacity: 0.3;
+        }
+      }
+      details {
+        margin-top: 12px;
+        color: var(--dim);
+      }
+      summary {
+        min-height: 44px;
+        line-height: 44px;
+        color: var(--accent);
+        cursor: pointer;
+      }
+      label {
+        display: block;
+        margin-bottom: 12px;
+        color: var(--dim);
+      }
+      input {
+        display: block;
+        box-sizing: border-box;
+        width: 100%;
+        min-height: 52px;
+        margin-top: 6px;
+        padding: 0 14px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #0b1020;
+        color: var(--ink);
+        font:
+          600 1.3rem ui-monospace,
+          monospace;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+      }
+      .note {
+        margin: 12px 0 0;
+        color: var(--dim);
+        font-size: 0.9rem;
+      }
+      .note a {
+        color: var(--accent);
+      }
+      /* A step's screenshot, cropped to what it is about, from the website's docs assets (dark mode; tabletGuideDir). */
+      .shot {
+        display: block;
+        width: min(100%, 300px);
+        height: auto;
+        margin: 10px 0 4px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+      }
+      [hidden] {
+        display: none !important;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .status::before {
+          animation: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Connect to Skymap</h1>
+      <p class="lead">Two steps, once per tablet. This page checks each one for you.</p>
+
+      <section id="trust">
+        <h2><span class="num">1</span>Trust this computer</h2>
+        <p>
+          Install Skymap's certificate, so this tablet knows it is talking to the computer running
+          Skymap.
+        </p>
+        <div id="install">
+          <a class="button" href="/ca.crt">Download the certificate</a>
+          <div id="steps"></div>
+          <details id="other">
+            <summary>Steps for another kind of tablet</summary>
+            <div id="otherSteps"></div>
+          </details>
+        </div>
+        <p class="status" id="status" role="status">Checking this tablet…</p>
+      </section>
+
+      <section id="open">
+        <h2><span class="num">2</span>Open the remote</h2>
+        <label id="codeField" hidden>
+          Code shown on the computer
+          <input
+            id="code"
+            autocomplete="off"
+            autocapitalize="characters"
+            spellcheck="false"
+            maxlength="9"
+          />
+        </label>
+        <a class="button" id="remote" aria-disabled="true">Open the remote</a>
+        <p class="note">Add it to the Home Screen or your bookmarks to find it again.</p>
+        <p class="note" id="anyway" hidden>
+          Can't install the certificate? <a id="anywayLink">Open the remote anyway</a> and accept
+          the browser's warning; it comes back on each visit.
+        </p>
+      </section>
+    </main>
+
+    <template id="ios">
+      <ol>
+        <li>Use Safari.</li>
+        <li>
+          Tap <b>Download the certificate</b>, then <b>Allow</b>. When it says
+          <b>Profile Downloaded</b>, tap <b>Close</b>.
+          <img
+            class="shot"
+            src="/guide/ios-1-allow.webp"
+            alt="Safari asks whether to allow the download: Ignore or Allow"
+            loading="lazy"
+          />
+        </li>
+        <li>
+          Open the <b>Settings</b> app. Near the top, below <b>Apple Account</b> (on an iPad, in the
+          list on the left), tap <b>Profile Downloaded</b>. Do it within a few minutes: iOS deletes
+          a downloaded profile that is not installed after 8 minutes.
+          <img
+            class="shot"
+            src="/guide/ios-2-profile-downloaded.webp"
+            alt="Settings, with Profile Downloaded below Apple Account"
+            loading="lazy"
+          />
+        </li>
+        <li>
+          Tap <b>Install</b> in the top right, <b>Install</b> again on the Warning screen, then
+          <b>Install</b> in the box that pops up. Enter your passcode if asked, then tap
+          <b>Done</b>.
+          <img
+            class="shot"
+            src="/guide/ios-3-install.webp"
+            alt="The Warning screen, with Install in the top right"
+            loading="lazy"
+          />
+        </li>
+        <li>
+          Go back to <b>General</b>, tap <b>About</b>, then <b>Certificate Trust Settings</b> at the
+          bottom. Turn on <b>Skymap local CA …</b> and tap <b>Continue</b>.
+          <img
+            class="shot"
+            src="/guide/ios-4-trust.webp"
+            alt="Certificate Trust Settings, with the switch for Skymap local CA"
+            loading="lazy"
+          />
+        </li>
+        <li>Switch back to Safari. This page sees the change by itself.</li>
+      </ol>
+    </template>
+    <template id="android">
+      <ol>
+        <li>Use Chrome or Brave: Firefox ignores certificates installed on Android.</li>
+        <li>
+          Tap <b>Download the certificate</b>. In Brave, tap <b>Download</b>, and when it says the
+          file can't be downloaded securely, tap <b>Keep</b> (not Discard).
+        </li>
+        <li>
+          Your phone says CA certificates must be installed in Settings: tap <b>Close</b>. The file
+          is saved as <b>ca.crt</b> in Downloads.
+          <img
+            class="shot"
+            src="/guide/android-2-close.webp"
+            alt="Install CA certificates in Settings, with a Close button"
+            loading="lazy"
+          />
+        </li>
+        <li>
+          Open the <b>Settings</b> app, tap <b>Search settings</b> and type <b>CA certificate</b>.
+          Tap the <b>CA certificate</b> result, then <b>CA certificate</b> again on the next screen.
+          <img
+            class="shot"
+            src="/guide/android-3-ca-certificate.webp"
+            alt="Install a certificate, with CA certificate at the top"
+            loading="lazy"
+          />
+        </li>
+        <li>
+          On <b>Your data won't be private</b>, tap <b>Install anyway</b>. Pick <b>ca.crt</b>: it is
+          under Recent, or tap ☰ and then <b>Downloads</b>. Enter your screen lock if asked.
+          <img
+            class="shot"
+            src="/guide/android-4-pick-file.webp"
+            alt="The file picker on Recent, with ca.crt listed"
+            loading="lazy"
+          />
+        </li>
+        <li>Switch back to this page. It sees the change by itself.</li>
+      </ol>
+    </template>
+    <template id="desktop">
+      <ol>
+        <li>Tap <b>Download the certificate</b>.</li>
+        <li>
+          Open it and trust it as a root (CA) certificate in the system's certificate settings.
+        </li>
+        <li>Switch back to this page. It sees the change by itself.</li>
+      </ol>
+    </template>
+
+    <script>
+      // Filled in by fillTabletSetupPage from appServerPort.ts and pairingUrl.ts.
+      const remoteOrigin = `https://${location.hostname}:__APP_PORT__`;
+      const remoteUrl = (code) => `${remoteOrigin}__REMOTE_PATH__${code}`;
+      const CODE = /^[0-9A-HJKMNP-TV-Z]{8}$/;
+      const $ = (id) => document.getElementById(id);
+
+      // iPadOS asks for desktop pages and says Macintosh; a touch screen gives it away.
+      const ua = navigator.userAgent;
+      const kind =
+        /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)
+          ? 'ios'
+          : /Android/.test(ua)
+            ? 'android'
+            : 'desktop';
+      $('steps').append($(kind).content.cloneNode(true));
+      for (const other of ['ios', 'android', 'desktop'].filter((k) => k !== kind)) {
+        const title = document.createElement('p');
+        title.textContent = { ios: 'iPad or iPhone', android: 'Android', desktop: 'Other' }[other];
+        $('otherSteps').append(title, $(other).content.cloneNode(true));
+      }
+
+      let code = location.hash.slice(1).toUpperCase();
+      if (!CODE.test(code)) $('codeField').hidden = false;
+      $('code').addEventListener('input', (event) => {
+        code = event.target.value.replace(/[\s-]/g, '').toUpperCase();
+        render();
+      });
+
+      let trusted = false;
+      const render = () => {
+        const ready = CODE.test(code);
+        const url = ready ? remoteUrl(code) : null;
+        $('trust').classList.toggle('done', trusted);
+        // Done is done: the instructions fold away, the green line stays.
+        $('install').hidden = trusted;
+        $('status').classList.toggle('ok', trusted);
+        $('status').textContent = trusted
+          ? 'This tablet trusts the computer.'
+          : 'Not trusted yet. This page checks again by itself.';
+        $('remote').setAttribute('aria-disabled', String(!(trusted && ready)));
+        if (trusted && ready) $('remote').href = url;
+        else $('remote').removeAttribute('href');
+        $('anyway').hidden = trusted || !ready;
+        if (ready) $('anywayLink').href = url;
+      };
+
+      // A fetch to the HTTPS server only succeeds once the tablet trusts its certificate; the
+      // opaque answer is enough. A tablet that already trusts it goes straight to the remote.
+      let timer = 0;
+      let checking = false;
+      const check = async (first) => {
+        if (checking) return;
+        checking = true;
+        clearTimeout(timer);
+        try {
+          await fetch(`${remoteOrigin}/ca.crt`, { mode: 'no-cors', cache: 'no-store' });
+          trusted = true;
+          if (first && CODE.test(code)) return location.replace(remoteUrl(code));
+        } catch {
+          trusted = false;
+        } finally {
+          checking = false;
+        }
+        render();
+        if (!trusted) timer = setTimeout(() => check(false), 2000);
+      };
+      check(true);
+      // Back from Settings, check at once rather than at the next tick.
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && !trusted) check(false);
+      });
+    </script>
+  </body>
+</html>

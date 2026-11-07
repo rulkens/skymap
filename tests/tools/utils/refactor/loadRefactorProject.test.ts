@@ -26,6 +26,10 @@ describe('loadRefactorProject', () => {
     );
     expect(paths.has(resolve('tests/tools/utils/refactor/applyMoves.test.ts'))).toBe(true);
     expect(paths.has(resolve('tools/utils/refactor/applyMoves.ts'))).toBe(true);
+    // A package's own tests/, scripts/ and .cts files: a move must rewrite them too.
+    expect(paths.has(resolve('packages/desktop/tests/electronBuilderConfig.test.ts'))).toBe(true);
+    expect(paths.has(resolve('packages/desktop/scripts/buildBrandAssets.ts'))).toBe(true);
+    expect(paths.has(resolve('packages/desktop/src/preload/preload.cts'))).toBe(true);
     expect(paths.has(resolve('packages/move-files/tests/planMoves.test.ts'))).toBe(true);
   }, 20000);
 });

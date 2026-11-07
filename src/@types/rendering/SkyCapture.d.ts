@@ -25,4 +25,6 @@ export type SkyCapture = {
   readonly viewSlotBase: number;
   /** false ⇒ one bake per band entry (settings writes are ignored once baked). */
   readonly rebakeOnSettings: boolean;
+  /** Spaces the re-bakes a still-settling roster forces at least this far apart; absent ⇒ every frame. */
+  readonly settlingRebakeMinMs?: number;
 };

@@ -77,7 +77,10 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import type { StarCatalogRuntime } from '../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { CubeFace } from '../../../../src/@types/rendering/CubeFace';
 import type { SkyCaptureKey } from '../../../../src/@types/rendering/SkyCaptureKey';
-import { ALL_CUBE_FACES } from '../../../../src/data/rendering/cubemapCaptures';
+import {
+  ALL_CUBE_FACES,
+  CORE_CUBEMAP_CAPTURES,
+} from '../../../../src/data/rendering/cubemapCaptures';
 
 /** Every sky row's target id, so the mock serves whichever row bakes. */
 const CAPTURE_TARGET_IDS: readonly string[] = APP_SKY_CAPTURE_KEYS.map(
@@ -147,7 +150,7 @@ function makeState(overrides: Partial<EngineState> = {}): EngineState {
       tonemap: { exposure: 1, curve: 0 },
       hdr: { enabled: false, knee: 0, headroom: 0 },
       bloom: { enabled: false },
-      debug: { renderStrategy: 'auto' },
+      debug: { renderStrategy: 'auto', disabledPasses: {} },
     },
     selection: { hover: null, select: null, focus: null },
     tier: 'medium',
@@ -165,6 +168,7 @@ function makeCtx(
   drawCamPos: readonly [number, number, number],
   faceSizePx = 256,
   layers: { awake?: boolean; settling?: boolean } = {},
+  nowMs = 1000,
 ): FrameView {
   // Frame-owned (`ReadyFrameContext`): `scheduleSkyCaptures` reads these off
   // `ctx.snapshot.x`, so they nest under `snapshot`, not the view's own `ctx.x`.
@@ -204,7 +208,7 @@ function makeCtx(
       isReady: true,
       slabBodyCandidates: [],
       simDays: 0,
-      nowMs: 1000,
+      nowMs,
       focus: {},
       renderTargets,
       // Frame-wide: which targets hold this frame's content — the executor
@@ -591,6 +595,47 @@ describe('renderFrame — cubemap-capture hand-off', () => {
     renderFrame(makeInput(makeCtx([1000, 0, 0]), state)); // band close.
     renderFrame(makeInput(makeCtx(atTheSun), state)); // re-entry ⇒ bakes again.
     expect(deriveViewMock).toHaveBeenCalledTimes(6);
+  });
+
+  it('a row with a settling re-bake cap re-bakes a still-settling roster at most once per cap', () => {
+    // A thumbnail's 400 ms fade lands every few frames while the view turns; uncapped,
+    // each one re-drew the whole galaxy cloud six times for a sky only probes sample.
+    deriveViewMock.mockImplementation(
+      (_snapshot: unknown, _cam: unknown, spec: ViewSpec) =>
+        ({ __face: spec.slot }) as unknown as FrameView,
+    );
+    const atTheSun: readonly [number, number, number] = [0, 0, 0];
+    const settling = { settling: true };
+    const cap = CORE_CUBEMAP_CAPTURES.solarSystem.settlingRebakeMinMs;
+    const state = makeState();
+
+    renderFrame(makeInput(makeCtx(atTheSun, 256, settling, 1000), state)); // band entry ⇒ bakes.
+    expect(handedOffContexts('solarSystem').size).toBe(6);
+    deriveViewMock.mockClear();
+
+    renderFrame(makeInput(makeCtx(atTheSun, 256, settling, 1000 + cap - 1), state));
+    expect(deriveViewMock).not.toHaveBeenCalled();
+
+    renderFrame(makeInput(makeCtx(atTheSun, 256, settling, 1000 + cap), state));
+    expect(deriveViewMock).toHaveBeenCalledTimes(6);
+  });
+
+  it('a sky row unticked in the DebugPanel bakes nothing, and bakes on the first ticked frame', () => {
+    deriveViewMock.mockImplementation(
+      (_snapshot: unknown, _cam: unknown, spec: ViewSpec) =>
+        ({ __face: spec.slot }) as unknown as FrameView,
+    );
+    const atTheSun: readonly [number, number, number] = [0, 0, 0];
+    const state = makeState();
+    state.settings.debug.disabledPasses = { 'solarSystem·capture': true };
+
+    renderFrame(makeInput(makeCtx(atTheSun), state)); // band entry while unticked.
+    expect(deriveViewMock).not.toHaveBeenCalled();
+    executeFrameMock.mockClear();
+
+    state.settings.debug.disabledPasses = {};
+    renderFrame(makeInput(makeCtx(atTheSun), state));
+    expect(handedOffContexts('solarSystem').size).toBe(6);
   });
 
   it('band close then re-entry triggers a full six-face sweep', () => {

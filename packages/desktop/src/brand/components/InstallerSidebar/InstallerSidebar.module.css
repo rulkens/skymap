@@ -1,0 +1,12 @@
+.root {
+  position: fixed;
+  inset: 0;
+  padding: var(--space-12) var(--space-9);
+}
+
+.mark {
+  margin: 0;
+  color: var(--color-fg);
+  font-size: 36px;
+  font-weight: inherit;
+}
