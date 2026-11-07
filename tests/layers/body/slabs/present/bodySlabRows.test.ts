@@ -24,10 +24,10 @@ describe('BODY_SLAB_ROWS', () => {
   });
 
   // The sea table is keyed by plain strings: a misspelt id would draw no mask, silently.
-  it('hosts the antique surfaceMask line on Earth and every sea-albedo body', () => {
+  it('hosts the antique surfaceMask line on Earth, the Moon and every albedo-mask body', () => {
     const masked = BODY_SLAB_ROWS.filter((row) =>
       row.hosts?.some((host) => host.line === 'surfaceMask'),
     ).map((row) => row.anchorId);
-    expect(masked.sort()).toEqual(['earth', ...Object.keys(ANTIQUE_ALBEDO_MASK)].sort());
+    expect(masked.sort()).toEqual(['earth', 'moon', ...Object.keys(ANTIQUE_ALBEDO_MASK)].sort());
   });
 });

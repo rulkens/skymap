@@ -47,6 +47,7 @@ export const ANTIQUE_ONLY_PASSES: readonly string[] = [
   'earth-ocean-mask',
   'earth-antique-map',
   'body-albedo-mask',
+  'moon-print',
   'star-points-print',
   'star-catalog-print',
 ];

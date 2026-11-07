@@ -19,6 +19,7 @@ import { earthPass } from './earth/passes/earthPass';
 import { earthOceanMaskPass } from './earth/passes/earthOceanMaskPass';
 import { earthAntiqueMapPass } from './earth/antiqueMap/passes/earthAntiqueMapPass';
 import { bodyAlbedoMaskPass } from './spheres/passes/bodyAlbedoMaskPass';
+import { moonPrintPass } from './spheres/passes/moonPrintPass';
 import { surfaceTilesPass } from './surfaceTiles/patch/passes/surfaceTilesPass';
 import { terrainPickMarkerPass } from './terrainPick/passes/terrainPickMarkerPass';
 import { cloudShellPass } from './clouds/passes/cloudShellPass';
@@ -84,6 +85,7 @@ export const bodyLayer = defineLayer({
     planetsPass(runtime),
     texturedBodiesPass(runtime),
     bodyAlbedoMaskPass(runtime),
+    moonPrintPass(runtime),
     ringsPass(runtime),
     bodyGlintsPass(runtime),
     atmosphereShellPass(runtime),

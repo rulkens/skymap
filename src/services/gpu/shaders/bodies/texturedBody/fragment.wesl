@@ -50,12 +50,32 @@ import package::lib::sphere::TexturedBodyUniforms;
 import package::lib::bodyLighting::litShade;
 import package::lib::limbDarkening::limbDarkening;
 import package::lib::normalMap::perturbNormal;
+import package::antiqueLook::engraving::inkLine;
 
 @group(0) @binding(0) var<uniform> u: TexturedBodyUniforms;
 @group(0) @binding(1) var bodySampler: sampler;
 @group(0) @binding(2) var bodyTexture: texture_2d<f32>;
 @group(0) @binding(3) var ringTexture: texture_2d<f32>;
 @group(0) @binding(4) var normalTexture: texture_2d<f32>;
+
+// The antique Moon pass's crater rings (`packMoonPrint.ts`): picked per frame on the
+// CPU (`pickMoonCraters`), largest first, so the last ring holding a pixel is its smallest.
+struct MoonCrater {
+  c: vec3<f32>,
+  rho: f32,
+  weight: f32,
+  cosReach: f32,
+  _p0: f32,
+  _p1: f32,
+};
+struct MoonPrint {
+  count: u32,
+  unit: f32,
+  focalPx: f32,
+  _p0: f32,
+  craters: array<MoonCrater, 128>,
+};
+@group(1) @binding(0) var<uniform> moon: MoonPrint;
 
 // Colour + analytic depth. No '@builtin(position)' anywhere in this struct --
 // the entry point's position comes in through 'TexturedBodyVSOut', and a second
@@ -155,4 +175,105 @@ fn fs(in: TexturedBodyVSOut) -> FSOut {
   // section.
   out.depth = fragDepthFromClip(u.vpCamRelLocal, rd * surface.t);
   return out;
+}
+
+// ── The antique Moon (`moon-print` pass, the look's `antique-relief` row) ─────
+// r sqrt(linear luma) at a 1024-texel mip floor (the maria: below ~10 km the albedo
+// is ejecta and small craters, not a mare's shape); g 1 + the relief ratio, 0 where
+// no Moon; b rim ink; a 1 + the wall coordinate inside a big crater's wall band.
+
+const MARE_MIP_TEXELS: f32 = 1024.0;
+// Mips over the hardware LOD: relief read at the hatching's scale, not the pixel's.
+const RELIEF_BIAS: f32 = 1.5;
+// The normal-map bake's slopes are ~0.4 of LOLA's (gain 8 over an 8-bit height).
+const SLOPE_GAIN: f32 = 2.4;
+// Mirror ANTIQUE_MOON_RIM_UNITS (layers/body/spheres/data/antiqueMoonPrint.ts).
+const RIM_MIN_UNITS: f32 = 20.0;
+const RIM_FULL_UNITS: f32 = 32.0;
+// A crater this wide takes concentric wall hatching on 0.55 < psi/rho < 1.
+const FRAME_MIN_UNITS: f32 = 48.0;
+const WALL_Q: f32 = 0.55;
+// Eight lines of the plate's HATCH: `rank8` needs only the line index mod 8.
+const WALL_PERIOD: f32 = 33.6;
+
+fn mareAlbedo(uv: vec2<f32>, ddx: vec2<f32>, ddy: vec2<f32>) -> f32 {
+  let g = max(max(length(ddx), length(ddy)), 1e-9);
+  let s = max(1.0, (1.0 / MARE_MIP_TEXELS) / g);
+  let rgb = textureSampleGrad(bodyTexture, bodySampler, uv, ddx * s, ddy * s).rgb;
+  return sqrt(dot(rgb, vec3<f32>(0.2126, 0.7152, 0.0722)));
+}
+
+// A slope's light over the flat ground's (a Lambert ratio), so walls read with the
+// same contrast at any Sun height; near the terminator sunward slopes exceed 1.
+fn reliefRatio(ng: vec3<f32>, nRelief: vec3<f32>, sun: vec3<f32>) -> f32 {
+  let flat = dot(ng, sun);
+  let lit = flat + SLOPE_GAIN * (dot(nRelief, sun) - flat);
+  return clamp(lit / max(flat, 0.04), 0.0, 2.0);
+}
+
+// x the nearest rim's ink, y units in from the rim of the smallest crater whose wall
+// band holds the point (-1 none). dNdx/dNdy: the geometric normal's screen derivatives.
+// The inner wall on the Sun's side faces away from it: the shaded one, cut heavier.
+fn craterRims(n: vec3<f32>, dNdx: vec3<f32>, dNdy: vec3<f32>, sun: vec3<f32>, unitsPerRad: f32,
+              pxUnits: f32) -> vec2<f32> {
+  var ink = 0.0;
+  var wall = -1.0;
+  var best = 1e9;
+  let ndl = dot(n, sun);
+  let lowSun = 1.0 - smoothstep(0.25, 0.75, ndl);
+  let stv = sun - ndl * n;
+  let st = stv * inverseSqrt(max(dot(stv, stv), 1e-12));
+  for (var i = 0u; i < moon.count; i++) {
+    let cr = moon.craters[i];
+    let cosPsi = dot(n, cr.c);
+    if (cosPsi < cr.cosReach) {
+      continue;
+    }
+    let inv = cr.c - cosPsi * n;
+    let sinPsi = sqrt(max(dot(inv, inv), 1e-12));
+    let psi = atan2(sinPsi, cosPsi);
+    let dUnits = 2.0 * cr.rho * unitsPerRad;
+    // |grad psi| per px: d psi = -dot(c, dN) / sin psi.
+    let gPx = length(vec2<f32>(dot(cr.c, dNdx), dot(cr.c, dNdy))) / sinPsi;
+    let d = abs(psi - cr.rho) / max(gPx, 1e-9) * pxUnits;
+    let shadeSide = -dot(inv / sinPsi, st);
+    let w = cr.weight * smoothstep(RIM_MIN_UNITS, RIM_FULL_UNITS, dUnits);
+    if (d < best && w > 0.01) {
+      best = d;
+      // The burin by weight (1.0 fine, 1.6 fresh), swelling on the shaded side; at a
+      // low Sun the lit side is one fine cut.
+      var width = select(1.0, 1.6, cr.weight > 0.75) + 1.4 * smoothstep(0.0, 0.8, shadeSide) * lowSun * w;
+      width = 1.0 + (width - 1.0) * (1.0 - lowSun * (1.0 - smoothstep(-0.3, 0.5, shadeSide)));
+      ink = inkLine(d, width, pxUnits) * smoothstep(0.05, 0.25, w);
+    }
+    let q = psi / cr.rho;
+    if (q < 1.0 && q > WALL_Q && dUnits >= FRAME_MIN_UNITS && cr.weight > 0.3 && ndl > 0.0) {
+      wall = (1.0 - q) * cr.rho * unitsPerRad;
+    }
+  }
+  return vec2<f32>(ink, wall);
+}
+
+@fragment
+fn fsMoonPrint(in: TexturedBodyVSOut) -> @location(0) vec4<f32> {
+  let rd = normalize(in.localPos - u.camPosLocal);
+  let surface = hitUnitSphere(u.camPosLocal, rd, u.camAltitudeSq);
+  let ng = surface.point;
+  let uv = equirectUvFromDir(ng);
+  let grad = equirectUvGradients(uv);
+  let dNdx = dpdx(ng);
+  let dNdy = dpdy(ng);
+  if (!surface.hit) {
+    discard;
+  }
+  let sun = u.sunDirLocal;
+  let pxUnits = 1.0 / moon.unit;
+  let unitsPerRad = moon.focalPx / surface.t * pxUnits;
+  let T = normalize(cross(vec3<f32>(0.0, 0.0, 1.0), ng));
+  let b = exp2(RELIEF_BIAS);
+  let nRelief = perturbNormal(ng, T, textureSampleGrad(normalTexture, bodySampler, uv, grad.ddx * b, grad.ddy * b).rg);
+  let rims = craterRims(ng, dNdx, dNdy, sun, unitsPerRad, pxUnits);
+  let day = smoothstep(-0.02, 0.06, dot(ng, sun));
+  let wall = select(0.0, 1.0 + WALL_PERIOD * fract(rims.y / WALL_PERIOD), rims.y >= 0.0);
+  return vec4<f32>(mareAlbedo(uv, grad.ddx, grad.ddy), 1.0 + reliefRatio(ng, nRelief, sun), rims.x * day, wall);
 }

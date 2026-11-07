@@ -262,6 +262,14 @@ export const SCENE: FrameSection = {
       slab: 'surfaceMask',
       passes: ['earth-antique-map'],
     },
+    // The Moon's engraving inputs (maria, relief, rims), in the row Mars's relief
+    // fills in `stylize`: never both in one frame, as no plate shows both close up.
+    {
+      kind: 'render',
+      target: 'antique-relief',
+      slab: 'surfaceMask',
+      passes: ['moon-print'],
+    },
     // The look's star glyphs come from the catalogue: every naked-eye star as one point,
     // the brightest per cell kept by its depth. Look-only, like the land row above.
     {

@@ -4,7 +4,8 @@
  * the foreground band measured from the body itself, and, for an atmosphere
  * body, hosting the `insideAtmosphere` line inside its `atmosphereInsideBand`,
  * the one rule the shell's `inside` reads too. Earth and every body the antique
- * look reads an albedo map of (`ANTIQUE_ALBEDO_MASK`) also host `surfaceMask`.
+ * look reads an albedo map of (`ANTIQUE_ALBEDO_MASK`), and the Moon (its print,
+ * `moon-print`), also host `surfaceMask`.
  */
 
 import type { SlabRow } from '../../../../@types/engine/frame/SlabRow';
@@ -25,7 +26,7 @@ export function bodyLayerSlabRow(body: SceneBody): SlabRow {
     activeBand: FOREGROUND_RECEDE_FADE_BAND,
     hosts: [
       ...(band === undefined ? [] : [{ line: 'insideAtmosphere' as const, band }]),
-      ...(body.id === 'earth' || body.id in ANTIQUE_ALBEDO_MASK
+      ...(body.id === 'earth' || body.id === 'moon' || body.id in ANTIQUE_ALBEDO_MASK
         ? [{ line: 'surfaceMask' as const }]
         : []),
     ],

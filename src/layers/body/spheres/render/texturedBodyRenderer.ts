@@ -24,6 +24,8 @@ import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
 import { TEXTURED_BODY_UNIFORM_FLOATS } from './packTexturedBodyUniforms';
 import { ANTIQUE_LAND_FORMAT } from '../../../../data/rendering/antiqueLook';
+import { ANTIQUE_RELIEF_FORMAT } from '../../../../data/rendering/antiqueRelief';
+import { ANTIQUE_MOON_PRINT_BYTES } from '../data/antiqueMoonPrint';
 import vsCode from '../../../../services/gpu/shaders/bodies/texturedBody/vertex.wesl?static';
 import fsCode from '../../../../services/gpu/shaders/bodies/texturedBody/fragment.wesl?static';
 
@@ -66,6 +68,9 @@ type BodyResources = {
    *  group is dropped whenever `bindGroup` is rebuilt. */
   maskUniformBuffer: GPUBuffer | null;
   maskBindGroup: GPUBindGroup | null;
+  /** The antique Moon print's slot, the same way. */
+  printUniformBuffer: GPUBuffer | null;
+  printBindGroup: GPUBindGroup | null;
 };
 
 /**
@@ -224,9 +229,59 @@ export function createTexturedBodyRenderer(
           { arrayStride: 8, attributes: [{ shaderLocation: 1, offset: 0, format: 'float32x2' }] },
         ],
       },
-      fragment: { module: fsModule, entryPoint: 'fsAlbedoMask', targets: [{ format: ANTIQUE_LAND_FORMAT }] },
+      fragment: {
+        module: fsModule,
+        entryPoint: 'fsAlbedoMask',
+        targets: [{ format: ANTIQUE_LAND_FORMAT }],
+      },
       primitive: { topology: 'triangle-list', frontFace: 'ccw', cullMode: 'front' },
     });
+
+  // The antique Moon print (`fsMoonPrint`): the body's group plus the picked craters
+  // (`packMoonPrint`), into the look's relief row, no depth; built on first use.
+  let moonPrint: {
+    pipeline: GPURenderPipeline;
+    buffer: GPUBuffer;
+    bindGroup: GPUBindGroup;
+  } | null = null;
+  const buildMoonPrint = (): NonNullable<typeof moonPrint> => {
+    const layout = device.createBindGroupLayout({
+      label: 'texturedBody-moon-print-bgl',
+      entries: [{ binding: 0, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } }],
+    });
+    const buffer = device.createBuffer({
+      label: 'texturedBody-moon-print-craters',
+      size: ANTIQUE_MOON_PRINT_BYTES,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+    const pipeline = device.createRenderPipeline({
+      label: 'texturedBody-moon-print-pipeline',
+      layout: device.createPipelineLayout({
+        label: 'texturedBody-moon-print-pipeline-layout',
+        bindGroupLayouts: [bindGroupLayout, layout],
+      }),
+      vertex: {
+        module: vsModule,
+        entryPoint: 'vs',
+        buffers: [
+          { arrayStride: 12, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }] },
+          { arrayStride: 8, attributes: [{ shaderLocation: 1, offset: 0, format: 'float32x2' }] },
+        ],
+      },
+      fragment: {
+        module: fsModule,
+        entryPoint: 'fsMoonPrint',
+        targets: [{ format: ANTIQUE_RELIEF_FORMAT }],
+      },
+      primitive: { topology: 'triangle-list', frontFace: 'ccw', cullMode: 'front' },
+    });
+    const bindGroup = device.createBindGroup({
+      label: 'texturedBody-moon-print-bg',
+      layout,
+      entries: [{ binding: 0, resource: { buffer } }],
+    });
+    return { pipeline, buffer, bindGroup };
+  };
 
   const bodies = new Map<BodyTextureId, BodyResources>();
 
@@ -258,6 +313,7 @@ export function createTexturedBodyRenderer(
   function rebuildBindGroups(bodyId: BodyTextureId, res: BodyResources): void {
     res.bindGroup = buildBindGroup(bodyId, res);
     res.maskBindGroup = null;
+    res.printBindGroup = null;
   }
 
   function resourcesFor(bodyId: BodyTextureId): BodyResources {
@@ -276,6 +332,8 @@ export function createTexturedBodyRenderer(
       bindGroup: buildBindGroup(bodyId, { uniformBuffer, maps: new Map(), ringTexture: null }),
       maskUniformBuffer: null,
       maskBindGroup: null,
+      printUniformBuffer: null,
+      printBindGroup: null,
     };
     bodies.set(bodyId, res);
     return res;
@@ -406,7 +464,11 @@ export function createTexturedBodyRenderer(
     pass.drawIndexed(indexCount);
   }
 
-  function drawAlbedoMask(pass: GPURenderPassEncoder, bodyId: BodyTextureId, uniforms: Float32Array): void {
+  function drawAlbedoMask(
+    pass: GPURenderPassEncoder,
+    bodyId: BodyTextureId,
+    uniforms: Float32Array,
+  ): void {
     const res = resourcesFor(bodyId);
     res.maskUniformBuffer ??= device.createBuffer({
       label: `texturedBody-albedo-mask-uniform-${bodyId}`,
@@ -424,15 +486,45 @@ export function createTexturedBodyRenderer(
     pass.drawIndexed(indexCount);
   }
 
+  function drawMoonPrint(
+    pass: GPURenderPassEncoder,
+    bodyId: BodyTextureId,
+    uniforms: Float32Array,
+    craters: ArrayBuffer,
+  ): void {
+    const res = resourcesFor(bodyId);
+    res.printUniformBuffer ??= device.createBuffer({
+      label: `texturedBody-moon-print-uniform-${bodyId}`,
+      size: UNIFORM_BUFFER_SIZE,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+    res.printBindGroup ??= buildBindGroup(bodyId, {
+      ...res,
+      uniformBuffer: res.printUniformBuffer,
+    });
+    device.queue.writeBuffer(res.printUniformBuffer, 0, uniforms);
+    moonPrint ??= buildMoonPrint();
+    device.queue.writeBuffer(moonPrint.buffer, 0, craters);
+    pass.setPipeline(moonPrint.pipeline);
+    pass.setBindGroup(0, res.printBindGroup);
+    pass.setBindGroup(1, moonPrint.bindGroup);
+    pass.setVertexBuffer(0, positionBuffer);
+    pass.setVertexBuffer(1, uvBuffer);
+    pass.setIndexBuffer(indexBuffer, 'uint16');
+    pass.drawIndexed(indexCount);
+  }
+
   function destroy(): void {
     positionBuffer.destroy();
     uvBuffer.destroy();
     indexBuffer.destroy();
     for (const placeholder of sharedPlaceholders.values()) placeholder.destroy();
     placeholderRing.destroy();
+    moonPrint?.buffer.destroy();
     for (const res of bodies.values()) {
       res.uniformBuffer.destroy();
       res.maskUniformBuffer?.destroy();
+      res.printUniformBuffer?.destroy();
       for (const texture of res.maps.values()) texture.destroy();
       for (const placeholder of res.placeholders.values()) placeholder.destroy();
       res.ringTexture?.destroy();
@@ -449,6 +541,7 @@ export function createTexturedBodyRenderer(
     setRingTexture,
     draw,
     drawAlbedoMask,
+    drawMoonPrint,
     destroy,
   };
   renderer satisfies Renderer;

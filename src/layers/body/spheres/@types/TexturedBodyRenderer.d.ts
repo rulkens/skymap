@@ -65,4 +65,15 @@ export type TexturedBodyRenderer = Renderer & {
    * depth. Its own uniform slot per body, so it never races `draw`'s.
    */
   drawAlbedoMask(pass: GPURenderPassEncoder, bodyId: BodyTextureId, uniforms: Float32Array): void;
+  /**
+   * Draw the antique Moon print (`fsMoonPrint`) into an `ANTIQUE_RELIEF_FORMAT` target
+   * with no depth: `uniforms` as for `draw` (its own slot), `craters` the
+   * `packMoonPrint` record.
+   */
+  drawMoonPrint(
+    pass: GPURenderPassEncoder,
+    bodyId: BodyTextureId,
+    uniforms: Float32Array,
+    craters: ArrayBuffer,
+  ): void;
 };

@@ -493,7 +493,7 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     }
   });
 
-  it("draws the look's own passes only with the look on: Earth's land map and geography on Earth's row, star points on NEAR0", () => {
+  it("draws the look's own passes only with the look on: land map, geography and the Moon's print on the body row, star points on NEAR0", () => {
     const lookSteps = (steps: readonly FrameStep[]) =>
       steps.filter((step) => namesOf(step).some((name) => ANTIQUE_ONLY_PASSES.includes(name)));
     const rows = { lens: [], insideAtmosphere: [], surfaceMask: [3] };
@@ -501,6 +501,7 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     expect(lookSteps(program({ antique: true, bodyRowSlabs: rows }))).toMatchObject([
       { kind: 'render', target: ANTIQUE_TARGETS.land, slab: 3 },
       { kind: 'render', target: ANTIQUE_TARGETS.geography, slab: 3 },
+      { kind: 'render', target: ANTIQUE_TARGETS.relief, slab: 3 },
       { kind: 'render', target: ANTIQUE_TARGETS.printPoints, slab: NEAR0, depth: 'clear' },
     ]);
   });
