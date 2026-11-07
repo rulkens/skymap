@@ -33,6 +33,8 @@ const DEG = Math.PI / 180;
 /** A sky ornament shows between these on-screen widths, as a share of the canvas height. */
 const SKY_FADE_IN = [0.12, 0.13] as const;
 const SKY_FADE_OUT = [0.9, 1.4] as const;
+// Half the subject's box at the plate centre, as a share of each canvas side.
+const SUBJECT_HALF_SHARE = 0.12;
 
 export function placeAntiqueOrnaments(input: {
   readonly ornaments: readonly AntiqueOrnament[];
@@ -50,6 +52,10 @@ export function placeAntiqueOrnaments(input: {
   const pxPerTan = size.height / (frustum.tanUp - frustum.tanDown);
   const placed: AntiqueOrnamentInstance[] = [];
   const reserved: { centre: readonly [number, number]; half: readonly [number, number] }[] = [];
+  const subject = {
+    centre: [size.width / 2, size.height / 2] as const,
+    half: [size.width * SUBJECT_HALF_SHARE, size.height * SUBJECT_HALF_SHARE] as const,
+  };
 
   for (const row of input.ornaments) {
     const rect = atlas.sprites[row.sprite];
@@ -120,6 +126,9 @@ export function placeAntiqueOrnaments(input: {
     if (anchor.kind !== 'sheet' && reserved.some((r) => overlapShare(centre, half, r) > 0.15))
       continue;
     if (anchor.kind === 'sheet' && row.clearsBeneath) reserved.push({ centre, half });
+    // The focused subject and its name sit at the plate's centre: a sea beast
+    // never sails over them (a constellation figure may lie behind, as it truly does).
+    if (anchor.kind === 'space' && overlapShare(centre, half, subject) > 0) continue;
     // A negative half-width flips the sprite in the shader (local x runs backwards).
     if (row.mirrored) half[0] = -half[0];
     const north = row.facesNorth ? screenNorthAngle(dir, centre, basis, frustum, size) : 0;

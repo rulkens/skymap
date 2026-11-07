@@ -8,6 +8,7 @@ import { describe, it, expect } from 'vitest';
 import { placeAntiqueOrnaments } from '../../../../src/utils/gpu/antiqueLook/placeAntiqueOrnaments';
 import type { AntiqueOrnament } from '../../../../src/@types/rendering/AntiqueOrnament';
 import type { ViewBasis } from '../../../../src/@types/camera/projection/ViewBasis';
+import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { GAL_TO_EQ_MATRIX } from '../../../../src/data/superGalacticTransform';
 import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTightMat3';
 import { cross3 } from '../../../../src/utils/math/cross3';
@@ -21,10 +22,14 @@ const NORTH_UP: ViewBasis = { forward: [1, 0, 0], right: [0, -1, 0], up: [0, 0, 
 // The same view rolled so north points to screen left.
 const NORTH_LEFT: ViewBasis = { forward: [1, 0, 0], right: [0, 0, -1], up: [0, -1, 0] };
 
-// The galactic centre (l = 0, b = 0) in the equatorial world frame, and a view looking at it.
+// The galactic centre (l = 0, b = 0) in the equatorial world frame, and a view
+// turned 30° off it, so a place there lands off the subject at the plate's centre.
 const GALACTIC_CENTRE = rotateVec3ByTightMat3(GAL_TO_EQ_MATRIX, [1, 0, 0], [0, 0, 0]);
-const GALACTIC_CENTRE_AHEAD: ViewBasis = (() => {
-  const f = GALACTIC_CENTRE;
+const GALACTIC_CENTRE_ASIDE: ViewBasis = (() => {
+  const g = GALACTIC_CENTRE;
+  const side = normalize3(cross3(g, [0, 0, 1]));
+  const t = (30 * Math.PI) / 180;
+  const f = normalize3(g.map((c, i) => c * Math.cos(t) + side[i]! * Math.sin(t)) as Vec3);
   const right = normalize3(cross3(f, [0, 0, 1]));
   return { forward: f, right, up: cross3(right, f) };
 })();
@@ -111,13 +116,13 @@ describe('placeAntiqueOrnaments', () => {
           }),
         ],
         atlas: ATLAS,
-        basis: GALACTIC_CENTRE_AHEAD,
+        basis: GALACTIC_CENTRE_ASIDE,
         frustum: FRUSTUM,
         size: SIZE,
         unitPx: 1,
         camPosMpc: GALACTIC_CENTRE.map((c) => c * camX) as [number, number, number],
       })[0]!;
-    // Halfway to it, it should look about twice as wide and stay dead ahead.
+    // Halfway to it, it should look about twice as wide and stay where it was.
     const far = atPlace(0);
     const near = atPlace(10);
     expect(near.halfPx[0] / far.halfPx[0]).toBeCloseTo(2, 1);
@@ -125,25 +130,50 @@ describe('placeAntiqueOrnaments', () => {
   });
 
   it('sails a sea beast whole inside the numbered border or not at all', () => {
-    const beastOfSize = (sizeMpc: number) =>
+    const beastWithUnit = (unitPx: number) =>
       placeAntiqueOrnaments({
         ornaments: [
           skyRow({
             facesNorth: false,
-            anchor: { kind: 'space', lonDeg: 0, latDeg: 0, distMpc: 20, sizeMpc },
+            anchor: { kind: 'space', lonDeg: 0, latDeg: 0, distMpc: 20, sizeMpc: 4 },
           }),
         ],
         atlas: ATLAS,
-        basis: GALACTIC_CENTRE_AHEAD,
+        basis: GALACTIC_CENTRE_ASIDE,
+        frustum: FRUSTUM,
+        size: SIZE,
+        unitPx,
+        camPosMpc: [0, 0, 0],
+      });
+    // The border is 50 print units deep: at 8 px a unit it reaches 400 px in,
+    // past the same beast's outer edge (~260 px from the canvas side), where a
+    // constellation figure may be cropped but a beast may not.
+    expect(beastWithUnit(1)).toHaveLength(1);
+    expect(beastWithUnit(8)).toEqual([]);
+  });
+
+  it('keeps a sea beast off the subject at the plate centre', () => {
+    const beast = skyRow({
+      facesNorth: false,
+      anchor: { kind: 'space', lonDeg: 0, latDeg: 0, distMpc: 20, sizeMpc: 4 },
+    });
+    const at = (basis: ViewBasis) =>
+      placeAntiqueOrnaments({
+        ornaments: [beast],
+        atlas: ATLAS,
+        basis,
         frustum: FRUSTUM,
         size: SIZE,
         unitPx: 1,
         camPosMpc: [0, 0, 0],
       });
-    // Dead ahead either way; the larger one would reach past the border into
-    // the margin, where a constellation figure may be cropped but a beast not.
-    expect(beastOfSize(4)).toHaveLength(1);
-    expect(beastOfSize(40)).toEqual([]);
+    const ahead: ViewBasis = (() => {
+      const f = GALACTIC_CENTRE;
+      const right = normalize3(cross3(f, [0, 0, 1]));
+      return { forward: f, right, up: cross3(right, f) };
+    })();
+    expect(at(GALACTIC_CENTRE_ASIDE)).toHaveLength(1);
+    expect(at(ahead)).toEqual([]);
   });
 
   it('withdraws a sky figure that would run under a clearing sheet ornament', () => {
