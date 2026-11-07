@@ -17,6 +17,7 @@ import peaksCode from '../../shaders/antiqueLook/peaks.wesl?static';
 import plateCode from '../../shaders/antiqueLook/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import {
+  ANTIQUE_GLYPH_BYTES,
   ANTIQUE_ORNAMENT_BYTES,
   ANTIQUE_REFERENCE_HEIGHT_CSS,
   ANTIQUE_TARGETS,
@@ -29,10 +30,14 @@ import { packAntiqueUniforms } from '../../../../utils/gpu/antiqueLook/packAntiq
 import { packAntiqueOrnaments } from '../../../../utils/gpu/antiqueLook/packAntiqueOrnaments';
 import { placeAntiqueOrnaments } from '../../../../utils/gpu/antiqueLook/placeAntiqueOrnaments';
 import { fetchAntiqueBitmap } from '../../../../utils/gpu/antiqueLook/fetchAntiqueBitmap';
+import { buildAntiqueGlyphSheet } from '../../../../utils/gpu/antiqueLook/buildAntiqueGlyphSheet';
+import { placeAntiqueNumerals } from '../../../../utils/gpu/antiqueLook/placeAntiqueNumerals';
+import { packAntiqueGlyphs } from '../../../../utils/gpu/antiqueLook/packAntiqueGlyphs';
 import { viewBasis } from '../../../../utils/camera/projection/viewBasis';
 import { viewCornerRays } from '../../../../utils/camera/projection/viewCornerRays';
 import { timestampSpread } from '../../../../utils/gpu/timestampSpread';
 import type { AntiqueLook } from '../../../../@types/rendering/AntiqueLook';
+import type { AntiqueGlyphSheet } from '../../../../@types/rendering/AntiqueGlyphSheet';
 import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../@types/engine/state/EngineState';
 import type { GpuTimingService } from '../../../../@types/gpu/timing/GpuTimingService';
@@ -90,9 +95,9 @@ export function createAntiqueLook(init: {
     });
   }
 
-  const paperLayout = layoutOf('paper', ['uniform']);
+  const paperLayout = layoutOf('paper', ['uniform', 'texture', 'texture', 'sampler']);
   const reduceLayout = layoutOf('reduce', ['texture', 'texture']);
-  const peaksLayout = layoutOf('peaks', ['texture']);
+  const peaksLayout = layoutOf('peaks', ['texture', 'uniform']);
   const glowLayout = layoutOf('glow', ['texture']);
   const plateLayout = layoutOf('plate', [
     'texture', // print
@@ -106,6 +111,8 @@ export function createAntiqueLook(init: {
     'texture', // glow
     'uniform', // ornaments
     'texture', // ornament atlas
+    'uniform', // border digits
+    'texture', // glyph sheet
   ]);
   const paperPipeline = pipelineOf('paper', paperCode, paperLayout, ['rgba8unorm']);
   const reducePipeline = pipelineOf('reduce', reduceCode, reduceLayout, [
@@ -129,6 +136,13 @@ export function createAntiqueLook(init: {
     addressModeU: 'clamp-to-edge',
     addressModeV: 'clamp-to-edge',
   });
+  const repeatSampler = device.createSampler({
+    label: 'antique-look-repeat',
+    magFilter: 'linear',
+    minFilter: 'linear',
+    addressModeU: 'repeat',
+    addressModeV: 'repeat',
+  });
   // All zeros: bound in place of a missing overlay or an undrawn foreground:0.
   const emptyTexture = device.createTexture({
     label: 'antique-look-empty',
@@ -148,27 +162,64 @@ export function createAntiqueLook(init: {
   // Fetched on the look's first frame, not at boot: most sessions never open it.
   // Until it lands (or if it fails) the plate draws with no ornaments.
   let ornamentAtlas: GPUTexture | null = null;
-  let ornamentRequested = false;
+  let sheetAssetsRequested = false;
+  let paperAssets: { tile: GPUTexture; stains: GPUTexture } | null = null;
+
+  const glyphBuffer = device.createBuffer({
+    label: 'antique-look-glyphs',
+    size: ANTIQUE_GLYPH_BYTES,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+  const glyphBytes = new ArrayBuffer(ANTIQUE_GLYPH_BYTES);
+  let glyphSheet: { texture: GPUTexture; sheet: AntiqueGlyphSheet } | null = null;
+
+  function uploadBitmap(label: string, bitmap: ImageBitmap): GPUTexture {
+    const texture = device.createTexture({
+      label,
+      size: [bitmap.width, bitmap.height],
+      format: 'rgba8unorm',
+      usage:
+        GPUTextureUsage.TEXTURE_BINDING |
+        GPUTextureUsage.COPY_DST |
+        GPUTextureUsage.RENDER_ATTACHMENT,
+    });
+    device.queue.copyExternalImageToTexture({ source: bitmap }, { texture }, [
+      bitmap.width,
+      bitmap.height,
+    ]);
+    return texture;
+  }
+
+  function requestSheetAssets(wake: () => void): void {
+    sheetAssetsRequested = true;
+    Promise.all([fetchAntiqueBitmap('paper.webp'), fetchAntiqueBitmap('stains.webp')])
+      .then(([tile, stains]) => {
+        paperAssets = {
+          tile: uploadBitmap('antique-look-paper-tile', tile),
+          stains: uploadBitmap('antique-look-stains', stains),
+        };
+        tile.close();
+        stains.close();
+        // A new sheet: the next frame re-bakes it.
+        bakedPaper = null;
+        wake();
+      })
+      .catch((error: unknown) => console.warn('antique look: scanned paper unavailable', error));
+    buildAntiqueGlyphSheet()
+      .then((sheet) => {
+        glyphSheet = { texture: uploadBitmap('antique-look-glyph-sheet', sheet.bitmap), sheet };
+        sheet.bitmap.close();
+        wake();
+      })
+      .catch((error: unknown) => console.warn('antique look: border numbering unavailable', error));
+    requestOrnamentAtlas(wake);
+  }
 
   function requestOrnamentAtlas(wake: () => void): void {
-    ornamentRequested = true;
     fetchAntiqueBitmap('ornaments.png')
       .then((bitmap) => {
-        const texture = device.createTexture({
-          label: 'antique-look-ornament-atlas',
-          size: [bitmap.width, bitmap.height],
-          format: 'rgba8unorm',
-          usage:
-            GPUTextureUsage.TEXTURE_BINDING |
-            GPUTextureUsage.COPY_DST |
-            GPUTextureUsage.RENDER_ATTACHMENT,
-        });
-        device.queue.copyExternalImageToTexture({ source: bitmap }, { texture }, [
-          bitmap.width,
-          bitmap.height,
-        ]);
+        ornamentAtlas = uploadBitmap('antique-look-ornament-atlas', bitmap);
         bitmap.close();
-        ornamentAtlas = texture;
         // The loop may be asleep at rest; the atlas landing is a reason to draw.
         wake();
       })
@@ -219,13 +270,14 @@ export function createAntiqueLook(init: {
         unitPx,
         bodies: ctx.snapshot.renderedTargets.has('foreground:0'),
         captions: io.overlay !== null,
+        paper: paperAssets !== null,
         rays: viewCornerRays(basis, ctx.frustum),
         seed: PAPER_SEED,
       },
       uniformBytes,
     );
     device.queue.writeBuffer(uniformBuffer, 0, uniformBytes);
-    if (!ornamentRequested) requestOrnamentAtlas(() => state.subsystems.scheduler.requestRender());
+    if (!sheetAssetsRequested) requestSheetAssets(() => state.subsystems.scheduler.requestRender());
     const placed =
       ornamentAtlas === null
         ? []
@@ -239,6 +291,17 @@ export function createAntiqueLook(init: {
             camDistMpc: Math.hypot(...ctx.drawCamPos),
           });
     device.queue.writeBuffer(ornamentBuffer, 0, packAntiqueOrnaments(placed, ornamentBytes));
+    const digits =
+      glyphSheet === null
+        ? []
+        : placeAntiqueNumerals({
+            basis,
+            frustum: ctx.frustum,
+            size,
+            unitPx,
+            sheet: glyphSheet.sheet,
+          });
+    device.queue.writeBuffer(glyphBuffer, 0, packAntiqueGlyphs(digits, glyphBytes));
     const uniforms = { buffer: uniformBuffer };
     const paper = targets.viewOf(ANTIQUE_TARGETS.paper);
     const wash = targets.viewOf(ANTIQUE_TARGETS.wash);
@@ -250,12 +313,17 @@ export function createAntiqueLook(init: {
     const bodies = hasBodies ? targets.viewOf('foreground:0') : emptyView;
 
     if (paper !== bakedPaper) {
-      fullScreen(encoder, 'paper', [paper], paperPipeline, paperLayout, [uniforms]);
+      fullScreen(encoder, 'paper', [paper], paperPipeline, paperLayout, [
+        uniforms,
+        paperAssets?.tile.createView() ?? emptyView,
+        paperAssets?.stains.createView() ?? emptyView,
+        repeatSampler,
+      ]);
       bakedPaper = paper;
     }
     fullScreen(encoder, 'reduce', [wash, peaks], reducePipeline, reduceLayout, [io.print, bodies]);
     fullScreen(encoder, 'glow', [glow], glowPipeline, glowLayout, [wash]);
-    fullScreen(encoder, 'peaks', [stars], peaksPipeline, peaksLayout, [peaks]);
+    fullScreen(encoder, 'peaks', [stars], peaksPipeline, peaksLayout, [peaks, uniforms]);
     fullScreen(
       encoder,
       'plate',
@@ -274,6 +342,8 @@ export function createAntiqueLook(init: {
         glow,
         { buffer: ornamentBuffer },
         ornamentAtlas?.createView() ?? emptyView,
+        { buffer: glyphBuffer },
+        glyphSheet?.texture.createView() ?? emptyView,
       ],
       timestampSpread(timing, 'stylize'),
     );
@@ -283,6 +353,10 @@ export function createAntiqueLook(init: {
     uniformBuffer.destroy();
     ornamentBuffer.destroy();
     ornamentAtlas?.destroy();
+    glyphBuffer.destroy();
+    paperAssets?.tile.destroy();
+    paperAssets?.stains.destroy();
+    glyphSheet?.texture.destroy();
     emptyTexture.destroy();
   }
 

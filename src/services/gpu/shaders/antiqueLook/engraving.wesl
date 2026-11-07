@@ -22,9 +22,11 @@ fn hatch(p: vec2<f32>, angle: f32, spacing: f32, tone: f32) -> f32 {
 // Up to three crossing families; each joins only past its threshold, the way a
 // plate is worked darker by re-cutting across the first lines.
 fn crossHatch(p: vec2<f32>, tone: f32, spacing: f32, baseAngle: f32) -> f32 {
-  let first = hatch(p, baseAngle, spacing, tone * 1.15);
-  let second = hatch(p, baseAngle + 1.05, spacing, (tone - 0.42) * 1.6);
-  let third = hatch(p, baseAngle - 0.5, spacing * 0.8, (tone - 0.75) * 2.2);
+  // Widths stay under ~0.7 of the spacing so the lozenges between crossings
+  // keep their paper even in the darkest tone: engraving never floods.
+  let first = hatch(p, baseAngle, spacing, tone * 0.72);
+  let second = hatch(p, baseAngle + 1.05, spacing, (tone - 0.35) * 0.95);
+  let third = hatch(p, baseAngle - 0.5, spacing * 0.8, (tone - 0.7) * 1.3);
   return max(first, max(second, third));
 }
 

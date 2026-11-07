@@ -27,6 +27,19 @@ export const ANTIQUE_REGIME_MPC = [0.003, 0.03] as const;
 export const ANTIQUE_MAX_ORNAMENTS = 16;
 export const ANTIQUE_ORNAMENT_BYTES = 16 + ANTIQUE_MAX_ORNAMENTS * 64;
 
+/**
+ * The sheet's border, in print units from the canvas edge; mirrored as
+ * `MARGIN` + `BAND` in `fragment.wesl`. The ladder's centre line is what the
+ * numbering reads, the numbers sit just inside the inner rule.
+ */
+export const ANTIQUE_LADDER_UNITS = 21.5;
+export const ANTIQUE_NUMERAL_INSET_UNITS = 35;
+export const ANTIQUE_NUMERAL_UNITS = 11;
+
+/** `AntiqueLettering` in `fragment.wesl`: a 16-byte header, then 32-byte glyph rows. */
+export const ANTIQUE_MAX_GLYPHS = 96;
+export const ANTIQUE_GLYPH_BYTES = 16 + ANTIQUE_MAX_GLYPHS * 32;
+
 export const ANTIQUE_TARGETS = {
   /** The tone-mapped scene, in the swap format. */
   print: 'print',

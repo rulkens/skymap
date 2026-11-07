@@ -20,6 +20,7 @@ import { ANTIQUE_REGIME_MPC } from '../../../data/rendering/antiqueLook';
 import { raDecDistToCartesian } from '../../math/raDecDistToCartesian';
 import { rotateVec3ByTightMat3 } from '../../math/rotateVec3ByTightMat3';
 import { projectDirToPx } from '../../camera/projection/projectDirToPx';
+import { rayThroughPx } from '../../camera/projection/rayThroughPx';
 import { smoothstep } from '../../math/smoothstep';
 
 const DEG = Math.PI / 180;
@@ -80,7 +81,7 @@ export function placeAntiqueOrnaments(input: {
         top ? iy * unitPx : size.height - iy * unitPx,
       ];
       widthPx = anchor.sizeUnits * unitPx;
-      dir = rayThrough(centre, basis, frustum, size);
+      dir = rayThroughPx(centre, basis, frustum, size);
     }
     if (opacity <= 0.003) continue;
     const half: [number, number] = [widthPx * 0.5, widthPx * 0.5 * aspect];
@@ -97,18 +98,6 @@ export function placeAntiqueOrnaments(input: {
     });
   }
   return placed;
-}
-
-function rayThrough(
-  px: readonly [number, number],
-  basis: ViewBasis,
-  frustum: ViewFrustum,
-  size: Size,
-): Vec3 {
-  const tx = frustum.tanLeft + (px[0] / size.width) * (frustum.tanRight - frustum.tanLeft);
-  const ty = frustum.tanUp - (px[1] / size.height) * (frustum.tanUp - frustum.tanDown);
-  const { forward: f, right: r, up: u } = basis;
-  return [f[0] + r[0] * tx + u[0] * ty, f[1] + r[1] * tx + u[1] * ty, f[2] + r[2] * tx + u[2] * ty];
 }
 
 /** The screen angle (counter-clockwise from up) of celestial north at `dir`. */

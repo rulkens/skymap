@@ -36,6 +36,23 @@ import package::antiqueLook::ornaments::AntiqueOrnaments;
 @group(0) @binding(8) var glowTex: texture_2d<f32>;
 @group(0) @binding(9) var<uniform> orn: AntiqueOrnaments;
 @group(0) @binding(10) var ornamentTex: texture_2d<f32>;
+@group(0) @binding(11) var<uniform> lettering: AntiqueLettering;
+@group(0) @binding(12) var glyphTex: texture_2d<f32>;
+
+// The border's numbering, placed per frame by `placeAntiqueNumerals`.
+struct Glyph {
+  centre: vec2<f32>,
+  half: vec2<f32>,
+  rect: vec4<f32>,
+}
+
+struct AntiqueLettering {
+  count: u32,
+  _pad0: u32,
+  _pad1: u32,
+  _pad2: u32,
+  items: array<Glyph, 96>,
+}
 
 // Warm carbon-black copperplate ink, as a transmittance: it multiplies the sheet.
 const INK: vec3<f32> = vec3<f32>(0.17, 0.13, 0.10);
@@ -47,7 +64,7 @@ const MARGIN: f32 = 18.0;
 const BAND: f32 = 7.0;
 const CELL: f32 = 4.0;
 // Star contrast below this prints nothing: the paper floor.
-const STAR_FLOOR: f32 = 0.2;
+const STAR_FLOOR: f32 = 0.34;
 
 fn texel(t: texture_2d<f32>, ip: vec2<i32>) -> vec4<f32> {
   let size = vec2<i32>(textureDimensions(t));
@@ -100,6 +117,29 @@ fn ornamentLayer(px: vec2<f32>) -> vec4<f32> {
   return acc;
 }
 
+// Ink of the border digits. Four taps per pixel: the glyphs are set at 64 px
+// and drawn at 7–15, so a single bilinear tap would alias their hairlines.
+fn numeralInk(px: vec2<f32>) -> f32 {
+  var ink = 0.0;
+  for (var i = 0u; i < lettering.count; i++) {
+    let half = lettering.items[i].half;
+    let local = (px - lettering.items[i].centre) / half;
+    if (abs(local.x) > 1.0 || abs(local.y) > 1.0) {
+      continue;
+    }
+    let rect = lettering.items[i].rect;
+    let texel = (rect.zw - rect.xy) / (2.0 * half);
+    let at = mix(rect.xy, rect.zw, local * 0.5 + 0.5);
+    var sum = 0.0;
+    for (var k = 0; k < 4; k++) {
+      let o = vec2<f32>(f32(k & 1), f32(k >> 1u)) - 0.5;
+      sum += textureSampleLevel(glyphTex, linear, at + o * texel * 0.5, 0.0).r;
+    }
+    ink = max(ink, sum * 0.25);
+  }
+  return ink;
+}
+
 // How near the coast an ocean pixel lies, from the quarter-res land share: land
 // within ~3 cells counts fully, within ~7 cells half. 1 at the shore, 0 far out.
 fn coastNear(uv: vec2<f32>) -> f32 {
@@ -127,11 +167,15 @@ fn starInk(px: vec2<f32>) -> vec2<f32> {
       if (s.z < STAR_FLOOR) {
         continue;
       }
-      let k = clamp((s.z - STAR_FLOOR) / (1.0 - STAR_FLOOR), 0.0, 1.0);
+      // Contrast decides whether a star prints; the light it spreads, how large.
+      let k = clamp((s.w - 0.05) / 0.6, 0.0, 1.0);
       let r = (0.7 + 3.4 * k) * u.unit;
-      let rays = select(select(select(select(0.0, 5.0, k > 0.12), 6.0, k > 0.3), 8.0, k > 0.5), 12.0, k > 0.72);
+      // Rays need room to read: under ~3 px a glyph is a dot, under ~6 px no glory.
+      var rays = select(select(select(5.0, 6.0, k > 0.3), 8.0, k > 0.5), 12.0, k > 0.72);
+      rays = select(0.0, rays, r >= 3.0);
+      let glory = smoothstep(0.95, 1.0, k) * step(6.0, r);
       let q = px - s.xy;
-      ink = max(ink, starGlyph(q, r, rays, smoothstep(0.82, 0.95, k)));
+      ink = max(ink, starGlyph(q, r, rays, glory));
       knock = max(knock, 1.0 - smoothstep(1.3 * r, 1.3 * r + 1.0, length(q)));
     }
   }
@@ -222,8 +266,8 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let ocean = smoothstep(0.06, 0.22, (src.b - max(src.r, src.g * 0.92)) / max(src.b, 0.04));
   // Night by the brightest channel: a sunlit sea is dark in luma but not in blue.
   let night = 1.0 - smoothstep(0.04, 0.16, max(src.r, max(src.g, src.b)));
-  let landTone = max(pow(1.0 - clamp(l * 1.8, 0.0, 1.0), 1.8), night * 0.95);
-  let tone = mix(landTone, night * 0.95, ocean);
+  let landTone = max(pow(1.0 - clamp(l * 1.8, 0.0, 1.0), 1.8), night);
+  let tone = mix(landTone, night, ocean);
   let hatchInk = crossHatch(p, tone, 3.2, 0.35);
   let halo = coastHalo(p, coastNear(uv), 2.4) * ocean * (1.0 - night);
   let o = i32(round(u.unit));
@@ -239,7 +283,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   }
 
   let scene = max(max(bodyInk, limb), max(skyInk, rulings)) * (1.0 - ornament.y);
-  let content = max(max(scene, captions), ornament.x);
+  let content = max(max(scene, captions), max(ornament.x, numeralInk(px)));
   var ink = max(content * frame.y, frame.x);
   // Paper tooth: the burr breaks thin lines where the sheet dips.
   ink *= 0.78 + 0.22 * smoothstep(0.2, 0.6, sheet.a);
