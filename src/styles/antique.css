@@ -1,9 +1,11 @@
 /*
  * antique.css — the HUD printed on the antique atlas's sheet: opaque paper panels, iron-gall
  * ink, a double-rule frame, IM Fell type. `App` stamps `data-look="antique"` on <html> while
- * settings.antique is on; everything here re-points tokens, so a component reads no look.
+ * settings.antique is on; everything here re-points tokens (bar one inheritance fix at the
+ * end), so a component reads no look.
  * Ink is the canvas pass's `INK` (shaders/antiqueLook/fragment.wesl). Every text token
- * clears 4.5:1 on --antique-paper; the faintest, --color-fg-ghost, sits at 4.9:1.
+ * clears 4.5:1 on --antique-paper; the faintest, --color-fg-ghost, sits at 4.9:1 (more on
+ * the lighter --antique-slip the panels are cut from).
  */
 
 /* IM Fell (OFL, public/fonts/antique/OFL-IMFell.txt). Pica has no italic of its own;
@@ -46,6 +48,8 @@
 
 :root[data-look='antique'] {
   --antique-paper: rgb(239, 226, 194);
+  /* The panels: paper slips laid on the plate, a shade lighter than its sheet. */
+  --antique-slip: rgb(247, 239, 218);
   --antique-ink: rgb(43, 33, 24);
   --antique-rubric: #8b2316;
 
@@ -76,10 +80,10 @@
   --color-accent-link-strong: var(--antique-rubric);
   --color-accent-bright: var(--antique-ink);
 
-  --surface-panel: rgb(239 226 194 / 0.97);
-  --surface-card-strong: rgb(239 226 194 / 0.97);
-  --surface-card-soft: rgb(239 226 194 / 0.95);
-  --surface-soft: rgb(239 226 194 / 0.95);
+  --surface-panel: var(--antique-slip);
+  --surface-card-strong: var(--antique-slip);
+  --surface-card-soft: var(--antique-slip);
+  --surface-soft: var(--antique-slip);
   --surface-control: rgb(43 33 24 / 0.05);
   --surface-control-hover: rgb(43 33 24 / 0.11);
   --surface-control-active: rgb(43 33 24 / 0.17);
@@ -95,8 +99,11 @@
   --focus-ring: var(--antique-rubric);
 
   /* The engraver's frame: the border is the outer hairline, this paints a 2px paper gap
-   * and a fainter inner rule inside it. No drop shadow; the sheet is flat. */
-  --shadow-card: inset 0 0 0 2px var(--antique-paper), inset 0 0 0 3px rgb(43 33 24 / 0.55);
+   * and a fainter inner rule inside it. The slip lies on the plate with a crisp 2px drop
+   * rule down-right, unblurred: printed, not lit. */
+  --shadow-card:
+    inset 0 0 0 2px var(--antique-slip), inset 0 0 0 3px rgb(43 33 24 / 0.55),
+    2px 2px 0 rgb(43 33 24 / 0.8);
   --shadow-panel: var(--shadow-card);
   --gradient-accent-bar: none;
   --toggle-thumb-on: var(--antique-paper);
@@ -128,4 +135,10 @@
   --label-case: lowercase;
   /* Small caps stand only an x-height tall; at 10px they read as 7px type. */
   --font-size-label-min: 12px;
+}
+
+/* The `font` shorthand resets font-size-adjust, and every panel and card root sets one;
+ * re-inheriting it lets the root's Fell x-height match reach their text. */
+:root[data-look='antique'] body * {
+  font-size-adjust: inherit;
 }
