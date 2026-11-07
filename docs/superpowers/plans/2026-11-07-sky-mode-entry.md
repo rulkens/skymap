@@ -236,7 +236,8 @@ review: yes
 type SkyRestore = { readonly base: FramedCameraPose; readonly focus: FocusRef | null };
 enterSky = createAction<{ spot: SkySpot; pointLocalM: Vec3 | null }>('sky/enter');
 exitTakeover = createAction<{ restore?: true } | undefined>(…) // Esc and Leave pass { restore: true }
-arrivalClip(start: WorldPose, spot: SkySpot, pointLocalM: Vec3 | null, headingRad: number, fovYRad: number): ClipData
+arrivalClip(start: WorldPose, spot: SkySpot, pointLocalM: Vec3, headingRad: number, fovYRad: number, ctx): ClipData // glide ends on the standing pose's body-arm image
+approachClip(start: WorldPose, spot: SkySpot, headingRad: number, fovYRad: number, ctx): ClipData // far entry: over the outer relief bound; the glide then takes the next centre readout within 1 km (1.5 s, else the outer bound)
 ```
 
 Behaviour (spec §4.3, §5): `watchTakeoverSaga` builds `restore = outgoing sky restore ?? { camera.base, focus }`.

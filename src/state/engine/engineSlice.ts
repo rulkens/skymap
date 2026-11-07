@@ -10,7 +10,7 @@
  * merge below never needs an existence branch — a patch under an unseeded key
  * throws rather than silently minting one.
  *
- * `engineScaleChanged`/`engineBodyDistanceReported` use DEDUP-ON-WRITE:
+ * `engineScaleChanged`/`engineBodyDistanceReported`/the sky readouts use DEDUP-ON-WRITE:
  * skipping the mutation when the value is unchanged keeps the same Immer
  * draft reference, so a per-frame dispatch during camera movement doesn't
  * re-fire `useSelector` for a stable displayed value.
@@ -28,6 +28,8 @@ import type { LayerSearchEntry } from '../../@types/engine/layer/LayerSearchEntr
 import type { SkyEntryFacts } from '../../@types/engine/SkyEntryFacts';
 import type { SkyView } from '../../@types/engine/SkyView';
 import { NO_SKY_ENTRY } from '../../data/sky/noSkyEntry';
+import { skyEntryChanged } from '../../utils/sky/skyEntryChanged';
+import { skyViewChanged } from '../../utils/sky/skyViewChanged';
 
 /**
  * Initial scale-bar value that renders something sensible before the engine
@@ -118,13 +120,13 @@ const engineSlice = createSlice({
     },
 
     // ── sky mode readouts ────────────────────────────────────────────────────
-    // Deduped at the source: each row dispatches only news against the frame's store
-    // snapshot (`skyEntryChanged`, `skyViewChanged`), so a still view dispatches nothing.
+    // DEDUP-ON-WRITE, same rationale as engineScaleChanged; "unchanged" is the row's own
+    // news test (sub-metre drift, the rounded view), so the stored value is what a reader saw.
     engineSkyEntryReported: (state, action: PayloadAction<SkyEntryFacts>) => {
-      state.skyEntry = action.payload;
+      if (skyEntryChanged(state.skyEntry, action.payload)) state.skyEntry = action.payload;
     },
     engineSkyViewReported: (state, action: PayloadAction<SkyView>) => {
-      state.skyView = action.payload;
+      if (skyViewChanged(state.skyView, action.payload)) state.skyView = action.payload;
     },
 
     // ── HDR display capability ───────────────────────────────────────────────

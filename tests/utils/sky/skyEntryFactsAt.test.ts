@@ -1,6 +1,6 @@
 /**
- * skyEntryFactsAt — the centre spot is the ground the view looks at on a terrain host, and
- * nothing on a miss, off a terrain host, or above the entry ceiling.
+ * skyEntryFactsAt — the centre spot is the ground the view looks at on a terrain host, at any
+ * altitude (a far entry reads it over the spot), and nothing on a miss or off a terrain host.
  */
 import { describe, it, expect } from 'vitest';
 
@@ -8,6 +8,10 @@ import { skyEntryFactsAt } from '../../../src/utils/sky/skyEntryFactsAt';
 import { datumOnlyTerrainHeight } from '../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 import { SCENE_CELESTIAL_BODIES } from '../../../src/data/bodies/sceneCelestialBodies';
+import { hostOrThrow } from '../../../src/services/engine/camera/arms/hostOrThrow';
+import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
+import { IDENTITY_MAT3 } from '../../../src/utils/math/identityMat3';
+import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import type { BodyFixedPose } from '../../../src/@types/camera/pose/BodyFixedPose';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
 
@@ -31,8 +35,15 @@ function poseAt(id: string, altitudeM: number, basisLocal: Mat3): BodyFixedPose 
   };
 }
 
+const ctx = {
+  bodies: deriveBodyStates(CONST_J2000),
+  poseBasis: IDENTITY_MAT3,
+  upBasis: IDENTITY_MAT3,
+  terrainHeightAt: datumOnlyTerrainHeight,
+};
+
 const facts = (pose: BodyFixedPose) =>
-  skyEntryFactsAt(pose, VIEWPORT, FRUSTUM, FOV, datumOnlyTerrainHeight);
+  skyEntryFactsAt(pose, hostOrThrow({ body: pose.bodyId }, ctx), VIEWPORT, FRUSTUM, FOV);
 
 describe('skyEntryFactsAt', () => {
   it('names the ground under the view centre on Earth', () => {
@@ -50,9 +61,9 @@ describe('skyEntryFactsAt', () => {
     expect(facts(poseAt('jupiter', 5_000, DOWN)).spot).toBeNull();
   });
 
-  it('casts no ray above the entry ceiling', () => {
+  it('names the ground above the entry ceiling too: the ceiling is the selector’s', () => {
     const above = facts(poseAt('earth', 25_000, DOWN));
-    expect(above.spot).toBeNull();
+    expect(above.spot).toEqual({ body: 'earth', lonRad: 0, latRad: 0 });
     expect(above.altitudeM).toBeCloseTo(25_000, 3);
   });
 });

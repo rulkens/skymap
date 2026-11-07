@@ -3,8 +3,8 @@ import type { Vec3 } from '../math/Vec3';
 
 /**
  * SkyEntryFacts — where "Look up from here" would stand: the view-centre ground hit on the
- * engaged terrain host. `spot`/`pointLocalM` (body-fixed metres) are null on a miss, off a
- * terrain host, or above `SKY_ENTRY_MAX_ALT_M`, where nothing reads them and no ray is cast.
+ * engaged terrain host, at any altitude (`selectSkyEntry` applies the ceiling). `spot` and
+ * `pointLocalM` (body-fixed metres) are null on a miss or off a terrain host.
  */
 export type SkyEntryFacts = {
   readonly spot: SkySpot | null;

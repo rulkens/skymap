@@ -40,6 +40,7 @@ import { selectViewCoverPx } from '../../../state/viewCover/selectors';
 import { NO_INSETS_PX } from '../../../data/layout/noInsetsPx';
 import { inputConsumed } from '../../../state/input/inputSlice';
 import { isKind } from '../../../utils/selection/isKind';
+import { hostOf } from '../camera/arms/hostOf';
 import type { StructureInfo } from '../../../@types/data/structure/StructureInfo';
 
 /**
@@ -153,8 +154,12 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     fovYRad: cam.fovYRad,
     frustum: next.outputs.frustum,
     framed: next.register.pose,
-    terrainHeightAt: state.terrainHeightAt,
-    stored,
+    host: hostOf(next.register.pose.frame, {
+      bodies: bodyStates,
+      poseBasis,
+      upBasis,
+      terrainHeightAt: state.terrainHeightAt,
+    }),
     altitudeMpc: input.altitudeMpc,
     focusRow: state.selectionRows.focus,
     bodyStates,

@@ -3,25 +3,23 @@ import { engineSkyEntryReported } from '../../../../state/engine/engineSlice';
 import { isBodyArm } from '../../camera/arms/body/isBodyArm';
 import { skyEntryFactsAt } from '../../../../utils/sky/skyEntryFactsAt';
 import { NO_SKY_ENTRY } from '../../../../data/sky/noSkyEntry';
-import { skyEntryChanged } from '../../../../utils/sky/skyEntryChanged';
-import { selectSkyEntryFacts } from '../../../../state/engine/selectors';
+import { skyEntryNewsGate } from './skyEntryNewsGate';
 
-/** Where "Look up from here" would stand, from the booted frame's authored pose; sub-metre drift is not news. */
+/** Where "Look up from here" would stand, from the booted frame's authored pose on its host. */
 export const skyEntryReadoutRow: FrameReadoutRow = {
   publish: (frame, dispatch) => {
     if (!frame.booted) return;
-    const { framed, canvasCssPx } = frame;
-    const facts = isBodyArm(framed)
-      ? skyEntryFactsAt(
-          framed.pose,
-          [canvasCssPx.width, canvasCssPx.height],
-          frame.frustum,
-          frame.fovYRad,
-          frame.terrainHeightAt,
-        )
-      : NO_SKY_ENTRY;
-    if (skyEntryChanged(selectSkyEntryFacts(frame.stored), facts)) {
-      dispatch(engineSkyEntryReported(facts));
-    }
+    const { framed, canvasCssPx, host } = frame;
+    const facts =
+      isBodyArm(framed) && host !== null
+        ? skyEntryFactsAt(
+            framed.pose,
+            host,
+            [canvasCssPx.width, canvasCssPx.height],
+            frame.frustum,
+            frame.fovYRad,
+          )
+        : NO_SKY_ENTRY;
+    if (skyEntryNewsGate(facts)) dispatch(engineSkyEntryReported(facts));
   },
 };

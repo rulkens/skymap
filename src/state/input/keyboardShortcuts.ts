@@ -29,7 +29,7 @@ import { shortcutKeys } from '../../utils/input/shortcutKeys';
 import { logCameraState } from '../camera/logCameraState';
 import { goHome } from '../selection/goHome';
 import { focusSelected } from '../selection/focusSelected';
-import { clearSelection } from '../selection/selectionSlice';
+import { clearSelection, updateSelectionSelect } from '../selection/selectionSlice';
 import { selectSelectedRef } from '../selection/selectors';
 import { selectTourActive } from '../tour/selectors';
 import { advanceTour, prevBeat, togglePause } from '../tour/tourActions';
@@ -53,14 +53,14 @@ export const KEYBOARD_SHORTCUTS: readonly KeyboardShortcut[] = [
     run: (s) => (selectPaletteOpen(s) ? null : setPaletteOpen(true)),
     preventDefault: true,
   },
-  // An open card closes first (R11). Otherwise `exitTakeover` ends whatever runs — a tour, an
+  // An open card closes first, focus kept (R11). Otherwise `exitTakeover` ends whatever runs — a tour, an
   // exhibit, a registry clip, sky mode, or the debug path replay — as the person's own leave,
   // so sky mode restores (or lifts off when standing with no takeover); nothing running, a no-op.
   {
     keys: 'escape',
     run: (s) =>
       selectSelectedRef(s) !== null
-        ? clearSelection()
+        ? updateSelectionSelect(null)
         : [clearSelection(), exitTakeover({ restore: true })],
   },
   { keys: 'f', run: () => focusSelected() },
