@@ -68,7 +68,7 @@ export const ANTIQUE_ORNAMENTS: readonly AntiqueOrnament[] = [
   // galactic plane that the surveys cannot see into: an uncharted ocean, where
   // the sea-chart fauna and a ship may sail, each at a place in it.
   voyager('zoa-monster', 'seaMonster', 60, 30, 18, 0),
-  voyager('zoa-whale', 'hornedWhale', 150, 45, 22, 5),
+  voyager('zoa-whale', 'whale', 150, 45, 22, 5),
   voyager('zoa-seahorse', 'seaHorse', 240, 35, 16, 1),
   voyager('zoa-ship', 'ship', 320, 25, 12, 6),
 ];
