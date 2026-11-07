@@ -64,7 +64,7 @@ the Display section container
 
 ### Task 9: Fidelity fixes (owner ruling 2026-11-07, after a 4/10 fidelity review)
 **Files:** body earth pass + shader, `shaders/antiqueLook/{reduce,fragment}.wesl`, `tools/antique/look/`
-- [ ] Earth's land share from its ocean mask (written by the Earth pass while the look is on), not from colour.
+- [x] Earth's land share from its ocean mask (written by the Earth pass while the look is on), not from colour (0e0455d63).
 - [x] Glows keep full brightness (block mean held near its dimmest texel, no per-texel cap); stipple follows the quarter-res band with relief (9cc398c58).
 - [x] `lookbench`: plain/antique pairs of pinned views, sheets, compares, crops (9cc398c58).
 - [x] Hevelius figures print the scan's own lines: cetus, dragon, seaSerpent packed at 1024 px with a `[0.1, 0.8]` push, the atlas mipped, coverage turned into density in `decor.wesl`.
