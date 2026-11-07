@@ -262,6 +262,46 @@ fn crescentInk(theta: f32, gTheta: f32, q: f32, rimUnits: f32, pxUnits: f32, see
   return inkLine(d, w, pxUnits) * step(0.5 * pxUnits, w) * step(-0.05, t);
 }
 
+// A rayed crater's ejecta (weight over 1: Copernicus, Keplerus, Aristarchus) brightens the
+// ground it fell on for ~300 km, which then reads as highland: the row takes the ground
+// round it, the two darkest of 8 taps on each of three circles 4, 6 and 8 radii out (the
+// dark between and beyond the rays), fading out over BLANKET radii, where the shore follows
+// the albedo, so a crater thrown on a sea sits in that sea. x that ground (sqrt luma), y
+// its reach 0..1.
+const BLANKET = vec2<f32>(2.5, 7.0);
+// The taps' mip: the albedo over ~40 km.
+const BLANKET_TEXELS: f32 = 256.0;
+
+fn blanketGround(n: vec3<f32>) -> vec2<f32> {
+  var ground = 1.0;
+  var reach = 0.0;
+  let lod = log2(f32(textureDimensions(bodyTexture).x) / BLANKET_TEXELS);
+  for (var i = 0u; i < moon.count; i++) {
+    let cr = moon.craters[i];
+    let cosPsi = dot(n, cr.c);
+    let here = 1.0 - smoothstep(BLANKET.x, BLANKET.y, acos(clamp(cosPsi, -1.0, 1.0)) / cr.rho);
+    if (cr.weight < 1.05 || here <= 0.0) {
+      continue;
+    }
+    let e1 = normalize(cross(vec3<f32>(0.0, 0.0, 1.0), cr.c));
+    let e2 = cross(cr.c, e1);
+    var d0 = 1.0;
+    var d1 = 1.0;
+    for (var k = 0; k < 24; k++) {
+      let a = f32(4 + 2 * (k / 8)) * cr.rho;
+      let t = f32(k) * 0.7853982 + f32(k / 8) * 0.39;
+      let p = cr.c * cos(a) + (e1 * cos(t) + e2 * sin(t)) * sin(a);
+      let rgb = textureSampleLevel(bodyTexture, bodySampler, equirectUvFromDir(p), lod).rgb;
+      let s = sqrt(dot(rgb, vec3<f32>(0.2126, 0.7152, 0.0722)));
+      d1 = min(d1, max(d0, s));
+      d0 = min(d0, s);
+    }
+    ground = min(ground, 0.5 * (d0 + d1));
+    reach = max(reach, here);
+  }
+  return vec2<f32>(ground, reach);
+}
+
 // x rim ink (the nearest live ring's line, every crescent), y inside a crater's floor
 // (0..1). n the geometric normal, dNdx/dNdy its screen derivatives, rd the eye's ray.
 fn craterRims(n: vec3<f32>, dNdx: vec3<f32>, dNdy: vec3<f32>, sun: vec3<f32>, rd: vec3<f32>,
@@ -359,8 +399,13 @@ fn fsMoonPrint(in: TexturedBodyVSOut) -> @location(0) vec4<f32> {
   let day = smoothstep(-0.02, 0.06, lit);
   // A crater floor brighter than any sea keeps the plate's mare lines off it (b + 2).
   let fine = mareTap(uv, grad.ddx, grad.ddy, 1.0, MARE_MIP_TEXELS, MARE_CAP_KM);
-  return encodeMoonRow(mareAlbedo(uv, grad.ddx, grad.ddy), lit, rims.x * day, rims.y > 0.5 && fine * fine > BRIGHT_FLOOR,
-    mareTap(uv, grad.ddx, grad.ddy, MARE_WIDE_PX, MARE_WIDE_TEXELS, MARE_WIDE_CAP_KM));
+  let blanket = blanketGround(ng);
+  let albedo = mareAlbedo(uv, grad.ddx, grad.ddy);
+  let wide = mareTap(uv, grad.ddx, grad.ddy, MARE_WIDE_PX, MARE_WIDE_TEXELS, MARE_WIDE_CAP_KM);
+  // The blanket keeps the albedo's own swell over its ground, so the sea's lines still vary.
+  let thrownOn = min(albedo, blanket.x + 0.6 * (albedo - wide));
+  return encodeMoonRow(mix(albedo, thrownOn, blanket.y), lit, rims.x * day,
+    rims.y > 0.5 && fine * fine > BRIGHT_FLOOR, mix(wide, min(wide, blanket.x), blanket.y));
 }
 
 // The Moon's ground in the shared relief row (`relief.wesl`'s contract), from the normal

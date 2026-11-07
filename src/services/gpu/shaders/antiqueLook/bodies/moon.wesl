@@ -133,12 +133,13 @@ fn moonShade(form: vec3<f32>, tone: f32, pxUnits: f32) -> f32 {
 // The maria's level lines, on whole device px so every line prints alike: the albedo
 // read along the line's own centre row (the mask is the line's, not the pixel's), cut by
 // the hysteresis above and the wide albedo's support, ends staggered by the line's hash
-// and stepped down over the taps that still read sea.
+// and stepped down over the taps that still read sea. A line carries on over a bright
+// fleck with sea both sides (~12 px), so a sea shows no paper holes.
 fn moonMare(field: texture_2d_array<f32>, layer: i32, px: vec2<f32>, unit: f32, moon: MoonTone) -> f32 {
   let pitch = max(round(MOON_PITCH * unit), 3.0);
   let k = floor(px.y / pitch);
   let yc = k * pitch + floor(0.5 * pitch) + 0.5;
-  let stagger = 0.008 * (hash21Hq(vec2<f32>(k, 7.7)) - 0.5);
+  let stagger = 0.004 * (hash21Hq(vec2<f32>(k, 7.7)) - 0.5);
   var taps = array<f32, 5>();
   var darkest = 1.0;
   var wide = 0.0;
@@ -154,7 +155,7 @@ fn moonMare(field: texture_2d_array<f32>, layer: i32, px: vec2<f32>, unit: f32, 
   for (var j = 0; j < 5; j++) {
     inSea += step(taps[j], shore);
   }
-  if (taps[2] > shore || wide * wide / 25.0 > MARE_SUPPORT + stagger) {
+  if ((taps[2] > shore && max(taps[0], taps[4]) > shore) || wide * wide / 25.0 > MARE_SUPPORT + stagger) {
     return 0.0;
   }
   // Thinner across the shade's own lines, so a mare at night is a darker weave, not a grid.
