@@ -10,6 +10,7 @@ import { APP_EXHIBIT_REGISTRY } from '../../compositions/appExhibits';
 import { clipRegistry } from '../../data/animation/clips/clipRegistry';
 import { tourRegistry } from '../../data/animation/tours/tourRegistry';
 import { RATE_LADDER } from '../../data/time/rateLadder';
+import { SKY_HOSTS } from '../../data/sky/skyHosts';
 import { setControlScheme } from '../settings/core/cameraControlsSlice';
 import { remotePairingToggled } from './remoteSlice';
 import { goHome } from '../selection/goHome';
@@ -60,6 +61,17 @@ function parsePaletteAction(raw: unknown): PaletteAction | undefined {
       if (!isFiniteIn(lonDeg, -180, 180) || !isFiniteIn(latDeg, -90, 90)) return undefined;
       return isFiniteIn(altKm, 0, MAX_ALT_KM)
         ? { kind: 'flyTo', lonDeg, latDeg, altKm }
+        : undefined;
+    }
+    case 'sky': {
+      const { spot } = raw;
+      if (spot === 'here') return { kind: 'sky', spot };
+      if (!isRecord(spot) || typeof spot.body !== 'string') return undefined;
+      const body = [...SKY_HOSTS].find((id) => id === spot.body);
+      const { lonRad, latRad } = spot;
+      if (body === undefined || !isFiniteIn(lonRad, -Math.PI, Math.PI)) return undefined;
+      return isFiniteIn(latRad, -Math.PI / 2, Math.PI / 2)
+        ? { kind: 'sky', spot: { body, lonRad, latRad } }
         : undefined;
     }
     default:

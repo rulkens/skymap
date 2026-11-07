@@ -3,7 +3,7 @@
  * events → `recognize` → the press bound through `CONTROL_BINDINGS` → `input/*`
  * actions. Motion and hover buffer to one dispatch per animation frame; every
  * edge (start, end, tap, resize) flushes the buffer first so the slice sees
- * events in device order. A double-tap's `focusSelected` lands after its own
+ * events in device order. A double-tap's `viewSelected` lands after its own
  * second press's `inputGestureStarted`, so that press cannot cancel the fly.
  */
 
@@ -20,7 +20,7 @@ import {
   inputSourceResized,
   inputTapped,
 } from './inputSlice';
-import { focusSelected } from '../selection/focusSelected';
+import { viewSelected } from '../selection/viewSelected';
 import { CONTROL_BINDINGS } from '../../data/input/controlBindings';
 import { TAP_SELECTING_INTENTS } from '../../data/input/tapSelectingIntents';
 import { selectCameraControls } from '../settings/selectors';
@@ -146,7 +146,7 @@ export function* inputSourceSaga(source: SourceId, channel: EventChannel<DeviceE
             // Only a press bound to the selecting drag picks or focuses.
             if (!TAP_SELECTING_INTENTS.has(bindPress(bindings, g.press))) break;
             yield* flush();
-            yield* put(g.kind === 'tap' ? inputTapped({ source, at: g.at }) : focusSelected());
+            yield* put(g.kind === 'tap' ? inputTapped({ source, at: g.at }) : viewSelected());
             break;
         }
       }

@@ -49,6 +49,7 @@ const ACTION_FOR_ROW: Record<ScoredRow['kind'], (row: ScoredRow) => PaletteActio
           altKm: row.entry.altKm,
         }
       : unreachableRow(),
+  sky: (row) => (row.kind === 'sky' ? { kind: 'sky', spot: row.spot } : unreachableRow()),
 };
 
 export function actionForRow(row: ScoredRow): PaletteAction {

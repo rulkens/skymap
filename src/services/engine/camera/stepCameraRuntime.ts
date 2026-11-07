@@ -144,10 +144,12 @@ export function stepCameraRuntime(
   // Every arm field but the up-basis. The replay and the produce run BEFORE
   // this frame's basis resolves, so they read the previous frame's; the fold
   // reads this frame's. One shared value would move the settle trace.
+  const focusBodyId = selectionDriver(focus)?.poseId ?? null;
   const armFields = {
     bodies,
     poseBasis,
-    focusBodyId: selectionDriver(focus)?.poseId ?? null,
+    focusBodyId,
+    bodilessFocus: focus !== null && focusBodyId === null,
     pivot: pivotFraming(pivotRow),
     viewportPx: canvasPx,
     frustum,

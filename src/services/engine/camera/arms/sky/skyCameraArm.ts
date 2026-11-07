@@ -3,7 +3,7 @@
  * live ground at the tag's spot, looking by azimuth and altitude. Only a tag
  * enters it (`engage` is null). Every drag looks and the wheel changes the
  * lens, which the arm hands back as `fovYRad` beside an unmoved pose; a fresh
- * wheel-out at the widest lens reports a push carrying the exit lift.
+ * wheel-out at the widest lens, or a `liftOff` step, reports a push carrying the exit lift.
  */
 
 import type { ClimbRow } from '../@types/ClimbRow';
@@ -56,6 +56,14 @@ export const skyCameraArm: ClimbRow<'sky'> = {
       const pose = skyLookedPose(framed.pose, dragPx, ctx.fovYRad, ctx.viewportPx[1]);
       return { pose, memory, tilt };
     }
+    if (input.kind === 'liftOff') {
+      return {
+        pose: framed.pose,
+        memory,
+        tilt,
+        pushed: { edge: 'out', lift: skyExitLift(framed, ctx) },
+      };
+    }
     if (input.kind !== 'zoom') return { pose: framed.pose, memory, tilt };
     const fovYRad = skyZoomedLens(ctx.fovYRad, input.factor);
     // The pose stays by reference, so `replayInput` commits no pose for a lens notch.
@@ -96,5 +104,8 @@ export const skyCameraArm: ClimbRow<'sky'> = {
 
   engage: () => null,
 
-  release: (framed, ctx) => !focusInSubtree(ctx.focusBodyId, framed.frame.sky.body),
+  // A tag carries no eye, so focus is the only way out: a bodiless one leaves too, or a fly to
+  // a galaxy would refold into this frame every frame and its end commit would land on the ground.
+  release: (framed, ctx) =>
+    ctx.bodilessFocus || !focusInSubtree(ctx.focusBodyId, framed.frame.sky.body),
 };

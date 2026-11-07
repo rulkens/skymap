@@ -10,7 +10,7 @@
  * merge below never needs an existence branch — a patch under an unseeded key
  * throws rather than silently minting one.
  *
- * `engineScaleChanged`/`engineBodyDistanceReported` use DEDUP-ON-WRITE:
+ * `engineScaleChanged`/`engineBodyDistanceReported`/the sky readouts use DEDUP-ON-WRITE:
  * skipping the mutation when the value is unchanged keeps the same Immer
  * draft reference, so a per-frame dispatch during camera movement doesn't
  * re-fire `useSelector` for a stable displayed value.
@@ -25,6 +25,11 @@ import type { ScaleInfo } from '../../@types/engine/ScaleInfo';
 import type { SourceType } from '../../@types/data/SourceType';
 import type { LoadProgressState } from '../../@types/loading/LoadProgressState';
 import type { LayerSearchEntry } from '../../@types/engine/layer/LayerSearchEntry';
+import type { SkyEntryFacts } from '../../@types/engine/SkyEntryFacts';
+import type { SkyView } from '../../@types/engine/SkyView';
+import { NO_SKY_ENTRY } from '../../data/sky/noSkyEntry';
+import { skyEntryChanged } from '../../utils/sky/skyEntryChanged';
+import { skyViewChanged } from '../../utils/sky/skyViewChanged';
 
 /**
  * Initial scale-bar value that renders something sensible before the engine
@@ -36,6 +41,8 @@ const CORE_INITIAL: CoreEngineSliceState = {
   status: { kind: 'initializing' },
   scale: INITIAL_SCALE,
   focusedBodyDistanceMpc: null,
+  skyEntry: NO_SKY_ENTRY,
+  skyView: null,
   hdrCapable: false,
   sourceCounts: {},
   loadProgress: null,
@@ -112,6 +119,16 @@ const engineSlice = createSlice({
       }
     },
 
+    // ── sky mode readouts ────────────────────────────────────────────────────
+    // DEDUP-ON-WRITE, same rationale as engineScaleChanged; "unchanged" is the row's own
+    // news test (sub-metre drift, the rounded view), so the stored value is what a reader saw.
+    engineSkyEntryReported: (state, action: PayloadAction<SkyEntryFacts>) => {
+      if (skyEntryChanged(state.skyEntry, action.payload)) state.skyEntry = action.payload;
+    },
+    engineSkyViewReported: (state, action: PayloadAction<SkyView>) => {
+      if (skyViewChanged(state.skyView, action.payload)) state.skyView = action.payload;
+    },
+
     // ── HDR display capability ───────────────────────────────────────────────
     // Live, not a boot snapshot: `initGpu`'s matchMedia `change` listener
     // (`watchHdrCapability` in `device.ts`) re-dispatches this whenever the
@@ -152,6 +169,8 @@ export const {
   layerSearchCleared,
   engineScaleChanged,
   engineBodyDistanceReported,
+  engineSkyEntryReported,
+  engineSkyViewReported,
   engineHdrCapabilityChanged,
   factsReported,
   layerFactsSeeded,

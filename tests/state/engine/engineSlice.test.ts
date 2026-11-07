@@ -18,11 +18,13 @@ import reducer, {
   engineSourceCountReported,
   engineScaleChanged,
   engineBodyDistanceReported,
+  engineSkyViewReported,
   factsReported,
   layerFactsSeeded,
 } from '../../../src/state/engine/engineSlice';
 import type { CoreEngineSliceState } from '../../../src/@types/store/CoreEngineSliceState';
 import { Source } from '../../../src/data/source';
+import { NO_SKY_ENTRY } from '../../../src/data/sky/noSkyEntry';
 
 /** A state widened with a stub Layer's facts key, standing in for a landed Layer. */
 type WithStubFacts = CoreEngineSliceState & { stub: { a: number; b: number; list?: number[] } };
@@ -33,6 +35,8 @@ const base = (): CoreEngineSliceState => ({
   status: { kind: 'initializing' },
   scale: { label: '…', widthPx: 100 },
   focusedBodyDistanceMpc: null,
+  skyEntry: NO_SKY_ENTRY,
+  skyView: null,
   hdrCapable: false,
   sourceCounts: {},
   loadProgress: null,
@@ -79,6 +83,19 @@ describe('engineSlice — engineBodyDistanceReported', () => {
     const s: CoreEngineSliceState = { ...base(), focusedBodyDistanceMpc: null };
     const next = reducer(s, engineBodyDistanceReported(3.4e-6));
     expect(next.focusedBodyDistanceMpc).toBe(3.4e-6);
+  });
+});
+
+describe('engineSlice — engineSkyViewReported', () => {
+  const view = {
+    spot: { body: 'earth', lonRad: 0.2, latRad: 0.9 },
+    azimuthRad: 1,
+    altitudeRad: 0.3,
+  };
+
+  it('returns the same state reference for an equal view in a fresh record', () => {
+    const s = reducer(base(), engineSkyViewReported(view as never));
+    expect(reducer(s, engineSkyViewReported({ ...view } as never))).toBe(s);
   });
 });
 

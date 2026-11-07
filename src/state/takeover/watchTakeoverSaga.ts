@@ -1,12 +1,13 @@
 /**
  * watchTakeoverSaga — the single mutual-exclusion point for every takeover
- * source (`startTour`, `openExhibit`, `startClip`). A superseding request cancels the running
+ * source (`startTour`, `openExhibit`, `startClip`, `enterSky`). A superseding request cancels the running
  * takeover and waits for the whole cancelled bracket to settle before the
  * successor starts, so the successor snapshots the user's pre-takeover scene
- * and not a mid-takeover one.
+ * and not a mid-takeover one. A sky entry over a running sky takeover inherits
+ * its restore, so Leave returns to the camera from before the first entry (D11).
  */
 
-import { call, cancel, fork, take } from 'typed-redux-saga';
+import { call, cancel, fork, select, take } from 'typed-redux-saga';
 import type { Task } from 'redux-saga';
 
 import { runTakeoverSaga } from './runTakeoverSaga';
@@ -17,11 +18,16 @@ import { exhibitBodySaga } from '../exhibits/exhibitBodySaga';
 import { openExhibit } from '../exhibits/exhibitActions';
 import { clipBodySaga } from '../camera/clipBodySaga';
 import { startClip } from '../camera/clipActions';
+import { skyBodySaga } from '../sky/skyBodySaga';
+import { enterSky } from '../sky/enterSky';
+import { selectTakeoverSource } from './selectors';
+import { selectCameraBase } from '../camera/selectors';
+import { selectFocusRef } from '../selection/selectors';
 import { tourRegistry } from '../../data/animation/tours/tourRegistry';
 import { APP_EXHIBIT_REGISTRY } from '../../compositions/appExhibits';
 import type { TakeoverSource } from '../../@types/takeover/TakeoverSource';
 
-const startRequests = [startTour, openExhibit, startClip];
+const startRequests = [startTour, openExhibit, startClip, enterSky];
 
 export function* watchTakeoverSaga() {
   let running: Task | undefined;
@@ -29,6 +35,8 @@ export function* watchTakeoverSaga() {
 
   while (true) {
     const action = yield* take(startRequests);
+    // Read before the cancel: a cancelled run puts no `takeoverEnded`, so this is still it.
+    const outgoing = yield* select(selectTakeoverSource);
 
     if (running) {
       // `cancel` only INITIATES cancellation: the outgoing run's `finally`
@@ -60,6 +68,14 @@ export function* watchTakeoverSaga() {
       const id = action.payload;
       source = { kind: 'clip', id };
       body = () => clipBodySaga(id);
+    } else if (enterSky.match(action)) {
+      const { spot, pointLocalM } = action.payload;
+      const restore =
+        outgoing?.kind === 'sky'
+          ? outgoing.restore
+          : { base: yield* select(selectCameraBase), focus: yield* select(selectFocusRef) };
+      source = { kind: 'sky', spot, restore };
+      body = () => skyBodySaga(spot, pointLocalM, restore);
     } else {
       // `take(startRequests)` widens `action` to `any` — typed-redux-saga
       // can't narrow a `take` over a mixed-creator array — so this branch is

@@ -53,6 +53,7 @@ function ctxFor(focusBodyId: SceneBodyId | null): CameraArmCtx {
     upBasis: B,
     terrainHeightAt: datumOnlyTerrainHeight,
     focusBodyId,
+    bodilessFocus: false,
     pivot: pivotFraming(null),
     viewportPx: [100, 100],
     frustum: symmetricFrustum(Math.PI / 3, 1),

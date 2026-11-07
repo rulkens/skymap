@@ -46,6 +46,7 @@ import {
   commitCameraPose,
   startFrameTween,
 } from '../../../../src/state/camera/cameraSlice';
+import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRowsSlice';
 import { setMissionCraft } from '../../../../src/layers/missions/state/missions/slice';
 import { takeoverStarted } from '../../../../src/state/takeover/takeoverActions';
 import { setOrientation } from '../../../../src/state/settings/core/orientationSlice';
@@ -231,6 +232,7 @@ describe('stepCameraRuntime', () => {
           upBasis: B,
           terrainHeightAt: datumOnlyTerrainHeight,
           focusBodyId: asSceneBodyId('earth'),
+          bodilessFocus: false,
           pivot: pivotFraming(EARTH_ROW),
           viewportPx: [1000, 1000],
           frustum: symmetricFrustum(Math.PI / 3, 1),
@@ -1084,5 +1086,41 @@ describe('the sky exit lift', () => {
     const m = arm.basisLocal;
     expect(along([m[6], m[7], m[8]], UP)).toBeCloseTo(-1, 9);
     expect(camera.fovYRad).toBeCloseTo(DEFAULT_FOV_Y_RAD, 12);
+  });
+});
+
+describe('a focus fly that starts while standing', () => {
+  // The Milky Way names no body, so `focusBodyId` is null for it exactly as for no focus;
+  // standing must still let it go, or the fly's end commit lands back on the ground.
+  it('leaves the sky frame at once and stays where it lands', () => {
+    const SKY = { body: asSceneBodyId('earth'), lonRad: 0.21857, latRad: 0.97158 };
+    const h = makeCameraSimHarness({ focusBody: 'earth' });
+    h.frame(2);
+    h.store.dispatch(
+      commitCameraPose({ frame: { sky: SKY }, pose: { azimuthRad: 1, altitudeRad: 0.4 } }),
+    );
+    h.frame(2);
+    const row = { type: 'milkyWay', positionMpc: [0, 0, 0], radiusMpc: 0.015 };
+    h.store.dispatch(setSelectionRow({ slot: 'focus', row, focusId: 'milkyWay' }));
+    const to: CameraPose = { target: [0, 0, 0], yaw: 0.3, pitch: 0.2, distance: 0.05 };
+    h.store.dispatch(
+      startCameraTween({
+        from: liveClipStartPose(h.state),
+        to,
+        motion: { style: 'eased', durationMs: 1000, ease: 'easeOutCubic' },
+        frame: DEFAULT_ORIENTATION,
+      }),
+    );
+
+    h.frame(1);
+    expect(cameraArmKindOf(h.store.getState().camera.base.frame)).not.toBe('sky');
+    for (let i = 0; i < 200 && h.store.getState().camera.tween !== null; i++) h.frame(1);
+    h.frame(5);
+
+    const { base } = h.store.getState().camera;
+    expect(isWorldArm(base)).toBe(true);
+    expect(eyeMpcOf(base.pose as CameraPose, B)).toEqual(
+      eyeMpcOf(to, B).map((v) => expect.closeTo(v, 9)),
+    );
   });
 });

@@ -1,0 +1,80 @@
+/*
+ * SkyEntryPreview.module.css — a zero-size anchor at the viewport centre; the ring centres on it
+ * and the tag hangs to its right. The ring's dark outline keeps it legible over bright ground.
+ */
+
+.root {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  z-index: 9;
+  pointer-events: none;
+  animation: fadeIn var(--duration-fast) var(--ease-standard);
+}
+
+.ring {
+  position: absolute;
+  left: calc(-1 * var(--space-6));
+  top: calc(-1 * var(--space-6));
+  width: var(--space-12);
+  height: var(--space-12);
+  box-sizing: border-box;
+  border: 1.5px solid var(--color-accent);
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 1px var(--shadow-card-outer),
+    0 0 var(--space-6) var(--color-accent-gradient-edge);
+}
+
+.ring::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--space-2);
+  height: var(--space-2);
+  margin: calc(-1 * var(--space-1));
+  border-radius: 50%;
+  background: var(--color-accent);
+}
+
+.tag {
+  position: absolute;
+  left: var(--space-10);
+  top: 0;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-4);
+  padding: var(--space-1) var(--space-4);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+  background: var(--surface-card-strong);
+  -webkit-backdrop-filter: blur(var(--blur-card));
+  backdrop-filter: blur(var(--blur-card));
+  white-space: nowrap;
+  transform: translateY(-50%);
+}
+
+.place {
+  color: var(--color-fg);
+  font-family: var(--font-family-display);
+  font-size: 1rem;
+}
+
+.coordinates {
+  color: var(--color-fg-tertiary);
+  font: var(--font-size-sm) / var(--line-height-tight) var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root {
+    animation: none;
+  }
+}

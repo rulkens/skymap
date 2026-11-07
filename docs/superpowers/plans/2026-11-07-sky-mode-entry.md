@@ -145,7 +145,7 @@ InfoCard Focus and `F` keep `requestFocus`.
       `git checkout origin/sky-mode -- src/utils/geo/parseLatLonQuery.ts src/utils/geo/parseCompassDegrees.ts src/utils/geo/parseLonLatInput.ts src/@types/scene/CompassDegrees.d.ts tests/utils/geo/parseLatLonQuery.test.ts tests/utils/geo/parseCompassDegrees.test.ts`
       plus `docs/backlog/2026-10-28-survey-sky-overlays-hips.md` and its `docs/BACKLOG.md` line (from the
       branch's `docs/BACKLOG.md`). Run their tests. Commit ("salvage lat/lon parsers from the sky-mode draft").
-- [ ] Archive (controller only): `git push origin origin/sky-mode:refs/tags/archive/sky-mode`, then
+- [x] Archive (controller only): `git push origin origin/sky-mode:refs/tags/archive/sky-mode`, then
       `git push origin --delete sky-mode`.
 
 **Prep PR:** push, open "Sky mode prep: pushed zoom limits, readout rows, view requests", watch CI.
@@ -173,15 +173,15 @@ neverRises(declinationRad: number, latitudeRad: number): boolean
 Build alt/az from the spot's ENU frame and the body's orientation the way `skyPoseFromBodyArm.ts:17-27` and
 `sunDirLocal` do; sample then bisect for the two searches.
 
-- [ ] Test `sun altitude at Copenhagen matches a reference` — two instants (noon and 22:00 UTC, 2026-11-07),
+- [x] Test `sun altitude at Copenhagen matches a reference` — two instants (noon and 22:00 UTC, 2026-11-07),
       reference values taken from the NOAA solar calculator, cited in the test, tolerance 0.3°.
-- [ ] Test `next astronomical dark at Copenhagen matches a reference` (same source, tolerance 2 min) and
+- [x] Test `next astronomical dark at Copenhagen matches a reference` (same source, tolerance 2 min) and
       `returns null for a white night` (Copenhagen, 2026-06-21, −18°).
-- [ ] Test `neverRises` for the Southern Cross from 55.7° N (true) and Vega from 55.7° N (false).
-- [ ] Test `altAzFromSpot at lat 89.9° returns finite values` (Review focus 2).
-- [ ] Test `sun altitude on Mars uses Mars's rotation` — one Mars instant against a value derived in the test
+- [x] Test `neverRises` for the Southern Cross from 55.7° N (true) and Vega from 55.7° N (false).
+- [x] Test `altAzFromSpot at lat 89.9° returns finite values` (Review focus 2).
+- [x] Test `sun altitude on Mars uses Mars's rotation` — one Mars instant against a value derived in the test
       from the IAU rotation elements already in `orientationForBody`.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 6: Place names
 
@@ -191,8 +191,8 @@ Build alt/az from the spot's ENU frame and the body's orientation the way `skyPo
 25 km); `placeLabel(spot: SkySpot): { text: string; near: boolean }` — Earth: the entry's first name, `near: true`;
 otherwise and on Mars: `"55.67° N 12.52° E"` (2 decimals, hemisphere letters), `near: false`.
 
-- [ ] Tests: `inside 25 km of Søndermarken names it`, `40 km out gives coordinates`, `Mars gives coordinates`.
-- [ ] Commit.
+- [x] Tests: `inside 25 km of Søndermarken names it`, `40 km out gives coordinates`, `Mars gives coordinates`.
+- [x] Commit.
 
 ### Task 7: Sky readout rows and selectors
 
@@ -206,7 +206,7 @@ review: yes
 
 ```ts
 type SkyEntryFacts = { readonly spot: SkySpot | null; readonly pointLocalM: Vec3 | null; readonly altitudeM: number };
-type SkyView = { readonly spot: SkySpot; readonly azimuthRad: number; readonly altitudeRad: number; readonly fovYRad: number } | null;
+type SkyView = { readonly spot: SkySpot; readonly azimuthRad: number; readonly altitudeRad: number } | null;
 selectSkyEntry(state: RootState): SkyEntryFacts['spot'] // non-null only when the gate holds
 ```
 
@@ -215,8 +215,8 @@ viewport centre), null on a miss or a host without terrain; republished only whe
 altitude crosses 20 km. `skyView`: non-null while the camera frame is `sky`, rounded to 0.5°. The gate:
 `spot !== null && altitudeM < 20_000 && skyView === null && no tour, exhibit or clip running`.
 
-- [ ] Tests: `selectSkyEntry` false above 20 km, on a miss, on a host without terrain, while standing, during a tour.
-- [ ] Commit.
+- [x] Tests: `selectSkyEntry` false above 20 km, on a miss, on a host without terrain, while standing, during a tour.
+- [x] Commit.
 
 ### Task 8: The sky takeover
 
@@ -236,7 +236,8 @@ review: yes
 type SkyRestore = { readonly base: FramedCameraPose; readonly focus: FocusRef | null };
 enterSky = createAction<{ spot: SkySpot; pointLocalM: Vec3 | null }>('sky/enter');
 exitTakeover = createAction<{ restore?: true } | undefined>(…) // Esc and Leave pass { restore: true }
-arrivalClip(start: WorldPose, spot: SkySpot, pointLocalM: Vec3 | null, headingRad: number, fovYRad: number): ClipData
+arrivalClip(start: WorldPose, spot: SkySpot, pointLocalM: Vec3, headingRad: number, fovYRad: number, ctx): ClipData // glide ends on the standing pose's body-arm image
+approachClip(start: WorldPose, spot: SkySpot, headingRad: number, fovYRad: number, ctx): ClipData // far entry: over the outer relief bound; the glide then takes the next centre readout within 1 km (1.5 s, else the outer bound)
 ```
 
 Behaviour (spec §4.3, §5): `watchTakeoverSaga` builds `restore = outgoing sky restore ?? { camera.base, focus }`.
@@ -251,12 +252,12 @@ it with the same `pushed: { edge: 'out', lift }` as a widest-lens wheel-out, so 
 the engine (Task 2's ruling). Esc: `selection open ? clearSelection() : exitTakeover({ restore: true })`. Hash: sky
 is named by no hash.
 
-- [ ] Tests: `Leave restores the entry camera and focus`; `lift-off ends it without restoring`;
+- [x] Tests: `Leave restores the entry camera and focus`; `lift-off ends it without restoring`;
       `a tour start ends it without restoring`; `a hash change ends it without restoring`;
       `re-entry keeps the first restore` (Review focus 4); `Esc with a card open clears the selection and keeps the takeover`;
       `a push at the floor enters at the cursor anchor`; `a push within 250 ms does not enter`;
       `Leave while standing with no takeover lifts off`.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 9: Search while standing
 
@@ -280,10 +281,10 @@ to the HUD (store field on the sky takeover or a small slice; builder's choice, 
 `clamp(3 × 2·atan(r/d), 0.5°, current)`; star rows (`starCatalog`) half the current, min 10°, never wider.
 **The body you stand on, or the Sun-system body hosting the spot, falls back to `requestFocus` (fly).**
 
-- [ ] Tests: `a pick while standing keeps focus and the sky frame`; `M31 frames at about 3 × its diameter`;
+- [x] Tests: `a pick while standing keeps focus and the sky frame`; `M31 frames at about 3 × its diameter`;
       `a star halves the lens down to 10°`; `a target below the horizon faces its rise azimuth`;
       `searching the host body flies` (Review focus 1).
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 10: Palette rows
 
@@ -295,9 +296,9 @@ to the HUD (store field on the sky takeover or a small slice; builder's choice, 
 `selectSkyEntry` holds; "Sky from <place>" beside each `EARTH_PLACES` match; a `parseLatLonQuery` hit gives
 "Sky from 52.37° N 4.89° E" on the current terrain host, else Earth. All map to `enterSky`.
 
-- [ ] Tests: `a typed lat, lon yields a sky row`; `a place match yields its sky row beside the fly-to`;
+- [x] Tests: `a typed lat, lon yields a sky row`; `a place match yields its sky row beside the fly-to`;
       `Sky from here is listed only when entry is available`.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 11: Entry button, `s`, and the sky HUD
 
@@ -317,10 +318,10 @@ the sun's lowest point that night); "Skip to when it rises" from Task 9; both vi
 Navigation sky rows: Drag "look around", Wheel "field of view", "Wheel out at 120°" "lift off", Esc
 "close card, then leave".
 
-- [ ] Interaction tests: button gate show/hide; hover shows the ring; Leave dispatches `exitTakeover({ restore: true })`;
+- [x] Interaction tests: button gate show/hide; hover shows the ring; Leave dispatches `exitTakeover({ restore: true })`;
       `Skip to tonight from live mode lands manual, paused, at the target` (Review focus 5).
-- [ ] Shots at both widths for: entry rest, entry hover, phone entry, HUD night, HUD day (skip visible).
-- [ ] Commit.
+- [x] Shots at both widths for: entry rest, entry hover, phone entry, HUD night, HUD day (skip visible).
+- [x] Commit.
 
 **Feature PR:** push, open "Sky mode: look up from here, compass HUD, search turns your head", stacked on the
 prep PR, watch CI. Perf gate (controller ruling): `npm run perf:cpu` at the Søndermarken sky pose and a 15 km

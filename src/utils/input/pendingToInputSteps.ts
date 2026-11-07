@@ -20,7 +20,8 @@ export function pendingToInputSteps(
 ): RawInputStep[] {
   const steps: RawInputStep[] = [];
   for (const step of pending) {
-    if (step.kind === 'start') steps.push({ kind: 'gestureStart' });
+    if (step.kind === 'liftOff') steps.push({ kind: 'liftOff' });
+    else if (step.kind === 'start') steps.push({ kind: 'gestureStart' });
     else if (step.kind === 'end') steps.push({ kind: 'gestureEnd' });
     else if (step.intent === 'zoom') {
       steps.push({

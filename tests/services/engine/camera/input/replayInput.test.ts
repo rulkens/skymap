@@ -38,6 +38,9 @@ import { datumOnlyTerrainHeight } from '../../../../../src/utils/camera/terrain/
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { ORIENTATION_FRAMES } from '../../../../../src/data/orientation/orientationFrames';
 import { earthArm } from '../../../../fixtures/earthArm';
+import { bodyFixedEyeM } from '../../../../../src/utils/camera/surfaceFrame/bodyFixedEyeM';
+import { surfaceFloorM } from '../../../../../src/services/engine/camera/arms/body/utils/surfaceFloorM';
+import { SURFACE_STANDOFF_RADII } from '../../../../../src/utils/camera/orbitCamera/clampDistance';
 import { worldArmOf } from '../../../../fixtures/worldArmOf';
 import { bodyDriverGeometry } from '../../../../../src/utils/scene/bodyDriverGeometry';
 import type { FramedCameraPose } from '../../../../../src/@types/camera/pose/FramedCameraPose';
@@ -77,6 +80,7 @@ function ctxOf(
       upBasis: B,
       terrainHeightAt: datumOnlyTerrainHeight,
       focusBodyId: isKind<BodySelectionRow>(focus, 'body') ? focus.id : null,
+      bodilessFocus: focus !== null && !isKind<BodySelectionRow>(focus, 'body'),
       pivot: pivotFraming(focus),
       viewportPx: [1000, 1000] as const,
       frustum: symmetricFrustum(Math.PI / 3, 1),
@@ -879,5 +883,65 @@ describe('replayInput', () => {
     const radii = worldArmOf(next.register).distance / EARTH_RADIUS_MPC;
     expect(radii).toBeGreaterThan(1);
     expect(radii).toBeLessThan(1.05);
+  });
+
+  describe('sky entry and lift-off through the drain', () => {
+    const pushesOf = (actions: readonly unknown[]) =>
+      actions
+        .filter((a) => zoomLimitPushed.match(a as never))
+        .map((a) => (a as ReturnType<typeof zoomLimitPushed>).payload.edge);
+
+    /** Earth's body arm with its eye on the descent floor, where a fresh zoom-in pushes. */
+    function atFloor(): FramedCameraPose {
+      const arm = earthArm(2);
+      if (!isBodyArm(arm)) throw new Error('fixture: not a body arm');
+      const radiusM = SCENE_CELESTIAL_BODIES.find((b) => b.id === 'earth')!.surface.datumRadiusM;
+      const eye = bodyFixedEyeM(arm.pose);
+      const s = surfaceFloorM(radiusM, SURFACE_STANDOFF_RADII) / Math.hypot(...eye);
+      const a = arm.pose.anchorLocalM;
+      return {
+        frame: arm.frame,
+        pose: {
+          ...arm.pose,
+          eyeRelAnchorM: [eye[0] * s - a[0], eye[1] * s - a[1], eye[2] * s - a[2]],
+        },
+      };
+    }
+
+    it('a floor notch within 250 ms of the last one does not push; one after the quiet does', () => {
+      const store = makeStore();
+      const floor = atFloor();
+      store.dispatch(commitCameraPose(floor));
+      const drain = (eventMs: number) =>
+        replayInput(
+          {
+            register: floor,
+            gesture: EMPTY_SURFACE_GESTURE_MEMORY,
+            tilt: EMPTY_TILT_MEMORY,
+            follow: null,
+            lastWheelMs: 1000,
+          },
+          [atRestZoom(0.8, eventMs)],
+          ctxOf(store),
+        ).actions;
+      expect(pushesOf(drain(1000 + FRESH_WHEEL_PAUSE_MS - 10))).toEqual([]);
+      expect(pushesOf(drain(1000 + FRESH_WHEEL_PAUSE_MS))).toEqual(['in']);
+    });
+
+    it('a liftOff step while standing reports the same push as a widest-lens wheel-out', () => {
+      const store = makeStore();
+      const sky: FramedCameraPose = {
+        frame: { sky: { body: asSceneBodyId('earth'), lonRad: 0.2, latRad: 0.9 } },
+        pose: { azimuthRad: 1, altitudeRad: 0.3 },
+      };
+      store.dispatch(commitCameraPose(sky));
+      const next = replayInput(
+        { register: sky, gesture: null, tilt: EMPTY_TILT_MEMORY, follow: null, lastWheelMs: 0 },
+        [{ kind: 'liftOff' }],
+        ctxOf(store),
+      );
+      expect(pushesOf(next.actions)).toEqual(['out']);
+      expect(next.register.pose).toBe(sky.pose);
+    });
   });
 });

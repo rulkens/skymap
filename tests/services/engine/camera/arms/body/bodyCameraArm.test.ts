@@ -87,6 +87,7 @@ describe('the body arm’s floor push', () => {
   const ctx: CameraArmCtx = {
     ...ctxWith(datumOnlyTerrainHeight),
     focusBodyId: null,
+    bodilessFocus: false,
     pivot: pivotFraming(null),
     viewportPx: [100, 100],
     frustum: symmetricFrustum(Math.PI / 3, 1),
