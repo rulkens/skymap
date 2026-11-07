@@ -3,8 +3,9 @@
  * maria and Terrae fitted across what they name (`placeAntiqueAreaName`), craters on
  * their floors or beside their rims (`placeAntiqueCraterName`), all faded in with the
  * disc (`ANTIQUE_MOON_PLACE_REVEAL.discPx`). The producer owns each name's px and side,
- * which `antiqueLabel` keeps; the director declutters by `rank`. With the look off it
- * returns before any work. A name carries the Moon as subject, so it recedes with it.
+ * which `antiqueLabel` keeps; the director declutters seas first, then by `rank`. With
+ * the look off it returns before any work. A name carries the Moon as subject, so it
+ * recedes with it.
  */
 
 import type { Label2D } from '../../../../@types/rendering/Label2D';
@@ -30,7 +31,8 @@ import { placeAntiqueAreaName } from '../utils/placeAntiqueAreaName';
 import { placeAntiqueCraterName } from '../utils/placeAntiqueCraterName';
 
 const NONE = { labels: [], awake: false } as const;
-// Above every rank, so rank 1 carries the highest priority within the row.
+// Above every rank, so rank 1 carries the highest priority within the row; a sea or Terra
+// a whole ceiling over every crater, as Riccioli's plate prints every sea first.
 const RANK_CEILING = 1000;
 
 export function produceAntiqueMoonPlaces(
@@ -87,7 +89,11 @@ export function produceAntiqueMoonPlaces(
         fadeAlpha: discAlpha * at.alpha,
         // Engraved over the disc it names; the placement already keeps it on the lit side.
         occludeWeight: 0,
-        declutterPriority: priority * CAPTION_PRIORITY_SCALE + RANK_CEILING - place.rank,
+        declutterPriority:
+          priority * CAPTION_PRIORITY_SCALE +
+          (place.kind === 'crater' ? 0 : RANK_CEILING) +
+          RANK_CEILING -
+          place.rank,
         subjectId,
       });
     });
