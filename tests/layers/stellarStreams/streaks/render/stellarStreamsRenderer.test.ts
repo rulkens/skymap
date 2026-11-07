@@ -4,6 +4,7 @@ import { createStellarStreamsRenderer } from '../../../../../src/layers/stellarS
 import { CAMERA_UNIFORM_BYTES } from '../../../../../src/services/gpu/lib/cameraUniforms';
 import { STELLAR_STREAMS_LOOKS } from '../../../../../src/layers/stellarStreams/streaks/data/stellarStreamsLooks';
 import type { StellarStreamsLook } from '../../../../../src/layers/stellarStreams/streaks/@types/StellarStreamsLook';
+import type { StellarStreamsFocus } from '../../../../../src/layers/stellarStreams/streaks/@types/StellarStreamsFocus';
 import type { StellarStreamsPayload } from '../../../../../src/layers/stellarStreams/catalog/@types/StellarStreamsPayload';
 
 // `Uniforms` in streams.wesl: eye xyz after the camera prefix, then the look lanes.
@@ -35,7 +36,12 @@ function setup() {
     setBindGroup: vi.fn(),
     draw: vi.fn(),
   };
-  const draw = (which: 'streak' | 'haze', look: StellarStreamsLook, opacity: number) =>
+  const draw = (
+    which: 'streak' | 'haze',
+    look: StellarStreamsLook,
+    opacity: number,
+    focus: StellarStreamsFocus = { recede: 1, focusedStream: -1 },
+  ) =>
     renderer.draw(
       pass as unknown as GPURenderPassEncoder,
       which,
@@ -46,6 +52,7 @@ function setup() {
       0,
       look,
       opacity,
+      focus,
     );
   return { writeBuffer, pass, draw };
 }
@@ -67,6 +74,17 @@ describe('createStellarStreamsRenderer draw', () => {
         Math.fround,
       ),
     );
+  });
+
+  it('writes the focused stream and the recede factor after the pick lanes, where the WGSL reads them', () => {
+    const { writeBuffer, draw } = setup();
+    draw('streak', STELLAR_STREAMS_LOOKS.streak, 1, { recede: 0.15, focusedStream: 12 });
+    const block = writeBuffer.mock.calls[0]![2];
+    // focusedStream at byte 124, recede at 128: past minHalfAcrossPx, inside the 144-byte block.
+    expect(Array.from(block.subarray(INTENSITY + 8, INTENSITY + 10))).toEqual(
+      [12, 0.15].map(Math.fround),
+    );
+    expect(block.byteLength).toBe(144);
   });
 
   it('draws nothing when the look or the fade is 0', () => {

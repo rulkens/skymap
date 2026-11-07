@@ -660,7 +660,7 @@ spatial sphere stays at zero blend; focusing a structure behaves exactly as befo
 green); the streams pass writes the focused index and the recede factor (−1 / 1 at rest); a non-stream focus
 (e.g. a structure) still recedes the streams via the show entry.
 
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 19: Stellar mass on the card, where published (owner ruling 92rh)
 

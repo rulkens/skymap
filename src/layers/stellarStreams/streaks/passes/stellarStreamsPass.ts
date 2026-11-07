@@ -1,9 +1,9 @@
 /**
  * stellarStreamsPass — the streak look, additive on NEAR0 right after `local-bubble`: like the
  * shell, it lands after the Milky Way's dust multiply, so halo streams in front of the disc are
- * not darkened by it. Core hands the fade. The haze look draws at half res in
- * `stellarStreamsHazePass`. Only the streaks stamp picks: the haze is wide and faint, and would
- * take clicks far off the stream.
+ * not darkened by it. Core hands the fade; a focus recedes every stream but its own. The haze
+ * look draws at half res in `stellarStreamsHazePass`. Only the streaks stamp picks: the haze is
+ * wide and faint, and would take clicks far off the stream.
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
@@ -12,6 +12,7 @@ import { rebaseViewProj } from '../../../../utils/camera/projection/rebaseViewPr
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { stellarStreamsClockSec } from '../present/stellarStreamsClockSec';
 import { stellarStreamsLookLive } from '../present/stellarStreamsLookLive';
+import { stellarStreamsFocus } from '../present/stellarStreamsFocus';
 
 export function stellarStreamsPass(runtime: StellarStreamsRuntime): ContentPass<'stellarStreams'> {
   return {
@@ -33,6 +34,7 @@ export function stellarStreamsPass(runtime: StellarStreamsRuntime): ContentPass<
         stellarStreamsClockSec(ctx),
         state.settings.stellarStreams.streak,
         fade,
+        stellarStreamsFocus(ctx, runtime.pickCode),
       );
     },
 

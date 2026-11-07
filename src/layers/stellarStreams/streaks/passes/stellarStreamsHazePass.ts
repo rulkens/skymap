@@ -11,6 +11,7 @@ import { rebaseViewProj } from '../../../../utils/camera/projection/rebaseViewPr
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { stellarStreamsClockSec } from '../present/stellarStreamsClockSec';
 import { stellarStreamsLookLive } from '../present/stellarStreamsLookLive';
+import { stellarStreamsFocus } from '../present/stellarStreamsFocus';
 
 export function stellarStreamsHazePass(
   runtime: StellarStreamsRuntime,
@@ -36,6 +37,7 @@ export function stellarStreamsHazePass(
         stellarStreamsClockSec(ctx),
         state.settings.stellarStreams.haze,
         fade,
+        stellarStreamsFocus(ctx, runtime.pickCode),
       );
     },
   };

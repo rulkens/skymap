@@ -2,6 +2,7 @@ import type { Vec2 } from '../../../../@types/math/Vec2';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { StellarStreamsPayload } from '../../catalog/@types/StellarStreamsPayload';
 import type { StellarStreamsLook } from './StellarStreamsLook';
+import type { StellarStreamsFocus } from './StellarStreamsFocus';
 
 export type StellarStreamsRenderer = {
   hasData(): boolean;
@@ -20,6 +21,7 @@ export type StellarStreamsRenderer = {
     look: StellarStreamsLook,
     /** Multiplies the look's intensity: the handed fade. A product of 0 draws nothing. */
     opacity: number,
+    focus: StellarStreamsFocus,
   ): void;
   /** Stamps `look`'s quads (the streak look) into the NEAR0 pick target, each word naming its stream. */
   drawPick(

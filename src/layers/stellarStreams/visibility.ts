@@ -14,6 +14,7 @@ export const stellarStreamsVisibility = [
   {
     key: 'stellarStreams',
     selects: ['stellarStream'],
+    recession: 'strong',
     bands: {
       streams: {
         in: [4 * KPC, NEIGHBOURHOOD_RECEDE_KPC * KPC],
@@ -21,5 +22,5 @@ export const stellarStreamsVisibility = [
       },
     },
   },
-  { label: 'stellarStream', cluster: 'stellarStreams', of: 'stellarStreams' },
+  { label: 'stellarStream', cluster: 'stellarStreams', of: 'stellarStreams', recession: 'mild' },
 ] as const satisfies readonly VisibilityEntry[];
