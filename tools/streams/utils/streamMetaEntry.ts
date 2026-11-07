@@ -13,6 +13,7 @@ import { streamStellarMass } from './streamStellarMass';
 import { trackPositionsKpc } from './trackPositionsKpc';
 import { trackWidthKpc } from './trackWidthKpc';
 import { streamCentreline } from './streamCentreline';
+import { cappedFrameRadiusKpc } from './cappedFrameRadiusKpc';
 
 /** The meta row of a galstreams stream; its label and focus sit at the track's midpoint by length. */
 export function streamMetaEntry(
@@ -33,7 +34,7 @@ export function streamMetaEntry(
     source: 'galstreams',
     reference: track.ref,
     lengthKpc,
-    frameRadiusKpc: lengthKpc / 2,
+    frameRadiusKpc: cappedFrameRadiusKpc(lengthKpc / 2, Math.hypot(mid[0], mid[1], mid[2])),
     distanceKpc: [Math.min(...track.distanceKpc), Math.max(...track.distanceKpc)],
     widthDeg: track.widthDeg,
     particleCount: particles.luminosity.length,

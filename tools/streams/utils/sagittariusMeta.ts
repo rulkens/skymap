@@ -7,6 +7,7 @@ import type { StreamWikipedia } from '../@types/StreamWikipedia';
 import type { VasilievStar } from '../@types/VasilievStar';
 import { streamArticleFields } from './streamArticleFields';
 import { streamCentreline } from './streamCentreline';
+import { cappedFrameRadiusKpc } from './cappedFrameRadiusKpc';
 import { sagittariusCentrelines } from './sagittariusCentrelines';
 
 const MPC_TO_KPC = 1e3;
@@ -47,7 +48,10 @@ export function sagittariusMeta(
     reference: 'Vasiliev, Belokurov & Erkal 2021',
     // An extent (diameter around the remnant) here; for galstreams streams an arc length.
     lengthKpc: 2 * percentile(fromAnchorKpc, EXTENT_PERCENTILE),
-    frameRadiusKpc: percentile(fromAnchorKpc, FRAME_PERCENTILE),
+    frameRadiusKpc: cappedFrameRadiusKpc(
+      percentile(fromAnchorKpc, FRAME_PERCENTILE),
+      Math.hypot(...anchorMpc) * MPC_TO_KPC,
+    ),
     distanceKpc: [near, far],
     widthDeg: null,
     particleCount: p.luminosity.length,
