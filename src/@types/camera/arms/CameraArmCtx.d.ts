@@ -8,6 +8,8 @@ import type { ViewFrustum } from '../projection/ViewFrustum';
 /** `CameraArmBasisCtx` plus the gesture-time fields only `engage`/`release`/`step`/`stepCameraArm` need. */
 export type CameraArmCtx = CameraArmBasisCtx & {
   readonly focusBodyId: PositionedId | null;
+  /** A focus on something that is no body (a galaxy, a survey star): `focusBodyId` is null for it too. */
+  readonly bodilessFocus: boolean;
   readonly pivot: PivotFraming;
   readonly viewportPx: Readonly<Vec2>;
   /** The main view's frustum: cursor rays map through it. */

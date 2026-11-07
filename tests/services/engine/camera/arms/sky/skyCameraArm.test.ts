@@ -76,6 +76,7 @@ function ctxFor(
       return args[0] === 'earth' ? terrainM : 0;
     },
     focusBodyId,
+    bodilessFocus: false,
     pivot: pivotFraming(null),
     viewportPx: [100, 100],
     frustum: symmetricFrustum(Math.PI / 3, 1),
@@ -332,6 +333,8 @@ describe('the sky arm', () => {
     expect(ROW.release(start, ctxFor(null))).toBe(false);
     expect(ROW.release(start, ctxFor(EARTH))).toBe(false);
     expect(ROW.release(start, ctxFor(asSceneBodyId('mars')))).toBe(true);
+    // A galaxy: no body id, yet a focus off the host all the same.
+    expect(ROW.release(start, { ...ctxFor(null), bodilessFocus: true })).toBe(true);
   });
 });
 

@@ -104,5 +104,8 @@ export const skyCameraArm: ClimbRow<'sky'> = {
 
   engage: () => null,
 
-  release: (framed, ctx) => !focusInSubtree(ctx.focusBodyId, framed.frame.sky.body),
+  // A tag carries no eye, so focus is the only way out: a bodiless one leaves too, or a fly to
+  // a galaxy would refold into this frame every frame and its end commit would land on the ground.
+  release: (framed, ctx) =>
+    ctx.bodilessFocus || !focusInSubtree(ctx.focusBodyId, framed.frame.sky.body),
 };

@@ -24,6 +24,7 @@ const CTX: CameraArmCtx = {
   upBasis: B,
   terrainHeightAt: datumOnlyTerrainHeight,
   focusBodyId: null,
+  bodilessFocus: false,
   pivot: { radiusMpc: null, floorMpc: 0 },
   viewportPx: [1920, 1080],
   frustum: symmetricFrustum(1, 1920 / 1080),

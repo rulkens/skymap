@@ -80,6 +80,7 @@ function ctxOf(
       upBasis: B,
       terrainHeightAt: datumOnlyTerrainHeight,
       focusBodyId: isKind<BodySelectionRow>(focus, 'body') ? focus.id : null,
+      bodilessFocus: focus !== null && !isKind<BodySelectionRow>(focus, 'body'),
       pivot: pivotFraming(focus),
       viewportPx: [1000, 1000] as const,
       frustum: symmetricFrustum(Math.PI / 3, 1),
