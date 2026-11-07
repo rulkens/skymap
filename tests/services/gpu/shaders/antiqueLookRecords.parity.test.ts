@@ -99,6 +99,7 @@ describe('antique look records ↔ WGSL structs', () => {
       },
       hatchAngle: 1024,
       web: 1025,
+      eye: [1026, 1027, 1028],
     });
     const sentinel: Record<string, number> = {
       res: 1001,
@@ -134,6 +135,9 @@ describe('antique look records ↔ WGSL structs', () => {
       expect(offsetOf(packed, value)).toBe(lane('globe', 'steps', i));
     // The web weight rides rayTL's spare w lane (io.wesl's table).
     expect(offsetOf(packed, 1025)).toBe(offsets.get('rayTL')! + 12);
+    // The eye rides the other three corners' w lanes.
+    for (const [i, ray] of ['rayTR', 'rayBL', 'rayBR'].entries())
+      expect(offsetOf(packed, 1026 + i)).toBe(offsets.get(ray)! + 12);
     // bodies (bit 0), paper (bit 2) and depth cover, the bit cover.wesl tests.
     const depthBit = readShaderSource(`${DIR}/cover.wesl`).match(/FLAG_DEPTH_COVER: u32 = (\d+)u/);
     expect(Number(depthBit?.[1])).toBe(0b1000);

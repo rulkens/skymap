@@ -154,10 +154,11 @@ Owner ruling 2026-11-07: keep the generic galaxy engraving with these names; the
 `src/services/gpu/passes/antiqueLook/{antiqueLook,createAntiqueLookGpu}.ts`, `src/data/labels/antiqueLabelRules.ts`,
 `tools/antique/look/views.json`
 - [x] `cosmic-web-filaments` moved onto the lines row (`ANTIQUE_MOVED_PASSES`): the print's 4×4 reduce no longer drops them.
-- [ ] Isobaths: the density raymarch read straight into the plate as log₂ contours (outermost dotted), walls stippled, voids left paper; the upsample hidden, the galaxy engraving no longer inks the density; the work gated to the cosmos regime with the density live.
-- [ ] Spines: the filament width and ink follow density on the plate; the faint tendrils lift.
-- [ ] Latin names for the web (Laniakea, Perseus-Pisces, Virgo, Coma Berenices, Attractor Magnus, Murus Hydrae); VACVVM LOCALE and VACVVM SCVLPTORIS only past `ANTIQUE_REGIME_MPC[1]`; a cluster glyph from the structures row.
-- [ ] The Zone of Avoidance ruled as a named hatched band, so it no longer reads as a void.
+- [x] Isobaths: the density raymarch's own row charted by a `web.wesl` pre-pass into `star-ink`'s spare b/a as log₂ contours (outermost dotted), walls scattered, voids left paper and lifting field galaxies; the upsample hidden, so the galaxy engraving no longer inks the density; drawn only in the cosmos regime with the density live.
+- [ ] Spines: the filament width and ink follow density on the plate; the faint tendrils lift. PARKED: the shipped `filaments.bin` carries density 0 at every vertex (no DisPerSE field values), so the ramp has nothing to read; needs a filament rebuild first.
+- [x] Latin names for the web (Laniakea, Perseus-Pisces, Virgo, Coma Berenices, Attractor Magnus, Murus Hydrae); VACVVM LOCALE and VACVVM SCVLPTORIS only past `ANTIQUE_REGIME_MPC[1]`.
+- [ ] A cluster glyph from the structures row.
+- [x] The Zone of Avoidance ruled where most of a sight line within the survey runs through 2MRS's dust wedge (`web.wesl`), so it no longer reads as a void. Its name on the plate is still open.
 
 ### Task 19: Mars terrain engraved, treatment (d) (owner rulings 2026-11-07: shadow hachures, halo, stipple, thinning; Hevelius plate light from orbit)
 **Files:** `src/services/gpu/shaders/antiqueLook/{relief,engraving,fragment}.wesl`, `src/services/gpu/shaders/antiqueLook/bodies/mars.wesl`,

@@ -9,6 +9,7 @@
 // |        |         | bit4 the relief row holds Mars ground (`relief.wesl`)    |
 // | 16..79 | ray*    | world (equatorial) view-ray at the four corners, xyz     |
 // | 28     | web     | rayTL.w: how far the cosmic web is charted, 0..1         |
+// | 44..76 | eye     | rayTR.w, rayBL.w, rayBR.w: the eye, world Mpc            |
 // | 80     | seed    | per-session paper seed                                   |
 // | 84     | hatch   | body hatch angle, radians: parallel to the terminator    |
 // | 96     | sky     | the sky's ruling frame (`RulingFrame`, 80 bytes)         |

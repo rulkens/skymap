@@ -30,6 +30,7 @@ export function packAntiqueUniforms(
   const { tl, tr, bl, br } = input.rays;
   [tl, tr, bl, br].forEach((ray, i) => f32.set(ray, 4 + i * 4));
   f32[7] = input.web;
+  [11, 15, 19].forEach((lane, i) => (f32[lane] = input.eye[i]!));
   f32[20] = input.seed;
   f32[21] = input.hatchAngle;
   // The sky's and a globe's `RulingFrame`, 20 floats each; no globe packs as zeros.

@@ -145,6 +145,7 @@ export function createAntiqueLook(init: {
         rulings,
         hatchAngle: terminatorHatchAngle(ctx.bodyPose(SUN)),
         web: webDensity ? cosmos : 0,
+        eye: ctx.drawCamPos,
       },
       uniformBytes,
     );

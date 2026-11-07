@@ -6,6 +6,7 @@
 import type { ViewCornerRays } from '../camera/projection/ViewCornerRays';
 import type { AntiquePlateRulings } from './AntiquePlateRulings';
 import type { Size } from './Size';
+import type { Vec3 } from '../math/Vec3';
 
 export type AntiqueUniformInput = {
   /** Target size in device px. */
@@ -31,4 +32,6 @@ export type AntiqueUniformInput = {
   readonly hatchAngle: number;
   /** How far the cosmic web is charted, 0..1: the cosmos regime, and 0 with no density drawn. */
   readonly web: number;
+  /** The eye, world Mpc: where `web.wesl` finds the Zone of Avoidance's dust wedge. */
+  readonly eye: Readonly<Vec3>;
 };
