@@ -36,7 +36,11 @@ export const ANTIQUE_NUMERAL_UNITS = 22;
  * upsample (the plate reads that row itself as isobaths, never as print to engrave),
  * and the resolved stars' sprites: a star prints only as its catalogue glyph
  * (`glyphs.wesl`), since bloom and the plate's glow filters ringed each sprite in
- * dotted halos. The unresolved aggregate (`star-upsample`) still feeds the print. */
+ * dotted halos. The unresolved aggregate (`star-upsample`) still feeds the print.
+ * Likewise a galaxy point prints only as its catalogue dot (a field of sprites grew
+ * contour islands in the low band); resolved galaxies' disks still feed the print.
+ * The cosmic structures' discs went too: their outlines drew rings round empty paper,
+ * so a structure is named on the plate, not ringed. */
 export const ANTIQUE_HIDDEN_PASSES: readonly string[] = [
   'star-points',
   'star-catalog',
@@ -45,6 +49,8 @@ export const ANTIQUE_HIDDEN_PASSES: readonly string[] = [
   'selection-ring',
   'near0-selection-ring',
   'cosmic-web-density-upsample',
+  'point-sprites',
+  'structure-markers-cosmo',
 ];
 
 /** Passes that exist only for the look: they draw nothing with it off. */
@@ -55,6 +61,7 @@ export const ANTIQUE_ONLY_PASSES: readonly string[] = [
   'moon-print',
   'star-points-print',
   'star-catalog-print',
+  'galaxy-points-print',
 ];
 
 /** Passes the look moves off their line onto a row of its own, which the plate inks
@@ -64,7 +71,6 @@ export const ANTIQUE_MOVED_PASSES: Readonly<Record<string, string>> = {
   'orbit-trails': 'antique-lines',
   'mission-trails': 'antique-lines',
   'cosmic-web-filaments': 'antique-lines',
-  'structure-markers-cosmo': 'antique-structures',
   'structure-markers-near': 'antique-structures',
 };
 

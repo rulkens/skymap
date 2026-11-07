@@ -24,6 +24,7 @@ import { SLAB_REVERSED_Z, COSMO } from '../../services/engine/frame/slabs';
 
 import { createGalaxyPointRenderer } from './pointSprites/render/galaxyPointRenderer';
 import { createGalaxyPickRenderer } from './pointSprites/render/galaxyPickRenderer';
+import { createGalaxyPointPrintRenderer } from './pointSprites/render/galaxyPointPrintRenderer';
 import { createTexturedDiskRenderer } from './disks/textured/render/texturedDiskRenderer';
 import { createProceduralDiskRenderer } from './disks/procedural/render/proceduralDiskRenderer';
 import { wireImpostorSubsystems } from './disks/load/wireImpostorSubsystems';
@@ -79,6 +80,13 @@ export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRu
     deps.focusUniform.bindGroup,
     SLAB_REVERSED_Z[COSMO]!,
   );
+  const pointPrintRenderer = createGalaxyPointPrintRenderer(
+    device,
+    deps.fadeBgl,
+    deps.sourceBgl,
+    deps.focusBgl,
+    deps.focusUniform.bindGroup,
+  );
 
   const { galaxyAtlas, texturedDisks, proceduralDisks, diskPlannerWalk } = wireImpostorSubsystems({
     device,
@@ -130,6 +138,7 @@ export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRu
     hiResFamous,
     pointRenderer,
     pickRenderer,
+    pointPrintRenderer,
     texturedDiskRenderer,
     proceduralDiskRenderer,
     galaxyAtlas,

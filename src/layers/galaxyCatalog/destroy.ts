@@ -19,6 +19,7 @@ export function destroy(runtime: GalaxyCatalogRuntime): void {
   runtime.galaxyAtlas.destroy();
 
   runtime.pickRenderer.destroy();
+  runtime.pointPrintRenderer.destroy();
   runtime.proceduralDiskRenderer.destroy();
   runtime.texturedDiskRenderer.destroy();
   runtime.pointRenderer.destroy();

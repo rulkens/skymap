@@ -270,8 +270,17 @@ export const SCENE: FrameSection = {
       slab: 'surfaceMask',
       passes: ['moon-print'],
     },
-    // The look's star glyphs come from the catalogue: every naked-eye star as one point,
-    // the brightest per cell kept by its depth. Look-only, like the land row above.
+    // The look's glyphs come from the catalogues: every galaxy point, then every naked-eye
+    // star, as one point each, the brightest per cell kept by depth; a star's clear
+    // restarts depth, so a star overwrites any galaxy in its cell. Look-only, like the
+    // land row above.
+    {
+      kind: 'render',
+      target: 'antique-print-points',
+      slab: COSMO,
+      depth: 'clear',
+      passes: ['galaxy-points-print'],
+    },
     {
       kind: 'render',
       target: 'antique-print-points',

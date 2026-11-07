@@ -362,10 +362,28 @@ export function executeFrame(args: ExecuteFrameArgs): void {
       }
       case 'composite': {
         const { source, dest, blend, tone } = step.step;
-        // Skip unless the source target was actually drawn into this frame:
-        // compositing an untouched (uncleared, undefined) source is a no-op at
-        // best and reads garbage at worst.
-        if (!touched.has(source)) break;
+        // An untouched source was never cleared, so it is never read. Blended in,
+        // it would add nothing; replacing, it stands for an empty frame, so the
+        // dest is cleared: the tone-map of a frame with nothing in hdr is still a
+        // print, which the look inks as bare paper.
+        if (!touched.has(source)) {
+          if (blend === 'replace') {
+            encoder
+              .beginRenderPass({
+                label: `composite-clear-${dest}`,
+                colorAttachments: [
+                  colorAttachment(
+                    viewFor(dest, ctx, swapView),
+                    clearValueOf(ctx.snapshot.renderTargets.specOf(dest), state),
+                    false,
+                  ),
+                ],
+              })
+              .end();
+            touched.add(dest);
+          }
+          break;
+        }
 
         const pass = encoder.beginRenderPass({
           label: `composite-${source}->${dest}`,

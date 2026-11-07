@@ -44,6 +44,9 @@ fn starGlyph(q: vec2<f32>, r: f32, rays: f32) -> f32 {
   return max(1.0 - smoothstep(core - 0.45, core + 0.45, d), wedge * step(0.0, along));
 }
 
+// A galaxy dot's radius in print units, faintest to brightest: under the faintest star's.
+const GALAXY_DOT = vec2<f32>(0.5, 1.4);
+
 @vertex
 fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32) -> GlyphOut {
   var o: GlyphOut;
@@ -71,8 +74,11 @@ fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32) -> Glyph
   let rayCounts = array<f32, 7>(0.0, 0.0, 0.0, 6.0, 8.0, 8.0, 16.0);
   let rank = 5 - clamp(i32(round(s.z)), -1, 5);
   // Each star punched by hand: its own turn, and a slight unevenness of size.
-  let r = radii[rank] * u.unit * (0.92 + 0.16 * hash21Hq(floor(centre) + 7.1));
-  let rays = rayCounts[rank];
+  // A galaxy (w 2, printPoint.wesl) is a plain dot swelling with its weight, off the ladder.
+  let galaxy = s.w > 1.5;
+  let size = select(radii[rank], mix(GALAXY_DOT.x, GALAXY_DOT.y, s.z * s.z), galaxy);
+  let r = size * u.unit * (0.92 + 0.16 * hash21Hq(floor(centre) + 7.1));
+  let rays = select(rayCounts[rank], 0.0, galaxy);
   let reach = 1.5 * r + 2.0;
   let corner = vec2<f32>(f32(vi & 1u), f32((vi >> 1u) & 1u)) * 2.0 - 1.0;
   let px = centre + corner * reach;

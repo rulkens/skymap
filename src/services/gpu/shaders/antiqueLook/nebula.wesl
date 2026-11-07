@@ -1,17 +1,13 @@
 // antiqueLook/nebula.wesl — the fields a galaxy is engraved from, at quarter res
-// beside `wash`: x Lxs (blur radius 1 cell), y Lsm (2.2 cells, the outline's),
-// z the iso-line field's input (Lsm in the faint disc, 2 cells above the line
-// onset), w the lane reference: the local max of a light blur. Only sky cells
-// (wash.a < 0) count, so a globe's light never draws iso-lines round its limb.
+// beside `wash`: x its light (blur radius 1 cell), w the lane reference: the local
+// max of a light blur; y and z unused. Only sky cells (wash.a < 0) count, so a
+// globe's light never stipples a halo round its limb.
 
 import package::antiqueLook::io::VSOut;
 import package::antiqueLook::pigments::luma;
 
 @group(0) @binding(0) var washTex: texture_2d<f32>;
 @group(0) @binding(1) var linear: sampler;
-
-// Mirrored in fragment.wesl: where iso-lines take over from stipple.
-const LINE_ON: f32 = 0.16;
 
 // The plate's 9-tap pattern (centre 4, axes 2, diagonals 1) at `r` cells, sky-weighted.
 fn blur9(uv: vec2<f32>, texel: vec2<f32>, r: f32) -> f32 {
@@ -34,8 +30,6 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let size = vec2<i32>(textureDimensions(washTex));
   let texel = 1.0 / vec2<f32>(size);
   let lxs = blur9(in.uv, texel, 1.0);
-  let lxh = blur9(in.uv, texel, 2.0);
-  let lsm = blur9(in.uv, texel, 2.2);
   // Lane reference: a 1-2-1 blur at each of the 3×3 neighbours, then their max,
   // from one 5×5 window of texels.
   let ip = vec2<i32>(in.pos.xy);
@@ -58,6 +52,5 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
       laneRef = max(laneRef, b / 16.0);
     }
   }
-  let lline = mix(lsm, lxh, smoothstep(LINE_ON, LINE_ON + 0.15, lxs));
-  return vec4<f32>(lxs, lsm, lline, laneRef);
+  return vec4<f32>(lxs, 0.0, 0.0, laneRef);
 }

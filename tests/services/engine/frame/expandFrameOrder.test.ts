@@ -495,7 +495,9 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
 
   it('the antique look draws resolved stars only as glyphs, while the star aggregate keeps its hdr line', () => {
     const hdrNames = (steps: readonly FrameStep[]) =>
-      steps.flatMap((step) => (step.kind === 'render' && step.target === 'hdr' ? namesOf(step) : []));
+      steps.flatMap((step) =>
+        step.kind === 'render' && step.target === 'hdr' ? namesOf(step) : [],
+      );
     const on = hdrNames(program({ antique: true }));
     const off = hdrNames(program());
     for (const resolved of ['star-points', 'star-catalog']) {
@@ -505,7 +507,21 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     expect(on).toContain('star-upsample');
   });
 
-  it("draws the look's own passes only with the look on: land map, geography and the Moon's print on the body row, star points on NEAR0", () => {
+  it('the antique look prints point galaxies only as dots: their sprites and the cosmic structure discs leave hdr', () => {
+    const hdrNames = (steps: readonly FrameStep[]) =>
+      steps.flatMap((step) =>
+        step.kind === 'render' && step.target === 'hdr' ? namesOf(step) : [],
+      );
+    const on = hdrNames(program({ antique: true }));
+    const off = hdrNames(program());
+    for (const name of ['point-sprites', 'structure-markers-cosmo']) {
+      expect(off, name).toContain(name);
+      expect(on, name).not.toContain(name);
+    }
+    expect(on).toContain('procedural-disks');
+  });
+
+  it("draws the look's own passes only with the look on: land map, geography and the Moon's print on the body row, galaxy then star points into the print points", () => {
     const lookSteps = (steps: readonly FrameStep[]) =>
       steps.filter((step) => namesOf(step).some((name) => ANTIQUE_ONLY_PASSES.includes(name)));
     const rows = { lens: [], insideAtmosphere: [], surfaceMask: [3] };
@@ -514,6 +530,7 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
       { kind: 'render', target: ANTIQUE_TARGETS.land, slab: 3 },
       { kind: 'render', target: ANTIQUE_TARGETS.geography, slab: 3 },
       { kind: 'render', target: ANTIQUE_TARGETS.relief, slab: 3 },
+      { kind: 'render', target: ANTIQUE_TARGETS.printPoints, slab: COSMO, depth: 'clear' },
       { kind: 'render', target: ANTIQUE_TARGETS.printPoints, slab: NEAR0, depth: 'clear' },
     ]);
   });
