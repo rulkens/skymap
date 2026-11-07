@@ -19,4 +19,6 @@ export type AntiqueUniformInput = {
   readonly paper: boolean;
   readonly rays: ViewCornerRays;
   readonly seed: number;
+  /** One RA / Dec ruling interval for the whole plate, degrees (`antiqueGraticuleSteps`). */
+  readonly rulings: { readonly raDeg: number; readonly decDeg: number };
 };

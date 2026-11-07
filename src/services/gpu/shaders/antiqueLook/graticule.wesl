@@ -19,54 +19,41 @@ fn ruling(coord: f32, step: f32, halfPx: f32, perPx: f32) -> f32 {
   return 1.0 - smoothstep(halfPx - 0.5, halfPx + 0.5, d);
 }
 
-// The smallest "round" step (from the list) at least `minPx` wide on screen.
-fn niceStep(perPx: f32, minPx: f32) -> f32 {
-  let want = perPx * minPx;
-  var s = 90.0;
-  let steps = array<f32, 8>(1.0, 2.0, 5.0, 10.0, 15.0, 20.0, 30.0, 45.0);
-  for (var i = 7; i >= 0; i--) {
-    if (steps[i] >= want) {
-      s = steps[i];
-    }
-  }
-  return s;
-}
-
 // Graduated band along a great circle (latitude `lat` from its pole, longitude
-// `lon` around it): two rules `gapPx` apart, cells alternately inked by degree.
-fn graduatedCircle(lat: f32, lon: f32, latPerPx: f32, lonPerPx: f32, gapPx: f32, rulePx: f32) -> f32 {
+// `lon` around it): two rules `gapPx` apart, cells of `cellDeg` alternately inked.
+fn graduatedCircle(lat: f32, lon: f32, latPerPx: f32, cellDeg: f32, gapPx: f32, rulePx: f32) -> f32 {
   let dPx = lat / max(latPerPx, 1e-6);
   let rules = max(
     1.0 - smoothstep(rulePx - 0.5, rulePx + 0.5, abs(dPx - gapPx * 0.5)),
     1.0 - smoothstep(rulePx - 0.5, rulePx + 0.5, abs(dPx + gapPx * 0.5)),
   );
-  let cellDeg = niceStep(lonPerPx, 9.0);
   let cellOn = f32(i32(floor(lon / cellDeg)) % 2 == 0);
   let inside = 1.0 - smoothstep(gapPx * 0.5 - 0.5, gapPx * 0.5, abs(dPx));
   return max(rules, cellOn * inside);
 }
 
-// RA/Dec rulings plus graduated equator and ecliptic. `unitPx` = device px per unit.
-fn graticule(d: vec3<f32>, unitPx: f32) -> f32 {
+// RA/Dec rulings, one interval each for the whole plate (`raStep`, `decStep`,
+// chosen on the CPU so no meridian starts or stops mid-field), plus graduated
+// equator and ecliptic. Line weights rise rulings < bands < neatline.
+fn graticule(d: vec3<f32>, unitPx: f32, raStep: f32, decStep: f32) -> f32 {
   let rd = raDec(d);
   // RA's derivative jumps at its 0/360 seam; the shifted copy is continuous there.
   let raPerPx = min(fwidth(rd.x), fwidth(fract(rd.x / 360.0 + 0.5) * 360.0));
   let decPerPx = fwidth(rd.y);
-  let decStep = niceStep(decPerPx, 110.0 * unitPx);
-  // RA rulings converge at the poles: thin them out above ±75°.
-  let raStep = niceStep(raPerPx * cos(rd.y / DEG), 110.0 * unitPx) * select(1.0, 6.0, abs(rd.y) > 75.0);
-  let thin = 0.42 * unitPx;
-  var ink = max(ruling(rd.x, raStep, thin, raPerPx), ruling(rd.y, decStep, thin, decPerPx)) * 0.75;
+  // Meridians crowd at the poles: past one fixed parallel only every third runs on.
+  let meridian = raStep * select(1.0, 3.0, abs(rd.y) > 75.0);
+  let thin = 0.36 * unitPx;
+  var ink = max(ruling(rd.x, meridian, thin, raPerPx), ruling(rd.y, decStep, thin, decPerPx)) * 0.8;
 
-  let gap = 4.2 * unitPx;
-  let rule = 0.38 * unitPx;
-  ink = max(ink, graduatedCircle(rd.y, rd.x, decPerPx, raPerPx, gap, rule));
+  let gap = 3.6 * unitPx;
+  let rule = 0.34 * unitPx;
+  let cell = max(raStep / 5.0, 1.0);
+  ink = max(ink, graduatedCircle(rd.y, rd.x, decPerPx, cell, gap, rule) * 0.9);
   let beta = asin(clamp(dot(d, ECLIPTIC_POLE), -1.0, 1.0)) * DEG;
   // Ecliptic longitude from the vernal equinox (+x), counted toward the summer solstice.
   let east = normalize(cross(ECLIPTIC_POLE, vec3<f32>(1.0, 0.0, 0.0)));
   var lambda = atan2(dot(d, east), dot(d, vec3<f32>(1.0, 0.0, 0.0))) * DEG;
   lambda = select(lambda, lambda + 360.0, lambda < 0.0);
-  let lamPerPx = min(fwidth(lambda), fwidth(fract(lambda / 360.0 + 0.5) * 360.0));
-  ink = max(ink, graduatedCircle(beta, lambda, fwidth(beta), lamPerPx, gap, rule));
+  ink = max(ink, graduatedCircle(beta, lambda, fwidth(beta), cell, gap, rule) * 0.9);
   return ink;
 }

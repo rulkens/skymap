@@ -11,11 +11,17 @@ import package::antiqueLook::io::VSOut;
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let origin = vec2<i32>(in.pos.xy) * 4;
   let size = vec2<i32>(textureDimensions(washTex));
+  // Sky cells only (wash.a < 0): a lit globe's light must not spill into the
+  // sky's outline colour round its limb.
   var sum = vec3<f32>(0.0);
+  var n = 0.0;
   for (var j = 0; j < 4; j++) {
     for (var i = 0; i < 4; i++) {
-      sum += textureLoad(washTex, min(origin + vec2<i32>(i, j), size - 1), 0).rgb;
+      let w = textureLoad(washTex, min(origin + vec2<i32>(i, j), size - 1), 0);
+      let sky = select(1.0, 0.0, w.a >= 0.0);
+      sum += w.rgb * sky;
+      n += sky;
     }
   }
-  return vec4<f32>(sum / 16.0, 1.0);
+  return vec4<f32>(sum / max(n, 1.0), 1.0);
 }

@@ -19,6 +19,7 @@ import { resolvePassNames } from './resolvePassNames';
 import { COSMO, NEAR0, isBodySlabIndex } from './slabs';
 import { depthKeyOf } from '../../../utils/render/depthKeyOf';
 import { lookTarget } from '../../../utils/render/lookTarget';
+import { ANTIQUE_HIDDEN_PASSES } from '../../../data/rendering/antiqueLook';
 
 export type FrameInputs = {
   readonly tone: ToneMap;
@@ -184,11 +185,15 @@ export function expandFrameOrder(
   passes: readonly ContentPass[],
   frame: FrameInputs,
 ): readonly FrameStep[] {
+  // A look draws without the passes it has no period equivalent for.
+  const drawn = frame.antique
+    ? passes.filter((pass) => !ANTIQUE_HIDDEN_PASSES.includes(pass.name))
+    : passes;
   const steps: FrameStep[] = [];
   for (const spec of order) {
     // The table's rows self-narrow; the lookup itself cannot, so it is cast once.
     const expand = EXPAND_STEP[spec.kind] as ExpandStep<FrameStepSpec['kind']>;
-    steps.push(...expand(spec, passes, frame));
+    steps.push(...expand(spec, drawn, frame));
   }
   return mergeAdjacent(steps.filter(draws));
 }

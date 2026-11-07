@@ -7,9 +7,9 @@ const PIGMENTS: array<vec3<f32>, 7> = array<vec3<f32>, 7>(
   vec3<f32>(0.42, 0.62, 0.50), // verdigris
   vec3<f32>(0.56, 0.60, 0.30), // sap green
   vec3<f32>(0.90, 0.74, 0.30), // gamboge
-  vec3<f32>(0.88, 0.48, 0.28), // red lead
+  vec3<f32>(0.86, 0.56, 0.42), // red lead, laid thin
   vec3<f32>(0.72, 0.28, 0.33), // carmine
-  vec3<f32>(0.36, 0.45, 0.66), // azurite
+  vec3<f32>(0.553, 0.604, 0.682), // smalt (a greyed blue, as smalt aged)
   vec3<f32>(0.78, 0.60, 0.36), // ochre
 );
 

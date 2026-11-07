@@ -25,8 +25,9 @@ fn crossHatch(p: vec2<f32>, tone: f32, spacing: f32, baseAngle: f32) -> f32 {
   // Widths stay under ~0.7 of the spacing so the lozenges between crossings
   // keep their paper even in the darkest tone: engraving never floods.
   let first = hatch(p, baseAngle, spacing, tone * 0.72);
-  let second = hatch(p, baseAngle + 1.05, spacing, (tone - 0.35) * 0.95);
-  let third = hatch(p, baseAngle - 0.5, spacing * 0.8, (tone - 0.7) * 1.3);
+  // The crossing set at 45° makes lozenges; a shallower crossing makes moiré.
+  let second = hatch(p, baseAngle + 0.7853982, spacing, (tone - 0.35) * 0.95);
+  let third = hatch(p, baseAngle - 0.7853982, spacing, (tone - 0.72) * 1.2);
   return max(first, max(second, third));
 }
 

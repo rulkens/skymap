@@ -345,6 +345,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         tonemap: { exposure: settings.exposure, curve: settings.toneMapCurve },
         // Bloom off: this fixture times the base (non-bloom) program shape.
         bloom: { enabled: false, strength: 1, threshold: 1 },
+        antique: { enabled: false },
         bias: { mode: settings.biasMode, absMagLimit: settings.absMagLimit },
         thumbnails: { enabled: settings.galaxyTexturesEnabled },
         milkyWay: { enabled: settings.milkyWayEnabled },

@@ -1,7 +1,7 @@
 /**
- * ANTIQUE_ORNAMENTS — the antique plate's decorations. Sheet rows sit where a
- * 1660s Amsterdam plate put them (title cartouche in a corner, one compass
- * rose); sky rows are the sky's own beasts. Inside the Galaxy they ride their
+ * ANTIQUE_ORNAMENTS — the antique plate's decorations. The title cartouche sits
+ * in a corner, as on any Amsterdam plate (no compass rose: a celestial chart
+ * never carried one); sky rows are the sky's own beasts. Inside the Galaxy they ride their
  * constellations, as a star atlas draws Cetus or Draco. Out among the galaxies
  * they move to the Zone of Avoidance, the band behind the galactic plane where
  * the catalogs are empty: the one honest terra incognita on this map.
@@ -43,25 +43,15 @@ export const ANTIQUE_ORNAMENTS: readonly AntiqueOrnament[] = [
     opacity: 1,
     clearsBeneath: true,
   },
-  {
-    id: 'compass-rose',
-    sprite: 'compassRose',
-    anchor: { kind: 'sheet', corner: 'bottomRight', insetUnits: [110, 210], sizeUnits: 130 },
-    regime: 'always',
-    facesNorth: true,
-    rotationDeg: 0,
-    pigment: 3,
-    opacity: 1,
-    clearsBeneath: true,
-  },
-  // Constellation beasts, at each figure's centre (J2000 RA/Dec, degrees).
-  beast('cetus', 'whale', 'stars', 'equatorial', 25, -8, 34, 5),
+  // Constellation figures, at each figure's centre (J2000 RA/Dec, degrees). Only
+  // beasts drawn without a sea under them: the sky has no waves.
+  beast('cetus', 'cetus', 'stars', 'equatorial', 25, -8, 36, 5),
   beast('draco', 'dragon', 'stars', 'equatorial', 255, 64, 34, 1),
   beast('hydra', 'seaSerpent', 'stars', 'equatorial', 150, -18, 44, 0),
-  beast('piscis-austrinus', 'seaMonster', 'stars', 'equatorial', 335, -30, 20, 6),
-  // Zone of Avoidance beasts, on the galactic equator.
-  beast('zoa-serpent', 'seaSerpent', 'cosmos', 'galactic', 60, 0, 30, 0),
-  beast('zoa-whale', 'whale', 'cosmos', 'galactic', 150, 0, 28, 5),
-  beast('zoa-dragon', 'dragon', 'cosmos', 'galactic', 240, 0, 30, 1),
-  beast('zoa-monster', 'seaMonster', 'cosmos', 'galactic', 320, 0, 26, 6),
+  // Out among the galaxies the Zone of Avoidance is an uncharted ocean, and the
+  // sea-chart fauna and a ship may sail it.
+  beast('zoa-monster', 'seaMonster', 'cosmos', 'galactic', 60, 0, 30, 0),
+  beast('zoa-whale', 'hornedWhale', 'cosmos', 'galactic', 150, 0, 28, 5),
+  beast('zoa-seahorse', 'seaHorse', 'cosmos', 'galactic', 240, 0, 26, 1),
+  beast('zoa-ship', 'ship', 'cosmos', 'galactic', 320, 0, 22, 6),
 ];

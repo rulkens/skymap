@@ -26,5 +26,7 @@ export function packAntiqueUniforms(
   const { tl, tr, bl, br } = input.rays;
   [tl, tr, bl, br].forEach((ray, i) => f32.set(ray, 4 + i * 4));
   f32[20] = input.seed;
+  f32[21] = input.rulings.raDeg;
+  f32[22] = input.rulings.decDeg;
   return out;
 }

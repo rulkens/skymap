@@ -33,6 +33,7 @@ import { fetchAntiqueBitmap } from '../../../../utils/gpu/antiqueLook/fetchAntiq
 import { buildAntiqueGlyphSheet } from '../../../../utils/gpu/antiqueLook/buildAntiqueGlyphSheet';
 import { placeAntiqueNumerals } from '../../../../utils/gpu/antiqueLook/placeAntiqueNumerals';
 import { packAntiqueGlyphs } from '../../../../utils/gpu/antiqueLook/packAntiqueGlyphs';
+import { antiqueGraticuleSteps } from '../../../../utils/gpu/antiqueLook/antiqueGraticuleSteps';
 import { viewBasis } from '../../../../utils/camera/projection/viewBasis';
 import { viewCornerRays } from '../../../../utils/camera/projection/viewCornerRays';
 import { timestampSpread } from '../../../../utils/gpu/timestampSpread';
@@ -265,6 +266,7 @@ export function createAntiqueLook(init: {
     const size = ctx.canvasSize;
     const unitPx = size.height / ANTIQUE_REFERENCE_HEIGHT_CSS;
     const basis = viewBasis(ctx.cam);
+    const rulings = antiqueGraticuleSteps(basis, ctx.frustum, size, unitPx);
     packAntiqueUniforms(
       {
         size,
@@ -274,6 +276,7 @@ export function createAntiqueLook(init: {
         paper: paperAssets !== null,
         rays: viewCornerRays(basis, ctx.frustum),
         seed: PAPER_SEED,
+        rulings,
       },
       uniformBytes,
     );
@@ -300,6 +303,7 @@ export function createAntiqueLook(init: {
             frustum: ctx.frustum,
             size,
             unitPx,
+            rulings,
             sheet: glyphSheet.sheet,
           });
     device.queue.writeBuffer(glyphBuffer, 0, packAntiqueGlyphs(digits, glyphBytes));

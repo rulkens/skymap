@@ -29,16 +29,27 @@ export const ANTIQUE_ORNAMENT_BYTES = 16 + ANTIQUE_MAX_ORNAMENTS * 64;
 
 /**
  * The sheet's border, in print units from the canvas edge; mirrored as
- * `MARGIN` + `BAND` in `fragment.wesl`. The ladder's centre line is what the
+ * `MARGIN` (30) + `BAND` (7) in `fragment.wesl`. The ladder's centre line is what the
  * numbering reads, the numbers sit just inside the inner rule.
  */
-export const ANTIQUE_LADDER_UNITS = 21.5;
-export const ANTIQUE_NUMERAL_INSET_UNITS = 35;
+export const ANTIQUE_LADDER_UNITS = 33.5;
+export const ANTIQUE_NUMERAL_INSET_UNITS = 46;
 export const ANTIQUE_NUMERAL_UNITS = 11;
+
+/** RA/Dec ruling intervals (degrees) the plate picks from, ~`GAP` units apart at its centre. */
+export const ANTIQUE_RULING_STEPS_DEG = [1, 2, 5, 10, 15, 20, 30, 45, 90] as const;
+export const ANTIQUE_RULING_GAP_UNITS = 120;
 
 /** `AntiqueLettering` in `fragment.wesl`: a 16-byte header, then 32-byte glyph rows. */
 export const ANTIQUE_MAX_GLYPHS = 96;
 export const ANTIQUE_GLYPH_BYTES = 16 + ANTIQUE_MAX_GLYPHS * 32;
+
+/**
+ * Passes the antique look does not draw: no period plate shows them. Cloud
+ * shells (no globe of the 1600s drew weather) and caption leader stems (an
+ * engraved name sits beside its glyph, unattached).
+ */
+export const ANTIQUE_HIDDEN_PASSES: readonly string[] = ['cloud-shell', 'marker-lines'];
 
 export const ANTIQUE_TARGETS = {
   /** The tone-mapped scene, in the swap format. */

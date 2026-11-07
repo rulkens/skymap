@@ -3,7 +3,8 @@
  * crosses a round value of the coordinate its degree ladder counts (right
  * ascension along top and bottom, declination up the sides, the shader's
  * `neatline` split), the value is set in digits just inside the inner rule.
- * Spacing follows the zoom, so numbers stay about a thumb's width apart.
+ * The values are the plate's own ruling intervals, so each number sits where
+ * a meridian or parallel meets the border.
  */
 
 import type { ViewBasis } from '../../../@types/camera/projection/ViewBasis';
@@ -20,8 +21,6 @@ import {
 import { rayThroughPx } from '../../camera/projection/rayThroughPx';
 
 const SAMPLES = 96;
-const STEPS = [1, 2, 5, 10, 15, 20, 30, 45, 90] as const;
-const MIN_GAP_UNITS = 90;
 const DEG = 180 / Math.PI;
 
 export function placeAntiqueNumerals(input: {
@@ -29,6 +28,8 @@ export function placeAntiqueNumerals(input: {
   readonly frustum: ViewFrustum;
   readonly size: Size;
   readonly unitPx: number;
+  /** The plate's ruling intervals: numbers stand where the rulings meet the border. */
+  readonly rulings: { readonly raDeg: number; readonly decDeg: number };
   readonly sheet: Pick<AntiqueGlyphSheet, 'width' | 'height' | 'glyphs'>;
 }): readonly AntiqueGlyphInstance[] {
   const { size, unitPx } = input;
@@ -69,9 +70,7 @@ export function placeAntiqueNumerals(input: {
       values.push(prev === undefined ? v : prev + wrap180(v - prev));
       points.push(p);
     }
-    const lengthPx = Math.hypot(edge.to[0] - edge.from[0], edge.to[1] - edge.from[1]);
-    const degPerPx = Math.abs(values[SAMPLES]! - values[0]!) / lengthPx;
-    const step = STEPS.find((s) => s / Math.max(degPerPx, 1e-9) >= MIN_GAP_UNITS * unitPx) ?? 90;
+    const step = edge.ra ? input.rulings.raDeg : input.rulings.decDeg;
     for (let i = 0; i < SAMPLES; i++) {
       const a = values[i]!;
       const b = values[i + 1]!;

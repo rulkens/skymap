@@ -521,6 +521,7 @@ function makeInput(
           // Bloom off by default in these fixtures: the bloom render steps only
           // shape the program when enabled, and no fixture asserts on them.
           bloom: { enabled: settings.bloomEnabled, strength: 1, threshold: 1 },
+          antique: { enabled: false },
           bias: { mode: settings.biasMode, absMagLimit: settings.absMagLimit },
           thumbnails: { enabled: settings.galaxyTexturesEnabled },
           milkyWay: { enabled: settings.milkyWayEnabled },
