@@ -145,7 +145,7 @@ InfoCard Focus and `F` keep `requestFocus`.
       `git checkout origin/sky-mode -- src/utils/geo/parseLatLonQuery.ts src/utils/geo/parseCompassDegrees.ts src/utils/geo/parseLonLatInput.ts src/@types/scene/CompassDegrees.d.ts tests/utils/geo/parseLatLonQuery.test.ts tests/utils/geo/parseCompassDegrees.test.ts`
       plus `docs/backlog/2026-10-28-survey-sky-overlays-hips.md` and its `docs/BACKLOG.md` line (from the
       branch's `docs/BACKLOG.md`). Run their tests. Commit ("salvage lat/lon parsers from the sky-mode draft").
-- [ ] Archive (controller only): `git push origin origin/sky-mode:refs/tags/archive/sky-mode`, then
+- [x] Archive (controller only): `git push origin origin/sky-mode:refs/tags/archive/sky-mode`, then
       `git push origin --delete sky-mode`.
 
 **Prep PR:** push, open "Sky mode prep: pushed zoom limits, readout rows, view requests", watch CI.
