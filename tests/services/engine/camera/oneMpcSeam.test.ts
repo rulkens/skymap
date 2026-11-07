@@ -67,6 +67,10 @@ const SCALE_UNITS_ALLOW_LIST: ReadonlyMap<string, string> = new Map([
     'cull/fade precedent — bridges radiusM to Mpc for the same apparentSizePx cull and for cloudDeckFade (outside the body-slab path)',
   ],
   [
+    'src/layers/body/labels/present/produceAntiqueEarthPlaces.ts',
+    'label-anchor precedent — lifts a lat/lon on the datum sphere to the Mpc world point the 2D label director projects (a screen anchor, not a slab MVP)',
+  ],
+  [
     'src/layers/body/rings/passes/ringsPass.ts',
     'cull/fade precedent — bridges the ring outer radius/distance to Mpc to call the shared apparentSizePx sub-pixel cull (outside the body-slab path)',
   ],
