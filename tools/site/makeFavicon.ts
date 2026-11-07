@@ -1,26 +1,31 @@
 /**
- * Render `public/favicon.svg` to the PNG icons: 180 px for iOS home-screen shortcuts (iOS draws
- * no SVG icons), 192 and 512 px for the remote's web app manifest (`public/remote.webmanifest`).
- *
- * Run `npx tsx tools/site/makeFavicon.ts` only when `favicon.svg` changes. The output is committed,
- * so neither a fresh clone nor a deploy needs sharp.
- *
- * Density 1024 oversamples the SVG before downscaling, so the radial halo composites without aliasing.
+ * Write the web app's and the site's icons from the Skymap mark (packages/website utils/skymapIcon):
+ * `public/favicon.svg`, the small drawing on a rounded tile, which must read at 16 px in a light or a
+ * dark tab, and the PNGs, the large drawing on a square tile: 180 px for iOS home-screen shortcuts
+ * (iOS renders no SVG icon and rounds the corners itself), 192 and 512 px for the remote's web app
+ * manifest (`public/remote.webmanifest`). All are committed, so a deploy does not depend on this
+ * running; re-run it (`npx tsx tools/site/makeFavicon.ts`) when the mark changes.
  */
 import sharp from 'sharp';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { writeFileSync } from 'node:fs';
 
-const svg = readFileSync('public/favicon.svg');
-const outputs = [
+import { skymapIcon } from '../../packages/website/src/utils/skymapIcon';
+
+const PNGS = [
   [180, 'public/apple-touch-icon.png'],
   [192, 'public/icon-192.png'],
   [512, 'public/icon-512.png'],
 ] as const;
-for (const [size, path] of outputs) {
-  const buf = await sharp(svg, { density: 1024 })
+
+writeFileSync('public/favicon.svg', skymapIcon('rounded', 'small'));
+for (const [size, path] of PNGS) {
+  // Drawn at four times the size and brought down, so the thin filaments stay smooth.
+  const png = await sharp(Buffer.from(skymapIcon('square', 'large')), {
+    density: (72 * 4 * size) / 100,
+  })
     .resize(size, size)
     .png({ compressionLevel: 9 })
     .toBuffer();
-  writeFileSync(path, buf);
-  console.log(`wrote ${buf.length} bytes to ${path}`);
+  writeFileSync(path, png);
+  console.log(`wrote ${png.length} bytes to ${path}`);
 }

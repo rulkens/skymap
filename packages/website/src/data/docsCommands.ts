@@ -40,6 +40,11 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         does: 'Serves what the build wrote.',
         manual: DEPLOY,
       },
+      {
+        scripts: ['desktop'],
+        does: 'Builds the desktop app for kiosks and planetarium domes and opens it in a window, drawing the data in public/data/.',
+        manual: 'docs/DESKTOP.md',
+      },
     ],
   },
   {

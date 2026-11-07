@@ -1,0 +1,11 @@
+.root {
+  composes: panel from '../../../controlChrome.module.css';
+}
+
+/* Heading, save status, link: a long failure wraps in its own column and leaves the link in place. */
+.head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--space-10);
+}

@@ -1,0 +1,47 @@
+/*
+ * Page reset and the website's type roles (packages/website/src/styles/site.css) at a window's reading
+ * size: Jost for words, Cormorant for titles, mono for codes, keys and addresses. Colours are the app's
+ * tokens; site.css itself is not imported because it swaps the display face for a subset of the site's glyphs.
+ */
+:root {
+  color-scheme: dark;
+  --font-body: 'Jost Variable', 'Avenir Next', 'Segoe UI', system-ui, sans-serif;
+  --weight-body: 400;
+  --weight-display: 600;
+  --text-small: 0.875rem;
+  --text-body: 1rem;
+  --text-heading: 1.5rem;
+  --text-title: clamp(2.25rem, 3.4vw, 3.25rem);
+  --leading-body: 1.55;
+  --leading-display: 1.05;
+  --measure: 52ch;
+  --tap: 2.75rem;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* A booth monitor is read from further away: the rem scale grows with the window, 16 px to 20 px. */
+html {
+  font-size: clamp(100%, 0.55vw + 0.55rem, 125%);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-fg-muted);
+  font: var(--weight-body) var(--text-body) / var(--leading-body) var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  overflow-wrap: break-word;
+  /* Short captions otherwise end on one word alone on a line. */
+  text-wrap: pretty;
+}

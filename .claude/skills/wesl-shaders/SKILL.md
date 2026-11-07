@@ -74,6 +74,24 @@ Declaring `@builtin(position)` twice in one entry point (once on a member of the
 - **`layout: 'auto'` bind groups are not interchangeable**: two pipelines with `'auto'` on the same `@group(N)` get distinct layouts, and a bind group built for one fails validation on the other (a pick texture reads back all zeros). Share the `GPUBuffer`/sampler/view, build each bind group against the consumer's own `getBindGroupLayout(N)`, or use one explicit `GPUPipelineLayout`.
 - **CPU-side math is wgpu-matrix, not gl-matrix**: the `dst` argument is LAST and optional; `mat4.create()` returns ZEROS (use `mat4.identity()`); `invert` is `inverse`, `scaleAndAdd` is `addScaled`; `mat4d`/`vec3d` are Float64. wgpu `Vec3` is a `Float32Array` (indexing gives `number | undefined`); skymap's `@types/math` `Vec3`/`Mat4` are tuples, so use those where you index.
 
+## f32 accuracy
+
+f32 carries ~7 digits (ε ≈ 6e-8). An expression's error is ε times its LARGEST intermediate, not its result, so the danger is subtracting two big, nearly equal numbers. A narrow lens doesn't cause these bugs; it magnifies something that sat far away and sub-pixel before.
+
+What to write instead:
+
+- **Ray vs sphere**: the discriminant as `r² − |m − b·rd|²` (closest-approach offset), never `b² − c`. Far out, `b²` and `c` are both ~|m|², so the old form's error is ~ε|m|² against a range of r². Near roots go through `c / q` (`lib/util.wesl::raySphere`). Near the surface, an f64 `altitude²` uniform beats both (`hitUnitSphere`).
+- **Points on a far ray**: rebuild them from the closest-approach point (`h − s·rd` for a sphere entry), not `ro + t·rd`, which cancels ~|ro| down to ~r (`skyViewLut.wesl`'s march entry).
+- **Angles near 0 or π**: `atan2(length(cross(a, b)), dot(a, b))`, and `atan2` or `asin` for a small angle, never `acos` of a cosine near ±1. A cone 1e-4 rad wide round the nadir has about 3 distinct f32 cosines. A LUT parametrised by angle must take the angle itself in both its bake and its lookup.
+- **Big magnitudes stay on the CPU**: rebase to the camera or the body in f64 first (`bodyRelativePose`, `rebaseViewProj`), then narrow. Pass any cancelling quantity in as an f64-computed uniform.
+
+How to find and prove it:
+
+1. **Distance or lens?** Shoot the bug pose, then the same on-screen size at 60° from close up. If only the far one breaks, it's precision.
+2. **Bisect on the GPU**: switch passes off with `settings/debug/setPassDisabled`, then add a tint probe that splits the output terms (emission only, transmittance only) to name the term.
+3. **Emulate f32 in TS**: a scratch `.mts` that wraps every op in `Math.fround`, compared against the same maths in f64 and swept over distance. Report the max error against the quantity's own range (2026-11 narrow-lens: discriminant error 7.9 on a 0–1 range, 65% false misses for the Moon at 10M km). That probe is the evidence; a TS twin can't catch a WGSL revert, so precision fixes ship with probe numbers in the PR, not a unit test.
+4. **Count ulps**: how many distinct f32 values does the input take across the feature's screen footprint? Fewer than the pixels it spans means banding or speckle.
+
 ## File layout and moves
 
 - **One folder per shader** with `io.wesl` + `vertex.wesl` + `fragment.wesl`; variants are extra fragments over one vertex (`galaxyCatalog/points/`: `colorFragment.wesl` + `pickFragment.wesl`). A draw-type `if` inside a shared fragment is the wrong split: it belongs in the pipeline table. Ground a new layout in the existing tree and checkpoint it with the user for anything beyond a one-file tweak. No register-style locals (`g0`, `w2`).

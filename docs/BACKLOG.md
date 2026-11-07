@@ -262,6 +262,16 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **More controls on the phone remote** `needs-design` — no command for data size, exposure, captions, full screen or showing the dome's interface (Tab on its keyboard). → [details](backlog/2026-11-03-remote-more-controls.md)
 - [ ] **Duplicate names in the remote's menus** `ready` — "Cosmic Flows" is both an exhibit and a clip (`src/data/exhibits/cosmicFlows.ts`, `src/data/animation/clips/cosmicFlows.ts`) and "Galactic Centre" shows twice in the label switches; rename or merge so each entry reads once.
 
+## Desktop app
+
+- [ ] **Website docs page for the desktop app** `blocked` — wait for a downloadable release; the install guide is `packages/desktop/README.md`. → [details](backlog/2026-11-04-desktop-website-docs-page.md)
+- [ ] **Intel or universal macOS build** `deferred` — the dmg is arm64 only; an Intel show machine cannot install it. → [details](backlog/2026-11-04-desktop-intel-mac-build.md)
+- [ ] **"Paired" confirmation in first-run setup** `awaiting-decision` — needs a remote-joined signal on `RelayHandle`, a contract that grows only with a yes. → [details](backlog/2026-11-04-desktop-paired-confirmation.md)
+- [ ] **Windows hardware smoke** `manual` — the Windows installer shipped untried; install, sync, render and pair on a real Windows PC. → [details](backlog/2026-11-06-desktop-windows-hardware-smoke.md)
+- [ ] **Updating the app itself** `awaiting-decision` — only the data updates; a notice, Windows auto-update, or both platforms once signed. → [details](backlog/2026-11-06-desktop-app-self-update.md)
+- [ ] **Signing and notarization** `deferred` — both installers are unsigned and warn on open; out of scope in the spec. → [details](backlog/2026-11-04-desktop-signing-notarization.md)
+- [ ] **The relay ships from `tools/`** `needs-design` — the installer ships `tools/utils/remote/attachRemoteRelay` and `RelayHandle` as runtime code; the relay is no longer a build tool.
+
 ## Docs & process
 
 - [ ] **Commercial build that cannot ship non-commercial data** `needs-design` — Gaia, Hipparcos, DSS2, EOX 2025 and others forbid commercial use or need permission; a build flag leaves them out, and a guard keyed on `ATTRIBUTIONS.md` markers fails any build that would ship them. → [details](backlog/2026-10-12-commercial-build.md)
@@ -280,7 +290,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Saga-context boot-ordering argument told five times** `ready` — keep it in `sagaContextRegistered.ts`, point createAppStore/rootSaga/watchHashSaga/watchHashReadSaga there. → [details](backlog/2026-07-30-boot-ordering-argument-nine-copies.md)
 - [ ] **CLAUDE.md compaction pass** `ready` — the file has grown; tighten it without losing load-bearing content.
 - [ ] **Repo is not prettier-clean** `ready` — 32 files fail `prettier --check .` (2026-10-29); format them in one commit and turn on `format:check` in CI.
-- [ ] **File-purity ratchet for `src/components/`** `needs-design` — a component's inline types are ratcheted but its module-private helpers are gated nowhere, so they accumulate unopposed (15 files, 22 strays, 11 of them singletons); `frameFilePurity`'s machinery applies directly, but component-local hooks and sub-components need a ruling so the sweep doesn't push them into `utils/`. → [details](backlog/2026-09-21-component-file-purity-ratchet.md)
+- [ ] **File-purity ratchet for `src/components/`** `needs-design` — a component's inline types are ratcheted but its module-private helpers are gated nowhere, so they accumulate unopposed (15 files, 22 strays, 11 of them singletons); `serviceFilePurity`'s machinery applies directly, but component-local hooks and sub-components need a ruling so the sweep doesn't push them into `utils/`. → [details](backlog/2026-09-21-component-file-purity-ratchet.md)
 - [ ] **Split the repo into workspace packages** `needs-design` — web app, `tools/`, and each workbench into `packages/*` after the desktop app; gated on a shared-code package for `src/`. → [details](backlog/2026-09-19-packages-split.md)
 - [ ] **Convention sweeps report one test per source file** `ready` — four `it.each(everyFile)` sweeps are 5,214 of 13,413 tests, so the headline tracks file count not coverage; adopt `layerImportBoundary`'s `assertSweep` shape. → [details](backlog/2026-09-21-convention-sweeps-inflate-test-count.md)
 

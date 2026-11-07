@@ -139,6 +139,9 @@ fn sampleShellSegment(dir: vec3<f32>, tDepth: f32, hasDepth: bool) -> ShellSampl
   let viewHeight = length(u.camPosLocal);
   let up = u.camPosLocal / viewHeight;
   let viewZenithCos = dot(dir, up);
+  // An angle, not a cosine (scattering.wesl's sky-view note): atan2 stays exact
+  // round the nadir, where the far-out disc lives.
+  let viewZenithAngle = atan2(length(cross(dir, up)), viewZenithCos);
 
   // Azimuth relative to the sun, encoded as the sky-view bake reconstructs the ray.
   let viewPerp = dir - up * viewZenithCos;
@@ -154,7 +157,7 @@ fn sampleShellSegment(dir: vec3<f32>, tDepth: f32, hasDepth: bool) -> ShellSampl
   // A ray ending on TERRAIN short of the floor sphere (the limb band) looks just
   // above the horizon, past where the ground half stops, so this uv and the reversed
   // endpoints below clamp to that horizon row; right to within its texel.
-  let skyUv = skyViewLutParamsToUv(u.bottomRadius, viewHeight, viewZenithCos, lightViewCos, intersectsGround);
+  let skyUv = skyViewLutParamsToUv(u.bottomRadius, viewHeight, viewZenithAngle, lightViewCos, intersectsGround);
   let inScatter = textureSampleLevel(skyViewLut, lutSamp, skyUv, 0.0).rgb;
 
   let nearPos = ro + dir * tNear;

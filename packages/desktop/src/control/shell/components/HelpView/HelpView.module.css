@@ -1,0 +1,55 @@
+/* One column under the header. */
+.root {
+  display: grid;
+  align-content: start;
+  justify-items: start;
+  gap: var(--space-12);
+  width: 100%;
+  margin: 0 auto;
+  padding: var(--space-4) var(--space-12) calc(var(--space-12) * 2);
+  max-width: 46rem;
+}
+
+.title {
+  composes: title from '../../../controlChrome.module.css';
+}
+
+.title:focus {
+  outline: none;
+}
+
+.section {
+  composes: stack from '../../../controlChrome.module.css';
+  padding-top: var(--space-12);
+  border-top: 1px solid var(--border-section);
+}
+
+.steps {
+  display: grid;
+  gap: var(--space-6);
+  margin: 0;
+  padding-left: 1.4em;
+  max-width: var(--measure);
+}
+
+.steps strong {
+  color: var(--color-fg);
+  font-weight: 500;
+}
+
+.problems {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  max-width: var(--measure);
+}
+
+.problems dt {
+  margin-top: var(--space-6);
+  color: var(--color-fg);
+  font-weight: 500;
+}
+
+.problems dd {
+  margin: 0;
+}
