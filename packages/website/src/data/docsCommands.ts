@@ -194,6 +194,11 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         manual: 'tools/antique/earth/buildAntiqueEarth.ts',
       },
       {
+        scripts: ['bake-moon-craters'],
+        does: 'Writes the antique atlas look’s Moon crater table, every named crater 12 km across or more, its rim measured on the Moon’s height map and its print weight from its depth, from the IAU gazetteer and NASA’s laser altimeter heights.',
+        manual: 'tools/antique/moon/bakeMoonCraters.ts',
+      },
+      {
         scripts: ['record-tour', 'record-clip'],
         does: 'Record a tour, or one clip, frame by frame into an MP4 film. A slow frame costs time, and the film stays smooth.',
         manual: RECORD,

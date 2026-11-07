@@ -6,7 +6,7 @@
  * print weight from its depth (`craterPrintWeight`). The look's Moon pass picks the
  * ones it rings each frame (`pickMoonCraters`).
  *
- *   npx tsx tools/antique/moon/bakeMoonCraters.ts
+ *   npm run bake-moon-craters
  */
 
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -65,7 +65,7 @@ async function main(): Promise<void> {
     join(PROJECT_ROOT, OUT),
     `// ${OUT}\n` +
       '// !!! GENERATED FILE — DO NOT EDIT BY HAND !!!\n' +
-      '// Regenerate with:  npx tsx tools/antique/moon/bakeMoonCraters.ts\n' +
+      '// Regenerate with:  npm run bake-moon-craters\n' +
       '// Source of truth:  the IAU gazetteer (USGS) and the LOLA DEM (NASA SVS)\n\n' +
       `/** ${rows.length} lunar craters, largest first, four numbers each: latitude and east\n` +
       ' *  longitude (deg), the LOLA rim-crest radius (km) and the print weight 0..1. */\n' +

@@ -1,6 +1,6 @@
 // src/data/rendering/antiqueMoonCraters.generated.ts
 // !!! GENERATED FILE — DO NOT EDIT BY HAND !!!
-// Regenerate with:  npx tsx tools/antique/moon/bakeMoonCraters.ts
+// Regenerate with:  npm run bake-moon-craters
 // Source of truth:  the IAU gazetteer (USGS) and the LOLA DEM (NASA SVS)
 
 /** 4990 lunar craters, largest first, four numbers each: latitude and east
