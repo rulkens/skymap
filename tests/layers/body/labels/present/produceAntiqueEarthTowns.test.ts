@@ -56,6 +56,13 @@ describe('produceAntiqueEarthTowns', () => {
     expect(byId(near, 'earthTown-hanover')!.fadeAlpha).toBeGreaterThan(0.5);
   });
 
+  it("ranks the plate's own city over every other world city, so Amsteldam never yields", () => {
+    const { labels } = produce(state, ctxAbove(52, 3, 3000), FADE);
+    const amsteldam = byId(labels, 'earthTown-amsteldam')!.declutterPriority!;
+    const others = labels.filter((l) => l.id !== 'earthTown-amsteldam');
+    expect(Math.max(...others.map((l) => l.declutterPriority!))).toBeLessThan(amsteldam);
+  });
+
   it("sets a renamed city's modern name beneath its period name, in one label", () => {
     const { labels } = produce(state, ctxAbove(48.2, 16.4, 3000), FADE);
     expect(

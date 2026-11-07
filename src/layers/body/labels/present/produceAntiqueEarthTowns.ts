@@ -79,7 +79,10 @@ export function produceAntiqueEarthTowns(
         smoothstep(sunCos[0], sunCos[1], dot3(up, toSun));
       if (fadeAlpha <= 0) return;
       const declutterPriority =
-        priority * CAPTION_PRIORITY_SCALE + (3 - town.tier) * 10 + (4 - town.popClass) * 2;
+        priority * CAPTION_PRIORITY_SCALE +
+        (3 - town.tier) * 10 +
+        (4 - town.popClass) * 2 +
+        (town.home ? 1 : 0);
       const base = {
         worldPos: anchor,
         font: 'cormorant',

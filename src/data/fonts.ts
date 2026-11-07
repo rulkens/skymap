@@ -114,8 +114,9 @@ const ASCII_PRINTABLE = Array.from({ length: 95 }, (_, i) => String.fromCodePoin
  */
 const UNIT_SYMBOLS = '°±µ';
 
-/** What a name needs and nothing more: letters, space, apostrophe, hyphen, full stop. */
-const NAME_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz '-.";
+/** What a name needs and nothing more: letters, space, apostrophe, hyphen, full stop,
+ * and brackets round a town's modern gloss. */
+const NAME_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz '-.()";
 
 /**
  * The registry.  Adding a font is a three-step config change:

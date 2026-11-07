@@ -234,7 +234,7 @@ export const ANTIQUE_EARTH_TOWNS: readonly AntiqueEarthTown[] = [
   { id: 'earthTown-oran', name: 'Oran', modern: 'Oran', latDeg: 35.6971, lonDeg: -0.6308, tier: 3, sign: 'fortress', popClass: 3 },
   { id: 'earthTown-sale', name: 'Sale', modern: 'Sale', latDeg: 34.0389, lonDeg: -6.7984, tier: 3, sign: 'town', popClass: 3 },
   { id: 'earthTown-tripoli', name: 'Tripoli', modern: 'Tripoli', latDeg: 32.8963, lonDeg: 13.1806, tier: 2, sign: 'town', popClass: 2 },
-  { id: 'earthTown-amsteldam', name: 'Amsteldam', modern: 'Amsterdam', latDeg: 52.3731, lonDeg: 4.8926, tier: 0, sign: 'cityPlan', popClass: 0 },
+  { id: 'earthTown-amsteldam', name: 'Amsteldam', modern: 'Amsterdam', latDeg: 52.3731, lonDeg: 4.8926, tier: 0, sign: 'cityPlan', popClass: 0 , home: true },
   { id: 'earthTown-haerlem', name: 'Haerlem', modern: 'Haarlem', latDeg: 52.3812, lonDeg: 4.6369, tier: 1, sign: 'cityPlan', popClass: 2 },
   { id: 'earthTown-alckmaer', name: 'Alckmaer', modern: 'Alkmaar', latDeg: 52.6324, lonDeg: 4.7534, tier: 2, sign: 'cityPlan', popClass: 2 },
   { id: 'earthTown-hoorn', name: 'Hoorn', modern: 'Hoorn', latDeg: 52.6425, lonDeg: 5.0597, tier: 2, sign: 'cityPlan', popClass: 2 },

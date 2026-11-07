@@ -22,6 +22,8 @@ export type AntiqueEarthTown = {
   readonly popClass: 0 | 1 | 2 | 3 | 4;
   /** A cross (bishopric) or double cross (archbishopric) over the sign, after Lubin 1678. */
   readonly see?: 'bishop' | 'archbishop';
+  /** The plate's own city: an Amsterdam atlas never drops it, so it outranks its tier. */
+  readonly home?: true;
   /** The modern name, set small beneath the period one, where the period name would not
    * lead a modern reader to the place (Jedo, Weenen); owner ruling 2026-11-07. */
   readonly gloss?: string;
