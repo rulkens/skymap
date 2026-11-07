@@ -14,6 +14,9 @@
 // | 84     | hatch   | body hatch angle, radians: parallel to the terminator    |
 // | 96     | sky     | the sky's ruling frame (`RulingFrame`, 80 bytes)         |
 // | 176    | globe   | a globe's ruling frame; all zero when none is ruled      |
+// | 256    | tune    | debug panel: hatch spacing (units), wash gain, ink gain  |
+// | 272    | tint    | debug panel: multiplies the sheet                        |
+// | 284    | hidden  | debug panel: rows switched off (fragment.wesl `HIDE_*`)  |
 
 // One frame the plate is ruled and numbered in (`AntiqueRulingFrame`), axes in world.
 struct RulingFrame {
@@ -36,6 +39,9 @@ struct AntiqueUniforms {
   hatchAngle: f32,
   sky: RulingFrame,
   globe: RulingFrame,
+  tune: vec4<f32>,
+  tint: vec3<f32>,
+  hidden: u32,
 }
 
 struct VSOut {

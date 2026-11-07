@@ -25,6 +25,7 @@
 
 import { GALAXY_CATALOG_IDS } from '../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { STAR_CATALOG_IDS } from '../../../src/data/starCatalog/starCatalogIds';
+import { ANTIQUE_TUNING_DEFAULTS } from '../../../src/data/rendering/antiqueTuning';
 import { BODY_SOURCE_IDS } from '../../../src/data/bodies/bodySourceIds';
 import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
 import {
@@ -94,7 +95,7 @@ export function makeSettingsFixture(
 ): EngineSettingsState {
   return {
     orientation: DEFAULT_ORIENTATION,
-    antique: { enabled: false },
+    antique: { enabled: false, tuning: ANTIQUE_TUNING_DEFAULTS },
     cameraControls: DEFAULT_CAMERA_CONTROLS,
     focusMoves: DEFAULT_FOCUS_MOVES,
     galaxyCatalogs: {

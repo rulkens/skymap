@@ -43,5 +43,8 @@ export function packAntiqueUniforms(
     f32.set([a[6], a[7], a[8], 0, ...(frame.globeCentre ?? [0, 0, 0])], at + 8);
     f32.set([lon.stepDeg, lat.stepDeg, lon.cellDeg, lat.cellDeg], at + 16);
   });
+  const { tune } = input;
+  f32.set([tune.hatchUnits, tune.washGain, tune.inkGain, 0, ...tune.tint], 64);
+  u32[71] = tune.hidden;
   return out;
 }

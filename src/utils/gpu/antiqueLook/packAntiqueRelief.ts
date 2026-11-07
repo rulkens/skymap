@@ -8,7 +8,6 @@
 import { mat4d } from 'wgpu-matrix';
 import type { AntiqueReliefInput } from '../../../@types/rendering/AntiqueReliefInput';
 import {
-  ANTIQUE_PLATE_LIGHT_ELEVATION_DEG,
   ANTIQUE_RELIEF_ANCHOR_LOG2,
   ANTIQUE_RELIEF_EXAGGERATION,
   ANTIQUE_RELIEF_ORBIT_ALT_M,
@@ -44,7 +43,7 @@ export function packAntiqueRelief(
   f32[47] = input.unitPx;
   f32[48] = input.size.width;
   f32[49] = input.size.height;
-  const elevation = (ANTIQUE_PLATE_LIGHT_ELEVATION_DEG * Math.PI) / 180;
+  const elevation = (input.lightElevationDeg * Math.PI) / 180;
   f32[50] = Math.sin(elevation);
   f32[51] = Math.cos(elevation);
   return out;

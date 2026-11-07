@@ -5,6 +5,7 @@
 
 import type { ViewCornerRays } from '../camera/projection/ViewCornerRays';
 import type { AntiquePlateRulings } from './AntiquePlateRulings';
+import type { AntiquePlateTune } from './AntiquePlateTune';
 import type { Size } from './Size';
 import type { Vec3 } from '../math/Vec3';
 
@@ -34,4 +35,6 @@ export type AntiqueUniformInput = {
   readonly web: number;
   /** The eye, world Mpc: where `web.wesl` finds the Zone of Avoidance's dust wedge. */
   readonly eye: Readonly<Vec3>;
+  /** The debug panel's knobs (`antiquePlateTune`). */
+  readonly tune: AntiquePlateTune;
 };

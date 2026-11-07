@@ -1,6 +1,7 @@
 /**
  * antiquePlateRulings — this frame's two ruling frames. The sky's axes follow
- * the orientation setting (ecliptic by default, as Hevelius ruled his plates);
+ * the orientation setting (ecliptic by default, as Hevelius ruled his plates) unless
+ * the debug panel forces a frame;
  * a globe's are its body-fixed axes, numbered from its prime meridian
  * (`ANTIQUE_GLOBE_RULINGS`), and it rules the plate wherever it lies under the
  * view. Its interior net fades with its share of the plate and with the ground
@@ -41,8 +42,11 @@ export function antiquePlateRulings(
     ...frame,
     ...antiqueGraticuleSteps(frame, basis, frustum, size, unitPx),
   });
+  const { skyRulings } = state.settings.antique.tuning;
   const sky = ruled({
-    axes: ANTIQUE_SKY_RULING_AXES[state.settings.orientation],
+    axes: ANTIQUE_SKY_RULING_AXES[
+      skyRulings === 'orientation' ? state.settings.orientation : skyRulings
+    ],
     lonOffsetDeg: 0,
     globeCentre: null,
     net: 1,

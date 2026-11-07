@@ -21,4 +21,6 @@ export type AntiqueReliefInput = {
   readonly unitPx: number;
   /** Radians per device px at the view centre. */
   readonly radPerPx: number;
+  /** The plate light's elevation from orbit (`ANTIQUE_PLATE_LIGHT_ELEVATION_DEG` by default). */
+  readonly lightElevationDeg: number;
 };

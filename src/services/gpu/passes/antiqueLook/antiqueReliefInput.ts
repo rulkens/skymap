@@ -42,5 +42,6 @@ export function antiqueReliefInput(
     size: ctx.canvasSize,
     unitPx,
     radPerPx: 1 / ctx.drawPxPerRad,
+    lightElevationDeg: state.settings.antique.tuning.reliefLightDeg,
   };
 }

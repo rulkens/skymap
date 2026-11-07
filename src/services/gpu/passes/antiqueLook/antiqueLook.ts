@@ -27,6 +27,7 @@ import { ANTIQUE_PLATE_BODIES_BYTES } from '../../../../data/rendering/antiquePl
 import { ANTIQUE_ORNAMENTS } from '../../../../data/rendering/antiqueOrnaments';
 import { ANTIQUE_ORNAMENT_ATLAS } from '../../../../data/rendering/antiqueOrnamentAtlas';
 import { packAntiqueUniforms } from '../../../../utils/gpu/antiqueLook/packAntiqueUniforms';
+import { antiquePlateTune } from '../../../../utils/gpu/antiqueLook/antiquePlateTune';
 import { packAntiquePlateBodies } from '../../../../utils/gpu/antiqueLook/packAntiquePlateBodies';
 import { antiquePlateBodies } from './antiquePlateBodies';
 import { antiqueReliefInput } from './antiqueReliefInput';
@@ -115,6 +116,7 @@ export function createAntiqueLook(init: {
       state.subsystems.scheduler.requestRender();
     });
     const g = gpu;
+    const tuning = state.settings.antique.tuning;
     const targets = ctx.snapshot.renderTargets;
     const size = ctx.canvasSize;
     const unitPx = size.height / ANTIQUE_REFERENCE_HEIGHT_CSS;
@@ -143,9 +145,11 @@ export function createAntiqueLook(init: {
         rays,
         seed: PAPER_SEED,
         rulings,
-        hatchAngle: terminatorHatchAngle(ctx.bodyPose(SUN)),
+        hatchAngle:
+          terminatorHatchAngle(ctx.bodyPose(SUN)) + (tuning.hatchAngleDeg * Math.PI) / 180,
         web: webDensity ? cosmos : 0,
         eye: ctx.drawCamPos,
+        tune: antiquePlateTune(tuning),
       },
       uniformBytes,
     );

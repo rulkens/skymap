@@ -122,8 +122,16 @@ const MARGIN: f32 = 30.0;
 const BAND: f32 = 7.0;
 // A side number runs inward up to this far from the sheet's edge: ANTIQUE_SIDE_NUMERAL_REACH_UNITS.
 const NUMERAL_SIDE_REACH: f32 = 100.0;
-// Hatch spacing on bodies, print units.
-const HATCH: f32 = 4.2;
+// The debug panel's row switches (`u.hidden`): bit i is ANTIQUE_PLATE_ROWS[i].
+const HIDE_RULINGS: u32 = 1u;
+const HIDE_LINES: u32 = 2u;
+const HIDE_FIGURES: u32 = 4u;
+const HIDE_GLYPHS: u32 = 8u;
+const HIDE_WEB: u32 = 16u;
+const HIDE_GALAXIES: u32 = 32u;
+const HIDE_HATCHING: u32 = 64u;
+const HIDE_RELIEF: u32 = 128u;
+const HIDE_GEOGRAPHY: u32 = 256u;
 // A constellation line's alpha at full cover: its BASE_ALPHA (constellations/fragment.wesl).
 const LINE_ALPHA: f32 = 0.5;
 // Glow levels: the outline-colour boundary, and one inner contour.
@@ -151,6 +159,10 @@ fn texel(t: texture_2d<f32>, ip: vec2<i32>) -> vec4<f32> {
 fn layerTexel(t: texture_2d_array<f32>, layer: i32, ip: vec2<i32>) -> vec4<f32> {
   let size = vec2<i32>(textureDimensions(t));
   return textureLoad(t, clamp(ip, vec2<i32>(0), size - 1), layer, 0);
+}
+
+fn rowOn(bit: u32) -> f32 {
+  return select(1.0, 0.0, (u.hidden & bit) != 0u);
 }
 
 fn bodyCover(ip: vec2<i32>) -> f32 {
@@ -418,7 +430,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let body = bodyCover(ip);
   let sky = 1.0 - body;
   let frame = neatline(px, uv);
-  let paperTone = sheet.rgb * (1.0 + plateMark(px));
+  let paperTone = sheet.rgb * u.tint * (1.0 + plateMark(px));
   var col = paperTone;
 
   // Dutch outline colour on the low band: a band 20 units wide inside each
@@ -446,6 +458,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   if (sky > 0.0 && max(neb.x, neb.y) > 0.8 * edgeLevel) {
     galaxy = galaxyEngraving(ip, uv, src, neb, lowL, clamp(glow.a, 0.0, 1.0), h, hPerUnit, fwSm, edgeLevel, big);
   }
+  galaxy *= rowOn(HIDE_GALAXIES);
   let band = outlineBand(inside) * sky * (1.0 - big);
   // A structure's disc (cluster, void, group) is outlined from its own row, never engraved.
   let structure = lowBandAt(STRUCTURE_GLOW_LAYER, uv);
@@ -460,7 +473,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   }
   // Colour gathers on the subject at the plate's centre and thins toward its
   // edges (to ~30%), so the eye lands on the subject, not the margins.
-  let focus = 1.0 - 0.7 * smoothstep(0.18, 0.62, length((uv - 0.5) * vec2<f32>(u.res.x / u.res.y, 1.0)) * 0.9);
+  let focus = u.tune.y * (1.0 - 0.7 * smoothstep(0.18, 0.62, length((uv - 0.5) * vec2<f32>(u.res.x / u.res.y, 1.0)) * 0.9));
   // Only a glow with a hue of its own is coloured; a grey one keeps just its line
   // (a grey glow washed in ochre read as scorched paper).
   let skyWash = band * 0.35 * focus * smoothstep(0.03, 0.12, chromaOf(hue));
@@ -472,7 +485,8 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   col = applyWash(col, pigmentAt(5.0), galaxyWash * (1.0 - galaxy.z)); // smalt
   col = applyWash(col, pigmentAt(2.0), galaxyWash * galaxy.z); // gamboge
 
-  let ornament = layerTexel(fullTex, DECOR_LAYER, ip);
+  let figures = rowOn(HIDE_FIGURES);
+  let ornament = layerTexel(fullTex, DECOR_LAYER, ip) * vec4<f32>(figures, 1.0, 1.0, figures);
   col = mix(col, paperTone, ornament.b);
   // Figures lie on the sky, behind any body; only a clearing ornament covers one.
   let behind = max(sky, ornament.b);
@@ -480,7 +494,9 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
 
   // Sky: glyphs for stars, the galaxy engraving, and on wider faint light the
   // boundary line and one inner contour of the low band. Star glyphs were scattered by glyphs.wesl: x ink, y paper knock-out.
-  let star = layerTexel(fullTex, STAR_INK_LAYER, ip);
+  let glyphs = rowOn(HIDE_GLYPHS);
+  let web = rowOn(HIDE_WEB);
+  let star = layerTexel(fullTex, STAR_INK_LAYER, ip) * vec4<f32>(glyphs, glyphs, web, web);
   let clear = 1.0 - star.y;
   // A glow's edge is dotted, as Bayer and de Wit drew a nebula's: a solid
   // ragged line here would read as a coast.
@@ -506,10 +522,10 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     let signs = clamp(2.0 * texel(geographyTex, ip).a, 0.0, 1.0);
     globeRulings = graticule(frameLonLat(u.globe, g.xyz), u.globe.steps, u.unit) * g.w * u.globe.lon90.w * (1.0 - signs);
   }
-  let rulings = (skyRulings * sky * clear + globeRulings * body) * (0.7 + 0.45 * vnoise(p * 0.045));
+  let rulings = (skyRulings * sky * clear + globeRulings * body) * (0.7 + 0.45 * vnoise(p * 0.045)) * rowOn(HIDE_RULINGS);
   // Constellation figures and orbits as a fine rule, a shade lighter than the
   // rulings: only a line's core inks, so a trail drawn wide still cuts thin.
-  let lines = smoothstep(0.55, 0.95, texel(linesTex, ip).a / LINE_ALPHA) * sky * clear * 0.7;
+  let lines = smoothstep(0.55, 0.95, texel(linesTex, ip).a / LINE_ALPHA) * sky * clear * 0.7 * rowOn(HIDE_LINES);
 
   // Bodies: burin hatching for the shade, and each recorded body's own
   // convention from its module (`printOf`). A recorded body (`plate`) is cast
@@ -540,7 +556,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     var marsForm = form;
     var moon = MoonTone(0.0, 0.0, 0.0);
     let relief = texel(reliefTex, ip);
-    let ground = (u.flags & FLAG_RELIEF) != 0u && relief.a != 0.0;
+    let ground = (u.flags & FLAG_RELIEF) != 0u && relief.a != 0.0 && rowOn(HIDE_RELIEF) > 0.0;
     if (hit.t < 1e30) {
       let b = plate.items[hit.index];
       let radius = b.centre.w;
@@ -592,11 +608,11 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     } else {
       tone = select(1.0 - smoothstep(0.015, 0.17, bodyLight(uv)), 0.0, ground);
     }
-    bodyInk = max(crossHatch(form, p, tone, HATCH, u.hatchAngle, pxUnits), lines);
+    bodyInk = max(crossHatch(form, p, tone, u.tune.x, u.hatchAngle, pxUnits) * rowOn(HIDE_HATCHING), lines);
     let cover = body * frame.y;
     if (print == PRINT_EARTH) {
       let e = EarthPrintIn(p, pxUnits, u.unit, tone, landShare, landPerPx,
-        landAt(uv + slip * 0.6), blurredShare, seaD, seaPerUnit, texel(geographyTex, ip));
+        landAt(uv + slip * 0.6), blurredShare, seaD, seaPerUnit, texel(geographyTex, ip) * rowOn(HIDE_GEOGRAPHY));
       let earth = earthPrint(col, cover, e);
       col = earth.col;
       bodyInk = max(bodyInk, earth.ink);
@@ -649,6 +665,6 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   ink = max(ink + rag * edgeInk * (1.0 - edgeInk) * 4.0, 0.0);
   ink *= 0.72 + 0.28 * smoothstep(0.25, 0.65, sheet.a);
   // Ink as density: one full stroke leaves INK's transmittance, a crossing more.
-  col *= pow(INK, vec3<f32>(ink));
+  col *= pow(INK, vec3<f32>(ink * u.tune.z));
   return vec4<f32>(col, 1.0);
 }

@@ -33,6 +33,7 @@ function input(eyeRelBodyM: [number, number, number]): AntiqueReliefInput {
     size: { width: 1600, height: 900 },
     unitPx: 1,
     radPerPx: 1e-3,
+    lightElevationDeg: 18,
   };
 }
 

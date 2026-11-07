@@ -16,6 +16,7 @@ import {
   ANTIQUE_ORNAMENT_BYTES,
   ANTIQUE_UNIFORM_BYTES,
 } from '../../../../src/data/rendering/antiqueLook';
+import { ANTIQUE_PLATE_ROWS } from '../../../../src/data/rendering/antiqueTuning';
 import { packAntiqueUniforms } from '../../../../src/utils/gpu/antiqueLook/packAntiqueUniforms';
 import { packAntiqueOrnaments } from '../../../../src/utils/gpu/antiqueLook/packAntiqueOrnaments';
 import { packAntiqueGlyphs } from '../../../../src/utils/gpu/antiqueLook/packAntiqueGlyphs';
@@ -100,6 +101,13 @@ describe('antique look records ↔ WGSL structs', () => {
       hatchAngle: 1024,
       web: 1025,
       eye: [1026, 1027, 1028],
+      tune: {
+        hatchUnits: 1071,
+        washGain: 1072,
+        inkGain: 1073,
+        tint: [1074, 1075, 1076],
+        hidden: 0b101,
+      },
     });
     const sentinel: Record<string, number> = {
       res: 1001,
@@ -110,9 +118,11 @@ describe('antique look records ↔ WGSL structs', () => {
       rayBR: 1014,
       seed: 1021,
       hatchAngle: 1024,
+      tune: 1071,
+      tint: 1074,
     };
     expect([...offsets.keys()].sort()).toEqual(
-      [...Object.keys(sentinel), 'flags', 'sky', 'globe'].sort(),
+      [...Object.keys(sentinel), 'flags', 'sky', 'globe', 'hidden'].sort(),
     );
     for (const [member, value] of Object.entries(sentinel))
       expect(offsetOf(packed, value), member).toBe(offsets.get(member));
@@ -142,6 +152,18 @@ describe('antique look records ↔ WGSL structs', () => {
     const depthBit = readShaderSource(`${DIR}/cover.wesl`).match(/FLAG_DEPTH_COVER: u32 = (\d+)u/);
     expect(Number(depthBit?.[1])).toBe(0b1000);
     expect(new Uint32Array(packed)[offsets.get('flags')! / 4]).toBe(0b1101);
+    for (const [i, value] of [1072, 1073].entries())
+      expect(offsetOf(packed, value)).toBe(offsets.get('tune')! + (i + 1) * 4);
+    expect(new Uint32Array(packed)[offsets.get('hidden')! / 4]).toBe(0b101);
+  });
+
+  it("fragment.wesl's HIDE_* bits follow ANTIQUE_PLATE_ROWS' order", () => {
+    const source = readShaderSource(`${DIR}/fragment.wesl`);
+    const bits = [...source.matchAll(/const HIDE_(\w+): u32 = (\d+)u;/g)].map(([, name, bit]) => [
+      name!.toLowerCase(),
+      Number(bit),
+    ]);
+    expect(bits).toEqual(ANTIQUE_PLATE_ROWS.map(({ key }, i) => [key, 1 << i]));
   });
 
   it('packAntiqueOrnaments writes AntiqueOrnaments row by row', () => {
