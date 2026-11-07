@@ -23,7 +23,8 @@ import { writeFileSync } from 'node:fs';
 export type MetaSidecarEntry = {
   id: string;
   names: string[];
-  description: string;
+  /** null where the domain has none (stellar streams without a Wikipedia article). */
+  description: string | null;
   [key: string]: unknown; // domain-specific extras (famous type/commonName,
   // cluster blurb) pass through untouched
 };
