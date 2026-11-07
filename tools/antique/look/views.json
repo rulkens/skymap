@@ -3,7 +3,7 @@
   "north": "focus=body-earth&t=2026-11-07T12:00:00Z&pose=a,0,0,0,0.4,-1.1,1.2e-15,0",
   "cetus": "focus=body-earth&t=2026-11-07T12:00:00Z&pose=a,0,0,0,-1.22,0.299,8e-15,0",
   "saturn": "focus=body-saturn&t=2026-10-07T12:00:00Z&pose=a,0,0,0,3.75,0.38,2.2e-14,0",
-  "sgra": "focus=blackhole-sgr-a-star&t=2026-11-07T12:00:00Z&pose=a,0,0,0,1.2,0.3,3e-4,0",
+  "sgra": "focus=blackhole-sgr-a-star&t=2026-11-07T12:00:00Z&pose=a,-0.0004469860712306233,-0.007138118108456056,-0.0039657480154262886,-1.5211,0.8306,1.25e-11,0",
   "virgo": "focus=galaxy-cluster-virgo-m87&t=2026-11-07T12:00:00Z&pose=a,0,0,0,2.4,-0.5,5,0",
   "pleiades": "focus=open-cluster-pleiades&t=2026-11-07T12:00:00Z&pose=a,0,0,0,4.0,0.4,8e-6,0",
   "milkyway": "focus=m31&t=2026-11-07T12:00:00Z&pose=a,0,0,0,5.2,-0.2,0.08,0",
