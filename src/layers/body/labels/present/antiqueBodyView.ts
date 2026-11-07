@@ -23,7 +23,6 @@ export function antiqueBodyView(
   body: BodyState,
   radiusM: number,
   toSun: Readonly<Vec3>,
-  diameterPx: number,
   ctx: FrameView,
 ): AntiqueBodyView {
   const basis = viewBasis(ctx.cam);
@@ -60,7 +59,9 @@ export function antiqueBodyView(
       return ctx.drawPxPerRad / (Math.hypot(g[0], g[1], g[2]) * radiusKm);
     },
     discCentrePx: toPx(centre),
-    discRadiusPx: diameterPx / 2,
+    // The silhouette's true radius, tan(asin(R/d)): the small-angle R/d puts the limb of
+    // a Moon a few radii off ~8% inside where it is drawn.
+    discRadiusPx: ctx.drawPxPerRad * Math.tan(Math.asin(Math.min(1, 1 / Math.hypot(...centre)))),
     radiusKm,
     anchorMpc: (xPx, yPx, latDeg, lonDeg) => {
       // `rayThroughPx` has unit forward component, so scaling it by depth lands at depth.

@@ -63,7 +63,7 @@ export function produceAntiqueMoonPlaces(
     const m = moon.positionMpc;
     const s = bodies.get('sun')!.positionMpc;
     const toSun = normalize3([s[0] - m[0], s[1] - m[1], s[2] - m[2]]);
-    const view = antiqueBodyView(moon, radiusM, toSun, diameterPx, ctx);
+    const view = antiqueBodyView(moon, radiusM, toSun, ctx);
     const subjectId = sceneBodyPickId(moonId, codeOf) ?? undefined;
     const labels: Label2D[] = [];
     ANTIQUE_MOON_PLACES.forEach((place, i) => {
