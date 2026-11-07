@@ -1,8 +1,8 @@
 /**
  * texturedBodyUniforms — this frame's uniform record for the textured body on one
  * body slab row, or null when that row's body is not textured or has no pose.
- * Shared by `texturedBodiesPass` and the antique look's `bodySeaMaskPass`, so the
- * sea mask lies exactly under the drawn sphere. Every term reads ONE radius, the
+ * Shared by `texturedBodiesPass` and the antique look's `bodyAlbedoMaskPass`, so the
+ * albedo mask lies exactly under the drawn sphere. Every term reads ONE radius, the
  * body's INNER bound (as `earthPass`), so the globe sits under every terrain tile.
  */
 
@@ -30,7 +30,7 @@ export function texturedBodyUniforms(
   ctx: FrameView,
   view: SlabView,
   runtime: Pick<BodyRuntime, 'texturedBodyRenderer'>,
-  seaBelow = 0,
+  albedoMid = 0,
 ): { bodyId: BodyTextureId; uniforms: Float32Array } | null {
   if (view.slab.frame.kind !== 'body-m') return null;
   const hostId = view.slab.frame.hostId;
@@ -57,7 +57,7 @@ export function texturedBodyUniforms(
     bodySlabCamLocal(pose.eyeRelBodyM, radiusM),
     bodySlabCamAltitudeSq(pose.eyeRelBodyM, radiusM),
     narrowMat4(composeBodySlabCamRelVp(view.slab.vp, radiusM)),
-    seaBelow,
+    albedoMid,
   );
   // The partition only routes bodies with a BODY_TEXTURE_REGISTRY row into `textured`.
   return { bodyId: body.id as BodyTextureId, uniforms };

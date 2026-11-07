@@ -47,7 +47,7 @@ export const ANTIQUE_HIDDEN_PASSES: readonly string[] = [
 /** Passes that exist only for the look: they draw nothing with it off. */
 export const ANTIQUE_ONLY_PASSES: readonly string[] = [
   'earth-ocean-mask',
-  'body-sea-mask',
+  'body-albedo-mask',
   'star-points-print',
   'star-catalog-print',
 ];
@@ -61,7 +61,7 @@ export const ANTIQUE_MOVED_PASSES: Readonly<Record<string, string>> = {
 };
 
 /** The land row's format: r land share, g covered (`earth/fragment.wesl` `fsOceanMask`,
- * `texturedBody/fragment.wesl` `fsSeaMask`). */
+ * `texturedBody/fragment.wesl` `fsAlbedoMask`). */
 export const ANTIQUE_LAND_FORMAT: GPUTextureFormat = 'rg8unorm';
 
 /** The print-points row (`antiqueLook/printPoint.wesl`): xy NDC and a magnitude need

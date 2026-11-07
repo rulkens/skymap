@@ -6,7 +6,7 @@
 
 struct PlateBody {
   centre: vec4<f32>, // xyz eye→centre / radius (world); w apparent radius, print units
-  sun: vec4<f32>, // xyz centre→Sun, unit; w 1 when the land share applies (Earth)
+  sun: vec4<f32>, // xyz centre→Sun, unit; w its print convention, a PRINT_* code
   ring: vec4<f32>, // xyz ring-plane normal; w ring texture's outer edge (radii), 0 = no ring
   ringEdges: vec4<f32>, // C inner, B inner, Cassini mid, A outer (radii)
 }
@@ -17,6 +17,23 @@ struct PlateBodies {
   _pad1: u32,
   _pad2: u32,
   items: array<PlateBody, 4>,
+}
+
+// Each body's own print convention, its module under `bodies/`; mirrored by
+// ANTIQUE_BODY_PRINT_CODES (data/rendering/antiquePlateBodies.ts).
+const PRINT_PLAIN: u32 = 0u;
+const PRINT_EARTH: u32 = 1u;
+const PRINT_MARS: u32 = 2u;
+const PRINT_MOON: u32 = 3u;
+
+fn printOf(b: PlateBody) -> u32 {
+  return u32(b.sun.w + 0.5);
+}
+
+// A body module's say over its pixels: the colour after its washes, and its own ink.
+struct BodyPrint {
+  col: vec3<f32>,
+  ink: f32,
 }
 
 // Half-width of Saturn's Cassini division in its radii (2,295 km), the one ring

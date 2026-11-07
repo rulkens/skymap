@@ -5,7 +5,7 @@
  * asserted directly (NOT mirrored from the packer); the 80-byte lit prefix is compared slot-for-slot
  * with `packLitBodyUniforms`.
  *
- *   0..15 mvp  16..18 sunDirLocal  19 seaBelow  20 ringInnerRatio
+ *   0..15 mvp  16..18 sunDirLocal  19 albedoMid  20 ringInnerRatio
  *   21 ringOuterRatio  22 limbStrength  23 limbExponent
  *   24..26 camPosLocal  27 camAltitudeSq  28..43 vpCamRelLocal
  */
@@ -50,10 +50,10 @@ describe('TexturedBodyUniforms byte offsets', () => {
     expect(out.length).toBe(44); // 176 bytes
     expect(out.byteLength).toBe(176);
 
-    // The 80-byte lit prefix is identical to packLitBodyUniforms; the lit draw leaves seaBelow 0.
+    // The 80-byte lit prefix is identical to packLitBodyUniforms; the lit draw leaves albedoMid 0.
     const lit = packLitBodyUniforms(MVP, SUN_DIR);
     for (let i = 0; i < 20; i++) expect(out[i]).toBe(lit[i]);
-    expect(out[19]).toBe(0); // seaBelow, defaulted
+    expect(out[19]).toBe(0); // albedoMid, defaulted
 
     expect(out[20]).toBe(RING_INNER); // byte 80
     expect(out[21]).toBe(RING_OUTER); // byte 84

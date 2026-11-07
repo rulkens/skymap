@@ -60,9 +60,9 @@ export type TexturedBodyRenderer = Renderer & {
    */
   draw(pass: GPURenderPassEncoder, bodyId: BodyTextureId, uniforms: Float32Array): void;
   /**
-   * Draw one body's sea mask for the antique look (`fsSeaMask`: albedo darker than
-   * the record's `seaBelow` is sea) into an `ANTIQUE_LAND_FORMAT` target with no
+   * Draw one body's albedo mask for the antique look (`fsAlbedoMask`: lightness
+   * ramped about the record's `albedoMid`) into an `ANTIQUE_LAND_FORMAT` target with no
    * depth. Its own uniform slot per body, so it never races `draw`'s.
    */
-  drawSeaMask(pass: GPURenderPassEncoder, bodyId: BodyTextureId, uniforms: Float32Array): void;
+  drawAlbedoMask(pass: GPURenderPassEncoder, bodyId: BodyTextureId, uniforms: Float32Array): void;
 };

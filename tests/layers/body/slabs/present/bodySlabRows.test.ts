@@ -10,7 +10,7 @@ import { BODY_SLAB_ROWS } from '../../../../../src/layers/body/slabs/present/bod
 import { bodyDrawRadiusM } from '../../../../../src/layers/body/slabs/present/bodyDrawRadiusM';
 import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
 import { bodyFootprintRadiusM } from '../../../../../src/utils/scene/bodyFootprintRadiusM';
-import { ANTIQUE_SEA_ALBEDO } from '../../../../../src/data/rendering/antiqueSeaAlbedo';
+import { ANTIQUE_ALBEDO_MASK } from '../../../../../src/data/rendering/antiqueAlbedoMask';
 
 describe('BODY_SLAB_ROWS', () => {
   it("carries Saturn's ring-inclusive draw radius apart from its footprint", () => {
@@ -28,6 +28,6 @@ describe('BODY_SLAB_ROWS', () => {
     const masked = BODY_SLAB_ROWS.filter((row) =>
       row.hosts?.some((host) => host.line === 'surfaceMask'),
     ).map((row) => row.anchorId);
-    expect(masked.sort()).toEqual(['earth', ...Object.keys(ANTIQUE_SEA_ALBEDO)].sort());
+    expect(masked.sort()).toEqual(['earth', ...Object.keys(ANTIQUE_ALBEDO_MASK)].sort());
   });
 });

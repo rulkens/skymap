@@ -7,8 +7,8 @@
 // structure discs, the band seen from inside — as Dutch outline colour: a
 // boundary line with a band of wash fading inward, never solid ink. Bodies are
 // engraved the classic way: burin lines bowing with the globe, swelling into
-// shadow, crossed only in the deepest; seas left pale with water lines off
-// the coasts of a body with a land map (Earth's oceans, Mars's dark markings).
+// shadow, crossed only in the deepest; what else a body shows is its own
+// convention, in its module under `bodies/` (Earth's coasts, Mars's markings).
 
 import package::antiqueLook::io::AntiqueUniforms;
 import package::antiqueLook::io::VSOut;
@@ -21,7 +21,6 @@ import package::antiqueLook::engraving::formTone;
 import package::antiqueLook::engraving::ringLines;
 import package::antiqueLook::engraving::seaDistance;
 import package::antiqueLook::engraving::landWeight;
-import package::antiqueLook::engraving::waterLines;
 import package::antiqueLook::engraving::inkLine;
 import package::antiqueLook::engraving::isoLines;
 import package::antiqueLook::plateBodies::PlateBodies;
@@ -29,6 +28,15 @@ import package::antiqueLook::plateBodies::BodyHit;
 import package::antiqueLook::plateBodies::castPlateBody;
 import package::antiqueLook::plateBodies::ballTheta;
 import package::antiqueLook::plateBodies::ringRho;
+import package::antiqueLook::plateBodies::printOf;
+import package::antiqueLook::plateBodies::PRINT_PLAIN;
+import package::antiqueLook::plateBodies::PRINT_EARTH;
+import package::antiqueLook::plateBodies::PRINT_MARS;
+import package::antiqueLook::plateBodies::PRINT_MOON;
+import package::antiqueLook::bodies::earth::EarthPrintIn;
+import package::antiqueLook::bodies::earth::earthPrint;
+import package::antiqueLook::bodies::mars::marsPrint;
+import package::antiqueLook::bodies::moon::moonTone;
 import package::antiqueLook::graticule::graticule;
 import package::antiqueLook::graticule::raDec;
 import package::antiqueLook::pigments::luma;
@@ -425,9 +433,8 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // rulings: only a line's core inks, so a trail drawn wide still cuts thin.
   let lines = smoothstep(0.55, 0.95, texel(linesTex, ip).a / LINE_ALPHA) * sky * clear * 0.7;
 
-  // Bodies, as a globe-maker engraved them: land and sea left as paper and
-  // washed, every coast cut as one continuous line with water lines off it,
-  // and burin hatching for the shade alone. A recorded body (`plate`) is cast
+  // Bodies: burin hatching for the shade, and each recorded body's own
+  // convention from its module (`printOf`). A recorded body (`plate`) is cast
   // analytically, so its lines bow with the globe and its tone is read off the
   // form; any other body keeps straight lines on the light at the terminator's
   // scale. Derivatives are taken here, in uniform control flow; the rest of
@@ -451,7 +458,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     var tone = 0.0;
     var form = vec3<f32>(dot(p, n), along, 1.0);
     var lines = 0.0;
-    var land = false;
+    var print = PRINT_PLAIN;
     if (hit.t < 1e30) {
       let b = plate.items[hit.index];
       let radius = b.centre.w;
@@ -468,7 +475,11 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
         // Half the screen line, half the Sun's parallel: lines bow with the globe
         // yet still cross the tone's contours, so they taper at both ends. `n`
         // points away from the Sun, as the arc grows: the halves add, never cancel.
+        print = printOf(b);
         tone = formTone(hit.ndl, hit.ndv);
+        if (print == PRINT_MOON) {
+          tone = moonTone(tone);
+        }
         // The ring's shadow on the ball is one solid stroke, not hatching.
         if (hit.ringShadow) {
           tone = max(tone, 0.85);
@@ -483,32 +494,21 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
         }
       }
       lines = max(lines, inkLine(hit.edgeUnits, 1.1, pxUnits));
-      land = b.sun.w > 0.5;
     } else {
       tone = 1.0 - smoothstep(0.015, 0.17, bodyLight(uv));
     }
     bodyInk = max(crossHatch(form, p, tone, HATCH, u.hatchAngle, pxUnits), lines);
-    // Land and sea only on a body with a land map (the record's flag).
-    if (land) {
-      let ocean = 1.0 - smoothstep(0.35, 0.65, landShare);
-      let coastPx = abs(landShare - 0.5) / landPerPx;
-      let coast = 1.0 - smoothstep(0.55 * u.unit, 0.55 * u.unit + 1.0, coastPx);
-      let waterFade = ocean * (1.0 - smoothstep(0.35, 0.8, tone));
-      var water = 0.0;
-      if (waterFade > 0.0) {
-        water = waterLines(p, seaD, seaPerUnit, pxUnits) * waterFade;
-      }
-      // Seas a pale smalt, pooled darker along the shore; land in Dutch outline
-      // colour, a band along each coast fading inward to paper. The colourist's
-      // wash stops a little off the cut coast, by a slow wander.
-      let washShare = landAt(uv + slip * 0.6);
-      let near = clamp(1.0 - seaD / 16.0, 0.0, 1.0);
-      let inland = seaDistance(1.0 - blurredShare);
-      let seaWash = (0.14 + 0.1 * near) * (1.0 - smoothstep(0.35, 0.65, washShare));
-      let landWash = 0.5 * smoothstep(0.35, 0.6, washShare) * clamp(1.0 - inland / 14.0, 0.0, 1.0);
-      col = applyWash(col, pigmentAt(5.0), seaWash * body * frame.y);
-      col = applyWash(col, pigmentAt(2.0), landWash * body * frame.y);
-      bodyInk = max(max(bodyInk, coast), water * 0.9);
+    let cover = body * frame.y;
+    if (print == PRINT_EARTH) {
+      let e = EarthPrintIn(p, pxUnits, u.unit, tone, landShare, landPerPx,
+        landAt(uv + slip * 0.6), blurredShare, seaD, seaPerUnit);
+      let earth = earthPrint(col, cover, e);
+      col = earth.col;
+      bodyInk = max(bodyInk, earth.ink);
+    } else if (print == PRINT_MARS) {
+      let mars = marsPrint(col, cover, landShare, p, pxUnits);
+      col = mars.col;
+      bodyInk = max(bodyInk, mars.ink);
     }
     bodyInk *= body;
   }

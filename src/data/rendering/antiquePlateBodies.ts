@@ -1,9 +1,26 @@
+import type { AntiqueBodyPrint } from '../../@types/rendering/AntiqueBodyPrint';
+
 /** Globes the plate ray-casts per frame, the widest on screen first; mirrored by the
  * `items` array length in `antiqueLook/plateBodies.wesl`. */
 export const ANTIQUE_PLATE_BODY_CAPACITY = 4;
 
 /** The `PlateBodies` uniform: a 16-byte count header, then 64 bytes per record. */
 export const ANTIQUE_PLATE_BODIES_BYTES = 16 + ANTIQUE_PLATE_BODY_CAPACITY * 64;
+
+/** Each body with a print convention of its own; any other is `plain`. */
+export const ANTIQUE_BODY_PRINTS: Readonly<Record<string, AntiqueBodyPrint>> = {
+  earth: 'earth',
+  mars: 'mars',
+  moon: 'moon',
+};
+
+/** The record's code per convention; mirrored by `PRINT_*` in `antiqueLook/plateBodies.wesl`. */
+export const ANTIQUE_BODY_PRINT_CODES: Readonly<Record<AntiqueBodyPrint, number>> = {
+  plain: 0,
+  earth: 1,
+  mars: 2,
+  moon: 3,
+};
 
 /** A globe is cast only from beyond its highest peak's radius times this; nearer,
  * its relief is the horizon and the sphere is not. */

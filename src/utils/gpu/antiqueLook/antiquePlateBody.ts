@@ -10,6 +10,7 @@
 import type { Mat3 } from '../../../@types/math/Mat3';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { AntiquePlateBody } from '../../../@types/rendering/AntiquePlateBody';
+import type { AntiqueBodyPrint } from '../../../@types/rendering/AntiqueBodyPrint';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { ANTIQUE_PLATE_RELIEF_MARGIN } from '../../../data/rendering/antiquePlateBodies';
 
@@ -21,7 +22,7 @@ export function antiquePlateBody(input: {
   readonly radiusM: number;
   /** Its highest peak's radius (`outerBoundRadiusM`). */
   readonly outerRadiusM: number;
-  readonly land: boolean;
+  readonly print: AntiqueBodyPrint;
   /** Ring edges in km: C inner, B inner, Cassini mid, A outer, and the texture's outer edge. */
   readonly ringKm: readonly [number, number, number, number, number] | null;
   readonly eyeMpc: Readonly<Vec3>;
@@ -47,7 +48,7 @@ export function antiquePlateBody(input: {
     // tan(asin(1/d)) = 1/√(d²−1): the silhouette cone's half-angle, projected.
     radiusUnits: input.unitsPerRad / Math.sqrt(d * d - 1),
     sun: [toSun[0] / sunDistance, toSun[1] / sunDistance, toSun[2] / sunDistance],
-    land: input.land,
+    print: input.print,
     ring:
       ringKm === null
         ? null

@@ -3,8 +3,8 @@
  * first: every resolved planet or moon drawn as a sphere, plus Earth (not a
  * sorted scene body; `earthPass` draws it alone). Each is cast at the radius its
  * sphere is drawn at, the inner bound, as `texturedBodiesPass` and `earthPass` do.
- * Only a body with a land map (Earth's oceans, `ANTIQUE_SEA_ALBEDO`'s dark
- * albedo), and only when the land row drew, carries the land share.
+ * Each carries its print convention (`ANTIQUE_BODY_PRINTS`); one that reads the
+ * land row (Earth's oceans, an albedo mask) falls back to plain when it did not draw.
  */
 
 import type { PassState } from '../../../../@types/engine/frame/PassState';
@@ -12,8 +12,11 @@ import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { AntiquePlateBody } from '../../../../@types/rendering/AntiquePlateBody';
 import type { BodySurface } from '../../../../@types/scene/BodySurface';
 import type { Vec3 } from '../../../../@types/math/Vec3';
-import { ANTIQUE_RING_LINES_KM } from '../../../../data/rendering/antiquePlateBodies';
-import { ANTIQUE_SEA_ALBEDO } from '../../../../data/rendering/antiqueSeaAlbedo';
+import {
+  ANTIQUE_BODY_PRINTS,
+  ANTIQUE_RING_LINES_KM,
+} from '../../../../data/rendering/antiquePlateBodies';
+import { ANTIQUE_ALBEDO_MASK } from '../../../../data/rendering/antiqueAlbedoMask';
 import { SCENE_RINGS } from '../../../../data/bodies/sceneRings';
 import { SCENE_EARTH } from '../../../../data/bodies/sceneEarth';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
@@ -33,7 +36,10 @@ export function antiquePlateBodies(
 ): AntiquePlateBody[] {
   const states = sceneBodyStates(state, ctx);
   const records: AntiquePlateBody[] = [];
-  const add = (id: string, positionMpc: Readonly<Vec3>, surface: BodySurface, land: boolean) => {
+  const add = (id: string, positionMpc: Readonly<Vec3>, surface: BodySurface) => {
+    // Earth's oceans and an albedo mask both come through the land row.
+    const readsLand = id === SCENE_EARTH.id || id in ANTIQUE_ALBEDO_MASK;
+    const print = readsLand && !landMapped ? 'plain' : (ANTIQUE_BODY_PRINTS[id] ?? 'plain');
     const ring = SCENE_RINGS.find((r) => r.bodyId === id);
     const lines = ANTIQUE_RING_LINES_KM[id];
     const record = antiquePlateBody({
@@ -41,7 +47,7 @@ export function antiquePlateBodies(
       orientation: states.get(id)!.orientation,
       radiusM: innerBoundRadiusM(surface),
       outerRadiusM: outerBoundRadiusM(surface),
-      land,
+      print,
       ringKm:
         ring && lines
           ? [ring.innerRadiusKm, lines[0], lines[1], lines[2], ring.outerRadiusKm]
@@ -54,8 +60,7 @@ export function antiquePlateBodies(
   };
 
   for (const { body, positionMpc } of sceneBodyPresentation(ctx).resolved) {
-    if (isPlanetBody(body))
-      add(body.id, positionMpc, body.surface, landMapped && body.id in ANTIQUE_SEA_ALBEDO);
+    if (isPlanetBody(body)) add(body.id, positionMpc, body.surface);
   }
   const earth = states.get(SCENE_EARTH.id)!.positionMpc;
   const earthPx = bodyApparentDiameterPx({
@@ -65,7 +70,7 @@ export function antiquePlateBodies(
     pxPerRad: ctx.drawPxPerRad,
   });
   if (earthPx >= SCENE_EARTH.resolvePx)
-    add(SCENE_EARTH.id, earth, SCENE_EARTH.surface, landMapped);
+    add(SCENE_EARTH.id, earth, SCENE_EARTH.surface);
 
   return records.sort((a, b) => b.radiusUnits - a.radiusUnits);
 }

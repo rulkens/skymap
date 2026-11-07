@@ -62,7 +62,7 @@ type BodyResources = {
   placeholders: Map<TextureKind, GPUTexture>;
   ringTexture: GPUTexture | null;
   bindGroup: GPUBindGroup;
-  /** The antique sea mask's own uniform slot, built on its first draw; its bind
+  /** The antique albedo mask's own uniform slot, built on its first draw; its bind
    *  group is dropped whenever `bindGroup` is rebuilt. */
   maskUniformBuffer: GPUBuffer | null;
   maskBindGroup: GPUBindGroup | null;
@@ -206,14 +206,14 @@ export function createTexturedBodyRenderer(
     },
   });
 
-  // The sea mask draws alone into the look's land row: no depth (one convex
+  // The albedo mask draws alone into the look's land row: no depth (one convex
   // sphere per row), one ANTIQUE_LAND_FORMAT target, built on the look's first use.
   let maskPipeline: GPURenderPipeline | null = null;
   const buildMaskPipeline = (): GPURenderPipeline =>
     device.createRenderPipeline({
-      label: 'texturedBody-sea-mask-pipeline',
+      label: 'texturedBody-albedo-mask-pipeline',
       layout: device.createPipelineLayout({
-        label: 'texturedBody-sea-mask-pipeline-layout',
+        label: 'texturedBody-albedo-mask-pipeline-layout',
         bindGroupLayouts: [bindGroupLayout],
       }),
       vertex: {
@@ -224,7 +224,7 @@ export function createTexturedBodyRenderer(
           { arrayStride: 8, attributes: [{ shaderLocation: 1, offset: 0, format: 'float32x2' }] },
         ],
       },
-      fragment: { module: fsModule, entryPoint: 'fsSeaMask', targets: [{ format: ANTIQUE_LAND_FORMAT }] },
+      fragment: { module: fsModule, entryPoint: 'fsAlbedoMask', targets: [{ format: ANTIQUE_LAND_FORMAT }] },
       primitive: { topology: 'triangle-list', frontFace: 'ccw', cullMode: 'front' },
     });
 
@@ -406,10 +406,10 @@ export function createTexturedBodyRenderer(
     pass.drawIndexed(indexCount);
   }
 
-  function drawSeaMask(pass: GPURenderPassEncoder, bodyId: BodyTextureId, uniforms: Float32Array): void {
+  function drawAlbedoMask(pass: GPURenderPassEncoder, bodyId: BodyTextureId, uniforms: Float32Array): void {
     const res = resourcesFor(bodyId);
     res.maskUniformBuffer ??= device.createBuffer({
-      label: `texturedBody-sea-mask-uniform-${bodyId}`,
+      label: `texturedBody-albedo-mask-uniform-${bodyId}`,
       size: UNIFORM_BUFFER_SIZE,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
@@ -448,7 +448,7 @@ export function createTexturedBodyRenderer(
     hasMap,
     setRingTexture,
     draw,
-    drawSeaMask,
+    drawAlbedoMask,
     destroy,
   };
   renderer satisfies Renderer;

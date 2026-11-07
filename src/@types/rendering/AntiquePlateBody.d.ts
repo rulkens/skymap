@@ -5,6 +5,7 @@
 
 import type { Vec3 } from '../math/Vec3';
 import type { AntiquePlateRing } from './AntiquePlateRing';
+import type { AntiqueBodyPrint } from './AntiqueBodyPrint';
 
 export type AntiquePlateBody = {
   /** Eye → centre, in body radii. */
@@ -13,8 +14,7 @@ export type AntiquePlateBody = {
   readonly radiusUnits: number;
   /** Centre → Sun, unit. */
   readonly sun: Readonly<Vec3>;
-  /** Whether `wash.a` can hold this body's land share (a land map drew: Earth's
-   * oceans, Mars's dark albedo). */
-  readonly land: boolean;
+  /** Its print convention; one that reads the land row is `plain` when that did not draw. */
+  readonly print: AntiqueBodyPrint;
   readonly ring: AntiquePlateRing | null;
 };

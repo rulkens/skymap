@@ -26,7 +26,7 @@ const at = (eye: Vec3) =>
     orientation: TILT,
     radiusM: RADIUS_M,
     outerRadiusM: RADIUS_M + 20_000,
-    land: false,
+    print: 'plain',
     ringKm: [74_500, 92_000, 119_875, 136_775, 140_220],
     eyeMpc: eye,
     sunMpc: [-1e-5, 0, 0],

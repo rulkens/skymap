@@ -7,6 +7,7 @@
 import type { AntiquePlateBody } from '../../../@types/rendering/AntiquePlateBody';
 import {
   ANTIQUE_PLATE_BODIES_BYTES,
+  ANTIQUE_BODY_PRINT_CODES,
   ANTIQUE_PLATE_BODY_CAPACITY,
 } from '../../../data/rendering/antiquePlateBodies';
 
@@ -23,12 +24,12 @@ export function packAntiquePlateBodies(
   f32.fill(0);
   new Uint32Array(out)[0] = count;
   for (let i = 0; i < count; i++) {
-    const { centre, radiusUnits, sun, land, ring } = bodies[i]!;
+    const { centre, radiusUnits, sun, print, ring } = bodies[i]!;
     const at = HEADER_FLOATS + i * RECORD_FLOATS;
     f32.set(centre, at);
     f32[at + 3] = radiusUnits;
     f32.set(sun, at + 4);
-    f32[at + 7] = land ? 1 : 0;
+    f32[at + 7] = ANTIQUE_BODY_PRINT_CODES[print];
     if (ring !== null) {
       f32.set(ring.normal, at + 8);
       // Outer edge 0 is the shader's "no ring".
