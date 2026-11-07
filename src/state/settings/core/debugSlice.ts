@@ -24,6 +24,7 @@ import type { SplineMode } from '../../../@types/animation/SplineMode';
 import type { PassByDir } from '../../../@types/animation/PassByDir';
 import type { ClipPathTuningKnob } from '../../../@types/settings/ClipPathTuningKnob';
 import type { RenderStrategy } from '../../../@types/engine/frame/RenderStrategy';
+import { MESH_SELF_BOUNCE } from '../../../data/mesh/meshSelfBounce';
 
 const initialState: DebugSettings = {
   // One entry per DEBUG_OVERLAY_ROWS row, all off — the roster is the
@@ -37,6 +38,7 @@ const initialState: DebugSettings = {
   disabledPasses: {},
   matteWhite: false,
   meshAmbient: 0,
+  meshSelfBounce: MESH_SELF_BOUNCE,
   // 'auto' reproduces the old timing-derived pass shape, so production +
   // ?gpuTimings stay identical to before Joint 1 (see `resolveStrategy`).
   renderStrategy: 'auto',
@@ -86,6 +88,9 @@ export const debugSlice = createSlice({
     },
     setMeshAmbient: (debug, action: PayloadAction<number>) => {
       debug.meshAmbient = action.payload;
+    },
+    setMeshSelfBounce: (debug, action: PayloadAction<number>) => {
+      debug.meshSelfBounce = action.payload;
     },
     // Override the frame's render-pass shape independently of GPU timing (Joint 1;
     // see `resolveStrategy`). 'auto' restores the timing-derived default.
@@ -186,6 +191,7 @@ export const {
   setPassDisabled,
   setMatteWhite,
   setMeshAmbient,
+  setMeshSelfBounce,
   setRenderStrategy,
   inspectClipPath,
   recalcClipPath,

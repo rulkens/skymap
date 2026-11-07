@@ -20,6 +20,8 @@ export type SurfaceTileDrawArgs = {
   readonly radiusM: number;
   /** The body slab's own eye-relative view-projection (`view.vp`). */
   readonly vp: Float32Array;
+  /** `viewFlipsWinding`: a capture face, drawn with the cull mode swapped. */
+  readonly mirrored: boolean;
   /** Sun direction in the engaged body's local (unrotated) frame, matching `EarthSurfaceUniforms.sunDirLocal`'s convention. */
   readonly sunDirLocal: Readonly<Vec3>;
   /** The engaged body's registry row: `effects` picks the fragment variant,

@@ -17,6 +17,7 @@ import { buildStaticAnchorStructures } from '../../../../src/layers/structure/ca
 import { encodeBlackHoleFocusId } from '../../../../src/layers/blackHoles/markers/present/encodeBlackHoleFocusId';
 import { BLACK_HOLE_SOURCE_ROWS } from '../../../../src/layers/blackHoles/sources/blackHoleSourceRows';
 import { CRAFT_SEARCH_NAMES } from '../../../../src/layers/missions/craft/present/craftSearch';
+import { PROBE_SPHERE_ROSTER } from '../../../../src/layers/probeSpheres/spheres/data/probeSphereRoster';
 import { BODY_FOCUS_PREFIX } from '../../../../src/services/url/bodyFocusId';
 import { encodeStarFocusId } from '../../../../src/layers/starCatalog/selection/utils/encodeStarFocusId';
 import { MILKY_WAY_FOCUS_ID } from '../../../../src/services/url/milkyWayFocusId';
@@ -195,7 +196,8 @@ const missionIds = new Set(
     card.action.kind === 'focus' ? [card.action.focusId] : [],
   ),
 );
-const models = SCENE_MESH_BODIES.map((body) => {
+// The probe spheres are a debug aid the app's search does not list, so they are not here.
+const models = SCENE_MESH_BODIES.filter((body) => !PROBE_SPHERE_ROSTER.has(body.id)).map((body) => {
   const id = `${BODY_FOCUS_PREFIX}${body.id}`;
   const names = CRAFT_SEARCH_NAMES.get(body.id) ?? [];
   return focusRow({

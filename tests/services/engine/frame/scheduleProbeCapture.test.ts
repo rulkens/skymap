@@ -145,6 +145,23 @@ describe('scheduleProbeCapture', () => {
     expect(probe.due).toBe(false);
   });
 
+  // The first capture lands before the textures do; the wake their arrival
+  // renders falls inside the interval, and a still scene renders nothing after.
+  it('owes a refresh after a frame that renders an older probe, none after capturing it', () => {
+    const state = makeState(['curiosity']);
+    const probe = state.cubemapCaptures.probe;
+
+    expect(scheduleProbeCapture({ state, ctx: ctxAt('curiosity') })).not.toBeNull();
+    expect(probe.refreshOwedInMs).toBeNull();
+
+    expect(scheduleProbeCapture({ state, ctx: ctxAt('curiosity', NOW_MS + 500) })).toBeNull();
+    expect(probe.refreshOwedInMs).toBe(PROBE_REFRESH_INTERVAL_MS - 500);
+
+    const due = NOW_MS + PROBE_REFRESH_INTERVAL_MS;
+    expect(scheduleProbeCapture({ state, ctx: ctxAt('curiosity', due) })).not.toBeNull();
+    expect(probe.refreshOwedInMs).toBeNull();
+  });
+
   it('refreshes nothing while every candidate is inside PROBE_REFRESH_INTERVAL_MS', () => {
     const state = makeState(['curiosity']);
     state.cubemapCaptures.probe.refreshedAtMs.set(

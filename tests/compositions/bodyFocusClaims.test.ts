@@ -1,6 +1,6 @@
 /**
- * Every scene body deep-links as `body-<id>`, a prefix three kinds share: `body`, missions'
- * `craft` and earthScenes' `earthScene`. Each claims only its own ids; a body nobody claims opens
+ * Every scene body deep-links as `body-<id>`, a prefix four kinds share: `body`, missions'
+ * `craft`, earthScenes' `earthScene` and probeSpheres' `probeSphere`. Each claims only its own ids; a body nobody claims opens
  * nothing, and two claimants make every resolve throw. Only the seeded stars stay unclaimed here
  * (they deep-link as `star-<id>`).
  */
@@ -10,8 +10,10 @@ import { composeSelectionRows } from '../../src/services/engine/selection/compos
 import { bodyLayer } from '../../src/layers/body/layer';
 import { missionsLayer } from '../../src/layers/missions/layer';
 import { earthScenesLayer } from '../../src/layers/earthScenes/layer';
+import { probeSpheresLayer } from '../../src/layers/probeSpheres/layer';
 import { MISSION_CRAFT_IDS } from '../../src/layers/missions/craft/present/missionCraftIds';
 import { EARTH_SCENE_BODY_IDS } from '../../src/layers/earthScenes/scenes/data/earthSceneBodyIds';
+import { PROBE_SPHERE_ROSTER } from '../../src/layers/probeSpheres/spheres/data/probeSphereRoster';
 import { SCENE_BODIES } from '../../src/data/bodies/sceneBodies';
 import { SCENE_SUN } from '../../src/data/bodies/sceneSun';
 import { SCENE_STARS } from '../../src/data/bodies/sceneStars';
@@ -27,6 +29,7 @@ const resolver = composeSelectionRows(
     ...bodyLayer.selection!.rows({ pickCodes: bodyPickCodes() } as never),
     ...missionsLayer.selection!.rows({ pickCode: missionsPickCode() } as never),
     ...earthScenesLayer.selection!.rows(undefined as never),
+    ...probeSpheresLayer.selection!.rows(undefined as never),
   ],
   () => NO_KINDS_OFF,
 );
@@ -40,9 +43,11 @@ describe('body-<id> focus claims', () => {
         ? 'craft'
         : EARTH_SCENE_BODY_IDS.has(id)
           ? 'earthScene'
-          : isBodyKindId(id)
-            ? 'body'
-            : null;
+          : PROBE_SPHERE_ROSTER.has(id)
+            ? 'probeSphere'
+            : isBodyKindId(id)
+              ? 'body'
+              : null;
       if (kind === null) {
         expect(STAR_IDS.has(id), `${id} is owned by no kind`).toBe(true);
         expect(ref).toBeNull();

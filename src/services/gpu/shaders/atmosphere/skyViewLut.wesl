@@ -18,7 +18,7 @@
 // ## The per-texel work
 //
 // 'skyViewLutUvToParams' (scattering.wesl) inverts Hillaire's horizon-split
-// warp to recover (viewZenithCos, lightViewCos) for the texel. From those, plus
+// warp to recover (viewZenithAngle, lightViewCos) for the texel. From those, plus
 // the camera altitude + sun zenith carried in 'SkyViewParams', we rebuild the
 // view ray and the sun direction in a local frame whose up axis is +z, then
 // march the single-plus-multi-scatter integral across the IN-ATMOSPHERE segment
@@ -115,6 +115,12 @@ fn raymarchInScatter(p0: vec3<f32>, dir: vec3<f32>, sunDir: vec3<f32>) -> vec3<f
     tFar = min(tFar, ground.x);
   }
   let dt = (tFar - tNear) / SKY_VIEW_STEPS;
+  // From space, 'p0 + dir * tNear' cancels ~1e7 km to the top radius; the entry
+  // rebuilt from the ray's closest-approach point carries no such difference.
+  let b = dot(p0, dir);
+  let closest = p0 - b * dir;
+  let sTop = sqrt(max(topRadius * topRadius - dot(closest, closest), 0.0));
+  let entry = select(p0, closest - sTop * dir, top.x > 0.0);
 
   let cosTheta = dot(dir, sunDir);
 
@@ -124,8 +130,7 @@ fn raymarchInScatter(p0: vec3<f32>, dir: vec3<f32>, sunDir: vec3<f32>) -> vec3<f
   var i: u32 = 0u;
   loop {
     if (f32(i) >= SKY_VIEW_STEPS) { break; }
-    let t = tNear + (f32(i) + 0.5) * dt;
-    let pos = p0 + dir * t;
+    let pos = entry + dir * ((f32(i) + 0.5) * dt);
     let s = scatterStep(
       params, transmittanceLut, multiScatterLut, lutSamp,
       pos, sunDir, cosTheta, dt,
@@ -148,7 +153,7 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
 
   let r = view.viewHeightKm;
   let angles = skyViewLutUvToParams(params.planetRadiusKm, r, uv);
-  let viewZenithCos = angles.x;
+  let viewZenithAngle = angles.x;
   let lightViewCos = angles.y;
 
   // Rebuild the view ray + sun in a local frame with up = +z. The sun sits at
@@ -156,7 +161,8 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   // azimuth relative to the sun), so the view direction's off-axis component
   // splits between the sun-aligned (x) and perpendicular (y) axes by
   // 'lightViewCos'.
-  let viewZenithSin = sqrt(max(0.0, 1.0 - viewZenithCos * viewZenithCos));
+  let viewZenithSin = sin(viewZenithAngle);
+  let viewZenithCos = cos(viewZenithAngle);
   let dir = vec3<f32>(
     viewZenithSin * lightViewCos,
     viewZenithSin * sqrt(max(0.0, 1.0 - lightViewCos * lightViewCos)),

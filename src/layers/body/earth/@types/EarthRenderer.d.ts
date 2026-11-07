@@ -40,7 +40,7 @@ export type EarthRenderer = Renderer & {
   getMapView(kind: TextureKind): GPUTextureView;
   /**
    * Draw the Earth into the current pass. `uniforms` is the length-32 Float32Array
-   * from `packEarthSurfaceUniforms`.
+   * from `packEarthSurfaceUniforms`. `mirrored` = `viewFlipsWinding`.
    */
-  draw(pass: GPURenderPassEncoder, uniforms: Float32Array): void;
+  draw(pass: GPURenderPassEncoder, uniforms: Float32Array, mirrored: boolean): void;
 };

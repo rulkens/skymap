@@ -165,7 +165,10 @@ fn raySphere(ro: vec3<f32>, rd: vec3<f32>, center: vec3<f32>, radius: f32) -> ve
   let b = dot(m, rd);
   let c = dot(m, m) - radius * radius;
   if (c > 0.0 && b > 0.0) { return vec2<f32>(-1.0, -1.0); }
-  let discr = b * b - c;
+  // 'b * b - c' subtracts two ~|m|^2 numbers: past ~1e3 radii that is f32 noise
+  // across the whole disc. The closest-approach offset 'h' keeps it at ~|m| ulps.
+  let h = m - b * rd;
+  let discr = radius * radius - dot(h, h);
   if (discr < 0.0) { return vec2<f32>(-1.0, -1.0); }
   let s = sqrt(discr);
   // Stable pair 'q = -(b + sign(b)*s)' and 'c / q': neither root cancels,

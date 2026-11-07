@@ -14,11 +14,13 @@ import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { AtmosphereShellDepth } from '../@types/AtmosphereShellDepth';
 import type { AtmosphereShellRenderer } from '../@types/AtmosphereShellRenderer';
 import type { AtmosphereParams } from '../@types/AtmosphereParams';
+import type { Vec2 } from '../../../../@types/math/Vec2';
 import { uvSphereMesh } from '../../../../utils/math/uvSphereMesh';
 import { ATMOSPHERE_UNIFORM_FLOATS } from './packAtmosphereUniforms';
 import { packScatteringParams, SCATTERING_PARAMS_BYTES } from './packScatteringParams';
 import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
 import { createAerialPerspectiveRenderer } from './aerialPerspectiveRenderer';
+import { PROBE_FACE_DEPTH_STATE } from '../data/probeFaceDepthState';
 import transmittanceCode from '../../../../services/gpu/shaders/atmosphere/transmittanceLut.wesl?static';
 import multiScatterCode from '../../../../services/gpu/shaders/atmosphere/multiScatterLut.wesl?static';
 import skyViewCode from '../../../../services/gpu/shaders/atmosphere/skyViewLut.wesl?static';
@@ -91,6 +93,12 @@ type AtmosphereBundle = {
   shellBindGroup: GPUBindGroup | null;
   /** Identity, not size, keys the rebuild: it always changes on a reallocation. */
   shellDepthView: GPUTextureView | null;
+  /** The probe-face twins of the four fields above: a face must neither share the main
+   *  draw's writes nor flip its depth-keyed group every frame. */
+  probeUniformBuffer: GPUBuffer;
+  probeDepthFrameBuffer: GPUBuffer;
+  probeBindGroup: GPUBindGroup | null;
+  probeDepthView: GPUTextureView | null;
 };
 
 export function createAtmosphereShellRenderer(
@@ -277,12 +285,14 @@ export function createAtmosphereShellRenderer(
     cullMode: 'none',
   };
 
-  // NO depthStencil: the step SAMPLES `foreground:0`'s depth rather than attaching it,
-  // and a pipeline naming a depth format is rejected by a pass that has none.
+  // NO depthStencil for the main view: the step SAMPLES `foreground:0`'s depth rather than
+  // attaching it, and a pipeline naming a depth format is rejected by a pass that has none.
+  // A probe face attaches one, so the probe pair names it.
   function createShellPipeline(
     label: string,
     entryPoint: string,
     blend: GPUBlendState,
+    depthStencil?: GPUDepthStencilState,
   ): GPURenderPipeline {
     return device.createRenderPipeline({
       label,
@@ -290,6 +300,7 @@ export function createAtmosphereShellRenderer(
       vertex: shellVertexState,
       fragment: { module: shellFsModule, entryPoint, targets: [{ format: targetFormat, blend }] },
       primitive: shellPrimitiveState,
+      ...(depthStencil === undefined ? {} : { depthStencil }),
     });
   }
 
@@ -311,6 +322,18 @@ export function createAtmosphereShellRenderer(
     alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
   };
   const shellAddPipeline = createShellPipeline('atmosphere-shell-add-pipeline', 'fsAdd', addBlend);
+  const probeShellMultiplyPipeline = createShellPipeline(
+    'atmosphere-probe-shell-multiply-pipeline',
+    'fsMultiply',
+    multiplyBlend,
+    PROBE_FACE_DEPTH_STATE,
+  );
+  const probeShellAddPipeline = createShellPipeline(
+    'atmosphere-probe-shell-add-pipeline',
+    'fsAdd',
+    addBlend,
+    PROBE_FACE_DEPTH_STATE,
+  );
 
   // ScatteringParams is written once; SkyViewParams every frame; AtmosphereUniforms
   // per outside draw or inside bake.
@@ -366,6 +389,16 @@ export function createAtmosphereShellRenderer(
       size: SHELL_DEPTH_UNIFORM_BYTES,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
+    const probeUniformBuffer = device.createBuffer({
+      label: `atmosphere-probe-shell-uniform-${bodyId}`,
+      size: ATMOSPHERE_UNIFORM_BYTES,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+    const probeDepthFrameBuffer = device.createBuffer({
+      label: `atmosphere-probe-shell-depth-frame-${bodyId}`,
+      size: SHELL_DEPTH_UNIFORM_BYTES,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
 
     const transmittanceBindGroup = device.createBindGroup({
       label: `atmosphere-transmittance-bg-${bodyId}`,
@@ -410,6 +443,10 @@ export function createAtmosphereShellRenderer(
       skyViewBaked: null,
       shellBindGroup: null,
       shellDepthView: null,
+      probeUniformBuffer,
+      probeDepthFrameBuffer,
+      probeBindGroup: null,
+      probeDepthView: null,
     };
   }
 
@@ -441,21 +478,23 @@ export function createAtmosphereShellRenderer(
 
   /** Over the depth view the current draw hands in; `ringTexture: null` binds the placeholder. */
   function buildShellBindGroup(
-    bodyId: string,
+    label: string,
     bundle: AtmosphereBundle,
+    uniformBuffer: GPUBuffer,
+    depthFrameBuffer: GPUBuffer,
     depthView: GPUTextureView,
   ): GPUBindGroup {
     return device.createBindGroup({
-      label: `atmosphere-shell-bg-${bodyId}`,
+      label,
       layout: shellBgl,
       entries: [
-        { binding: 0, resource: { buffer: bundle.shellUniformBuffer } },
+        { binding: 0, resource: { buffer: uniformBuffer } },
         { binding: 1, resource: sampler },
         { binding: 2, resource: bundle.skyViewTex.createView() },
         { binding: 3, resource: bundle.transmittanceTex.createView() },
         { binding: 4, resource: (bundle.ringTexture ?? placeholderRing).createView() },
         { binding: 5, resource: depthView },
-        { binding: 6, resource: { buffer: bundle.depthFrameBuffer } },
+        { binding: 6, resource: { buffer: depthFrameBuffer } },
       ],
     });
   }
@@ -558,6 +597,7 @@ export function createAtmosphereShellRenderer(
       // shell's is only dropped (it also binds a depth view), rebuilt at the next draw.
       bundle.skyViewBindGroup = buildSkyViewBindGroup(bodyId, bundle);
       bundle.shellBindGroup = null;
+      bundle.probeBindGroup = null;
       aerial.rebind(bodyId, bundle);
     }
   }
@@ -584,6 +624,7 @@ export function createAtmosphereShellRenderer(
     ]);
     bundle.ringTexture = texture;
     bundle.shellBindGroup = null;
+    bundle.probeBindGroup = null;
   }
 
   // One scratch for every body: `writeBuffer` copies at call time; only the GPU buffers must be per-body.
@@ -593,6 +634,33 @@ export function createAtmosphereShellRenderer(
   const depthViewportPx = new Float32Array(depthScratch, SHELL_DEPTH_VIEWPORT_OFFSET, 2);
   const depthKmToLocal = new Float32Array(depthScratch, SHELL_DEPTH_KM_TO_LOCAL_OFFSET, 1);
 
+  function writeDepthFrame(buffer: GPUBuffer, depth: AtmosphereShellDepth): void {
+    // A null frame arrives with the far-cleared placeholder view, so FAR_DEPTH never reads these.
+    if (depth.frame !== null) {
+      depthInvMvp.set(depth.frame.invMvp);
+      depthCamPosKm.set(depth.frame.camPosKm);
+    }
+    depthViewportPx.set(depth.viewportPx);
+    depthKmToLocal[0] = depth.kmToLocal;
+    device.queue.writeBuffer(buffer, 0, depthScratch);
+  }
+
+  function drawShellPair(
+    pass: GPURenderPassEncoder,
+    bindGroup: GPUBindGroup,
+    multiplyPipeline: GPURenderPipeline,
+    addPipeline: GPURenderPipeline,
+  ): void {
+    pass.setBindGroup(0, bindGroup);
+    // MULTIPLY strictly BEFORE ADD, or the multiply would attenuate this body's own in-scatter.
+    pass.setVertexBuffer(0, positionBuffer);
+    pass.setIndexBuffer(indexBuffer, 'uint16');
+    pass.setPipeline(multiplyPipeline);
+    pass.drawIndexed(indexCount);
+    pass.setPipeline(addPipeline);
+    pass.drawIndexed(indexCount);
+  }
+
   function draw(
     pass: GPURenderPassEncoder,
     bodyId: string,
@@ -601,26 +669,49 @@ export function createAtmosphereShellRenderer(
   ): void {
     const bundle = bundleFor(bodyId);
     device.queue.writeBuffer(bundle.shellUniformBuffer, 0, uniforms);
-    // A null frame arrives with the far-cleared placeholder view, so FAR_DEPTH never reads these.
-    if (depth.frame !== null) {
-      depthInvMvp.set(depth.frame.invMvp);
-      depthCamPosKm.set(depth.frame.camPosKm);
-    }
-    depthViewportPx.set(depth.viewportPx);
-    depthKmToLocal[0] = depth.kmToLocal;
-    device.queue.writeBuffer(bundle.depthFrameBuffer, 0, depthScratch);
+    writeDepthFrame(bundle.depthFrameBuffer, depth);
     if (bundle.shellBindGroup === null || bundle.shellDepthView !== depth.view) {
       bundle.shellDepthView = depth.view;
-      bundle.shellBindGroup = buildShellBindGroup(bodyId, bundle, depth.view);
+      bundle.shellBindGroup = buildShellBindGroup(
+        `atmosphere-shell-bg-${bodyId}`,
+        bundle,
+        bundle.shellUniformBuffer,
+        bundle.depthFrameBuffer,
+        depth.view,
+      );
     }
-    pass.setBindGroup(0, bundle.shellBindGroup);
-    // MULTIPLY strictly BEFORE ADD, or the multiply would attenuate this body's own in-scatter.
-    pass.setVertexBuffer(0, positionBuffer);
-    pass.setIndexBuffer(indexBuffer, 'uint16');
-    pass.setPipeline(shellMultiplyPipeline);
-    pass.drawIndexed(indexCount);
-    pass.setPipeline(shellAddPipeline);
-    pass.drawIndexed(indexCount);
+    drawShellPair(pass, bundle.shellBindGroup, shellMultiplyPipeline, shellAddPipeline);
+  }
+
+  // With FAR depth every pixel takes the far wall, and the analytic ground sphere ends the
+  // rays that hit the planet. Each capture face is its own submit, so one buffer serves six.
+  function drawProbeShell(
+    pass: GPURenderPassEncoder,
+    bodyId: string,
+    uniforms: Float32Array,
+    farDepthView: GPUTextureView,
+    viewportPx: Vec2,
+  ): void {
+    const bundle = bundleFor(bodyId);
+    device.queue.writeBuffer(bundle.probeUniformBuffer, 0, uniforms);
+    // kmToLocal scales a sampled depth, and FAR_DEPTH samples none.
+    writeDepthFrame(bundle.probeDepthFrameBuffer, {
+      frame: null,
+      view: farDepthView,
+      viewportPx,
+      kmToLocal: 0,
+    });
+    if (bundle.probeBindGroup === null || bundle.probeDepthView !== farDepthView) {
+      bundle.probeDepthView = farDepthView;
+      bundle.probeBindGroup = buildShellBindGroup(
+        `atmosphere-probe-shell-bg-${bodyId}`,
+        bundle,
+        bundle.probeUniformBuffer,
+        bundle.probeDepthFrameBuffer,
+        farDepthView,
+      );
+    }
+    drawShellPair(pass, bundle.probeBindGroup, probeShellMultiplyPipeline, probeShellAddPipeline);
   }
 
   function bakeAerialPerspective(
@@ -658,6 +749,8 @@ export function createAtmosphereShellRenderer(
       bundle.skyViewParamsBuffer.destroy();
       bundle.shellUniformBuffer.destroy();
       bundle.depthFrameBuffer.destroy();
+      bundle.probeUniformBuffer.destroy();
+      bundle.probeDepthFrameBuffer.destroy();
     }
     bundles.clear();
     aerial.destroy();
@@ -674,6 +767,7 @@ export function createAtmosphereShellRenderer(
     bakeAerialPerspective,
     drawAerialPerspective,
     drawProbeSky,
+    drawProbeShell,
     destroy,
     reconcile,
   };

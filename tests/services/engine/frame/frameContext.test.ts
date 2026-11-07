@@ -433,4 +433,9 @@ describe('deriveFrameContext — scene-body admission', () => {
     expect(admittedIds(0)).toContain('mars');
     expect(admittedIds(1, 0)).toContain('mars');
   });
+
+  // A mesh body has its own admission loop; a second entry would sort, occlude and draw it twice.
+  it('a covered mesh body is admitted once', () => {
+    expect(admittedIds(1).filter((id) => id === 'probe-sphere-orbit')).toHaveLength(1);
+  });
 });

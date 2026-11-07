@@ -24,6 +24,7 @@ import { sunDirLocal } from '../../../../../utils/camera/bodyCompose/sunDirLocal
 import { isTexturedBodyKey } from '../../../textures/present/isTexturedBodyKey';
 import { prepareBodySurfaceFrame } from '../../../slabs/present/prepareBodySurfaceFrame';
 import { surfaceTileSpecOf } from '../../format/utils/surfaceTileSpecOf';
+import { viewFlipsWinding } from '../../../../../utils/camera/viewRig/viewFlipsWinding';
 
 export function surfaceTilesPass(runtime: BodyRuntime): ContentPass {
   return {
@@ -92,6 +93,7 @@ export function surfaceTilesPass(runtime: BodyRuntime): ContentPass {
         tiles: surfaceTiles.plan.cut,
         // Already eye-relative (body-m rows build vp about the eye): no rebase.
         vp: view.vp,
+        mirrored: viewFlipsWinding(ctx),
         eyeRelBodyM: pose.eyeRelBodyM,
         radiusM,
         sunDirLocal: sun,
