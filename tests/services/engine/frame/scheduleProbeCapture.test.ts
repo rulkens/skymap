@@ -151,14 +151,20 @@ describe('scheduleProbeCapture', () => {
     const state = makeState(['curiosity']);
     const probe = state.cubemapCaptures.probe;
 
-    expect(scheduleProbeCapture({ state, ctx: ctxAt('curiosity') })).not.toBeNull();
+    expect(
+      scheduleProbeCapture({ state, captureOn: ALL_ON, ctx: ctxAt('curiosity') }),
+    ).not.toBeNull();
     expect(probe.refreshOwedInMs).toBeNull();
 
-    expect(scheduleProbeCapture({ state, ctx: ctxAt('curiosity', NOW_MS + 500) })).toBeNull();
+    expect(
+      scheduleProbeCapture({ state, captureOn: ALL_ON, ctx: ctxAt('curiosity', NOW_MS + 500) }),
+    ).toBeNull();
     expect(probe.refreshOwedInMs).toBe(PROBE_REFRESH_INTERVAL_MS - 500);
 
     const due = NOW_MS + PROBE_REFRESH_INTERVAL_MS;
-    expect(scheduleProbeCapture({ state, ctx: ctxAt('curiosity', due) })).not.toBeNull();
+    expect(
+      scheduleProbeCapture({ state, captureOn: ALL_ON, ctx: ctxAt('curiosity', due) }),
+    ).not.toBeNull();
     expect(probe.refreshOwedInMs).toBeNull();
   });
 
