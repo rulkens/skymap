@@ -2,9 +2,9 @@
 // engraved, hand-coloured chart on the baked sheet.
 //
 // Two regimes, split by body coverage (`cover.wesl`). Sky is INVERTED, as on every
-// period chart: bare paper where space is empty, a glyph per star, galaxies cut
-// as swelling iso-lines inside a dotted outline, and wider faint light —
-// structure discs, the band seen from inside — as Dutch outline colour: a
+// period chart: bare paper where space is empty, a glyph per star, a dot per
+// point galaxy, resolved galaxies stippled by their light, and wider faint light —
+// Milky Way structure discs, the band seen from inside — as Dutch outline colour: a
 // boundary line with a band of wash fading inward, never solid ink. Bodies are
 // engraved the classic way: burin lines bowing with the globe, swelling into
 // shadow, crossed only in the deepest; what else a body shows is its own
@@ -23,7 +23,6 @@ import package::antiqueLook::engraving::ringLines;
 import package::antiqueLook::engraving::seaDistance;
 import package::antiqueLook::engraving::landWeight;
 import package::antiqueLook::engraving::inkLine;
-import package::antiqueLook::engraving::isoLines;
 import package::antiqueLook::plateBodies::PlateBodies;
 import package::antiqueLook::plateBodies::BodyHit;
 import package::antiqueLook::plateBodies::castPlateBody;
@@ -76,8 +75,8 @@ const PAPER_LAYER: i32 = 0;
 const STAR_INK_LAYER: i32 = 1;
 const DECOR_LAYER: i32 = 2;
 const DECOR_HUE_LAYER: i32 = 3;
-// Quarter res, rgba16f: the wash; `nebula.wesl`'s fields (x Lxs, y Lsm, z the iso-line
-// input, w the lane reference); `landBlur.wesl`'s x Σ weight·land share, y Σ weight.
+// Quarter res, rgba16f: the wash; `nebula.wesl`'s fields (x the band's light, w the
+// lane reference); `landBlur.wesl`'s x Σ weight·land share, y Σ weight.
 const WASH_LAYER: i32 = 0;
 const NEBULA_LAYER: i32 = 1;
 const LAND_BLUR_LAYER: i32 = 2;
@@ -148,15 +147,14 @@ const GLOW_CORE: f32 = 0.4;
 // The same two levels on the structure markers' coverage (their halos' alpha).
 const STRUCTURE_EDGE: f32 = 0.05;
 const STRUCTURE_CORE: f32 = 0.18;
-// The galaxy engraving (RECIPE.md Part 2), levels in the print's luma: the lowest
-// outline, where iso-lines take over from stipple (LINE_ON mirrors nebula.wesl),
-// the tone ramp and how hard a band's relief over its 1/16 surroundings drives it.
+// The galaxy engraving, in the print's luma: where its stipple starts and how hard
+// a band's relief over its 1/16 surroundings grades it (an arm over its gaps); the
+// densest stipple, so paper shows between the dots up to the core; the dust lanes'
+// cross-hatch spacing in print units.
 const GALAXY_EDGE: f32 = 0.10;
-const LINE_ON: f32 = 0.16;
-const TONE_LO: f32 = 0.08;
-const RELIEF_GAIN: f32 = 2.0;
-// Unsharp weight on the line field: what bends the isophotes round the arms.
-const LINE_UNSHARP: f32 = 1.5;
+const RELIEF_GAIN: f32 = 2.5;
+const GALAXY_STIPPLE_MAX: f32 = 0.85;
+const LANE_HATCH: f32 = 2.4;
 const GALAXY_WASH: f32 = 0.22;
 
 fn texel(t: texture_2d<f32>, ip: vec2<i32>) -> vec4<f32> {
@@ -256,29 +254,16 @@ fn washHue(uv: vec2<f32>) -> vec3<f32> {
   return sum / 16.0;
 }
 
-// A galaxy cut as Mellan cut the Moon: iso-lines on its isophotes, swelling
-// with tone, stipple in the faint disc, a dotted outline at the field-adaptive
-// level and a solid core; dust lanes stay paper. Derivatives come in from the
-// caller's uniform flow. x ink, y wash amount, z warmth (0 smalt, 1 gamboge).
+// A galaxy stippled as the Milky Way is: dots swelling with the band's light and
+// its relief over the 1/16 surroundings, so arms print dense and their gaps thin,
+// a near-solid nucleus, and the dust lanes in a light cross-hatch. Derivative-free, so it
+// runs in the caller's branch. x ink, y wash amount, z warmth (0 smalt, 1 gamboge).
 fn galaxyEngraving(ip: vec2<i32>, uv: vec2<f32>, src: vec3<f32>, neb: vec4<f32>, lowL: f32,
-                   coherence: f32, h: f32, hPerUnit: f32, fwSm: f32, edgeLevel: f32,
                    big: f32) -> vec3<f32> {
   let p = vec2<f32>(ip) / u.unit;
   let pxUnits = 1.0 / u.unit;
   let lxs = neb.x;
   let lc = clamp(log((lxs + 0.02) / (lowL + 0.02)), -1.5, 1.5);
-  let ramp = smoothstep(TONE_LO, 1.0, lxs);
-  let tone = clamp(ramp * sqrt(ramp) * clamp(1.0 + RELIEF_GAIN * lc, 0.25, 1.6), 0.0, 1.0);
-  // The burin lifts in the faintest tone and below the line onset. Where the
-  // isophotes run every way (a star field's speckle, glow.wesl) lines would
-  // wander as fingerprints: stipple by tone there instead.
-  let cut = isoLines(h, hPerUnit, tone, pxUnits) * smoothstep(0.03, 0.09, tone);
-  let lines = mix(stipple(p, 2.0, tone * 0.8), cut, smoothstep(0.38, 0.46, coherence))
-    * smoothstep(LINE_ON - 0.03, LINE_ON + 0.03, lxs);
-  let faint = clamp(smoothstep(GALAXY_EDGE - 0.02, LINE_ON + 0.05, lxs) * clamp(1.0 + 0.8 * lc, 0.2, 1.6), 0.0, 1.0);
-  let dots = stipple(p, 2.0, faint * 0.45) * (1.0 - smoothstep(LINE_ON, LINE_ON + 0.06, lxs));
-  let edgePx = abs(neb.y - edgeLevel) / fwSm;
-  let outline = (1.0 - smoothstep(0.9 * u.unit, 0.9 * u.unit + 1.0, edgePx)) * stipple(p, 2.3, 0.4);
   // Lanes: the print eroded by a one-unit cross loses its stars but keeps a
   // lane, a notch below the band's local max; or a warm notch, since dust
   // reddens (warmth alone is a yellow bar or bulge, not dust).
@@ -294,12 +279,26 @@ fn galaxyEngraving(ip: vec2<i32>, uv: vec2<f32>, src: vec3<f32>, neb: vec4<f32>,
   let hue = washHue(uv);
   let notch = 1.0 - ero / max(neb.w, 0.05);
   let mean = sum / 5.0;
+  // The band's light, sharpened by the print's own around this pixel (its stars and
+  // point galaxies are off the print under the look), so an arm keeps its edge.
+  let light = mix(lxs, luma(mean), 0.5);
+  let ramp = smoothstep(GALAXY_EDGE - 0.02, 0.9, light);
+  let tone = min(ramp * clamp(1.0 + RELIEF_GAIN * lc, 0.2, 2.0), 1.0) * GALAXY_STIPPLE_MAX;
   let warmPrint = (mean.r - mean.b) / max(mean.r + mean.g + mean.b, 0.05);
   let warmBand = (hue.r - hue.b) / max(hue.r + hue.g + hue.b, 0.05);
   let red = smoothstep(0.035, 0.08, warmPrint - warmBand) * smoothstep(0.10, 0.25, notch);
-  let keep = 1.0 - max(smoothstep(0.30, 0.55, notch), red) * smoothstep(0.18, 0.30, lxs);
-  let core = smoothstep(0.90, 0.97, min(lxs, luma(mean))) * keep;
-  let ink = max(max(max(lines, dots) * keep, outline) * big, core);
+  let lane = max(smoothstep(0.30, 0.55, notch), red) * smoothstep(0.18, 0.30, lxs);
+  // Two straight sets 30° either side of the plate's hatch angle: a lozenge net,
+  // a texture of its own beside the stipple.
+  let a = u.hatchAngle;
+  let d1 = dot(p, vec2<f32>(cos(a + 0.5236), sin(a + 0.5236))) / LANE_HATCH;
+  let d2 = dot(p, vec2<f32>(cos(a - 0.5236), sin(a - 0.5236))) / LANE_HATCH;
+  let net = max(inkLine(abs(fract(d1) - 0.5) * LANE_HATCH, 0.45, pxUnits),
+                inkLine(abs(fract(d2) - 0.5) * LANE_HATCH, 0.45, pxUnits));
+  // The nucleus: the stipple closes up to near solid, never a flat blot.
+  let core = smoothstep(0.90, 0.99, min(lxs, luma(mean)));
+  let dots = stipple(p, 1.6, mix(tone, 0.92, core));
+  let ink = max(dots * (1.0 - lane), net * lane) * big;
   let chroma = max(hue.r, max(hue.g, hue.b)) - min(hue.r, min(hue.g, hue.b));
   let wash = GALAXY_WASH * smoothstep(GALAXY_EDGE, GALAXY_EDGE + 0.1, lxs) * smoothstep(0.03, 0.10, chroma) * big;
   return vec3<f32>(ink, wash, smoothstep(-0.04, 0.06, hue.r - hue.b));
@@ -456,19 +455,15 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // over this frame's field floor (a star's halo is not a nebula; a dense
   // survey field is not one). Elsewhere the outline colour below still holds.
   let floorL = skyFloor;
-  let edgeLevel = max(GALAXY_EDGE, 2.5 * floorL);
   let big = smoothstep(1.8 * floorL + 0.03, 2.6 * floorL + 0.05, lowL);
   let neb = textureSampleLevel(quarterTex, linear, uv, NEBULA_LAYER, 0.0);
-  let h = log(neb.z + 0.01) + LINE_UNSHARP * (log(neb.z + 0.02) - log(lowL + 0.02));
-  let hPerUnit = max(length(vec2<f32>(dpdx(h), dpdy(h))), 1e-6) * u.unit;
-  let fwSm = max(fwidth(neb.y), 1e-5);
   var galaxy = vec3<f32>(0.0);
-  if (sky > 0.0 && max(neb.x, neb.y) > 0.8 * edgeLevel) {
-    galaxy = galaxyEngraving(ip, uv, src, neb, lowL, clamp(glow.a, 0.0, 1.0), h, hPerUnit, fwSm, edgeLevel, big);
+  if (sky > 0.0 && neb.x > 0.8 * GALAXY_EDGE) {
+    galaxy = galaxyEngraving(ip, uv, src, neb, lowL, big);
   }
   galaxy *= rowOn(HIDE_GALAXIES);
   let band = outlineBand(inside) * sky * (1.0 - big);
-  // A structure's disc (cluster, void, group) is outlined from its own row, never engraved.
+  // A Milky Way structure's disc (a nebula, a cluster) is outlined from its own row, never engraved.
   let structure = lowBandAt(STRUCTURE_GLOW_LAYER, uv);
   let structL = structure.a;
   let structPerPx = max(fwidth(structL), 1e-5);
