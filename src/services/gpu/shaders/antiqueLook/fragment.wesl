@@ -14,6 +14,7 @@ import package::antiqueLook::paper::vnoise;
 import package::antiqueLook::engraving::crossHatch;
 import package::antiqueLook::engraving::stipple;
 import package::antiqueLook::engraving::starGlyph;
+import package::antiqueLook::engraving::coastHalo;
 import package::antiqueLook::graticule::graticule;
 import package::antiqueLook::graticule::raDec;
 import package::antiqueLook::graticule::niceStep;
@@ -70,11 +71,27 @@ fn viewRay(uv: vec2<f32>) -> vec3<f32> {
   return normalize(mix(top, bottom, uv.y));
 }
 
+// How near the coast an ocean pixel lies, from the quarter-res land share: land
+// within ~3 cells counts fully, within ~7 cells half. 1 at the shore, 0 far out.
+fn coastNear(uv: vec2<f32>) -> f32 {
+  let t = 1.0 / vec2<f32>(textureDimensions(washTex));
+  var near = 0.0;
+  for (var k = 0; k < 8; k++) {
+    let a = f32(k) * 0.7853982;
+    let dir = vec2<f32>(cos(a), sin(a)) * t;
+    near = max(near, clamp(textureSampleLevel(washTex, linear, uv + dir * 3.0, 0.0).a, 0.0, 1.0));
+    near = max(near, 0.5 * clamp(textureSampleLevel(washTex, linear, uv + dir * 7.0, 0.0).a, 0.0, 1.0));
+  }
+  return near;
+}
+
 // Gather the suppressed peaks of the 5×5 cells around this pixel; each stamps a
-// glyph sized by its contrast: a dot for a faint star, six rays for a bright one.
-fn starInk(px: vec2<f32>) -> f32 {
+// glyph from the ladder by its contrast. y: the knock-out — every glyph clears
+// a paper halo 1.3× its size through the stipple, contours and rulings behind it.
+fn starInk(px: vec2<f32>) -> vec2<f32> {
   let cell = vec2<i32>(px / CELL);
   var ink = 0.0;
+  var knock = 0.0;
   for (var j = -2; j <= 2; j++) {
     for (var i = -2; i <= 2; i++) {
       let s = texel(starTex, cell + vec2<i32>(i, j));
@@ -82,11 +99,14 @@ fn starInk(px: vec2<f32>) -> f32 {
         continue;
       }
       let k = clamp((s.z - STAR_FLOOR) / (1.0 - STAR_FLOOR), 0.0, 1.0);
-      let r = (0.55 + 2.6 * sqrt(k)) * u.unit;
-      ink = max(ink, starGlyph(px - s.xy, r, smoothstep(0.55, 0.85, k)));
+      let r = (0.7 + 3.4 * k) * u.unit;
+      let rays = select(select(select(select(0.0, 5.0, k > 0.12), 6.0, k > 0.3), 8.0, k > 0.5), 12.0, k > 0.72);
+      let q = px - s.xy;
+      ink = max(ink, starGlyph(q, r, rays, smoothstep(0.82, 0.95, k)));
+      knock = max(knock, 1.0 - smoothstep(1.3 * r, 1.3 * r + 1.0, length(q)));
     }
   }
-  return ink;
+  return vec2<f32>(ink, knock);
 }
 
 // Neatline: heavy outer rule, hairline inner rule, and the degree ladder between —
@@ -131,7 +151,6 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let body = bodyCover(ip);
   let sky = 1.0 - body;
   let frame = neatline(px, uv);
-  let low = textureSampleLevel(washTex, linear, uv, 0.0);
 
   var col = sheet.rgb * (1.0 + plateMark(px));
 
@@ -139,7 +158,12 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let slip = (vec2<f32>(vnoise(p * 0.018 + 3.0), vnoise(p * 0.018 + 9.0)) - 0.5) * 0.012;
   let glowSlip = glowAt(uv + slip);
   let glowL = luma(glowSlip);
-  let skyWash = smoothstep(0.035, 0.35, glowL) * clamp(0.2 + chromaOf(glowSlip) * 2.0, 0.0, 0.5);
+  // Dutch outline colour: a band 22 units wide inside each glow's boundary, a
+  // darker rim where the wash pooled as it dried, and only a pale wash beyond.
+  let inside = (glowL - 0.13) / max(fwidth(glowL), 1e-5);
+  let band = step(0.0, inside) * (1.0 - smoothstep(0.0, 22.0 * u.unit, inside));
+  let rim = step(0.0, inside) * (1.0 - smoothstep(1.5 * u.unit, 3.5 * u.unit, inside));
+  let skyWash = (band * 0.5 + rim * 0.15 + smoothstep(0.13, 0.5, glowL) * 0.12) * clamp(0.5 + chromaOf(glowSlip) * 3.0, 0.0, 1.0);
   let bodyWash = clamp(chromaOf(src) * 2.2, 0.0, 0.7);
   let washAmt = mix(skyWash, bodyWash, body) * frame.y;
   col = applyWash(col, nearestPigment(mix(glowSlip, src, body)), washAmt);
@@ -147,32 +171,32 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // Sky: glyphs for stars; the smooth band as sparse stipple and, where it is
   // bright, isophote contours (the Herschel-era way of drawing a nebula).
   let lowL = luma(glowAt(uv));
-  let iso = log2(max(lowL, 1e-4)) * 1.6;
+  // Levels at 0.13, 0.26, 0.52…: one boundary line, then one per doubling.
+  let iso = log2(max(lowL, 1e-4) / 0.13);
   let isoPx = abs(fract(iso + 0.5) - 0.5) / max(fwidth(iso), 1e-4);
-  let contour = (1.0 - smoothstep(0.35 * u.unit, 0.35 * u.unit + 1.0, isoPx)) * smoothstep(0.08, 0.14, lowL) * 0.7;
-  let dots = stipple(p, 2.2, smoothstep(0.05, 0.6, lowL) * 0.45);
-  let skyInk = max(starInk(px), max(dots, contour)) * sky;
-  let rulings = graticule(viewRay(uv), u.unit) * sky * 0.75;
+  let contour = (1.0 - smoothstep(0.35 * u.unit, 0.35 * u.unit + 1.0, isoPx)) * smoothstep(0.1, 0.13, lowL) * 0.7;
+  let dots = stipple(p, 2.2, smoothstep(0.1, 0.7, lowL) * 0.3);
+  let star = starInk(px);
+  let clear = 1.0 - star.y;
+  let skyInk = max(star.x, max(dots, contour) * clear) * sky;
+  let rulings = graticule(viewRay(uv), u.unit) * sky * clear;
 
-  // Bodies: land hatched by darkness, oceans paper by day with waterlines along
-  // the coast, the night side crossed throughout; the limb gets one firm line.
+  // Bodies: land hatched by darkness, oceans paper by day with the Dutch hatched
+  // halo along the coast, the night side crossed throughout; one firm limb line.
   let l = luma(src);
-  let land = clamp(low.a, 0.0, 1.0);
   // Ocean by hue, not brightness: tone-mapped seas are dark but always blue-led.
   let ocean = smoothstep(0.06, 0.22, (src.b - max(src.r, src.g * 0.92)) / max(src.b, 0.04));
-  let night = 1.0 - smoothstep(0.03, 0.18, l);
-  let landTone = pow(1.0 - clamp(l * 1.25, 0.0, 1.0), 1.5);
+  // Night by the brightest channel: a sunlit sea is dark in luma but not in blue.
+  let night = 1.0 - smoothstep(0.04, 0.16, max(src.r, max(src.g, src.b)));
+  let landTone = max(pow(1.0 - clamp(l * 1.8, 0.0, 1.0), 1.8), night * 0.95);
   let tone = mix(landTone, night * 0.95, ocean);
   let hatchInk = crossHatch(p, tone, 3.2, 0.35);
-  let waterline = select(0.0, 1.0, low.a >= 0.0) * ocean * (1.0 - night);
-  let wl = land * 6.0;
-  let wlPx = abs(fract(wl + 0.5) - 0.5) / max(fwidth(wl), 1e-4);
-  let waterInk = (1.0 - smoothstep(0.35 * u.unit, 0.35 * u.unit + 1.0, wlPx)) * step(0.02, land) * waterline;
+  let halo = coastHalo(p, coastNear(uv), 2.4) * ocean * (1.0 - night);
   let o = i32(round(u.unit));
   let gx = bodyCover(ip + vec2<i32>(o, 0)) - bodyCover(ip - vec2<i32>(o, 0));
   let gy = bodyCover(ip + vec2<i32>(0, o)) - bodyCover(ip - vec2<i32>(0, o));
   let limb = smoothstep(0.25, 0.7, length(vec2<f32>(gx, gy)));
-  let bodyInk = max(hatchInk, waterInk * 0.8) * body;
+  let bodyInk = max(hatchInk, halo * 0.85) * body;
 
   var captions = 0.0;
   if ((u.flags & FLAG_CAPTIONS) != 0u) {

@@ -45,12 +45,31 @@ fn stipple(p: vec2<f32>, cell: f32, tone: f32) -> f32 {
   return ink * step(0.02, tone);
 }
 
-// A star glyph centred at the origin: a disc for faint stars, a six-rayed
-// engraved star for bright ones (Flamsteed / Bode convention). `r` in units.
-fn starGlyph(q: vec2<f32>, r: f32, rays: f32) -> f32 {
+// A star glyph centred at the origin, after the Bayer/Flamsteed ladder: a disc
+// for the faintest, then `rays` tapered points (5, 6, 8, 12) over a small core,
+// and for the brightest a glory of short ticks round it. `r` = ray length, units.
+fn starGlyph(q: vec2<f32>, r: f32, rays: f32, glory: f32) -> f32 {
   let d = length(q);
-  let a = atan2(q.y, q.x);
-  let spike = pow(abs(cos(3.0 * a)), 12.0) * rays;
-  let edge = r * (1.0 + 1.25 * spike);
-  return 1.0 - smoothstep(edge - 0.5, edge + 0.5, d);
+  let a = atan2(q.y, q.x) + 1.5707963;
+  // Alternate rays run short when there are 8 or more (4 long + 4 short, Bode).
+  let lobe = abs(cos(0.5 * rays * a));
+  let alt = cos(0.25 * rays * a);
+  let spike = pow(lobe, 10.0 + rays) * select(1.0, select(0.62, 1.0, alt * alt > 0.5), rays >= 8.0);
+  let core = r * select(1.0, 0.38, rays > 0.0);
+  let edge = core + (r - core) * spike;
+  var ink = 1.0 - smoothstep(edge - 0.45, edge + 0.45, d);
+  let ticks = pow(abs(cos(12.0 * a)), 24.0);
+  let ring = smoothstep(1.12 * r, 1.2 * r, d) * (1.0 - smoothstep(1.42 * r, 1.5 * r, d));
+  ink = max(ink, ticks * ring * glory);
+  return ink;
+}
+
+// The 17th-century Dutch coast halo: short horizontal strokes in the sea, densest
+// against the shore and thinning out over `near` (1 at the coast, 0 far out).
+fn coastHalo(p: vec2<f32>, near: f32, spacing: f32) -> f32 {
+  let row = floor(p.y / spacing);
+  let d = abs(fract(p.y / spacing) - 0.5) * spacing;
+  let line = 1.0 - smoothstep(0.3, 0.85, d);
+  let dash = vnoise(vec2<f32>(p.x * 0.11, row * 7.31));
+  return line * step(1.0 - near * 0.95, dash) * step(0.04, near);
 }
