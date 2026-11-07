@@ -67,6 +67,7 @@ the Display section container
 - [ ] Earth's land share from its ocean mask (written by the Earth pass while the look is on), not from colour.
 - [x] Glows keep full brightness (block mean held near its dimmest texel, no per-texel cap); stipple follows the quarter-res band with relief (9cc398c58).
 - [x] `lookbench`: plain/antique pairs of pinned views, sheets, compares, crops (9cc398c58).
+- [x] Hevelius figures print the scan's own lines: cetus, dragon, seaSerpent packed at 1024 px with a `[0.1, 0.8]` push, the atlas mipped, coverage turned into density in `decor.wesl`.
 
 ### Task 10: Star glyphs from the catalogue (route B; ruling 2026-11-07, rides this feature)
 **Files:** `starCatalog/vertex.wesl` (prep: `leafRecord(ii)`), star Layer print passes, `antiqueLookTargetRows.ts`, `frameSections.ts`, `shaders/antiqueLook/{printPoint,glyphs,reduce}.wesl`; delete `peaks.wesl`, the `peaks`/`stars` targets, `STAR_FLOOR`

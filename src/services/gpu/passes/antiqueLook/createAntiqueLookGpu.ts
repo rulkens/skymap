@@ -77,6 +77,7 @@ export function createAntiqueLookGpu(
       label: `antique-look-${label}`,
       magFilter: 'linear',
       minFilter: 'linear',
+      mipmapFilter: 'linear', // only the ornament atlas has mips
       addressModeU: mode,
       addressModeV: mode,
     });

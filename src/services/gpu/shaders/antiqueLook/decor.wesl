@@ -8,13 +8,16 @@
 
 import package::antiqueLook::io::AntiqueUniforms;
 import package::antiqueLook::ornaments::AntiqueOrnaments;
-import package::antiqueLook::engraving::hatch;
 import package::antiqueLook::pigments::pigmentAt;
 
 @group(0) @binding(0) var<uniform> u: AntiqueUniforms;
 @group(0) @binding(1) var<uniform> orn: AntiqueOrnaments;
 @group(0) @binding(2) var atlas: texture_2d<f32>;
 @group(0) @binding(3) var linear: sampler;
+
+/** INK's transmittance (the plate's darkest stroke) and a figure's darkest coverage. */
+const INK_T: f32 = 0.136;
+const FIGURE_COVER: f32 = 0.9;
 
 struct DecorOut {
   @builtin(position) pos: vec4<f32>,
@@ -51,20 +54,18 @@ fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32) -> Decor
 @fragment
 fn fs(in: DecorOut) -> DecorInk {
   let rect = orn.items[in.item].rect;
-  let s = textureSampleLevel(atlas, linear, mix(rect.xy, rect.zw, in.local * 0.5 + 0.5), 0.0);
+  let uv = mix(rect.xy, rect.zw, in.local * 0.5 + 0.5);
+  let s = textureSampleLevel(atlas, linear, uv, 0.0);
   let edge = max(abs(in.local.x), abs(in.local.y));
   let o = orn.items[in.item].opacity * (1.0 - smoothstep(0.9, 1.0, edge));
   let clears = orn.items[in.item].clears;
   // One ink with the plate: the scan's greys pushed to line or paper.
   let ink = smoothstep(0.2, 0.55, s.r) * o;
-  // A constellation figure is re-cut in the plate's own line: its outline from
-  // the silhouette, its shading as one set of hatching turning with it, as light
-  // as the scan is dark. The scan itself, shrunk, prints a dark smudge.
-  let rim = abs(s.g - 0.5) / max(fwidth(s.g), 1e-4);
-  let outline = 1.0 - smoothstep(0.6, 1.6, rim);
-  let rot = orn.items[in.item].rot;
-  let shade = hatch(in.pos.xy / u.unit, atan2(rot.y, rot.x) + 0.6, 3.2, smoothstep(0.2, 0.8, s.r) * 0.5 * s.g, 1.0 / u.unit);
-  let figure = max(outline, shade) * o;
+  // A constellation figure prints the scan's own lines through the mip chain:
+  // shrunk, a line becomes coverage, turned here into the density whose INK^d
+  // matches that coverage printed. Sampled above any branch (implicit derivatives).
+  let cover = textureSampleBias(atlas, linear, uv, -0.5).r;
+  let figure = log2(1.0 - cover * FIGURE_COVER * (1.0 - INK_T)) / log2(INK_T) * o;
   // A clearing ornament (the cartouche) takes the plate back to paper under its
   // whole engraving, not just its fill; every ornament takes a light wash, as
   // a coloured Dutch copy's cartouche and beasts did.
@@ -72,7 +73,7 @@ fn fs(in: DecorOut) -> DecorInk {
   // Only clearing ornaments are washed: a figure lies on the sky uncoloured.
   let wash = max(s.b, s.g * 0.28) * o * clears;
   var out: DecorInk;
-  out.ink = vec4<f32>(figure * 0.8 * (1.0 - clears), ink * clears, clear, wash);
+  out.ink = vec4<f32>(figure * (1.0 - clears), ink * clears, clear, wash);
   out.hue = vec4<f32>(pigmentAt(orn.items[in.item].pigment) * step(0.01, wash), 0.0);
   return out;
 }

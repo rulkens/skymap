@@ -46,7 +46,7 @@ const OUT_PNG = 'public/antique/ornaments.png';
 const OUT_TS = 'src/data/rendering/antiqueOrnamentAtlas.ts';
 
 const MAX_SIDE_PX = 640;
-const MAX_ATLAS_PX = 2048;
+const MAX_ATLAS_PX = 2304;
 const GUTTER_PX = 4;
 /** Transparent margin around each sprite: room for the close and the fill halo. */
 const PAD_PX = 10;
@@ -112,25 +112,41 @@ const TITLE_LEADING = 0.5;
 const TITLE_CHORD_FILL = 0.92;
 /** Ink-density band pushed to paper/ink, so scanned greys read as engraved lines. */
 const INK_PUSH = [0.3, 0.65] as const;
+/**
+ * Constellation figures print through the atlas's mip chain (`decor.wesl`), so
+ * they keep their source resolution and a gentler push: each hatch line stays a
+ * line down to the level the plate reads, instead of a grey the push erased.
+ */
+const FIGURE_IDS: ReadonlySet<(typeof SPRITE_IDS)[number]> = new Set([
+  'cetus',
+  'dragon',
+  'seaSerpent',
+]);
+const FIGURE_SIDE_PX = 1024;
+const FIGURE_INK_PUSH = [0.1, 0.8] as const;
 
 /**
  * The sprite's ink density, scaled and padded; `push` maps it to two levels at
  * the source's own resolution first: there a grey is a scan midtone, while after
  * the downscale it is mostly a fine hatch line's coverage, which a push would erase.
  */
-async function loadInk(file: string, push: boolean): Promise<GreyRaster> {
+async function loadInk(
+  file: string,
+  push: readonly [number, number] | undefined,
+  side: number,
+): Promise<GreyRaster> {
   const src = await sharp(spritePath(file))
     .ensureAlpha()
     .extractChannel(3)
     .raw()
     .toBuffer({ resolveWithObject: true });
   const ink = push
-    ? src.data.map((v) => Math.round(smoothstep(INK_PUSH[0], INK_PUSH[1], v / 255) * 255))
+    ? src.data.map((v) => Math.round(smoothstep(push[0], push[1], v / 255) * 255))
     : src.data;
   const { data, info } = await sharp(ink, {
     raw: { width: src.info.width, height: src.info.height, channels: 1 },
   })
-    .resize({ width: MAX_SIDE_PX, height: MAX_SIDE_PX, fit: 'inside', withoutEnlargement: true })
+    .resize({ width: side, height: side, fit: 'inside', withoutEnlargement: true })
     .extend({ top: PAD_PX, bottom: PAD_PX, left: PAD_PX, right: PAD_PX, background: '#000' })
     .extractChannel(0) // extend's colour background promotes the plane to sRGB
     .raw()
@@ -251,10 +267,16 @@ async function rasterizeLine(
 }
 
 async function buildSprite(id: (typeof SPRITE_IDS)[number]): Promise<OrnamentSprite> {
-  const { data: ink, width: w, height: h } = await loadInk(id, true);
+  const figure = FIGURE_IDS.has(id);
+  const side = figure ? FIGURE_SIDE_PX : MAX_SIDE_PX;
+  const {
+    data: ink,
+    width: w,
+    height: h,
+  } = await loadInk(id, figure ? FIGURE_INK_PUSH : INK_PUSH, side);
   if (id === 'cartouche') await engraveTitle(ink, w, h);
   // The silhouette reads the unpushed ink: faint wave and hatch lines still hold it together.
-  const { data: density } = await loadInk(id, false);
+  const { data: density } = await loadInk(id, undefined, side);
   const solid = fillMaskHoles(
     closeMaskDisc(
       density.map((v) => (v > INK_THRESHOLD ? 1 : 0)),
@@ -275,7 +297,7 @@ async function buildSprite(id: (typeof SPRITE_IDS)[number]): Promise<OrnamentSpr
     id === 'cartouche'
       ? frameWash(ink, w, h)
       : existsSync(spritePath(`${id}.colour`))
-        ? (await loadInk(`${id}.colour`, false)).data
+        ? (await loadInk(`${id}.colour`, undefined, side)).data
         : new Uint8Array(w * h);
   return { ink, fill, wash, w, h };
 }

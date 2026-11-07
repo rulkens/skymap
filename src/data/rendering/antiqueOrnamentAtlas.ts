@@ -7,16 +7,16 @@
 import type { AntiqueOrnamentAtlas } from '../../@types/rendering/AntiqueOrnamentAtlas';
 
 export const ANTIQUE_ORNAMENT_ATLAS: AntiqueOrnamentAtlas = {
-  width: 1536,
-  height: 1717,
+  width: 1859,
+  height: 2260,
   sprites: {
-    cartouche: { x: 921, y: 4, w: 611, h: 654 },
-    cetus: { x: 4, y: 668, w: 660, h: 501 },
-    ship: { x: 4, y: 4, w: 400, h: 660 },
-    whale: { x: 4, y: 1513, w: 660, h: 200 },
-    dragon: { x: 408, y: 4, w: 509, h: 660 },
-    seaSerpent: { x: 668, y: 1173, w: 660, h: 206 },
-    seaMonster: { x: 4, y: 1173, w: 660, h: 336 },
-    seaHorse: { x: 668, y: 668, w: 660, h: 479 },
+    cartouche: { x: 408, y: 1052, w: 611, h: 654 },
+    cetus: { x: 811, y: 4, w: 1044, h: 790 },
+    ship: { x: 4, y: 1052, w: 400, h: 660 },
+    whale: { x: 4, y: 2056, w: 660, h: 200 },
+    dragon: { x: 4, y: 4, w: 803, h: 1044 },
+    seaSerpent: { x: 668, y: 1716, w: 1044, h: 317 },
+    seaMonster: { x: 4, y: 1716, w: 660, h: 336 },
+    seaHorse: { x: 1023, y: 1052, w: 660, h: 479 },
   },
 };
