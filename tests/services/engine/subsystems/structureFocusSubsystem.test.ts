@@ -81,17 +81,39 @@ describe('structureFocusSubsystem', () => {
     expect(sub.produceFocus(500).blend).toBe(1);
   });
 
-  it('replacing the subject does not pass through blend 0, and a stream drops the sphere', () => {
+  it('replacing a structure with a structure keeps both blends at 1', () => {
     const sub = makeStructureFocus(0);
     sub.update(makeCluster('virgo'), 0);
     sub.produceFocus(500); // settle at 1
     sub.update(makeCluster('coma', { center: [-10, 0, 0] }), 600);
     expect(sub.produceFocus(601).blend).toBeCloseTo(1, 5);
-    expect(sub.produceFocus(1000).uniforms.center).toEqual([-10, 0, 0]);
-    sub.update(STREAM, 1000);
-    const stream = sub.produceFocus(1001);
-    expect(stream.blend).toBeCloseTo(1, 5);
-    expect(stream.uniforms.blend).toBe(0);
+    const settled = sub.produceFocus(1000);
+    expect(settled.uniforms.center).toEqual([-10, 0, 0]);
+    expect(settled.uniforms.blend).toBe(1);
+  });
+
+  it('structure → stream fades the sphere out over the ramp while the blend holds at 1', () => {
+    const sub = makeStructureFocus(0);
+    sub.update(makeCluster('virgo'), 0);
+    sub.produceFocus(500); // settle at 1
+    sub.update(STREAM, 500);
+    const mid = sub.produceFocus(700);
+    expect(mid.blend).toBe(1);
+    expect(mid.ref).toEqual(STREAM.ref);
+    expect(mid.uniforms.center).toEqual([10, 0, 0]);
+    expect(mid.uniforms.blend).toBeGreaterThan(0);
+    expect(mid.uniforms.blend).toBeLessThan(1);
+    expect(sub.isAwake(700)).toBe(true);
+    expect(sub.produceFocus(900).uniforms).toBe(ZERO_FOCUS);
+  });
+
+  it('stream → structure fades the sphere in from 0', () => {
+    const sub = makeStructureFocus(0);
+    sub.update(STREAM, 0);
+    sub.produceFocus(500); // settle at 1
+    sub.update(makeCluster('virgo'), 500);
+    expect(sub.produceFocus(501).uniforms.blend).toBeCloseTo(0, 3);
+    expect(sub.produceFocus(900).uniforms.blend).toBe(1);
   });
 
   it('isAwake is true mid-fade and false at rest', () => {

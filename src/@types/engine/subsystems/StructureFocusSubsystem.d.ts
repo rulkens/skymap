@@ -5,7 +5,7 @@ import type { FocusFrame } from './FocusFrame';
 /**
  * StructureFocusSubsystem — owns focus mode: when a receding row (`RecedingFocusRow`) is focused,
  * entries with `recession` dim over ~400 ms, and a structure's sphere also dims everything
- * outside it. Every receding kind behaves identically.
+ * outside it. Every receding kind shares one blend; the sphere fades on a ramp of its own.
  *
  * ### Focus-driven, not imperative
  *
