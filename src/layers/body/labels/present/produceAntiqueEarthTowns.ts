@@ -91,8 +91,8 @@ export function produceAntiqueEarthTowns(
         occludeWeight: 0,
         subjectId,
       } as const;
-      // A gloss shares the name's label: NEAR0 declutters by anchor distance, so a
-      // label of its own beside the name would always be culled.
+      // A gloss shares the name's label: as a label of its own its rect would touch
+      // the name's inside the declutter pad, and the name would cut it.
       const gap = SIGN_GAP[town.tier];
       const gloss = town.gloss === undefined ? '' : `\n${gap}(${town.gloss})`;
       labels.push({

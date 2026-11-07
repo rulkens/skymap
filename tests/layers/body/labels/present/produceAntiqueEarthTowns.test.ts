@@ -1,8 +1,8 @@
 /**
  * A town's name arrives with its sign: the tier's reveal level against the map's
  * detail at this eye, which `sign.wesl` reads from the same `antiqueMapDetail`.
- * A renamed city's modern gloss rides the name's own label: NEAR0 declutters
- * by anchor distance, so a gloss label of its own would always be culled.
+ * A renamed city's modern gloss rides the name's own label: a gloss label of its
+ * own would touch the name's rect inside the declutter pad and be cut by it.
  */
 
 import { describe, it, expect } from 'vitest';

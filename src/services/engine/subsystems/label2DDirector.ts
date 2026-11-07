@@ -138,6 +138,8 @@ import { antiqueLabel } from '../../../utils/labels/antiqueLabel';
 import { ANTIQUE_LABEL_RULES } from '../../../data/labels/antiqueLabelRules';
 import { ANTIQUE_LABEL_STYLE } from '../../../data/labels/antiqueLabelStyle';
 import { ANTIQUE_AREA_LETTERING } from '../../../data/labels/antiqueAreaLettering';
+import { ANTIQUE_PLACE_LETTERING } from '../../../data/labels/antiquePlaceLettering';
+import { ANTIQUE_LABEL_DECLUTTER } from '../../../data/labels/antiqueLabelDeclutter';
 import { isKeyOf } from '../../../utils/object/isKeyOf';
 import { antiquePlateKeepOut } from '../../../utils/labels/antiquePlateKeepOut';
 import { emphasisOf } from '../presentation/emphasisOf';
@@ -231,16 +233,19 @@ function declutterByBboxOverlap(
   // cannot be decluttered against one rect and clicked on another.
   const rects: (ScreenRectPx | null)[] = labels.map((label, i) => {
     const p = projected[i]!;
-    if (!p.screenPx) return null;
+    // A zero-fadeAlpha label shows nothing, so it must not claim a slot and
+    // cull a visible label behind it.
+    if (!p.screenPx || (label.fadeAlpha ?? 1) === 0) return null;
     const bbox = measure(label);
     if (!bbox) return null;
-    return labelScreenRect({
-      label,
-      bbox,
-      screenPx: p.screenPx,
-      clipW: p.clipW,
-      pxPerRad,
-    });
+    // The lift stage runs later, over survivors, so a lifted label is judged
+    // here at its proposed lift: a planet's floated name must not cull a
+    // rover standing at the planet's own anchor.
+    const screenPx: Vec2 =
+      label.lift === undefined
+        ? p.screenPx
+        : [p.screenPx[0], p.screenPx[1] - proposedLiftPx(label.lift.subjectSizePx)];
+    return labelScreenRect({ label, bbox, screenPx, clipW: p.clipW, pxPerRad });
   });
 
   const order = sortByDeclutterPriorityDesc(labels);
@@ -450,10 +455,10 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
    * frame's projection (memoised per `ctx` by `config.project`), projects
    * every label's anchor ONCE (`projectLabels`), then hands the shared
    * per-label records to whichever declutter arm `config.declutter.mode`
-   * selects. Runs in the director (not per producer) so it de-collides
-   * labels ACROSS producers — a structure label vs a famous-galaxy label
-   * vs the Milky Way "you are here" marker — which a per-producer pass
-   * could never see.
+   * selects (`ANTIQUE_LABEL_DECLUTTER` while the antique look is on). Runs
+   * in the director (not per producer) so it de-collides labels ACROSS
+   * producers — a structure label vs a famous-galaxy label vs the Milky Way
+   * "you are here" marker — which a per-producer pass could never see.
    *
    * Returns BOTH the filtered `survivors` array (what `smoothstepRamp`
    * consumes unchanged — a culled label is simply absent from it, exactly
@@ -462,10 +467,14 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
    * survivors, so a culled-but-still-emitted label eases toward 0 instead of
    * popping — see `applyExponentialEnvelope`).
    */
-  function declutter(labels: readonly Label2D[], ctx: FrameView): DeclutterResult {
+  function declutter(
+    labels: readonly Label2D[],
+    ctx: FrameView,
+    antique: boolean,
+  ): DeclutterResult {
     const projection = config.project(ctx);
     const projected = projectLabels(labels, projection);
-    const policy = config.declutter;
+    const policy = antique ? ANTIQUE_LABEL_DECLUTTER : config.declutter;
     let survivors: Label2D[];
     switch (policy.mode) {
       case 'bboxOverlap':
@@ -867,7 +876,8 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     const isTitle = (l: Label2D) =>
       l.subjectId !== undefined &&
       keptPicks.includes(l.subjectId) &&
-      !isKeyOf(ANTIQUE_AREA_LETTERING, l.id);
+      !isKeyOf(ANTIQUE_AREA_LETTERING, l.id) &&
+      !isKeyOf(ANTIQUE_PLACE_LETTERING, l.id);
     const hasFont = (font: FontId) => state.gpu.fontAtlases?.metricsByFont[font] !== undefined;
     const cosmos = Math.hypot(...ctx.drawCamPos) > ANTIQUE_REGIME_MPC[1];
     for (const p of producers) {
@@ -890,7 +900,7 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     // Cross-producer declutter — producers emit every candidate (no internal
     // declutter); the director de-collides them together here. A culled
     // label's leader is culled with it by construction.
-    const declutterResult = declutter(mergedLabels, ctx);
+    const declutterResult = declutter(mergedLabels, ctx, antique);
 
     // Appear/disappear envelope — animated alphas feed `signatureOf` below,
     // so mid-ramp frames re-upload and settled frames skip, with no extra

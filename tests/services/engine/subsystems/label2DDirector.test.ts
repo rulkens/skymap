@@ -1057,6 +1057,37 @@ describe('label2DDirector', () => {
       expect(flushedIds).not.toContain('orion');
     });
 
+    it('under the antique look, culls the lower-priority name when long names overlap though their anchors stand apart', () => {
+      // The antique Earth bug: town names left-aligned beside their signs,
+      // anchors 100 px apart (clear of the 48 px separation), printed one
+      // over the other.
+      const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
+      const labelStub = makeLabelStub();
+      // A long left-aligned name: ~140 px wide at the look's 20 px capitals.
+      const measure = () => ({ minX: 0, minY: -100, maxX: 600, maxY: 0 });
+      dir.attachRenderers(labelStub as never, makeLineStub() as never, measure);
+      const town: Label2D = { ...SAMPLE_LABEL, text: 'Town', fadeAlpha: 1 };
+      const big: Label2D = { ...town, id: 'amsterdam', declutterPriority: 100 };
+      const small: Label2D = {
+        ...town,
+        id: 'haarlem',
+        worldPos: [-0.2, 0, 0],
+        declutterPriority: 10,
+      };
+      dir.registerProducer(makeProducer('p', [big, small]));
+      const antique = { ...makeState(), settings: { antique: { enabled: true } } } as EngineState;
+
+      dir.runFrame(antique, makeNear0Ctx(0));
+      expect(dir.labels().map((l) => l.id)).toEqual(['amsterdam']);
+
+      // A far-side place name emits at fadeAlpha 0: it must not cut a visible one.
+      dir.registerProducer(
+        makeProducer('far', [{ ...town, id: 'far-side', declutterPriority: 1000, fadeAlpha: 0 }]),
+      );
+      dir.runFrame(antique, makeNear0Ctx(16));
+      expect(dir.labels().map((l) => l.id)).toEqual(['amsterdam']);
+    });
+
     it('a caption standing under a lifted planet caption survives: the cull reads where the text is drawn', () => {
       // The Curiosity case: a rover at the sub-camera point projects within a
       // pixel of its host planet's anchor, but the planet's text is lifted
@@ -1292,5 +1323,33 @@ describe('label2DDirector', () => {
     expect(shown('earthPlace-africa').maxPixelSize).toBeLessThan(
       shown('sceneBody-earth').minPixelSize!,
     );
+  });
+
+  it("a town on the selected Earth keeps its own type, never the Earth's title", () => {
+    const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
+    const labelStub = makeLabelStub();
+    dir.attachRenderers(labelStub as never, makeLineStub() as never, defaultMeasure);
+    const town: Label2D = {
+      ...SAMPLE_LABEL,
+      id: 'earthTown-amsteldam',
+      text: 'Amsteldam',
+      subjectId: 7, // HIGHLIGHT_ROWS' pick id for earth
+    };
+    dir.registerProducer({
+      id: 'bodies',
+      label: 'body',
+      produceLabels: () => ({ labels: [town], awake: false }),
+    });
+    const state = {
+      ...makeHighlightState(null, 'earth'),
+      selection: { hover: null, select: { type: 'body', id: 'earth' }, focus: null },
+      settings: { antique: { enabled: true } },
+    } as unknown as EngineState;
+    const ctx = { ...makeCtx(0), snapshot: { nowMs: 0, focusBlend: 0 } } as unknown as FrameView;
+
+    dir.runFrame(state, ctx);
+    const shown = dir.labels().find((l) => l.id === town.id)!;
+    expect(shown.text).toBe('Amsteldam');
+    expect(shown.alignX).toBe('left');
   });
 });
