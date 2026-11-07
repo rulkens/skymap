@@ -11,7 +11,7 @@ import type { Label2D } from '../../../../@types/rendering/Label2D';
 import type { LayerScreenLabel } from '../../../../@types/engine/layer/LayerScreenLabel';
 import type { StellarStreamsRuntime } from '../../@types/StellarStreamsRuntime';
 import type { StellarStreamRef } from '../../selection/@types/StellarStreamRef';
-import { streamTintRgb } from '../../streaks/utils/streamTintRgb';
+import { streamTintRgb } from '../utils/streamTintRgb';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { isKind } from '../../../../utils/selection/isKind';
