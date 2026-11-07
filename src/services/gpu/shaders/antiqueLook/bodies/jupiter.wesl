@@ -22,13 +22,13 @@ const BELTS = array<vec3<f32>, 4>(
   vec3<f32>(6.5, 17.5, 0.7),
   vec3<f32>(22.0, 25.0, 0.48),
 );
-// The temperate dusk: from these latitudes (S, N) at 0.5, deepening by 0.12 to 45°.
+// The temperate dusk: from these latitudes (S, N) at 0.56, deepening by 0.1 to 45°.
 const DUSK = vec2<f32>(-31.0, 31.0);
 // Past 58° the rings would close on the pole as a target: there they break up and give
 // way to flicks of stipple drawn out along the latitude.
 const CAP = vec2<f32>(58.0, 70.0);
 // The shade lays thin strokes over a zone and swells a belt's own.
-const SHADE = vec3<f32>(0.46, 0.3, 0.79); // zone share, belt swell, cap below the crossing set
+const SHADE = vec3<f32>(0.46, 0.4, 0.79); // zone share, belt swell, cap below the crossing set
 // The spot's oval out to its pale collar on the plain texture, radians east and north;
 // its north side drawn flatter, as the plain texture has it.
 const SPOT_AXES = vec2<f32>(0.155, 0.084);
@@ -61,8 +61,8 @@ fn redSpotRadius(n: vec3<f32>, pole: vec3<f32>, spot: vec3<f32>) -> f32 {
 
 // Edges are sharp, so a belt's strokes start whole, never as one broken arriving line.
 fn beltTone(latDeg: f32) -> f32 {
-  let south = step(latDeg, DUSK.x) * (0.5 + 0.12 * smoothstep(DUSK.x, -45.0, latDeg));
-  let north = step(DUSK.y, latDeg) * (0.5 + 0.12 * smoothstep(DUSK.y, 45.0, latDeg));
+  let south = step(latDeg, DUSK.x) * (0.56 + 0.1 * smoothstep(DUSK.x, -45.0, latDeg));
+  let north = step(DUSK.y, latDeg) * (0.56 + 0.1 * smoothstep(DUSK.y, 45.0, latDeg));
   var tone = max(south, north);
   for (var i = 0; i < 4; i++) {
     let b = BELTS[i];
@@ -72,17 +72,18 @@ fn beltTone(latDeg: f32) -> f32 {
 }
 
 fn jupiterPrint(col: vec3<f32>, cover: f32, j: JupiterPrintIn) -> BodyPrint {
-  let q = j.spotQ * (1.0 + 0.05 * (vnoise(j.p * 0.008) - 0.5));
+  let q = j.spotQ * (1.0 + 0.03 * (vnoise(j.p * 0.008) - 0.5));
   let inside = 1.0 - smoothstep(0.97, 1.0, q);
   let latDeg = degrees(j.lat);
-  let cap = smoothstep(CAP.x, CAP.y, abs(latDeg));
+  // The cap's edge wanders, so the last rings fall apart along an uneven line.
+  let cap = smoothstep(CAP.x, CAP.y, abs(latDeg) + 6.0 * (vnoise(j.p * 0.06) - 0.5));
   // The burin lifts out toward the lit limb.
-  var belt = beltTone(latDeg) * smoothstep(1.0, SPOT_COLLAR, q) * mix(smoothstep(0.05, 0.3, j.ndv), 1.0, j.shade);
+  var belt = beltTone(latDeg) * smoothstep(1.0, SPOT_COLLAR, q) * mix(smoothstep(0.02, 0.2, j.ndv), 1.0, j.shade);
   belt = max(belt, mix(SPOT_TONE.x, SPOT_TONE.y, smoothstep(0.35, 0.95, q)) * inside);
   let swell = select(0.0, belt + SHADE.y * j.shade, belt > 0.0);
   let tone = min(max(SHADE.x * j.shade, swell), SHADE.z) * (1.0 - cap);
   var ink = crossHatch(j.form, j.p, tone, j.spacing, 0.0, j.pxUnits);
-  ink = max(ink, stipple(j.p * vec2<f32>(0.6, 1.0), 2.2, cap * (0.3 + 0.35 * j.shade)));
+  ink = max(ink, stipple(j.p * vec2<f32>(0.6, 1.0), 2.6, cap * (0.15 + 0.3 * j.shade)));
   // The outline cut with the burin's pressure wandering along it.
   let width = 1.2 + 0.9 * vnoise(j.p * 0.04);
   ink = max(ink, inkLine(abs(q - 1.0) / max(j.qPerUnit, 1e-6), width, j.pxUnits));
