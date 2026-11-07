@@ -158,7 +158,8 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   n = select(n, -n, dot(n, p) > 0.0);
   let up = normalize(r.eyeRelBody + p);
   let nu = dot(n, up);
-  if (nu < cos(MESH_SLOPE)) {
+  // A coarse-mesh body's steep facets are its terrain's cliffs, not a lander.
+  if (nu < cos(MESH_SLOPE) && r.wideNormal < 0.5) {
     return vec4<f32>(0.0);
   }
   let nex = normalize(r.exaggeration * (n - nu * up) / max(nu, 0.2) + up);

@@ -75,7 +75,7 @@ fn earthPrint(col: vec3<f32>, cover: f32, e: EarthPrintIn) -> BodyPrint {
 const EARTH_SHADE_INK: f32 = 0.75;
 const EARTH_DETAIL_INK: f32 = 0.3;
 // The shade's share over which lines arrive and swell to their full width.
-const EARTH_SHADE_BAND = vec2<f32>(0.12, 0.42);
+const EARTH_SHADE_BAND = vec2<f32>(0.08, 0.55);
 
 fn earthRelief(field: texture_2d<f32>, px: vec2<f32>, relief: vec4<f32>, unit: f32, plain: f32, around: f32) -> f32 {
   if (relief.a <= 0.0) {
