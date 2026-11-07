@@ -1,7 +1,7 @@
 # Blending seq — design
 
 - **Date:** 2026-11-07
-- **Status:** draft, for the owner's review
+- **Status:** approved by the owner, 2026-11-07
 - **Source:** tour PR #1070 conversation (beat 02's dolly zoom stops between steps), refactor-ground
   checkpoint 2026-11-07 (rulings below); earlier ground pass on velocity-matched joins
   (`feat/animation-flow-joins`, `docs/superpowers/ground/2026-11-06-animation-flow-joins-ground.md`)
