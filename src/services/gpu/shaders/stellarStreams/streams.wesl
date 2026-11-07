@@ -1,12 +1,13 @@
-// stellarStreams/streams.wesl — PROTOTYPE. Each stream particle is a screen-space
-// streak billboard: a Gaussian smeared along its projected orbital tangent, so a
-// stream reads as flowing debris rather than dots. Surface brightness is held
+// stellarStreams/streams.wesl — the streak look. Each stream particle is a screen-space
+// billboard: a Gaussian smeared along its projected orbital tangent and drifting along
+// it, so a stream reads as flowing debris rather than dots. Surface brightness is held
 // constant while resolved; below 'minPx' the sprite clamps and dims by area, so
 // distant streams stay smooth haze instead of aliasing sparkle. Picking is the
 // centreline ribbons' (ribbonPick.wesl), not these quads.
 
 import package::lib::camera::CameraUniforms;
 import package::lib::camera::worldToClip;
+import package::lib::flow::rand01;
 import package::starCatalog::tint::starTint;
 
 struct Uniforms {
@@ -35,10 +36,6 @@ struct VSOut {
 // attr.z is Gaia BP−RP mapped linearly onto 0..1 over this span (STREAM_BP_RP_RANGE in TS).
 const STREAM_BP_RP_RANGE: vec2<f32> = vec2<f32>(-0.3, 2.2);
 
-fn hash11(x: f32) -> f32 {
-  return fract(sin(x * 127.1) * 43758.5453);
-}
-
 fn placeStreak(
   vi: u32,
   ii: u32,
@@ -53,7 +50,7 @@ fn placeStreak(
   // and out at the loop ends so the wrap-around never pops; the /0.8 restores
   // the plateau window's mean brightness.
   // 'flow' is kpc travelled per 8 s loop, so drift speed is physical, not sprite-sized.
-  let phase = fract(u.timeSec * 0.125 + hash11(f32(ii)));
+  let phase = fract(u.timeSec * 0.125 + rand01(ii));
   let rel = pos + tangent * (u.flow * 0.001) * (phase - 0.5) - u.eye;
   let c0 = worldToClip(u.cam, rel);
   if (c0.w <= 0.0) {
