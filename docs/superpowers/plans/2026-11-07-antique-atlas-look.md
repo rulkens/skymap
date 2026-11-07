@@ -196,6 +196,11 @@ Owner ruling 2026-11-07: keep the generic galaxy engraving with these names; the
 `src/services/gpu/shaders/antiqueLook/fragment.wesl`, `tests/services/gpu/shaders/antiquePlateBindings.parity.test.ts`
 - [x] The nine rows the look writes and the plate reads become layers of `antique-full` (rgba8), `antique-quarter` and `antique-low` (rgba16f): the plate samples 10 textures, budget 12, a new row is a layer (62ece682d).
 
+### Task 24: The chrome weathered (owner: "too clean … do something with its background")
+**Files:** `src/utils/antiqueChrome/{inkWearSvg,paperTileSvg,paperNoiseFilter,foxingSvg,tabletSvg,cartoucheSvg,checkBoxSvg,antiqueChromeCss}.ts`,
+`src/data/ui/antiqueChrome.ts`, `src/styles/antique.css`, the `--sheet-ground` hook in Panel, cardChrome, MobileSheet and Dock
+- [x] Slips on laid paper (fibre, mottle, chain and wire lines, edge toning, foxing and a tide-line varied by panel size); ink thins and breaks, wobbles off the repeating edges; washes laid by hand (40df88d68).
+
 ## Definition of Done
 
 **Deliverables:** the `stylize` FRAME_ORDER line and `antiqueLook` pass; the `antique` settings
