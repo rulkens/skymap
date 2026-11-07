@@ -169,6 +169,14 @@ describe('placeAntiqueOrnaments', () => {
     expect(edge === undefined || edge.opacity < 0.5).toBe(true);
   });
 
+  it('withdraws a sky figure the numbered border cuts through, not only one off the canvas', () => {
+    // Centred 24 degrees south: the canvas holds it all, the 50-unit border cuts a quarter of it.
+    const row = skyRow({});
+    const cut = { ...row, anchor: { kind: 'sky' as const, lonDeg: 0, latDeg: -24, sizeDeg: 30 } };
+    const [placed] = place([cut]);
+    expect(placed === undefined || placed.opacity < 0.05).toBe(true);
+  });
+
   it('sizes a place in space by its distance from the eye, not from the Sun', () => {
     const atPlace = (camX: number) =>
       placeAntiqueOrnaments({

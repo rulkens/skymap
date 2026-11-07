@@ -130,17 +130,16 @@ export function placeAntiqueOrnaments(input: {
       dir = rayThroughPx(centre, basis, frustum, size);
     }
     const half: [number, number] = [widthPx * 0.5, widthPx * 0.5 * aspect];
-    // A sky figure mostly off the plate reads as a cropped stray claw: fade it
-    // out unless at least about half of it is on screen. The neatline may crop a
-    // constellation figure, as on Hevelius' plates, but a sea beast sails whole
-    // inside the numbered border or not at all.
-    if (anchor.kind === 'sky') opacity *= smoothstep(0.55, 0.6, onScreenShare(centre, half, size));
-    if (anchor.kind === 'space') {
+    // A figure the numbered border cuts reads as a stray claw, not a crop (Mars's
+    // sea serpent against the bottom neatline): a beast or a constellation figure
+    // sails whole inside the border or not at all, bar a sliver.
+    if (anchor.kind === 'sky' || anchor.kind === 'space') {
       const inset = ANTIQUE_NUMERAL_INSET_UNITS * unitPx;
       const plate = { width: size.width - 2 * inset, height: size.height - 2 * inset };
+      const [lo, hi] = anchor.kind === 'sky' ? [0.85, 0.95] : [0.97, 0.995];
       opacity *= smoothstep(
-        0.97,
-        0.995,
+        lo,
+        hi,
         onScreenShare([centre[0] - inset, centre[1] - inset], half, plate),
       );
     }
