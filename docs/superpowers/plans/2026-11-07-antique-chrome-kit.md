@@ -116,6 +116,9 @@ tablet's fill is the button's ground and paints over its background, so the stat
 image's source to one with a wash baked in (`--tablet-source-{hover,pressed,selected}`), mixed
 by `utils/color/multiplyWashHex(paper, pigment, strength)`. Text on a wash stays full ink. The
 search trigger takes the title cartouche instead. No test for the tablet drawing (no logic).
+The controls' own backgrounds read `--framed-control-ground` (transparent under the look), or they
+show past the incurved corners. `.tablet.tablet` is doubled to outrank a composing rule's `border`
+shorthand, which resets `border-image`. Only the secondary `Button` is a tablet.
 
 - [x] Test `multiplyWashHex leaves bare paper at strength 0 and multiplies the full pigment in at 1`.
 
