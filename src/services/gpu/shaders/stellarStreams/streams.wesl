@@ -37,12 +37,13 @@ struct VSOut {
 // attr.z is Gaia BP−RP mapped linearly onto 0..1 over this span (STREAM_BP_RP_RANGE in TS).
 const STREAM_BP_RP_RANGE: vec2<f32> = vec2<f32>(-0.3, 2.2);
 
-fn placeStreak(
-  vi: u32,
-  ii: u32,
-  pos: vec3<f32>,
-  tangent: vec3<f32>,
-  attr: vec4<f32>,
+@vertex
+fn vs(
+  @builtin(vertex_index) vi: u32,
+  @builtin(instance_index) ii: u32,
+  @location(0) pos: vec3<f32>,
+  @location(1) tangent: vec3<f32>,
+  @location(2) attr: vec4<f32>,
 ) -> VSOut {
   var out: VSOut;
   let c = vec2<f32>(f32(vi & 1u) * 2.0 - 1.0, f32(vi >> 1u) * 2.0 - 1.0);
@@ -83,17 +84,6 @@ fn placeStreak(
   let emphasis = select(u.recede, u.focusBoost, attr.w == u.focusedStream);
   out.colour = starTint(bpRp) * lum * u.intensity * emphasis;
   return out;
-}
-
-@vertex
-fn vs(
-  @builtin(vertex_index) vi: u32,
-  @builtin(instance_index) ii: u32,
-  @location(0) pos: vec3<f32>,
-  @location(1) tangent: vec3<f32>,
-  @location(2) attr: vec4<f32>,
-) -> VSOut {
-  return placeStreak(vi, ii, pos, tangent, attr);
 }
 
 @fragment

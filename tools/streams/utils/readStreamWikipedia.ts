@@ -3,15 +3,14 @@ import { delay } from '../../utils/async/delay';
 import { loadJsonCache } from '../../utils/io/loadJsonCache';
 import { saveJsonCache } from '../../utils/io/saveJsonCache';
 import type { StreamWikipedia } from '../@types/StreamWikipedia';
-import type { StreamWikipediaRow } from '../@types/StreamWikipediaRow';
 
 /**
- * The curated articles' summaries by stream name. The cache holds each REST body, parsed, by article title, so a
- * rebuild with every row cached makes no request; a missing one is fetched once, `delayMs` after
- * the last. A body that is not a standard article, or no body, throws: the table lists only real ones.
+ * The curated articles' summaries by stream name (`titles`: stream name → article title). The
+ * cache holds each REST body, parsed, by article title, so a rebuild with every row cached makes
+ * no request; a missing one is fetched once, `delayMs` after the last. A body that is not a standard article, or no body, throws: the table lists only real ones.
  */
 export async function readStreamWikipedia(
-  rows: readonly StreamWikipediaRow[],
+  titles: Readonly<Record<string, string>>,
   cachePath: string,
   fetchBody: (url: string) => Promise<string | null>,
   delayMs: number,
@@ -19,7 +18,7 @@ export async function readStreamWikipedia(
   const cache = loadJsonCache<Record<string, unknown>>(cachePath);
   const out: Record<string, StreamWikipedia> = {};
   let fetched = false;
-  for (const { name, title } of rows) {
+  for (const [name, title] of Object.entries(titles)) {
     if (cache[title] === undefined) {
       if (fetched) await delay(delayMs);
       const body = await fetchBody(wikipediaSummaryUrl(title));

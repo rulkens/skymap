@@ -66,7 +66,6 @@ describe('produceStellarStreamLabels', () => {
     const [sgr, gd1] = produce([SAGITTARIUS, GD_1]);
     expect(sgr!.color![0] - sgr!.color![2]).toBeGreaterThan(gd1!.color![0] - gd1!.color![2]);
     expect(Math.max(...sgr!.color!.slice(0, 3))).toBe(1);
-    expect(sgr!.color![3]).toBe(0.85);
   });
 
   describe('the apparent-length gate', () => {

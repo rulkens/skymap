@@ -7,7 +7,7 @@ import { readStreamWikipedia } from '../../../../tools/streams/utils/readStreamW
 
 const body = (title: string, extract: string, type = 'standard') =>
   JSON.stringify({ type, title, extract });
-const rows = [{ name: 'GD-1', title: 'GD-1' }];
+const rows = { 'GD-1': 'GD-1' };
 const cachePath = () => join(mkdtempSync(join(tmpdir(), 'streamwiki-')), 'cache.json');
 
 describe('readStreamWikipedia', () => {

@@ -2,7 +2,7 @@ import { arrayMean } from '../../../src/utils/math/arrayMean';
 import { raDecDistToEqCart } from '../../../src/utils/math/raDecDistToEqCart';
 import { cumulativeLengths } from '../../utils/math/cumulativeLengths';
 import { percentile } from '../../utils/perf/percentile';
-import type { StellarStreamMetaEntry } from '../@types/StellarStreamMetaEntry';
+import type { StellarStreamMeta } from '../../../src/layers/stellarStreams/catalog/@types/StellarStreamMeta';
 import type { StreamParticles } from '../@types/StreamParticles';
 import type { StreamWikipedia } from '../@types/StreamWikipedia';
 import type { VasilievStar } from '../@types/VasilievStar';
@@ -23,7 +23,7 @@ export function sagittariusMeta(
   stars: readonly VasilievStar[],
   p: StreamParticles,
   wikipedia: StreamWikipedia | null,
-): StellarStreamMetaEntry {
+): StellarStreamMeta {
   const positionsMpc = stars.map((s) =>
     raDecDistToEqCart({ raHours: s.ra / 15, decDeg: s.dec, distMpc: s.distanceKpc / MPC_TO_KPC }),
   );

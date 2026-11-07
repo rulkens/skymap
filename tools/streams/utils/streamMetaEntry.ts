@@ -4,7 +4,7 @@ import { cumulativeLengths } from '../../utils/math/cumulativeLengths';
 import { pointAlongPolyline } from '../../utils/math/pointAlongPolyline';
 import type { GalstreamsTrack } from '../@types/GalstreamsTrack';
 import type { StreamParticles } from '../@types/StreamParticles';
-import type { StellarStreamMetaEntry } from '../@types/StellarStreamMetaEntry';
+import type { StellarStreamMeta } from '../../../src/layers/stellarStreams/catalog/@types/StellarStreamMeta';
 import type { StreamMetallicity } from '../@types/StreamMetallicity';
 import type { StreamWikipedia } from '../@types/StreamWikipedia';
 import { streamArticleFields } from './streamArticleFields';
@@ -22,7 +22,7 @@ export function streamMetaEntry(
   particles: StreamParticles,
   metallicity: StreamMetallicity | null,
   wikipedia: StreamWikipedia | null,
-): StellarStreamMetaEntry {
+): StellarStreamMeta {
   const points = trackPositionsKpc(track);
   const cumulative = cumulativeLengths(points);
   const lengthKpc = cumulative[cumulative.length - 1]!;
