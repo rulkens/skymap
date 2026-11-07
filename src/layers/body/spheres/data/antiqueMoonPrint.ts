@@ -29,9 +29,22 @@ export const ANTIQUE_MOON_FLOOR_CRATER = [0.3, 0.85] as const;
 /** A crater is evaluated out to this many radii from its centre (rim line + flank). */
 export const ANTIQUE_MOON_RIM_REACH = 1.35;
 
-/** `MoonPrint` in `texturedBody/fragment.wesl`, read by both Moon passes: a 16-byte
- * header, then two vec4 per crater. */
-export const ANTIQUE_MOON_PRINT_BYTES = 16 + ANTIQUE_MOON_MAX_CRATERS * 32;
+/** A named crater's mark reaches at least this far (cosine of the arc, ~110 km). Mirrored
+ * as `NAMED_REACH_COS` in `fsMoonPrint`. */
+export const ANTIQUE_MOON_NAMED_REACH_COS = 0.998;
+
+/** A sea crater's blanket (`ANTIQUE_MOON_SEA_CRATERS`) fades out over these radii.
+ * Mirrored as `BLANKET` in `fsMoonPrint`. */
+export const ANTIQUE_MOON_BLANKET = [2.5, 7] as const;
+
+/** The frame's tiles (columns, rows): each lists the rings that can reach it, so a pixel
+ * loops over a few rings, not all of them (`binMoonCraters`). Mirrored in `fsMoonPrint`. */
+export const ANTIQUE_MOON_TILES = [16, 9] as const;
+
+/** `MoonPrint` in `texturedBody/fragment.wesl`, read by both Moon passes: a 32-byte
+ * header, two vec4 per crater, then two u32 of ring mask per tile. */
+export const ANTIQUE_MOON_PRINT_BYTES =
+  32 + ANTIQUE_MOON_MAX_CRATERS * 32 + ANTIQUE_MOON_TILES[0] * ANTIQUE_MOON_TILES[1] * 8;
 
 /** The sphere the crater bake measured arcs on (LOLA's reference radius): its km
  * radii turn back into arcs on this, not on the drawn datum. */

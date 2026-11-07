@@ -78,9 +78,35 @@ struct MoonPrint {
   unit: f32,
   focalPx: f32,
   radiusM: f32,
+  tilePx: vec2<f32>,
+  _p0: vec2<f32>,
   craters: array<MoonCrater, 60>,
+  // Two u32 of ring mask per tile (`binMoonCraters`), two tiles a vec4.
+  tiles: array<vec4<u32>, 72>,
 };
 @group(1) @binding(0) var<uniform> moon: MoonPrint;
+// Mirror ANTIQUE_MOON_TILES (layers/body/spheres/data/antiqueMoonPrint.ts).
+const TILES = vec2<i32>(16, 9);
+
+// The rings that can reach the tile holding frag (device px), as a mask over their order.
+fn ringsAt(frag: vec2<f32>) -> vec2<u32> {
+  let t = clamp(vec2<i32>(frag / moon.tilePx), vec2<i32>(0), TILES - 1);
+  let k = t.y * TILES.x + t.x;
+  let v = moon.tiles[k / 2];
+  return select(v.xy, v.zw, (k & 1) == 1);
+}
+
+// The lowest ring left in the mask, which it clears.
+fn popRing(mask: ptr<function, vec2<u32>>) -> u32 {
+  if ((*mask).x != 0u) {
+    let b = firstTrailingBit((*mask).x);
+    (*mask).x &= ~(1u << b);
+    return b;
+  }
+  let b = firstTrailingBit((*mask).y);
+  (*mask).y &= ~(1u << b);
+  return 32u + b;
+}
 
 // Colour + analytic depth. No '@builtin(position)' anywhere in this struct --
 // the entry point's position comes in through 'TexturedBodyVSOut', and a second
@@ -203,6 +229,8 @@ const SLOPE_GAIN: f32 = 2.4;
 const RIM_MIN_UNITS: f32 = 8.0;
 const RIM_FULL_UNITS: f32 = 14.0;
 const NAMED_MIN_UNITS: f32 = 7.0;
+// Mirror ANTIQUE_MOON_NAMED_REACH_COS.
+const NAMED_REACH_COS: f32 = 0.998;
 // Linear albedo over which a crater's floor is no sea (the plate's MARE_SHORE), and under
 // which a ringed floor is its own small sea (Plato, Grimaldi: Riccioli's dark ovals).
 const BRIGHT_FLOOR: f32 = 0.25;
@@ -276,12 +304,15 @@ const MARE_GROUND: f32 = 0.34;
 // x rim ink (the nearest live ring's line, every crescent), y inside a crater's floor
 // (0..1), z the reach of a sea crater's blanket (0..1). n the geometric normal, dNdx/dNdy its screen derivatives, rd the eye's ray.
 fn craterRims(n: vec3<f32>, dNdx: vec3<f32>, dNdy: vec3<f32>, sun: vec3<f32>, rd: vec3<f32>,
-              unitsPerRad: f32, pxUnits: f32) -> vec3<f32> {
+              unitsPerRad: f32, pxUnits: f32, frag: vec2<f32>) -> vec3<f32> {
+  let near = ringsAt(frag);
   // The youngest ring holding the point inside 0.97 of its rim (small angles: psi² ~
   // 2 (1 - cos psi)), and the blanket's reach.
   var youngest = -1.0;
   var blanket = 0.0;
-  for (var i = 0u; i < moon.count; i++) {
+  var first = near;
+  while (any(first != vec2<u32>(0u))) {
+    let i = popRing(&first);
     let rho = moon.craters[i].rho;
     let psi2 = 2.0 * (1.0 - dot(n, moon.craters[i].c));
     if (psi2 < 0.94 * rho * rho) {
@@ -297,11 +328,13 @@ fn craterRims(n: vec3<f32>, dNdx: vec3<f32>, dNdy: vec3<f32>, sun: vec3<f32>, rd
   var best = 1e9;
   // The Sun as seen on the plate: its sides of a crater hold even at full Moon.
   let seen = sun - dot(sun, rd) * rd;
-  for (var i = 0u; i < moon.count; i++) {
+  var second = near;
+  while (any(second != vec2<u32>(0u))) {
+    let i = popRing(&second);
     let cr = moon.craters[i];
     let cosPsi = dot(n, cr.c);
-    // A named crater's mark may outgrow its reach: it reaches ~100 km (cos 0.998) at least.
-    if (cosPsi < select(cr.cosReach, min(cr.cosReach, 0.998), cr.named > 0.5) || craterYouth(cr) < youngest - 1e-3) {
+    // A named crater's mark may outgrow its reach: it reaches ~110 km at least.
+    if (cosPsi < select(cr.cosReach, min(cr.cosReach, NAMED_REACH_COS), cr.named > 0.5) || craterYouth(cr) < youngest - 1e-3) {
       continue;
     }
     // From the centre toward the point, in the crater's tangent plane.
@@ -370,7 +403,7 @@ fn fsMoonPrint(in: TexturedBodyVSOut) -> @location(0) vec4<f32> {
   let T = normalize(cross(vec3<f32>(0.0, 0.0, 1.0), ng));
   let b = exp2(RELIEF_BIAS);
   let nRelief = perturbNormal(ng, T, textureSampleGrad(normalTexture, bodySampler, uv, grad.ddx * b, grad.ddy * b).rg);
-  let rims = craterRims(ng, dNdx, dNdy, sun, rd, unitsPerRad, pxUnits);
+  let rims = craterRims(ng, dNdx, dNdy, sun, rd, unitsPerRad, pxUnits, in.clip.xy);
   let flat = dot(ng, sun);
   let lit = flat + SLOPE_GAIN * (dot(nRelief, sun) - flat);
   let day = smoothstep(-0.02, 0.06, lit);
@@ -408,10 +441,12 @@ const RELIEF_STEEP: f32 = 0.8;
 
 // x inside a ring to RING_INNER of its radius, y within RING_FLANK of one (small angles:
 // psi² ~ 2 (1 - cos psi)).
-fn ringZone(n: vec3<f32>) -> vec2<bool> {
+fn ringZone(n: vec3<f32>, frag: vec2<f32>) -> vec2<bool> {
   var inner = false;
   var flank = false;
-  for (var i = 0u; i < moon.count; i++) {
+  var near = ringsAt(frag);
+  while (any(near != vec2<u32>(0u))) {
+    let i = popRing(&near);
     let rho = moon.craters[i].rho;
     let psi2 = 2.0 * (1.0 - dot(n, moon.craters[i].c));
     inner = inner || psi2 < RING_INNER * RING_INNER * rho * rho;
@@ -454,7 +489,7 @@ fn fsMoonRelief(in: TexturedBodyVSOut) -> @location(0) vec4<f32> {
   let noise = groundNoiseAt(ng * moon.radiusM, vec3<i32>(0), metresPerUnit);
   let flat = dot(ng, u.sunDirLocal);
   let day = smoothstep(-0.02, 0.06, flat + SLOPE_GAIN * (dot(n, u.sunDirLocal) - flat));
-  let zone = ringZone(ng);
+  let zone = ringZone(ng, in.clip.xy);
   let onRing = zone.x || (zone.y && slope > RELIEF_STEEP);
   let stroke = select(-RELIEF_FLAT, slope, slope > RELIEF_STROKE && onRing) * resolved * day;
   return vec4<f32>(fall, noise, stroke);

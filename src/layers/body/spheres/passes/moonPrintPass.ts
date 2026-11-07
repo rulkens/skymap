@@ -20,9 +20,11 @@ import {
   ANTIQUE_MOON_PRINT_BYTES,
   ANTIQUE_MOON_RIM_SCALE,
   ANTIQUE_MOON_TABLE_RADIUS_KM,
+  ANTIQUE_MOON_TILES,
 } from '../data/antiqueMoonPrint';
 import { moonCraterTable } from '../present/moonCraterTable';
 import { namedMoonCraters } from '../present/namedMoonCraters';
+import { binMoonCraters } from '../present/binMoonCraters';
 import { pickMoonCraters } from '../present/pickMoonCraters';
 import { reweighMoonCraters } from '../present/reweighMoonCraters';
 import { ANTIQUE_MOON_CRATER_WEIGHTS } from '../data/antiqueMoonCraterWeights';
@@ -46,6 +48,7 @@ export function moonPrintPass(runtime: BodyRuntime): ContentPass {
     SCENE_CELESTIAL_BODIES.find((b) => b.id === ANTIQUE_MOON_HOST)!.surface,
   );
   const bytes = new ArrayBuffer(ANTIQUE_MOON_PRINT_BYTES);
+  const tiles = new Uint32Array(ANTIQUE_MOON_TILES[0] * ANTIQUE_MOON_TILES[1] * 2);
   return {
     name: 'moon-print',
 
@@ -59,19 +62,18 @@ export function moonPrintPass(runtime: BodyRuntime): ContentPass {
       const pose = ctx.bodyPose(view.slab.frame.hostId);
       if (record === null || pose === null) return;
       const unitPx = ctx.canvasSize.height / ANTIQUE_REFERENCE_HEIGHT_CSS;
-      const picked = pickMoonCraters(
-        table,
-        {
-          eye: bodySlabCamLocal(pose.eyeRelBodyM, radiusM),
-          mvp: composeBodySlabMvp(view.slab.vp, pose.eyeRelBodyM, radiusM),
-          widthPx: ctx.canvasSize.width,
-          heightPx: ctx.canvasSize.height,
-          pxPerRad: ctx.drawPxPerRad,
-          unitPx,
-        },
-        named,
-      );
-      packMoonPrint(table, picked, unitPx, ctx.drawPxPerRad, radiusM, bytes, namedRows, seaRows);
+      const craterView = {
+        eye: bodySlabCamLocal(pose.eyeRelBodyM, radiusM),
+        mvp: composeBodySlabMvp(view.slab.vp, pose.eyeRelBodyM, radiusM),
+        widthPx: ctx.canvasSize.width,
+        heightPx: ctx.canvasSize.height,
+        pxPerRad: ctx.drawPxPerRad,
+        unitPx,
+      };
+      const picked = pickMoonCraters(table, craterView, named);
+      const tilePx = binMoonCraters(table, picked, craterView, namedRows, seaRows, tiles);
+      const frame = { unitPx, focalPx: ctx.drawPxPerRad, radiusM, tilePx, tiles };
+      packMoonPrint(table, picked, frame, bytes, namedRows, seaRows);
       runtime.texturedBodyRenderer.drawMoonPrint(pass, record.bodyId, record.uniforms, bytes);
     },
   };
