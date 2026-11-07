@@ -2149,6 +2149,24 @@ export const RAW_DATA = {
       'Provenance for the CelesTrak groups: the query, the groups and the download policy.',
   },
 
+  // ─── IAU Gazetteer of Planetary Nomenclature (USGS, public domain) ─────
+
+  'iau.moon-nomenclature': {
+    path: 'data/raw/iau/MOON_nomenclature_center_pts.dbf',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      "The Moon's named features as centre points (name, type, centre lat/lon east, diameter km), the dBASE table from the gazetteer's shapefile zip (unzip beside this path). The antique Moon's crater table is baked from it (`tools/antique/moon/bakeMoonCraters.ts`).",
+    upstream: 'https://planetarynames.wr.usgs.gov/shapefiles/MOON_nomenclature_center_pts.zip',
+    readme: 'iau.readme',
+  },
+  'iau.readme': {
+    path: 'data/raw/iau/README.md',
+    kind: 'file',
+    source: 'committed',
+    description: 'Provenance for the IAU gazetteer download: URL, fetch date, checksum, fields used.',
+  },
+
   // ─── JPL Horizons planet and moon vectors (ephemeris-correction fit input)
 
   horizons: {
