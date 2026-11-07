@@ -47,7 +47,7 @@ describe('produceStellarStreamLabels', () => {
   });
 
   describe('the apparent-length gate', () => {
-    // 4 kpc at 100 kpc is 40 px at 1000 px/rad: under the 80 px floor.
+    // 4 kpc at 100 kpc is 40 px at 1000 px/rad: under the 150 px floor.
     const far = { ...SHORT, anchorMpc: [0.1, 0, 0] as const };
     const ref = { type: 'stellarStream', slug: far.id };
     const ids = (selection = NO_SELECTION) =>
