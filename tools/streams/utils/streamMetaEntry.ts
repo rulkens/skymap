@@ -5,6 +5,8 @@ import type { GalstreamsTrack } from '../@types/GalstreamsTrack';
 import type { StreamParticles } from '../@types/StreamParticles';
 import type { StellarStreamMetaEntry } from '../@types/StellarStreamMetaEntry';
 import type { StreamMetallicity } from '../@types/StreamMetallicity';
+import type { StreamWikipedia } from '../@types/StreamWikipedia';
+import { streamArticleFields } from './streamArticleFields';
 import { streamSlug } from './streamSlug';
 import { streamStellarMass } from './streamStellarMass';
 import { trackPositionsKpc } from './trackPositionsKpc';
@@ -18,6 +20,7 @@ export function streamMetaEntry(
   track: GalstreamsTrack,
   particles: StreamParticles,
   metallicity: StreamMetallicity | null,
+  wikipedia: StreamWikipedia | null,
 ): StellarStreamMetaEntry {
   const points = trackPositionsKpc(track);
   const cumulative = cumulativeLengths(points);
@@ -27,7 +30,10 @@ export function streamMetaEntry(
   return {
     id: streamSlug(name),
     names: [name],
-    description: `${name}, a stellar stream traced by the ${track.ref} track of galstreams (Mateu 2023).`,
+    ...streamArticleFields(
+      wikipedia,
+      `${name}, a stellar stream traced by the ${track.ref} track of galstreams (Mateu 2023).`,
+    ),
     source: 'galstreams',
     reference: track.ref,
     lengthKpc,

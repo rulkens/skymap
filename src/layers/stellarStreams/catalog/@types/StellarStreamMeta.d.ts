@@ -4,6 +4,8 @@ export type StellarStreamMeta = {
   readonly id: string;
   readonly names: readonly string[];
   readonly description: string;
+  /** English Wikipedia article about the stream itself; null when it has none. */
+  readonly wikipediaTitle: string | null;
   readonly source: 'vasiliev2021' | 'galstreams';
   readonly reference: string;
   /** Track length; for Sagittarius, the debris extent. */

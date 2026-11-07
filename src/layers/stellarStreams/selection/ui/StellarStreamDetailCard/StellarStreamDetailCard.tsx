@@ -1,7 +1,7 @@
 /**
  * StellarStreamDetailCard — the panel for a selected stream: what kind of debris it is, its size
- * and distance, and its width, measured metallicity and published stellar mass where there are
- * such. Every value is the meta row, so the card shows before the particles load.
+ * and distance, its width, measured metallicity and published stellar mass where there are such, and its
+ * description with a Wikipedia link where it has an article. Every value is the meta row, so the card shows before the particles load.
  */
 
 import type { ReactNode } from 'react';
@@ -13,6 +13,8 @@ import { formatKpcRange } from '../../utils/formatKpcRange';
 import { formatScientific } from '../../../../../utils/format/formatScientific';
 import CardHeader from '../../../../../components/InfoCard/CardHeader/CardHeader';
 import CardRow from '../../../../../components/InfoCard/CardRow/CardRow';
+import DescriptionBlock from '../../../../../components/InfoCard/DescriptionBlock/DescriptionBlock';
+import WikipediaRow from '../../../../../components/InfoCard/WikipediaRow/WikipediaRow';
 import styles from '../../../../../components/InfoCard/cardChrome.module.css';
 import local from './StellarStreamDetailCard.module.css';
 
@@ -63,6 +65,14 @@ function StellarStreamDetailCard({
             value={`${target.stellarMass.partial ? '≥ ' : ''}${formatScientific(target.stellarMass.massMsun)} M☉ (${target.stellarMass.ref})`}
           />
         )}
+      </div>
+      {target.wikipediaTitle && (
+        <div className={styles.cardSection}>
+          <WikipediaRow title={target.wikipediaTitle} />
+        </div>
+      )}
+      <div className={styles.cardSection}>
+        <DescriptionBlock text={target.description} />
       </div>
     </div>
   );

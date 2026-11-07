@@ -83,3 +83,8 @@ export const STREAM_POPULATION_METAL_RICH: StreamPopulationAnchor = {
 export const SUN_VELOCITY_GAL_KMS: readonly [number, number, number] = [12.9, 245.6, 7.78];
 /** km/s per (kpc · mas/yr). */
 export const KMS_PER_KPC_MASYR = 4.74047;
+
+/** Sagittarius's key in the per-stream tables: it has no galstreams `Name`. */
+export const SAGITTARIUS_KEY = 'sagittarius';
+/** Polite pause between Wikipedia requests, as the famous pipeline keeps. */
+export const WIKIPEDIA_DELAY_MS = 1000;

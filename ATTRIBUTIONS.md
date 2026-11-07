@@ -1249,12 +1249,13 @@ paying a fee."
 
 ### Galaxy photographs fetched from Wikipedia (3 images) and galaxy descriptions
 
-<!-- attribution: id=wikipedia; keys=famous.wikipedia-cache; hosts=en.wikipedia.org -->
+<!-- attribution: id=wikipedia; keys=famous.wikipedia-cache,streams.wikipedia-cache; hosts=en.wikipedia.org -->
 
 - **What:** The lead image of the Wikipedia article for the three listed
   galaxies with no curated photograph (`c52`, `c53`, `c61`), and the
-  article's opening sentences as the description of about 50 galaxies. The
-  app's cards also link to Wikipedia articles.
+  article's opening sentences as the description of about 50 galaxies and of
+  the six stellar streams that have an article. The app's cards also link to
+  Wikipedia articles.
 - **By:** Wikipedia contributors; the images' authors on Wikimedia Commons.
 - **Licence:** Text: CC BY-SA 4.0 (and GFDL), per the Wikimedia Terms of Use.
   Images, as Commons states on 2026-10-07: `c52` NGC 4697, CC BY-SA 3.0 (author given
@@ -1269,7 +1270,9 @@ paying a fee."
 - **Enters skymap:** `tools/famous/fetchFamousImages.ts` →
   `data/raw/famous/wikipedia_famous_cache.json` → `public/images/famous/` and
   `famous_galaxies_meta.json`; descriptions also sit in
-  `data/seeds/famous_galaxies.seed.json`.
+  `data/seeds/famous_galaxies.seed.json`. Streams: `npm run
+  build-stellar-streams` → `data/raw/streams/wikipedia_streams_cache.json` →
+  `stellar_streams_meta.json`.
 - **Modified:** Images resized and faded at the edge; text taken as is.
 - **Checked:** 2026-10-07: <https://foundation.wikimedia.org/wiki/Policy:Terms_of_Use>,
   <https://commons.wikimedia.org/w/api.php> (the three files)

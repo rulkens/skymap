@@ -28,7 +28,7 @@ const tracks = [
 
 describe('buildStellarStreams', () => {
   it('the build writes a stream count equal to the meta length, Sagittarius first, slugs sorted after', () => {
-    const { bin, meta } = buildStellarStreams(stars, tracks);
+    const { bin, meta } = buildStellarStreams(stars, tracks, {});
     const decoded = decodeStellarStreams(bin);
     expect(meta.map((m) => m.id)).toEqual(['sagittarius', 'aau-atlas', 'gd-1', 'pal5']);
     expect(decoded.streamCount).toBe(meta.length);
@@ -38,14 +38,14 @@ describe('buildStellarStreams', () => {
   });
 
   it('the meta carries a measured [Fe/H] with its source, and none for a defaulted stream', () => {
-    const { meta } = buildStellarStreams(stars, tracks);
+    const { meta } = buildStellarStreams(stars, tracks, {});
     const byId = (id: string) => meta.find((m) => m.id === id)!;
     expect(byId('pal5').metallicity).toEqual({ feh: -1.41, ref: 'Harris 1996, 2010 ed.' });
     expect(byId('gd-1').metallicity).toBeNull();
   });
 
   it('the meta carries a published stellar mass with its source, and none where the table has none', () => {
-    const { meta } = buildStellarStreams(stars, tracks);
+    const { meta } = buildStellarStreams(stars, tracks, {});
     const byId = (id: string) => meta.find((m) => m.id === id)!;
     expect(byId('gd-1').stellarMass).toEqual({
       massMsun: 2e4,
@@ -55,9 +55,26 @@ describe('buildStellarStreams', () => {
     expect(byId('pal5').stellarMass).toBeNull();
   });
 
+  it('a stream with an article takes its title and extract; one whose summary has no extract keeps its description', () => {
+    const { meta } = buildStellarStreams(stars, tracks, {
+      sagittarius: { title: 'Sagittarius Stream', extract: 'A long stream.' },
+      'GD-1': { title: 'GD-1', extract: 'A moving group.' },
+      Pal5: { title: 'Pal 5 article', extract: '' },
+    });
+    const byId = (id: string) => meta.find((m) => m.id === id)!;
+    expect(byId('sagittarius')).toMatchObject({
+      wikipediaTitle: 'Sagittarius Stream',
+      description: 'A long stream.',
+    });
+    expect(byId('gd-1')).toMatchObject({ wikipediaTitle: 'GD-1', description: 'A moving group.' });
+    expect(byId('pal5').wikipediaTitle).toBe('Pal 5 article');
+    expect(byId('pal5').description).toMatch(/stellar stream traced by/);
+    expect(byId('aau-atlas').wikipediaTitle).toBeNull();
+  });
+
   it('a rebuild over the same inputs is byte-identical', () => {
-    const a = new Uint8Array(buildStellarStreams(stars, tracks).bin);
-    const b = new Uint8Array(buildStellarStreams(stars, tracks).bin);
+    const a = new Uint8Array(buildStellarStreams(stars, tracks, {}).bin);
+    const b = new Uint8Array(buildStellarStreams(stars, tracks, {}).bin);
     expect(Buffer.from(a).equals(Buffer.from(b))).toBe(true);
   });
 
@@ -70,7 +87,7 @@ describe('buildStellarStreams', () => {
       dec: Array.from({ length: 400 }, (_, i) => 4 * Math.sin(i * 0.7)),
     });
     const smooth = track({ name: 'GD-1', ref: 'b' });
-    const { meta } = buildStellarStreams(stars, [wiggly, smooth]);
+    const { meta } = buildStellarStreams(stars, [wiggly, smooth], {});
     for (const t of [wiggly, smooth]) {
       const m = meta.find((e) => e.names[0] === t.name)!;
       const lineKpc = m.centrelineMpc.map(

@@ -47,6 +47,12 @@ across reruns over the same inputs. On 2026-11-07 it wrote 128,419 particles in 
   measured over only part of the stream (the card prefixes "≥"). Values resting on an assumed
   mass-to-light range stay out, and Sagittarius has none. The build fails if a row names no built
   stream.
+- **Wikipedia**: the meta row's `wikipediaTitle`, and its `description` when the summary has an
+  extract, come from [`data/streamWikipedia.constants.ts`](data/streamWikipedia.constants.ts): only
+  articles about the stream itself (6 rows on 2026-11-07, 5 articles; progenitor-cluster articles stay
+  out, and so do the titles that merely redirect to one). The raw REST summaries are cached in the
+  committed `data/raw/streams/wikipedia_streams_cache.json`, so a rebuild makes no request; a new row
+  is fetched once, 1 s apart, and must be a `standard` page. The card shows the link and blurb.
 - **Pick centrelines**: the meta row's `centrelineMpc` and `ribbonWidthKpc` feed the app's pick
   ribbons. A galstreams track is simplified (Douglas–Peucker, worst span first) toward half its
   width, at most 16 points; where the cap leaves the track farther from the line, the ribbon widens

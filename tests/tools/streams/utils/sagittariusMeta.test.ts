@@ -23,7 +23,7 @@ describe('sagittariusMeta', () => {
       ...Array.from({ length: 200 }, (_, i) => star(26 + (i % 5) * 0.1, i < 100 ? 0 : -1)),
       star(500, -2.5),
     ];
-    const meta = sagittariusMeta(stars, sagittariusParticles(stars, 1n));
+    const meta = sagittariusMeta(stars, sagittariusParticles(stars, 1n), null);
     expect(meta.lengthKpc).toBeGreaterThan(0);
     expect(meta.lengthKpc).toBeLessThan(2);
     expect(meta.distanceKpc[1]).toBeCloseTo(500, 3);

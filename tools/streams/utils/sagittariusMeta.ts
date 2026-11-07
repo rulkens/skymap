@@ -3,7 +3,9 @@ import { raDecDistToEqCart } from '../../../src/utils/math/raDecDistToEqCart';
 import { percentile } from '../../utils/perf/percentile';
 import type { StellarStreamMetaEntry } from '../@types/StellarStreamMetaEntry';
 import type { StreamParticles } from '../@types/StreamParticles';
+import type { StreamWikipedia } from '../@types/StreamWikipedia';
 import type { VasilievStar } from '../@types/VasilievStar';
+import { streamArticleFields } from './streamArticleFields';
 import { streamCentreline } from './streamCentreline';
 import { sagittariusCentrelines } from './sagittariusCentrelines';
 
@@ -17,6 +19,7 @@ const FRAME_PERCENTILE = 90;
 export function sagittariusMeta(
   stars: readonly VasilievStar[],
   p: StreamParticles,
+  wikipedia: StreamWikipedia | null,
 ): StellarStreamMetaEntry {
   const positionsMpc = stars.map((s) =>
     raDecDistToEqCart({ raHours: s.ra / 15, decDeg: s.dec, distMpc: s.distanceKpc / MPC_TO_KPC }),
@@ -39,8 +42,10 @@ export function sagittariusMeta(
   return {
     id: 'sagittarius',
     names: ['Sagittarius', 'Sagittarius stream'],
-    description:
+    ...streamArticleFields(
+      wikipedia,
       'The tidal debris of the Sagittarius dwarf galaxy, from the N-body model of Vasiliev, Belokurov & Erkal 2021.',
+    ),
     source: 'vasiliev2021',
     reference: 'Vasiliev, Belokurov & Erkal 2021',
     // An extent (diameter around the remnant) here; for galstreams streams an arc length.

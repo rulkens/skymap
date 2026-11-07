@@ -352,6 +352,14 @@ export const RAW_DATA = {
     upstream: 'https://zenodo.org/records/4300977',
     fetcher: 'tools/fetch/fetchVasiliev2021.ts',
   },
+  'streams.wikipedia-cache': {
+    path: 'data/raw/streams/wikipedia_streams_cache.json',
+    kind: 'file',
+    source: 'committed',
+    description:
+      "Wikipedia REST summaries of the stellar-stream articles listed in tools/streams/data/streamWikipedia.constants.ts, keyed by article title — the stream card's blurb and link. Committed so a rebuild needs no network.",
+    fetcher: 'tools/streams/buildStellarStreams.ts',
+  },
   'galstreams.dir': {
     path: 'data/raw/galstreams',
     kind: 'directory',

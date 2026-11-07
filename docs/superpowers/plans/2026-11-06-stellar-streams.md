@@ -781,4 +781,4 @@ tools/streams/README.
 **Tests:** card link + blurb present/absent; build guard on an unknown table key; the build uses the cached extract
 and falls back to the old description when the article has none.
 
-- [ ] Commit (rebuilt data is gitignored).
+- [x] Commit (rebuilt data is gitignored).

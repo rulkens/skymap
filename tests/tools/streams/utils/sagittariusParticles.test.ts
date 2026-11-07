@@ -72,7 +72,7 @@ describe('sagittariusParticles', () => {
 
   it("the meta's anchor and extent read the full snapshot, not the capped pick", () => {
     const rows = sgrRows(40_000, 70_000).map((s, i) => ({ ...s, ra: i % 2 ? 10 : 200 }));
-    const meta = sagittariusMeta(rows, sagittariusParticles(rows, 1n));
+    const meta = sagittariusMeta(rows, sagittariusParticles(rows, 1n), null);
     const bound = rows.filter((s) => s.tStripGyr === 0);
     const anchor = [0, 1, 2].map(
       (c) =>
@@ -86,7 +86,9 @@ describe('sagittariusParticles', () => {
         ) / bound.length,
     );
     meta.anchorMpc.forEach((v, c) => expect(v).toBeCloseTo(anchor[c]!, 9));
-    expect(sagittariusMeta(rows, sagittariusParticles(rows, 2n)).lengthKpc).toBe(meta.lengthKpc);
+    expect(sagittariusMeta(rows, sagittariusParticles(rows, 2n), null).lengthKpc).toBe(
+      meta.lengthKpc,
+    );
   });
 
   it('the tangent is the rotated galactocentric velocity', () => {

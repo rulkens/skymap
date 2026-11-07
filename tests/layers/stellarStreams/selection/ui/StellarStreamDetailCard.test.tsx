@@ -55,4 +55,15 @@ describe('StellarStreamDetailCard', () => {
     renderCard(SAGITTARIUS);
     expect(screen.queryByText('Stellar mass')).toBeNull();
   });
+
+  it('a stream with an article gets a Wikipedia link and its blurb; one without gets neither', () => {
+    renderCard(SAGITTARIUS);
+    expect(screen.getByText('The tidal debris of the Sagittarius dwarf galaxy.')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Wikipedia' }).getAttribute('href')).toBe(
+      'https://en.wikipedia.org/wiki/Sagittarius_Stream',
+    );
+    cleanup();
+    renderCard(GD_1);
+    expect(screen.queryByText('Learn more')).toBeNull();
+  });
 });
