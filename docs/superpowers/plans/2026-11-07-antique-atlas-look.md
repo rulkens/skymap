@@ -81,7 +81,7 @@ export const ANTIQUE_PRINT_CELL_UNITS = 4;   // one print-point texel per 4 prin
 - [ ] `star-points-print` (seeded, own instance buffer) and `star-catalog-print` (leaf stream) draw m ≤ 5.75.
 - [ ] Glyph class = 5 − round(m); stars behind a body never print; peak detection deleted.
 - [ ] Test: apparent magnitude → class; Fomalhaut, Polaris, Dubhe are class ≥ 3 in `north`/`earth` at 1× and 2× (lookbench).
-- [ ] Phase 2: the galaxy Layer writes the same target, so galaxy views keep their dots.
+- [x] Phase 2: the galaxy Layer writes the same target, so galaxy views keep their dots (60abf475a, Task 32).
 
 ### Task 11: North-up and names (rulings 2026-11-07)
 - [x] Camera roll held at zero (celestial north up) while the look is on.
@@ -255,6 +255,17 @@ Owner ruling 2026-11-07: keep the generic galaxy engraving with these names; the
 - [x] Constellation names over star names (`AntiqueLabelRule.priority`); names coined after 1690 (Avior, Peacock, Tiaki, Larawag) as Bayer's letter, the modern name as gloss.
 - [x] The sgra view frames Sgr A* (its pose looked back at the Sun, the hole behind the camera).
 - Open: Greek letters (τ Ceti) need Greek in the IM Fell atlas (rebake + R2 sync); a constellation name anchored off the plate or under the title is dropped, not moved along its figure; English galaxy titles (Whirlpool Galaxy) await a ruling on a Latin form or a catalogue title with the modern gloss.
+
+### Task 32: Galaxies engraved, not contoured; route B phase 2 (review 7 #1 and #2)
+**Files:** `shaders/antiqueLook/{fragment,printPoint,glyphs,glow,nebula}.wesl`, `galaxyCatalog/points/printVertex.wesl`,
+`layers/galaxyCatalog/pointSprites/{passes/galaxyPointsPrintPass,render/galaxyPointPrintRenderer,render/printUniformBytesOf}.ts`,
+`data/rendering/{antiqueLook,frameSections}.ts`, `executeFrame.ts`, `utils/gpu/antiqueLook/placeAntiqueOrnaments.ts`, `web.wesl`
+- [x] Every point galaxy prints as a catalogue dot (`galaxy-points-print`, before the stars, forward Z); point sprites and the cosmic structure discs leave the print.
+- [x] Resolved galaxies stippled by light and two-scale relief, a closing nucleus, dust lanes as a light net; iso-lines, the dotted outline and the coherence field deleted.
+- [x] Stars past the naked eye print as dots to m 7.5 (the Via Lactea at Sgr A*); glyphs to m 5.75 unchanged.
+- [x] Constellation figures only within 10–50 pc of the Sun; a replacing composite of an empty source clears its dest (black deep-space frames).
+- [x] The Zone of Avoidance ruled lightest in the line hierarchy, its pitch and weight wandering by hand (`web.wesl`).
+- [ ] Panel r9 (cartographer 6, historian 6, art 5.5, fidelity 5; r7 galaxies 4.6). Open: the bar and nucleus are no brighter than the arms in the look's print, so they print no darker; the stipple's cell grid shows at 1x; M51's spiral at its default size; dense-field dots cap at one per print cell, not catalogue density; curved arm names; Latin names for post-1690 objects.
 
 ## Definition of Done
 

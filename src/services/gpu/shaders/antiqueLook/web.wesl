@@ -13,6 +13,8 @@ import package::antiqueLook::engraving::inkLine;
 import package::lib::util::raySphere;
 import package::lib::util::worldToGalactic;
 import package::antiqueLook::pigments::luma;
+import package::antiqueLook::paper::vnoise;
+import package::lib::util::hash21Hq;
 
 @group(0) @binding(0) var webTex: texture_2d<f32>;
 @group(0) @binding(1) var linear: sampler;
@@ -33,7 +35,12 @@ const WEB_BLUR: f32 = 12.0;
 const ZOA_LAT_DEG = vec2<f32>(5.0, 8.0);
 const ZOA_REACH_MPC: f32 = 300.0;
 const ZOA_STEPS: i32 = 12;
-const ZOA_RULE: f32 = 3.0;
+// Ruled by hand and lightest in the plate's line hierarchy (below the isobaths and
+// filaments): its pitch wanders by ZOA_WANDER of a pitch along each line, its weight
+// by line, so it reads as a light tint, never a machine screen.
+const ZOA_RULE: f32 = 4.2;
+const ZOA_WANDER: f32 = 0.3;
+const ZOA_INK: f32 = 0.32;
 
 // Share of the sight line within the survey's reach that lies in the dust wedge.
 fn zoaShare(eye: vec3<f32>, ray: vec3<f32>) -> f32 {
@@ -71,7 +78,12 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let wall = scatter(p, 3.2, 0.5 * smoothstep(0.0, 2.5, q) * (1.0 - smoothstep(2.5, 4.0, q)), 0.5) * 0.7;
   let ray = normalize(mix(mix(u.rayTL.xyz, u.rayTR.xyz, in.uv.x), mix(u.rayBL.xyz, u.rayBR.xyz, in.uv.x), in.uv.y));
   let zoa = smoothstep(0.4, 0.7, zoaShare(vec3<f32>(u.rayTR.w, u.rayBL.w, u.rayBR.w), ray));
-  let rule = inkLine(abs(fract(dot(p, vec2<f32>(0.7071, 0.7071)) / ZOA_RULE) - 0.5) * ZOA_RULE, 0.6, 1.0 / u.unit) * 0.6 * zoa;
+  let across = dot(p, vec2<f32>(0.7071, 0.7071)) / ZOA_RULE;
+  let along = dot(p, vec2<f32>(-0.7071, 0.7071));
+  let ruleIndex = floor(across + 0.5);
+  let wander = ZOA_WANDER * (vnoise(vec2<f32>(along * 0.015, ruleIndex * 1.7)) - 0.5);
+  let ruleWeight = 0.75 + 0.5 * hash21Hq(vec2<f32>(ruleIndex, 3.1));
+  let rule = inkLine(abs(fract(across + wander) - 0.5) * ZOA_RULE, 0.45 * ruleWeight, 1.0 / u.unit) * ZOA_INK * zoa;
   let weight = u.rayTL.w;
   return vec4<f32>(0.0, 0.0, max(max(isobath, wall), rule) * weight, (1.0 - smoothstep(-1.0, 0.6, q)) * weight);
 }
