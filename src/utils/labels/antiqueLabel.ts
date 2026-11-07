@@ -5,7 +5,8 @@
  * looking at (`subjectKept`) always keeps a label, its modern name Latinised when
  * the table has none, centred at the plate's one largest size. Other names sit
  * left-aligned so a lifted name falls upper-right of its glyph; a name set over the
- * land or sea it names (`ANTIQUE_AREA_LETTERING`) shows in its own cut, centred.
+ * land or sea it names (`ANTIQUE_AREA_LETTERING`) shows in its own cut, centred; a
+ * placed map name (`ANTIQUE_PLACE_LETTERING`) in its own cut and size.
  */
 
 import type { Label2D } from '../../@types/rendering/Label2D';
@@ -15,6 +16,7 @@ import type { AntiqueLettering } from '../../@types/rendering/AntiqueLettering';
 import { ANTIQUE_LABEL_STYLE } from '../../data/labels/antiqueLabelStyle';
 import { ANTIQUE_MODERN_NAME_EDITS } from '../../data/labels/antiqueModernNameEdits';
 import { ANTIQUE_AREA_LETTERING } from '../../data/labels/antiqueAreaLettering';
+import { ANTIQUE_PLACE_LETTERING } from '../../data/labels/antiquePlaceLettering';
 import { isKeyOf } from '../object/isKeyOf';
 
 const DIGIT = /\d/;
@@ -25,9 +27,12 @@ export function antiqueLabel(
   subjectKept: boolean,
   hasFont: (font: FontId) => boolean,
 ): Label2D | null {
+  const place = isKeyOf(ANTIQUE_PLACE_LETTERING, label.id)
+    ? ANTIQUE_PLACE_LETTERING[label.id]
+    : undefined;
   const area = isKeyOf(ANTIQUE_AREA_LETTERING, label.id)
     ? ANTIQUE_AREA_LETTERING[label.id]
-    : undefined;
+    : place?.cut;
   const name = rule && isKeyOf(rule.names, label.id) ? rule.names[label.id] : undefined;
   const hidden =
     area === undefined &&
@@ -65,15 +70,15 @@ export function antiqueLabel(
   // is full ink: the plate inks a caption by its fill's lightness.
   const italic = cut === 'italic' || cut === 'spacedItalic';
   const fell = italic ? style.italicFont : style.romanFont;
-  const px = subjectKept ? style.subjectPx : area ? style.areaPx : style[cut].px;
+  const px = subjectKept ? style.subjectPx : (place?.px ?? (area ? style.areaPx : style[cut].px));
   return {
     ...placed,
     text:
       cut === 'capitals' || cut === 'spacedItalic' ? text.toUpperCase().replace(/U/g, 'V') : text,
     font: hasFont(fell) ? fell : label.font,
-    trackingEm: style[cut].trackingEm,
+    trackingEm: place?.trackingEm ?? style[cut].trackingEm,
     color: [1, 1, 1, 1],
-    alignX: subjectKept || area ? 'center' : 'left',
+    alignX: subjectKept || (area && (place?.centred ?? true)) ? 'center' : 'left',
     minPixelSize: px,
     maxPixelSize: px,
   };

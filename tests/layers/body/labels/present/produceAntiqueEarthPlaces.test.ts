@@ -32,6 +32,7 @@ function ctxAbove(latDeg: number, lonDeg: number, radii: number): FrameView {
     snapshot: { bodyStates: STATES },
     drawCamPos: cam,
     drawPxPerRad: PX_PER_RAD,
+    canvasSize: { width: 1600, height: 900 },
   } as unknown as FrameView;
 }
 

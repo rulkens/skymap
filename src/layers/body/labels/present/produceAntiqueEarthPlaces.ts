@@ -19,6 +19,8 @@ import { CAPTION_PRIORITY_SCALE } from '../../../../data/labels/captionPriorityS
 import { SCENE_EARTH } from '../../../../data/bodies/sceneEarth';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { BODY_CAPTION_ROWS } from '../data/bodyCaptionRows';
+import { ANTIQUE_REFERENCE_HEIGHT_CSS } from '../../../../data/rendering/antiqueLook';
+import { antiqueMapDetail } from '../../earth/antiqueMap/utils/antiqueMapDetail';
 import { bodyCodeOf } from '../../selection/present/bodyCodeOf';
 import { antiqueLookOn } from '../../../../utils/render/antiqueLookOn';
 import { sceneBodyStates } from '../../../../services/engine/frame/sceneBodyStates';
@@ -37,7 +39,7 @@ export function produceAntiqueEarthPlaces(
 ): LayerScreenLabel<'body'>['produceLabels'] {
   const codeOf = bodyCodeOf(pickCodes);
   const { priority, item } = BODY_CAPTION_ROWS.earthPlace;
-  const { globePx, fitPx, sunCos, advanceEm, lineEm } = ANTIQUE_EARTH_PLACE_REVEAL;
+  const { globePx, fitPx, sunCos, detailOut, advanceEm, lineEm } = ANTIQUE_EARTH_PLACE_REVEAL;
   const radiusM = SCENE_EARTH.surface.datumRadiusM;
   const radiusMpc = radiusM * SCALE_UNITS.M_TO_MPC;
   // Half the larger side of each name's box as `antiqueLabel` sets it, px: what must stay inside the rim.
@@ -68,7 +70,16 @@ export function produceAntiqueEarthPlaces(
     const e = earth.positionMpc;
     const s = bodies.get('sun')!.positionMpc;
     const toSun = normalize3([s[0] - e[0], s[1] - e[1], s[2] - e[2]]);
-    const globeAlpha = smoothstep(globePx[0], globePx[1], diameterPx) * fade[item];
+    const altitudeKm =
+      (Math.hypot(e[0] - cam[0], e[1] - cam[1], e[2] - cam[2]) * SCALE_UNITS.MPC_TO_M - radiusM) /
+      1000;
+    const unitsPerRad = ctx.drawPxPerRad / (ctx.canvasSize.height / ANTIQUE_REFERENCE_HEIGHT_CSS);
+    const detail = antiqueMapDetail(unitsPerRad, altitudeKm);
+    const globeAlpha =
+      smoothstep(globePx[0], globePx[1], diameterPx) *
+      (1 - smoothstep(detailOut[0], detailOut[1], detail)) *
+      fade[item];
+    if (globeAlpha <= 0) return NONE;
     const rimPx = diameterPx / 2;
     const subjectId = sceneBodyPickId(SCENE_EARTH.id, codeOf) ?? undefined;
 

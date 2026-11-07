@@ -4,18 +4,17 @@
  * Capitals arrive with the continent, towns with the country, villages near city
  * scale. A walled town is drawn in plan only on a regional plate, as Visscher
  * drew Holland (1690); coarser, it prints the profile sign of a small-scale map.
- * Sizes in print units, the sign's full height; name px at the label clamp.
+ * Sizes in print units, the sign's full height.
  */
 
 export const ANTIQUE_TOWN_REVEAL = {
   tierLevel: [0, 1, 3, 5],
   planLevel: 4,
-  profileUnits: [22, 17, 14, 12],
-  planUnits: [30, 22, 16, 14],
-  fortressUnits: 18,
-  villageUnits: 12,
-  hamletUnits: 8,
-  namePx: [19, 16, 14, 12],
+  profileUnits: [30, 24, 20, 17],
+  planUnits: [34, 26, 20, 17],
+  fortressUnits: 22,
+  villageUnits: 16,
+  hamletUnits: 10,
 } as const;
 
 /** `townSigns.wesl`'s kind codes and see flags. */

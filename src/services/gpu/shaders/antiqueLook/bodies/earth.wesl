@@ -39,12 +39,12 @@ fn earthPrint(col: vec3<f32>, cover: f32, e: EarthPrintIn) -> BodyPrint {
   if (waterFade > 0.0) {
     water = waterLines(e.p, e.seaD, e.seaPerUnit, e.pxUnits) * waterFade;
   }
-  // Seas a pale smalt, pooled darker along the shore; land in Dutch outline
-  // colour, a band along each coast fading inward to paper. The colourist's
-  // wash stops a little off the cut coast, by a slow wander.
+  // Seas mostly paper, as Dutch colourists left them, smalt pooled along the
+  // shore; land in Dutch outline colour, a band along each coast fading inward
+  // to paper. The colourist's wash stops a little off the cut coast, by a slow wander.
   let near = clamp(1.0 - e.seaD / 16.0, 0.0, 1.0);
   let inland = seaDistance(1.0 - e.blurredShare);
-  let seaWash = (0.14 + 0.1 * near) * (1.0 - smoothstep(0.35, 0.65, e.washShare));
+  let seaWash = (0.03 + 0.17 * pow(near, 1.5)) * (1.0 - smoothstep(0.35, 0.65, e.washShare));
   // Each realm takes its own pigment along its coasts and its borders alike.
   let code = i32(round(e.geo.r * 255.0));
   let realm = code >= 1 && code <= 7;

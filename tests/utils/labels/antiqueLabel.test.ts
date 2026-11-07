@@ -6,6 +6,8 @@ import { bodyCaption } from '../../../src/utils/labels/bodyCaption';
 import { ANTIQUE_LABEL_RULES } from '../../../src/data/labels/antiqueLabelRules';
 import { ANTIQUE_LABEL_STYLE } from '../../../src/data/labels/antiqueLabelStyle';
 import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
+import { ANTIQUE_EARTH_TOWNS } from '../../../src/data/labels/antiqueEarthTowns';
+import { ANTIQUE_PLACE_LETTERING } from '../../../src/data/labels/antiquePlaceLettering';
 import { ANTIQUE_EARTH_PLACES } from '../../../src/data/labels/antiqueEarthPlaces';
 
 const label = (id: string, text: string): Label2D => ({
@@ -162,6 +164,17 @@ describe('antiqueLabel', () => {
     }
     const europa = antiqueLabel(label('earthPlace-europa', 'Europa'), rule, false, ALL_FONTS)!;
     expect(europa.text).toBe('EVROPA');
+  });
+
+  it("sets a town beside its sign in its tier's cut and size, whatever the body rule hides", () => {
+    const rule = ANTIQUE_LABEL_RULES.body;
+    const city = antiqueLabel(label('earthTown-amsteldam', 'Amsteldam'), rule, false, ALL_FONTS)!;
+    expect(city.alignX).toBe('left');
+    expect(city.font).toBe(ANTIQUE_LABEL_STYLE.romanFont);
+    expect(city.minPixelSize).toBe(ANTIQUE_PLACE_LETTERING['earthTown-amsteldam']!.px);
+    const village = ANTIQUE_EARTH_TOWNS.find((town) => town.tier === 3)!;
+    const shown = antiqueLabel(label(village.id, village.name), rule, false, ALL_FONTS)!;
+    expect(shown.font).toBe(ANTIQUE_LABEL_STYLE.italicFont);
   });
 
   it("sets an arm of the Galaxy in letter-spaced italic capitals, V for U, under the Milky Way's rule", () => {
