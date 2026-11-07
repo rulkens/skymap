@@ -16,9 +16,13 @@
   -webkit-backdrop-filter: blur(var(--blur-card));
   backdrop-filter: blur(var(--blur-card));
 
-  border: 1px solid var(--border-card);
+  /* The antique look sets it in the title cartouche (common/framedTitle.module.css hooks). */
+  min-height: var(--title-cartouche-height, auto);
+  border: solid var(--border-card);
+  border-width: var(--title-cartouche-border, 1px);
+  border-image: var(--title-cartouche-image, none);
   border-radius: var(--radius-pill);
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--framed-shadow, var(--shadow-card));
 
   /* The icon's colour; the text spans set their own. */
   color: var(--color-fg-dim);
@@ -68,4 +72,10 @@
   color: var(--color-fg-dim);
   font-size: var(--font-size-xs);
   letter-spacing: var(--letter-spacing-wide);
+}
+
+@media (forced-colors: active) {
+  .trigger {
+    border-image: none;
+  }
 }

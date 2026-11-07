@@ -1,9 +1,42 @@
 /*
- * CardHeader.module.css — the header's two arrangements. Without `.compact` the
- * eyebrow bar stacks over the name (the desktop card). `.compact` (the phone
- * sheet) turns the root into a grid: name first, actions at its right, the
- * eyebrow and badge as a meta line.
+ * CardHeader.module.css — the header's arrangements. Without `.compact` the
+ * eyebrow bar stacks over the name (the desktop card); a look that frames the
+ * card (`--card-header-*` hooks, styles/antique.css) lifts the name above the bar
+ * into a cartouche astride the frame's top rule (common/framedTitle.module.css).
+ * `.compact` (the phone sheet) turns the root into a grid: name first, actions at
+ * its right, the eyebrow and badge as a meta line.
  */
+.root {
+  display: var(--card-header-display, block);
+  flex-direction: column;
+}
+
+/* Two classes, so these hooks outrank the composed cardChrome rules whatever their load order. */
+.root .headlineRow {
+  gap: var(--card-headline-gap, var(--space-4));
+  flex-wrap: var(--card-headline-wrap, nowrap);
+  order: var(--card-headline-order, 0);
+  margin: var(--card-headline-row-margin, 0 0 var(--space-4));
+}
+
+.root .headline {
+  flex: var(--card-headline-flex, 1);
+  padding: var(--card-headline-padding, 0);
+  font-size: var(--card-headline-size, var(--font-size-xl));
+  /* No fallback: unset, the property inherits as before. */
+  text-align: var(--card-headline-align);
+  word-break: var(--card-headline-break, break-all);
+}
+
+/* Framed, the source badge reads as a subtitle on its own line under the cartouche. */
+.root .badge {
+  flex-basis: var(--card-badge-basis, auto);
+  order: var(--card-badge-order, 0);
+  border-color: var(--card-badge-rule, var(--border-control));
+  background: var(--card-badge-ground, var(--surface-badge));
+  text-align: center;
+}
+
 .bar {
   composes: cardTitle from '../cardChrome.module.css';
 }
@@ -14,10 +47,12 @@
 
 .headlineRow {
   composes: headlineRow from '../cardChrome.module.css';
+  composes: row from '../../common/framedTitle.module.css';
 }
 
 .headline {
   composes: cardHeadline from '../cardChrome.module.css';
+  composes: cartouche from '../../common/framedTitle.module.css';
 }
 
 .badge {
@@ -35,6 +70,14 @@
 .compact {
   /* Alias spans in the title (cardChrome's headlineAlias) read this: same size as the name. */
   --headline-alias-size: 1em;
+  /* The sheet is never framed: the header keeps its plain arrangement in every look. */
+  --framed-flank-display: none;
+  --title-cartouche-image: none;
+  --title-cartouche-border: 0;
+  --title-cartouche-height: auto;
+  --card-headline-padding: 0;
+  --card-headline-size: var(--font-size-xl);
+  --card-headline-align: start;
   display: grid;
   grid-template-columns: minmax(0, auto) auto 1fr auto;
   grid-template-areas:

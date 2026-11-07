@@ -19,7 +19,8 @@
   /* When standalone, fix directly to the corner */
   display: block;
   position: fixed;
-  top: var(--corner-offset);
+  /* A framed card's title cartouche rides above its top edge: keep it on screen. */
+  top: calc(var(--corner-offset) + var(--framed-overhang, 0px));
   right: var(--corner-offset);
   z-index: 10;
 
@@ -41,12 +42,22 @@
   -webkit-backdrop-filter: blur(var(--blur-card));
   backdrop-filter: blur(var(--blur-card));
 
-  border: 1px solid var(--border-card);
+  /* The antique look's engraved frame hooks: see common/Panel/Panel.module.css. */
+  border: var(--frame-border, 1px) solid var(--border-card);
+  border-image: var(--frame-image, none);
   border-radius: var(--radius-2xl);
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--framed-shadow, var(--shadow-card));
+  min-height: var(--framed-min-height, auto);
+  padding-bottom: var(--framed-body-padding-bottom, var(--space-7));
 
   color: var(--color-fg-base);
   font: var(--font-size-lg) / var(--line-height-relaxed) var(--font-family-mono);
+}
+
+@media (forced-colors: active) {
+  .infoCardFull {
+    border-image: none;
+  }
 }
 
 /*
@@ -89,9 +100,12 @@
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
   border: none;
+  border-image: none;
   border-radius: 0;
   box-shadow: none;
   min-width: 0;
+  min-height: auto;
+  padding-bottom: var(--space-7);
   max-width: none;
   /* The sheet's handle already sits above; the header's name row starts right under it. */
   padding-top: 0;
@@ -394,6 +408,7 @@ details:not([open]) > .detailsSummary::before {
  * dominate the already tight overlay.
  */
 .focusButton {
+  composes: tablet from '../common/tablet.module.css';
   margin-left: var(--space-4);
   padding: var(--space-1) var(--space-4);
   border: 1px solid var(--border-control);
@@ -433,6 +448,7 @@ details:not([open]) > .detailsSummary::before {
  * button, distinguishing it from the rectangular Focus pill.
  */
 .closeButton {
+  composes: tablet from '../common/tablet.module.css';
   margin-left: var(--space-2);
   width: 1.6em;
   height: 1.6em;

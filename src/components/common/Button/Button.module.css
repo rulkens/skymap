@@ -8,6 +8,7 @@
  * without per-consumer wiring.
  */
 .root {
+  composes: tablet from '../tablet.module.css';
   font: inherit;
   letter-spacing: var(--letter-spacing-mid);
   padding: var(--space-3) var(--space-5);
@@ -65,6 +66,11 @@
   text-decoration: underline;
   font-size: 12px;
   letter-spacing: 0;
+}
+
+/* Two classes: a text button is never a tablet, whichever module the bundler emits last. */
+.root.ghost {
+  border-image: none;
 }
 
 .ghost:hover:not(:disabled),

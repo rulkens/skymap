@@ -45,7 +45,7 @@ function CardHeader({
   const hasThumbnail = phone && thumbnail != null;
   return (
     <div
-      className={cx(phone && styles.compact, hasThumbnail && styles.withThumbnail)}
+      className={cx(styles.root, phone && styles.compact, hasThumbnail && styles.withThumbnail)}
       // The phone sheet's top section: MobileSheet drags from it once expanded.
       data-sheet-grip={phone || undefined}
     >

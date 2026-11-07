@@ -108,12 +108,11 @@
   --gradient-accent-bar: none;
   --toggle-thumb-on: var(--antique-paper);
 
-  /* The photo as an ink-on-paper plate: grey and punchier, black lifted to the ink's 17%
-   * (the invert pair), warmed a touch, then multiplied into the panel's paper. */
-  --thumbnail-filter: grayscale(1) brightness(1.2) contrast(1.35) invert(1) brightness(0.83)
-    invert(1) sepia(0.3);
-  --thumbnail-filter-hover: var(--thumbnail-filter) brightness(1.1);
-  --thumbnail-blend: multiply;
+  /* The photo engraved: hatched in ink on the card's paper (components/EngravingFilter,
+   * mounted by App while the look is on). Its output is ink as alpha: no blend needed. */
+  --thumbnail-filter: url(#antique-engrave);
+  --thumbnail-filter-hover: url(#antique-engrave) brightness(1.6);
+  --thumbnail-blend: normal;
 
   --blur-panel: 0px;
   --blur-card: 0px;
@@ -147,6 +146,8 @@
   --framed-shadow: none;
   --framed-min-height: calc(2 * var(--frame-slice));
   --framed-flank-display: block;
+  --framed-overhang: calc((var(--title-cartouche-height) - var(--frame-border)) / 2);
+  --framed-flank-offset: calc((var(--title-cartouche-height) - var(--frame-border)) / 2);
   /* Clears the bottom corners' acanthus. */
   --framed-body-padding-bottom: calc(var(--frame-slice) - var(--frame-border));
   /* The title row spans corner slice to corner slice and centres the cartouche on the
@@ -163,6 +164,40 @@
   --panel-extra-basis: 100%;
   --panel-extra-order: 1;
   --panel-extra-margin: calc(var(--frame-border) - var(--frame-slice));
+  /* The InfoCard: the name lifts above the eyebrow bar into the cartouche. */
+  --card-header-display: flex;
+  --card-headline-order: -1;
+  --card-headline-wrap: wrap;
+  /* The rules run up to the cartouche's ends. */
+  --card-headline-gap: 0;
+  --card-headline-row-margin: calc(-0.5 * (var(--frame-border) + var(--title-cartouche-height)) - var(--space-7))
+    calc(var(--frame-slice) - var(--frame-border) - var(--space-9)) var(--space-4);
+  --card-headline-flex: none;
+  --card-headline-padding: 0 var(--space-4);
+  --card-headline-size: var(--antique-title-size);
+  --card-headline-align: center;
+  --card-headline-break: normal;
+  --card-badge-basis: 100%;
+  --card-badge-order: 1;
+  --card-badge-rule: transparent;
+  --card-badge-ground: transparent;
+  /* The pill toggle becomes an engraved check box (images: --toggle-image, --toggle-image-on);
+   * 15px drawn inside a 1px rule that only shows on hover. */
+  --toggle-width: 17px;
+  --toggle-height: 17px;
+  --toggle-radius: 0;
+  --toggle-rule: transparent;
+  --toggle-thumb-display: none;
+  /* The slider pill: label and value over a scale of miles (--scale-track-image), the value
+   * a verdigris wash laid along the bar up to a lozenge pointer. */
+  --slider-ground: transparent;
+  --slider-padding: var(--space-1) 0 calc(var(--scale-track-height) + var(--space-1));
+  --slider-fill-inset: auto auto 2px 0;
+  --slider-fill-height: 6px;
+  --slider-fill-blend: multiply;
+  --slider-pointer-display: block;
+  --slider-pointer-size: 11px;
+  --slider-pointer-bottom: -3px;
   /* Room for the half-cartouche above each panel. */
   --left-stack-gap: calc(var(--space-4) + var(--title-cartouche-height) / 2);
 }

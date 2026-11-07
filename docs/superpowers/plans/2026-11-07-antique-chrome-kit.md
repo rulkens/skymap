@@ -75,13 +75,18 @@ antiqueChromeCss(): string
 
 ### Task 2: The InfoCard frame and name cartouche
 
-**Files:** `src/components/InfoCard/cardChrome.module.css`,
-`src/components/InfoCard/CardHeader/CardHeader.module.css`, `src/styles/antique.css`
+**Files:** `src/components/common/framedTitle.module.css` (new: the flanked row and the
+cartouche, shared by Panel and CardHeader), `src/components/InfoCard/cardChrome.module.css`,
+`src/components/InfoCard/InfoCard.module.css`, `src/components/InfoCard/CardHeader/{CardHeader.tsx,CardHeader.module.css}`,
+`src/styles/antique.css`
 
 The full card wears the open-top frame. CardHeader's name row moves above the eyebrow bar with
-`order`, and becomes the cartouche astride the top rule, flanked like the Panel title. Tokens:
-`--card-headline-*`. The phone layout (`.compact`) keeps its own order. No new test: this is
-CSS-only and checked by the shots.
+`order`, and becomes the cartouche astride the top rule, flanked like the Panel title. The card
+drops by the cartouche's overhang (`--framed-overhang`) so the cartouche stays on screen. Tokens:
+`--card-header-*`, `--card-headline-*`, `--card-badge-*`. The phone layout (`.compact`) resets
+the framed tokens and keeps its own order. No new test: this is CSS-only and checked by the shots.
+
+- [x] Done; the source badge becomes a subtitle line under the cartouche.
 
 ### Task 3: Engraved check box
 
@@ -96,7 +101,7 @@ The pill becomes a 15 px double-ruled square. On draws a saltire over a verdigri
 empty. Shape carries the state, so colour is never the only signal. Hooks: `--toggle-width`,
 `--toggle-height`, `--toggle-image`, `--toggle-image-on`, `--toggle-thumb-display`.
 
-- [ ] Test `draws the saltire only when checked` (the on markup has the saltire path, the off markup does not).
+- [x] Test `draws the saltire and the wash only when checked, so the state is a shape as well as a colour`.
 
 ### Task 4: Tablet buttons and washes
 
@@ -106,9 +111,13 @@ empty. Shape carries the state, so colour is never the only signal. Hooks: `--to
 `src/components/InfoCard/CardHeader/CardHeader.module.css`, `antiqueChromeCss.ts`, `antique.css`
 
 `tabletSvg(ink: string, ground: string): SliceImage` draws the incurved-corner tablet, used as a
-9-slice `border-image` via `--tablet-image` and `--tablet-border`. Hover and press re-point
-`--surface-control-hover` and `--surface-control-active` to gamboge washes. Text on a wash stays
-full ink, never a dim token. No test: the SVG is a fixed drawing with no logic.
+9-slice `border-image` (`--tablet-image`) through the shared `common/tablet.module.css`. The
+tablet's fill is the button's ground and paints over its background, so the states swap the
+image's source to one with a wash baked in (`--tablet-source-{hover,pressed,selected}`), mixed
+by `utils/color/multiplyWashHex(paper, pigment, strength)`. Text on a wash stays full ink. The
+search trigger takes the title cartouche instead. No test for the tablet drawing (no logic).
+
+- [x] Test `multiplyWashHex leaves bare paper at strength 0 and multiplies the full pigment in at 1`.
 
 ### Task 5: Scale of miles
 
@@ -125,13 +134,13 @@ A 3-slice track. The first unit is subdivided into quarters, as on Blaeu's scale
 units follow in a two-row chequer that `round` repeats. The ScaleBar's bracket and the Settings
 range track both take it; the range thumb is the lozenge pointer.
 
-- [ ] Test `repeats a two-unit chequer between the subdivided start and the end rule`
+- [x] Test `repeats a two-unit chequer between the subdivided start and the end rule`
       (`start` = 1 unit, the middle slice = 2 units, `end` = the end rule).
 
 ### Task 6: Engraved thumbnail
 
 **Files:** `src/components/EngravingFilter/{EngravingFilter.tsx,EngravingFilter.module.css}`,
-`src/utils/antiqueChrome/hatchTileSvg.ts`, `tests/components/EngravingFilter/EngravingFilter.test.tsx`,
+`src/utils/antiqueChrome/{hatchTileSvg,svgDataUri}.ts`, `tests/components/App/App.antiqueLook.test.tsx`,
 `src/components/App/App.tsx`, `antique.css`
 
 `EngravingFilter` is a zero-size `<svg>` holding `#antique-engrave`, the prototype's
@@ -139,7 +148,9 @@ tone-width hatch filter. `App` mounts it only while the look is on. `antique.css
 `--thumbnail-filter: url(#antique-engrave)` and drops the multiply blend. The hatch tiles are
 SVG linear gradients repeated at a fixed pitch, so no canvas is needed.
 
-- [ ] Test `renders the filter that antique.css references by id`.
+- [x] Test (in `tests/components/App/App.antiqueLook.test.tsx`) `injects the chrome tokens and the
+      engraving filter while the look is on, and removes them after`; the filter id is read from
+      `antique.css`.
 
 ### Task 7: Accessibility and colour contract
 
@@ -148,7 +159,7 @@ SVG linear gradients repeated at a fixed pitch, so no canvas is needed.
 - A 2 px rubric focus ring (`--focus-ring-width`) in every touched module.
 - Each touched module has a forced-colours fallback (`border-image: none`) and a
   reduced-motion branch.
-- [ ] Test `the generated SVG colours match antique.css's ink and ground`: read `antique.css`,
+- [x] Test `bakes antique.css's ink and panel paper into the generated SVGs`: read `antique.css`,
       parse `--antique-ink` and `--antique-slip`, and compare them with `ANTIQUE_CHROME_INK` and
       `ANTIQUE_CHROME_GROUND`.
 

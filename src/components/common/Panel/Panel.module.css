@@ -1,9 +1,9 @@
 /*
  * Panel.module.css — the shared card chrome of the left-stack panels (Navigation, Settings).
- * Every value is a token. The `--frame-*`, `--title-cartouche-*` and `--panel-title-*`
- * hooks are unset in the plain look (each falls back to today's value); the antique look
- * fills them (styles/antique.css, utils/antiqueChrome/antiqueChromeCss) to draw an
- * engraved frame whose title cartouche sits astride the top rule, flanked by rule strips.
+ * Every value is a token. The `--frame-*`, `--framed-*` and `--panel-title-*` hooks are
+ * unset in the plain look (each falls back to today's value); the antique look fills them
+ * (styles/antique.css, utils/antiqueChrome/antiqueChromeCss) to draw an engraved frame with
+ * the title astride its top rule (framedTitle.module.css).
  */
 
 .panel {
@@ -24,6 +24,7 @@
 }
 
 .titleRow {
+  composes: row from '../framedTitle.module.css';
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -32,28 +33,15 @@
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
 }
 
-/* The frame's top rules, either side of the cartouche: flex sizes the gap to the title. */
-.titleRow::before,
-.titleRow::after {
-  content: '';
-  display: var(--framed-flank-display, none);
-  flex: 1 1 0;
-  height: var(--frame-border);
-  background: var(--frame-edge);
-}
-
 /* A real <button>: focus, Enter/Space and `aria-expanded` come free. */
 .titleButton {
+  composes: cartouche from '../framedTitle.module.css';
   display: flex;
   align-items: var(--panel-title-align, baseline);
   flex: var(--panel-title-flex, 1);
   min-width: 0;
-  height: var(--title-cartouche-height, auto);
   padding: var(--panel-title-padding, var(--space-5) var(--space-7));
   background: transparent;
-  border: solid transparent;
-  border-width: var(--title-cartouche-border, 0);
-  border-image: var(--title-cartouche-image, none);
   font: inherit;
   text-align: left;
   cursor: pointer;

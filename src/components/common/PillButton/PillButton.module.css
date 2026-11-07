@@ -11,6 +11,7 @@
  * wrapper, so the pill needs no positioning context of its own.
  */
 .root {
+  composes: tablet from '../tablet.module.css';
   width: 40px;
   height: 40px;
   flex-shrink: 0;
@@ -24,7 +25,7 @@
   backdrop-filter: blur(var(--blur-card));
   border: 1px solid var(--border-card);
   border-radius: var(--radius-pill);
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--framed-shadow, var(--shadow-card));
 
   color: var(--color-fg-dim);
   cursor: pointer;

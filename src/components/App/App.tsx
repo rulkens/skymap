@@ -33,6 +33,7 @@ import TourBeatRailContainer from '../containers/TourBeatRailContainer';
 import ExhibitOverlayContainer from '../containers/ExhibitOverlayContainer';
 import { isCinemaMode } from '../../utils/url/isCinemaMode';
 import { antiqueChromeCss } from '../../utils/antiqueChrome/antiqueChromeCss';
+import EngravingFilter from '../EngravingFilter/EngravingFilter';
 import { selectTourActive } from '../../state/tour/selectors';
 import { selectTakeoverSource } from '../../state/takeover/selectors';
 import { selectAntiqueEnabled } from '../../state/settings/selectors';
@@ -137,6 +138,7 @@ export function App(): React.ReactElement {
       {exhibitOverlay}
       {/* Progress chrome: interactive session only, never the cinema frames. */}
       {tourActive && <TourBeatRailContainer />}
+      {antique && <EngravingFilter />}
       <SplashContainer />
       <ArrivalVeilContainer />
       <PairingOverlayContainer />

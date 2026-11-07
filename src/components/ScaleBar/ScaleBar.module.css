@@ -68,7 +68,9 @@
  */
 .scaleLine {
   display: inline-block;
-  height: 7px;
+  height: var(--scale-track-height, 7px);
+  /* The antique look's scale of miles (utils/antiqueChrome/scaleTrackSvg). */
+  border-image: var(--scale-track-image, none);
   border-left: 1px solid var(--color-accent-bright);
   border-right: 1px solid var(--color-accent-bright);
   border-bottom: 1px solid var(--color-accent-bright);

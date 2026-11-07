@@ -1,4 +1,6 @@
-/** An SVG document as a CSS `url()`; percent-encoded so `#` (colours, fragment refs) survives. */
+import { svgDataUri } from './svgDataUri';
+
+/** An SVG document as a CSS `url()`. */
 export function svgDataUrl(svg: string): string {
-  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+  return `url("${svgDataUri(svg)}")`;
 }
