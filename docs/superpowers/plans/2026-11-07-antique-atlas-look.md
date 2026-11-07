@@ -99,6 +99,19 @@ export const ANTIQUE_PRINT_CELL_UNITS = 4;   // one print-point texel per 4 prin
 - [x] Shown when the globe is 200–250 px or more across, the name's box fits inside the rim, and the anchor is in daylight or twilight.
 - [x] A name carries Earth as subject (focus emphasis) but is never set as Earth's title; tests for the producer, the cut and the director.
 
+### Task 14: Engraved bodies (recipe: the five-round offline model, round 5)
+**Files:** `src/services/gpu/shaders/antiqueLook/{engraving,fragment,plateBodies,landBlur}.wesl`,
+`src/services/gpu/passes/antiqueLook/{antiquePlateBodies,antiqueLook,createAntiqueLookGpu,antiqueLookTargetRows}.ts`,
+`src/utils/gpu/antiqueLook/{antiquePlateBody,packAntiquePlateBodies}.ts`, `src/data/rendering/antiquePlateBodies.ts`,
+`src/@types/rendering/{AntiquePlateBody,AntiquePlateRing}.d.ts`
+- [x] `PlateBodies` uniform: up to four of the widest resolved globes plus Earth, from `ctx` body states at the drawn (inner-bound) radius; no Layer contract change; packing tested against the WGSL struct.
+- [x] Burin hatching on four widths, rank-ordered arrival, bowed half-way toward the globe; 27° second set only past tone 0.8; reflected light on the night limb.
+- [x] Saturn's ring as paper: C, B, Cassini and A ellipses plus the dotted C hairline; the ball's shadow hatched along the ring, the ring's shadow on the ball one solid stroke.
+- [x] Water lines from a probit of the land share blurred in two quarter-res passes (run only under Earth's land map); land and sea washes only on a record flagged Earth, so Saturn's yellow fringe is gone.
+- [x] No record within 1.02× a body's highest peak, so surface views (Jezero) keep the plain path and their real horizon.
+
+Open for the owner: reflected light lightens Earth's night side near the limb (the period convention).
+
 ## Definition of Done
 
 **Deliverables:** the `stylize` FRAME_ORDER line and `antiqueLook` pass; the `antique` settings
