@@ -14,6 +14,7 @@ import {
   ANTIQUE_PRINT_POINTS_DEPTH,
   ANTIQUE_PRINT_POINTS_FORMAT,
   ANTIQUE_REFERENCE_HEIGHT_CSS,
+  ANTIQUE_STRUCTURE_CELL,
   ANTIQUE_TARGETS,
 } from '../../../../data/rendering/antiqueLook';
 import { HDR_TARGET_FORMAT } from '../../../../data/renderTargetFormats';
@@ -42,6 +43,9 @@ export function antiqueLookTargetRows(swapFormat: GPUTextureFormat): readonly Re
     row(ANTIQUE_TARGETS.wash, HDR_TARGET_FORMAT, ANTIQUE_CELL),
     row(ANTIQUE_TARGETS.glow, HDR_TARGET_FORMAT, ANTIQUE_CELL * 4),
     row(ANTIQUE_TARGETS.nebula, HDR_TARGET_FORMAT, ANTIQUE_CELL),
+    // The structure markers, moved off the print (ANTIQUE_MOVED_PASSES), and their low band.
+    row(ANTIQUE_TARGETS.structures, HDR_TARGET_FORMAT, ANTIQUE_STRUCTURE_CELL),
+    row(ANTIQUE_TARGETS.structureGlow, HDR_TARGET_FORMAT, ANTIQUE_CELL * 4),
     row(
       ANTIQUE_TARGETS.printPoints,
       ANTIQUE_PRINT_POINTS_FORMAT,

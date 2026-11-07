@@ -58,7 +58,14 @@ export const ANTIQUE_MOVED_PASSES: Readonly<Record<string, string>> = {
   constellations: 'antique-lines',
   'orbit-trails': 'antique-lines',
   'mission-trails': 'antique-lines',
+  'structure-markers-cosmo': 'antique-structures',
+  'structure-markers-near': 'antique-structures',
 };
+
+/** The structure markers' row is half res: their halos are soft, and the low band
+ * erodes their rings away anyway. Mirrored by `structureGlow.wesl`'s 8×8 box (1/16
+ * of the print). */
+export const ANTIQUE_STRUCTURE_CELL = 2;
 
 /** The land row's format: r land share, g covered (`earth/fragment.wesl` `fsOceanMask`,
  * `texturedBody/fragment.wesl` `fsAlbedoMask`). */
@@ -76,6 +83,8 @@ export const ANTIQUE_TARGETS = {
   paper: 'antique-paper',
   wash: 'antique-wash',
   glow: 'antique-glow',
+  structures: 'antique-structures',
+  structureGlow: 'antique-structure-glow',
   nebula: 'antique-nebula',
   printPoints: 'antique-print-points',
   starInk: 'antique-star-ink',

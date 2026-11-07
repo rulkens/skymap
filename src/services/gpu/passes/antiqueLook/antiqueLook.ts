@@ -163,6 +163,9 @@ export function createAntiqueLook(init: {
     const wash = targets.viewOf(ANTIQUE_TARGETS.wash);
     const glow = targets.viewOf(ANTIQUE_TARGETS.glow);
     const nebula = targets.viewOf(ANTIQUE_TARGETS.nebula);
+    // The structure markers, when one drew this frame: their own low band, else nothing.
+    const structured = ctx.snapshot.renderedTargets.has(ANTIQUE_TARGETS.structures);
+    const structureGlow = structured ? targets.viewOf(ANTIQUE_TARGETS.structureGlow) : g.empty;
     const starInk = targets.viewOf(ANTIQUE_TARGETS.starInk);
     const decor = targets.viewOf(ANTIQUE_TARGETS.decor);
     const decorHue = targets.viewOf(ANTIQUE_TARGETS.decorHue);
@@ -213,6 +216,12 @@ export function createAntiqueLook(init: {
     );
     fullScreen(encoder, 'glow', [glow], g.glow, [wash]);
     fullScreen(encoder, 'nebula', [nebula], g.nebula, [wash, g.clampSampler]);
+    if (structured) {
+      fullScreen(encoder, 'structure-glow', [structureGlow], g.structureGlow, [
+        targets.viewOf(ANTIQUE_TARGETS.structures),
+        g.clampSampler,
+      ]);
+    }
     const floorPass = encoder.beginComputePass({ label: 'antique-look-sky-floor' });
     floorPass.setPipeline(g.skyFloor.pipeline);
     floorPass.setBindGroup(
@@ -304,6 +313,7 @@ export function createAntiqueLook(init: {
         landBlur,
         nebula,
         { buffer: g.skyFloorBuffer },
+        structureGlow,
       ],
       end,
     );

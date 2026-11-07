@@ -68,6 +68,8 @@ import package::antiqueLook::pigments::pigmentAt;
 @group(0) @binding(16) var nebulaTex: texture_2d<f32>;
 // This frame's field floor: the glow's 30th-percentile luma (`skyFloor.wesl`).
 @group(0) @binding(17) var<storage, read> skyFloor: f32;
+// The structure markers' low band (`structureGlow.wesl`): premultiplied rgb, a coverage.
+@group(0) @binding(18) var structureGlowTex: texture_2d<f32>;
 
 // The border's numbering, placed per frame by `placeAntiqueNumerals`.
 struct Glyph {
@@ -102,6 +104,9 @@ const LINE_ALPHA: f32 = 0.5;
 // Glow levels: the outline-colour boundary, and one inner contour.
 const GLOW_EDGE: f32 = 0.13;
 const GLOW_CORE: f32 = 0.4;
+// The same two levels on the structure markers' coverage (their halos' alpha).
+const STRUCTURE_EDGE: f32 = 0.05;
+const STRUCTURE_CORE: f32 = 0.18;
 // The galaxy engraving (RECIPE.md Part 2), levels in the print's luma: the lowest
 // outline, where iso-lines take over from stipple (LINE_ON mirrors nebula.wesl),
 // the tone ramp and how hard a band's relief over its 1/16 surroundings drives it.
@@ -110,7 +115,7 @@ const LINE_ON: f32 = 0.16;
 const TONE_LO: f32 = 0.08;
 const RELIEF_GAIN: f32 = 2.0;
 // Unsharp weight on the line field: what bends the isophotes round the arms.
-const LINE_UNSHARP: f32 = 2.5;
+const LINE_UNSHARP: f32 = 1.5;
 const GALAXY_WASH: f32 = 0.22;
 
 fn texel(t: texture_2d<f32>, ip: vec2<i32>) -> vec4<f32> {
@@ -160,17 +165,33 @@ fn landAt(uv: vec2<f32>) -> f32 {
   return select(1.0, sum / weight, weight > 1e-4);
 }
 
-// The low band at 1/16 res, smoothed over nine bilinear taps: contours drawn on
-// it must be curves, not the stair-steps of its texels.
-fn glowAt(uv: vec2<f32>) -> vec3<f32> {
-  let t = 1.0 / vec2<f32>(textureDimensions(glowTex));
-  var sum = textureSampleLevel(glowTex, linear, uv, 0.0).rgb * 4.0;
+// A 1/16-res low band smoothed over nine bilinear taps: contours drawn on it
+// must be curves, not the stair-steps of its texels.
+fn lowBandAt(tex: texture_2d<f32>, uv: vec2<f32>) -> vec4<f32> {
+  let t = 1.0 / vec2<f32>(textureDimensions(tex));
+  var sum = textureSampleLevel(tex, linear, uv, 0.0) * 4.0;
   for (var k = 0; k < 8; k++) {
     let a = f32(k) * 0.7853982;
     let w = select(1.0, 2.0, (k & 1) == 0);
-    sum += textureSampleLevel(glowTex, linear, uv + vec2<f32>(cos(a), sin(a)) * t * 2.0, 0.0).rgb * w;
+    sum += textureSampleLevel(tex, linear, uv + vec2<f32>(cos(a), sin(a)) * t * 2.0, 0.0) * w;
   }
   return sum / 16.0;
+}
+
+// Dutch outline colour's band, from a field's signed px inside its boundary: it
+// fades inward from the line, clear pigment with no pooled rim (a dark ragged
+// edge read as foxing, not colour).
+fn outlineBand(insidePx: f32) -> f32 {
+  return step(0.0, insidePx) * (1.0 - smoothstep(0.0, 14.0 * u.unit, insidePx));
+}
+
+// The boundary line and one inner contour of a low band, before their dots.
+fn outlineLevels(l: f32, perPx: f32, edge: f32, core: f32) -> f32 {
+  let w = 0.9 * u.unit;
+  return max(
+    1.0 - smoothstep(w, w + 1.0, abs(l - edge) / perPx),
+    0.8 * (1.0 - smoothstep(w, w + 1.0, abs(l - core) / perPx)),
+  );
 }
 
 // The wash's hue at the band's scale, 1.5 quarter-res cells round.
@@ -190,15 +211,19 @@ fn washHue(uv: vec2<f32>) -> vec3<f32> {
 // level and a solid core; dust lanes stay paper. Derivatives come in from the
 // caller's uniform flow. x ink, y wash amount, z warmth (0 smalt, 1 gamboge).
 fn galaxyEngraving(ip: vec2<i32>, uv: vec2<f32>, src: vec3<f32>, neb: vec4<f32>, lowL: f32,
-                   h: f32, hPerUnit: f32, fwSm: f32, edgeLevel: f32, big: f32) -> vec3<f32> {
+                   coherence: f32, h: f32, hPerUnit: f32, fwSm: f32, edgeLevel: f32,
+                   big: f32) -> vec3<f32> {
   let p = vec2<f32>(ip) / u.unit;
   let pxUnits = 1.0 / u.unit;
   let lxs = neb.x;
   let lc = clamp(log((lxs + 0.02) / (lowL + 0.02)), -1.5, 1.5);
   let ramp = smoothstep(TONE_LO, 1.0, lxs);
   let tone = clamp(ramp * sqrt(ramp) * clamp(1.0 + RELIEF_GAIN * lc, 0.25, 1.6), 0.0, 1.0);
-  // The burin lifts in the faintest tone and below the line onset.
-  let lines = isoLines(h, hPerUnit, tone, pxUnits) * smoothstep(0.03, 0.09, tone)
+  // The burin lifts in the faintest tone and below the line onset. Where the
+  // isophotes run every way (a star field's speckle, glow.wesl) lines would
+  // wander as fingerprints: stipple by tone there instead.
+  let cut = isoLines(h, hPerUnit, tone, pxUnits) * smoothstep(0.03, 0.09, tone);
+  let lines = mix(stipple(p, 2.0, tone * 0.8), cut, smoothstep(0.38, 0.46, coherence))
     * smoothstep(LINE_ON - 0.03, LINE_ON + 0.03, lxs);
   let faint = clamp(smoothstep(GALAXY_EDGE - 0.02, LINE_ON + 0.05, lxs) * clamp(1.0 + 0.8 * lc, 0.2, 1.6), 0.0, 1.0);
   let dots = stipple(p, 2.0, faint * 0.45) * (1.0 - smoothstep(LINE_ON, LINE_ON + 0.06, lxs));
@@ -365,7 +390,8 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // glow's boundary, fading inward to plain paper, offset from the engraved
   // line by a slow misregistration field as a colourist's brush was.
   let slip = (vec2<f32>(vnoise(p * 0.018 + 3.0), vnoise(p * 0.018 + 9.0)) - 0.5) * 0.006;
-  let lowL = luma(glowAt(uv));
+  let glow = lowBandAt(glowTex, uv);
+  let lowL = luma(glow.rgb);
   // The colour band reads the same field a little displaced: the brush's slip,
   // approximated to first order from the field's own gradient.
   let glowL = lowL + dot(vec2<f32>(dpdx(lowL), dpdy(lowL)), slip * u.res);
@@ -383,11 +409,15 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let fwSm = max(fwidth(neb.y), 1e-5);
   var galaxy = vec3<f32>(0.0);
   if (sky > 0.0 && max(neb.x, neb.y) > 0.8 * edgeLevel) {
-    galaxy = galaxyEngraving(ip, uv, src, neb, lowL, h, hPerUnit, fwSm, edgeLevel, big);
+    galaxy = galaxyEngraving(ip, uv, src, neb, lowL, clamp(glow.a, 0.0, 1.0), h, hPerUnit, fwSm, edgeLevel, big);
   }
-  // The band fades inward from the line: clear pigment, no pooled rim (a dark
-  // ragged edge read as foxing, not colour).
-  let band = step(0.0, inside) * (1.0 - smoothstep(0.0, 14.0 * u.unit, inside)) * sky * (1.0 - big);
+  let band = outlineBand(inside) * sky * (1.0 - big);
+  // A structure's disc (cluster, void, group) is outlined from its own row, never engraved.
+  let structure = lowBandAt(structureGlowTex, uv);
+  let structL = structure.a;
+  let structPerPx = max(fwidth(structL), 1e-5);
+  let structSlipL = structL + dot(vec2<f32>(dpdx(structL), dpdy(structL)), slip * u.res);
+  let structBand = outlineBand((structSlipL - STRUCTURE_EDGE) / structPerPx) * sky;
   // The hue is only needed where the band paints.
   var hue = vec3<f32>(0.0);
   if (band > 0.0) {
@@ -400,6 +430,9 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // (a grey glow washed in ochre read as scorched paper).
   let skyWash = band * 0.35 * focus * smoothstep(0.03, 0.12, chromaOf(hue));
   col = applyWash(col, regionPigment(hue), skyWash * sky * frame.y);
+  let structHue = structure.rgb / max(structure.a, 1e-3);
+  let structWash = structBand * 0.35 * focus * smoothstep(0.03, 0.12, chromaOf(structHue));
+  col = applyWash(col, regionPigment(structHue), structWash * frame.y);
   let galaxyWash = galaxy.y * focus * sky * frame.y;
   col = applyWash(col, pigmentAt(5.0), galaxyWash * (1.0 - galaxy.z)); // smalt
   col = applyWash(col, pigmentAt(2.0), galaxyWash * galaxy.z); // gamboge
@@ -414,17 +447,15 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // boundary line and one inner contour of the low band. Star glyphs were scattered by glyphs.wesl: x ink, y paper knock-out.
   let star = texel(starInkTex, ip).xy;
   let clear = 1.0 - star.y;
-  let edgePx = abs(lowL - GLOW_EDGE) / lowPerPx;
-  let corePx = abs(lowL - GLOW_CORE) / lowPerPx;
   // A glow's edge is dotted, as Bayer and de Wit drew a nebula's: a solid
   // ragged line here would read as a coast.
   let onEdge = max(
-    1.0 - smoothstep(0.9 * u.unit, 0.9 * u.unit + 1.0, edgePx),
-    0.8 * (1.0 - smoothstep(0.9 * u.unit, 0.9 * u.unit + 1.0, corePx)),
+    outlineLevels(lowL, lowPerPx, GLOW_EDGE, GLOW_CORE) * (1.0 - big),
+    outlineLevels(structL, structPerPx, STRUCTURE_EDGE, STRUCTURE_CORE),
   );
   var contour = 0.0;
-  if (onEdge > 0.0 && big < 1.0) {
-    contour = onEdge * stipple(p, 2.3, 0.4) * (1.0 - big);
+  if (onEdge > 0.0) {
+    contour = onEdge * stipple(p, 2.3, 0.4);
   }
   let skyInk = max(star.x, max(galaxy.x, contour) * clear) * sky;
   // The rulings were cut by hand too: their ink load wanders along their length.

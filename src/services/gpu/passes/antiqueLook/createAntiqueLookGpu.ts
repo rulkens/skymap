@@ -11,6 +11,7 @@ import reduceCode from '../../shaders/antiqueLook/reduce.wesl?static';
 import glowCode from '../../shaders/antiqueLook/glow.wesl?static';
 import nebulaCode from '../../shaders/antiqueLook/nebula.wesl?static';
 import skyFloorCode from '../../shaders/antiqueLook/skyFloor.wesl?static';
+import structureGlowCode from '../../shaders/antiqueLook/structureGlow.wesl?static';
 import glyphsCode from '../../shaders/antiqueLook/glyphs.wesl?static';
 import decorCode from '../../shaders/antiqueLook/decor.wesl?static';
 import plateCode from '../../shaders/antiqueLook/fragment.wesl?static';
@@ -189,6 +190,12 @@ export function createAntiqueLookGpu(
     ),
     glow: stage('glow', glowCode, [TEXTURE], [HDR_TARGET_FORMAT]),
     nebula: stage('nebula', nebulaCode, [TEXTURE, SAMPLER], [HDR_TARGET_FORMAT]),
+    structureGlow: stage(
+      'structure-glow',
+      structureGlowCode,
+      [TEXTURE, SAMPLER],
+      [HDR_TARGET_FORMAT],
+    ),
     skyFloor: { pipeline: skyFloorPipeline, layout: skyFloorLayout },
     landBlurAcross: stage(
       'land-blur-across',
@@ -226,6 +233,7 @@ export function createAntiqueLookGpu(
         TEXTURE, // land blur
         TEXTURE, // nebula
         STORAGE, // sky floor
+        TEXTURE, // structure glow
       ],
       [targetFormat],
     ),

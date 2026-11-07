@@ -20,9 +20,10 @@ import package::antiqueLook::pigments::luma;
 @group(0) @binding(3) var<uniform> u: AntiqueUniforms;
 
 const CELL: i32 = 4;
-// How far over its dimmest texel a sky block's mean may sit. At 1.5 foreground
-// stars leaked into a bright disc and grew iso-line bubbles; at 1.15 arms join up.
-const FLOOR_K: f32 = 1.15;
+// How far over its dimmest texel a sky block's mean may sit: none, so a dense
+// field's points never leak into a galaxy's light (at 1.15 they wobbled its
+// iso-lines into fingerprints on M87; at 1.5 they grew bubbles on bright discs).
+const FLOOR_K: f32 = 1.0;
 
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {

@@ -1,6 +1,6 @@
 // antiqueLook/nebula.wesl — the fields a galaxy is engraved from, at quarter res
-// beside `wash`: x Lxs (blur radius 1 cell), y Lsm (1.6 cells, the outline's),
-// z the iso-line field's input (Lsm in the faint disc, 1.3 cells above the line
+// beside `wash`: x Lxs (blur radius 1 cell), y Lsm (2.2 cells, the outline's),
+// z the iso-line field's input (Lsm in the faint disc, 2 cells above the line
 // onset), w the lane reference: the local max of a light blur. Only sky cells
 // (wash.a < 0) count, so a globe's light never draws iso-lines round its limb.
 
@@ -34,8 +34,8 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let size = vec2<i32>(textureDimensions(washTex));
   let texel = 1.0 / vec2<f32>(size);
   let lxs = blur9(in.uv, texel, 1.0);
-  let lxh = blur9(in.uv, texel, 1.3);
-  let lsm = blur9(in.uv, texel, 1.6);
+  let lxh = blur9(in.uv, texel, 2.0);
+  let lsm = blur9(in.uv, texel, 2.2);
   // Lane reference: a 1-2-1 blur at each of the 3×3 neighbours, then their max,
   // from one 5×5 window of texels.
   let ip = vec2<i32>(in.pos.xy);
