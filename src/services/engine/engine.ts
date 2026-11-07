@@ -34,6 +34,8 @@ import { datumOnlyTerrainHeight } from '../../utils/camera/terrain/datumOnlyTerr
 import { FRAME_ORDER } from './frame/frameOrder';
 import { FRAME_ORDER_PASS_NAMES } from './frame/frameOrderPassNames';
 import { computeTimingSlotName } from './frame/timing/computeTimingSlotName';
+import { captureTimingSlotName } from './frame/timing/captureTimingSlotName';
+import type { CubemapCaptureKey } from '../../@types/rendering/CubemapCaptureKey';
 import { liveWorldPose } from './helpers/liveWorldPose';
 import { liveClipStartPose } from './helpers/liveClipStartPose';
 import { waitUntilSettled } from './helpers/waitUntilSettled';
@@ -107,8 +109,14 @@ export function createEngine(
             lastAnchorDistanceMpc: Number.POSITIVE_INFINITY,
             bakedSettings: null,
             bakedContentVersion: null,
+            lastBakeAtMs: null,
           }
-        : { subject: null, refreshedAtMs: new Map<string, number>(), due: false },
+        : {
+            subject: null,
+            refreshedAtMs: new Map<string, number>(),
+            due: false,
+            refreshOwedInMs: null,
+          },
     ]),
   ) as CubemapCaptureRuntimes;
 
@@ -417,11 +425,14 @@ export function createEngine(
         idle:
           frameStats.lastStartMs === 0 || performance.now() - frameStats.lastStartMs > IDLE_GAP_MS,
       }),
-      // Prelude compute steps first: GPU work no render toggle could reach.
+      // Prelude compute steps and captures first: GPU work no render toggle could reach.
       passOverrides: {
         allNames: [
           ...FRAME_ORDER.filter((step) => step.kind === 'compute').map((step) =>
             computeTimingSlotName(step.name, 'canvas'),
+          ),
+          ...(Object.keys(APP_CUBEMAP_CAPTURE_REGISTRY) as CubemapCaptureKey[]).map(
+            captureTimingSlotName,
           ),
           ...FRAME_ORDER_PASS_NAMES,
         ],

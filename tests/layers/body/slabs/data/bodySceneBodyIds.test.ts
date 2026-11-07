@@ -1,7 +1,7 @@
 /**
- * The body, the missions craft and the earthScenes rosters split the body-slab roster between three
- * mesh passes and three glint passes. A body in both draws twice (z-fighting, or a double-bright
- * glint); a body in neither vanishes.
+ * The body, the missions craft, the earthScenes and the probeSpheres rosters split the body-slab
+ * roster between four mesh passes and four glint passes. A body in two draws twice (z-fighting,
+ * or a double-bright glint); a body in none vanishes.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -15,6 +15,7 @@ import { sceneBodyPartition } from '../../../../../src/services/engine/frame/sce
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
 import { EARTH_SCENE_BODY_IDS } from '../../../../../src/layers/earthScenes/scenes/data/earthSceneBodyIds';
 import { MISSION_CRAFT_IDS } from '../../../../../src/layers/missions/craft/present/missionCraftIds';
+import { PROBE_SPHERE_ROSTER } from '../../../../../src/layers/probeSpheres/spheres/data/probeSphereRoster';
 import { SCENE_MESH_BODIES } from '../../../../../src/data/bodies/sceneMeshBodies';
 import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
@@ -46,7 +47,7 @@ function ctxAt(camPosMpc: Readonly<Vec3>, pxPerRad: number): FrameView {
 const idsOf = (bodies: readonly { readonly id: string }[]) => bodies.map((body) => body.id);
 const sorted = (ids: readonly string[]) => [...ids].sort();
 
-describe('the body, missions and earthScenes rosters', () => {
+describe('the body, missions, earthScenes and probeSpheres rosters', () => {
   // A telephoto pxPerRad resolves every body on the row, so each one reaches a mesh pass.
   it.each([
     ['mars', 'curiosity'],
@@ -61,10 +62,13 @@ describe('the body, missions and earthScenes rosters', () => {
         drawableMeshBodies(STATE, ctx, hostId, bodySlabRosterIds(SCENE_MESH_BODIES)),
       );
       const earthScenes = idsOf(drawableMeshBodies(STATE, ctx, hostId, EARTH_SCENE_BODY_IDS));
+      const probeSpheres = idsOf(drawableMeshBodies(STATE, ctx, hostId, PROBE_SPHERE_ROSTER));
 
       expect(missions).toContain(cameraAt);
       expect(body.filter((id) => missions.includes(id))).toEqual([]);
-      expect(sorted([...body, ...missions, ...earthScenes])).toEqual(sorted(whole));
+      expect(sorted([...body, ...missions, ...earthScenes, ...probeSpheres])).toEqual(
+        sorted(whole),
+      );
     },
   );
 
@@ -76,12 +80,15 @@ describe('the body, missions and earthScenes rosters', () => {
     const earthScenes = idsOf(
       sceneBodyPartition(STATE, ctx, EARTH_SCENE_BODY_IDS, () => false).glints,
     );
+    const probeSpheres = idsOf(
+      sceneBodyPartition(STATE, ctx, PROBE_SPHERE_ROSTER, () => false).glints,
+    );
     const whole = idsOf(
       sceneBodyPartition(STATE, ctx, bodySlabRosterIds(SCENE_MESH_BODIES), () => false).glints,
     );
 
     expect(missions.length).toBeGreaterThan(0);
     expect(body.filter((id) => missions.includes(id))).toEqual([]);
-    expect(sorted([...body, ...missions, ...earthScenes])).toEqual(sorted(whole));
+    expect(sorted([...body, ...missions, ...earthScenes, ...probeSpheres])).toEqual(sorted(whole));
   });
 });

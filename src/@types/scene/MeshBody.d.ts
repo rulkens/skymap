@@ -1,10 +1,11 @@
 /**
- * MeshBody — a seeded scene body drawn from a baked triangle mesh, not a
- * flat/textured sphere. `meshKey` names the baked asset the mesh layer loads.
+ * MeshBody — a seeded scene body drawn from a triangle mesh, not a flat/textured
+ * sphere: the baked asset `meshKey` names, or the one `buildMesh` generates.
  * Identity only — position/orientation live in `BodyState`, as for `PlanetBody`.
  */
 
 import type { Vec3 } from '../math/Vec3';
+import type { MeshAsset } from '../data/mesh/MeshAsset';
 import type { SceneBodyId } from './SceneBodyId';
 
 export type MeshBody = {
@@ -15,6 +16,8 @@ export type MeshBody = {
   readonly boundingRadiusM: number;
   readonly albedo: Vec3;
   readonly meshKey: string;
+  /** Generates the mesh in the browser for a body with no baked asset; absent: `meshKey`'s baked files. */
+  readonly buildMesh?: () => Promise<MeshAsset>;
   /** Camera standoff floor, in body radii, replacing `clampDistance`'s
    *  Earth-tuned `SURFACE_STANDOFF_RADII` (which would park the camera microns
    *  off a metre-scale hull). `MESH_BODY_STANDOFF_RADII` unless the seed

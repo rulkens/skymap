@@ -140,6 +140,18 @@ fn fsAerialMultiply(in: FullscreenOut) -> @location(0) vec4<f32> {
   return s.transmit;
 }
 
+// A probe face has no compositor: its stars sit in the same target, so the sky's
+// background weight (alpha, 1 - coverage: extinction AND day-sky adaptation) has to
+// scale them here. Plain 'transmit' would leave ~90% of a star in a noon sky.
+@fragment
+fn fsProbeSkyMultiply(in: FullscreenOut) -> @location(0) vec4<f32> {
+  let s = aerialSample(in);
+  if (!s.hit) {
+    discard;
+  }
+  return vec4<f32>(s.transmit.a);
+}
+
 @fragment
 fn fsAerialAdd(in: FullscreenOut) -> @location(0) vec4<f32> {
   let s = aerialSample(in);

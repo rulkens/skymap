@@ -21,9 +21,18 @@ export function makeCubemapCaptureRuntimes(
         lastAnchorDistanceMpc: Number.POSITIVE_INFINITY,
         bakedSettings: null,
         bakedContentVersion: null,
+        lastBakeAtMs: null,
         ...overrides[key],
       },
     ]),
   ) as Record<SkyCaptureKey, SkyCaptureRuntime>;
-  return { ...sky, probe: { subject: null, refreshedAtMs: new Map<string, number>(), due: false } };
+  return {
+    ...sky,
+    probe: {
+      subject: null,
+      refreshedAtMs: new Map<string, number>(),
+      due: false,
+      refreshOwedInMs: null,
+    },
+  };
 }

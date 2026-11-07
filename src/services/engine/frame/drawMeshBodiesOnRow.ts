@@ -13,6 +13,8 @@ import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { SlabView } from '../../../@types/engine/frame/SlabView';
 import type { MeshPresentation } from '../../../@types/scene/MeshPresentation';
+import type { MeshMaterialFactors } from '../../../@types/rendering/MeshMaterialFactors';
+import { NEUTRAL_MESH_MATERIAL_FACTORS } from '../../../data/mesh/neutralMeshMaterialFactors';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { SCENE_CELESTIAL_BODIES } from '../../../data/bodies/sceneCelestialBodies';
@@ -34,6 +36,7 @@ export function drawMeshBodiesOnRow(
   ctx: FrameView,
   state: PassState,
   bodies: readonly MeshPresentation[],
+  material: MeshMaterialFactors = NEUTRAL_MESH_MATERIAL_FACTORS,
 ): void {
   const renderer = state.gpu.meshBodyRenderer;
   if (renderer === null || view.slab.frame.kind !== 'body-m' || bodies.length === 0) return;
@@ -74,6 +77,7 @@ export function drawMeshBodiesOnRow(
           : 1,
         model: rotM,
         ambient: state.settings.debug.meshAmbient,
+        material,
         camPosLocal: [
           hostPose.eyeRelBodyM[0] - posM[0],
           hostPose.eyeRelBodyM[1] - posM[1],

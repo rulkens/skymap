@@ -182,6 +182,26 @@ describe('evaluateAssetDemand', () => {
     expect(run(row({ shown: at('sats'), labelsCount: true }), ctx({}, off))).toEqual(LOAD);
   });
 
+  it('a size-only row of a body a show item covers releases while that item is off', () => {
+    // The frame admits a covered body only while its item shows; its asset must not outlive that.
+    const park = SCENE_BODIES.find((b) => b.id === 'soendermarken')!;
+    const entries: readonly VisibilityEntry[] = [
+      ...ENTRIES,
+      { key: 'scenes', items: ['park'], bodies: { park: [park] } },
+    ];
+    const sizeOnly = row({ size: { body: park.id, loadPx: 3, releasePx: 1.5 } });
+    const withPark = (on: boolean): DemandCtx => ({
+      ...ctx(),
+      settings: {
+        ...ctx().settings,
+        scenes: { enabled: true, items: { park: { enabled: on } } },
+      } as unknown as EngineSettingsState,
+    });
+    expect(evaluateAssetDemand(sizeOnly, withPark(false), entries)).toEqual(RELEASE);
+    // On, it is the size gate's again: nothing has drawn yet, so it holds.
+    expect(evaluateAssetDemand(sizeOnly, withPark(true), entries)).toEqual(HOLD);
+  });
+
   describe('size gate', () => {
     const states = deriveBodyStates(CONST_J2000);
     const posOf = (id: string) => states.get(asSceneBodyId(id))!.positionMpc;

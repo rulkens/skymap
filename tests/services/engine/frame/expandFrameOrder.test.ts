@@ -108,6 +108,7 @@ describe('expandFrameOrder', () => {
       'body-glints',
       'mission-glints',
       'earth-scene-glints',
+      'probe-sphere-glints',
       'black-hole-marker',
     ]);
     // The merged step bills the bare group key, as today: the roster line
@@ -204,7 +205,7 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
       [NEAR0, 'sgrAStar', 0],
       [COSMO, 'sgrAStar', 2],
       [NEAR0, 'sgrAStar', 2],
-      [COSMO, 'solarSystem', 1],
+      // Stars-only roster: an empty COSMO list emits no COSMO step.
       [NEAR0, 'solarSystem', 1],
     ]);
     // The captures ride the PRELUDE computes, ahead of every other render
@@ -360,6 +361,7 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
       'mission-meshes',
       'body-meshes',
       'earth-scene-meshes',
+      'probe-sphere-meshes',
     ]);
   });
 

@@ -36,9 +36,6 @@ export const PRELUDE: FrameSection = {
     // can sample a cubemap written this frame. Most frames the face list is empty and
     // this line emits nothing (the lens's zero-dispatch guarantee).
     //
-    // `solarSystem` is the star field a reflection probe is captured over; parallax
-    // across the solar system is sub-texel on its 256² faces.
-    //
     // TWO rosters because the content spans both slabs: galaxy billboards and
     // textured disks project through COSMO, survey stars through NEAR0. A render step
     // is the unit of pass encoding, so a NEAR0-only step leaves the COSMO half
@@ -47,8 +44,19 @@ export const PRELUDE: FrameSection = {
     // alone: a capture step hands it a SYNTHETIC per-face ctx, never the real camera.
     {
       kind: 'capture',
-      captures: APP_SKY_CAPTURE_KEYS,
+      captures: APP_SKY_CAPTURE_KEYS.filter((key) => key !== 'solarSystem'),
       cosmoPasses: ['point-sprites', 'textured-disks'],
+      near0Passes: ['star-aggregates', 'star-catalog'],
+      bodyPasses: [],
+    },
+    // `solarSystem` is the star field a reflection probe is captured over; parallax
+    // across the solar system is sub-texel on its 256² faces. Stars only: galaxies are
+    // invisible in a 128² probe, and drawing ~2.5M billboards six times cost up to
+    // 34 ms a bake.
+    {
+      kind: 'capture',
+      captures: ['solarSystem'],
+      cosmoPasses: [],
       near0Passes: ['star-aggregates', 'star-catalog'],
       bodyPasses: [],
     },
@@ -58,9 +66,11 @@ export const PRELUDE: FrameSection = {
     // own probe); `star-spheres` / `field-star-sphere` (the Sun stays analytic, a
     // sub-pixel Sun would smear into a false highlight); glints and `orbit-trails`
     // (not environment); `atmosphere-shell` (classifies rays by a sampled scene depth a
-    // capture face never resolves, and its pipeline has no depth state) — inside an
-    // atmosphere `atmosphere-probe-sky` draws the sky instead, FIRST, so the ground
-    // passes overdraw it. NEAR0 is empty because the blit rides COSMO.
+    // capture face never resolves, and its pipeline has no depth state). In its place:
+    // inside an atmosphere `atmosphere-probe-sky` draws the sky FIRST, so the ground
+    // passes overdraw it; outside, `atmosphere-probe-shell` draws the shell LAST, as the
+    // live view does over globe and rings, with far depth: its rays end at the analytic
+    // globe. NEAR0 is empty because the blit rides COSMO.
     {
       kind: 'capture',
       captures: ['probe'],
@@ -74,6 +84,7 @@ export const PRELUDE: FrameSection = {
         'planets',
         'textured-bodies',
         'rings',
+        'atmosphere-probe-shell',
       ],
     },
   ],
@@ -171,7 +182,13 @@ export const SCENE: FrameSection = {
       kind: 'render',
       target: 'hdr',
       slab: NEAR0,
-      passes: ['body-glints', 'mission-glints', 'earth-scene-glints', 'black-hole-marker'],
+      passes: [
+        'body-glints',
+        'mission-glints',
+        'earth-scene-glints',
+        'probe-sphere-glints',
+        'black-hole-marker',
+      ],
       slot: 'POST_LENSING',
     },
     // Near-field foreground bodies into their own depth-bearing target, expanded over
@@ -211,6 +228,7 @@ export const SCENE: FrameSection = {
         'mission-meshes',
         'body-meshes',
         'earth-scene-meshes',
+        'probe-sphere-meshes',
       ],
     },
     // Aerial-perspective apply, on the enclosing body's painter row (the row that

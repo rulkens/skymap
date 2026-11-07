@@ -16,6 +16,7 @@ import { objectSubLists } from '../../../packages/website/src/utils/objectSubLis
 import { tourRegistry } from '../../../src/data/animation/tours/tourRegistry';
 import { BODY_PICK_ROWS } from '../../../src/data/bodies/bodyPickRows';
 import { SCENE_MESH_BODIES } from '../../../src/data/bodies/sceneMeshBodies';
+import { PROBE_SPHERE_ROSTER } from '../../../src/layers/probeSpheres/spheres/data/probeSphereRoster';
 import { SEEDED_STAR_CATALOGS } from '../../../src/data/bodies/seededStarCatalogs';
 import { APP_EXHIBIT_REGISTRY } from '../../../src/compositions/appExhibits';
 import { EARTH_PLACES } from '../../../src/data/palette/earthPlaces';
@@ -100,7 +101,10 @@ describe('object catalogue', () => {
     const prefixed = (prefix: string, rows: readonly { id: string }[]) =>
       rows.map((row) => `${prefix}${row.id}`).sort();
     expect(ids('planet', 'moon', 'spacecraft', 'model')).toEqual(
-      prefixed(BODY_FOCUS_PREFIX, [...Object.values(BODY_PICK_ROWS).flat(), ...SCENE_MESH_BODIES]),
+      prefixed(BODY_FOCUS_PREFIX, [
+        ...Object.values(BODY_PICK_ROWS).flat(),
+        ...SCENE_MESH_BODIES.filter((body) => !PROBE_SPHERE_ROSTER.has(body.id)),
+      ]),
     );
     expect(ids('sun', 'star', 'sStar')).toEqual(
       prefixed(STAR_FOCUS_PREFIX, Object.values(SEEDED_STAR_CATALOGS).flat()),
