@@ -61,7 +61,7 @@ import { refoldTo } from '../../../../src/services/engine/camera/arms/refoldTo';
 import { skySpotRadial } from '../../../../src/utils/geo/skySpotRadial';
 import { bodyFixedEyeM } from '../../../../src/utils/camera/surfaceFrame/bodyFixedEyeM';
 import { SKY_EXIT_ALTITUDE_M } from '../../../../src/services/engine/camera/arms/sky/data/skyExitAltitudeM';
-import { SKY_EXIT_PAUSE_MS } from '../../../../src/services/engine/camera/arms/sky/data/skyExitPauseMs';
+import { FRESH_WHEEL_PAUSE_MS } from '../../../../src/data/input/freshWheelPauseMs';
 import type { FramedCameraPose } from '../../../../src/@types/camera/pose/FramedCameraPose';
 import type { BodyFixedPose } from '../../../../src/@types/camera/pose/BodyFixedPose';
 import type { SkyPose } from '../../../../src/@types/camera/pose/SkyPose';
@@ -82,7 +82,7 @@ import type { StepInputs } from '../../../../src/@types/engine/camera/StepInputs
 import type { Vec4 } from '../../../../src/@types/math/Vec4';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import type { CameraDriver } from '../../../../src/@types/engine/camera/CameraDriver';
-import type { InputStep } from '../../../../src/@types/camera/input/InputStep';
+import type { RawInputStep } from '../../../../src/@types/camera/input/RawInputStep';
 import type { NavVelocity } from '../../../../src/@types/camera/input/NavVelocity';
 import type { UnknownAction } from '@reduxjs/toolkit';
 import {
@@ -235,7 +235,6 @@ describe('stepCameraRuntime', () => {
           frustum: symmetricFrustum(Math.PI / 3, 1),
           fovYRad: Math.PI / 3,
           tuning: intent.tuning,
-          nowMs: 0,
         },
       });
 
@@ -480,12 +479,12 @@ describe('the wheel under a mission', () => {
 
 describe('stepCameraRuntime — the openspace scheme', () => {
   const GUARD = 2000;
-  const press: readonly InputStep[] = [
+  const press: readonly RawInputStep[] = [
     { kind: 'gestureStart' },
     { kind: 'navDrag', axis: 'orbit', deltaPx: [10, 0] },
   ];
-  const hold: readonly InputStep[] = [{ kind: 'navDrag', axis: 'orbit', deltaPx: [10, 0] }];
-  const release: readonly InputStep[] = [{ kind: 'gestureEnd' }];
+  const hold: readonly RawInputStep[] = [{ kind: 'navDrag', axis: 'orbit', deltaPx: [10, 0] }];
+  const release: readonly RawInputStep[] = [{ kind: 'gestureEnd' }];
 
   // The hand-fed frames' wall clock, picking up where the harness's own frames stopped.
   const clocks = new WeakMap<CameraSimHarness, number>();
@@ -494,7 +493,7 @@ describe('stepCameraRuntime — the openspace scheme', () => {
   /** One frame with hand-fed steps, installed and dispatched as `runFrame` does. */
   function stepWith(
     h: CameraSimHarness,
-    steps: readonly InputStep[],
+    steps: readonly RawInputStep[],
     schemes?: StepInputs['schemes'],
   ) {
     // `wireInput` dispatches the release outside the loop, as it does the press.
@@ -1034,7 +1033,7 @@ describe('the sky exit lift', () => {
     }
     expect(h.store.getState().camera.fovYRad).toBe(degToRad(LENS_MAX_DEG));
     expect(h.store.getState().camera.clip).toBeNull();
-    h.frame(Math.ceil(SKY_EXIT_PAUSE_MS / 16));
+    h.frame(Math.ceil(FRESH_WHEEL_PAUSE_MS / 16));
     h.wheel(300);
     expect(h.store.getState().camera.clip).not.toBeNull();
   });

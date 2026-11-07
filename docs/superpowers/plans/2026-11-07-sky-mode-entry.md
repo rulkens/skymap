@@ -54,7 +54,7 @@ review: yes
 `src/services/engine/camera/input/replayInput.ts`, `src/services/engine/camera/arms/sky/skyCameraArm.ts`,
 `src/@types/camera/arms/MemOf.d.ts`, `src/@types/camera/arms/SkyWheelMemory.d.ts` (delete),
 `src/services/engine/camera/arms/sky/data/emptySkyWheelMemory.ts` (delete),
-`src/services/engine/camera/arms/sky/data/skyExitPauseMs.ts` → `src/data/camera/freshWheelPauseMs.ts`,
+`src/services/engine/camera/arms/sky/data/skyExitPauseMs.ts` → `src/data/input/freshWheelPauseMs.ts`,
 the arms that construct zoom steps (`absoluteCameraArm.ts:59`, `site/utils/nudgedSitePose.ts:24`), tests
 under `tests/services/engine/camera/`.
 
@@ -63,7 +63,7 @@ under `tests/services/engine/camera/`.
 ```ts
 // InputStep zoom member
 | { kind: 'zoom'; factor: number; duringGesture: boolean; cursorPx: Vec2 | null; fresh: boolean }
-// src/data/camera/freshWheelPauseMs.ts
+// src/data/input/freshWheelPauseMs.ts
 export const FRESH_WHEEL_PAUSE_MS = 250;
 ```
 
@@ -71,13 +71,13 @@ export const FRESH_WHEEL_PAUSE_MS = 250;
 one wheel clock lives where the drain runs (the camera runtime), never in an arm's memory. Nudge-built zoom
 steps are `fresh: false`. `MemOf['sky']` becomes `null`.
 
-- [ ] Move the constant: `npm run move-files -- src/services/engine/camera/arms/sky/data/skyExitPauseMs.ts src/data/camera/freshWheelPauseMs.ts`,
+- [x] Move the constant: `npm run move-files -- src/services/engine/camera/arms/sky/data/skyExitPauseMs.ts src/data/input/freshWheelPauseMs.ts` (in `data/input/`: `data/camera/` is at the 15-file folder cap),
       then `npm run refactor -- rename SKY_EXIT_PAUSE_MS FRESH_WHEEL_PAUSE_MS` (check the refactor skill for
       the exact syntax).
-- [ ] Test `a wheel notch after 250 ms of quiet is fresh; one inside it is not` (drain level).
-- [ ] Sky arm reads `input.fresh` instead of `memory.lastWheelMs`; delete `SkyWheelMemory` and its empty value.
-- [ ] Existing sky exit tests stay green: the lift fires from a fresh wheel-out at 120°, not from a tail.
-- [ ] Commit.
+- [x] Test `a wheel notch after 250 ms of quiet is fresh; one inside it is not` (drain level).
+- [x] Sky arm reads `input.fresh` instead of `memory.lastWheelMs`; delete `SkyWheelMemory` and its empty value.
+- [x] Existing sky exit tests stay green: the lift fires from a fresh wheel-out at 120°, not from a tail.
+- [x] Commit.
 
 ### Task 2: Arms report a pushed zoom limit
 

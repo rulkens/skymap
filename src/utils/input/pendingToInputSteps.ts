@@ -8,7 +8,7 @@
  * isotropic pixel delta, not a pointer: the navigator integrates velocity.
  */
 
-import type { InputStep } from '../../@types/camera/input/InputStep';
+import type { RawInputStep } from '../../@types/camera/input/RawInputStep';
 import type { PendingStep } from '../../@types/input/PendingStep';
 import type { Vec2 } from '../../@types/math/Vec2';
 import { NAV_INTENT_AXIS } from '../../data/input/navIntentAxis';
@@ -17,8 +17,8 @@ import { unitToViewPx } from './unitToViewPx';
 export function pendingToInputSteps(
   pending: readonly PendingStep[],
   viewPx: Readonly<Vec2>,
-): InputStep[] {
-  const steps: InputStep[] = [];
+): RawInputStep[] {
+  const steps: RawInputStep[] = [];
   for (const step of pending) {
     if (step.kind === 'start') steps.push({ kind: 'gestureStart' });
     else if (step.kind === 'end') steps.push({ kind: 'gestureEnd' });

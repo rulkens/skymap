@@ -37,7 +37,8 @@ export function createInputAggregator(): InputAggregator {
       tail.cursorPx = cursorPx;
       return;
     }
-    steps.push({ kind: 'zoom', factor, duringGesture, cursorPx });
+    // A workbench pushes no zoom limit, so no notch is ever fresh.
+    steps.push({ kind: 'zoom', factor, duringGesture, cursorPx, fresh: false });
   };
 
   return {

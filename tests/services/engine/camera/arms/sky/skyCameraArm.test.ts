@@ -30,7 +30,6 @@ import { evaluateFramedClip } from '../../../../../../src/services/engine/camera
 import { decodeBodyFixedChannels } from '../../../../../../src/services/engine/camera/arms/body/utils/decodeBodyFixedChannels';
 import { SKY_EXIT_PITCH_MS } from '../../../../../../src/services/engine/camera/arms/sky/data/skyExitPitchMs';
 import { SKY_EXIT_CLIMB_MS } from '../../../../../../src/services/engine/camera/arms/sky/data/skyExitClimbMs';
-import { SKY_EXIT_PAUSE_MS } from '../../../../../../src/services/engine/camera/arms/sky/data/skyExitPauseMs';
 import type { ClipData } from '../../../../../../src/@types/animation/ClipData';
 import type { InputStep } from '../../../../../../src/@types/camera/input/InputStep';
 import type { Vec2 } from '../../../../../../src/@types/math/Vec2';
@@ -82,7 +81,6 @@ function ctxFor(
     frustum: symmetricFrustum(Math.PI / 3, 1),
     fovYRad: Math.PI / 3,
     tuning: DEFAULT_CAMERA_TUNING,
-    nowMs: 0,
   };
 }
 
@@ -122,11 +120,12 @@ const pixelOf = (m: Mat3, d: Vec3, f: number, centre: number): Vec2 => {
   return [centre + (f * along(0)) / z, centre - (f * along(3)) / z];
 };
 
-const wheel = (factor: number): InputStep => ({
+const wheel = (factor: number, fresh = true): InputStep => ({
   kind: 'zoom',
   factor,
   duringGesture: false,
   cursorPx: null,
+  fresh,
 });
 
 const roundTrip = (start: FramedPose<'sky'>) => {
@@ -351,38 +350,19 @@ describe('the sky exit lift', () => {
     );
     expect(reaching.fovYRad).toBe(LENS_MAX);
     expect(reaching.clip).toBeUndefined();
-    const out = ROW.step(reaching.memory, EMPTY_TILT_MEMORY, start, wheel(1.1), {
-      ...atMax,
-      nowMs: SKY_EXIT_PAUSE_MS,
-    });
+    const out = ROW.step(reaching.memory, EMPTY_TILT_MEMORY, start, wheel(1.1), atMax);
     expect(out.pose).toBe(start.pose);
     expect(out.fovYRad).toBeUndefined();
     expect(out.clip).toBeDefined();
   });
 
-  it('a streaming wheel-out stops at the widest lens; a fresh one after a pause lifts', () => {
-    // A notch per 16 ms frame from 100° on: through the stop and on, a trackpad's momentum tail.
-    let memory = ROW.emptyMemory;
-    let lens = degToRad(100);
-    let nowMs = 0;
-    for (let i = 0; i < 20; i++, nowMs += 16) {
-      const out = ROW.step(memory, EMPTY_TILT_MEMORY, start, wheel(1.1), {
-        ...withLens(lens),
-        nowMs,
-      });
-      expect(out.clip, `notch ${i}`).toBeUndefined();
-      memory = out.memory;
-      lens = out.fovYRad ?? lens;
-    }
-    expect(lens).toBe(LENS_MAX);
-    const lastMs = nowMs - 16;
-    const after = (quietMs: number) =>
-      ROW.step(memory, EMPTY_TILT_MEMORY, start, wheel(1.1), {
-        ...atMax,
-        nowMs: lastMs + quietMs,
-      }).clip;
-    expect(after(SKY_EXIT_PAUSE_MS - 1)).toBeUndefined();
-    expect(after(SKY_EXIT_PAUSE_MS)).toBeDefined();
+  it('a wheel-out tail at the widest lens stays; only a fresh notch lifts', () => {
+    expect(
+      ROW.step(ROW.emptyMemory, EMPTY_TILT_MEMORY, start, wheel(1.1, false), atMax).clip,
+    ).toBeUndefined();
+    expect(
+      ROW.step(ROW.emptyMemory, EMPTY_TILT_MEMORY, start, wheel(1.1), atMax).clip,
+    ).toBeDefined();
   });
 
   // −430 m is the Dead Sea: an eye standing there is inside the datum sphere.
