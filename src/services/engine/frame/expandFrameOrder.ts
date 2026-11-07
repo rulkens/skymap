@@ -105,7 +105,8 @@ const EXPAND_STEP: { [K in FrameStepSpec['kind']]: ExpandStep<K> } = {
         const moved = frame.antique
           ? roster.filter((pass) => ANTIQUE_MOVED_PASSES[pass.name] !== undefined)
           : [];
-        // Moved passes go FIRST, so the line after this one can still merge back.
+        // Moved passes go FIRST, so the line after this one can still merge back. They
+        // keep the line's depth: a trail still hides behind the bodies it passes.
         return [
           ...moved.map(
             (pass): FrameStep => ({
@@ -113,6 +114,7 @@ const EXPAND_STEP: { [K in FrameStepSpec['kind']]: ExpandStep<K> } = {
               target: ANTIQUE_MOVED_PASSES[pass.name]!,
               slab,
               passes: [pass],
+              ...(spec.depth === undefined ? {} : { depth: spec.depth }),
             }),
           ),
           {

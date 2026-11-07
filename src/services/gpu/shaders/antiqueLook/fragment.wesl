@@ -300,8 +300,9 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let skyInk = max(star.x, max(dots, contour) * clear) * sky;
   // The rulings were cut by hand too: their ink load wanders along their length.
   let rulings = graticule(viewRay(uv), u.unit, u.raStep, u.decStep) * sky * clear * (0.7 + 0.45 * vnoise(p * 0.045));
-  // Constellation figures as a fine rule, a shade lighter than the rulings.
-  let lines = min(texel(linesTex, ip).a / LINE_ALPHA, 1.0) * sky * clear * 0.75;
+  // Constellation figures and orbits as a fine rule, a shade lighter than the
+  // rulings: only a line's core inks, so a trail drawn wide still cuts thin.
+  let lines = smoothstep(0.55, 0.95, texel(linesTex, ip).a / LINE_ALPHA) * sky * clear * 0.7;
 
   // Bodies, as a globe-maker engraved them: land and sea left as paper and
   // washed, every coast cut as one continuous line with water lines off it,

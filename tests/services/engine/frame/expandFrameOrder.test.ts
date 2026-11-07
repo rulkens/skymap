@@ -521,6 +521,15 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     expect(hdrNear0(program({ antique: true }))).toBe(hdrNear0(program()));
   });
 
+  it("moves the orbit trails onto the look's lines row with the depth they hide behind", () => {
+    const trailSteps = (steps: readonly FrameStep[]) =>
+      steps.filter((step) => namesOf(step).includes('orbit-trails'));
+    const [off] = trailSteps(program());
+    const [on] = trailSteps(program({ antique: true }));
+    expect(off).toMatchObject({ target: 'hdr' });
+    expect(on).toMatchObject({ target: ANTIQUE_TARGETS.lines, depth: { sample: 'foreground:0' } });
+  });
+
   it('with the look off nothing is rerouted and no stylize step runs', () => {
     const off = program();
     expect(off.some((step) => step.kind === 'stylize')).toBe(false);

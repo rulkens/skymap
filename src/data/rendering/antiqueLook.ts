@@ -52,6 +52,8 @@ export const ANTIQUE_ONLY_PASSES: readonly string[] = [
  * as line work: the quarter-res reduce would average a 1-px line away. */
 export const ANTIQUE_MOVED_PASSES: Readonly<Record<string, string>> = {
   constellations: 'antique-lines',
+  'orbit-trails': 'antique-lines',
+  'mission-trails': 'antique-lines',
 };
 
 /** The land row's format: r land share, g covered (`earth/fragment.wesl` `fsOceanMask`). */
