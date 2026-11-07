@@ -58,6 +58,7 @@ export const ANTIQUE_MOVED_PASSES: Readonly<Record<string, string>> = {
   constellations: 'antique-lines',
   'orbit-trails': 'antique-lines',
   'mission-trails': 'antique-lines',
+  'cosmic-web-filaments': 'antique-lines',
   'structure-markers-cosmo': 'antique-structures',
   'structure-markers-near': 'antique-structures',
 };

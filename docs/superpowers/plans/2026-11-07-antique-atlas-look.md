@@ -148,6 +148,17 @@ Open: the depth cover holds only the last body row's depth, so a second globe in
 
 Owner ruling 2026-11-07: keep the generic galaxy engraving with these names; the offline arm-steered engraving is not ported. Open: the names are straight (no text-on-path).
 
+### Task 18: The cosmic web charted (owner pick: variant D, spines + isobaths; void names cosmos-only)
+**Files:** `src/data/rendering/antiqueLook.ts`, `src/services/gpu/shaders/antiqueLook/fragment.wesl`,
+`src/services/gpu/shaders/filaments/*.wesl`, `src/layers/cosmicWebFilaments/filaments/{passes,render}/*`,
+`src/services/gpu/passes/antiqueLook/{antiqueLook,createAntiqueLookGpu}.ts`, `src/data/labels/antiqueLabelRules.ts`,
+`tools/antique/look/views.json`
+- [x] `cosmic-web-filaments` moved onto the lines row (`ANTIQUE_MOVED_PASSES`): the print's 4×4 reduce no longer drops them.
+- [ ] Isobaths: the density raymarch read straight into the plate as log₂ contours (outermost dotted), walls stippled, voids left paper; the upsample hidden, the galaxy engraving no longer inks the density; the work gated to the cosmos regime with the density live.
+- [ ] Spines: the filament width and ink follow density on the plate; the faint tendrils lift.
+- [ ] Latin names for the web (Laniakea, Perseus-Pisces, Virgo, Coma Berenices, Attractor Magnus, Murus Hydrae); VACVVM LOCALE and VACVVM SCVLPTORIS only past `ANTIQUE_REGIME_MPC[1]`; a cluster glyph from the structures row.
+- [ ] The Zone of Avoidance ruled as a named hatched band, so it no longer reads as a void.
+
 ## Definition of Done
 
 **Deliverables:** the `stylize` FRAME_ORDER line and `antiqueLook` pass; the `antique` settings

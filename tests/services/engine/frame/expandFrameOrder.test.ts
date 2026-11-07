@@ -530,6 +530,15 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     expect(on).toMatchObject({ target: ANTIQUE_TARGETS.lines, depth: { sample: 'foreground:0' } });
   });
 
+  it("moves the cosmic-web filaments onto the look's lines row, where the print's reduce can't thin them away", () => {
+    const filamentSteps = (steps: readonly FrameStep[]) =>
+      steps.filter((step) => namesOf(step).includes('cosmic-web-filaments'));
+    expect(filamentSteps(program())).toMatchObject([{ target: 'hdr', slab: COSMO }]);
+    expect(filamentSteps(program({ antique: true }))).toMatchObject([
+      { target: ANTIQUE_TARGETS.lines, slab: COSMO },
+    ]);
+  });
+
   it('with the look off nothing is rerouted and no stylize step runs', () => {
     const off = program();
     expect(off.some((step) => step.kind === 'stylize')).toBe(false);
