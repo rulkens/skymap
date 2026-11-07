@@ -5,6 +5,7 @@ import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriv
 import { rotateVec3ByTightMat3 } from '../../../../../src/utils/math/rotateVec3ByTightMat3';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
+import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 import { frameViewsAt } from '../../../../helpers/frame/frameViewsAt';
 
 const RADIUS_M = 1737000;
@@ -12,7 +13,7 @@ const RADII_OFF = 2.65;
 
 // The Moon from 2.65 radii out over latitude 0, longitude 0, looking at its centre.
 function moonView() {
-  const moon = deriveBodyStates(CONST_J2000).get('moon')!;
+  const moon = deriveBodyStates(CONST_J2000).get(asSceneBodyId('moon'))!;
   const out = rotateVec3ByTightMat3(moon.orientation, [1, 0, 0]);
   const distanceMpc = RADII_OFF * RADIUS_M * SCALE_UNITS.M_TO_MPC;
   const m = moon.positionMpc;
