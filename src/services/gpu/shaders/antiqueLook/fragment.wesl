@@ -52,31 +52,39 @@ import package::antiqueLook::pigments::pigmentAt;
 @group(0) @binding(1) var overlayTex: texture_2d<f32>;
 @group(0) @binding(2) var bodyTex: texture_2d<f32>;
 @group(0) @binding(3) var<uniform> u: AntiqueUniforms;
-@group(0) @binding(4) var paperTex: texture_2d<f32>;
-@group(0) @binding(5) var washTex: texture_2d<f32>;
-@group(0) @binding(6) var starInkTex: texture_2d<f32>;
+// The rows the look writes itself: one array per size and format, a layer per row
+// (ANTIQUE_*_LAYERS, data/rendering/antiqueLook.ts). WebGPU allows a stage 16 sampled
+// textures and a phone may offer no more, so a new row is a layer, not a binding.
+@group(0) @binding(4) var fullTex: texture_2d_array<f32>;
+@group(0) @binding(5) var quarterTex: texture_2d_array<f32>;
+@group(0) @binding(6) var lowTex: texture_2d_array<f32>;
+// Full res, rgba8: the baked sheet; star ink (`glyphs.wesl`, `web.wesl`); the decor
+// (`decor.wesl`: r figure ink, g plate ink, b clear, a wash) and its hue.
+const PAPER_LAYER: i32 = 0;
+const STAR_INK_LAYER: i32 = 1;
+const DECOR_LAYER: i32 = 2;
+const DECOR_HUE_LAYER: i32 = 3;
+// Quarter res, rgba16f: the wash; `nebula.wesl`'s fields (x Lxs, y Lsm, z the iso-line
+// input, w the lane reference); `landBlur.wesl`'s x Σ weight·land share, y Σ weight.
+const WASH_LAYER: i32 = 0;
+const NEBULA_LAYER: i32 = 1;
+const LAND_BLUR_LAYER: i32 = 2;
+// 1/16 res, rgba16f: the glow; the structure markers' low band (`structureGlow.wesl`:
+// premultiplied rgb, a coverage).
+const GLOW_LAYER: i32 = 0;
+const STRUCTURE_GLOW_LAYER: i32 = 1;
 @group(0) @binding(7) var linear: sampler;
-@group(0) @binding(8) var glowTex: texture_2d<f32>;
-// Scattered by decor.wesl: r figure ink, g plate ink, b clear, a wash; and its hue.
-@group(0) @binding(9) var decorTex: texture_2d<f32>;
-@group(0) @binding(10) var decorHueTex: texture_2d<f32>;
-@group(0) @binding(11) var<uniform> lettering: AntiqueLettering;
-@group(0) @binding(12) var glyphTex: texture_2d<f32>;
+@group(0) @binding(8) var<uniform> lettering: AntiqueLettering;
+@group(0) @binding(9) var glyphTex: texture_2d<f32>;
 // The constellation figures, moved off the HDR roster (ANTIQUE_MOVED_PASSES).
-@group(0) @binding(13) var linesTex: texture_2d<f32>;
-@group(0) @binding(14) var<uniform> plate: PlateBodies;
-// `landBlur.wesl`'s output: x Σ weight·land share, y Σ weight.
-@group(0) @binding(15) var landBlurTex: texture_2d<f32>;
-// `nebula.wesl`'s fields: x Lxs, y Lsm, z the iso-line input, w the lane reference.
-@group(0) @binding(16) var nebulaTex: texture_2d<f32>;
+@group(0) @binding(10) var linesTex: texture_2d<f32>;
+@group(0) @binding(11) var<uniform> plate: PlateBodies;
 // This frame's field floor: the glow's 30th-percentile luma (`skyFloor.wesl`).
-@group(0) @binding(17) var<storage, read> skyFloor: f32;
-// The structure markers' low band (`structureGlow.wesl`): premultiplied rgb, a coverage.
-@group(0) @binding(18) var structureGlowTex: texture_2d<f32>;
+@group(0) @binding(12) var<storage, read> skyFloor: f32;
 // Earth's c.1690 geography (`earth/antiqueMap/*.wesl`): r realm code, g border band, b line ink, a signs.
-@group(0) @binding(19) var geographyTex: texture_2d<f32>;
+@group(0) @binding(13) var geographyTex: texture_2d<f32>;
 // The engraved ground (`relief.wesl`): a 0 off it, and wherever the pass did not run.
-@group(0) @binding(20) var reliefTex: texture_2d<f32>;
+@group(0) @binding(14) var reliefTex: texture_2d<f32>;
 
 // The border's numbering, placed per frame by `placeAntiqueNumerals`.
 struct Glyph {
@@ -132,6 +140,11 @@ fn texel(t: texture_2d<f32>, ip: vec2<i32>) -> vec4<f32> {
   return textureLoad(t, clamp(ip, vec2<i32>(0), size - 1), 0);
 }
 
+fn layerTexel(t: texture_2d_array<f32>, layer: i32, ip: vec2<i32>) -> vec4<f32> {
+  let size = vec2<i32>(textureDimensions(t));
+  return textureLoad(t, clamp(ip, vec2<i32>(0), size - 1), layer, 0);
+}
+
 fn bodyCover(ip: vec2<i32>) -> f32 {
   return select(0.0, coverOf(texel(bodyTex, ip), u.flags), (u.flags & FLAG_BODIES) != 0u);
 }
@@ -159,14 +172,14 @@ fn depthEdge(ip: vec2<i32>, o: i32) -> f32 {
 // (`landWeight`). A plain bilinear tap mixed the sky's −1 into a land share at the
 // limb and cut a false coast round it. No mapped cell near reads as land.
 fn landAt(uv: vec2<f32>) -> f32 {
-  let f = uv * vec2<f32>(textureDimensions(washTex)) - 0.5;
+  let f = uv * vec2<f32>(textureDimensions(quarterTex)) - 0.5;
   let base = vec2<i32>(floor(f));
   let t = fract(f);
   var sum = 0.0;
   var weight = 0.0;
   for (var k = 0; k < 4; k++) {
     let o = vec2<i32>(k & 1, k >> 1u);
-    let a = texel(washTex, base + o).a;
+    let a = layerTexel(quarterTex, WASH_LAYER, base + o).a;
     let w = mix(1.0 - t.x, t.x, f32(o.x)) * mix(1.0 - t.y, t.y, f32(o.y)) * landWeight(a);
     sum += w * a;
     weight += w;
@@ -176,13 +189,13 @@ fn landAt(uv: vec2<f32>) -> f32 {
 
 // A 1/16-res low band smoothed over nine bilinear taps: contours drawn on it
 // must be curves, not the stair-steps of its texels.
-fn lowBandAt(tex: texture_2d<f32>, uv: vec2<f32>) -> vec4<f32> {
-  let t = 1.0 / vec2<f32>(textureDimensions(tex));
-  var sum = textureSampleLevel(tex, linear, uv, 0.0) * 4.0;
+fn lowBandAt(layer: i32, uv: vec2<f32>) -> vec4<f32> {
+  let t = 1.0 / vec2<f32>(textureDimensions(lowTex));
+  var sum = textureSampleLevel(lowTex, linear, uv, layer, 0.0) * 4.0;
   for (var k = 0; k < 8; k++) {
     let a = f32(k) * 0.7853982;
     let w = select(1.0, 2.0, (k & 1) == 0);
-    sum += textureSampleLevel(tex, linear, uv + vec2<f32>(cos(a), sin(a)) * t * 2.0, 0.0) * w;
+    sum += textureSampleLevel(lowTex, linear, uv + vec2<f32>(cos(a), sin(a)) * t * 2.0, layer, 0.0) * w;
   }
   return sum / 16.0;
 }
@@ -205,12 +218,12 @@ fn outlineLevels(l: f32, perPx: f32, edge: f32, core: f32) -> f32 {
 
 // The wash's hue at the band's scale, 1.5 quarter-res cells round.
 fn washHue(uv: vec2<f32>) -> vec3<f32> {
-  let t = 1.5 / vec2<f32>(textureDimensions(washTex));
-  var sum = textureSampleLevel(washTex, linear, uv, 0.0).rgb * 4.0;
+  let t = 1.5 / vec2<f32>(textureDimensions(quarterTex));
+  var sum = textureSampleLevel(quarterTex, linear, uv, WASH_LAYER, 0.0).rgb * 4.0;
   for (var k = 0; k < 8; k++) {
     let a = f32(k) * 0.7853982;
     let w = select(1.0, 2.0, (k & 1) == 0);
-    sum += textureSampleLevel(washTex, linear, uv + vec2<f32>(cos(a), sin(a)) * t, 0.0).rgb * w;
+    sum += textureSampleLevel(quarterTex, linear, uv + vec2<f32>(cos(a), sin(a)) * t, WASH_LAYER, 0.0).rgb * w;
   }
   return sum / 16.0;
 }
@@ -267,11 +280,11 @@ fn galaxyEngraving(ip: vec2<i32>, uv: vec2<f32>, src: vec3<f32>, neb: vec4<f32>,
 // The colour a whole glow is washed in, judged over ~5 of its texels, so one
 // region takes one hue rather than a patchwork.
 fn glowHue(uv: vec2<f32>) -> vec3<f32> {
-  let t = 1.0 / vec2<f32>(textureDimensions(glowTex));
+  let t = 1.0 / vec2<f32>(textureDimensions(lowTex));
   var sum = vec3<f32>(0.0);
   for (var k = 0; k < 8; k++) {
     let a = f32(k) * 0.7853982;
-    sum += textureSampleLevel(glowTex, linear, uv + vec2<f32>(cos(a), sin(a)) * t * 4.0, 0.0).rgb;
+    sum += textureSampleLevel(lowTex, linear, uv + vec2<f32>(cos(a), sin(a)) * t * 4.0, GLOW_LAYER, 0.0).rgb;
   }
   return sum / 8.0;
 }
@@ -309,13 +322,13 @@ fn numeralInk(px: vec2<f32>) -> f32 {
 // apart, body cells only (wash.a >= 0) — so albedo (dark forest, bright desert,
 // a sea glint) never reads as shade, and a thin ring is not darkened by the sky.
 fn bodyLight(uv: vec2<f32>) -> f32 {
-  let t = 6.0 / vec2<f32>(textureDimensions(washTex));
-  let c = textureSampleLevel(washTex, linear, uv, 0.0).rgb;
+  let t = 6.0 / vec2<f32>(textureDimensions(quarterTex));
+  let c = textureSampleLevel(quarterTex, linear, uv, WASH_LAYER, 0.0).rgb;
   var light = max(c.r, max(c.g, c.b)) * 2.0;
   var weight = 2.0;
   for (var k = 0; k < 8; k++) {
     let a = f32(k) * 0.7853982;
-    let s = textureSampleLevel(washTex, linear, uv + vec2<f32>(cos(a), sin(a)) * t, 0.0);
+    let s = textureSampleLevel(quarterTex, linear, uv + vec2<f32>(cos(a), sin(a)) * t, WASH_LAYER, 0.0);
     let w = step(0.0, s.a);
     light += max(s.r, max(s.g, s.b)) * w;
     weight += w;
@@ -392,7 +405,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let p = px / u.unit;
   let uv = in.uv;
 
-  let sheet = texel(paperTex, ip);
+  let sheet = layerTexel(fullTex, PAPER_LAYER, ip);
   let src = texel(printTex, ip).rgb;
   let body = bodyCover(ip);
   let sky = 1.0 - body;
@@ -404,7 +417,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // glow's boundary, fading inward to plain paper, offset from the engraved
   // line by a slow misregistration field as a colourist's brush was.
   let slip = (vec2<f32>(vnoise(p * 0.018 + 3.0), vnoise(p * 0.018 + 9.0)) - 0.5) * 0.006;
-  let glow = lowBandAt(glowTex, uv);
+  let glow = lowBandAt(GLOW_LAYER, uv);
   let lowL = luma(glow.rgb);
   // The colour band reads the same field a little displaced: the brush's slip,
   // approximated to first order from the field's own gradient.
@@ -417,7 +430,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let floorL = skyFloor;
   let edgeLevel = max(GALAXY_EDGE, 2.5 * floorL);
   let big = smoothstep(1.8 * floorL + 0.03, 2.6 * floorL + 0.05, lowL);
-  let neb = textureSampleLevel(nebulaTex, linear, uv, 0.0);
+  let neb = textureSampleLevel(quarterTex, linear, uv, NEBULA_LAYER, 0.0);
   let h = log(neb.z + 0.01) + LINE_UNSHARP * (log(neb.z + 0.02) - log(lowL + 0.02));
   let hPerUnit = max(length(vec2<f32>(dpdx(h), dpdy(h))), 1e-6) * u.unit;
   let fwSm = max(fwidth(neb.y), 1e-5);
@@ -427,7 +440,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   }
   let band = outlineBand(inside) * sky * (1.0 - big);
   // A structure's disc (cluster, void, group) is outlined from its own row, never engraved.
-  let structure = lowBandAt(structureGlowTex, uv);
+  let structure = lowBandAt(STRUCTURE_GLOW_LAYER, uv);
   let structL = structure.a;
   let structPerPx = max(fwidth(structL), 1e-5);
   let structSlipL = structL + dot(vec2<f32>(dpdx(structL), dpdy(structL)), slip * u.res);
@@ -451,15 +464,15 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   col = applyWash(col, pigmentAt(5.0), galaxyWash * (1.0 - galaxy.z)); // smalt
   col = applyWash(col, pigmentAt(2.0), galaxyWash * galaxy.z); // gamboge
 
-  let ornament = texel(decorTex, ip);
+  let ornament = layerTexel(fullTex, DECOR_LAYER, ip);
   col = mix(col, paperTone, ornament.b);
   // Figures lie on the sky, behind any body; only a clearing ornament covers one.
   let behind = max(sky, ornament.b);
-  col = applyWash(col, max(texel(decorHueTex, ip).rgb, vec3<f32>(1e-3)), ornament.a * 0.55 * behind * frame.y);
+  col = applyWash(col, max(layerTexel(fullTex, DECOR_HUE_LAYER, ip).rgb, vec3<f32>(1e-3)), ornament.a * 0.55 * behind * frame.y);
 
   // Sky: glyphs for stars, the galaxy engraving, and on wider faint light the
   // boundary line and one inner contour of the low band. Star glyphs were scattered by glyphs.wesl: x ink, y paper knock-out.
-  let star = texel(starInkTex, ip);
+  let star = layerTexel(fullTex, STAR_INK_LAYER, ip);
   let clear = 1.0 - star.y;
   // A glow's edge is dotted, as Bayer and de Wit drew a nebula's: a solid
   // ragged line here would read as a coast.
@@ -498,7 +511,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // the body work runs only where a body is.
   let landShare = landAt(uv);
   let landPerPx = max(fwidth(landShare), 1e-4);
-  let landBlur = textureSampleLevel(landBlurTex, linear, uv, 0.0).xy;
+  let landBlur = textureSampleLevel(quarterTex, linear, uv, LAND_BLUR_LAYER, 0.0).xy;
   let blurredShare = select(1.0, landBlur.x / landBlur.y, landBlur.y > 1e-3);
   let seaD = seaDistance(blurredShare);
   let seaPerUnit = length(vec2<f32>(dpdx(seaD), dpdy(seaD))) * u.unit;
@@ -571,7 +584,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
       bodyInk = max(bodyInk, select(mars.ink, 0.0, ground));
     }
     if (ground) {
-      let around = luma(textureSampleLevel(washTex, linear, uv, 0.0).rgb);
+      let around = luma(textureSampleLevel(quarterTex, linear, uv, WASH_LAYER, 0.0).rgb);
       bodyInk = max(bodyInk, marsRelief(reliefTex, linear, px, relief, u.unit, luma(src), around));
     }
     bodyInk *= body;

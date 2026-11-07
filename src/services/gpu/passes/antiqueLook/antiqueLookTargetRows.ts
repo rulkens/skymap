@@ -3,17 +3,21 @@
  * held only while it draws (`antiqueLookOn`). `print` and `overlay` take the
  * swap format so every pipeline built for `swap` draws into them unchanged;
  * `print-points` is sized in print units, so it holds the same cells at any
- * DPR; `star-ink` holds 0..1 channels (glyphs, then the web chart), so 8 bits each.
+ * DPR; the plate's own rows are layers of three arrays, one per size and format
+ * (`ANTIQUE_*_LAYERS`), so the plate binds three textures for nine rows.
  */
 
 import type { RenderTargetSpec } from '../../../../@types/engine/frame/RenderTargetSpec';
 import {
   ANTIQUE_CELL,
+  ANTIQUE_FULL_LAYERS,
   ANTIQUE_GEOGRAPHY_FORMAT,
   ANTIQUE_LAND_FORMAT,
+  ANTIQUE_LOW_LAYERS,
   ANTIQUE_PRINT_CELL_UNITS,
   ANTIQUE_PRINT_POINTS_DEPTH,
   ANTIQUE_PRINT_POINTS_FORMAT,
+  ANTIQUE_QUARTER_LAYERS,
   ANTIQUE_REFERENCE_HEIGHT_CSS,
   ANTIQUE_STRUCTURE_CELL,
   ANTIQUE_TARGETS,
@@ -38,30 +42,30 @@ export function antiqueLookTargetRows(swapFormat: GPUTextureFormat): readonly Re
     clearValue: TRANSPARENT,
     allocateWhen: antiqueLookOn,
   });
+  const layered = (
+    id: string,
+    format: GPUTextureFormat,
+    scale: number,
+    layers: Record<string, number>,
+  ): RenderTargetSpec => ({ ...row(id, format, scale), layers: Object.keys(layers).length });
   return [
     row(ANTIQUE_TARGETS.print, swapFormat, 1),
     row(ANTIQUE_TARGETS.overlay, swapFormat, 1),
-    row(ANTIQUE_TARGETS.paper, 'rgba8unorm', 1),
-    row(ANTIQUE_TARGETS.wash, HDR_TARGET_FORMAT, ANTIQUE_CELL),
-    row(ANTIQUE_TARGETS.glow, HDR_TARGET_FORMAT, ANTIQUE_CELL * 4),
-    row(ANTIQUE_TARGETS.nebula, HDR_TARGET_FORMAT, ANTIQUE_CELL),
-    // The structure markers, moved off the print (ANTIQUE_MOVED_PASSES), and their low band.
+    layered(ANTIQUE_TARGETS.full, 'rgba8unorm', 1, ANTIQUE_FULL_LAYERS),
+    layered(ANTIQUE_TARGETS.quarter, HDR_TARGET_FORMAT, ANTIQUE_CELL, ANTIQUE_QUARTER_LAYERS),
+    layered(ANTIQUE_TARGETS.low, HDR_TARGET_FORMAT, ANTIQUE_CELL * 4, ANTIQUE_LOW_LAYERS),
+    // The structure markers, moved off the print (ANTIQUE_MOVED_PASSES).
     row(ANTIQUE_TARGETS.structures, HDR_TARGET_FORMAT, ANTIQUE_STRUCTURE_CELL),
-    row(ANTIQUE_TARGETS.structureGlow, HDR_TARGET_FORMAT, ANTIQUE_CELL * 4),
     row(
       ANTIQUE_TARGETS.printPoints,
       ANTIQUE_PRINT_POINTS_FORMAT,
       (_state, canvas) => (ANTIQUE_PRINT_CELL_UNITS * canvas.height) / ANTIQUE_REFERENCE_HEIGHT_CSS,
       ANTIQUE_PRINT_POINTS_DEPTH,
     ),
-    row(ANTIQUE_TARGETS.starInk, 'rgba8unorm', 1),
-    row(ANTIQUE_TARGETS.decor, 'rgba8unorm', 1),
-    row(ANTIQUE_TARGETS.decorHue, 'rgba8unorm', 1),
     row(ANTIQUE_TARGETS.land, ANTIQUE_LAND_FORMAT, 1),
     row(ANTIQUE_TARGETS.geography, ANTIQUE_GEOGRAPHY_FORMAT, 1),
-    // The land share's blur, two passes (`landBlur.wesl`): Σ weight·share, Σ weight.
+    // The land share's blur's first half (`landBlur.wesl`): Σ weight·share, Σ weight.
     row(ANTIQUE_TARGETS.landBlurAcross, 'rg16float', ANTIQUE_CELL),
-    row(ANTIQUE_TARGETS.landBlur, 'rg16float', ANTIQUE_CELL),
     // The moved passes' own pipelines are built for HDR, so their row is too.
     row(ANTIQUE_TARGETS.lines, HDR_TARGET_FORMAT, 1),
     row(ANTIQUE_TARGETS.relief, ANTIQUE_RELIEF_FORMAT, 1),
