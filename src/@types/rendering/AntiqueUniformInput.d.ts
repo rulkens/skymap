@@ -4,6 +4,7 @@
  */
 
 import type { ViewCornerRays } from '../camera/projection/ViewCornerRays';
+import type { AntiqueRulings } from './AntiqueRulings';
 import type { Size } from './Size';
 
 export type AntiqueUniformInput = {
@@ -20,7 +21,7 @@ export type AntiqueUniformInput = {
   readonly rays: ViewCornerRays;
   readonly seed: number;
   /** One RA / Dec ruling interval for the whole plate, degrees (`antiqueGraticuleSteps`). */
-  readonly rulings: { readonly raDeg: number; readonly decDeg: number };
+  readonly rulings: AntiqueRulings;
   /** Body hatch direction, screen radians (`terminatorHatchAngle`). */
   readonly hatchAngle: number;
 };

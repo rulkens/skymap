@@ -1,15 +1,12 @@
 #!/usr/bin/env node
 /**
- * packOrnaments — packs the antique look's engraved ornaments into one sheet,
- * `public/antique/ornaments.png`, and generates its layout module. Channels:
- * R = ink density, G = fill (the solid silhouette the plate is cleared to paper
- * under), B = wash (where the colourist painted: the alpha of `<id>.colour.png`
- * when a sprite has one, else 0).
- *
- * Usage:  npm run pack-ornaments
+ * packOrnaments (`npm run pack-ornaments`) — packs the antique look's engraved
+ * ornaments into `public/antique/ornaments.png` and generates its layout module.
+ * Channels: R ink density, G fill (the solid silhouette the plate is cleared to
+ * paper under), B wash (the alpha of `<id>.colour.png` when a sprite has one).
  * Inputs: data/antique/sprites/<id>.png (black RGB, ink in alpha), optional
- *         <id>.colour.png (RGB hue, alpha saturation), provenance in
- *         data/antique/PROVENANCE.md; the IM Fell TTFs in data/antique/fonts/.
+ * <id>.colour.png (RGB hue, alpha saturation), the IM Fell TTFs in
+ * data/antique/fonts/; provenance in data/antique/PROVENANCE.md.
  */
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';

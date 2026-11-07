@@ -11,14 +11,16 @@ import type { ViewBasis } from '../../../@types/camera/projection/ViewBasis';
 import type { ViewFrustum } from '../../../@types/camera/projection/ViewFrustum';
 import type { AntiqueGlyphInstance } from '../../../@types/rendering/AntiqueGlyphInstance';
 import type { AntiqueGlyphSheet } from '../../../@types/rendering/AntiqueGlyphSheet';
+import type { AntiqueRulings } from '../../../@types/rendering/AntiqueRulings';
 import type { Size } from '../../../@types/rendering/Size';
 import {
   ANTIQUE_LADDER_UNITS,
   ANTIQUE_MAX_GLYPHS,
   ANTIQUE_NUMERAL_INSET_UNITS,
-  ANTIQUE_NUMERAL_UNITS,
 } from '../../../data/rendering/antiqueLook';
 import { rayThroughPx } from '../../camera/projection/rayThroughPx';
+import { wrapRad } from '../../math/wrapRad';
+import { setAntiqueDigits } from './setAntiqueDigits';
 
 const SAMPLES = 96;
 const DEG = 180 / Math.PI;
@@ -29,7 +31,7 @@ export function placeAntiqueNumerals(input: {
   readonly size: Size;
   readonly unitPx: number;
   /** The plate's ruling intervals: numbers stand where the rulings meet the border. */
-  readonly rulings: { readonly raDeg: number; readonly decDeg: number };
+  readonly rulings: AntiqueRulings;
   readonly sheet: Pick<AntiqueGlyphSheet, 'width' | 'height' | 'glyphs'>;
 }): readonly AntiqueGlyphInstance[] {
   const { size, unitPx } = input;
@@ -67,15 +69,16 @@ export function placeAntiqueNumerals(input: {
       const v = edge.ra ? Math.atan2(d[1], d[0]) * DEG : Math.asin(d[2] / len) * DEG;
       // Unwrap right ascension across its 0/360 seam so crossings interpolate.
       const prev = values[values.length - 1];
-      values.push(prev === undefined ? v : prev + wrap180(v - prev));
+      values.push(prev === undefined ? v : prev + wrapRad((v - prev) / DEG) * DEG);
       points.push(p);
     }
     const step = edge.ra ? input.rulings.raDeg : input.rulings.decDeg;
     for (let i = 0; i < SAMPLES; i++) {
       const a = values[i]!;
       const b = values[i + 1]!;
-      const k = Math.ceil(Math.min(a, b) / step);
-      if (k * step > Math.max(a, b) || a === b) continue;
+      // Half-open (min, max]: a ruling that falls exactly on a sample is set once, not twice.
+      const k = Math.floor(Math.min(a, b) / step) + 1;
+      if (k * step > Math.max(a, b)) continue;
       const value = k * step;
       const t = (value - a) / (b - a);
       const at: [number, number] = [
@@ -83,41 +86,9 @@ export function placeAntiqueNumerals(input: {
         points[i]![1] + (points[i + 1]![1] - points[i]![1]) * t + edge.text[1],
       ];
       const label = edge.ra ? String(((value % 360) + 360) % 360) : String(Math.abs(value));
-      setDigits(label, at, unitPx, input.sheet, out);
+      setAntiqueDigits(label, at, unitPx, input.sheet, out);
       if (out.length >= ANTIQUE_MAX_GLYPHS) return out.slice(0, ANTIQUE_MAX_GLYPHS);
     }
   }
   return out;
-}
-
-function setDigits(
-  text: string,
-  centre: readonly [number, number],
-  unitPx: number,
-  sheet: Pick<AntiqueGlyphSheet, 'width' | 'height' | 'glyphs'>,
-  out: AntiqueGlyphInstance[],
-): void {
-  const height = ANTIQUE_NUMERAL_UNITS * unitPx;
-  const rects = [...text].map((ch) => sheet.glyphs[ch]).filter((r) => r !== undefined);
-  const scale = height / Math.max(...rects.map((r) => r.h));
-  const total = rects.reduce((sum, r) => sum + r.w * scale, 0);
-  let x = centre[0] - total / 2;
-  for (const r of rects) {
-    const w = r.w * scale;
-    out.push({
-      centrePx: [x + w / 2, centre[1]],
-      halfPx: [w / 2, (r.h * scale) / 2],
-      rect: [
-        r.x / sheet.width,
-        r.y / sheet.height,
-        (r.x + r.w) / sheet.width,
-        (r.y + r.h) / sheet.height,
-      ],
-    });
-    x += w;
-  }
-}
-
-function wrap180(d: number): number {
-  return ((((d + 180) % 360) + 360) % 360) - 180;
 }

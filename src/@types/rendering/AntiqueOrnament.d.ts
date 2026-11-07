@@ -7,7 +7,6 @@
 import type { AntiqueOrnamentAnchor } from './AntiqueOrnamentAnchor';
 
 export type AntiqueOrnament = {
-  readonly id: string;
   /** Key into the packed atlas (`data/rendering/antiqueOrnamentAtlas.ts`). */
   readonly sprite: string;
   readonly anchor: AntiqueOrnamentAnchor;
@@ -18,8 +17,6 @@ export type AntiqueOrnament = {
   readonly regime: 'stars' | 'cosmos' | 'always';
   /** Turn so the engraving's own up points at celestial north on screen. */
   readonly facesNorth: boolean;
-  /** Extra turn, degrees, counter-clockwise on screen. */
-  readonly rotationDeg: number;
   /** Index into `pigments.wesl`'s PIGMENTS for the sprite's wash channel. */
   readonly pigment: number;
   readonly opacity: number;

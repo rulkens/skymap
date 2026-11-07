@@ -7,6 +7,7 @@
 
 import type { ViewBasis } from '../../../@types/camera/projection/ViewBasis';
 import type { ViewFrustum } from '../../../@types/camera/projection/ViewFrustum';
+import type { AntiqueRulings } from '../../../@types/rendering/AntiqueRulings';
 import type { Size } from '../../../@types/rendering/Size';
 import {
   ANTIQUE_RULING_STEPS_DEG,
@@ -18,7 +19,7 @@ export function antiqueGraticuleSteps(
   frustum: ViewFrustum,
   size: Size,
   unitPx: number,
-): { readonly raDeg: number; readonly decDeg: number } {
+): AntiqueRulings {
   const radPerPx = (frustum.tanUp - frustum.tanDown) / size.height;
   const degPerPx = (radPerPx * 180) / Math.PI;
   const f = basis.forward;

@@ -1,5 +1,5 @@
 /**
- * antique — the engraved-atlas look (spike). Boots from the `?antique` URL gate
+ * antique — the engraved-atlas look. Boots from the `?antique` URL gate
  * so a deep link opens straight into it; the toggle dispatches `setAntiqueEnabled`.
  */
 

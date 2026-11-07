@@ -31,12 +31,10 @@ const GALACTIC_CENTRE_AHEAD: ViewBasis = (() => {
 
 function skyRow(over: Partial<AntiqueOrnament> & { lonDeg?: number }): AntiqueOrnament {
   return {
-    id: 'b',
     sprite: 'beast',
-    anchor: { kind: 'sky', frame: 'equatorial', lonDeg: over.lonDeg ?? 0, latDeg: 0, sizeDeg: 30 },
+    anchor: { kind: 'sky', lonDeg: over.lonDeg ?? 0, latDeg: 0, sizeDeg: 30 },
     regime: 'always',
     facesNorth: true,
-    rotationDeg: 0,
     pigment: 0,
     opacity: 1,
     clearsBeneath: false,
@@ -84,7 +82,7 @@ describe('placeAntiqueOrnaments', () => {
   });
 
   it('keeps star-chart rows inside the Galaxy and Zone-of-Avoidance rows outside it', () => {
-    const rows = [skyRow({ id: 's', regime: 'stars' }), skyRow({ id: 'c', regime: 'cosmos' })];
+    const rows = [skyRow({ regime: 'stars' }), skyRow({ regime: 'cosmos' })];
     expect(place(rows, NORTH_UP, 0).map((p) => p.opacity)).toEqual([1]);
     expect(place(rows, NORTH_UP, 5)).toHaveLength(1);
   });
@@ -127,10 +125,8 @@ describe('placeAntiqueOrnaments', () => {
   });
 
   it('fades a sky row out while it is too small to read', () => {
-    expect(
-      place([
-        skyRow({ anchor: { kind: 'sky', frame: 'equatorial', lonDeg: 0, latDeg: 0, sizeDeg: 3 } }),
-      ]),
-    ).toEqual([]);
+    expect(place([skyRow({ anchor: { kind: 'sky', lonDeg: 0, latDeg: 0, sizeDeg: 3 } })])).toEqual(
+      [],
+    );
   });
 });

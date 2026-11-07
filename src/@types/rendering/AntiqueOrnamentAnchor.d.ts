@@ -1,13 +1,12 @@
 /**
- * AntiqueOrnamentAnchor — where an ornament sits. `sky`: a direction on the
- * celestial sphere with an angular size, so it moves with the sky like a
+ * AntiqueOrnamentAnchor — where an ornament sits. `sky`: an equatorial RA/Dec
+ * direction with an angular size, so it moves with the sky like a
  * constellation figure. `space`: a place among the galaxies. `sheet`: a fixed
  * place on the plate, in print units from a corner, like a cartouche.
  */
 export type AntiqueOrnamentAnchor =
   | {
       readonly kind: 'sky';
-      readonly frame: 'equatorial' | 'galactic';
       readonly lonDeg: number;
       readonly latDeg: number;
       /** Width on the sky, degrees. */
