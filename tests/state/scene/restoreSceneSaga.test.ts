@@ -70,6 +70,7 @@ function makeSnapshot(
       cosmicHorizon: { ...f.cosmicHorizon, enabled: !f.cosmicHorizon.enabled },
       flow: { ...f.flow, flowSpeed: 7 },
       localBubble: { ...f.localBubble, enabled: !f.localBubble.enabled },
+      probeSpheres: { ...f.probeSpheres, enabled: !f.probeSpheres.enabled },
       constellations: { ...f.constellations, enabled: !f.constellations.enabled },
       orbitTrails: { ...f.orbitTrails, enabled: !f.orbitTrails.enabled },
       surfaceTileDebug: f.surfaceTileDebug,

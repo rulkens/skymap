@@ -26,6 +26,7 @@ import { cloudDeckFade } from '../../clouds/present/cloudDeckFade';
 import { bodyCameraDistanceMpc } from '../../slabs/present/bodyCameraDistanceMpc';
 import { bodySlabFlooredPick } from '../../../../services/engine/helpers/bodySlabFlooredPick';
 import { prepareBodySurfaceFrame } from '../../slabs/present/prepareBodySurfaceFrame';
+import { viewFlipsWinding } from '../../../../utils/camera/viewRig/viewFlipsWinding';
 
 export function earthPass(runtime: BodyRuntime): ContentPass {
   return {
@@ -73,6 +74,7 @@ export function earthPass(runtime: BodyRuntime): ContentPass {
           state.settings.earth.ambientLight,
           state.settings.earth.oceanRoughness,
         ),
+        viewFlipsWinding(ctx),
       );
     },
 

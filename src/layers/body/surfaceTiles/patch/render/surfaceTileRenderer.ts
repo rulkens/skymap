@@ -132,30 +132,37 @@ export function createSurfaceTileRenderer(
       variant.fragment,
       `surfaceTile.fragment[${key}]`,
     );
-    const pipeline = device.createRenderPipeline({
-      label: `surface-tile-pipeline[${key}]`,
-      layout: device.createPipelineLayout({
-        label: `surface-tile-pipeline-layout[${key}]`,
-        bindGroupLayouts: [bindGroupLayout],
-      }),
-      vertex: { module: vsModule, entryPoint: 'vs' },
-      fragment: {
-        module: fsModule,
-        entryPoint: 'fs',
-        targets: [{ format: targetFormat }], // opaque replace, alpha=1
-      },
-      primitive: {
-        topology: 'triangle-list',
-        frontFace: 'ccw', // matches surfacePatchIndices' east x north = outward winding
-        cullMode: 'back',
-      },
-      depthStencil: {
-        format: depthFormat,
-        depthWriteEnabled: true,
-        depthCompare: resolveDepthCompare('nearer-or-equal', reversedZ),
-      },
-    });
-    return { bindGroupLayout, pipeline, bindings: variant.bindings };
+    // `cullMode` is the one difference: a capture face mirrors winding (`viewFlipsWinding`).
+    const createPipeline = (cullMode: GPUCullMode): GPURenderPipeline =>
+      device.createRenderPipeline({
+        label: `surface-tile-pipeline[${key}]-cull-${cullMode}`,
+        layout: device.createPipelineLayout({
+          label: `surface-tile-pipeline-layout[${key}]`,
+          bindGroupLayouts: [bindGroupLayout],
+        }),
+        vertex: { module: vsModule, entryPoint: 'vs' },
+        fragment: {
+          module: fsModule,
+          entryPoint: 'fs',
+          targets: [{ format: targetFormat }], // opaque replace, alpha=1
+        },
+        primitive: {
+          topology: 'triangle-list',
+          frontFace: 'ccw', // matches surfacePatchIndices' east x north = outward winding
+          cullMode,
+        },
+        depthStencil: {
+          format: depthFormat,
+          depthWriteEnabled: true,
+          depthCompare: resolveDepthCompare('nearer-or-equal', reversedZ),
+        },
+      });
+    return {
+      bindGroupLayout,
+      pipeline: createPipeline('back'),
+      mirroredPipeline: createPipeline('front'),
+      bindings: variant.bindings,
+    };
   }
   const variants = new Map<string, ReturnType<typeof buildVariant>>();
 
@@ -337,7 +344,7 @@ export function createSurfaceTileRenderer(
       ],
     });
 
-    pass.setPipeline(variant.pipeline);
+    pass.setPipeline(args.mirrored ? variant.mirroredPipeline : variant.pipeline);
     pass.setBindGroup(0, bindGroup);
     pass.setIndexBuffer(indexBuffer, 'uint16');
     pass.drawIndexed(indexCount, tileCount);

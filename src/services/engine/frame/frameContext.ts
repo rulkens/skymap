@@ -37,6 +37,8 @@ import { viewBandOf } from '../presentation/viewBandOf';
 import type { PositionedId } from '../../../@types/scene/PositionedId';
 import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
 import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
+import { isPlanetBody } from '../../../utils/scene/isPlanetBody';
+import { isMeshBody } from '../../../utils/meshBodies/isMeshBody';
 
 export function deriveFrameContext(
   state: EngineState,
@@ -117,7 +119,10 @@ export function deriveFrameContext(
   };
   for (const body of SCENE_PLANETS) admit(body);
   for (const body of meshBodies) admit(body);
-  for (const { body } of coverage.values()) admit(body);
+  // A covered planet or mesh body was offered above; its coverage only gates it.
+  for (const { body } of coverage.values()) {
+    if (!isPlanetBody(body) && !isMeshBody(body)) admit(body);
+  }
 
   // `focus`, `focusBlend` and `focusPickId` are at-rest placeholders that `runFrame`
   // overwrites the moment the ready gate passes, before any consumer reads them:

@@ -25,7 +25,8 @@ def source(filename, frame=None, drop_materials=(), scale=1.0, materials=None, w
         # NASA's documentary models type every surface matte whatever it is
         # made of. Per-material `metallic` / `roughness` / `gain` (Base Color
         # multiplier) / `bump` (metres of relief per unit of the colour map's
-        # luminance, for a source with no normal map) Principled overrides.
+        # luminance, for a source with no normal map) / `classify` (texel rules,
+        # see classify_texels()) Principled overrides.
         "materials": materials or {},
         # None = the file's saved transforms; an int = that animation frame. The
         # deploy animations park the rover STOWED at their own frame 0, so a
@@ -53,7 +54,23 @@ def lonlat_albedo(filename, lon_offset_deg, mean_albedo):
 
 
 SOURCES = {
-    "voyager": source("Voyager Probe (B).glb"),
+    # One photo atlas (tex_01) carries every part but the dish, so its texels
+    # are classed by colour over a dielectric default. Bare aluminium stays in
+    # that default: in the photos it is the same neutral grey as shaded white
+    # paint, and a grey-means-metal rule took both. Bump does the foil crinkle.
+    # The dish (tex_02_AO) and its backing (tex_02_AO_dark) are white paint.
+    "voyager": source("Voyager Probe (B).glb", materials={
+        "tex_01": dict(metallic=0.0, roughness=0.5, bump=0.02, classify=[
+            # Black MLI and paint: a matte dielectric.
+            dict(val=(0, 0.25), metallic=0.0, roughness=0.6),
+            # Gold and amber: aluminised Kapton, a tinted mirror. The Golden
+            # Record shares its hue and saturation, so it lands here too; the
+            # low value floor keeps the record's shadowed half.
+            dict(hue=(0.04, 0.16), sat=(0.45, 1), val=(0.03, 1), metallic=0.8, roughness=0.3),
+        ]),
+        "tex_02_AO": dict(roughness=0.8),
+        "tex_02_AO_dark": dict(roughness=0.8),
+    }),
     "perseverance": source("Mars 2020 Perseverance Rover.glb", frame=120),
     "curiosity": source("Curiosity Rover (MSL) (Clean).blend", frame=206,
                         drop_materials=("pivot", "shadow2")),
@@ -188,12 +205,83 @@ def override_materials(cfg):
                     for link in list(socket.links):
                         tree.links.remove(link)
                     socket.default_value = values[socket_name.lower()]
+            if "classify" in values:
+                classify_texels(tree, node, values["classify"])
             if "bump" in values:
                 bump_from_base_colour(tree, node, values["bump"])
             if "gain" in values:
                 multiply_base_colour(tree, node, values["gain"])
             applied += 1
     return applied
+
+
+def classify_texels(tree, principled, rules):
+    """Generated metallic and roughness maps for a photo atlas that packs metal
+    and dielectric parts into one material. Each rule (`hue` / `sat` / `val`
+    ranges in 0..1, display-encoded) fades in over the sockets' scalar values,
+    later rules winning, so the bake reads the maps like authored ones."""
+    import numpy as np
+    base = principled.inputs["Base Color"]
+    tex = base.links[0].from_node if base.links else None
+    if tex is None or tex.type != "TEX_IMAGE":
+        raise RuntimeError("import: classify needs a Base Color image to read texels from")
+    width, height = tex.image.size
+    px = np.empty(width * height * 4, dtype=np.float32)
+    tex.image.pixels.foreach_get(px)
+    hsv = rgb_to_hsv(px.reshape(-1, 4)[:, :3])
+    maps = {name: np.full(width * height, principled.inputs[name].default_value, dtype=np.float32)
+            for name in ("Metallic", "Roughness")}
+    for rule in rules:
+        weight = np.ones(width * height, dtype=np.float32)
+        for channel, key in enumerate(("hue", "sat", "val")):
+            if key in rule:
+                weight *= soft_band(hsv[:, channel], *rule[key])
+        for name, values in maps.items():
+            values += (rule[name.lower()] - values) * weight
+    for name, values in maps.items():
+        image = bpy.data.images.new("%s_%s" % (tex.image.name, name.lower()), width, height, alpha=False)
+        image.colorspace_settings.name = "Non-Color"
+        rgba = np.repeat(values[:, None], 4, axis=1)
+        rgba[:, 3] = 1.0
+        image.pixels.foreach_set(rgba.ravel())
+        image.pack()
+        node = tree.nodes.new("ShaderNodeTexImage")
+        node.image = image
+        node.interpolation = tex.interpolation
+        node.extension = tex.extension
+        if tex.inputs["Vector"].links:
+            tree.links.new(node.inputs["Vector"], tex.inputs["Vector"].links[0].from_socket)
+        socket = principled.inputs[name]
+        for link in list(socket.links):
+            tree.links.remove(link)
+        tree.links.new(socket, node.outputs["Color"])
+
+
+# Half-width of a classify edge: a hard threshold aliases into stair-stepped
+# class borders across the atlas.
+CLASSIFY_SOFTNESS = 0.04
+
+
+def soft_band(x, lo, hi):
+    """1 inside [lo, hi], 0 outside; a bound at the 0 or 1 end of the scale is open."""
+    import numpy as np
+
+    def step(edge):
+        t = np.clip((x - edge + CLASSIFY_SOFTNESS) / (2 * CLASSIFY_SOFTNESS), 0.0, 1.0)
+        return t * t * (3 - 2 * t)
+    return (step(lo) if lo > 0 else 1.0) * (1 - step(hi) if hi < 1 else 1.0)
+
+
+def rgb_to_hsv(rgb):
+    import numpy as np
+    top = rgb.max(axis=1)
+    span = top - rgb.min(axis=1)
+    safe = np.maximum(span, 1e-6)
+    r, g, b = rgb.T
+    hue = np.where(top == r, ((g - b) / safe) % 6,
+                   np.where(top == g, (b - r) / safe + 2, (r - g) / safe + 4)) / 6
+    sat = np.where(top > 0, span / np.maximum(top, 1e-6), 0.0)
+    return np.stack([np.where(span > 0, hue, 0.0), sat, top], axis=1)
 
 
 def bump_from_base_colour(tree, principled, relief_m):

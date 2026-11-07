@@ -221,6 +221,13 @@ describe('resolveClipFoci resolves focusId(null) to focus(null)', () => {
 // ---------------------------------------------------------------------------
 
 describe('resolveClipFoci recurses into seq/all/fork', () => {
+  it('resolveClipFoci keeps overlap', () => {
+    const clip: ClipData = { timeline: [seq([hold(1), hold(2)], { overlap: [1, 2] })] };
+    const outer = resolveClipFoci(clip, RESOLVER, FOV_Y, POSE, SIM_DAYS).timeline[0];
+    if (outer!.kind !== 'seq') throw new Error('expected seq');
+    expect(outer.overlap).toEqual([1, 2]);
+  });
+
   it('id-bearing leaf nested under seq is rewritten', () => {
     const id = focusId('galaxy-cluster-virgo');
     const clip: ClipData = {

@@ -529,5 +529,10 @@
       -0.8691902737079163
     ],
     "orbit": { "meanAnomalyRad": -137.73824329516466 }
+  },
+  "probe-sphere-orbit": {
+    "positionMpc": [-8.586029809921233e-13, 4.302365851487608e-12, 1.8652815217375455e-12],
+    "orientation": [1, 0, 0, 0, 1, 0, 0, 0, 1],
+    "orbit": { "meanAnomalyRad": 0 }
   }
 }

@@ -1,5 +1,5 @@
 import type { Channel } from '../Channel';
-import type { Ease } from '../Ease';
+import type { SegmentCurve } from './SegmentCurve';
 import type { Space } from '../Space';
 import type { PoseFrame } from '../../camera/pose/PoseFrame';
 import type { Vec3 } from '../../math/Vec3';
@@ -22,10 +22,11 @@ import type { Vec3 } from '../../math/Vec3';
  * from the prior segment's final value or the clip's `start` pose.
  *
  * `space` comes directly from the `set`/`spin` action (defaulting to
- * `CHANNEL_SPACE[ch]`). `ease` is also carried from the action.
+ * `CHANNEL_SPACE[ch]`). `curve` wraps the action's `ease`.
  *
  * Segments in `baseTracks[channel]` are ordered by `startSec` ascending and
- * non-overlapping (guaranteed by `validateSingleWriter`, Task 5).
+ * overlap only as a blend pair: the later one carries `blendIn` over the shared
+ * window (guaranteed by `resolveSeqJoins` and `validateSingleWriter`).
  */
 export type BaseSegment = {
   readonly segKind: 'tween' | 'spin';
@@ -34,7 +35,7 @@ export type BaseSegment = {
   readonly endSec: number;
   readonly from?: number | Vec3;
   readonly to: number | Vec3;
-  readonly ease: Ease;
+  readonly curve: SegmentCurve;
   readonly space: Space;
   /** Carried from the `set`/`setVec` endpoint; absent ⇒ `'absolute'`. A `spin`
    *  is a relative writer and never carries one. */
@@ -43,4 +44,7 @@ export type BaseSegment = {
    *  its `by`-delta sweep after `endSec` (the perpetual looping orbit idiom).
    *  The evaluator (Task 6) reads this to gate completion logic. */
   readonly loop?: boolean;
+  /** Set only on the incoming segment of an overlapping `seq` join:
+   *  `[startSec, outgoing.endSec)`, the window the evaluator crossfades over. */
+  readonly blendIn?: { readonly startSec: number; readonly endSec: number };
 };

@@ -4,13 +4,14 @@
  * multi-scatter baked once in one encoder, sky-view re-baked when its record moves.
  * The shell draws BOTH walls (`cullMode: 'none'`); the fragment splits duty by
  * `@builtin(front_facing)` and classifies rays by SAMPLED `foreground:0` depth, so
- * the pipeline declares no depth state. One bundle (LUTs, uniform buffers, bind
+ * its main-view pipelines declare no depth state. One bundle (LUTs, uniform buffers, bind
  * groups) per `paramsById` row, so per-frame writes never share a buffer.
  * Pipelines use explicit layouts, never `layout: 'auto'`.
  */
 
 import type { AtmosphereShellDepth } from './AtmosphereShellDepth';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
+import type { Vec2 } from '../../../../@types/math/Vec2';
 
 export type AtmosphereShellRenderer = Renderer & {
   /**
@@ -88,6 +89,19 @@ export type AtmosphereShellRenderer = Renderer & {
     bodyId: string,
     uniforms: Float32Array,
     farDepthView: GPUTextureView,
+  ): void;
+
+  /**
+   * `draw`'s shell into a mesh probe's capture face, for a probe eye OUTSIDE the
+   * atmosphere: no scene depth (rays end at the analytic ground sphere), pipelines that
+   * carry the face's depth format, and its own uniform buffers and bind group.
+   */
+  drawProbeShell(
+    pass: GPURenderPassEncoder,
+    bodyId: string,
+    uniforms: Float32Array,
+    farDepthView: GPUTextureView,
+    viewportPx: Vec2,
   ): void;
 
   /**

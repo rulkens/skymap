@@ -108,6 +108,7 @@ describe('expandFrameOrder', () => {
       'body-glints',
       'mission-glints',
       'earth-scene-glints',
+      'probe-sphere-glints',
       'black-hole-marker',
     ]);
     // The merged step bills the bare group key, as today: the roster line
@@ -360,6 +361,7 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
       'mission-meshes',
       'body-meshes',
       'earth-scene-meshes',
+      'probe-sphere-meshes',
     ]);
   });
 

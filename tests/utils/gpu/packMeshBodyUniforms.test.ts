@@ -18,6 +18,8 @@ import { packMeshBodyUniforms } from '../../../src/utils/gpu/packMeshBodyUniform
 import { MESH_BODY_UNIFORM_FLOATS } from '../../../src/data/mesh/meshBodyUniformLayout';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
+import type { MeshMaterialFactors } from '../../../src/@types/rendering/MeshMaterialFactors';
+import { NEUTRAL_MESH_MATERIAL_FACTORS } from '../../../src/data/mesh/neutralMeshMaterialFactors';
 import { debugSlice } from '../../../src/state/settings/core/debugSlice';
 
 const MVP = new Float32Array(16);
@@ -33,6 +35,11 @@ const MODEL: Mat3 = [101, 102, 103, 104, 105, 106, 107, 108, 109];
 const CAM_LOCAL: Vec3 = [3.5, -4.25, 6.75];
 const SIN_SUN_ANGULAR_RADIUS = 0.625;
 const AMBIENT = 0.125;
+const MATERIAL: MeshMaterialFactors = {
+  baseColor: [0.875, 0.4375, 0.1875],
+  metallic: 0.3125,
+  roughness: 0.5625,
+};
 
 describe('MeshBodyUniforms byte offsets', () => {
   it('packs every field at its documented float index', () => {
@@ -44,10 +51,11 @@ describe('MeshBodyUniforms byte offsets', () => {
       camPosLocal: CAM_LOCAL,
       sinSunAngularRadius: SIN_SUN_ANGULAR_RADIUS,
       ambient: AMBIENT,
+      material: MATERIAL,
     });
 
     expect(out).toHaveLength(MESH_BODY_UNIFORM_FLOATS);
-    expect(out.byteLength).toBe(160);
+    expect(out.byteLength).toBe(176);
 
     for (let i = 0; i < 16; i++) expect(out[i]).toBe(i + 1); // bytes 0..63
 
@@ -65,7 +73,11 @@ describe('MeshBodyUniforms byte offsets', () => {
     expect([out[32], out[33], out[34]]).toEqual([3.5, -4.25, 6.75]); // bytes 128..139
     expect(out[35]).toBe(SIN_SUN_ANGULAR_RADIUS); // byte 140 — camPosLocal's pad slot
     expect(out[36]).toBe(AMBIENT); // byte 144
-    expect([out[37], out[38], out[39]]).toEqual([0, 0, 0]); // struct padding
+    expect(out[37]).toBe(0.3125); // byte 148 — metallicFactor
+    expect(out[38]).toBe(0.5625); // byte 152 — roughnessFactor
+    expect(out[39]).toBe(0); // padding: baseColorFactor is a 16-byte-aligned vec3
+    expect([out[40], out[41], out[42]]).toEqual([0.875, 0.4375, 0.1875]); // bytes 160..171
+    expect(out[43]).toBe(0); // struct padding
   });
 
   it('reads only the first 16 floats of a longer mvp', () => {
@@ -81,8 +93,18 @@ describe('MeshBodyUniforms byte offsets', () => {
       camPosLocal: CAM_LOCAL,
       sinSunAngularRadius: SIN_SUN_ANGULAR_RADIUS,
       ambient: AMBIENT,
+      material: MATERIAL,
     });
     expect([out[16], out[17], out[18]]).toEqual([0.5, 0.25, 0.75]);
+  });
+
+  // The fragment multiplies every baked map by these: anything but 1 restyles every mesh body.
+  it('the neutral material is all ones, so a baked mesh renders as baked', () => {
+    expect(NEUTRAL_MESH_MATERIAL_FACTORS).toEqual({
+      baseColor: [1, 1, 1],
+      metallic: 1,
+      roughness: 1,
+    });
   });
 
   // The fragment adds `(diffuse + f0) * u.ambient * …`: a zero here is the app's own frame.
