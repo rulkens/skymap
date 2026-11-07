@@ -7,11 +7,12 @@
  * the pose it held just after `clipEnded`: the sky after a full glide, anywhere else after a
  * foreign stop. Standing, the first commit outside the sky frame ends it.
  */
-import { actionChannel, call, delay, race, select, take } from 'typed-redux-saga';
+import { actionChannel, call, delay, put, race, select, take } from 'typed-redux-saga';
 import type { Action } from '@reduxjs/toolkit';
 
 import { commitCameraPose } from '../camera/cameraSlice';
 import { engineSkyEntryReported } from '../engine/engineSlice';
+import { selectCameraBase } from '../camera/selectors';
 import { selectOrientation } from '../settings/selectors';
 import { liveCameraRuntimeSaga } from '../navigation/liveCameraRuntimeSaga';
 import { approachClip } from './approachClip';
@@ -24,6 +25,7 @@ import { surfacePointBodyFixed } from '../../utils/geo/surfacePointBodyFixed';
 import { toBodyArm } from '../../services/engine/camera/arms/body/poseFrameConversion';
 import { skyPoseFromBodyArm } from '../../services/engine/camera/arms/sky/utils/skyPoseFromBodyArm';
 import { isSkyArm } from '../../services/engine/camera/arms/sky/isSkyArm';
+import { refoldTo } from '../../services/engine/camera/arms/refoldTo';
 import { hostOrThrow } from '../../services/engine/camera/arms/hostOrThrow';
 import { ARRIVAL_APPROACH_SEC } from '../../data/sky/arrivalApproachSec';
 import { ARRIVAL_GROUND_MATCH_M } from '../../data/sky/arrivalGroundMatchM';
@@ -40,6 +42,12 @@ export function* arriveSaga(spot: SkySpot, pointLocalM: Vec3 | null) {
   const here = toBodyArm(runtime.from, now.poseBasis, now.upBasis, spot.body, host.state);
   const headingRad = skyPoseFromBodyArm(here, spot).azimuthRad;
   const { fovYRad } = runtime;
+  // Standing, the old spot's arm holds through any flight (focus stays on its body), so the
+  // approach would refold into it every frame and no readout could name the new ground.
+  // Its body-arm image is a cut nobody sees: the clip draws from `runtime.from`.
+  const base = yield* select(selectCameraBase);
+  if (isSkyArm(base))
+    yield* put(commitCameraPose(refoldTo(base, { body: base.frame.sky.body }, now)));
 
   let ground = pointLocalM;
   if (ground === null) {
