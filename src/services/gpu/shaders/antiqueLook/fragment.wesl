@@ -378,8 +378,10 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // The plate is wiped by hand and printed on laid paper: the ink's edge is
   // ragged by a few tenths of a unit and the sheet's dips take less of it.
   let rag = (vnoise(p * 1.7) - 0.5) * 0.35;
-  ink = clamp(ink + rag * ink * (1.0 - ink) * 4.0, 0.0, 1.0);
+  let edgeInk = min(ink, 1.0);
+  ink = max(ink + rag * edgeInk * (1.0 - edgeInk) * 4.0, 0.0);
   ink *= 0.72 + 0.28 * smoothstep(0.25, 0.65, sheet.a);
-  col *= mix(vec3<f32>(1.0), INK, ink);
+  // Ink as density: one full stroke leaves INK's transmittance, a crossing more.
+  col *= pow(INK, vec3<f32>(ink));
   return vec4<f32>(col, 1.0);
 }

@@ -31,7 +31,9 @@ fn crossHatch(p: vec2<f32>, tone: f32, spacing: f32, baseAngle: f32) -> f32 {
   // Spacings a little apart, so the crossings never lock into a screen-like lattice.
   let second = hatch(p, baseAngle + 0.87, spacing * 0.92, (tone - 0.35) * 0.95);
   let third = hatch(p, baseAngle - 0.7, spacing * 1.07, (tone - 0.72) * 1.2);
-  return max(first, max(second, third));
+  // An ink DENSITY, not a coverage: where lines cross the ink lies twice, so a
+  // crossing prints darker than either line (the plate multiplies it as Beer's law).
+  return min(first + second + third, 1.4);
 }
 
 // Jittered-grid dots: the dot AREA tracks the tone, as in stipple engraving.
