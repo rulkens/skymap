@@ -55,7 +55,7 @@ const WESL_FILES: readonly string[] = walkFiles('src/services/gpu/shaders/bodies
 // names its category so a NEW use needs its own line.
 const SCALE_UNITS_ALLOW_LIST: ReadonlyMap<string, string> = new Map([
   [
-    'src/layers/body/earth/passes/earthPass.ts',
+    'src/layers/body/earth/present/earthSurfaceUniforms.ts',
     'cull/fade precedent — bridges radiusM to Mpc to call the shared apparentSizePx sub-pixel cull and cloudDeckFade (both outside the body-slab path, both Mpc-shaped APIs)',
   ],
   [

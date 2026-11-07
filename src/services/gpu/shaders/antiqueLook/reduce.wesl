@@ -9,6 +9,8 @@ import package::antiqueLook::pigments::luma;
 
 @group(0) @binding(0) var printTex: texture_2d<f32>;
 @group(0) @binding(1) var bodyTex: texture_2d<f32>;
+// Earth's land map (r land share, g covered), or a 1×1 empty texture.
+@group(0) @binding(2) var landTex: texture_2d<f32>;
 
 struct ReduceOut {
   @location(0) wash: vec4<f32>,
@@ -17,7 +19,8 @@ struct ReduceOut {
 
 const CELL: i32 = 4;
 
-// Oceans read blue-dominant on every body texture we draw; Earth is the case that matters.
+// Where no land map covers (bodies other than Earth), land is guessed from
+// colour: oceans read blue-dominant on every body texture we draw.
 fn landness(c: vec3<f32>) -> f32 {
   return 1.0 - smoothstep(0.06, 0.22, (c.b - max(c.r, c.g * 0.92)) / max(c.b, 0.04));
 }
@@ -28,6 +31,7 @@ fn fs(in: VSOut) -> ReduceOut {
   let size = vec2<i32>(textureDimensions(printTex));
   // A frame without bodies binds a 1×1 empty texture here, hence its own clamp.
   let bodySize = vec2<i32>(textureDimensions(bodyTex));
+  let landSize = vec2<i32>(textureDimensions(landTex));
   var bodySum = vec3<f32>(0.0);
   var skySum = vec3<f32>(0.0);
   var skyDimmest = 1e9;
@@ -47,7 +51,8 @@ fn fs(in: VSOut) -> ReduceOut {
         skyDimmest = min(skyDimmest, luma(c));
       }
       light += luma(c) * (1.0 - body);
-      land += body * landness(c);
+      let mapped = textureLoad(landTex, min(q, landSize - 1), 0).rg;
+      land += body * select(landness(c), mapped.r, mapped.g > 0.5);
       bodyCount += body;
       let l = luma(c) * (1.0 - body);
       if (l > best) {

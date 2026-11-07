@@ -157,6 +157,10 @@ export function createAntiqueLook(init: {
     const decorHue = targets.viewOf(ANTIQUE_TARGETS.decorHue);
     // foreground:0 keeps last frame's bodies when nothing drew one this frame.
     const bodies = hasBodies ? targets.viewOf('foreground:0') : g.empty;
+    // Earth's land map, when its globe drew this frame; elsewhere land is read from colour.
+    const land = ctx.snapshot.renderedTargets.has(ANTIQUE_TARGETS.land)
+      ? targets.viewOf(ANTIQUE_TARGETS.land)
+      : g.empty;
     // The slot's begin rides whichever pass opens first (the paper bake is
     // usually skipped), its end the plate; both write the one query pair.
     const ts = timing.descriptorFor('stylize');
@@ -183,7 +187,7 @@ export function createAntiqueLook(init: {
       'reduce',
       [wash, peaks],
       g.reduce,
-      [io.print, bodies],
+      [io.print, bodies, land],
       bakesPaper ? undefined : begin,
     );
     fullScreen(encoder, 'glow', [glow], g.glow, [wash]);

@@ -37,6 +37,12 @@ export const ANTIQUE_HIDDEN_PASSES: readonly string[] = [
   'near0-selection-ring',
 ];
 
+/** Passes that exist only for the look: they draw nothing with it off. */
+export const ANTIQUE_ONLY_PASSES: readonly string[] = ['earth-ocean-mask'];
+
+/** The land row's format: r land share, g covered (`earth/fragment.wesl` `fsOceanMask`). */
+export const ANTIQUE_LAND_FORMAT: GPUTextureFormat = 'rg8unorm';
+
 /** The look's row ids; each row's channels are documented by the shader that writes it. */
 export const ANTIQUE_TARGETS = {
   print: 'print',
@@ -49,4 +55,5 @@ export const ANTIQUE_TARGETS = {
   starInk: 'antique-star-ink',
   decor: 'antique-decor',
   decorHue: 'antique-decor-hue',
+  land: 'antique-land',
 } as const;

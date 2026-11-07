@@ -146,7 +146,12 @@ export function createAntiqueLookGpu(
 
   return {
     paper: stage('paper', paperCode, [UNIFORM, TEXTURE, TEXTURE, SAMPLER], ['rgba8unorm']),
-    reduce: stage('reduce', reduceCode, [TEXTURE, TEXTURE], [HDR_TARGET_FORMAT, HDR_TARGET_FORMAT]),
+    reduce: stage(
+      'reduce',
+      reduceCode,
+      [TEXTURE, TEXTURE, TEXTURE],
+      [HDR_TARGET_FORMAT, HDR_TARGET_FORMAT],
+    ),
     glow: stage('glow', glowCode, [TEXTURE], [HDR_TARGET_FORMAT]),
     peaks: stage('peaks', peaksCode, [TEXTURE, UNIFORM], [HDR_TARGET_FORMAT]),
     plate: stage(

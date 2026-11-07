@@ -16,6 +16,7 @@ import { bodyVisibility } from './visibility';
 import { create } from './create';
 import { destroy } from './destroy';
 import { earthPass } from './earth/passes/earthPass';
+import { earthOceanMaskPass } from './earth/passes/earthOceanMaskPass';
 import { surfaceTilesPass } from './surfaceTiles/patch/passes/surfaceTilesPass';
 import { terrainPickMarkerPass } from './terrainPick/passes/terrainPickMarkerPass';
 import { cloudShellPass } from './clouds/passes/cloudShellPass';
@@ -70,6 +71,7 @@ export const bodyLayer = defineLayer({
   destroy,
   passes: (runtime) => [
     earthPass(runtime),
+    earthOceanMaskPass(runtime),
     surfaceTilesPass(runtime),
     terrainPickMarkerPass(runtime),
     cloudShellPass(runtime),

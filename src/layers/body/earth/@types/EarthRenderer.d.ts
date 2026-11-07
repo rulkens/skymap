@@ -43,4 +43,10 @@ export type EarthRenderer = Renderer & {
    * from `packEarthSurfaceUniforms`. `mirrored` = `viewFlipsWinding`.
    */
   draw(pass: GPURenderPassEncoder, uniforms: Float32Array, mirrored: boolean): void;
+  /**
+   * Draw the globe's land map (the material map's ocean mask) for the antique look,
+   * same uniforms as `draw`, into an `ANTIQUE_LAND_FORMAT` target with no depth.
+   * Its own uniform slot, so it never races `draw`'s.
+   */
+  drawOceanMask(pass: GPURenderPassEncoder, uniforms: Float32Array, mirrored: boolean): void;
 };

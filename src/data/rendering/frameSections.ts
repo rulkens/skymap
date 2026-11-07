@@ -246,6 +246,14 @@ export const SCENE: FrameSection = {
       passes: ['aerial-perspective'],
       slot: 'AERIAL',
     },
+    // The antique look's land row: Earth's ocean mask on its own body row. Draws
+    // only with the look on (`ANTIQUE_ONLY_PASSES`); the look reads it in `stylize`.
+    {
+      kind: 'render',
+      target: 'antique-land',
+      slab: 'surfaceMask',
+      passes: ['earth-ocean-mask'],
+    },
     // Bodies join HDR in LINEAR space before the tone-map, so one tone curve covers
     // stars, galaxies and bodies (no seam at the Sun's limb); hence a composite, not a
     // second tone-mapped pass.

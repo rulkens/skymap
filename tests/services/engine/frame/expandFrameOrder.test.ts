@@ -20,7 +20,11 @@ import type { FrameInputs } from '../../../../src/services/engine/frame/expandFr
 import type { ToneMap } from '../../../../src/@types/rendering/ToneMap';
 import type { OrbitCamera } from '../../../../src/@types/camera/orbitCamera/OrbitCamera';
 import { symmetricFrustum } from '../../../../src/utils/camera/frustum/symmetricFrustum';
-import { ANTIQUE_HIDDEN_PASSES } from '../../../../src/data/rendering/antiqueLook';
+import {
+  ANTIQUE_HIDDEN_PASSES,
+  ANTIQUE_ONLY_PASSES,
+  ANTIQUE_TARGETS,
+} from '../../../../src/data/rendering/antiqueLook';
 
 const TONE: ToneMap = { exposure: 1.5, curve: 4, hdrKnee: 0, hdrHeadroom: 0 };
 
@@ -59,7 +63,7 @@ function program(over: Partial<FrameInputs> = {}): readonly FrameStep[] {
     antique: false,
     foregroundChain: [NEAR0],
     captureFaces: new Map(),
-    bodyRowSlabs: { lens: [], insideAtmosphere: [] },
+    bodyRowSlabs: { lens: [], insideAtmosphere: [], surfaceMask: [] },
     ...over,
   });
 }
@@ -86,7 +90,7 @@ describe('expandFrameOrder', () => {
       antique: false,
       foregroundChain: [NEAR0],
       captureFaces: new Map(),
-      bodyRowSlabs: { lens: [], insideAtmosphere: [] },
+      bodyRowSlabs: { lens: [], insideAtmosphere: [], surfaceMask: [] },
     });
 
     const foregroundAt = program.findIndex(
@@ -130,7 +134,7 @@ describe('expandFrameOrder', () => {
       antique: false,
       foregroundChain: [NEAR0],
       captureFaces: new Map(),
-      bodyRowSlabs: { lens: [2], insideAtmosphere: [] },
+      bodyRowSlabs: { lens: [2], insideAtmosphere: [], surfaceMask: [] },
     });
 
     const slots = program
@@ -147,7 +151,7 @@ describe('expandFrameOrder', () => {
       antique: false,
       foregroundChain: [NEAR0],
       captureFaces: new Map(),
-      bodyRowSlabs: { lens: [], insideAtmosphere: [] },
+      bodyRowSlabs: { lens: [], insideAtmosphere: [], surfaceMask: [] },
     });
 
     expect(program.some((step) => step.kind === 'render' && step.target === 'zoa')).toBe(false);
@@ -171,7 +175,7 @@ describe('expandFrameOrder', () => {
         antique: false,
         foregroundChain: [],
         captureFaces: new Map(),
-        bodyRowSlabs: { lens: [], insideAtmosphere: [] },
+        bodyRowSlabs: { lens: [], insideAtmosphere: [], surfaceMask: [] },
       },
     );
 
@@ -243,7 +247,7 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
       antique: false,
       foregroundChain: [],
       captureFaces: new Map([['probe', [{ face: 4, bodySlabs: [3, 2] }]]]),
-      bodyRowSlabs: { lens: [], insideAtmosphere: [] },
+      bodyRowSlabs: { lens: [], insideAtmosphere: [], surfaceMask: [] },
     });
     expect(
       steps.map((step) =>
@@ -273,7 +277,7 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
       antique: false,
       foregroundChain: [],
       captureFaces: new Map([['sgrAStar', [skyFace(0)]]]),
-      bodyRowSlabs: { lens: [], insideAtmosphere: [] },
+      bodyRowSlabs: { lens: [], insideAtmosphere: [], surfaceMask: [] },
     });
     expect(steps.map((step) => (step.kind === 'render' ? step.slab : null))).toEqual([
       COSMO,
@@ -339,7 +343,7 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
       antique: false,
       foregroundChain: chain,
       captureFaces: new Map(),
-      bodyRowSlabs: { lens: [], insideAtmosphere: [] },
+      bodyRowSlabs: { lens: [], insideAtmosphere: [], surfaceMask: [] },
     });
   }
 
@@ -401,7 +405,7 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
   });
 
   it('emits an (hdr, slab) lens step per entry, after (hdr, NEAR0) and before the foreground chain', () => {
-    const steps = program({ bodyRowSlabs: { lens: [4], insideAtmosphere: [] } });
+    const steps = program({ bodyRowSlabs: { lens: [4], insideAtmosphere: [], surfaceMask: [] } });
     const rosterIdx = steps.findIndex(
       (step) => step.kind === 'render' && step.target === 'hdr' && step.slab === NEAR0,
     );
@@ -418,7 +422,7 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
   });
 
   it('a render line with a BodyRowSource slab expands once per resolved row', () => {
-    const steps = program({ bodyRowSlabs: { lens: [3, 2], insideAtmosphere: [] } });
+    const steps = program({ bodyRowSlabs: { lens: [3, 2], insideAtmosphere: [], surfaceMask: [] } });
     expect(
       steps
         .filter((step) => step.kind === 'render' && step.slab >= 2)
@@ -485,6 +489,16 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
       expect(on.has(name), name).toBe(false);
       expect(off.has(name), name).toBe(true);
     }
+  });
+
+  it("draws the look's own passes (Earth's land map) only with the look on, on Earth's row", () => {
+    const landSteps = (steps: readonly FrameStep[]) =>
+      steps.filter((step) => namesOf(step).some((name) => ANTIQUE_ONLY_PASSES.includes(name)));
+    const rows = { lens: [], insideAtmosphere: [], surfaceMask: [3] };
+    expect(landSteps(program({ bodyRowSlabs: rows }))).toEqual([]);
+    expect(landSteps(program({ antique: true, bodyRowSlabs: rows }))).toMatchObject([
+      { kind: 'render', target: ANTIQUE_TARGETS.land, slab: 3 },
+    ]);
   });
 
   it('with the look off nothing is rerouted and no stylize step runs', () => {

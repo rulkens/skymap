@@ -47,7 +47,7 @@ describe('timedSlotGroupsOf', () => {
         antique: false,
         foregroundChain: [NEAR0, 2, 3],
         captureFaces: new Map(),
-        bodyRowSlabs: { lens: [], insideAtmosphere: [] },
+        bodyRowSlabs: { lens: [], insideAtmosphere: [], surfaceMask: [] },
       }),
     );
     const foreground = groups.find((g) => g.title === 'Foreground bodies · depth')!;

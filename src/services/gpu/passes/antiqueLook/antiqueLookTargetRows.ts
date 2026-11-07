@@ -7,7 +7,11 @@
  */
 
 import type { RenderTargetSpec } from '../../../../@types/engine/frame/RenderTargetSpec';
-import { ANTIQUE_CELL, ANTIQUE_TARGETS } from '../../../../data/rendering/antiqueLook';
+import {
+  ANTIQUE_CELL,
+  ANTIQUE_LAND_FORMAT,
+  ANTIQUE_TARGETS,
+} from '../../../../data/rendering/antiqueLook';
 import { HDR_TARGET_FORMAT } from '../../../../data/renderTargetFormats';
 import { antiqueLookOn } from '../../../../utils/render/antiqueLookOn';
 
@@ -33,5 +37,6 @@ export function antiqueLookTargetRows(swapFormat: GPUTextureFormat): readonly Re
     row(ANTIQUE_TARGETS.starInk, 'rgba8unorm', 1),
     row(ANTIQUE_TARGETS.decor, 'rgba8unorm', 1),
     row(ANTIQUE_TARGETS.decorHue, 'rgba8unorm', 1),
+    row(ANTIQUE_TARGETS.land, ANTIQUE_LAND_FORMAT, 1),
   ];
 }

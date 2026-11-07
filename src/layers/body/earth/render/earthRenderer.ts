@@ -19,6 +19,7 @@ import { cubeSphereMesh } from '../../../../utils/math/cubeSphereMesh';
 import { generateMipChain, mipLevelCount } from '../../../../services/gpu/lib/generateMipChain';
 import { isLinearTextureKind } from '../../../../utils/bodyTextures/isLinearTextureKind';
 import { EARTH_SURFACE_UNIFORM_FLOATS } from './packEarthSurfaceUniforms';
+import { ANTIQUE_LAND_FORMAT } from '../../../../data/rendering/antiqueLook';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import vsCode from '../../../../services/gpu/shaders/bodies/earth/vertex.wesl?static';
 import fsCode from '../../../../services/gpu/shaders/bodies/earth/fragment.wesl?static';
@@ -200,12 +201,12 @@ export function createEarthRenderer(
     ],
   });
 
-  function buildBindGroup(): GPUBindGroup {
+  function buildBindGroup(buffer: GPUBuffer): GPUBindGroup {
     return device.createBindGroup({
       label: 'earth-bg',
       layout: bindGroupLayout,
       entries: [
-        { binding: 0, resource: { buffer: uniformBuffer } },
+        { binding: 0, resource: { buffer } },
         { binding: 1, resource: sampler },
         ...MAP_KINDS.map((kind) => ({
           binding: KIND_CFG[kind].binding,
@@ -214,7 +215,16 @@ export function createEarthRenderer(
       ],
     });
   }
-  let bindGroup = buildBindGroup();
+  let bindGroup = buildBindGroup(uniformBuffer);
+  // The ocean-mask draw's own uniform slot and bind group, built on its first
+  // draw (the antique look only) and dropped whenever a map changes.
+  let maskUniformBuffer: GPUBuffer | null = null;
+  let maskBindGroup: GPUBindGroup | null = null;
+  const maskPipelines = new Map<boolean, GPURenderPipeline>();
+  function rebuildBindGroups(): void {
+    bindGroup = buildBindGroup(uniformBuffer);
+    maskBindGroup = null;
+  }
 
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'earth.vertex');
   const fsModule = createShaderModuleWithDevLog(device, fsCode, 'earth.fragment');
@@ -264,6 +274,33 @@ export function createEarthRenderer(
   const pipeline = createPipeline('back');
   const mirroredPipeline = createPipeline('front');
 
+  // The ocean mask draws alone into the look's land row: no depth (the globe is
+  // convex and culled), one 'rg8unorm' target.
+  const maskPipeline = (mirrored: boolean): GPURenderPipeline => {
+    const cached = maskPipelines.get(mirrored);
+    if (cached !== undefined) return cached;
+    const built = device.createRenderPipeline({
+      label: `earth-ocean-mask-pipeline-${mirrored ? 'mirrored' : 'plain'}`,
+      layout: device.createPipelineLayout({
+        label: 'earth-ocean-mask-pipeline-layout',
+        bindGroupLayouts: [bindGroupLayout],
+      }),
+      vertex: {
+        module: vsModule,
+        entryPoint: 'vs',
+        buffers: [
+          { arrayStride: 12, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }] },
+          { arrayStride: 8, attributes: [{ shaderLocation: 1, offset: 0, format: 'float32x2' }] },
+          { arrayStride: 12, attributes: [{ shaderLocation: 2, offset: 0, format: 'float32x3' }] },
+        ],
+      },
+      fragment: { module: fsModule, entryPoint: 'fsOceanMask', targets: [{ format: ANTIQUE_LAND_FORMAT }] },
+      primitive: { topology: 'triangle-list', frontFace: 'ccw', cullMode: mirrored ? 'front' : 'back' },
+    });
+    maskPipelines.set(mirrored, built);
+    return built;
+  };
+
   function setMap(kind: TextureKind, bitmap: ImageBitmap): void {
     // `isLinearTextureKind` is shared with the fetcher's decode path and the filename helper.
     const format: GPUTextureFormat = isLinearTextureKind(kind) ? 'rgba8unorm' : 'rgba8unorm-srgb';
@@ -289,7 +326,7 @@ export function createEarthRenderer(
     // Retire ONLY a prior committed texture, never the placeholder underneath.
     committed.get(kind)?.destroy();
     committed.set(kind, fresh);
-    bindGroup = buildBindGroup();
+    rebuildBindGroups();
   }
 
   /** Free a kind's committed map; the placeholder underneath binds again. */
@@ -298,7 +335,7 @@ export function createEarthRenderer(
     if (texture === undefined) return;
     texture.destroy();
     committed.delete(kind);
-    bindGroup = buildBindGroup();
+    rebuildBindGroups();
   }
 
   /** `setMap`'s twin: the texture lands in `placeholders`, and only `rect` of the bitmap is copied. */
@@ -327,7 +364,7 @@ export function createEarthRenderer(
     // Retire ONLY the prior PLACEHOLDER, never the committed map.
     placeholders.get(kind)?.destroy();
     placeholders.set(kind, fresh);
-    bindGroup = buildBindGroup();
+    rebuildBindGroups();
   }
 
   /** How `surfaceTileRenderer` shares this renderer's maps; same resolution as `buildBindGroup`. */
@@ -346,12 +383,30 @@ export function createEarthRenderer(
     pass.drawIndexed(indexCount);
   }
 
+  function drawOceanMask(pass: GPURenderPassEncoder, uniforms: Float32Array, mirrored: boolean): void {
+    maskUniformBuffer ??= device.createBuffer({
+      label: 'earth-ocean-mask-uniform-buffer',
+      size: UNIFORM_BUFFER_SIZE,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+    maskBindGroup ??= buildBindGroup(maskUniformBuffer);
+    device.queue.writeBuffer(maskUniformBuffer, 0, uniforms);
+    pass.setPipeline(maskPipeline(mirrored));
+    pass.setBindGroup(0, maskBindGroup);
+    pass.setVertexBuffer(0, positionBuffer);
+    pass.setVertexBuffer(1, uvBuffer);
+    pass.setVertexBuffer(2, tangentBuffer);
+    pass.setIndexBuffer(indexBuffer, 'uint32');
+    pass.drawIndexed(indexCount);
+  }
+
   function destroy(): void {
     positionBuffer.destroy();
     uvBuffer.destroy();
     tangentBuffer.destroy();
     indexBuffer.destroy();
     uniformBuffer.destroy();
+    maskUniformBuffer?.destroy();
     // Neither setter frees the other's layer, so teardown releases both.
     for (const texture of committed.values()) texture.destroy();
     for (const placeholder of placeholders.values()) placeholder.destroy();
@@ -366,6 +421,7 @@ export function createEarthRenderer(
     setPlaceholderMap,
     getMapView,
     draw,
+    drawOceanMask,
     destroy,
   };
   renderer satisfies Renderer;

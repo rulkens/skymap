@@ -37,8 +37,9 @@ export const MAX_FRAME_INPUTS: FrameInputs = {
     ]),
   ),
   bodyRowSlabs: {
-    // Every capacity index, for both: the two rows move with the live bodies.
+    // Every capacity index, for each: the rows move with the live bodies.
     lens: Array.from({ length: SLAB_ROW_CEILING }, (_, k) => k + 2),
     insideAtmosphere: Array.from({ length: SLAB_ROW_CEILING }, (_, k) => k + 2),
+    surfaceMask: Array.from({ length: SLAB_ROW_CEILING }, (_, k) => k + 2),
   },
 };
