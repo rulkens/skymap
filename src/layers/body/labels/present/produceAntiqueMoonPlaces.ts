@@ -42,6 +42,8 @@ const RANK_CEILING = 1000;
 // The director's antique pad (`ANTIQUE_LABEL_DECLUTTER`, 8) and a margin for the set
 // glyphs over `antiqueNameBoxPx`'s estimate.
 const SEA_PAD_PX = 16;
+// A placement's fade (its reveal, facing and light ramps) sharpened to a cut.
+const NAME_CUT = [0.45, 0.55] as const;
 // placeAntiqueAreaName's limb clearance.
 const SEA_LIMB_CLEAR_PX = 4;
 
@@ -115,7 +117,8 @@ export function produceAntiqueMoonPlaces(
         maxPixelSize: at.px,
         alignX: at.alignX,
         alignY: 'center',
-        fadeAlpha: discAlpha * at.alpha,
+        // A name prints or it does not: a ghost-grey half fade reads as a smudge.
+        fadeAlpha: discAlpha * smoothstep(NAME_CUT[0], NAME_CUT[1], at.alpha),
         // Engraved over the disc it names; the placement already keeps it on the lit side.
         occludeWeight: 0,
         declutterPriority:
