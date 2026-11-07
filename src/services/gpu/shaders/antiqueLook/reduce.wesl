@@ -2,7 +2,7 @@
 // Splits the frame by frequency: `wash` carries the block's mean colour (the
 // low band — glows become watercolour, never ink) and, in alpha, how much of
 // the block is land on a body; `peak` carries the block's brightest sky texel
-// (device px position, luminance) for the star-glyph gather.
+// (device px position, luminance) for the star-glyph scatter.
 
 import package::antiqueLook::io::VSOut;
 import package::antiqueLook::pigments::luma;
@@ -55,7 +55,7 @@ fn fs(in: VSOut) -> ReduceOut {
   }
   let n = f32(CELL * CELL);
   var o: ReduceOut;
-  // Sky blocks report land −1 so the waterlines stop at the limb, not mid-space.
+  // Sky blocks report land −1 so the coast halo stop at the limb, not mid-space.
   o.wash = vec4<f32>(sum / n, select(-1.0, land / max(bodyCount, 1e-3), bodyCount > 8.0));
   // w: the block's uncapped sky light — a star's size is read from the area it lights.
   o.peak = vec4<f32>(bestAt, best, light / n);

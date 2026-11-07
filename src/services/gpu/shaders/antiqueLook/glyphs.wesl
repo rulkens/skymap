@@ -2,7 +2,7 @@
 // quarter-res cell, collapsed in the vertex stage unless the cell holds a
 // suppressed peak. A gather in the plate (25 cells per pixel) cost ~2 ms at
 // 2800×1800; this touches only the pixels a glyph covers. Max-blended into
-// `antique-starink`: r = glyph ink, g = its paper knock-out (1.3× radius).
+// `antique-star-ink`: r = glyph ink, g = its paper knock-out (1.3× radius).
 
 import package::antiqueLook::io::AntiqueUniforms;
 import package::antiqueLook::engraving::starGlyph;
@@ -13,7 +13,7 @@ import package::lib::util::hash21Hq;
 @group(0) @binding(1) var<uniform> u: AntiqueUniforms;
 
 // Star contrast below this prints nothing: the paper floor (about naked-eye depth).
-const STAR_FLOOR: f32 = 0.5;
+const STAR_FLOOR: f32 = 0.58;
 
 struct GlyphOut {
   @builtin(position) pos: vec4<f32>,
@@ -36,15 +36,16 @@ fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32) -> Glyph
     return o;
   }
   // Six classes of the Bayer/Flamsteed ladder by the light a star spreads: dots
-  // for the faintest two, then 6, 6, 8 and 12 rays; the brightest adds a glory.
+  // for the faintest two, then 6, 6 and 8 rays, and 8 long with 8 short for the
+  // brightest (a ring of ticks round a star read as a modern marker).
   let radii = array<f32, 6>(0.8, 1.4, 2.6, 3.6, 5.2, 10.0);
-  let rayCounts = array<f32, 6>(0.0, 0.0, 6.0, 6.0, 8.0, 12.0);
+  let rayCounts = array<f32, 6>(0.0, 0.0, 6.0, 6.0, 8.0, 16.0);
   let k = clamp((s.w - 0.07) / 0.85, 0.0, 1.0);
   let rank = min(i32(k * 6.0), 5);
   // Each star punched by hand: its own turn, and a slight unevenness of size.
   let r = radii[rank] * u.unit * (0.92 + 0.16 * hash21Hq(floor(s.xy) + 7.1));
   let rays = select(0.0, rayCounts[rank], r >= 3.0);
-  let glory = select(0.0, 1.0, rank == 5 && k > 0.9 && r >= 6.0);
+  let glory = 0.0;
   let reach = 1.5 * r + 2.0;
   let corner = vec2<f32>(f32(vi & 1u), f32((vi >> 1u) & 1u)) * 2.0 - 1.0;
   let px = s.xy + corner * reach;

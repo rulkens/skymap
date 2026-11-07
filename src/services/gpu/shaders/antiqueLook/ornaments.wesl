@@ -1,9 +1,5 @@
-// antiqueLook/ornaments.wesl — the record of the plate's engraved decorations: cartouche,
-// compass rose, and the beasts of the sky. Each is a rect of the ornament atlas
-// whose channels are INK (r), FILL (g, the solid silhouette) and WASH (b); the
-// hue comes from the instance's pigment so ornaments stay inside the palette.
-// The loop lives in fragment.wesl: WESL bindings are module-local, and a
-// uniform struct is never passed by value (RENDERER.md's Adreno landmine).
+// antiqueLook/ornaments.wesl — the placed-ornament record decor.wesl draws from:
+// each a rect of the atlas (INK r, FILL g, WASH b) with its turn and pigment.
 // Byte map mirrored by `packAntiqueOrnaments.ts`:
 //
 // | offset | field   | meaning                                         |

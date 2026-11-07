@@ -54,10 +54,15 @@ fn fs(in: DecorOut) -> DecorInk {
   let edge = max(abs(in.local.x), abs(in.local.y));
   let o = orn.items[in.item].opacity * (1.0 - smoothstep(0.9, 1.0, edge));
   let clears = orn.items[in.item].clears;
-  // A figure takes a light wash over its body, as coloured atlas copies did.
-  let wash = max(s.b, s.g * 0.28 * (1.0 - clears)) * o;
+  // One ink with the plate: the scan's greys pushed to line or paper.
+  let ink = smoothstep(0.2, 0.55, s.r) * o;
+  // A clearing ornament (the cartouche) takes the plate back to paper under its
+  // whole engraving, not just its fill; every ornament takes a light wash, as
+  // a coloured Dutch copy's cartouche and beasts did.
+  let clear = max(s.g, smoothstep(0.05, 0.3, s.r)) * o * clears;
+  let wash = max(s.b, s.g * 0.28) * o;
   var out: DecorInk;
-  out.ink = vec4<f32>(s.r * o * (1.0 - clears), s.r * o * clears, s.g * o * clears, wash);
+  out.ink = vec4<f32>(ink * (1.0 - clears), ink * clears, clear, wash);
   out.hue = vec4<f32>(pigmentAt(orn.items[in.item].pigment) * step(0.01, wash), 0.0);
   return out;
 }

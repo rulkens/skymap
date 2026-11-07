@@ -28,7 +28,7 @@ const beast = (
   facesNorth: true,
   rotationDeg: 0,
   pigment,
-  opacity: 0.8,
+  opacity: 1,
   clearsBeneath: false,
   mirrored,
 });
@@ -43,6 +43,8 @@ const voyager = (
 ): AntiqueOrnament => ({
   ...beast(id, sprite, 'cosmos', 'galactic', lonDeg, 0, 0, pigment),
   anchor: { kind: 'space', lonDeg, latDeg: 0, distMpc, sizeMpc },
+  // Not a constellation figure: it sails empty sea, so no glyph prints through it.
+  clearsBeneath: true,
 });
 
 export const ANTIQUE_ORNAMENTS: readonly AntiqueOrnament[] = [
@@ -70,5 +72,5 @@ export const ANTIQUE_ORNAMENTS: readonly AntiqueOrnament[] = [
   voyager('zoa-monster', 'seaMonster', 60, 30, 18, 0),
   voyager('zoa-whale', 'whale', 150, 45, 22, 5),
   voyager('zoa-seahorse', 'seaHorse', 240, 35, 16, 1),
-  voyager('zoa-ship', 'ship', 320, 25, 12, 6),
+  voyager('zoa-ship', 'ship', 320, 25, 7, 6),
 ];

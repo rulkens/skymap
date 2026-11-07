@@ -7,6 +7,8 @@ import package::antiqueLook::io::AntiqueUniforms;
 import package::antiqueLook::io::VSOut;
 import package::antiqueLook::paper::paperColor;
 import package::antiqueLook::paper::paperRelief;
+import package::antiqueLook::paper::TONED;
+import package::antiqueLook::paper::FOX;
 
 @group(0) @binding(0) var<uniform> u: AntiqueUniforms;
 @group(0) @binding(1) var tileTex: texture_2d<f32>;
@@ -14,15 +16,12 @@ import package::antiqueLook::paper::paperRelief;
 @group(0) @binding(3) var repeatSamp: sampler;
 
 const FLAG_PAPER: u32 = 4u;
-const TONED: vec3<f32> = vec3<f32>(0.78, 0.64, 0.45);
-const FOX: vec3<f32> = vec3<f32>(0.6, 0.42, 0.27);
 const TIDE: vec3<f32> = vec3<f32>(0.7, 0.56, 0.4);
 const TEXEL_UNITS: f32 = 0.5;
 
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let p = in.pos.xy / u.unit;
-  // Sampled unconditionally (uniformity); the flag decides which sheet is used.
   let tile = textureSampleLevel(tileTex, repeatSamp, p / (TEXEL_UNITS * f32(textureDimensions(tileTex).x)) + vec2<f32>(0.37, 0.61), 0.0);
   let stain = textureSampleLevel(stainTex, repeatSamp, in.uv, 0.0);
   if ((u.flags & FLAG_PAPER) == 0u) {

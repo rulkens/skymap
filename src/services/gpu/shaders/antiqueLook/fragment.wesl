@@ -62,7 +62,6 @@ const FLAG_CAPTIONS: u32 = 2u;
 const PLATE: f32 = 15.0;
 const MARGIN: f32 = 30.0;
 const BAND: f32 = 7.0;
-const CELL: f32 = 4.0;
 // Hatch spacing on bodies, print units.
 const HATCH: f32 = 5.0;
 // Glow levels: the outline-colour boundary, and one inner contour.
@@ -225,14 +224,16 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // Dutch outline colour on the low band: a band 20 units wide inside each
   // glow's boundary, fading inward to plain paper, offset from the engraved
   // line by a slow misregistration field as a colourist's brush was.
-  let slip = (vec2<f32>(vnoise(p * 0.018 + 3.0), vnoise(p * 0.018 + 9.0)) - 0.5) * 0.01;
+  let slip = (vec2<f32>(vnoise(p * 0.018 + 3.0), vnoise(p * 0.018 + 9.0)) - 0.5) * 0.006;
   let lowL = luma(glowAt(uv));
   // The colour band reads the same field a little displaced: the brush's slip,
   // approximated to first order from the field's own gradient.
   let glowL = lowL + dot(vec2<f32>(dpdx(lowL), dpdy(lowL)), slip * u.res);
   let lowPerPx = max(fwidth(lowL), 1e-5);
   let inside = (glowL - GLOW_EDGE) / lowPerPx;
-  let band = step(0.0, inside) * (1.0 - smoothstep(0.0, 20.0 * u.unit, inside)) * sky;
+  // The band fades inward from the line, with the darker rim where it pooled.
+  let band = step(0.0, inside) * (1.0 - smoothstep(0.0, 20.0 * u.unit, inside)
+    + 0.35 * (1.0 - smoothstep(1.0 * u.unit, 3.0 * u.unit, inside))) * sky;
   // The hue is only needed where the band paints.
   var hue = vec3<f32>(0.0);
   if (band > 0.0) {
@@ -257,15 +258,21 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let clear = 1.0 - star.y;
   let edgePx = abs(lowL - GLOW_EDGE) / lowPerPx;
   let corePx = abs(lowL - GLOW_CORE) / lowPerPx;
-  let contour = max(
-    1.0 - smoothstep(0.4 * u.unit, 0.4 * u.unit + 1.0, edgePx),
-    0.75 * (1.0 - smoothstep(0.3 * u.unit, 0.3 * u.unit + 1.0, corePx)),
+  // A glow's edge is dotted, as Bayer and de Wit drew a nebula's: a solid
+  // ragged line here would read as a coast.
+  let onEdge = max(
+    1.0 - smoothstep(0.9 * u.unit, 0.9 * u.unit + 1.0, edgePx),
+    0.8 * (1.0 - smoothstep(0.9 * u.unit, 0.9 * u.unit + 1.0, corePx)),
   );
+  var contour = 0.0;
+  if (onEdge > 0.0) {
+    contour = onEdge * stipple(p, 2.3, 0.4);
+  }
   var dots = 0.0;
   if (lowL > 0.18) {
     dots = stipple(p, 2.2, smoothstep(0.18, 0.8, lowL) * 0.3);
   }
-  let skyInk = max(star.x, max(dots, contour * 0.8) * clear) * sky;
+  let skyInk = max(star.x, max(dots, contour) * clear) * sky;
   // The rulings were cut by hand too: their ink load wanders along their length.
   let rulings = graticule(viewRay(uv), u.unit, u.raStep, u.decStep) * sky * clear * (0.7 + 0.45 * vnoise(p * 0.045));
 
@@ -292,10 +299,13 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     let near = coastNear(uv);
     let halo = coastHalo(p, near, 2.4) * ocean * (1.0 - tone);
     // Seas a pale smalt, pooled darker along the shore; land in the hue of its light.
-    let seaWash = (0.3 + 0.18 * near) * ocean;
-    let landWash = clamp(chromaOf(wash.rgb) * 1.6, 0.0, 0.4) * (1.0 - ocean);
+    // The colourist's sea stops a little off the cut coast, by a slow wander.
+    let washShare = clamp(textureSampleLevel(washTex, linear, uv + slip * 0.6, 0.0).a, 0.0, 1.0);
+    let seaWash = (0.3 + 0.18 * near) * (1.0 - smoothstep(0.35, 0.65, washShare));
+    let landWash = 0.32 * (1.0 - ocean);
     col = applyWash(col, pigmentAt(5.0), seaWash * body * frame.y);
-    col = applyWash(col, nearestPigment(wash.rgb), landWash * body * frame.y);
+    // Land in gamboge, the Dutch colourist's yellow, whatever its photograph's hue.
+    col = applyWash(col, pigmentAt(2.0), landWash * body * frame.y);
     bodyInk = max(max(hatchInk, coast), halo * 0.85) * body;
   }
 

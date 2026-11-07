@@ -19,7 +19,7 @@ fn hatch(p: vec2<f32>, angle: f32, spacing: f32, tone: f32, pxUnits: f32) -> f32
   // line) on top of the tone; below ~0.06 tone the burin lifts.
   let swell = 0.85 + 0.3 * vnoise(vec2<f32>(along * 0.035, floor(v) * 3.7));
   let halfWidth = clamp(tone, 0.0, 1.0) * spacing * 0.5 * swell;
-  let aa = max(pxUnits, 0.6 * pxUnits);
+  let aa = pxUnits;
   return (1.0 - smoothstep(halfWidth - aa * 0.5, halfWidth + aa * 0.5, d)) * smoothstep(0.03, 0.09, tone);
 }
 
@@ -30,12 +30,13 @@ fn crossHatch(p: vec2<f32>, tone: f32, spacing: f32, baseAngle: f32, pxUnits: f3
   // keep their paper even in the darkest tone: engraving never floods.
   let first = hatch(p, baseAngle, spacing, tone * 0.72, pxUnits);
   // The crossing set at 45° makes lozenges; a shallower crossing makes moiré.
-  // Spacings a little apart, so the crossings never lock into a screen-like lattice.
+  // Crossed at ~50°, spacings a little apart, so the crossings never lock into
+  // a screen-like lattice; the third set only flecks the deepest shade.
   let second = hatch(p, baseAngle + 0.87, spacing * 0.92, (tone - 0.35) * 0.95, pxUnits);
-  let third = hatch(p, baseAngle - 0.7, spacing * 1.07, (tone - 0.72) * 1.2, pxUnits);
+  let third = hatch(p, baseAngle - 0.7, spacing * 1.07, (tone - 0.8) * 0.8, pxUnits);
   // An ink DENSITY, not a coverage: where lines cross the ink lies twice, so a
   // crossing prints darker than either line (the plate multiplies it as Beer's law).
-  return min(first + second + third, 1.4);
+  return min(first + second + third, 1.05);
 }
 
 // Jittered-grid dots: the dot AREA tracks the tone, as in stipple engraving.
@@ -56,8 +57,8 @@ fn stipple(p: vec2<f32>, cell: f32, tone: f32) -> f32 {
 }
 
 // A star glyph centred at the origin, after the Bayer/Flamsteed ladder: a disc
-// for the faintest, then `rays` tapered points (5, 6, 8, 12) over a small core,
-// and for the brightest a glory of short ticks round it. `r` = ray length, units.
+// for the faintest, then `rays` tapered points over a small core (from 8 up,
+// alternate rays run short). `glory` adds a ring of ticks. `r` = ray length.
 fn starGlyph(q: vec2<f32>, r: f32, rays: f32, glory: f32) -> f32 {
   let d = length(q);
   let a = atan2(q.y, q.x) + 1.5707963;

@@ -1,5 +1,5 @@
 // antiqueLook/io.wesl — the look's uniform record and the vertex→fragment struct.
-// Byte map mirrored by `packAntiqueUniforms.ts` (the TS writer is authoritative).
+// This table is the byte map; `packAntiqueUniforms.ts` writes it.
 //
 // | offset | field   | meaning                                                  |
 // | 0      | res     | target size, device px                                   |
