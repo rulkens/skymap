@@ -653,6 +653,31 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     description:
       'How the metal content of the Sagittarius stream falls with the time since its stars were torn away, from Hayes and colleagues, 2020.',
   },
+  shipp2018: {
+    description:
+      'The stellar masses of eight streams seen in the Dark Energy Survey, from Shipp and colleagues, 2018.',
+  },
+  koposov2010: {
+    description:
+      'The stellar mass of the GD-1 stream, counted from its stars by Koposov, Rix and Hogg, 2010.',
+  },
+  jethwa2018: {
+    description: 'The stellar mass of the Jet stream, from Jethwa and colleagues, 2018.',
+  },
+  jensen2021: {
+    description:
+      'The stellar mass of the stream torn from the globular cluster NGC 5466, from Jensen and colleagues, 2021.',
+  },
+  caldwell2020: {
+    description: 'The stellar mass of the Ophiuchus stream, from Caldwell and colleagues, 2020.',
+  },
+  thomas2022: {
+    description:
+      'The stellar mass of the Cetus-Palca stream, the remains of a small dwarf galaxy, from Thomas and Battaglia, 2022.',
+  },
+  koposov2023: {
+    description: 'The stellar mass of the Orphan-Chenab stream, from Koposov and colleagues, 2023.',
+  },
   mist: {
     description:
       'Models of how stars age, which give the colours of a stream’s giants, turnoff stars and horizontal-branch stars at its metal content.',

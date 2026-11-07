@@ -6,6 +6,7 @@ import type { StreamParticles } from '../@types/StreamParticles';
 import type { StellarStreamMetaEntry } from '../@types/StellarStreamMetaEntry';
 import type { StreamMetallicity } from '../@types/StreamMetallicity';
 import { streamSlug } from './streamSlug';
+import { streamStellarMass } from './streamStellarMass';
 import { trackPositionsKpc } from './trackPositionsKpc';
 
 const KPC_TO_MPC = 1e-3;
@@ -34,6 +35,7 @@ export function streamMetaEntry(
     particleCount: particles.luminosity.length,
     colourT: arrayMean(particles.colourT),
     metallicity,
+    stellarMass: streamStellarMass(track.name),
     anchorMpc: [mid[0] * KPC_TO_MPC, mid[1] * KPC_TO_MPC, mid[2] * KPC_TO_MPC],
   };
 }

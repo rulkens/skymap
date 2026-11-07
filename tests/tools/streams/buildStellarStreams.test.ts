@@ -42,6 +42,18 @@ describe('buildStellarStreams', () => {
     expect(byId('gd-1').metallicity).toBeNull();
   });
 
+  it('the meta carries a published stellar mass with its source, and none where the table has none', () => {
+    const { meta } = buildStellarStreams(stars, tracks);
+    const byId = (id: string) => meta.find((m) => m.id === id)!;
+    expect(byId('gd-1').stellarMass).toEqual({
+      massMsun: 2e4,
+      ref: 'Koposov+ 2010',
+      derived: false,
+    });
+    expect(byId('pal5').stellarMass).toBeNull();
+    expect(byId('sagittarius').stellarMass).toBeNull();
+  });
+
   it('a rebuild over the same inputs is byte-identical', () => {
     const a = new Uint8Array(buildStellarStreams(stars, tracks).bin);
     const b = new Uint8Array(buildStellarStreams(stars, tracks).bin);

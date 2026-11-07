@@ -47,6 +47,8 @@ export function sagittariusMeta(
     colourT: arrayMean(p.colourT),
     // A gradient along the debris, not one value (`sagittariusFeh`).
     metallicity: null,
+    // Published values are ranges or limits (see streamStellarMass.constants).
+    stellarMass: null,
     anchorMpc: [anchorMpc[0]!, anchorMpc[1]!, anchorMpc[2]!],
   };
 }

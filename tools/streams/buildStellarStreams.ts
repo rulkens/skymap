@@ -22,7 +22,9 @@ import type { GalstreamsTrack } from './@types/GalstreamsTrack';
 import type { StellarStreamMetaEntry } from './@types/StellarStreamMetaEntry';
 import type { VasilievStar } from './@types/VasilievStar';
 import { STREAM_METALLICITY } from './data/streamMetallicity.constants';
+import { STREAM_STELLAR_MASS } from './data/streamStellarMass.constants';
 import { SGR_SEED, TRACK_SEED } from './data/streamsBuild.constants';
+import { assertTableNamesBuilt } from './utils/assertTableNamesBuilt';
 import { orientTrackByMotion } from './utils/orientTrackByMotion';
 import { pickStreamTracks } from './utils/pickStreamTracks';
 import { readGalstreamsTracks } from './utils/readGalstreamsTracks';
@@ -75,14 +77,9 @@ export function buildStellarStreams(
 function main(): void {
   const stars = readVasilievStars(rawDataPath('vasiliev2021.stars'));
   const tracks = readGalstreamsTracks(rawDataPath('galstreams.dir'));
-  // A galstreams rename on refetch would otherwise drop a measured stream to the median unseen.
   const built = new Set(pickStreamTracks(tracks).map((t) => t.name));
-  const stale = Object.keys(STREAM_METALLICITY).filter((name) => !built.has(name));
-  if (stale.length > 0) {
-    throw new Error(
-      `buildStellarStreams: metallicity rows name no built stream: ${stale.join(', ')}`,
-    );
-  }
+  assertTableNamesBuilt('metallicity', STREAM_METALLICITY, built);
+  assertTableNamesBuilt('stellar-mass', STREAM_STELLAR_MASS, built);
   const { bin, meta } = buildStellarStreams(stars, tracks);
   mkdirSync(OUT_DIR, { recursive: true });
   writeFileSync(join(OUT_DIR, 'stellar-streams.bin'), Buffer.from(bin));

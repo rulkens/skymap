@@ -1,8 +1,7 @@
 /**
  * StellarStreamDetailCard — the panel for a selected stream: what kind of debris it is, its size,
- * distance and width, its measured metallicity (only when measured), how many particles draw it,
- * and where the track comes from. Every value is the meta row, so the card shows before the
- * particles load.
+ * distance and width, and its measured metallicity and published stellar mass where there are
+ * such. Every value is the meta row, so the card shows before the particles load.
  */
 
 import type { ReactNode } from 'react';
@@ -11,6 +10,7 @@ import type { CardLayout } from '../../../../../@types/components/infoCard/CardL
 import type { StellarStreamTarget } from '../../@types/StellarStreamTarget';
 import { STELLAR_STREAM_SOURCE_FACTS } from '../../data/stellarStreamSourceFacts.constants';
 import { formatKpcRange } from '../../utils/formatKpcRange';
+import { formatScientific } from '../../../../../utils/format/formatScientific';
 import CardHeader from '../../../../../components/InfoCard/CardHeader/CardHeader';
 import CardRow from '../../../../../components/InfoCard/CardRow/CardRow';
 import styles from '../../../../../components/InfoCard/cardChrome.module.css';
@@ -55,6 +55,12 @@ function StellarStreamDetailCard({
           <CardRow
             label="Metallicity"
             value={`[Fe/H] ${target.metallicity.feh.toFixed(2).replace('-', '\u2212')} (${target.metallicity.ref})`}
+          />
+        )}
+        {target.stellarMass && (
+          <CardRow
+            label="Stellar mass"
+            value={`${target.stellarMass.derived ? '≈ ' : ''}${formatScientific(target.stellarMass.massMsun)} M☉ (${target.stellarMass.ref})`}
           />
         )}
       </div>

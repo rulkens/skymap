@@ -13,6 +13,7 @@ export const SAGITTARIUS: StellarStreamMeta = {
   particleCount: 60000,
   colourT: 0.55,
   metallicity: null,
+  stellarMass: null,
   anchorMpc: [0.0056, -0.0225, -0.0137],
 };
 
@@ -29,6 +30,7 @@ export const GD_1: StellarStreamMeta = {
   particleCount: 700,
   colourT: 0.2,
   metallicity: null,
+  stellarMass: { massMsun: 2e4, ref: 'Koposov+ 2010', derived: false },
   anchorMpc: [-0.004, 0.006, 0.005],
 };
 
@@ -38,6 +40,7 @@ export const SHORT: StellarStreamMeta = {
   names: ['Pal 5'],
   lengthKpc: 4,
   metallicity: { feh: -1.41, ref: 'Harris 1996, 2010 ed.' },
+  stellarMass: null,
 };
 
 export const STREAM_META: readonly StellarStreamMeta[] = [SAGITTARIUS, GD_1, SHORT];

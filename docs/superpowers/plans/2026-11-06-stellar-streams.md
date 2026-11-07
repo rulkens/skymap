@@ -682,7 +682,7 @@ website test forces them.
 
 **Tests:** card row present/absent/≈; the formatter (one util file) for mantissa × 10^n; the build guard.
 
-- [ ] Commit (rebuilt data is gitignored).
+- [x] Commit (rebuilt data is gitignored).
 
 Task 13 re-runs (perf, eye check) after Task 19.
 

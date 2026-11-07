@@ -18,5 +18,11 @@ export type StellarStreamMeta = {
   readonly colourT: number;
   /** Measured [Fe/H] and its citation; null when the build defaulted it (never shown) and for Sagittarius. */
   readonly metallicity: { readonly feh: number; readonly ref: string } | null;
+  /** Published stellar mass (M☉) and its citation; `derived` = converted from a luminosity, shown "≈". */
+  readonly stellarMass: {
+    readonly massMsun: number;
+    readonly ref: string;
+    readonly derived: boolean;
+  } | null;
   readonly anchorMpc: readonly [number, number, number];
 };

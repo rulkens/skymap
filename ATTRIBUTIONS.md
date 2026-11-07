@@ -1004,6 +1004,143 @@ unclear, and no entry here reads them as a licence.
 - **Checked:** 2026-11-07: <https://arxiv.org/e-print/1912.06707>
 - **Not verified:** the journal's terms.
 
+### Stream stellar masses from DES (Shipp et al. 2018)
+
+<!-- attribution: id=shipp2018 -->
+
+- **What:** The stellar masses of eight streams, from the paper's table of
+  derived parameters.
+- **By:** Shipp et al. 2018, "Stellar Streams Discovered in the Dark Energy
+  Survey", ApJ 862, 114.
+- **Licence:** A published paper; eight of its numbers used.
+- **Use:** Reference only
+- **Attribution:** Cite the paper, doi:10.3847/1538-4357/aacdab.
+- **Upstream:** <https://arxiv.org/abs/1801.03097>
+- **Enters skymap:** typed into
+  `tools/streams/data/streamStellarMass.constants.ts` → the stream card's
+  Stellar mass row.
+- **Modified:** No values changed. Each is the mass inside the DES
+  footprint, not the whole stream.
+- **Checked:** 2026-11-07: <https://arxiv.org/e-print/1801.03097> (the
+  source's table "Derived parameters of stellar streams").
+- **Not verified:** the journal's terms.
+
+### The stellar mass of GD-1 (Koposov et al. 2010)
+
+<!-- attribution: id=koposov2010 -->
+
+- **What:** The stellar mass of the GD-1 stream, from its star count.
+- **By:** Koposov, Rix & Hogg 2010, "Constraining the Milky Way potential
+  with a 6-D phase-space map of the GD-1 stellar stream", ApJ 712, 260.
+- **Licence:** A published paper; one of its numbers used.
+- **Use:** Reference only
+- **Attribution:** Cite the paper, doi:10.1088/0004-637X/712/1/260.
+- **Upstream:** <https://arxiv.org/abs/0907.1085>
+- **Enters skymap:** typed into
+  `tools/streams/data/streamStellarMass.constants.ts` → the stream card's
+  Stellar mass row.
+- **Modified:** No values changed.
+- **Checked:** 2026-11-07: <https://arxiv.org/e-print/0907.1085> (the source's
+  section "Stellar population of the stream").
+- **Not verified:** the journal's terms.
+
+### The stellar mass of the Jet stream (Jethwa et al. 2018)
+
+<!-- attribution: id=jethwa2018 -->
+
+- **What:** The stellar mass of the Jet stream, from its main-sequence turnoff.
+- **By:** Jethwa et al. 2018, "Discovery of a thin stellar stream in the SLAMS
+  survey", MNRAS 480, 5342.
+- **Licence:** A published paper; one of its numbers used.
+- **Use:** Reference only
+- **Attribution:** Cite the paper, doi:10.1093/mnras/sty2226.
+- **Upstream:** <https://arxiv.org/abs/1711.09103>
+- **Enters skymap:** typed into
+  `tools/streams/data/streamStellarMass.constants.ts` → the stream card's
+  Stellar mass row.
+- **Modified:** No values changed.
+- **Checked:** 2026-11-07: <https://arxiv.org/e-print/1711.09103> (the
+  source's section "The progenitor?").
+- **Not verified:** the journal's terms.
+
+### The stellar mass of the NGC 5466 stream (Jensen et al. 2021)
+
+<!-- attribution: id=jensen2021 -->
+
+- **What:** The stellar mass of the detected part of the NGC 5466 stream.
+- **By:** Jensen et al. 2021, "Uncovering fossils of the distant Milky Way with
+  UNIONS: NGC 5466 and its stellar stream", MNRAS 507, 1923.
+- **Licence:** A published paper; one of its numbers used.
+- **Use:** Reference only
+- **Attribution:** Cite the paper, doi:10.1093/mnras/stab2325.
+- **Upstream:** <https://arxiv.org/abs/2108.04340>
+- **Enters skymap:** typed into
+  `tools/streams/data/streamStellarMass.constants.ts` → the stream card's
+  Stellar mass row.
+- **Modified:** No values changed.
+- **Checked:** 2026-11-07: <https://arxiv.org/e-print/2108.04340> (the
+  source's subsection "Luminosity").
+- **Not verified:** the journal's terms.
+
+### The stellar mass of the Ophiuchus stream (Caldwell et al. 2020)
+
+<!-- attribution: id=caldwell2020 -->
+
+- **What:** The total mass of the stars of the Ophiuchus stream.
+- **By:** Caldwell et al. 2020, "A Larger Extent for the Ophiuchus Stream",
+  AJ 159, 287.
+- **Licence:** A published paper; one of its numbers used.
+- **Use:** Reference only
+- **Attribution:** Cite the paper, doi:10.3847/1538-3881/ab8cbf.
+- **Upstream:** <https://arxiv.org/abs/2004.14350>
+- **Enters skymap:** typed into
+  `tools/streams/data/streamStellarMass.constants.ts` → the stream card's
+  Stellar mass row.
+- **Modified:** No values changed.
+- **Checked:** 2026-11-07: <https://arxiv.org/e-print/2004.14350> (the
+  source's section "Discussion and conclusions").
+- **Not verified:** the journal's terms.
+
+### The stellar mass of the Cetus-Palca stream (Thomas & Battaglia 2022)
+
+<!-- attribution: id=thomas2022 -->
+
+- **What:** The stellar mass of the Cetus-Palca stream, from its luminosity
+  function.
+- **By:** Thomas & Battaglia 2022, "The Cetus-Palca stream: A disrupted
+  small dwarf galaxy", A&A 660, A29.
+- **Licence:** A published paper; one of its numbers used.
+- **Use:** Reference only
+- **Attribution:** Cite the paper, doi:10.1051/0004-6361/202142347.
+- **Upstream:** <https://arxiv.org/abs/2112.03973>
+- **Enters skymap:** typed into
+  `tools/streams/data/streamStellarMass.constants.ts` → the stream card's
+  Stellar mass row.
+- **Modified:** No values changed; the median of the paper's 100 realisations.
+- **Checked:** 2026-11-07: <https://arxiv.org/e-print/2112.03973> (the
+  source's section "Tracing the Cetus-Palca stream with different stellar
+  populations").
+- **Not verified:** the journal's terms.
+
+### The stellar mass of the Orphan-Chenab stream (Koposov et al. 2023)
+
+<!-- attribution: id=koposov2023 -->
+
+- **What:** The stellar mass of the visible part of the Orphan-Chenab stream.
+- **By:** Koposov et al. 2023, "S5: Probing the Milky Way and Magellanic Clouds
+  potentials with the 6-D map of the Orphan-Chenab stream", MNRAS 521, 4936.
+- **Licence:** A published paper; one of its numbers used.
+- **Use:** Reference only
+- **Attribution:** Cite the paper, doi:10.1093/mnras/stad551.
+- **Upstream:** <https://arxiv.org/abs/2211.04495>
+- **Enters skymap:** typed into
+  `tools/streams/data/streamStellarMass.constants.ts` → the stream card's
+  Stellar mass row.
+- **Modified:** No values changed.
+- **Checked:** 2026-11-07: <https://arxiv.org/e-print/2211.04495> (the
+  source's section "Stream density").
+- **Not verified:** the journal's terms.
+
 ### Old-population colours (MIST isochrones)
 
 <!-- attribution: id=mist -->

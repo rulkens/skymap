@@ -1,4 +1,5 @@
 import type { StreamMetallicity } from './StreamMetallicity';
+import type { StreamStellarMass } from './StreamStellarMass';
 
 /** One row of stellar_streams_meta.json; array position = stream index in the bin. */
 export type StellarStreamMetaEntry = {
@@ -19,5 +20,7 @@ export type StellarStreamMetaEntry = {
   colourT: number;
   /** Measured [Fe/H] and its citation; null when the median stood in, and for Sagittarius's gradient. */
   metallicity: StreamMetallicity | null;
+  /** Published stellar mass and its citation; null where none is published as one value. */
+  stellarMass: StreamStellarMass | null;
   anchorMpc: readonly [number, number, number];
 };
