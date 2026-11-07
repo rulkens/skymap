@@ -71,6 +71,7 @@ import { buildPathTrack } from './buildPathTrack';
 import { buildGeodesicTrack } from './buildGeodesicTrack';
 import { hasDuration } from './hasDuration';
 import { validateSeqOverlap } from './validateSeqOverlap';
+import { validateSeqCueOrder } from './validateSeqCueOrder';
 import type { SeqOverlap } from '../../../@types/animation/SeqOverlap';
 import type { SeqSteps } from '../../../@types/animation/SeqSteps';
 import type { StepSpan } from '../../../@types/animation/StepSpan';
@@ -459,6 +460,8 @@ export function compileClip(data: ClipData, frameBasis?: Mat3): CompiledClip {
   for (const effect of data.timeline) {
     awaitedDur += walk(effect, awaitedDur, acc);
   }
+
+  validateSeqCueOrder(acc.seqs, acc.cues);
 
   const sortedCues: SceneCue[] = [...acc.cues].sort((a, b) => a.atSec - b.atSec);
 
