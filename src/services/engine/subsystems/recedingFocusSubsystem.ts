@@ -1,5 +1,5 @@
 /**
- * structureFocusSubsystem — focus mode: one 400 ms blend for whichever receding row is focused,
+ * recedingFocusSubsystem — focus mode: one 400 ms blend for whichever receding row is focused,
  * and its sphere on a ramp of its own. A switch to a different sphere fades through: the old one
  * fades out, then the new one in, so the per-vertex dim never pops (a structure's ball and a
  * stream's recede-all sphere included). `update` runs every frame but fades only on a transition
@@ -11,7 +11,7 @@
 import { createFadeController } from '../../animation/fadeController';
 import { refKey } from '../../../utils/selection/refKey';
 import { sameFocusSphere } from '../../../utils/structure/sameFocusSphere';
-import type { StructureFocusSubsystem } from '../../../@types/engine/subsystems/StructureFocusSubsystem';
+import type { RecedingFocusSubsystem } from '../../../@types/engine/subsystems/RecedingFocusSubsystem';
 import type { FocusSubject } from '../../../@types/engine/subsystems/FocusSubject';
 import type { FocusFrame } from '../../../@types/engine/subsystems/FocusFrame';
 import type { FocusUniformsValue } from '../../../@types/rendering/FocusUniformsValue';
@@ -36,10 +36,10 @@ export const ZERO_FOCUS: FocusUniformsValue = {
 
 const AT_REST: FocusFrame = { uniforms: ZERO_FOCUS, blend: 0, ref: null };
 
-export function createStructureFocusSubsystem(
+export function createRecedingFocusSubsystem(
   deps: { readonly requestRender: () => void },
   initialNowMs: number = performance.now(),
-): StructureFocusSubsystem {
+): RecedingFocusSubsystem {
   const fade = createFadeController(0, initialNowMs);
   const sphereFade = createFadeController(0, initialNowMs);
   // What we emit for, each latched through its own fade-out; `queued` fades in once `sphere` is out.
@@ -101,7 +101,7 @@ export function createStructureFocusSubsystem(
   }
 
   return {
-    id: 'structureFocus',
+    id: 'recedingFocus',
     update,
     produceFocus,
     lastFocus: () => last,

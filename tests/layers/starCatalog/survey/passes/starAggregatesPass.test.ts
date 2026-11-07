@@ -8,7 +8,7 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { starAggregatesPass } from '../../../../../src/layers/starCatalog/survey/passes/starAggregatesPass';
 import { Source } from '../../../../../src/data/source';
-import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/structureFocusSubsystem';
+import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/recedingFocusSubsystem';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';

@@ -18,7 +18,7 @@
  */
 
 import type { Label2DDirector } from '../subsystems/Label2DDirector';
-import type { StructureFocusSubsystem } from '../subsystems/StructureFocusSubsystem';
+import type { RecedingFocusSubsystem } from '../subsystems/RecedingFocusSubsystem';
 import type { ClipPlayer } from '../subsystems/ClipPlayer';
 import type { ClipPathInspector } from '../subsystems/ClipPathInspector';
 import type { RenderScheduler } from '../subsystems/RenderScheduler';
@@ -87,7 +87,7 @@ export type EngineSubsystemHandles = {
    * `produceFocus(nowMs)` into the snapshot. Constructed
    * eagerly; no GPU dep, non-null from t=0.
    */
-  structureFocus: StructureFocusSubsystem;
+  recedingFocus: RecedingFocusSubsystem;
   /**
    * Clip-player Resource — owns the active clip's scene cues, the
    * `clipOpacity` channel (per-layer transient opacity), and clip-completion

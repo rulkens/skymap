@@ -202,8 +202,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // per frame, before every consumer of the blend (label director, markers,
   // render settings); all of them read the captured value, never a fresh call.
   const focusRow = state.selectionRows.focus;
-  state.subsystems.structureFocus.update(focusSubjectOf(state.selection.focus, focusRow), nowMs);
-  const focus = state.subsystems.structureFocus.produceFocus(nowMs);
+  state.subsystems.recedingFocus.update(focusSubjectOf(state.selection.focus, focusRow), nowMs);
+  const focus = state.subsystems.recedingFocus.produceFocus(nowMs);
   snapshot.focus = focus.uniforms;
   snapshot.focusBlend = focus.blend;
   snapshot.focusPickId = encodeSelectionPick(state.selectionKindRows, focus.ref);

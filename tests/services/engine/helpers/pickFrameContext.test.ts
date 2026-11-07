@@ -23,7 +23,7 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 import type { CameraProjection } from '../../../../src/@types/camera/projection/CameraProjection';
 import type { FocusUniformsValue } from '../../../../src/@types/rendering/FocusUniformsValue';
-import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
+import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/recedingFocusSubsystem';
 import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 import { symmetricFrustum } from '../../../../src/utils/camera/frustum/symmetricFrustum';
 import type { FocusFrame } from '../../../../src/@types/engine/subsystems/FocusFrame';
@@ -64,7 +64,7 @@ function makeState(
     gpu: { galaxyPointRenderer, renderTargets, galaxyPickRenderer, compositor },
     subsystems: {
       texturedDisks,
-      structureFocus: {
+      recedingFocus: {
         lastFocus: () => overrides.lastFocus ?? { uniforms: ZERO_FOCUS, blend: 0, ref: null },
       },
     },

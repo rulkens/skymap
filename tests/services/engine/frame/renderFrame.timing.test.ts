@@ -44,7 +44,7 @@ import type { SourceType } from '../../../../src/@types/data/SourceType';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 import { INITIAL_SETTINGS } from '../../../../src/state/settings/initialSettings';
 import { galaxyRowRuntime } from '../../../support/layerPickCodes';
-import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
+import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/recedingFocusSubsystem';
 
 // `descriptorFor` returns a DISTINCT descriptor per slot, with the stub querySet tagged
 // `{ _stub: slot }`, so assertions can tell which slot's descriptor landed on which pass.

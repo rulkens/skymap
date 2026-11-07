@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
-  createStructureFocusSubsystem,
+  createRecedingFocusSubsystem,
   ZERO_FOCUS,
-} from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
+} from '../../../../src/services/engine/subsystems/recedingFocusSubsystem';
 import type { FocusSubject } from '../../../../src/@types/engine/subsystems/FocusSubject';
 import type { FocusSphere } from '../../../../src/@types/rendering/FocusSphere';
 import { RECEDE_ALL_FOCUS_SPHERE } from '../../../../src/data/selection/recedeAllFocusSphere';
@@ -20,13 +20,13 @@ const STREAM: FocusSubject = {
 };
 
 // Factory helper — passes a no-op wake function for tests that don't inspect it.
-function makeStructureFocus(initialNowMs = 0) {
-  return createStructureFocusSubsystem({ requestRender: () => {} }, initialNowMs);
+function makeRecedingFocus(initialNowMs = 0) {
+  return createRecedingFocusSubsystem({ requestRender: () => {} }, initialNowMs);
 }
 
-describe('structureFocusSubsystem', () => {
+describe('recedingFocusSubsystem', () => {
   it('a subject with a sphere fades sphere and blend 0→1 together, with its centre/radii', () => {
-    const sub = makeStructureFocus(0);
+    const sub = makeRecedingFocus(0);
     sub.update(makeCluster('virgo', { center: [3, 4, 5], apparentRadiusMpc: 5 }), 0);
     const mid = sub.produceFocus(200);
     expect(mid.blend).toBeGreaterThan(0);
@@ -44,7 +44,7 @@ describe('structureFocusSubsystem', () => {
   });
 
   it('lastFocus returns the produced value without advancing the fade', () => {
-    const sub = makeStructureFocus(0);
+    const sub = makeRecedingFocus(0);
     expect(sub.lastFocus().blend).toBe(0);
     sub.update(makeCluster(), 0);
     const mid = sub.produceFocus(200);
@@ -52,7 +52,7 @@ describe('structureFocusSubsystem', () => {
   });
 
   it('update(null) fades blend 1→0 keeping the ref latched, without restarting per frame', () => {
-    const sub = makeStructureFocus(0);
+    const sub = makeRecedingFocus(0);
     sub.update(makeCluster(), 0);
     sub.produceFocus(500); // settle at 1
     sub.update(null, 500);
@@ -68,7 +68,7 @@ describe('structureFocusSubsystem', () => {
   });
 
   it('the same ref re-observed each frame does not restart the ramp, even as a fresh object', () => {
-    const sub = makeStructureFocus(0);
+    const sub = makeRecedingFocus(0);
     sub.update(makeCluster(), 0);
     sub.produceFocus(100); // mid fade-in
     sub.update(makeCluster(), 100);
@@ -77,7 +77,7 @@ describe('structureFocusSubsystem', () => {
   });
 
   it('structure → stream fades the sphere out, then the recede-all sphere in, the blend holding at 1', () => {
-    const sub = makeStructureFocus(0);
+    const sub = makeRecedingFocus(0);
     sub.update(makeCluster('virgo'), 0);
     sub.produceFocus(500); // settle at 1
     sub.update(STREAM, 500);
@@ -98,7 +98,7 @@ describe('structureFocusSubsystem', () => {
   });
 
   it('structure → structure fades through 0 too, never snapping the bright region across', () => {
-    const sub = makeStructureFocus(0);
+    const sub = makeRecedingFocus(0);
     sub.update(makeCluster('virgo'), 0);
     sub.produceFocus(500);
     sub.update(makeCluster('coma', { center: [-10, 0, 0] }), 600);
@@ -110,7 +110,7 @@ describe('structureFocusSubsystem', () => {
   });
 
   it('stream → stream keeps the recede-all sphere at full, a value-equal copy included', () => {
-    const sub = makeStructureFocus(0);
+    const sub = makeRecedingFocus(0);
     sub.update(STREAM, 0);
     sub.produceFocus(500);
     sub.update(
@@ -121,7 +121,7 @@ describe('structureFocusSubsystem', () => {
   });
 
   it('isAwake is true mid-fade and false at rest', () => {
-    const sub = makeStructureFocus(0);
+    const sub = makeRecedingFocus(0);
     expect(sub.isAwake(0)).toBe(false);
     sub.update(makeCluster(), 0);
     expect(sub.isAwake(200)).toBe(true);
@@ -131,7 +131,7 @@ describe('structureFocusSubsystem', () => {
 
   it('update wakes the scheduler on each transition, never on steady frames', () => {
     const requestRender = vi.fn();
-    const sub = createStructureFocusSubsystem({ requestRender }, 0);
+    const sub = createRecedingFocusSubsystem({ requestRender }, 0);
     sub.update(makeCluster(), 0);
     sub.update(makeCluster(), 16);
     sub.update(makeCluster(), 32);

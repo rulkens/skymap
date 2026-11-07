@@ -6,7 +6,7 @@
  * fade-band / occlusion / registry-ramp mechanics are covered here once, on core's bodies.
  */
 
-import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/structureFocusSubsystem';
+import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/recedingFocusSubsystem';
 import { describe, it, expect } from 'vitest';
 
 import { produceSceneBodyCaptions as produceSceneBodyCaptionsFor } from '../../../../../src/layers/body/labels/present/produceSceneBodyCaptions';

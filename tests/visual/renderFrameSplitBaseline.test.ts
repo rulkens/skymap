@@ -45,7 +45,7 @@ import type { CosmicWebFilamentsRuntime } from '../../src/layers/cosmicWebFilame
 import type { MilkyWayRuntime } from '../../src/layers/milkyWay/@types/MilkyWayRuntime';
 import { INITIAL_SETTINGS } from '../../src/state/settings/initialSettings';
 import { galaxyRowRuntime } from '../support/layerPickCodes';
-import { ZERO_FOCUS } from '../../src/services/engine/subsystems/structureFocusSubsystem';
+import { ZERO_FOCUS } from '../../src/services/engine/subsystems/recedingFocusSubsystem';
 
 type DrawRecord =
   | { kind: 'beginRenderPass' }

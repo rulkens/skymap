@@ -84,7 +84,7 @@ import type { ClipPlayer } from '../../../../src/@types/engine/subsystems/ClipPl
 import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/FrameContentPlanner';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/layers/galaxyCatalog/state/defaults';
-import { createStructureFocusSubsystem } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
+import { createRecedingFocusSubsystem } from '../../../../src/services/engine/subsystems/recedingFocusSubsystem';
 import {
   inputSourceAttached,
   inputGestureStarted,
@@ -850,7 +850,7 @@ describe('runFrame — the label-director wake fold', () => {
         proceduralDisks: null,
         diskPlannerWalk: null,
         hiResFamous: null,
-        structureFocus: createStructureFocusSubsystem({ requestRender: vi.fn() }),
+        recedingFocus: createRecedingFocusSubsystem({ requestRender: vi.fn() }),
         fades: { tick: vi.fn(), opacityOf: () => 0, isAnyAnimating: () => false },
         cosmoLabelDirector: { runFrame: vi.fn(cosmoRunFrame) },
         foregroundLabelDirector: { runFrame: vi.fn(foregroundRunFrame) },
@@ -883,7 +883,7 @@ describe('runFrame — the label-director wake fold', () => {
       () => false,
       () => false,
     );
-    const structureFocus = createStructureFocusSubsystem({ requestRender: vi.fn() }, 0);
+    const recedingFocus = createRecedingFocusSubsystem({ requestRender: vi.fn() }, 0);
     const state = {
       ...base,
       selectionKindRows: [
@@ -895,19 +895,19 @@ describe('runFrame — the label-director wake fold', () => {
       subsystems: {
         ...base.subsystems,
         scheduler: { requestRender: vi.fn(), requestIdleFrame: vi.fn() },
-        structureFocus,
+        recedingFocus,
       },
     } as unknown as EngineState;
     // Virgo was focused and settled; the focus is already cleared (the fixture's
     // focus row is null), so the frames below tick its fade-out.
-    structureFocus.update(
+    recedingFocus.update(
       {
         ref: { type: 'structure', id: 'virgo' },
         sphere: { center: [1, 0, 0], apparentRadiusMpc: 2, physicalRadiusMpc: 2 },
       },
       0,
     );
-    structureFocus.produceFocus(500);
+    recedingFocus.produceFocus(500);
     const deps = makeCamDeps(state);
     const snapshotAt = (nowMs: number) => {
       runFrame(state, deps, nowMs);
@@ -938,7 +938,7 @@ describe('runFrame — the label-director wake fold', () => {
       subsystems: {
         ...base.subsystems,
         scheduler: { requestRender: vi.fn(), requestIdleFrame: vi.fn() },
-        structureFocus: createStructureFocusSubsystem({ requestRender: vi.fn() }, 0),
+        recedingFocus: createRecedingFocusSubsystem({ requestRender: vi.fn() }, 0),
       },
     } as unknown as EngineState;
     const deps = makeCamDeps(state);
@@ -989,7 +989,7 @@ describe('runFrame — the planner keep-ticking fold', () => {
         proceduralDisks: null,
         diskPlannerWalk: null,
         hiResFamous: null,
-        structureFocus: {
+        recedingFocus: {
           update: vi.fn(),
           produceFocus: vi.fn(() => ({
             uniforms: { center: [1, 2, 3], apparentRadiusMpc: 1, physicalRadiusMpc: 1, blend: 0.5 },
