@@ -112,6 +112,18 @@ export const ANTIQUE_PRINT_CELL_UNITS = 4;   // one print-point texel per 4 prin
 
 Open for the owner: reflected light lightens Earth's night side near the limb (the period convention).
 
+### Task 15: Engraved galaxies (recipe: the galaxy spike, RECIPE.md Part 2)
+**Files:** `src/services/gpu/shaders/antiqueLook/{nebula,skyFloor,structureGlow,glow,reduce,engraving,fragment}.wesl`,
+`src/services/gpu/passes/antiqueLook/{antiqueLook,createAntiqueLookGpu,antiqueLookTargetRows}.ts`,
+`src/data/rendering/antiqueLook.ts`, `src/@types/rendering/AntiqueLookGpu.d.ts`
+- [x] Galaxies cut as swelling iso-lines on their isophotes (octave-nested, integer lines so nothing pops), tone stipple in the faint disc, a dotted outline at the field-adaptive level, a solid core, dust lanes left as paper, smalt/gamboge wash.
+- [x] A quarter-res nebula pass (Lxs, Lsm, line field, lane reference) and a one-workgroup compute for the field floor: the 30th percentile of the glow's sky texels, read by the plate in the same submit; a planet's day sky is its own field and stays paper.
+- [x] Iso-lines only where the glow's isophotes are coherent (structure tensor per 4×4 block); a star field's speckle (the band from Sgr A*) gets tone stipple.
+- [x] Structure markers moved to their own half-res row; their eroded low band keeps the old Dutch outline colour and dotted contour, so no cluster or void disc is engraved. The old print-glow contours stay for light the galaxy gate rejects.
+- [x] Deviations from the recipe, measured on the app's real frames: reduce floor factor 1.0 (not 1.15), line field Lxh 2 cells, Lsm 2.2, unsharp 1.5 (not 1.3, 1.6, 2.5): the recipe's values left M87 as fingerprints.
+
+Open for the owner: the Sombrero and the Clouds still don't read (a content gap, per the spike); dense field clumps near M51 print as small stippled patches.
+
 ## Definition of Done
 
 **Deliverables:** the `stylize` FRAME_ORDER line and `antiqueLook` pass; the `antique` settings
