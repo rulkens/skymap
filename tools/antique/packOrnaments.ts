@@ -1,0 +1,217 @@
+#!/usr/bin/env node
+/**
+ * packOrnaments — packs the antique look's engraved ornaments into one sheet,
+ * `public/antique/ornaments.png`, and generates its layout module. Channels:
+ * R = ink density, G = fill (the solid silhouette the plate is cleared to paper
+ * under), B = wash (colour strength; 0 here, every sprite is uncoloured).
+ *
+ * Usage:  npm run pack-ornaments
+ * Inputs: data/antique/sprites/<id>.png (black RGB, ink in alpha; provenance in
+ *         data/antique/PROVENANCE.md) and the IM Fell TTFs in data/antique/fonts/.
+ */
+
+import { readFileSync, writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+
+import { type Font, parse } from 'opentype.js';
+import sharp from 'sharp';
+
+import type { GreyRaster } from '../@types/image/GreyRaster';
+import { closeMaskDisc } from '../utils/image/closeMaskDisc';
+import { dilateMaskDisc } from '../utils/image/dilateMaskDisc';
+import { fillMaskHoles } from '../utils/image/fillMaskHoles';
+import { gaussianBlurFloat32 } from '../utils/image/gaussianBlurFloat32';
+import { shelfPack } from '../utils/image/shelfPack';
+import type { OrnamentSprite } from './@types/OrnamentSprite';
+
+const SPRITE_IDS = [
+  'cartouche',
+  'compassRose',
+  'cetus',
+  'dragon',
+  'seaSerpent',
+  'seaMonster',
+  'hornedWhale',
+  'seaHorse',
+  'spoutFish',
+  'ship',
+] as const;
+
+const ROOT = fileURLToPath(new URL('../../', import.meta.url));
+const OUT_PNG = 'public/antique/ornaments.png';
+const OUT_TS = 'src/data/rendering/antiqueOrnamentAtlas.ts';
+
+const MAX_SIDE_PX = 640;
+const MAX_ATLAS_PX = 2048;
+const GUTTER_PX = 4;
+/** Transparent margin around each sprite: room for the close and the fill halo. */
+const PAD_PX = 10;
+const INK_THRESHOLD = Math.round(0.08 * 255);
+const CLOSE_RADIUS_PX = 6;
+const FILL_GROW_PX = 3;
+const FILL_BLUR_SIGMA_PX = 1.5;
+
+/**
+ * The cartouche's empty oval, measured by eye on the 1024 px source and stored
+ * normalised to the unpadded sprite. Hard-coded rather than detected: the oval's
+ * inner rule is broken at the top left, so a flood would leak out of it.
+ */
+const CARTOUCHE_OVAL = { cx: 0.49, cy: 0.473, rx: 0.231, ry: 0.201 } as const;
+const ROMAN = 'IMFellEnglish-Regular.ttf';
+const ITALIC = 'IMFellEnglish-Italic.ttf';
+const TITLE_LINES = [
+  { text: 'NOVA ET ACCVRATISSIMA', file: ROMAN, dy: -0.46, sizeOfRy: 0.2 },
+  { text: 'TOTIVS VNIVERSI TABVLA', file: ROMAN, dy: 0, sizeOfRy: 0.3 },
+  { text: 'Amstelodami, ex officina Skymap. MDCLX', file: ITALIC, dy: 0.46, sizeOfRy: 0.17 },
+] as const;
+/** Fraction of the oval's chord a title line may span. */
+const TITLE_CHORD_FILL = 0.84;
+
+async function loadInk(id: string): Promise<GreyRaster> {
+  const { data, info } = await sharp(`${ROOT}data/antique/sprites/${id}.png`)
+    .ensureAlpha()
+    .resize({ width: MAX_SIDE_PX, height: MAX_SIDE_PX, fit: 'inside', withoutEnlargement: true })
+    .extend({ top: PAD_PX, bottom: PAD_PX, left: PAD_PX, right: PAD_PX, background: '#0000' })
+    .extractChannel(3)
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  return { data: new Uint8Array(data), width: info.width, height: info.height };
+}
+
+function insideOval(x: number, y: number, w: number, h: number, scale: number): boolean {
+  const { cx, cy, rx, ry } = CARTOUCHE_OVAL;
+  const iw = w - 2 * PAD_PX;
+  const ih = h - 2 * PAD_PX;
+  const u = (x - PAD_PX - cx * iw) / (rx * iw * scale);
+  const v = (y - PAD_PX - cy * ih) / (ry * ih * scale);
+  return u * u + v * v <= 1;
+}
+
+/** Engraves the title into `ink` inside the oval, erasing the source's specks first. */
+async function engraveTitle(ink: Uint8Array, w: number, h: number): Promise<void> {
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++) if (insideOval(x, y, w, h, 0.95)) ink[y * w + x] = 0;
+  const iw = w - 2 * PAD_PX;
+  const ih = h - 2 * PAD_PX;
+  const rx = CARTOUCHE_OVAL.rx * iw;
+  const ry = CARTOUCHE_OVAL.ry * ih;
+  for (const line of TITLE_LINES) {
+    const face = parse(
+      new Uint8Array(readFileSync(`${ROOT}data/antique/fonts/${line.file}`)).buffer,
+    );
+    const chord = 2 * rx * Math.sqrt(1 - line.dy * line.dy) * TITLE_CHORD_FILL;
+    const { x1, x2 } = face.getPath(line.text, 0, 0, 1).getBoundingBox();
+    const sizePx = Math.min(line.sizeOfRy * 2 * ry, chord / (x2 - x1));
+    const glyphs = await rasterizeLine(face, line.text, sizePx);
+    const x0 = Math.round(PAD_PX + CARTOUCHE_OVAL.cx * iw - glyphs.width / 2);
+    const y0 = Math.round(PAD_PX + CARTOUCHE_OVAL.cy * ih + line.dy * ry - glyphs.height / 2);
+    for (let y = 0; y < glyphs.height; y++)
+      for (let x = 0; x < glyphs.width; x++) {
+        const i = (y0 + y) * w + x0 + x;
+        ink[i] = Math.max(ink[i]!, glyphs.data[y * glyphs.width + x]!);
+      }
+  }
+}
+
+/**
+ * One line of text as coverage, `sizePx` the em size, cropped to its ink box.
+ * Drawn from the font's outlines rather than sharp's `text` input: on macOS
+ * that goes through CoreText, which ignores `fontfile` and falls back to sans.
+ */
+async function rasterizeLine(face: Font, text: string, sizePx: number): Promise<GreyRaster> {
+  const path = face.getPath(text, 0, 0, sizePx);
+  const { x1, y1, x2, y2 } = path.getBoundingBox();
+  const width = Math.ceil(x2 - x1);
+  const height = Math.ceil(y2 - y1);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="${x1} ${y1} ${width} ${height}"><path d="${path.toPathData(3)}"/></svg>`;
+  const { data } = await sharp(Buffer.from(svg))
+    .ensureAlpha()
+    .extractChannel(3)
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  return { data: new Uint8Array(data), width, height };
+}
+
+async function buildSprite(id: string): Promise<OrnamentSprite> {
+  const { data: ink, width: w, height: h } = await loadInk(id);
+  if (id === 'cartouche') await engraveTitle(ink, w, h);
+  const solid = fillMaskHoles(
+    closeMaskDisc(
+      ink.map((v) => (v > INK_THRESHOLD ? 1 : 0)),
+      w,
+      h,
+      CLOSE_RADIUS_PX,
+    ),
+    w,
+    h,
+  );
+  if (id === 'cartouche')
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < w; x++) if (insideOval(x, y, w, h, 1)) solid[y * w + x] = 1;
+  const grown = dilateMaskDisc(solid, w, h, FILL_GROW_PX);
+  const soft = gaussianBlurFloat32(Float32Array.from(grown), w, h, FILL_BLUR_SIGMA_PX);
+  const fill = Uint8Array.from(soft, (v) => Math.round(Math.min(1, v) * 255));
+  return { ink, fill, w, h };
+}
+
+/** The narrowest-square packing under the size cap. */
+function packSquarest(sprites: readonly OrnamentSprite[]): ReturnType<typeof shelfPack> {
+  let best: ReturnType<typeof shelfPack> | undefined;
+  for (let maxWidth = 512; maxWidth <= MAX_ATLAS_PX; maxWidth += 16) {
+    if (sprites.some((s) => s.w + 2 * GUTTER_PX > maxWidth)) continue;
+    const p = shelfPack(sprites, maxWidth, GUTTER_PX);
+    if (p.height > MAX_ATLAS_PX) continue;
+    const side = Math.max(p.width, p.height);
+    if (!best || side < Math.max(best.width, best.height)) best = p;
+  }
+  if (!best) throw new Error(`packOrnaments: sprites do not fit ${MAX_ATLAS_PX} px`);
+  return best;
+}
+
+async function main(): Promise<void> {
+  const sprites = await Promise.all(SPRITE_IDS.map(buildSprite));
+  const { width, height, rects } = packSquarest(sprites);
+  // RGB only: a PNG without alpha decodes to A = 1, which is the sheet's contract.
+  const atlas = new Uint8Array(width * height * 3);
+  sprites.forEach((s, k) => {
+    const { x, y } = rects[k]!;
+    for (let j = 0; j < s.h; j++)
+      for (let i = 0; i < s.w; i++) {
+        const o = ((y + j) * width + x + i) * 3;
+        atlas[o] = s.ink[j * s.w + i]!;
+        atlas[o + 1] = s.fill[j * s.w + i]!;
+      }
+  });
+  await sharp(atlas, { raw: { width, height, channels: 3 } })
+    .png({ compressionLevel: 9 })
+    .toFile(`${ROOT}${OUT_PNG}`);
+
+  const rows = SPRITE_IDS.map((id, k) => {
+    const { x, y, w, h } = rects[k]!;
+    return `    ${id}: { x: ${x}, y: ${y}, w: ${w}, h: ${h} },`;
+  });
+  writeFileSync(
+    `${ROOT}${OUT_TS}`,
+    `/**
+ * ANTIQUE_ORNAMENT_ATLAS — the packed ornament sheet's layout. GENERATED by
+ * \`tools/antique/packOrnaments.ts\` with \`public/antique/ornaments.png\`; do not
+ * edit by hand.
+ */
+
+import type { AntiqueOrnamentAtlas } from '../../@types/rendering/AntiqueOrnamentAtlas';
+
+export const ANTIQUE_ORNAMENT_ATLAS: AntiqueOrnamentAtlas = {
+  width: ${width},
+  height: ${height},
+  sprites: {
+${rows.join('\n')}
+  },
+};
+`,
+  );
+  console.log(
+    `packOrnaments: ${sprites.length} sprites → ${OUT_PNG} ${width}×${height}, ${OUT_TS}`,
+  );
+}
+
+await main();

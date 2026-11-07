@@ -75,9 +75,6 @@ fn bodyCover(ip: vec2<i32>) -> f32 {
   return select(0.0, texel(bodyTex, ip).a, (u.flags & FLAG_BODIES) != 0u);
 }
 
-  return bodyCover(ip) * smoothstep(0.2, 0.45, around / 8.0);
-}
-
 // A tent over five bilinear taps: the 1/16 texels' diamonds smoothed out of the contours.
 fn glowAt(uv: vec2<f32>) -> vec3<f32> {
   let t = 1.0 / vec2<f32>(textureDimensions(glowTex));

@@ -38,6 +38,7 @@
     "structure-audit": "tsx tools/structure-audit/structureAudit.ts",
     "build-all": "tsx tools/catalog/buildAllBins.ts && npm run build-data-manifest",
     "build-surface-tiles": "tsx tools/textures/buildSurfaceTiles.ts",
+    "pack-ornaments": "tsx tools/antique/packOrnaments.ts",
     "build-site-ground-heights": "tsx tools/textures/buildSiteGroundHeights.ts",
     "report-site-terrain": "tsx tools/textures/reportSiteTerrain.ts",
     "build-flow-field": "tsx tools/flow/buildFlowField.ts && npm run build-data-manifest",

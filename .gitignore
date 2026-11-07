@@ -110,6 +110,9 @@ pnpm-debug.log*
 !/data/raw/**/*.sha256
 !/data/raw/fonts/*.ttf
 !/data/raw/fonts/OFL.txt
+# Antique-look ornament source art, its provenance and the title fonts: inputs
+# to tools/antique/packOrnaments.ts, small and not reproducible from a fetch.
+!/data/antique/**
 # Hand-drawn scene-workbench mesh outlines: authored input, not a bake output.
 !/data/geo3d/**/*.outline.json
 # Vendored d3-celestial constellation line data — a committed raw JSON the

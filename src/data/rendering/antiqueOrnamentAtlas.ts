@@ -7,7 +7,18 @@
 import type { AntiqueOrnamentAtlas } from '../../@types/rendering/AntiqueOrnamentAtlas';
 
 export const ANTIQUE_ORNAMENT_ATLAS: AntiqueOrnamentAtlas = {
-  width: 1,
-  height: 1,
-  sprites: {},
+  width: 1949,
+  height: 1894,
+  sprites: {
+    cartouche: { x: 668, y: 668, w: 660, h: 430 },
+    compassRose: { x: 4, y: 4, w: 613, h: 660 },
+    cetus: { x: 1285, y: 4, w: 660, h: 506 },
+    dragon: { x: 4, y: 1553, w: 660, h: 337 },
+    seaSerpent: { x: 4, y: 1151, w: 660, h: 398 },
+    seaMonster: { x: 668, y: 1553, w: 660, h: 336 },
+    hornedWhale: { x: 668, y: 1151, w: 660, h: 348 },
+    seaHorse: { x: 4, y: 668, w: 660, h: 479 },
+    spoutFish: { x: 1332, y: 1553, w: 546, h: 336 },
+    ship: { x: 621, y: 4, w: 660, h: 507 },
+  },
 };
