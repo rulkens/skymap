@@ -1,7 +1,8 @@
 // meshBody/fragment.wesl — the mesh body's material: baked TBN relief over a
 // GGX metal/dielectric blend, lit by the Sun as a sphere light and by the
-// body's own reflection probe as its environment. The probe is the ambient;
-// 'u.ambient' adds a uniform fill only when a site shot asks (0 otherwise).
+// body's own reflection probe as its environment. 'u.ambient' is a uniform fill:
+// the body's self-bounce ('MESH_SELF_BOUNCE', which no probe of its own carries)
+// plus a site shot's extra.
 //
 // LANDMINE -- there is no shadow map and no self-shadowing term. Occlusion of
 // the sun by the host is the CPU-side scalar 'u.sunVisibleFraction' and nothing
@@ -43,13 +44,14 @@ fn fs(in: MeshBodyVSOut, @builtin(front_facing) frontFacing: bool) -> @location(
   let tilt = textureSample(normalTexture, meshSampler, in.uv).xyz * 2.0 - 1.0;
   let n = normalize(t * tilt.x + b * tilt.y + ng * tilt.z);
 
-  let albedo = textureSample(albedoTexture, meshSampler, in.uv).rgb;
+  let albedo = textureSample(albedoTexture, meshSampler, in.uv).rgb * u.baseColorFactor;
   // glTF ORM packing: R baked occlusion (255 when the mesh has none), G roughness,
   // B metallic ('tools/meshes/buildMeshes.ts').
   let orm = textureSample(metalRoughTexture, meshSampler, in.uv).rgb;
   let ao = orm.r;
-  let roughness = orm.g;
-  let metallic = orm.b;
+  // Roughness 0 is safe: 'lib/pbr.wesl' floors it at MIN_ROUGHNESS inside GGX.
+  let roughness = orm.g * u.roughnessFactor;
+  let metallic = orm.b * u.metallicFactor;
   let f0 = mix(vec3<f32>(DIELECTRIC_F0), albedo, metallic);
   let diffuseAlbedo = albedo * (1.0 - metallic);
 

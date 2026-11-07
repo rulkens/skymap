@@ -21,6 +21,7 @@ import { lightTimeVisibility } from '../layers/lightTime/visibility';
 import { localBubbleVisibility } from '../layers/localBubble/visibility';
 import { milkyWayVisibility } from '../layers/milkyWay/visibility';
 import { missionsVisibility } from '../layers/missions/visibility';
+import { probeSpheresVisibility } from '../layers/probeSpheres/visibility';
 import { satellitesVisibility } from '../layers/satellites/visibility';
 import { starCatalogVisibility } from '../layers/starCatalog/visibility';
 import { structureVisibility } from '../layers/structure/visibility';
@@ -43,6 +44,7 @@ export const APP_VISIBILITY_REGISTRY = [
   ...milkyWayVisibility,
   ...structureVisibility,
   ...bodyVisibility,
+  ...probeSpheresVisibility,
 ] as const;
 
 // A misspelled `of` fails here: the entry types cannot name `ShowKey` themselves.

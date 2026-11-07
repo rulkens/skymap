@@ -219,9 +219,15 @@ export function createCloudShellRenderer(
     bindGroup = buildBindGroup();
   }
 
-  function draw(pass: GPURenderPassEncoder, uniforms: Float32Array, inside: boolean): void {
+  function draw(
+    pass: GPURenderPassEncoder,
+    uniforms: Float32Array,
+    inside: boolean,
+    mirrored: boolean,
+  ): void {
     device.queue.writeBuffer(uniformBuffer, 0, uniforms);
-    pass.setPipeline(inside ? insidePipeline : outsidePipeline);
+    // A mirrored view swaps which wall each cull mode keeps.
+    pass.setPipeline(inside !== mirrored ? insidePipeline : outsidePipeline);
     pass.setBindGroup(0, bindGroup);
     pass.setVertexBuffer(0, positionBuffer);
     pass.setVertexBuffer(1, uvBuffer);

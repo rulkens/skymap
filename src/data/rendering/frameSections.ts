@@ -66,9 +66,11 @@ export const PRELUDE: FrameSection = {
     // own probe); `star-spheres` / `field-star-sphere` (the Sun stays analytic, a
     // sub-pixel Sun would smear into a false highlight); glints and `orbit-trails`
     // (not environment); `atmosphere-shell` (classifies rays by a sampled scene depth a
-    // capture face never resolves, and its pipeline has no depth state) — inside an
-    // atmosphere `atmosphere-probe-sky` draws the sky instead, FIRST, so the ground
-    // passes overdraw it. NEAR0 is empty because the blit rides COSMO.
+    // capture face never resolves, and its pipeline has no depth state). In its place:
+    // inside an atmosphere `atmosphere-probe-sky` draws the sky FIRST, so the ground
+    // passes overdraw it; outside, `atmosphere-probe-shell` draws the shell LAST, as the
+    // live view does over globe and rings, with far depth: its rays end at the analytic
+    // globe. NEAR0 is empty because the blit rides COSMO.
     {
       kind: 'capture',
       captures: ['probe'],
@@ -82,6 +84,7 @@ export const PRELUDE: FrameSection = {
         'planets',
         'textured-bodies',
         'rings',
+        'atmosphere-probe-shell',
       ],
     },
   ],
@@ -179,7 +182,13 @@ export const SCENE: FrameSection = {
       kind: 'render',
       target: 'hdr',
       slab: NEAR0,
-      passes: ['body-glints', 'mission-glints', 'earth-scene-glints', 'black-hole-marker'],
+      passes: [
+        'body-glints',
+        'mission-glints',
+        'earth-scene-glints',
+        'probe-sphere-glints',
+        'black-hole-marker',
+      ],
       slot: 'POST_LENSING',
     },
     // Near-field foreground bodies into their own depth-bearing target, expanded over
@@ -219,6 +228,7 @@ export const SCENE: FrameSection = {
         'mission-meshes',
         'body-meshes',
         'earth-scene-meshes',
+        'probe-sphere-meshes',
       ],
     },
     // Aerial-perspective apply, on the enclosing body's painter row (the row that
