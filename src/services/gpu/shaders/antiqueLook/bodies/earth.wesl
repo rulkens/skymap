@@ -56,7 +56,8 @@ fn earthPrint(col: vec3<f32>, cover: f32, e: EarthPrintIn) -> BodyPrint {
   let land = smoothstep(0.35, 0.6, e.washShare);
   // A narrow band inside the line, as a colourist laid it: wide, it showed the land
   // row's blocky texels and pooled into clouds over the interior.
-  let coastBand = clamp(1.0 - inland / 5.0, 0.0, 1.0) * (0.85 + 0.3 * vnoise(e.p * 0.06 + 3.0));
+  // The smoothstep drops the blur's weak tails, which pooled as pink blobs far from any coast.
+  let coastBand = smoothstep(0.5, 1.0, clamp(1.0 - inland / 5.0, 0.0, 1.0)) * (0.85 + 0.3 * vnoise(e.p * 0.06 + 3.0));
   let band = select(0.0, max(coastBand, e.geo.g * e.geo.g), realm);
   let pigment = pigmentAt(f32(max(code - 1, 0)));
   var washed = applyWash(col, pigmentAt(5.0), seaWash * cover);
