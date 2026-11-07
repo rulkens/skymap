@@ -160,6 +160,7 @@ export function placeAntiqueOrnaments(input: {
       opacity,
       clearsBeneath: row.clearsBeneath,
       pigment: row.pigment,
+      accent: row.accent,
       rect: [uv[0], uv[1], uv[2], uv[3]],
       lettering: false,
     });
@@ -176,6 +177,7 @@ export function placeAntiqueOrnaments(input: {
         opacity: opacity * input.title.weight,
         clearsBeneath: true,
         pigment: row.pigment,
+        accent: row.accent,
         rect: [...input.title.rect],
         lettering: true,
       });

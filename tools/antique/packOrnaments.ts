@@ -3,8 +3,9 @@
  * packOrnaments (`npm run pack-ornaments`) — packs the antique look's engraved
  * ornaments into `public/antique/ornaments.png` and generates its layout module.
  * Channels: R ink density, G fill (the solid silhouette the plate is cleared to
- * paper under), B wash (the alpha of `<id>.colour.png` when a sprite has one;
- * the cartouche's frame).
+ * paper under), B wash (the alpha of `<id>.colour.png` when a sprite has one,
+ * else a flat share of the fill; the cartouche's frame, never its field), A the
+ * share of the row's main pigment over its accent (the cartouche's moulding ring).
  * The cartouche's interior is left blank: each plate sets its own title there
  * at runtime (`buildAntiqueGlyphSheet`), so the module records the interior oval.
  * Inputs: data/antique/sprites/<id>.png (black RGB, ink in alpha), optional
@@ -52,6 +53,11 @@ const CLOSE_RADIUS_OVERRIDE_PX: Partial<Record<(typeof SPRITE_IDS)[number], numb
   whale: 24,
 };
 const FILL_GROW_PX = 3;
+/** A sea beast's and a constellation figure's flat wash, as a share of full. */
+const FILL_WASH = 0.28;
+const FIGURE_WASH = 0.85;
+/** The cartouche's moulding ring, out to this scale of its interior: the accent pigment's. */
+const RING_SCALE = 1.09;
 const FILL_BLUR_SIGMA_PX = 1.5;
 
 /**
@@ -150,24 +156,21 @@ async function buildSprite(id: (typeof SPRITE_IDS)[number]): Promise<OrnamentSpr
   const grown = dilateMaskDisc(solid, w, h, FILL_GROW_PX);
   const soft = gaussianBlurFloat32(Float32Array.from(grown), w, h, FILL_BLUR_SIGMA_PX);
   const fill = Uint8Array.from(soft, (v) => Math.round(Math.min(1, v) * 255));
+  // A colourist laid each wash flat inside the engraved outline: the whole
+  // silhouette, the cartouche's frame but never its field, where the title sits on paper.
+  const share = FIGURE_IDS.has(id) ? FIGURE_WASH : FILL_WASH;
   const wash =
     id === 'cartouche'
-      ? frameWash(ink, w, h)
+      ? fill.map((v, i) => (insideOval(i % w, Math.floor(i / w), w, h, 1) ? 0 : v))
       : existsSync(spritePath(`${id}.colour`))
         ? (await loadInk(`${id}.colour`, undefined, side)).data
-        : new Uint8Array(w * h);
-  return { ink, fill, wash, w, h };
-}
-
-/**
- * The cartouche's wash: its strapwork, grown 3 px, and never the field inside,
- * so the colourist's tint sits on the frame and the title's ground stays paper.
- */
-function frameWash(ink: Uint8Array, w: number, h: number): Uint8Array {
-  const frame = ink.map((v) => (v > INK_THRESHOLD ? 1 : 0));
-  for (let y = 0; y < h; y++)
-    for (let x = 0; x < w; x++) if (insideOval(x, y, w, h, 1)) frame[y * w + x] = 0;
-  return dilateMaskDisc(frame, w, h, FILL_GROW_PX).map((v) => v * 255);
+        : fill.map((v) => Math.round(v * share));
+  const accent = new Uint8Array(w * h).fill(255);
+  if (id === 'cartouche')
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < w; x++) if (insideOval(x, y, w, h, RING_SCALE)) accent[y * w + x] = 0;
+  const softAccent = gaussianBlurFloat32(Float32Array.from(accent), w, h, FILL_BLUR_SIGMA_PX);
+  return { ink, fill, wash, accent: Uint8Array.from(softAccent, Math.round), w, h };
 }
 
 /** The narrowest-square packing under the size cap. */
@@ -187,19 +190,20 @@ function packSquarest(sprites: readonly OrnamentSprite[]): ReturnType<typeof she
 async function main(): Promise<void> {
   const sprites = await Promise.all(SPRITE_IDS.map(buildSprite));
   const { width, height, rects } = packSquarest(sprites);
-  // RGB only: a PNG without alpha decodes to A = 1, which is the sheet's contract.
-  const atlas = new Uint8Array(width * height * 3);
+  // Alpha is data (the accent share), decoded unpremultiplied (`fetchAntiqueBitmap`).
+  const atlas = new Uint8Array(width * height * 4).fill(255);
   sprites.forEach((s, k) => {
     const { x, y } = rects[k]!;
     for (let j = 0; j < s.h; j++)
       for (let i = 0; i < s.w; i++) {
-        const o = ((y + j) * width + x + i) * 3;
+        const o = ((y + j) * width + x + i) * 4;
         atlas[o] = s.ink[j * s.w + i]!;
         atlas[o + 1] = s.fill[j * s.w + i]!;
         atlas[o + 2] = s.wash[j * s.w + i]!;
+        atlas[o + 3] = s.accent[j * s.w + i]!;
       }
   });
-  await sharp(atlas, { raw: { width, height, channels: 3 } })
+  await sharp(atlas, { raw: { width, height, channels: 4 } })
     .png({ compressionLevel: 9 })
     .toFile(`${ROOT}${OUT_PNG}`);
 

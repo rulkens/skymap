@@ -46,6 +46,7 @@ function skyRow(over: Partial<AntiqueOrnament> & { lonDeg?: number }): AntiqueOr
     regime: 'always',
     facesNorth: true,
     pigment: 0,
+    accent: 0,
     opacity: 1,
     clearsBeneath: false,
     mirrored: false,

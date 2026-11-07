@@ -12,6 +12,7 @@
 // | +32    | rect    | atlas u0, v0, u1, v1                            |
 // | +48    | pigment | index into PIGMENTS                             |
 // | +52    | lettering | 1 = rect is on the lettering sheet (a title)  |
+// | +56    | accent  | PIGMENTS index where the atlas alpha is 0       |
 
 struct Ornament {
   centre: vec2<f32>,
@@ -22,7 +23,7 @@ struct Ornament {
   rect: vec4<f32>,
   pigment: f32,
   lettering: f32,
-  _pad1: f32,
+  accent: f32,
   _pad2: f32,
 }
 

@@ -2,8 +2,10 @@
 // carries a photograph's hue: every wash is one of a few period pigments,
 // picked here by the hue direction of the scene colour beneath it.
 
-const PIGMENT_COUNT: i32 = 7;
-const PIGMENTS: array<vec3<f32>, 7> = array<vec3<f32>, 7>(
+const PIGMENT_COUNT: i32 = 8;
+// The pigments a scene colour may be matched to; rose madder is laid only by name.
+const SCENE_PIGMENT_COUNT: i32 = 7;
+const PIGMENTS: array<vec3<f32>, 8> = array<vec3<f32>, 8>(
   vec3<f32>(0.42, 0.62, 0.50), // verdigris
   vec3<f32>(0.56, 0.60, 0.30), // sap green
   vec3<f32>(0.90, 0.74, 0.30), // gamboge
@@ -11,6 +13,7 @@ const PIGMENTS: array<vec3<f32>, 7> = array<vec3<f32>, 7>(
   vec3<f32>(0.72, 0.28, 0.33), // carmine
   vec3<f32>(0.553, 0.604, 0.682), // smalt (a greyed blue, as smalt aged)
   vec3<f32>(0.86, 0.73, 0.44), // yellow ochre (a browner one read as scorching)
+  vec3<f32>(0.86, 0.55, 0.58), // rose madder
 );
 
 fn luma(c: vec3<f32>) -> f32 {
@@ -26,7 +29,7 @@ fn nearestPigment(c: vec3<f32>) -> vec3<f32> {
   }
   var best = PIGMENTS[6];
   var bestDot = -2.0;
-  for (var i = 0; i < PIGMENT_COUNT; i++) {
+  for (var i = 0; i < SCENE_PIGMENT_COUNT; i++) {
     let pc = PIGMENTS[i] - vec3<f32>(luma(PIGMENTS[i]));
     let d = dot(chroma / len, normalize(pc));
     if (d > bestDot) {

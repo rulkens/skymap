@@ -179,6 +179,7 @@ describe('antique look records ↔ WGSL structs', () => {
         opacity: 0,
         clearsBeneath: false,
         pigment: 0,
+        accent: 0,
         rect: [0, 0, 0, 0],
         lettering: false,
       },
@@ -189,6 +190,7 @@ describe('antique look records ↔ WGSL structs', () => {
         opacity: 2005,
         clearsBeneath: true,
         pigment: 2006,
+        accent: 2011,
         rect: [2007, 2008, 2009, 2010],
         lettering: true,
       },
@@ -202,6 +204,7 @@ describe('antique look records ↔ WGSL structs', () => {
       opacity: 2005,
       rect: 2007,
       pigment: 2006,
+      accent: 2011,
     };
     for (const [member, value] of Object.entries(sentinel))
       expect(offsetOf(packed, value), member).toBe(second + row.offsets.get(member)!);

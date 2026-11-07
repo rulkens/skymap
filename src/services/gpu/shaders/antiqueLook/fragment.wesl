@@ -53,6 +53,7 @@ import package::antiqueLook::graticule::graticule;
 import package::antiqueLook::graticule::frameLonLat;
 import package::antiqueLook::graticule::globeNormal;
 import package::antiqueLook::graticule::skyCircles;
+import package::antiqueLook::graticule::handCell;
 import package::antiqueLook::pigments::luma;
 import package::antiqueLook::pigments::regionPigment;
 import package::antiqueLook::pigments::chromaOf;
@@ -139,6 +140,14 @@ const HIDE_GALAXIES: u32 = 32u;
 const HIDE_HATCHING: u32 = 64u;
 const HIDE_RELIEF: u32 = 128u;
 const HIDE_GEOGRAPHY: u32 = 256u;
+// The border band's gamboge, as a share of a full wash.
+const BORDER_WASH: f32 = 0.6;
+// A line's ink (orbits, figures): under the rulings' (0.7–1.15), over the hatching's.
+const LINE_INK: f32 = 0.6;
+// A trail's stroke (alpha past TRAIL_ALPHA: a figure's line tops out at LINE_ALPHA)
+// is eroded by this many device px each side, leaving a hairline core.
+const TRAIL_ALPHA: f32 = 0.9;
+const TRAIL_ERODE_PX: f32 = 1.8;
 // A constellation line's alpha at full cover: its BASE_ALPHA (constellations/fragment.wesl).
 const LINE_ALPHA: f32 = 0.5;
 // Glow levels: the outline-colour boundary, and one inner contour.
@@ -403,7 +412,7 @@ fn neatline(px: vec2<f32>, uv: vec2<f32>) -> vec2<f32> {
     let steps = select(u.sky.steps, u.globe.steps, onGlobe);
     let coord = select(ll.y, ll.x, horizontalEdge);
     let cell = select(steps.w, steps.z, horizontalEdge);
-    ladder = f32(i32(floor(coord / cell)) % 2 == 0);
+    ladder = handCell(coord, cell);
   }
   return vec2<f32>(max(max(outer, inner), ladder), smoothstep(BAND, BAND + 0.6, inset));
 }
@@ -493,7 +502,15 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   col = mix(col, paperTone, ornament.b);
   // Figures lie on the sky, behind any body; only a clearing ornament covers one.
   let behind = max(sky, ornament.b);
-  col = applyWash(col, max(layerTexel(fullTex, DECOR_HUE_LAYER, ip).rgb, vec3<f32>(1e-3)), ornament.a * 0.55 * behind * frame.y);
+  // Hand-laid: the wash pools and thins across a figure, never one flat tint.
+  let pooling = 0.7 + 0.6 * vnoise(p * 0.035 + 17.0);
+  col = applyWash(col, max(layerTexel(fullTex, DECOR_HUE_LAYER, ip).rgb, vec3<f32>(1e-3)), ornament.a * 0.55 * pooling * behind * frame.y);
+  // The border washed in gamboge between the neatline's rules, its edges
+  // wandering a fraction of a unit as a brush along a ruler does.
+  let edgeUnits = min(min(p.x, u.res.x / u.unit - p.x), min(p.y, u.res.y / u.unit - p.y)) - MARGIN
+    + (vnoise(p * 0.11) - 0.5) * 1.2;
+  let border = smoothstep(-2.0, -1.2, edgeUnits) * (1.0 - smoothstep(BAND - 0.4, BAND + 0.4, edgeUnits));
+  col = applyWash(col, pigmentAt(2.0), border * BORDER_WASH * pooling);
 
   // Sky: glyphs for stars, the galaxy engraving, and on wider faint light the
   // boundary line and one inner contour of the low band. Star glyphs were scattered by glyphs.wesl: x ink, y paper knock-out.
@@ -526,9 +543,22 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     globeRulings = graticule(frameLonLat(u.globe, g.xyz), u.globe.steps, u.unit) * g.w * u.globe.lon90.w * (1.0 - signs);
   }
   let rulings = (skyRulings * sky * clear + globeRulings * body) * (0.7 + 0.45 * vnoise(p * 0.045)) * rowOn(HIDE_RULINGS);
-  // Constellation figures and orbits as a fine rule, a shade lighter than the
-  // rulings: only a line's core inks, so a trail drawn wide still cuts thin.
-  let lines = smoothstep(0.55, 0.95, texel(linesTex, ip).a / LINE_ALPHA) * sky * clear * 0.7 * rowOn(HIDE_LINES);
+  // Constellation figures and orbits as a fine rule under the rulings' weight.
+  // Ink follows a thin line's coverage, so a slanted one stays whole: a
+  // threshold on it cut machine-regular dashes. An orbit's trail lands as a
+  // solid stroke (additive, alpha 1 across 5 px): only its eroded core inks.
+  let lineAlpha = texel(linesTex, ip).a;
+  var lineCover = clamp(lineAlpha / LINE_ALPHA, 0.0, 1.0);
+  if (lineAlpha > TRAIL_ALPHA) {
+    let r = TRAIL_ERODE_PX / u.res;
+    lineCover = min(
+      min(textureSampleLevel(linesTex, linear, uv + vec2<f32>(r.x, 0.0), 0.0).a,
+        textureSampleLevel(linesTex, linear, uv - vec2<f32>(r.x, 0.0), 0.0).a),
+      min(textureSampleLevel(linesTex, linear, uv + vec2<f32>(0.0, r.y), 0.0).a,
+        textureSampleLevel(linesTex, linear, uv - vec2<f32>(0.0, r.y), 0.0).a));
+    lineCover = smoothstep(0.2, 0.9, lineCover);
+  }
+  let lines = lineCover * (0.75 + 0.4 * vnoise(p * 0.06 + 5.0)) * sky * clear * LINE_INK * rowOn(HIDE_LINES);
 
   // Bodies: burin hatching for the shade, and each recorded body's own
   // convention from its module (`printOf`). A recorded body (`plate`) is cast

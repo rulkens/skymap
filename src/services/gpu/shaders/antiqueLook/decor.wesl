@@ -74,13 +74,18 @@ fn fs(in: DecorOut) -> DecorInk {
   let cover = textureSampleBias(atlas, linear, uv, -0.5).r;
   let figure = log2(1.0 - cover * FIGURE_COVER * (1.0 - INK_T)) / log2(INK_T) * o;
   // A clearing ornament (the cartouche) takes the plate back to paper under its
-  // whole engraving, not just its fill; every ornament takes a light wash, as
-  // a coloured Dutch copy's cartouche and beasts did.
+  // whole engraving, not just its fill.
   let clear = max(s.g, smoothstep(0.05, 0.3, s.r)) * o * clears;
-  // Only clearing ornaments are washed: a figure lies on the sky uncoloured.
-  let wash = max(s.b, s.g * 0.28) * o * clears;
+  // Every engraving is washed flat inside its outline (the atlas's b), as a
+  // coloured Dutch copy's cartouche, beasts and figures were; the brush strays
+  // a little off the line and pools unevenly (the plate's own wash noise).
+  let stray = (vec2<f32>(sin(dot(in.local, vec2<f32>(7.3, 3.1)) + in.local.y * 11.0),
+    cos(dot(in.local, vec2<f32>(-4.7, 8.9)) + in.local.x * 13.0))) * 0.006;
+  let brush = textureSampleLevel(atlas, linear, uv + stray * (rect.zw - rect.xy), 0.0);
+  let wash = select(brush.b, 0.0, orn.items[in.item].lettering > 0.5) * o;
+  let hue = mix(pigmentAt(orn.items[in.item].accent), pigmentAt(orn.items[in.item].pigment), brush.a);
   var out: DecorInk;
   out.ink = vec4<f32>(figure * (1.0 - clears), ink * clears, clear, wash);
-  out.hue = vec4<f32>(pigmentAt(orn.items[in.item].pigment) * step(0.01, wash), 0.0);
+  out.hue = vec4<f32>(hue * step(0.01, wash), 0.0);
   return out;
 }

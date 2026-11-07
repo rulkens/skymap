@@ -168,6 +168,9 @@ Owner ruling 2026-11-07: keep the generic galaxy engraving with these names; the
 - [x] Plate light: from orbit the real Sun's azimuth at 18° over each point's horizon; the ground keeps the real Sun (blend over 8–25 km altitude).
 - [x] The plate's Mars module cuts hachures by line-integral convolution of that noise along the fall line (12 taps each way, stopping at halos), a contour-wise second set in the deepest shade, stipple on the flats from the plain render's darkness, dotted at the ground noise's peaks; lines thin with range over eye height; a paper halo behind every nearer profile.
 - [x] The albedo marking and the generic light hatching yield to the relief on the engraved ground; the land blur runs only under an Earth record.
+- [x] Follow-up (owner rulings: ink vs light, 8 taps): the plain render's shade sets where ink goes and how much (`ground.wesl` `groundRelief`, shared with the Moon next); strokes run along the light from orbit and on gentle ground (the km mesh's facets scattered them), a steep landform up close keeps its fall line; fall lines 8 taps each way 2.25 units apart, the same reach; the albedo mask skipped inside the relief shell (no salmon paper).
+- [x] Shade-edge outlines from the plain wash and crest lines from the fall field; ink capped at half the paper.
+- [ ] Review panel to ≥ 7 (engraver, cartographer, art critic, fidelity).
 
 ### Task 20: The ruling follows the frame (owner rulings 2026-11-07: ecliptic default as Hevelius; Earth numbered from the Pico de Teide)
 **Files:** `src/services/gpu/shaders/antiqueLook/{graticule,fragment,io}.wesl`, `src/data/rendering/antiqueRulings.ts`,
@@ -225,8 +228,8 @@ Owner ruling 2026-11-07: keep the generic galaxy engraving with these names; the
 `passes/antiqueLook/antiqueTitleGlobe.ts`, `decor.wesl`, `ornaments.wesl`, `tools/antique/packOrnaments.ts`
 - [x] Per-plate cartouche titles set at runtime on the lettering sheet (the cartouche sprite baked blank): the sky, the universe, the Earth (world, continent, the Seventeen Provinces, Holland by ground scale), Moon, Mars, Jupiter and Saturn; a change passes through a blank cartouche.
 - [x] The cartouche takes the free corner from the view covers (desktop panels report rects, 4f36bc19b), shrinking into its corner when none is free; labels keep off panels.
-- [ ] Flat hand-colour washes (borders, cartouche, figures), sparing and uneven.
-- [ ] Line weights: border > ruling > orbits > hatching; hand-irregular dashes.
+- [x] Flat hand-colour washes laid inside each engraving's outline and pooling unevenly: the cartouche's frame in gamboge with a rose-madder moulding (a new pigment), figures and beasts in their row's pigment, a gamboge border band; realms stay the Earth lead's.
+- [x] Line weights: an orbit's 5 px additive stroke eroded to a hairline at 0.6 ink, a figure's line inked by coverage (the threshold cut regular dashes); graduated bands and the border ladder spaced by eye (±8% per boundary).
 
 ### Task 29: Jupiter and its Great Red Spot (owner: "make sure the Great Red Spot is nicely rendered on Jupiter")
 **Files:** `shaders/antiqueLook/bodies/jupiter.wesl`, `plateBodies.wesl` (a `spot` per record), `fragment.wesl`,

@@ -6,7 +6,8 @@
  * Avoidance, the wedge behind the galactic plane the surveys cannot see into:
  * the one honest terra incognita on this map.
  * Pigment indices are `pigments.wesl`'s: 0 verdigris, 1 sap green, 2 gamboge,
- * 5 smalt, 6 yellow ochre.
+ * 5 smalt, 6 yellow ochre, 7 rose madder. Each engraving is washed flat inside
+ * its outline, as Cellarius' colourists washed his figures' robes.
  */
 
 import type { AntiqueOrnament } from '../../@types/rendering/AntiqueOrnament';
@@ -25,6 +26,7 @@ const beast = (
   regime,
   facesNorth: true,
   pigment,
+  accent: pigment,
   opacity: 1,
   clearsBeneath: false,
   mirrored,
@@ -50,6 +52,7 @@ export const ANTIQUE_ORNAMENTS: readonly AntiqueOrnament[] = [
     regime: 'always',
     facesNorth: false,
     pigment: 2,
+    accent: 7,
     opacity: 1,
     clearsBeneath: true,
     mirrored: false,
