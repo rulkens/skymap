@@ -66,13 +66,13 @@ fn graduatedCircle(lat: f32, lon: f32, latPerPx: f32, cellDeg: f32, gapPx: f32, 
   let inside = 1.0 - smoothstep(gapPx * 0.5 - 0.5, gapPx * 0.5, abs(dPx));
   var cells = 0.0;
   if (inside > 0.0) {
-    cells = handCell(lon, cellDeg) * inside;
+    cells = handCell(lon, cellDeg) * inside * 0.6;
   }
   return max(rules, cells);
 }
 
 fn band(ll: vec2<f32>, cellDeg: f32, unitPx: f32) -> f32 {
-  return graduatedCircle(ll.y, ll.x, fwidth(ll.y), cellDeg, 2.6 * unitPx, 0.3 * unitPx) * 0.75;
+  return graduatedCircle(ll.y, ll.x, fwidth(ll.y), cellDeg, 2.4 * unitPx, 0.26 * unitPx) * 0.7;
 }
 
 // A frame's meridians and parallels at its intervals (`steps` xy), and its

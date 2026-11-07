@@ -22,7 +22,7 @@ const sub = (...breaks: (readonly string[])[]): AntiqueTitleGroup => ({
   breaks,
 });
 const small = (...breaks: (readonly string[])[]): AntiqueTitleGroup => ({
-  style: { face: 'italic', cap: 0.7, tracking: 0, minSqueeze: 0.85 },
+  style: { face: 'italic', cap: 0.78, tracking: 0, minSqueeze: 0.85 },
   breaks,
 });
 
@@ -100,12 +100,8 @@ export const ANTIQUE_TITLES: Readonly<Record<AntiqueTitleKey, readonly AntiqueTi
     small(...IMPRINT),
   ],
   saturnus: [
-    head('CHRISTIANI HVGENII'),
     title(['SYSTEMA SATVRNIVM'], ['SYSTEMA', 'SATVRNIVM']),
-    sub(
-      ['sive de Causis mirandorum Saturni Phænomenôn'],
-      ['sive de Causis mirandorum', 'Saturni Phænomenôn'],
-    ),
+    sub(['ex Observationibus Christiani Hugenii'], ['ex Observationibus', 'Christiani Hugenii']),
     small(...IMPRINT),
   ],
 };

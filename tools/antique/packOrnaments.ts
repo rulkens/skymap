@@ -51,10 +51,13 @@ const CLOSE_RADIUS_PX = 6;
 /** Wider closes where the engraving leaves a body's outline open (the whale's belly line). */
 const CLOSE_RADIUS_OVERRIDE_PX: Partial<Record<(typeof SPRITE_IDS)[number], number>> = {
   whale: 24,
+  // The scrolls' open curls, so no ruling runs through them.
+  cartouche: 14,
 };
 const FILL_GROW_PX = 3;
 /** A sea beast's and a constellation figure's flat wash, as a share of full. */
 const FILL_WASH = 0.6;
+const WASH_EDGE_SIGMA_PX = 0.8;
 const FIGURE_WASH = 0.85;
 /** The cartouche's outer scrolls, past this scale of its interior: the accent pigment's. */
 const SCROLL_SCALE = 1.38;
@@ -159,9 +162,14 @@ async function buildSprite(id: (typeof SPRITE_IDS)[number]): Promise<OrnamentSpr
   // A colourist laid each wash flat inside the engraved outline: the whole
   // silhouette, the cartouche's frame but never its field, where the title sits on paper.
   const share = FIGURE_IDS.has(id) ? FIGURE_WASH : FILL_WASH;
+  // Ungrown and barely softened: the colourist stopped at the line, not a halo past it.
+  const edgeWash = Uint8Array.from(
+    gaussianBlurFloat32(Float32Array.from(solid), w, h, WASH_EDGE_SIGMA_PX),
+    (v) => Math.round(Math.min(1, v) * 255),
+  );
   const wash =
     id === 'cartouche'
-      ? fill.map((v, i) => (insideOval(i % w, Math.floor(i / w), w, h, 1) ? 0 : v))
+      ? edgeWash.map((v, i) => (insideOval(i % w, Math.floor(i / w), w, h, 1) ? 0 : v))
       : existsSync(spritePath(`${id}.colour`))
         ? (await loadInk(`${id}.colour`, undefined, side)).data
         : fill.map((v) => Math.round(v * share));

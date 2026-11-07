@@ -82,7 +82,9 @@ fn fs(in: DecorOut) -> DecorInk {
   let stray = (vec2<f32>(sin(dot(in.local, vec2<f32>(7.3, 3.1)) + in.local.y * 11.0),
     cos(dot(in.local, vec2<f32>(-4.7, 8.9)) + in.local.x * 13.0))) * 0.006;
   let brush = textureSampleLevel(atlas, linear, uv + stray * (rect.zw - rect.xy), 0.0);
-  let wash = select(brush.b, 0.0, orn.items[in.item].lettering > 0.5) * o;
+  // Pigment gathers where a wash dries, at its edge: a darker rim, no airbrush fade.
+  let rim = 1.0 - abs(2.0 * brush.b - 1.0);
+  let wash = select(min(brush.b + 0.35 * rim, 1.0), 0.0, orn.items[in.item].lettering > 0.5) * o;
   let hue = mix(pigmentAt(orn.items[in.item].accent), pigmentAt(orn.items[in.item].pigment), brush.a);
   var out: DecorInk;
   out.ink = vec4<f32>(figure * (1.0 - clears), ink * clears, clear, wash);

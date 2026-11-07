@@ -20,7 +20,7 @@ const CORNERS: readonly Extract<AntiqueOrnamentAnchor, { kind: 'sheet' }>['corne
 ];
 const SCALES = [1, 0.8, 0.65, 0.55] as const;
 /** Room kept between the ornament and a panel, print units. */
-const GAP_UNITS = 8;
+const GAP_UNITS = 14;
 
 export function antiqueSheetAnchor(
   anchor: Extract<AntiqueOrnamentAnchor, { kind: 'sheet' }>,

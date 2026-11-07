@@ -541,7 +541,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   }
   let rulings = (skyRulings * sky * clear + globeRulings * body) * (0.7 + 0.45 * vnoise(p * 0.045)) * rowOn(HIDE_RULINGS);
   // Constellation figures and orbits as a fine rule under the rulings' weight
-  // (`u.tune.w`, 0.6 by default, against the rulings' 0.7–1.15).
+  // (`u.tune.w`, 0.45 by default, against the rulings' 0.56–0.92).
   // Ink follows a thin line's coverage, so a slanted one stays whole: a
   // threshold on it cut machine-regular dashes. An orbit's trail lands as a
   // solid stroke (additive, alpha 1 across 5 px): only its eroded core inks.
