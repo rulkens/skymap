@@ -5,6 +5,6 @@ export type MoonCraterTable = {
   readonly centres: Float32Array;
   /** Rim-crest radius, radians of arc. */
   readonly rho: Float32Array;
-  /** Print weight 0..1. */
+  /** Print weight 0..1; a rayed crater curated over 1 (`ANTIQUE_MOON_CRATER_WEIGHTS`). */
   readonly weight: Float32Array;
 };

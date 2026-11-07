@@ -51,14 +51,25 @@ describe('pickMoonCraters', () => {
     expect(pickMoonCraters(table, view(4))).toEqual([0, 3]);
   });
 
+  it('drops an unnamed ring whose centre lies inside a larger kept ring', () => {
+    const rows = [
+      [0, 0, 150, 1], // 300 km across at the sub-eye point
+      [0, 2, 40, 1], // centred inside it: bubble wrap
+      [0, 12, 40, 1], // beside it, centre outside
+    ];
+    expect(pickMoonCraters(moonCraterTable(rows.flat(), R_KM), view(4))).toEqual([0, 2]);
+  });
+
   it('drops craters off the screen of a narrow view', () => {
     const table = moonCraterTable([0, 0, 40, 1, 30, 0, 40, 1], R_KM);
     expect(pickMoonCraters(table, view(1.5, 10))).toEqual([0]);
   });
 
-  const crowd = (n: number): number[] => {
+  // n craters on a 20-wide grid `stepDeg` apart, growing in size, none inside another.
+  const crowd = (n: number, stepDeg = 2, baseKm = 35, growKm = 0.1): number[] => {
     const rows: number[] = [];
-    for (let i = 0; i < n; i++) rows.push((i % 20) * 0.01, Math.floor(i / 20) * 0.01, 50 + i, 1);
+    for (let i = 0; i < n; i++)
+      rows.push((i % 20) * stepDeg, Math.floor(i / 20) * stepDeg, baseKm + growKm * i, 1);
     return rows;
   };
 
@@ -66,13 +77,14 @@ describe('pickMoonCraters', () => {
     const v = view(4);
     const picked = pickMoonCraters(moonCraterTable(crowd(200), R_KM), v);
     expect(picked).toHaveLength(Math.round(visibleDiscAreaPx(v) / ANTIQUE_MOON_RING_AREA_UNITS));
-    expect(picked[0]).toBe(199);
+    // The largest row first, foreshortening ranking its nearest-the-centre ring top.
+    expect(Math.floor(picked[0]! / 20)).toBe(9);
   });
 
   it('rings a named crater whose name shows before larger ones, not one too small to name', () => {
     const picked = pickMoonCraters(moonCraterTable(crowd(200), R_KM), view(4), [
-      { index: 3, revealPx: 10 },
-      { index: 5, revealPx: 1e4 },
+      { id: 'a', index: 3, revealPx: 10 },
+      { id: 'b', index: 5, revealPx: 1e4 },
     ]);
     expect(picked[0]).toBe(3);
     expect(picked).not.toContain(5);
@@ -85,7 +97,10 @@ describe('pickMoonCraters', () => {
   });
 
   it('stops at the cap in a close-up', () => {
-    const picked = pickMoonCraters(moonCraterTable(crowd(400), R_KM), view(1.3, 20));
+    const picked = pickMoonCraters(
+      moonCraterTable(crowd(400, 0.15, 1, 0.002), R_KM),
+      view(1.3, 20),
+    );
     expect(picked).toHaveLength(ANTIQUE_MOON_MAX_CRATERS);
   });
 });

@@ -3,7 +3,7 @@
  * centre just past the horizon still shows its near rim), on screen within 0.7 of its
  * own diameter, and at least the rim size cut across (a named crater its smaller own).
  * Every named crater whose name shows comes first, then the largest as seen (foreshortened;
- * one wider than the frame ranked down), to one ring per
+ * one wider than the frame ranked down) whose centre is outside every larger kept ring, to one ring per
  * `ANTIQUE_MOON_RING_AREA_UNITS` of visible disc, at most `ANTIQUE_MOON_MAX_CRATERS`.
  * Indices into the table.
  */
@@ -73,5 +73,21 @@ export function pickMoonCraters(
     sizePx.push(dPx <= view.heightPx ? dPx : view.heightPx ** 2 / dPx);
   }
   const order = rest.map((_, k) => k).sort((a, b) => sizePx[b]! - sizePx[a]!);
-  return [...chosen, ...order.slice(0, budget - chosen.size).map((k) => rest[k]!)];
+  // A ring whose centre lies inside a larger kept ring is more than half inside it:
+  // nested and overlapping circles read as bubble wrap, not as craters.
+  const kept = [...chosen];
+  const inside = (i: number): boolean =>
+    kept.some(
+      (j) =>
+        rho[j]! > rho[i]! &&
+        centres[3 * i]! * centres[3 * j]! +
+          centres[3 * i + 1]! * centres[3 * j + 1]! +
+          centres[3 * i + 2]! * centres[3 * j + 2]! >
+          Math.cos(rho[j]!),
+    );
+  for (const k of order) {
+    if (kept.length >= budget) break;
+    if (!inside(rest[k]!)) kept.push(rest[k]!);
+  }
+  return kept;
 }

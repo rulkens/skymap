@@ -288,9 +288,10 @@ fn craterRims(n: vec3<f32>, dNdx: vec3<f32>, dNdy: vec3<f32>, sun: vec3<f32>, un
     let d = abs(psi - rho) / max(gPx, 1e-9) * pxUnits;
     if (d < best && w > 0.01) {
       best = d;
-      // A fresh wall a firm cut, swelling on the shaded (Sun-side) crest at a low Sun; a
-      // ruined one fine and broken into arcs where its crest is lost.
-      let width = mix(0.9, 1.5, smoothstep(0.5, 0.85, cr.weight)) + 0.8 * smoothstep(0.0, 0.8, sunward) * lowSun;
+      // A fresh wall a firm cut, a rayed one (weight over 1) the plate's heaviest, swelling
+      // on the shaded (Sun-side) crest at a low Sun; a ruined one fine and broken into arcs.
+      let width = mix(0.9, 1.5, smoothstep(0.5, 0.85, cr.weight)) + 0.9 * smoothstep(1.0, 1.3, cr.weight)
+        + 0.8 * smoothstep(0.0, 0.8, sunward) * lowSun;
       let east = normalize(cross(vec3<f32>(0.0, 0.0, 1.0), cr.c) + vec3<f32>(1e-4, 0.0, 0.0));
       let az = atan2(dot(off, cross(cr.c, east)), dot(off, east)) / 6.2831853 + 0.5;
       let f = az * RIM_ARCS;

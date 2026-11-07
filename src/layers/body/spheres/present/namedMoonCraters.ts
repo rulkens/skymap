@@ -37,7 +37,7 @@ export function namedMoonCraters(
         best = i;
       }
     }
-    if (best >= 0) named.push({ index: best, revealPx: base * grow ** place.rank });
+    if (best >= 0) named.push({ id: place.id, index: best, revealPx: base * grow ** place.rank });
   }
   return named;
 }

@@ -24,16 +24,19 @@ import {
 import { moonCraterTable } from '../present/moonCraterTable';
 import { namedMoonCraters } from '../present/namedMoonCraters';
 import { pickMoonCraters } from '../present/pickMoonCraters';
+import { reweighMoonCraters } from '../present/reweighMoonCraters';
+import { ANTIQUE_MOON_CRATER_WEIGHTS } from '../data/antiqueMoonCraterWeights';
 import { texturedBodyUniforms } from '../present/texturedBodyUniforms';
 import { packMoonPrint } from '../render/packMoonPrint';
 
 export function moonPrintPass(runtime: BodyRuntime): ContentPass {
   // Arcs on a sphere 1/scale as big: the rings drawn at the rim the plain shows.
-  const table = moonCraterTable(
+  const baked = moonCraterTable(
     ANTIQUE_MOON_CRATERS,
     ANTIQUE_MOON_TABLE_RADIUS_KM / ANTIQUE_MOON_RIM_SCALE,
   );
-  const named = namedMoonCraters(table, ANTIQUE_MOON_PLACES, ANTIQUE_MOON_TABLE_RADIUS_KM);
+  const named = namedMoonCraters(baked, ANTIQUE_MOON_PLACES, ANTIQUE_MOON_TABLE_RADIUS_KM);
+  const table = reweighMoonCraters(baked, named, ANTIQUE_MOON_CRATER_WEIGHTS);
   const namedRows = new Set(named.map((n) => n.index));
   const radiusM = innerBoundRadiusM(
     SCENE_CELESTIAL_BODIES.find((b) => b.id === ANTIQUE_MOON_HOST)!.surface,
