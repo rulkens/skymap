@@ -19,6 +19,7 @@ import package::antiqueLook::cover::FLAG_DEPTH_COVER;
 import package::antiqueLook::paper::vnoise;
 import package::antiqueLook::engraving::crossHatch;
 import package::antiqueLook::engraving::stipple;
+import package::antiqueLook::engraving::stippleDense;
 import package::antiqueLook::engraving::formTone;
 import package::antiqueLook::engraving::ringLines;
 import package::antiqueLook::engraving::seaDistance;
@@ -81,8 +82,8 @@ const STAR_INK_LAYER: i32 = 1;
 const DECOR_LAYER: i32 = 2;
 const DECOR_HUE_LAYER: i32 = 3;
 const MOON_LAYER: i32 = 4;
-// Quarter res, rgba16f: the wash; `nebula.wesl`'s fields (x the band's light, w the
-// lane reference); `landBlur.wesl`'s x Σ weight·land share, y Σ weight.
+// Quarter res, rgba16f: the wash; `nebula.wesl`'s x, the band's light; `landBlur.wesl`'s
+// x Σ weight·land share, y Σ weight.
 const WASH_LAYER: i32 = 0;
 const NEBULA_LAYER: i32 = 1;
 const LAND_BLUR_LAYER: i32 = 2;
@@ -162,14 +163,15 @@ const GLOW_CORE: f32 = 0.4;
 // The same two levels on the structure markers' coverage (their halos' alpha).
 const STRUCTURE_EDGE: f32 = 0.05;
 const STRUCTURE_CORE: f32 = 0.18;
-// The galaxy engraving, in the print's luma: where its stipple starts and how hard
-// a band's relief over its 1/16 surroundings grades it (an arm over its gaps); the
-// densest stipple, so paper shows between the dots up to the core; the dust lanes'
-// cross-hatch spacing in print units.
+// The galaxy engraving, in the print's luma: where its stipple starts; the print
+// luma its tone's log scale starts from, and that scale's power (over 1 the arms
+// stay a step under the bar); the tone an inter-arm gap keeps; the dust lanes'
+// hatch spacing in print units.
 const GALAXY_EDGE: f32 = 0.10;
-const RELIEF_GAIN: f32 = 1.5;
-const GALAXY_STIPPLE_MAX: f32 = 0.85;
-const LANE_HATCH: f32 = 2.4;
+const GALAXY_FLOOR: f32 = 0.07;
+const GALAXY_SB_POW: f32 = 1.3;
+const GALAXY_GAP: f32 = 0.08;
+const LANE_HATCH: f32 = 2.6;
 const GALAXY_WASH: f32 = 0.15;
 
 fn texel(t: texture_2d<f32>, ip: vec2<i32>) -> vec4<f32> {
@@ -269,51 +271,43 @@ fn washHue(uv: vec2<f32>) -> vec3<f32> {
   return sum / 16.0;
 }
 
-// A galaxy stippled as the Milky Way is: dots swelling with the band's light and
-// its relief over the 1/16 surroundings, so arms print dense and their gaps thin,
-// a near-solid nucleus, and the dust lanes in a light cross-hatch. Derivative-free, so it
-// runs in the caller's branch. x ink, y wash amount, z warmth (0 smalt, 1 gamboge).
+// A resolved galaxy's stipple tone from the print (`light`, its 1/16 surroundings
+// `lowL`, the unsharpened `nucleus`): surface brightness on a log scale, so the bar
+// outweighs the arms, times the light's relief over its surroundings, so an
+// inter-arm gap keeps GALAXY_GAP of it. The print peaks near 0.75 off the bar.
+fn galaxyTone(light: f32, lowL: f32, nucleus: f32) -> f32 {
+  let sb = pow(clamp(log(max(light, 1e-3) / GALAXY_FLOOR) / -log(GALAXY_FLOOR), 0.0, 1.0), GALAXY_SB_POW);
+  let relief = smoothstep(-0.2, 0.35, log((light + 0.02) / (lowL + 0.02)));
+  return max(sb * mix(GALAXY_GAP, 1.0, relief), smoothstep(0.8, 1.0, nucleus));
+}
+
+// A galaxy stippled as an engraver dotted a nebula: dots denser with its surface
+// brightness up to a near-solid bar, its dust lanes in fine hatching. Derivative-free,
+// so it runs in the caller's branch. x ink, y wash amount, z warmth (0 smalt, 1 gamboge).
 fn galaxyEngraving(ip: vec2<i32>, uv: vec2<f32>, src: vec3<f32>, neb: vec4<f32>, lowL: f32,
                    big: f32) -> vec3<f32> {
   let p = vec2<f32>(ip) / u.unit;
   let pxUnits = 1.0 / u.unit;
   let lxs = neb.x;
-  let lc = clamp(log((lxs + 0.02) / (lowL + 0.02)), -1.5, 1.5);
-  // Lanes: the print eroded by a one-unit cross loses its stars but keeps a
-  // lane, a notch below the band's local max. (A warm-notch test inked the edges
-  // of a yellow bulge as dust.)
-  let o = i32(round(u.unit));
-  var ero = luma(src);
   var sum = src;
   for (var k = 0; k < 4; k++) {
-    let step1 = select(-o, o, (k & 1) == 1);
-    let c = texel(printTex, ip + select(vec2<i32>(step1, 0), vec2<i32>(0, step1), k >= 2)).rgb;
-    ero = min(ero, luma(c));
-    sum += c;
+    let o = select(vec2<i32>(1, 0), vec2<i32>(0, 1), k >= 2) * select(-1, 1, (k & 1) == 1);
+    sum += texel(printTex, ip + o * i32(round(u.unit))).rgb;
   }
   let hue = washHue(uv);
-  let notch = 1.0 - ero / max(neb.w, 0.05);
-  let mean = sum / 5.0;
-  // The band's light, sharpened by the print's own around this pixel (its stars and
-  // point galaxies are off the print under the look), so an arm keeps its edge.
-  let light = mix(lxs, luma(mean), 0.5);
-  // The print under the look peaks near 0.75 (no stars, no point galaxies on it).
-  let ramp = smoothstep(GALAXY_EDGE - 0.04, 0.75, light);
-  let fine = clamp(log((luma(mean) + 0.02) / (lxs + 0.02)), -1.0, 1.0);
-  let tone = min(pow(ramp, 0.8) * clamp(1.0 + RELIEF_GAIN * (lc + fine), 0.3, 1.5), 1.0) * GALAXY_STIPPLE_MAX;
-  // The nucleus: the stipple closes up to near solid, never a flat blot.
-  let core = smoothstep(0.55, 0.75, min(lxs, luma(mean)));
-  let lane = smoothstep(0.30, 0.55, notch) * smoothstep(0.18, 0.30, lxs) * (1.0 - core);
-  // Two straight sets 30° either side of the plate's hatch angle: a lozenge net,
-  // a texture of its own beside the stipple.
-  let a = u.hatchAngle;
-  let d1 = dot(p, vec2<f32>(cos(a + 0.5236), sin(a + 0.5236))) / LANE_HATCH;
-  let d2 = dot(p, vec2<f32>(cos(a - 0.5236), sin(a - 0.5236))) / LANE_HATCH;
-  let net = max(inkLine(abs(fract(d1) - 0.5) * LANE_HATCH, 0.6, pxUnits),
-                inkLine(abs(fract(d2) - 0.5) * LANE_HATCH, 0.6, pxUnits));
-  // A cell under 3 device px would alias the dots into a maze.
-  let dots = stipple(p, max(1.6, 3.0 * pxUnits), mix(tone, 0.95, core));
-  let ink = max(dots * (1.0 - lane), 0.6 * net * lane) * big;
+  let mean = luma(sum / 5.0);
+  // The band's light, sharpened by the print's own round this pixel, so an arm keeps its edge.
+  let light = mix(lxs, mean, 0.5);
+  let tone = galaxyTone(light, lowL, min(lxs, mean));
+  // Dust: a hole well under its surroundings where those are bright (the inner disc),
+  // not an outer inter-arm gap, which stays paper.
+  let lane = smoothstep(-0.2, -0.6, log((light + 0.02) / (lowL + 0.02))) * smoothstep(0.3, 0.45, lowL);
+  let d = dot(p, vec2<f32>(cos(u.hatchAngle + 0.5236), sin(u.hatchAngle + 0.5236))) / LANE_HATCH;
+  // Whole lines that thin toward a lane's edge, never a grey ramp of sub-pixel ones.
+  let hatch = inkLine(abs(fract(d) - 0.5) * LANE_HATCH, mix(0.4, 1.0, lane), pxUnits) * smoothstep(0.2, 0.45, lane);
+  // A cell under ~2.6 device px aliases the dots into a maze.
+  let dots = stippleDense(p, max(1.6, 2.6 * pxUnits), tone, pxUnits);
+  let ink = max(dots * (1.0 - lane), 0.85 * hatch) * big;
   let chroma = max(hue.r, max(hue.g, hue.b)) - min(hue.r, min(hue.g, hue.b));
   let wash = GALAXY_WASH * smoothstep(GALAXY_EDGE, GALAXY_EDGE + 0.1, lxs) * smoothstep(0.03, 0.10, chroma) * big;
   return vec3<f32>(ink, wash, smoothstep(-0.04, 0.06, hue.r - hue.b));
