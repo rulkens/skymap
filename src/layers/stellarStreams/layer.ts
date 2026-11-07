@@ -10,6 +10,9 @@ import { create } from './create';
 import { destroy } from './destroy';
 import { stellarStreamsPlanner } from './frame';
 import { stellarStreamsAssetRows } from './catalog/load/stellarStreamsAssetRows';
+import { STELLAR_STREAMS_HAZE_TARGET } from './streaks/render/stellarStreamsHazeTarget';
+import { stellarStreamsHazePass } from './streaks/passes/stellarStreamsHazePass';
+import { stellarStreamsHazeUpsamplePass } from './streaks/passes/stellarStreamsHazeUpsamplePass';
 import { stellarStreamsPass } from './streaks/passes/stellarStreamsPass';
 import StellarStreamsTuningSectionContainer from './streaks/ui/StellarStreamsTuningSectionContainer';
 import StellarStreamDetailCard from './selection/ui/StellarStreamDetailCard/StellarStreamDetailCard';
@@ -24,10 +27,15 @@ export const stellarStreamsLayer = defineLayer({
   name: 'stellarStreams',
   settings: stellarStreamsLayerSettings,
   visibility: stellarStreamsVisibility,
+  targets: [STELLAR_STREAMS_HAZE_TARGET],
   create,
   destroy,
   planners: (runtime) => [stellarStreamsPlanner(runtime)],
-  passes: (runtime) => [stellarStreamsPass(runtime)],
+  passes: (runtime) => [
+    stellarStreamsHazePass(runtime),
+    stellarStreamsHazeUpsamplePass(runtime),
+    stellarStreamsPass(runtime),
+  ],
   assets: stellarStreamsAssetRows,
   selection: {
     kinds: stellarStreamsSelectionKinds,

@@ -5,4 +5,5 @@ import type { StellarStreamsRuntime } from './@types/StellarStreamsRuntime';
 export function destroy(runtime: StellarStreamsRuntime): void {
   runtime.slot.cancel();
   runtime.renderer.destroy();
+  runtime.hazeUpsample.destroy();
 }

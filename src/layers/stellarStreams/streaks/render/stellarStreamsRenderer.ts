@@ -1,10 +1,10 @@
 /**
  * StellarStreamsRenderer — instanced streak billboards, one per
  * stream particle (40-byte records: pos xyz Mpc, unit tangent xyz, size Mpc,
- * luminosity, colour t, stream id), drawn twice per frame — sharp streaks, then
- * a wide low haze — each with its own 128-byte uniform block, since two
- * `writeBuffer`s into one buffer before submit would leave only the last. The
- * pick draws the streak look alone, through a third block.
+ * luminosity, colour t, stream id), drawn once per look per frame — sharp streaks
+ * full-res, the wide haze into its half-res target — each look through its own
+ * 128-byte uniform block, since two `writeBuffer`s into one buffer before submit
+ * would leave only the last. The pick draws the streak look alone, through a third.
  */
 
 import type { StellarStreamsRenderer } from '../@types/StellarStreamsRenderer';
@@ -35,6 +35,7 @@ const TIME_SEC = INTENSITY + 4;
 const FLOW = INTENSITY + 5;
 const PICK_BASE = INTENSITY + 6;
 const MIN_HALF_ACROSS_PX = INTENSITY + 7;
+const SLOT_OF = { streak: 0, haze: 1 } as const;
 const PICK_SLOT = 2;
 
 export function createStellarStreamsRenderer(
@@ -147,24 +148,16 @@ export function createStellarStreamsRenderer(
       instances?.destroy();
       instances = null;
     },
-    draw(pass, rebasedVp, viewportPx, pxPerRad, eye, timeSec, looks, opacity) {
-      if (instances === null) return;
+    draw(pass, which, rebasedVp, viewportPx, pxPerRad, eye, timeSec, look, opacity) {
+      const intensity = look.intensity * opacity;
+      if (instances === null || intensity <= 0) return;
       pass.setPipeline(pipeline);
       pass.setVertexBuffer(0, instances);
-      looks.forEach((look, i) => {
-        const group = writeLook(
-          i,
-          rebasedVp,
-          viewportPx,
-          pxPerRad,
-          eye,
-          timeSec,
-          look,
-          look.intensity * opacity,
-        );
-        pass.setBindGroup(0, group);
-        pass.draw(4, count);
-      });
+      pass.setBindGroup(
+        0,
+        writeLook(SLOT_OF[which], rebasedVp, viewportPx, pxPerRad, eye, timeSec, look, intensity),
+      );
+      pass.draw(4, count);
     },
     drawPick(pass, rebasedVp, viewportPx, pxPerRad, eye, timeSec, look) {
       // An invisible look takes no clicks.

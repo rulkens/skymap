@@ -8,15 +8,17 @@ export type StellarStreamsRenderer = {
   upload(payload: StellarStreamsPayload): void;
   /** Frees the instance buffer; `hasData()` is false after. */
   clear(): void;
+  /** Draws one look; `which` names its uniform block, so both looks can draw in one submit. */
   draw(
     pass: GPURenderPassEncoder,
+    which: 'streak' | 'haze',
     rebasedVp: Float32Array,
     viewportPx: Readonly<Vec2>,
     pxPerRad: number,
     eye: Readonly<Vec3>,
     timeSec: number,
-    looks: readonly [StellarStreamsLook, StellarStreamsLook],
-    /** Multiplies each look's intensity: the handed fade. */
+    look: StellarStreamsLook,
+    /** Multiplies the look's intensity: the handed fade. A product of 0 draws nothing. */
     opacity: number,
   ): void;
   /** Stamps `look`'s quads (the streak look) into the NEAR0 pick target, each word naming its stream. */

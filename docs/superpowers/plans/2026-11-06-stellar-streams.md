@@ -538,11 +538,11 @@ today's as possible. The streak look and the pick stay full res.
 - Produces: renderer `draw(pass, vp, viewportPx, pxPerRad, camPos, clockSec, look, opacity)` (one look);
   pass names `stellar-streams-haze`, `stellar-streams-haze-upsample`.
 
-- [ ] Haze target + passes + roster rows; all three passes share one enabled predicate (data loaded, look
+- [x] Haze target + passes + roster rows; all three passes share one enabled predicate (data loaded, look
   intensity > 0) so producer and consumer cannot disagree.
-- [ ] Haze `minPx` reads in the half-res target's pixels: halve nothing by hand, the viewport/pxPerRad scaling
+- [x] Haze `minPx` reads in the half-res target's pixels: halve nothing by hand, the viewport/pxPerRad scaling
   does it — say so in the target header.
-- [ ] `npm run typecheck && npm test` green; commit.
+- [x] `npm run typecheck && npm test` green; commit.
 
 ### Task 15: Cap Sagittarius's bound share (owner ruling Q-remnant a, amends Q7)
 
