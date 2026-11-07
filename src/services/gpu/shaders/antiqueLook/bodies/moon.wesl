@@ -29,18 +29,23 @@ const MOON_SHADE_CAP: f32 = 0.72;
 // share, wider than the planets' 3.2 so a 1:1 line reads as a cut, not a scan line.
 const SHADE_W = vec2<f32>(0.5, 2.0);
 const MOON_PITCH: f32 = 4.6;
-// Linear albedo: lines start at the shore and are at body width by the mare body; the
-// darkest cores (Crisium, Tranquillitatis) swell by MARE_CORE_W. A patch counts as sea
-// only where the wide albedo (~170 km) is darker than MARE_SUPPORT too: a walled
-// plain's dark floor or a dusky highland patch is no sea.
-const MARE_SHORE: f32 = 0.25;
-const MARE_BODY: f32 = 0.165;
-const MARE_SUPPORT: f32 = 0.19;
-const MARE_CORE = vec2<f32>(0.105, 0.075);
-const MARE_W = vec2<f32>(0.8, 1.4);
-const MARE_CORE_W: f32 = 0.8;
-// The mare taps along a line's centre row, print units apart: with the pass's own blur
-// a ~7 px mask, so a mare's edge is a line's tapered end, not a staircase.
+// Linear albedo: a line is cut where its ground is darker than MARE_ON, and carried out
+// to MARE_OFF only beside such a core (hysteresis), so a dusky highland (the Apennines
+// ~0.17, Haemus ~0.14) stays paper while a sea's pale shore still prints. A patch counts
+// as sea only where the wide albedo (~170 km) is darker than MARE_SUPPORT too: a walled
+// plain's dark floor is no sea. A line swells from MARE_CORE.x to its heaviest weight
+// at MARE_CORE.y, the darkest cores (Crisium, Tranquillitatis).
+const MARE_ON: f32 = 0.13;
+const MARE_OFF: f32 = 0.155;
+const MARE_SUPPORT: f32 = 0.24;
+const MARE_CORE = vec2<f32>(0.125, 0.065);
+// Line weights as shares of the pitch, cut to whole device px: the lightest .. the
+// heaviest, at most 60% of the pitch so paper always shows between lines; MARE_WEIGHTS
+// steps between them, so a swell is a hard-edged step, never an anti-aliased grey.
+const MARE_SHARE = vec2<f32>(0.2, 0.6);
+const MARE_WEIGHTS: f32 = 3.0;
+// The mare taps along a line's centre row, print units apart: a line's end steps down
+// its weights over the two taps it takes to leave the sea (~6 px), a tapered end.
 const MARE_TAP_UNITS: f32 = 3.0;
 
 // tone: the shade's, capped; shade: uncapped; litSlope: how far a slope is turned to
@@ -126,33 +131,42 @@ fn moonShade(form: vec3<f32>, tone: f32, pxUnits: f32) -> f32 {
 }
 
 // The maria's level lines, on whole device px so every line prints alike: the albedo
-// read along the line's own centre row (the mask is the line's, not the pixel's), a
-// patch admitted as sea only with the wide albedo's support (a threshold with
-// hysteresis), ends staggered and tapered.
+// read along the line's own centre row (the mask is the line's, not the pixel's), cut by
+// the hysteresis above and the wide albedo's support, ends staggered by the line's hash
+// and stepped down over the taps that still read sea.
 fn moonMare(field: texture_2d_array<f32>, layer: i32, px: vec2<f32>, unit: f32, moon: MoonTone) -> f32 {
   let pitch = max(round(MOON_PITCH * unit), 3.0);
   let k = floor(px.y / pitch);
   let yc = k * pitch + floor(0.5 * pitch) + 0.5;
-  var near = 0.0;
+  let stagger = 0.008 * (hash21Hq(vec2<f32>(k, 7.7)) - 0.5);
+  var taps = array<f32, 5>();
+  var darkest = 1.0;
   var wide = 0.0;
-  for (var j = -2; j <= 2; j++) {
-    let s = moonAt(field, layer, vec2<i32>(i32(px.x + f32(j) * MARE_TAP_UNITS * unit), i32(yc)));
+  for (var j = 0; j < 5; j++) {
+    let s = moonAt(field, layer, vec2<i32>(i32(px.x + f32(j - 2) * MARE_TAP_UNITS * unit), i32(yc)));
     // Off the disc reads as highland, so a sea at the limb still ends in a taper.
-    near += select(0.7, s.r, s.g > 0.0);
+    taps[j] = select(0.5, s.r * s.r, s.g > 0.0);
+    darkest = min(darkest, taps[j]);
     wide += select(0.7, s.a, s.g > 0.0);
   }
-  let albedo = near * near / 25.0;
-  let support = smoothstep(MARE_SHORE, MARE_SUPPORT, wide * wide / 25.0);
-  let sea = smoothstep(MARE_SHORE, MARE_BODY, albedo);
-  let t = sea * support - 0.12 * hash21Hq(vec2<f32>(k, 7.7));
-  if (t <= 0.0) {
+  let shore = select(MARE_ON, MARE_OFF, darkest < MARE_ON + stagger) + stagger;
+  var inSea = 0.0;
+  for (var j = 0; j < 5; j++) {
+    inSea += step(taps[j], shore);
+  }
+  if (taps[2] > shore || wide * wide / 25.0 > MARE_SUPPORT + stagger) {
     return 0.0;
   }
-  let core = smoothstep(MARE_CORE.x, MARE_CORE.y, albedo);
   // Thinner across the shade's own lines, so a mare at night is a darker weave, not a grid.
   let night = 1.0 - 0.45 * smoothstep(0.45, MOON_SHADE_CAP, moon.tone);
-  let width = (mix(MARE_W.x, MARE_W.y, t) + MARE_CORE_W * core) * smoothstep(0.0, 0.2, t) * night * unit;
-  return (1.0 - smoothstep(0.5 * width - 0.5, 0.5 * width + 0.5, abs(px.y - yc))) * (1.0 - moon.litSlope);
+  let dark = smoothstep(MARE_CORE.x, MARE_CORE.y, taps[2]);
+  let taper = clamp((inSea - 2.0) / 3.0, 0.0, 1.0);
+  let share = mix(MARE_SHARE.x, MARE_SHARE.y, dark) * taper * night * (1.0 - moon.litSlope);
+  let weight = round(share / MARE_SHARE.y * MARE_WEIGHTS);
+  let w = select(0.0, max(1.0, round(pitch * MARE_SHARE.y * weight / MARE_WEIGHTS)), weight > 0.0);
+  // An even weight sits half a px off the row's centre, so it covers whole px too.
+  let centre = yc + 0.5 * (1.0 - w % 2.0);
+  return step(abs(px.y - centre), 0.5 * w - 0.01);
 }
 
 // The plate's Moon arm: the mare lines (cleared inside a bright-floored crater, as the

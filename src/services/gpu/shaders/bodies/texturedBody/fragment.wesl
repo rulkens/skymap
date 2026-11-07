@@ -219,19 +219,34 @@ const BRIGHT_FLOOR: f32 = 0.25;
 // Arcs round a ruined wall: its rim breaks into about this many.
 const RIM_ARCS: f32 = 9.0;
 
-fn mareTap(uv: vec2<f32>, ddx: vec2<f32>, ddy: vec2<f32>, footprintPx: f32, floorTexels: f32) -> f32 {
+// A footprint's ground length (km) along a uv step: u spans the parallel, v half the meridian.
+const MOON_CIRCUMFERENCE_KM: f32 = 10917.0;
+// The blurs' ground caps (km): foreshortened at the limb and stretched toward the poles,
+// a screen footprint averaged highland with sea into a false sea of faint lines.
+const MARE_CAP_KM: f32 = 40.0;
+const MARE_WIDE_CAP_KM: f32 = 300.0;
+
+fn capOnGround(d: vec2<f32>, cosLat: f32, capKm: f32) -> vec2<f32> {
+  let km = MOON_CIRCUMFERENCE_KM * length(vec2<f32>(d.x * cosLat, 0.5 * d.y));
+  return d * min(1.0, capKm / max(km, 1e-6));
+}
+
+fn mareTap(uv: vec2<f32>, ddx: vec2<f32>, ddy: vec2<f32>, footprintPx: f32, floorTexels: f32, capKm: f32) -> f32 {
   let g = max(max(length(ddx), length(ddy)), 1e-9);
   let s = max(footprintPx, (1.0 / floorTexels) / g);
-  let rgb = textureSampleGrad(bodyTexture, bodySampler, uv, ddx * s, ddy * s).rgb;
+  let cosLat = max(sin(3.14159265 * uv.y), 0.05);
+  let rgb = textureSampleGrad(bodyTexture, bodySampler, uv, capOnGround(ddx * s, cosLat, capKm),
+    capOnGround(ddy * s, cosLat, capKm)).rgb;
   return sqrt(dot(rgb, vec3<f32>(0.2126, 0.7152, 0.0722)));
 }
 
 fn mareAlbedo(uv: vec2<f32>, ddx: vec2<f32>, ddy: vec2<f32>) -> f32 {
-  let ox = ddx * MARE_TAP_PX;
-  let oy = ddy * MARE_TAP_PX;
-  return (2.0 * mareTap(uv, ddx, ddy, MARE_BLUR_PX, MARE_MIP_TEXELS) + mareTap(uv + ox, ddx, ddy, MARE_BLUR_PX, MARE_MIP_TEXELS)
-    + mareTap(uv - ox, ddx, ddy, MARE_BLUR_PX, MARE_MIP_TEXELS) + mareTap(uv + oy, ddx, ddy, MARE_BLUR_PX, MARE_MIP_TEXELS)
-    + mareTap(uv - oy, ddx, ddy, MARE_BLUR_PX, MARE_MIP_TEXELS)) / 6.0;
+  let cosLat = max(sin(3.14159265 * uv.y), 0.05);
+  let ox = capOnGround(ddx * MARE_TAP_PX, cosLat, MARE_CAP_KM);
+  let oy = capOnGround(ddy * MARE_TAP_PX, cosLat, MARE_CAP_KM);
+  return (2.0 * mareTap(uv, ddx, ddy, MARE_BLUR_PX, MARE_MIP_TEXELS, MARE_CAP_KM) + mareTap(uv + ox, ddx, ddy, MARE_BLUR_PX, MARE_MIP_TEXELS, MARE_CAP_KM)
+    + mareTap(uv - ox, ddx, ddy, MARE_BLUR_PX, MARE_MIP_TEXELS, MARE_CAP_KM) + mareTap(uv + oy, ddx, ddy, MARE_BLUR_PX, MARE_MIP_TEXELS, MARE_CAP_KM)
+    + mareTap(uv - oy, ddx, ddy, MARE_BLUR_PX, MARE_MIP_TEXELS, MARE_CAP_KM)) / 6.0;
 }
 
 // x rim ink, y how far the point is a Sun-side inner wall (0..1), z inside a crater's
@@ -315,10 +330,10 @@ fn fsMoonPrint(in: TexturedBodyVSOut) -> @location(0) vec4<f32> {
   lit = mix(lit, min(lit, CRESCENT_LIGHT), rims.y);
   let day = smoothstep(-0.02, 0.06, lit);
   // A crater floor brighter than any sea keeps the plate's mare lines off it (b + 2).
-  let fine = mareTap(uv, grad.ddx, grad.ddy, 1.0, MARE_MIP_TEXELS);
+  let fine = mareTap(uv, grad.ddx, grad.ddy, 1.0, MARE_MIP_TEXELS, MARE_CAP_KM);
   let clear = select(0.0, 2.0, rims.z > 0.5 && fine * fine > BRIGHT_FLOOR);
   return encodeMoonRow(mareAlbedo(uv, grad.ddx, grad.ddy), lit, rims.x * day, rims.z > 0.5 && fine * fine > BRIGHT_FLOOR,
-    mareTap(uv, grad.ddx, grad.ddy, MARE_WIDE_PX, MARE_WIDE_TEXELS));
+    mareTap(uv, grad.ddx, grad.ddy, MARE_WIDE_PX, MARE_WIDE_TEXELS, MARE_WIDE_CAP_KM));
 }
 
 // The Moon's ground in the shared relief row (`relief.wesl`'s contract), from the normal
