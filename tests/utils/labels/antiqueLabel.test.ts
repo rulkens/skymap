@@ -191,6 +191,28 @@ describe('antiqueLabel', () => {
     expect(arm.alignX).toBe('center');
   });
 
+  it("keeps a placed Moon name's side and size from its producer: a crater flipped left stays right-aligned", () => {
+    const rule = ANTIQUE_LABEL_RULES.body;
+    const flipped: Label2D = {
+      ...label('moonPlace-copernicus', 'Copernicus'),
+      alignX: 'right',
+      minPixelSize: 14,
+      maxPixelSize: 14,
+    };
+    const crater = antiqueLabel(flipped, rule, false, ALL_FONTS)!;
+    expect(crater.alignX).toBe('right');
+    expect(crater.maxPixelSize).toBe(14);
+    expect(crater.font).toBe(ANTIQUE_LABEL_STYLE.italicFont);
+    const mare = antiqueLabel(
+      { ...label('moonPlace-mareImbrium', 'Mare\nImbrium'), alignX: 'left' },
+      rule,
+      false,
+      ALL_FONTS,
+    )!;
+    expect(mare.alignX).toBe('center');
+    expect(mare.text).toBe('MARE\nIMBRIVM');
+  });
+
   it('does not read inherited keys as table entries', () => {
     expect(antiqueLabel(label('constructor', 'Constructor'), PLACES, false, ALL_FONTS)).toBeNull();
   });

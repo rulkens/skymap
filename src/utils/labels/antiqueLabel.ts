@@ -6,7 +6,9 @@
  * the table has none, centred at the plate's one largest size. Other names sit
  * left-aligned so a lifted name falls upper-right of its glyph; a name set over the
  * land or sea it names (`ANTIQUE_AREA_LETTERING`) shows in its own cut, centred; a
- * placed map name (`ANTIQUE_PLACE_LETTERING`) in its own cut and size.
+ * placed map name (`ANTIQUE_PLACE_LETTERING`) in its own cut and size, keeping the
+ * alignment and size clamp its producer gave it (a crater name flipped left of its rim
+ * is right-aligned, and grows with the crater).
  */
 
 import type { Label2D } from '../../@types/rendering/Label2D';
@@ -70,7 +72,17 @@ export function antiqueLabel(
   // is full ink: the plate inks a caption by its fill's lightness.
   const italic = cut === 'italic' || cut === 'spacedItalic';
   const fell = italic ? style.italicFont : style.romanFont;
-  const px = subjectKept ? style.subjectPx : (place?.px ?? (area ? style.areaPx : style[cut].px));
+  const px = subjectKept
+    ? style.subjectPx
+    : place
+      ? (label.maxPixelSize ?? place.px)
+      : area
+        ? style.areaPx
+        : style[cut].px;
+  const alignX =
+    subjectKept || (area && (place?.centred ?? true))
+      ? 'center'
+      : (place && label.alignX) || 'left';
   return {
     ...placed,
     text:
@@ -78,7 +90,7 @@ export function antiqueLabel(
     font: hasFont(fell) ? fell : label.font,
     trackingEm: place?.trackingEm ?? style[cut].trackingEm,
     color: [1, 1, 1, 1],
-    alignX: subjectKept || (area && (place?.centred ?? true)) ? 'center' : 'left',
+    alignX,
     minPixelSize: px,
     maxPixelSize: px,
   };

@@ -45,6 +45,7 @@ import { SMALL_BODY_TRAIL_IDS } from './orbitTrails/data/smallBodyTrailIds';
 import { produceSceneBodyCaptions } from './labels/present/produceSceneBodyCaptions';
 import { produceAntiqueEarthPlaces } from './labels/present/produceAntiqueEarthPlaces';
 import { produceAntiqueEarthTowns } from './labels/present/produceAntiqueEarthTowns';
+import { produceAntiqueMoonPlaces } from './labels/present/produceAntiqueMoonPlaces';
 import { bodyLayerExhibits } from './exhibits/exhibits';
 import { NEAR0 } from '../../services/engine/frame/slabs';
 import BodyDetailCardContainer from './card/ui/BodyDetailCardContainer';
@@ -115,6 +116,12 @@ export const bodyLayer = defineLayer({
         id: 'antiqueEarthTowns',
         label: 'body',
         produceLabels: produceAntiqueEarthTowns(runtime.pickCodes),
+      },
+      {
+        slab: NEAR0,
+        id: 'antiqueMoonPlaces',
+        label: 'body',
+        produceLabels: produceAntiqueMoonPlaces(runtime.pickCodes),
       },
     ],
     orbitTrails: {
