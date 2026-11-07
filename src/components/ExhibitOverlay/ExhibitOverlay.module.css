@@ -451,7 +451,8 @@
   left: 50%;
   transform: translate(-50%, -50%);
   padding: 0 var(--space-3);
-  background: var(--surface-panel);
+  /* Only the paper's grain: the full sheet ground would tone this little box's edges. */
+  background: var(--sheet-paper, none), var(--surface-panel);
   text-align: center;
 }
 
