@@ -1,10 +1,11 @@
 // antiqueLook/relief.wesl — the ground's relief for the plate's shadow hachures, per
-// pixel of the engraved body's depth: rg the screen fall line, b a noise pinned to the
-// ground (the plate convolves it along that line, `engraving.wesl` `fallLines`), a the
-// stroke: > 0 the share of paper a hachure inks, -1..0 a flat's stipple weight, RELIEF_HALO
-// paper behind a nearer profile, 0 off the ground (the empty texture reads the same). The normal is the depth's,
-// vertically exaggerated, lit by the real Sun on the ground and from orbit by the plate
-// light: the Sun's azimuth at a raking elevation, as Hevelius lit his Moon.
+// pixel of the engraved body's depth: rg the strokes' screen direction (the fall line, or
+// the light's), b a noise pinned to the ground (the plate convolves it along that line,
+// `engraving.wesl` `fallLines`), a the stroke: > 0 a hachure's weight (per `slopeInk`,
+// the slope or the shade's share), -1..0 a flat's stipple weight, RELIEF_HALO paper behind
+// a nearer profile, 0 off the ground (the empty texture reads the same). The normal is the
+// depth's, vertically exaggerated, lit by the real Sun on the ground and from orbit by the
+// plate light: the Sun's azimuth at a raking elevation, as Hevelius lit his Moon.
 //
 // | 0 invVp: NDC → eye-relative body-fixed m | 64 vp | 128 eyeFromAnchor, m; 140 orbit |
 // | 144 anchorCells (i32); 156 exaggeration | 160 sun; 172 radPerPx | 176 eyeRelBody; 188 unit |
@@ -62,6 +63,8 @@ const MESH_SLOPE: f32 = 1.0;
 // A `wideNormal` body's stencil spans one height cell on screen, at most this many px;
 // a wide tap off the near step's plane by HALO_JUMP has crossed a profile.
 const WIDE_MAX_PX: i32 = 48;
+// Slope share over which a `slopeInk` body's strokes turn from the light to the fall line.
+const LIGHT_SLOPE: vec2<f32> = vec2<f32>(0.5, 0.9);
 
 fn depthAt(ip: vec2<i32>) -> f32 {
   let size = vec2<i32>(textureDimensions(depthTex));
@@ -97,6 +100,14 @@ fn surfaceStep(ip: vec2<i32>, axis: vec2<i32>, base: i32, wide: i32, p: vec3<f32
   let far = oneSided(ip, axis * wide, p, d);
   let k = f32(base) / f32(wide);
   return select(near, far * k, abs(far.w * k - near.w) < HALO_JUMP * d * k);
+}
+
+// A step `v` (eye-relative m) from `p`, as a unit screen direction in px.
+fn screenDir(p: vec3<f32>, v: vec3<f32>) -> vec2<f32> {
+  let c0 = r.vp * vec4<f32>(p, 1.0);
+  let c1 = r.vp * vec4<f32>(p + v, 1.0);
+  let step = (c1.xy / c1.w - c0.xy / c0.w) * vec2<f32>(r.res.x, -r.res.y);
+  return step / max(length(step), 1e-12);
 }
 
 fn pcg3(c: vec3<i32>) -> f32 {
@@ -159,7 +170,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let fade = 0.45 + 0.55 * near;
   let cellStencils = cellPx / f32(wide);
   let landform = slope > STROKE_SLOPE && cellStencils < FACET_STENCILS.y;
-  let stroke = select(0.0, ((0.05 + 0.16 * slope) * r.slopeInk + 0.6 * tone) * fade
+  let stroke = select(0.0, mix(0.6 * tone, slope, r.slopeInk) * fade
     * (1.0 - smoothstep(FACET_STENCILS.x, FACET_STENCILS.y, cellStencils)), landform);
 
   // Paper behind a nearer profile: a tap nearer (deeper reversed-Z) than this
@@ -180,10 +191,17 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let downhill = n - nu * up;
   var fall = vec2<f32>(0.0);
   if (length(downhill) > 1e-5) {
-    let c0 = r.vp * vec4<f32>(p, 1.0);
-    let c1 = r.vp * vec4<f32>(p + normalize(downhill) * (0.01 * t), 1.0);
-    let step = (c1.xy / c1.w - c0.xy / c0.w) * vec2<f32>(r.res.x, -r.res.y);
-    fall = step / max(length(step), 1e-12);
+    fall = screenDir(p, normalize(downhill) * (0.01 * t));
+  }
+  // A body its plain render inks (`slopeInk`) strokes along the light where its depth
+  // can't be trusted for form: from orbit (km mesh facets) and on gentle ground; only a
+  // steep landform up close keeps its fall line (owner ruling: the light sets direction).
+  let alongLight = r.slopeInk * max(r.orbit, 1.0 - smoothstep(LIGHT_SLOPE.x, LIGHT_SLOPE.y, slope));
+  if (alongLight > 0.0) {
+    var lit = screenDir(p, l * (0.01 * t));
+    lit = select(lit, -lit, dot(lit, fall) < 0.0);
+    let mixed = mix(fall, lit, alongLight);
+    fall = mixed / max(length(mixed), 1e-6);
   }
 
   // Two lattice octaves round NOISE_UNITS of screen, blended at constant contrast.

@@ -5,8 +5,8 @@ import type { AntiqueReliefBody } from '../../@types/rendering/AntiqueReliefBody
 
 /** Bodies whose ground the relief pass engraves, and how; any other keeps its plain print.
  * Mars: HiRISE's metre, Imhof's exaggeration (a 3° slope read from 50 km up prints as a
- * 9° one), slope inked as well as shade. Earth: ETOPO's z7 posts ~2.4 km apart outside the
- * skadi boxes, so the exaggeration lifts the coarse mesh's ranges off the flats; only the
+ * 9° one), every landform stroked, inked by the plain render's shade. Earth: ETOPO's z7
+ * posts ~2.4 km apart outside the skadi boxes, so the exaggeration lifts the coarse mesh's ranges off the flats; only the
  * shade side inked, as a 1690 engraver drew a mountain (hachures by slope are Lehmann's,
  * 1799); handed over from the map's molehills (ANTIQUE_MAP_DETAIL levels 7..8). */
 export const ANTIQUE_RELIEF_BODIES: Readonly<Record<string, AntiqueReliefBody>> = {

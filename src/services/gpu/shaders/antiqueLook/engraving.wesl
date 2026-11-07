@@ -183,9 +183,10 @@ fn isoLines(h: f32, hPerUnit: f32, tone: f32, pxUnits: f32) -> f32 {
 // `field.rg`, FALL_TAPS each way FALL_STEP print units apart, tent-weighted. A streamline stops
 // where the field has no line (a halo, the sky), so no stroke crosses a profile.
 // `across` follows the contour instead: the deep shade's second set. In units of the
-// convolved noise's spread on `relief.wesl`'s lattice, FALL_SIGMA (simulated).
-const FALL_TAPS: i32 = 12;
-const FALL_STEP: f32 = 1.5;
+// convolved noise's spread on `relief.wesl`'s lattice, FALL_SIGMA (simulated: 8 taps
+// 2.25 apart spread as 12 taps 1.5 apart did, so the strokes keep their 18-unit reach).
+const FALL_TAPS: i32 = 8;
+const FALL_STEP: f32 = 2.25;
 const FALL_SIGMA: f32 = 0.123;
 
 fn fallLines(field: texture_2d<f32>, samp: sampler, px: vec2<f32>, unit: f32, across: bool) -> f32 {
@@ -211,6 +212,35 @@ fn fallLines(field: texture_2d<f32>, samp: sampler, px: vec2<f32>, unit: f32, ac
     }
   }
   return sum / weight / FALL_SIGMA;
+}
+
+// A crest or a rim: the fall line `field.rg` points out of the pixel both ways along a
+// screen axis, CREST_REACH units off (so the line is ~2 × CREST_REACH wide) and again
+// CREST_PROBE units off, where both taps lie on a landform (`field.a` > 0; the crest
+// itself is too flat to be one), so the ground's noise on a plain draws none. The line
+// runs on unbroken where hachures, cut from noise, would leave gaps. Two axes suffice:
+// a crest at 45° crosses both.
+const CREST_REACH: f32 = 0.7;
+const CREST_PROBE: f32 = 3.0;
+
+fn outward(field: texture_2d<f32>, samp: sampler, px: vec2<f32>, e: vec2<f32>, res: vec2<f32>) -> vec2<f32> {
+  let ahead = textureSampleLevel(field, samp, (px + e) / res, 0.0);
+  let behind = textureSampleLevel(field, samp, (px - e) / res, 0.0);
+  let d = normalize(e);
+  let landform = step(0.5, min(length(ahead.rg), length(behind.rg))) * step(0.0, min(ahead.a, behind.a));
+  return vec2<f32>(min(dot(ahead.rg, d), -dot(behind.rg, d)), landform);
+}
+
+fn fallCrest(field: texture_2d<f32>, samp: sampler, px: vec2<f32>, unit: f32) -> f32 {
+  let res = vec2<f32>(textureDimensions(field));
+  var crest = 0.0;
+  for (var k = 0; k < 2; k++) {
+    let e = vec2<f32>(f32(1 - k), f32(k)) * unit;
+    let near = outward(field, samp, px, e * CREST_REACH, res);
+    let far = outward(field, samp, px, e * CREST_PROBE, res);
+    crest = max(crest, smoothstep(0.1, 0.4, near.x) * smoothstep(0.2, 0.5, far.x) * far.y);
+  }
+  return crest;
 }
 
 // Ink where a unit-spread field `v` tops its (1 − share) quantile (a logistic probit),

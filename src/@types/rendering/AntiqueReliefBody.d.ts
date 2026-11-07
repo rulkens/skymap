@@ -9,7 +9,8 @@ export type AntiqueReliefBody = {
   readonly cellM: number;
   /** Vertical exaggeration of the shading normal on the ground and from orbit (Imhof). */
   readonly exaggeration: readonly [ground: number, orbit: number];
-  /** Share of a steep LIT slope's stroke: 1 inks slope as well as shade, 0 shade only. */
+  /** What the stroke share measures: 1 the landform's slope alone, the plate inking it by
+   * the plain render's shade (Mars); 0 the plate light's shade side only (Earth). */
   readonly slopeInk: number;
   /** Difference the depth normal across one height cell on screen, so a coarse mesh's
    * facets average out instead of printing one tone each. */
