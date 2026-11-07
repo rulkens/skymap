@@ -17,7 +17,9 @@ const MARS_R = SCENE_CELESTIAL_BODIES.find((b) => b.id === 'mars')!.surface.datu
 
 function enabledAt(altitudeM: number): boolean {
   const pass = bodyAlbedoMaskPass({} as BodyRuntime);
-  const ctx = { bodyPose: () => ({ eyeRelBodyM: [MARS_R + altitudeM, 0, 0] }) } as unknown as FrameView;
+  const ctx = {
+    bodyPose: () => ({ eyeRelBodyM: [MARS_R + altitudeM, 0, 0] }),
+  } as unknown as FrameView;
   const view = { slab: { frame: { kind: 'body-m', hostId: 'mars' } } } as unknown as SlabView;
   return pass.enabled!({} as PassState, ctx, view);
 }

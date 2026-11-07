@@ -9,10 +9,7 @@ import type { AntiqueReliefInput } from '../../../../@types/rendering/AntiqueRel
 import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { PassState } from '../../../../@types/engine/frame/PassState';
 import type { SampledDepth } from '../../../../@types/engine/frame/SampledDepth';
-import {
-  ANTIQUE_RELIEF_BODIES,
-  ANTIQUE_RELIEF_MAX_ALT_M,
-} from '../../../../data/rendering/antiqueRelief';
+import { ANTIQUE_RELIEF_BODIES } from '../../../../data/rendering/antiqueRelief';
 import {
   ANTIQUE_BODY_PRINTS,
   ANTIQUE_BODY_PRINT_CODES,
@@ -23,6 +20,7 @@ import { sunDirLocal } from '../../../../utils/camera/bodyCompose/sunDirLocal';
 import { antiqueMapDetail } from '../../../../utils/gpu/antiqueLook/antiqueMapDetail';
 import { innerBoundRadiusM } from '../../../../utils/occlusion/innerBoundRadiusM';
 import { smoothstep } from '../../../../utils/math/smoothstep';
+import { insideAntiqueReliefShell } from '../../../../utils/gpu/antiqueLook/insideAntiqueReliefShell';
 import { sceneBodyStates } from '../../../engine/frame/sceneBodyStates';
 
 export function antiqueReliefInput(
@@ -42,10 +40,13 @@ export function antiqueReliefInput(
   if (body === undefined || pose === null || bodyState === undefined) return null;
   const datumRadiusM = body.surface.datumRadiusM;
   const eyeR = Math.hypot(...pose.eyeRelBodyM);
-  if (eyeR - datumRadiusM > ANTIQUE_RELIEF_MAX_ALT_M) return null;
+  if (!insideAntiqueReliefShell(ctx, hostId)) return null;
   // The map's own reveal level, from the same inner-bound altitude its signs use.
   const band = reliefBody.revealDetail;
-  const detail = antiqueMapDetail(ctx.drawPxPerRad / unitPx, (eyeR - innerBoundRadiusM(body.surface)) / 1000);
+  const detail = antiqueMapDetail(
+    ctx.drawPxPerRad / unitPx,
+    (eyeR - innerBoundRadiusM(body.surface)) / 1000,
+  );
   const reveal = band === null ? 1 : smoothstep(band[0], band[1], detail);
   if (reveal <= 0) return null;
   return {
