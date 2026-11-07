@@ -11,7 +11,9 @@ implemented with all skymap conventions, not a throwaway spike.
 Skymap is a map of the measured universe. Rendering it the way a 1660 Amsterdam atelier would
 have engraved it is a teaching device (planetarium shows, exhibits: "this is how the sky was
 charted") and a showcase of the renderer. It must stay a *chart of the real data*: every star
-glyph, contour and wash is derived from the rendered frame, nothing is painted over it.
+glyph comes from the catalogue the frame draws (by apparent magnitude), every contour and wash
+from the rendered frame, and land and sea from the body's own ocean mask; nothing is painted
+over it. A fidelity reviewer checks each plate against the plain render of the same view.
 
 ## Period: one atelier, held throughout
 

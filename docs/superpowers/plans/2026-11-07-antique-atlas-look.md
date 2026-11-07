@@ -62,6 +62,33 @@ the Display section container
 **Files:** `packages/website/src/data/docs{Settings,UrlParams,Commands}.ts`, `tools/perf/{measurePerf.ts,README.md}`
 - [x] The switch, `?antique` and `pack-ornaments` documented; `npm run perf -- --gate antique`.
 
+### Task 9: Fidelity fixes (owner ruling 2026-11-07, after a 4/10 fidelity review)
+**Files:** body earth pass + shader, `shaders/antiqueLook/{reduce,fragment}.wesl`, `tools/antique/look/`
+- [ ] Earth's land share from its ocean mask (written by the Earth pass while the look is on), not from colour.
+- [x] Glows keep full brightness (block mean held near its dimmest texel, no per-texel cap); stipple follows the quarter-res band with relief (9cc398c58).
+- [x] `lookbench`: plain/antique pairs of pinned views, sheets, compares, crops (9cc398c58).
+
+### Task 10: Star glyphs from the catalogue (route B; ruling 2026-11-07, rides this feature)
+**Files:** `starCatalog/vertex.wesl` (prep: `leafRecord(ii)`), star Layer print passes, `antiqueLookTargetRows.ts`, `frameSections.ts`, `shaders/antiqueLook/{printPoint,glyphs,reduce}.wesl`; delete `peaks.wesl`, the `peaks`/`stars` targets, `STAR_FLOOR`
+**Contract:**
+```ts
+export const ANTIQUE_PRINT_CELL_UNITS = 4;   // one print-point texel per 4 print units
+// target 'antique-print-points': rgba16float + depth32float, allocateWhen antiqueLookOn
+// texel: xy NDC, z apparent magnitude, w 1 = a star; reversed-Z depth so the brightest per cell wins
+```
+- [ ] Prep: `leafRecord(ii)` shared by the visual, pick and print stages; test they decode alike.
+- [ ] `star-points-print` (seeded, own instance buffer) and `star-catalog-print` (leaf stream) draw m ≤ 5.75.
+- [ ] Glyph class = 5 − round(m); stars behind a body never print; peak detection deleted.
+- [ ] Test: apparent magnitude → class; Fomalhaut, Polaris, Dubhe are class ≥ 3 in `north`/`earth` at 1× and 2× (lookbench).
+- [ ] Phase 2: the galaxy Layer writes the same target, so galaxy views keep their dots.
+
+### Task 11: North-up and names (rulings 2026-11-07)
+- [ ] Camera roll held at zero (celestial north up) while the look is on.
+- [ ] Modern names shown where no period name exists; period names kept where they do.
+
+### Task 12: Constellation lines engraved
+- [ ] With the look on, the constellation pass draws into its own target; the plate inks it as a fine rule behind bodies, stars knocked out of it.
+
 ## Definition of Done
 
 **Deliverables:** the `stylize` FRAME_ORDER line and `antiqueLook` pass; the `antique` settings
