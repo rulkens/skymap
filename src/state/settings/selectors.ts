@@ -68,6 +68,11 @@ export const selectBloomStrength = (state: RootState): number =>
 export const selectBloomThreshold = (state: RootState): number =>
   selectSettings(state).bloom.threshold;
 
+// --- antique cluster ----------------------------------------------------------
+
+export const selectAntiqueEnabled = (state: RootState): boolean =>
+  selectSettings(state).antique.enabled;
+
 // --- debug cluster ------------------------------------------------------------
 
 export const selectDebugOverlays = (state: RootState): Record<DebugOverlayKey, boolean> =>
