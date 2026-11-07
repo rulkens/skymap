@@ -4,9 +4,8 @@
  * left between its box and the globe's rim, so none overhangs the limb much; and over
  * `sunCos`, the cosine toward the Sun, so twilight keeps a name and the
  * cross-hatched night drops it. Past `detailOut` (`antiqueMapDetail`) the map's
- * realms and towns name the ground, so a continent's name gives way. The box is
- * estimated from each cut's mean IM Fell advance (`advanceEm`, tracking added)
- * and line height (`lineEm`), in em.
+ * realms and towns name the ground, so a continent's name gives way. A name's box
+ * stacks its lines `lineEm` apart (`antiqueNameBoxPx`).
  */
 
 export const ANTIQUE_EARTH_PLACE_REVEAL = {
@@ -14,6 +13,5 @@ export const ANTIQUE_EARTH_PLACE_REVEAL = {
   fitPx: [-8, 8],
   sunCos: [-0.35, -0.1],
   detailOut: [2.5, 3.5],
-  advanceEm: { capitals: 0.62, roman: 0.5, italic: 0.44, spacedItalic: 0.56 },
   lineEm: 1.2,
 } as const;

@@ -31,6 +31,7 @@ import { rotateVec3ByTightMat3 } from '../../../../utils/math/rotateVec3ByTightM
 import { normalize3 } from '../../../../utils/math/normalize3';
 import { dot3 } from '../../../../utils/math/dot3';
 import { smoothstep } from '../../../../utils/math/smoothstep';
+import { antiqueNameBoxPx } from '../utils/antiqueNameBoxPx';
 
 const NONE = { labels: [], awake: false } as const;
 
@@ -39,19 +40,15 @@ export function produceAntiqueEarthPlaces(
 ): LayerScreenLabel<'body'>['produceLabels'] {
   const codeOf = bodyCodeOf(pickCodes);
   const { priority, item } = BODY_CAPTION_ROWS.earthPlace;
-  const { globePx, fitPx, sunCos, detailOut, advanceEm, lineEm } = ANTIQUE_EARTH_PLACE_REVEAL;
+  const { globePx, fitPx, sunCos, detailOut, lineEm } = ANTIQUE_EARTH_PLACE_REVEAL;
   const radiusM = SCENE_EARTH.surface.datumRadiusM;
   const radiusMpc = radiusM * SCALE_UNITS.M_TO_MPC;
   // Half the larger side of each name's box as `antiqueLabel` sets it, px: what must stay inside the rim.
   const halfBoxPx = ANTIQUE_EARTH_PLACES.map((place) => {
     const cut = ANTIQUE_AREA_LETTERING[place.id]!;
-    const lines = place.name.split('\n');
-    const chars = Math.max(...lines.map((line) => line.length));
-    const ems = Math.max(
-      chars * (advanceEm[cut] + ANTIQUE_LABEL_STYLE[cut].trackingEm),
-      lines.length * lineEm,
-    );
-    return (ems * ANTIQUE_LABEL_STYLE.areaPx) / 2;
+    const { trackingEm } = ANTIQUE_LABEL_STYLE[cut];
+    const box = antiqueNameBoxPx(place.name, cut, trackingEm, ANTIQUE_LABEL_STYLE.areaPx, lineEm);
+    return Math.max(box.width, box.height) / 2;
   });
 
   return (state, ctx, fade) => {
