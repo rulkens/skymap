@@ -191,8 +191,8 @@ Build alt/az from the spot's ENU frame and the body's orientation the way `skyPo
 25 km); `placeLabel(spot: SkySpot): { text: string; near: boolean }` — Earth: the entry's first name, `near: true`;
 otherwise and on Mars: `"55.67° N 12.52° E"` (2 decimals, hemisphere letters), `near: false`.
 
-- [ ] Tests: `inside 25 km of Søndermarken names it`, `40 km out gives coordinates`, `Mars gives coordinates`.
-- [ ] Commit.
+- [x] Tests: `inside 25 km of Søndermarken names it`, `40 km out gives coordinates`, `Mars gives coordinates`.
+- [x] Commit.
 
 ### Task 7: Sky readout rows and selectors
 
