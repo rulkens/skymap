@@ -9,6 +9,8 @@ import paperCode from '../../shaders/antiqueLook/paperBake.wesl?static';
 import reduceCode from '../../shaders/antiqueLook/reduce.wesl?static';
 import glowCode from '../../shaders/antiqueLook/glow.wesl?static';
 import peaksCode from '../../shaders/antiqueLook/peaks.wesl?static';
+import glyphsCode from '../../shaders/antiqueLook/glyphs.wesl?static';
+import decorCode from '../../shaders/antiqueLook/decor.wesl?static';
 import plateCode from '../../shaders/antiqueLook/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import {
@@ -86,7 +88,61 @@ export function createAntiqueLookGpu(
 
   const uniforms = buffer('uniforms', ANTIQUE_UNIFORM_BYTES);
   const ornaments = buffer('ornaments', ANTIQUE_ORNAMENT_BYTES);
-  const glyphs = buffer('glyphs', ANTIQUE_GLYPH_BYTES);
+  const digits = buffer('digits', ANTIQUE_GLYPH_BYTES);
+  // Star glyphs scatter: their own vertex stage, a strip per instance, MAX blend
+  // so overlapping glyphs and halos keep the stronger, never sum.
+  const glyphsModule = createShaderModuleWithDevLog(device, glyphsCode, 'antiqueLook.glyphs');
+  const glyphsLayout = device.createBindGroupLayout({
+    label: 'antique-look-glyphs-bgl',
+    entries: [
+      { binding: 0, visibility: GPUShaderStage.VERTEX, ...TEXTURE },
+      { binding: 1, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, ...UNIFORM },
+    ],
+  });
+  const max: GPUBlendComponent = { srcFactor: 'one', dstFactor: 'one', operation: 'max' };
+  const glyphsPipeline = device.createRenderPipeline({
+    label: 'antique-look-glyphs',
+    layout: device.createPipelineLayout({
+      label: 'antique-look-glyphs-layout',
+      bindGroupLayouts: [glyphsLayout],
+    }),
+    vertex: { module: glyphsModule, entryPoint: 'vs' },
+    fragment: {
+      module: glyphsModule,
+      entryPoint: 'fs',
+      targets: [{ format: HDR_TARGET_FORMAT, blend: { color: max, alpha: max } }],
+    },
+    primitive: { topology: 'triangle-strip' },
+  });
+  const decorModule = createShaderModuleWithDevLog(device, decorCode, 'antiqueLook.decor');
+  const both = GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT;
+  const decorLayout = device.createBindGroupLayout({
+    label: 'antique-look-decor-bgl',
+    entries: [
+      { binding: 0, visibility: both, ...UNIFORM },
+      { binding: 1, visibility: both, ...UNIFORM },
+      { binding: 2, visibility: GPUShaderStage.FRAGMENT, ...TEXTURE },
+      { binding: 3, visibility: GPUShaderStage.FRAGMENT, ...SAMPLER },
+    ],
+  });
+  const decorPipeline = device.createRenderPipeline({
+    label: 'antique-look-decor',
+    layout: device.createPipelineLayout({
+      label: 'antique-look-decor-layout',
+      bindGroupLayouts: [decorLayout],
+    }),
+    vertex: { module: decorModule, entryPoint: 'vs' },
+    fragment: {
+      module: decorModule,
+      entryPoint: 'fs',
+      targets: [
+        { format: 'rgba8unorm', blend: { color: max, alpha: max } },
+        { format: 'rgba8unorm', blend: { color: max, alpha: max } },
+      ],
+    },
+    primitive: { topology: 'triangle-strip' },
+  });
+
   return {
     paper: stage('paper', paperCode, [UNIFORM, TEXTURE, TEXTURE, SAMPLER], ['rgba8unorm']),
     reduce: stage('reduce', reduceCode, [TEXTURE, TEXTURE], [HDR_TARGET_FORMAT, HDR_TARGET_FORMAT]),
@@ -102,11 +158,11 @@ export function createAntiqueLookGpu(
         UNIFORM,
         TEXTURE, // paper
         TEXTURE, // wash
-        TEXTURE, // stars
+        TEXTURE, // star ink
         SAMPLER,
         TEXTURE, // glow
-        UNIFORM, // ornaments
-        TEXTURE, // ornament atlas
+        TEXTURE, // decor
+        TEXTURE, // decor hue
         UNIFORM, // border digits
         TEXTURE, // glyph sheet
       ],
@@ -114,14 +170,16 @@ export function createAntiqueLookGpu(
     ),
     uniforms,
     ornaments,
-    glyphs,
+    glyphs: { pipeline: glyphsPipeline, layout: glyphsLayout },
+    decor: { pipeline: decorPipeline, layout: decorLayout },
+    digits,
     clampSampler: sampler('clamp', 'clamp-to-edge'),
     repeatSampler: sampler('repeat', 'repeat'),
     empty: emptyTexture.createView(),
     destroy() {
       uniforms.destroy();
       ornaments.destroy();
-      glyphs.destroy();
+      digits.destroy();
       emptyTexture.destroy();
     },
   };

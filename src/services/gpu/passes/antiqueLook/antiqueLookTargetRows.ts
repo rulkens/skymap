@@ -29,5 +29,8 @@ export function antiqueLookTargetRows(swapFormat: GPUTextureFormat): readonly Re
     row(ANTIQUE_TARGETS.glow, HDR_TARGET_FORMAT, ANTIQUE_CELL * 4),
     row(ANTIQUE_TARGETS.peaks, HDR_TARGET_FORMAT, ANTIQUE_CELL),
     row(ANTIQUE_TARGETS.stars, HDR_TARGET_FORMAT, ANTIQUE_CELL),
+    row(ANTIQUE_TARGETS.starInk, HDR_TARGET_FORMAT, 1),
+    row(ANTIQUE_TARGETS.decor, 'rgba8unorm', 1),
+    row(ANTIQUE_TARGETS.decorHue, 'rgba8unorm', 1),
   ];
 }

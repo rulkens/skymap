@@ -7,7 +7,9 @@ import package::lib::util::hash21Hq;
 
 // One family of parallel lines at `angle`. `tone` 0..1 sets the half-width as a
 // share of `spacing`; the slow wobble is the hand, so lines are never ruled.
-fn hatch(p: vec2<f32>, angle: f32, spacing: f32, tone: f32) -> f32 {
+// `pxUnits` (units per device px) sets the anti-aliasing analytically, so the
+// hatch takes no derivative and may run inside a branch (bodies only).
+fn hatch(p: vec2<f32>, angle: f32, spacing: f32, tone: f32, pxUnits: f32) -> f32 {
   let n = vec2<f32>(-sin(angle), cos(angle));
   let along = dot(p, vec2<f32>(n.y, -n.x));
   let wobble = 0.22 * (vnoise(vec2<f32>(along * 0.015, dot(p, n) * 0.05)) - 0.5);
@@ -17,20 +19,20 @@ fn hatch(p: vec2<f32>, angle: f32, spacing: f32, tone: f32) -> f32 {
   // line) on top of the tone; below ~0.06 tone the burin lifts.
   let swell = 0.85 + 0.3 * vnoise(vec2<f32>(along * 0.035, floor(v) * 3.7));
   let halfWidth = clamp(tone, 0.0, 1.0) * spacing * 0.5 * swell;
-  let aa = max(fwidth(v) * spacing, 0.6);
+  let aa = max(pxUnits, 0.6 * pxUnits);
   return (1.0 - smoothstep(halfWidth - aa * 0.5, halfWidth + aa * 0.5, d)) * smoothstep(0.03, 0.09, tone);
 }
 
 // Up to three crossing families; each joins only past its threshold, the way a
 // plate is worked darker by re-cutting across the first lines.
-fn crossHatch(p: vec2<f32>, tone: f32, spacing: f32, baseAngle: f32) -> f32 {
+fn crossHatch(p: vec2<f32>, tone: f32, spacing: f32, baseAngle: f32, pxUnits: f32) -> f32 {
   // Widths stay under ~0.7 of the spacing so the lozenges between crossings
   // keep their paper even in the darkest tone: engraving never floods.
-  let first = hatch(p, baseAngle, spacing, tone * 0.72);
+  let first = hatch(p, baseAngle, spacing, tone * 0.72, pxUnits);
   // The crossing set at 45° makes lozenges; a shallower crossing makes moiré.
   // Spacings a little apart, so the crossings never lock into a screen-like lattice.
-  let second = hatch(p, baseAngle + 0.87, spacing * 0.92, (tone - 0.35) * 0.95);
-  let third = hatch(p, baseAngle - 0.7, spacing * 1.07, (tone - 0.72) * 1.2);
+  let second = hatch(p, baseAngle + 0.87, spacing * 0.92, (tone - 0.35) * 0.95, pxUnits);
+  let third = hatch(p, baseAngle - 0.7, spacing * 1.07, (tone - 0.72) * 1.2, pxUnits);
   // An ink DENSITY, not a coverage: where lines cross the ink lies twice, so a
   // crossing prints darker than either line (the plate multiplies it as Beer's law).
   return min(first + second + third, 1.4);

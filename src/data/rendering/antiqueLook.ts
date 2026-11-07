@@ -66,4 +66,10 @@ export const ANTIQUE_TARGETS = {
   peaks: 'antique-peaks',
   /** Quarter res: the peaks that survive suppression, with their contrast. */
   stars: 'antique-stars',
+  /** Full res: scattered star glyphs, ink r and paper knock-out g. */
+  starInk: 'antique-star-ink',
+  /** Full res: scattered ornaments — figure ink, plate ink, clear, wash. */
+  decor: 'antique-decor',
+  /** Full res: the ornaments' wash pigment. */
+  decorHue: 'antique-decor-hue',
 } as const;

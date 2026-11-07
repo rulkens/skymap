@@ -5,7 +5,9 @@
  *   2. reduce — print → quarter-res `wash` (low band) + `peaks` (MRT);
  *   3. glow   — `wash` → 1/16-res `glow`, the low band past star scale;
  *   4. peaks  — non-maximum suppression → `stars`;
- *   5. plate  — everything inked onto the swap chain.
+ *   5. glyphs — one instanced quad per star cell, scattered into `star-ink`;
+ *      decor  — one instanced quad per placed ornament, into `decor`/`decor-hue`;
+ *   6. plate  — everything inked onto the swap chain.
  * Everything GPU-side is built on the look's first frame, not at boot: most
  * sessions never open it. The look itself lives in `shaders/antiqueLook/`.
  */
@@ -13,6 +15,7 @@
 import { createAntiqueLookGpu } from './createAntiqueLookGpu';
 import { loadAntiqueSheetAssets } from './loadAntiqueSheetAssets';
 import {
+  ANTIQUE_CELL,
   ANTIQUE_GLYPH_BYTES,
   ANTIQUE_ORNAMENT_BYTES,
   ANTIQUE_REFERENCE_HEIGHT_CSS,
@@ -146,7 +149,7 @@ export function createAntiqueLook(init: {
             rulings,
             sheet: glyphs.sheet,
           });
-    device.queue.writeBuffer(g.glyphs, 0, packAntiqueGlyphs(digits, glyphBytes));
+    device.queue.writeBuffer(g.digits, 0, packAntiqueGlyphs(digits, glyphBytes));
 
     const uniforms = { buffer: g.uniforms };
     const paper = targets.viewOf(ANTIQUE_TARGETS.paper);
@@ -154,6 +157,9 @@ export function createAntiqueLook(init: {
     const peaks = targets.viewOf(ANTIQUE_TARGETS.peaks);
     const stars = targets.viewOf(ANTIQUE_TARGETS.stars);
     const glow = targets.viewOf(ANTIQUE_TARGETS.glow);
+    const starInk = targets.viewOf(ANTIQUE_TARGETS.starInk);
+    const decor = targets.viewOf(ANTIQUE_TARGETS.decor);
+    const decorHue = targets.viewOf(ANTIQUE_TARGETS.decorHue);
     // foreground:0 keeps last frame's bodies when nothing drew one this frame.
     const bodies = hasBodies ? targets.viewOf('foreground:0') : g.empty;
 
@@ -169,6 +175,52 @@ export function createAntiqueLook(init: {
     fullScreen(encoder, 'reduce', [wash, peaks], g.reduce, [io.print, bodies]);
     fullScreen(encoder, 'glow', [glow], g.glow, [wash]);
     fullScreen(encoder, 'peaks', [stars], g.peaks, [peaks, uniforms]);
+    // One instance per quarter-res cell (an upper bound: the shader drops the rest).
+    const cells = Math.ceil(size.width / ANTIQUE_CELL) * Math.ceil(size.height / ANTIQUE_CELL);
+    const glyphPass = encoder.beginRenderPass({
+      label: 'antique-look-glyphs',
+      colorAttachments: [{ view: starInk, loadOp: 'clear', storeOp: 'store' }],
+    });
+    glyphPass.setPipeline(g.glyphs.pipeline);
+    glyphPass.setBindGroup(
+      0,
+      device.createBindGroup({
+        label: 'antique-look-glyphs-bg',
+        layout: g.glyphs.layout,
+        entries: [
+          { binding: 0, resource: stars },
+          { binding: 1, resource: uniforms },
+        ],
+      }),
+    );
+    glyphPass.draw(4, cells);
+    glyphPass.end();
+    const decorPass = encoder.beginRenderPass({
+      label: 'antique-look-decor',
+      colorAttachments: [decor, decorHue].map((view) => ({
+        view,
+        loadOp: 'clear',
+        storeOp: 'store',
+      })),
+    });
+    if (placed.length > 0 && atlas !== null) {
+      decorPass.setPipeline(g.decor.pipeline);
+      decorPass.setBindGroup(
+        0,
+        device.createBindGroup({
+          label: 'antique-look-decor-bg',
+          layout: g.decor.layout,
+          entries: [
+            { binding: 0, resource: uniforms },
+            { binding: 1, resource: { buffer: g.ornaments } },
+            { binding: 2, resource: atlas.createView() },
+            { binding: 3, resource: g.clampSampler },
+          ],
+        }),
+      );
+      decorPass.draw(4, placed.length);
+    }
+    decorPass.end();
     fullScreen(
       encoder,
       'plate',
@@ -181,12 +233,12 @@ export function createAntiqueLook(init: {
         uniforms,
         paper,
         wash,
-        stars,
+        starInk,
         g.clampSampler,
         glow,
-        { buffer: g.ornaments },
-        atlas?.createView() ?? g.empty,
-        { buffer: g.glyphs },
+        decor,
+        decorHue,
+        { buffer: g.digits },
         glyphs?.texture.createView() ?? g.empty,
       ],
       timestampSpread(timing, 'stylize'),
