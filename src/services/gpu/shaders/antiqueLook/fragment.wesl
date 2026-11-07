@@ -269,9 +269,10 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     contour = onEdge * stipple(p, 2.3, 0.4);
   }
   var dots = 0.0;
-  // Light stipple fills a glow between its dotted edges, as Bayer filled the Via Lactea.
-  if (lowL > GLOW_EDGE) {
-    dots = stipple(p, 2.2, smoothstep(GLOW_EDGE, 0.8, lowL) * 0.3);
+  // Stipple only where a glow is truly bright: lower, it found square billboard
+  // glows in the scene (a structure's own sprite) and printed them as blocks.
+  if (lowL > 0.18) {
+    dots = stipple(p, 2.2, smoothstep(0.18, 0.8, lowL) * 0.3);
   }
   let skyInk = max(star.x, max(dots, contour) * clear) * sky;
   // The rulings were cut by hand too: their ink load wanders along their length.
