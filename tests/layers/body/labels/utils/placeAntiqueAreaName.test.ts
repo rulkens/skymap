@@ -48,4 +48,15 @@ describe('placeAntiqueAreaName', () => {
     const at = placeAntiqueAreaName(frigoris, view, ANTIQUE_PLACE_LETTERING[frigoris.id]!);
     expect(at!.alpha).toBe(0);
   });
+
+  it("moves a wide sea's name inward off the limb rather than dropping it", () => {
+    const procellarum = ANTIQUE_MOON_PLACES.find((p) => p.id === 'moonPlace-oceanusProcellarum')!;
+    if (procellarum.kind === 'crater') throw new Error('Procellarum is a mare');
+    const view = orthographicMoonView(317, [1, 0, 0], -14);
+    const anchor = view.project(procellarum.latDeg, procellarum.lonDeg)!;
+    const at = placeAntiqueAreaName(procellarum, view, ANTIQUE_PLACE_LETTERING[procellarum.id]!)!;
+    expect(at.alpha).toBe(1);
+    expect(at.xPx).toBeGreaterThan(anchor[0]);
+    expect(at.yPx).toBeGreaterThan(anchor[1]);
+  });
 });
