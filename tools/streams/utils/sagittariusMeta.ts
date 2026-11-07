@@ -42,6 +42,9 @@ export function sagittariusMeta(
     widthDeg: null,
     particleCount: p.luminosity.length,
     colourT: arrayMean(p.colourT),
+    // A gradient along the debris, not one value (`sagittariusFeh`).
+    feh: null,
+    fehRef: null,
     anchorMpc: [anchorMpc[0]!, anchorMpc[1]!, anchorMpc[2]!],
   };
 }

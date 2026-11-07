@@ -943,6 +943,88 @@ unclear, and no entry here reads them as a licence.
   across the stream's width.
 - **Checked:** 2026-11-06: <https://github.com/cmateu/galstreams/blob/main/LICENSE>
 
+### Globular-cluster metallicities (Harris catalogue)
+
+<!-- attribution: id=harris-gc -->
+
+- **What:** The [Fe/H] of 21 globular clusters whose streams skymap draws
+  (`mwgc.dat` Part II, December 2010 revision).
+- **By:** William E. Harris. Harris 1996, AJ 112, 1487 (2010 edition).
+- **Licence:** The file's own notice: "THE DATA IN THIS CATALOG ARE SUPPLIED
+  FREE OF CHARGE TO ALL USERS. ANY THIRD PARTY WHO SUPPLIES THIS CATALOG IN
+  TURN TO OTHER USERS MUST REFER TO THE ORIGINAL SOURCE, WHICH IS THIS
+  WEBSITE, AND MUST DO SO WITHOUT CHARGE OF ANY FEE."
+- **Use:** Conditions apply
+- **Attribution:** "Please acknowledge the use of this catalog in any
+  published work you derive from it ... please use 'Harris 1996 (2010
+  edition)'".
+- **Upstream:** <https://physics.mcmaster.ca/~harris/mwgc.dat>
+- **Enters skymap:** typed into
+  `tools/streams/data/streamMetallicity.constants.ts` → the stream colours
+  and the stream card's Metallicity row.
+- **Modified:** No values changed.
+- **Checked:** 2026-11-07: <https://physics.mcmaster.ca/~harris/mwgc.dat>
+
+### Stream metallicities from S5 (Li et al. 2022)
+
+<!-- attribution: id=s5-li2022 -->
+
+- **What:** The mean CaT [Fe/H] of the streams in the S5 survey's Table 1.
+- **By:** Li et al. 2022, "S5: The Orbital and Chemical Properties of One
+  Dozen Stellar Streams", ApJ 928, 30.
+- **Licence:** A published paper; a few of its numbers used.
+- **Use:** Reference only
+- **Attribution:** Cite the paper.
+- **Upstream:** <https://arxiv.org/abs/2110.06950>
+- **Enters skymap:** typed into
+  `tools/streams/data/streamMetallicity.constants.ts` → the stream colours
+  and the stream card's Metallicity row.
+- **Modified:** Orphan and Chenab, measured apart, enter as one
+  giant-weighted mean (galstreams has one Orphan-Chenab stream).
+- **Checked:** 2026-11-07: <https://arxiv.org/e-print/2110.06950> (the
+  source's Table 1).
+- **Not verified:** the journal's terms.
+
+### The Sagittarius metallicity gradient (Hayes et al. 2020)
+
+<!-- attribution: id=hayes2020 -->
+
+- **What:** The median [Fe/H] of the Sagittarius core and of its leading
+  arm, which set the stream's colour against stripping time.
+- **By:** Hayes et al. 2020, "Metallicity and α-Element Abundance Gradients
+  along the Sagittarius Stream as Seen by APOGEE", ApJ 889, 63.
+- **Licence:** A published paper; two of its numbers used.
+- **Use:** Reference only
+- **Attribution:** Cite the paper.
+- **Upstream:** <https://arxiv.org/abs/1912.06707>
+- **Enters skymap:** `tools/streams/data/streamsBuild.constants.ts`
+  (`SGR_FEH_*`) → `stellar-streams.bin`.
+- **Modified:** The two medians are joined by a line in stripping time of
+  our own.
+- **Checked:** 2026-11-07: <https://arxiv.org/e-print/1912.06707>
+- **Not verified:** the journal's terms.
+
+### Old-population colours (MIST isochrones)
+
+<!-- attribution: id=mist -->
+
+- **What:** The light shares and B−V colours of giants, turnoff stars and
+  the horizontal branch at two metallicities, read off 12.6 Gyr isochrones.
+- **By:** The MIST project. Dotter 2016, ApJS 222, 8; Choi et al. 2016, ApJ
+  823, 102 (MIST v1.2).
+- **Licence:** Not stated for the model grids. The references page asks:
+  "Please cite the following papers in a publication that makes use of the
+  MIST models".
+- **Use:** Reference only
+- **Attribution:** Cite Dotter 2016 and Choi et al. 2016.
+- **Upstream:** <https://waps.cfa.harvard.edu/MIST/model_grids.html>
+  (`MIST_v1.2_vvcrit0.4_UBVRIplus.txz`)
+- **Enters skymap:** `tools/streams/data/streamsBuild.constants.ts`
+  (`STREAM_POPULATION_*`) → `stellar-streams.bin`.
+- **Modified:** Yes. Integrated by us over a Kroupa initial mass function
+  into two rounded anchors; nothing of MIST's is shipped as a file.
+- **Checked:** 2026-11-07: <https://waps.cfa.harvard.edu/MIST/references.html>
+
 ### Filaments (DisPerSE)
 
 <!-- attribution: id=disperse; keys=filaments.cache-dir -->

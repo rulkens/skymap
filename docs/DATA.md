@@ -32,7 +32,7 @@ Nine formats, each a magic + version header followed by fixed- or variable-size 
 | FILA   | `0x414C4946` | 1       | DisPerSE filament skeleton as variable-length polyline strips. 16-byte header + strip-offset table + vertex array.                                                | [`filamentBinaryFormat.ts`](../src/layers/cosmicWebFilaments/filaments/data/filamentBinaryFormat.ts)      |
 | SATG   | `0x47544153` | 1       | Earth-satellite SGP4 mean elements, columnar: ten f64 element columns, NORAD ids, class bytes, then names and COSPAR ids as a UTF-8 string table. 24-byte header. | [`writeSatelliteCatalog.ts`](../tools/utils/io/writeSatelliteCatalog.ts) |
 | SHEL   | `0x4C454853` | 1       | Baked Local Bubble shell mesh: f16 or f32 positions + normals (pc, 4 components each) and u32 indices, frame tag and centre in a 32-byte header.                  | [`shellMeshFormat.ts`](../src/layers/localBubble/shell/data/shellMeshFormat.ts)               |
-| STRM   | `0x4D525453` | 1       | Stellar-stream particles, GPU-ready: position, unit motion tangent, size, luminosity, colour t and stream index, ten f32 per particle; meta sidecar `stellar_streams_meta.json`. 16-byte header + 40 bytes/particle. | [`stellarStreamsFormat.constants.ts`](../src/layers/stellarStreams/catalog/data/stellarStreamsFormat.constants.ts) |
+| STRM   | `0x4D525453` | 1       | Stellar-stream particles, GPU-ready: position, unit motion tangent, size, luminosity, colour t (Gaia BP−RP over a fixed span) and stream index, ten f32 per particle; meta sidecar `stellar_streams_meta.json`. 16-byte header + 40 bytes/particle. | [`stellarStreamsFormat.constants.ts`](../src/layers/stellarStreams/catalog/data/stellarStreamsFormat.constants.ts) |
 
 ## `public/data/` layout
 

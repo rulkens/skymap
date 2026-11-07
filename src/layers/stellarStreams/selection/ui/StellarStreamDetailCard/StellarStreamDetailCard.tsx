@@ -1,7 +1,8 @@
 /**
  * StellarStreamDetailCard — the panel for a selected stream: what kind of debris it is, its size,
- * distance and width, how many particles draw it, and where the track comes from. Every value is
- * the meta row, so the card shows before the particles load.
+ * distance and width, its measured metallicity (only when measured), how many particles draw it,
+ * and where the track comes from. Every value is the meta row, so the card shows before the
+ * particles load.
  */
 
 import type { ReactNode } from 'react';
@@ -50,6 +51,12 @@ function StellarStreamDetailCard({
         <CardRow label={facts.sizeLabel} value={`${Math.round(target.lengthKpc)} kpc`} />
         <CardRow label="Distance" value={formatKpcRange(target.distanceKpc)} />
         <CardRow label="Width" value={target.widthDeg === null ? '—' : `${target.widthDeg}°`} />
+        {target.feh !== null && (
+          <CardRow
+            label="Metallicity"
+            value={`[Fe/H] ${target.feh.toFixed(2).replace('-', '\u2212')} (${target.fehRef})`}
+          />
+        )}
         <CardRow label="Particles drawn" value={target.particleCount.toLocaleString()} />
       </div>
       <div className={styles.cardSection}>

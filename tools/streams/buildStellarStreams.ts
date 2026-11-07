@@ -29,6 +29,7 @@ import { readVasilievStars } from './utils/readVasilievStars';
 import { sagittariusMeta } from './utils/sagittariusMeta';
 import { sagittariusParticles } from './utils/sagittariusParticles';
 import { streamMetaEntry } from './utils/streamMetaEntry';
+import { streamMetallicity } from './utils/streamMetallicity';
 import { streamSlug } from './utils/streamSlug';
 import { trackParticles } from './utils/trackParticles';
 
@@ -40,13 +41,18 @@ export function buildStellarStreams(
 ): { bin: ArrayBuffer; meta: StellarStreamMetaEntry[] } {
   const sgr = sagittariusParticles(stars, SGR_SEED);
   const picked = pickStreamTracks(tracks)
-    .map((t) => ({ t, slug: streamSlug(t.name) }))
+    .map((t) => ({ t, slug: streamSlug(t.name), metallicity: streamMetallicity(t.name) }))
     .sort((a, b) => (a.slug < b.slug ? -1 : a.slug > b.slug ? 1 : 0));
   const rng = splitmix64Rng(TRACK_SEED);
-  const sources = [sgr, ...picked.map(({ t }) => trackParticles(orientTrackByMotion(t), rng))];
+  const sources = [
+    sgr,
+    ...picked.map(({ t, metallicity }) =>
+      trackParticles(orientTrackByMotion(t), metallicity.feh, rng),
+    ),
+  ];
   const meta = [
     sagittariusMeta(stars, sgr),
-    ...picked.map(({ t }, i) => streamMetaEntry(t, sources[i + 1]!)),
+    ...picked.map(({ t, metallicity }, i) => streamMetaEntry(t, sources[i + 1]!, metallicity)),
   ];
   const ids = meta.map((m) => m.id);
   if (new Set(ids).size !== ids.length) throw new Error(`buildStellarStreams: duplicate slug`);

@@ -6,5 +6,6 @@ export type StreamParticles = {
   readonly tangents: Float32Array;
   readonly sizeMpc: Float32Array;
   readonly luminosity: Float32Array;
+  /** Gaia BP−RP over `STREAM_BP_RP_RANGE`, 0 to 1. */
   readonly colourT: Float32Array;
 };

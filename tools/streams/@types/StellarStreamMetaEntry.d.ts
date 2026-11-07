@@ -13,5 +13,9 @@ export type StellarStreamMetaEntry = {
   particleCount: number;
   /** Mean of the emitted particles' colourT: tints the stream's caption like its streaks. */
   colourT: number;
+  /** Measured [Fe/H]; null when the table's median stood in, and for Sagittarius's gradient. */
+  feh: number | null;
+  /** Where `feh` was measured, e.g. 'Harris 2010'; null exactly when `feh` is. */
+  fehRef: string | null;
   anchorMpc: readonly [number, number, number];
 };

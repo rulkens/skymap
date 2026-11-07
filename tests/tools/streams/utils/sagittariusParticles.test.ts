@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { VasilievStar } from '../../../../tools/streams/@types/VasilievStar';
 import {
   SGR_BOUND_SHARE,
-  SGR_OLDEST_STRIP_GYR,
+  SGR_FEH_OLD_STRIP_GYR,
   SGR_PARTICLE_BUDGET,
 } from '../../../../tools/streams/data/streamsBuild.constants';
 import { sagittariusParticles } from '../../../../tools/streams/utils/sagittariusParticles';
@@ -98,19 +98,17 @@ describe('sagittariusParticles', () => {
     expect(tangents[2]).toBeCloseTo(tz, 6);
   });
 
-  it('bound particles lean orange and the oldest lean blue', () => {
-    const rows = Array.from({ length: 200 }, (_, i) =>
-      star(i, i < 100 ? 0 : -SGR_OLDEST_STRIP_GYR),
+  it('the metal-rich bound core is redder on average than the oldest debris', () => {
+    const rows = Array.from({ length: 4000 }, (_, i) =>
+      star(i, i < 2000 ? 0 : -SGR_FEH_OLD_STRIP_GYR),
     );
     const { colourT } = sagittariusParticles(rows, 1n);
-    expect(Math.min(...colourT.subarray(0, 100))).toBeGreaterThan(
-      Math.max(...colourT.subarray(100)),
-    );
+    expect(mean(colourT.subarray(0, 2000))).toBeGreaterThan(mean(colourT.subarray(2000)) + 0.03);
   });
 
   it('luminosity carries no stripping-time trend', () => {
     const n = 20_000;
-    const rows = Array.from({ length: n }, (_, i) => star(i, (-SGR_OLDEST_STRIP_GYR * i) / n));
+    const rows = Array.from({ length: n }, (_, i) => star(i, (-SGR_FEH_OLD_STRIP_GYR * i) / n));
     const { luminosity } = sagittariusParticles(rows, 1n);
     const young = mean(luminosity.subarray(0, n / 2));
     const old = mean(luminosity.subarray(n / 2));

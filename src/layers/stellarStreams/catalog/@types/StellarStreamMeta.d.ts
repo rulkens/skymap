@@ -12,7 +12,11 @@ export type StellarStreamMeta = {
   /** null for the N-body stream and for tracks with no catalogued width. */
   readonly widthDeg: number | null;
   readonly particleCount: number;
-  /** Mean particle colourT, 0 (blue horizontal branch) to 1 (red giant); tints the caption. */
+  /** Mean particle colourT (Gaia BP−RP over `STREAM_BP_RP_RANGE`); tints the caption. */
   readonly colourT: number;
+  /** Measured [Fe/H]; null when the build defaulted it (never shown) and for Sagittarius. */
+  readonly feh: number | null;
+  /** Where `feh` was measured, e.g. 'Harris 2010'; null exactly when `feh` is. */
+  readonly fehRef: string | null;
   readonly anchorMpc: readonly [number, number, number];
 };

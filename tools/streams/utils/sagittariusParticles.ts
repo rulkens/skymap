@@ -3,24 +3,26 @@
  * catalogue's own sky position and distance, moving along its galactocentric velocity. Bound and
  * stripped stars are picked separately, the bound capped at `SGR_BOUND_SHARE` of the budget (a
  * uniform pick drowned the core in remnant); either class fills what the other cannot, so the
- * budget is never underspent. Colour follows stripping time (bound and fresh debris amber, old
- * debris blue); brightness does not, so the old arms are not dimmed into invisibility.
+ * budget is never underspent. Colour samples star types at the [Fe/H] of the star's stripping
+ * time (metal-rich core, metal-poor old debris); brightness does not follow it, so the old arms
+ * are not dimmed into invisibility.
  */
 import { raDecDistToEqCart } from '../../../src/utils/math/raDecDistToEqCart';
 import { normalize3 } from '../../../src/utils/math/normalize3';
 import { galToEq } from '../../utils/math/galToEq';
 import { splitmix64Rng } from '../../utils/random/splitmix64Rng';
 import { seededPick } from '../../utils/random/seededPick';
-import { clamp } from '../../utils/textures/clamp';
 import type { StreamParticles } from '../@types/StreamParticles';
 import type { VasilievStar } from '../@types/VasilievStar';
 import {
   SGR_BOUND_SHARE,
   SGR_LUMINOSITY,
-  SGR_OLDEST_STRIP_GYR,
   SGR_PARTICLE_BUDGET,
   SGR_SIZE_KPC,
 } from '../data/streamsBuild.constants';
+import { sagittariusFeh } from './sagittariusFeh';
+import { sampleStreamBv } from './sampleStreamBv';
+import { streamColourT } from './streamColourT';
 
 const KPC_TO_MPC = 1e-3;
 const BOUND_CAP = Math.floor(SGR_BOUND_SHARE * SGR_PARTICLE_BUDGET);
@@ -53,7 +55,7 @@ export function sagittariusParticles(rows: readonly VasilievStar[], seed: bigint
     positionsMpc.set(p, k * 3);
     tangents.set(normalize3(galToEq([s.vx, s.vy, s.vz])), k * 3);
     luminosity[k] = SGR_LUMINOSITY * (0.5 + 0.5 * rng());
-    colourT[k] = clamp(1 + s.tStripGyr / SGR_OLDEST_STRIP_GYR, 0, 1) * 0.8 + 0.2 * rng();
+    colourT[k] = streamColourT(sampleStreamBv(sagittariusFeh(s.tStripGyr), rng));
     sizeMpc[k] = (SGR_SIZE_KPC[0] + (SGR_SIZE_KPC[1] - SGR_SIZE_KPC[0]) * rng()) * KPC_TO_MPC;
   }
   return { positionsMpc, tangents, sizeMpc, luminosity, colourT };

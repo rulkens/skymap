@@ -1,7 +1,8 @@
 /**
  * Look and sampling constants of the stellar-streams build. Luminosity and size are display
- * quantities the renderer scales, not photometry; colour t runs 0 = blue to 1 = amber.
+ * quantities the renderer scales, not photometry; colour is a real B−V from the population model.
  */
+import type { StreamPopulationAnchor } from '../@types/StreamPopulationAnchor';
 
 /** Sagittarius particles drawn from the snapshot's 200,000 star particles. */
 export const SGR_PARTICLE_BUDGET = 60_000;
@@ -10,8 +11,14 @@ export const SGR_PARTICLE_BUDGET = 60_000;
  * 56%, ~33k particles in a few kpc that blew the core out to white. The rest goes to the debris.
  */
 export const SGR_BOUND_SHARE = 0.1;
-/** The run's span (its trajectory starts at −3 Gyr), so the oldest debris (−2.6) never clamps. */
-export const SGR_OLDEST_STRIP_GYR = 3;
+/**
+ * Sagittarius [Fe/H] against stripping time, approximate, after Hayes et al. 2020, ApJ 889, 63
+ * (arXiv:1912.06707) §4: the core's median −0.57 and the leading arm's −1.13, debris stripped
+ * three pericentres (~2.7 Gyr) ago. A line between the two, flat beyond.
+ */
+export const SGR_FEH_BOUND = -0.57;
+export const SGR_FEH_OLD = -1.13;
+export const SGR_FEH_OLD_STRIP_GYR = 2.7;
 export const SGR_LUMINOSITY = 1;
 export const SGR_SIZE_KPC: readonly [number, number] = [0.25, 0.6];
 export const SGR_SEED = 0x5347_5221n;
@@ -27,10 +34,32 @@ export const TRACK_DEFAULT_WIDTH_DEG = 0.3;
 export const TRACK_MIN_WIDTH_KPC = 0.03;
 export const TRACK_SIZE_PER_WIDTH = 0.8;
 export const TRACK_SIZE_KPC: readonly [number, number] = [0.05, 0.3];
-export const TRACK_COLOUR_T_MAX = 0.6;
 /** End fade reaches full brightness 1/8 of the track in from each end. */
 export const TRACK_END_FADE_SLOPE = 8;
 export const TRACK_SEED = 0x4753_5452n;
+
+/**
+ * A two-anchor approximation of an old population's light, linear in [Fe/H] between them and flat
+ * outside: V-light share and light-weighted B−V per MIST v1.2 phase (vvcrit 0.4, log age 10.10,
+ * Kroupa IMF; turnoff = main sequence, giants = RGB and AGB, BHB = core-helium burning).
+ * −2.2 interpolates the −2.0 and −2.5 grids; at −0.5 the HB is red and counts as giants.
+ */
+export const STREAM_POPULATION_METAL_POOR: StreamPopulationAnchor = {
+  feh: -2.2,
+  bhbShare: 0.13,
+  turnoffShare: 0.33,
+  bhbBv: 0.15,
+  turnoffBv: 0.51,
+  giantBv: 0.78,
+};
+export const STREAM_POPULATION_METAL_RICH: StreamPopulationAnchor = {
+  feh: -0.5,
+  bhbShare: 0,
+  turnoffShare: 0.36,
+  bhbBv: 0.15,
+  turnoffBv: 0.72,
+  giantBv: 1.09,
+};
 
 /**
  * The Sun's velocity in the Galactic rest frame, km/s, galactic axes (astropy's Galactocentric

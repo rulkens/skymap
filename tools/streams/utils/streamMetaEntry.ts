@@ -4,6 +4,7 @@ import { pointAlongPolyline } from '../../utils/math/pointAlongPolyline';
 import type { GalstreamsTrack } from '../@types/GalstreamsTrack';
 import type { StreamParticles } from '../@types/StreamParticles';
 import type { StellarStreamMetaEntry } from '../@types/StellarStreamMetaEntry';
+import type { StreamMetallicity } from '../@types/StreamMetallicity';
 import { streamSlug } from './streamSlug';
 import { trackPositionsKpc } from './trackPositionsKpc';
 
@@ -13,6 +14,7 @@ const KPC_TO_MPC = 1e-3;
 export function streamMetaEntry(
   track: GalstreamsTrack,
   particles: StreamParticles,
+  metallicity: StreamMetallicity,
 ): StellarStreamMetaEntry {
   const points = trackPositionsKpc(track);
   const cumulative = cumulativeLengths(points);
@@ -30,6 +32,9 @@ export function streamMetaEntry(
     widthDeg: track.widthDeg,
     particleCount: particles.luminosity.length,
     colourT: arrayMean(particles.colourT),
+    // A defaulted median coloured the particles but is no measurement: the card must not show it.
+    feh: metallicity.ref === null ? null : metallicity.feh,
+    fehRef: metallicity.ref,
     anchorMpc: [mid[0] * KPC_TO_MPC, mid[1] * KPC_TO_MPC, mid[2] * KPC_TO_MPC],
   };
 }

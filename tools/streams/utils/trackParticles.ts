@@ -1,7 +1,8 @@
 /**
  * A galstreams track resampled into particles: evenly spaced along its length, scattered across it
- * by a Gaussian of the stream's width, dimmed only towards the two ends. `rng` is shared across
- * streams by the caller, so the build's stream order fixes every draw.
+ * by a Gaussian of the stream's width, dimmed only towards the two ends, coloured by star types
+ * drawn for the stream's [Fe/H]. `rng` is shared across streams by the caller, so the build's
+ * stream order fixes every draw.
  */
 import { normalize3 } from '../../../src/utils/math/normalize3';
 import { cumulativeLengths } from '../../utils/math/cumulativeLengths';
@@ -11,7 +12,6 @@ import { clamp } from '../../utils/textures/clamp';
 import type { GalstreamsTrack } from '../@types/GalstreamsTrack';
 import type { StreamParticles } from '../@types/StreamParticles';
 import {
-  TRACK_COLOUR_T_MAX,
   TRACK_END_FADE_SLOPE,
   TRACK_LUMINOSITY,
   TRACK_PARTICLES_MAX,
@@ -21,12 +21,18 @@ import {
   TRACK_SIZE_KPC,
   TRACK_SIZE_PER_WIDTH,
 } from '../data/streamsBuild.constants';
+import { sampleStreamBv } from './sampleStreamBv';
+import { streamColourT } from './streamColourT';
 import { trackPositionsKpc } from './trackPositionsKpc';
 import { trackWidthKpc } from './trackWidthKpc';
 
 const KPC_TO_MPC = 1e-3;
 
-export function trackParticles(track: GalstreamsTrack, rng: () => number): StreamParticles {
+export function trackParticles(
+  track: GalstreamsTrack,
+  feh: number,
+  rng: () => number,
+): StreamParticles {
   const points = trackPositionsKpc(track);
   const cumulative = cumulativeLengths(points);
   const lengthKpc = cumulative[cumulative.length - 1]!;
@@ -59,7 +65,7 @@ export function trackParticles(track: GalstreamsTrack, rng: () => number): Strea
     tangents.set(t, k * 3);
     const endFade = clamp(Math.min(phase, 1 - phase) * TRACK_END_FADE_SLOPE, 0, 1);
     luminosity[k] = endFade * (0.5 + 0.5 * rng()) * TRACK_LUMINOSITY;
-    colourT[k] = TRACK_COLOUR_T_MAX * rng();
+    colourT[k] = streamColourT(sampleStreamBv(feh, rng));
   }
   return { positionsMpc, tangents, sizeMpc, luminosity, colourT };
 }

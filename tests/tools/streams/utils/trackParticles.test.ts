@@ -11,7 +11,7 @@ const lengthKpc = (t: ReturnType<typeof track>) => cumulativeLengths(trackPositi
 describe('trackParticles', () => {
   it('trackParticles spreads particles evenly with only the end fade varying luminosity along the track', () => {
     const t = track({ spanDeg: 90, points: 91 });
-    const p = trackParticles(t, splitmix64Rng(1n));
+    const p = trackParticles(t, -1.5, splitmix64Rng(1n));
     const n = p.luminosity.length;
     const bins = 8;
     const count = new Array<number>(bins).fill(0);
@@ -35,7 +35,7 @@ describe('trackParticles', () => {
     const short = track({ spanDeg: 3, points: 4 });
     const long = track({ spanDeg: 350, points: 351, distanceKpc: Array(351).fill(100) });
     const rng = splitmix64Rng(1n);
-    const count = (t: ReturnType<typeof track>) => trackParticles(t, rng).luminosity.length;
+    const count = (t: ReturnType<typeof track>) => trackParticles(t, -1.5, rng).luminosity.length;
     const wKpc = ((3 * Math.PI) / 180) * 10;
     expect(count(narrow)).toBe(Math.floor(lengthKpc(narrow) * 60));
     expect(count(wide)).toBe(Math.floor(lengthKpc(wide) * 60 * (wKpc / 0.3)));

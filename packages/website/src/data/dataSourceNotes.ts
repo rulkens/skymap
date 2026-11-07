@@ -641,6 +641,22 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     description:
       'The paths across the sky, with distances, of the streams of stars torn from star clusters and small galaxies around the Milky Way.',
   },
+  'harris-gc': {
+    description:
+      'William Harris’s catalogue of the Milky Way’s globular clusters, which gives the metal content of the clusters that some streams came from.',
+  },
+  's5-li2022': {
+    description:
+      'The metal content of a dozen stellar streams, measured from the spectra of their giant stars by the S5 survey, Li and colleagues, 2022.',
+  },
+  hayes2020: {
+    description:
+      'How the metal content of the Sagittarius stream falls with the time since its stars were torn away, from Hayes and colleagues, 2020.',
+  },
+  mist: {
+    description:
+      'Models of how stars age, which give the colours of a stream’s giants, turnoff stars and horizontal-branch stars at its metal content.',
+  },
   vizier: {
     description:
       'The catalogue service of CDS in Strasbourg, through which six of our tables were fetched.',

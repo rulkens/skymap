@@ -7,6 +7,7 @@
 
 import package::lib::camera::CameraUniforms;
 import package::lib::camera::worldToClip;
+import package::starCatalog::tint::starTint;
 
 struct Uniforms {
   cam: CameraUniforms,
@@ -37,8 +38,8 @@ struct PickOut {
 
 @group(0) @binding(0) var<uniform> u: Uniforms;
 
-const BHB: vec3<f32> = vec3<f32>(0.62, 0.76, 1.0);
-const GIANT: vec3<f32> = vec3<f32>(1.0, 0.70, 0.40);
+// attr.z is Gaia BP−RP mapped linearly onto 0..1 over this span (STREAM_BP_RP_RANGE in TS).
+const STREAM_BP_RP_RANGE: vec2<f32> = vec2<f32>(-0.3, 2.2);
 
 fn hash11(x: f32) -> f32 {
   return fract(sin(x * 127.1) * 43758.5453);
@@ -86,7 +87,8 @@ fn placeStreak(
   let area = (rTrue * rTrue) / (rPx * rPx);
   let envelope = smoothstep(0.0, 0.2, phase) * smoothstep(1.0, 0.8, phase) / 0.8;
   let lum = attr.y * area / (1.0 + lPx / (1.25 * rPx)) * select(1.0, envelope, u.flow > 0.0);
-  out.colour = mix(BHB, GIANT, attr.z) * lum * u.intensity;
+  let bpRp = mix(STREAM_BP_RP_RANGE.x, STREAM_BP_RP_RANGE.y, attr.z);
+  out.colour = starTint(bpRp) * lum * u.intensity;
   return out;
 }
 

@@ -1,8 +1,3 @@
-import type { Vec3 } from '../../../../@types/math/Vec3';
-
-/**
- * The streak palette's two ends; `streams.wesl` declares the same pair as `BHB` and `GIANT`
- * (a parity test keeps them equal), and the captions mix them by each stream's mean colourT.
- */
-export const STREAM_BHB_RGB: Vec3 = [0.62, 0.76, 1.0];
-export const STREAM_GIANT_RGB: Vec3 = [1.0, 0.7, 0.4];
+/** The Gaia BP−RP span colour t covers linearly: `starCatalog/tint.wesl`'s ramp span, so streams
+ * take catalogue star colours. `streams.wesl` declares the same pair; a parity test pins it. */
+export const STREAM_BP_RP_RANGE: readonly [number, number] = [-0.3, 2.2];

@@ -624,8 +624,8 @@ samples a star type — giant, turnoff, BHB — with fractions and per-type B−
   seed → same output), the lookup (table hit vs median), the Sgr map (monotone, endpoints), the card row
   present/absent.
 
-- [ ] No Layer contract change. Brightness untouched.
-- [ ] Commit (code; the rebuilt data is gitignored).
+- [x] No Layer contract change. Brightness untouched.
+- [x] Commit (code; the rebuilt data is gitignored).
 
 Task 13 re-runs (perf, eye check) after Task 17.
 
