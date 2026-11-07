@@ -5,8 +5,8 @@
  * each be oriented and tapered on its own. Ends match to 1e-3° (~100 m).
  */
 
-type Line = readonly (readonly [number, number])[];
-type End = { readonly piece: number; readonly end: 0 | 1 };
+import type { LonLatLine as Line } from '../@types/LonLatLine';
+import type { PolylineEnd as End } from '../@types/PolylineEnd';
 
 const nodeKey = (p: readonly [number, number]) => `${p[0].toFixed(3)},${p[1].toFixed(3)}`;
 
