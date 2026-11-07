@@ -113,7 +113,9 @@ Each is its own commit, behaviour-preserving, with its test.
   layer from the wheel clock (a notch after `SKY_EXIT_PAUSE_MS` of quiet, the constant moved to
   `src/data/camera/` and renamed for its new job); the sky arm's `SkyWheelMemory.lastWheelMs` goes, and no arm
   keeps a wheel clock. The sky arm returns `pushed: 'out'` for a fresh notch its widest lens ate, where it
-  returned its clip today (`skyCameraArm.ts:70`); a new saga starts `skyExitLift` on (sky, out). The body arm
+  returned its clip today (`skyCameraArm.ts:70`), carrying the `skyExitLift` clip as a value (it needs
+engine-only context: `hostOrThrow`, `groundRadiusAtM`, `foldToWorld`); a new saga decides to play it on
+(sky, out). The body arm
   returns `pushed: 'in'` for a fresh zoom-in at the floor (definition: §4.2); the saga ignores (body, in)
   until the feature. First check: the saga can read the framed sky pose at the push (the at-rest commit); if
   it cannot, stop and report. Tests: the lift still plays from a fresh wheel-out at the widest lens; a
