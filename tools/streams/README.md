@@ -65,3 +65,15 @@ across reruns over the same inputs. On 2026-11-07 it wrote 128,419 particles in 
 
 Tunables (particle budget, sizes, luminosities, seeds) live in
 [`data/streamsBuild.constants.ts`](data/streamsBuild.constants.ts).
+
+## Deploy order
+
+Sync before merging. Merging to `main` deploys the app shell, the app demands
+`stellar_streams_meta.json` on every boot, and it rejects a meta without `centrelineMpc` (an older
+build's). Merged first, every boot 404s the meta (a 4xx is never retried), so the palette lists no
+streams and switching them on draws nothing until the sync lands. Run from this branch's checkout,
+whose `DATA_FAMILIES` row puts the two files in the manifest:
+
+1. `npm run build-data-manifest`
+2. `npm run sync-r2-secure` (the owner; see [`docs/DEPLOY.md`](../../docs/DEPLOY.md))
+3. merge
