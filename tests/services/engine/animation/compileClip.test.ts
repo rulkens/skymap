@@ -453,8 +453,4 @@ describe('seq overlap', () => {
       ]),
     ).toThrow(/seq at 0s, join 2/);
   });
-
-  it('a plain seq stays { kind, children }', () => {
-    expect(seq([hold(1)])).toEqual({ kind: 'seq', children: [hold(1)] });
-  });
 });

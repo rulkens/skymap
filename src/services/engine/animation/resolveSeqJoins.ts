@@ -140,8 +140,9 @@ export function resolveSeqJoins(
       ) {
         throw new Error(`${prefix}three writers are live on '${ch}' at ${b.startSec}s`);
       }
-      // A join reads its spans from `a`'s folded `from`, so no leg may open after
-      // the writer before `a` starts. The lens is frame-free, so no leg converts it.
+      // A join reads its spans at compile time from `a`'s folded `from`, so no leg may
+      // open after the writer before `a` starts; only a zero-length snap at the leg
+      // start lets it (D3 converts nothing at run time). The lens is frame-free.
       const sinceSec = writers[k - 2]?.startSec ?? -Infinity;
       const changeSec =
         ch === 'fov'
@@ -151,8 +152,6 @@ export function resolveSeqJoins(
             : frameChangeIn(a, b);
       if (changeSec !== undefined) {
         const what = abut ? `join at ${b.startSec}s` : `blend [${b.startSec},${a.endSec})`;
-        // A join reads the outgoing span at compile time; only a zero-length snap
-        // at the leg start lets it (plan D3 converts nothing at run time).
         const remedy = abut ? `; snap '${ch}' at ${changeSec}s so the join can read its span` : '';
         throw new Error(
           `${prefix}the '${ch}' ${what} crosses a frame change at ${changeSec}s${remedy}`,

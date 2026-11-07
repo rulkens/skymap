@@ -169,7 +169,6 @@ function walkOverlappedSeq(
   let pendingFrom = lens();
   let pending: Effect[] = [];
   let endSec = atSec;
-  let first = true;
   const flush = (startSec: number) => {
     for (const child of pending) walk(child, startSec, acc);
     pending = [];
@@ -179,9 +178,7 @@ function walkOverlappedSeq(
       pending.push(child);
       continue;
     }
-    const j = durs.length - 1;
-    const startSec = first ? atSec : endSec - per[j]!;
-    first = false;
+    const startSec = durs.length === 0 ? atSec : endSec - per[durs.length - 1]!;
     flush(startSec);
     const dur = walk(child, startSec, acc);
     if (dur <= 0) throw new Error(`seq at ${atSec}s: a step with a duration compiled to ${dur}s`);
@@ -192,10 +189,7 @@ function walkOverlappedSeq(
     pendingFrom = after;
   }
   flush(endSec);
-  const end = lens();
-  if (end[0] !== pendingFrom[0] || end[1] !== pendingFrom[1] || end[2] !== pendingFrom[2]) {
-    steps.push(span(pendingFrom, end));
-  }
+  steps.push(span(pendingFrom, lens()));
   acc.seqs.push({ startSec: atSec, steps });
   validateSeqOverlap(atSec, overlap, durs);
   return endSec - atSec;
