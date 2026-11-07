@@ -187,6 +187,10 @@ Owner ruling 2026-11-07: keep the generic galaxy engraving with these names; the
 - [ ] Earth labels cut by their text rects, not their anchors.
 - [ ] Five-reviewer loop (cartographer, map designer, historian, art critic, fidelity) to ≥ 8.
 
+### Task 22: Paper knock-out behind lettering (owner-approved debt fix)
+**Files:** `src/services/gpu/shaders/antiqueLook/{captionHalo,fragment}.wesl`
+- [ ] A caption's halo is round (eight directions, two radii) and clears the wash as well as the ink; bare paper skips the taps.
+
 ### Task 23: Plate textures packed into arrays (owner GO 2026-11-07)
 **Files:** `src/data/rendering/antiqueLook.ts`, `src/services/gpu/passes/antiqueLook/{antiqueLook,antiqueLookTargetRows,createAntiqueLookGpu}.ts`,
 `src/services/gpu/shaders/antiqueLook/fragment.wesl`, `tests/services/gpu/shaders/antiquePlateBindings.parity.test.ts`

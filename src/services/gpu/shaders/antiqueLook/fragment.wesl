@@ -10,6 +10,7 @@
 // shadow, crossed only in the deepest; what else a body shows is its own
 // convention, in its module under `bodies/` (Earth's coasts, Mars's markings).
 
+import package::antiqueLook::captionHalo::captionHalo;
 import package::antiqueLook::io::AntiqueUniforms;
 import package::antiqueLook::io::VSOut;
 import package::antiqueLook::cover::coverOf;
@@ -599,26 +600,24 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     bodyInk *= body;
   }
 
-  // Captions at full ink, each on its own paper halo (a 2.5-unit knock-out of
-  // everything engraved beneath it), as an engraver lettered over the work.
+  let figure = ornament.r * clear * sky;
+  var scene = max(max(max(bodyInk, limb), max(skyInk, max(rulings, lines))), figure) * (1.0 - ornament.b);
+  // Captions at full ink, each on its own knock-out of the engraving and wash
+  // beneath it, as an engraver lettered over the work. Bare paper has nothing
+  // to clear, so it skips the halo's taps.
   var captions = 0.0;
-  var captionHalo = 0.0;
   if ((u.flags & FLAG_CAPTIONS) != 0u) {
     // Ink from the letters' light fill only; their dark contrast outline (drawn
     // for a black sky) feeds the paper halo instead of thickening the type.
     let ov = texel(overlayTex, ip);
     captions = smoothstep(0.03, 0.2, ov.a) * smoothstep(0.3, 0.6, luma(ov.rgb / max(ov.a, 1e-3)));
-    let reach = 3.5 * u.unit;
-    for (var k = 0; k < 4; k++) {
-      let a = f32(k) * 1.5707963 + 0.7853982;
-      let tap = ip + vec2<i32>(round(vec2<f32>(cos(a), sin(a)) * reach));
-      captionHalo = max(captionHalo, smoothstep(0.05, 0.3, texel(overlayTex, tap).a));
+    if (scene > 0.0 || any(col != paperTone)) {
+      let halo = captionHalo(overlayTex, ip, u.unit, ov.a);
+      col = mix(col, paperTone, halo);
+      scene *= 1.0 - halo;
     }
   }
-
-  let figure = ornament.r * clear * sky;
-  let scene = max(max(max(bodyInk, limb), max(skyInk, max(rulings, lines))), figure) * (1.0 - ornament.b);
-  let lettered = max(scene * (1.0 - captionHalo), captions);
+  let lettered = max(scene, captions);
   // The border's digits only exist along the edges: skip their loop elsewhere.
   var numerals = 0.0;
   let sideUnits = min(p.x, u.res.x / u.unit - p.x);
