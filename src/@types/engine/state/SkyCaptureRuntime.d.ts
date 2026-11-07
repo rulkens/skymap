@@ -24,4 +24,6 @@ export type SkyCaptureRuntime = {
   bakedSettings: EngineSettingsState | null;
   /** The row's own memory of `state.contentVersion` at its last bake; same null sentinel. */
   bakedContentVersion: number | null;
+  /** Frame clock of the last sweep, settled or not; null while the band is shut. */
+  lastBakeAtMs: number | null;
 };

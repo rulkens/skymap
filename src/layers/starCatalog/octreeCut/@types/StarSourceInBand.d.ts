@@ -1,9 +1,9 @@
 import type { StarCatalogSourceType } from '../../@types/StarCatalogSourceType';
 import type { SurveyStarCatalogSourceEntry } from '../../../../@types/data/starCatalog/SurveyStarCatalogSourceEntry';
 
-/** One loaded survey catalog inside its crossfade band this frame — `starSourcesInBand`'s row. */
+/** One loaded survey catalog with a handed value above 0 this frame — `starSourcesInBand`'s row. */
 export type StarSourceInBand = {
   readonly source: StarCatalogSourceType;
   readonly entry: SurveyStarCatalogSourceEntry;
-  readonly crossfade: number;
+  readonly opacity: number;
 };

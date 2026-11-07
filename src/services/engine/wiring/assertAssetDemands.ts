@@ -14,17 +14,20 @@ export function assertAssetDemands(
 ): void {
   for (const row of rows) {
     const demand = row.demand;
-    if (typeof demand === 'string' || 'companionOf' in demand || 'fn' in demand) continue;
+    if (typeof demand === 'string' || 'companionOf' in demand) continue;
     try {
-      const { selects } = resolveAssetDemand(demand, row.gates, entries);
+      resolveAssetDemand(demand, row.gates, entries);
       const near = demand.near;
       if (near !== undefined && (near.lead < 1 || near.release < near.lead)) {
         throw new Error(
           `near needs release ≥ lead ≥ 1, got lead ${near.lead}, release ${near.release}`,
         );
       }
-      if (demand.alsoWhen?.includes('selected') && selects === undefined) {
-        throw new Error("lifts on 'selected' but its entry has no `selects`");
+      const size = demand.size;
+      if (size !== undefined && !(size.loadPx > size.releasePx && size.releasePx > 0)) {
+        throw new Error(
+          `size needs loadPx > releasePx > 0, got ${size.loadPx} and ${size.releasePx}`,
+        );
       }
     } catch (err) {
       throw new Error(`asset row '${String(row.key)}': ${(err as Error).message}`, { cause: err });

@@ -1,7 +1,7 @@
 /**
  * The Layer's one asset row, gated on the `nearEarth` band's out edge, measured from Earth's
- * live position (spec §5.5). The selection arm lets a deep link to a satellite resolve from far
- * away, once `watchSelectionRevealSaga` has switched the section on.
+ * live position (spec §5.5). The entry's `selects` lifts it, so a deep link to a satellite
+ * resolves from far away once `watchSelectionRevealSaga` has switched the section on.
  */
 import type { AssetWiringRow } from '../../../../@types/loading/AssetWiringRow';
 import type { SatellitesAssetKey } from '../../@types/SatellitesAssetKey';
@@ -18,7 +18,7 @@ export function satellitesAssetRows(
       demand: {
         shown: 'satellites',
         near: { band: 'nearEarth', edge: 'out', lead: 1.5, release: 2.5 },
-        alsoWhen: ['searching', 'selected'],
+        alsoWhen: ['searching'],
       },
       priority: 84, // next free rung after the Local Bubble (83)
       // No `gates`: one file holds every class, and a gate names one item's whole data. The pass

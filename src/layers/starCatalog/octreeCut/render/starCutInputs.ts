@@ -5,7 +5,6 @@ import type { StarCatalogId } from '../../@types/StarCatalogId';
 import type { StarCatalogRuntime } from '../../@types/StarCatalogRuntime';
 import type { StarCutInputs } from '../@types/StarCutInputs';
 import { NEAR0 } from '../../../../services/engine/frame/slabs';
-import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import {
   STAR_GLOW_MIN_PX,
   STAR_PICK_MIN_RADIUS_PX,
@@ -20,7 +19,8 @@ import { FLOATS_PER_VIEW } from '../../../../services/gpu/octree/octreeCutLayout
 
 /**
  * This frame's GPU cut inputs, or `null` when no source has a value above 0 in band.
- * `settings` supplies the appearance knobs only; `fade` is the star entry's handed value.
+ * `settings` supplies the appearance knobs only; `fade` is the star entry's handed value,
+ * its `survey` band measured at `views[0]`.
  * `views[0]` is the anchor — its eye is the cut's origin; every view's NEAR0
  * frustum is rebased about that origin in f64 (the cancellation discipline
  * `cutIo.wesl` keeps for node boxes) and the cut keeps a node any of them
@@ -35,7 +35,7 @@ export function starCutInputs(
   const view = views[0]!;
   const originMpc: Vec3 = [view.drawCamPos[0], view.drawCamPos[1], view.drawCamPos[2]];
   const camDistMpc = Math.hypot(originMpc[0], originMpc[1], originMpc[2]);
-  const inBand = starSourcesInBand(runtime, fade, camDistMpc * SCALE_UNITS.MPC_TO_PC);
+  const inBand = starSourcesInBand(runtime, fade);
   if (inBand.length === 0) return null;
 
   const planes = new Float32Array(views.length * FLOATS_PER_VIEW);
@@ -64,10 +64,10 @@ export function starCutInputs(
       // old catalog keeps drawing at the budget it was loaded under. The
       // renderer holds a catalog only once its slot commits, so the skip
       // never drops a drawing source.
-      sources: inBand.flatMap(({ source, entry, crossfade }) => {
+      sources: inBand.flatMap(({ source, entry, opacity }) => {
         const tier = runtime.catalogs.get(source)?.committed()?.req.tier;
         if (tier === undefined) return [];
-        return [{ source, opacity: crossfade, drawBudget: entry.budgets[tier].drawBudget }];
+        return [{ source, opacity, drawBudget: entry.budgets[tier].drawBudget }];
       }),
     },
     nowMs: view.snapshot.nowMs,

@@ -11,7 +11,6 @@ import { describe, it, expect, vi } from 'vitest';
 import { starAggregateUpsamplePass } from '../../../../../src/layers/starCatalog/survey/passes/starAggregateUpsamplePass';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { Source } from '../../../../../src/data/source';
-import { GAIA_STARS_ENTRY } from '../../../../../src/layers/starCatalog/sources/gaia-stars';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { PassState } from '../../../../../src/@types/engine/frame/PassState';
 import type { StarCatalogRuntime } from '../../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
@@ -25,7 +24,6 @@ import type { StarColumns } from '../../../../../src/layers/starCatalog/survey/@
 const ALL_ON = { famousStar: 1, gaiaStars: 1, sStar: 1, sun: 1 } as const;
 
 const PC_TO_MPC = SCALE_UNITS.PC_TO_MPC;
-const { inner, outer } = GAIA_STARS_ENTRY.crossfadePc;
 
 const VIEW_STUB = {} as SlabView;
 const PASS_STUB = {
@@ -72,7 +70,7 @@ function makeRuntime(upsample: unknown): StarCatalogRuntime {
 // The pass reads no engine state: its enable rides the handed value.
 const PASS_STATE = {} as unknown as PassState;
 
-const inBand: Vec3 = [0, 0, (inner + (outer - inner) * 0.5) * PC_TO_MPC];
+const inBand: Vec3 = [0, 0, 1_000 * PC_TO_MPC];
 
 describe('starAggregateUpsamplePass', () => {
   it('calls starAggregateUpsample.draw with the HDR pass and the offscreen view', () => {

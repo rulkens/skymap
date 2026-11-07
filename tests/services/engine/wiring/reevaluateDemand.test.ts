@@ -21,11 +21,28 @@ import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientation
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { AssetWiringRow } from '../../../../src/@types/loading/AssetWiringRow';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
-import type { DemandFn } from '../../../../src/@types/loading/DemandFn';
+import type { AssetDemand } from '../../../../src/@types/loading/AssetDemand';
+import type { AssetDemandVerdict } from '../../../../src/@types/loading/AssetDemandVerdict';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 import type { Tier } from '../../../../src/@types/data/Tier';
 import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
+
+type DemandFn = () => boolean;
+
+/** The loop is under test, not the declarations: a stub row carries its verdict as functions, which
+ *  this stand-in for the evaluator reads. Real declarations meet the real evaluator elsewhere. */
+type StubDemand = { stub: { demand: DemandFn; release?: DemandFn } };
+
+vi.mock('../../../../src/services/engine/wiring/evaluateAssetDemand', () => ({
+  evaluateAssetDemand: (row: { demand: StubDemand }): AssetDemandVerdict => ({
+    demand: row.demand.stub.demand(),
+    release: row.demand.stub.release?.() ?? false,
+  }),
+}));
+
+const stubDemand = (demand: DemandFn, release?: DemandFn): AssetDemand =>
+  ({ stub: { demand, release } }) as unknown as AssetDemand;
 
 type StubSlot = AssetSlot<unknown, unknown> & {
   load: ReturnType<typeof vi.fn>;
@@ -88,7 +105,7 @@ function makeState(
     },
     slotsByKey: points,
     visibilityEntries: [],
-    selection: { hover: null, select: null, focus: null },
+    selection: { hover: null, select: null, focus: null, pending: { select: null, focus: null } },
   } as unknown as EngineState;
 }
 
@@ -101,7 +118,7 @@ function row(
   const req = opts.req ?? ((tier) => ({ source: key, tier }));
   // `priority` is required on the row type but irrelevant to the edges under
   // test here (fetch order is the queue's concern), so every stub row shares 0.
-  return { key, slot, req, demand: { fn: demand, release: opts.release }, priority: 0 };
+  return { key, slot, req, demand: stubDemand(demand, opts.release), priority: 0 };
 }
 
 /** A queue whose calls are assertable — for the edges that must reach it with
@@ -286,7 +303,7 @@ describe('evaluateRows', () => {
     evaluateRows(state, [
       ranked(first, Source.TwoMRS, 0),
       ranked(second, Source.Glade, 1),
-      { ...ranked(waiting, Source.SDSS, 2), demand: { fn: () => demanded } },
+      { ...ranked(waiting, Source.SDSS, 2), demand: stubDemand(() => demanded) },
     ]);
     expect(waiting.load).not.toHaveBeenCalled();
 
@@ -422,7 +439,7 @@ describe('evaluateRows — body textures at a stale tier', () => {
     key: 'earth:surface',
     slot,
     req: (tier) => ({ bodyId: 'earth', kind: 'surface', tier: clampTier(tier, 'large') }),
-    demand: { fn: () => true },
+    demand: stubDemand(() => true),
     priority: 0,
   });
 
@@ -430,7 +447,7 @@ describe('evaluateRows — body textures at a stale tier', () => {
     key: 'uranus:surface',
     slot,
     req: (tier) => ({ bodyId: 'uranus', kind: 'surface', tier: clampTier(tier, 'small') }),
-    demand: { fn: () => true },
+    demand: stubDemand(() => true),
     priority: 0,
   });
 
@@ -452,7 +469,7 @@ describe('evaluateRows — body textures at a stale tier', () => {
       },
       slotsByKey: new Map([[key, slot]]),
       visibilityEntries: [],
-      selection: { hover: null, select: null, focus: null },
+      selection: { hover: null, select: null, focus: null, pending: { select: null, focus: null } },
     } as unknown as EngineState;
   }
 

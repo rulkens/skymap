@@ -1,0 +1,17 @@
+/* Half the 600px file: about the size the screen has on a phone. */
+.picture {
+  display: block;
+  width: min(100%, 18.75rem);
+  height: auto;
+  border: 1px solid var(--site-line);
+  border-radius: 0.75rem;
+}
+
+/* ShotCaption's size and colour: a docs picture's label. */
+.caption {
+  margin-top: var(--site-space-3xs);
+  font-size: 0.8125rem;
+  font-weight: var(--weight-small);
+  line-height: 1.45;
+  color: var(--site-text-dim);
+}

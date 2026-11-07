@@ -1,6 +1,6 @@
 /**
- * Ratchet for ADRs 0014 and 0015: no folder under `src/layers/` or the camera
- * trees holds more than 15 files directly, no folder is named for a bag, and a
+ * Ratchet for ADRs 0014 and 0015: no folder under `src/layers/`, the camera
+ * trees or `packages/desktop/src/` holds more than 15 files directly, no folder is named for a bag, and a
  * regrouped Layer has no role folder (`render/`, `ui/`, ...) at its root. The three allow-lists are
  * shrink-only: an entry must go when its folder or Layer is fixed, so none can
  * go stale. A Layer's regroup PR deletes its rows from them. Every Layer's selection
@@ -19,6 +19,8 @@ const CONCERN_ROOTS = [
   'src/utils/camera',
   'src/@types/camera',
   'src/data/camera',
+  // The desktop app follows the same concern-module shape (docs/DESKTOP.md).
+  'packages/desktop/src',
 ];
 const BAG_NAMES = ['helpers', 'misc', 'common', 'shared', 'other'];
 const ROLE_FOLDERS = [

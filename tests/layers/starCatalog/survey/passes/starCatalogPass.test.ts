@@ -2,8 +2,8 @@
  * starCatalogPass — the survey (Gaia bin) star LEAF content row. The cut is
  * taken on the GPU; here we pin the layer's own behaviour:
  *
- *   1. `enabled` delegates to `starCatalogVisible` — the handed value AND the
- *      crossfade band that IS the far gate.
+ *   1. `enabled` delegates to `starCatalogVisible` — the handed value, which
+ *      carries the entry's `survey` band (the far gate).
  *   2. `draw` records the LEAF stream of the frame cut for every source,
  *      handing the IDENTICAL cut-origin-rebased matrix to each `drawCut`
  *      (the shared-camera-uniform invariant).
@@ -14,7 +14,6 @@ import { describe, it, expect, vi } from 'vitest';
 import { starCatalogPass } from '../../../../../src/layers/starCatalog/survey/passes/starCatalogPass';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { Source } from '../../../../../src/data/source';
-import { GAIA_STARS_ENTRY } from '../../../../../src/layers/starCatalog/sources/gaia-stars';
 import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/structureFocusSubsystem';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
@@ -96,18 +95,14 @@ function makeNear0View(camPos: Vec3): SlabView {
   };
 }
 
-const { inner, outer } = GAIA_STARS_ENTRY.crossfadePc;
 const VIEW_STUB = makeNear0View([0, 0, 0]);
 
 describe('starCatalogPass.enabled', () => {
-  it("follows its catalog's handed value and the crossfade band", () => {
+  it("follows its catalog's handed value", () => {
     const pass = starCatalogPass(makeRuntime(null).runtime);
-    const insideCtx = makeCtx(camAtPc(inner + (outer - inner) * 0.25));
-    expect(pass.enabled(STATE, insideCtx, VIEW_STUB, ALL_ON)).toBe(true);
-
-    const beyondCtx = makeCtx(camAtPc(outer + 1000));
-    expect(pass.enabled(STATE, beyondCtx, VIEW_STUB, ALL_ON)).toBe(false);
-    expect(pass.enabled(STATE, insideCtx, VIEW_STUB, { ...ALL_ON, gaiaStars: 0 })).toBe(false);
+    const ctx = makeCtx(camAtPc(1_000));
+    expect(pass.enabled(STATE, ctx, VIEW_STUB, ALL_ON)).toBe(true);
+    expect(pass.enabled(STATE, ctx, VIEW_STUB, { ...ALL_ON, gaiaStars: 0 })).toBe(false);
   });
 });
 

@@ -12,7 +12,7 @@ a transitional `{ fn, release? }` variant, which PR B deletes.
 
 **Tech Stack:** TypeScript, Vitest.
 
-**Spec:** `docs/superpowers/specs/2026-11-06-declarative-asset-demand-design.md`
+**Spec:** `docs/superpowers/specs/completed/2026-11-06-declarative-asset-demand-design.md`
 
 ## Global Constraints
 

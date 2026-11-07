@@ -26,7 +26,11 @@ function pointRow(
     req: (tier) => galaxyCatalogRequest(source, tier),
     // Target 0 means the tier ships no file for this source (SDSS at `small`); a source
     // with no caps has no target and is listed at every tier.
-    demand: { tiers: TIER_LADDER.filter((tier) => tierTarget(source, tier) !== 0) },
+    demand: {
+      tiers: TIER_LADDER.filter((tier) => tierTarget(source, tier) !== 0),
+      near: { band: 'deepZoom', edge: 'in', lead: 10, release: 100 },
+      alsoWhen: ['searching'],
+    },
     priority: entry.priority,
     gates: { address: 'survey', item: id },
   };

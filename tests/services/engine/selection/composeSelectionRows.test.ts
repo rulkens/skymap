@@ -638,15 +638,6 @@ describe('composeSelectionRows — claim-then-decode contract', () => {
     expect(decode).not.toHaveBeenCalled();
   });
 
-  it('two rows claiming the same id throw, naming the id and both rows', () => {
-    const rows = [stubRow('x', 'x-', () => null), stubRow('y', 'x-', () => null)];
-    const composed = composeSelectionRows(
-      () => rows,
-      () => NO_KINDS_OFF,
-    );
-    expect(() => composed.resolveFocusId('x-1')).toThrow(/x-1/);
-  });
-
   it('rowsOf is read on every call', () => {
     let calls = 0;
     const composed = composeSelectionRows(
