@@ -44,13 +44,19 @@ fn lineFamily(form: vec3<f32>, spacing: f32, alive: f32, width: f32, pxUnits: f3
 fn crossHatch(form: vec3<f32>, p: vec2<f32>, tone: f32, spacing: f32, baseAngle: f32, pxUnits: f32) -> f32 {
   let s = smoothstep(vec3<f32>(0.465, 0.595, 0.725), vec3<f32>(0.535, 0.665, 0.795), vec3<f32>(tone));
   let w1 = BURIN.x + dot(s, BURIN.yzw - BURIN.xyz);
-  let first = lineFamily(form, spacing, clamp((tone - 0.06) / 0.04, 0.0, 9.7), w1, pxUnits, 0.0);
-  let a = baseAngle + 0.47;
-  let n = vec2<f32>(-sin(a), cos(a));
-  let w2 = mix(BURIN.x, BURIN.y, smoothstep(0.92, 0.97, tone));
-  let second = lineFamily(vec3<f32>(dot(p, n), dot(p, vec2<f32>(n.y, -n.x)), 1.0), spacing * 1.15,
-                          clamp((tone - 0.8) / 0.025, 0.0, 9.7), w2, pxUnits, 5.3);
-  return min(first + second, 1.05);
+  // The families run only where their lines exist: most of a lit globe is paper.
+  var ink = 0.0;
+  if (tone > 0.06) {
+    ink = lineFamily(form, spacing, clamp((tone - 0.06) / 0.04, 0.0, 9.7), w1, pxUnits, 0.0);
+  }
+  if (tone > 0.8) {
+    let a = baseAngle + 0.47;
+    let n = vec2<f32>(-sin(a), cos(a));
+    let w2 = mix(BURIN.x, BURIN.y, smoothstep(0.92, 0.97, tone));
+    ink += lineFamily(vec3<f32>(dot(p, n), dot(p, vec2<f32>(n.y, -n.x)), 1.0), spacing * 1.15,
+                      clamp((tone - 0.8) / 0.025, 0.0, 9.7), w2, pxUnits, 5.3);
+  }
+  return min(ink, 1.05);
 }
 
 // Tone from the form: paper on the lit crown, full past the terminator but for the

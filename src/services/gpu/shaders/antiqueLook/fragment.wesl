@@ -347,16 +347,18 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
         // Half the screen line, half the Sun's parallel: lines bow with the globe
         // yet still cross the tone's contours, so they taper at both ends. `n`
         // points away from the Sun, as the arc grows: the halves add, never cancel.
-        let phase = 0.5 * dot(p, n) + 0.5 * radius * hit.theta;
-        let screenStep = 0.5 * n * pxUnits;
-        let dx = screenStep.x + 0.5 * radius * (ballTheta(rayX, b) - hit.theta);
-        let dy = screenStep.y + 0.5 * radius * (ballTheta(rayY, b) - hit.theta);
-        form = vec3<f32>(phase, along, length(vec2<f32>(dx, dy)) * u.unit);
         tone = formTone(hit.ndl, hit.ndv);
         // The ring's shadow on the ball is one solid stroke, not hatching.
         if (hit.ringShadow) {
           tone = max(tone, 0.85);
           lines = 0.95;
+        }
+        if (tone > 0.06) {
+          let phase = 0.5 * dot(p, n) + 0.5 * radius * hit.theta;
+          let screenStep = 0.5 * n * pxUnits;
+          let dx = screenStep.x + 0.5 * radius * (ballTheta(rayX, b) - hit.theta);
+          let dy = screenStep.y + 0.5 * radius * (ballTheta(rayY, b) - hit.theta);
+          form = vec3<f32>(phase, along, length(vec2<f32>(dx, dy)) * u.unit);
         }
       }
       lines = max(lines, inkLine(hit.edgeUnits, 1.1, pxUnits));
@@ -371,7 +373,11 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
       let ocean = 1.0 - smoothstep(0.35, 0.65, landShare);
       let coastPx = abs(landShare - 0.5) / landPerPx;
       let coast = 1.0 - smoothstep(0.55 * u.unit, 0.55 * u.unit + 1.0, coastPx);
-      let water = waterLines(p, seaD, seaPerUnit, pxUnits) * ocean * (1.0 - smoothstep(0.35, 0.8, tone));
+      let waterFade = ocean * (1.0 - smoothstep(0.35, 0.8, tone));
+      var water = 0.0;
+      if (waterFade > 0.0) {
+        water = waterLines(p, seaD, seaPerUnit, pxUnits) * waterFade;
+      }
       // Seas a pale smalt, pooled darker along the shore; land in Dutch outline
       // colour, a band along each coast fading inward to paper. The colourist's
       // wash stops a little off the cut coast, by a slow wander.
