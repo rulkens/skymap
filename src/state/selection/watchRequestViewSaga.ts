@@ -11,7 +11,7 @@ import { call, getContext, put, select, takeLatest } from 'typed-redux-saga';
 import { requestView } from './requestView';
 import { requestFocus } from './requestFocus';
 import { resolveFocusRefDeferringSaga } from './resolveFocusRefDeferringSaga';
-import { clipStarted } from '../camera/cameraSlice';
+import { clipEnded, clipStarted } from '../camera/cameraSlice';
 import { selectSkyView } from '../engine/selectors';
 import { selectTakeoverSource } from '../takeover/selectors';
 import { selectOrientation } from '../settings/selectors';
@@ -31,23 +31,35 @@ import { SKY_BELOW_HORIZON_LOOK_RAD } from '../../data/sky/skyBelowHorizonLookRa
 import { SKY_LOOK_SEC } from '../../data/sky/skyLookSec';
 import type { Effect } from '../../@types/animation/Effect';
 import type { PlacedRow } from '../../@types/engine/selection/PlacedRow';
-import type { SagaContext } from '../../store/types';
+import type { ClipData } from '../../@types/animation/ClipData';
+import type { RootState, SagaContext } from '../../store/types';
 
 export function* watchRequestViewSaga() {
+  // The head turn this saga last started: a fly asked for while it still plays ends it first,
+  // since `suspendDuringClip` would otherwise swallow the focus tween.
+  let looking: ClipData | null = null;
+  function* fly(id: string) {
+    const clip = yield* select((state: RootState) => state.camera.clip);
+    if (looking !== null && clip?.data === looking) yield* put(clipEnded());
+    looking = null;
+    yield* put(requestFocus({ id, transition: 'fly' }));
+  }
+
   yield* takeLatest(requestView, function* (action) {
     const { id } = action.payload;
+    const selection = yield* getContext<SagaContext['selection']>('selection');
+    // Resolving can wait on a catalog; standing is read once it is done.
+    const ref = yield* resolveFocusRefDeferringSaga(id);
     const view = yield* select(selectSkyView);
     const takeover = yield* select(selectTakeoverSource);
     if (view === null || (takeover !== null && takeover.kind !== 'sky')) {
-      yield* put(requestFocus({ id, transition: 'fly' }));
+      yield* call(fly, id);
       return;
     }
-    const selection = yield* getContext<SagaContext['selection']>('selection');
-    const ref = yield* resolveFocusRefDeferringSaga(id);
     const simDays = deriveSimDays(yield* select(selectTimeState), performance.now());
     const row = selection.extractRow(ref, simDays);
     if (row === null || !('positionMpc' in row) || isUnderfoot(row, view.spot)) {
-      yield* put(requestFocus({ id, transition: 'fly' }));
+      yield* call(fly, id);
       return;
     }
     const runtime = yield* call(liveCameraRuntimeSaga);
@@ -80,11 +92,7 @@ export function* watchRequestViewSaga() {
       }),
     ];
     if (look.kind === 'look') legs.push(tween('fov', { to: look.fovYRad, over }));
-    yield* put(
-      clipStarted({
-        data: { start: { ...runtime.from, fov: runtime.fovYRad }, timeline: [all(legs)] },
-        frame: orientation,
-      }),
-    );
+    looking = { start: { ...runtime.from, fov: runtime.fovYRad }, timeline: [all(legs)] };
+    yield* put(clipStarted({ data: looking, frame: orientation }));
   });
 }

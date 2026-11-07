@@ -1,11 +1,13 @@
 /**
  * skySlice — what the last search while standing found below the horizon, for the sky HUD's
- * "Skip to when it rises" or its never-rises line (R12). `watchRequestViewSaga` is its one
- * writer; a new entry clears it, since a rise is only true of the spot it was searched from.
+ * "Skip to when it rises" or its never-rises line (R12). Only `watchRequestViewSaga` sets it;
+ * standing ending (the sky view readout going null) or a new entry clears it, since a rise is
+ * only true of the spot it was searched from.
  */
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import { enterSky } from './enterSky';
+import { engineSkyViewReported } from '../engine/engineSlice';
 import type { SkyBelowHorizon } from '../../@types/sky/SkyBelowHorizon';
 
 const initialState: { belowHorizon: SkyBelowHorizon | null } = { belowHorizon: null };
@@ -21,6 +23,9 @@ const skySlice = createSlice({
   extraReducers: (builder) => {
     builder.addCase(enterSky, (state) => {
       state.belowHorizon = null;
+    });
+    builder.addCase(engineSkyViewReported, (state, action) => {
+      if (action.payload === null) state.belowHorizon = null;
     });
   },
 });

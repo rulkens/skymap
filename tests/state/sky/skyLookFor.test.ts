@@ -6,6 +6,7 @@ import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyS
 import { rotateVec3ByTightMat3 } from '../../../src/utils/math/rotateVec3ByTightMat3';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 import { degToRad } from '../../../src/utils/math/degToRad';
+import { unixMsToJulianDays } from '../../../src/utils/time/unixMsToJulianDays';
 import type { SkySpot } from '../../../src/@types/camera/pose/SkySpot';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 import type { PositionedId } from '../../../src/@types/scene/PositionedId';
@@ -37,7 +38,7 @@ describe('skyLookFor', () => {
     expect(look.neverRises).toBe(false);
     expect(look.riseAt).not.toBeNull();
     expect(look.riseAt! - SIM_DAYS).toBeLessThan(1);
-    const atRise = altAzFromSpot(COPENHAGEN, target, look.riseAt!);
+    const atRise = altAzFromSpot(COPENHAGEN, target, deriveBodyStates(look.riseAt!));
     expect(atRise.altitudeRad).toBeCloseTo(0, 5);
     expect(look.azimuthRad).toBeCloseTo(atRise.azimuthRad, 9);
     // On the celestial equator a target rises due east.
@@ -55,5 +56,24 @@ describe('skyLookFor', () => {
     if (look.kind !== 'look') throw new Error(`expected look, got ${look.kind}`);
     expect(look.altitudeRad).toBeCloseTo(degToRad(85), 3);
     expect(look.fovYRad).toBeCloseTo(3 * 2 * Math.atan(20 / 1e3), 4);
+  });
+
+  it('the Sun in a polar night is a body that does not rise soon, not a never-rising star', () => {
+    const bearIsland: SkySpot = { body: EARTH, lonRad: degToRad(19), latRad: degToRad(74.5) };
+    const midwinter = unixMsToJulianDays(Date.parse('2026-12-21T12:00:00Z'));
+    const sun = {
+      type: 'starCatalog',
+      positionMpc: [0, 0, 0] as Vec3,
+      radiusMpc: 2.25e-14,
+      driver: {
+        poseId: 'sun',
+        boundingRadiusM: 0,
+        footprintRadiusM: 0,
+        groundRadiusM: null,
+        standoffRadii: 0,
+      },
+    };
+    const look = skyLookFor(sun, bearIsland, midwinter, LENS);
+    expect(look).toMatchObject({ kind: 'belowHorizon', riseAt: null, neverRises: false });
   });
 });

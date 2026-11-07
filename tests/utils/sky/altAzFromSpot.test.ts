@@ -18,7 +18,7 @@ describe('altAzFromSpot', () => {
       lonRad: 0.3,
       latRad: 89.9 * (Math.PI / 180),
     };
-    const { azimuthRad, altitudeRad } = altAzFromSpot(spot, [0, 0, 0], 2461000);
+    const { azimuthRad, altitudeRad } = altAzFromSpot(spot, [0, 0, 0], deriveBodyStates(2461000));
     expect(Number.isFinite(azimuthRad)).toBe(true);
     expect(Number.isFinite(altitudeRad)).toBe(true);
   });
@@ -37,7 +37,7 @@ describe('altAzFromSpot', () => {
     const eye: Vec3 = [0, 1, 2].map((i) => earth.positionMpc[i]! + up[i]! * radiusMpc) as Vec3;
     const d = 384_400_000 * SCALE_UNITS.M_TO_MPC;
     const target: Vec3 = [0, 1, 2].map((i) => eye[i]! + eastWorld[i]! * d) as Vec3;
-    const { azimuthRad, altitudeRad } = altAzFromSpot(spot, target, simDays);
+    const { azimuthRad, altitudeRad } = altAzFromSpot(spot, target, deriveBodyStates(simDays));
     // From the centre it would read ~0.95° up.
     expect(Math.abs(altitudeRad)).toBeLessThan(1e-9);
     expect(azimuthRad).toBeCloseTo(Math.PI / 2, 9);
