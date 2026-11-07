@@ -1,12 +1,52 @@
 # Stellar streams — design
 
-**Status:** design, awaiting approval. Branch `feat/stellar-streams`, worktree `feat-milky-way-structures`,
+**Status:** approved and built on #1074; what shipped differently is under Amendments below. Branch `feat/stellar-streams`, worktree `feat-milky-way-structures`,
 written against `main` at `74751cae3` plus the spike commits. Rulings: grill transcript
 `docs/grill-sessions/stellar-streams-production-2026-11-06.md` (Q1–Q10); Q11–Q13 below are recommendations
 for review.
 
 **Depends on:** the asset-demand-as-data work another session is running (the `near` data form on
 `AssetWiringRow`, §3). This spec targets that shape; the plan sequences the asset row after it lands.
+
+## Amendments (2026-11-07)
+
+Plan Tasks 14–21 and the final review changed the design below. Where a section disagrees with this list,
+this list is what shipped.
+
+- **Haze at half resolution** (§6): the haze look draws into a half-res target and an upsample pass blends it
+  in (~30 ms → ~3 ms GPU). One gate (`stellarStreamsLookLive`) holds the haze producer, the upsample, the streak
+  pass and its pick together.
+- **Sagittarius** (§4.2): still-bound remnant particles capped at 10 % of the 60,000 (a uniform pick made it
+  56 % and the core burned white). Its focus frames `frameRadiusKpc`, the 90th-percentile reach of the debris,
+  not half the 275 kpc extent; galstreams streams frame half their length.
+- **Captions** (§5.5): a stream is named once its length spans 150 px, at 35–150 px like the Milky Way
+  structure captions, tinted by the stream's mean particle colour (BP−RP spread ×6, saturation ×2).
+- **Colours** (§4.2): each particle samples a star type (giant, turnoff, BHB) by its stream's [Fe/H] and takes
+  that type's colour, stored as Gaia BP−RP and tinted with the star catalogue's `starTint`. [Fe/H] comes from a
+  curated table (Harris 1996, 2010 ed.; S5, Li et al. 2022), the median where none; Sagittarius runs from
+  −0.57 bound to −1.13 for old debris.
+- **Meta schema** (§4.3) gained `wikipediaTitle`, `frameRadiusKpc`, `colourT`, `metallicity` (measured only),
+  `stellarMass` (13 published values, `partial` shown as "≥"), `centrelineMpc` and `ribbonWidthKpc`.
+  `description` is the Wikipedia extract or null. The fetcher rejects a meta without `centrelineMpc`. The meta
+  is 107 KB raw, 22 KB gzipped, and still demanded at boot.
+- **Card** (§5.6): length (or extent), distance, width when known, metallicity and stellar mass where present,
+  and a Wikipedia link and blurb for the 6 streams with an article of their own (5 articles, summaries cached in
+  `data/raw/streams/`). The Particles, Source and Licence rows were dropped.
+- **Pick** (§5.4): no particle pick. Each stream's track is simplified to at most 16 centreline points (556
+  segments in all; Sagittarius gets two arms derived from the snapshot), drawn as static ribbons wide enough
+  to hold the track. During a stream focus only the focused stream picks.
+- **Focus recedes everything else** (§2's per-stream highlight non-goal, §5.6): a stream focus dims the rest
+  of the scene and the other streams, and nothing but the focused stream takes a click. Core changes behind it:
+  - a selection row declaring `focusSphere` drives the recession; structures declare their ball, streams
+    `RECEDE_ALL_FOCUS_SPHERE`, a sphere nothing lies inside;
+  - every sphere change fades through zero (structure → structure takes 800 ms, not a snap);
+  - the Milky Way disc and Sgr A* dim and leave the pick outside any focus sphere; the Zone of Avoidance
+    recedes and takes no pick under any focus;
+  - a focus recedes the scene only while its subject's kind is shown: both blends scale by the selecting show
+    entry's fade × band, so a focused stream switched off or out of its band leaves the scene undimmed and
+    clickable. Kinds no show entry selects (structures) are unaffected.
+- **Deploy** (§9): the R2 sync runs from this branch before the merge, not from `main` after it
+  (`tools/streams/README.md`, "Deploy order").
 
 ## 1. Intent
 
