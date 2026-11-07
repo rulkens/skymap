@@ -18,8 +18,8 @@
  * mono font + font-size, so `ch` and `em` here resolve to identical glyph
  * metrics — the two boxes match by construction (border-box, so the panel's own
  * padding + border stay inside this width). If the clock format, the
- * readout/pill padding, or the readout letter-spacing changes, this calc
- * follows. The inline-width scaleLine reads in real px within the box; see the
+ * readout/pill padding, or the readout letter-spacing changes,
+ * `--scale-bar-width` (tokens.css) follows. The inline-width scaleLine reads in real px within the box; see the
  * SCALE_TARGET_PX coupling comment in src/data/layout/scaleTargetPx.ts for why ≤120 px fits here.
  */
 .root {
@@ -27,7 +27,7 @@
   bottom: calc(var(--corner-offset) + var(--time-toolbar-height) + var(--space-3));
   right: var(--corner-offset);
   z-index: 10;
-  width: calc(20ch + 20 * var(--letter-spacing-tight) + 34px);
+  width: var(--scale-bar-width);
   box-sizing: border-box;
   padding: var(--space-4) var(--space-6) var(--space-5);
 

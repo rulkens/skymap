@@ -23,8 +23,8 @@
   backdrop-filter: blur(var(--blur-card));
   box-shadow: var(--shadow-card);
   color: var(--color-accent);
-  font: var(--font-size-lg) / var(--line-height-tight) var(--font-family-mono);
-  letter-spacing: var(--letter-spacing-tight);
+  /* md, not the label's lg, so `--scale-bar-width`'s ch reads the scale bar's glyphs. */
+  font: var(--font-size-md) / var(--line-height-tight) var(--font-family-mono);
   white-space: nowrap;
   cursor: pointer;
   transform: translateX(-50%);
@@ -33,6 +33,14 @@
     opacity var(--duration-base) var(--ease-standard),
     background-color var(--duration-color) ease,
     border-color var(--duration-color) ease;
+}
+
+/* Too narrow to centre clear of the left stack: centre on the band between it and the scale bar. */
+@media (min-width: 769px) and (max-width: 903px) {
+  .root {
+    left: calc((100vw + var(--panel-width) - var(--scale-bar-width)) / 2);
+    max-width: calc(100vw - var(--panel-width) - var(--scale-bar-width) - 4 * var(--corner-offset));
+  }
 }
 
 .phone {
@@ -65,6 +73,8 @@
   overflow: hidden;
   text-overflow: ellipsis;
   color: var(--color-fg);
+  font-size: var(--font-size-lg);
+  letter-spacing: var(--letter-spacing-tight);
 }
 
 .key {

@@ -26,6 +26,14 @@
   animation: fadeIn var(--duration-base) var(--ease-standard);
 }
 
+/* Too narrow to centre clear of the left stack: centre on the band between it and the scale bar. */
+@media (min-width: 769px) and (max-width: 903px) {
+  .root {
+    left: calc((100vw + var(--panel-width) - var(--scale-bar-width)) / 2);
+    width: calc(100vw - var(--panel-width) - var(--scale-bar-width) - 4 * var(--corner-offset));
+  }
+}
+
 .phone {
   bottom: calc(var(--bottom-stack-height) + var(--sheet-lift) + var(--scale-clearance));
   z-index: var(--z-bottom-stack);
