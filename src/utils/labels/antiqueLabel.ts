@@ -1,7 +1,7 @@
 /**
  * antiqueLabel — one label as the antique look shows it: renamed, kept, or null
  * (hidden), per its producer's `AntiqueLabelRule`, and cut in its tier's type
- * (`AntiqueLettering`; capitals take V for U, SATVRNVS). A subject the user is
+ * (`AntiqueLettering`; both capital cuts take V for U, SATVRNVS). A subject the user is
  * looking at (`subjectKept`) always keeps a label, its modern name Latinised when
  * the table has none, centred at the plate's one largest size. Other names sit
  * left-aligned so a lifted name falls upper-right of its glyph; a name set over the
@@ -59,15 +59,17 @@ export function antiqueLabel(
   if (subjectKept) {
     cut = tier === 'italic' || text.length > style.titleMaxChars ? 'italic' : 'capitals';
   }
-  if (cut === 'italic' && DIGIT.test(text)) cut = 'roman';
+  if ((cut === 'italic' || cut === 'spacedItalic') && DIGIT.test(text)) cut = 'roman';
 
   // Until the look's fonts land (`loadLookFonts`), the label keeps its own. White
   // is full ink: the plate inks a caption by its fill's lightness.
-  const fell = cut === 'italic' ? style.italicFont : style.romanFont;
+  const italic = cut === 'italic' || cut === 'spacedItalic';
+  const fell = italic ? style.italicFont : style.romanFont;
   const px = subjectKept ? style.subjectPx : area ? style.areaPx : style[cut].px;
   return {
     ...placed,
-    text: cut === 'capitals' ? text.toUpperCase().replace(/U/g, 'V') : text,
+    text:
+      cut === 'capitals' || cut === 'spacedItalic' ? text.toUpperCase().replace(/U/g, 'V') : text,
     font: hasFont(fell) ? fell : label.font,
     trackingEm: style[cut].trackingEm,
     color: [1, 1, 1, 1],

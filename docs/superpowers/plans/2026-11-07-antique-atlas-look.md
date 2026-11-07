@@ -136,6 +136,18 @@ Open for the owner: the Sombrero and the Clouds still don't read (a content gap,
 
 Open: the depth cover holds only the last body row's depth, so a second globe in a surface sky (the Moon from Earth's ground) reads as sky.
 
+### Task 17: The Milky Way from outside, named (owner brief 2026-11-07)
+**Files:** `src/data/labels/{antiqueMilkyWayNames,antiqueMilkyWayNameReveal,antiqueAreaLettering,antiqueLabelStyle,antiqueEarthPlaceReveal}.ts`,
+`src/@types/rendering/{AntiqueMilkyWayName,AntiqueLettering}.d.ts`, `src/utils/labels/antiqueLabel.ts`,
+`src/layers/milkyWay/{layer.ts,card/present/produceAntiqueMilkyWayNames.ts,card/present/produceMilkyWayLabel.ts}`,
+`src/layers/milkyWay/card/utils/{milkyWayDiscPoint,antiqueMilkyWayNameAlpha}.ts`, `tools/antique/look/views.json`
+- [x] Nine period names on the generated disc: Brachium Persei, Sagittarii, Scuti-Centauri, Normae, Exterius on the generator's own arm ridges (lopsided bend as the sprites draw it), Ramus Orionis and Sol hic at fixed places, Trabs and Nucleus by the bar and bulge; a test holds the arm order against the Sun–centre line crossings.
+- [x] A new `spacedItalic` cut (IM Fell italic capitals, 0.3 em tracking, V for U), set as area lettering: centred, never a title.
+- [x] A second milkyWay screen-label row under `label:milkyWay`; names fade in with the disc's size on screen (420–560 px), the eye outside the disc (20–26 kpc) and the view off edge-on (face cosine 0.3–0.5); no Layer contract change. "You are here" yields to Sol hic while the names show.
+- [x] Lookbench views `mw-face` (32 kpc), `mw-oblique` (35°, 40 kpc) and `mw-edge` (50 kpc).
+
+Owner ruling 2026-11-07: keep the generic galaxy engraving with these names; the offline arm-steered engraving is not ported. Open: the names are straight (no text-on-path).
+
 ## Definition of Done
 
 **Deliverables:** the `stylize` FRAME_ORDER line and `antiqueLook` pass; the `antique` settings

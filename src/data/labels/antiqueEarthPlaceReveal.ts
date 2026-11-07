@@ -11,6 +11,6 @@ export const ANTIQUE_EARTH_PLACE_REVEAL = {
   globePx: [200, 250],
   fitPx: [-8, 8],
   sunCos: [-0.35, -0.1],
-  advanceEm: { capitals: 0.62, roman: 0.5, italic: 0.44 },
+  advanceEm: { capitals: 0.62, roman: 0.5, italic: 0.44, spacedItalic: 0.56 },
   lineEm: 1.2,
 } as const;

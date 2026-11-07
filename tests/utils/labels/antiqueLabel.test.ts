@@ -164,6 +164,20 @@ describe('antiqueLabel', () => {
     expect(europa.text).toBe('EVROPA');
   });
 
+  it("sets an arm of the Galaxy in letter-spaced italic capitals, V for U, under the Milky Way's rule", () => {
+    const rule = ANTIQUE_LABEL_RULES.milkyWay;
+    const arm = antiqueLabel(
+      label('mwName-sagittarius', 'Brachium Sagittarii'),
+      rule,
+      false,
+      ALL_FONTS,
+    )!;
+    expect(arm.text).toBe('BRACHIVM SAGITTARII');
+    expect(arm.font).toBe(ANTIQUE_LABEL_STYLE.italicFont);
+    expect(arm.trackingEm).toBe(ANTIQUE_LABEL_STYLE.spacedItalic.trackingEm);
+    expect(arm.alignX).toBe('center');
+  });
+
   it('does not read inherited keys as table entries', () => {
     expect(antiqueLabel(label('constructor', 'Constructor'), PLACES, false, ALL_FONTS)).toBeNull();
   });

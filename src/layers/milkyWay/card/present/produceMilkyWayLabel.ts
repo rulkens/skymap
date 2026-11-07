@@ -16,6 +16,7 @@ import { MILKY_WAY_LABEL_STYLE } from './milkyWayLabelStyle';
 import { liftedLabelPlacement } from '../../../../services/engine/presentation/liftedLabelPlacement';
 import { textLayoutOf } from '../../../../services/gpu/labelLayout/textLayoutOf';
 import { isPickableUnderFocus } from '../../../../utils/structure/isPickableUnderFocus';
+import { antiqueMilkyWayNameAlpha } from '../utils/antiqueMilkyWayNameAlpha';
 
 // The MW stellar disk, in kpc: the origin dot has no catalog row to read a
 // diameter from, so the producer supplies one for the proportional lift.
@@ -28,6 +29,8 @@ export const produceMilkyWayLabel =
   (state, ctx, fade) => {
     if (state.settings.labels.focusedOnly && state.selection.focus?.type !== 'milkyWay')
       return { labels: [], awake: false };
+    // On an antique plate that letters the disc, "Sol hic" marks where we are.
+    if (antiqueMilkyWayNameAlpha(state, ctx) > 0) return { labels: [], awake: false };
 
     const camDist = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
     const style = MILKY_WAY_LABEL_STYLE;

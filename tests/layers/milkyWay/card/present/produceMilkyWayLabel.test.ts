@@ -8,6 +8,8 @@ import {
   MIN_LABEL_CLEARANCE_PX,
 } from '../../../../../src/services/engine/presentation/leaderLineStyle';
 import { ATLAS_FONT_SIZE } from '../../../../../src/data/fonts';
+import { MILKY_WAY_CENTER_WORLD } from '../../../../../src/data/milkyWay/galacticCenter';
+import { GAL_Z_EQ } from '../../../../../src/data/orientation/orientationFrames';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
@@ -40,13 +42,20 @@ const TEXT_BOTTOM_BELOW_ANCHOR_PX =
 // for the solo gate) and the text layout bbox for the caption's ink bbox (which
 // places the stem top); its fade arrives as the handed value.
 function makeState(
-  opts: { focusedOnly?: boolean; focus?: { type: string } | null; bbox?: LabelBBox } = {},
+  opts: {
+    focusedOnly?: boolean;
+    focus?: { type: string } | null;
+    bbox?: LabelBBox;
+    antique?: boolean;
+  } = {},
 ): EngineState {
   layout.bbox = opts.bbox ?? MEASURED_BBOX;
   return {
     settings: {
       labels: { focusedOnly: opts.focusedOnly ?? false },
+      antique: { enabled: opts.antique ?? false },
     },
+    viewRig: 'mono',
     selection: { focus: opts.focus ?? null, select: null, hover: null },
     gpu: { fontAtlases: { metricsByFont: {} } },
   } as unknown as EngineState;
@@ -115,6 +124,14 @@ describe('produceMilkyWayLabel', () => {
     expect(pickOf(ctx)).toBeDefined();
     expect(pickOf(at([0, 0, 0]))).toBeDefined();
     expect(pickOf(at([5, 0, 0]))).toBeUndefined();
+  });
+
+  it('gives way to the antique plate\'s "Sol hic" while the plate letters the disc', () => {
+    const eye = [0, 1, 2].map((i) => MILKY_WAY_CENTER_WORLD[i]! + 0.032 * GAL_Z_EQ[i]!) as Vec3;
+    const ctx = { ...makeCtx(0.5), drawCamPos: eye };
+    const produce = produceMilkyWayLabelFor(PICK_CODE);
+    expect(produce(makeState({ antique: true }), ctx, 1).labels).toEqual([]);
+    expect(produce(makeState(), ctx, 1).labels).toHaveLength(1);
   });
 
   it('emits one label carrying a leader when enabled', () => {
