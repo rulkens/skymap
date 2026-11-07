@@ -38,6 +38,8 @@ const EUROPE_BUDGET = 60_000;
 const EUROPE_LEVEL = 5;
 const SIZE_UNITS_MIN = 12;
 const SIZE_UNITS_SPAN = 14;
+/** Hills fade out over detail 7..8, where the relief pass's hachures fade in (bodies/earth.wesl). */
+const UNTIL_LEVEL = 7;
 
 export async function molehillsSource(heights: HeightSource): Promise<AntiqueMapPiece> {
   const placed = await placeMolehills(heights, PLANS, {
@@ -66,6 +68,7 @@ export async function molehillsSource(heights: HeightSource): Promise<AntiqueMap
       sizeUnits: SIZE_UNITS_MIN + SIZE_UNITS_SPAN * hill.importance,
       kind: SIGN_KIND_MOLEHILL,
       level: hill.level,
+      untilLevel: UNTIL_LEVEL,
     }));
   return { signs };
 }

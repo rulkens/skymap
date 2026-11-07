@@ -1603,12 +1603,13 @@ The surface tile manifests under `public/data/images/earth-tiles/` and
 - **Checked:** 2026-10-07: <https://www.ncei.noaa.gov/access/metadata/landing-page/bin/iso?id=gov.noaa.ngdc.mgg.dem:etopo_2022>,
   <https://www.ncei.noaa.gov/products/etopo-global-relief-model>
 
-### Natural Earth (rivers of the antique map)
+### Natural Earth (rivers and provinces of the antique map)
 
 <!-- attribution: id=natural-earth; keys=naturalearth.* -->
 
 - **What:** The 1:10m rivers and lake centrelines, world and European
-  supplement (`ne_10m_rivers_lake_centerlines`, `ne_10m_rivers_europe`).
+  supplement (`ne_10m_rivers_lake_centerlines`, `ne_10m_rivers_europe`), and
+  the 1:10m admin-1 states and provinces (`ne_10m_admin_1_states_provinces`).
 - **By:** Natural Earth; primary authors Tom Patterson and Nathaniel Vaughn
   Kelso.
 - **Licence:** Public domain. The terms of use: "All versions of Natural
@@ -1622,8 +1623,30 @@ The surface tile manifests under `public/data/images/earth-tiles/` and
 - **Enters skymap:** `npm run fetch-natural-earth` → `data/raw/naturalearth/` →
   `build-antique-earth` → `public/antique/earth-1690.bin`.
 - **Modified:** Yes. Canals and intermittent rivers dropped, pieces chained
-  and simplified, widths and reveal levels derived.
+  and simplified, widths and reveal levels derived. Provinces dissolved into
+  the realms of 1690, cut along historical lines, simplified, coloured.
 - **Checked:** 2026-11-07: <https://www.naturalearthdata.com/about/terms-of-use/>
+
+### OpenHistoricalMap (1690 borders of the antique map)
+
+<!-- attribution: id=openhistoricalmap; keys=ohm.* -->
+
+- **What:** Twenty boundary relations alive in 1690 (Rhineland and Low
+  Countries principalities, Lorraine, Bar, the Three Bishoprics) with their
+  member ways, pinned by id and version, read as of 2026-11-07T14:38:11Z.
+- **By:** OpenHistoricalMap contributors.
+- **Licence:** CC0 1.0. The Overpass API states "The data is made available
+  under CC0"; the fetcher refuses any element tagged with another licence.
+- **Use:** Free, no credit asked
+- **Attribution:** None required by CC0; credited here as "OpenHistoricalMap
+  contributors".
+- **Upstream:** <https://www.openhistoricalmap.org/>; the extract comes from
+  <https://overpass-api.openhistoricalmap.org/api/interpreter>.
+- **Enters skymap:** `npm run fetch-ohm-1690` → `data/raw/ohm/` →
+  `build-antique-earth` → `public/antique/earth-1690.bin`.
+- **Modified:** Yes. Ways assembled into polygons, enclaves under 40 km²
+  dropped, used to cut the Natural Earth provinces.
+- **Checked:** 2026-11-07: <https://overpass-api.openhistoricalmap.org/api/interpreter>
 
 ### Terrain Tiles "skadi" (1 arc-second heights)
 

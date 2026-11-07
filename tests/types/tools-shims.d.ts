@@ -3,16 +3,16 @@
  * tools/ tree imports without ambient types.
  *
  * Why does the test tree need its own shim copies of declarations
- * that already exist under `tools/types/`?  The two tsconfigs have
+ * that already exist under `tools/vendor-types/`?  The two tsconfigs have
  * disjoint `include` sets — `tsconfig.json` includes `["src", "tests"]`
  * while `tsconfig.tools.json` includes `["tools", "src"]`.  When a
  * test under `tests/tools/*.test.ts` imports from `../../tools/*.ts`,
  * TypeScript follows the import to type-check the tools file but
- * cannot see the shims under `tools/types/` — those only apply to the
+ * cannot see the shims under `tools/vendor-types/` — those only apply to the
  * tools tsconfig.  Re-declaring the same ambient modules here gives
  * the root pass the types it needs.
  *
- * Keep these in sync with `tools/types/*.d.ts`.
+ * Keep these in sync with `tools/vendor-types/*.d.ts`.
  */
 
 declare module 'msdf-bmfont-xml' {
@@ -48,4 +48,14 @@ declare module 'pngjs' {
       read(buffer: Buffer): DecodedPNG;
     };
   };
+}
+
+declare module 'mapshaper' {
+  const mapshaper: {
+    applyCommands(
+      commands: string,
+      input: Readonly<Record<string, unknown>>,
+    ): Promise<Record<string, Buffer>>;
+  };
+  export default mapshaper;
 }

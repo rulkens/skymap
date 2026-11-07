@@ -1395,6 +1395,32 @@ export const RAW_DATA = {
     description: 'Provenance for the Natural Earth layers — pinned commit, URLs, licence, fetch date.',
   },
 
+  // ─── OpenHistoricalMap (CC0) — the antique Earth map's 1690 border lines ─
+
+  'ohm.relations-1690': {
+    path: 'data/raw/ohm/ohm-relations-1690.json',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'OpenHistoricalMap relations alive in 1690 (OHM_RELATIONS_1690, pinned ids and versions) with their member ways, an Overpass attic extract: the Rhineland, Lorraine and Low Countries lines the 1690 realms cut along.',
+    upstream: 'https://overpass-api.openhistoricalmap.org/api/interpreter',
+    fetcher: 'tools/fetch/fetchOhm1690.ts',
+    readme: 'ohm.readme',
+  },
+  'ohm.sha256': {
+    path: 'data/raw/ohm/ohm.sha256',
+    kind: 'file',
+    source: 'committed',
+    description: 'SHA-256 of the OHM extract; the fetcher refuses one that differs.',
+    fetcher: 'tools/fetch/fetchOhm1690.ts',
+  },
+  'ohm.readme': {
+    path: 'data/raw/ohm/README.md',
+    kind: 'file',
+    source: 'committed',
+    description: 'Provenance for the OHM extract — relations, versions, snapshot, query, licence.',
+  },
+
   // ─── Mars surface sources — fetched by hand, no fetchers ───────────────
   // Strip-layout upstream files are read through tiled COG copies (README
   // records the gdal_translate line); worktrees reach them via leaf symlinks.

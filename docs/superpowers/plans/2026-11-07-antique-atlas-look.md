@@ -183,8 +183,9 @@ Owner ruling 2026-11-07: keep the generic galaxy engraving with these names; the
 **Files:** `tools/antique/earth/**` (bake: `npm run build-antique-earth` → `public/antique/earth-1690.bin`), `tools/fetch/{fetchNaturalEarth,fetchOhm1690}.ts`, `data/raw/{naturalearth,ohm}/`, `src/data/labels/antiqueEarthRealms.ts`
 - [x] The map file's geography row, town signs and period names on the globe (7efa5150d, ea90f2cf5).
 - [x] Rivers from Natural Earth (canals after 1690 dropped, chained source to mouth, tapered) and molehills from ETOPO relief, nested by reveal level.
-- [ ] Realms of 1690 from Natural Earth admin-1, cut along OpenHistoricalMap lines; dotted borders by rank, pigments no neighbour shares.
-- [ ] Earth labels cut by their text rects, not their anchors.
+- [x] Realms of 1690 from Natural Earth admin-1, cut along OpenHistoricalMap lines; dotted borders by rank, pigments no neighbour shares.
+- [x] Earth labels cut by their text rects, not their anchors (bc461a73d); Amsteldam outranks every world city; glosses in brackets (5be604ad6).
+- [x] Molehills fade out over detail 7..8, where the relief pass's Earth hachures fade in.
 - [ ] Five-reviewer loop (cartographer, map designer, historian, art critic, fidelity) to ≥ 8.
 
 ### Task 22: Paper knock-out behind lettering (owner-approved debt fix)

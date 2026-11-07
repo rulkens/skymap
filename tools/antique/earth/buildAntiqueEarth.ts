@@ -4,7 +4,9 @@
  * `public/antique/earth-1690.bin` (`antiqueEarthMapFormat.ts`), from its
  * sources: each returns a piece (fill, strips, signs) and the pieces are
  * concatenated in SOURCES order, which is also the signs' painter order.
- * Needs `npm run fetch-natural-earth` and ETOPO (`npm run fetch-height`).
+ * The realms source also writes `src/data/labels/antiqueEarthRealms.ts`.
+ * Needs `npm run fetch-natural-earth`, `npm run fetch-ohm-1690` and ETOPO
+ * (`npm run fetch-height`).
  */
 
 import { mkdirSync } from 'node:fs';
@@ -26,12 +28,13 @@ import {
 import { concatAntiqueMapPieces } from './utils/concatAntiqueMapPieces';
 import { encodeAntiqueEarthMap } from './utils/encodeAntiqueEarthMap';
 import { molehillsSource } from './sources/molehillsSource';
+import { realmsSource } from './sources/realmsSource';
 import { riversSource } from './sources/riversSource';
 
 const OUT_PATH = join(PROJECT_ROOT, 'public/antique', ANTIQUE_EARTH_MAP_FILE);
 
 const SOURCES: readonly ((heights: HeightSource) => Promise<AntiqueMapPiece>)[] = [
-  // Plug-in point: realm fills and realm/province borders (line kinds 0, 1).
+  realmsSource,
   riversSource,
   molehillsSource,
   // Plug-in point: towns (sign kinds 0–7), last so they paint over the hills.

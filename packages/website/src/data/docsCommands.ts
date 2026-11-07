@@ -66,6 +66,7 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
           'fetch-local-bubble',
           'fetch-milliquas',
           'fetch-natural-earth',
+          'fetch-ohm-1690',
           'fetch-skraafoto',
           'fetch-structures',
           'fetch-textures',
@@ -189,7 +190,7 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
       },
       {
         scripts: ['build-antique-earth'],
-        does: 'Writes the antique atlas look’s Earth map, its rivers and molehills, from the Natural Earth rivers and the ETOPO heights.',
+        does: 'Writes the antique atlas look’s Earth map, its realms of 1690, rivers and molehills, from the Natural Earth provinces and rivers, OpenHistoricalMap’s old borders and the ETOPO heights. It also writes the realm name table the app labels them from.',
         manual: 'tools/antique/earth/buildAntiqueEarth.ts',
       },
       {
