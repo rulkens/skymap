@@ -1,0 +1,13 @@
+.root {
+  position: absolute;
+  top: calc(var(--space-12) * 4);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: var(--space-3) var(--space-6);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-xl);
+  background: var(--surface-panel);
+  color: var(--color-fg);
+  font-size: var(--font-size-lg);
+  pointer-events: auto;
+}
