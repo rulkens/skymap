@@ -35,7 +35,7 @@ export const ANTIQUE_ORNAMENTS: readonly AntiqueOrnament[] = [
   {
     id: 'cartouche',
     sprite: 'cartouche',
-    anchor: { kind: 'sheet', corner: 'topLeft', insetUnits: [170, 92], sizeUnits: 280 },
+    anchor: { kind: 'sheet', corner: 'topLeft', insetUnits: [215, 130], sizeUnits: 380 },
     regime: 'always',
     facesNorth: false,
     rotationDeg: 0,

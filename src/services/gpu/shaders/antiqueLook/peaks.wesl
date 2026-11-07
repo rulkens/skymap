@@ -19,18 +19,26 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let reach = max(1, i32(round(u.unit)));
   var mean = 0.0;
   var n = 0.0;
+  var bright = 0.0;
   for (var j = -reach; j <= reach; j++) {
     for (var i = -reach; i <= reach; i++) {
       let q = clamp(c + vec2<i32>(i, j), vec2<i32>(0), size - 1);
       let other = textureLoad(peakTex, q, 0);
       mean += other.w;
       n += 1.0;
+      bright += select(0.0, 1.0, (i != 0 || j != 0) && other.z > mine.z * 0.6);
       // Ties break by cell order so two equal peaks never both survive.
       let ahead = (j > 0) || (j == 0 && i > 0);
       if (other.z > mine.z || (other.z == mine.z && ahead && (i != 0 || j != 0))) {
         return vec4<f32>(0.0);
       }
     }
+  }
+  // A star stands alone; a peak with bright neighbours is a stretch of a line
+  // (an orbit trail, a ring) or a glow's crest, and a run of glyphs along it
+  // reads as a blot. Those are left to the low band.
+  if (bright >= 2.0) {
+    return vec4<f32>(0.0);
   }
   // w: the block's mean light. A star's core saturates in the tone-map, so its
   // brightness survives as the AREA it lights, which the block mean measures.

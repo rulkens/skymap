@@ -10,5 +10,10 @@ const ANTIQUE_BASE = '/antique/';
 export async function fetchAntiqueBitmap(file: string): Promise<ImageBitmap> {
   const response = await fetch(`${ANTIQUE_BASE}${file}`);
   if (!response.ok) throw new Error(`antique look: ${file} answered ${response.status}`);
-  return createImageBitmap(await response.blob());
+  // The paper tile keeps its relief in alpha: a premultiplied decode would
+  // blacken its colour wherever the sheet dips (the chain lines' valleys).
+  return createImageBitmap(await response.blob(), {
+    premultiplyAlpha: 'none',
+    colorSpaceConversion: 'none',
+  });
 }
