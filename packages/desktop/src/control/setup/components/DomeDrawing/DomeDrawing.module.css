@@ -1,0 +1,12 @@
+.root {
+  composes: root from '../KioskDrawing/KioskDrawing.module.css';
+}
+
+.beam {
+  stroke: var(--color-fg-dim);
+  stroke-dasharray: 2 4;
+}
+
+.stars {
+  composes: stars from '../KioskDrawing/KioskDrawing.module.css';
+}

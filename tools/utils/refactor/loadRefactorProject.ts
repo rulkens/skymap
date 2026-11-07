@@ -16,8 +16,9 @@ export function loadRefactorProject(): Project {
     'src/**/*.{ts,tsx}',
     'tests/**/*.{ts,tsx}',
     'tools/**/*.{ts,tsx}',
-    'packages/*/src/**/*.{ts,tsx}',
+    'packages/*/src/**/*.{ts,tsx,cts}',
     'packages/*/tests/**/*.{ts,tsx}',
+    'packages/*/scripts/**/*.{ts,tsx}',
   ]);
   return project;
 }

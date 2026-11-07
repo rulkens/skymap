@@ -24,17 +24,11 @@
 
 import { Fragment, type MouseEvent, type ReactNode, useEffect, useRef } from 'react';
 import SplashProgress from './SplashProgress';
-import {
-  BODY_DATA_ID,
-  BODY_ID,
-  CREDIT_GROUPS,
-  DESCRIBED_BY,
-  ERROR_COPY,
-  TITLE_ID,
-} from './Splash.constants';
+import { BODY_DATA_ID, BODY_ID, DESCRIBED_BY, ERROR_COPY, TITLE_ID } from './Splash.constants';
 import type { SplashError } from '../../@types/splash/SplashError';
 import type { LoadProgressState } from '../../@types/loading/LoadProgressState';
 import styles from './Splash.module.css';
+import { CREDIT_GROUPS } from '../../data/creditGroups';
 
 export type SplashProps = {
   readonly blocked: boolean;
