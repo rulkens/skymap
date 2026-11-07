@@ -2,11 +2,11 @@
  * The body Layer: owns the body settings clusters (`bodies`, `earth`, `orbitTrails`),
  * their visibility entries, the Orbit trails toggle row, the Earth, planet and moon
  * body rows with their source rows, the `body` selection kind and card, palette rows,
- * name captions, orbit trails, the Solar System exhibit and the Earth and planet slab
- * rows. It draws Earth, the planets, moons and rings: its own renderers, texture slots,
- * passes and the two atmosphere computes. It streams and plans the surface tiles, is
- * the ground core's camera reads, and publishes the DebugPanel's tile readouts. The
- * shape-model moons draw through core's one mesh handle (the mesh slots stay core's).
+ * name captions, the antique globe's place names, orbit trails, the Solar System exhibit
+ * and the Earth and planet slab rows. It draws Earth, the planets, moons and rings: its
+ * own renderers, texture slots, passes and the two atmosphere computes. It streams and
+ * plans the surface tiles, is the ground core's camera reads, and publishes the tile
+ * readouts. Shape-model moons draw through core's one mesh handle (its mesh slots).
  */
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';
@@ -41,6 +41,7 @@ import { bodySearch } from './selection/present/bodySearch';
 import { BODY_TRAIL_ELEMENTS } from './orbitTrails/data/bodyTrailElements';
 import { SMALL_BODY_TRAIL_IDS } from './orbitTrails/data/smallBodyTrailIds';
 import { produceSceneBodyCaptions } from './labels/present/produceSceneBodyCaptions';
+import { produceAntiqueEarthPlaces } from './labels/present/produceAntiqueEarthPlaces';
 import { bodyLayerExhibits } from './exhibits/exhibits';
 import { NEAR0 } from '../../services/engine/frame/slabs';
 import BodyDetailCardContainer from './card/ui/BodyDetailCardContainer';
@@ -97,6 +98,12 @@ export const bodyLayer = defineLayer({
         id: 'sceneBodyCaptions',
         label: 'body',
         produceLabels: produceSceneBodyCaptions(runtime.pickCodes),
+      },
+      {
+        slab: NEAR0,
+        id: 'antiqueEarthPlaces',
+        label: 'body',
+        produceLabels: produceAntiqueEarthPlaces(runtime.pickCodes),
       },
     ],
     orbitTrails: {

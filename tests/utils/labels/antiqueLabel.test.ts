@@ -6,6 +6,7 @@ import { bodyCaption } from '../../../src/utils/labels/bodyCaption';
 import { ANTIQUE_LABEL_RULES } from '../../../src/data/labels/antiqueLabelRules';
 import { ANTIQUE_LABEL_STYLE } from '../../../src/data/labels/antiqueLabelStyle';
 import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
+import { ANTIQUE_EARTH_PLACES } from '../../../src/data/labels/antiqueEarthPlaces';
 
 const label = (id: string, text: string): Label2D => ({
   id,
@@ -146,6 +147,21 @@ describe('antiqueLabel', () => {
     const shown = antiqueLabel(label('saturn', 'Saturn'), PLACES, false, () => false)!;
     expect(shown.font).toBe('cormorant');
     expect(shown.text).toBe('SATVRNVS');
+  });
+
+  it('sets every globe name over its place, centred, lands in capitals and seas in italic, whatever the body rule hides', () => {
+    const rule = ANTIQUE_LABEL_RULES.body;
+    expect(rule?.unlisted).toBe('hide');
+    for (const place of ANTIQUE_EARTH_PLACES) {
+      const shown = antiqueLabel(label(place.id, place.name), rule, false, ALL_FONTS);
+      expect(shown, place.id).not.toBeNull();
+      expect(shown!.alignX).toBe('center');
+      expect(shown!.font).toBe(
+        place.kind === 'sea' ? ANTIQUE_LABEL_STYLE.italicFont : ANTIQUE_LABEL_STYLE.romanFont,
+      );
+    }
+    const europa = antiqueLabel(label('earthPlace-europa', 'Europa'), rule, false, ALL_FONTS)!;
+    expect(europa.text).toBe('EVROPA');
   });
 
   it('does not read inherited keys as table entries', () => {

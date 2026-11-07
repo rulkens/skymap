@@ -1217,4 +1217,49 @@ describe('label2DDirector', () => {
     expect(flushedLabels(labelStub).map((f) => f.map((l) => l.text))).toEqual([['Sun'], ['Sol']]);
     expect(lineStub.setLines.mock.calls.map((c) => (c[0] as unknown[]).length)).toEqual([1, 0]);
   });
+
+  it("a place name on the focused Earth keeps Earth's emphasis and never takes its title", () => {
+    const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
+    const labelStub = makeLabelStub();
+    dir.attachRenderers(labelStub as never, makeLineStub() as never, defaultMeasure);
+    const EARTH = 7; // HIGHLIGHT_ROWS' pick id for earth
+    const terra: Label2D = {
+      ...SAMPLE_LABEL,
+      id: 'sceneBody-earth',
+      text: 'Earth',
+      subjectId: EARTH,
+    };
+    const africa: Label2D = {
+      ...SAMPLE_LABEL,
+      id: 'earthPlace-africa',
+      text: 'Africa',
+      worldPos: [0.3, 0, 0],
+      subjectId: EARTH,
+    };
+    dir.registerProducer({
+      id: 'bodies',
+      label: 'body',
+      produceLabels: () => ({ labels: [terra, africa], awake: false }),
+    });
+    const state = {
+      ...makeHighlightState(null, 'earth'),
+      selection: { hover: null, select: { type: 'body', id: 'earth' }, focus: null },
+      settings: { antique: { enabled: true } },
+      visibilityEntries: APP_VISIBILITY_REGISTRY,
+    } as unknown as EngineState;
+    const ctxAt = (nowMs: number) =>
+      ({
+        ...makeCtx(nowMs),
+        snapshot: { nowMs, focusBlend: 1, focusPickId: EARTH },
+      }) as unknown as FrameView;
+
+    dir.runFrame(state, ctxAt(0));
+    dir.runFrame(state, ctxAt(300));
+    const shown = (id: string) => dir.labels().find((l) => l.id === id)!;
+    expect(shown('earthPlace-africa').fadeAlpha ?? 1).toBe(1);
+    expect(shown('earthPlace-africa').text).toBe('AFRICA');
+    expect(shown('earthPlace-africa').maxPixelSize).toBeLessThan(
+      shown('sceneBody-earth').minPixelSize!,
+    );
+  });
 });

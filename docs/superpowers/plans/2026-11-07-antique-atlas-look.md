@@ -90,6 +90,15 @@ export const ANTIQUE_PRINT_CELL_UNITS = 4;   // one print-point texel per 4 prin
 ### Task 12: Constellation lines engraved
 - [x] With the look on, the constellation pass draws into its own target; the plate inks it as a fine rule behind bodies, stars knocked out of it.
 
+### Task 13: Place names on the globe (owner: "so places actually have names")
+**Files:** `src/data/labels/{antiqueEarthPlaces,antiqueAreaLettering,antiqueEarthPlaceReveal,antiqueLabelStyle}.ts`,
+`src/@types/rendering/AntiqueEarthPlace.d.ts`, `src/layers/body/labels/present/produceAntiqueEarthPlaces.ts`,
+`src/layers/body/{layer.ts,labels/data/bodyCaptionRows.ts}`, `src/utils/labels/antiqueLabel.ts`, `label2DDirector.ts`
+- [x] Thirteen period names: seven lands in spaced capitals, six seas in IM Fell italic, at 16 px under the planets' 20 px.
+- [x] A body-Layer screen-label row under `label:body`; it returns before any work with the look off.
+- [x] Shown when the globe is 200–250 px or more across, the name's box fits inside the rim, and the anchor is in daylight or twilight.
+- [x] A name carries Earth as subject (focus emphasis) but is never set as Earth's title; tests for the producer, the cut and the director.
+
 ## Definition of Done
 
 **Deliverables:** the `stylize` FRAME_ORDER line and `antiqueLook` pass; the `antique` settings

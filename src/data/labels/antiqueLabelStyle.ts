@@ -17,6 +17,8 @@ export const ANTIQUE_LABEL_STYLE = {
   capitals: { px: 20, trackingEm: 0.35 },
   roman: { px: 16, trackingEm: 0.08 },
   italic: { px: 17, trackingEm: 0 },
+  // A land or sea on a globe, either cut: under the planets' capitals.
+  areaPx: 16,
   rimFraction: 0.65,
   gapPx: 6,
 } as const;

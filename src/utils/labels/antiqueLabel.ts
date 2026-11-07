@@ -4,7 +4,8 @@
  * (`AntiqueLettering`; capitals take V for U, SATVRNVS). A subject the user is
  * looking at (`subjectKept`) always keeps a label, its modern name Latinised when
  * the table has none, centred at the plate's one largest size. Other names sit
- * left-aligned so a lifted name falls upper-right of its glyph.
+ * left-aligned so a lifted name falls upper-right of its glyph; a name set over the
+ * land or sea it names (`ANTIQUE_AREA_LETTERING`) shows in its own cut, centred.
  */
 
 import type { Label2D } from '../../@types/rendering/Label2D';
@@ -13,6 +14,7 @@ import type { FontId } from '../../@types/data/FontId';
 import type { AntiqueLettering } from '../../@types/rendering/AntiqueLettering';
 import { ANTIQUE_LABEL_STYLE } from '../../data/labels/antiqueLabelStyle';
 import { ANTIQUE_MODERN_NAME_EDITS } from '../../data/labels/antiqueModernNameEdits';
+import { ANTIQUE_AREA_LETTERING } from '../../data/labels/antiqueAreaLettering';
 import { isKeyOf } from '../object/isKeyOf';
 
 const DIGIT = /\d/;
@@ -23,9 +25,14 @@ export function antiqueLabel(
   subjectKept: boolean,
   hasFont: (font: FontId) => boolean,
 ): Label2D | null {
+  const area = isKeyOf(ANTIQUE_AREA_LETTERING, label.id)
+    ? ANTIQUE_AREA_LETTERING[label.id]
+    : undefined;
   const name = rule && isKeyOf(rule.names, label.id) ? rule.names[label.id] : undefined;
   const hidden =
-    name === null || (name === undefined && (rule?.unlisted === 'hide' || DIGIT.test(label.text)));
+    area === undefined &&
+    (name === null ||
+      (name === undefined && (rule?.unlisted === 'hide' || DIGIT.test(label.text))));
   if (hidden && !subjectKept) return null;
 
   // A producer that lifts its own label (COSMO: famous galaxies, the Milky Way)
@@ -45,6 +52,7 @@ export function antiqueLabel(
   const style = ANTIQUE_LABEL_STYLE;
   const letteringOf = rule?.letteringOf;
   const tier =
+    area ??
     (letteringOf && isKeyOf(letteringOf, label.id) ? letteringOf[label.id] : rule?.lettering) ??
     'capitals';
   let cut: AntiqueLettering = tier;
@@ -56,14 +64,14 @@ export function antiqueLabel(
   // Until the look's fonts land (`loadLookFonts`), the label keeps its own. White
   // is full ink: the plate inks a caption by its fill's lightness.
   const fell = cut === 'italic' ? style.italicFont : style.romanFont;
-  const px = subjectKept ? style.subjectPx : style[cut].px;
+  const px = subjectKept ? style.subjectPx : area ? style.areaPx : style[cut].px;
   return {
     ...placed,
     text: cut === 'capitals' ? text.toUpperCase().replace(/U/g, 'V') : text,
     font: hasFont(fell) ? fell : label.font,
     trackingEm: style[cut].trackingEm,
     color: [1, 1, 1, 1],
-    alignX: subjectKept ? 'center' : 'left',
+    alignX: subjectKept || area ? 'center' : 'left',
     minPixelSize: px,
     maxPixelSize: px,
   };

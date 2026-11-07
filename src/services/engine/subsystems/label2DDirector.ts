@@ -136,6 +136,8 @@ import { antiqueLookOn } from '../../../utils/render/antiqueLookOn';
 import { antiqueLabel } from '../../../utils/labels/antiqueLabel';
 import { ANTIQUE_LABEL_RULES } from '../../../data/labels/antiqueLabelRules';
 import { ANTIQUE_LABEL_STYLE } from '../../../data/labels/antiqueLabelStyle';
+import { ANTIQUE_AREA_LETTERING } from '../../../data/labels/antiqueAreaLettering';
+import { isKeyOf } from '../../../utils/object/isKeyOf';
 import { antiquePlateKeepOut } from '../../../utils/labels/antiquePlateKeepOut';
 import { emphasisOf } from '../presentation/emphasisOf';
 import {
@@ -796,14 +798,13 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
   function toAntique(
     labels: readonly Label2D[],
     labelName: LabelName | undefined,
-    keptPicks: readonly (number | null)[],
+    isTitle: (label: Label2D) => boolean,
     hasFont: (font: FontId) => boolean,
   ): Label2D[] {
     const rule = labelName === undefined ? undefined : ANTIQUE_LABEL_RULES[labelName];
     const out: Label2D[] = [];
     for (const l of labels) {
-      const kept = l.subjectId !== undefined && keptPicks.includes(l.subjectId);
-      const shown = antiqueLabel(l, rule, kept, hasFont);
+      const shown = antiqueLabel(l, rule, isTitle(l), hasFont);
       if (shown !== null) out.push(shown);
     }
     return out;
@@ -817,7 +818,7 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
   function clearOfPlate(
     labels: readonly Label2D[],
     ctx: FrameView,
-    keptPicks: readonly (number | null)[],
+    isTitle: (label: Label2D) => boolean,
   ): readonly Label2D[] {
     const projection = config.project(ctx);
     const projected = projectLabels(labels, projection);
@@ -826,7 +827,7 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
       const { screenPx, clipW } = projected[i]!;
       const bbox = screenPx ? measureText!(label) : null;
       if (!screenPx || !bbox) return true;
-      if (label.subjectId !== undefined && keptPicks.includes(label.subjectId)) return true;
+      if (isTitle(label)) return true;
       const r = labelScreenRect({ label, bbox, screenPx, clipW, pxPerRad: projection.pxPerRad });
       const em = r.y1 - r.y0; // the ink's height stands in for the em
       const inField =
@@ -858,11 +859,16 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
           encodeSelectionPick(state.selectionKindRows, state.selection.select),
         ]
       : [];
+    // The focused or selected subject's own name; a place name set over it is no title.
+    const isTitle = (l: Label2D) =>
+      l.subjectId !== undefined &&
+      keptPicks.includes(l.subjectId) &&
+      !isKeyOf(ANTIQUE_AREA_LETTERING, l.id);
     const hasFont = (font: FontId) => state.gpu.fontAtlases?.metricsByFont[font] !== undefined;
     for (const p of producers) {
       const out = p.produceLabels(state, ctx);
       if (out.awake) anyAwake = true;
-      const produced = antique ? toAntique(out.labels, p.label, keptPicks, hasFont) : out.labels;
+      const produced = antique ? toAntique(out.labels, p.label, isTitle, hasFont) : out.labels;
       if (p.label === undefined || atRest) {
         for (const l of produced) mergedLabels.push(l);
         continue;
@@ -897,7 +903,7 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     // `config.lift` is null): runs over survivors only, after the envelope
     // has resolved the final alpha for each.
     const lifted = applyLift(highlighted, ctx, antique);
-    const labels = antique ? clearOfPlate(lifted, ctx, keptPicks) : lifted;
+    const labels = antique ? clearOfPlate(lifted, ctx, isTitle) : lifted;
 
     // Flush contract: one MarkerLine per surviving leader-carrying label,
     // derived from the FINAL (post-declutter, post-envelope, post-lift) set.
