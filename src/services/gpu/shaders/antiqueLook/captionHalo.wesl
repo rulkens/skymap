@@ -19,9 +19,11 @@ const DIRS = array<vec2<f32>, 8>(
 fn captionHalo(overlay: texture_2d<f32>, ip: vec2<i32>, unit: f32, centreAlpha: f32) -> f32 {
   let last = vec2<i32>(textureDimensions(overlay)) - 1;
   var a = centreAlpha;
+  // A var copy: naga, and maybe WebKit, refuse a runtime index into a const array.
+  var dirs = DIRS;
   for (var k = 0; k < 8; k++) {
-    let near = ip + vec2<i32>(round(DIRS[k] * (0.5 * REACH * unit)));
-    let far = ip + vec2<i32>(round(DIRS[k] * (REACH * unit)));
+    let near = ip + vec2<i32>(round(dirs[k] * (0.5 * REACH * unit)));
+    let far = ip + vec2<i32>(round(dirs[k] * (REACH * unit)));
     a = max(a, textureLoad(overlay, clamp(near, vec2<i32>(0), last), 0).a);
     a = max(a, textureLoad(overlay, clamp(far, vec2<i32>(0), last), 0).a);
   }

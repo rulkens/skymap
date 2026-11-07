@@ -105,6 +105,8 @@ describe('antique look records ↔ WGSL structs', () => {
         hatchUnits: 1071,
         washGain: 1072,
         inkGain: 1073,
+        lineInk: 1077,
+        borderWash: 1078,
         tint: [1074, 1075, 1076],
         hidden: 0b101,
       },
@@ -120,6 +122,7 @@ describe('antique look records ↔ WGSL structs', () => {
       hatchAngle: 1024,
       tune: 1071,
       tint: 1074,
+      borderWash: 1078,
     };
     expect([...offsets.keys()].sort()).toEqual(
       [...Object.keys(sentinel), 'flags', 'sky', 'globe', 'hidden'].sort(),
@@ -152,7 +155,7 @@ describe('antique look records ↔ WGSL structs', () => {
     const depthBit = readShaderSource(`${DIR}/cover.wesl`).match(/FLAG_DEPTH_COVER: u32 = (\d+)u/);
     expect(Number(depthBit?.[1])).toBe(0b1000);
     expect(new Uint32Array(packed)[offsets.get('flags')! / 4]).toBe(0b1101);
-    for (const [i, value] of [1072, 1073].entries())
+    for (const [i, value] of [1072, 1073, 1077].entries())
       expect(offsetOf(packed, value)).toBe(offsets.get('tune')! + (i + 1) * 4);
     expect(new Uint32Array(packed)[offsets.get('hidden')! / 4]).toBe(0b101);
   });

@@ -1,8 +1,7 @@
 import type { SliderField } from '../../@types/data/SliderField';
 import type { AntiqueTuning } from '../../@types/settings/AntiqueTuning';
 import type { OrientationFrameId } from '../../@types/camera/orientation/OrientationFrameId';
-
-type AntiqueSliderKey = 'hatchUnits' | 'hatchAngleDeg' | 'washGain' | 'inkGain' | 'reliefLightDeg';
+import type { AntiqueSliderKey } from '../../@types/settings/AntiqueSliderKey';
 
 /** The antique look's sliders in the DebugPanel; the rest of `AntiqueTuning` has its own controls. */
 export const ANTIQUE_TUNING_SLIDER_FIELDS: readonly SliderField<
@@ -43,6 +42,24 @@ export const ANTIQUE_TUNING_SLIDER_FIELDS: readonly SliderField<
     step: 0.05,
     format: (v) => `×${v.toFixed(2)}`,
     title: 'Ink per stroke: 2 prints every line as two passes',
+  },
+  {
+    key: 'lineInk',
+    label: 'Line ink',
+    min: 0,
+    max: 1.5,
+    step: 0.05,
+    format: (v) => v.toFixed(2),
+    title: "Orbits' and constellation lines' ink; the rulings print at 0.7–1.15",
+  },
+  {
+    key: 'borderWash',
+    label: 'Border wash',
+    min: 0,
+    max: 1.5,
+    step: 0.05,
+    format: (v) => v.toFixed(2),
+    title: 'Gamboge laid along the border between the neatline rules',
   },
   {
     key: 'reliefLightDeg',

@@ -16,6 +16,10 @@ export type AntiqueTuning = {
   washGain: number;
   /** Gain on the ink's density: 2 prints every stroke as two passes of ink. */
   inkGain: number;
+  /** Ink of the orbits' and figures' lines, below the rulings'. */
+  lineInk: number;
+  /** The gamboge border band, as a share of a full wash. */
+  borderWash: number;
   /** Multiplies the sheet, sRGB. */
   paperTint: HexString;
   /** The relief's plate light above the ground, degrees. */

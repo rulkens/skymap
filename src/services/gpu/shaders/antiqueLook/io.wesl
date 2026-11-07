@@ -12,9 +12,11 @@
 // | 44..76 | eye     | rayTR.w, rayBL.w, rayBR.w: the eye, world Mpc            |
 // | 80     | seed    | per-session paper seed                                   |
 // | 84     | hatch   | body hatch angle, radians: parallel to the terminator    |
+// | 88     | borderWash | debug panel: the border band's gamboge                |
 // | 96     | sky     | the sky's ruling frame (`RulingFrame`, 80 bytes)         |
 // | 176    | globe   | a globe's ruling frame; all zero when none is ruled      |
-// | 256    | tune    | debug panel: hatch spacing (units), wash gain, ink gain  |
+// | 256    | tune    | debug panel: hatch spacing (units), wash gain, ink gain, |
+// |        |         | line ink                                                 |
 // | 272    | tint    | debug panel: multiplies the sheet                        |
 // | 284    | hidden  | debug panel: rows switched off (fragment.wesl `HIDE_*`)  |
 
@@ -37,6 +39,7 @@ struct AntiqueUniforms {
   rayBR: vec4<f32>,
   seed: f32,
   hatchAngle: f32,
+  borderWash: f32,
   sky: RulingFrame,
   globe: RulingFrame,
   tune: vec4<f32>,

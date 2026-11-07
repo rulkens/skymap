@@ -5,7 +5,7 @@
  * Channels: R ink density, G fill (the solid silhouette the plate is cleared to
  * paper under), B wash (the alpha of `<id>.colour.png` when a sprite has one,
  * else a flat share of the fill; the cartouche's frame, never its field), A the
- * share of the row's main pigment over its accent (the cartouche's moulding ring).
+ * share of the row's main pigment over its accent (the cartouche's outer scrolls).
  * The cartouche's interior is left blank: each plate sets its own title there
  * at runtime (`buildAntiqueGlyphSheet`), so the module records the interior oval.
  * Inputs: data/antique/sprites/<id>.png (black RGB, ink in alpha), optional
@@ -54,10 +54,10 @@ const CLOSE_RADIUS_OVERRIDE_PX: Partial<Record<(typeof SPRITE_IDS)[number], numb
 };
 const FILL_GROW_PX = 3;
 /** A sea beast's and a constellation figure's flat wash, as a share of full. */
-const FILL_WASH = 0.28;
+const FILL_WASH = 0.6;
 const FIGURE_WASH = 0.85;
-/** The cartouche's moulding ring, out to this scale of its interior: the accent pigment's. */
-const RING_SCALE = 1.09;
+/** The cartouche's outer scrolls, past this scale of its interior: the accent pigment's. */
+const SCROLL_SCALE = 1.38;
 const FILL_BLUR_SIGMA_PX = 1.5;
 
 /**
@@ -168,7 +168,7 @@ async function buildSprite(id: (typeof SPRITE_IDS)[number]): Promise<OrnamentSpr
   const accent = new Uint8Array(w * h).fill(255);
   if (id === 'cartouche')
     for (let y = 0; y < h; y++)
-      for (let x = 0; x < w; x++) if (insideOval(x, y, w, h, RING_SCALE)) accent[y * w + x] = 0;
+      for (let x = 0; x < w; x++) if (!insideOval(x, y, w, h, SCROLL_SCALE)) accent[y * w + x] = 0;
   const softAccent = gaussianBlurFloat32(Float32Array.from(accent), w, h, FILL_BLUR_SIGMA_PX);
   return { ink, fill, wash, accent: Uint8Array.from(softAccent, Math.round), w, h };
 }

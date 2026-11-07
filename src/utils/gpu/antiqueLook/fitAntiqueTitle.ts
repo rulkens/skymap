@@ -13,10 +13,10 @@ import type { AntiqueTitleLine } from '../../../@types/rendering/AntiqueTitleLin
 import type { AntiqueTitleLineMetrics } from '../../../@types/rendering/AntiqueTitleLineMetrics';
 
 /** Share of the interior's height the block may fill, and its leading in first-line caps. */
-const HEIGHT_FILL = 0.7;
+const HEIGHT_FILL = 0.66;
 const LEADING = 0.5;
 /** Share of the interior's chord a line may span: keeps it inside the rule. */
-const CHORD_FILL = 0.92;
+const CHORD_FILL = 0.84;
 
 export function fitAntiqueTitle(
   groups: readonly AntiqueTitleGroup[],

@@ -19,7 +19,7 @@ export type AntiqueOrnament = {
   readonly facesNorth: boolean;
   /** Index into `pigments.wesl`'s PIGMENTS for the sprite's wash channel. */
   readonly pigment: number;
-  /** The pigment where the atlas marks an accent (alpha 0): the cartouche's moulding ring. */
+  /** The pigment where the atlas marks an accent (alpha 0): the cartouche's outer scrolls. */
   readonly accent: number;
   readonly opacity: number;
   /** Clears the plate beneath its fill to bare paper (a cartouche), or lets it show (a figure). */

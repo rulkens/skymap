@@ -52,7 +52,7 @@ export const ANTIQUE_ORNAMENTS: readonly AntiqueOrnament[] = [
     regime: 'always',
     facesNorth: false,
     pigment: 2,
-    accent: 7,
+    accent: 0,
     opacity: 1,
     clearsBeneath: true,
     mirrored: false,

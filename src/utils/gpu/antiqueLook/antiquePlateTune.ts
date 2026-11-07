@@ -11,6 +11,8 @@ export function antiquePlateTune(tuning: AntiqueTuning): AntiquePlateTune {
     hatchUnits: tuning.hatchUnits,
     washGain: tuning.washGain,
     inkGain: tuning.inkGain,
+    lineInk: tuning.lineInk,
+    borderWash: tuning.borderWash,
     tint: [r, g, b],
     hidden: ANTIQUE_PLATE_ROWS.reduce(
       (bits, { key }, i) => bits | (tuning.rows[key] ? 0 : 1 << i),

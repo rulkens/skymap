@@ -27,14 +27,16 @@ fn nearestPigment(c: vec3<f32>) -> vec3<f32> {
   if (len < 1e-3) {
     return PIGMENTS[6];
   }
-  var best = PIGMENTS[6];
+  // Runtime indices go into a var copy: naga, and maybe WebKit, refuse them on a const array.
+  var box = PIGMENTS;
+  var best = box[6];
   var bestDot = -2.0;
   for (var i = 0; i < SCENE_PIGMENT_COUNT; i++) {
-    let pc = PIGMENTS[i] - vec3<f32>(luma(PIGMENTS[i]));
+    let pc = box[i] - vec3<f32>(luma(box[i]));
     let d = dot(chroma / len, normalize(pc));
     if (d > bestDot) {
       bestDot = d;
-      best = PIGMENTS[i];
+      best = box[i];
     }
   }
   return best;
@@ -45,22 +47,24 @@ fn nearestPigment(c: vec3<f32>) -> vec3<f32> {
 fn regionPigment(c: vec3<f32>) -> vec3<f32> {
   let chroma = c - vec3<f32>(luma(c));
   let len = max(length(chroma), 1e-3);
-  let picks = array<i32, 4>(0, 2, 4, 5);
-  var best = PIGMENTS[4];
+  var picks = array<i32, 4>(0, 2, 4, 5);
+  var box = PIGMENTS;
+  var best = box[4];
   var bestDot = -2.0;
   for (var i = 0; i < 4; i++) {
-    let pc = PIGMENTS[picks[i]] - vec3<f32>(luma(PIGMENTS[picks[i]]));
+    let pc = box[picks[i]] - vec3<f32>(luma(box[picks[i]]));
     let d = dot(chroma / len, normalize(pc));
     if (d > bestDot) {
       bestDot = d;
-      best = PIGMENTS[picks[i]];
+      best = box[picks[i]];
     }
   }
   return best;
 }
 
 fn pigmentAt(index: f32) -> vec3<f32> {
-  return PIGMENTS[clamp(i32(index), 0, PIGMENT_COUNT - 1)];
+  var box = PIGMENTS;
+  return box[clamp(i32(index), 0, PIGMENT_COUNT - 1)];
 }
 
 fn chromaOf(c: vec3<f32>) -> f32 {

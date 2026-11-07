@@ -52,7 +52,7 @@ export const ANTIQUE_TITLES: Readonly<Record<AntiqueTitleKey, readonly AntiqueTi
   coelum: [
     head('NOVA ET ACCVRATISSIMA'),
     title(['COELI STELLATI TABVLA'], ['COELI STELLATI', 'TABVLA']),
-    sub(['Stellarum fixarum Loca ad Annum MDCXC'], ['Stellarum fixarum Loca', 'ad Annum MDCXC']),
+    sub(['Stellarum fixarum Loca exhibens']),
     small(...IMPRINT),
   ],
   orbis: terrestrial('NOVA', ['TOTIVS TERRARVM ORBIS TABVLA'], ['TOTIVS TERRARVM', 'ORBIS TABVLA']),
@@ -71,7 +71,13 @@ export const ANTIQUE_TITLES: Readonly<Record<AntiqueTitleKey, readonly AntiqueTi
     ['XVII PROVINCIARVM', 'GERMANIÆ INFERIORIS TABVLA'],
     ['XVII PROVINCIARVM', 'GERMANIÆ INFERIORIS', 'TABVLA'],
   ),
-  hollandia: terrestrial('NOVA ET ACCVRATA', ['COMITATVS HOLLANDIÆ'], ['COMITATVS', 'HOLLANDIÆ']),
+  // The adjectives agree with Tabula, as Visscher's own title runs.
+  hollandia: [
+    title(['COMITATVS HOLLANDIÆ'], ['COMITATVS', 'HOLLANDIÆ']),
+    sub(['Tabula nova et accurata']),
+    small(...IMPRINT),
+    PRIVILEGE,
+  ],
   luna: [
     head('NOVA ET ACCVRATISSIMA'),
     title(['TABVLA SELENOGRAPHICA'], ['TABVLA', 'SELENOGRAPHICA']),

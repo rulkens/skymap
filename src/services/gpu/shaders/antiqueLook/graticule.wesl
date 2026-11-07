@@ -43,14 +43,14 @@ fn ruling(coord: f32, step: f32, halfPx: f32, perPx: f32) -> f32 {
 }
 
 // 1 on alternate cells of `cell` along `coord`, each boundary set off its true
-// place by up to 8% of a cell, as an engraver spaced a ladder by eye; the
+// place by up to 15% of a cell, as an engraver spaced a ladder by eye; the
 // offsets are fixed per boundary, so a cell keeps its shape as the view turns.
 fn handCell(coord: f32, cell: f32) -> f32 {
   let c = coord / cell;
   let k = floor(c);
   let f = c - k;
-  let here = (fract(sin(k * 12.9898) * 43758.547) - 0.5) * 0.16;
-  let next = (fract(sin((k + 1.0) * 12.9898) * 43758.547) - 0.5) * 0.16;
+  let here = (fract(sin(k * 12.9898) * 43758.547) - 0.5) * 0.3;
+  let next = (fract(sin((k + 1.0) * 12.9898) * 43758.547) - 0.5) * 0.3;
   let index = k - f32(f < here) + f32(f > 1.0 + next);
   return f32(i32(index) % 2 == 0);
 }
@@ -63,13 +63,16 @@ fn graduatedCircle(lat: f32, lon: f32, latPerPx: f32, cellDeg: f32, gapPx: f32, 
     1.0 - smoothstep(rulePx - 0.5, rulePx + 0.5, abs(dPx - gapPx * 0.5)),
     1.0 - smoothstep(rulePx - 0.5, rulePx + 0.5, abs(dPx + gapPx * 0.5)),
   );
-  let cellOn = handCell(lon, cellDeg);
   let inside = 1.0 - smoothstep(gapPx * 0.5 - 0.5, gapPx * 0.5, abs(dPx));
-  return max(rules, cellOn * inside);
+  var cells = 0.0;
+  if (inside > 0.0) {
+    cells = handCell(lon, cellDeg) * inside;
+  }
+  return max(rules, cells);
 }
 
 fn band(ll: vec2<f32>, cellDeg: f32, unitPx: f32) -> f32 {
-  return graduatedCircle(ll.y, ll.x, fwidth(ll.y), cellDeg, 3.6 * unitPx, 0.34 * unitPx) * 0.9;
+  return graduatedCircle(ll.y, ll.x, fwidth(ll.y), cellDeg, 2.6 * unitPx, 0.3 * unitPx) * 0.75;
 }
 
 // A frame's meridians and parallels at its intervals (`steps` xy), and its

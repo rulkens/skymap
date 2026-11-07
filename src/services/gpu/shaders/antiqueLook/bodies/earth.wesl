@@ -11,6 +11,7 @@ import package::antiqueLook::engraving::seaDistance;
 import package::antiqueLook::engraving::waterLines;
 import package::antiqueLook::pigments::applyWash;
 import package::antiqueLook::pigments::pigmentAt;
+import package::antiqueLook::paper::vnoise;
 
 // What the plate hands the module, in print units but for the shares.
 struct EarthPrintIn {
@@ -53,7 +54,8 @@ fn earthPrint(col: vec3<f32>, cover: f32, e: EarthPrintIn) -> BodyPrint {
   let code = i32(round(e.geo.r * 255.0));
   let realm = code >= 1 && code <= 7;
   let land = smoothstep(0.35, 0.6, e.washShare);
-  let coastBand = clamp(1.0 - inland / 14.0, 0.0, 1.0);
+  // Narrow, and pooling as a brush does: wide, it showed the land row's blocky texels.
+  let coastBand = clamp(1.0 - inland / 9.0, 0.0, 1.0) * (0.65 + 0.7 * vnoise(e.p * 0.06 + 3.0));
   let band = select(0.0, max(coastBand, e.geo.g * e.geo.g), realm);
   let pigment = pigmentAt(f32(max(code - 1, 0)));
   var washed = applyWash(col, pigmentAt(5.0), seaWash * cover);
