@@ -125,6 +125,21 @@ target name; a second look would make it a table.
   limb taps off-body.
 - No modern UI bleed with the look on: the app chrome takes the sheet's theme.
 
+Where the grades stand (2026-11-07): round 1 all 5; rounds 4 to 6 all 6 from every reviewer,
+so the ≥ 8 criterion is not met. What the reviewers agree caps the grade needs more than
+shader tuning:
+
+- **Star glyphs by magnitude.** The glyph count and size follow device pixels (about 3× the
+  stars at 2×), since peaks and their light are measured per quarter-res device cell. The
+  fix is a reduce at a fixed print-cell size, or glyphs from the star catalogue itself.
+- **Engraving that follows the form.** Hatching along a globe's parallels, a globe
+  graticule, and water lines offset from the coast need a surface-parameter target from the
+  body shaders. Saturn's ring needs its own id to be hatched lighter than the ball.
+- **App chrome on the plate.** The cards, toggles and photo thumbnail still read as modern UI
+  over the sheet.
+- **Owner rulings.** North-up roll while the look is on, Latin glosses for modern names, and
+  dotted versus solid glow outlines.
+
 ## Out of scope
 
 Sky-anchored constellation figures from Flamsteed/Bode plates (backlog item
