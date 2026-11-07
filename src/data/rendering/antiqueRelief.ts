@@ -1,8 +1,17 @@
+import type { AntiqueReliefBody } from '../../@types/rendering/AntiqueReliefBody';
+
 /** The antique look's terrain relief (`antiqueLook/relief.wesl`): which bodies' ground is
  * engraved as shadow hachures, the plate light, and the record's size. */
 
-/** Bodies whose ground the relief pass engraves; any other keeps its plain print. */
-export const ANTIQUE_RELIEF_BODIES: readonly string[] = ['mars'];
+/** Bodies whose ground the relief pass engraves, and how; any other keeps its plain print.
+ * Mars: HiRISE's metre, Imhof's exaggeration (a 3° slope read from 50 km up prints as a
+ * 9° one), slope inked as well as shade. Earth: ETOPO's z7 posts ~2.4 km apart outside the
+ * skadi boxes, mountains steep enough unexaggerated, and only the shade side inked, as a
+ * 1690 engraver drew a mountain (shaded hachures by slope are Lehmann's, 1799). */
+export const ANTIQUE_RELIEF_BODIES: Readonly<Record<string, AntiqueReliefBody>> = {
+  mars: { cellM: 1, exaggeration: [2, 3], slopeInk: 1, wideNormal: false },
+  earth: { cellM: 1500, exaggeration: [1, 2], slopeInk: 0, wideNormal: true },
+};
 
 /** Above this altitude over the datum the ground is too small to engrave: no pass. */
 export const ANTIQUE_RELIEF_MAX_ALT_M = 400_000;
@@ -15,16 +24,12 @@ export const ANTIQUE_PLATE_LIGHT_ELEVATION_DEG = 18;
  * and the orbit exaggeration fade in over it. */
 export const ANTIQUE_RELIEF_ORBIT_ALT_M = [8_000, 25_000] as const;
 
-/** Vertical exaggeration of the shading normal, ground and orbit (Imhof): a 3° slope
- * read from 50 km up prints as a 9° one. */
-export const ANTIQUE_RELIEF_EXAGGERATION = [2, 3] as const;
-
 /** The noise is anchored to the body on a grid of this many metres (2^12): the shader
  * hashes lattice indices offset by whole cells, so f32 never carries the body radius. */
 export const ANTIQUE_RELIEF_ANCHOR_LOG2 = 12;
 
 /** `ReliefUniforms` in `relief.wesl`; that file's table is the byte map. */
-export const ANTIQUE_RELIEF_UNIFORM_BYTES = 208;
+export const ANTIQUE_RELIEF_UNIFORM_BYTES = 224;
 
 /** rg the screen fall line, b body-anchored noise, a the stroke (`relief.wesl`). */
 export const ANTIQUE_RELIEF_FORMAT: GPUTextureFormat = 'rgba16float';

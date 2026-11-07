@@ -19,8 +19,9 @@ export type AntiqueUniformInput = {
   /** Body coverage is read off foreground:0's depth, not its alpha: the eye is
    * inside an atmosphere, whose day sky fills that row's alpha (`cover.wesl`). */
   readonly depthCover: boolean;
-  /** The relief row holds Mars ground (`antiqueReliefInput`). */
-  readonly relief: boolean;
+  /** The relief row holds engraved ground: its body's print code (`antiqueReliefInput`),
+   * or null. */
+  readonly relief: number | null;
   /** The overlay row holds this frame's captions. */
   readonly captions: boolean;
   /** The scanned paper tile and stain mask have landed. */

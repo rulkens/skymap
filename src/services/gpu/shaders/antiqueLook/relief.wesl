@@ -8,7 +8,8 @@
 //
 // | 0 invVp: NDC → eye-relative body-fixed m | 64 vp | 128 eyeFromAnchor, m; 140 orbit |
 // | 144 anchorCells (i32); 156 exaggeration | 160 sun; 172 radPerPx | 176 eyeRelBody; 188 unit |
-// | 192 res; 200 sin, 204 cos of the plate light's elevation (`packAntiqueRelief.ts`) |
+// | 192 res; 200 sin, 204 cos of the plate light's elevation | 208 cellM; 212 slopeInk;   |
+// | 216 wideNormal (`AntiqueReliefBody`, per body; `packAntiqueRelief.ts`)              |
 
 import package::antiqueLook::io::VSOut;
 
@@ -26,6 +27,10 @@ struct ReliefUniforms {
   res: vec2<f32>,
   lightSin: f32,
   lightCos: f32,
+  cellM: f32,
+  slopeInk: f32,
+  wideNormal: f32,
+  _pad: f32,
 }
 
 // foreground:0's depth (reversed-Z: 0 is the far clear, so sky).
@@ -47,14 +52,16 @@ const SLOPE_FLAT: f32 = 0.12;
 const SLOPE_STEEP: f32 = 0.5;
 // Below this share of the steep slope ground is a flat: stipple, never strokes.
 const STROKE_SLOPE: f32 = 0.3;
-// The finest height model's cell (HiRISE, m). Where one cell spans this many normal
-// stencils the slope is a mesh facet's, not a landform's: no strokes, so the ground at
-// a rover's wheels does not streak toward the eye.
-const DTM_CELL_M: f32 = 1.0;
+// Where one height cell (`cellM`) spans this many normal stencils the slope is a mesh
+// facet's, not a landform's: no strokes, so the ground at a rover's wheels does not
+// streak toward the eye.
 const FACET_STENCILS: vec2<f32> = vec2<f32>(4.0, 16.0);
 // Real slope (radians) past which a face is no ground the DTM holds (a rover, a lander):
 // left to the plate's own body print.
 const MESH_SLOPE: f32 = 1.0;
+// A `wideNormal` body's stencil spans one height cell on screen, at most this many px;
+// a wide tap off the near step's plane by HALO_JUMP has crossed a profile.
+const WIDE_MAX_PX: i32 = 48;
 
 fn depthAt(ip: vec2<i32>) -> f32 {
   let size = vec2<i32>(textureDimensions(depthTex));
@@ -78,6 +85,18 @@ fn oneSided(ip: vec2<i32>, axis: vec2<i32>, p: vec3<f32>, d: f32) -> vec4<f32> {
     return vec4<f32>(eyeRel(ip + axis, dp) - p, dp - d);
   }
   return vec4<f32>(p - eyeRel(ip - axis, dm), d - dm);
+}
+
+// `oneSided` over `base` px, or over `wide` where the wider taps still lie on the near
+// step's plane, rescaled to `base` px so the callers' units hold.
+fn surfaceStep(ip: vec2<i32>, axis: vec2<i32>, base: i32, wide: i32, p: vec3<f32>, d: f32) -> vec4<f32> {
+  let near = oneSided(ip, axis * base, p, d);
+  if (wide <= base) {
+    return near;
+  }
+  let far = oneSided(ip, axis * wide, p, d);
+  let k = f32(base) / f32(wide);
+  return select(near, far * k, abs(far.w * k - near.w) < HALO_JUMP * d * k);
 }
 
 fn pcg3(c: vec3<i32>) -> f32 {
@@ -113,9 +132,12 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     return vec4<f32>(0.0);
   }
   let p = eyeRel(ip, d);
+  let t = length(p);
   let o = max(i32(round(NORMAL_UNITS * r.unit)), 1);
-  let sx = oneSided(ip, vec2<i32>(o, 0), p, d);
-  let sy = oneSided(ip, vec2<i32>(0, o), p, d);
+  let cellPx = r.cellM / (t * r.radPerPx);
+  let wide = select(o, clamp(i32(round(cellPx)), o, max(o, WIDE_MAX_PX)), r.wideNormal > 0.5);
+  let sx = surfaceStep(ip, vec2<i32>(1, 0), o, wide, p, d);
+  let sy = surfaceStep(ip, vec2<i32>(0, 1), o, wide, p, d);
   var n = normalize(cross(sx.xyz, sy.xyz));
   n = select(n, -n, dot(n, p) > 0.0);
   let up = normalize(r.eyeRelBody + p);
@@ -133,12 +155,11 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let slope = smoothstep(SLOPE_FLAT, SLOPE_STEEP, atan2(length(cross(nex, up)), dot(nex, up)));
   let tone = pow(min(dark * 1.1, 1.0), 1.4) * max(slope, 0.35);
   // Imhof's aerial perspective: lighter and finer with range over the eye's height there.
-  let t = length(p);
   let near = clamp(log(30.0 * max(-dot(p, up), 1e-3) / t) / log(30.0), 0.0, 1.0);
   let fade = 0.45 + 0.55 * near;
-  let cellStencils = DTM_CELL_M / (t * r.radPerPx * f32(o));
+  let cellStencils = cellPx / f32(wide);
   let landform = slope > STROKE_SLOPE && cellStencils < FACET_STENCILS.y;
-  let stroke = select(0.0, (0.05 + 0.16 * slope + 0.6 * tone) * fade
+  let stroke = select(0.0, ((0.05 + 0.16 * slope) * r.slopeInk + 0.6 * tone) * fade
     * (1.0 - smoothstep(FACET_STENCILS.x, FACET_STENCILS.y, cellStencils)), landform);
 
   // Paper behind a nearer profile: a tap nearer (deeper reversed-Z) than this

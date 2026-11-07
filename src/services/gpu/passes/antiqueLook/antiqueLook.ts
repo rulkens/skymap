@@ -139,7 +139,7 @@ export function createAntiqueLook(init: {
         unitPx,
         bodies: hasBodies,
         depthCover,
-        relief: relief !== null,
+        relief: relief?.print ?? null,
         captions: io.overlay !== null,
         paper: paperAssets !== null,
         rays,
@@ -286,7 +286,7 @@ export function createAntiqueLook(init: {
       fullScreen(encoder, 'land-blur-across', [landBlurAcross], g.landBlurAcross, [wash, uniforms]);
       fullScreen(encoder, 'land-blur-down', [landBlur], g.landBlurDown, [landBlurAcross, uniforms]);
     }
-    // Mars's relief pass below fills the row, or the Moon's own pass drew into it.
+    // The relief pass below engraves Mars or Earth ground into the row, or the Moon's own pass drew into it.
     const reliefWritten =
       relief !== null || ctx.snapshot.renderedTargets.has(ANTIQUE_TARGETS.relief);
     const reliefView = reliefWritten ? targets.viewOf(ANTIQUE_TARGETS.relief) : g.empty;

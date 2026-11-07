@@ -13,6 +13,10 @@ import {
   ANTIQUE_RELIEF_BODIES,
   ANTIQUE_RELIEF_MAX_ALT_M,
 } from '../../../../data/rendering/antiqueRelief';
+import {
+  ANTIQUE_BODY_PRINTS,
+  ANTIQUE_BODY_PRINT_CODES,
+} from '../../../../data/rendering/antiquePlateBodies';
 import { SCENE_CELESTIAL_BODIES } from '../../../../data/bodies/sceneCelestialBodies';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { sunDirLocal } from '../../../../utils/camera/bodyCompose/sunDirLocal';
@@ -27,7 +31,8 @@ export function antiqueReliefInput(
   const row = depth.row;
   if (row === null || row.frame.kind !== 'body-m') return null;
   const hostId = row.frame.hostId;
-  if (!ANTIQUE_RELIEF_BODIES.includes(hostId)) return null;
+  const reliefBody = ANTIQUE_RELIEF_BODIES[hostId];
+  if (reliefBody === undefined) return null;
   const body = SCENE_CELESTIAL_BODIES.find((b) => b.id === hostId);
   const pose = ctx.bodyPose(hostId);
   const bodyState = sceneBodyStates(state, ctx).get(hostId);
@@ -38,6 +43,8 @@ export function antiqueReliefInput(
     vp: row.vp,
     eyeRelBodyM: pose.eyeRelBodyM,
     datumRadiusM,
+    body: reliefBody,
+    print: ANTIQUE_BODY_PRINT_CODES[ANTIQUE_BODY_PRINTS[hostId] ?? 'plain'],
     sun: sunDirLocal(bodyState.positionMpc, RENDER_ORIGIN_MPC, bodyState.orientation),
     size: ctx.canvasSize,
     unitPx,

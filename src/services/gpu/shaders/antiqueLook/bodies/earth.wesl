@@ -4,6 +4,8 @@
 // has water edges.
 
 import package::antiqueLook::plateBodies::BodyPrint;
+import package::antiqueLook::engraving::fallLines;
+import package::antiqueLook::engraving::quantileCut;
 import package::antiqueLook::engraving::seaDistance;
 import package::antiqueLook::engraving::waterLines;
 import package::antiqueLook::pigments::applyWash;
@@ -60,4 +62,32 @@ fn earthPrint(col: vec3<f32>, cover: f32, e: EarthPrintIn) -> BodyPrint {
   let signPaper = clamp(2.0 * e.geo.a, 0.0, 1.0);
   let lines = max(max(coast, water * 0.9), e.geo.b * smoothstep(0.2, 0.5, e.landShare));
   return BodyPrint(washed, max(lines * (1.0 - signPaper), signInk));
+}
+
+// Its ground up close (`relief.wesl`'s texel `relief`), as a 1690 prospect drew a mountain:
+// the shade side hatched down the fall line, a second set along the contours in the
+// deepest shade, the lit side and the plains left paper. Below the mesh's ~km facets the
+// relief lives in the imagery's own shading, so where the plain render `plain` is darker
+// than its surroundings `around` (gullies, cliffs, buttes) a slope's hatching thickens;
+// an engraver toned what he saw. No stipple: flats and sea are paper, as Dutch plates
+// left plains, and the sea is the coast's and the water lines'.
+const EARTH_SHADE_INK: f32 = 0.75;
+const EARTH_DETAIL_INK: f32 = 0.45;
+
+fn earthRelief(field: texture_2d<f32>, samp: sampler, px: vec2<f32>, relief: vec4<f32>, unit: f32,
+               plain: f32, around: f32) -> f32 {
+  if (relief.a <= 0.0) {
+    return 0.0;
+  }
+  let detail = clamp((around - plain) / max(around, 1e-3) * 2.0, 0.0, 1.0);
+  let share = EARTH_SHADE_INK * relief.a + EARTH_DETAIL_INK * detail * min(relief.a * 4.0, 1.0);
+  if (share <= 0.0) {
+    return 0.0;
+  }
+  var ink = quantileCut(fallLines(field, samp, px, unit, false), share);
+  let deep = smoothstep(0.45, 0.7, share);
+  if (deep > 0.0) {
+    ink = max(ink, quantileCut(fallLines(field, samp, px, unit, true), 0.4 * deep));
+  }
+  return ink;
 }

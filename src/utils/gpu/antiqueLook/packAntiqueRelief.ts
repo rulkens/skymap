@@ -9,7 +9,6 @@ import { mat4d } from 'wgpu-matrix';
 import type { AntiqueReliefInput } from '../../../@types/rendering/AntiqueReliefInput';
 import {
   ANTIQUE_RELIEF_ANCHOR_LOG2,
-  ANTIQUE_RELIEF_EXAGGERATION,
   ANTIQUE_RELIEF_ORBIT_ALT_M,
   ANTIQUE_RELIEF_UNIFORM_BYTES,
 } from '../../../data/rendering/antiqueRelief';
@@ -35,7 +34,7 @@ export function packAntiqueRelief(
   const t = Math.min(Math.max((altitude - low) / (high - low), 0), 1);
   const orbit = t * t * (3 - 2 * t);
   f32[35] = orbit;
-  const [groundK, orbitK] = ANTIQUE_RELIEF_EXAGGERATION;
+  const [groundK, orbitK] = input.body.exaggeration;
   f32[39] = groundK + (orbitK - groundK) * orbit;
   f32.set(input.sun, 40);
   f32[43] = input.radPerPx;
@@ -46,5 +45,8 @@ export function packAntiqueRelief(
   const elevation = (input.lightElevationDeg * Math.PI) / 180;
   f32[50] = Math.sin(elevation);
   f32[51] = Math.cos(elevation);
+  f32[52] = input.body.cellM;
+  f32[53] = input.body.slopeInk;
+  f32[54] = input.body.wideNormal ? 1 : 0;
   return out;
 }

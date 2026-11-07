@@ -10,7 +10,7 @@ import { mat4d, vec4d } from 'wgpu-matrix';
 import { packAntiqueRelief } from '../../../../src/utils/gpu/antiqueLook/packAntiqueRelief';
 import {
   ANTIQUE_RELIEF_ANCHOR_LOG2,
-  ANTIQUE_RELIEF_EXAGGERATION,
+  ANTIQUE_RELIEF_BODIES,
   ANTIQUE_RELIEF_UNIFORM_BYTES,
 } from '../../../../src/data/rendering/antiqueRelief';
 import { layoutWgslStruct } from '../../../../tools/utils/wgsl/layoutWgslStruct';
@@ -21,6 +21,7 @@ import type { AntiqueReliefInput } from '../../../../src/@types/rendering/Antiqu
 
 const SHADER = 'src/services/gpu/shaders/antiqueLook/relief.wesl';
 const MARS_M = 3_390_000;
+const MARS = ANTIQUE_RELIEF_BODIES['mars']!;
 
 function input(eyeRelBodyM: [number, number, number]): AntiqueReliefInput {
   const view = mat4d.lookAt([0, 0, 0], [0.3, -0.2, -1], [0, 1, 0]);
@@ -29,6 +30,8 @@ function input(eyeRelBodyM: [number, number, number]): AntiqueReliefInput {
     vp: mat4d.multiply(proj, view) as Float64Array,
     eyeRelBodyM,
     datumRadiusM: MARS_M,
+    body: MARS,
+    print: 2,
     sun: [0, 0.6, 0.8],
     size: { width: 1600, height: 900 },
     unitPx: 1,
@@ -56,7 +59,12 @@ describe('packAntiqueRelief', () => {
     expect(f32[at('lightSin')]! ** 2 + f32[at('lightCos')]! ** 2).toBeCloseTo(1, 6);
     // ~52 km up: all orbit, all the orbit exaggeration.
     expect(f32[at('orbit')]).toBe(1);
-    expect(f32[at('exaggeration')]).toBe(ANTIQUE_RELIEF_EXAGGERATION[1]);
+    expect(f32[at('exaggeration')]).toBe(MARS.exaggeration[1]);
+    expect(f32[at('cellM')]).toBe(MARS.cellM);
+    expect(f32[at('slopeInk')]).toBe(MARS.slopeInk);
+    expect(f32[at('wideNormal')]).toBe(0);
+    const earth = { ...input(eye), body: ANTIQUE_RELIEF_BODIES['earth']! };
+    expect(new Float32Array(packAntiqueRelief(earth))[at('wideNormal')]).toBe(1);
   });
 
   it('splits the eye into whole anchor cells and a small f32 remainder', () => {
@@ -77,8 +85,8 @@ describe('packAntiqueRelief', () => {
       const f32 = new Float32Array(packAntiqueRelief(input([0, 0, MARS_M + altitudeM])));
       return [f32[35], f32[39]];
     };
-    expect(at(-2_500)).toEqual([0, ANTIQUE_RELIEF_EXAGGERATION[0]]);
-    expect(at(46_000)).toEqual([1, ANTIQUE_RELIEF_EXAGGERATION[1]]);
+    expect(at(-2_500)).toEqual([0, MARS.exaggeration[0]]);
+    expect(at(46_000)).toEqual([1, MARS.exaggeration[1]]);
   });
 
   it('uploads an inverse that unprojects what the projection projects', () => {

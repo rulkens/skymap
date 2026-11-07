@@ -37,6 +37,7 @@ import package::antiqueLook::plateBodies::PRINT_MARS;
 import package::antiqueLook::plateBodies::PRINT_MOON;
 import package::antiqueLook::bodies::earth::EarthPrintIn;
 import package::antiqueLook::bodies::earth::earthPrint;
+import package::antiqueLook::bodies::earth::earthRelief;
 import package::antiqueLook::bodies::mars::marsPrint;
 import package::antiqueLook::bodies::mars::marsRelief;
 import package::antiqueLook::bodies::moon::MoonTone;
@@ -111,8 +112,10 @@ struct AntiqueLettering {
 const INK: vec3<f32> = vec3<f32>(0.17, 0.13, 0.10);
 const FLAG_BODIES: u32 = 1u;
 const FLAG_CAPTIONS: u32 = 2u;
-// The relief row holds Mars ground this frame (`relief.wesl`).
+// The relief row holds engraved ground this frame (`relief.wesl`), its body's PRINT_*
+// code in the flags from this bit: inside the relief shell the globe has no record.
 const FLAG_RELIEF: u32 = 16u;
+const RELIEF_PRINT_SHIFT: u32 = 8u;
 // `depthEdge`'s second difference of depth over the nearest tap's depth.
 const DEPTH_JUMP: f32 = 0.05;
 // Sheet layout in print units: bare margin with the plate mark in it, then the
@@ -626,7 +629,11 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     }
     if (ground) {
       let around = luma(textureSampleLevel(quarterTex, linear, uv, WASH_LAYER, 0.0).rgb);
-      bodyInk = max(bodyInk, marsRelief(reliefTex, linear, px, relief, u.unit, luma(src), around));
+      if ((u.flags >> RELIEF_PRINT_SHIFT) == PRINT_EARTH) {
+        bodyInk = max(bodyInk, earthRelief(reliefTex, linear, px, relief, u.unit, luma(src), around));
+      } else {
+        bodyInk = max(bodyInk, marsRelief(reliefTex, linear, px, relief, u.unit, luma(src), around));
+      }
     }
     bodyInk *= body;
   }

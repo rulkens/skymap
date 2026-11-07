@@ -6,6 +6,7 @@
  */
 
 import type { Vec3 } from '../math/Vec3';
+import type { AntiqueReliefBody } from './AntiqueReliefBody';
 import type { Size } from './Size';
 
 export type AntiqueReliefInput = {
@@ -14,6 +15,11 @@ export type AntiqueReliefInput = {
   /** Eye − body centre, f64. */
   readonly eyeRelBodyM: Readonly<Vec3>;
   readonly datumRadiusM: number;
+  /** How this body's ground is engraved (`ANTIQUE_RELIEF_BODIES`). */
+  readonly body: AntiqueReliefBody;
+  /** Its print convention's code (`ANTIQUE_BODY_PRINT_CODES`): the plate dispatches the
+   * engraved ground on it, since inside the relief shell the globe has no plate record. */
+  readonly print: number;
   /** Unit vector toward the Sun. */
   readonly sun: Readonly<Vec3>;
   readonly size: Size;
