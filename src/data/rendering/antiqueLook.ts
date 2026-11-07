@@ -47,6 +47,7 @@ export const ANTIQUE_HIDDEN_PASSES: readonly string[] = [
 /** Passes that exist only for the look: they draw nothing with it off. */
 export const ANTIQUE_ONLY_PASSES: readonly string[] = [
   'earth-ocean-mask',
+  'earth-antique-map',
   'body-albedo-mask',
   'star-points-print',
   'star-catalog-print',
@@ -72,6 +73,10 @@ export const ANTIQUE_STRUCTURE_CELL = 2;
  * `texturedBody/fragment.wesl` `fsAlbedoMask`). */
 export const ANTIQUE_LAND_FORMAT: GPUTextureFormat = 'rg8unorm';
 
+/** The geography row (`earth/antiqueMap/*.wesl`): r realm colour code, g border
+ * proximity (the outline-colour band), b line ink, a sign ink. */
+export const ANTIQUE_GEOGRAPHY_FORMAT: GPUTextureFormat = 'rgba8unorm';
+
 /** The print-points row (`antiqueLook/printPoint.wesl`): xy NDC and a magnitude need
  * floats; its depth ranks the points in a texel by magnitude. */
 export const ANTIQUE_PRINT_POINTS_FORMAT: GPUTextureFormat = 'rgba16float';
@@ -95,4 +100,5 @@ export const ANTIQUE_TARGETS = {
   landBlurAcross: 'antique-land-blur-across',
   landBlur: 'antique-land-blur',
   lines: 'antique-lines',
+  geography: 'antique-geography',
 } as const;

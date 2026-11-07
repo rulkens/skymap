@@ -234,6 +234,7 @@ export function createAntiqueLookGpu(
         TEXTURE, // nebula
         STORAGE, // sky floor
         TEXTURE, // structure glow
+        TEXTURE, // Earth's geography
       ],
       [targetFormat],
     ),

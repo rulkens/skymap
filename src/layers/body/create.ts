@@ -13,6 +13,7 @@ import { SURFACE_TILE_MESH_RESOLUTION } from './surfaceTiles/format/data/surface
 import { SLAB_REVERSED_Z, NEAR0 } from '../../services/engine/frame/slabs';
 import { createBodyGlintRenderer } from '../../services/gpu/renderers/bodies/bodyGlintRenderer';
 import { createEarthRenderer } from './earth/render/earthRenderer';
+import { createAntiqueMapRenderer } from './earth/antiqueMap/render/antiqueMapRenderer';
 import { createSurfaceTileRenderer } from './surfaceTiles/patch/render/surfaceTileRenderer';
 import { createTerrainPickMarkerRenderer } from './terrainPick/render/terrainPickMarkerRenderer';
 import { createTerrainPickCursor } from './terrainPick/subsystems/terrainPickCursor';
@@ -81,6 +82,7 @@ export function create(deps: LayerCoreDeps<BodyFacts>): BodyRuntime {
       ATMOSPHERE_PARAMS,
     ),
     bodyGlintRenderer: createBodyGlintRenderer(device, HDR_TARGET_FORMAT),
+    antiqueMapRenderer: createAntiqueMapRenderer(device, deps.requestRender),
   };
   return {
     ...renderers,

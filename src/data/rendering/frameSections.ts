@@ -255,6 +255,13 @@ export const SCENE: FrameSection = {
       slab: 'surfaceMask',
       passes: ['earth-ocean-mask', 'body-albedo-mask'],
     },
+    // Earth's c.1690 geography for the look: realm colours, borders, rivers, signs.
+    {
+      kind: 'render',
+      target: 'antique-geography',
+      slab: 'surfaceMask',
+      passes: ['earth-antique-map'],
+    },
     // The look's star glyphs come from the catalogue: every naked-eye star as one point,
     // the brightest per cell kept by its depth. Look-only, like the land row above.
     {

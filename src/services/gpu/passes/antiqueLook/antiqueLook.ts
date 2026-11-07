@@ -112,6 +112,7 @@ export function createAntiqueLook(init: {
     // Inside an atmosphere the day sky fills foreground:0's alpha; its depth tells body from sky.
     const depthCover = hasBodies && bodyRowSlabs(ctx).insideAtmosphere.length > 0;
     const { paper: paperAssets, ornaments: atlas, glyphs } = assets;
+    const rays = viewCornerRays(basis, ctx.frustum, size);
 
     packAntiqueUniforms(
       {
@@ -121,7 +122,7 @@ export function createAntiqueLook(init: {
         depthCover,
         captions: io.overlay !== null,
         paper: paperAssets !== null,
-        rays: viewCornerRays(basis, ctx.frustum, size),
+        rays,
         seed: PAPER_SEED,
         rulings,
         hatchAngle: terminatorHatchAngle(ctx.bodyPose(SUN)),
@@ -155,7 +156,7 @@ export function createAntiqueLook(init: {
           });
     device.queue.writeBuffer(g.digits, 0, packAntiqueGlyphs(digits, glyphBytes));
     const landMapped = ctx.snapshot.renderedTargets.has(ANTIQUE_TARGETS.land);
-    const plateBodies = hasBodies ? antiquePlateBodies(state, ctx, unitPx, landMapped) : [];
+    const plateBodies = hasBodies ? antiquePlateBodies(state, ctx, unitPx, landMapped, rays) : [];
     device.queue.writeBuffer(g.plateBodies, 0, packAntiquePlateBodies(plateBodies, plateBodyBytes));
 
     const uniforms = { buffer: g.uniforms };
@@ -314,6 +315,9 @@ export function createAntiqueLook(init: {
         nebula,
         { buffer: g.skyFloorBuffer },
         structureGlow,
+        ctx.snapshot.renderedTargets.has(ANTIQUE_TARGETS.geography)
+          ? targets.viewOf(ANTIQUE_TARGETS.geography)
+          : g.empty,
       ],
       end,
     );

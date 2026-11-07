@@ -20,7 +20,25 @@ const S = Math.sin(Math.PI / 6);
 const C = Math.cos(Math.PI / 6);
 const TILT: Mat3 = [1, 0, 0, 0, C, S, 0, -S, C];
 
-const at = (eye: Vec3) =>
+// Corner rays of a narrow frame looking down −y, and one looking along x past the limb.
+const DOWN: Vec3[] = [
+  [0.05, -1, 0.05],
+  [-0.05, -1, 0.05],
+  [0.05, -1, -0.05],
+  [-0.05, -1, -0.05],
+].map(([x, y, z]) => [
+  x! / Math.hypot(x!, y!, z!),
+  y! / Math.hypot(x!, y!, z!),
+  z! / Math.hypot(x!, y!, z!),
+]);
+const LEVEL: Vec3[] = [
+  [1, 0.05, 0.05],
+  [1, -0.05, 0.05],
+  [1, 0.05, -0.05],
+  [1, -0.05, -0.05],
+];
+
+const at = (eye: Vec3, cornerRays: readonly Vec3[] = LEVEL) =>
   antiquePlateBody({
     positionMpc: [0, 0, 0],
     orientation: TILT,
@@ -31,6 +49,7 @@ const at = (eye: Vec3) =>
     eyeMpc: eye,
     sunMpc: [-1e-5, 0, 0],
     unitsPerRad: 800,
+    cornerRays,
   });
 
 describe('antiquePlateBody', () => {
@@ -49,5 +68,13 @@ describe('antiquePlateBody', () => {
     // 4 km over the highest peak: above the sphere, still under the margin.
     expect(at([0, (RADIUS_M + 24_000) / SCALE_UNITS.MPC_TO_M, 0])).toBeNull();
     expect(at([0, 1.1 * R_MPC, 0])).not.toBeNull();
+  });
+
+  it('records a globe under the margin when the whole frame looks onto it', () => {
+    const low: Vec3 = [0, (RADIUS_M + 24_000) / SCALE_UNITS.MPC_TO_M, 0];
+    expect(at(low, DOWN)).not.toBeNull();
+    expect(at(low, LEVEL)).toBeNull();
+    // Still nothing from inside the relief shell, whatever the frame.
+    expect(at([0, (RADIUS_M + 10_000) / SCALE_UNITS.MPC_TO_M, 0], DOWN)).toBeNull();
   });
 });

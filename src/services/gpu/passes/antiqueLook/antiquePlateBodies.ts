@@ -12,6 +12,7 @@ import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { AntiquePlateBody } from '../../../../@types/rendering/AntiquePlateBody';
 import type { BodySurface } from '../../../../@types/scene/BodySurface';
 import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { ViewCornerRays } from '../../../../@types/camera/projection/ViewCornerRays';
 import {
   ANTIQUE_BODY_PRINTS,
   ANTIQUE_RING_LINES_KM,
@@ -33,6 +34,7 @@ export function antiquePlateBodies(
   ctx: FrameView,
   unitPx: number,
   landMapped: boolean,
+  rays: ViewCornerRays,
 ): AntiquePlateBody[] {
   const states = sceneBodyStates(state, ctx);
   const records: AntiquePlateBody[] = [];
@@ -55,6 +57,7 @@ export function antiquePlateBodies(
       eyeMpc: ctx.drawCamPos,
       sunMpc: RENDER_ORIGIN_MPC,
       unitsPerRad: ctx.drawPxPerRad / unitPx,
+      cornerRays: [rays.tl, rays.tr, rays.bl, rays.br],
     });
     if (record !== null) records.push(record);
   };

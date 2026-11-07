@@ -24,6 +24,9 @@ struct EarthPrintIn {
   blurredShare: f32,
   seaD: f32,
   seaPerUnit: f32,
+  // The geography row's texel: r realm code (0 none, else pigment + 1), g border
+  // band, b border and river ink, a sign ink.
+  geo: vec4<f32>,
 }
 
 // `cover` scales the washes: body coverage times the plate's inside.
@@ -42,8 +45,19 @@ fn earthPrint(col: vec3<f32>, cover: f32, e: EarthPrintIn) -> BodyPrint {
   let near = clamp(1.0 - e.seaD / 16.0, 0.0, 1.0);
   let inland = seaDistance(1.0 - e.blurredShare);
   let seaWash = (0.14 + 0.1 * near) * (1.0 - smoothstep(0.35, 0.65, e.washShare));
-  let landWash = 0.5 * smoothstep(0.35, 0.6, e.washShare) * clamp(1.0 - inland / 14.0, 0.0, 1.0);
+  // Each realm takes its own pigment along its coasts and its borders alike.
+  let code = i32(round(e.geo.r * 255.0));
+  let realm = code >= 1 && code <= 7;
+  let land = smoothstep(0.35, 0.6, e.washShare);
+  let coastBand = clamp(1.0 - inland / 14.0, 0.0, 1.0);
+  let band = select(coastBand, max(coastBand, e.geo.g * e.geo.g), realm);
+  let pigment = select(pigmentAt(2.0), pigmentAt(f32(code - 1)), realm);
   var washed = applyWash(col, pigmentAt(5.0), seaWash * cover);
-  washed = applyWash(washed, pigmentAt(2.0), landWash * cover);
-  return BodyPrint(washed, max(coast, water * 0.9));
+  washed = applyWash(washed, pigment, 0.5 * land * band * cover);
+  // A sign's alpha is half its paper plus half its ink (`sign.wesl`): the paper clears
+  // the engraving under the sign, the ink prints over it.
+  let signInk = clamp(2.0 * e.geo.a - 1.0, 0.0, 1.0);
+  let signPaper = clamp(2.0 * e.geo.a, 0.0, 1.0);
+  let lines = max(max(coast, water * 0.9), e.geo.b * smoothstep(0.2, 0.5, e.landShare));
+  return BodyPrint(washed, max(lines * (1.0 - signPaper), signInk));
 }

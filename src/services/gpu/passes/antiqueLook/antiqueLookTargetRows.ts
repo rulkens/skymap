@@ -9,6 +9,7 @@
 import type { RenderTargetSpec } from '../../../../@types/engine/frame/RenderTargetSpec';
 import {
   ANTIQUE_CELL,
+  ANTIQUE_GEOGRAPHY_FORMAT,
   ANTIQUE_LAND_FORMAT,
   ANTIQUE_PRINT_CELL_UNITS,
   ANTIQUE_PRINT_POINTS_DEPTH,
@@ -56,6 +57,7 @@ export function antiqueLookTargetRows(swapFormat: GPUTextureFormat): readonly Re
     row(ANTIQUE_TARGETS.decor, 'rgba8unorm', 1),
     row(ANTIQUE_TARGETS.decorHue, 'rgba8unorm', 1),
     row(ANTIQUE_TARGETS.land, ANTIQUE_LAND_FORMAT, 1),
+    row(ANTIQUE_TARGETS.geography, ANTIQUE_GEOGRAPHY_FORMAT, 1),
     // The land share's blur, two passes (`landBlur.wesl`): Σ weight·share, Σ weight.
     row(ANTIQUE_TARGETS.landBlurAcross, 'rg16float', ANTIQUE_CELL),
     row(ANTIQUE_TARGETS.landBlur, 'rg16float', ANTIQUE_CELL),

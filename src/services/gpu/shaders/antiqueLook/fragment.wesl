@@ -70,6 +70,8 @@ import package::antiqueLook::pigments::pigmentAt;
 @group(0) @binding(17) var<storage, read> skyFloor: f32;
 // The structure markers' low band (`structureGlow.wesl`): premultiplied rgb, a coverage.
 @group(0) @binding(18) var structureGlowTex: texture_2d<f32>;
+// Earth's c.1690 geography (`earth/antiqueMap/*.wesl`): r realm code, g border band, b line ink, a signs.
+@group(0) @binding(19) var geographyTex: texture_2d<f32>;
 
 // The border's numbering, placed per frame by `placeAntiqueNumerals`.
 struct Glyph {
@@ -532,7 +534,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     let cover = body * frame.y;
     if (print == PRINT_EARTH) {
       let e = EarthPrintIn(p, pxUnits, u.unit, tone, landShare, landPerPx,
-        landAt(uv + slip * 0.6), blurredShare, seaD, seaPerUnit);
+        landAt(uv + slip * 0.6), blurredShare, seaD, seaPerUnit, texel(geographyTex, ip));
       let earth = earthPrint(col, cover, e);
       col = earth.col;
       bodyInk = max(bodyInk, earth.ink);
