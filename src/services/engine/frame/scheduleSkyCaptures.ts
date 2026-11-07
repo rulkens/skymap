@@ -13,6 +13,7 @@ import type { CubemapCaptureKey } from '../../../@types/rendering/CubemapCapture
 import type { CubeFace } from '../../../@types/rendering/CubeFace';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
+import type { SkyCapture } from '../../../@types/rendering/SkyCapture';
 import {
   APP_CUBEMAP_CAPTURE_REGISTRY,
   APP_SKY_CAPTURE_KEYS,
@@ -23,6 +24,7 @@ import { deriveView } from './deriveView';
 import { regionRelativeDistanceMpc } from '../../../utils/regions/regionRelativeDistanceMpc';
 import { sceneBodyStates } from './sceneBodyStates';
 import { ALL_CUBE_FACES } from '../../../data/rendering/cubemapCaptures';
+import { captureTimingSlotName } from './timing/captureTimingSlotName';
 
 export function scheduleSkyCaptures(input: {
   readonly state: EngineState;
@@ -38,7 +40,7 @@ export function scheduleSkyCaptures(input: {
 
   const scheduled = new Map<CubemapCaptureKey, ReadonlyMap<CubeFace, CaptureFace>>();
   for (const key of APP_SKY_CAPTURE_KEYS) {
-    const row = APP_CUBEMAP_CAPTURE_REGISTRY[key];
+    const row: SkyCapture = APP_CUBEMAP_CAPTURE_REGISTRY[key];
     const runtime = state.cubemapCaptures[key];
     // Unconditional, band or no band: the target's release-margin check needs
     // the distance on the very frame the band closes, not one frame later.
@@ -55,9 +57,11 @@ export function scheduleSkyCaptures(input: {
       if (!bandActive) {
         runtime.bakedSettings = null;
         runtime.bakedContentVersion = null;
+        runtime.lastBakeAtMs = null;
       }
     }
-    if (!bandActive) continue;
+    // Before the stale check, so an unticked row keeps its bake record and bakes once re-ticked.
+    if (!bandActive || state.settings.debug.disabledPasses[captureTimingSlotName(key)]) continue;
     // A `rebakeOnSettings: false` row reads its bake as current whatever the
     // settings (or catalog content) do; only a band re-entry (which nulls the
     // record) re-bakes it — content bumps obey the same gate as settings writes.
@@ -67,6 +71,11 @@ export function scheduleSkyCaptures(input: {
         (runtime.bakedSettings !== state.settings ||
           runtime.bakedContentVersion !== state.contentVersion));
     if (!rosterSettling && !stale) continue;
+    const settlingCapped =
+      row.settlingRebakeMinMs !== undefined &&
+      runtime.lastBakeAtMs !== null &&
+      ctx.snapshot.nowMs - runtime.lastBakeAtMs < row.settlingRebakeMinMs;
+    if (settlingCapped) continue;
 
     // One bake covers the band: a 1024² face's texel is ~1.5 mrad, so content
     // at 8 kpc shifts by a texel only after ~12 pc of travel, against a 500 AU
@@ -105,6 +114,7 @@ export function scheduleSkyCaptures(input: {
     // next frame baking, and the first settled frame bakes once more.
     runtime.bakedSettings = rosterSettling ? null : state.settings;
     runtime.bakedContentVersion = rosterSettling ? null : state.contentVersion;
+    runtime.lastBakeAtMs = ctx.snapshot.nowMs;
   }
   return scheduled;
 }

@@ -30,6 +30,9 @@ export const CORE_CUBEMAP_CAPTURES = {
     nearMpc: 0.1 * SCALE_UNITS.AU_TO_MPC,
     viewSlotBase: 7,
     rebakeOnSettings: false,
+    // Each sweep redraws the whole galaxy cloud six times, and turning the view keeps
+    // thumbnail fades landing; a probe refreshes every 2 s and never shows a stale star.
+    settlingRebakeMinMs: 4000,
   },
   probe: {
     kind: 'probe',
