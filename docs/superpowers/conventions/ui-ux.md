@@ -23,7 +23,8 @@ Do these in order and keep the answers; the report quotes them.
    then the shortest and the longest real content. Each gets a designed answer. The empty state says
    what this is and gives the next step. [UIStack, GettingReal, NN-empty, Vercel]
 4. **Sketch two or three layouts** in words (places, controls, what leads where), pick one, and write
-   the reason against the job. One candidate is not a choice. [ShapeUp, NN-parallel]
+   the reason against the job. One candidate is not a choice. To shoot them in the real UI, use the
+   `mockup` skill (`npm run mock`). [ShapeUp, NN-parallel]
 5. **Build**, the centre first: the one part the screen cannot live without, before the rest. [GettingReal]
 6. **Screenshot at 1728 and 400 wide**, every state, and look at each image.
 7. **Critique against step 1**, not against taste: one pass per section of this file. Rate each finding

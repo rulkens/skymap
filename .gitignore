@@ -226,3 +226,9 @@ packages/desktop/build/
 packages/desktop/release/
 # Brand bitmaps from `npm run brand -w packages/desktop` (dist runs it first); the source is src/brand.
 packages/desktop/resources/
+
+# `?mock=<name>` mockups are scratch; only the example and its README are kept (src/dev/mocks/README.md).
+/src/dev/mocks/*
+!/src/dev/mocks/README.md
+!/src/dev/mocks/example.tsx
+!/src/dev/mocks/example.module.css

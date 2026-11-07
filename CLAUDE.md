@@ -95,6 +95,7 @@ npm run record-tour # offline 4K tour recorder → tools/record/README.md
 npm run perf        # headless GPU-timing harness → tools/perf/README.md
 npm run perf:cpu    # main-thread ms per frame row at the perf poses → tools/perf/README.md
 npm run shot        # screenshot of any deep link → tools/shot/README.md
+npm run mock        # ?mock=<name> mockup in the real UI, re-shot on every save (~0.3 s) → tools/mock/README.md
 npm run loadtime    # cold-load milestones on throttled 3G/4G → tools/loadtime/README.md
 npm run phone       # Android phone over USB: serve, open, shot, net, trace → tools/phone/README.md
 npm run capture-featured # palette-card + cosmic-structure thumbnails → tools/capture/README.md
