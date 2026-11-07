@@ -201,6 +201,17 @@ Owner ruling 2026-11-07: keep the generic galaxy engraving with these names; the
 `src/data/ui/antiqueChrome.ts`, `src/styles/antique.css`, the `--sheet-ground` hook in Panel, cardChrome, MobileSheet and Dock
 - [x] Slips on laid paper (fibre, mottle, chain and wire lines, edge toning, foxing and a tide-line varied by panel size); ink thins and breaks, wobbles off the repeating edges; washes laid by hand (40df88d68).
 
+### Task 25: A debug section to tune the look live (owner: "make a debug section for the antique look")
+**Files:** `src/components/DebugPanel/AntiqueTuningSection/`, `src/data/rendering/antiqueTuning{,SliderFields}.ts`, `antiqueSlice.ts`,
+`io.wesl` (`tune`, `tint`, `hidden`), `fragment.wesl` (`HIDE_*`, `rowOn`)
+- [x] Hatch spacing and angle, sky wash, ink density, relief light, paper tint, sky ruling frame, a switch per plate row; Reset, and Copy of the moved knobs; defaults print the plate as before (653c0f990).
+
+### Task 25: Stars on their own path (owner: "they need their own way to reach the screen, so they read as stars")
+**Files:** `src/data/rendering/antiqueLook.ts`, `src/services/gpu/shaders/antiqueLook/{glyphs,engraving}.wesl`,
+`tests/services/engine/frame/expandFrameOrder.test.ts`, `tests/services/gpu/shaders/antiqueStarClass.test.ts`
+- [x] Resolved stars reach the plate only as catalogue glyphs: `star-points` and `star-catalog` are hidden under the look, so bloom and the glow filters no longer ring them; the aggregate keeps its hdr line (c7e829f2f).
+- [x] Seven glyph classes by whole magnitude, with wedge rays that survive at 1x (r7 cartographer) (c7e829f2f).
+
 ## Definition of Done
 
 **Deliverables:** the `stylize` FRAME_ORDER line and `antiqueLook` pass; the `antique` settings
