@@ -30,6 +30,7 @@ import {
   oscillate,
   seq,
   all,
+  wait,
 } from '../../../../src/services/engine/animation/effectHelpers';
 import type { BaseSegment } from '../../../../src/@types/animation/compiledClip/BaseSegment';
 import type { Channel } from '../../../../src/@types/animation/Channel';
@@ -60,7 +61,7 @@ describe('validateSingleWriter isolation', () => {
         startSec: 0,
         endSec: 4,
         to: 300,
-        ease: 'easeInOutCubic',
+        curve: { kind: 'ease', ease: 'easeInOutCubic' },
         space: 'log',
       },
     ];
@@ -76,7 +77,7 @@ describe('validateSingleWriter isolation', () => {
         startSec: 0,
         endSec: 4,
         to: 300,
-        ease: 'easeInOutCubic',
+        curve: { kind: 'ease', ease: 'easeInOutCubic' },
         space: 'log',
       },
       {
@@ -85,7 +86,7 @@ describe('validateSingleWriter isolation', () => {
         startSec: 4,
         endSec: 8,
         to: 950,
-        ease: 'easeInOutCubic',
+        curve: { kind: 'ease', ease: 'easeInOutCubic' },
         space: 'log',
       },
     ];
@@ -101,7 +102,7 @@ describe('validateSingleWriter isolation', () => {
         startSec: 0,
         endSec: 4,
         to: 300,
-        ease: 'easeInOutCubic',
+        curve: { kind: 'ease', ease: 'easeInOutCubic' },
         space: 'log',
       },
       {
@@ -110,7 +111,7 @@ describe('validateSingleWriter isolation', () => {
         startSec: 0,
         endSec: 4,
         to: 950,
-        ease: 'easeInOutCubic',
+        curve: { kind: 'ease', ease: 'easeInOutCubic' },
         space: 'log',
       },
     ];
@@ -127,7 +128,7 @@ describe('validateSingleWriter isolation', () => {
         startSec: 0,
         endSec: 6,
         to: 1,
-        ease: 'easeInOutCubic',
+        curve: { kind: 'ease', ease: 'easeInOutCubic' },
         space: 'add',
       },
       {
@@ -136,7 +137,7 @@ describe('validateSingleWriter isolation', () => {
         startSec: 4,
         endSec: 8,
         to: 2,
-        ease: 'easeInOutCubic',
+        curve: { kind: 'ease', ease: 'easeInOutCubic' },
         space: 'add',
       },
     ];
@@ -155,7 +156,7 @@ describe('validateSingleWriter isolation', () => {
         startSec: 0,
         endSec: 4,
         to: 300,
-        ease: 'easeInOutCubic',
+        curve: { kind: 'ease', ease: 'easeInOutCubic' },
         space: 'log',
       },
     ];
@@ -166,7 +167,7 @@ describe('validateSingleWriter isolation', () => {
         startSec: 0,
         endSec: 4,
         to: 0.5,
-        ease: 'easeInOutCubic',
+        curve: { kind: 'ease', ease: 'easeInOutCubic' },
         space: 'add',
       },
       {
@@ -175,7 +176,7 @@ describe('validateSingleWriter isolation', () => {
         startSec: 0,
         endSec: 4,
         to: 1.0,
-        ease: 'easeInOutCubic',
+        curve: { kind: 'ease', ease: 'easeInOutCubic' },
         space: 'add',
       },
     ];
@@ -228,5 +229,50 @@ describe('validateSingleWriter via compileClip integration', () => {
         ],
       }),
     ).not.toThrow();
+  });
+});
+
+describe('validateSingleWriter blend pairs', () => {
+  const seg = (
+    startSec: number,
+    endSec: number,
+    blendIn?: { startSec: number; endSec: number },
+  ): BaseSegment => ({
+    segKind: 'tween',
+    channel: 'distance',
+    startSec,
+    endSec,
+    to: 300,
+    curve: { kind: 'ease', ease: 'linear' },
+    space: 'log',
+    ...(blendIn !== undefined ? { blendIn } : {}),
+  });
+  const tracksOf = (...segs: BaseSegment[]) => ({ ...emptyTracks(), distance: segs });
+
+  it('an overlap with a matching blendIn passes', () => {
+    const tracks = tracksOf(seg(0, 4), seg(2, 6, { startSec: 2, endSec: 4 }));
+    expect(() => validateSingleWriter(tracks)).not.toThrow();
+  });
+
+  it('a blendIn that does not match the overlap throws', () => {
+    const tracks = tracksOf(seg(0, 4), seg(2, 6, { startSec: 1, endSec: 4 }));
+    expect(() => validateSingleWriter(tracks)).toThrow(/'distance'.*does not match/);
+  });
+
+  it('three live writers throw', () => {
+    const tracks = tracksOf(
+      seg(0, 4),
+      seg(1, 6, { startSec: 1, endSec: 4 }),
+      seg(3, 8, { startSec: 3, endSec: 6 }),
+    );
+    expect(() => validateSingleWriter(tracks)).toThrow(/three writers.*'distance'/);
+  });
+
+  it.each([
+    ['one snap', [seq([dollyTo(300, 0)])]],
+    ['two snaps', [seq([dollyTo(300, 0), dollyTo(250, 0)])]],
+  ])('%s at the start of a window never hide an unmarked overlap', (_name, snaps) => {
+    const timeline = [all([dollyTo(400, 4), ...snaps, seq([wait(1), dollyTo(200, 4)])])];
+    expect(() => compileClip({ timeline })).toThrow(/single-writer violation.*\[0,4\) overlaps/);
   });
 });

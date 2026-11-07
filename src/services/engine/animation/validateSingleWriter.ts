@@ -33,6 +33,8 @@
  * Windows are HALF-OPEN: `[startSec, endSec)`. Two segments that TOUCH at an
  * endpoint (e.g. `[0, 4)` and `[4, 8)`) do NOT overlap — a `seq` of two ramps
  * must pass cleanly. The predicate is `a.startSec < b.endSec && b.startSec < a.endSec`.
+ * The one legal overlap is a crossfade from an overlapping `seq`: the later
+ * segment's `blendIn` names exactly the shared window, and never three at once.
  *
  * ### How it is called
  *
@@ -50,9 +52,8 @@ import type { Channel } from '../../../@types/animation/Channel';
  * the same channel's base track overlap.
  *
  * `baseTracks` comes from `compileClip` with each channel's segments already
- * sorted ascending by `startSec`. The scan therefore only needs to compare
- * each segment against the one immediately following it on the same channel —
- * a linear O(n) pass per channel.
+ * sorted ascending by `startSec`. The scan therefore only compares each segment
+ * with the ones that start before it ends on the same channel.
  *
  * @param baseTracks  The per-channel base-segment arrays from `CompiledClip`.
  * @throws            `Error` naming the channel and both overlapping windows
@@ -62,18 +63,35 @@ export function validateSingleWriter(baseTracks: Record<Channel, BaseSegment[]>)
   for (const ch of Object.keys(baseTracks) as Channel[]) {
     const segs = baseTracks[ch];
     // Segments are pre-sorted by startSec ascending (compileClip guarantees
-    // this). Consecutive-pair scan is sufficient by contrapositive: if segment i
-    // does NOT overlap i+1, then segs[i].endSec <= segs[i+1].startSec, so by
-    // sorted order segs[i] cannot overlap i+2 or any later segment either.
+    // this), so every segment that can overlap `a` starts before `a` ends. Not
+    // just the next one: zero-length snaps at `a`'s start sort between them.
     for (let i = 0; i < segs.length - 1; i++) {
       const a = segs[i]!;
-      const b = segs[i + 1]!;
       // Half-open overlap: [a.start, a.end) ∩ [b.start, b.end) is non-empty
       // iff a.start < b.end AND b.start < a.end.
-      if (a.startSec < b.endSec && b.startSec < a.endSec) {
+      const overlapping: BaseSegment[] = [];
+      for (let j = i + 1; j < segs.length && segs[j]!.startSec < a.endSec; j++) {
+        if (a.startSec < segs[j]!.endSec) overlapping.push(segs[j]!);
+      }
+      const [b, c] = overlapping;
+      if (b === undefined) continue;
+      if (b.blendIn === undefined) {
         throw new Error(
           `single-writer violation on channel '${ch}': ` +
             `[${a.startSec},${a.endSec}) overlaps [${b.startSec},${b.endSec})`,
+        );
+      }
+      const { startSec, endSec } = b.blendIn;
+      if (startSec !== b.startSec || endSec !== a.endSec || a.endSec > b.endSec) {
+        throw new Error(
+          `blend window [${startSec},${endSec}) on channel '${ch}' does not match ` +
+            `the overlap of [${a.startSec},${a.endSec}) and [${b.startSec},${b.endSec})`,
+        );
+      }
+      if (c !== undefined) {
+        throw new Error(
+          `three writers live at once on channel '${ch}': ` +
+            `[${a.startSec},${a.endSec}) still runs at ${c.startSec}`,
         );
       }
     }

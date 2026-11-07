@@ -24,6 +24,7 @@ import {
   oscillate,
   hold,
   hide,
+  show,
   fade,
   frameTo,
   seq,
@@ -379,5 +380,77 @@ describe('compileClip composites and their neighbours', () => {
     // A loop keeps turning past its window, so this is not the spin's one-window `by`.
     const spun = evaluateClip({ start: START, timeline: [loopSpin] }, 5).yaw;
     expect(compileClip(data).compositeTracks[0]!.sample(0).yaw).toBeCloseTo(spun, 12);
+  });
+});
+
+describe('seq overlap', () => {
+  const START = { target: [0, 0, 0] as [number, number, number], yaw: 0, pitch: 0, distance: 1000 };
+  const compile = (timeline: ClipData['timeline']) => compileClip({ start: START, timeline });
+
+  it('shifts each step start and shrinks the duration', () => {
+    const clip = compile([seq([dollyTo(300, 4), spin('yaw', { by: 1, over: 4 })], { overlap: 1 })]);
+    const yaw = clip.baseTracks['yaw']![0]!;
+    expect(yaw.startSec).toBe(3);
+    expect(clip.durationSec).toBe(7);
+  });
+
+  it('counts only steps with a duration', () => {
+    const clip = compile([
+      seq(
+        [dollyTo(300, 4), show(['label:body:planet']), spin('yaw', { by: 1, over: 4 }), hold(2)],
+        { overlap: [1, 0.5] },
+      ),
+    ]);
+    expect(clip.cues[0]!.atSec).toBe(3);
+    expect(clip.baseTracks['yaw']![0]!.startSec).toBe(3);
+    expect(clip.durationSec).toBe(8.5);
+  });
+
+  it('trailing zero-length steps fire at the seq end', () => {
+    const clip = compile([
+      seq([dollyTo(300, 4), spin('yaw', { by: 1, over: 4 }), show(['label:body:planet'])], {
+        overlap: 1,
+      }),
+    ]);
+    expect(clip.cues[0]!.atSec).toBe(7);
+  });
+
+  it('rate and osc shift with their step', () => {
+    const rated = compile([
+      seq([dollyTo(300, 4), rate('distance', { to: 0, over: 4 })], { overlap: 1 }),
+    ]);
+    expect(rated.velTracks[0]!.startSec).toBe(3);
+    const bobbed = compile([
+      seq(
+        [
+          dollyTo(300, 4),
+          oscillate('yaw', { amp: 1, period: 2, over: 3 }),
+          spin('pitch', { by: 1, over: 4 }),
+        ],
+        { overlap: 1 },
+      ),
+    ]);
+    expect(bobbed.oscTracks[0]!.startSec).toBe(3);
+  });
+
+  it.each([
+    ['negative', -1],
+    ['NaN', NaN],
+    ['wrong-length array', [1, 1]],
+    ['longer than a step', 5],
+  ])('throws on %s overlap', (_name, overlap) => {
+    expect(() =>
+      compile([seq([dollyTo(300, 4), spin('yaw', { by: 1, over: 4 })], { overlap })]),
+    ).toThrow(/seq at 0s, join 1/);
+  });
+
+  it('throws when two overlaps exceed the step between them', () => {
+    expect(() =>
+      compile([
+        seq([dollyTo(300, 6), spin('yaw', { by: 1, over: 4 }), spin('pitch', { by: 1, over: 6 })], {
+          overlap: [3, 3],
+        }),
+      ]),
+    ).toThrow(/seq at 0s, join 2/);
   });
 });
