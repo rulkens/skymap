@@ -63,7 +63,7 @@
   align-items: center;
   margin-bottom: var(--space-5);
   font-family: var(--font-family-label);
-  font-size: var(--font-size-sm);
+  font-size: max(var(--font-size-sm), var(--font-size-label-min));
   letter-spacing: var(--letter-spacing-widest);
   color: var(--color-fg-faint);
   text-transform: var(--label-case);

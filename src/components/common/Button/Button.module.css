@@ -47,7 +47,7 @@
 .primary {
   background: var(--color-accent);
   border-color: var(--color-accent);
-  color: #05070d;
+  color: var(--color-on-accent);
 }
 
 .primary:hover:not(:disabled),

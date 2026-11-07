@@ -42,6 +42,7 @@
 
 .caption {
   font-family: var(--font-family-label);
+  font-size: max(var(--font-size-sm), var(--font-size-label-min));
   text-transform: var(--label-case);
   letter-spacing: var(--letter-spacing-mid);
   font-weight: 500;

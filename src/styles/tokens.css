@@ -61,6 +61,15 @@
   /* The PINNED badge: the one warm accent against the blue palette. Not for reuse. */
   --color-pinned: #ffd97a;
 
+  /* Text on an --color-accent fill (the primary button). */
+  --color-on-accent: #05070d;
+
+  /* The thumbnail's broken-image text: fainter than --color-fg-ghost, quiet beside the card. */
+  --color-fg-placeholder: rgba(160, 180, 230, 0.35);
+
+  /* A value that is absent ("Not catalogued") fades to this opacity. */
+  --opacity-absent: 0.45;
+
   /* ── Accent (interactive highlights) ─────────────────────────────────── */
 
   --color-accent: #a8d0ff;
@@ -121,6 +130,11 @@
   /* A switch's thumb when on: the off colour, so only the track changes. */
   --toggle-thumb-on: var(--color-fg-muted);
 
+  /* The info card's photo: shown as is, brightened on hover. A look may tone it to its palette. */
+  --thumbnail-filter: none;
+  --thumbnail-filter-hover: brightness(1.15);
+  --thumbnail-blend: normal;
+
   /* ── Decorative gradient: the "starlight" line on the top edge of glass surfaces ── */
   --color-accent-gradient-mid: rgba(180, 220, 255, 0.7);
   --color-accent-gradient-edge: rgba(120, 180, 255, 0.45);
@@ -137,13 +151,16 @@
   /* ── Typography ─────────────────────────────────────────────────────── */
   /* System mono (no webfont round-trip): `ui-monospace` is SF Mono / Cascadia Mono / the Linux Mono.
    * `--font-family-mono` is the panels' text face; `--font-family-figures` is for readouts
-   * that update in place (clock, scale), which must keep fixed-width digits under any look. */
+   * that update in place (clock, scale). Their boxes are sized in `ch`, so a look may give
+   * them proportional digits without the box reflowing as the value changes. */
   --font-family-figures: ui-monospace, 'SF Mono', Menlo, monospace;
   --font-family-mono: var(--font-family-figures);
 
   /* Panel headings, eyebrows and badges. */
   --font-family-label: var(--font-family-mono);
   --label-case: uppercase;
+  /* A floor under every label's size: a face with small x-height (small caps) raises it. */
+  --font-size-label-min: 0px;
 
   /* Display serif: the face baked into the MSDF label atlas (src/data/fonts.ts), for marquee text echoing the in-scene labels. */
   --font-family-display: 'Cormorant Garamond', ui-serif, Georgia, serif;

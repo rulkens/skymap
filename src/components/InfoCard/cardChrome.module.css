@@ -125,7 +125,7 @@
   align-items: center;
   margin-bottom: var(--space-5);
   font-family: var(--font-family-label);
-  font-size: var(--font-size-sm);
+  font-size: max(var(--font-size-sm), var(--font-size-label-min));
   letter-spacing: var(--letter-spacing-widest);
   color: var(--color-fg-faint);
   text-transform: var(--label-case);
@@ -136,7 +136,7 @@
   display: none;
   color: var(--color-pinned);
   font-family: var(--font-family-label);
-  font-size: var(--font-size-sm);
+  font-size: max(var(--font-size-sm), var(--font-size-label-min));
   letter-spacing: var(--letter-spacing-max);
   text-transform: var(--label-case);
 }
@@ -163,7 +163,7 @@
   border: 1px solid var(--border-control);
   color: var(--color-accent-bright);
   font-family: var(--font-family-label);
-  font-size: var(--font-size-xs);
+  font-size: max(var(--font-size-xs), var(--font-size-label-min));
   letter-spacing: var(--letter-spacing-wider);
   text-transform: var(--label-case);
 }
@@ -382,7 +382,7 @@ details:not([open]) > .detailsSummary::before {
 
 /* Muted placeholder when a row has no resolvable catalogue page at all. */
 .catalogueNone {
-  opacity: 0.45;
+  opacity: var(--opacity-absent);
   font-style: italic;
 }
 
@@ -402,7 +402,7 @@ details:not([open]) > .detailsSummary::before {
   color: var(--color-fg);
   font: inherit;
   font-family: var(--font-family-label);
-  font-size: var(--font-size-sm);
+  font-size: max(var(--font-size-sm), var(--font-size-label-min));
   letter-spacing: var(--letter-spacing-mid);
   cursor: pointer;
   text-transform: var(--label-case);

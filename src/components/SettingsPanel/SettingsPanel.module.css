@@ -187,7 +187,7 @@
   padding-bottom: var(--space-2);
   border-bottom: 1px solid var(--border-control);
   font-family: var(--font-family-label);
-  font-size: var(--font-size-sm);
+  font-size: max(var(--font-size-sm), var(--font-size-label-min));
   letter-spacing: var(--letter-spacing-mid);
   text-transform: var(--label-case);
   color: var(--color-fg-dim);

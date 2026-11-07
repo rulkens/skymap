@@ -50,12 +50,13 @@
   --antique-rubric: #8b2316;
 
   /* Fell's x-height is ~0.44em against the system mono's ~0.53em; matching it keeps
-   * every token size legible without resizing a box. Mono readouts are unchanged. */
+   * every token size legible without resizing a box. */
   font-size-adjust: 0.526;
 
   --color-fg: var(--antique-ink);
   --color-fg-base: #33281d;
-  --color-fg-muted: #46372a;
+  /* Dark enough that the tier chip's caption, at 0.75 opacity, still clears 4.5:1. */
+  --color-fg-muted: #3d3024;
   --color-fg-subtle: #4c3c2d;
   --color-fg-tertiary: #574533;
   --color-fg-dim: #66513c;
@@ -64,6 +65,10 @@
   --color-fg-label: #66513c;
   --color-fg-key: #66513c;
   --color-pinned: var(--antique-rubric);
+  --color-on-accent: var(--antique-paper);
+  --color-fg-placeholder: var(--color-fg-ghost);
+  /* Faded ink would drop under 4.5:1; the italic alone marks the absence. */
+  --opacity-absent: 1;
 
   --color-accent: var(--antique-rubric);
   --color-accent-control: #46372a;
@@ -96,6 +101,13 @@
   --gradient-accent-bar: none;
   --toggle-thumb-on: var(--antique-paper);
 
+  /* The photo as an ink-on-paper plate: grey and punchier, black lifted to the ink's 17%
+   * (the invert pair), warmed a touch, then multiplied into the panel's paper. */
+  --thumbnail-filter: grayscale(1) brightness(1.2) contrast(1.35) invert(1) brightness(0.83)
+    invert(1) sepia(0.3);
+  --thumbnail-filter-hover: var(--thumbnail-filter) brightness(1.1);
+  --thumbnail-blend: multiply;
+
   --blur-panel: 0px;
   --blur-card: 0px;
 
@@ -108,8 +120,12 @@
   --radius-pill: 0;
 
   --font-family-mono: 'Antique Figures', 'IM Fell DW Pica', 'IM Fell English', Georgia, serif;
+  /* Clock and scale keep Fell's own old-style figures, period-correct for a single readout. */
+  --font-family-figures: 'IM Fell DW Pica', 'IM Fell English', Georgia, serif;
   --font-family-display: 'Antique Figures', 'IM Fell English', Georgia, serif;
   /* Small capitals: the SC face sets lowercase as small caps, so labels go lowercase. */
   --font-family-label: 'IM Fell English SC', Georgia, serif;
   --label-case: lowercase;
+  /* Small caps stand only an x-height tall; at 10px they read as 7px type. */
+  --font-size-label-min: 12px;
 }
