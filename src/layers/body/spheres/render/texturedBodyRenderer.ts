@@ -23,6 +23,7 @@ import { generateMipChain, mipLevelCount } from '../../../../services/gpu/lib/ge
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
 import { TEXTURED_BODY_UNIFORM_FLOATS } from './packTexturedBodyUniforms';
+import { ANTIQUE_LAND_FORMAT } from '../../../../data/rendering/antiqueLook';
 import vsCode from '../../../../services/gpu/shaders/bodies/texturedBody/vertex.wesl?static';
 import fsCode from '../../../../services/gpu/shaders/bodies/texturedBody/fragment.wesl?static';
 
@@ -61,6 +62,10 @@ type BodyResources = {
   placeholders: Map<TextureKind, GPUTexture>;
   ringTexture: GPUTexture | null;
   bindGroup: GPUBindGroup;
+  /** The antique sea mask's own uniform slot, built on its first draw; its bind
+   *  group is dropped whenever `bindGroup` is rebuilt. */
+  maskUniformBuffer: GPUBuffer | null;
+  maskBindGroup: GPUBindGroup | null;
 };
 
 /**
@@ -201,6 +206,28 @@ export function createTexturedBodyRenderer(
     },
   });
 
+  // The sea mask draws alone into the look's land row: no depth (one convex
+  // sphere per row), one ANTIQUE_LAND_FORMAT target, built on the look's first use.
+  let maskPipeline: GPURenderPipeline | null = null;
+  const buildMaskPipeline = (): GPURenderPipeline =>
+    device.createRenderPipeline({
+      label: 'texturedBody-sea-mask-pipeline',
+      layout: device.createPipelineLayout({
+        label: 'texturedBody-sea-mask-pipeline-layout',
+        bindGroupLayouts: [bindGroupLayout],
+      }),
+      vertex: {
+        module: vsModule,
+        entryPoint: 'vs',
+        buffers: [
+          { arrayStride: 12, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }] },
+          { arrayStride: 8, attributes: [{ shaderLocation: 1, offset: 0, format: 'float32x2' }] },
+        ],
+      },
+      fragment: { module: fsModule, entryPoint: 'fsSeaMask', targets: [{ format: ANTIQUE_LAND_FORMAT }] },
+      primitive: { topology: 'triangle-list', frontFace: 'ccw', cullMode: 'front' },
+    });
+
   const bodies = new Map<BodyTextureId, BodyResources>();
 
   // What a body shows for a kind it has NOT committed: its own override, else the
@@ -228,6 +255,11 @@ export function createTexturedBodyRenderer(
     });
   }
 
+  function rebuildBindGroups(bodyId: BodyTextureId, res: BodyResources): void {
+    res.bindGroup = buildBindGroup(bodyId, res);
+    res.maskBindGroup = null;
+  }
+
   function resourcesFor(bodyId: BodyTextureId): BodyResources {
     const existing = bodies.get(bodyId);
     if (existing) return existing;
@@ -242,6 +274,8 @@ export function createTexturedBodyRenderer(
       placeholders: new Map(),
       ringTexture: null,
       bindGroup: buildBindGroup(bodyId, { uniformBuffer, maps: new Map(), ringTexture: null }),
+      maskUniformBuffer: null,
+      maskBindGroup: null,
     };
     bodies.set(bodyId, res);
     return res;
@@ -272,7 +306,7 @@ export function createTexturedBodyRenderer(
     ]);
     generateMipChain(device, texture);
     res.maps.set(kind, texture);
-    res.bindGroup = buildBindGroup(bodyId, res);
+    rebuildBindGroups(bodyId, res);
   }
 
   // Lands in `res.placeholders`, not `res.maps`, so a committed hi-res map shadows
@@ -310,7 +344,7 @@ export function createTexturedBodyRenderer(
     generateMipChain(device, texture);
     // Store BEFORE the rebuild: `buildBindGroup` resolves the placeholder through `bodies`.
     res.placeholders.set(kind, texture);
-    res.bindGroup = buildBindGroup(bodyId, res);
+    rebuildBindGroups(bodyId, res);
   }
 
   // Per-KIND, not per-body: `surface` and `normal` clamp to INDEPENDENT tiers (the
@@ -325,7 +359,7 @@ export function createTexturedBodyRenderer(
     if (texture === undefined) return;
     texture.destroy();
     res.maps.delete(kind);
-    res.bindGroup = buildBindGroup(bodyId, res);
+    rebuildBindGroups(bodyId, res);
   }
 
   // The flat-vs-textured split asks HERE, not the loading system: a committed slot is
@@ -356,7 +390,7 @@ export function createTexturedBodyRenderer(
       1,
     ]);
     res.ringTexture = texture;
-    res.bindGroup = buildBindGroup(bodyId, res);
+    rebuildBindGroups(bodyId, res);
   }
 
   function draw(pass: GPURenderPassEncoder, bodyId: BodyTextureId, uniforms: Float32Array): void {
@@ -372,6 +406,24 @@ export function createTexturedBodyRenderer(
     pass.drawIndexed(indexCount);
   }
 
+  function drawSeaMask(pass: GPURenderPassEncoder, bodyId: BodyTextureId, uniforms: Float32Array): void {
+    const res = resourcesFor(bodyId);
+    res.maskUniformBuffer ??= device.createBuffer({
+      label: `texturedBody-sea-mask-uniform-${bodyId}`,
+      size: UNIFORM_BUFFER_SIZE,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+    res.maskBindGroup ??= buildBindGroup(bodyId, { ...res, uniformBuffer: res.maskUniformBuffer });
+    device.queue.writeBuffer(res.maskUniformBuffer, 0, uniforms);
+    maskPipeline ??= buildMaskPipeline();
+    pass.setPipeline(maskPipeline);
+    pass.setBindGroup(0, res.maskBindGroup);
+    pass.setVertexBuffer(0, positionBuffer);
+    pass.setVertexBuffer(1, uvBuffer);
+    pass.setIndexBuffer(indexBuffer, 'uint16');
+    pass.drawIndexed(indexCount);
+  }
+
   function destroy(): void {
     positionBuffer.destroy();
     uvBuffer.destroy();
@@ -380,6 +432,7 @@ export function createTexturedBodyRenderer(
     placeholderRing.destroy();
     for (const res of bodies.values()) {
       res.uniformBuffer.destroy();
+      res.maskUniformBuffer?.destroy();
       for (const texture of res.maps.values()) texture.destroy();
       for (const placeholder of res.placeholders.values()) placeholder.destroy();
       res.ringTexture?.destroy();
@@ -395,6 +448,7 @@ export function createTexturedBodyRenderer(
     hasMap,
     setRingTexture,
     draw,
+    drawSeaMask,
     destroy,
   };
   renderer satisfies Renderer;

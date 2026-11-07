@@ -246,13 +246,14 @@ export const SCENE: FrameSection = {
       passes: ['aerial-perspective'],
       slot: 'AERIAL',
     },
-    // The antique look's land row: Earth's ocean mask on its own body row. Draws
-    // only with the look on (`ANTIQUE_ONLY_PASSES`); the look reads it in `stylize`.
+    // The antique look's land row: Earth's ocean mask and Mars's dark albedo, each
+    // on its own body row. Draws only with the look on
+    // (`ANTIQUE_ONLY_PASSES`); the look reads it in `stylize`.
     {
       kind: 'render',
       target: 'antique-land',
       slab: 'surfaceMask',
-      passes: ['earth-ocean-mask'],
+      passes: ['earth-ocean-mask', 'body-sea-mask'],
     },
     // The look's star glyphs come from the catalogue: every naked-eye star as one point,
     // the brightest per cell kept by its depth. Look-only, like the land row above.

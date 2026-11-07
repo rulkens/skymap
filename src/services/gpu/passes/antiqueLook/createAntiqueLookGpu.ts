@@ -30,6 +30,9 @@ const TEXTURE = { texture: { sampleType: 'float' } } as const;
 const UNIFORM = { buffer: { type: 'uniform' } } as const;
 const SAMPLER = { sampler: { type: 'filtering' } } as const;
 const STORAGE = { buffer: { type: 'read-only-storage' } } as const;
+// foreground:0's colour or, inside an atmosphere, its depth32float (`cover.wesl`):
+// only a `textureLoad` layout takes both.
+const COVER = { texture: { sampleType: 'unfilterable-float' } } as const;
 
 export function createAntiqueLookGpu(
   device: GPUDevice,
@@ -129,7 +132,7 @@ export function createAntiqueLookGpu(
     entries: [
       { binding: 0, visibility: GPUShaderStage.VERTEX, ...TEXTURE },
       { binding: 1, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, ...UNIFORM },
-      { binding: 2, visibility: GPUShaderStage.VERTEX, ...TEXTURE },
+      { binding: 2, visibility: GPUShaderStage.VERTEX, ...COVER },
     ],
   });
   const max: GPUBlendComponent = { srcFactor: 'one', dstFactor: 'one', operation: 'max' };
@@ -178,7 +181,12 @@ export function createAntiqueLookGpu(
 
   return {
     paper: stage('paper', paperCode, [UNIFORM, TEXTURE, TEXTURE, SAMPLER], ['rgba8unorm']),
-    reduce: stage('reduce', reduceCode, [TEXTURE, TEXTURE, TEXTURE], [HDR_TARGET_FORMAT]),
+    reduce: stage(
+      'reduce',
+      reduceCode,
+      [TEXTURE, COVER, TEXTURE, UNIFORM],
+      [HDR_TARGET_FORMAT],
+    ),
     glow: stage('glow', glowCode, [TEXTURE], [HDR_TARGET_FORMAT]),
     nebula: stage('nebula', nebulaCode, [TEXTURE, SAMPLER], [HDR_TARGET_FORMAT]),
     skyFloor: { pipeline: skyFloorPipeline, layout: skyFloorLayout },
@@ -202,7 +210,7 @@ export function createAntiqueLookGpu(
       [
         TEXTURE, // print
         TEXTURE, // overlay
-        TEXTURE, // foreground:0
+        COVER, // foreground:0
         UNIFORM,
         TEXTURE, // paper
         TEXTURE, // wash

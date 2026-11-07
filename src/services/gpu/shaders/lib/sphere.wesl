@@ -52,10 +52,11 @@ struct LitBodyUniforms {
 // identity. `camPosLocal` is in the body's local frame (same as `sunDirLocal`) for
 // the view-dependent Minnaert mu. `camAltitudeSq` and `vpCamRelLocal` are the
 // contact-range depth pair, see `lib/analyticSphere.wesl`'s depth section.
+// `seaBelow` is read only by the antique look's sea mask (`fsSeaMask`).
 //
 //   offset  0..63:   mvp            (mat4x4<f32>, column-major)
 //   offset 64..75:   sunDirLocal    (vec3<f32>)
-//   offset 76..79:   _pad           (f32)
+//   offset 76..79:   seaBelow       (f32, linear luma; 0 in the lit draw)
 //   offset 80..83:   ringInnerRatio (f32, ring inner / planet radius)
 //   offset 84..87:   ringOuterRatio (f32, ring outer / planet radius; 0 = none)
 //   offset 88..91:   limbStrength   (f32, Minnaert blend; 0 = plain Lambert)
@@ -68,7 +69,7 @@ struct LitBodyUniforms {
 struct TexturedBodyUniforms {
   mvp: mat4x4<f32>,
   sunDirLocal: vec3<f32>,
-  _pad: f32,
+  seaBelow: f32,
   ringInnerRatio: f32,
   ringOuterRatio: f32,
   limbStrength: f32,

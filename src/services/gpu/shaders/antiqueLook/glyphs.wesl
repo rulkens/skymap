@@ -5,13 +5,14 @@
 // Max-blended into `antique-star-ink`: r = glyph ink, g = its paper knock-out (1.3× radius).
 
 import package::antiqueLook::io::AntiqueUniforms;
+import package::antiqueLook::cover::coverOf;
 import package::antiqueLook::engraving::starGlyph;
 import package::lib::math::rot2;
 import package::lib::util::hash21Hq;
 
 @group(0) @binding(0) var pointTex: texture_2d<f32>;
 @group(0) @binding(1) var<uniform> u: AntiqueUniforms;
-// foreground:0, or a 1×1 empty texture on a frame without bodies.
+// foreground:0's colour or depth (`cover.wesl`), or a 1×1 empty texture on a frame without bodies.
 @group(0) @binding(2) var bodyTex: texture_2d<f32>;
 
 struct GlyphOut {
@@ -37,7 +38,7 @@ fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32) -> Glyph
   let centre = vec2<f32>(s.x * 0.5 + 0.5, 0.5 - s.y * 0.5) * u.res;
   // A star behind a body never prints: its point was drawn without the body's depth.
   let bodyDims = vec2<i32>(textureDimensions(bodyTex));
-  if (textureLoad(bodyTex, min(vec2<i32>(centre), bodyDims - 1), 0).a > 0.5) {
+  if (coverOf(textureLoad(bodyTex, min(vec2<i32>(centre), bodyDims - 1), 0), u.flags) > 0.5) {
     return o;
   }
   // Six classes of the Bayer/Flamsteed ladder by apparent magnitude, one per

@@ -3,7 +3,8 @@
  * first: every resolved planet or moon drawn as a sphere, plus Earth (not a
  * sorted scene body; `earthPass` draws it alone). Each is cast at the radius its
  * sphere is drawn at, the inner bound, as `texturedBodiesPass` and `earthPass` do.
- * Only Earth, and only when its ocean mask drew, carries the land share.
+ * Only a body with a land map (Earth's oceans, `ANTIQUE_SEA_ALBEDO`'s dark
+ * albedo), and only when the land row drew, carries the land share.
  */
 
 import type { PassState } from '../../../../@types/engine/frame/PassState';
@@ -12,6 +13,7 @@ import type { AntiquePlateBody } from '../../../../@types/rendering/AntiquePlate
 import type { BodySurface } from '../../../../@types/scene/BodySurface';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import { ANTIQUE_RING_LINES_KM } from '../../../../data/rendering/antiquePlateBodies';
+import { ANTIQUE_SEA_ALBEDO } from '../../../../data/rendering/antiqueSeaAlbedo';
 import { SCENE_RINGS } from '../../../../data/bodies/sceneRings';
 import { SCENE_EARTH } from '../../../../data/bodies/sceneEarth';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
@@ -27,7 +29,7 @@ export function antiquePlateBodies(
   state: PassState,
   ctx: FrameView,
   unitPx: number,
-  earthLandMapped: boolean,
+  landMapped: boolean,
 ): AntiquePlateBody[] {
   const states = sceneBodyStates(state, ctx);
   const records: AntiquePlateBody[] = [];
@@ -52,7 +54,8 @@ export function antiquePlateBodies(
   };
 
   for (const { body, positionMpc } of sceneBodyPresentation(ctx).resolved) {
-    if (isPlanetBody(body)) add(body.id, positionMpc, body.surface, false);
+    if (isPlanetBody(body))
+      add(body.id, positionMpc, body.surface, landMapped && body.id in ANTIQUE_SEA_ALBEDO);
   }
   const earth = states.get(SCENE_EARTH.id)!.positionMpc;
   const earthPx = bodyApparentDiameterPx({
@@ -62,7 +65,7 @@ export function antiquePlateBodies(
     pxPerRad: ctx.drawPxPerRad,
   });
   if (earthPx >= SCENE_EARTH.resolvePx)
-    add(SCENE_EARTH.id, earth, SCENE_EARTH.surface, earthLandMapped);
+    add(SCENE_EARTH.id, earth, SCENE_EARTH.surface, landMapped);
 
   return records.sort((a, b) => b.radiusUnits - a.radiusUnits);
 }

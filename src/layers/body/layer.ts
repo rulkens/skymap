@@ -17,6 +17,7 @@ import { create } from './create';
 import { destroy } from './destroy';
 import { earthPass } from './earth/passes/earthPass';
 import { earthOceanMaskPass } from './earth/passes/earthOceanMaskPass';
+import { bodySeaMaskPass } from './spheres/passes/bodySeaMaskPass';
 import { surfaceTilesPass } from './surfaceTiles/patch/passes/surfaceTilesPass';
 import { terrainPickMarkerPass } from './terrainPick/passes/terrainPickMarkerPass';
 import { cloudShellPass } from './clouds/passes/cloudShellPass';
@@ -78,6 +79,7 @@ export const bodyLayer = defineLayer({
     cloudShellPass(runtime),
     planetsPass(runtime),
     texturedBodiesPass(runtime),
+    bodySeaMaskPass(runtime),
     ringsPass(runtime),
     bodyGlintsPass(runtime),
     atmosphereShellPass(runtime),

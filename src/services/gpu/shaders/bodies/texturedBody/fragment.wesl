@@ -91,6 +91,27 @@ fn ringSunVisibility(p: vec3<f32>, sunDir: vec3<f32>, innerRatio: f32, outerRati
   return 1.0 - ringAlpha;
 }
 
+// Half-width of the sea mask's coast, in linear luma: wide enough that the
+// shore lands between texels, narrow enough to keep one coast per marking.
+const SEA_BAND: f32 = 0.02;
+
+// The antique look's land map (`body-sea-mask` pass, 'rg8unorm'), the twin of
+// Earth's `fsOceanMask`: r land share, albedo darker than `u.seaBelow` read as
+// sea, as Huygens charted Syrtis Major; g 1 where the body covers.
+@fragment
+fn fsSeaMask(in: TexturedBodyVSOut) -> @location(0) vec4<f32> {
+  let rd = normalize(in.localPos - u.camPosLocal);
+  let surface = hitUnitSphere(u.camPosLocal, rd, u.camAltitudeSq);
+  let uv = equirectUvFromDir(surface.point);
+  let grad = equirectUvGradients(uv);
+  if (!surface.hit) {
+    discard;
+  }
+  let albedo = textureSampleGrad(bodyTexture, bodySampler, uv, grad.ddx, grad.ddy).rgb;
+  let luma = dot(albedo, vec3<f32>(0.2126, 0.7152, 0.0722));
+  return vec4<f32>(smoothstep(u.seaBelow - SEA_BAND, u.seaBelow + SEA_BAND, luma), 1.0, 0.0, 1.0);
+}
+
 @fragment
 fn fs(in: TexturedBodyVSOut) -> FSOut {
   // ── The ray ───────────────────────────────────────────────────────────────

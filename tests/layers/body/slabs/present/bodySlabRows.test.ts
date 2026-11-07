@@ -10,6 +10,7 @@ import { BODY_SLAB_ROWS } from '../../../../../src/layers/body/slabs/present/bod
 import { bodyDrawRadiusM } from '../../../../../src/layers/body/slabs/present/bodyDrawRadiusM';
 import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
 import { bodyFootprintRadiusM } from '../../../../../src/utils/scene/bodyFootprintRadiusM';
+import { ANTIQUE_SEA_ALBEDO } from '../../../../../src/data/rendering/antiqueSeaAlbedo';
 
 describe('BODY_SLAB_ROWS', () => {
   it("carries Saturn's ring-inclusive draw radius apart from its footprint", () => {
@@ -20,5 +21,13 @@ describe('BODY_SLAB_ROWS', () => {
     expect(row.footprintRadiusM).toBe(bodyFootprintRadiusM(saturn));
     expect(row.drawRadiusM(1e12, 1000)).toBe(bodyDrawRadiusM(saturn));
     expect(row.drawRadiusM(1e12, 1000)).toBeGreaterThan(row.footprintRadiusM);
+  });
+
+  // The sea table is keyed by plain strings: a misspelt id would draw no mask, silently.
+  it('hosts the antique surfaceMask line on Earth and every sea-albedo body', () => {
+    const masked = BODY_SLAB_ROWS.filter((row) =>
+      row.hosts?.some((host) => host.line === 'surfaceMask'),
+    ).map((row) => row.anchorId);
+    expect(masked.sort()).toEqual(['earth', ...Object.keys(ANTIQUE_SEA_ALBEDO)].sort());
   });
 });

@@ -81,6 +81,14 @@ fn ringLines(rho: f32, rhoPerUnit: f32, e: vec4<f32>, p: vec2<f32>, pxUnits: f32
 // The land-blur pass's sigma, print units (`landBlur.wesl`).
 const LAND_SIGMA: f32 = 6.0;
 
+// `wash.a` on a body no land map covers (`reduce.wesl`): above any share, so
+// `landWeight` drops it as it drops the sky's −1, and no coast is cut there.
+const LAND_UNMAPPED: f32 = 2.0;
+
+fn landWeight(a: f32) -> f32 {
+  return step(0.0, a) * step(a, 1.0);
+}
+
 // Blurring a straight coast gives a normal CDF, so the blurred land share inverts
 // to a distance off the coast: d = -sigma * probit(share), with Giles' erfinv
 // (central branch, share >= 0.01). Positive at sea; land is seaDistance(1 - share).

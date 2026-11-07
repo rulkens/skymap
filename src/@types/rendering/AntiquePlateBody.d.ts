@@ -13,7 +13,8 @@ export type AntiquePlateBody = {
   readonly radiusUnits: number;
   /** Centre → Sun, unit. */
   readonly sun: Readonly<Vec3>;
-  /** Whether `wash.a` holds this body's true land share (Earth with its ocean mask). */
+  /** Whether `wash.a` can hold this body's land share (a land map drew: Earth's
+   * oceans, Mars's dark albedo). */
   readonly land: boolean;
   readonly ring: AntiquePlateRing | null;
 };

@@ -3,7 +3,7 @@
  * only when its row was reallocated or the scan landed), reduce (print →
  * quarter-res `wash`), glow (`wash` → 1/16-res), nebula (`wash` → the galaxy
  * engraving's quarter-res fields), sky floor (glow → one f32, compute), land blur (`wash.a` →
- * `land-blur`, across then down, only under Earth's land map), glyphs (from the
+ * `land-blur`, across then down, only under a land map), glyphs (from the
  * star Layer's `print-points`) and decor (instanced scatters into `star-ink` and
  * `decor`/`decor-hue`), plate (all of it inked onto the swap chain). One
  * `stylize` timing slot spans them, as `runBloom`'s does. GPU objects are built
@@ -32,6 +32,7 @@ import { placeAntiqueNumerals } from '../../../../utils/gpu/antiqueLook/placeAnt
 import { antiqueGraticuleSteps } from '../../../../utils/gpu/antiqueLook/antiqueGraticuleSteps';
 import { terminatorHatchAngle } from '../../../../utils/gpu/antiqueLook/terminatorHatchAngle';
 import { asSceneBodyId } from '../../../../utils/scene/asSceneBodyId';
+import { bodyRowSlabs } from '../../../engine/frame/bodyRowSlabs';
 import { viewBasis } from '../../../../utils/camera/projection/viewBasis';
 import { viewCornerRays } from '../../../../utils/camera/projection/viewCornerRays';
 import type { AntiqueLook } from '../../../../@types/rendering/AntiqueLook';
@@ -108,6 +109,8 @@ export function createAntiqueLook(init: {
     const basis = viewBasis(ctx.cam);
     const rulings = antiqueGraticuleSteps(basis, ctx.frustum, size, unitPx);
     const hasBodies = ctx.snapshot.renderedTargets.has('foreground:0');
+    // Inside an atmosphere the day sky fills foreground:0's alpha; its depth tells body from sky.
+    const depthCover = hasBodies && bodyRowSlabs(ctx).insideAtmosphere.length > 0;
     const { paper: paperAssets, ornaments: atlas, glyphs } = assets;
 
     packAntiqueUniforms(
@@ -115,6 +118,7 @@ export function createAntiqueLook(init: {
         size,
         unitPx,
         bodies: hasBodies,
+        depthCover,
         captions: io.overlay !== null,
         paper: paperAssets !== null,
         rays: viewCornerRays(basis, ctx.frustum, size),
@@ -163,8 +167,12 @@ export function createAntiqueLook(init: {
     const decor = targets.viewOf(ANTIQUE_TARGETS.decor);
     const decorHue = targets.viewOf(ANTIQUE_TARGETS.decorHue);
     // foreground:0 keeps last frame's bodies when nothing drew one this frame.
-    const bodies = hasBodies ? targets.viewOf('foreground:0') : g.empty;
-    // Earth's land map, when its globe drew this frame; elsewhere land is read from colour.
+    const bodies = !hasBodies
+      ? g.empty
+      : depthCover
+        ? targets.depthViewOf('foreground:0')
+        : targets.viewOf('foreground:0');
+    // The land map, when a masked globe drew this frame (Earth, Mars).
     const land = landMapped ? targets.viewOf(ANTIQUE_TARGETS.land) : g.empty;
     const landBlurAcross = targets.viewOf(ANTIQUE_TARGETS.landBlurAcross);
     const landBlur = targets.viewOf(ANTIQUE_TARGETS.landBlur);
@@ -200,7 +208,7 @@ export function createAntiqueLook(init: {
       'reduce',
       [wash],
       g.reduce,
-      [io.print, bodies, land],
+      [io.print, bodies, land, uniforms],
       bakesPaper ? undefined : begin,
     );
     fullScreen(encoder, 'glow', [glow], g.glow, [wash]);
@@ -220,7 +228,7 @@ export function createAntiqueLook(init: {
     );
     floorPass.dispatchWorkgroups(1);
     floorPass.end();
-    // Only Earth's mapped land is read (a record's land flag), so no map, no blur.
+    // Only mapped land is read (a record's land flag), so no map, no blur.
     if (landMapped) {
       fullScreen(encoder, 'land-blur-across', [landBlurAcross], g.landBlurAcross, [wash, uniforms]);
       fullScreen(encoder, 'land-blur-down', [landBlur], g.landBlurDown, [landBlurAcross, uniforms]);

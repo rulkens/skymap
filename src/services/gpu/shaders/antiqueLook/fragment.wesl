@@ -1,22 +1,26 @@
 // antiqueLook/fragment.wesl — the plate: the tone-mapped frame re-cut as an
 // engraved, hand-coloured chart on the baked sheet.
 //
-// Two regimes, split by foreground:0's alpha. Sky is INVERTED, as on every
+// Two regimes, split by body coverage (`cover.wesl`). Sky is INVERTED, as on every
 // period chart: bare paper where space is empty, a glyph per star, galaxies cut
 // as swelling iso-lines inside a dotted outline, and wider faint light —
 // structure discs, the band seen from inside — as Dutch outline colour: a
 // boundary line with a band of wash fading inward, never solid ink. Bodies are
 // engraved the classic way: burin lines bowing with the globe, swelling into
-// shadow, crossed only in the deepest; seas left pale with water lines off Earth's coasts.
+// shadow, crossed only in the deepest; seas left pale with water lines off
+// the coasts of a body with a land map (Earth's oceans, Mars's dark markings).
 
 import package::antiqueLook::io::AntiqueUniforms;
 import package::antiqueLook::io::VSOut;
+import package::antiqueLook::cover::coverOf;
+import package::antiqueLook::cover::FLAG_DEPTH_COVER;
 import package::antiqueLook::paper::vnoise;
 import package::antiqueLook::engraving::crossHatch;
 import package::antiqueLook::engraving::stipple;
 import package::antiqueLook::engraving::formTone;
 import package::antiqueLook::engraving::ringLines;
 import package::antiqueLook::engraving::seaDistance;
+import package::antiqueLook::engraving::landWeight;
 import package::antiqueLook::engraving::waterLines;
 import package::antiqueLook::engraving::inkLine;
 import package::antiqueLook::engraving::isoLines;
@@ -76,6 +80,8 @@ struct AntiqueLettering {
 const INK: vec3<f32> = vec3<f32>(0.17, 0.13, 0.10);
 const FLAG_BODIES: u32 = 1u;
 const FLAG_CAPTIONS: u32 = 2u;
+// `depthEdge`'s second difference of depth over the nearest tap's depth.
+const DEPTH_JUMP: f32 = 0.05;
 // Sheet layout in print units: bare margin with the plate mark in it, then the
 // neatline band. Mirrored by ANTIQUE_LADDER_UNITS (data/rendering/antiqueLook.ts).
 const PLATE: f32 = 15.0;
@@ -105,7 +111,45 @@ fn texel(t: texture_2d<f32>, ip: vec2<i32>) -> vec4<f32> {
 }
 
 fn bodyCover(ip: vec2<i32>) -> f32 {
-  return select(0.0, texel(bodyTex, ip).a, (u.flags & FLAG_BODIES) != 0u);
+  return select(0.0, coverOf(texel(bodyTex, ip), u.flags), (u.flags & FLAG_BODIES) != 0u);
+}
+
+// Where the scene's depth breaks: a rover against the ground behind it, a crater
+// rim against the plain beyond. Only inside an atmosphere, where `bodyTex` holds
+// depth (`cover.wesl`). Reversed-Z depth is linear in screen space across any
+// plane, so its second difference is ~0 on open ground at any slant and jumps at
+// an occluding edge: relative to the nearest tap, DEPTH_JUMP ≈ a 5% step in range.
+fn depthEdge(ip: vec2<i32>, o: i32) -> f32 {
+  if ((u.flags & FLAG_DEPTH_COVER) == 0u) {
+    return 0.0;
+  }
+  let c = texel(bodyTex, ip).r;
+  let l = texel(bodyTex, ip - vec2<i32>(o, 0)).r;
+  let r = texel(bodyTex, ip + vec2<i32>(o, 0)).r;
+  let d = texel(bodyTex, ip - vec2<i32>(0, o)).r;
+  let t = texel(bodyTex, ip + vec2<i32>(0, o)).r;
+  let nearest = max(max(c, max(l, r)), max(d, t));
+  let jump = max(abs(l + r - 2.0 * c), abs(d + t - 2.0 * c)) / max(nearest, 1e-30);
+  return smoothstep(DEPTH_JUMP * 0.7, DEPTH_JUMP * 1.3, jump);
+}
+
+// A body's land share at `uv`: bilinear over the quarter-res cells that carry one
+// (`landWeight`). A plain bilinear tap mixed the sky's −1 into a land share at the
+// limb and cut a false coast round it. No mapped cell near reads as land.
+fn landAt(uv: vec2<f32>) -> f32 {
+  let f = uv * vec2<f32>(textureDimensions(washTex)) - 0.5;
+  let base = vec2<i32>(floor(f));
+  let t = fract(f);
+  var sum = 0.0;
+  var weight = 0.0;
+  for (var k = 0; k < 4; k++) {
+    let o = vec2<i32>(k & 1, k >> 1u);
+    let a = texel(washTex, base + o).a;
+    let w = mix(1.0 - t.x, t.x, f32(o.x)) * mix(1.0 - t.y, t.y, f32(o.y)) * landWeight(a);
+    sum += w * a;
+    weight += w;
+  }
+  return select(1.0, sum / weight, weight > 1e-4);
 }
 
 // The low band at 1/16 res, smoothed over nine bilinear taps: contours drawn on
@@ -388,17 +432,16 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // form; any other body keeps straight lines on the light at the terminator's
   // scale. Derivatives are taken here, in uniform control flow; the rest of
   // the body work runs only where a body is.
-  let wash = textureSampleLevel(washTex, linear, uv, 0.0);
-  let landShare = clamp(wash.a, 0.0, 1.0);
+  let landShare = landAt(uv);
   let landPerPx = max(fwidth(landShare), 1e-4);
   let landBlur = textureSampleLevel(landBlurTex, linear, uv, 0.0).xy;
-  let blurredShare = landBlur.x / max(landBlur.y, 1e-4);
+  let blurredShare = select(1.0, landBlur.x / landBlur.y, landBlur.y > 1e-3);
   let seaD = seaDistance(blurredShare);
   let seaPerUnit = length(vec2<f32>(dpdx(seaD), dpdy(seaD))) * u.unit;
   let o = i32(round(u.unit));
   let gx = bodyCover(ip + vec2<i32>(o, 0)) - bodyCover(ip - vec2<i32>(o, 0));
   let gy = bodyCover(ip + vec2<i32>(0, o)) - bodyCover(ip - vec2<i32>(0, o));
-  let limb = smoothstep(0.25, 0.7, length(vec2<f32>(gx, gy)));
+  let limb = max(smoothstep(0.25, 0.7, length(vec2<f32>(gx, gy))), depthEdge(ip, o));
   var bodyInk = 0.0;
   if (body > 0.0) {
     let pxUnits = 1.0 / u.unit;
@@ -445,8 +488,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
       tone = 1.0 - smoothstep(0.015, 0.17, bodyLight(uv));
     }
     bodyInk = max(crossHatch(form, p, tone, HATCH, u.hatchAngle, pxUnits), lines);
-    // Land and sea only where Earth's ocean mask fed the share: elsewhere it is a
-    // colour guess, which called Saturn's limb a coast.
+    // Land and sea only on a body with a land map (the record's flag).
     if (land) {
       let ocean = 1.0 - smoothstep(0.35, 0.65, landShare);
       let coastPx = abs(landShare - 0.5) / landPerPx;
@@ -459,7 +501,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
       // Seas a pale smalt, pooled darker along the shore; land in Dutch outline
       // colour, a band along each coast fading inward to paper. The colourist's
       // wash stops a little off the cut coast, by a slow wander.
-      let washShare = clamp(textureSampleLevel(washTex, linear, uv + slip * 0.6, 0.0).a, 0.0, 1.0);
+      let washShare = landAt(uv + slip * 0.6);
       let near = clamp(1.0 - seaD / 16.0, 0.0, 1.0);
       let inland = seaDistance(1.0 - blurredShare);
       let seaWash = (0.14 + 0.1 * near) * (1.0 - smoothstep(0.35, 0.65, washShare));

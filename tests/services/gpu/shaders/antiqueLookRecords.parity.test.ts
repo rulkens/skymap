@@ -72,6 +72,7 @@ describe('antique look records ↔ WGSL structs', () => {
       size: { width: 1001, height: 1002 },
       unitPx: 1003,
       bodies: true,
+      depthCover: true,
       captions: false,
       paper: true,
       rays: { tl: [1011, 0, 0], tr: [1012, 0, 0], bl: [1013, 0, 0], br: [1014, 0, 0] },
@@ -94,8 +95,10 @@ describe('antique look records ↔ WGSL structs', () => {
     expect([...offsets.keys()].sort()).toEqual([...Object.keys(sentinel), 'flags'].sort());
     for (const [member, value] of Object.entries(sentinel))
       expect(offsetOf(packed, value), member).toBe(offsets.get(member));
-    // bodies (bit 0) and paper (bit 2).
-    expect(new Uint32Array(packed)[offsets.get('flags')! / 4]).toBe(0b101);
+    // bodies (bit 0), paper (bit 2) and depth cover, the bit cover.wesl tests.
+    const depthBit = readShaderSource(`${DIR}/cover.wesl`).match(/FLAG_DEPTH_COVER: u32 = (\d+)u/);
+    expect(Number(depthBit?.[1])).toBe(0b1000);
+    expect(new Uint32Array(packed)[offsets.get('flags')! / 4]).toBe(0b1101);
   });
 
   it('packAntiqueOrnaments writes AntiqueOrnaments row by row', () => {
