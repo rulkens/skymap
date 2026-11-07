@@ -286,7 +286,10 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let inside = (glowL - GLOW_EDGE) / max(fwidth(glowL), 1e-5);
   let band = step(0.0, inside) * (1.0 - smoothstep(0.0, 20.0 * u.unit, inside));
   let hue = glowHue(uv);
-  let skyWash = band * 0.42 * clamp(0.6 + chromaOf(hue) * 3.0, 0.0, 1.0);
+  // Colour gathers on the subject at the plate's centre and thins toward its
+  // edges (to ~30%), so the eye lands on the subject, not the margins.
+  let focus = 1.0 - 0.7 * smoothstep(0.18, 0.62, length((uv - 0.5) * vec2<f32>(u.res.x / u.res.y, 1.0)) * 0.9);
+  let skyWash = band * 0.42 * focus * clamp(0.6 + chromaOf(hue) * 3.0, 0.0, 1.0);
   let bodyWash = clamp(chromaOf(src) * 1.8, 0.0, 0.45);
   col = applyWash(col, nearestPigment(hue), skyWash * sky * frame.y);
   col = applyWash(col, nearestPigment(src), bodyWash * body * frame.y);

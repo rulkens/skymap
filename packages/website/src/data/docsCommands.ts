@@ -177,6 +177,11 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         manual: 'tools/capture/README.md',
       },
       {
+        scripts: ['pack-ornaments'],
+        does: 'Packs the engraved ornaments of the antique atlas look, title and all, into the one picture the app loads.',
+        manual: 'tools/antique/packOrnaments.ts',
+      },
+      {
         scripts: ['record-tour', 'record-clip'],
         does: 'Record a tour, or one clip, frame by frame into an MP4 film. A slow frame costs time, and the film stays smooth.',
         manual: RECORD,

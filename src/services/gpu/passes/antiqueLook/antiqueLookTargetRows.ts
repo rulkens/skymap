@@ -22,7 +22,7 @@ export function antiqueLookTargetRows(swapFormat: GPUTextureFormat): readonly Re
     allocateWhen: antiqueLookOn,
   });
   return [
-    { ...row(ANTIQUE_TARGETS.print, swapFormat, 1), clearValue: { r: 0, g: 0, b: 0, a: 1 } },
+    row(ANTIQUE_TARGETS.print, swapFormat, 1),
     row(ANTIQUE_TARGETS.overlay, swapFormat, 1),
     row(ANTIQUE_TARGETS.paper, 'rgba8unorm', 1),
     row(ANTIQUE_TARGETS.wash, HDR_TARGET_FORMAT, ANTIQUE_CELL),

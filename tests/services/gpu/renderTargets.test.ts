@@ -22,7 +22,7 @@ import { makeCubemapCaptureRuntimes } from '../../helpers/engine/makeCubemapCapt
 import { clearValueOf } from '../../../src/utils/gpu/clearValueOf';
 
 const DEFAULT_DEBUG_STATE = {
-  settings: { debug: { matteWhite: false } },
+  settings: { debug: { matteWhite: false }, antique: { enabled: false } },
 } as unknown as EngineState;
 
 function mockDevice(): GPUDevice {
@@ -71,6 +71,7 @@ function stateWithDivisor(
 ): EngineState {
   return {
     settings: {
+      antique: { enabled: false },
       milkyWay: { aggregateDivisor },
       blackHoleLensingTuning: { cubemapResolutionPx },
     },
@@ -583,7 +584,9 @@ describe('createRenderTargets', () => {
   it('hdr clears opaque black unless the debug matte asks for white', () => {
     const hdr = renderTargetRows(SWAP_FORMAT).find((spec) => spec.id === 'hdr')!;
     expect(clearValueOf(hdr, DEFAULT_DEBUG_STATE)).toEqual({ r: 0, g: 0, b: 0, a: 1 });
-    const matte = { settings: { debug: { matteWhite: true } } } as unknown as EngineState;
+    const matte = {
+      settings: { debug: { matteWhite: true }, antique: { enabled: false } },
+    } as unknown as EngineState;
     expect(clearValueOf(hdr, matte)).toEqual({ r: 1, g: 1, b: 1, a: 1 });
   });
 
