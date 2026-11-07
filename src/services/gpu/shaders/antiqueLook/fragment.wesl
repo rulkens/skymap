@@ -276,10 +276,15 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     contour = onEdge * stipple(p, 2.3, 0.4);
   }
   var dots = 0.0;
-  // Stipple only where a glow is truly bright: lower, it found square billboard
-  // glows in the scene (a structure's own sprite) and printed them as blocks.
-  if (lowL > 0.18) {
-    dots = stipple(p, 2.2, smoothstep(0.18, 0.8, lowL) * 0.3);
+  // Stipple reads the quarter-res band, not the 1/16 glow, so a galaxy's arms
+  // (~25 px) keep their shape. Only where it is truly bright: lower, it found
+  // square billboard glows (a structure's own sprite) and printed them as blocks.
+  let fineL = luma(textureSampleLevel(washTex, linear, uv, 0.0).rgb);
+  if (fineL > 0.18) {
+    // Denser where the band is brighter than its 1/16 surroundings, sparser where
+    // darker: a galaxy's arms and bar print, the dust between them stays open.
+    let relief = smoothstep(0.75, 1.35, fineL / max(lowL, 1e-3));
+    dots = stipple(p, 2.2, smoothstep(0.18, 0.85, fineL) * (0.12 + 0.43 * relief));
   }
   let skyInk = max(star.x, max(dots, contour) * clear) * sky;
   // The rulings were cut by hand too: their ink load wanders along their length.

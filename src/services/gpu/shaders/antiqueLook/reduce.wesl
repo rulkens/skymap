@@ -28,7 +28,9 @@ fn fs(in: VSOut) -> ReduceOut {
   let size = vec2<i32>(textureDimensions(printTex));
   // A frame without bodies binds a 1×1 empty texture here, hence its own clamp.
   let bodySize = vec2<i32>(textureDimensions(bodyTex));
-  var sum = vec3<f32>(0.0);
+  var bodySum = vec3<f32>(0.0);
+  var skySum = vec3<f32>(0.0);
+  var skyDimmest = 1e9;
   var light = 0.0;
   var land = 0.0;
   var bodyCount = 0.0;
@@ -39,10 +41,11 @@ fn fs(in: VSOut) -> ReduceOut {
       let q = min(origin + vec2<i32>(i, j), size - 1);
       let c = textureLoad(printTex, q, 0).rgb;
       let body = textureLoad(bodyTex, min(q, bodySize - 1), 0).a;
-      // Sky light is capped per texel before it is averaged: a star is a point and
-      // belongs to the glyphs, so it must not raise a glow (and a contour) round itself.
-      let skyCap = c * min(1.0, 0.25 / max(luma(c), 1e-3));
-      sum += select(skyCap, c, body > 0.5);
+      bodySum += c * body;
+      skySum += c * (1.0 - body);
+      if (body < 0.5) {
+        skyDimmest = min(skyDimmest, luma(c));
+      }
       light += luma(c) * (1.0 - body);
       land += body * landness(c);
       bodyCount += body;
@@ -54,6 +57,15 @@ fn fs(in: VSOut) -> ReduceOut {
     }
   }
   let n = f32(CELL * CELL);
+  // The sky's low band keeps only light that fills the block: its mean is held
+  // to a little over its dimmest texel. A star (a point in dark sky) drops out,
+  // since it belongs to the glyphs, while an extended glow keeps its full
+  // brightness: a per-texel cap had flattened a galaxy's arms and gaps alike.
+  let skyCount = max(n - bodyCount, 0.0);
+  var skyMean = skySum / max(skyCount, 1.0);
+  let floorL = select(0.0, skyDimmest * 1.5 + 0.01, skyCount > 0.0);
+  skyMean *= min(1.0, floorL / max(luma(skyMean), 1e-4));
+  let sum = bodySum + skyMean * skyCount;
   var o: ReduceOut;
   // Sky blocks report land −1 so the coast halo stop at the limb, not mid-space.
   o.wash = vec4<f32>(sum / n, select(-1.0, land / max(bodyCount, 1e-3), bodyCount > 8.0));
