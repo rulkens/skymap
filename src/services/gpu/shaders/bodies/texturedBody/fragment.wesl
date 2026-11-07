@@ -341,8 +341,11 @@ fn fsMoonPrint(in: TexturedBodyVSOut) -> @location(0) vec4<f32> {
 // a slope past RELIEF_SLOPE.x (both flanks of a rim, so the plate draws its crest), a hint
 // of stipple weight on flats (ground, so a crest between flanks still prints), 0 by night
 // and where a print unit spans more ground than RELIEF_M.y (the full disc).
-const RELIEF_SLOPE = vec2<f32>(0.08, 0.4);
-const RELIEF_STROKE: f32 = 0.3;
+const RELIEF_SLOPE = vec2<f32>(0.15, 0.5);
+const RELIEF_STROKE: f32 = 0.4;
+// The normal read this many times coarser than the pixel: a landform under ~8 px across
+// (a small crater, a hummock) prints no hachure, which strewed confetti over a close-up.
+const RELIEF_SCALE: f32 = 4.0;
 const RELIEF_M = vec2<f32>(1200.0, 3000.0);
 const RELIEF_FLAT: f32 = 0.01;
 
@@ -364,7 +367,8 @@ fn fsMoonRelief(in: TexturedBodyVSOut) -> @location(0) vec4<f32> {
     return vec4<f32>(0.0);
   }
   let T = normalize(cross(vec3<f32>(0.0, 0.0, 1.0), ng));
-  let n = perturbNormal(ng, T, textureSampleGrad(normalTexture, bodySampler, uv, grad.ddx, grad.ddy).rg);
+  let n = perturbNormal(ng, T, textureSampleGrad(normalTexture, bodySampler, uv, grad.ddx * RELIEF_SCALE,
+    grad.ddy * RELIEF_SCALE).rg);
   let up = dot(n, ng);
   // The normal leans downhill: its tangent part is the fall line on the ground.
   let downhill = (n - up * ng) * SLOPE_GAIN;
