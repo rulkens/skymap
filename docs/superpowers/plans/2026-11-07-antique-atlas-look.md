@@ -228,6 +228,12 @@ Owner ruling 2026-11-07: keep the generic galaxy engraving with these names; the
 - [ ] Flat hand-colour washes (borders, cartouche, figures), sparing and uneven.
 - [ ] Line weights: border > ruling > orbits > hatching; hand-irregular dashes.
 
+### Task 29: Jupiter and its Great Red Spot (owner: "make sure the Great Red Spot is nicely rendered on Jupiter")
+**Files:** `shaders/antiqueLook/bodies/jupiter.wesl`, `plateBodies.wesl` (a `spot` per record), `fragment.wesl`,
+`src/data/rendering/antiquePlateBodies.ts` (`ANTIQUE_BODY_SPOTS`), `src/utils/gpu/antiqueLook/{antiquePlateBody,packAntiquePlateBodies}.ts`
+- [x] Jupiter prints by its own module: belts as latitude bands weighted by line, ranked by the plain texture's zonal luma; the shade in the bands' own lines; a stipple cap past 58°; the spot as Hooke and Cassini drew it, an outlined hatched oval with a paper collar and a carmine wash, placed where the plain texture has it.
+- Open: the plain texture is a fixed Cassini Dec-2000 map spun in System III, so its spot sits near 47° W (III) against the real spot's ~68° W (III) today (L2 ~100°), drifting ~118° a year apart; a date-driven placement of the texture (or the spot) needs an owner ruling. Rose madder: the box has carmine only (cartouche/wash stream asked).
+
 ## Definition of Done
 
 **Deliverables:** the `stylize` FRAME_ORDER line and `antiqueLook` pass; the `antique` settings
