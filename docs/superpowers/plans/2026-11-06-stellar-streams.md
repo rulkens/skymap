@@ -579,8 +579,8 @@ card's galstreams source line wraps; it becomes the track reference alone (`fu20
 - Test: a short far stream gets no caption; the same stream hovered or selected gets one; a long one always
   does
 
-- [ ] No Layer contract member added or widened (STOP and report if the hover/selection read needs one).
-- [ ] Commit.
+- [x] No Layer contract member added or widened (STOP and report if the hover/selection read needs one).
+- [x] Commit.
 
 Task 13 re-runs (perf, eye check) after Task 16.
 

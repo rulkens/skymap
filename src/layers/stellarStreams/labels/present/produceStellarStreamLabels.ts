@@ -1,30 +1,43 @@
 /**
  * produceStellarStreamLabels — one NEAR0 caption per stream at its anchor, camera-relative (the
- * NEAR0 director's f32 matrix has no room for absolute Mpc). Ranked by apparent length, so the
- * declutter keeps the long streams. The pick word is the streak stamp's, so a click on a caption
- * resolves through the selection row unchanged. Nothing until the meta lands.
+ * NEAR0 director's f32 matrix has no room for absolute Mpc). Only streams at least
+ * `STELLAR_STREAM_LABEL_MIN_PX` long on screen get one (83 crowd the halo), unless hovered or
+ * selected; ranked by that apparent length, so the declutter keeps the long streams. The pick word
+ * is the streak stamp's, so a click on a caption resolves through the selection row unchanged.
+ * Nothing until the meta lands.
  */
 
 import type { Label2D } from '../../../../@types/rendering/Label2D';
 import type { LayerScreenLabel } from '../../../../@types/engine/layer/LayerScreenLabel';
 import type { StellarStreamsRuntime } from '../../@types/StellarStreamsRuntime';
+import type { StellarStreamRef } from '../../selection/@types/StellarStreamRef';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
+import { isKind } from '../../../../utils/selection/isKind';
 import { isPickableUnderFocus } from '../../../../utils/structure/isPickableUnderFocus';
-import { STELLAR_STREAM_LABEL_STYLE } from '../data/stellarStreamLabelStyle.constants';
+import {
+  STELLAR_STREAM_LABEL_MIN_PX,
+  STELLAR_STREAM_LABEL_STYLE,
+} from '../data/stellarStreamLabelStyle.constants';
 
 export function produceStellarStreamLabels(
   runtime: Pick<StellarStreamsRuntime, 'meta' | 'pickCode'>,
 ): LayerScreenLabel<'stellarStream'>['produceLabels'] {
-  return (_state, ctx, fade) => {
+  return (state, ctx, fade) => {
     const meta = runtime.meta();
     if (meta === null) return { labels: [], awake: false };
+    const { hover, select } = state.selection;
+    const named = (slug: string): boolean =>
+      [hover, select].some((r) => isKind<StellarStreamRef>(r, 'stellarStream') && r.slug === slug);
     const [cx, cy, cz] = ctx.drawCamPos;
-    const labels = meta.map((m, i): Label2D => {
+    const labels = meta.flatMap((m, i): Label2D[] => {
       const [x, y, z] = m.anchorMpc;
       const distanceMpc = Math.hypot(x - cx, y - cy, z - cz);
+      const lengthPx =
+        ((m.lengthKpc * SCALE_UNITS.KPC_TO_MPC) / Math.max(distanceMpc, 1e-12)) * ctx.drawPxPerRad;
+      if (lengthPx < STELLAR_STREAM_LABEL_MIN_PX && !named(m.id)) return [];
       const subjectId = packSelection(runtime.pickCode, i + PICK_SENTINEL_OFFSET);
-      return {
+      const label: Label2D = {
         id: `stream:${m.id}`,
         text: m.names[0]!,
         font: 'cormorant',
@@ -34,12 +47,11 @@ export function produceStellarStreamLabels(
         fadeAlpha: fade,
         alignX: 'center',
         alignY: 'center',
-        declutterPriority:
-          ((m.lengthKpc * SCALE_UNITS.KPC_TO_MPC) / Math.max(distanceMpc, 1e-12)) *
-          ctx.drawPxPerRad,
+        declutterPriority: lengthPx,
         pickId: isPickableUnderFocus(m.anchorMpc, ctx.snapshot.focus) ? subjectId : undefined,
         subjectId,
       };
+      return [label];
     });
     return { labels, awake: false };
   };

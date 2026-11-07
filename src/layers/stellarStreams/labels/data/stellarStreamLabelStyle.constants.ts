@@ -9,3 +9,6 @@ export const STELLAR_STREAM_LABEL_STYLE = {
   minPixelSize: 13,
   maxPixelSize: 28,
 } as const;
+
+/** A stream shorter than this on screen goes uncaptioned unless hovered or selected. */
+export const STELLAR_STREAM_LABEL_MIN_PX = 80;

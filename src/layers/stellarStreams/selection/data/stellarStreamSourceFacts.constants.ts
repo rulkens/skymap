@@ -23,7 +23,8 @@ export const STELLAR_STREAM_SOURCE_FACTS: Record<
   galstreams: {
     kind: 'Stellar stream',
     sizeLabel: 'Length',
-    sourceLine: (reference) => `galstreams (Mateu 2023), ${reference} track`,
+    // The full credit wrapped; galstreams is credited in the meta description and ATTRIBUTIONS.md.
+    sourceLine: (reference) => `${reference} track`,
     licence: 'BSD-3-Clause',
   },
 };
