@@ -1,9 +1,10 @@
 /**
  * skyLookFor — where a search while standing turns the head (spec §7): at the target, framed by
- * its angular size, or, below the horizon, at where it rises (D7). A row with a body-table pose
- * (planets, moons, craft, the Sun) is placed through the 48 h rise search at its own position;
- * anything else is fixed on the sky and never rises when its declination against the host's
- * equator says so (D8). The Sun in a polar night is a body: it rises again, just not soon.
+ * its angular size, or, below the horizon, at where it rises (D7). One physical rule by range:
+ * beyond `SKY_FIXED_BEYOND_MPC` a target is fixed on the sky and never rises when its declination
+ * against the host's equator says so (D8), else rises where `nextRiseAt` finds it; nearer, the
+ * 48 h rise search follows it (by its pose id, else where it is now). The Sun in a polar night
+ * is near: it rises again, just not soon.
  */
 import type { PlacedRow } from '../../@types/engine/selection/PlacedRow';
 import type { SkyLook } from '../../@types/sky/SkyLook';
@@ -18,6 +19,7 @@ import { nextRiseAt } from '../../utils/sky/nextRiseAt';
 import { spotWorldMpc } from '../../utils/sky/spotWorldMpc';
 import { selectionDriver } from '../../utils/selection/selectionDriver';
 import { SKY_RISE_HORIZON_DAYS } from '../../data/sky/skyRiseHorizonDays';
+import { SKY_FIXED_BEYOND_MPC } from '../../data/sky/skyFixedBeyondMpc';
 
 export function skyLookFor(
   row: PlacedRow,
@@ -27,10 +29,10 @@ export function skyLookFor(
 ): SkyLook {
   const bodies = deriveBodyStates(simDays);
   const now = altAzFromSpot(spot, row.positionMpc, bodies);
+  const eye = spotWorldMpc(spot, bodies.get(spot.body as unknown as PositionedId)!);
+  const p = row.positionMpc;
+  const distanceMpc = Math.hypot(p[0] - eye[0], p[1] - eye[1], p[2] - eye[2]);
   if (now.altitudeRad >= 0) {
-    const eye = spotWorldMpc(spot, bodies.get(spot.body as unknown as PositionedId)!);
-    const p = row.positionMpc;
-    const distanceMpc = Math.hypot(p[0] - eye[0], p[1] - eye[1], p[2] - eye[2]);
     const isStar = row.type === 'starCatalog';
     return {
       kind: 'look',
@@ -38,8 +40,8 @@ export function skyLookFor(
       fovYRad: framedLensRad(row.radiusMpc, distanceMpc, currentLensRad, isStar),
     };
   }
-  const poseId = selectionDriver(row)?.poseId ?? null;
-  if (poseId === null) {
+  const fixed = distanceMpc > SKY_FIXED_BEYOND_MPC;
+  if (fixed) {
     // Seen from the host's north pole, a target's altitude is its declination.
     const pole: SkySpot = { body: spot.body, lonRad: 0, latRad: Math.PI / 2 };
     const declinationRad = altAzFromSpot(pole, row.positionMpc, bodies).altitudeRad;
@@ -47,6 +49,7 @@ export function skyLookFor(
       return { kind: 'belowHorizon', azimuthRad: now.azimuthRad, riseAt: null, neverRises: true };
     }
   }
+  const poseId = fixed ? null : (selectionDriver(row)?.poseId ?? null);
   const targetAt = (at: ReadonlyMap<PositionedId, BodyState>) =>
     poseId === null ? row.positionMpc : (at.get(poseId)?.positionMpc ?? row.positionMpc);
   const riseAt = nextRiseAt(spot, simDays, targetAt, SKY_RISE_HORIZON_DAYS);

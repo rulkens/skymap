@@ -50,6 +50,25 @@ describe('skyLookFor', () => {
     expect(look).toMatchObject({ kind: 'belowHorizon', riseAt: null, neverRises: true });
   });
 
+  it('the Galactic Centre, posed from its place, never rises from 70° N', () => {
+    const id = 'galactic-centre' as PositionedId;
+    const centre = {
+      type: 'blackHole',
+      positionMpc: deriveBodyStates(SIM_DAYS).get(id)!.positionMpc,
+      radiusMpc: 1e-12,
+      driver: {
+        poseId: id,
+        boundingRadiusM: 0,
+        footprintRadiusM: 0,
+        groundRadiusM: null,
+        standoffRadii: 0,
+      },
+    };
+    const north: SkySpot = { body: EARTH, lonRad: 0, latRad: degToRad(70) };
+    const look = skyLookFor(centre, north, SIM_DAYS, LENS);
+    expect(look).toMatchObject({ kind: 'belowHorizon', riseAt: null, neverRises: true });
+  });
+
   it('a target above the horizon is looked at, framed by its size', () => {
     const target = fixedTargetAt(Math.PI - COPENHAGEN.latRad - degToRad(5));
     const look = skyLookFor(row(target, 20), COPENHAGEN, SIM_DAYS, LENS);
