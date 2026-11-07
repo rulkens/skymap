@@ -25,6 +25,9 @@ import type { ScaleInfo } from '../../@types/engine/ScaleInfo';
 import type { SourceType } from '../../@types/data/SourceType';
 import type { LoadProgressState } from '../../@types/loading/LoadProgressState';
 import type { LayerSearchEntry } from '../../@types/engine/layer/LayerSearchEntry';
+import type { SkyEntryFacts } from '../../@types/engine/SkyEntryFacts';
+import type { SkyView } from '../../@types/engine/SkyView';
+import { NO_SKY_ENTRY } from '../../data/sky/noSkyEntry';
 
 /**
  * Initial scale-bar value that renders something sensible before the engine
@@ -36,6 +39,8 @@ const CORE_INITIAL: CoreEngineSliceState = {
   status: { kind: 'initializing' },
   scale: INITIAL_SCALE,
   focusedBodyDistanceMpc: null,
+  skyEntry: NO_SKY_ENTRY,
+  skyView: null,
   hdrCapable: false,
   sourceCounts: {},
   loadProgress: null,
@@ -112,6 +117,16 @@ const engineSlice = createSlice({
       }
     },
 
+    // ── sky mode readouts ────────────────────────────────────────────────────
+    // Deduped at the source: each row dispatches only news against the frame's store
+    // snapshot (`skyEntryChanged`, `skyViewChanged`), so a still view dispatches nothing.
+    engineSkyEntryReported: (state, action: PayloadAction<SkyEntryFacts>) => {
+      state.skyEntry = action.payload;
+    },
+    engineSkyViewReported: (state, action: PayloadAction<SkyView>) => {
+      state.skyView = action.payload;
+    },
+
     // ── HDR display capability ───────────────────────────────────────────────
     // Live, not a boot snapshot: `initGpu`'s matchMedia `change` listener
     // (`watchHdrCapability` in `device.ts`) re-dispatches this whenever the
@@ -152,6 +167,8 @@ export const {
   layerSearchCleared,
   engineScaleChanged,
   engineBodyDistanceReported,
+  engineSkyEntryReported,
+  engineSkyViewReported,
   engineHdrCapabilityChanged,
   factsReported,
   layerFactsSeeded,

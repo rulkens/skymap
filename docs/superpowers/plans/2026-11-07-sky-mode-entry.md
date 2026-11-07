@@ -215,8 +215,8 @@ viewport centre), null on a miss or a host without terrain; republished only whe
 altitude crosses 20 km. `skyView`: non-null while the camera frame is `sky`, rounded to 0.5°. The gate:
 `spot !== null && altitudeM < 20_000 && skyView === null && no tour, exhibit or clip running`.
 
-- [ ] Tests: `selectSkyEntry` false above 20 km, on a miss, on a host without terrain, while standing, during a tour.
-- [ ] Commit.
+- [x] Tests: `selectSkyEntry` false above 20 km, on a miss, on a host without terrain, while standing, during a tour.
+- [x] Commit.
 
 ### Task 8: The sky takeover
 

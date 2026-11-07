@@ -23,6 +23,7 @@ import reducer, {
 } from '../../../src/state/engine/engineSlice';
 import type { CoreEngineSliceState } from '../../../src/@types/store/CoreEngineSliceState';
 import { Source } from '../../../src/data/source';
+import { NO_SKY_ENTRY } from '../../../src/data/sky/noSkyEntry';
 
 /** A state widened with a stub Layer's facts key, standing in for a landed Layer. */
 type WithStubFacts = CoreEngineSliceState & { stub: { a: number; b: number; list?: number[] } };
@@ -33,6 +34,8 @@ const base = (): CoreEngineSliceState => ({
   status: { kind: 'initializing' },
   scale: { label: '…', widthPx: 100 },
   focusedBodyDistanceMpc: null,
+  skyEntry: NO_SKY_ENTRY,
+  skyView: null,
   hdrCapable: false,
   sourceCounts: {},
   loadProgress: null,
