@@ -4,8 +4,10 @@
  * fades out, then the new one in, so the per-vertex dim never pops (a structure's ball and a
  * stream's recede-all sphere included). `update` runs every frame but fades only on a transition
  * (re-calling `fadeTo` would reset the ramp's clock). Ref and sphere stay latched through their
- * fade-outs, outlasting `selection.focus`. The fade controllers are private (no `FadeRegistry`
- * wake), so `update` wakes the scheduler on each transition; steady frames rely on `isAwake`.
+ * fade-outs, outlasting `selection.focus`. Both blends scale by how shown the subject's kind is,
+ * so a focus whose subject has faded from view (out of its band, switched off) recedes nothing.
+ * The fade controllers are private (no `FadeRegistry` wake), so `update` wakes the scheduler on
+ * each transition; steady frames rely on `isAwake`.
  */
 
 import { createFadeController } from '../../animation/fadeController';
@@ -76,7 +78,7 @@ export function createStructureFocusSubsystem(
     deps.requestRender();
   }
 
-  function produceFocus(nowMs: number): FocusFrame {
+  function produceFocus(nowMs: number, shownOf: (ref: SelectionRefBase) => number): FocusFrame {
     const blend = fade.currentOpacity(nowMs);
     const sphereBlend = sphereFade.currentOpacity(nowMs);
     if (blend === 0 && !fade.isAnimating(nowMs)) ref = null;
@@ -85,14 +87,13 @@ export function createStructureFocusSubsystem(
       if (queued !== null) sphereFade.fadeTo(1, FOCUS_FADE_DURATION_MS, nowMs);
       queued = null;
     }
-    last =
-      ref === null && sphere === null
-        ? AT_REST
-        : {
-            uniforms: sphere === null ? ZERO_FOCUS : { ...sphere, blend: sphereBlend },
-            blend,
-            ref,
-          };
+    if (ref === null && sphere === null) return (last = AT_REST);
+    const shown = ref === null ? 1 : shownOf(ref);
+    last = {
+      uniforms: sphere === null ? ZERO_FOCUS : { ...sphere, blend: sphereBlend * shown },
+      blend: blend * shown,
+      ref,
+    };
     return last;
   }
 

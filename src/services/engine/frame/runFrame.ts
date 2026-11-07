@@ -43,6 +43,7 @@ import { selectPendingInput } from '../../../state/input/selectors';
 import { selectViewCoverPx } from '../../../state/viewCover/selectors';
 import { NO_INSETS_PX } from '../../../data/layout/noInsetsPx';
 import { inputConsumed } from '../../../state/input/inputSlice';
+import { selectionKindShown } from '../presentation/selectionKindShown';
 import { focusSubjectOf } from '../../../utils/selection/focusSubjectOf';
 
 /**
@@ -203,7 +204,10 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // render settings); all of them read the captured value, never a fresh call.
   const focusRow = state.selectionRows.focus;
   state.subsystems.structureFocus.update(focusSubjectOf(state.selection.focus, focusRow), nowMs);
-  const focus = state.subsystems.structureFocus.produceFocus(nowMs);
+  // A focus recedes the scene only while its subject's kind is shown, measured at the frame camera.
+  const focus = state.subsystems.structureFocus.produceFocus(nowMs, (ref) =>
+    selectionKindShown(state, canvas, ref.type),
+  );
   snapshot.focus = focus.uniforms;
   snapshot.focusBlend = focus.blend;
   snapshot.focusPickId = encodeSelectionPick(state.selectionKindRows, focus.ref);

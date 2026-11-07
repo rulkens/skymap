@@ -1,6 +1,7 @@
 import type { Destroyable } from '../../rendering/Destroyable';
 import type { FocusSubject } from './FocusSubject';
 import type { FocusFrame } from './FocusFrame';
+import type { SelectionRefBase } from '../selection/SelectionRefBase';
 
 /**
  * StructureFocusSubsystem — owns focus mode: when a receding row (`RecedingFocusRow`) is focused,
@@ -39,8 +40,12 @@ export type StructureFocusSubsystem = {
    */
   update(subject: FocusSubject | null, nowMs: number): void;
 
-  /** Ticks the fade and returns this frame's focus. At rest: zero sphere, blend 0, no ref. */
-  produceFocus(nowMs: number): FocusFrame;
+  /**
+   * Ticks the fade and returns this frame's focus, both blends scaled by `shownOf` the latched
+   * ref: how shown its kind is this frame (0 = faded from view, so nothing recedes). At rest:
+   * zero sphere, blend 0, no ref.
+   */
+  produceFocus(nowMs: number, shownOf: (ref: SelectionRefBase) => number): FocusFrame;
 
   /**
    * The value the last `produceFocus` returned, without ticking the fade: what a pick between
