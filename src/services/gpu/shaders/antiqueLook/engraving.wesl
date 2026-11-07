@@ -196,3 +196,46 @@ fn starGlyph(q: vec2<f32>, r: f32, rays: f32, glory: f32) -> f32 {
   ink = max(ink, ticks * ring * glory);
   return ink;
 }
+
+// Hachures by line-integral convolution (Cabral & Leedom 1993): `field.b`, a noise
+// pinned to the ground, averaged along the streamline of the screen fall line
+// `field.rg`, FALL_TAPS each way FALL_STEP print units apart, tent-weighted. A streamline stops
+// where the field has no line (a halo, the sky), so no stroke crosses a profile.
+// `across` follows the contour instead: the deep shade's second set. In units of the
+// convolved noise's spread on `relief.wesl`'s lattice, FALL_SIGMA (simulated).
+const FALL_TAPS: i32 = 12;
+const FALL_STEP: f32 = 1.5;
+const FALL_SIGMA: f32 = 0.123;
+
+fn fallLines(field: texture_2d<f32>, samp: sampler, px: vec2<f32>, unit: f32, across: bool) -> f32 {
+  let res = vec2<f32>(textureDimensions(field));
+  let c = textureSampleLevel(field, samp, px / res, 0.0);
+  var sum = c.b;
+  var weight = 1.0;
+  for (var side = 0; side < 2; side++) {
+    var q = px;
+    var d = select(c.rg, vec2<f32>(-c.g, c.r), across) * select(-1.0, 1.0, side == 1);
+    for (var k = 1; k <= FALL_TAPS; k++) {
+      q += d * (FALL_STEP * unit);
+      let s = textureSampleLevel(field, samp, q / res, 0.0);
+      let len = length(s.rg);
+      if (len < 0.5) {
+        break;
+      }
+      let next = select(s.rg, vec2<f32>(-s.g, s.r), across) / len;
+      d = select(next, -next, dot(next, d) < 0.0);
+      let w = 1.0 - f32(k) / f32(FALL_TAPS + 1);
+      sum += s.b * w;
+      weight += w;
+    }
+  }
+  return sum / weight / FALL_SIGMA;
+}
+
+// Ink where a unit-spread field `v` tops its (1 − share) quantile (a logistic probit),
+// so the marks cover about `share` of the paper.
+fn quantileCut(v: f32, share: f32) -> f32 {
+  let s = clamp(share, 0.005, 0.995);
+  let cut = log((1.0 - s) / s) / 1.702;
+  return smoothstep(cut - 0.3, cut + 0.3, v);
+}

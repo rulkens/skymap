@@ -16,6 +16,7 @@ import glyphsCode from '../../shaders/antiqueLook/glyphs.wesl?static';
 import decorCode from '../../shaders/antiqueLook/decor.wesl?static';
 import plateCode from '../../shaders/antiqueLook/fragment.wesl?static';
 import landBlurCode from '../../shaders/antiqueLook/landBlur.wesl?static';
+import reliefCode from '../../shaders/antiqueLook/relief.wesl?static';
 import webCode from '../../shaders/antiqueLook/web.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import {
@@ -25,6 +26,10 @@ import {
   ANTIQUE_UNIFORM_BYTES,
 } from '../../../../data/rendering/antiqueLook';
 import { ANTIQUE_PLATE_BODIES_BYTES } from '../../../../data/rendering/antiquePlateBodies';
+import {
+  ANTIQUE_RELIEF_FORMAT,
+  ANTIQUE_RELIEF_UNIFORM_BYTES,
+} from '../../../../data/rendering/antiqueRelief';
 import { HDR_TARGET_FORMAT } from '../../../../data/renderTargetFormats';
 import type { AntiqueLookGpu } from '../../../../@types/rendering/AntiqueLookGpu';
 
@@ -104,6 +109,7 @@ export function createAntiqueLookGpu(
   const ornaments = buffer('ornaments', ANTIQUE_ORNAMENT_BYTES);
   const digits = buffer('digits', ANTIQUE_GLYPH_BYTES);
   const plateBodies = buffer('plate-bodies', ANTIQUE_PLATE_BODIES_BYTES);
+  const reliefUniforms = buffer('relief-uniforms', ANTIQUE_RELIEF_UNIFORM_BYTES);
   const skyFloorBuffer = device.createBuffer({
     label: 'antique-look-sky-floor',
     size: ANTIQUE_SKY_FLOOR_BYTES,
@@ -241,9 +247,12 @@ export function createAntiqueLookGpu(
         STORAGE, // sky floor
         TEXTURE, // structure glow
         TEXTURE, // Earth's geography
+        TEXTURE, // relief
       ],
       [targetFormat],
     ),
+    relief: stage('relief', reliefCode, [COVER, UNIFORM], [ANTIQUE_RELIEF_FORMAT]),
+    reliefUniforms,
     uniforms,
     ornaments,
     glyphs: { pipeline: glyphsPipeline, layout: glyphsLayout },
@@ -260,6 +269,7 @@ export function createAntiqueLookGpu(
       ornaments.destroy();
       digits.destroy();
       plateBodies.destroy();
+      reliefUniforms.destroy();
       skyFloorBuffer.destroy();
       emptyTexture.destroy();
     },

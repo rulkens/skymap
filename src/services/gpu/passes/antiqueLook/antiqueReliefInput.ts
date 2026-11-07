@@ -1,0 +1,46 @@
+/**
+ * antiqueReliefInput — the relief pass's frame, or null when it has no ground to
+ * engrave: foreground:0's depth must come from the row of an `ANTIQUE_RELIEF_BODIES`
+ * body, close enough that its relief shows. The row's own `vp` and pose, so the depth
+ * unprojects into the frame it was drawn in.
+ */
+
+import type { AntiqueReliefInput } from '../../../../@types/rendering/AntiqueReliefInput';
+import type { FrameView } from '../../../../@types/engine/frame/FrameView';
+import type { PassState } from '../../../../@types/engine/frame/PassState';
+import type { SampledDepth } from '../../../../@types/engine/frame/SampledDepth';
+import {
+  ANTIQUE_RELIEF_BODIES,
+  ANTIQUE_RELIEF_MAX_ALT_M,
+} from '../../../../data/rendering/antiqueRelief';
+import { SCENE_CELESTIAL_BODIES } from '../../../../data/bodies/sceneCelestialBodies';
+import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
+import { sunDirLocal } from '../../../../utils/camera/bodyCompose/sunDirLocal';
+import { sceneBodyStates } from '../../../engine/frame/sceneBodyStates';
+
+export function antiqueReliefInput(
+  state: PassState,
+  ctx: FrameView,
+  depth: SampledDepth,
+  unitPx: number,
+): AntiqueReliefInput | null {
+  const row = depth.row;
+  if (row === null || row.frame.kind !== 'body-m') return null;
+  const hostId = row.frame.hostId;
+  if (!ANTIQUE_RELIEF_BODIES.includes(hostId)) return null;
+  const body = SCENE_CELESTIAL_BODIES.find((b) => b.id === hostId);
+  const pose = ctx.bodyPose(hostId);
+  const bodyState = sceneBodyStates(state, ctx).get(hostId);
+  if (body === undefined || pose === null || bodyState === undefined) return null;
+  const datumRadiusM = body.surface.datumRadiusM;
+  if (Math.hypot(...pose.eyeRelBodyM) - datumRadiusM > ANTIQUE_RELIEF_MAX_ALT_M) return null;
+  return {
+    vp: row.vp,
+    eyeRelBodyM: pose.eyeRelBodyM,
+    datumRadiusM,
+    sun: sunDirLocal(bodyState.positionMpc, RENDER_ORIGIN_MPC, bodyState.orientation),
+    size: ctx.canvasSize,
+    unitPx,
+    radPerPx: 1 / ctx.drawPxPerRad,
+  };
+}
