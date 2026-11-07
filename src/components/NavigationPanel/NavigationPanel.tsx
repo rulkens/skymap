@@ -23,7 +23,7 @@ const ROWS_BY_MODE: Readonly<
     { key: 'Wheel', action: 'zoom' },
     { key: 'H', action: 'home view' },
     { key: 'F', action: 'focus selected' },
-    { key: 'Esc', action: 'close card, then leave' },
+    { key: 'Esc', action: 'close card, then clear' },
     // `/` is the fallback for keyboards without a meta key.
     { key: '⌘K / Ctrl+K / /', action: 'search galaxies' },
   ],
