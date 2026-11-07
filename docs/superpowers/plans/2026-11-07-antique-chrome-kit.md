@@ -166,6 +166,38 @@ SVG linear gradients repeated at a fixed pitch, so no canvas is needed.
       parse `--antique-ink` and `--antique-slip`, and compare them with `ANTIQUE_CHROME_INK` and
       `ANTIQUE_CHROME_GROUND`.
 
+### Task 8: The exhibit as compartments (owner pick: direction A) and the kit's leftovers
+
+**Files:** `src/components/ExhibitOverlay/{ExhibitOverlay.tsx,ExhibitOverlay.module.css}`,
+`src/components/ExhibitOverlay/SectionScale/{SectionScale.tsx,SectionScale.module.css}`,
+`src/hooks/useActiveSection.ts`, `src/data/ui/antiqueChrome.ts` (`INSET_FRAME`),
+`antiqueChromeCss.ts` (`--inset-frame-*`), `src/styles/{tokens,antique}.css`,
+`src/components/common/CompactInfoTip/CompactInfoTip.module.css`,
+`src/components/Splash/Splash.module.css`, `tests/components/ExhibitOverlay/ExhibitOverlay.test.tsx`
+
+```ts
+useActiveSection(scrollerRef: RefObject<HTMLElement | null>): readonly [number, (index: number) => void]
+```
+
+Outer boxes place, an inner `.slip` carries the chrome, so the phone's full-screen caption and
+padded notes keep their geometry while only the slip is framed. The caption slip and the notes
+compartment wear the Panel frame with a cartouche on the top rule ("Exhibit"; the exhibit's name
+as running head). Section numbers and the drop capital are CSS (`counter(…, lower-roman)`,
+`::first-letter`), so no kind component learns its index. The key and facts sit in
+`--inset-frame-*` insets; the switch takes the kit's `--toggle-*` box. `SectionScale` and the
+running head are `display: none` unless the look sets their hooks. The exhibit's raw colours,
+fonts and display sizes moved to `--exhibit-*` tokens in `tokens.css` at their plain values;
+the antique look re-points them.
+
+- [x] Tests: the first section is current at rest; a jump scrolls to its section and marks it
+      current at once; the reader's scroll moves `aria-current`; a jump holds its section
+      through the scroll it causes, until the reader scrolls; the end of the box marks the last
+      section; Exit still exits and Escape still reaches the document.
+- [x] Plain look: computed styles and rects of every text-bearing element, and every painted
+      box, match the pre-change dump (both exhibits, 1728, 400 and 1200×900).
+- [x] Leftovers: the time tooltip drops the glass shadow (`--framed-shadow`); Splash links take
+      the rubric ring (`--splash-link-focus-*`); the phone splash wash ends above its column.
+
 ## Definition of Done
 
 **Deliverables:** the generator files above; the framed Panel and InfoCard; engraved check

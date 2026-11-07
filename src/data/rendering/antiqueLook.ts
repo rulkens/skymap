@@ -84,22 +84,20 @@ export const ANTIQUE_PRINT_POINTS_DEPTH: GPUTextureFormat = 'depth32float';
 export const ANTIQUE_TARGETS = {
   print: 'print',
   overlay: 'overlay',
-  full: 'antique-full',
-  quarter: 'antique-quarter',
-  low: 'antique-low',
+  paper: 'antique-paper',
+  wash: 'antique-wash',
+  glow: 'antique-glow',
   structures: 'antique-structures',
+  structureGlow: 'antique-structure-glow',
+  nebula: 'antique-nebula',
   printPoints: 'antique-print-points',
+  starInk: 'antique-star-ink',
+  decor: 'antique-decor',
+  decorHue: 'antique-decor-hue',
   land: 'antique-land',
   landBlurAcross: 'antique-land-blur-across',
+  landBlur: 'antique-land-blur',
   lines: 'antique-lines',
   geography: 'antique-geography',
   relief: 'antique-relief',
 } as const;
-
-/** The layers of the plate's array rows, one row per size and format (full res rgba8,
- * ¼ res and 1/16 res rgba16float), mirrored by the `*_LAYER` constants in fragment.wesl.
- * A new row the look writes and the plate reads is a layer here, never a plate binding:
- * WebGPU allows a stage 16 sampled textures and a phone may offer no more. */
-export const ANTIQUE_FULL_LAYERS = { paper: 0, starInk: 1, decor: 2, decorHue: 3 } as const;
-export const ANTIQUE_QUARTER_LAYERS = { wash: 0, nebula: 1, landBlur: 2 } as const;
-export const ANTIQUE_LOW_LAYERS = { glow: 0, structureGlow: 1 } as const;

@@ -20,6 +20,16 @@ export const PANEL_FRAME: EngravedFrameParams = {
   ornament: 28,
 };
 
+/** An inset's own neatline inside a compartment (a key, a facts table): finer, plain corners. */
+export const INSET_FRAME: EngravedFrameParams = {
+  outer: 1.1,
+  hair: 0.5,
+  gap: 1.2,
+  band: 3,
+  cell: 5,
+  ornament: 0,
+};
+
 /** The colourist's box (shaders/antiqueLook/pigments.wesl): gamboge marks hover and press, verdigris what is on. */
 export const ANTIQUE_GAMBOGE = '#e6bd4d';
 export const ANTIQUE_VERDIGRIS = '#6b9e80';

@@ -4,6 +4,7 @@ import {
   ANTIQUE_GAMBOGE,
   ANTIQUE_VERDIGRIS,
   HOVER_WASH_STRENGTH,
+  INSET_FRAME,
   PANEL_FRAME,
   TITLE_CARTOUCHE_HEIGHT,
   WASH_STRENGTH,
@@ -29,6 +30,7 @@ export function antiqueChromeCss(): string {
   const ground = ANTIQUE_CHROME_GROUND;
   const frame = engravedFrameSvg(PANEL_FRAME, ink, true);
   const edge = engravedEdgeSvg(PANEL_FRAME, ink);
+  const inset = engravedFrameSvg(INSET_FRAME, ink, false);
   const cartouche = cartoucheSvg(TITLE_CARTOUCHE_HEIGHT, ink, ground);
   const tablet = (g: string): string => svgDataUrl(tabletSvg(ink, g).svg);
   const { slice: ts } = tabletSvg(ink, ground);
@@ -39,6 +41,8 @@ export function antiqueChromeCss(): string {
     '--frame-image': `${svgDataUrl(frame.svg)} ${f(frame.slice)} / ${f(frame.slice)}px round`,
     '--frame-border': `${f(frame.border)}px`,
     '--frame-slice': `${f(frame.slice)}px`,
+    '--inset-frame-image': `${svgDataUrl(inset.svg)} ${f(inset.slice)} / ${f(inset.slice)}px round`,
+    '--inset-frame-border': `${f(inset.border)}px`,
     '--frame-edge': `${svgDataUrl(edge.svg)} 0 0 / ${f(edge.tile)}px ${f(edge.height)}px round no-repeat`,
     '--title-cartouche-image': `${svgDataUrl(cartouche)} ${CARTOUCHE_CAP} ${CARTOUCHE_END} fill / ${CARTOUCHE_CAP}px ${CARTOUCHE_END}px stretch`,
     '--title-cartouche-border': `0 ${CARTOUCHE_END}px`,

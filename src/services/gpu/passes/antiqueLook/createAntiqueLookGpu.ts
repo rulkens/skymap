@@ -34,8 +34,6 @@ import { HDR_TARGET_FORMAT } from '../../../../data/renderTargetFormats';
 import type { AntiqueLookGpu } from '../../../../@types/rendering/AntiqueLookGpu';
 
 const TEXTURE = { texture: { sampleType: 'float' } } as const;
-// The plate's own rows, a layer each (`ANTIQUE_*_LAYERS`).
-const ARRAY = { texture: { sampleType: 'float', viewDimension: '2d-array' } } as const;
 const UNIFORM = { buffer: { type: 'uniform' } } as const;
 const SAMPLER = { sampler: { type: 'filtering' } } as const;
 const STORAGE = { buffer: { type: 'read-only-storage' } } as const;
@@ -222,7 +220,7 @@ export function createAntiqueLookGpu(
       'land-blur-down',
       landBlurCode,
       [TEXTURE, UNIFORM],
-      [HDR_TARGET_FORMAT], // a layer of antique-quarter
+      ['rg16float'],
       'fsDown',
     ),
     plate: stage(
@@ -233,15 +231,21 @@ export function createAntiqueLookGpu(
         TEXTURE, // overlay
         COVER, // foreground:0
         UNIFORM,
-        ARRAY, // antique-full
-        ARRAY, // antique-quarter
-        ARRAY, // antique-low
+        TEXTURE, // paper
+        TEXTURE, // wash
+        TEXTURE, // star ink
         SAMPLER,
+        TEXTURE, // glow
+        TEXTURE, // decor
+        TEXTURE, // decor hue
         UNIFORM, // border digits
         TEXTURE, // glyph sheet
         TEXTURE, // constellation lines
         UNIFORM, // plate bodies
+        TEXTURE, // land blur
+        TEXTURE, // nebula
         STORAGE, // sky floor
+        TEXTURE, // structure glow
         TEXTURE, // Earth's geography
         TEXTURE, // relief
       ],

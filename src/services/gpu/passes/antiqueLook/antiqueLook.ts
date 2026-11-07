@@ -13,11 +13,8 @@
 import { createAntiqueLookGpu } from './createAntiqueLookGpu';
 import { loadAntiqueSheetAssets } from './loadAntiqueSheetAssets';
 import {
-  ANTIQUE_FULL_LAYERS,
   ANTIQUE_GLYPH_BYTES,
-  ANTIQUE_LOW_LAYERS,
   ANTIQUE_ORNAMENT_BYTES,
-  ANTIQUE_QUARTER_LAYERS,
   ANTIQUE_REFERENCE_HEIGHT_CSS,
   ANTIQUE_REGIME_MPC,
   ANTIQUE_TARGETS,
@@ -183,23 +180,16 @@ export function createAntiqueLook(init: {
     }
 
     const uniforms = { buffer: g.uniforms };
-    // Each pass writes or reads one layer; only the plate binds the whole arrays.
-    const full = (layer: keyof typeof ANTIQUE_FULL_LAYERS) =>
-      targets.layerViewOf(ANTIQUE_TARGETS.full, ANTIQUE_FULL_LAYERS[layer]);
-    const quarter = (layer: keyof typeof ANTIQUE_QUARTER_LAYERS) =>
-      targets.layerViewOf(ANTIQUE_TARGETS.quarter, ANTIQUE_QUARTER_LAYERS[layer]);
-    const low = (layer: keyof typeof ANTIQUE_LOW_LAYERS) =>
-      targets.layerViewOf(ANTIQUE_TARGETS.low, ANTIQUE_LOW_LAYERS[layer]);
-    const paper = full('paper');
-    const wash = quarter('wash');
-    const glow = low('glow');
-    const nebula = quarter('nebula');
+    const paper = targets.viewOf(ANTIQUE_TARGETS.paper);
+    const wash = targets.viewOf(ANTIQUE_TARGETS.wash);
+    const glow = targets.viewOf(ANTIQUE_TARGETS.glow);
+    const nebula = targets.viewOf(ANTIQUE_TARGETS.nebula);
     // The structure markers, when one drew this frame: their own low band, else nothing.
     const structured = ctx.snapshot.renderedTargets.has(ANTIQUE_TARGETS.structures);
-    const structureGlow = low('structureGlow');
-    const starInk = full('starInk');
-    const decor = full('decor');
-    const decorHue = full('decorHue');
+    const structureGlow = structured ? targets.viewOf(ANTIQUE_TARGETS.structureGlow) : g.empty;
+    const starInk = targets.viewOf(ANTIQUE_TARGETS.starInk);
+    const decor = targets.viewOf(ANTIQUE_TARGETS.decor);
+    const decorHue = targets.viewOf(ANTIQUE_TARGETS.decorHue);
     // foreground:0 keeps last frame's bodies when nothing drew one this frame.
     const bodies = !hasBodies
       ? g.empty
@@ -209,7 +199,7 @@ export function createAntiqueLook(init: {
     // The land map, when a masked globe drew this frame (Earth, Mars).
     const land = landMapped ? targets.viewOf(ANTIQUE_TARGETS.land) : g.empty;
     const landBlurAcross = targets.viewOf(ANTIQUE_TARGETS.landBlurAcross);
-    const landBlur = quarter('landBlur');
+    const landBlur = targets.viewOf(ANTIQUE_TARGETS.landBlur);
     // The catalogue's naked-eye stars, when a star pass printed this frame.
     const printed = ctx.snapshot.renderedTargets.has(ANTIQUE_TARGETS.printPoints);
     const points = printed ? targets.viewOf(ANTIQUE_TARGETS.printPoints) : g.empty;
@@ -252,14 +242,6 @@ export function createAntiqueLook(init: {
         targets.viewOf(ANTIQUE_TARGETS.structures),
         g.clampSampler,
       ]);
-    } else {
-      // The layer outlives the frame that drew it: no marker reads as no band.
-      encoder
-        .beginRenderPass({
-          label: 'antique-look-structure-glow-clear',
-          colorAttachments: [{ view: structureGlow, loadOp: 'clear', storeOp: 'store' }],
-        })
-        .end();
     }
     const floorPass = encoder.beginComputePass({ label: 'antique-look-sky-floor' });
     floorPass.setPipeline(g.skyFloor.pipeline);
@@ -361,15 +343,21 @@ export function createAntiqueLook(init: {
         io.overlay ?? g.empty,
         bodies,
         uniforms,
-        targets.viewOf(ANTIQUE_TARGETS.full),
-        targets.viewOf(ANTIQUE_TARGETS.quarter),
-        targets.viewOf(ANTIQUE_TARGETS.low),
+        paper,
+        wash,
+        starInk,
         g.clampSampler,
+        glow,
+        decor,
+        decorHue,
         { buffer: g.digits },
         glyphs?.view ?? g.empty,
         lines,
         { buffer: g.plateBodies },
+        landBlur,
+        nebula,
         { buffer: g.skyFloorBuffer },
+        structureGlow,
         ctx.snapshot.renderedTargets.has(ANTIQUE_TARGETS.geography)
           ? targets.viewOf(ANTIQUE_TARGETS.geography)
           : g.empty,

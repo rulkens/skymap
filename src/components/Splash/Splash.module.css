@@ -225,6 +225,12 @@
   color: inherit;
   text-decoration: underline;
 }
+/* The browser's own ring in the plain look; a look with its own ring sets the hooks. */
+.body a:focus-visible,
+.footer a:focus-visible {
+  outline: var(--splash-link-focus-ring, revert);
+  outline-offset: var(--splash-link-focus-offset, revert);
+}
 
 .credits,
 .attribution {

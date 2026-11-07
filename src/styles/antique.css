@@ -211,15 +211,19 @@
     rgb(247 239 218 / 0.5) 55%,
     transparent 75%
   );
+  /* Measured from the foot, as the splash column is: the wash ends a little above its
+   * top, so the plate's title cartouche at the head of the sheet stays clear. */
   --splash-scrim-phone: linear-gradient(
     to top,
-    rgb(247 239 218 / 0.96) 0%,
-    rgb(247 239 218 / 0.9) 60%,
-    rgb(247 239 218 / 0.15) 100%
+    rgb(247 239 218 / 0.96) 0,
+    rgb(247 239 218 / 0.9) 520px,
+    transparent 660px
   );
   --splash-strong: var(--antique-ink);
   --splash-rule: rgb(43 33 24 / 0.5);
   --splash-rule-faint: rgb(43 33 24 / 0.3);
+  --splash-link-focus-ring: var(--focus-ring-width) solid var(--focus-ring);
+  --splash-link-focus-offset: 2px;
   /* The phone's scale legend: ink knocked out of the plate's lines, as an engraver clears
    * the hatching round his lettering. */
   --scale-bracket-halo:
@@ -229,6 +233,67 @@
     0 0 var(--space-2) var(--antique-paper), 0 0 var(--space-2) var(--antique-paper);
   --scale-bracket-mark-halo: drop-shadow(1px 0 var(--antique-paper))
     drop-shadow(-1px 0 var(--antique-paper)) drop-shadow(0 -1px var(--antique-paper));
+
+  /* The exhibit: caption and notes cut as compartments, so the scrims and glows go. The
+   * notes get a running head, numbered sections opening on a drop capital, insets with
+   * their own neatline (--inset-frame-*) and a scale of the sections at their foot. */
+  --exhibit-scrim-caption: none;
+  --exhibit-scrim-notes: none;
+  --exhibit-scrim-caption-phone: none;
+  --exhibit-scrim-notes-phone: none;
+  --exhibit-text-shadow-caption: none;
+  --exhibit-text-shadow-notes: none;
+  --exhibit-text-shadow-control: none;
+  --exhibit-icon-shadow: none;
+  --exhibit-rule: none;
+  --font-family-exhibit-body: var(--font-family-mono);
+  --font-weight-exhibit-body: 400;
+  --font-weight-exhibit-display: 400;
+  --font-weight-exhibit-lede: 400;
+  --exhibit-title-size: 42px;
+  --exhibit-lede-size: 18px;
+  --exhibit-lede-size-phone: 17px;
+  --exhibit-heading-size: 19px;
+  --exhibit-fact-size: 17px;
+  --exhibit-body-size: 15px;
+  --exhibit-heading-color: var(--antique-ink);
+  --exhibit-slip-ground: var(--surface-panel);
+  --exhibit-slip-gutter: var(--space-12);
+  --exhibit-slip-foot: var(--framed-body-padding-bottom);
+  --exhibit-caption-left: 60px;
+  --exhibit-caption-bottom: 72px;
+  --exhibit-caption-align: center;
+  /* Inside the plate's own neatline, which the plain look's 40px would ride. */
+  --exhibit-notes-top: 56px;
+  --exhibit-notes-right: 56px;
+  --exhibit-notes-width: 384px;
+  --exhibit-notes-max-height: calc(100dvh - 56px - 96px);
+  --exhibit-running-head-display: flex;
+  --exhibit-scale-display: flex;
+  --exhibit-scroller-padding: var(--space-6) var(--space-12) var(--space-12);
+  --exhibit-scroller-padding-phone: var(--space-6) var(--space-8) var(--space-12);
+  --exhibit-accent-rule-display: none;
+  --exhibit-rule-display: none;
+  --exhibit-section-rule-display: block;
+  --exhibit-numeral-display: inline-block;
+  --exhibit-inset-padding: var(--space-6) var(--space-7);
+  --exhibit-ramp-height: 9px;
+  --exhibit-ramp-rule: 0 0 0 0.8px var(--antique-ink);
+  --exhibit-ramp-blend: multiply;
+  --exhibit-ramp-opacity: 0.8;
+  --exhibit-toggle-order: -1;
+  --exhibit-toggle-justify: flex-start;
+  --exhibit-hide-rule: 2px solid transparent;
+  --exhibit-drop-cap-float: left;
+  --exhibit-drop-cap-margin: 0.06em var(--space-3) 0 0;
+  --exhibit-drop-cap-font: var(--font-family-display);
+  --exhibit-drop-cap-size: 4.1em;
+  --exhibit-drop-cap-leading: 0.82;
+  --exhibit-drop-cap-color: var(--antique-rubric);
+  /* The print reveals downward from the top rule; the overhanging cartouche stays out of
+   * the clip from the first frame. */
+  --exhibit-print-from: inset(-48px -48px 100% -48px);
+  --exhibit-print-to: inset(-48px);
 }
 
 /* The `font` shorthand resets font-size-adjust, and every panel and card root sets one;
