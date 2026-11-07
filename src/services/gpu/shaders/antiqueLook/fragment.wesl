@@ -235,9 +235,9 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let glowL = lowL + dot(vec2<f32>(dpdx(lowL), dpdy(lowL)), slip * u.res);
   let lowPerPx = max(fwidth(lowL), 1e-5);
   let inside = (glowL - GLOW_EDGE) / lowPerPx;
-  // The band fades inward from the line, with the darker rim where it pooled.
-  let band = step(0.0, inside) * (1.0 - smoothstep(0.0, 20.0 * u.unit, inside)
-    + 0.35 * (1.0 - smoothstep(1.0 * u.unit, 3.0 * u.unit, inside))) * sky;
+  // The band fades inward from the line: clear pigment, no pooled rim (a dark
+  // ragged edge read as foxing, not colour).
+  let band = step(0.0, inside) * (1.0 - smoothstep(0.0, 14.0 * u.unit, inside)) * sky;
   // The hue is only needed where the band paints.
   var hue = vec3<f32>(0.0);
   if (band > 0.0) {
@@ -248,7 +248,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let focus = 1.0 - 0.7 * smoothstep(0.18, 0.62, length((uv - 0.5) * vec2<f32>(u.res.x / u.res.y, 1.0)) * 0.9);
   // Only a glow with a hue of its own is coloured; a grey one keeps just its line
   // (a grey glow washed in ochre read as scorched paper).
-  let skyWash = band * 0.45 * focus * smoothstep(0.03, 0.12, chromaOf(hue));
+  let skyWash = band * 0.35 * focus * smoothstep(0.03, 0.12, chromaOf(hue));
   col = applyWash(col, regionPigment(hue), skyWash * sky * frame.y);
 
   let ornament = texel(decorTex, ip);

@@ -124,6 +124,28 @@ describe('placeAntiqueOrnaments', () => {
     expect(near.centrePx[0]).toBeCloseTo(far.centrePx[0], 3);
   });
 
+  it('sails a sea beast whole inside the numbered border or not at all', () => {
+    const beastOfSize = (sizeMpc: number) =>
+      placeAntiqueOrnaments({
+        ornaments: [
+          skyRow({
+            facesNorth: false,
+            anchor: { kind: 'space', lonDeg: 0, latDeg: 0, distMpc: 20, sizeMpc },
+          }),
+        ],
+        atlas: ATLAS,
+        basis: GALACTIC_CENTRE_AHEAD,
+        frustum: FRUSTUM,
+        size: SIZE,
+        unitPx: 1,
+        camPosMpc: [0, 0, 0],
+      });
+    // Dead ahead either way; the larger one would reach past the border into
+    // the margin, where a constellation figure may be cropped but a beast not.
+    expect(beastOfSize(4)).toHaveLength(1);
+    expect(beastOfSize(40)).toEqual([]);
+  });
+
   it('withdraws a sky figure that would run under a clearing sheet ornament', () => {
     const cartouche: AntiqueOrnament = {
       ...skyRow({ facesNorth: false, clearsBeneath: true }),

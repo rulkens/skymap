@@ -8,6 +8,7 @@
 
 import package::antiqueLook::io::AntiqueUniforms;
 import package::antiqueLook::ornaments::AntiqueOrnaments;
+import package::antiqueLook::engraving::hatch;
 import package::antiqueLook::pigments::pigmentAt;
 
 @group(0) @binding(0) var<uniform> u: AntiqueUniforms;
@@ -56,15 +57,22 @@ fn fs(in: DecorOut) -> DecorInk {
   let clears = orn.items[in.item].clears;
   // One ink with the plate: the scan's greys pushed to line or paper.
   let ink = smoothstep(0.2, 0.55, s.r) * o;
+  // A constellation figure is re-cut in the plate's own line: its outline from
+  // the silhouette, its shading as one set of hatching turning with it, as light
+  // as the scan is dark. The scan itself, shrunk, prints a dark smudge.
+  let rim = abs(s.g - 0.5) / max(fwidth(s.g), 1e-4);
+  let outline = 1.0 - smoothstep(0.6, 1.6, rim);
+  let rot = orn.items[in.item].rot;
+  let shade = hatch(in.pos.xy / u.unit, atan2(rot.y, rot.x) + 0.6, 3.2, smoothstep(0.2, 0.8, s.r) * 0.5 * s.g, 1.0 / u.unit);
+  let figure = max(outline, shade) * o;
   // A clearing ornament (the cartouche) takes the plate back to paper under its
   // whole engraving, not just its fill; every ornament takes a light wash, as
   // a coloured Dutch copy's cartouche and beasts did.
   let clear = max(s.g, smoothstep(0.05, 0.3, s.r)) * o * clears;
-  let wash = max(s.b, s.g * 0.28) * o;
+  // Only clearing ornaments are washed: a figure lies on the sky uncoloured.
+  let wash = max(s.b, s.g * 0.28) * o * clears;
   var out: DecorInk;
-  // Constellation figures are light hatching (Hevelius), so the stars on them
-  // stay readable: about 60% ink. Clearing ornaments print full.
-  out.ink = vec4<f32>(ink * 0.62 * (1.0 - clears), ink * clears, clear, wash);
+  out.ink = vec4<f32>(figure * 0.8 * (1.0 - clears), ink * clears, clear, wash);
   out.hue = vec4<f32>(pigmentAt(orn.items[in.item].pigment) * step(0.01, wash), 0.0);
   return out;
 }

@@ -16,7 +16,7 @@ import type { AntiqueOrnamentInstance } from '../../../@types/rendering/AntiqueO
 import type { Size } from '../../../@types/rendering/Size';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { GAL_TO_EQ_MATRIX } from '../../../data/superGalacticTransform';
-import { ANTIQUE_REGIME_MPC } from '../../../data/rendering/antiqueLook';
+import { ANTIQUE_NUMERAL_INSET_UNITS, ANTIQUE_REGIME_MPC } from '../../../data/rendering/antiqueLook';
 import { raDecDistToCartesian } from '../../math/raDecDistToCartesian';
 import { rotateVec3ByTightMat3 } from '../../math/rotateVec3ByTightMat3';
 import { projectDirToPx } from '../../camera/projection/projectDirToPx';
@@ -104,9 +104,16 @@ export function placeAntiqueOrnaments(input: {
     }
     const half: [number, number] = [widthPx * 0.5, widthPx * 0.5 * aspect];
     // A sky figure mostly off the plate reads as a cropped stray claw: fade it
-    // out unless at least about half of it is on screen.
-    if (anchor.kind !== 'sheet')
+    // out unless at least about half of it is on screen. The neatline may crop a
+    // constellation figure, as on Hevelius' plates, but a sea beast sails whole
+    // inside the numbered border or not at all.
+    if (anchor.kind === 'sky')
       opacity *= smoothstep(0.55, 0.6, onScreenShare(centre, half, size));
+    if (anchor.kind === 'space') {
+      const inset = ANTIQUE_NUMERAL_INSET_UNITS * unitPx;
+      const plate = { width: size.width - 2 * inset, height: size.height - 2 * inset };
+      opacity *= smoothstep(0.97, 0.995, onScreenShare([centre[0] - inset, centre[1] - inset], half, plate));
+    }
     if (opacity <= 0.003 || offScreen(centre, half, size)) continue;
     // An engraving is on the plate or not: a beast that would run under a
     // cartouche is withdrawn rather than shown cut off or faded.
