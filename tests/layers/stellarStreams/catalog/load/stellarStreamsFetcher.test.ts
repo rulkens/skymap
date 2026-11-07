@@ -9,7 +9,12 @@ const bin = () =>
   encodeStellarStreams({ particleCount: 2, streamCount: 2, records: new Float32Array(20) });
 const metaJson = (length: number) =>
   JSON.stringify(
-    Array.from({ length }, (_, i) => ({ id: `s${i}`, names: [`S${i}`], centrelineMpc: [] })),
+    Array.from({ length }, (_, i) => ({
+      id: `s${i}`,
+      names: [`S${i}`],
+      centrelineMpc: [],
+      focusBoost: 1,
+    })),
   );
 
 const signal = new AbortController().signal;
@@ -37,6 +42,15 @@ describe('stellar streams pair check', () => {
     await expect(
       stellarStreamsMetaFetcher(() => null)(undefined, signal, noProgress),
     ).rejects.toThrow(/predates centrelineMpc/);
+  });
+
+  it('rejects a meta from before the focus boost by name, so a focus never draws NaN', async () => {
+    fetch.mock.mockResolvedValue(
+      new Response(JSON.stringify([{ id: 's0', names: ['S0'], centrelineMpc: [] }])),
+    );
+    await expect(
+      stellarStreamsMetaFetcher(() => null)(undefined, signal, noProgress),
+    ).rejects.toThrow(/predates focusBoost.*npm run build-stellar-streams/);
   });
 
   it('accepts a bin with no meta yet', async () => {

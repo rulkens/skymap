@@ -29,7 +29,7 @@ this list is what shipped.
   −0.57 bound to −1.13 for old debris.
 - **Meta schema** (§4.3) gained `wikipediaTitle`, `frameRadiusKpc`, `colourT`, `metallicity` (measured only),
   `stellarMass` (13 published values, `partial` shown as "≥"), `centrelineMpc` and `ribbonWidthKpc`.
-  `description` is the Wikipedia extract or null. The fetcher rejects a meta without `centrelineMpc`. The meta
+  `description` is the Wikipedia extract or null. The fetcher rejects a meta without `centrelineMpc` or `focusBoost`. The meta
   is 107 KB raw, 22 KB gzipped, and still demanded at boot.
 - **Card** (§5.6): length (or extent), distance, width when known, metallicity and stellar mass where present,
   and a Wikipedia link and blurb for the 6 streams with an article of their own (5 articles, summaries cached in

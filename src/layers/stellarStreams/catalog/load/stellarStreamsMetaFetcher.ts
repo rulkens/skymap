@@ -8,6 +8,9 @@ import { HttpError, dataUrl } from '../../../../services/loading/fetchWithProgre
 import { streamPairMismatch } from '../utils/streamPairMismatch';
 
 const STELLAR_STREAMS_META_PATH = 'stellar-streams/v1/stellar_streams_meta.json';
+// Fields older builds lack: without centrelines the ribbon upload throws and takes labels and
+// cards down with it; without the boost a focused stream draws NaN.
+const REQUIRED_FIELDS = ['centrelineMpc', 'focusBoost'] as const;
 
 export function stellarStreamsMetaFetcher(
   binStreamCount: () => number | null,
@@ -18,13 +21,14 @@ export function stellarStreamsMetaFetcher(
     if (!res.ok) throw new HttpError(res.status, url);
     const meta: unknown = await res.json();
     if (!Array.isArray(meta)) throw new Error('stellar_streams_meta.json: root must be an array');
-    // A pre-centreline meta would throw inside the ribbon upload and take labels and cards down with it.
-    if (
-      meta.length > 0 &&
-      !(typeof meta[0] === 'object' && meta[0] !== null && 'centrelineMpc' in meta[0])
-    ) {
+    const first: unknown = meta[0];
+    const missing =
+      meta.length === 0
+        ? undefined
+        : REQUIRED_FIELDS.find((f) => !(typeof first === 'object' && first !== null && f in first));
+    if (missing !== undefined) {
       throw new Error(
-        'stellar_streams_meta.json predates centrelineMpc: run npm run build-stellar-streams',
+        `stellar_streams_meta.json predates ${missing}: run npm run build-stellar-streams`,
       );
     }
     const count = binStreamCount();
