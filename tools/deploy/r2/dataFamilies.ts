@@ -76,7 +76,7 @@ export const DATA_FAMILIES: readonly DataFamily[] = [
     dir: null,
     fileName: /^(?:stellar-streams\.bin|stellar_streams_meta\.json)$/,
     transport: 'wrangler',
-    // Measured: bin 5.1 → 4.0 MB, meta 42 → 8 KB.
+    // Measured (gzip, 2026-11-07): bin 5.1 → 3.7 MB, meta 107 → 22 KB.
     gzipOnWire: true,
   },
   {

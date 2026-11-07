@@ -3,7 +3,8 @@ export type StellarStreamMeta = {
   /** Slug, e.g. 'gd-1', 'sagittarius'. */
   readonly id: string;
   readonly names: readonly string[];
-  readonly description: string;
+  /** The Wikipedia article's lead; null when there is none. */
+  readonly description: string | null;
   /** English Wikipedia article about the stream itself; null when it has none. */
   readonly wikipediaTitle: string | null;
   readonly source: 'vasiliev2021' | 'galstreams';

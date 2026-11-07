@@ -29,10 +29,7 @@ export function streamMetaEntry(
   return {
     id: streamSlug(name),
     names: [name],
-    ...streamArticleFields(
-      wikipedia,
-      `${name}, a stellar stream traced by the ${track.ref} track of galstreams (Mateu 2023).`,
-    ),
+    ...streamArticleFields(wikipedia),
     source: 'galstreams',
     reference: track.ref,
     lengthKpc,

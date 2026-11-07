@@ -27,7 +27,7 @@ export const SAGITTARIUS: StellarStreamMeta = {
 export const GD_1: StellarStreamMeta = {
   id: 'gd-1',
   names: ['GD-1'],
-  description: 'GD-1, a stellar stream traced by the ibata2021 track of galstreams.',
+  description: null,
   wikipediaTitle: null,
   source: 'galstreams',
   reference: 'ibata2021',

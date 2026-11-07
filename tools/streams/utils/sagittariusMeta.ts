@@ -42,10 +42,7 @@ export function sagittariusMeta(
   return {
     id: 'sagittarius',
     names: ['Sagittarius', 'Sagittarius stream'],
-    ...streamArticleFields(
-      wikipedia,
-      'The tidal debris of the Sagittarius dwarf galaxy, from the N-body model of Vasiliev, Belokurov & Erkal 2021.',
-    ),
+    ...streamArticleFields(wikipedia),
     source: 'vasiliev2021',
     reference: 'Vasiliev, Belokurov & Erkal 2021',
     // An extent (diameter around the remnant) here; for galstreams streams an arc length.

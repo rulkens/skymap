@@ -7,8 +7,8 @@ export type StellarStreamMetaEntry = {
   /** Slug: lowercase, non-alphanumerics → '-', e.g. 'gd-1', 'sagittarius'. */
   id: string;
   names: string[];
-  /** The Wikipedia article's lead when the stream has one, else the build's own line. */
-  description: string;
+  /** The Wikipedia article's lead; null without an article or when its summary has no extract. */
+  description: string | null;
   /** English Wikipedia article about the stream itself (`streamWikipedia.constants`); null when none. */
   wikipediaTitle: string | null;
   source: 'vasiliev2021' | 'galstreams';

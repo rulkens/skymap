@@ -48,7 +48,7 @@ across reruns over the same inputs. On 2026-11-07 it wrote 128,419 particles in 
   mass-to-light range stay out, and Sagittarius has none. The build fails if a row names no built
   stream.
 - **Wikipedia**: the meta row's `wikipediaTitle`, and its `description` when the summary has an
-  extract, come from [`data/streamWikipedia.constants.ts`](data/streamWikipedia.constants.ts): only
+  extract (null otherwise; the build writes no description of its own), come from [`data/streamWikipedia.constants.ts`](data/streamWikipedia.constants.ts): only
   articles about the stream itself (6 rows on 2026-11-07, 5 articles; progenitor-cluster articles stay
   out, and so do the titles that merely redirect to one). The raw REST summaries are cached in the
   committed `data/raw/streams/wikipedia_streams_cache.json`, so a rebuild makes no request; a new row
