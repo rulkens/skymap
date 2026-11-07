@@ -13,6 +13,9 @@ import type { Channel } from '../../../@types/animation/Channel';
 import type { SeqSteps } from '../../../@types/animation/SeqSteps';
 import { baseTracksOf } from './baseTracksOf';
 import { buildFrameLegs } from './buildFrameLegs';
+import { legIndexAt } from './legIndexAt';
+import { sameFrame } from '../camera/arms/sameFrame';
+import { byStartSec } from '../../../utils/animation/byStartSec';
 
 export function resolveSeqJoins(
   baseSegs: readonly BaseSegment[],
@@ -40,6 +43,18 @@ export function resolveSeqJoins(
     return null;
   };
   const legs = buildFrameLegs(baseTracksOf(baseSegs)).legs;
+  // Where a blend would cross frames: two tweens in different frames, a leg the
+  // evaluator reads `a` in that is not `a`'s own (one opening at `a`'s start, after
+  // it), or any leg opening later inside `a`'s window.
+  const frameOf = (s: BaseSegment) => s.frame ?? 'absolute';
+  const frameChangeIn = (a: BaseSegment, b: BaseSegment): number | undefined => {
+    if (a.segKind === 'tween' && b.segKind === 'tween' && !sameFrame(frameOf(a), frameOf(b))) {
+      return b.startSec;
+    }
+    const readIn = legs[legIndexAt(legs, a.startSec)]!.frame;
+    if (a.segKind === 'tween' && !sameFrame(readIn, frameOf(a))) return a.startSec;
+    return legs.find((l) => l.startSec > a.startSec && l.startSec < a.endSec)?.startSec;
+  };
   const channels = new Set<Channel>([
     ...baseSegs.map((s) => s.channel),
     ...composites.flatMap((c) => c.channels),
@@ -49,7 +64,7 @@ export function resolveSeqJoins(
     const writers = [
       ...baseSegs.filter((s) => s.channel === ch),
       ...composites.filter((c) => (c.channels as readonly Channel[]).includes(ch)),
-    ].sort((a, b) => a.startSec - b.startSec || a.endSec - b.endSec);
+    ].sort(byStartSec);
     for (let k = 1; k < writers.length; k++) {
       const [a, b] = [writers[k - 1]!, writers[k]!];
       const prefix = joinOf(a, b);
@@ -74,10 +89,10 @@ export function resolveSeqJoins(
         throw new Error(`${prefix}three writers are live on '${ch}' at ${b.startSec}s`);
       }
       // The lens is frame-free, so no leg ever converts it.
-      const leg = legs.find((l) => l.startSec > a.startSec && l.startSec < a.endSec);
-      if (ch !== 'fov' && leg !== undefined) {
+      const changeSec = ch === 'fov' ? undefined : frameChangeIn(a, b);
+      if (changeSec !== undefined) {
         throw new Error(
-          `${prefix}the '${ch}' blend [${b.startSec},${a.endSec}) crosses a frame change at ${leg.startSec}s`,
+          `${prefix}the '${ch}' blend [${b.startSec},${a.endSec}) crosses a frame change at ${changeSec}s`,
         );
       }
       resolved[segIndex.get(b)!] = { ...b, blendIn: { startSec: b.startSec, endSec: a.endSec } };

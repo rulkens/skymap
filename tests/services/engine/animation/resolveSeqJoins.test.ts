@@ -62,6 +62,28 @@ describe('resolveSeqJoins', () => {
       ],
       /crosses a frame change/,
     ],
+    [
+      'an incoming dolly starting with the outgoing one but ending first',
+      [
+        seq([dollyTo(400, 4), all([dollyTo(200, 1), spin('yaw', { by: 1, over: 4 })])], {
+          overlap: 4,
+        }),
+      ],
+      /ends at 1s, before/,
+    ],
+    [
+      'a frame change where both writers start together',
+      [
+        seq(
+          [
+            tween('distance', { to: 5e6, over: 4, frame: { body: asSceneBodyId('earth') } }),
+            dollyTo(100, 4),
+          ],
+          { overlap: 4 },
+        ),
+      ],
+      /crosses a frame change/,
+    ],
   ])('throws on %s', (_name, timeline, reason) => {
     expect(() => compile(timeline)).toThrow(/seq at 0s, join 1/);
     expect(() => compile(timeline)).toThrow(reason);

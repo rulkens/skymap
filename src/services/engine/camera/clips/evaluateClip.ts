@@ -107,8 +107,8 @@ import type { TerrainHeightAtLookup } from '../../../../@types/camera/terrain/Te
 import { compileClip } from '../../animation/compileClip';
 import { EASE } from '../../animation/ease';
 import { segmentValueAt } from '../../animation/segmentValueAt';
-import { lerpChannel } from '../../animation/lerpChannel';
-import { CHANNEL_SPACE } from '../../animation/channelSpace';
+import { lerpUnwrapped } from '../../animation/lerpUnwrapped';
+import { unwrappedEndOf } from '../../animation/unwrappedEndOf';
 import { smootherstep } from '../../../../utils/math/smootherstep';
 import { foldToWorld } from '../arms/foldToWorld';
 import { rowFor } from '../arms/rowFor';
@@ -378,18 +378,12 @@ function evaluateBaseTrack<V extends number | Vec3>(
     }
     const next = segments[i + 1];
     if (next?.blendIn === undefined || t < next.startSec) return value;
-    // Crossfade: the incoming plan starts from this one's PLANNED end, as it will
-    // once this segment ends; smootherstep keeps value and velocity continuous.
+    // Crossfade: the incoming plan starts from this one's planned end (unwrapped,
+    // so both turn the same way); smootherstep keeps value and velocity continuous.
     const { startSec, endSec } = next.blendIn;
-    const inFrom = (next.from ?? segmentValueAt(seg, from, seg.endSec)) as V;
+    const inFrom = (next.from ?? unwrappedEndOf(seg, from)) as V;
     const w = smootherstep((t - startSec) / (endSec - startSec));
-    return lerpChannel(
-      seg.channel,
-      CHANNEL_SPACE[seg.channel],
-      value,
-      segmentValueAt(next, inFrom, t),
-      w,
-    );
+    return lerpUnwrapped(seg.channel, value, segmentValueAt(next, inFrom, t), w);
   }
   return runningVal;
 }

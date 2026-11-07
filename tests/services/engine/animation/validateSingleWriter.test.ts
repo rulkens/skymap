@@ -30,6 +30,7 @@ import {
   oscillate,
   seq,
   all,
+  wait,
 } from '../../../../src/services/engine/animation/effectHelpers';
 import type { BaseSegment } from '../../../../src/@types/animation/compiledClip/BaseSegment';
 import type { Channel } from '../../../../src/@types/animation/Channel';
@@ -265,5 +266,13 @@ describe('validateSingleWriter blend pairs', () => {
       seg(3, 8, { startSec: 3, endSec: 6 }),
     );
     expect(() => validateSingleWriter(tracks)).toThrow(/three writers.*'distance'/);
+  });
+
+  it.each([
+    ['one snap', [seq([dollyTo(300, 0)])]],
+    ['two snaps', [seq([dollyTo(300, 0), dollyTo(250, 0)])]],
+  ])('%s at the start of a window never hide an unmarked overlap', (_name, snaps) => {
+    const timeline = [all([dollyTo(400, 4), ...snaps, seq([wait(1), dollyTo(200, 4)])])];
+    expect(() => compileClip({ timeline })).toThrow(/single-writer violation.*\[0,4\) overlaps/);
   });
 });

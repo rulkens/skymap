@@ -25,11 +25,13 @@ import {
   flyPath,
   atPoint,
   geodesic,
+  spin,
 } from '../../../../../src/services/engine/animation/effectHelpers';
 import { easedFocusClip } from '../../../../../src/services/engine/camera/clips/easedFocusClip';
 import { DEFAULT_GEODESIC_TUNING } from '../../../../../src/data/camera/focusMoveDefaults';
 import { compileClip } from '../../../../../src/services/engine/animation/compileClip';
 import { lerpInSpace } from '../../../../../src/services/engine/animation/channelSpace';
+import { wrapRad } from '../../../../../src/utils/math/wrapRad';
 import { resolveClipFoci } from '../../../../../src/services/engine/animation/resolveClipFoci';
 import { neighbourhoodFlythrough } from '../../../../../src/data/animation/tours/grandTour/neighbourhoodFlythrough';
 import { relErr } from '../../../../support/relErr';
@@ -675,6 +677,41 @@ describe('blending seq: crossfade', () => {
     for (let i = 1; i < ts.length; i++) {
       const step = evaluateClip(yawClip, ts[i]!).yaw - evaluateClip(yawClip, ts[i - 1]!).yaw;
       expect(Math.abs(step)).toBeLessThan(0.05);
+    }
+  });
+
+  // Steps are wrapped: a 2πk step where a tween's raw `to` takes over is the same
+  // orientation, and plain seqs have it too.
+  const yawSteps = (timeline: ClipData['timeline'], endSec: number) => {
+    const clip: ClipData = { start: { ...FROM_100, yaw: 0 }, timeline };
+    const ts = samples(endSec, 0.01);
+    return ts
+      .slice(1)
+      .map((t, i) => wrapRad(evaluateClip(clip, t).yaw - evaluateClip(clip, ts[i]!).yaw));
+  };
+
+  it('angles mix unwrapped when the two plans are more than π apart', () => {
+    const steps = yawSteps(
+      [
+        seq(
+          [
+            tween('yaw', { to: 3, over: 4, ease: 'linear' }),
+            tween('yaw', { to: 6, over: 2, ease: 'easeOutCubic' }),
+          ],
+          { overlap: 2 },
+        ),
+      ],
+      4,
+    );
+    for (const step of steps) expect(Math.abs(step)).toBeLessThan(0.05);
+  });
+
+  it('two full-turn spins blend without turning backwards', () => {
+    const spinTurn = () => spin('yaw', { by: 2 * Math.PI, over: 4, ease: 'linear' });
+    const steps = yawSteps([seq([spinTurn(), spinTurn()], { overlap: 2 })], 6);
+    for (const step of steps) {
+      expect(Math.abs(step)).toBeLessThan(0.05);
+      expect(step).toBeGreaterThan(0);
     }
   });
 
