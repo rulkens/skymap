@@ -1,8 +1,9 @@
 /**
  * The pick keeps what the eye can ring and nothing else: the far side and craters
  * under the size cut drop, a big crater whose centre is just past the limb stays
- * (its near rim shows), off-screen craters drop, a crowded view keeps one ring per
- * 8000 units² of visible disc (named craters whose name shows first, then the largest),
+ * (its near rim shows), off-screen craters drop, a ring centred in a larger one drops unless
+ * it lies on a named floor, a crowded view keeps one ring per
+ * 5200 units² of visible disc (named craters whose name shows first, then the largest),
  * and a close-up stops at the cap.
  */
 
@@ -60,6 +61,17 @@ describe('pickMoonCraters', () => {
     expect(pickMoonCraters(moonCraterTable(rows.flat(), R_KM), view(4))).toEqual([0, 2]);
   });
 
+  it('keeps a small crater wholly inside a named ring, on its floor', () => {
+    const rows = [
+      [0, 0, 150, 1], // a named 300 km walled plain at the sub-eye point
+      [0, 1.5, 30, 1], // a 60 km crater on its floor
+      [0, 3.5, 30, 1], // one whose rim crosses the wall
+    ];
+    const table = moonCraterTable(rows.flat(), R_KM);
+    expect(pickMoonCraters(table, view(4), [{ id: 'p', index: 0, revealPx: 10 }])).toEqual([0, 1]);
+    expect(pickMoonCraters(table, view(4))).toEqual([0]);
+  });
+
   it('drops craters off the screen of a narrow view', () => {
     const table = moonCraterTable([0, 0, 40, 1, 30, 0, 40, 1], R_KM);
     expect(pickMoonCraters(table, view(1.5, 10))).toEqual([0]);
@@ -73,7 +85,7 @@ describe('pickMoonCraters', () => {
     return rows;
   };
 
-  it('spends one ring per 8000 units² of visible disc, largest first', () => {
+  it('spends one ring per 5200 units² of visible disc, largest first', () => {
     const v = view(4);
     const picked = pickMoonCraters(moonCraterTable(crowd(200), R_KM), v);
     expect(picked).toHaveLength(Math.round(visibleDiscAreaPx(v) / ANTIQUE_MOON_RING_AREA_UNITS));
@@ -88,6 +100,14 @@ describe('pickMoonCraters', () => {
     ]);
     expect(picked[0]).toBe(3);
     expect(picked).not.toContain(5);
+  });
+
+  it("rings a named floor's own crater before larger ones elsewhere", () => {
+    const rows = [...crowd(200), -30, 0, 150, 1, -30, 1.5, 34, 1];
+    const picked = pickMoonCraters(moonCraterTable(rows, R_KM), view(4), [
+      { id: 'p', index: 200, revealPx: 10 },
+    ]);
+    expect(picked.slice(0, 2)).toEqual([200, 201]);
   });
 
   it('ranks a crater wider than the frame below one that fits it', () => {

@@ -26,7 +26,7 @@ import { TEXTURED_BODY_UNIFORM_FLOATS } from './packTexturedBodyUniforms';
 import { ANTIQUE_LAND_FORMAT } from '../../../../data/rendering/antiqueLook';
 import { ANTIQUE_RELIEF_FORMAT } from '../../../../data/rendering/antiqueRelief';
 import { ANTIQUE_MOON_FORMAT } from '../../../../data/rendering/antiqueLook';
-import { ANTIQUE_MOON_PRINT_BYTES, ANTIQUE_MOON_RELIEF_BYTES } from '../data/antiqueMoonPrint';
+import { ANTIQUE_MOON_PRINT_BYTES } from '../data/antiqueMoonPrint';
 import vsCode from '../../../../services/gpu/shaders/bodies/texturedBody/vertex.wesl?static';
 import fsCode from '../../../../services/gpu/shaders/bodies/texturedBody/fragment.wesl?static';
 
@@ -238,27 +238,22 @@ export function createTexturedBodyRenderer(
       primitive: { topology: 'triangle-list', frontFace: 'ccw', cullMode: 'front' },
     });
 
-  // The antique Moon's two passes, each the body's group plus its own record at group 1:
-  // `fsMoonPrint` (the picked craters, `packMoonPrint`) into the Moon's row, binding 0;
-  // `fsMoonRelief` into the relief row, binding 1. No depth; built on first use.
-  type MoonStage = { pipeline: GPURenderPipeline; buffer: GPUBuffer; bindGroup: GPUBindGroup };
+  // The antique Moon's two passes, each the body's group plus the one ring record at group 1
+  // (`packMoonPrint`): `fsMoonPrint` into the Moon's row writes it, `fsMoonRelief` into the
+  // relief row reads the same frame's rings to clip its hachures. No depth; built on first use.
+  type MoonStage = { pipeline: GPURenderPipeline; bindGroup: GPUBindGroup };
   let moonPrint: MoonStage | null = null;
   let moonRelief: MoonStage | null = null;
-  const buildMoonStage = (
-    name: string,
-    entryPoint: string,
-    format: GPUTextureFormat,
-    binding: number,
-    bytes: number,
-  ): MoonStage => {
+  let moonRecord: GPUBuffer | null = null;
+  const buildMoonStage = (name: string, entryPoint: string, format: GPUTextureFormat): MoonStage => {
+    moonRecord ??= device.createBuffer({
+      label: 'texturedBody-moon-record',
+      size: ANTIQUE_MOON_PRINT_BYTES,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
     const layout = device.createBindGroupLayout({
       label: `texturedBody-${name}-bgl`,
-      entries: [{ binding, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } }],
-    });
-    const buffer = device.createBuffer({
-      label: `texturedBody-${name}-record`,
-      size: bytes,
-      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+      entries: [{ binding: 0, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } }],
     });
     const pipeline = device.createRenderPipeline({
       label: `texturedBody-${name}-pipeline`,
@@ -284,9 +279,9 @@ export function createTexturedBodyRenderer(
     const bindGroup = device.createBindGroup({
       label: `texturedBody-${name}-bg`,
       layout,
-      entries: [{ binding, resource: { buffer } }],
+      entries: [{ binding: 0, resource: { buffer: moonRecord } }],
     });
-    return { pipeline, buffer, bindGroup };
+    return { pipeline, bindGroup };
   };
 
   const bodies = new Map<BodyTextureId, BodyResources>();
@@ -497,7 +492,6 @@ export function createTexturedBodyRenderer(
     bodyId: BodyTextureId,
     uniforms: Float32Array,
     stage: MoonStage,
-    record: ArrayBuffer,
   ): void {
     const res = resourcesFor(bodyId);
     res.printUniformBuffer ??= device.createBuffer({
@@ -511,7 +505,6 @@ export function createTexturedBodyRenderer(
     });
     // Both Moon passes write this one slot with the same frame's record.
     device.queue.writeBuffer(res.printUniformBuffer, 0, uniforms);
-    device.queue.writeBuffer(stage.buffer, 0, record);
     pass.setPipeline(stage.pipeline);
     pass.setBindGroup(0, res.printBindGroup);
     pass.setBindGroup(1, stage.bindGroup);
@@ -527,8 +520,7 @@ export function createTexturedBodyRenderer(
     indexBuffer.destroy();
     for (const placeholder of sharedPlaceholders.values()) placeholder.destroy();
     placeholderRing.destroy();
-    moonPrint?.buffer.destroy();
-    moonRelief?.buffer.destroy();
+    moonRecord?.destroy();
     for (const res of bodies.values()) {
       res.uniformBuffer.destroy();
       res.maskUniformBuffer?.destroy();
@@ -550,12 +542,13 @@ export function createTexturedBodyRenderer(
     draw,
     drawAlbedoMask,
     drawMoonPrint(pass, bodyId, uniforms, craters) {
-      moonPrint ??= buildMoonStage('moon-print', 'fsMoonPrint', ANTIQUE_MOON_FORMAT, 0, ANTIQUE_MOON_PRINT_BYTES);
-      drawMoonStage(pass, bodyId, uniforms, moonPrint, craters);
+      moonPrint ??= buildMoonStage('moon-print', 'fsMoonPrint', ANTIQUE_MOON_FORMAT);
+      device.queue.writeBuffer(moonRecord!, 0, craters);
+      drawMoonStage(pass, bodyId, uniforms, moonPrint);
     },
-    drawMoonRelief(pass, bodyId, uniforms, record) {
-      moonRelief ??= buildMoonStage('moon-relief', 'fsMoonRelief', ANTIQUE_RELIEF_FORMAT, 1, ANTIQUE_MOON_RELIEF_BYTES);
-      drawMoonStage(pass, bodyId, uniforms, moonRelief, record);
+    drawMoonRelief(pass, bodyId, uniforms) {
+      moonRelief ??= buildMoonStage('moon-relief', 'fsMoonRelief', ANTIQUE_RELIEF_FORMAT);
+      drawMoonStage(pass, bodyId, uniforms, moonRelief);
     },
     destroy,
   };

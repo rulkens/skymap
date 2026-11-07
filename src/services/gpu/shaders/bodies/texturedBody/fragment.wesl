@@ -61,8 +61,8 @@ import package::antiqueLook::groundNoise::groundNoiseAt;
 @group(0) @binding(3) var ringTexture: texture_2d<f32>;
 @group(0) @binding(4) var normalTexture: texture_2d<f32>;
 
-// The antique Moon pass's crater rings (`packMoonPrint.ts`): picked per frame on the
-// CPU (`pickMoonCraters`), largest first, so the last ring holding a pixel is its smallest.
+// The antique Moon's crater rings (`packMoonPrint.ts`), read by both Moon passes: picked
+// per frame on the CPU (`pickMoonCraters`), largest first.
 struct MoonCrater {
   c: vec3<f32>,
   rho: f32,
@@ -76,19 +76,10 @@ struct MoonPrint {
   count: u32,
   unit: f32,
   focalPx: f32,
-  _p0: f32,
-  craters: array<MoonCrater, 40>,
+  radiusM: f32,
+  craters: array<MoonCrater, 60>,
 };
 @group(1) @binding(0) var<uniform> moon: MoonPrint;
-// The Moon relief pass's record (`moonReliefPass.ts`): device px per print unit, px per
-// radian, the sphere's radius in metres.
-struct MoonRelief {
-  unit: f32,
-  focalPx: f32,
-  radiusM: f32,
-  _p0: f32,
-};
-@group(1) @binding(1) var<uniform> moonRelief: MoonRelief;
 
 // Colour + analytic depth. No '@builtin(position)' anywhere in this struct --
 // the entry point's position comes in through 'TexturedBodyVSOut', and a second
@@ -211,9 +202,6 @@ const SLOPE_GAIN: f32 = 2.4;
 const RIM_MIN_UNITS: f32 = 8.0;
 const RIM_FULL_UNITS: f32 = 14.0;
 const NAMED_MIN_UNITS: f32 = 7.0;
-// The Sun-side inner wall (0.4 < psi/rho < 0.95) faces away from the Sun: its light
-// falls toward CRESCENT_LIGHT, so the plate hatches it as a crescent.
-const CRESCENT_LIGHT: f32 = 0.04;
 // Linear albedo over which a crater's floor is no sea (the plate's MARE_SHORE).
 const BRIGHT_FLOOR: f32 = 0.25;
 // Arcs round a ruined wall: its rim breaks into about this many.
@@ -249,25 +237,54 @@ fn mareAlbedo(uv: vec2<f32>, ddx: vec2<f32>, ddy: vec2<f32>) -> f32 {
     + mareTap(uv - oy, ddx, ddy, MARE_BLUR_PX, MARE_MIP_TEXELS, MARE_CAP_KM)) / 6.0;
 }
 
-// x rim ink, y how far the point is a Sun-side inner wall (0..1), z inside a crater's
-// floor (0..1). n the geometric normal, dNdx/dNdy its screen derivatives.
-fn craterRims(n: vec3<f32>, dNdx: vec3<f32>, dNdy: vec3<f32>, sun: vec3<f32>, unitsPerRad: f32,
-              pxUnits: f32) -> vec3<f32> {
+// A ring yields its line and crescent to a younger ring holding the point: a fresher one
+// (curated weight a step heavier) or, as fresh, a smaller one, which lies on it.
+fn craterYouth(cr: MoonCrater) -> f32 {
+  return floor(cr.weight * 10.0 + 0.5) + 0.9 * (1.0 - min(cr.rho * 8.0, 1.0));
+}
+
+// The Sun-side inner wall's hachures, Riccioli's dark crescent: strokes down the wall from
+// the rim, CRESCENT_PITCH units apart along it (a small ring at most CRESCENT_MAX_RAD, ~5),
+// longest toward the Sun, none past ~70° off it, each tapering to a point. theta: the
+// azimuth off the Sun, gTheta its rad per px; q: psi / rho.
+const CRESCENT_PITCH: f32 = 4.2;
+const CRESCENT_MAX_RAD: f32 = 0.42;
+const CRESCENT_LEN: f32 = 0.42;
+const CRESCENT_W: f32 = 1.9;
+
+fn crescentInk(theta: f32, gTheta: f32, q: f32, rimUnits: f32, pxUnits: f32, seed: f32) -> f32 {
+  let pitch = min(CRESCENT_PITCH / rimUnits, CRESCENT_MAX_RAD);
+  let k = round(theta / pitch);
+  let reach = CRESCENT_LEN * smoothstep(0.35, 0.95, cos(k * pitch)) * (0.75 + 0.5 * hash21Hq(vec2<f32>(k, seed)));
+  let t = (1.0 - q) / max(reach, 1e-3);
+  let w = CRESCENT_W * (1.0 - t);
+  let d = abs(theta - k * pitch) / max(gTheta, 1e-9) * pxUnits;
+  return inkLine(d, w, pxUnits) * step(0.5 * pxUnits, w) * step(-0.05, t);
+}
+
+// x rim ink (the nearest live ring's line, every crescent), y inside a crater's floor
+// (0..1). n the geometric normal, dNdx/dNdy its screen derivatives, rd the eye's ray.
+fn craterRims(n: vec3<f32>, dNdx: vec3<f32>, dNdy: vec3<f32>, sun: vec3<f32>, rd: vec3<f32>,
+              unitsPerRad: f32, pxUnits: f32) -> vec2<f32> {
+  // The youngest ring holding the point inside 0.97 of its rim (1 - cos psi ~ psi² / 2).
+  var youngest = -1.0;
+  for (var i = 0u; i < moon.count; i++) {
+    let cr = moon.craters[i];
+    if (1.0 - dot(n, cr.c) < 0.47 * cr.rho * cr.rho) {
+      youngest = max(youngest, craterYouth(cr));
+    }
+  }
   var ink = 0.0;
   var crescent = 0.0;
   var inFloor = 0.0;
   var best = 1e9;
-  let ndl = dot(n, sun);
-  let lowSun = 1.0 - smoothstep(0.25, 0.75, ndl);
-  let stv = sun - ndl * n;
-  let stLen = sqrt(max(dot(stv, stv), 1e-12));
-  let st = stv / stLen;
-  let tilt = smoothstep(0.1, 0.5, stLen);
+  // The Sun as seen on the plate: its sides of a crater hold even at full Moon.
+  let seen = sun - dot(sun, rd) * rd;
   for (var i = 0u; i < moon.count; i++) {
     let cr = moon.craters[i];
     let cosPsi = dot(n, cr.c);
     // A named crater's mark may outgrow its reach: it reaches ~100 km (cos 0.998) at least.
-    if (cosPsi < select(cr.cosReach, min(cr.cosReach, 0.998), cr.named > 0.5)) {
+    if (cosPsi < select(cr.cosReach, min(cr.cosReach, 0.998), cr.named > 0.5) || craterYouth(cr) < youngest - 1e-3) {
       continue;
     }
     // From the centre toward the point, in the crater's tangent plane.
@@ -278,33 +295,44 @@ fn craterRims(n: vec3<f32>, dNdx: vec3<f32>, dNdy: vec3<f32>, sun: vec3<f32>, un
     let rho = max(cr.rho, cr.named * 0.5 * NAMED_MIN_UNITS / unitsPerRad);
     let dUnits = 2.0 * rho * unitsPerRad;
     let w = max(cr.weight, 0.6 * cr.named) * max(smoothstep(RIM_MIN_UNITS, RIM_FULL_UNITS, dUnits), cr.named);
-    let sunward = dot(off / sinPsi, st);
     let q = psi / rho;
     inFloor = max(inFloor, 1.0 - smoothstep(0.75, 0.85, q));
-    crescent = max(crescent, smoothstep(0.4, 0.7, q) * (1.0 - smoothstep(0.92, 1.0, q))
-      * smoothstep(-0.1, 0.6, sunward) * tilt * smoothstep(0.3, 0.6, cr.weight));
+    // Azimuth off the seen Sun, and its rate per px (off's e1, e2 parts are n's).
+    let sc = seen - dot(seen, cr.c) * cr.c;
+    let scLen = length(sc);
+    let e1 = sc / max(scLen, 1e-6);
+    let e2 = cross(cr.c, e1);
+    let x = dot(n, e1);
+    let y = dot(n, e2);
+    let theta = atan2(y, x);
+    let gTheta = length(vec2<f32>(x * dot(e2, dNdx) - y * dot(e1, dNdx), x * dot(e2, dNdy) - y * dot(e1, dNdy)))
+      / max(x * x + y * y, 1e-12);
+    let sided = smoothstep(0.02, 0.1, scLen);
     // |grad psi| per px: d psi = -dot(c, dN) / sin psi.
     let gPx = length(vec2<f32>(dot(cr.c, dNdx), dot(cr.c, dNdy))) / sinPsi;
+    let seed = f32(i) * 7.31 + rho * 1e4;
+    crescent = max(crescent, crescentInk(theta, gTheta, q, rho / max(gPx, 1e-9) * pxUnits, pxUnits, seed) * sided
+      * smoothstep(0.05, 0.25, w));
     let d = abs(psi - rho) / max(gPx, 1e-9) * pxUnits;
     if (d < best && w > 0.01) {
       best = d;
-      // A fresh wall a firm cut, a rayed one (weight over 1) the plate's heaviest, swelling
-      // on the shaded (Sun-side) crest at a low Sun; a ruined one fine and broken into arcs.
-      let width = mix(0.9, 1.5, smoothstep(0.5, 0.85, cr.weight)) + 0.9 * smoothstep(1.0, 1.3, cr.weight)
-        + 0.8 * smoothstep(0.0, 0.8, sunward) * lowSun;
-      let east = normalize(cross(vec3<f32>(0.0, 0.0, 1.0), cr.c) + vec3<f32>(1e-4, 0.0, 0.0));
-      let az = atan2(dot(off, cross(cr.c, east)), dot(off, east)) / 6.2831853 + 0.5;
-      let f = az * RIM_ARCS;
+      // A fresh wall a firm cut, a rayed one (weight over 1) the plate's heaviest, a ruined
+      // one fine and broken into arcs; every wall heavy on its shaded Sun side, fine on the
+      // lit side, and broken there unless fresh.
+      let side = mix(0.5, smoothstep(-0.5, 0.6, cos(theta)), sided);
+      let width = (mix(0.9, 1.5, smoothstep(0.5, 0.85, cr.weight)) + 0.9 * smoothstep(1.0, 1.3, cr.weight))
+        * mix(0.6, 1.4, side);
+      let f = (theta / 6.2831853 + 0.5) * RIM_ARCS;
       let k = floor(f);
-      let seed = f32(i) * 7.31 + rho * 1e4;
       let h0 = hash21Hq(vec2<f32>(k % RIM_ARCS, seed));
       let h1 = hash21Hq(vec2<f32>((k + 1.0) % RIM_ARCS, seed));
       let arc = mix(h0, h1, smoothstep(0.0, 1.0, fract(f)));
-      let gap = 0.7 * (1.0 - smoothstep(0.3, 0.7, cr.weight)) - 0.1;
+      let gap = min(0.7 * (1.0 - smoothstep(0.3, 0.7, cr.weight)) - 0.1
+        + 0.45 * (1.0 - side) * (1.0 - smoothstep(0.9, 1.2, cr.weight)), 0.55);
       ink = inkLine(d, width, pxUnits) * smoothstep(0.05, 0.25, w) * smoothstep(gap - 0.06, gap + 0.06, arc);
     }
   }
-  return vec3<f32>(ink, crescent, inFloor);
+  return vec2<f32>(max(ink, crescent), inFloor);
 }
 
 @fragment
@@ -325,15 +353,13 @@ fn fsMoonPrint(in: TexturedBodyVSOut) -> @location(0) vec4<f32> {
   let T = normalize(cross(vec3<f32>(0.0, 0.0, 1.0), ng));
   let b = exp2(RELIEF_BIAS);
   let nRelief = perturbNormal(ng, T, textureSampleGrad(normalTexture, bodySampler, uv, grad.ddx * b, grad.ddy * b).rg);
-  let rims = craterRims(ng, dNdx, dNdy, sun, unitsPerRad, pxUnits);
+  let rims = craterRims(ng, dNdx, dNdy, sun, rd, unitsPerRad, pxUnits);
   let flat = dot(ng, sun);
-  var lit = flat + SLOPE_GAIN * (dot(nRelief, sun) - flat);
-  lit = mix(lit, min(lit, CRESCENT_LIGHT), rims.y);
+  let lit = flat + SLOPE_GAIN * (dot(nRelief, sun) - flat);
   let day = smoothstep(-0.02, 0.06, lit);
   // A crater floor brighter than any sea keeps the plate's mare lines off it (b + 2).
   let fine = mareTap(uv, grad.ddx, grad.ddy, 1.0, MARE_MIP_TEXELS, MARE_CAP_KM);
-  let clear = select(0.0, 2.0, rims.z > 0.5 && fine * fine > BRIGHT_FLOOR);
-  return encodeMoonRow(mareAlbedo(uv, grad.ddx, grad.ddy), lit, rims.x * day, rims.z > 0.5 && fine * fine > BRIGHT_FLOOR,
+  return encodeMoonRow(mareAlbedo(uv, grad.ddx, grad.ddy), lit, rims.x * day, rims.y > 0.5 && fine * fine > BRIGHT_FLOOR,
     mareTap(uv, grad.ddx, grad.ddy, MARE_WIDE_PX, MARE_WIDE_TEXELS, MARE_WIDE_CAP_KM));
 }
 
@@ -341,7 +367,10 @@ fn fsMoonPrint(in: TexturedBodyVSOut) -> @location(0) vec4<f32> {
 // map at SLOPE_GAIN: rg the screen fall line, b the ground noise, a a hachure's weight on
 // a slope past RELIEF_SLOPE.x (both flanks of a rim, so the plate draws its crest), a hint
 // of stipple weight on flats (ground, so a crest between flanks still prints), 0 by night
-// and where a print unit spans more ground than RELIEF_M.y (the full disc).
+// and where a print unit spans more ground than RELIEF_M.y (the full disc). The hachures
+// stay on the rings the plate draws: inside one (to RING_INNER of its radius) and on its
+// outer flank out to RING_FLANK where steeper than RELIEF_STEEP; elsewhere flat, so no
+// ringless hummock prints confetti and no wall's stroke crosses a rim as an eyelash.
 const RELIEF_SLOPE = vec2<f32>(0.12, 0.45);
 const RELIEF_STROKE: f32 = 0.35;
 // The normal read this many times coarser than the pixel: a landform under ~8 px across
@@ -349,6 +378,19 @@ const RELIEF_STROKE: f32 = 0.35;
 const RELIEF_SCALE: f32 = 3.0;
 const RELIEF_M = vec2<f32>(1200.0, 3000.0);
 const RELIEF_FLAT: f32 = 0.01;
+const RING_INNER: f32 = 0.97;
+const RING_FLANK: f32 = 1.3;
+const RELIEF_STEEP: f32 = 0.8;
+
+// The nearest ring's psi / rho at n (small angles: psi ~ sqrt(2 (1 - cos psi))).
+fn nearestRing(n: vec3<f32>) -> f32 {
+  var q = 1e9;
+  for (var i = 0u; i < moon.count; i++) {
+    let cr = moon.craters[i];
+    q = min(q, sqrt(max(2.0 * (1.0 - dot(n, cr.c)), 0.0)) / cr.rho);
+  }
+  return q;
+}
 
 @fragment
 fn fsMoonRelief(in: TexturedBodyVSOut) -> @location(0) vec4<f32> {
@@ -362,7 +404,7 @@ fn fsMoonRelief(in: TexturedBodyVSOut) -> @location(0) vec4<f32> {
   if (!surface.hit) {
     discard;
   }
-  let metresPerUnit = surface.t * moonRelief.radiusM * moonRelief.unit / moonRelief.focalPx;
+  let metresPerUnit = surface.t * moon.radiusM * moon.unit / moon.focalPx;
   let resolved = smoothstep(RELIEF_M.y, RELIEF_M.x, metresPerUnit);
   if (resolved <= 0.0) {
     return vec4<f32>(0.0);
@@ -381,9 +423,11 @@ fn fsMoonRelief(in: TexturedBodyVSOut) -> @location(0) vec4<f32> {
   let rhs = vec2<f32>(dot(downhill, dNdx), dot(downhill, dNdy));
   let onScreen = vec2<f32>(gyy * rhs.x - gxy * rhs.y, gxx * rhs.y - gxy * rhs.x);
   let fall = select(vec2<f32>(0.0), onScreen / max(length(onScreen), 1e-12), length(downhill) > 1e-4);
-  let noise = groundNoiseAt(ng * moonRelief.radiusM, vec3<i32>(0), metresPerUnit);
+  let noise = groundNoiseAt(ng * moon.radiusM, vec3<i32>(0), metresPerUnit);
   let flat = dot(ng, u.sunDirLocal);
   let day = smoothstep(-0.02, 0.06, flat + SLOPE_GAIN * (dot(n, u.sunDirLocal) - flat));
-  let stroke = select(-RELIEF_FLAT, slope, slope > RELIEF_STROKE) * resolved * day;
+  let q = nearestRing(ng);
+  let onRing = q < RING_INNER || (q < RING_FLANK && slope > RELIEF_STEEP);
+  let stroke = select(-RELIEF_FLAT, slope, slope > RELIEF_STROKE && onRing) * resolved * day;
   return vec4<f32>(fall, noise, stroke);
 }

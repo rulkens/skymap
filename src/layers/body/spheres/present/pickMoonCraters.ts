@@ -3,7 +3,8 @@
  * centre just past the horizon still shows its near rim), on screen within 0.7 of its
  * own diameter, and at least the rim size cut across (a named crater its smaller own).
  * Every named crater whose name shows comes first, then the largest as seen (foreshortened;
- * one wider than the frame ranked down) whose centre is outside every larger kept ring, to one ring per
+ * one wider than the frame ranked down) whose centre is outside every larger kept ring (but
+ * for a small one on a named crater's floor), to one ring per
  * `ANTIQUE_MOON_RING_AREA_UNITS` of visible disc, at most `ANTIQUE_MOON_MAX_CRATERS`.
  * Indices into the table.
  */
@@ -12,6 +13,7 @@ import type { MoonCraterTable } from '../@types/MoonCraterTable';
 import type { MoonCraterView } from '../@types/MoonCraterView';
 import type { MoonNamedCrater } from '../@types/MoonNamedCrater';
 import {
+  ANTIQUE_MOON_FLOOR_CRATER,
   ANTIQUE_MOON_MAX_CRATERS,
   ANTIQUE_MOON_NAMED_RIM_UNITS,
   ANTIQUE_MOON_RIM_REACH,
@@ -74,20 +76,31 @@ export function pickMoonCraters(
   }
   const order = rest.map((_, k) => k).sort((a, b) => sizePx[b]! - sizePx[a]!);
   // A ring whose centre lies inside a larger kept ring is more than half inside it:
-  // nested and overlapping circles read as bubble wrap, not as craters.
-  const kept = [...chosen];
-  const inside = (i: number): boolean =>
-    kept.some(
-      (j) =>
-        rho[j]! > rho[i]! &&
+  // nested and overlapping circles read as bubble wrap, not as craters. A small one
+  // wholly on a named crater's floor is its floor's own (Clavius' chain): it stays, and
+  // comes before the rest.
+  const apart = (i: number, j: number): number =>
+    Math.acos(
+      Math.min(
+        1,
         centres[3 * i]! * centres[3 * j]! +
           centres[3 * i + 1]! * centres[3 * j + 1]! +
-          centres[3 * i + 2]! * centres[3 * j + 2]! >
-          Math.cos(rho[j]!),
+          centres[3 * i + 2]! * centres[3 * j + 2]!,
+      ),
     );
-  for (const k of order) {
-    if (kept.length >= budget) break;
-    if (!inside(rest[k]!)) kept.push(rest[k]!);
+  const onFloorOf = (i: number, j: number): boolean =>
+    chosen.has(j) &&
+    rho[i]! <= ANTIQUE_MOON_FLOOR_CRATER[0] * rho[j]! &&
+    apart(i, j) + rho[i]! <= ANTIQUE_MOON_FLOOR_CRATER[1] * rho[j]!;
+  const kept = [...chosen];
+  const inside = (i: number): boolean =>
+    kept.some((j) => rho[j]! > rho[i]! && apart(i, j) < rho[j]! && !onFloorOf(i, j));
+  for (const floor of [true, false]) {
+    for (const k of order) {
+      const i = rest[k]!;
+      if (kept.length >= budget) break;
+      if ([...chosen].some((j) => onFloorOf(i, j)) === floor && !inside(i)) kept.push(i);
+    }
   }
   return kept;
 }

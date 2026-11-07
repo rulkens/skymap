@@ -67,7 +67,7 @@ export function moonPrintPass(runtime: BodyRuntime): ContentPass {
         },
         named,
       );
-      packMoonPrint(table, picked, unitPx, ctx.drawPxPerRad, bytes, namedRows);
+      packMoonPrint(table, picked, unitPx, ctx.drawPxPerRad, radiusM, bytes, namedRows);
       runtime.texturedBodyRenderer.drawMoonPrint(pass, record.bodyId, record.uniforms, bytes);
     },
   };

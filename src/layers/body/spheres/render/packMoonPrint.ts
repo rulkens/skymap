@@ -1,6 +1,6 @@
 /**
  * packMoonPrint — the `MoonPrint` uniform of `texturedBody/fragment.wesl`: count (u32),
- * unit (device px per print unit), focalPx, pad; then per crater c.xyz, rho (rad),
+ * unit (device px per print unit), focalPx, the sphere's radius (m); then per crater c.xyz, rho (rad),
  * weight, cos of its reach, 1 if the look names it, a pad. The reach's cosine is taken here, once per
  * crater, not per fragment.
  */
@@ -13,6 +13,7 @@ export function packMoonPrint(
   picked: readonly number[],
   unitPx: number,
   focalPx: number,
+  radiusM: number,
   out: ArrayBuffer,
   named: ReadonlySet<number> = new Set(),
 ): ArrayBuffer {
@@ -20,6 +21,7 @@ export function packMoonPrint(
   new Uint32Array(out)[0] = picked.length;
   f[1] = unitPx;
   f[2] = focalPx;
+  f[3] = radiusM;
   picked.forEach((i, k) => {
     const o = 4 + 8 * k;
     f[o] = table.centres[3 * i]!;

@@ -78,13 +78,8 @@ export type TexturedBodyRenderer = Renderer & {
   ): void;
   /**
    * Draw the Moon's ground relief (`fsMoonRelief`) into an `ANTIQUE_RELIEF_FORMAT`
-   * target with no depth: `uniforms` as for `drawMoonPrint`, `record` its
-   * `ANTIQUE_MOON_RELIEF_BYTES` record (unit, focal px, radius m).
+   * target with no depth: `uniforms` as for `drawMoonPrint`, the rings the frame's
+   * `drawMoonPrint` wrote (its hachures stay on them).
    */
-  drawMoonRelief(
-    pass: GPURenderPassEncoder,
-    bodyId: BodyTextureId,
-    uniforms: Float32Array,
-    record: ArrayBuffer,
-  ): void;
+  drawMoonRelief(pass: GPURenderPassEncoder, bodyId: BodyTextureId, uniforms: Float32Array): void;
 };
