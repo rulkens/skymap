@@ -128,6 +128,13 @@ export const ANTIQUE_TARGETS = {
  * ¼ res and 1/16 res rgba16float), mirrored by the `*_LAYER` constants in fragment.wesl.
  * A new row the look writes and the plate reads is a layer here, never a plate binding:
  * WebGPU allows a stage 16 sampled textures and a phone may offer no more. */
-export const ANTIQUE_FULL_LAYERS = { paper: 0, starInk: 1, decor: 2, decorHue: 3, moon: 4 } as const;
+export const ANTIQUE_FULL_LAYERS = {
+  paper: 0,
+  starInk: 1,
+  decor: 2,
+  decorHue: 3,
+  moon: 4,
+  mask: 5,
+} as const;
 export const ANTIQUE_QUARTER_LAYERS = { wash: 0, nebula: 1, landBlur: 2 } as const;
 export const ANTIQUE_LOW_LAYERS = { glow: 0, structureGlow: 1 } as const;

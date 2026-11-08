@@ -79,7 +79,6 @@ describe('antique look records ↔ WGSL structs', () => {
         size: { width: 1001, height: 1002 },
       },
       unitPx: 1003,
-      bodies: true,
       depthCover: true,
       relief: null,
       moon: false,
@@ -161,10 +160,10 @@ describe('antique look records ↔ WGSL structs', () => {
     // The eye rides the other three corners' w lanes.
     for (const [i, ray] of ['rayTR', 'rayBL', 'rayBR'].entries())
       expect(offsetOf(packed, 1026 + i)).toBe(offsets.get(ray)! + 12);
-    // bodies (bit 0), paper (bit 2) and depth cover, the bit cover.wesl tests.
-    const depthBit = readShaderSource(`${DIR}/cover.wesl`).match(/FLAG_DEPTH_COVER: u32 = (\d+)u/);
+    // paper (bit 2) and depth cover, the bit mask.wesl tests.
+    const depthBit = readShaderSource(`${DIR}/mask.wesl`).match(/FLAG_DEPTH_COVER: u32 = (\d+)u/);
     expect(Number(depthBit?.[1])).toBe(0b1000);
-    expect(new Uint32Array(packed)[offsets.get('flags')! / 4]).toBe(0b1101);
+    expect(new Uint32Array(packed)[offsets.get('flags')! / 4]).toBe(0b1100);
     for (const [i, value] of [1072, 1073, 1077].entries())
       expect(offsetOf(packed, value)).toBe(offsets.get('tune')! + (i + 1) * 4);
     expect(new Uint32Array(packed)[offsets.get('hidden')! / 4]).toBe(0b101);

@@ -4,8 +4,8 @@
 // | offset | field   | meaning                                                  |
 // | 0      | res     | target size, device px                                   |
 // | 8      | unit    | device px per print unit (1 unit = 1 CSS px at 900 tall) |
-// | 12     | flags   | bit0 bodies · bit1 captions · bit2 paper assets loaded · |
-// |        |         | bit3 `bodies` holds depth (`cover.wesl`) ·               |
+// | 12     | flags   | bit1 captions · bit2 paper assets loaded ·               |
+// |        |         | bit3 cover read off foreground:0 depth (`mask.wesl`) ·   |
 // |        |         | bit4 the relief row holds Mars ground (`relief.wesl`)    |
 // | 16..79 | ray*    | world (equatorial) view-ray at the four corners, xyz     |
 // | 28     | web     | rayTL.w: how far the cosmic web is charted, 0..1         |

@@ -1,6 +1,7 @@
 /**
  * antiqueLook — the `stylize` step, its passes in order: paper (the sheet, baked
- * only when its row was reallocated or the scan landed), reduce (print →
+ * only when its row was reallocated or the scan landed), mask (foreground:0 and
+ * the land row → the `mask` layer, the only body record later passes read), reduce (print →
  * quarter-res `wash`), glow (`wash` → 1/16-res), nebula (`wash` → the galaxy
  * engraving's quarter-res fields), sky floor (glow → one f32, compute), land blur (`wash.a` →
  * `land-blur`, across then down, only under a land map), glyphs (from the
@@ -150,7 +151,6 @@ export function createAntiqueLook(init: {
       {
         projection,
         unitPx,
-        bodies: hasBodies,
         depthCover,
         relief: relief?.print ?? (moonRelief ? ANTIQUE_BODY_PRINT_CODES.moon : null),
         moon: moonPrinted,
@@ -241,12 +241,10 @@ export function createAntiqueLook(init: {
     const starInk = full('starInk');
     const decor = full('decor');
     const decorHue = full('decorHue');
-    // foreground:0 keeps last frame's bodies when nothing drew one this frame.
-    const bodies = !hasBodies
-      ? g.empty
-      : depthCover
-        ? targets.depthViewOf('foreground:0')
-        : targets.viewOf('foreground:0');
+    const mask = full('mask');
+    const bodies = depthCover
+      ? targets.depthViewOf('foreground:0')
+      : targets.viewOf('foreground:0');
     // The land map, when a masked globe drew this frame (Earth, Mars).
     const land = landMapped ? targets.viewOf(ANTIQUE_TARGETS.land) : g.empty;
     const landBlurAcross = targets.viewOf(ANTIQUE_TARGETS.landBlurAcross);
@@ -278,14 +276,21 @@ export function createAntiqueLook(init: {
       );
       bakedPaper = paper;
     }
-    fullScreen(
-      encoder,
-      'reduce',
-      [wash],
-      g.reduce,
-      [io.print, bodies, land, uniforms],
-      bakesPaper ? undefined : begin,
-    );
+    const opens = bakesPaper ? undefined : begin;
+    // foreground:0 keeps last frame's bodies when nothing drew one this frame.
+    if (hasBodies) {
+      fullScreen(encoder, 'mask', [mask], g.mask, [bodies, land, uniforms], opens);
+    } else {
+      // The layer outlives the frame that drew it: no body reads as no cover.
+      encoder
+        .beginRenderPass({
+          label: 'antique-look-mask-clear',
+          colorAttachments: [{ view: mask, loadOp: 'clear', storeOp: 'store' }],
+          ...(opens ? { timestampWrites: opens } : {}),
+        })
+        .end();
+    }
+    fullScreen(encoder, 'reduce', [wash], g.reduce, [io.print, mask]);
     fullScreen(encoder, 'glow', [glow], g.glow, [wash]);
     fullScreen(encoder, 'nebula', [nebula], g.nebula, [wash, g.clampSampler]);
     if (structured) {
@@ -359,7 +364,7 @@ export function createAntiqueLook(init: {
         entries: [
           { binding: 0, resource: points },
           { binding: 1, resource: uniforms },
-          { binding: 2, resource: bodies },
+          { binding: 2, resource: mask },
           { binding: 3, resource: targets.viewOf(ANTIQUE_TARGETS.low) },
           { binding: 4, resource: { buffer: g.skyFloorBuffer } },
         ],
@@ -418,7 +423,6 @@ export function createAntiqueLook(init: {
       [
         io.print,
         io.overlay ?? g.empty,
-        bodies,
         uniforms,
         targets.viewOf(ANTIQUE_TARGETS.full),
         targets.viewOf(ANTIQUE_TARGETS.quarter),

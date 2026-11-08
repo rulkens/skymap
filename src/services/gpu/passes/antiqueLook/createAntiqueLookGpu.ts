@@ -1,5 +1,5 @@
 /**
- * createAntiqueLookGpu — the look's ten pipelines (full-screen paper bake,
+ * createAntiqueLookGpu — the look's pipelines (full-screen paper bake, mask,
  * reduce, glow, nebula, the land blur's two halves and plate; instanced glyphs and
  * decor; the sky-floor compute) with their bind-group layouts, and its fixed buffers. Binding order is each
  * shader's `@binding` order. Target formats must match `antiqueLookTargetRows`.
@@ -7,6 +7,7 @@
 
 import vsCode from '../../shaders/antiqueLook/vertex.wesl?static';
 import paperCode from '../../shaders/antiqueLook/paperBake.wesl?static';
+import maskCode from '../../shaders/antiqueLook/mask.wesl?static';
 import reduceCode from '../../shaders/antiqueLook/reduce.wesl?static';
 import glowCode from '../../shaders/antiqueLook/glow.wesl?static';
 import nebulaCode from '../../shaders/antiqueLook/nebula.wesl?static';
@@ -39,7 +40,7 @@ const ARRAY = { texture: { sampleType: 'float', viewDimension: '2d-array' } } as
 const UNIFORM = { buffer: { type: 'uniform' } } as const;
 const SAMPLER = { sampler: { type: 'filtering' } } as const;
 const STORAGE = { buffer: { type: 'read-only-storage' } } as const;
-// foreground:0's colour or, inside an atmosphere, its depth32float (`cover.wesl`):
+// foreground:0's colour or, inside an atmosphere, its depth32float (`mask.wesl`):
 // only a `textureLoad` layout takes both.
 const COVER = { texture: { sampleType: 'unfilterable-float' } } as const;
 
@@ -143,7 +144,7 @@ export function createAntiqueLookGpu(
     entries: [
       { binding: 0, visibility: GPUShaderStage.VERTEX, ...TEXTURE },
       { binding: 1, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, ...UNIFORM },
-      { binding: 2, visibility: GPUShaderStage.VERTEX, ...COVER },
+      { binding: 2, visibility: GPUShaderStage.VERTEX, ...TEXTURE },
       { binding: 3, visibility: GPUShaderStage.VERTEX, ...ARRAY },
       { binding: 4, visibility: GPUShaderStage.VERTEX, ...STORAGE },
     ],
@@ -199,12 +200,8 @@ export function createAntiqueLookGpu(
 
   return {
     paper: stage('paper', paperCode, [UNIFORM, TEXTURE, TEXTURE, SAMPLER], ['rgba8unorm']),
-    reduce: stage(
-      'reduce',
-      reduceCode,
-      [TEXTURE, COVER, TEXTURE, UNIFORM],
-      [HDR_TARGET_FORMAT],
-    ),
+    mask: stage('mask', maskCode, [COVER, TEXTURE, UNIFORM], ['rgba8unorm']),
+    reduce: stage('reduce', reduceCode, [TEXTURE, TEXTURE], [HDR_TARGET_FORMAT]),
     glow: stage('glow', glowCode, [TEXTURE], [HDR_TARGET_FORMAT]),
     nebula: stage('nebula', nebulaCode, [TEXTURE, SAMPLER], [HDR_TARGET_FORMAT]),
     structureGlow: stage(
@@ -234,7 +231,6 @@ export function createAntiqueLookGpu(
       [
         TEXTURE, // print
         TEXTURE, // overlay
-        COVER, // foreground:0
         UNIFORM,
         ARRAY, // antique-full
         ARRAY, // antique-quarter

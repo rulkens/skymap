@@ -13,10 +13,8 @@ export type AntiqueUniformInput = {
   readonly projection: ViewProjection;
   /** Device px per print unit. */
   readonly unitPx: number;
-  /** foreground:0 holds this frame's bodies. */
-  readonly bodies: boolean;
   /** Body coverage is read off foreground:0's depth, not its alpha: the eye is
-   * inside an atmosphere, whose day sky fills that row's alpha (`cover.wesl`). */
+   * inside an atmosphere, whose day sky fills that row's alpha (`mask.wesl`). */
   readonly depthCover: boolean;
   /** The relief row holds engraved ground: its body's print code (`antiqueReliefInput`),
    * or null. */

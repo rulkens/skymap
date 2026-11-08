@@ -5,15 +5,14 @@
 // Max-blended into `antique-star-ink`: r = glyph ink, g = its paper knock-out (1.3× radius).
 
 import package::antiqueLook::io::AntiqueUniforms;
-import package::antiqueLook::cover::coverOf;
 import package::lib::math::rot2;
 import package::lib::util::hash21Hq;
 import package::antiqueLook::pigments::luma;
 
 @group(0) @binding(0) var pointTex: texture_2d<f32>;
 @group(0) @binding(1) var<uniform> u: AntiqueUniforms;
-// foreground:0's colour or depth (`cover.wesl`), or a 1×1 empty texture on a frame without bodies.
-@group(0) @binding(2) var bodyTex: texture_2d<f32>;
+// The look's `mask` layer (`mask.wesl`): r body cover.
+@group(0) @binding(2) var maskTex: texture_2d<f32>;
 // The 1/16 glow (`ANTIQUE_LOW_LAYERS`) and this frame's field floor (`skyFloor.wesl`).
 @group(0) @binding(3) var lowTex: texture_2d_array<f32>;
 @group(0) @binding(4) var<storage, read> skyFloor: f32;
@@ -97,8 +96,8 @@ fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32) -> Glyph
   }
   let centre = vec2<f32>(s.x * 0.5 + 0.5, 0.5 - s.y * 0.5) * u.res;
   // A star behind a body never prints: its point was drawn without the body's depth.
-  let bodyDims = vec2<i32>(textureDimensions(bodyTex));
-  if (coverOf(textureLoad(bodyTex, min(vec2<i32>(centre), bodyDims - 1), 0), u.flags) > 0.5) {
+  let maskDims = vec2<i32>(textureDimensions(maskTex));
+  if (textureLoad(maskTex, min(vec2<i32>(centre), maskDims - 1), 0).r > 0.5) {
     return o;
   }
   // Seven classes by apparent magnitude, one per whole magnitude as Hevelius

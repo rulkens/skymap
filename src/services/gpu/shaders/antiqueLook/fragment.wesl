@@ -1,7 +1,7 @@
 // antiqueLook/fragment.wesl — the plate: the tone-mapped frame re-cut as an
 // engraved, hand-coloured chart on the baked sheet.
 //
-// Two regimes, split by body coverage (`cover.wesl`). Sky is INVERTED, as on every
+// Two regimes, split by body coverage (`mask.wesl`). Sky is INVERTED, as on every
 // period chart: bare paper where space is empty, a glyph per star, a dot per
 // point galaxy, resolved galaxies stippled by their light, and wider faint light —
 // Milky Way structure discs, the band seen from inside — as Dutch outline colour: a
@@ -14,8 +14,6 @@ import package::antiqueLook::captionHalo::captionHalo;
 import package::antiqueLook::captionHalo::captionBridge;
 import package::antiqueLook::io::AntiqueUniforms;
 import package::antiqueLook::io::VSOut;
-import package::antiqueLook::cover::coverOf;
-import package::antiqueLook::cover::FLAG_DEPTH_COVER;
 import package::antiqueLook::paper::vnoise;
 import package::antiqueLook::engraving::crossHatch;
 import package::antiqueLook::engraving::stipple;
@@ -66,22 +64,22 @@ import package::antiqueLook::pigments::pigmentAt;
 
 @group(0) @binding(0) var printTex: texture_2d<f32>;
 @group(0) @binding(1) var overlayTex: texture_2d<f32>;
-@group(0) @binding(2) var bodyTex: texture_2d<f32>;
-@group(0) @binding(3) var<uniform> u: AntiqueUniforms;
+@group(0) @binding(2) var<uniform> u: AntiqueUniforms;
 // The rows the look writes itself: one array per size and format, a layer per row
 // (ANTIQUE_*_LAYERS, data/rendering/antiqueLook.ts). WebGPU allows a stage 16 sampled
 // textures and a phone may offer no more, so a new row is a layer, not a binding.
-@group(0) @binding(4) var fullTex: texture_2d_array<f32>;
-@group(0) @binding(5) var quarterTex: texture_2d_array<f32>;
-@group(0) @binding(6) var lowTex: texture_2d_array<f32>;
+@group(0) @binding(3) var fullTex: texture_2d_array<f32>;
+@group(0) @binding(4) var quarterTex: texture_2d_array<f32>;
+@group(0) @binding(5) var lowTex: texture_2d_array<f32>;
 // Full res, rgba8: the baked sheet; star ink (`glyphs.wesl`, `web.wesl`); the decor
 // (`decor.wesl`: r figure ink, g plate ink, b clear, a wash) and its hue; the Moon's own
-// row (`moonRow.wesl`), copied in from its pass.
+// row (`moonRow.wesl`), copied in from its pass; the bodies' mask (`mask.wesl`).
 const PAPER_LAYER: i32 = 0;
 const STAR_INK_LAYER: i32 = 1;
 const DECOR_LAYER: i32 = 2;
 const DECOR_HUE_LAYER: i32 = 3;
 const MOON_LAYER: i32 = 4;
+const MASK_LAYER: i32 = 5;
 // Quarter res, rgba16f: the wash; `nebula.wesl`'s x, the band's light; `landBlur.wesl`'s
 // x Σ weight·land share, y Σ weight.
 const WASH_LAYER: i32 = 0;
@@ -91,18 +89,18 @@ const LAND_BLUR_LAYER: i32 = 2;
 // premultiplied rgb, a coverage).
 const GLOW_LAYER: i32 = 0;
 const STRUCTURE_GLOW_LAYER: i32 = 1;
-@group(0) @binding(7) var linear: sampler;
-@group(0) @binding(8) var<uniform> lettering: AntiqueLettering;
-@group(0) @binding(9) var glyphTex: texture_2d<f32>;
+@group(0) @binding(6) var linear: sampler;
+@group(0) @binding(7) var<uniform> lettering: AntiqueLettering;
+@group(0) @binding(8) var glyphTex: texture_2d<f32>;
 // The constellation figures, moved off the HDR roster (ANTIQUE_MOVED_PASSES).
-@group(0) @binding(10) var linesTex: texture_2d<f32>;
-@group(0) @binding(11) var<uniform> plate: PlateBodies;
+@group(0) @binding(9) var linesTex: texture_2d<f32>;
+@group(0) @binding(10) var<uniform> plate: PlateBodies;
 // This frame's field floor: the glow's 30th-percentile luma (`skyFloor.wesl`).
-@group(0) @binding(12) var<storage, read> skyFloor: f32;
+@group(0) @binding(11) var<storage, read> skyFloor: f32;
 // Earth's c.1690 geography (`earth/antiqueMap/*.wesl`): r realm code, g border band, b line ink, a signs.
-@group(0) @binding(13) var geographyTex: texture_2d<f32>;
+@group(0) @binding(12) var geographyTex: texture_2d<f32>;
 // The engraved ground (`relief.wesl`): a 0 off it, and wherever the pass did not run.
-@group(0) @binding(14) var reliefTex: texture_2d<f32>;
+@group(0) @binding(13) var reliefTex: texture_2d<f32>;
 
 // The border's numbering, placed per frame by `placeAntiqueNumerals`.
 struct Glyph {
@@ -121,7 +119,6 @@ struct AntiqueLettering {
 
 // Warm carbon-black copperplate ink, as a transmittance: it multiplies the sheet.
 const INK: vec3<f32> = vec3<f32>(0.17, 0.13, 0.10);
-const FLAG_BODIES: u32 = 1u;
 const FLAG_CAPTIONS: u32 = 2u;
 // The relief row holds engraved ground this frame (`relief.wesl`), its body's PRINT_*
 // code in the flags from this bit: inside the relief shell the globe has no record.
@@ -132,8 +129,6 @@ const FLAG_MOON: u32 = 32u;
 const MOON_HALO_GROW: f32 = 1.5;
 // Over a galaxy's stipple a caption's knock-out is wider, or its dots crowd the letters.
 const GALAXY_HALO_GROW: f32 = 1.7;
-// `depthEdge`'s second difference of depth over the nearest tap's depth.
-const DEPTH_JUMP: f32 = 0.05;
 // Sheet layout in print units: bare margin with the plate mark in it, then the
 // neatline band. Mirrored by ANTIQUE_LADDER_UNITS (data/rendering/antiqueLook.ts).
 const PLATE: f32 = 15.0;
@@ -196,26 +191,7 @@ fn rowOn(bit: u32) -> f32 {
 }
 
 fn bodyCover(ip: vec2<i32>) -> f32 {
-  return select(0.0, coverOf(texel(bodyTex, ip), u.flags), (u.flags & FLAG_BODIES) != 0u);
-}
-
-// Where the scene's depth breaks: a rover against the ground behind it, a crater
-// rim against the plain beyond. Only inside an atmosphere, where `bodyTex` holds
-// depth (`cover.wesl`). Reversed-Z depth is linear in screen space across any
-// plane, so its second difference is ~0 on open ground at any slant and jumps at
-// an occluding edge: relative to the nearest tap, DEPTH_JUMP ≈ a 5% step in range.
-fn depthEdge(ip: vec2<i32>, o: i32) -> f32 {
-  if ((u.flags & FLAG_DEPTH_COVER) == 0u) {
-    return 0.0;
-  }
-  let c = texel(bodyTex, ip).r;
-  let l = texel(bodyTex, ip - vec2<i32>(o, 0)).r;
-  let r = texel(bodyTex, ip + vec2<i32>(o, 0)).r;
-  let d = texel(bodyTex, ip - vec2<i32>(0, o)).r;
-  let t = texel(bodyTex, ip + vec2<i32>(0, o)).r;
-  let nearest = max(max(c, max(l, r)), max(d, t));
-  let jump = max(abs(l + r - 2.0 * c), abs(d + t - 2.0 * c)) / max(nearest, 1e-30);
-  return smoothstep(DEPTH_JUMP * 0.7, DEPTH_JUMP * 1.3, jump);
+  return layerTexel(fullTex, MASK_LAYER, ip).r;
 }
 
 // A body's land share at `uv`: bilinear over the quarter-res cells that carry one
@@ -588,10 +564,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let blurredShare = select(1.0, landBlur.x / landBlur.y, landBlur.y > 1e-3);
   let seaD = seaDistance(blurredShare);
   let seaPerUnit = length(vec2<f32>(dpdx(seaD), dpdy(seaD))) * u.unit;
-  let o = i32(round(u.unit));
-  let gx = bodyCover(ip + vec2<i32>(o, 0)) - bodyCover(ip - vec2<i32>(o, 0));
-  let gy = bodyCover(ip + vec2<i32>(0, o)) - bodyCover(ip - vec2<i32>(0, o));
-  let limb = max(smoothstep(0.25, 0.7, length(vec2<f32>(gx, gy))), depthEdge(ip, o));
+  let limb = layerTexel(fullTex, MASK_LAYER, ip).a;
   var bodyInk = 0.0;
   if (body > 0.0) {
     let pxUnits = 1.0 / u.unit;

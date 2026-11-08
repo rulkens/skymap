@@ -5,6 +5,8 @@
 
 export type AntiqueLookGpu = {
   readonly paper: { readonly pipeline: GPURenderPipeline; readonly layout: GPUBindGroupLayout };
+  /** foreground:0 and the land row packed into the `mask` layer (`mask.wesl`). */
+  readonly mask: { readonly pipeline: GPURenderPipeline; readonly layout: GPUBindGroupLayout };
   readonly reduce: { readonly pipeline: GPURenderPipeline; readonly layout: GPUBindGroupLayout };
   readonly glow: { readonly pipeline: GPURenderPipeline; readonly layout: GPUBindGroupLayout };
   /** The galaxy engraving's quarter-res fields (`nebula.wesl`). */
