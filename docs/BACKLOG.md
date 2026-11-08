@@ -105,6 +105,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 ## Rendering
 
 - [ ] **Earth's ground draws grey-white at night up close** `needs-design` — diagnosed: the surface tiles' Black Marble emissive, painted flat at street level from ~8.6° of Sun altitude down. → [details](backlog/2026-11-06-earth-night-ground-haze.md)
+- [ ] **Finer terrain heights for the Alps and Andes** `needs-design` — ETOPO posts 2.4 km apart make the antique mountain engraving faceted; a ~30 m DEM for selected regions would fix it. → [details](backlog/2026-11-08-finer-mountain-heights.md)
 - [ ] **The swap chain gets linear values with no sRGB encode** `needs-design` — `bgra8unorm` plus no OETF crushes mid-tones ~3×; every look is tuned to it, so fixing it needs its own spec and a re-tune. → [details](backlog/2026-11-06-swap-chain-no-srgb-encode.md)
 - [ ] **Dark stair-steps off EOX coastlines** `needs-debug` — blocky rims in the water around regions, strongest at Tanegashima; cause not diagnosed. → [details](backlog/2026-11-05-eox-coast-stair-steps.md)
 - [ ] **Satellite orbit rings for fast time** `ready` — step 4 of the satellites spec: past about a minute of sim time per sweep, points fade and each object draws its J2-turned mean-element ellipse. → [spec §5.4](superpowers/specs/completed/2026-10-28-earth-satellites-design.md)
