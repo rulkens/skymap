@@ -64,11 +64,15 @@ const CAM_Z = 5;
 
 /** `focusBlend` (frame-owned) nests under `snapshot`; every other override is a view field. */
 function makeCtx(
-  over: { drawCamPos?: Readonly<[number, number, number]>; focusBlend?: number } = {},
+  over: {
+    drawCamPos?: Readonly<[number, number, number]>;
+    focusBlend?: number;
+    devicePixelRatio?: number;
+  } = {},
 ): FrameView {
-  const { focusBlend = 0, ...viewOver } = over;
+  const { focusBlend = 0, devicePixelRatio = 1, ...viewOver } = over;
   return {
-    snapshot: { focusBlend, nowMs: 0, focus: ZERO_FOCUS },
+    snapshot: { devicePixelRatio, focusBlend, nowMs: 0, focus: ZERO_FOCUS },
     drawCamPos: [0, 0, CAM_Z],
     // Identity pose: screen-up is world +Y.
     cam: { yaw: 0, pitch: 0, roll: 0, poseBasis: [1, 0, 0, 0, 1, 0, 0, 0, 1] },
@@ -258,5 +262,21 @@ describe('produceStructureLabels', () => {
     expect(byId(under, 'out').fadeAlpha).toBeGreaterThan(0);
     // Not clickable, still named: emphasis keys on the subject, not the pick.
     expect(byId(under, 'out').subjectId).toBe(structurePickId('galaxy-cluster', 1, PICK_CODES));
+  });
+
+  // The ring-size fade band is CSS px (see the markers test); the label dissolves with it.
+  it('fades a small ring label by its size in CSS px, the same at dpr 1 and dpr 2', () => {
+    const state = makeState();
+    state.store.setGroup('anchors', [rec('a')]);
+    const alphaAt = (dpr: number): number => {
+      const ctx = {
+        ...makeCtx({ devicePixelRatio: dpr }),
+        drawPxPerRad: (dpr * 7 * 10) / 5,
+      } as FrameView;
+      return labelsOf(state, ctx, 'cosmic').labels[0]!.fadeAlpha ?? 1;
+    };
+    expect(alphaAt(1)).toBeGreaterThan(0);
+    expect(alphaAt(1)).toBeLessThan(1);
+    expect(alphaAt(2)).toBeCloseTo(alphaAt(1), 6);
   });
 });

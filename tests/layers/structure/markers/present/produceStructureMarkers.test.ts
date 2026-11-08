@@ -50,9 +50,10 @@ function makeCtx(
   focusBlend = 0,
   camDistMpc = FULL_BAND_CAM_Z,
   focusPickId: number | null = null,
+  devicePixelRatio = 1,
 ): FrameView {
   return {
-    snapshot: { focusBlend, focusPickId, nowMs: 0, focus: ZERO_FOCUS },
+    snapshot: { devicePixelRatio, focusBlend, focusPickId, nowMs: 0, focus: ZERO_FOCUS },
     drawCamPos: [0, 0, camDistMpc],
     canvasSize: { width: 1920, height: 1080 },
     drawPxPerRad: 1080 / (2 * Math.tan((60 * Math.PI) / 180 / 2)),
@@ -353,5 +354,28 @@ describe('produceStructureMarkers', () => {
 
     const both = build(hoverOn(makeState('a', 'a'), 'a')).find((m) => m.id === 'a')!;
     expect(both.ringColor[0]).toBeCloseTo(plain.ringColor[0] * SELECTED_RING_BRIGHTEN, 6);
+  });
+
+  // A cluster ring's 5 CSS px floor and 4 px band are authored for dpr 1: a ring that
+  // spans 7 CSS px sits mid-band (neither 0 nor 1) however dense the canvas.
+  it('fades a small ring by its size in CSS px, the same at dpr 1 and dpr 2', () => {
+    const state = makeState();
+    state.store.setGroup('anchors', [rec('a')]);
+    const dist = Math.hypot(10, FULL_BAND_CAM_Z);
+    const alphaAt = (dpr: number): number => {
+      const ctx = {
+        ...makeCtx(0, FULL_BAND_CAM_Z, null, dpr),
+        drawPxPerRad: (dpr * 7 * dist) / 5,
+      } as FrameView;
+      return produceStructureMarkers(
+        { store: state.store, pickCodes: PICK_CODES },
+        state,
+        ctx,
+        ONE,
+      )[0]!.ringColor[3];
+    };
+    expect(alphaAt(1)).toBeGreaterThan(0);
+    expect(alphaAt(1)).toBeLessThan(1);
+    expect(alphaAt(2)).toBeCloseTo(alphaAt(1), 6);
   });
 });

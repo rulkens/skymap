@@ -63,7 +63,8 @@ export function produceStructureMarkers(
   fade: Readonly<Record<StructureId, number>>,
 ): readonly StructureMarkerDescriptor[] {
   const out: StructureMarkerDescriptor[] = [];
-  const pxPerRad = ctx.drawPxPerRad;
+  // CSS px per rad: the style's ring-size gates are authored in CSS px.
+  const pxPerRad = ctx.drawPxPerRad / ctx.snapshot.devicePixelRatio;
   const [cx, cy, cz] = ctx.drawCamPos;
 
   // selected → ring colour gain SELECTED_RING_BRIGHTEN (highlight what you clicked). A
