@@ -127,6 +127,7 @@ type FamousLabelInput = {
 function deriveFamousLabelInputs(
   names: readonly FamousGalaxyName[],
   catalog: Pick<GalaxyCatalog, 'count' | 'positions' | 'diameterKpc'>,
+  devicePixelRatio: number,
 ): FamousLabelInput[] {
   const out: FamousLabelInput[] = [];
   for (const [i, e] of names.entries()) {
@@ -139,7 +140,8 @@ function deriveFamousLabelInputs(
       name: famousDisplayName(e),
       worldPos: [x, y, z],
       apparentDiameterKpc: diameterKpc,
-      minApparentSizePx: FAMOUS_MIN_APPARENT_PX,
+      // The gate is authored in CSS px; apparent sizes here are device px.
+      minApparentSizePx: FAMOUS_MIN_APPARENT_PX * devicePixelRatio,
       labelWorldEmMpc: famousLabelWorldEmMpc(diameterKpc),
     });
   }
@@ -180,7 +182,11 @@ export function produceFamousGalaxyLabels(
       : null;
     if (state.settings.labels.focusedOnly && focusedIdx === null) return empty;
 
-    const inputs = deriveFamousLabelInputs(famousGalaxyNamesFor(catalog.count) ?? [], catalog);
+    const inputs = deriveFamousLabelInputs(
+      famousGalaxyNamesFor(catalog.count) ?? [],
+      catalog,
+      ctx.snapshot.devicePixelRatio,
+    );
     if (inputs.length === 0) return empty;
 
     const labels: Label2D[] = [];
@@ -236,7 +242,7 @@ export function produceFamousGalaxyLabels(
       // the placement call below.
       const maxPixelSize = famousLabelMaxPx(distanceMpc);
       let fadeAlpha = 1;
-      const t = Math.min(1, (sizePx - p.minApparentSizePx) / style.fadeBandPx);
+      const t = Math.min(1, (sizePx - p.minApparentSizePx) / (style.fadeBandPx * ctx.snapshot.devicePixelRatio));
       fadeAlpha = t * t * (3 - 2 * t); // smoothstep
       // No `awake` signal: fadeAlpha is a pure function of camera distance, and
       // camera motion already wakes the loop. Pinning awake mid-band would keep

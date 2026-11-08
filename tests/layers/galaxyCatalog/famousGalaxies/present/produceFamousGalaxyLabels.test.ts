@@ -89,10 +89,11 @@ function screenOf(p: readonly number[]): [number, number] {
   return [(clipX / clipW / 2 + 0.5) * 1920, (1 - (clipY / clipW / 2 + 0.5)) * 1080];
 }
 
-function makeCtx(over: { focusBlend?: number } = {}): FrameView {
+function makeCtx(over: { focusBlend?: number; dpr?: number } = {}): FrameView {
+  const dpr = over.dpr ?? 1;
   return {
     snapshot: {
-      devicePixelRatio: 1,
+      devicePixelRatio: dpr,
       focusBlend: over.focusBlend ?? 0,
       nowMs: 0,
       focus: ZERO_FOCUS,
@@ -100,7 +101,8 @@ function makeCtx(over: { focusBlend?: number } = {}): FrameView {
     drawCamPos: [0, 0, 0],
     vp: VP,
     canvasSize: { width: 1920, height: 1080 },
-    drawPxPerRad: 1080 / (2 * Math.tan((60 * Math.PI) / 180 / 2)),
+    // Device px per rad grows with dpr: the same sky on a denser canvas.
+    drawPxPerRad: (dpr * 1080) / (2 * Math.tan((60 * Math.PI) / 180 / 2)),
   } as unknown as FrameView;
 }
 
@@ -267,6 +269,18 @@ describe('produceFamousGalaxyLabels', () => {
     const runtime = seed([{ id: 'far', names: ['Far'] }], [100000, 0, 0], [40]);
     const out = produceFamousGalaxyLabels(runtime)(state, makeCtx(), ONE);
     expect(out.labels).toEqual([]);
+  });
+
+  // The 6 px gate is CSS px: the same sky on a dpr-2 canvas is twice as many device px.
+  it('gates on apparent size in CSS px, the same at dpr 1 and dpr 2', () => {
+    const kept = (cssPx: number, dpr: number): number =>
+      produceFamousGalaxyLabels(
+        seed([{ id: 'g', names: ['G'] }], [10, 0, 0], [(cssPx * 10 * 1000) / PX_PER_RAD]),
+      )(makeState(), makeCtx({ dpr }), ONE).labels.length;
+    for (const dpr of [1, 2]) {
+      expect(kept(5, dpr)).toBe(0);
+      expect(kept(8, dpr)).toBeGreaterThan(0);
+    }
   });
 
   it('emits at the handed value, so a falling value draws the fade-out tail', () => {
