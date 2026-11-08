@@ -352,6 +352,7 @@ describe('renderFrame visual baseline', () => {
     const ctx = {
       snapshot: {
         isReady: true as const,
+        devicePixelRatio: 1,
         plans: createFramePlannerResultStore(),
         nowMs: 0,
         // The handed value's recession factor lerps on this; production
@@ -540,7 +541,7 @@ describe('renderFrame visual baseline', () => {
           "renderer": "compositor",
         },
         {
-          "argShape": "pass,Float32Array[16],Array[2],number,undefined",
+          "argShape": "pass,Float32Array[16],Array[2],number,number,undefined",
           "renderer": "marker-lines",
         },
         {
