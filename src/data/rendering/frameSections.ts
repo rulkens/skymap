@@ -1,5 +1,5 @@
 /**
- * PRELUDE / SCENE / POST / OVERLAYS — `FRAME_ORDER` split into the scopes
+ * PRELUDE / SCENE / POST / OVERLAYS / STYLIZE — `FRAME_ORDER` split into the scopes
  * `renderFrame` walks (`ViewRig.program`): `once` runs against the frame's main
  * context, `perView` once per rig view. The per-line ordering rationale below
  * is this file's value, so it runs over the comment budget; see `frameOrder.ts`.
@@ -380,8 +380,15 @@ export const OVERLAYS: FrameSection = {
       depth: { sample: 'foreground:0' },
       passes: ['near0-selection-ring', 'labels-near', 'clip-path-debug'],
     },
+  ],
+};
+
+// Every rig's program ends here, so the look has one site in either rig.
+export const STYLIZE: FrameSection = {
+  scope: 'once',
+  steps: [
     // The antique look inks the scene and the captions onto the swap chain. Emits
-    // nothing with the look off, when the lines above write `swap` directly.
+    // nothing with the look off, when the swap lines write `swap` directly.
     { kind: 'stylize', source: 'print', overlay: 'overlay' },
   ],
 };
