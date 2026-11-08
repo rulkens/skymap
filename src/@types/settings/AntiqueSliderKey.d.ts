@@ -6,4 +6,5 @@ export type AntiqueSliderKey =
   | 'inkGain'
   | 'lineInk'
   | 'borderWash'
+  | 'letterWear'
   | 'reliefLightDeg';

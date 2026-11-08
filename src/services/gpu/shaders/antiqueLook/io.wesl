@@ -20,6 +20,7 @@
 // |        |         | line ink                                                 |
 // | 272    | tint    | debug panel: multiplies the sheet                        |
 // | 284    | hidden  | debug panel: rows switched off (fragment.wesl `HIDE_*`)  |
+// | 288    | letterWear | debug panel: 0 clean anti-aliased letters, 1 worn     |
 
 // One frame the plate is ruled and numbered in (`AntiqueRulingFrame`), axes in world.
 struct RulingFrame {
@@ -47,6 +48,7 @@ struct AntiqueUniforms {
   tune: vec4<f32>,
   tint: vec3<f32>,
   hidden: u32,
+  letterWear: f32,
 }
 
 struct VSOut {

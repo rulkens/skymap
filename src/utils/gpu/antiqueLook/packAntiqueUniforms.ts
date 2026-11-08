@@ -52,5 +52,6 @@ export function packAntiqueUniforms(
   f32[22] = tune.borderWash;
   f32.set([tune.hatchUnits, tune.washGain, tune.inkGain, tune.lineInk, ...tune.tint], 64);
   u32[71] = tune.hidden;
+  f32[72] = tune.letterWear;
   return out;
 }

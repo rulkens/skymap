@@ -18,6 +18,7 @@ describe('antiquePlateTune', () => {
       borderWash: 0.6,
       tint: [1, 1, 1],
       hidden: 0,
+      letterWear: 0.25,
     });
   });
 

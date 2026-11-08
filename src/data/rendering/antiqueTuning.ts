@@ -27,6 +27,7 @@ export const ANTIQUE_TUNING_DEFAULTS: AntiqueTuning = {
   inkGain: 1,
   lineInk: 0.45,
   borderWash: 0.6,
+  letterWear: 0.25,
   paperTint: '#ffffff',
   reliefLightDeg: ANTIQUE_PLATE_LIGHT_ELEVATION_DEG,
   skyRulings: 'orientation',

@@ -110,6 +110,7 @@ describe('antique look records ↔ WGSL structs', () => {
         borderWash: 1078,
         tint: [1074, 1075, 1076],
         hidden: 0b101,
+        letterWear: 1080,
       },
       subject: 1079,
     });
@@ -126,6 +127,7 @@ describe('antique look records ↔ WGSL structs', () => {
       tint: 1074,
       borderWash: 1078,
       subject: 1079,
+      letterWear: 1080,
     };
     expect([...offsets.keys()].sort()).toEqual(
       [...Object.keys(sentinel), 'flags', 'sky', 'globe', 'hidden'].sort(),

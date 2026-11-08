@@ -62,6 +62,15 @@ export const ANTIQUE_TUNING_SLIDER_FIELDS: readonly SliderField<
     title: 'Gamboge laid along the border between the neatline rules',
   },
   {
+    key: 'letterWear',
+    label: 'Letter wear',
+    min: 0,
+    max: 1,
+    step: 0.05,
+    format: (v) => v.toFixed(2),
+    title: 'Lettering: 0 clean anti-aliased edges, 1 hard and frayed by the plate',
+  },
+  {
     key: 'reliefLightDeg',
     label: 'Relief light',
     min: 2,

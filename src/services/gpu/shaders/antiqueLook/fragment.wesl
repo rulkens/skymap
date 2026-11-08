@@ -721,9 +721,13 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   var captions = 0.0;
   if ((u.flags & FLAG_CAPTIONS) != 0u) {
     // Ink from the letters' light fill only; their dark contrast outline (drawn
-    // for a black sky) feeds the paper halo instead of thickening the type.
+    // for a black sky) feeds the paper halo instead of thickening the type. The
+    // fill is white, so luma is its anti-aliased coverage, lifted so a hairline
+    // at small sizes still prints black; wear trades that for a hard, bolder
+    // threshold that the rag below then frays.
     let ov = texel(overlayTex, ip);
-    captions = smoothstep(0.03, 0.2, ov.a) * smoothstep(0.3, 0.6, luma(ov.rgb / max(ov.a, 1e-3)));
+    let worn = smoothstep(0.03, 0.2, ov.a) * smoothstep(0.3, 0.6, luma(ov.rgb / max(ov.a, 1e-3)));
+    captions = mix(smoothstep(0.0, 0.7, luma(ov.rgb)), worn, u.letterWear);
     if (scene > 0.0 || any(col != paperTone)) {
       // A Moon plate's names sit on mare lines as dense as any work: a wider knock-out.
       let overGalaxy = neb.x > 0.8 * GALAXY_EDGE && sky > 0.0;
@@ -745,10 +749,12 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   var ink = max(content * frame.y, frame.x);
   // The plate is wiped by hand and printed on laid paper: the ink's edge is
   // ragged by a few tenths of a unit and the sheet's dips take less of it.
-  let rag = (vnoise(p * 1.7) - 0.5) * 0.35;
+  // Lettering takes both only as far as its wear: a frayed small name stops reading.
+  let wear = mix(1.0, u.letterWear, min(captions * 2.0, 1.0));
+  let rag = (vnoise(p * 1.7) - 0.5) * 0.35 * wear;
   let edgeInk = min(ink, 1.0);
   ink = max(ink + rag * edgeInk * (1.0 - edgeInk) * 4.0, 0.0);
-  ink *= 0.72 + 0.28 * smoothstep(0.25, 0.65, sheet.a);
+  ink *= 1.0 - 0.28 * wear * (1.0 - smoothstep(0.25, 0.65, sheet.a));
   // Ink as density: one full stroke leaves INK's transmittance, a crossing more.
   col *= pow(INK, vec3<f32>(ink * u.tune.z));
   return vec4<f32>(col, 1.0);

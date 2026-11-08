@@ -18,6 +18,8 @@ export type AntiqueTuning = {
   inkGain: number;
   /** Ink of the orbits' and figures' lines, below the rulings'. */
   lineInk: number;
+  /** How worn the lettering prints: 0 clean anti-aliased edges, 1 hard and frayed. */
+  letterWear: number;
   /** The gamboge border band, as a share of a full wash. */
   borderWash: number;
   /** Multiplies the sheet, sRGB. */

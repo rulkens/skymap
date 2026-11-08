@@ -24,7 +24,7 @@ export const ANTIQUE_FIGURE_VANTAGE_MPC = [1e-5, 5e-5] as const;
 
 /** Sizes of io.wesl `AntiqueUniforms`, ornaments.wesl `AntiqueOrnaments` and fragment.wesl
  * `AntiqueLettering` (each list: a 16-byte header, then fixed rows). */
-export const ANTIQUE_UNIFORM_BYTES = 288;
+export const ANTIQUE_UNIFORM_BYTES = 304;
 export const ANTIQUE_MAX_ORNAMENTS = 16;
 export const ANTIQUE_ORNAMENT_BYTES = 16 + ANTIQUE_MAX_ORNAMENTS * 64;
 export const ANTIQUE_MAX_GLYPHS = 96;
