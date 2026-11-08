@@ -33,7 +33,7 @@ export const ANTIQUE_GLYPH_BYTES = 16 + ANTIQUE_MAX_GLYPHS * 32;
 /** mask.wesl `MaskDepth`: the forward, then a near plane per plate body. */
 export const ANTIQUE_MASK_DEPTH_BYTES = 32;
 
-/** `skyFloor.wesl`'s output, one f32 padded to WebGPU's 16-byte minimum binding size. */
+/** `skyFloor.wesl`'s output, two f32 padded to WebGPU's 16-byte minimum binding size. */
 export const ANTIQUE_SKY_FLOOR_BYTES = 16;
 
 /** The border in print units from the canvas edge: the ladder's centre line
@@ -143,4 +143,4 @@ export const ANTIQUE_FULL_LAYERS = {
   mask: 5,
 } as const;
 export const ANTIQUE_QUARTER_LAYERS = { wash: 0, nebula: 1, landBlur: 2 } as const;
-export const ANTIQUE_LOW_LAYERS = { glow: 0, structureGlow: 1 } as const;
+export const ANTIQUE_LOW_LAYERS = { glow: 0, structureGlow: 1, webLevel: 2 } as const;

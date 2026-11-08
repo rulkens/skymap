@@ -13,10 +13,12 @@ import package::antiqueLook::pigments::luma;
 @group(0) @binding(1) var<uniform> u: AntiqueUniforms;
 // The look's `mask` layer (`mask.wesl`): r body cover.
 @group(0) @binding(2) var maskTex: texture_2d<f32>;
-// The 1/16 glow (`ANTIQUE_LOW_LAYERS`) and this frame's field floor (`skyFloor.wesl`).
+// The 1/16 glow and web level (`ANTIQUE_LOW_LAYERS`) and this frame's floors (`skyFloor.wesl`):
+// x the field's, y the web's median level.
 @group(0) @binding(3) var lowTex: texture_2d_array<f32>;
-@group(0) @binding(4) var<storage, read> skyFloor: f32;
+@group(0) @binding(4) var<storage, read> floors: vec2<f32>;
 const GLOW_LAYER: i32 = 0;
+const WEB_LEVEL_LAYER: i32 = 2;
 
 struct GlyphOut {
   @builtin(position) pos: vec4<f32>,
@@ -68,8 +70,8 @@ const FIELD_QUIET_REACH = vec2<f32>(0.05, 0.12);
 fn nearResolvedGalaxy(centre: vec2<f32>) -> f32 {
   let dims = vec2<i32>(textureDimensions(lowTex));
   let c = centre / u.res * vec2<f32>(dims);
-  let lo = 1.8 * skyFloor + 0.03;
-  let hi = 2.6 * skyFloor + 0.05;
+  let lo = 1.8 * floors.x + 0.03;
+  let hi = 2.6 * floors.x + 0.05;
   var near = smoothstep(lo, hi, luma(textureLoad(lowTex, clamp(vec2<i32>(c), vec2<i32>(0), dims - 1), GLOW_LAYER, 0).rgb));
   for (var k = 0; k < 8; k++) {
     let ring = select(FIELD_QUIET_REACH.x, FIELD_QUIET_REACH.y, k >= 4);
@@ -79,6 +81,20 @@ fn nearResolvedGalaxy(centre: vec2<f32>) -> f32 {
     near = max(near, big * select(1.0, 0.6, k >= 4));
   }
   return near;
+}
+
+// The web's levels (doublings of density, `web.wesl`) about the plate's median over
+// which the field's dots thin, all but VOID_KEEP gone at the lower: graded, so walls read dense.
+const VOID_LEVELS = vec2<f32>(-0.75, 1.0);
+const VOID_KEEP: f32 = 0.06;
+
+// The share of field galaxies the web's voids take here (`web.wesl` `fsLevel`; 0 off the cosmos).
+fn voidThinning(centre: vec2<f32>) -> f32 {
+  let dims = vec2<i32>(textureDimensions(lowTex));
+  let c = clamp(vec2<i32>(centre / u.res * vec2<f32>(dims)), vec2<i32>(0), dims - 1);
+  let level = textureLoad(lowTex, c, WEB_LEVEL_LAYER, 0).rg;
+  let ramp = floors.y + VOID_LEVELS;
+  return (1.0 - VOID_KEEP) * (1.0 - smoothstep(ramp.x, ramp.y, level.x)) * level.y;
 }
 
 @vertex
@@ -112,11 +128,12 @@ fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32) -> Glyph
   let isDot = s.w > 1.5;
   let dotRadius = select(GALAXY_DOT_RADIUS, STAR_DOT_RADIUS, s.w > 2.5);
   // Round a resolved galaxy most field galaxies go and the rest shrink, so the
-  // subject is not lost in a speckle as loud as itself; stars keep every dot.
+  // subject is not lost in a speckle as loud as itself; a void empties of them
+  // too, so the web's walls carry the field. Stars keep every dot.
   var quiet = 0.0;
   if (isDot && s.w < 2.5) {
     quiet = nearResolvedGalaxy(centre);
-    if (hash21Hq(floor(centre) + 29.3) < 0.7 * quiet) {
+    if (hash21Hq(floor(centre) + 29.3) < max(0.7 * quiet, voidThinning(centre))) {
       return o;
     }
   }

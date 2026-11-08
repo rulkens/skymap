@@ -23,7 +23,9 @@ const PLATE = readShaderSource('src/services/gpu/shaders/antiqueLook/fragment.we
 function plateLayout(): GPUBindGroupLayoutEntry[] {
   const layouts: GPUBindGroupLayoutDescriptor[] = [];
   const device = {
-    createShaderModule: vi.fn(() => ({ getCompilationInfo: () => Promise.resolve({ messages: [] }) })),
+    createShaderModule: vi.fn(() => ({
+      getCompilationInfo: () => Promise.resolve({ messages: [] }),
+    })),
     createBindGroupLayout: vi.fn((desc: GPUBindGroupLayoutDescriptor) => {
       layouts.push(desc);
       return {};
@@ -89,10 +91,11 @@ describe('the antique plate bindings', () => {
     expect(wgsl).toEqual(ts);
   });
 
-  it("names the glow's layer in glyphs.wesl as the plate does", () => {
+  it("names the glow's and the web level's layers in glyphs.wesl as the plate does", () => {
     const glyphs = readShaderSource('src/services/gpu/shaders/antiqueLook/glyphs.wesl');
-    expect(/const\s+GLOW_LAYER\s*:\s*i32\s*=\s*(\d+)\s*;/.exec(glyphs)?.[1]).toBe(
-      String(ANTIQUE_LOW_LAYERS.glow),
-    );
+    const layer = (name: string) =>
+      new RegExp(`const\\s+${name}\\s*:\\s*i32\\s*=\\s*(\\d+)\\s*;`).exec(glyphs)?.[1];
+    expect(layer('GLOW_LAYER')).toBe(String(ANTIQUE_LOW_LAYERS.glow));
+    expect(layer('WEB_LEVEL_LAYER')).toBe(String(ANTIQUE_LOW_LAYERS.webLevel));
   });
 });

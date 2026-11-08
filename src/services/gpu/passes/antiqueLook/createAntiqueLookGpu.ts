@@ -124,6 +124,7 @@ export function createAntiqueLookGpu(
     entries: [
       { binding: 0, visibility: GPUShaderStage.COMPUTE, ...TEXTURE },
       { binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
+      { binding: 2, visibility: GPUShaderStage.COMPUTE, ...TEXTURE },
     ],
   });
   const skyFloorPipeline = device.createComputePipeline({
@@ -169,6 +170,13 @@ export function createAntiqueLookGpu(
   const web = stage('web', webCode, [TEXTURE, SAMPLER, UNIFORM], [], 'fs', [
     { format: 'rgba8unorm', blend: { color: max, alpha: max } },
   ]);
+  const webLevel = stage(
+    'web-level',
+    webCode,
+    [TEXTURE, SAMPLER, UNIFORM],
+    [HDR_TARGET_FORMAT],
+    'fsLevel',
+  );
   const decorModule = createShaderModuleWithDevLog(device, decorCode, 'antiqueLook.decor');
   const both = GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT;
   const decorLayout = device.createBindGroupLayout({
@@ -258,6 +266,7 @@ export function createAntiqueLookGpu(
     ornaments,
     glyphs: { pipeline: glyphsPipeline, layout: glyphsLayout },
     web,
+    webLevel,
     decor: { pipeline: decorPipeline, layout: decorLayout },
     digits,
     plateBodies,

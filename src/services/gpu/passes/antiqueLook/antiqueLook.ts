@@ -3,12 +3,12 @@
  * only when its row was reallocated or the scan landed), mask (foreground:0 and
  * the land row → the `mask` layer, the only body record later passes read), reduce (print →
  * quarter-res `wash`), glow (`wash` → 1/16-res), nebula (`wash` → the galaxy
- * engraving's quarter-res fields), sky floor (glow → one f32, compute), land blur (`wash.a` →
- * `land-blur`, across then down, only under a land map), glyphs (from the
- * star Layer's `print-points`) and decor (instanced scatters into `star-ink` and
- * `decor`/`decor-hue`), plate (all of it inked onto the swap chain). One
- * `stylize` timing slot spans them, as `runBloom`'s does. GPU objects are built
- * on the look's first frame, not at boot: most sessions never open it.
+ * engraving's quarter-res fields), web level (the density → 1/16-res), sky floor (glow and
+ * web level → two f32, compute), land blur (`wash.a` → `land-blur`, across then down, only
+ * under a land map), glyphs (from the star Layer's `print-points`) and decor (instanced scatters
+ * into `star-ink` and `decor`/`decor-hue`), plate (all of it inked onto the swap chain). One
+ * `stylize` timing slot spans them, as `runBloom`'s does. GPU objects are built on the look's
+ * first frame, not at boot: most sessions never open it.
  */
 
 import { createAntiqueLookGpu } from './createAntiqueLookGpu';
@@ -244,6 +244,7 @@ export function createAntiqueLook(init: {
     // The structure markers, when one drew this frame: their own low band, else nothing.
     const structured = ctx.snapshot.renderedTargets.has(ANTIQUE_TARGETS.structures);
     const structureGlow = low('structureGlow');
+    const webLevel = low('webLevel');
     const starInk = full('starInk');
     const decor = full('decor');
     const decorHue = full('decorHue');
@@ -313,6 +314,20 @@ export function createAntiqueLook(init: {
         })
         .end();
     }
+    if (webDensity) {
+      fullScreen(encoder, 'web-level', [webLevel], g.webLevel, [
+        targets.viewOf(WEB_DENSITY),
+        g.clampSampler,
+        uniforms,
+      ]);
+    } else {
+      encoder
+        .beginRenderPass({
+          label: 'antique-look-web-level-clear',
+          colorAttachments: [{ view: webLevel, loadOp: 'clear', storeOp: 'store' }],
+        })
+        .end();
+    }
     const floorPass = encoder.beginComputePass({ label: 'antique-look-sky-floor' });
     floorPass.setPipeline(g.skyFloor.pipeline);
     floorPass.setBindGroup(
@@ -323,6 +338,7 @@ export function createAntiqueLook(init: {
         entries: [
           { binding: 0, resource: glow },
           { binding: 1, resource: { buffer: g.skyFloorBuffer } },
+          { binding: 2, resource: webLevel },
         ],
       }),
     );

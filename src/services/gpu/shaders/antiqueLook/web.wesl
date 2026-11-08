@@ -1,9 +1,10 @@
 // antiqueLook/web.wesl — the cosmic web charted as a sea, from the density raymarch's
 // own 1/3-res row (its upsample never reaches the print, so the galaxy engraving
 // never inks it): isobaths, the outermost dotted as a shoal's edge, walls stippled
-// by density, voids bare paper, the Zone of Avoidance ruled. Max-blended into `antique-star-ink`'s spare b and a,
-// beside the star glyphs: b web ink, a how much of a galaxy the void lifts. Drawn
-// only in the cosmos with the density live (`u.rayTL.w`); the eye in rayTR..BR.w.
+// by density, voids bare paper, the Zone of Avoidance ruled. `fs` max-blends its ink into
+// `antique-star-ink`'s spare b, beside the star glyphs; `fsLevel` writes the 1/16 `webLevel`
+// layer (r the level, g where it is charted), from which the plate and the field dots thin
+// a void's galaxies. Drawn only in the cosmos with the density live (`u.rayTL.w`); the eye in rayTR..BR.w.
 
 import package::antiqueLook::io::AntiqueUniforms;
 import package::antiqueLook::io::VSOut;
@@ -27,6 +28,9 @@ const WEB_BASE: f32 = 0.033;
 const WEB_FLOOR: f32 = 0.004;
 const WEB_LEVELS: f32 = 5.0;
 const WEB_BLUR: f32 = 12.0;
+// The level of a density of 0, and just above it: outside the density cube's footprint
+// (laniakea's south) the row is 0, which is uncharted, never a void.
+const UNCHARTED = vec2<f32>(-2.95, -2.75);
 
 // 2MRS saw no galaxies through the Galaxy's dust within ZOA_LAT_DEG of its plane
 // (anticentre, bulge), so the density there is bare paper and would chart a void.
@@ -60,16 +64,27 @@ fn zoaShare(eye: vec3<f32>, ray: vec3<f32>) -> f32 {
   return inside / f32(ZOA_STEPS);
 }
 
-@fragment
-fn fs(in: VSOut) -> @location(0) vec4<f32> {
-  let p = in.pos.xy / u.unit;
+// The density's isobath level at `uv`: doublings of its tent-blurred luma over WEB_BASE.
+fn webLevel(uv: vec2<f32>) -> f32 {
   let s = WEB_BLUR * u.unit / u.res;
   var sum = 0.0;
   for (var k = 0; k < 9; k++) {
     let o = vec2<f32>(f32(k % 3 - 1), f32(k / 3 - 1));
-    sum += luma(textureSampleLevel(webTex, linear, in.uv + o * s, 0.0).rgb) * (2.0 - abs(o.x)) * (2.0 - abs(o.y));
+    sum += luma(textureSampleLevel(webTex, linear, uv + o * s, 0.0).rgb) * (2.0 - abs(o.x)) * (2.0 - abs(o.y));
   }
-  let q = log2((sum / 16.0 + WEB_FLOOR) / WEB_BASE);
+  return log2((sum / 16.0 + WEB_FLOOR) / WEB_BASE);
+}
+
+@fragment
+fn fsLevel(in: VSOut) -> @location(0) vec4<f32> {
+  let q = webLevel(in.uv);
+  return vec4<f32>(q, smoothstep(UNCHARTED.x, UNCHARTED.y, q) * u.rayTL.w, 0.0, 0.0);
+}
+
+@fragment
+fn fs(in: VSOut) -> @location(0) vec4<f32> {
+  let p = in.pos.xy / u.unit;
+  let q = webLevel(in.uv);
   let level = round(q);
   let w = 0.3 * u.unit;
   let line = (1.0 - smoothstep(w, w + 1.0, abs(q - level) / max(fwidth(q), 1e-4)))
@@ -85,5 +100,5 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let ruleWeight = 0.75 + 0.5 * hash21Hq(vec2<f32>(ruleIndex, 3.1));
   let rule = inkLine(abs(fract(across + wander) - 0.5) * ZOA_RULE, 0.45 * ruleWeight, 1.0 / u.unit) * ZOA_INK * zoa;
   let weight = u.rayTL.w;
-  return vec4<f32>(0.0, 0.0, max(max(isobath, wall), rule) * weight, (1.0 - smoothstep(-1.0, 0.6, q)) * weight);
+  return vec4<f32>(0.0, 0.0, max(max(isobath, wall), rule) * weight, 0.0);
 }

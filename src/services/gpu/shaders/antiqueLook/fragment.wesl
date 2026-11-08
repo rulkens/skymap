@@ -88,9 +88,10 @@ const WASH_LAYER: i32 = 0;
 const NEBULA_LAYER: i32 = 1;
 const LAND_BLUR_LAYER: i32 = 2;
 // 1/16 res, rgba16f: the glow; the structure markers' low band (`structureGlow.wesl`:
-// premultiplied rgb, a coverage).
+// premultiplied rgb, a coverage); the web's level (`web.wesl` `fsLevel`: r level, g charted).
 const GLOW_LAYER: i32 = 0;
 const STRUCTURE_GLOW_LAYER: i32 = 1;
+const WEB_LEVEL_LAYER: i32 = 2;
 @group(0) @binding(6) var linear: sampler;
 @group(0) @binding(7) var<uniform> lettering: AntiqueLettering;
 @group(0) @binding(8) var glyphTex: texture_2d<f32>;
@@ -513,7 +514,9 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // boundary line and one inner contour of the low band. Star glyphs were scattered by glyphs.wesl: x ink, y paper knock-out.
   let glyphs = rowOn(HIDE_GLYPHS);
   let web = rowOn(HIDE_WEB);
-  let star = layerTexel(fullTex, STAR_INK_LAYER, ip) * vec4<f32>(glyphs, glyphs, web, web);
+  let star = layerTexel(fullTex, STAR_INK_LAYER, ip) * vec4<f32>(glyphs, glyphs, web, 0.0);
+  let webLevel = textureSampleLevel(lowTex, linear, uv, WEB_LEVEL_LAYER, 0.0).rg;
+  let voidLift = (1.0 - smoothstep(-1.0, 0.6, webLevel.x)) * webLevel.y * web;
   let clear = 1.0 - star.y;
   // A glow's edge is dotted, as Bayer and de Wit drew a nebula's: a solid
   // ragged line here would read as a coast.
@@ -525,9 +528,9 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   if (onEdge > 0.0) {
     contour = onEdge * stipple(p, 2.3, 0.4);
   }
-  // The web chart (`web.wesl`): z its ink, w how much of a field galaxy its voids
-  // lift; an engraved (big) galaxy is a subject, never lifted.
-  let skyInk = max(star.x, max(max(galaxy.x * max(1.0 - star.w, big), star.z), contour) * clear) * sky;
+  // The web chart (`web.wesl`): z its ink; its voids lift a field galaxy, never an
+  // engraved (big) one, which is a subject.
+  let skyInk = max(star.x, max(max(galaxy.x * max(1.0 - voidLift, big), star.z), contour) * clear) * sky;
   // The rulings were cut by hand too: their ink load wanders along their length.
   let ray = viewRay(uv);
   let skyRulings = max(graticule(frameLonLat(u.sky, ray), u.sky.steps, u.unit), skyCircles(ray, u.sky, u.unit));
