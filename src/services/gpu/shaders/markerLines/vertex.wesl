@@ -39,7 +39,7 @@ const CLIP_Z_EPS: f32 = 1e-4;
 fn expandMarkerLineQuad(input: VsIn, occludeWeight: f32) -> VsOut {
   // Unpack the packed instance attributes.
   let fromWorld = input.fromAndWidth.xyz;
-  let pixelWidth = input.fromAndWidth.w;
+  let pixelWidth = input.fromAndWidth.w * u.devicePixelRatio;
   let toWorld = input.toAndAlpha.xyz;
   let fadeAlpha = input.toAndAlpha.w;
 

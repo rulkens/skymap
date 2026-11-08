@@ -23,7 +23,7 @@
 // ## Bind-group convention
 //
 // One uniform binding at @group(0) @binding(0) holding the shared
-// CameraUniforms prefix only — no renderer-specific tail.  Per-line
+// CameraUniforms prefix plus one tail field, devicePixelRatio.  Per-line
 // state (endpoints, color, width, fade) lives on the per-instance
 // vertex attributes, not in a storage buffer, because there's no
 // indirect lookup needed: every quad already gets the segment's
@@ -36,6 +36,8 @@ struct Uniforms {
   // 64..71 = viewportPx (drives the screen-space half-width math),
   // 72..75 = pxPerRad; 76..79 = the reserved pad (CPU writer zeroes it).
   cam: CameraUniforms,
+  // Device px per CSS px: lines carry their width in CSS px (80..83; padded to 96).
+  devicePixelRatio: f32,
 };
 
 // ── per-vertex + per-instance attributes ──────────────────────────

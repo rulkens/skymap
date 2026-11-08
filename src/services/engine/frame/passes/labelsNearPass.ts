@@ -49,7 +49,7 @@ export const labelsNearPass: ContentPass = {
     // Lines before captions, so the glyphs composite OVER the connector where
     // they meet. A null line renderer (bootstrap gap) just skips them.
     if (lineRenderer !== null) {
-      lineRenderer.draw(pass, vpF32, viewportPx, ctx.drawPxPerRad, scene);
+      lineRenderer.draw(pass, vpF32, viewportPx, ctx.drawPxPerRad, devicePixelRatio, scene);
     }
     // The captions' em rides the rescaled NEAR0 matrix, so it scales with it.
     renderer.draw(pass, vpF32, viewportPx, ctx.drawPxPerRad, {

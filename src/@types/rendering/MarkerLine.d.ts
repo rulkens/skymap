@@ -18,7 +18,7 @@ export type MarkerLine = {
   id: string;
   readonly fromWorld: Vec3;
   readonly toWorld: Vec3;
-  /** Full pixel width of the rendered line (the shader halves to half-width). */
+  /** Full width in CSS px (the renderer scales by devicePixelRatio; the shader halves to half-width). */
   pixelWidth: number;
   /** Premultiplied RGBA — alpha-weighted colour packed into a single vec4. */
   readonly color: Vec4;
