@@ -310,6 +310,13 @@ Owner ruling 2026-11-07: keep the generic galaxy engraving with these names; the
 - [x] Panel on cart7 (phone 400×850 @2 + desktop; saturn, earth-europe, moon-full, laniakea): UI/UX 7, historian 7, art critic 7.
 - [ ] Open: Europe desktop fits only half size above the Navigation panel (all three ask for more presence); the phone Moon tablet is small between neatline and limb; reviewers want one title scale across views and the strapwork lighter; a faint numeral ghost left of the strapwork's crest on laniakea desktop; Earth placement does not yet prefer sea.
 
+### Task 37: Legible names (owner, 2026-11-08: "hard to read", "no anti-aliasing", "far labels a little bigger", "the selected label should animate")
+**Files:** `shaders/antiqueLook/{fragment,io}.wesl`, `utils/gpu/antiqueLook/{packAntiqueUniforms,antiquePlateTune}.ts`, `data/rendering/{antiqueTuning,antiqueTuningSliderFields}.ts`, `data/labels/antiqueLabelStyle.ts`, `services/engine/subsystems/label2DDirector.ts`, `services/engine/presentation/createTitleGrowth.ts`
+- [x] Captions ink the MSDF's anti-aliased coverage (the fill's luma, lifted for hairlines), not a hard alpha threshold; the rag and the paper dips reach lettering only as far as the Letter wear knob (debug board; 0 clean, 1 the old print, default 0.25).
+- [x] The far sky's cuts a size up (capitals 23, roman 19, italic 21, spaced italic 19 px); placed map names keep their sizes.
+- [x] A selected name grows to the title size over 220 ms and shrinks back when let go; the director's flush signature keys text, alignment and size so a reset name re-uploads.
+- [ ] Open: the owner's off-centre selected-star label not reproduced (Orion stars off-centre and near edges, desktop dpr 1 and 2, phone, InfoCard open: centred each time); the name still hops from beside its glyph to over it when the growth starts.
+
 ## Definition of Done
 
 **Deliverables:** the `stylize` FRAME_ORDER line and `antiqueLook` pass; the `antique` settings
