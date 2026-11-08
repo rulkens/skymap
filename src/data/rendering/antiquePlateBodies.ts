@@ -13,6 +13,9 @@ export const ANTIQUE_BODY_PRINTS: Readonly<Record<string, AntiqueBodyPrint>> = {
   mars: 'mars',
   moon: 'moon',
   jupiter: 'jupiter',
+  // Jupiter's convention reads the bands off the body's own plain texture; `plain` has no
+  // tone on a lit face, so a near Saturn printed as a blank disc.
+  saturn: 'jupiter',
 };
 
 /** The record's code per convention; mirrored by `PRINT_*` in `antiqueLook/plateBodies.wesl`. */
