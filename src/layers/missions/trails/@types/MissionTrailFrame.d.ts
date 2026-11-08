@@ -12,6 +12,8 @@ export type MissionTrailFrame = {
   readonly camPosMpc: Readonly<Vec3>;
   readonly viewportPx: readonly [number, number];
   readonly pxPerRad: number;
+  /** Trail width in device px (the CSS-px style width times devicePixelRatio). */
+  readonly widthPx: number;
   readonly occluders: { readonly count: number; readonly spheresKm: Float32Array };
   readonly depth: SampledDepthBinding;
 };
