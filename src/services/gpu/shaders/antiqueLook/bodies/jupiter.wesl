@@ -58,9 +58,9 @@ const FEATURE_RELIEF: f32 = 3.5;
 const SPOT_AXES = vec2<f32>(0.155, 0.084);
 const SPOT_NORTH_POWER: f32 = 2.35;
 const SPOT_CORE = vec2<f32>(0.56, 0.7); // the core's tone, and its share of the plain's
-// The dark collar: a couple of rings inside the outline, from q SPOT_COLLAR.x out to .y,
-// SPOT_RING_GAP of the hatching's spacing apart, swelling outward and broken.
-const SPOT_COLLAR = vec2<f32>(0.8, 1.0);
+// The dark collar: a thin broken ring inside the outline, from q SPOT_COLLAR.x out to .y,
+// SPOT_RING_GAP of the hatching's spacing apart.
+const SPOT_COLLAR = vec2<f32>(0.9, 1.0);
 const SPOT_RING_GAP: f32 = 1.3;
 const SPOT_NEAR: f32 = 1.3; // past this q nothing of the spot's is drawn
 const SPOT_WASH = vec2<f32>(0.05, 0.22); // rose madder at the collar, at the core
@@ -156,7 +156,7 @@ fn jupiterPrint(col: vec3<f32>, cover: f32, j: JupiterPrintIn, wash: texture_2d_
     let lift = smoothstep(0.3, 0.45, vnoise(j.p * 0.03 + 11.0));
     ink = max(ink, inkLine(ring, (0.9 + 1.8 * collar) * (0.85 + 0.3 * vnoise(j.p * 0.06)) * lift, j.pxUnits) * collar);
     // The outline cut with the burin's pressure wandering and lifting along it.
-    let width = (1.3 + 1.2 * vnoise(j.p * 0.03)) * smoothstep(0.15, 0.3, vnoise(j.p * 0.02 + 3.0));
+    let width = (1.3 + 1.2 * vnoise(j.p * 0.03)) * smoothstep(0.15, 0.3, vnoise(j.p * 0.02 + 3.0)) * mix(0.5, 1.0, big);
     ink = max(ink, inkLine(abs(q - 1.0) / max(j.qPerUnit, 1e-6), width, j.pxUnits));
     // Rose madder laid by hand: it pools where the core is darkest and thins out over
     // the collar, granular as watercolour on laid paper.

@@ -288,6 +288,14 @@ Owner ruling 2026-11-07: keep the generic galaxy engraving with these names; the
 - [x] Mars ground shade measured down from the lit ground round it (brightest of the 8 taps, held to 1.3x their mean), a gravel stipple on lit flats, no crossing.
 - [ ] Open: panel plateaued at ~5 over three rounds (the historian would trade the highland dots for short hatching along the relief; fidelity wants the plain's dark corners denser); Copernicus' mare ruling uniform and heavy (mare engine); rings as clean circles without floors or peaks; rover unshaded; the Tycho close-up's cost unmeasured (shared GPU too loaded for an A/B).
 
+### Task 35: Jupiter by hand (review 8 #4: "ruled like a machine drew it")
+**Files:** `shaders/antiqueLook/bodies/jupiter.wesl`, `shaders/antiqueLook/fragment.wesl` (its call), `tests/services/gpu/shaders/antiqueJupiter.parity.test.ts`
+- [x] Line weight read off the plain render's own lightness per pixel (chroma-weighted, over the light across the bands), not fixed belt latitudes: belts swell, zones keep a light ruling, a belt's detail swells and thins its lines; no polar stipple.
+- [x] Lines drift, taper, open and close, and bend round what stands out of their band; a small globe cut plainer (wider-set lines, near-paper zones).
+- [x] Pale ovals and the darkest dark features outlined, broken; the Red Spot (not moved) a hatched core, a thin inner ring and a bold broken outline, rose madder pooling granular at the core.
+- [x] Rose madder's pigment index pinned by a parity test. Panel (art/history/fidelity) 5.5/5/5.5 → 7.5/7/7, plateau at rounds 4-5. Shared `lineFamily` untouched, so Mars, Earth's mountains, the Moon and the rulings are unchanged. Cost: ~1.6 ms of `stylize` at the full-screen Red Spot close-up, dpr 2 (11.4 against 9.8 ms with the module stubbed; 11 quarter-res taps, the spot and outline work gated to where they show).
+- [ ] Open: the spot still a clean ellipse (panel: one contour heavier on the shadow side; fidelity: the plain's spiral core and pale collar); festoon whorls as scattered loops, not long strokes; the southern rulings still even; the disc's belts finer than a period figure (historian wants 3-4 broad bands, an oblate profile, a hatched limb).
+
 ## Definition of Done
 
 **Deliverables:** the `stylize` FRAME_ORDER line and `antiqueLook` pass; the `antique` settings
