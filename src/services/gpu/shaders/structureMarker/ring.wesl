@@ -24,7 +24,13 @@ import package::structureMarker::io::MARKER_RADIUS_RETUNE;
 import package::lib::billboard::quadCorner;
 import package::lib::billboard::expandBillboardWorld;
 
-@group(0) @binding(0) var<uniform> u: CameraUniforms;
+// The camera prefix plus one tail f32 (bytes 80..83, padded to 96): the band widths
+// below are CSS px, and the fragment scales them by this.
+struct RingUniforms {
+  cam: CameraUniforms,
+  devicePixelRatio: f32,
+};
+@group(0) @binding(0) var<uniform> u: RingUniforms;
 // No @group(1) — see halo.wesl.
 
 // Ring width in CSS pixels (full visible band, halved for the AA
@@ -68,7 +74,7 @@ fn vs(
   let offset = expandBillboardWorld(vec3<f32>(0.0), worldPos, corner, half);
 
   var out: VsOut;
-  out.pos = worldToClip(u, worldPos + offset);
+  out.pos = worldToClip(u.cam, worldPos + offset);
   // d == 1 is still the marker radius: RING_QUAD_MARGIN scales the
   // geometry (above) and the uv (here) together, so they cancel.
   out.uv = corner * RING_QUAD_MARGIN;
@@ -103,8 +109,8 @@ fn fs(input: VsOut) -> @location(0) vec4<f32> {
   // wide in whichever view draws it. Capped at 1: a sub-pixel ring fills
   // its quad instead of aliasing to one fragment.
   let uvPerPx = min(length(vec2<f32>(dpdx(d), dpdy(d))), 1.0);
-  let bandHalfUv = RING_PX_WIDTH * 0.5 * uvPerPx;
-  let aaUv = RING_AA_WIDTH * uvPerPx;
+  let bandHalfUv = RING_PX_WIDTH * u.devicePixelRatio * 0.5 * uvPerPx;
+  let aaUv = RING_AA_WIDTH * u.devicePixelRatio * uvPerPx;
 
   // Distance from the |uv| == 1 ring centre line.
   let distFromRing = abs(d - 1.0);

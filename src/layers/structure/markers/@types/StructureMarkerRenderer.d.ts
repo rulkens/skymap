@@ -21,6 +21,8 @@ export type StructureMarkerRenderer = {
     viewProj: Float64Array,
     viewportSize: Vec2,
     pxPerRad: number,
+    /** Device px per CSS px: the ring's band widths are CSS px. */
+    devicePixelRatio: number,
   ): void;
   markerCount(): number;
   /**

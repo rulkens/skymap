@@ -43,7 +43,13 @@ export function createStructureMarkersPass(
       renderer.setMarkers(ctx.snapshot.plans.get(planner, ctx), view.camPos);
       // The renderer rebases this on the eye it packed; pick reuses those instances through
       // the same rebase, so draw and pick cannot diverge.
-      renderer.draw(pass, view.slab.vp, view.viewportPx, ctx.drawPxPerRad);
+      renderer.draw(
+        pass,
+        view.slab.vp,
+        view.viewportPx,
+        ctx.drawPxPerRad,
+        ctx.snapshot.devicePixelRatio,
+      );
     },
 
     // One ring-pick draw per category; the renderer ORs each category's `sourceCode` into
