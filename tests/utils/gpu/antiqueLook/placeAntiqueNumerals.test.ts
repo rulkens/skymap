@@ -18,6 +18,7 @@ import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { AntiqueGlyphInstance } from '../../../../src/@types/rendering/AntiqueGlyphInstance';
 import type { AntiquePlateRulings } from '../../../../src/@types/rendering/AntiquePlateRulings';
 import type { AntiqueRulingFrame } from '../../../../src/@types/rendering/AntiqueRulingFrame';
+import type { ScreenRectPx } from '../../../../src/@types/rendering/ScreenRectPx';
 import {
   ANTIQUE_LADDER_UNITS,
   ANTIQUE_NUMERAL_INSET_UNITS,
@@ -71,6 +72,7 @@ function topNumbers(
   basis: ViewBasis,
   rulings: AntiquePlateRulings,
   frustum = FRUSTUM,
+  cartouche: ScreenRectPx | null = null,
 ): { x: number; left: number; right: number; text: string }[] {
   const glyphs = placeAntiqueNumerals({
     basis,
@@ -79,6 +81,7 @@ function topNumbers(
     unitPx: 1,
     rulings,
     sheet: SHEET,
+    cartouche,
   })
     .filter((g) => Math.abs(g.centrePx[1] - ANTIQUE_NUMERAL_INSET_UNITS) < 1e-6)
     .sort((p, q) => p.centrePx[0] - q.centrePx[0]);
@@ -128,6 +131,16 @@ describe('placeAntiqueNumerals', () => {
     expect(leftmost.left).toBeGreaterThan(ANTIQUE_LADDER_UNITS + 20);
   });
 
+  it('leaves out a number the cartouche would cover or crowd, and only that one', () => {
+    const all = topNumbers(lookingAt(0), { sky: frame(15), globe: null });
+    const hit = all[1]!;
+    // A cartouche ending just short of the number still crowds it; the rest stand.
+    const cartouche = { x0: 40, y0: 40, x1: hit.left - 2, y1: 300 };
+    const kept = topNumbers(lookingAt(0), { sky: frame(15), globe: null }, FRUSTUM, cartouche);
+    expect(kept.map((n) => n.text)).not.toContain(hit.text);
+    expect(kept.map((n) => n.text)).toContain(all[2]!.text);
+  });
+
   it('lets a number wait for room rather than run into its neighbour', () => {
     // At 2° the crossings come ~35 px apart, closer than numbers 22 px tall can stand.
     const numbers = topNumbers(lookingAt(0), { sky: frame(2), globe: null });
@@ -164,6 +177,7 @@ describe('placeAntiqueNumerals', () => {
       unitPx: 1,
       rulings: { sky: frame(5 / 60), globe: null },
       sheet: SHEET,
+      cartouche: null,
     });
     // Clear of the top and bottom rows, whose minutes sit a little off their line.
     const rows = ANTIQUE_NUMERAL_INSET_UNITS + ANTIQUE_NUMERAL_UNITS;

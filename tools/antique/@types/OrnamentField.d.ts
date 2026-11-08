@@ -10,6 +10,4 @@ export type OrnamentField = {
   readonly ry: number;
   /** Past this scale of the field the accent pigment's (the scrollwork's outer scrolls). */
   readonly accentScale?: number;
-  /** When set, the wash keeps within this many px of an engraved line (a frame cut from a ruled map). */
-  readonly washReachPx?: number;
 };

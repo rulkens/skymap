@@ -2,9 +2,9 @@
  * antiquePlateCartouche — this frame's title cartouche: the plate's title, the
  * frame its kind of plate is set in (`ANTIQUE_TITLE_CARTOUCHES`), where that
  * frame goes (`fitAntiqueCartouche`, clear of the open panels and of the subject:
- * the titled globe's disc, rings included, and the plate's centre) and how
- * strongly each prints. The one placement the plate draws and the label director
- * keeps names off.
+ * the plate's centre, and the titled globe's disc with its rings unless a region
+ * of it is titled) and how strongly each prints. The one placement the plate
+ * draws and the label director keeps names off.
  */
 
 import type { FrameView } from '../../../../@types/engine/frame/FrameView';
@@ -18,6 +18,7 @@ import {
   ANTIQUE_REFERENCE_HEIGHT_CSS,
   ANTIQUE_REGIME_MPC,
 } from '../../../../data/rendering/antiqueLook';
+import { ANTIQUE_EARTH_TITLE_REGIONS } from '../../../../data/rendering/antiqueTitleRegions';
 import { ANTIQUE_ORNAMENT_ATLAS } from '../../../../data/rendering/antiqueOrnamentAtlas';
 import { ANTIQUE_TITLE_CARTOUCHES } from '../../../../data/rendering/antiqueTitleCartouches';
 import { projectDirToPx } from '../../../../utils/camera/projection/projectDirToPx';
@@ -31,7 +32,7 @@ import type { antiqueTitleGlobe } from './antiqueTitleGlobe';
 /** The plate's centre the subject's name and figure sit at, as a share of the canvas's short side. */
 const CENTRE_SHARE = 0.15;
 /** Shrunk below this share of its authored size, the cartouche sets its title compact (a phone's). */
-const COMPACT_BELOW = 0.7;
+const COMPACT_BELOW = 0.8;
 
 export function antiquePlateCartouche(
   ctx: FrameView,
@@ -71,7 +72,12 @@ export function antiquePlateCartouche(
       radius: CENTRE_SHARE * Math.min(size.width, size.height),
     },
   ];
-  if (globe?.discPx) subjects.push(globe.discPx);
+  // Under a region's title the globe is the ground the map is drawn on, not its subject.
+  if (
+    globe?.discPx &&
+    !ANTIQUE_EARTH_TITLE_REGIONS.some((level) => level.some((r) => r.key === key))
+  )
+    subjects.push(globe.discPx);
   const anchor = fitAntiqueCartouche({
     anchor: cartouche.anchor,
     aspect,

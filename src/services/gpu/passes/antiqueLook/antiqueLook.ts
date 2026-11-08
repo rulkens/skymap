@@ -216,6 +216,7 @@ export function createAntiqueLook(init: {
             unitPx,
             rulings,
             sheet: glyphs.sheet,
+            cartouche: card?.rectPx ?? null,
           });
     device.queue.writeBuffer(g.digits, 0, packAntiqueGlyphs(digits, glyphBytes));
     const landMapped = ctx.snapshot.renderedTargets.has(ANTIQUE_TARGETS.land);

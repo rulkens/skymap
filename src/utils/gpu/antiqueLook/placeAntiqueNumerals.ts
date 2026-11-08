@@ -5,7 +5,9 @@
  * inside the inner rule. A stretch of border over a ruled globe reads the
  * globe's frame, the rest the sky's (`AntiquePlateRulings`), and no crossing is
  * read across the switch. Values are the frames' own intervals, so each number
- * sits where a meridian or parallel meets the border.
+ * sits where a meridian or parallel meets the border. A number the cartouche
+ * would cover, or crowd within half a numeral, is left out, as an engraver cut the
+ * graduation short of a title frame.
  */
 
 import type { ViewBasis } from '../../../@types/camera/projection/ViewBasis';
@@ -14,6 +16,7 @@ import type { AntiqueGlyphInstance } from '../../../@types/rendering/AntiqueGlyp
 import type { AntiqueGlyphSheet } from '../../../@types/rendering/AntiqueGlyphSheet';
 import type { AntiquePlateRulings } from '../../../@types/rendering/AntiquePlateRulings';
 import type { AntiqueRulingFrame } from '../../../@types/rendering/AntiqueRulingFrame';
+import type { ScreenRectPx } from '../../../@types/rendering/ScreenRectPx';
 import type { Size } from '../../../@types/rendering/Size';
 import {
   ANTIQUE_LADDER_UNITS,
@@ -42,8 +45,11 @@ export function placeAntiqueNumerals(input: {
   readonly unitPx: number;
   readonly rulings: AntiquePlateRulings;
   readonly sheet: Pick<AntiqueGlyphSheet, 'width' | 'height' | 'baseline' | 'glyphs'>;
+  /** The title cartouche, device px. */
+  readonly cartouche: ScreenRectPx | null;
 }): readonly AntiqueGlyphInstance[] {
-  const { size, unitPx, rulings } = input;
+  const { size, unitPx, rulings, cartouche } = input;
+  const crowd = 0.5 * ANTIQUE_NUMERAL_UNITS * unitPx;
   const band = ANTIQUE_LADDER_UNITS * unitPx;
   const inset = (ANTIQUE_NUMERAL_INSET_UNITS - ANTIQUE_LADDER_UNITS) * unitPx;
   const out: AntiqueGlyphInstance[] = [];
@@ -125,6 +131,19 @@ export function placeAntiqueNumerals(input: {
       if (!edge.lon) fitSideNumber(out, before, edge.text[0] > 0, size.width, unitPx);
       const axis = edge.lon ? 0 : 1;
       const set = out.slice(before);
+      if (
+        cartouche &&
+        set.some(
+          (g) =>
+            g.centrePx[0] + g.halfPx[0] + crowd > cartouche.x0 &&
+            g.centrePx[0] - g.halfPx[0] - crowd < cartouche.x1 &&
+            g.centrePx[1] + g.halfPx[1] + crowd > cartouche.y0 &&
+            g.centrePx[1] - g.halfPx[1] - crowd < cartouche.y1,
+        )
+      ) {
+        out.length = before;
+        continue;
+      }
       const start = Math.min(...set.map((g) => g.centrePx[axis] - g.halfPx[axis]));
       if (start < lastReach + NUMBER_GAP * ANTIQUE_NUMERAL_UNITS * unitPx) {
         out.length = before;

@@ -23,6 +23,7 @@ import { closeMaskDisc } from '../utils/image/closeMaskDisc';
 import { dilateMaskDisc } from '../utils/image/dilateMaskDisc';
 import { fillMaskHoles } from '../utils/image/fillMaskHoles';
 import { gaussianBlurFloat32 } from '../utils/image/gaussianBlurFloat32';
+import { labelMaskRegions } from '../utils/image/labelMaskRegions';
 import { shelfPack } from '../utils/image/shelfPack';
 import type { OrnamentField } from './@types/OrnamentField';
 import type { OrnamentSprite } from './@types/OrnamentSprite';
@@ -80,9 +81,8 @@ const FIELDS: Partial<Record<(typeof SPRITE_IDS)[number], OrnamentField>> = {
     rx: 0.2474,
     ry: 0.1778,
     accentScale: 1.9,
-    washReachPx: 4,
   },
-  tablet: { shape: 'rect', cx: 0.5054, cy: 0.6273, rx: 0.3473, ry: 0.2412, washReachPx: 4 },
+  tablet: { shape: 'rect', cx: 0.5054, cy: 0.6273, rx: 0.3473, ry: 0.2412 },
 };
 /** A rectangular field's title oval, past its rect: the fitted lines' chord still clears the rule. */
 const RECT_TITLE_OVAL = 1.15;
@@ -187,33 +187,52 @@ async function buildSprite(id: (typeof SPRITE_IDS)[number]): Promise<OrnamentSpr
   // A colourist laid each wash flat inside the engraved outline: the whole
   // silhouette, a cartouche's frame but never its field, where the title sits on paper.
   const share = FIGURE_IDS.has(id) ? FIGURE_WASH : FILL_WASH;
-  // Ungrown and barely softened: the colourist stopped at the line, not a halo past it.
-  const edgeWash = Uint8Array.from(
-    gaussianBlurFloat32(Float32Array.from(solid), w, h, WASH_EDGE_SIGMA_PX),
-    (v) => Math.round(Math.min(1, v) * 255),
-  );
-  // A frame cut from a ruled map keeps only the paper its engraving reaches: the
-  // closed silhouette also spans gaps between its straps, which a wash would stain.
-  const reach = field?.washReachPx;
-  const nearInk = reach
-    ? dilateMaskDisc(
-        ink.map((v) => (v > INK_THRESHOLD ? 1 : 0)),
+  // A frame's wash stays inside its printed lines, as a colourist's brush did: the
+  // pushed ink closed over its hatching (half the silhouette's close, which reads
+  // fainter scan greys), so no halo past the outline and no web between scrolls.
+  const printed = ink.map((v) => (v > INK_THRESHOLD ? 1 : 0));
+  const inLines = field
+    ? fillMaskHoles(
+        closeMaskDisc(printed, w, h, (CLOSE_RADIUS_OVERRIDE_PX[id] ?? CLOSE_RADIUS_PX) / 2),
         w,
         h,
-        reach,
       )
     : null;
-  const wash = field
-    ? edgeWash.map((v, i) =>
-        inField(i, 1) || (nearInk && !nearInk[i]) ? 0 : Math.round(v * FRAME_WASH),
+  const wash = inLines
+    ? Uint8Array.from(
+        gaussianBlurFloat32(
+          Float32Array.from(inLines, (v, i) => (inField(i, 1) ? 0 : v)),
+          w,
+          h,
+          WASH_EDGE_SIGMA_PX,
+        ),
+        (v) => Math.round(Math.min(1, v) * FRAME_WASH * 255),
       )
     : existsSync(spritePath(`${id}.colour`))
       ? (await loadInk(`${id}.colour`, undefined, side)).data
       : fill.map((v) => Math.round(v * share));
   const accent = new Uint8Array(w * h).fill(255);
   const accentScale = field?.accentScale;
-  if (accentScale)
+  if (accentScale && inLines) {
     for (let i = 0; i < accent.length; i++) if (!inField(i, accentScale)) accent[i] = 0;
+    // Each part the engraved lines enclose takes one pigment, the one most of it lies
+    // in, so a scroll is never cut in two colours along the accent's oval.
+    const { labels, count } = labelMaskRegions(
+      inLines.map((v, i) => (v && !printed[i] ? 1 : 0)),
+      w,
+      h,
+    );
+    const outer = new Float64Array(count);
+    const size = new Float64Array(count);
+    labels.forEach((r, i) => {
+      if (r < 0) return;
+      size[r] = size[r]! + 1;
+      if (!accent[i]) outer[r] = outer[r]! + 1;
+    });
+    labels.forEach((r, i) => {
+      if (r >= 0) accent[i] = outer[r]! > size[r]! / 2 ? 0 : 255;
+    });
+  }
   const softAccent = gaussianBlurFloat32(Float32Array.from(accent), w, h, FILL_BLUR_SIGMA_PX);
   return { ink, fill, wash, accent: Uint8Array.from(softAccent, Math.round), w, h };
 }

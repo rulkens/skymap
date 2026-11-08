@@ -38,6 +38,7 @@ export function antiqueTitleGlobe(
     body: (typeof SCENE_BODIES)[number];
     radiusM: number;
     centre: Vec3;
+    angle: number;
     radiusUnits: number;
   } | null = null;
   for (const body of SCENE_BODIES) {
@@ -48,10 +49,10 @@ export function antiqueTitleGlobe(
     const toRadii = SCALE_UNITS.MPC_TO_M / radiusM;
     const centre = [0, 1, 2].map((i) => (p.positionMpc[i]! - eye[i]!) * toRadii) as Vec3;
     // Angular radius from the eye, as print units at the plate's scale.
-    const radiusUnits =
-      (Math.asin(Math.min(1, 1 / Math.hypot(...centre))) * ctx.drawPxPerRad) / unitPx;
+    const angle = Math.asin(Math.min(1, 1 / Math.hypot(...centre)));
+    const radiusUnits = (angle * ctx.drawPxPerRad) / unitPx;
     if (widest === null || radiusUnits > widest.radiusUnits)
-      widest = { body, radiusM, centre, radiusUnits };
+      widest = { body, radiusM, centre, angle, radiusUnits };
   }
   if (widest === null) return null;
   const orientation = ctx.snapshot.bodyStates.get(widest.body.id)!.orientation;
@@ -72,6 +73,10 @@ export function antiqueTitleGlobe(
       ray,
     ),
     coverage: antiqueGlobeCoverage(widest.centre, basis, frustum, size),
-    discPx: at && { centre: [at.x, at.y], radius: widest.radiusUnits * unitPx * reach },
+    // Its limb on the canvas: a sphere's silhouette spans tan of its angular radius, not the angle.
+    discPx: at && {
+      centre: [at.x, at.y],
+      radius: Math.tan(widest.angle) * ctx.drawPxPerRad * reach,
+    },
   };
 }

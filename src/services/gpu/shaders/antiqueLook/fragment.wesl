@@ -509,7 +509,9 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // On a Moon plate the chart's figures, rulings, trails and numerals fade (`u.subject`).
   let chart = 1.0 - u.subject;
   let figures = rowOn(HIDE_FIGURES) * chart;
-  let ornament = layerTexel(fullTex, DECOR_LAYER, ip) * vec4<f32>(figures, 1.0, 1.0, figures);
+  let decorTexel = layerTexel(fullTex, DECOR_LAYER, ip);
+  // A figure's wash fades with it; a clearing ornament's (the cartouche's) stays.
+  let ornament = decorTexel * vec4<f32>(figures, 1.0, 1.0, max(figures, step(0.01, decorTexel.b)));
   col = mix(col, paperTone, ornament.b);
   // Figures lie on the sky, behind any body; only a clearing ornament covers one.
   let behind = max(sky, ornament.b);

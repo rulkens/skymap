@@ -302,6 +302,14 @@ Owner ruling 2026-11-07: keep the generic galaxy engraving with these names; the
 - [x] Rose madder's pigment index pinned by a parity test. Panel (art/history/fidelity) 5.5/5/5.5 → 7.5/7/7, plateau at rounds 4-5. Shared `lineFamily` untouched, so Mars, Earth's mountains, the Moon and the rulings are unchanged. Cost: ~1.6 ms of `stylize` at the full-screen Red Spot close-up, dpr 2 (11.4 against 9.8 ms with the module stubbed; 11 quarter-res taps, the spot and outline work gated to where they show).
 - [ ] Open: the spot still a clean ellipse (panel: one contour heavier on the shadow side; fidelity: the plain's spiral core and pale collar); festoon whorls as scattered loops, not long strokes; the southern rulings still even; the disc's belts finer than a period figure (historian wants 3-4 broad bands, an oblate profile, a hatched limb).
 
+### Task 36: The title cartouche on a phone, in three designs (review 8 #3: "half the phone over Saturn", "mass-produced")
+**Files:** `utils/gpu/antiqueLook/fitAntiqueCartouche.ts`, `passes/antiqueLook/{antiquePlateCartouche,antiqueTitleGlobe}.ts`, `utils/gpu/antiqueLook/placeAntiqueNumerals.ts`, `data/rendering/{antiqueCartouches,antiqueTitleCartouches}.ts`, `tools/antique/packOrnaments.ts`, `data/antique/sprites/{strapwork,tablet,scrollwork}.png`
+- [x] Fitted to the canvas (at most 2/5 of its width), kept in its authored corner while shrinking (steps to half size) before moving, closing in on the neatline as it shrinks; clear of the open panels and, by a band's width, of the subject: the view's axis and the titled globe's limb (tan of its angular radius), which under a region's title is ground, not subject.
+- [x] Three designs by kind of plate (Ortelius strapwork for sky and cosmos, de Wit scrollwork for Earth, Goos tablet for a globe), the new two cut from PD scans; a compact name-only title below 0.8 of authored size; neatline numerals the cartouche would cover or crowd are left out.
+- [x] Washes stay inside the printed lines (pushed ink closed at half the silhouette's close), each enclosed part takes one pigment (no scroll cut along the accent oval); strapwork accent carmine; the strapwork's graticule gaps erased; the Moon plate keeps the cartouche's wash.
+- [x] Panel on cart7 (phone 400×850 @2 + desktop; saturn, earth-europe, moon-full, laniakea): UI/UX 7, historian 7, art critic 7.
+- [ ] Open: Europe desktop fits only half size above the Navigation panel (all three ask for more presence); the phone Moon tablet is small between neatline and limb; reviewers want one title scale across views and the strapwork lighter; a faint numeral ghost left of the strapwork's crest on laniakea desktop; Earth placement does not yet prefer sea.
+
 ## Definition of Done
 
 **Deliverables:** the `stylize` FRAME_ORDER line and `antiqueLook` pass; the `antique` settings

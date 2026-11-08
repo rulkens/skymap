@@ -4,6 +4,7 @@ import type { AntiqueSheetAnchor } from '../../../../src/@types/rendering/Antiqu
 import type { ScreenDiscPx } from '../../../../src/@types/rendering/ScreenDiscPx';
 import type { ScreenRectPx } from '../../../../src/@types/rendering/ScreenRectPx';
 import type { Vec2 } from '../../../../src/@types/math/Vec2';
+import { ANTIQUE_LADDER_UNITS } from '../../../../src/data/rendering/antiqueLook';
 import { fitAntiqueCartouche } from '../../../../src/utils/gpu/antiqueLook/fitAntiqueCartouche';
 import { sheetAnchorCentre } from '../../../../src/utils/render/sheetAnchorCentre';
 
@@ -58,10 +59,25 @@ describe('fitAntiqueCartouche', () => {
     expect(fitted.corner).toBe('topLeft');
     expect(fitted.sizeUnits).toBeLessThan(CARTOUCHE.sizeUnits);
     expect(covers.some((c) => overlaps(rectOf(fitted), c))).toBe(false);
-    // The corner-side edges stay where the full-size cartouche had them.
-    const full = rectOf(CARTOUCHE);
-    expect(rectOf(fitted).x0).toBeCloseTo(full.x0);
-    expect(rectOf(fitted).y0).toBeCloseTo(full.y0);
+    // Its corner-side edge closes in on the neatline, never past the band's middle.
+    expect(rectOf(fitted).x0).toBeLessThan(rectOf(CARTOUCHE).x0 - 1);
+    expect(rectOf(fitted).x0).toBeGreaterThan(ANTIQUE_LADDER_UNITS);
+  });
+
+  it('shrinks in its own corner before it moves to a free one', () => {
+    // Desktop Europe: the navigation panel leaves room above it for a smaller cartouche only.
+    const navigation = { x0: 0, y0: 330, x1: 334, y1: 884 };
+    const fitted = fit(DESKTOP, 1, [navigation]);
+    expect(fitted.corner).toBe('topLeft');
+    expect(fitted.sizeUnits).toBeLessThan(CARTOUCHE.sizeUnits);
+    expect(overlaps(rectOf(fitted), navigation)).toBe(false);
+  });
+
+  it('keeps a gap from the subject, not just off it', () => {
+    // A phone's Moon filling the width: its limb passes just under the authored corner.
+    const moon = { centre: [400, 782] as Vec2, radius: 601 };
+    const r = rectOf(fit(PHONE, PHONE_UNIT, [], [moon]), PHONE, PHONE_UNIT);
+    expect(touches(r, { ...moon, radius: moon.radius + 5 * PHONE_UNIT })).toBe(false);
   });
 
   it('shrinks hard on a phone, to two fifths of the screen width', () => {

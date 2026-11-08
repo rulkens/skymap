@@ -3,7 +3,7 @@
  * plate, 56 units in from the side and the top, just inside the neatline
  * (sizes and insets at the 900-unit reference height; `fitAntiqueCartouche`
  * shrinks and moves them on a small or crowded screen). Pigments are
- * `pigments.wesl`'s: 0 verdigris, 2 gamboge, 6 yellow ochre, 7 rose madder (the
+ * `pigments.wesl`'s: 0 verdigris, 2 gamboge, 4 carmine, 6 yellow ochre (the
  * strapwork's straps in ochre, carmine only on its scrolls, as a 1690s colourist picked parts out).
  */
 
@@ -21,7 +21,7 @@ export const ANTIQUE_CARTOUCHES: Readonly<Record<AntiqueCartoucheDesign, Antique
     sprite: 'strapwork',
     anchor: { corner: 'topLeft', insetUnits: [271, 191], sizeUnits: 430 },
     pigment: 6,
-    accent: 7,
+    accent: 4,
   },
   tablet: {
     sprite: 'tablet',
