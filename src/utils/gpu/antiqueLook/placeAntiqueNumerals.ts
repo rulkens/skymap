@@ -10,14 +10,12 @@
  * graduation short of a title frame.
  */
 
-import type { ViewBasis } from '../../../@types/camera/projection/ViewBasis';
-import type { ViewFrustum } from '../../../@types/camera/projection/ViewFrustum';
+import type { ViewProjection } from '../../../@types/camera/projection/ViewProjection';
 import type { AntiqueGlyphInstance } from '../../../@types/rendering/AntiqueGlyphInstance';
 import type { AntiqueGlyphSheet } from '../../../@types/rendering/AntiqueGlyphSheet';
 import type { AntiquePlateRulings } from '../../../@types/rendering/AntiquePlateRulings';
 import type { AntiqueRulingFrame } from '../../../@types/rendering/AntiqueRulingFrame';
 import type { ScreenRectPx } from '../../../@types/rendering/ScreenRectPx';
-import type { Size } from '../../../@types/rendering/Size';
 import {
   ANTIQUE_LADDER_UNITS,
   ANTIQUE_MAX_GLYPHS,
@@ -25,7 +23,7 @@ import {
   ANTIQUE_NUMERAL_UNITS,
 } from '../../../data/rendering/antiqueLook';
 import { ANTIQUE_SIDE_NUMERAL_REACH_UNITS } from '../../../data/rendering/antiqueRulings';
-import { rayThroughPx } from '../../camera/projection/rayThroughPx';
+import { rayOfPx } from '../../camera/projection/viewProjection/rayOfPx';
 import { formatAntiqueDegrees } from './formatAntiqueDegrees';
 import { rulingLonLat } from './rulingLonLat';
 import { setAntiqueDigits } from './setAntiqueDigits';
@@ -39,16 +37,15 @@ const NUMBER_GAP = 0.6;
 const MINUTES_PER_TURN = 360 * 60;
 
 export function placeAntiqueNumerals(input: {
-  readonly basis: ViewBasis;
-  readonly frustum: ViewFrustum;
-  readonly size: Size;
+  readonly projection: ViewProjection;
   readonly unitPx: number;
   readonly rulings: AntiquePlateRulings;
   readonly sheet: Pick<AntiqueGlyphSheet, 'width' | 'height' | 'baseline' | 'glyphs'>;
   /** The title cartouche, device px. */
   readonly cartouche: ScreenRectPx | null;
 }): readonly AntiqueGlyphInstance[] {
-  const { size, unitPx, rulings, cartouche } = input;
+  const { projection, unitPx, rulings, cartouche } = input;
+  const { size } = projection;
   const crowd = 0.5 * ANTIQUE_NUMERAL_UNITS * unitPx;
   const band = ANTIQUE_LADDER_UNITS * unitPx;
   const inset = (ANTIQUE_NUMERAL_INSET_UNITS - ANTIQUE_LADDER_UNITS) * unitPx;
@@ -72,7 +69,8 @@ export function placeAntiqueNumerals(input: {
   ] as const;
   for (const edge of edges) {
     const values: number[] = [];
-    const frames: AntiqueRulingFrame[] = [];
+    // A sample outside the projection (past a fisheye's disc) reads no frame.
+    const frames: (AntiqueRulingFrame | null)[] = [];
     const points: [number, number][] = [];
     for (let i = 0; i <= SAMPLES; i++) {
       const t = i / SAMPLES;
@@ -80,10 +78,10 @@ export function placeAntiqueNumerals(input: {
         edge.from[0] + (edge.to[0] - edge.from[0]) * t,
         edge.from[1] + (edge.to[1] - edge.from[1]) * t,
       ];
-      const d = rayThroughPx(p, input.basis, input.frustum, size);
-      const onGlobe = rulings.globe && rulingLonLat(rulings.globe, d);
-      const frame = onGlobe ? rulings.globe! : rulings.sky;
-      const v = (onGlobe || rulingLonLat(rulings.sky, d)!)[edge.lon ? 0 : 1];
+      const d = rayOfPx(projection, p);
+      const onGlobe = d && rulings.globe && rulingLonLat(rulings.globe, d);
+      const frame = d === null ? null : onGlobe ? rulings.globe! : rulings.sky;
+      const v = d === null ? NaN : (onGlobe || rulingLonLat(rulings.sky, d)!)[edge.lon ? 0 : 1];
       // Unwrap longitude across its ±180 seam so crossings interpolate.
       const prev = frames[i - 1] === frame ? values[i - 1]! : v;
       values.push(prev + (((v - prev + 540) % 360) - 180));
@@ -94,7 +92,7 @@ export function placeAntiqueNumerals(input: {
     const clear = CORNER_CLEAR_UNITS * unitPx;
     const crossings: { minutes: number; at: [number, number] }[] = [];
     for (let i = 0; i < SAMPLES; i++) {
-      if (frames[i] !== frames[i + 1]) continue;
+      if (frames[i] === null || frames[i] !== frames[i + 1]) continue;
       const step = frames[i]![edge.lon ? 'lon' : 'lat'].stepDeg;
       const a = values[i]!;
       const b = values[i + 1]!;

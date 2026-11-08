@@ -51,6 +51,7 @@ import { smoothstep } from '../../../../utils/math/smoothstep';
 import { bodyRowSlabs } from '../../../engine/frame/bodyRowSlabs';
 import { viewBasis } from '../../../../utils/camera/projection/viewBasis';
 import { viewCornerRays } from '../../../../utils/camera/projection/viewCornerRays';
+import { outputProjection } from '../../../../utils/camera/projection/viewProjection/outputProjection';
 import type { AntiqueLook } from '../../../../@types/rendering/AntiqueLook';
 import type { AntiqueLookGpu } from '../../../../@types/rendering/AntiqueLookGpu';
 import type { AntiqueSheetAssets } from '../../../../@types/rendering/AntiqueSheetAssets';
@@ -127,13 +128,14 @@ export function createAntiqueLook(init: {
     const targets = ctx.snapshot.renderTargets;
     const size = ctx.canvasSize;
     const unitPx = size.height / ANTIQUE_REFERENCE_HEIGHT_CSS;
+    const projection = outputProjection(ctx, state.viewRig);
     const basis = viewBasis(ctx.cam);
     const hasBodies = ctx.snapshot.renderedTargets.has('foreground:0');
     // Inside an atmosphere the day sky fills foreground:0's alpha; its depth tells body from sky.
     const depthCover = hasBodies && bodyRowSlabs(ctx).insideAtmosphere.length > 0;
     const { paper: paperAssets, ornaments: atlas, glyphs } = assets;
     const rays = viewCornerRays(basis, ctx.frustum, size);
-    const rulings = antiquePlateRulings(state, ctx, { basis, rays, unitPx }, hasBodies);
+    const rulings = antiquePlateRulings(state, ctx, { projection, basis, rays, unitPx }, hasBodies);
     const [x, y, z] = ctx.drawCamPos;
     const cosmos = smoothstep(ANTIQUE_REGIME_MPC[0], ANTIQUE_REGIME_MPC[1], Math.hypot(x, y, z));
     // The density raymarch, when it drew this frame: charted in the cosmos only (`web.wesl`).
@@ -146,7 +148,7 @@ export function createAntiqueLook(init: {
     const globe = antiqueTitleGlobe(ctx, basis, unitPx);
     packAntiqueUniforms(
       {
-        size,
+        projection,
         unitPx,
         bodies: hasBodies,
         depthCover,
@@ -154,7 +156,6 @@ export function createAntiqueLook(init: {
         moon: moonPrinted,
         captions: io.overlay !== null,
         paper: paperAssets !== null,
-        rays,
         seed: PAPER_SEED,
         rulings,
         hatchAngle:
@@ -182,9 +183,7 @@ export function createAntiqueLook(init: {
         : placeAntiqueOrnaments({
             ornaments: ANTIQUE_ORNAMENTS,
             atlas: ANTIQUE_ORNAMENT_ATLAS,
-            basis,
-            frustum: ctx.frustum,
-            size,
+            projection,
             unitPx,
             camPosMpc: ctx.drawCamPos,
             cartouche: card && {
@@ -210,9 +209,7 @@ export function createAntiqueLook(init: {
       glyphs === null
         ? []
         : placeAntiqueNumerals({
-            basis,
-            frustum: ctx.frustum,
-            size,
+            projection,
             unitPx,
             rulings,
             sheet: glyphs.sheet,

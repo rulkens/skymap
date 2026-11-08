@@ -16,7 +16,11 @@ const SIZE = { width: 1600, height: 900 };
 const IDENTITY = [1, 0, 0, 0, 1, 0, 0, 0, 1] as const;
 const sky = { axes: IDENTITY, lonOffsetDeg: 0, globeCentre: null };
 const steps = (frame: { globeCentre: Vec3 | null }, basis: ViewBasis) =>
-  antiqueGraticuleSteps({ ...sky, ...frame }, basis, FRUSTUM, SIZE, 1);
+  antiqueGraticuleSteps(
+    { ...sky, ...frame },
+    { kind: 'rectilinear', basis, frustum: FRUSTUM, size: SIZE },
+    1,
+  );
 
 /** Looking at declination `decDeg` on RA 0, north up. */
 function lookingAtDec(decDeg: number): ViewBasis {

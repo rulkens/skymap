@@ -8,17 +8,16 @@
  * there, so longitude widens toward the pole and a globe's net with distance.
  */
 
-import type { ViewBasis } from '../../../@types/camera/projection/ViewBasis';
-import type { ViewFrustum } from '../../../@types/camera/projection/ViewFrustum';
+import type { ViewProjection } from '../../../@types/camera/projection/ViewProjection';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { AntiqueRulingFrame } from '../../../@types/rendering/AntiqueRulingFrame';
 import type { AntiqueRulingStep } from '../../../@types/rendering/AntiqueRulingStep';
-import type { Size } from '../../../@types/rendering/Size';
 import {
   ANTIQUE_RULING_GAP_UNITS,
   ANTIQUE_RULING_STEPS,
 } from '../../../data/rendering/antiqueRulings';
-import { rayThroughPx } from '../../camera/projection/rayThroughPx';
+import { pxPerRadAt } from '../../camera/projection/viewProjection/pxPerRadAt';
+import { rayOfPx } from '../../camera/projection/viewProjection/rayOfPx';
 import { cross3 } from '../../math/cross3';
 import { normalize3 } from '../../math/normalize3';
 import { rulingLonLat } from './rulingLonLat';
@@ -27,19 +26,24 @@ const COARSEST = ANTIQUE_RULING_STEPS[ANTIQUE_RULING_STEPS.length - 1]!;
 
 export function antiqueGraticuleSteps(
   frame: Pick<AntiqueRulingFrame, 'axes' | 'lonOffsetDeg' | 'globeCentre'>,
-  basis: ViewBasis,
-  frustum: ViewFrustum,
-  size: Size,
+  projection: ViewProjection,
   unitPx: number,
 ): { readonly lon: AntiqueRulingStep; readonly lat: AntiqueRulingStep } {
   const c = frame.globeCentre;
-  const centre = rayThroughPx([size.width / 2, size.height / 2], basis, frustum, size);
+  const { width, height } = projection.size;
+  const at = (x: number, y: number) => rayOfPx(projection, [width / 2 + x, height / 2 + y])!;
+  const centre = at(0, 0);
   const anchor = c !== null && rulingLonLat(frame, centre) === null ? c : centre;
   // Turn the anchor by one pixel's angle at the centre, both ways across it.
-  const radPerPx = (frustum.tanUp - frustum.tanDown) / size.height;
+  const radPerPx = 1 / pxPerRadAt(projection, normalize3(centre));
   const n = normalize3(anchor);
-  const across = cross3(n, basis.up);
-  const e1 = Math.hypot(...across) > 1e-6 ? normalize3(across) : basis.right;
+  // The frame the nudges turn in only needs to sit across the anchor: screen up, else right.
+  const screen = (x: number, y: number) => {
+    const p = at(x, y);
+    return normalize3([p[0] - centre[0], p[1] - centre[1], p[2] - centre[2]]);
+  };
+  const across = cross3(n, screen(0, -1));
+  const e1 = Math.hypot(...across) > 1e-6 ? normalize3(across) : screen(1, 0);
   const e2 = cross3(e1, n);
   const nudged = (e: Readonly<Vec3>) =>
     rulingLonLat(frame, [n[0] + e[0] * radPerPx, n[1] + e[1] * radPerPx, n[2] + e[2] * radPerPx]);

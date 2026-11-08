@@ -75,9 +75,7 @@ function topNumbers(
   cartouche: ScreenRectPx | null = null,
 ): { x: number; left: number; right: number; text: string }[] {
   const glyphs = placeAntiqueNumerals({
-    basis,
-    frustum,
-    size: SIZE,
+    projection: { kind: 'rectilinear', basis, frustum, size: SIZE },
     unitPx: 1,
     rulings,
     sheet: SHEET,
@@ -171,9 +169,7 @@ describe('placeAntiqueNumerals', () => {
     const tan = Math.tan((0.25 * Math.PI) / 180);
     const frustum = { tanLeft: -tan * 1.78, tanRight: tan * 1.78, tanDown: -tan, tanUp: tan };
     const glyphs = placeAntiqueNumerals({
-      basis,
-      frustum,
-      size: SIZE,
+      projection: { kind: 'rectilinear', basis, frustum, size: SIZE },
       unitPx: 1,
       rulings: { sky: frame(5 / 60), globe: null },
       sheet: SHEET,

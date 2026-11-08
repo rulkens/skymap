@@ -3,15 +3,14 @@
  * (`shaders/antiqueLook/io.wesl` holds the byte map).
  */
 
-import type { ViewCornerRays } from '../camera/projection/ViewCornerRays';
+import type { ViewProjection } from '../camera/projection/ViewProjection';
 import type { AntiquePlateRulings } from './AntiquePlateRulings';
 import type { AntiquePlateTune } from './AntiquePlateTune';
-import type { Size } from './Size';
 import type { Vec3 } from '../math/Vec3';
 
 export type AntiqueUniformInput = {
-  /** Target size in device px. */
-  readonly size: Size;
+  /** The output's projection: the target size, and the corner rays `fragment.wesl`'s `viewRay` reads. */
+  readonly projection: ViewProjection;
   /** Device px per print unit. */
   readonly unitPx: number;
   /** foreground:0 holds this frame's bodies. */
@@ -28,7 +27,6 @@ export type AntiqueUniformInput = {
   readonly captions: boolean;
   /** The scanned paper tile and stain mask have landed. */
   readonly paper: boolean;
-  readonly rays: ViewCornerRays;
   readonly seed: number;
   /** The plate's ruling frames (`antiquePlateRulings`). */
   readonly rulings: AntiquePlateRulings;

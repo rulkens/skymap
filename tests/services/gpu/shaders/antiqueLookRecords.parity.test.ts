@@ -71,7 +71,13 @@ describe('antique look records ↔ WGSL structs', () => {
     const { offsets, layout } = layoutOf('io.wesl', 'AntiqueUniforms');
     expect(layout.size).toBe(ANTIQUE_UNIFORM_BYTES);
     const packed = packAntiqueUniforms({
-      size: { width: 1001, height: 1002 },
+      // A degenerate pinhole whose corner rays read x = 1011, 1012, 1013, 1014 (tl, tr, bl, br).
+      projection: {
+        kind: 'rectilinear',
+        basis: { forward: [0, 0, 0], right: [1, 0, 0], up: [-2, 0, 0] },
+        frustum: { tanLeft: 1013, tanRight: 1014, tanDown: 0, tanUp: 1 },
+        size: { width: 1001, height: 1002 },
+      },
       unitPx: 1003,
       bodies: true,
       depthCover: true,
@@ -79,7 +85,6 @@ describe('antique look records ↔ WGSL structs', () => {
       moon: false,
       captions: false,
       paper: true,
-      rays: { tl: [1011, 0, 0], tr: [1012, 0, 0], bl: [1013, 0, 0], br: [1014, 0, 0] },
       seed: 1021,
       rulings: {
         sky: {

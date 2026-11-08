@@ -12,6 +12,7 @@ import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { PassState } from '../../../../@types/engine/frame/PassState';
 import type { ViewBasis } from '../../../../@types/camera/projection/ViewBasis';
 import type { ViewCornerRays } from '../../../../@types/camera/projection/ViewCornerRays';
+import type { ViewProjection } from '../../../../@types/camera/projection/ViewProjection';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { AntiquePlateRulings } from '../../../../@types/rendering/AntiquePlateRulings';
 import type { AntiqueRulingFrame } from '../../../../@types/rendering/AntiqueRulingFrame';
@@ -32,15 +33,20 @@ import { outerBoundRadiusM } from '../../../../utils/occlusion/outerBoundRadiusM
 export function antiquePlateRulings(
   state: PassState,
   ctx: FrameView,
-  view: { readonly basis: ViewBasis; readonly rays: ViewCornerRays; readonly unitPx: number },
+  view: {
+    readonly projection: ViewProjection;
+    readonly basis: ViewBasis;
+    readonly rays: ViewCornerRays;
+    readonly unitPx: number;
+  },
   /** foreground:0 drew bodies this frame: a globe that did not draw rules nothing. */
   hasBodies: boolean,
 ): AntiquePlateRulings {
-  const { basis, rays, unitPx } = view;
+  const { projection, basis, rays, unitPx } = view;
   const { frustum, canvasSize: size } = ctx;
   const ruled = (frame: Omit<AntiqueRulingFrame, 'lon' | 'lat'>): AntiqueRulingFrame => ({
     ...frame,
-    ...antiqueGraticuleSteps(frame, basis, frustum, size, unitPx),
+    ...antiqueGraticuleSteps(frame, projection, unitPx),
   });
   const { skyRulings } = state.settings.antique.tuning;
   const sky = ruled({

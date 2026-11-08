@@ -9,13 +9,11 @@
  * Avoidance), so nothing pops and nothing balloons past the plate.
  */
 
-import type { ViewBasis } from '../../../@types/camera/projection/ViewBasis';
-import type { ViewFrustum } from '../../../@types/camera/projection/ViewFrustum';
+import type { ViewProjection } from '../../../@types/camera/projection/ViewProjection';
 import type { AntiqueCartouche } from '../../../@types/rendering/AntiqueCartouche';
 import type { AntiqueOrnament } from '../../../@types/rendering/AntiqueOrnament';
 import type { AntiqueOrnamentAtlas } from '../../../@types/rendering/AntiqueOrnamentAtlas';
 import type { AntiqueOrnamentInstance } from '../../../@types/rendering/AntiqueOrnamentInstance';
-import type { Size } from '../../../@types/rendering/Size';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { AntiqueSheetAnchor } from '../../../@types/rendering/AntiqueSheetAnchor';
 import { GAL_TO_EQ_MATRIX } from '../../../data/superGalacticTransform';
@@ -26,7 +24,8 @@ import {
 } from '../../../data/rendering/antiqueLook';
 import { raDecDistToCartesian } from '../../math/raDecDistToCartesian';
 import { rotateVec3ByTightMat3 } from '../../math/rotateVec3ByTightMat3';
-import { projectDirToPx } from '../../camera/projection/projectDirToPx';
+import { pxOfRay } from '../../camera/projection/viewProjection/pxOfRay';
+import { pxPerRadAt } from '../../camera/projection/viewProjection/pxPerRadAt';
 import { overlapShare } from '../../render/overlapShare';
 import { sheetAnchorCentre } from '../../render/sheetAnchorCentre';
 import { smoothstep } from '../../math/smoothstep';
@@ -45,9 +44,7 @@ const SUBJECT_HALF_SHARE = 0.12;
 export function placeAntiqueOrnaments(input: {
   readonly ornaments: readonly AntiqueOrnament[];
   readonly atlas: AntiqueOrnamentAtlas;
-  readonly basis: ViewBasis;
-  readonly frustum: ViewFrustum;
-  readonly size: Size;
+  readonly projection: ViewProjection;
   readonly unitPx: number;
   /** The eye in the world frame, Mpc from the Sun. */
   readonly camPosMpc: Readonly<Vec3>;
@@ -63,12 +60,12 @@ export function placeAntiqueOrnaments(input: {
     } | null;
   } | null;
 }): readonly AntiqueOrnamentInstance[] {
-  const { atlas, basis, frustum, size, unitPx } = input;
+  const { atlas, projection, unitPx } = input;
+  const { size } = projection;
   const camDistMpc = Math.hypot(input.camPosMpc[0], input.camPosMpc[1], input.camPosMpc[2]);
   const cosmos = smoothstep(ANTIQUE_REGIME_MPC[0], ANTIQUE_REGIME_MPC[1], camDistMpc);
   const nearSun =
     1 - smoothstep(ANTIQUE_FIGURE_VANTAGE_MPC[0], ANTIQUE_FIGURE_VANTAGE_MPC[1], camDistMpc);
-  const pxPerTan = size.height / (frustum.tanUp - frustum.tanDown);
   const placed: AntiqueOrnamentInstance[] = [];
   const reserved: { centre: readonly [number, number]; half: readonly [number, number] }[] = [];
   const subject = {
@@ -148,12 +145,11 @@ export function placeAntiqueOrnaments(input: {
         : unit;
     const range = Math.hypot(toward[0], toward[1], toward[2]);
     const dir: Vec3 = [toward[0] / range, toward[1] / range, toward[2] / range];
-    const at = projectDirToPx(dir, basis, frustum, size);
-    if (at === null) continue;
-    const centre: [number, number] = [at.x, at.y];
+    const centre = pxOfRay(projection, dir);
+    if (centre === null) continue;
     const angle =
       anchor.kind === 'space' ? 2 * Math.atan(anchor.sizeMpc / (2 * range)) : anchor.sizeDeg * DEG;
-    const widthPx = (Math.tan(angle * 0.5) * 2 * pxPerTan) / at.z;
+    const widthPx = Math.tan(angle * 0.5) * 2 * pxPerRadAt(projection, dir);
     const share = widthPx / size.height;
     opacity *=
       smoothstep(SKY_FADE_IN[0], SKY_FADE_IN[1], share) *
@@ -179,7 +175,7 @@ export function placeAntiqueOrnaments(input: {
     if (anchor.kind === 'space' && overlapShare(centre, half, subject) > 0) continue;
     // A negative half-width flips the sprite in the shader (local x runs backwards).
     if (row.mirrored) half[0] = -half[0];
-    const north = row.facesNorth ? screenNorthAngle(dir, centre, basis, frustum, size) : 0;
+    const north = row.facesNorth ? screenNorthAngle(dir, centre, projection) : 0;
     placed.push({
       centrePx: centre,
       halfPx: half,
