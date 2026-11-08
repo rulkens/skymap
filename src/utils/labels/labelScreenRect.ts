@@ -1,9 +1,8 @@
 /**
  * labelScreenRect — the screen rect a label's ink occupies, in device px.
  *
- * Reproduces the label vertex shader's sizing on the CPU: `pxPerEm = worldEmMpc
- * / clipW · pxPerRad · LABEL_EM_PX_RETUNE`, clamped to [minPx, maxPx], then atlas px → screen px
- * via `displayEmPx / ATLAS_FONT_SIZE` (+Y-down bbox already matches screen
+ * Reproduces the label vertex shader's sizing on the CPU (`labelDisplayEmPx`), then
+ * atlas px → screen px via `displayEmPx / ATLAS_FONT_SIZE` (+Y-down bbox already matches screen
  * space — the shader's atlas-Y and NDC→screen flips cancel). ONE derivation for
  * the two consumers that must agree — the COSMO declutter's overlap test and
  * the pick quads — so a label can't be clickable somewhere it isn't drawn.
@@ -15,11 +14,11 @@ import type { ScreenRectPx } from '../../@types/rendering/ScreenRectPx';
 import type { Vec2 } from '../../@types/math/Vec2';
 import { ATLAS_FONT_SIZE } from '../../data/fonts';
 import {
-  LABEL_EM_PX_RETUNE,
   LABEL_MAX_PX_DEFAULT,
   LABEL_MIN_PX_DEFAULT,
   LABEL_WORLD_EM_MPC_DEFAULT,
 } from '../../data/labels/labelSizingDefaults';
+import { labelDisplayEmPx } from './labelDisplayEmPx';
 
 export function labelScreenRect(args: {
   readonly label: Label2D;
@@ -30,7 +29,9 @@ export function labelScreenRect(args: {
   readonly clipW: number;
   /** The drawn view's pixels per radian — the shader's `cam.pxPerRad`. */
   readonly pxPerRad: number;
-  /** Uniform outward inflation, device px. Defaults to 0 (the drawn ink). */
+  /** Device px per CSS px — the label's size clamp and `padPx` are CSS px. */
+  readonly devicePixelRatio: number;
+  /** Uniform outward inflation, CSS px. Defaults to 0 (the drawn ink). */
   readonly padPx?: number;
   /**
    * Also inflate by the painted outline's screen footprint
@@ -40,14 +41,16 @@ export function labelScreenRect(args: {
    */
   readonly includeOutline?: boolean;
 }): ScreenRectPx {
-  const { label, bbox, screenPx, clipW, pxPerRad } = args;
-  const pad = args.padPx ?? 0;
-  const pxPerEm =
-    ((label.worldEmMpc ?? LABEL_WORLD_EM_MPC_DEFAULT) / clipW) * pxPerRad * LABEL_EM_PX_RETUNE;
-  const displayEmPx = Math.min(
-    Math.max(pxPerEm, label.minPixelSize ?? LABEL_MIN_PX_DEFAULT),
-    label.maxPixelSize ?? LABEL_MAX_PX_DEFAULT,
-  );
+  const { label, bbox, screenPx, clipW, pxPerRad, devicePixelRatio } = args;
+  const pad = (args.padPx ?? 0) * devicePixelRatio;
+  const displayEmPx = labelDisplayEmPx({
+    worldEmMpc: label.worldEmMpc ?? LABEL_WORLD_EM_MPC_DEFAULT,
+    clipW,
+    pxPerRad,
+    minPixelSize: label.minPixelSize ?? LABEL_MIN_PX_DEFAULT,
+    maxPixelSize: label.maxPixelSize ?? LABEL_MAX_PX_DEFAULT,
+    devicePixelRatio,
+  });
   const s = displayEmPx / ATLAS_FONT_SIZE;
   const outlinePx = args.includeOutline ? (label.outlineEmFrac ?? 0) * displayEmPx : 0;
   const inflate = pad + outlinePx;

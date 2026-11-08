@@ -142,6 +142,7 @@ const SCENE_BODIES = positionedBodiesOf(
 function makeCtx(eye: Vec3, slab: Slab): FrameView {
   return {
     snapshot: {
+      devicePixelRatio: 1,
       bodyStates: deriveBodyStates(CONST_J2000),
       nowMs: 0,
       simDays: CONST_J2000,

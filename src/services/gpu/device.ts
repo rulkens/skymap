@@ -25,6 +25,7 @@
  */
 
 import type { GpuContext } from '../../@types/rendering/GpuContext';
+import { displayPixelRatio } from '../../utils/gpu/displayPixelRatio';
 
 /** Extra device-request hints beyond the `timestamp-query` mirror — see Step 2 below. */
 type InitGpuOptions = {
@@ -225,10 +226,8 @@ export function watchHdrCapability(onChange: (hdrCapable: boolean) => void): () 
  *          `false` if the canvas was already the right size.
  */
 export function resizeCanvasToDisplay(canvas: HTMLCanvasElement): boolean {
-  // Clamp DPR to 2 — see doc-comment above for rationale.
-  // `|| 1` guards the rare case where `devicePixelRatio` is 0 or NaN
-  // (seen in some jsdom test environments).
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  // Clamped to 2 — see doc-comment above for rationale.
+  const dpr = displayPixelRatio();
 
   // `Math.floor` ensures we never request a sub-pixel fraction from the GPU.
   // `Math.max(1, …)` prevents a zero-dimension canvas when the element is

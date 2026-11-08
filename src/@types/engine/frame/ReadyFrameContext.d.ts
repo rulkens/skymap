@@ -70,6 +70,9 @@ export type ReadyFrameContext = {
    * animation stays a pure function of the stamped time.
    */
   nowMs: number;
+  /** Device px per CSS px (`displayPixelRatio`), read once per frame: sizes written in
+   *  CSS px (label sizes, their pads) become device px by this factor. */
+  devicePixelRatio: number;
   /**
    * This frame's sim-clock instant in Julian days — `deriveSimDays(time, nowMs)`,
    * sampled ONCE by `runFrame` from the time-intent slice before the camera

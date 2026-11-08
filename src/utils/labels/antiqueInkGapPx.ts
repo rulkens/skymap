@@ -6,6 +6,8 @@
 
 import { ANTIQUE_LABEL_STYLE } from '../../data/labels/antiqueLabelStyle';
 
-export function antiqueInkGapPx(subjectSizePx: number): number {
-  return subjectSizePx * ANTIQUE_LABEL_STYLE.rimFraction + ANTIQUE_LABEL_STYLE.gapPx;
+export function antiqueInkGapPx(subjectSizePx: number, devicePixelRatio: number): number {
+  return (
+    subjectSizePx * ANTIQUE_LABEL_STYLE.rimFraction + ANTIQUE_LABEL_STYLE.gapPx * devicePixelRatio
+  );
 }

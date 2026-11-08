@@ -83,10 +83,11 @@ import { packLabels } from './packLabels';
 
 // `struct Uniforms` in io.wesl: the 80-byte camera prefix (viewProj 0..63,
 // viewportPx 64..71, pxPerRad 72..75, one zero pad f32 76..79), then
-// emClipScale at 80..83, padded to 16 -> 96.
+// emClipScale at 80..83 and devicePixelRatio at 84..87, padded to 16 -> 96.
 const UNIFORM_BYTES = 96;
-// f32 index of `emClipScale` (byte 80).
+// f32 index of `emClipScale` (byte 80); `devicePixelRatio` follows it.
 const EM_CLIP_SCALE_F32_INDEX = CAMERA_UNIFORM_BYTES / 4;
+const DEVICE_PIXEL_RATIO_F32_INDEX = EM_CLIP_SCALE_F32_INDEX + 1;
 
 // ─── capacity constants ───────────────────────────────────────────────────
 
@@ -477,16 +478,17 @@ export function createLabelRenderer(
     viewProj: Float32Array,
     viewportSize: Vec2,
     pxPerRad: number,
-    extras?: { scene?: OverlaySceneOcclusion; clipScale?: number },
+    extras: { devicePixelRatio: number; scene?: OverlaySceneOcclusion; clipScale?: number },
   ): void {
-    const scene = extras?.scene;
+    const scene = extras.scene;
     if (!bindGroup || !instanceBuffer || currentGlyphCount === 0) return;
 
     // The pad float 19 stays zero via Float32Array zero-init — the shared
     // writer leaves it untouched by design.
     const uni = new Float32Array(UNIFORM_BYTES / 4);
     writeCameraPrefix(uni, viewProj, viewportSize, pxPerRad);
-    uni[EM_CLIP_SCALE_F32_INDEX] = extras?.clipScale ?? 1;
+    uni[EM_CLIP_SCALE_F32_INDEX] = extras.clipScale ?? 1;
+    uni[DEVICE_PIXEL_RATIO_F32_INDEX] = extras.devicePixelRatio;
     device.queue.writeBuffer(uniformBuffer, 0, uni);
 
     // Pipeline selection: an occlusion instance draws through its occlusion

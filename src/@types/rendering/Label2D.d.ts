@@ -66,14 +66,15 @@ export type Label2D = {
    */
   readonly outlineEmFrac?: number;
   /**
-   * Floor clamp on the projected em height in screen pixels (default 8).
+   * Floor clamp on the projected em height in CSS px (default 8); drawn at this times
+   * the device pixel ratio, so a name reads the same size on any screen.
    * When the perspective projection of `worldEmMpc` falls below this
    * value (label is very far away), the label renders at exactly this
    * pixel height instead of shrinking further.
    */
   readonly minPixelSize?: number;
   /**
-   * Ceiling clamp on the projected em height in screen pixels (default 64).
+   * Ceiling clamp on the projected em height in CSS px (default 64).
    * Prevents labels from becoming enormous when the camera is very close
    * to the anchor.
    */

@@ -39,7 +39,7 @@ export const labelsNearPass: ContentPass = {
     if (renderer === null) return;
     const lineRenderer = state.gpu.markerLineRendererNear;
 
-    const { vpF32, viewportPx, clipScale } = near0LabelProjection(ctx);
+    const { vpF32, viewportPx, clipScale, devicePixelRatio } = near0LabelProjection(ctx);
 
     // The joint both renderers bind: the coverage alpha AND the sampled depth
     // these captions clip their glyphs against, since their `occludeNearKm`
@@ -53,6 +53,7 @@ export const labelsNearPass: ContentPass = {
     }
     // The captions' em rides the rescaled NEAR0 matrix, so it scales with it.
     renderer.draw(pass, vpF32, viewportPx, ctx.drawPxPerRad, {
+      devicePixelRatio,
       scene,
       clipScale,
     });

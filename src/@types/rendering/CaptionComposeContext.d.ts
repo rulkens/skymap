@@ -8,6 +8,8 @@ export type CaptionComposeContext = {
   readonly camPos: Readonly<Vec3>;
   readonly viewportShortSidePx: number;
   readonly drawPxPerRad: number;
+  /** `ReadyFrameContext.devicePixelRatio`: the leader's CSS-px gap becomes device px by it. */
+  readonly devicePixelRatio: number;
   /** The focus sphere: captions lose their pick id outside it. */
   readonly focus: FocusUniformsValue;
   readonly occluders: readonly OccluderBody[];

@@ -86,6 +86,7 @@ export const produceMilkyWayLabel =
       worldEmMpc: style.worldEmMpc,
       minPixelSize: style.minPixelSize,
       maxPixelSize: style.maxPixelSize,
+      devicePixelRatio: ctx.snapshot.devicePixelRatio,
     });
     // Origin behind the camera: the projection is undefined — emit nothing.
     if (placement === null) return { labels: [], awake: false };

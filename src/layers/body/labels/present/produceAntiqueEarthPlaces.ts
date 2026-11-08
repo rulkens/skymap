@@ -60,7 +60,8 @@ export function produceAntiqueEarthPlaces(
       positionMpc: earth.positionMpc,
       radiusM,
       camPosMpc: cam,
-      pxPerRad: ctx.drawPxPerRad,
+      // CSS px, the unit `globePx` and the names' boxes are in.
+      pxPerRad: ctx.drawPxPerRad / ctx.snapshot.devicePixelRatio,
     });
     if (diameterPx < globePx[0]) return NONE;
 

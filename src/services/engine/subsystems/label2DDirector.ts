@@ -245,7 +245,9 @@ function declutterByBboxOverlap(
   antique: boolean,
   farIds: ReadonlySet<string>,
 ): Label2D[] {
-  const { pxPerRad } = projection;
+  const { pxPerRad, devicePixelRatio } = projection;
+  // CSS px, like every label size and pad; the rects below are device px.
+  const pad = padPx * devicePixelRatio;
   // `labelScreenRect` is the shared CPU twin of the vertex shader's em clamp —
   // the pick path derives its hit boxes from the same function, so a label
   // cannot be decluttered against one rect and clicked on another.
@@ -260,15 +262,25 @@ function declutterByBboxOverlap(
     // here at its proposed lift: a planet's floated name must not cull a
     // rover standing at the planet's own anchor.
     if (antique && label.lift !== undefined) {
-      const r = labelScreenRect({ label, bbox, screenPx: p.screenPx, clipW: p.clipW, pxPerRad });
-      const dy = p.screenPx[1] - antiqueInkGapPx(label.lift.subjectSizePx) - r.y1;
+      const r = labelScreenRect({
+        label,
+        bbox,
+        screenPx: p.screenPx,
+        clipW: p.clipW,
+        pxPerRad,
+        devicePixelRatio,
+      });
+      const dy = p.screenPx[1] - antiqueInkGapPx(label.lift.subjectSizePx, devicePixelRatio) - r.y1;
       return { x0: r.x0, y0: r.y0 + dy, x1: r.x1, y1: r.y1 + dy };
     }
     const screenPx: Vec2 =
       label.lift === undefined
         ? p.screenPx
-        : [p.screenPx[0], p.screenPx[1] - proposedLiftPx(label.lift.subjectSizePx)];
-    return labelScreenRect({ label, bbox, screenPx, clipW: p.clipW, pxPerRad });
+        : [
+            p.screenPx[0],
+            p.screenPx[1] - proposedLiftPx(label.lift.subjectSizePx, devicePixelRatio),
+          ];
+    return labelScreenRect({ label, bbox, screenPx, clipW: p.clipW, pxPerRad, devicePixelRatio });
   });
   const discs = antique ? bodyDiscs(labels, projected, pxPerRad) : [];
 
@@ -287,10 +299,10 @@ function declutterByBboxOverlap(
         const aRect = rects[a]!;
         if (!projected[a]!.onScreen || !aRect) continue;
         if (
-          rect.x0 - padPx < aRect.x1 &&
-          rect.x1 + padPx > aRect.x0 &&
-          rect.y0 - padPx < aRect.y1 &&
-          rect.y1 + padPx > aRect.y0
+          rect.x0 - pad < aRect.x1 &&
+          rect.x1 + pad > aRect.x0 &&
+          rect.y0 - pad < aRect.y1 &&
+          rect.y1 + pad > aRect.y0
         ) {
           collides = true;
           break;
@@ -347,6 +359,7 @@ function declutterByScreenSeparationArm(
   labels: readonly Label2D[],
   projected: readonly Label2DProjected[],
   minSeparationPx: number,
+  devicePixelRatio: number,
 ): Label2D[] {
   const candidateIdx: number[] = [];
   const candidates: { screenPx: Vec2; declutterPriority: number }[] = [];
@@ -366,10 +379,14 @@ function declutterByScreenSeparationArm(
     const screenPx: Vec2 =
       label.lift === undefined
         ? p.screenPx
-        : [p.screenPx[0], p.screenPx[1] - proposedLiftPx(label.lift.subjectSizePx)];
+        : [
+            p.screenPx[0],
+            p.screenPx[1] - proposedLiftPx(label.lift.subjectSizePx, devicePixelRatio),
+          ];
     candidates.push({ screenPx, declutterPriority: label.declutterPriority ?? 0 });
   }
-  for (const k of declutterByScreenSeparation({ candidates, minSeparationPx })) {
+  const separation = { candidates, minSeparationPx: minSeparationPx * devicePixelRatio };
+  for (const k of declutterByScreenSeparation(separation)) {
     accepted.add(candidateIdx[k]!);
   }
   return labels.filter((_, i) => accepted.has(i));
@@ -545,7 +562,12 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
         );
         break;
       case 'screenSeparation':
-        survivors = declutterByScreenSeparationArm(labels, projected, policy.minSeparationPx);
+        survivors = declutterByScreenSeparationArm(
+          labels,
+          projected,
+          policy.minSeparationPx,
+          projection.devicePixelRatio,
+        );
         break;
     }
     return { survivors, survivorIds: new Set(survivors.map((l) => l.id)) };
@@ -806,9 +828,12 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
         worldEmMpc: liftEmMpc,
         minPixelSize: label.minPixelSize ?? LABEL_MIN_PX_DEFAULT,
         maxPixelSize: label.maxPixelSize ?? LABEL_MAX_PX_DEFAULT,
+        devicePixelRatio: projection.devicePixelRatio,
         lineBottomLiftPx: lift.lineBottomLiftPx ?? 0,
         // An engraved name sits just off its glyph's rim, not a diameter and a half above.
-        inkGapPx: antique ? antiqueInkGapPx(lift.subjectSizePx) : undefined,
+        inkGapPx: antique
+          ? antiqueInkGapPx(lift.subjectSizePx, projection.devicePixelRatio)
+          : undefined,
       });
 
       if (placement === null) {
@@ -891,7 +916,8 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
       const px = rest.maxPixelSize! + (shown.maxPixelSize! - rest.maxPixelSize!) * t;
       const from = alignXFraction(rest.alignX ?? 'left');
       const steps = ANTIQUE_LABEL_STYLE.titleSlideSteps;
-      const alignX = Math.round((from + (alignXFraction(shown.alignX!) - from) * t) * steps) / steps;
+      const alignX =
+        Math.round((from + (alignXFraction(shown.alignX!) - from) * t) * steps) / steps;
       out.push({ ...shown, minPixelSize: px, maxPixelSize: px, alignX });
     }
     return out;
@@ -930,7 +956,14 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
       const bbox = screenPx ? measureText!(label) : null;
       if (!screenPx || !bbox) return true;
       if (isTitle(label)) return true;
-      const r = labelScreenRect({ label, bbox, screenPx, clipW, pxPerRad: projection.pxPerRad });
+      const r = labelScreenRect({
+        label,
+        bbox,
+        screenPx,
+        clipW,
+        pxPerRad: projection.pxPerRad,
+        devicePixelRatio: projection.devicePixelRatio,
+      });
       const em = r.y1 - r.y0; // the ink's height stands in for the em
       const inField =
         r.x0 >= inner.x0 + em &&

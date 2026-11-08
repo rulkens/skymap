@@ -11,6 +11,6 @@ import {
   MIN_LABEL_CLEARANCE_PX,
 } from '../../services/engine/presentation/leaderLineStyle';
 
-export function proposedLiftPx(subjectSizePx: number): number {
-  return Math.max(MIN_LABEL_CLEARANCE_PX, LEADER_LIFT_FACTOR * subjectSizePx);
+export function proposedLiftPx(subjectSizePx: number, devicePixelRatio: number): number {
+  return Math.max(MIN_LABEL_CLEARANCE_PX * devicePixelRatio, LEADER_LIFT_FACTOR * subjectSizePx);
 }

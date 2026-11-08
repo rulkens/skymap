@@ -420,6 +420,7 @@ function makeInput(
     sceneBodies: [] as never[],
     plans: createFramePlannerResultStore(),
     nowMs: 0,
+    devicePixelRatio: 1,
     simDays: 0,
     altitudeMpc: 0,
     focusBlend: 0,

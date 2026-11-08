@@ -55,6 +55,7 @@ function baseInput() {
     worldEmMpc: 0.001,
     minPixelSize: 13,
     maxPixelSize: 44,
+    devicePixelRatio: 1,
   };
 }
 
@@ -130,6 +131,7 @@ describe('liftedLabelPlacement lineBottomLiftPx', () => {
       worldEmMpc: 2.25e-14, // a solar radius — clamps to minPixelSize anyway
       minPixelSize: 13,
       maxPixelSize: 44,
+      devicePixelRatio: 1,
       lineBottomLiftPx: 14,
     });
     expect(res).not.toBeNull();

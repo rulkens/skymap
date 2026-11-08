@@ -78,7 +78,7 @@ function makeCtx(
     mat4.lookAt([camDistMpc, 0, 0], [0, 0, 0], opts.up ?? [0, 1, 0]),
   );
   return {
-    snapshot: { nowMs: 0, focusBlend: 0, focus: ZERO_FOCUS },
+    snapshot: { devicePixelRatio: 1, nowMs: 0, focusBlend: 0, focus: ZERO_FOCUS },
     drawCamPos: [camDistMpc, 0, 0],
     vp,
     canvasSize: { width, height },

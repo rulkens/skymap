@@ -274,6 +274,7 @@ export function produceFamousGalaxyLabels(
         worldEmMpc: p.labelWorldEmMpc,
         minPixelSize: style.minPixelSize,
         maxPixelSize,
+        devicePixelRatio: ctx.snapshot.devicePixelRatio,
       });
       // Behind the camera the projection is undefined — nothing visible to label.
       if (placement === null) continue;

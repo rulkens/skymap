@@ -103,7 +103,8 @@ export function produceAntiqueMoonPlaces(
       positionMpc: moon.positionMpc,
       radiusM,
       camPosMpc: ctx.drawCamPos,
-      pxPerRad: ctx.drawPxPerRad,
+      // CSS px, like `discPx` and the view below.
+      pxPerRad: ctx.drawPxPerRad / ctx.snapshot.devicePixelRatio,
     });
     if (diameterPx < discPx[0]) return NONE;
     const discAlpha = smoothstep(discPx[0], discPx[1], diameterPx) * fade[item];

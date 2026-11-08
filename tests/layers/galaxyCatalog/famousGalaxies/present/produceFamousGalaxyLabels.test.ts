@@ -91,7 +91,12 @@ function screenOf(p: readonly number[]): [number, number] {
 
 function makeCtx(over: { focusBlend?: number } = {}): FrameView {
   return {
-    snapshot: { focusBlend: over.focusBlend ?? 0, nowMs: 0, focus: ZERO_FOCUS },
+    snapshot: {
+      devicePixelRatio: 1,
+      focusBlend: over.focusBlend ?? 0,
+      nowMs: 0,
+      focus: ZERO_FOCUS,
+    },
     drawCamPos: [0, 0, 0],
     vp: VP,
     canvasSize: { width: 1920, height: 1080 },

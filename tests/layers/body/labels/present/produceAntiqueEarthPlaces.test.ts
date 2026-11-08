@@ -29,7 +29,7 @@ function ctxAbove(latDeg: number, lonDeg: number, radii: number): FrameView {
   const e = EARTH.positionMpc;
   const cam: Vec3 = [e[0] + up[0] * d, e[1] + up[1] * d, e[2] + up[2] * d];
   return {
-    snapshot: { bodyStates: STATES },
+    snapshot: { devicePixelRatio: 1, bodyStates: STATES },
     drawCamPos: cam,
     drawPxPerRad: PX_PER_RAD,
     canvasSize: { width: 1600, height: 900 },

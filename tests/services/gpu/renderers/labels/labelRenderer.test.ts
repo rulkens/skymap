@@ -196,10 +196,12 @@ describe('LabelRenderer capacity growth', () => {
         .filter((c) => c[0] === uniformBuffer.buffer)
         .at(-1)![2] as Float32Array;
 
-    r.draw(pass, new Float32Array(16), [1280, 720], 1000);
+    r.draw(pass, new Float32Array(16), [1280, 720], 1000, { devicePixelRatio: 1 });
     expect(lastUniformWrite()[20]).toBe(1);
-    r.draw(pass, new Float32Array(16), [1280, 720], 1000, { clipScale: 3 });
+    r.draw(pass, new Float32Array(16), [1280, 720], 1000, { devicePixelRatio: 2, clipScale: 3 });
     expect(lastUniformWrite()[20]).toBe(3);
+    // The size clamp's CSS → device factor rides right behind it (io.wesl `Uniforms`).
+    expect(lastUniformWrite()[21]).toBe(2);
   });
 
   it('reallocates the GPU storage/instance buffers and rebinds when the roster outgrows capacity', () => {

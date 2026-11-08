@@ -26,6 +26,10 @@ export function antiqueBodyView(
   ctx: FrameView,
 ): AntiqueBodyView {
   const basis = viewBasis(ctx.cam);
+  // CSS px: the view's device size and focal length over the pixel ratio.
+  const dpr = ctx.snapshot.devicePixelRatio;
+  const size = { width: ctx.canvasSize.width / dpr, height: ctx.canvasSize.height / dpr };
+  const pxPerRad = ctx.drawPxPerRad / dpr;
   const radiusMpc = radiusM * SCALE_UNITS.M_TO_MPC;
   const radiusKm = radiusM / 1000;
   const eye = ctx.drawCamPos;
@@ -43,7 +47,7 @@ export function antiqueBodyView(
     centre[2] + n[2],
   ];
   const toPx = (dir: Readonly<Vec3>): Vec2 | null => {
-    const hit = projectDirToPx(normalize3(dir), basis, ctx.frustum, ctx.canvasSize);
+    const hit = projectDirToPx(normalize3(dir), basis, ctx.frustum, size);
     return hit ? [hit.x, hit.y] : null;
   };
 
@@ -56,17 +60,17 @@ export function antiqueBodyView(
     sunCos: (latDeg, lonDeg) => dot3(normal(latDeg, lonDeg), toSun),
     pxPerKm: (latDeg, lonDeg) => {
       const g = ground(normal(latDeg, lonDeg));
-      return ctx.drawPxPerRad / (Math.hypot(g[0], g[1], g[2]) * radiusKm);
+      return pxPerRad / (Math.hypot(g[0], g[1], g[2]) * radiusKm);
     },
     discCentrePx: toPx(centre),
     // The silhouette's true radius, tan(asin(R/d)): the small-angle R/d puts the limb of
     // a Moon a few radii off ~8% inside where it is drawn.
-    discRadiusPx: ctx.drawPxPerRad * Math.tan(Math.asin(Math.min(1, 1 / Math.hypot(...centre)))),
+    discRadiusPx: pxPerRad * Math.tan(Math.asin(Math.min(1, 1 / Math.hypot(...centre)))),
     radiusKm,
     anchorMpc: (xPx, yPx, latDeg, lonDeg) => {
       // `rayThroughPx` has unit forward component, so scaling it by depth lands at depth.
       const depthMpc = dot3(ground(normal(latDeg, lonDeg)), basis.forward) * radiusMpc;
-      const ray = rayThroughPx([xPx, yPx], basis, ctx.frustum, ctx.canvasSize);
+      const ray = rayThroughPx([xPx, yPx], basis, ctx.frustum, size);
       return [ray[0] * depthMpc, ray[1] * depthMpc, ray[2] * depthMpc];
     },
   };

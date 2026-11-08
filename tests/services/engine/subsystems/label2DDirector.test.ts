@@ -83,7 +83,7 @@ const VIEW = {
 function makeCtx(nowMs = 0): FrameView {
   return {
     ...VIEW,
-    snapshot: { bodyStates: NO_BODIES, nowMs },
+    snapshot: { devicePixelRatio: 1, bodyStates: NO_BODIES, nowMs },
     drawCamPos: [0, 0, 0],
     vp: mat4.identity(),
     canvasSize: { width: 1000, height: 1000 },
@@ -111,7 +111,7 @@ const NEAR0_SLAB: Slab = {
 function makeNear0Ctx(nowMs = 0): FrameView {
   return {
     ...VIEW,
-    snapshot: { bodyStates: NO_BODIES, nowMs },
+    snapshot: { devicePixelRatio: 1, bodyStates: NO_BODIES, nowMs },
     drawCamPos: [0, 0, 0],
     slabs: [NEAR0_SLAB],
     canvasSize: { width: 1000, height: 1000 },
@@ -212,7 +212,13 @@ describe('label2DDirector', () => {
     const ctxAt = (nowMs: number) =>
       ({
         ...makeCtx(nowMs),
-        snapshot: { bodyStates: NO_BODIES, nowMs, focusBlend: 1, focusPickId: FOCUS },
+        snapshot: {
+          devicePixelRatio: 1,
+          bodyStates: NO_BODIES,
+          nowMs,
+          focusBlend: 1,
+          focusPickId: FOCUS,
+        },
       }) as unknown as FrameView;
 
     dir.runFrame(state, ctxAt(0));
@@ -1133,7 +1139,13 @@ describe('label2DDirector', () => {
     it('under the antique look, a selected name grows to the title size and back, waking the loop meanwhile', () => {
       const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
       dir.attachRenderers(makeLabelStub() as never, makeLineStub() as never, defaultMeasure);
-      const star: Label2D = { ...SAMPLE_LABEL, text: 'Rigel', fadeAlpha: 1, pickId: 7, subjectId: 7 };
+      const star: Label2D = {
+        ...SAMPLE_LABEL,
+        text: 'Rigel',
+        fadeAlpha: 1,
+        pickId: 7,
+        subjectId: 7,
+      };
       dir.registerProducer(makeProducer('p', [star]));
       const look = (select: string | null) => {
         const state = makeHighlightState(null, select);
@@ -1280,7 +1292,7 @@ describe('label2DDirector', () => {
         const rest = (nowMs: number) =>
           ({
             ...makeNear0Ctx(nowMs),
-            snapshot: { bodyStates: NO_BODIES, nowMs, focusBlend: 0 },
+            snapshot: { devicePixelRatio: 1, bodyStates: NO_BODIES, nowMs, focusBlend: 0 },
           }) as unknown as FrameView;
         const onDisc = { fadeAlpha: 1, declutterPriority: 10 * CAPTION_PRIORITY_SCALE };
         const cluster: Label2D = {
@@ -1431,7 +1443,7 @@ describe('label2DDirector', () => {
 
     const ctx = {
       ...makeCtx(0),
-      snapshot: { bodyStates: NO_BODIES, nowMs: 0, focusBlend: 0 },
+      snapshot: { devicePixelRatio: 1, bodyStates: NO_BODIES, nowMs: 0, focusBlend: 0 },
     } as unknown as FrameView;
 
     dir.runFrame(antiqueState(false), ctx);
@@ -1459,7 +1471,7 @@ describe('label2DDirector', () => {
       ({
         ...makeCtx(0),
         drawCamPos,
-        snapshot: { bodyStates: NO_BODIES, nowMs: 0, focusBlend: 0 },
+        snapshot: { devicePixelRatio: 1, bodyStates: NO_BODIES, nowMs: 0, focusBlend: 0 },
       }) as unknown as FrameView;
 
     dir.runFrame(state, ctxAt([0, 0, 0.01]));
@@ -1503,7 +1515,13 @@ describe('label2DDirector', () => {
     const ctxAt = (nowMs: number) =>
       ({
         ...makeCtx(nowMs),
-        snapshot: { bodyStates: NO_BODIES, nowMs, focusBlend: 1, focusPickId: EARTH },
+        snapshot: {
+          devicePixelRatio: 1,
+          bodyStates: NO_BODIES,
+          nowMs,
+          focusBlend: 1,
+          focusPickId: EARTH,
+        },
       }) as unknown as FrameView;
 
     dir.runFrame(state, ctxAt(0));
@@ -1538,7 +1556,7 @@ describe('label2DDirector', () => {
     } as unknown as EngineState;
     const ctx = {
       ...makeCtx(0),
-      snapshot: { bodyStates: NO_BODIES, nowMs: 0, focusBlend: 0 },
+      snapshot: { devicePixelRatio: 1, bodyStates: NO_BODIES, nowMs: 0, focusBlend: 0 },
     } as unknown as FrameView;
 
     dir.runFrame(state, ctx);

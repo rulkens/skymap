@@ -63,7 +63,9 @@ fn expandLabelQuad(input: VsIn, label: LabelData, occludeWeight: f32) -> VsOut {
   // size at the app's 60 degree fov (see its declaration); the CPU twins
   // 'labelScreenRect' and 'liftedLabelPlacement' apply the same factor.
   let pxPerEm = worldLenToPx(u.cam, worldEmMpc * u.emClipScale, clip.w) * EM_PX_RETUNE;
-  let displayEmPx = clamp(pxPerEm, minPx, maxPx);
+  // The clamp is CSS px, the projected em device px (as 'cam.pxPerRad' is);
+  // 'labelDisplayEmPx' is the CPU twin.
+  let displayEmPx = clamp(pxPerEm, minPx * u.devicePixelRatio, maxPx * u.devicePixelRatio);
   let pxScale = displayEmPx / ATLAS_EM_PX;
 
   // Outline fringe in atlas px.  The on-screen fringe is
