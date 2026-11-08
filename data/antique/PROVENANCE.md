@@ -52,6 +52,7 @@ long side.
   strapwork's top-left scroll, lighter than the rest, is forced into the mask by its own polygon.
   The field (Ortelius' oval imprint, Goos' scale bars) is erased; the crop is trimmed and resized to
   1024 px wide.
+  Rebuild both with `tools/antique/sprites/` (README there; the specs hold the crops and outlines).
 - **ship:** Goos labels no ship type; it is a typical Dutch three-masted merchantman of the 1660s,
   seen from the stern. The colour layer carries the washes: brown hull, green sea.
 

@@ -94,6 +94,10 @@ const INK_PUSH_OVERRIDE: Partial<Record<(typeof SPRITE_IDS)[number], readonly [n
 };
 /** A cartouche frame's wash, as a share of full: a thin colourist's wash, not a flat poster yellow. */
 const FRAME_WASH = 0.7;
+/** How far a frame's wash stops inside its outline: past the blur's reach, so none lands on the paper. */
+const WASH_INSET_PX = 1.5;
+/** How far the field's paper reaches out from its oval to the frame's inner ink. */
+const FIELD_REACH_PX = 12;
 /**
  * Constellation figures print through the atlas's mip chain (`decor.wesl`), so
  * they keep their source resolution and a gentler push: each hatch line stays a
@@ -155,6 +159,30 @@ function insideField(
   return field.shape === 'rect' ? Math.abs(u) <= 1 && Math.abs(v) <= 1 : u * u + v * v <= 1;
 }
 
+/**
+ * A frame's wash: the area its lines enclose, pulled in by `WASH_INSET_PX`, less the bare
+ * paper between the field's oval and the frame's inner ink (the scrollwork has no inner
+ * rule, so the oval alone left a lineless band of pigment round the title).
+ */
+function washMask(
+  inLines: Uint8Array,
+  printed: Uint8Array,
+  inField: (i: number) => boolean,
+  w: number,
+  h: number,
+): Uint8Array {
+  const outside = dilateMaskDisc(
+    inLines.map((v) => 1 - v),
+    w,
+    h,
+    WASH_INSET_PX,
+  );
+  let field = Uint8Array.from(inLines, (_, i) => (inField(i) ? 1 : 0));
+  for (let k = 0; k < FIELD_REACH_PX; k++)
+    field = dilateMaskDisc(field, w, h, 1).map((v, i) => v & (1 - printed[i]!));
+  return inLines.map((_, i) => (outside[i] || field[i] ? 0 : 1));
+}
+
 async function buildSprite(id: (typeof SPRITE_IDS)[number]): Promise<OrnamentSprite> {
   const figure = FIGURE_IDS.has(id);
   const side = figure ? FIGURE_SIDE_PX : MAX_SIDE_PX;
@@ -198,10 +226,13 @@ async function buildSprite(id: (typeof SPRITE_IDS)[number]): Promise<OrnamentSpr
         h,
       )
     : null;
-  const wash = inLines
+  // Its soft edge pulled in under the outline, so the blur and the plate's magnification
+  // don't lay a fringe of pigment on the paper past it (owner: "colours that don't belong").
+  const washed = inLines && washMask(inLines, printed, (i) => inField(i, 1), w, h);
+  const wash = washed
     ? Uint8Array.from(
         gaussianBlurFloat32(
-          Float32Array.from(inLines, (v, i) => (inField(i, 1) ? 0 : v)),
+          Float32Array.from(washed, (v, i) => (inField(i, 1) ? 0 : v)),
           w,
           h,
           WASH_EDGE_SIGMA_PX,

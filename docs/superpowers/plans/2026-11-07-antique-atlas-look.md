@@ -337,3 +337,9 @@ label rules; `styles/antique.css`.
 **Deferral boundary:** Flamsteed/Bode constellation figures for every constellation (backlog
 `2026-09-14-antique-atlas-constellation-figures`); the dome rig; a second period look; true
 globe-space (lat/lon) hatching, which needs a surface-parameter target from the body shaders.
+
+### Task 38: Cartouche colours inside the lines (owner, 2026-11-08: "the cartouche still has some colours that don't belong")
+
+- [x] Measured on all three designs (desktop and phone): the sprites carry no scan colour (RGB 0 everywhere); the stray colour was each frame's wash landing on the paper 2 to 5 px past its outline, plus a lineless gamboge band round the scrollwork's field.
+- [x] The packer pulls a frame's wash 1.5 px inside its outline and cuts the field's paper out to the frame's inner ink; decor.wesl keeps the brush's stray inside the wash's own outline. A guard test checks the packed atlas.
+- [x] The strapwork and tablet extraction scripts moved to `tools/antique/sprites/` (they rebuild both sprites byte for byte).
