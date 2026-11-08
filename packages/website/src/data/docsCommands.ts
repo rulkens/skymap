@@ -199,6 +199,11 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         manual: 'tools/antique/moon/bakeMoonCraters.ts',
       },
       {
+        scripts: ['bake-moon-far-side-places'],
+        does: 'Writes the antique atlas look’s names for the Moon’s far side, its four maria and the craters of 180 km or more, from the IAU gazetteer.',
+        manual: 'tools/antique/moon/bakeMoonFarSidePlaces.ts',
+      },
+      {
         scripts: ['record-tour', 'record-clip'],
         does: 'Record a tour, or one clip, frame by frame into an MP4 film. A slow frame costs time, and the film stays smooth.',
         manual: RECORD,

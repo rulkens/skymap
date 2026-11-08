@@ -467,6 +467,13 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     shows: 'The craters ringed and named on the Moon in the antique atlas look.',
     scene: 'the-moon',
   },
+  'antique-ornaments': {
+    description:
+      'Cartouches, constellation figures and sea beasts cut from 16th- and 17th-century atlas plates, for the antique atlas look.',
+    shows:
+      'The title cartouche, the constellation figures and the sea beasts of the antique atlas look.',
+    scene: 'earth-and-its-surface',
+  },
   skadi: {
     description: 'Heights at 1 arc-second under the regions where Earth has sharper imagery.',
     shows: 'The height of the ground under the regions that have sharper imagery.',

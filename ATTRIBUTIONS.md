@@ -2206,12 +2206,9 @@ rewritten only by `npm run build-meshes`, which re-bakes the models.
 
 <!-- attribution: id=antique-ornaments -->
 
-- **What:** The antique look's engraved ornaments: three title cartouches (de
-  Wit's scrollwork, Ortelius' strapwork, Goos' framed tablet), Hevelius'
-  constellation figures (Cetus, Draco, Hydra), and the sea beasts and ship that
-  sail the Zone of Avoidance. Each is cut from a scan of a 16th- or 17th-century
-  map or atlas plate; `data/antique/PROVENANCE.md` lists every file, crop box
-  and scan size.
+- **What:** The antique look's engraved ornaments: three title cartouches,
+  Hevelius' constellation figures, and the sea beasts and ship of the Zone of
+  Avoidance.
 - **By:** Abraham Ortelius (1527–1598), Pieter Goos (1616–1675), Frederik de Wit
   (1629/30–1706) and Johannes Hevelius (1611–1687); scans by the Bibliothèque
   nationale de France (Gallica), the David Rumsey Map Collection (via the
