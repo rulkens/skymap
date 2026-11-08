@@ -153,6 +153,8 @@ import { antiqueTitleGlobe } from '../../gpu/passes/antiqueLook/antiqueTitleGlob
 import { viewBasis } from '../../../utils/camera/projection/viewBasis';
 import { viewCoverRectsPx } from '../../../utils/layout/viewCoverRectsPx';
 import { emphasisOf } from '../presentation/emphasisOf';
+import { createTitleGrowth } from '../presentation/createTitleGrowth';
+import { ANTIQUE_LABEL_STYLE } from '../../../data/labels/antiqueLabelStyle';
 import {
   HOVERED_LABEL_WHITEN,
   SELECTED_LABEL_WHITEN,
@@ -392,6 +394,7 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
   // fading (smoothstep) or drop immediately (exponential).
   const smoothstepEnvelopes = new Map<string, SmoothstepEnvelopeEntry>();
   const exponentialEnvelopes = new Map<string, ExponentialEnvelopeEntry>();
+  const titleGrowth = createTitleGrowth(ANTIQUE_LABEL_STYLE.titleGrowMs);
 
   function attachRenderers(
     label: LabelRenderer,
@@ -412,7 +415,7 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
   }
 
   function signatureOf(labels: readonly Label2D[]): string {
-    // Cheap stable signature: per-label `id:fadeAlpha:worldPos[:leaderToWorld][:color][:pickId]`,
+    // Cheap stable signature: per-label `id:fadeAlpha:worldPos[:leaderToWorld][:color][:pickId]:set`,
     // joined. A label's synthesized leader line (see `synthesizeLines`) carries
     // no state of its own beyond what's keyed here, so one term covers both.
     //
@@ -455,10 +458,9 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     // visible frame.  Endpoints only move while the camera does, so the
     // skip still fires on every static frame — exactly when it pays.
     //
-    // Edge case: a producer mutating a label's `text` while keeping
-    // the same `id` will NOT trigger re-upload.  No current producer
-    // does this — the Milky Way label has constant text; structures derive text
-    // from the structure name which is part of the id space.
+    // The set-type terms (text, alignment, size clamp) are keyed too: the antique
+    // look resets a selected subject's name as a title at its own id and place,
+    // and grows it frame by frame; unkeyed, the GPU kept the old setting.
     const lIds = labels
       .map((l) => {
         const leaderKey = l.leader
@@ -466,7 +468,8 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
           : '';
         const colorKey = l.color ? `:${l.color.join(',')}` : '';
         const pickKey = l.pickId !== undefined ? `:${l.pickId}` : '';
-        return `${l.id}:${l.fadeAlpha ?? 1}:${l.worldPos[0]},${l.worldPos[1]},${l.worldPos[2]}${leaderKey}${colorKey}${pickKey}`;
+        const setKey = `:${l.text}:${l.alignX}:${l.minPixelSize},${l.maxPixelSize}`;
+        return `${l.id}:${l.fadeAlpha ?? 1}:${l.worldPos[0]},${l.worldPos[1]},${l.worldPos[2]}${leaderKey}${colorKey}${pickKey}${setKey}`;
       })
       .join('|');
     return `L:${labels.length}:${lIds}`;
@@ -857,20 +860,34 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     });
   }
 
-  /** The antique look's names (`antiqueLabel`); the focused or selected subject keeps one. */
+  /**
+   * The antique look's names (`antiqueLabel`); the focused or selected subject keeps one,
+   * set as a title that grows from its cut's size and shrinks back when let go.
+   */
   function toAntique(
     labels: readonly Label2D[],
     labelName: LabelName | undefined,
     isTitle: (label: Label2D) => boolean,
     hasFont: (font: FontId) => boolean,
     cosmos: boolean,
+    nowMs: number,
   ): Label2D[] {
     const rule = labelName === undefined ? undefined : ANTIQUE_LABEL_RULES[labelName];
     const out: Label2D[] = [];
     for (const l of labels) {
-      if (!cosmos && rule?.cosmosOnly?.includes(l.id) && !isTitle(l)) continue;
-      const shown = antiqueLabel(l, rule, isTitle(l), hasFont);
-      if (shown !== null) out.push(shown);
+      const title = isTitle(l);
+      const t = title || titleGrowth.tracks(l.id) ? titleGrowth.blend(l.id, title, nowMs) : 0;
+      const kept = title || t > 0;
+      if (!cosmos && rule?.cosmosOnly?.includes(l.id) && !kept) continue;
+      const shown = antiqueLabel(l, rule, kept, hasFont);
+      if (shown === null) continue;
+      const cut = kept && t < 1 ? antiqueLabel(l, rule, false, hasFont)?.maxPixelSize : undefined;
+      if (cut === undefined) {
+        out.push(shown);
+        continue;
+      }
+      const px = cut + (shown.maxPixelSize! - cut) * t;
+      out.push({ ...shown, minPixelSize: px, maxPixelSize: px });
     }
     return out;
   }
@@ -954,7 +971,7 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
       const out = p.produceLabels(state, ctx);
       if (out.awake) anyAwake = true;
       const produced = antique
-        ? toAntique(out.labels, p.label, isTitle, hasFont, cosmos)
+        ? toAntique(out.labels, p.label, isTitle, hasFont, cosmos, ctx.snapshot.nowMs)
         : out.labels;
       if (antique && (p.label === 'starCatalog' || p.label === 'structure')) {
         for (const l of produced) if (l.occludeNearKm === undefined) farIds.add(l.id);
@@ -969,6 +986,8 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
         mergedLabels.push(emphasis === 1 ? l : { ...l, fadeAlpha: (l.fadeAlpha ?? 1) * emphasis });
       }
     }
+
+    const titleGrowing = titleGrowth.endFrame(ctx.snapshot.nowMs);
 
     // Cross-producer declutter — producers emit every candidate (no internal
     // declutter); the director de-collides them together here. A culled
@@ -1012,7 +1031,7 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
       prevSignature = sig;
     }
 
-    return anyAwake || anyRamping;
+    return anyAwake || anyRamping || titleGrowing;
   }
 
   // Built as a `const` (rather than returned inline) so we can attach

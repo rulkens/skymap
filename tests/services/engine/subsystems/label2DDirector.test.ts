@@ -19,6 +19,7 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import { LABEL_EM_PX_RETUNE } from '../../../../src/data/labels/labelSizingDefaults';
 import { APP_VISIBILITY_REGISTRY } from '../../../../src/compositions/appVisibility';
 import { MILD_RECESSION } from '../../../../src/data/mildRecession';
+import { ANTIQUE_LABEL_STYLE } from '../../../../src/data/labels/antiqueLabelStyle';
 
 function makeState(): EngineState {
   // The director fires no layer load-in (each producer owns its own), but
@@ -312,6 +313,27 @@ describe('label2DDirector', () => {
     color = [0.8, 0.84, 0.88, 1];
     dir.runFrame(makeState(), makeCtx(500));
     expect(labelStub.setLabels).toHaveBeenCalledTimes(settled + 1);
+  });
+
+  it('re-uploads when a label is reset at fixed id and place (an antique title: size, cut, alignment)', () => {
+    const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
+    const labelStub = makeLabelStub();
+    dir.attachRenderers(labelStub as never, makeLineStub() as never, defaultMeasure);
+    let label: Label2D = { ...SAMPLE_LABEL, text: 'Rigel', minPixelSize: 21, maxPixelSize: 21 };
+    dir.registerProducer({ id: 'p', produceLabels: () => ({ labels: [label], awake: false }) });
+    dir.runFrame(makeState(), makeCtx(0));
+    dir.runFrame(makeState(), makeCtx(300)); // envelope settled
+    const settled = labelStub.setLabels.mock.calls.length;
+
+    for (const [i, change] of [
+      { minPixelSize: 30, maxPixelSize: 30 },
+      { alignX: 'center' },
+      { text: 'RIGEL' },
+    ].entries()) {
+      label = { ...label, ...change } as Label2D;
+      dir.runFrame(makeState(), makeCtx(400 + i));
+      expect(labelStub.setLabels).toHaveBeenCalledTimes(settled + i + 1);
+    }
   });
 
   describe('highlight', () => {
@@ -1106,6 +1128,40 @@ describe('label2DDirector', () => {
       );
       dir.runFrame(antique, makeNear0Ctx(16));
       expect(dir.labels().map((l) => l.id)).toEqual(['amsterdam']);
+    });
+
+    it('under the antique look, a selected name grows to the title size and back, waking the loop meanwhile', () => {
+      const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
+      dir.attachRenderers(makeLabelStub() as never, makeLineStub() as never, defaultMeasure);
+      const star: Label2D = { ...SAMPLE_LABEL, text: 'Rigel', fadeAlpha: 1, pickId: 7, subjectId: 7 };
+      dir.registerProducer(makeProducer('p', [star]));
+      const look = (select: string | null) => {
+        const state = makeHighlightState(null, select);
+        return {
+          ...state,
+          selection: { ...state.selection, focus: null },
+          settings: { antique: { enabled: true } },
+        } as unknown as EngineState;
+      };
+      const px = () => dir.labels()[0]!.maxPixelSize!;
+      const ramp = ANTIQUE_LABEL_STYLE.titleGrowMs;
+
+      dir.runFrame(look(null), makeNear0Ctx(0));
+      const cut = px();
+      expect(dir.runFrame(look('earth'), makeNear0Ctx(100))).toBe(true);
+      expect(px()).toBe(cut);
+      dir.runFrame(look('earth'), makeNear0Ctx(100 + ramp / 2));
+      expect(px()).toBeCloseTo((cut + ANTIQUE_LABEL_STYLE.subjectPx) / 2);
+      expect(dir.runFrame(look('earth'), makeNear0Ctx(100 + ramp))).toBe(false);
+      expect(px()).toBe(ANTIQUE_LABEL_STYLE.subjectPx);
+
+      // Let go, it shrinks back over the same ramp, still centred until it lands.
+      expect(dir.runFrame(look(null), makeNear0Ctx(200 + ramp))).toBe(true);
+      expect(px()).toBe(ANTIQUE_LABEL_STYLE.subjectPx);
+      expect(dir.labels()[0]!.alignX).toBe('center');
+      dir.runFrame(look(null), makeNear0Ctx(200 + 2 * ramp));
+      expect(px()).toBe(cut);
+      expect(dir.labels()[0]!.alignX).toBe('left');
     });
 
     it('a caption standing under a lifted planet caption survives: the cull reads where the text is drawn', () => {
