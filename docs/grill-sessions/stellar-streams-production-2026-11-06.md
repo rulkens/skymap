@@ -1,7 +1,7 @@
 # Grill Session: Stellar streams to production — 2026-10-20 to 2026-11-06
 
 Source: the stellar-streams spike (branch `feat/stellar-streams`, formerly `ccr-03796997-nysv48`) and the owner's
-"real feature, grill me if needed". Spec: `docs/superpowers/specs/2026-11-06-stellar-streams-design.md`.
+"real feature, grill me if needed". Spec: `docs/superpowers/specs/completed/2026-11-06-stellar-streams-design.md`.
 
 The spike drew Milky Way stellar streams as drifting streak particles with a home-made Sagittarius model,
 invented structure on the galstreams streams, and none of the Layer machinery (toggle, fade, bands, assets,

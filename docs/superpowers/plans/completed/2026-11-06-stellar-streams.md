@@ -17,7 +17,7 @@ selection kind (post-#1064, no core tables).
 **Tech Stack:** TypeScript, WebGPU + WESL, Redux Toolkit slices, React (debug section, cards), Vitest, tsx
 tools.
 
-**Spec:** `docs/superpowers/specs/2026-11-06-stellar-streams-design.md`
+**Spec:** `docs/superpowers/specs/completed/2026-11-06-stellar-streams-design.md`
 
 ## Global Constraints
 
