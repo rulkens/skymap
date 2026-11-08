@@ -29,20 +29,23 @@ const SHIMS = {
   step: (edge: number, x: number) => (x >= edge ? 1 : 0),
 };
 
+const SOURCE = readShaderSource('src/services/gpu/shaders/antiqueLook/glyphs.wesl');
+const RAY_REACH = Number(/const RAY_REACH: f32 = ([0-9.]+);/.exec(SOURCE)?.[1]);
+
 function starGlyphFromShader(): (q: V2, r: number, rays: number) => number {
-  const source = readShaderSource('src/services/gpu/shaders/antiqueLook/glyphs.wesl');
   const body = /fn starGlyph\(q: vec2<f32>, r: f32, rays: f32\) -> f32 \{([\s\S]*?)\n\}/.exec(
-    source,
+    SOURCE,
   )?.[1];
   if (body === undefined) throw new Error('glyphs.wesl lacks starGlyph');
+  const scope = { ...SHIMS, RAY_REACH };
   const fn = new Function(
-    ...Object.keys(SHIMS),
+    ...Object.keys(scope),
     'q',
     'r',
     'rays',
     body.replace(/\blet\b/g, 'const'),
   );
-  return (q, r, rays) => fn(...Object.values(SHIMS), q, r, rays);
+  return (q, r, rays) => fn(...Object.values(scope), q, r, rays);
 }
 
 describe('antique star glyph', () => {
@@ -52,20 +55,23 @@ describe('antique star glyph', () => {
 
   it.each([4, 8])('inks a %i-ray glyph from core to tip, and nothing past the tip', (rays) => {
     const r = 12;
+    const tip = RAY_REACH * r;
+    expect(RAY_REACH).toBeGreaterThanOrEqual(1.5);
     expect(onRay(0.3 * r, r, rays)).toBeCloseTo(1);
-    expect(onRay(0.75 * r, r, rays)).toBeGreaterThan(0.5);
-    for (const past of [1, 3, 10]) expect(onRay(r + past, r, rays)).toBe(0);
+    expect(onRay(0.75 * tip, r, rays)).toBeGreaterThan(0.5);
+    for (const past of [1, 3, 10]) expect(onRay(tip + past, r, rays)).toBe(0);
   });
 
   it("cuts a Bode short ray at its own tip, short of a long ray's", () => {
     const r = 12;
-    const shortTip = 0.5 * r + 0.55 * (r - 0.5 * r);
+    const shortTip = 0.5 * r + 0.55 * (RAY_REACH * r - 0.5 * r);
     const shortRay = (along: number) =>
       glyph(
         { x: along * Math.sin((2 * Math.PI) / 8), y: -along * Math.cos((2 * Math.PI) / 8) },
         r,
         8,
       );
+    expect(shortRay(0.7 * shortTip)).toBeGreaterThan(0.5);
     expect(shortRay(shortTip + 1)).toBe(0);
   });
 });

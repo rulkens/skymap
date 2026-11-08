@@ -26,10 +26,13 @@ struct GlyphOut {
   @location(1) @interpolate(flat) shape: vec4<f32>,
 }
 
-// A star glyph centred at the origin, `r` its ray length (device px): a disc
-// for the faint, else a solid core half the reach with `rays` straight wedges
-// tapering to points, alternate ones short from 8 up (Bode). Wedges, not a
-// lobed outline: a cos^n lobe thinned below a pixel, so every star read as its core.
+// A rayed star's long rays reach RAY_REACH × r: at 1× r they were nubs past the core at dpr 1.
+const RAY_REACH: f32 = 2.0;
+
+// A star glyph centred at the origin, `r` its size (device px): a disc for the
+// faint, else a solid core r/2 with `rays` straight wedges tapering to points at
+// RAY_REACH × r, alternate ones short from 8 up (Bode). Wedges, not a lobed
+// outline: a cos^n lobe thinned below a pixel, so every star read as its core.
 fn starGlyph(q: vec2<f32>, r: f32, rays: f32) -> f32 {
   let d = length(q);
   if (rays <= 0.0) {
@@ -43,8 +46,10 @@ fn starGlyph(q: vec2<f32>, r: f32, rays: f32) -> f32 {
   let along = d * cos(phi);
   let across = d * sin(phi);
   let short = rays >= 8.0 && (i32(k) & 1) == 1;
-  let tip = select(r, core + 0.55 * (r - core), short);
-  let halfWidth = 0.7 * core * clamp((tip - along) / (tip - 0.5 * core), 0.0, 1.0);
+  let tip = select(RAY_REACH * r, core + 0.55 * (RAY_REACH * r - core), short);
+  // Concave taper: a long ray stays a spike, not a fat wedge merging its neighbours at the core.
+  let taper = clamp((tip - along) / (tip - 0.5 * core), 0.0, 1.0);
+  let halfWidth = 0.6 * core * taper * taper;
   // Past the tip halfWidth is 0 but the AA band still half-inks the axis: cap it there.
   let cap = step(0.0, along) * (1.0 - smoothstep(tip - 0.4, tip + 0.4, along));
   let wedge = 1.0 - smoothstep(halfWidth - 0.4, halfWidth + 0.4, across);
@@ -99,7 +104,7 @@ fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32) -> Glyph
   // Seven classes by apparent magnitude, one per whole magnitude as Hevelius
   // and Flamsteed graded theirs: dots for the faintest three (m 5, 4, 3), then
   // 6, 8 and 8 rays, and 8 long with 8 short for Sirius and Canopus. A rayed
-  // star's core (half its reach) outgrows the largest dot, so every step reads.
+  // star's core (half its size) outgrows the largest dot, so every step reads.
   let radii = array<f32, 7>(1.0, 1.5, 2.1, 4.4, 5.4, 6.6, 8.0);
   let rayCounts = array<f32, 7>(0.0, 0.0, 0.0, 6.0, 8.0, 8.0, 16.0);
   let rank = 5 - clamp(i32(round(s.z)), -1, 5);
@@ -119,7 +124,7 @@ fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32) -> Glyph
   let size = select(radii[rank], mix(dotRadius.x, dotRadius.y, s.z * s.z) * (1.0 - 0.35 * quiet), isDot);
   let r = size * u.unit * (0.92 + 0.16 * hash21Hq(floor(centre) + 7.1));
   let rays = select(rayCounts[rank], 0.0, isDot);
-  let reach = 1.5 * r + 2.0;
+  let reach = select(1.5, RAY_REACH, rays > 0.0) * r + 2.0;
   let corner = vec2<f32>(f32(vi & 1u), f32((vi >> 1u) & 1u)) * 2.0 - 1.0;
   let px = centre + corner * reach;
   o.pos = vec4<f32>(px.x / u.res.x * 2.0 - 1.0, 1.0 - px.y / u.res.y * 2.0, 0.0, 1.0);
