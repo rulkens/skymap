@@ -704,7 +704,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
       if ((u.flags >> RELIEF_PRINT_SHIFT) == PRINT_EARTH) {
         bodyInk = max(bodyInk, earthRelief(reliefTex, px, relief, u.unit, luma(src), around));
       } else if ((u.flags >> RELIEF_PRINT_SHIFT) == PRINT_MOON) {
-        bodyInk = max(bodyInk, select(0.0, moonRelief(reliefTex, linear, px, relief, u.unit, moon, moonTexel, luma(src) / max(around, 1e-3)), moonRow));
+        bodyInk = max(bodyInk, select(0.0, moonRelief(reliefTex, linear, px, relief, u.unit, moon, moonTexel, luma(src), around), moonRow));
       } else {
         bodyInk = max(bodyInk, groundRelief(reliefTex, linear, px, relief, u.unit, u.hatchAngle,
           luma(src), quarterTex, WASH_LAYER));

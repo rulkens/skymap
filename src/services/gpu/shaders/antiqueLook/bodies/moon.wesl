@@ -197,16 +197,19 @@ const RELIEF_SHARE = vec2<f32>(0.04, 0.55);
 // plates: GRAIN_SHARE.x of the GRAIN_CELL dots on lit flats, up to .y (swelling over
 // GRAIN_RADIUS) on a slope turned from the Sun (`dusk`), where the albedo sinks under the
 // wide albedo by GRAIN_DARKER (sqrt luma: a dark floor), or the plain under its local wash
-// by GRAIN_SHADOW (a small crater's shadow). Seas, cleared floors and blankets (b + 2)
-// keep paper, and the dots give way to the shade's lines.
+// by GRAIN_SHADOW (a small crater's shadow); up to DIM_TONE where that wash itself is dim
+// (luma over GRAIN_DIM: the plain's dusky ground). Seas, cleared floors and blankets
+// (b + 2) keep paper, and the dots give way to the shade's lines.
 const GRAIN_CELL: f32 = 2.8;
 const GRAIN_SHARE = vec2<f32>(0.03, 0.6);
 const GRAIN_RADIUS = vec2<f32>(0.7, 0.95);
 const GRAIN_DARKER = vec2<f32>(0.005, 0.06);
 const GRAIN_SHADOW = vec2<f32>(0.85, 0.6);
+const GRAIN_DIM = vec2<f32>(0.34, 0.16);
+const DIM_TONE: f32 = 0.5;
 
 fn moonRelief(field: texture_2d<f32>, samp: sampler, px: vec2<f32>, relief: vec4<f32>, unit: f32,
-              moon: MoonTone, row: vec4<f32>, plainOverWash: f32) -> f32 {
+              moon: MoonTone, row: vec4<f32>, plain: f32, wash: f32) -> f32 {
   var ink = fallCrest(field, samp, px, unit);
   if (relief.a > 0.0) {
     let share = min(relief.a * 1.5, 1.0) * mix(RELIEF_SHARE.x, RELIEF_SHARE.y, smoothstep(0.1, 0.5, moon.shade));
@@ -214,8 +217,9 @@ fn moonRelief(field: texture_2d<f32>, samp: sampler, px: vec2<f32>, relief: vec4
   }
   let darker = smoothstep(GRAIN_DARKER.x, GRAIN_DARKER.y, row.a - row.r);
   let highland = smoothstep(MARE_OFF, MARE_OFF + 0.04, row.r * row.r) * (1.0 - step(1.5, row.b));
-  let shadow = smoothstep(GRAIN_SHADOW.x, GRAIN_SHADOW.y, plainOverWash);
-  let t = max(max(moon.dusk, darker), shadow) * (1.0 - smoothstep(SHADE_START, SHADE_START + 0.2, moon.tone));
+  let shadow = smoothstep(GRAIN_SHADOW.x, GRAIN_SHADOW.y, plain / max(wash, 1e-3));
+  let dim = DIM_TONE * smoothstep(GRAIN_DIM.x, GRAIN_DIM.y, wash);
+  let t = max(max(moon.dusk, darker), max(shadow, dim)) * (1.0 - smoothstep(SHADE_START, SHADE_START + 0.2, moon.tone));
   let grain = scatter(px / unit, GRAIN_CELL, mix(GRAIN_SHARE.x, GRAIN_SHARE.y, t), mix(GRAIN_RADIUS.x, GRAIN_RADIUS.y, t));
   return max(ink, grain * highland);
 }
