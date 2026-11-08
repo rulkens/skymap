@@ -2,6 +2,8 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import type { Browser } from '@playwright/test';
 import { bootHookedPage } from '../browser/bootHookedPage';
+import { gateViteHmr } from '../browser/gateViteHmr';
+import { wasReloaded } from '../browser/wasReloaded';
 import { collectPageErrors } from '../browser/collectPageErrors';
 import { dispatchActions } from '../browser/dispatchActions';
 import { warnIfWrongCheckout } from '../browser/warnIfWrongCheckout';
@@ -50,6 +52,7 @@ export async function shootLink(
   try {
     const page = await withTimeout(context.newPage(), BROWSER_CALL_TIMEOUT_MS, 'opening a page');
     const pageErrors = collectPageErrors(page);
+    const closeHmr = await withTimeout(gateViteHmr(page), BROWSER_CALL_TIMEOUT_MS, 'gating HMR');
     const params = new URLSearchParams(link.search);
     if (opts.hideUi && !params.has('cinema')) params.set('cinema', '');
     const search = params.toString().replace(/=(&|$)/g, '$1');
@@ -59,6 +62,7 @@ export async function shootLink(
     const boot = (async (): Promise<string | null> => {
       try {
         await bootHookedPage(page, url);
+        closeHmr();
         booted = true;
         if (opts.warnCheckout) await warnIfWrongCheckout(page);
         if (opts.hideLabels) {
@@ -66,6 +70,8 @@ export async function shootLink(
         }
         // Waits out label fades too, which a single frame after the dispatch would still show.
         await page.evaluate(() => (window as unknown as SkymapWindow).__skymap!.settled());
+        // A reload boots from the rewritten hash, so it would be another view.
+        if (await wasReloaded(page)) throw new Error('the page reloaded after it booted');
         return null;
       } catch (err) {
         return (err instanceof Error ? err.message : String(err)).split('\n')[0] ?? '';

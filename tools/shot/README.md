@@ -51,10 +51,29 @@ An `--out` file ending in `.png` is written as PNG without `--png`; any other na
 Before shooting, the tool awaits `window.__skymap.settled()`. It resolves after two frames in a
 row with nothing left to wait for: no focus flight or frame turn, no asset loading (including one
 the destination only asks for once the camera nears it, such as a cosmic-web density cube), no
-Layer still streaming tiles, no fade or label animation, and no frame that threw (a throwing frame
+Layer still streaming or cross-fading tiles, no fade or label animation, and no frame that threw (a throwing frame
 draws nothing, so the canvas would be blank). It never times out itself; `--timeout` is the
 deadline. `window.__skymap.unsettled()` lists what it still waits for. Auto-rotate and a playing
 clock do not hold it back; a playing `clip` or `tour` is not waited for either.
+
+### Settle contract
+
+Two shots of one link on unchanged code are meant to match pixel for pixel. What makes that hold:
+
+- **Time**: give the link a `t=`. It pins the clock, paused, before anything is framed (the boot
+  base pose is taken at that instant too), so bodies and the framing a focus link inherits repeat.
+  A link without `t=` is shot at the wall clock and differs every run.
+- **Code**: the page keeps the code it booted with. After boot the tool drops Vite's HMR messages,
+  so an edit elsewhere in a shared tree can't hot-swap a module or reload the page mid-shot.
+- **Wrong view**: a reload during boot (Vite's dependency-optimize reload) reopens the link itself.
+  Reloading in place would boot from the hash the app has rewritten, which no longer carries `pose`.
+  A page that reloads after boot fails the shot.
+- **Settled**: no flight or frame turn, no asset loading, no tile fetch or tile crossfade, no fade
+  or label animation (see below).
+
+What still varies: point clouds composited in GPU order (stars, galaxies) differ by ±1 in a
+scattered few thousand pixels. The plain cosmic-web volume re-seeds its ray-march dither every
+frame; the antique print pass holds it steady.
 
 With `--hide-ui` the image is read straight from the WebGPU canvas (`toBlob`, in the same task as a
 fresh frame, since a presented WebGPU canvas is cleared), so no page chrome can leak in; otherwise,

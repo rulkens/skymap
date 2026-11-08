@@ -1,27 +1,35 @@
 /**
  * bootHookedPage — navigate to `url`, wait for `window.__skymap`, then await its
- * `ready` promise. Retries the wait (not the goto) up to 2 times: Vite's
- * one-time dependency-optimize reload on a cold cache destroys the execution
- * context mid-wait, and the reloaded page reinstalls the hook and boots again
- * in real time.
+ * `ready` promise. A page that reloads meanwhile (Vite's one-time
+ * dependency-optimize reload on a cold cache, or an HMR full reload) is opened
+ * afresh from `url`, up to 2 times: the reload would boot from the hash the app
+ * has since rewritten, which drops a link's read-only `pose` and so shows
+ * another view.
  */
 import type { Page } from '@playwright/test';
 import { isNavigationInterruption } from './isNavigationInterruption';
+import { wasReloaded } from './wasReloaded';
 import type { SkymapWindow } from '../../../src/@types/automation/SkymapWindow';
 
 const HOOK_TIMEOUT_MS = 15_000;
 const MAX_BOOT_NAVIGATIONS = 2;
 
 export async function bootHookedPage(page: Page, url: string): Promise<void> {
-  await page.goto(url, { waitUntil: 'load' });
   for (let navigations = 0; ; navigations++) {
+    // Via a blank page: a goto that differs only in its hash is a same-document
+    // hash change, which the app would fly to rather than boot on.
+    if (navigations > 0) await page.goto('about:blank');
+    await page.goto(url, { waitUntil: 'load' });
     try {
       await waitForHookReady(page, url);
-      return;
+      if (!(await wasReloaded(page))) return;
     } catch (err) {
-      if (!isNavigationInterruption(err) || navigations >= MAX_BOOT_NAVIGATIONS) throw err;
-      console.warn(`[boot] page navigated during the ready wait (${url}) — retrying`);
+      if (!isNavigationInterruption(err)) throw err;
     }
+    if (navigations >= MAX_BOOT_NAVIGATIONS) {
+      throw new Error(`the page kept reloading while it booted ${url}`);
+    }
+    console.warn(`[boot] page reloaded during the ready wait (${url}) — opening the link again`);
   }
 }
 
