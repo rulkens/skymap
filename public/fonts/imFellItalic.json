@@ -88,6 +88,20 @@
             "page": 0
         },
         {
+            "id": 958,
+            "index": 243,
+            "char": "ξ",
+            "width": 67,
+            "height": 114,
+            "xoffset": -14,
+            "yoffset": -16,
+            "xadvance": 33,
+            "chnl": 15,
+            "x": 0,
+            "y": 148,
+            "page": 0
+        },
+        {
             "id": 74,
             "index": 45,
             "char": "J",
@@ -97,8 +111,8 @@
             "yoffset": -14,
             "xadvance": 45,
             "chnl": 15,
-            "x": 0,
-            "y": 148,
+            "x": 552,
+            "y": 0,
             "page": 0
         },
         {
@@ -111,7 +125,21 @@
             "yoffset": -10,
             "xadvance": 80,
             "chnl": 15,
-            "x": 552,
+            "x": 657,
+            "y": 0,
+            "page": 0
+        },
+        {
+            "id": 946,
+            "index": 231,
+            "char": "β",
+            "width": 67,
+            "height": 113,
+            "xoffset": -16,
+            "yoffset": -15,
+            "xadvance": 38,
+            "chnl": 15,
+            "x": 794,
             "y": 0,
             "page": 0
         },
@@ -125,8 +153,22 @@
             "yoffset": -11,
             "xadvance": 56,
             "chnl": 15,
-            "x": 689,
-            "y": 0,
+            "x": 657,
+            "y": 111,
+            "page": 0
+        },
+        {
+            "id": 950,
+            "index": 235,
+            "char": "ζ",
+            "width": 66,
+            "height": 112,
+            "xoffset": -14,
+            "yoffset": -15,
+            "xadvance": 29,
+            "chnl": 15,
+            "x": 552,
+            "y": 137,
             "page": 0
         },
         {
@@ -139,8 +181,8 @@
             "yoffset": -12,
             "xadvance": 55,
             "chnl": 15,
-            "x": 552,
-            "y": 111,
+            "x": 885,
+            "y": 0,
             "page": 0
         },
         {
@@ -181,8 +223,8 @@
             "yoffset": -13,
             "xadvance": 85,
             "chnl": 15,
-            "x": 105,
-            "y": 255,
+            "x": 885,
+            "y": 135,
             "page": 0
         },
         {
@@ -195,8 +237,22 @@
             "yoffset": -12,
             "xadvance": 69,
             "chnl": 15,
-            "x": 823,
-            "y": 0,
+            "x": 91,
+            "y": 255,
+            "page": 0
+        },
+        {
+            "id": 968,
+            "index": 253,
+            "char": "ψ",
+            "width": 78,
+            "height": 104,
+            "xoffset": -15,
+            "yoffset": -7,
+            "xadvance": 49,
+            "chnl": 15,
+            "x": 642,
+            "y": 247,
             "page": 0
         },
         {
@@ -209,8 +265,8 @@
             "yoffset": 1,
             "xadvance": 33,
             "chnl": 15,
-            "x": 0,
-            "y": 285,
+            "x": 511,
+            "y": 273,
             "page": 0
         },
         {
@@ -223,8 +279,8 @@
             "yoffset": -12,
             "xadvance": 60,
             "chnl": 15,
-            "x": 102,
-            "y": 371,
+            "x": 386,
+            "y": 275,
             "page": 0
         },
         {
@@ -237,8 +293,8 @@
             "yoffset": -12,
             "xadvance": 63,
             "chnl": 15,
-            "x": 823,
-            "y": 114,
+            "x": 744,
+            "y": 247,
             "page": 0
         },
         {
@@ -251,8 +307,8 @@
             "yoffset": -17,
             "xadvance": 65,
             "chnl": 15,
-            "x": 685,
-            "y": 136,
+            "x": 867,
+            "y": 251,
             "page": 0
         },
         {
@@ -265,8 +321,8 @@
             "yoffset": 10,
             "xadvance": 32,
             "chnl": 15,
-            "x": 0,
-            "y": 412,
+            "x": 744,
+            "y": 363,
             "page": 0
         },
         {
@@ -279,8 +335,8 @@
             "yoffset": -14,
             "xadvance": 54,
             "chnl": 15,
-            "x": 511,
-            "y": 246,
+            "x": 613,
+            "y": 375,
             "page": 0
         },
         {
@@ -293,8 +349,8 @@
             "yoffset": -16,
             "xadvance": 33,
             "chnl": 15,
-            "x": 952,
-            "y": 0,
+            "x": 0,
+            "y": 286,
             "page": 0
         },
         {
@@ -307,8 +363,22 @@
             "yoffset": -15,
             "xadvance": 35,
             "chnl": 15,
-            "x": 946,
-            "y": 119,
+            "x": 846,
+            "y": 371,
+            "page": 0
+        },
+        {
+            "id": 955,
+            "index": 240,
+            "char": "λ",
+            "width": 73,
+            "height": 95,
+            "xoffset": -18,
+            "yoffset": -15,
+            "xadvance": 40,
+            "chnl": 15,
+            "x": 936,
+            "y": 371,
             "page": 0
         },
         {
@@ -321,8 +391,22 @@
             "yoffset": 10,
             "xadvance": 31,
             "chnl": 15,
-            "x": 386,
-            "y": 275,
+            "x": 732,
+            "y": 484,
+            "page": 0
+        },
+        {
+            "id": 948,
+            "index": 233,
+            "char": "δ",
+            "width": 67,
+            "height": 94,
+            "xoffset": -13,
+            "yoffset": -15,
+            "xadvance": 35,
+            "chnl": 15,
+            "x": 86,
+            "y": 369,
             "page": 0
         },
         {
@@ -335,8 +419,8 @@
             "yoffset": -15,
             "xadvance": 44,
             "chnl": 15,
-            "x": 807,
-            "y": 230,
+            "x": 177,
+            "y": 369,
             "page": 0
         },
         {
@@ -349,8 +433,8 @@
             "yoffset": -14,
             "xadvance": 39,
             "chnl": 15,
-            "x": 908,
-            "y": 238,
+            "x": 278,
+            "y": 388,
             "page": 0
         },
         {
@@ -363,8 +447,8 @@
             "yoffset": -14,
             "xadvance": 58,
             "chnl": 15,
-            "x": 227,
-            "y": 388,
+            "x": 379,
+            "y": 390,
             "page": 0
         },
         {
@@ -377,7 +461,7 @@
             "yoffset": 12,
             "xadvance": 35,
             "chnl": 15,
-            "x": 102,
+            "x": 177,
             "y": 486,
             "page": 0
         },
@@ -391,8 +475,8 @@
             "yoffset": 9,
             "xadvance": 32,
             "chnl": 15,
-            "x": 0,
-            "y": 533,
+            "x": 267,
+            "y": 505,
             "page": 0
         },
         {
@@ -405,8 +489,8 @@
             "yoffset": -13,
             "xadvance": 52,
             "chnl": 15,
-            "x": 630,
-            "y": 256,
+            "x": 486,
+            "y": 400,
             "page": 0
         },
         {
@@ -419,8 +503,8 @@
             "yoffset": -13,
             "xadvance": 42,
             "chnl": 15,
-            "x": 485,
-            "y": 362,
+            "x": 360,
+            "y": 506,
             "page": 0
         },
         {
@@ -433,8 +517,8 @@
             "yoffset": -12,
             "xadvance": 48,
             "chnl": 15,
-            "x": 334,
-            "y": 393,
+            "x": 591,
+            "y": 491,
             "page": 0
         },
         {
@@ -447,8 +531,8 @@
             "yoffset": -11,
             "xadvance": 33,
             "chnl": 15,
-            "x": 192,
-            "y": 504,
+            "x": 459,
+            "y": 515,
             "page": 0
         },
         {
@@ -461,8 +545,22 @@
             "yoffset": -12,
             "xadvance": 20,
             "chnl": 15,
-            "x": 93,
-            "y": 602,
+            "x": 0,
+            "y": 405,
+            "page": 0
+        },
+        {
+            "id": 952,
+            "index": 237,
+            "char": "θ",
+            "width": 64,
+            "height": 91,
+            "xoffset": -11,
+            "yoffset": -11,
+            "xadvance": 38,
+            "chnl": 15,
+            "x": 81,
+            "y": 487,
             "page": 0
         },
         {
@@ -475,8 +573,8 @@
             "yoffset": -12,
             "xadvance": 59,
             "chnl": 15,
-            "x": 735,
-            "y": 347,
+            "x": 831,
+            "y": 490,
             "page": 0
         },
         {
@@ -489,8 +587,8 @@
             "yoffset": -12,
             "xadvance": 56,
             "chnl": 15,
-            "x": 584,
-            "y": 371,
+            "x": 703,
+            "y": 602,
             "page": 0
         },
         {
@@ -503,8 +601,8 @@
             "yoffset": -11,
             "xadvance": 55,
             "chnl": 15,
-            "x": 446,
-            "y": 477,
+            "x": 556,
+            "y": 606,
             "page": 0
         },
         {
@@ -517,8 +615,78 @@
             "yoffset": -11,
             "xadvance": 24,
             "chnl": 15,
+            "x": 944,
+            "y": 490,
+            "page": 0
+        },
+        {
+            "id": 947,
+            "index": 232,
+            "char": "γ",
+            "width": 70,
+            "height": 90,
+            "xoffset": -15,
+            "yoffset": 8,
+            "xadvance": 37,
+            "chnl": 15,
+            "x": 816,
+            "y": 604,
+            "page": 0
+        },
+        {
+            "id": 956,
+            "index": 241,
+            "char": "μ",
+            "width": 73,
+            "height": 90,
+            "xoffset": -16,
+            "yoffset": 8,
+            "xadvance": 42,
+            "chnl": 15,
+            "x": 910,
+            "y": 604,
+            "page": 0
+        },
+        {
+            "id": 961,
+            "index": 246,
+            "char": "ρ",
+            "width": 66,
+            "height": 90,
+            "xoffset": -17,
+            "yoffset": 8,
+            "xadvance": 36,
+            "chnl": 15,
+            "x": 664,
+            "y": 716,
+            "page": 0
+        },
+        {
+            "id": 962,
+            "index": 247,
+            "char": "ς",
+            "width": 62,
+            "height": 89,
+            "xoffset": -13,
+            "yoffset": 8,
+            "xadvance": 32,
+            "chnl": 15,
             "x": 0,
-            "y": 649,
+            "y": 830,
+            "page": 0
+        },
+        {
+            "id": 966,
+            "index": 251,
+            "char": "φ",
+            "width": 76,
+            "height": 89,
+            "xoffset": -14,
+            "yoffset": 8,
+            "xadvance": 49,
+            "chnl": 15,
+            "x": 86,
+            "y": 602,
             "page": 0
         },
         {
@@ -531,8 +699,8 @@
             "yoffset": -10,
             "xadvance": 48,
             "chnl": 15,
-            "x": 289,
-            "y": 508,
+            "x": 0,
+            "y": 715,
             "page": 0
         },
         {
@@ -545,8 +713,8 @@
             "yoffset": -9,
             "xadvance": 34,
             "chnl": 15,
-            "x": 174,
-            "y": 619,
+            "x": 86,
+            "y": 830,
             "page": 0
         },
         {
@@ -559,8 +727,8 @@
             "yoffset": -9,
             "xadvance": 50,
             "chnl": 15,
-            "x": 848,
-            "y": 355,
+            "x": 107,
+            "y": 715,
             "page": 0
         },
         {
@@ -573,8 +741,22 @@
             "yoffset": -8,
             "xadvance": 55,
             "chnl": 15,
-            "x": 697,
-            "y": 461,
+            "x": 175,
+            "y": 830,
+            "page": 0
+        },
+        {
+            "id": 951,
+            "index": 236,
+            "char": "η",
+            "width": 66,
+            "height": 87,
+            "xoffset": -14,
+            "yoffset": 8,
+            "xadvance": 40,
+            "chnl": 15,
+            "x": 285,
+            "y": 621,
             "page": 0
         },
         {
@@ -587,8 +769,22 @@
             "yoffset": 9,
             "xadvance": 56,
             "chnl": 15,
-            "x": 554,
-            "y": 485,
+            "x": 205,
+            "y": 732,
+            "page": 0
+        },
+        {
+            "id": 967,
+            "index": 252,
+            "char": "χ",
+            "width": 73,
+            "height": 85,
+            "xoffset": -19,
+            "yoffset": 8,
+            "xadvance": 38,
+            "chnl": 15,
+            "x": 375,
+            "y": 630,
             "page": 0
         },
         {
@@ -601,8 +797,22 @@
             "yoffset": 11,
             "xadvance": 58,
             "chnl": 15,
-            "x": 807,
-            "y": 466,
+            "x": 0,
+            "y": 943,
+            "page": 0
+        },
+        {
+            "id": 969,
+            "index": 254,
+            "char": "ω",
+            "width": 80,
+            "height": 72,
+            "xoffset": -13,
+            "yoffset": 8,
+            "xadvance": 55,
+            "chnl": 15,
+            "x": 108,
+            "y": 942,
             "page": 0
         },
         {
@@ -615,8 +825,8 @@
             "yoffset": 3,
             "xadvance": 27,
             "chnl": 15,
-            "x": 83,
-            "y": 717,
+            "x": 472,
+            "y": 630,
             "page": 0
         },
         {
@@ -629,8 +839,148 @@
             "yoffset": 9,
             "xadvance": 40,
             "chnl": 15,
-            "x": 946,
-            "y": 355,
+            "x": 186,
+            "y": 621,
+            "page": 0
+        },
+        {
+            "id": 960,
+            "index": 245,
+            "char": "π",
+            "width": 74,
+            "height": 72,
+            "xoffset": -15,
+            "yoffset": 8,
+            "xadvance": 41,
+            "chnl": 15,
+            "x": 556,
+            "y": 720,
+            "page": 0
+        },
+        {
+            "id": 945,
+            "index": 230,
+            "char": "α",
+            "width": 71,
+            "height": 72,
+            "xoffset": -14,
+            "yoffset": 8,
+            "xadvance": 41,
+            "chnl": 15,
+            "x": 212,
+            "y": 941,
+            "page": 0
+        },
+        {
+            "id": 963,
+            "index": 248,
+            "char": "σ",
+            "width": 72,
+            "height": 72,
+            "xoffset": -14,
+            "yoffset": 8,
+            "xadvance": 39,
+            "chnl": 15,
+            "x": 285,
+            "y": 830,
+            "page": 0
+        },
+        {
+            "id": 964,
+            "index": 249,
+            "char": "τ",
+            "width": 67,
+            "height": 72,
+            "xoffset": -14,
+            "yoffset": 8,
+            "xadvance": 34,
+            "chnl": 15,
+            "x": 791,
+            "y": 137,
+            "page": 0
+        },
+        {
+            "id": 949,
+            "index": 234,
+            "char": "ε",
+            "width": 63,
+            "height": 71,
+            "xoffset": -15,
+            "yoffset": 8,
+            "xadvance": 33,
+            "chnl": 15,
+            "x": 307,
+            "y": 926,
+            "page": 0
+        },
+        {
+            "id": 953,
+            "index": 238,
+            "char": "ι",
+            "width": 49,
+            "height": 71,
+            "xoffset": -13,
+            "yoffset": 8,
+            "xadvance": 22,
+            "chnl": 15,
+            "x": 381,
+            "y": 830,
+            "page": 0
+        },
+        {
+            "id": 954,
+            "index": 239,
+            "char": "κ",
+            "width": 69,
+            "height": 71,
+            "xoffset": -14,
+            "yoffset": 8,
+            "xadvance": 40,
+            "chnl": 15,
+            "x": 454,
+            "y": 739,
+            "page": 0
+        },
+        {
+            "id": 957,
+            "index": 242,
+            "char": "ν",
+            "width": 69,
+            "height": 71,
+            "xoffset": -15,
+            "yoffset": 8,
+            "xadvance": 40,
+            "chnl": 15,
+            "x": 547,
+            "y": 816,
+            "page": 0
+        },
+        {
+            "id": 959,
+            "index": 244,
+            "char": "ο",
+            "width": 62,
+            "height": 71,
+            "xoffset": -14,
+            "yoffset": 8,
+            "xadvance": 35,
+            "chnl": 15,
+            "x": 0,
+            "y": 602,
+            "page": 0
+        },
+        {
+            "id": 965,
+            "index": 250,
+            "char": "υ",
+            "width": 66,
+            "height": 71,
+            "xoffset": -14,
+            "yoffset": 8,
+            "xadvance": 39,
+            "chnl": 15,
+            "x": 454,
+            "y": 834,
             "page": 0
         },
         {
@@ -643,8 +993,8 @@
             "yoffset": 10,
             "xadvance": 25,
             "chnl": 15,
-            "x": 0,
-            "y": 763,
+            "x": 394,
+            "y": 929,
             "page": 0
         },
         {
@@ -657,8 +1007,8 @@
             "yoffset": 10,
             "xadvance": 29,
             "chnl": 15,
-            "x": 946,
-            "y": 448,
+            "x": 476,
+            "y": 929,
             "page": 0
         },
         {
@@ -671,8 +1021,8 @@
             "yoffset": 11,
             "xadvance": 40,
             "chnl": 15,
-            "x": 915,
-            "y": 541,
+            "x": 314,
+            "y": 739,
             "page": 0
         },
         {
@@ -685,8 +1035,8 @@
             "yoffset": 10,
             "xadvance": 31,
             "chnl": 15,
-            "x": 807,
-            "y": 558,
+            "x": 561,
+            "y": 911,
             "page": 0
         },
         {
@@ -699,8 +1049,8 @@
             "yoffset": 11,
             "xadvance": 37,
             "chnl": 15,
-            "x": 663,
-            "y": 572,
+            "x": 643,
+            "y": 830,
             "page": 0
         },
         {
@@ -713,8 +1063,8 @@
             "yoffset": 11,
             "xadvance": 28,
             "chnl": 15,
-            "x": 554,
-            "y": 578,
+            "x": 643,
+            "y": 921,
             "page": 0
         },
         {
@@ -727,8 +1077,8 @@
             "yoffset": 12,
             "xadvance": 39,
             "chnl": 15,
-            "x": 396,
-            "y": 591,
+            "x": 727,
+            "y": 921,
             "page": 0
         },
         {
@@ -741,8 +1091,8 @@
             "yoffset": 13,
             "xadvance": 38,
             "chnl": 15,
-            "x": 263,
-            "y": 620,
+            "x": 734,
+            "y": 830,
             "page": 0
         },
         {
@@ -755,8 +1105,8 @@
             "yoffset": 12,
             "xadvance": 24,
             "chnl": 15,
-            "x": 889,
-            "y": 632,
+            "x": 754,
+            "y": 718,
             "page": 0
         },
         {
@@ -769,8 +1119,8 @@
             "yoffset": 21,
             "xadvance": 37,
             "chnl": 15,
-            "x": 754,
-            "y": 650,
+            "x": 0,
+            "y": 520,
             "page": 0
         },
         {
@@ -783,8 +1133,8 @@
             "yoffset": -14,
             "xadvance": 23,
             "chnl": 15,
-            "x": 972,
-            "y": 632,
+            "x": 220,
+            "y": 255,
             "page": 0
         },
         {
@@ -797,8 +1147,8 @@
             "yoffset": 35,
             "xadvance": 19,
             "chnl": 15,
-            "x": 486,
-            "y": 591,
+            "x": 91,
+            "y": 148,
             "page": 0
         },
         {
@@ -811,13 +1161,13 @@
             "yoffset": 46,
             "xadvance": 18,
             "chnl": 15,
-            "x": 638,
-            "y": 578,
+            "x": 424,
+            "y": 115,
             "page": 0
         }
     ],
     "info": {
-        "face": "IMFellEnglish-Italic",
+        "face": "SkymapItalicGreek",
         "size": 84,
         "bold": 0,
         "italic": 0,
@@ -879,7 +1229,32 @@
             "-",
             ".",
             "(",
-            ")"
+            ")",
+            "α",
+            "β",
+            "γ",
+            "δ",
+            "ε",
+            "ζ",
+            "η",
+            "θ",
+            "ι",
+            "κ",
+            "λ",
+            "μ",
+            "ν",
+            "ξ",
+            "ο",
+            "π",
+            "ρ",
+            "ς",
+            "σ",
+            "τ",
+            "υ",
+            "φ",
+            "χ",
+            "ψ",
+            "ω"
         ],
         "unicode": 1,
         "stretchH": 100,

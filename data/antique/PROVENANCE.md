@@ -25,6 +25,10 @@ applies.
 Each cartouche's title is set at runtime in IM FELL English (`data/raw/fonts/`, © Igino Marini, SIL Open
 Font License 1.1, `data/raw/fonts/OFL-IMFell.txt`).
 
+The star italic's Bayer letters (τ Ceti) are lowercase Greek glyphs from Gentium Plus Italic (SIL International,
+SIL OFL 1.1, `data/raw/fonts/OFL-Gentium.txt`), scaled to the Fell x-height and merged into a bake-only TTF
+(`tools/fonts/mergeGreekIntoItalic.py`); IM Fell has no Greek. Only the MSDF atlas `public/fonts/imFellItalic.*` ships.
+
 ## Processing
 
 Per sprite: crop to luminance (the coloured ship uses the max channel, so its washes do not read as
@@ -53,8 +57,9 @@ long side.
 
 ## Known residue
 
-- strapwork: short ends of the graticule remain where it met the straps, and between the right-hand
-  straps and the roll.
+- strapwork: short ends of the graticule remain where it met the straps. The rules in the gaps between
+  straps and rolls were erased afterwards by hand-placed boxes, cutting only ink under 5 px wide (no
+  solid stroke), on the 1024 px sprite.
 - tablet: a few rhumb-line ends remain beside the left scroll.
 
 - whale: the belly line is cut where the whale lies on the dark shore hatching, and a few sea-hatching

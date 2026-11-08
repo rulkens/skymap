@@ -19,6 +19,7 @@ import { ANTIQUE_LABEL_STYLE } from '../../data/labels/antiqueLabelStyle';
 import { ANTIQUE_MODERN_NAME_EDITS } from '../../data/labels/antiqueModernNameEdits';
 import { ANTIQUE_AREA_LETTERING } from '../../data/labels/antiqueAreaLettering';
 import { ANTIQUE_PLACE_LETTERING } from '../../data/labels/antiquePlaceLettering';
+import { bayerGreek } from './bayerGreek';
 import { isKeyOf } from '../object/isKeyOf';
 import { CAPTION_PRIORITY_SCALE } from '../../data/labels/captionPriorityScale';
 
@@ -95,7 +96,11 @@ export function antiqueLabel(
     ...placed,
     declutterPriority,
     text:
-      cut === 'capitals' || cut === 'spacedItalic' ? text.toUpperCase().replace(/U/g, 'V') : text,
+      cut === 'capitals' || cut === 'spacedItalic'
+        ? text.toUpperCase().replace(/U/g, 'V')
+        : cut === 'italic'
+          ? bayerGreek(text)
+          : text,
     font: hasFont(fell) ? fell : label.font,
     trackingEm: place?.trackingEm ?? style[cut].trackingEm,
     color: [1, 1, 1, 1],

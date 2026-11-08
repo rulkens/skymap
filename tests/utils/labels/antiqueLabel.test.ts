@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import type { Label2D } from '../../../src/@types/rendering/Label2D';
 import type { AntiqueLabelRule } from '../../../src/@types/rendering/AntiqueLabelRule';
+import { bayerGreek } from '../../../src/utils/labels/bayerGreek';
+import { FONTS } from '../../../src/data/fonts';
 import { antiqueLabel } from '../../../src/utils/labels/antiqueLabel';
 import { bodyCaption } from '../../../src/utils/labels/bodyCaption';
 import { ANTIQUE_LABEL_RULES } from '../../../src/data/labels/antiqueLabelRules';
@@ -54,9 +56,20 @@ describe('antiqueLabel', () => {
       const caption = bodyCaption(star, 1, [0, 0, 0], [1, 1, 1], 0, undefined);
       const shown = antiqueLabel(caption, rule, false, ALL_FONTS);
       expect(shown, star.label).not.toBeNull();
-      expect(shown!.text).toBe(rule?.names[caption.id] ?? star.label);
+      expect(shown!.text).toBe(bayerGreek(rule?.names[caption.id] ?? star.label));
       expect(shown!.font).toBe(ANTIQUE_LABEL_STYLE.italicFont);
+      // A glyph the baked italic atlas lacks would print as a hole in the name.
+      const atlas = FONTS[ANTIQUE_LABEL_STYLE.italicFont].charset;
+      for (const ch of shown!.text.replace('\n', '')) expect(atlas, shown!.text).toContain(ch);
     }
+  });
+
+  it('prints a Bayer letter as its Greek glyph, in the italic only', () => {
+    const rule = ANTIQUE_LABEL_RULES.starCatalog;
+    const ceti = antiqueLabel(label('sceneBody-tau-ceti', 'Tau Ceti'), rule, false, ALL_FONTS);
+    expect(ceti!.text).toBe('τ Ceti');
+    const avior = antiqueLabel(label('sceneBody-avior', 'Avior'), rule, false, ALL_FONTS);
+    expect(avior!.text).toBe('ε Argus\n(Avior)');
   });
 
   it("follows the rule's unlisted policy", () => {

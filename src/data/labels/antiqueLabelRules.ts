@@ -62,7 +62,7 @@ export const ANTIQUE_LABEL_RULES: Readonly<Partial<Record<LabelName, AntiqueLabe
       'sceneBody-schedar': 'Schedir',
       'sceneBody-fomalhaut': 'Fomahant',
       // Names coined after the plate (1930s almanac, IAU 2016-18) yield to Bayer's
-      // letter, spelled out until the italic carries Greek; the modern name glosses it.
+      // letter (the italic turns "Epsilon" to ε, `bayerGreek`); the modern name glosses it.
       'sceneBody-avior': 'Epsilon Argus\n(Avior)',
       'sceneBody-peacock': 'Alpha Pavonis\n(Peacock)',
       'sceneBody-tiaki': 'Beta Gruis\n(Tiaki)',

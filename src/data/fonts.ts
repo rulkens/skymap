@@ -118,6 +118,9 @@ const UNIT_SYMBOLS = '°±µ';
  * and brackets round a town's modern gloss. */
 const NAME_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz '-.()";
 
+/** Alpha to omega, with the final sigma: the Bayer letters. */
+const GREEK_LOWERCASE = 'αβγδεζηθικλμνξοπρςστυφχψω';
+
 /**
  * The registry.  Adding a font is a three-step config change:
  *   1. Drop the TTF under `data/raw/fonts/`.
@@ -142,9 +145,11 @@ export const FONTS = {
     onDemand: true,
   },
   // Letters only: the italic's wide swashes overflow one page with all of ASCII.
+  // Greek lowercase for Bayer letters (τ Ceti): IM Fell has none, so the TTF is the Fell italic
+  // with Gentium Plus Italic's Greek cut in (`tools/fonts/mergeGreekIntoItalic.py`).
   imFellItalic: {
-    ttf: 'IMFellEnglish-Italic.ttf',
-    charset: NAME_LETTERS,
+    ttf: 'SkymapItalicGreek.ttf',
+    charset: NAME_LETTERS + GREEK_LOWERCASE,
     onDemand: true,
   },
 } as const satisfies Readonly<Record<string, FontConfig>>;
