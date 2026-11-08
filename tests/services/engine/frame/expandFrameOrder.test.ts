@@ -530,13 +530,14 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     expect(on).toContain('procedural-disks');
   });
 
-  it("draws the look's own passes only with the look on: the steady density raymarch, land map, geography, the Moon's print and relief on the body row, galaxy then star points into the print points", () => {
+  it("draws the look's own passes only with the look on: the steady density raymarch, the print's filaments, land map, geography, the Moon's print and relief on the body row, galaxy then star points into the print points", () => {
     const lookSteps = (steps: readonly FrameStep[]) =>
       steps.filter((step) => namesOf(step).some((name) => ANTIQUE_ONLY_PASSES.includes(name)));
     const rows = { lens: [], insideAtmosphere: [], surfaceMask: [3] };
     expect(lookSteps(program({ bodyRowSlabs: rows }))).toEqual([]);
     expect(lookSteps(program({ antique: true, bodyRowSlabs: rows }))).toMatchObject([
       { kind: 'render', target: 'cosmic-web-density', slab: COSMO },
+      { kind: 'render', target: ANTIQUE_TARGETS.lines, slab: COSMO },
       { kind: 'render', target: ANTIQUE_TARGETS.land, slab: 3 },
       { kind: 'render', target: ANTIQUE_TARGETS.geography, slab: 3 },
       { kind: 'render', target: ANTIQUE_TARGETS.moon, slab: 3 },
@@ -572,11 +573,16 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     expect(on).toMatchObject({ target: ANTIQUE_TARGETS.lines, depth: { sample: 'foreground:0' } });
   });
 
-  it("moves the cosmic-web filaments onto the look's lines row, where the print's reduce can't thin them away", () => {
-    const filamentSteps = (steps: readonly FrameStep[]) =>
-      steps.filter((step) => namesOf(step).includes('cosmic-web-filaments'));
-    expect(filamentSteps(program())).toMatchObject([{ target: 'hdr', slab: COSMO }]);
-    expect(filamentSteps(program({ antique: true }))).toMatchObject([
+  it("draws the cosmic-web filaments' print twin on the look's lines row, where the print's reduce can't thin them away", () => {
+    const stepsOf = (name: string, steps: readonly FrameStep[]) =>
+      steps.filter((step) => namesOf(step).includes(name));
+    expect(stepsOf('cosmic-web-filaments', program())).toMatchObject([
+      { target: 'hdr', slab: COSMO },
+    ]);
+    expect(stepsOf('cosmic-web-filaments-print', program())).toEqual([]);
+    const on = program({ antique: true });
+    expect(stepsOf('cosmic-web-filaments', on)).toEqual([]);
+    expect(stepsOf('cosmic-web-filaments-print', on)).toMatchObject([
       { target: ANTIQUE_TARGETS.lines, slab: COSMO },
     ]);
   });

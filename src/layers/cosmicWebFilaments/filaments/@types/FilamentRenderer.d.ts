@@ -26,6 +26,8 @@ export type FilamentRenderer = {
     fadeOpacity: number,
     baseTint: Vec3,
     hotTint: Vec3,
+    /** The antique look's lines row: overlaps composite over, so alpha never passes 1. */
+    print?: boolean,
   ): void;
   destroy(): void;
 };

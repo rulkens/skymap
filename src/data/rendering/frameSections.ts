@@ -123,6 +123,7 @@ export const SCENE: FrameSection = {
         'procedural-disks',
         'textured-disks',
         'cosmic-web-filaments',
+        'cosmic-web-filaments-print',
         'flow',
         'cosmic-web-density-upsample',
         'zone-of-avoidance-upsample',

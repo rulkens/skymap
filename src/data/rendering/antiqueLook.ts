@@ -51,7 +51,8 @@ export const ANTIQUE_NUMERAL_UNITS = 22;
  * Likewise a galaxy point prints only as its catalogue dot (a field of sprites grew
  * contour islands in the low band); resolved galaxies' disks still feed the print.
  * The cosmic structures' discs went too: their outlines drew rings round empty paper,
- * so a structure is named on the plate, not ringed. */
+ * so a structure is named on the plate, not ringed. The density and the filaments
+ * give way to their `-print` twins. */
 export const ANTIQUE_HIDDEN_PASSES: readonly string[] = [
   'star-points',
   'star-catalog',
@@ -61,6 +62,7 @@ export const ANTIQUE_HIDDEN_PASSES: readonly string[] = [
   'near0-selection-ring',
   'cosmic-web-density',
   'cosmic-web-density-upsample',
+  'cosmic-web-filaments',
   'point-sprites',
   'structure-markers-cosmo',
 ];
@@ -76,6 +78,7 @@ export const ANTIQUE_ONLY_PASSES: readonly string[] = [
   'star-catalog-print',
   'galaxy-points-print',
   'cosmic-web-density-print',
+  'cosmic-web-filaments-print',
 ];
 
 /** Passes the look moves off their line onto a row of its own, which the plate inks
@@ -84,7 +87,7 @@ export const ANTIQUE_MOVED_PASSES: Readonly<Record<string, string>> = {
   constellations: 'antique-lines',
   'orbit-trails': 'antique-lines',
   'mission-trails': 'antique-lines',
-  'cosmic-web-filaments': 'antique-lines',
+  'cosmic-web-filaments-print': 'antique-lines',
   'structure-markers-near': 'antique-structures',
 };
 

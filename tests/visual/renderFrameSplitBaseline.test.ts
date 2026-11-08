@@ -516,7 +516,7 @@ describe('renderFrame visual baseline', () => {
           "renderer": "textured-disks",
         },
         {
-          "argShape": "pass,Float32Array[16],Array[2],number,number,number,number,Array[3],Array[3]",
+          "argShape": "pass,Float32Array[16],Array[2],number,number,number,number,Array[3],Array[3],boolean",
           "renderer": "filaments",
         },
         {

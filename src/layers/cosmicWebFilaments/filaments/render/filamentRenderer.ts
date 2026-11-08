@@ -133,49 +133,57 @@ export function createFilamentRenderer(
     entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
   });
 
-  const pipeline = device.createRenderPipeline({
-    label: 'filaments-pipeline',
-    layout: device.createPipelineLayout({
-      label: 'filaments-pipeline-layout',
-      bindGroupLayouts: [bindGroupLayout, fadeBgl],
-    }),
-    vertex: {
-      module: vsModule,
-      entryPoint: 'vs',
-      buffers: [
-        // Per-quad-vertex: uv vec2
-        UNIT_QUAD_VERTEX_LAYOUT,
-        // Per-instance: startxyz + startDensity + endxyz + endDensity
-        {
-          arrayStride: FLOATS_PER_SEGMENT * 4,
-          stepMode: 'instance',
-          attributes: [
-            { shaderLocation: 1, offset: 0, format: 'float32x3' }, // startPos
-            { shaderLocation: 2, offset: 12, format: 'float32' }, // startDensity
-            { shaderLocation: 3, offset: 16, format: 'float32x3' }, // endPos
-            { shaderLocation: 4, offset: 28, format: 'float32' }, // endDensity
-          ],
-        },
-      ],
-    },
-    fragment: {
-      module: fsModule,
-      entryPoint: 'fs',
-      targets: [
-        {
-          format: targetFormat,
-          // Additive blending — filaments glow over the existing scene
-          // without occluding the point cloud below them.
-          blend: ADDITIVE_BLEND,
-        },
-      ],
-    },
-    primitive: { topology: 'triangle-list' },
-    // Note: the HDR pass in `renderFrame.ts` does NOT attach a depth
-    // texture — points/quads/disks all skip depth.  Filaments follow
-    // the same convention; if a future plan adds a depth attachment
-    // to the HDR pass, mirror the points-pipeline's depthStencil
-    // block here.
+  const pipelineFor = (label: string, blend: GPUBlendState) =>
+    device.createRenderPipeline({
+      label,
+      layout: device.createPipelineLayout({
+        label: 'filaments-pipeline-layout',
+        bindGroupLayouts: [bindGroupLayout, fadeBgl],
+      }),
+      vertex: {
+        module: vsModule,
+        entryPoint: 'vs',
+        buffers: [
+          // Per-quad-vertex: uv vec2
+          UNIT_QUAD_VERTEX_LAYOUT,
+          // Per-instance: startxyz + startDensity + endxyz + endDensity
+          {
+            arrayStride: FLOATS_PER_SEGMENT * 4,
+            stepMode: 'instance',
+            attributes: [
+              { shaderLocation: 1, offset: 0, format: 'float32x3' }, // startPos
+              { shaderLocation: 2, offset: 12, format: 'float32' }, // startDensity
+              { shaderLocation: 3, offset: 16, format: 'float32x3' }, // endPos
+              { shaderLocation: 4, offset: 28, format: 'float32' }, // endDensity
+            ],
+          },
+        ],
+      },
+      fragment: {
+        module: fsModule,
+        entryPoint: 'fs',
+        targets: [
+          {
+            format: targetFormat,
+            blend,
+          },
+        ],
+      },
+      primitive: { topology: 'triangle-list' },
+      // Note: the HDR pass in `renderFrame.ts` does NOT attach a depth
+      // texture — points/quads/disks all skip depth.  Filaments follow
+      // the same convention; if a future plan adds a depth attachment
+      // to the HDR pass, mirror the points-pipeline's depthStencil
+      // block here.
+    });
+  // Additive: filaments glow over the scene without occluding the points below.
+  const pipeline = pipelineFor('filaments-pipeline', ADDITIVE_BLEND);
+  // The antique look's lines row reads alpha as stroke weight, and past 0.9 as an
+  // orbit trail it erodes to a core: summed, a spine's ~100 overlapping strips
+  // erased it. Over-compositing saturates toward 1 instead, so overlap still grades.
+  const printPipeline = pipelineFor('filaments-print-pipeline', {
+    color: ADDITIVE_BLEND.color,
+    alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
   });
 
   // ── Stateful per-cloud bookkeeping ────────────────────────────────
@@ -254,6 +262,7 @@ export function createFilamentRenderer(
      */
     baseTint: Vec3,
     hotTint: Vec3,
+    print = false,
   ): void {
     if (segmentCount === 0 || !instanceBuffer || !fadeBuffer || !fadeBindGroup) return;
 
@@ -282,7 +291,7 @@ export function createFilamentRenderer(
     fadeScratchF32[0] = fadeOpacity;
     device.queue.writeBuffer(fadeBuffer, 0, fadeScratchBuffer);
 
-    pass.setPipeline(pipeline);
+    pass.setPipeline(print ? printPipeline : pipeline);
     pass.setBindGroup(0, bindGroup);
     pass.setBindGroup(1, fadeBindGroup);
     pass.setIndexBuffer(indexBuffer, 'uint16');
