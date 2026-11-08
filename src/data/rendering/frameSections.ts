@@ -102,7 +102,13 @@ export const SCENE: FrameSection = {
     { kind: 'compute', name: 'aerial-perspective' },
     // Reduced-res density raymarch, merged into HDR by `cosmic-web-density-upsample`
     // inside the hdr COSMO step below, so this render must precede that step.
-    { kind: 'render', target: 'cosmic-web-density', slab: COSMO, passes: ['cosmic-web-density'] },
+    // The look swaps in `-print`, its jitter still (`ANTIQUE_ONLY_PASSES`).
+    {
+      kind: 'render',
+      target: 'cosmic-web-density',
+      slab: COSMO,
+      passes: ['cosmic-web-density', 'cosmic-web-density-print'],
+    },
     // Twin of the density render, into a 1/5-res offscreen merged by
     // `zone-of-avoidance-upsample`.
     { kind: 'render', target: 'zoa', slab: COSMO, passes: ['zone-of-avoidance'] },

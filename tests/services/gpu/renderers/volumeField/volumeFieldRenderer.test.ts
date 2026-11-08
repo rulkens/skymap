@@ -120,6 +120,35 @@ describe('createVolumeFieldRenderer draw', () => {
     expect(s?.[62]).toBeCloseTo(0.1); // trim
   });
 
+  it('a steady draw holds the jitter seed still; a default draw moves it every frame', () => {
+    const device = mockDevice();
+    const r = createVolumeFieldRenderer(device, 'bgra8unorm', {} as never);
+    r.upload('mcpm', fixture(), MCPM_ENTRY);
+    const drawOnce = (steady?: boolean) =>
+      r.draw(
+        makeFakePass(),
+        new Float32Array(16) as unknown as Mat4,
+        [320, 180],
+        1000,
+        [0, 0, 5],
+        () => fullSettings(),
+        () => 1,
+        steady,
+      );
+    drawOnce();
+    drawOnce();
+    drawOnce(true);
+    drawOnce(true);
+    const seeds = (
+      device.queue.writeBuffer as unknown as { mock: { calls: unknown[][] } }
+    ).mock.calls
+      .map((c) => c[2])
+      .filter((d): d is Float32Array => d instanceof Float32Array && d.length === 64)
+      .map((s) => s[63]);
+    expect(seeds[0]).not.toBe(seeds[1]);
+    expect(seeds[2]).toBe(seeds[3]);
+  });
+
   it('upload seeds contrastCenter / envelope from statics, for an id no registry row names', () => {
     // Per-cube static config taken from `upload`'s `statics` argument;
     // user-tunable knobs are absent from it and arrive per draw via

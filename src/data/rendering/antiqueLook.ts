@@ -56,6 +56,7 @@ export const ANTIQUE_HIDDEN_PASSES: readonly string[] = [
   'marker-lines',
   'selection-ring',
   'near0-selection-ring',
+  'cosmic-web-density',
   'cosmic-web-density-upsample',
   'point-sprites',
   'structure-markers-cosmo',
@@ -71,6 +72,7 @@ export const ANTIQUE_ONLY_PASSES: readonly string[] = [
   'star-points-print',
   'star-catalog-print',
   'galaxy-points-print',
+  'cosmic-web-density-print',
 ];
 
 /** Passes the look moves off their line onto a row of its own, which the plate inks

@@ -343,3 +343,8 @@ globe-space (lat/lon) hatching, which needs a surface-parameter target from the 
 - [x] Measured on all three designs (desktop and phone): the sprites carry no scan colour (RGB 0 everywhere); the stray colour was each frame's wash landing on the paper 2 to 5 px past its outline, plus a lineless gamboge band round the scrollwork's field.
 - [x] The packer pulls a frame's wash 1.5 px inside its outline and cuts the field's paper out to the frame's inner ink; decor.wesl keeps the brush's stray inside the wash's own outline. A guard test checks the packed atlas.
 - [x] The strapwork and tablet extraction scripts moved to `tools/antique/sprites/` (they rebuild both sprites byte for byte).
+
+### Task 39: Still at rest, rays that end (glyph-flicker investigation)
+
+- [x] The cosmic-web chart shimmered at rest (~6k px per frame at dpr 1): `web.wesl` thresholds the density row, whose raymarch reseeds its step jitter every frame. With the look on, `cosmic-web-density-print` swaps in for the raymarch with its jitter held still (`steadyJitter`); the plain look's raymarch is untouched. Rest diff: 0 px per frame; no added pass.
+- [ ] `starGlyph`'s rays ended in a half-ink hairline out to the quad's edge.

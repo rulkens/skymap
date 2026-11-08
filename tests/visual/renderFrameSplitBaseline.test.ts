@@ -500,7 +500,7 @@ describe('renderFrame visual baseline', () => {
     expect(drawSequence).toMatchInlineSnapshot(`
       [
         {
-          "argShape": "pass,Float32Array[16],Array[2],number,Array[3],function,function",
+          "argShape": "pass,Float32Array[16],Array[2],number,Array[3],function,function,undefined",
           "renderer": "cosmic-web-density",
         },
         {
