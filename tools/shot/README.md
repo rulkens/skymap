@@ -52,6 +52,14 @@ Before shooting, the tool awaits `window.__skymap.settled()`: it resolves after 
 with no fade or label animation running (always at least one frame, never times out). Auto-rotate
 and a playing clock do not hold it back.
 
+### Page stability
+
+- **Code**: the page keeps the code it booted with. After boot the tool drops Vite's HMR messages,
+  so an edit elsewhere in a shared tree can't hot-swap a module or reload the page mid-shot.
+- **Wrong view**: a reload during boot (Vite's dependency-optimize reload) reopens the link itself.
+  Reloading in place would boot from the hash the app has rewritten, which no longer carries `pose`.
+  A page that reloads after boot fails the shot.
+
 With `--hide-ui` the image is read straight from the WebGPU canvas (`toBlob`, in the same task as a
 fresh frame, since a presented WebGPU canvas is cleared), so no page chrome can leak in; otherwise,
 and whenever that read fails, it is a Playwright page screenshot.
