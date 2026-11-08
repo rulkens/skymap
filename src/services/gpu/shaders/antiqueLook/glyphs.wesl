@@ -45,8 +45,10 @@ fn starGlyph(q: vec2<f32>, r: f32, rays: f32) -> f32 {
   let short = rays >= 8.0 && (i32(k) & 1) == 1;
   let tip = select(r, core + 0.55 * (r - core), short);
   let halfWidth = 0.7 * core * clamp((tip - along) / (tip - 0.5 * core), 0.0, 1.0);
+  // Past the tip halfWidth is 0 but the AA band still half-inks the axis: cap it there.
+  let cap = step(0.0, along) * (1.0 - smoothstep(tip - 0.4, tip + 0.4, along));
   let wedge = 1.0 - smoothstep(halfWidth - 0.4, halfWidth + 0.4, across);
-  return max(1.0 - smoothstep(core - 0.45, core + 0.45, d), wedge * step(0.0, along));
+  return max(1.0 - smoothstep(core - 0.45, core + 0.45, d), wedge * cap);
 }
 
 // A dot's radius in print units, faintest to brightest: a star's under the faintest

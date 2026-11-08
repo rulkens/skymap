@@ -347,4 +347,4 @@ globe-space (lat/lon) hatching, which needs a surface-parameter target from the 
 ### Task 39: Still at rest, rays that end (glyph-flicker investigation)
 
 - [x] The cosmic-web chart shimmered at rest (~6k px per frame at dpr 1): `web.wesl` thresholds the density row, whose raymarch reseeds its step jitter every frame. With the look on, `cosmic-web-density-print` swaps in for the raymarch with its jitter held still (`steadyJitter`); the plain look's raymarch is untouched. Rest diff: 0 px per frame; no added pass.
-- [ ] `starGlyph`'s rays ended in a half-ink hairline out to the quad's edge.
+- [x] `starGlyph`'s rays ran on past their tips as a half-ink hairline to the quad's edge (the AA band over a zero-width wedge); an anti-aliased cap ends each ray at its tip. A test evaluates the shader's own `starGlyph`.
