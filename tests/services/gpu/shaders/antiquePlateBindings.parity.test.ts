@@ -88,4 +88,11 @@ describe('the antique plate bindings', () => {
     );
     expect(wgsl).toEqual(ts);
   });
+
+  it("names the glow's layer in glyphs.wesl as the plate does", () => {
+    const glyphs = readShaderSource('src/services/gpu/shaders/antiqueLook/glyphs.wesl');
+    expect(/const\s+GLOW_LAYER\s*:\s*i32\s*=\s*(\d+)\s*;/.exec(glyphs)?.[1]).toBe(
+      String(ANTIQUE_LOW_LAYERS.glow),
+    );
+  });
 });

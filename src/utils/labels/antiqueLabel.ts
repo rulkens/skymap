@@ -44,12 +44,6 @@ export function antiqueLabel(
       (name === undefined && (rule?.unlisted === 'hide' || DIGIT.test(label.text))));
   if (hidden && !subjectKept) return null;
 
-  // A producer that lifts its own label (COSMO: famous galaxies, the Milky Way)
-  // carries the subject as its leader's foot; the name goes back there.
-  const placed: Label2D =
-    label.leader && !label.lift
-      ? { ...label, worldPos: label.leader.fromWorld, leader: undefined }
-      : label;
   const text =
     name ??
     (subjectKept
@@ -66,7 +60,9 @@ export function antiqueLabel(
     'capitals';
   let cut: AntiqueLettering = tier;
   if (subjectKept) {
-    cut = tier === 'italic' || text.length > style.titleMaxChars ? 'italic' : 'capitals';
+    // A glossed title is judged by its name line alone.
+    const nameChars = text.split('\n')[0]!.length;
+    cut = tier === 'italic' || nameChars > style.titleMaxChars ? 'italic' : 'capitals';
   }
   if ((cut === 'italic' || cut === 'spacedItalic') && DIGIT.test(text)) cut = 'roman';
 
@@ -93,11 +89,15 @@ export function antiqueLabel(
       ? own
       : rule.priority * CAPTION_PRIORITY_SCALE + ((own ?? 0) % CAPTION_PRIORITY_SCALE);
   return {
-    ...placed,
+    ...label,
     declutterPriority,
     text:
       cut === 'capitals' || cut === 'spacedItalic'
-        ? text.toUpperCase().replace(/U/g, 'V')
+        ? text
+            .split('\n')
+            // A gloss in brackets keeps its case, so it reads under the name, not as a second one.
+            .map((line) => (line.startsWith('(') ? line : line.toUpperCase().replace(/U/g, 'V')))
+            .join('\n')
         : cut === 'italic'
           ? bayerGreek(text)
           : text,

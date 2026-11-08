@@ -144,6 +144,8 @@ export function createAntiqueLookGpu(
       { binding: 0, visibility: GPUShaderStage.VERTEX, ...TEXTURE },
       { binding: 1, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, ...UNIFORM },
       { binding: 2, visibility: GPUShaderStage.VERTEX, ...COVER },
+      { binding: 3, visibility: GPUShaderStage.VERTEX, ...ARRAY },
+      { binding: 4, visibility: GPUShaderStage.VERTEX, ...STORAGE },
     ],
   });
   const max: GPUBlendComponent = { srcFactor: 'one', dstFactor: 'one', operation: 'max' };

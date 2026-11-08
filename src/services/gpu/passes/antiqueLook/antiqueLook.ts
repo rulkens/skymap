@@ -362,6 +362,8 @@ export function createAntiqueLook(init: {
           { binding: 0, resource: points },
           { binding: 1, resource: uniforms },
           { binding: 2, resource: bodies },
+          { binding: 3, resource: targets.viewOf(ANTIQUE_TARGETS.low) },
+          { binding: 4, resource: { buffer: g.skyFloorBuffer } },
         ],
       }),
     );

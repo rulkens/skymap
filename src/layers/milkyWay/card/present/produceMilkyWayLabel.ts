@@ -17,6 +17,7 @@ import { liftedLabelPlacement } from '../../../../services/engine/presentation/l
 import { textLayoutOf } from '../../../../services/gpu/labelLayout/textLayoutOf';
 import { isPickableUnderFocus } from '../../../../utils/structure/isPickableUnderFocus';
 import { antiqueMilkyWayNameAlpha } from '../utils/antiqueMilkyWayNameAlpha';
+import { antiqueLookOn } from '../../../../utils/render/antiqueLookOn';
 
 // The MW stellar disk, in kpc: the origin dot has no catalog row to read a
 // diameter from, so the producer supplies one for the proportional lift.
@@ -69,6 +70,10 @@ export const produceMilkyWayLabel =
       distanceMpc: camDist,
       pxPerRad: ctx.drawPxPerRad,
     });
+    // The antique look sets its own type, which only the director measures, so its
+    // lift stage sets the name off the disc's rim.
+    if (antiqueLookOn(state))
+      return { labels: [{ ...label, lift: { subjectSizePx: sizePx } }], awake: false };
     const viewportPx: Vec2 = [ctx.canvasSize.width, ctx.canvasSize.height];
     const fontAtlases = state.gpu.fontAtlases;
     const placement = liftedLabelPlacement({

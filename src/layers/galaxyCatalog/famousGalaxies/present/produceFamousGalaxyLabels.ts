@@ -61,6 +61,7 @@ import { liftedLabelPlacement } from '../../../../services/engine/presentation/l
 import { textLayoutOf } from '../../../../services/gpu/labelLayout/textLayoutOf';
 import { smoothstep } from '../../../../utils/math/smoothstep';
 import { isPickableUnderFocus } from '../../../../utils/structure/isPickableUnderFocus';
+import { antiqueLookOn } from '../../../../utils/render/antiqueLookOn';
 
 const FAMOUS_MIN_APPARENT_PX = 6;
 
@@ -180,6 +181,7 @@ export function produceFamousGalaxyLabels(
     // Identical for every famous label (no per-member focus exemption here), so
     // read once; folded into each label + anchor-line fadeAlpha below.
     const layerAlpha = fade.famousGalaxy;
+    const antique = antiqueLookOn(state);
 
     for (let i = 0; i < inputs.length; i += 1) {
       const p = inputs[i]!;
@@ -247,6 +249,13 @@ export function produceFamousGalaxyLabels(
         outlineEmFrac: style.outlineEmFrac,
         declutterPriority,
       };
+
+      // The antique look sets its own type (`antiqueLabel`), which only the director
+      // measures, so its lift stage sets the name off the disc's rim.
+      if (antique) {
+        labels.push({ ...label, lift: { subjectSizePx: sizePx } });
+        continue;
+      }
 
       // Single derivation chain (see `liftedLabelPlacement`): the lift is
       // screen-space (world +Y offsets foreshorten or fall over the text), the

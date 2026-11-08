@@ -134,6 +134,15 @@ describe('produceMilkyWayLabel', () => {
     expect(produce(makeState(), ctx, 1).labels).toHaveLength(1);
   });
 
+  it('under the antique look leaves the name on the Sun for the director to set off the disc', () => {
+    // From 0.5 Mpc the plate does not letter the disc, so the plate's name stands.
+    const label = produceMilkyWayLabelFor(PICK_CODE)(makeState({ antique: true }), makeCtx(0.5), 1)
+      .labels[0]!;
+    expect(label.worldPos).toEqual([0, 0, 0]);
+    expect(label.lift?.subjectSizePx).toBeGreaterThan(0);
+    expect(label.leader).toBeUndefined();
+  });
+
   it('emits one label carrying a leader when enabled', () => {
     const out = produceMilkyWayLabelFor(PICK_CODE)(makeState(), makeCtx(0.5), 1);
     expect(out.labels).toHaveLength(1);

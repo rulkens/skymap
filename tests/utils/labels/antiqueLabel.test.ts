@@ -136,6 +136,13 @@ describe('antiqueLabel', () => {
     expect(kept('Galactic Centre')).toBe('Centrum Galaxiae');
   });
 
+  it('titles M51 by its catalogue number in capitals, its modern name glossed beneath as written', () => {
+    // Owner ruling 2026-11-08: the gloss line does not count toward the capitals' length.
+    expect(
+      antiqueLabel(label('famous-m51', 'Whirlpool Galaxy'), PLACES, true, ALL_FONTS)?.text,
+    ).toBe('MESSIER 51\n(Whirlpool Galaxy)');
+  });
+
   it("ranks the subject's title over every other name", () => {
     const title = antiqueLabel(label('x', 'Ross 154'), STARS, true, ALL_FONTS)!;
     expect(title.declutterPriority).toBe(Number.MAX_VALUE);
@@ -163,17 +170,6 @@ describe('antiqueLabel', () => {
     const shown = antiqueLabel(big, PLACES, false, ALL_FONTS)!;
     const subject = antiqueLabel(label('famous-m31', 'Andromeda Galaxy'), PLACES, true, ALL_FONTS)!;
     expect(subject.minPixelSize).toBeGreaterThan(shown.maxPixelSize!);
-  });
-
-  it('puts a self-lifted name back on its subject', () => {
-    const lifted: Label2D = {
-      ...label('famous-m31', 'Andromeda Galaxy'),
-      worldPos: [0, 9, 0],
-      leader: { fromWorld: [1, 2, 3], toWorld: [0, 8, 0], pixelWidth: 1, color: [1, 1, 1, 1] },
-    };
-    const placed = antiqueLabel(lifted, PLACES, false, ALL_FONTS)!;
-    expect(placed.worldPos).toEqual([1, 2, 3]);
-    expect(placed.leader).toBeUndefined();
   });
 
   it("keeps the label's own font until the look's fonts land", () => {

@@ -60,13 +60,18 @@ function makeState(
     focusedOnly?: boolean;
     focus?: object | null;
     bbox?: LabelBBox;
+    antique?: boolean;
   } = {},
 ): EngineState {
   layout.bbox = opts.bbox ?? MEASURED_BBOX;
   return {
     gpu: { fontAtlases: { metricsByFont: {} } },
     selection: { focus: opts.focus ?? null, select: null, hover: null },
-    settings: { labels: { focusedOnly: opts.focusedOnly ?? false } },
+    settings: {
+      labels: { focusedOnly: opts.focusedOnly ?? false },
+      antique: { enabled: opts.antique ?? false },
+    },
+    viewRig: 'mono',
   } as unknown as EngineState;
 }
 
@@ -158,6 +163,17 @@ describe('produceFamousGalaxyLabels', () => {
     const tip = screenOf(label.leader!.toWorld);
     expect(tip[0]).toBeCloseTo(dot[0], 2);
     expect(tip[1] - anchor[1]).toBeCloseTo(TEXT_BOTTOM_BELOW_ANCHOR_PX + LEADER_LINE_PADDING_PX, 2);
+  });
+
+  it('under the antique look leaves the name at the galaxy for the director to set off its disc', () => {
+    // The look sets its type after the producer (font, size, a glossed second line), so
+    // only the director, which measures that text, can place it clear of the disc.
+    const runtime = seed([{ id: 'm51', names: ['M51'] }], [5, 0, 0], [120]);
+    const label = produceFamousGalaxyLabels(runtime)(makeState({ antique: true }), makeCtx(), ONE)
+      .labels[0]!;
+    expect(label.worldPos).toEqual([5, 0, 0]);
+    expect(label.lift?.subjectSizePx).toBeCloseTo(sizePxAt(120, 5), 3);
+    expect(label.leader).toBeUndefined();
   });
 
   it('keeps the line top exactly the padding below the label bottom at any lift', () => {

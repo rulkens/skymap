@@ -8,11 +8,16 @@ import package::antiqueLook::io::AntiqueUniforms;
 import package::antiqueLook::cover::coverOf;
 import package::lib::math::rot2;
 import package::lib::util::hash21Hq;
+import package::antiqueLook::pigments::luma;
 
 @group(0) @binding(0) var pointTex: texture_2d<f32>;
 @group(0) @binding(1) var<uniform> u: AntiqueUniforms;
 // foreground:0's colour or depth (`cover.wesl`), or a 1×1 empty texture on a frame without bodies.
 @group(0) @binding(2) var bodyTex: texture_2d<f32>;
+// The 1/16 glow (`ANTIQUE_LOW_LAYERS`) and this frame's field floor (`skyFloor.wesl`).
+@group(0) @binding(3) var lowTex: texture_2d_array<f32>;
+@group(0) @binding(4) var<storage, read> skyFloor: f32;
+const GLOW_LAYER: i32 = 0;
 
 struct GlyphOut {
   @builtin(position) pos: vec4<f32>,
@@ -48,6 +53,24 @@ fn starGlyph(q: vec2<f32>, r: f32, rays: f32) -> f32 {
 // glyph's; a galaxy's wider, so a cloud of bright members stands out of the field.
 const STAR_DOT_RADIUS = vec2<f32>(0.45, 0.9);
 const GALAXY_DOT_RADIUS = vec2<f32>(0.4, 1.6);
+// Within this share of the screen's height of a resolved galaxy, the field's dots thin.
+const FIELD_QUIET_REACH: f32 = 0.08;
+
+// How near a resolved galaxy (the plate's `big` test on the glow, at the point and four
+// points FIELD_QUIET_REACH round it) a field galaxy's dot stands: 1 on or beside one.
+fn nearResolvedGalaxy(centre: vec2<f32>) -> f32 {
+  let dims = vec2<i32>(textureDimensions(lowTex));
+  let c = centre / u.res * vec2<f32>(dims);
+  let reach = FIELD_QUIET_REACH * f32(dims.y);
+  var light = 0.0;
+  for (var k = 0; k < 5; k++) {
+    let a = f32(k) * 1.5707963;
+    let o = select(vec2<f32>(cos(a), sin(a)) * reach, vec2<f32>(0.0), k == 4);
+    let q = clamp(vec2<i32>(c + o), vec2<i32>(0), dims - 1);
+    light = max(light, luma(textureLoad(lowTex, q, GLOW_LAYER, 0).rgb));
+  }
+  return smoothstep(1.8 * skyFloor + 0.03, 2.6 * skyFloor + 0.05, light);
+}
 
 @vertex
 fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32) -> GlyphOut {
@@ -79,7 +102,16 @@ fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32) -> Glyph
   // A dot (printPoint.wesl: w 2 a galaxy, 3 a faint star) swells with its weight, off the ladder.
   let isDot = s.w > 1.5;
   let dotRadius = select(GALAXY_DOT_RADIUS, STAR_DOT_RADIUS, s.w > 2.5);
-  let size = select(radii[rank], mix(dotRadius.x, dotRadius.y, s.z * s.z), isDot);
+  // Round a resolved galaxy most field galaxies go and the rest shrink, so the
+  // subject is not lost in a speckle as loud as itself; stars keep every dot.
+  var quiet = 0.0;
+  if (isDot && s.w < 2.5) {
+    quiet = nearResolvedGalaxy(centre);
+    if (hash21Hq(floor(centre) + 29.3) < 0.7 * quiet) {
+      return o;
+    }
+  }
+  let size = select(radii[rank], mix(dotRadius.x, dotRadius.y, s.z * s.z) * (1.0 - 0.35 * quiet), isDot);
   let r = size * u.unit * (0.92 + 0.16 * hash21Hq(floor(centre) + 7.1));
   let rays = select(rayCounts[rank], 0.0, isDot);
   let reach = 1.5 * r + 2.0;

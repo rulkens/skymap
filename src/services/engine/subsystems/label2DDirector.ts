@@ -750,7 +750,8 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     antique: boolean,
   ): readonly Label2D[] {
     const policy = config.lift;
-    if (!policy) return labels;
+    // COSMO's names carry a lift only under the antique look.
+    if (!policy || !labels.some((l) => l.lift)) return labels;
     const slab = ctx.slabs[policy.slab];
     if (!slab) throw new Error(`label2DDirector: no slab at index ${policy.slab}`);
     const projection = config.project(ctx); // memoised per ctx — free here

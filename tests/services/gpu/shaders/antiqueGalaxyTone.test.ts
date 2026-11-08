@@ -83,9 +83,9 @@ describe('antique galaxy stipple tone', () => {
   });
 
   it("keeps the bar's own gradient: its flank a step between the disc and its crest", () => {
-    // Print lumas under the highlight shoulder: the bar's flank ~0.86, its crest ~0.93.
-    const flank = tone(0.86, 0.8, 0.86);
+    // Print lumas under the highlight shoulder (mw-face): the lobes' flank ~0.83, crests ~0.9.
+    const flank = tone(0.83, 0.8, 0.83);
     expect(flank - 0.62).toBeGreaterThan(0.08);
-    expect(tone(0.93, 0.8, 0.93) - flank).toBeGreaterThan(0.15);
+    expect(tone(0.9, 0.8, 0.9) - flank).toBeGreaterThan(0.15);
   });
 });
