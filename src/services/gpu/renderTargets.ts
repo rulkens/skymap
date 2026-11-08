@@ -215,10 +215,11 @@ export function createRenderTargets(
   // depth attachment", which is exactly what `depthViewOf` throws on.
   const textures = new Map<string, GPUTexture>();
   const views = new Map<string, GPUTextureView>();
-  // A dimension:'cube' view alongside `views`' default (2d-array) one, for a
-  // row whose 6 layers are later sampled as a `texture_cube` (see
-  // `RenderTargets.cubeViewOf`'s doc). Keyed off `fixedSizePx.layers === 6`
-  // (data-driven, not a hardcoded id check) so every 6-layer row gets one.
+  // A dimension:'cube' view alongside `views`' 2d-array one, for a row whose
+  // 6 layers are later sampled as a `texture_cube` (see
+  // `RenderTargets.cubeViewOf`'s doc). Keyed off `fixedSizePx` + 6 layers: a
+  // cube view must be square, which only a fixed-size row guarantees (a
+  // canvas-scaled 6-layer row, antique-full, failed validation every alloc).
   const cubeViews = new Map<string, GPUTextureView>();
   // One single-array-layer `dimension: '2d'` view per layer, for a row whose
   // `views`' default (a whole-array `2d-array` view with no `baseArrayLayer`)
@@ -284,11 +285,14 @@ export function createRenderTargets(
       // caption occlusion pass reads (its alpha, via lib/sceneDepth.wesl).
       // Both usage flags are required on the same texture — WebGPU
       // descriptors don't support re-tagging after creation.
-      usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING | (spec.usage ?? 0),
+      usage:
+        GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING | (spec.usage ?? 0),
     });
     textures.set(spec.id, texture);
-    views.set(spec.id, texture.createView());
-    if (spec.layers === 6) {
+    const layerCount = spec.layers ?? 1;
+    // Explicit, so the binding's dimension never rests on a default that keys off the layer count.
+    views.set(spec.id, texture.createView({ dimension: layerCount > 1 ? '2d-array' : '2d' }));
+    if (layerCount === 6 && spec.fixedSizePx !== undefined) {
       cubeViews.set(
         spec.id,
         texture.createView({
@@ -299,7 +303,6 @@ export function createRenderTargets(
         }),
       );
     }
-    const layerCount = spec.layers ?? 1;
     if (layerCount > 1) {
       layerViews.set(
         spec.id,
@@ -427,7 +430,7 @@ export function createRenderTargets(
     cubeViewOf(id: string): GPUTextureView {
       const view = cubeViews.get(id);
       if (!view) {
-        // Covers a row with < 6 layers, 'swap', unknown ids, and
+        // Covers a non-cube row, 'swap', unknown ids, and
         // use-after-destroy — same loud-failure discipline as `viewOf`.
         throw new Error(`renderTargets: no cube view for target '${id}'`);
       }

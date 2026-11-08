@@ -200,6 +200,35 @@ describe('createRenderTargets', () => {
     expect(() => targets.cubeViewOf('nope')).toThrow();
   });
 
+  // The antique-full array grew to 6 layers, and a cube view of a canvas-sized
+  // (non-square) texture is a WebGPU validation error on every allocation.
+  it('a canvas-scaled 6-layer row gets an explicit 2d-array view and no cube view', () => {
+    const device = mockDevice();
+    const create = device.createTexture as ReturnType<typeof vi.fn>;
+    const sixLayers: RenderTargetSpec = {
+      id: 'six-canvas',
+      format: 'rgba8unorm',
+      depth: null,
+      scale: 1,
+      layers: 6,
+      clearValue: { r: 0, g: 0, b: 0, a: 0 },
+    };
+    const targets = createRenderTargets(
+      device,
+      [...CORE_AND_LENS_ROWS, sixLayers],
+      { width: 1280, height: 720 },
+      stateWithDivisor(MW_DIVISOR),
+    );
+    const index = create.mock.calls.findIndex((c) => c[0].label === 'render-target-six-canvas');
+    const texture = create.mock.results[index]!.value as { createView: ReturnType<typeof vi.fn> };
+    const dims = texture.createView.mock.calls.map(
+      (c) => (c[0] as GPUTextureViewDescriptor)?.dimension,
+    );
+    expect(dims).not.toContain('cube');
+    expect(dims).toContain('2d-array');
+    expect(() => targets.cubeViewOf('six-canvas')).toThrow();
+  });
+
   // `layers` is independent of `fixedSizePx` — a canvas-scaled row (the
   // dome-cube row) can carry array layers too, sized off the canvas like any
   // other `scale: 1` row rather than a fixed declared size.

@@ -48,8 +48,8 @@ export type RenderTargetSpec = {
    * (the dome-cube row). `layerViewOf` exposes one per-layer `dimension: '2d'`
    * view when this is > 1 (WebGPU rejects a multi-layer view as a colour
    * ATTACHMENT); `cubeViewOf` exposes a `dimension: 'cube'` view when this is
-   * exactly 6 (sampled as `texture_cube` — WebGPU has no cube-view render
-   * attachment).
+   * exactly 6 on a `fixedSizePx` row, the only kind guaranteed square (sampled
+   * as `texture_cube` — WebGPU has no cube-view render attachment).
    */
   layers?: number;
   /**
