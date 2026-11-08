@@ -300,16 +300,55 @@ fn crescentInk(theta: f32, gTheta: f32, q: f32, rimUnits: f32, pxUnits: f32, see
 const BLANKET = vec2<f32>(2.5, 7.0);
 const MARE_GROUND: f32 = 0.34;
 
+// A rayed crater's ejecta blanket (curated weight over 1), the ground it threw, as radial
+// stipple (its rays have no honest data and stay dropped): dots in lanes EJECTA_PITCH units apart
+// at the rim, fanning out with the radius, one every EJECTA_STEP units down a lane, drawn
+// out along it (EJECTA_DOT half-length, half-width, units), kept densest within EJECTA.x
+// radii and thinning to none at EJECTA.y. Mirror ANTIQUE_MOON_EJECTA.
+const EJECTA = vec2<f32>(1.4, 2.4);
+const EJECTA_PITCH: f32 = 3.2;
+const EJECTA_STEP: f32 = 3.6;
+const EJECTA_DOT = vec2<f32>(0.8, 0.55);
+// A blanket prints round a crater whose radius spans EJECTA_UNITS (print units), dotted in
+// fully by the second: a smaller one would wear a smudge, and its sea's lines run to its rim.
+const EJECTA_UNITS = vec2<f32>(10.0, 20.0);
+// Mirror MOON_PITCH (antiqueLook/bodies/moon.wesl): the mare lines' rows, print units.
+const MARE_PITCH_UNITS: f32 = 4.6;
 
-// x rim ink (the nearest live ring's line, every crescent), y inside a crater's floor
-// (0..1), z the reach of a sea crater's blanket (0..1). n the geometric normal, dNdx/dNdy its screen derivatives, rd the eye's ray.
+// n on the ground at q radii (> 1) from the crater; rhoUnits its radius in print units.
+fn ejectaInk(n: vec3<f32>, cr: MoonCrater, q: f32, rhoUnits: f32, pxUnits: f32, seed: f32) -> f32 {
+  // A frame fixed to the ground round the centre, so each dot keeps its place.
+  let e1 = normalize(cross(cr.c, select(vec3<f32>(0.0, 0.0, 1.0), vec3<f32>(1.0, 0.0, 0.0), abs(cr.c.z) > 0.9)));
+  let lanes = max(round(6.2831853 * rhoUnits / EJECTA_PITCH), 8.0);
+  let a = (atan2(dot(n, cross(cr.c, e1)), dot(n, e1)) / 6.2831853 + 0.5) * lanes;
+  let r = (q - 1.0) * rhoUnits / EJECTA_STEP;
+  let cell = vec2<f32>(floor(a) % lanes, floor(r)) + seed;
+  let h = vec3<f32>(hash21Hq(cell), hash21Hq(cell + 17.3), hash21Hq(cell + 41.7));
+  let ac = floor(a) + 0.25 + 0.5 * h.x;
+  let rc = floor(r) + 0.3 + 0.4 * h.y;
+  let qc = 1.0 + rc * EJECTA_STEP / rhoUnits;
+  let kept = step(h.z, 0.7 * (1.0 - smoothstep(EJECTA.x, EJECTA.y, qc)) * smoothstep(EJECTA_UNITS.x, EJECTA_UNITS.y, rhoUnits));
+  let across = (a - ac) / lanes * 6.2831853 * q * rhoUnits;
+  let along = (r - rc) * EJECTA_STEP;
+  let size = mix(1.0, 0.65, smoothstep(1.0, EJECTA.y, qc));
+  let d = length(vec2<f32>(along / EJECTA_DOT.x, across / EJECTA_DOT.y));
+  let aa = 0.5 * pxUnits / EJECTA_DOT.y;
+  return kept * (1.0 - smoothstep(size - aa, size + aa, d));
+}
+
+// x rim ink (the nearest live ring's line, every crescent, the ejecta's dots), y inside a
+// crater's floor (0..1), z the reach of a sea crater's blanket (0..1), w 1 on a rayed
+// crater's ejecta out to a ragged EJECTA.x .. EJECTA.y radii, where the mare lines stop.
+// n the geometric normal, dNdx/dNdy its screen derivatives, rd the eye's ray.
 fn craterRims(n: vec3<f32>, dNdx: vec3<f32>, dNdy: vec3<f32>, sun: vec3<f32>, rd: vec3<f32>,
-              unitsPerRad: f32, pxUnits: f32, frag: vec2<f32>) -> vec3<f32> {
+              unitsPerRad: f32, pxUnits: f32, frag: vec2<f32>) -> vec4<f32> {
   let near = ringsAt(frag);
   // The youngest ring holding the point inside 0.97 of its rim (small angles: psi² ~
   // 2 (1 - cos psi)), and the blanket's reach.
   var youngest = -1.0;
   var blanket = 0.0;
+  var ejecta = 0.0;
+  var thrown = 0.0;
   var first = near;
   while (any(first != vec2<u32>(0u))) {
     let i = popRing(&first);
@@ -320,6 +359,14 @@ fn craterRims(n: vec3<f32>, dNdx: vec3<f32>, dNdy: vec3<f32>, sun: vec3<f32>, rd
     }
     if (moon.craters[i].onSea > 0.0 && psi2 < BLANKET.y * BLANKET.y * rho * rho) {
       blanket = max(blanket, 1.0 - smoothstep(BLANKET.x, BLANKET.y, sqrt(max(psi2, 0.0)) / rho));
+    }
+    if (moon.craters[i].weight > 1.0 && psi2 > rho * rho && psi2 < EJECTA.y * EJECTA.y * rho * rho
+        && rho * unitsPerRad > EJECTA_UNITS.x) {
+      let q = sqrt(psi2) / rho;
+      ejecta = max(ejecta, ejectaInk(n, moon.craters[i], q, rho * unitsPerRad, pxUnits, f32(i) * 3.7));
+      // Each mare line (its row as `moonMare` cuts them) stops at its own radius: a ragged edge.
+      let edge = mix(EJECTA.x, EJECTA.y, 0.4 + 0.5 * hash21Hq(vec2<f32>(floor(frag.y / max(round(MARE_PITCH_UNITS / pxUnits), 3.0)), f32(i))));
+      thrown = max(thrown, step(q, edge));
     }
   }
   var ink = 0.0;
@@ -382,7 +429,7 @@ fn craterRims(n: vec3<f32>, dNdx: vec3<f32>, dNdy: vec3<f32>, sun: vec3<f32>, rd
       ink = inkLine(d, width, pxUnits) * smoothstep(0.05, 0.25, w) * smoothstep(gap - 0.06, gap + 0.06, arc);
     }
   }
-  return vec3<f32>(max(ink, crescent), inFloor, blanket);
+  return vec4<f32>(max(max(ink, crescent), ejecta), inFloor, blanket, thrown);
 }
 
 @fragment
@@ -417,7 +464,7 @@ fn fsMoonPrint(in: TexturedBodyVSOut) -> @location(0) vec4<f32> {
   // A dark floor passes the plate's wide support, which keeps a walled plain's floor paper.
   let support = select(wide, min(wide, fine), rims.y > 0.5 && fine * fine < DARK_FLOOR);
   return encodeMoonRow(mix(albedo, thrownOn, blanket), lit, rims.x * day,
-    rims.y > 0.5 && fine * fine > BRIGHT_FLOOR, mix(support, min(support, MARE_GROUND), blanket));
+    (rims.y > 0.5 && fine * fine > BRIGHT_FLOOR) || rims.w > 0.5, mix(support, min(support, MARE_GROUND), blanket));
 }
 
 // The Moon's ground in the shared relief row (`relief.wesl`'s contract), from the normal

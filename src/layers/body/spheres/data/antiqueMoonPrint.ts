@@ -37,6 +37,10 @@ export const ANTIQUE_MOON_NAMED_REACH_COS = 0.998;
  * Mirrored as `BLANKET` in `fsMoonPrint`. */
 export const ANTIQUE_MOON_BLANKET = [2.5, 7] as const;
 
+/** A rayed crater (curated weight over 1) prints its ejecta blanket as radial stipple
+ * from its rim out to [1] radii, densest within [0]. Mirrored as `EJECTA` in `fsMoonPrint`. */
+export const ANTIQUE_MOON_EJECTA = [1.4, 2.4] as const;
+
 /** The frame's tiles (columns, rows): each lists the rings that can reach it, so a pixel
  * loops over a few rings, not all of them (`binMoonCraters`). Mirrored in `fsMoonPrint`. */
 export const ANTIQUE_MOON_TILES = [16, 9] as const;

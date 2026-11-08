@@ -56,6 +56,14 @@ describe('binMoonCraters', () => {
     expect(tilesOf(sea, 0)).toEqual(expect.arrayContaining(tilesOf(plain, 0)));
   });
 
+  it("reaches farther for a rayed crater's ejecta", () => {
+    const plain = new Uint32Array(COLS * ROWS * 2);
+    const rayed = new Uint32Array(COLS * ROWS * 2);
+    binMoonCraters(table, [0], view(1.5), new Set(), new Set(), plain);
+    binMoonCraters(moonCraterTable([0, 0, 50, 1.3], 1737.4), [0], view(1.5), new Set(), new Set(), rayed);
+    expect(tilesOf(rayed, 0).length).toBeGreaterThan(tilesOf(plain, 0).length);
+  });
+
   it('puts a ring past the 32nd in the second word', () => {
     const out = new Uint32Array(COLS * ROWS * 2);
     binMoonCraters(table, [...Array(40).fill(0)], view(1.5), new Set(), new Set(), out);

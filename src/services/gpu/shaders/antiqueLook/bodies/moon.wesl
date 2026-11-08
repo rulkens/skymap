@@ -3,7 +3,7 @@
 // did not run). Darkness is line WIDTH at a constant pitch, never a line count or a
 // grey: every line of a family is cut once its tone starts, so no density steps
 // (barcodes) and no grey where lines crowd. The maria are level lines, the highlands
-// paper; no coast, no wash (owner ruling). The shade follows the terrain's light, so
+// paper (stippled in a close-up); no coast, no wash (owner ruling). The shade follows the terrain's light, so
 // the terminator is ragged with lit peaks and crater shadows.
 
 import package::lib::util::hash21Hq;
@@ -11,6 +11,7 @@ import package::antiqueLook::bodies::moonRow::decodeMoonRow;
 import package::antiqueLook::engraving::fallCrest;
 import package::antiqueLook::engraving::fallLines;
 import package::antiqueLook::engraving::quantileCut;
+import package::antiqueLook::engraving::scatter;
 
 // Lommel–Seeliger brightness 2·L/(L + ndv) on the terrain's light L: ~1 across the
 // whole full disc (no limb darkening), falling only at the terminator. Paper from 0.16
@@ -21,6 +22,9 @@ const LS_GROUND = vec2<f32>(-0.03, 0.16);
 // .. none), prints up to SLOPE_TONE: crater walls and hills, never the night's weight.
 const SLOPE_RATIO = vec2<f32>(0.15, 0.55);
 const SLOPE_TONE: f32 = 0.62;
+// A slope turned only a little from the Sun (the same ratio, none .. full) is the close-up
+// ground's stipple, short of the shade's lines.
+const DUSK_RATIO = vec2<f32>(0.95, 0.5);
 // Shade lines start at this tone (below it a slope barely off the ground's light would
 // print a rain of loose dashes) and reach their widest at the cap.
 const SHADE_START: f32 = 0.22;
@@ -49,11 +53,13 @@ const MARE_WEIGHTS: f32 = 3.0;
 const MARE_TAP_UNITS: f32 = 3.0;
 
 // tone: the shade's, capped; shade: uncapped; litSlope: how far a slope is turned to
-// the Sun beyond the smooth globe (a lit wall inside a mare stays white).
+// the Sun beyond the smooth globe (a lit wall inside a mare stays white); dusk: how far it
+// is turned from it, by day, below the shade's lines.
 struct MoonTone {
   tone: f32,
   shade: f32,
   litSlope: f32,
+  dusk: f32,
 }
 
 fn moonTone(ndl: f32, ndv: f32, row: f32) -> MoonTone {
@@ -66,7 +72,8 @@ fn moonTone(ndl: f32, ndv: f32, row: f32) -> MoonTone {
   // band of it ending at ndl = 0 printed a ruler-straight edge the relief could not break.
   let slope = SLOPE_TONE * smoothstep(SLOPE_RATIO.y, SLOPE_RATIO.x, lit / max(ndl, 0.05)) * smoothstep(0.03, 0.12, ndl);
   let shade = max(ground, slope);
-  return MoonTone(min(shade, MOON_SHADE_CAP), shade, smoothstep(0.1, 0.28, lit - ndl));
+  let dusk = smoothstep(DUSK_RATIO.x, DUSK_RATIO.y, lit / max(ndl, 0.05)) * smoothstep(0.03, 0.12, ndl);
+  return MoonTone(min(shade, MOON_SHADE_CAP), shade, smoothstep(0.1, 0.28, lit - ndl), dusk);
 }
 
 // A shade line runs at least 2 × SHADE_DASH units: the tone is eroded along the line
@@ -105,11 +112,13 @@ fn moonToneAlong(field: texture_2d_array<f32>, layer: i32, ip: vec2<i32>, hatchA
   let here = moonTone(ndl, ndv, row);
   let a = hatchAngle + MOON_HATCH_TURN;
   let o = vec2<i32>(round(vec2<f32>(cos(a), sin(a)) * unit * SHADE_DASH));
-  let ahead = moonTone(ndl, ndv, moonAt(field, layer, ip + o).g).tone;
-  let behind = moonTone(ndl, ndv, moonAt(field, layer, ip - o).g).tone;
+  let ahead = moonTone(ndl, ndv, moonAt(field, layer, ip + o).g);
+  let behind = moonTone(ndl, ndv, moonAt(field, layer, ip - o).g);
   let cap = mix(MOON_SHADE_CAP, SEEN_CAP, smoothstep(SEEN_LUMA.x, SEEN_LUMA.y, plain));
-  let eroded = max(0.5 * (ahead + behind), here.tone * smoothstep(SHADOW_KEEP.x, SHADOW_KEEP.y, here.shade));
-  return MoonTone(min(min(here.tone, eroded), cap), here.shade, here.litSlope);
+  let eroded = max(0.5 * (ahead.tone + behind.tone), here.tone * smoothstep(SHADOW_KEEP.x, SHADOW_KEEP.y, here.shade));
+  // The stipple's dusk averaged over the same taps: a pixel's own slope speckles in clumps.
+  let dusk = (here.dusk + ahead.dusk + behind.dusk) / 3.0;
+  return MoonTone(min(min(here.tone, eroded), cap), here.shade, here.litSlope, dusk);
 }
 
 // The shade's lines along `form` (phase, along, |d phase / d unit|): all cut from
@@ -184,13 +193,29 @@ fn moonInk(field: texture_2d_array<f32>, layer: i32, px: vec2<f32>, unit: f32, m
 // own light (`shade`), not the plain render's luma: the albedo carries baked shadows from
 // another Sun. A rim, steep on both flanks, keeps its crest line (`fallCrest`).
 const RELIEF_SHARE = vec2<f32>(0.04, 0.55);
+// The highland between them is stippled in the page's frame, as Mellan dotted his close
+// plates: GRAIN_SHARE.x of the GRAIN_CELL dots on lit flats, up to .y (swelling over
+// GRAIN_RADIUS) on a slope turned from the Sun (`dusk`), where the albedo sinks under the
+// wide albedo by GRAIN_DARKER (sqrt luma: a dark floor), or the plain under its local wash
+// by GRAIN_SHADOW (a small crater's shadow). Seas, cleared floors and blankets (b + 2)
+// keep paper, and the dots give way to the shade's lines.
+const GRAIN_CELL: f32 = 2.8;
+const GRAIN_SHARE = vec2<f32>(0.03, 0.6);
+const GRAIN_RADIUS = vec2<f32>(0.7, 0.95);
+const GRAIN_DARKER = vec2<f32>(0.005, 0.06);
+const GRAIN_SHADOW = vec2<f32>(0.85, 0.6);
 
 fn moonRelief(field: texture_2d<f32>, samp: sampler, px: vec2<f32>, relief: vec4<f32>, unit: f32,
-              shade: f32) -> f32 {
+              moon: MoonTone, row: vec4<f32>, plainOverWash: f32) -> f32 {
   var ink = fallCrest(field, samp, px, unit);
   if (relief.a > 0.0) {
-    let share = min(relief.a * 1.5, 1.0) * mix(RELIEF_SHARE.x, RELIEF_SHARE.y, smoothstep(0.1, 0.5, shade));
+    let share = min(relief.a * 1.5, 1.0) * mix(RELIEF_SHARE.x, RELIEF_SHARE.y, smoothstep(0.1, 0.5, moon.shade));
     ink = max(ink, quantileCut(fallLines(field, samp, px, unit, false), share));
   }
-  return ink;
+  let darker = smoothstep(GRAIN_DARKER.x, GRAIN_DARKER.y, row.a - row.r);
+  let highland = smoothstep(MARE_OFF, MARE_OFF + 0.04, row.r * row.r) * (1.0 - step(1.5, row.b));
+  let shadow = smoothstep(GRAIN_SHADOW.x, GRAIN_SHADOW.y, plainOverWash);
+  let t = max(max(moon.dusk, darker), shadow) * (1.0 - smoothstep(SHADE_START, SHADE_START + 0.2, moon.tone));
+  let grain = scatter(px / unit, GRAIN_CELL, mix(GRAIN_SHARE.x, GRAIN_SHARE.y, t), mix(GRAIN_RADIUS.x, GRAIN_RADIUS.y, t));
+  return max(ink, grain * highland);
 }

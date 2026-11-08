@@ -3,7 +3,8 @@
  * `ANTIQUE_MOON_TILES`: a bit per ring (its order in `picked`) in two u32 per tile,
  * written into `out`, so the Moon passes loop over a pixel's few rings, not all of them
  * (all 40 cost a close-up ~17 ms a frame at dpr 2). A ring reaches its rim's flank, a named
- * crater's mark at least `ANTIQUE_MOON_NAMED_REACH_COS`, a sea crater's blanket. The
+ * crater's mark at least `ANTIQUE_MOON_NAMED_REACH_COS`, a sea crater's blanket, a rayed
+ * crater's ejecta. The
  * bound is the reach's small-angle size at the centre's distance, grown by REACH_MARGIN
  * for the perspective stretch off the axis. Returns one tile's size, device px.
  */
@@ -12,6 +13,7 @@ import type { MoonCraterTable } from '../@types/MoonCraterTable';
 import type { MoonCraterView } from '../@types/MoonCraterView';
 import {
   ANTIQUE_MOON_BLANKET,
+  ANTIQUE_MOON_EJECTA,
   ANTIQUE_MOON_NAMED_REACH_COS,
   ANTIQUE_MOON_RIM_REACH,
   ANTIQUE_MOON_TILES,
@@ -45,6 +47,7 @@ export function binMoonCraters(
     const rho = table.rho[i]!;
     let reach = ANTIQUE_MOON_RIM_REACH * rho;
     if (named.has(i)) reach = Math.max(reach, NAMED_REACH);
+    if (table.weight[i]! > 1) reach = Math.max(reach, ANTIQUE_MOON_EJECTA[1] * rho);
     if (onSea.has(i)) reach = Math.max(reach, ANTIQUE_MOON_BLANKET[1] * rho);
     const r = (REACH_MARGIN * reach * view.pxPerRad) / Math.hypot(cx - ex, cy - ey, cz - ez) + 2;
     const c0 = Math.max(0, Math.floor((x - r) / tileW));
