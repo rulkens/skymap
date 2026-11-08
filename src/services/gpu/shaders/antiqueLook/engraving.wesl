@@ -160,7 +160,7 @@ fn scatter(p: vec2<f32>, cell: f32, share: f32, radius: f32) -> f32 {
 // paper; each dot's size varies by a quarter either way, as a punch's did.
 fn stippleDense(p: vec2<f32>, cell: f32, tone: f32, pxUnits: f32) -> f32 {
   let c = floor(p / cell - 0.5);
-  let r0 = cell * (0.24 + 0.42 * smoothstep(0.1, 1.0, tone));
+  let r0 = cell * (0.24 + 0.42 * tone * tone);
   var ink = 0.0;
   for (var k = 0; k < 4; k++) {
     let kc = c + vec2<f32>(f32(k & 1), f32(k >> 1u));

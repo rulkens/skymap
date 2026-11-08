@@ -174,7 +174,7 @@ const GALAXY_FLOOR: f32 = 0.07;
 const GALAXY_SB_POW: f32 = 1.5;
 const GALAXY_GAP: f32 = 0.08;
 const GALAXY_RELIEF_CAP: f32 = 0.65;
-const GALAXY_DISC_MAX: f32 = 0.55;
+const GALAXY_DISC_MAX: f32 = 0.62;
 const LANE_HATCH: f32 = 2.6;
 const GALAXY_WASH: f32 = 0.15;
 
@@ -277,14 +277,12 @@ fn washHue(uv: vec2<f32>) -> vec3<f32> {
 
 // A resolved galaxy's stipple tone from its `light`, the 1/16 surroundings `lowL` and
 // the print's own pixel `nucleus`: surface brightness on a log scale, times the light's
-// relief over its surroundings, so an inter-arm gap keeps GALAXY_GAP of it while light
-// over 0.55 keeps its weight (the bright disc round the bar is no gap). Only the
+// relief over its surroundings, so an inter-arm gap keeps GALAXY_GAP of it. Only the
 // print's white (the bar, unblurred, so it keeps its shape) closes up past GALAXY_DISC_MAX.
 fn galaxyTone(light: f32, lowL: f32, nucleus: f32) -> f32 {
   let sb = pow(clamp(log(max(light, 1e-3) / GALAXY_FLOOR) / -log(GALAXY_FLOOR), 0.0, 1.0), GALAXY_SB_POW);
   let relief = smoothstep(-0.2, 0.35, log((light + 0.02) / (min(lowL, GALAXY_RELIEF_CAP) + 0.02)));
-  let lit = max(relief, smoothstep(0.55, 0.95, light));
-  return max(min(sb * mix(GALAXY_GAP, 1.0, lit), GALAXY_DISC_MAX), smoothstep(0.94, 1.0, nucleus));
+  return max(min(sb * mix(GALAXY_GAP, 1.0, relief), GALAXY_DISC_MAX), smoothstep(0.94, 1.0, nucleus));
 }
 
 // A galaxy stippled as an engraver dotted a nebula: dots denser with its surface
