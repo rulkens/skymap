@@ -148,16 +148,15 @@ const ALBEDO_BAND: f32 = 0.06;
 
 // The antique look's albedo map (`body-albedo-mask` pass, 'rg8unorm'), the twin of
 // Earth's `fsOceanMask`: r lightness, 0 well below `u.albedoMid`, 1 well above;
-// g 1 where the body covers.
+// g 1 wherever the proxy covers. A ray past the sphere reads its horizon point, so
+// terrain standing above that horizon up close keeps a lightness (the look's reduce
+// counts only body pixels, so the sky's share is never read).
 @fragment
 fn fsAlbedoMask(in: TexturedBodyVSOut) -> @location(0) vec4<f32> {
   let rd = normalize(in.localPos - u.camPosLocal);
   let surface = hitUnitSphere(u.camPosLocal, rd, u.camAltitudeSq);
   let uv = equirectUvFromDir(surface.point);
   let grad = equirectUvGradients(uv);
-  if (!surface.hit) {
-    discard;
-  }
   let albedo = textureSampleGrad(bodyTexture, bodySampler, uv, grad.ddx, grad.ddy).rgb;
   let luma = dot(albedo, vec3<f32>(0.2126, 0.7152, 0.0722));
   return vec4<f32>(smoothstep(u.albedoMid - ALBEDO_BAND, u.albedoMid + ALBEDO_BAND, luma), 1.0, 0.0, 1.0);

@@ -1,6 +1,6 @@
 /**
- * bodyAlbedoMaskPass — Mars's albedo mask feeds only the globe's print; inside the relief
- * shell the engraved ground replaces it, so the pass must not draw there (pure waste).
+ * bodyAlbedoMaskPass — Mars's albedo mask feeds its red-lead wash at every range: inside the
+ * relief shell the engraved ground replaces the markings' ink, not their colour.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -29,7 +29,7 @@ describe('bodyAlbedoMaskPass', () => {
     expect(enabledAt(2 * ANTIQUE_RELIEF_MAX_ALT_M)).toBe(true);
   });
 
-  it('skips it inside the relief shell, where the ground is engraved', () => {
-    expect(enabledAt(0.5 * ANTIQUE_RELIEF_MAX_ALT_M)).toBe(false);
+  it('keeps drawing it inside the relief shell, where the ground is engraved', () => {
+    expect(enabledAt(0.5 * ANTIQUE_RELIEF_MAX_ALT_M)).toBe(true);
   });
 });

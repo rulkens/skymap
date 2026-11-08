@@ -1,8 +1,7 @@
 /**
  * insideAntiqueReliefShell — whether the eye is close enough over `hostId`, a body the
  * antique look engraves (`ANTIQUE_RELIEF_BODIES`), for the relief pass to run there.
- * Inside it the engraved ground replaces the globe's print, so the passes that feed
- * that print (Mars's albedo mask) have nothing to draw.
+ * Inside it the engraved ground replaces the globe's ink (its washes carry on).
  */
 
 import type { FrameView } from '../../../@types/engine/frame/FrameView';

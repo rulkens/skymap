@@ -686,10 +686,10 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
       let earth = earthPrint(col, cover, e);
       col = earth.col;
       bodyInk = max(bodyInk, earth.ink);
-    } else if (print == PRINT_MARS) {
+    } else if (print == PRINT_MARS || (ground && (u.flags >> RELIEF_PRINT_SHIFT) == PRINT_MARS)) {
       let mars = marsPrint(col, cover, landShare, latForm, p, pxUnits);
       col = mars.col;
-      // A marking is a globe's feature: on the engraved ground the relief speaks.
+      // Its wash carries onto the engraved ground, where the relief, not the marking, inks.
       bodyInk = max(bodyInk, select(mars.ink, 0.0, ground));
     } else if (print == PRINT_JUPITER) {
       let jupiter = jupiterPrint(col, cover, JupiterPrintIn(latForm, u.tune.x, jupiterShade, spotQ, spotQPerUnit,
