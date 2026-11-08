@@ -315,7 +315,7 @@ Owner ruling 2026-11-07: keep the generic galaxy engraving with these names; the
 - [x] Captions ink the MSDF's anti-aliased coverage (the fill's luma, lifted for hairlines), not a hard alpha threshold; the rag and the paper dips reach lettering only as far as the Letter wear knob (debug board; 0 clean, 1 the old print, default 0.25).
 - [x] The far sky's cuts a size up (capitals 23, roman 19, italic 21, spaced italic 19 px); placed map names keep their sizes.
 - [x] A selected name grows to the title size over 220 ms and shrinks back when let go; the director's flush signature keys text, alignment and size so a reset name re-uploads.
-- [ ] Open: the owner's off-centre selected-star label not reproduced (Orion stars off-centre and near edges, desktop dpr 1 and 2, phone, InfoCard open: centred each time); the name still hops from beside its glyph to over it when the growth starts.
+- [x] The name slides from beside its glyph to centred over it (and back) on the same ramp: `alignX` takes a number, the share of the width left of the anchor, quantised to `titleSlideSteps` so the layout memo stays bounded. A wrong final position was not reproduced (Orion and Cetus stars off-centre and near the edge, dpr 1 and 2, phone, InfoCard open, window resized after load: centred each time); the hop was the report.
 
 ## Definition of Done
 

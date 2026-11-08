@@ -26,6 +26,7 @@
  *   `'left'`    (default)  pen anchor = label's left edge   → text extends right
  *   `'center'`  pen anchor = label's horizontal center      → text spans both sides
  *   `'right'`   pen anchor = label's right edge             → text extends left
+ *   a number    that share of the width sits left of the anchor (0..1)
  *
  * The "you are here" marker uses `'center'` so the vertical line
  * passes through the middle of the text rather than its left edge.
@@ -45,6 +46,7 @@ import type { GlyphQuad } from '../../../@types/rendering/GlyphQuad';
 import type { LabelAlignX } from '../../../@types/rendering/LabelAlignX';
 import type { LabelAlignY } from '../../../@types/rendering/LabelAlignY';
 import { lookupGlyph } from './fontMetrics';
+import { alignXFraction } from '../../../utils/labels/alignXFraction';
 
 export function layoutLabel(
   text: string,
@@ -90,11 +92,12 @@ export function layoutLabel(
     // After the line's layout pass, `penX` holds its total advance width
     // (sum of glyph advances + kerning + tracking, which adds nothing after the
     // last glyph).  Apply the alignment shift by subtracting a fraction of that
-    // width from the LINE's glyphs only.  Skipping the loop for the no-op 'left'
+    // width from the LINE's glyphs only.  Skipping the loop for the no-op left (0)
     // case keeps the common path allocation-free (no second pass over the quads array).
-    if (alignX !== 'left') {
+    const share = alignXFraction(alignX);
+    if (share !== 0) {
       const width = quads.length > lineStart ? penX - trackingPx : penX;
-      const shift = alignX === 'center' ? width * 0.5 : width;
+      const shift = width * share;
       for (let i = lineStart; i < quads.length; i++) {
         quads[i]!.localOffsetX -= shift;
       }

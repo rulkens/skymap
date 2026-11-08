@@ -1152,13 +1152,17 @@ describe('label2DDirector', () => {
       expect(px()).toBe(cut);
       dir.runFrame(look('earth'), makeNear0Ctx(100 + ramp / 2));
       expect(px()).toBeCloseTo((cut + ANTIQUE_LABEL_STYLE.subjectPx) / 2);
+      // It slides from beside its anchor (left, 0) to centred over it (0.5) on the same ramp.
+      expect(dir.labels()[0]!.alignX).toBeCloseTo(0.25, 1);
       expect(dir.runFrame(look('earth'), makeNear0Ctx(100 + ramp))).toBe(false);
       expect(px()).toBe(ANTIQUE_LABEL_STYLE.subjectPx);
 
-      // Let go, it shrinks back over the same ramp, still centred until it lands.
+      // Let go, it shrinks and slides back over the same ramp.
       expect(dir.runFrame(look(null), makeNear0Ctx(200 + ramp))).toBe(true);
       expect(px()).toBe(ANTIQUE_LABEL_STYLE.subjectPx);
       expect(dir.labels()[0]!.alignX).toBe('center');
+      dir.runFrame(look(null), makeNear0Ctx(200 + 1.5 * ramp));
+      expect(dir.labels()[0]!.alignX).toBeCloseTo(0.25, 1);
       dir.runFrame(look(null), makeNear0Ctx(200 + 2 * ramp));
       expect(px()).toBe(cut);
       expect(dir.labels()[0]!.alignX).toBe('left');

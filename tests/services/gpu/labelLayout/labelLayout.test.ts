@@ -101,4 +101,9 @@ describe('layoutLabel', () => {
     expect(quads[0]!.localOffsetX).toBeCloseTo(1 - line0Width / 2);
     expect(quads[2]!.localOffsetX).toBeCloseTo(1 - line1Width / 2);
   });
+
+  it('a numeric alignX sets that fraction of the line width left of the anchor', () => {
+    const quads = layoutLabel('AB', metrics, 0.25);
+    expect(quads[0]!.localOffsetX).toBeCloseTo(1 - (25 - 1 + 26) / 4);
+  });
 });

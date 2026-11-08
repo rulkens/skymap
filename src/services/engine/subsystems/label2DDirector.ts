@@ -154,6 +154,7 @@ import { viewBasis } from '../../../utils/camera/projection/viewBasis';
 import { viewCoverRectsPx } from '../../../utils/layout/viewCoverRectsPx';
 import { emphasisOf } from '../presentation/emphasisOf';
 import { createTitleGrowth } from '../presentation/createTitleGrowth';
+import { alignXFraction } from '../../../utils/labels/alignXFraction';
 import { ANTIQUE_LABEL_STYLE } from '../../../data/labels/antiqueLabelStyle';
 import {
   HOVERED_LABEL_WHITEN,
@@ -862,7 +863,8 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
 
   /**
    * The antique look's names (`antiqueLabel`); the focused or selected subject keeps one,
-   * set as a title that grows from its cut's size and shrinks back when let go.
+   * set as a title that grows from its cut's size and shrinks back when let go, sliding
+   * from its resting alignment beside its anchor to centred over it on the same ramp.
    */
   function toAntique(
     labels: readonly Label2D[],
@@ -881,13 +883,16 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
       if (!cosmos && rule?.cosmosOnly?.includes(l.id) && !kept) continue;
       const shown = antiqueLabel(l, rule, kept, hasFont);
       if (shown === null) continue;
-      const cut = kept && t < 1 ? antiqueLabel(l, rule, false, hasFont)?.maxPixelSize : undefined;
-      if (cut === undefined) {
+      const rest = kept && t < 1 ? antiqueLabel(l, rule, false, hasFont) : null;
+      if (rest === null) {
         out.push(shown);
         continue;
       }
-      const px = cut + (shown.maxPixelSize! - cut) * t;
-      out.push({ ...shown, minPixelSize: px, maxPixelSize: px });
+      const px = rest.maxPixelSize! + (shown.maxPixelSize! - rest.maxPixelSize!) * t;
+      const from = alignXFraction(rest.alignX ?? 'left');
+      const steps = ANTIQUE_LABEL_STYLE.titleSlideSteps;
+      const alignX = Math.round((from + (alignXFraction(shown.alignX!) - from) * t) * steps) / steps;
+      out.push({ ...shown, minPixelSize: px, maxPixelSize: px, alignX });
     }
     return out;
   }

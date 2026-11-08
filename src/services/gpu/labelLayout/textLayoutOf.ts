@@ -13,7 +13,8 @@ import { layoutLabel } from './labelLayout';
 import { measureLabel } from './measureLabel';
 import { ATLAS_FONT_SIZE } from '../../../data/fonts';
 
-// Unbounded by design: the key space is the label catalog (~hundreds), not user input.
+// Unbounded by design: the key space is the label catalog (~hundreds), not user input; a
+// sliding antique title adds at most `titleSlideSteps` alignments per selected name.
 const memoByMetrics = new WeakMap<LoadedFontAtlases['metricsByFont'], Map<string, LaidOutText>>();
 
 export function textLayoutOf(

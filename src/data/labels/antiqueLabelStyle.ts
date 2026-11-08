@@ -13,8 +13,11 @@ export const ANTIQUE_LABEL_STYLE = {
   romanFont: 'imFell',
   italicFont: 'imFellItalic',
   subjectPx: 30,
-  // A selected name grows to the subject's size, and shrinks back when let go, over this.
+  // A selected name grows to the subject's size, and shrinks back when let go, over this,
+  // sliding from beside its anchor to centred in this many alignment steps (each step is a
+  // new glyph layout, memoised per name, so the slide must not be continuous).
   titleGrowMs: 220,
+  titleSlideSteps: 64,
   titleMaxChars: 14,
   // `advanceEm`: IM Fell's mean glyph advance in the cut over a sample of place names
   // (tracking excluded), so a producer can size a name's box before the atlas sets it.
