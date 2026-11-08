@@ -12,6 +12,15 @@ import { bodyCodeOf } from '../../selection/present/bodyCodeOf';
 import { sceneBodyStates } from '../../../../services/engine/frame/sceneBodyStates';
 import { captionComposeContextOf } from '../../../../utils/labels/captionComposeContextOf';
 import { composeForegroundCaption } from '../../../../utils/labels/composeForegroundCaption';
+import { SCENE_RINGS } from '../../../../data/bodies/sceneRings';
+import { SCALE_UNITS } from '../../../../data/scaleUnits';
+
+// A ring's plane is its host's equator, so its pole is the body frame's third column.
+const RINGS = SCENE_RINGS.map((r) => ({
+  id: `sceneBody-${r.bodyId}`,
+  bodyId: r.bodyId,
+  outerRadiusMpc: r.outerRadiusKm * SCALE_UNITS.KM_TO_MPC,
+}));
 
 export function produceSceneBodyCaptions(
   pickCodes: BodyRuntime['pickCodes'],
@@ -34,9 +43,18 @@ export function produceSceneBodyCaptions(
 
   return (state, ctx, fade) => {
     const composeCtx = captionComposeContextOf(state, ctx);
-    const labels = baseLabelsFor(sceneBodyStates(state, ctx)).map((label) =>
-      composeForegroundCaption(composeCtx, label, fade[label.item]),
-    );
+    const bodyStates = sceneBodyStates(state, ctx);
+    const labels = baseLabelsFor(bodyStates).map((label) => {
+      const caption = composeForegroundCaption(composeCtx, label, fade[label.item]);
+      const ring = RINGS.find((r) => r.id === label.id);
+      if (!ring || !caption.lift) return caption;
+      const m = bodyStates.get(ring.bodyId)!.orientation;
+      const pole = [m[6], m[7], m[8]] as const;
+      return {
+        ...caption,
+        lift: { ...caption.lift, ring: { pole, outerRadiusMpc: ring.outerRadiusMpc } },
+      };
+    });
 
     return { labels, awake: false };
   };

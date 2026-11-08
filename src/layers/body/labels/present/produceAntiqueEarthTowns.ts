@@ -1,6 +1,7 @@
 /**
  * produceAntiqueEarthTowns — the antique look's town names (`ANTIQUE_EARTH_TOWNS`),
- * each set to the right of its sign, just above the sign's foot, arriving with it
+ * each set to the right of its sign (to its left where the right is taken, the
+ * director's `fallback`), just above the sign's foot, arriving with it
  * (`antiqueMapDetail` against the tier's level, as `sign.wesl` reveals the sign).
  * A renamed world city carries its modern name beneath, in brackets (`gloss`). Facing the
  * eye and in daylight or twilight only. With the look off it returns before any
@@ -78,11 +79,13 @@ export function produceAntiqueEarthTowns(
         smoothstep(0.05, 0.2, facing) *
         smoothstep(sunCos[0], sunCos[1], dot3(up, toSun));
       if (fadeAlpha <= 0) return;
+      // Inside a tier the plate's own city first, then the capitals, then by size.
       const declutterPriority =
         priority * CAPTION_PRIORITY_SCALE +
-        (3 - town.tier) * 10 +
-        (4 - town.popClass) * 2 +
-        (town.home ? 1 : 0);
+        (3 - town.tier) * 100 +
+        (town.home ? 50 : 0) +
+        (town.sign === 'capital' ? 20 : 0) +
+        (4 - town.popClass) * 2;
       const base = {
         worldPos: anchor,
         font: 'cormorant',
@@ -97,13 +100,17 @@ export function produceAntiqueEarthTowns(
       // A gloss shares the name's label: as a label of its own its rect would touch
       // the name's inside the declutter pad, and the name would cut it.
       const gap = SIGN_GAP[town.tier];
-      const gloss = town.gloss === undefined ? '' : `\n${gap}(${town.gloss})`;
-      labels.push({
+      const lines = town.gloss === undefined ? [town.name] : [town.name, `(${town.gloss})`];
+      const label = {
         ...base,
         id: town.id,
-        text: gap + town.name + gloss,
+        text: lines.map((line) => gap + line).join('\n'),
         alignY: 'bottom',
         declutterPriority,
+      } as const;
+      labels.push({
+        ...label,
+        fallback: { ...label, text: lines.map((line) => line + gap).join('\n'), alignX: 'right' },
       });
     });
     return { labels, awake: false };

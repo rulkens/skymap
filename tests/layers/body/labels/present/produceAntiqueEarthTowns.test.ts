@@ -63,6 +63,22 @@ describe('produceAntiqueEarthTowns', () => {
     expect(Math.max(...others.map((l) => l.declutterPriority!))).toBeLessThan(amsteldam);
   });
 
+  it('ranks a capital over a larger city of its tier, so Coppenhagen outlasts Dantzig', () => {
+    const { labels } = produce(state, ctxAbove(52, 10, 3000), FADE);
+    const rank = (id: string) => byId(labels, id)!.declutterPriority!;
+    expect(rank('earthTown-coppenhagen')).toBeGreaterThan(rank('earthTown-dantzig'));
+  });
+
+  it('offers each name the left of its sign, for when its right is taken', () => {
+    // London stood unnamed beside Amsteldam: an atlas sets the crowded name on the other side.
+    const { labels } = produce(state, ctxAbove(48.2, 16.4, 3000), FADE);
+    const weenen = byId(labels, 'earthTown-weenen')!;
+    expect(weenen.alignX).toBe('left');
+    expect(weenen.fallback?.alignX).toBe('right');
+    expect(weenen.fallback?.text.split('\n').map((l) => l.trim())).toEqual(['Weenen', '(Vienna)']);
+    expect(weenen.fallback?.text.split('\n')[0]).toMatch(/^Weenen\s+$/);
+  });
+
   it("sets a renamed city's modern name beneath its period name, in one label", () => {
     const { labels } = produce(state, ctxAbove(48.2, 16.4, 3000), FADE);
     expect(

@@ -8,4 +8,6 @@ export type ScreenBodyDisc = {
   readonly radius: number;
   /** The body centre's distance, in the units of `Label2D.occludeNearKm`. */
   readonly centreKm: number;
+  /** A ring's outline on screen (device px), in order round the ring. */
+  readonly ring?: readonly Vec2[];
 };

@@ -181,6 +181,27 @@ describe('produceFamousGalaxyLabels', () => {
     expect(label.leader).toBeUndefined();
   });
 
+  it("under the antique look drops a galaxy's name when it stands behind a nearer galaxy's disc", () => {
+    // M31's period name printed across M51: seen from M51 the Local Group lies behind it,
+    // a speck the plate prints into M51's own stipple.
+    const runtime = seed(
+      [
+        { id: 'm51', names: ['M51'] },
+        { id: 'm31', names: ['M31'] },
+        { id: 'm81', names: ['M81'] },
+      ],
+      [5, 0, 0, 20, 0.2, 0, 20, 6, 0],
+      [120, 200, 200],
+    );
+    const ids = (antique: boolean) =>
+      produceFamousGalaxyLabels(runtime)(makeState({ antique }), makeCtx(), ONE).labels.map(
+        (l) => l.id,
+      );
+    expect(ids(true)).toEqual(['famous-m51', 'famous-m81']);
+    // The plain look's galaxies add light, so the far one shows through and keeps its name.
+    expect(ids(false)).toEqual(['famous-m51', 'famous-m31', 'famous-m81']);
+  });
+
   it('keeps the line top exactly the padding below the label bottom at any lift', () => {
     // The line top DERIVES from the measured text bottom minus the padding, so the gap is
     // identical at different lifts (~33.7 px and ~42.1 px, both proportional-regime).

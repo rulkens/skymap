@@ -177,4 +177,10 @@ export type Label2D = {
    * focus sphere makes unclickable still keeps full emphasis.
    */
   readonly subjectId?: number;
+  /**
+   * The same name set on the other side of its sign, which the antique look's bbox
+   * declutter tries when this placement collides (an atlas sets a crowded town's
+   * name to the left). Keeps the label's id, so the envelope sees one name.
+   */
+  readonly fallback?: Label2D;
 };

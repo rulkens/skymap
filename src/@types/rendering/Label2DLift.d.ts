@@ -6,6 +6,8 @@
  * lift entirely — absence of data, not a discriminant.
  */
 
+import type { Vec3 } from '../math/Vec3';
+
 export type Label2DLift = {
   /** The labelled subject's apparent size in px — drives the proportional lift. */
   readonly subjectSizePx: number;
@@ -17,4 +19,9 @@ export type Label2DLift = {
    * its star's glyph and halo.
    */
   readonly inkGapPx?: number;
+  /**
+   * A ringed subject's ring (unit pole, outer radius in Mpc): the antique declutter
+   * keeps a farther name off the ring's ellipse as well as off the globe.
+   */
+  readonly ring?: { readonly pole: Readonly<Vec3>; readonly outerRadiusMpc: number };
 };

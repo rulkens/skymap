@@ -49,6 +49,7 @@ import type { LayerScreenLabel } from '../../../../@types/engine/layer/LayerScre
 import type { Label2DProducerOutput } from '../../../../@types/engine/subsystems/Label2DProducerOutput';
 import type { GalaxyCatalogRuntime } from '../../@types/GalaxyCatalogRuntime';
 import type { FamousGalaxyName } from '../@types/FamousGalaxyName';
+import type { FamousDisc } from '../@types/FamousDisc';
 import type { GalaxyCatalog } from '../../../../@types/data/galaxyCatalog/GalaxyCatalog';
 import { Source } from '../../../../data/source';
 import { famousGalaxyNamesFor } from '../utils/famousGalaxyNamesFor';
@@ -62,6 +63,7 @@ import { textLayoutOf } from '../../../../services/gpu/labelLayout/textLayoutOf'
 import { smoothstep } from '../../../../utils/math/smoothstep';
 import { isPickableUnderFocus } from '../../../../utils/structure/isPickableUnderFocus';
 import { antiqueLookOn } from '../../../../utils/render/antiqueLookOn';
+import { angleBetween3 } from '../../../../utils/math/angleBetween3';
 
 const FAMOUS_MIN_APPARENT_PX = 6;
 
@@ -144,6 +146,22 @@ function deriveFamousLabelInputs(
   return out;
 }
 
+/** The famous galaxies the frame resolves, as discs on the sky seen from `cam`. */
+function famousDiscs(
+  inputs: readonly FamousLabelInput[],
+  cam: Readonly<Vec3>,
+  pxPerRad: number,
+): FamousDisc[] {
+  return inputs.flatMap((p) => {
+    const dir: Vec3 = [p.worldPos[0] - cam[0], p.worldPos[1] - cam[1], p.worldPos[2] - cam[2]];
+    const distanceMpc = Math.hypot(...dir);
+    const sizePx = apparentSizePx({ diameterKpc: p.apparentDiameterKpc, distanceMpc, pxPerRad });
+    return sizePx < p.minApparentSizePx
+      ? []
+      : [{ dir, distanceMpc, radiusRad: sizePx / 2 / pxPerRad }];
+  });
+}
+
 export function produceFamousGalaxyLabels(
   runtime: Pick<GalaxyCatalogRuntime, 'catalogs' | 'pickCodes'>,
 ): LayerScreenLabel<'famousGalaxy'>['produceLabels'] {
@@ -182,6 +200,9 @@ export function produceFamousGalaxyLabels(
     // read once; folded into each label + anchor-line fadeAlpha below.
     const layerAlpha = fade.famousGalaxy;
     const antique = antiqueLookOn(state);
+    // The plate prints a galaxy as ink, so one standing behind a nearer galaxy's disc is
+    // lost in its stipple (M31 seen from M51); the plain look's galaxies add light.
+    const discs = antique ? famousDiscs(inputs, ctx.drawCamPos, ctx.drawPxPerRad) : [];
 
     for (let i = 0; i < inputs.length; i += 1) {
       const p = inputs[i]!;
@@ -202,6 +223,12 @@ export function produceFamousGalaxyLabels(
         pxPerRad: ctx.drawPxPerRad,
       });
       if (sizePx < p.minApparentSizePx) continue;
+      if (
+        discs.some(
+          (d) => d.distanceMpc < distanceMpc && angleBetween3(d.dir, [dx, dy, dz]) < d.radiusRad,
+        )
+      )
+        continue;
       const declutterPriority = sizePx;
       // Distance-scaled ceiling — see `famousLabelMaxPx`'s docblock for why the
       // category's flat 150 px cap can't stand for permanently-near companions

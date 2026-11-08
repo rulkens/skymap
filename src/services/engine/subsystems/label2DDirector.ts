@@ -115,6 +115,8 @@ import type { Label2DProjected } from '../../../@types/rendering/Label2DProjecte
 import type { ScreenRectPx } from '../../../@types/rendering/ScreenRectPx';
 import type { ScreenBodyDisc } from '../../../@types/rendering/ScreenBodyDisc';
 import type { Vec2 } from '../../../@types/math/Vec2';
+import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Label2DLift } from '../../../@types/rendering/Label2DLift';
 import type { LabelName } from '../../../@types/animation/LabelName';
 import type { FontId } from '../../../@types/data/FontId';
 import { projectLabels } from '../../../utils/labels/projectLabels';
@@ -143,6 +145,10 @@ import { ANTIQUE_LABEL_RULES } from '../../../data/labels/antiqueLabelRules';
 import { antiqueInkGapPx } from '../../../utils/labels/antiqueInkGapPx';
 import { ANTIQUE_TITLE_CLEAR_UNITS } from '../../../data/labels/antiqueTitleClearUnits';
 import { rectMeetsCircle } from '../../../utils/math/rectMeetsCircle';
+import { rectMeetsPolygon } from '../../../utils/math/rectMeetsPolygon';
+import { cross3 } from '../../../utils/math/cross3';
+import { normalize3 } from '../../../utils/math/normalize3';
+import { BODY_GLINT_MAX_PX } from '../../../data/bodies/bodyGlintMaxPx';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { ANTIQUE_AREA_LETTERING } from '../../../data/labels/antiqueAreaLettering';
 import { ANTIQUE_PLACE_LETTERING } from '../../../data/labels/antiquePlaceLettering';
@@ -232,8 +238,9 @@ function sortByDeclutterPriorityDesc(labels: readonly Label2D[]): number[] {
  * ink.  A culled label's leader is culled with it BY CONSTRUCTION — the
  * leader lives on the label object, so there is no separate line-side filter
  * to run.  Under the antique look (`antique`) a lifted name is judged just off
- * its glyph's rim, where `applyLift` engraves it, and a name never prints across
- * the disc of a body nearer than its own subject (a star over a planet's limb;
+ * its glyph's rim, where `applyLift` engraves it, a name that collides tries its
+ * `fallback` placement, and a name never prints across the disc or ring of a body
+ * nearer than its own subject (a star over a planet's limb;
  * `farIds` are the captions that name no depth yet stand beyond every globe).  Returns a fresh array in original input order (deterministic,
  * sort-independent).
  */
@@ -252,8 +259,7 @@ function declutterByBboxOverlap(
   // `labelScreenRect` is the shared CPU twin of the vertex shader's em clamp —
   // the pick path derives its hit boxes from the same function, so a label
   // cannot be decluttered against one rect and clicked on another.
-  const rects: (ScreenRectPx | null)[] = labels.map((label, i) => {
-    const p = projected[i]!;
+  const rectOf = (label: Label2D, p: Label2DProjected): ScreenRectPx | null => {
     // A zero-fadeAlpha label shows nothing, so it must not claim a slot and
     // cull a visible label behind it.
     if (!p.screenPx || (label.fadeAlpha ?? 1) === 0) return null;
@@ -282,40 +288,52 @@ function declutterByBboxOverlap(
             p.screenPx[1] - proposedLiftPx(label.lift.subjectSizePx, devicePixelRatio),
           ];
     return labelScreenRect({ label, bbox, screenPx, clipW: p.clipW, pxPerRad, devicePixelRatio });
-  });
-  const discs = antique ? bodyDiscs(labels, projected, pxPerRad) : [];
+  };
+  const rects = labels.map((label, i) => rectOf(label, projected[i]!));
+  const discs = antique ? bodyDiscs(labels, projected, projection) : [];
+
+  const accepted: number[] = [];
+  // Whether a name set at `rect` stays clear of the bodies in front of it and the names placed.
+  const fits = (i: number, rect: ScreenRectPx): boolean => {
+    const nearKm = labels[i]!.occludeNearKm ?? (farIds.has(labels[i]!.id) ? Infinity : -Infinity);
+    const behindDisc = discs.some(
+      (d) =>
+        d.index !== i &&
+        nearKm > d.centreKm &&
+        (rectMeetsCircle(rect, d.centre, d.radius) ||
+          (d.ring !== undefined && rectMeetsPolygon(rect, d.ring))),
+    );
+    if (behindDisc) return false;
+    for (const a of accepted) {
+      const aRect = rects[a]!;
+      if (!projected[a]!.onScreen || !aRect) continue;
+      if (
+        rect.x0 - pad < aRect.x1 &&
+        rect.x1 + pad > aRect.x0 &&
+        rect.y0 - pad < aRect.y1 &&
+        rect.y1 + pad > aRect.y0
+      )
+        return false;
+    }
+    return true;
+  };
 
   const order = sortByDeclutterPriorityDesc(labels);
-  const accepted: number[] = [];
+  const placed = [...labels];
   for (const i of order) {
     const rect = rects[i];
-    if (projected[i]!.onScreen && rect) {
-      const nearKm = labels[i]!.occludeNearKm ?? (farIds.has(labels[i]!.id) ? Infinity : -Infinity);
-      const behindDisc = discs.some(
-        (d) => d.index !== i && nearKm > d.centreKm && rectMeetsCircle(rect, d.centre, d.radius),
-      );
-      if (behindDisc) continue;
-      let collides = false;
-      for (const a of accepted) {
-        const aRect = rects[a]!;
-        if (!projected[a]!.onScreen || !aRect) continue;
-        if (
-          rect.x0 - pad < aRect.x1 &&
-          rect.x1 + pad > aRect.x0 &&
-          rect.y0 - pad < aRect.y1 &&
-          rect.y1 + pad > aRect.y0
-        ) {
-          collides = true;
-          break;
-        }
-      }
-      if (collides) continue;
+    if (projected[i]!.onScreen && rect && !fits(i, rect)) {
+      const fallback = antique ? labels[i]!.fallback : undefined;
+      const alt = fallback && rectOf(fallback, projected[i]!);
+      if (!fallback || !alt || !fits(i, alt)) continue;
+      placed[i] = fallback;
+      rects[i] = alt;
     }
     accepted.push(i);
   }
 
   const acceptedIndices = new Set(accepted);
-  return labels.filter((_, i) => acceptedIndices.has(i));
+  return placed.filter((_, i) => acceptedIndices.has(i));
 }
 
 /**
@@ -325,8 +343,9 @@ function declutterByBboxOverlap(
 function bodyDiscs(
   labels: readonly Label2D[],
   projected: readonly Label2DProjected[],
-  pxPerRad: number,
+  projection: Label2DProjection,
 ): ScreenBodyDisc[] {
+  const { pxPerRad } = projection;
   const discs: ScreenBodyDisc[] = [];
   labels.forEach((label, index) => {
     const centre = projected[index]!.screenPx;
@@ -338,9 +357,38 @@ function bodyDiscs(
     // image plane lies at f·tan(asin(r/d)), up to ~9% wider at 22° (Pleiades clipped on the Moon).
     const sinHalf = Math.min(lift.subjectSizePx / 2 / pxPerRad, 0.99);
     const radius = lift.subjectSizePx / 2 / Math.sqrt(1 - sinHalf * sinHalf);
-    discs.push({ index, centre, radius, centreKm });
+    const ring = lift.ring && ringOutline(label.worldPos, lift.ring, projection);
+    discs.push({ index, centre, radius, centreKm, ...(ring && { ring }) });
   });
   return discs;
+}
+
+/** Points round a ring's outline: enough that a polygon of them stays within a pixel or two. */
+const RING_OUTLINE_POINTS = 48;
+
+/**
+ * A ring's outline on screen, projected point by point: the eye can stand within a few
+ * ring radii, where the near half swells well past a centred ellipse. Null when part of
+ * it falls behind the eye.
+ */
+function ringOutline(
+  anchor: Readonly<Vec3>,
+  ring: NonNullable<Label2DLift['ring']>,
+  projection: Label2DProjection,
+): Vec2[] | null {
+  const seed: Vec3 = Math.abs(ring.pole[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0];
+  const u = normalize3(cross3(ring.pole, seed));
+  const v = cross3(ring.pole, u);
+  const r = ring.outerRadiusMpc;
+  const points = Array.from({ length: RING_OUTLINE_POINTS }, (_, k) => {
+    const c = Math.cos((k / RING_OUTLINE_POINTS) * 2 * Math.PI) * r;
+    const s = Math.sin((k / RING_OUTLINE_POINTS) * 2 * Math.PI) * r;
+    return {
+      worldPos: [0, 1, 2].map((a) => anchor[a]! + u[a]! * c + v[a]! * s),
+    } as unknown as Label2D;
+  });
+  const screen = projectLabels(points, projection).map((p) => p.screenPx);
+  return screen.every((p) => p !== null) ? (screen as Vec2[]) : null;
 }
 
 /**
@@ -759,8 +807,12 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     switch (policy.mode) {
       case 'smoothstepRamp':
         return applySmoothstepEnvelope(declutterResult.survivors, nowMs, policy);
-      case 'exponentialApproach':
-        return applyExponentialEnvelope(mergedLabels, declutterResult.survivorIds, nowMs, policy);
+      case 'exponentialApproach': {
+        // A survivor may stand at its fallback placement; a culled name fades where it was.
+        const placed = new Map(declutterResult.survivors.map((l) => [l.id, l]));
+        const labels = mergedLabels.map((l) => placed.get(l.id) ?? l);
+        return applyExponentialEnvelope(labels, declutterResult.survivorIds, nowMs, policy);
+      }
     }
   }
 
@@ -909,8 +961,13 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
       const t = title || titleGrowth.tracks(l.id) ? titleGrowth.blend(l.id, title, nowMs) : 0;
       const kept = title || t > 0;
       if (!cosmos && rule?.cosmosOnly?.includes(l.id) && !kept) continue;
-      const shown = antiqueLabel(l, rule, kept, hasFont);
-      if (shown === null) continue;
+      // A planet or moon below a globe prints no sign on the plate: its name would name nothing.
+      if (labelName === 'body' && !kept && l.lift && l.lift.subjectSizePx < BODY_GLINT_MAX_PX)
+        continue;
+      const named = antiqueLabel(l, rule, kept, hasFont);
+      if (named === null) continue;
+      const fallback = !kept && l.fallback && antiqueLabel(l.fallback, rule, false, hasFont);
+      const shown = fallback ? { ...named, fallback } : named;
       const rest = kept && t < 1 ? antiqueLabel(l, rule, false, hasFont) : null;
       const lift = (px: number) => {
         if (!kept || !shown.lift) return shown.lift;
@@ -935,7 +992,8 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
 
   /**
    * Under the antique look, drop a name that runs within an em of the neatline,
-   * onto the cartouche or under an open panel (`antiquePlateKeepOut`); the subject's name stays. Runs
+   * onto the cartouche or under an open panel (`antiquePlateKeepOut`); the subject's name stays,
+   * shrunk to fit inside the neatline. Runs
    * on the final, lifted set, so it judges where the ink is drawn.
    */
   function clearOfPlate(
@@ -961,11 +1019,10 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
       covers,
       rectPx,
     );
-    return labels.filter((label, i) => {
+    return labels.flatMap((label, i) => {
       const { screenPx, clipW } = projected[i]!;
       const bbox = screenPx ? measureText!(label) : null;
-      if (!screenPx || !bbox) return true;
-      if (isTitle(label)) return true;
+      if (!screenPx || !bbox) return [label];
       const r = labelScreenRect({
         label,
         bbox,
@@ -974,15 +1031,22 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
         pxPerRad: projection.pxPerRad,
         devicePixelRatio: projection.devicePixelRatio,
       });
-      const em = r.y1 - r.y0; // the ink's height stands in for the em
+      // A line's ink height stands in for the em.
+      const em = (r.y1 - r.y0) / label.text.split('\n').length;
+      if (isTitle(label)) {
+        // A title wider than a narrow plate shrinks to sit an em inside the neatline.
+        const fit = (inner.x1 - inner.x0) / (r.x1 - r.x0 + 2 * em);
+        if (fit >= 1 || label.maxPixelSize === undefined) return [label];
+        const px = label.maxPixelSize * fit;
+        return [{ ...label, minPixelSize: px, maxPixelSize: px }];
+      }
       const inField =
         r.x0 >= inner.x0 + em &&
         r.y0 >= inner.y0 + em &&
         r.x1 <= inner.x1 - em &&
         r.y1 <= inner.y1 - em;
-      return (
-        inField && !keepOut.some((k) => r.x0 < k.x1 && r.x1 > k.x0 && r.y0 < k.y1 && r.y1 > k.y0)
-      );
+      const clear = !keepOut.some((k) => r.x0 < k.x1 && r.x1 > k.x0 && r.y0 < k.y1 && r.y1 > k.y0);
+      return inField && clear ? [label] : [];
     });
   }
 
