@@ -129,6 +129,12 @@ describe('placeAntiqueOrnaments', () => {
     const card = { row: TABLET, anchor: TABLET.anchor, frame: 0.7, title: { rect, weight: 0.4 } };
     const [frame, title] = place([], NORTH_UP, 0, card);
     expect(frame).toMatchObject({ lettering: false, opacity: 0.7, clearsBeneath: true });
+    // The cartouche keeps its flat wash; only figures and beasts follow their ink.
+    expect([
+      frame!.washFollowsInk,
+      title!.washFollowsInk,
+      place([skyRow({})])[0]!.washFollowsInk,
+    ]).toEqual([false, false, true]);
     expect(title).toMatchObject({ lettering: true, opacity: 0.4, rect: [...rect], rotation: 0 });
     // The interior's centre sits 0.1 of the sprite's height below its middle.
     expect(title!.centrePx[0]).toBeCloseTo(frame!.centrePx[0]);

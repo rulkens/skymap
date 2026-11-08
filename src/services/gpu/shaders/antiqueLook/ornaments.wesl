@@ -13,6 +13,7 @@
 // | +48    | pigment | index into PIGMENTS                             |
 // | +52    | lettering | 1 = rect is on the lettering sheet (a title)  |
 // | +56    | accent  | PIGMENTS index where the atlas alpha is 0       |
+// | +60    | shaded  | 1 = the wash follows the engraving's ink        |
 
 struct Ornament {
   centre: vec2<f32>,
@@ -24,7 +25,7 @@ struct Ornament {
   pigment: f32,
   lettering: f32,
   accent: f32,
-  _pad2: f32,
+  shaded: f32,
 }
 
 struct AntiqueOrnaments {

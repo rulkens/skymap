@@ -87,11 +87,11 @@ fn fs(in: DecorOut) -> DecorInk {
   let brush = textureSampleLevel(atlas, linear, uv + stray * (rect.zw - rect.xy), 0.0);
   // Pigment gathers where a wash dries, at its edge: a darker rim, no airbrush fade.
   let rim = 1.0 - abs(2.0 * brush.b - 1.0);
-  // A figure's wash follows its engraving instead (the atlas's coarse mip is the
+  // A figure's or beast's wash follows its engraving instead (the atlas's coarse mip is the
   // local ink density): full where the engraver shaded, thinning to bare paper in
   // the lit parts and at the outline, so it never reads as a tinted cut-out.
   let shade = smoothstep(FIGURE_SHADE.x, FIGURE_SHADE.y, textureSampleLevel(atlas, linear, uv, FIGURE_SHADE_LOD).r);
-  let laid = select(min(brush.b + 0.35 * rim, 1.0), brush.b * shade, clears < 0.5);
+  let laid = select(min(brush.b + 0.35 * rim, 1.0), brush.b * shade, orn.items[in.item].shaded > 0.5);
   let wash = select(laid, 0.0, orn.items[in.item].lettering > 0.5) * o;
   let hue = mix(pigmentAt(orn.items[in.item].accent), pigmentAt(orn.items[in.item].pigment), brush.a);
   var out: DecorInk;
