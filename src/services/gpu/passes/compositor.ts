@@ -74,7 +74,11 @@ import fsCode from '../shaders/compositor/fragment.wesl?static';
 import { clampExposure } from '../../../utils/tonemap/clampExposure';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../lib/blendStates';
-import { REINHARD_WHITEPOINT, ASINH_SOFTNESS } from '../../../data/toneMapCurve';
+import {
+  REINHARD_WHITEPOINT,
+  ASINH_SOFTNESS,
+  toneMapCurveSaturation,
+} from '../../../data/toneMapCurve';
 import type { Compositor } from '../../../@types/rendering/Compositor';
 import type { CompositeBlend } from '../../../@types/rendering/CompositeBlend';
 import type { ToneMap } from '../../../@types/rendering/ToneMap';
@@ -217,13 +221,12 @@ export function createCompositor(init: { device: GPUDevice }): Compositor {
   // dest target, so the same blend can key two entries for two formats.
   const cache = new Map<string, { pipeline: GPURenderPipeline; uniformBuffer: GPUBuffer }>();
 
-  // Mixed f32/u32 uniform — pack via two views over one 32-byte
+  // Mixed f32/u32 uniform — pack via two views over one 48-byte
   // ArrayBuffer. Lanes 6 and 7 (bytes 24..31) carry the extended-range
-  // `hdrKnee` / `hdrHeadroom` — see the `if (tone)` / `else` branches
-  // below. They stay zero in the tone-null / SDR case (a fresh ArrayBuffer
-  // is zero-filled), satisfying the uniform 16-byte-stride requirement with
-  // no unused padding left in the buffer.
-  const uniformBytes = new ArrayBuffer(32);
+  // `hdrKnee` / `hdrHeadroom`, lanes 8 and 9 the print shoulder's knee and
+  // top — see the `if (tone)` / `else` branches below. They stay zero in the
+  // tone-null / SDR case; lanes 10 and 11 pad to the 16-byte stride.
+  const uniformBytes = new ArrayBuffer(48);
   const uniformF32 = new Float32Array(uniformBytes);
   const uniformU32 = new Uint32Array(uniformBytes);
 
@@ -252,7 +255,7 @@ export function createCompositor(init: { device: GPUDevice }): Compositor {
 
     const uniformBuffer = device.createBuffer({
       label: `compositor-uniform-${key}`,
-      size: 32,
+      size: 48,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
@@ -284,6 +287,9 @@ export function createCompositor(init: { device: GPUDevice }): Compositor {
         // sets these non-zero when `hdrActiveOf(ctx.renderTargets)` is true).
         uniformF32[6] = tone.hdrKnee;
         uniformF32[7] = tone.hdrHeadroom;
+        const top = toneMapCurveSaturation(tone.curve);
+        uniformF32[8] = (tone.printShoulder ?? 0) * top;
+        uniformF32[9] = top;
       } else {
         // No tone-map: exposure 1.0, curve params zeroed, toneEnabled 0.
         // The fragment takes the raw pass-through branch.
@@ -294,6 +300,8 @@ export function createCompositor(init: { device: GPUDevice }): Compositor {
         uniformU32[4] = 0;
         uniformF32[6] = 0;
         uniformF32[7] = 0;
+        uniformF32[8] = 0;
+        uniformF32[9] = 0;
       }
       // preserveAlpha comes from the blend table, NOT the caller — alpha
       // handling is a property of the blend mode.

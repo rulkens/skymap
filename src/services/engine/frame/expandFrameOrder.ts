@@ -23,6 +23,7 @@ import {
   ANTIQUE_HIDDEN_PASSES,
   ANTIQUE_MOVED_PASSES,
   ANTIQUE_ONLY_PASSES,
+  ANTIQUE_PRINT_SHOULDER,
 } from '../../../data/rendering/antiqueLook';
 
 export type FrameInputs = {
@@ -145,7 +146,12 @@ const EXPAND_STEP: { [K in FrameStepSpec['kind']]: ExpandStep<K> } = {
   composite: (spec) => [merge(spec.source, spec.dest, 'over', null)],
   bloom: (_spec, _passes, frame) => (frame.bloomEnabled ? [{ kind: 'bloom' }] : []),
   tonemap: (spec, _passes, frame) => [
-    merge(spec.source, lookTarget(spec.dest, 'print', frame.antique), 'replace', frame.tone),
+    merge(
+      spec.source,
+      lookTarget(spec.dest, 'print', frame.antique),
+      'replace',
+      frame.antique ? { ...frame.tone, printShoulder: ANTIQUE_PRINT_SHOULDER } : frame.tone,
+    ),
   ],
   copy: (spec) => [{ kind: 'copy', source: spec.source }],
   stylize: (spec, _passes, frame) =>

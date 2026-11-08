@@ -167,14 +167,17 @@ const STRUCTURE_CORE: f32 = 0.18;
 // luma its tone's log scale starts from, and that scale's power (over 1 the arms
 // and inner disc stay steps under the bar); the tone an inter-arm gap keeps; the
 // most a 1/16 surroundings counts for its relief (the bar's glare lifts it, which
-// left the bright disc round the bar paper); the densest tone short of the bar, which
-// alone (the print's white) closes up; the dust lanes' hatch spacing in print units.
+// left the bright disc round the bar paper); the densest tone short of the bar; the
+// print luma over which the bar rises from it to solid (the print's highlight shoulder,
+// ANTIQUE_PRINT_SHOULDER, keeps a gradient there); the dust lanes' hatch spacing in print units.
 const GALAXY_EDGE: f32 = 0.10;
 const GALAXY_FLOOR: f32 = 0.07;
 const GALAXY_SB_POW: f32 = 1.5;
 const GALAXY_GAP: f32 = 0.08;
 const GALAXY_RELIEF_CAP: f32 = 0.65;
 const GALAXY_DISC_MAX: f32 = 0.62;
+const GALAXY_BAR_LO: f32 = 0.80;
+const GALAXY_BAR_HI: f32 = 0.88;
 const LANE_HATCH: f32 = 2.6;
 const GALAXY_WASH: f32 = 0.15;
 
@@ -278,11 +281,12 @@ fn washHue(uv: vec2<f32>) -> vec3<f32> {
 // A resolved galaxy's stipple tone from its `light`, the 1/16 surroundings `lowL` and
 // the print's own pixel `nucleus`: surface brightness on a log scale, times the light's
 // relief over its surroundings, so an inter-arm gap keeps GALAXY_GAP of it. Only the
-// print's white (the bar, unblurred, so it keeps its shape) closes up past GALAXY_DISC_MAX.
+// print's highlights (the bar, unblurred, so it keeps its shape) climb past GALAXY_DISC_MAX.
 fn galaxyTone(light: f32, lowL: f32, nucleus: f32) -> f32 {
   let sb = pow(clamp(log(max(light, 1e-3) / GALAXY_FLOOR) / -log(GALAXY_FLOOR), 0.0, 1.0), GALAXY_SB_POW);
   let relief = smoothstep(-0.2, 0.35, log((light + 0.02) / (min(lowL, GALAXY_RELIEF_CAP) + 0.02)));
-  return max(min(sb * mix(GALAXY_GAP, 1.0, relief), GALAXY_DISC_MAX), smoothstep(0.94, 1.0, nucleus));
+  let bar = mix(GALAXY_DISC_MAX, 1.0, smoothstep(GALAXY_BAR_LO, GALAXY_BAR_HI, nucleus)) * step(GALAXY_BAR_LO, nucleus);
+  return max(min(sb * mix(GALAXY_GAP, 1.0, relief), GALAXY_DISC_MAX), bar);
 }
 
 // A galaxy stippled as an engraver dotted a nebula: dots denser with its surface

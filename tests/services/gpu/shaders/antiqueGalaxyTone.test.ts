@@ -21,6 +21,7 @@ const SHIMS = {
   max: Math.max,
   min: Math.min,
   pow: Math.pow,
+  step: (edge: number, x: number) => (x < edge ? 0 : 1),
   clamp,
   mix: (a: number, b: number, t: number) => a + (b - a) * t,
   smoothstep: (a: number, b: number, x: number) => {
@@ -31,13 +32,29 @@ const SHIMS = {
 
 function galaxyToneFromShader(): (light: number, lowL: number, nucleus: number) => number {
   const plate = readShaderSource('src/services/gpu/shaders/antiqueLook/fragment.wesl');
-  const body = /fn galaxyTone\(light: f32, lowL: f32, nucleus: f32\) -> f32 \{([\s\S]*?)\n\}/.exec(plate)?.[1];
+  const body = /fn galaxyTone\(light: f32, lowL: f32, nucleus: f32\) -> f32 \{([\s\S]*?)\n\}/.exec(
+    plate,
+  )?.[1];
   if (body === undefined) throw new Error('fragment.wesl lacks galaxyTone');
   const consts = Object.fromEntries(
-    ['GALAXY_FLOOR', 'GALAXY_GAP', 'GALAXY_SB_POW', 'GALAXY_RELIEF_CAP', 'GALAXY_DISC_MAX'].map((name) => [name, weslF32(plate, name)]),
+    [
+      'GALAXY_FLOOR',
+      'GALAXY_GAP',
+      'GALAXY_SB_POW',
+      'GALAXY_RELIEF_CAP',
+      'GALAXY_DISC_MAX',
+      'GALAXY_BAR_LO',
+      'GALAXY_BAR_HI',
+    ].map((name) => [name, weslF32(plate, name)]),
   );
   const scope = { ...SHIMS, ...consts };
-  const fn = new Function(...Object.keys(scope), 'light', 'lowL', 'nucleus', body.replace(/\blet\b/g, 'const'));
+  const fn = new Function(
+    ...Object.keys(scope),
+    'light',
+    'lowL',
+    'nucleus',
+    body.replace(/\blet\b/g, 'const'),
+  );
   return (light, lowL, nucleus) => fn(...Object.values(scope), light, lowL, nucleus);
 }
 
@@ -63,5 +80,12 @@ describe('antique galaxy stipple tone', () => {
 
   it('keeps a faint outer arm over its darker surroundings', () => {
     expect(tone(0.25, 0.15, 0.25)).toBeGreaterThan(0.25);
+  });
+
+  it("keeps the bar's own gradient: its flank a step between the disc and its crest", () => {
+    // Print lumas under the highlight shoulder: the bar's flank ~0.86, its crest ~0.93.
+    const flank = tone(0.86, 0.8, 0.86);
+    expect(flank - 0.62).toBeGreaterThan(0.08);
+    expect(tone(0.93, 0.8, 0.93) - flank).toBeGreaterThan(0.15);
   });
 });

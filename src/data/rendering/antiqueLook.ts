@@ -11,6 +11,10 @@ export const ANTIQUE_CELL = 4;
  * so a retina plate carries the same stars as a 1× one. */
 export const ANTIQUE_PRINT_CELL_UNITS = 4;
 
+/** Under the look the print rolls its highlights off from this share of the tone curve's
+ * saturation (`printShoulder`): clipped, a galaxy's bar printed as a round white blob. */
+export const ANTIQUE_PRINT_SHOULDER = 0.625;
+
 /** Camera distance from the Sun (Mpc) over which ornaments go from star chart to cosmos. */
 export const ANTIQUE_REGIME_MPC = [0.003, 0.03] as const;
 

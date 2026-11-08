@@ -23,6 +23,7 @@ import { symmetricFrustum } from '../../../../src/utils/camera/frustum/symmetric
 import {
   ANTIQUE_HIDDEN_PASSES,
   ANTIQUE_ONLY_PASSES,
+  ANTIQUE_PRINT_SHOULDER,
   ANTIQUE_TARGETS,
 } from '../../../../src/data/rendering/antiqueLook';
 
@@ -472,7 +473,15 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     );
     expect(swapWriters).toEqual([]);
     expect(on.find((step) => step.kind === 'composite' && step.step.tone !== null)).toMatchObject({
-      step: { source: 'hdr', dest: 'print' },
+      step: { source: 'hdr', dest: 'print', tone: { printShoulder: ANTIQUE_PRINT_SHOULDER } },
+    });
+    // The shoulder is the print's alone: the plain frame's swap clips as it always did.
+    const plain = program({ antique: false }).find(
+      (step) => step.kind === 'composite' && step.step.tone !== null,
+    );
+    expect(plain).toEqual({
+      kind: 'composite',
+      step: { source: 'hdr', dest: 'swap', blend: 'replace', tone: TONE },
     });
     expect(on.some((step) => step.kind === 'render' && step.target === 'overlay')).toBe(true);
     expect(on.at(-1)).toEqual({ kind: 'stylize', source: 'print', overlay: 'overlay' });
