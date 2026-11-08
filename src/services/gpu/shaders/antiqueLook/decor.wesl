@@ -95,7 +95,7 @@ fn fs(in: DecorOut) -> DecorInk {
   let flat = min(brush.b + 0.35 * rim, 1.0) * smoothstep(0.0, 0.2, s.b);
   let laid = select(flat, brush.b * shade, orn.items[in.item].shaded > 0.5);
   let wash = select(laid, 0.0, orn.items[in.item].lettering > 0.5) * o;
-  let hue = mix(pigmentAt(orn.items[in.item].accent), pigmentAt(orn.items[in.item].pigment), brush.a);
+  let hue = pigmentAt(orn.items[in.item].pigment);
   var out: DecorInk;
   out.ink = vec4<f32>(figure * (1.0 - clears), ink * clears, clear, wash);
   out.hue = vec4<f32>(hue * step(0.01, wash), 0.0);

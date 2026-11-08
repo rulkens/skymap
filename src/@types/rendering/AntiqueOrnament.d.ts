@@ -19,8 +19,6 @@ export type AntiqueOrnament = {
   readonly facesNorth: boolean;
   /** Index into `pigments.wesl`'s PIGMENTS for the sprite's wash channel. */
   readonly pigment: number;
-  /** The pigment where the atlas marks an accent (alpha 0). */
-  readonly accent: number;
   readonly opacity: number;
   /** Clears the plate beneath its fill to bare paper (a sea beast), or lets it show (a constellation figure). */
   readonly clearsBeneath: boolean;

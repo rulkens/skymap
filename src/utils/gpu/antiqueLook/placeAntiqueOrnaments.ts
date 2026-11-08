@@ -89,7 +89,7 @@ export function placeAntiqueOrnaments(input: {
       ((card.anchor.sizeUnits * unitPx) / 2) * (cardRect.h / cardRect.w),
     ];
     reserved.push({ centre, half });
-    const { pigment, accent } = card.row;
+    const { pigment } = card.row;
     placed.push({
       centrePx: centre,
       halfPx: half,
@@ -97,7 +97,6 @@ export function placeAntiqueOrnaments(input: {
       opacity: card.frame,
       clearsBeneath: true,
       pigment,
-      accent,
       rect: uvOf(cardRect),
       lettering: false,
       washFollowsInk: false,
@@ -115,7 +114,6 @@ export function placeAntiqueOrnaments(input: {
         opacity: card.title.weight,
         clearsBeneath: true,
         pigment,
-        accent,
         rect: [...card.title.rect],
         lettering: true,
         washFollowsInk: false,
@@ -183,7 +181,6 @@ export function placeAntiqueOrnaments(input: {
       opacity,
       clearsBeneath: row.clearsBeneath,
       pigment: row.pigment,
-      accent: row.accent,
       rect: uvOf(rect),
       lettering: false,
       washFollowsInk: true,

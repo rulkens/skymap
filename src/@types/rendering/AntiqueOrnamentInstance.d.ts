@@ -14,7 +14,6 @@ export type AntiqueOrnamentInstance = {
   readonly opacity: number;
   readonly clearsBeneath: boolean;
   readonly pigment: number;
-  readonly accent: number;
   /** Rect, normalised: u0, v0, u1, v1, on the atlas or the lettering sheet. */
   readonly rect: Vec4;
   /** Drawn from the lettering sheet (a cartouche's title), not the ornament atlas. */

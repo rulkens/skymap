@@ -12,7 +12,7 @@
 // | +32    | rect    | atlas u0, v0, u1, v1                            |
 // | +48    | pigment | index into PIGMENTS                             |
 // | +52    | lettering | 1 = rect is on the lettering sheet (a title)  |
-// | +56    | accent  | PIGMENTS index where the atlas alpha is 0       |
+// | +56    | (pad)   | keeps the record 64 bytes, a multiple of its 16 |
 // | +60    | shaded  | 1 = the wash follows the engraving's ink        |
 
 struct Ornament {
@@ -24,7 +24,7 @@ struct Ornament {
   rect: vec4<f32>,
   pigment: f32,
   lettering: f32,
-  accent: f32,
+  _pad: f32,
   shaded: f32,
 }
 

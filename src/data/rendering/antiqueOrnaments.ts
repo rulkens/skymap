@@ -26,7 +26,6 @@ const beast = (
   regime,
   facesNorth: true,
   pigment,
-  accent: pigment,
   opacity: 1,
   clearsBeneath: false,
   mirrored,

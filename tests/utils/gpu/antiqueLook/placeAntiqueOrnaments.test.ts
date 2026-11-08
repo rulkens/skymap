@@ -25,7 +25,6 @@ const TABLET: AntiqueCartouche = {
   sprite: 'tablet',
   anchor: { corner: 'topLeft', insetUnits: [200, 200], sizeUnits: 100 },
   pigment: 6,
-  accent: 6,
 };
 const FRUSTUM = { tanLeft: -1.0264, tanRight: 1.0264, tanDown: -0.5774, tanUp: 0.5774 };
 const SIZE = { width: 1600, height: 900 };
@@ -53,7 +52,6 @@ function skyRow(over: Partial<AntiqueOrnament> & { lonDeg?: number }): AntiqueOr
     regime: 'stars',
     facesNorth: true,
     pigment: 0,
-    accent: 0,
     opacity: 1,
     clearsBeneath: false,
     mirrored: false,
