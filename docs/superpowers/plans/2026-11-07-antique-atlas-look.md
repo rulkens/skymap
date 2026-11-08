@@ -265,7 +265,9 @@ Owner ruling 2026-11-07: keep the generic galaxy engraving with these names; the
 - [x] Stars past the naked eye print as dots to m 7.5 (the Via Lactea at Sgr A*); glyphs to m 5.75 unchanged.
 - [x] Constellation figures only within 10–50 pc of the Sun; a replacing composite of an empty source clears its dest (black deep-space frames).
 - [x] The Zone of Avoidance ruled lightest in the line hierarchy, its pitch and weight wandering by hand (`web.wesl`).
-- [ ] Panel r9 (cartographer 6, historian 6, art 5.5, fidelity 5; r7 galaxies 4.6). Open: the bar and nucleus are no brighter than the arms in the look's print, so they print no darker; the stipple's cell grid shows at 1x; M51's spiral at its default size; dense-field dots cap at one per print cell, not catalogue density; curved arm names; Latin names for post-1690 objects.
+- [x] Panel r9 (cartographer 6, historian 6, art 5.5, fidelity 5; r7 galaxies 4.6).
+- [x] Review 8 #2: the print carried bar, arms and gaps all along; the tone capped every arm and the jittered grid covered ~60% at most. `galaxyTone` (log surface brightness × relief, only the print's white closes up, tested from the shader's text) and `stippleDense` (dots thin by count, then grow); dust as whole-line hatching; nebula.wesl's lane window gone. Panel r1→r3: cartographer 6→6.5, printmaking 5.5→6, fidelity 5.5→6, a plateau.
+- [ ] Open: the print clips the bar (its ≥0.94 region is a 136×97 px near-round blob in mw-face), so the bar's tilt and length can't come back from it without a softer tone under the look; M51's name and knock-out cover its disc and core, and NGC 5195 out-inks it; dense-field dots cap at one per print cell; curved arm names; Latin names for post-1690 objects.
 
 ### Task 33: The Moon engraved as Riccioli's plate (Moon review r3)
 **Files:** `shaders/bodies/texturedBody/fragment.wesl` (`fsMoonPrint`, `fsMoonRelief`), `shaders/antiqueLook/{bodies/moon,fragment}.wesl`,
