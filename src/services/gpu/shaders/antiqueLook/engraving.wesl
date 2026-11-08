@@ -195,6 +195,32 @@ fn isoLines(h: f32, hPerUnit: f32, tone: f32, pxUnits: f32) -> f32 {
   return ink;
 }
 
+// `isoLines` over a height phase `h` (`relief.wesl`, `heightPeriodM`) at `px` in `field`,
+// its gradient from the neighbours' phases. A face seen edge-on crowds even the coarsest
+// lines past ISO_SPACING: fade them rather than alias. A zero tone would still leave
+// isoLines' sub-pixel hairline. Below `resolvedPerPx` (> 0) of phase per px the stored
+// phase's steps outrun its slope: a facet inside one step reads flat, and one sitting on
+// a line's value inked solid, so the lines leave such ground to the paper.
+fn contourLines(field: texture_2d<f32>, px: vec2<f32>, h: f32, unit: f32, tone: f32, resolvedPerPx: f32) -> f32 {
+  let ip = vec2<i32>(px);
+  let hx = wrapStep(textureLoad(field, ip + vec2<i32>(1, 0), 0).b, textureLoad(field, ip - vec2<i32>(1, 0), 0).b);
+  let hy = wrapStep(textureLoad(field, ip + vec2<i32>(0, 1), 0).b, textureLoad(field, ip - vec2<i32>(0, 1), 0).b);
+  let hPerUnit = 0.5 * length(vec2<f32>(hx, hy)) * unit;
+  let crowd = hPerUnit * ISO_K * ISO_SPACING;
+  let resolved = select(1.0, smoothstep(resolvedPerPx, 2.0 * resolvedPerPx, hPerUnit / unit), resolvedPerPx > 0.0);
+  let keep = smoothstep(0.0, 0.15, tone) * (1.0 - smoothstep(1.0, 2.0, crowd)) * resolved;
+  if (keep <= 0.0) {
+    return 0.0;
+  }
+  return min(isoLines(h, max(hPerUnit, 1e-6), tone, 1.0 / unit), 1.0) * keep;
+}
+
+// The step between two height phases across their wrap.
+fn wrapStep(a: f32, b: f32) -> f32 {
+  let d = a - b;
+  return d - round(d);
+}
+
 // Hachures by line-integral convolution (Cabral & Leedom 1993): `field.b`, a noise
 // pinned to the ground, averaged along the streamline of the screen fall line
 // `field.rg`, FALL_TAPS each way FALL_STEP print units apart, tent-weighted. A streamline stops

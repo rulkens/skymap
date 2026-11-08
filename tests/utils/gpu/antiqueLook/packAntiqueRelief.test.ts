@@ -67,8 +67,8 @@ describe('packAntiqueRelief', () => {
     expect(f32[at('reveal')]).toBe(0.25);
     const earth = { ...input(eye), body: ANTIQUE_RELIEF_BODIES['earth']! };
     expect(new Float32Array(packAntiqueRelief(earth))[at('wideNormal')]).toBe(1);
-    expect(f32[at('contour')]).toBe(0);
-    expect(new Float32Array(packAntiqueRelief(earth))[at('contour')]).toBe(1);
+    expect(f32[at('heightPeriodM')]).toBe(MARS.contourPeriodM);
+    expect(new Float32Array(packAntiqueRelief(earth))[at('heightPeriodM')]).toBe(2048);
   });
 
   it('splits the eye into whole anchor cells and a small f32 remainder', () => {

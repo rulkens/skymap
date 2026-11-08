@@ -4,9 +4,7 @@
 // has water edges.
 
 import package::antiqueLook::plateBodies::BodyPrint;
-import package::antiqueLook::engraving::isoLines;
-import package::antiqueLook::engraving::ISO_K;
-import package::antiqueLook::engraving::ISO_SPACING;
+import package::antiqueLook::engraving::contourLines;
 import package::antiqueLook::engraving::seaDistance;
 import package::antiqueLook::engraving::waterLines;
 import package::antiqueLook::pigments::applyWash;
@@ -89,22 +87,5 @@ fn earthRelief(field: texture_2d<f32>, px: vec2<f32>, relief: vec4<f32>, unit: f
   let detail = clamp((around - plain) / max(around, 1e-3) * 2.0, 0.0, 1.0);
   let share = EARTH_SHADE_INK * relief.a + EARTH_DETAIL_INK * detail * min(relief.a * 4.0, 1.0);
   let tone = 0.85 * smoothstep(EARTH_SHADE_BAND.x, EARTH_SHADE_BAND.y, share);
-  let ip = vec2<i32>(px);
-  let hx = wrapStep(textureLoad(field, ip + vec2<i32>(1, 0), 0).b, textureLoad(field, ip - vec2<i32>(1, 0), 0).b);
-  let hy = wrapStep(textureLoad(field, ip + vec2<i32>(0, 1), 0).b, textureLoad(field, ip - vec2<i32>(0, 1), 0).b);
-  let hPerUnit = 0.5 * length(vec2<f32>(hx, hy)) * unit;
-  // A face seen edge-on crowds even the coarsest lines past ISO_SPACING: fade them rather
-  // than alias. A zero tone would still leave isoLines' sub-pixel hairline.
-  let crowd = hPerUnit * ISO_K * ISO_SPACING;
-  let keep = smoothstep(0.0, 0.15, tone) * (1.0 - smoothstep(1.0, 2.0, crowd));
-  if (keep <= 0.0) {
-    return 0.0;
-  }
-  return min(isoLines(relief.b, max(hPerUnit, 1e-6), tone, 1.0 / unit), 1.0) * keep;
-}
-
-// The step between two height phases across their wrap.
-fn wrapStep(a: f32, b: f32) -> f32 {
-  let d = a - b;
-  return d - round(d);
+  return contourLines(field, px, relief.b, unit, tone, 0.0);
 }

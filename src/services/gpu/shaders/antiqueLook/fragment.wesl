@@ -695,8 +695,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
       } else if ((u.flags >> RELIEF_PRINT_SHIFT) == PRINT_MOON) {
         bodyInk = max(bodyInk, select(0.0, moonRelief(reliefTex, linear, px, relief, u.unit, moon, moonTexel, luma(src), around), moonRow));
       } else {
-        bodyInk = max(bodyInk, groundRelief(reliefTex, linear, px, relief, u.unit, u.hatchAngle,
-          luma(src), quarterTex, WASH_LAYER));
+        bodyInk = max(bodyInk, groundRelief(reliefTex, linear, px, relief, u.unit, quarterTex, WASH_LAYER));
       }
     }
     bodyInk *= body;

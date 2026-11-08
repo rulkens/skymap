@@ -11,7 +11,8 @@
 // | 144 anchorCells (i32); 156 exaggeration | 160 sun; 172 radPerPx | 176 eyeRelBody; 188 unit |
 // | 192 res; 200 sin, 204 cos of the plate light's elevation | 208 cellM; 212 slopeInk;   |
 // | 216 wideNormal (`AntiqueReliefBody`, per body); 220 reveal (`packAntiqueRelief.ts`) |
-// | 224 contour: b holds the height phase instead of the noise (`AntiqueReliefBody.hatch`) |
+// | 224 heightPeriodM: > 0, b holds the height phase over it instead of the noise          |
+// |     (`AntiqueReliefBody.contourPeriodM`)                                               |
 
 import package::antiqueLook::io::VSOut;
 import package::antiqueLook::groundNoise::groundNoiseAt;
@@ -34,7 +35,7 @@ struct ReliefUniforms {
   slopeInk: f32,
   wideNormal: f32,
   reveal: f32,
-  contour: f32,
+  heightPeriodM: f32,
 }
 
 // foreground:0's depth (reversed-Z: 0 is the far clear, so sky).
@@ -62,9 +63,6 @@ const MESH_SLOPE: f32 = 1.0;
 // A `wideNormal` body's stencil spans one height cell on screen, at most this many px;
 // a wide tap off the near step's plane by HALO_JUMP has crossed a profile.
 const WIDE_MAX_PX: i32 = 48;
-// A contour body's b: its radius over this period, whose fraction `isoLines` cuts at
-// power-of-two steps (2048 m down to 8 m), so a whole period wraps onto every step.
-const HEIGHT_PHASE_M: f32 = 2048.0;
 // A body its plain render inks (`slopeInk`) trusts its depth for form only past this slope
 // share and below orbit, where the mesh is km facets; elsewhere its ground is a flat,
 // hatched along the plate's light angle (owner ruling: the light sets the direction).
@@ -176,7 +174,9 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   }
 
   let noise = groundNoiseAt(r.eyeFromAnchor + p, r.anchorCells, t * r.radPerPx * r.unit);
-  let hb = select(noise, fract(length(r.eyeRelBody + p) / HEIGHT_PHASE_M), r.contour > 0.5);
+  // A contour body's radius over its period, whose fraction `isoLines` cuts at power-of-two
+  // steps, so a whole period wraps onto every step.
+  let hb = select(noise, fract(length(r.eyeRelBody + p) / r.heightPeriodM), r.heightPeriodM > 0.0);
   // Hachures fade in as a body's far relief signs fade out (`revealDetail`).
   return vec4<f32>(fall, hb, select(-fade, stroke * r.reveal, stroke > 0.0));
 }

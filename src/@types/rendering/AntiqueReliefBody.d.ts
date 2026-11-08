@@ -18,7 +18,8 @@ export type AntiqueReliefBody = {
   /** The antique map's reveal level (`antiqueMapDetail`) over which the hachures fade in,
    * as the map's molehill signs fade out; null: always in. */
   readonly revealDetail: readonly [number, number] | null;
-  /** How the shade is cut: `fall` hachures down the fall line from the ground's noise,
-   * `contour` lines along the height's contours, swelling with the shade (`earthRelief`). */
-  readonly hatch: 'fall' | 'contour';
+  /** How the shade is cut: null, hachures down the fall line from the ground's noise; else
+   * lines along the height's contours, swelling with the shade, at heights that are whole
+   * fractions of this period, m (`isoLines`: a quarter of it down to 1/256). */
+  readonly contourPeriodM: number | null;
 };

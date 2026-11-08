@@ -10,8 +10,8 @@ import type { AntiqueReliefBody } from '../../@types/rendering/AntiqueReliefBody
  * shade side inked, as a 1690 engraver drew a mountain (hachures by slope are Lehmann's,
  * 1799); handed over from the map's molehills (ANTIQUE_MAP_DETAIL levels 7..8). */
 export const ANTIQUE_RELIEF_BODIES: Readonly<Record<string, AntiqueReliefBody>> = {
-  mars: { cellM: 1, exaggeration: [2, 3], slopeInk: 1, wideNormal: false, revealDetail: null, hatch: 'fall' },
-  earth: { cellM: 1500, exaggeration: [1.3, 2.5], slopeInk: 0, wideNormal: true, revealDetail: [7, 8], hatch: 'contour' },
+  mars: { cellM: 1, exaggeration: [2, 3], slopeInk: 1, wideNormal: false, revealDetail: null, contourPeriodM: 512 },
+  earth: { cellM: 1500, exaggeration: [1.3, 2.5], slopeInk: 0, wideNormal: true, revealDetail: [7, 8], contourPeriodM: 2048 },
 };
 
 /** Above this altitude over the datum the ground is too small to engrave: no pass. */
