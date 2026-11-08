@@ -11,4 +11,10 @@ export type Label2DLift = {
   readonly subjectSizePx: number;
   /** Screen-px lift of the leader's BOTTOM off the subject. Default 0. */
   readonly lineBottomLiftPx?: number;
+  /**
+   * Device px an engraved name's ink keeps above its subject's centre, in place of
+   * `antiqueInkGapPx`'s rim rule: the antique look sets it on a title, which clears
+   * its star's glyph and halo.
+   */
+  readonly inkGapPx?: number;
 };

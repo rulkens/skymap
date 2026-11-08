@@ -20,6 +20,9 @@ import { LABEL_EM_PX_RETUNE } from '../../../../src/data/labels/labelSizingDefau
 import { APP_VISIBILITY_REGISTRY } from '../../../../src/compositions/appVisibility';
 import { MILD_RECESSION } from '../../../../src/data/mildRecession';
 import { ANTIQUE_LABEL_STYLE } from '../../../../src/data/labels/antiqueLabelStyle';
+import { ANTIQUE_REFERENCE_HEIGHT_CSS } from '../../../../src/data/rendering/antiqueLook';
+import { labelScreenRect } from '../../../../src/utils/labels/labelScreenRect';
+import { alignXFraction } from '../../../../src/utils/labels/alignXFraction';
 
 function makeState(): EngineState {
   // The director fires no layer load-in (each producer owns its own), but
@@ -1179,6 +1182,67 @@ describe('label2DDirector', () => {
       expect(px()).toBe(cut);
       expect(dir.labels()[0]!.alignX).toBe('left');
     });
+
+    // Rigel's title slid onto its own rays and the caption halo erased them (owner, 2026-11-08):
+    // settled, the title's ink, outline and halo stand clear of the largest glyph's rays.
+    it.each([1, 2])(
+      'under the antique look, a selected star settles centred above its glyph, clear of the halo, at dpr %i',
+      (dpr) => {
+        const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
+        dir.attachRenderers(makeLabelStub() as never, makeLineStub() as never, defaultMeasure);
+        const star: Label2D = {
+          ...SAMPLE_LABEL,
+          text: 'Rigel',
+          worldPos: [0.1, -0.2, 0],
+          outlineEmFrac: 0.16,
+          fadeAlpha: 1,
+          pickId: 7,
+          subjectId: 7,
+          lift: { subjectSizePx: 0.5 },
+        };
+        dir.registerProducer(makeProducer('p', [star]));
+        const state = makeHighlightState(null, 'earth');
+        const look = {
+          ...state,
+          selection: { ...state.selection, focus: null },
+          settings: { antique: { enabled: true } },
+        } as unknown as EngineState;
+        const side = 1000 * dpr;
+        const ctxAt = (nowMs: number) =>
+          ({
+            ...makeNear0Ctx(nowMs),
+            snapshot: { devicePixelRatio: dpr, bodyStates: NO_BODIES, nowMs },
+            canvasSize: { width: side, height: side },
+            drawPxPerRad: side / 2 / LABEL_EM_PX_RETUNE,
+          }) as unknown as FrameView;
+        dir.runFrame(look, ctxAt(0));
+        dir.runFrame(look, ctxAt(ANTIQUE_LABEL_STYLE.titleGrowMs));
+
+        const title = dir.labels()[0]!;
+        const toScreen = (p: readonly number[]): [number, number] => [
+          (p[0]! * 0.5 + 0.5) * side,
+          (0.5 - p[1]! * 0.5) * side,
+        ];
+        const glyph = toScreen(star.worldPos);
+        // `defaultMeasure` lays out left-aligned; the atlas shifts a centred line by half.
+        const box = defaultMeasure(title);
+        const shift = (box.maxX - box.minX) * alignXFraction(title.alignX ?? 'left');
+        const ink = labelScreenRect({
+          label: title,
+          bbox: { ...box, minX: box.minX - shift, maxX: box.maxX - shift },
+          screenPx: toScreen(title.worldPos),
+          clipW: 1,
+          pxPerRad: side / 2 / LABEL_EM_PX_RETUNE,
+          devicePixelRatio: dpr,
+          includeOutline: true,
+        });
+        const unitPx = side / ANTIQUE_REFERENCE_HEIGHT_CSS;
+        // Sirius's 8-unit rays swelled by the glyph's 8% hand jitter, then the halo's 3 units.
+        const clearPx = (8 * 1.08 + 3) * unitPx;
+        expect(glyph[1] - ink.y1).toBeGreaterThanOrEqual(clearPx);
+        expect((ink.x0 + ink.x1) / 2).toBeCloseTo(glyph[0], 6);
+      },
+    );
 
     it('a caption standing under a lifted planet caption survives: the cull reads where the text is drawn', () => {
       // The Curiosity case: a rover at the sub-camera point projects within a

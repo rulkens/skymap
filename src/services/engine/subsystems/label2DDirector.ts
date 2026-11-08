@@ -141,6 +141,7 @@ import {
 import { antiqueLabel } from '../../../utils/labels/antiqueLabel';
 import { ANTIQUE_LABEL_RULES } from '../../../data/labels/antiqueLabelRules';
 import { antiqueInkGapPx } from '../../../utils/labels/antiqueInkGapPx';
+import { ANTIQUE_TITLE_CLEAR_UNITS } from '../../../data/labels/antiqueTitleClearUnits';
 import { rectMeetsCircle } from '../../../utils/math/rectMeetsCircle';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { ANTIQUE_AREA_LETTERING } from '../../../data/labels/antiqueAreaLettering';
@@ -270,7 +271,7 @@ function declutterByBboxOverlap(
         pxPerRad,
         devicePixelRatio,
       });
-      const dy = p.screenPx[1] - antiqueInkGapPx(label.lift.subjectSizePx, devicePixelRatio) - r.y1;
+      const dy = p.screenPx[1] - antiqueInkGapPx(label.lift, devicePixelRatio) - r.y1;
       return { x0: r.x0, y0: r.y0 + dy, x1: r.x1, y1: r.y1 + dy };
     }
     const screenPx: Vec2 =
@@ -831,9 +832,7 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
         devicePixelRatio: projection.devicePixelRatio,
         lineBottomLiftPx: lift.lineBottomLiftPx ?? 0,
         // An engraved name sits just off its glyph's rim, not a diameter and a half above.
-        inkGapPx: antique
-          ? antiqueInkGapPx(lift.subjectSizePx, projection.devicePixelRatio)
-          : undefined,
+        inkGapPx: antique ? antiqueInkGapPx(lift, projection.devicePixelRatio) : undefined,
       });
 
       if (placement === null) {
@@ -889,7 +888,9 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
   /**
    * The antique look's names (`antiqueLabel`); the focused or selected subject keeps one,
    * set as a title that grows from its cut's size and shrinks back when let go, sliding
-   * from its resting alignment beside its anchor to centred over it on the same ramp.
+   * from its resting alignment beside its anchor to centred over it on the same ramp,
+   * and rising on it to `titleClearPx` (device px) above its subject, so neither its ink
+   * nor the halo the plate clears round it reaches a star glyph's rays.
    */
   function toAntique(
     labels: readonly Label2D[],
@@ -898,6 +899,8 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     hasFont: (font: FontId) => boolean,
     cosmos: boolean,
     nowMs: number,
+    titleClearPx: number,
+    devicePixelRatio: number,
   ): Label2D[] {
     const rule = labelName === undefined ? undefined : ANTIQUE_LABEL_RULES[labelName];
     const out: Label2D[] = [];
@@ -909,8 +912,15 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
       const shown = antiqueLabel(l, rule, kept, hasFont);
       if (shown === null) continue;
       const rest = kept && t < 1 ? antiqueLabel(l, rule, false, hasFont) : null;
+      const lift = (px: number) => {
+        if (!kept || !shown.lift) return shown.lift;
+        const restGap = antiqueInkGapPx(shown.lift, devicePixelRatio);
+        // The outline is inked, so the halo grows from its edge.
+        const clear = titleClearPx + (shown.outlineEmFrac ?? 0) * px * devicePixelRatio;
+        return { ...shown.lift, inkGapPx: restGap + Math.max(0, clear - restGap) * t };
+      };
       if (rest === null) {
-        out.push(shown);
+        out.push(kept ? { ...shown, lift: lift(shown.maxPixelSize!) } : shown);
         continue;
       }
       const px = rest.maxPixelSize! + (shown.maxPixelSize! - rest.maxPixelSize!) * t;
@@ -918,7 +928,7 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
       const steps = ANTIQUE_LABEL_STYLE.titleSlideSteps;
       const alignX =
         Math.round((from + (alignXFraction(shown.alignX!) - from) * t) * steps) / steps;
-      out.push({ ...shown, minPixelSize: px, maxPixelSize: px, alignX });
+      out.push({ ...shown, minPixelSize: px, maxPixelSize: px, alignX, lift: lift(px) });
     }
     return out;
   }
@@ -1005,11 +1015,22 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     // antique cull keeps them off a globe's disc (a name with no depth never would).
     const farIds = new Set<string>();
     const cosmos = Math.hypot(...ctx.drawCamPos) > ANTIQUE_REGIME_MPC[1];
+    const titleClearPx =
+      (ANTIQUE_TITLE_CLEAR_UNITS * ctx.canvasSize.height) / ANTIQUE_REFERENCE_HEIGHT_CSS;
     for (const p of producers) {
       const out = p.produceLabels(state, ctx);
       if (out.awake) anyAwake = true;
       const produced = antique
-        ? toAntique(out.labels, p.label, isTitle, hasFont, cosmos, ctx.snapshot.nowMs)
+        ? toAntique(
+            out.labels,
+            p.label,
+            isTitle,
+            hasFont,
+            cosmos,
+            ctx.snapshot.nowMs,
+            titleClearPx,
+            ctx.snapshot.devicePixelRatio,
+          )
         : out.labels;
       if (antique && (p.label === 'starCatalog' || p.label === 'structure')) {
         for (const l of produced) if (l.occludeNearKm === undefined) farIds.add(l.id);
