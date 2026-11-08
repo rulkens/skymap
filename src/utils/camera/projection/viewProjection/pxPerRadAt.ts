@@ -6,8 +6,8 @@
  * the zenith.
  */
 
-import type { ViewProjection } from '../../../@types/camera/projection/ViewProjection';
-import type { Vec3 } from '../../../@types/math/Vec3';
+import type { ViewProjection } from '../../../../@types/camera/projection/ViewProjection';
+import type { Vec3 } from '../../../../@types/math/Vec3';
 
 export function pxPerRadAt(proj: ViewProjection, dir: Readonly<Vec3>): number {
   if (proj.kind === 'rectilinear') {

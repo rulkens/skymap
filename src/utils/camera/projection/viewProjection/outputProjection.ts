@@ -4,14 +4,14 @@
  * forward pitched up `DOME_PARAMS.tiltDeg`, front at the bottom) in a dome.
  */
 
-import type { FrameView } from '../../../@types/engine/frame/FrameView';
-import type { ViewRigKey } from '../../../@types/engine/frame/ViewRigKey';
-import type { ViewProjection } from '../../../@types/camera/projection/ViewProjection';
-import { DOME_PARAMS } from '../../../data/rendering/domeParams';
-import { domeBasis } from '../../dome/domeBasis';
-import { mat3FromColumns } from '../../math/mat3FromColumns';
-import { multiply3x3 } from '../../math/multiply3x3';
-import { viewBasis } from './viewBasis';
+import type { FrameView } from '../../../../@types/engine/frame/FrameView';
+import type { ViewRigKey } from '../../../../@types/engine/frame/ViewRigKey';
+import type { ViewProjection } from '../../../../@types/camera/projection/ViewProjection';
+import { DOME_PARAMS } from '../../../../data/rendering/domeParams';
+import { domeBasis } from '../../../dome/domeBasis';
+import { mat3FromColumns } from '../../../math/mat3FromColumns';
+import { multiply3x3 } from '../../../math/multiply3x3';
+import { viewBasis } from '../viewBasis';
 
 export function outputProjection(
   ctx: Pick<FrameView, 'cam' | 'frustum' | 'canvasSize'>,

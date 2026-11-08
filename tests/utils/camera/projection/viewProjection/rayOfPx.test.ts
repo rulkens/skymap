@@ -4,20 +4,20 @@
  * ornament), and `pxOfRay` must invert `rayOfPx` on both.
  */
 import { describe, expect, it } from 'vitest';
-import type { ViewProjection } from '../../../../src/@types/camera/projection/ViewProjection';
-import type { Vec2 } from '../../../../src/@types/math/Vec2';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import { rayOfPx } from '../../../../src/utils/camera/projection/rayOfPx';
-import { pxOfRay } from '../../../../src/utils/camera/projection/pxOfRay';
-import { rayThroughPx } from '../../../../src/utils/camera/projection/rayThroughPx';
-import { projectDirToPx } from '../../../../src/utils/camera/projection/projectDirToPx';
-import { fisheyeDirection } from '../../../../src/utils/dome/fisheyeDirection';
-import { directionToFisheye } from '../../../../src/utils/dome/directionToFisheye';
-import { mat3FromColumns } from '../../../../src/utils/math/mat3FromColumns';
-import { normalize3 } from '../../../../src/utils/math/normalize3';
-import { cross3 } from '../../../../src/utils/math/cross3';
-import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTightMat3';
-import { rotateByTranspose } from '../../../../src/utils/math/rotateByTranspose';
+import type { ViewProjection } from '../../../../../src/@types/camera/projection/ViewProjection';
+import type { Vec2 } from '../../../../../src/@types/math/Vec2';
+import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import { rayOfPx } from '../../../../../src/utils/camera/projection/viewProjection/rayOfPx';
+import { pxOfRay } from '../../../../../src/utils/camera/projection/viewProjection/pxOfRay';
+import { rayThroughPx } from '../../../../../src/utils/camera/projection/rayThroughPx';
+import { projectDirToPx } from '../../../../../src/utils/camera/projection/projectDirToPx';
+import { fisheyeDirection } from '../../../../../src/utils/dome/fisheyeDirection';
+import { directionToFisheye } from '../../../../../src/utils/dome/directionToFisheye';
+import { mat3FromColumns } from '../../../../../src/utils/math/mat3FromColumns';
+import { normalize3 } from '../../../../../src/utils/math/normalize3';
+import { cross3 } from '../../../../../src/utils/math/cross3';
+import { rotateVec3ByTightMat3 } from '../../../../../src/utils/math/rotateVec3ByTightMat3';
+import { rotateByTranspose } from '../../../../../src/utils/math/rotateByTranspose';
 
 // A tilted, rolled basis and a lens-shifted frustum, so no axis or symmetry hides a sign.
 const forward = normalize3([0.3, -0.5, 0.81]);

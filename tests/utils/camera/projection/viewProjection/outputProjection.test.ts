@@ -4,12 +4,12 @@
  * or the look's placements land on the wrong part of the sky.
  */
 import { describe, expect, it } from 'vitest';
-import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
-import { outputProjection } from '../../../../src/utils/camera/projection/outputProjection';
-import { rayOfPx } from '../../../../src/utils/camera/projection/rayOfPx';
-import { viewBasis } from '../../../../src/utils/camera/projection/viewBasis';
-import { DOME_PARAMS } from '../../../../src/data/rendering/domeParams';
-import { createOrbitCamera } from '../../../../src/utils/camera/orbitCamera/createOrbitCamera';
+import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
+import { outputProjection } from '../../../../../src/utils/camera/projection/viewProjection/outputProjection';
+import { rayOfPx } from '../../../../../src/utils/camera/projection/viewProjection/rayOfPx';
+import { viewBasis } from '../../../../../src/utils/camera/projection/viewBasis';
+import { DOME_PARAMS } from '../../../../../src/data/rendering/domeParams';
+import { createOrbitCamera } from '../../../../../src/utils/camera/orbitCamera/createOrbitCamera';
 
 const ctx = {
   cam: createOrbitCamera({

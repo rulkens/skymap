@@ -4,12 +4,12 @@
  * below a fisheye's horizon circle. `rayOfPx` inverts it.
  */
 
-import type { ViewProjection } from '../../../@types/camera/projection/ViewProjection';
-import type { Vec2 } from '../../../@types/math/Vec2';
-import type { Vec3 } from '../../../@types/math/Vec3';
-import { directionToFisheye } from '../../dome/directionToFisheye';
-import { rotateByTranspose } from '../../math/rotateByTranspose';
-import { projectDirToPx } from './projectDirToPx';
+import type { ViewProjection } from '../../../../@types/camera/projection/ViewProjection';
+import type { Vec2 } from '../../../../@types/math/Vec2';
+import type { Vec3 } from '../../../../@types/math/Vec3';
+import { directionToFisheye } from '../../../dome/directionToFisheye';
+import { rotateByTranspose } from '../../../math/rotateByTranspose';
+import { projectDirToPx } from '../projectDirToPx';
 
 export function pxOfRay(proj: ViewProjection, dir: Readonly<Vec3>): Vec2 | null {
   if (proj.kind === 'rectilinear') {

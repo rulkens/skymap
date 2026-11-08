@@ -5,12 +5,12 @@
  * bilinear blending; normalise where a unit vector is needed. `pxOfRay` inverts it.
  */
 
-import type { ViewProjection } from '../../../@types/camera/projection/ViewProjection';
-import type { Vec2 } from '../../../@types/math/Vec2';
-import type { Vec3 } from '../../../@types/math/Vec3';
-import { fisheyeDirection } from '../../dome/fisheyeDirection';
-import { rotateVec3ByTightMat3 } from '../../math/rotateVec3ByTightMat3';
-import { rayThroughPx } from './rayThroughPx';
+import type { ViewProjection } from '../../../../@types/camera/projection/ViewProjection';
+import type { Vec2 } from '../../../../@types/math/Vec2';
+import type { Vec3 } from '../../../../@types/math/Vec3';
+import { fisheyeDirection } from '../../../dome/fisheyeDirection';
+import { rotateVec3ByTightMat3 } from '../../../math/rotateVec3ByTightMat3';
+import { rayThroughPx } from '../rayThroughPx';
 
 export function rayOfPx(proj: ViewProjection, px: Readonly<Vec2>): Vec3 | null {
   if (proj.kind === 'rectilinear') return rayThroughPx(px, proj.basis, proj.frustum, proj.size);

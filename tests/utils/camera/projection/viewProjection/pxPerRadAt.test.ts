@@ -4,13 +4,13 @@
  * as well as at the centre, on both arms.
  */
 import { describe, expect, it } from 'vitest';
-import type { ViewProjection } from '../../../../src/@types/camera/projection/ViewProjection';
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import { pxPerRadAt } from '../../../../src/utils/camera/projection/pxPerRadAt';
-import { pxOfRay } from '../../../../src/utils/camera/projection/pxOfRay';
-import { mat3FromColumns } from '../../../../src/utils/math/mat3FromColumns';
-import { normalize3 } from '../../../../src/utils/math/normalize3';
-import { cross3 } from '../../../../src/utils/math/cross3';
+import type { ViewProjection } from '../../../../../src/@types/camera/projection/ViewProjection';
+import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import { pxPerRadAt } from '../../../../../src/utils/camera/projection/viewProjection/pxPerRadAt';
+import { pxOfRay } from '../../../../../src/utils/camera/projection/viewProjection/pxOfRay';
+import { mat3FromColumns } from '../../../../../src/utils/math/mat3FromColumns';
+import { normalize3 } from '../../../../../src/utils/math/normalize3';
+import { cross3 } from '../../../../../src/utils/math/cross3';
 
 const forward = normalize3([0.3, -0.5, 0.81]);
 const right = normalize3(cross3(forward, [0.2, 0.9, 0.1]));
