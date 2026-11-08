@@ -2,8 +2,9 @@
  * placeAntiqueOrnaments — this frame's ornament instances, in device px.
  *
  * The title cartouche comes first, where `antiquePlateCartouche` put it, its
- * title set level in its field. Sky-anchored rows project through the view and
- * turn with the sky (their up to celestial north on screen). Each fades in only
+ * title set level in its field. A constellation figure is fitted onto where its
+ * anchor stars project; a place in space projects through the view, its up to
+ * celestial north. Each fades in only
  * while it is a sensible size on screen and while the camera is in its regime
  * (near the Sun for a constellation, out among the galaxies for the Zone of
  * Avoidance), so nothing pops and nothing balloons past the plate.
@@ -14,6 +15,7 @@ import type { AntiqueCartouche } from '../../../@types/rendering/AntiqueCartouch
 import type { AntiqueOrnament } from '../../../@types/rendering/AntiqueOrnament';
 import type { AntiqueOrnamentAtlas } from '../../../@types/rendering/AntiqueOrnamentAtlas';
 import type { AntiqueOrnamentInstance } from '../../../@types/rendering/AntiqueOrnamentInstance';
+import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { AntiqueSheetAnchor } from '../../../@types/rendering/AntiqueSheetAnchor';
 import { GAL_TO_EQ_MATRIX } from '../../../data/superGalacticTransform';
@@ -29,13 +31,12 @@ import { pxPerRadAt } from '../../camera/projection/viewProjection/pxPerRadAt';
 import { overlapShare } from '../../render/overlapShare';
 import { sheetAnchorCentre } from '../../render/sheetAnchorCentre';
 import { smoothstep } from '../../math/smoothstep';
+import { fitSimilarity2D } from '../../math/fitSimilarity2D';
 import { screenNorthAngle } from '../../camera/projection/screenNorthAngle';
 import { onScreenShare } from '../../render/onScreenShare';
 import { offScreen } from '../../render/offScreen';
 
-const DEG = Math.PI / 180;
-
-/** A sky ornament shows between these on-screen widths, as a share of the canvas height. */
+/** An ornament shows between these on-screen sizes, as a share of the canvas (see `girth`). */
 const SKY_FADE_IN = [0.12, 0.13] as const;
 const SKY_FADE_OUT = [0.9, 1.4] as const;
 // Half the subject's box at the plate centre, as a share of each canvas side.
@@ -128,37 +129,67 @@ export function placeAntiqueOrnaments(input: {
     const aspect = rect.h / rect.w;
     const { anchor } = row;
     let opacity = row.opacity * regime;
-    const raw = raDecDistToCartesian(anchor.lonDeg, anchor.latDeg, 1);
-    const unit =
-      anchor.kind === 'space' ? rotateVec3ByTightMat3(GAL_TO_EQ_MATRIX, raw, [0, 0, 0]) : raw;
-    // A place is seen from the camera: its direction and distance from the eye.
-    const cam = input.camPosMpc;
-    const toward: Vec3 =
-      anchor.kind === 'space'
-        ? [
-            unit[0] * anchor.distMpc - cam[0],
-            unit[1] * anchor.distMpc - cam[1],
-            unit[2] * anchor.distMpc - cam[2],
-          ]
-        : unit;
-    const range = Math.hypot(toward[0], toward[1], toward[2]);
-    const dir: Vec3 = [toward[0] / range, toward[1] / range, toward[2] / range];
-    const centre = pxOfRay(projection, dir);
-    if (centre === null) continue;
-    const angle =
-      anchor.kind === 'space' ? 2 * Math.atan(anchor.sizeMpc / (2 * range)) : anchor.sizeDeg * DEG;
-    const widthPx = Math.tan(angle * 0.5) * 2 * pxPerRadAt(projection, dir);
-    const share = widthPx / size.height;
+    // Where it lands, how wide, how turned (radians counter-clockwise) and handed.
+    let centre: Vec2;
+    let widthPx: number;
+    let rotation = 0;
+    let mirrored = false;
+    if (anchor.kind === 'sky') {
+      // Fitted in screen space, so it holds in any view: a sky-wide fit on one
+      // tangent plane misses by degrees once the view's axis is off the figure's.
+      const p: Vec2[] = [];
+      const q: Vec2[] = [];
+      for (const star of anchor.stars) {
+        const px = pxOfRay(projection, raDecDistToCartesian(star.raDeg, star.decDeg, 1));
+        // A star far off the canvas would outweigh the rest in the fit.
+        if (px === null || offScreen(px, [size.width, size.height], size)) continue;
+        p.push([star.u - 0.5, (star.v - 0.5) * aspect]);
+        q.push(px);
+      }
+      if (p.length < 3) continue;
+      const fit = fitSimilarity2D(p, q);
+      centre = fit.t;
+      widthPx = fit.scale;
+      // decor.wesl turns by the opposite sense of this y-down frame.
+      rotation = -fit.theta;
+      mirrored = fit.mirrored;
+    } else {
+      const raw = raDecDistToCartesian(anchor.lonDeg, anchor.latDeg, 1);
+      const unit = rotateVec3ByTightMat3(GAL_TO_EQ_MATRIX, raw, [0, 0, 0]);
+      // A place is seen from the camera: its direction and distance from the eye.
+      const cam = input.camPosMpc;
+      const toward: Vec3 = [
+        unit[0] * anchor.distMpc - cam[0],
+        unit[1] * anchor.distMpc - cam[1],
+        unit[2] * anchor.distMpc - cam[2],
+      ];
+      const range = Math.hypot(toward[0], toward[1], toward[2]);
+      const dir: Vec3 = [toward[0] / range, toward[1] / range, toward[2] / range];
+      const at = pxOfRay(projection, dir);
+      if (at === null) continue;
+      centre = at;
+      const angle = 2 * Math.atan(anchor.sizeMpc / (2 * range));
+      widthPx = Math.tan(angle * 0.5) * 2 * pxPerRadAt(projection, dir);
+      if (row.facesNorth) rotation = screenNorthAngle(dir, centre, projection);
+    }
+    // A figure is as big as its stars make it, so a long one (Hydra, 90°) is
+    // judged by its girth, and against the canvas's long side so a phone's
+    // narrow plate still shows the part of it that lies there; a beast by its width.
+    const share =
+      anchor.kind === 'sky'
+        ? (widthPx * Math.min(1, aspect)) / Math.max(size.width, size.height)
+        : widthPx / size.height;
     opacity *=
       smoothstep(SKY_FADE_IN[0], SKY_FADE_IN[1], share) *
       (1 - smoothstep(SKY_FADE_OUT[0], SKY_FADE_OUT[1], share));
     const half: [number, number] = [widthPx * 0.5, widthPx * 0.5 * aspect];
-    // A figure the numbered border cuts reads as a stray claw, not a crop (Mars's
-    // sea serpent against the bottom neatline): a beast or a constellation figure
-    // sails whole inside the border or not at all, bar a sliver.
+    // A beast the numbered border cuts reads as a stray claw, not a crop (Mars's
+    // sea serpent against the bottom neatline), so it sails whole inside the border
+    // or not at all. A constellation figure lies on its stars and the neatline may
+    // crop it, as Hevelius' own plates do, while a good part of it is on the plate.
     const inset = ANTIQUE_NUMERAL_INSET_UNITS * unitPx;
     const plate = { width: size.width - 2 * inset, height: size.height - 2 * inset };
-    const [lo, hi] = anchor.kind === 'sky' ? [0.85, 0.95] : [0.97, 0.995];
+    const [lo, hi] = anchor.kind === 'sky' ? [0.2, 0.3] : [0.97, 0.995];
     opacity *= smoothstep(
       lo,
       hi,
@@ -172,12 +203,11 @@ export function placeAntiqueOrnaments(input: {
     // never sails over them (a constellation figure may lie behind, as it truly does).
     if (anchor.kind === 'space' && overlapShare(centre, half, subject) > 0) continue;
     // A negative half-width flips the sprite in the shader (local x runs backwards).
-    if (row.mirrored) half[0] = -half[0];
-    const north = row.facesNorth ? screenNorthAngle(dir, centre, projection) : 0;
+    if (mirrored) half[0] = -half[0];
     placed.push({
       centrePx: centre,
       halfPx: half,
-      rotation: north,
+      rotation,
       opacity,
       clearsBeneath: row.clearsBeneath,
       pigment: row.pigment,

@@ -1,16 +1,15 @@
 /**
- * AntiqueOrnamentAnchor — where an ornament sits. `sky`: an equatorial RA/Dec
- * direction with an angular size, so it moves with the sky like a
- * constellation figure. `space`: a place among the galaxies. (A cartouche
- * sits on the sheet instead: `AntiqueSheetAnchor`.)
+ * AntiqueOrnamentAnchor — where an ornament sits. `sky`: a constellation figure,
+ * fitted each frame onto where its anchor stars project, so it lies on them in
+ * any view. `space`: a place among the galaxies. (A cartouche sits on the sheet
+ * instead: `AntiqueSheetAnchor`.)
  */
+import type { AntiqueFigureAnchor } from './AntiqueFigureAnchor';
+
 export type AntiqueOrnamentAnchor =
   | {
       readonly kind: 'sky';
-      readonly lonDeg: number;
-      readonly latDeg: number;
-      /** Width on the sky, degrees. */
-      readonly sizeDeg: number;
+      readonly stars: readonly AntiqueFigureAnchor[];
     }
   | {
       /**

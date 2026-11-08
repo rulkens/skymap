@@ -40,11 +40,12 @@ long side.
 - **cetus:** 45 of Hevelius' star symbols are removed, each replaced by the nearby patch of engraving
   whose surrounding ring matched best (a small exemplar inpaint), and the leftover chart arcs and a
   stray letter are erased. The figure keeps the source orientation, Hevelius' globe view; the
-  renderer mirrors it.
+  renderer fits it onto its anchor stars, read off the removed symbols
+  (`src/data/rendering/antiqueFigureAnchors.ts`), which mirrors and turns it.
 - **dragon, seaSerpent:** the same pipeline as cetus, with 35 and 36 star symbols inpainted from
   nearby body hatching (inked donors only, so no blank paper discs). The chart lines are removed per
-  half of the plate, because the two sheets of each plate are offset at the gutter. Neither figure
-  is mirrored.
+  half of the plate, because the two sheets of each plate are offset at the gutter. Neither sprite
+  is mirrored; both are placed by their anchor stars, as cetus is.
 - **strapwork, tablet:** both are hand-coloured, so ink is read from the max channel. The map's ruled
   lines (Ortelius' graticule, Goos' rhumbs) are cut away by a body mask: the binary ink opened by a
   2–3 px disc (which drops the thin rules), closed by 16–18 px, holes filled, opened by 5 px,

@@ -14,6 +14,8 @@ import { GAL_TO_EQ_MATRIX } from '../../../../src/data/superGalacticTransform';
 import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTightMat3';
 import { cross3 } from '../../../../src/utils/math/cross3';
 import { normalize3 } from '../../../../src/utils/math/normalize3';
+import { raDecDistToCartesian } from '../../../../src/utils/math/raDecDistToCartesian';
+import { cartesianToRaDec } from '../../../../src/utils/math/cartesianToRaDec';
 
 const ATLAS = {
   width: 100,
@@ -45,17 +47,44 @@ const GALACTIC_CENTRE_ASIDE: ViewBasis = (() => {
   return { forward: f, right, up: cross3(right, f) };
 })();
 
+/**
+ * A figure whose anchor stars sit at its rect's corners and centre, laid
+ * `sizeDeg` wide on the sky about (lon, lat), upright as a sky view shows it
+ * (east on the left) or drawn left-for-right as on a globe.
+ */
+function skyAnchor(lonDeg: number, latDeg: number, sizeDeg: number, globeView = false) {
+  const c = raDecDistToCartesian(lonDeg, latDeg, 1);
+  const east = normalize3(cross3([0, 0, 1], c));
+  const north = cross3(c, east);
+  const w = 2 * Math.tan(((sizeDeg / 2) * Math.PI) / 180);
+  const aspect = ATLAS.sprites.beast.h / ATLAS.sprites.beast.w;
+  const stars = [
+    [0, 0],
+    [1, 0],
+    [0, 1],
+    [1, 1],
+    [0.5, 0.5],
+  ].map(([u, v]) => {
+    const x = (globeView ? 0.5 - u! : u! - 0.5) * w;
+    const y = (v! - 0.5) * aspect * w;
+    const d = c.map((ci, i) => ci - x * east[i]! - y * north[i]!) as Vec3;
+    const [raDeg, decDeg] = cartesianToRaDec(d[0], d[1], d[2]);
+    return { star: `${u},${v}`, raDeg: raDeg!, decDeg: decDeg!, u: u!, v: v! };
+  });
+  return { kind: 'sky' as const, stars };
+}
+
 function skyRow(over: Partial<AntiqueOrnament> & { lonDeg?: number }): AntiqueOrnament {
+  const { lonDeg = 0, ...rest } = over;
   return {
     sprite: 'beast',
-    anchor: { kind: 'sky', lonDeg: over.lonDeg ?? 0, latDeg: 0, sizeDeg: 30 },
+    anchor: skyAnchor(lonDeg, 0, 30),
     regime: 'stars',
-    facesNorth: true,
+    facesNorth: false,
     pigment: 0,
     opacity: 1,
     clearsBeneath: false,
-    mirrored: false,
-    ...over,
+    ...rest,
   };
 }
 
@@ -90,7 +119,7 @@ describe('placeAntiqueOrnaments', () => {
     expect(placed!.halfPx[1]).toBeCloseTo(placed!.halfPx[0] * 0.5, 3);
   });
 
-  it('turns a row a quarter counter-clockwise when north points left', () => {
+  it('turns a figure a quarter counter-clockwise when north points left', () => {
     const [placed] = place([skyRow({})], NORTH_LEFT);
     expect(placed!.rotation).toBeCloseTo(Math.PI / 2, 3);
   });
@@ -115,7 +144,7 @@ describe('placeAntiqueOrnaments', () => {
 
   it('mirrors a globe-view figure by flipping its width, not its place', () => {
     const [plain] = place([skyRow({})]);
-    const [mirrored] = place([skyRow({ mirrored: true })]);
+    const [mirrored] = place([skyRow({ anchor: skyAnchor(0, 0, 30, true) })]);
     expect(mirrored!.halfPx[0]).toBeCloseTo(-plain!.halfPx[0], 6);
     expect(mirrored!.centrePx).toEqual(plain!.centrePx);
   });
@@ -141,17 +170,16 @@ describe('placeAntiqueOrnaments', () => {
   });
 
   it('drops a sky figure that is mostly off the plate', () => {
-    // Centred just past the right edge: well under the ~0.6 on-screen share it needs.
+    // Centred well past the right edge: under the fifth on the plate it needs.
     const [edge] = place([skyRow({ lonDeg: -50 })]);
     expect(edge === undefined || edge.opacity < 0.5).toBe(true);
   });
 
-  it('withdraws a sky figure the numbered border cuts through, not only one off the canvas', () => {
+  it('lets the numbered border crop a sky figure lying on its stars, as a plate does', () => {
     // Centred 24 degrees south: the canvas holds it all, the 50-unit border cuts a quarter of it.
     const row = skyRow({});
-    const cut = { ...row, anchor: { kind: 'sky' as const, lonDeg: 0, latDeg: -24, sizeDeg: 30 } };
-    const [placed] = place([cut]);
-    expect(placed === undefined || placed.opacity < 0.05).toBe(true);
+    const cut = { ...row, anchor: skyAnchor(0, -24, 30) };
+    expect(place([cut])[0]!.opacity).toBeCloseTo(1, 3);
   });
 
   it('sizes a place in space by its distance from the eye, not from the Sun', () => {
@@ -242,8 +270,6 @@ describe('placeAntiqueOrnaments', () => {
   });
 
   it('fades a sky row out while it is too small to read', () => {
-    expect(place([skyRow({ anchor: { kind: 'sky', lonDeg: 0, latDeg: 0, sizeDeg: 3 } })])).toEqual(
-      [],
-    );
+    expect(place([skyRow({ anchor: skyAnchor(0, 0, 3) })])).toEqual([]);
   });
 });

@@ -11,24 +11,17 @@
  */
 
 import type { AntiqueOrnament } from '../../@types/rendering/AntiqueOrnament';
+import { ANTIQUE_FIGURE_ANCHORS } from './antiqueFigureAnchors';
 
-const beast = (
-  sprite: string,
-  regime: 'stars' | 'cosmos',
-  lonDeg: number,
-  latDeg: number,
-  sizeDeg: number,
-  pigment: number,
-  mirrored = false,
-): AntiqueOrnament => ({
+// A constellation figure lies on its anchor stars, refitted every frame.
+const figure = (sprite: string, pigment: number): AntiqueOrnament => ({
   sprite,
-  anchor: { kind: 'sky', lonDeg, latDeg, sizeDeg },
-  regime,
-  facesNorth: true,
+  anchor: { kind: 'sky', stars: ANTIQUE_FIGURE_ANCHORS[sprite]! },
+  regime: 'stars',
+  facesNorth: false,
   pigment,
   opacity: 1,
   clearsBeneath: false,
-  mirrored,
 });
 
 const voyager = (
@@ -38,19 +31,21 @@ const voyager = (
   sizeMpc: number,
   pigment: number,
 ): AntiqueOrnament => ({
-  ...beast(sprite, 'cosmos', lonDeg, 0, 0, pigment),
+  sprite,
   anchor: { kind: 'space', lonDeg, latDeg: 0, distMpc, sizeMpc },
+  regime: 'cosmos',
+  facesNorth: true,
+  pigment,
+  opacity: 1,
   // Not a constellation figure: it sails empty sea, so no glyph prints through it.
   clearsBeneath: true,
 });
 
 export const ANTIQUE_ORNAMENTS: readonly AntiqueOrnament[] = [
-  // Hevelius' constellation figures (1690) at each figure's centre (J2000 RA/Dec,
-  // degrees). He drew them as seen from outside the globe, so a sky-view plate
-  // mirrors them.
-  beast('cetus', 'stars', 25, -8, 36, 5, true),
-  beast('dragon', 'stars', 255, 64, 34, 1, true),
-  beast('seaSerpent', 'stars', 150, -18, 44, 0, true),
+  // Hevelius' constellation figures (1690).
+  figure('cetus', 5),
+  figure('dragon', 1),
+  figure('seaSerpent', 0),
   // Places in the Zone of Avoidance: galactic longitude, distance, size (Mpc).
   voyager('seaMonster', 60, 30, 18, 0),
   voyager('whale', 150, 45, 22, 5),

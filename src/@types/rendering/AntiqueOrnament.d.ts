@@ -15,13 +15,11 @@ export type AntiqueOrnament = {
    * among the galaxies, where the Zone of Avoidance is real terra incognita.
    */
   readonly regime: 'stars' | 'cosmos';
-  /** Turn so the engraving's own up points at celestial north on screen. */
+  /** Turn so the engraving's own up points at celestial north on screen (a sky figure is turned by its stars). */
   readonly facesNorth: boolean;
   /** Index into `pigments.wesl`'s PIGMENTS for the sprite's wash channel. */
   readonly pigment: number;
   readonly opacity: number;
   /** Clears the plate beneath its fill to bare paper (a sea beast), or lets it show (a constellation figure). */
   readonly clearsBeneath: boolean;
-  /** Drawn left-for-right: a globe-view figure (Hevelius) on a sky-view plate. */
-  readonly mirrored: boolean;
 };
