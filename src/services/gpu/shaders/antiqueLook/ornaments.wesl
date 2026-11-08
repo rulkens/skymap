@@ -13,7 +13,7 @@
 // | +48    | pigment | index into PIGMENTS                             |
 // | +52    | lettering | 1 = rect is on the lettering sheet (a title)  |
 // | +56    | (pad)   | keeps the record 64 bytes, a multiple of its 16 |
-// | +60    | shaded  | 1 = the wash follows the engraving's ink        |
+// | +60    | washed  | 1 = flat pigment wash inside the outline (cartouche frame only) |
 
 struct Ornament {
   centre: vec2<f32>,
@@ -25,7 +25,7 @@ struct Ornament {
   pigment: f32,
   lettering: f32,
   _pad: f32,
-  shaded: f32,
+  washed: f32,
 }
 
 struct AntiqueOrnaments {

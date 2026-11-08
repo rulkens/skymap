@@ -193,7 +193,7 @@ describe('antique look records ↔ WGSL structs', () => {
         pigment: 0,
         rect: [0, 0, 0, 0],
         lettering: false,
-        washFollowsInk: false,
+        washed: false,
       },
       {
         centrePx: [2001, 2002],
@@ -204,7 +204,7 @@ describe('antique look records ↔ WGSL structs', () => {
         pigment: 2006,
         rect: [2007, 2008, 2009, 2010],
         lettering: true,
-        washFollowsInk: true,
+        washed: true,
       },
     ]);
     expect(new Uint32Array(packed)[header.offsets.get('count')! / 4]).toBe(2);
@@ -221,7 +221,7 @@ describe('antique look records ↔ WGSL structs', () => {
       expect(offsetOf(packed, value), member).toBe(second + row.offsets.get(member)!);
     expect(new Float32Array(packed)[(second + row.offsets.get('clears')!) / 4]).toBe(1);
     expect(new Float32Array(packed)[(second + row.offsets.get('lettering')!) / 4]).toBe(1);
-    expect(new Float32Array(packed)[(second + row.offsets.get('shaded')!) / 4]).toBe(1);
+    expect(new Float32Array(packed)[(second + row.offsets.get('washed')!) / 4]).toBe(1);
   });
 
   it('packAntiqueGlyphs writes AntiqueLettering row by row', () => {

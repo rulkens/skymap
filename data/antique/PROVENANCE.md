@@ -2,8 +2,8 @@
 
 Source art for `npm run pack-ornaments` (`tools/antique/packOrnaments.ts`), which packs these into
 `public/antique/ornaments.png`. Every sprite is an ink-density mask: RGB black, alpha = ink, paper = 0.
-`ship.colour.png` is the matching colour layer of the hand-coloured ship: RGB = wash hue, alpha =
-colour saturation (packed as the atlas's wash channel).
+Figures and beasts print as ink on bare paper (owner ruling, 2026-11-08): the ship's colour layer
+(`ship.colour.png`) was dropped with the wash it fed.
 
 Crop boxes are `[x0, y0, x1, y1]` in pixels of the Commons file at the "scan size" given. Every source
 work's author died more than 100 years ago and every scan is a faithful 2D reproduction, so PD-Art
@@ -54,7 +54,7 @@ long side.
   1024 px wide.
   Rebuild both with `tools/antique/sprites/` (README there; the specs hold the crops and outlines).
 - **ship:** Goos labels no ship type; it is a typical Dutch three-masted merchantman of the 1660s,
-  seen from the stern. The colour layer carries the washes: brown hull, green sea.
+  seen from the stern.
 
 ## Known residue
 
@@ -71,5 +71,6 @@ long side.
 - dragon, seaSerpent: both keep the plate's gutter seam (a vertical break in the hatching through
   Draco's head and coils), a few Bayer letters and soft inpaint patches.
 - dragon: the tail near α has a short ragged stretch where a degree-scale circle crossed it.
-- seaSerpent: two short gaps in the body, where Hevelius drew Crater's foot and Corvus's claws over
-  the serpent and both were removed.
+- seaSerpent: two gaps in the body, where Hevelius drew Crater's foot and Corvus's claws over the
+  serpent and both were removed, are bridged with drawn hatching (`tools/antique/sprites/repair_serpent.py`,
+  hand-placed strokes, not from the scan).

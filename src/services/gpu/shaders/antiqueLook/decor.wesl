@@ -20,9 +20,6 @@ import package::antiqueLook::pigments::pigmentAt;
 /** INK's transmittance (the plate's darkest stroke) and a figure's darkest coverage. */
 const INK_T: f32 = 0.136;
 const FIGURE_COVER: f32 = 0.9;
-/** A figure's wash: the atlas mip its shading is read at, and the density band it ramps over. */
-const FIGURE_SHADE_LOD: f32 = 3.0;
-const FIGURE_SHADE: vec2<f32> = vec2<f32>(0.04, 0.4);
 
 struct DecorOut {
   @builtin(position) pos: vec4<f32>,
@@ -79,22 +76,17 @@ fn fs(in: DecorOut) -> DecorInk {
   // A clearing ornament (the cartouche) takes the plate back to paper under its
   // whole engraving, not just its fill.
   let clear = max(s.g, smoothstep(0.05, 0.3, s.r)) * o * clears;
-  // Every engraving is washed flat inside its outline (the atlas's b), as a
-  // coloured Dutch copy's cartouche, beasts and figures were; the brush strays
+  // Only the cartouche frame is washed (flat inside its outline, the atlas's b);
+  // figures and beasts print as ink on bare paper. The brush strays
   // a little off the line and pools unevenly (the plate's own wash noise).
   let stray = (vec2<f32>(sin(dot(in.local, vec2<f32>(7.3, 3.1)) + in.local.y * 11.0),
     cos(dot(in.local, vec2<f32>(-4.7, 8.9)) + in.local.x * 13.0))) * 0.003;
   let brush = textureSampleLevel(atlas, linear, uv + stray * (rect.zw - rect.xy), 0.0);
   // Pigment gathers where a wash dries, at its edge: a darker rim, no airbrush fade.
   let rim = 1.0 - abs(2.0 * brush.b - 1.0);
-  // A figure's or beast's wash follows its engraving instead (the atlas's coarse mip is the
-  // local ink density): full where the engraver shaded, thinning to bare paper in
-  // the lit parts and at the outline, so it never reads as a tinted cut-out.
-  let shade = smoothstep(FIGURE_SHADE.x, FIGURE_SHADE.y, textureSampleLevel(atlas, linear, uv, FIGURE_SHADE_LOD).r);
   // The stray only wanders inside the wash's own outline (`s.b`), never onto the paper past it.
   let flat = min(brush.b + 0.35 * rim, 1.0) * smoothstep(0.0, 0.2, s.b);
-  let laid = select(flat, brush.b * shade, orn.items[in.item].shaded > 0.5);
-  let wash = select(laid, 0.0, orn.items[in.item].lettering > 0.5) * o;
+  let wash = flat * orn.items[in.item].washed * o;
   let hue = pigmentAt(orn.items[in.item].pigment);
   var out: DecorInk;
   out.ink = vec4<f32>(figure * (1.0 - clears), ink * clears, clear, wash);

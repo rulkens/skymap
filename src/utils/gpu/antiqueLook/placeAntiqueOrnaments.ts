@@ -99,7 +99,7 @@ export function placeAntiqueOrnaments(input: {
       pigment,
       rect: uvOf(cardRect),
       lettering: false,
-      washFollowsInk: false,
+      washed: true,
     });
     // The title is set level in the cartouche's blank field, lettering-sheet ink on its paper.
     const field = atlas.interiors[card.row.sprite];
@@ -116,7 +116,7 @@ export function placeAntiqueOrnaments(input: {
         pigment,
         rect: [...card.title.rect],
         lettering: true,
-        washFollowsInk: false,
+        washed: false,
       });
   }
 
@@ -183,7 +183,7 @@ export function placeAntiqueOrnaments(input: {
       pigment: row.pigment,
       rect: uvOf(rect),
       lettering: false,
-      washFollowsInk: true,
+      washed: false,
     });
   }
   return placed;

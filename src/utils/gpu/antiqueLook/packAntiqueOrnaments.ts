@@ -27,7 +27,7 @@ export function packAntiqueOrnaments(
     f32.set(o.rect, at + 8);
     f32[at + 12] = o.pigment;
     f32[at + 13] = o.lettering ? 1 : 0;
-    f32[at + 15] = o.washFollowsInk ? 1 : 0;
+    f32[at + 15] = o.washed ? 1 : 0;
   }
   return out;
 }

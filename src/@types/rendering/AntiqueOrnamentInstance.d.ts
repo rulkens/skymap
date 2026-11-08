@@ -18,6 +18,6 @@ export type AntiqueOrnamentInstance = {
   readonly rect: Vec4;
   /** Drawn from the lettering sheet (a cartouche's title), not the ornament atlas. */
   readonly lettering: boolean;
-  /** The wash thins with the engraving's local ink (figures, beasts), not flat over the outline. */
-  readonly washFollowsInk: boolean;
+  /** Flat pigment wash inside the outline: the cartouche frame only. Figures and beasts are ink on paper. */
+  readonly washed: boolean;
 };

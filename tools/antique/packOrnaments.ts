@@ -3,16 +3,15 @@
  * packOrnaments (`npm run pack-ornaments`) — packs the antique look's engraved
  * ornaments into `public/antique/ornaments.png` and generates its layout module.
  * Channels: R ink density, G fill (the solid silhouette the plate is cleared to
- * paper under), B wash (the alpha of `<id>.colour.png` when a sprite has one,
- * else a flat share of the fill; a cartouche's frame, never its field), A the
- * share of the row's main pigment over its accent (the scrollwork's outer scrolls).
+ * paper under), B wash (a cartouche's frame only, never its field; figures and
+ * beasts print as ink on bare paper), A the share of the row's main pigment over
+ * its accent (the scrollwork's outer scrolls).
  * A cartouche's field is left blank: each plate sets its own title there at
  * runtime (`buildAntiqueGlyphSheet`), so the module records each field's oval.
- * Inputs: data/antique/sprites/<id>.png (black RGB, ink in alpha), optional
- * <id>.colour.png (RGB hue, alpha saturation); provenance in data/antique/PROVENANCE.md.
+ * Inputs: data/antique/sprites/<id>.png (black RGB, ink in alpha); provenance in data/antique/PROVENANCE.md.
  */
 
-import { existsSync, writeFileSync } from 'node:fs';
+import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 import sharp from 'sharp';
@@ -60,10 +59,7 @@ const CLOSE_RADIUS_OVERRIDE_PX: Partial<Record<(typeof SPRITE_IDS)[number], numb
   tablet: 10,
 };
 const FILL_GROW_PX = 3;
-/** A sea beast's and a constellation figure's flat wash, as a share of full. */
-const FILL_WASH = 0.6;
 const WASH_EDGE_SIGMA_PX = 0.8;
-const FIGURE_WASH = 0.85;
 const FILL_BLUR_SIGMA_PX = 1.5;
 
 /**
@@ -212,9 +208,6 @@ async function buildSprite(id: (typeof SPRITE_IDS)[number]): Promise<OrnamentSpr
   const grown = dilateMaskDisc(solid, w, h, FILL_GROW_PX);
   const soft = gaussianBlurFloat32(Float32Array.from(grown), w, h, FILL_BLUR_SIGMA_PX);
   const fill = Uint8Array.from(soft, (v) => Math.round(Math.min(1, v) * 255));
-  // A colourist laid each wash flat inside the engraved outline: the whole
-  // silhouette, a cartouche's frame but never its field, where the title sits on paper.
-  const share = FIGURE_IDS.has(id) ? FIGURE_WASH : FILL_WASH;
   // A frame's wash stays inside its printed lines, as a colourist's brush did: the
   // pushed ink closed over its hatching (half the silhouette's close, which reads
   // fainter scan greys), so no halo past the outline and no web between scrolls.
@@ -239,9 +232,7 @@ async function buildSprite(id: (typeof SPRITE_IDS)[number]): Promise<OrnamentSpr
         ),
         (v) => Math.round(Math.min(1, v) * FRAME_WASH * 255),
       )
-    : existsSync(spritePath(`${id}.colour`))
-      ? (await loadInk(`${id}.colour`, undefined, side)).data
-      : fill.map((v) => Math.round(v * share));
+    : new Uint8Array(w * h); // figures and beasts print as ink on bare paper
   const accent = new Uint8Array(w * h).fill(255);
   const accentScale = field?.accentScale;
   if (accentScale && inLines) {
