@@ -13,13 +13,14 @@ import type { CosmicWebFilamentsRuntime } from '../../../../../src/layers/cosmic
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 
-function makeCtx(focusBlend: number): FrameView {
+function makeCtx(focusBlend: number, devicePixelRatio = 1): FrameView {
   const vp = new Float32Array(16) as unknown as Mat4;
   const cosmoSlab: Slab = makeCosmoSlab({ vp: Float64Array.from(vp as unknown as Float32Array) });
   return {
     snapshot: {
       isReady: true,
       nowMs: 0,
+      devicePixelRatio,
       simDays: 0,
       focusBlend,
       focusPickId: null,
@@ -103,5 +104,21 @@ describe('filamentsPass draw', () => {
     expect(args[3]).toBe(ctx.drawPxPerRad);
     expect(args[4]).toBe(1.5); // line halfwidth (FILAMENT_LINE_HALFWIDTH_PX)
     expect(args[5]).toBe(0.7);
+  });
+
+  it('draws the same CSS-px line width at dpr 1 and dpr 2', () => {
+    const halfwidthAt = (dpr: number): number => {
+      const drawSpy = vi.fn();
+      const ctx = makeCtx(0, dpr);
+      filamentsPass(makeRuntime(drawSpy)).draw(
+        PASS_STUB,
+        slabViewOf(ctx, COSMO),
+        ctx,
+        makeState(),
+        1,
+      );
+      return drawSpy.mock.calls[0]![4] as number;
+    };
+    expect(halfwidthAt(2) / 2).toBeCloseTo(halfwidthAt(1));
   });
 });

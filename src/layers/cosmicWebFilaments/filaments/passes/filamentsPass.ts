@@ -36,9 +36,12 @@ export function filamentsPass(
         view.vp,
         view.viewportPx,
         ctx.drawPxPerRad,
-        // The plate's strokes are sized in its print unit, which scales with the window.
+        // CSS px; the plate's strokes are sized in its print unit instead, which scales with
+        // the (device-px) window height and so with dpr already.
         FILAMENT_LINE_HALFWIDTH_PX *
-          (print ? view.viewportPx[1] / ANTIQUE_REFERENCE_HEIGHT_CSS : 1),
+          (print
+            ? view.viewportPx[1] / ANTIQUE_REFERENCE_HEIGHT_CSS
+            : ctx.snapshot.devicePixelRatio),
         state.settings.cosmicWebFilaments.intensity * (print ? FILAMENT_PRINT_INTENSITY : 1),
         // The print grades by overlap alone, the same in any focus.
         print ? fade : fade * emphasisOf(entry, ctx.snapshot),
