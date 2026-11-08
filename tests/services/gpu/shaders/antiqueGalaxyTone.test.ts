@@ -85,7 +85,11 @@ describe('antique galaxy stipple tone', () => {
   it("keeps the bar's own gradient: its flank a step between the disc and its crest", () => {
     // Print lumas under the highlight shoulder (mw-face): the lobes' flank ~0.83, crests ~0.9.
     const flank = tone(0.83, 0.8, 0.83);
-    expect(flank - 0.62).toBeGreaterThan(0.08);
+    const discMax = weslF32(
+      readShaderSource('src/services/gpu/shaders/antiqueLook/fragment.wesl'),
+      'GALAXY_DISC_MAX',
+    );
+    expect(flank - discMax).toBeGreaterThan(0.08);
     expect(tone(0.9, 0.8, 0.9) - flank).toBeGreaterThan(0.15);
   });
 });
