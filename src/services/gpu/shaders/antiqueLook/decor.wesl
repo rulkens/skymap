@@ -20,6 +20,9 @@ import package::antiqueLook::pigments::pigmentAt;
 /** INK's transmittance (the plate's darkest stroke) and a figure's darkest coverage. */
 const INK_T: f32 = 0.136;
 const FIGURE_COVER: f32 = 0.9;
+/** A figure's wash: the atlas mip its shading is read at, and the density band it ramps over. */
+const FIGURE_SHADE_LOD: f32 = 3.0;
+const FIGURE_SHADE: vec2<f32> = vec2<f32>(0.04, 0.4);
 
 struct DecorOut {
   @builtin(position) pos: vec4<f32>,
@@ -84,7 +87,12 @@ fn fs(in: DecorOut) -> DecorInk {
   let brush = textureSampleLevel(atlas, linear, uv + stray * (rect.zw - rect.xy), 0.0);
   // Pigment gathers where a wash dries, at its edge: a darker rim, no airbrush fade.
   let rim = 1.0 - abs(2.0 * brush.b - 1.0);
-  let wash = select(min(brush.b + 0.35 * rim, 1.0), 0.0, orn.items[in.item].lettering > 0.5) * o;
+  // A figure's wash follows its engraving instead (the atlas's coarse mip is the
+  // local ink density): full where the engraver shaded, thinning to bare paper in
+  // the lit parts and at the outline, so it never reads as a tinted cut-out.
+  let shade = smoothstep(FIGURE_SHADE.x, FIGURE_SHADE.y, textureSampleLevel(atlas, linear, uv, FIGURE_SHADE_LOD).r);
+  let laid = select(min(brush.b + 0.35 * rim, 1.0), brush.b * shade, clears < 0.5);
+  let wash = select(laid, 0.0, orn.items[in.item].lettering > 0.5) * o;
   let hue = mix(pigmentAt(orn.items[in.item].accent), pigmentAt(orn.items[in.item].pigment), brush.a);
   var out: DecorInk;
   out.ink = vec4<f32>(figure * (1.0 - clears), ink * clears, clear, wash);
