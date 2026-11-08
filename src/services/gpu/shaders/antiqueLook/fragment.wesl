@@ -588,6 +588,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     var lines = 0.0;
     var print = PRINT_PLAIN;
     var latForm = form;
+    var latRadius = 1.0; // the globe's apparent radius under `latForm`, print units
     var spotQ = 1e3;
     var spotQPerUnit = 1.0;
     var jupiterShade = 0.0;
@@ -637,6 +638,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
           // Jupiter's bands keep an even spacing on the page: the height along the pole.
           let h = select(lats, sin(lats), print == PRINT_JUPITER);
           latForm = vec3<f32>(radius * h.x, along, length(h.yz - h.x) * radius * u.unit);
+          latRadius = radius;
           jupiterBands = vec3<f32>((h.yz - h.x) / max(length(h.yz - h.x), 1e-9), radius * u.unit);
         }
         // Jupiter lays its shade in its bands' own lines (`jupiterPrint`).
@@ -674,7 +676,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
       col = earth.col;
       bodyInk = max(bodyInk, earth.ink);
     } else if (print == PRINT_MARS || (ground && (u.flags >> RELIEF_PRINT_SHIFT) == PRINT_MARS)) {
-      let mars = marsPrint(col, cover, landShare, latForm, p, pxUnits);
+      let mars = marsPrint(col, cover, landShare, latForm, latRadius, p, pxUnits);
       col = mars.col;
       // Its wash carries onto the engraved ground, where the relief, not the marking, inks.
       bodyInk = max(bodyInk, select(mars.ink, 0.0, ground));
