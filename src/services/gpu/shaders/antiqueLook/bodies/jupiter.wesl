@@ -15,12 +15,17 @@ import package::antiqueLook::pigments::pigmentAt;
 
 // The plain's lightness over the light round it (the brightest of a ring LIGHT_REACH of
 // the radius out, so the limb's darkening divides out and the form's shade lays it back
-// by convention): a zone's (1) and a belt's (0.85), and the tones they print at. Capped
+// by convention): a zone's (1) and a belt's (0.86), and the tones they print at. Capped
 // short of the widest burin and the crossing set: on a small globe they close into
 // black, and a straight second set reads as a grid on the bands.
-const TONE_OF_LUMA = vec4<f32>(0.97, 0.85, 0.12, 0.52); // zone, belt lightness; zone, belt tone
+const TONE_OF_LUMA = vec3<f32>(0.99, 0.86, 0.58); // zone, belt lightness; belt tone
 const LIGHT_REACH: f32 = 0.45;
-const TONE_CAP = vec4<f32>(0.6, 0.72, 150.0, 400.0); // on a small globe, a large one; their disc px
+// A small globe (under SMALL_GLOBE.x disc px; a large one over .y) is cut plainer, or
+// its lines shimmer and close up: up to SPARSE times wider set, its zones near paper.
+const SMALL_GLOBE = vec2<f32>(150.0, 400.0);
+const SPARSE: f32 = 1.6;
+const ZONE_TONE = vec2<f32>(0.05, 0.12); // on a small globe, a large one
+const TONE_CAP = vec2<f32>(0.68, 0.72);
 // The plain already darkens toward the terminator: the form's shade only carries the
 // night side past it, at this share.
 const SHADE_SHARE: f32 = 0.55;
@@ -28,30 +33,37 @@ const SHADE_SHARE: f32 = 0.55;
 // limb pixel's ratio: lifted by up to LIMB_LIFT.z from ndv LIMB_LIFT.x out to LIMB_LIFT.y.
 // LIMB keeps the globe round: from ndv LIMB.x in to LIMB.y, LIMB.z more tone at the edge.
 const LIMB_LIFT = vec3<f32>(0.4, 0.05, 0.06);
-const LIMB = vec3<f32>(0.35, 0.05, 0.12);
+const LIMB = vec3<f32>(0.35, 0.05, 0.06);
 // The burin drifts: a line wanders off true by up to WAVE.x of the spacing, over about
-// 1 / WAVE.y units along the band, its neighbours with it.
-const WAVE = vec2<f32>(0.8, 0.005);
+// 1 / WAVE.y units along the band, its neighbours with it; the gaps between lines open
+// and close by up to WAVE.z of the spacing over a few lines; and a line bends round what stands
+// out of the band, FLOW spacings per unit of the feature's lightness step, so the
+// festoons and ovals show as the lines' own swirl.
+const WAVE = vec3<f32>(0.8, 0.005, 1.4);
+const FLOW: f32 = 6.0;
 // A feature is told from its belt by its luma against the band either side of it along
 // the latitude, FEATURE_REACH × its scale away; the scale follows the disc (FEATURE_SCALE
 // of the apparent radius), so a disc and a close-up outline the same ovals.
 const FEATURE_SCALE = vec2<f32>(0.022, 3.0); // of the radius, at least this many px
-const OUTLINE_SCALE = vec2<f32>(4.0, 7.0); // px: smaller, an outline would be a fleck
-const FEATURE_REACH = vec2<f32>(1.6, 3.2);
-const FEATURE_EDGE: f32 = 0.06; // a pale oval's lightness step its outline follows
+const DETAIL_SCALE = vec2<f32>(4.0, 7.0); // px: smaller, an outline is a fleck and a bend a tremor
+const FEATURE_REACH: f32 = 2.4;
+// The lightness step a pale oval's outline follows, and a dark one's: only the darkest
+// (a barge, a ringed oval's rim) are outlined, the rest of a festoon is its lines' swelling.
+const FEATURE_EDGE = vec2<f32>(0.07, 0.1);
 // How much a feature's step over its band adds to its tone, so the lines swell and thin
 // through a belt's own detail, not just with the belt's mean.
-const FEATURE_RELIEF: f32 = 2.5;
+const FEATURE_RELIEF: f32 = 3.5;
 // The spot's oval out to its pale collar on the plain texture, radians east and north;
 // its north side drawn flatter, as the plain texture has it.
 const SPOT_AXES = vec2<f32>(0.155, 0.084);
 const SPOT_NORTH_POWER: f32 = 2.35;
-const SPOT_CORE = vec2<f32>(0.4, 0.5); // the core's tone, and its share of the plain's
-// The dark collar, rings cut round the oval as an engraver follows a form: from q
-// SPOT_COLLAR.x out to .y, SPOT_RING_GAP of the hatching's spacing apart, swelling outward.
-const SPOT_COLLAR = vec2<f32>(0.55, 1.0);
-const SPOT_RING_GAP: f32 = 1.0;
-const SPOT_WASH = vec2<f32>(0.1, 0.28); // rose madder at the collar, at the core
+const SPOT_CORE = vec2<f32>(0.56, 0.7); // the core's tone, and its share of the plain's
+// The dark collar: a couple of rings inside the outline, from q SPOT_COLLAR.x out to .y,
+// SPOT_RING_GAP of the hatching's spacing apart, swelling outward and broken.
+const SPOT_COLLAR = vec2<f32>(0.8, 1.0);
+const SPOT_RING_GAP: f32 = 1.3;
+const SPOT_NEAR: f32 = 1.3; // past this q nothing of the spot's is drawn
+const SPOT_WASH = vec2<f32>(0.05, 0.22); // rose madder at the collar, at the core
 const ROSE_MADDER: f32 = 7.0; // `pigments.wesl`
 
 struct JupiterPrintIn {
@@ -90,7 +102,7 @@ fn plainLuma(wash: texture_2d_array<f32>, samp: sampler, layer: i32, uv: vec2<f3
 fn jupiterPrint(col: vec3<f32>, cover: f32, j: JupiterPrintIn, wash: texture_2d_array<f32>, samp: sampler,
                 layer: i32) -> BodyPrint {
   let scale = max(FEATURE_SCALE.x * j.discPx, FEATURE_SCALE.y);
-  let along = vec2<f32>(-j.across.y, j.across.x) * scale * j.pxUv;
+  let along = vec2<f32>(-j.across.y, j.across.x) * scale * FEATURE_REACH * j.pxUv;
   // The feature's own lightness, smoothed at its scale, and its slope from the same taps.
   let e = scale * j.pxUv;
   let c = plainLuma(wash, samp, layer, j.uv);
@@ -100,55 +112,67 @@ fn jupiterPrint(col: vec3<f32>, cover: f32, j: JupiterPrintIn, wash: texture_2d_
   let ym = plainLuma(wash, samp, layer, j.uv - vec2<f32>(0.0, e.y));
   let l = (2.0 * c + xp + xm + yp + ym) / 6.0;
   let lPerUnit = length(vec2<f32>(xp - xm, yp - ym)) / scale * j.pxUnits;
-  let band = 0.25 * (plainLuma(wash, samp, layer, j.uv + along * FEATURE_REACH.x)
-    + plainLuma(wash, samp, layer, j.uv - along * FEATURE_REACH.x)
-    + plainLuma(wash, samp, layer, j.uv + along * FEATURE_REACH.y)
-    + plainLuma(wash, samp, layer, j.uv - along * FEATURE_REACH.y));
-  var light = l;
-  for (var k = 0; k < 8; k++) {
-    let a = f32(k) * 0.7853982;
-    light = max(light, plainLuma(wash, samp, layer, j.uv + vec2<f32>(cos(a), sin(a)) * LIGHT_REACH * j.discPx * j.pxUv));
-  }
+  let band = 0.5 * (plainLuma(wash, samp, layer, j.uv + along) + plainLuma(wash, samp, layer, j.uv - along));
+  // The light is sought across the bands, where the zones are.
+  let reach = j.across * LIGHT_REACH * j.discPx * j.pxUv;
+  let light = max(max(l, max(plainLuma(wash, samp, layer, j.uv + reach), plainLuma(wash, samp, layer, j.uv - reach))),
+    max(plainLuma(wash, samp, layer, j.uv + 0.5 * reach), plainLuma(wash, samp, layer, j.uv - 0.5 * reach)));
   let feature = (l - band) / light;
 
   let ratio = c / light * (1.0 + LIMB_LIFT.z * smoothstep(LIMB_LIFT.x, LIMB_LIFT.y, j.ndv));
+  let big = smoothstep(SMALL_GLOBE.x, SMALL_GLOBE.y, j.discPx);
+  let zone = mix(ZONE_TONE.x, ZONE_TONE.y, big);
   let t = (TONE_OF_LUMA.x - ratio) / (TONE_OF_LUMA.x - TONE_OF_LUMA.y);
-  let plain = TONE_OF_LUMA.z + t * (TONE_OF_LUMA.w - TONE_OF_LUMA.z) - FEATURE_RELIEF * feature;
+  let plain = zone + t * (TONE_OF_LUMA.z - zone) - FEATURE_RELIEF * feature;
   // A pale oval lies open in its belt.
-  var tone = max(plain, TONE_OF_LUMA.z) * (1.0 - 0.8 * smoothstep(FEATURE_EDGE, FEATURE_EDGE + 0.05, feature));
+  var tone = max(plain, zone) * (1.0 - 0.8 * smoothstep(FEATURE_EDGE.x, FEATURE_EDGE.x + 0.05, feature));
   tone = max(tone + LIMB.z * smoothstep(LIMB.x, LIMB.y, j.ndv), SHADE_SHARE * j.shade);
-
-  let q = j.spotQ * (1.0 + 0.03 * (vnoise(j.p * 0.008) - 0.5));
-  let inside = 1.0 - smoothstep(0.97, 1.0, q);
-  let core = SPOT_CORE.x + SPOT_CORE.y * (plain - SPOT_CORE.x);
-  tone = mix(tone, core, inside);
-  // The pale ring round the spot keeps the lightest ruling.
-  tone = mix(tone, TONE_OF_LUMA.z, (1.0 - smoothstep(1.0, 1.2, q)) * (1.0 - inside));
+  let detail = smoothstep(DETAIL_SCALE.x, DETAIL_SCALE.y, scale);
+  let spacing = j.spacing * mix(SPARSE, 1.0, big);
   var form = j.form;
-  form.x += WAVE.x * j.spacing * (vnoise(vec2<f32>(form.y * WAVE.y, form.x * 0.01)) - 0.5);
-  let cap = mix(TONE_CAP.x, TONE_CAP.y, smoothstep(TONE_CAP.z, TONE_CAP.w, j.discPx));
-  // The collar's rings swell outward, as the spot darkens to its rim; the core's own
-  // lines stop at the first.
-  let gap = SPOT_RING_GAP * j.spacing * j.qPerUnit;
-  let collar = smoothstep(SPOT_COLLAR.x - gap, SPOT_COLLAR.y, q) * step(q, SPOT_COLLAR.y + 0.5 * gap);
-  let banded = 1.0 - inside * smoothstep(SPOT_COLLAR.x - 0.3 * gap, SPOT_COLLAR.x, q);
-  var ink = crossHatch(form, j.p, min(tone, cap), j.spacing, 0.0, j.pxUnits) * banded;
-  let ring = abs(fract((SPOT_COLLAR.y - q) / gap + 0.5) - 0.5) * gap / max(j.qPerUnit, 1e-6);
-  let lift = smoothstep(0.2, 0.32, vnoise(j.p * 0.025 + 11.0));
-  ink = max(ink, inkLine(ring, (0.5 + 2.2 * collar) * (0.85 + 0.3 * vnoise(j.p * 0.06)) * lift, j.pxUnits) * collar);
+  form.x += spacing * (WAVE.x * (vnoise(vec2<f32>(form.y * WAVE.y, form.x * 0.01)) - 0.5)
+    + WAVE.z * (vnoise(vec2<f32>(form.x / spacing * 0.15, 3.0)) - 0.5) + FLOW * detail * feature);
+
+  // Near the spot only: its core, its collar's rings, its outline and its wash.
+  let near = j.spotQ < SPOT_NEAR;
+  var q = j.spotQ;
+  var banded = 1.0;
+  if (near) {
+    q *= 1.0 + 0.03 * (vnoise(j.p * 0.008) - 0.5);
+    let inside = 1.0 - smoothstep(0.97, 1.0, q);
+    tone = mix(tone, SPOT_CORE.x + SPOT_CORE.y * (plain - SPOT_CORE.x), inside);
+    // The pale ring round the spot keeps the lightest ruling; the core's own lines stop
+    // at the collar's first ring.
+    tone = mix(tone, zone, (1.0 - smoothstep(1.0, 1.2, q)) * (1.0 - inside));
+    banded = 1.0 - inside * smoothstep(SPOT_COLLAR.x - 0.3 * SPOT_RING_GAP * spacing * j.qPerUnit, SPOT_COLLAR.x, q);
+  }
+  var ink = crossHatch(form, j.p, min(tone, mix(TONE_CAP.x, TONE_CAP.y, big)), spacing, 0.0, j.pxUnits) * banded;
+  var laid = 0.0;
+  if (near) {
+    // The collar's rings swell outward, as the spot darkens to its rim.
+    let gap = SPOT_RING_GAP * spacing * j.qPerUnit;
+    let collar = smoothstep(SPOT_COLLAR.x - gap, SPOT_COLLAR.y, q) * step(q, SPOT_COLLAR.y + 0.5 * gap);
+    let ring = abs(fract((SPOT_COLLAR.y - q) / gap + 0.5) - 0.5) * gap / max(j.qPerUnit, 1e-6);
+    let lift = smoothstep(0.3, 0.45, vnoise(j.p * 0.03 + 11.0));
+    ink = max(ink, inkLine(ring, (0.9 + 1.8 * collar) * (0.85 + 0.3 * vnoise(j.p * 0.06)) * lift, j.pxUnits) * collar);
+    // The outline cut with the burin's pressure wandering and lifting along it.
+    let width = (1.3 + 1.2 * vnoise(j.p * 0.03)) * smoothstep(0.15, 0.3, vnoise(j.p * 0.02 + 3.0));
+    ink = max(ink, inkLine(abs(q - 1.0) / max(j.qPerUnit, 1e-6), width, j.pxUnits));
+    // Rose madder laid by hand: it pools where the core is darkest and thins out over
+    // the collar, granular as watercolour on laid paper.
+    let grain = (0.6 + 0.8 * vnoise(j.p * 0.035)) * (0.7 + 0.6 * vnoise(j.p * 0.3));
+    let pool = mix(SPOT_WASH.y, SPOT_WASH.x, smoothstep(0.2, 0.8, q)) * grain * (0.6 + 0.8 * clamp(t, 0.0, 1.0));
+    laid = (1.0 - smoothstep(0.85, 1.0, q + 0.06 * (vnoise(j.p * 0.05) - 0.5))) * pool;
+  }
 
   // The outlines of what stands out of its band, clear of the spot's own, the limb and
   // the terminator, where the light itself steps; the burin lifts off now and then.
-  let wobble = (0.8 + 0.5 * vnoise(j.p * 0.05)) * smoothstep(0.25, 0.4, vnoise(j.p * 0.03 + 7.0));
-  // Only the pale ones: a dark festoon or barge is cut as the swelling of its lines.
-  let edge = abs(feature - FEATURE_EDGE) / max(lPerUnit / light, 1e-5);
-  ink = max(ink, inkLine(edge, wobble, j.pxUnits) * smoothstep(1.1, 1.3, q) * smoothstep(0.15, 0.3, j.ndv)
-    * (1.0 - smoothstep(0.15, 0.4, j.shade)) * smoothstep(OUTLINE_SCALE.x, OUTLINE_SCALE.y, scale));
-  // The spot's outline cut with the burin's pressure wandering and lifting along it.
-  let width = (0.8 + 0.8 * vnoise(j.p * 0.04)) * smoothstep(0.2, 0.35, vnoise(j.p * 0.02 + 3.0));
-  ink = max(ink, inkLine(abs(q - 1.0) / max(j.qPerUnit, 1e-6), width, j.pxUnits));
-  // Rose madder laid by hand: it pools at the core and thins out over the collar.
-  let pool = mix(SPOT_WASH.y, SPOT_WASH.x, smoothstep(0.2, 0.8, q)) * (0.75 + 0.5 * vnoise(j.p * 0.035));
-  let laid = (1.0 - smoothstep(0.85, 1.0, q + 0.06 * (vnoise(j.p * 0.05) - 0.5))) * pool;
+  if (detail > 0.0 && q > 1.1 && j.ndv > 0.15 && j.shade < 0.4) {
+    let wobble = (0.8 + 0.5 * vnoise(j.p * 0.05)) * smoothstep(0.25, 0.4, vnoise(j.p * 0.03 + 7.0));
+    let offEdge = select(feature - FEATURE_EDGE.x, -feature - FEATURE_EDGE.y, feature < 0.0);
+    let edge = abs(offEdge) / max(lPerUnit / light, 1e-5);
+    ink = max(ink, inkLine(edge, wobble, j.pxUnits) * smoothstep(1.1, 1.3, q) * smoothstep(0.15, 0.3, j.ndv)
+      * (1.0 - smoothstep(0.15, 0.4, j.shade)) * detail);
+  }
   return BodyPrint(applyWash(col, pigmentAt(ROSE_MADDER), laid * cover), ink);
 }
