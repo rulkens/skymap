@@ -50,6 +50,7 @@ export function antiquePlateBody(input: {
   const kmToRadii = SCALE_UNITS.KM_TO_M / radiusM;
   return {
     centre,
+    radiusM,
     // tan(asin(1/d)) = 1/√(d²−1): the silhouette cone's half-angle, projected.
     radiusUnits: input.unitsPerRad / Math.sqrt(d * d - 1),
     sun: [toSun[0] / sunDistance, toSun[1] / sunDistance, toSun[2] / sunDistance],

@@ -10,6 +10,8 @@ import type { AntiqueBodyPrint } from './AntiqueBodyPrint';
 export type AntiquePlateBody = {
   /** Eye → centre, in body radii. */
   readonly centre: Readonly<Vec3>;
+  /** The radius its lengths are in, metres (the mask scales depth by it). */
+  readonly radiusM: number;
   /** Apparent radius, print units: the hatch's bow and the ring hatch scale with it. */
   readonly radiusUnits: number;
   /** Centre → Sun, unit. */

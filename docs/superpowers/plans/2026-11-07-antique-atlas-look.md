@@ -348,3 +348,8 @@ globe-space (lat/lon) hatching, which needs a surface-parameter target from the 
 
 - [x] The cosmic-web chart shimmered at rest (~6k px per frame at dpr 1): `web.wesl` thresholds the density row, whose raymarch reseeds its step jitter every frame. With the look on, `cosmic-web-density-print` swaps in for the raymarch with its jitter held still (`steadyJitter`); the plain look's raymarch is untouched. Rest diff: 0 px per frame; no added pass.
 - [x] `starGlyph`'s rays ran on past their tips as a half-ink hairline to the quad's edge (the AA band over a zero-width wedge); an anti-aliased cap ends each ray at its tip. A test evaluates the shader's own `starGlyph`.
+
+### Task 40: A craft over a globe prints as itself (owner, 2026-11-08: "Hubble still hides behind Earth")
+
+- [x] The plate cast the recorded globes for every body pixel, so a mesh body over Earth printed as Earth (paper, coastlines) and vanished straight down. The mask pass now binds foreground:0's depth every frame, casts the same globes, and marks a surface well in front of the nearest one (`NEARER_SURFACE` in the mask's b, below reduce's mapped threshold); the plate takes the plain-body path there, keeps the globe's net off it, and the depth's edges ink its outline. Views without a mesh: bit-identical on the nine lookbench views. Perf (scratch worktrees, A-B ×3, shared GPU): stylize +0.26 ms at the best round on earth-surface, earth-copenhagen-500km and mars-jezero.
+- [x] A cold `#pose=b,hubble,…` threw `hostOrThrow` every frame: the decoder admitted craft the body arm never hosts. Body and sky arms now read `isHostBodyId`.

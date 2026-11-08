@@ -21,6 +21,7 @@ const SHADER = readFileSync('src/services/gpu/shaders/antiqueLook/plateBodies.we
 
 const saturn: AntiquePlateBody = {
   centre: [1, 2, 3],
+  radiusM: 58_232_000,
   radiusUnits: 120,
   sun: [0, 0.6, 0.8],
   print: 'plain',
@@ -30,6 +31,7 @@ const saturn: AntiquePlateBody = {
 };
 const earth: AntiquePlateBody = {
   centre: [4, 5, 6],
+  radiusM: 6_371_000,
   radiusUnits: 300,
   sun: [1, 0, 0],
   print: 'earth',
@@ -91,7 +93,9 @@ describe('packAntiquePlateBodies', () => {
 
   it('writes a spot as its direction and a flag, cleared when the slot is spotless', () => {
     const out = packAntiquePlateBodies([jupiter]);
-    expect([...new Float32Array(out).slice(4 + 16, 4 + 20)]).toEqual([0.6, 0, -0.8, 1].map(Math.fround));
+    expect([...new Float32Array(out).slice(4 + 16, 4 + 20)]).toEqual(
+      [0.6, 0, -0.8, 1].map(Math.fround),
+    );
     packAntiquePlateBodies([earth], out);
     expect(new Float32Array(out)[4 + 19]).toBe(0);
   });

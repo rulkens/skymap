@@ -30,6 +30,9 @@ export const ANTIQUE_ORNAMENT_BYTES = 16 + ANTIQUE_MAX_ORNAMENTS * 64;
 export const ANTIQUE_MAX_GLYPHS = 96;
 export const ANTIQUE_GLYPH_BYTES = 16 + ANTIQUE_MAX_GLYPHS * 32;
 
+/** mask.wesl `MaskDepth`: the forward, then a near plane per plate body. */
+export const ANTIQUE_MASK_DEPTH_BYTES = 32;
+
 /** `skyFloor.wesl`'s output, one f32 padded to WebGPU's 16-byte minimum binding size. */
 export const ANTIQUE_SKY_FLOOR_BYTES = 16;
 

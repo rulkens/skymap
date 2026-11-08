@@ -24,6 +24,7 @@ import {
   ANTIQUE_GLYPH_BYTES,
   ANTIQUE_ORNAMENT_BYTES,
   ANTIQUE_SKY_FLOOR_BYTES,
+  ANTIQUE_MASK_DEPTH_BYTES,
   ANTIQUE_UNIFORM_BYTES,
 } from '../../../../data/rendering/antiqueLook';
 import { ANTIQUE_PLATE_BODIES_BYTES } from '../../../../data/rendering/antiquePlateBodies';
@@ -40,8 +41,7 @@ const ARRAY = { texture: { sampleType: 'float', viewDimension: '2d-array' } } as
 const UNIFORM = { buffer: { type: 'uniform' } } as const;
 const SAMPLER = { sampler: { type: 'filtering' } } as const;
 const STORAGE = { buffer: { type: 'read-only-storage' } } as const;
-// foreground:0's colour or, inside an atmosphere, its depth32float (`mask.wesl`):
-// only a `textureLoad` layout takes both.
+// foreground:0's colour and its depth32float (`mask.wesl`), read with `textureLoad`.
 const COVER = { texture: { sampleType: 'unfilterable-float' } } as const;
 
 export function createAntiqueLookGpu(
@@ -112,6 +112,7 @@ export function createAntiqueLookGpu(
   const ornaments = buffer('ornaments', ANTIQUE_ORNAMENT_BYTES);
   const digits = buffer('digits', ANTIQUE_GLYPH_BYTES);
   const plateBodies = buffer('plate-bodies', ANTIQUE_PLATE_BODIES_BYTES);
+  const maskDepth = buffer('mask-depth', ANTIQUE_MASK_DEPTH_BYTES);
   const reliefUniforms = buffer('relief-uniforms', ANTIQUE_RELIEF_UNIFORM_BYTES);
   const skyFloorBuffer = device.createBuffer({
     label: 'antique-look-sky-floor',
@@ -200,7 +201,12 @@ export function createAntiqueLookGpu(
 
   return {
     paper: stage('paper', paperCode, [UNIFORM, TEXTURE, TEXTURE, SAMPLER], ['rgba8unorm']),
-    mask: stage('mask', maskCode, [COVER, TEXTURE, UNIFORM], ['rgba8unorm']),
+    mask: stage(
+      'mask',
+      maskCode,
+      [COVER, COVER, TEXTURE, UNIFORM, UNIFORM, UNIFORM],
+      ['rgba8unorm'],
+    ),
     reduce: stage('reduce', reduceCode, [TEXTURE, TEXTURE], [HDR_TARGET_FORMAT]),
     glow: stage('glow', glowCode, [TEXTURE], [HDR_TARGET_FORMAT]),
     nebula: stage('nebula', nebulaCode, [TEXTURE, SAMPLER], [HDR_TARGET_FORMAT]),
@@ -255,6 +261,7 @@ export function createAntiqueLookGpu(
     decor: { pipeline: decorPipeline, layout: decorLayout },
     digits,
     plateBodies,
+    maskDepth,
     skyFloorBuffer,
     clampSampler: sampler('clamp', 'clamp-to-edge'),
     repeatSampler: sampler('repeat', 'repeat'),
@@ -264,6 +271,7 @@ export function createAntiqueLookGpu(
       ornaments.destroy();
       digits.destroy();
       plateBodies.destroy();
+      maskDepth.destroy();
       reliefUniforms.destroy();
       skyFloorBuffer.destroy();
       emptyTexture.destroy();

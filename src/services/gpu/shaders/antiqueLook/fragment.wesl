@@ -80,6 +80,8 @@ const DECOR_LAYER: i32 = 2;
 const DECOR_HUE_LAYER: i32 = 3;
 const MOON_LAYER: i32 = 4;
 const MASK_LAYER: i32 = 5;
+// The mask's b for a surface nearer than any cast globe (`mask.wesl`): printed plain.
+const NEARER_SURFACE: f32 = 0.25;
 // Quarter res, rgba16f: the wash; `nebula.wesl`'s x, the band's light; `landBlur.wesl`'s
 // x Σ weight·land share, y Σ weight.
 const WASH_LAYER: i32 = 0;
@@ -192,6 +194,10 @@ fn rowOn(bit: u32) -> f32 {
 
 fn bodyCover(ip: vec2<i32>) -> f32 {
   return layerTexel(fullTex, MASK_LAYER, ip).r;
+}
+
+fn nearerSurface(ip: vec2<i32>) -> bool {
+  return abs(layerTexel(fullTex, MASK_LAYER, ip).b - NEARER_SURFACE) < 0.1;
 }
 
 // A body's land share at `uv`: bilinear over the quarter-res cells that carry one
@@ -528,10 +534,12 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // A globe's net, on its own pixels: clear of its town signs and molehills (their paper, as
   // `bodies/earth.wesl` reads it), crossing its borders and rivers as the maps' did.
   var globeRulings = 0.0;
+  let nearer = nearerSurface(ip);
   if (u.globe.lon90.w > 0.0) {
     let g = globeNormal(u.globe, ray);
     let signs = clamp(2.0 * texel(geographyTex, ip).a, 0.0, 1.0);
-    globeRulings = graticule(frameLonLat(u.globe, g.xyz), u.globe.steps, u.unit) * g.w * u.globe.lon90.w * (1.0 - signs);
+    // Not over a nearer surface; its derivatives want uniform flow, so masked, not branched.
+    globeRulings = graticule(frameLonLat(u.globe, g.xyz), u.globe.steps, u.unit) * g.w * u.globe.lon90.w * (1.0 - signs) * f32(!nearer);
   }
   let rulings = (skyRulings * sky * clear * chart + globeRulings * body) * (0.7 + 0.45 * vnoise(p * 0.045)) * rowOn(HIDE_RULINGS);
   // Constellation figures and orbits as a fine rule under the rulings' weight
@@ -570,7 +578,11 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     let pxUnits = 1.0 / u.unit;
     let n = vec2<f32>(-sin(u.hatchAngle), cos(u.hatchAngle));
     let along = dot(p, vec2<f32>(n.y, -n.x));
-    let hit = castPlateBodies(viewRay(uv));
+    // A nearer surface (a spacecraft over Earth) is no cast globe: the plain path.
+    var hit = BodyHit(1e30, 0.0, 0.0, 0.0, 0.0, false, 0.0, false, 1e30, 0u);
+    if (!nearer) {
+      hit = castPlateBodies(viewRay(uv));
+    }
     var tone = 0.0;
     var form = vec3<f32>(dot(p, n), along, 1.0);
     var lines = 0.0;

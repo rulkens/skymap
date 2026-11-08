@@ -17,6 +17,7 @@ import {
   ANTIQUE_FULL_LAYERS,
   ANTIQUE_GLYPH_BYTES,
   ANTIQUE_LOW_LAYERS,
+  ANTIQUE_MASK_DEPTH_BYTES,
   ANTIQUE_ORNAMENT_BYTES,
   ANTIQUE_QUARTER_LAYERS,
   ANTIQUE_REFERENCE_HEIGHT_CSS,
@@ -33,6 +34,7 @@ import { ANTIQUE_ORNAMENT_ATLAS } from '../../../../data/rendering/antiqueOrname
 import { packAntiqueUniforms } from '../../../../utils/gpu/antiqueLook/packAntiqueUniforms';
 import { antiquePlateTune } from '../../../../utils/gpu/antiqueLook/antiquePlateTune';
 import { packAntiquePlateBodies } from '../../../../utils/gpu/antiqueLook/packAntiquePlateBodies';
+import { packAntiqueMaskDepth } from '../../../../utils/gpu/antiqueLook/packAntiqueMaskDepth';
 import { antiquePlateBodies } from './antiquePlateBodies';
 import { antiqueReliefInput } from './antiqueReliefInput';
 import { packAntiqueRelief } from '../../../../utils/gpu/antiqueLook/packAntiqueRelief';
@@ -83,6 +85,7 @@ export function createAntiqueLook(init: {
   const ornamentBytes = new ArrayBuffer(ANTIQUE_ORNAMENT_BYTES);
   const glyphBytes = new ArrayBuffer(ANTIQUE_GLYPH_BYTES);
   const plateBodyBytes = new ArrayBuffer(ANTIQUE_PLATE_BODIES_BYTES);
+  const maskDepthBytes = new ArrayBuffer(ANTIQUE_MASK_DEPTH_BYTES);
   const reliefBytes = new ArrayBuffer(ANTIQUE_RELIEF_UNIFORM_BYTES);
 
   function fullScreen(
@@ -219,6 +222,9 @@ export function createAntiqueLook(init: {
     const landMapped = ctx.snapshot.renderedTargets.has(ANTIQUE_TARGETS.land);
     const plateBodies = hasBodies ? antiquePlateBodies(state, ctx, unitPx, landMapped, rays) : [];
     device.queue.writeBuffer(g.plateBodies, 0, packAntiquePlateBodies(plateBodies, plateBodyBytes));
+    const radiiM = plateBodies.map((b) => b.radiusM);
+    const maskDepth = packAntiqueMaskDepth(io.bodyDepth.row, radiiM, basis.forward, maskDepthBytes);
+    device.queue.writeBuffer(g.maskDepth, 0, maskDepth);
     if (relief !== null) {
       device.queue.writeBuffer(g.reliefUniforms, 0, packAntiqueRelief(relief, reliefBytes));
     }
@@ -242,9 +248,7 @@ export function createAntiqueLook(init: {
     const decor = full('decor');
     const decorHue = full('decorHue');
     const mask = full('mask');
-    const bodies = depthCover
-      ? targets.depthViewOf('foreground:0')
-      : targets.viewOf('foreground:0');
+    const bodies = targets.viewOf('foreground:0');
     // The land map, when a masked globe drew this frame (Earth, Mars).
     const land = landMapped ? targets.viewOf(ANTIQUE_TARGETS.land) : g.empty;
     const landBlurAcross = targets.viewOf(ANTIQUE_TARGETS.landBlurAcross);
@@ -279,7 +283,9 @@ export function createAntiqueLook(init: {
     const opens = bakesPaper ? undefined : begin;
     // foreground:0 keeps last frame's bodies when nothing drew one this frame.
     if (hasBodies) {
-      fullScreen(encoder, 'mask', [mask], g.mask, [bodies, land, uniforms], opens);
+      const plateBuffers = [{ buffer: g.plateBodies }, { buffer: g.maskDepth }];
+      const maskInputs = [bodies, io.bodyDepth.view, land, uniforms, ...plateBuffers];
+      fullScreen(encoder, 'mask', [mask], g.mask, maskInputs, opens);
     } else {
       // The layer outlives the frame that drew it: no body reads as no cover.
       encoder

@@ -42,6 +42,8 @@ export type AntiqueLookGpu = {
   readonly digits: GPUBuffer;
   /** `PlateBodies` (`plateBodies.wesl`): the globes the plate ray-casts. */
   readonly plateBodies: GPUBuffer;
+  /** `MaskDepth` (`mask.wesl`): the depth row's scale for those globes. */
+  readonly maskDepth: GPUBuffer;
   /** Written by the sky-floor compute, read by the plate in the same submit. */
   readonly skyFloorBuffer: GPUBuffer;
   readonly clampSampler: GPUSampler;
