@@ -39,9 +39,9 @@ import { ANTIQUE_RELIEF_UNIFORM_BYTES } from '../../../../data/rendering/antique
 import { packAntiqueOrnaments } from '../../../../utils/gpu/antiqueLook/packAntiqueOrnaments';
 import { packAntiqueGlyphs } from '../../../../utils/gpu/antiqueLook/packAntiqueGlyphs';
 import { placeAntiqueOrnaments } from '../../../../utils/gpu/antiqueLook/placeAntiqueOrnaments';
-import { antiquePlateTitle } from '../../../../utils/gpu/antiqueLook/antiquePlateTitle';
 import { antiqueMoonSubject } from './antiqueMoonSubject';
 import { antiqueTitleGlobe } from './antiqueTitleGlobe';
+import { antiquePlateCartouche } from './antiquePlateCartouche';
 import { viewCoverRectsPx } from '../../../../utils/layout/viewCoverRectsPx';
 import { placeAntiqueNumerals } from '../../../../utils/gpu/antiqueLook/placeAntiqueNumerals';
 import { antiquePlateRulings } from './antiquePlateRulings';
@@ -142,8 +142,7 @@ export function createAntiqueLook(init: {
     const relief = hasBodies ? antiqueReliefInput(state, ctx, io.bodyDepth, unitPx) : null;
     // The Moon's passes drew its own row and its ground's relief (a frame section's rows).
     const moonPrinted = ctx.snapshot.renderedTargets.has(ANTIQUE_TARGETS.moon);
-    const moonRelief =
-      relief === null && ctx.snapshot.renderedTargets.has(ANTIQUE_TARGETS.relief);
+    const moonRelief = relief === null && ctx.snapshot.renderedTargets.has(ANTIQUE_TARGETS.relief);
     const globe = antiqueTitleGlobe(ctx, basis, unitPx);
     packAntiqueUniforms(
       {
@@ -168,20 +167,15 @@ export function createAntiqueLook(init: {
       uniformBytes,
     );
     device.queue.writeBuffer(g.uniforms, 0, uniformBytes);
-    const title = antiquePlateTitle({ cosmos, globe, centreLonLat: globe?.centreLonLat ?? null });
-    const block = title && glyphs ? glyphs.sheet.titles[title.key] : null;
-    const titleOnSheet =
-      title && glyphs && block
-        ? {
-            rect: [
-              block.x / glyphs.sheet.width,
-              block.y / glyphs.sheet.height,
-              (block.x + block.w) / glyphs.sheet.width,
-              (block.y + block.h) / glyphs.sheet.height,
-            ] as const,
-            weight: title.weight,
-          }
-        : null;
+    const covers = viewCoverRectsPx(
+      state.viewCover,
+      [size.width, size.height],
+      globalThis.innerWidth || size.width,
+    );
+    // Tab's hidden UI takes the cartouche with it; the map's figures stay.
+    const card = state.ui.uiHidden ? null : antiquePlateCartouche(ctx, globe, covers);
+    const blocks = card && glyphs ? glyphs.sheet.titles[card.title.key] : undefined;
+    const block = blocks && (card!.title.compact ? blocks.compact : blocks.full);
     const placed =
       atlas === null
         ? []
@@ -193,13 +187,23 @@ export function createAntiqueLook(init: {
             size,
             unitPx,
             camPosMpc: ctx.drawCamPos,
-            chromeHidden: state.ui.uiHidden,
-            covers: viewCoverRectsPx(
-              state.viewCover,
-              [size.width, size.height],
-              globalThis.innerWidth || size.width,
-            ),
-            title: titleOnSheet,
+            cartouche: card && {
+              row: card.cartouche,
+              anchor: card.anchor,
+              frame: card.frame,
+              title:
+                glyphs && block && card.title.weight > 0
+                  ? {
+                      rect: [
+                        block.x / glyphs.sheet.width,
+                        block.y / glyphs.sheet.height,
+                        (block.x + block.w) / glyphs.sheet.width,
+                        (block.y + block.h) / glyphs.sheet.height,
+                      ],
+                      weight: card.title.weight,
+                    }
+                  : null,
+            },
           });
     device.queue.writeBuffer(g.ornaments, 0, packAntiqueOrnaments(placed, ornamentBytes));
     const digits =
@@ -335,7 +339,10 @@ export function createAntiqueLook(init: {
       const { width, height } = targets.sizeOf(ANTIQUE_TARGETS.moon);
       encoder.copyTextureToTexture(
         { texture: targets.textureOf(ANTIQUE_TARGETS.moon) },
-        { texture: targets.textureOf(ANTIQUE_TARGETS.full), origin: [0, 0, ANTIQUE_FULL_LAYERS.moon] },
+        {
+          texture: targets.textureOf(ANTIQUE_TARGETS.full),
+          origin: [0, 0, ANTIQUE_FULL_LAYERS.moon],
+        },
         [width, height, 1],
       );
     }

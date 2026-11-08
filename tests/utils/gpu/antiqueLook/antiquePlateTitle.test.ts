@@ -19,10 +19,12 @@ describe('antiquePlateTitle', () => {
     expect(antiquePlateTitle({ cosmos: 0, globe: null, centreLonLat: null })).toEqual({
       key: 'coelum',
       weight: 1,
+      frame: 1,
     });
     expect(antiquePlateTitle({ cosmos: 1, globe: null, centreLonLat: null })).toEqual({
       key: 'universe',
       weight: 1,
+      frame: 1,
     });
     expect(
       antiquePlateTitle({ cosmos: 0.5, globe: null, centreLonLat: null })?.weight ?? 0,
@@ -33,6 +35,7 @@ describe('antiquePlateTitle', () => {
     expect(antiquePlateTitle({ cosmos: 0, globe: globe('moon', 0.6), centreLonLat: ON })).toEqual({
       key: 'luna',
       weight: 1,
+      frame: 1,
     });
     expect(antiquePlateTitle({ cosmos: 0, globe: globe('moon', 0.1), centreLonLat: ON })?.key).toBe(
       'coelum',
@@ -60,7 +63,7 @@ describe('antiquePlateTitle', () => {
     // Earthrise: the Moon's ground across the plate's lower third, the centre ray in the sky.
     expect(
       antiquePlateTitle({ cosmos: 0, globe: globe('moon', 50, 0.3), centreLonLat: null }),
-    ).toEqual({ key: 'luna', weight: 1 });
+    ).toEqual({ key: 'luna', weight: 1, frame: 1 });
     expect(
       antiquePlateTitle({ cosmos: 0, globe: globe('earth', 50, 0.3), centreLonLat: null })?.key,
     ).toBe('coelum');
@@ -96,7 +99,7 @@ describe('antiquePlateTitle', () => {
   it('crosses a region edge through a blank cartouche rather than swapping titles', () => {
     const at = (lon: number) =>
       antiquePlateTitle({ cosmos: 0, globe: ground(4), centreLonLat: [lon, 50] });
-    expect(at(10)).toEqual({ key: 'europa', weight: 1 });
+    expect(at(10)).toEqual({ key: 'europa', weight: 1, frame: 1 });
     expect(at(38)?.weight ?? 0).toBeLessThan(0.05);
     expect(at(39.9)?.key).toBe('orbis');
   });
@@ -105,5 +108,18 @@ describe('antiquePlateTitle', () => {
     expect(
       antiquePlateTitle({ cosmos: 0, globe: ground(4), centreLonLat: [100 + 360, 40] })?.key,
     ).toBe('asia');
+  });
+
+  it('fades the cartouche itself only where its design changes', () => {
+    // Sky to Moon: strapwork to tablet, so the frame passes through nothing with the title.
+    const moon = (share: number) =>
+      antiquePlateTitle({ cosmos: 0, globe: globe('moon', share), centreLonLat: ON });
+    const swaps = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6].map(moon);
+    expect(Math.min(...swaps.map((t) => t.frame))).toBeLessThan(0.05);
+    for (const t of swaps) expect(t.frame).toBeCloseTo(t.weight);
+    // Earth to its continent: both scrollwork, so only the title fades.
+    const at = (kmPerUnit: number) =>
+      antiquePlateTitle({ cosmos: 0, globe: ground(kmPerUnit), centreLonLat: AMSTERDAM });
+    for (const km of [40, 30, 20, 10, 5]) expect(at(km).frame).toBe(1);
   });
 });

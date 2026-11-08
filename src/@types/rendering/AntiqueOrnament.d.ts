@@ -14,15 +14,15 @@ export type AntiqueOrnament = {
    * `stars`: near the Sun, where the constellations still outline (`ANTIQUE_FIGURE_VANTAGE_MPC`); `cosmos`: out
    * among the galaxies, where the Zone of Avoidance is real terra incognita.
    */
-  readonly regime: 'stars' | 'cosmos' | 'always';
+  readonly regime: 'stars' | 'cosmos';
   /** Turn so the engraving's own up points at celestial north on screen. */
   readonly facesNorth: boolean;
   /** Index into `pigments.wesl`'s PIGMENTS for the sprite's wash channel. */
   readonly pigment: number;
-  /** The pigment where the atlas marks an accent (alpha 0): the cartouche's outer scrolls. */
+  /** The pigment where the atlas marks an accent (alpha 0). */
   readonly accent: number;
   readonly opacity: number;
-  /** Clears the plate beneath its fill to bare paper (a cartouche), or lets it show (a figure). */
+  /** Clears the plate beneath its fill to bare paper (a sea beast), or lets it show (a constellation figure). */
   readonly clearsBeneath: boolean;
   /** Drawn left-for-right: a globe-view figure (Hevelius) on a sky-view plate. */
   readonly mirrored: boolean;

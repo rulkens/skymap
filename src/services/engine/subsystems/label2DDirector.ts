@@ -134,7 +134,10 @@ import { whitenColor } from '../../../utils/labels/whitenColor';
 import { encodeSelectionPick } from '../../../utils/selection/encodeSelectionPick';
 import { visibilityEntryOf } from '../../../utils/visibility/visibilityEntryOf';
 import { antiqueLookOn } from '../../../utils/render/antiqueLookOn';
-import { ANTIQUE_REGIME_MPC } from '../../../data/rendering/antiqueLook';
+import {
+  ANTIQUE_REFERENCE_HEIGHT_CSS,
+  ANTIQUE_REGIME_MPC,
+} from '../../../data/rendering/antiqueLook';
 import { antiqueLabel } from '../../../utils/labels/antiqueLabel';
 import { ANTIQUE_LABEL_RULES } from '../../../data/labels/antiqueLabelRules';
 import { antiqueInkGapPx } from '../../../utils/labels/antiqueInkGapPx';
@@ -145,6 +148,9 @@ import { ANTIQUE_PLACE_LETTERING } from '../../../data/labels/antiquePlaceLetter
 import { ANTIQUE_LABEL_DECLUTTER } from '../../../data/labels/antiqueLabelDeclutter';
 import { isKeyOf } from '../../../utils/object/isKeyOf';
 import { antiquePlateKeepOut } from '../../../utils/labels/antiquePlateKeepOut';
+import { antiquePlateCartouche } from '../../gpu/passes/antiqueLook/antiquePlateCartouche';
+import { antiqueTitleGlobe } from '../../gpu/passes/antiqueLook/antiqueTitleGlobe';
+import { viewBasis } from '../../../utils/camera/projection/viewBasis';
 import { viewCoverRectsPx } from '../../../utils/layout/viewCoverRectsPx';
 import { emphasisOf } from '../presentation/emphasisOf';
 import {
@@ -887,7 +893,15 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
       projection.viewportPx,
       globalThis.innerWidth || projection.viewportPx[0],
     );
-    const { inner, keepOut } = antiquePlateKeepOut(projection.viewportPx, chromeHidden, covers);
+    const unitPx = ctx.canvasSize.height / ANTIQUE_REFERENCE_HEIGHT_CSS;
+    const globe = antiqueTitleGlobe(ctx, viewBasis(ctx.cam), unitPx);
+    const { rectPx } = antiquePlateCartouche(ctx, globe, covers);
+    const { inner, keepOut } = antiquePlateKeepOut(
+      projection.viewportPx,
+      chromeHidden,
+      covers,
+      rectPx,
+    );
     return labels.filter((label, i) => {
       const { screenPx, clipW } = projected[i]!;
       const bbox = screenPx ? measureText!(label) : null;

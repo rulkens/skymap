@@ -1,8 +1,9 @@
 /**
  * placeAntiqueOrnaments — this frame's ornament instances, in device px.
  *
- * Sky-anchored rows project through the view and turn with the sky (their up to
- * celestial north on screen); sheet rows sit at a corner. Each fades in only
+ * The title cartouche comes first, where `antiquePlateCartouche` put it, its
+ * title set level in its field. Sky-anchored rows project through the view and
+ * turn with the sky (their up to celestial north on screen). Each fades in only
  * while it is a sensible size on screen and while the camera is in its regime
  * (near the Sun for a constellation, out among the galaxies for the Zone of
  * Avoidance), so nothing pops and nothing balloons past the plate.
@@ -10,12 +11,13 @@
 
 import type { ViewBasis } from '../../../@types/camera/projection/ViewBasis';
 import type { ViewFrustum } from '../../../@types/camera/projection/ViewFrustum';
+import type { AntiqueCartouche } from '../../../@types/rendering/AntiqueCartouche';
 import type { AntiqueOrnament } from '../../../@types/rendering/AntiqueOrnament';
 import type { AntiqueOrnamentAtlas } from '../../../@types/rendering/AntiqueOrnamentAtlas';
 import type { AntiqueOrnamentInstance } from '../../../@types/rendering/AntiqueOrnamentInstance';
 import type { Size } from '../../../@types/rendering/Size';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import type { ScreenRectPx } from '../../../@types/rendering/ScreenRectPx';
+import type { AntiqueSheetAnchor } from '../../../@types/rendering/AntiqueSheetAnchor';
 import { GAL_TO_EQ_MATRIX } from '../../../data/superGalacticTransform';
 import {
   ANTIQUE_FIGURE_VANTAGE_MPC,
@@ -27,12 +29,10 @@ import { rotateVec3ByTightMat3 } from '../../math/rotateVec3ByTightMat3';
 import { projectDirToPx } from '../../camera/projection/projectDirToPx';
 import { overlapShare } from '../../render/overlapShare';
 import { sheetAnchorCentre } from '../../render/sheetAnchorCentre';
-import { rayThroughPx } from '../../camera/projection/rayThroughPx';
 import { smoothstep } from '../../math/smoothstep';
 import { screenNorthAngle } from '../../camera/projection/screenNorthAngle';
 import { onScreenShare } from '../../render/onScreenShare';
 import { offScreen } from '../../render/offScreen';
-import { antiqueSheetAnchor } from './antiqueSheetAnchor';
 
 const DEG = Math.PI / 180;
 
@@ -51,14 +51,16 @@ export function placeAntiqueOrnaments(input: {
   readonly unitPx: number;
   /** The eye in the world frame, Mpc from the Sun. */
   readonly camPosMpc: Readonly<Vec3>;
-  /** Tab's hidden-UI mode: sheet-anchored title chrome (the cartouche) goes, the map's figures stay. */
-  readonly chromeHidden: boolean;
-  /** The plate's title (`antiquePlateTitle`): its block on the lettering sheet, normalised, and strength. */
-  /** The open UI panels, device px: a clearing sheet ornament (the cartouche) moves off them. */
-  readonly covers: readonly ScreenRectPx[];
-  readonly title: {
-    readonly rect: readonly [number, number, number, number];
-    readonly weight: number;
+  /** The title cartouche as placed, its frame's strength and its title; null while Tab hides the UI. */
+  readonly cartouche: {
+    readonly row: AntiqueCartouche;
+    readonly anchor: AntiqueSheetAnchor;
+    readonly frame: number;
+    /** The title's block on the lettering sheet, normalised, and its strength. */
+    readonly title: {
+      readonly rect: readonly [number, number, number, number];
+      readonly weight: number;
+    } | null;
   } | null;
 }): readonly AntiqueOrnamentInstance[] {
   const { atlas, basis, frustum, size, unitPx } = input;
@@ -73,82 +75,103 @@ export function placeAntiqueOrnaments(input: {
     centre: [size.width / 2, size.height / 2] as const,
     half: [size.width * SUBJECT_HALF_SHARE, size.height * SUBJECT_HALF_SHARE] as const,
   };
-
-  for (const row of input.ornaments) {
-    const rect = atlas.sprites[row.sprite];
-    if (rect === undefined) continue;
-    const regime = row.regime === 'always' ? 1 : row.regime === 'cosmos' ? cosmos : nearSun;
-    if (regime <= 0) continue;
-    const aspect = rect.h / rect.w;
-    const uv = [
+  const uvOf = (rect: { x: number; y: number; w: number; h: number }) =>
+    [
       rect.x / atlas.width,
       rect.y / atlas.height,
       (rect.x + rect.w) / atlas.width,
       (rect.y + rect.h) / atlas.height,
-    ] as const;
-    if (input.chromeHidden && row.anchor.kind === 'sheet') continue;
-    const anchor =
-      row.anchor.kind === 'sheet' && row.clearsBeneath
-        ? antiqueSheetAnchor(row.anchor, aspect, [size.width, size.height], unitPx, input.covers)
-        : row.anchor;
+    ] as [number, number, number, number];
 
-    let centre: [number, number];
-    let widthPx: number;
+  const card = input.cartouche;
+  const cardRect = card && atlas.sprites[card.row.sprite];
+  if (card && cardRect && card.frame > 0.003) {
+    const centre = sheetAnchorCentre(card.anchor, size.width, size.height, unitPx);
+    const half: [number, number] = [
+      (card.anchor.sizeUnits * unitPx) / 2,
+      ((card.anchor.sizeUnits * unitPx) / 2) * (cardRect.h / cardRect.w),
+    ];
+    reserved.push({ centre, half });
+    const { pigment, accent } = card.row;
+    placed.push({
+      centrePx: centre,
+      halfPx: half,
+      rotation: 0,
+      opacity: card.frame,
+      clearsBeneath: true,
+      pigment,
+      accent,
+      rect: uvOf(cardRect),
+      lettering: false,
+    });
+    // The title is set level in the cartouche's blank field, lettering-sheet ink on its paper.
+    const field = atlas.interiors[card.row.sprite];
+    if (card.title !== null && field !== undefined)
+      placed.push({
+        centrePx: [
+          centre[0] + (field.cx - 0.5) * 2 * half[0],
+          centre[1] + (field.cy - 0.5) * 2 * half[1],
+        ],
+        halfPx: [field.rx * 2 * half[0], field.ry * 2 * half[1]],
+        rotation: 0,
+        opacity: card.title.weight,
+        clearsBeneath: true,
+        pigment,
+        accent,
+        rect: [...card.title.rect],
+        lettering: true,
+      });
+  }
+
+  for (const row of input.ornaments) {
+    const rect = atlas.sprites[row.sprite];
+    if (rect === undefined) continue;
+    const regime = row.regime === 'cosmos' ? cosmos : nearSun;
+    if (regime <= 0) continue;
+    const aspect = rect.h / rect.w;
+    const { anchor } = row;
     let opacity = row.opacity * regime;
-    let dir: Vec3;
-    if (anchor.kind === 'sky' || anchor.kind === 'space') {
-      const raw = raDecDistToCartesian(anchor.lonDeg, anchor.latDeg, 1);
-      const unit =
-        anchor.kind === 'space' ? rotateVec3ByTightMat3(GAL_TO_EQ_MATRIX, raw, [0, 0, 0]) : raw;
-      // A place is seen from the camera: its direction and distance from the eye.
-      const cam = input.camPosMpc;
-      const toward: Vec3 =
-        anchor.kind === 'space'
-          ? [
-              unit[0] * anchor.distMpc - cam[0],
-              unit[1] * anchor.distMpc - cam[1],
-              unit[2] * anchor.distMpc - cam[2],
-            ]
-          : unit;
-      const range = Math.hypot(toward[0], toward[1], toward[2]);
-      dir = [toward[0] / range, toward[1] / range, toward[2] / range];
-      const at = projectDirToPx(dir, basis, frustum, size);
-      if (at === null) continue;
-      centre = [at.x, at.y];
-      const angle =
-        anchor.kind === 'space'
-          ? 2 * Math.atan(anchor.sizeMpc / (2 * range))
-          : anchor.sizeDeg * DEG;
-      widthPx = (Math.tan(angle * 0.5) * 2 * pxPerTan) / at.z;
-      const share = widthPx / size.height;
-      opacity *=
-        smoothstep(SKY_FADE_IN[0], SKY_FADE_IN[1], share) *
-        (1 - smoothstep(SKY_FADE_OUT[0], SKY_FADE_OUT[1], share));
-    } else {
-      centre = sheetAnchorCentre(anchor, size.width, size.height, unitPx);
-      widthPx = anchor.sizeUnits * unitPx;
-      dir = rayThroughPx(centre, basis, frustum, size);
-    }
+    const raw = raDecDistToCartesian(anchor.lonDeg, anchor.latDeg, 1);
+    const unit =
+      anchor.kind === 'space' ? rotateVec3ByTightMat3(GAL_TO_EQ_MATRIX, raw, [0, 0, 0]) : raw;
+    // A place is seen from the camera: its direction and distance from the eye.
+    const cam = input.camPosMpc;
+    const toward: Vec3 =
+      anchor.kind === 'space'
+        ? [
+            unit[0] * anchor.distMpc - cam[0],
+            unit[1] * anchor.distMpc - cam[1],
+            unit[2] * anchor.distMpc - cam[2],
+          ]
+        : unit;
+    const range = Math.hypot(toward[0], toward[1], toward[2]);
+    const dir: Vec3 = [toward[0] / range, toward[1] / range, toward[2] / range];
+    const at = projectDirToPx(dir, basis, frustum, size);
+    if (at === null) continue;
+    const centre: [number, number] = [at.x, at.y];
+    const angle =
+      anchor.kind === 'space' ? 2 * Math.atan(anchor.sizeMpc / (2 * range)) : anchor.sizeDeg * DEG;
+    const widthPx = (Math.tan(angle * 0.5) * 2 * pxPerTan) / at.z;
+    const share = widthPx / size.height;
+    opacity *=
+      smoothstep(SKY_FADE_IN[0], SKY_FADE_IN[1], share) *
+      (1 - smoothstep(SKY_FADE_OUT[0], SKY_FADE_OUT[1], share));
     const half: [number, number] = [widthPx * 0.5, widthPx * 0.5 * aspect];
     // A figure the numbered border cuts reads as a stray claw, not a crop (Mars's
     // sea serpent against the bottom neatline): a beast or a constellation figure
     // sails whole inside the border or not at all, bar a sliver.
-    if (anchor.kind === 'sky' || anchor.kind === 'space') {
-      const inset = ANTIQUE_NUMERAL_INSET_UNITS * unitPx;
-      const plate = { width: size.width - 2 * inset, height: size.height - 2 * inset };
-      const [lo, hi] = anchor.kind === 'sky' ? [0.85, 0.95] : [0.97, 0.995];
-      opacity *= smoothstep(
-        lo,
-        hi,
-        onScreenShare([centre[0] - inset, centre[1] - inset], half, plate),
-      );
-    }
+    const inset = ANTIQUE_NUMERAL_INSET_UNITS * unitPx;
+    const plate = { width: size.width - 2 * inset, height: size.height - 2 * inset };
+    const [lo, hi] = anchor.kind === 'sky' ? [0.85, 0.95] : [0.97, 0.995];
+    opacity *= smoothstep(
+      lo,
+      hi,
+      onScreenShare([centre[0] - inset, centre[1] - inset], half, plate),
+    );
     if (opacity <= 0.003 || offScreen(centre, half, size)) continue;
     // An engraving is on the plate or not: a beast that would run under a
     // cartouche is withdrawn rather than shown cut off or faded.
-    if (anchor.kind !== 'sheet' && reserved.some((r) => overlapShare(centre, half, r) > 0.15))
-      continue;
-    if (anchor.kind === 'sheet' && row.clearsBeneath) reserved.push({ centre, half });
+    if (reserved.some((r) => overlapShare(centre, half, r) > 0.15)) continue;
     // The focused subject and its name sit at the plate's centre: a sea beast
     // never sails over them (a constellation figure may lie behind, as it truly does).
     if (anchor.kind === 'space' && overlapShare(centre, half, subject) > 0) continue;
@@ -163,27 +186,9 @@ export function placeAntiqueOrnaments(input: {
       clearsBeneath: row.clearsBeneath,
       pigment: row.pigment,
       accent: row.accent,
-      rect: [uv[0], uv[1], uv[2], uv[3]],
+      rect: uvOf(rect),
       lettering: false,
     });
-    // The title is set level in the cartouche's blank interior, lettering-sheet ink on its paper.
-    if (row.sprite === 'cartouche' && input.title !== null) {
-      const oval = atlas.cartoucheOval;
-      placed.push({
-        centrePx: [
-          centre[0] + (oval.cx - 0.5) * 2 * Math.abs(half[0]),
-          centre[1] + (oval.cy - 0.5) * 2 * half[1],
-        ],
-        halfPx: [oval.rx * 2 * Math.abs(half[0]), oval.ry * 2 * half[1]],
-        rotation: 0,
-        opacity: opacity * input.title.weight,
-        clearsBeneath: true,
-        pigment: row.pigment,
-        accent: row.accent,
-        rect: [...input.title.rect],
-        lettering: true,
-      });
-    }
   }
   return placed;
 }

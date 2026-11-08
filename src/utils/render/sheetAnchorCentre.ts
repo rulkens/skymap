@@ -1,14 +1,14 @@
 /**
- * sheetAnchorCentre — where a sheet-anchored ornament's centre falls on a
+ * sheetAnchorCentre — where a sheet-anchored ornament's (a cartouche's) centre falls on a
  * canvas, in device px: its print-unit inset measured inward from its corner.
  * The one placement the ornament pass and the label keep-out both read.
  */
 
-import type { AntiqueOrnamentAnchor } from '../../@types/rendering/AntiqueOrnamentAnchor';
+import type { AntiqueSheetAnchor } from '../../@types/rendering/AntiqueSheetAnchor';
 import type { Vec2 } from '../../@types/math/Vec2';
 
 export function sheetAnchorCentre(
-  anchor: Extract<AntiqueOrnamentAnchor, { kind: 'sheet' }>,
+  anchor: AntiqueSheetAnchor,
   width: number,
   height: number,
   unitPx: number,

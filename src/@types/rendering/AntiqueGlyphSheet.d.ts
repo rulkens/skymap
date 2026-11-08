@@ -14,5 +14,8 @@ export type AntiqueGlyphSheet = {
   /** Every glyph's baseline, as a fraction of its rect's height from the top. */
   readonly baseline: number;
   readonly glyphs: Readonly<Record<string, AntiqueSheetRect>>;
-  readonly titles: Readonly<Record<AntiqueTitleKey, AntiqueSheetRect>>;
+  /** Each title set in full, and compact (its name alone) for a shrunken cartouche. */
+  readonly titles: Readonly<
+    Record<AntiqueTitleKey, { readonly full: AntiqueSheetRect; readonly compact: AntiqueSheetRect }>
+  >;
 };

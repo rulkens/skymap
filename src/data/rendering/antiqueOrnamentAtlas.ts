@@ -7,17 +7,23 @@
 import type { AntiqueOrnamentAtlas } from '../../@types/rendering/AntiqueOrnamentAtlas';
 
 export const ANTIQUE_ORNAMENT_ATLAS: AntiqueOrnamentAtlas = {
-  width: 1859,
-  height: 2260,
+  width: 2263,
+  height: 2344,
   sprites: {
-    cartouche: { x: 408, y: 1052, w: 611, h: 654 },
+    scrollwork: { x: 4, y: 1052, w: 611, h: 654 },
+    strapwork: { x: 1283, y: 1052, w: 660, h: 415 },
+    tablet: { x: 4, y: 2050, w: 660, h: 290 },
     cetus: { x: 811, y: 4, w: 1044, h: 790 },
-    ship: { x: 4, y: 1052, w: 400, h: 660 },
-    whale: { x: 4, y: 2056, w: 660, h: 200 },
+    ship: { x: 1859, y: 4, w: 400, h: 660 },
+    whale: { x: 668, y: 2050, w: 660, h: 200 },
     dragon: { x: 4, y: 4, w: 803, h: 1044 },
-    seaSerpent: { x: 668, y: 1716, w: 1044, h: 317 },
-    seaMonster: { x: 4, y: 1716, w: 660, h: 336 },
-    seaHorse: { x: 1023, y: 1052, w: 660, h: 479 },
+    seaSerpent: { x: 668, y: 1710, w: 1044, h: 317 },
+    seaMonster: { x: 4, y: 1710, w: 660, h: 336 },
+    seaHorse: { x: 619, y: 1052, w: 660, h: 479 },
   },
-  cartoucheOval: { cx: 0.5039, cy: 0.5019, rx: 0.3076, ry: 0.3005 },
+  interiors: {
+    scrollwork: { cx: 0.5039, cy: 0.5019, rx: 0.3076, ry: 0.3005 },
+    strapwork: { cx: 0.4933, cy: 0.5227, rx: 0.2399, ry: 0.1692 },
+    tablet: { cx: 0.5052, cy: 0.6185, rx: 0.3873, ry: 0.2583 },
+  },
 };

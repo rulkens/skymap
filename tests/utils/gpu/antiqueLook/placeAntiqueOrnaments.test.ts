@@ -6,6 +6,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { placeAntiqueOrnaments } from '../../../../src/utils/gpu/antiqueLook/placeAntiqueOrnaments';
+import type { AntiqueCartouche } from '../../../../src/@types/rendering/AntiqueCartouche';
 import type { AntiqueOrnament } from '../../../../src/@types/rendering/AntiqueOrnament';
 import type { ViewBasis } from '../../../../src/@types/camera/projection/ViewBasis';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
@@ -17,8 +18,14 @@ import { normalize3 } from '../../../../src/utils/math/normalize3';
 const ATLAS = {
   width: 100,
   height: 100,
-  sprites: { beast: { x: 0, y: 0, w: 100, h: 50 }, cartouche: { x: 0, y: 50, w: 50, h: 50 } },
-  cartoucheOval: { cx: 0.5, cy: 0.6, rx: 0.3, ry: 0.25 },
+  sprites: { beast: { x: 0, y: 0, w: 100, h: 50 }, tablet: { x: 0, y: 50, w: 50, h: 50 } },
+  interiors: { tablet: { cx: 0.5, cy: 0.6, rx: 0.3, ry: 0.25 } },
+};
+const TABLET: AntiqueCartouche = {
+  sprite: 'tablet',
+  anchor: { corner: 'topLeft', insetUnits: [200, 200], sizeUnits: 100 },
+  pigment: 6,
+  accent: 6,
 };
 const FRUSTUM = { tanLeft: -1.0264, tanRight: 1.0264, tanDown: -0.5774, tanUp: 0.5774 };
 const SIZE = { width: 1600, height: 900 };
@@ -43,7 +50,7 @@ function skyRow(over: Partial<AntiqueOrnament> & { lonDeg?: number }): AntiqueOr
   return {
     sprite: 'beast',
     anchor: { kind: 'sky', lonDeg: over.lonDeg ?? 0, latDeg: 0, sizeDeg: 30 },
-    regime: 'always',
+    regime: 'stars',
     facesNorth: true,
     pigment: 0,
     accent: 0,
@@ -58,9 +65,7 @@ function place(
   rows: readonly AntiqueOrnament[],
   basis = NORTH_UP,
   camDistMpc = 0,
-  chromeHidden = false,
-  title: { rect: readonly [number, number, number, number]; weight: number } | null = null,
-  covers: readonly { x0: number; y0: number; x1: number; y1: number }[] = [],
+  cartouche: Parameters<typeof placeAntiqueOrnaments>[0]['cartouche'] = null,
 ) {
   const camPosMpc = [camDistMpc, 0, 0] as [number, number, number];
   return placeAntiqueOrnaments({
@@ -71,9 +76,7 @@ function place(
     size: SIZE,
     unitPx: 1,
     camPosMpc,
-    chromeHidden,
-    covers,
-    title,
+    cartouche,
   });
 }
 
@@ -121,46 +124,18 @@ describe('placeAntiqueOrnaments', () => {
     expect(mirrored!.centrePx).toEqual(plain!.centrePx);
   });
 
-  it('withdraws a sheet-anchored title when the UI is hidden, keeping the sky figures', () => {
-    const title = skyRow({
-      anchor: { kind: 'sheet', corner: 'topLeft', insetUnits: [100, 100], sizeUnits: 100 },
-      facesNorth: false,
-    });
-    expect(place([title, skyRow({})], NORTH_UP, 0, false)).toHaveLength(2);
-    expect(place([title, skyRow({})], NORTH_UP, 0, true)).toHaveLength(1);
-  });
-
-  it("sets the plate's title from the lettering sheet in the cartouche's interior, at its strength", () => {
-    const cartouche = skyRow({
-      sprite: 'cartouche',
-      anchor: { kind: 'sheet', corner: 'topLeft', insetUnits: [200, 200], sizeUnits: 100 },
-      facesNorth: false,
-      clearsBeneath: true,
-    });
+  it("sets the plate's title from the lettering sheet in the cartouche's field, at its strength", () => {
     const rect = [0.1, 0.2, 0.3, 0.4] as const;
-    const [frame, title] = place([cartouche], NORTH_UP, 0, false, { rect, weight: 0.4 });
-    expect(frame!.lettering).toBe(false);
+    const card = { row: TABLET, anchor: TABLET.anchor, frame: 0.7, title: { rect, weight: 0.4 } };
+    const [frame, title] = place([], NORTH_UP, 0, card);
+    expect(frame).toMatchObject({ lettering: false, opacity: 0.7, clearsBeneath: true });
     expect(title).toMatchObject({ lettering: true, opacity: 0.4, rect: [...rect], rotation: 0 });
     // The interior's centre sits 0.1 of the sprite's height below its middle.
     expect(title!.centrePx[0]).toBeCloseTo(frame!.centrePx[0]);
     expect(title!.centrePx[1]).toBeCloseTo(frame!.centrePx[1] + 0.1 * 2 * frame!.halfPx[1]);
     expect(title!.halfPx[0]).toBeCloseTo(0.3 * 2 * frame!.halfPx[0]);
     expect(title!.halfPx[1]).toBeCloseTo(0.25 * 2 * frame!.halfPx[1]);
-    expect(place([cartouche], NORTH_UP, 0, false, null)).toHaveLength(1);
-  });
-
-  it('moves the cartouche off an open panel, and its title with it', () => {
-    const cartouche = skyRow({
-      sprite: 'cartouche',
-      anchor: { kind: 'sheet', corner: 'topLeft', insetUnits: [200, 200], sizeUnits: 100 },
-      facesNorth: false,
-      clearsBeneath: true,
-    });
-    const panel = { x0: 0, y0: 0, x1: 400, y1: 400 };
-    const title = { rect: [0, 0, 1, 1] as const, weight: 1 };
-    const [frame, set] = place([cartouche], NORTH_UP, 0, false, title, [panel]);
-    expect(frame!.centrePx[0]).toBeGreaterThan(SIZE.width / 2);
-    expect(set!.centrePx[0]).toBeCloseTo(frame!.centrePx[0]);
+    expect(place([], NORTH_UP, 0, { ...card, title: null })).toHaveLength(1);
   });
 
   it('drops a sky figure that is mostly off the plate', () => {
@@ -182,7 +157,7 @@ describe('placeAntiqueOrnaments', () => {
       placeAntiqueOrnaments({
         ornaments: [
           skyRow({
-            regime: 'always',
+            regime: 'cosmos',
             facesNorth: false,
             anchor: { kind: 'space', lonDeg: 0, latDeg: 0, distMpc: 20, sizeMpc: 4 },
           }),
@@ -192,13 +167,12 @@ describe('placeAntiqueOrnaments', () => {
         frustum: FRUSTUM,
         size: SIZE,
         unitPx: 1,
-        chromeHidden: false,
-        covers: [],
-        title: null,
+        cartouche: null,
         camPosMpc: GALACTIC_CENTRE.map((c) => c * camX) as [number, number, number],
       })[0]!;
     // Halfway to it, it should look about twice as wide and stay where it was.
-    const far = atPlace(0);
+    // Just past the Sun, out in the cosmos regime where the place shows.
+    const far = atPlace(0.05);
     const near = atPlace(10);
     expect(near.halfPx[0] / far.halfPx[0]).toBeCloseTo(2, 1);
     expect(near.centrePx[0]).toBeCloseTo(far.centrePx[0], 3);
@@ -218,9 +192,7 @@ describe('placeAntiqueOrnaments', () => {
         frustum: FRUSTUM,
         size: SIZE,
         unitPx,
-        chromeHidden: false,
-        covers: [],
-        title: null,
+        cartouche: null,
         camPosMpc: [0, 0, 0],
       });
     // The border is 50 print units deep: at 8 px a unit it reaches 400 px in,
@@ -243,9 +215,7 @@ describe('placeAntiqueOrnaments', () => {
         frustum: FRUSTUM,
         size: SIZE,
         unitPx: 1,
-        chromeHidden: false,
-        covers: [],
-        title: null,
+        cartouche: null,
         camPosMpc: [0, 0, 0],
       });
     const ahead: ViewBasis = (() => {
@@ -257,13 +227,11 @@ describe('placeAntiqueOrnaments', () => {
     expect(at(ahead)).toEqual([]);
   });
 
-  it('withdraws a sky figure that would run under a clearing sheet ornament', () => {
-    const cartouche: AntiqueOrnament = {
-      ...skyRow({ facesNorth: false, clearsBeneath: true }),
-      anchor: { kind: 'sheet', corner: 'topLeft', insetUnits: [800, 450], sizeUnits: 300 },
-    };
+  it('withdraws a sky figure that would run under the cartouche', () => {
+    const anchor = { corner: 'topLeft' as const, insetUnits: [800, 450] as const, sizeUnits: 300 };
+    const card = { row: TABLET, anchor, frame: 1, title: null };
     // Straight ahead, the figure lands on the cartouche placed at the canvas centre.
-    expect(place([cartouche, skyRow({})])).toHaveLength(1);
+    expect(place([skyRow({})], NORTH_UP, 0, card)).toHaveLength(1);
     expect(place([skyRow({})])).toHaveLength(1);
   });
 

@@ -2,18 +2,21 @@
  * antiqueTitleGlobe — the widest globe with a cartouche title of its own
  * (`ANTIQUE_GLOBE_TITLES`), as `antiquePlateTitle` reads it: its apparent
  * radius in print units, the ground's scale under the eye in km per print unit,
- * where the plate's centre ray meets it (Greenwich longitude, so region boxes
- * read modern maps), and the share of the plate it covers.
+ * where the view's axis meets it (Greenwich longitude, so region boxes
+ * read modern maps), the share of the plate it covers, and its disc on the
+ * canvas, rings included (what the cartouche keeps clear of); null behind the eye.
  */
 
 import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { ViewBasis } from '../../../../@types/camera/projection/ViewBasis';
 import type { Vec2 } from '../../../../@types/math/Vec2';
 import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { ScreenDiscPx } from '../../../../@types/rendering/ScreenDiscPx';
 import { SCENE_BODIES } from '../../../../data/bodies/sceneBodies';
+import { SCENE_RINGS } from '../../../../data/bodies/sceneRings';
 import { ANTIQUE_GLOBE_TITLES } from '../../../../data/rendering/antiqueGlobeTitles';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
-import { rayThroughPx } from '../../../../utils/camera/projection/rayThroughPx';
+import { projectDirToPx } from '../../../../utils/camera/projection/projectDirToPx';
 import { antiqueGlobeCoverage } from '../../../../utils/gpu/antiqueLook/antiqueGlobeCoverage';
 import { rulingLonLat } from '../../../../utils/gpu/antiqueLook/rulingLonLat';
 import { innerBoundRadiusM } from '../../../../utils/occlusion/innerBoundRadiusM';
@@ -28,6 +31,7 @@ export function antiqueTitleGlobe(
   readonly kmPerUnit: number;
   readonly centreLonLat: Readonly<Vec2> | null;
   readonly coverage: number;
+  readonly discPx: ScreenDiscPx | null;
 } | null {
   const { frustum, canvasSize: size, drawCamPos: eye } = ctx;
   let widest: {
@@ -46,11 +50,17 @@ export function antiqueTitleGlobe(
     // Angular radius from the eye, as print units at the plate's scale.
     const radiusUnits =
       (Math.asin(Math.min(1, 1 / Math.hypot(...centre))) * ctx.drawPxPerRad) / unitPx;
-    if (widest === null || radiusUnits > widest.radiusUnits) widest = { body, radiusM, centre, radiusUnits };
+    if (widest === null || radiusUnits > widest.radiusUnits)
+      widest = { body, radiusM, centre, radiusUnits };
   }
   if (widest === null) return null;
   const orientation = ctx.snapshot.bodyStates.get(widest.body.id)!.orientation;
-  const ray = rayThroughPx([size.width / 2, size.height / 2], basis, frustum, size);
+  // The view's axis, not the canvas centre: a lens shift (a phone's open sheet) moves the subject up.
+  const ray = basis.forward;
+  const range = Math.hypot(...widest.centre);
+  const at = projectDirToPx(widest.centre.map((c) => c / range) as Vec3, basis, frustum, size);
+  const ring = SCENE_RINGS.find((r) => r.bodyId === widest.body.id);
+  const reach = ring ? Math.max(1, (ring.outerRadiusKm * 1000) / widest.radiusM) : 1;
   return {
     id: widest.body.id,
     radiusUnits: widest.radiusUnits,
@@ -62,5 +72,6 @@ export function antiqueTitleGlobe(
       ray,
     ),
     coverage: antiqueGlobeCoverage(widest.centre, basis, frustum, size),
+    discPx: at && { centre: [at.x, at.y], radius: widest.radiusUnits * unitPx * reach },
   };
 }

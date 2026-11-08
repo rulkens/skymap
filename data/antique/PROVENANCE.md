@@ -11,8 +11,10 @@ applies.
 
 | Sprite | Source work | Author / engraver | Year | Commons file page | Licence on Commons | Scan size used | Crop box |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| cartouche | _Poli Arctici, et circumiacentium terrarum descriptio novissima_: the empty strapwork cartouche in the Tartaria quadrant (interior blank as engraved) | Frederik de Wit (1629/30–1706), Amsterdam | c. 1680 (BnF dates it 1690) | [link](https://commons.wikimedia.org/wiki/File:Poli_Arctici,_et_circumiacentium_terrarum_descriptio_novissima_-_per_F._de_Wit_-_btv1b10116728c.jpg) | Public domain (PD France / PD-US expired), BnF Gallica scan | 7487×6277 (orig.) | [5180, 1775, 5771, 2409] |
-| whale | same map: the naturalistic whale in the lower-right whaling vignette | same | same | same | same | same | [4792, 5315, 5916, 5631] |
+| scrollwork | _Poli Arctici, et circumiacentium terrarum descriptio novissima_: the empty strapwork cartouche in the Tartaria quadrant (interior blank as engraved) | Frederik de Wit (1629/30–1706), Amsterdam | c. 1680 (BnF dates it 1690) | [link](https://commons.wikimedia.org/wiki/File:Poli_Arctici,_et_circumiacentium_terrarum_descriptio_novissima_-_per_F._de_Wit_-_btv1b10116728c.jpg) | Public domain (PD France / PD-US expired), BnF Gallica scan | 7487×6277 (orig.) | [5180, 1775, 5771, 2409] |
+| strapwork | _Aevi Veteris, Typus Geographicus_ (Theatrum Orbis Terrarum, Parergon): the strapwork cartouche with lion masks below the world map (its oval imprint erased) | Abraham Ortelius (1527–1598), Antwerp; engraved for Vrients' edition | 1590 | [link](<https://commons.wikimedia.org/wiki/File:Aevi_Veteris,_Typus_Geographicus._Abrah._Ortelius_Regiae_Mts._Geographus_describ._cum_Privilegijs_decennalib._Imp._Reg._et_(IA_dr_aevi-veteris-typus-geographicus-abrah-ortelius-regiae-mts-geographus-de-10001347).jpg>) | PD-old-100-expired, David Rumsey via Internet Archive | 14420×12062 (orig.) | [5479, 6272, 8940, 8443] |
+| tablet | _Pascaart van de Noort Zee_: the framed tablet in the lower right (its scale bars erased) | Pieter Goos (1616–1675), Amsterdam | 1666 | [link](<https://commons.wikimedia.org/wiki/File:Pascaart_van_de_Noort_Zee._(IA_dr_pascaart-van-de-noort-zee-12179010).jpg>) | PD-old-100-expired, David Rumsey via Internet Archive | 11627×9230 (orig.) | [7208, 7199, 10696, 8953] |
+| whale | same map as the scrollwork: the naturalistic whale in the lower-right whaling vignette | same | same | same | same | same | [4792, 5315, 5916, 5631] |
 | ship (+ `ship.colour`) | _Paskaerte van Nova Granada en t'Eylandt California_ (Zee-Atlas): the stern-quarter three-master in the Pacific | Pieter Goos (1616–1675), Amsterdam | 1666 | [link](<https://commons.wikimedia.org/wiki/File:Paskaerte_van_Nova_Granada,_en_t%27Eylandt_California._t%27Amersterdam_by_Pieter_Goos_op%27t_Waater_inde_Vergulde_Zeepiegel,_Ao_1666._(IA_dr_paskaerte-van-nova-granada-en-teylandt-california-tamersterdam-by-piete-12179047).jpg>) | PD-old-100-expired, David Rumsey via Internet Archive | 11856×9198 (orig.) | [3532, 5108, 3971, 5847] |
 | cetus | _Firmamentum Sobiescianum sive Uranographia_, plate Cetus | Johannes Hevelius (1611–1687) | 1690 | [link](<https://commons.wikimedia.org/wiki/File:Cetus_(Uranographia_Hevelius).jpg>) | Public domain (author died >70 y; e-rara scan) | 4716×3537 (orig.) | [688, 98, 4278, 2827] |
 | seaMonster | _Islandia_ (Theatrum Orbis Terrarum) | Abraham Ortelius (1527–1598) | c. 1590 (BnF dates it 1587) | [link](<https://commons.wikimedia.org/wiki/File:Islandia_-_(Ortelius_Abraham)_-_btv1b10678483d.jpg>) | Public domain (PD France / PD-US expired), BnF Gallica scan | 6424×4640 (orig.) | [1753, 3711, 2844, 4249] |
@@ -20,7 +22,7 @@ applies.
 | dragon | _Firmamentum Sobiescianum sive Uranographia_ (bound with _Prodromus astronomiae_), Fig. B, Draco | Johannes Hevelius (1611–1687) | 1690 | [link](<https://commons.wikimedia.org/wiki/File:Draco_Hevelius_-_Prodromus_astronomiae_1690_(5590223).jpg>) | PD-old-100-expired, Polona (National Library of Poland) scan | 4400×3474 (orig.) | [1359, 438, 3582, 3346] |
 | seaSerpent | same atlas, Fig. TT, Hydra (uncoloured copy) | same | 1690 | [link](<https://commons.wikimedia.org/wiki/File:Hydra_-_Prodromus_astronomiae_1690_(436340).jpg>) | PD-old-100-expired, Polona scan | 4435×3495 (orig.) | [44, 441, 4442, 1739] |
 
-The cartouche's title is engraved at pack time in IM FELL English (`data/raw/fonts/`, © Igino Marini, SIL Open
+Each cartouche's title is set at runtime in IM FELL English (`data/raw/fonts/`, © Igino Marini, SIL Open
 Font License 1.1, `data/raw/fonts/OFL-IMFell.txt`).
 
 ## Processing
@@ -39,10 +41,21 @@ long side.
   nearby body hatching (inked donors only, so no blank paper discs). The chart lines are removed per
   half of the plate, because the two sheets of each plate are offset at the gutter. Neither figure
   is mirrored.
+- **strapwork, tablet:** both are hand-coloured, so ink is read from the max channel. The map's ruled
+  lines (Ortelius' graticule, Goos' rhumbs) are cut away by a body mask: the binary ink opened by a
+  2–3 px disc (which drops the thin rules), closed by 16–18 px, holes filled, opened by 5 px,
+  components under 3000 px dropped, grown by 9–14 px, and cut to a hand-drawn outline polygon. The
+  strapwork's top-left scroll, lighter than the rest, is forced into the mask by its own polygon.
+  The field (Ortelius' oval imprint, Goos' scale bars) is erased; the crop is trimmed and resized to
+  1024 px wide.
 - **ship:** Goos labels no ship type; it is a typical Dutch three-masted merchantman of the 1660s,
   seen from the stern. The colour layer carries the washes: brown hull, green sea.
 
 ## Known residue
+
+- strapwork: short ends of the graticule remain where it met the straps, and between the right-hand
+  straps and the roll.
+- tablet: a few rhumb-line ends remain beside the left scroll.
 
 - whale: the belly line is cut where the whale lies on the dark shore hatching, and a few sea-hatching
   strokes remain under the body (the packer closes the silhouette over the gap).

@@ -2200,6 +2200,37 @@ rewritten only by `npm run build-meshes`, which re-bakes the models.
   downsampled, and rescaled to the seed albedo.
 - **Checked:** 2026-10-30: <https://naif.jpl.nasa.gov/pub/naif/pds/pds4/orex/orex_spice/spice_kernels/dsk/>
 
+## Antique plate engravings
+
+### Engraved ornaments of the antique look (Ortelius, Goos, de Wit, Hevelius)
+
+<!-- attribution: id=antique-ornaments -->
+
+- **What:** The antique look's engraved ornaments: three title cartouches (de
+  Wit's scrollwork, Ortelius' strapwork, Goos' framed tablet), Hevelius'
+  constellation figures (Cetus, Draco, Hydra), and the sea beasts and ship that
+  sail the Zone of Avoidance. Each is cut from a scan of a 16th- or 17th-century
+  map or atlas plate; `data/antique/PROVENANCE.md` lists every file, crop box
+  and scan size.
+- **By:** Abraham Ortelius (1527–1598), Pieter Goos (1616–1675), Frederik de Wit
+  (1629/30–1706) and Johannes Hevelius (1611–1687); scans by the Bibliothèque
+  nationale de France (Gallica), the David Rumsey Map Collection (via the
+  Internet Archive), e-rara and Polona.
+- **Licence:** Public domain. Every author died more than 100 years ago and
+  every scan is a faithful 2D reproduction; Wikimedia Commons marks each file
+  "Public domain" (PD-old-100-expired, PD France or PD-US expired).
+- **Use:** Free, no credit asked
+- **Attribution:** None required. `data/antique/PROVENANCE.md` credits each
+  plate and scan.
+- **Upstream:** <https://commons.wikimedia.org/wiki/File:Pascaart_van_de_Noort_Zee._(IA_dr_pascaart-van-de-noort-zee-12179010).jpg>
+  and the other Commons pages listed in `data/antique/PROVENANCE.md`.
+- **Enters skymap:** `data/antique/sprites/*.png` → `npm run pack-ornaments` →
+  `public/antique/ornaments.png`.
+- **Modified:** Yes. Cropped, the map's ruled lines and lettering removed, the
+  cartouches' fields erased for runtime titles, the ink pushed to two levels and
+  repacked with fill, wash and accent planes.
+- **Checked:** 2026-11-08: <https://commons.wikimedia.org/wiki/File:Pascaart_van_de_Noort_Zee._(IA_dr_pascaart-van-de-noort-zee-12179010).jpg>
+
 ## Fonts
 
 All three are under the SIL Open Font License 1.1, whose second condition

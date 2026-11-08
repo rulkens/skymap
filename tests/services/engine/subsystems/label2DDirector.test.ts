@@ -13,6 +13,7 @@ import type { Label2D } from '../../../../src/@types/rendering/Label2D';
 import type { Label2DLeader } from '../../../../src/@types/rendering/Label2DLeader';
 import type { Label2DDirectorConfig } from '../../../../src/@types/engine/subsystems/Label2DDirectorConfig';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
+import { createOrbitCamera } from '../../../../src/utils/camera/orbitCamera/createOrbitCamera';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import { LABEL_EM_PX_RETUNE } from '../../../../src/data/labels/labelSizingDefaults';
@@ -62,9 +63,26 @@ function makeHighlightState(hover: string | null, select: string | null): Engine
 // pure function of it, so tests step time by passing explicit stamps.  The
 // envelope ramp is 300 ms of smoothstep, so 0 / 150 / 300 hit alpha
 // 0 / 0.5 / 1 exactly.
+// The antique look places its title cartouche from the camera and the globes in view.
+const NO_BODIES = new Map();
+const VIEW = {
+  cam: createOrbitCamera({
+    target: [0, 0, 0],
+    distance: 1,
+    yaw: 0,
+    pitch: 0,
+    fovYRad: Math.PI / 2,
+    aspect: 1,
+    near: 0.1,
+    far: 100,
+  }),
+  frustum: { tanLeft: -1, tanRight: 1, tanDown: -1, tanUp: 1 },
+};
+
 function makeCtx(nowMs = 0): FrameView {
   return {
-    snapshot: { nowMs },
+    ...VIEW,
+    snapshot: { bodyStates: NO_BODIES, nowMs },
     drawCamPos: [0, 0, 0],
     vp: mat4.identity(),
     canvasSize: { width: 1000, height: 1000 },
@@ -91,7 +109,8 @@ const NEAR0_SLAB: Slab = {
 
 function makeNear0Ctx(nowMs = 0): FrameView {
   return {
-    snapshot: { nowMs },
+    ...VIEW,
+    snapshot: { bodyStates: NO_BODIES, nowMs },
     drawCamPos: [0, 0, 0],
     slabs: [NEAR0_SLAB],
     canvasSize: { width: 1000, height: 1000 },
@@ -192,7 +211,7 @@ describe('label2DDirector', () => {
     const ctxAt = (nowMs: number) =>
       ({
         ...makeCtx(nowMs),
-        snapshot: { nowMs, focusBlend: 1, focusPickId: FOCUS },
+        snapshot: { bodyStates: NO_BODIES, nowMs, focusBlend: 1, focusPickId: FOCUS },
       }) as unknown as FrameView;
 
     dir.runFrame(state, ctxAt(0));
@@ -1199,7 +1218,10 @@ describe('label2DDirector', () => {
           maxY: 0,
         }));
         const rest = (nowMs: number) =>
-          ({ ...makeNear0Ctx(nowMs), snapshot: { nowMs, focusBlend: 0 } }) as FrameView;
+          ({
+            ...makeNear0Ctx(nowMs),
+            snapshot: { bodyStates: NO_BODIES, nowMs, focusBlend: 0 },
+          }) as unknown as FrameView;
         const onDisc = { fadeAlpha: 1, declutterPriority: 10 * CAPTION_PRIORITY_SCALE };
         const cluster: Label2D = {
           ...SAMPLE_LABEL,
@@ -1347,7 +1369,10 @@ describe('label2DDirector', () => {
     const antiqueState = (enabled: boolean) =>
       ({ ...makeState(), settings: { antique: { enabled } } }) as unknown as EngineState;
 
-    const ctx = { ...makeCtx(0), snapshot: { nowMs: 0, focusBlend: 0 } } as unknown as FrameView;
+    const ctx = {
+      ...makeCtx(0),
+      snapshot: { bodyStates: NO_BODIES, nowMs: 0, focusBlend: 0 },
+    } as unknown as FrameView;
 
     dir.runFrame(antiqueState(false), ctx);
     dir.runFrame(antiqueState(true), ctx);
@@ -1374,7 +1399,7 @@ describe('label2DDirector', () => {
       ({
         ...makeCtx(0),
         drawCamPos,
-        snapshot: { nowMs: 0, focusBlend: 0 },
+        snapshot: { bodyStates: NO_BODIES, nowMs: 0, focusBlend: 0 },
       }) as unknown as FrameView;
 
     dir.runFrame(state, ctxAt([0, 0, 0.01]));
@@ -1418,7 +1443,7 @@ describe('label2DDirector', () => {
     const ctxAt = (nowMs: number) =>
       ({
         ...makeCtx(nowMs),
-        snapshot: { nowMs, focusBlend: 1, focusPickId: EARTH },
+        snapshot: { bodyStates: NO_BODIES, nowMs, focusBlend: 1, focusPickId: EARTH },
       }) as unknown as FrameView;
 
     dir.runFrame(state, ctxAt(0));
@@ -1451,7 +1476,10 @@ describe('label2DDirector', () => {
       selection: { hover: null, select: { type: 'body', id: 'earth' }, focus: null },
       settings: { antique: { enabled: true } },
     } as unknown as EngineState;
-    const ctx = { ...makeCtx(0), snapshot: { nowMs: 0, focusBlend: 0 } } as unknown as FrameView;
+    const ctx = {
+      ...makeCtx(0),
+      snapshot: { bodyStates: NO_BODIES, nowMs: 0, focusBlend: 0 },
+    } as unknown as FrameView;
 
     dir.runFrame(state, ctx);
     const shown = dir.labels().find((l) => l.id === town.id)!;

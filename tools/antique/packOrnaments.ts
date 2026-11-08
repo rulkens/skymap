@@ -4,10 +4,10 @@
  * ornaments into `public/antique/ornaments.png` and generates its layout module.
  * Channels: R ink density, G fill (the solid silhouette the plate is cleared to
  * paper under), B wash (the alpha of `<id>.colour.png` when a sprite has one,
- * else a flat share of the fill; the cartouche's frame, never its field), A the
- * share of the row's main pigment over its accent (the cartouche's outer scrolls).
- * The cartouche's interior is left blank: each plate sets its own title there
- * at runtime (`buildAntiqueGlyphSheet`), so the module records the interior oval.
+ * else a flat share of the fill; a cartouche's frame, never its field), A the
+ * share of the row's main pigment over its accent (the scrollwork's outer scrolls).
+ * A cartouche's field is left blank: each plate sets its own title there at
+ * runtime (`buildAntiqueGlyphSheet`), so the module records each field's oval.
  * Inputs: data/antique/sprites/<id>.png (black RGB, ink in alpha), optional
  * <id>.colour.png (RGB hue, alpha saturation); provenance in data/antique/PROVENANCE.md.
  */
@@ -24,10 +24,13 @@ import { dilateMaskDisc } from '../utils/image/dilateMaskDisc';
 import { fillMaskHoles } from '../utils/image/fillMaskHoles';
 import { gaussianBlurFloat32 } from '../utils/image/gaussianBlurFloat32';
 import { shelfPack } from '../utils/image/shelfPack';
+import type { OrnamentField } from './@types/OrnamentField';
 import type { OrnamentSprite } from './@types/OrnamentSprite';
 
 const SPRITE_IDS = [
-  'cartouche',
+  'scrollwork',
+  'strapwork',
+  'tablet',
   'cetus',
   'ship',
   'whale',
@@ -42,7 +45,7 @@ const OUT_PNG = 'public/antique/ornaments.png';
 const OUT_TS = 'src/data/rendering/antiqueOrnamentAtlas.ts';
 
 const MAX_SIDE_PX = 640;
-const MAX_ATLAS_PX = 2304;
+const MAX_ATLAS_PX = 2560;
 const GUTTER_PX = 4;
 /** Transparent margin around each sprite: room for the close and the fill halo. */
 const PAD_PX = 10;
@@ -52,25 +55,45 @@ const CLOSE_RADIUS_PX = 6;
 const CLOSE_RADIUS_OVERRIDE_PX: Partial<Record<(typeof SPRITE_IDS)[number], number>> = {
   whale: 24,
   // The scrolls' open curls, so no ruling runs through them.
-  cartouche: 14,
+  scrollwork: 14,
+  tablet: 10,
 };
 const FILL_GROW_PX = 3;
 /** A sea beast's and a constellation figure's flat wash, as a share of full. */
 const FILL_WASH = 0.6;
 const WASH_EDGE_SIGMA_PX = 0.8;
 const FIGURE_WASH = 0.85;
-/** The cartouche's outer scrolls, past this scale of its interior: the accent pigment's. */
-const SCROLL_SCALE = 1.38;
 const FILL_BLUR_SIGMA_PX = 1.5;
 
 /**
- * The cartouche's empty interior, measured on the 591×634 source just inside its
- * inner rule and stored normalised to the unpadded sprite. Hard-coded rather than
- * detected: the interior opens upward between the crest scrolls, so a flood leaks.
+ * Each cartouche's empty field, measured on its source just inside the inner rule
+ * and stored normalised to the unpadded sprite. Hard-coded rather than detected:
+ * the scrollwork's field opens upward between the crest scrolls, so a flood leaks.
+ * `accentScale`: past this scale of the field, the accent pigment's (the outer scrolls).
  */
-const CARTOUCHE_OVAL = { cx: 0.504, cy: 0.502, rx: 0.318, ry: 0.31 } as const;
+const FIELDS: Partial<Record<(typeof SPRITE_IDS)[number], OrnamentField>> = {
+  scrollwork: { shape: 'ellipse', cx: 0.504, cy: 0.502, rx: 0.318, ry: 0.31, accentScale: 1.38 },
+  strapwork: {
+    shape: 'ellipse',
+    cx: 0.4931,
+    cy: 0.5239,
+    rx: 0.2474,
+    ry: 0.1778,
+    accentScale: 1.9,
+    washReachPx: 4,
+  },
+  tablet: { shape: 'rect', cx: 0.5054, cy: 0.6273, rx: 0.3473, ry: 0.2412, washReachPx: 4 },
+};
+/** A rectangular field's title oval, past its rect: the fitted lines' chord still clears the rule. */
+const RECT_TITLE_OVAL = 1.15;
 /** Ink-density band pushed to paper/ink, so scanned greys read as engraved lines. */
 const INK_PUSH = [0.3, 0.65] as const;
+/** Ortelius' strapwork is cross-hatched densely: only its lines' cores print, or it shrinks to a blot. */
+const INK_PUSH_OVERRIDE: Partial<Record<(typeof SPRITE_IDS)[number], readonly [number, number]>> = {
+  strapwork: [0.5, 0.85],
+};
+/** A cartouche frame's wash, as a share of full: a thin colourist's wash, not a flat poster yellow. */
+const FRAME_WASH = 0.7;
 /**
  * Constellation figures print through the atlas's mip chain (`decor.wesl`), so
  * they keep their source resolution and a gentler push: each hatch line stays a
@@ -117,19 +140,19 @@ function spritePath(file: string): string {
   return `${ROOT}data/antique/sprites/${file}.png`;
 }
 
-function insideOval(x: number, y: number, w: number, h: number, scale: number): boolean {
-  const { cx, cy, rx, ry } = CARTOUCHE_OVAL;
+function insideField(
+  field: OrnamentField,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  scale: number,
+): boolean {
   const iw = w - 2 * PAD_PX;
   const ih = h - 2 * PAD_PX;
-  const u = (x - PAD_PX - cx * iw) / (rx * iw * scale);
-  const v = (y - PAD_PX - cy * ih) / (ry * ih * scale);
-  return u * u + v * v <= 1;
-}
-
-/** Erases the interior's specks, so the plate's title is set on clean paper. */
-function clearInterior(ink: Uint8Array, w: number, h: number): void {
-  for (let y = 0; y < h; y++)
-    for (let x = 0; x < w; x++) if (insideOval(x, y, w, h, 0.95)) ink[y * w + x] = 0;
+  const u = (x - PAD_PX - field.cx * iw) / (field.rx * iw * scale);
+  const v = (y - PAD_PX - field.cy * ih) / (field.ry * ih * scale);
+  return field.shape === 'rect' ? Math.abs(u) <= 1 && Math.abs(v) <= 1 : u * u + v * v <= 1;
 }
 
 async function buildSprite(id: (typeof SPRITE_IDS)[number]): Promise<OrnamentSprite> {
@@ -139,8 +162,12 @@ async function buildSprite(id: (typeof SPRITE_IDS)[number]): Promise<OrnamentSpr
     data: ink,
     width: w,
     height: h,
-  } = await loadInk(id, figure ? FIGURE_INK_PUSH : INK_PUSH, side);
-  if (id === 'cartouche') clearInterior(ink, w, h);
+  } = await loadInk(id, figure ? FIGURE_INK_PUSH : (INK_PUSH_OVERRIDE[id] ?? INK_PUSH), side);
+  const field = FIELDS[id];
+  const inField = (i: number, scale: number) =>
+    field !== undefined && insideField(field, i % w, Math.floor(i / w), w, h, scale);
+  // The field's specks erased, so the plate's title is set on clean paper.
+  if (field) for (let i = 0; i < ink.length; i++) if (inField(i, 0.95)) ink[i] = 0;
   // The silhouette reads the unpushed ink: faint wave and hatch lines still hold it together.
   const { data: density } = await loadInk(id, undefined, side);
   const solid = fillMaskHoles(
@@ -153,30 +180,40 @@ async function buildSprite(id: (typeof SPRITE_IDS)[number]): Promise<OrnamentSpr
     w,
     h,
   );
-  if (id === 'cartouche')
-    for (let y = 0; y < h; y++)
-      for (let x = 0; x < w; x++) if (insideOval(x, y, w, h, 1)) solid[y * w + x] = 1;
+  if (field) for (let i = 0; i < solid.length; i++) if (inField(i, 1)) solid[i] = 1;
   const grown = dilateMaskDisc(solid, w, h, FILL_GROW_PX);
   const soft = gaussianBlurFloat32(Float32Array.from(grown), w, h, FILL_BLUR_SIGMA_PX);
   const fill = Uint8Array.from(soft, (v) => Math.round(Math.min(1, v) * 255));
   // A colourist laid each wash flat inside the engraved outline: the whole
-  // silhouette, the cartouche's frame but never its field, where the title sits on paper.
+  // silhouette, a cartouche's frame but never its field, where the title sits on paper.
   const share = FIGURE_IDS.has(id) ? FIGURE_WASH : FILL_WASH;
   // Ungrown and barely softened: the colourist stopped at the line, not a halo past it.
   const edgeWash = Uint8Array.from(
     gaussianBlurFloat32(Float32Array.from(solid), w, h, WASH_EDGE_SIGMA_PX),
     (v) => Math.round(Math.min(1, v) * 255),
   );
-  const wash =
-    id === 'cartouche'
-      ? edgeWash.map((v, i) => (insideOval(i % w, Math.floor(i / w), w, h, 1) ? 0 : v))
-      : existsSync(spritePath(`${id}.colour`))
-        ? (await loadInk(`${id}.colour`, undefined, side)).data
-        : fill.map((v) => Math.round(v * share));
+  // A frame cut from a ruled map keeps only the paper its engraving reaches: the
+  // closed silhouette also spans gaps between its straps, which a wash would stain.
+  const reach = field?.washReachPx;
+  const nearInk = reach
+    ? dilateMaskDisc(
+        ink.map((v) => (v > INK_THRESHOLD ? 1 : 0)),
+        w,
+        h,
+        reach,
+      )
+    : null;
+  const wash = field
+    ? edgeWash.map((v, i) =>
+        inField(i, 1) || (nearInk && !nearInk[i]) ? 0 : Math.round(v * FRAME_WASH),
+      )
+    : existsSync(spritePath(`${id}.colour`))
+      ? (await loadInk(`${id}.colour`, undefined, side)).data
+      : fill.map((v) => Math.round(v * share));
   const accent = new Uint8Array(w * h).fill(255);
-  if (id === 'cartouche')
-    for (let y = 0; y < h; y++)
-      for (let x = 0; x < w; x++) if (!insideOval(x, y, w, h, SCROLL_SCALE)) accent[y * w + x] = 0;
+  const accentScale = field?.accentScale;
+  if (accentScale)
+    for (let i = 0; i < accent.length; i++) if (!inField(i, accentScale)) accent[i] = 0;
   const softAccent = gaussianBlurFloat32(Float32Array.from(accent), w, h, FILL_BLUR_SIGMA_PX);
   return { ink, fill, wash, accent: Uint8Array.from(softAccent, Math.round), w, h };
 }
@@ -219,11 +256,14 @@ async function main(): Promise<void> {
     const { x, y, w, h } = rects[k]!;
     return `    ${id}: { x: ${x}, y: ${y}, w: ${w}, h: ${h} },`;
   });
-  // The interior, renormalised from the unpadded source to the padded sprite the plate draws.
-  const card = sprites[SPRITE_IDS.indexOf('cartouche')]!;
+  // Each field's title oval, renormalised from the unpadded source to the padded sprite the plate draws.
   const along = (c: number, side: number) => ((PAD_PX + c * (side - 2 * PAD_PX)) / side).toFixed(4);
   const across = (r: number, side: number) => ((r * (side - 2 * PAD_PX)) / side).toFixed(4);
-  const { cx, cy, rx, ry } = CARTOUCHE_OVAL;
+  const interiors = Object.entries(FIELDS).map(([id, f]) => {
+    const card = sprites[SPRITE_IDS.indexOf(id as (typeof SPRITE_IDS)[number])]!;
+    const grow = f.shape === 'rect' ? RECT_TITLE_OVAL : 1;
+    return `    ${id}: { cx: ${along(f.cx, card.w)}, cy: ${along(f.cy, card.h)}, rx: ${across(f.rx * grow, card.w)}, ry: ${across(f.ry * grow, card.h)} },`;
+  });
   writeFileSync(
     `${ROOT}${OUT_TS}`,
     `/**
@@ -240,7 +280,9 @@ export const ANTIQUE_ORNAMENT_ATLAS: AntiqueOrnamentAtlas = {
   sprites: {
 ${rows.join('\n')}
   },
-  cartoucheOval: { cx: ${along(cx, card.w)}, cy: ${along(cy, card.h)}, rx: ${across(rx, card.w)}, ry: ${across(ry, card.h)} },
+  interiors: {
+${interiors.join('\n')}
+  },
 };
 `,
   );

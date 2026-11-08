@@ -5,12 +5,15 @@
  * under the plate's centre. The deepest level past halfway holds the
  * cartouche, faded by how far it is past halfway and by every deeper level's
  * approach, so a change passes through a blank cartouche and two titles never print together.
+ * `frame` fades the cartouche itself the same way, but only across a change of its
+ * design (`ANTIQUE_TITLE_CARTOUCHES`), so one frame never swaps for another in sight.
  */
 
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { AntiqueTitleKey } from '../../../@types/rendering/AntiqueTitleKey';
 import { ANTIQUE_GLOBE_TITLES } from '../../../data/rendering/antiqueGlobeTitles';
 import { ANTIQUE_EARTH_TITLE_REGIONS } from '../../../data/rendering/antiqueTitleRegions';
+import { ANTIQUE_TITLE_CARTOUCHES } from '../../../data/rendering/antiqueTitleCartouches';
 import { smoothstep } from '../../math/smoothstep';
 import { antiqueGlobeSubject } from './antiqueGlobeSubject';
 
@@ -27,7 +30,7 @@ export function antiquePlateTitle(input: {
   } | null;
   /** Where the plate's centre ray meets that globe, degrees; null off it. */
   readonly centreLonLat: Readonly<Vec2> | null;
-}): { readonly key: AntiqueTitleKey; readonly weight: number } | null {
+}): { readonly key: AntiqueTitleKey; readonly weight: number; readonly frame: number } {
   const levels: { key: AntiqueTitleKey; v: number }[] = [
     { key: 'coelum', v: 1 },
     { key: 'universe', v: input.cosmos },
@@ -60,7 +63,14 @@ export function antiquePlateTitle(input: {
   levels.forEach(({ v }, i) => {
     if (v >= 0.5) k = i;
   });
+  const { key } = levels[k]!;
+  const design = ANTIQUE_TITLE_CARTOUCHES[key];
   let weight = k === 0 ? 1 : smoothstep(0.5, 1, levels[k]!.v);
-  for (const { v } of levels.slice(k + 1)) weight *= 1 - smoothstep(0, 0.5, v);
-  return weight > 0 ? { key: levels[k]!.key, weight } : null;
+  let frame = k > 0 && ANTIQUE_TITLE_CARTOUCHES[levels[k - 1]!.key] !== design ? weight : 1;
+  for (const deeper of levels.slice(k + 1)) {
+    const fade = 1 - smoothstep(0, 0.5, deeper.v);
+    weight *= fade;
+    if (ANTIQUE_TITLE_CARTOUCHES[deeper.key] !== design) frame *= fade;
+  }
+  return { key, weight, frame };
 }

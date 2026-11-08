@@ -1,13 +1,13 @@
 /**
- * ANTIQUE_ORNAMENTS — the antique plate's decorations. The title cartouche sits
- * in a corner, as on any Amsterdam plate (no compass rose: a celestial chart
- * never carried one). Inside the Galaxy the beasts are constellation figures
+ * ANTIQUE_ORNAMENTS — the antique plate's decorations beside its title cartouche
+ * (`ANTIQUE_CARTOUCHES`); no compass rose: a celestial chart never carried one.
+ * Inside the Galaxy the beasts are constellation figures
  * over their own stars; out among the galaxies they sail the Zone of
  * Avoidance, the wedge behind the galactic plane the surveys cannot see into:
  * the one honest terra incognita on this map.
- * Pigment indices are `pigments.wesl`'s: 0 verdigris, 1 sap green, 2 gamboge,
- * 5 smalt, 6 yellow ochre, 7 rose madder. Each engraving is washed flat inside
- * its outline, as Cellarius' colourists washed his figures' robes.
+ * Pigment indices are `pigments.wesl`'s: 0 verdigris, 1 sap green, 5 smalt,
+ * 6 yellow ochre. Each engraving is washed flat inside its outline, as
+ * Cellarius' colourists washed his figures' robes.
  */
 
 import type { AntiqueOrnament } from '../../@types/rendering/AntiqueOrnament';
@@ -46,17 +46,6 @@ const voyager = (
 });
 
 export const ANTIQUE_ORNAMENTS: readonly AntiqueOrnament[] = [
-  {
-    sprite: 'cartouche',
-    anchor: { kind: 'sheet', corner: 'topLeft', insetUnits: [240, 178], sizeUnits: 380 },
-    regime: 'always',
-    facesNorth: false,
-    pigment: 2,
-    accent: 0,
-    opacity: 1,
-    clearsBeneath: true,
-    mirrored: false,
-  },
   // Hevelius' constellation figures (1690) at each figure's centre (J2000 RA/Dec,
   // degrees). He drew them as seen from outside the globe, so a sky-view plate
   // mirrors them.

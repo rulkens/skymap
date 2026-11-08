@@ -1,23 +1,17 @@
 /**
- * antiquePlateKeepOut — the cartouche's corner stays reserved for labels
- * until Tab hides the UI, which also withdraws the cartouche itself; open
- * panels are kept clear too, and the reservation follows the cartouche when a
- * panel moves it to another corner.
+ * antiquePlateKeepOut — the cartouche and the open panels stay reserved for
+ * labels until Tab hides the UI, which withdraws both.
  */
 import { describe, expect, it } from 'vitest';
 import { antiquePlateKeepOut } from '../../../src/utils/labels/antiquePlateKeepOut';
 
 describe('antiquePlateKeepOut', () => {
-  it('reserves the title cartouche, and frees its corner when the UI is hidden', () => {
-    expect(antiquePlateKeepOut([1600, 900], false, []).keepOut.length).toBeGreaterThan(0);
-    expect(antiquePlateKeepOut([1600, 900], true, []).keepOut).toEqual([]);
-  });
+  const navigation = { x0: 0, y0: 240, x1: 290, y1: 880 };
+  const cartouche = { x0: 1200, y0: 30, x1: 1550, y1: 400 };
 
-  it('keeps names off open panels and reserves the corner the cartouche moved to', () => {
-    const navigation = { x0: 0, y0: 240, x1: 290, y1: 880 };
-    const { keepOut } = antiquePlateKeepOut([1600, 900], false, [navigation]);
-    expect(keepOut).toContainEqual(navigation);
-    const cartouche = keepOut.find((r) => r !== navigation)!;
-    expect(cartouche.x0).toBeGreaterThan(800);
+  it('keeps names off the cartouche and the open panels, and frees both when the UI is hidden', () => {
+    const shown = antiquePlateKeepOut([1600, 900], false, [navigation], cartouche).keepOut;
+    expect(shown).toEqual([navigation, cartouche]);
+    expect(antiquePlateKeepOut([1600, 900], true, [navigation], cartouche).keepOut).toEqual([]);
   });
 });

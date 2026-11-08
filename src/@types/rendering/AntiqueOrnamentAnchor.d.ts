@@ -1,8 +1,8 @@
 /**
  * AntiqueOrnamentAnchor — where an ornament sits. `sky`: an equatorial RA/Dec
  * direction with an angular size, so it moves with the sky like a
- * constellation figure. `space`: a place among the galaxies. `sheet`: a fixed
- * place on the plate, in print units from a corner, like a cartouche.
+ * constellation figure. `space`: a place among the galaxies. (A cartouche
+ * sits on the sheet instead: `AntiqueSheetAnchor`.)
  */
 export type AntiqueOrnamentAnchor =
   | {
@@ -24,12 +24,4 @@ export type AntiqueOrnamentAnchor =
       readonly distMpc: number;
       /** Width in space, Mpc. */
       readonly sizeMpc: number;
-    }
-  | {
-      readonly kind: 'sheet';
-      readonly corner: 'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight';
-      /** Centre offset from the corner, print units, measured inward. */
-      readonly insetUnits: readonly [number, number];
-      /** Width, print units. */
-      readonly sizeUnits: number;
     };
