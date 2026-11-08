@@ -7,9 +7,8 @@
  */
 
 import type { TitleGrowth } from '../../../@types/engine/presentation/TitleGrowth';
+import type { TitleGrowthRamp as Ramp } from '../../../@types/engine/presentation/TitleGrowthRamp';
 import { smoothstep } from '../../../utils/math/smoothstep';
-
-type Ramp = { from: number; to: number; startMs: number };
 
 export function createTitleGrowth(durationMs: number): TitleGrowth {
   const ramps = new Map<string, Ramp>();
