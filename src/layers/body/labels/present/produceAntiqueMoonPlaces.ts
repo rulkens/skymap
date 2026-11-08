@@ -13,7 +13,7 @@ import type { Label2D } from '../../../../@types/rendering/Label2D';
 import type { AntiqueMoonPlace } from '../../../../@types/rendering/AntiqueMoonPlace';
 import type { LayerScreenLabel } from '../../../../@types/engine/layer/LayerScreenLabel';
 import type { BodyRuntime } from '../../@types/BodyRuntime';
-import { ANTIQUE_MOON_PLACES } from '../../../../data/labels/antiqueMoonPlaces';
+import { ANTIQUE_MOON_LABEL_PLACES as ANTIQUE_MOON_PLACES } from '../../../../data/labels/antiqueMoonLabelPlaces';
 import { ANTIQUE_MOON_PLACE_REVEAL } from '../../../../data/labels/antiqueMoonPlaceReveal';
 import { ANTIQUE_PLACE_LETTERING } from '../../../../data/labels/antiquePlaceLettering';
 import { CAPTION_PRIORITY_SCALE } from '../../../../data/labels/captionPriorityScale';

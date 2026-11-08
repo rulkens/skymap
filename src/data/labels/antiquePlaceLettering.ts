@@ -11,7 +11,7 @@
 
 import type { AntiquePlaceLettering } from '../../@types/rendering/AntiquePlaceLettering';
 import { ANTIQUE_EARTH_TOWNS } from './antiqueEarthTowns';
-import { ANTIQUE_MOON_PLACES } from './antiqueMoonPlaces';
+import { ANTIQUE_MOON_LABEL_PLACES } from './antiqueMoonLabelPlaces';
 
 /** A town's name px by tier (capital, city, town, village). */
 const TOWN_NAME_PX = [19, 16, 14, 12] as const;
@@ -31,6 +31,12 @@ export const ANTIQUE_PLACE_LETTERING: Readonly<Record<string, AntiquePlaceLetter
     ]),
   ),
   ...Object.fromEntries(
-    ANTIQUE_MOON_PLACES.map((place) => [place.id, MOON_LETTERING_OF_KIND[place.kind]]),
+    ANTIQUE_MOON_LABEL_PLACES.map((place) => [
+      place.id,
+      // A name Riccioli never knew is set upright, not in his italic.
+      place.modern
+        ? { ...MOON_LETTERING_OF_KIND[place.kind], cut: 'roman' }
+        : MOON_LETTERING_OF_KIND[place.kind],
+    ]),
   ),
 };

@@ -41,6 +41,7 @@
     "pack-ornaments": "tsx tools/antique/packOrnaments.ts",
     "build-antique-earth": "tsx tools/antique/earth/buildAntiqueEarth.ts",
     "bake-moon-craters": "tsx tools/antique/moon/bakeMoonCraters.ts",
+    "bake-moon-far-side-places": "tsx tools/antique/moon/bakeMoonFarSidePlaces.ts",
     "build-site-ground-heights": "tsx tools/textures/buildSiteGroundHeights.ts",
     "report-site-terrain": "tsx tools/textures/reportSiteTerrain.ts",
     "build-flow-field": "tsx tools/flow/buildFlowField.ts && npm run build-data-manifest",

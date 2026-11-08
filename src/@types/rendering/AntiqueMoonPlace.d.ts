@@ -9,6 +9,8 @@ export type AntiqueMoonPlace = {
   /** Label id, unique across every producer. */
   readonly id: string;
   readonly name: string;
+  /** A post-1959 IAU name (the far side's): the plate sets it in roman beside Riccioli's italic. */
+  readonly modern?: true;
   /** One ladder across kinds: 1 wins a collision, and reveals a crater at the fewest px. */
   readonly rank: number;
   readonly latDeg: number;

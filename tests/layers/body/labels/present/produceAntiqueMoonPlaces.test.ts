@@ -15,12 +15,14 @@ import { frameViewsAt } from '../../../../helpers/frame/frameViewsAt';
 // latitude 0, longitude 0, north up, its disc ~680 px tall on the shot's 1600 × 900 frame.
 const SIM_DAYS = 2461339.75;
 const DISTANCE_M = 4.6e6;
+// Half a synodic month on, the far side is the lit one.
+const NEW_MOON_AFTER_FULL_DAYS = 14.77;
 const FADE = { [EARTH_ENTRY.id]: 1, planet: 1, 'small-body': 1 };
 
-function fullDiscLabels() {
-  const states = deriveBodyStates(SIM_DAYS);
+function fullDiscLabels(side: 1 | -1 = 1, simDays = SIM_DAYS) {
+  const states = deriveBodyStates(simDays);
   const { positionMpc: moon, orientation } = states.get(asSceneBodyId('moon'))!;
-  const out = rotateVec3ByTightMat3(orientation, [1, 0, 0]);
+  const out = rotateVec3ByTightMat3(orientation, [side, 0, 0]);
   const distanceMpc = DISTANCE_M * SCALE_UNITS.M_TO_MPC;
   const eyeMpc: Vec3 = [
     moon[0] + out[0] * distanceMpc,
@@ -31,7 +33,7 @@ function fullDiscLabels() {
     eyeMpc,
     forward: [-out[0], -out[1], -out[2]],
     distanceMpc,
-    simDays: SIM_DAYS,
+    simDays,
     up: rotateVec3ByTightMat3(orientation, [0, 0, 1]),
     sizePx: { width: 1600, height: 900 },
   });
@@ -43,6 +45,14 @@ function fullDiscLabels() {
 }
 
 describe('produceAntiqueMoonPlaces', () => {
+  // The far side was never on Riccioli's plate: its IAU names (post-1959, set in roman)
+  // fill it so a view of it is not blank, and none of the near side's show there.
+  it('names the far side from above it, and none of the near side', () => {
+    const ids = fullDiscLabels(-1, SIM_DAYS + NEW_MOON_AFTER_FULL_DAYS).map((l) => l.id);
+    expect(ids.length).toBeGreaterThan(8);
+    expect(ids.every((id) => id.startsWith('moonPlace-far-'))).toBe(true);
+  });
+
   // Riccioli's plate prints every sea; craters come second (lead's ruling, 2026-11-07):
   // Procellarum lost the full disc to Keplerus and Aristarchus, ranked above it. The
   // headline craters keep their names over the bays, the Terrae and every other crater
