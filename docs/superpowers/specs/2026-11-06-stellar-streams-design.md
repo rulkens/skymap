@@ -160,7 +160,6 @@ type StellarStreamMeta = { // the runtime type, `catalog/@types/StellarStreamMet
   lengthKpc: number;
   distanceKpc: readonly [min: number, max: number];
   widthDeg: number | null; // null for the N-body stream
-  particleCount: number;
   anchorMpc: readonly [number, number, number]; // label + focus point
 };
 ```

@@ -56,7 +56,6 @@ export function sagittariusMeta(
     ),
     distanceKpc: [near, far],
     widthDeg: null,
-    particleCount: p.luminosity.length,
     colourT: arrayMean(p.colourT),
     // Its arms' arc length, not the extent: the debris lies along them.
     focusBoost: streamFocusBoost(

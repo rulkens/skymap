@@ -39,7 +39,6 @@ export function streamMetaEntry(
     frameRadiusKpc: cappedFrameRadiusKpc(lengthKpc / 2, Math.hypot(mid[0], mid[1], mid[2])),
     distanceKpc: [Math.min(...track.distanceKpc), Math.max(...track.distanceKpc)],
     widthDeg: track.widthDeg,
-    particleCount: particles.luminosity.length,
     colourT: arrayMean(particles.colourT),
     focusBoost: streamFocusBoost(particles, lengthKpc, widthKpc),
     metallicity,

@@ -14,6 +14,7 @@ import {
   STELLAR_STREAMS_RECORD_F32,
   STELLAR_STREAMS_VERSION,
 } from '../../src/layers/stellarStreams/catalog/data/stellarStreamsFormat.constants';
+import { decodeStellarStreams } from '../../src/layers/stellarStreams/catalog/utils/decodeStellarStreams';
 import { encodeStellarStreams } from '../../src/layers/stellarStreams/catalog/utils/encodeStellarStreams';
 import { writeMetaSidecar } from '../curation/writeMetaSidecar';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
@@ -105,7 +106,7 @@ async function main(): Promise<void> {
   mkdirSync(OUT_DIR, { recursive: true });
   writeFileSync(join(OUT_DIR, 'stellar-streams.bin'), Buffer.from(bin));
   writeMetaSidecar(meta, join(OUT_DIR, 'stellar_streams_meta.json'));
-  const particles = meta.reduce((n, m) => n + m.particleCount, 0);
+  const { particleCount: particles } = decodeStellarStreams(bin);
   console.log(
     `buildStellarStreams: ${particles} particles, ${meta.length} streams, ` +
       `${(bin.byteLength / 1e6).toFixed(2)} MB → ${OUT_DIR}`,

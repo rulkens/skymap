@@ -16,7 +16,6 @@ export type StellarStreamMeta = {
   readonly distanceKpc: readonly [number, number];
   /** null for the N-body stream and for tracks with no catalogued width. */
   readonly widthDeg: number | null;
-  readonly particleCount: number;
   /** Mean particle colourT (Gaia BP−RP over `STREAM_BP_RP_RANGE`); tints the caption. */
   readonly colourT: number;
   /** What a full focus multiplies this stream's streaks and haze by: 1 for the brightest, more for dim ones. */
