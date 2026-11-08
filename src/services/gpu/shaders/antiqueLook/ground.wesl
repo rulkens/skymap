@@ -19,13 +19,17 @@ const GROUND_NOISE_SIGMA: f32 = 0.43;
 // No hachure share past this, so paper always shows between the fall lines.
 const GROUND_INK_CAP: f32 = 0.5;
 // Darkness under the reference over which the shade's ink comes in; the hatch tone it
-// reaches (`crossHatch`: lines from 0.06, wider from 0.5, crossed past 0.8) and spacing,
-// so the deepest shade keeps a quarter of its paper.
-const GROUND_SHADE: vec2<f32> = vec2<f32>(0.1, 0.5);
-const GROUND_TONE: f32 = 0.8;
+// reaches (`crossHatch`: lines from 0.06, wider from 0.5, crossed past 0.8) and spacing:
+// short of the crossing, so the deepest shade is one set of lines, never a smear.
+const GROUND_SHADE: vec2<f32> = vec2<f32>(0.06, 0.45);
+const GROUND_TONE: f32 = 0.65;
 const GROUND_HATCH: f32 = 3.6;
 // The plains' two rings, in screen heights: past a big crater's wall at mid range.
-const GROUND_SURROUND: vec2<f32> = vec2<f32>(0.07, 0.2);
+const GROUND_SURROUND: vec2<f32> = vec2<f32>(0.08, 0.3);
+// Shade is measured down from the lit ground round it (the rings' brightest tap, held to
+// GROUND_LIT_SPAN of their mean: a white lander sets no standard), so a broad swell turned
+// from the Sun shades as the plain shows it, not only what is darker than its neighbours.
+const GROUND_LIT_SPAN: f32 = 1.3;
 // The plain render's luma below which ground is shade wherever it lies (lit Martian
 // ground prints ~0.25 in the print): a valley dark all round still inks, as the plain shows.
 const GROUND_LIT_LUMA: f32 = 0.2;
@@ -50,18 +54,21 @@ fn groundRelief(field: texture_2d<f32>, samp: sampler, px: vec2<f32>, relief: ve
   let uv = px / res;
   let around = washLuma(wash, samp, uv, layer);
   var mean = 0.0;
+  var brightest = 0.0;
   for (var k = 0; k < 8; k++) {
     let a = f32(k) * 0.7853982 + 0.39;
     let r = select(GROUND_SURROUND.x, GROUND_SURROUND.y, (k & 1) == 1);
-    mean += washLuma(wash, samp, uv + vec2<f32>(cos(a) * res.y / res.x, sin(a)) * r, layer) / 8.0;
+    let tap = washLuma(wash, samp, uv + vec2<f32>(cos(a) * res.y / res.x, sin(a)) * r, layer);
+    mean += tap / 8.0;
+    brightest = max(brightest, tap);
   }
-  let reference = max(max(around, mean), GROUND_LIT_LUMA);
+  let reference = max(max(around, min(brightest, GROUND_LIT_SPAN * mean)), GROUND_LIT_LUMA);
   let dark = clamp(1.0 - plain / reference, 0.0, 1.0);
   let shade = smoothstep(GROUND_SHADE.x, GROUND_SHADE.y, dark);
-  // The hatching's tone also from the smooth wash, so where the plain render's grain
-  // drops out its lines still arrive and leave by rank, each tapering out.
-  // Graded on the absolute tone too, so mid-dark ground takes a light single hatch.
-  let washShade = max(smoothstep(GROUND_SHADE.x, GROUND_SHADE.y, clamp(1.0 - around / max(mean, GROUND_LIT_LUMA), 0.0, 1.0)),
+  // The hatching's tone from the smooth wash, so its lines arrive and leave by rank where
+  // the plain's grain and terraced bands would cut blocks; graded on the absolute tone
+  // too, so mid-dark ground takes a light single hatch.
+  let washShade = max(smoothstep(GROUND_SHADE.x, GROUND_SHADE.y, clamp(1.0 - around / reference, 0.0, 1.0)),
                       1.0 - smoothstep(GROUND_TONE_LUMA.x, GROUND_TONE_LUMA.y, around));
   let weight = min(abs(relief.a) * 1.5, 1.0);
   // A crest is too flat to be a landform itself: its line is sought on every pixel.
@@ -75,8 +82,8 @@ fn groundRelief(field: texture_2d<f32>, samp: sampler, px: vec2<f32>, relief: ve
     let p = px / unit;
     let n = vec2<f32>(-sin(hatchAngle), cos(hatchAngle));
     let form = vec3<f32>(dot(p, n), dot(p, vec2<f32>(n.y, -n.x)), 1.0);
-    ink = max(ink, crossHatch(form, p, GROUND_TONE * max(washShade, shade) * weight, GROUND_HATCH, hatchAngle, 1.0 / unit));
-    let density = (0.06 + 0.3 * dark) * 0.3 * weight * (1.0 - shade);
+    ink = max(ink, crossHatch(form, p, GROUND_TONE * washShade * weight, GROUND_HATCH, hatchAngle, 1.0 / unit));
+    let density = (0.03 + 0.25 * dark) * weight * (1.0 - shade);
     ink = max(ink, quantileCut(relief.b / GROUND_NOISE_SIGMA, density));
   }
   // The lit crest (a crater's rim, a ridge catching the light): a bright ridge in the

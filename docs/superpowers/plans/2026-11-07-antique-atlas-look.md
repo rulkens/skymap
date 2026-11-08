@@ -280,6 +280,14 @@ Owner ruling 2026-11-07: keep the generic galaxy engraving with these names; the
 - [x] Rings binned by screen tile: the Tycho close-up at dpr 2 costs 22.8 ms a frame (23.6 before the round, 50 at its worst).
 - [ ] Open: Plato, Aristarchus, Posidonius, Aristoteles and Petavius still lose the full-disc declutter (MARE IMBRIVM's name sits on Plato's ring); the terminator's flecks and moiré.
 
+### Task 34: Ground under the close-ups (review 8 #1: "outlines on bare paper")
+**Files:** `shaders/antiqueLook/{bodies/moon,ground,fragment}.wesl`, `shaders/bodies/texturedBody/fragment.wesl` (`craterRims`),
+`layers/body/spheres/{data/antiqueMoonPrint,present/binMoonCraters}.ts`
+- [x] The Moon's highland ground in a close-up stippled in the page's frame: denser on a slope turned from the Sun, where the albedo sinks under its surroundings and where the plain shows a shadow; seas keep their lines alone.
+- [x] A rayed crater's ejecta blanket as short radial stipple to 2.4 radii (Tycho, Copernicus), the mare lines stopping raggedly at it; tiles bound the reach.
+- [x] Mars ground shade measured down from the lit ground round it (brightest of the 8 taps, held to 1.3x their mean), a gravel stipple on lit flats, no crossing.
+- [ ] Open: panel plateaued at ~5 over three rounds (the historian would trade the highland dots for short hatching along the relief; fidelity wants the plain's dark corners denser); Copernicus' mare ruling uniform and heavy (mare engine); rings as clean circles without floors or peaks; rover unshaded; the Tycho close-up's cost unmeasured (shared GPU too loaded for an A/B).
+
 ## Definition of Done
 
 **Deliverables:** the `stylize` FRAME_ORDER line and `antiqueLook` pass; the `antique` settings
