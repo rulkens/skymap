@@ -2,7 +2,7 @@
  * ANTIQUE_FIGURE_ANCHORS — the stars each Hevelius figure (1690) lies on, read
  * off his star symbols on the source scans (PROVENANCE.md) before they were
  * inpainted. His plates are ecliptic, globe-view projections, so the sprite's up
- * and handedness are not the sky's: placement fits both from these each frame.
+ * and handedness are not the sky's: placement fits both from these (`projectFigureGrid`).
  * Hydra is anchored head to Crater only: its 100° body is drawn foreshortened,
  * so one rigid sprite on a pinhole sky cannot also hold the bend and tail.
  */
