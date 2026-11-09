@@ -7,8 +7,7 @@ struct Uniforms {
   cam: CameraUniforms,
   eye: vec3<f32>,
   minHalfWidthPx: f32,
-  // packSelection(code, PICK_SENTINEL_OFFSET); plus the stream index, the stream's pick
-  // word.
+  // packSelection(code, PICK_SENTINEL_OFFSET); plus the stream index, a stream's pick word.
   pickBase: u32,
 };
 

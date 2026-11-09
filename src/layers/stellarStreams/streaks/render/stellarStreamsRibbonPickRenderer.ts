@@ -1,7 +1,7 @@
 /**
  * StellarStreamsRibbonPickRenderer — the streams' pick: static ribbons along each stream's
- * centreline (`stellarStreams/ribbonPick/`), one instanced quad per segment out of a small buffer built from
- * the meta, into the NEAR0 pick target (r32uint, no blend; its depth attachment's format).
+ * centreline (`stellarStreams/ribbonPick/`), one instanced quad per segment out of a small
+ * buffer built from the meta, into the NEAR0 pick target (r32uint, no blend; its depth attachment's format).
  * Segments are grouped by stream, so a focus draws its stream's run alone.
  */
 
