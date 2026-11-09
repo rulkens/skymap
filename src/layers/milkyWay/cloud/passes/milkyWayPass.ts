@@ -25,6 +25,8 @@ import type { MilkyWayRuntime } from '../../@types/MilkyWayRuntime';
 import { deriveMilkyWayCloudAlpha } from '../present/milkyWayCloudLiveness';
 import { milkyWayCamPosModel } from '../render/milkyWayCamPosModel';
 import { milkyWayModelCached } from '../render/milkyWayModelCached';
+import { isPickableUnderFocus } from '../../../../utils/structure/isPickableUnderFocus';
+import { MILKY_WAY_CENTER_WORLD } from '../../../../data/milkyWay/galacticCenter';
 
 /**
  * Camera origin distance (Mpc) below which the impostor stops taking clicks —
@@ -57,6 +59,7 @@ export function milkyWayPass(runtime: MilkyWayRuntime): ContentPass<'milkyWayDis
     // subset of draw; see `MILKY_WAY_PICK_MIN_DISTANCE_MPC` above.
     pickEnabled(_state, ctx, view, fade) {
       if (deriveMilkyWayCloudAlpha(ctx, fade, runtime.pickCode) === null) return false;
+      if (!isPickableUnderFocus(MILKY_WAY_CENTER_WORLD, ctx.snapshot.focus)) return false;
       const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
       return camDistMpc >= MILKY_WAY_PICK_MIN_DISTANCE_MPC;
     },

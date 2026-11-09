@@ -45,6 +45,7 @@ import type { CosmicWebFilamentsRuntime } from '../../src/layers/cosmicWebFilame
 import type { MilkyWayRuntime } from '../../src/layers/milkyWay/@types/MilkyWayRuntime';
 import { INITIAL_SETTINGS } from '../../src/state/settings/initialSettings';
 import { galaxyRowRuntime } from '../support/layerPickCodes';
+import { ZERO_FOCUS } from '../../src/services/engine/subsystems/recedingFocusSubsystem';
 
 type DrawRecord =
   | { kind: 'beginRenderPass' }
@@ -354,9 +355,10 @@ describe('renderFrame visual baseline', () => {
         isReady: true as const,
         plans: createFramePlannerResultStore(),
         nowMs: 0,
-        // The handed value's recession factor lerps on this; production
-        // seeds it to 0 in frameContext, and an absent one yields NaN alphas.
+        // The handed value's recession factor lerps on this, and the sphere dim
+        // reads `focus`; production seeds both at rest in frameContext.
         focusBlend: 0,
+        focus: ZERO_FOCUS,
         slabBodyCandidates: [],
         bodyStates: new Map(),
         renderTargets,

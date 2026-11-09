@@ -18,7 +18,7 @@
  */
 
 import type { Label2DDirector } from '../subsystems/Label2DDirector';
-import type { StructureFocusSubsystem } from '../subsystems/StructureFocusSubsystem';
+import type { RecedingFocusSubsystem } from '../subsystems/RecedingFocusSubsystem';
 import type { ClipPlayer } from '../subsystems/ClipPlayer';
 import type { ClipPathInspector } from '../subsystems/ClipPathInspector';
 import type { RenderScheduler } from '../subsystems/RenderScheduler';
@@ -81,13 +81,13 @@ export type EngineSubsystemHandles = {
    */
   foregroundLabelDirector: Label2DDirector;
   /**
-   * Structure focus-mode subsystem — drives the "dim everything outside the
-   * selected structure" effect. Selection-driven: `runFrame` calls
-   * `update(selectedStructure, nowMs)` each frame and threads
-   * `produceFocusUniforms(nowMs)` into the points draw. Constructed
+   * Focus-mode subsystem — drives the recession of the rest of the scene,
+   * and a structure's "dim everything outside it" sphere. Selection-driven: `runFrame` calls
+   * `update(focus, row, nowMs)` each frame and threads
+   * `produceFocus(nowMs, shownOf)` into the snapshot. Constructed
    * eagerly; no GPU dep, non-null from t=0.
    */
-  structureFocus: StructureFocusSubsystem;
+  recedingFocus: RecedingFocusSubsystem;
   /**
    * Clip-player Resource — owns the active clip's scene cues, the
    * `clipOpacity` channel (per-layer transient opacity), and clip-completion

@@ -16,7 +16,7 @@
  * Keeping it separate from the shared FadeRegistry (which the settings-driven
  * visibility sync owns) means the clip's transient fades vanish cleanly on
  * `reset()` without disturbing the persistent visibility state. This mirrors the pattern used by
- * `structureFocusSubsystem` — a private `createFadeController` outside the
+ * `recedingFocusSubsystem` — a private `createFadeController` outside the
  * registry — extended to one-per-key.
  *
  * `clipPlayer` owns and calls this channel; callers outside the player
@@ -32,7 +32,7 @@ export type ClipOpacityChannel = {
   factorOf(key: VisibilityAddress, nowMs?: number): number;
   /** Stamp the channel's default clock (called from clipPlayer.tick). */
   tick(nowMs: number): void;
-  /** Whether any controller is mid-ramp (keeps the loop awake; mirrors structureFocus). */
+  /** Whether any controller is mid-ramp (keeps the loop awake; mirrors recedingFocus). */
   isAnimating(nowMs?: number): boolean;
   /** Reset ALL layers to factor 1 — clip-end Resource teardown. */
   reset(): void;

@@ -161,7 +161,7 @@ describe('watchSelectionRowsSaga', () => {
   it('clearSelection re-extracts select + focus rows to null, leaving hover untouched', async () => {
     // Regression: clearSelection (Esc / InfoCard ×) nulls the select+focus REFS,
     // but the reconciler must also null the derived ROWS — otherwise the InfoCard,
-    // focus ring, and structure-focus subsystem (all read the rows) stay stuck and
+    // focus ring, and receding-focus subsystem (all read the rows) stay stuck and
     // Esc appears to do nothing.
     const ref = { type: 'galaxyCatalog', source: Source.SDSS, index: 0 } as const;
     store.dispatch(updateSelectionHover(ref));

@@ -3,7 +3,7 @@
  *
  * Wraps one private FadeController per VisibilityAddress, created lazily on
  * the first `fadeTo` call for a given key. This mirrors the pattern used by
- * `structureFocusSubsystem` (one private `createFadeController`, NOT the
+ * `recedingFocusSubsystem` (one private `createFadeController`, NOT the
  * shared FadeRegistry), extended to a keyed map: one controller per layer.
  *
  * ### Lazy default-1 design
@@ -42,7 +42,7 @@ import type { FadeController } from '../../@types/animation/FadeController';
 
 export function createClipOpacityChannel(
   // Accepted for API symmetry with other factory shapes (e.g. createFadeController,
-  // createStructureFocusSubsystem). Unused here because controllers are lazy —
+  // createRecedingFocusSubsystem). Unused here because controllers are lazy —
   // each is stamped with the `now` from its first fadeTo call, not construction
   // time — so the default of 0 is inert (no animation can precede construction).
   _initialNowMs: number = 0,

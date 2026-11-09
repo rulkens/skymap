@@ -44,7 +44,7 @@ import {
 } from './structureMarkerStyles';
 import { structureApparentRadiusFade } from './structureApparentRadiusFade';
 import { structureIdOf } from './structureIdOf';
-import { isPickableUnderFocus } from '../../../../utils/structure/isPickableUnderFocus';
+import { isSubjectPickableUnderFocus } from '../../../../utils/structure/isSubjectPickableUnderFocus';
 import { structurePickId } from '../../picking/utils/structurePickId';
 import { visibilityEntryOf } from '../../../../utils/visibility/visibilityEntryOf';
 import { emphasisOf } from '../../../../services/engine/presentation/emphasisOf';
@@ -135,7 +135,8 @@ export function produceStructureMarkers(
       haloColor,
       ringColor,
       pickable:
-        ringColor[3] >= RING_PICK_MIN_ALPHA && isPickableUnderFocus(p.worldPos, ctx.snapshot.focus),
+        ringColor[3] >= RING_PICK_MIN_ALPHA &&
+        isSubjectPickableUnderFocus(pickId, p.worldPos, ctx.snapshot),
     });
   }
   return out;

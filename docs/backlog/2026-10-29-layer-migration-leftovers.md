@@ -23,7 +23,7 @@ core root means a pure-move candidate. Core-reached files were then swept by con
 | J3 | `ephemerisCorrections.generated` + `barycentricPairs` | body | NEEDS-JOINT | 1,113 | core solver (`orbitRowPlacement`) keys them by id; `LayerBody`/`OrbitalElements` would carry them |
 | J4 | Content camera clips (flowOrbit, famousFlythrough, earth/Søndermarken/Perseverance flyouts) | flow, galaxyCatalog, body, earthScenes, missions | NEEDS-JOINT | ~480 | no `clips?` member; `ClipId` union + `clipRegistry` are core |
 | J5 | `bodyFacts.generated` (card facts incl. `sgr-a-star`) | body, missions, blackHoles | NEEDS-JOINT | 500 | shared `BodyDetailCard` reads one table; `LayerBody` has no `facts` |
-| J6 | Structure focus mode (`structureFocusSubsystem`) | structure | NEEDS-JOINT | ~290 | core focus uniform read by other Layers' shaders; private fade controller vs "a Layer never drives a fade" |
+| J6 | Receding focus mode (`recedingFocusSubsystem`) | structure | NEEDS-JOINT | ~290 | core focus uniform read by other Layers' shaders; private fade controller vs "a Layer never drives a fade" |
 | J7 | Palette famous/alias/structure arms | galaxyCatalog, structure | NEEDS-JOINT | ~250 | `LayerSearchEntry` lacks thumbnail/description/scoring class |
 | J8 | Tier-swap galaxy re-anchor (`captureGalaxyFocusIds`, half of `watchTierSaga`) | galaxyCatalog | NEEDS-JOINT | ~120 | capture must run before core's tier write: an ordering hook |
 | J10 | Earth places palette (`earthPlaces`, flyTo action) | body | NEEDS-JOINT | ~60 | `LayerSearchEntry` is focus-only |
@@ -80,8 +80,8 @@ The per-kind core tables this item named (`BUILD_FOCUSABLE`, `REF_OF`, `focusFra
 ### J5. `bodyFacts.generated`: 500
 One table of card facts for 41 ids: planets, moons, craft and `sgr-a-star`. It is read by core's shared `BodyDetailCard` and by `blackHoles/ui/BlackHoleDetailCard`. **Joint:** per-row facts (`LayerBody.facts?`), or one generated facts file per Layer. Either way the seed and generator split.
 
-### J6. Structure focus mode: ~290
-`subsystems/structureFocusSubsystem` 146 + `StructureFocusSubsystem.d.ts` 66 + `ZERO_FOCUS`. `engine.ts` creates it and `frameContext` reads it. It feeds core's focus uniform (`focusUniform`/`focusBgl`), which galaxy, filament and structure shaders read. **Joint:** a Layer-provided focus-uniform producer. It also owns a private `createFadeController`, which contradicts "A Layer never drives a fade", so moving it means turning it into a declared fade.
+### J6. Receding focus mode: ~290
+`subsystems/recedingFocusSubsystem` 146 + `RecedingFocusSubsystem.d.ts` 66 + `ZERO_FOCUS`. `engine.ts` creates it and `frameContext` reads it. It feeds core's focus uniform (`focusUniform`/`focusBgl`), which galaxy, filament and structure shaders read. **Joint:** a Layer-provided focus-uniform producer. It also owns a private `createFadeController`, which contradicts "A Layer never drives a fade", so moving it means turning it into a declared fade.
 
 ### J7. Palette famous / alias / structure arms: ~250
 `ScoredRow` kinds `famous` / `alias` / `structure` in `rankPaletteMatches` and `paletteRows` use thumbnails (`/images/famous/<id>.webp`, `structureShotUrl`), description matching and capped lists. **Joint:** widen `LayerSearchEntry` (`thumbnail?`, `description?`, a capped class).

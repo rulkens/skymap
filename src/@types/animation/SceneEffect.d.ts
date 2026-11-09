@@ -29,9 +29,9 @@
  *     every reconcile saga fires for free. Widens in Plan C as the tour needs more
  *     knobs.
  *
- *   - `focus` — set the selection focus to `ref` (or `null` to clear). Drives the
- *     structure-isolation dim (`emphasisOf` recession). A ref carries
- *     a galaxyCatalog/structure/milkyWay discriminant and the durable id.
+ *   - `focus` — set the selection focus to `ref` (or `null` to clear). A receding
+ *     kind's focus (a structure, a stream) recedes the rest (`emphasisOf`). A ref carries
+ *     its kind's discriminant and the durable id.
  *
  *   - `frameTo` — cue-style orientation-frame reorientation. Fires
  *     `setOrientation(frame)` (persists the target pole past the clip) then
