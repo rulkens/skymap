@@ -23,12 +23,11 @@ import { skyArmCtxSaga } from '../sky/skyArmCtxSaga';
 import { all, tween } from '../../services/engine/animation/effectHelpers';
 import { rowFor } from '../../services/engine/camera/arms/rowFor';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
-import { isUnderfoot } from '../../utils/sky/isUnderfoot';
+import { isSkyLookable } from '../../utils/sky/isSkyLookable';
 import { wrapRad } from '../../utils/math/wrapRad';
 import { SKY_BELOW_HORIZON_LOOK_RAD } from '../../data/sky/skyBelowHorizonLookRad';
 import { SKY_LOOK_SEC } from '../../data/sky/skyLookSec';
 import type { Effect } from '../../@types/animation/Effect';
-import type { PlacedRow } from '../../@types/engine/selection/PlacedRow';
 import type { ClipData } from '../../@types/animation/ClipData';
 import type { RootState, SagaContext } from '../../store/types';
 
@@ -56,12 +55,12 @@ export function* watchRequestViewSaga() {
     }
     const simDays = deriveSimDays(yield* select(selectTimeState), performance.now());
     const row = selection.extractRow(ref, simDays);
-    if (row === null || !('positionMpc' in row) || isUnderfoot(row, view.spot)) {
+    if (!isSkyLookable(row, view.spot)) {
       yield* call(fly, id);
       return;
     }
     const runtime = yield* call(liveCameraRuntimeSaga);
-    const look = skyLookFor(row as PlacedRow, view.spot, simDays, runtime.fovYRad);
+    const look = skyLookFor(row, view.spot, simDays, runtime.fovYRad);
     yield* put(
       skyBelowHorizonSet(
         look.kind === 'look' ? null : { riseAt: look.riseAt, neverRises: look.neverRises },
