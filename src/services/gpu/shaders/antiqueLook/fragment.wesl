@@ -489,7 +489,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   col = applyWash(col, pigmentAt(5.0), galaxyWash * (1.0 - galaxy.z)); // smalt
   col = applyWash(col, pigmentAt(2.0), galaxyWash * galaxy.z); // gamboge
 
-  // On a Moon plate the chart's figures, rulings, trails and numerals fade (`u.subject`).
+  // On a Moon plate the chart's figures, rulings and numerals fade (`u.subject`); star-to-star lines stay.
   let chart = 1.0 - u.subject;
   let figures = rowOn(HIDE_FIGURES) * chart;
   let decorTexel = layerTexel(fullTex, DECOR_LAYER, ip);
@@ -561,7 +561,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
         textureSampleLevel(linesTex, linear, uv - vec2<f32>(0.0, r.y), 0.0).a));
     lineCover = smoothstep(0.2, 0.9, lineCover);
   }
-  let lines = lineCover * (0.75 + 0.4 * vnoise(p * 0.06 + 5.0)) * sky * clear * u.tune.w * rowOn(HIDE_LINES) * chart;
+  let lines = lineCover * (0.75 + 0.4 * vnoise(p * 0.06 + 5.0)) * sky * clear * u.tune.w * rowOn(HIDE_LINES);
 
   // Bodies: burin hatching for the shade, and each recorded body's own
   // convention from its module (`printOf`). A recorded body (`plate`) is cast
