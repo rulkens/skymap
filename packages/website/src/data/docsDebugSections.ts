@@ -69,6 +69,12 @@ export const DOCS_DEBUG_SECTIONS: readonly DocsDebugSection[] = [
     file: 'src/layers/localBubble/shell/ui/LocalBubbleTuningSectionContainer.tsx',
   },
   {
+    heading: 'Stellar streams tuning',
+    shows:
+      'Each stream is drawn twice, as sharp streaks and as a wide haze; for each, its brightness, size, stretch along the orbit, smallest size on screen and drift. A button puts both back to their defaults.',
+    file: 'src/layers/stellarStreams/streaks/ui/StellarStreamsTuningSectionContainer.tsx',
+  },
+  {
     heading: 'Sgr A* lens tuning',
     shows:
       'The drawn ring of gas round the black hole (its radii, tilt, flicker and colour) and the size of the sky picture that is bent round it.',

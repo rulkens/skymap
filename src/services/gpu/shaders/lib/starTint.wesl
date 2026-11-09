@@ -1,6 +1,7 @@
-// lib/starTint.wesl — Gaia BP−RP → linear-RGB star tint, for any shader that colours stars.
-// CPU twin: src/utils/color/starTintFromBpRp.ts (focused-star sphere); an edit to the anchors or
-// breakpoints here MUST be mirrored there (starTint.parity.test.ts pins both).
+// lib/starTint.wesl — Gaia BP−RP → linear-RGB star tint, for survey stars and stream streaks.
+// CPU twin: src/utils/color/starTintFromBpRp.ts (focused-star sphere, stream captions); an edit to
+// the anchors or breakpoints here MUST be mirrored there (starTint.parity.test.ts pins both),
+// and STREAM_BP_RP_RANGE (stellarStreams/streaks/vertex.wesl + its TS twin) spans the end ones.
 // Breakpoints are approximate Gaia class centres. Each chained mix only activates once 'bpRp'
 // passes its low breakpoint, when the running value already equals that segment's start anchor:
 // a piecewise-linear ramp with clamped flat ends and no branch.

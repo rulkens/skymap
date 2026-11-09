@@ -1,0 +1,4 @@
+/* CompactStellarStreamCard.module.css — the hover preview's outer hook; the chrome is compactChrome's. */
+.root {
+  composes: infoCardCompact from '../../../../../components/InfoCard/compactChrome.module.css';
+}

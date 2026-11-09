@@ -15,6 +15,7 @@ describe('FOREGROUND_MAX_DISTANCE_MPC importers', () => {
     expect(importers).toEqual([
       'src/data/bands/foregroundRecede.ts',
       'src/data/bands/surveyDeepZoom.ts',
+      'src/layers/stellarStreams/visibility.ts',
       'src/layers/structure/visibility.ts',
     ]);
   });

@@ -1,0 +1,39 @@
+/**
+ * stellarStreamsMetaFetcher — the name sidecar. It runs the pair check only when the bin has
+ * committed first; when the meta lands first, the bin fetcher runs it instead.
+ */
+import type { Fetcher } from '../../../../@types/loading/Fetcher';
+import type { StellarStreamMeta } from '../@types/StellarStreamMeta';
+import { HttpError, dataUrl } from '../../../../services/loading/fetchWithProgress';
+import { streamPairMismatch } from '../utils/streamPairMismatch';
+
+const STELLAR_STREAMS_META_PATH = 'stellar-streams/v1/stellar_streams_meta.json';
+// Fields older builds lack: without centrelines the ribbon upload throws and takes labels and
+// cards down with it; without the boost a focused stream draws NaN.
+const REQUIRED_FIELDS = ['centrelineMpc', 'focusBoost'] as const;
+
+export function stellarStreamsMetaFetcher(
+  binStreamCount: () => number | null,
+): Fetcher<readonly StellarStreamMeta[], void> {
+  return async (_req, signal) => {
+    const url = dataUrl(STELLAR_STREAMS_META_PATH);
+    const res = await fetch(url, { signal });
+    if (!res.ok) throw new HttpError(res.status, url);
+    const meta: unknown = await res.json();
+    if (!Array.isArray(meta)) throw new Error('stellar_streams_meta.json: root must be an array');
+    const first: unknown = meta[0];
+    const missing =
+      meta.length === 0
+        ? undefined
+        : REQUIRED_FIELDS.find((f) => !(typeof first === 'object' && first !== null && f in first));
+    if (missing !== undefined) {
+      throw new Error(
+        `stellar_streams_meta.json predates ${missing}: run npm run build-stellar-streams`,
+      );
+    }
+    const count = binStreamCount();
+    const mismatch = count === null ? null : streamPairMismatch(count, meta.length);
+    if (mismatch !== null) throw new Error(mismatch);
+    return meta as StellarStreamMeta[];
+  };
+}

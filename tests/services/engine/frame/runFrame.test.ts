@@ -78,6 +78,7 @@ import { rootReducer } from '../../../../src/store/rootReducer';
 import type { RunFrameDeps } from '../../../../src/@types/engine/frame/RunFrameDeps';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { VisibilityEntry } from '../../../../src/@types/engine/layer/VisibilityEntry';
+import { stellarStreamsVisibility } from '../../../../src/layers/stellarStreams/visibility';
 import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 import type { CameraDriver } from '../../../../src/@types/engine/camera/CameraDriver';
 import type { DriverId } from '../../../../src/@types/engine/camera/DriverId';
@@ -987,10 +988,6 @@ describe('runFrame — the label-director wake fold', () => {
     const SWITCH_ONLY: readonly VisibilityEntry[] = [
       { key: 'stellarStreams', selects: ['stellarStream'] },
     ];
-    // A band that fades in from 1 Mpc; the fixture's draw camera sits under 0.5 Mpc from the origin.
-    const BANDED: readonly VisibilityEntry[] = [
-      { key: 'stellarStreams', selects: ['stellarStream'], bands: { far: { in: [1, 2] } } },
-    ];
 
     it('shown: recedes as before', () => {
       const { snapshot } = focusedStreamFrame(SWITCH_ONLY, 1);
@@ -1007,7 +1004,7 @@ describe('runFrame — the label-director wake fold', () => {
     });
 
     it('out of its band: un-receded', () => {
-      const { snapshot } = focusedStreamFrame(BANDED, 1);
+      const { snapshot } = focusedStreamFrame(stellarStreamsVisibility, 1);
       expect(snapshot.focusBlend).toBe(0);
       expect(snapshot.focus.blend).toBe(0);
     });

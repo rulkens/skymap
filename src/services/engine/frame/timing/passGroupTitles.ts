@@ -21,6 +21,7 @@ export const PASS_GROUP_TITLES: Readonly<Record<string, string>> = {
   'zoa·COSMO': 'Volumes & aggregates',
   'star-aggregates·NEAR0': 'Volumes & aggregates',
   'mw-aggregate·NEAR0': 'Volumes & aggregates',
+  'stellar-streams-haze·NEAR0': 'Volumes & aggregates',
   // A sky capture's bake — one slot per capture, filed under its first step's
   // group, so its own group rather than folding into an existing title. Keyed
   // on the CAPTURE, not its render target.
