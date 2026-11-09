@@ -196,5 +196,22 @@ import?
 
 **Decision:** B, outline + tracks.
 
-_Still open:_ how the camera follows the playhead vs. flies free
+## Q10: How does the camera relate to the playhead?
+
+**The question:** "Use current view" needs a free camera, and scrubbing needs one that follows the
+clip. Mock B's pill offered "drag the sky to look around".
+
+**Considerations:**
+
+- **Option A (drag detaches):** follow until the sky is dragged, then fly free. A scrub, play or
+  "Use current view" re-attaches. No extra control, but the mode changes implicitly.
+- **Option B (explicit toggle):** a Follow / Free switch in the toolbar (key F). Nothing changes mode
+  by accident, at the cost of one control. Dragging in Follow does nothing.
+- **Option C (free when paused):** paused means free and play means follow. Scrubbing while paused
+  becomes ambiguous.
+
+**Decision:** B, an explicit Follow / Free toggle. The state is always on screen (the ui-ux.md
+"state is on screen" rule), and no gesture changes it.
+
+_Still open (engineering, to be proposed in the spec):_ how the camera follows the playhead vs. flies free
 for "use current view", the timeline layout, and how the studio's RTK state plugs into the app store.
