@@ -72,12 +72,12 @@ Tunables (particle budget, sizes, luminosities, seeds) live in
 
 ## Deploy order
 
-Sync before merging. Merging to `main` deploys the app shell, the app demands
-`stellar_streams_meta.json` on every boot, and it rejects a meta without `centrelineMpc` or `focusBoost`
-(an older build's, this branch's earlier syncs included). Merged first, every boot 404s the meta (a 4xx is never retried), so the palette lists no
-streams and switching them on draws nothing until the sync lands. Run from this branch's checkout,
-whose `DATA_FAMILIES` row puts the two files in the manifest:
+The app demands `stellar_streams_meta.json` on every boot and rejects a meta missing a field it reads
+(`centrelineMpc`, `focusBoost`, …). A 4xx is never retried, so until R2 holds a matching meta the palette
+lists no streams and switching them on draws nothing. When a change adds a meta field or a new file, run
+from a checkout whose `DATA_FAMILIES` row covers the stream files (a worktree with a symlinked
+`public/data` is skipped by the manifest step), then merge:
 
-1. `npm run build-data-manifest`
-2. `npm run sync-r2-secure` (the owner; see [`docs/DEPLOY.md`](../../docs/DEPLOY.md))
-3. merge
+1. `npm run build-stellar-streams`
+2. `npm run build-data-manifest`
+3. `npm run sync-r2-secure` (the owner; see [`docs/DEPLOY.md`](../../docs/DEPLOY.md))
