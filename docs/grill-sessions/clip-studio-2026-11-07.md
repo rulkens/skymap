@@ -159,11 +159,42 @@ reason ("nothing drifts under a scripted move").
 ## Amendments (owner, 2026-11-09)
 
 - **Q3 revised: lazy-loaded from day 1.** The owner asked to re-ask Q3 and ruled that the studio is
-  a lazy-loaded chunk from the first version, not a dev-only mount (exact scope confirmed in Q8).
+  a lazy-loaded chunk from the first version, not a dev-only mount (scope confirmed in Q8).
 - **Q5 widened: hand-written TS clips are edited in place too** (Q5 option C, on top of A). Saving
   over a hand-written clip regenerates its whole file, flattening its makers and constants into
   literals. The owner accepts that loss in exchange for one home per clip. The spec must state what
   happens to factory clips whose start depends on `simDays` (`earthFlyout`).
 
-_Open after Q7, pending the UI/UX investigation:_ how the camera follows the playhead vs. flies free
+## Q8: What does "lazy-loaded from day 1" mean?
+
+**The question:** Does v1 ship in the public build as a code-split chunk, or stay a dev-only lazy
+import?
+
+**Considerations:**
+
+- **Option A (shipped lazy chunk):** a code-split chunk behind an unlinked `#studio` hash param, in
+  the public build. Writing TS files needs the dev server, so saving is dev-only.
+- **Option B (dev-only, still lazy):** a lazy import under `import.meta.env.DEV`, like `?mock=`.
+
+**Decision:** A, a shipped lazy chunk behind `#studio`. Saving stays dev-only.
+
+## Q9: Which timeline layout?
+
+**The question:** The UI/UX investigation shot three layouts in the real UI
+(`data/shots/mock-studio-{a,b,c}.jpg`, Cosmic Flows at 4 s).
+
+**Considerations:**
+
+- **Option A (nested boxes):** NLE-style blocks inside their `seq`/`all` boxes, with a floating
+  inspector. Compact and direct to drag, but cramped past two or three levels, and short cues lose
+  their labels.
+- **Option B (outline + tracks):** a named row per step, indented by nesting, with bars on a time
+  grid and an inspector on the right. Readable at depth 4+, works from the keyboard, and every cue
+  has a named row.
+- **Option C (one row per channel):** camera channels and scene tracks as rows, with the structure
+  as brackets above. Clashes are obvious, but the step structure being edited is secondary.
+
+**Decision:** B, outline + tracks.
+
+_Still open:_ how the camera follows the playhead vs. flies free
 for "use current view", the timeline layout, and how the studio's RTK state plugs into the app store.
