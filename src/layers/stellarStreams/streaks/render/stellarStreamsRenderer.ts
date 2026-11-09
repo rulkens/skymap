@@ -13,7 +13,8 @@ import type { StellarStreamsFocus } from '../@types/StellarStreamsFocus';
 import type { Vec2 } from '../../../../@types/math/Vec2';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 
-import streamsCode from '../../../../services/gpu/shaders/stellarStreams/streams.wesl?static';
+import vsCode from '../../../../services/gpu/shaders/stellarStreams/streaks/vertex.wesl?static';
+import fsCode from '../../../../services/gpu/shaders/stellarStreams/streaks/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../../../../services/gpu/lib/blendStates';
 import {
@@ -22,9 +23,9 @@ import {
 } from '../../../../services/gpu/lib/cameraUniforms';
 import { STELLAR_STREAMS_RECORD_F32 } from '../../catalog/data/stellarStreamsFormat.constants';
 
-// The WGSL struct's 124 bytes rounded up to its 16-byte alignment.
+// The WGSL struct's size, already a multiple of its 16-byte alignment.
 const UNIFORMS_BYTES = 128;
-// f32 slots after the camera prefix; `Uniforms` in streams.wesl must agree.
+// f32 slots after the camera prefix; `Uniforms` in streaks/io.wesl must agree.
 const EYE = CAMERA_UNIFORM_BYTES / 4;
 const INTENSITY = EYE + 3;
 const SIZE_SCALE = INTENSITY + 1;
@@ -34,13 +35,15 @@ const TIME_SEC = INTENSITY + 4;
 const FLOW = INTENSITY + 5;
 const FOCUSED_STREAM = INTENSITY + 6;
 const RECEDE = INTENSITY + 7;
+const FOCUS_BOOST = INTENSITY + 8;
 const SLOT_OF = { streak: 0, haze: 1 } as const;
 
 export function createStellarStreamsRenderer(
   device: GPUDevice,
   targetFormat: GPUTextureFormat,
 ): StellarStreamsRenderer {
-  const module = createShaderModuleWithDevLog(device, streamsCode, 'stellar-streams');
+  const vsModule = createShaderModuleWithDevLog(device, vsCode, 'stellar-streams-vs');
+  const fsModule = createShaderModuleWithDevLog(device, fsCode, 'stellar-streams-fs');
   const bgl = device.createBindGroupLayout({
     label: 'stellar-streams-bgl',
     entries: [
@@ -70,7 +73,7 @@ export function createStellarStreamsRenderer(
     label: 'stellar-streams-pipeline',
     layout: device.createPipelineLayout({ bindGroupLayouts: [bgl] }),
     vertex: {
-      module,
+      module: vsModule,
       entryPoint: 'vs',
       buffers: [
         {
@@ -85,7 +88,7 @@ export function createStellarStreamsRenderer(
       ],
     },
     fragment: {
-      module,
+      module: fsModule,
       entryPoint: 'fs',
       targets: [{ format: targetFormat, blend: ADDITIVE_BLEND }],
     },
@@ -118,6 +121,7 @@ export function createStellarStreamsRenderer(
     scratch[FLOW] = look.flow;
     scratch[FOCUSED_STREAM] = focus.focusedStream;
     scratch[RECEDE] = focus.recede;
+    scratch[FOCUS_BOOST] = focus.focusBoost;
     device.queue.writeBuffer(slot.buffer, 0, scratch);
     return slot.bindGroup;
   }

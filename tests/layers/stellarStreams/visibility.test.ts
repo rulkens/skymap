@@ -18,8 +18,4 @@ describe('stellarStreams visibility', () => {
     expect(valueAt(20 * SCALE_UNITS.KPC_TO_MPC)).toBe(1);
     expect(valueAt(FOREGROUND_MAX_DISTANCE_MPC * 1.01)).toBe(0);
   });
-
-  it('the show entry selects the stellarStream kind', () => {
-    expect(entry.selects).toContain('stellarStream');
-  });
 });

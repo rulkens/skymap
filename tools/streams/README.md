@@ -48,7 +48,7 @@ across reruns over the same inputs. On 2026-11-07 it wrote 128,419 particles in 
   mass-to-light range stay out, and Sagittarius has none. The build fails if a row names no built
   stream.
 - **Wikipedia**: the meta row's `wikipediaTitle`, and its `description` when the summary has an
-  extract, come from [`data/streamWikipedia.constants.ts`](data/streamWikipedia.constants.ts): only
+  extract (null otherwise; the build writes no description of its own), come from [`data/streamWikipedia.constants.ts`](data/streamWikipedia.constants.ts): only
   articles about the stream itself (6 rows on 2026-11-07, 5 articles; progenitor-cluster articles stay
   out, and so do the titles that merely redirect to one). The raw REST summaries are cached in the
   committed `data/raw/streams/wikipedia_streams_cache.json`, so a rebuild makes no request; a new row
@@ -61,7 +61,23 @@ across reruns over the same inputs. On 2026-11-07 it wrote 128,419 particles in 
   angular momentum, arms split by orbital energy against the remnant's, binned by angle from the
   remnant); each arm is simplified the same way and the meta joins them through the remnant. On
   2026-11-07: 556 segments over the 83 streams, median 7 points, at most 16.
+- **Focus boost**: the meta row's `focusBoost` is what a full focus multiplies the stream's brightness by
+  (`streamFocusBoost`): a target surface brightness over the stream's summed sprite flux (luminosity ×
+  size²) per track area, the length grown by one streak flow loop, clamped to [1, 5]. On 2026-11-07: 5
+  streams at 1 (Sagittarius among them), 21 at the cap, median 3.6.
 - **Frame**: heliocentric J2000 equatorial, Mpc, as everywhere in skymap.
 
 Tunables (particle budget, sizes, luminosities, seeds) live in
 [`data/streamsBuild.constants.ts`](data/streamsBuild.constants.ts).
+
+## Deploy order
+
+The app demands `stellar_streams_meta.json` on every boot and rejects a meta missing a field it reads
+(`centrelineMpc`, `focusBoost`, …). A 4xx is never retried, so until R2 holds a matching meta the palette
+lists no streams and switching them on draws nothing. When a change adds a meta field or a new file, run
+from a checkout whose `DATA_FAMILIES` row covers the stream files (a worktree with a symlinked
+`public/data` is skipped by the manifest step), then merge:
+
+1. `npm run build-stellar-streams`
+2. `npm run build-data-manifest`
+3. `npm run sync-r2-secure` (the owner; see [`docs/DEPLOY.md`](../../docs/DEPLOY.md))

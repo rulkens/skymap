@@ -130,6 +130,8 @@ if (typeof navigator === 'undefined' || typeof navigator.gpu === 'undefined') {
       </Provider>,
     ),
   );
+  // Behind the flag so the build folds the import away (src/dev/mocks/README.md).
+  if (import.meta.env.DEV) void import('./dev/mountMock').then((m) => m.mountMock(store));
   // The shell stays up until React has something to show in its place: the
   // splash at once, otherwise the first drawn frame, which is what `arrival`
   // reports. Dropping it at mount left a black canvas while the engine loaded.

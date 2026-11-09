@@ -5,13 +5,11 @@
  * progenitor-cluster articles (Palomar 5, NGC 5466, whose "stream" titles redirect to the
  * cluster), and streams with no article. The build fails on a name that names no built stream.
  */
-import type { StreamWikipediaRow } from '../@types/StreamWikipediaRow';
-
-export const STREAM_WIKIPEDIA: readonly StreamWikipediaRow[] = [
-  { name: 'sagittarius', title: 'Sagittarius Stream' },
-  { name: 'GD-1', title: 'GD-1' },
-  { name: 'Monoceros', title: 'Monoceros Ring' },
-  { name: 'Aquarius', title: 'Aquarius Stream' },
-  { name: 'Fimbulthul', title: 'Fimbulthul stream' },
-  { name: 'OmegaCen-Fimbulthul', title: 'Fimbulthul stream' },
-];
+export const STREAM_WIKIPEDIA: Readonly<Record<string, string>> = {
+  sagittarius: 'Sagittarius Stream',
+  'GD-1': 'GD-1',
+  Monoceros: 'Monoceros Ring',
+  Aquarius: 'Aquarius Stream',
+  Fimbulthul: 'Fimbulthul stream',
+  'OmegaCen-Fimbulthul': 'Fimbulthul stream',
+};

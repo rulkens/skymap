@@ -1,0 +1,7 @@
+/* Above every app layer (the highest sits at 99999); the mock opts its own elements back into pointer events. */
+.root {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  pointer-events: none;
+}

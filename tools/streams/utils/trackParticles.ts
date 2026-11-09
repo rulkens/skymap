@@ -5,6 +5,7 @@
  * stream order fixes every draw.
  */
 import { normalize3 } from '../../../src/utils/math/normalize3';
+import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { cumulativeLengths } from '../../utils/math/cumulativeLengths';
 import { pointAlongPolyline } from '../../utils/math/pointAlongPolyline';
 import { gaussian } from '../../utils/random/gaussian';
@@ -26,8 +27,6 @@ import { streamColourT } from './streamColourT';
 import { trackPositionsKpc } from './trackPositionsKpc';
 import { trackWidthKpc } from './trackWidthKpc';
 
-const KPC_TO_MPC = 1e-3;
-
 export function trackParticles(
   track: GalstreamsTrack,
   feh: number,
@@ -44,7 +43,8 @@ export function trackParticles(
       TRACK_PARTICLES_MAX,
     ),
   );
-  const size = clamp(TRACK_SIZE_PER_WIDTH * w, TRACK_SIZE_KPC[0], TRACK_SIZE_KPC[1]) * KPC_TO_MPC;
+  const size =
+    clamp(TRACK_SIZE_PER_WIDTH * w, TRACK_SIZE_KPC[0], TRACK_SIZE_KPC[1]) * SCALE_UNITS.KPC_TO_MPC;
 
   const positionsMpc = new Float32Array(n * 3);
   const tangents = new Float32Array(n * 3);
@@ -60,7 +60,7 @@ export function trackParticles(
     const o = [gaussian(rng) * w, gaussian(rng) * w, gaussian(rng) * w];
     const along = o[0]! * t[0] + o[1]! * t[1] + o[2]! * t[2];
     for (let c = 0; c < 3; c++) {
-      positionsMpc[k * 3 + c] = (point[c]! + o[c]! - along * t[c]!) * KPC_TO_MPC;
+      positionsMpc[k * 3 + c] = (point[c]! + o[c]! - along * t[c]!) * SCALE_UNITS.KPC_TO_MPC;
     }
     tangents.set(t, k * 3);
     const endFade = clamp(Math.min(phase, 1 - phase) * TRACK_END_FADE_SLOPE, 0, 1);

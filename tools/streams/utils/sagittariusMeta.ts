@@ -1,13 +1,16 @@
 import { arrayMean } from '../../../src/utils/math/arrayMean';
 import { raDecDistToEqCart } from '../../../src/utils/math/raDecDistToEqCart';
+import { cumulativeLengths } from '../../utils/math/cumulativeLengths';
 import { percentile } from '../../utils/perf/percentile';
-import type { StellarStreamMetaEntry } from '../@types/StellarStreamMetaEntry';
+import type { StellarStreamMeta } from '../../../src/layers/stellarStreams/catalog/@types/StellarStreamMeta';
 import type { StreamParticles } from '../@types/StreamParticles';
 import type { StreamWikipedia } from '../@types/StreamWikipedia';
 import type { VasilievStar } from '../@types/VasilievStar';
 import { streamArticleFields } from './streamArticleFields';
 import { streamCentreline } from './streamCentreline';
+import { cappedFrameRadiusKpc } from './cappedFrameRadiusKpc';
 import { sagittariusCentrelines } from './sagittariusCentrelines';
+import { streamFocusBoost } from './streamFocusBoost';
 
 const MPC_TO_KPC = 1e3;
 /** The extent ignores the farthest 1% of the snapshot, so one stray particle cannot set it. */
@@ -20,7 +23,7 @@ export function sagittariusMeta(
   stars: readonly VasilievStar[],
   p: StreamParticles,
   wikipedia: StreamWikipedia | null,
-): StellarStreamMetaEntry {
+): StellarStreamMeta {
   const positionsMpc = stars.map((s) =>
     raDecDistToEqCart({ raHours: s.ra / 15, decDeg: s.dec, distMpc: s.distanceKpc / MPC_TO_KPC }),
   );
@@ -42,19 +45,24 @@ export function sagittariusMeta(
   return {
     id: 'sagittarius',
     names: ['Sagittarius', 'Sagittarius stream'],
-    ...streamArticleFields(
-      wikipedia,
-      'The tidal debris of the Sagittarius dwarf galaxy, from the N-body model of Vasiliev, Belokurov & Erkal 2021.',
-    ),
+    ...streamArticleFields(wikipedia),
     source: 'vasiliev2021',
     reference: 'Vasiliev, Belokurov & Erkal 2021',
     // An extent (diameter around the remnant) here; for galstreams streams an arc length.
     lengthKpc: 2 * percentile(fromAnchorKpc, EXTENT_PERCENTILE),
-    frameRadiusKpc: percentile(fromAnchorKpc, FRAME_PERCENTILE),
+    frameRadiusKpc: cappedFrameRadiusKpc(
+      percentile(fromAnchorKpc, FRAME_PERCENTILE),
+      Math.hypot(...anchorMpc) * MPC_TO_KPC,
+    ),
     distanceKpc: [near, far],
     widthDeg: null,
-    particleCount: p.luminosity.length,
     colourT: arrayMean(p.colourT),
+    // Its arms' arc length, not the extent: the debris lies along them.
+    focusBoost: streamFocusBoost(
+      p,
+      [leadingKpc, trailingKpc].reduce((sum, arm) => sum + (cumulativeLengths(arm).at(-1) ?? 0), 0),
+      widthKpc,
+    ),
     // A gradient along the debris, not one value (`sagittariusFeh`).
     metallicity: null,
     // Published values are ranges or limits (see streamStellarMass.constants).

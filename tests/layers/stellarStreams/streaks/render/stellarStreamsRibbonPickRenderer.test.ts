@@ -68,7 +68,7 @@ describe('createStellarStreamsRibbonPickRenderer', () => {
     expect(pass.draw).not.toHaveBeenCalled();
   });
 
-  it('writes the pick base and the width floor where ribbonPick.wesl reads them', () => {
+  it('writes the pick base and the width floor where ribbonPick/vertex.wesl reads them', () => {
     const { draw, writeBuffer } = setup();
     draw(-1);
     const block = writeBuffer.mock.calls.at(-1)![2] as Float32Array;

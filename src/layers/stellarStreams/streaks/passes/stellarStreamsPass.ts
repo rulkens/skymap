@@ -34,13 +34,13 @@ export function stellarStreamsPass(runtime: StellarStreamsRuntime): ContentPass<
         stellarStreamsClockSec(ctx),
         state.settings.stellarStreams.streak,
         fade,
-        stellarStreamsFocus(ctx, runtime.pickCode),
+        stellarStreamsFocus(ctx, runtime.pickCode, runtime.meta()),
       );
     },
 
     // The same windowed `vp`/`viewportPx` as `draw`, so the ribbon lands under the streaks.
     drawPick(pass, view, ctx) {
-      const { recede, focusedStream } = stellarStreamsFocus(ctx, runtime.pickCode);
+      const { recede, focusedStream } = stellarStreamsFocus(ctx, runtime.pickCode, runtime.meta());
       // Another kind's focus recedes the streams, and what a focus recedes takes no clicks.
       if (focusedStream < 0 && recede < 1) return;
       runtime.ribbonPick.draw(

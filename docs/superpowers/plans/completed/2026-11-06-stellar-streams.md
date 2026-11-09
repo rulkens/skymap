@@ -17,7 +17,7 @@ selection kind (post-#1064, no core tables).
 **Tech Stack:** TypeScript, WebGPU + WESL, Redux Toolkit slices, React (debug section, cards), Vitest, tsx
 tools.
 
-**Spec:** `docs/superpowers/specs/2026-11-06-stellar-streams-design.md`
+**Spec:** `docs/superpowers/specs/completed/2026-11-06-stellar-streams-design.md`
 
 ## Global Constraints
 
@@ -68,20 +68,20 @@ tools.
 
 Read `docs/DATA.md` "Adding a new raw data source" first; model the fetchers on `tools/fetch/fetchLocalBubble.ts`.
 
-- [ ] `fetchVasiliev2021`: download `https://zenodo.org/records/4300977/files/Sgr_stream_simulations.zip`
+- [x] `fetchVasiliev2021`: download `https://zenodo.org/records/4300977/files/Sgr_stream_simulations.zip`
   (43.6 MB), extract only `Sgr_snapshot/stars.txt` and `Sgr_snapshot/readme.txt` into
   `data/raw/vasiliev2021/`, write `.sha256` sidecars; skip when present and the checksum matches.
-- [ ] `fetchGalstreams`: download the GitHub tarball of `cmateu/galstreams` at a pinned commit sha (a named
+- [x] `fetchGalstreams`: download the GitHub tarball of `cmateu/galstreams` at a pinned commit sha (a named
   constant in the fetcher, chosen at implementation time from `main`), extract `galstreams/tracks/` and
   `galstreams/lib/master_log.txt` into `data/raw/galstreams/`; one `.sha256` for the tarball.
-- [ ] Registry rows (`kind`, `source: 'gitignored'`, `description`, `upstream`, `fetcher`, `readme`).
-- [ ] READMEs: upstream URL, licence, columns (stars.txt: `x y z vx vy vz ra dec distance pmra pmdec vlos
+- [x] Registry rows (`kind`, `source: 'gitignored'`, `description`, `upstream`, `fetcher`, `readme`).
+- [x] READMEs: upstream URL, licence, columns (stars.txt: `x y z vx vy vz ra dec distance pmra pmdec vlos
   Lambda Beta Zeta Tstrip mass`; galactocentric axes with the Sun at x = −8 kpc), fetch date, checksum.
-- [ ] `ATTRIBUTIONS.md` entries for both (the `attributionCoverage` test forces them), and the website
+- [x] `ATTRIBUTIONS.md` entries for both (the `attributionCoverage` test forces them), and the website
   data-page row it then requires (`dataPages.test.ts`).
-- [ ] `DOCS_COMMANDS` rows for the two scripts (`docsProject.test.ts:32-33`).
-- [ ] No new unit test: fetchers are I/O; the coverage tests above guard the rows.
-- [ ] Commit.
+- [x] `DOCS_COMMANDS` rows for the two scripts (`docsProject.test.ts:32-33`).
+- [x] No new unit test: fetchers are I/O; the coverage tests above guard the rows.
+- [x] Commit.
 
 ### Task 2: The bin format codec
 
@@ -123,14 +123,14 @@ Layout (little-endian), header comment spelled out in full (byte-layout contract
 | +32 | f32 | colour t ∈ [0, 1] |
 | +36 | f32 | stream index (integer-valued) |
 
-- [ ] Tests:
+- [x] Tests:
   - `round-trips a payload byte for byte` (encode → decode → same `records`, counts).
   - `rejects a wrong magic with a regenerate message` (message contains `npm run build-stellar-streams`).
   - `rejects another version with a regenerate message`.
   - `rejects a byte length that disagrees with particleCount`.
-- [ ] Implement; the renderer's attribute offsets (spike `streaks/render/stellarStreamsRenderer.ts:53-60`)
+- [x] Implement; the renderer's attribute offsets (spike `streaks/render/stellarStreamsRenderer.ts:53-60`)
   already match this record.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 3: Sagittarius particles from the Vasiliev snapshot
 
@@ -165,15 +165,15 @@ x towards the GC from the Sun, y towards l = 90°, z to the NGP); luminosity uni
 constant, **no age boost**; colour t = `clamp01(1 + tStrip / SGR_OLDEST_STRIP_GYR) · 0.8 + U(0, 0.2)` so bound
 (`tStrip = 0`) and recent debris lean orange (t → 1) and old debris blue; size from a per-source range constant.
 
-- [ ] Tests:
+- [x] Tests:
   - `galToEq maps the galactic centre direction to RA 266.40°, Dec −28.94°` (to 0.01°).
   - `galToEq keeps vectors unit length`.
   - `subsamples to the budget, deterministically for one seed` (same seed → identical arrays; other seed →
     different).
   - `the tangent is the rotated galactocentric velocity` (one hand-made row, expected vector from `galToEq`).
-  - `bound particles lean orange and the oldest lean blue` (colour t of `tStrip = 0` > that of the oldest).
+  - `bound particles lean orange and the oldest lean blue` (colour t of `tStrip = 0` > that of the oldest). (superseded by Task 17: colour now follows [Fe/H] and a sampled star mix)
   - `luminosity carries no stripping-time trend` (mean over young vs old halves within 5%).
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 4: galstreams particles, meta sidecar and the build command
 
@@ -210,6 +210,7 @@ review: yes
     anchorMpc: readonly [number, number, number];
   };
   ```
+  (superseded by the deletion audit 49628d5a6: the build now returns the runtime `StellarStreamMeta`, and this tools mirror is deleted.)
   The runtime mirror of this type lands in Task 6 (`catalog/@types/StellarStreamMeta.d.ts`) with the same
   fields.
 
@@ -230,7 +231,7 @@ Rules (from the spike's Python, `tools/streams/buildStellarStreams.py:118-228`, 
   `/^(?:stellar-streams\.bin|stellar_streams_meta\.json)$/`.
 - `DATA.md`: format table row (`STRM`, `0x4D525453`, v1), `public/data` layout line, refresh-order row.
 
-- [ ] Tests:
+- [x] Tests:
   - `pickStreamTracks prefers the On track and skips sky-only, non-st and Sagittarius tracks`.
   - `orientTrackByMotion flips a track listed against its proper motion` and `keeps one listed along it`.
   - `trackParticles spreads particles evenly with only the end fade varying luminosity along the track`
@@ -239,11 +240,11 @@ Rules (from the spike's Python, `tools/streams/buildStellarStreams.py:118-228`, 
   - `the build writes a stream count equal to the meta length, Sagittarius first, slugs sorted after`
     (run the builder's core over fixture inputs, no network).
   - `a rebuild over the same inputs is byte-identical`.
-- [ ] Run `npm run fetch-vasiliev2021 && npm run fetch-galstreams && npm run build-stellar-streams` locally;
+- [x] Run `npm run fetch-vasiliev2021 && npm run fetch-galstreams && npm run build-stellar-streams` locally;
   report particle and stream counts and the bin size (expect ~127k, ~83, ~5.1 MB). The worktree's
   `public/data` is a symlink to main's: the files land there, and `build-data-manifest` skips a symlinked
   tree (identity paths in dev, as intended).
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 5: Settings, visibility and the toggle
 
@@ -281,12 +282,12 @@ Rules (from the spike's Python, `tools/streams/buildStellarStreams.py:118-228`, 
   `streams`; label entry `{ label: 'stellarStream', cluster: 'stellarStreams', of: 'stellarStreams' }`).
 - UI row: `{ slot: 'labelsAndGuides', content: { toggle: 'stellarStreams', label: 'Stellar streams' } }`.
 
-- [ ] Tests (`visibility.test.ts`, via `bandValueOf`):
+- [x] Tests (`visibility.test.ts`, via `bandValueOf`):
   - `the streams band is 0 at 2 kpc, 1 at 20 kpc and 0 past the foreground gate`.
-  - `the show entry selects the stellarStream kind` (the reveal saga's hook).
-- [ ] No reducer tests (plain setters); the composition identity test (`appVisibility.test.ts:78-86`) covers
+  - `the show entry selects the stellarStream kind` (the reveal saga's hook). (superseded: deleted by the deletion audit 49628d5a6 as a restatement of the data; `selectionKindShown.test.ts` goes red if `selects` is lost)
+- [x] No reducer tests (plain setters); the composition identity test (`appVisibility.test.ts:78-86`) covers
   the registry entry.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 6: Loading the bin and the meta
 
@@ -324,11 +325,11 @@ Rules (from the spike's Python, `tools/streams/buildStellarStreams.py:118-228`, 
   demand with the `near` form.
 - Delete the spike's direct `fetch` in `create.ts`.
 
-- [ ] Tests:
+- [x] Tests:
   - `rejects a bin whose stream count disagrees with the committed meta` (Review Focus 4).
   - `rejects a meta whose length disagrees with the loaded bin`.
   - `accepts a bin with no meta yet` (it draws index-only).
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 7: Streaks driven by settings, fade and the visible-only wake
 
@@ -354,14 +355,14 @@ review: yes
 - The uniform block layout is unchanged (spike renderer `:88-96`: camera prefix, eye at f32 20,
   intensity 23, sizeScale 24, stretch 25, minPx 26, timeSec 27, flow 28); name those offsets as constants.
 
-- [ ] Tests (`frame.test.ts`):
+- [x] Tests (`frame.test.ts`):
   - `does not wake at fade 0` (Review Focus 2).
   - `does not wake when both looks' flow are 0` (Review Focus 3).
   - `does not wake before the bin loads, and reports loading only while visible`.
   - `wakes while visible with data and a drifting look`.
-- [ ] `layer.test.ts`: `the Layer's pass sits on a FRAME_ORDER line` (pattern
+- [x] `layer.test.ts`: `the Layer's pass sits on a FRAME_ORDER line` (pattern
   `tests/layers/structure/layer.test.ts:75`).
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 8: The debug tuning section
 
@@ -381,9 +382,9 @@ Read `docs/superpowers/conventions/ui-ux.md` first; mirror
 - Two groups, "Streaks" and "Haze", five sliders each, plus "Reset looks" dispatching
   `resetStellarStreamsLooks()`. The heading text must appear in the component (`docsProject.test.ts:50-58`).
 
-- [ ] Test: `a slider change dispatches setStellarStreamsLook for its look and knob` and `reset restores the
+- [x] Test: `a slider change dispatches setStellarStreamsLook for its look and knob` and `reset restores the
   defaults` (interaction test per ui-ux.md).
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 9: Picking
 
@@ -407,11 +408,11 @@ Invoke the `wesl-shaders` skill before editing WESL. Pattern: `src/layers/milkyW
   `PICK_PADDING_PX` (4) device px; same vertex stage as the visual draw (shared function, no copy).
 - Uses the windowed `view.slab.vp` / `view.viewportPx` the visual pass uses, so the pick crop applies.
 
-- [ ] Tests:
+- [x] Tests (superseded by Task 20: the particle pick and `pickEnabled` are gone; the ribbon pick has its own tests):
   - `drawPick draws the streak look only` (fake renderer records one pick draw, none for haze).
   - `pickEnabled is false when the pass is disabled or the fade is 0`.
-- [ ] Manual check (controller): hover a stream in the dev server; the hover preview names it.
-- [ ] Commit.
+- [x] Manual check (controller): hover a stream in the dev server; the hover preview names it.
+- [x] Commit.
 
 ### Task 10: The selection kind, card and search
 
@@ -446,12 +447,12 @@ Mirror the satellites kind (`src/layers/satellites/selection/kinds.ts`, `satelli
   with reference and licence. Compact: name, kind line, distance range.
 - Search: one `LayerSearchEntry` per stream `{ id: 'stream-<slug>', names, class: 'primary', chip: 'Stream' }`.
 
-- [ ] Tests:
+- [x] Tests:
   - `resolvePick and encodePick round-trip every stream`.
   - `a deep-link ref resolves with the bin unloaded` (meta committed, bin slot idle; Review Focus 1).
   - `focusId decodes stream-gd-1 and refuses other prefixes`.
   - `the detail card shows the N-body kind line for Sagittarius and the width dash`.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 11: Labels
 
@@ -472,11 +473,11 @@ Pattern: `src/layers/structure/**/present/produceStructureLabels.ts` (NEAR0 anch
   `isPickableUnderFocus`.
 - No labels until the meta is committed.
 
-- [ ] Tests:
+- [x] Tests:
   - `emits one label per stream once the meta is in` and `none before`.
   - `each label's pickId equals the selection row's encodePick`.
   - `a longer stream outranks a shorter one at equal distance` (prominence).
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 12: Band-driven asset demand (depends on the asset-demand-as-data PR)
 
@@ -488,22 +489,22 @@ into this branch. Read the landed shape in `src/@types/loading/AssetWiringRow.d.
 - Modify: `src/layers/stellarStreams/catalog/load/stellarStreamsAssetRows.ts`
 - Test: whatever the landed shape's own tests pin per row (follow its pattern for localBubble/satellites)
 
-- [ ] Replace the bin row's interim `demand`/`release` with the band form on show entry `stellarStreams`, band
+- [x] Replace the bin row's interim `demand`/`release` with the band form on show entry `stellarStreams`, band
   `streams`, lead 1.2, release 2 (field names as landed).
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 13: Perf, eye check and docs (controller)
 
 **Files:**
 - Modify: `docs/superpowers/plans/2026-11-06-stellar-streams.md` (tick boxes), ledger
 
-- [ ] `npm run perf -- --url http://localhost:<this wt port>` at the oblique pose
+- [x] `npm run perf -- --url http://localhost:<this wt port>` at the oblique pose
   (`#pose=a,-0.00043726202,-0.0069827522,-0.0038794295,4.4046,-0.6,0.065,0`) and the M54 pose
   (`#pose=a,0.005388403,-0.021997970,-0.013330148,4.4046,-0.6,0.022,0`): streams off (before) vs on (after);
   read the `perf` skill first. Record GPU ms for `stellar-streams` and frame totals.
-- [ ] Eye check pairs (main vs branch) at both poses plus a label/pick/card shot, sent to the owner with deep
+- [x] Eye check pairs (main vs branch) at both poses plus a label/pick/card shot, sent to the owner with deep
   links.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 14: Haze look at half resolution (perf-gate follow-up, owner ruling 1c)
 
@@ -723,37 +724,62 @@ nothing but the focused stream's caption; switching structure→stream fades.
 - [x] No Layer contract change.
 - [x] Commit (rebuilt data is gitignored).
 
+### Task 20b: The Milky Way disc and Sgr A* obey a stream focus; Zone of Avoidance takes no pick; Width row hides (owner ruling j7Jj)
+
+**Why:** after Task 20 the Milky Way disc and the Galactic-centre dot stayed pickable under a stream (and a
+structure) focus, and the disc stayed bright; 51 of 83 streams have no known width and the card showed a bare
+"—". The owner ruled: keep the fade-through on every focus-sphere change, and fix the disc and dot on this branch.
+
+**Rulings:** (1) The disc and Sgr A* take the same rules as every other receding thing, through the existing
+`isPickableUnderFocus` and `focusAlphaMultiplier` helpers: no new mechanism, no per-layer kind branch, no Layer
+contract change. Neither declares a `focusSphere`, so focusing either leaves the focus at rest and they stay bright
+and pickable. (2) The disc's sphere dim stacks on its existing `strong` recession (0.15 × 0.08): the sphere-only
+option still read bright because the core is far over exposure. (3) The Zone of Avoidance band has no position to
+test against a sphere, so it takes no pick while a focus fades or holds, and recedes strongly. (4) The card's
+Width row hides when unknown, like Metallicity and Stellar mass.
+
+**Files:** `milkyWayPass.ts`, `milkyWayCloudLiveness.ts`, `blackHolePickable.ts`, `blackHoleMarkerPass.ts`,
+`zoneOfAvoidancePass.ts` + its visibility entry, `StellarStreamDetailCard.tsx`.
+
+**Tests:** under a sphere that excludes the disc or the Galactic centre they are unpickable and dimmed, and stay
+pickable under one that holds it; the shared `isSubjectPickableUnderFocus` helper has its own test (dropping the
+`subjectId === focusPickId` term fails it); the Width row is absent for Sagittarius and shown for GD-1.
+
+- [x] Commit (7b196122e, e8850fe5c, 7ef991c0d).
+
 Task 13 re-runs (perf, eye check) after Task 20.
 
 ---
 
 ## Definition of Done
 
+Ticked at the /feature-done audit; a note after a box says what the evidence is or what superseded the wording.
+
 **Deliverables**
-- `npm run fetch-vasiliev2021`, `npm run fetch-galstreams`, `npm run build-stellar-streams` work end to end and
+- [x] `npm run fetch-vasiliev2021`, `npm run fetch-galstreams`, `npm run build-stellar-streams` work end to end and
   produce `stellar-streams/v1/stellar-streams.bin` (~127k particles, ~83 streams) and
   `stellar_streams_meta.json`.
-- `src/layers/stellarStreams/` in ADR 0014 modules: `catalog/`, `streaks/`, `labels/`, `selection/`, `search/`;
+- [x] `src/layers/stellarStreams/` in ADR 0014 modules: `catalog/`, `streaks/`, `labels/`, `selection/`, `search/`;
   `tools/streams/buildStellarStreams.py` deleted; no `window.__streamLooks`.
-- `ATTRIBUTIONS.md`, `DATA.md`, website commands/data/settings/debug rows updated.
+- [x] `ATTRIBUTIONS.md`, `DATA.md`, website commands/data/settings/debug rows updated.
 
 **Observable behaviours (smoke)**
-- Off at boot; switching "Stellar streams" on in Labels & guides shows nothing near the Sun, fades in between
+- [x] Off at boot; switching "Stellar streams" on in Labels & guides shows nothing near the Sun, fades in between
   4 and 10 kpc, and is gone past the foreground gate.
-- Streaks drift along each stream's motion; Sagittarius runs from an orange core to yellow-orange arms;
+- [x] Streaks drift along each stream's motion; Sagittarius runs from an orange core to yellow-orange arms;
   galstreams streams are pale yellow-white, shaded by metallicity; no along-track brightness waves on the
   galstreams streams.
-- The render loop sleeps when streams are off, out of band, or both looks' flow are 0.
-- Debug panel "Stellar streams" sliders change the look live; Reset restores it.
-- Hover a stream: preview card; click: detail card with name, kind line, length, distance range, width,
-  particles, source; F focuses and frames it; Esc clears.
-- Each stream has one label; clicking the label selects the stream.
-- Palette search finds "GD-1" and "Sagittarius"; `#focus=stream-gd-1` from the boot view switches the section on
+- [x] The render loop sleeps (pinned in `frame.test.ts`) when streams are off, out of band, or both looks' flow are 0.
+- [x] Debug panel "Stellar streams" sliders change the look live; Reset restores it.
+- [x] Hover a stream: preview card; click: detail card with name, kind line, length, distance range, width,
+  particles, source (superseded: the owner dropped the Particles, Source and Licence rows, and the Width row hides when unknown); F focuses and frames it; Esc clears.
+- [x] Each stream has one label (superseded by Task 16: captioned once its length spans 150 px, or when hovered or selected); clicking the label selects the stream.
+- [x] Palette search finds "GD-1" and "Sagittarius"; `#focus=stream-gd-1` from the boot view switches the section on
   and flies there.
-- Perf numbers at the two poses reported before/after.
+- [x] Perf numbers (ledger: ~30 ms before Task 14, ~3.7 / 2.7 ms real GPU at the two poses after, no regression after Task 20) at the two poses reported before/after.
 
 **Deferral boundary**
-- Per-stream highlight of the selected stream; real-orbit animation or time scrub; streams without real
+- Per-stream highlight of the selected stream (superseded: shipped as Tasks 18, 20 and 23, the rest recedes and the focused stream brightens); real-orbit animation or time scrub; streams without real
   distances; packed records; R2 sync (the owner's step from main); `matteHiddenPasses` and the other backlogged
   adjacent findings.
 
@@ -782,3 +808,45 @@ tools/streams/README.
 and falls back to the old description when the article has none.
 
 - [x] Commit (rebuilt data is gitignored).
+
+### Task 22: Frame a stream focus tighter, large streams most (owner request 2026-11-07)
+
+**Why:** `#focus=stream-sagittarius` settled the camera ~156 kpc from the Sun, inside the streams' out band
+(fade 35 to 230 kpc), so the focused stream drew at ~0.32 and, since the recede scales with the focused kind's shown
+value, the scene dimmed only ~32 %. The owner ruled: frame tighter, especially large streams.
+
+**Rulings:** (1) A cap at the data seam, `cappedFrameRadiusKpc` in the meta build, so the settled camera (anchor
+plus arrival distance, worst camera side) stays within the out band's 0.95 point (61.4 kpc); no change to the band and
+no stream case in core camera code. (2) A floor so the camera clears the in band's 0.95 point (9.19 kpc) on the
+Sun side; the floor wins where it clashes with the cap (anchors beyond ~26 kpc), visibility over tightness. (3)
+Streams anchored past 61 kpc keep their radius; 9 of 83 stay below 0.95 on the far side (Eridanus 0.07, accepted).
+
+**Files:** `tools/streams/utils/cappedFrameRadiusKpc.ts`, `tools/streams/data/streamFrameCap.constants.ts`, the
+meta builders; spec Amendments line.
+
+**Tests:** every framing the util yields keeps the in band's near side at shown >= 0.95, and the out side too where
+the cap and floor allow; the cap and floor constants derive from the band.
+
+- [x] Meta rebuilt twice, byte-identical. Sagittarius 55.3 to 12.5 kpc, Orphan-Chenab 49.1 to 14.9, GD-1 8.3.
+- [x] Commit (0287826d7, 7a2ea4c28).
+
+### Task 23: A focused stream brightens, dim streams most (owner request 2026-11-07)
+
+**Why:** several streams read dim at rest; focused, they should stand out from the receded background.
+
+**Rulings:** (1) The focused stream's streak and haze intensity multiply by a per-stream `focusBoost`, ramped in by
+the shown-scaled focus blend (exactly 1 at rest, for other streams and under another kind's focus). (2) The factor
+is built into the meta: `clamp(STREAM_FOCUS_BOOST_TARGET / SB, 1, STREAM_FOCUS_BOOST_CAP)`, SB the sprite flux per
+track area with one streak flow loop added to the length (target 6, cap 5, two named constants); Sagittarius 1,
+GD-1 4.1, Orphan-Chenab 2.9, NGC 6397 2.2. (3) No DebugPanel knob. (4) A meta without `focusBoost` is rejected by
+the fetcher (it would draw NaN), through one `REQUIRED_FIELDS` list with `centrelineMpc`.
+
+**Files:** `tools/streams/utils/streamFocusBoost.ts`, `streamsBuild.constants.ts`, the runtime meta type,
+`stellarStreamsFocus`, the renderer's uniform block (last lane, byte 124), `streams.wesl`, the meta fetcher.
+
+**Tests:** a thin sparse track gets more than a dense wide one, and the factor is clamped to [1, cap] and finite
+at zero width; the boost is 1 at rest and under another kind's focus, linear in the blend; `focusBoost` sits at
+byte 124 of the 128-byte block; a meta without it is rejected.
+
+- [x] Meta rebuilt twice, byte-identical; the bin is unchanged.
+- [x] Commit (26b39d986, 0a8407ca5).

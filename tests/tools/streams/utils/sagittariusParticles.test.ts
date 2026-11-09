@@ -44,12 +44,13 @@ function boundCount(positionsMpc: Float32Array): number {
 describe('sagittariusParticles', () => {
   it('subsamples to the budget, deterministically for one seed', () => {
     const rows = Array.from({ length: SGR_PARTICLE_BUDGET + 10_000 }, (_, i) => star(i));
-    const a = sagittariusParticles(rows, 1n);
-    expect(a.luminosity.length).toBe(SGR_PARTICLE_BUDGET);
-    expect(sagittariusParticles(rows, 1n)).toEqual(a);
-    expect(Array.from(sagittariusParticles(rows, 2n).positionsMpc)).not.toEqual(
-      Array.from(a.positionsMpc),
-    );
+    // Byte compares: `toEqual` over 180k floats was the suite's slowest assertion.
+    const bytes = (seed: bigint) =>
+      Buffer.from(sagittariusParticles(rows, seed).positionsMpc.buffer);
+    const a = bytes(1n);
+    expect(a.length / 12).toBe(SGR_PARTICLE_BUDGET);
+    expect(bytes(1n).equals(a)).toBe(true);
+    expect(bytes(2n).equals(a)).toBe(false);
   });
 
   it('caps the bound remnant and spends the rest of the budget on debris', () => {

@@ -2,17 +2,20 @@
  * recedingFocusSubsystem — focus mode: one 400 ms blend for whichever receding row is focused,
  * and its sphere on a ramp of its own. A switch to a different sphere fades through: the old one
  * fades out, then the new one in, so the per-vertex dim never pops (a structure's ball and a
- * stream's recede-all sphere included). `update` runs every frame but fades only on a transition
+ * `'subjectOnly'` region's recede-all sphere included). `update` runs every frame but fades only on a transition
  * (re-calling `fadeTo` would reset the ramp's clock). Ref and sphere stay latched through their
- * fade-outs, outlasting `selection.focus`. The fade controllers are private (no `FadeRegistry`
- * wake), so `update` wakes the scheduler on each transition; steady frames rely on `isAwake`.
+ * fade-outs, outlasting `selection.focus`. Both blends scale by how shown the subject's kind is,
+ * so a focus whose subject has faded from view (out of its band, switched off) recedes nothing.
+ * The fade controllers are private (no `FadeRegistry` wake), so `update` wakes the scheduler on
+ * each transition; steady frames rely on `isAwake`.
  */
 
 import { createFadeController } from '../../animation/fadeController';
 import { refKey } from '../../../utils/selection/refKey';
 import { sameFocusSphere } from '../../../utils/structure/sameFocusSphere';
+import { RECEDE_ALL_FOCUS_SPHERE } from '../../../data/selection/recedeAllFocusSphere';
 import type { RecedingFocusSubsystem } from '../../../@types/engine/subsystems/RecedingFocusSubsystem';
-import type { FocusSubject } from '../../../@types/engine/subsystems/FocusSubject';
+import type { RecedingFocusRow } from '../../../@types/engine/selection/RecedingFocusRow';
 import type { FocusFrame } from '../../../@types/engine/subsystems/FocusFrame';
 import type { FocusUniformsValue } from '../../../@types/rendering/FocusUniformsValue';
 import type { FocusSphere } from '../../../@types/rendering/FocusSphere';
@@ -50,33 +53,44 @@ export function createRecedingFocusSubsystem(
   let focusedKey: string | null = null;
   let last: FocusFrame = AT_REST;
 
-  function update(subject: FocusSubject | null, nowMs: number): void {
-    const targetKey = subject === null ? null : refKey(subject.ref);
+  function update(
+    focusRef: SelectionRefBase | null,
+    row: RecedingFocusRow | null,
+    nowMs: number,
+  ): void {
+    const focused = focusRef !== null && row !== null;
+    const targetKey = focused ? refKey(focusRef) : null;
     // No transition → no re-fade (covers the same subject every frame AND
     // an already-in-flight fade-out being re-observed every frame).
     if (targetKey === focusedKey) return;
 
     focusedKey = targetKey;
-    fade.fadeTo(subject === null ? 0 : 1, FOCUS_FADE_DURATION_MS, nowMs);
-    if (subject !== null) ref = subject.ref;
+    fade.fadeTo(focused ? 1 : 0, FOCUS_FADE_DURATION_MS, nowMs);
+    if (focused) ref = focusRef;
+    // The shader knows only the sphere test: core's one translation of 'subjectOnly' to uniforms.
+    const target = !focused
+      ? null
+      : row.focusRegion === 'subjectOnly'
+        ? RECEDE_ALL_FOCUS_SPHERE
+        : row.focusRegion;
     const sphereChanges =
-      subject !== null &&
+      target !== null &&
       sphere !== null &&
       sphereFade.currentOpacity(nowMs) > 0 &&
-      !sameFocusSphere(sphere, subject.sphere);
-    if (subject === null || sphereChanges) {
-      queued = subject?.sphere ?? null;
+      !sameFocusSphere(sphere, target);
+    if (target === null || sphereChanges) {
+      queued = target;
       sphereFade.fadeTo(0, FOCUS_FADE_DURATION_MS, nowMs);
     } else {
       queued = null;
-      sphere = subject.sphere;
+      sphere = target;
       sphereFade.fadeTo(1, FOCUS_FADE_DURATION_MS, nowMs);
     }
     // Essential wake: private fade controllers — no FadeRegistry wake covers them.
     deps.requestRender();
   }
 
-  function produceFocus(nowMs: number): FocusFrame {
+  function produceFocus(nowMs: number, shownOf: (ref: SelectionRefBase) => number): FocusFrame {
     const blend = fade.currentOpacity(nowMs);
     const sphereBlend = sphereFade.currentOpacity(nowMs);
     if (blend === 0 && !fade.isAnimating(nowMs)) ref = null;
@@ -85,14 +99,13 @@ export function createRecedingFocusSubsystem(
       if (queued !== null) sphereFade.fadeTo(1, FOCUS_FADE_DURATION_MS, nowMs);
       queued = null;
     }
-    last =
-      ref === null && sphere === null
-        ? AT_REST
-        : {
-            uniforms: sphere === null ? ZERO_FOCUS : { ...sphere, blend: sphereBlend },
-            blend,
-            ref,
-          };
+    if (ref === null && sphere === null) return (last = AT_REST);
+    const shown = ref === null ? 1 : shownOf(ref);
+    last = {
+      uniforms: sphere === null ? ZERO_FOCUS : { ...sphere, blend: sphereBlend * shown },
+      blend: blend * shown,
+      ref,
+    };
     return last;
   }
 

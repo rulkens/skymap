@@ -23,7 +23,11 @@ const ctxOf = (focusPickId: number | null) =>
 
 function pickedStream(focusPickId: number | null): number | undefined {
   const ribbonPick = { draw: vi.fn() };
-  const runtime = { ribbonPick, pickCode: PICK_CODE } as unknown as StellarStreamsRuntime;
+  const runtime = {
+    ribbonPick,
+    pickCode: PICK_CODE,
+    meta: () => null,
+  } as unknown as StellarStreamsRuntime;
   stellarStreamsPass(runtime).drawPick!(
     {} as GPURenderPassEncoder,
     VIEW,

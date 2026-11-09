@@ -14,12 +14,13 @@ import {
   STELLAR_STREAMS_RECORD_F32,
   STELLAR_STREAMS_VERSION,
 } from '../../src/layers/stellarStreams/catalog/data/stellarStreamsFormat.constants';
+import { decodeStellarStreams } from '../../src/layers/stellarStreams/catalog/utils/decodeStellarStreams';
 import { encodeStellarStreams } from '../../src/layers/stellarStreams/catalog/utils/encodeStellarStreams';
 import { writeMetaSidecar } from '../curation/writeMetaSidecar';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 import { splitmix64Rng } from '../utils/random/splitmix64Rng';
 import type { GalstreamsTrack } from './@types/GalstreamsTrack';
-import type { StellarStreamMetaEntry } from './@types/StellarStreamMetaEntry';
+import type { StellarStreamMeta } from '../../src/layers/stellarStreams/catalog/@types/StellarStreamMeta';
 import type { StreamWikipedia } from './@types/StreamWikipedia';
 import type { VasilievStar } from './@types/VasilievStar';
 import { STREAM_METALLICITY } from './data/streamMetallicity.constants';
@@ -51,7 +52,7 @@ export function buildStellarStreams(
   stars: readonly VasilievStar[],
   tracks: readonly GalstreamsTrack[],
   wikipedia: Readonly<Record<string, StreamWikipedia>>,
-): { bin: ArrayBuffer; meta: StellarStreamMetaEntry[] } {
+): { bin: ArrayBuffer; meta: StellarStreamMeta[] } {
   const sgr = sagittariusParticles(stars, SGR_SEED);
   const picked = pickStreamTracks(tracks)
     .map((t) => ({ t, slug: streamSlug(t.name), metallicity: streamMetallicity(t.name) }))
@@ -91,11 +92,7 @@ async function main(): Promise<void> {
   const built = new Set(pickStreamTracks(tracks).map((t) => t.name));
   assertTableNamesBuilt('metallicity', STREAM_METALLICITY, built);
   assertTableNamesBuilt('stellar-mass', STREAM_STELLAR_MASS, built);
-  assertTableNamesBuilt(
-    'wikipedia',
-    Object.fromEntries(STREAM_WIKIPEDIA.map((row) => [row.name, row])),
-    new Set([...built, SAGITTARIUS_KEY]),
-  );
+  assertTableNamesBuilt('wikipedia', STREAM_WIKIPEDIA, new Set([...built, SAGITTARIUS_KEY]));
   const wikipedia = await readStreamWikipedia(
     STREAM_WIKIPEDIA,
     rawDataPath('streams.wikipedia-cache'),
@@ -109,7 +106,7 @@ async function main(): Promise<void> {
   mkdirSync(OUT_DIR, { recursive: true });
   writeFileSync(join(OUT_DIR, 'stellar-streams.bin'), Buffer.from(bin));
   writeMetaSidecar(meta, join(OUT_DIR, 'stellar_streams_meta.json'));
-  const particles = meta.reduce((n, m) => n + m.particleCount, 0);
+  const { particleCount: particles } = decodeStellarStreams(bin);
   console.log(
     `buildStellarStreams: ${particles} particles, ${meta.length} streams, ` +
       `${(bin.byteLength / 1e6).toFixed(2)} MB → ${OUT_DIR}`,

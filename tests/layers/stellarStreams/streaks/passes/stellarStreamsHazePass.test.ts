@@ -22,7 +22,10 @@ const VIEW = {
 describe('stellarStreamsHazePass', () => {
   it("draws the haze in the target's pixels: its size, and pxPerRad scaled to its height", () => {
     const draw = vi.fn();
-    const runtime = { renderer: { hasData: () => true, draw } } as unknown as StellarStreamsRuntime;
+    const runtime = {
+      renderer: { hasData: () => true, draw },
+      meta: () => null,
+    } as unknown as StellarStreamsRuntime;
     stellarStreamsHazePass(runtime).draw({} as GPURenderPassEncoder, VIEW, CTX, STATE, 1);
     const [, which, , viewportPx, pxPerRad, , , look] = draw.mock.calls[0]!;
     expect(which).toBe('haze');

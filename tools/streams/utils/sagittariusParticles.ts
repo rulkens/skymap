@@ -9,6 +9,7 @@
  */
 import { raDecDistToEqCart } from '../../../src/utils/math/raDecDistToEqCart';
 import { normalize3 } from '../../../src/utils/math/normalize3';
+import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { galToEq } from '../../utils/math/galToEq';
 import { splitmix64Rng } from '../../utils/random/splitmix64Rng';
 import { seededPick } from '../../utils/random/seededPick';
@@ -23,8 +24,6 @@ import {
 import { sagittariusFeh } from './sagittariusFeh';
 import { sampleStreamBv } from './sampleStreamBv';
 import { streamColourT } from './streamColourT';
-
-const KPC_TO_MPC = 1e-3;
 const BOUND_CAP = Math.floor(SGR_BOUND_SHARE * SGR_PARTICLE_BUDGET);
 
 export function sagittariusParticles(rows: readonly VasilievStar[], seed: bigint): StreamParticles {
@@ -50,13 +49,14 @@ export function sagittariusParticles(rows: readonly VasilievStar[], seed: bigint
     const p = raDecDistToEqCart({
       raHours: s.ra / 15,
       decDeg: s.dec,
-      distMpc: s.distanceKpc * KPC_TO_MPC,
+      distMpc: s.distanceKpc * SCALE_UNITS.KPC_TO_MPC,
     });
     positionsMpc.set(p, k * 3);
     tangents.set(normalize3(galToEq([s.vx, s.vy, s.vz])), k * 3);
     luminosity[k] = SGR_LUMINOSITY * (0.5 + 0.5 * rng());
     colourT[k] = streamColourT(sampleStreamBv(sagittariusFeh(s.tStripGyr), rng));
-    sizeMpc[k] = (SGR_SIZE_KPC[0] + (SGR_SIZE_KPC[1] - SGR_SIZE_KPC[0]) * rng()) * KPC_TO_MPC;
+    sizeMpc[k] =
+      (SGR_SIZE_KPC[0] + (SGR_SIZE_KPC[1] - SGR_SIZE_KPC[0]) * rng()) * SCALE_UNITS.KPC_TO_MPC;
   }
   return { positionsMpc, tangents, sizeMpc, luminosity, colourT };
 }

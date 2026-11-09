@@ -5,7 +5,6 @@
  */
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
-import { RECEDE_ALL_FOCUS_SPHERE } from '../../../data/selection/recedeAllFocusSphere';
 import { encodeStellarStreamFocusId } from './utils/encodeStellarStreamFocusId';
 import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKindRow';
 import type { StellarStreamsRuntime } from '../@types/StellarStreamsRuntime';
@@ -38,7 +37,7 @@ export function stellarStreamsSelectionRow(
         type: 'stellarStream',
         positionMpc: [anchorMpc[0], anchorMpc[1], anchorMpc[2]],
         radiusMpc: entry.frameRadiusKpc * SCALE_UNITS.KPC_TO_MPC,
-        focusSphere: RECEDE_ALL_FOCUS_SPHERE,
+        focusRegion: 'subjectOnly',
       };
     },
     focusId: {

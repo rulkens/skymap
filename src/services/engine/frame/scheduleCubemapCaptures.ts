@@ -3,7 +3,8 @@
  * frame, in one map: the frame's single call, so `renderFrame` stays unaware of
  * how many kinds of capture there are. Sky rows first: a probe's faces sample
  * the solar-system sky, and the sky scheduler is what reconciles that row's
- * texture into existence on its band edge.
+ * texture into existence on its band edge. The DebugPanel's capture toggles are
+ * read here once, under each row's timing slot name, and handed to both schedulers.
  */
 
 import type { CaptureFace } from '../../../@types/engine/frame/CaptureFace';
@@ -14,15 +15,19 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import { scheduleProbeCapture } from './scheduleProbeCapture';
 import { scheduleSkyCaptures } from './scheduleSkyCaptures';
+import { captureTimingSlotName } from './timing/captureTimingSlotName';
 
 export function scheduleCubemapCaptures(input: {
   readonly state: EngineState;
   readonly ctx: FrameView;
 }): CaptureFaceContexts {
+  const disabled = input.state.settings.debug.disabledPasses;
+  const captureOn = (key: CubemapCaptureKey): boolean =>
+    disabled[captureTimingSlotName(key)] !== true;
   const scheduled = new Map<CubemapCaptureKey, ReadonlyMap<CubeFace, CaptureFace>>(
-    scheduleSkyCaptures(input),
+    scheduleSkyCaptures({ ...input, captureOn }),
   );
-  const probe = scheduleProbeCapture(input);
+  const probe = scheduleProbeCapture({ ...input, captureOn });
   if (probe !== null) scheduled.set('probe', probe);
   return scheduled;
 }

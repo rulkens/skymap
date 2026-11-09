@@ -84,6 +84,14 @@ export const SUN_VELOCITY_GAL_KMS: readonly [number, number, number] = [12.9, 24
 /** km/s per (kpc · mas/yr). */
 export const KMS_PER_KPC_MASYR = 4.74047;
 
+/**
+ * A focused stream's brightness is lifted toward this surface brightness (`streamFocusBoost`, display
+ * units: luminosity × kpc² of sprite per kpc² of track), about where Sagittarius's arms read.
+ */
+export const STREAM_FOCUS_BOOST_TARGET = 6;
+/** The most a focus lifts a stream: past it the thinnest tracks would turn to solid bars. */
+export const STREAM_FOCUS_BOOST_CAP = 5;
+
 /** Sagittarius's key in the per-stream tables: it has no galstreams `Name`. */
 export const SAGITTARIUS_KEY = 'sagittarius';
 /** Polite pause between Wikipedia requests, as the famous pipeline keeps. */

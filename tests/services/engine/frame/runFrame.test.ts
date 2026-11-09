@@ -77,6 +77,8 @@ import { setSimDays } from '../../../../src/state/time/timeSlice';
 import { rootReducer } from '../../../../src/store/rootReducer';
 import type { RunFrameDeps } from '../../../../src/@types/engine/frame/RunFrameDeps';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
+import type { VisibilityEntry } from '../../../../src/@types/engine/layer/VisibilityEntry';
+import { stellarStreamsVisibility } from '../../../../src/layers/stellarStreams/visibility';
 import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 import type { CameraDriver } from '../../../../src/@types/engine/camera/CameraDriver';
 import type { DriverId } from '../../../../src/@types/engine/camera/DriverId';
@@ -901,13 +903,14 @@ describe('runFrame — the label-director wake fold', () => {
     // Virgo was focused and settled; the focus is already cleared (the fixture's
     // focus row is null), so the frames below tick its fade-out.
     recedingFocus.update(
+      { type: 'structure', id: 'virgo' },
       {
-        ref: { type: 'structure', id: 'virgo' },
-        sphere: { center: [1, 0, 0], apparentRadiusMpc: 2, physicalRadiusMpc: 2 },
+        type: 'structure',
+        focusRegion: { center: [1, 0, 0], apparentRadiusMpc: 2, physicalRadiusMpc: 2 },
       },
       0,
     );
-    recedingFocus.produceFocus(500);
+    recedingFocus.produceFocus(500, () => 1);
     const deps = makeCamDeps(state);
     const snapshotAt = (nowMs: number) => {
       runFrame(state, deps, nowMs);
@@ -923,7 +926,7 @@ describe('runFrame — the label-director wake fold', () => {
     expect(settled.focusPickId).toBeNull();
   });
 
-  it('a focused stream ramps the blend under its own pick word, its recede-all sphere with it', () => {
+  it('a focused stream ramps the blend under its own pick word, its subjectOnly region as the recede-all sphere', () => {
     const STREAM_WORD = 7;
     const base = makeReadyState(
       () => false,
@@ -933,7 +936,7 @@ describe('runFrame — the label-director wake fold', () => {
     const state = {
       ...base,
       selection: { hover: null, select: null, focus: stream },
-      selectionRows: { focus: { type: 'stellarStream', focusSphere: RECEDE_ALL_FOCUS_SPHERE } },
+      selectionRows: { focus: { type: 'stellarStream', focusRegion: 'subjectOnly' } },
       selectionKindRows: [{ type: 'stellarStream', encodePick: () => STREAM_WORD }],
       subsystems: {
         ...base.subsystems,
@@ -950,6 +953,61 @@ describe('runFrame — the label-director wake fold', () => {
     expect(snapshot.focusBlend).toBe(1);
     expect(snapshot.focusPickId).toBe(STREAM_WORD);
     expect(snapshot.focus).toEqual({ ...RECEDE_ALL_FOCUS_SPHERE, blend: 1 });
+  });
+
+  describe("a focused stream recedes the scene only while the streams' show entry is visible", () => {
+    function focusedStreamFrame(visibilityEntries: readonly VisibilityEntry[], fade: number) {
+      const base = makeReadyState(
+        () => false,
+        () => false,
+      );
+      const recedingFocus = createRecedingFocusSubsystem({ requestRender: vi.fn() }, 0);
+      const state = {
+        ...base,
+        visibilityEntries,
+        selection: { hover: null, select: null, focus: { type: 'stellarStream', slug: 'gd-1' } },
+        selectionRows: { focus: { type: 'stellarStream', focusRegion: 'subjectOnly' } },
+        selectionKindRows: [{ type: 'stellarStream', encodePick: () => 7 }],
+        subsystems: {
+          ...base.subsystems,
+          scheduler: { requestRender: vi.fn(), requestIdleFrame: vi.fn() },
+          fades: { ...base.subsystems.fades, opacityOf: () => fade },
+          recedingFocus,
+        },
+      } as unknown as EngineState;
+      const deps = makeCamDeps(state);
+      runFrame(state, deps, 0);
+      runFrame(state, deps, 500);
+      return {
+        snapshot: vi.mocked(state.subsystems.cosmoLabelDirector.runFrame).mock.lastCall![1]
+          .snapshot,
+        drawn: recedingFocus.lastFocus(),
+      };
+    }
+    // No band, so only the switch speaks; the fixture camera sits 100 Mpc out.
+    const SWITCH_ONLY: readonly VisibilityEntry[] = [
+      { key: 'stellarStreams', selects: ['stellarStream'] },
+    ];
+
+    it('shown: recedes as before', () => {
+      const { snapshot } = focusedStreamFrame(SWITCH_ONLY, 1);
+      expect(snapshot.focusBlend).toBe(1);
+      expect(snapshot.focus.blend).toBe(1);
+    });
+
+    it('switched off: un-receded and pickable, in the frame and in what a pick reads back', () => {
+      const { snapshot, drawn } = focusedStreamFrame(SWITCH_ONLY, 0);
+      expect(snapshot.focusBlend).toBe(0);
+      expect(snapshot.focus.blend).toBe(0);
+      expect(drawn.blend).toBe(0);
+      expect(drawn.uniforms.blend).toBe(0);
+    });
+
+    it('out of its band: un-receded', () => {
+      const { snapshot } = focusedStreamFrame(stellarStreamsVisibility, 1);
+      expect(snapshot.focusBlend).toBe(0);
+      expect(snapshot.focus.blend).toBe(0);
+    });
   });
 });
 

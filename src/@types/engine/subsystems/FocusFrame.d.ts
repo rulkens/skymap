@@ -5,8 +5,8 @@ import type { SelectionRefBase } from '../selection/SelectionRefBase';
 export type FocusFrame = {
   /** The spatial sphere; its own blend dips to 0 between two different spheres. */
   readonly uniforms: FocusUniformsValue;
-  /** The recession blend 0→1, for every subject. */
+  /** The recession blend 0→1, for every subject; 0 while the subject's kind is hidden. */
   readonly blend: number;
-  /** The subject the blend is about, latched through the fade-out; null once it settles at 0. */
+  /** The subject the blend is about, latched through the fade-out; null once the fade settles at 0. */
   readonly ref: SelectionRefBase | null;
 };

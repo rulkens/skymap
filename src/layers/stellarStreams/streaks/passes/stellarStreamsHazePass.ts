@@ -37,7 +37,7 @@ export function stellarStreamsHazePass(
         stellarStreamsClockSec(ctx),
         state.settings.stellarStreams.haze,
         fade,
-        stellarStreamsFocus(ctx, runtime.pickCode),
+        stellarStreamsFocus(ctx, runtime.pickCode, runtime.meta()),
       );
     },
   };

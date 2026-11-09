@@ -174,6 +174,11 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         manual: 'tools/shot/README.md',
       },
       {
+        scripts: ['mock'],
+        does: 'Shows a design mockup on top of the running app and takes a new picture of it each time you save it, in about a third of a second.',
+        manual: 'tools/mock/README.md',
+      },
+      {
         scripts: ['capture-featured'],
         does: 'Takes the small pictures on the cards of the search, one for each card that has none.',
         manual: 'tools/capture/README.md',
