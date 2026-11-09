@@ -46,6 +46,7 @@ import { bodyFixedEyeM } from '../../../src/utils/camera/surfaceFrame/bodyFixedE
 import { ORIENTATION_FRAMES } from '../../../src/data/orientation/orientationFrames';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { SKY_RETURN_SEC } from '../../../src/data/sky/skyReturnSec';
+import { DEFAULT_FOV_Y_RAD } from '../../../src/services/engine/camera/framing/cameraFraming';
 import { selectionResolverOver } from '../../support/selectionResolverOver';
 import type { FramedCameraPose } from '../../../src/@types/camera/pose/FramedCameraPose';
 import type { LiveCameraRuntime, RootState } from '../../../src/store/types';
@@ -139,7 +140,7 @@ describe('the sky takeover', () => {
     expect(selectTakeoverSource(s)).toEqual({
       kind: 'sky',
       spot: COPENHAGEN,
-      restore: { base: ENTRY, focus: MARS_REF },
+      restore: { base: ENTRY, fovYRad: DEFAULT_FOV_Y_RAD, focus: MARS_REF },
     });
     expect(s.selection.focus).toEqual({ type: 'body', id: EARTH });
     expect(lastLeg(s.camera.clip!.data)).toContain('"sky"');
@@ -196,7 +197,7 @@ describe('the sky takeover', () => {
     expect(source).toEqual({
       kind: 'sky',
       spot: PARIS,
-      restore: { base: ENTRY, focus: MARS_REF },
+      restore: { base: ENTRY, fovYRad: DEFAULT_FOV_Y_RAD, focus: MARS_REF },
     });
 
     store.dispatch(exitTakeover({ restore: true }));

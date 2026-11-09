@@ -32,8 +32,9 @@ export function* skyBodySaga(
   });
   if (exit?.payload?.restore !== true) return;
   yield* put(updateSelectionFocus(restore.focus, 'cut'));
-  const { from } = yield* call(liveCameraRuntimeSaga);
-  const back = returnClip(from, restore.base, yield* call(skyArmCtxSaga, 0));
+  const { from, fovYRad } = yield* call(liveCameraRuntimeSaga);
+  const start = { ...from, fov: fovYRad };
+  const back = returnClip(start, restore.base, restore.fovYRad, yield* call(skyArmCtxSaga, 0));
   // A clip delivers its framing, so the restored focus owes no follow approach after it.
   yield* call(playSkyClipSaga, back, yield* select(selectOrientation));
 }

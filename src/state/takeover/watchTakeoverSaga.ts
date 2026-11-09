@@ -21,7 +21,7 @@ import { startClip } from '../camera/clipActions';
 import { skyBodySaga } from '../sky/skyBodySaga';
 import { enterSky } from '../sky/enterSky';
 import { selectTakeoverSource } from './selectors';
-import { selectCameraBase } from '../camera/selectors';
+import { selectCameraBase, selectFovYRad } from '../camera/selectors';
 import { selectFocusRef } from '../selection/selectors';
 import { tourRegistry } from '../../data/animation/tours/tourRegistry';
 import { APP_EXHIBIT_REGISTRY } from '../../compositions/appExhibits';
@@ -73,7 +73,11 @@ export function* watchTakeoverSaga() {
       const restore =
         outgoing?.kind === 'sky'
           ? outgoing.restore
-          : { base: yield* select(selectCameraBase), focus: yield* select(selectFocusRef) };
+          : {
+              base: yield* select(selectCameraBase),
+              fovYRad: yield* select(selectFovYRad),
+              focus: yield* select(selectFocusRef),
+            };
       source = { kind: 'sky', spot, restore };
       body = () => skyBodySaga(spot, pointLocalM, restore);
     } else {

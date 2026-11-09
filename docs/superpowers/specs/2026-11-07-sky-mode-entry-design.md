@@ -63,6 +63,7 @@ The owner's (grill Q-numbers in brackets) and those carried from the 2026-10-28 
 - **D11.** `restore` holds the entry camera **and the entry focus**. Entering focuses the spot's body (the
   sky arm releases unless focus is in its body's subtree, `skyCameraArm.ts:103`), so Leave must put focus back
   or the restored pose sits under the wrong focus. Time and settings still stay (R15).
+  It also holds the entry lens (owner, 2026-11-09): the return flight eases the lens back to it.
 - **D12.** Arrival is a camera clip whose last leg is in the `{ sky: spot }` frame, so the engine resolves the
   live ground at play time (clips already do: `clipKeyframeFrames.test.ts`, "a sky → body leg starts at the
   standing eye"). No saga needs terrain; `SagaContext` does not grow.
@@ -174,7 +175,7 @@ and stands (§4.3), which finishes the zoom the person was aiming.
 ### 4.3 Arrival
 
 `watchTakeoverSaga` builds the source once: `restore = outgoing sky takeover's restore ?? { camera.base,
-focus }` (D11). The sky body saga focuses the spot's body and plays the arrival as a camera-level clip
+camera.fovYRad, focus }` (D11). The sky body saga focuses the spot's body and plays the arrival as a camera-level clip
 (`clipStarted`, never `startClip`, which would preempt the takeover): legs that keep the heading down to the
 floor above the spot, then a zero-length leg in the `{ sky: spot }` frame at that heading, 15° up, keeping
 the lens (D3, D12). From another body or deep space the first leg is the flight to the spot's body that
@@ -195,13 +196,13 @@ with a reduced-motion branch.
 ## 5. The sky takeover
 
 - **Variant**: `{ kind: 'sky'; spot: SkySpot; restore: SkyRestore }` in `TakeoverSource`, with
-  `SkyRestore = { base: FramedCameraPose; focus: FocusRef | null }` (D11). It has no `id`:
+  `SkyRestore = { base: FramedCameraPose; fovYRad: number; focus: FocusRef | null }` (D11). It has no `id`:
   `watchHashReadSaga.ts:92` (`names(takeover.kind, takeover.id)`) must treat sky as named by no hash, so a
   hash change while standing ends it like preemption.
 - **Body saga**, beside `clipBodySaga`, skipping `withSceneSnapshotSaga` like clips (R15), in this order:
   the arrival clip (§4.3); then `race({ leave: take(exitTakeover with restore), left: take(a camera commit
-  whose frame is not sky) })`; then, only if `leave` won, a tween back to `restore.base` and focus back to
-  `restore.focus`. The `left` arm covers lift-off, the card's Focus or `F` flying away and any clip; no
+  whose frame is not sky) })`; then, only if `leave` won, a tween back to `restore.base` (its lens leg easing
+  to `restore.fovYRad`) and focus back to `restore.focus`. The `left` arm covers lift-off, the card's Focus or `F` flying away and any clip; no
   separate rule for each.
 - **`exitTakeover({ restore?: true })`**: Esc and Leave pass `restore: true`; `navigateSaga`,
   `watchHashReadSaga` and the remote do not (D13). Tours and exhibits ignore the flag.

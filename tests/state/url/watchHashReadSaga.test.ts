@@ -173,7 +173,8 @@ describe('watchHashReadSaga', () => {
   it('any hash change ends sky mode, plainly: no hash names it (D13)', () => {
     const { store, recorded, emit } = buildHarness('');
     const spot = { body: asSceneBodyId('earth'), lonRad: 0.2, latRad: 0.9 };
-    const restore = { base: store.getState().camera.base, focus: null };
+    const { base, fovYRad } = store.getState().camera;
+    const restore = { base, fovYRad, focus: null };
     store.dispatch(takeoverStarted({ kind: 'sky', spot, restore }));
     recorded.length = 0;
 
