@@ -14,4 +14,4 @@ fields it could write.
 
 Tick the focus before the snapshot is built and pass the result into `deriveFrameContext`. The three fields would
 then be set once, at construction, and the type could be fully readonly. Check the cubemap path, which today leaves
-them at rest (blend 0), and the pick path, which reads `lastFocusUniforms()` without ticking.
+them at rest (blend 0), and the pick path, which reads `lastFocus()` (one `FocusFrame` value, all three fields) without ticking.

@@ -18,6 +18,7 @@ import { suspendDuringClip } from './suspendDuringClip';
 import { selectSettings } from '../settings/selectSettings';
 import { selectTakeoverSource } from '../takeover/selectors';
 import { APP_VISIBILITY_REGISTRY } from '../../compositions/appVisibility';
+import { selectingEntryOf } from '../../utils/visibility/selectingEntryOf';
 import { settingsClusterOf } from '../../utils/visibility/settingsClusterOf';
 import { setVisibilityActionsFor } from '../../utils/visibility/setVisibilityActionsFor';
 import { visibilityAddressOf } from '../../utils/visibility/visibilityAddressOf';
@@ -47,7 +48,7 @@ export function* watchSelectionRevealSaga() {
     [updateSelectionSelect, updateSelectionFocus, requestFocus, requestSelect],
     suspendDuringClip(function* (action: Action) {
       const kind: SelectionRefBase['type'] | null = yield* kindOf(action);
-      const entry = kind && ENTRIES.find((e) => 'key' in e && e.selects?.includes(kind));
+      const entry = kind && selectingEntryOf(ENTRIES, kind);
       if (!entry || (yield* select(selectTakeoverSource)) !== null) return;
       const settings = yield* select(selectSettings);
       if (settingsClusterOf(settings, visibilityClusterOf(entry)).enabled !== false) return;

@@ -4,7 +4,7 @@
  *
  * Sums the visible galaxy catalog sources (`visibleCatalogs`), so the count tracks
  * the on-screen points. The radius is `apparentRadiusMpc ?? physicalRadiusMpc`,
- * the cone the GPU focus fade tests (`structureFocusSubsystem`), so "N galaxies"
+ * the cone the GPU focus fade tests (`recedingFocusSubsystem`), so "N galaxies"
  * matches the set that stays lit on focus.
  *
  * Returns `null` when no visible catalog is loaded (the caller omits the row

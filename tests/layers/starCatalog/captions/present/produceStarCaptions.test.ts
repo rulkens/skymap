@@ -6,7 +6,7 @@
  * covered once, on core's bodies, in `produceSceneBodyCaptions.test.ts`.
  */
 
-import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/structureFocusSubsystem';
+import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/recedingFocusSubsystem';
 import { describe, it, expect } from 'vitest';
 
 import { produceStarCaptions } from '../../../../../src/layers/starCatalog/captions/present/produceStarCaptions';
