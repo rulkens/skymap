@@ -106,12 +106,11 @@ export const bodyCameraArm: ClimbRow<'body'> = {
     const surfaceCtx = surfaceStepCtxOf(hostOrThrow(framed.frame, ctx), ctx);
     const stepped = surfaceStep(memory, tilt, framed.pose, input, surfaceCtx);
     const result = { pose: stepped.pose, memory: stepped.gesture, tilt: stepped.tilt };
-    // A fresh zoom-in that STARTS on the floor pushes it, sliding or not (spec §4.2): at the
-    // floor the view is oblique, so a notch is rarely eaten whole.
+    // A zoom-in that STARTS on the floor presses it, sliding or not (spec §4.2): at the floor
+    // the view is oblique, so a notch is rarely eaten whole. The drain decides if it pushes.
     const anchorM = stepped.zoomAnchorM;
     const pushes =
       input.kind === 'zoom' &&
-      input.fresh &&
       input.factor < 1 &&
       anchorM !== null &&
       eyeAtFloor(framed.pose, surfaceCtx.groundRadiusAtM, surfaceCtx.standoffRadii);

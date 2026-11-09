@@ -112,7 +112,7 @@ function drag(mode: 'orbit' | 'pan', startPx: Vec2, endPx: Vec2): InputStep {
 
 /** `cursorPx: null` is the pinch case — no single cursor, so screen centre. */
 function zoom(factor: number, duringGesture: boolean, cursorPx: Vec2 | null = null): InputStep {
-  return { kind: 'zoom', factor, duringGesture, cursorPx, fresh: false };
+  return { kind: 'zoom', factor, duringGesture, cursorPx };
 }
 
 function eyeOf(pose: BodyFixedPose): Vec3 {
@@ -1144,7 +1144,6 @@ describe('surfaceStep', () => {
       factor: 0.5,
       duringGesture: false,
       cursorPx: null,
-      fresh: false,
     };
     const { pose, gesture, tilt } = surfaceStep(
       EMPTY_SURFACE_GESTURE_MEMORY,
@@ -1211,7 +1210,6 @@ describe('the zoom settle is priced per unit of zoom, not per step (F1, ruling 2
       factor,
       duringGesture: false,
       cursorPx: null,
-      fresh: false,
     };
     for (let i = 0; i < steps; i += 1)
       pose = driver.apply(pose, step, VIEWPORT, FOV, R, POLE, TUNING);

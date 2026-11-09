@@ -9,7 +9,6 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
 
 import { replayInput } from '../../../../../src/services/engine/camera/input/replayInput';
-import { skyCameraArm } from '../../../../../src/services/engine/camera/arms/sky/skyCameraArm';
 import { FRESH_WHEEL_PAUSE_MS } from '../../../../../src/data/input/freshWheelPauseMs';
 import { LENS_MAX_DEG } from '../../../../../src/data/camera/lensMaxDeg';
 import { degToRad } from '../../../../../src/utils/math/degToRad';
@@ -105,6 +104,12 @@ const atRestZoom = (factor: number, eventMs = 0): RawInputStep => ({
   firstEventMs: eventMs,
   lastEventMs: eventMs,
 });
+
+/** The edges of the zoom limits a drain pushed, in order. */
+const pushesOf = (actions: readonly unknown[]) =>
+  actions
+    .filter((a) => zoomLimitPushed.match(a as never))
+    .map((a) => (a as ReturnType<typeof zoomLimitPushed>).payload.edge);
 
 /** Geocentric range of a body arm, metres — the anchor is the body centre. */
 function rangeM(framed: FramedCameraPose): number {
@@ -308,39 +313,42 @@ describe('replayInput', () => {
       frame: { sky: { body: asSceneBodyId('earth'), lonRad: 0.2, latRad: 0.9 } },
       pose: { azimuthRad: 1, altitudeRad: 0.3 },
     };
+    // At the widest lens, where a wheel-out pushes only when fresh: a 1 % notch is far too
+    // small to push by any sum.
     const setup = () => {
       const store = makeStore();
       store.dispatch(commitCameraPose(sky));
-      const step = vi.spyOn(skyCameraArm, 'step');
+      store.dispatch(setFovYRad(degToRad(LENS_MAX_DEG)));
       const drain = (lastWheelMs: number, notches: readonly RawInputStep[], nowMs = 0) =>
         replayInput(
           { register: sky, gesture: null, tilt: EMPTY_TILT_MEMORY, follow: null, lastWheelMs },
           notches,
           ctxOf(store, { nowMs }),
         );
-      const freshness = () =>
-        step.mock.calls.map(([, , , input]) => input.kind === 'zoom' && input.fresh);
-      return { drain, freshness };
+      return { drain };
     };
 
     it('a wheel notch after 250 ms of quiet is fresh; one inside it is not', () => {
-      const { drain, freshness } = setup();
+      const { drain } = setup();
       const quiet = 1000 + FRESH_WHEEL_PAUSE_MS;
-      expect(drain(1000, [atRestZoom(1.01, quiet - 1)]).lastWheelMs).toBe(quiet - 1);
-      drain(1000, [atRestZoom(1.01, quiet), atRestZoom(1.01, quiet + 16)]);
-      expect(freshness()).toEqual([false, true, false]);
+      const inside = drain(1000, [atRestZoom(1.01, quiet - 1)]);
+      expect(pushesOf(inside.actions)).toEqual([]);
+      expect(inside.lastWheelMs).toBe(quiet - 1);
+      const after = drain(1000, [atRestZoom(1.01, quiet), atRestZoom(1.01, quiet + 16)]);
+      expect(pushesOf(after.actions)).toEqual(['out']);
     });
 
     it('a frame hitch inside a momentum tail does not make a notch fresh', () => {
-      const { drain, freshness } = setup();
+      const { drain } = setup();
       // 30 ms apart as events, drained 400 ms apart as frames.
       const first = drain(-Infinity, [atRestZoom(1.01, 1000)], 1000);
-      drain(first.lastWheelMs, [atRestZoom(1.01, 1030)], 1400);
-      expect(freshness()).toEqual([true, false]);
+      expect(pushesOf(first.actions)).toEqual(['out']);
+      const next = drain(first.lastWheelMs, [atRestZoom(1.01, 1030)], 1400);
+      expect(pushesOf(next.actions)).toEqual([]);
     });
 
     it('a folded run is judged by its first event and leaves its last as the clock', () => {
-      const { drain, freshness } = setup();
+      const { drain } = setup();
       const run: RawInputStep = {
         kind: 'zoom',
         factor: 1.01,
@@ -349,8 +357,9 @@ describe('replayInput', () => {
         firstEventMs: 1000,
         lastEventMs: 1600,
       };
-      expect(drain(900, [run]).lastWheelMs).toBe(1600);
-      expect(freshness()).toEqual([false]);
+      const next = drain(900, [run]);
+      expect(next.lastWheelMs).toBe(1600);
+      expect(pushesOf(next.actions)).toEqual([]);
     });
   });
 
@@ -886,11 +895,6 @@ describe('replayInput', () => {
   });
 
   describe('sky entry and lift-off through the drain', () => {
-    const pushesOf = (actions: readonly unknown[]) =>
-      actions
-        .filter((a) => zoomLimitPushed.match(a as never))
-        .map((a) => (a as ReturnType<typeof zoomLimitPushed>).payload.edge);
-
     /** Earth's body arm with its eye on the descent floor, where a fresh zoom-in pushes. */
     function atFloor(): FramedCameraPose {
       const arm = earthArm(2);

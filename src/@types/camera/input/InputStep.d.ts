@@ -8,10 +8,10 @@
  * two zoom owners: pointer down ⇒ the gesture register renders, at rest ⇒ the
  * store `base` does. `cursorPx` is where the wheel fired, in the same absolute
  * pixels; `null` for a pinch, which has two contacts and no single cursor.
- * `fresh` is decided once by the drain (`replayInput`): the notch's device event
- * came after `FRESH_WHEEL_PAUSE_MS` of wheel quiet, so it starts a scroll. A
- * `navDrag` is the navigator's pointer motion in CSS pixels; no arm reads it. `liftOff` asks the
- * sky arm for the push a widest-lens wheel-out makes; every other arm declines it.
+ * No arm reads the wheel's timing: whether a notch at a limit pushes it is the drain's call
+ * (`replayInput`). A `navDrag` is the navigator's pointer motion in CSS pixels; no arm reads
+ * it. `liftOff` asks the sky arm for the push a widest-lens wheel-out makes; every other arm
+ * declines it.
  */
 
 import type { DragMode } from './DragMode';
@@ -22,6 +22,6 @@ export type InputStep =
   | { kind: 'gestureStart' }
   | { kind: 'gestureEnd' }
   | { kind: 'drag'; mode: DragMode; startPx: Vec2; endPx: Vec2 }
-  | { kind: 'zoom'; factor: number; duringGesture: boolean; cursorPx: Vec2 | null; fresh: boolean }
+  | { kind: 'zoom'; factor: number; duringGesture: boolean; cursorPx: Vec2 | null }
   | { kind: 'navDrag'; axis: NavAxis; deltaPx: Vec2 }
   | { kind: 'liftOff' };

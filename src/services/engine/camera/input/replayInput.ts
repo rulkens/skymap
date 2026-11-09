@@ -6,7 +6,8 @@
  * reducer — so a step sees the commit the step before it made, exactly as the
  * incumbent's fresh `getState()` per step did. The store commits only at
  * gesture end and per at-rest notch; a following camera's notch rides the
- * return as `followDistanceTarget`. A zoom's `fresh` is stamped here, once.
+ * return as `followDistanceTarget`. Whether a notch an arm reports at its zoom
+ * limit pushes it is decided here, once, off the wheel clock.
  */
 
 import type { UnknownAction } from '@reduxjs/toolkit';
@@ -36,6 +37,7 @@ import type { FramedCameraPose } from '../../../../@types/camera/pose/FramedCame
 import type { FramedPose } from '../../../../@types/camera/pose/FramedPose';
 import type { InputStep } from '../../../../@types/camera/input/InputStep';
 import type { RawInputStep } from '../../../../@types/camera/input/RawInputStep';
+import type { ZoomLimitPush } from '../../../../@types/camera/arms/ZoomLimitPush';
 import type { MemOf } from '../../../../@types/camera/arms/MemOf';
 import type { NavStep } from '../@types/NavStep';
 import type { CameraArmCtx } from '../../../../@types/camera/arms/CameraArmCtx';
@@ -91,6 +93,8 @@ export function replayInput(
   let follow = prev.follow;
   let followDistanceTarget: number | null = null;
   let lastWheelMs = prev.lastWheelMs;
+  // What the arm reported pressed against its zoom limit, written by `stepRow`, per step.
+  let pressed: ZoomLimitPush | undefined;
   // Advanced locally for this frame's elapsed read and DISCARDED: handing it to
   // `advanceEpochs` would keep a fold-time reset when another driver wins.
   let autoRotateEpoch = args.autoRotateEpoch;
@@ -119,7 +123,7 @@ export function replayInput(
     gestureMemory = stepped.memory;
     tilt = stepped.tilt;
     if (stepped.fovYRad !== undefined) emit(setFovYRad(stepped.fovYRad));
-    if (stepped.pushed !== undefined) emit(zoomLimitPushed(stepped.pushed));
+    pressed = stepped.pushed;
     return { frame: framed.frame, pose: stepped.pose };
   };
 
@@ -201,6 +205,9 @@ export function replayInput(
   };
 
   for (const step of steps) {
+    pressed = undefined;
+    // On the EVENT clock: a frame hitch inside a momentum tail must not read as quiet.
+    const fresh = step.kind === 'zoom' && step.firstEventMs - lastWheelMs >= FRESH_WHEEL_PAUSE_MS;
     switch (step.kind) {
       case 'gestureStart':
         // The latch itself is the arm's; the first drag step takes it, carrying
@@ -234,11 +241,9 @@ export function replayInput(
         break;
 
       case 'zoom': {
-        // On the EVENT clock: a frame hitch inside a momentum tail must not read as quiet.
         // Every zoom step restarts the quiet, swallowed or not: a tail that ran into a clip
         // or a floor is still a tail.
-        const { firstEventMs, lastEventMs, ...zoom } = step;
-        const fresh = firstEventMs - lastWheelMs >= FRESH_WHEEL_PAUSE_MS;
+        const { firstEventMs: _firstEventMs, lastEventMs, ...zoom } = step;
         lastWheelMs = lastEventMs;
         // The settles are priced per unit of zoom, not per step (user ruling
         // 2026-09-10): a trackpad twitch must not spend a mouse notch's decay.
@@ -258,7 +263,6 @@ export function replayInput(
         const notch: InputStep = {
           ...zoom,
           duringGesture: args.navOwns || step.duringGesture,
-          fresh,
         };
         if (!ridesTheFollow && stepRegister(notch)) break;
         if (ridesTheFollow) {
@@ -314,6 +318,8 @@ export function replayInput(
         break;
       }
     }
+    // A press pushes only from a fresh scroll: a momentum tail reaching the stop stays.
+    if (pressed !== undefined && (step.kind !== 'zoom' || fresh)) emit(zoomLimitPushed(pressed));
   }
 
   return {

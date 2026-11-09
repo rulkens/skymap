@@ -51,7 +51,7 @@ describe('absoluteCameraArm', () => {
       null,
       EMPTY_TILT_MEMORY,
       FRAMED,
-      { kind: 'zoom', factor: Math.exp(z), duringGesture: false, cursorPx: null, fresh: false },
+      { kind: 'zoom', factor: Math.exp(z), duringGesture: false, cursorPx: null },
       CTX,
     ).pose;
     const nudged = absoluteCameraArm.nudge(EMPTY_TILT_MEMORY, FRAMED, { zoom: z }, CTX).pose;

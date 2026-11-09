@@ -2,7 +2,7 @@
  * bodyCameraArm.host's `groundRadiusAtM` closure — the ground-collision row's
  * source (F3a, spec §8.3). What can fail here is silent: a swapped operand or
  * a hardcoded body id reads a plausible but wrong number, never an error. And
- * the floor push: it must fire only from a fresh zoom-in that starts on the floor.
+ * the floor press: only a zoom-in that starts on the floor reports it.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -108,19 +108,18 @@ describe('the body arm’s floor push', () => {
   };
   /** Off the optical centre, so an anchor taken at the centre would be metres away. */
   const CURSOR_PX: Vec2 = [80, 30];
-  const notch = (factor: number, fresh: boolean): InputStep => ({
+  const notch = (factor: number): InputStep => ({
     kind: 'zoom',
     factor,
     duringGesture: false,
     cursorPx: CURSOR_PX,
-    fresh,
   });
   const pushOf = (framed: FramedPose<'body'>, input: InputStep) =>
     bodyCameraArm.step(EMPTY_SURFACE_GESTURE_MEMORY, EMPTY_TILT_MEMORY, framed, input, ctx).pushed;
 
-  it('a fresh zoom-in that starts at the floor reports edge in at the cursor anchor', () => {
+  it('a zoom-in that starts at the floor reports edge in at the cursor anchor', () => {
     const framed = standing(0);
-    const pushed = pushOf(framed, notch(0.8, true));
+    const pushed = pushOf(framed, notch(0.8));
     if (pushed?.edge !== 'in') throw new Error('expected a floor push');
     // Where the cursor pixel's ray meets the (datum-only) ground.
     const ray = cursorRayBodyLocal(framed.pose, CURSOR_PX, ctx.viewportPx, ctx.frustum);
@@ -138,11 +137,10 @@ describe('the body arm’s floor push', () => {
   });
 
   it('a zoom-in that starts above the floor reports nothing', () => {
-    expect(pushOf(standing(1), notch(0.8, true))).toBeUndefined();
+    expect(pushOf(standing(1), notch(0.8))).toBeUndefined();
   });
 
-  it('a non-fresh notch at the floor reports nothing; nor does a fresh zoom-out', () => {
-    expect(pushOf(standing(0), notch(0.8, false))).toBeUndefined();
-    expect(pushOf(standing(0), notch(1.25, true))).toBeUndefined();
+  it('a zoom-out at the floor reports nothing', () => {
+    expect(pushOf(standing(0), notch(1.25))).toBeUndefined();
   });
 });

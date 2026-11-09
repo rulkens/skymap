@@ -121,12 +121,11 @@ const pixelOf = (m: Mat3, d: Vec3, f: number, centre: number): Vec2 => {
   return [centre + (f * along(0)) / z, centre - (f * along(3)) / z];
 };
 
-const wheel = (factor: number, fresh = true): InputStep => ({
+const wheel = (factor: number): InputStep => ({
   kind: 'zoom',
   factor,
   duringGesture: false,
   cursorPx: null,
-  fresh,
 });
 
 const roundTrip = (start: FramedPose<'sky'>) => {
@@ -357,13 +356,6 @@ describe('the sky exit lift', () => {
     expect(out.pose).toBe(start.pose);
     expect(out.fovYRad).toBeUndefined();
     expect(out.pushed?.edge).toBe('out');
-  });
-
-  it('a wheel-out tail at the widest lens stays; only a fresh notch lifts', () => {
-    const notch = (fresh: boolean) =>
-      ROW.step(ROW.emptyMemory, EMPTY_TILT_MEMORY, start, wheel(1.1, fresh), atMax).pushed;
-    expect(notch(false)).toBeUndefined();
-    expect(notch(true)?.edge).toBe('out');
   });
 
   // −430 m is the Dead Sea: an eye standing there is inside the datum sphere.
