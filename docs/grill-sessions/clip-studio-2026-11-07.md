@@ -213,5 +213,44 @@ clip. Mock B's pill offered "drag the sky to look around".
 **Decision:** B, an explicit Follow / Free toggle. The state is always on screen (the ui-ux.md
 "state is on screen" rule), and no gesture changes it.
 
-_Still open (engineering, to be proposed in the spec):_ how the camera follows the playhead vs. flies free
-for "use current view", the timeline layout, and how the studio's RTK state plugs into the app store.
+## Owner design preferences (2026-11-09, during the review loop)
+
+The owner set these during the review loop. Every review round scores against them:
+
+- **Crossfades:** better crossfade UI. A seq overlap blend, a matched join (no stop) and a plain rest
+  must each look different, and layer fades must read at a glance.
+- **Labels:** compact text, never whole sentences. One fixed naming scheme per effect type: a Name |
+  Value | Duration row, a closed verb list, and an operator slot (`→` set to, `+`/`−` add, `±` swing),
+  e.g. `Distance | → 300 Mpc | 4 s`, `Fade | flow → 0 % | 3 s`.
+- **Scrubber:** a well-designed scrubber. A grab head that shows the time, a haloed playhead line, a
+  sticky adaptive ruler with notches at step edges and cues, and a clear End marker with an
+  after-end zone.
+- **Encoding:** better use of colour, icons and UI elements for nesting, crossfades, effect types and
+  channels. Five channel hues: distance, look-at point, turn and tilt, layers, settings and focus.
+
+## Q11–Q17: The round-1 reviewer's asks
+
+The first review round scored the mock 4/10 and raised these asks. Each records the reviewer's
+recommendation and the owner's ruling.
+
+- **Q11 Save over a hand-written clip:** options were a top-bar label only, an inline note once per
+  clip, or a modal. **Decision:** an inline note once per clip, `Makers → literals · Save / Save as
+  new`. It is also where the note on `earthFlyout`'s simDays-dependent start goes.
+- **Q12 Dock height:** options were fixed, fixed plus a collapse key, or drag to resize.
+  **Decision:** a draggable top edge, remembered per viewer, that always keeps at least 35% of the
+  height for the 3D view.
+- **Q13 Phone width (400 px):** options were a "wider screen" state, read-only scrubbing, or fully
+  responsive. **Decision:** a "needs a wider screen" state with Play and Close only.
+- **Q14 Crossfade treatment:** the options are T1 (tapered bars plus Stop / No stop / Blend join
+  marks), T2 (a lens on the group row) and T3 (a value curve on the group row). **Open:** the owner
+  asked to see images of all three before choosing.
+- **Q15 Duration placement:** options were its own column or inline. **Decision:** its own dim,
+  right-aligned column.
+- **Q16 Loop scope:** options were the selection or the whole clip, the whole clip only, or a free
+  band on the ruler. **Decision:** loop the selected step or group, or the whole clip when nothing is
+  selected.
+- **Q17 Snap:** options were on by default or off by default. **Decision:** on by default, with ⌥ to
+  scrub freely and ⇧ for fine control.
+
+_Still open (engineering, to be proposed in the spec):_ how the studio's RTK state plugs into the
+app store.
