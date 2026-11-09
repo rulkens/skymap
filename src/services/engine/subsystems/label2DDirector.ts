@@ -148,7 +148,6 @@ import { rectMeetsCircle } from '../../../utils/math/rectMeetsCircle';
 import { rectMeetsPolygon } from '../../../utils/math/rectMeetsPolygon';
 import { cross3 } from '../../../utils/math/cross3';
 import { normalize3 } from '../../../utils/math/normalize3';
-import { BODY_GLINT_MAX_PX } from '../../../data/bodies/bodyGlintMaxPx';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { ANTIQUE_AREA_LETTERING } from '../../../data/labels/antiqueAreaLettering';
 import { ANTIQUE_PLACE_LETTERING } from '../../../data/labels/antiquePlaceLettering';
@@ -961,9 +960,6 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
       const t = title || titleGrowth.tracks(l.id) ? titleGrowth.blend(l.id, title, nowMs) : 0;
       const kept = title || t > 0;
       if (!cosmos && rule?.cosmosOnly?.includes(l.id) && !kept) continue;
-      // A planet or moon below a globe prints no sign on the plate: its name would name nothing.
-      if (labelName === 'body' && !kept && l.lift && l.lift.subjectSizePx < BODY_GLINT_MAX_PX)
-        continue;
       const named = antiqueLabel(l, rule, kept, hasFont);
       if (named === null) continue;
       const fallback = !kept && l.fallback && antiqueLabel(l.fallback, rule, false, hasFont);

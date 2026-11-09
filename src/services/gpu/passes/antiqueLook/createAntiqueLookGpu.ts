@@ -14,6 +14,7 @@ import nebulaCode from '../../shaders/antiqueLook/nebula.wesl?static';
 import skyFloorCode from '../../shaders/antiqueLook/skyFloor.wesl?static';
 import structureGlowCode from '../../shaders/antiqueLook/structureGlow.wesl?static';
 import glyphsCode from '../../shaders/antiqueLook/glyphs.wesl?static';
+import bodySignsCode from '../../shaders/antiqueLook/bodySigns.wesl?static';
 import decorCode from '../../shaders/antiqueLook/decor.wesl?static';
 import plateCode from '../../shaders/antiqueLook/fragment.wesl?static';
 import landBlurCode from '../../shaders/antiqueLook/landBlur.wesl?static';
@@ -22,6 +23,7 @@ import webCode from '../../shaders/antiqueLook/web.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import {
   ANTIQUE_GLYPH_BYTES,
+  ANTIQUE_SIGN_BYTES,
   ANTIQUE_ORNAMENT_BYTES,
   ANTIQUE_SKY_FLOOR_BYTES,
   ANTIQUE_MASK_DEPTH_BYTES,
@@ -111,6 +113,11 @@ export function createAntiqueLookGpu(
   const uniforms = buffer('uniforms', ANTIQUE_UNIFORM_BYTES);
   const ornaments = buffer('ornaments', ANTIQUE_ORNAMENT_BYTES);
   const digits = buffer('digits', ANTIQUE_GLYPH_BYTES);
+  const signs = device.createBuffer({
+    label: 'antique-look-signs',
+    size: ANTIQUE_SIGN_BYTES,
+    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+  });
   const plateBodies = buffer('plate-bodies', ANTIQUE_PLATE_BODIES_BYTES);
   const maskDepth = buffer('mask-depth', ANTIQUE_MASK_DEPTH_BYTES);
   const reliefUniforms = buffer('relief-uniforms', ANTIQUE_RELIEF_UNIFORM_BYTES);
@@ -161,6 +168,30 @@ export function createAntiqueLookGpu(
     vertex: { module: glyphsModule, entryPoint: 'vs' },
     fragment: {
       module: glyphsModule,
+      entryPoint: 'fs',
+      targets: [{ format: 'rgba8unorm', blend: { color: max, alpha: max } }],
+    },
+    primitive: { topology: 'triangle-strip' },
+  });
+  // Body signs ride the glyphs' pass and target: a ring and dot per named body below a globe.
+  const signsModule = createShaderModuleWithDevLog(device, bodySignsCode, 'antiqueLook.bodySigns');
+  const signsLayout = device.createBindGroupLayout({
+    label: 'antique-look-signs-bgl',
+    entries: [
+      { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, ...UNIFORM },
+      { binding: 1, visibility: GPUShaderStage.VERTEX, ...STORAGE },
+      { binding: 2, visibility: GPUShaderStage.VERTEX, ...TEXTURE },
+    ],
+  });
+  const signsPipeline = device.createRenderPipeline({
+    label: 'antique-look-signs',
+    layout: device.createPipelineLayout({
+      label: 'antique-look-signs-layout',
+      bindGroupLayouts: [signsLayout],
+    }),
+    vertex: { module: signsModule, entryPoint: 'vs' },
+    fragment: {
+      module: signsModule,
       entryPoint: 'fs',
       targets: [{ format: 'rgba8unorm', blend: { color: max, alpha: max } }],
     },
@@ -265,6 +296,7 @@ export function createAntiqueLookGpu(
     uniforms,
     ornaments,
     glyphs: { pipeline: glyphsPipeline, layout: glyphsLayout },
+    signs: { pipeline: signsPipeline, layout: signsLayout, buffer: signs },
     web,
     webLevel,
     decor: { pipeline: decorPipeline, layout: decorLayout },
@@ -279,6 +311,7 @@ export function createAntiqueLookGpu(
       uniforms.destroy();
       ornaments.destroy();
       digits.destroy();
+      signs.destroy();
       plateBodies.destroy();
       maskDepth.destroy();
       reliefUniforms.destroy();

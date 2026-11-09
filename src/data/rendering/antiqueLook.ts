@@ -38,6 +38,9 @@ export const ANTIQUE_SKY_FLOOR_BYTES = 16;
 
 /** The border in print units from the canvas edge: the ladder's centre line
  * (`MARGIN` + `BAND` / 2 in `fragment.wesl`) is what the numbering reads. */
+/** bodySigns.wesl `AntiqueSigns`: a count, then a centre per named body below a globe. */
+export const ANTIQUE_MAX_SIGNS = 32;
+export const ANTIQUE_SIGN_BYTES = 16 + ANTIQUE_MAX_SIGNS * 16;
 export const ANTIQUE_LADDER_UNITS = 33.5;
 export const ANTIQUE_NUMERAL_INSET_UNITS = 50;
 export const ANTIQUE_NUMERAL_UNITS = 22;

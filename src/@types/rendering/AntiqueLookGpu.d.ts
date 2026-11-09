@@ -29,6 +29,12 @@ export type AntiqueLookGpu = {
   };
   /** Instanced, one quad per print-points texel, max-blended (`glyphs.wesl`). */
   readonly glyphs: { readonly pipeline: GPURenderPipeline; readonly layout: GPUBindGroupLayout };
+  /** One quad per named body below a globe, into the glyphs' row (`bodySigns.wesl`). */
+  readonly signs: {
+    readonly pipeline: GPURenderPipeline;
+    readonly layout: GPUBindGroupLayout;
+    readonly buffer: GPUBuffer;
+  };
   /** The cosmic web's ink charted into the glyphs' row, in their pass (`web.wesl`). */
   readonly web: { readonly pipeline: GPURenderPipeline; readonly layout: GPUBindGroupLayout };
   /** The web's level into the 1/16 `webLevel` layer (`web.wesl` `fsLevel`). */

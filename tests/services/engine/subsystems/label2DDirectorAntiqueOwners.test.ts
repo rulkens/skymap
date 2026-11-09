@@ -138,15 +138,17 @@ describe('label2DDirector under the antique look: names with no owner', () => {
     expect(ids).toContain('star-achernar');
   });
 
-  it('names a planet too small to print as a globe only while it is the subject', () => {
+  it('names a listed planet too small for a globe, whose sign stands on the plate', () => {
     const glint = name('sceneBody-saturn', [0.2, 0.2, 0], {
       subjectId: 7,
       lift: { subjectSizePx: 0.2 },
     });
-    expect(run([producerOf([glint], 'body')])).toEqual([]);
-    expect(run([producerOf([glint], 'body')], lookState('saturn')).map((l) => l.id)).toEqual([
-      'sceneBody-saturn',
-    ]);
+    expect(run([producerOf([glint], 'body')]).map((l) => l.id)).toEqual(['sceneBody-saturn']);
+  });
+
+  it('keeps an unlisted small body unnamed: it has no sign either', () => {
+    const bennu = name('sceneBody-bennu', [0.2, 0.2, 0], { lift: { subjectSizePx: 0.2 } });
+    expect(run([producerOf([bennu], 'body')])).toEqual([]);
   });
 
   it('sets a crowded name on its fallback side, and keeps its own side when that is clear', () => {
