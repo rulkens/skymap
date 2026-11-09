@@ -162,8 +162,9 @@ export function placeAntiqueOrnaments(input: {
     const mid = ANTIQUE_ORNAMENT_GRID / 2;
     const midRow = mid * (ANTIQUE_ORNAMENT_GRID + 1);
     const centre = grid[midRow + mid]!;
-    const [left, right] = [grid[midRow]!, grid[midRow + ANTIQUE_ORNAMENT_GRID]!];
-    const widthPx = Math.hypot(right[0] - left[0], right[1] - left[1]);
+    // The middle half of the sprite, doubled: a clamped far corner would inflate the full width.
+    const [left, right] = [grid[midRow + mid / 2]!, grid[midRow + mid + mid / 2]!];
+    const widthPx = 2 * Math.hypot(right[0] - left[0], right[1] - left[1]);
     // A figure is as big as its stars make it, so a long one (Hydra, 90°) is
     // judged by its girth, and against the canvas's long side so a phone's
     // narrow plate still shows the part of it that lies there; a beast by its width.

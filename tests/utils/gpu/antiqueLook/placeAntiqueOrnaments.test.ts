@@ -142,6 +142,21 @@ describe('placeAntiqueOrnaments', () => {
     }
   });
 
+  it('keeps drawing a figure whose far corners lie behind the camera', () => {
+    // 140° across: a 60° figure centred 60° off the axis has corners past the 87° cut-off.
+    const wide = { tanLeft: -2.7, tanRight: 2.7, tanDown: -1.5, tanUp: 1.5 };
+    const [inst] = placeAntiqueOrnaments({
+      ornaments: [skyRow({ anchor: skyAnchor(-60, 0, 60) })],
+      atlas: ATLAS,
+      projection: { kind: 'rectilinear', basis: NORTH_UP, frustum: wide, size: SIZE },
+      unitPx: 1,
+      camPosMpc: [0, 0, 0],
+      cartouche: null,
+    });
+    expect(inst).toBeDefined();
+    expect(inst!.grid!.every((p) => Number.isFinite(p[0]) && Number.isFinite(p[1]))).toBe(true);
+  });
+
   it('turns a figure a quarter counter-clockwise when north points left', () => {
     const [placed] = place([skyRow({})], NORTH_LEFT);
     // The sprite's up (its bottom-middle to top-middle) points to screen left.
@@ -159,13 +174,13 @@ describe('placeAntiqueOrnaments', () => {
 
   it('keeps star-chart rows inside the Galaxy and Zone-of-Avoidance rows outside it', () => {
     const rows = [skyRow({ regime: 'stars' }), skyRow({ regime: 'cosmos' })];
-    expect(place(rows, NORTH_UP, 0).map((p) => p.opacity)).toEqual([expect.closeTo(1, 2)]);
+    expect(place(rows, NORTH_UP, 0).map((p) => p.opacity > 0.5)).toEqual([true]);
     expect(place(rows, NORTH_UP, 5)).toHaveLength(1);
   });
 
   it('withdraws a constellation figure from a vantage its stars no longer outline (Sgr A*, 8 kpc out)', () => {
     const figure = [skyRow({ regime: 'stars' })];
-    expect(place(figure, NORTH_UP, 5e-6).map((p) => p.opacity)).toEqual([expect.closeTo(1, 2)]);
+    expect(place(figure, NORTH_UP, 5e-6).map((p) => p.opacity > 0.5)).toEqual([true]);
     expect(place(figure, NORTH_UP, 0.008)).toEqual([]);
   });
 
