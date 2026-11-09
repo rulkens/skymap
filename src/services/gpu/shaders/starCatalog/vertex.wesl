@@ -91,7 +91,7 @@ import package::octree::cutIo::OPACITY_CHANNELS;
 import package::octree::cutIo::nodeMinCells;
 import package::octree::cutIo::leafEntryNode;
 import package::octree::cutIo::leafEntryBlock;
-import package::starCatalog::tint::starTint;
+import package::lib::starTint::starTint;
 import package::lib::camera::worldToClip;
 import package::lib::billboard::triCorner;
 import package::lib::billboard::expandBillboardScreen;
