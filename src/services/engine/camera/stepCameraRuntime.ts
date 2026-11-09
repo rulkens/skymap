@@ -166,6 +166,7 @@ export function stepCameraRuntime(
       tilt: prev.tilt,
       follow: prev.follow,
       lastWheelMs: prev.lastWheelMs,
+      zoomLimitPress: prev.zoomLimitPress,
     },
     steps,
     {
@@ -380,6 +381,7 @@ export function stepCameraRuntime(
       gesture,
       tilt: projected.tilt,
       lastWheelMs: drained.lastWheelMs,
+      zoomLimitPress: drained.zoomLimitPress,
       // Velocity survives only while a navigator row authors the camera, or an exhibit
       // owns the drag and the navigator keeps nudging the register it reads.
       navigator:

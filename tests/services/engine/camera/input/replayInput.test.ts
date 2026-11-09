@@ -44,6 +44,8 @@ import { worldArmOf } from '../../../../fixtures/worldArmOf';
 import { bodyDriverGeometry } from '../../../../../src/utils/scene/bodyDriverGeometry';
 import type { FramedCameraPose } from '../../../../../src/@types/camera/pose/FramedCameraPose';
 import type { RawInputStep } from '../../../../../src/@types/camera/input/RawInputStep';
+import type { ZoomLimitPress } from '../../../../../src/@types/camera/input/ZoomLimitPress';
+import { ZOOM_LIMIT_PUSH_LN } from '../../../../../src/data/input/zoomLimitPushLn';
 import type { DriverId } from '../../../../../src/@types/engine/camera/DriverId';
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
@@ -149,6 +151,7 @@ describe('replayInput', () => {
         saturated: false,
       },
       lastWheelMs: -Infinity,
+      zoomLimitPress: null,
     });
     const steps = deepFreeze<readonly RawInputStep[]>([
       atRestZoom(1.5),
@@ -182,6 +185,7 @@ describe('replayInput', () => {
       tilt: EMPTY_TILT_MEMORY,
       follow: null,
       lastWheelMs: -Infinity,
+      zoomLimitPress: null,
     };
 
     const next = replayInput(
@@ -217,6 +221,7 @@ describe('replayInput', () => {
         tilt: EMPTY_TILT_MEMORY,
         follow: null,
         lastWheelMs: -Infinity,
+        zoomLimitPress: null,
       },
       [
         atRestZoom(Math.exp(-0.1)),
@@ -261,6 +266,7 @@ describe('replayInput', () => {
         tilt: EMPTY_TILT_MEMORY,
         follow,
         lastWheelMs: -Infinity,
+        zoomLimitPress: null,
       },
       [atRestZoom(Math.exp(0.1))],
       ctxOf(followStore, { winnerLastFrame: 'followHold' }),
@@ -299,6 +305,7 @@ describe('replayInput', () => {
         tilt: EMPTY_TILT_MEMORY,
         follow: null,
         lastWheelMs: -Infinity,
+        zoomLimitPress: null,
       },
       [atRestZoom(Math.exp(-0.1))],
       ctxOf(store),
@@ -321,7 +328,14 @@ describe('replayInput', () => {
       store.dispatch(setFovYRad(degToRad(LENS_MAX_DEG)));
       const drain = (lastWheelMs: number, notches: readonly RawInputStep[], nowMs = 0) =>
         replayInput(
-          { register: sky, gesture: null, tilt: EMPTY_TILT_MEMORY, follow: null, lastWheelMs },
+          {
+            register: sky,
+            gesture: null,
+            tilt: EMPTY_TILT_MEMORY,
+            follow: null,
+            lastWheelMs,
+            zoomLimitPress: null,
+          },
           notches,
           ctxOf(store, { nowMs }),
         );
@@ -379,6 +393,7 @@ describe('replayInput', () => {
         tilt: EMPTY_TILT_MEMORY,
         follow: null,
         lastWheelMs: -Infinity,
+        zoomLimitPress: null,
       },
       [atRestZoom(1.1)],
       ctxOf(store),
@@ -410,6 +425,7 @@ describe('replayInput', () => {
         tilt: EMPTY_TILT_MEMORY,
         follow: null,
         lastWheelMs: -Infinity,
+        zoomLimitPress: null,
       },
       [atRestZoom(1.25), atRestZoom(1.25)],
       ctxOf(store),
@@ -454,6 +470,7 @@ describe('replayInput', () => {
         tilt: EMPTY_TILT_MEMORY,
         follow: null,
         lastWheelMs: -Infinity,
+        zoomLimitPress: null,
       },
       [
         {
@@ -504,6 +521,7 @@ describe('replayInput', () => {
         tilt: EMPTY_TILT_MEMORY,
         follow: null,
         lastWheelMs: -Infinity,
+        zoomLimitPress: null,
       },
       [
         { kind: 'gestureStart' },
@@ -537,6 +555,7 @@ describe('replayInput', () => {
         tilt: EMPTY_TILT_MEMORY,
         follow: null,
         lastWheelMs: -Infinity,
+        zoomLimitPress: null,
       },
       [
         { kind: 'gestureStart' },
@@ -568,6 +587,7 @@ describe('replayInput', () => {
         tilt: EMPTY_TILT_MEMORY,
         follow: null,
         lastWheelMs: -Infinity,
+        zoomLimitPress: null,
       },
       [atRestZoom(Math.exp(0.1))],
       {
@@ -592,6 +612,7 @@ describe('replayInput', () => {
       tilt: EMPTY_TILT_MEMORY,
       follow: null,
       lastWheelMs: -Infinity,
+      zoomLimitPress: null,
     };
 
     const orbited = replayInput(
@@ -631,6 +652,7 @@ describe('replayInput', () => {
         tilt: EMPTY_TILT_MEMORY,
         follow: null,
         lastWheelMs: -Infinity,
+        zoomLimitPress: null,
       },
       [
         atRestZoom(Math.exp(0.24)),
@@ -666,6 +688,7 @@ describe('replayInput', () => {
         tilt: EMPTY_TILT_MEMORY,
         follow: null,
         lastWheelMs: -Infinity,
+        zoomLimitPress: null,
       },
       [atRestZoom(Math.exp(0.1))],
       ctxOf(store),
@@ -692,6 +715,7 @@ describe('replayInput', () => {
         tilt: EMPTY_TILT_MEMORY,
         follow: null,
         lastWheelMs: -Infinity,
+        zoomLimitPress: null,
       },
       [atRestZoom(Math.exp(0.1))],
       ctxOf(store, { winnerLastFrame: 'followHold' }),
@@ -733,6 +757,7 @@ describe('replayInput', () => {
         tilt: EMPTY_TILT_MEMORY,
         follow,
         lastWheelMs: -Infinity,
+        zoomLimitPress: null,
       },
       [atRestZoom(Math.exp(-10))],
       ctxOf(store, { winnerLastFrame: 'followHold' }),
@@ -785,6 +810,7 @@ describe('replayInput', () => {
             saturated: false,
           },
           lastWheelMs: -Infinity,
+          zoomLimitPress: null,
         },
         [atRestZoom(Math.exp(deltaY * 0.001))],
         ctxOf(store, { winnerLastFrame: 'followHold', nowMs }),
@@ -839,6 +865,7 @@ describe('replayInput', () => {
         tilt: EMPTY_TILT_MEMORY,
         follow: null,
         lastWheelMs: -Infinity,
+        zoomLimitPress: null,
       },
       [
         { kind: 'gestureStart' },
@@ -874,6 +901,7 @@ describe('replayInput', () => {
         tilt: EMPTY_TILT_MEMORY,
         follow: null,
         lastWheelMs: -Infinity,
+        zoomLimitPress: null,
       },
       [
         { kind: 'gestureStart' },
@@ -924,6 +952,7 @@ describe('replayInput', () => {
             tilt: EMPTY_TILT_MEMORY,
             follow: null,
             lastWheelMs: 1000,
+            zoomLimitPress: null,
           },
           [atRestZoom(0.8, eventMs)],
           ctxOf(store),
@@ -940,12 +969,84 @@ describe('replayInput', () => {
       };
       store.dispatch(commitCameraPose(sky));
       const next = replayInput(
-        { register: sky, gesture: null, tilt: EMPTY_TILT_MEMORY, follow: null, lastWheelMs: 0 },
+        {
+          register: sky,
+          gesture: null,
+          tilt: EMPTY_TILT_MEMORY,
+          follow: null,
+          lastWheelMs: 0,
+          zoomLimitPress: null,
+        },
         [{ kind: 'liftOff' }],
         ctxOf(store),
       );
       expect(pushesOf(next.actions)).toEqual(['out']);
       expect(next.register.pose).toBe(sky.pose);
+    });
+
+    describe('the push counter: a streaming scroll pushes once the eaten zoom fills it', () => {
+      /** One notch a drain, carrying the wheel clock and the press: each drain's pushes. */
+      function stream(
+        edge: 'in' | 'out',
+        notches: readonly (readonly [factor: number, eventMs: number])[],
+        frameMs = 16,
+      ): string[] {
+        const store = makeStore();
+        const sky: FramedCameraPose = {
+          frame: { sky: { body: asSceneBodyId('earth'), lonRad: 0.2, latRad: 0.9 } },
+          pose: { azimuthRad: 1, altitudeRad: 0.3 },
+        };
+        const register = edge === 'in' ? atFloor() : sky;
+        store.dispatch(commitCameraPose(register));
+        if (edge === 'out') store.dispatch(setFovYRad(degToRad(LENS_MAX_DEG)));
+        const gesture = edge === 'in' ? EMPTY_SURFACE_GESTURE_MEMORY : null;
+        // The scroll is already streaming when it reaches the limit: its first notch there is stale.
+        let carried = {
+          lastWheelMs: notches[0]![1] - 16,
+          zoomLimitPress: null as ZoomLimitPress | null,
+        };
+        return notches.map(([factor, eventMs], i) => {
+          const next = replayInput(
+            { register, gesture, tilt: EMPTY_TILT_MEMORY, follow: null, ...carried },
+            [atRestZoom(factor, eventMs)],
+            ctxOf(store, { nowMs: i * frameMs }),
+          );
+          carried = { lastWheelMs: next.lastWheelMs, zoomLimitPress: next.zoomLimitPress };
+          return pushesOf(next.actions).join();
+        });
+      }
+      /** Notches 30 ms apart, each 1/3.5 of the push, so the fourth fills it. */
+      const run = (factor: number, n: number, fromMs = 1000) =>
+        Array.from({ length: n }, (_, i) => [factor, fromMs + 30 * i] as const);
+      const IN = Math.exp(-ZOOM_LIMIT_PUSH_LN / 3.5);
+      const OUT = 1 / IN;
+
+      it('continuous notches into the floor enter once their sum reaches the push', () => {
+        expect(stream('in', run(IN, 5))).toEqual(['', '', '', 'in', '']);
+      });
+
+      it('continuous wheel-out at the widest lens lifts, frame hitches or not', () => {
+        // Drained 400 ms apart as frames: the count runs on the event clock alone.
+        expect(stream('out', run(OUT, 4), 400)).toEqual(['', '', '', 'out']);
+      });
+
+      it('a decaying trackpad tail whose sum stays below the push does not push', () => {
+        const tail = Array.from(
+          { length: 30 },
+          (_, i) => [Math.exp(-(ZOOM_LIMIT_PUSH_LN / 4) * 0.6 ** i), 1000 + 16 * i] as const,
+        );
+        expect(stream('in', tail).every((p) => p === '')).toBe(true);
+      });
+
+      it('a notch the other way starts the count over', () => {
+        const zigzag = [...run(IN, 3), [OUT, 1090] as const, ...run(IN, 3, 1120)];
+        expect(stream('in', zigzag).every((p) => p === '')).toBe(true);
+      });
+
+      it('a fresh notch at the limit still pushes at once', () => {
+        const paused = [...run(IN, 2), [IN, 1030 + FRESH_WHEEL_PAUSE_MS] as const];
+        expect(stream('in', paused)).toEqual(['', '', 'in']);
+      });
     });
   });
 });

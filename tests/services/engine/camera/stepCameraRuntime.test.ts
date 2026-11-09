@@ -63,7 +63,8 @@ import { refoldTo } from '../../../../src/services/engine/camera/arms/refoldTo';
 import { skySpotRadial } from '../../../../src/utils/geo/skySpotRadial';
 import { bodyFixedEyeM } from '../../../../src/utils/camera/surfaceFrame/bodyFixedEyeM';
 import { SKY_EXIT_ALTITUDE_M } from '../../../../src/services/engine/camera/arms/sky/data/skyExitAltitudeM';
-import { FRESH_WHEEL_PAUSE_MS } from '../../../../src/data/input/freshWheelPauseMs';
+import { ZOOM_LIMIT_PUSH_LN } from '../../../../src/data/input/zoomLimitPushLn';
+import { WHEEL_ZOOM_K } from '../../../../src/data/input/wheelZoomK';
 import type { FramedCameraPose } from '../../../../src/@types/camera/pose/FramedCameraPose';
 import type { BodyFixedPose } from '../../../../src/@types/camera/pose/BodyFixedPose';
 import type { SkyPose } from '../../../../src/@types/camera/pose/SkyPose';
@@ -1050,7 +1051,7 @@ describe('the sky exit lift', () => {
     }
   });
 
-  it('carries the wheel quiet across frames: a streaming scroll stops at the widest lens', () => {
+  it('carries the press across frames: a streaming scroll lifts once it fills the push', () => {
     const h = makeCameraSimHarness({
       focusBody: 'earth',
       realClipPlayer: true,
@@ -1062,16 +1063,16 @@ describe('the sky exit lift', () => {
     );
     h.store.dispatch(setFovYRad(degToRad(100)));
     h.frame(2);
-    // A notch a frame, through the stop and on: a trackpad's momentum tail.
-    for (let i = 0; i < 20; i++) {
+    // A notch a frame, through the stop and on: none is fresh, so only the count can lift.
+    const LENS_MAX = degToRad(LENS_MAX_DEG);
+    let pressedAtMax = 0;
+    for (let i = 0; i < 20 && h.store.getState().camera.clip === null; i++) {
+      if (h.store.getState().camera.fovYRad === LENS_MAX) pressedAtMax++;
       h.notch(300);
       h.frame(1);
     }
-    expect(h.store.getState().camera.fovYRad).toBe(degToRad(LENS_MAX_DEG));
-    expect(h.store.getState().camera.clip).toBeNull();
-    h.frame(Math.ceil(FRESH_WHEEL_PAUSE_MS / 16));
-    h.wheel(300);
     expect(h.store.getState().camera.clip).not.toBeNull();
+    expect(pressedAtMax).toBe(Math.ceil(ZOOM_LIMIT_PUSH_LN / (300 * WHEEL_ZOOM_K)));
   });
 
   it('hands off 100 m above the spot looking straight down at the default lens', () => {

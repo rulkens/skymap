@@ -22,6 +22,7 @@ import { rowFor } from '../arms/rowFor';
 import { cameraArmKindOf } from '../arms/cameraArmKindOf';
 import { sameFrame } from '../arms/sameFrame';
 import { zoomedDistance } from './utils/zoomedDistance';
+import { zoomLimitPressStep } from './utils/zoomLimitPressStep';
 import { FRESH_WHEEL_PAUSE_MS } from '../../../../data/input/freshWheelPauseMs';
 import { absoluteArm } from '../../../../utils/camera/arms/absoluteArm';
 import { bodyMovesThisFrame } from '../../../../utils/scene/bodyMovesThisFrame';
@@ -38,6 +39,7 @@ import type { FramedPose } from '../../../../@types/camera/pose/FramedPose';
 import type { InputStep } from '../../../../@types/camera/input/InputStep';
 import type { RawInputStep } from '../../../../@types/camera/input/RawInputStep';
 import type { ZoomLimitPush } from '../../../../@types/camera/arms/ZoomLimitPush';
+import type { ZoomLimitPress } from '../../../../@types/camera/input/ZoomLimitPress';
 import type { MemOf } from '../../../../@types/camera/arms/MemOf';
 import type { NavStep } from '../@types/NavStep';
 import type { CameraArmCtx } from '../../../../@types/camera/arms/CameraArmCtx';
@@ -53,6 +55,7 @@ export function replayInput(
     readonly follow: FollowMemory | null;
     /** The last wheel notch's device-event time, ms (`−∞` before one). */
     readonly lastWheelMs: number;
+    readonly zoomLimitPress: ZoomLimitPress | null;
   },
   steps: readonly RawInputStep[],
   args: {
@@ -74,6 +77,7 @@ export function replayInput(
   readonly follow: FollowMemory | null;
   readonly followDistanceTarget: number | null;
   readonly lastWheelMs: number;
+  readonly zoomLimitPress: ZoomLimitPress | null;
   readonly actions: readonly UnknownAction[];
   /** The navigator's input, in order; a `gestureEnd` is also handled here. */
   readonly navSteps: readonly NavStep[];
@@ -93,6 +97,7 @@ export function replayInput(
   let follow = prev.follow;
   let followDistanceTarget: number | null = null;
   let lastWheelMs = prev.lastWheelMs;
+  let zoomLimitPress = prev.zoomLimitPress;
   // What the arm reported pressed against its zoom limit, written by `stepRow`, per step.
   let pressed: ZoomLimitPush | undefined;
   // Advanced locally for this frame's elapsed read and DISCARDED: handing it to
@@ -318,8 +323,13 @@ export function replayInput(
         break;
       }
     }
-    // A press pushes only from a fresh scroll: a momentum tail reaching the stop stays.
-    if (pressed !== undefined && (step.kind !== 'zoom' || fresh)) emit(zoomLimitPushed(pressed));
+    const limit = zoomLimitPressStep(
+      zoomLimitPress,
+      pressed,
+      step.kind === 'zoom' ? { lnZoom: Math.abs(Math.log(step.factor)), fresh } : null,
+    );
+    zoomLimitPress = limit.press;
+    if (limit.push !== null) emit(zoomLimitPushed(limit.push));
   }
 
   return {
@@ -329,6 +339,7 @@ export function replayInput(
     follow,
     followDistanceTarget,
     lastWheelMs,
+    zoomLimitPress,
     actions,
     navSteps,
   };
