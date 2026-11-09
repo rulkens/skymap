@@ -1,6 +1,6 @@
 /**
  * UpsamplePassRow — per-subsystem input to `createUpsamplePass`: the fields
- * today's four upsample `ContentPass`s vary on (name, which offscreen to blit,
+ * the upsample `ContentPass`s vary on (name, which offscreen to blit,
  * how to fetch this frame's handle, the shared liveness gate).
  */
 
