@@ -42,9 +42,9 @@ import { antiqueReliefInput } from './antiqueReliefInput';
 import { packAntiqueRelief } from '../../../../utils/gpu/antiqueLook/packAntiqueRelief';
 import { ANTIQUE_RELIEF_UNIFORM_BYTES } from '../../../../data/rendering/antiqueRelief';
 import { packAntiqueOrnaments } from '../../../../utils/gpu/antiqueLook/packAntiqueOrnaments';
-import { packAntiqueGlyphs } from '../../../../utils/gpu/antiqueLook/packAntiqueGlyphs';
 import { packAntiqueSigns } from '../../../../utils/gpu/antiqueLook/packAntiqueSigns';
 import { antiqueBodySigns } from './antiqueBodySigns';
+import { packAntiqueGlyphs } from '../../../../utils/gpu/antiqueLook/packAntiqueGlyphs';
 import { placeAntiqueOrnaments } from '../../../../utils/gpu/antiqueLook/placeAntiqueOrnaments';
 import { antiqueMoonSubject } from './antiqueMoonSubject';
 import { antiqueTitleGlobe } from './antiqueTitleGlobe';
@@ -88,8 +88,8 @@ export function createAntiqueLook(init: {
   const uniformBytes = new ArrayBuffer(ANTIQUE_UNIFORM_BYTES);
   const ornamentBytes = new ArrayBuffer(ANTIQUE_ORNAMENT_BYTES);
   const glyphBytes = new ArrayBuffer(ANTIQUE_GLYPH_BYTES);
-  const plateBodyBytes = new ArrayBuffer(ANTIQUE_PLATE_BODIES_BYTES);
   const signBytes = new ArrayBuffer(ANTIQUE_SIGN_BYTES);
+  const plateBodyBytes = new ArrayBuffer(ANTIQUE_PLATE_BODIES_BYTES);
   const maskDepthBytes = new ArrayBuffer(ANTIQUE_MASK_DEPTH_BYTES);
   const reliefBytes = new ArrayBuffer(ANTIQUE_RELIEF_UNIFORM_BYTES);
 
@@ -224,9 +224,9 @@ export function createAntiqueLook(init: {
             cartouche: card?.rectPx ?? null,
           });
     device.queue.writeBuffer(g.digits, 0, packAntiqueGlyphs(digits, glyphBytes));
-    const landMapped = ctx.snapshot.renderedTargets.has(ANTIQUE_TARGETS.land);
     const signs = antiqueBodySigns(state, ctx, basis);
     device.queue.writeBuffer(g.signs.buffer, 0, packAntiqueSigns(signs, signBytes));
+    const landMapped = ctx.snapshot.renderedTargets.has(ANTIQUE_TARGETS.land);
     const plateBodies = hasBodies ? antiquePlateBodies(state, ctx, unitPx, landMapped, rays) : [];
     device.queue.writeBuffer(g.plateBodies, 0, packAntiquePlateBodies(plateBodies, plateBodyBytes));
     const radiiM = plateBodies.map((b) => b.radiusM);
@@ -400,7 +400,6 @@ export function createAntiqueLook(init: {
       }),
     );
     glyphPass.draw(4, cells.width * cells.height);
-    if (webDensity) {
     if (signs.length > 0) {
       glyphPass.setPipeline(g.signs.pipeline);
       glyphPass.setBindGroup(
@@ -417,6 +416,7 @@ export function createAntiqueLook(init: {
       );
       glyphPass.draw(4, signs.length);
     }
+    if (webDensity) {
       glyphPass.setPipeline(g.web.pipeline);
       glyphPass.setBindGroup(
         0,
