@@ -156,5 +156,14 @@ reason ("nothing drifts under a scripted move").
 
 ---
 
+## Amendments (owner, 2026-11-09)
+
+- **Q3 revised: lazy-loaded from day 1.** The owner asked to re-ask Q3 and ruled that the studio is
+  a lazy-loaded chunk from the first version, not a dev-only mount (exact scope confirmed in Q8).
+- **Q5 widened: hand-written TS clips are edited in place too** (Q5 option C, on top of A). Saving
+  over a hand-written clip regenerates its whole file, flattening its makers and constants into
+  literals. The owner accepts that loss in exchange for one home per clip. The spec must state what
+  happens to factory clips whose start depends on `simDays` (`earthFlyout`).
+
 _Open after Q7, pending the UI/UX investigation:_ how the camera follows the playhead vs. flies free
 for "use current view", the timeline layout, and how the studio's RTK state plugs into the app store.
