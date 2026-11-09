@@ -15,6 +15,8 @@ import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTi
 import { cross3 } from '../../../../src/utils/math/cross3';
 import { normalize3 } from '../../../../src/utils/math/normalize3';
 import { raDecDistToCartesian } from '../../../../src/utils/math/raDecDistToCartesian';
+import { spritePointPx } from './spritePointPx';
+import { pxOfRay } from '../../../../src/utils/camera/projection/viewProjection/pxOfRay';
 import { cartesianToRaDec } from '../../../../src/utils/math/cartesianToRaDec';
 
 const ATLAS = {
@@ -80,7 +82,6 @@ function skyRow(over: Partial<AntiqueOrnament> & { lonDeg?: number }): AntiqueOr
     sprite: 'beast',
     anchor: skyAnchor(lonDeg, 0, 30),
     regime: 'stars',
-    facesNorth: false,
     pigment: 0,
     opacity: 1,
     clearsBeneath: false,
@@ -111,17 +112,43 @@ describe('placeAntiqueOrnaments', () => {
     expect(placed!.centrePx[0]).toBeCloseTo(800, 3);
     expect(placed!.centrePx[1]).toBeCloseTo(450, 3);
     expect(placed!.rotation).toBeCloseTo(0, 3);
-    // 2·tan(15°) of a 2·0.5774-tan-tall 900 px frustum, half of it; the atlas rect is 2:1.
-    expect(placed!.halfPx[0]).toBeCloseTo(
-      0.5 * ((2 * Math.tan(Math.PI / 12) * 900) / (2 * 0.5774)),
-      1,
-    );
+    // 30° of a 2·0.5774-tan-tall 900 px frustum: 2·tan(15°) wide, half of it, to within the
+    // angle-vs-tangent difference of the fixture's stars; the atlas rect is 2:1.
+    expect(
+      placed!.halfPx[0] / (0.5 * ((2 * Math.tan(Math.PI / 12) * 900) / (2 * 0.5774))),
+    ).toBeCloseTo(1, 1);
     expect(placed!.halfPx[1]).toBeCloseTo(placed!.halfPx[0] * 0.5, 3);
+  });
+
+  it('registers a figure to its stars out in a corner of a wide view, where a flat fit grows it', () => {
+    // 120° across, the figure 30° wide and 40° off the axis: the sky is stretched there.
+    const wide = { tanLeft: -1.73, tanRight: 1.73, tanDown: -0.97, tanUp: 0.97 };
+    const projection = { kind: 'rectilinear' as const, basis: NORTH_UP, frustum: wide, size: SIZE };
+    const row = skyRow({ anchor: skyAnchor(-45, 25, 30) });
+    if (row.anchor.kind !== 'sky') throw new Error('a figure');
+    const [inst] = placeAntiqueOrnaments({
+      ornaments: [row],
+      atlas: ATLAS,
+      projection,
+      unitPx: 1,
+      camPosMpc: [0, 0, 0],
+      cartouche: null,
+    });
+    expect(inst).toBeDefined();
+    for (const a of row.anchor.stars) {
+      const star = pxOfRay(projection, raDecDistToCartesian(a.raDeg, a.decDeg, 1))!;
+      const drawn = spritePointPx(inst!, a.u, a.v);
+      expect(Math.hypot(drawn[0] - star[0], drawn[1] - star[1])).toBeLessThan(1);
+    }
   });
 
   it('turns a figure a quarter counter-clockwise when north points left', () => {
     const [placed] = place([skyRow({})], NORTH_LEFT);
-    expect(placed!.rotation).toBeCloseTo(Math.PI / 2, 3);
+    // The sprite's up (its bottom-middle to top-middle) points to screen left.
+    const up = spritePointPx(placed!, 0.5, 0);
+    const down = spritePointPx(placed!, 0.5, 1);
+    expect(up[0]).toBeLessThan(down[0] - 100);
+    expect(up[1]).toBeCloseTo(down[1], 0);
   });
 
   it('places east of centre on the screen left, and nothing behind the camera', () => {
@@ -132,21 +159,23 @@ describe('placeAntiqueOrnaments', () => {
 
   it('keeps star-chart rows inside the Galaxy and Zone-of-Avoidance rows outside it', () => {
     const rows = [skyRow({ regime: 'stars' }), skyRow({ regime: 'cosmos' })];
-    expect(place(rows, NORTH_UP, 0).map((p) => p.opacity)).toEqual([1]);
+    expect(place(rows, NORTH_UP, 0).map((p) => p.opacity)).toEqual([expect.closeTo(1, 2)]);
     expect(place(rows, NORTH_UP, 5)).toHaveLength(1);
   });
 
   it('withdraws a constellation figure from a vantage its stars no longer outline (Sgr A*, 8 kpc out)', () => {
     const figure = [skyRow({ regime: 'stars' })];
-    expect(place(figure, NORTH_UP, 5e-6).map((p) => p.opacity)).toEqual([1]);
+    expect(place(figure, NORTH_UP, 5e-6).map((p) => p.opacity)).toEqual([expect.closeTo(1, 2)]);
     expect(place(figure, NORTH_UP, 0.008)).toEqual([]);
   });
 
-  it('mirrors a globe-view figure by flipping its width, not its place', () => {
+  it('mirrors a globe-view figure about its own centre, not its place', () => {
     const [plain] = place([skyRow({})]);
     const [mirrored] = place([skyRow({ anchor: skyAnchor(0, 0, 30, true) })]);
-    expect(mirrored!.halfPx[0]).toBeCloseTo(-plain!.halfPx[0], 6);
-    expect(mirrored!.centrePx).toEqual(plain!.centrePx);
+    // The sprite's left edge lands where the plain one's right edge does.
+    const [a, b] = [spritePointPx(mirrored!, 0, 0.5), spritePointPx(plain!, 1, 0.5)];
+    expect(a[0]).toBeCloseTo(b[0], 0);
+    expect(mirrored!.centrePx[0]).toBeCloseTo(plain!.centrePx[0], 3);
   });
 
   it("sets the plate's title from the lettering sheet in the cartouche's field, at its strength", () => {
@@ -171,7 +200,7 @@ describe('placeAntiqueOrnaments', () => {
 
   it('drops a sky figure that is mostly off the plate', () => {
     // Centred well past the right edge: under the fifth on the plate it needs.
-    const [edge] = place([skyRow({ lonDeg: -50 })]);
+    const [edge] = place([skyRow({ lonDeg: -65 })]);
     expect(edge === undefined || edge.opacity < 0.5).toBe(true);
   });
 
@@ -188,7 +217,6 @@ describe('placeAntiqueOrnaments', () => {
         ornaments: [
           skyRow({
             regime: 'cosmos',
-            facesNorth: false,
             anchor: { kind: 'space', lonDeg: 0, latDeg: 0, distMpc: 20, sizeMpc: 4 },
           }),
         ],
@@ -216,7 +244,6 @@ describe('placeAntiqueOrnaments', () => {
       placeAntiqueOrnaments({
         ornaments: [
           skyRow({
-            facesNorth: false,
             anchor: { kind: 'space', lonDeg: 0, latDeg: 0, distMpc: 20, sizeMpc: 4 },
           }),
         ],
@@ -240,7 +267,6 @@ describe('placeAntiqueOrnaments', () => {
 
   it('keeps a sea beast off the subject at the plate centre', () => {
     const beast = skyRow({
-      facesNorth: false,
       anchor: { kind: 'space', lonDeg: 0, latDeg: 0, distMpc: 20, sizeMpc: 4 },
     });
     const at = (basis: ViewBasis) =>

@@ -12,8 +12,11 @@
 // | +32    | rect    | atlas u0, v0, u1, v1                            |
 // | +48    | pigment | index into PIGMENTS                             |
 // | +52    | lettering | 1 = rect is on the lettering sheet (a title)  |
-// | +56    | (pad)   | keeps the record 64 bytes, a multiple of its 16 |
+// | +56    | gridded | 1 = a sky figure: `grid` places its corners      |
 // | +60    | washed  | 1 = flat pigment wash inside the outline (cartouche frame only) |
+//
+// After the 16 records, `grid`: per ornament 41 vec4 = 82 px points, of which the
+// first 81 are its 9x9 lattice (row by row from the sprite's top left).
 
 struct Ornament {
   centre: vec2<f32>,
@@ -24,7 +27,7 @@ struct Ornament {
   rect: vec4<f32>,
   pigment: f32,
   lettering: f32,
-  _pad: f32,
+  gridded: f32,
   washed: f32,
 }
 
@@ -34,4 +37,5 @@ struct AntiqueOrnaments {
   _pad1: u32,
   _pad2: u32,
   items: array<Ornament, 16>,
+  grid: array<vec4<f32>, 656>,
 }

@@ -15,8 +15,8 @@ import { dot3 } from '../../../src/utils/math/dot3';
 import { raDecDistToCartesian } from '../../../src/utils/math/raDecDistToCartesian';
 import { cross3 } from '../../../src/utils/math/cross3';
 import { normalize3 } from '../../../src/utils/math/normalize3';
+import { spritePointPx } from '../../utils/gpu/antiqueLook/spritePointPx';
 import type { ViewProjection } from '../../../src/@types/camera/projection/ViewProjection';
-import type { AntiqueOrnamentInstance } from '../../../src/@types/rendering/AntiqueOrnamentInstance';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 
 // Hevelius' own star places are good to about a degree; past 2° the figure visibly
@@ -66,15 +66,6 @@ function viewOf(centre: Vec3, view: (typeof VIEWS)[number]): ViewProjection {
   };
 }
 
-/** A sprite point's screen px, as decor.wesl's vertex stage maps it (a negative half-width mirrors). */
-function pxOfSpritePoint(inst: AntiqueOrnamentInstance, u: number, v: number): [number, number] {
-  const lx = (2 * u - 1) * inst.halfPx[0];
-  const ly = (2 * v - 1) * inst.halfPx[1];
-  const c = Math.cos(inst.rotation);
-  const s = Math.sin(inst.rotation);
-  return [inst.centrePx[0] + c * lx + s * ly, inst.centrePx[1] - s * lx + c * ly];
-}
-
 describe('ANTIQUE_FIGURE_ANCHORS', () => {
   const figures = ANTIQUE_ORNAMENTS.filter((o) => o.anchor.kind === 'sky');
 
@@ -104,7 +95,7 @@ describe('ANTIQUE_FIGURE_ANCHORS', () => {
         });
         expect(inst).toBeDefined();
         const missDeg = stars.map((a, i) => {
-          const drawn = normalize3(rayOfPx(projection, pxOfSpritePoint(inst!, a.u, a.v))!);
+          const drawn = normalize3(rayOfPx(projection, spritePointPx(inst!, a.u, a.v))!);
           const miss = Math.acos(Math.min(1, dot3(drawn, dirs[i]!)));
           return [a.star, Math.round((miss / DEG) * 10) / 10] as const;
         });

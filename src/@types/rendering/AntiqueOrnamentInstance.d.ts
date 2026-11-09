@@ -20,4 +20,9 @@ export type AntiqueOrnamentInstance = {
   readonly lettering: boolean;
   /** Flat pigment wash inside the outline: the cartouche frame only. Figures and beasts are ink on paper. */
   readonly washed: boolean;
+  /**
+   * A sky figure's lattice: the screen px of the sprite's (GRID + 1)² corners, row by row
+   * from its top left. Null for a flat ornament, which `centrePx`/`halfPx`/`rotation` place.
+   */
+  readonly grid: readonly Vec2[] | null;
 };

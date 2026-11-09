@@ -5,10 +5,16 @@
  */
 
 import type { AntiqueOrnamentInstance } from '../../../@types/rendering/AntiqueOrnamentInstance';
-import { ANTIQUE_MAX_ORNAMENTS, ANTIQUE_ORNAMENT_BYTES } from '../../../data/rendering/antiqueLook';
+import {
+  ANTIQUE_MAX_ORNAMENTS,
+  ANTIQUE_ORNAMENT_BYTES,
+  ANTIQUE_ORNAMENT_GRID_VEC4,
+} from '../../../data/rendering/antiqueLook';
 
 const HEADER_F32 = 4;
 const ROW_F32 = 16;
+const GRID_F32 = ANTIQUE_ORNAMENT_GRID_VEC4 * 4;
+const GRIDS_AT_F32 = HEADER_F32 + ANTIQUE_MAX_ORNAMENTS * ROW_F32;
 
 export function packAntiqueOrnaments(
   instances: readonly AntiqueOrnamentInstance[],
@@ -27,7 +33,9 @@ export function packAntiqueOrnaments(
     f32.set(o.rect, at + 8);
     f32[at + 12] = o.pigment;
     f32[at + 13] = o.lettering ? 1 : 0;
+    f32[at + 14] = o.grid ? 1 : 0;
     f32[at + 15] = o.washed ? 1 : 0;
+    if (o.grid) f32.set(o.grid.flat(), GRIDS_AT_F32 + i * GRID_F32);
   }
   return out;
 }

@@ -20,6 +20,7 @@ import {
   ANTIQUE_LOW_LAYERS,
   ANTIQUE_MASK_DEPTH_BYTES,
   ANTIQUE_ORNAMENT_BYTES,
+  ANTIQUE_ORNAMENT_STRIP_VERTS,
   ANTIQUE_QUARTER_LAYERS,
   ANTIQUE_REFERENCE_HEIGHT_CSS,
   ANTIQUE_REGIME_MPC,
@@ -456,7 +457,7 @@ export function createAntiqueLook(init: {
           ],
         }),
       );
-      decorPass.draw(4, placed.length);
+      decorPass.draw(ANTIQUE_ORNAMENT_STRIP_VERTS, placed.length);
     }
     decorPass.end();
     fullScreen(

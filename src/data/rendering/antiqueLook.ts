@@ -26,7 +26,16 @@ export const ANTIQUE_FIGURE_VANTAGE_MPC = [1e-5, 5e-5] as const;
  * `AntiqueLettering` (each list: a 16-byte header, then fixed rows). */
 export const ANTIQUE_UNIFORM_BYTES = 304;
 export const ANTIQUE_MAX_ORNAMENTS = 16;
-export const ANTIQUE_ORNAMENT_BYTES = 16 + ANTIQUE_MAX_ORNAMENTS * 64;
+/** A sky figure is drawn as this many cells a side, each corner placed on the sphere and
+ * projected, so the view's own stretch bends it (`placeAntiqueOrnaments`, decor.wesl). */
+export const ANTIQUE_ORNAMENT_GRID = 8;
+/** Triangle-strip vertices per ornament: a strip per cell row, joined by two degenerate ones. */
+export const ANTIQUE_ORNAMENT_STRIP_VERTS =
+  ANTIQUE_ORNAMENT_GRID * (2 * (ANTIQUE_ORNAMENT_GRID + 1) + 2);
+/** One ornament's lattice in vec4s (two px points each): (GRID + 1)² points, rounded up. */
+export const ANTIQUE_ORNAMENT_GRID_VEC4 = Math.ceil((ANTIQUE_ORNAMENT_GRID + 1) ** 2 / 2);
+export const ANTIQUE_ORNAMENT_BYTES =
+  16 + ANTIQUE_MAX_ORNAMENTS * (64 + ANTIQUE_ORNAMENT_GRID_VEC4 * 16);
 export const ANTIQUE_MAX_GLYPHS = 96;
 export const ANTIQUE_GLYPH_BYTES = 16 + ANTIQUE_MAX_GLYPHS * 32;
 

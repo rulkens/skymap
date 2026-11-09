@@ -14,6 +14,7 @@ import {
   ANTIQUE_MAX_GLYPHS,
   ANTIQUE_MAX_ORNAMENTS,
   ANTIQUE_ORNAMENT_BYTES,
+  ANTIQUE_ORNAMENT_GRID_VEC4,
   ANTIQUE_UNIFORM_BYTES,
 } from '../../../../src/data/rendering/antiqueLook';
 import { ANTIQUE_PLATE_ROWS } from '../../../../src/data/rendering/antiqueTuning';
@@ -52,7 +53,11 @@ function listOf(file: string, struct: string, row: string) {
   const length = Number(items[1]);
   const rowLayout = layoutOf(file, row);
   const header = layoutWgslStruct(parseWgslStructFields(source, struct), (type) =>
-    type === `array<${row}` ? { size: rowLayout.layout.size * length, align: 16 } : primitive(type),
+    type === `array<${row}`
+      ? { size: rowLayout.layout.size * length, align: 16 }
+      : type === 'array<vec4<f32>'
+        ? { size: 16 * ANTIQUE_MAX_ORNAMENTS * ANTIQUE_ORNAMENT_GRID_VEC4, align: 16 }
+        : primitive(type),
   );
   return { length, row: rowLayout, header };
 }
@@ -181,7 +186,13 @@ describe('antique look records ↔ WGSL structs', () => {
   it('packAntiqueOrnaments writes AntiqueOrnaments row by row', () => {
     const { length, row, header } = listOf('ornaments.wesl', 'AntiqueOrnaments', 'Ornament');
     expect(length).toBe(ANTIQUE_MAX_ORNAMENTS);
-    expect(row.layout.size * length + header.offsets.get('items')!).toBe(ANTIQUE_ORNAMENT_BYTES);
+    const grid = readShaderSource(`${DIR}/ornaments.wesl`).match(
+      /grid\s*:\s*array<vec4<f32>,\s*(\d+)>/,
+    );
+    expect(Number(grid?.[1])).toBe(ANTIQUE_MAX_ORNAMENTS * ANTIQUE_ORNAMENT_GRID_VEC4);
+    expect(header.offsets.get('items')! + row.layout.size * length + Number(grid?.[1]) * 16).toBe(
+      ANTIQUE_ORNAMENT_BYTES,
+    );
     const rotation = 0.3;
     const packed = packAntiqueOrnaments([
       {
@@ -194,6 +205,7 @@ describe('antique look records ↔ WGSL structs', () => {
         rect: [0, 0, 0, 0],
         lettering: false,
         washed: false,
+        grid: null,
       },
       {
         centrePx: [2001, 2002],
@@ -205,6 +217,7 @@ describe('antique look records ↔ WGSL structs', () => {
         rect: [2007, 2008, 2009, 2010],
         lettering: true,
         washed: true,
+        grid: null,
       },
     ]);
     expect(new Uint32Array(packed)[header.offsets.get('count')! / 4]).toBe(2);

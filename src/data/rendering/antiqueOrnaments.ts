@@ -13,12 +13,11 @@
 import type { AntiqueOrnament } from '../../@types/rendering/AntiqueOrnament';
 import { ANTIQUE_FIGURE_ANCHORS } from './antiqueFigureAnchors';
 
-// A constellation figure lies on its anchor stars, refitted every frame.
+// A constellation figure lies on its anchor stars; a voyager upright to celestial north.
 const figure = (sprite: string, pigment: number): AntiqueOrnament => ({
   sprite,
   anchor: { kind: 'sky', stars: ANTIQUE_FIGURE_ANCHORS[sprite]! },
   regime: 'stars',
-  facesNorth: false,
   pigment,
   opacity: 1,
   clearsBeneath: false,
@@ -34,7 +33,6 @@ const voyager = (
   sprite,
   anchor: { kind: 'space', lonDeg, latDeg: 0, distMpc, sizeMpc },
   regime: 'cosmos',
-  facesNorth: true,
   pigment,
   opacity: 1,
   // Not a constellation figure: it sails empty sea, so no glyph prints through it.

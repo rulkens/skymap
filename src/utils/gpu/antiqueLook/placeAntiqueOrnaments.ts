@@ -2,8 +2,8 @@
  * placeAntiqueOrnaments — this frame's ornament instances, in device px.
  *
  * The title cartouche comes first, where `antiquePlateCartouche` put it, its
- * title set level in its field. A constellation figure is fitted onto where its
- * anchor stars project; a place in space projects through the view, its up to
+ * title set level in its field. A constellation figure is laid on the sky by its
+ * anchor stars and projected as a lattice; a place in space projects through the view, its up to
  * celestial north. Each fades in only
  * while it is a sensible size on screen and while the camera is in its regime
  * (near the Sun for a constellation, out among the galaxies for the Zone of
@@ -22,17 +22,18 @@ import { GAL_TO_EQ_MATRIX } from '../../../data/superGalacticTransform';
 import {
   ANTIQUE_FIGURE_VANTAGE_MPC,
   ANTIQUE_NUMERAL_INSET_UNITS,
+  ANTIQUE_ORNAMENT_GRID,
   ANTIQUE_REGIME_MPC,
 } from '../../../data/rendering/antiqueLook';
 import { raDecDistToCartesian } from '../../math/raDecDistToCartesian';
 import { rotateVec3ByTightMat3 } from '../../math/rotateVec3ByTightMat3';
-import { pxOfRay } from '../../camera/projection/viewProjection/pxOfRay';
-import { pxPerRadAt } from '../../camera/projection/viewProjection/pxPerRadAt';
 import { overlapShare } from '../../render/overlapShare';
 import { sheetAnchorCentre } from '../../render/sheetAnchorCentre';
 import { smoothstep } from '../../math/smoothstep';
-import { fitSimilarity2D } from '../../math/fitSimilarity2D';
-import { screenNorthAngle } from '../../camera/projection/screenNorthAngle';
+import { projectFigureGrid } from './projectFigureGrid';
+import { projectTangentLattice } from './projectTangentLattice';
+import { tangentFrameAt } from './tangentFrameAt';
+import { normalize3 } from '../../math/normalize3';
 import { onScreenShare } from '../../render/onScreenShare';
 import { offScreen } from '../../render/offScreen';
 
@@ -101,6 +102,7 @@ export function placeAntiqueOrnaments(input: {
       rect: uvOf(cardRect),
       lettering: false,
       washed: true,
+      grid: null,
     });
     // The title is set level in the cartouche's blank field, lettering-sheet ink on its paper.
     const field = atlas.interiors[card.row.sprite];
@@ -118,6 +120,7 @@ export function placeAntiqueOrnaments(input: {
         rect: [...card.title.rect],
         lettering: true,
         washed: false,
+        grid: null,
       });
   }
 
@@ -129,34 +132,15 @@ export function placeAntiqueOrnaments(input: {
     const aspect = rect.h / rect.w;
     const { anchor } = row;
     let opacity = row.opacity * regime;
-    // Where it lands, how wide, how turned (radians counter-clockwise) and handed.
-    let centre: Vec2;
-    let widthPx: number;
-    let rotation = 0;
-    let mirrored = false;
+    // Laid on the sky and projected corner by corner, so the view stretches the sprite as it
+    // does the stars: a figure by its anchor stars, a place in space upright to celestial north
+    // at its angular size as seen from the eye.
+    let grid: Vec2[] | null;
     if (anchor.kind === 'sky') {
-      // Fitted in screen space, so it holds in any view: a sky-wide fit on one
-      // tangent plane misses by degrees once the view's axis is off the figure's.
-      const p: Vec2[] = [];
-      const q: Vec2[] = [];
-      for (const star of anchor.stars) {
-        const px = pxOfRay(projection, raDecDistToCartesian(star.raDeg, star.decDeg, 1));
-        // A star far off the canvas would outweigh the rest in the fit.
-        if (px === null || offScreen(px, [size.width, size.height], size)) continue;
-        p.push([star.u - 0.5, (star.v - 0.5) * aspect]);
-        q.push(px);
-      }
-      if (p.length < 3) continue;
-      const fit = fitSimilarity2D(p, q);
-      centre = fit.t;
-      widthPx = fit.scale;
-      // decor.wesl turns by the opposite sense of this y-down frame.
-      rotation = -fit.theta;
-      mirrored = fit.mirrored;
+      grid = projectFigureGrid(anchor.stars, aspect, projection);
     } else {
       const raw = raDecDistToCartesian(anchor.lonDeg, anchor.latDeg, 1);
       const unit = rotateVec3ByTightMat3(GAL_TO_EQ_MATRIX, raw, [0, 0, 0]);
-      // A place is seen from the camera: its direction and distance from the eye.
       const cam = input.camPosMpc;
       const toward: Vec3 = [
         unit[0] * anchor.distMpc - cam[0],
@@ -164,14 +148,22 @@ export function placeAntiqueOrnaments(input: {
         unit[2] * anchor.distMpc - cam[2],
       ];
       const range = Math.hypot(toward[0], toward[1], toward[2]);
-      const dir: Vec3 = [toward[0] / range, toward[1] / range, toward[2] / range];
-      const at = pxOfRay(projection, dir);
-      if (at === null) continue;
-      centre = at;
-      const angle = 2 * Math.atan(anchor.sizeMpc / (2 * range));
-      widthPx = Math.tan(angle * 0.5) * 2 * pxPerRadAt(projection, dir);
-      if (row.facesNorth) rotation = screenNorthAngle(dir, centre, projection);
+      const dir = normalize3(toward);
+      const scale = 2 * Math.atan(anchor.sizeMpc / (2 * range));
+      // A sprite's right is celestial west and its down south: a half turn on the (east, north) plane.
+      grid = projectTangentLattice(
+        { centre: dir, ...tangentFrameAt(dir) },
+        { scale, theta: Math.PI, mirrored: false, t: [0, 0] },
+        aspect,
+        projection,
+      );
     }
+    if (grid === null) continue;
+    const mid = ANTIQUE_ORNAMENT_GRID / 2;
+    const midRow = mid * (ANTIQUE_ORNAMENT_GRID + 1);
+    const centre = grid[midRow + mid]!;
+    const [left, right] = [grid[midRow]!, grid[midRow + ANTIQUE_ORNAMENT_GRID]!];
+    const widthPx = Math.hypot(right[0] - left[0], right[1] - left[1]);
     // A figure is as big as its stars make it, so a long one (Hydra, 90°) is
     // judged by its girth, and against the canvas's long side so a phone's
     // narrow plate still shows the part of it that lies there; a beast by its width.
@@ -202,18 +194,17 @@ export function placeAntiqueOrnaments(input: {
     // The focused subject and its name sit at the plate's centre: a sea beast
     // never sails over them (a constellation figure may lie behind, as it truly does).
     if (anchor.kind === 'space' && overlapShare(centre, half, subject) > 0) continue;
-    // A negative half-width flips the sprite in the shader (local x runs backwards).
-    if (mirrored) half[0] = -half[0];
     placed.push({
       centrePx: centre,
       halfPx: half,
-      rotation,
+      rotation: 0,
       opacity,
       clearsBeneath: row.clearsBeneath,
       pigment: row.pigment,
       rect: uvOf(rect),
       lettering: false,
       washed: false,
+      grid,
     });
   }
   return placed;
