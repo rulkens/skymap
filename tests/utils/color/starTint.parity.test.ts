@@ -5,7 +5,7 @@ import { expect, it } from 'vitest';
 import { starTintFromBpRp } from '../../../src/utils/color/starTintFromBpRp';
 
 const wesl = readFileSync(
-  join(process.cwd(), 'src/services/gpu/shaders/starCatalog/tint.wesl'),
+  join(process.cwd(), 'src/services/gpu/shaders/lib/starTint.wesl'),
   'utf-8',
 );
 const anchors = [...wesl.matchAll(/let \w+ = vec3<f32>\(([^)]*)\);/g)].map((m) =>

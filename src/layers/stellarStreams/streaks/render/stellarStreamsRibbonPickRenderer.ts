@@ -1,6 +1,6 @@
 /**
  * StellarStreamsRibbonPickRenderer — the streams' pick: static ribbons along each stream's
- * centreline (`ribbonPick.wesl`), one instanced quad per segment out of a small buffer built from
+ * centreline (`stellarStreams/ribbonPick/`), one instanced quad per segment out of a small buffer built from
  * the meta, into the NEAR0 pick target (r32uint, no blend; its depth attachment's format).
  * Segments are grouped by stream, so a focus draws its stream's run alone.
  */
@@ -8,7 +8,8 @@
 import type { StellarStreamsRibbonPickRenderer } from '../@types/StellarStreamsRibbonPickRenderer';
 import type { StellarStreamRibbons } from '../@types/StellarStreamRibbons';
 
-import ribbonPickCode from '../../../../services/gpu/shaders/stellarStreams/ribbonPick.wesl?static';
+import vsCode from '../../../../services/gpu/shaders/stellarStreams/ribbonPick/vertex.wesl?static';
+import fsCode from '../../../../services/gpu/shaders/stellarStreams/ribbonPick/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
 import {
   CAMERA_UNIFORM_BYTES,
@@ -24,7 +25,7 @@ import { stellarStreamRibbons } from '../utils/stellarStreamRibbons';
 
 // The WGSL struct's 100 bytes rounded up to its 16-byte alignment.
 const UNIFORMS_BYTES = 112;
-// 4-byte slots after the camera prefix; `Uniforms` in ribbonPick.wesl must agree.
+// 4-byte slots after the camera prefix; `Uniforms` in ribbonPick/io.wesl must agree.
 const EYE = CAMERA_UNIFORM_BYTES / 4;
 const MIN_HALF_WIDTH_PX = EYE + 3;
 const PICK_BASE = EYE + 4;
@@ -33,11 +34,8 @@ export function createStellarStreamsRibbonPickRenderer(
   device: GPUDevice,
   pickCode: number,
 ): StellarStreamsRibbonPickRenderer {
-  const module = createShaderModuleWithDevLog(
-    device,
-    ribbonPickCode,
-    'stellar-streams-ribbon-pick',
-  );
+  const vsModule = createShaderModuleWithDevLog(device, vsCode, 'stellar-streams-ribbon-pick-vs');
+  const fsModule = createShaderModuleWithDevLog(device, fsCode, 'stellar-streams-ribbon-pick-fs');
   const bgl = device.createBindGroupLayout({
     label: 'stellar-streams-ribbon-pick-bgl',
     entries: [{ binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' } }],
@@ -56,7 +54,7 @@ export function createStellarStreamsRibbonPickRenderer(
     label: 'stellar-streams-ribbon-pick-pipeline',
     layout: device.createPipelineLayout({ bindGroupLayouts: [bgl] }),
     vertex: {
-      module,
+      module: vsModule,
       entryPoint: 'vs',
       buffers: [
         {
@@ -71,7 +69,7 @@ export function createStellarStreamsRibbonPickRenderer(
         },
       ],
     },
-    fragment: { module, entryPoint: 'fs', targets: [{ format: 'r32uint' }] },
+    fragment: { module: fsModule, entryPoint: 'fs', targets: [{ format: 'r32uint' }] },
     primitive: { topology: 'triangle-strip' },
     depthStencil: {
       format: pickDepthFormat(NEAR0),

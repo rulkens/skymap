@@ -5,7 +5,7 @@ import { expect, it } from 'vitest';
 import { STREAM_BP_RP_RANGE } from '../../../../../src/layers/stellarStreams/streaks/data/stellarStreamColours.constants';
 
 const wesl = readFileSync(
-  join(process.cwd(), 'src/services/gpu/shaders/stellarStreams/streams.wesl'),
+  join(process.cwd(), 'src/services/gpu/shaders/stellarStreams/streaks/vertex.wesl'),
   'utf-8',
 );
 

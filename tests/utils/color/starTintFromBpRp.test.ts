@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { starTintFromBpRp } from '../../../src/utils/color/starTintFromBpRp';
 
 // The two fixtures below are hand-computed from the canonical ramp in
-// starCatalog/tint.wesl (anchors ob/af, breakpoints -0.30 / 0.30). If the
+// lib/starTint.wesl (anchors ob/af, breakpoints -0.30 / 0.30). If the
 // WESL ramp ever changes, these expectations must change with it — that is
 // the drift the CPU twin exists to guard against.
 

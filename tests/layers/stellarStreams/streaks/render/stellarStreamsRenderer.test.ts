@@ -7,7 +7,7 @@ import type { StellarStreamsLook } from '../../../../../src/layers/stellarStream
 import type { StellarStreamsFocus } from '../../../../../src/layers/stellarStreams/streaks/@types/StellarStreamsFocus';
 import type { StellarStreamsPayload } from '../../../../../src/layers/stellarStreams/catalog/@types/StellarStreamsPayload';
 
-// `Uniforms` in streams.wesl: eye xyz after the camera prefix, then the look lanes.
+// `Uniforms` in streaks/io.wesl: eye xyz after the camera prefix, then the look lanes.
 const INTENSITY = CAMERA_UNIFORM_BYTES / 4 + 3;
 
 function setup() {

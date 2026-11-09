@@ -10,7 +10,7 @@ import {
 
 /**
  * How much a focus brightens this stream: its surface brightness lifted toward the target, never
- * dimmed, at most the cap. streams.wesl keeps a sprite's flux (luminosity × size²) whether it is
+ * dimmed, at most the cap. streaks/vertex.wesl keeps a sprite's flux (luminosity × size²) whether it is
  * resolved or clamped to `minPx`, so the summed flux over the track's area predicts how bright the
  * stream reads at any distance; particle count alone would miss the sprite size, which follows the
  * width. The streak's flow slides each particle up to half a loop either way, so the track's
