@@ -15,9 +15,9 @@ const record = (radii: Partial<StructureInfo>): StructureInfo =>
     ...radii,
   }) as StructureInfo;
 
-describe('placedStructureRow focusSphere', () => {
+describe('placedStructureRow focusRegion', () => {
   it('fades across the [physical, apparent] band, the two radii independent', () => {
-    expect(placedStructureRow(record({ apparentRadiusMpc: 5 })).focusSphere).toEqual({
+    expect(placedStructureRow(record({ apparentRadiusMpc: 5 })).focusRegion).toEqual({
       center: [3, 4, 5],
       apparentRadiusMpc: 5,
       physicalRadiusMpc: 2,
@@ -25,7 +25,7 @@ describe('placedStructureRow focusSphere', () => {
   });
 
   it('without an apparent extent the outer edge falls back to the physical radius', () => {
-    expect(placedStructureRow(record({})).focusSphere).toEqual({
+    expect(placedStructureRow(record({})).focusRegion).toEqual({
       center: [3, 4, 5],
       apparentRadiusMpc: 2,
       physicalRadiusMpc: 2,

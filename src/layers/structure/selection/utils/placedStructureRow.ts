@@ -12,7 +12,7 @@ export function placedStructureRow(record: StructureInfo): StructureSelectionRow
     ...record,
     positionMpc: record.worldPos,
     radiusMpc,
-    focusSphere: {
+    focusRegion: {
       center: record.worldPos,
       apparentRadiusMpc: radiusMpc,
       physicalRadiusMpc: record.physicalRadiusMpc,

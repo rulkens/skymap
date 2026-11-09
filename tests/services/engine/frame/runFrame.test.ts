@@ -903,9 +903,10 @@ describe('runFrame — the label-director wake fold', () => {
     // Virgo was focused and settled; the focus is already cleared (the fixture's
     // focus row is null), so the frames below tick its fade-out.
     structureFocus.update(
+      { type: 'structure', id: 'virgo' },
       {
-        ref: { type: 'structure', id: 'virgo' },
-        sphere: { center: [1, 0, 0], apparentRadiusMpc: 2, physicalRadiusMpc: 2 },
+        type: 'structure',
+        focusRegion: { center: [1, 0, 0], apparentRadiusMpc: 2, physicalRadiusMpc: 2 },
       },
       0,
     );
@@ -925,7 +926,7 @@ describe('runFrame — the label-director wake fold', () => {
     expect(settled.focusPickId).toBeNull();
   });
 
-  it('a focused stream ramps the blend under its own pick word, its recede-all sphere with it', () => {
+  it('a focused stream ramps the blend under its own pick word, its subjectOnly region as the recede-all sphere', () => {
     const STREAM_WORD = 7;
     const base = makeReadyState(
       () => false,
@@ -935,7 +936,7 @@ describe('runFrame — the label-director wake fold', () => {
     const state = {
       ...base,
       selection: { hover: null, select: null, focus: stream },
-      selectionRows: { focus: { type: 'stellarStream', focusSphere: RECEDE_ALL_FOCUS_SPHERE } },
+      selectionRows: { focus: { type: 'stellarStream', focusRegion: 'subjectOnly' } },
       selectionKindRows: [{ type: 'stellarStream', encodePick: () => STREAM_WORD }],
       subsystems: {
         ...base.subsystems,
@@ -965,7 +966,7 @@ describe('runFrame — the label-director wake fold', () => {
         ...base,
         visibilityEntries,
         selection: { hover: null, select: null, focus: { type: 'stellarStream', slug: 'gd-1' } },
-        selectionRows: { focus: { type: 'stellarStream', focusSphere: RECEDE_ALL_FOCUS_SPHERE } },
+        selectionRows: { focus: { type: 'stellarStream', focusRegion: 'subjectOnly' } },
         selectionKindRows: [{ type: 'stellarStream', encodePick: () => 7 }],
         subsystems: {
           ...base.subsystems,

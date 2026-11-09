@@ -39,8 +39,8 @@ this list is what shipped.
   to hold the track. During a stream focus only the focused stream picks.
 - **Focus recedes everything else** (§2's per-stream highlight non-goal, §5.6): a stream focus dims the rest
   of the scene and the other streams, and nothing but the focused stream takes a click. Core changes behind it:
-  - a selection row declaring `focusSphere` drives the recession; structures declare their ball, streams
-    `RECEDE_ALL_FOCUS_SPHERE`, a sphere nothing lies inside;
+  - a selection row declaring `focusRegion` drives the recession; structures declare their ball, streams
+    `'subjectOnly'`, which the focus subsystem sends as a sphere nothing lies inside;
   - every sphere change fades through zero (structure → structure takes 800 ms, not a snap);
   - the Milky Way disc and Sgr A* dim and leave the pick outside any focus sphere; the Zone of Avoidance
     recedes and takes no pick under any focus;

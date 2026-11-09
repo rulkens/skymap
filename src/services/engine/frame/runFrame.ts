@@ -44,7 +44,7 @@ import { selectViewCoverPx } from '../../../state/viewCover/selectors';
 import { NO_INSETS_PX } from '../../../data/layout/noInsetsPx';
 import { inputConsumed } from '../../../state/input/inputSlice';
 import { selectionKindShown } from '../presentation/selectionKindShown';
-import { focusSubjectOf } from '../../../utils/selection/focusSubjectOf';
+import { isRecedingFocusRow } from '../../../utils/selection/isRecedingFocusRow';
 
 /**
  * Scale-bar width, CSS px. Must stay under the ScaleBar panel's ~145 px content
@@ -203,7 +203,11 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // per frame, before every consumer of the blend (label director, markers,
   // render settings); all of them read the captured value, never a fresh call.
   const focusRow = state.selectionRows.focus;
-  state.subsystems.structureFocus.update(focusSubjectOf(state.selection.focus, focusRow), nowMs);
+  state.subsystems.structureFocus.update(
+    state.selection.focus,
+    isRecedingFocusRow(focusRow) ? focusRow : null,
+    nowMs,
+  );
   // A focus recedes the scene only while its subject's kind is shown, measured at the frame camera.
   const focus = state.subsystems.structureFocus.produceFocus(nowMs, (ref) =>
     selectionKindShown(state, canvas, ref.type),

@@ -83,7 +83,7 @@ export type EngineSubsystemHandles = {
   /**
    * Focus-mode subsystem — drives the recession of the rest of the scene,
    * and a structure's "dim everything outside it" sphere. Selection-driven: `runFrame` calls
-   * `update(focusSubjectOf(...), nowMs)` each frame and threads
+   * `update(focus, row, nowMs)` each frame and threads
    * `produceFocus(nowMs, shownOf)` into the snapshot. Constructed
    * eagerly; no GPU dep, non-null from t=0.
    */
