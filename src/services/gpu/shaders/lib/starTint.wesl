@@ -1,4 +1,4 @@
-// lib/starTint.wesl — Gaia BP−RP → linear-RGB star tint, shared by every shader that colours stars.
+// lib/starTint.wesl — Gaia BP−RP → linear-RGB star tint, for any shader that colours stars.
 // CPU twin: src/utils/color/starTintFromBpRp.ts (focused-star sphere); an edit to the anchors or
 // breakpoints here MUST be mirrored there (starTint.parity.test.ts pins both).
 // Breakpoints are approximate Gaia class centres. Each chained mix only activates once 'bpRp'
