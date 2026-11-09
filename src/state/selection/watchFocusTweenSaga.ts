@@ -25,7 +25,8 @@ import { selectionKindOf } from '../../services/engine/selection/selectionKindOf
 import { bodyMovesThisFrame } from '../../utils/scene/bodyMovesThisFrame';
 import { suspendDuringClip } from './suspendDuringClip';
 import { engineStatusChanged, factsReported } from '../engine/engineSlice';
-import { selectStructureBulk } from '../engine/selectors';
+import { selectSkyView, selectStructureBulk } from '../engine/selectors';
+import { DEFAULT_FOV_Y_RAD } from '../../services/engine/camera/framing/cameraFraming';
 import { selectFocusMoves, selectOrientation } from '../settings/selectors';
 import { selectTimeState } from '../time/selectors';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
@@ -85,8 +86,11 @@ export function* watchFocusTweenSaga() {
       // Known ready since the wait above; re-read rather than reuse, since a
       // long catalog defer can move `from`/`fovYRad` in the meantime.
       const runtime = cameraRuntime()!;
+      // The standing lens is the sky's own (wheel, head turn): a fly that starts there leaves
+      // it, so it frames for and eases to the default, as the scroll-out lift does.
+      const lens = (yield* select(selectSkyView)) === null ? runtime.fovYRad : DEFAULT_FOV_Y_RAD;
       // Frozen here, at dispatch: a style flip or slider drag mid-flight never bends this move.
-      const motion = resolveFocusMotion(yield* select(selectFocusMoves), runtime.fovYRad);
+      const motion = resolveFocusMotion(yield* select(selectFocusMoves), lens);
 
       // The motion row decides whether a moving body is tweened.
       // Gate on `bodyMovesThisFrame`, not `row.type === 'body'`: a focused
@@ -95,7 +99,9 @@ export function* watchFocusTweenSaga() {
 
       const frame = yield* select(selectOrientation);
       yield* put(
-        startCameraTween(focusTweenDescriptor(row, runtime.from, runtime.fovYRad, motion, frame)),
+        startCameraTween(
+          focusTweenDescriptor(row, runtime.from, runtime.fovYRad, lens, motion, frame),
+        ),
       );
     }),
   );

@@ -9,6 +9,7 @@
 import type { CameraTweenDescriptor } from '../../../../@types/camera/focusMotion/CameraTweenDescriptor';
 import type { FocusMotion } from '../../../../@types/camera/focusMotion/FocusMotion';
 import type { ClipData } from '../../../../@types/animation/ClipData';
+import type { Effect } from '../../../../@types/animation/Effect';
 import { all, geodesic, tween } from '../../animation/effectHelpers';
 import { geodesicDurationMs } from './geodesicDurationMs';
 
@@ -17,15 +18,12 @@ export function geodesicFocusClip(
 ): ClipData {
   const over = geodesicDurationMs(d) / 1000;
   const ease = d.motion.tuning.ease;
-  return {
-    start: d.from,
-    timeline: [
-      all([
-        geodesic(d.to, d.motion.tuning, d.motion.fovYRad, over),
-        tween('yaw', { to: d.to.yaw, over, ease }),
-        tween('pitch', { to: d.to.pitch, over, ease }),
-        tween('roll', { to: d.to.roll ?? 0, over, ease }),
-      ]),
-    ],
-  };
+  const legs: Effect[] = [
+    geodesic(d.to, d.motion.tuning, d.motion.fovYRad, over),
+    tween('yaw', { to: d.to.yaw, over, ease }),
+    tween('pitch', { to: d.to.pitch, over, ease }),
+    tween('roll', { to: d.to.roll ?? 0, over, ease }),
+  ];
+  if (d.to.fov !== undefined) legs.push(tween('fov', { to: d.to.fov, over, ease }));
+  return { start: d.from, timeline: [all(legs)] };
 }
