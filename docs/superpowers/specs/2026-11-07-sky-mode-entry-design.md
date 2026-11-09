@@ -25,7 +25,7 @@ The owner's (grill Q-numbers in brackets) and those carried from the 2026-10-28 
 | #   | Ruling |
 | --- | ------ |
 | R1  | Entry is a **"Look up from here" button** at the bottom centre, plus the `s` key and palette rows. [Q1, Q5] |
-| R2  | **R6 of the draft is amended**: a fresh wheel-in (or pinch-in) that the surface floor eats whole enters sky mode, guarded like the exit (`SKY_EXIT_PAUSE_MS`, 250 ms of quiet). Zooming in through open air never enters. [Q2] |
+| R2  | **R6 of the draft is amended**: a wheel-in (or pinch-in) at the surface floor enters sky mode when it is fresh (250 ms of wheel quiet), or when the push counter fills (R16); the lift at the widest lens follows the same rule. Zooming in through open air never enters. [Q2] |
 | R3  | **Where you stand**: the push uses the point under the cursor (the wheel's existing anchor); the button, `s` and "Sky from here" use the point under the view centre. [Q3] |
 | R4  | The button shows only **below 20 km**, with terrain of a terrain host (Earth, Mars) under the view centre. [Q4] |
 | R5  | **Desktop preview**: hovering or focusing the button shows a ring at the view centre with the place and coordinates beside it. **Phone**: the place goes in the button label, no ring. [Q5, Q6] |
@@ -39,6 +39,7 @@ The owner's (grill Q-numbers in brackets) and those carried from the 2026-10-28 
 | R13 | Ground and horizon are the real terrain and atmosphere; eye height 1.7 m; perspective lens 0.5°–120°. (Draft R1, R3, R7.) |
 | R14 | Sky mode is a **takeover**, a fourth `TakeoverSource` kind. (Draft R5.) |
 | R15 | Leave restores **the camera only**: time, toggles and settings changed while standing stay. (Draft D2.) |
+| R16 | **Push counter** (owner, 2026-11-09): stale notches pressed in a row against a limit sum their \|ln f\| in the drain and push at 0.35; a fresh notch still pushes at once. One rule for both edges; arms stay stateless. |
 
 ### Decisions made in this spec (not rulings — challenge freely)
 
@@ -160,9 +161,13 @@ view dispatches nothing.
 All of them dispatch `enterSky({ spot })`. The palette gets a `sky` `PaletteAction` kind and matching
 `ScoredRow` rows; `remoteCommands` parses the same.
 
-**The push** (owner ruling, 2026-11-07): a fresh zoom-in notch whose eye **starts** at the floor height
-(`surfaceFloorM` at the eye, within a small tolerance) reports (body, in), whether or not the notch still
-slides the eye toward the cursor anchor. At the floor the view is usually oblique, so a notch is rarely eaten
+**The push** (owner rulings, 2026-11-07 and 2026-11-09): a zoom-in notch whose eye **starts** at the floor
+height (`surfaceFloorM` at the eye, within a small tolerance) presses the floor, whether or not the notch still
+slides the eye toward the cursor anchor. `replayInput` turns the press into a (body, in) push when the notch is
+fresh, or when the push counter it keeps beside its wheel clock fills: the \|ln f\| of notches pressed in a row
+against the same limit reaches `ZOOM_LIMIT_PUSH_LN` (0.35). Any other step empties the counter; it needs no
+decay clock, because a pause long enough to matter makes the next notch fresh. The lift is the same rule on
+the sky arm's widest lens. At the floor the view is usually oblique, so a notch is rarely eaten
 whole; waiting for that would make the push almost never fire. The arrival then glides to the cursor point
 and stands (§4.3), which finishes the zoom the person was aiming.
 
@@ -265,8 +270,8 @@ Per `docs/superpowers/conventions/testing.md`: each one fails on a real bug noth
   dispatch with their dedup; P3 a pick still flies outside sky mode.
 - Leave with no takeover (a `#pose=k` link) lifts off.
 - `selectSkyEntry`: false above 20 km, on a miss, on a host without terrain, while standing.
-- Entry: each way in reaches `enterSky` with the spot its row names (centre vs cursor anchor); a push within
-  250 ms of the last notch does not enter; re-entry while standing keeps the first `restore`.
+- Entry: each way in reaches `enterSky` with the spot its row names (centre vs cursor anchor); a small notch
+  within 250 ms of the last one does not enter, a continuous scroll does once it fills the counter; re-entry while standing keeps the first `restore`.
 - Takeover: Leave restores the entry camera and focus; lift-off and a frame change end it without restoring;
   a tour start and a hash change end it without restoring.
 - Esc: with a card open, the first Esc clears the selection and keeps the takeover; the second exits.
