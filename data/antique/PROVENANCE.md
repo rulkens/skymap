@@ -67,6 +67,7 @@ long side.
 - whale: the belly line is cut where the whale lies on the dark shore hatching, and a few sea-hatching
   strokes remain under the body (the packer closes the silhouette over the gap).
 - ship: a faint grey sea wash remains around the waterline.
+- cetus: the head's outer contour, horn edge and crown hatching, lost in the first cut, are read back from the scan by `tools/antique/sprites/restore_cetus_head.py`.
 - cetus: there are faint patches where the stars were inpainted, and a dashed remnant of the colure
   line remains on the neck.
 - dragon, seaSerpent: both keep the plate's gutter seam (a vertical break in the hatching through
