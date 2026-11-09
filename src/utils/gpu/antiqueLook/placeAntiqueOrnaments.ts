@@ -189,9 +189,11 @@ export function placeAntiqueOrnaments(input: {
       onScreenShare([centre[0] - inset, centre[1] - inset], half, plate),
     );
     if (opacity <= 0.003 || offScreen(centre, half, size)) continue;
-    // An engraving is on the plate or not: a beast that would run under a
-    // cartouche is withdrawn rather than shown cut off or faded.
-    if (reserved.some((r) => overlapShare(centre, half, r) > 0.15)) continue;
+    // A beast that would run under a cartouche is withdrawn rather than shown cut off or
+    // faded; a constellation figure lies on its stars and the cartouche simply covers it
+    // (a big one like Cetus overlaps it at many window sizes, and would pop in and out).
+    if (anchor.kind === 'space' && reserved.some((r) => overlapShare(centre, half, r) > 0.15))
+      continue;
     // The focused subject and its name sit at the plate's centre: a sea beast
     // never sails over them (a constellation figure may lie behind, as it truly does).
     if (anchor.kind === 'space' && overlapShare(centre, half, subject) > 0) continue;

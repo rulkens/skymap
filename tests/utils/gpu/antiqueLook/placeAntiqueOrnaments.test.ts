@@ -302,12 +302,32 @@ describe('placeAntiqueOrnaments', () => {
     expect(at(ahead)).toEqual([]);
   });
 
-  it('withdraws a sky figure that would run under the cartouche', () => {
+  it('keeps a sky figure under the cartouche, and withdraws a beast there', () => {
     const anchor = { corner: 'topLeft' as const, insetUnits: [800, 450] as const, sizeUnits: 300 };
     const card = { row: TABLET, anchor, frame: 1, title: null };
     // Straight ahead, the figure lands on the cartouche placed at the canvas centre.
-    expect(place([skyRow({})], NORTH_UP, 0, card)).toHaveLength(1);
+    expect(place([skyRow({})], NORTH_UP, 0, card)).toHaveLength(2);
     expect(place([skyRow({})])).toHaveLength(1);
+    const beast = skyRow({
+      anchor: { kind: 'space', lonDeg: 0, latDeg: 0, distMpc: 20, sizeMpc: 4 },
+    });
+    const beastAt = (cartouche: Parameters<typeof place>[3]) =>
+      place([beast], GALACTIC_CENTRE_ASIDE, 0, cartouche);
+    const [beastBox] = beastAt(null);
+    expect(beastBox).toBeDefined();
+    // The same cartouche, centred on the beast: the beast goes, the card stays.
+    const [cx, cy] = beastBox!.centrePx;
+    const onBeast = {
+      row: TABLET,
+      anchor: {
+        corner: 'topLeft' as const,
+        insetUnits: [cx - 50, cy - 50] as const,
+        sizeUnits: 100,
+      },
+      frame: 1,
+      title: null,
+    };
+    expect(beastAt(onBeast)).toHaveLength(1);
   });
 
   it('fades a sky row out while it is too small to read', () => {
