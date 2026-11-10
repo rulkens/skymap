@@ -74,10 +74,12 @@ main after it.
 - [ ] **Step 1: Take the baselines, before any edit.**
   - Shots: `npm run shot -- '<link>' --url <your server>` for M31 (`#focus=m31`), Sirius, Mars, an SDSS galaxy
     `#focus=sdss-…` link, and the Labels panel open. Save them to the SDD workspace as `before-*.png`.
-  - Bins: point this worktree's `public/data` at a directory of its own (unlink the symlink, `mkdir
-    public/data`), run `npm run build-all` per `docs/DATA.md`, and save
-    `shasum public/data/*.bin | sort` to the SDD workspace as `bins-before.txt`. Never run `build-all`
-    through the symlink: it would write into the main checkout's data.
+  - Bins: the worktree's `data/raw/` holds only the tracked folders, so first symlink each raw folder it
+    lacks from the main checkout (`ln -s /Users/rulkens/Development/js/skymap/data/raw/<dir> data/raw/<dir>`).
+    Then run `npx tsx tools/catalog/buildAllBins.ts --out-dir <SDD workspace>/bins-before` (not
+    `npm run build-all`, which also rewrites `public/data`'s manifest, and `public/data` is a symlink into
+    the main checkout). Save `find <dir> -name '*.bin' -exec shasum {} + | sed 's#<dir>/##' | sort` as
+    `bins-before.txt`. Later parity runs build into `bins-after` the same way and diff the two lists.
 - [ ] **Step 2: Generate the member→id map** from the entries (each entry has `code: Source.<Member>` and its
       `id`) with a throwaway script, and rewrite `src/data/source.ts` so each member's value is its id string.
       Fix its header (it falsely says the codes are baked into every `.bin`): it is now a transitional alias
@@ -98,7 +100,7 @@ main after it.
       asserting the id (never by re-pinning a number).
 - [ ] **Step 8: Boot check.** Start the dev server; the app boots with no `createLayers: asset keys` error, and
       M31, Sirius and Mars focus.
-- [ ] **Step 9: Bin parity.** Rebuild as in Step 1; `shasum public/data/*.bin | sort` equals `bins-before.txt`.
+- [ ] **Step 9: Bin parity.** Rebuild into `bins-after` as in Step 1; its checksum list equals `bins-before.txt`.
 - [ ] **Step 10: Commit** — "Source's values become the entries' ids".
 
 ### Task 2: A Layer's `sources` is an array of entries; `code` goes
@@ -234,7 +236,7 @@ export function catalogPickCodes<K extends string>(
 
 ### Task 5: Before/after evidence
 
-**Files:** none (SDD workspace only); restore `public/data` with `/link-data` once the last `build-all` is done.
+**Files:** none (SDD workspace only); remove the `data/raw/` symlinks Task 1 added.
 
 - [ ] **Step 1: Shoot the five Task 1 links again** as `after-*.png`.
 - [ ] **Step 2: Compare** each pair. The galaxy, star and body shots match. The Labels panel may reorder (spec
