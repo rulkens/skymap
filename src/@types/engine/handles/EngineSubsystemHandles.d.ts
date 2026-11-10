@@ -73,8 +73,8 @@ export type EngineSubsystemHandles = {
   cosmoLabelDirector: Label2DDirector;
   /**
    * The NEAR0 sibling of `cosmoLabelDirector` — same `createLabel2DDirector`
-   * factory, `screenSeparation`/`exponentialApproach`/lift arms instead of
-   * COSMO's `bboxOverlap`/`smoothstepRamp`/no-lift (`FOREGROUND_LABEL_DIRECTOR`
+   * factory, `exponentialApproach`/lift arms instead of COSMO's
+   * `smoothstepRamp`/no-lift (`FOREGROUND_LABEL_DIRECTOR`
    * in `src/data/labels/`). Attaches `labelRendererNear` +
    * `markerLineRendererNear` at the same two sites `cosmoLabelDirector`
    * attaches its own pair.
