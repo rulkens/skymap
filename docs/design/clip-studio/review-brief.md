@@ -108,3 +108,5 @@ and the asks in full.
   shows ALL scene labels as in the app (owner overrode the reviewer); the inset keeps labels off.
 - Q38: inspector sliders are the app's own Slider (pill, label left, value right, fill behind) in a
   compact variant, not a studio look-alike; unbounded values stay text fields that sit with them.
+- Q39: every icon comes from the app's icon system (Icon frame + src/components/icons/*); no
+  studio-drawn glyph paths.

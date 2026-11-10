@@ -394,5 +394,12 @@ compact, but they should look similar." **Decision:** ranged numeric fields reus
 variant added to that component, never a studio look-alike. Unbounded values (a Vec3, a typed time) stay text
 fields styled to sit with the pills. The studio's `NumberField` becomes a thin wrapper over this.
 
+## Q39: Icons come from the app's icon system (owner, 2026-11-10)
+
+"We already have a system for glyphs / icons. Use that." **Decision:** the studio draws no glyph paths of its
+own. Every icon is an app icon component under `src/components/icons/`, drawn in `src/components/Icon/Icon.tsx`'s
+frame; missing ones are added there. The registry keeps a plain `GlyphId` string; the studio's `Glyph` maps it
+to the app icon component.
+
 _Settled in the plan:_ the studio's RTK slice is injected into the app store through
 `combineSlices().inject` (ADR 0016). Q14 is ruled (Q32).
