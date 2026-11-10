@@ -813,8 +813,8 @@ Empty timeline: `No steps`. Unresolved: rows render, lanes empty, the top bar sa
 `degrees`/`degreesPerSec` store radians, `percent` stores 0–1, `seconds` and `mpc` store as shown. Pick options
 for `ease` (the `Ease` union) and `channel` (`Channel`) come from data the engine already exports, not a copy.
 
-- [ ] Test `degrees round-trip: 63° stores 1.0996 rad and shows 63°` (hand-computed).
-- [ ] Test `percent round-trip: 40 % stores 0.4`.
+- [x] Test `degrees round-trip: 63° stores 1.0996 rad and shows 63°` (hand-computed).
+- [x] Test `percent round-trip: 40 % stores 0.4`.
 
 ### Task 5.2: `FieldRow`
 
