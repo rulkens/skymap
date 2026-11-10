@@ -47,7 +47,7 @@ export type CameraArmRow<K extends CameraArmKind> = {
     readonly memory: MemOf[K];
     readonly tilt: TiltMemory;
     readonly fovYRad?: number;
-    readonly pushed?: ZoomLimitPush;
+    readonly pressed?: ZoomLimitPush;
   };
   /**
    * One frame's pixel-free motion in this arm's own frame, at the equivalent

@@ -74,8 +74,8 @@ The owner's (grill Q-numbers in brackets) and those carried from the 2026-10-28 
 
 ### 3.1 Ideal shape
 
-- **Arms report, sagas decide.** A camera arm's step says only that a zoom limit was pushed
-  (`pushed: 'in' | 'out'`); one saga maps (body, in) to entering sky mode at the cursor point and (sky, out)
+- **Arms report, sagas decide.** A camera arm's step says only that a notch pressed its zoom limit
+  (`pressed`, edge `in` or `out`); the drain decides whether the press pushes it, and one saga maps (body, in) to entering sky mode at the cursor point and (sky, out)
   to the lift-off and the end of the takeover. Arms never know about modes or takeovers.
 - **Engine readouts are rows.** The engine publishes per-frame UI facts through one table of readout rows;
   sky mode adds two rows (entry availability with the centre spot, and the live sky view).
@@ -110,7 +110,7 @@ six reactors; sky is the first takeover with its own HUD, a registry pays at the
 Each is its own commit, behaviour-preserving, with its test.
 
 - **P1. Arms report a pushed zoom limit; freshness is decided once.** The step result's `clip?: ClipData`
-  becomes `pushed?: ZoomLimitPush`, a value without an `arm` tag: `{ edge: 'out', lift }` from the sky arm
+  becomes `pressed?: ZoomLimitPush`, a value without an `arm` tag: `{ edge: 'out', lift }` from the sky arm
   for a fresh wheel-out its widest lens ate (the `skyExitLift` clip built by the arm, which alone has the
   engine ctx), `{ edge: 'in', body, pointLocalM }` from the body arm for a fresh zoom-in that starts at the
   floor (definition: §4.2), the cursor anchor in body-fixed metres. `replayInput` only reports it

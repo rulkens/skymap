@@ -123,7 +123,7 @@ export function replayInput(
     gestureMemory = stepped.memory;
     tilt = stepped.tilt;
     if (stepped.fovYRad !== undefined) emit(setFovYRad(stepped.fovYRad));
-    pressed = stepped.pushed;
+    pressed = stepped.pressed;
     return { frame: framed.frame, pose: stepped.pose };
   };
 

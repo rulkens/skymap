@@ -94,9 +94,9 @@ the root saga registration, tests.
 ```ts
 export type ZoomLimitPush =
   | { readonly edge: 'out'; readonly lift: ClipData } // sky arm: a fresh notch the widest lens ate
-  | { readonly edge: 'in'; readonly spot: SkySpot; readonly pointLocalM: Vec3 }; // body arm, see below
+  | { readonly edge: 'in'; readonly body: SceneBodyId; readonly pointLocalM: Vec3 }; // body arm, see below
 // CameraArmRow.step result: `clip?: ClipData` is replaced by
-readonly pushed?: ZoomLimitPush;
+readonly pressed?: ZoomLimitPush;
 // replayInput emits
 zoomLimitPushed(push: ZoomLimitPush) // reducer-less action
 ```
@@ -104,9 +104,9 @@ zoomLimitPushed(push: ZoomLimitPush) // reducer-less action
 Controller ruling (2026-11-07): `skyExitLift` needs engine-only context (`hostOrThrow`, `groundRadiusAtM`,
 `foldToWorld`), so the arm builds the lift as a value inside the push and the saga decides whether to play it.
 The body arm reports `edge: 'in'` for a fresh zoom-in notch whose eye **starts** at the floor height
-(`surfaceFloorM` at the eye, within 1 cm), whether or not the notch still slides the eye; `spot` and
-`pointLocalM` are the cursor anchor (the terrain pick the zoom already makes) as a sky spot and a body-local
-point. `watchZoomLimitSaga`: on `edge: 'out'` put `clipStarted({ data: lift, frame: <orientation> })`
+(`surfaceFloorM` at the eye, within 1 cm), whether or not the notch still slides the eye; `body` and
+`pointLocalM` are the cursor anchor (the terrain pick the zoom already makes) as a body-local point; the
+saga derives the sky spot from them (`skySpotAt`). `watchZoomLimitSaga`: on `edge: 'out'` put `clipStarted({ data: lift, frame: <orientation> })`
 (what `replayInput.ts:118` did); on `edge: 'in'` do nothing yet (Task 8 wires it).
 
 - [x] Test `a fresh wheel-out at the widest lens reports edge out with a lift clip; the saga plays it`.

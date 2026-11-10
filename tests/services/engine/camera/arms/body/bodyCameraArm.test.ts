@@ -113,30 +113,30 @@ describe('the body arm’s floor push', () => {
     duringGesture: false,
     cursorPx: CURSOR_PX,
   });
-  const pushOf = (framed: FramedPose<'body'>, input: InputStep) =>
-    bodyCameraArm.step(EMPTY_SURFACE_GESTURE_MEMORY, EMPTY_TILT_MEMORY, framed, input, ctx).pushed;
+  const pressOf = (framed: FramedPose<'body'>, input: InputStep) =>
+    bodyCameraArm.step(EMPTY_SURFACE_GESTURE_MEMORY, EMPTY_TILT_MEMORY, framed, input, ctx).pressed;
 
   it('a zoom-in that starts at the floor reports edge in at the cursor anchor', () => {
     const framed = standing(0);
-    const pushed = pushOf(framed, notch(0.8));
-    if (pushed?.edge !== 'in') throw new Error('expected a floor push');
+    const pressed = pressOf(framed, notch(0.8));
+    if (pressed?.edge !== 'in') throw new Error('expected a floor push');
     // Where the cursor pixel's ray meets the (datum-only) ground.
     const ray = cursorRayBodyLocal(framed.pose, CURSOR_PX, ctx.viewportPx, ctx.frustum);
     const t = raySphereRoots(ray.originM, ray.dir, [0, 0, 0], EARTH_R_M)![0];
     const underCursor = [0, 1, 2].map((i) => ray.originM[i]! + ray.dir[i]! * t);
     const nadir = normalize3(bodyFixedEyeM(framed.pose)).map((c) => c * EARTH_R_M);
     const gap = (p: readonly number[]) =>
-      Math.hypot(...p.map((c, i) => c - pushed.pointLocalM[i]!));
+      Math.hypot(...p.map((c, i) => c - pressed.pointLocalM[i]!));
     expect(gap(underCursor)).toBeLessThan(0.5);
     expect(gap(nadir)).toBeGreaterThan(2);
-    expect(pushed.body).toBe(EARTH_ID);
+    expect(pressed.body).toBe(EARTH_ID);
   });
 
   it('a zoom-in that starts above the floor reports nothing', () => {
-    expect(pushOf(standing(1), notch(0.8))).toBeUndefined();
+    expect(pressOf(standing(1), notch(0.8))).toBeUndefined();
   });
 
   it('a zoom-out at the floor reports nothing', () => {
-    expect(pushOf(standing(0), notch(1.25))).toBeUndefined();
+    expect(pressOf(standing(0), notch(1.25))).toBeUndefined();
   });
 });

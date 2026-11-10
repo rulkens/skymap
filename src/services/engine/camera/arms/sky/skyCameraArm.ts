@@ -61,7 +61,7 @@ export const skyCameraArm: ClimbRow<'sky'> = {
         pose: framed.pose,
         memory,
         tilt,
-        pushed: { edge: 'out', lift: skyExitLift(framed, ctx) },
+        pressed: { edge: 'out', lift: skyExitLift(framed, ctx) },
       };
     }
     if (input.kind !== 'zoom') return { pose: framed.pose, memory, tilt };
@@ -72,7 +72,12 @@ export const skyCameraArm: ClimbRow<'sky'> = {
     // pushes. The lift rides the push as a value; once played, its end commit (a body-arm
     // pose) leaves the sky.
     return input.factor > 1
-      ? { pose: framed.pose, memory, tilt, pushed: { edge: 'out', lift: skyExitLift(framed, ctx) } }
+      ? {
+          pose: framed.pose,
+          memory,
+          tilt,
+          pressed: { edge: 'out', lift: skyExitLift(framed, ctx) },
+        }
       : { pose: framed.pose, memory, tilt };
   },
 

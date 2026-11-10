@@ -293,7 +293,7 @@ describe('the sky arm', () => {
     );
     expect(out.pose).toBe(start.pose);
     expect(out.fovYRad).toBeUndefined();
-    expect(out.pushed).toBeUndefined();
+    expect(out.pressed).toBeUndefined();
     const edge = ROW.step(
       ROW.emptyMemory,
       EMPTY_TILT_MEMORY,
@@ -351,11 +351,11 @@ describe('the sky exit lift', () => {
       withLens(degToRad(119)),
     );
     expect(reaching.fovYRad).toBe(LENS_MAX);
-    expect(reaching.pushed).toBeUndefined();
+    expect(reaching.pressed).toBeUndefined();
     const out = ROW.step(reaching.memory, EMPTY_TILT_MEMORY, start, wheel(1.1), atMax);
     expect(out.pose).toBe(start.pose);
     expect(out.fovYRad).toBeUndefined();
-    expect(out.pushed?.edge).toBe('out');
+    expect(out.pressed?.edge).toBe('out');
   });
 
   // −430 m is the Dead Sea: an eye standing there is inside the datum sphere.
@@ -363,9 +363,9 @@ describe('the sky exit lift', () => {
     'the exit lift ends above the spot looking down at the default lens — terrain %d m',
     (terrainM) => {
       const ctx = withLens(LENS_MAX, terrainM);
-      const pushed = ROW.step(ROW.emptyMemory, EMPTY_TILT_MEMORY, start, wheel(1.1), ctx).pushed;
-      if (pushed?.edge !== 'out') throw new Error('expected the sky exit push');
-      const { lift } = pushed;
+      const pressed = ROW.step(ROW.emptyMemory, EMPTY_TILT_MEMORY, start, wheel(1.1), ctx).pressed;
+      if (pressed?.edge !== 'out') throw new Error('expected the sky exit push');
+      const { lift } = pressed;
       const at = (sec: number) =>
         evaluateFramedClip(lift, sec, {
           bodies: ctx.bodies,

@@ -114,7 +114,7 @@ export const bodyCameraArm: ClimbRow<'body'> = {
       anchorM !== null &&
       eyeAtFloor(framed.pose, surfaceCtx.groundRadiusAtM, surfaceCtx.standoffRadii);
     if (!pushes) return result;
-    return { ...result, pushed: { edge: 'in', body: framed.frame.body, pointLocalM: anchorM } };
+    return { ...result, pressed: { edge: 'in', body: framed.frame.body, pointLocalM: anchorM } };
   },
 
   nudge(tilt, framed, delta, ctx) {
