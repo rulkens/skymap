@@ -432,7 +432,7 @@ describe('renderFrame visual baseline', () => {
           bloom: { enabled: false, strength: 1, threshold: 1 },
           bias: { mode: settings.biasMode, absMagLimit: settings.absMagLimit },
           thumbnails: { enabled: settings.galaxyTexturesEnabled },
-          milkyWay: { enabled: settings.milkyWayEnabled },
+          milkyWay: { enabled: settings.milkyWayEnabled, renderer: 'v1' },
           cosmicWebFilaments: {
             enabled: settings.filamentsEnabled,
             intensity: settings.filamentIntensity,

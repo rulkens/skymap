@@ -1221,16 +1221,16 @@ export function milkyWayFieldCompute(
 **Files:** `src/layers/milkyWay/cloud/passes/{milkyWayAggregatePass,milkyWayUpsamplePass,milkyWayPass}.ts`,
 `tests/layers/milkyWay/cloud/passes/milkyWayPass.test.ts`
 
-- [ ] `milky-way-aggregate` and `milky-way-upsample`:
+- [x] `milky-way-aggregate` and `milky-way-upsample`:
       `enabled = parts.cloud && deriveMilkyWayCloudAlpha(...) !== null`. This matches B4's
       `allocateWhen`.
-- [ ] `milky-way`: `enabled = parts.cloudDust && alpha !== null`. Leave `pickEnabled` and `drawPick`
+- [x] `milky-way`: `enabled = parts.cloudDust && alpha !== null`. Leave `pickEnabled` and `drawPick`
       untouched; `pickProgram.ts:17` filters picks by `pickEnabled ?? enabled`, so the impostor
       still picks in `'v2'`.
-- [ ] **Test, new:** in `milkyWayPass.test.ts`,
+- [x] **Test, new:** in `milkyWayPass.test.ts`,
       `it('in v2 the dust draw is off but the pick impostor still picks')`. With
       `renderer: 'v2'`, `enabled` is false and `pickEnabled` is true at a pickable pose.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task B9: DebugPanel rows
 
