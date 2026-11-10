@@ -75,6 +75,18 @@ describe('FieldRow', () => {
     expect(selectDraft(store.getState())!.timeline[0]).not.toHaveProperty('fade');
   });
 
+  it('Enter on an unchanged degrees field adds no Undo, though the radian round trip is inexact', async () => {
+    const store = setup(
+      { start: { ...START_POSE, yaw: 0.1 }, timeline: [] },
+      'start',
+      { kind: 'start' },
+      'yaw',
+    );
+    await userEvent.type(screen.getByRole('textbox', { name: 'Turn' }), '{Enter}');
+
+    expect(selectStudioState(store.getState()).history.past).toHaveLength(0);
+  });
+
   it('a degrees field dispatches radians', async () => {
     const store = setup({ start: START_POSE, timeline: [] }, 'start', { kind: 'start' }, 'yaw');
     const field = screen.getByRole('textbox', { name: 'Turn' });

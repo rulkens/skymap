@@ -36,15 +36,26 @@ function FieldRow({ spec, subject, rowRef }: Props) {
     field = <ReadoutField>{readoutText(spec.param, subject[spec.param])}</ReadoutField>;
   } else if (widget.widget === 'number') {
     const shown = Number(stored ?? 0);
+    const display = widget.toDisplay ? widget.toDisplay(shown) : shown;
     field = (
       <NumberField
         label={spec.label}
         unit={widget.unit}
-        value={widget.toDisplay ? widget.toDisplay(shown) : shown}
+        value={display}
         step={widget.step}
         min={widget.min}
         max={widget.max}
-        onCommit={(v, gesture) => edit(widget.fromDisplay ? widget.fromDisplay(v) : v, gesture)}
+        // The shown number back unchanged is no edit: a degrees round trip can move the last bit.
+        onCommit={(v, gesture) =>
+          edit(
+            v === display
+              ? (subject[spec.param] as number | undefined)
+              : widget.fromDisplay
+                ? widget.fromDisplay(v)
+                : v,
+            gesture,
+          )
+        }
       />
     );
   } else if (widget.widget === 'pick') {

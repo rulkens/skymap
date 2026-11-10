@@ -46,6 +46,21 @@ const edit = (value: number, gesture: string | null, label = 'Distance') =>
   paramEdited({ ref: DISTANCE, param: 'to', value, label, gesture });
 
 describe('studioSlice', () => {
+  it('an edit to the value the param already has changes nothing: clean, no Undo, same revision', () => {
+    const store = open();
+    const before = selectStudioState(store.getState());
+
+    store.dispatch(edit(300, null));
+    // dollyTo's default ease, and a reset of a param that is already absent.
+    store.dispatch(
+      paramEdited({ ...edit(0, null).payload, param: 'ease', value: 'easeInOutCubic' }),
+    );
+    store.dispatch(paramEdited({ ...edit(0, null).payload, param: 'loop', value: undefined }));
+
+    expect(selectStudioState(store.getState())).toBe(before);
+    expect(selectIsDirty(store.getState())).toBe(false);
+  });
+
   it('paramEdited pushes one history entry and bumps the revision', () => {
     const store = open();
     const before = selectDraft(store.getState());

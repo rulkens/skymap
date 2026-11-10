@@ -8,6 +8,7 @@
 import { createSlice, original, type Draft, type PayloadAction } from '@reduxjs/toolkit';
 
 import { initialState } from './initialState';
+import { rowSubject } from '../../draft/utils/rowSubject';
 import { setRowParam } from '../../draft/utils/setRowParam';
 import { defaultCollapsed } from '../utils/defaultCollapsed';
 import { stepHistory } from '../utils/stepHistory';
@@ -76,6 +77,8 @@ export const studioSlice = createSlice({
     ) => {
       const base = original(state)!;
       if (base.draft === null) return;
+      // Re-committing the value a param already has must not dirty the draft or add an empty Undo.
+      if (Object.is(rowSubject(base.draft, payload.ref)?.[payload.param], payload.value)) return;
       const { past } = base.history;
       const top = past.at(-1);
       const coalesce = payload.gesture !== null && top?.gesture === payload.gesture;
