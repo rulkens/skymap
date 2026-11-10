@@ -1,8 +1,8 @@
 /**
  * Row kinds that move the camera by value. Names follow the owner's naming table: the channel picks the
  * Name (Distance / Turn / Tilt …), the operator slot says how (`→` sets to, `+`/`−` adds, `±` swings).
- * `glyph` is one per kind, so `set` shows the distance icon whatever its channel; a row's tint comes
- * from its family.
+ * set, spin, rate and osc span several channels, so they leave `glyph` out and the model uses the
+ * icon of the row's channel family.
  */
 import { CHANNEL_FAMILY } from '../../data/channelFamilies';
 import { formatDegrees } from '../utils/formatDegrees';
@@ -75,7 +75,6 @@ export const cameraKinds: Pick<
   'set' | 'setVec' | 'spin' | 'rate' | 'osc' | 'aimAlong' | 'flyPath' | 'geodesic'
 > = {
   set: {
-    glyph: 'dist',
     mark: 'bar',
     writes: (s) => familyOf(s.ch),
     label: (s) => ({ name: SET_NAME[s.ch], op: '→', value: channelValue(s.ch, s.to) }),
@@ -89,7 +88,6 @@ export const cameraKinds: Pick<
     fields: [readoutField('to', 'Target'), overField(), easeField()],
   },
   spin: {
-    glyph: 'turn',
     mark: 'bar',
     writes: (s) => familyOf(s.ch),
     label: (s) => ({
@@ -112,7 +110,6 @@ export const cameraKinds: Pick<
     ],
   },
   rate: {
-    glyph: 'rate',
     mark: 'rate',
     writes: (s) => familyOf(s.ch),
     label: (s) => ({
@@ -136,7 +133,6 @@ export const cameraKinds: Pick<
     ],
   },
   osc: {
-    glyph: 'osc',
     mark: 'osc',
     writes: (s) => familyOf(s.ch),
     label: (s) => ({

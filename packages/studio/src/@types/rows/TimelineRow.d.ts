@@ -3,6 +3,7 @@
  * the compile. Times are seconds from clip start; all three are null until the draft resolves.
  */
 import type { ClipCompileReason } from '../../../../../src/@types/animation/ClipCompileReason';
+import type { GlyphId } from '../kinds/GlyphId';
 import type { ChannelFamily } from './ChannelFamily';
 import type { RowKind } from './RowKind';
 import type { RowLabel } from './RowLabel';
@@ -21,6 +22,8 @@ export type TimelineRow = {
   readonly background: boolean;
   /** Icon tint; null for structure rows. */
   readonly family: ChannelFamily | null;
+  /** The icon to draw: the kind's own, else its channel family's. Views read only this. */
+  readonly glyph: GlyphId;
   /** A group: the union of its children's. */
   readonly writes: readonly ChannelFamily[];
   readonly label: RowLabel;

@@ -8,6 +8,7 @@
 import { ROW_KINDS } from '../../kinds/data/rowKinds';
 import { rowKey } from '../../draft/utils/rowKey';
 import { formatDuration } from '../../utils/format/formatDuration';
+import { familyGlyph } from './familyGlyph';
 import { rowDurationText } from './rowDurationText';
 import { rowTailEndSec } from './rowTailEndSec';
 import { culpritReasons } from './culpritReasons';
@@ -54,6 +55,7 @@ export function buildTimeline(
     const spec = ROW_KINDS[kind];
     const id = rowKey(ref);
     const writes = spec.writes(subject);
+    const family = UNTINTED_MARKS.has(spec.mark) ? null : (writes[0] ?? null);
     const base = spec.label(subject);
     rows.push({
       id,
@@ -61,7 +63,8 @@ export function buildTimeline(
       kind,
       ...where,
       collapsed: where.expandable && folded.has(id),
-      family: UNTINTED_MARKS.has(spec.mark) ? null : (writes[0] ?? null),
+      family,
+      glyph: spec.glyph ?? familyGlyph(family),
       writes,
       label: label === undefined ? base : label(base),
       ...times,

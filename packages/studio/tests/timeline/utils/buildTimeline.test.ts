@@ -147,6 +147,14 @@ describe('buildTimeline', () => {
     expect(rowOf(rows, 'e:0.0').kind).toBe('lookAtId');
   });
 
+  it('a kind without its own glyph shows its channel family glyph', () => {
+    const draft: ClipData = {
+      timeline: [dollyTo(300, 4), tween('yaw', { to: 1, over: 2 }), hold(1)],
+    };
+    const { rows } = buildTimeline(draft, compiled(draft), []);
+    expect(rows.map((r) => r.glyph)).toEqual(['start', 'dist', 'turn', 'hold']);
+  });
+
   it('cueSecs lists each effect start and the clip end', () => {
     const draft: ClipData = { timeline: [dollyTo(300, 4), hold(2), dollyTo(500, 3)] };
     expect(buildTimeline(draft, compiled(draft), []).cueSecs).toEqual([0, 4, 6, 9]);
