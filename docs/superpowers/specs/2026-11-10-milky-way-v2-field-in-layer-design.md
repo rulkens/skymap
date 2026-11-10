@@ -38,7 +38,8 @@ From 2026-09-25 (the brief):
 From 2026-11-10 (the checkpoint):
 
 - **Settings are nested,** in `cloud` and `field` groups, named for their concern modules (§6).
-- **In `'both'`, the light sums.** Each renderer draws at full weight, so each term matches its solo mode exactly.
+- **In `'both'`, the light sums.** Each renderer draws at full weight. The field term matches `'v2'` exactly; the cloud
+  term is v1 without its dust, because the "v1 dust off whenever v2 is on" ruling wins (`cloudDust`, §7).
 - **The shape is signed off:** `FieldView`, targets as `{ view, sizePx }`, and the host in `src/` with one frame plan.
 - **The whole v2 engine moves into the Layer,** as the concern module `src/layers/milkyWay/field/`, beside `cloud/`.
   That covers the renderer, the v2 generator, the host, and every type and helper only the field reaches. This

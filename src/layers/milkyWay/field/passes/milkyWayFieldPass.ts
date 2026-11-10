@@ -1,7 +1,8 @@
 /**
  * milkyWayFieldPass — the `milky-way-field` composite: the field's reduced-res
- * targets added into HDR right after `milky-way-upsample`, so v1 dust extincts
- * field light as it does the cloud's. One hand-written pass rather than an
+ * targets added into HDR. v1 dust never draws with the field, whose own dust
+ * is in-shader, so its slot after `milky-way-upsample` is placement only. One
+ * hand-written pass rather than an
  * upsample row per target, because the planner's `plan.composites` varies by
  * frame. Shares the compute's gate, toggle included; no pick.
  */

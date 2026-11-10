@@ -8,9 +8,9 @@ import { FIELD_CALIBRATION } from '../../data/fieldCalibration';
 
 /**
  * The app's field tuning, one value per dust setting, both built once so the
- * host's identity keys see an unchanged frame as unchanged. The geometry is the
- * one v1's cloud generates from: the cloud's model matrix then places the field
- * too (the plan's units RISK). `render` is the calibration row as it stands.
+ * host's identity keys see an unchanged frame as unchanged. The geometry is
+ * v1's, so the cloud's model matrix places the field too. `render` is the
+ * calibration row as it stands.
  */
 export function milkyWayFieldHostTuningFor(): (dust: boolean) => FieldHostTuning {
   const shared = {
