@@ -498,4 +498,24 @@ describe('spans', () => {
     });
     expect(clip.spans.map((s) => s.path.join())).toEqual(['0', '0,0', '0,1', '0,2']);
   });
+
+  it('a flyPath span carries its track knotSecs', () => {
+    const clip = compileClip({
+      start: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 10 },
+      timeline: [
+        wait(1),
+        flyPath([atPoint([10, 0, 0], 10), atPoint([20, 0, 0], 10)], {
+          over: 6,
+          linger: 0.5,
+          lingerSec: 1,
+        }),
+      ],
+    });
+    const span = clip.spans.find((s) => s.path.join() === '1')!;
+    expect(span.knotSecs).toHaveLength(2);
+    clip.compositeTracks[0]!.knotSecs!.forEach((k, i) =>
+      expect(span.knotSecs![i]).toBeCloseTo(k, 9),
+    );
+    expect(span.knotSecs!.at(-1)).toBe(span.endSec);
+  });
 });

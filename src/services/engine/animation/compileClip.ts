@@ -205,7 +205,16 @@ function walkOverlappedSeq(
 function walk(effect: Effect, path: EffectPath, atSec: number, acc: Accum): number {
   const slot = acc.spans.length;
   const dur = walkNode(effect, path, atSec, acc);
-  acc.spans.splice(slot, 0, { path, startSec: atSec, endSec: atSec + dur });
+  const endSec = atSec + dur;
+  // A flyPath's track is the last composite it pushed; its last knot is pinned to
+  // the cursor's `atSec + dur`, which can sit an ulp off the track's own endSec.
+  const knots = effect.kind === 'flyPath' ? acc.compositeTracks.at(-1)!.knotSecs : undefined;
+  acc.spans.splice(slot, 0, {
+    path,
+    startSec: atSec,
+    endSec,
+    ...(knots !== undefined ? { knotSecs: [...knots.slice(0, -1), endSec] } : {}),
+  });
   return dur;
 }
 

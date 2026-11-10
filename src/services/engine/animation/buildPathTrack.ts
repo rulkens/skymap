@@ -573,13 +573,29 @@ export function buildPathTrack(params: BuildParams): CompositeTrack {
   // the dwelled `totalSec`, wall→base dwell warp, arc-length inversion). Pulled
   // out of `sample` so the look-ahead aim can re-evaluate the EYE at a future
   // time with the same map.
-  const paramAtLocalSec = (localSec: number): number => {
-    const s = clamp01(localSec / totalSec);
-    const easedWall = warp(s) * totalSec;
-    const baseTime = dwell.baseTimeAt(easedWall);
-    const u = clamp01(timing(baseTime));
-    return paramAtArcFrac(u);
+  const baseTimeAtLocalSec = (localSec: number): number =>
+    dwell.baseTimeAt(warp(clamp01(localSec / totalSec)) * totalSec);
+  const paramAtLocalSec = (localSec: number): number =>
+    paramAtArcFrac(clamp01(timing(baseTimeAtLocalSec(localSec))));
+
+  // Knot k is reached when base time reaches `knotTime[k]` (`timing` passes
+  // through every knot). Solved on the sampling pipeline itself, so dwell and
+  // envelope are included; an overshooting ease (Back, Elastic, Bounce) crosses
+  // more than once, so a coarse scan brackets the FIRST crossing, then bisection.
+  const arrivalLocalSec = (baseSec: number): number => {
+    const n = 256;
+    let hi = 1;
+    while (hi < n && baseTimeAtLocalSec((hi / n) * totalSec) < baseSec) hi++;
+    let [a, b] = [((hi - 1) / n) * totalSec, (hi / n) * totalSec];
+    for (let i = 0; i < 60; i++) {
+      const mid = 0.5 * (a + b);
+      if (baseTimeAtLocalSec(mid) < baseSec) a = mid;
+      else b = mid;
+    }
+    return b;
   };
+  const endSec = startSec + totalSec;
+  const knotSecs = [...knotTime.slice(1, -1).map((t) => startSec + arrivalLocalSec(t)), endSec];
   const eyePosAt = (localSec: number): Vec3 => {
     const p = poseAtTau(paramAtLocalSec(localSec));
     return [p.tx, p.ty, p.tz];
@@ -634,5 +650,5 @@ export function buildPathTrack(params: BuildParams): CompositeTrack {
     };
   };
 
-  return { startSec, endSec: startSec + totalSec, channels: FLY_PATH_CHANNELS, sample };
+  return { startSec, endSec, channels: FLY_PATH_CHANNELS, sample, knotSecs };
 }

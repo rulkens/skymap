@@ -17,4 +17,6 @@ export type CompositeTrack = {
   readonly channels: readonly (keyof CompositeSample)[];
   /** `localSec` is seconds since the track's own `startSec` (0 → `endSec−startSec`). */
   readonly sample: (localSec: number) => CompositeSample;
+  /** flyPath only: absolute arrival second at each waypoint (dwell included), the last equal to `endSec`. */
+  readonly knotSecs?: readonly number[];
 };
