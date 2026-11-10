@@ -24,6 +24,7 @@ import { probeSpheresLayer } from '../layers/probeSpheres/layer';
 import { missionsLayer } from '../layers/missions/layer';
 import { satellitesLayer } from '../layers/satellites/layer';
 import { starCatalogLayer } from '../layers/starCatalog/layer';
+import { stellarStreamsLayer } from '../layers/stellarStreams/layer';
 import { structureLayer } from '../layers/structure/layer';
 import { zoneOfAvoidanceLayer } from '../layers/zoneOfAvoidance/layer';
 
@@ -38,6 +39,7 @@ export const APP_COMPOSITION = {
     satellitesLayer,
     zoneOfAvoidanceLayer,
     localBubbleLayer,
+    stellarStreamsLayer,
     lightTimeLayer,
     cosmicHorizonLayer,
     constellationsLayer,
@@ -60,6 +62,7 @@ export const APP_COMPOSITION = {
     typeof satellitesLayer,
     typeof zoneOfAvoidanceLayer,
     typeof localBubbleLayer,
+    typeof stellarStreamsLayer,
     typeof lightTimeLayer,
     typeof cosmicHorizonLayer,
     typeof constellationsLayer,

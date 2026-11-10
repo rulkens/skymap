@@ -1,7 +1,7 @@
 /**
  * A once-scope planner gets the band at the anchor view (`views[0]`) only when it sets
  * `hasDistanceBand`; a perView planner always reads its own view's. Losing the band plans work
- * (an SGP4 sweep) for a Layer nothing draws; gaining it drops the survey planner's member count
+ * (an SGP4 sweep) for a Layer nothing draws; gaining it drops the facts planner's member count
  * to famous-only inside the deep-zoom band.
  */
 
@@ -58,7 +58,7 @@ describe('gatePlannerByFade', () => {
     expect(onceValue(planner, makeState(), viewAt(2))).toBe(1);
   });
 
-  it('the survey planner keeps its survey catalogs at the home view, inside the deep-zoom band', () => {
+  it('the member-count planner keeps its survey catalogs at the home view, inside the deep-zoom band', () => {
     const value = onceValue(
       galaxyCatalogPlanner({} as never),
       makeState(APP_VISIBILITY_REGISTRY),

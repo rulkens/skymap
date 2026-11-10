@@ -1,4 +1,4 @@
-import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
+import type { LonLatBounds } from '../../../src/layers/body/surfaceTiles/format/@types/LonLatBounds';
 import { heightLatticeStepDeg } from './heightLatticeStepDeg';
 
 /** The lon/lat box spanned by the `nx × ny` lattice posts starting at

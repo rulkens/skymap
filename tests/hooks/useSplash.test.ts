@@ -30,7 +30,6 @@ import { engineStatusChanged, engineLoadProgressChanged } from '../../src/state/
 import { selectSplashVisible, selectSplashDismissedVersion } from '../../src/state/ui/selectors';
 import { CURRENT_SPLASH_VERSION } from '../../src/state/ui/splashStorage';
 import type { UiState } from '../../src/@types/ui/UiState';
-import { Source } from '../../src/data/source';
 
 /**
  * Render useSplash inside a Provider-wrapped store.  The `ui` seed is
@@ -61,6 +60,7 @@ describe('useSplash — slice-backed visibility', () => {
       debugPanelOpen: false,
       paletteTab: 'highlights',
       splash: { visible: true, dismissedVersion: null },
+      learnedGestures: { look: false, zoom: false },
     };
     const { store, result } = renderSplash(ui);
 
@@ -91,6 +91,7 @@ describe('useSplash — dispatch on dismiss + reopen', () => {
       debugPanelOpen: false,
       paletteTab: 'highlights',
       splash: { visible: true, dismissedVersion: null },
+      learnedGestures: { look: false, zoom: false },
     };
     const { store, result } = renderSplash(ui);
 
@@ -109,6 +110,7 @@ describe('useSplash — dispatch on dismiss + reopen', () => {
       debugPanelOpen: false,
       paletteTab: 'highlights',
       splash: { visible: false, dismissedVersion: CURRENT_SPLASH_VERSION },
+      learnedGestures: { look: false, zoom: false },
     };
     const { store, result } = renderSplash(ui);
 
@@ -136,6 +138,7 @@ describe('useSplash — blocked state', () => {
       debugPanelOpen: false,
       paletteTab: 'highlights',
       splash: { visible: true, dismissedVersion: null },
+      learnedGestures: { look: false, zoom: false },
     };
     const { store, result } = renderSplash(ui);
     expect(result.current.blocked).toBe(true);
@@ -163,6 +166,7 @@ describe('useSplash error mapping', () => {
     debugPanelOpen: false,
     paletteTab: 'highlights',
     splash: { visible: true, dismissedVersion: null },
+    learnedGestures: { look: false, zoom: false },
   };
 
   /** Helper: render useSplash with an explicit engine `status` seeded in the store. */

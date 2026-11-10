@@ -24,7 +24,7 @@
 
 import { mat4 } from 'wgpu-matrix';
 
-import type { ShellMesh } from '../../../../@types/data/shellMesh/ShellMesh';
+import type { ShellMesh } from '../../@types/ShellMesh';
 import type { LocalBubbleRenderer } from '../@types/LocalBubbleRenderer';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { Vec3 } from '../../../../@types/math/Vec3';

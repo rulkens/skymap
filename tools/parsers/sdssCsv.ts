@@ -32,7 +32,6 @@
  *   them inside the row loop.
  */
 
-import { Source } from '../../src/data/source';
 import { arcsecToKpc } from '../../src/utils/math/arcsecToKpc';
 import { redshiftToDistanceMpc } from '../../src/utils/math/redshiftToDistanceMpc';
 import { isPlausibleMagnitude } from '../utils/math/isPlausibleMagnitude';
@@ -288,7 +287,7 @@ export function parseSdssCsv(rawText: string): SdssCsvResult {
     }
 
     records.push({
-      source: Source.SDSS,
+      source: 'sdss',
       objID,
       ra,
       dec,

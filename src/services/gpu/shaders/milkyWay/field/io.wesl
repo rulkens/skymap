@@ -11,15 +11,14 @@
 // ## Byte layout (canonical — the offset authority for the CPU packer's
 // HEADER uniform only; 'comps' layout authority is records.wesl, see below)
 //
-// HEADER (uniform, binding 0) — camera + params only, unchanged every frame
-// in shape though its bytes are rewritten every frame (the fade/exposure
-// terms in 'params' track the camera):
+// HEADER (uniform, binding 0) — unchanged every frame in shape though its
+// bytes are rewritten every frame (the camera and the exposure fade move):
 //
-//   offset 0   : eye: vec4      (xyz camera world position, w unused)
-//   offset 16  : camRight: vec4 (world-space camera basis, w unused)
+//   offset 0   : eye: vec4      (xyz eye in the galaxy frame, w exposure)
+//   offset 16  : camRight: vec4 (galaxy-frame camera basis, w unused)
 //   offset 32  : camUp: vec4
-//   offset 48  : camFwd: vec4
-//   offset 64  : params: vec4   (tanHalfFov, aspect, lensShiftX, exposure)
+//   offset 48  : camFwd: vec4   (into the screen)
+//   offset 64  : frustum: vec4  (tanLeft, tanRight, tanDown, tanUp), signed
 //   offset 80  : counts: vec4   (emissionCount, dustOffset, dustCount, primaryCount)
 //   offset 96  : counts2: vec4  (spurCloudStart, dustMapHeightPx, fieldWidthPx, fieldHeightPx)
 //   offset 112 : dustExtinction: vec4 (A_lambda/A_V per channel, w unused)
@@ -71,7 +70,7 @@
 //
 // dustNoise (offset 128) erodes the primary's whole dust slice
 // (dustMap.wesl's fs) — the particle cloud is the ONLY dust tier (see
-// galaxyDustMixture.ts's header on the CPU side for why there is no
+// dustDiscShape.ts's header on the CPU side for why there is no
 // kiloparsec-scale smooth-disc component alongside it), so a single noise
 // sample here erodes texture rather than reading as one giant blotch.
 // tileUnits (.x) is the world span of one full wrap of dustNoiseBake.wesl's
@@ -132,7 +131,7 @@
 // zeroing three isolates the fourth.
 //
 // bubbleView (offset 192) is bubblePresent.wesl's own crossfade weight —
-// the SF-event catalog's (dustBubblePlacements.ts) bubble/cavity overlay, a
+// the SF-event catalog's (buildDustBubblePlacements.ts) bubble/cavity overlay, a
 // SECOND, independent star-formation model drawn alongside ismMap's own view
 // so the two can be compared directly. Not folded into debugView: that vec4
 // is full (dust/ismMap/orientation/galaxyWeight), and reusing
@@ -184,7 +183,7 @@
 // never pays for a sample it would just multiply by zero. .w is the SAME
 // free lane the seeding view's cap and dustDetail.wesl's legacy/swept blend
 // weight passed through before each moved on — now starGrainFeatureScale,
-// deriveFrameView.ts's per-frame blend of render.starGrainFeatureScaleNear/
+// deriveFieldFrameLanes's per-frame blend of render.starGrainFeatureScaleNear/
 // Far by camera distance (defaults 2/15, live-tunable): starGrain.wesl's
 // starGrainTerm multiplies it by STAR_GRAIN_POINT_SIGMA_FRAC (the baked
 // point's fixed sigma-as-tile-fraction, starGrain.wesl's own const) to get the
@@ -264,12 +263,10 @@
 // outgrow that. The CPU packer sizes the backing GPUBuffer to counts.x +
 // counts.z (growing, never per-frame).
 //
-// The ray comes from a camera BASIS plus tanHalfFov/aspect rather than an
-// inverse view-projection: the engine already holds the basis (it packs the
-// same rows for the sprite billboards) and the fov, so this needs no matrix
-// inverse and no depth-convention bookkeeping. lensShiftX undoes the
-// off-centre framing the engine writes into proj[8]; without it the
-// analytic field slides against the sprites whenever a side panel is open.
+// The ray comes from a camera BASIS plus the four frustum tangents rather
+// than an inverse view-projection: no matrix inverse and no depth-convention
+// bookkeeping (lib/camera.wesl's cameraRayFromNdc). The tangents carry any
+// lens shift, so an off-centre window needs no separate term.
 //
 // Per component, the WORLD-space inverse covariance M of
 // exp(-0.5*(p-center)^T*M*(p-center)), plus amplitude, colour and a centre,
@@ -282,7 +279,7 @@
 // GalaxyFieldComponent) sizes the per-instance quad in fieldSplat/vertex.wesl
 // and hiiSplat/vertex.wesl. textureWeight
 // (GalaxyFieldComponent's own field) is 0 (untouched) for every producer
-// except hiiRegions.ts's pushes — hiiSplat's fragments mix ITS MAGNITUDE
+// except buildHiiShellsAndYoungWithSegments.ts's pushes — hiiSplat's fragments mix ITS MAGNITUDE
 // against hiiNoiseTerm or starGrainTerm (erosionFragment.wesl/youngFragment.wesl/
 // extrasFragment.wesl; see dustDetail's own doc above).
 // The SIGN, not a second lane, is what picks the texture: positive (shell,
@@ -302,7 +299,7 @@
 // two re-readings, not two new fields: amplitude (emission) is the
 // component's central V-band extinction density, per unit length; color
 // (emission) is the per-channel A_lambda/A_V extinction ratio
-// (galaxyDustMixture.ts's dustExtinctionRgb), not a tint — carried per
+// (dustDiscShape.ts's dustExtinctionRgb), not a tint — carried per
 // component for a future per-extra dust loop, but NOT what the primary
 // galaxy's attenuation actually reads: dustMap.wesl sums every dust
 // component down to four depth-sliced tau columns before dustAttenuation.wesl's
@@ -365,7 +362,7 @@ struct FieldUniforms {
   camRight: vec4<f32>,
   camUp: vec4<f32>,
   camFwd: vec4<f32>,
-  params: vec4<f32>,
+  frustum: vec4<f32>,
   counts: vec4<f32>,
   counts2: vec4<f32>,
   dustExtinction: vec4<f32>,

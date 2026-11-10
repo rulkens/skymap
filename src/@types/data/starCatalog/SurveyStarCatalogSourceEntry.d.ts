@@ -8,14 +8,11 @@ import type { OctreeBudgets } from '../../octree/OctreeBudgets';
  * Its presentation defaults live in-row (like `CosmicWebDensitySourceEntry`) rather than
  * in a separate settings table, so the draw budget sits next to the `binBaseName`
  * it governs. Leaf stars ARE pickable — `drawPick` stamps a resolved star's
- * identity into the NEAR0 pick pass — and the `code` tags the source in that
- * pick encoding, but a star's identity is its record index and is never
+ * identity into the NEAR0 pick pass — but a star's identity is its record index and is never
  * persisted to the `.bin`.
  */
 export type SurveyStarCatalogSourceEntry = SourceEntryBase & {
   readonly type: 'starCatalog';
-  /** Stable numeric tag; registry key only — not persisted, not packed. */
-  readonly code: number;
   /** `skst`: one `-<tier>.bin` per tier; `octree`: one index plus chunks serve every tier. */
   readonly format: StarCatalogFormat;
   /** Filename stem the fetcher builds the format's path from. */

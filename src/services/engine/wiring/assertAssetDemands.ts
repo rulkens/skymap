@@ -30,7 +30,7 @@ export function assertAssetDemands(
         );
       }
     } catch (err) {
-      throw new Error(`asset row '${String(row.key)}': ${(err as Error).message}`, { cause: err });
+      throw new Error(`asset row '${row.key}': ${(err as Error).message}`, { cause: err });
     }
   }
 }

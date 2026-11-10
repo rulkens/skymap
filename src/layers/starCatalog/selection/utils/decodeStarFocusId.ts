@@ -8,17 +8,14 @@
  */
 
 import { STAR_FOCUS_PREFIX } from '../../../../services/url/starFocusId';
-import { Source } from '../../../../data/source';
-import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../../../data/bodies/seededStarCatalogsBySource';
+import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../seededStars/data/seededStarCatalogsBySource';
 import { seedIndexOfBody } from '../../../../utils/picking/seedIndexOfBody';
 import type { StarCatalogRef } from '../@types/StarCatalogRef';
 
 export function decodeStarFocusId(id: string, surveyLoaded: boolean): StarCatalogRef | null {
   const rest = id.slice(STAR_FOCUS_PREFIX.length);
   if (/^\d+$/.test(rest)) {
-    return surveyLoaded
-      ? { type: 'starCatalog', source: Source.GaiaStars, index: Number(rest) }
-      : null;
+    return surveyLoaded ? { type: 'starCatalog', source: 'gaiaStars', index: Number(rest) } : null;
   }
   for (const [source, row] of SEEDED_STAR_CATALOGS_BY_SOURCE) {
     const index = seedIndexOfBody(rest, row.stars);

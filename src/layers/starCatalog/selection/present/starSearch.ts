@@ -5,7 +5,7 @@
  * row displays exactly the names it can be found by.
  */
 
-import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../../../data/bodies/seededStarCatalogsBySource';
+import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../seededStars/data/seededStarCatalogsBySource';
 import { BODY_SEARCH_NAMES } from '../../../../data/bodies/bodySearchNames';
 import { encodeStarFocusId } from '../utils/encodeStarFocusId';
 import { seededStarChip } from '../utils/seededStarChip';

@@ -8,9 +8,9 @@
  * shown whenever the generator is active.
  */
 import type { ReactNode } from 'react';
-import type { GalaxyIsmMapFluidParams } from '../../../../../src/@types/galaxy/GalaxyIsmMapFluidParams';
-import type { GalaxyIsmMapGeneratorKind } from '../../../../../src/@types/galaxy/GalaxyIsmMapGeneratorKind';
-import type { GalaxyIsmMapParams } from '../../../../../src/@types/galaxy/GalaxyIsmMapParams';
+import type { GalaxyIsmMapFluidParams } from '../../../../../src/layers/milkyWay/field/ismMap/@types/GalaxyIsmMapFluidParams';
+import type { GalaxyIsmMapGeneratorKind } from '../../../../../src/layers/milkyWay/field/ismMap/@types/GalaxyIsmMapGeneratorKind';
+import type { GalaxyIsmMapParams } from '../../../../../src/layers/milkyWay/field/ismMap/@types/GalaxyIsmMapParams';
 import type { OrientationDiagnostics } from '../../../@types/engine/OrientationDiagnostics';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { fieldTuningPatched } from '../../state/slices/fieldTuningSlice';
@@ -160,7 +160,7 @@ const FLUID_SLIDER_GROUPS: readonly FluidSliderGroupSpec[] = [
         max: 60,
         step: 0.5,
         format: (v) => v.toFixed(1),
-        info: "Shifts arm gather's own forcing sample off the crest by this many az texels, upstream (positive) or downstream (negative) of the flank the drift carries gas from — signed consistently on both sides of corotation. 0 (default) gathers toward the crest itself. The ridge's own half-FWHM is ~17-24 texels across this app's Milky Way preset's grid (galaxyIsmMapArmForcing.ts's armCrossSigma); the range deliberately reaches well past it so the gather target can sit fully off-arm.",
+        info: "Shifts arm gather's own forcing sample off the crest by this many az texels, upstream (positive) or downstream (negative) of the flank the drift carries gas from — signed consistently on both sides of corotation. 0 (default) gathers toward the crest itself. The ridge's own half-FWHM is ~17-24 texels across this app's Milky Way preset's grid (buildGalaxyIsmMapArmForcing.ts's armCrossSigma); the range deliberately reaches well past it so the gather target can sit fully off-arm.",
       },
     ],
   },

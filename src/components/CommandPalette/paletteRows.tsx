@@ -7,7 +7,6 @@
  * one component that renders these rows.
  */
 import type { ReactNode } from 'react';
-import { APP_SOURCE_REGISTRY } from '../../compositions/appSources';
 import { CATEGORY_DISPLAY_INFO } from '../../data/structure/categoryDisplayInfo';
 import { structureShotUrl } from '../../utils/structure/structureShotUrl';
 import { cardShotUrl } from '../../utils/palette/cardShotUrl';
@@ -113,8 +112,8 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
     const primary = paletteRowLabel(m).name;
     const remaining = m.entry.names.slice(1);
     return {
-      key: `alias:${m.entry.source}:${m.entry.pgc}`,
-      testid: `alias-row-${m.entry.source}-${m.entry.pgc}`,
+      key: `alias:${m.entry.sourceLabel}:${m.entry.pgc}`,
+      testid: `alias-row-${m.entry.sourceLabel}-${m.entry.pgc}`,
       leading: (
         <span className={styles.glyph} aria-hidden="true">
           {primary[0] ?? '·'}
@@ -126,7 +125,7 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
           {remaining.length > 0 && (
             <span className={styles.secondary}>{remaining.join(' · ')}</span>
           )}
-          <span className={styles.source}>{APP_SOURCE_REGISTRY[m.entry.source].label}</span>
+          <span className={styles.source}>{m.entry.sourceLabel}</span>
         </>
       ),
     };

@@ -10,7 +10,7 @@
  */
 import { takeLatest, put, select, call } from 'typed-redux-saga';
 
-import type { SourceType } from '../../../../../src/@types/data/SourceType';
+import type { GalaxyCatalogId } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import type { Tier } from '../../../../../src/@types/data/Tier';
 import { hasUrlGate } from '../../../../../src/utils/url/hasUrlGate';
 import type { CatalogPoints } from '../../../@types/CatalogPoints';
@@ -32,7 +32,7 @@ import {
 export type CatalogPointsPlan =
   | { readonly kind: 'packedOverride'; readonly points: CatalogPoints }
   | { readonly kind: 'synthetic' }
-  | { readonly kind: 'network'; readonly sources: readonly SourceType[]; readonly tier: Tier };
+  | { readonly kind: 'network'; readonly sources: readonly GalaxyCatalogId[]; readonly tier: Tier };
 
 /**
  * A dev-dropped packed catalog wins outright (sticky for the session, same as

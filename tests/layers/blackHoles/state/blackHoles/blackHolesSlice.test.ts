@@ -15,7 +15,7 @@ import type { BlackHolesSettings } from '../../../../../src/layers/blackHoles/@t
 describe('blackHolesSlice', () => {
   it('the initial blackHoles.items has a row for every black-hole id', () => {
     const { items } = blackHolesSlice.getInitialState();
-    for (const [, entry] of BLACK_HOLE_SOURCE_ROWS) {
+    for (const entry of BLACK_HOLE_SOURCE_ROWS) {
       expect(items[entry.id]).toEqual({ labelEnabled: true });
     }
   });

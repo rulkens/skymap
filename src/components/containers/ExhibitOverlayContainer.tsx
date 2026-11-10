@@ -12,6 +12,7 @@ import ExhibitOverlay from '../ExhibitOverlay/ExhibitOverlay';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { exitTakeover } from '../../state/takeover/takeoverActions';
 import { selectExhibitCopyDelaySec } from '../../state/takeover/selectors';
+import { selectLearnedGestures } from '../../state/ui/selectors';
 import { viewCoverSet } from '../../state/viewCover/viewCoverSlice';
 import { APP_EXHIBIT_REGISTRY } from '../../compositions/appExhibits';
 import type { ExhibitId } from '../../@types/exhibits/ExhibitId';
@@ -25,6 +26,7 @@ function ExhibitOverlayContainer({ id }: ExhibitOverlayContainerProps): React.Re
   const dispatch = useAppDispatch();
   const exhibit = APP_EXHIBIT_REGISTRY[id];
   const enterDelaySec = useAppSelector(selectExhibitCopyDelaySec);
+  const learnedGestures = useAppSelector(selectLearnedGestures);
 
   const onExit = useCallback(() => dispatch(exitTakeover()), [dispatch]);
   const onNotesCover = useCallback(
@@ -44,6 +46,7 @@ function ExhibitOverlayContainer({ id }: ExhibitOverlayContainerProps): React.Re
       lede={exhibit.lede}
       body={exhibit.body}
       enterDelaySec={enterDelaySec}
+      learnedGestures={learnedGestures}
       onExit={onExit}
       onNotesCover={onNotesCover}
       onCaptionCover={onCaptionCover}

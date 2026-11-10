@@ -11,7 +11,7 @@
 
 import sharp from 'sharp';
 
-import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
+import type { LonLatBounds } from '../../src/layers/body/surfaceTiles/format/@types/LonLatBounds';
 import { SURFACE_TILE_PX } from '../../src/layers/body/surfaceTiles/format/data/surfaceTileParams';
 import type { GreyRaster } from '../@types/image/GreyRaster';
 import { surfaceTileBounds } from '../utils/scene/surfaceTileBounds';

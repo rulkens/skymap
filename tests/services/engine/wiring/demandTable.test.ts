@@ -12,7 +12,6 @@
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { reevaluateDemand } from '../../../../src/services/engine/wiring/reevaluateDemand';
-import { Source } from '../../../../src/data/source';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { PriorityQueue } from '../../../../src/utils/concurrency/priorityQueue';
 import { ASSET_QUEUE_CONCURRENCY } from '../../../../src/utils/concurrency/assetQueueConcurrency';
@@ -21,7 +20,7 @@ import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientation
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
-import type { SourceType } from '../../../../src/@types/data/SourceType';
+import type { SourceId } from '../../../../src/@types/data/SourceId';
 import type { CosmicWebDensityRuntime } from '../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
 import { cosmicWebDensityAssetRows } from '../../../../src/layers/cosmicWebDensity/densityCubes/load/cosmicWebDensityAssetRows';
 import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../../../../src/layers/cosmicWebDensity/sources/cosmicWebDensitySourceRows';
@@ -105,7 +104,7 @@ const BOOT_GALAXY_CATALOG_ITEMS: GalaxyCatalogItemLeaves = {
   desiSgw: { enabled: false },
 };
 
-type PointSlotOverrides = Partial<Record<SourceType, StubSlot>>;
+type PointSlotOverrides = Partial<Record<SourceId, StubSlot>>;
 type NamedSlotOverrides = Partial<{
   famousGalaxiesMeta: StubSlot;
   structureCatalog: StubSlot;
@@ -121,15 +120,15 @@ type MakeStateOptions = {
   namedSlots?: NamedSlotOverrides;
 };
 
-const ALL_POINT_SOURCES: readonly SourceType[] = [
-  Source.SDSS,
-  Source.TwoMRS,
-  Source.Glade,
-  Source.Milliquas,
-  Source.FamousGalaxy,
-  Source.DesiDeep,
-  Source.DesiWedge,
-  Source.DesiSgw,
+const ALL_POINT_SOURCES: readonly SourceId[] = [
+  'sdss',
+  '2mrs',
+  'glade',
+  'milliquas',
+  'famousGalaxy',
+  'desiDeep',
+  'desiWedge',
+  'desiSgw',
 ];
 
 function makeState(opts: MakeStateOptions = {}): EngineState {
@@ -142,7 +141,7 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
     namedSlots = {},
   } = opts;
 
-  const points = new Map<SourceType, AssetSlot<unknown, unknown>>(
+  const points = new Map<SourceId, AssetSlot<unknown, unknown>>(
     ALL_POINT_SOURCES.map((src) => [
       src,
       (pointSlots[src] ?? stubSlot()) as AssetSlot<unknown, unknown>,
@@ -158,7 +157,7 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
     hiResFamous: stubSlot(),
   } as unknown as GalaxyCatalogRuntime;
   const densitySlots: Record<string, AssetSlot<unknown, unknown>> = {};
-  for (const [, entry] of COSMIC_WEB_DENSITY_SOURCE_ROWS) {
+  for (const entry of COSMIC_WEB_DENSITY_SOURCE_ROWS) {
     densitySlots[entry.id] = stubSlot() as AssetSlot<unknown, unknown>;
   }
   const densityRuntime = { slots: densitySlots } as unknown as CosmicWebDensityRuntime;
@@ -252,15 +251,15 @@ describe('reevaluateDemand demand-table regression', () => {
 
     expect(fired).toEqual(
       new Set<AssetKey>([
-        Source.SDSS,
-        Source.TwoMRS,
-        Source.Glade,
-        Source.FamousGalaxy,
-        Source.Milliquas,
+        'sdss',
+        '2mrs',
+        'glade',
+        'famousGalaxy',
+        'milliquas',
         'famousGalaxiesMeta',
         'hiResFamous',
         'structureCatalog',
-        Source.Mcpm,
+        'mcpm',
       ]),
     );
   });
@@ -285,21 +284,21 @@ describe('reevaluateDemand demand-table regression', () => {
     const fired = await firedKeys(state);
 
     expect(fired.has('structureCatalog')).toBe(false);
-    expect(fired.has(Source.SDSS)).toBe(true);
-    expect(fired.has(Source.TwoMRS)).toBe(true);
-    expect(fired.has(Source.Glade)).toBe(true);
-    expect(fired.has(Source.FamousGalaxy)).toBe(true);
+    expect(fired.has('sdss')).toBe(true);
+    expect(fired.has('2mrs')).toBe(true);
+    expect(fired.has('glade')).toBe(true);
+    expect(fired.has('famousGalaxy')).toBe(true);
   });
 
   /** An all-failed boot: errored rows are still demanded but NOT idle, so the idle-guard skips them (no
    *  retry storm on re-eval). famousGalaxiesMeta still demands (Famous !== 'idle'). */
   it('errored galaxy catalogs are not retried on re-evaluation', async () => {
     const pointSlots: PointSlotOverrides = {
-      [Source.SDSS]: stubSlot('error'),
-      [Source.TwoMRS]: stubSlot('error'),
-      [Source.Glade]: stubSlot('error'),
-      [Source.Milliquas]: stubSlot('error'),
-      [Source.FamousGalaxy]: stubSlot('error'),
+      ['sdss']: stubSlot('error'),
+      ['2mrs']: stubSlot('error'),
+      ['glade']: stubSlot('error'),
+      ['milliquas']: stubSlot('error'),
+      ['famousGalaxy']: stubSlot('error'),
     };
     const state = makeState({ pointSlots });
 
@@ -307,11 +306,11 @@ describe('reevaluateDemand demand-table regression', () => {
 
     expect(fired.has('famousGalaxiesMeta')).toBe(true);
     expect(fired.has('structureCatalog')).toBe(true);
-    expect(fired.has(Source.SDSS)).toBe(false);
-    expect(fired.has(Source.TwoMRS)).toBe(false);
-    expect(fired.has(Source.Glade)).toBe(false);
-    expect(fired.has(Source.Milliquas)).toBe(false);
-    expect(fired.has(Source.FamousGalaxy)).toBe(false);
+    expect(fired.has('sdss')).toBe(false);
+    expect(fired.has('2mrs')).toBe(false);
+    expect(fired.has('glade')).toBe(false);
+    expect(fired.has('milliquas')).toBe(false);
+    expect(fired.has('famousGalaxy')).toBe(false);
   });
 
   /** Companion join in one pass: with ONLY Famous enabled, one `reevaluateDemand` loads BOTH the Famous
@@ -343,8 +342,6 @@ describe('reevaluateDemand demand-table regression', () => {
 
     const fired = await firedKeys(state);
 
-    expect(fired).toEqual(
-      new Set<AssetKey>([Source.FamousGalaxy, 'famousGalaxiesMeta', 'hiResFamous']),
-    );
+    expect(fired).toEqual(new Set<AssetKey>(['famousGalaxy', 'famousGalaxiesMeta', 'hiResFamous']));
   });
 });

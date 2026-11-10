@@ -7,7 +7,7 @@
 
 import type { ReactNode } from 'react';
 import cx from 'classnames';
-import type { BlackHoleInfo } from '../../../../../@types/engine/BlackHoleInfo';
+import type { BlackHoleInfo } from '../../../selection/@types/BlackHoleInfo';
 import { BODY_FACTS } from '../../../../../data/bodies/bodyFacts.generated';
 import { formatDistance } from '../../../../../utils/format/formatDistance';
 import { formatRadiusM } from '../../../../../utils/format/formatRadiusM';

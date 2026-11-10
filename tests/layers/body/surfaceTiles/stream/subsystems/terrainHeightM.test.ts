@@ -11,7 +11,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { SurfaceTileId } from '../../../../../../src/layers/body/surfaceTiles/format/@types/SurfaceTileId';
-import type { HeightTileHeader } from '../../../../../../src/@types/scene/HeightTileHeader';
+import type { HeightTileHeader } from '../../../../../../src/layers/body/surfaceTiles/format/@types/HeightTileHeader';
 import { equirectUvToDirection } from '../../../../../../src/utils/math/equirectUvToDirection';
 import {
   HEIGHT_CODE_BYTES,

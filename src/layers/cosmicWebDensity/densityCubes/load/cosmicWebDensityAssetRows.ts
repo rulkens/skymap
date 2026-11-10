@@ -1,11 +1,11 @@
 /**
- * The Layer's asset rows, one per source row, keyed by its `Source` code. Switching a
+ * The Layer's asset rows, one per source row, keyed by its id. Switching a
  * cube off releases it, and the slot's `onRelease` frees its GPU textures.
  */
 
 import type { AssetWiringRow } from '../../../../@types/loading/AssetWiringRow';
 import type { CosmicWebDensityAssetKey } from '../../@types/CosmicWebDensityAssetKey';
-import type { CosmicWebDensityFieldId } from '../../../../@types/data/volume/CosmicWebDensityFieldId';
+import type { CosmicWebDensityFieldId } from '../../@types/CosmicWebDensityFieldId';
 import type { CosmicWebDensityRuntime } from '../../@types/CosmicWebDensityRuntime';
 
 import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../../sources/cosmicWebDensitySourceRows';
@@ -20,8 +20,8 @@ export function cosmicWebDensityAssetRows(
   runtime: CosmicWebDensityRuntime,
 ): readonly AssetWiringRow<unknown, unknown, CosmicWebDensityAssetKey>[] {
   return COSMIC_WEB_DENSITY_SOURCE_ROWS.map(
-    ([code, entry]): AssetWiringRow<unknown, unknown, CosmicWebDensityAssetKey> => ({
-      key: code,
+    (entry): AssetWiringRow<unknown, unknown, CosmicWebDensityAssetKey> => ({
+      key: entry.id,
       slot: runtime.slots[entry.id],
       // An untiered row carries no `tier`, so a tier flip leaves its request
       // unchanged and the demand loop never reloads it.

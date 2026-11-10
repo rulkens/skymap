@@ -1,19 +1,18 @@
 import { describe, it, expect } from 'vitest';
 
 import { shallowEqualRef } from '../../../src/utils/object/shallowEqualRef';
-import { Source } from '../../../src/data/source';
 import type { SelectionRefBase } from '../../../src/@types/engine/selection/SelectionRefBase';
 
 describe('shallowEqualRef', () => {
   it('returns true for two fresh equal objects (structurally equivalent)', () => {
-    const a: SelectionRefBase = { type: 'galaxyCatalog', source: Source.SDSS, index: 3 };
-    const b: SelectionRefBase = { type: 'galaxyCatalog', source: Source.SDSS, index: 3 };
+    const a: SelectionRefBase = { type: 'galaxyCatalog', source: 'sdss', index: 3 };
+    const b: SelectionRefBase = { type: 'galaxyCatalog', source: 'sdss', index: 3 };
     expect(shallowEqualRef(a, b)).toBe(true);
   });
 
   it('returns false for refs with differing index', () => {
-    const a: SelectionRefBase = { type: 'galaxyCatalog', source: Source.SDSS, index: 3 };
-    const b: SelectionRefBase = { type: 'galaxyCatalog', source: Source.SDSS, index: 7 };
+    const a: SelectionRefBase = { type: 'galaxyCatalog', source: 'sdss', index: 3 };
+    const b: SelectionRefBase = { type: 'galaxyCatalog', source: 'sdss', index: 7 };
     expect(shallowEqualRef(a, b)).toBe(false);
   });
 

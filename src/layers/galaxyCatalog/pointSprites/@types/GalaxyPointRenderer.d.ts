@@ -5,9 +5,8 @@
  */
 
 import type { Mat4 } from 'wgpu-matrix';
-import type { GalaxyCatalogSourceType } from '../../@types/GalaxyCatalogSourceType';
-import type { GalaxyCatalog } from '../../../../@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
+import type { GalaxyCatalog } from '../../../../@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyPointDrawSettings } from './GalaxyPointDrawSettings';
 import type { GalaxyPointStats } from './GalaxyPointStats';
 import type { Vec2 } from '../../../../@types/math/Vec2';
@@ -21,9 +20,9 @@ export type GalaxyPointRenderer = {
   unload(id: GalaxyCatalogId): void;
   /** Total number of points across every loaded source. */
   totalCount(): number;
-  /** Every loaded source's GPU buffer in `Source` enum order; a fresh generator per call. */
+  /** Every loaded source's GPU buffer in draw order; a fresh generator per call. */
   loadedSources(): IterableIterator<{
-    source: GalaxyCatalogSourceType;
+    source: GalaxyCatalogId;
     vertexBuffer: GPUBuffer;
     count: number;
     /**

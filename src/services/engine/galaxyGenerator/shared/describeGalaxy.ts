@@ -62,10 +62,10 @@ const ARM_EXTENT_AT_FALLOFF_1 = 0.65;
 const ARM_EXTENT_FLOOR = 0.5;
 
 /**
- * Mirrors `v2/armRidgeGeometry.ts`'s `ARM_SPAN_START_FRAC` (1.05) — an ordinary
+ * Mirrors `field/arms/data/armSpanStartFrac.ts`'s `ARM_SPAN_START_FRAC` (1.05) — an ordinary
  * arm's `spanStartLogR` default. Duplicated rather than imported: `shared/`
  * must gain no import edge onto either tier (`shared/README.md`'s landmine on
- * `v1/`, mirrored here for `v2/` — the folder's whole point is that both tiers
+ * `v1/`, mirrored here for `field/` — the folder's whole point is that both tiers
  * read it by DATA, never by import). `tests/…/shared/describeGalaxy.test.ts`
  * pins the two constants equal so they cannot drift apart silently.
  */

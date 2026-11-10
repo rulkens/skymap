@@ -15,7 +15,6 @@ import { FAMOUS_GALAXY_NAMES } from '../../../../../src/layers/galaxyCatalog/fam
 import { createTestStore } from '../../../../support/createTestStore';
 import { factsReported, layerFactsSeeded } from '../../../../../src/state/engine/engineSlice';
 import { makeGalaxyCatalog } from '../../../../fixtures/makeGalaxyCatalog';
-import { Source } from '../../../../../src/data/source';
 import type { FamousGalaxyMetaEntry } from '../../../../../src/@types/loading/FamousGalaxyMetaEntry';
 
 const m31Index = FAMOUS_GALAXY_NAMES.findIndex((name) => name.id === 'm31');
@@ -28,7 +27,7 @@ const m31Meta: FamousGalaxyMetaEntry = {
 const row = extractGalaxyRow(
   makeGalaxyCatalog(FAMOUS_GALAXY_NAMES.length),
   m31Index,
-  Source.FamousGalaxy,
+  'famousGalaxy',
 )!;
 const target = galaxyCatalogSelectionKinds[0]!.toFocusable(placedGalaxyRow(row));
 

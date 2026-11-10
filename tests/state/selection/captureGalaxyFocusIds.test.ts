@@ -26,7 +26,6 @@ import {
   updateSelectionFocus,
 } from '../../../src/state/selection/selectionSlice';
 import { setGalaxyCatalogVisible } from '../../../src/layers/galaxyCatalog/state/galaxyCatalogs/slice';
-import { Source } from '../../../src/data/source';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import { selectionResolverOver } from '../../support/selectionResolverOver';
 import type { GalaxyRowFixture, StructureRowFixture } from '../../support/selectionResolverOver';
@@ -55,7 +54,7 @@ const EMPTY_STRUCTURES: StructureRowFixture = { byId: () => null, byCategory: ()
 /** The galaxyCatalog Layer's slice: one SDSS cloud carrying the durable id under test. */
 function makeSdssGalaxies(objId: bigint): GalaxyRowFixture {
   return {
-    catalogs: new Map([[Source.SDSS, makeCloud(objId)]]),
+    catalogs: new Map([['sdss', makeCloud(objId)]]),
   } as unknown as GalaxyRowFixture;
 }
 
@@ -71,7 +70,7 @@ function buildStore() {
 // SDSS ships tier variants, so its request names `medium` vs `large` — different.
 // Used throughout as the "source that reloads on medium→large" test case.
 const SDSS_OBJ_ID = 1237668393006604288n;
-const SDSS_REF = { type: 'galaxyCatalog' as const, source: Source.SDSS, index: 0 };
+const SDSS_REF = { type: 'galaxyCatalog' as const, source: 'sdss', index: 0 };
 
 describe('captureGalaxyFocusIds', () => {
   it('a tiered enabled source is captured with its durable id', () => {
@@ -88,7 +87,7 @@ describe('captureGalaxyFocusIds', () => {
     expect(result).toHaveLength(1);
     expect(result[0]).toMatchObject({
       slot: 'select',
-      source: Source.SDSS,
+      source: 'sdss',
       focusId: `sdss-${SDSS_OBJ_ID}`,
     });
   });
@@ -105,7 +104,7 @@ describe('captureGalaxyFocusIds', () => {
     );
 
     expect(result).toHaveLength(1);
-    expect(result[0]).toMatchObject({ slot: 'focus', source: Source.SDSS });
+    expect(result[0]).toMatchObject({ slot: 'focus', source: 'sdss' });
   });
 
   it('does NOT capture a galaxy ref when the request does not drift across prev→next', () => {
@@ -126,7 +125,7 @@ describe('captureGalaxyFocusIds', () => {
   it('a tier-agnostic source is not captured', () => {
     // 2MRS and Famous have empty tierTargets, so galaxyCatalogRequest names the
     // same request for every tier — every swap, not just one pair, must skip.
-    for (const source of [Source.TwoMRS, Source.FamousGalaxy]) {
+    for (const source of ['2mrs', 'famousGalaxy']) {
       for (const [prevTier, nextTier] of [
         ['small', 'large'],
         ['medium', 'large'],

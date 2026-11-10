@@ -6,7 +6,7 @@ import { dirname, join } from 'node:path';
 import sharp from 'sharp';
 
 import { eoxTileSource } from '../../../tools/textures/eoxTileSource';
-import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
+import type { LonLatBounds } from '../../../src/layers/body/surfaceTiles/format/@types/LonLatBounds';
 
 const EOX_MAX_LEVEL = 13;
 const EOX_TILE_PX = 256;

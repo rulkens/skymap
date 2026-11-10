@@ -109,6 +109,7 @@ pnpm-debug.log*
 !/data/pgc_aliases.json
 !/data/raw/**/README.md
 !/data/raw/**/*.sha256
+!/data/raw/streams/wikipedia_streams_cache.json
 !/data/raw/fonts/*.ttf
 !/data/raw/fonts/OFL.txt
 # Hand-drawn scene-workbench mesh outlines: authored input, not a bake output.

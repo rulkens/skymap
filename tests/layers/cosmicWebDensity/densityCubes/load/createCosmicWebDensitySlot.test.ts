@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createCosmicWebDensitySlot } from '../../../../../src/layers/cosmicWebDensity/densityCubes/load/createCosmicWebDensitySlot';
 import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../../../../../src/layers/cosmicWebDensity/sources/cosmicWebDensitySourceRows';
 import type { VolumeFieldRenderer } from '../../../../../src/@types/rendering/VolumeFieldRenderer';
-import type { CosmicWebDensityFieldId } from '../../../../../src/@types/data/volume/CosmicWebDensityFieldId';
+import type { CosmicWebDensityFieldId } from '../../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityFieldId';
 
 vi.mock(
   '../../../../../src/layers/cosmicWebDensity/densityCubes/load/cosmicWebDensityFetcher',
@@ -20,7 +20,7 @@ describe('createCosmicWebDensitySlot', () => {
       upload: vi.fn(),
       unload: vi.fn(),
     } as unknown as VolumeFieldRenderer<CosmicWebDensityFieldId>;
-    const entry = COSMIC_WEB_DENSITY_SOURCE_ROWS[1][1];
+    const entry = COSMIC_WEB_DENSITY_SOURCE_ROWS[1];
     const slot = createCosmicWebDensitySlot(entry, renderer);
 
     void slot.load({ binBaseName: entry.binBaseName });

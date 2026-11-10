@@ -7,7 +7,7 @@
 
 import { memo } from 'react';
 import type { CosmicWebDensitySettings } from '../../@types/CosmicWebDensitySettings';
-import type { CosmicWebDensityFieldId } from '../../../../@types/data/volume/CosmicWebDensityFieldId';
+import type { CosmicWebDensityFieldId } from '../../@types/CosmicWebDensityFieldId';
 import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../../sources/cosmicWebDensitySourceRows';
 import CollapsibleSection from '../../../../components/SettingsPanel/CollapsibleSection';
 import styles from '../../../../components/SettingsPanel/SettingsPanel.module.css';
@@ -29,7 +29,7 @@ function CosmicWebDensitySection({
 }: CosmicWebDensitySectionProps) {
   return (
     <CollapsibleSection title={title} headerToggle={enabled} onHeaderToggleChange={onEnabledChange}>
-      {COSMIC_WEB_DENSITY_SOURCE_ROWS.map(([, entry]) => (
+      {COSMIC_WEB_DENSITY_SOURCE_ROWS.map((entry) => (
         <div className={styles.panelRow} key={entry.id}>
           <label htmlFor={`toggle-cosmic-web-density-${entry.id}`}>{entry.label}</label>
           <input

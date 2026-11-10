@@ -899,6 +899,269 @@ unclear, and no entry here reads them as a licence.
 - **Modified:** Yes. Baked to a triangle mesh with normals.
 - **Checked:** 2026-10-07: <https://dataverse.harvard.edu/api/datasets/:persistentId/?persistentId=doi:10.7910/DVN/INB1RB>
 
+### The Sagittarius stream N-body model (Vasiliev et al. 2021)
+
+<!-- attribution: id=vasiliev2021; keys=vasiliev2021.* -->
+
+- **What:** The present-day snapshot of an N-body model of the disrupting
+  Sagittarius dwarf galaxy, 200,000 star particles (`Sgr_snapshot/stars.txt`
+  of `Sgr_stream_simulations.zip`).
+- **By:** Vasiliev, Belokurov & Erkal 2021, "Tango for three: Sagittarius,
+  LMC, and the Milky Way", MNRAS 501, 2279.
+- **Licence:** Creative Commons Attribution 4.0 International (the Zenodo
+  record).
+- **Use:** Free with credit
+- **Attribution:** Cite the paper and the dataset: Vasiliev, Belokurov &
+  Erkal 2021, Zenodo, doi:10.5281/zenodo.4300977.
+- **Upstream:** <https://zenodo.org/records/4300977>
+- **Enters skymap:** `npm run fetch-vasiliev2021` → `data/raw/vasiliev2021/` →
+  `npm run build-stellar-streams` →
+  `public/data/stellar-streams/v1/stellar-streams.bin`.
+- **Modified:** Yes. 60,000 of the particles picked at random, rotated into
+  the equatorial frame and given a size, brightness and colour of our own.
+- **Checked:** 2026-11-06: <https://zenodo.org/api/records/4300977>
+
+### Stellar stream tracks (galstreams)
+
+<!-- attribution: id=galstreams; keys=galstreams.* -->
+
+- **What:** The published sky tracks, with distances and proper motions, of
+  the Milky Way's stellar streams (`tracks/*.ecsv`, `lib/master_log.txt`).
+- **By:** Cecilia Mateu. Mateu 2023, "galstreams: a library of Milky Way
+  stellar stream footprints and tracks", MNRAS 520, 5225; each track is from
+  the discovery or mapping paper its master-log row names.
+- **Licence:** BSD 3-Clause. "Copyright (c) 2017, Cecilia Mateu".
+- **Use:** Free with credit
+- **Attribution:** Keep the licence notice; cite Mateu 2023 and, for a single
+  stream, the paper of its track.
+- **Upstream:** <https://github.com/cmateu/galstreams> (commit `6a304c0`)
+- **Enters skymap:** `npm run fetch-galstreams` → `data/raw/galstreams/` →
+  `npm run build-stellar-streams` →
+  `public/data/stellar-streams/v1/stellar-streams.bin` and
+  `stellar_streams_meta.json`.
+- **Modified:** Yes. One track per stream resampled into particles scattered
+  across the stream's width.
+- **Checked:** 2026-11-06: <https://github.com/cmateu/galstreams/blob/main/LICENSE>
+
+### Globular-cluster metallicities (Harris catalogue)
+
+<!-- attribution: id=harris-gc -->
+
+- **What:** The [Fe/H] of 19 globular clusters whose streams skymap draws
+  (`mwgc.dat` Part II, December 2010 revision).
+- **By:** William E. Harris. Harris 1996, AJ 112, 1487 (2010 edition).
+- **Licence:** The file's own notice: "THE DATA IN THIS CATALOG ARE SUPPLIED
+  FREE OF CHARGE TO ALL USERS. ANY THIRD PARTY WHO SUPPLIES THIS CATALOG IN
+  TURN TO OTHER USERS MUST REFER TO THE ORIGINAL SOURCE, WHICH IS THIS
+  WEBSITE, AND MUST DO SO WITHOUT CHARGE OF ANY FEE."
+- **Use:** Conditions apply
+- **Attribution:** "Please acknowledge the use of this catalog in any
+  published work you derive from it ... please use 'Harris 1996 (2010
+  edition)'".
+- **Upstream:** <https://physics.mcmaster.ca/~harris/mwgc.dat>
+- **Enters skymap:** typed into
+  `tools/streams/data/streamMetallicity.constants.ts` → the stream colours
+  and the stream card's Metallicity row.
+- **Modified:** No values changed.
+- **Checked:** 2026-11-07: <https://physics.mcmaster.ca/~harris/mwgc.dat>
+
+### Stream metallicities from S5 (Li et al. 2022)
+
+<!-- attribution: id=s5-li2022 -->
+
+- **What:** The mean CaT [Fe/H] of the streams in the S5 survey's Table 1.
+- **By:** Li et al. 2022, "S5: The Orbital and Chemical Properties of One
+  Dozen Stellar Streams", ApJ 928, 30.
+- **Licence:** A published paper; a few of its numbers used.
+- **Use:** Reference only
+- **Attribution:** Cite the paper.
+- **Upstream:** <https://arxiv.org/abs/2110.06950>
+- **Enters skymap:** typed into
+  `tools/streams/data/streamMetallicity.constants.ts` → the stream colours
+  and the stream card's Metallicity row.
+- **Modified:** Orphan and Chenab, measured apart, enter as one
+  giant-weighted mean (galstreams has one Orphan-Chenab stream).
+- **Checked:** 2026-11-07: <https://arxiv.org/e-print/2110.06950> (the
+  source's Table 1).
+- **Not verified:** the journal's terms.
+
+### The Sagittarius metallicity gradient (Hayes et al. 2020)
+
+<!-- attribution: id=hayes2020 -->
+
+- **What:** The median [Fe/H] of the Sagittarius core and of its leading
+  arm, which set the stream's colour against stripping time.
+- **By:** Hayes et al. 2020, "Metallicity and α-Element Abundance Gradients
+  along the Sagittarius Stream as Seen by APOGEE", ApJ 889, 63.
+- **Licence:** A published paper; two of its numbers used.
+- **Use:** Reference only
+- **Attribution:** Cite the paper.
+- **Upstream:** <https://arxiv.org/abs/1912.06707>
+- **Enters skymap:** `tools/streams/data/streamsBuild.constants.ts`
+  (`SGR_FEH_*`) → `stellar-streams.bin`.
+- **Modified:** The two medians are joined by a line in stripping time of
+  our own.
+- **Checked:** 2026-11-07: <https://arxiv.org/e-print/1912.06707>
+- **Not verified:** the journal's terms.
+
+### Stream stellar masses from DES (Shipp et al. 2018)
+
+<!-- attribution: id=shipp2018 -->
+
+- **What:** The stellar masses of seven streams, from the paper's table of
+  derived parameters.
+- **By:** Shipp et al. 2018, "Stellar Streams Discovered in the Dark Energy
+  Survey", ApJ 862, 114.
+- **Licence:** A published paper; seven of its numbers used.
+- **Use:** Reference only
+- **Attribution:** Cite the paper, doi:10.3847/1538-4357/aacdab.
+- **Upstream:** <https://arxiv.org/abs/1801.03097>
+- **Enters skymap:** typed into
+  `tools/streams/data/streamStellarMass.constants.ts` → the stream card's
+  Stellar mass row.
+- **Modified:** No values changed. Each is the mass inside the DES
+  footprint; the four streams that run past it show as lower bounds.
+- **Checked:** 2026-11-07: <https://arxiv.org/e-print/1801.03097> (the
+  source's table "Derived parameters of stellar streams").
+- **Not verified:** the journal's terms.
+
+### The stellar mass of GD-1 (Koposov et al. 2010)
+
+<!-- attribution: id=koposov2010 -->
+
+- **What:** The stellar mass of the GD-1 stream, from its star count.
+- **By:** Koposov, Rix & Hogg 2010, "Constraining the Milky Way potential
+  with a 6-D phase-space map of the GD-1 stellar stream", ApJ 712, 260.
+- **Licence:** A published paper; one of its numbers used.
+- **Use:** Reference only
+- **Attribution:** Cite the paper, doi:10.1088/0004-637X/712/1/260.
+- **Upstream:** <https://arxiv.org/abs/0907.1085>
+- **Enters skymap:** typed into
+  `tools/streams/data/streamStellarMass.constants.ts` → the stream card's
+  Stellar mass row.
+- **Modified:** No values changed.
+- **Checked:** 2026-11-07: <https://arxiv.org/e-print/0907.1085> (the source's
+  section "Stellar population of the stream").
+- **Not verified:** the journal's terms.
+
+### The stellar mass of the Jet stream (Jethwa et al. 2018)
+
+<!-- attribution: id=jethwa2018 -->
+
+- **What:** The stellar mass of the Jet stream, from its main-sequence turnoff.
+- **By:** Jethwa et al. 2018, "Discovery of a thin stellar stream in the SLAMS
+  survey", MNRAS 480, 5342.
+- **Licence:** A published paper; one of its numbers used.
+- **Use:** Reference only
+- **Attribution:** Cite the paper, doi:10.1093/mnras/sty2226.
+- **Upstream:** <https://arxiv.org/abs/1711.09103>
+- **Enters skymap:** typed into
+  `tools/streams/data/streamStellarMass.constants.ts` → the stream card's
+  Stellar mass row.
+- **Modified:** No values changed.
+- **Checked:** 2026-11-07: <https://arxiv.org/e-print/1711.09103> (the
+  source's section "The progenitor?").
+- **Not verified:** the journal's terms.
+
+### The stellar mass of the NGC 5466 stream (Jensen et al. 2021)
+
+<!-- attribution: id=jensen2021 -->
+
+- **What:** The stellar mass of the detected part of the NGC 5466 stream.
+- **By:** Jensen et al. 2021, "Uncovering fossils of the distant Milky Way with
+  UNIONS: NGC 5466 and its stellar stream", MNRAS 507, 1923.
+- **Licence:** A published paper; one of its numbers used.
+- **Use:** Reference only
+- **Attribution:** Cite the paper, doi:10.1093/mnras/stab2325.
+- **Upstream:** <https://arxiv.org/abs/2108.04340>
+- **Enters skymap:** typed into
+  `tools/streams/data/streamStellarMass.constants.ts` → the stream card's
+  Stellar mass row.
+- **Modified:** No values changed.
+- **Checked:** 2026-11-07: <https://arxiv.org/e-print/2108.04340> (the
+  source's subsection "Luminosity").
+- **Not verified:** the journal's terms.
+
+### The stellar mass of the Ophiuchus stream (Caldwell et al. 2020)
+
+<!-- attribution: id=caldwell2020 -->
+
+- **What:** The total mass of the stars of the Ophiuchus stream.
+- **By:** Caldwell et al. 2020, "A Larger Extent for the Ophiuchus Stream",
+  AJ 159, 287.
+- **Licence:** A published paper; one of its numbers used.
+- **Use:** Reference only
+- **Attribution:** Cite the paper, doi:10.3847/1538-3881/ab8cbf.
+- **Upstream:** <https://arxiv.org/abs/2004.14350>
+- **Enters skymap:** typed into
+  `tools/streams/data/streamStellarMass.constants.ts` → the stream card's
+  Stellar mass row.
+- **Modified:** No values changed.
+- **Checked:** 2026-11-07: <https://arxiv.org/e-print/2004.14350> (the
+  source's section "Discussion and conclusions").
+- **Not verified:** the journal's terms.
+
+### The stellar mass of the Cetus-Palca stream (Thomas & Battaglia 2022)
+
+<!-- attribution: id=thomas2022 -->
+
+- **What:** The stellar mass of the Cetus-Palca stream, from its luminosity
+  function.
+- **By:** Thomas & Battaglia 2022, "The Cetus-Palca stream: A disrupted
+  small dwarf galaxy", A&A 660, A29.
+- **Licence:** A published paper; one of its numbers used.
+- **Use:** Reference only
+- **Attribution:** Cite the paper, doi:10.1051/0004-6361/202142347.
+- **Upstream:** <https://arxiv.org/abs/2112.03973>
+- **Enters skymap:** typed into
+  `tools/streams/data/streamStellarMass.constants.ts` → the stream card's
+  Stellar mass row.
+- **Modified:** No values changed; the median of the paper's 100 realisations.
+- **Checked:** 2026-11-07: <https://arxiv.org/e-print/2112.03973> (the
+  source's section "Tracing the Cetus-Palca stream with different stellar
+  populations").
+- **Not verified:** the journal's terms.
+
+### The stellar mass of the Orphan-Chenab stream (Koposov et al. 2023)
+
+<!-- attribution: id=koposov2023 -->
+
+- **What:** The stellar mass of the visible part of the Orphan-Chenab stream.
+- **By:** Koposov et al. 2023, "S5: Probing the Milky Way and Magellanic Clouds
+  potentials with the 6-D map of the Orphan-Chenab stream", MNRAS 521, 4936.
+- **Licence:** A published paper; one of its numbers used.
+- **Use:** Reference only
+- **Attribution:** Cite the paper, doi:10.1093/mnras/stad551.
+- **Upstream:** <https://arxiv.org/abs/2211.04495>
+- **Enters skymap:** typed into
+  `tools/streams/data/streamStellarMass.constants.ts` → the stream card's
+  Stellar mass row.
+- **Modified:** No values changed.
+- **Checked:** 2026-11-07: <https://arxiv.org/e-print/2211.04495> (the
+  source's section "Stream density").
+- **Not verified:** the journal's terms.
+
+### Old-population colours (MIST isochrones)
+
+<!-- attribution: id=mist -->
+
+- **What:** The light shares and B−V colours of giants, turnoff stars and
+  the horizontal branch at two metallicities, read off 12.6 Gyr isochrones.
+- **By:** The MIST project. Dotter 2016, ApJS 222, 8; Choi et al. 2016, ApJ
+  823, 102 (MIST v1.2).
+- **Licence:** Not stated for the model grids. The references page asks:
+  "Please cite the following papers in a publication that makes use of the
+  MIST models".
+- **Use:** Reference only
+- **Attribution:** Cite Dotter 2016 and Choi et al. 2016.
+- **Upstream:** <https://waps.cfa.harvard.edu/MIST/model_grids.html>
+  (`MIST_v1.2_vvcrit0.4_UBVRIplus.txz`)
+- **Enters skymap:** `tools/streams/data/streamsBuild.constants.ts`
+  (`STREAM_POPULATION_*`) → `stellar-streams.bin`.
+- **Modified:** Yes. Integrated by us over a Kroupa initial mass function
+  into two rounded anchors; nothing of MIST's is shipped as a file.
+- **Checked:** 2026-11-07: <https://waps.cfa.harvard.edu/MIST/references.html>
+
 ### Filaments (DisPerSE)
 
 <!-- attribution: id=disperse; keys=filaments.cache-dir -->
@@ -986,12 +1249,13 @@ paying a fee."
 
 ### Galaxy photographs fetched from Wikipedia (3 images) and galaxy descriptions
 
-<!-- attribution: id=wikipedia; keys=famous.wikipedia-cache; hosts=en.wikipedia.org -->
+<!-- attribution: id=wikipedia; keys=famous.wikipedia-cache,streams.wikipedia-cache; hosts=en.wikipedia.org -->
 
 - **What:** The lead image of the Wikipedia article for the three listed
   galaxies with no curated photograph (`c52`, `c53`, `c61`), and the
-  article's opening sentences as the description of about 50 galaxies. The
-  app's cards also link to Wikipedia articles.
+  article's opening sentences as the description of about 50 galaxies and of
+  the six stellar streams that have an article. The app's cards also link to
+  Wikipedia articles.
 - **By:** Wikipedia contributors; the images' authors on Wikimedia Commons.
 - **Licence:** Text: CC BY-SA 4.0 (and GFDL), per the Wikimedia Terms of Use.
   Images, as Commons states on 2026-10-07: `c52` NGC 4697, CC BY-SA 3.0 (author given
@@ -1006,7 +1270,9 @@ paying a fee."
 - **Enters skymap:** `tools/famous/fetchFamousImages.ts` →
   `data/raw/famous/wikipedia_famous_cache.json` → `public/images/famous/` and
   `famous_galaxies_meta.json`; descriptions also sit in
-  `data/seeds/famous_galaxies.seed.json`.
+  `data/seeds/famous_galaxies.seed.json`. Streams: `npm run
+  build-stellar-streams` → `data/raw/streams/wikipedia_streams_cache.json` →
+  `stellar_streams_meta.json`.
 - **Modified:** Images resized and faded at the edge; text taken as is.
 - **Checked:** 2026-10-07: <https://foundation.wikimedia.org/wiki/Policy:Terms_of_Use>,
   <https://commons.wikimedia.org/w/api.php> (the three files)
@@ -2862,17 +3128,18 @@ and where they come from".
 
 ### Links to papers, repositories and reference pages
 
-<!-- attribution: id=outbound-links; hosts=arxiv.org,doi.org,github.com,caniuse.com,opensource.org -->
+<!-- attribution: id=outbound-links; hosts=arxiv.org,doi.org,github.com,caniuse.com,opensource.org,www.youtube.com -->
 
 - **What:** Plain links in the app's exhibits, credits and page head: papers
-  on arXiv and by DOI, repositories on GitHub, the WebGPU support table, the
-  MIT licence text. Nothing is fetched from them.
+  on arXiv and by DOI, repositories on GitHub, a Nature video on YouTube, the
+  WebGPU support table, the MIT licence text. Nothing is fetched or embedded.
 - **By:** Their respective owners.
 - **Licence:** None applies to a link.
 - **Use:** Reference only
 - **Attribution:** None.
 - **Upstream:** the links themselves.
-- **Enters skymap:** `src/data/exhibits/*.ts`, `src/components/Splash/`,
+- **Enters skymap:** the exhibits' `*.copy.ts` (`src/compositions/exhibits/`,
+  `src/layers/*/exhibits/`), `src/components/Splash/`,
   `src/unsupportedPage.ts`, `index.html`.
 - **Modified:** Not applicable.
 - **Checked:** 2026-10-07: no page opened.

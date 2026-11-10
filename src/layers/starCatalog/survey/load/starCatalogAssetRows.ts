@@ -11,12 +11,12 @@ import { STAR_CATALOG_SOURCE_ROWS } from '../../sources/starCatalogSourceRows';
 export function starCatalogAssetRows(
   runtime: StarCatalogRuntime,
 ): readonly AssetWiringRow<unknown, unknown, StarCatalogAssetKey>[] {
-  const surveyRows = STAR_CATALOG_SOURCE_ROWS.filter(([, entry]) => entry.binBaseName !== null).map(
-    ([source, { id }]): AssetWiringRow<unknown, unknown, StarCatalogAssetKey> => {
+  const surveyRows = STAR_CATALOG_SOURCE_ROWS.filter((entry) => entry.binBaseName !== null).map(
+    ({ id }): AssetWiringRow<unknown, unknown, StarCatalogAssetKey> => {
       return {
-        key: source,
-        slot: runtime.catalogs.get(source)!,
-        req: (tier) => ({ source, tier }),
+        key: id,
+        slot: runtime.catalogs.get(id)!,
+        req: (tier) => ({ source: id, tier }),
         demand: { near: { band: 'survey', edge: 'out', lead: 10, release: 100 } },
         priority: 50, // one rank for every star catalog: the Earth boot view's own scale rung
         gates: { address: 'starCatalog', item: id },

@@ -1,2 +1,2 @@
-/** The asset row this Layer authors: keyed by name, though flow also has a `Source` code. */
+/** The asset row this Layer authors: keyed by name. */
 export type FlowAssetKey = 'flow';

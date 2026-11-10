@@ -1,4 +1,4 @@
-import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/structureFocusSubsystem';
+import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/recedingFocusSubsystem';
 import { describe, expect, it } from 'vitest';
 import { produceStructureLabels } from '../../../../../src/layers/structure/markers/present/produceStructureLabels';
 import { createStructureStore } from '../../../../../src/layers/structure/catalog/load/createStructureStore';
@@ -15,10 +15,9 @@ import type { StructureStore } from '../../../../../src/layers/structure/catalog
 import type { StructureId } from '../../../../../src/@types/data/structure/StructureId';
 import type { StructureScale } from '../../../../../src/@types/data/structure/StructureScale';
 import { structurePickCodes } from '../../../../support/layerPickCodes';
-import { fakePickCode } from '../../../../support/fakePickCode';
 
 // Codes from 40 up: a stamp that packs a catalog value fails the decode below.
-const PICK_CODES = structurePickCodes(fakePickCode());
+const PICK_CODES = structurePickCodes();
 
 // produceStructureLabels reads its `store` argument for the records,
 // `state.selection.focus` for focusedOnly mode and `state.settings.labels`; the

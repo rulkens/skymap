@@ -5,7 +5,7 @@
  */
 
 import { BLACK_HOLE_FOCUS_PREFIX } from './blackHoleFocusPrefix';
-import type { BlackHoleId } from '../../../../@types/data/blackHole/BlackHoleId';
+import type { BlackHoleId } from '../../@types/BlackHoleId';
 
 export function encodeBlackHoleFocusId(id: BlackHoleId): string {
   return `${BLACK_HOLE_FOCUS_PREFIX}${id}`;

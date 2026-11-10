@@ -7,7 +7,7 @@ import { ORBITAL_ELEMENTS } from '../../../../src/data/bodies/orbitalElements';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
-import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../../../src/data/bodies/seededStarCatalogsBySource';
+import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../../../src/layers/starCatalog/seededStars/data/seededStarCatalogsBySource';
 import { SURFACE_FIXED_SITES } from '../../../../src/data/bodies/surfaceFixedSites';
 import { APP_EXHIBIT_REGISTRY } from '../../../../src/compositions/appExhibits';
 import { EARTH_PLACES } from '../../../../src/data/palette/earthPlaces';
@@ -235,7 +235,7 @@ const places = EARTH_PLACES.map(
 );
 
 const milkyWay = focusRow({ name: MILKY_WAY_NAMES[0], kind: 'milkyWay', id: MILKY_WAY_FOCUS_ID });
-const blackHoles = BLACK_HOLE_SOURCE_ROWS.map(([, entry]) =>
+const blackHoles = BLACK_HOLE_SOURCE_ROWS.map((entry) =>
   focusRow({
     name: entry.detailLabel,
     kind: 'blackHole',

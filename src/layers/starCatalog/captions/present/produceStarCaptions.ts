@@ -11,7 +11,7 @@ import type { LayerScreenLabel } from '../../../../@types/engine/layer/LayerScre
 import type { CaptionSourceRow } from '../@types/CaptionSourceRow';
 import type { StarCatalogRuntime } from '../../@types/StarCatalogRuntime';
 import type { ForegroundCaption } from '../../../../services/engine/presentation/foregroundCaption';
-import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../../../data/bodies/seededStarCatalogsBySource';
+import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../seededStars/data/seededStarCatalogsBySource';
 import { sceneBodyStates } from '../../../../services/engine/frame/sceneBodyStates';
 import { captionComposeContextOf } from '../../../../utils/labels/captionComposeContextOf';
 import { bodyCaption } from '../../../../utils/labels/bodyCaption';

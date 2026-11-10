@@ -10,7 +10,7 @@
  * legacy sprite dust, not a sub-toggle of the master dust pill.
  */
 import type { ReactNode } from 'react';
-import type { GalaxyDustCloudParams } from '../../../../../src/@types/galaxy/GalaxyDustCloudParams';
+import type { GalaxyDustCloudParams } from '../../../../../src/layers/milkyWay/field/dust/@types/GalaxyDustCloudParams';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { fieldTuningPatched } from '../../state/slices/fieldTuningSlice';
 import { renderPatched } from '../../state/slices/renderSlice';

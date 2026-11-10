@@ -11,7 +11,6 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { createStarCatalogRenderer } from '../../../../../src/layers/starCatalog/survey/render/starCatalogRenderer';
-import { Source } from '../../../../../src/data/source';
 import { STAR_FOCUS_AT_REST } from '../../../../fixtures/starFocusAtRest';
 import type { Octree } from '../../../../../src/@types/octree/Octree';
 import type { StarCatalogCutDrawArgs } from '../../../../../src/layers/starCatalog/octreeCut/@types/StarCatalogCutDrawArgs';
@@ -57,7 +56,7 @@ const CATALOG = {
 
 function args(viewSlot: number): StarCatalogCutDrawArgs {
   return {
-    source: Source.GaiaStars,
+    source: 'gaiaStars',
     focus: STAR_FOCUS_AT_REST,
     stream: 'leaf',
     capture: false,
@@ -76,7 +75,7 @@ describe('starCatalogRenderer viewSlot isolation', () => {
   it('writes each slot camera uniform into a different physical buffer', () => {
     const device = mockDevice();
     const renderer = createStarCatalogRenderer(device, 'rgba16float');
-    renderer.upload(Source.GaiaStars, CATALOG, 0);
+    renderer.upload('gaiaStars', CATALOG, 0);
     const pass = {
       setPipeline: vi.fn(),
       setBindGroup: vi.fn(),
@@ -97,7 +96,7 @@ describe('starCatalogRenderer viewSlot isolation', () => {
   it('the leaf and aggregate streams of one view slot write different camera buffers', () => {
     const device = mockDevice();
     const renderer = createStarCatalogRenderer(device, 'rgba16float');
-    renderer.upload(Source.GaiaStars, CATALOG, 0);
+    renderer.upload('gaiaStars', CATALOG, 0);
     const pass = {
       setPipeline: vi.fn(),
       setBindGroup: vi.fn(),
@@ -118,7 +117,7 @@ describe('starCatalogRenderer viewSlot isolation', () => {
   // Aggregates draw linear for `star-upsample` to knee; a capture face has no upsample.
   it('picks the kneed pipeline for leaves and capture aggregates, linear for real-view aggregates', () => {
     const renderer = createStarCatalogRenderer(mockDevice(), 'rgba16float');
-    renderer.upload(Source.GaiaStars, CATALOG, 0);
+    renderer.upload('gaiaStars', CATALOG, 0);
     const setPipeline = vi.fn();
     const pass = {
       setPipeline,

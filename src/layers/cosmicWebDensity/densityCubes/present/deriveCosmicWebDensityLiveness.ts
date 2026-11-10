@@ -10,7 +10,7 @@
 
 import type { PassState } from '../../../../@types/engine/frame/PassState';
 import type { FrameView } from '../../../../@types/engine/frame/FrameView';
-import type { CosmicWebDensityFieldId } from '../../../../@types/data/volume/CosmicWebDensityFieldId';
+import type { CosmicWebDensityFieldId } from '../../@types/CosmicWebDensityFieldId';
 import type { VolumeFieldLiveness } from '../../../../@types/rendering/VolumeFieldLiveness';
 import type { CosmicWebDensityRuntime } from '../../@types/CosmicWebDensityRuntime';
 import { deriveVolumeLiveness } from '../utils/deriveVolumeLiveness';

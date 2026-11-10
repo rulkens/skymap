@@ -5,7 +5,7 @@
  * (Its caption's gates are pinned in `sources/sgrAStar.test.ts`.)
  */
 
-import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/structureFocusSubsystem';
+import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/recedingFocusSubsystem';
 import { describe, it, expect, vi } from 'vitest';
 
 import { produceBlackHoleCaptions } from '../../../../../src/layers/blackHoles/markers/present/produceBlackHoleCaptions';

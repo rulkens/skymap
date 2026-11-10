@@ -1,4 +1,4 @@
-// milkyWay/ismMap/placeDigVeil.wesl — GPU port of hiiRegions.ts's
+// milkyWay/ismMap/placeDigVeil.wesl — GPU port of buildHiiShellsAndYoungWithSegments.ts's
 // buildDigVeil, one invocation per particle SLOT (DIG_MAX_COUNT ceiling).
 // The CPU still decides slot COUNT (computeDigVeilBudget.ts); this shader
 // decides slot CONTENT, including the map-usability gate itself (see
@@ -21,11 +21,11 @@ import package::milkyWay::ismMap::ismMapDustCdfScan::ismMapDustRingEdges;
 
 const DIG_PI: f32 = 3.14159265358979323846;
 // The DIG-veil analogue of placeDust.wesl/placeArmCloud.wesl's own
-// CHILD_POLE_RATIO — hiiRegions.ts's DIG_CHILD_POLE_RATIO, this tier's own
+// CHILD_POLE_RATIO — buildDigVeil.ts's DIG_CHILD_POLE_RATIO, this tier's own
 // fixed constant, mirrored (not shared) like every other placement
 // shader's own pole-ratio constant.
 const DIG_CHILD_POLE_RATIO: f32 = 0.4;
-// (2*PI)^1.5 — hiiRegions.ts's TAU_ROOT3 (:114), the isotropic Gaussian's
+// (2*PI)^1.5 — tauRoot3.ts's TAU_ROOT3 (:114), the isotropic Gaussian's
 // own normalisation constant.
 const TAU_ROOT3: f32 = 15.749609945722418;
 
@@ -136,7 +136,7 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   let axisAlong = surf.along * cosT + surf.across * sinT;
   let axisAcross = surf.across * cosT - surf.along * sinT;
 
-  // Child scatter — hiiRegions.ts:607-632. This tier's OWN elongation
+  // Child scatter — buildDigVeil.ts. This tier's OWN elongation
   // convention (sqrt-split, area-preserving on the scatter footprint,
   // mirroring placeDust.wesl's own area-preserving aspect) — NOT
   // clusteredDiscPlacement.wesl's shared child-scatter tail, which applies

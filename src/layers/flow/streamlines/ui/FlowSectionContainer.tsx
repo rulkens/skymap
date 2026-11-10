@@ -24,7 +24,7 @@ import FlowSection from './FlowSection';
 import { useAppDispatch, useAppSelector } from '../../../../store/hooks';
 import { selectFlow } from '../../state/flow/selectors';
 import { setFlow, setFlowEnabled } from '../../state/flow/slice';
-import type { FlowFieldDefaults } from '../../../../@types/data/flow/FlowFieldDefaults';
+import type { FlowFieldDefaults } from '../../@types/FlowFieldDefaults';
 import type { LayerMainSectionProps } from '../../../../@types/engine/layer/LayerMainSectionProps';
 
 function FlowSectionContainer({ title }: LayerMainSectionProps): React.ReactElement {

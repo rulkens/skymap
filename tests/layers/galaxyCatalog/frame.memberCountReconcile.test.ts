@@ -7,12 +7,10 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { galaxyCatalogPlanner } from '../../../src/layers/galaxyCatalog/frame';
-import { Source } from '../../../src/data/source';
-import { galaxyCatalogIdOf } from '../../../src/utils/galaxyCatalogIdOf';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import { makeGalaxyCatalogFade } from '../../fixtures/makeGalaxyCatalogFade';
 import { makeGalaxyCatalogItems } from '../../fixtures/makeGalaxyCatalogItems';
-import type { GalaxyCatalogSourceType } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogSourceType';
+import type { GalaxyCatalogId } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
@@ -35,7 +33,7 @@ const CLUSTER = placedStructureRow({
 });
 
 /** The two catalogs this file's fixtures populate. */
-const SDSS_AND_TWOMRS: readonly GalaxyCatalogSourceType[] = [Source.SDSS, Source.TwoMRS];
+const SDSS_AND_TWOMRS: readonly GalaxyCatalogId[] = ['sdss', '2mrs'];
 
 function catalogAt(positions: ReadonlyArray<readonly [number, number, number]>): GalaxyCatalog {
   const flat = new Float32Array(positions.length * 3);
@@ -48,11 +46,8 @@ const SNAPSHOT = { nowMs: 0 } as unknown as ReadyFrameContext;
 const VIEWS = [galaxyPlannerViewOf()];
 
 /** `visible` are the catalogs core hands a value above 0: they are the mask. */
-function fadeOf(visible: readonly GalaxyCatalogSourceType[] = SDSS_AND_TWOMRS) {
-  return makeGalaxyCatalogFade(
-    Object.fromEntries(visible.map((s) => [galaxyCatalogIdOf(s), 1])),
-    0,
-  );
+function fadeOf(visible: readonly GalaxyCatalogId[] = SDSS_AND_TWOMRS) {
+  return makeGalaxyCatalogFade(Object.fromEntries(visible.map((s) => [s, 1])), 0);
 }
 
 function makeState(select: SelectionRowBase | null): PassState {
@@ -70,24 +65,14 @@ function makeState(select: SelectionRowBase | null): PassState {
   } as unknown as PassState;
 }
 
-// Every other limb of `frame` is inert here (no committed pgcAlias/hi-res
-// pair, a no-op planner walk) — this suite is only about this reconcile.
-function makeRuntime(catalogs: Map<number, GalaxyCatalog>) {
+// No committed pgcAlias, so the alias-index reconcile stays inert here.
+function makeRuntime(catalogs: Map<GalaxyCatalogId, GalaxyCatalog>) {
   const publish = vi.fn();
   const runtime = {
-    hiResFamous: { committed: () => null },
-    diskPlannerWalk: { runFrame: vi.fn() },
-    proceduralDisks: { beginFrame: vi.fn(() => ({})) },
-    texturedDisks: {
-      beginFrame: vi.fn(() => ({})),
-      hasInFlightWork: () => false,
-      hasFadingContent: () => false,
-    },
     catalogs,
     get records() {
       return galaxyRecordsOver(catalogs);
     },
-    famousMeta: [],
     catalogsVersion: 0,
     pgcAlias: { committed: () => null },
     publish,
@@ -97,7 +82,7 @@ function makeRuntime(catalogs: Map<number, GalaxyCatalog>) {
 
 describe('galaxyCatalog frame — structureMemberCount reconcile', () => {
   it('recomputes only when the key changes', () => {
-    const catalogs = new Map([[Source.SDSS, catalogAt([[1, 0, 0]])]]); // 1 inside
+    const catalogs = new Map([['sdss' as const, catalogAt([[1, 0, 0]])]]); // 1 inside
     const { runtime, publish } = makeRuntime(catalogs);
     const tick = galaxyCatalogPlanner(runtime);
 
@@ -112,7 +97,7 @@ describe('galaxyCatalog frame — structureMemberCount reconcile', () => {
   });
 
   it('publishes null when the selected row is not a structure', () => {
-    const catalogs = new Map([[Source.SDSS, catalogAt([[1, 0, 0]])]]);
+    const catalogs = new Map([['sdss' as const, catalogAt([[1, 0, 0]])]]);
     const { runtime, publish } = makeRuntime(catalogs);
     const tick = galaxyCatalogPlanner(runtime);
 
@@ -124,41 +109,32 @@ describe('galaxyCatalog frame — structureMemberCount reconcile', () => {
 
   it('recomputes when the visible source mask changes with the same selection', () => {
     const catalogs = new Map([
-      [Source.SDSS, catalogAt([[1, 0, 0]])], // 1 inside
-      [Source.TwoMRS, catalogAt([])], // loaded, no members
+      ['sdss' as const, catalogAt([[1, 0, 0]])], // 1 inside
+      ['2mrs' as const, catalogAt([])], // loaded, no members
     ]);
     const { runtime, publish } = makeRuntime(catalogs);
     const tick = galaxyCatalogPlanner(runtime);
 
-    tick.plan(SNAPSHOT, VIEWS, makeState(CLUSTER), fadeOf([Source.SDSS]));
+    tick.plan(SNAPSHOT, VIEWS, makeState(CLUSTER), fadeOf(['sdss']));
     expect(publish).toHaveBeenLastCalledWith({ structureMemberCount: 1 });
 
     // Same selection, same catalogsVersion — only the visible source swapped,
     // which is exactly what the renderer draws and the focus fade tracks.
-    tick.plan(SNAPSHOT, VIEWS, makeState(CLUSTER), fadeOf([Source.TwoMRS]));
+    tick.plan(SNAPSHOT, VIEWS, makeState(CLUSTER), fadeOf(['2mrs']));
     expect(publish).toHaveBeenLastCalledWith({ structureMemberCount: 0 });
   });
 
   it('recomputes when only catalogsVersion changes, same selection and mask (tier-swap recount)', () => {
     let catalogsVersion = 0;
-    let catalogs = new Map([[Source.SDSS, catalogAt([[1, 0, 0]])]]); // 1 inside
+    let catalogs = new Map([['sdss' as const, catalogAt([[1, 0, 0]])]]); // 1 inside
     const publish = vi.fn();
     const runtime = {
-      hiResFamous: { committed: () => null },
-      diskPlannerWalk: { runFrame: vi.fn() },
-      proceduralDisks: { beginFrame: vi.fn(() => ({})) },
-      texturedDisks: {
-        beginFrame: vi.fn(() => ({})),
-        hasInFlightWork: () => false,
-        hasFadingContent: () => false,
-      },
       get catalogs() {
         return catalogs;
       },
       get records() {
         return galaxyRecordsOver(catalogs);
       },
-      famousMeta: [],
       get catalogsVersion() {
         return catalogsVersion;
       },
@@ -175,7 +151,7 @@ describe('galaxyCatalog frame — structureMemberCount reconcile', () => {
     // bumped — must recompute against the new array, not reuse the stale count.
     catalogs = new Map([
       [
-        Source.SDSS,
+        'sdss' as const,
         catalogAt([
           [1, 0, 0],
           [2, 0, 0],

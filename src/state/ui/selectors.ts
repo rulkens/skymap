@@ -27,6 +27,7 @@ import { selectTakeoverSource } from '../takeover/selectors';
 import type { RootState } from '../../store/types';
 import type { UiState } from '../../@types/ui/UiState';
 import type { PaletteTabId } from '../../@types/palette/PaletteTabId';
+import type { CameraGesture } from '../../@types/ui/CameraGesture';
 
 const selectUi = (state: RootState): UiState => state[uiRoute];
 
@@ -42,6 +43,9 @@ export const selectSplashVisible = (state: RootState): boolean => selectUi(state
 
 export const selectSplashDismissedVersion = (state: RootState): number | null =>
   selectUi(state).splash.dismissedVersion;
+
+export const selectLearnedGestures = (state: RootState): Readonly<Record<CameraGesture, boolean>> =>
+  selectUi(state).learnedGestures;
 
 /** The HUD stack is faded out: hidden by Tab, under the splash, or yielded to a tour or exhibit. */
 export const selectUiStackHidden = (state: RootState): boolean =>
