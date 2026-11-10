@@ -58,7 +58,11 @@ export const cameraKinds: Pick<
     mark: 'bar',
     writes: () => ['lookAt'],
     label: (s) => ({ name: 'Look-at', op: '→', value: formatVec3(s.to, 'Mpc') }),
-    fields: [readoutField('to', 'Target'), overField(), easeField()],
+    fields: [
+      { key: 'to', param: 'to', label: 'Target', control: 'subjectPosition' },
+      overField(),
+      easeField(),
+    ],
   },
   spin: {
     mark: 'bar',
