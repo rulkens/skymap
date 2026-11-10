@@ -15,6 +15,7 @@ export const PRELUDE: FrameSection = {
     // Plan rows come first (`checkFrameOrder`'s boot rule), before any GPU step reads
     // what they publish (`runPlanSteps`).
     { kind: 'plan', name: 'galaxy-catalog' },
+    { kind: 'plan', name: 'galaxy-disks' },
     { kind: 'plan', name: 'flow' },
     { kind: 'plan', name: 'star-catalog' },
     { kind: 'plan', name: 'milky-way' },

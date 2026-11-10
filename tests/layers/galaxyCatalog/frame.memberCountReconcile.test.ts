@@ -70,24 +70,14 @@ function makeState(select: SelectionRowBase | null): PassState {
   } as unknown as PassState;
 }
 
-// Every other limb of `frame` is inert here (no committed pgcAlias/hi-res
-// pair, a no-op planner walk) — this suite is only about this reconcile.
+// No committed pgcAlias, so the alias-index reconcile stays inert here.
 function makeRuntime(catalogs: Map<number, GalaxyCatalog>) {
   const publish = vi.fn();
   const runtime = {
-    hiResFamous: { committed: () => null },
-    diskPlannerWalk: { runFrame: vi.fn() },
-    proceduralDisks: { beginFrame: vi.fn(() => ({})) },
-    texturedDisks: {
-      beginFrame: vi.fn(() => ({})),
-      hasInFlightWork: () => false,
-      hasFadingContent: () => false,
-    },
     catalogs,
     get records() {
       return galaxyRecordsOver(catalogs);
     },
-    famousMeta: [],
     catalogsVersion: 0,
     pgcAlias: { committed: () => null },
     publish,
@@ -144,21 +134,12 @@ describe('galaxyCatalog frame — structureMemberCount reconcile', () => {
     let catalogs = new Map([[Source.SDSS, catalogAt([[1, 0, 0]])]]); // 1 inside
     const publish = vi.fn();
     const runtime = {
-      hiResFamous: { committed: () => null },
-      diskPlannerWalk: { runFrame: vi.fn() },
-      proceduralDisks: { beginFrame: vi.fn(() => ({})) },
-      texturedDisks: {
-        beginFrame: vi.fn(() => ({})),
-        hasInFlightWork: () => false,
-        hasFadingContent: () => false,
-      },
       get catalogs() {
         return catalogs;
       },
       get records() {
         return galaxyRecordsOver(catalogs);
       },
-      famousMeta: [],
       get catalogsVersion() {
         return catalogsVersion;
       },

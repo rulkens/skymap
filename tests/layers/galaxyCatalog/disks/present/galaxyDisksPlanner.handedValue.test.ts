@@ -1,23 +1,23 @@
 /**
- * galaxyCatalogPlanner — the disk walk's visible catalogs and the LOD disks' per-source opacity
+ * galaxyDisksPlanner — the disk walk's visible catalogs and the LOD disks' per-source opacity
  * come from the value core hands the planner, never from settings or the fade
  * registry (the state stub carries neither a fade registry nor switches).
  */
 import { describe, it, expect, vi } from 'vitest';
 
-import { galaxyCatalogPlanner } from '../../../src/layers/galaxyCatalog/frame';
-import { Source } from '../../../src/data/source';
-import { galaxyCatalogIdOf } from '../../../src/utils/galaxyCatalogIdOf';
-import { makeGalaxyCatalogFade } from '../../fixtures/makeGalaxyCatalogFade';
-import { makeGalaxyCatalogItems } from '../../fixtures/makeGalaxyCatalogItems';
-import { FRUSTUM_FLOATS_PER_VIEW } from '../../../src/data/camera/frustumFloatsPerView';
-import type { DiskWalkInput } from '../../../src/layers/galaxyCatalog/lod/@types/DiskWalkInput';
-import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
-import { galaxyPlannerViewOf } from '../../helpers/frame/galaxyPlannerViewOf';
-import { OCCLUDER_CONE_FLOATS } from '../../../src/data/occlusion/occluderConeFloats';
-import type { PassState } from '../../../src/@types/engine/frame/PassState';
-import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
-import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
+import { galaxyDisksPlanner } from '../../../../../src/layers/galaxyCatalog/disks/present/galaxyDisksPlanner';
+import { Source } from '../../../../../src/data/source';
+import { galaxyCatalogIdOf } from '../../../../../src/utils/galaxyCatalogIdOf';
+import { makeGalaxyCatalogFade } from '../../../../fixtures/makeGalaxyCatalogFade';
+import { makeGalaxyCatalogItems } from '../../../../fixtures/makeGalaxyCatalogItems';
+import { FRUSTUM_FLOATS_PER_VIEW } from '../../../../../src/data/camera/frustumFloatsPerView';
+import type { DiskWalkInput } from '../../../../../src/layers/galaxyCatalog/lod/@types/DiskWalkInput';
+import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
+import { galaxyPlannerViewOf } from '../../../../helpers/frame/galaxyPlannerViewOf';
+import { OCCLUDER_CONE_FLOATS } from '../../../../../src/data/occlusion/occluderConeFloats';
+import type { PassState } from '../../../../../src/@types/engine/frame/PassState';
+import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { GalaxyCatalogRuntime } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 
 const SNAPSHOT = { nowMs: 0 } as unknown as ReadyFrameContext;
 const VIEWS = [galaxyPlannerViewOf()];
@@ -43,15 +43,12 @@ function walkInputFor(
     catalogs: new Map(),
     records: new Map(),
     famousMeta: [],
-    catalogsVersion: 0,
-    pgcAlias: { committed: () => null },
-    publish: vi.fn(),
   } as unknown as GalaxyCatalogRuntime;
-  galaxyCatalogPlanner(runtime).plan(snapshot, views, STATE, fade);
+  galaxyDisksPlanner(runtime).plan(snapshot, views, STATE, fade);
   return runFrame.mock.calls[0]![0] as DiskWalkInput;
 }
 
-describe('galaxyCatalogPlanner — handed value', () => {
+describe('galaxyDisksPlanner — handed value', () => {
   it('the planner walk hides a catalog whose handed value is 0', () => {
     const input = walkInputFor(makeGalaxyCatalogFade({ sdss: 0 }));
     expect(input.visibleCatalogs.has(galaxyCatalogIdOf(Source.SDSS))).toBe(false);
@@ -65,18 +62,20 @@ describe('galaxyCatalogPlanner — handed value', () => {
   });
 });
 
-describe('galaxyCatalogPlanner — view cull', () => {
+describe('galaxyDisksPlanner — view cull', () => {
   it('hands the walk every rig view, so a dome face sees its own galaxies', () => {
     const domeFaces = [...VIEWS, ...VIEWS, ...VIEWS, ...VIEWS, ...VIEWS];
     const input = walkInputFor(makeGalaxyCatalogFade({}), SNAPSHOT, domeFaces);
     expect(input.viewPlanes).toHaveLength(domeFaces.length * FRUSTUM_FLOATS_PER_VIEW);
   });
 
-
   // A gate that turned the cull off for captures made the list flip between culled and
   // whole-sky frames, and the whole-sky frames fed thumbnail fades back into capture bakes.
   it('culls to the rig views even while a sky capture band is open', () => {
-    const inBand = { ...SNAPSHOT, skyCapturesInBand: new Set(['solarSystem']) } as ReadyFrameContext;
+    const inBand = {
+      ...SNAPSHOT,
+      skyCapturesInBand: new Set(['solarSystem']),
+    } as ReadyFrameContext;
     expect(walkInputFor(makeGalaxyCatalogFade({}), inBand).viewPlanes).toHaveLength(
       FRUSTUM_FLOATS_PER_VIEW,
     );

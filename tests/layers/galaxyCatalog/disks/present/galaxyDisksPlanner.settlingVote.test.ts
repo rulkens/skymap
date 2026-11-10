@@ -1,5 +1,5 @@
 /**
- * The Layer's `galaxyCatalogPlanner` work votes. Both read the LANDED half of
+ * The Layer's `galaxyDisksPlanner` work votes. Both read the LANDED half of
  * the textured planner's thumbnail work, never the outstanding-fetch half:
  * `tileStream` calls `requestRender()` on every settle (success AND failure),
  * so an arrival wakes a frame by itself and neither vote has to hold the loop
@@ -9,26 +9,22 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 
-import { galaxyCatalogPlanner } from '../../../src/layers/galaxyCatalog/frame';
-import { makeGalaxyCatalogFade } from '../../fixtures/makeGalaxyCatalogFade';
-import { makeGalaxyCatalogItems } from '../../fixtures/makeGalaxyCatalogItems';
-import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
-import type { PassState } from '../../../src/@types/engine/frame/PassState';
-import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
-import { galaxyPlannerViewOf } from '../../helpers/frame/galaxyPlannerViewOf';
+import { galaxyDisksPlanner } from '../../../../../src/layers/galaxyCatalog/disks/present/galaxyDisksPlanner';
+import { makeGalaxyCatalogFade } from '../../../../fixtures/makeGalaxyCatalogFade';
+import { makeGalaxyCatalogItems } from '../../../../fixtures/makeGalaxyCatalogItems';
+import type { GalaxyCatalogRuntime } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
+import type { PassState } from '../../../../../src/@types/engine/frame/PassState';
+import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
+import { galaxyPlannerViewOf } from '../../../../helpers/frame/galaxyPlannerViewOf';
 
-// Same inert fixture as the other `frame` reconcile tests: nothing committed,
-// a no-op planner walk, no selection row — only the disk-work predicate
-// varies, which is what the votes read.
+// Inert fixture: nothing committed, a no-op planner walk — only the disk-work
+// predicate varies, which is what the votes read.
 function makeRuntime(fading: boolean) {
   return {
     hiResFamous: { committed: () => null },
     catalogs: new Map(),
     records: new Map(),
     famousMeta: [],
-    catalogsVersion: 0,
-    pgcAlias: { committed: () => null },
-    publish: vi.fn(),
     diskPlannerWalk: { runFrame: vi.fn() },
     proceduralDisks: { beginFrame: vi.fn(() => ({})) },
     texturedDisks: {
@@ -50,9 +46,9 @@ const SNAPSHOT = { nowMs: 0 } as unknown as ReadyFrameContext;
 const FADE = makeGalaxyCatalogFade();
 const VIEWS = [galaxyPlannerViewOf()];
 
-describe('galaxyCatalog frame — work votes', () => {
+describe('galaxyDisksPlanner — work votes', () => {
   it('votes both while a landed thumbnail is inside its load fade', () => {
-    const tick = galaxyCatalogPlanner(makeRuntime(true));
+    const tick = galaxyDisksPlanner(makeRuntime(true));
     expect(tick.plan(SNAPSHOT, VIEWS, STATE, FADE)).toEqual({
       value: undefined,
       awake: true,
@@ -65,7 +61,7 @@ describe('galaxyCatalog frame — work votes', () => {
   // whole 30 s deadline must cost neither a woken loop nor a sky re-bake. The
   // fixture has no `hasInFlightWork` at all — reading it here would throw.
   it('votes neither while a fetch is merely outstanding', () => {
-    const tick = galaxyCatalogPlanner(makeRuntime(false));
+    const tick = galaxyDisksPlanner(makeRuntime(false));
     expect(tick.plan(SNAPSHOT, VIEWS, STATE, FADE)).toEqual({
       value: undefined,
       awake: false,

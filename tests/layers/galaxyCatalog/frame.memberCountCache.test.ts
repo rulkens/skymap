@@ -26,13 +26,8 @@ const STATE = {
 function setup() {
   const publish = vi.fn();
   const runtime = {
-    hiResFamous: { committed: () => null },
-    diskPlannerWalk: { runFrame: vi.fn() },
-    proceduralDisks: { beginFrame: vi.fn(() => ({})) },
-    texturedDisks: { beginFrame: vi.fn(() => ({})), hasFadingContent: () => false },
     catalogs: new Map(),
     records: new Map(),
-    famousMeta: [],
     catalogsVersion: 0,
     pgcAlias: { committed: () => null },
     publish,
