@@ -5,15 +5,13 @@
  */
 import { formatDegrees } from '../utils/formatDegrees';
 import { formatSelectionRef } from '../utils/formatSelectionRef';
-import { formatVec3 } from '../utils/formatVec3';
 import { formatNumber } from '../../utils/format/formatNumber';
 import { formatQuantity } from '../../utils/format/formatQuantity';
-import { easeField, overField, readoutField } from './commonFields';
-import type { Effect } from '../../../../../src/@types/animation/Effect';
+import { easeField } from '../utils/fields/easeField';
+import { overField } from '../utils/fields/overField';
+import { readoutField } from '../utils/fields/readoutField';
+import { resolvedPosition } from '../utils/resolvedPosition';
 import type { RowKindRegistry } from '../../@types/kinds/RowKindRegistry';
-
-const resolvedPosition = (e: Effect): string =>
-  e.kind === 'setVec' ? formatVec3(e.to, 'Mpc') : '';
 
 export const subjectKinds: Pick<
   RowKindRegistry,

@@ -4,23 +4,14 @@
  * read the registry back: `createStructureKinds` takes it as a thunk instead of importing it, which
  * keeps `rowKinds.ts` the one place the registry is assembled and avoids an import cycle.
  */
+import { blendOf } from '../utils/blendOf';
+import { foldRepeats } from '../utils/foldRepeats';
 import { CHANNEL_FAMILY_LEGEND } from '../../data/channelFamilies';
 import { formatNameList } from '../../utils/format/formatNameList';
 import { formatQuantity } from '../../utils/format/formatQuantity';
 import type { Effect } from '../../../../../src/@types/animation/Effect';
-import type { SeqOverlap } from '../../../../../src/@types/animation/SeqOverlap';
 import type { RowKindRegistry } from '../../@types/kinds/RowKindRegistry';
 import type { ChannelFamily } from '../../@types/rows/ChannelFamily';
-
-/** Names in first-appearance order, repeats folded into `Name ×N`. */
-const foldRepeats = (names: readonly string[]): string[] => {
-  const counts = new Map<string, number>();
-  for (const name of names) counts.set(name, (counts.get(name) ?? 0) + 1);
-  return [...counts].map(([name, n]) => (n > 1 ? `${name} ×${n}` : name));
-};
-
-const blendOf = (overlap: SeqOverlap | undefined): number =>
-  overlap === undefined ? 0 : typeof overlap === 'number' ? overlap : Math.max(0, ...overlap);
 
 export function createStructureKinds(
   registry: () => RowKindRegistry,

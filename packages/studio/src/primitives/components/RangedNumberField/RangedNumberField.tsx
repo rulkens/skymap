@@ -1,6 +1,6 @@
 import { useId, useRef } from 'react';
 import Slider from '../../../../../../src/components/common/Slider/Slider';
-import { SLIDER_GESTURE_MS } from './NumberField.constants';
+import { SLIDER_GESTURE_MS } from './RangedNumberField.constants';
 
 type Props = {
   readonly value: number;

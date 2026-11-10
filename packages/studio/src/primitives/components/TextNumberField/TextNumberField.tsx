@@ -1,7 +1,7 @@
 import { useId, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
-import { SHIFT_FACTOR } from './NumberField.constants';
-import s from './NumberField.module.css';
+import { SHIFT_FACTOR } from './TextNumberField.constants';
+import s from './TextNumberField.module.css';
 
 type Props = {
   readonly value: number;

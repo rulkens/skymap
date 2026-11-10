@@ -11,7 +11,7 @@ import { readoutText } from '../../utils/readoutText';
 import { TOGGLE_OPTIONS } from './FieldRow.constants';
 import type { FieldSpec } from '../../../@types/kinds/FieldSpec';
 import type { RowRef } from '../../../@types/rows/RowRef';
-import type { InspectorSubject } from '../../@types/InspectorSubject';
+import type { InspectorSubject } from '../../../@types/rows/InspectorSubject';
 
 type Props = {
   readonly spec: FieldSpec<InspectorSubject>;

@@ -8,7 +8,7 @@ import { rootReducer } from '../../../../../src/store/rootReducer';
 import { oscillate } from '../../../../../src/services/engine/animation/effectHelpers';
 import FieldRow from '../../../src/inspector/components/FieldRow/FieldRow';
 import { inspectorSpec } from '../../../src/inspector/utils/inspectorSpec';
-import { rowSubject } from '../../../src/inspector/utils/rowSubject';
+import { rowSubject } from '../../../src/draft/utils/rowSubject';
 import { injectStudioSlice } from '../../../src/session/state/injectStudioSlice';
 import { studioOpened } from '../../../src/session/state/studioSlice';
 import { selectDraft, selectStudioState } from '../../../src/session/state/selectors';

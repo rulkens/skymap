@@ -3,34 +3,14 @@
  * orientation frame. Visibility rows list their addresses in the Value (`flow, labels +1`); a fade
  * puts the addresses in its qualifier so the Value stays the level (`→ 0 %`).
  */
+import { describeSettingsAction } from '../utils/describeSettingsAction';
+import { easeField } from '../utils/fields/easeField';
+import { formatAddresses } from '../utils/formatAddresses';
 import { formatSelectionRef } from '../utils/formatSelectionRef';
-import { formatNameList } from '../../utils/format/formatNameList';
+import { overField } from '../utils/fields/overField';
+import { readoutField } from '../utils/fields/readoutField';
 import { formatQuantity } from '../../utils/format/formatQuantity';
-import { easeField, overField, readoutField } from './commonFields';
-import { setFlow, setFlowEnabled } from '../../../../../src/layers/flow/state/flow/slice';
-import { setGalaxyCatalogVisible } from '../../../../../src/layers/galaxyCatalog/state/galaxyCatalogs/slice';
-import { setLabelsFocusedOnly } from '../../../../../src/state/settings/core/labelsSlice';
-import type { SettingsAction } from '../../../../../src/compositions/@types/SettingsAction';
 import type { RowKindRegistry } from '../../@types/kinds/RowKindRegistry';
-
-/** `flow`, `clusters labels` for `label:clusters`, and the bare item for a scoped address. */
-const formatAddress = (address: string): string => {
-  const parts = address.split(':');
-  if (parts[0] === 'label') return parts[2] ?? `${parts[1]} labels`;
-  return parts[1] ?? address;
-};
-
-const formatAddresses = (args: readonly string[]): string =>
-  formatNameList(args.map(formatAddress));
-
-const describeSettingsAction = (action: SettingsAction): string => {
-  if (setFlowEnabled.match(action)) return `flow ${action.payload ? 'on' : 'off'}`;
-  if (setFlow.match(action)) return 'flow tuned';
-  if (setGalaxyCatalogVisible.match(action)) {
-    return `${action.payload.id} ${action.payload.enabled ? 'on' : 'off'}`;
-  }
-  return setLabelsFocusedOnly.match(action) && action.payload ? 'labels focused' : 'labels all';
-};
 
 export const sceneKinds: Pick<
   RowKindRegistry,

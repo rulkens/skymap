@@ -1,5 +1,5 @@
-import RangedNumberField from './RangedNumberField';
-import TextNumberField from './TextNumberField';
+import RangedNumberField from '../RangedNumberField/RangedNumberField';
+import TextNumberField from '../TextNumberField/TextNumberField';
 
 type Props = {
   readonly value: number;

@@ -7,7 +7,8 @@ import { cameraKinds } from './cameraKinds';
 import { sceneKinds } from './sceneKinds';
 import { createStructureKinds } from './structureKinds';
 import { subjectKinds } from './subjectKinds';
-import { overField, readoutField } from './commonFields';
+import { overField } from '../utils/fields/overField';
+import { readoutField } from '../utils/fields/readoutField';
 import { formatQuantity } from '../../utils/format/formatQuantity';
 import type { RowKindRegistry } from '../../@types/kinds/RowKindRegistry';
 

@@ -2,7 +2,8 @@
 import { useEffect, useState } from 'react';
 
 import { clampDockFraction } from '../utils/clampDockFraction';
-import { DEFAULT_DOCK_FRACTION, DOCK_HEIGHT_ROW } from './useDockHeight.constants';
+import { DEFAULT_DOCK_FRACTION } from '../data/dockLimits';
+import { DOCK_HEIGHT_ROW } from './useDockHeight.constants';
 import { readPersisted } from '../../../../../src/utils/storage/readPersisted';
 
 export function useDockHeight(): readonly [number, (fraction: number) => void] {

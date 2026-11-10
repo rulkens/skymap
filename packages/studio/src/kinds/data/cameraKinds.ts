@@ -4,13 +4,18 @@
  * set, spin, rate and osc span several channels, so they leave `glyph` out and the model uses the
  * icon of the row's channel family.
  */
-import { CHANNEL_FAMILY } from '../../data/channelFamilies';
-import { formatDegrees } from '../utils/formatDegrees';
+import { channelControl } from '../utils/channelControl';
+import { channelField } from '../utils/fields/channelField';
+import { channelValue } from '../utils/channelValue';
+import { easeField } from '../utils/fields/easeField';
+import { familyOf } from '../utils/familyOf';
 import { formatVec3 } from '../utils/formatVec3';
+import { overField } from '../utils/fields/overField';
+import { readoutField } from '../utils/fields/readoutField';
+import { toField } from '../utils/fields/toField';
 import { formatNameList } from '../../utils/format/formatNameList';
 import { formatNumber } from '../../utils/format/formatNumber';
 import { formatQuantity } from '../../utils/format/formatQuantity';
-import { easeField, overField, readoutField } from './commonFields';
 import {
   DEFAULT_ALIGN_SEC,
   DEFAULT_LINGER,
@@ -18,8 +23,6 @@ import {
   DEFAULT_RAMP_SEC,
 } from '../../../../../src/services/engine/animation/pathDefaults';
 import type { Channel } from '../../../../../src/@types/animation/Channel';
-import type { FieldControl } from '../../@types/kinds/FieldControl';
-import type { FieldSpec } from '../../@types/kinds/FieldSpec';
 import type { RowKindRegistry } from '../../@types/kinds/RowKindRegistry';
 
 const SET_NAME: Record<Channel, string> = {
@@ -46,29 +49,6 @@ const BOB_NAME: Record<Channel, string> = {
   fov: 'Bob FOV',
   target: 'Bob pan',
 };
-
-/** A channel's scalar in the unit people read it in: Mpc for distance, degrees for angles. */
-const channelValue = (ch: Channel, value: number): string =>
-  ch === 'distance' ? formatQuantity(value, 'Mpc') : formatDegrees(value);
-
-const channelControl = (ch: Channel): FieldControl =>
-  ch === 'distance' ? 'mpc' : ch === 'target' ? 'number' : 'degrees';
-
-const channelField = <T extends { readonly ch: Channel }>(): FieldSpec<T> => ({
-  key: 'ch',
-  param: 'ch' as FieldSpec<T>['param'],
-  label: 'Channel',
-  control: 'channel',
-});
-
-const toField = <T extends { readonly ch: Channel; readonly to: number }>(): FieldSpec<T> => ({
-  key: 'to',
-  param: 'to' as FieldSpec<T>['param'],
-  label: 'Value',
-  control: (s) => channelControl(s.ch),
-});
-
-const familyOf = (ch: Channel) => [CHANNEL_FAMILY[ch]] as const;
 
 export const cameraKinds: Pick<
   RowKindRegistry,

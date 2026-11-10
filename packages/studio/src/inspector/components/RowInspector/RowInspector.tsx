@@ -10,7 +10,7 @@ import { formatRowTitle } from '../../utils/formatRowTitle';
 import { inspectorSpec } from '../../utils/inspectorSpec';
 import { resolvedText } from '../../utils/resolvedText';
 import { rowContext } from '../../utils/rowContext';
-import { rowSubject } from '../../utils/rowSubject';
+import { rowSubject } from '../../../draft/utils/rowSubject';
 import FieldRow from '../FieldRow/FieldRow';
 import type { ClipData } from '../../../../../../src/@types/animation/ClipData';
 import type { TimelineRow } from '../../../@types/rows/TimelineRow';
