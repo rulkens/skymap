@@ -629,15 +629,15 @@ error can name a child of a resolved `aimAt`), duration strings via `formatDurat
 perpetual osc, `∞` for a looping spin, `–` unresolved), label/writes/family from `ROW_KINDS`, and `cueSecs`
 from step starts, cue times and End.
 
-- [ ] Test (fixtures compile with the real `compileClip`) `an overlapped seq's second child starts overlap
+- [x] Test (fixtures compile with the real `compileClip`) `an overlapped seq's second child starts overlap
       seconds early`.
-- [ ] Test `collapsing a group hides its descendants and keeps the group row`.
-- [ ] Test `fork children are background rows with their own window`.
-- [ ] Test `waypoint rows span consecutive knot times and the last is Settle`.
-- [ ] Test `a group writes the union of its children's families`.
-- [ ] Test `an invalid compile marks exactly the culprit rows` (`all([dollyTo(300, 4), dollyTo(500, 6)])`).
-- [ ] Test `without a compile every row is unresolved` (`startSec` null, duration `–`).
-- [ ] Test `an error inside a resolved lookAtId marks the lookAtId row` (two `lookAtId`s overlapping in one `all`).
+- [x] Test `collapsing a group hides its descendants and keeps the group row`.
+- [x] Test `fork children are background rows with their own window`.
+- [x] Test `waypoint rows span consecutive knot times and the last is Settle`.
+- [x] Test `a group writes the union of its children's families`.
+- [x] Test `an invalid compile marks exactly the culprit rows` (`all([dollyTo(300, 4), dollyTo(500, 6)])`).
+- [x] Test `without a compile every row is unresolved` (`startSec` null, duration `–`).
+- [x] Test `an error inside a resolved lookAtId marks the lookAtId row` (two `lookAtId`s overlapping in one `all`).
 
 ### Task 2.5: ruler steps and snapping
 
