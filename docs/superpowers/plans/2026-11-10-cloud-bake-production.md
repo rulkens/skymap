@@ -230,10 +230,10 @@ export function bmngMonthKey(month: 1 | 2 | … | 12): RawDataKey; // 'textures.
 
 **Files:** `.github/workflows/ci.yml`
 
-- [ ] New job `cloud-bake-rs` (parallel to `ci`): checkout, `dtolnay/rust-toolchain@stable`,
+- [x] New job `cloud-bake-rs` (parallel to `ci`): checkout, `dtolnay/rust-toolchain@stable`,
       `Swatinem/rust-cache@v2` with `workspaces: tools/cloud-bake-rs`, `cargo test --release
       --manifest-path tools/cloud-bake-rs/Cargo.toml`. Pin action versions the way `ci.yml` already does.
-- [ ] Commit; after push, CI is the gate.
+- [x] Commit; after push, CI is the gate.
 
 ### Task 9: Docs and backlog
 
