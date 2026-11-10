@@ -6,7 +6,7 @@
  * on a 128 px/° grid, and the true grid is exactly global.
  */
 
-import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
+import type { LonLatBounds } from '../../../src/layers/body/surfaceTiles/format/@types/LonLatBounds';
 import { rawDataPath } from '../../utils/io/rawDataRegistry';
 import type { GeoTiffGrid } from '../@types/GeoTiffGrid';
 

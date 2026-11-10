@@ -1,5 +1,4 @@
 import type { SurveyStarCatalogSourceEntry } from '../../../@types/data/starCatalog/SurveyStarCatalogSourceEntry';
-import { Source } from '../../../data/source';
 
 /**
  * Survey-wide Gaia stellar catalog — the bulk near-field stars, streamed as
@@ -11,7 +10,6 @@ import { Source } from '../../../data/source';
  */
 export const GAIA_STARS_ENTRY = {
   type: 'starCatalog',
-  code: Source.GaiaStars,
   id: 'gaiaStars',
   label: 'Gaia Stars',
   // A near-field bubble of stars around the observer, not a sky patch —

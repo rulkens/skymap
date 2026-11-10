@@ -1363,7 +1363,7 @@ type SubsystemBundle = {
   deletion **CLOSED by #16 (2026-08-20)** — the maps (`PASS_GROUP_TITLES`, the
   DebugPanel section list) stay hand-authored (D2).
 - **P3** Extract field/ISM orchestration from `tools/galaxy-renderer/src/engine/`
-  into `src/services/gpu/renderers/galaxyField/` (instantiable per galaxy); tool
+  into `src/layers/milkyWay/field/` (instantiable per galaxy); tool
   consumes it. Tool-neutral (probe gates it).
 - **P4** `MilkyWaySettings` identity/tuning split.
 

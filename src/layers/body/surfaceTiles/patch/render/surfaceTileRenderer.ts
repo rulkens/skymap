@@ -14,7 +14,7 @@
  */
 
 import type { Renderer } from '../../../../../@types/rendering/Renderer';
-import type { SurfaceEffect } from '../../../../../@types/data/SurfaceEffect';
+import type { SurfaceEffect } from '../../format/@types/SurfaceEffect';
 import type { SurfaceTileRenderer } from '../@types/SurfaceTileRenderer';
 import { resolveDepthCompare } from '../../../../../utils/gpu/resolveDepthCompare';
 import { IDENTITY_MAT3 } from '../../../../../utils/math/identityMat3';
@@ -29,10 +29,8 @@ import {
   writePatchInstance,
   writeSurfaceTileUniforms,
 } from './surfaceTileLayout';
-import {
-  SURFACE_TILE_CROSSFADE_MS,
-  HEIGHT_ATLAS_SLOTS_PER_ROW,
-} from '../../format/data/surfaceTileParams';
+import { HEIGHT_ATLAS_SLOTS_PER_ROW } from '../../format/data/surfaceTileParams';
+import { surfaceTileFadeWeight } from '../subsystems/surfaceTileFadeWeight';
 import { HEIGHT_POSTS_PER_TILE } from '../../format/data/heightTileFormat';
 import { SURFACE_TILE_SHADER_VARIANTS } from './surfaceTileShaderVariants';
 import type { SurfaceTileDrawArgs } from '../@types/SurfaceTileDrawArgs';
@@ -247,10 +245,7 @@ export function createSurfaceTileRenderer(
       // No fallback ⇒ fadeWeight 1 with the fallback rect aliased to the primary, so
       // the fragment's mix() needs no branch.
       const fallback = tile.albedo.fallback ?? tile.albedo;
-      const fadeWeight =
-        tile.albedo.fallback === null
-          ? 1
-          : Math.min(1, Math.max(0, (nowMs - tile.albedo.readyAtMs) / SURFACE_TILE_CROSSFADE_MS));
+      const fadeWeight = surfaceTileFadeWeight(tile.albedo, nowMs);
 
       const slotOriginX = (tile.height.slot % HEIGHT_ATLAS_SLOTS_PER_ROW) * HEIGHT_POSTS_PER_TILE;
       const slotOriginY =

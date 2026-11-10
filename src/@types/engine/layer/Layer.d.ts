@@ -13,7 +13,6 @@ import type { ContentCompute } from '../frame/ContentCompute';
 import type { AssetWiringRow } from '../../loading/AssetWiringRow';
 import type { Exhibit } from '../../exhibits/Exhibit';
 import type { CompanionAssetRow } from '../../loading/CompanionAssetRow';
-import type { SourceType } from '../../data/SourceType';
 import type { SourceEntry } from '../../data/SourceEntry';
 import type { SkyCapture } from '../../rendering/SkyCapture';
 import type { TerrainHeightAtLookup } from '../../camera/terrain/TerrainHeightAtLookup';
@@ -33,10 +32,7 @@ export type Layer<
   Name extends string,
   Runtime,
   Settings extends readonly Slice[] = readonly Slice[],
-  Sources extends readonly (readonly [SourceType, SourceEntry])[] = readonly (readonly [
-    SourceType,
-    SourceEntry,
-  ])[],
+  Sources extends readonly SourceEntry[] = readonly SourceEntry[],
   Facts = unknown,
 > = {
   /** Unique across the composition; also the key this Layer's `facts` sit under in `state.engine`. */

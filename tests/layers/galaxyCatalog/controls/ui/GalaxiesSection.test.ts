@@ -16,10 +16,6 @@
  *  - A keyboard nudge on the point-size Slider fires `onPointSizeChange`
  *    with the stepped value.
  *
- * Source codes from `src/data/source.ts`:
- *   SDSS=1, TwoMRS=2, Glade=3, FamousGalaxy=4, Milliquas=8, DesiDeep=18, DesiWedge=19, DesiSgw=20
- *
- * TOGGLEABLE_SOURCES = [FamousGalaxy(4), TwoMRS(2), SDSS(1), Glade(3), Milliquas(8), DesiDeep(18), DesiWedge(19), DesiSgw(20)]
  * All-on = every galaxy catalog id; partial = SDSS + TwoMRS; none-on = empty set
  */
 
@@ -29,8 +25,6 @@ import { createElement } from 'react';
 import GalaxiesSection from '../../../../../src/layers/galaxyCatalog/controls/ui/GalaxiesSection';
 import { BiasMode } from '../../../../../src/data/galaxyCatalog/biasMode';
 import type { BiasMode as BiasModeT } from '../../../../../src/layers/galaxyCatalog/@types/BiasMode';
-import type { SourceType } from '../../../../../src/@types/data/SourceType';
-import { Source } from '../../../../../src/data/source';
 import { GALAXY_CATALOG_IDS } from '../../../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import type { GalaxyCatalogId } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 
@@ -42,7 +36,7 @@ function baseProps() {
   return {
     title: 'Galaxies',
     visibleCatalogs: ALL_ON,
-    onToggleSource: vi.fn<(source: SourceType, visible: boolean) => void>(),
+    onToggleSource: vi.fn<(source: GalaxyCatalogId, visible: boolean) => void>(),
     pointSize: 2.5,
     onPointSizeChange: vi.fn<(v: number) => void>(),
     depthFadeEnabled: true,
@@ -77,16 +71,12 @@ describe('GalaxiesSection', () => {
       const props = { ...baseProps(), visibleCatalogs: new Set<GalaxyCatalogId>(['sdss']) };
       const { container } = render(createElement(GalaxiesSection, props));
       // #toggle-source-1 = SDSS checkbox
-      const sdssCheckbox = container.querySelector<HTMLInputElement>(
-        `#toggle-source-${Source.SDSS}`,
-      );
+      const sdssCheckbox = container.querySelector<HTMLInputElement>(`#toggle-source-${'sdss'}`);
       expect(sdssCheckbox).not.toBeNull();
       expect(sdssCheckbox!.checked).toBe(true);
 
       // TwoMRS checkbox should be unchecked
-      const twomrsCheckbox = container.querySelector<HTMLInputElement>(
-        `#toggle-source-${Source.TwoMRS}`,
-      );
+      const twomrsCheckbox = container.querySelector<HTMLInputElement>(`#toggle-source-${'2mrs'}`);
       expect(twomrsCheckbox).not.toBeNull();
       expect(twomrsCheckbox!.checked).toBe(false);
     });
@@ -94,20 +84,18 @@ describe('GalaxiesSection', () => {
 
   describe('callbacks', () => {
     it('calls onToggleSource with source and false when a catalog checkbox is unchecked', () => {
-      const onToggleSource = vi.fn<(source: SourceType, visible: boolean) => void>();
+      const onToggleSource = vi.fn<(source: GalaxyCatalogId, visible: boolean) => void>();
       const props = { ...baseProps(), visibleCatalogs: ALL_ON, onToggleSource };
       const { container } = render(createElement(GalaxiesSection, props));
 
       // SDSS starts checked (ALL_ON); a click toggles it off.
       // fireEvent.click is the reliable trigger for controlled checkboxes in jsdom —
       // fireEvent.change does not update e.target.checked for React-controlled inputs.
-      const sdssCheckbox = container.querySelector<HTMLInputElement>(
-        `#toggle-source-${Source.SDSS}`,
-      )!;
+      const sdssCheckbox = container.querySelector<HTMLInputElement>(`#toggle-source-${'sdss'}`)!;
       fireEvent.click(sdssCheckbox);
 
       expect(onToggleSource).toHaveBeenCalledOnce();
-      expect(onToggleSource).toHaveBeenCalledWith(Source.SDSS, false);
+      expect(onToggleSource).toHaveBeenCalledWith('sdss', false);
     });
 
     it('calls onPointSizeChange with the stepped value on a keyboard nudge', () => {
@@ -125,7 +113,7 @@ describe('GalaxiesSection', () => {
     });
 
     it('calls onToggleSource for all TOGGLEABLE_SOURCES when master is toggled from noneOn', () => {
-      const onToggleSource = vi.fn<(source: SourceType, visible: boolean) => void>();
+      const onToggleSource = vi.fn<(source: GalaxyCatalogId, visible: boolean) => void>();
       const props = { ...baseProps(), visibleCatalogs: new Set<GalaxyCatalogId>(), onToggleSource };
       const { container } = render(createElement(GalaxiesSection, props));
 
@@ -137,14 +125,14 @@ describe('GalaxiesSection', () => {
 
       // Should call once per TOGGLEABLE_SOURCE (8 sources), each with true
       expect(onToggleSource).toHaveBeenCalledTimes(8);
-      expect(onToggleSource).toHaveBeenCalledWith(Source.FamousGalaxy, true);
-      expect(onToggleSource).toHaveBeenCalledWith(Source.TwoMRS, true);
-      expect(onToggleSource).toHaveBeenCalledWith(Source.SDSS, true);
-      expect(onToggleSource).toHaveBeenCalledWith(Source.Glade, true);
-      expect(onToggleSource).toHaveBeenCalledWith(Source.Milliquas, true);
-      expect(onToggleSource).toHaveBeenCalledWith(Source.DesiDeep, true);
-      expect(onToggleSource).toHaveBeenCalledWith(Source.DesiWedge, true);
-      expect(onToggleSource).toHaveBeenCalledWith(Source.DesiSgw, true);
+      expect(onToggleSource).toHaveBeenCalledWith('famousGalaxy', true);
+      expect(onToggleSource).toHaveBeenCalledWith('2mrs', true);
+      expect(onToggleSource).toHaveBeenCalledWith('sdss', true);
+      expect(onToggleSource).toHaveBeenCalledWith('glade', true);
+      expect(onToggleSource).toHaveBeenCalledWith('milliquas', true);
+      expect(onToggleSource).toHaveBeenCalledWith('desiDeep', true);
+      expect(onToggleSource).toHaveBeenCalledWith('desiWedge', true);
+      expect(onToggleSource).toHaveBeenCalledWith('desiSgw', true);
     });
   });
 });

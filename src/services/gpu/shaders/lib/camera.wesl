@@ -139,41 +139,45 @@ fn worldEyeDepth(eyeWS: vec3<f32>, p: vec3<f32>) -> f32 {
   return length(eyeWS - p);
 }
 
-// ── cameraRayFromUv ─────────────────────────────────────────────────
+// ── Frustum-tangent rays ────────────────────────────────────────────
 //
-// Reconstructs a per-fragment camera ray direction from a fullscreen
-// pass's own uv (a 'FullscreenOut.uv' in [0,1], y-DOWN — fullscreenTri
-// .wesl's own convention) plus the camera basis and horizontal-FOV
-// params every renderer here packs as (tanHalfFov, aspect, lensShiftX).
-// Promoted out of milkyWay/ismMap/ismMapPresent.wesl and
-// orientationPresent.wesl, which both rebuilt this ray to intersect it
-// with the disc plane (package::lib::util::rayPlaneY0) for their own
-// log-polar resample.
-//
-// uv -> ndc: x is the ordinary [0,1]->[-1,1] flip; y is inverted a
-// SECOND time (1 - uv.y*2) to undo the uv's own y-down convention and
-// recover the y-up NDC the basis weights below expect — the same net
-// transform fieldSplat/fragment.wesl's per-vertex 'input.ndc' already
-// carries in, just derived from a uv instead of a varying.
-//
-// No 'eye' parameter: the ray direction alone doesn't need the camera
-// position, and folding it in here would force every caller to thread
-// an unused value through — callers that also need the ray ORIGIN read
-// their own 'eye' uniform directly, same as before this was factored out.
+// 'frustum' is (tanLeft, tanRight, tanDown, tanUp), signed (io.wesl's
+// FieldUniforms.frustum): the tangent at an NDC is the window's centre plus
+// ndc times its half-extent, so a lens shift needs no term of its own. For a
+// symmetric lens mid is 0 and half is (T*aspect, T), T the VERTICAL
+// half-tangent; the 0.5*(a+b) forms keep y bit-identical to ndc.y*T.
+
+fn cameraRayFromNdc(
+  ndc: vec2<f32>,
+  camRight: vec3<f32>,
+  camUp: vec3<f32>,
+  camFwd: vec3<f32>,
+  frustum: vec4<f32>,
+) -> vec3<f32> {
+  let mid = 0.5 * (frustum.xz + frustum.yw);
+  let half = 0.5 * (frustum.yw - frustum.xz);
+  let t = mid + ndc * half;
+  return normalize(camRight * t.x + camUp * t.y + camFwd);
+}
+
+// The inverse: the NDC a view-space tangent (x/z, y/z) lands on.
+fn ndcFromTangent(t: vec2<f32>, frustum: vec4<f32>) -> vec2<f32> {
+  let mid = 0.5 * (frustum.xz + frustum.yw);
+  let half = 0.5 * (frustum.yw - frustum.xz);
+  return (t - mid) / half;
+}
+
+// cameraRayFromNdc from a fullscreen pass's uv ('FullscreenOut.uv' in [0,1],
+// y-DOWN, fullscreenTri.wesl's convention): x is the plain [0,1]->[-1,1]
+// map, y is flipped once more to recover y-up NDC. No 'eye' parameter:
+// callers that need the ray origin read their own uniform.
 fn cameraRayFromUv(
   uv: vec2<f32>,
   camRight: vec3<f32>,
   camUp: vec3<f32>,
   camFwd: vec3<f32>,
-  tanHalfFov: f32,
-  aspect: f32,
-  shift: f32,
+  frustum: vec4<f32>,
 ) -> vec3<f32> {
-  let ndcX = uv.x * 2.0 - 1.0;
-  let ndcY = 1.0 - uv.y * 2.0;
-  return normalize(
-    camRight * ((ndcX + shift) * tanHalfFov * aspect)
-      + camUp * (ndcY * tanHalfFov)
-      + camFwd,
-  );
+  let ndc = vec2<f32>(uv.x * 2.0 - 1.0, 1.0 - uv.y * 2.0);
+  return cameraRayFromNdc(ndc, camRight, camUp, camFwd, frustum);
 }

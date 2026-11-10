@@ -73,6 +73,7 @@ function makeStore(): Store {
       debugPanelOpen: false,
       paletteTab: 'highlights',
       splash: { visible: false, dismissedVersion: 1 },
+      learnedGestures: { look: false, zoom: false },
     },
   }).store;
 }

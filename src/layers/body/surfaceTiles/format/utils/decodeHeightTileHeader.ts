@@ -1,4 +1,4 @@
-import type { HeightTileHeader } from '../../../../../@types/scene/HeightTileHeader';
+import type { HeightTileHeader } from '../@types/HeightTileHeader';
 import {
   HEIGHT_GRID_BYTES,
   HEIGHT_POSTS_PER_TILE,

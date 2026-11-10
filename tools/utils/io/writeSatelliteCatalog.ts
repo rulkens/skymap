@@ -5,7 +5,7 @@
  * padding to 4, u32 string offsets (2n + 1) into a UTF-8 blob holding names[0..n) then cosparIds.
  * f64 columns stay 8-aligned so the reader views them in place. `parseSatelliteCatalog` is the reader.
  */
-import type { SatelliteCatalog } from '../../../src/@types/satellites/SatelliteCatalog';
+import type { SatelliteCatalog } from '../../../src/layers/satellites/catalog/@types/SatelliteCatalog';
 
 const align = (n: number, to: number): number => Math.ceil(n / to) * to;
 

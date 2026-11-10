@@ -12,16 +12,15 @@
 import type { GalaxyRecordSource } from '../../records/@types/GalaxyRecordSource';
 import type { OrbitCamera } from '../../../../@types/camera/orbitCamera/OrbitCamera';
 import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
-import type { GalaxyCatalogSourceType } from '../../@types/GalaxyCatalogSourceType';
 
 export type DiskWalkInput = {
   readonly cam: OrbitCamera;
-  readonly records: ReadonlyMap<GalaxyCatalogSourceType, GalaxyRecordSource>;
+  readonly records: ReadonlyMap<GalaxyCatalogId, GalaxyRecordSource>;
   readonly visibleCatalogs: ReadonlySet<GalaxyCatalogId>;
   readonly pxPerRad: number;
   /** Every view's COSMO `frustumPlanesFromViewProj` planes about `cam.position`; empty culls nothing. */
   readonly viewPlanes: Float32Array;
   /** `occluderConesFrom` the frame's opaque bodies, from `cam.position`; empty hides nothing. */
   readonly occluderCones: Float64Array;
-  readonly sourceOpacity: (source: GalaxyCatalogSourceType) => number;
+  readonly sourceOpacity: (source: GalaxyCatalogId) => number;
 };

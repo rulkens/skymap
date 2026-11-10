@@ -42,7 +42,7 @@ fn fs(input: HiiSplatOut) -> @location(0) vec4<f32> {
     if (starsWeight > 0.0) {
       let uv = ismCartesianUv(p);
       // A spur's own fadeRadius can run past the ISM grid's rMax
-      // (armSpurGeometry.ts's buildSpurRecord), so this keeps an explicit
+      // (deriveArmSpurs.ts's buildSpurRecord), so this keeps an explicit
       // range test rather than trusting the clamp sampler — outside the
       // disc the bake's G is neutral 0, and skipping the test would DARKEN
       // term via mix(1, 0, starsWeight) instead of leaving it untouched.

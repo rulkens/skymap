@@ -2,7 +2,7 @@
 
 Turns one `GalaxyParams` preset into one `GalaxyDescription`, then hands that to
 each tier: `v1/` packs it into `GENERATION_UBO` bytes and binds them to its
-compute shaders; `v2/` builds its Gaussian mixtures from it. That is the whole
+compute shaders; the milkyWay Layer's `field/` builds its Gaussian mixtures from it. That is the whole
 reason this folder exists: **one galaxy, one description, two renderings.**
 
 ## Flow
@@ -38,7 +38,7 @@ seeded preset are pinned to it — reorder a draw, add one, or skip one and ever
 galaxy in the gallery rerolls. A pinned value (`barAngleDeg`, `armAges[a]`)
 still consumes its draw for exactly that reason.
 
-**`v2` depends on this folder through DATA, not imports.** Nothing under `v2/`
+**`v2` depends on this folder through DATA, not imports.** Nothing under `src/layers/milkyWay/field/`
 imports anything here; the wiring happens in the caller
 (`tools/galaxy-renderer/src/engine/sprites/generateGalaxy.ts`).
 Grepping the import graph alone will tell you this folder is v1-only. It is not.
@@ -69,8 +69,9 @@ this folder by design: `StarBudget`, the count shares it quantises and the
 per-sprite brightness those divide by all live under `v1/`, and
 `GalaxyDescription` carries no sprite quantity — so a re-introduction has to add
 the import edge the landmine above forbids. It is worth the guard: sprite count
-goes as N^(1/3), so an `emissionScale` or `hiiRegions.tierFlux` anchored on it
-would change brightness by 26% per tier step with the structure untouched —
+goes as N^(1/3), so the mixture's emission or the HII `tierFlux`
+(`src/layers/milkyWay/field/starFormation/utils/buildHiiShellsAndYoungWithSegments.ts`)
+anchored on it would change brightness by 26% per tier step with the structure untouched —
 invisible on screen, since the sprite bag itself drifts by the same factor.
 Both scale off `GalaxyDescription.luminosity`, a function of size alone.
 

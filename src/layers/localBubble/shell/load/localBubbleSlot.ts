@@ -3,7 +3,7 @@
 import { createAssetSlot } from '../../../../services/loading/AssetSlot';
 import { localBubbleFetcher } from './localBubbleFetcher';
 import type { AssetSlot } from '../../../../@types/loading/AssetSlot';
-import type { ShellMesh } from '../../../../@types/data/shellMesh/ShellMesh';
+import type { ShellMesh } from '../../@types/ShellMesh';
 import type { LocalBubbleRenderer } from '../@types/LocalBubbleRenderer';
 
 export function createLocalBubbleSlot(renderer: LocalBubbleRenderer): AssetSlot<ShellMesh, void> {

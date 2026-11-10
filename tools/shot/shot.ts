@@ -13,6 +13,7 @@ import { ensureServeBuild } from '../utils/serve/ensureServeBuild';
 import { spawnViteServer } from '../utils/serve/spawnViteServer';
 import { shootLink } from '../utils/shot/shootLink';
 import { shotOutName } from '../utils/shot/shotOutName';
+import { withTimeout } from '../utils/async/withTimeout';
 import type { ViteServerHandle } from '../@types/serve/ViteServerHandle';
 import { parseShotArgs } from './parseShotArgs';
 
@@ -68,7 +69,8 @@ async function main(): Promise<number> {
       if (outcome.path !== null) process.stdout.write(`${outcome.path}\n`);
       if (outcome.timedOut) {
         console.error(
-          `shot: ${label} did not settle within ${options.timeoutMs / 1000} s — shot what was on screen`,
+          `shot: ${label} did not settle within ${options.timeoutMs / 1000} s ` +
+            `(${outcome.unsettled.join(', ') || 'never booted'}) — shot what was on screen`,
         );
       }
       if (outcome.error !== null) console.error(`shot: ${label} failed: ${outcome.error}`);
@@ -78,7 +80,8 @@ async function main(): Promise<number> {
   } finally {
     // Kill first: a throwing browser.close() must not orphan the server.
     server?.proc.kill();
-    await browser?.close();
+    // A wedged browser never closes; exiting reaps it.
+    if (browser) await withTimeout(browser.close(), 10_000, 'closing the browser').catch(() => {});
   }
   return failed ? 1 : 0;
 }

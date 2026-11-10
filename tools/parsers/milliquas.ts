@@ -31,11 +31,10 @@
  * `MQ J<RA><Dec>` IAU name.
  */
 
-import { Source } from '../../src/data/source';
 import {
   MILLIQUAS_CLASS_BYTE,
   MILLIQUAS_PARENT_SURVEY_BYTE,
-} from '../../src/data/galaxyCatalog/sourceClass';
+} from '../../src/layers/galaxyCatalog/records/data/sourceClass';
 import { isPlausibleMagnitude } from '../utils/math/isPlausibleMagnitude';
 import { nonCommentLines, type ParsedRecord } from './common';
 
@@ -213,7 +212,7 @@ export function parseMilliquas(rawText: string): MilliquasParseResult {
     const parentSurveyByte = parentSurveyByteFromName(nameTrimmed);
 
     records.push({
-      source: Source.Milliquas,
+      source: 'milliquas',
       objID: 0n,
       ra,
       dec,

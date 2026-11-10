@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { SourceType } from '../src/@types/data/SourceType';
+import type { GalaxyCatalogId } from '../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 
 // Note: we import from `tools/catalog/crossMatch` rather than the documented
 // `tools/catalog/buildAllBins` path because the latter pulls in `node:fs`/`node:url`,
@@ -7,7 +7,6 @@ import type { SourceType } from '../src/@types/data/SourceType';
 // `tools/` and does not register `@types/node`. `buildAllBins.ts` re-exports
 // `crossMatch` from this same module, so the symbol is identical either way.
 import { crossMatch } from '../tools/catalog/crossMatch';
-import { Source } from '../src/data/source';
 import type { ParsedRecord } from '../tools/parsers/common';
 
 /**
@@ -22,7 +21,13 @@ import type { ParsedRecord } from '../tools/parsers/common';
  * the same sentinel the real parsers emit when a galaxy catalog lacks that band
  * (see common.ts), so the merger is exercised with realistic input.
  */
-function rec(source: SourceType, ra: number, dec: number, z: number, objID = 0n): ParsedRecord {
+function rec(
+  source: GalaxyCatalogId,
+  ra: number,
+  dec: number,
+  z: number,
+  objID = 0n,
+): ParsedRecord {
   return {
     source,
     objID,
@@ -62,16 +67,16 @@ describe('crossMatch', () => {
   // below pin down each half of that AND.
   it('rejects positional duplicates within 5 arcsec and Δz/(1+z) < 1%', () => {
     const out = crossMatch({
-      sdss: [rec(Source.SDSS, 180, 0, 0.1)],
+      sdss: [rec('sdss', 180, 0, 0.1)],
       // ~0.36 arcsec offset and ~0.05% relative redshift difference — well
       // within both tolerances, so this should be detected as a duplicate
       // and dropped in favour of the higher-priority SDSS record.
-      twoMrs: [rec(Source.TwoMRS, 180.0001, 0, 0.10005)],
+      twoMrs: [rec('2mrs', 180.0001, 0, 0.10005)],
       glade: [],
       desiPatches: [],
     });
     expect(out).toHaveLength(1);
-    expect(out[0]!.source).toBe(Source.SDSS);
+    expect(out[0]!.source).toBe('sdss');
   });
 
   it('keeps records that differ in z even at the same position', () => {
@@ -80,9 +85,9 @@ describe('crossMatch', () => {
     // distinct objects in 3D — the redshift gate is precisely what stops
     // the dedup pass from collapsing them into one.
     const out = crossMatch({
-      sdss: [rec(Source.SDSS, 180, 0, 0.1)],
+      sdss: [rec('sdss', 180, 0, 0.1)],
       twoMrs: [],
-      glade: [rec(Source.Glade, 180, 0, 0.5)],
+      glade: [rec('glade', 180, 0, 0.5)],
       desiPatches: [],
     });
     expect(out).toHaveLength(2);
@@ -94,12 +99,12 @@ describe('crossMatch', () => {
     // and "first one through wins" — 2MRS is processed before GLADE.
     const out = crossMatch({
       sdss: [],
-      twoMrs: [rec(Source.TwoMRS, 180, 0, 0.05)],
-      glade: [rec(Source.Glade, 180.0001, 0, 0.05005)],
+      twoMrs: [rec('2mrs', 180, 0, 0.05)],
+      glade: [rec('glade', 180.0001, 0, 0.05005)],
       desiPatches: [],
     });
     expect(out).toHaveLength(1);
-    expect(out[0]!.source).toBe(Source.TwoMRS);
+    expect(out[0]!.source).toBe('2mrs');
   });
 
   it('keeps galaxies that appear only in GLADE', () => {
@@ -109,7 +114,7 @@ describe('crossMatch', () => {
     const out = crossMatch({
       sdss: [],
       twoMrs: [],
-      glade: [rec(Source.Glade, 30, -25, 0.001), rec(Source.Glade, 200, -43, 0.001)],
+      glade: [rec('glade', 30, -25, 0.001), rec('glade', 200, -43, 0.001)],
       desiPatches: [],
     });
     expect(out).toHaveLength(2);
@@ -122,16 +127,16 @@ describe('crossMatch', () => {
   // rows, and the untouched-passthrough case.
   it('drops a DESI record within 5 arcsec and 1% z of an SDSS record (SDSS wins)', () => {
     const out = crossMatch({
-      sdss: [rec(Source.SDSS, 180, 0, 0.1)],
+      sdss: [rec('sdss', 180, 0, 0.1)],
       twoMrs: [],
       glade: [],
       // Same ~0.36 arcsec / ~0.05% offsets as the SDSS-vs-2MRS dedup test
       // above — well within both tolerances, so this DESI row is the
       // low-z BGS overlap the priority rule exists to collapse away.
-      desiPatches: [[rec(Source.DesiDeep, 180.0001, 0, 0.10005)]],
+      desiPatches: [[rec('desiDeep', 180.0001, 0, 0.10005)]],
     });
     expect(out).toHaveLength(1);
-    expect(out[0]!.source).toBe(Source.SDSS);
+    expect(out[0]!.source).toBe('sdss');
   });
 
   it('keeps a DESI same-sightline pair when Δz is beyond tolerance (finger-of-god survives)', () => {
@@ -145,9 +150,7 @@ describe('crossMatch', () => {
       sdss: [],
       twoMrs: [],
       glade: [],
-      desiPatches: [
-        [rec(Source.DesiDeep, 233.2, 32.3, 0.07), rec(Source.DesiDeep, 233.2, 32.3, 0.09)],
-      ],
+      desiPatches: [[rec('desiDeep', 233.2, 32.3, 0.07), rec('desiDeep', 233.2, 32.3, 0.09)]],
     });
     expect(out).toHaveLength(2);
   });
@@ -164,12 +167,12 @@ describe('crossMatch', () => {
       twoMrs: [],
       glade: [],
       desiPatches: [
-        [rec(Source.DesiDeep, shared.ra, shared.dec, shared.z)],
-        [rec(Source.DesiWedge, shared.ra, shared.dec, shared.z)],
+        [rec('desiDeep', shared.ra, shared.dec, shared.z)],
+        [rec('desiWedge', shared.ra, shared.dec, shared.z)],
       ],
     });
     expect(out).toHaveLength(2);
-    expect(out.map((r) => r.source).sort()).toEqual([Source.DesiDeep, Source.DesiWedge].sort());
+    expect(out.map((r) => r.source).sort()).toEqual(['desiDeep', 'desiWedge'].sort());
   });
 
   it('DOES dedup DESI rows within a single patch (position + z match)', () => {
@@ -180,9 +183,7 @@ describe('crossMatch', () => {
       sdss: [],
       twoMrs: [],
       glade: [],
-      desiPatches: [
-        [rec(Source.DesiDeep, 233.2, 30.9, 0.08), rec(Source.DesiDeep, 233.20005, 30.9, 0.08)],
-      ],
+      desiPatches: [[rec('desiDeep', 233.2, 30.9, 0.08), rec('desiDeep', 233.20005, 30.9, 0.08)]],
     });
     expect(out).toHaveLength(1);
   });

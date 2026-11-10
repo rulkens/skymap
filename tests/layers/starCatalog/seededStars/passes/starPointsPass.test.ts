@@ -31,13 +31,12 @@ import { positionedSeededStars } from '../../../../../src/layers/starCatalog/see
 import { distanceMpc } from '../../../../../src/utils/math/distanceMpc';
 import { projectToScreenPx } from '../../../../../src/utils/camera/projection/projectToScreenPx';
 import { FAMOUS_STAR_PICK_RADIUS_PX } from '../../../../../src/layers/starCatalog/seededStars/data/famousStarPickRadiusPx';
-import { Source } from '../../../../../src/data/source';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../../src/data/selectionEncoding';
 import { makeBodyItems } from '../../../../fixtures/makeBodyItems';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
-import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/structureFocusSubsystem';
+import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/recedingFocusSubsystem';
 import type { FocusUniformsValue } from '../../../../../src/@types/rendering/FocusUniformsValue';
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
@@ -52,10 +51,10 @@ import type { Vec2 } from '../../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import { catalogPickCodes } from '../../../../../src/utils/picking/catalogPickCodes';
 import { STAR_CATALOG_SOURCE_ROWS } from '../../../../../src/layers/starCatalog/sources/starCatalogSourceRows';
-import { fakePickCode } from '../../../../support/fakePickCode';
+import { testPickCode } from '../../../../support/testPickCode';
 
 /** Codes from 40 up: a stamp that packs the catalog value instead fails. */
-const PICK_CODES = catalogPickCodes(STAR_CATALOG_SOURCE_ROWS, fakePickCode());
+const PICK_CODES = catalogPickCodes(STAR_CATALOG_SOURCE_ROWS, testPickCode('starCatalog'));
 
 const ALL_ON = { famousStar: 1, gaiaStars: 1, sStar: 1, sun: 1 } as const;
 
@@ -485,7 +484,7 @@ describe('the Galactic Centre footprint exclusion', () => {
   const sStarIdsIn = (stamped: readonly number[]): string[] =>
     SCENE_S_STARS.filter((star, seedIndex) =>
       stamped.includes(
-        packSelection(PICK_CODES.pickCodeOf(Source.SStar), seedIndex + PICK_SENTINEL_OFFSET),
+        packSelection(PICK_CODES.pickCodeOf('sStar'), seedIndex + PICK_SENTINEL_OFFSET),
       ),
     ).map((star) => star.id);
 

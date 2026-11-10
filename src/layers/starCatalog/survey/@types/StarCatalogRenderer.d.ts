@@ -5,7 +5,7 @@
  */
 
 import type { Renderer } from '../../../../@types/rendering/Renderer';
-import type { StarCatalogSourceType } from '../../@types/StarCatalogSourceType';
+import type { StarCatalogId } from '../../@types/StarCatalogId';
 import type { OctreeChunk } from '../../../../@types/octree/OctreeChunk';
 import type { Octree } from '../../../../@types/octree/Octree';
 import type { StarCatalogPickResources } from './StarCatalogPickResources';
@@ -20,21 +20,21 @@ export type StarCatalogRenderer = Renderer & {
    * upload; `min(slots, octree.chunkCount)` chunk slots follow the index, and that pool
    * size is returned for the chunk stream to match.
    */
-  upload(source: StarCatalogSourceType, octree: Octree<StarColumns>, slots: number): number;
+  upload(source: StarCatalogId, octree: Octree<StarColumns>, slots: number): number;
   /** Destroy one catalog's GPU buffers, records and cut alike, so a switched-off catalog holds no VRAM. */
-  release(source: StarCatalogSourceType): void;
+  release(source: StarCatalogId): void;
   /**
    * Land a chunk in a slot: its records and rows, then every root's resident bit, written in
    * the rows of `hostSlot` (its parent's slot; null when the index holds its roots).
    */
   uploadChunk(
-    source: StarCatalogSourceType,
+    source: StarCatalogId,
     slot: number,
     chunk: OctreeChunk<StarColumns>,
     hostSlot: number | null,
   ): void;
   /** Free a slot: every root of its chunk stops refining, then the slot's row count is cleared. */
-  evictChunk(source: StarCatalogSourceType, slot: number, hostSlot: number | null): void;
+  evictChunk(source: StarCatalogId, slot: number, hostSlot: number | null): void;
   /**
    * Called by every star pick draw: `recordOrdinal` reads the slots as that draw saw them. The
    * DEV pick overlay records the same draws each frame, so with it on the snapshot follows the
@@ -47,11 +47,11 @@ export type StarCatalogRenderer = Renderer & {
    * of the last pick draw, so a slot evicted and refilled before the readback still names the
    * star that was drawn; the selection row then finds its chunk gone, never another star.
    */
-  recordOrdinal(source: StarCatalogSourceType, poolIndex: number): number | null;
+  recordOrdinal(source: StarCatalogId, poolIndex: number): number | null;
   /** The inverse: null when the ordinal's chunk is not resident. */
-  poolRecordIndex(source: StarCatalogSourceType, ordinal: number): number | null;
+  poolRecordIndex(source: StarCatalogId, ordinal: number): number | null;
   /** Every committed catalog — the star analogue of `catalogStore.entries()`. */
-  loadedCatalogs(): Iterable<{ source: StarCatalogSourceType; octree: Octree<StarColumns> }>;
+  loadedCatalogs(): Iterable<{ source: StarCatalogId; octree: Octree<StarColumns> }>;
   /** What the sibling `starCatalogPickRenderer` shares; see {@link StarCatalogPickResources}. */
   pickResources(): StarCatalogPickResources;
   /**

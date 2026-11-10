@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseSatelliteCatalog } from '../../../../../src/layers/satellites/catalog/load/parseSatelliteCatalog';
 import { writeSatelliteCatalog } from '../../../../../tools/utils/io/writeSatelliteCatalog';
-import type { SatelliteCatalog } from '../../../../../src/@types/satellites/SatelliteCatalog';
+import type { SatelliteCatalog } from '../../../../../src/layers/satellites/catalog/@types/SatelliteCatalog';
 
 // Three objects with deliberately awkward values: f64s no f32 could hold, a non-ASCII name, an empty
 // COSPAR id. A column read from the wrong offset or a string sliced one off fails exactly here.

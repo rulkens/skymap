@@ -1,7 +1,7 @@
 /**
  * ToneMapCurve — selectable tone-mapping curves for the HDR post-process.
  *
- * Mirrors the pattern of the `Source` enum and `BiasMode`: the runtime
+ * Mirrors the pattern of `BiasMode`: the runtime
  * `const` object in `src/data/toneMapCurve.ts` carries the value-level
  * literals (0..4) that land verbatim in the shader's `curve: u32`
  * uniform.  The numeric values are part of the GPU contract — DON'T

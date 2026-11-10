@@ -13,7 +13,7 @@ import { describe, expect, it } from 'vitest';
 import type { ObjectKind } from '../../../packages/website/src/@types/ObjectKind';
 import { OBJECT_ROWS, OBJECT_SECTIONS } from '../../../packages/website/src/data/objectCatalogue';
 import { objectSubLists } from '../../../packages/website/src/utils/objectSubLists';
-import { tourRegistry } from '../../../src/data/animation/tours/tourRegistry';
+import { APP_TOUR_REGISTRY } from '../../../src/compositions/appTours';
 import { BODY_PICK_ROWS } from '../../../src/data/bodies/bodyPickRows';
 import { SCENE_MESH_BODIES } from '../../../src/data/bodies/sceneMeshBodies';
 import { PROBE_SPHERE_ROSTER } from '../../../src/layers/probeSpheres/spheres/data/probeSphereRoster';
@@ -27,7 +27,7 @@ import { BODY_FOCUS_PREFIX } from '../../../src/services/url/bodyFocusId';
 import { decodeStarFocusId } from '../../../src/layers/starCatalog/selection/utils/decodeStarFocusId';
 import { MILKY_WAY_FOCUS_ID } from '../../../src/services/url/milkyWayFocusId';
 import { STAR_FOCUS_PREFIX } from '../../../src/services/url/starFocusId';
-import { isRegistryBodyId } from '../../../src/utils/scene/isRegistryBodyId';
+import { isHostBodyId } from '../../../src/utils/scene/isHostBodyId';
 import { linkIntentFrom } from '../../../src/utils/url/linkIntentFrom';
 
 const ROOT = resolve(import.meta.dirname, '../../..');
@@ -40,6 +40,7 @@ const ids = (...kinds: ObjectKind[]) =>
   rowsOf(...kinds)
     .map((row) => row.id)
     .sort();
+const isCraftId = (id: string) => SCENE_MESH_BODIES.some((body) => body.id === id);
 const structureIds = new Set(buildStaticAnchorStructures().map((structure) => structure.id));
 
 /** Whether the app has something behind an id of a `focus` link, by the same decoder or table the app resolves it with. */
@@ -47,13 +48,12 @@ const RESOLVES: Record<ObjectKind, (id: string) => boolean> = {
   sun: (id) => decodeStarFocusId(id, false) !== null,
   star: (id) => decodeStarFocusId(id, false) !== null,
   sStar: (id) => decodeStarFocusId(id, false) !== null,
-  planet: (id) => isRegistryBodyId(id.slice(BODY_FOCUS_PREFIX.length)),
-  moon: (id) => isRegistryBodyId(id.slice(BODY_FOCUS_PREFIX.length)),
-  spacecraft: (id) => isRegistryBodyId(id.slice(BODY_FOCUS_PREFIX.length)),
-  model: (id) => isRegistryBodyId(id.slice(BODY_FOCUS_PREFIX.length)),
+  planet: (id) => isHostBodyId(id.slice(BODY_FOCUS_PREFIX.length)),
+  moon: (id) => isHostBodyId(id.slice(BODY_FOCUS_PREFIX.length)),
+  spacecraft: (id) => isCraftId(id.slice(BODY_FOCUS_PREFIX.length)),
+  model: (id) => isCraftId(id.slice(BODY_FOCUS_PREFIX.length)),
   milkyWay: (id) => id === MILKY_WAY_FOCUS_ID,
-  blackHole: (id) =>
-    BLACK_HOLE_SOURCE_ROWS.some(([, hole]) => encodeBlackHoleFocusId(hole.id) === id),
+  blackHole: (id) => BLACK_HOLE_SOURCE_ROWS.some((hole) => encodeBlackHoleFocusId(hole.id) === id),
   // The app's resolver takes any id of the famous-galaxy shape; the list it checks against is in its data files (below).
   galaxy: (id) => /^[a-z0-9]+$/.test(id),
   'open-cluster': (id) => structureIds.has(id),
@@ -65,7 +65,7 @@ const RESOLVES: Record<ObjectKind, (id: string) => boolean> = {
   supercluster: (id) => structureIds.has(id),
   void: (id) => structureIds.has(id),
   exhibit: (id) => id in APP_EXHIBIT_REGISTRY,
-  tour: (id) => id in tourRegistry,
+  tour: (id) => id in APP_TOUR_REGISTRY,
   place: () => false,
 };
 
@@ -124,7 +124,7 @@ describe('object catalogue', () => {
     ).toEqual([...structureIds].sort());
     expect(ids('exhibit')).toEqual(Object.keys(APP_EXHIBIT_REGISTRY).sort());
     expect(ids('tour')).toEqual(
-      Object.values(tourRegistry)
+      Object.values(APP_TOUR_REGISTRY)
         .filter((tour) => tour.dev !== true)
         .map((tour) => tour.id)
         .sort(),

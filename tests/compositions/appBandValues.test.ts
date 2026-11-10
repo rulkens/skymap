@@ -5,8 +5,8 @@ import { bandValueOf } from '../../src/services/engine/presentation/bandValueOf'
 import { MILKY_WAY_RADIUS_MPC } from '../../src/data/milkyWay/milkyWayRadiusMpc';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../src/data/rendering/foregroundMaxDistance';
 import { SCALE_UNITS } from '../../src/data/scaleUnits';
-import { cosmicFlows } from '../../src/compositions/exhibits/cosmicFlows';
-import { observableUniverse } from '../../src/layers/cosmicHorizon/exhibits/observableUniverse';
+import { cosmicFlows } from '../../src/compositions/exhibits/cosmicFlows/cosmicFlows';
+import { observableUniverse } from '../../src/layers/cosmicHorizon/exhibits/observableUniverse/observableUniverse';
 import { THE_EDGE_MPC } from '../../src/data/animation/tours/grandTour/theEdge';
 import { deriveBodyStates } from '../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../src/data/time/constJ2000';

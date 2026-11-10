@@ -8,7 +8,7 @@
  */
 import type { AlbedoApply } from './@types/AlbedoApply';
 import type { HeightSource } from './@types/HeightSource';
-import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
+import type { LonLatBounds } from '../../src/layers/body/surfaceTiles/format/@types/LonLatBounds';
 import { applyAlbedoRecipe } from '../utils/textures/applyAlbedoRecipe';
 import { sampleSlope } from '../utils/textures/sampleSlope';
 import { sampleSunField } from '../utils/textures/sampleSunField';

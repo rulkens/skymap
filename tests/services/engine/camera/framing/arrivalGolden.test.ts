@@ -12,7 +12,6 @@ import { arrivalFor } from '../../../../../src/services/engine/camera/framing/ar
 import { selectionHaloOf } from '../../../../../src/services/engine/helpers/selectionHaloOf';
 import { galaxyCatalogSelectionRow } from '../../../../../src/layers/galaxyCatalog/selection/galaxyCatalogSelectionRow';
 import { structureSelectionRow } from '../../../../../src/layers/structure/selection/structureSelectionRow';
-import { Source } from '../../../../../src/data/source';
 import { NEAR0, COSMO } from '../../../../../src/services/engine/frame/slabs';
 import { makeGalaxyCatalog } from '../../../../fixtures/makeGalaxyCatalog';
 import { galaxyRowRuntime, structureRowRuntime } from '../../../../support/layerPickCodes';
@@ -31,7 +30,7 @@ const galaxies = galaxyCatalogSelectionRow(
   galaxyRowRuntime({
     catalogs: new Map([
       [
-        Source.SDSS,
+        'sdss',
         makeGalaxyCatalog(2, {
           positions: Float32Array.from([10, 20, 30, -4, 5.5, 6]),
           diameterKpc: Float32Array.from([25, NaN]),
@@ -78,10 +77,10 @@ const BODY_POS: Vec3 = [3e-12, -4e-12, 1e-12];
 /** One row per kind (and per framing branch). */
 const ROWS: Readonly<Record<string, () => PlacedRow>> = {
   'galaxy, 25 kpc': extracted(
-    galaxies.extractRow({ type: 'galaxyCatalog', source: Source.SDSS, index: 0 }, 0),
+    galaxies.extractRow({ type: 'galaxyCatalog', source: 'sdss', index: 0 }, 0),
   ),
   'galaxy, no diameter': extracted(
-    galaxies.extractRow({ type: 'galaxyCatalog', source: Source.SDSS, index: 1 }, 0),
+    galaxies.extractRow({ type: 'galaxyCatalog', source: 'sdss', index: 1 }, 0),
   ),
   'structure, apparent radius': extracted(
     structures.extractRow({ type: 'structure', id: 'galaxy-cluster-apparent' }, 0),

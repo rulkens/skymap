@@ -1,9 +1,7 @@
 import type { BodySourceEntry } from '../../../@types/data/body/BodySourceEntry';
-import { Source } from '../../../data/source';
 
 export const EARTH_ENTRY = {
   type: 'body',
-  code: Source.Earth,
   id: 'earth',
   label: 'Earth',
   // Only galaxy-catalog footprints consult this flag; true matches the other non-catalog rows.

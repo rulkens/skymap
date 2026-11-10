@@ -6,7 +6,7 @@
  * into the pulse `resolveFocusRefDeferringSaga` already retries on.
  */
 
-import type { GalaxyCatalogSourceType } from '../../@types/GalaxyCatalogSourceType';
+import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
 import type { GalaxyRecordSource } from '../../records/@types/GalaxyRecordSource';
 import type { GalaxyRecordBridge } from '../@types/GalaxyRecordBridge';
 
@@ -19,12 +19,12 @@ import { durableIdClaimants } from '../../aliases/utils/durableIdClaimants';
 const PENDING = Symbol('pending');
 
 export function galaxyRecordBridge(
-  records: ReadonlyMap<GalaxyCatalogSourceType, GalaxyRecordSource>,
+  records: ReadonlyMap<GalaxyCatalogId, GalaxyRecordSource>,
 ): GalaxyRecordBridge {
   // Keyed by the source object: a tier swap's fresh source starts empty, and a
   // released source's late settle lands in a memo nothing reads again.
   const memos = new WeakMap<GalaxyRecordSource, Map<string, unknown>>();
-  const listeners = new Set<(source: GalaxyCatalogSourceType) => void>();
+  const listeners = new Set<(source: GalaxyCatalogId) => void>();
 
   /** The lookup's answer, or `undefined` while it is pending. */
   function answer<T>(
@@ -76,7 +76,7 @@ export function galaxyRecordBridge(
     resolvePosition(raDeg, decDeg, distMpc) {
       const cosDecT = Math.cos((decDeg * Math.PI) / 180);
       const key = `pos:${raDeg},${decDeg},${distMpc}`;
-      let bestSource: GalaxyCatalogSourceType | null = null;
+      let bestSource: GalaxyCatalogId | null = null;
       let bestIndex = -1;
       let bestSqArcsec = Infinity;
       let pending = false;

@@ -1,6 +1,6 @@
 import { missionEventStepMs } from './missionEventStepMs';
 import { SAME_INSTANT_MS } from '../data/sameInstantMs';
-import type { MissionEvent } from '../../../../@types/missions/MissionEvent';
+import type { MissionEvent } from '../@types/MissionEvent';
 
 /** The last event whose step instant is at or before `ms`, give or take a clock round-trip (events sorted), or null. */
 export function currentMissionEvent(

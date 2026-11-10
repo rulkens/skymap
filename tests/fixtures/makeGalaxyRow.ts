@@ -9,16 +9,15 @@
  * `extractRow` places it, so it is a whole selection row.
  */
 
-import { Source } from '../../src/data/source';
 
 import { placedGalaxyRow } from '../../src/layers/galaxyCatalog/selection/utils/placedGalaxyRow';
 
-import type { GalaxyRow } from '../../src/@types/engine/GalaxyRow';
+import type { GalaxyRow } from '../../src/layers/galaxyCatalog/records/@types/GalaxyRow';
 
 export function makeGalaxyRow(overrides: Partial<GalaxyRow> = {}) {
   return placedGalaxyRow({
     type: 'galaxyCatalog',
-    source: Source.SDSS,
+    source: 'sdss',
     index: 0,
     objId: '1',
     x: 0,

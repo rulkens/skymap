@@ -157,8 +157,8 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
     ).y;
     let azIdx = cdpAzIndexForAngle(childAngle, params.gridAz);
     // dustSample's own ring index: FLOOR bucket (cdpRingIndexForSample),
-    // matching sampleGalaxyIsmMap's internals exactly — this is the texel
-    // the CPU's own 'sample.dust' reads.
+    // using the same floor bucket as every other placement sample — this is
+    // the texel 'sample.dust' reads.
     let sampleRing = cdpRingIndexForSample(childRadius, params.gridRings, params.rMin, params.rMax);
     let dustSample = textureLoad(ismMapTex, vec2<i32>(i32(azIdx), i32(sampleRing)), 0).w;
     // ringMean's own ring index: ROUND-to-nearest (cdpRingIndexForRadius) —

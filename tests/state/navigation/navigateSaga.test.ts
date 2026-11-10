@@ -165,6 +165,16 @@ describe('navigateSaga', () => {
     expect(selectFocusRef(h.store.getState())).toBeNull();
   });
 
+  it('a cold moon link frames the host-facing side, not the inherited view', async () => {
+    const h = build();
+    await h.navigate({ view: { kind: 'focus', id: 'body-moon' } }, 'cut');
+    await flush();
+
+    const pose = worldArmOf(h.store.getState().camera.base);
+    // The runtime's carried-over view is yaw 0.5, pitch -0.2.
+    expect([pose.yaw, pose.pitch]).not.toEqual([0.5, -0.2]);
+  });
+
   it('navigate applies t before framing', async () => {
     const h = build();
     const t = Date.UTC(1990, 0, 1);

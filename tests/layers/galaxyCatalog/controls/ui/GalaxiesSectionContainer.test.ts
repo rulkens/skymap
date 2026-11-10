@@ -38,7 +38,6 @@ import {
   selectVisibleCatalogs,
 } from '../../../../../src/layers/galaxyCatalog/state/galaxyCatalogs/selectors';
 import { setGalaxyCatalogSize } from '../../../../../src/layers/galaxyCatalog/state/galaxyCatalogs/slice';
-import { Source } from '../../../../../src/data/source';
 import type { AppStore } from '../../../../../src/store/types';
 
 function makeWrapper(store: AppStore) {
@@ -85,7 +84,7 @@ describe('GalaxiesSectionContainer', () => {
     });
 
     // Toggle SDSS off — it starts enabled in the default store state
-    const sdssCheckbox = container.querySelector<HTMLInputElement>(`#toggle-source-${Source.SDSS}`);
+    const sdssCheckbox = container.querySelector<HTMLInputElement>(`#toggle-source-${'sdss'}`);
     expect(sdssCheckbox).not.toBeNull();
     expect(sdssCheckbox!.checked).toBe(true);
 

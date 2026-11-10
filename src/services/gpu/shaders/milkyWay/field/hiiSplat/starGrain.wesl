@@ -80,7 +80,7 @@ fn starGrainOctave(p: vec3<f32>, tileUnits: f32, contrast: f32, offset: vec3<f32
 // the UNSCALED p so the Texture-scale slider zooms the grain without
 // re-randomizing the shift.
 fn starGrainTerm(p: vec3<f32>, depth: f32, scale: f32, contrast: f32) -> f32 {
-  let pxWorld = 2.0 * depth * u.params.x / u.counts2.w;
+  let pxWorld = depth * (u.frustum.w - u.frustum.z) / u.counts2.w;
   let featureFrac = max(u.dustDetail.w, 0.0) * STAR_GRAIN_POINT_SIGMA_FRAC;
 
   let tileUnits0 = STAR_GRAIN_TILE_UNITS / max(scale, 1e-4);

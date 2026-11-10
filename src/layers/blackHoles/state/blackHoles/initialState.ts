@@ -5,6 +5,6 @@ import type { BlackHolesSettings } from '../../@types/BlackHolesSettings';
 // the reducer writes a field into an existing item and never creates one.
 export const initialState: BlackHolesSettings = {
   items: Object.fromEntries(
-    BLACK_HOLE_SOURCE_ROWS.map(([, entry]) => [entry.id, { labelEnabled: true }]),
+    BLACK_HOLE_SOURCE_ROWS.map((entry) => [entry.id, { labelEnabled: true }]),
   ) as BlackHolesSettings['items'],
 };

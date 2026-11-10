@@ -1,4 +1,4 @@
-import type { GalaxyCatalogSourceType } from '../../../@types/GalaxyCatalogSourceType';
+import type { GalaxyCatalogId } from '../../../@types/GalaxyCatalogId';
 
 /**
  * ProceduralDiskInstance — one entry in the procedural-disk pass's per-instance
@@ -27,7 +27,7 @@ export type ProceduralDiskInstance = {
   crossfadeAlpha: number;
   procFadeOut: number;
   /** The catalog value, CPU-only; the renderer maps it to the pick word's code. */
-  source: GalaxyCatalogSourceType;
+  source: GalaxyCatalogId;
   /** The record's pick index (`pickOfOrdinal`) — the localIdx half of the packed pick id. */
   localIdx: number;
   /**

@@ -14,21 +14,19 @@ import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBo
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { unpackPick } from '../../../../src/data/selectionEncoding';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
-import { fakePickCode } from '../../../support/fakePickCode';
 import { bodyPickCodes } from '../../../support/layerPickCodes';
 import { relErr } from '../../../support/relErr';
 import type { PlacedRow } from '../../../../src/@types/engine/selection/PlacedRow';
 
-const pickCodes = bodyPickCodes(fakePickCode());
+const pickCodes = bodyPickCodes();
 const row = bodySelectionRow({ pickCodes });
 const bodyRef = (id: string) => ({ type: 'body', id: asSceneBodyId(id) }) as const;
 
 describe('bodySelectionRow pick codes', () => {
-  it('body refs round-trip under non-catalog codes', () => {
+  it('body refs round-trip under allocator codes', () => {
     for (const id of [SCENE_EARTH.id, 'moon', 'phobos', 'vesta']) {
       const ref = bodyRef(id);
       const pick = unpackPick(row.encodePick(ref)!)!;
-      expect(pick.sourceCode).toBeGreaterThanOrEqual(40);
       expect(row.resolvePick(pick)).toEqual(ref);
     }
   });

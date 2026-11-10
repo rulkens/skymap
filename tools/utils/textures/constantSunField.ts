@@ -1,7 +1,7 @@
 /** constantSunField — the bench's manual-sun comparison: one `g` everywhere,
  *  as the smallest `SunField` `sampleSunField` can bilinearly interpolate
  *  (a 2×2 grid, corners at `bounds`) without a degenerate single-post axis. */
-import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
+import type { LonLatBounds } from '../../../src/layers/body/surfaceTiles/format/@types/LonLatBounds';
 import type { SunField } from '../../textures/@types/SunField';
 
 export function constantSunField(

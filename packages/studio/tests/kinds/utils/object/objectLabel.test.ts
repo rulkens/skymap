@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { objectLabel } from '../../../../src/kinds/utils/object/objectLabel';
 import { actionForRow } from '../../../../../../src/utils/palette/actionForRow';
-import { Source } from '../../../../../../src/data/source';
 import type { ObjectIndex } from '../../../../src/@types/kinds/ObjectIndex';
 
-const ALIAS = { pgc: 2557, names: ['Andromeda Galaxy', 'M31'], source: Source.Glade };
+const ALIAS = {
+  pgc: 2557,
+  names: ['Andromeda Galaxy', 'M31'],
+  sourceLabel: 'GLADE',
+  focusId: 'pgc-2557',
+};
 const INDEX: ObjectIndex = {
   famous: [],
   aliases: [ALIAS],

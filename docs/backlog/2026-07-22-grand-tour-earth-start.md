@@ -13,7 +13,7 @@ Open the grand tour at Earth instead of the Milky Way, and climb the scale ladde
 - Load-order property to rethink: `grandTour.ts:7-9` documents that the opening anchors on the `milkyWay` singleton _because it resolves with no catalog data loaded_, so the tour establishes even on an unlinked worktree. An Earth opening keeps that property (body ephemerides are data-free), but the star-field rungs lean on the Gaia bin — decide how those beats degrade without it.
 - Reusable material: `earthFlyout` (`src/data/animation/clips/earthFlyout.ts`, registered in `clipRegistry.ts:7-19`, playable via `?clip=earthFlyout`) already pulls back from Earth's surface to the Hubble radius, opening on Earth's live orbital position — a proven camera path to mine for the new opening beats.
 - Beat shape: `BeatData = { caption, dwellClip, enterClip? }` (`src/@types/animation/tour/BeatData.ts`); camera targets live _inside_ clips as `focus()`/`focusId()` cues. The `grandTourBeats.ts` debug-panel wrapper re-exports every beat as a standalone clip and must track any added beats.
-- `npm run tour-length` (`tools/animation/tourLength.ts:16` via `tourRegistry.ts`) reports the beat sheet — use it when rebalancing durations.
+- `npm run tour-length` (`tools/animation/tourLength.ts:16` via `appTours.ts`) reports the beat sheet — use it when rebalancing durations.
 
 ## Design questions
 

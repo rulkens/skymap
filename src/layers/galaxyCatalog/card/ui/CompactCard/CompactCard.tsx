@@ -5,7 +5,7 @@
  */
 
 import type { ReactNode } from 'react';
-import type { GalaxyInfo } from '../../../../../@types/engine/GalaxyInfo';
+import type { GalaxyInfo } from '../../../records/@types/GalaxyInfo';
 import type { FamousGalaxyMetaEntry } from '../../../../../@types/loading/FamousGalaxyMetaEntry';
 import { formatMorphology } from '../../../../../utils/format/formatMorphology';
 import { formatDistance } from '../../../../../utils/format/formatDistance';

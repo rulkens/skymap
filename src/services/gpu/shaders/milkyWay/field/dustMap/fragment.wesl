@@ -10,6 +10,7 @@
 
 import package::milkyWay::field::dustMap::io::DustMapOut;
 import package::lib::splatSilhouette::SPLAT_CUT;
+import package::lib::camera::cameraRayFromNdc;
 import package::lib::gaussianIntegral::gaussianRayCoeffs;
 import package::lib::gaussianIntegral::expHalfErfc;
 import package::lib::gaussianIntegral::GAUSS_PI;
@@ -76,10 +77,10 @@ fn dustNoiseWeighted(p: vec3<f32>, depth: f32, stretch: f32) -> f32 {
   let bands = textureSampleLevel(dustNoiseTex, dustNoiseSmp, coord, 0.0);
 
   // dustMapHeightPx (counts2.y) is dustMapTex's own pixel height (io.wesl);
-  // tanHalfFov (params.x) times depth is the world-space HALF-height of the
-  // view frustum at this depth, so 2x that over the pixel height converts
-  // to world units per pixel — this fragment's own footprint at 'depth'.
-  let pxWorld = 2.0 * depth * u.params.x / u.counts2.y;
+  // (tanUp - tanDown) times depth is the view frustum's world-space height
+  // at this depth, so over the pixel height it is world units per pixel —
+  // this fragment's own footprint at 'depth'.
+  let pxWorld = depth * (u.frustum.w - u.frustum.z) / u.counts2.y;
   if (pxWorld <= 0.0) {
     // Neutral: 0.5 is dustNoiseMultiplier's own no-op input (s=0 there), and
     // it zeroes S5's carve*(n-0.5) perturbation the same way.
@@ -163,14 +164,7 @@ fn fs(input: DustMapOut) -> @location(0) vec4<f32> {
   // Reconstructs the world-space ray from the interpolated NDC, exactly as
   // fieldSplat/fragment.wesl's fs does — the two must agree pixel-for-pixel
   // since the map is later read back at the SAME framebuffer coordinates.
-  let tanHalfFov = u.params.x;
-  let aspect = u.params.y;
-  let shift = u.params.z;
-  let d = normalize(
-    u.camRight.xyz * ((input.ndc.x + shift) * tanHalfFov * aspect)
-      + u.camUp.xyz * (input.ndc.y * tanHalfFov)
-      + u.camFwd.xyz,
-  );
+  let d = cameraRayFromNdc(input.ndc, u.camRight.xyz, u.camUp.xyz, u.camFwd.xyz, u.frustum);
   let o = u.eye.xyz;
 
   let dustOffset = u32(u.counts.y);
@@ -309,7 +303,7 @@ fn fs(input: DustMapOut) -> @location(0) vec4<f32> {
       dustNoiseTex, dustNoiseSmp, p / u.dustNoise.x + vec3<f32>(0.5), 0.0,
     );
     let w = 2.0 * bands.y; // 2x band, mean ~0.5 -> w mean ~1.
-    let pxWorld = 2.0 * tPeak * u.params.x / u.counts2.y;
+    let pxWorld = tPeak * (u.frustum.w - u.frustum.z) / u.counts2.y;
     var breakup = 1.0;
     if (pxWorld > 0.0) {
       // Band-limited like dustNoiseMultiplier's own w1 term above, but

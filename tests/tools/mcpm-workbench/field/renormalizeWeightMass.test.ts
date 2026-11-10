@@ -9,7 +9,6 @@ import {
   TOTAL_WEIGHT_MASS,
 } from '../../../../tools/mcpm-workbench/src/field/deriveAgentWeights';
 import { renormalizeWeightMass } from '../../../../tools/mcpm-workbench/src/field/renormalizeWeightMass';
-import { Source } from '../../../../src/data/source';
 import type { CatalogPoints } from '../../../../tools/mcpm-workbench/@types/CatalogPoints';
 import type { GridBox } from '../../../../tools/mcpm-workbench/@types/GridBox';
 
@@ -69,7 +68,7 @@ describe('renormalizeWeightMass', () => {
         positions: new Float32Array(positions),
         log10StellarMass: log10Mass,
         count: 6,
-        sources: [Source.SDSS],
+        sources: ['sdss'],
       };
 
       const culled = cullPointsToBox(points, weights, box);

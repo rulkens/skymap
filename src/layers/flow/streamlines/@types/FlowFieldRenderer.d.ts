@@ -34,7 +34,7 @@
 import type { Mat4 } from 'wgpu-matrix';
 import type { Vec2 } from '../../../../@types/math/Vec2';
 import type { ScalarCube } from '../../../../@types/data/volume/ScalarCube';
-import type { FlowSettings } from '../../../../@types/settings/FlowSettings';
+import type { FlowSettings } from '../../@types/FlowSettings';
 import type { ClaimTimestampWrites } from '../../../../@types/gpu/timing/ClaimTimestampWrites';
 
 export type FlowFieldRenderer = {

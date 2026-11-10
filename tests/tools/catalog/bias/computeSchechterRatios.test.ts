@@ -5,7 +5,6 @@
 
 import { describe, it, expect } from 'vitest';
 import { computeSchechterRatios } from '../../../../tools/catalog/bias/computeSchechterRatios';
-import { Source } from '../../../../src/data/source';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 
@@ -27,7 +26,7 @@ describe('computeSchechterRatios', () => {
     for (let i = 0; i < 10; i++) {
       cloud.positions[i * 3 + 0] = (i + 1) * 100; // 100, 200, …, 1000
     }
-    const ratios = computeSchechterRatios({ cloud, source: Source.SDSS });
+    const ratios = computeSchechterRatios({ cloud, source: 'sdss' });
     for (let i = 0; i < 10; i++) {
       expect(Number.isFinite(ratios[i]!)).toBe(true);
       // Bounds use a tiny f32-rounding slack — `Math.min(1.2, …)` stored as
@@ -45,7 +44,7 @@ describe('computeSchechterRatios', () => {
     // field below 1, with the median pivot in between.
     const cloud = makeCloud(3);
     cloud.positions.set([20, 0, 0, 100, 0, 0, 500, 0, 0]); // 20, 100, 500 Mpc
-    const ratios = computeSchechterRatios({ cloud, source: Source.SDSS });
+    const ratios = computeSchechterRatios({ cloud, source: 'sdss' });
     expect(ratios[0]!).toBeLessThanOrEqual(ratios[1]!);
     expect(ratios[1]!).toBeLessThanOrEqual(ratios[2]!);
     // The near-field row should land below 1 (dimmed) and the far-field
@@ -61,7 +60,7 @@ describe('computeSchechterRatios', () => {
     // would produce.  Visually those rows render at natural alpha.
     const cloud = makeCloud(1);
     cloud.positions.set([1e9, 0, 0]); // absurd distance
-    const ratios = computeSchechterRatios({ cloud, source: Source.SDSS });
+    const ratios = computeSchechterRatios({ cloud, source: 'sdss' });
     expect(Number.isFinite(ratios[0]!)).toBe(true);
     expect(ratios[0]!).toBeGreaterThanOrEqual(0.3);
     expect(ratios[0]!).toBeLessThanOrEqual(1.2);

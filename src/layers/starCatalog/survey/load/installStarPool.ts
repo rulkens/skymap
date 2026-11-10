@@ -7,7 +7,7 @@ import { STAR_CATALOG_SOURCE_RECORD } from '../../sources/starCatalogSourceRecor
 import { installOctreePool } from '../../../../services/octree/installOctreePool';
 import { octreeChunkPath } from '../../../../utils/octree/octreeChunkPath';
 import { starColumnsOf } from '../utils/starColumnsOf';
-import type { StarCatalogSourceType } from '../../@types/StarCatalogSourceType';
+import type { StarCatalogId } from '../../@types/StarCatalogId';
 import type { Tier } from '../../../../@types/data/Tier';
 import type { StarColumns } from '../@types/StarColumns';
 import type { Octree } from '../../../../@types/octree/Octree';
@@ -15,7 +15,7 @@ import type { OctreePoolHost } from '../../../../@types/octree/OctreePoolHost';
 
 export function installStarPool(
   host: OctreePoolHost<StarColumns>,
-  source: StarCatalogSourceType,
+  source: StarCatalogId,
   octree: Octree<StarColumns>,
   tier: Tier,
   slotsOverride: number | null,
