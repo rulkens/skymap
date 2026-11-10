@@ -21,19 +21,18 @@ sprites/   encodeStarPass, encodeTransmittanceDust, packCloudUniforms,
 field/     createArmRidgeDebugSample — the one field-tier module still local
            to the tool; the pipelines, packers and encode passes it debugs
            moved to src/layers/milkyWay/field/render/
-ismMap/     createIsmMapDustCdfScanDebugSample, createIsmMapReadbacks,
-           decodeIsmMapTexels, decodeOrientationTexels,
-           orientationCoherenceStats — readback and diagnostic paths the
-           matcher/probe drive; the generator and its placement/orientation
-           chain moved to src/layers/milkyWay/field/ismMap/
+ismMap/     createIsmMapDustCdfScanDebugSample, orientationCoherenceStats —
+           diagnostic paths the matcher/probe drive; the generator and its
+           placement/orientation chain moved to
+           src/layers/milkyWay/field/ismMap/, its readbacks and decoders to
+           src/layers/milkyWay/field/host/
 
 model/     createGalaxyModel — what a galaxy IS; drives BOTH tiers
 frame/     deriveFrameView + the pure per-frame arithmetic under it
 passes/    beginClearPass (now src/services/gpu/lib/), encodeSceneComposites
            — the pass vocabulary the tier folders share
 post/      encodeBloomPyramid, packGradeUniforms, gradeIsActive
-gpu/       createGalaxyRenderTargets, createReadbackQueue,
-           readTextureChannelSum — the field/ISM render targets stay HERE,
+gpu/       createGalaxyRenderTargets, readTextureChannelSum — the field/ISM render targets stay HERE,
            host-owned; only the grow-only record buffer and the volume-bake
            helper moved to src/layers/milkyWay/field/render/
 camera/    orbit input

@@ -8,9 +8,9 @@
  * that ring's own annulus area rather than a full per-texel accumulation —
  * `dTheta` cancels in the ratio, so it never needs computing.
  */
-import { ismMapDustRingEdges } from './ismMapDustRingEdges';
-import type { GalaxyIsmMap } from '../../@types/galaxy/GalaxyIsmMap';
-import type { IsmMapDensityTexel } from './buildIsmMapDustCdf';
+import { ismMapDustRingEdges } from '../../../../../utils/galaxy/ismMapDustRingEdges';
+import type { GalaxyIsmMap } from '../../../../../@types/galaxy/GalaxyIsmMap';
+import type { IsmMapDensityTexel } from '../../../../../utils/galaxy/buildIsmMapDustCdf';
 
 export function areaWeightedMeanIsmMapChannel(
   map: GalaxyIsmMap,

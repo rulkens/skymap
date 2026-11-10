@@ -7,9 +7,9 @@
  * ALL four lanes are kept (dust lives in .w).
  */
 import { describe, expect, it } from 'vitest';
-import { decodeIsmMapTexels } from '../../../../../tools/galaxy-renderer/src/engine/ismMap/decodeIsmMapTexels';
-import { floatToF16 } from '../../../../../src/utils/math/floatToF16';
-import { f16ToFloat } from '../../../../../src/utils/math/f16ToFloat';
+import { decodeIsmMapTexels } from '../../../../../../src/layers/milkyWay/field/host/utils/decodeIsmMapTexels';
+import { floatToF16 } from '../../../../../../src/utils/math/floatToF16';
+import { f16ToFloat } from '../../../../../../src/utils/math/f16ToFloat';
 
 describe('decodeIsmMapTexels', () => {
   it('reads all four lanes of each texel at the padded row stride, skipping padding', () => {

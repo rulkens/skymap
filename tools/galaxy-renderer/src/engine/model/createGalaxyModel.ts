@@ -31,7 +31,7 @@ import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../../src/layers/milkyWay/
 import { ismMapGridRadius } from '../../../../../src/layers/milkyWay/field/ismMap/utils/ismMapGridRadius';
 import type { GalaxyIsmMapGridRadius } from '../../../../../src/layers/milkyWay/field/ismMap/@types/GalaxyIsmMapGridRadius';
 import { normalizeGenerationSeed } from '../../../../../src/utils/galaxy/normalizeGenerationSeed';
-import { areaWeightedMeanIsmMapChannel } from '../../../../../src/utils/galaxy/areaWeightedMeanIsmMapChannel';
+import { areaWeightedMeanIsmMapChannel } from '../../../../../src/layers/milkyWay/field/ismMap/utils/areaWeightedMeanIsmMapChannel';
 import { ismMapRingMeans } from '../../../../../src/utils/galaxy/ismMapRingMeans';
 import { arrayMean } from '../../../../../src/utils/math/arrayMean';
 
@@ -41,7 +41,7 @@ import { createGrowOnlyRecordBuffer } from '../../../../../src/layers/milkyWay/f
 import type { GrowOnlyRecordBuffer } from '../../../../../src/layers/milkyWay/field/@types/GrowOnlyRecordBuffer';
 import { generateGalaxy } from '../sprites/generateGalaxy';
 import { orientationCoherenceStats } from '../ismMap/orientationCoherenceStats';
-import { createIsmMapReadbacks } from '../ismMap/createIsmMapReadbacks';
+import { createIsmMapReadbacks } from '../../../../../src/layers/milkyWay/field/host/render/createIsmMapReadbacks';
 import {
   BUBBLE_RECORD_FLOATS,
   packBubbleInstances,

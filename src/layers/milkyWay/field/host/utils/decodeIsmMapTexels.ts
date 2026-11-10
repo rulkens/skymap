@@ -10,7 +10,7 @@
  * have dropped. Runs on every fluid slider tick over 3.1M halves, so the
  * per-lane decode is a LUT read (`f16ToFloatLut`), not bit-twiddling.
  */
-import { f16ToFloatLut } from '../../../../../src/utils/math/f16ToFloatLut';
+import { f16ToFloatLut } from '../../../../../utils/math/f16ToFloatLut';
 
 export function decodeIsmMapTexels(
   padded: Uint16Array,

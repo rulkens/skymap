@@ -61,17 +61,10 @@ import { createAdditiveUpsample } from '../../../../src/services/gpu/passes/addi
 import { DEFAULT_RENDER_SETTINGS } from '../data/defaultRenderSettings';
 import { DEFAULT_LOD_SETTINGS } from '../data/defaultLodSettings';
 import { HII_TIERS } from '../data/hiiTiers';
+import { DUST_MAP_FORMAT } from '../../../../src/layers/milkyWay/field/host/data/dustMapFormat';
 
 /** HDR working format for the scene + bloom pyramid — the runtime's `hdr` row. */
 const HDR: GPUTextureFormat = 'rgba16float';
-
-/**
- * Format of `dustMapTex`: four channels, one optical depth per depth slice
- * (tau_0..tau_3, see io.wesl's dustSlices doc), `float16` for headroom since a
- * summed column has no natural upper bound. One channel per slice because a
- * single tau-weighted mean depth puts a hard 50% floor on obscuration.
- */
-const DUST_MAP_FORMAT: GPUTextureFormat = 'rgba16float';
 
 /** rAF deltas kept for the median — one second at 60 Hz. */
 const FRAME_WINDOW = 60;

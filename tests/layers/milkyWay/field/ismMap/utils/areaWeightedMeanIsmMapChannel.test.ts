@@ -8,8 +8,8 @@
  */
 import { describe, it, expect } from 'vitest';
 
-import type { GalaxyIsmMap } from '../../../src/@types/galaxy/GalaxyIsmMap';
-import { areaWeightedMeanIsmMapChannel } from '../../../src/utils/galaxy/areaWeightedMeanIsmMapChannel';
+import type { GalaxyIsmMap } from '../../../../../../src/@types/galaxy/GalaxyIsmMap';
+import { areaWeightedMeanIsmMapChannel } from '../../../../../../src/layers/milkyWay/field/ismMap/utils/areaWeightedMeanIsmMapChannel';
 
 function makeMap(
   rings: number,

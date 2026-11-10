@@ -548,7 +548,7 @@ export type GalaxyFieldRenderTargets = Readonly<Record<FieldTargetId, FieldTarge
 - `tests/helpers/conventions/inlineTypeFiles.ts` (today rows 179 and 181)
 - Their tests (moved)
 
-- [ ] Write `<scratch>/host-moves.json` and run `npm run move-files -- --manifest <scratch>/host-moves.json --dry`,
+- [x] Write `<scratch>/host-moves.json` and run `npm run move-files -- --manifest <scratch>/host-moves.json --dry`,
       then for real. The moves:
 
 | from | to |
@@ -563,16 +563,16 @@ export type GalaxyFieldRenderTargets = Readonly<Record<FieldTargetId, FieldTarge
 | `tests/tools/galaxy-renderer/engine/ismMap/decodeOrientationTexels.test.ts` | `tests/layers/milkyWay/field/host/utils/decodeOrientationTexels.test.ts` |
 | `tests/utils/galaxy/areaWeightedMeanIsmMapChannel.test.ts` | `tests/layers/milkyWay/field/ismMap/utils/areaWeightedMeanIsmMapChannel.test.ts` |
 
-- [ ] Extract the inline `IsmMapReadbacks` type with
+- [x] Extract the inline `IsmMapReadbacks` type with
       `npm run refactor -- extract src/layers/milkyWay/field/host/render/createIsmMapReadbacks.ts#IsmMapReadbacks src/layers/milkyWay/field/host/@types/IsmMapReadbacks.ts`,
       then
       `npm run move-files -- src/layers/milkyWay/field/host/@types/IsmMapReadbacks.ts src/layers/milkyWay/field/host/@types/IsmMapReadbacks.d.ts`. Repoint the two allow-list rows; `createReadbackQueue` keeps its inline stream types
       and its row. Delete the `createIsmMapReadbacks` row only if it's left with no inline type.
-- [ ] `DUST_MAP_FORMAT` (`createGalaxyEngine.ts:76`, unexported today) becomes the export of
+- [x] `DUST_MAP_FORMAT` (`createGalaxyEngine.ts:76`, unexported today) becomes the export of
       `host/data/dustMapFormat.ts`, with its doc (`:70-75`). The engine imports it.
-- [ ] Out of scope: `ismMapRingMeans` and `ismMapRingIndexForRadius` stay in `src/utils/galaxy/`.
+- [x] Out of scope: `ismMapRingMeans` and `ismMapRingIndexForRadius` stay in `src/utils/galaxy/`.
       The host doesn't reach them; only the tool's seeding view and the probes do.
-- [ ] No new test. Commit.
+- [x] No new test. Commit.
 
 ### Task A8: The calibration row and the frame-lane derivation
 
