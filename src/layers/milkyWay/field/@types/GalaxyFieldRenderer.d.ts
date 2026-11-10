@@ -14,7 +14,7 @@ import type { GalaxyFieldProbe } from '../probe/@types/GalaxyFieldProbe';
 export type GalaxyFieldRenderer = {
   /**
    * Rebuild whatever the moved half of `input` feeds. Idempotent: a call in
-   * which nothing moved (the host re-pushes its whole render bag on any knob)
+   * which nothing moved (the host passes its whole tuning every frame, each section identity-keyed)
    * does no work.
    */
   setMixture(input: GalaxyFieldMixtureInput): void;

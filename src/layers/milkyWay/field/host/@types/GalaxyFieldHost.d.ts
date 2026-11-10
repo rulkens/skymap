@@ -15,7 +15,6 @@ export type GalaxyFieldHost = {
   ensureFresh(): void;
   /** planFieldFrame over the renderer's packed segments. Called once per frame, by the planner. */
   plan(): FieldFramePlan;
-  /** Throws before the first `setTuning`: the headers have no render lanes to pack. */
   encode(
     encoder: GPUCommandEncoder,
     plan: FieldFramePlan,

@@ -3,14 +3,14 @@
  * knobs: every lane `FIELD_CALIBRATION.render` holds neutral, here set from
  * the tool's sliders, debug views and seeding view.
  */
-import type { DebugViewWeights } from '../../../../../src/layers/milkyWay/field/header/@types/DebugViewWeights';
 import type { FieldHostTuning } from '../../../../../src/layers/milkyWay/field/host/@types/FieldHostTuning';
 import type { IsmMapSeedingLanes } from '../../../../../src/layers/milkyWay/field/header/@types/IsmMapSeedingLanes';
+import type { FrameView } from './deriveFrameView';
 import type { RenderSettings } from '../../../@types/engine/RenderSettings';
 
 export function fieldHostRender(
   render: RenderSettings,
-  views: { readonly debugViews: DebugViewWeights; readonly galaxyWeight: number },
+  views: Pick<FrameView, 'debugViews' | 'galaxyWeight'>,
   ismMapSeeding: IsmMapSeedingLanes,
 ): FieldHostTuning['render'] {
   return {

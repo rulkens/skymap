@@ -59,6 +59,12 @@ import {
 import { createBloomPyramid } from '../../../../src/services/gpu/passes/bloomPyramid';
 import { createCompositor } from '../../../../src/services/gpu/passes/compositor';
 import { createAdditiveUpsample } from '../../../../src/services/gpu/passes/additiveUpsample';
+import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../src/layers/milkyWay/field/mixture/utils/galaxyFieldMixture';
+import { DEFAULT_GALAXY_PARAMS } from '../data/defaultGalaxyParams';
+import { describeGalaxy } from '../../../../src/services/engine/galaxyGenerator/shared/describeGalaxy';
+import { FIELD_CALIBRATION } from '../../../../src/layers/milkyWay/field/data/fieldCalibration';
+import { debugViewWeights } from './frame/debugViewWeights';
+import type { FrameView } from './frame/deriveFrameView';
 import { DEFAULT_RENDER_SETTINGS } from '../data/defaultRenderSettings';
 import { DEFAULT_LOD_SETTINGS } from '../data/defaultLodSettings';
 import { HII_TIERS } from '../data/hiiTiers';
@@ -145,17 +151,41 @@ export async function createGalaxyEngine(
   const makeShader = (code: string, label: string): GPUShaderModule =>
     createShaderModuleWithDevLog(device, code, label);
 
+  // One internal render bag, merged by `setRender`. Seeded from the same two
+  // constants the UI pushes on its first sync, so it can't drift from the
+  // store slice + preset envelope — and, through them, the app's own
+  // defaults. Declared before the field host and the model: the host's initial tuning
+  // and the model's rebuild gates read it.
+  const render = { ...DEFAULT_RENDER_SETTINGS, ...DEFAULT_LOD_SETTINGS };
+
   // ---- the analytic field: the host the app shares ----
   // `debug` carries the renderer and readbacks only the tool's diagnostics
   // reach. Both hooks feed `model`, which is in scope by the time either fires
   // (nothing rebuilds at construction).
-  const { host, debug } = createGalaxyFieldHost(device, {
-    makeShader,
-    hdrFormat: HDR,
-    dustMapFormat: DUST_MAP_FORMAT,
-    onIsmMapLanded: () => model.noteIsmMapLanded(),
-    onOrientationRebuilt: (grid) => model.noteOrientationRebuilt(grid),
-  });
+  // The model that owns the real tuning needs the host's readbacks, so the
+  // host starts from the boot preset's geometry; `drawFrame` replaces it with
+  // the model's from the first `setParams` on.
+  const { host, debug } = createGalaxyFieldHost(
+    device,
+    {
+      makeShader,
+      hdrFormat: HDR,
+      dustMapFormat: DUST_MAP_FORMAT,
+      onIsmMapLanded: () => model.noteIsmMapLanded(),
+      onOrientationRebuilt: (grid) => model.noteOrientationRebuilt(grid),
+    },
+    {
+      geometry: describeGalaxy(DEFAULT_GALAXY_PARAMS),
+      seed: 0,
+      extras: [],
+      field: DEFAULT_GALAXY_FIELD_TUNING,
+      render: fieldHostRender(
+        render,
+        { debugViews: debugViewWeights(render), galaxyWeight: 1 },
+        FIELD_CALIBRATION.render.ismMapSeeding,
+      ),
+    },
+  );
 
   // Tool-only grade trailer — see `packGradeUniforms` for the lanes. The bloom
   // and compositor uniforms are owned by their shared factories below.
@@ -206,13 +236,6 @@ export async function createGalaxyEngine(
     makeShader,
     swapFormat: format,
   });
-
-  // One internal render bag, merged by `setRender`. Seeded from the same two
-  // constants the UI pushes on its first sync, so it can't drift from the
-  // store slice + preset envelope — and, through them, the app's own
-  // defaults. Declared before the model because the model's rebuild gates
-  // read three of its lanes live.
-  const render = { ...DEFAULT_RENDER_SETTINGS, ...DEFAULT_LOD_SETTINGS };
 
   // ---- the galaxy itself: sprite buffers, extras, readback diagnostics ----
   // The model holds what the field host is tuned from (geometry, tuning,
@@ -268,7 +291,7 @@ export async function createGalaxyEngine(
   }
 
   /** The field host's whole tuning for this frame; null until `setParams` gives the galaxy a geometry. */
-  function fieldHostTuning(views: Parameters<typeof fieldHostRender>[1]): FieldHostTuning | null {
+  function fieldHostTuning(views: FrameView): FieldHostTuning | null {
     const geometry = model.geometry;
     if (!geometry) return null;
     return {
@@ -501,7 +524,7 @@ export async function createGalaxyEngine(
     const fieldTargets = targets.fieldTargets;
     if (fieldLive) {
       // The fade folds into the exposure, the same product the app's
-      // visibility alpha makes. The slot name keeps today's HUD rows.
+      // visibility alpha makes.
       host.encode(
         enc,
         plan,

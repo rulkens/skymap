@@ -21,6 +21,7 @@ import { planFieldFrame } from '../utils/planFieldFrame';
 export function createGalaxyFieldHost(
   device: GPUDevice,
   deps: GalaxyFieldHostDeps,
+  initialTuning: FieldHostTuning,
 ): { host: GalaxyFieldHost; debug: GalaxyFieldHostDebug } {
   // The hook fires only from a rebuild inside `setMixture`/`stepIsmMap`, never
   // during construction, so `readbacks` is initialised by the time it runs.
@@ -28,8 +29,8 @@ export function createGalaxyFieldHost(
     makeShader: deps.makeShader,
     hdrFormat: deps.hdrFormat,
     dustMapFormat: deps.dustMapFormat,
-    // Not a diagnostic: the landing is the map `invMeanNorm` is computed from,
-    // and the shader reads that lane. Until the first landing it is 1.
+    // The landing is the map `invMeanNorm` is computed from, which the shader
+    // reads; until the first landing that lane is 1.
     onIsmMapRebuilt: (grid) => readbacks.requestIsmMap(grid, deps.onIsmMapLanded),
     onOrientationRebuilt: deps.onOrientationRebuilt,
   });
@@ -39,7 +40,8 @@ export function createGalaxyFieldHost(
     orientation: renderer.ismMapOrientation,
   });
 
-  let tuning: FieldHostTuning | null = null;
+  // Held, not applied: the renderer builds nothing until the first `setTuning`.
+  let tuning = initialTuning;
   // Keyed on (map identity, gamma) rather than computed at the landing: gamma
   // is a live knob that can move on its own between landings.
   let youngStarsMeanCache: {
@@ -79,7 +81,6 @@ export function createGalaxyFieldHost(
     plan: () => planFieldFrame(renderer.hiiSegments),
 
     encode(encoder, plan, camera, exposure, targets, timestampWrites): void {
-      if (!tuning) throw new Error('createGalaxyFieldHost: encode before setTuning');
       const { render } = tuning;
       renderer.encode(encoder, plan, targets, {
         camera,
@@ -99,7 +100,7 @@ export function createGalaxyFieldHost(
     setTuning(next): void {
       // Only a moved grid invalidates a cached map: content one rebuild stale
       // over the same grid is kept (see `dropIfGridMoved`).
-      if (next.geometry !== tuning?.geometry) {
+      if (next.geometry !== tuning.geometry) {
         readbacks.dropIfGridMoved(ismMapGridRadius(next.geometry));
       }
       tuning = next;
