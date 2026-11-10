@@ -98,17 +98,29 @@ pub struct OrbitMeta {
 }
 
 /// hi_meta.json grouped into orbits: slots 6 minutes apart belong together. Piece paths are re-rooted
-/// under `granules/hi/` so a moved cache still resolves.
+/// under `granules/hi/` so a moved cache still resolves; pieces that never downloaded are dropped, and a
+/// slot left with none is dropped with them.
 pub fn orbit_groups(granules: &Path) -> Vec<OrbitMeta> {
     let meta: serde_json::Value =
         serde_json::from_str(&std::fs::read_to_string(granules.join("hi_meta.json")).unwrap())
             .unwrap();
-    let mut slots: Vec<&String> = meta.as_object().unwrap().keys().collect();
+    let have = |s: &&String| {
+        meta[s.as_str()].as_array().unwrap().iter().any(|p| {
+            granules
+                .join("hi")
+                .join(Path::new(p["path"].as_str().unwrap()).file_name().unwrap())
+                .exists()
+        })
+    };
+    let mut slots: Vec<&String> = meta.as_object().unwrap().keys().filter(have).collect();
     slots.sort();
     let mins: Vec<i32> = slots
         .iter()
         .map(|s| s[..2].parse::<i32>().unwrap() * 60 + s[2..].parse::<i32>().unwrap())
         .collect();
+    if slots.is_empty() {
+        return Vec::new();
+    }
     let mut groups: Vec<Vec<usize>> = vec![vec![0]];
     for i in 1..slots.len() {
         if mins[i] - mins[i - 1] == 6 {
@@ -134,6 +146,7 @@ pub fn orbit_groups(granules: &Path) -> Vec<OrbitMeta> {
                         p["y0"].as_u64().unwrap() as usize,
                     )
                 })
+                .filter(|p| p.0.exists())
                 .collect();
             OrbitMeta {
                 name: format!("N20 {}-{}", slots[g[0]], slots[*g.last().unwrap()]),
@@ -218,7 +231,8 @@ pub fn load_orbits(granules: &Path, lut: &[f32]) -> Vec<Source> {
         .collect()
 }
 
-/// The GIBS daily mosaics (JPEG), N20 then N21 as its own source; each speck-filled (p2).
+/// The GIBS daily mosaics (JPEG), N20 then N21 as its own source; each speck-filled (p2). A mosaic that
+/// did not download is left out; the required N20 one is checked by `fetch::mosaics`, so it leads.
 pub fn load_mosaics(mosaics: &Path, lut: &[f32]) -> Vec<Source> {
     let spec = [
         (
@@ -231,6 +245,7 @@ pub fn load_mosaics(mosaics: &Path, lut: &[f32]) -> Vec<Source> {
         ("daily mosaic N21", "viirs21_tc", N21_BIAS, N21_BAND, true),
     ];
     spec.iter()
+        .filter(|s| mosaics.join(format!("{}.jpg", s.1)).exists())
         .map(|&(name, f, bias, band, gain)| {
             let (w, h, px) = rgb(&mosaics.join(format!("{f}.jpg")));
             assert_eq!((w, h), (W, H));
@@ -339,4 +354,30 @@ pub fn hybridise(orbits: &mut [Source], mos: &Source) {
             kept.0 as f64 / kept.1 as f64
         );
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_granule_slot_with_every_piece_missing_is_dropped_without_panicking() {
+        let dir = std::env::temp_dir().join(format!("cloud-bake-granules-{}", std::process::id()));
+        let hi = dir.join("hi");
+        std::fs::create_dir_all(&hi).unwrap();
+        // slot 0006 downloaded its one piece, slot 0600 lost both of its pieces
+        image::RgbaImage::from_pixel(8, 8, image::Rgba([200, 200, 200, 255]))
+            .save(hi.join("0006_00.png"))
+            .unwrap();
+        let piece = |f: &str| serde_json::json!({"path": f, "x0": 0, "y0": 1024});
+        let meta = serde_json::json!({
+            "0006": [piece("0006_00.png")],
+            "0600": [piece("0600_00.png"), piece("0600_01.png")],
+        });
+        std::fs::write(dir.join("hi_meta.json"), meta.to_string()).unwrap();
+        let orbits = load_orbits(&dir, &opacity_lut());
+        std::fs::remove_dir_all(&dir).unwrap();
+        assert_eq!(orbits.len(), 1);
+        assert_eq!(orbits[0].name, "N20 0006-0006");
+    }
 }

@@ -128,18 +128,18 @@ pub struct Source { pub id: &'static str, pub host: Host, pub layer: &'static st
 pub const SOURCES: &[Source];           // replaces SATS + layer()'s match (fetch.rs:111-122)
 ```
 
-- [ ] `get` returns `Fetched` instead of panicking (`fetch.rs:94`); 5 tries with the existing backoff
+- [x] `get` returns `Fetched` instead of panicking (`fetch.rs:94`); 5 tries with the existing backoff
       stay. With `--offline`, a cache miss is `Missing`.
-- [ ] A missing/broken granule piece drops that piece; a slot with no pieces drops the slot; a
+- [x] A missing/broken granule piece drops that piece; a slot with no pieces drops the slot; a
       missing/broken geostationary frame drops it from the fill plan (its slot falls back as if out of
       geo reach). Each skip logs one stderr line and counts into `skipped.missing` / `skipped.broken`.
-- [ ] `required` is a field on the row, not a branch on a source id (owner ruling, simplicity review):
+- [x] `required` is a field on the row, not a branch on a source id (owner ruling, simplicity review):
       only the NOAA-20 daily mosaic is `required: true` (it patches the NOAA-20 swaths in `hybridise`);
       a required source missing or broken → exit 3, any other → skipped.
-- [ ] Tests: `is_all_black flags a black opaque frame`, `is_all_black ignores transparent pixels`
+- [x] Tests: `is_all_black flags a black opaque frame`, `is_all_black ignores transparent pixels`
       (mostly transparent frame with a few grey pixels → false), `a granule slot with every piece missing
       is dropped without panicking` (at the `load_orbits` level, with a tiny temp cache).
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 6: Coverage floor, calibration probe, verdict and summary line
 

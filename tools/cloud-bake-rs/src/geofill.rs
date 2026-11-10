@@ -4,11 +4,12 @@
 //! 10-min slots that cross-fade over ~1 deg, and each slot's frames map to opacity as bake.py ir() does.
 use crate::date::Date;
 use crate::edt::nearest_feature;
-use crate::fetch::{self, FrameReq, SATS};
+use crate::fetch::{self, FrameReq};
 use crate::filters::{gaussian, median3_u8, Edge};
 use crate::geodecode::{lon_in, view_angle, Decoder};
 use crate::grid::{arc, block_any, lon, subsample, H, W};
 use crate::orbit::{Orbit, HALF_SWATH, P};
+use crate::sources_table::geo;
 use rayon::prelude::*;
 use std::path::Path;
 
@@ -29,8 +30,9 @@ fn slot_of(t: f64) -> i32 {
 
 /// Per satellite, the time cells it can contribute to (view angle < 78 deg, longitude window + 1 cell).
 fn satc() -> Vec<Vec<bool>> {
-    SATS.iter()
-        .map(|&k| {
+    geo()
+        .map(|s| s.id)
+        .map(|k| {
             let inwin: Vec<bool> = (0..WC)
                 .map(|c| lon_in(k, lon(c * CELL + CELL / 2)))
                 .collect();
@@ -106,7 +108,7 @@ fn plan(
     let mut jobs = Vec::new();
     for (slot, m) in slot_masks {
         for g in groups(m) {
-            for (ki, &k) in SATS.iter().enumerate() {
+            for (ki, k) in geo().map(|s| s.id).enumerate() {
                 let mk: Vec<bool> = (0..HC * WC).map(|i| g[i] && satc[ki][i]).collect();
                 if !mk.iter().any(|&b| b) {
                     continue;
@@ -353,9 +355,11 @@ fn accumulate(
     for chunk in jobs.chunks(batch) {
         let layers: Vec<_> = chunk
             .par_iter()
-            .map(|jb| dec.layer(&jb.req, fetch::frame(frames, &jb.req)))
+            .map(|jb| fetch::frame(frames, &jb.req).map(|f| dec.layer(&jb.req, f)))
             .collect();
-        for (jb, (lv, lw, lf)) in chunk.iter().zip(layers) {
+        for (jb, layer) in chunk.iter().zip(layers) {
+            // a missing or broken frame contributes nothing, as if its slot were out of geo reach
+            let Some((lv, lw, lf)) = layer else { continue };
             if pending.first().is_some_and(|p| p.slot != jb.slot) {
                 flush(&mut pending, a, &mut on_slot);
             }

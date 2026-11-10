@@ -17,6 +17,7 @@ mod orbit;
 mod quantile;
 mod seam;
 mod sources;
+mod sources_table;
 
 use grid::{smoothstep, subsample, H, W};
 use rayon::prelude::*;
@@ -51,7 +52,10 @@ fn main() {
         "orbit: tn {:.2} min, lon_n {:.2}, LTAN {:.2} h, median |dt| {:.2} min",
         fit.tn, fit.lon_n, fit.ltan, fit.median_dt_min
     );
-    fetch::mosaics(&mosaics_dir, a.date, !a.offline);
+    if let Err(e) = fetch::mosaics(&mosaics_dir, a.date, !a.offline) {
+        eprintln!("cloud-bake-rs: {e}");
+        std::process::exit(3);
+    }
 
     let ice = imageio::ice_sheets(&a.blue_marble);
     let base: Vec<f32> = imageio::baseline(&a.baseline)
