@@ -73,11 +73,17 @@ function StudioTip({ name, meaning, keys, state, side = 'top', className, childr
 
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
-    window.addEventListener('keydown', onKey);
+    // Capture phase: the dock stops every key at its root. Escape closes the innermost open
+    // thing (ui-ux rule 8), so an open tip takes it and nothing else acts on it.
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      e.stopPropagation();
+      setOpen(false);
+    };
+    window.addEventListener('keydown', onKey, true);
     window.addEventListener('resize', place);
     return () => {
-      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('keydown', onKey, true);
       window.removeEventListener('resize', place);
     };
   }, [open, place]);

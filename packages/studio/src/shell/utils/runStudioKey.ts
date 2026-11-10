@@ -1,6 +1,7 @@
 /**
  * What a key does to the studio, as the actions to dispatch, or null when it has nothing to do
- * (nothing to undo, no selection to clear, a leaf row to fold), so the event is left for the app.
+ * (nothing to undo, a leaf row to fold), so the key keeps its default. Escape clears the selection
+ * first and then closes the studio: the app's own Escape stands down while the studio is open.
  * `help` is the overlay's, not the store's, so it is not here. Folding acts on the visible row that
  * stands for the selection, the same one the outline highlights.
  */
@@ -14,11 +15,14 @@ import {
 import { selectSelection, selectRedoLabel, selectUndoLabel } from '../../session/state/selectors';
 import { selectSelectionStandInId } from '../../timeline/state/selectSelectionStandInId';
 import { selectTimeline } from '../../timeline/state/selectTimeline';
+import { exitTakeover } from '../../../../../src/state/takeover/takeoverActions';
 import type { UnknownAction } from '@reduxjs/toolkit';
 import type { RootState } from '../../../../../src/store/types';
 import type { StudioKeyId } from '../@types/StudioKeyId';
 
 export function runStudioKey(id: StudioKeyId, state: RootState): UnknownAction[] | null {
+  if (id === 'escape')
+    return selectSelection(state) === null ? [exitTakeover()] : [rowSelected(null)];
   const timeline = selectTimeline(state);
   if (timeline === null) return null;
   const standIn = selectSelectionStandInId(state);
@@ -47,8 +51,6 @@ export function runStudioKey(id: StudioKeyId, state: RootState): UnknownAction[]
       return [playheadSet(0)];
     case 'end':
       return timeline.durationSec === null ? null : [playheadSet(timeline.durationSec)];
-    case 'clear':
-      return selectSelection(state) === null ? null : [rowSelected(null)];
     case 'help':
       return null;
   }

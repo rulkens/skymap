@@ -12,8 +12,7 @@ function DockGrabber({ fraction, onChange }: Props) {
   const onKeyDown = (event: KeyboardEvent) => {
     const grow = event.key === 'ArrowUp' ? 1 : event.key === 'ArrowDown' ? -1 : 0;
     if (grow === 0) return;
-    // The dock's own handler would take the arrow as a row selection.
-    event.stopPropagation();
+    // Default-prevented, so the dock's handler leaves the arrow alone instead of selecting a row.
     event.preventDefault();
     onChange(fraction + grow * DOCK_STEP);
   };

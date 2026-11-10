@@ -40,9 +40,9 @@ export const STUDIO_KEYS: readonly StudioKey[] = [
     matches: (e) => plain(e) && e.key === 'ArrowRight',
   },
   {
-    id: 'clear',
+    id: 'escape',
     group: 'Steps',
-    label: 'Deselect',
+    label: 'Deselect, then close',
     chips: ['Esc'],
     matches: (e) => plain(e) && e.key === 'Escape',
   },

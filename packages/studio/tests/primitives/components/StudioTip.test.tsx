@@ -45,6 +45,23 @@ describe('StudioTip', () => {
     expect(open.has(tipEl())).toBe(false);
   });
 
+  it('Escape closes the tip even inside a parent that stops every key, and goes no further', async () => {
+    const user = userEvent.setup();
+    const parent = vi.fn();
+    render(
+      // The dock stops every keydown at its root.
+      <div onKeyDown={(event) => (parent(), event.stopPropagation())}>
+        <StudioTip name="Loop">
+          <button type="button">go</button>
+        </StudioTip>
+      </div>,
+    );
+    await user.tab();
+    await user.keyboard('{Escape}');
+    expect(open.has(tipEl())).toBe(false);
+    expect(parent).not.toHaveBeenCalled();
+  });
+
   it('moving the pointer from the anchor onto the tip keeps it open', () => {
     vi.useFakeTimers();
     render(
