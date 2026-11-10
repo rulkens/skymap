@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 import { REMOTE_MENU } from '../../../src/state/remote/remoteMenu';
 import { clipRegistry } from '../../../src/data/animation/clips/clipRegistry';
-import { tourRegistry } from '../../../src/data/animation/tours/tourRegistry';
+import { APP_TOUR_REGISTRY } from '../../../src/compositions/appTours';
 
 describe('REMOTE_MENU', () => {
   it('leaves dev tours and dev clips off', () => {
-    const devTours = Object.values(tourRegistry).filter((t) => t.dev);
+    const devTours = Object.values(APP_TOUR_REGISTRY).filter((t) => t.dev);
     const devClips = Object.values(clipRegistry).filter((c) => c.dev);
     expect(devTours.length).toBeGreaterThan(0);
     expect(devClips.length).toBeGreaterThan(0);
