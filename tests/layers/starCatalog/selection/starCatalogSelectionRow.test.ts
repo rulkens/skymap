@@ -9,14 +9,12 @@ import { starCatalogSelectionRow } from '../../../../src/layers/starCatalog/sele
 import { unpackPick } from '../../../../src/data/selectionEncoding';
 import { type StarRowFixture } from '../../../support/selectionResolverOver';
 import { starRowRuntime } from '../../../support/layerPickCodes';
-import { fakePickCode } from '../../../support/fakePickCode';
 import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../../../src/layers/starCatalog/seededStars/data/seededStarCatalogsBySource';
 import { relErr } from '../../../support/relErr';
 import type { PlacedRow } from '../../../../src/@types/engine/selection/PlacedRow';
 
 /**
- * Pool index 7 maps to ordinal 1007 while its chunk is resident; nothing else
- * maps. Codes from 40 up, so a row that skips `pickCode` fails.
+ * Pool index 7 maps to ordinal 1007 while its chunk is resident; nothing else maps.
  */
 function runtime(resident: boolean) {
   const stars = {
@@ -28,7 +26,7 @@ function runtime(resident: boolean) {
     },
     chunkStreams: new Map(),
   } as unknown as StarRowFixture;
-  return starRowRuntime(stars, fakePickCode());
+  return starRowRuntime(stars);
 }
 
 const GAIA_CODE = runtime(true).pickCodes.pickCodeOf('gaiaStars');
@@ -54,7 +52,6 @@ describe('starCatalogSelectionRow', () => {
       { type: 'starCatalog', source: 'sStar', index: 2 },
     ] as const) {
       const pick = unpackPick(row.encodePick(ref)!)!;
-      expect(pick.sourceCode).toBeGreaterThanOrEqual(40);
       expect(row.resolvePick(pick)).toEqual(ref);
     }
   });

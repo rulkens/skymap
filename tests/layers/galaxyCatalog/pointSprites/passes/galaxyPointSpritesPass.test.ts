@@ -18,7 +18,7 @@ import { makeGalaxyCatalogItems } from '../../../../fixtures/makeGalaxyCatalogIt
 import { makeGalaxyCatalogFade } from '../../../../fixtures/makeGalaxyCatalogFade';
 import { makeGalaxyCatalog } from '../../../../fixtures/makeGalaxyCatalog';
 import { galaxyRowRuntime } from '../../../../support/layerPickCodes';
-import { fakePickCode } from '../../../../support/fakePickCode';
+import { testPickCode } from '../../../../support/testPickCode';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { OrbitCamera } from '../../../../../src/@types/camera/orbitCamera/OrbitCamera';
@@ -103,10 +103,10 @@ const SETTINGS_STUB = {
   },
 } as unknown as EngineState['settings'];
 
-// The selection row's reads: one SDSS catalog, codes far from the dense low ones.
+// The selection row's reads: one SDSS catalog.
 const ROW_RUNTIME = galaxyRowRuntime(
   { catalogs: new Map([['sdss', makeGalaxyCatalog(64)]]) },
-  fakePickCode(),
+  testPickCode('galaxyCatalog'),
 );
 
 // The pass closes over its Layer's runtime, so the draw spy rides a runtime

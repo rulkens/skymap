@@ -16,7 +16,7 @@ import type { StarCatalogRuntime } from '../../src/layers/starCatalog/@types/Sta
 import type { GalaxyRowFixture, StarRowFixture } from './selectionResolverOver';
 import type { StructureStore } from '../../src/layers/structure/catalog/@types/StructureStore';
 
-/** The body Layer's `pickCodes`, as `create` builds them; pass `fakePickCode()` to catch a stamp that packs a catalog value. */
+/** The body Layer's `pickCodes`, as `create` builds them. */
 export function bodyPickCodes(pickCode = testPickCode('body')) {
   return catalogPickCodes(BODY_SOURCE_ROWS, pickCode);
 }

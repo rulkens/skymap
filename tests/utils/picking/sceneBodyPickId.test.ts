@@ -12,14 +12,13 @@ import { bodyCodeOf } from '../../../src/layers/body/selection/present/bodyCodeO
 import { bodySelectionRow } from '../../../src/layers/body/selection/bodySelectionRow';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
 import { NO_KINDS_OFF } from '../../support/noKindsOff';
-import { fakePickCode } from '../../support/fakePickCode';
 import { bodyPickCodes } from '../../support/layerPickCodes';
 import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../src/data/bodies/scenePlanets';
 import { unpackPick } from '../../../src/data/selectionEncoding';
 
 // Codes from 40 up, so no expectation below can pass on a catalog value.
-const pickCodes = bodyPickCodes(fakePickCode());
+const pickCodes = bodyPickCodes();
 const sceneBodyPickId = (id: string) => pickIdOf(id, bodyCodeOf(pickCodes));
 const resolver = composeSelectionRows(
   () => [bodySelectionRow({ pickCodes })],

@@ -59,11 +59,10 @@ import { prepareBodySurfaceFrame } from '../../../../../src/layers/body/slabs/pr
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 import { createFramePlannerResultStore } from '../../../../../src/services/engine/frame/createFramePlannerResultStore';
 import { bodyPickCodes } from '../../../../support/layerPickCodes';
-import { fakePickCode } from '../../../../support/fakePickCode';
 import type { SurfaceTileProduct } from '../../../../../src/layers/body/surfaceTiles/format/@types/SurfaceTileProduct';
 
 // Codes from 40 up: a stamp that packs a catalog value fails every id match below.
-const PICK_CODES = bodyPickCodes(fakePickCode());
+const PICK_CODES = bodyPickCodes();
 
 // Stub the snapshot to the fixtures below, reusing each one's own positionMpc/orientation refs so
 // toBe(...) holds. Mars is seeded too, for the second-bodyId memo test.

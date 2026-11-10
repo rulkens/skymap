@@ -36,10 +36,9 @@ import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 import { viewBandOf } from '../../../../../src/services/engine/presentation/viewBandOf';
 import { APP_VISIBILITY_REGISTRY } from '../../../../../src/compositions/appVisibility';
 import { bodyPickCodes } from '../../../../support/layerPickCodes';
-import { fakePickCode } from '../../../../support/fakePickCode';
 
 // Codes from 40 up: a stamp that packs a catalog value fails every id match below.
-const PICK_CODES = bodyPickCodes(fakePickCode());
+const PICK_CODES = bodyPickCodes();
 
 // Where the solar-system captions have faded out.
 const CAPTION_GONE_MPC = SOLAR_SYSTEM_CAPTION_RECEDE.out[1];

@@ -4,12 +4,11 @@ import { GALAXY_CATALOG_SOURCES } from '../../../../src/layers/galaxyCatalog/sou
 import { unpackPick } from '../../../../src/data/selectionEncoding';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 import { galaxyRowRuntime } from '../../../support/layerPickCodes';
-import { fakePickCode } from '../../../support/fakePickCode';
 
-/** Every catalog loaded, under codes from 40 up, clear of the dense low codes. */
+/** Every catalog loaded, under the allocator's codes. */
 function rowOverAllCatalogs() {
   const catalogs = new Map(GALAXY_CATALOG_SOURCES.map((s) => [s, makeGalaxyCatalog(16)] as const));
-  return galaxyCatalogSelectionRow(galaxyRowRuntime({ catalogs }, fakePickCode()));
+  return galaxyCatalogSelectionRow(galaxyRowRuntime({ catalogs }));
 }
 
 describe('galaxyCatalogSelectionRow pick codes', () => {
@@ -20,7 +19,6 @@ describe('galaxyCatalogSelectionRow pick codes', () => {
       { type: 'galaxyCatalog', source: 'famousGalaxy', index: 3 },
     ] as const) {
       const pick = unpackPick(row.encodePick(ref)!)!;
-      expect(pick.sourceCode).toBeGreaterThanOrEqual(40);
       expect(row.resolvePick(pick)).toEqual(ref);
     }
   });

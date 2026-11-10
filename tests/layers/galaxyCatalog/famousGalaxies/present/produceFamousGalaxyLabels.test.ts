@@ -19,7 +19,7 @@ import type { EngineState } from '../../../../../src/@types/engine/state/EngineS
 import type { GalaxyCatalogRuntime } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import { catalogPickCodes } from '../../../../../src/utils/picking/catalogPickCodes';
 import { GALAXY_CATALOG_SOURCE_ROWS } from '../../../../../src/layers/galaxyCatalog/sources/galaxyCatalogSourceRows';
-import { fakePickCode } from '../../../../support/fakePickCode';
+import { testPickCode } from '../../../../support/testPickCode';
 import type { GalaxyCatalog } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { FamousGalaxyName } from '../../../../../src/layers/galaxyCatalog/famousGalaxies/@types/FamousGalaxyName';
 import type { Label2D } from '../../../../../src/@types/rendering/Label2D';
@@ -111,7 +111,7 @@ const famousCatalog = (positions: number[], diameters: number[]): GalaxyCatalog 
 
 type FamousRuntime = Pick<GalaxyCatalogRuntime, 'catalogs' | 'pickCodes'>;
 
-const PICK_CODES = catalogPickCodes(GALAXY_CATALOG_SOURCE_ROWS, fakePickCode());
+const PICK_CODES = catalogPickCodes(GALAXY_CATALOG_SOURCE_ROWS, testPickCode('galaxyCatalog'));
 
 function seed(
   entries: Partial<FamousGalaxyName>[],
