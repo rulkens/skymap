@@ -38,7 +38,7 @@ describe('watchZoomLimitSaga', () => {
     store.dispatch(
       zoomLimitPushed({
         edge: 'in',
-        spot: { body: asSceneBodyId('earth'), lonRad: 0, latRad: 0 },
+        body: asSceneBodyId('earth'),
         pointLocalM: [6_371_000, 0, 0],
       }),
     );

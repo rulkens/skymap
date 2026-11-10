@@ -35,7 +35,6 @@ import { hostOf } from '../hostOf';
 import { hostOrThrow } from '../hostOrThrow';
 import { bodyGroundRadiusAtM } from '../../../../../utils/scene/bodyGroundRadiusAtM';
 import { eyeAtFloor } from './utils/eyeAtFloor';
-import { skySpotAt } from '../../../../../utils/geo/skySpotAt';
 
 function surfaceStepCtxOf(host: HostBody, ctx: CameraArmCtx): SurfaceStepCtx {
   return {
@@ -116,8 +115,7 @@ export const bodyCameraArm: ClimbRow<'body'> = {
       anchorM !== null &&
       eyeAtFloor(framed.pose, surfaceCtx.groundRadiusAtM, surfaceCtx.standoffRadii);
     if (!pushes) return result;
-    const spot = skySpotAt(framed.frame.body, anchorM);
-    return { ...result, pushed: { edge: 'in', spot, pointLocalM: anchorM } };
+    return { ...result, pushed: { edge: 'in', body: framed.frame.body, pointLocalM: anchorM } };
   },
 
   nudge(tilt, framed, delta, ctx) {
