@@ -6,12 +6,13 @@
 import { updateEffectAt } from './updateEffectAt';
 import type { ClipData } from '../../../../../src/@types/animation/ClipData';
 import type { RowRef } from '../../@types/rows/RowRef';
+import type { ParamValue } from '../../@types/kinds/ParamValue';
 
 export function setRowParam(
   data: ClipData,
   ref: RowRef,
   param: string,
-  value: number | string | boolean | undefined,
+  value: ParamValue,
 ): ClipData {
   const withParam = <T extends object>(subject: T): T => {
     const { [param]: _removed, ...rest } = subject as Record<string, unknown>;

@@ -33,4 +33,6 @@ export const FIELD_CONTROLS: Record<FieldControl, FieldWidget> = {
   ease: { widget: 'pick' },
   toggle: { widget: 'toggle' },
   readout: { widget: 'readout' },
+  layers: { widget: 'layers', items: false },
+  layerItems: { widget: 'layers', items: true },
 };

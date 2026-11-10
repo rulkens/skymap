@@ -2,15 +2,19 @@ import { useAppDispatch } from '../../../../../../src/store/hooks';
 import { paramEdited } from '../../../session/state/studioSlice';
 import InspectorRow from '../../../primitives/components/InspectorRow/InspectorRow';
 import NumberField from '../../../primitives/components/NumberField/NumberField';
+import LayerPickField from '../../../primitives/components/LayerPickField/LayerPickField';
 import PickField from '../../../primitives/components/PickField/PickField';
 import ReadoutField from '../../../primitives/components/ReadoutField/ReadoutField';
 import SegmentedField from '../../../primitives/components/SegmentedField/SegmentedField';
 import { FIELD_CONTROLS } from '../../data/fieldControls';
 import { EASE_OPTIONS } from '../../data/easeOptions';
+import { layerOptions } from '../../utils/layerOptions';
 import { readoutText } from '../../utils/readoutText';
+import { formatAddresses } from '../../../kinds/utils/formatAddresses';
 import { AUTO_TEXT } from '../../../data/autoText';
 import { TOGGLE_OPTIONS } from './FieldRow.constants';
 import type { FieldSpec } from '../../../@types/kinds/FieldSpec';
+import type { ParamValue } from '../../../@types/kinds/ParamValue';
 import type { RowRef } from '../../../@types/rows/RowRef';
 import type { InspectorSubject } from '../../../@types/rows/InspectorSubject';
 
@@ -32,7 +36,7 @@ function FieldRow({ spec, subject, rowRef }: Props) {
   const canBeAbsent = spec.fallback !== undefined || spec.optional === true;
   const auto = !authored && spec.optional === true;
   const stored = subject[spec.param] ?? spec.fallback;
-  const edit = (value: number | string | boolean | undefined, gesture: string | null) =>
+  const edit = (value: ParamValue, gesture: string | null) =>
     dispatch(paramEdited({ ref: rowRef, param: spec.param, value, label: spec.label, gesture }));
 
   let field;
@@ -62,6 +66,17 @@ function FieldRow({ spec, subject, rowRef }: Props) {
             gesture,
           )
         }
+      />
+    );
+  } else if (widget.widget === 'layers') {
+    const picked = (stored ?? []) as readonly string[];
+    field = (
+      <LayerPickField
+        label={spec.label}
+        summary={formatAddresses(picked)}
+        value={picked}
+        options={layerOptions(widget.items === true)}
+        onChange={(v) => edit(v, null)}
       />
     );
   } else if (widget.widget === 'pick') {

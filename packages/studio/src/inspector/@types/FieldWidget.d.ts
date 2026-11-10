@@ -1,6 +1,8 @@
 /** How one `FieldControl` is drawn and converted: the widget, its unit suffix, and stored ↔ shown numbers. */
 export type FieldWidget = {
-  readonly widget: 'number' | 'pick' | 'toggle' | 'readout';
+  readonly widget: 'number' | 'pick' | 'toggle' | 'readout' | 'layers';
+  /** Layers widget: offer a per-item entry's items too. */
+  readonly items?: boolean;
   readonly unit?: string;
   /** A function steps relative to the shown value (Mpc spans many decades). */
   readonly step?: number | ((shown: number) => number);

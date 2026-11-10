@@ -8,4 +8,7 @@ export type FieldControl =
   | 'number'
   | 'ease'
   | 'toggle'
-  | 'readout';
+  | 'readout'
+  /** Visibility addresses: whole layers, or with items for show and hide. */
+  | 'layers'
+  | 'layerItems';

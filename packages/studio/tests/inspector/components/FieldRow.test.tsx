@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { Provider } from 'react-redux';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { oscillate } from '../../../../../src/services/engine/animation/effectHelpers';
+import { fade, oscillate, show } from '../../../../../src/services/engine/animation/effectHelpers';
 import FieldRow from '../../../src/inspector/components/FieldRow/FieldRow';
 import { inspectorSpec } from '../../../src/inspector/utils/inspectorSpec';
 import { rowSubject } from '../../../src/draft/utils/rowSubject';
@@ -14,6 +14,8 @@ import type { RowKind } from '../../../src/@types/rows/RowKind';
 import type { RowRef } from '../../../src/@types/rows/RowRef';
 
 afterEach(cleanup);
+
+const EFFECT = { kind: 'effect', path: [0] } as const;
 
 const START_POSE = {
   target: [0, 0, 0] as [number, number, number],
@@ -102,5 +104,25 @@ describe('FieldRow', () => {
       Math.PI / 2,
       10,
     );
+  });
+
+  it('a show picks layers and their items; the last one checked cannot be unchecked', async () => {
+    const store = setup({ timeline: [show(['flow'])] }, 'show', EFFECT, 'args');
+    await userEvent.click(screen.getByRole('button', { name: 'Layers: flow' }));
+    // The field holds the subject it rendered with, so the one check left is the stored ['flow'].
+    expect(screen.getByRole('checkbox', { name: 'flow' })).toBeDisabled();
+    expect(screen.getByRole('checkbox', { name: 'milliquas' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('checkbox', { name: 'milkyWay labels' }));
+
+    const args = (selectDraft(store.getState())!.timeline[0] as { args: string[] }).args;
+    expect(args).toEqual(['flow', 'label:milkyWay']);
+  });
+
+  it('a fade offers whole layers only, not their items', async () => {
+    setup({ timeline: [fade(['flow'], 0, 1)] }, 'fade', EFFECT, 'args');
+    await userEvent.click(screen.getByRole('button', { name: 'Layers: flow' }));
+
+    expect(screen.getByRole('checkbox', { name: 'survey' })).toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: 'milliquas' })).toBeNull();
   });
 });

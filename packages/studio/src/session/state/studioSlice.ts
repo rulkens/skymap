@@ -9,12 +9,14 @@ import { createSlice, original, type Draft, type PayloadAction } from '@reduxjs/
 
 import { initialState } from './initialState';
 import { rowSubject } from '../../draft/utils/rowSubject';
+import { sameParamValue } from '../../draft/utils/sameParamValue';
 import { setRowParam } from '../../draft/utils/setRowParam';
 import { defaultCollapsed } from '../utils/defaultCollapsed';
 import { commitDraft } from '../utils/commitDraft';
 import { stepHistory } from '../utils/stepHistory';
 import type { ClipData } from '../../../../../src/@types/animation/ClipData';
 import type { ClipId } from '../../../../../src/@types/animation/ClipId';
+import type { ParamValue } from '../../@types/kinds/ParamValue';
 import type { RowRef } from '../../@types/rows/RowRef';
 import type { PreviewPins } from '../../@types/session/PreviewPins';
 import type { StudioResolution } from '../../@types/session/StudioResolution';
@@ -70,7 +72,7 @@ export const studioSlice = createSlice({
       }: PayloadAction<{
         ref: RowRef;
         param: string;
-        value: number | string | boolean | undefined;
+        value: ParamValue;
         label: string;
         gesture: string | null;
       }>,
@@ -78,7 +80,8 @@ export const studioSlice = createSlice({
       const base = original(state)!;
       if (base.draft === null) return;
       // Re-committing the value a param already has must not dirty the draft or add an empty Undo.
-      if (Object.is(rowSubject(base.draft, payload.ref)?.[payload.param], payload.value)) return;
+      if (sameParamValue(rowSubject(base.draft, payload.ref)?.[payload.param], payload.value))
+        return;
       const next = setRowParam(base.draft, payload.ref, payload.param, payload.value);
       return commitDraft({ ...base, draft: base.draft }, next, payload.label, payload.gesture);
     },

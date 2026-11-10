@@ -12,6 +12,13 @@ import { readoutField } from '../utils/fields/readoutField';
 import { formatQuantity } from '../../utils/format/formatQuantity';
 import type { RowKindRegistry } from '../../@types/kinds/RowKindRegistry';
 
+const LAYER_ITEMS_FIELD = {
+  key: 'args',
+  param: 'args',
+  label: 'Layers',
+  control: 'layerItems',
+} as const;
+
 export const sceneKinds: Pick<
   RowKindRegistry,
   'show' | 'hide' | 'fade' | 'scene' | 'focus' | 'frameTo'
@@ -21,14 +28,14 @@ export const sceneKinds: Pick<
     mark: 'cue',
     writes: () => ['layers'],
     label: (s) => ({ name: 'Show', op: '', value: formatAddresses(s.args) }),
-    fields: [readoutField('args', 'Layers'), overField('Fade in', { fallback: 0 })],
+    fields: [LAYER_ITEMS_FIELD, overField('Fade in', { fallback: 0 })],
   },
   hide: {
     glyph: 'hide',
     mark: 'cue',
     writes: () => ['layers'],
     label: (s) => ({ name: 'Hide', op: '', value: formatAddresses(s.args) }),
-    fields: [readoutField('args', 'Layers'), overField('Fade out', { fallback: 0 })],
+    fields: [LAYER_ITEMS_FIELD, overField('Fade out', { fallback: 0 })],
   },
   fade: {
     glyph: 'fade',
@@ -41,7 +48,7 @@ export const sceneKinds: Pick<
       qualifier: formatAddresses(s.args),
     }),
     fields: [
-      readoutField('args', 'Layers'),
+      { key: 'args', param: 'args', label: 'Layers', control: 'layers' },
       { key: 'to', param: 'to', label: 'Level', control: 'percent' },
       overField(),
     ],
