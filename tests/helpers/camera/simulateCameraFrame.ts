@@ -21,7 +21,6 @@ import { selectPendingInput } from '../../../src/state/input/selectors';
 import { selectViewCoverPx } from '../../../src/state/viewCover/selectors';
 import { inputConsumed } from '../../../src/state/input/inputSlice';
 import { pendingToInputSteps } from '../../../src/utils/input/pendingToInputSteps';
-import { antiqueLookOn } from '../../../src/utils/render/antiqueLookOn';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
 
 export function simulateCameraFrame(
@@ -47,7 +46,6 @@ export function simulateCameraFrame(
     terrainHeightAt: () => 0,
     clipEpoch,
     schemes: deps.controlSchemes,
-    northUp: antiqueLookOn(state),
   });
   state.cameraRuntime = next;
   for (const action of actions) store.dispatch(action);

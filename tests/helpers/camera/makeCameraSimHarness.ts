@@ -34,6 +34,7 @@ import { WHEEL_ZOOM_K } from '../../../src/data/input/wheelZoomK';
 import { absoluteArm } from '../../../src/utils/camera/arms/absoluteArm';
 import { bodyDriverGeometry } from '../../../src/utils/scene/bodyDriverGeometry';
 import { SCENE_CELESTIAL_BODIES } from '../../../src/data/bodies/sceneCelestialBodies';
+import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { deepFreeze } from '../deepFreeze';
 import { makeCubemapCaptureRuntimes } from '../engine/makeCubemapCaptureRuntimes';
@@ -85,11 +86,7 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
     SCENE_CELESTIAL_BODIES.find((b) => b.id === id)!.surface.datumRadiusM;
 
   const state = {
-    // Live off the store, as `engine.ts`'s getter is (`antiqueLookOn` reads it).
-    get settings() {
-      return store.getState().settings;
-    },
-    viewRig: 'mono',
+    settings: { orientation: DEFAULT_ORIENTATION },
     gpu: { galaxyPointRenderer: null, renderTargets: null },
     subsystems: {
       scheduler: { requestRender: () => {}, requestIdleFrame: () => {} },

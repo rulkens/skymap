@@ -48,7 +48,6 @@ import {
 import { setMissionCraft } from '../../../../src/layers/missions/state/missions/slice';
 import { takeoverStarted } from '../../../../src/state/takeover/takeoverActions';
 import { setOrientation } from '../../../../src/state/settings/core/orientationSlice';
-import { setAntiqueEnabled } from '../../../../src/state/settings/core/antiqueSlice';
 import { LENS_MAX_DEG } from '../../../../src/data/camera/lensMaxDeg';
 import { degToRad } from '../../../../src/utils/math/degToRad';
 import { cameraArmKindOf } from '../../../../src/services/engine/camera/arms/cameraArmKindOf';
@@ -137,7 +136,6 @@ function inputsFor(h: CameraSimHarness, nowMs: number, over: Partial<StepInputs>
     terrainHeightAt: () => 0,
     clipEpoch: h.state.cameraRuntime.epochs.clip,
     schemes: composeControlSchemes([]),
-    northUp: false,
     ...over,
   };
 }
@@ -1053,49 +1051,5 @@ describe('the sky exit lift', () => {
     const m = arm.basisLocal;
     expect(along([m[6], m[7], m[8]], UP)).toBeCloseTo(-1, 9);
     expect(camera.fovYRad).toBeCloseTo(DEFAULT_FOV_Y_RAD, 12);
-  });
-});
-
-describe('the antique look holds north up', () => {
-  const START: CameraPose = { target: [0, 0, 0], yaw: 0.3, pitch: 0.2, distance: 100 };
-  const drawnRoll = (h: CameraSimHarness) => {
-    const { displayed } = h.state.cameraRuntime.outputs;
-    return isWorldArm(displayed) ? (displayed.pose.roll ?? 0) : NaN;
-  };
-  const baseRoll = (h: CameraSimHarness) => {
-    const { base } = h.store.getState().camera;
-    return isWorldArm(base) ? (base.pose.roll ?? 0) : NaN;
-  };
-
-  it('levels a rolled pose, and turning the look off leaves it level', () => {
-    const h = makeCameraSimHarness({ focusBody: null, bootHR: null });
-    h.seedPose(absoluteArm({ ...START, roll: 0.4 }));
-    h.frame(2);
-    expect(drawnRoll(h)).toBeCloseTo(0.4, 12);
-
-    h.store.dispatch(setAntiqueEnabled(true));
-    h.frame(2);
-    expect(drawnRoll(h)).toBe(0);
-    expect(baseRoll(h)).toBe(0);
-
-    h.store.dispatch(setAntiqueEnabled(false));
-    h.frame(2);
-    expect(drawnRoll(h)).toBe(0);
-  });
-
-  it('draws a roll written mid-frame level', () => {
-    const h = makeCameraSimHarness({ focusBody: null, bootHR: null, realClipPlayer: true });
-    h.store.dispatch(setAntiqueEnabled(true));
-    h.frame(2);
-    h.store.dispatch(
-      clipStarted({
-        data: { start: START, timeline: [tween('roll', { to: 1, over: 1, ease: 'linear' })] },
-        frame: DEFAULT_ORIENTATION,
-      }),
-    );
-    for (let i = 0; i < 10; i++) {
-      h.frame(1);
-      expect(drawnRoll(h)).toBe(0);
-    }
   });
 });

@@ -36,6 +36,4 @@ export type StepInputs = {
   /** Every scheme, not just the active one: an edge commit looks the departing
    *  row up in the table LAST frame's winner came from. */
   readonly schemes: Readonly<Record<ControlSchemeId, ControlScheme>>;
-  /** Hold the world arm's roll at zero (`northUpArm`): the antique look is on. */
-  readonly northUp: boolean;
 };
