@@ -15,7 +15,13 @@ import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { all, dollyTo, focus } from '../../../../../src/services/engine/animation/effectHelpers';
 import { focusId } from '../../../../../src/utils/animation/focusId';
 import { studioSessionSaga } from '../../../src/session/sagas/studioSessionSaga';
-import { draftResolved, paramEdited, studioOpened } from '../../../src/session/state/studioSlice';
+import {
+  draftResolved,
+  paramEdited,
+  studioOpened,
+  undone,
+} from '../../../src/session/state/studioSlice';
+import { positionPicked } from '../../../src/session/state/positionPicked';
 import {
   selectCurrentResolution,
   selectDraft,
@@ -28,6 +34,7 @@ import { installAppSelectionKinds } from '../../../../../tests/support/installAp
 import type { ClipId } from '../../../../../src/@types/animation/ClipId';
 import type { LiveCameraRuntime } from '../../../../../src/store/types';
 import type { SelectionResolver } from '../../../../../src/@types/engine/selection/SelectionResolver';
+import type { PlacedRow } from '../../../../../src/@types/engine/selection/PlacedRow';
 
 installAppSelectionKinds();
 
@@ -132,6 +139,29 @@ describe('studioSessionSaga', () => {
     const landed = h.recorded.filter(draftResolved.match).map((a) => a.payload.revision);
     expect(landed).toEqual([waiting + 1]);
     expect(selectCurrentResolution(h.store.getState())).not.toBeNull();
+  });
+
+  it("a picked object's position at the preview instant becomes the start's look-at, one Undo step", async () => {
+    const h = harness();
+    h.run('cosmicFlows');
+    await flush();
+    const before = selectDraft(h.store.getState())!;
+
+    h.store.dispatch(
+      positionPicked({
+        ref: { kind: 'start' },
+        param: 'target',
+        label: 'Look-at',
+        focusId: 'body-mars',
+      }),
+    );
+    await flush();
+
+    const { simDays } = selectPreview(h.store.getState())!;
+    const mars = FIXTURE.extractRow(FIXTURE.resolveFocusId('body-mars'), simDays) as PlacedRow;
+    expect(selectDraft(h.store.getState())!.start).toMatchObject({ target: mars.positionMpc });
+    h.store.dispatch(undone());
+    expect(selectDraft(h.store.getState())).toEqual(before);
   });
 
   it('ending the takeover keeps the draft in the slice', async () => {

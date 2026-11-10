@@ -9,7 +9,7 @@ import { formatNumber } from '../../utils/format/formatNumber';
 import { formatQuantity } from '../../utils/format/formatQuantity';
 import { easeField } from '../utils/fields/easeField';
 import { overField } from '../utils/fields/overField';
-import { readoutField } from '../utils/fields/readoutField';
+import { subjectField } from '../utils/fields/subjectField';
 import { resolvedPosition } from '../utils/resolvedPosition';
 import { formatMpc } from '../../utils/format/formatMpc';
 import type { RowKindRegistry } from '../../@types/kinds/RowKindRegistry';
@@ -23,7 +23,7 @@ export const subjectKinds: Pick<
     mark: 'bar',
     writes: () => ['lookAt'],
     label: (s) => ({ name: 'Look-at', op: '→', value: '', subject: s.id }),
-    fields: [readoutField('id', 'Subject'), overField(), easeField()],
+    fields: [subjectField(), overField(), easeField()],
     resolved: resolvedPosition,
   },
   dollyToId: {
@@ -38,7 +38,7 @@ export const subjectKinds: Pick<
       ...(s.scale !== undefined && s.scale !== 1 ? { qualifier: `×${formatNumber(s.scale)}` } : {}),
     }),
     fields: [
-      readoutField('id', 'Subject'),
+      subjectField(),
       { key: 'scale', param: 'scale', label: 'Closeness', control: 'number', fallback: 1 },
       overField(),
       easeField(),
@@ -50,7 +50,7 @@ export const subjectKinds: Pick<
     mark: 'bar',
     writes: () => ['turn'],
     label: (s) => ({ name: 'Aim', op: '→', value: '', subject: s.id }),
-    fields: [readoutField('id', 'Subject'), overField(), easeField()],
+    fields: [subjectField(), overField(), easeField()],
     // `aimAt`: an `all` of the yaw tween then the pitch tween.
     resolved: (e) =>
       e.kind === 'all' && e.children[0]?.kind === 'set' && e.children[1]?.kind === 'set'
@@ -68,7 +68,7 @@ export const subjectKinds: Pick<
       subject: s.id,
     }),
     fields: [
-      readoutField('id', 'Subject'),
+      subjectField(),
       // Stored in degrees already, unlike the radian angles `degrees` converts.
       { key: 'byDeg', param: 'byDeg', label: 'Sidestep', control: 'number' },
       overField(),
@@ -90,7 +90,7 @@ export const subjectKinds: Pick<
         : {}),
     }),
     fields: [
-      readoutField('id', 'Subject'),
+      subjectField(),
       { key: 'turns', param: 'turns', label: 'Extra turns', control: 'number', fallback: 0 },
       overField(),
       easeField(),
@@ -105,7 +105,7 @@ export const subjectKinds: Pick<
       s.id === null
         ? { name: 'Focus', op: '', value: 'none' }
         : { name: 'Focus', op: '', value: '', subject: s.id },
-    fields: [readoutField('id', 'Subject')],
+    fields: [subjectField()],
     resolved: (e) => (e.kind === 'focus' ? formatSelectionRef(e.ref) : ''),
   },
 };

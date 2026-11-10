@@ -1,6 +1,6 @@
 /**
- * True when the focused control acts on this key itself, so the studio's keys leave it: the dock's
- * one input (TextNumberField, text entry) takes every key, a select its arrows and Home/End, and a
+ * True when the focused control acts on this key itself, so the studio's keys leave it: a text
+ * input (TextNumberField, ObjectPicker) takes every key, a select its arrows and Home/End, and a
  * key some control already default-prevented (the app's Slider, the dock grabber) stays that
  * control's. Escape and ⌘Z on a slider or select still reach the studio.
  */

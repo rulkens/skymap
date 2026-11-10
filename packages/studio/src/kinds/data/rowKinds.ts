@@ -30,7 +30,7 @@ export const ROW_KINDS: RowKindRegistry = {
       { key: 'distance', param: 'distance', label: 'Distance', control: 'mpc' },
       { key: 'yaw', param: 'yaw', label: 'Turn', control: 'degrees' },
       { key: 'pitch', param: 'pitch', label: 'Tilt', control: 'degrees' },
-      readoutField('target', 'Look-at'),
+      { key: 'target', param: 'target', label: 'Look-at', control: 'subjectPosition' },
     ],
   },
   waypoint: {

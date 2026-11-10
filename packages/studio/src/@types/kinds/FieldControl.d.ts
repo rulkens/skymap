@@ -13,4 +13,7 @@ export type FieldControl =
   | 'layers'
   | 'layerItems'
   /** A Set step's whole settings action: which setting and its value. */
-  | 'settingsAction';
+  | 'settingsAction'
+  /** An object picked by name: its focus id, or (`subjectPosition`) its position at the preview instant. */
+  | 'subject'
+  | 'subjectPosition';

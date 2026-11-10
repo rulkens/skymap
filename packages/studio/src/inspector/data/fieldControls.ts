@@ -36,4 +36,6 @@ export const FIELD_CONTROLS: Record<FieldControl, FieldWidget> = {
   layers: { widget: 'layers', items: false },
   layerItems: { widget: 'layers', items: true },
   settingsAction: { widget: 'settingsAction' },
+  subject: { widget: 'object', position: false },
+  subjectPosition: { widget: 'object', position: true },
 };

@@ -1,4 +1,4 @@
-/** Text for a computed, non-editable field: numbers and names as typed, vectors as `x, y, z`, a bound subject as `◎id`, a channel by its Name. */
+/** Text for a computed, non-editable field: numbers and names as typed, vectors as `x, y, z`, a channel by its Name. */
 import { CHANNEL_NAME } from '../../data/channelNames';
 import { formatVec3 } from '../../kinds/utils/formatVec3';
 import { formatNameList } from '../../utils/format/formatNameList';
@@ -7,7 +7,6 @@ import type { Channel } from '../../../../../src/@types/animation/Channel';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
 export function readoutText(param: string, value: unknown): string {
-  if (param === 'id' && typeof value === 'string') return `◎${value}`;
   if (param === 'ch' && typeof value === 'string') return CHANNEL_NAME[value as Channel] ?? value;
   if (value === null) return 'none';
   if (typeof value === 'string') return value;

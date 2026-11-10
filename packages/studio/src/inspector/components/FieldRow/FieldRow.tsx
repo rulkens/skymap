@@ -1,5 +1,7 @@
 import { useAppDispatch } from '../../../../../../src/store/hooks';
 import { paramEdited } from '../../../session/state/studioSlice';
+import { positionPicked } from '../../../session/state/positionPicked';
+import { useObjectIndex } from '../../../session/hooks/useObjectIndex';
 import InspectorRow from '../../../primitives/components/InspectorRow/InspectorRow';
 import NumberField from '../../../primitives/components/NumberField/NumberField';
 import LayerPickField from '../../../primitives/components/LayerPickField/LayerPickField';
@@ -7,11 +9,13 @@ import PickField from '../../../primitives/components/PickField/PickField';
 import ReadoutField from '../../../primitives/components/ReadoutField/ReadoutField';
 import SegmentedField from '../../../primitives/components/SegmentedField/SegmentedField';
 import SettingsActionField from '../SettingsActionField/SettingsActionField';
+import ObjectPicker from '../ObjectPicker/ObjectPicker';
 import { FIELD_CONTROLS } from '../../data/fieldControls';
 import { EASE_OPTIONS } from '../../data/easeOptions';
 import { layerOptions } from '../../utils/layerOptions';
 import { readoutText } from '../../utils/readoutText';
 import { formatAddresses } from '../../../kinds/utils/formatAddresses';
+import { objectText } from '../../../kinds/utils/object/objectText';
 import { AUTO_TEXT } from '../../../data/autoText';
 import { TOGGLE_OPTIONS } from './FieldRow.constants';
 import type { FieldSpec } from '../../../@types/kinds/FieldSpec';
@@ -32,6 +36,7 @@ type Props = {
  */
 function FieldRow({ spec, subject, rowRef }: Props) {
   const dispatch = useAppDispatch();
+  const objects = useObjectIndex();
   const control = typeof spec.control === 'function' ? spec.control(subject) : spec.control;
   const widget = FIELD_CONTROLS[control];
   const authored = subject[spec.param] !== undefined;
@@ -86,6 +91,19 @@ function FieldRow({ spec, subject, rowRef }: Props) {
         value={picked}
         options={layerOptions(widget.items === true)}
         onChange={(v) => edit(v, null)}
+      />
+    );
+  } else if (widget.widget === 'object') {
+    const { param, label } = spec;
+    field = (
+      <ObjectPicker
+        label={label}
+        value={objectText(stored, objects)}
+        onPick={(focusId) =>
+          widget.position
+            ? dispatch(positionPicked({ ref: rowRef, param, label, focusId }))
+            : edit(focusId, null)
+        }
       />
     );
   } else if (widget.widget === 'pick') {

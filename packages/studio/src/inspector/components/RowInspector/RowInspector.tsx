@@ -10,6 +10,7 @@ import { resolvedText } from '../../utils/resolvedText';
 import { rowWhere } from '../../utils/rowWhere';
 import { shownFields } from '../../utils/shownFields';
 import { rowSubject } from '../../../draft/utils/rowSubject';
+import { useObjectIndex } from '../../../session/hooks/useObjectIndex';
 import FieldRow from '../FieldRow/FieldRow';
 import StartModeField from '../StartModeField/StartModeField';
 import type { ClipData } from '../../../../../../src/@types/animation/ClipData';
@@ -29,6 +30,7 @@ function RowInspector({ row, rows, draft, resolution }: Props) {
   const subject = rowSubject(draft, row.ref);
   const fields = subject === null ? [] : shownFields(spec.fields, subject);
   const resolved = resolvedText(row, resolution);
+  const objects = useObjectIndex();
 
   return (
     <>
@@ -36,7 +38,7 @@ function RowInspector({ row, rows, draft, resolution }: Props) {
         glyph={row.glyph}
         where={rowWhere(rows, row)}
         range={formatRange(row.startSec, row.endSec)}
-        title={formatRowTitle(row.label)}
+        title={formatRowTitle(row.label, objects)}
       />
       {row.errors.map((reason) => (
         <AlertChip key={reason}>{COMPILE_REASON_TEXT[reason].long}</AlertChip>

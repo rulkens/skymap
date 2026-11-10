@@ -2,6 +2,7 @@ import type { SelectionRelation } from '../../@types/SelectionRelation';
 import type { CSSProperties } from 'react';
 import cx from 'classnames';
 import Glyph from '../../../primitives/components/Glyph/Glyph';
+import { useObjectName } from '../../../session/hooks/useObjectName';
 import { CHANNEL_FAMILY_LEGEND } from '../../../data/channelFamilies';
 import { ROW_KINDS } from '../../../kinds/data/rowKinds';
 import { familyStyle } from '../../utils/familyStyle';
@@ -22,7 +23,8 @@ type Props = {
 function OutlineRow({ row, ancestors, selected, relation, onSelect, onToggle }: Props) {
   const group = ROW_KINDS[row.kind].mark === 'group';
   const invalid = row.errors.length > 0;
-  const { op, subject, value, qualifier } = row.label;
+  const { op, value, qualifier } = row.label;
+  const subjectName = useObjectName(row.label.subject);
   return (
     <div
       role="treeitem"
@@ -79,10 +81,10 @@ function OutlineRow({ row, ancestors, selected, relation, onSelect, onToggle }: 
       </span>
       <span className={s.value}>
         <span className={s.op}>{op}</span>
-        {subject !== undefined && (
+        {subjectName !== undefined && (
           <span className={s.subject}>
             <Glyph id="subject" size={12} />
-            {subject}
+            {subjectName}
           </span>
         )}
         <span className={s.val}>{value}</span>

@@ -1,6 +1,7 @@
 import cx from 'classnames';
 import { spanStyle } from '../../../utils/spanStyle';
 import { stuckLabelInset } from '../../../utils/stuckLabelInset';
+import { useObjectName } from '../../../../session/hooks/useObjectName';
 import type { MarkProps } from '../../../@types/MarkProps';
 import s from './BarMark.module.css';
 
@@ -9,9 +10,10 @@ import s from './BarMark.module.css';
  * Overlapping steps draw as plain overlapping bars (the crossfade taper is slice S5).
  */
 function BarMark({ row, window, selected }: MarkProps) {
+  const subject = useObjectName(row.label.subject);
   const { startSec, tailEndSec: endSec } = row;
   if (startSec === null || endSec === null) return null;
-  const { op, value, subject } = row.label;
+  const { op, value } = row.label;
   const text = [op, subject, value].filter(Boolean).join(' ');
   const stuck = stuckLabelInset(startSec, endSec, window);
   return (
