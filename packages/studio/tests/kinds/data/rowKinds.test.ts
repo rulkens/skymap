@@ -117,13 +117,13 @@ describe('ROW_KINDS', () => {
     expect(ROW_KINDS.seq.label(overlapped)).toEqual({
       name: 'Sequence',
       op: '',
-      value: 'Distance ×2 · blend 1 s',
+      value: '',
+      qualifier: 'blend 1 s',
     });
   });
 
-  it('a group lists its children by Name and writes the union of their families', () => {
+  it("a group writes the union of its children's families", () => {
     const group = all([dollyTo(1, 2), tween('yaw', { to: 1, over: 2 }), moveTarget([0, 0, 0], 2)]);
-    expect(ROW_KINDS.all.label(group).value).toBe('Distance, Turn +1');
     expect(ROW_KINDS.all.writes(group)).toEqual(['distance', 'lookAt', 'turn']);
     expect(ROW_KINDS.fork.writes(fork(show(['flow'])))).toEqual(['layers']);
   });

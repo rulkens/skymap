@@ -5,10 +5,10 @@
  * row with its child beneath it; a flyPath's waypoints are child rows windowed by its `knotSecs`.
  * A waypoint subject carries `last`, which the registry labels Settle.
  */
-import { ROW_KINDS } from '../../kinds/data/rowKinds';
 import { rowKey } from '../../draft/utils/rowKey';
 import { formatQuantity } from '../../utils/format/formatQuantity';
-import { familyGlyph } from './familyGlyph';
+import { rowFace } from './rowFace';
+import { groupMembers } from './groupMembers';
 import { rowDurationText } from './rowDurationText';
 import { rowTailEndSec } from './rowTailEndSec';
 import { culpritReasons } from './culpritReasons';
@@ -22,8 +22,6 @@ import type { RowSubjects } from '../../@types/rows/RowSubjects';
 import type { Timeline } from '../../@types/rows/Timeline';
 import type { TimelineCompile } from '../../@types/rows/TimelineCompile';
 import type { TimelineRow } from '../../@types/rows/TimelineRow';
-
-const UNTINTED_MARKS = new Set(['group', 'gap', 'start']);
 
 export function buildTimeline(
   draft: ClipData,
@@ -49,27 +47,18 @@ export function buildTimeline(
     subject: RowSubjects[K],
     where: Pick<TimelineRow, 'depth' | 'parentId' | 'background' | 'expandable'>,
     times: Pick<TimelineRow, 'startSec' | 'endSec' | 'tailEndSec' | 'duration'>,
-    extra: Pick<TimelineRow, 'knotSecs' | 'wave'> = {},
+    extra: Pick<TimelineRow, 'knotSecs' | 'wave' | 'members'> = {},
   ): string => {
-    const spec = ROW_KINDS[kind];
     const id = rowKey(ref);
     const collapsed = where.expandable && folded.has(id);
     const pathKey = ref.kind === 'effect' ? ref.path.join('.') : null;
-    const writes = spec.writes(subject);
-    const family = UNTINTED_MARKS.has(spec.mark) ? null : (writes[0] ?? null);
     rows.push({
       id,
       ref,
       kind,
       ...where,
       collapsed,
-      family,
-      glyph:
-        typeof spec.glyph === 'function'
-          ? spec.glyph(subject)
-          : (spec.glyph ?? familyGlyph(family)),
-      writes,
-      label: spec.label(subject),
+      ...rowFace(kind, subject),
       ...times,
       ...extra,
       errors: pathKey === null ? [] : (culprits.get(pathKey) ?? []),
@@ -109,6 +98,7 @@ export function buildTimeline(
       },
       {
         ...(span?.knotSecs === undefined ? {} : { knotSecs: span.knotSecs }),
+        ...(children.length > 0 ? { members: groupMembers(children) } : {}),
         // The evaluator's phase rule: a windowed bob's sine starts at its window, a perpetual one at clip 0.
         ...(effect.kind === 'osc' && span !== undefined
           ? {

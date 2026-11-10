@@ -5,6 +5,7 @@
 import type { ClipCompileReason } from '../../../../../src/@types/animation/ClipCompileReason';
 import type { GlyphId } from '../kinds/GlyphId';
 import type { OscWave } from './OscWave';
+import type { RowMember } from './RowMember';
 import type { ChannelFamily } from './ChannelFamily';
 import type { RowKind } from './RowKind';
 import type { RowLabel } from './RowLabel';
@@ -39,6 +40,8 @@ export type TimelineRow = {
   readonly knotSecs?: readonly number[];
   /** An osc's sine, for its lane's wave. */
   readonly wave?: OscWave;
+  /** A block's direct children, for its folded row's Value. */
+  readonly members?: readonly RowMember[];
   readonly errors: readonly ClipCompileReason[];
   /** Folded over a culprit: the outline flags it ⚠ so the error stays findable. */
   readonly hidesErrors: boolean;

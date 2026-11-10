@@ -37,8 +37,19 @@ describe('buildTimeline', () => {
     const { rows, durationSec } = buildTimeline(draft, compiled(draft), []);
     expect(rowOf(rows, 'e:0.0')).toMatchObject({ startSec: 0, endSec: 4, duration: '4 s' });
     expect(rowOf(rows, 'e:0.1')).toMatchObject({ startSec: 3, endSec: 7 });
-    expect(rowOf(rows, 'e:0').label.value).toBe('Distance ×2 · blend 1 s');
     expect(durationSec).toBe(7);
+  });
+
+  it("a group's members are its direct children's icons, in order, a run of one kind folded", () => {
+    const draft: ClipData = {
+      timeline: [seq([dollyTo(300, 4), dollyTo(950, 4), hold(1), all([dollyTo(1, 1)])])],
+    };
+    const { rows } = buildTimeline(draft, compiled(draft), []);
+    expect(rowOf(rows, 'e:0').members).toEqual([
+      { glyph: 'dist', family: 'distance', name: 'Distance', count: 2 },
+      { glyph: 'hold', family: null, name: 'Hold', count: 1 },
+      { glyph: 'all', family: null, name: 'All', count: 1 },
+    ]);
   });
 
   it('collapsing a group hides its descendants and keeps the group row', () => {

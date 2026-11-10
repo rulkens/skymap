@@ -131,6 +131,23 @@
   color: var(--color-fg);
   text-overflow: ellipsis;
 }
+.members {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  overflow: hidden;
+}
+.member {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--c, var(--color-fg-dim));
+}
+.count {
+  font-size: var(--font-size-sm);
+  color: var(--color-fg-tertiary);
+}
 .qualifier {
   overflow: hidden;
   color: var(--color-fg-tertiary);

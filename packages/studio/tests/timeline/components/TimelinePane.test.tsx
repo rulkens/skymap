@@ -73,6 +73,15 @@ describe('TimelinePane', () => {
     expect(selectSelection(store.getState())).toEqual({ kind: 'effect', path: [0, 0] });
   });
 
+  it('a folded block shows its steps as icons named for screen readers; an open one shows nothing', () => {
+    mount({ timeline: [seq([dollyTo(300, 4), dollyTo(950, 4)])] });
+    const summary = () => screen.queryByRole('img', { name: 'Distance ×2' });
+    expect(summary()).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Fold Sequence' }));
+    expect(summary()).not.toBeNull();
+  });
+
   it('clicking a lane selects its row', () => {
     const store = mount({ timeline: [seq([dollyTo(300, 4), dollyTo(950, 4)])] });
 

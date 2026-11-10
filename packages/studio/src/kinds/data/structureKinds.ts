@@ -1,13 +1,11 @@
 /**
- * Row kinds that compose or delay other effects. A group's Value lists its children's Names plus the
- * join state (`Distance ×2 · blend 1 s`) and its families are the union of its children's, so both
- * read the registry back: `createStructureKinds` takes it as a thunk instead of importing it, which
- * keeps `rowKinds.ts` the one place the registry is assembled and avoids an import cycle.
+ * Row kinds that compose or delay other effects. A group's Value is empty (a folded one shows its
+ * members' icons, from buildTimeline) and its families are the union of its children's, which reads
+ * the registry back: `createStructureKinds` takes it as a thunk instead of importing it, which keeps
+ * `rowKinds.ts` the one place the registry is assembled and avoids an import cycle.
  */
 import { blendOf } from '../utils/blendOf';
-import { foldRepeats } from '../utils/foldRepeats';
 import { CHANNEL_FAMILY_LEGEND } from '../../data/channelFamilies';
-import { formatNameList } from '../../utils/format/formatNameList';
 import { formatQuantity } from '../../utils/format/formatQuantity';
 import type { Effect } from '../../../../../src/@types/animation/Effect';
 import type { RowKindRegistry } from '../../@types/kinds/RowKindRegistry';
@@ -19,18 +17,11 @@ export function createStructureKinds(
   // `registry()[e.kind]` is a union of specs over different subjects; indexing by the child's own
   // kind makes the subject match, which the compiler cannot follow.
   const spec = (e: Effect) =>
-    registry()[e.kind] as unknown as {
-      label: (subject: Effect) => { name: string };
-      writes: (subject: Effect) => readonly ChannelFamily[];
-    };
-  const names = (children: readonly Effect[]) => children.map((c) => spec(c).label(c).name);
+    registry()[e.kind] as unknown as { writes: (subject: Effect) => readonly ChannelFamily[] };
   const union = (children: readonly Effect[]): readonly ChannelFamily[] => {
     const written = new Set(children.flatMap((c) => spec(c).writes(c)));
     return CHANNEL_FAMILY_LEGEND.map((entry) => entry.family).filter((f) => written.has(f));
   };
-  const groupValue = (children: readonly Effect[], blend = 0): string =>
-    formatNameList(foldRepeats(names(children))) +
-    (blend > 0 ? ` · blend ${formatQuantity(blend, 's')}` : '');
 
   return {
     hold: {
@@ -51,11 +42,15 @@ export function createStructureKinds(
       glyph: 'seq',
       mark: 'group',
       writes: (s) => union(s.children),
-      label: (s) => ({
-        name: 'Sequence',
-        op: '',
-        value: groupValue(s.children, blendOf(s.overlap)),
-      }),
+      label: (s) => {
+        const blend = blendOf(s.overlap);
+        return {
+          name: 'Sequence',
+          op: '',
+          value: '',
+          ...(blend > 0 ? { qualifier: `blend ${formatQuantity(blend, 's')}` } : {}),
+        };
+      },
       fields: [
         {
           key: 'overlap',
@@ -70,14 +65,14 @@ export function createStructureKinds(
       glyph: 'all',
       mark: 'group',
       writes: (s) => union(s.children),
-      label: (s) => ({ name: 'All', op: '', value: groupValue(s.children) }),
+      label: () => ({ name: 'All', op: '', value: '' }),
       fields: [],
     },
     fork: {
       glyph: 'fork',
       mark: 'group',
       writes: (s) => union([s.child]),
-      label: (s) => ({ name: 'Fork', op: '', value: groupValue([s.child]) }),
+      label: () => ({ name: 'Fork', op: '', value: '' }),
       fields: [],
     },
   };

@@ -25,6 +25,8 @@ function OutlineRow({ row, ancestors, selected, relation, onSelect, onToggle }: 
   const invalid = row.errors.length > 0;
   const { op, value, qualifier } = row.label;
   const subjectName = useObjectName(row.label.subject);
+  // An open block's children are its rows below; only a folded one summarises them.
+  const members = row.collapsed ? row.members : undefined;
   return (
     <div
       role="treeitem"
@@ -88,7 +90,28 @@ function OutlineRow({ row, ancestors, selected, relation, onSelect, onToggle }: 
           </span>
         )}
         <span className={s.val}>{value}</span>
-        {qualifier !== undefined && <span className={s.qualifier}> · {qualifier}</span>}
+        {members !== undefined && (
+          <span
+            role="img"
+            className={s.members}
+            aria-label={members
+              .map((m) => (m.count > 1 ? `${m.name} ×${m.count}` : m.name))
+              .join(', ')}
+          >
+            {members.map((m, i) => (
+              <span key={i} className={s.member} style={familyStyle(m.family)}>
+                <Glyph id={m.glyph} size={12} />
+                {m.count > 1 && <span className={s.count}>×{m.count}</span>}
+              </span>
+            ))}
+          </span>
+        )}
+        {qualifier !== undefined && (
+          <span className={s.qualifier}>
+            {value !== '' || subjectName !== undefined || members !== undefined ? ' · ' : ''}
+            {qualifier}
+          </span>
+        )}
       </span>
       <span className={cx(s.dur, (invalid || row.hidesErrors) && s.durInvalid)}>
         {row.duration}
