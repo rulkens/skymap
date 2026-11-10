@@ -38,9 +38,9 @@ import { HII_TIER_KINDS, mapHiiTiers } from '../starFormation/data/hiiTiers';
 import { createStageGraph } from '../../../../services/gpu/lib/createStageGraph';
 
 import { buildFieldHeaderInputs } from '../header/render/buildFieldHeaderInputs';
-import { createBubblePresentPipeline } from './createBubblePresentPipeline';
-import { createFieldPipelines } from './createFieldPipelines';
-import type { FieldBindGroups } from './createFieldPipelines';
+import { createBubblePresentPipeline } from '../pipelines/render/createBubblePresentPipeline';
+import { createFieldPipelines } from '../pipelines/render/createFieldPipelines';
+import type { FieldBindGroups } from '../pipelines/@types/FieldBindGroups';
 import { encodeDustMapPass } from './encodeDustMapPass';
 import { encodeDustPresentPass } from './encodeDustPresentPass';
 import { encodeSplatPass } from './encodeSplatPass';

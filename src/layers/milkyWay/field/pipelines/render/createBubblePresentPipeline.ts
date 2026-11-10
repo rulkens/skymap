@@ -8,11 +8,11 @@
  * every `encode`).
  */
 
-import { ADDITIVE_BLEND } from '../../../../services/gpu/lib/blendStates';
-import { BUBBLE_RECORD_FLOATS } from './packBubbleInstances';
+import { ADDITIVE_BLEND } from '../../../../../services/gpu/lib/blendStates';
+import { BUBBLE_RECORD_FLOATS } from '../../render/packBubbleInstances';
 
-import bubblePresentVsWgsl from '../../../../services/gpu/shaders/milkyWay/field/bubblePresent/vertex.wesl?static';
-import bubblePresentFsWgsl from '../../../../services/gpu/shaders/milkyWay/field/bubblePresent/fragment.wesl?static';
+import bubblePresentVsWgsl from '../../../../../services/gpu/shaders/milkyWay/field/bubblePresent/vertex.wesl?static';
+import bubblePresentFsWgsl from '../../../../../services/gpu/shaders/milkyWay/field/bubblePresent/fragment.wesl?static';
 
 export function createBubblePresentPipeline(deps: {
   readonly device: GPUDevice;

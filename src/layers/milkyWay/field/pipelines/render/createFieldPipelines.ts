@@ -8,81 +8,27 @@
  * (stage visibility) forces separate module pairs per pipeline — a mismatched
  * entry list is a validation error, not a no-op.
  */
-import type { HiiTier } from '../starFormation/@types/HiiTier';
-import type { IsmMapGenerator } from '../ismMap/@types/IsmMapGenerator';
+import type { HiiTier } from '../../starFormation/@types/HiiTier';
 
-import { mapHiiTiers } from '../starFormation/data/hiiTiers';
-import { ADDITIVE_BLEND } from '../../../../services/gpu/lib/blendStates';
+import { mapHiiTiers } from '../../starFormation/data/hiiTiers';
+import { ADDITIVE_BLEND } from '../../../../../services/gpu/lib/blendStates';
 
-import fieldSplatVsWgsl from '../../../../services/gpu/shaders/milkyWay/field/fieldSplat/vertex.wesl?static';
-import fieldSplatFsWgsl from '../../../../services/gpu/shaders/milkyWay/field/fieldSplat/fragment.wesl?static';
-import hiiSplatVsWgsl from '../../../../services/gpu/shaders/milkyWay/field/hiiSplat/vertex.wesl?static';
-import hiiYoungFsWgsl from '../../../../services/gpu/shaders/milkyWay/field/hiiSplat/youngFragment.wesl?static';
-import hiiErosionFsWgsl from '../../../../services/gpu/shaders/milkyWay/field/hiiSplat/erosionFragment.wesl?static';
-import hiiExtrasFsWgsl from '../../../../services/gpu/shaders/milkyWay/field/hiiSplat/extrasFragment.wesl?static';
-import dustMapVsWgsl from '../../../../services/gpu/shaders/milkyWay/field/dustMap/vertex.wesl?static';
-import dustMapFsWgsl from '../../../../services/gpu/shaders/milkyWay/field/dustMap/fragment.wesl?static';
-import dustPresentVsWgsl from '../../../../services/gpu/shaders/milkyWay/field/dustPresent/vertex.wesl?static';
-import dustPresentFsWgsl from '../../../../services/gpu/shaders/milkyWay/field/dustPresent/fragment.wesl?static';
-
-type FieldPipelineDeps = {
-  readonly device: GPUDevice;
-  readonly makeShader: (code: string, label: string) => GPUShaderModule;
-  readonly hdrFormat: GPUTextureFormat;
-  readonly dustMapFormat: GPUTextureFormat;
-  readonly fieldUbo: GPUBuffer;
-  readonly hiiUbo: GPUBuffer;
-  readonly tierUbo: Readonly<Record<HiiTier, GPUBuffer>>;
-  readonly ismMapGenerator: IsmMapGenerator;
-  readonly dustNoiseTex: GPUTexture;
-  readonly dustNoiseSampler: GPUSampler;
-  readonly warpNoiseTex: GPUTexture;
-  readonly warpNoiseSampler: GPUSampler;
-  readonly starGrainTex: GPUTexture;
-  readonly starGrainSampler: GPUSampler;
-  readonly dustMapSampler: GPUSampler;
-  /** dustMap/fragment.wesl binding 14 — the Larson renorm scale, GPU-written by `ringReduce.dispatchSurvivorSum`. Fixed-lifetime, never regrows (see `createIsmMapRingReduce.ts`'s own `dustRenormBuffer`), so it rides here like `fieldUbo`/`hiiUbo` rather than in `FieldBindGroupResources`. */
-  readonly dustRenormBuffer: GPUBuffer;
-  /** fieldSplat/fragment.wesl bindings 15/16 — the arm-cloud/spur-cloud reciprocal-weightSum scales, GPU-written by `ringReduce.dispatchArmCloudFluxWeightSum`/`dispatchArmSpurFluxWeightSum`. Same fixed-lifetime shape as `dustRenormBuffer` above. */
-  readonly armRenormBuffer: GPUBuffer;
-  readonly spurRenormBuffer: GPUBuffer;
-};
-
-/** The identity-bearing inputs every bind group in this module is built against. */
-type FieldBindGroupResources = {
-  readonly fieldComps: GPUBuffer;
-  readonly hiiComps: GPUBuffer;
-  readonly dustMap: GPUTextureView;
-};
-
-export type FieldBindGroups = {
-  readonly dustMap: GPUBindGroup;
-  readonly fieldSplat: GPUBindGroup;
-  readonly dustPresent: GPUBindGroup;
-  readonly hii: GPUBindGroup;
-  tier(kind: HiiTier): GPUBindGroup;
-};
-
-type FieldPipelines = {
-  readonly fieldSplatPipe: GPURenderPipeline;
-  readonly hiiYoungPipe: GPURenderPipeline;
-  readonly hiiErosionPipe: GPURenderPipeline;
-  readonly hiiExtrasPipe: GPURenderPipeline;
-  readonly dustMapPipe: GPURenderPipeline;
-  readonly dustPresentPipe: GPURenderPipeline;
-  /** Which pipeline draws a given HII tier — see its own doc below. */
-  hiiTierPipeline(kind: HiiTier): GPURenderPipeline;
-
-  /**
-   * Rebuild every bind group whose declared inputs' IDENTITY moved since the
-   * last call; return the full set. Idempotent and cheap — called at the top
-   * of every `encode`.
-   */
-  sync(resources: FieldBindGroupResources): FieldBindGroups;
-};
-
-type BindGroupRole = 'dustMap' | 'fieldSplat' | 'hii' | 'tiers' | 'dustPresent';
-type BindGroupResourceKey = keyof FieldBindGroupResources;
+import fieldSplatVsWgsl from '../../../../../services/gpu/shaders/milkyWay/field/fieldSplat/vertex.wesl?static';
+import fieldSplatFsWgsl from '../../../../../services/gpu/shaders/milkyWay/field/fieldSplat/fragment.wesl?static';
+import hiiSplatVsWgsl from '../../../../../services/gpu/shaders/milkyWay/field/hiiSplat/vertex.wesl?static';
+import hiiYoungFsWgsl from '../../../../../services/gpu/shaders/milkyWay/field/hiiSplat/youngFragment.wesl?static';
+import hiiErosionFsWgsl from '../../../../../services/gpu/shaders/milkyWay/field/hiiSplat/erosionFragment.wesl?static';
+import hiiExtrasFsWgsl from '../../../../../services/gpu/shaders/milkyWay/field/hiiSplat/extrasFragment.wesl?static';
+import dustMapVsWgsl from '../../../../../services/gpu/shaders/milkyWay/field/dustMap/vertex.wesl?static';
+import dustMapFsWgsl from '../../../../../services/gpu/shaders/milkyWay/field/dustMap/fragment.wesl?static';
+import dustPresentVsWgsl from '../../../../../services/gpu/shaders/milkyWay/field/dustPresent/vertex.wesl?static';
+import dustPresentFsWgsl from '../../../../../services/gpu/shaders/milkyWay/field/dustPresent/fragment.wesl?static';
+import type { FieldBindGroups } from '../@types/FieldBindGroups';
+import type { BindGroupResourceKey } from '../@types/BindGroupResourceKey';
+import type { BindGroupRole } from '../@types/BindGroupRole';
+import type { FieldBindGroupResources } from '../@types/FieldBindGroupResources';
+import type { FieldPipelines } from '../@types/FieldPipelines';
+import type { FieldPipelineDeps } from '../@types/FieldPipelineDeps';
 
 /**
  * Which identity-bearing resources a role is built against — the "which bind

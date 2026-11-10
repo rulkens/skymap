@@ -65,7 +65,6 @@ export const INLINE_TYPE_FILES: ReadonlySet<string> = new Set([
   'src/services/engine/wiring/attachLabelDirectors.ts',
   'src/services/gpu/device.ts',
   'src/layers/milkyWay/field/header/render/buildFieldHeaderInputs.ts',
-  'src/layers/milkyWay/field/render/createFieldPipelines.ts',
   'src/layers/milkyWay/field/render/bakeVolumeTexture.ts',
   'src/layers/milkyWay/field/render/createGrowOnlyRecordBuffer.ts',
   'src/layers/milkyWay/field/ismMap/render/createIsmMapFluidRunner.ts',

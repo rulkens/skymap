@@ -49,6 +49,10 @@ app and the tool share: per frame `setTuning`, `ensureFresh`, `plan`, then
 (`host/utils/deriveFieldFrameLanes.ts`). Until its first `setTuning` it plans
 and encodes nothing. Only the tool (`tools/galaxy-renderer/`) drives it today.
 
+## `pipelines/` — the render pipelines
+
+`pipelines/render/` holds the field's pipeline factories (`createFieldPipelines`, `createBubblePresentPipeline`); `pipelines/@types/` holds the types of their bind-group and dependency contracts.
+
 ## Landmines
 
 **There is no MGE of the Milky Way, and there cannot be.** MGE deprojects an
