@@ -2,7 +2,8 @@
  * The studio package is a lazy chunk: the app reaches it only through dynamic `import()`s of its
  * entry in two files, so Vite emits it apart and the main chunk never depends on it. The package
  * deep-imports the app freely, but reads the store through `src/store/hooks.ts`, never
- * `react-redux`, and never the throwaway mocks under `src/dev/`. Empty allowlist; the rules are the
+ * `react-redux`, and never the throwaway mocks under `src/dev/`. Those two import the entry and
+ * nothing else from the package. Empty allowlist; the rules are the
  * plan's A2 (docs/superpowers/plans/2026-11-10-clip-studio-package.md) and the package README.
  */
 import { readFileSync } from 'node:fs';
@@ -13,6 +14,7 @@ import { parseOnlyProject } from '../helpers/conventions/parseOnlyProject';
 import { walkFiles } from '../helpers/conventions/walkFiles';
 
 const PACKAGE = 'packages/studio/';
+const ENTRY = `${PACKAGE}src/studioEntry`;
 const DYNAMIC_IMPORTERS = new Set([
   'src/state/studio/studioBodySaga.ts',
   'src/components/StudioHost/StudioHost.tsx',
@@ -63,6 +65,15 @@ describe('studio import boundary (lazy chunk)', () => {
           .map((spec) => `${file} imports '${spec}'`),
       );
     expect(offenders, `Only ${[...DYNAMIC_IMPORTERS].join(' and ')} load the chunk.`).toEqual([]);
+  });
+
+  it('those two load only the entry, so the chunk keeps one door', () => {
+    const loaded = [...DYNAMIC_IMPORTERS].flatMap((file) =>
+      dynamicSpecifiers(parseOnlyProject.addSourceFileAtPath(file))
+        .filter((spec) => spec.startsWith('.') && repoPath(file, spec).startsWith(PACKAGE))
+        .map((spec) => repoPath(file, spec)),
+    );
+    expect(loaded, `Import ${ENTRY}, not a module behind it.`).toEqual([ENTRY, ENTRY]);
   });
 
   it('the package never imports react-redux or src/dev/', () => {
