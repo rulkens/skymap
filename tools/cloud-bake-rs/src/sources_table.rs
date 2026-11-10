@@ -21,91 +21,73 @@ pub struct Source {
     pub required: bool,
 }
 
-const fn row(
-    id: &'static str,
-    host: Host,
-    layer: &'static str,
-    styles: &'static str,
-    kind: Kind,
-    required: bool,
-) -> Source {
-    Source {
-        id,
-        host,
-        layer,
-        styles,
-        kind,
-        required,
-    }
-}
-
 /// The NOAA-20 mosaic is required: it patches the NOAA-20 swaths in `hybridise`. The order of the `Geo`
 /// rows is the satellite index geofill's per-satellite tables use.
 pub const SOURCES: [Source; 8] = [
-    row(
-        "viirs_n20_granule",
-        Host::Gibs,
-        "VIIRS_NOAA20_CorrectedReflectance_TrueColor_Granule",
-        "",
-        Kind::Granule,
-        false,
-    ),
-    row(
-        "viirs_tc",
-        Host::Gibs,
-        "VIIRS_NOAA20_CorrectedReflectance_TrueColor",
-        "",
-        Kind::Mosaic,
-        true,
-    ),
-    row(
-        "viirs21_tc",
-        Host::Gibs,
-        "VIIRS_NOAA21_CorrectedReflectance_TrueColor",
-        "",
-        Kind::Mosaic,
-        false,
-    ),
-    row(
-        "goes_e",
-        Host::Gibs,
-        "GOES-East_ABI_Band13_Clean_Infrared",
-        "",
-        Kind::Geo,
-        false,
-    ),
-    row(
-        "goes_w",
-        Host::Gibs,
-        "GOES-West_ABI_Band13_Clean_Infrared",
-        "",
-        Kind::Geo,
-        false,
-    ),
-    row(
-        "hima",
-        Host::Gibs,
-        "Himawari_AHI_Band13_Clean_Infrared",
-        "",
-        Kind::Geo,
-        false,
-    ),
-    row(
-        "mtg",
-        Host::Eumetsat,
-        "mtg_fd:ir105_hrfi",
-        "mtg_fd:mtg_fd_ir105_hrfi_grayscale",
-        Kind::Geo,
-        false,
-    ),
-    row(
-        "iodc",
-        Host::Eumetsat,
-        "msg_iodc:ir108",
-        "",
-        Kind::Geo,
-        false,
-    ),
+    Source {
+        id: "viirs_n20_granule",
+        host: Host::Gibs,
+        layer: "VIIRS_NOAA20_CorrectedReflectance_TrueColor_Granule",
+        styles: "",
+        kind: Kind::Granule,
+        required: false,
+    },
+    Source {
+        id: "viirs_tc",
+        host: Host::Gibs,
+        layer: "VIIRS_NOAA20_CorrectedReflectance_TrueColor",
+        styles: "",
+        kind: Kind::Mosaic,
+        required: true,
+    },
+    Source {
+        id: "viirs21_tc",
+        host: Host::Gibs,
+        layer: "VIIRS_NOAA21_CorrectedReflectance_TrueColor",
+        styles: "",
+        kind: Kind::Mosaic,
+        required: false,
+    },
+    Source {
+        id: "goes_e",
+        host: Host::Gibs,
+        layer: "GOES-East_ABI_Band13_Clean_Infrared",
+        styles: "",
+        kind: Kind::Geo,
+        required: false,
+    },
+    Source {
+        id: "goes_w",
+        host: Host::Gibs,
+        layer: "GOES-West_ABI_Band13_Clean_Infrared",
+        styles: "",
+        kind: Kind::Geo,
+        required: false,
+    },
+    Source {
+        id: "hima",
+        host: Host::Gibs,
+        layer: "Himawari_AHI_Band13_Clean_Infrared",
+        styles: "",
+        kind: Kind::Geo,
+        required: false,
+    },
+    Source {
+        id: "mtg",
+        host: Host::Eumetsat,
+        layer: "mtg_fd:ir105_hrfi",
+        styles: "mtg_fd:mtg_fd_ir105_hrfi_grayscale",
+        kind: Kind::Geo,
+        required: false,
+    },
+    Source {
+        id: "iodc",
+        host: Host::Eumetsat,
+        layer: "msg_iodc:ir108",
+        styles: "",
+        kind: Kind::Geo,
+        required: false,
+    },
 ];
 
 pub fn by_id(id: &str) -> &'static Source {

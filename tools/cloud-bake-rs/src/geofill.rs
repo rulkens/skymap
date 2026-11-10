@@ -49,12 +49,6 @@ fn satc() -> Vec<Vec<bool>> {
         .collect()
 }
 
-#[derive(Clone)]
-struct Job {
-    slot: i32,
-    req: FrameReq,
-}
-
 /// 8-connected groups of a cell mask in scipy label order, joined across the date line per row.
 fn groups(m: &[bool]) -> Vec<Vec<bool>> {
     let mut lab = vec![0usize; HC * WC];
@@ -104,7 +98,7 @@ fn plan(
     satc: &[Vec<bool>],
     scale: usize,
     date: Date,
-) -> Vec<Job> {
+) -> Vec<FrameReq> {
     let mut jobs = Vec::new();
     for (slot, m) in slot_masks {
         for g in groups(m) {
@@ -126,18 +120,15 @@ fn plan(
                 } else {
                     (((c0 * CELL + W) - pad) % W, len)
                 };
-                jobs.push(Job {
-                    slot: *slot,
-                    req: FrameReq {
-                        sat: k,
-                        date,
-                        tmin: *slot,
-                        x0,
-                        x1: x0 + len,
-                        y0: r0,
-                        y1: r1,
-                        scale,
-                    },
+                jobs.push(FrameReq {
+                    sat: k,
+                    date,
+                    tmin: *slot,
+                    x0,
+                    x1: x0 + len,
+                    y0: r0,
+                    y1: r1,
+                    scale,
                 });
             }
         }
@@ -207,8 +198,7 @@ fn cell_times(labels: &[i8], names: &[String], need: &[bool], orb: &Orbit) -> Ve
         let tsds: Vec<(f64, f64)> = cand[ph].iter().map(|p| p[j]).collect();
         if let Some(win) = nm.strip_prefix("N20 ") {
             let (a, b) = win.split_once('-').unwrap();
-            let m =
-                |s: &str| s[..2].parse::<f64>().unwrap() * 60.0 + s[2..].parse::<f64>().unwrap();
+            let m = |s: &str| fetch::slot_minute(s) as f64;
             let (lo, hi) = (m(a) - 3.0, m(b) + 9.0);
             let best = tsds.iter().filter(|(t, _)| *t >= lo && *t <= hi).fold(
                 None,
@@ -315,72 +305,66 @@ fn target(r: &FrameReq, i: usize, j: usize, ww: usize) -> usize {
     ((r.y0 + i * s) / s) * ww + ((r.x0 + j * s) % W) / s
 }
 
+/// Calls `f(accumulator index, slot weight, layer index)` for each pixel of a job's layer.
+fn visit(
+    jb: &FrameReq,
+    ww: usize,
+    weights: Option<&[(i32, Sparse)]>,
+    mut f: impl FnMut(usize, f32, usize),
+) {
+    let (h, w) = ((jb.y1 - jb.y0) / jb.scale, (jb.x1 - jb.x0) / jb.scale);
+    let sp = weights.map(|ws| &ws.iter().find(|(s, _)| *s == jb.tmin).unwrap().1);
+    for i in 0..h {
+        for j in 0..w {
+            let wv = sp.map_or(1.0, |s| s.get((jb.y0 + i) / Q, ((jb.x0 + j) % W) / Q));
+            f(target(jb, i, j, ww), wv, i * w + j);
+        }
+    }
+}
+
 /// geofill.py accumulate over consecutive jobs (grouped by slot): layers decode in parallel batches,
 /// each slot's coverage is the max over its satellites, weighted once.
 fn accumulate(
-    jobs: &[Job],
+    jobs: &[FrameReq],
     dec: &Decoder,
     frames: &Path,
     a: &mut Acc,
     weights: Option<&[(i32, Sparse)]>,
-    mut on_slot: impl FnMut(i32, &mut Acc, &[Job]),
+    mut on_slot: impl FnMut(i32, &mut Acc, &[FrameReq]),
 ) {
     let batch = (rayon::current_num_threads() * 2).max(4);
-    let mut pending: Vec<Job> = Vec::new();
-    let flush =
-        |pending: &mut Vec<Job>, a: &mut Acc, on_slot: &mut dyn FnMut(i32, &mut Acc, &[Job])| {
-            let ww = a.ww;
-            for jb in pending.iter() {
-                let (h, w) = (
-                    (jb.req.y1 - jb.req.y0) / jb.req.scale,
-                    (jb.req.x1 - jb.req.x0) / jb.req.scale,
-                );
-                let sp = weights.map(|ws| &ws.iter().find(|(s, _)| *s == jb.slot).unwrap().1);
-                for i in 0..h {
-                    for j in 0..w {
-                        let t = target(&jb.req, i, j, ww);
-                        let wv = sp.map_or(1.0, |s| {
-                            s.get((jb.req.y0 + i) / Q, ((jb.req.x0 + j) % W) / Q)
-                        });
-                        a.cov[t] += wv * a.cmax[t];
-                        a.cmax[t] = 0.0;
-                    }
-                }
-            }
-            if let Some(s) = pending.first().map(|j| j.slot) {
-                on_slot(s, a, pending);
-            }
-            pending.clear();
-        };
+    let mut pending: Vec<FrameReq> = Vec::new();
+    let flush = |pending: &mut Vec<FrameReq>,
+                 a: &mut Acc,
+                 on_slot: &mut dyn FnMut(i32, &mut Acc, &[FrameReq])| {
+        let ww = a.ww;
+        for jb in pending.iter() {
+            visit(jb, ww, weights, |t, wv, _| {
+                a.cov[t] += wv * a.cmax[t];
+                a.cmax[t] = 0.0;
+            });
+        }
+        if let Some(s) = pending.first().map(|j| j.tmin) {
+            on_slot(s, a, pending);
+        }
+        pending.clear();
+    };
     for chunk in jobs.chunks(batch) {
         let layers: Vec<_> = chunk
             .par_iter()
-            .map(|jb| fetch::frame(frames, &jb.req).map(|f| dec.layer(&jb.req, f)))
+            .map(|jb| fetch::frame(frames, jb).map(|f| dec.layer(jb, f)))
             .collect();
         for (jb, layer) in chunk.iter().zip(layers) {
             // a missing or broken frame contributes nothing, as if its slot were out of geo reach
             let Some((lv, lw, lf)) = layer else { continue };
-            if pending.first().is_some_and(|p| p.slot != jb.slot) {
+            if pending.first().is_some_and(|p| p.tmin != jb.tmin) {
                 flush(&mut pending, a, &mut on_slot);
             }
-            let ww = a.ww;
-            let (h, w) = (
-                (jb.req.y1 - jb.req.y0) / jb.req.scale,
-                (jb.req.x1 - jb.req.x0) / jb.req.scale,
-            );
-            let sp = weights.map(|ws| &ws.iter().find(|(s, _)| *s == jb.slot).unwrap().1);
-            for i in 0..h {
-                for j in 0..w {
-                    let t = target(&jb.req, i, j, ww);
-                    let wv = sp.map_or(1.0, |s| {
-                        s.get((jb.req.y0 + i) / Q, ((jb.req.x0 + j) % W) / Q)
-                    });
-                    let k = i * w + j;
-                    a.acc[t] += wv * lv[k];
-                    a.wsum[t] += wv * lw[k];
-                    a.cmax[t] = a.cmax[t].max(lf[k]);
-                }
-            }
+            visit(jb, a.ww, weights, |t, wv, k| {
+                a.acc[t] += wv * lv[k];
+                a.wsum[t] += wv * lw[k];
+                a.cmax[t] = a.cmax[t].max(lf[k]);
+            });
             pending.push(jb.clone());
         }
     }
@@ -468,8 +452,7 @@ fn pick_by_correlation(
         by_slot.len(),
         jobs.len()
     );
-    let reqs: Vec<FrameReq> = jobs.iter().map(|j| j.req.clone()).collect();
-    fetch::prefetch(frames, &reqs, allow);
+    fetch::prefetch(frames, &jobs, allow);
     let (hq, wq) = (H / Q, W / Q);
     let mut a = Acc::new(hq, wq);
     let mut windows: std::collections::HashMap<(usize, i32), Vec<f64>> =
@@ -499,13 +482,10 @@ fn pick_by_correlation(
             windows.insert((cell, slot), g);
         }
         for jb in sj {
-            let (h, w) = (
-                (jb.req.y1 - jb.req.y0) / jb.req.scale,
-                (jb.req.x1 - jb.req.x0) / jb.req.scale,
-            );
+            let (h, w) = ((jb.y1 - jb.y0) / jb.scale, (jb.x1 - jb.x0) / jb.scale);
             for i in 0..h {
                 for j in 0..w {
-                    let k = target(&jb.req, i, j, a.ww);
+                    let k = target(jb, i, j, a.ww);
                     (a.acc[k], a.wsum[k], a.cov[k]) = (0.0, 0.0, 0.0);
                 }
             }
@@ -688,8 +668,7 @@ pub fn build_fill(
         masks.len(),
         jobs.len()
     );
-    let reqs: Vec<FrameReq> = jobs.iter().map(|j| j.req.clone()).collect();
-    fetch::prefetch(frames, &reqs, allow);
+    fetch::prefetch(frames, &jobs, allow);
 
     let mut a = Acc::new(H, W);
     accumulate(&jobs, dec, frames, &mut a, Some(&weights), |_, _, _| {});

@@ -50,7 +50,7 @@ export const FULL_FETCH_APPROX_MB =
 export const DEV_FETCH_APPROX_MB = 7;
 
 /** MB, all twelve 21600x10800 BMNG equirects (~30 MB each) — the cloud bake's ice-mask months. */
-export const BMNG_MONTHS_APPROX_MB = 360;
+const BMNG_MONTHS_APPROX_MB = 360;
 
 export type TextureSource = {
   readonly url: string;
@@ -149,7 +149,7 @@ export function textureSourcesFor(dev: boolean): readonly TextureSource[] {
 }
 
 /** The twelve BMNG equirects (`--bmng-months`); the full pull fetches only the `BMNG_VINTAGE` one. */
-export function bmngMonthSources(): readonly TextureSource[] {
+function bmngMonthSources(): readonly TextureSource[] {
   return BMNG_MONTHS.map((_, i) => {
     const key = bmngMonthKey(i + 1);
     return { url: RAW_DATA[key].upstream, destPath: rawDataPath(key) };

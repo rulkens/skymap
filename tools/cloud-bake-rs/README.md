@@ -88,27 +88,6 @@ Registry row `clouds.cache`; upstreams and licences in
 and the frozen MTG/IODC grey-to-temperature tables. Provenance and refit notes in
 [`assets/README.md`](assets/README.md).
 
-## Modules
-
-One module per stage, plus the numeric primitives the stages share.
-
-| module                                        | what                                                                          |
-| --------------------------------------------- | ----------------------------------------------------------------------------- |
-| `cli`, `date`                                 | the command line and the UTC date as values                                   |
-| `sources_table`                               | every WMS layer in one table, with the `required` column                      |
-| `fetch`                                       | cached, concurrent WMS pulls into the day cache; WMS time strings             |
-| `probe`, `verdict`, `summary`                 | calibration probe, the exit-code decision, the stdout JSON line               |
-| `sources`                                     | every source in `sources_table`, loaded and decoded; orbits held as row bands |
-| `seam`                                        | the per-join seam decision at 2048x1024                                       |
-| `maxflow`                                     | Boykov–Kolmogorov on the wrapped grid                                         |
-| `blend`                                       | Laplacian-pyramid blend, windowed                                             |
-| `composite`                                   | the join loop and its tail                                                    |
-| `orbit`                                       | pass times                                                                    |
-| `geodecode`                                   | IR frame -> opacity layer                                                     |
-| `geofill`                                     | time-matched gap fill                                                         |
-| `imageio`                                     | decoders, Pillow's BOX resize, the WebP writer                                |
-| `edt`, `label`, `filters`, `quantile`, `grid` | distance transform, components, filters, percentiles                          |
-
 Two departures from a line-by-line port, both exact:
 
 - **Blend window.** `multiband` is linear and reconstructs its first input exactly, so
@@ -139,7 +118,4 @@ threads. Peak RSS is ~5.3 GB on macOS, whose allocator keeps freed pages; on Lin
 cargo test --release --manifest-path tools/cloud-bake-rs/Cargo.toml
 ```
 
-CI runs the same command (job `cloud-bake-rs`). Max-flow against brute-force min cuts, the EDT and its
-indices against brute force, components and hole filling, numpy's percentile and interp, Pillow's BOX
-rounding, the CLI parser, date arithmetic and WMS time rollover, the orbit fit on synthetic footprints,
-the coverage and calibration verdicts, the summary keys and the grey WebP round trip.
+CI runs the same command (job `cloud-bake-rs`). The tests sit beside the code they check, in each module's `tests`.

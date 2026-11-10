@@ -27,8 +27,7 @@ pub struct Footprint {
 pub type Footprints = Vec<Footprint>;
 
 pub struct OrbitFit {
-    pub tn: f64,
-    pub lon_n: f64,
+    pub orbit: Orbit,
     pub ltan: f64,
     pub median_dt_min: f64,
 }
@@ -222,8 +221,10 @@ pub fn fit(footprints: &Footprints) -> Result<OrbitFit, String> {
         ));
     }
     Ok(OrbitFit {
-        tn,
-        lon_n: 15.0 * (ltan - tn / 60.0),
+        orbit: Orbit {
+            tn,
+            lon_n: 15.0 * (ltan - tn / 60.0),
+        },
         ltan,
         median_dt_min: err,
     })
@@ -294,7 +295,7 @@ mod tests {
         let f = fit(&footprints).unwrap();
         // Slot-binned times leave the median a valley ~1 min x 0.1 h wide (this truth fits to
         // 88.0 min / 13.00 h), so the tolerances are the valley's, not the grid step's.
-        assert!((f.tn - 89.0).abs() <= 1.5, "tn {}", f.tn);
+        assert!((f.orbit.tn - 89.0).abs() <= 1.5, "tn {}", f.orbit.tn);
         assert!((f.ltan - 13.10).abs() <= 0.15, "ltan {}", f.ltan);
         assert!(f.median_dt_min <= 3.0, "median {}", f.median_dt_min);
     }

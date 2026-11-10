@@ -231,23 +231,17 @@ impl Decoder {
             .iter()
             .flat_map(|&y| cols.iter().map(move |&x| view_angle(r.sat, y, x)))
             .collect();
-        let (t, mut ok): (Vec<f32>, Vec<f64>) = if r.sat == "mtg" || r.sat == "iodc" {
-            let t = self.lut_t(r.sat, &a);
-            let ok = t.iter().map(|v| !v.is_nan() as u8 as f64).collect();
-            (t, ok)
-        } else {
+        if r.sat != "mtg" && r.sat != "iodc" {
             for i in 0..h * w {
                 let c = &mut a.px[i * 4..i * 4 + 4];
                 if ang[i] > 75.0 && c[0] == 255 && c[1] == 255 && c[2] == 255 {
                     c[3] = 0;
                 }
             }
-            let t = self.gibs_t(&a, 20000 / (s * s));
-            let ok = (0..h * w)
-                .map(|i| (a.px[i * 4 + 3] > 0) as u8 as f64)
-                .collect();
-            (t, ok)
-        };
+        }
+        let t = self.temperature(r, &a);
+        // Every decode path returns NaN exactly where alpha is 0.
+        let mut ok: Vec<f64> = t.iter().map(|v| !v.is_nan() as u8 as f64).collect();
         for i in 0..h * w {
             let lo = lon(cols[i % w]);
             if r.sat == "iodc" {

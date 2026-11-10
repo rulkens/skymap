@@ -62,10 +62,10 @@ fn main() {
     let footprints = fetch::granules(&granules, a.date, !a.offline);
     let fit = orbit::fit(&footprints).unwrap_or_else(|e| fail(&run, 3, &e));
     drop(footprints);
-    run.orbit = serde_json::json!({"tn": fit.tn, "lon_n": fit.lon_n, "ltan": fit.ltan, "median_dt_min": fit.median_dt_min});
+    run.orbit = serde_json::json!({"tn": fit.orbit.tn, "lon_n": fit.orbit.lon_n, "ltan": fit.ltan, "median_dt_min": fit.median_dt_min});
     eprintln!(
         "orbit: tn {:.2} min, lon_n {:.2}, LTAN {:.2} h, median |dt| {:.2} min",
-        fit.tn, fit.lon_n, fit.ltan, fit.median_dt_min
+        fit.orbit.tn, fit.orbit.lon_n, fit.ltan, fit.median_dt_min
     );
     fetch::mosaics(&mosaics_dir, a.date, !a.offline).unwrap_or_else(|e| fail(&run, 3, &e));
 
@@ -94,10 +94,7 @@ fn main() {
         .map(|(&d, &i)| smoothstep(0.0, 1.0, d / 80.0) * (1.0 - i))
         .collect();
     drop(d);
-    let orb = orbit::Orbit {
-        tn: fit.tn,
-        lon_n: fit.lon_n,
-    };
+    let orb = fit.orbit;
     let x = geofill::Inputs {
         labels: &comp.labels,
         names: &comp.names,

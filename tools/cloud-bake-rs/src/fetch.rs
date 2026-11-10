@@ -33,10 +33,9 @@ fn layer_url(s: &Source) -> String {
     )
 }
 
-/// What a request came back as. `Missing`: the server never gave a body. `Broken`: it gave one that is
+/// Why an input is skipped. `Missing`: the server never gave a body. `Broken`: it gave one that is
 /// not the image asked for (a WMS error document, say).
-pub enum Fetched {
-    Ok,
+enum Failure {
     Missing(String),
     Broken(String),
 }
@@ -53,7 +52,6 @@ pub fn wms_time(date: Date, minute: i32) -> String {
     format!("{d}T{:02}:{:02}:00Z", m / 60, m % 60)
 }
 
-#[derive(Default)]
 pub struct Stats {
     pub bytes: AtomicUsize,
     pub requests: AtomicUsize,
@@ -70,16 +68,14 @@ pub static STATS: Stats = Stats {
     broken: AtomicUsize::new(0),
 };
 
-/// Log one skipped input and count it. Returns the same `Fetched` for the caller to hand on.
-fn skip(what: &Path, f: Fetched) -> Fetched {
+/// Log one skipped input and count it.
+fn skip(what: &Path, f: Failure) {
     let (n, why) = match &f {
-        Fetched::Missing(w) => (&STATS.missing, w),
-        Fetched::Broken(w) => (&STATS.broken, w),
-        Fetched::Ok => return f,
+        Failure::Missing(w) => (&STATS.missing, w),
+        Failure::Broken(w) => (&STATS.broken, w),
     };
     n.fetch_add(1, Ordering::Relaxed);
     eprintln!("warning: skipped {}: {why}", what.display());
-    f
 }
 
 pub fn stats_line() -> String {
@@ -109,17 +105,17 @@ pub fn write_atomic(path: &Path, bytes: &[u8]) {
 
 /// GET with 5 tries; the body must start with `magic`. A server Warning header lands in `<path>.warn`.
 /// Nothing is written unless the body is the right kind of image.
-fn get(url: &str, path: &Path, magic: &[u8]) -> Fetched {
+fn get(url: &str, path: &Path, magic: &[u8]) {
     let agent: ureq::Agent = ureq::Agent::config_builder()
         .timeout_global(Some(std::time::Duration::from_secs(300)))
         .build()
         .into();
-    let mut last = Fetched::Missing(String::new());
+    let mut last = Failure::Missing(String::new());
     for k in 0..5u64 {
         let res = agent
             .get(url)
             .call()
-            .map_err(|e| Fetched::Missing(e.to_string()))
+            .map_err(|e| Failure::Missing(e.to_string()))
             .and_then(|mut r| {
                 let warn = r
                     .headers()
@@ -131,9 +127,9 @@ fn get(url: &str, path: &Path, magic: &[u8]) -> Fetched {
                     .with_config()
                     .limit(1 << 30)
                     .read_to_vec()
-                    .map_err(|e| Fetched::Missing(e.to_string()))?;
+                    .map_err(|e| Failure::Missing(e.to_string()))?;
                 if !body.starts_with(magic) {
-                    return Err(Fetched::Broken(format!(
+                    return Err(Failure::Broken(format!(
                         "unexpected body: {:?}",
                         String::from_utf8_lossy(&body[..body.len().min(200)])
                     )));
@@ -148,7 +144,7 @@ fn get(url: &str, path: &Path, magic: &[u8]) -> Fetched {
                 }
                 STATS.bytes.fetch_add(body.len(), Ordering::Relaxed);
                 STATS.requests.fetch_add(1, Ordering::Relaxed);
-                return Fetched::Ok;
+                return;
             }
             Err(e) => {
                 last = e;
@@ -172,7 +168,7 @@ fn fetch_all(jobs: Vec<(PathBuf, String)>, n: usize, magic: &[u8], allow: bool) 
         });
     } else {
         for (p, _) in jobs {
-            skip(&p, Fetched::Missing("not cached (--offline)".into()));
+            skip(&p, Failure::Missing("not cached (--offline)".into()));
         }
     }
 }
@@ -207,6 +203,19 @@ pub struct FrameReq {
     pub scale: usize,
 }
 
+/// WMS BBOX parameter (lon0,lat0,lon1,lat1) of the full-grid pixel box [x0, x1) x [y0, y1).
+fn bbox(x0: usize, x1: usize, y0: usize, y1: usize) -> String {
+    let (lon0, lon1) = (
+        -180.0 + x0 as f64 * 360.0 / W as f64,
+        -180.0 + x1 as f64 * 360.0 / W as f64,
+    );
+    let (lat1, lat0) = (
+        90.0 - y0 as f64 * 180.0 / H as f64,
+        90.0 - y1 as f64 * 180.0 / H as f64,
+    );
+    format!("BBOX={lon0:?},{lat0:?},{lon1:?},{lat1:?}")
+}
+
 /// (cache path, url) per date-line piece of a request.
 fn pieces(frames: &Path, r: &FrameReq) -> Vec<(usize, usize, PathBuf, String)> {
     let mut out = Vec::new();
@@ -223,17 +232,10 @@ fn pieces(frames: &Path, r: &FrameReq) -> Vec<(usize, usize, PathBuf, String)> {
             "{}_{:04}_{c0}_{c1}_{}_{}{sfx}.png",
             r.sat, r.tmin, r.y0, r.y1
         ));
-        let (lon0, lon1) = (
-            -180.0 + c0 as f64 * 360.0 / W as f64,
-            -180.0 + c1 as f64 * 360.0 / W as f64,
-        );
-        let (lat1, lat0) = (
-            90.0 - r.y0 as f64 * 180.0 / H as f64,
-            90.0 - r.y1 as f64 * 180.0 / H as f64,
-        );
         let url = format!(
-            "{}&BBOX={lon0:?},{lat0:?},{lon1:?},{lat1:?}&WIDTH={}&HEIGHT={}&TIME={}",
+            "{}&{}&WIDTH={}&HEIGHT={}&TIME={}",
             layer_url(by_id(r.sat)),
+            bbox(c0, c1, r.y0, r.y1),
             (c1 - c0) / r.scale,
             (r.y1 - r.y0) / r.scale,
             wms_time(r.date, r.tmin)
@@ -285,7 +287,7 @@ pub fn frame(frames: &Path, r: &FrameReq) -> Option<Rgba> {
     }
     if is_all_black(&px) {
         let name = format!("{} {} {}..{}", r.sat, r.tmin, r.x0, r.x1);
-        skip(Path::new(&name), Fetched::Broken("all-black frame".into()));
+        skip(Path::new(&name), Failure::Broken("all-black frame".into()));
         return None;
     }
     Some(Rgba { w: ow, h: oh, px })
@@ -300,7 +302,7 @@ fn slots() -> Vec<String> {
 }
 
 /// UTC minute of a granule slot named `HHMM`.
-fn slot_minute(s: &str) -> i32 {
+pub fn slot_minute(s: &str) -> i32 {
     s[..2].parse::<i32>().unwrap() * 60 + s[2..].parse::<i32>().unwrap()
 }
 
@@ -327,8 +329,10 @@ pub fn granules(dir: &Path, date: Date, allow: bool) -> Footprints {
         })
         .collect();
     fetch_all(jobs, 6, PNG, allow);
-    let mut foot = serde_json::Map::new();
+    let hi = dir.join("hi");
     let mut footprints = Footprints::new();
+    let mut meta = serde_json::Map::new();
+    let mut jobs = Vec::new();
     for s in slots() {
         let path = lo.join(format!("{s}.png"));
         if !cached(&path) {
@@ -339,33 +343,15 @@ pub fn granules(dir: &Path, date: Date, allow: bool) -> Footprints {
         if !m.iter().any(|&b| b) {
             continue;
         }
+        assert_eq!((im.w, im.h), (FOOT_W, FOOT_H), "{s}");
         let ys: Vec<usize> = (0..im.h)
             .filter(|&y| m[y * im.w..(y + 1) * im.w].iter().any(|&b| b))
             .collect();
-        let cols: Vec<usize> = (0..im.w)
-            .filter(|&x| (0..im.h).any(|y| m[y * im.w + x]))
+        let occ: Vec<bool> = (0..im.w)
+            .map(|x| (0..im.h).any(|y| m[y * im.w + x]))
             .collect();
-        let frac = m.iter().filter(|&&b| b).count() as f64 / m.len() as f64;
-        foot.insert(
-            s.clone(),
-            serde_json::json!({"frac": frac, "y0": ys[0], "y1": ys[ys.len() - 1], "cols": cols}),
-        );
-        assert_eq!((im.w, im.h), (FOOT_W, FOOT_H), "{s}");
-        footprints.push(Footprint {
-            minute: slot_minute(&s) as f64,
-            mask: m,
-        });
-    }
-    let hi = dir.join("hi");
-    let mut meta = serde_json::Map::new();
-    let mut jobs = Vec::new();
-    for (s, f) in &foot {
-        let y0 = (f["y0"].as_u64().unwrap() as usize).saturating_sub(2) * 8;
-        let y1 = (f["y1"].as_u64().unwrap() as usize + 3).min(512) * 8;
-        let mut occ = vec![false; 1024];
-        for c in f["cols"].as_array().unwrap() {
-            occ[c.as_u64().unwrap() as usize] = true;
-        }
+        let y0 = ys[0].saturating_sub(2) * 8;
+        let y1 = (ys[ys.len() - 1] + 3).min(512) * 8;
         let mut list = Vec::new();
         for (k, (c0, ln)) in col_runs(&occ).into_iter().enumerate() {
             let (c0, ln) = (c0 as i64 - 2, (ln + 4).min(1024) as i64);
@@ -381,24 +367,21 @@ pub fn granules(dir: &Path, date: Date, allow: bool) -> Footprints {
                 let (x0, x1) = (a as usize * 8, (a + l) as usize * 8);
                 let path = hi.join(format!("{s}_{k}{p}.png"));
                 list.push(serde_json::json!({"path": path.to_str().unwrap(), "x0": x0, "y0": y0}));
-                let (lon0, lon1) = (
-                    -180.0 + x0 as f64 * 360.0 / 8192.0,
-                    -180.0 + x1 as f64 * 360.0 / 8192.0,
-                );
-                let (lat1, lat0) = (
-                    90.0 - y0 as f64 * 180.0 / 4096.0,
-                    90.0 - y1 as f64 * 180.0 / 4096.0,
-                );
                 let url = format!(
-                    "{granule}&BBOX={lon0:?},{lat0:?},{lon1:?},{lat1:?}&WIDTH={}&HEIGHT={}&TIME={}",
+                    "{granule}&{}&WIDTH={}&HEIGHT={}&TIME={}",
+                    bbox(x0, x1, y0, y1),
                     x1 - x0,
                     y1 - y0,
-                    tstr(date, s)
+                    tstr(date, &s)
                 );
                 jobs.push((path, url));
             }
         }
         meta.insert(s.clone(), serde_json::Value::Array(list));
+        footprints.push(Footprint {
+            minute: slot_minute(&s) as f64,
+            mask: m,
+        });
     }
     write_atomic(
         &dir.join("hi_meta.json"),

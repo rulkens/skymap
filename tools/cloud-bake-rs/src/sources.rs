@@ -3,6 +3,7 @@
 //! filter here gives the same values as on the full grid (the margin is zero, and the big no-data region
 //! a band edge touches is never a speck); mosaics are full-height bands.
 use crate::edt::edt;
+use crate::fetch::slot_minute;
 use crate::filters::{dilate_roll, gaussian_wrap};
 use crate::grid::{block_mean, smoothstep, subsample, H, W};
 use crate::imageio::{rgb, rgba};
@@ -68,7 +69,7 @@ fn min_max(c: &[u8]) -> (usize, usize) {
 }
 
 /// GIBS no-data specks under 400 px, filled from their neighbours with a normalised Gaussian.
-/// Returns the speck mask (already merged into `valid`).
+/// Merges the specks into `valid` and returns how many pixels it filled.
 fn fill_specks(op: &mut [f32], valid: &mut [bool], h: usize) -> usize {
     let inv: Vec<bool> = valid.par_iter().map(|&v| !v).collect();
     let speck = small_components(&inv, h, W, SPECK_MAX);
@@ -114,10 +115,7 @@ pub fn orbit_groups(granules: &Path) -> Vec<OrbitMeta> {
     };
     let mut slots: Vec<&String> = meta.as_object().unwrap().keys().filter(have).collect();
     slots.sort();
-    let mins: Vec<i32> = slots
-        .iter()
-        .map(|s| s[..2].parse::<i32>().unwrap() * 60 + s[2..].parse::<i32>().unwrap())
-        .collect();
+    let mins: Vec<i32> = slots.iter().map(|s| slot_minute(s)).collect();
     if slots.is_empty() {
         return Vec::new();
     }

@@ -10,7 +10,7 @@ edition = "2021"
 
 [dependencies]
 rayon = "1"
-image = { version = "0.25", default-features = false, features = ["png", "jpeg", "tiff"] }
+image = { version = "0.25", default-features = false, features = ["png", "tiff"] }
 libwebp-sys = { version = "0.14", features = ["neon", "sse41"] }
 serde_json = "1"
 mozjpeg = "0.10"

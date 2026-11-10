@@ -3,20 +3,13 @@
 //! returns A, so multiband(A, B, M) = A + E with E = multiband(0, B - A, M). B - A is zero away from the
 //! overlap and every kernel is finite (radius 4 per level), so E vanishes beyond ~600 px of that support;
 //! the crop adds MARGIN so the mask pyramid's crop-edge clamping (~510 px at level 6) never reaches E.
-use crate::filters::{gauss_kernel, Edge};
+use crate::filters::{gauss_kernel, idx, Edge};
 use crate::grid::{arc, H, W};
 use rayon::prelude::*;
 
 const LEVELS: usize = 6;
-pub const MARGIN: usize = 1024;
+const MARGIN: usize = 1024;
 const ALIGN: usize = 64; // 2^LEVELS: keeps every level's even samples on the full-grid lattice
-
-fn ix(i: i64, n: usize, e: Edge) -> usize {
-    match e {
-        Edge::Clamp => i.clamp(0, n as i64 - 1) as usize,
-        Edge::Wrap => i.rem_euclid(n as i64) as usize,
-    }
-}
 
 /// gaussian_filter(x, 1, WRAP)[::2, ::2], computing only the kept samples.
 fn pyr_down(x: &[f32], h: usize, w: usize, ce: Edge, k: &[f32]) -> Vec<f32> {
@@ -25,7 +18,7 @@ fn pyr_down(x: &[f32], h: usize, w: usize, ce: Edge, k: &[f32]) -> Vec<f32> {
     let mut v = vec![0f32; oh * w];
     v.par_chunks_mut(w).enumerate().for_each(|(oy, o)| {
         for (j, &kj) in k.iter().enumerate() {
-            let sy = ix(2 * oy as i64 + j as i64 - r, h, Edge::Clamp);
+            let sy = idx(2 * oy as i64 + j as i64 - r, h, Edge::Clamp);
             o.iter_mut()
                 .zip(&x[sy * w..(sy + 1) * w])
                 .for_each(|(a, b)| *a += kj * b);
@@ -38,7 +31,7 @@ fn pyr_down(x: &[f32], h: usize, w: usize, ce: Edge, k: &[f32]) -> Vec<f32> {
             *a = k
                 .iter()
                 .enumerate()
-                .map(|(j, &kj)| kj * row[ix(2 * ox as i64 + j as i64 - r, w, ce)])
+                .map(|(j, &kj)| kj * row[idx(2 * ox as i64 + j as i64 - r, w, ce)])
                 .sum();
         }
     });
@@ -52,7 +45,7 @@ fn pyr_up(x: &[f32], h: usize, w: usize, ce: Edge, k: &[f32]) -> Vec<f32> {
     let mut v = vec![0f32; oh * w];
     v.par_chunks_mut(w).enumerate().for_each(|(oy, o)| {
         for (j, &kj) in k.iter().enumerate() {
-            let sy = ix(oy as i64 + j as i64 - r, oh, Edge::Clamp) / 2;
+            let sy = idx(oy as i64 + j as i64 - r, oh, Edge::Clamp) / 2;
             o.iter_mut()
                 .zip(&x[sy * w..(sy + 1) * w])
                 .for_each(|(a, b)| *a += kj * b);
@@ -62,7 +55,7 @@ fn pyr_up(x: &[f32], h: usize, w: usize, ce: Edge, k: &[f32]) -> Vec<f32> {
     out.par_chunks_mut(ow).enumerate().for_each(|(y, o)| {
         let row = &v[y * w..(y + 1) * w];
         let pad: Vec<f32> = (0..ow + 2 * r as usize)
-            .map(|i| row[ix(i as i64 - r, ow, ce) / 2])
+            .map(|i| row[idx(i as i64 - r, ow, ce) / 2])
             .collect();
         for (j, &kj) in k.iter().enumerate() {
             o.iter_mut()
@@ -117,7 +110,7 @@ pub struct Window {
 }
 
 /// The aligned window covering every pixel where `diff` is true, plus MARGIN (wrap-aware in longitude).
-pub fn window(diff: &[bool], margin: usize) -> Option<Window> {
+pub fn window(diff: &[bool]) -> Option<Window> {
     let rows: Vec<bool> = diff.par_chunks(W).map(|r| r.iter().any(|&b| b)).collect();
     let (r0, r1) = (
         rows.iter().position(|&b| b)?,
@@ -127,26 +120,18 @@ pub fn window(diff: &[bool], margin: usize) -> Option<Window> {
         .into_par_iter()
         .map(|c| (r0..r1).any(|r| diff[r * W + c]))
         .collect();
-    let y0 = r0.saturating_sub(margin) / ALIGN * ALIGN;
-    let y1 = ((r1 + margin).div_ceil(ALIGN) * ALIGN).min(H);
+    let y0 = r0.saturating_sub(MARGIN) / ALIGN * ALIGN;
+    let y1 = ((r1 + MARGIN).div_ceil(ALIGN) * ALIGN).min(H);
     let (c0, n) = arc(&cols);
-    let x0 = (c0 + W - margin % W) % W / ALIGN * ALIGN;
-    let span = (c0 + W - x0) % W + n + margin;
+    let x0 = (c0 + W - MARGIN % W) % W / ALIGN * ALIGN;
+    let span = (c0 + W - x0) % W + n + MARGIN;
     let w = span.div_ceil(ALIGN) * ALIGN;
-    Some(if w >= W {
-        Window {
-            y0,
-            h: y1 - y0,
-            x0: 0,
-            w: W,
-        }
-    } else {
-        Window {
-            y0,
-            h: y1 - y0,
-            x0,
-            w,
-        }
+    let (x0, w) = if w >= W { (0, W) } else { (x0, w) };
+    Some(Window {
+        y0,
+        h: y1 - y0,
+        x0,
+        w,
     })
 }
 

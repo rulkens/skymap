@@ -109,7 +109,7 @@ pub fn join_all(
                 .map(|i| af[i] != if sv[i] { s[i] } else { c[i] })
                 .collect();
             let mut out = af;
-            if let Some(win) = blend::window(&diff, blend::MARGIN) {
+            if let Some(win) = blend::window(&diff) {
                 let (cr, sr, cvr, svr, mr) = (&c, &s, &cv, &sv, &m);
                 blend::add_residual(
                     &mut out,

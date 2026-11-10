@@ -17,7 +17,7 @@ pub fn gauss_kernel(sigma: f64) -> Vec<f32> {
     k.iter().map(|v| (v / s) as f32).collect()
 }
 
-fn idx(i: i64, n: usize, e: Edge) -> usize {
+pub(crate) fn idx(i: i64, n: usize, e: Edge) -> usize {
     match e {
         Edge::Clamp => i.clamp(0, n as i64 - 1) as usize,
         Edge::Wrap => i.rem_euclid(n as i64) as usize,
