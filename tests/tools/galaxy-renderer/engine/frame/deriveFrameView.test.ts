@@ -42,6 +42,36 @@ describe('deriveFrameView', () => {
     expect([...shifted.view]).toEqual([...centred.view]);
   });
 
+  it('field camera rays land on their own NDC under viewProj, lens shift included', () => {
+    // The oracle is the sprites' own projection (`proj[8] = shiftX`), not the
+    // tangent formula under test; an oblique pose keeps the basis honest.
+    const fv = deriveFrameView({
+      ...base(),
+      eye: [7, 4, 30],
+      target: [1, -2, 0],
+      fov: 0.9,
+      shiftX: 0.17,
+    });
+    const { eye, right, up, fwd, frustum } = fv.camera;
+    const mid = [(frustum.tanLeft + frustum.tanRight) / 2, (frustum.tanDown + frustum.tanUp) / 2];
+    const half = [(frustum.tanRight - frustum.tanLeft) / 2, (frustum.tanUp - frustum.tanDown) / 2];
+    const m = fv.viewProj;
+    for (const ndc of [
+      [-1, -1],
+      [1, 1],
+      [0.3, -0.6],
+    ]) {
+      const tx = mid[0]! + ndc[0]! * half[0]!;
+      const ty = mid[1]! + ndc[1]! * half[1]!;
+      const p = [0, 1, 2].map((i) => eye[i]! + 10 * (fwd[i]! + right[i]! * tx + up[i]! * ty));
+      const clip = [0, 1, 3].map(
+        (r) => m[r]! * p[0]! + m[4 + r]! * p[1]! + m[8 + r]! * p[2]! + m[12 + r]!,
+      );
+      expect(clip[0]! / clip[2]!).toBeCloseTo(ndc[0]!, 5);
+      expect(clip[1]! / clip[2]!).toBeCloseTo(ndc[1]!, 5);
+    }
+  });
+
   it("keeps the field's exposure independent of the sprite pass's starIntensity/sizeScale", () => {
     // Guards against `analyticExposure` being multiplied by the sprite pass's
     // own knobs — that coupling would let retuning a SPRITE slider silently

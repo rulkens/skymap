@@ -6,7 +6,7 @@
 import type { Vec2 } from '../../../../../@types/math/Vec2';
 
 import type { DebugViewWeights } from './DebugViewWeights';
-import type { FieldCamera } from './FieldCamera';
+import type { FieldView } from '../../@types/FieldView';
 import type { FieldDust } from '../../dust/@types/FieldDust';
 import type { HiiTextureLanes } from './HiiTextureLanes';
 import type { IsmMapChannelWeights } from './IsmMapChannelWeights';
@@ -14,7 +14,9 @@ import type { IsmMapSeedingLanes } from './IsmMapSeedingLanes';
 import type { YoungStarsLanes } from './YoungStarsLanes';
 
 export type FieldHeaderInput = {
-  readonly camera: FieldCamera;
+  readonly camera: FieldView;
+  /** Whole-field intensity multiplier: emission only, never the dust attenuation. */
+  readonly exposure: number;
   /** The draw call's own instance count — dust components are never drawn as quads. */
   readonly emissionCount: number;
   /**

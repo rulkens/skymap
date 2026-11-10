@@ -6,6 +6,7 @@
 
 import package::milkyWay::field::bubblePresent::io::VsOut;
 import package::lib::billboard::quadCorner;
+import package::lib::camera::ndcFromTangent;
 import package::milkyWay::field::io::u;
 
 @vertex
@@ -22,16 +23,13 @@ fn vs(
   let camRight = u.camRight.xyz;
   let camUp = u.camUp.xyz;
   let camFwd = u.camFwd.xyz;
-  let tanHalfFov = u.params.x;
-  let aspect = u.params.y;
-  let shift = u.params.z;
 
   var out: VsOut;
   out.kind = kind;
   out.uv = corner;
 
-  // camRight/camUp/camFwd are the orthonormal camera basis (the view
-  // matrix's own rows — see io.wesl's header), so offsetting along
+  // camRight/camUp/camFwd are the orthonormal camera basis (io.wesl's
+  // header), so offsetting along
   // camRight/camUp can never change the view-space depth zv: only xv/yv
   // shift, by the corner's own radius-scaled offset. Same simplification
   // fieldSplat/vertex.wesl's vs relies on implicitly by never touching zv per-corner.
@@ -47,8 +45,6 @@ fn vs(
     out.pos = vec4<f32>(2.0, 2.0, 0.0, 1.0);
     return out;
   }
-  let ndcX = xv / zv / (tanHalfFov * aspect) - shift;
-  let ndcY = yv / zv / tanHalfFov;
-  out.pos = vec4<f32>(ndcX, ndcY, 0.0, 1.0);
+  out.pos = vec4<f32>(ndcFromTangent(vec2<f32>(xv, yv) / zv, u.frustum), 0.0, 1.0);
   return out;
 }

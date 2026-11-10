@@ -524,9 +524,7 @@ export async function createGalaxyEngine(
     // `dustMap` before `field` is the only ordering the module owns; where
     // this galaxy's passes sit in the frame stays here.
     field.encode(enc, fieldTargets(), {
-      eye,
-      fov,
-      shiftX,
+      camera: frameView.camera,
       view: frameView,
       render,
       ismMapSeeding: model.ismMapSeedingView,

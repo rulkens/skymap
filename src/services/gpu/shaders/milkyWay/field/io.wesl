@@ -11,15 +11,14 @@
 // ## Byte layout (canonical — the offset authority for the CPU packer's
 // HEADER uniform only; 'comps' layout authority is records.wesl, see below)
 //
-// HEADER (uniform, binding 0) — camera + params only, unchanged every frame
-// in shape though its bytes are rewritten every frame (the fade/exposure
-// terms in 'params' track the camera):
+// HEADER (uniform, binding 0) — unchanged every frame in shape though its
+// bytes are rewritten every frame (the camera and the exposure fade move):
 //
-//   offset 0   : eye: vec4      (xyz camera world position, w unused)
-//   offset 16  : camRight: vec4 (world-space camera basis, w unused)
+//   offset 0   : eye: vec4      (xyz eye in the galaxy frame, w exposure)
+//   offset 16  : camRight: vec4 (galaxy-frame camera basis, w unused)
 //   offset 32  : camUp: vec4
-//   offset 48  : camFwd: vec4
-//   offset 64  : params: vec4   (tanHalfFov, aspect, lensShiftX, exposure)
+//   offset 48  : camFwd: vec4   (into the screen)
+//   offset 64  : frustum: vec4  (tanLeft, tanRight, tanDown, tanUp), signed
 //   offset 80  : counts: vec4   (emissionCount, dustOffset, dustCount, primaryCount)
 //   offset 96  : counts2: vec4  (spurCloudStart, dustMapHeightPx, fieldWidthPx, fieldHeightPx)
 //   offset 112 : dustExtinction: vec4 (A_lambda/A_V per channel, w unused)
@@ -264,12 +263,10 @@
 // outgrow that. The CPU packer sizes the backing GPUBuffer to counts.x +
 // counts.z (growing, never per-frame).
 //
-// The ray comes from a camera BASIS plus tanHalfFov/aspect rather than an
-// inverse view-projection: the engine already holds the basis (it packs the
-// same rows for the sprite billboards) and the fov, so this needs no matrix
-// inverse and no depth-convention bookkeeping. lensShiftX undoes the
-// off-centre framing the engine writes into proj[8]; without it the
-// analytic field slides against the sprites whenever a side panel is open.
+// The ray comes from a camera BASIS plus the four frustum tangents rather
+// than an inverse view-projection: no matrix inverse and no depth-convention
+// bookkeeping (lib/camera.wesl's cameraRayFromNdc). The tangents carry any
+// lens shift, so an off-centre window needs no separate term.
 //
 // Per component, the WORLD-space inverse covariance M of
 // exp(-0.5*(p-center)^T*M*(p-center)), plus amplitude, colour and a centre,
@@ -365,7 +362,7 @@ struct FieldUniforms {
   camRight: vec4<f32>,
   camUp: vec4<f32>,
   camFwd: vec4<f32>,
-  params: vec4<f32>,
+  frustum: vec4<f32>,
   counts: vec4<f32>,
   counts2: vec4<f32>,
   dustExtinction: vec4<f32>,

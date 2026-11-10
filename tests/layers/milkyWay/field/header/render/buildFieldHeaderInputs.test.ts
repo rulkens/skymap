@@ -38,9 +38,7 @@ const tierTargetSizePx = Object.fromEntries(
 ) as Record<(typeof HII_TIERS)[number]['kind'], [number, number]>;
 
 const inputs = buildFieldHeaderInputs({
-  eye: [1, 2, 3],
-  fov: 1.1,
-  shiftX: 0.1,
+  camera: frame.camera,
   frame,
   render,
   model: {

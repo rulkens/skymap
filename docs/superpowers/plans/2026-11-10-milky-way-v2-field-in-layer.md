@@ -441,7 +441,7 @@ Each row reduces to today's for the frustum `((s−1)·T·A, (s+1)·T·A, −T, 
 
 **Steps:**
 
-- [ ] **Shaders.**
+- [x] **Shaders.**
   - Add `cameraRayFromNdc` and `ndcFromTangent`, and change `cameraRayFromUv` and `splatNdc` to the
     signatures above.
   - Repoint every site in the first RISK callout.
@@ -451,21 +451,21 @@ Each row reduces to today's for the frustum `((s−1)·T·A, (s+1)·T·A, −T, 
     call `cameraRayFromNdc` instead of repeating the formula.
   - `bubblePresent/vertex` uses `ndcFromTangent`. Fix the "horizontal-FOV" comment in
     `camera.wesl:145`: T is the vertical half-tangent.
-- [ ] **Packer.**
+- [x] **Packer.**
   - `packFieldHeaderUniforms` writes floats 0–2 from `camera.eye`, 3 = `exposure`, 4–15 from
     `camera.right/up/fwd` (no view-matrix gather), and 16–19 from `camera.frustum`.
   - Rewrite the module header's "camera BASIS" section: the basis is now an input, and
     `FieldView`'s frustum carries the lens shift.
   - `buildFieldHeaderInputs` and the renderer's `encode` pass `frame.camera` and
     `frame.view.analyticExposure` through.
-- [ ] **Tool.**
+- [x] **Tool.**
   - `deriveFrameView` returns `camera: FieldView` instead of `view` and `aspect` for the field. It
     keeps `view`, `proj` and `viewProj` for the sprites.
   - The basis is today's gather (`right = (view[0], view[4], view[8])`,
     `up = (view[1], view[5], view[9])`, `fwd = −(view[2], view[6], view[10])`), and the frustum is
     `shiftedFrustum(fov, aspect, [−shiftX, 0])`.
   - `createGalaxyEngine` passes `camera` into `field.encode`.
-- [ ] **Test, updated:**
+- [x] **Test, updated:**
   - `packFieldHeaderUniforms ↔ io.wesl`, `it('puts every vec4 where the shader declares it')`.
   - The sentinel fixture becomes `camera: { eye: [11000, 11001, 11002], right: [12000, …],
     up: […], fwd: […], frustum: { tanLeft: 13000, tanRight: 13001, tanDown: 13003, tanUp: 13004 } },
@@ -473,13 +473,13 @@ Each row reduces to today's for the frustum `((s−1)·T·A, (s+1)·T·A, −T, 
   - Assert `exposure` is observed at byte `at('eye') + 12` and the four tangents at `at('frustum')`
     + 0/4/8/12, both found by sentinel, not by restated index.
   - Assert `at('params')` no longer exists.
-- [ ] **Test, new (tool):** `deriveFrameView`,
+- [x] **Test, new (tool):** `deriveFrameView`,
       `it('field camera rays land on their own NDC under viewProj, lens shift included')`.
   - With `shiftX = 0.17`, `fov = 0.9` and viewport 1600×900, for `ndc ∈ {(−1,−1), (1,1), (0.3,−0.6)}`:
     form `t = mid + ndc·half` from `camera.frustum` and `P = eye + 10·(fwd + right·t.x + up·t.y)`.
   - Then `viewProj · P` divided by w must equal `ndc` within 1e-5.
   - The oracle is the tool's own projection (`proj[8] = shiftX`), not the formula under test.
-- [ ] `npm run galaxy-renderer`, load the default preset, and confirm the field renders. Commit.
+- [x] `npm run galaxy-renderer`, load the default preset, and confirm the field renders. Commit.
 
 ## Prep 2: field targets are `{ view, sizePx }`
 

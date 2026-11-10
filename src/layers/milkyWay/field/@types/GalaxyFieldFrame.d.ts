@@ -1,7 +1,7 @@
 import type { IsmMapSeedingLanes } from '../header/@types/IsmMapSeedingLanes';
 import type { YoungStarsLanes } from '../header/@types/YoungStarsLanes';
 import type { TimingSlotName } from '../../../../@types/gpu/timing/TimingSlotName';
-import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { FieldView } from './FieldView';
 import type { FieldHeaderRenderLanes } from '../header/@types/FieldHeaderRenderLanes';
 import type { FieldHeaderFrameLanes } from '../header/@types/FieldHeaderFrameLanes';
 
@@ -10,9 +10,7 @@ import type { FieldHeaderFrameLanes } from '../header/@types/FieldHeaderFrameLan
  * — the half of the encode inputs no `GPUTexture` can supply.
  */
 export type GalaxyFieldFrame = {
-  readonly eye: Vec3;
-  readonly fov: number;
-  readonly shiftX: number;
+  readonly camera: FieldView;
   readonly view: FieldHeaderFrameLanes;
   /** `analyticField` gates every pass below, never the header writes. */
   readonly render: FieldHeaderRenderLanes & { readonly analyticField: boolean };

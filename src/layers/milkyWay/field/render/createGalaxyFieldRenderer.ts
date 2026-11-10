@@ -331,9 +331,7 @@ export function createGalaxyFieldRenderer(
     const central = centralField.get();
 
     const headers = buildFieldHeaderInputs({
-      eye: frame.eye,
-      fov: frame.fov,
-      shiftX: frame.shiftX,
+      camera: frame.camera,
       frame: frame.view,
       render: frame.render,
       model: {

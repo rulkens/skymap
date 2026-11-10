@@ -8,9 +8,8 @@
  * the packer's own inert defaults — see each field's own comment below.
  */
 import type { Vec2 } from '../../../../../@types/math/Vec2';
-import type { Vec3 } from '../../../../../@types/math/Vec3';
 import type { DustHeaderLanes } from '../../dust/@types/DustHeaderLanes';
-import type { FieldCamera } from '../@types/FieldCamera';
+import type { FieldView } from '../../@types/FieldView';
 import type { FieldHeaderInput } from '../@types/FieldHeaderInput';
 import type { FieldSliceCounts } from '../../@types/FieldSliceCounts';
 import type { HiiTextureLanes } from '../@types/HiiTextureLanes';
@@ -48,9 +47,7 @@ type FieldHeaderTargetSizes = {
   readonly tiers: Readonly<Record<HiiTier, Vec2>>;
 };
 type FieldHeaderInputsDeps = {
-  readonly eye: Vec3;
-  readonly fov: number;
-  readonly shiftX: number;
+  readonly camera: FieldView;
   readonly frame: FieldHeaderFrameLanes;
   readonly render: FieldHeaderRenderLanes;
   readonly model: FieldHeaderModelLanes;
@@ -64,23 +61,16 @@ type FieldHeaderInputs = {
 };
 
 export function buildFieldHeaderInputs(deps: FieldHeaderInputsDeps): FieldHeaderInputs {
-  const { eye, fov, shiftX, frame, render, model, targetSizes } = deps;
+  const { camera, frame, render, model, targetSizes } = deps;
   const { debugViews, galaxyWeight, ismMapChannels, dustSlices, starGrainFeatureScale } = frame;
-
-  // Shared ray basis — `aspect` is the PROJECTION's (the canvas's), not any
-  // reduced target's: the fullscreen triangle covers a divisor-scaled target,
-  // but the frustum it must reconstruct is the one `proj` was built with.
-  const camera: FieldCamera = {
-    eye,
-    view: frame.view,
-    fov,
-    aspect: frame.aspect,
-    lensShiftX: shiftX,
-    exposure: frame.analyticExposure,
-  };
+  // `camera.frustum` is the PROJECTION's, not any reduced target's: the
+  // fullscreen triangle covers a divisor-scaled target, but the frustum it
+  // must reconstruct is the one `proj` was built with.
+  const exposure = frame.analyticExposure;
 
   const field: FieldHeaderInput = {
     camera,
+    exposure,
     emissionCount: model.fieldCounts.emission,
     primaryCount: model.fieldCounts.primary,
     targetSizePx: targetSizes.field,
@@ -135,6 +125,7 @@ export function buildFieldHeaderInputs(deps: FieldHeaderInputsDeps): FieldHeader
   // frequency as a side effect of a fix that is only about attenuation.
   const hii: FieldHeaderInput = {
     camera,
+    exposure,
     emissionCount: model.hiiCount,
     primaryCount: model.hiiCount,
     targetSizePx: targetSizes.hii,

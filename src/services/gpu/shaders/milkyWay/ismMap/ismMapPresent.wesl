@@ -51,14 +51,11 @@ fn vs(@builtin(vertex_index) vi: u32) -> FullscreenOut {
 
 @fragment
 fn fs(input: FullscreenOut) -> @location(0) vec4<f32> {
-  let tanHalfFov = u.params.x;
-  let aspect = u.params.y;
-  let shift = u.params.z;
   // FullscreenOut carries 'uv' (its @builtin(position) is FRAMEBUFFER
   // pixels in the fragment stage, not NDC) — cameraRayFromUv undoes
   // fullscreenVertex's own uv transform to recover the NDC
   // fieldSplat/fragment.wesl's fs reconstructs its ray from.
-  let d = cameraRayFromUv(input.uv, u.camRight.xyz, u.camUp.xyz, u.camFwd.xyz, tanHalfFov, aspect, shift);
+  let d = cameraRayFromUv(input.uv, u.camRight.xyz, u.camUp.xyz, u.camFwd.xyz, u.frustum);
   let o = u.eye.xyz;
 
   // Disc-plane (y=0) intersection; a ray parallel to or diverging from the

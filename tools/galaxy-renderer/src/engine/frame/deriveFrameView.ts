@@ -11,6 +11,7 @@
 import { mat4 } from 'wgpu-matrix';
 
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
+import type { FieldView } from '../../../../../src/layers/milkyWay/field/@types/FieldView';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import type { DebugViewWeights } from '../../../../../src/layers/milkyWay/field/header/@types/DebugViewWeights';
 import type { FieldDustSlices } from '../../../../../src/layers/milkyWay/field/dust/@types/FieldDustSlices';
@@ -23,6 +24,7 @@ import { debugViewWeights } from './debugViewWeights';
 import { deriveMilkyWayFade } from './deriveMilkyWayFade';
 import { dustSliceEdges } from '../../../../../src/layers/milkyWay/field/dust/utils/dustSliceEdges';
 import { lerp } from '../../../../../src/utils/math/lerp';
+import { shiftedFrustum } from '../../../../../src/services/engine/camera/lens/utils/shiftedFrustum';
 import { smoothstep } from '../../../../../src/utils/math/smoothstep';
 
 /**
@@ -52,7 +54,8 @@ export type FieldFrameLanes = {
   readonly view: Float32Array;
   readonly proj: Float32Array;
   readonly viewProj: Float32Array;
-  readonly aspect: number;
+  /** The field's camera; the tool's galaxy frame is its world frame, so no transform. */
+  readonly camera: FieldView;
   readonly fade: MilkyWayFadeReadout;
   readonly galaxyWeight: number;
   readonly debugViews: DebugViewWeights;
@@ -93,6 +96,17 @@ export function deriveFrameView(input: {
   const aspect = viewportPx[0] / viewportPx[1];
   const proj = mat4.perspective(fov, aspect, near, far);
   proj[8] = input.shiftX; // lens shift to centre in the visible area
+  // A lookAt view's rotation ROWS are the camera's world axes; column-major,
+  // so each row is a stride-4 gather, and row 2 points away from the target.
+  // `proj[8] = shiftX` puts the window centre at shiftX half-widths, so the
+  // axis lands at −shiftX in `shiftedFrustum`'s terms.
+  const camera: FieldView = {
+    eye,
+    right: [view[0]!, view[4]!, view[8]!],
+    up: [view[1]!, view[5]!, view[9]!],
+    fwd: [-view[2]!, -view[6]!, -view[10]!],
+    frustum: shiftedFrustum(fov, aspect, [-input.shiftX, 0]),
+  };
 
   // `viewportPx[1]`, not the aggregate target's height, for the same reason the
   // app passes `ctx.canvasSize.height`: the fade band asks how big the disc
@@ -134,7 +148,7 @@ export function deriveFrameView(input: {
     view,
     proj,
     viewProj: mat4.multiply(proj, view),
-    aspect,
+    camera,
     fade,
     galaxyWeight,
     debugViews,
