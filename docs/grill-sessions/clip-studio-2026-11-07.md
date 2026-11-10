@@ -293,5 +293,14 @@ metres from Earth while the edit camera is Mpc away. It also needs per-view eval
 reads the one main camera: scale-band fades, LOD planning, data demand and body slabs. Labels start
 off in the inset, as they are in dome views.
 
+## Q22–Q23: Steps bound to a named subject (from the approachM31 mock)
+
+- **Q22 Value of a bound step:** options were the subject only, the subject plus the resolved
+  numbers, or the numbers only. **Decision:** the subject only (`→ ◎M31`). The resolved numbers
+  show in the inspector's Resolved line.
+- **Q23 "Use current view" on a bound step:** options were to switch it to Fixed or to disable the
+  button. **Decision:** capture the live value and flip Bind from Subject to Fixed. The change shows
+  in the Bind toggle and can be undone.
+
 _Still open (engineering, to be proposed in the spec):_ how the studio's RTK state plugs into the
 app store.
