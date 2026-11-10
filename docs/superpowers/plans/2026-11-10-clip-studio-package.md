@@ -648,8 +648,8 @@ from step starts, cue times and End.
 - `snapTime(sec: number, targets: readonly number[], secPerPx: number): { sec: number; snapped: number | null }`:
   snaps within 6 px.
 
-- [ ] Test `rulerSteps: 24 s over 900 px is 2 s / 0.4 s; 40 s is 5 s / 1 s`.
-- [ ] Test `snapTime snaps within 6 px to the nearest target and not beyond`.
+- [x] Test `rulerSteps: 24 s over 900 px is 2 s / 0.4 s; 40 s is 5 s / 1 s`.
+- [x] Test `snapTime snaps within 6 px to the nearest target and not beyond`.
 
 ### Task 2.6: composed selectors
 
