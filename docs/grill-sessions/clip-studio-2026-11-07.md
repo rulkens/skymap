@@ -302,5 +302,19 @@ off in the inset, as they are in dome views.
   button. **Decision:** capture the live value and flip Bind from Subject to Fixed. The change shows
   in the Bind toggle and can be undone.
 
+## Q24–Q25: Detaching a view into its own window
+
+- **Q24 Which view can detach:** options were the camera view only, or either view. **Decision:**
+  either view. Each view, the edit view and the camera view, has a detach control. A detached view
+  leaves the picture-in-picture layout, and the other view takes the main viewport.
+- **Q25 How a detached window gets its picture:** options were a second app instance synced on
+  `(clip, t)` over BroadcastChannel (works across machines, but a second data load and GPU
+  context), or the same engine rendering into a canvas in a popup window as one more view (one data
+  load, frame-exact sync, same machine only). **Decision:** the same engine with a second canvas: a
+  view whose `output` is the popup canvas's swap chain, on the same GPU device, built on the
+  view-rig seam from Q21. **Spec risk to prove first:** configuring a WebGPU canvas context that
+  lives in another same-origin window with the main device, and rAF and throttling when the main
+  window is hidden behind the popup.
+
 _Still open (engineering, to be proposed in the spec):_ how the studio's RTK state plugs into the
 app store.
