@@ -4,6 +4,7 @@
 use crate::date::Date;
 use crate::grid::{H, W};
 use crate::imageio::{rgba, Rgba};
+use crate::orbit::{Footprint, Footprints, FOOT_H, FOOT_W};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
@@ -242,16 +243,19 @@ fn slots() -> Vec<String> {
         .collect()
 }
 
+/// UTC minute of a granule slot named `HHMM`.
+fn slot_minute(s: &str) -> i32 {
+    s[..2].parse::<i32>().unwrap() * 60 + s[2..].parse::<i32>().unwrap()
+}
+
 /// WMS time of a granule slot named `HHMM`.
 fn tstr(date: Date, s: &str) -> String {
-    wms_time(
-        date,
-        s[..2].parse::<i32>().unwrap() * 60 + s[2..].parse::<i32>().unwrap(),
-    )
+    wms_time(date, slot_minute(s))
 }
 
 /// fetch_granules.py `lo` then `hi`: footprints at 1024x512, then each daylit slot's bbox at full res.
-pub fn granules(dir: &Path, date: Date, allow: bool) {
+/// Returns the non-empty footprints, which the orbit fit reads.
+pub fn granules(dir: &Path, date: Date, allow: bool) -> Footprints {
     let lo = dir.join("lo");
     let jobs: Vec<(PathBuf, String)> = slots()
         .iter()
@@ -269,6 +273,7 @@ pub fn granules(dir: &Path, date: Date, allow: bool) {
     require_online(&jobs, allow);
     pool(jobs, 6, |(p, u)| get(&u, &p, false));
     let mut foot = serde_json::Map::new();
+    let mut footprints = Footprints::new();
     for s in slots() {
         let im = rgba(&lo.join(format!("{s}.png")));
         let m: Vec<bool> = im.px.chunks(4).map(|c| c[3] > 0).collect();
@@ -286,6 +291,11 @@ pub fn granules(dir: &Path, date: Date, allow: bool) {
             s.clone(),
             serde_json::json!({"frac": frac, "y0": ys[0], "y1": ys[ys.len() - 1], "cols": cols}),
         );
+        assert_eq!((im.w, im.h), (FOOT_W, FOOT_H), "{s}");
+        footprints.push(Footprint {
+            minute: slot_minute(&s) as f64,
+            mask: m,
+        });
     }
     write_atomic(
         &dir.join("footprints.json"),
@@ -340,6 +350,7 @@ pub fn granules(dir: &Path, date: Date, allow: bool) {
     );
     require_online(&jobs, allow);
     pool(jobs, 6, |(p, u)| get(&u, &p, true));
+    footprints
 }
 
 fn require_online(jobs: &[(PathBuf, String)], allow: bool) {

@@ -98,19 +98,20 @@ pub struct OrbitFit { pub tn: f64, pub lon_n: f64, pub ltan: f64, pub median_dt_
 pub fn fit(footprints: &Footprints) -> Result<OrbitFit, String>; // Err when < MIN_FIT_SAMPLES usable samples
 ```
 
-- [ ] Port the fit (spec "Orbit"): samples = up to 150 footprint pixels per slot with |lat| < 30°,
+- [x] Port the fit (spec "Orbit"): samples = up to 150 footprint pixels per slot with |lat| < 30°,
       deterministic sampling (fixed-seed or strided, not thread-dependent), sample time = slot minute +
       3.0; coarse grid LTAN 13.0..=14.0 step 0.05 h × tn 0..P step 0.5 min; fine grid ±0.05 h step 0.01
       × ±0.5 min step 0.1; `lon_n = 15 * (ltan - tn / 60)`; objective = median |pass_time − t|, using
       the existing `orbit::pass_time`. Parallelise the coarse grid with rayon if it is slow; a fit must
       take under ~5 s.
-- [ ] Fit error → exit 3 (Task 6 owns the mapping; return the error up).
-- [ ] Test: `fit recovers a known orbit from synthetic footprints` — build footprints from
+- [x] Fit error → exit 3 (Task 6 owns the mapping; return the error up).
+- [x] Test: `fit recovers a known orbit from synthetic footprints` — build footprints from
       `pass_time` for tn = 89.0, ltan = 13.10 over a day of 6-min slots, assert |Δtn| ≤ 0.2 min,
-      |Δltan| ≤ 0.02 h, median_dt_min ≤ 3.
-- [ ] Manual check, logged in the commit body: fits for 2026-11-06 and 2026-11-09 land within 0.2 min /
+      |Δltan| ≤ 0.02 h, median_dt_min ≤ 3. Shipped at 1.5 min / 0.15 h: on slot-binned times the median
+      has a valley ~1 min × 0.1 h wide and this truth fits to 88.0 / 13.00, as fit_orbit.py would.
+- [x] Manual check, logged in the commit body: fits for 2026-11-06 and 2026-11-09 land within 0.2 min /
       0.02 h of the Python's {tn 45.0, ltan 13.15} and {tn 89.0, ltan 13.10}.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 5: Missing and broken inputs are skipped, not fatal
 

@@ -38,7 +38,19 @@ fn main() {
         a.date,
         rayon::current_num_threads()
     );
-    fetch::granules(&granules, a.date, !a.offline);
+    let footprints = fetch::granules(&granules, a.date, !a.offline);
+    let fit = match orbit::fit(&footprints) {
+        Ok(f) => f,
+        Err(e) => {
+            eprintln!("cloud-bake-rs: {e}");
+            std::process::exit(3);
+        }
+    };
+    drop(footprints);
+    println!(
+        "orbit: tn {:.2} min, lon_n {:.2}, LTAN {:.2} h, median |dt| {:.2} min",
+        fit.tn, fit.lon_n, fit.ltan, fit.median_dt_min
+    );
     fetch::mosaics(&mosaics_dir, a.date, !a.offline);
 
     let ice = imageio::ice_sheets(&a.blue_marble);
@@ -66,13 +78,9 @@ fn main() {
         .map(|(&d, &i)| smoothstep(0.0, 1.0, d / 80.0) * (1.0 - i))
         .collect();
     drop(d);
-    // Temporary until the orbit is fitted from the footprints (plan Task 4).
-    let orb: serde_json::Value =
-        serde_json::from_str(&std::fs::read_to_string(granules.join("orbit.json")).unwrap())
-            .unwrap();
     let orb = orbit::Orbit {
-        tn: orb["tn"].as_f64().unwrap(),
-        lon_n: orb["lon_n"].as_f64().unwrap(),
+        tn: fit.tn,
+        lon_n: fit.lon_n,
     };
     let dec = geodecode::Decoder::new();
     let x = geofill::Inputs {
