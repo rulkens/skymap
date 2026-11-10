@@ -62,15 +62,13 @@ fn gaussianRayCoeffs(o: vec3<f32>, d: vec3<f32>, mDiag: vec3<f32>, mOff: vec3<f3
   let a = bilinearForm(d, d, mDiag, mOff);
   if (a < 1e-12) { return vec3<f32>(0.0); }
   let b = bilinearForm(o, d, mDiag, mOff);
-  // q, the closest approach in squared Mahalanobis distance, is the same from
-  // any origin on the ray, so it is taken from the point nearest the centre
-  // (d is unit). From o itself, c - b*b/a cancels: a compact HII shell 31 kpc
-  // out has c ~ 4e8 and q ~ 16, and one f32 ulp of d swung q across SPLAT_CUT^2.
-  // a and b stay on o, since callers read -b/a as a depth along THIS ray. The
-  // clamp catches the residual rounding at grazing incidence.
-  let oNear = o - d * dot(o, d);
-  let bNear = bilinearForm(oNear, d, mDiag, mOff);
-  let q = max(bilinearForm(oNear, oNear, mDiag, mOff) - bNear * bNear / a, 0.0);
+  // q, the closest approach in squared Mahalanobis distance, is evaluated AT
+  // that closest point (o - d*b/a, where the ray's b vanishes). Taken from o as
+  // c - b*b/a it cancels whenever c >> q (a compact shell far away: c ~ 4e8,
+  // q ~ 16), and the cut test against SPLAT_CUT^2 turns into rounding noise.
+  // a and b stay on o: callers read -b/a as a depth along THIS ray.
+  let oNear = o - d * (b / a);
+  let q = max(bilinearForm(oNear, oNear, mDiag, mOff), 0.0);
   return vec3<f32>(a, b, q);
 }
 
