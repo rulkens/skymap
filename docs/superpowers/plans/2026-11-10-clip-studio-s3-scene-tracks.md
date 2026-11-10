@@ -88,9 +88,9 @@ The tour fold's output is unchanged: `captureSettings` drops `orientation`
 `frameTo` is excluded: it is now folded and dropped by the capture. No new test (a moved function; the frameTo arm
 is asserted through `sceneView` in Task 1.2, and `tests/state/tour/computeSceneEntering.test.ts` must stay green).
 
-- [ ] Move, add the arm, point `computeSceneEntering` at it.
-- [ ] `npx vitest run tests/state/tour`.
-- [ ] Commit: "Scene writes come from one table".
+- [x] Move, add the arm, point `computeSceneEntering` at it.
+- [x] `npx vitest run tests/state/tour`.
+- [x] Commit: "Scene writes come from one table".
 
 **Controller, after dispatch 1:** take the perf baseline on this HEAD (DoD perf gate):
 `npm run perf -- --url http://localhost:<port>` and `npm run perf:cpu -- --url http://localhost:<port>`, all
