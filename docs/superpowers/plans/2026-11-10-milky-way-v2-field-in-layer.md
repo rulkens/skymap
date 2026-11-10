@@ -727,7 +727,7 @@ export type GalaxyFieldHostDebug = {
 
 `createGalaxyFieldHost(device: GPUDevice, deps: GalaxyFieldHostDeps): { host: GalaxyFieldHost; debug: GalaxyFieldHostDebug }`.
 
-- [ ] Build the host from the v2 half of `createGalaxyModel.ts`:
+- [x] Build the host from the v2 half of `createGalaxyModel.ts`:
   - From there: `mixtureInput` (today `:217-227`, with `orientationViewWanted =
     render.debugViews.orientation > 0`), `invMeanNormFor` (`:255-269`), `youngStarsMeanCache`,
     the `youngStars` getter (`:482-488`), the ISM landing (`:448-459`) and `readbacks` (into
@@ -740,7 +740,7 @@ export type GalaxyFieldHostDebug = {
     renderer's identity keys make an unchanged section free.
   - `encode` derives the frame lanes (`deriveFieldFrameLanes` with `renderer.dustHeaderLanes.reachR`),
     then calls `renderer.encode(encoder, plan, targets, frame)`.
-- [ ] Change the renderer:
+- [x] Change the renderer:
   - `encode(encoder, plan, targets, frame)` iterates `plan.encodes`. The `findHiiSegment` calls
     (today `:439`, `:455`) remain only to read each pass's `first`/`count`.
   - `frame.render.analyticField` and the early return (`:367`) go: the tool gates on its own
@@ -748,20 +748,20 @@ export type GalaxyFieldHostDebug = {
   - `GalaxyFieldFrame.timestampWrites` becomes
     `(id: FieldTargetId) => GPURenderPassTimestampWrites | undefined`, called only where a pass
     opens.
-- [ ] Rework `createGalaxyModel.ts`:
+- [x] Rework `createGalaxyModel.ts`:
   - It keeps the v1 sprites, the bubbles, the orientation diagnostics and the seeding view, which
     reads `debug.readbacks`.
   - It drops its `field` dep, and exposes the generated `geometry` and the field `extras` for the
     engine to put into `FieldHostTuning`.
   - Its allow-list row (today `inlineTypeFiles.ts:182`) stays only if an inline type remains.
-- [ ] **Test, new:** `planFieldFrame` (segments as plain `{ label, first, count }` fixtures):
+- [x] **Test, new:** `planFieldFrame` (segments as plain `{ label, first, count }` fixtures):
   - `it('encodes dustMap and field first, then each id with components, in FIELD_TARGET_IDS order')`:
     with segments for `hii:young` and `hii:extras`, the result is
     `encodes = ['dustMap', 'field', 'young', 'extras']`.
   - `it('composites are the encodes minus the dust map, in the same order')`.
   - `it('a tier with no components is in neither list')`: a `hii:shells` segment with `count: 0`
     puts `shells` in neither array.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task A10: Composite loop in `src/`, tool rewired onto the host
 

@@ -9,6 +9,7 @@
  * before `createFieldPipelines`) — see the block comments at each step.
  */
 import type { DustHeaderLanes } from '../dust/@types/DustHeaderLanes';
+import type { FieldFramePlan } from '../@types/FieldFramePlan';
 import type { FieldSliceCounts } from '../@types/FieldSliceCounts';
 import type { GalaxyFieldFrame } from '../@types/GalaxyFieldFrame';
 import type { GalaxyFieldMixtureInput } from '../mixture/@types/GalaxyFieldMixtureInput';
@@ -305,6 +306,7 @@ export function createGalaxyFieldRenderer(
 
   function encode(
     encoder: GPUCommandEncoder,
+    plan: FieldFramePlan,
     frameTargets: GalaxyFieldRenderTargets,
     frame: GalaxyFieldFrame,
   ): void {
@@ -360,87 +362,64 @@ export function createGalaxyFieldRenderer(
       device.queue.writeBuffer(tierUbo[kind], 0, tierData);
     }
 
-    if (!frame.render.analyticField) return;
     const groups = bindGroups;
     const timestampWrites = frame.timestampWrites ?? ((): undefined => undefined);
-    // Dust-column map: the primary's dust slice, splatted into its own
-    // divisor-matched target (additive). Every frame, even at zero dust — see
-    // `encodeDustMapPass` for why the clear is unconditional.
-    encodeDustMapPass({
-      enc: encoder,
-      timestampWrites: timestampWrites('dustMap'),
-      targetView: frameTargets.dustMap.view,
-      pipeline: fieldPipelines.dustMapPipe,
-      bindGroup: groups.dustMap,
-      instanceCount: fieldCounts.dust,
-    });
-
-    // JWST dust-view presentation, into its OWN target — runs ADDITIONALLY
-    // alongside the emission splat below rather than replacing it: the four
-    // debug views crossfade independently, and the scene pass sums whichever
-    // of them are live. Gated on the same `debugViews` lane the headers above
-    // were packed from, so the pass and its header cannot disagree.
-    const dustView = frameTargets.dustView;
-    if (dustView && frame.view.debugViews.dust > 0) {
-      encodeDustPresentPass({
-        enc: encoder,
-        targetView: dustView.view,
-        pipeline: fieldPipelines.dustPresentPipe,
-        bindGroup: groups.dustPresent,
-      });
-    }
-
-    // One draw for the WHOLE emission list `upload:field` wrote —
-    // central galaxy's components then every extra's. `fieldCounts.emission`,
-    // NOT the packed total: the trailing dust slice is never drawn as its own
-    // quad, only read from inside a primary emission fragment.
-    encodeSplatPass({
-      enc: encoder,
-      label: 'galaxy:fieldPass',
-      timestampWrites: timestampWrites('field'),
-      targetView: frameTargets.field.view,
-      pipeline: fieldPipelines.fieldSplatPipe,
-      bindGroup: groups.fieldSplat,
-      instanceCount: fieldCounts.emission,
-    });
-
-    // Every tier's own pass, into its own target at its own divisor: shells,
-    // young stars and DIG each get a private target rather than sharing
-    // the `extras` target's coarser one, since a shell or young-stars association is
-    // small and bright enough that a coarser shared target would collapse it
-    // under a texel. One pass per tier WITH CONTENT, into a freshly cleared
-    // target. Asking for a timestamp descriptor marks its slot consumed, so
-    // calling it only inside `if (segment)` is what makes a tier's HUD row
-    // vanish on the frames it draws nothing.
-    for (const kind of HII_TIER_KINDS) {
-      const segment = findHiiSegment(hiiSegments, `hii:${kind}`);
-      if (!segment) continue;
-      encodeSplatPass({
-        enc: encoder,
-        label: `galaxy:hiiPass:${kind}`,
-        timestampWrites: timestampWrites(`hii:${kind}`),
-        targetView: frameTargets[kind].view,
-        pipeline: fieldPipelines.hiiTierPipeline(kind),
-        bindGroup: groups.tier(kind),
-        instanceCount: segment.count,
-        firstInstance: segment.first,
-      });
-    }
-    // The `extras` target's own pass draws ONLY background extras' HII contribution —
-    // see `HiiTierSpec` for why extras can't split into their own
-    // shell/DIG/young tiers the way the central galaxy's do.
-    const extrasSegment = findHiiSegment(hiiSegments, 'hii:extras');
-    if (extrasSegment) {
-      encodeSplatPass({
-        enc: encoder,
-        label: 'galaxy:hiiPass:extras',
-        timestampWrites: timestampWrites('hii:extras'),
-        targetView: frameTargets.extras.view,
-        pipeline: fieldPipelines.hiiExtrasPipe,
-        bindGroup: groups.hii,
-        instanceCount: extrasSegment.count,
-        firstInstance: extrasSegment.first,
-      });
+    for (const id of plan.encodes) {
+      if (id === 'dustMap') {
+        // The primary's dust slice into its own divisor-matched target; an
+        // empty clear at zero dust — see `encodeDustMapPass`.
+        encodeDustMapPass({
+          enc: encoder,
+          timestampWrites: timestampWrites(id),
+          targetView: frameTargets.dustMap.view,
+          pipeline: fieldPipelines.dustMapPipe,
+          bindGroup: groups.dustMap,
+          instanceCount: fieldCounts.dust,
+        });
+        // JWST dust-view presentation, into its OWN target, beside the emission
+        // splat rather than replacing it: the debug views crossfade
+        // independently. Gated on the lane the headers above were packed from.
+        const dustView = frameTargets.dustView;
+        if (dustView && frame.view.debugViews.dust > 0) {
+          encodeDustPresentPass({
+            enc: encoder,
+            targetView: dustView.view,
+            pipeline: fieldPipelines.dustPresentPipe,
+            bindGroup: groups.dustPresent,
+          });
+        }
+      } else if (id === 'field') {
+        // One draw for the WHOLE emission list `upload:field` wrote, central
+        // galaxy then every extra. `fieldCounts.emission`, NOT the packed
+        // total: the dust slice is only read from inside an emission fragment.
+        encodeSplatPass({
+          enc: encoder,
+          label: 'galaxy:fieldPass',
+          timestampWrites: timestampWrites(id),
+          targetView: frameTargets.field.view,
+          pipeline: fieldPipelines.fieldSplatPipe,
+          bindGroup: groups.fieldSplat,
+          instanceCount: fieldCounts.emission,
+        });
+      } else {
+        // An HII target, a tier or the background extras' (which can't split
+        // into tiers — see `HiiTierSpec`), each at its own divisor: a shell is
+        // small and bright enough that a coarser shared target collapses it
+        // under a texel. The segment only gives the range; a stale plan clears
+        // the target with an empty draw rather than leaving it uncleared.
+        const segment = findHiiSegment(hiiSegments, `hii:${id}`);
+        const extras = id === 'extras';
+        encodeSplatPass({
+          enc: encoder,
+          label: `galaxy:hiiPass:${id}`,
+          timestampWrites: timestampWrites(id),
+          targetView: frameTargets[id].view,
+          pipeline: extras ? fieldPipelines.hiiExtrasPipe : fieldPipelines.hiiTierPipeline(id),
+          bindGroup: extras ? groups.hii : groups.tier(id),
+          instanceCount: segment?.count ?? 0,
+          firstInstance: segment?.first ?? 0,
+        });
+      }
     }
   }
 

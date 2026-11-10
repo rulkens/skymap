@@ -27,7 +27,8 @@ import { createFrameTimer } from './timing/createFrameTimer';
 import { createReportThrottle } from './timing/createReportThrottle';
 import { TIMING_SLOTS } from './timing/timingSlots';
 import { createRafLoop } from './createRafLoop';
-import { createGalaxyFieldRenderer } from '../../../../src/layers/milkyWay/field/render/createGalaxyFieldRenderer';
+import { createGalaxyFieldHost } from '../../../../src/layers/milkyWay/field/host/subsystems/createGalaxyFieldHost';
+import type { FieldHostTuning } from '../../../../src/layers/milkyWay/field/host/@types/FieldHostTuning';
 import { createGalaxyRenderTargets } from './gpu/createGalaxyRenderTargets';
 import type { TargetDivisors } from './gpu/createGalaxyRenderTargets';
 import { readTextureChannelSum } from './gpu/readTextureChannelSum';
@@ -39,7 +40,6 @@ import { createGradePipeline } from './post/createGradePipeline';
 import { createCloudPipelines } from './sprites/createCloudPipelines';
 import { encodeSceneComposites } from './passes/encodeSceneComposites';
 import { encodeSplatPass } from '../../../../src/layers/milkyWay/field/render/encodeSplatPass';
-import { findHiiSegment } from '../../../../src/layers/milkyWay/field/starFormation/utils/findHiiSegment';
 import { encodeStarPass } from './sprites/encodeStarPass';
 import { encodeTransmittanceDust } from './sprites/encodeTransmittanceDust';
 import { createArmRidgeDebugSample } from './field/createArmRidgeDebugSample';
@@ -48,7 +48,7 @@ import { createGalaxyModel } from './model/createGalaxyModel';
 import { gradeIsActive } from './post/gradeIsActive';
 import { toMilkyWayTuning } from './sprites/toMilkyWayTuning';
 import { deriveFrameView } from './frame/deriveFrameView';
-import { deriveFieldFrameLanes } from '../../../../src/layers/milkyWay/field/host/utils/deriveFieldFrameLanes';
+import { fieldHostRender } from './frame/fieldHostRender';
 import { createOffscreenProbe } from './probe/createOffscreenProbe';
 import { CLOUD_UNIFORM_FLOATS, packCloudUniforms } from './sprites/packCloudUniforms';
 import {
@@ -120,7 +120,7 @@ export async function createGalaxyEngine(
   // Every engine-scope GPU allocation registers at its own allocation site;
   // `dispose` walks this in reverse. An HMR remount hands the next engine the
   // same canvas, so a missed registration leaks a full set per remount.
-  // Resources that own their own teardown (`targets`, `model`, `field`,
+  // Resources that own their own teardown (`targets`, `model`, `host`,
   // `bloomPyramid`, `compositor`, `aggregateUpsample`) keep delegating and are
   // deliberately absent here — which is also why nothing registered here is
   // ever reassigned.
@@ -145,18 +145,18 @@ export async function createGalaxyEngine(
   const makeShader = (code: string, label: string): GPUShaderModule =>
     createShaderModuleWithDevLog(device, code, label);
 
-  // ---- the analytic field: `createGalaxyFieldRenderer` ----
-  // Construction order follows its own header (header UBOs, baked volumes,
-  // ISM-map chain, splat pipelines). The two hooks are the CPU readback path
-  // it deliberately does not own — `model` is in scope by the time either
-  // fires (nothing rebuilds at construction).
-  const field = createGalaxyFieldRenderer(device, {
+  // ---- the analytic field: the host the app shares ----
+  // `debug` carries the renderer and readbacks only the tool's diagnostics
+  // reach. Both hooks feed `model`, which is in scope by the time either fires
+  // (nothing rebuilds at construction).
+  const { host, debug } = createGalaxyFieldHost(device, {
     makeShader,
     hdrFormat: HDR,
     dustMapFormat: DUST_MAP_FORMAT,
-    onIsmMapRebuilt: (grid) => model.noteIsmMapRebuilt(grid),
+    onIsmMapLanded: () => model.noteIsmMapLanded(),
     onOrientationRebuilt: (grid) => model.noteOrientationRebuilt(grid),
   });
+  const field = debug.renderer;
 
   // Tool-only grade trailer — see `packGradeUniforms` for the lanes. The bloom
   // and compositor uniforms are owned by their shared factories below.
@@ -215,13 +215,13 @@ export async function createGalaxyEngine(
   // read three of its lanes live.
   const render = { ...DEFAULT_RENDER_SETTINGS, ...DEFAULT_LOD_SETTINGS };
 
-  // ---- the galaxy itself: sprite buffers, extras, ISM-map readbacks ----
-  // Everything the analytic field derives from (geometry, tuning, seed) is the
-  // field renderer's; the model feeds it and keeps the v1 sprite tier, the
-  // bubble overlay and the CPU readbacks.
+  // ---- the galaxy itself: sprite buffers, extras, readback diagnostics ----
+  // The model holds what the field host is tuned from (geometry, tuning,
+  // seed, extras); `drawFrame` hands it over once per frame.
   const model = createGalaxyModel({
     device,
-    field,
+    readbacks: debug.readbacks,
+    ismMapGenerator: field.ismMapGenerator,
     render,
     onStats: opts.onStats,
     onOrientationDiagnostics: opts.onOrientationDiagnostics,
@@ -260,14 +260,25 @@ export async function createGalaxyEngine(
   const cloudData = new Float32Array(CLOUD_UNIFORM_FLOATS);
   const gradeData = new Float32Array(GRADE_UNIFORM_FLOATS);
 
-  // Every knob reaches the next frame through the uniform pack, so a merge is
-  // all that's needed — except the four divisors (size render targets) and
-  // the two orientation sigmas (key a rebuild the model gates), which own
-  // their own comparisons downstream.
+  // Every knob reaches the next frame through the uniform pack or the field
+  // host's per-frame tuning, so a merge is all that's needed — except the
+  // divisors, which size render targets and own their comparisons downstream.
   function setRender(patch: Partial<RenderSettings & LodSettings>): void {
     Object.assign(render, patch);
     targets.setDivisors(allDivisors());
-    model.noteRenderChanged();
+  }
+
+  /** The field host's whole tuning for this frame; null until `setParams` gives the galaxy a geometry. */
+  function fieldHostTuning(views: Parameters<typeof fieldHostRender>[1]): FieldHostTuning | null {
+    const geometry = model.geometry;
+    if (!geometry) return null;
+    return {
+      geometry,
+      seed: model.seed,
+      extras: model.fieldExtras,
+      field: model.fieldTuning,
+      render: fieldHostRender(render, views, model.ismMapSeedingView),
+    };
   }
 
   // ---- resize ----
@@ -448,15 +459,22 @@ export async function createGalaxyEngine(
     );
     device.queue.writeBuffer(dustUbo, 0, cloudData);
 
-    // The five field headers are packed and written inside `field.encode`
+    // The five field headers are packed and written inside `host.encode`
     // below; the post chain's uniforms are written by the shared factories at
     // draw time, so there is nothing else to pack here.
 
     // Before the encoder exists, not after: a rebuild can destroy and replace
     // `bubbleComps`'s buffer, which a recorded draw would already be holding,
     // and the orientation chain submits an encoder of its own that must
-    // precede this frame's.
+    // precede this frame's. The host's order is the app planner's: tune,
+    // step, then one plan the encode and the composites both read.
     const { bubblesLive } = model.ensureFresh();
+    const hostTuning = fieldHostTuning(frameView);
+    if (hostTuning) host.setTuning(hostTuning);
+    host.ensureFresh();
+    const plan = host.plan();
+    // No tuning yet means no headers to pack, so nothing of the field draws.
+    const fieldLive = render.analyticField && hostTuning !== null;
 
     const timingCtx = timing.beginFrame();
     const enc = device.createCommandEncoder({ label: 'galaxy:frame' });
@@ -480,51 +498,21 @@ export async function createGalaxyEngine(
       quad,
       instances: starInstances,
     });
-    // Each segment lookup below gates the scene pass's composite that reads a
-    // target — `field.encode` below runs its own independent lookup gating
-    // the pass that FILLS the same target, off this same frame's
-    // `field.hiiSegments`, so the two can't drift into compositing a target
-    // this frame never cleared (which sums the previous frame's content into
-    // HDR with nothing to catch it) — per tier independently, since a galaxy
-    // with DIG but no shells/young/extras must still skip those targets'
-    // composite push.
-    const analytic = render.analyticField;
-    const tierSegments = HII_TIERS.map((tier) => ({
-      tier,
-      segment: findHiiSegment(field.hiiSegments, tier.label),
-    }));
-    const extrasSegment = findHiiSegment(field.hiiSegments, 'hii:extras');
     const drawDustView = debugViews.dust > 0;
-    // Every field/HII pass this frame, into the caller-owned targets above —
-    // `dustMap` before `field` is the only ordering the module owns; where
-    // this galaxy's passes sit in the frame stays here.
     // Read per frame, not captured: a resize or a divisor drag replaces rows.
     const fieldTargets = targets.fieldTargets;
-    field.encode(enc, fieldTargets, {
-      camera: frameView.camera,
+    if (fieldLive) {
       // The fade folds into the exposure, the same product the app's
-      // visibility alpha makes.
-      view: deriveFieldFrameLanes({
-        camera: frameView.camera,
-        exposure: render.analyticExposure * fade.alpha,
-        dustReachR: field.dustHeaderLanes.reachR,
-        render: {
-          ...render,
-          debugViews,
-          galaxyWeight,
-          ismMapChannels: {
-            gasWeight: render.ismMapGasWeight,
-            starsWeight: render.ismMapStarsWeight,
-            activityWeight: render.ismMapActivityWeight,
-            dustWeight: render.ismMapDustWeight,
-          },
-        },
-      }),
-      render,
-      ismMapSeeding: model.ismMapSeedingView,
-      youngStars: model.youngStars,
-      timestampWrites: (slot) => timing.descriptorFor(slot),
-    });
+      // visibility alpha makes. The slot name keeps today's HUD rows.
+      host.encode(
+        enc,
+        plan,
+        frameView.camera,
+        render.analyticExposure * fade.alpha,
+        fieldTargets,
+        (id) => timing.descriptorFor(id === 'field' || id === 'dustMap' ? id : `hii:${id}`),
+      );
+    }
 
     // Scene pass: the aggregate folded into HDR, then transmittance dust over
     // it. The order matches the app's HDR content order — dust multiplies the
@@ -542,21 +530,16 @@ export async function createGalaxyEngine(
       );
       // Every representation here is additive into the SAME attachment, so the
       // crossfade is just which of them ran this frame, each already carrying
-      // its own weight — summation order carries no meaning. Each push is
-      // gated on the SAME segment lookup that gated its pass
-      // (`tierSegments`/`extrasSegment`), which keeps a target this frame
-      // never drew out of the composite with no separate staleness tracking.
+      // its own weight — summation order carries no meaning. The field's
+      // pushes are the plan's composites, the same value that gated its
+      // passes, so a target this frame never cleared is never summed.
       const compositeViews = [targets.aggregateTex.createView()];
-      if (analytic) {
-        compositeViews.push(fieldTargets.field.view);
-        for (const { tier, segment } of tierSegments) {
-          if (segment) compositeViews.push(fieldTargets[tier.kind].view);
-        }
-        if (extrasSegment) compositeViews.push(fieldTargets.extras.view);
+      if (fieldLive) {
+        for (const id of plan.composites) compositeViews.push(fieldTargets[id].view);
         if (drawDustView) compositeViews.push(fieldTargets.dustView.view);
       }
       encodeSceneComposites(pass, aggregateUpsample, compositeViews);
-      if (analytic) {
+      if (fieldLive) {
         // The three diagnostics present straight into `sceneTex` at full
         // canvas resolution — a divisor-matched offscreen and the upsample's
         // 4-tap reconstruction are both wrong for them; see the field pass.
@@ -660,7 +643,7 @@ export async function createGalaxyEngine(
     // null until the first one lands. `placeDust.wesl` reads the GPU texture
     // directly, never this readback; it feeds the seeding debug view and
     // `youngStars.invMeanNorm`'s contrast normalisation instead.
-    getIsmMapData: (): GalaxyIsmMap | null => model.ismMapData,
+    getIsmMapData: (): GalaxyIsmMap | null => debug.readbacks.ismMapData,
     // Debug-only: composes the field renderer's own probe share with the
     // readbacks that need `device`/`targets` and so can't live inside it —
     // see `GalaxyProbeApi.d.ts` for the full member docs. No production
@@ -687,7 +670,7 @@ export async function createGalaxyEngine(
       // request (every other caller is fire-and-forget) — without it, a
       // mapAsync rejection would leave this Promise pending forever.
       requestRingMeansReadback: (): Promise<Float32Array> =>
-        new Promise((resolve, reject) => model.probe.requestRingMeansReadback(resolve, reject)),
+        new Promise((resolve, reject) => debug.readbacks.requestRingMeans(resolve, reject)),
       requestArmRidgeSampleReadback: (): Promise<Float32Array> =>
         armRidgeDebugSample.dispatchAndReadback(),
       requestIsmMapDustCdfScanReadback: () => ismMapDustCdfScanDebugSample.dispatchAndReadback(),
@@ -750,7 +733,7 @@ export async function createGalaxyEngine(
       bloomPyramid.destroy();
       compositor.destroy();
       aggregateUpsample.destroy();
-      field.dispose();
+      host.destroy();
       armRidgeDebugSample.dispose();
       ismMapDustCdfScanDebugSample.dispose();
       // The size-dependent targets outlive every other resource here — the
