@@ -148,15 +148,27 @@ falls inside one, which that segment's `endSec` is then cut to). A `fade` whose 
 target appends nothing (the `FadeController.fadeTo` no-op, `fadeController.ts:67-70`). `over: 0` is a segment with
 `startSec === endSec`.
 
-- [ ] Test `scene steps are time-sorted and keep written order at one instant` (two steps at the same `atSec` in
+**As built (G1), three deviations:**
+
+- **`cues` stays until Task 2.2.** The live `clipPlayer.ts` still fires `compiled.cues` (focus and fade included), and
+  the suite must stay green between dispatches, so compile emits `scene` beside `cues` and `SceneStep` is a new file
+  instead of a rename of `SceneCue`. Task 2.2 deletes `CompiledClip.cues`, `Accum.cues`, `sortedCues` and
+  `SceneCue.d.ts` with the cue path.
+- **Segments supersede, they are not cut.** Cutting the first segment's `endSec` changes its smoothstep curve (at
+  t = 1 it would read 0.5 instead of today's 0.84375, and jump at the cut). A later segment instead takes over from
+  its own `startSec`; `clipFactorAt` evaluates the last segment with `startSec ≤ t`. `FactorSegment` and
+  `SceneTracks.factors` say "ascending startSec", not "non-overlapping".
+- **`clipFactorAt` lands here**, with its test, because compile computes each `from` with it.
+
+- [x] Test `scene steps are time-sorted and keep written order at one instant` (two steps at the same `atSec` in
       written order A, B; a later-written step with an earlier `atSec` sorts first).
-- [ ] Test `a fade starts from the factor the previous fade reached` (fade to 0 over 4 s at 0, fade to 1 over 2 s
-      at 2: second segment `from` is the smoothstep value at u = 0.5, i.e. 0.5, first segment cut to end at 2).
-- [ ] Test `a fade to the target already held adds no segment`.
-- [ ] Test `focus(null) compiles to an explicit clear step`.
-- [ ] Update the existing `.cues` assertions in `compileClip.test.ts` and the `validateSeqCueOrder` fixtures to steps.
-- [ ] `npx vitest run tests/services/engine/animation`.
-- [ ] Commit: "A compiled clip carries its scene as tracks".
+- [x] Test `a fade starts from the factor the previous fade reached` (fade to 0 over 4 s at 0, fade to 1 over 2 s
+      at 2: second segment `from` is the smoothstep value at u = 0.5, i.e. 0.5; the first segment keeps its curve).
+- [x] Test `a fade to the target already held adds no segment`.
+- [x] Test `focus(null) compiles to an explicit clear step`.
+- [x] Update the existing `.cues` assertions in `compileClip.test.ts` and the `validateSeqCueOrder` fixtures to steps.
+- [x] `npx vitest run tests/services/engine/animation`.
+- [x] Commit: "A compiled clip carries its scene as tracks".
 
 ### Task 1.2: the pure evaluators
 

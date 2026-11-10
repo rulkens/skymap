@@ -1,11 +1,12 @@
 /**
- * cueOrderKeys — the settings a cue overwrites, as strings, mirroring what
- * `computeSceneEntering` folds: show/hide one key per arg, `scene` its action type.
- * fade/focus/frameTo are not folded there, so their order cannot diverge.
+ * cueOrderKeys — the settings a scene step overwrites, as strings, mirroring what
+ * `computeSceneEntering` keeps of its fold: show/hide one key per arg, `scene` its
+ * action type. A `frameTo` folds into `orientation`, which the fold's capture drops,
+ * so its order cannot diverge.
  */
-import type { SceneCue } from '../../../@types/animation/compiledClip/SceneCue';
+import type { SceneStep } from '../../../@types/animation/compiledClip/SceneStep';
 
-export function cueOrderKeys({ effect }: SceneCue): string[] {
+export function cueOrderKeys({ effect }: SceneStep): string[] {
   switch (effect.kind) {
     case 'show':
     case 'hide':

@@ -175,26 +175,55 @@ describe('compileClip leading wait shifts every following window', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Test 5 — orders cues by atSec ascending
+// Test 5 — the scene compiles to tracks
 // ---------------------------------------------------------------------------
 
-describe('compileClip orders cues by atSec', () => {
-  it('hide at t=0 then fade at t>0 produces cues[0].atSec===0 ascending', () => {
-    // We emit hide first (at t=0), then a later fade after a hold.
-    // The timeline in a seq processes left to right, so hide fires at 0 and
-    // fade fires after the hold.
+describe('compileClip scene tracks', () => {
+  it('scene steps are time-sorted and keep written order at one instant', () => {
     const clip = compileClip({
-      timeline: [seq([hide(['flow'], 0), hold(3), fade(['flow'], 0.5, 2)])],
+      timeline: [
+        all([seq([wait(1), show(['flow']), hide(['flow'])]), show(['label:body:planet'])]),
+      ],
     });
+    expect(clip.scene.steps.map((s) => [s.atSec, s.effect.kind, s.effect])).toEqual([
+      [0, 'show', show(['label:body:planet'])],
+      [1, 'show', show(['flow'])],
+      [1, 'hide', hide(['flow'])],
+    ]);
+  });
 
-    expect(clip.cues).toHaveLength(2);
-    expect(clip.cues[0]!.atSec).toBe(0);
-    expect(clip.cues[0]!.effect.kind).toBe('hide');
-    expect(clip.cues[1]!.atSec).toBe(3);
-    expect(clip.cues[1]!.effect.kind).toBe('fade');
-    // Ascending order is maintained even if the internal walk emits them in a
-    // different order (the sort in compileClip ensures this).
-    expect(clip.cues[0]!.atSec).toBeLessThan(clip.cues[1]!.atSec);
+  it('a fade starts from the factor the previous fade reached', () => {
+    const clip = compileClip({
+      timeline: [all([fade(['flow'], 0, 4), seq([wait(2), fade(['flow'], 1, 2)])])],
+    });
+    // Halfway through the first ramp the smoothstep is 0.5. The first segment keeps its own
+    // curve; the second supersedes it from 2 s, as a FadeController retarget does.
+    expect(clip.scene.factors['flow']).toEqual([
+      { startSec: 0, endSec: 4, from: 1, to: 0 },
+      { startSec: 2, endSec: 4, from: 0.5, to: 1 },
+    ]);
+  });
+
+  it('a fade to the target already held adds no segment', () => {
+    const clip = compileClip({
+      timeline: [
+        seq([fade(['label:body'], 1, 2), fade(['flow'], 0, 1), wait(2), fade(['flow'], 0, 1)]),
+      ],
+    });
+    expect(clip.scene.factors['label:body']).toBeUndefined();
+    expect(clip.scene.factors['flow']).toEqual([{ startSec: 0, endSec: 1, from: 1, to: 0 }]);
+  });
+
+  it('focus(null) compiles to an explicit clear step', () => {
+    // The resolved focus arm: `resolveClipFoci` rewrites `focus(id)` into it before compile.
+    const ref = { type: 'galaxy', id: 'm31' };
+    const clip = compileClip({
+      timeline: [seq([wait(1), { kind: 'focus', ref }, wait(2), { kind: 'focus', ref: null }])],
+    });
+    expect(clip.scene.focus).toEqual([
+      { atSec: 1, ref },
+      { atSec: 3, ref: null },
+    ]);
   });
 });
 
@@ -269,20 +298,20 @@ describe('compileClip throws on an unresolved focus-bound effect', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Test 8b — frameTo compiles to one cue and awaits no time
+// Test 8b — frameTo compiles to one step and awaits no time
 // ---------------------------------------------------------------------------
 
 describe('compileClip frameTo', () => {
-  it('compiling a clip with frameTo emits one cue at the beat and 0 awaited duration', () => {
+  it('compiling a clip with frameTo emits one step at the beat and 0 awaited duration', () => {
     // A 2s wait then a frameTo: the reorientation fires at t=2 as a point-in-
     // time cue and adds no awaited time, so durationSec is just the wait's 2s.
     const clip = compileClip({
       timeline: [wait(2), frameTo('galactic', { over: 1 })],
     });
 
-    expect(clip.cues).toHaveLength(1);
-    expect(clip.cues[0]!.atSec).toBe(2);
-    expect(clip.cues[0]!.effect.kind).toBe('frameTo');
+    expect(clip.scene.steps).toHaveLength(1);
+    expect(clip.scene.steps[0]!.atSec).toBe(2);
+    expect(clip.scene.steps[0]!.effect.kind).toBe('frameTo');
     expect(clip.durationSec).toBe(2);
   });
 });
@@ -402,7 +431,7 @@ describe('seq overlap', () => {
         { overlap: [1, 0.5] },
       ),
     ]);
-    expect(clip.cues[0]!.atSec).toBe(3);
+    expect(clip.scene.steps[0]!.atSec).toBe(3);
     expect(clip.baseTracks['yaw']![0]!.startSec).toBe(3);
     expect(clip.durationSec).toBe(8.5);
   });
@@ -413,7 +442,7 @@ describe('seq overlap', () => {
         overlap: 1,
       }),
     ]);
-    expect(clip.cues[0]!.atSec).toBe(7);
+    expect(clip.scene.steps[0]!.atSec).toBe(7);
   });
 
   it('rate and osc shift with their step', () => {

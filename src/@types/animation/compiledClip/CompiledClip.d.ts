@@ -50,6 +50,7 @@ import type { VelRamp } from './VelRamp';
 import type { OscTrack } from './OscTrack';
 import type { CompositeTrack } from './CompositeTrack';
 import type { SceneCue } from './SceneCue';
+import type { SceneTracks } from './SceneTracks';
 import type { EffectSpan } from '../EffectSpan';
 
 /**
@@ -86,8 +87,12 @@ export type CompiledClip = {
    *  sums contributions per channel each frame. */
   readonly oscTracks: OscTrack[];
 
-  /** Time-ordered (ascending `atSec`) list of scene cues to fire. */
+  /** Time-ordered (ascending `atSec`) list of scene cues to fire; the clip player's input
+   *  until it evaluates `scene` instead (S3 G2 deletes it with the cue path). */
   readonly cues: SceneCue[];
+
+  /** The clip's scene as tracks, a pure function of the clip clock (`sceneView`, `clipFactorAt`). */
+  readonly scene: SceneTracks;
 
   /** Composite writers (a `flyPath` each), each over its own window. The
    *  evaluator lets one supersede the base layer for the channels it declares;

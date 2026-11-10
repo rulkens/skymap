@@ -34,7 +34,8 @@
  *   - `spin`           → `BaseSegment` with `segKind:'spin'`.
  *   - `rate`           → `VelRamp`.
  *   - `osc`            → `OscTrack`.
- *   - `show` / `hide` / `fade` / `scene` / `focus` / `frameTo` → `SceneCue`.
+ *   - `show` / `hide` / `scene` / `frameTo` → `SceneStep`, `focus` → `FocusStep`,
+ *     `fade` → per-address `FactorSegment`s: together `CompiledClip.scene`.
  *
  * ### Lead-in
  *
@@ -89,6 +90,13 @@ import type { VelRamp } from '../../../@types/animation/compiledClip/VelRamp';
 import type { OscTrack } from '../../../@types/animation/compiledClip/OscTrack';
 import type { CompositeTrack } from '../../../@types/animation/compiledClip/CompositeTrack';
 import type { SceneCue } from '../../../@types/animation/compiledClip/SceneCue';
+import type { SceneStep } from '../../../@types/animation/compiledClip/SceneStep';
+import type { FocusStep } from '../../../@types/animation/compiledClip/FocusStep';
+import type { FactorSegment } from '../../../@types/animation/compiledClip/FactorSegment';
+import type { SceneTracks } from '../../../@types/animation/compiledClip/SceneTracks';
+import type { SceneEffect } from '../../../@types/animation/SceneEffect';
+import type { VisibilityAddress } from '../../../@types/animation/VisibilityAddress';
+import { clipFactorAt } from './clipFactorAt';
 
 // ---------------------------------------------------------------------------
 // Zero pose — used when start is 'live' or absent (placeholder; resolved by
@@ -105,7 +113,12 @@ type Accum = {
   readonly baseSegs: BaseSegment[];
   readonly velRamps: VelRamp[];
   readonly oscTracks: OscTrack[];
+  // Every scene effect as a fire-once cue: the clip player's input until it evaluates `scene`.
   readonly cues: SceneCue[];
+  // `steps`, `focus` and `fades` are in push (tree) order; `compileClip` time-sorts them.
+  readonly steps: SceneStep[];
+  readonly focus: FocusStep[];
+  readonly fades: { readonly atSec: number; readonly effect: SceneEffect & { kind: 'fade' } }[];
   readonly compositeTracks: CompositeTrack[];
   readonly seqs: SeqSteps[];
   readonly spans: EffectSpan[];
@@ -184,11 +197,11 @@ function walkOverlappedSeq(
   const per = refusedAt('seqOverlap', path, acc, () =>
     validateSeqOverlap(atSec, overlap, Array(joins + 1).fill(Infinity)),
   );
-  const lens = () => [acc.baseSegs.length, acc.compositeTracks.length, acc.cues.length] as const;
+  const lens = () => [acc.baseSegs.length, acc.compositeTracks.length, acc.steps.length] as const;
   const span = (a: readonly number[], b: readonly number[]): StepSpan => ({
     segs: [a[0]!, b[0]!],
     composites: [a[1]!, b[1]!],
-    cues: [a[2]!, b[2]!],
+    steps: [a[2]!, b[2]!],
   });
   const steps: StepSpan[] = [];
   const durs: number[] = [];
@@ -425,10 +438,9 @@ function walkNode(effect: Effect, path: EffectPath, atSec: number, acc: Accum): 
       return 0;
     }
 
-    // --- Scene effects: all fire as point-in-time cues at atSec ---
-    // `frameTo` joins them: it fires its `setOrientation` + `startFrameTween`
-    // at the beat and awaits zero time (the roll runs under the timeline, like
-    // a forked animation). An author dwelling through it sequences a `wait`.
+    // --- Scene effects: point-in-time at atSec, awaiting zero time ---
+    // A `frameTo`'s roll runs under the timeline, like a forked animation; an
+    // author dwelling through it sequences a `wait`.
     case 'show':
     case 'hide':
     case 'fade':
@@ -436,6 +448,9 @@ function walkNode(effect: Effect, path: EffectPath, atSec: number, acc: Accum): 
     case 'focus':
     case 'frameTo': {
       acc.cues.push(emitted(acc, path, { atSec, effect }));
+      if (effect.kind === 'focus') acc.focus.push(emitted(acc, path, { atSec, ref: effect.ref }));
+      else if (effect.kind === 'fade') acc.fades.push(emitted(acc, path, { atSec, effect }));
+      else acc.steps.push(emitted(acc, path, { atSec, effect }));
       return 0;
     }
 
@@ -463,6 +478,23 @@ function walkNode(effect: Effect, path: EffectPath, atSec: number, acc: Accum): 
 // ---------------------------------------------------------------------------
 // compileClip — public entry point.
 // ---------------------------------------------------------------------------
+
+// Fades in time order, per address. `from` is the factor the earlier segments reached at the
+// fade's start, and a fade to the target already held adds nothing (the `FadeController.fadeTo`
+// no-op), so the factor matches what fire-once fades on a controller would have drawn.
+function factorsOf(fades: Accum['fades']): SceneTracks['factors'] {
+  const out: Partial<Record<VisibilityAddress, FactorSegment[]>> = {};
+  for (const { atSec, effect } of [...fades].sort((a, b) => a.atSec - b.atSec)) {
+    for (const address of effect.args) {
+      const segs = out[address] ?? [];
+      if (effect.to === (segs.at(-1)?.to ?? 1)) continue;
+      const from = clipFactorAt(segs, atSec);
+      segs.push({ startSec: atSec, endSec: atSec + effect.over, from, to: effect.to });
+      out[address] = segs;
+    }
+  }
+  return out;
+}
 
 // Post-walk validators name compiled objects; report them by the effects that emitted them.
 function reportedByPath<T>(acc: Accum, run: () => T): T {
@@ -507,6 +539,9 @@ export function compileClip(data: ClipData, frameBasis?: Mat3): CompiledClip {
     velRamps: [],
     oscTracks: [],
     cues: [],
+    steps: [],
+    focus: [],
+    fades: [],
     compositeTracks: [],
     seqs: [],
     spans: [],
@@ -526,7 +561,7 @@ export function compileClip(data: ClipData, frameBasis?: Mat3): CompiledClip {
   const sortedCues: SceneCue[] = [...acc.cues].sort((a, b) => a.atSec - b.atSec);
 
   const baseTracks = reportedByPath(acc, () => {
-    validateSeqCueOrder(acc.seqs, acc.cues);
+    validateSeqCueOrder(acc.seqs, acc.steps);
     // Both passes keep array positions, so a rewritten segment inherits its
     // original's path by index.
     const inherit = (segs: readonly BaseSegment[]) =>
@@ -550,6 +585,11 @@ export function compileClip(data: ClipData, frameBasis?: Mat3): CompiledClip {
     velTracks: acc.velRamps,
     oscTracks: acc.oscTracks,
     cues: sortedCues,
+    scene: {
+      steps: [...acc.steps].sort((a, b) => a.atSec - b.atSec),
+      focus: [...acc.focus].sort((a, b) => a.atSec - b.atSec),
+      factors: factorsOf(acc.fades),
+    },
     compositeTracks: acc.compositeTracks,
     spans: acc.spans,
   };
