@@ -316,5 +316,29 @@ off in the inset, as they are in dome views.
   lives in another same-origin window with the main device, and rAF and throttling when the main
   window is hidden behind the popup.
 
+## Q26: When does real code start? (owner override)
+
+**The question:** The mocks are throwaway React: hand-typed rows per clip, props and a little local
+state, no RTK. The owner wants reuse and composition now ("better to rewrite code now than to have
+to do a lot of cleanup passes"), and RTK.
+
+**Considerations:**
+
+- **Option A (prototype on real data, still a mock):** rewrite the mock into a production-shaped
+  tree with an RTK slice, rows derived from real `ClipData`, and it moves into the package after
+  the spec.
+- **Option B (start `packages/studio` now):** the same rewrite, straight into the package,
+  committed, with tests. This skips the spec/plan step the conventions require while the design is
+  still moving.
+- **Option C (mocks stay throwaway):** the package is written fresh from the spec.
+
+**Decision:** B, start `packages/studio` now. This is an explicit owner override of the spec-first
+convention for this feature. The package is production code from its first commit: an RTK studio
+slice, a timeline model derived from real `ClipData` (no hand-typed rows), per-kind marks and
+inspectors from one registry, and shared primitives (glyph, tooltip, inspector grid). It follows
+every CLAUDE.md convention, with tests. Engine groundwork (scene as pure tracks, seek, the
+picture-in-picture view rig, a second-window canvas, saving TS) lands as its own slices. The mocks
+keep serving as the design reference.
+
 _Still open (engineering, to be proposed in the spec):_ how the studio's RTK state plugs into the
 app store.
