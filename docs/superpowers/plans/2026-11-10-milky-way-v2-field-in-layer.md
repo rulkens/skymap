@@ -1092,7 +1092,7 @@ export function createFieldHostSlot(deps: {
 }): FieldHostSlot;
 ```
 
-- [ ] The real `tuningFor` is built once in `create.ts`:
+- [x] The real `tuningFor` is built once in `create.ts`:
   - `geometry` is `describeGalaxy(MILKY_WAY_GALAXY_PARAMS)` (see the units RISK), with the matching
     `seed`.
   - `extras` is a frozen `[]`.
@@ -1100,14 +1100,14 @@ export function createFieldHostSlot(deps: {
   - `render` is `FIELD_CALIBRATION.render` as it stands (its neutral debug lanes included); the app
     hand-builds no inert lane.
   - `onIsmMapLanded` is `deps.requestRender`, because the app renders on demand.
-- [ ] `MilkyWayRuntime` gains `readonly fieldHost: FieldHostSlot`.
+- [x] `MilkyWayRuntime` gains `readonly fieldHost: FieldHostSlot`.
   - `milkyWayPlanner` (once scope, type `FrameContentPlanner<FieldPlannerValue>`) calls
     `const host = runtime.fieldHost.sync(parts.field, state.settings.milkyWay.field.dust)` after the
     cloud reconcile, then returns `value: host === null ? null : { host, plan: host.plan() }`. This
     is the only `plan()` call in a frame.
   - `destroy.ts` calls `fieldHost.destroy()`.
   - With `'v1'` nothing is created at startup.
-- [ ] **Test, new:** `createFieldHostSlot` (a fake `create` that counts calls and records
+- [x] **Test, new:** `createFieldHostSlot` (a fake `create` that counts calls and records
       `setTuning`/`ensureFresh`/`destroy`):
   - `it('creates on the first field frame and not again while on')`.
   - `it('destroys when the field part turns off, and recreates when it returns')`.
@@ -1116,9 +1116,9 @@ export function createFieldHostSlot(deps: {
     `tuningFor(false)`.
   - `it('sync returns the live host, and null when off')`.
   - `it('destroy releases a live host')`.
-- [ ] **Test, updated:** `frame.test.ts`,
+- [x] **Test, updated:** `frame.test.ts`,
       `it('the planner value carries the host and its plan only while the field part is on')`.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task B6: The `mw-field` compute, its gate and the timing span
 
