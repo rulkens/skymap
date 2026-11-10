@@ -70,7 +70,7 @@ import { DESI_PATCHES, DESI_TRACER_FILE_KEYS } from './desiPatches';
 import type { DesiPatch } from './desiPatches';
 
 import { encodeGalaxyCatalog } from '../../src/layers/galaxyCatalog/records/data/galaxyCatalogFormat';
-import { raDecZToCartesian } from '../../src/utils/math/index';
+import { raDecZToCartesian } from '../../src/utils/math/raDecZToCartesian';
 import { raDecDistToCartesian } from '../../src/utils/math/raDecDistToCartesian';
 import { redshiftToDistanceMpc } from '../../src/utils/math/redshiftToDistanceMpc';
 import { fallbackOrientation } from '../../src/utils/random/fallbackOrientation';

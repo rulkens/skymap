@@ -33,7 +33,6 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **`encodeGalaxyId` reads `durableId.prefix`** `needs-design` — the `sdss-`/`pgc-` branch duplicates each entry's `durableId.prefix`; settle with J8.
 - [ ] **Two types named `SourceId`** `ready` — `src/@types/data/SourceId.d.ts` and the unrelated `src/@types/input/SourceId.d.ts`; rename one.
 - [ ] **Source ids mix casing** `needs-design` — `'galaxy-cluster'`/`'small-body'` against `'gaiaStars'`; visibility and links store them, so a rename needs a link-compat answer.
-- [ ] **`src/utils/math/index.ts` is a barrel** `ready` — against the no-barrel rule; repoint its importers to the files and delete it.
 - [ ] **A deep link fails on its asset's error, not a timer** `needs-design` — the arrival waits a flat 30 s (`ARRIVAL_TIMEOUT_MS`) even when the subject's catalog has already failed; give up on the owning asset's `error` instead. Raised by the selection-driven Layers ground check.
 - [ ] **Layer terrain contract review** `needs-design` — whether the camera's ground query should stay a Layer member (`heightAt`, narrowed 2026-10-28) or move behind another seam.
 - [ ] **Label director's `runFrame` swallows exceptions with no page error** `ready` — a producer crash goes unnoticed; producers run unguarded at `label2DDirector.ts:792`, and neither `runFrame` nor the scheduler's `tick` (`renderScheduler.ts:84`, `try/finally`) catches, so trace where the throw is lost.
