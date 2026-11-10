@@ -59,7 +59,7 @@ fn main() {
     if let Some(m) = verdict::drift(&cal) {
         fail(&run, 4, &m);
     }
-    let footprints = fetch::granules(&granules, a.date, !a.offline);
+    let (footprints, slot_pieces) = fetch::granules(&granules, a.date, !a.offline);
     let fit = orbit::fit(&footprints).unwrap_or_else(|e| fail(&run, 3, &e));
     drop(footprints);
     run.orbit = serde_json::json!({"tn": fit.orbit.tn, "lon_n": fit.orbit.lon_n, "ltan": fit.ltan, "median_dt_min": fit.median_dt_min});
@@ -75,7 +75,7 @@ fn main() {
         .map(|&v| v as f32 / 255.0)
         .collect();
     let lut = sources::opacity_lut();
-    let mut orbits = sources::load_orbits(&granules, &lut);
+    let mut orbits = sources::load_orbits(&slot_pieces, &lut);
     let mosaics = sources::load_mosaics(&mosaics_dir, &lut);
     let display = quantile::qmatch(
         &subsample(&mosaics[0].op, H, W, 4),

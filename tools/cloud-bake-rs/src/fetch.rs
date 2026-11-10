@@ -311,9 +311,12 @@ fn tstr(date: Date, s: &str) -> String {
     wms_time(date, slot_minute(s))
 }
 
+/// One granule slot's `hi` pieces: (slot `HHMM`, [(png path, x0, y0)]), daylit slots only.
+pub type SlotPieces = Vec<(String, Vec<(PathBuf, usize, usize)>)>;
+
 /// fetch_granules.py `lo` then `hi`: footprints at 1024x512, then each daylit slot's bbox at full res.
-/// Returns the non-empty footprints, which the orbit fit reads.
-pub fn granules(dir: &Path, date: Date, allow: bool) -> Footprints {
+/// Returns the non-empty footprints, which the orbit fit reads, and where each slot's pieces sit.
+pub fn granules(dir: &Path, date: Date, allow: bool) -> (Footprints, SlotPieces) {
     let granule = layer_url(by_id("viirs_n20_granule"));
     let lo = dir.join("lo");
     let jobs: Vec<(PathBuf, String)> = slots()
@@ -331,7 +334,7 @@ pub fn granules(dir: &Path, date: Date, allow: bool) -> Footprints {
     fetch_all(jobs, 6, PNG, allow);
     let hi = dir.join("hi");
     let mut footprints = Footprints::new();
-    let mut meta = serde_json::Map::new();
+    let mut pieces = SlotPieces::new();
     let mut jobs = Vec::new();
     for s in slots() {
         let path = lo.join(format!("{s}.png"));
@@ -366,7 +369,7 @@ pub fn granules(dir: &Path, date: Date, allow: bool) -> Footprints {
             for (p, (a, l)) in ps.into_iter().enumerate() {
                 let (x0, x1) = (a as usize * 8, (a + l) as usize * 8);
                 let path = hi.join(format!("{s}_{k}{p}.png"));
-                list.push(serde_json::json!({"path": path.to_str().unwrap(), "x0": x0, "y0": y0}));
+                list.push((path.clone(), x0, y0));
                 let url = format!(
                     "{granule}&{}&WIDTH={}&HEIGHT={}&TIME={}",
                     bbox(x0, x1, y0, y1),
@@ -377,18 +380,14 @@ pub fn granules(dir: &Path, date: Date, allow: bool) -> Footprints {
                 jobs.push((path, url));
             }
         }
-        meta.insert(s.clone(), serde_json::Value::Array(list));
+        pieces.push((s.clone(), list));
         footprints.push(Footprint {
             minute: slot_minute(&s) as f64,
             mask: m,
         });
     }
-    write_atomic(
-        &dir.join("hi_meta.json"),
-        serde_json::Value::Object(meta).to_string().as_bytes(),
-    );
     fetch_all(jobs, 6, PNG, allow);
-    footprints
+    (footprints, pieces)
 }
 
 /// Occupied column runs of a 1024-wide footprint, merged across the date line: (start, length).

@@ -3,7 +3,7 @@
 //! filter here gives the same values as on the full grid (the margin is zero, and the big no-data region
 //! a band edge touches is never a speck); mosaics are full-height bands.
 use crate::edt::edt;
-use crate::fetch::slot_minute;
+use crate::fetch::{slot_minute, SlotPieces};
 use crate::filters::{dilate_roll, gaussian_wrap};
 use crate::grid::{block_mean, smoothstep, subsample, H, W};
 use crate::imageio::{rgb, rgba};
@@ -98,24 +98,14 @@ pub struct OrbitMeta {
     pub pieces: Vec<(PathBuf, usize, usize)>, // path, x0, y0
 }
 
-/// hi_meta.json grouped into orbits: slots 6 minutes apart belong together. Piece paths are re-rooted
-/// under `granules/hi/` so a moved cache still resolves; pieces that never downloaded are dropped, and a
-/// slot left with none is dropped with them.
-pub fn orbit_groups(granules: &Path) -> Vec<OrbitMeta> {
-    let meta: serde_json::Value =
-        serde_json::from_str(&std::fs::read_to_string(granules.join("hi_meta.json")).unwrap())
-            .unwrap();
-    let have = |s: &&String| {
-        meta[s.as_str()].as_array().unwrap().iter().any(|p| {
-            granules
-                .join("hi")
-                .join(Path::new(p["path"].as_str().unwrap()).file_name().unwrap())
-                .exists()
-        })
-    };
-    let mut slots: Vec<&String> = meta.as_object().unwrap().keys().filter(have).collect();
-    slots.sort();
-    let mins: Vec<i32> = slots.iter().map(|s| slot_minute(s)).collect();
+/// The granule slots grouped into orbits: slots 6 minutes apart belong together. Pieces that never
+/// downloaded are dropped, and a slot left with none is dropped with them.
+pub fn orbit_groups(slots: &SlotPieces) -> Vec<OrbitMeta> {
+    let slots: Vec<&(String, Vec<(PathBuf, usize, usize)>)> = slots
+        .iter()
+        .filter(|(_, ps)| ps.iter().any(|p| p.0.exists()))
+        .collect();
+    let mins: Vec<i32> = slots.iter().map(|s| slot_minute(&s.0)).collect();
     if slots.is_empty() {
         return Vec::new();
     }
@@ -129,27 +119,13 @@ pub fn orbit_groups(granules: &Path) -> Vec<OrbitMeta> {
     }
     groups
         .iter()
-        .map(|g| {
-            let pieces = g
+        .map(|g| OrbitMeta {
+            name: format!("N20 {}-{}", slots[g[0]].0, slots[*g.last().unwrap()].0),
+            pieces: g
                 .iter()
-                .flat_map(|&i| meta[slots[i].as_str()].as_array().unwrap().iter())
-                .map(|p| {
-                    let file = Path::new(p["path"].as_str().unwrap())
-                        .file_name()
-                        .unwrap()
-                        .to_owned();
-                    (
-                        granules.join("hi").join(file),
-                        p["x0"].as_u64().unwrap() as usize,
-                        p["y0"].as_u64().unwrap() as usize,
-                    )
-                })
+                .flat_map(|&i| slots[i].1.iter().cloned())
                 .filter(|p| p.0.exists())
-                .collect();
-            OrbitMeta {
-                name: format!("N20 {}-{}", slots[g[0]], slots[*g.last().unwrap()]),
-                pieces,
-            }
+                .collect(),
         })
         .collect()
 }
@@ -222,8 +198,8 @@ fn load_orbit(m: &OrbitMeta, lut: &[f32]) -> Source {
     }
 }
 
-pub fn load_orbits(granules: &Path, lut: &[f32]) -> Vec<Source> {
-    orbit_groups(granules)
+pub fn load_orbits(slots: &SlotPieces, lut: &[f32]) -> Vec<Source> {
+    orbit_groups(slots)
         .iter()
         .map(|m| load_orbit(m, lut))
         .collect()
@@ -367,13 +343,15 @@ mod tests {
         image::RgbaImage::from_pixel(8, 8, image::Rgba([200, 200, 200, 255]))
             .save(hi.join("0006_00.png"))
             .unwrap();
-        let piece = |f: &str| serde_json::json!({"path": f, "x0": 0, "y0": 1024});
-        let meta = serde_json::json!({
-            "0006": [piece("0006_00.png")],
-            "0600": [piece("0600_00.png"), piece("0600_01.png")],
-        });
-        std::fs::write(dir.join("hi_meta.json"), meta.to_string()).unwrap();
-        let orbits = load_orbits(&dir, &opacity_lut());
+        let piece = |f: &str| (hi.join(f), 0, 1024);
+        let slots: SlotPieces = vec![
+            ("0006".into(), vec![piece("0006_00.png")]),
+            (
+                "0600".into(),
+                vec![piece("0600_00.png"), piece("0600_01.png")],
+            ),
+        ];
+        let orbits = load_orbits(&slots, &opacity_lut());
         std::fs::remove_dir_all(&dir).unwrap();
         assert_eq!(orbits.len(), 1);
         assert_eq!(orbits[0].name, "N20 0006-0006");
