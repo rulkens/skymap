@@ -33,6 +33,7 @@ import { clearSelection } from '../selection/selectionSlice';
 import { selectTourActive } from '../tour/selectors';
 import { advanceTour, prevBeat, togglePause } from '../tour/tourActions';
 import { exitTakeover } from '../takeover/takeoverActions';
+import { selectStudioActive } from '../takeover/selectors';
 import { selectPaletteOpen } from '../ui/selectors';
 import { setPaletteOpen, toggleDebugPanelOpen, toggleUiHidden } from '../ui/uiSlice';
 import { selectTimeState } from '../time/selectors';
@@ -41,6 +42,12 @@ import { goLiveNowAction } from '../time/goLiveNowAction';
 import type { RootState } from '../../store/types';
 import { toggleControlScheme } from '../settings/core/cameraControlsSlice';
 import type { KeyboardShortcut } from '../../@types/state/input/KeyboardShortcut';
+
+// The studio's dock owns Escape and holds the clock at its frozen instant, so these rows stand down.
+const unlessStudio =
+  (run: KeyboardShortcut['run']): KeyboardShortcut['run'] =>
+  (s) =>
+    selectStudioActive(s) ? null : run(s);
 
 const stepSpeed = (s: RootState, step: -1 | 1) =>
   setRate({ rateIndex: stepRate(s, step), nowMs: performance.now() });
@@ -54,23 +61,24 @@ export const KEYBOARD_SHORTCUTS: readonly KeyboardShortcut[] = [
   },
   // `exitTakeover` ends whatever runs — a tour, an exhibit, a registry clip, or
   // the debug path replay — and is a no-op when nothing does.
-  { keys: 'escape', run: () => [clearSelection(), exitTakeover()] },
+  { keys: 'escape', run: unlessStudio(() => [clearSelection(), exitTakeover()]) },
   { keys: 'f', run: () => focusSelected() },
   { keys: 'h,e', run: () => goHome() },
   { keys: 'tab', run: () => toggleUiHidden(), preventDefault: true },
   { keys: 'l', run: () => logCameraState() },
   { keys: 'd', run: () => toggleDebugPanelOpen() },
   // A running exhibit's section kinds may claim a key first (`watchKeyboardEventsSaga`).
-  { keys: '[', run: (s) => stepSpeed(s, -1) },
-  { keys: ']', run: (s) => stepSpeed(s, +1) },
+  { keys: '[', run: unlessStudio((s) => stepSpeed(s, -1)) },
+  { keys: ']', run: unlessStudio((s) => stepSpeed(s, +1)) },
   {
     keys: '\\',
-    run: (s) =>
+    run: unlessStudio((s) =>
       selectTimeState(s).paused
         ? resume({ nowMs: performance.now() })
         : pause({ nowMs: performance.now() }),
+    ),
   },
-  { keys: 'shift+n', run: () => goLiveNowAction() },
+  { keys: 'shift+n', run: unlessStudio(() => goLiveNowAction()) },
   { keys: 'shift+c', run: () => toggleControlScheme() },
   // Tour keys — always registered, gated on an active tour by `run` (returns
   // null outside a tour). `preventDefault` is OMITTED: Space must stay free to
