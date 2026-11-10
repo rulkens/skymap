@@ -1,7 +1,7 @@
 /**
  * MILKY_WAY_FIELD_SLIDER_FIELDS — the v2 field's slider rows: exposure, then one
- * divisor row per app field target. A parity test keeps the keys equal to
- * `['exposure', ...APP_FIELD_TARGET_IDS]`; `milkyWayFieldSliderPatch` writes them.
+ * divisor row per app field target, so the keys follow `APP_FIELD_TARGET_IDS` by
+ * construction; `milkyWayFieldSliderPatch` writes them.
  */
 import type { SliderField } from '../../../../@types/data/SliderField';
 import { APP_FIELD_TARGET_IDS } from '../../field/data/appFieldTargetIds';

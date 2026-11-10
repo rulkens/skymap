@@ -8,7 +8,6 @@ import { rootReducer } from '../../../../../src/store/rootReducer';
 import {
   setMilkyWayCloudTuning,
   setMilkyWayFieldTuning,
-  setMilkyWayRenderer,
 } from '../../../../../src/layers/milkyWay/state/milkyWay/slice';
 import type { MilkyWaySettings } from '../../../../../src/layers/milkyWay/@types/MilkyWaySettings';
 
@@ -36,13 +35,5 @@ describe('milkyWay settings reducers', () => {
 
     expect(after.field).toEqual({ ...before.field, exposure: 2, divisors });
     expect(after.cloud).toBe(before.cloud);
-  });
-
-  it('setMilkyWayRenderer sets only renderer', () => {
-    const after = milkyWayAfter(setMilkyWayRenderer('both'));
-
-    expect(after).toEqual({ ...before, renderer: 'both' });
-    expect(after.cloud).toBe(before.cloud);
-    expect(after.field).toBe(before.field);
   });
 });

@@ -6,7 +6,7 @@
  * closed most of the time.
  */
 
-import { memo, useCallback, useMemo } from 'react';
+import { memo, useCallback } from 'react';
 import { MilkyWayTuningSection } from './MilkyWayTuningSection';
 import { useAppDispatch, useAppSelector } from '../../../../store/hooks';
 import { selectMilkyWay } from '../../state/milkyWay/selectors';
@@ -22,8 +22,6 @@ import type { MilkyWayRenderer } from '../../@types/MilkyWayRenderer';
 function MilkyWayTuningSectionContainer(): React.ReactElement {
   const dispatch = useAppDispatch();
   const milkyWay = useAppSelector(selectMilkyWay);
-  const { exposure, divisors } = milkyWay.field;
-  const fieldValues = useMemo(() => ({ exposure, ...divisors }), [exposure, divisors]);
 
   const onCloudChange = useCallback(
     (patch: Partial<MilkyWayCloudTuning>) => dispatch(setMilkyWayCloudTuning(patch)),
@@ -41,7 +39,6 @@ function MilkyWayTuningSectionContainer(): React.ReactElement {
   return (
     <MilkyWayTuningSection
       milkyWay={milkyWay}
-      fieldValues={fieldValues}
       onCloudChange={onCloudChange}
       onFieldChange={onFieldChange}
       onRendererChange={onRendererChange}

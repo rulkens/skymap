@@ -1,9 +1,0 @@
-import type { SliderField } from '../../../../@types/data/SliderField';
-import type { MilkyWayCloudSliderKey } from './MilkyWayCloudSliderKey';
-
-/**
- * UI metadata for one Milky-Way star-cloud tuning slider, iterated by the
- * DebugPanel section. No `surface` discriminator (unlike `FlowSliderField`):
- * every one of these knobs is dev-only, so there is exactly one surface.
- */
-export type MilkyWayCloudSliderField = SliderField<MilkyWayCloudSliderKey>;

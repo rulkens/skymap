@@ -22,9 +22,9 @@
  */
 import type { MilkyWayCloudTuning } from '../../../../@types/settings/MilkyWayCloudTuning';
 import type { MilkyWayCloudSliderKey } from '../@types/MilkyWayCloudSliderKey';
-import type { MilkyWayCloudSliderField } from '../@types/MilkyWayCloudSliderField';
+import type { SliderField } from '../../../../@types/data/SliderField';
 
-export const MILKY_WAY_CLOUD_SLIDER_FIELDS: readonly MilkyWayCloudSliderField[] = [
+export const MILKY_WAY_CLOUD_SLIDER_FIELDS: readonly SliderField<MilkyWayCloudSliderKey>[] = [
   {
     key: 'starSizeScale',
     label: 'starSize',

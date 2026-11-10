@@ -10,7 +10,6 @@ import type { ReactElement } from 'react';
 import type { MilkyWaySettings } from '../../@types/MilkyWaySettings';
 import type { MilkyWayFieldTuning } from '../../@types/MilkyWayFieldTuning';
 import type { MilkyWayRenderer } from '../../@types/MilkyWayRenderer';
-import type { MilkyWayFieldSliderKey } from '../@types/MilkyWayFieldSliderKey';
 import type { MilkyWayCloudTuning } from '../../../../@types/settings/MilkyWayCloudTuning';
 import {
   MILKY_WAY_CLOUD_SLIDER_FIELDS,
@@ -29,8 +28,6 @@ import { milkyWayFieldSliderPatch } from '../utils/milkyWayFieldSliderPatch';
 
 export type MilkyWayTuningSectionProps = {
   milkyWay: MilkyWaySettings;
-  /** The field slider values, memoised by the container. */
-  fieldValues: Readonly<Record<MilkyWayFieldSliderKey, number>>;
   onCloudChange: (patch: Partial<MilkyWayCloudTuning>) => void;
   onFieldChange: (patch: Partial<MilkyWayFieldTuning>) => void;
   onRendererChange: (renderer: MilkyWayRenderer) => void;
@@ -40,7 +37,6 @@ const RENDERERS: readonly MilkyWayRenderer[] = ['v1', 'v2', 'both'];
 
 export function MilkyWayTuningSection({
   milkyWay,
-  fieldValues,
   onCloudChange,
   onFieldChange,
   onRendererChange,
@@ -88,7 +84,7 @@ export function MilkyWayTuningSection({
         <DebugTuningSection
           title="Milky Way field tuning"
           fields={MILKY_WAY_FIELD_SLIDER_FIELDS}
-          values={fieldValues}
+          values={{ exposure: milkyWay.field.exposure, ...milkyWay.field.divisors }}
           onSliderChange={(k, v) => onFieldChange(milkyWayFieldSliderPatch(milkyWay.field, k, v))}
         >
           <label className={toggleStyles.checkRow}>

@@ -20,7 +20,6 @@ const PARTS_BY_RENDERER: Readonly<Record<MilkyWayRenderer, MilkyWayParts>> = {
   both: { cloud: true, cloudDust: false, field: true },
 };
 
-/** The only reader of `renderer`. */
 export function selectMilkyWayParts(settings: MilkyWaySettings): MilkyWayParts {
   return PARTS_BY_RENDERER[settings.renderer];
 }
