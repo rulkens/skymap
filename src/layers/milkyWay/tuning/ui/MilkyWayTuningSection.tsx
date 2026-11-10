@@ -1,7 +1,7 @@
 /**
- * MilkyWayTuningSection — DebugPanel subsections for the Milky Way: the v1
- * cloud rows when the cloud draws, then the renderer switch, then a field
- * section (rows and dust toggle) when the field draws. Dev-only; the
+ * MilkyWayTuningSection — DebugPanel subsections for the Milky Way: the
+ * renderer switch first, then the v1 cloud rows when the cloud draws, then the
+ * field rows and dust toggle when the field draws. Dev-only; the
  * explorer-facing SettingsPanel surfaces only the visibility toggle. The copy
  * button promotes a tuned cloud session to code via `formatMilkyWayCloudTuningDefaults`.
  */
@@ -21,6 +21,7 @@ import { selectMilkyWayParts } from '../../state/milkyWay/selectors';
 import { MILKY_WAY_CLOUD_TUNING_DEFAULTS } from '../../../../services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import { formatMilkyWayCloudTuningDefaults } from '../utils/formatMilkyWayCloudTuningDefaults';
 import CopyButton from '../../../../components/common/CopyButton/CopyButton';
+import DebugSection from '../../../../components/DebugPanel/DebugSection';
 import DebugTuningSection from '../../../../components/DebugPanel/DebugTuningSection';
 import sliderStyles from '../../../../components/DebugPanel/DebugSlider.module.css';
 import toggleStyles from '../../../../components/DebugPanel/DebugOverlayToggles.module.css';
@@ -47,12 +48,7 @@ export function MilkyWayTuningSection({
   const parts = selectMilkyWayParts(milkyWay);
   return (
     <>
-      <DebugTuningSection
-        title="Milky Way tuning"
-        fields={parts.cloud ? MILKY_WAY_CLOUD_SLIDER_FIELDS : []}
-        values={milkyWay.cloud}
-        onSliderChange={(k, v) => onCloudChange(milkyWayCloudSliderPatch(k, v))}
-      >
+      <DebugSection title="Milky Way renderer">
         <div
           className={sliderStyles.root}
           title="Which Milky Way draws: v1 star sprites, v2 analytic field, or both summed."
@@ -70,7 +66,14 @@ export function MilkyWayTuningSection({
             ))}
           </select>
         </div>
-        {parts.cloud && (
+      </DebugSection>
+      {parts.cloud && (
+        <DebugTuningSection
+          title="Milky Way tuning"
+          fields={MILKY_WAY_CLOUD_SLIDER_FIELDS}
+          values={milkyWay.cloud}
+          onSliderChange={(k, v) => onCloudChange(milkyWayCloudSliderPatch(k, v))}
+        >
           <CopyButton
             text={formatMilkyWayCloudTuningDefaults(
               milkyWay.cloud,
@@ -79,8 +82,8 @@ export function MilkyWayTuningSection({
             label="Copy changed defaults"
             title="Paste into MILKY_WAY_CLOUD_TUNING_DEFAULTS in milkyWayCalibration.ts"
           />
-        )}
-      </DebugTuningSection>
+        </DebugTuningSection>
+      )}
       {parts.field && (
         <DebugTuningSection
           title="Milky Way field tuning"
