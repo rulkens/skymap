@@ -30,8 +30,6 @@ const STATE = {
   selectionRows: { select: null },
 } as unknown as PassState;
 
-// Every other limb of `frame` is inert here (no committed hi-res pair, a
-// no-op planner walk) — this suite is only about the reconcile ahead of them.
 function makeRuntime(opts: {
   committed: () => { value: ReadonlyMap<bigint, readonly string[]> } | null;
   catalogsVersion: () => number;
@@ -41,19 +39,10 @@ function makeRuntime(opts: {
     [Source.Glade, makeGalaxyCatalog(1, { objIDs: new BigUint64Array([100n]) })],
   ]);
   const runtime = {
-    hiResFamous: { committed: () => null },
-    diskPlannerWalk: { runFrame: vi.fn() },
-    proceduralDisks: { beginFrame: vi.fn(() => ({})) },
-    texturedDisks: {
-      beginFrame: vi.fn(() => ({})),
-      hasInFlightWork: () => false,
-      hasFadingContent: () => false,
-    },
     catalogs,
     get records() {
       return galaxyRecordsOver(catalogs);
     },
-    famousMeta: [],
     get catalogsVersion() {
       return opts.catalogsVersion();
     },
@@ -120,19 +109,10 @@ describe('galaxyCatalog frame — alias index reconcile', () => {
     };
     const publish = vi.fn();
     const runtime = {
-      hiResFamous: { committed: () => null },
-      diskPlannerWalk: { runFrame: vi.fn() },
-      proceduralDisks: { beginFrame: vi.fn(() => ({})) },
-      texturedDisks: {
-        beginFrame: vi.fn(() => ({})),
-        hasInFlightWork: () => false,
-        hasFadingContent: () => false,
-      },
       catalogs,
       get records() {
         return galaxyRecordsOver(catalogs);
       },
-      famousMeta: [],
       get catalogsVersion() {
         return catalogsVersion;
       },
