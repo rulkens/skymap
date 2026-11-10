@@ -15,14 +15,16 @@ type Props = {
   readonly ancestors: readonly TimelineRow[];
   readonly window: TimeWindow;
   readonly selected: boolean;
+  /** Aria-hidden like the rest of the lane: keyboard selection is the outline's. */
+  readonly onSelect: () => void;
 };
 
-function TrackLane({ row, ancestors, window, selected }: Props) {
+function TrackLane({ row, ancestors, window, selected, onSelect }: Props) {
   const Mark = TRACK_MARKS[ROW_KINDS[row.kind].mark];
   const tagAt =
     row.background && row.startSec !== null ? timeToPercent(row.startSec, window) : null;
   return (
-    <div className={s.root} style={familyStyle(row.family)} aria-hidden>
+    <div className={s.root} style={familyStyle(row.family)} aria-hidden onClick={onSelect}>
       {ancestors.map((ancestor) =>
         ancestor.startSec === null || ancestor.endSec === null ? null : (
           <span

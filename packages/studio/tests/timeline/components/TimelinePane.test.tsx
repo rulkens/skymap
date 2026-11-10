@@ -55,6 +55,13 @@ describe('TimelinePane', () => {
     expect(selectSelection(store.getState())).toEqual({ kind: 'effect', path: [0, 0] });
   });
 
+  it('clicking a lane selects its row', () => {
+    const store = mount({ timeline: [seq([dollyTo(300, 4), dollyTo(950, 4)])] });
+
+    fireEvent.click(screen.getAllByRole('treeitem')[3]!.nextElementSibling!);
+    expect(selectSelection(store.getState())).toEqual({ kind: 'effect', path: [0, 1] });
+  });
+
   it('an invalid row is marked invalid and shows the warning in its duration', () => {
     mount({ timeline: [all([dollyTo(300, 4), dollyTo(500, 4)])] });
 

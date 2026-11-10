@@ -2,6 +2,7 @@
   position: relative;
   overflow: hidden;
   margin-right: var(--track-pad);
+  cursor: pointer;
 }
 .band {
   position: absolute;
