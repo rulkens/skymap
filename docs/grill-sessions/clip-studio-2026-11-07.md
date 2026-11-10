@@ -386,5 +386,13 @@ The plan is `docs/superpowers/plans/2026-11-10-clip-studio-package.md`.
   or path knots and subjects only. **Decision:** all labels as in the app, against the reviewer's
   recommendation. The Edit view follows the app's existing label settings; the inset keeps labels off (Q21).
 
+## Q38: Inspector sliders follow the app (owner, 2026-11-10)
+
+"The sliders on the edit panel (right) don't follow the design of the main app. I understand they can be more
+compact, but they should look similar." **Decision:** ranged numeric fields reuse the app's `Slider`
+(`src/components/common/Slider`: one pill, label left, value right, fill behind both) through a compact
+variant added to that component, never a studio look-alike. Unbounded values (a Vec3, a typed time) stay text
+fields styled to sit with the pills. The studio's `NumberField` becomes a thin wrapper over this.
+
 _Settled in the plan:_ the studio's RTK slice is injected into the app store through
 `combineSlices().inject` (ADR 0016). Q14 is ruled (Q32).

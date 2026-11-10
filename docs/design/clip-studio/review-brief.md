@@ -106,3 +106,5 @@ and the asks in full.
   literals; an End row in every clip carries stop / loop + seam check; Edit-view frame box at real
   size + a fixed playhead dot; path recomputes on commit for drags, live otherwise; the Edit view
   shows ALL scene labels as in the app (owner overrode the reviewer); the inset keeps labels off.
+- Q38: inspector sliders are the app's own Slider (pill, label left, value right, fill behind) in a
+  compact variant, not a studio look-alike; unbounded values stay text fields that sit with them.
