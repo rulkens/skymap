@@ -692,8 +692,8 @@ Port of the mock (name, meaning, keys, state line; manual popover; 150 ms open, 
 opens; Escape closes; the pointer can rest on the tip). jsdom lacks the Popover API: stub
 `showPopover`/`hidePopover` in the test file.
 
-- [ ] Test `focus-visible opens the tip and Escape closes it`.
-- [ ] Test `moving the pointer from the anchor onto the tip keeps it open`.
+- [x] Test `focus-visible opens the tip and Escape closes it`.
+- [x] Test `moving the pointer from the anchor onto the tip keeps it open`.
 
 ### Task 3.3: `Kbd`
 

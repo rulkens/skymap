@@ -1,0 +1,11 @@
+.root {
+  margin-left: var(--space-1);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-sm);
+  color: var(--color-fg-dim);
+}
+
+/* dim fg on the accent fill fails contrast; the button's own text colour at reduced strength passes */
+.onPrimary {
+  color: color-mix(in srgb, var(--color-bg) 70%, transparent);
+}
