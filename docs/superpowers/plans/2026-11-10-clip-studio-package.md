@@ -739,8 +739,8 @@ Slice 1 draws overlapping steps as plain bars: the crossfade treatment waits on 
 with labelled knots (the speed curve, Q19, needs evaluation; slice S5). Unresolved rows draw no mark. Rows with
 errors get `aria-invalid`, `⚠` in Dur and an error outline on the mark.
 
-- [ ] Test `clicking a row selects it; clicking its twisty toggles collapse without selecting`.
-- [ ] Test `an invalid row is marked invalid and shows the warning in its duration`.
+- [x] Test `clicking a row selects it; clicking its twisty toggles collapse without selecting`.
+- [x] Test `an invalid row is marked invalid and shows the warning in its duration`.
 
 ### Task 4.2: ruler, playhead and scrub
 
@@ -751,8 +751,8 @@ flag (`End 20 s`, or `Loop` for a looping clip) with an `after end` zone, the he
 Click to seek, drag to scrub; snap to `cueSecs` (⌥ off, ⇧ fine ×0.1); Home/End. Zoom −/Fit/+ beside the
 ruler, `viewportSet`. The playhead line is 1 px `--color-fg` with a `--surface-card-strong` halo, above marks.
 
-- [ ] Test `clicking the ruler near a step edge seeks to the edge`.
-- [ ] Test `holding Alt seeks to the exact pointer time`.
+- [x] Test `clicking the ruler near a step edge seeks to the edge`.
+- [x] Test `holding Alt seeks to the exact pointer time`.
 
 ### Task 4.3: top bar
 
@@ -764,9 +764,9 @@ Left: clip label (`clipRegistry[id].label`), `Hand-written` tag, status (`● Un
 Redo naming their edit, Close (`exitTakeover`) with `Esc`. Icon-only where the glyph is unambiguous, keys in
 `Kbd`, one primary action (none in slice 1: saving is S8).
 
-- [ ] Test `Undo names the last edit and is disabled with nothing to undo`.
-- [ ] Test `Close ends the takeover`.
-- [ ] Test `a compile error shows one alert line naming the culprit`.
+- [x] Test `Undo names the last edit and is disabled with nothing to undo`.
+- [x] Test `Close ends the takeover`.
+- [x] Test `a compile error shows one alert line naming the culprit`.
 
 ### Task 4.4: keys
 
@@ -780,10 +780,10 @@ document-level shortcuts never see them; an unhandled Escape (nothing selected) 
 the takeover. Ignored while typing in a field. The key bar also carries the channel-family legend and the mark
 legend.
 
-- [ ] Test `ArrowDown selects the next visible row`.
-- [ ] Test `Escape with a selection clears it and does not reach a document listener`.
-- [ ] Test `Escape with no selection reaches the document`.
-- [ ] Verify (and say in the reply) whether the app's keyboard listener runs in the capture phase; if it does,
+- [x] Test `ArrowDown selects the next visible row`.
+- [x] Test `Escape with a selection clears it and does not reach a document listener`.
+- [x] Test `Escape with no selection reaches the document`.
+- [x] Verify (and say in the reply) whether the app's keyboard listener runs in the capture phase; if it does,
       stop-propagation cannot pre-empt it: report instead of working around it.
 
 ### Task 4.5: the dock
@@ -798,8 +798,8 @@ legend.
 (`useIsMobile`), `NarrowNotice` replaces the body: `Needs a wider screen` and Close (Q13; Play arrives in S4).
 Empty timeline: `No steps`. Unresolved: rows render, lanes empty, the top bar says so.
 
-- [ ] Test `the grabber's arrow keys resize the dock within its clamp`.
-- [ ] Test `a narrow viewport shows the notice with Close`.
+- [x] Test `the grabber's arrow keys resize the dock within its clamp`.
+- [x] Test `a narrow viewport shows the notice with Close`.
 
 ---
 

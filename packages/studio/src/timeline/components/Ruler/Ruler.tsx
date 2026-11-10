@@ -6,6 +6,7 @@ import { formatTimecode } from '../../../utils/format/formatTimecode';
 import { familyStyle } from '../../utils/familyStyle';
 import { rulerSteps } from '../../utils/rulerSteps';
 import { timeToPercent } from '../../utils/timeToPercent';
+import { EPSILON } from './Ruler.constants';
 import { useRulerScrub } from './useRulerScrub';
 import { useTrackWidth } from './useTrackWidth';
 import type { TimeWindow } from '../../../@types/session/TimeWindow';
@@ -18,8 +19,6 @@ type Props = {
   readonly window: TimeWindow;
   readonly playheadSec: number;
 };
-
-const EPSILON = 1e-6;
 
 /** The time axis: ticks, a notch per cue in its channel's tint, the End flag and the playhead's readout. Click or drag to seek. */
 function Ruler({ timeline, window, playheadSec }: Props) {
