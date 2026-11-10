@@ -7,7 +7,11 @@
   --ch-layers: #d55181;
   --ch-settings: #d95926;
   /* Opaque (alpha dropped): marks use it as a knockout and the renderer must not show through. */
-  --dock-bg: color-mix(in srgb, rgb(from var(--surface-card-strong) r g b / 1), var(--color-bg) 75%);
+  --dock-bg: color-mix(
+    in srgb,
+    rgb(from var(--surface-card-strong) r g b / 1),
+    var(--color-bg) 75%
+  );
   --outline-w: 510px;
   --row-h: var(--space-12);
   --name-w: 176px;
