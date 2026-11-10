@@ -18,41 +18,8 @@ import { BLOOM_LEVELS, bloomScale } from '../../../../../src/data/bloomConstants
 import { mapHiiTiers } from '../../../../../src/layers/milkyWay/field/starFormation/data/hiiTiers';
 import { FIELD_TARGET_IDS } from '../../../../../src/layers/milkyWay/field/data/fieldTargetIds';
 import { reducedTargetSize } from '../../../../../src/utils/gpu/reducedTargetSize';
-
-/**
- * The reduced targets' divisors, each its own live slider, keyed like the
- * field's targets so a new `FieldTargetId` fails to compile until it has one.
- */
-export type TargetDivisors = Readonly<Record<FieldTargetId | 'aggregate', number>>;
-
-/**
- * Textures are getters, never snapshot properties: every one of them is
- * replaced by a resize or a divisor drag, and a caller holding the object
- * across frames must still see the live texture.
- */
-type GalaxyRenderTargets = {
-  readonly sceneTex: GPUTexture;
-  readonly ldrTex: GPUTexture;
-  readonly aggregateTex: GPUTexture;
-  /** The field module's targets, `dustView` included. Rebuilt per read; each view is stable until its reallocation. */
-  readonly fieldTargets: Required<GalaxyFieldRenderTargets>;
-  /** The textures behind `fieldTargets.field` and `.dustMap`, for the probe's `readTextureChannelSum`. */
-  readonly fieldTex: GPUTexture;
-  readonly dustMapTex: GPUTexture;
-  readonly bloomMips: readonly GPUTexture[];
-  /** Pixel size of a target at `divisor` — also what the passes pack as `viewportPx`. */
-  reducedSize(divisor: number): Vec2;
-  bloomTexelSize(level: number): Vec2;
-  /** Recreate the canvas-sized targets, then bring the reduced ones up to date. */
-  rebuildAll(divisors: TargetDivisors): void;
-  /**
-   * Reallocate whichever reduced targets these divisors no longer describe.
-   * Safe to call on every render-bag push: the comparison is against the live
-   * textures' pixel sizes, so an unmoved divisor is a no-op.
-   */
-  setDivisors(divisors: TargetDivisors): void;
-  destroy(): void;
-};
+import type { TargetDivisors } from '../../../@types/engine/TargetDivisors';
+import type { GalaxyRenderTargets } from '../../../@types/engine/GalaxyRenderTargets';
 
 export function createGalaxyRenderTargets(
   device: GPUDevice,

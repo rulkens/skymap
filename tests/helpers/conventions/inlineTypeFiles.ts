@@ -168,7 +168,6 @@ export const INLINE_TYPE_FILES: ReadonlySet<string> = new Set([
   'tools/galaxy-renderer/src/engine/camera/createOrbitCameraInput.ts',
   'tools/galaxy-renderer/src/engine/field/createArmRidgeDebugSample.ts',
   'tools/galaxy-renderer/src/engine/frame/deriveFrameView.ts',
-  'tools/galaxy-renderer/src/engine/gpu/createGalaxyRenderTargets.ts',
   'src/layers/milkyWay/field/host/render/createReadbackQueue.ts',
   'tools/galaxy-renderer/src/engine/ismMap/createIsmMapDustCdfScanDebugSample.ts',
   'tools/galaxy-renderer/src/engine/model/createGalaxyModel.ts',

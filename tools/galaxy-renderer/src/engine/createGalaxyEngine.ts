@@ -29,7 +29,7 @@ import { createRafLoop } from './createRafLoop';
 import { createGalaxyFieldHost } from '../../../../src/layers/milkyWay/field/host/subsystems/createGalaxyFieldHost';
 import type { FieldHostTuning } from '../../../../src/layers/milkyWay/field/host/@types/FieldHostTuning';
 import { createGalaxyRenderTargets } from './gpu/createGalaxyRenderTargets';
-import type { TargetDivisors } from './gpu/createGalaxyRenderTargets';
+import type { TargetDivisors } from '../../@types/engine/TargetDivisors';
 import { readTextureChannelSum } from './gpu/readTextureChannelSum';
 import { createOrbitCameraInput } from './camera/createOrbitCameraInput';
 import { createPassTimingWindows } from './timing/createPassTimingWindows';
