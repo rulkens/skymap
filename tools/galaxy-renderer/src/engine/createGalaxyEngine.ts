@@ -28,7 +28,6 @@ import { createReportThrottle } from './timing/createReportThrottle';
 import { TIMING_SLOTS } from './timing/timingSlots';
 import { createRafLoop } from './createRafLoop';
 import { createGalaxyFieldRenderer } from '../../../../src/layers/milkyWay/field/render/createGalaxyFieldRenderer';
-import type { GalaxyFieldRenderTargets } from '../../../../src/layers/milkyWay/field/@types/GalaxyFieldRenderTargets';
 import { createGalaxyRenderTargets } from './gpu/createGalaxyRenderTargets';
 import type { TargetDivisors } from './gpu/createGalaxyRenderTargets';
 import { readTextureChannelSum } from './gpu/readTextureChannelSum';
@@ -62,7 +61,6 @@ import { createAdditiveUpsample } from '../../../../src/services/gpu/passes/addi
 import { DEFAULT_RENDER_SETTINGS } from '../data/defaultRenderSettings';
 import { DEFAULT_LOD_SETTINGS } from '../data/defaultLodSettings';
 import { HII_TIERS } from '../data/hiiTiers';
-import { mapHiiTiers } from '../../../../src/layers/milkyWay/field/starFormation/data/hiiTiers';
 
 /** HDR working format for the scene + bloom pyramid — the runtime's `hdr` row. */
 const HDR: GPUTextureFormat = 'rgba16float';
@@ -243,22 +241,6 @@ export async function createGalaxyEngine(
     swap: format,
     dustMap: DUST_MAP_FORMAT,
   });
-
-  /**
-   * This tool's own target rows in the field renderer's shape. Built fresh at
-   * every call rather than captured: a resize or a divisor drag REPLACES these
-   * textures, and the module packs each pass's `targetSizePx` straight off the
-   * one it is handed.
-   */
-  function fieldTargets(): GalaxyFieldRenderTargets {
-    return {
-      fieldTex: targets.fieldTex,
-      dustMapTex: targets.dustMapTex,
-      dustViewTex: targets.dustViewTex,
-      hiiTex: targets.hiiTex,
-      hiiTiers: mapHiiTiers((kind) => targets.tierTex(kind)),
-    };
-  }
 
   // ---- camera state (orbit) ----
   const camera = createOrbitCameraInput(canvas, { autoRotate: opts.autoRotate !== false });
@@ -523,7 +505,9 @@ export async function createGalaxyEngine(
     // Every field/HII pass this frame, into the caller-owned targets above —
     // `dustMap` before `field` is the only ordering the module owns; where
     // this galaxy's passes sit in the frame stays here.
-    field.encode(enc, fieldTargets(), {
+    // Read per frame, not captured: a resize or a divisor drag replaces rows.
+    const fieldTargets = targets.fieldTargets;
+    field.encode(enc, fieldTargets, {
       camera: frameView.camera,
       view: frameView,
       render,
@@ -554,12 +538,12 @@ export async function createGalaxyEngine(
       // never drew out of the composite with no separate staleness tracking.
       const compositeViews = [targets.aggregateTex.createView()];
       if (analytic) {
-        compositeViews.push(targets.fieldTex.createView());
+        compositeViews.push(fieldTargets.field.view);
         for (const { tier, segment } of tierSegments) {
-          if (segment) compositeViews.push(targets.tierTex(tier.kind).createView());
+          if (segment) compositeViews.push(fieldTargets[tier.kind].view);
         }
-        if (extrasSegment) compositeViews.push(targets.hiiTex.createView());
-        if (drawDustView) compositeViews.push(targets.dustViewTex.createView());
+        if (extrasSegment) compositeViews.push(fieldTargets.extras.view);
+        if (drawDustView) compositeViews.push(fieldTargets.dustView.view);
       }
       encodeSceneComposites(pass, aggregateUpsample, compositeViews);
       if (analytic) {
@@ -720,7 +704,7 @@ export async function createGalaxyEngine(
         encodeSplatPass({
           enc,
           label: 'galaxy:armCloudRenderedFluxSumPass',
-          targetView: targets.fieldTex.createView(),
+          targetView: targets.fieldTargets.field.view,
           pipeline: field.probe.fieldSplatPipe,
           bindGroup,
           instanceCount: reservation.count,
@@ -738,7 +722,7 @@ export async function createGalaxyEngine(
         encodeSplatPass({
           enc,
           label: 'galaxy:armSpurCloudRenderedFluxSumPass',
-          targetView: targets.fieldTex.createView(),
+          targetView: targets.fieldTargets.field.view,
           pipeline: field.probe.fieldSplatPipe,
           bindGroup,
           instanceCount: reservation.count,

@@ -512,7 +512,7 @@ export type GalaxyFieldRenderTargets = Readonly<Record<FieldTargetId, FieldTarge
 }; // 'extras' is the background extras' HII (today hiiTex); the tiers are today's hiiTiers
 ```
 
-- [ ] The renderer:
+- [x] The renderer:
   - Reads `targets.extras` where it read `targets.hii`, and `targets[tier]` where it read
     `targets.hiiTiers[tier]`.
   - Reads header target sizes from `sizePx` (`[width, height]` into `targetSizePx`, `height` into
@@ -520,18 +520,18 @@ export type GalaxyFieldRenderTargets = Readonly<Record<FieldTargetId, FieldTarge
   - Binds `view` directly, with no `createView()` per pass (today `:398, :411, :425, :447, :462`).
   - `createFieldPipelines`' `FieldBindGroupResources.dustMap` becomes the `GPUTextureView`. Its
     identity cache (today `createFieldPipelines.ts:55`) keys on the view.
-- [ ] The dust map:
+- [x] The dust map:
   - It encodes on every frame the field encodes (empty clear at count 0). Delete the
     `populated` latch and its texture-identity reset (today `:171, :376-401`).
   - `encodeDustMapPass` stops returning the latch.
   - The dust-view pass runs iff `targets.dustView` is present and `debugViews.dust > 0`.
-- [ ] The tool:
+- [x] The tool:
   - `createGalaxyRenderTargets` builds one `FieldTarget` per allocation, keyed by `FieldTargetId`
     (`hii` → `extras`, `hiiTiers.*` flattened), its view made once at
     allocation and replaced only on reallocation. It keeps its textures for the probe readbacks
     (`readTextureChannelSum`).
   - `createGalaxyEngine` composites from `.view`.
-- [ ] No new test (type reshaping plus a deleted latch). The pixel check is Task A11. Commit.
+- [x] No new test (type reshaping plus a deleted latch). The pixel check is Task A11. Commit.
 
 ## Prep 3: the host moves into `src/` with one `FieldFramePlan`
 

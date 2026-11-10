@@ -168,8 +168,6 @@ export function createGalaxyFieldRenderer(
   // — the stages and the probe reach it through their context, not from here.
   const chain = own(createIsmMapChain(device, { makeShader, hdrFormat, fieldUbo }));
 
-  /** The dust map this module last saw, and whether it holds anything but zeros. */
-  let dustMap: { readonly tex: GPUTexture; populated: boolean } | null = null;
   /** What the last `encode`'s `sync` returned — the probe's isolated-range draw reads it. */
   let bindGroups: FieldBindGroups | null = null;
 
@@ -317,15 +315,14 @@ export function createGalaxyFieldRenderer(
     bindGroups = fieldPipelines.sync({
       fieldComps: fieldComps.getBuffer(),
       hiiComps: hiiComps.getBuffer(),
-      dustMap: frameTargets.dustMapTex,
+      dustMap: frameTargets.dustMap.view,
     });
 
     // Every FieldHeaderInput this frame needs — field, `hii:extras`, and
     // every tier — assembled in one pure call off explicit mixture lanes,
     // host render settings and this frame's own derived view. Target sizes
-    // come off the textures themselves: every reduced target is allocated at
-    // exactly the pixel size its divisor floors to, and that lane feeds
-    // `counts2.w`, which the shader's footprint gates read directly.
+    // come off each target's own `sizePx`: that lane feeds `counts2.w`, which
+    // the shader's footprint gates read directly.
     const fieldCounts = fieldPack.get().counts;
     const hiiSegments = hiiPack.get().segments;
     const central = centralField.get();
@@ -345,12 +342,12 @@ export function createGalaxyFieldRenderer(
         spurCloudReservation: central.spurCloudReservation,
       },
       targetSizes: {
-        field: [frameTargets.fieldTex.width, frameTargets.fieldTex.height],
-        dustMapHeightPx: frameTargets.dustMapTex.height,
-        hii: [frameTargets.hiiTex.width, frameTargets.hiiTex.height],
+        field: [frameTargets.field.sizePx.width, frameTargets.field.sizePx.height],
+        dustMapHeightPx: frameTargets.dustMap.sizePx.height,
+        hii: [frameTargets.extras.sizePx.width, frameTargets.extras.sizePx.height],
         tiers: mapHiiTiers<Vec2>((kind) => [
-          frameTargets.hiiTiers[kind].width,
-          frameTargets.hiiTiers[kind].height,
+          frameTargets[kind].sizePx.width,
+          frameTargets[kind].sizePx.height,
         ]),
       },
     });
@@ -366,47 +363,28 @@ export function createGalaxyFieldRenderer(
     if (!frame.render.analyticField) return;
     const groups = bindGroups;
     const timestampWrites = frame.timestampWrites ?? ((): undefined => undefined);
-    // The JWST view's own gate, read off the same `debugViews` the headers
-    // above were packed from — one lane per fact, so the pass and its header
-    // cannot disagree.
-    const drawDustView = frame.view.debugViews.dust > 0;
-
-    // Dust-column map: splat the primary's dust slice into `dustMapTex`, at
-    // its own divisor-matched resolution (additive). Feeds
-    // dustAttenuation.wesl's componentEmission always, and IS the dustPresent
-    // pass's own source whenever the JWST view is live — so it has to run
-    // whenever either consumer needs it.
-    //
-    // The third disjunct is `populated`: a skipped pass leaves the last
-    // frame's contents, so the frame the dust count drops to zero still has to
-    // run — as the clear that empties the map. Assigning the returned latch is
-    // what carries that across; drop the assignment and the map freezes at the
-    // previous galaxy's dust. A texture WebGPU just created is zeroed, so a
-    // moved identity implies `populated: false` rather than the host having to
-    // announce it.
-    if (dustMap?.tex !== frameTargets.dustMapTex) {
-      dustMap = { tex: frameTargets.dustMapTex, populated: false };
-    }
-    const dustState = dustMap;
-    if (fieldCounts.dust > 0 || drawDustView || dustState.populated) {
-      dustState.populated = encodeDustMapPass({
-        enc: encoder,
-        timestampWrites: timestampWrites('dustMap'),
-        targetView: frameTargets.dustMapTex.createView(),
-        pipeline: fieldPipelines.dustMapPipe,
-        bindGroup: groups.dustMap,
-        instanceCount: fieldCounts.dust,
-      });
-    }
+    // Dust-column map: the primary's dust slice, splatted into its own
+    // divisor-matched target (additive). Every frame, even at zero dust — see
+    // `encodeDustMapPass` for why the clear is unconditional.
+    encodeDustMapPass({
+      enc: encoder,
+      timestampWrites: timestampWrites('dustMap'),
+      targetView: frameTargets.dustMap.view,
+      pipeline: fieldPipelines.dustMapPipe,
+      bindGroup: groups.dustMap,
+      instanceCount: fieldCounts.dust,
+    });
 
     // JWST dust-view presentation, into its OWN target — runs ADDITIONALLY
     // alongside the emission splat below rather than replacing it: the four
     // debug views crossfade independently, and the scene pass sums whichever
-    // of them are live.
-    if (drawDustView) {
+    // of them are live. Gated on the same `debugViews` lane the headers above
+    // were packed from, so the pass and its header cannot disagree.
+    const dustView = frameTargets.dustView;
+    if (dustView && frame.view.debugViews.dust > 0) {
       encodeDustPresentPass({
         enc: encoder,
-        targetView: frameTargets.dustViewTex.createView(),
+        targetView: dustView.view,
         pipeline: fieldPipelines.dustPresentPipe,
         bindGroup: groups.dustPresent,
       });
@@ -420,7 +398,7 @@ export function createGalaxyFieldRenderer(
       enc: encoder,
       label: 'galaxy:fieldPass',
       timestampWrites: timestampWrites('field'),
-      targetView: frameTargets.fieldTex.createView(),
+      targetView: frameTargets.field.view,
       pipeline: fieldPipelines.fieldSplatPipe,
       bindGroup: groups.fieldSplat,
       instanceCount: fieldCounts.emission,
@@ -428,7 +406,7 @@ export function createGalaxyFieldRenderer(
 
     // Every tier's own pass, into its own target at its own divisor: shells,
     // young stars and DIG each get a private target rather than sharing
-    // `hiiTex`'s coarser one, since a shell or young-stars association is
+    // the `extras` target's coarser one, since a shell or young-stars association is
     // small and bright enough that a coarser shared target would collapse it
     // under a texel. One pass per tier WITH CONTENT, into a freshly cleared
     // target. Asking for a timestamp descriptor marks its slot consumed, so
@@ -441,14 +419,14 @@ export function createGalaxyFieldRenderer(
         enc: encoder,
         label: `galaxy:hiiPass:${kind}`,
         timestampWrites: timestampWrites(`hii:${kind}`),
-        targetView: frameTargets.hiiTiers[kind].createView(),
+        targetView: frameTargets[kind].view,
         pipeline: fieldPipelines.hiiTierPipeline(kind),
         bindGroup: groups.tier(kind),
         instanceCount: segment.count,
         firstInstance: segment.first,
       });
     }
-    // `hiiTex`'s own pass draws ONLY background extras' HII contribution —
+    // The `extras` target's own pass draws ONLY background extras' HII contribution —
     // see `HiiTierSpec` for why extras can't split into their own
     // shell/DIG/young tiers the way the central galaxy's do.
     const extrasSegment = findHiiSegment(hiiSegments, 'hii:extras');
@@ -457,7 +435,7 @@ export function createGalaxyFieldRenderer(
         enc: encoder,
         label: 'galaxy:hiiPass:extras',
         timestampWrites: timestampWrites('hii:extras'),
-        targetView: frameTargets.hiiTex.createView(),
+        targetView: frameTargets.extras.view,
         pipeline: fieldPipelines.hiiExtrasPipe,
         bindGroup: groups.hii,
         instanceCount: extrasSegment.count,

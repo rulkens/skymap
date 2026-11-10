@@ -34,8 +34,8 @@ function makeFake(): Fake {
   return { enc, opened, draws };
 }
 
-function encode(fake: Fake, instanceCount: number): boolean {
-  return encodeDustMapPass({
+function encode(fake: Fake, instanceCount: number): void {
+  encodeDustMapPass({
     enc: fake.enc,
     targetView: {} as GPUTextureView,
     pipeline: {} as GPURenderPipeline,
@@ -47,18 +47,16 @@ function encode(fake: Fake, instanceCount: number): boolean {
 describe('encodeDustMapPass', () => {
   it('opens the clearing pass but issues no draw when there is nothing to splat', () => {
     const fake = makeFake();
-    const populated = encode(fake, 0);
+    encode(fake, 0);
 
     expect(fake.opened).toEqual(['clear']);
     expect(fake.draws).toEqual([]);
-    expect(populated).toBe(false);
   });
 
-  it('draws and reports the map populated when there is dust', () => {
+  it('draws every dust component when there is dust', () => {
     const fake = makeFake();
-    const populated = encode(fake, 7);
+    encode(fake, 7);
 
     expect(fake.draws).toEqual([7]);
-    expect(populated).toBe(true);
   });
 });

@@ -52,7 +52,7 @@ type FieldPipelineDeps = {
 type FieldBindGroupResources = {
   readonly fieldComps: GPUBuffer;
   readonly hiiComps: GPUBuffer;
-  readonly dustMap: GPUTexture;
+  readonly dustMap: GPUTextureView;
 };
 
 export type FieldBindGroups = {
@@ -216,7 +216,7 @@ export function createFieldPipelines(deps: FieldPipelineDeps): FieldPipelines {
   }
 
   // ---- bind groups ----
-  // A group holds the EXACT GPUBuffer/GPUTexture objects it names, so each
+  // A group holds the EXACT GPUBuffer/GPUTextureView objects it names, so each
   // resource that can regrow/recreate must trigger a rebuild rather than a
   // cached group living forever — `BIND_GROUP_DEPS` above plus `sync` below
   // are the one table/one walker doing that.
@@ -246,7 +246,7 @@ export function createFieldPipelines(deps: FieldPipelineDeps): FieldPipelines {
 
   function buildFieldSplatBindGroup(
     fieldCompsBuffer: GPUBuffer,
-    dustMapTex: GPUTexture,
+    dustMapView: GPUTextureView,
   ): GPUBindGroup {
     return device.createBindGroup({
       label: 'galaxy:fieldSplatBG',
@@ -257,7 +257,7 @@ export function createFieldPipelines(deps: FieldPipelineDeps): FieldPipelines {
         // dustAttenuation.wesl's own two bindings — fieldSplat/fragment.wesl
         // is the only reader of dustMapTex through a FILTERED sample
         // (dustPresent.wesl gets away with a 1:1 texel load below).
-        { binding: 2, resource: dustMapTex.createView() },
+        { binding: 2, resource: dustMapView },
         { binding: 6, resource: dustMapSampler },
         // The arm/spur renorm scales — only fieldSplat/fragment.wesl
         // imports these, so 'layout: auto' adds these entries to
@@ -269,13 +269,13 @@ export function createFieldPipelines(deps: FieldPipelineDeps): FieldPipelines {
     });
   }
 
-  function buildDustPresentBindGroup(dustMapTex: GPUTexture): GPUBindGroup {
+  function buildDustPresentBindGroup(dustMapView: GPUTextureView): GPUBindGroup {
     return device.createBindGroup({
       label: 'galaxy:dustPresentBG',
       layout: dustPresentPipe.getBindGroupLayout(0),
       entries: [
         { binding: 0, resource: { buffer: fieldUbo } },
-        { binding: 2, resource: dustMapTex.createView() },
+        { binding: 2, resource: dustMapView },
         // No 3/7/8/9: S4's detail term applies at accumulation (dustMap.wesl);
         // this pass just presents the already-modulated column.
       ],
@@ -295,12 +295,12 @@ export function createFieldPipelines(deps: FieldPipelineDeps): FieldPipelines {
     label: string,
     pipe: GPURenderPipeline,
     hiiCompsBuffer: GPUBuffer,
-    dustMapTex: GPUTexture,
+    dustMapView: GPUTextureView,
   ): GPUBindGroup {
     const entries: GPUBindGroupEntry[] = [
       { binding: 0, resource: { buffer: ubo } },
       { binding: 1, resource: { buffer: hiiCompsBuffer } },
-      { binding: 2, resource: dustMapTex.createView() },
+      { binding: 2, resource: dustMapView },
       { binding: 3, resource: { buffer: ismMapGenerator.gridBuffer } },
       { binding: 7, resource: dustMapSampler },
       { binding: 8, resource: ismMapGenerator.cartesianTexture.createView() },
@@ -334,7 +334,7 @@ export function createFieldPipelines(deps: FieldPipelineDeps): FieldPipelines {
     ubo: GPUBuffer,
     label: string,
     hiiCompsBuffer: GPUBuffer,
-    dustMapTex: GPUTexture,
+    dustMapView: GPUTextureView,
   ): GPUBindGroup {
     return device.createBindGroup({
       label,
@@ -342,7 +342,7 @@ export function createFieldPipelines(deps: FieldPipelineDeps): FieldPipelines {
       entries: [
         { binding: 0, resource: { buffer: ubo } },
         { binding: 1, resource: { buffer: hiiCompsBuffer } },
-        { binding: 2, resource: dustMapTex.createView() },
+        { binding: 2, resource: dustMapView },
         { binding: 4, resource: dustNoiseTex.createView() },
         { binding: 5, resource: dustNoiseSampler },
         { binding: 6, resource: dustMapSampler },
@@ -353,7 +353,7 @@ export function createFieldPipelines(deps: FieldPipelineDeps): FieldPipelines {
   const lastIdentity: {
     fieldComps: GPUBuffer | null;
     hiiComps: GPUBuffer | null;
-    dustMap: GPUTexture | null;
+    dustMap: GPUTextureView | null;
   } = { fieldComps: null, hiiComps: null, dustMap: null };
 
   /** What the last `sync` returned — a role whose inputs didn't move rides along unrebuilt. */

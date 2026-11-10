@@ -4,15 +4,18 @@
  * / foreground rows this tool never draws, so the tool allocates its own `hdr`,
  * `mw-aggregate` and `bloom0..4` rows at the same formats and divisors.
  * `ldrTex` has no runtime counterpart: it is only the intermediate the
- * tool-only grade trailer reads. Bind groups are not cached here — the shared
- * pass factories rebuild theirs per draw, and the field module's own groups
- * are pulled from the textures it is handed each `encode`.
+ * tool-only grade trailer reads. Each field target's view is made once per
+ * allocation: the field module's bind-group cache keys on view identity.
  */
+import type { FieldTarget } from '../../../../../src/layers/milkyWay/field/@types/FieldTarget';
+import type { FieldTargetId } from '../../../../../src/layers/milkyWay/field/@types/FieldTargetId';
+import type { GalaxyFieldRenderTargets } from '../../../../../src/layers/milkyWay/field/@types/GalaxyFieldRenderTargets';
 import type { HiiTier } from '../../../../../src/layers/milkyWay/field/starFormation/@types/HiiTier';
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
 
 import { BLOOM_LEVELS, bloomScale } from '../../../../../src/data/bloomConstants';
 import { HII_TIERS } from '../../data/hiiTiers';
+import { mapHiiTiers } from '../../../../../src/layers/milkyWay/field/starFormation/data/hiiTiers';
 import { reducedTargetSize } from '../../../../../src/utils/gpu/reducedTargetSize';
 
 /**
@@ -38,12 +41,11 @@ type GalaxyRenderTargets = {
   readonly sceneTex: GPUTexture;
   readonly ldrTex: GPUTexture;
   readonly aggregateTex: GPUTexture;
+  /** The field module's targets, `dustView` included. Rebuilt per read; each view is stable until its reallocation. */
+  readonly fieldTargets: Required<GalaxyFieldRenderTargets>;
+  /** The textures behind `fieldTargets.field` and `.dustMap`, for the probe's `readTextureChannelSum`. */
   readonly fieldTex: GPUTexture;
   readonly dustMapTex: GPUTexture;
-  readonly hiiTex: GPUTexture;
-  /** One of the three generalized HII sub-tiers' own targets — see `allocateTier`'s own doc. */
-  tierTex(kind: HiiTier): GPUTexture;
-  readonly dustViewTex: GPUTexture;
   readonly bloomMips: readonly GPUTexture[];
   /** Pixel size of a target at `divisor` — also what the passes pack as `viewportPx`. */
   reducedSize(divisor: number): Vec2;
@@ -72,68 +74,20 @@ export function createGalaxyRenderTargets(
   let ldrTex: GPUTexture;
   let aggregateTex: GPUTexture;
   /**
-   * The analytic field's OWN reduced-resolution target, deliberately not the
-   * star aggregate. Both are additive glow folded into HDR by the same
-   * upsample, but their spatial frequency is not the same: sprites carry
-   * point-like detail that a coarse divisor destroys, while the field is a
-   * sum of wide Gaussians that survives 5x downsampling with no visible
-   * change. Sharing one target forced the field to pay the sprites' pixel
-   * rate — and it is FILL-bound, so that was most of its cost.
+   * Every field target, keyed by `FieldTargetId` plus the debug `dustView`:
+   * the texture (the probe readbacks copy from it) and the ONE view the field
+   * module binds. A reallocation replaces both, which is what tells the
+   * module's bind-group cache to rebuild.
    */
-  let fieldTex: GPUTexture;
-  /**
-   * The dust-column map (see dustMap.wesl): screen-space, four depth-sliced
-   * optical-depth channels (io.wesl's dustSlices doc) accumulated for the
-   * primary galaxy's dust slice. Sized to ITS OWN divisor,
-   * `reducedSize(render.dustDivisor)` — much finer than fieldTex's, because
-   * the dust splat carries far higher-frequency structure than the smooth
-   * emission field — sharing one target decimates thin lanes into beads
-   * (see `allocateDust`). dustPresent.wesl
-   * (the JWST view) still reads it via a 1:1 `input.pos.xy` texel lookup, but
-   * into its OWN divisor-matched target (`dustViewTex`, not `fieldTex`);
-   * dustAttenuation.wesl's componentEmission, which runs at fieldTex's coarser resolution, instead
-   * samples it through a linear sampler (`dustMapSmp`) at a normalized UV —
-   * see field/io.wesl's DUST MAP doc for why that is a deliberate, imperfect
-   * trade rather than an oversight.
-   */
-  let dustMapTex: GPUTexture;
-  /**
-   * The HII tier's own target, sized to ITS OWN divisor,
-   * `reducedSize(render.extrasDivisor)` — defaults to the canvas itself (1), not
-   * `fieldTex`'s coarser one. A shell sprite is small and bright by
-   * construction: sharing the field's target once collapsed a whole sprite's
-   * flux onto one texel and bloom promoted the spike into a firefly
-   * (`docs/research/milky-way/hii-regions.md` — the SAME shape as the bug that
-   * split off `dustMapTex`, one tenant later). Drawn by `splatPipe` again (`hiiBG`),
-   * composited into HDR through the same `aggregateUpsample` the field and
-   * star aggregate use.
-   */
-  let hiiTex: GPUTexture;
-  /**
-   * The three generalized HII sub-tiers' own targets (`data/hiiTiers.ts`'s
-   * `HII_TIERS`), split off `hiiTex` one at a time — DIG first (the biggest,
-   * softest quads in the tier, worst overdraw at close zoom but also the
-   * lowest-frequency content, so it tolerates its own much coarser divisor
-   * with no visible loss), shells and young stars for the SAME firefly reason
-   * `hiiTex` itself split off `fieldTex`: small, bright sprites collapse under
-   * a shared coarser texel and bloom promotes the spike into a firefly. A
-   * `Map` rather than three more `let`s — `allocateTier` is the one function
-   * a fourth tier would extend, not a fourth near-copy of `allocateHii`.
-   * Drawn by `splatPipe` again (one bind group per tier, see
-   * `createGalaxyEngine.ts`'s `buildTierBindGroup`), composited into HDR
-   * through the same `aggregateUpsample` as every other reduced target.
-   */
-  const tierTextures = new Map<HiiTier, GPUTexture>();
-  /**
-   * The JWST-view's own presentation target (dustPresent.wesl), divisor-
-   * matched to `dustMapTex` rather than `fieldTex` — see `dustMapTex`'s own
-   * comment above. Only drawn into while `render.dustViewIntensity` is above
-   * 0; the scene pass sums it additively alongside `fieldTex` when it ran
-   * this frame (see `drawFrame`).
-   */
-  let dustViewTex: GPUTexture;
+  const fieldRows = new Map<
+    FieldTargetId | 'dustView',
+    { readonly texture: GPUTexture; readonly target: FieldTarget }
+  >();
+  // Non-null: every reader runs after `rebuildAll` has allocated every row.
+  const row = (key: FieldTargetId | 'dustView') => fieldRows.get(key)!;
   let bloomMips: GPUTexture[] = [];
   const RA_TB = GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING;
+  const COPY_SRC = GPUTextureUsage.COPY_SRC;
 
   /**
    * This is also the number the star pass writes into `viewportPx`, which is
@@ -159,68 +113,66 @@ export function createGalaxyRenderTargets(
     });
   }
 
+  function allocateFieldRow(
+    key: FieldTargetId | 'dustView',
+    label: string,
+    w: number,
+    h: number,
+    format: GPUTextureFormat,
+    usage: GPUTextureUsageFlags,
+  ): void {
+    fieldRows.get(key)?.texture.destroy();
+    const texture = device.createTexture({ label, size: [w, h], format, usage });
+    fieldRows.set(key, {
+      texture,
+      target: { view: texture.createView(), sizePx: { width: w, height: h } },
+    });
+  }
+
+  /**
+   * The analytic field's OWN reduced-resolution target, deliberately not the
+   * star aggregate: sprites carry point-like detail that a coarse divisor
+   * destroys, while the field is a sum of wide Gaussians that survives 5x
+   * downsampling. Sharing one target made the FILL-bound field pay the
+   * sprites' pixel rate. COPY_SRC beyond production need: the probe's
+   * `requestArmCloudRenderedFluxSum`/`requestArmSpurCloudRenderedFluxSum` draw
+   * an isolated instance range here and read it back.
+   */
   function allocateField(w: number, h: number): void {
-    if (fieldTex) fieldTex.destroy();
-    fieldTex = device.createTexture({
-      label: 'galaxy:fieldTex',
-      size: [w, h],
-      format: formats.hdr,
-      // COPY_SRC beyond RA_TB's production need: `requestArmCloudRenderedFluxSum`/
-      // `requestArmSpurCloudRenderedFluxSum` (createGalaxyEngine.ts) each draw an
-      // isolated instance range into this target through the REAL production
-      // pipeline, then read it back via `readTextureChannelSum` to observe the
-      // arm-cloud/spur-cloud renorm's ACTUAL rendered effect — `dustMapTex`'s own
-      // identical precedent below.
-      usage: RA_TB | GPUTextureUsage.COPY_SRC,
-    });
+    allocateFieldRow('field', 'galaxy:fieldTex', w, h, formats.hdr, RA_TB | COPY_SRC);
   }
 
-  // The two dust targets rebuild TOGETHER — dustPresent.wesl reads `dustMapTex`
-  // 1:1 into `dustViewTex`, so leaving either behind reintroduces the
-  // resolution mismatch the shared divisor exists to prevent.
+  /**
+   * The dust-column map (dustMap.wesl, four depth-sliced optical depths) and
+   * the JWST view's target (dustPresent.wesl), which reads the map 1:1 — so
+   * they rebuild TOGETHER on one divisor, finer than the field's, since thin
+   * lanes decimate into beads at the field's resolution. The field's
+   * componentEmission samples the map through a linear sampler instead (see
+   * field/io.wesl's DUST MAP doc for that trade). COPY_SRC beyond production
+   * need: the probe's `requestDustMapChannelSum` reads the whole map back.
+   */
   function allocateDust(w: number, h: number): void {
-    if (dustMapTex) dustMapTex.destroy();
-    dustMapTex = device.createTexture({
-      label: 'galaxy:dustMapTex',
-      size: [w, h],
-      format: formats.dustMap,
-      // COPY_SRC beyond RA_TB's production need: a debug-only readback
-      // (readTextureChannelSum.ts) copies the whole map back to
-      // observe the Larson renorm's ACTUAL rendered effect — same "debug
-      // readback rides the production texture's own COPY_SRC flag"
-      // precedent `fieldComps`/`hiiComps` already establish for buffers.
-      usage: RA_TB | GPUTextureUsage.COPY_SRC,
-    });
-    if (dustViewTex) dustViewTex.destroy();
-    dustViewTex = device.createTexture({
-      label: 'galaxy:dustViewTex',
-      size: [w, h],
-      format: formats.hdr,
-      usage: RA_TB,
-    });
+    allocateFieldRow('dustMap', 'galaxy:dustMapTex', w, h, formats.dustMap, RA_TB | COPY_SRC);
+    allocateFieldRow('dustView', 'galaxy:dustViewTex', w, h, formats.hdr, RA_TB);
   }
 
-  function allocateHii(w: number, h: number): void {
-    if (hiiTex) hiiTex.destroy();
-    hiiTex = device.createTexture({
-      label: 'galaxy:hiiTex',
-      size: [w, h],
-      format: formats.hdr,
-      usage: RA_TB,
-    });
+  /**
+   * The background extras' HII target, at its own divisor (default 1): a
+   * shell sprite is small and bright, and the field's coarser target once
+   * collapsed it onto one texel that bloom promoted into a firefly
+   * (`docs/research/milky-way/hii-regions.md`).
+   */
+  function allocateExtras(w: number, h: number): void {
+    allocateFieldRow('extras', 'galaxy:hiiTex', w, h, formats.hdr, RA_TB);
   }
 
+  /**
+   * One HII sub-tier's target (`data/hiiTiers.ts`'s `HII_TIERS`): shells and
+   * young stars split off for the same firefly reason as `extras`; DIG, the
+   * softest and lowest-frequency content, tolerates a much coarser divisor.
+   */
   function allocateTier(kind: HiiTier, w: number, h: number): void {
-    tierTextures.get(kind)?.destroy();
-    tierTextures.set(
-      kind,
-      device.createTexture({
-        label: `galaxy:hiiTierTex:${kind}`,
-        size: [w, h],
-        format: formats.hdr,
-        usage: RA_TB,
-      }),
-    );
+    allocateFieldRow(kind, `galaxy:hiiTierTex:${kind}`, w, h, formats.hdr, RA_TB);
   }
 
   /**
@@ -230,7 +182,7 @@ export function createGalaxyRenderTargets(
    * drag and a canvas resize both reduce to the same question, and `rebuildAll`
    * delegates here. Two divisors that floor to the same size — or a resize that
    * floors to the same pixels — genuinely need no reallocation: the surviving
-   * texture is the same object every bind group already holds a view of.
+   * view is the same object every bind group already holds.
    */
   function setDivisors(divisors: TargetDivisors): void {
     const reallocateIfResized = (
@@ -242,19 +194,17 @@ export function createGalaxyRenderTargets(
       if (tex && tex.width === w && tex.height === h) return;
       allocate(w, h);
     };
+    const rowTex = (key: FieldTargetId): GPUTexture | undefined => fieldRows.get(key)?.texture;
     reallocateIfResized(aggregateTex, divisors.aggregate, allocateAggregate);
-    reallocateIfResized(fieldTex, divisors.field, allocateField);
-    // `allocateDust` covers dustMapTex AND dustViewTex — they share one
-    // divisor (see dustMapTex's declaration comment), and rebuilding one
-    // without the other reintroduces the resolution-mismatch bug the
-    // divisor-matched contract exists to prevent.
-    reallocateIfResized(dustMapTex, divisors.dust, allocateDust);
-    reallocateIfResized(hiiTex, divisors.hii, allocateHii);
+    reallocateIfResized(rowTex('field'), divisors.field, allocateField);
+    // `allocateDust` covers `dustView` too — see its doc.
+    reallocateIfResized(rowTex('dustMap'), divisors.dust, allocateDust);
+    reallocateIfResized(rowTex('extras'), divisors.hii, allocateExtras);
     // One call per row of `HII_TIERS` rather than one hand-written
     // `reallocateIfResized` line per tier — a fourth tier is a table row, not
     // a fourth line here.
     for (const tier of HII_TIERS) {
-      reallocateIfResized(tierTextures.get(tier.kind), divisors.tiers[tier.kind], (w, h) =>
+      reallocateIfResized(rowTex(tier.kind), divisors.tiers[tier.kind], (w, h) =>
         allocateTier(tier.kind, w, h),
       );
     }
@@ -305,23 +255,20 @@ export function createGalaxyRenderTargets(
     get aggregateTex(): GPUTexture {
       return aggregateTex;
     },
+    get fieldTargets(): Required<GalaxyFieldRenderTargets> {
+      return {
+        field: row('field').target,
+        dustMap: row('dustMap').target,
+        extras: row('extras').target,
+        ...mapHiiTiers((kind) => row(kind).target),
+        dustView: row('dustView').target,
+      };
+    },
     get fieldTex(): GPUTexture {
-      return fieldTex;
+      return row('field').texture;
     },
     get dustMapTex(): GPUTexture {
-      return dustMapTex;
-    },
-    get hiiTex(): GPUTexture {
-      return hiiTex;
-    },
-    tierTex(kind: HiiTier): GPUTexture {
-      // Non-null: every caller runs after `rebuildAll` returns, by which point
-      // every `HII_TIERS` row is allocated — the same contract `aggregateTex`'s
-      // (unchecked) getter relies on.
-      return tierTextures.get(kind)!;
-    },
-    get dustViewTex(): GPUTexture {
-      return dustViewTex;
+      return row('dustMap').texture;
     },
     get bloomMips(): readonly GPUTexture[] {
       return bloomMips;
@@ -348,11 +295,7 @@ export function createGalaxyRenderTargets(
       if (sceneTex) sceneTex.destroy();
       if (ldrTex) ldrTex.destroy();
       if (aggregateTex) aggregateTex.destroy();
-      if (fieldTex) fieldTex.destroy();
-      if (dustMapTex) dustMapTex.destroy();
-      if (hiiTex) hiiTex.destroy();
-      for (const tex of tierTextures.values()) tex.destroy();
-      if (dustViewTex) dustViewTex.destroy();
+      for (const { texture } of fieldRows.values()) texture.destroy();
       for (const m of bloomMips) m.destroy();
     },
   };
