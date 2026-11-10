@@ -1,11 +1,9 @@
 /**
  * MILKY_WAY_FIELD_SLIDER_FIELDS — the v2 field's slider rows: exposure, then one
  * divisor row per app field target. A parity test keeps the keys equal to
- * `['exposure', ...APP_FIELD_TARGET_IDS]`. The divisor rows write the `divisors`
- * record, which replaces whole, so the patch builder spreads the LIVE record.
+ * `['exposure', ...APP_FIELD_TARGET_IDS]`; `milkyWayFieldSliderPatch` writes them.
  */
 import type { SliderField } from '../../../../@types/data/SliderField';
-import type { MilkyWayFieldTuning } from '../../@types/MilkyWayFieldTuning';
 import { APP_FIELD_TARGET_IDS } from '../../field/data/appFieldTargetIds';
 import type { MilkyWayFieldSliderKey } from '../@types/MilkyWayFieldSliderKey';
 
@@ -31,13 +29,3 @@ export const MILKY_WAY_FIELD_SLIDER_FIELDS: readonly SliderField<MilkyWayFieldSl
     }),
   ),
 ];
-
-/** The patch for one field slider, with the divisor record spread from the live `field` group. */
-export function milkyWayFieldSliderPatch(
-  field: MilkyWayFieldTuning,
-  key: MilkyWayFieldSliderKey,
-  value: number,
-): Partial<MilkyWayFieldTuning> {
-  if (key === 'exposure') return { exposure: value };
-  return { divisors: { ...field.divisors, [key]: value } };
-}

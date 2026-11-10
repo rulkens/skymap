@@ -15,10 +15,7 @@ import {
   MILKY_WAY_CLOUD_SLIDER_FIELDS,
   milkyWayCloudSliderPatch,
 } from '../data/milkyWayCloudSliderFields';
-import {
-  MILKY_WAY_FIELD_SLIDER_FIELDS,
-  milkyWayFieldSliderPatch,
-} from '../data/milkyWayFieldSliderFields';
+import { MILKY_WAY_FIELD_SLIDER_FIELDS } from '../data/milkyWayFieldSliderFields';
 import { selectMilkyWayParts } from '../../state/milkyWay/selectors';
 import { MILKY_WAY_CLOUD_TUNING_DEFAULTS } from '../../../../services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import { formatMilkyWayCloudTuningDefaults } from '../utils/formatMilkyWayCloudTuningDefaults';
@@ -27,6 +24,7 @@ import DebugSection from '../../../../components/DebugPanel/DebugSection';
 import DebugSlider from '../../../../components/DebugPanel/DebugSlider';
 import sliderStyles from '../../../../components/DebugPanel/DebugSlider.module.css';
 import toggleStyles from '../../../../components/DebugPanel/DebugOverlayToggles.module.css';
+import { milkyWayFieldSliderPatch } from '../utils/milkyWayFieldSliderPatch';
 
 export type MilkyWayTuningSectionProps = {
   milkyWay: MilkyWaySettings;

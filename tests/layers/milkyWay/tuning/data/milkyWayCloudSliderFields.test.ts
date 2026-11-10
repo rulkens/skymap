@@ -11,10 +11,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { MILKY_WAY_CLOUD_SLIDER_FIELDS } from '../../../../../src/layers/milkyWay/tuning/data/milkyWayCloudSliderFields';
-import {
-  MILKY_WAY_FIELD_SLIDER_FIELDS,
-  milkyWayFieldSliderPatch,
-} from '../../../../../src/layers/milkyWay/tuning/data/milkyWayFieldSliderFields';
+import { MILKY_WAY_FIELD_SLIDER_FIELDS } from '../../../../../src/layers/milkyWay/tuning/data/milkyWayFieldSliderFields';
 import type { MilkyWayFieldSliderKey } from '../../../../../src/layers/milkyWay/tuning/@types/MilkyWayFieldSliderKey';
 import { APP_FIELD_TARGET_IDS } from '../../../../../src/layers/milkyWay/field/data/appFieldTargetIds';
 import { MILKY_WAY_FIELD_TUNING_DEFAULTS } from '../../../../../src/layers/milkyWay/field/data/milkyWayFieldTuningDefaults';
@@ -55,14 +52,5 @@ describe('MILKY_WAY_FIELD_SLIDER_FIELDS — parity with the field knobs', () => 
       expect(f.min).toBeLessThanOrEqual(defaults[f.key]);
       expect(f.max).toBeGreaterThanOrEqual(defaults[f.key]);
     }
-  });
-
-  it('a divisor patch keeps the other divisors of the live record', () => {
-    const live = {
-      ...MILKY_WAY_FIELD_TUNING_DEFAULTS,
-      divisors: { ...MILKY_WAY_FIELD_TUNING_DEFAULTS.divisors, young: 3 },
-    };
-    const patch = milkyWayFieldSliderPatch(live, 'dig', 5);
-    expect(patch.divisors).toEqual({ ...live.divisors, dig: 5 });
   });
 });
