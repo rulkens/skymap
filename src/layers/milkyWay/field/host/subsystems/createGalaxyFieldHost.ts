@@ -95,7 +95,6 @@ export function createGalaxyFieldHost(
           render,
         }),
         render,
-        ismMapSeeding: render.ismMapSeeding,
         youngStars: youngStars(tuning),
         timestampWrites,
       });

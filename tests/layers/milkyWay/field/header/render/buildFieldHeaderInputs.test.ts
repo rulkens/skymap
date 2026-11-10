@@ -10,16 +10,16 @@ import { buildFieldHeaderInputs } from '../../../../../../src/layers/milkyWay/fi
 import { deriveFrameView } from '../../../../../../tools/galaxy-renderer/src/engine/frame/deriveFrameView';
 import { deriveFieldFrameLanes } from '../../../../../../src/layers/milkyWay/field/host/utils/deriveFieldFrameLanes';
 import { FIELD_CALIBRATION } from '../../../../../../src/layers/milkyWay/field/data/fieldCalibration';
-import type { RenderSettings } from '../../../../../../tools/galaxy-renderer/@types/engine/RenderSettings';
 import { DEFAULT_RENDER_SETTINGS } from '../../../../../../tools/galaxy-renderer/src/data/defaultRenderSettings';
 import { HII_TIERS } from '../../../../../../tools/galaxy-renderer/src/data/hiiTiers';
 
-const render: RenderSettings = {
-  ...DEFAULT_RENDER_SETTINGS,
+const render = {
+  ...FIELD_CALIBRATION.render,
   hiiNearFadeStart: 101,
   hiiNearFadeEnd: 102,
   starGrainWarpAmp: 103,
   hiiQuadCap: 104,
+  ismMapSeeding: { weight: 9, cap: 10, globalMean: 11 },
 };
 
 const { camera } = deriveFrameView({
@@ -29,13 +29,13 @@ const { camera } = deriveFrameView({
   dist: 30,
   shiftX: 0.1,
   viewportPx: [1600, 900],
-  render,
+  render: DEFAULT_RENDER_SETTINGS,
 });
 const frame = deriveFieldFrameLanes({
   camera,
-  exposure: render.analyticExposure,
+  exposure: DEFAULT_RENDER_SETTINGS.analyticExposure,
   dustReachR: 5,
-  render: FIELD_CALIBRATION.render,
+  render,
 });
 
 // Distinct per-tier target sizes, so a tier that reuses a sibling's (or
@@ -57,7 +57,6 @@ const inputs = buildFieldHeaderInputs({
       reachR: 5,
       detail: 8,
     },
-    ismMapSeeding: { weight: 9, cap: 10, globalMean: 11 },
     hiiCount: 42,
     hiiTexture: { scale: 12, contrast: 13 },
     youngStars: { contrastGamma: 14, invMeanNorm: 15 },

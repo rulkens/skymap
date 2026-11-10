@@ -336,7 +336,6 @@ export function createGalaxyFieldRenderer(
       model: {
         fieldCounts,
         dustHeaderLanes: dustHeaderLanes.get(),
-        ismMapSeeding: frame.ismMapSeeding,
         hiiCount: hiiComps.count,
         hiiTexture: hiiTextureLanes(),
         youngStars: frame.youngStars,
@@ -380,7 +379,7 @@ export function createGalaxyFieldRenderer(
         // splat rather than replacing it: the debug views crossfade
         // independently. Gated on the lane the headers above were packed from.
         const dustView = frameTargets.dustView;
-        if (dustView && frame.view.debugViews.dust > 0) {
+        if (dustView && frame.render.debugViews.dust > 0) {
           encodeDustPresentPass({
             enc: encoder,
             targetView: dustView.view,

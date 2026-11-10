@@ -14,23 +14,20 @@ import type { FieldHeaderInput } from '../@types/FieldHeaderInput';
 import type { FieldSliceCounts } from '../../@types/FieldSliceCounts';
 import type { HiiTextureLanes } from '../@types/HiiTextureLanes';
 import type { HiiTier } from '../../starFormation/@types/HiiTier';
-import type { IsmMapSeedingLanes } from '../@types/IsmMapSeedingLanes';
 import type { YoungStarsLanes } from '../@types/YoungStarsLanes';
 
 import { mapHiiTiers } from '../../starFormation/data/hiiTiers';
 import type { FieldHeaderFrameLanes } from '../@types/FieldHeaderFrameLanes';
-import type { FieldHeaderRenderLanes } from '../@types/FieldHeaderRenderLanes';
+import type { FieldHostTuning } from '../../host/@types/FieldHostTuning';
 
 /**
  * The lanes no `render`/`frame` value can supply — one snapshot per frame.
- * Six of eight are the module's own state (`fieldCounts` through
- * `spurCloudReservation`); `ismMapSeeding`/`youngStars` are the two the host
- * still owns, derived from the CPU-side ISM-map readback.
+ * All but `youngStars` are the renderer's own state; `youngStars` the host
+ * derives from the CPU-side ISM-map readback.
  */
 type FieldHeaderModelLanes = {
   readonly fieldCounts: FieldSliceCounts;
   readonly dustHeaderLanes: DustHeaderLanes;
-  readonly ismMapSeeding: IsmMapSeedingLanes;
   readonly hiiCount: number;
   readonly hiiTexture: HiiTextureLanes;
   readonly youngStars: YoungStarsLanes;
@@ -49,7 +46,7 @@ type FieldHeaderTargetSizes = {
 type FieldHeaderInputsDeps = {
   readonly camera: FieldView;
   readonly frame: FieldHeaderFrameLanes;
-  readonly render: FieldHeaderRenderLanes;
+  readonly render: FieldHostTuning['render'];
   readonly model: FieldHeaderModelLanes;
   readonly targetSizes: FieldHeaderTargetSizes;
 };
@@ -62,7 +59,8 @@ type FieldHeaderInputs = {
 
 export function buildFieldHeaderInputs(deps: FieldHeaderInputsDeps): FieldHeaderInputs {
   const { camera, frame, render, model, targetSizes } = deps;
-  const { debugViews, galaxyWeight, ismMapChannels, dustSlices, starGrainFeatureScale } = frame;
+  const { debugViews, galaxyWeight, ismMapChannels } = render;
+  const { dustSlices, starGrainFeatureScale } = frame;
   const exposure = frame.analyticExposure;
 
   const field: FieldHeaderInput = {
@@ -91,7 +89,7 @@ export function buildFieldHeaderInputs(deps: FieldHeaderInputsDeps): FieldHeader
     // ismMapPresent.wesl binds ONLY this header (createIsmMapOutput.ts's
     // presentBindGroup) — the HII header below omits this and packs the
     // seeding lanes inert.
-    ismMapSeeding: model.ismMapSeeding,
+    ismMapSeeding: render.ismMapSeeding,
     // Task 15 — real only on THIS header (arm/spur cloud components exist
     // only in fieldComps, never hiiComps); `null` reservation packs the
     // absent-range default (`FieldHeaderInput`'s own doc).

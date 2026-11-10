@@ -26,11 +26,7 @@ export function deriveFieldFrameLanes(input: {
   readonly dustReachR: number;
   readonly render: Pick<
     FieldHostTuning['render'],
-    | 'debugViews'
-    | 'galaxyWeight'
-    | 'ismMapChannels'
-    | 'starGrainFeatureScaleNear'
-    | 'starGrainFeatureScaleFar'
+    'starGrainFeatureScaleNear' | 'starGrainFeatureScaleFar'
   >;
 }): FieldHeaderFrameLanes {
   const { camera, render } = input;
@@ -44,9 +40,6 @@ export function deriveFieldFrameLanes(input: {
   );
   return {
     analyticExposure: input.exposure * FIELD_EXPOSURE_GAUGE,
-    debugViews: render.debugViews,
-    galaxyWeight: render.galaxyWeight,
-    ismMapChannels: render.ismMapChannels,
     dustSlices: dustSliceEdges(eyeDist, input.dustReachR),
     starGrainFeatureScale: lerp(
       render.starGrainFeatureScaleNear,
