@@ -12,17 +12,15 @@
 import type { GalaxyFieldStageContext } from '../@types/GalaxyFieldStageContext';
 import type { GalaxyFieldStageName } from '../@types/GalaxyFieldStageName';
 import type { Stage } from '../../../../@types/gpu/Stage';
-import {
-  ISM_MAP_AZ,
-  ISM_MAP_RINGS,
-  ismMapGridRadiusOrDefault,
-} from '../ismMap/utils/galaxyIsmMapArmForcing';
+import { ISM_MAP_RINGS } from '../ismMap/data/ismMapRings';
 import { ISM_MAP_AMBIENT_DUST } from '../ismMap/data/ismMapAmbientDust';
 import { buildDigArmEnvelopeTable } from '../dustCdf/utils/buildDigArmEnvelopeTable';
 import { buildArmCloudDispatchInput } from '../placement/utils/buildArmCloudDispatchInput';
 import { buildDigDispatchInput } from '../placement/utils/buildDigDispatchInput';
 import { buildDustDispatchInput } from '../placement/utils/buildDustDispatchInput';
 import { buildSpurCloudDispatchInput } from '../placement/utils/buildSpurCloudDispatchInput';
+import { ismMapGridRadiusOrDefault } from '../ismMap/utils/ismMapGridRadiusOrDefault';
+import { ISM_MAP_AZ } from '../ismMap/data/ismMapAz';
 
 export const GALAXY_FIELD_STAGES: readonly Stage<GalaxyFieldStageName, GalaxyFieldStageContext>[] =
   [

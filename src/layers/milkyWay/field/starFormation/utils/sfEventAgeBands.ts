@@ -7,8 +7,8 @@
  * `hiiRegionGeometry.ts`.
  */
 import type { IsmMapFluidEvent } from '../../ismMap/@types/IsmMapFluidEvent';
-import { ismMapFluidEventWindow } from '../../ismMap/utils/galaxyIsmMapFluidEvents';
-import type { IsmMapFluidEventWindow } from '../../ismMap/utils/galaxyIsmMapFluidEvents';
+import { ismMapFluidEventWindow } from '../../ismMap/utils/ismMapFluidEventWindow';
+import type { IsmMapFluidEventWindow } from '../../ismMap/@types/IsmMapFluidEventWindow';
 
 /**
  * Fraction ceiling — age01 for catalog events, `(steps - birthStep) / steps`

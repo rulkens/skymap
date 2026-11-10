@@ -41,7 +41,7 @@ export type GalaxyArmSpurTuning = {
   readonly elongation: number;
   /**
    * 0..1 how strongly a spur forces the ISM map's fluid gas, against its
-   * parent arm's own forcing (`galaxyIsmMapArmForcing.ts`). Default 0.5, not
+   * parent arm's own forcing (`buildGalaxyIsmMapArmForcing.ts`). Default 0.5, not
    * 1: a spur is a short, low-mass offshoot, not a second arm — weighting it
    * as strongly as its parent would overdrive event placement along it.
    */

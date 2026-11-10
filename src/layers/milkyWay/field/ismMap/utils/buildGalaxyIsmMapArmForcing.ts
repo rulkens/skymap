@@ -4,7 +4,7 @@
  * rendered arms use (`armRidgeCurvePoint`/`armCrossSigma`/`armFadeEnvelope`)
  * — never re-derived in WGSL. Uploaded once per generation as an R32F
  * texture the fluid step shader samples with `textureLoad`;
- * `galaxyIsmMapFluidEvents.ts` reuses this same CPU field, never the
+ * `buildGalaxyIsmMapFluidEvents.ts` reuses this same CPU field, never the
  * texture. Single-slot memo keyed on geometry identity plus the tuning
  * fields the walk below actually reads.
  */
@@ -15,46 +15,11 @@ import { memoizeLastByKeys } from '../../../../../utils/cache/memoizeLastByKeys'
 import type { GalaxyDescription } from '../../../../../@types/galaxy/GalaxyDescription';
 import type { GalaxyFieldArmRecord } from '../../../../../@types/galaxy/GalaxyFieldArmRecord';
 import type { GalaxyFieldTuning } from '../../mixture/@types/GalaxyFieldTuning';
-import type { GalaxyIsmMapGridRadius } from '../@types/GalaxyIsmMapGridRadius';
 import { armFadeEnvelope } from '../../arms/utils/armFadeEnvelope';
 import { armCrossSigma } from '../../arms/utils/armCrossSigma';
-
-/** Grid extent; sizes the ismMap textures. Every WGSL pass reads its own texture's `textureDimensions`, so there's no mirrored copy to drift. */
-export const ISM_MAP_AZ = 1536;
-export const ISM_MAP_RINGS = 512;
-
-/** WGSL hard-codes `@workgroup_size(16, 16)` as a compile-time literal, so unlike ISM_MAP_AZ/ISM_MAP_RINGS this stays mirrored — see `constants.parity.test.ts`'s ismMap block. */
-export const ISM_MAP_WORKGROUP_SIZE = 16;
-/** Forcing is zero below `armStartRadius` (this file's own skip), so this margin only lets percolation leak inward instead of hard-stopping there. */
-const ISM_MAP_INNER_MARGIN_FRAC = 0.6;
-
-/** Degenerate-galaxy guard: `ismMapRingRadius`'s log spacing needs rMax clear of rMin. */
-const ISM_MAP_MIN_SPAN_RATIO = 2;
-
-/**
- * The radius bounds one generated galaxy's log-radial grid spans. The outer
- * edge covers the outermost arm's `fadeRadius`, not `outerRadius`: dust is
- * ISM-map-seeded only where this grid has data, so stopping at
- * `outerRadius` leaves a hard edge mid-arm. Rings are log-spaced over a
- * fixed `ISM_MAP_RINGS`, so widening rMax spends radial resolution on the
- * newly-covered outer arm — raise `ISM_MAP_RINGS` if inner detail suffers.
- */
-export function ismMapGridRadius(geometry: GalaxyDescription): GalaxyIsmMapGridRadius {
-  const rMin = Math.max(geometry.armStartRadius * ISM_MAP_INNER_MARGIN_FRAC, 1e-3);
-  const outerArmRadius =
-    geometry.numArms > 0 && geometry.arms.length > 0
-      ? Math.max(...geometry.arms.map((arm) => arm.fadeRadius))
-      : geometry.outerRadius;
-  const rMax = Math.max(outerArmRadius, rMin * ISM_MAP_MIN_SPAN_RATIO);
-  return { rMin, rMax };
-}
-
-/** Same bounds for a galaxy that may not be generated yet — the ismMap chain dispatches before geometry exists, and its grid must agree texel-for-texel with the orientation chain's. */
-export function ismMapGridRadiusOrDefault(
-  geometry: GalaxyDescription | null,
-): GalaxyIsmMapGridRadius {
-  return geometry ? ismMapGridRadius(geometry) : { rMin: 1e-3, rMax: 1 };
-}
+import { ismMapGridRadius } from './ismMapGridRadius';
+import { ISM_MAP_AZ } from '../data/ismMapAz';
+import { ISM_MAP_RINGS } from '../data/ismMapRings';
 
 /**
  * Cross-track distance from a grid cell to an arm's ridge, disc-plane only

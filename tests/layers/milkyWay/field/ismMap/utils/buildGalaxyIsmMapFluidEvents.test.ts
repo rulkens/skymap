@@ -3,33 +3,24 @@
  * nothing else catches: a seed that stops reproducing its own event list, an
  * arm bias that points the wrong way (or isn't a bias at all), and a
  * requested count that overruns the GPU buffer's fixed capacity.
- *
- * ismMapFluidEventWindow — the binary search that avoids a per-step,
- * whole-list GPU scan (`createIsmMapFluidRunner.ts`'s own docblock); a
- * boundary bug here would silently drop or duplicate active events per step.
  */
 import { describe, expect, it } from 'vitest';
 import { MILKY_WAY_GALAXY_PARAMS } from '../../../../../../src/data/milkyWay/milkyWayGalaxyParams';
 import { describeGalaxy } from '../../../../../../src/services/engine/galaxyGenerator/shared/describeGalaxy';
 import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../../../src/layers/milkyWay/field/mixture/utils/galaxyFieldMixture';
-import {
-  buildGalaxyIsmMapArmForcing,
-  ISM_MAP_AZ,
-  ISM_MAP_RINGS,
-} from '../../../../../../src/layers/milkyWay/field/ismMap/utils/galaxyIsmMapArmForcing';
-import {
-  buildGalaxyIsmMapFluidEvents,
-  ismMapFluidEventWindow,
-  ISM_MAP_FLUID_MAX_EVENTS,
-} from '../../../../../../src/layers/milkyWay/field/ismMap/utils/galaxyIsmMapFluidEvents';
+import { buildGalaxyIsmMapArmForcing } from '../../../../../../src/layers/milkyWay/field/ismMap/utils/buildGalaxyIsmMapArmForcing';
+import { buildGalaxyIsmMapFluidEvents } from '../../../../../../src/layers/milkyWay/field/ismMap/utils/buildGalaxyIsmMapFluidEvents';
 import { mulberry32 } from '../../../../../../src/utils/random/mulberry32';
+import { ISM_MAP_FLUID_MAX_EVENTS } from '../../../../../../src/layers/milkyWay/field/ismMap/data/ismMapFluidMaxEvents';
+import { ISM_MAP_AZ } from '../../../../../../src/layers/milkyWay/field/ismMap/data/ismMapAz';
+import { ISM_MAP_RINGS } from '../../../../../../src/layers/milkyWay/field/ismMap/data/ismMapRings';
 
 const geometry = describeGalaxy(MILKY_WAY_GALAXY_PARAMS);
 
 /**
  * Standalone reconstruction of the PRE-Kennicutt-Schmidt event placement
  * (arm-biased CDF pick + sub-texel jitter, no gas-weighted rejection loop) —
- * duplicates the private ARM_BIAS_FLOOR/salt/upperBound galaxyIsmMapFluidEvents.ts
+ * duplicates the private ARM_BIAS_FLOOR/salt/upperBound buildGalaxyIsmMapFluidEvents.ts
  * does not export, purely so this test can pin the byte-identical-at-
  * gasFloor=1 invariant against an independent implementation rather than
  * against the same code path it is meant to catch a regression in.
@@ -46,7 +37,7 @@ function legacyUnweightedEvents(
   radiusScale: number;
 }> {
   const ARM_BIAS_FLOOR = 0.15;
-  const SALT = 0x464c5549; // "FLUI" — mirrors galaxyIsmMapFluidEvents.ts's private salt
+  const SALT = 0x464c5549; // "FLUI" — mirrors buildGalaxyIsmMapFluidEvents.ts's private salt
   const fluid = tuning.ismMapFluid;
   const requested = Math.round(fluid.eventRate * fluid.steps);
   const count = Math.min(Math.max(requested, 0), ISM_MAP_FLUID_MAX_EVENTS);
@@ -185,32 +176,5 @@ describe('buildGalaxyIsmMapFluidEvents', () => {
     for (let i = 1; i < events.length; i++) {
       expect(events[i]!.birthStep).toBeGreaterThanOrEqual(events[i - 1]!.birthStep);
     }
-  });
-});
-
-describe('ismMapFluidEventWindow', () => {
-  it('selects exactly the events active at a given step, given a birthStep-sorted list', () => {
-    const events = buildGalaxyIsmMapFluidEvents(geometry, DEFAULT_GALAXY_FIELD_TUNING, 7);
-    const { impulseDuration, steps } = DEFAULT_GALAXY_FIELD_TUNING.ismMapFluid;
-    const step = Math.floor(steps / 2);
-
-    const { start, end } = ismMapFluidEventWindow(events, step, impulseDuration);
-
-    const expectedIndices = events.reduce<number[]>((acc, e, i) => {
-      const age = step - e.birthStep;
-      if (age >= 0 && age < impulseDuration) acc.push(i);
-      return acc;
-    }, []);
-    expect(Array.from({ length: end - start }, (_, k) => start + k)).toEqual(expectedIndices);
-  });
-
-  it('returns an empty range at a step nothing is active on both sides of the run', () => {
-    const events: ReturnType<typeof buildGalaxyIsmMapFluidEvents> = [
-      { az: 0, ring: 0, birthStep: 10, strength: 1, radiusScale: 1 },
-      { az: 0, ring: 0, birthStep: 10, strength: 1, radiusScale: 1 },
-    ];
-    const impulseDuration = 5;
-    expect(ismMapFluidEventWindow(events, 0, impulseDuration)).toEqual({ start: 0, end: 0 }); // before any birth
-    expect(ismMapFluidEventWindow(events, 20, impulseDuration)).toEqual({ start: 2, end: 2 }); // long past impulseDuration
   });
 });

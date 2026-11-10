@@ -8,7 +8,7 @@
  * layout requirement past `ismMapFluidStep.wesl`'s own
  * `IsmMapFluidStepIndex`).
  */
-import { ismMapFluidEventWindow } from '../utils/galaxyIsmMapFluidEvents';
+import { ismMapFluidEventWindow } from '../utils/ismMapFluidEventWindow';
 import type { IsmMapFluidEvent } from '../@types/IsmMapFluidEvent';
 
 /** Floats actually written per row — `step`, `activeStart`, `activeEnd` — mirrors `ismMapFluidStep.wesl`'s `IsmMapFluidStepIndex`; the row's remaining `strideFloats - 3` floats are unread padding out to the device alignment. */

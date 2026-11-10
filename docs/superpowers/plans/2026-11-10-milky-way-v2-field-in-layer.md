@@ -295,19 +295,19 @@ Shared rules for A1–A4:
 - `tests/layers/milkyWay/field/ismMap/utils/galaxyIsmMapFluidEvents.test.ts` (split)
 - `inlineTypeFiles.ts` (row)
 
-- [ ] `galaxyIsmMapFluidEvents.ts`:
+- [x] `galaxyIsmMapFluidEvents.ts`:
   - Extract `IsmMapFluidEventWindow` to `@types`.
   - Extract `ismMapFluidEventWindow`, and `ISM_MAP_FLUID_MAX_EVENTS` → data.
   - `npm run move-files -- P/ismMap/utils/galaxyIsmMapFluidEvents.ts P/ismMap/utils/buildGalaxyIsmMapFluidEvents.ts`.
   - Split the test: `describe('ismMapFluidEventWindow')` (today L191-216) → its own file. Copy only
     the fixtures it uses.
-- [ ] `galaxyIsmMapArmForcing.ts`:
+- [x] `galaxyIsmMapArmForcing.ts`:
   - Extract `ismMapGridRadiusOrDefault`, then `ismMapGridRadius`, which drags the two margin
     constants.
   - Extract `ISM_MAP_AZ`, `ISM_MAP_RINGS` and `ISM_MAP_WORKGROUP_SIZE` → data. The
     `constants.parity.test.ts` import is repointed for you.
   - `npm run move-files -- P/ismMap/utils/galaxyIsmMapArmForcing.ts P/ismMap/utils/buildGalaxyIsmMapArmForcing.ts`.
-- [ ] Resulting count: `ismMap/utils` 6. Commit.
+- [x] Resulting count: `ismMap/utils` 6. Commit.
 
 ### Task A4: Split the star-formation builders
 

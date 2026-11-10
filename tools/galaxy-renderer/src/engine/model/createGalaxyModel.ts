@@ -28,7 +28,7 @@ import { createGenerationPipelines } from '../../../../../src/services/engine/ga
 import { GENERATION_UBO } from '../../../../../src/services/engine/galaxyGenerator/shared/generationUboLayout';
 import { buildDustBubblePlacements } from '../../../../../src/layers/milkyWay/field/dust/utils/buildDustBubblePlacements';
 import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../../src/layers/milkyWay/field/mixture/utils/galaxyFieldMixture';
-import { ismMapGridRadius } from '../../../../../src/layers/milkyWay/field/ismMap/utils/galaxyIsmMapArmForcing';
+import { ismMapGridRadius } from '../../../../../src/layers/milkyWay/field/ismMap/utils/ismMapGridRadius';
 import type { GalaxyIsmMapGridRadius } from '../../../../../src/layers/milkyWay/field/ismMap/@types/GalaxyIsmMapGridRadius';
 import { normalizeGenerationSeed } from '../../../../../src/utils/galaxy/normalizeGenerationSeed';
 import { areaWeightedMeanIsmMapChannel } from '../../../../../src/utils/galaxy/areaWeightedMeanIsmMapChannel';

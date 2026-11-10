@@ -8,13 +8,14 @@
  * texture/bind-group regardless of whether the generator is running.
  */
 import { ADDITIVE_BLEND } from '../../../../../services/gpu/lib/blendStates';
-import { ISM_MAP_AZ, ISM_MAP_RINGS } from '../utils/galaxyIsmMapArmForcing';
+import { ISM_MAP_RINGS } from '../data/ismMapRings';
 import type { GalaxyIsmMapGridRadius } from '../@types/GalaxyIsmMapGridRadius';
 import { alignedBytesPerRow } from '../../../../../utils/gpu/alignedBytesPerRow';
 
 import ismMapPresentWgsl from '../../../../../services/gpu/shaders/milkyWay/ismMap/ismMapPresent.wesl?static';
 import ismMapDustBlurWgsl from '../../../../../services/gpu/shaders/milkyWay/ismMap/ismMapDustBlur.wesl?static';
 import ismMapCartesianBakeWgsl from '../../../../../services/gpu/shaders/milkyWay/ismMap/ismMapCartesianBake.wesl?static';
+import { ISM_MAP_AZ } from '../data/ismMapAz';
 
 /** Mirrored by BLUR_FACTOR in ismMapDustBlur.wesl; also sets the S4 high-pass crossover (~8 texels, roughly the scale the dust splats stop resolving). */
 const DUST_BLUR_FACTOR = 8;

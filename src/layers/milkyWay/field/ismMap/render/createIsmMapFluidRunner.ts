@@ -8,15 +8,10 @@
  * within one pass since WebGPU synchronizes a storage-texture write against
  * a later read. Step 0 only dispatches the second (velocity is unused).
  */
-import {
-  buildGalaxyIsmMapArmForcing,
-  ISM_MAP_AZ,
-  ISM_MAP_RINGS,
-  ISM_MAP_WORKGROUP_SIZE,
-} from '../utils/galaxyIsmMapArmForcing';
+import { buildGalaxyIsmMapArmForcing } from '../utils/buildGalaxyIsmMapArmForcing';
 import type { GalaxyIsmMapGridRadius } from '../@types/GalaxyIsmMapGridRadius';
-import { buildGalaxyIsmMapFluidEvents } from '../utils/galaxyIsmMapFluidEvents';
-import { ISM_MAP_FLUID_MAX_EVENTS } from '../utils/galaxyIsmMapFluidEvents';
+import { buildGalaxyIsmMapFluidEvents } from '../utils/buildGalaxyIsmMapFluidEvents';
+import { ISM_MAP_FLUID_MAX_EVENTS } from '../data/ismMapFluidMaxEvents';
 import type { GalaxyDescription } from '../../../../../@types/galaxy/GalaxyDescription';
 import type { GalaxyFieldTuning } from '../../mixture/@types/GalaxyFieldTuning';
 
@@ -31,6 +26,9 @@ import type { IsmMapOutput } from './createIsmMapOutput';
 import ismMapFluidVelocityWgsl from '../../../../../services/gpu/shaders/milkyWay/ismMap/ismMapFluidVelocity.wesl?static';
 import ismMapFluidStepWgsl from '../../../../../services/gpu/shaders/milkyWay/ismMap/ismMapFluidStep.wesl?static';
 import ismMapFluidPackWgsl from '../../../../../services/gpu/shaders/milkyWay/ismMap/ismMapFluidPack.wesl?static';
+import { ISM_MAP_AZ } from '../data/ismMapAz';
+import { ISM_MAP_RINGS } from '../data/ismMapRings';
+import { ISM_MAP_WORKGROUP_SIZE } from '../data/ismMapWorkgroupSize';
 
 type IsmMapFluidRunner = {
   /** Dispatch the fluid's N advection steps, its own straight repack into `output.texture`, and `output`'s dust-blur pass — one encoder, one submit. Caller has already checked `enabled`/`steps > 0` and written `output`'s grid. */
@@ -134,7 +132,7 @@ export function createIsmMapFluidRunner(
       // Same CPU field `buildGalaxyIsmMapFluidEvents` below reads for its own
       // event-placement bias — its call re-reads `buildGalaxyIsmMapArmForcing`
       // with the SAME (geometry, tuning) key, so this only ever costs a
-      // second call, never a third; the memo in galaxyIsmMapArmForcing.ts
+      // second call, never a third; the memo in buildGalaxyIsmMapArmForcing.ts
       // (when it lands) makes even that call free, but nothing here depends
       // on it landing.
       const forcing = buildGalaxyIsmMapArmForcing(geometry, tuning);

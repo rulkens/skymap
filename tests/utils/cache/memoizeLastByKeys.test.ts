@@ -1,6 +1,6 @@
 /**
  * memoizeLastByKeys backs every dust-CDF/forcing-field cache in the galaxy
- * generator (hiiRegions.ts, galaxyIsmMapArmForcing.ts) — a wrong hit there
+ * generator (hiiRegions.ts, buildGalaxyIsmMapArmForcing.ts) — a wrong hit there
  * silently freezes a field that should have recomputed, and a wrong miss
  * silently doubles an O(rings x az) bake per frame. Both are invisible in
  * the generator's own output tests (the value is correct either way; only

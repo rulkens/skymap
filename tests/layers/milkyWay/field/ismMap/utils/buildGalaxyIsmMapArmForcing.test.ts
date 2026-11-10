@@ -1,7 +1,7 @@
 /**
  * The bake this module does is expensive (O(rings x arms x az)) and gets
  * called twice per ISM-map rebuild (the fluid runner's own texture upload +
- * `galaxyIsmMapFluidEvents.ts`'s event draw) with geometry/tuning objects
+ * `buildGalaxyIsmMapFluidEvents.ts`'s event draw) with geometry/tuning objects
  * that are byte-identical on every non-arm slider drag — the memo and the
  * windowed inner loop are both there to make that NOT repay the full bake.
  * Two things can break: the memo keying on the wrong thing (either missing
@@ -16,17 +16,15 @@ import { armRidgeAngle } from '../../../../../../src/layers/milkyWay/field/arms/
 import { buildArmSpurs } from '../../../../../../src/layers/milkyWay/field/arms/utils/buildArmSpurs';
 import { describeGalaxy } from '../../../../../../src/services/engine/galaxyGenerator/shared/describeGalaxy';
 import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../../../src/layers/milkyWay/field/mixture/utils/galaxyFieldMixture';
-import {
-  buildGalaxyIsmMapArmForcing,
-  ISM_MAP_AZ,
-  ISM_MAP_RINGS,
-  ismMapGridRadius,
-} from '../../../../../../src/layers/milkyWay/field/ismMap/utils/galaxyIsmMapArmForcing';
+import { buildGalaxyIsmMapArmForcing } from '../../../../../../src/layers/milkyWay/field/ismMap/utils/buildGalaxyIsmMapArmForcing';
 import { ismMapRingIndexForRadius } from '../../../../../../src/utils/galaxy/ismMapRingIndexForRadius';
 import { ismMapRingRadius } from '../../../../../../src/utils/galaxy/ismMapRingRadius';
 import { armFadeEnvelope } from '../../../../../../src/layers/milkyWay/field/arms/utils/armFadeEnvelope';
 import { armCrossSigma } from '../../../../../../src/layers/milkyWay/field/arms/utils/armCrossSigma';
 import { armRidgeCurvePoint } from '../../../../../../src/layers/milkyWay/field/arms/utils/armRidgeCurvePoint';
+import { ismMapGridRadius } from '../../../../../../src/layers/milkyWay/field/ismMap/utils/ismMapGridRadius';
+import { ISM_MAP_AZ } from '../../../../../../src/layers/milkyWay/field/ismMap/data/ismMapAz';
+import { ISM_MAP_RINGS } from '../../../../../../src/layers/milkyWay/field/ismMap/data/ismMapRings';
 
 /**
  * The pre-windowing algorithm: full az sweep, atan2(sin, cos) wrap. Computed

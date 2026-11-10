@@ -5,7 +5,7 @@
  * `ismMapFluidStep.wesl` reads the packed result as velocity-field impulses.
  *
  * Returned events are sorted ascending by `birthStep` — a contract:
- * `ismMapFluidEventWindow` below binary-searches this order to hand a
+ * `ismMapFluidEventWindow` (its own file) binary-searches this order to hand a
  * per-step [start, end) slice of active events, not the whole list.
  */
 import { mulberry32 } from '../../../../../utils/random/mulberry32';
@@ -14,15 +14,11 @@ import { ismMapRingRadius } from '../../../../../utils/galaxy/ismMapRingRadius';
 import type { GalaxyDescription } from '../../../../../@types/galaxy/GalaxyDescription';
 import type { GalaxyFieldTuning } from '../../mixture/@types/GalaxyFieldTuning';
 import type { IsmMapFluidEvent } from '../@types/IsmMapFluidEvent';
-import {
-  buildGalaxyIsmMapArmForcing,
-  ismMapGridRadius,
-  ISM_MAP_AZ,
-  ISM_MAP_RINGS,
-} from './galaxyIsmMapArmForcing';
-
-/** Safely above the "several hundred events over a run" design target — a generous ceiling, not a tuned one. Overflow is truncated, not resampled. */
-export const ISM_MAP_FLUID_MAX_EVENTS = 1024;
+import { buildGalaxyIsmMapArmForcing } from './buildGalaxyIsmMapArmForcing';
+import { ISM_MAP_FLUID_MAX_EVENTS } from '../data/ismMapFluidMaxEvents';
+import { ismMapGridRadius } from './ismMapGridRadius';
+import { ISM_MAP_AZ } from '../data/ismMapAz';
+import { ISM_MAP_RINGS } from '../data/ismMapRings';
 
 const ISM_MAP_FLUID_EVENT_SALT = 0x464c5549; // "FLUI"
 
@@ -123,44 +119,4 @@ export function buildGalaxyIsmMapFluidEvents(
   }
   events.sort((a, b) => a.birthStep - b.birthStep); // ascending by birthStep — see docblock above
   return events;
-}
-
-/** Index range in `events` (see `ismMapFluidEventWindow`'s docblock). */
-export type IsmMapFluidEventWindow = {
-  readonly start: number;
-  readonly end: number;
-};
-
-/**
- * `[start, end)` slice of a birthStep-sorted `events` list active at
- * generation `step`, mirroring `ismMapFluidStep.wesl`'s per-event
- * `age < 0.0 || age >= impulseDuration` skip but computed once CPU-side via
- * two binary searches. `events` must already be sorted ascending by
- * `birthStep`; this function does not sort, so an unsorted list produces a
- * silently wrong window, not a thrown error.
- */
-export function ismMapFluidEventWindow(
-  events: readonly IsmMapFluidEvent[],
-  step: number,
-  impulseDuration: number,
-): IsmMapFluidEventWindow {
-  return {
-    start: firstIndexWithBirthStepAbove(events, step - impulseDuration),
-    end: firstIndexWithBirthStepAbove(events, step),
-  };
-}
-
-/** First index whose `birthStep` exceeds `threshold` — same upper-bound search idiom as this file's own `upperBound`, kept separate since it walks event objects by field, not a raw cumulative-weight array. */
-function firstIndexWithBirthStepAbove(
-  events: readonly IsmMapFluidEvent[],
-  threshold: number,
-): number {
-  let lo = 0;
-  let hi = events.length;
-  while (lo < hi) {
-    const mid = (lo + hi) >>> 1;
-    if (events[mid]!.birthStep > threshold) hi = mid;
-    else lo = mid + 1;
-  }
-  return lo;
 }

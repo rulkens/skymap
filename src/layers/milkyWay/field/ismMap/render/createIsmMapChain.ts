@@ -6,7 +6,7 @@
  * readback staging buffers; this bundle keeps only the handles.
  */
 
-import { ISM_MAP_AZ, ISM_MAP_RINGS } from '../utils/galaxyIsmMapArmForcing';
+import { ISM_MAP_RINGS } from '../data/ismMapRings';
 import { createIsmMapDustCdfScan } from '../../dustCdf/render/createIsmMapDustCdfScan';
 import { createIsmMapGenerator } from './createIsmMapGenerator';
 import { createIsmMapOrientation } from './createIsmMapOrientation';
@@ -16,6 +16,7 @@ import { createIsmMapPlaceDigVeil } from '../../placement/render/createIsmMapPla
 import { createIsmMapPlaceDust } from '../../placement/render/createIsmMapPlaceDust';
 import { createIsmMapRingReduce } from './createIsmMapRingReduce';
 import type { IsmMapChain } from '../@types/IsmMapChain';
+import { ISM_MAP_AZ } from '../data/ismMapAz';
 
 export function createIsmMapChain(
   device: GPUDevice,

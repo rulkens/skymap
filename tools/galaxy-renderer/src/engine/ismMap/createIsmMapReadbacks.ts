@@ -12,16 +12,14 @@
 import type { GalaxyIsmMap } from '../../../../../src/@types/galaxy/GalaxyIsmMap';
 import type { GalaxyIsmMapOrientation } from '../../../../../src/@types/galaxy/GalaxyIsmMapOrientation';
 import type { GalaxyIsmMapGridRadius } from '../../../../../src/layers/milkyWay/field/ismMap/@types/GalaxyIsmMapGridRadius';
-import {
-  ISM_MAP_AZ,
-  ISM_MAP_RINGS,
-} from '../../../../../src/layers/milkyWay/field/ismMap/utils/galaxyIsmMapArmForcing';
+import { ISM_MAP_RINGS } from '../../../../../src/layers/milkyWay/field/ismMap/data/ismMapRings';
 
 import { createReadbackQueue } from '../gpu/createReadbackQueue';
 import { decodeOrientationTexels } from './decodeOrientationTexels';
 import { decodeIsmMapTexels } from './decodeIsmMapTexels';
 import type { IsmMapGenerator } from '../../../../../src/layers/milkyWay/field/ismMap/@types/IsmMapGenerator';
 import type { IsmMapOrientation } from '../../../../../src/layers/milkyWay/field/ismMap/@types/IsmMapOrientation';
+import { ISM_MAP_AZ } from '../../../../../src/layers/milkyWay/field/ismMap/data/ismMapAz';
 
 export type IsmMapReadbacks = {
   /** Null until the first copy lands, and again whenever `dropIfGridMoved` invalidates it. */

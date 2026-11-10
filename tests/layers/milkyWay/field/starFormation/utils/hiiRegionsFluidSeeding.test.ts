@@ -14,19 +14,15 @@ import { MILKY_WAY_GALAXY_PARAMS } from '../../../../../../src/data/milkyWay/mil
 import { describeGalaxy } from '../../../../../../src/services/engine/galaxyGenerator/shared/describeGalaxy';
 import { DEFAULT_GALAXY_STAR_FORMATION_PARAMS } from '../../../../../../src/layers/milkyWay/field/starFormation/data/defaultGalaxyStarFormationParams';
 import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../../../src/layers/milkyWay/field/mixture/utils/galaxyFieldMixture';
-import {
-  buildGalaxyIsmMapFluidEvents,
-  ismMapFluidEventWindow,
-} from '../../../../../../src/layers/milkyWay/field/ismMap/utils/galaxyIsmMapFluidEvents';
-import {
-  ismMapGridRadius,
-  ISM_MAP_AZ,
-  ISM_MAP_RINGS,
-} from '../../../../../../src/layers/milkyWay/field/ismMap/utils/galaxyIsmMapArmForcing';
+import { buildGalaxyIsmMapFluidEvents } from '../../../../../../src/layers/milkyWay/field/ismMap/utils/buildGalaxyIsmMapFluidEvents';
+import { ISM_MAP_RINGS } from '../../../../../../src/layers/milkyWay/field/ismMap/data/ismMapRings';
 import { buildHiiRegions } from '../../../../../../src/layers/milkyWay/field/starFormation/utils/hiiRegions';
 import { ismMapRingRadius } from '../../../../../../src/utils/galaxy/ismMapRingRadius';
 import { warpHeight } from '../../../../../../src/layers/milkyWay/field/mixture/utils/warpHeight';
 import type { GalaxyFieldTuning } from '../../../../../../src/layers/milkyWay/field/mixture/@types/GalaxyFieldTuning';
+import { ismMapFluidEventWindow } from '../../../../../../src/layers/milkyWay/field/ismMap/utils/ismMapFluidEventWindow';
+import { ismMapGridRadius } from '../../../../../../src/layers/milkyWay/field/ismMap/utils/ismMapGridRadius';
+import { ISM_MAP_AZ } from '../../../../../../src/layers/milkyWay/field/ismMap/data/ismMapAz';
 
 const geometry = describeGalaxy(MILKY_WAY_GALAXY_PARAMS);
 
@@ -63,7 +59,7 @@ describe('buildHiiRegions — fluid generator seeding', () => {
     // impulseDuration > steps captures every event the run ever spawns, so
     // `count = round(eventRate * steps)` IS the window size — isolates this
     // test from `ismMapFluidEventWindow`'s own age-boundary behaviour (that
-    // lives in galaxyIsmMapFluidEvents.test.ts).
+    // lives in buildGalaxyIsmMapFluidEvents.test.ts).
     const base = fluidTuning({ eventRate: 0.1, steps: 80, impulseDuration: 1000 });
     const doubled = fluidTuning({ eventRate: 0.2, steps: 80, impulseDuration: 1000 });
     const empty = fluidTuning({ eventRate: 0, steps: 80, impulseDuration: 1000 });

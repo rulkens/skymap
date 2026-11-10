@@ -16,16 +16,9 @@ import {
 } from './hiiRegionGeometry';
 import { armRidgeAngle } from '../../arms/utils/armRidgeAngle';
 import { armAgeWeight } from '../../arms/utils/dustLaneFeatures';
-import {
-  ismMapGridRadius,
-  ISM_MAP_AZ,
-  ISM_MAP_RINGS,
-} from '../../ismMap/utils/galaxyIsmMapArmForcing';
+import { ISM_MAP_RINGS } from '../../ismMap/data/ismMapRings';
 import type { GalaxyIsmMapGridRadius } from '../../ismMap/@types/GalaxyIsmMapGridRadius';
-import {
-  buildGalaxyIsmMapFluidEvents,
-  ismMapFluidEventWindow,
-} from '../../ismMap/utils/galaxyIsmMapFluidEvents';
+import { buildGalaxyIsmMapFluidEvents } from '../../ismMap/utils/buildGalaxyIsmMapFluidEvents';
 import { buildSfEventCatalog } from './sfEventCatalog';
 import {
   RECENT_EVENT_AGE_FRAC_CEIL,
@@ -55,6 +48,9 @@ import type { Vec3 } from '../../../../../@types/math/Vec3';
 import { armFadeEnvelope } from '../../arms/utils/armFadeEnvelope';
 import { armCrossSigma } from '../../arms/utils/armCrossSigma';
 import { armRidgeCurvePoint } from '../../arms/utils/armRidgeCurvePoint';
+import { ismMapFluidEventWindow } from '../../ismMap/utils/ismMapFluidEventWindow';
+import { ismMapGridRadius } from '../../ismMap/utils/ismMapGridRadius';
+import { ISM_MAP_AZ } from '../../ismMap/data/ismMapAz';
 
 /**
  * Component-budget ceiling for the whole tier. HII draws into its own

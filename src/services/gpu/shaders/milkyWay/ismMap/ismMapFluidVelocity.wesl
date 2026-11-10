@@ -33,7 +33,7 @@ struct IsmMapFluidConstants {
   // binds validly, and the prefix contract is what the parity test pins).
   diffusion: f32,
   // Shear drag by the arm-forcing field at this texel — see composedVelocity
-  // below. Forcing peaks at 1 (galaxyIsmMapArmForcing.ts's clamp), so full
+  // below. Forcing peaks at 1 (buildGalaxyIsmMapArmForcing.ts's clamp), so full
   // stall at a ridge crest needs armDrag >= 1.
   armDrag: f32,
   // Pass-B-consumed only (ismMapFluidStep.wesl's gasProfile) — kept for the

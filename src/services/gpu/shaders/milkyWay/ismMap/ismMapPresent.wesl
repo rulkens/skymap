@@ -31,7 +31,7 @@ import package::milkyWay::ismMap::ismMapGrid::IsmMapGrid;
 const DUST_SURVIVAL_FLOOR_FRAC: f32 = 0.01;
 
 // grid: the log-radial bounds THIS galaxy's grid was built over
-// (galaxyIsmMapArmForcing.ts's ismMapGridRadius) — written once per ISM-map
+// (buildGalaxyIsmMapArmForcing.ts's ismMapGridRadius) — written once per ISM-map
 // rebuild, not every frame like io.wesl's 'u' above.
 @group(0) @binding(1) var ismMapTex: texture_2d<f32>;
 @group(0) @binding(2) var ismMapSmp: sampler;

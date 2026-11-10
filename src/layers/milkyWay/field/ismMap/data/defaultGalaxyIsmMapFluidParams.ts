@@ -74,14 +74,14 @@ export const DEFAULT_GALAXY_ISM_MAP_FLUID_PARAMS: GalaxyIsmMapFluidParams = {
   // Exponential decline length of the radial gas profile `gasRegen` relaxes
   // toward, in grid-radius units (same as rMin/rMax/corotationRadius) —
   // roughly a third of the Milky Way preset's own rMax (`ismMapGridRadius`,
-  // galaxyIsmMapArmForcing.ts).
+  // buildGalaxyIsmMapArmForcing.ts).
   gasScaleLength: 4.75,
   // Flat HI floor the radial gas profile approaches at large r, as a
   // fraction of the disc-centre value. 0 = pure exponential disc, no floor:
   // gas (and with it events, dust, activity) dies off entirely toward the
   // outer edge — `gasScaleLength` above alone sets the falloff.
   gasFloor: 0,
-  // Floor drops to ARM_BIAS_FLOOR * (1 - 0.83) ~= 0.026 (galaxyIsmMapFluidEvents.ts),
+  // Floor drops to ARM_BIAS_FLOOR * (1 - 0.83) ~= 0.026 (buildGalaxyIsmMapFluidEvents.ts),
   // a near-hard gate that concentrates events onto the arms while leaving a
   // thin off-arm floor.
   eventArmBias: 0.83,
