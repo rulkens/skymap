@@ -14,6 +14,89 @@ Newest first. Primitives: [`../animation/clip-primitives.md`](../animation/clip-
 
 ## Log
 
+- **The clock and the sky arm** (the Earth opening, Tasks 1–10): the clock
+  is frozen for the whole run (`tourBodySaga` pauses once, inside the takeover
+  bracket, whose snapshot puts the viewer's clock back on exit, mid-tour exits
+  included); a beat moves it only with `scene(clockTo({ simDays, overSec,
+  ease? }))`, and every beat that depends on the date (00–04, Home again) snaps
+  it on entry, so a skip or Prev lands on the right date with no fold
+  (`beatDates.test.ts`). A clock that stops dead while the sky wheels reads as
+  a break between beats: ease it to rest (`easeOutQuad` over the last stretch).
+  The tour's Pause holds the clock like the camera. The sky arm pins the eye,
+  so a pose produced in another frame is never folded back into it: once the
+  eye leaves the spot it releases to the body arm (`pinsEye`). The body arm
+  releases to the world above 0.9 radii, so a landing meant to ride a body
+  when the clock jumps (Home again) must sit below that height
+  (`homeAgain.test.ts`). A body leg has no roll and levels north up, so a world
+  leg handing over to one arrives rolled north up (`northUpRoll`), or the image
+  turns at the handover. On exit the restore re-applies the pre-tour focus, and
+  a focus change flies the camera to frame it.
+- **Naming one star means naming the star map** (beat 04, `stellarNeighbourhood`):
+  star captions switch per catalog (`label:starCatalog:famousStar`), not per
+  star, and focus does not gate them, so every star-map star in frame is named
+  with Proxima; about a dozen in any view that frames the Sun and Alpha
+  Centauri. Proxima sits 0.06 pc off Alpha Centauri, so from more than about a
+  parsec its name lands on Alpha Centauri's and the declutter drops it (the
+  bigger star wins); the beat ends half a parsec off the pair. A target lean
+  of a parsec has to wait until the log dolly's range is a sizeable fraction of
+  it, or the subject leaps off the centre in one frame; no ease starts slowly
+  enough to track an exponential range.
+- **True sizes for two bodies** (beat 02, fix round 2): discs keep their true
+  size ratio only from an eye as far from one body as from the other, so the
+  aim slides off the gap's middle by the view's lean along the gap
+  (`EARTH_AND_MOON_VIEW`). Square to both the gap and the Sun is the ecliptic
+  pole, where a pole-up view has no heading; a view steeply across the
+  ecliptic (80°) sees both near half lit whatever the Moon's phase, because
+  the Sun lies in the ecliptic. Its heading turned off square to the gap tilts
+  the gap on screen by about that angle, robust to the Moon's ±5° latitude
+  only because the pitch is measured from the ecliptic pole, not from the gap.
+  `earthAndMoonView.test.ts` fails if a date change breaks either.
+- **A pan that turns with the clock** (beat 00, the sunset): a yaw linear in
+  sim time shares the clock's profile (a linear leg, then `easeOutQuad` over
+  the clock's ease), so the frame and the wheeling sky come to rest together.
+  Yaw tweens take the shorter arc (`lerpAngleShortest`), so a pan longer than
+  half a turn needs a leg break; unwrap the azimuths one step at a time with
+  `wrapRad`. Sun positions come from `skyPoseOfBodyAt` at the tour's noon,
+  sunset and night constants, so moving the date moves only those three
+  (`tourDayTimes.test.ts`). The ground tiles go grey-white from ~4° of solar
+  altitude, so a sunset shot keeps the ground to a thin strip.
+- **Turn before you pull back past a body** (beat 03, `solarSystem`): a log
+  dolly backs the eye along the view axis, so a pull-out from a view that faces
+  away from the Sun runs the eye past the Sun as the range crosses 1 au. Turn
+  the view about the old target while the range is still small, then dolly and
+  lean the target. The Sun's caption is the star layer's
+  (`'label:starCatalog:sun'`), not a body caption; a scoped show names it alone
+  while the other star names stay hidden. A perspective view of an orbit plane
+  swells its near side, so to centre the rings aim on the Sun's ecliptic axis,
+  below the Sun; the dwell's yaw (ecliptic pole) still circles the Sun.
+- **Framing two bodies at once** (beat 02, `earthAndMoon`): body captions are
+  not focus-gated, so focusing the Moon does not name it; `label:body:planet`
+  names every planet and moon in view, so pick the bearing with no other planet
+  in frame (Pluto and Neptune sat behind the first tries). A focused moving body
+  pins the orbit target to its centre whenever no clip runs (a tour pause), so
+  a shot aimed off a body clears the focus.
+- **Beats state their pole and roll on entry** (fix round 1 of beat 02): the
+  ladder is now galactic (park, rise) → ecliptic (Earth and Moon, and the
+  Solar System and neighbourhood beats to come; the Moon and planets orbit near
+  it, so the gap runs flat) → galactic (Milky Way) → supergalactic (M31 out) →
+  galactic (home). Like the date, each beat up to the M31 approach states its
+  pole with `frameTo` (instant where a cut or the sky arm hides the roll), so a
+  skip or Prev lands right; `frameLadder.test.ts` enters each cold. The rise's
+  world leg keeps the body leg's roll (about −36°), so the beats after it state
+  `roll` too (`beatRolls.test.ts`).
+- **A `{ body }` turn from the ground** (beat 01, `youAreHereEarth`): body
+  yaw/pitch are Y-up orbit angles in the host's fixed axes, not local
+  azimuth/altitude, so one tween across a big turn leaves the meridian and
+  rolls the horizon (~4° over 2.4 rad); step the turn along the meridian
+  (`meridianArm`) at one rate. A sky → body handover needs the view due north
+  under the celestial pole: the body arm levels screen-up on the pole, so above
+  it the image flips. The body arm turns about its target, so ease the turn to
+  rest at the handover or the eye lurches.
+- **`fade` cannot black out a frame** (beat 00, `parkOpening`): it moves a
+  layer's `clipOpacity`, and the planet, a scene mesh and the sky have no
+  visibility address; the channel also resets to 1 when the clip ends, so a
+  fade in an enter clip is gone before the cold-load gate waits. A cold open
+  that must hide its load needs a frame-wide veil, which the tour lacks.
 - **Captions are subtitles: `{ title, lines }`.** The overlay shows the title
   as a small label and one `lines` entry at a time, centred at the bottom;
   `body`, markdown and the five `position` anchors are gone. Lines share the
@@ -24,7 +107,7 @@ Newest first. Primitives: [`../animation/clip-primitives.md`](../animation/clip-
   lines where they read well; text over motion means authoring the motion as
   the dwell; `subtitleFit.test.ts` is the guard — a line below its reading
   floor fails the suite, so lengthen the dwell or re-break the copy.
-- **The tour owns its pole** (`openingTitle`/`approachM31`/`homeAgain` `frameTo`
+- **The tour owns its pole** (`parkOpening`/`approachM31`/`homeAgain` `frameTo`
   cues): screen-up is the orientation frame's pole, so a yaw drift — and
   `dwellDrift` is a yaw spin, the dwell in nearly every beat — rolls the image
   by `sin(|pitch|)` per radian of drift: a horizontal pan at the frame's

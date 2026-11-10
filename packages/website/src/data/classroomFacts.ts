@@ -14,11 +14,11 @@ export const CLASSROOM_FACTS: readonly Fact[] = [
   {
     id: 'tour-length',
     about: 'app',
-    text: 'Left to play, “The Long Way Out” takes a little over 5 minutes.',
-    short: 'Left to play it takes a little over 5 minutes.',
+    text: 'Left to play, “The Long Way Out” takes a little over 7 minutes.',
+    short: 'Left to play it takes a little over 7 minutes.',
     source: `${REPO_BLOB}/src/data/animation/tours/grandTour.ts`,
     sourceLabel: `the tour’s timings, ${IN_REPO}`,
-    checked: CHECKED,
+    checked: '2026-11-06',
   },
   {
     id: 'tour-keys',

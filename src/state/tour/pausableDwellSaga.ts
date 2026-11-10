@@ -12,8 +12,8 @@
  * not; only the auto-advance TIMEOUT is pause-sensitive. So there is a single
  * race and `paused` is a boolean — not a second code path duplicating the
  * navigation arms. While running, the race offers a `timeout` arm and forks the
- * ambient clip; while paused it offers neither, so the clock and the camera
- * both hold until the next toggle. `togglePause` flips the boolean; only a
+ * ambient clip; while paused it offers neither, so the countdown and the camera
+ * both hold until the next toggle (the sim clock too: see the toggle branch). `togglePause` flips the boolean; only a
  * running→paused flip subtracts the elapsed slice from `remainingMs`, so resume
  * CONTINUES the countdown rather than restarting it.
  *
@@ -51,6 +51,7 @@ import { put, take, race, delay, fork, cancel, getContext } from 'typed-redux-sa
 
 import { advanceTour, prevBeat, togglePause } from './tourActions';
 import { setPaused } from './tourSlice';
+import { pause } from '../time/timeSlice';
 import type { ClipData } from '../../@types/animation/ClipData';
 import type { OrientationFrameId } from '../../@types/camera/orientation/OrientationFrameId';
 import type { SagaContext } from '../../store/types';
@@ -108,5 +109,8 @@ export function* pausableDwellSaga(
     if (!paused) remainingMs -= Date.now() - sliceStartedAt;
     paused = !paused;
     yield* put(setPaused(paused));
+    // The sim clock holds with the camera: pausing drops a running `clockTo` profile at its
+    // current instant, and the clip's replay on resume restarts the move from there.
+    if (paused) yield* put(pause({ nowMs: performance.now() }));
   }
 }

@@ -45,6 +45,7 @@ function meshBodyOf(id: SceneBodyId): MeshBody {
 export const siteCameraArm: ClimbRow<'site'> = {
   kind: 'site',
   parent: 'body',
+  pinsEye: false,
   emptyMemory: null,
 
   channels: {
