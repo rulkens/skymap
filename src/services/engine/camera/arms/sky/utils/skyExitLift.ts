@@ -1,5 +1,5 @@
 /**
- * The sky exit's lift (spec §6.1) as a clip in two framed legs, so neither leg
+ * The sky exit's lift (look-around spec §6.1) as a clip in two framed legs, so neither leg
  * interpolates world angles (which roll at the nadir's gimbal point). The sky
  * leg pitches the standing look to the nadir and holds the azimuth; the body
  * leg holds that orientation and moves only the LookAt's target to the ground

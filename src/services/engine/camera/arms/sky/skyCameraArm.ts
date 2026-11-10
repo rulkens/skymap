@@ -1,5 +1,5 @@
 /**
- * The sky arm's row (spec §4): a person standing SKY_EYE_HEIGHT_M above the
+ * The sky arm's row (look-around spec §4): a person standing SKY_EYE_HEIGHT_M above the
  * live ground at the tag's spot, looking by azimuth and altitude. Only a tag
  * enters it (`engage` is null). Every drag looks and the wheel changes the
  * lens, which the arm hands back as `fovYRad` beside an unmoved pose; a wheel-out at the

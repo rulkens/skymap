@@ -1,5 +1,5 @@
 /**
- * The sky arm's look (spec §4.1): one pixel turns the view by `fovY / heightPx`,
+ * The sky arm's look (look-around spec §4.1): one pixel turns the view by `fovY / heightPx`,
  * so the sky under the pointer follows it at every lens — dragging right turns
  * the eye left, dragging down looks up. The altitude stops at the zenith and
  * nadir; the azimuth stays free there, since the view still rolls about them.
