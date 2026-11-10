@@ -119,6 +119,7 @@ export function createGalaxyFieldHost(
     },
 
     destroy(): void {
+      readbacks.cancel();
       renderer.dispose();
     },
   };
