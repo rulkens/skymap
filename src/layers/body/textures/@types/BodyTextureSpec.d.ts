@@ -1,6 +1,6 @@
-import type { BodyTextureId } from '../data/BodyTextureId';
-import type { Tier } from '../data/Tier';
-import type { TextureKind } from '../data/TextureKind';
+import type { BodyTextureId } from '../../../../@types/data/BodyTextureId';
+import type { Tier } from '../../../../@types/data/Tier';
+import type { TextureKind } from '../../../../@types/data/TextureKind';
 import type { ColourTreatment } from './ColourTreatment';
 
 /**

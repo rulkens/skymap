@@ -28,7 +28,7 @@ import sharp from 'sharp';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { quadrantImagerySource } from '../../../tools/textures/quadrantImagerySource';
-import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
+import type { LonLatBounds } from '../../../src/layers/body/surfaceTiles/format/@types/LonLatBounds';
 import type { ImageryQuadrant } from '../../../tools/textures/@types/ImageryQuadrant';
 
 const QUADRANT_EDGE_PX = 1024;

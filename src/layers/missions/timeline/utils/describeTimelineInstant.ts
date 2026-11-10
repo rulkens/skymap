@@ -1,6 +1,6 @@
 import { missionEventMs } from '../../events/utils/missionEventMs';
 import { DAY_MS } from '../../../../data/time/dayMs';
-import type { MissionEvent } from '../../../../@types/missions/MissionEvent';
+import type { MissionEvent } from '../../events/@types/MissionEvent';
 
 /**
  * Screen-reader text for the thumb: '12 November 1980, 23:46 UTC, Voyager 1 at Saturn'.

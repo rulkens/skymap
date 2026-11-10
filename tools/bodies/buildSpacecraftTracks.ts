@@ -13,7 +13,7 @@ import { join, resolve } from 'node:path';
 
 import { format, resolveConfig } from 'prettier';
 
-import type { MissionEvent } from '../../src/@types/missions/MissionEvent';
+import type { MissionEvent } from '../../src/layers/missions/events/@types/MissionEvent';
 import type { SampledTrack } from '../../src/@types/scene/SampledTrack';
 import { mergeHorizonsChunks } from '../utils/data/mergeHorizonsChunks';
 import { readHorizonsCsv } from '../utils/data/readHorizonsCsv';
@@ -155,7 +155,7 @@ async function main(): Promise<void> {
     '// !!! GENERATED FILE — DO NOT EDIT BY HAND !!!\n' +
     '// Regenerate with:  npm run fetch-horizons -- voyager1 voyager2 && npm run fetch-voyager-windows && npm run build-spacecraft-tracks\n' +
     '// Source of truth:  data/raw/horizons/{500@10,500@5..500@8,500@599,500@699,500@606,500@799,500@899}/ (JPL Horizons); launch, boundary and milestone instants are cited literals\n' +
-    "import type { MissionEvent } from '../../../../@types/missions/MissionEvent';\n\n" +
+    "import type { MissionEvent } from '../@types/MissionEvent';\n\n" +
     `export const MISSION_EVENTS: readonly MissionEvent[] = ${JSON.stringify(events)};\n`;
   const outPath = resolve(EVENTS_PATH);
   writeFileSync(

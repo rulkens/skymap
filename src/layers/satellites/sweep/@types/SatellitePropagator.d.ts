@@ -1,4 +1,4 @@
-import type { SatelliteCatalog } from '../../../../@types/satellites/SatelliteCatalog';
+import type { SatelliteCatalog } from '../../catalog/@types/SatelliteCatalog';
 import type { SatelliteSweep } from './SatelliteSweep';
 
 /**

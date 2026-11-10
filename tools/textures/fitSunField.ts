@@ -6,7 +6,7 @@
  * a larger region's fit over the same area would also see.
  */
 import type { HeightSource } from './@types/HeightSource';
-import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
+import type { LonLatBounds } from '../../src/layers/body/surfaceTiles/format/@types/LonLatBounds';
 import type { AlbedoRecipe } from './@types/AlbedoRecipe';
 import { SURFACE_EQUIRECT_BASE_WIDTH_PX } from '../../src/layers/body/surfaceTiles/format/data/surfaceTileParams';
 import { srgbToLinear } from '../../src/utils/color/srgbToLinear';

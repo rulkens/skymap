@@ -7,7 +7,7 @@
 import { sgp4 } from './satelliteJsCore';
 import { satrecOf } from './satrecOf';
 import { HUBBLE_NORAD_ID } from '../data/hubbleNoradId';
-import type { SatelliteCatalog } from '../../../../@types/satellites/SatelliteCatalog';
+import type { SatelliteCatalog } from '../../catalog/@types/SatelliteCatalog';
 
 const MS_PER_MINUTE = 60_000;
 

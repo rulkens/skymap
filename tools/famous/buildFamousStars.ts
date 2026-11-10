@@ -20,7 +20,7 @@ import {
   type FamousStarEntry,
 } from '../parsers/famousStarsSeed';
 import type { FamousStarRow } from '../../src/@types/data/FamousStarRow';
-import type { FamousStarMetaEntry } from '../../src/@types/loading/FamousStarMetaEntry';
+import type { FamousStarMetaEntry } from '../../src/layers/starCatalog/card/@types/FamousStarMetaEntry';
 import { RAW_DATA, rawDataPath } from '../utils/io/rawDataRegistry';
 import { writeMetaSidecar } from '../curation/writeMetaSidecar';
 import type { StarSeedArtefact } from './@types/StarSeedArtefact';

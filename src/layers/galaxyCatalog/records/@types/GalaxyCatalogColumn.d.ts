@@ -1,4 +1,4 @@
-import type { GalaxyCatalog } from './GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../@types/data/galaxyCatalog/GalaxyCatalog';
 
 /**
  * Every typed-array column of `GalaxyCatalog` — the on-disk field set.

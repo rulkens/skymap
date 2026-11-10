@@ -8,8 +8,8 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
-import type { ShellMesh } from '../../src/@types/data/shellMesh/ShellMesh';
-import type { ShellMeshDtype } from '../../src/@types/data/shellMesh/ShellMeshDtype';
+import type { ShellMesh } from '../../src/layers/localBubble/@types/ShellMesh';
+import type { ShellMeshDtype } from '../../src/layers/localBubble/@types/ShellMeshDtype';
 import type { Vec3 } from '../../src/@types/math/Vec3';
 import { encodeShellMesh } from '../../src/layers/localBubble/shell/data/shellMeshFormat';
 import { f32ToF16Bits } from '../../src/utils/math/f32ToF16Bits';

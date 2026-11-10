@@ -1,6 +1,6 @@
-import type { BodyTextureId } from './BodyTextureId';
-import type { RingTextureId } from './RingTextureId';
-import type { TextureKind } from './TextureKind';
+import type { BodyTextureId } from '../../../../@types/data/BodyTextureId';
+import type { RingTextureId } from '../../../../@types/data/RingTextureId';
+import type { TextureKind } from '../../../../@types/data/TextureKind';
 
 /**
  * BodyTextureKey — the structured identity of one entry in the body-texture

@@ -1,4 +1,4 @@
-import type { Vec3 } from '../math/Vec3';
+import type { Vec3 } from '../../../../@types/math/Vec3';
 
 /** ColourGrade — a `writeBodyTier` treatment step and `delightedImagerySource`'s
  *  post-delight pass, applied to sRGB 0..1 in this order: exposure, then

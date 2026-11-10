@@ -3,7 +3,7 @@
  * the orbit rings. Hover gets no ring: it only needs its card, and hovering sweeps across many dots.
  */
 import { catalogIndexOf } from '../../catalog/subsystems/catalogIndexOf';
-import type { SatelliteCatalog } from '../../../../@types/satellites/SatelliteCatalog';
+import type { SatelliteCatalog } from '../../catalog/@types/SatelliteCatalog';
 import type { SelectionState } from '../../../../@types/store/SelectionState';
 import { isKind } from '../../../../utils/selection/isKind';
 import type { SatelliteRef } from '../../selection/@types/SatelliteRef';

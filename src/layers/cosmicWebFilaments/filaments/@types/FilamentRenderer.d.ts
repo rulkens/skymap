@@ -8,7 +8,7 @@
  */
 
 import type { Mat4 } from 'wgpu-matrix';
-import type { FilamentCloud } from '../../../../@types/data/filament/FilamentCloud';
+import type { FilamentCloud } from '../../@types/FilamentCloud';
 import type { Vec2 } from '../../../../@types/math/Vec2';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 

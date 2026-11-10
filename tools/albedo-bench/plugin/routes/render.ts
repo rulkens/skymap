@@ -7,7 +7,7 @@
  * Wide boxes fit at `previewSunFit`'s coarser stride (see `field.ts`), so
  * the two routes' calls land on the same cached fit.
  */
-import type { LonLatBounds } from '../../../../src/@types/scene/LonLatBounds.ts';
+import type { LonLatBounds } from '../../../../src/layers/body/surfaceTiles/format/@types/LonLatBounds.ts';
 import type { SlopeLattice } from '../../../textures/@types/SlopeLattice.ts';
 import { albedoRecipeImagerySource } from '../../../textures/albedoRecipeImagerySource.ts';
 import { readSlopeLattice } from '../../../textures/readSlopeLattice.ts';

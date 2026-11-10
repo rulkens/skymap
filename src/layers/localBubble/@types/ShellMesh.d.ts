@@ -1,5 +1,5 @@
-import type { ScalarFieldFrameKind } from '../volume/ScalarFieldFrameKind';
-import type { Vec3 } from '../../math/Vec3';
+import type { ScalarFieldFrameKind } from '../../../@types/data/volume/ScalarFieldFrameKind';
+import type { Vec3 } from '../../../@types/math/Vec3';
 import type { ShellMeshDtype } from './ShellMeshDtype';
 
 /** ShellMesh — decoded `.shell` runtime mesh: the Local Bubble cavity-wall shell, positions and normals in `frame`, centre-relative parsecs. */

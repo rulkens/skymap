@@ -1,6 +1,6 @@
 import { missionEventStepMs } from './missionEventStepMs';
 import { SAME_INSTANT_MS } from '../data/sameInstantMs';
-import type { MissionEvent } from '../../../../@types/missions/MissionEvent';
+import type { MissionEvent } from '../@types/MissionEvent';
 
 /**
  * The id of the nearest event whose step instant lies strictly before (-1) or after (+1)

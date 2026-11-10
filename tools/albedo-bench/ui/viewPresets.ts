@@ -4,7 +4,7 @@
  * directly: it is what the inputs (and the wheel/drag gesture) edit, and
  * `boxFromView` is the one place that turns it into a box.
  */
-import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
+import type { LonLatBounds } from '../../../src/layers/body/surfaceTiles/format/@types/LonLatBounds';
 import type { ViewState } from '../@types/ViewState';
 import type { ViewPreset } from '../@types/ViewPreset';
 

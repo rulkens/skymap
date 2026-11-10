@@ -1,4 +1,4 @@
-import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
+import type { LonLatBounds } from '../../../src/layers/body/surfaceTiles/format/@types/LonLatBounds';
 import { surfaceTileColumns } from '../../../src/layers/body/surfaceTiles/format/utils/surfaceTileColumns';
 import type { TileIndexRect } from '../../@types/scene/TileIndexRect';
 

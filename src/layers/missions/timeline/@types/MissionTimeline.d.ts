@@ -6,7 +6,7 @@
  * planets.
  */
 
-import type { MissionEvent } from '../../../../@types/missions/MissionEvent';
+import type { MissionEvent } from '../../events/@types/MissionEvent';
 
 export type MissionTimeline = {
   readonly heading: string;
