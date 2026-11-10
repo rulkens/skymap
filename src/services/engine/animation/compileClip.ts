@@ -62,6 +62,8 @@
 import type { ClipData } from '../../../@types/animation/ClipData';
 import type { CompiledClip } from '../../../@types/animation/compiledClip/CompiledClip';
 import type { Effect } from '../../../@types/animation/Effect';
+import type { EffectPath } from '../../../@types/animation/EffectPath';
+import type { EffectSpan } from '../../../@types/animation/EffectSpan';
 import type { CameraPose } from '../../../@types/camera/pose/CameraPose';
 import type { Mat3 } from '../../../@types/math/Mat3';
 import { CHANNEL_SPACE } from './channelSpace';
@@ -103,6 +105,7 @@ type Accum = {
   readonly cues: SceneCue[];
   readonly compositeTracks: CompositeTrack[];
   readonly seqs: SeqSteps[];
+  readonly spans: EffectSpan[];
   // The resolved clip start pose — the seed of every channel's running value, so
   // a composite leaf can start from where the camera is (`startPoseAt`).
   readonly start: CameraPose;
@@ -151,6 +154,7 @@ function continuedFromComposite(seg: BaseSegment, acc: Accum): BaseSegment {
 function walkOverlappedSeq(
   children: readonly Effect[],
   overlap: SeqOverlap,
+  path: EffectPath,
   atSec: number,
   acc: Accum,
 ): number {
@@ -167,20 +171,20 @@ function walkOverlappedSeq(
   const steps: StepSpan[] = [];
   const durs: number[] = [];
   let pendingFrom = lens();
-  let pending: Effect[] = [];
+  let pending: number[] = [];
   let endSec = atSec;
   const flush = (startSec: number) => {
-    for (const child of pending) walk(child, startSec, acc);
+    for (const i of pending) walk(children[i]!, [...path, i], startSec, acc);
     pending = [];
   };
-  for (const child of children) {
+  for (const [i, child] of children.entries()) {
     if (!hasDuration(child)) {
-      pending.push(child);
+      pending.push(i);
       continue;
     }
     const startSec = durs.length === 0 ? atSec : endSec - per[durs.length - 1]!;
     flush(startSec);
-    const dur = walk(child, startSec, acc);
+    const dur = walk(child, [...path, i], startSec, acc);
     if (dur <= 0) throw new Error(`seq at ${atSec}s: a step with a duration compiled to ${dur}s`);
     durs.push(dur);
     endSec = startSec + dur;
@@ -195,6 +199,16 @@ function walkOverlappedSeq(
   return endSec - atSec;
 }
 
+// Records the node's span once its children are walked, spliced in front of
+// theirs so `spans` is pre-order. Walk order is tree order (an overlapped seq
+// flushes its zero-length children before the step they precede).
+function walk(effect: Effect, path: EffectPath, atSec: number, acc: Accum): number {
+  const slot = acc.spans.length;
+  const dur = walkNode(effect, path, atSec, acc);
+  acc.spans.splice(slot, 0, { path, startSec: atSec, endSec: atSec + dur });
+  return dur;
+}
+
 // ---------------------------------------------------------------------------
 // Core recursive walk.
 //
@@ -203,16 +217,16 @@ function walkOverlappedSeq(
 // keeps the enclosing scope alive.
 // ---------------------------------------------------------------------------
 
-function walk(effect: Effect, atSec: number, acc: Accum): number {
+function walkNode(effect: Effect, path: EffectPath, atSec: number, acc: Accum): number {
   switch (effect.kind) {
     // --- Structural: sequential composition ---
     case 'seq': {
       if (effect.overlap !== undefined) {
-        return walkOverlappedSeq(effect.children, effect.overlap, atSec, acc);
+        return walkOverlappedSeq(effect.children, effect.overlap, path, atSec, acc);
       }
       let cursor = atSec;
-      for (const child of effect.children) {
-        cursor += walk(child, cursor, acc);
+      for (const [i, child] of effect.children.entries()) {
+        cursor += walk(child, [...path, i], cursor, acc);
       }
       return cursor - atSec;
     }
@@ -220,8 +234,8 @@ function walk(effect: Effect, atSec: number, acc: Accum): number {
     // --- Structural: concurrent composition; awaited on the LONGEST child ---
     case 'all': {
       let maxDur = 0;
-      for (const child of effect.children) {
-        const dur = walk(child, atSec, acc);
+      for (const [i, child] of effect.children.entries()) {
+        const dur = walk(child, [...path, i], atSec, acc);
         if (dur > maxDur) maxDur = dur;
       }
       return maxDur;
@@ -229,7 +243,7 @@ function walk(effect: Effect, atSec: number, acc: Accum): number {
 
     // --- Structural: forked (fire and forget) — duration is 0 ---
     case 'fork': {
-      walk(effect.child, atSec, acc);
+      walk(effect.child, [...path, 0], atSec, acc);
       return 0;
     }
 
@@ -442,6 +456,7 @@ export function compileClip(data: ClipData, frameBasis?: Mat3): CompiledClip {
     cues: [],
     compositeTracks: [],
     seqs: [],
+    spans: [],
     start,
     frameBasis,
   };
@@ -450,8 +465,8 @@ export function compileClip(data: ClipData, frameBasis?: Mat3): CompiledClip {
   // leading `wait` simply advances the cursor before the rest, which is the
   // whole of the lead-in mechanism.
   let awaitedDur = 0;
-  for (const effect of data.timeline) {
-    awaitedDur += walk(effect, awaitedDur, acc);
+  for (const [i, effect] of data.timeline.entries()) {
+    awaitedDur += walk(effect, [i], awaitedDur, acc);
   }
 
   validateSeqCueOrder(acc.seqs, acc.cues);
@@ -479,5 +494,6 @@ export function compileClip(data: ClipData, frameBasis?: Mat3): CompiledClip {
     oscTracks: acc.oscTracks,
     cues: sortedCues,
     compositeTracks: acc.compositeTracks,
+    spans: acc.spans,
   };
 }
