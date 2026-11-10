@@ -15,7 +15,7 @@ evidence.
 
 **Tech Stack:** TypeScript, Vitest, the tools catalog pipeline (`npm run build-all`).
 
-**Spec:** `docs/superpowers/specs/2026-11-10-source-table-deletion-design.md`.
+**Spec:** `docs/superpowers/specs/completed/2026-11-10-source-table-deletion-design.md`.
 
 **Precondition:** the prep PR (`completed/2026-11-10-source-table-deletion-prep.md`) is merged; this branch starts from
 main after it.
@@ -71,35 +71,37 @@ main after it.
   `Source.GaiaStars === 'gaiaStars'`). So `SourceType` is the id union, `APP_SOURCE_REGISTRY` is keyed by id,
   and so is every asset key, ref and count built from a `Source` value. Later tasks rely on this.
 
-- [ ] **Step 1: Take the baselines, before any edit.**
+- [x] **Step 1: Take the baselines, before any edit.**
   - Shots: `npm run shot -- '<link>' --url <your server>` for M31 (`#focus=m31`), Sirius, Mars, an SDSS galaxy
     `#focus=sdss-…` link, and the Labels panel open. Save them to the SDD workspace as `before-*.png`.
-  - Bins: point this worktree's `public/data` at a directory of its own (unlink the symlink, `mkdir
-    public/data`), run `npm run build-all` per `docs/DATA.md`, and save
-    `shasum public/data/*.bin | sort` to the SDD workspace as `bins-before.txt`. Never run `build-all`
-    through the symlink: it would write into the main checkout's data.
-- [ ] **Step 2: Generate the member→id map** from the entries (each entry has `code: Source.<Member>` and its
+  - Bins: the worktree's `data/raw/` holds only the tracked folders, so first symlink each raw folder it
+    lacks from the main checkout (`ln -s /Users/rulkens/Development/js/skymap/data/raw/<dir> data/raw/<dir>`).
+    Then run `npx tsx tools/catalog/buildAllBins.ts --out-dir <SDD workspace>/bins-before` (not
+    `npm run build-all`, which also rewrites `public/data`'s manifest, and `public/data` is a symlink into
+    the main checkout). Save `find <dir> -name '*.bin' -exec shasum {} + | sed 's#<dir>/##' | sort` as
+    `bins-before.txt`. Later parity runs build into `bins-after` the same way and diff the two lists.
+- [x] **Step 2: Generate the member→id map** from the entries (each entry has `code: Source.<Member>` and its
       `id`) with a throwaway script, and rewrite `src/data/source.ts` so each member's value is its id string.
       Fix its header (it falsely says the codes are baked into every `.bin`): it is now a transitional alias
       table, deleted in Task 4.
-- [ ] **Step 3: Write the failing tests** in `importParams.test.ts`:
+- [x] **Step 3: Write the failing tests** in `importParams.test.ts`:
   - `it('rejects a preset whose sources are numbers, asking for a re-export')` — `sources: [1, 3]` throws an
     error whose message equals the Global Constraints text for that field.
   - `it('rejects a mixed sources array on its number')` — `sources: ['sdss', 3]` throws.
   - Change the existing fixtures from numbers to ids.
-- [ ] **Step 4: Run them** — `npx vitest run tests/tools/mcpm-workbench/state/importParams.test.ts` → the two
+- [x] **Step 4: Run them** — `npx vitest run tests/tools/mcpm-workbench/state/importParams.test.ts` → the two
       new tests FAIL.
-- [ ] **Step 5: Make `optionalSourceList` accept ids only**: an all-number array fails with the re-export
+- [x] **Step 5: Make `optionalSourceList` accept ids only**: an all-number array fails with the re-export
       message, any other non-member fails with the existing unknown-id message.
-- [ ] **Step 6: `npm run typecheck` and fix each place that used a code as a number** (arithmetic, a typed
+- [x] **Step 6: `npm run typecheck` and fix each place that used a code as a number** (arithmetic, a typed
       array slot, a `typeof … === 'number'` test on a source). Report each one in the commit body: none was
       found by grep, so each is news.
-- [ ] **Step 7: Full suite.** `npm test`; fix the tests that pinned numeric codes or code-sorted order, by
+- [x] **Step 7: Full suite.** `npm test`; fix the tests that pinned numeric codes or code-sorted order, by
       asserting the id (never by re-pinning a number).
-- [ ] **Step 8: Boot check.** Start the dev server; the app boots with no `createLayers: asset keys` error, and
+- [x] **Step 8: Boot check.** Start the dev server; the app boots with no `createLayers: asset keys` error, and
       M31, Sirius and Mars focus.
-- [ ] **Step 9: Bin parity.** Rebuild as in Step 1; `shasum public/data/*.bin | sort` equals `bins-before.txt`.
-- [ ] **Step 10: Commit** — "Source's values become the entries' ids".
+- [x] **Step 9: Bin parity.** Rebuild into `bins-after` as in Step 1; its checksum list equals `bins-before.txt`.
+- [x] **Step 10: Commit** — "Source's values become the entries' ids".
 
 ### Task 2: A Layer's `sources` is an array of entries; `code` goes
 
@@ -148,16 +150,16 @@ export function catalogPickCodes<K extends string>(
 - `appSources.ts` keeps its spreads; `satisfies Readonly<Record<SourceType, SourceEntry>>` still holds (Task 3
   swaps it to `SourceId`).
 
-- [ ] **Step 1: Change the contract types and `sourceRecordOf`** per the Interfaces block.
-- [ ] **Step 2: Rewrite the 14 rows files and two records** to entry arrays; drop `code` from the type and
+- [x] **Step 1: Change the contract types and `sourceRecordOf`** per the Interfaces block.
+- [x] **Step 2: Rewrite the 14 rows files and two records** to entry arrays; drop `code` from the type and
       the 34 entries; point the `.code` readers at `.id`.
-- [ ] **Step 3: Switch `catalogPickCodes`** and its four callers; update its header and `CatalogPickCodes`'s
+- [x] **Step 3: Switch `catalogPickCodes`** and its four callers; update its header and `CatalogPickCodes`'s
       (no more "`Source` value").
-- [ ] **Step 4: Adapt `sourceRegistryCoverage.test.ts`** so it still asserts "every Layer row is the
+- [x] **Step 4: Adapt `sourceRegistryCoverage.test.ts`** so it still asserts "every Layer row is the
       registry's entry at its id". Check it can fail: temporarily give two entries the same id, see it go red,
       revert. No new test: the compiler checks the rest.
-- [ ] **Step 5: Verify.** `npm run typecheck`, `npm test` → green.
-- [ ] **Step 6: Commit** — "A Layer's sources are its entries, keyed by id; the code field goes".
+- [x] **Step 5: Verify.** `npm run typecheck`, `npm test` → green.
+- [x] **Step 6: Commit** — "A Layer's sources are its entries, keyed by id; the code field goes".
 
 ### Task 3: The `SourceType` family and the id↔code translators go
 
@@ -194,15 +196,15 @@ export function catalogPickCodes<K extends string>(
 - Produces: no `SourceType`, `GalaxyCatalogSourceType` or `StarCatalogSourceType` anywhere. `Source` itself still
   exists (Task 4 deletes it); its values now type as the Layer id literals.
 
-- [ ] **Step 1: Swap the types**, Layer by Layer, then core, then tools; `npm run typecheck` after each Layer
+- [x] **Step 1: Swap the types**, Layer by Layer, then core, then tools; `npm run typecheck` after each Layer
       keeps the fallout local.
-- [ ] **Step 2: Delete each translator** listed above. Where the code mapped a ref's source to an id to test
+- [x] **Step 2: Delete each translator** listed above. Where the code mapped a ref's source to an id to test
       visibility, the ref's `source` is the id: test it directly.
-- [ ] **Step 3: `AssetKey = string`** and drop the `String()` in `createLayers`.
-- [ ] **Step 4: Delete the four files**, the `CORE_ALLOWED` row and the ledger mention.
-- [ ] **Step 5: Verify.** `npm run typecheck`, `npm test` → green. `grep -rn "SourceType\|galaxyCatalogIdOf" src
+- [x] **Step 3: `AssetKey = string`** and drop the `String()` in `createLayers`.
+- [x] **Step 4: Delete the four files**, the `CORE_ALLOWED` row and the ledger mention.
+- [x] **Step 5: Verify.** `npm run typecheck`, `npm test` → green. `grep -rn "SourceType\|galaxyCatalogIdOf" src
       tools tests packages` → only `docs/` history. No new test: a type swap and identity deletions.
-- [ ] **Step 6: Commit** — "Sources are typed by their ids; the SourceType family and its translators go".
+- [x] **Step 6: Commit** — "Sources are typed by their ids; the SourceType family and its translators go".
 
 ### Task 4: `Source.X` becomes the id literal; `src/data/source.ts` is deleted
 
@@ -221,25 +223,25 @@ export function catalogPickCodes<K extends string>(
 
 - Consumes: Task 1's member→id values (the table itself is the map).
 
-- [ ] **Step 1: Substitute.** A throwaway script outside the repo reads the member→id map from
+- [x] **Step 1: Substitute.** A throwaway script outside the repo reads the member→id map from
       `src/data/source.ts` and, **only in files that import from `data/source`**, replaces `Source.<Member>`
       with `'<id>'` and removes the emptied import. Run `npm run format`.
-- [ ] **Step 2: Delete `src/data/source.ts`.** `grep -rn "data/source'" src tools tests packages` → nothing.
-- [ ] **Step 3: Fix the stale comments and add the ADR 0013 note.**
+- [x] **Step 2: Delete `src/data/source.ts`.** `grep -rn "data/source'" src tools tests packages` → nothing.
+- [x] **Step 3: Fix the stale comments and add the ADR 0013 note.**
       `grep -rniE "Source (code|enum)|numeric Source|Source\.[A-Z]" src tools tests packages` → nothing left that
       describes the deleted table.
-- [ ] **Step 4: Verify.** `npm run typecheck`, `npm test` → green; bin parity as in Task 1 Step 9 → equal to
+- [x] **Step 4: Verify.** `npm run typecheck`, `npm test` → green; bin parity as in Task 1 Step 9 → equal to
       `bins-before.txt`.
-- [ ] **Step 5: Commit** — "The Source table is deleted; sources are named by their ids".
+- [x] **Step 5: Commit** — "The Source table is deleted; sources are named by their ids".
 
 ### Task 5: Before/after evidence
 
-**Files:** none (SDD workspace only); restore `public/data` with `/link-data` once the last `build-all` is done.
+**Files:** none (SDD workspace only); remove the `data/raw/` symlinks Task 1 added.
 
-- [ ] **Step 1: Shoot the five Task 1 links again** as `after-*.png`.
-- [ ] **Step 2: Compare** each pair. The galaxy, star and body shots match. The Labels panel may reorder (spec
+- [x] **Step 1: Shoot the five Task 1 links again** as `after-*.png`.
+- [x] **Step 2: Compare** each pair. The galaxy, star and body shots match. The Labels panel may reorder (spec
       §9.1); note the old and new order.
-- [ ] **Step 3: Hand the pairs to the user** as one dash `check` question per pair (the Labels panel one says
+- [x] **Step 3: Hand the pairs to the user** as one dash `check` question per pair (the Labels panel one says
       whether the order changed), with the deep link. The user keeps the verdict.
 
 ---

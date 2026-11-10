@@ -20,7 +20,6 @@
 import type { GalaxyCatalogId } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import { GALAXY_CATALOG_IDS } from '../../../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { describe, it, expect, vi } from 'vitest';
-import { Source } from '../../../../../src/data/source';
 import { createProceduralDiskSubsystem } from '../../../../../src/layers/galaxyCatalog/disks/procedural/subsystems/proceduralDiskSubsystem';
 import { createTexturedDiskSubsystem } from '../../../../../src/layers/galaxyCatalog/disks/textured/subsystems/texturedDiskSubsystem';
 import { createGalaxyAtlasSubsystem } from '../../../../../src/layers/galaxyCatalog/thumbnailAtlas/subsystems/galaxyAtlasSubsystem';
@@ -37,7 +36,6 @@ import {
 } from '../../../../../src/layers/galaxyCatalog/lod/data/galaxyLodBands';
 import type { GalaxyCatalog } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { OrbitCamera } from '../../../../../src/@types/camera/orbitCamera/OrbitCamera';
-import type { SourceType } from '../../../../../src/@types/data/SourceType';
 import { makeGalaxyCatalog } from '../../../../fixtures/makeGalaxyCatalog';
 import { galaxyRecordsOver } from '../../../../support/galaxyRecordsOver';
 
@@ -125,7 +123,7 @@ function pxPerRadFor(cam: OrbitCamera): number {
 }
 
 function makeInput(
-  catalogs: Map<SourceType, GalaxyCatalog>,
+  catalogs: Map<GalaxyCatalogId, GalaxyCatalog>,
   visibleCatalogs: ReadonlySet<GalaxyCatalogId> = ALL_CATALOGS,
 ) {
   const cam = makeCam();
@@ -172,9 +170,9 @@ describe('diskPlannerWalk drives both bodies', () => {
   it('one walk drives both bodies with output identical to running each solo', async () => {
     // A famous cloud and a non-famous cloud — both near the camera, so every
     // row clears both bodies' px gates and emits.
-    const catalogs = new Map<SourceType, GalaxyCatalog>([
-      [Source.FamousGalaxy, makeDenseCloud(2)],
-      [Source.SDSS, makeDenseCloud(2)],
+    const catalogs = new Map<GalaxyCatalogId, GalaxyCatalog>([
+      ['famousGalaxy', makeDenseCloud(2)],
+      ['sdss', makeDenseCloud(2)],
     ]);
     const input = makeInput(catalogs); // read-only; reused across all three runs
 
@@ -218,7 +216,7 @@ describe('diskPlannerWalk drives both bodies', () => {
 
   it('one walk.runFrame call populates BOTH lastOutputs in a single frame', async () => {
     // Warm the atlas so the textured body has a bitmap to emit on the observed frame.
-    const catalogs = new Map<SourceType, GalaxyCatalog>([[Source.SDSS, makeDenseCloud(2)]]);
+    const catalogs = new Map<GalaxyCatalogId, GalaxyCatalog>([['sdss', makeDenseCloud(2)]]);
     const input = makeInput(catalogs);
 
     const rig = makeMergedRig();
@@ -242,7 +240,7 @@ describe('diskPlannerWalk drives both bodies', () => {
     // shared cursor yields window {0,1,2} on frame 1, {3,4,5} on frame 2. Both
     // bodies must advance through the SAME window (one cursor), not independently.
     const count = 6;
-    const catalogs = new Map<SourceType, GalaxyCatalog>([[Source.SDSS, makeDenseCloud(count)]]);
+    const catalogs = new Map<GalaxyCatalogId, GalaxyCatalog>([['sdss', makeDenseCloud(count)]]);
     const input = makeInput(catalogs);
 
     // Key → local-index map: the textured body enqueues by RA/Dec-derived key;
@@ -325,7 +323,7 @@ describe('diskPlannerWalk drives both bodies', () => {
 
     // Run the textured body solo for a source, capturing atlas.enqueueFetch.
     // Returns the spy (its inferred MockInstance type carries `.mock`).
-    async function texEnqueueFetchFor(source: SourceType) {
+    async function texEnqueueFetchFor(source: GalaxyCatalogId) {
       const device = makeFakeDevice();
       const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
       const spy = vi.spyOn(atlas, 'enqueueFetch');
@@ -335,7 +333,7 @@ describe('diskPlannerWalk drives both bodies', () => {
         fetcher: async () => makeFakeBitmap(),
       });
       const walk = createDiskPlannerWalk({ decimationFactor: 1 });
-      const catalogs = new Map<SourceType, GalaxyCatalog>([
+      const catalogs = new Map<GalaxyCatalogId, GalaxyCatalog>([
         [source, makeSingletonCloud(rowX, diameterKpc)],
       ]);
       runTexturedSolo(walk, tex, {
@@ -352,14 +350,14 @@ describe('diskPlannerWalk drives both bodies', () => {
 
     // Famous: exempt from the 24-px gate, so the shared 8-px bound lets it reach
     // the textured body and prefetch — the documented behaviour change.
-    const famousSpy = await texEnqueueFetchFor(Source.FamousGalaxy);
+    const famousSpy = await texEnqueueFetchFor('famousGalaxy');
     expect(famousSpy).toHaveBeenCalledTimes(1);
     expect(famousSpy.mock.calls[0]![0].key).toBe(expectedKey);
 
     // Non-famous: identical geometry, but px < 24 → the textured gate skips it
     // before any allocate/fetch. This proves the famous exemption is what
     // changed, not the gate itself.
-    const sdssSpy = await texEnqueueFetchFor(Source.SDSS);
+    const sdssSpy = await texEnqueueFetchFor('sdss');
     expect(sdssSpy).not.toHaveBeenCalled();
   });
 });

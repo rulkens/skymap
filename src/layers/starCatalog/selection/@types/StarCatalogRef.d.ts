@@ -1,4 +1,4 @@
-import type { StarCatalogSourceType } from '../../@types/StarCatalogSourceType';
+import type { StarCatalogId } from '../../@types/StarCatalogId';
 
 /**
  * A star's ref, one kind for all four catalogs. `index` is the tier-scoped record index for
@@ -7,6 +7,6 @@ import type { StarCatalogSourceType } from '../../@types/StarCatalogSourceType';
  */
 export type StarCatalogRef = {
   readonly type: 'starCatalog';
-  readonly source: StarCatalogSourceType;
+  readonly source: StarCatalogId;
   readonly index: number;
 };

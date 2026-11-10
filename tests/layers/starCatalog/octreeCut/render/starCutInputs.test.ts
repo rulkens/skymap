@@ -10,7 +10,6 @@ import { starCutInputs } from '../../../../../src/layers/starCatalog/octreeCut/r
 import { FLOATS_PER_VIEW } from '../../../../../src/services/gpu/octree/octreeCutLayout';
 import { STAR_PICK_MIN_RADIUS_PX } from '../../../../../src/layers/starCatalog/photometry/data/starCullSlack';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
-import { Source } from '../../../../../src/data/source';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { StarCatalogRuntime } from '../../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
@@ -39,16 +38,16 @@ vi.mock('../../../../../src/layers/starCatalog/sources/gaia-stars', async (impor
 
 function runtime(committedTier: Tier, requestedTier: Tier = committedTier): StarCatalogRuntime {
   const slot = {
-    committed: () => ({ kind: 'ready', req: { source: Source.GaiaStars, tier: committedTier } }),
-    lastRequest: () => ({ source: Source.GaiaStars, tier: requestedTier }),
+    committed: () => ({ kind: 'ready', req: { source: 'gaiaStars', tier: committedTier } }),
+    lastRequest: () => ({ source: 'gaiaStars', tier: requestedTier }),
   };
   return {
     renderer: {
       loadedCatalogs: vi.fn(() =>
-        [{ source: Source.GaiaStars, octree: {} as Octree<StarColumns> }][Symbol.iterator](),
+        [{ source: 'gaiaStars', octree: {} as Octree<StarColumns> }][Symbol.iterator](),
       ),
     },
-    catalogs: new Map([[Source.GaiaStars, slot]]),
+    catalogs: new Map([['gaiaStars', slot]]),
   } as unknown as StarCatalogRuntime;
 }
 
@@ -94,7 +93,7 @@ describe('starCutInputs', () => {
     // Mid-reload: the slot still holds the small catalog while large is in flight.
     const inputs = starCutInputs(runtime('small', 'large'), SETTINGS, ALL_ON, [view(600)]);
     expect(inputs!.cut.sources).toEqual([
-      expect.objectContaining({ source: Source.GaiaStars, drawBudget: 100 }),
+      expect.objectContaining({ source: 'gaiaStars', drawBudget: 100 }),
     ]);
   });
 

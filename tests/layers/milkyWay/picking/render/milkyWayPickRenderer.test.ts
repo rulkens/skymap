@@ -3,7 +3,6 @@ import { createMilkyWayPickRenderer } from '../../../../../src/layers/milkyWay/p
 import { MILKY_WAY_CENTER_WORLD } from '../../../../../src/data/milkyWay/galacticCenter';
 import { MILKY_WAY_RADIUS_MPC } from '../../../../../src/data/milkyWay/milkyWayRadiusMpc';
 import { MILKY_WAY_PICK_MIN_SIZE_PX } from '../../../../../src/layers/milkyWay/picking/data/milkyWayPickMinSizePx';
-import { Source } from '../../../../../src/data/source';
 import type { FadeUniformsBgl } from '../../../../../src/@types/rendering/FadeUniformsBgl';
 
 // Not a catalog value: the uniform must carry what the caller passes.
@@ -11,7 +10,7 @@ const PICK_CODE = 37;
 
 // Null-device pattern, mirrors structureMarkerRenderer.test.ts.  The GPU-
 // backed pick round-trip (a click at the galactic centre decodes to
-// Source.MilkyWay) is covered by the DoD manual smoke test — the existing
+// 'milkyWay') is covered by the DoD manual smoke test — the existing
 // pick-renderer harness exercises only the null/stub device, so a
 // decode-from-texture unit test is not feasible here.
 const newRenderer = () => {

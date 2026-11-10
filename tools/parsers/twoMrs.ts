@@ -70,7 +70,6 @@
  * definition; the merger uses 0n as the dedup-skip sentinel.
  */
 
-import { Source } from '../../src/data/source';
 import { nonCommentLines, type ParsedRecord } from './common';
 import { arcsecToKpc } from '../../src/utils/math/arcsecToKpc';
 import { isPlausibleMagnitude } from '../utils/math/isPlausibleMagnitude';
@@ -317,7 +316,7 @@ export function parseTwoMrs(rawText: string, xsc: XscShapeMap = new Map()): TwoM
     }
 
     records.push({
-      source: Source.TwoMRS,
+      source: '2mrs',
       objID: 0n,
       // Retain the 2MASS XSC designation transiently so the build
       // pipeline's PGC cross-match can patch a HyperLEDA PGC into the

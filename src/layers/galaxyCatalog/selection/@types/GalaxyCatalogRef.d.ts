@@ -1,4 +1,4 @@
-import type { GalaxyCatalogSourceType } from '../../@types/GalaxyCatalogSourceType';
+import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
 
 /**
  * A galaxy's ref. POSITIONAL: `index` drifts on a tier swap, and the tier saga re-anchors by
@@ -6,6 +6,6 @@ import type { GalaxyCatalogSourceType } from '../../@types/GalaxyCatalogSourceTy
  */
 export type GalaxyCatalogRef = {
   readonly type: 'galaxyCatalog';
-  readonly source: GalaxyCatalogSourceType;
+  readonly source: GalaxyCatalogId;
   readonly index: number;
 };

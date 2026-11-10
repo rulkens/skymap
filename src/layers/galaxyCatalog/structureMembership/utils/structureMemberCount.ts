@@ -13,22 +13,20 @@
 
 import { structureMembership } from './structureMembership';
 import { GALAXY_CATALOG_SOURCES } from '../../sources/galaxyCatalogSources';
-import { galaxyCatalogIdOf } from '../../../../utils/galaxyCatalogIdOf';
 import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
-import type { GalaxyCatalogSourceType } from '../../@types/GalaxyCatalogSourceType';
 import type { GalaxyRecordSource } from '../../records/@types/GalaxyRecordSource';
 import type { StructureInfo } from '../../../../@types/data/structure/StructureInfo';
 
 export function structureMemberCount(
   structure: StructureInfo,
-  records: ReadonlyMap<GalaxyCatalogSourceType, GalaxyRecordSource>,
+  records: ReadonlyMap<GalaxyCatalogId, GalaxyRecordSource>,
   visibleCatalogs: ReadonlySet<GalaxyCatalogId>,
 ): number | null {
   const radiusMpc = structure.apparentRadiusMpc ?? structure.physicalRadiusMpc;
 
   const visible: GalaxyRecordSource[] = [];
   for (const source of GALAXY_CATALOG_SOURCES) {
-    if (!visibleCatalogs.has(galaxyCatalogIdOf(source))) continue;
+    if (!visibleCatalogs.has(source)) continue;
     const record = records.get(source);
     if (record === undefined) continue;
     visible.push(record);

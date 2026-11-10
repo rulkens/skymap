@@ -19,7 +19,6 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { Source } from '../../src/data/source';
 import { GALAXY_CATALOG_IDS } from '../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { createGalaxyAtlasSubsystem } from '../../src/layers/galaxyCatalog/thumbnailAtlas/subsystems/galaxyAtlasSubsystem';
 import { createProceduralDiskSubsystem } from '../../src/layers/galaxyCatalog/disks/procedural/subsystems/proceduralDiskSubsystem';
@@ -126,7 +125,7 @@ describe('galaxy-impostor visual baseline', () => {
       const walk = createDiskPlannerWalk({ decimationFactor: 1 });
 
       const cam = makeCam();
-      const records = galaxyRecordsOver(new Map([[Source.SDSS, makeCloud(8)]]));
+      const records = galaxyRecordsOver(new Map([['sdss', makeCloud(8)]]));
       const pxPerRad = 720 / (2 * Math.tan(cam.fovYRad / 2));
 
       // One shared walk drives both bodies per frame — the same call the engine
@@ -177,7 +176,7 @@ describe('galaxy-impostor visual baseline', () => {
         {
           "procDisks": {
             "count": 8,
-            "hash": "axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=7|positionAngleDeg=45|procFadeOut=1|sbAmp=0.000114|sizeWorldMpc=0.2|source=1|x=10|y=0.007|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=6|positionAngleDeg=45|procFadeOut=1|sbAmp=0.000114|sizeWorldMpc=0.2|source=1|x=10|y=0.006|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=5|positionAngleDeg=45|procFadeOut=1|sbAmp=0.000114|sizeWorldMpc=0.2|source=1|x=10|y=0.005|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=4|positionAngleDeg=45|procFadeOut=1|sbAmp=0.000114|sizeWorldMpc=0.2|source=1|x=10|y=0.004|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=3|positionAngleDeg=45|procFadeOut=1|sbAmp=0.000114|sizeWorldMpc=0.2|source=1|x=10|y=0.003|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=2|positionAngleDeg=45|procFadeOut=1|sbAmp=0.000114|sizeWorldMpc=0.2|source=1|x=10|y=0.002|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=1|positionAngleDeg=45|procFadeOut=1|sbAmp=0.000114|sizeWorldMpc=0.2|source=1|x=10|y=0.001|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=0|positionAngleDeg=45|procFadeOut=1|sbAmp=0.000114|sizeWorldMpc=0.2|source=1|x=10|y=0|z=0",
+            "hash": "axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=7|positionAngleDeg=45|procFadeOut=1|sbAmp=0.000114|sizeWorldMpc=0.2|source=sdss|x=10|y=0.007|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=6|positionAngleDeg=45|procFadeOut=1|sbAmp=0.000114|sizeWorldMpc=0.2|source=sdss|x=10|y=0.006|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=5|positionAngleDeg=45|procFadeOut=1|sbAmp=0.000114|sizeWorldMpc=0.2|source=sdss|x=10|y=0.005|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=4|positionAngleDeg=45|procFadeOut=1|sbAmp=0.000114|sizeWorldMpc=0.2|source=sdss|x=10|y=0.004|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=3|positionAngleDeg=45|procFadeOut=1|sbAmp=0.000114|sizeWorldMpc=0.2|source=sdss|x=10|y=0.003|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=2|positionAngleDeg=45|procFadeOut=1|sbAmp=0.000114|sizeWorldMpc=0.2|source=sdss|x=10|y=0.002|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=1|positionAngleDeg=45|procFadeOut=1|sbAmp=0.000114|sizeWorldMpc=0.2|source=sdss|x=10|y=0.001|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|localIdx=0|positionAngleDeg=45|procFadeOut=1|sbAmp=0.000114|sizeWorldMpc=0.2|source=sdss|x=10|y=0|z=0",
           },
           "texDisks": {
             "count": 8,

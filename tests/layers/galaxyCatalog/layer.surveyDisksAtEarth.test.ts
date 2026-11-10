@@ -7,7 +7,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { APP_VISIBILITY_REGISTRY } from '../../../src/compositions/appVisibility';
-import { Source } from '../../../src/data/source';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { galaxyCatalogLayer } from '../../../src/layers/galaxyCatalog/layer';
 import { createFadeRegistry } from '../../../src/services/animation/fadeRegistry';
@@ -70,7 +69,7 @@ describe('galaxyCatalog Layer — survey disks at Earth', () => {
 
   it('gives survey disks opacity 0 and leaves famous disks at full', () => {
     const { sourceOpacity } = walkInputAtEarth();
-    expect(sourceOpacity(Source.SDSS)).toBe(0);
-    expect(sourceOpacity(Source.FamousGalaxy)).toBe(1);
+    expect(sourceOpacity('sdss')).toBe(0);
+    expect(sourceOpacity('famousGalaxy')).toBe(1);
   });
 });

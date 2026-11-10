@@ -1,12 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { assertSelectionRowsDisjoint } from '../../../src/utils/selection/assertSelectionRowsDisjoint';
 import type { SelectionKindRow } from '../../../src/@types/engine/layer/SelectionKindRow';
-import { Source } from '../../../src/data/source';
 
-function row(
-  type: string,
-  pickSources: readonly (typeof Source)[keyof typeof Source][],
-): SelectionKindRow {
+function row(type: string, pickSources: readonly number[]): SelectionKindRow {
   return {
     type,
     pickSources,
@@ -21,20 +17,18 @@ describe('assertSelectionRowsDisjoint', () => {
   });
 
   it('passes when types and pick sources are all distinct', () => {
-    expect(() =>
-      assertSelectionRowsDisjoint([row('galaxy', [Source.SDSS]), row('star', [Source.GaiaStars])]),
-    ).not.toThrow();
+    expect(() => assertSelectionRowsDisjoint([row('galaxy', [1]), row('star', [2])])).not.toThrow();
   });
 
   it('throws on a repeated pick source code', () => {
-    expect(() =>
-      assertSelectionRowsDisjoint([row('galaxy', [Source.SDSS]), row('star', [Source.SDSS])]),
-    ).toThrow(/SDSS|1/);
+    expect(() => assertSelectionRowsDisjoint([row('galaxy', [1]), row('star', [1])])).toThrow(
+      /"1"/,
+    );
   });
 
   it('throws on a repeated type', () => {
-    expect(() =>
-      assertSelectionRowsDisjoint([row('galaxy', [Source.SDSS]), row('galaxy', [Source.Glade])]),
-    ).toThrow(/galaxy/);
+    expect(() => assertSelectionRowsDisjoint([row('galaxy', [1]), row('galaxy', [3])])).toThrow(
+      /galaxy/,
+    );
   });
 });

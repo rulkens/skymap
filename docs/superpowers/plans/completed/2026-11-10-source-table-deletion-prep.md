@@ -12,7 +12,7 @@ unchanged. Each commit adds no `CORE_ALLOWED` row and no type-ownership exceptio
 
 **Tech Stack:** TypeScript, Vitest, `npm run move-files`.
 
-**Spec:** `docs/superpowers/specs/2026-11-10-source-table-deletion-design.md` (§3.4 is this plan).
+**Spec:** `docs/superpowers/specs/completed/2026-11-10-source-table-deletion-design.md` (§3.4 is this plan).
 
 ## Global Constraints
 

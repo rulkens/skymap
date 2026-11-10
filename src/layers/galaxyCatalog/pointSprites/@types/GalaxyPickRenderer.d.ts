@@ -39,7 +39,7 @@ export type GalaxyPickRenderer = {
    *
    * @param pass         An already-begun `GPURenderPassEncoder`.
    * @param sources      Per-source draw records, one per visible galaxy
-   *                     catalog, in `Source` enum order.  The caller filters
+   *                     catalog, in draw order.  The caller filters
    *                     by visibility mask — the picker draws every record it
    *                     receives.
    * @param uniformBytes The complete pick-shaped uniform bytes for the pick

@@ -20,10 +20,10 @@
  * not a distinct absent state requiring extra narrowing.
  */
 
-import type { SourceType } from '../../src/@types/data/SourceType';
+import type { GalaxyCatalogId } from '../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 
 export type ParsedRecord = {
-  source: SourceType;
+  source: GalaxyCatalogId;
   /**
    * Numeric SDSS objID when known (SDSS rows always have one; some 2MPZ
    * rows include an `SDSS_OBJID` cross-ID column). 0n means "no SDSS

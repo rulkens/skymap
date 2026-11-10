@@ -4,7 +4,6 @@
  */
 import { describe, expect, it } from 'vitest';
 import { cullPointsToBox } from '../../../../tools/mcpm-workbench/src/field/cullPointsToBox';
-import { Source } from '../../../../src/data/source';
 import type { AgentWeights } from '../../../../tools/mcpm-workbench/@types/AgentWeights';
 import type { CatalogPoints } from '../../../../tools/mcpm-workbench/@types/CatalogPoints';
 import type { GridBox } from '../../../../tools/mcpm-workbench/@types/GridBox';
@@ -23,7 +22,7 @@ function pointsFrom(positions: readonly number[]): CatalogPoints {
     positions: new Float32Array(positions),
     log10StellarMass: new Float32Array(count).fill(10),
     count,
-    sources: [Source.SDSS],
+    sources: ['sdss'],
   };
 }
 

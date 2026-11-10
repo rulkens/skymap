@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createGalaxyPickRenderer } from '../../../../../src/layers/galaxyCatalog/pointSprites/render/galaxyPickRenderer';
 import { UNIFORM_BYTES } from '../../../../../src/layers/galaxyCatalog/pointSprites/render/galaxyPointVertexLayout';
-import { Source } from '../../../../../src/data/source';
 
 // A minimal stub device with a tracked writeBuffer — allows assertions
 // about which buffer was targeted and at which byte offset.  `createBuffer`
@@ -110,7 +109,7 @@ describe('createGalaxyPickRenderer', () => {
       makeStubPass(),
       [
         {
-          source: Source.SDSS,
+          source: 'sdss',
           vertexBuffer: {} as GPUBuffer,
           count: 10,
           sourceBuffer: {} as GPUBuffer,
@@ -191,8 +190,8 @@ describe('createGalaxyPickRenderer', () => {
     galaxyPickRenderer.drawPoints(
       makeStubPass(),
       [
-        { source: Source.SDSS, vertexBuffer: vbA, count: 10, sourceBuffer: sourceBufA },
-        { source: Source.TwoMRS, vertexBuffer: vbB, count: 20, sourceBuffer: sourceBufB },
+        { source: 'sdss', vertexBuffer: vbA, count: 10, sourceBuffer: sourceBufA },
+        { source: '2mrs', vertexBuffer: vbB, count: 20, sourceBuffer: sourceBufB },
       ],
       makeUniformBytes(),
     );

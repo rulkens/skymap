@@ -22,7 +22,7 @@ import { MILKY_WAY_FADE_FULL_PX } from '../../src/services/engine/galaxyGenerato
 import { MILKY_WAY_RADIUS_MPC } from '../../src/data/milkyWay/milkyWayRadiusMpc';
 import type { OrbitCamera } from '../../src/@types/camera/orbitCamera/OrbitCamera';
 import type { Mat4 } from 'wgpu-matrix';
-import type { SourceType } from '../../src/@types/data/SourceType';
+import type { SourceId } from '../../src/@types/data/SourceId';
 import type { Slab } from '../../src/@types/engine/frame/Slab';
 import { CONTENT_PASSES } from '../../src/services/engine/frame/passes';
 import { PRELUDE } from '../../src/data/rendering/frameSections';
@@ -378,7 +378,7 @@ describe('renderFrame visual baseline', () => {
     const settings = {
       pointSizePx: 2.5,
       brightness: 1.0,
-      selected: null as { source: SourceType; localIdx: number } | null,
+      selected: null as { source: SourceId; localIdx: number } | null,
       biasMode: BiasMode.None,
       absMagLimit: -19,
       depthFadeEnabled: true,

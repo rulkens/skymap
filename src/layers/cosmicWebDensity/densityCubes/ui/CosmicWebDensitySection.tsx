@@ -29,7 +29,7 @@ function CosmicWebDensitySection({
 }: CosmicWebDensitySectionProps) {
   return (
     <CollapsibleSection title={title} headerToggle={enabled} onHeaderToggleChange={onEnabledChange}>
-      {COSMIC_WEB_DENSITY_SOURCE_ROWS.map(([, entry]) => (
+      {COSMIC_WEB_DENSITY_SOURCE_ROWS.map((entry) => (
         <div className={styles.panelRow} key={entry.id}>
           <label htmlFor={`toggle-cosmic-web-density-${entry.id}`}>{entry.label}</label>
           <input

@@ -2,16 +2,15 @@
  * Per-galaxy catalog flux limits and Schechter luminosity-function parameters —
  * thin accessors over the Layer's own entries. The actual numbers live on each
  * galaxy catalog entry (`sources/galaxyCatalogSourceRows.ts`); this module only adds the
- * non-galaxy catalog throw guard so callers that hand us a raw `Source` get a loud error rather
+ * non-galaxy catalog throw guard so callers that hand us a non-galaxy source id get a loud error rather
  * than silently reading `undefined`.
  */
 
 import { galaxyEntryOf } from '../utils/galaxyEntryOf';
 import type { SchechterTriple } from '../../../../@types/data/galaxyCatalog/SchechterTriple';
-import type { SourceType } from '../../../../@types/data/SourceType';
 
 /** Per-galaxy catalog apparent-magnitude flux limit (band varies — see `bandLabels`). */
-export function galaxyCatalogFluxLimit(source: SourceType): number {
+export function galaxyCatalogFluxLimit(source: string): number {
   const entry = galaxyEntryOf(source);
   if (entry === undefined) {
     throw new Error(
@@ -22,7 +21,7 @@ export function galaxyCatalogFluxLimit(source: SourceType): number {
 }
 
 /** Per-galaxy catalog Schechter triple for the band that defines the flux limit. */
-export function galaxyCatalogSchechter(source: SourceType): SchechterTriple {
+export function galaxyCatalogSchechter(source: string): SchechterTriple {
   const entry = galaxyEntryOf(source);
   if (entry === undefined) {
     throw new Error(

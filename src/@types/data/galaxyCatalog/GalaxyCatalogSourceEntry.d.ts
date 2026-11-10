@@ -1,6 +1,7 @@
 import type { BandLabels } from './BandLabels';
 import type { ColourIndexSpec } from './ColourIndexSpec';
 import type { GalaxyDurableIdClaim } from './GalaxyDurableIdClaim';
+import type { GalaxyTypeColour } from './GalaxyTypeColour';
 import type { SchechterTriple } from './SchechterTriple';
 import type { SourceEntryBase } from '../SourceEntryBase';
 import type { Tier } from '../Tier';
@@ -12,8 +13,6 @@ import type { Tier } from '../Tier';
  */
 export type GalaxyCatalogSourceEntry = SourceEntryBase & {
   readonly type: 'galaxyCatalog';
-  /** Stable numeric tag, matching the `.bin` file format byte. */
-  readonly code: number;
   /**
    * Filename stem under `public/data/` (and on R2). Tier-aware sources get
    * `-<tier>` appended by `tierFilenameForSource`.
@@ -28,6 +27,8 @@ export type GalaxyCatalogSourceEntry = SourceEntryBase & {
   readonly bandLabels: BandLabels;
   /** Colour-index recipe; consumer is `pickColourIndex` in `data/colourIndex.ts`. */
   readonly colourSpec: ColourIndexSpec;
+  /** The colour the card's galaxy-type tag reads; consumer is the Layer's `galaxyType`. */
+  readonly typeColour: GalaxyTypeColour;
   /** Apparent-magnitude flux limit in the band that defines the selection (SDSS r, 2MRS K_s, GLADE B); Malmquist-bias correction. */
   readonly mLim: number;
   /** Schechter luminosity-function triple `(M*, α, φ*)` in the flux-limit band. */

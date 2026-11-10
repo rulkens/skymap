@@ -1,4 +1,4 @@
-import type { GalaxyCatalogSourceType } from '../../@types/GalaxyCatalogSourceType';
+import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
 import type { GalaxyColumnBlock } from './GalaxyColumnBlock';
 import type { GalaxyRow } from './GalaxyRow';
 import type { ProvenanceCounts } from '../../../../@types/engine/ProvenanceCounts';
@@ -10,7 +10,7 @@ import type { ProvenanceCounts } from '../../../../@types/engine/ProvenanceCount
  * (it is where the record sits in the drawn buffer), hence the two mappings.
  */
 export type GalaxyRecordSource = {
-  readonly source: GalaxyCatalogSourceType;
+  readonly source: GalaxyCatalogId;
   /** Real records the source holds in total (UI count); resident or not. */
   readonly recordCount: number;
   readonly stats: {

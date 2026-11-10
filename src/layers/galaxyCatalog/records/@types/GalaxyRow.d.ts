@@ -1,4 +1,4 @@
-import type { GalaxyCatalogSourceType } from '../../@types/GalaxyCatalogSourceType';
+import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
 
 /**
  * GalaxyRow — the serializable projection of a single galaxy's CLOUD-SOURCED
@@ -18,7 +18,7 @@ import type { GalaxyCatalogSourceType } from '../../@types/GalaxyCatalogSourceTy
  */
 export type GalaxyRow = {
   readonly type: 'galaxyCatalog';
-  readonly source: GalaxyCatalogSourceType;
+  readonly source: GalaxyCatalogId;
   readonly index: number;
   readonly objId: string;
   readonly x: number;

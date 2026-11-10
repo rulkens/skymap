@@ -47,7 +47,6 @@ import { clipStarted } from '../../../src/state/camera/cameraSlice';
 import { updateSelectionFocus } from '../../../src/state/selection/selectionSlice';
 import { watchFocusTweenSaga } from '../../../src/state/selection/watchFocusTweenSaga';
 
-import { Source } from '../../../src/data/source';
 import { FAMOUS_GALAXY_NAMES } from '../../../src/layers/galaxyCatalog/famousGalaxies/data/famousGalaxyNames.generated';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
@@ -119,7 +118,7 @@ const DIVE_STRUCTURES: StructureRowFixture = {
 };
 
 /** The galaxyCatalog Layer's slice: the famous cloud M87 resolves into. */
-const DIVE_GALAXIES: GalaxyRowFixture = { catalogs: new Map([[Source.FamousGalaxy, M87_CLOUD]]) };
+const DIVE_GALAXIES: GalaxyRowFixture = { catalogs: new Map([['famousGalaxy', M87_CLOUD]]) };
 
 const DIVE_SELECTION = selectionResolverOver(DIVE_STRUCTURES, DIVE_GALAXIES);
 

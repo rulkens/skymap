@@ -34,9 +34,7 @@
  * fade-in left off).
  */
 
-import { Source } from '../../../../data/source';
 import { famousGalaxyNamesFor } from '../../famousGalaxies/utils/famousGalaxyNamesFor';
-import { galaxyCatalogIdOf } from '../../../../utils/galaxyCatalogIdOf';
 import { cartesianToRaDec } from '../../../../utils/math/index';
 import { fetchGalaxyBitmap } from '../../thumbnailAtlas/utils/fetchGalaxyBitmap';
 import { HI_RES_TRIGGER_PX, HI_RES_FADE_BAND_PX } from '../../lod/data/galaxyLodBands';
@@ -107,12 +105,12 @@ export function createHiResFamousSubsystem(deps: HiResFamousDeps): HiResFamousSu
     byFamousIdx.clear();
 
     // Visibility gate.  If the Famous catalog is not visible, emit empty.
-    if (!visibleCatalogs.has(galaxyCatalogIdOf(Source.FamousGalaxy))) {
+    if (!visibleCatalogs.has('famousGalaxy')) {
       lastOutput = { byFamousIdx };
       return lastOutput;
     }
 
-    const cloud = catalogs.get(Source.FamousGalaxy);
+    const cloud = catalogs.get('famousGalaxy');
     if (!cloud) {
       lastOutput = { byFamousIdx };
       return lastOutput;
