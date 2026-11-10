@@ -15,11 +15,11 @@ afterEach(cleanup);
 const WINDOW = { startSec: 0, endSec: 10 };
 const RECT = { left: 0, top: 0, width: 960, height: 24, right: 960, bottom: 24, x: 0, y: 0 };
 
-function mount() {
+function mount(window = WINDOW) {
   const store = openStudioStore({ timeline: [seq([dollyTo(300, 4), dollyTo(950, 4)])] });
   render(
     <Provider store={store}>
-      <Ruler timeline={selectTimeline(store.getState())!} window={WINDOW} playheadSec={0} />
+      <Ruler timeline={selectTimeline(store.getState())!} window={window} playheadSec={0} />
     </Provider>,
   );
   const ruler = screen.getByLabelText('Timeline ruler');
@@ -35,6 +35,19 @@ describe('Ruler', () => {
     const { store, ruler } = mount();
     fireEvent.pointerDown(ruler, { clientX: x(3.97) });
     expect(selectPlayheadSec(store.getState())).toBe(4);
+  });
+
+  it('ticks from a minute on read m:ss', () => {
+    mount({ startSec: 0, endSec: 300 });
+    expect(screen.getByText('1:00')).toBeInTheDocument();
+    expect(screen.getByText('2:30')).toBeInTheDocument();
+  });
+
+  it('zoomed short of End, there is no after-end caption and the last labels stay', () => {
+    // End is at 8 s, off the right of a 0-5 s window; the 800 px fallback track puts 4.5 s at 720 px.
+    mount({ startSec: 0, endSec: 5 });
+    expect(screen.queryByText('after end')).toBeNull();
+    expect(screen.getByText('4.5')).toBeInTheDocument();
   });
 
   it('holding Alt seeks to the exact pointer time', () => {

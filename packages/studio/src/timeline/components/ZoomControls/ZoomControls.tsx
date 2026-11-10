@@ -1,31 +1,29 @@
 import StudioTip from '../../../primitives/components/StudioTip/StudioTip';
 import MinusIcon from '../../../../../../src/components/icons/MinusIcon/MinusIcon';
 import PlusIcon from '../../../../../../src/components/icons/PlusIcon/PlusIcon';
-import { selectViewport } from '../../../session/state/selectors';
+import { selectPlayheadSec, selectViewport } from '../../../session/state/selectors';
 import { viewportSet } from '../../../session/state/studioSlice';
 import { selectTimeline } from '../../state/selectTimeline';
-import { viewWindow } from '../../utils/viewWindow';
-import { MIN_SPAN_SEC, ZOOM_FACTOR } from './ZoomControls.constants';
+import { viewWindow } from '../../utils/window/viewWindow';
+import { zoomWindow } from '../../utils/window/zoomWindow';
+import { ZOOM_FACTOR } from './ZoomControls.constants';
 import { useAppDispatch, useAppSelector } from '../../../../../../src/store/hooks';
 import s from './ZoomControls.module.css';
 
-/** Zoom out, Fit (the level reads here), zoom in: each zooms about the middle of the visible window. */
+/** Zoom out, Fit (the level reads here), zoom in: each zooms about the playhead and keeps it in view. */
 function ZoomControls() {
   const dispatch = useAppDispatch();
   const timeline = useAppSelector(selectTimeline);
   const viewport = useAppSelector(selectViewport);
+  const playheadSec = useAppSelector(selectPlayheadSec);
   const resolved = timeline !== null && timeline.durationSec !== null;
   const fit = timeline === null ? null : viewWindow(null, timeline);
   const current = timeline === null ? null : viewWindow(viewport, timeline);
 
   const zoom = (factor: number) => {
-    if (fit === null || current === null) return;
-    const fitSpan = fit.endSec - fit.startSec;
-    const span = Math.max(MIN_SPAN_SEC, (current.endSec - current.startSec) * factor);
-    if (span >= fitSpan) return void dispatch(viewportSet(null));
-    const centre = (current.startSec + current.endSec) / 2;
-    const startSec = Math.min(Math.max(0, centre - span / 2), fit.endSec - span);
-    dispatch(viewportSet({ startSec, endSec: startSec + span }));
+    if (fit !== null && current !== null) {
+      dispatch(viewportSet(zoomWindow(current, fit, factor, playheadSec)));
+    }
   };
   const level =
     viewport === null || fit === null || current === null

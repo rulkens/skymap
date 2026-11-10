@@ -1,4 +1,4 @@
-import { timeToPercent } from '../../utils/timeToPercent';
+import { timeToPercent } from '../../utils/window/timeToPercent';
 import type { TimeWindow } from '../../../@types/session/TimeWindow';
 import s from './Playhead.module.css';
 

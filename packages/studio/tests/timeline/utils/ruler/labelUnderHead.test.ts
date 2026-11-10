@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { labelUnderHead } from '../../../src/timeline/utils/labelUnderHead';
+import { labelUnderHead } from '../../../../src/timeline/utils/ruler/labelUnderHead';
 
 describe('labelUnderHead', () => {
   it('catches a label the tag reaches from either side, and clears one beside it', () => {

@@ -2,8 +2,8 @@
  * The window the timeline draws: the viewport, or when it is null (Fit) the whole clip plus a margin
  * so the End flag and the `after end` zone have room. An unresolved clip falls back to the last row end.
  */
-import type { TimeWindow } from '../../@types/session/TimeWindow';
-import type { Timeline } from '../../@types/rows/Timeline';
+import type { TimeWindow } from '../../../@types/session/TimeWindow';
+import type { Timeline } from '../../../@types/rows/Timeline';
 
 const FIT_MARGIN = 1.2;
 const MIN_SPAN_SEC = 1;

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import cx from 'classnames';
 import Glyph from '../../../primitives/components/Glyph/Glyph';
 import OutlineRow from '../OutlineRow/OutlineRow';
@@ -8,12 +8,13 @@ import { rowSelected, rowToggled } from '../../../session/state/studioSlice';
 import { selectPlayheadSec, selectViewport } from '../../../session/state/selectors';
 import Playhead from '../Playhead/Playhead';
 import Ruler from '../Ruler/Ruler';
-import { timeToPercent } from '../../utils/timeToPercent';
+import { timeToPercent } from '../../utils/window/timeToPercent';
 import { selectSelectionStandInId } from '../../state/selectSelectionStandInId';
 import { selectTimeline } from '../../state/selectTimeline';
 import { ancestorChains } from '../../utils/ancestorChains';
 import { familyStyle } from '../../utils/familyStyle';
-import { viewWindow } from '../../utils/viewWindow';
+import { viewWindow } from '../../utils/window/viewWindow';
+import { useWheelPan } from './useWheelPan';
 import { useAppDispatch, useAppSelector } from '../../../../../../src/store/hooks';
 import s from './TimelinePane.module.css';
 
@@ -25,12 +26,14 @@ function TimelinePane() {
   const viewport = useAppSelector(selectViewport);
   const playheadSec = useAppSelector(selectPlayheadSec);
   const chains = useMemo(() => ancestorChains(timeline?.rows ?? []), [timeline]);
+  const track = useRef<HTMLDivElement>(null);
+  const onWheel = useWheelPan(track, viewport, timeline);
   if (timeline === null) return null;
   const window = viewWindow(viewport, timeline);
   const end = timeline.durationSec === null ? null : timeToPercent(timeline.durationSec, window);
 
   return (
-    <div className={s.root}>
+    <div className={s.root} onWheel={onWheel}>
       <div className={s.head}>
         <div className={s.headOutline}>
           <span className={s.headLabel}>Step</span>
@@ -66,7 +69,7 @@ function TimelinePane() {
         ))}
         {timeline.rows.length <= 1 && <p className={s.empty}>No steps</p>}
       </div>
-      <div className={s.overlay} aria-hidden>
+      <div ref={track} className={s.overlay} aria-hidden>
         {end !== null && (
           <>
             <span className={s.afterEnd} style={{ left: `${end}%` }} />

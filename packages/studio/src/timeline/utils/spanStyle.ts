@@ -1,5 +1,5 @@
 /** Absolute-position style for a mark spanning `startSec`-`endSec` of the visible window. */
-import { timeToPercent } from './timeToPercent';
+import { timeToPercent } from './window/timeToPercent';
 import type { CSSProperties } from 'react';
 import type { TimeWindow } from '../../@types/session/TimeWindow';
 

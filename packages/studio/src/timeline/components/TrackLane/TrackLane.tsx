@@ -3,7 +3,7 @@ import Glyph from '../../../primitives/components/Glyph/Glyph';
 import { ROW_KINDS } from '../../../kinds/data/rowKinds';
 import { familyStyle } from '../../utils/familyStyle';
 import { spanStyle } from '../../utils/spanStyle';
-import { timeToPercent } from '../../utils/timeToPercent';
+import { timeToPercent } from '../../utils/window/timeToPercent';
 import { TAG_ROOM_PERCENT, TRACK_MARKS } from './TrackLane.constants';
 import type { TimeWindow } from '../../../@types/session/TimeWindow';
 import type { TimelineRow } from '../../../@types/rows/TimelineRow';

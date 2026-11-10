@@ -1,6 +1,6 @@
 import cx from 'classnames';
 import { spanStyle } from '../../../utils/spanStyle';
-import { timeToPercent } from '../../../utils/timeToPercent';
+import { timeToPercent } from '../../../utils/window/timeToPercent';
 import type { MarkProps } from '../../../@types/MarkProps';
 import s from './GroupMark.module.css';
 

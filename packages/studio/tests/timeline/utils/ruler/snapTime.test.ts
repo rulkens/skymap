@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { snapTime } from '../../../src/timeline/utils/snapTime';
+import { snapTime } from '../../../../src/timeline/utils/ruler/snapTime';
 
 describe('snapTime', () => {
   const targets = [0, 4, 4.5, 10];

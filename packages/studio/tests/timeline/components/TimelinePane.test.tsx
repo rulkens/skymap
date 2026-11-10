@@ -1,15 +1,23 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { Provider } from 'react-redux';
 
 import { all, dollyTo, seq } from '../../../../../src/services/engine/animation/effectHelpers';
 import TimelinePane from '../../../src/timeline/components/TimelinePane/TimelinePane';
-import { selectCollapsed, selectSelection } from '../../../src/session/state/selectors';
+import { viewportSet } from '../../../src/session/state/studioSlice';
+import {
+  selectCollapsed,
+  selectSelection,
+  selectViewport,
+} from '../../../src/session/state/selectors';
 import { openStudioStore } from '../../helpers/openStudioStore';
 import type { ClipData } from '../../../../../src/@types/animation/ClipData';
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 const mount = (draft: ClipData) => {
   const store = openStudioStore(draft);
@@ -22,6 +30,20 @@ const mount = (draft: ClipData) => {
 };
 
 describe('TimelinePane', () => {
+  it('a sideways swipe pans a zoomed timeline; a plain vertical wheel does not', () => {
+    // Steps end at 8 s, so Fit spans 0-9.6 s; a 1000 px track at a 2 s window is 2 ms per px.
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(1000);
+    const store = mount({ timeline: [seq([dollyTo(300, 4), dollyTo(950, 4)])] });
+    act(() => void store.dispatch(viewportSet({ startSec: 2, endSec: 4 })));
+    const pane = screen.getByRole('tree').parentElement!;
+
+    fireEvent.wheel(pane, { deltaY: 300 });
+    expect(selectViewport(store.getState())).toEqual({ startSec: 2, endSec: 4 });
+
+    fireEvent.wheel(pane, { deltaX: 500 });
+    expect(selectViewport(store.getState())).toEqual({ startSec: 3, endSec: 5 });
+  });
+
   it('clicking a row selects it; clicking its twisty toggles collapse without selecting', () => {
     const store = mount({ timeline: [seq([dollyTo(300, 4), dollyTo(950, 4)])] });
 

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { rulerSteps } from '../../../src/timeline/utils/rulerSteps';
+import { rulerSteps } from '../../../../src/timeline/utils/ruler/rulerSteps';
 
 describe('rulerSteps', () => {
   it('rulerSteps: 24 s over 900 px is 2 s / 0.4 s; 40 s is 5 s / 1 s', () => {

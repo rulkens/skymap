@@ -1,5 +1,5 @@
 import Glyph from '../../../../primitives/components/Glyph/Glyph';
-import { timeToPercent } from '../../../utils/timeToPercent';
+import { timeToPercent } from '../../../utils/window/timeToPercent';
 import type { MarkProps } from '../../../@types/MarkProps';
 import s from './StartMark.module.css';
 
