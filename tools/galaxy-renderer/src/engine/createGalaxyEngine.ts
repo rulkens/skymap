@@ -1,7 +1,7 @@
 /**
  * createGalaxyEngine — GPU orchestration for the v1 sprite tier and the post
  * chain: device, targets, per-frame encode. The whole analytic field belongs
- * to `createGalaxyFieldRenderer` (shared with the app); galaxy state to
+ * to the field host (`createGalaxyFieldHost`, shared with the app); galaxy state to
  * `model/createGalaxyModel.ts`; camera to `createOrbitCameraInput`;
  * `timing/timingSlots.ts` is the one account of the pass chain. What is still
  * DUPLICATED here rather than shared is `runBloom`'s pass order and the cloud
@@ -38,7 +38,7 @@ import { beginClearPass } from '../../../../src/services/gpu/lib/beginClearPass'
 import { encodeBloomPyramid } from './post/encodeBloomPyramid';
 import { createGradePipeline } from './post/createGradePipeline';
 import { createCloudPipelines } from './sprites/createCloudPipelines';
-import { encodeSceneComposites } from './passes/encodeSceneComposites';
+import { encodeFieldComposites } from '../../../../src/layers/milkyWay/field/host/render/encodeFieldComposites';
 import { encodeSplatPass } from '../../../../src/layers/milkyWay/field/render/encodeSplatPass';
 import { encodeStarPass } from './sprites/encodeStarPass';
 import { encodeTransmittanceDust } from './sprites/encodeTransmittanceDust';
@@ -156,7 +156,6 @@ export async function createGalaxyEngine(
     onIsmMapLanded: () => model.noteIsmMapLanded(),
     onOrientationRebuilt: (grid) => model.noteOrientationRebuilt(grid),
   });
-  const field = debug.renderer;
 
   // Tool-only grade trailer — see `packGradeUniforms` for the lanes. The bloom
   // and compositor uniforms are owned by their shared factories below.
@@ -221,7 +220,7 @@ export async function createGalaxyEngine(
   const model = createGalaxyModel({
     device,
     readbacks: debug.readbacks,
-    ismMapGenerator: field.ismMapGenerator,
+    ismMapGenerator: debug.renderer.ismMapGenerator,
     render,
     onStats: opts.onStats,
     onOrientationDiagnostics: opts.onOrientationDiagnostics,
@@ -498,7 +497,6 @@ export async function createGalaxyEngine(
       quad,
       instances: starInstances,
     });
-    const drawDustView = debugViews.dust > 0;
     // Read per frame, not captured: a resize or a divisor drag replaces rows.
     const fieldTargets = targets.fieldTargets;
     if (fieldLive) {
@@ -530,16 +528,12 @@ export async function createGalaxyEngine(
       );
       // Every representation here is additive into the SAME attachment, so the
       // crossfade is just which of them ran this frame, each already carrying
-      // its own weight — summation order carries no meaning. The field's
-      // pushes are the plan's composites, the same value that gated its
-      // passes, so a target this frame never cleared is never summed.
-      const compositeViews = [targets.aggregateTex.createView()];
+      // its own weight — summation order carries no meaning. The tool-only
+      // dust view shares the gate its pass ran under inside `host.encode`.
+      aggregateUpsample.draw(pass, targets.aggregateTex.createView());
       if (fieldLive) {
-        for (const id of plan.composites) compositeViews.push(fieldTargets[id].view);
-        if (drawDustView) compositeViews.push(fieldTargets.dustView.view);
-      }
-      encodeSceneComposites(pass, aggregateUpsample, compositeViews);
-      if (fieldLive) {
+        encodeFieldComposites(pass, aggregateUpsample, plan, fieldTargets);
+        if (debugViews.dust > 0) aggregateUpsample.draw(pass, fieldTargets.dustView.view);
         // The three diagnostics present straight into `sceneTex` at full
         // canvas resolution — a divisor-matched offscreen and the upsample's
         // 4-tap reconstruction are both wrong for them; see the field pass.
@@ -548,7 +542,7 @@ export async function createGalaxyEngine(
         // `bubblesLive` is "a consumer wants this", `bubbleComps.count` is
         // "we have geometry to draw". Nothing rebuilds on the falling edge,
         // so the count outlives the overlay being switched off.
-        field.encodeOverlays(pass, {
+        debug.renderer.encodeOverlays(pass, {
           ismMap: debugViews.ismMap > 0,
           orientation: debugViews.orientation > 0,
           bubbles:
@@ -638,7 +632,7 @@ export async function createGalaxyEngine(
     // The ISM-map generator's packed output (ismMapFluidPack.wesl) — a
     // persistent GPU texture, always non-null, whose CONTENT is only
     // meaningful once the `ismMap` stage row has run at least once (setParams).
-    getIsmMapTexture: (): GPUTexture => field.ismMapGenerator.texture,
+    getIsmMapTexture: (): GPUTexture => debug.renderer.ismMapGenerator.texture,
     // The CPU-side readback of the same output (`scheduleIsmMapReadback`):
     // null until the first one lands. `placeDust.wesl` reads the GPU texture
     // directly, never this readback; it feeds the seeding debug view and
@@ -649,22 +643,23 @@ export async function createGalaxyEngine(
     // see `GalaxyProbeApi.d.ts` for the full member docs. No production
     // caller touches this.
     probe: {
-      peekRecords: field.probe.peekRecords,
-      requestDustPlacementReadback: field.probe.requestDustPlacementReadback,
-      requestArmSpurCloudPlacementReadback: field.probe.requestArmSpurCloudPlacementReadback,
-      requestArmCloudPlacementReadback: field.probe.requestArmCloudPlacementReadback,
-      requestDigVeilPlacementReadback: field.probe.requestDigVeilPlacementReadback,
+      peekRecords: debug.renderer.probe.peekRecords,
+      requestDustPlacementReadback: debug.renderer.probe.requestDustPlacementReadback,
+      requestArmSpurCloudPlacementReadback:
+        debug.renderer.probe.requestArmSpurCloudPlacementReadback,
+      requestArmCloudPlacementReadback: debug.renderer.probe.requestArmCloudPlacementReadback,
+      requestDigVeilPlacementReadback: debug.renderer.probe.requestDigVeilPlacementReadback,
       get fieldCounts() {
-        return field.fieldCounts;
+        return debug.renderer.fieldCounts;
       },
       get hiiSegments() {
-        return field.hiiSegments;
+        return debug.renderer.hiiSegments;
       },
       get armCloudReservation() {
-        return field.armCloudReservation;
+        return debug.renderer.armCloudReservation;
       },
       get spurCloudReservation() {
-        return field.spurCloudReservation;
+        return debug.renderer.spurCloudReservation;
       },
       // `reject` matters here: this is the queue's first EXTERNALLY-AWAITED
       // request (every other caller is fire-and-forget) — without it, a
@@ -681,7 +676,7 @@ export async function createGalaxyEngine(
       // live, not captured, since a resize or divisor drag replaces it.
       requestDustMapChannelSum: () => readTextureChannelSum(device, targets.dustMapTex),
       // Draws ONLY the arm-cloud reservation's own instance range
-      // (`field.armCloudReservation`) into `targets.fieldTex`, through the
+      // (`debug.renderer.armCloudReservation`) into `targets.fieldTex`, through the
       // SAME `fieldSplatPipe`/`fieldSplatBG` the production draw uses — this
       // exercises the REAL fragment shader's REAL `armCloudRenorm[0]` read,
       // not a buffer readback that would validate the reduction but never the
@@ -690,15 +685,15 @@ export async function createGalaxyEngine(
       // cross-tier confound. `targets.fieldTex` is safely clobbered: the next
       // production frame's `encodeSplatPass` redraws it in full.
       async requestArmCloudRenderedFluxSum(): Promise<number | null> {
-        const reservation = field.armCloudReservation;
-        const bindGroup = field.probe.fieldSplatBG;
+        const reservation = debug.renderer.armCloudReservation;
+        const bindGroup = debug.renderer.probe.fieldSplatBG;
         if (!reservation || !bindGroup) return null;
         const enc = device.createCommandEncoder({ label: 'galaxy:armCloudRenderedFluxSum' });
         encodeSplatPass({
           enc,
           label: 'galaxy:armCloudRenderedFluxSumPass',
           targetView: targets.fieldTargets.field.view,
-          pipeline: field.probe.fieldSplatPipe,
+          pipeline: debug.renderer.probe.fieldSplatPipe,
           bindGroup,
           instanceCount: reservation.count,
           firstInstance: reservation.offset,
@@ -708,15 +703,15 @@ export async function createGalaxyEngine(
       },
       // The spur-cloud twin of `requestArmCloudRenderedFluxSum` above.
       async requestArmSpurCloudRenderedFluxSum(): Promise<number | null> {
-        const reservation = field.spurCloudReservation;
-        const bindGroup = field.probe.fieldSplatBG;
+        const reservation = debug.renderer.spurCloudReservation;
+        const bindGroup = debug.renderer.probe.fieldSplatBG;
         if (!reservation || !bindGroup) return null;
         const enc = device.createCommandEncoder({ label: 'galaxy:armSpurCloudRenderedFluxSum' });
         encodeSplatPass({
           enc,
           label: 'galaxy:armSpurCloudRenderedFluxSumPass',
           targetView: targets.fieldTargets.field.view,
-          pipeline: field.probe.fieldSplatPipe,
+          pipeline: debug.renderer.probe.fieldSplatPipe,
           bindGroup,
           instanceCount: reservation.count,
           firstInstance: reservation.offset,

@@ -13,7 +13,8 @@ say which is which:
 ## The tree
 
 ```
-createGalaxyEngine.ts   device, every pipeline/bind group, the per-frame encode
+createGalaxyEngine.ts   device, the v1 and post pipelines, the per-frame encode;
+                        the field draws through the shared field host
 createRafLoop.ts        the rAF driver
 
 sprites/   encodeStarPass, encodeTransmittanceDust, packCloudUniforms,
@@ -27,14 +28,12 @@ ismMap/     createIsmMapDustCdfScanDebugSample, orientationCoherenceStats —
            src/layers/milkyWay/field/ismMap/, its readbacks and decoders to
            src/layers/milkyWay/field/host/
 
-model/     createGalaxyModel — what a galaxy IS; drives BOTH tiers
-frame/     deriveFrameView + the pure per-frame arithmetic under it
-passes/    beginClearPass (now src/services/gpu/lib/), encodeSceneComposites
-           — the pass vocabulary the tier folders share
+model/     createGalaxyModel — what a galaxy IS: the v1 sprites, bubbles and
+           readback diagnostics, plus what the field host is tuned from
+frame/     deriveFrameView, fieldHostRender + the pure per-frame arithmetic
 post/      encodeBloomPyramid, packGradeUniforms, gradeIsActive
-gpu/       createGalaxyRenderTargets, readTextureChannelSum — the field/ISM render targets stay HERE,
-           host-owned; only the grow-only record buffer and the volume-bake
-           helper moved to src/layers/milkyWay/field/render/
+gpu/       createGalaxyRenderTargets, readTextureChannelSum — the field/ISM
+           render targets stay HERE, tool-owned
 camera/    orbit input
 timing/    the frame median + the per-pass GPU spans (`timingSlots.ts`)
 probe/     the headless readback paths the matcher drives
@@ -43,12 +42,13 @@ shaders/   WESL — mostly symlinks into the runtime's trees (`wesl.toml`).
            folders above, so a folder means the same thing on both sides.
 ```
 
-The v2 field/ISM orchestration — pipelines, packers, encode passes, and
-`createKeyedRebuild` — now lives in
+The v2 field/ISM orchestration — the field host the app shares
+(`field/host/`: tuning, plan, encode, readbacks, composite loop), pipelines,
+packers, encode passes, and `createKeyedRebuild` — lives in
 [`src/layers/milkyWay/field/`](../../../../src/layers/milkyWay/field/)
 and [`src/services/gpu/lib/`](../../../../src/services/gpu/lib/); this
-tree keeps only what stayed tool-local (v1 sprites, debug samples, the
-render-target/readback plumbing, and the host that drives both tiers).
+tree keeps only what stayed tool-local (v1 sprites, debug samples and the
+render targets).
 
 ## Deleting v1
 
@@ -56,8 +56,8 @@ render-target/readback plumbing, and the host that drives both tiers).
 not in it:
 
 - **`sprites/generateGalaxy.ts` also produces v2's geometry.** Its return
-  carries `geometry: describeGalaxy(params)`, and `createGalaxyModel` builds
-  every analytic mixture from that value. This is the tool's copy of the
+  carries `geometry: describeGalaxy(params)`, and `createGalaxyModel` hands
+  that value to the field host as `FieldHostTuning.geometry`. This is the tool's copy of the
   coupling [`docs/superpowers/plans/2026-08-04-unbraid-analytic-field-from-sprite-tier.md`](../../../../docs/superpowers/plans/2026-08-04-unbraid-analytic-field-from-sprite-tier.md)
   exists to remove; the file sits under `sprites/` so the edge is visible in the
   import graph rather than hidden behind a neutral folder name.
@@ -68,7 +68,7 @@ not in it:
 ## Why not `v1/` / `v2/` / `shared/`
 
 `galaxyGenerator/` splits that way because a builder there produces one tier's
-data end to end. Here the same split would put 28 of 49 modules in a `shared/`
+data end to end. Here the same split would put most modules in a `shared/`
 bucket, including the two largest (`createGalaxyEngine.ts`,
 `createGalaxyModel.ts`) — which are not shared plumbing, they are the tool. Tier
 is a property of the modules that draw a tier, and only those; the rest is

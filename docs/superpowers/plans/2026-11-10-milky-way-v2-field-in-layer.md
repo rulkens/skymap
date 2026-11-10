@@ -787,10 +787,10 @@ export function encodeFieldComposites(
 ): void;
 ```
 
-- [ ] Run
+- [x] Run
       `npm run move-files -- tools/galaxy-renderer/src/engine/passes/encodeSceneComposites.ts src/layers/milkyWay/field/host/render/encodeFieldComposites.ts`
       (`--dry` first), then rewrite it to the contract.
-- [ ] Rewire `createGalaxyEngine.ts`. Today's ranges:
+- [x] Rewire `createGalaxyEngine.ts`. Today's ranges:
   - `:161-167`: construct `const { host, debug } = createGalaxyFieldHost(device, { makeShader,
     hdrFormat: HDR, dustMapFormat: DUST_MAP_FORMAT, onIsmMapLanded, onOrientationRebuilt })`. The
     forward reference to `model` goes.
@@ -818,8 +818,8 @@ export function encodeFieldComposites(
     (tool-only).
   - `:576-583`, `:666`, `:671`, `:698`, `:707-750`: through `debug.renderer` / `debug.readbacks`.
   - `:770`: `host.destroy()`.
-- [ ] Update the old `galaxyField/` paths in `tools/galaxy-renderer/src/engine/README.md:9,23,28,38,49`.
-- [ ] `npm run galaxy-renderer:probe` must report no GPU errors. No new unit test (wiring). Commit.
+- [x] Update the old `galaxyField/` paths in `tools/galaxy-renderer/src/engine/README.md:9,23,28,38,49`.
+- [x] `npm run galaxy-renderer:probe` must report no GPU errors. No new unit test (wiring). Commit.
 
 ### Task A11: Tool identity pair (controller-owned)
 

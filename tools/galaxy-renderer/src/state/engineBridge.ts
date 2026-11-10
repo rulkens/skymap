@@ -35,10 +35,10 @@
 import type { AppStore } from './createStore';
 import type { ExtraGalaxySpec } from '../../../../src/@types/galaxy/ExtraGalaxySpec';
 import type { GalaxyEngineHandle } from '../../@types/engine/GalaxyEngineHandle';
-import type { GalaxyFieldTuning } from '../../../../src/layers/milkyWay/field/mixture/@types/GalaxyFieldTuning';
 import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
 import type { RenderSettings } from '../../@types/engine/RenderSettings';
 import { buildExtraSpecs } from '../data/buildExtraSpecs';
+import { withoutDustCloud } from '../../../../src/layers/milkyWay/field/dust/utils/withoutDustCloud';
 
 const COMPARE_OPEN_INSET_PX = 390;
 const COMPARE_CLOSED_INSET_PX = 0;
@@ -68,20 +68,6 @@ function extrasForEngine(
   return specs.map((spec) => ({ ...spec, params: paramsForEngine(spec.params, render) }));
 }
 
-/**
- * DUST CLOUD pill: same "patch the outgoing copy, never the stored state"
- * idiom as `paramsForEngine`, now on `fieldTuning` since the tier moved off
- * `galaxy.dust` — one gate for the whole scene (central galaxy AND every
- * extra alike) rather than a per-`GalaxyParams` patch repeated per extra.
- */
-function fieldTuningForEngine(
-  tuning: GalaxyFieldTuning,
-  render: RenderSettings,
-): GalaxyFieldTuning {
-  if (render.dustCloudEnabled) return tuning;
-  return { ...tuning, dust: { ...tuning.dust, cloud: { ...tuning.dust.cloud, count: 0 } } };
-}
-
 export function connectEngineBridge(
   store: AppStore,
   engine: GalaxyEngineHandle,
@@ -94,7 +80,11 @@ export function connectEngineBridge(
   // Initial sync — the boot render, fired immediately like every other
   // reaction below.
   engine.setRender({ ...prev.render, ...prev.lod });
-  engine.setFieldTuning(fieldTuningForEngine(prev.fieldTuning, prev.render));
+  // DUST CLOUD pill: one gate for the whole scene, same "patch the outgoing
+  // copy" idiom as `paramsForEngine`.
+  engine.setFieldTuning(
+    prev.render.dustCloudEnabled ? prev.fieldTuning : withoutDustCloud(prev.fieldTuning),
+  );
   engine.setInsets(
     prev.compare.open ? COMPARE_OPEN_INSET_PX : COMPARE_CLOSED_INSET_PX,
     REFERENCE_INSET_PX,
@@ -120,7 +110,9 @@ export function connectEngineBridge(
       next.fieldTuning !== prev.fieldTuning ||
       next.render.dustCloudEnabled !== prev.render.dustCloudEnabled
     ) {
-      engine.setFieldTuning(fieldTuningForEngine(next.fieldTuning, next.render));
+      engine.setFieldTuning(
+        next.render.dustCloudEnabled ? next.fieldTuning : withoutDustCloud(next.fieldTuning),
+      );
     }
 
     if (next.ui.autoRotate !== prev.ui.autoRotate) {
