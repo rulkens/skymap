@@ -1198,7 +1198,7 @@ export function milkyWayFieldCompute(
   `src/layers/milkyWay/{create,destroy}.ts` and
   `src/layers/milkyWay/cloud/passes/milkyWayUpsamplePass.ts`.
 
-- [ ] `milkyWayFieldPass(runtime, planner): ContentPass<'milkyWayDisk'>`:
+- [x] `milkyWayFieldPass(runtime, planner): ContentPass<'milkyWayDisk'>`:
   - name `'milky-way-field'`,
     `enabled = milkyWayFieldAlpha(runtime, planner, state, ctx, fade) !== null`, so it also skips
     when the compute is DebugPanel-disabled;
@@ -1206,13 +1206,13 @@ export function milkyWayFieldCompute(
     `encodeFieldComposites(pass, runtime.additiveUpsample, plan,
     fieldRenderTargetsOf(ctx.snapshot.renderTargets))`;
   - no pick.
-- [ ] Insert `'milky-way-field'` right after `'milky-way-upsample'` on the hdr NEAR0 line, so v1
+- [x] Insert `'milky-way-field'` right after `'milky-way-upsample'` on the hdr NEAR0 line, so v1
       dust (`milky-way`) extincts field light as it does the cloud's.
-- [ ] Runtime member `aggregateUpsample` → `additiveUpsample`, since it now serves both. Hand-edit
+- [x] Runtime member `aggregateUpsample` → `additiveUpsample`, since it now serves both. Hand-edit
       it; it is a property, not an exported symbol, so `refactor rename` doesn't apply. The sites are
       `MilkyWayRuntime.d.ts`, `create.ts`, `destroy.ts` and `milkyWayUpsamplePass.ts`; grep the old
       name.
-- [ ] No new test: `checkFrameOrder` validates the line at boot, and B11 checks the pixels. Commit.
+- [x] No new test: `checkFrameOrder` validates the line at boot, and B11 checks the pixels. Commit.
 
 ### Task B8: v1 gates
 

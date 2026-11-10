@@ -1,6 +1,7 @@
 /**
  * create — the five handles, in construction order: the pick impostor, the
- * generated cloud, its two-pass renderer, the aggregate offscreen's upsample,
+ * generated cloud, its two-pass renderer, the additive upsample (shared by
+ * the aggregate offscreen and the field targets),
  * and the v2 field's slot, which builds no host until the field part is on.
  */
 
@@ -40,7 +41,7 @@ export function create(deps: LayerCoreDeps): MilkyWayRuntime {
       device: deps.ctx.device,
       targetFormat: HDR_TARGET_FORMAT,
     }),
-    aggregateUpsample: createAdditiveUpsample(deps.ctx.device, HDR_TARGET_FORMAT),
+    additiveUpsample: createAdditiveUpsample(deps.ctx.device, HDR_TARGET_FORMAT),
     fieldHost: createFieldHostSlot({
       create: () =>
         createGalaxyFieldHost(deps.ctx.device, {

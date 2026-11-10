@@ -7,7 +7,7 @@ import type { MilkyWayRuntime } from './@types/MilkyWayRuntime';
 
 export function destroy(runtime: MilkyWayRuntime): void {
   runtime.fieldHost.destroy();
-  runtime.aggregateUpsample.destroy();
+  runtime.additiveUpsample.destroy();
   runtime.cloudRenderer.destroy();
   runtime.cloud.destroy();
   runtime.pickRenderer.destroy();

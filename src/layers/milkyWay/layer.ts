@@ -4,7 +4,8 @@
  * star-count reconcile, the three draw/pick passes, its show and label entries, the
  * "You are here" COSMO label, the selection row, the source entry, the
  * DebugPanel tuning section, the InfoCard detail cards and the tier re-seed —
- * and, behind the `renderer` switch, the v2 field's targets and `mw-field` compute.
+ * and, behind the `renderer` switch, the v2 field's targets, its `mw-field`
+ * compute and its `milky-way-field` composite.
  */
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';
@@ -18,6 +19,7 @@ import { milkyWayPlanner } from './frame';
 import { MILKY_WAY_AGGREGATE_TARGET } from './cloud/render/milkyWayAggregateTarget';
 import { FIELD_TARGET_ROWS } from './field/render/fieldTargetRows';
 import { milkyWayFieldCompute } from './field/computes/milkyWayFieldCompute';
+import { milkyWayFieldPass } from './field/passes/milkyWayFieldPass';
 import { milkyWayAggregatePass } from './cloud/passes/milkyWayAggregatePass';
 import { milkyWayUpsamplePass } from './cloud/passes/milkyWayUpsamplePass';
 import { milkyWayPass } from './cloud/passes/milkyWayPass';
@@ -39,12 +41,13 @@ export const milkyWayLayer = defineLayer({
   create,
   destroy,
   planners: (runtime) => [milkyWayPlanner(runtime)],
-  // A second `milkyWayPlanner(runtime)` is only a typed handle: the result
-  // store keys by planner name, so it reads the one above's value.
+  // A second `milkyWayPlanner(runtime)` (here and in `passes`) is only a typed
+  // handle: the result store keys by planner name, so it reads the one above's value.
   computes: (runtime) => [milkyWayFieldCompute(runtime, milkyWayPlanner(runtime))],
   passes: (runtime) => [
     milkyWayAggregatePass(runtime),
     milkyWayUpsamplePass(runtime),
+    milkyWayFieldPass(runtime, milkyWayPlanner(runtime)),
     milkyWayPass(runtime),
   ],
   guides: (runtime) => ({
