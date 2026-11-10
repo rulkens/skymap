@@ -59,22 +59,29 @@ fn expHalfErfc(q: f32, x: f32) -> f32 {
 // must check .x themselves before dividing by it, same discipline
 // gaussianRayIntegral applies below.
 fn gaussianRayCoeffs(o: vec3<f32>, d: vec3<f32>, mDiag: vec3<f32>, mOff: vec3<f32>) -> vec3<f32> {
-  // v^T M v = dot(v*v, mDiag) + 2*dot((vx*vy, vx*vz, vy*vz), mOff), and the
-  // mixed form u^T M v symmetrises each cross term.
-  let a = dot(d * d, mDiag) + 2.0 * dot(vec3<f32>(d.x * d.y, d.x * d.z, d.y * d.z), mOff);
+  let a = bilinearForm(d, d, mDiag, mOff);
   if (a < 1e-12) { return vec3<f32>(0.0); }
-  let b = dot(o * d, mDiag)
+  let b = bilinearForm(o, d, mDiag, mOff);
+  // q, the closest approach in squared Mahalanobis distance, is the same from
+  // any origin on the ray, so it is taken from the point nearest the centre
+  // (d is unit). From o itself, c - b*b/a cancels: a compact HII shell 31 kpc
+  // out has c ~ 4e8 and q ~ 16, and one f32 ulp of d swung q across SPLAT_CUT^2.
+  // a and b stay on o, since callers read -b/a as a depth along THIS ray. The
+  // clamp catches the residual rounding at grazing incidence.
+  let oNear = o - d * dot(o, d);
+  let bNear = bilinearForm(oNear, d, mDiag, mOff);
+  let q = max(bilinearForm(oNear, oNear, mDiag, mOff) - bNear * bNear / a, 0.0);
+  return vec3<f32>(a, b, q);
+}
+
+// u^T M v for the symmetric M split as gaussianRayCoeffs takes it: each cross
+// term is symmetrised, so u == v gives the quadratic form v^T M v.
+fn bilinearForm(u: vec3<f32>, v: vec3<f32>, mDiag: vec3<f32>, mOff: vec3<f32>) -> f32 {
+  return dot(u * v, mDiag)
     + dot(
-      vec3<f32>(o.x * d.y + o.y * d.x, o.x * d.z + o.z * d.x, o.y * d.z + o.z * d.y),
+      vec3<f32>(u.x * v.y + u.y * v.x, u.x * v.z + u.z * v.x, u.y * v.z + u.z * v.y),
       mOff,
     );
-  let c = dot(o * o, mDiag) + 2.0 * dot(vec3<f32>(o.x * o.y, o.x * o.z, o.y * o.z), mOff);
-  // The quadratic's minimum along the ray, i.e. the closest approach in
-  // Mahalanobis distance. Analytically non-negative; clamped because
-  // cancellation between c and b*b/a can put it a hair under zero at grazing
-  // incidence, and a negative q turns the exp into a blowup.
-  let q = max(c - b * b / a, 0.0);
-  return vec3<f32>(a, b, q);
 }
 
 // gaussianRayIntegral — the full 0->infinity line integral, built on
