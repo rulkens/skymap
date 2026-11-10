@@ -46,7 +46,7 @@ export const DATA_FAMILIES: readonly DataFamily[] = [
     id: 'structures',
     name: 'Structure catalogues and fields',
     about:
-      'Clusters and superclusters, the density and flow fields of the cosmic web, and the dust and gas near the Sun.',
+      'Clusters and superclusters, the density and flow fields of the cosmic web, the dust and gas near the Sun, and the streams of stars around the Milky Way.',
     pages: 'each',
     sections: ['Fields, volumes and structures'],
     ids: ['mcxc', 'mscc', 'seed-structures', 'seed-milky-way-structures'],

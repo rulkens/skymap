@@ -44,7 +44,7 @@ export function shouldKeepTicking(
   return (
     selectCameraActive(s) ||
     state.subsystems.fades.isAnyAnimating(nowMs) ||
-    state.subsystems.structureFocus.isAwake(nowMs) ||
+    state.subsystems.recedingFocus.isAwake(nowMs) ||
     selectIsManualPlaying(s) ||
     followApproachEaseActive(state, drivers) ||
     anim.labelsAnimating ||

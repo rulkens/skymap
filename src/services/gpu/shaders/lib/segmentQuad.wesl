@@ -93,7 +93,8 @@ fn expandSegmentQuad(
     t = select((hLen - d * front.w * clip.w) / denom, s, aFront);
     let ndc = frontNdc + select(-tangent, tangent, aFront) * d;
     // Depth keeps the front end's z/w: the real point's z would cancel in f32
-    // on a standard-Z slab, and no caller depth-tests these lines.
+    // on a standard-Z slab. A caller that depth-tests gets that depth on the
+    // walked corner (stellarStreams/ribbonPick/vertex.wesl accepts it).
     clip = vec4<f32>(ndc * w, front.z / front.w * w, w);
   }
 

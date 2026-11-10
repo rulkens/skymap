@@ -8,7 +8,7 @@
  * `filters.expression`, not `filters.range`: PDAL ORs chained range clauses
  * on one dimension, excluding nothing.
  */
-import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
+import type { LonLatBounds } from '../../../src/layers/body/surfaceTiles/format/@types/LonLatBounds';
 import type { GroupAnchor } from '../../scene-workbench/@types/GroupAnchor';
 
 /** `writers.text`'s `order` — shared with `readPdalCsv` so the two cannot drift apart. */

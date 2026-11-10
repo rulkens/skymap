@@ -10,7 +10,6 @@
 import { describe, it, expect } from 'vitest';
 import { recordsToCloud } from '../../tools/catalog/buildAllBins';
 import type { ParsedRecord } from '../../tools/parsers/common';
-import { Source } from '../../src/data/source';
 import { encodeGalaxyCatalog } from '../../src/layers/galaxyCatalog/records/data/galaxyCatalogFormat';
 
 function record(source: ParsedRecord['source'], objID: bigint): ParsedRecord {
@@ -35,7 +34,7 @@ function record(source: ParsedRecord['source'], objID: bigint): ParsedRecord {
 }
 
 describe('buildAllBins — stellar-mass wiring', () => {
-  const records = [record(Source.SDSS, 1n), record(Source.Milliquas, 2n)];
+  const records = [record('sdss', 1n), record('milliquas', 2n)];
 
   it('the mass-is-estimated bit rides the encoded flags byte', () => {
     const cloud = recordsToCloud(records);

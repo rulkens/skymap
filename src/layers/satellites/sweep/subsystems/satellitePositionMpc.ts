@@ -8,7 +8,7 @@ import { satrecOf } from '../load/satrecOf';
 import { composeTemeToWorld } from './composeTemeToWorld';
 import { temeKmToWorldMpc } from './temeKmToWorldMpc';
 import { julianDaysToUnixMs } from '../../../../utils/time/julianDaysToUnixMs';
-import type { SatelliteCatalog } from '../../../../@types/satellites/SatelliteCatalog';
+import type { SatelliteCatalog } from '../../catalog/@types/SatelliteCatalog';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { BodyState } from '../../../../@types/scene/BodyState';
 

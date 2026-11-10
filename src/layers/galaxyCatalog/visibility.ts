@@ -6,9 +6,9 @@ import { GALAXY_CATALOG_IDS } from '../../data/galaxyCatalog/galaxyCatalogIds';
 import { GALAXY_CATALOG_SOURCE_ROWS } from './sources/galaxyCatalogSourceRows';
 
 // A single-parameter `.filter` is what lets `tsc` infer the narrowing predicate.
-const LABEL_BEARING_GALAXY_CATALOG_IDS = GALAXY_CATALOG_SOURCE_ROWS.map(([, entry]) => entry)
-  .filter((entry) => entry.bearsLabel)
-  .map((entry) => entry.id);
+const LABEL_BEARING_GALAXY_CATALOG_IDS = GALAXY_CATALOG_SOURCE_ROWS.filter(
+  (entry) => entry.bearsLabel,
+).map((entry) => entry.id);
 
 // The famous catalog is exempt from the deep-zoom band on purpose: its ~20 curated
 // galaxies stay as landmarks while the survey points yield to the local starfield.

@@ -7,7 +7,7 @@ import type { MissionOffsets } from '../../../../../src/layers/missions/missionC
 import type { CameraPose } from '../../../../../src/@types/camera/pose/CameraPose';
 import type { FollowMemory } from '../../../../../src/@types/engine/camera/FollowMemory';
 import type { DriverId } from '../../../../../src/@types/engine/camera/DriverId';
-import type { MissionEvent } from '../../../../../src/@types/missions/MissionEvent';
+import type { MissionEvent } from '../../../../../src/layers/missions/events/@types/MissionEvent';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import { MISSION_EASE_MS } from '../../../../../src/layers/missions/missionCamera/data/missionEaseMs';
 import { MISSION_FLYBY_LEAD_DAYS } from '../../../../../src/layers/missions/events/data/missionFlybyLeadDays';

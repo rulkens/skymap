@@ -34,7 +34,6 @@ import {
 } from '../../../../../src/data/starCatalog/starCatalogFormat';
 import { fetchWithProgress } from '../../../../../src/services/loading/fetchWithProgress';
 import { starOctreeFromSkst } from '../../../../../src/layers/starCatalog/survey/utils/starOctreeFromSkst';
-import { Source } from '../../../../../src/data/source';
 import { encodeOctreeObject } from '../../../../../tools/octree/encodeOctreeObject';
 import { NO_CHUNK_REF } from '../../../../../src/data/octree/octreeFormat';
 import type { SkstCatalog } from '../../../../../src/@types/data/starCatalog/SkstCatalog';
@@ -130,7 +129,7 @@ describe('starCatalogFetcher', () => {
     vi.mocked(fetchWithProgress).mockResolvedValueOnce(bytes.slice().buffer);
 
     const decoded = await starCatalogFetcher(
-      { source: Source.GaiaStars, tier: 'large' },
+      { source: 'gaiaStars', tier: 'large' },
       new AbortController().signal,
       () => {},
     );
@@ -144,7 +143,7 @@ describe('starCatalogFetcher', () => {
     vi.mocked(fetchWithProgress).mockResolvedValueOnce(await encodeSkstCatalog(cat));
 
     const decoded = await starCatalogFetcher(
-      { source: Source.GaiaStars, tier: 'medium' },
+      { source: 'gaiaStars', tier: 'medium' },
       new AbortController().signal,
       () => {},
     );

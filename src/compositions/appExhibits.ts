@@ -8,9 +8,9 @@ import { bodyLayerExhibits } from '../layers/body/exhibits/exhibits';
 import { cosmicHorizonLayerExhibits } from '../layers/cosmicHorizon/exhibits/exhibits';
 import { missionsLayerExhibits } from '../layers/missions/exhibits/exhibits';
 import { exhibitsById } from '../utils/exhibits/exhibitsById';
-import { cosmicFlows } from './exhibits/cosmicFlows';
-import { cosmicWeb } from './exhibits/cosmicWeb';
-import { zoneOfAvoidance } from './exhibits/zoneOfAvoidance';
+import { cosmicFlows } from './exhibits/cosmicFlows/cosmicFlows';
+import { cosmicWeb } from './exhibits/cosmicWeb/cosmicWeb';
+import { zoneOfAvoidance } from './exhibits/zoneOfAvoidance/zoneOfAvoidance';
 
 export const APP_EXHIBIT_REGISTRY = exhibitsById([
   cosmicFlows,

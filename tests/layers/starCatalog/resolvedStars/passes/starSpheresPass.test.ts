@@ -34,7 +34,6 @@ import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
-import { Source } from '../../../../../src/data/source';
 import { unpackPick } from '../../../../../src/data/selectionEncoding';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
@@ -57,10 +56,10 @@ import { composeBodyMvp } from '../../../../../src/utils/camera/bodyCompose/comp
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 import { catalogPickCodes } from '../../../../../src/utils/picking/catalogPickCodes';
 import { STAR_CATALOG_SOURCE_ROWS } from '../../../../../src/layers/starCatalog/sources/starCatalogSourceRows';
-import { fakePickCode } from '../../../../support/fakePickCode';
+import { testPickCode } from '../../../../support/testPickCode';
 
 /** Codes from 40 up: a stamp that packs the catalog value instead fails. */
-const PICK_CODES = catalogPickCodes(STAR_CATALOG_SOURCE_ROWS, fakePickCode());
+const PICK_CODES = catalogPickCodes(STAR_CATALOG_SOURCE_ROWS, testPickCode('starCatalog'));
 
 // The star entry's handed value with every catalog fully faded in.
 const ALL_ON = { famousStar: 1, gaiaStars: 1, sStar: 1, sun: 1 } as const;
@@ -350,7 +349,7 @@ describe('starSpheresPass.drawPick', () => {
     const decoded = unpackPick(captured[0]!)!;
     const seedIndex = seedIndexOfBody('sirius', SCENE_STARS);
     // The durable identity: Sirius' SCENE_STARS row, decoded straight back.
-    expect(decoded.sourceCode).toBe(PICK_CODES.pickCodeOf(Source.FamousStar));
+    expect(decoded.sourceCode).toBe(PICK_CODES.pickCodeOf('famousStar'));
     expect(decoded.localIdx).toBe(seedIndex);
     // ...and that seed index is NOT Sirius' slot in the drawn sphere list (0).
     // Stamping the pack-loop slot would decode to 0, aliasing the first seed.

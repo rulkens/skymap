@@ -4,7 +4,7 @@
  * groups over one collection never share a harvest or an asset directory.
  */
 import type { GroupAnchor } from '../../scene-workbench/@types/GroupAnchor';
-import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
+import type { LonLatBounds } from '../../../src/layers/body/surfaceTiles/format/@types/LonLatBounds';
 
 export type SceneGroupDefinition = {
   readonly id: string;

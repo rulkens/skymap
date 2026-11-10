@@ -43,7 +43,6 @@ import { SCENE_SETTLE_TIMEOUT_MS } from '../../../src/state/tour/sceneSettleTime
 import { advanceTour, prevBeat, togglePause } from '../../../src/state/tour/tourActions';
 import type { BeatData } from '../../../src/@types/animation/tour/BeatData';
 import { selectionResolverOver } from '../../support/selectionResolverOver';
-import { Source } from '../../../src/data/source';
 import { FAMOUS_GALAXY_NAMES } from '../../../src/layers/galaxyCatalog/famousGalaxies/data/famousGalaxyNames.generated';
 import type { GalaxyRowFixture, StructureRowFixture } from '../../support/selectionResolverOver';
 import type { LiveCameraRuntime } from '../../../src/store/types';
@@ -212,7 +211,7 @@ describe('visitBeatSaga', () => {
     // Read LIVE: the beat's readiness gate must clear only once the cloud lands.
     const lazyGalaxies = {
       get catalogs() {
-        return cloudLoaded ? new Map([[Source.FamousGalaxy, CLOUD]]) : new Map();
+        return cloudLoaded ? new Map([['famousGalaxy', CLOUD]]) : new Map();
       },
     } as unknown as GalaxyRowFixture;
 

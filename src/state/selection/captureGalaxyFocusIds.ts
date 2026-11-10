@@ -12,7 +12,6 @@
 import { selectSelectedRef, selectFocusRef } from './selectors';
 import { galaxyCatalogRequest } from '../../services/engine/wiring/galaxyCatalogRequest';
 import { sameRequest } from '../../utils/loading/sameRequest';
-import { galaxyCatalogIdOf } from '../../utils/galaxyCatalogIdOf';
 import type { RootState } from '../../store/types';
 import type { SelectionResolver } from '../../@types/engine/selection/SelectionResolver';
 import type { SelectionSlot } from '../../@types/engine/SelectionSlot';
@@ -51,8 +50,7 @@ export function captureGalaxyFocusIds(
       galaxyCatalogRequest(ref.source, prevTier),
       galaxyCatalogRequest(ref.source, nextTier),
     );
-    const enabled =
-      state.settings.galaxyCatalogs.items[galaxyCatalogIdOf(ref.source)]?.enabled === true;
+    const enabled = state.settings.galaxyCatalogs.items[ref.source]?.enabled === true;
     if (!drifts || !enabled) continue;
     // focusIdOf returns null when the cloud is absent or the ref has no durable
     // representation (Milky Way, already guarded above). Skip nulls so the

@@ -50,7 +50,7 @@ import {
 import { resolve, join, dirname } from 'node:path';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
-import type { SourceType } from '../../src/@types/data/SourceType';
+import type { GalaxyCatalogId } from '../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 
 import { parseSdssCsv } from '../parsers/sdssCsv';
 import { parseTwoMrs, parseXscShapeCsv } from '../parsers/twoMrs';
@@ -82,7 +82,6 @@ import { CUTOFF_MPC } from './localVolumeCutoff';
 import type { Cf4CatalogIndex } from '../parsers/cosmicflows4';
 import { loadCf4CatalogIndex } from '../parsers/cosmicflows4';
 import { DEFAULT_GALAXY_DIAMETER_KPC } from '../../src/utils/math/defaultGalaxyDiameterKpc';
-import { Source } from '../../src/data/source';
 import { APP_SOURCE_REGISTRY } from '../../src/compositions/appSources';
 import type { GalaxyCatalog } from '../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import {
@@ -432,7 +431,7 @@ function loadMilliquas(path: string | undefined): MilliquasParseResult {
  * of `desiPatches`.
  *
  * The patch supplies both its membership filter (`patch.makeFilter()`) and the
- * `Source` every kept row is stamped with, so the four-tracer read loop is
+ * source id every kept row is stamped with, so the four-tracer read loop is
  * identical across geometries — a new patch is one `DESI_PATCHES` row, not a
  * cloned loader.
  *
@@ -742,10 +741,10 @@ async function runCli(): Promise<void> {
 
   // Capture per-source input counts up front so the summary can report
   // the dedup drop rate per survey, not just the merged total.
-  const inputCounts: Record<number, number> = {
-    [Source.SDSS]: sdss.length,
-    [Source.TwoMRS]: twoMrs.length,
-    [Source.Glade]: glade.length,
+  const inputCounts: Partial<Record<GalaxyCatalogId, number>> = {
+    sdss: sdss.length,
+    '2mrs': twoMrs.length,
+    glade: glade.length,
   };
   DESI_PATCHES.forEach((patch, i) => {
     inputCounts[patch.source] = desiPatches[i]!.length;
@@ -793,7 +792,7 @@ async function runCli(): Promise<void> {
   // Bucket the merged stream back out per source so we can write one
   // file per survey. Using a Map preserves insertion order, which keeps
   // the log output tidy.
-  const bySource = new Map<SourceType, ParsedRecord[]>();
+  const bySource = new Map<GalaxyCatalogId, ParsedRecord[]>();
   for (const r of merged) {
     let arr = bySource.get(r.source);
     if (!arr) {
@@ -841,17 +840,18 @@ async function runCli(): Promise<void> {
         `  famous-seed dedup: dropped ${milliquasFamousDropped.toLocaleString()} Milliquas rows that match a famous-seed position\n`,
       );
     }
-    bySource.set(Source.Milliquas, milliquasKept);
+    bySource.set('milliquas', milliquasKept);
   }
 
   // Per-source dedup report. Subtracting kept from input gives the number
   // of records dropped as duplicates of a higher-priority survey's row.
-  for (const source of [
-    Source.SDSS,
-    Source.TwoMRS,
-    Source.Glade,
+  const dedupReportOrder: GalaxyCatalogId[] = [
+    'sdss',
+    '2mrs',
+    'glade',
     ...DESI_PATCHES.map((patch) => patch.source),
-  ]) {
+  ];
+  for (const source of dedupReportOrder) {
     const kept = (bySource.get(source) ?? []).length;
     const input = inputCounts[source] ?? 0;
     const dropped = input - kept;

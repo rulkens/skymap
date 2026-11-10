@@ -52,8 +52,7 @@ const RESOLVES: Record<ObjectKind, (id: string) => boolean> = {
   spacecraft: (id) => isRegistryBodyId(id.slice(BODY_FOCUS_PREFIX.length)),
   model: (id) => isRegistryBodyId(id.slice(BODY_FOCUS_PREFIX.length)),
   milkyWay: (id) => id === MILKY_WAY_FOCUS_ID,
-  blackHole: (id) =>
-    BLACK_HOLE_SOURCE_ROWS.some(([, hole]) => encodeBlackHoleFocusId(hole.id) === id),
+  blackHole: (id) => BLACK_HOLE_SOURCE_ROWS.some((hole) => encodeBlackHoleFocusId(hole.id) === id),
   // The app's resolver takes any id of the famous-galaxy shape; the list it checks against is in its data files (below).
   galaxy: (id) => /^[a-z0-9]+$/.test(id),
   'open-cluster': (id) => structureIds.has(id),

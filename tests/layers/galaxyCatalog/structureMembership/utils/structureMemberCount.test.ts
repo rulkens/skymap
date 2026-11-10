@@ -1,16 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import { structureMemberCount } from '../../../../../src/layers/galaxyCatalog/structureMembership/utils/structureMemberCount';
-import { Source } from '../../../../../src/data/source';
-import { galaxyCatalogIdOf } from '../../../../../src/utils/galaxyCatalogIdOf';
 import { makeGalaxyCatalog } from '../../../../fixtures/makeGalaxyCatalog';
 import { galaxyRecordsOver } from '../../../../support/galaxyRecordsOver';
 import type { GalaxyCatalog } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import type { SourceType } from '../../../../../src/@types/data/SourceType';
+import type { GalaxyCatalogId } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import type { StructureInfo } from '../../../../../src/@types/data/structure/StructureInfo';
 
 /** The visible catalogs covering the two catalogs this file's fixtures populate. */
-const SDSS_AND_TWOMRS = new Set([galaxyCatalogIdOf(Source.SDSS), galaxyCatalogIdOf(Source.TwoMRS)]);
-const SDSS_ONLY = new Set([galaxyCatalogIdOf(Source.SDSS)]);
+const SDSS_AND_TWOMRS = new Set(['sdss', '2mrs'] as const);
+const SDSS_ONLY = new Set(['sdss'] as const);
 
 /**
  * Minimal GalaxyCatalog from (x,y,z) tuples — only `positions`/`count` are
@@ -40,23 +38,21 @@ const cluster: StructureInfo = {
 };
 
 /** The flat record sources over a per-source catalog map. */
-function cloudFrom(map: Partial<Record<SourceType, GalaxyCatalog>>) {
+function cloudFrom(map: Partial<Record<GalaxyCatalogId, GalaxyCatalog>>) {
   return galaxyRecordsOver(
-    new Map(
-      Object.entries(map).map(([source, catalog]) => [Number(source) as SourceType, catalog]),
-    ),
+    new Map(Object.entries(map).map(([source, catalog]) => [source as GalaxyCatalogId, catalog])),
   );
 }
 
 describe('structureMemberCount', () => {
   it('counts galaxies inside the sphere across visible galaxy catalogs', () => {
     const getCloud = cloudFrom({
-      [Source.SDSS]: makeCatalog([
+      ['sdss']: makeCatalog([
         [1, 0, 0],
         [2, 0, 0],
         [100, 0, 0],
       ]), // 2 inside
-      [Source.TwoMRS]: makeCatalog([
+      ['2mrs']: makeCatalog([
         [0, 3, 0],
         [0, 200, 0],
       ]), // 1 inside
@@ -66,11 +62,11 @@ describe('structureMemberCount', () => {
 
   it('excludes galaxy catalogs toggled off in the visibility mask', () => {
     const getCloud = cloudFrom({
-      [Source.SDSS]: makeCatalog([
+      ['sdss']: makeCatalog([
         [1, 0, 0],
         [2, 0, 0],
       ]), // 2 inside
-      [Source.TwoMRS]: makeCatalog([
+      ['2mrs']: makeCatalog([
         [0, 1, 0],
         [0, 2, 0],
       ]), // 2 inside, but hidden
@@ -80,7 +76,7 @@ describe('structureMemberCount', () => {
 
   it('returns 0 for a genuinely empty sphere over loaded data', () => {
     const getCloud = cloudFrom({
-      [Source.SDSS]: makeCatalog([
+      ['sdss']: makeCatalog([
         [100, 0, 0],
         [200, 0, 0],
       ]),
@@ -95,7 +91,7 @@ describe('structureMemberCount', () => {
       physicalRadiusMpc: 5,
       apparentRadiusMpc: 12,
     };
-    const getCloud = cloudFrom({ [Source.SDSS]: makeCatalog([[8, 0, 0]]) });
+    const getCloud = cloudFrom({ ['sdss']: makeCatalog([[8, 0, 0]]) });
     expect(structureMemberCount(wide, getCloud, SDSS_ONLY)).toBe(1);
     // With no apparent extent, the same galaxy falls outside the 5 Mpc core.
     expect(structureMemberCount({ ...cluster, physicalRadiusMpc: 5 }, getCloud, SDSS_ONLY)).toBe(0);

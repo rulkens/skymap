@@ -11,7 +11,6 @@ import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { GalaxyCatalogRuntime } from '../../@types/GalaxyCatalogRuntime';
 import { PICK_SENTINEL_OFFSET, SELECTION_NONE_SENTINEL } from '../../../../data/selectionEncoding';
 import { galaxyCatalogSelectionRow } from '../../selection/galaxyCatalogSelectionRow';
-import { galaxyCatalogIdOf } from '../../../../utils/galaxyCatalogIdOf';
 import { pickUniformBytesOf } from '../render/pickUniformBytesOf';
 import {
   PROCEDURAL_DISK_FADE_START_PX,
@@ -62,7 +61,7 @@ export function galaxyPointSpritesPass(runtime: GalaxyCatalogRuntime): ContentPa
         // @group(3): the engine owns one focus buffer, written once per frame in
         // renderFrame. At rest (blend 0) the shader multiplier is 1.0.
         focusBindGroup: runtime.focusBindGroup,
-        fadeOpacityOf: (source) => fade[galaxyCatalogIdOf(source)],
+        fadeOpacityOf: (source) => fade[source],
       });
     },
 
@@ -70,7 +69,7 @@ export function galaxyPointSpritesPass(runtime: GalaxyCatalogRuntime): ContentPa
     // catalog that is invisible, faded or clipped to 0 is not clickable either.
     drawPick(pass, view, ctx, state, fade) {
       const sources = Array.from(runtime.pointRenderer.loadedSources()).filter(
-        (s) => fade[galaxyCatalogIdOf(s.source)] !== 0,
+        (s) => fade[s.source] !== 0,
       );
       runtime.pickRenderer.drawPoints(pass, sources, pickUniformBytesOf(view, ctx, state));
     },

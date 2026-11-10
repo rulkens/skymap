@@ -253,7 +253,7 @@ export const DOCS_REFERENCE_FACTS: readonly Fact[] = [
     id: 'ref-focus-galaxy-ids',
     about: 'app',
     text: 'For a galaxy the app writes the shortest id it has: a named galaxy’s own, or else its PGC or SDSS number, or else its place on the sky to four decimals of a degree.',
-    source: `${REPO_BLOB}/src/services/url/encodeGalaxyId.ts`,
+    source: `${REPO_BLOB}/src/layers/galaxyCatalog/selection/utils/encodeGalaxyId.ts`,
     sourceLabel: `how a galaxy’s id is chosen, ${IN_REPO}`,
     checked: CHECKED,
   },

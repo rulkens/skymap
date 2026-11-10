@@ -1,4 +1,4 @@
-import type { StructureCatalog } from '../../../../@types/data/structure/structureCatalog/StructureCatalog';
+import type { StructureCatalog } from './StructureCatalog';
 import type { StructureMetaEntry } from './StructureMetaEntry';
 
 /**

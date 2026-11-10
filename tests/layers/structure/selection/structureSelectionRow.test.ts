@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { structureSelectionRow } from '../../../../src/layers/structure/selection/structureSelectionRow';
 import { STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
 import { unpackPick } from '../../../../src/data/selectionEncoding';
-import { fakePickCode } from '../../../support/fakePickCode';
 import { structureRowRuntime } from '../../../support/layerPickCodes';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 
@@ -30,14 +29,13 @@ describe('structureSelectionRow pick codes', () => {
     byId: (id: string) => records.find((r) => r.id === id) ?? null,
     byCategory: (category: string) => records.filter((r) => r.category === category),
   };
-  const row = structureSelectionRow(structureRowRuntime(store, fakePickCode()));
+  const row = structureSelectionRow(structureRowRuntime(store));
 
-  it('refs round-trip under non-catalog codes, one per category', () => {
+  it('refs round-trip under allocator codes, one per category', () => {
     const seen = new Set<number>();
     for (const { id } of records) {
       const ref = { type: 'structure', id } as const;
       const pick = unpackPick(row.encodePick(ref)!)!;
-      expect(pick.sourceCode).toBeGreaterThanOrEqual(40);
       expect(row.resolvePick(pick)).toEqual(ref);
       seen.add(pick.sourceCode);
     }

@@ -1,3 +1,3 @@
-import type { BlackHoleId } from '../../../../@types/data/blackHole/BlackHoleId';
+import type { BlackHoleId } from '../../@types/BlackHoleId';
 
 export type BlackHoleRef = { readonly type: 'blackHole'; readonly id: BlackHoleId };

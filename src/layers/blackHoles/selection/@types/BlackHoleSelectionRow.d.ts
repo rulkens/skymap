@@ -1,4 +1,4 @@
-import type { BlackHoleInfo } from '../../../../@types/engine/BlackHoleInfo';
+import type { BlackHoleInfo } from './BlackHoleInfo';
 import type { DriverGeometry } from '../../../../@types/engine/camera/DriverGeometry';
 import type { PlacedRow } from '../../../../@types/engine/selection/PlacedRow';
 

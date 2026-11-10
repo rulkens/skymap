@@ -633,6 +633,55 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     description:
       'The shape of the Local Bubble, the cavity in the gas around the Sun, from O’Neill and colleagues, 2024.',
   },
+  vasiliev2021: {
+    description:
+      'A computer model of the Sagittarius dwarf galaxy being torn apart by the Milky Way, from Vasiliev and colleagues, 2021.',
+  },
+  galstreams: {
+    description:
+      'The paths across the sky, with distances, of the streams of stars torn from star clusters and small galaxies around the Milky Way.',
+  },
+  'harris-gc': {
+    description:
+      'William Harris’s catalogue of the Milky Way’s globular clusters, which gives the metal content of the clusters that some streams came from.',
+  },
+  's5-li2022': {
+    description:
+      'The metal content of a dozen stellar streams, measured from the spectra of their giant stars by the S5 survey, Li and colleagues, 2022.',
+  },
+  hayes2020: {
+    description:
+      'How the metal content of the Sagittarius stream falls with the time since its stars were torn away, from Hayes and colleagues, 2020.',
+  },
+  shipp2018: {
+    description:
+      'The stellar masses of seven streams seen in the Dark Energy Survey, from Shipp and colleagues, 2018.',
+  },
+  koposov2010: {
+    description:
+      'The stellar mass of the GD-1 stream, counted from its stars by Koposov, Rix and Hogg, 2010.',
+  },
+  jethwa2018: {
+    description: 'The stellar mass of the Jet stream, from Jethwa and colleagues, 2018.',
+  },
+  jensen2021: {
+    description:
+      'The stellar mass of the stream torn from the globular cluster NGC 5466, from Jensen and colleagues, 2021.',
+  },
+  caldwell2020: {
+    description: 'The stellar mass of the Ophiuchus stream, from Caldwell and colleagues, 2020.',
+  },
+  thomas2022: {
+    description:
+      'The stellar mass of the Cetus-Palca stream, the remains of a small dwarf galaxy, from Thomas and Battaglia, 2022.',
+  },
+  koposov2023: {
+    description: 'The stellar mass of the Orphan-Chenab stream, from Koposov and colleagues, 2023.',
+  },
+  mist: {
+    description:
+      'Models of how stars age, which give the colours of a stream’s giants, turnoff stars and horizontal-branch stars at its metal content.',
+  },
   vizier: {
     description:
       'The catalogue service of CDS in Strasbourg, through which six of our tables were fetched.',

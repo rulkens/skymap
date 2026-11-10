@@ -11,8 +11,8 @@
  * mosaic and MOLA thousands of times over.
  */
 
-import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
-import type { ColourGrade } from '../../src/@types/scene/ColourGrade';
+import type { LonLatBounds } from '../../src/layers/body/surfaceTiles/format/@types/LonLatBounds';
+import type { ColourGrade } from '../../src/layers/body/textures/@types/ColourGrade';
 import { MARS_IAU_SPHERE_RADIUS_M } from '../../src/layers/body/surfaceTiles/format/data/marsSurfaceParams';
 import { gradeRgbaInPlace } from '../utils/image/gradeRgbaInPlace';
 import { heightLatticeStepDeg } from '../utils/textures/heightLatticeStepDeg';

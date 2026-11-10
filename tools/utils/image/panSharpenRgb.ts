@@ -1,4 +1,4 @@
-import type { ChromaCalibration } from '../../../src/@types/scene/ChromaCalibration';
+import type { ChromaCalibration } from '../../../src/layers/body/textures/@types/ChromaCalibration';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 import { linearToSrgbByte } from '../../../src/utils/color/linearToSrgbByte';
 import { srgbToLinear } from '../../../src/utils/color/srgbToLinear';

@@ -10,9 +10,9 @@
  * inside the field renderer.
  */
 
-import type { FieldSliceCounts } from '../../../../src/@types/galaxy/FieldSliceCounts';
-import type { HiiSegment } from '../../../../src/@types/galaxy/HiiSegment';
-import type { GalaxyFieldMixtureResult } from '../../../../src/@types/galaxy/GalaxyFieldMixtureResult';
+import type { FieldSliceCounts } from '../../../../src/layers/milkyWay/field/@types/FieldSliceCounts';
+import type { HiiSegment } from '../../../../src/layers/milkyWay/field/starFormation/@types/HiiSegment';
+import type { GalaxyFieldMixtureResult } from '../../../../src/layers/milkyWay/field/mixture/@types/GalaxyFieldMixtureResult';
 
 export type GalaxyProbeApi = {
   // Live production state — NOT copies — that `peekRecords`' caller reads to
@@ -42,7 +42,7 @@ export type GalaxyProbeApi = {
   // `ismMapRingMeans.ts`'s CPU loop over `getIsmMapData()`.
   requestRingMeansReadback(): Promise<Float32Array>;
   // Debug-only: numeric-validation exception (`createArmRidgeDebugSample.ts`)
-  // — armRidge.wesl vs. armRidgeGeometry.ts.
+  // — armRidge.wesl vs. arms/utils/armRidge*.ts.
   requestArmRidgeSampleReadback(): Promise<Float32Array>;
   // Debug-only: numeric-validation exception
   // (`createIsmMapDustCdfScanDebugSample.ts`) — ismMapDustCdfScan.wesl's

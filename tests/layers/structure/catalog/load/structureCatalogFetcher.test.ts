@@ -4,7 +4,7 @@ import {
   parseStructureMeta,
 } from '../../../../../src/layers/structure/catalog/load/structureCatalogFetcher';
 import { encodeStructureCatalog } from '../../../../../src/layers/structure/catalog/data/structureCatalogFormat';
-import type { StructureCatalog } from '../../../../../src/@types/data/structure/structureCatalog/StructureCatalog';
+import type { StructureCatalog } from '../../../../../src/layers/structure/catalog/@types/StructureCatalog';
 import type { StructureMetaEntry } from '../../../../../src/layers/structure/catalog/@types/StructureMetaEntry';
 import { useFetchMock } from '../../../../setup/fetchMock';
 

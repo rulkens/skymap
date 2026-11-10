@@ -35,7 +35,6 @@ import { setSimDays, pause } from '../../../src/state/time/timeSlice';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { selectionRowsRoute } from '../../../src/store/constants';
-import { Source } from '../../../src/data/source';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import {
   buildStarOctree,
@@ -111,7 +110,7 @@ describe('watchSelectionRowsSaga', () => {
     // the deferral cases can land the cloud mid-test.
     const galaxies = {
       get catalogs() {
-        return cloudPresent ? new Map([[Source.SDSS, makeCloud()]]) : new Map();
+        return cloudPresent ? new Map([['sdss', makeCloud()]]) : new Map();
       },
     } as unknown as GalaxyRowFixture;
     const structures: StructureRowFixture = { byId: () => structure, byCategory: () => [] };
@@ -120,9 +119,7 @@ describe('watchSelectionRowsSaga', () => {
     const stars = {
       renderer: {
         loadedCatalogs: () =>
-          (starCatalog ? [{ source: Source.GaiaStars, octree: starCatalog }] : [])[
-            Symbol.iterator
-          ](),
+          (starCatalog ? [{ source: 'gaiaStars', octree: starCatalog }] : [])[Symbol.iterator](),
       },
     } as unknown as StarRowFixture;
     sagaMiddleware.run(watchSelectionRowsSaga);
@@ -139,7 +136,7 @@ describe('watchSelectionRowsSaga', () => {
   });
 
   it('a ref change re-extracts that slot into selectionRows', async () => {
-    store.dispatch(updateSelectionSelect({ type: 'galaxyCatalog', source: Source.SDSS, index: 0 }));
+    store.dispatch(updateSelectionSelect({ type: 'galaxyCatalog', source: 'sdss', index: 0 }));
     await flush();
     expect(store.getState()[selectionRowsRoute].select).toMatchObject({
       type: 'galaxyCatalog',
@@ -148,7 +145,7 @@ describe('watchSelectionRowsSaga', () => {
   });
 
   it('a focus ref change lands the focus id with the row; select and hover carry none', async () => {
-    const ref = { type: 'galaxyCatalog', source: Source.SDSS, index: 0 } as const;
+    const ref = { type: 'galaxyCatalog', source: 'sdss', index: 0 } as const;
     store.dispatch(updateSelectionSelect(ref));
     await flush();
     expect(store.getState()[selectionRowsRoute].focusId).toBeNull();
@@ -161,9 +158,9 @@ describe('watchSelectionRowsSaga', () => {
   it('clearSelection re-extracts select + focus rows to null, leaving hover untouched', async () => {
     // Regression: clearSelection (Esc / InfoCard ×) nulls the select+focus REFS,
     // but the reconciler must also null the derived ROWS — otherwise the InfoCard,
-    // focus ring, and structure-focus subsystem (all read the rows) stay stuck and
+    // focus ring, and receding-focus subsystem (all read the rows) stay stuck and
     // Esc appears to do nothing.
-    const ref = { type: 'galaxyCatalog', source: Source.SDSS, index: 0 } as const;
+    const ref = { type: 'galaxyCatalog', source: 'sdss', index: 0 } as const;
     store.dispatch(updateSelectionHover(ref));
     store.dispatch(updateSelectionSelect(ref));
     store.dispatch(updateSelectionFocus(ref));
@@ -184,13 +181,13 @@ describe('watchSelectionRowsSaga', () => {
 
   it('a deep link defers: ref present but cloud absent → null row; the count pulse fills it', async () => {
     cloudPresent = false;
-    store.dispatch(updateSelectionFocus({ type: 'galaxyCatalog', source: Source.SDSS, index: 0 }));
+    store.dispatch(updateSelectionFocus({ type: 'galaxyCatalog', source: 'sdss', index: 0 }));
     await flush();
     expect(store.getState()[selectionRowsRoute].focus).toBeNull();
     expect(store.getState()[selectionRowsRoute].focusId).toBeNull();
 
     cloudPresent = true;
-    store.dispatch(engineSourceCountReported({ source: Source.SDSS, count: 1 }));
+    store.dispatch(engineSourceCountReported({ source: 'sdss', count: 1 }));
     await flush();
     expect(store.getState()[selectionRowsRoute].focus).toMatchObject({
       type: 'galaxyCatalog',
@@ -206,14 +203,12 @@ describe('watchSelectionRowsSaga', () => {
     // that pulse or the star focus row stays null forever (the camera arrives
     // via watchFocusTweenSaga, but no InfoCard/body).
     starCatalog = null;
-    store.dispatch(
-      updateSelectionFocus({ type: 'starCatalog', source: Source.GaiaStars, index: 0 }),
-    );
+    store.dispatch(updateSelectionFocus({ type: 'starCatalog', source: 'gaiaStars', index: 0 }));
     await flush();
     expect(store.getState()[selectionRowsRoute].focus).toBeNull();
 
     starCatalog = await makeStarCatalog();
-    store.dispatch(engineSourceCountReported({ source: Source.GaiaStars, count: 2 }));
+    store.dispatch(engineSourceCountReported({ source: 'gaiaStars', count: 2 }));
     await flush();
     expect(store.getState()[selectionRowsRoute].focus).toMatchObject({
       type: 'starCatalog',

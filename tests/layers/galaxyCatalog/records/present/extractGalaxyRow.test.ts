@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
 import { extractGalaxyRow } from '../../../../../src/layers/galaxyCatalog/records/present/extractGalaxyRow';
-import { Source } from '../../../../../src/data/source';
 import { makeGalaxyCatalog } from '../../../../fixtures/makeGalaxyCatalog';
 
 import type { GalaxyCatalog } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
@@ -24,10 +23,10 @@ function makeCloud(): GalaxyCatalog {
 
 describe('extractGalaxyRow', () => {
   it('reads the raw cloud slots into a serializable row (objId as string)', () => {
-    const row = extractGalaxyRow(makeCloud(), 0, Source.SDSS);
+    const row = extractGalaxyRow(makeCloud(), 0, 'sdss');
     expect(row).toMatchObject({
       type: 'galaxyCatalog',
-      source: Source.SDSS,
+      source: 'sdss',
       index: 0,
       objId: '1237668',
       x: 10,
@@ -49,19 +48,19 @@ describe('extractGalaxyRow', () => {
   it('maps the persisted orientationIsFallback byte (1) to a boolean true', () => {
     const cloud = makeCloud();
     cloud.orientationIsFallback[0] = 1;
-    const row = extractGalaxyRow(cloud, 0, Source.SDSS);
+    const row = extractGalaxyRow(cloud, 0, 'sdss');
     expect(row!.orientationIsFallback).toBe(true);
   });
 
   it('maps the persisted diameterIsFallback byte (1) to a boolean true', () => {
     const cloud = makeCloud();
     cloud.diameterIsFallback[0] = 1;
-    const row = extractGalaxyRow(cloud, 0, Source.SDSS);
+    const row = extractGalaxyRow(cloud, 0, 'sdss');
     expect(row!.diameterIsFallback).toBe(true);
   });
 
   it('returns null for an out-of-bounds index or missing cloud (tier-swap race guard)', () => {
-    expect(extractGalaxyRow(makeCloud(), 5, Source.SDSS)).toBeNull();
-    expect(extractGalaxyRow(undefined, 0, Source.SDSS)).toBeNull();
+    expect(extractGalaxyRow(makeCloud(), 5, 'sdss')).toBeNull();
+    expect(extractGalaxyRow(undefined, 0, 'sdss')).toBeNull();
   });
 });

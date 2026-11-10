@@ -14,7 +14,7 @@
  */
 
 import type { Renderer } from '../../../../../@types/rendering/Renderer';
-import type { SurfaceEffect } from '../../../../../@types/data/SurfaceEffect';
+import type { SurfaceEffect } from '../../format/@types/SurfaceEffect';
 import type { SurfaceTileRenderer } from '../@types/SurfaceTileRenderer';
 import { resolveDepthCompare } from '../../../../../utils/gpu/resolveDepthCompare';
 import { IDENTITY_MAT3 } from '../../../../../utils/math/identityMat3';

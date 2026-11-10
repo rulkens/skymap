@@ -4,7 +4,7 @@
  * epoch window.
  */
 import { parseSatelliteCatalog } from '../../catalog/load/parseSatelliteCatalog';
-import type { SatelliteCatalog } from '../../../../@types/satellites/SatelliteCatalog';
+import type { SatelliteCatalog } from '../../catalog/@types/SatelliteCatalog';
 import type { SatellitePropagator } from '../@types/SatellitePropagator';
 import type { SatelliteSweep } from '../@types/SatelliteSweep';
 import type { SatelliteWorkerReply } from '../@types/SatelliteWorkerReply';

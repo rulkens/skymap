@@ -3,10 +3,6 @@ import { near0LabelProjection } from '../../services/engine/frame/near0LabelProj
 import { NEAR0 } from '../../services/engine/frame/slabs';
 import { NEAR0_FAR_CLAMP_FRACTION } from '../../utils/camera/frustum/foregroundFrustum';
 
-// Screen px: sized a little above the clamped caption height
-// (`FAMOUS_LABEL_STYLE.maxPixelSize`) so names de-collide rather than stack.
-const STAR_CAPTION_MIN_SEPARATION_PX = 48;
-
 // Envelope time constant (ms): ~95% of the gap closed within 3·tau (300 ms), the
 // COSMO director's smoothstep ramp duration. Exponential rather than
 // smoothstep because this target moves continuously with the distance band.
@@ -17,10 +13,9 @@ const CAPTION_ENVELOPE_TAU_MS = 100;
 const CAPTION_ENVELOPE_SETTLE_EPS = 0.005;
 
 /**
- * The NEAR0 slab's `Label2DDirector` config (spec §4.3). `screenSeparation`/
- * 48 px is cheaper than COSMO's measured-rect overlap — appropriate for
- * scene-body/star/constellation captions, where text metrics aren't the
- * cull's business. `exponentialApproach`/τ 100 ms/ε 0.005 tracks a
+ * The NEAR0 slab's `Label2DDirector` config (spec §4.3). Declutter tests the
+ * same padded text rects as COSMO: an anchor-distance cull let long names
+ * (stellar streams, missions) overlap. `exponentialApproach`/τ 100 ms/ε 0.005 tracks a
  * continuously-moving distance-band target rather than a binary
  * appear/disappear cliff — see `applyExponentialEnvelope`'s docblock for why
  * that needs a different curve than COSMO's. `lift` clamps a lifted anchor
@@ -29,7 +24,7 @@ const CAPTION_ENVELOPE_SETTLE_EPS = 0.005;
  */
 export const FOREGROUND_LABEL_DIRECTOR: Label2DDirectorConfig = {
   project: near0LabelProjection,
-  declutter: { mode: 'screenSeparation', minSeparationPx: STAR_CAPTION_MIN_SEPARATION_PX },
+  declutterPadPx: 8,
   envelope: {
     mode: 'exponentialApproach',
     tauMs: CAPTION_ENVELOPE_TAU_MS,

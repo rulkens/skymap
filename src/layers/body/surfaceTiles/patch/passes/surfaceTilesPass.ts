@@ -11,7 +11,7 @@
 import type { ContentPass } from '../../../../../@types/engine/frame/ContentPass';
 import type { BodyRuntime } from '../../../@types/BodyRuntime';
 import type { BodyTextureId } from '../../../../../@types/data/BodyTextureId';
-import type { SurfaceEffect } from '../../../../../@types/data/SurfaceEffect';
+import type { SurfaceEffect } from '../../format/@types/SurfaceEffect';
 import type { SurfaceEffectInputs } from '../@types/SurfaceEffectInputs';
 import { SCALE_UNITS } from '../../../../../data/scaleUnits';
 import { RENDER_ORIGIN_MPC } from '../../../../../data/renderOrigin';

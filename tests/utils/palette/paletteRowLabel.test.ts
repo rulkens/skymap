@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
 import { paletteRowLabel } from '../../../src/utils/palette/paletteRowLabel';
-import { Source } from '../../../src/data/source';
 import { APP_EXHIBIT_REGISTRY } from '../../../src/compositions/appExhibits';
 import { tourRegistry } from '../../../src/data/animation/tours/tourRegistry';
 import type { ScoredRow } from '../../../src/@types/palette/ScoredRow';
@@ -21,7 +20,7 @@ describe('paletteRowLabel', () => {
       [
         {
           kind: 'alias',
-          entry: { pgc: 42038, names: ['NGC 4565'], source: Source.Glade },
+          entry: { pgc: 42038, names: ['NGC 4565'], sourceLabel: 'GLADE', focusId: 'pgc-42038' },
           score: 0,
         },
         'NGC 4565',
@@ -30,7 +29,7 @@ describe('paletteRowLabel', () => {
       [
         {
           kind: 'alias',
-          entry: { pgc: 1, names: [], source: Source.Glade },
+          entry: { pgc: 1, names: [], sourceLabel: 'GLADE', focusId: 'pgc-1' },
           score: 0,
         },
         '(unnamed)',

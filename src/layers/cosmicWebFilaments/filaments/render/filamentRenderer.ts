@@ -34,7 +34,7 @@
  */
 import vsCode from '../../../../services/gpu/shaders/filaments/vertex.wesl?static';
 import fsCode from '../../../../services/gpu/shaders/filaments/fragment.wesl?static';
-import type { FilamentCloud } from '../../../../@types/data/filament/FilamentCloud';
+import type { FilamentCloud } from '../../@types/FilamentCloud';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { FilamentRenderer } from '../@types/FilamentRenderer';
 import type { Mat4 } from 'wgpu-matrix';

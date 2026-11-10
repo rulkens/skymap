@@ -1,9 +1,7 @@
 import type { StructureSourceEntry } from '../../../@types/data/structure/StructureSourceEntry';
-import { Source } from '../../../data/source';
 
 export const GLOBULAR_CLUSTER_ENTRY = {
   type: 'structure',
-  code: Source.GlobularCluster,
   id: 'globular-cluster',
   label: 'Globular cluster',
   allSky: true,

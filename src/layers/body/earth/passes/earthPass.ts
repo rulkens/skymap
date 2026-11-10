@@ -12,7 +12,6 @@ import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { BodyRuntime } from '../../@types/BodyRuntime';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
-import { Source } from '../../../../data/source';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { composeBodySlabMvp } from '../../../../utils/camera/bodyCompose/composeBodySlabMvp';
 import { bodySlabCamLocal } from '../../../../utils/camera/bodyCompose/bodySlabCamLocal';
@@ -78,7 +77,7 @@ export function earthPass(runtime: BodyRuntime): ContentPass {
       );
     },
 
-    // Earth is the sole body of Source.Earth (seed index 0); PICK_SENTINEL_OFFSET
+    // Earth is the sole body of 'earth' (seed index 0); PICK_SENTINEL_OFFSET
     // keeps a real hit distinct from the cleared no-hit texel.
     drawPick(pass, view, ctx, state) {
       const pickRenderer = state.gpu.bodyPickRenderer;
@@ -98,10 +97,7 @@ export function earthPass(runtime: BodyRuntime): ContentPass {
       pickRenderer.drawSphere(pass, {
         mvp,
         camPosLocal,
-        packedId: packSelection(
-          runtime.pickCodes.pickCodeOf(Source.Earth),
-          0 + PICK_SENTINEL_OFFSET,
-        ),
+        packedId: packSelection(runtime.pickCodes.pickCodeOf('earth'), 0 + PICK_SENTINEL_OFFSET),
       });
     },
   };

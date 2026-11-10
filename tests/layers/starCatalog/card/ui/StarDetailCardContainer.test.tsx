@@ -11,8 +11,7 @@ import StarDetailCardContainer from '../../../../../src/layers/starCatalog/card/
 import { createTestStore } from '../../../../support/createTestStore';
 import { factsReported, layerFactsSeeded } from '../../../../../src/state/engine/engineSlice';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
-import { Source } from '../../../../../src/data/source';
-import type { FamousStarMetaEntry } from '../../../../../src/@types/loading/FamousStarMetaEntry';
+import type { FamousStarMetaEntry } from '../../../../../src/layers/starCatalog/card/@types/FamousStarMetaEntry';
 import type { StarCatalogTarget } from '../../../../../src/layers/starCatalog/selection/@types/StarCatalogTarget';
 
 const siriusMeta: FamousStarMetaEntry = {
@@ -30,8 +29,8 @@ const siriusMeta: FamousStarMetaEntry = {
 
 const sirius: StarCatalogTarget = {
   type: 'starCatalog',
-  ref: { type: 'starCatalog', source: Source.FamousStar, index: 3 },
-  source: Source.FamousStar,
+  ref: { type: 'starCatalog', source: 'famousStar', index: 3 },
+  source: 'famousStar',
   index: 3,
   id: 'sirius',
   displayName: 'Sirius',

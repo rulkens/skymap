@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { starCatalogSelectionKinds } from '../../../../src/layers/starCatalog/selection/kinds';
-import { Source } from '../../../../src/data/source';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { apparentMagnitudeFromAbs } from '../../../../src/utils/star/apparentMagnitudeFromAbs';
 import { spectralClassFromBpRp } from '../../../../src/utils/star/spectralClassFromBpRp';
@@ -36,7 +35,7 @@ function starRow(
 
 // 10 pc out, so the distance modulus is zero and apparentMag === absMag.
 const gaiaRow = starRow(
-  Source.GaiaStars,
+  'gaiaStars',
   7,
   null,
   'Field star',
@@ -45,24 +44,20 @@ const gaiaRow = starRow(
   { absMag: 4.83, bpRp: 0.82 },
 );
 const siriusRow = starRow(
-  Source.FamousStar,
+  'famousStar',
   3,
   'sirius',
   'Sirius',
   [2.64 * SCALE_UNITS.PC_TO_MPC, 0, 0],
   1.19e9,
 );
-const s2Row = starRow(Source.SStar, 0, 's2', 'S2', [0.0025, 0, 0], 4.2e9);
-const sunRow = starRow(Source.Sun, 0, 'sun', 'Sun', [0, 0, 0], 696340000);
+const s2Row = starRow('sStar', 0, 's2', 'S2', [0.0025, 0, 0], 4.2e9);
+const sunRow = starRow('sun', 0, 'sun', 'Sun', [0, 0, 0], 696340000);
 
 describe('starCatalog selection kind', () => {
   it('a seeded star may carry a label, a Gaia star may not', () => {
-    expect(kind!.mayHaveLabel({ type: 'starCatalog', source: Source.FamousStar, index: 0 })).toBe(
-      true,
-    );
-    expect(kind!.mayHaveLabel({ type: 'starCatalog', source: Source.GaiaStars, index: 0 })).toBe(
-      false,
-    );
+    expect(kind!.mayHaveLabel({ type: 'starCatalog', source: 'famousStar', index: 0 })).toBe(true);
+    expect(kind!.mayHaveLabel({ type: 'starCatalog', source: 'gaiaStars', index: 0 })).toBe(false);
   });
 
   // `detail` is chosen by what the row HAS, never by its catalog — so a source that stopped
@@ -92,7 +87,7 @@ describe('starCatalog selection kind', () => {
     // headline and its `star-<id>` link work before the JSON lands.
     expect(kind!.toFocusable(siriusRow)).toMatchObject({
       type: 'starCatalog',
-      ref: { type: 'starCatalog', source: Source.FamousStar, index: 3 },
+      ref: { type: 'starCatalog', source: 'famousStar', index: 3 },
       id: 'sirius',
       displayName: 'Sirius',
     });

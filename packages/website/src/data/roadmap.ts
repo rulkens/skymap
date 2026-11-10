@@ -30,9 +30,10 @@ export const ROADMAP: readonly RoadmapGroup[] = [
       {
         id: 'milky-way-model',
         title: 'A Milky Way drawn from a model',
-        text: 'A second way of drawing the Milky Way, from a model of its light and dust, beside the cloud of points the app draws today.',
-        state: 'planned',
-        backlog: 'Draw the v2 analytic Milky Way in the `milkyWay` Layer, beside v1',
+        text: 'A second way of drawing the Milky Way, from a model of its light and dust, beside the cloud of points the app draws today. The model and its renderer are written; the app does not draw it yet.',
+        state: 'in progress',
+        spec: `${SPECS}/2026-11-10-milky-way-v2-field-in-layer-design.md`,
+        built: 'src/layers/milkyWay/field/render/createGalaxyFieldRenderer.ts',
       },
       {
         id: 'galaxy-impostors',

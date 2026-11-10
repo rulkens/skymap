@@ -1,6 +1,6 @@
 import type { SurfaceCutTile } from '../../plan/@types/SurfaceCutTile';
 import type { Vec3 } from '../../../../../@types/math/Vec3';
-import type { SurfaceEffect } from '../../../../../@types/data/SurfaceEffect';
+import type { SurfaceEffect } from '../../format/@types/SurfaceEffect';
 import type { SurfaceTileShading } from '../../format/@types/SurfaceTileShading';
 import type { SurfaceEffectInputs } from './SurfaceEffectInputs';
 

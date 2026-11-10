@@ -16,6 +16,7 @@ import { MILKY_WAY_LABEL_STYLE } from './milkyWayLabelStyle';
 import { liftedLabelPlacement } from '../../../../services/engine/presentation/liftedLabelPlacement';
 import { textLayoutOf } from '../../../../services/gpu/labelLayout/textLayoutOf';
 import { isPickableUnderFocus } from '../../../../utils/structure/isPickableUnderFocus';
+import { MILKY_WAY_CENTER_WORLD } from '../../../../data/milkyWay/galacticCenter';
 
 // The MW stellar disk, in kpc: the origin dot has no catalog row to read a
 // diameter from, so the producer supplies one for the proportional lift.
@@ -38,8 +39,9 @@ export const produceMilkyWayLabel =
     const label: Label2D = {
       id: 'milkyWay',
       // Exactly what `milkyWayPickRenderer` stamps. The impostor picks on NEAR0
-      // while this label picks on COSMO; both decode to `{ type: 'milkyWay' }`.
-      pickId: isPickableUnderFocus([0, 0, 0], ctx.snapshot.focus) ? pickId : undefined,
+      // while this label picks on COSMO; both decode to `{ type: 'milkyWay' }`, so
+      // both gate at the disc's centre.
+      pickId: isPickableUnderFocus(MILKY_WAY_CENTER_WORLD, ctx.snapshot.focus) ? pickId : undefined,
       subjectId: pickId,
       worldPos: [0, 0, 0],
       text: LABEL_TEXT,

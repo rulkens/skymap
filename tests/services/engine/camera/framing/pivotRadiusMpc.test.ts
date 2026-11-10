@@ -22,7 +22,6 @@ import {
 } from '../../../../../src/utils/camera/orbitCamera/clampDistance';
 import { MIN_NEAR_MPC } from '../../../../../src/utils/camera/frustum/foregroundFrustum';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
-import { Source } from '../../../../../src/data/source';
 import { makeGalaxyRow } from '../../../../fixtures/makeGalaxyRow';
 import { starRowDriver } from '../../../../fixtures/starRowDriver';
 import { blackHoleSelectionRow } from '../../../../../src/layers/blackHoles/selection/blackHoleSelectionRow';
@@ -49,7 +48,7 @@ describe('pivotRadiusMpc', () => {
   it('gives a star row its stamped radius too — same near-field discrete case', () => {
     const star: StarCatalogSelectionRow = {
       type: 'starCatalog',
-      source: Source.GaiaStars,
+      source: 'gaiaStars',
       index: 7,
       id: null,
       label: 'Field star',
@@ -106,7 +105,7 @@ describe('pivotFraming', () => {
   it('falls through to the global ratio for a star, and to the absolute floor for a galaxy / no focus', () => {
     const star: StarCatalogSelectionRow = {
       type: 'starCatalog',
-      source: Source.GaiaStars,
+      source: 'gaiaStars',
       index: 7,
       id: null,
       label: 'Field star',

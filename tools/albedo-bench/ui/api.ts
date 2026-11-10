@@ -1,6 +1,6 @@
 /** api — typed fetch wrappers for the bench's /api/* routes. */
 import type { AlbedoRecipe } from '../../textures/@types/AlbedoRecipe';
-import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
+import type { LonLatBounds } from '../../../src/layers/body/surfaceTiles/format/@types/LonLatBounds';
 import type { RenderBody } from '../@types/RenderBody';
 import type { FieldArrow } from '../@types/FieldArrow';
 

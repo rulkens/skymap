@@ -1,3 +1,3 @@
-import type { FamousStarMetaEntry } from '../../../../@types/loading/FamousStarMetaEntry';
+import type { FamousStarMetaEntry } from './FamousStarMetaEntry';
 
 export type FamousStarsPayload = { meta: FamousStarMetaEntry[] };
