@@ -411,5 +411,11 @@ to the app icon component.
 - **Q42 famousFlythrough pacing:** from an Earth-close start the first leg takes ~103 of 107 s (the path's arc
   metric is dominated by log distance). Backlogged, not fixed on this branch.
 
+## Q43–Q45: Branch-review asks (owner, 2026-11-10)
+
+- **Q43** `#studio=` keeps its home cut but clears the selection, as the `clip` route does.
+- **Q44** `tests/store/rootReducer.test.ts` is deleted: it tests RTK, and a revert already fails typecheck.
+- **Q45** The icons slice 1 doesn't draw yet stay; later slices use them.
+
 _Settled in the plan:_ the studio's RTK slice is injected into the app store through
 `combineSlices().inject` (ADR 0016). Q14 is ruled (Q32).
