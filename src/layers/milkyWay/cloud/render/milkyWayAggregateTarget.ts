@@ -7,6 +7,7 @@
 
 import type { RenderTargetSpec } from '../../../../@types/engine/frame/RenderTargetSpec';
 import { HDR_TARGET_FORMAT } from '../../../../data/renderTargetFormats';
+import { selectMilkyWayParts } from '../../state/milkyWay/selectors';
 
 export const MILKY_WAY_AGGREGATE_TARGET: RenderTargetSpec = {
   id: 'mw-aggregate',
@@ -14,4 +15,6 @@ export const MILKY_WAY_AGGREGATE_TARGET: RenderTargetSpec = {
   depth: null,
   scale: (state) => state.settings.milkyWay.cloud.aggregateDivisor,
   clearValue: { r: 0, g: 0, b: 0, a: 0 },
+  // Both passes reading it gate on the same part; `viewOf` throws on a released row.
+  allocateWhen: (state) => selectMilkyWayParts(state.settings.milkyWay).cloud,
 };

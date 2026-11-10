@@ -1056,12 +1056,12 @@ export const FIELD_TARGET_ROWS: readonly RenderTargetSpec[];
 export function fieldRenderTargetsOf(targets: RenderTargets): GalaxyFieldRenderTargets;
 ```
 
-- [ ] `MILKY_WAY_AGGREGATE_TARGET` gains `allocateWhen: (s) => selectMilkyWayParts(s.settings.milkyWay).cloud`.
+- [x] `MILKY_WAY_AGGREGATE_TARGET` gains `allocateWhen: (s) => selectMilkyWayParts(s.settings.milkyWay).cloud`.
       B8 gates both passes that read it on the same part; `viewOf`/`sizeOf` throw on a released row.
-- [ ] `layer.ts` `targets: [MILKY_WAY_AGGREGATE_TARGET, ...FIELD_TARGET_ROWS]`.
-- [ ] Confirm the usage `renderTargets.ts` allocates includes `TEXTURE_BINDING`, since the field
+- [x] `layer.ts` `targets: [MILKY_WAY_AGGREGATE_TARGET, ...FIELD_TARGET_ROWS]`.
+- [x] Confirm the usage `renderTargets.ts` allocates includes `TEXTURE_BINDING`, since the field
       shaders sample the dust map.
-- [ ] No new test: the rows are data, and `checkFrameOrder` already rejects malformed rows at boot.
+- [x] No new test: the rows are data, and `checkFrameOrder` already rejects malformed rows at boot.
       Commit.
 
 ### Task B5: The host slot and the planner lifecycle

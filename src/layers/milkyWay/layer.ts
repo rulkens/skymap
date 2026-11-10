@@ -15,6 +15,7 @@ import { create } from './create';
 import { destroy } from './destroy';
 import { milkyWayPlanner } from './frame';
 import { MILKY_WAY_AGGREGATE_TARGET } from './cloud/render/milkyWayAggregateTarget';
+import { FIELD_TARGET_ROWS } from './field/render/fieldTargetRows';
 import { milkyWayAggregatePass } from './cloud/passes/milkyWayAggregatePass';
 import { milkyWayUpsamplePass } from './cloud/passes/milkyWayUpsamplePass';
 import { milkyWayPass } from './cloud/passes/milkyWayPass';
@@ -32,7 +33,7 @@ export const milkyWayLayer = defineLayer({
   settings: milkyWayLayerSettings,
   visibility: milkyWayVisibility,
   sources: MILKY_WAY_SOURCE_ROWS,
-  targets: [MILKY_WAY_AGGREGATE_TARGET],
+  targets: [MILKY_WAY_AGGREGATE_TARGET, ...FIELD_TARGET_ROWS],
   create,
   destroy,
   planners: (runtime) => [milkyWayPlanner(runtime)],
