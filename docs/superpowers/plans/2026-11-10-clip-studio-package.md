@@ -568,7 +568,7 @@ otherwise `formatQuantity` covers it. Do not add a formatter without a caller in
 - `formatNameList(names: readonly string[]): string`: `flow`, `flow, labels`, `flow, labels +2`.
 - `formatTimecode(sec: number): string`: `7.4 s` below 60, `1:47.5` from 60 (ruler head and readout).
 
-- [ ] One test per function on hand-computed cases above, plus `formatQuantity(-0.0, '°')` → `0°` (no `−0`).
+- [x] One test per function on hand-computed cases above, plus `formatQuantity(-0.0, '°')` → `0°` (no `−0`).
 
 ### Task 2.2: channel families
 
