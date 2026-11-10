@@ -1,10 +1,11 @@
 /** One inspector field of a row kind: which subject param it reads and writes, and with what control. */
 import type { FieldControl } from './FieldControl';
+import type { KeysOfUnion } from './KeysOfUnion';
 
 export type FieldSpec<T> = {
   /** Stable within the kind. */
   readonly key: string;
-  readonly param: Extract<keyof Exclude<T, string | undefined>, string>;
+  readonly param: KeysOfUnion<Exclude<T, string | undefined>>;
   /** At most 11 characters, the naming vocabulary. */
   readonly label: string;
   /** One line, no full stop. */

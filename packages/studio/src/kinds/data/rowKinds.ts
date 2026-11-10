@@ -43,6 +43,9 @@ export const ROW_KINDS: RowKindRegistry = {
         : { name, op: '→', value: formatQuantity(s.distance, 'Mpc') };
     },
     fields: [
+      // `at` and `distance` exist only on a point waypoint; an id waypoint reads them from its subject.
+      readoutField('at', 'Position'),
+      { key: 'distance', param: 'distance', label: 'Distance', control: 'mpc' },
       overField('Leg time'),
       { key: 'linger', param: 'linger', label: 'Linger', control: 'percent' },
       { key: 'yaw', param: 'yaw', label: 'Turn', control: 'degrees' },
