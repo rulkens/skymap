@@ -147,7 +147,7 @@ but any per-kind row inside them falls under this rule like every other.
 
 ## Implementation note, 2026-11-10
 
-The `Source` code enum is deleted (`docs/superpowers/specs/2026-11-10-source-table-deletion-design.md`): a source is named by its entry's id, which keys every registry, asset and ref, and pick codes come from `createPickCodeAllocator`. The bullet above that keeps the enum is superseded.
+The `Source` code enum is deleted (`docs/superpowers/specs/completed/2026-11-10-source-table-deletion-design.md`): a source is named by its entry's id, which keys every registry, asset and ref, and pick codes come from `createPickCodeAllocator`. The bullet above that keeps the enum is superseded.
 
 ## References
 

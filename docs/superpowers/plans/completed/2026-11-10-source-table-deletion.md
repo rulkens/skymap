@@ -15,7 +15,7 @@ evidence.
 
 **Tech Stack:** TypeScript, Vitest, the tools catalog pipeline (`npm run build-all`).
 
-**Spec:** `docs/superpowers/specs/2026-11-10-source-table-deletion-design.md`.
+**Spec:** `docs/superpowers/specs/completed/2026-11-10-source-table-deletion-design.md`.
 
 **Precondition:** the prep PR (`completed/2026-11-10-source-table-deletion-prep.md`) is merged; this branch starts from
 main after it.
@@ -71,7 +71,7 @@ main after it.
   `Source.GaiaStars === 'gaiaStars'`). So `SourceType` is the id union, `APP_SOURCE_REGISTRY` is keyed by id,
   and so is every asset key, ref and count built from a `Source` value. Later tasks rely on this.
 
-- [ ] **Step 1: Take the baselines, before any edit.**
+- [x] **Step 1: Take the baselines, before any edit.**
   - Shots: `npm run shot -- '<link>' --url <your server>` for M31 (`#focus=m31`), Sirius, Mars, an SDSS galaxy
     `#focus=sdss-…` link, and the Labels panel open. Save them to the SDD workspace as `before-*.png`.
   - Bins: the worktree's `data/raw/` holds only the tracked folders, so first symlink each raw folder it
@@ -80,28 +80,28 @@ main after it.
     `npm run build-all`, which also rewrites `public/data`'s manifest, and `public/data` is a symlink into
     the main checkout). Save `find <dir> -name '*.bin' -exec shasum {} + | sed 's#<dir>/##' | sort` as
     `bins-before.txt`. Later parity runs build into `bins-after` the same way and diff the two lists.
-- [ ] **Step 2: Generate the member→id map** from the entries (each entry has `code: Source.<Member>` and its
+- [x] **Step 2: Generate the member→id map** from the entries (each entry has `code: Source.<Member>` and its
       `id`) with a throwaway script, and rewrite `src/data/source.ts` so each member's value is its id string.
       Fix its header (it falsely says the codes are baked into every `.bin`): it is now a transitional alias
       table, deleted in Task 4.
-- [ ] **Step 3: Write the failing tests** in `importParams.test.ts`:
+- [x] **Step 3: Write the failing tests** in `importParams.test.ts`:
   - `it('rejects a preset whose sources are numbers, asking for a re-export')` — `sources: [1, 3]` throws an
     error whose message equals the Global Constraints text for that field.
   - `it('rejects a mixed sources array on its number')` — `sources: ['sdss', 3]` throws.
   - Change the existing fixtures from numbers to ids.
-- [ ] **Step 4: Run them** — `npx vitest run tests/tools/mcpm-workbench/state/importParams.test.ts` → the two
+- [x] **Step 4: Run them** — `npx vitest run tests/tools/mcpm-workbench/state/importParams.test.ts` → the two
       new tests FAIL.
-- [ ] **Step 5: Make `optionalSourceList` accept ids only**: an all-number array fails with the re-export
+- [x] **Step 5: Make `optionalSourceList` accept ids only**: an all-number array fails with the re-export
       message, any other non-member fails with the existing unknown-id message.
-- [ ] **Step 6: `npm run typecheck` and fix each place that used a code as a number** (arithmetic, a typed
+- [x] **Step 6: `npm run typecheck` and fix each place that used a code as a number** (arithmetic, a typed
       array slot, a `typeof … === 'number'` test on a source). Report each one in the commit body: none was
       found by grep, so each is news.
-- [ ] **Step 7: Full suite.** `npm test`; fix the tests that pinned numeric codes or code-sorted order, by
+- [x] **Step 7: Full suite.** `npm test`; fix the tests that pinned numeric codes or code-sorted order, by
       asserting the id (never by re-pinning a number).
-- [ ] **Step 8: Boot check.** Start the dev server; the app boots with no `createLayers: asset keys` error, and
+- [x] **Step 8: Boot check.** Start the dev server; the app boots with no `createLayers: asset keys` error, and
       M31, Sirius and Mars focus.
-- [ ] **Step 9: Bin parity.** Rebuild into `bins-after` as in Step 1; its checksum list equals `bins-before.txt`.
-- [ ] **Step 10: Commit** — "Source's values become the entries' ids".
+- [x] **Step 9: Bin parity.** Rebuild into `bins-after` as in Step 1; its checksum list equals `bins-before.txt`.
+- [x] **Step 10: Commit** — "Source's values become the entries' ids".
 
 ### Task 2: A Layer's `sources` is an array of entries; `code` goes
 
@@ -238,10 +238,10 @@ export function catalogPickCodes<K extends string>(
 
 **Files:** none (SDD workspace only); remove the `data/raw/` symlinks Task 1 added.
 
-- [ ] **Step 1: Shoot the five Task 1 links again** as `after-*.png`.
-- [ ] **Step 2: Compare** each pair. The galaxy, star and body shots match. The Labels panel may reorder (spec
+- [x] **Step 1: Shoot the five Task 1 links again** as `after-*.png`.
+- [x] **Step 2: Compare** each pair. The galaxy, star and body shots match. The Labels panel may reorder (spec
       §9.1); note the old and new order.
-- [ ] **Step 3: Hand the pairs to the user** as one dash `check` question per pair (the Labels panel one says
+- [x] **Step 3: Hand the pairs to the user** as one dash `check` question per pair (the Labels panel one says
       whether the order changed), with the deep link. The user keeps the verdict.
 
 ---
