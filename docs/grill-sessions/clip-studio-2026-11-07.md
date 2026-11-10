@@ -340,5 +340,18 @@ every CLAUDE.md convention, with tests. Engine groundwork (scene as pure tracks,
 picture-in-picture view rig, a second-window canvas, saving TS) lands as its own slices. The mocks
 keep serving as the design reference.
 
-_Still open (engineering, to be proposed in the spec):_ how the studio's RTK state plugs into the
-app store.
+## Q27–Q28: Architecture asks from the slice-1 plan
+
+- **Q27 Is the studio a takeover?** Options were a takeover kind (`#studio=<clipId>`) beside
+  exhibit, tour and clip, which reuses the takeover arm, the hash row, mutual exclusion, scene
+  capture and the frozen clock; or a separate overlay mode with its own URL, clock and exclusion
+  rules. The owner had no preference. **Decision:** the architect's recommendation, a takeover.
+  Escape with nothing selected closes the studio, and a tour or exhibit link replaces it.
+- **Q28 Unsaved work before saving lands (S8):** options were memory only, a localStorage draft, or
+  moving saving earlier. **Decision:** memory only. Edits survive Close and reopen, but not a
+  reload.
+
+The plan is `docs/superpowers/plans/2026-11-10-clip-studio-package.md`.
+
+_Settled in the plan:_ the studio's RTK slice is injected into the app store through
+`combineSlices().inject` (ADR 0016). Still open: Q14, the crossfade treatment.
