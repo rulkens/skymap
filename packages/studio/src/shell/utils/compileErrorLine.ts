@@ -3,7 +3,7 @@
  * range come from the culprit rows (the ones the model marked with an error), the reason from the
  * compiler; a culprit the spans never reached has no time and adds none.
  */
-import { COMPILE_REASON_TEXT } from '../data/compileReasonText';
+import { COMPILE_REASON_TEXT } from '../../data/compileReasonText';
 import { formatNameList } from '../../utils/format/formatNameList';
 import { formatNumber } from '../../utils/format/formatNumber';
 import type { ClipCompileErrorInfo } from '../../@types/rows/ClipCompileErrorInfo';
@@ -21,7 +21,11 @@ export function compileErrorLine(
     starts.length === 0 || ends.length === 0
       ? null
       : `${formatNumber(Math.min(...starts))}–${formatNumber(Math.max(...ends))} s`;
-  return [names.length > 0 ? formatNameList(names) : null, COMPILE_REASON_TEXT[error.reason], range]
+  return [
+    names.length > 0 ? formatNameList(names) : null,
+    COMPILE_REASON_TEXT[error.reason].short,
+    range,
+  ]
     .filter((part) => part !== null)
     .join(' · ');
 }

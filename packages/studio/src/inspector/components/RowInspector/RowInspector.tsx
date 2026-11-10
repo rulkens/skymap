@@ -4,7 +4,7 @@ import InspectorHead from '../../../primitives/components/InspectorHead/Inspecto
 import InspectorRow from '../../../primitives/components/InspectorRow/InspectorRow';
 import InspectorSection from '../../../primitives/components/InspectorSection/InspectorSection';
 import ReadoutField from '../../../primitives/components/ReadoutField/ReadoutField';
-import { REASON_TEXT } from '../../data/reasonText';
+import { COMPILE_REASON_TEXT } from '../../../data/compileReasonText';
 import { formatRange } from '../../utils/formatRange';
 import { formatRowTitle } from '../../utils/formatRowTitle';
 import { inspectorSpec } from '../../utils/inspectorSpec';
@@ -43,7 +43,7 @@ function RowInspector({ row, rows, draft, resolution }: Props) {
         title={formatRowTitle(row.label)}
       />
       {row.errors.map((reason) => (
-        <AlertChip key={reason}>{REASON_TEXT[reason]}</AlertChip>
+        <AlertChip key={reason}>{COMPILE_REASON_TEXT[reason].long}</AlertChip>
       ))}
       {subject !== null &&
         fields.map((field, i) => (
