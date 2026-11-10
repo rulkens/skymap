@@ -19,11 +19,11 @@
  * hovered or selected ref has its colour blended toward white — one place for
  * every clickable caption, and the lift copies the colour onto the leader.
  *
- * ### Declutter, envelope, and lift are policy arms
+ * ### Envelope and lift are policy arms
  *
- * `config.declutter.mode` / `config.envelope.mode` select which stage
- * implementation runs: `bboxOverlap`/`smoothstepRamp` (COSMO) or
- * `screenSeparation`/`exponentialApproach` (NEAR0). `config.lift`, when
+ * Both slabs declutter by padded text rects (`config.declutterPadPx`);
+ * `config.envelope.mode` selects `smoothstepRamp` (COSMO) or
+ * `exponentialApproach` (NEAR0). `config.lift`, when
  * non-null, runs a third stage after the envelope — see its own docblock
  * for why it is gated on data absence (`label.lift`) rather than a mode.
  *
@@ -113,7 +113,6 @@ import type { Label2DDirectorConfig } from '../../../@types/engine/subsystems/La
 import type { Label2DProjection } from '../../../@types/rendering/Label2DProjection';
 import type { Label2DProjected } from '../../../@types/rendering/Label2DProjected';
 import type { ScreenRectPx } from '../../../@types/rendering/ScreenRectPx';
-import type { Vec2 } from '../../../@types/math/Vec2';
 import { projectLabels } from '../../../utils/labels/projectLabels';
 import { smoothstep } from '../../../utils/math/smoothstep';
 import {
@@ -125,7 +124,6 @@ import { labelScreenRect } from '../../../utils/labels/labelScreenRect';
 import { clampVec3Length } from '../../../utils/math/clampVec3Length';
 import { liftedLabelPlacement } from '../presentation/liftedLabelPlacement';
 import { FAMOUS_LABEL_STYLE } from '../presentation/famousLabelStyle';
-import { declutterByScreenSeparation } from '../../../utils/labels/declutterByScreenSeparation';
 import { proposedLiftPx } from '../../../utils/labels/proposedLiftPx';
 import { whitenColor } from '../../../utils/labels/whitenColor';
 import { encodeSelectionPick } from '../../../utils/selection/encodeSelectionPick';
@@ -177,9 +175,9 @@ type DeclutterResult = {
 };
 
 /**
- * `declutterPriority` DESC, stable on input order — the one rank contract every
- * declutter arm shares, whichever collision test it runs.  A label with no
- * declutter priority sinks to lowest rather than beating real structures.
+ * `declutterPriority` DESC, stable on input order — the declutter's one rank
+ * contract.  A label with no declutter priority sinks to lowest rather than
+ * beating real structures.
  * (Labels that must always win — the Milky Way "You are here" — declare it
  * explicitly with `declutterPriority: Number.MAX_VALUE` in their producer.)
  */
@@ -193,7 +191,7 @@ function sortByDeclutterPriorityDesc(labels: readonly Label2D[]): number[] {
 }
 
 /**
- * `bboxOverlap` declutter arm (COSMO). Reads each label's shared `clipW` to
+ * The declutter pass, shared by both slabs. Reads each label's shared `clipW` to
  * reproduce the vertex shader's em clamp on the CPU, places the measured
  * text rect (`measure` — real glyph ink, alignment shifts
  * applied), and accepts a label in rank order when its padded rect
@@ -203,7 +201,11 @@ function sortByDeclutterPriorityDesc(labels: readonly Label2D[]): number[] {
  * wide labels whose anchors are far apart but whose texts overlap do.
  * Off-screen labels (behind camera / outside the viewport) are accepted
  * unconditionally and never block, as are labels whose text lays out to no
- * ink.  A culled label's leader is culled with it BY CONSTRUCTION — the
+ * ink and zero-`fadeAlpha` labels (nothing to show, so they must not cull a
+ * visible caption).  A `lift`ed label is judged at its text's proposed lifted
+ * position: the lift stage runs later, over survivors, so this is the one
+ * place that keeps a planet's floated name from culling a rover standing at
+ * the planet's own anchor.  A culled label's leader is culled with it BY CONSTRUCTION — the
  * leader lives on the label object, so there is no separate line-side filter
  * to run.  Returns a fresh array in original input order (deterministic,
  * sort-independent).
@@ -221,13 +223,14 @@ function declutterByBboxOverlap(
   // cannot be decluttered against one rect and clicked on another.
   const rects: (ScreenRectPx | null)[] = labels.map((label, i) => {
     const p = projected[i]!;
-    if (!p.screenPx) return null;
+    if (!p.screenPx || (label.fadeAlpha ?? 1) === 0) return null;
     const bbox = measure(label);
     if (!bbox) return null;
+    const liftPx = label.lift === undefined ? 0 : proposedLiftPx(label.lift.subjectSizePx);
     return labelScreenRect({
       label,
       bbox,
-      screenPx: p.screenPx,
+      screenPx: [p.screenPx[0], p.screenPx[1] - liftPx],
       clipW: p.clipW,
       pxPerRad,
     });
@@ -259,51 +262,6 @@ function declutterByBboxOverlap(
 
   const acceptedIndices = new Set(accepted);
   return labels.filter((_, i) => acceptedIndices.has(i));
-}
-
-/**
- * `screenSeparation` declutter arm (NEAR0). Cheaper than `bboxOverlap` —
- * anchor-point separation rather than measured text rects, appropriate where
- * text metrics aren't the cull's business (spec §4.5). A label with no
- * `screenPx` (behind the camera) bypasses the cull unconditionally, exactly
- * as `declutterByBboxOverlap` never blocks on an off-screen anchor; the pure
- * `declutterByScreenSeparation` util does the priority-sorted greedy accept
- * over everything else. A label carrying `lift` is judged at its text's
- * proposed lifted position, not its anchor: the lift stage runs later, over
- * survivors, so this is the one place that can keep a planet's floated name
- * from culling a rover standing at the planet's own anchor. Returns a fresh
- * array in original input order.
- */
-function declutterByScreenSeparationArm(
-  labels: readonly Label2D[],
-  projected: readonly Label2DProjected[],
-  minSeparationPx: number,
-): Label2D[] {
-  const candidateIdx: number[] = [];
-  const candidates: { screenPx: Vec2; declutterPriority: number }[] = [];
-  const accepted = new Set<number>();
-  for (let i = 0; i < labels.length; i++) {
-    const p = projected[i]!;
-    const label = labels[i]!;
-    // Bypass unconditionally: behind camera (no screen position) OR a
-    // zero-fadeAlpha label. Such a label has nothing to show regardless of
-    // survival, so it must not CLAIM a screen slot and cull a real, visible
-    // caption at the same position — it neither competes nor blocks.
-    if (!p.screenPx || (label.fadeAlpha ?? 1) === 0) {
-      accepted.add(i);
-      continue;
-    }
-    candidateIdx.push(i);
-    const screenPx: Vec2 =
-      label.lift === undefined
-        ? p.screenPx
-        : [p.screenPx[0], p.screenPx[1] - proposedLiftPx(label.lift.subjectSizePx)];
-    candidates.push({ screenPx, declutterPriority: label.declutterPriority ?? 0 });
-  }
-  for (const k of declutterByScreenSeparation({ candidates, minSeparationPx })) {
-    accepted.add(candidateIdx[k]!);
-  }
-  return labels.filter((_, i) => accepted.has(i));
 }
 
 export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDirector {
@@ -439,8 +397,7 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
    * Cross-producer declutter over the merged label set: resolves this
    * frame's projection (memoised per `ctx` by `config.project`), projects
    * every label's anchor ONCE (`projectLabels`), then hands the shared
-   * per-label records to whichever declutter arm `config.declutter.mode`
-   * selects. Runs in the director (not per producer) so it de-collides
+   * per-label records to `declutterByBboxOverlap`. Runs in the director (not per producer) so it de-collides
    * labels ACROSS producers — a structure label vs a famous-galaxy label
    * vs the Milky Way "you are here" marker — which a per-producer pass
    * could never see.
@@ -455,22 +412,13 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
   function declutter(labels: readonly Label2D[], ctx: FrameView): DeclutterResult {
     const projection = config.project(ctx);
     const projected = projectLabels(labels, projection);
-    const policy = config.declutter;
-    let survivors: Label2D[];
-    switch (policy.mode) {
-      case 'bboxOverlap':
-        survivors = declutterByBboxOverlap(
-          measureText!,
-          labels,
-          projected,
-          projection,
-          policy.padPx,
-        );
-        break;
-      case 'screenSeparation':
-        survivors = declutterByScreenSeparationArm(labels, projected, policy.minSeparationPx);
-        break;
-    }
+    const survivors = declutterByBboxOverlap(
+      measureText!,
+      labels,
+      projected,
+      projection,
+      config.declutterPadPx,
+    );
     return { survivors, survivorIds: new Set(survivors.map((l) => l.id)) };
   }
 
