@@ -190,7 +190,7 @@ pick from that table.
 
 ```ts
 // tools/utils/io/BMNG_MONTHS.ts — the twelve 2004 months, January first
-export const BMNG_MONTHS: readonly { stamp: `2004${string}`; baseUrl: string; label: string }[];
+export const BMNG_MONTHS: readonly { month: number; stamp: `2004${string}`; baseUrl: string; label: string }[];
 // tools/utils/io/bmngVintage.ts — keeps its doc comment; becomes a pick
 export const BMNG_VINTAGE = BMNG_MONTHS[7]; // August 2004, unchanged value
 // tools/utils/io/bmngMonthKey.ts

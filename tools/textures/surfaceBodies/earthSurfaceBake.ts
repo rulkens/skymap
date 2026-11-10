@@ -10,7 +10,7 @@ import { baseLevelForTier } from '../../../src/layers/body/surfaceTiles/format/u
 import { BLACK_MARBLE_QUADRANT_KEYS } from '../../utils/io/blackMarbleQuadrantKeys';
 import { BMNG_QUADRANT_KEYS } from '../../utils/io/bmngQuadrantKeys';
 import { BMNG_VINTAGE } from '../../utils/io/bmngVintage';
-import { BMNG_VINTAGE_KEY } from '../../utils/io/bmngVintageKey';
+import { bmngMonthKey } from '../../utils/io/bmngMonthKey';
 import { rawDataPath } from '../../utils/io/rawDataRegistry';
 import { quadrantImagerySource } from '../quadrantImagerySource';
 import { colourMatchedImagerySource } from '../colourMatchedImagerySource';
@@ -113,7 +113,7 @@ async function blackMarbleSource() {
 async function devSource() {
   return equirectFileSource({
     id: `nasa-bmng-${BMNG_VINTAGE.stamp}-equirect`,
-    rawKey: BMNG_VINTAGE_KEY,
+    rawKey: bmngMonthKey(BMNG_VINTAGE.month),
     attribution: BMNG_ATTRIBUTION,
     vintage: BMNG_VINTAGE.label,
   });

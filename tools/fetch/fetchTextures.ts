@@ -150,8 +150,8 @@ export function textureSourcesFor(dev: boolean): readonly TextureSource[] {
 
 /** The twelve BMNG equirects (`--bmng-months`); the full pull fetches only the `BMNG_VINTAGE` one. */
 function bmngMonthSources(): readonly TextureSource[] {
-  return BMNG_MONTHS.map((_, i) => {
-    const key = bmngMonthKey(i + 1);
+  return BMNG_MONTHS.map(({ month }) => {
+    const key = bmngMonthKey(month);
     return { url: RAW_DATA[key].upstream, destPath: rawDataPath(key) };
   });
 }
