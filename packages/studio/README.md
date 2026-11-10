@@ -45,8 +45,9 @@ The app knows the package only by two dynamic `import()`s of `studioEntry.ts`:
 (the React host). The package deep-imports app types, engine and store modules by relative path;
 those live in the main chunk, so the lazy chunk depends on main and never the reverse.
 
-Its state is a slice injected into the app's root reducer at session start (ADR 0016); the app's
-`RootState` does not know it, and every read goes through the slice's `injectInto` selectors.
+Its state is a slice injected into the app's root reducer when the chunk loads (ADR 0016): the
+selectors module calls `injectInto`, and every read goes through those selectors, since the app's
+`RootState` does not know the slice.
 Components read the store through `src/store/hooks.ts`, never `react-redux`, and nothing imports
 the design mocks under `src/dev/`. `tests/conventions/studioImportBoundary.test.ts` enforces all of
 this.

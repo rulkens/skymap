@@ -9,7 +9,6 @@ import { oscillate } from '../../../../../src/services/engine/animation/effectHe
 import FieldRow from '../../../src/inspector/components/FieldRow/FieldRow';
 import { inspectorSpec } from '../../../src/inspector/utils/inspectorSpec';
 import { rowSubject } from '../../../src/draft/utils/rowSubject';
-import { injectStudioSlice } from '../../../src/session/state/injectStudioSlice';
 import { studioOpened } from '../../../src/session/state/studioSlice';
 import { selectDraft, selectStudioState } from '../../../src/session/state/selectors';
 import type { ClipData } from '../../../../../src/@types/animation/ClipData';
@@ -32,7 +31,6 @@ const START_POSE = {
 };
 
 function setup(draft: ClipData, kind: RowKind, rowRef: RowRef, fieldKey: string) {
-  injectStudioSlice();
   const store = configureStore({ reducer: rootReducer });
   store.dispatch(studioOpened({ clipId: 'cosmicFlows', draft, preview: PREVIEW }));
   const spec = inspectorSpec(kind).fields.find((f) => f.key === fieldKey)!;

@@ -1,7 +1,6 @@
 import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../../src/store/rootReducer';
-import { injectStudioSlice } from '../../src/session/state/injectStudioSlice';
 import { draftResolved, studioOpened } from '../../src/session/state/studioSlice';
 import { selectDraft, selectRevision } from '../../src/session/state/selectors';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
@@ -16,7 +15,6 @@ const PREVIEW: PreviewPins = {
 
 /** A real app store with the studio slice open on `draft`; `resolve` lands the draft itself as its resolution (no focus ids). */
 export function openStudioStore(draft: ClipData, options: { resolve?: boolean } = {}) {
-  injectStudioSlice();
   const store = configureStore({ reducer: rootReducer });
   store.dispatch(studioOpened({ clipId: 'cosmicFlows', draft, preview: PREVIEW }));
   if (options.resolve ?? true) {

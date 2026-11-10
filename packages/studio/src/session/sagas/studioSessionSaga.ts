@@ -7,7 +7,6 @@
 import { call, getContext, put, select } from 'typed-redux-saga';
 
 import { resolveDraftSaga } from './resolveDraftSaga';
-import { injectStudioSlice } from '../state/injectStudioSlice';
 import { studioOpened } from '../state/studioSlice';
 import { withFrozenClockSaga } from '../../../../../src/state/time/withFrozenClockSaga';
 import { waitUntilSaga } from '../../../../../src/state/tour/waitUntilSaga';
@@ -17,7 +16,6 @@ import type { ClipId } from '../../../../../src/@types/animation/ClipId';
 import type { SagaContext } from '../../../../../src/store/types';
 
 export function* studioSessionSaga(id: ClipId): Generator {
-  injectStudioSlice();
   const cameraRuntime = yield* getContext<SagaContext['cameraRuntime']>('cameraRuntime');
   yield* withFrozenClockSaga(function* (simDays) {
     yield* call(waitUntilSaga, () => cameraRuntime() !== null);

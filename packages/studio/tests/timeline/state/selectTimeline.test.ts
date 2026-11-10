@@ -3,7 +3,6 @@ import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../../../src/store/rootReducer';
 import { dollyTo, seq } from '../../../../../src/services/engine/animation/effectHelpers';
-import { injectStudioSlice } from '../../../src/session/state/injectStudioSlice';
 import {
   draftResolved,
   paramEdited,
@@ -27,7 +26,6 @@ const PREVIEW: PreviewPins = {
 const DRAFT: ClipData = { timeline: [seq([dollyTo(300, 4), dollyTo(950, 4)], { overlap: 1 })] };
 
 function open() {
-  injectStudioSlice();
   const store = configureStore({ reducer: rootReducer });
   store.dispatch(studioOpened({ clipId: 'cosmicFlows', draft: DRAFT, preview: PREVIEW }));
   return store;

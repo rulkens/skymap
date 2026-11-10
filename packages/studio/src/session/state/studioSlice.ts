@@ -96,6 +96,22 @@ export const studioSlice = createSlice({
     undone: (state) => stepHistory(original(state)!, 'past'),
     redone: (state) => stepHistory(original(state)!, 'future'),
   },
+  selectors: {
+    selectStudioClipId: (s) => s.clipId,
+    selectDraft: (s) => s.draft,
+    selectRevision: (s) => s.revision,
+    selectSelection: (s) => s.selection,
+    selectCollapsed: (s) => s.collapsed,
+    selectPlayheadSec: (s) => s.playheadSec,
+    selectViewport: (s) => s.viewport,
+    selectPreview: (s) => s.preview,
+    selectIsDirty: (s) => s.draft !== s.baseline,
+    selectUndoLabel: (s) => s.history.past.at(-1)?.label ?? null,
+    selectRedoLabel: (s) => s.history.future.at(-1)?.label ?? null,
+    /** The resolution only when it was made from the current draft revision. */
+    selectCurrentResolution: (s): StudioResolution | null =>
+      s.resolution?.revision === s.revision ? s.resolution : null,
+  },
 });
 
 export const {

@@ -15,7 +15,6 @@ import {
   seq,
 } from '../../../../../src/services/engine/animation/effectHelpers';
 import Inspector from '../../../src/inspector/components/Inspector/Inspector';
-import { injectStudioSlice } from '../../../src/session/state/injectStudioSlice';
 import {
   draftResolved,
   paramEdited,
@@ -40,7 +39,6 @@ const PREVIEW = {
 };
 
 function open(draft: ClipData) {
-  injectStudioSlice();
   const store = configureStore({ reducer: rootReducer });
   store.dispatch(studioOpened({ clipId: 'cosmicFlows', draft, preview: PREVIEW }));
   return store;
