@@ -49,6 +49,7 @@ export function buildTimeline(
     subject: RowSubjects[K],
     where: Pick<TimelineRow, 'depth' | 'parentId' | 'background' | 'expandable'>,
     times: Pick<TimelineRow, 'startSec' | 'endSec' | 'tailEndSec' | 'duration'>,
+    knotSecs?: readonly number[],
   ): string => {
     const spec = ROW_KINDS[kind];
     const id = rowKey(ref);
@@ -65,6 +66,7 @@ export function buildTimeline(
       writes,
       label: spec.label(subject),
       ...times,
+      ...(knotSecs === undefined ? {} : { knotSecs }),
       errors: ref.kind === 'effect' ? (culprits.get(ref.path.join('.')) ?? []) : [],
     });
     return id;
@@ -96,6 +98,7 @@ export function buildTimeline(
         tailEndSec: rowTailEndSec(effect, path, spanAt, draft, clipEndSec),
         duration: rowDurationText(effect, path, spanAt, draft),
       },
+      span?.knotSecs,
     );
     if (folded.has(id)) return;
     children.forEach((child, index) =>

@@ -57,6 +57,8 @@
   color: var(--color-fg-dim);
 }
 .head {
+  /* The tag's minimum width: a t = 0 tag sits whole inside the track, its tip off the line. */
+  --head-inset: var(--space-12);
   position: absolute;
   top: var(--space-1);
   min-width: var(--space-12);

@@ -6,7 +6,7 @@ import { formatTimecode } from '../../../utils/format/formatTimecode';
 import { familyStyle } from '../../utils/familyStyle';
 import { rulerSteps } from '../../utils/rulerSteps';
 import { timeToPercent } from '../../utils/timeToPercent';
-import { EPSILON } from './Ruler.constants';
+import { AFTER_END_CAPTION_PX, EPSILON, TICK_LABEL_PX } from './Ruler.constants';
 import { useRulerScrub } from './useRulerScrub';
 import { useTrackWidth } from './useTrackWidth';
 import type { TimeWindow } from '../../../@types/session/TimeWindow';
@@ -47,10 +47,14 @@ function Ruler({ timeline, window, playheadSec }: Props) {
       {ticks.map((sec) => {
         const isMajor = Math.abs(sec / major - Math.round(sec / major)) < EPSILON;
         const label = `${+sec.toFixed(3)}${labelled ? '' : ' s'}`;
-        if (isMajor) labelled = true;
+        const clipsCaption =
+          durationSec !== null &&
+          timeToPercent(sec, window) * (trackPx / 100) + TICK_LABEL_PX >
+            trackPx - AFTER_END_CAPTION_PX;
+        if (isMajor && !clipsCaption) labelled = true;
         return (
           <span key={sec} className={cx(s.tick, isMajor && s.major)} style={at(sec)}>
-            {isMajor && <span className={s.tickLabel}>{label}</span>}
+            {isMajor && !clipsCaption && <span className={s.tickLabel}>{label}</span>}
           </span>
         );
       })}
@@ -78,7 +82,10 @@ function Ruler({ timeline, window, playheadSec }: Props) {
           <span className={s.after}>after end</span>
         </>
       )}
-      <span className={s.head} style={at(playheadSec)}>
+      <span
+        className={s.head}
+        style={{ left: `max(${timeToPercent(playheadSec, window)}%, var(--head-inset))` }}
+      >
         {formatTimecode(playheadSec)}
       </span>
     </div>

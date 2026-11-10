@@ -1,4 +1,5 @@
 import { useAppSelector } from '../../../../../../src/store/hooks';
+import { clipRegistry } from '../../../../../../src/data/animation/clips/clipRegistry';
 import InspectorPanel from '../../../primitives/components/InspectorPanel/InspectorPanel';
 import {
   selectCurrentResolution,
@@ -23,7 +24,7 @@ function Inspector() {
     <InspectorPanel label="Step settings">
       {row === null ? (
         <ClipInspector
-          label={clipId ?? 'Clip'}
+          label={clipId === null ? 'Clip' : clipRegistry[clipId].label}
           durationSec={timeline.durationSec}
           start={timeline.rows[0]?.label.value ?? ''}
         />

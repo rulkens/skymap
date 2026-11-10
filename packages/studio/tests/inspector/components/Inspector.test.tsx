@@ -82,7 +82,7 @@ describe('Inspector', () => {
     const store = open({ timeline: [dollyTo(300, 4)] });
     show(store);
 
-    expect(screen.getByRole('heading', { level: 2 }).textContent).toBe('cosmicFlows');
+    expect(screen.getByRole('heading', { level: 2 }).textContent).toBe('Cosmic Flows');
     expect(screen.getByText('live view')).toBeTruthy();
   });
 });

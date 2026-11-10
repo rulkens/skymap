@@ -34,5 +34,7 @@ export type TimelineRow = {
   readonly endSec: number | null;
   /** Visible extent: a cue's `over`, a windowed osc's window, a perpetual osc to clip end. */
   readonly tailEndSec: number | null;
+  /** A flyPath's waypoint arrival times (the compiler's `knotSecs`), for its lane's knots. */
+  readonly knotSecs?: readonly number[];
   readonly errors: readonly ClipCompileReason[];
 };

@@ -94,6 +94,23 @@ describe('buildTimeline', () => {
     expect(waypoints[2]).toMatchObject({ id: 'w:0/2', parentId: 'e:0', depth: 1 });
   });
 
+  it('a flyPath row carries one knot per waypoint, so its lane can draw them while collapsed', () => {
+    const draft: ClipData = {
+      timeline: [
+        flyPath([atPoint([0, 0, 0], 10), atPoint([5, 0, 0], 8), atPoint([9, 2, 0], 6)], {
+          over: 6,
+        }),
+      ],
+    };
+    const { rows } = buildTimeline(draft, compiled(draft), ['e:0']);
+    const fly = rowOf(rows, 'e:0');
+    expect(fly.knotSecs).toHaveLength(3);
+    expect(fly.knotSecs!.at(-1)).toBe(fly.endSec);
+    expect(
+      rowOf(buildTimeline({ timeline: [dollyTo(1, 2)] }, null, []).rows, 'e:0').knotSecs,
+    ).toBeUndefined();
+  });
+
   it("a group writes the union of its children's families", () => {
     const draft: ClipData = {
       timeline: [all([dollyTo(1, 2), tween('yaw', { to: 1, over: 2 }), moveTarget([0, 0, 0], 2)])],
