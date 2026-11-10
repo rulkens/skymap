@@ -85,8 +85,8 @@ It diverged in three places:
   `as const` record keyed by id already narrows (`APP_SOURCE_REGISTRY.sdss.type === 'galaxyCatalog'`)
   without casts. Pick codes already come from the runtime allocator (#1057). A brand adds a concept that the
   derived literal union already covers.
-- It proposed namespaced asset keys (`src:sdss#2`). **Rejected,** given the uniqueness assert in §4.4: today
-  the merged key space has no collision, and the assert turns any future one into a boot failure.
+- It proposed namespaced asset keys (`src:sdss#2`). **Rejected,** given the uniqueness guard in §4.4: today
+  the merged key space has no collision, and the guard turns any future one into a boot failure.
 - It proposed per-catalog behaviour as a strategy object on the entry. **Deferred:** prep 1 moves
   `galaxyType` as-is (ruled Qfx7). A colour-index fact per entry is backlogged (§3.6).
 
@@ -164,9 +164,11 @@ ascending code. `SOURCE_ENTRIES`, `SOURCE_IDS` and anything that iterates them f
 `AssetKey` narrows to `string`. galaxyCatalog, starCatalog and cosmicWebDensity key their rows by the entry
 id, and `companionOf` names an id.
 
-Numbers and strings were two separate key spaces, so `createLayers.ts:174`'s `new Map(...)` could never see
-a collision. Now it would silently overwrite one. **New boot assert:** asset keys are unique across all
-Layers' rows. It throws and names both rows, next to `assertAssetDemands`. Test it with a composed duplicate.
+A galaxy catalog's key changes from `1` to `'sdss'`, so it now shares one key space with every string key.
+That is already guarded: `createLayers.ts:166` composes the rows through
+`concatUniqueRows('createLayers: asset keys', (row) => String(row.key), …)`, which throws at boot on a
+duplicate (and already treated `1` and `'1'` as one key). The `String()` goes once `AssetKey` is `string`.
+No new assert. (Corrected at plan time, 2026-11-10: the first draft asked for one.)
 
 ### 4.5 Pick codes
 
@@ -212,7 +214,8 @@ the substitution empties are removed.
 ## 6. Testing
 
 - **Existing tests:** rewritten per §4.7, and the full suite stays green.
-- **Asset-key uniqueness assert:** new; one test with two Layers that author the same key.
+- **Asset-key collisions:** the existing `concatUniqueRows` guard throws at boot; the dev-server boot after
+  the id switch shows that today's keys don't collide.
 - **Registry by identity:** `sourceRegistryCoverage.test.ts` keeps "every Layer row is the registry's entry
   at its id". After the re-key, a duplicate id collapses two rows, and this test fails on it.
 - **Workbench import:** a numeric `sources` array is rejected with the re-export message.
@@ -239,5 +242,5 @@ None.
    after the re-key they follow `appSources.ts`'s spread order. If the panel's order matters, it should come
    from an explicit order on the panel, not from the key order. The before/after shot will show the
    difference.
-2. **Asset keys stay bare ids**, not namespaced, relying on the new uniqueness assert.
+2. **Asset keys stay bare ids**, not namespaced, relying on the existing uniqueness guard.
 3. **The workbench preset error** asks for a re-export and does not migrate the file.
