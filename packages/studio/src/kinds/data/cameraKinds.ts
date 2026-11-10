@@ -119,7 +119,7 @@ export const cameraKinds: Pick<
     fields: [
       readoutField('ch', 'Channel'),
       { key: 'amp', param: 'amp', label: 'Swing', control: (s) => channelControl(s.ch) },
-      { key: 'period', param: 'period', label: 'Period', control: 'seconds' },
+      { key: 'period', param: 'period', label: 'Period', control: 'positiveSeconds' },
       overField('Window', { optional: true }),
       { key: 'fade', param: 'fade', label: 'Fade', control: 'seconds', fallback: 0 },
       easeField(),
@@ -149,7 +149,7 @@ export const cameraKinds: Pick<
         key: 'align',
         param: 'align',
         label: 'Align-in',
-        control: 'seconds',
+        control: 'positiveSeconds',
         fallback: DEFAULT_ALIGN_SEC,
       },
       {

@@ -1,6 +1,8 @@
 /** An inspector field's control and stored unit; `FIELD_CONTROLS` maps each to its widget. */
 export type FieldControl =
   | 'seconds'
+  /** Seconds the engine divides by (a bob's period, an align-in), so never 0. */
+  | 'positiveSeconds'
   | 'mpc'
   | 'degrees'
   | 'degreesPerSec'

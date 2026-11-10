@@ -17,6 +17,7 @@ const angle = {
 
 export const FIELD_CONTROLS: Record<FieldControl, FieldWidget> = {
   seconds: { widget: 'number', unit: 's', step: 0.1, min: 0 },
+  positiveSeconds: { widget: 'number', unit: 's', step: 0.1, min: 0.1 },
   mpc: { widget: 'number', unit: 'Mpc', step: relativeStep, min: 0 },
   degrees: { widget: 'number', unit: '°', step: 1, ...angle },
   degreesPerSec: { widget: 'number', unit: '°/s', step: 0.1, ...angle },
