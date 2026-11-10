@@ -48,7 +48,7 @@ Two curated spines already exist: `ATTRIBUTIONS.md` (per-dataset citation, licen
 **Milky Way / morphology** (tabled in `docs/research/milky-way/literature.md`)
 
 - Freudenreich 1998 (the load-bearing model); Drimmel & Spergel 2001; Chen+2019 (warp); Bland-Hawthorn & Gerhard 2016; Licquia & Newman 2016; Wegg & Gerhard 2013 → `src/data/milkyWay/milkyWayGalaxyParams.ts`.
-- Reid+2019, Reid+2014 (arm widths) → `layers/milkyWay/field/arms/utils/armRidgeGeometry.ts`.
+- Reid+2019, Reid+2014 (arm widths) → `layers/milkyWay/field/arms/utils/armCrossSigma.ts`.
 - Rix & Zaritsky 1995; Antoja+2011; Vogel & Ostriker 2006; Kim & Ostriker 2002/2017.
 - Bulge / bar decomposition: Laurikainen+2010, Salo+2015, Buta+2015, Gao+2019, Gadotti 2009, Kormendy & Kennicutt 2004 → `galaxyGenerator/shared/galaxyLightDecomposition.ts`.
 - SF / ISM: Gerola & Seiden 1978, Dobbs & Baba 2014, Kennicutt 1989.

@@ -1,50 +1,23 @@
 /**
- * deriveArmSpurs / buildArmSpurs — interarm spurs ("feathers"): short
- * `GalaxyFieldArmRecord`s rooted at quasi-regular intervals along a parent
- * arm, so the wide interarm gap at larger radii isn't empty. Shape-compatible
- * with an ordinary arm record, so the shared ridge vocabulary
- * (`armRidgeAngle`, `armRidgeCurvePoint`, `armRidgeFrameAt`, `armFadeEnvelope`)
- * renders a spur exactly like an arm. Rendering itself is
- * `armSpurParticleCloud.ts`'s job; this module only produces the records.
- * Pure `(arm, geometry, tuning, rng) -> flat data`, no engine state.
+ * deriveArmSpurs — one parent arm's interarm spurs: roots dropped at jittered
+ * quasi-regular arc-length spacing, each curve continuous with the parent's at
+ * its root. Shape-compatible with an arm record, so the ridge vocabulary renders it.
  */
-import { armRidgeAngle, armRidgeCurvePoint } from './armRidgeGeometry';
+import { armRidgeAngle } from './armRidgeAngle';
 import { distance3 } from '../../../../../utils/math/distance3';
-import { mulberry32 } from '../../../../../utils/random/mulberry32';
 import type { GalaxyArmSpurTuning } from '../@types/GalaxyArmSpurTuning';
 import type { GalaxyFieldArmRecord } from '../../../../../@types/galaxy/GalaxyFieldArmRecord';
 import type { GalaxyDescription } from '../../../../../@types/galaxy/GalaxyDescription';
+import { armRidgeCurvePoint } from './armRidgeCurvePoint';
+import { spurRootSpacing } from './spurRootSpacing';
 
 /** Log-radius samples per parent arm's own span — same order of magnitude as `sfEventCatalog.ts`'s STEPS_PER_ARM, fine enough to track arc length without a curvature-adaptive bound (`deriveArmBlobCount`'s finer 192 exists for a stricter chord-sag tolerance this walk doesn't need). */
 const SPUR_WALK_STEPS = 128;
 
-/**
- * Root-spacing law: `w/h = FLOOR_H + SLOPE*(R/h)`, the same re-expression
- * idiom `armRidgeGeometry.ts`'s `armCrossSigma` uses for Reid et al.'s width
- * law, applied to La Vigne, Vogel & Ostriker (2006)'s measured feather
- * spacing of 300-800 pc (~0.12-0.31 of the Milky Way's 2.605 kpc disc scale
- * length). The floor anchors the inner-disc end of that range; the slope
- * carries it past the upper end at large radius, filling the gap the arm
- * cloud's own contrast law would otherwise leave empty.
- */
-const SPUR_SPACING_FLOOR_H = 0.12;
-const SPUR_SPACING_SLOPE = 0.03;
-
 /** A spur is young by construction (post-shock gas, not the arm's own stellar population) — low floor, small spread, independent of the parent's own `age`. */
 const SPUR_AGE_FLOOR = 0.05;
-const SPUR_AGE_JITTER = 0.15;
 
-/** Physical root-to-root spacing at a radius — read by both the walk below and `armSpurParticleCloud.ts`'s size draw, so a spur's sprites size against the SAME gap its root spacing was drawn from. */
-export function spurRootSpacing(
-  radius: number,
-  geometry: GalaxyDescription,
-  tuning: GalaxyArmSpurTuning,
-): number {
-  return (
-    (SPUR_SPACING_FLOOR_H * geometry.diskScaleLen + SPUR_SPACING_SLOPE * radius) *
-    Math.max(tuning.spacing, 1e-3)
-  );
-}
+const SPUR_AGE_JITTER = 0.15;
 
 function buildSpurRecord(
   logR: number,
@@ -134,28 +107,4 @@ export function deriveArmSpurs(
     }
   }
   return spurs;
-}
-
-/** "SPUR" — this tier's own rng salt, the `armParticleCloud.ts`/"ARMC" precedent. */
-const ARM_SPUR_SEED_SALT = 0x53505552;
-
-/**
- * Every arm's spurs, one rng stream advanced across arms in `geometry.arms`
- * order (not re-salted per arm) — the same "continue the stream" idiom
- * `describeGalaxy`'s `clumpStream`/`waveStream` use across their own arm
- * loop, so a change to arm count still reruns a deterministic prefix of the
- * same sequence rather than reshuffling every arm's spurs.
- */
-export function buildArmSpurs(
-  geometry: GalaxyDescription,
-  tuning: GalaxyArmSpurTuning,
-  seed: number,
-): readonly GalaxyFieldArmRecord[] {
-  if (!tuning.enabled || geometry.numArms <= 0) return [];
-  const rng = mulberry32((seed ^ ARM_SPUR_SEED_SALT) >>> 0);
-  const out: GalaxyFieldArmRecord[] = [];
-  for (const arm of geometry.arms) {
-    out.push(...deriveArmSpurs(arm, geometry, tuning, rng));
-  }
-  return out;
 }

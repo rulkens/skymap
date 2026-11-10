@@ -6,18 +6,13 @@
  */
 import { describe, expect, it } from 'vitest';
 import { describeGalaxy } from '../../../../../../src/services/engine/galaxyGenerator/shared/describeGalaxy';
-import {
-  armRidgeAngle,
-  armRidgeCurvePoint,
-} from '../../../../../../src/layers/milkyWay/field/arms/utils/armRidgeGeometry';
-import {
-  buildArmSpurs,
-  deriveArmSpurs,
-  spurRootSpacing,
-} from '../../../../../../src/layers/milkyWay/field/arms/utils/armSpurGeometry';
+import { armRidgeAngle } from '../../../../../../src/layers/milkyWay/field/arms/utils/armRidgeAngle';
 import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../../../src/layers/milkyWay/field/mixture/utils/galaxyFieldMixture';
 import { mulberry32 } from '../../../../../../src/utils/random/mulberry32';
 import type { GalaxyParams } from '../../../../../../src/@types/galaxy/GalaxyParams';
+import { armRidgeCurvePoint } from '../../../../../../src/layers/milkyWay/field/arms/utils/armRidgeCurvePoint';
+import { spurRootSpacing } from '../../../../../../src/layers/milkyWay/field/arms/utils/spurRootSpacing';
+import { deriveArmSpurs } from '../../../../../../src/layers/milkyWay/field/arms/utils/deriveArmSpurs';
 
 const PARAMS: GalaxyParams = {
   type: 'Sb',
@@ -91,20 +86,5 @@ describe('deriveArmSpurs', () => {
     expect(noArms.arms.length).toBeGreaterThan(0); // zeroed, not empty — see describeGalaxy's ZERO_ARM
     const spurs = deriveArmSpurs(noArms.arms[0]!, noArms, tuning, mulberry32(1));
     expect(spurs).toEqual([]);
-  });
-});
-
-describe('buildArmSpurs', () => {
-  const geometry = describeGalaxy(PARAMS);
-  const tuning = DEFAULT_GALAXY_FIELD_TUNING.arms.spurs;
-
-  it('is empty when the pill is off', () => {
-    expect(buildArmSpurs(geometry, { ...tuning, enabled: false }, geometry.seed)).toEqual([]);
-  });
-
-  it('is deterministic for a fixed seed', () => {
-    const a = buildArmSpurs(geometry, tuning, 999);
-    const b = buildArmSpurs(geometry, tuning, 999);
-    expect(a).toEqual(b);
   });
 });

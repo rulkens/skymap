@@ -1,6 +1,6 @@
 /**
  * GalaxyArmCloudTuning — the arm excess's stochastic sprite tier
- * (`armParticleCloud.ts`), nested under `GalaxyArmTuning` the way
+ * (`deriveArmCloudCount.ts`), nested under `GalaxyArmTuning` the way
  * `GalaxyDustCloudParams` nests under `GalaxyDustParams`.
  */
 export type GalaxyArmCloudTuning = {
@@ -16,7 +16,7 @@ export type GalaxyArmCloudTuning = {
   readonly share: number;
   /**
    * Dimensionless covering factor on a DERIVED count (`deriveArmCloudCount`
-   * in `armParticleCloud.ts`: ridge arc length x cross-section width / mean
+   * in `deriveArmCloudCount.ts`: ridge arc length x cross-section width / mean
    * sprite footprint). Only literal at `clumpiness` 0 — above 0 the sampler
    * huddles sprites into complexes that overlap themselves, so the count
    * that actually fills an arm is several times this value.
@@ -25,7 +25,7 @@ export type GalaxyArmCloudTuning = {
   /**
    * Tilts placement density outward along the arm by `(radius / outermost
    * fadeRadius) ** bias`. BRIGHTNESS-NEUTRAL by construction —
-   * `armParticleCloud.ts` divides the same factor back out of each sprite's
+   * `deriveArmCloudCount.ts` divides the same factor back out of each sprite's
    * flux — but only in EXPECTATION: the sampler's bounded rejection can give
    * up at high bias and keep an untilted draw whose flux is still divided,
    * dragging the tier's light inward. Shipped default 2.9 accepts that drift.

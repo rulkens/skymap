@@ -15,8 +15,8 @@ export type GalaxyFieldArmRecord = {
   /**
    * Log-radius (armRidgeAngle's `logR`, 0 at `armStartRadius`) where THIS
    * arm's rendered span begins — an ordinary arm's is
-   * `log(ARM_SPAN_START_FRAC)` (`armRidgeGeometry.ts`). A spur
-   * (`armSpurGeometry.ts`) sets its own: the log-radius of the root it grows
+   * `log(ARM_SPAN_START_FRAC)` (`armSpanStartFrac.ts`). A spur
+   * (`buildArmSpurs.ts`) sets its own: the log-radius of the root it grows
    * from on its parent, not the galaxy-wide default. Not read by
    * `armStarSample` — v1 has no spurs.
    */

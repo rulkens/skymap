@@ -8,15 +8,13 @@
  */
 import { distance3 } from '../../../../../utils/math/distance3';
 import { mulberry32 } from '../../../../../utils/random/mulberry32';
-import {
-  armCrossSigma,
-  armFadeEnvelope,
-  armRidgeCurvePoint,
-} from '../../arms/utils/armRidgeGeometry';
+import { armRidgeCurvePoint } from '../../arms/utils/armRidgeCurvePoint';
 import type { GalaxyDescription } from '../../../../../@types/galaxy/GalaxyDescription';
 import type { GalaxyFieldTuning } from '../../mixture/@types/GalaxyFieldTuning';
 import type { GalaxyStarFormationParams } from '../@types/GalaxyStarFormationParams';
 import type { SfEvent } from '../@types/SfEvent';
+import { armFadeEnvelope } from '../../arms/utils/armFadeEnvelope';
+import { armCrossSigma } from '../../arms/utils/armCrossSigma';
 
 /** Log-radius samples per arm, across that arm's whole span. */
 const STEPS_PER_ARM = 64;

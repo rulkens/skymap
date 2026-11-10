@@ -5,8 +5,8 @@
  * their spurs. Pure `(geometry, tuning, seed) -> flat data`, same discipline
  * as every other `field/` builder — no `ismMap`/`starFormation` input.
  */
-import { armCrossSigma } from '../../arms/utils/armRidgeGeometry';
-import { buildArmSpurs } from '../../arms/utils/armSpurGeometry';
+import { armCrossSigma } from '../../arms/utils/armCrossSigma';
+import { buildArmSpurs } from '../../arms/utils/buildArmSpurs';
 import { HII_CLUSTER_COLOR } from './hiiRegionGeometry';
 import { sampleArmRidgeNodes } from '../../arms/utils/sampleArmRidgeNodes';
 import { inverseCovarianceFromFrame } from '../../mixture/utils/inverseCovarianceFromFrame';

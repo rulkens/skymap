@@ -7,11 +7,7 @@
  * data`, no engine state, no Math.random — same discipline as
  * `sfEventCatalog.ts`.
  */
-import {
-  armFadeEnvelope,
-  armRidgeAngle,
-  armRidgeCurvePoint,
-} from '../../arms/utils/armRidgeGeometry';
+import { armRidgeAngle } from '../../arms/utils/armRidgeAngle';
 import {
   HII_AGE_GATE,
   hiiLuminosityOf,
@@ -27,6 +23,8 @@ import type { GalaxyFieldTuning } from '../../mixture/@types/GalaxyFieldTuning';
 import type { GalaxyStarFormationParams } from '../../starFormation/@types/GalaxyStarFormationParams';
 import type { SfEvent } from '../../starFormation/@types/SfEvent';
 import type { Vec3 } from '../../../../../@types/math/Vec3';
+import { armFadeEnvelope } from '../../arms/utils/armFadeEnvelope';
+import { armRidgeCurvePoint } from '../../arms/utils/armRidgeCurvePoint';
 
 /** Fixed at 1, not exposed as a slider — kept as a single multiplication point rather than inlining `1` at both use sites below. */
 const BUBBLE_RADIUS_SCALE = 1;

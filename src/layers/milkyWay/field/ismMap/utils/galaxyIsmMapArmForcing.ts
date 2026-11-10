@@ -8,18 +8,16 @@
  * texture. Single-slot memo keyed on geometry identity plus the tuning
  * fields the walk below actually reads.
  */
-import {
-  armRidgeCurvePoint,
-  armCrossSigma,
-  armFadeEnvelope,
-} from '../../arms/utils/armRidgeGeometry';
-import { buildArmSpurs } from '../../arms/utils/armSpurGeometry';
+import { armRidgeCurvePoint } from '../../arms/utils/armRidgeCurvePoint';
+import { buildArmSpurs } from '../../arms/utils/buildArmSpurs';
 import { ismMapRingRadius } from '../../../../../utils/galaxy/ismMapRingRadius';
 import { memoizeLastByKeys } from '../../../../../utils/cache/memoizeLastByKeys';
 import type { GalaxyDescription } from '../../../../../@types/galaxy/GalaxyDescription';
 import type { GalaxyFieldArmRecord } from '../../../../../@types/galaxy/GalaxyFieldArmRecord';
 import type { GalaxyFieldTuning } from '../../mixture/@types/GalaxyFieldTuning';
 import type { GalaxyIsmMapGridRadius } from '../@types/GalaxyIsmMapGridRadius';
+import { armFadeEnvelope } from '../../arms/utils/armFadeEnvelope';
+import { armCrossSigma } from '../../arms/utils/armCrossSigma';
 
 /** Grid extent; sizes the ismMap textures. Every WGSL pass reads its own texture's `textureDimensions`, so there's no mirrored copy to drift. */
 export const ISM_MAP_AZ = 1536;

@@ -56,7 +56,6 @@ export const INLINE_TYPE_FILES: ReadonlySet<string> = new Set([
   'src/services/engine/galaxyGenerator/v1/carveDustLayout.ts',
   'src/services/engine/galaxyGenerator/v1/carveStarLayout.ts',
   'src/services/engine/galaxyGenerator/v1/splitStarBudget.ts',
-  'src/layers/milkyWay/field/arms/utils/armRidgeGeometry.ts',
   'src/layers/milkyWay/field/dust/utils/dustBubblePlacements.ts',
   'src/layers/milkyWay/field/dust/utils/galaxyDustMixture.ts',
   'src/layers/milkyWay/field/ismMap/utils/galaxyIsmMapFluidEvents.ts',

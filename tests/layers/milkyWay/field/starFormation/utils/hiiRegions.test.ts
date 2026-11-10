@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { MILKY_WAY_GALAXY_PARAMS } from '../../../../../../src/data/milkyWay/milkyWayGalaxyParams';
 import { describeGalaxy } from '../../../../../../src/services/engine/galaxyGenerator/shared/describeGalaxy';
-import { armRidgeAngle } from '../../../../../../src/layers/milkyWay/field/arms/utils/armRidgeGeometry';
+import { armRidgeAngle } from '../../../../../../src/layers/milkyWay/field/arms/utils/armRidgeAngle';
 import { DEFAULT_GALAXY_STAR_FORMATION_PARAMS } from '../../../../../../src/layers/milkyWay/field/starFormation/data/defaultGalaxyStarFormationParams';
 import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../../../src/layers/milkyWay/field/mixture/utils/galaxyFieldMixture';
 import {
@@ -92,7 +92,7 @@ describe('buildHiiRegions', () => {
     const dig = withDig.slice(withoutDig.length);
     expect(dig.length % tuningOn.hii.dig.childrenPerComplex).toBe(0);
     // Individual children can drift past `rMax` (the clustering offset from
-    // a complex's seed, same as `armParticleCloud.ts`/`dustParticleCloud.ts`
+    // a complex's seed, same as `deriveArmCloudCount.ts`/`dustParticleCloud.ts`
     // children can land outside their complex's own footprint) — the MEAN
     // radius is the robust invariant that the veil follows the map rather
     // than, say, ignoring it and filling the whole disc.

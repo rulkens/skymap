@@ -12,13 +12,8 @@ import { describe, expect, it } from 'vitest';
 import type { GalaxyDescription } from '../../../../../../src/@types/galaxy/GalaxyDescription';
 import type { GalaxyFieldTuning } from '../../../../../../src/layers/milkyWay/field/mixture/@types/GalaxyFieldTuning';
 import { MILKY_WAY_GALAXY_PARAMS } from '../../../../../../src/data/milkyWay/milkyWayGalaxyParams';
-import {
-  armCrossSigma,
-  armFadeEnvelope,
-  armRidgeAngle,
-  armRidgeCurvePoint,
-} from '../../../../../../src/layers/milkyWay/field/arms/utils/armRidgeGeometry';
-import { buildArmSpurs } from '../../../../../../src/layers/milkyWay/field/arms/utils/armSpurGeometry';
+import { armRidgeAngle } from '../../../../../../src/layers/milkyWay/field/arms/utils/armRidgeAngle';
+import { buildArmSpurs } from '../../../../../../src/layers/milkyWay/field/arms/utils/buildArmSpurs';
 import { describeGalaxy } from '../../../../../../src/services/engine/galaxyGenerator/shared/describeGalaxy';
 import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../../../src/layers/milkyWay/field/mixture/utils/galaxyFieldMixture';
 import {
@@ -29,6 +24,9 @@ import {
 } from '../../../../../../src/layers/milkyWay/field/ismMap/utils/galaxyIsmMapArmForcing';
 import { ismMapRingIndexForRadius } from '../../../../../../src/utils/galaxy/ismMapRingIndexForRadius';
 import { ismMapRingRadius } from '../../../../../../src/utils/galaxy/ismMapRingRadius';
+import { armFadeEnvelope } from '../../../../../../src/layers/milkyWay/field/arms/utils/armFadeEnvelope';
+import { armCrossSigma } from '../../../../../../src/layers/milkyWay/field/arms/utils/armCrossSigma';
+import { armRidgeCurvePoint } from '../../../../../../src/layers/milkyWay/field/arms/utils/armRidgeCurvePoint';
 
 /**
  * The pre-windowing algorithm: full az sweep, atan2(sin, cos) wrap. Computed
@@ -178,7 +176,7 @@ describe('buildGalaxyIsmMapArmForcing — arm spur coupling (arms.spurs.gasWeigh
     const { rMin, rMax } = ismMapGridRadius(geometry);
 
     // At the FIRST spur's own root, its ridge coincides exactly with its
-    // parent arm's (armSpurGeometry.ts's continuity invariant) — raising
+    // parent arm's (deriveArmSpurs.ts's continuity invariant) — raising
     // gasWeight must strictly raise the forcing there.
     const spur = spurArms[0]!;
     const rootRadius = geometry.armStartRadius * Math.exp(spur.spanStartLogR);

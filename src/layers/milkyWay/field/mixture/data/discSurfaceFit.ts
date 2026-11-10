@@ -2,8 +2,8 @@
  * Math-derivation exception (comments.md): the disc's dimensionless
  * radial-profile fit, shared by every builder that needs the disc's own
  * surface density. Its own module, not `galaxyFieldMixture.ts`, because
- * `armParticleCloud.ts` needs it too and the mixture builder imports
- * `armParticleCloud.ts` — hosting it there would cycle.
+ * `deriveArmCloudCount.ts` needs it too and the mixture builder imports
+ * `deriveArmCloudCount.ts` — hosting it there would cycle.
  *
  * A sum of Gaussians fitted (ridge-regularised NNLS) to exp(-R/h) over R in
  * [0, 7h]: sigmas in units of h, weights as central surface densities, both

@@ -13,11 +13,9 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { describeGalaxy } from '../../../../../src/services/engine/galaxyGenerator/shared/describeGalaxy';
-import {
-  ARM_SPAN_START_FRAC,
-  armRidgeCurvePoint,
-} from '../../../../../src/layers/milkyWay/field/arms/utils/armRidgeGeometry';
+import { armRidgeCurvePoint } from '../../../../../src/layers/milkyWay/field/arms/utils/armRidgeCurvePoint';
 import type { GalaxyParams } from '../../../../../src/@types/galaxy/GalaxyParams';
+import { ARM_SPAN_START_FRAC } from '../../../../../src/layers/milkyWay/field/arms/data/armSpanStartFrac';
 
 /**
  * Every drawn field, at full precision. Deliberately a hash over fixed presets

@@ -187,7 +187,7 @@ export async function createGalaxyEngine(
   const dustUbo = own(cloudPipelines.dustUbo);
   const { starPipe, dustPipe, starBG, dustBG } = cloudPipelines;
 
-  // Numeric-validation exception (armRidge.wesl vs. armRidgeGeometry.ts) —
+  // Numeric-validation exception (armRidge.wesl vs. arms/utils/armRidge*.ts) —
   // see createArmRidgeDebugSample.ts's own header.
   const armRidgeDebugSample = createArmRidgeDebugSample(device, { makeShader });
   // Numeric-validation exception (ismMapDustCdfScan.wesl vs.

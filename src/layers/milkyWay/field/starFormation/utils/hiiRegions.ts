@@ -14,12 +14,7 @@ import {
   hiiLuminosityOf,
   hiiRadiusUnits,
 } from './hiiRegionGeometry';
-import {
-  armCrossSigma,
-  armFadeEnvelope,
-  armRidgeAngle,
-  armRidgeCurvePoint,
-} from '../../arms/utils/armRidgeGeometry';
+import { armRidgeAngle } from '../../arms/utils/armRidgeAngle';
 import { armAgeWeight } from '../../arms/utils/dustLaneFeatures';
 import {
   ismMapGridRadius,
@@ -57,6 +52,9 @@ import type { GalaxyStarFormationParams } from '../@types/GalaxyStarFormationPar
 import type { SfEvent } from '../@types/SfEvent';
 import type { IsmMapFluidEvent } from '../../ismMap/@types/IsmMapFluidEvent';
 import type { Vec3 } from '../../../../../@types/math/Vec3';
+import { armFadeEnvelope } from '../../arms/utils/armFadeEnvelope';
+import { armCrossSigma } from '../../arms/utils/armCrossSigma';
+import { armRidgeCurvePoint } from '../../arms/utils/armRidgeCurvePoint';
 
 /**
  * Component-budget ceiling for the whole tier. HII draws into its own

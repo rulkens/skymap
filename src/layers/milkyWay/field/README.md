@@ -17,7 +17,9 @@ Dust, arm-cloud and arm-spur-cloud placement moved GPU-side
 (`placeDust.wesl`, `placeArmCloud.wesl`, `placeArmSpurCloud.wesl` under
 `src/services/gpu/shaders/milkyWay/ismMap/`); their files here survive only as the
 constants/budget-derivation halves the GPU dispatch hosts
-(`tools/galaxy-renderer/src/engine/ismMap/`) still read.
+(`tools/galaxy-renderer/src/engine/ismMap/`) still read. Those halves live in
+`armClouds/` (counts, radial tilt, footprint integral, ceilings); `arms/` keeps
+the ridge vocabulary and spur records.
 
 | entry point                                                               | output                                   | drawn by                                     |
 | ------------------------------------------------------------------------- | ---------------------------------------- | -------------------------------------------- |
@@ -33,7 +35,7 @@ those are `v1/`'s, along with the per-population brightness that converts one
 into the other. This tier applies no such multiplier — `light` times
 `luminosity` IS what a population emits, and its flux is a function of
 `luminosity` alone.
-`armRidgeGeometry.ts` holds the ridge curve/width/colour vocabulary every arm
+The `arms/utils/armRidge*.ts` files hold the ridge curve/width/colour vocabulary every arm
 consumer shares; re-deriving a ridge anywhere else is the mistake it exists to
 prevent.
 

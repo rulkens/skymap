@@ -1,4 +1,4 @@
-// milkyWay/ismMap/placeArmCloud.wesl — GPU port of armParticleCloud.ts's
+// milkyWay/ismMap/placeArmCloud.wesl — GPU port of deriveArmCloudCount.ts's
 // buildArmParticleCloud, one invocation per particle SLOT
 // (ARM_CLOUD_MAX_COUNT ceiling). The CPU still decides slot COUNT
 // (deriveArmCloudCount, unchanged); this shader decides slot CONTENT,
@@ -22,7 +22,7 @@ import package::milkyWay::ismMap::clusteredDiscPlacement::buildClusteredDiscPlac
 import package::milkyWay::ismMap::clusteredDiscPlacement::cdpRadialTilt;
 
 // SIZE_MIN_RATIO/SIZE_MAX_RATIO/SPRITE_POLE_RATIO mirror
-// armParticleCloud.ts's own non-exported constants verbatim (same "mirror,
+// deriveArmCloudCount.ts's own non-exported constants verbatim (same "mirror,
 // no parity test" treatment armRidge.wesl gives its own non-scalar-const
 // mirrors); this WGSL copy is now the only place they live.
 const SIZE_MIN_RATIO: f32 = 0.35;
