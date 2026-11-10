@@ -163,7 +163,6 @@ export function stepCameraRuntime(
       gesture: prev.gesture.value,
       tilt: prev.tilt,
       follow: prev.follow,
-      lastWheelMs: prev.lastWheelMs,
     },
     steps,
     {
@@ -377,7 +376,6 @@ export function stepCameraRuntime(
       follow: memory,
       gesture,
       tilt: projected.tilt,
-      lastWheelMs: drained.lastWheelMs,
       // Velocity survives only while a navigator row authors the camera, or an exhibit
       // owns the drag and the navigator keeps nudging the register it reads.
       navigator:

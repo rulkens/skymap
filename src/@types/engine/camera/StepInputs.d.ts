@@ -11,7 +11,7 @@ import type { CameraState } from '../../camera/orbitCamera/CameraState';
 import type { ControlScheme } from './ControlScheme';
 import type { ControlSchemeId } from './ControlSchemeId';
 import type { Epoch } from './Epoch';
-import type { RawInputStep } from '../../camera/input/RawInputStep';
+import type { InputStep } from '../../camera/input/InputStep';
 import type { TerrainHeightAtLookup } from '../../camera/terrain/TerrainHeightAtLookup';
 import type { Vec2 } from '../../math/Vec2';
 import type { InsetsPx } from '../../layout/InsetsPx';
@@ -27,7 +27,7 @@ export type StepInputs = {
   readonly coverPx: InsetsPx;
   /** `canvas.width / canvas.height` after `resizeCanvasToDisplay`. */
   readonly aspect: number;
-  readonly steps: readonly RawInputStep[];
+  readonly steps: readonly InputStep[];
   readonly bodies: ReadonlyMap<PositionedId, BodyState>;
   /** `SurfaceTileStream.heightAt` bound by `runFrame`, or a `() =>
    *  0` stub pre-boot — the ground-collision row's source (F3a, spec §8.3). */

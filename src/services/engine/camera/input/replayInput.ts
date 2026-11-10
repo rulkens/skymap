@@ -6,7 +6,7 @@
  * reducer — so a step sees the commit the step before it made, exactly as the
  * incumbent's fresh `getState()` per step did. The store commits only at
  * gesture end and per at-rest notch; a following camera's notch rides the
- * return as `followDistanceTarget`. A zoom's `fresh` is stamped here, once.
+ * return as `followDistanceTarget`.
  */
 
 import type { UnknownAction } from '@reduxjs/toolkit';
@@ -21,7 +21,6 @@ import { rowFor } from '../arms/rowFor';
 import { cameraArmKindOf } from '../arms/cameraArmKindOf';
 import { sameFrame } from '../arms/sameFrame';
 import { zoomedDistance } from './utils/zoomedDistance';
-import { FRESH_WHEEL_PAUSE_MS } from '../../../../data/input/freshWheelPauseMs';
 import { absoluteArm } from '../../../../utils/camera/arms/absoluteArm';
 import { bodyMovesThisFrame } from '../../../../utils/scene/bodyMovesThisFrame';
 import { selectFocusRow } from '../../../../state/selection/selectors';
@@ -35,7 +34,6 @@ import type { FollowMemory } from '../../../../@types/engine/camera/FollowMemory
 import type { FramedCameraPose } from '../../../../@types/camera/pose/FramedCameraPose';
 import type { FramedPose } from '../../../../@types/camera/pose/FramedPose';
 import type { InputStep } from '../../../../@types/camera/input/InputStep';
-import type { RawInputStep } from '../../../../@types/camera/input/RawInputStep';
 import type { MemOf } from '../../../../@types/camera/arms/MemOf';
 import type { NavStep } from '../@types/NavStep';
 import type { CameraArmCtx } from '../../../../@types/camera/arms/CameraArmCtx';
@@ -49,10 +47,8 @@ export function replayInput(
     readonly gesture: MemOf[CameraArmKind];
     readonly tilt: TiltMemory;
     readonly follow: FollowMemory | null;
-    /** The last wheel notch's device-event time, ms (`−∞` before one). */
-    readonly lastWheelMs: number;
   },
-  steps: readonly RawInputStep[],
+  steps: readonly InputStep[],
   args: {
     readonly ctx: CameraArmCtx;
     /** The step clock, ms, for the spin epoch. */
@@ -71,7 +67,6 @@ export function replayInput(
   readonly tilt: TiltMemory;
   readonly follow: FollowMemory | null;
   readonly followDistanceTarget: number | null;
-  readonly lastWheelMs: number;
   readonly actions: readonly UnknownAction[];
   /** The navigator's input, in order; a `gestureEnd` is also handled here. */
   readonly navSteps: readonly NavStep[];
@@ -90,7 +85,6 @@ export function replayInput(
   let tilt = prev.tilt;
   let follow = prev.follow;
   let followDistanceTarget: number | null = null;
-  let lastWheelMs = prev.lastWheelMs;
   // Advanced locally for this frame's elapsed read and DISCARDED: handing it to
   // `advanceEpochs` would keep a fold-time reset when another driver wins.
   let autoRotateEpoch = args.autoRotateEpoch;
@@ -233,12 +227,6 @@ export function replayInput(
         break;
 
       case 'zoom': {
-        // On the EVENT clock: a frame hitch inside a momentum tail must not read as quiet.
-        // Every zoom step restarts the quiet, swallowed or not: a tail that ran into a clip
-        // or a floor is still a tail.
-        const { firstEventMs, lastEventMs, ...zoom } = step;
-        const fresh = firstEventMs - lastWheelMs >= FRESH_WHEEL_PAUSE_MS;
-        lastWheelMs = lastEventMs;
         // The settles are priced per unit of zoom, not per step (user ruling
         // 2026-09-10): a trackpad twitch must not spend a mouse notch's decay.
         const logZoom = Math.abs(Math.log(step.factor));
@@ -254,11 +242,7 @@ export function replayInput(
         // While the navigator owns the camera, `base` is the last commit, not the
         // view: an at-rest notch would zoom that stale pose and snap back to it.
         // It rides the live register instead, as a held gesture's does.
-        const notch: InputStep = {
-          ...zoom,
-          duringGesture: args.navOwns || step.duringGesture,
-          fresh,
-        };
+        const notch: InputStep = { ...step, duringGesture: args.navOwns || step.duringGesture };
         if (!ridesTheFollow && stepRegister(notch)) break;
         if (ridesTheFollow) {
           followDistanceTarget = zoomedDistance(followTargetBefore, step.factor, pivot);
@@ -321,7 +305,6 @@ export function replayInput(
     tilt,
     follow,
     followDistanceTarget,
-    lastWheelMs,
     actions,
     navSteps,
   };

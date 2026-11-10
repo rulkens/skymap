@@ -10,7 +10,6 @@ import { configureStore } from '@reduxjs/toolkit';
 
 import { replayInput } from '../../../../../src/services/engine/camera/input/replayInput';
 import { skyCameraArm } from '../../../../../src/services/engine/camera/arms/sky/skyCameraArm';
-import { FRESH_WHEEL_PAUSE_MS } from '../../../../../src/data/input/freshWheelPauseMs';
 import { LENS_MAX_DEG } from '../../../../../src/data/camera/lensMaxDeg';
 import { degToRad } from '../../../../../src/utils/math/degToRad';
 import { zoomLimitPushed } from '../../../../../src/state/camera/zoomLimitPushed';
@@ -40,8 +39,8 @@ import { ORIENTATION_FRAMES } from '../../../../../src/data/orientation/orientat
 import { earthArm } from '../../../../fixtures/earthArm';
 import { worldArmOf } from '../../../../fixtures/worldArmOf';
 import { bodyDriverGeometry } from '../../../../../src/utils/scene/bodyDriverGeometry';
+import type { InputStep } from '../../../../../src/@types/camera/input/InputStep';
 import type { FramedCameraPose } from '../../../../../src/@types/camera/pose/FramedCameraPose';
-import type { RawInputStep } from '../../../../../src/@types/camera/input/RawInputStep';
 import type { DriverId } from '../../../../../src/@types/engine/camera/DriverId';
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
@@ -92,14 +91,12 @@ function ctxOf(
   };
 }
 
-/** `eventMs` is the notch's device-event time, the clock freshness reads. */
-const atRestZoom = (factor: number, eventMs = 0): RawInputStep => ({
+const atRestZoom = (factor: number, fresh = false): InputStep => ({
   kind: 'zoom',
   factor,
   duringGesture: false,
   cursorPx: [500, 500],
-  firstEventMs: eventMs,
-  lastEventMs: eventMs,
+  fresh,
 });
 
 /** Geocentric range of a body arm, metres — the anchor is the body centre. */
@@ -139,9 +136,8 @@ describe('replayInput', () => {
         panOffset: [1, 2, 3] as Vec3,
         saturated: false,
       },
-      lastWheelMs: -Infinity,
     });
-    const steps = deepFreeze<readonly RawInputStep[]>([
+    const steps = deepFreeze<readonly InputStep[]>([
       atRestZoom(1.5),
       { kind: 'gestureStart' },
       { kind: 'drag', mode: 'pan', startPx: [100, 100], endPx: [150, 100] },
@@ -172,7 +168,6 @@ describe('replayInput', () => {
       gesture: EMPTY_SURFACE_GESTURE_MEMORY,
       tilt: EMPTY_TILT_MEMORY,
       follow: null,
-      lastWheelMs: -Infinity,
     };
 
     const next = replayInput(
@@ -207,7 +202,6 @@ describe('replayInput', () => {
         gesture: EMPTY_SURFACE_GESTURE_MEMORY,
         tilt: EMPTY_TILT_MEMORY,
         follow: null,
-        lastWheelMs: -Infinity,
       },
       [
         atRestZoom(Math.exp(-0.1)),
@@ -251,7 +245,6 @@ describe('replayInput', () => {
         gesture: EMPTY_SURFACE_GESTURE_MEMORY,
         tilt: EMPTY_TILT_MEMORY,
         follow,
-        lastWheelMs: -Infinity,
       },
       [atRestZoom(Math.exp(0.1))],
       ctxOf(followStore, { winnerLastFrame: 'followHold' }),
@@ -289,7 +282,6 @@ describe('replayInput', () => {
         gesture: EMPTY_SURFACE_GESTURE_MEMORY,
         tilt: EMPTY_TILT_MEMORY,
         follow: null,
-        lastWheelMs: -Infinity,
       },
       [atRestZoom(Math.exp(-0.1))],
       ctxOf(store),
@@ -297,57 +289,6 @@ describe('replayInput', () => {
 
     expect(next.actions).toEqual([]);
     expect(next.register.pose).toBe(arm.pose);
-  });
-
-  describe('wheel freshness', () => {
-    const sky: FramedCameraPose = {
-      frame: { sky: { body: asSceneBodyId('earth'), lonRad: 0.2, latRad: 0.9 } },
-      pose: { azimuthRad: 1, altitudeRad: 0.3 },
-    };
-    const setup = () => {
-      const store = makeStore();
-      store.dispatch(commitCameraPose(sky));
-      const step = vi.spyOn(skyCameraArm, 'step');
-      const drain = (lastWheelMs: number, notches: readonly RawInputStep[], nowMs = 0) =>
-        replayInput(
-          { register: sky, gesture: null, tilt: EMPTY_TILT_MEMORY, follow: null, lastWheelMs },
-          notches,
-          ctxOf(store, { nowMs }),
-        );
-      const freshness = () =>
-        step.mock.calls.map(([, , , input]) => input.kind === 'zoom' && input.fresh);
-      return { drain, freshness };
-    };
-
-    it('a wheel notch after 250 ms of quiet is fresh; one inside it is not', () => {
-      const { drain, freshness } = setup();
-      const quiet = 1000 + FRESH_WHEEL_PAUSE_MS;
-      expect(drain(1000, [atRestZoom(1.01, quiet - 1)]).lastWheelMs).toBe(quiet - 1);
-      drain(1000, [atRestZoom(1.01, quiet), atRestZoom(1.01, quiet + 16)]);
-      expect(freshness()).toEqual([false, true, false]);
-    });
-
-    it('a frame hitch inside a momentum tail does not make a notch fresh', () => {
-      const { drain, freshness } = setup();
-      // 30 ms apart as events, drained 400 ms apart as frames.
-      const first = drain(-Infinity, [atRestZoom(1.01, 1000)], 1000);
-      drain(first.lastWheelMs, [atRestZoom(1.01, 1030)], 1400);
-      expect(freshness()).toEqual([true, false]);
-    });
-
-    it('a folded run is judged by its first event and leaves its last as the clock', () => {
-      const { drain, freshness } = setup();
-      const run: RawInputStep = {
-        kind: 'zoom',
-        factor: 1.01,
-        duringGesture: false,
-        cursorPx: [500, 500],
-        firstEventMs: 1000,
-        lastEventMs: 1600,
-      };
-      expect(drain(900, [run]).lastWheelMs).toBe(1600);
-      expect(freshness()).toEqual([false]);
-    });
   });
 
   it('a fresh wheel-out at the widest lens reports edge out with a lift clip, and starts none', () => {
@@ -365,9 +306,8 @@ describe('replayInput', () => {
         gesture: null,
         tilt: EMPTY_TILT_MEMORY,
         follow: null,
-        lastWheelMs: -Infinity,
       },
-      [atRestZoom(1.1)],
+      [atRestZoom(1.1, true)],
       ctxOf(store),
     );
 
@@ -396,7 +336,6 @@ describe('replayInput', () => {
         gesture: null,
         tilt: EMPTY_TILT_MEMORY,
         follow: null,
-        lastWheelMs: -Infinity,
       },
       [atRestZoom(1.25), atRestZoom(1.25)],
       ctxOf(store),
@@ -440,7 +379,6 @@ describe('replayInput', () => {
         gesture: EMPTY_SURFACE_GESTURE_MEMORY,
         tilt: EMPTY_TILT_MEMORY,
         follow: null,
-        lastWheelMs: -Infinity,
       },
       [
         {
@@ -448,8 +386,7 @@ describe('replayInput', () => {
           factor: f,
           duringGesture: false,
           cursorPx: [700, 500],
-          firstEventMs: 0,
-          lastEventMs: 0,
+          fresh: false,
         },
       ],
       ctxOf(store),
@@ -490,7 +427,6 @@ describe('replayInput', () => {
         gesture: EMPTY_SURFACE_GESTURE_MEMORY,
         tilt: EMPTY_TILT_MEMORY,
         follow: null,
-        lastWheelMs: -Infinity,
       },
       [
         { kind: 'gestureStart' },
@@ -523,7 +459,6 @@ describe('replayInput', () => {
         gesture: EMPTY_SURFACE_GESTURE_MEMORY,
         tilt: EMPTY_TILT_MEMORY,
         follow: null,
-        lastWheelMs: -Infinity,
       },
       [
         { kind: 'gestureStart' },
@@ -554,7 +489,6 @@ describe('replayInput', () => {
         gesture: EMPTY_SURFACE_GESTURE_MEMORY,
         tilt: EMPTY_TILT_MEMORY,
         follow: null,
-        lastWheelMs: -Infinity,
       },
       [atRestZoom(Math.exp(0.1))],
       {
@@ -578,7 +512,6 @@ describe('replayInput', () => {
       gesture: EMPTY_SURFACE_GESTURE_MEMORY,
       tilt: EMPTY_TILT_MEMORY,
       follow: null,
-      lastWheelMs: -Infinity,
     };
 
     const orbited = replayInput(
@@ -617,7 +550,6 @@ describe('replayInput', () => {
         gesture: EMPTY_SURFACE_GESTURE_MEMORY,
         tilt: EMPTY_TILT_MEMORY,
         follow: null,
-        lastWheelMs: -Infinity,
       },
       [
         atRestZoom(Math.exp(0.24)),
@@ -652,7 +584,6 @@ describe('replayInput', () => {
         gesture: EMPTY_SURFACE_GESTURE_MEMORY,
         tilt: EMPTY_TILT_MEMORY,
         follow: null,
-        lastWheelMs: -Infinity,
       },
       [atRestZoom(Math.exp(0.1))],
       ctxOf(store),
@@ -678,7 +609,6 @@ describe('replayInput', () => {
         gesture: EMPTY_SURFACE_GESTURE_MEMORY,
         tilt: EMPTY_TILT_MEMORY,
         follow: null,
-        lastWheelMs: -Infinity,
       },
       [atRestZoom(Math.exp(0.1))],
       ctxOf(store, { winnerLastFrame: 'followHold' }),
@@ -719,7 +649,6 @@ describe('replayInput', () => {
         gesture: EMPTY_SURFACE_GESTURE_MEMORY,
         tilt: EMPTY_TILT_MEMORY,
         follow,
-        lastWheelMs: -Infinity,
       },
       [atRestZoom(Math.exp(-10))],
       ctxOf(store, { winnerLastFrame: 'followHold' }),
@@ -771,7 +700,6 @@ describe('replayInput', () => {
             panOffset: [0, 0, 0],
             saturated: false,
           },
-          lastWheelMs: -Infinity,
         },
         [atRestZoom(Math.exp(deltaY * 0.001))],
         ctxOf(store, { winnerLastFrame: 'followHold', nowMs }),
@@ -825,7 +753,6 @@ describe('replayInput', () => {
         gesture: EMPTY_SURFACE_GESTURE_MEMORY,
         tilt: EMPTY_TILT_MEMORY,
         follow: null,
-        lastWheelMs: -Infinity,
       },
       [
         { kind: 'gestureStart' },
@@ -834,8 +761,7 @@ describe('replayInput', () => {
           factor: Math.exp(0.1),
           duringGesture: true,
           cursorPx: [500, 500],
-          firstEventMs: 0,
-          lastEventMs: 0,
+          fresh: false,
         },
       ],
       ctxOf(store),
@@ -860,7 +786,6 @@ describe('replayInput', () => {
         gesture: EMPTY_SURFACE_GESTURE_MEMORY,
         tilt: EMPTY_TILT_MEMORY,
         follow: null,
-        lastWheelMs: -Infinity,
       },
       [
         { kind: 'gestureStart' },
@@ -869,8 +794,7 @@ describe('replayInput', () => {
           factor: 1e-6,
           duringGesture: true,
           cursorPx: null,
-          firstEventMs: 0,
-          lastEventMs: 0,
+          fresh: false,
         },
       ],
       ctxOf(store),

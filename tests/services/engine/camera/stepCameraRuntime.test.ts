@@ -83,7 +83,7 @@ import type { StepInputs } from '../../../../src/@types/engine/camera/StepInputs
 import type { Vec4 } from '../../../../src/@types/math/Vec4';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import type { CameraDriver } from '../../../../src/@types/engine/camera/CameraDriver';
-import type { RawInputStep } from '../../../../src/@types/camera/input/RawInputStep';
+import type { InputStep } from '../../../../src/@types/camera/input/InputStep';
 import type { NavVelocity } from '../../../../src/@types/camera/input/NavVelocity';
 import type { UnknownAction } from '@reduxjs/toolkit';
 import {
@@ -480,12 +480,12 @@ describe('the wheel under a mission', () => {
 
 describe('stepCameraRuntime — the openspace scheme', () => {
   const GUARD = 2000;
-  const press: readonly RawInputStep[] = [
+  const press: readonly InputStep[] = [
     { kind: 'gestureStart' },
     { kind: 'navDrag', axis: 'orbit', deltaPx: [10, 0] },
   ];
-  const hold: readonly RawInputStep[] = [{ kind: 'navDrag', axis: 'orbit', deltaPx: [10, 0] }];
-  const release: readonly RawInputStep[] = [{ kind: 'gestureEnd' }];
+  const hold: readonly InputStep[] = [{ kind: 'navDrag', axis: 'orbit', deltaPx: [10, 0] }];
+  const release: readonly InputStep[] = [{ kind: 'gestureEnd' }];
 
   // The hand-fed frames' wall clock, picking up where the harness's own frames stopped.
   const clocks = new WeakMap<CameraSimHarness, number>();
@@ -494,7 +494,7 @@ describe('stepCameraRuntime — the openspace scheme', () => {
   /** One frame with hand-fed steps, installed and dispatched as `runFrame` does. */
   function stepWith(
     h: CameraSimHarness,
-    steps: readonly RawInputStep[],
+    steps: readonly InputStep[],
     schemes?: StepInputs['schemes'],
   ) {
     // `wireInput` dispatches the release outside the loop, as it does the press.
@@ -588,8 +588,7 @@ describe('stepCameraRuntime — the openspace scheme', () => {
         factor: 1.2,
         duringGesture: false,
         cursorPx: null,
-        firstEventMs: 0,
-        lastEventMs: 0,
+        fresh: false,
       },
     ]);
     const after = h.state.cameraRuntime.register.pose;
@@ -706,8 +705,7 @@ describe('stepCameraRuntime — the openspace scheme', () => {
         factor: 1.25,
         duringGesture: false,
         cursorPx: null,
-        firstEventMs: 0,
-        lastEventMs: 0,
+        fresh: false,
       },
     ]);
     const lenses = out.actions.filter((a) => setFovYRad.match(a)).map((a) => a.payload as number);
@@ -754,8 +752,7 @@ describe('stepCameraRuntime — the openspace scheme', () => {
         factor: 1.5,
         duringGesture: true,
         cursorPx: null,
-        firstEventMs: 0,
-        lastEventMs: 0,
+        fresh: false,
       },
     ]);
     const pinched = worldOf(h.state.cameraRuntime.register.pose).distance;

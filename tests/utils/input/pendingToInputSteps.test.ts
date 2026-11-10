@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 
 import { pendingToInputSteps } from '../../../src/utils/input/pendingToInputSteps';
 import type { PendingStep } from '../../../src/@types/input/PendingStep';
-import type { RawInputStep } from '../../../src/@types/camera/input/RawInputStep';
+import type { InputStep } from '../../../src/@types/camera/input/InputStep';
 
 const drag = (over: Partial<PendingStep & { kind: 'motion' }>): PendingStep => ({
   kind: 'motion',
@@ -14,12 +14,12 @@ const drag = (over: Partial<PendingStep & { kind: 'motion' }>): PendingStep => (
   ratio: 1,
   at: { x: 0.5, y: 0.5 },
   held: true,
-  firstEventMs: 0,
+  fresh: false,
   eventMs: 0,
   ...over,
 });
 
-const dragOf = (step: RawInputStep | undefined) => {
+const dragOf = (step: InputStep | undefined) => {
   if (step?.kind !== 'drag') throw new Error(`expected a drag, got ${step?.kind}`);
   return step;
 };
@@ -56,7 +56,7 @@ describe('pendingToInputSteps', () => {
     ]);
   });
 
-  it('a held: false wheel gives duringGesture false, its cursor in view pixels and its event span', () => {
+  it('a held: false wheel gives duringGesture false, its cursor in view pixels and its fresh', () => {
     const steps = pendingToInputSteps(
       [
         drag({
@@ -64,8 +64,7 @@ describe('pendingToInputSteps', () => {
           ratio: 1.1,
           held: false,
           at: { x: 0.25, y: 0.5 },
-          firstEventMs: 10,
-          eventMs: 40,
+          fresh: true,
         }),
       ],
       [100, 50],
@@ -76,8 +75,7 @@ describe('pendingToInputSteps', () => {
         factor: 1.1,
         duringGesture: false,
         cursorPx: [25, 25],
-        firstEventMs: 10,
-        lastEventMs: 40,
+        fresh: true,
       },
     ]);
   });
