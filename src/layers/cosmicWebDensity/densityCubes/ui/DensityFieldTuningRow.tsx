@@ -28,7 +28,7 @@ const DENSITY_MAX = 60;
 const DENSITY_STEP = 0.1;
 
 export type DensityFieldTuningRowProps = {
-  entry: (typeof COSMIC_WEB_DENSITY_SOURCE_ROWS)[number][1];
+  entry: (typeof COSMIC_WEB_DENSITY_SOURCE_ROWS)[number];
   settings: VolumeFieldSettings;
   onChange: (id: CosmicWebDensityFieldId, patch: Partial<VolumeFieldSettings>) => void;
 };

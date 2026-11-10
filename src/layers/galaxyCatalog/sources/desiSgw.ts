@@ -1,9 +1,7 @@
 import type { GalaxyCatalogSourceEntry } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceEntry';
-import { Source } from '../../../data/source';
 
 export const DESI_SGW_ENTRY = {
   type: 'galaxyCatalog',
-  code: Source.DesiSgw,
   id: 'desiSgw',
   label: 'Sloan Great Wall',
   binBaseName: 'desi-sgw',

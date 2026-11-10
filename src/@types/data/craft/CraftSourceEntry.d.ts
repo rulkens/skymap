@@ -6,6 +6,4 @@ import type { SourceEntryBase } from '../SourceEntryBase';
  */
 export type CraftSourceEntry = SourceEntryBase & {
   readonly type: 'craft';
-  /** Stable numeric tag; not persisted, packed into the pick texture. */
-  readonly code: string;
 };

@@ -59,7 +59,7 @@ export function starCatalogSelectionRow(
 ): SelectionKindRow<StarCatalogRef> {
   return {
     type: 'starCatalog',
-    pickSources: STAR_CATALOG_SOURCE_ROWS.map(([source]) => runtime.pickCodes.pickCodeOf(source)),
+    pickSources: STAR_CATALOG_SOURCE_ROWS.map((entry) => runtime.pickCodes.pickCodeOf(entry.id)),
     resolvePick: (pick) => {
       const source = runtime.pickCodes.catalogOfPickCode(pick.sourceCode);
       if (source === null) return null;

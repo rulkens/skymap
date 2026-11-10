@@ -16,8 +16,8 @@ import type { GalaxyCatalogSourceType } from '../../../../src/layers/galaxyCatal
 
 /** Every galaxy catalog that actually ships a `.bin` — the only ones with a filename. */
 const FILE_BACKED: readonly GalaxyCatalogSourceType[] = GALAXY_CATALOG_SOURCE_ROWS.filter(
-  ([, e]) => e.binBaseName !== null,
-).map(([code]) => code);
+  (e) => e.binBaseName !== null,
+).map((e) => e.id);
 
 describe('galaxyCatalogRequest', () => {
   it('the request agrees with the filename', () => {

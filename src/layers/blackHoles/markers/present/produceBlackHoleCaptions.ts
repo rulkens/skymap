@@ -26,7 +26,7 @@ import { blackHoleAnchorId } from './blackHoleAnchorId';
  */
 const BLACK_HOLE_CAPTION_TINT: Readonly<Vec3> = [1, 0.66, 0.32];
 
-const ENTRIES = BLACK_HOLE_SOURCE_ROWS.map(([, entry]) => entry);
+const ENTRIES = BLACK_HOLE_SOURCE_ROWS.map((entry) => entry);
 
 export function produceBlackHoleCaptions(
   pickCode: number,

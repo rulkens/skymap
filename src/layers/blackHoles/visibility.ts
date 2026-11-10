@@ -14,7 +14,7 @@ export const blackHolesVisibility = [
   {
     label: 'blackHole',
     cluster: 'blackHoles',
-    items: BLACK_HOLE_SOURCE_ROWS.map(([, entry]) => entry.id),
+    items: BLACK_HOLE_SOURCE_ROWS.map((entry) => entry.id),
     recession: 'mild',
     bands: {
       caption: { from: 'galactic-centre', out: [CAPTION_FULL_MPC, MILKY_WAY_RADIUS_MPC * 2] },

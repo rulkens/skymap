@@ -89,12 +89,12 @@ export function create(deps: LayerCoreDeps<StarCatalogFacts>): StarCatalogRuntim
     requestRender: deps.requestRender,
   };
   const catalogs = new Map(
-    STAR_CATALOG_SOURCE_ROWS.filter(([, entry]) => entry.binBaseName !== null).map(
-      ([source]) =>
+    STAR_CATALOG_SOURCE_ROWS.filter((entry) => entry.binBaseName !== null).map(
+      (entry) =>
         [
-          source,
+          entry.id,
           createStarCatalogSlot(
-            source,
+            entry.id,
             poolHost,
             () => deps.settings().starCatalogs.chunkSlotsOverride,
           ),

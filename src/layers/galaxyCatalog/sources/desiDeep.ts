@@ -1,9 +1,7 @@
 import type { GalaxyCatalogSourceEntry } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceEntry';
-import { Source } from '../../../data/source';
 
 export const DESI_DEEP_ENTRY = {
   type: 'galaxyCatalog',
-  code: Source.DesiDeep,
   id: 'desiDeep',
   label: 'DESI Deep Field',
   binBaseName: 'desi-deep',

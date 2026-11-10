@@ -1,9 +1,7 @@
 import type { GalaxyCatalogSourceEntry } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceEntry';
-import { Source } from '../../../data/source';
 
 export const TWOMRS_ENTRY = {
   type: 'galaxyCatalog',
-  code: Source.TwoMRS,
   id: '2mrs',
   label: '2MRS',
   binBaseName: '2mrs',

@@ -218,7 +218,7 @@ function makeState(
   const densityRuntime = {
     renderer: densityRenderer,
     slots: Object.fromEntries(
-      COSMIC_WEB_DENSITY_SOURCE_ROWS.map(([, entry]) => [
+      COSMIC_WEB_DENSITY_SOURCE_ROWS.map((entry) => [
         entry.id,
         createCosmicWebDensitySlot(entry, densityRenderer),
       ]),

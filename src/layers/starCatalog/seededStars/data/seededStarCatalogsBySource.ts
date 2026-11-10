@@ -15,10 +15,8 @@ export const SEEDED_STAR_CATALOGS_BY_SOURCE: ReadonlyMap<
   StarCatalogSourceType,
   SeededStarCatalogRow
 > = new Map(
-  STAR_CATALOG_SOURCE_ROWS.filter(([, entry]) => entry.binBaseName === null).map(
-    ([code, entry]) => {
-      const id = entry.id as SeededStarCatalogId;
-      return [code, { id, stars: SEEDED_STAR_CATALOGS[id] }] as const;
-    },
-  ),
+  STAR_CATALOG_SOURCE_ROWS.filter((entry) => entry.binBaseName === null).map((entry) => {
+    const id = entry.id as SeededStarCatalogId;
+    return [id, { id, stars: SEEDED_STAR_CATALOGS[id] }] as const;
+  }),
 );

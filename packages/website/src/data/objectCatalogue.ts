@@ -235,7 +235,7 @@ const places = EARTH_PLACES.map(
 );
 
 const milkyWay = focusRow({ name: MILKY_WAY_NAMES[0], kind: 'milkyWay', id: MILKY_WAY_FOCUS_ID });
-const blackHoles = BLACK_HOLE_SOURCE_ROWS.map(([, entry]) =>
+const blackHoles = BLACK_HOLE_SOURCE_ROWS.map((entry) =>
   focusRow({
     name: entry.detailLabel,
     kind: 'blackHole',

@@ -19,7 +19,7 @@ import { encodeBlackHoleFocusId } from '../markers/present/encodeBlackHoleFocusI
 import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKindRow';
 import type { BlackHoleRef } from './@types/BlackHoleRef';
 
-const ENTRIES = BLACK_HOLE_SOURCE_ROWS.map(([, entry]) => entry);
+const ENTRIES = BLACK_HOLE_SOURCE_ROWS.map((entry) => entry);
 
 export function blackHoleSelectionRow(pickCode: number): SelectionKindRow<BlackHoleRef> {
   return {

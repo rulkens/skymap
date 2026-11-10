@@ -1,9 +1,7 @@
 import type { ZoneOfAvoidanceSourceEntry } from '../../../@types/data/zoneOfAvoidance/ZoneOfAvoidanceSourceEntry';
-import { Source } from '../../../data/source';
 
 export const ZONE_OF_AVOIDANCE_ENTRY = {
   type: 'zoneOfAvoidance',
-  code: Source.ZoneOfAvoidance,
   id: 'zoneOfAvoidance',
   label: 'Zone of Avoidance',
   // Radially-extruded wedge around the observer; allSky:true matches the

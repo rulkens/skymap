@@ -1,9 +1,7 @@
 import type { CosmicWebDensitySourceEntry } from '../../../@types/data/volume/CosmicWebDensitySourceEntry';
-import { Source } from '../../../data/source';
 
 export const MCPM_WORKBENCH_ENTRY = {
   type: 'cosmicWebDensity',
-  code: Source.McpmWorkbench,
   id: 'mcpm-workbench',
   label: 'MCPM Workbench (promoted)',
   allSky: true, // same physical field as MCPM/Polyphorm2MRS, whatever footprint the promoted run covers

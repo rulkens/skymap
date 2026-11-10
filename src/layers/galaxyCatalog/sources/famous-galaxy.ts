@@ -1,9 +1,7 @@
 import type { GalaxyCatalogSourceEntry } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceEntry';
-import { Source } from '../../../data/source';
 
 export const FAMOUS_GALAXY_ENTRY = {
   type: 'galaxyCatalog',
-  code: Source.FamousGalaxy,
   id: 'famousGalaxy',
   label: 'Famous',
   binBaseName: 'famous',

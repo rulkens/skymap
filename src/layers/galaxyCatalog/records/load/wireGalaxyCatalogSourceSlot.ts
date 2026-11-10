@@ -33,8 +33,8 @@ export function wireGalaxyCatalogSourceSlot(
     readonly bumpCatalogsVersion: () => void;
   },
 ): AssetSlot<GalaxyCatalog, GalaxyCatalogReq> {
-  const source = entry.code;
   const id = entry.id;
+  const source = id;
 
   const slot = createAssetSlot<GalaxyCatalog, GalaxyCatalogReq>({
     name: `${id}-points`,

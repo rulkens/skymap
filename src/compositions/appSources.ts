@@ -1,10 +1,10 @@
 /**
- * `APP_SOURCE_REGISTRY`, keyed by `Source` code (`data/source`); `SourceEntry.d.ts` lists the `type`
+ * `APP_SOURCE_REGISTRY`, keyed by id; `SourceEntry.d.ts` lists the `type`
  * kinds. Rows import straight from each Layer's `sources/`, never `layer.ts` or `APP_COMPOSITION`
  * (the tuple would reopen the circular alias and module-init cycles). `as const satisfies` keeps
  * each entry's literal `type`, so `APP_SOURCE_REGISTRY[Source.SDSS]` narrows without casts.
- * `maxDistMpc` is a display limit (H₀ ≈ 70 km/s/Mpc), not a cut. Integer keys iterate ascending,
- * so `SOURCE_ENTRIES` / `SOURCE_IDS` and the Labels panel follow code value.
+ * `maxDistMpc` is a display limit (H₀ ≈ 70 km/s/Mpc), not a cut. String keys iterate in
+ * spread order, which `SOURCE_ENTRIES` / `SOURCE_IDS` and the Labels panel follow.
  * `bandLabels` names what each `magU/G/R/I/Z` slot really carries, `'—'` = empty.
  */
 

@@ -27,7 +27,7 @@ export const missionsPickCode = (pickCode = testPickCode('missions')) => pickCod
 /** The structure Layer's `pickCodes`, as `create` builds them. */
 export function structurePickCodes(pickCode = testPickCode('structure')) {
   return catalogPickCodes(
-    STRUCTURE_IDS.map((id) => [id, { id }] as const),
+    STRUCTURE_IDS.map((id) => ({ id })),
     pickCode,
   );
 }

@@ -14,8 +14,6 @@ import type { VolumeFieldDefaults } from './VolumeFieldDefaults';
 export type CosmicWebDensitySourceEntry = SourceEntryBase &
   VolumeFieldDefaults & {
     readonly type: 'cosmicWebDensity';
-    /** Stable numeric tag; not persisted, only used as the registry key. */
-    readonly code: string;
     /**
      * Filename stem under `public/data/` (the loader appends `.scfd`,
      * with the tier suffix wired in by tier-aware fetchers).

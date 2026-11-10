@@ -158,7 +158,7 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
     hiResFamous: stubSlot(),
   } as unknown as GalaxyCatalogRuntime;
   const densitySlots: Record<string, AssetSlot<unknown, unknown>> = {};
-  for (const [, entry] of COSMIC_WEB_DENSITY_SOURCE_ROWS) {
+  for (const entry of COSMIC_WEB_DENSITY_SOURCE_ROWS) {
     densitySlots[entry.id] = stubSlot() as AssetSlot<unknown, unknown>;
   }
   const densityRuntime = { slots: densitySlots } as unknown as CosmicWebDensityRuntime;

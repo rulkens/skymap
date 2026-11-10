@@ -33,10 +33,10 @@ describe('the S-star source row', () => {
     expect(BODY_SOURCE_IDS).not.toContain(SUN_ENTRY.id);
   });
 
-  it('the registry is keyed by each entry’s code, and the S-star row is in it', () => {
+  it('the registry is keyed by each entry’s id, and the S-star row is in it', () => {
     // A `Source` member that drifts from its entry's id would key the row under a
     // name no asset, setting or ref uses.
-    for (const [key, entry] of Object.entries(APP_SOURCE_REGISTRY)) expect(key).toBe(entry.code);
+    for (const [key, entry] of Object.entries(APP_SOURCE_REGISTRY)) expect(key).toBe(entry.id);
     expect(APP_SOURCE_REGISTRY[Source.SStar]).toBe(S_STAR_ENTRY);
   });
 });

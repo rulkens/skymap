@@ -1,9 +1,7 @@
 import type { GalaxyCatalogSourceEntry } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceEntry';
-import { Source } from '../../../data/source';
 
 export const SDSS_ENTRY = {
   type: 'galaxyCatalog',
-  code: Source.SDSS,
   id: 'sdss',
   label: 'SDSS',
   binBaseName: 'sdss',

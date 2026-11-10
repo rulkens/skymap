@@ -23,7 +23,7 @@ export function flatGalaxyRecordSource(
   entry: GalaxyCatalogRegistryEntry,
   catalog: GalaxyCatalog,
 ): GalaxyRecordSource {
-  const source = entry.code;
+  const source = entry.id;
   const count = catalog.count;
   const claim = (entry as GalaxyCatalogSourceEntry).durableId;
   const prefix = claim === undefined ? null : `${claim.prefix}-`;

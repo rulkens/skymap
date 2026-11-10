@@ -7,7 +7,5 @@ import type { SourceEntryBase } from '../SourceEntryBase';
  */
 export type BlackHoleSourceEntry = SourceEntryBase & {
   readonly type: 'blackHole';
-  /** Stable numeric tag; not persisted, only used as the registry key. */
-  readonly code: string;
   readonly detailLabel: string;
 };

@@ -16,7 +16,7 @@ export function galaxyRecordsOver(
   const records = new Map<GalaxyCatalogSourceType, GalaxyRecordSource>();
   for (const [source, catalog] of catalogs) {
     const entry = GALAXY_CATALOG_SOURCE_RECORD[source as GalaxyCatalogSourceType];
-    records.set(entry.code, flatGalaxyRecordSource(entry, catalog));
+    records.set(entry.id, flatGalaxyRecordSource(entry, catalog));
   }
   return records;
 }

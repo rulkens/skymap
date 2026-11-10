@@ -150,16 +150,16 @@ export function catalogPickCodes<K extends string>(
 - `appSources.ts` keeps its spreads; `satisfies Readonly<Record<SourceType, SourceEntry>>` still holds (Task 3
   swaps it to `SourceId`).
 
-- [ ] **Step 1: Change the contract types and `sourceRecordOf`** per the Interfaces block.
-- [ ] **Step 2: Rewrite the 14 rows files and two records** to entry arrays; drop `code` from the type and
+- [x] **Step 1: Change the contract types and `sourceRecordOf`** per the Interfaces block.
+- [x] **Step 2: Rewrite the 14 rows files and two records** to entry arrays; drop `code` from the type and
       the 34 entries; point the `.code` readers at `.id`.
-- [ ] **Step 3: Switch `catalogPickCodes`** and its four callers; update its header and `CatalogPickCodes`'s
+- [x] **Step 3: Switch `catalogPickCodes`** and its four callers; update its header and `CatalogPickCodes`'s
       (no more "`Source` value").
-- [ ] **Step 4: Adapt `sourceRegistryCoverage.test.ts`** so it still asserts "every Layer row is the
+- [x] **Step 4: Adapt `sourceRegistryCoverage.test.ts`** so it still asserts "every Layer row is the
       registry's entry at its id". Check it can fail: temporarily give two entries the same id, see it go red,
       revert. No new test: the compiler checks the rest.
-- [ ] **Step 5: Verify.** `npm run typecheck`, `npm test` → green.
-- [ ] **Step 6: Commit** — "A Layer's sources are its entries, keyed by id; the code field goes".
+- [x] **Step 5: Verify.** `npm run typecheck`, `npm test` → green.
+- [x] **Step 6: Commit** — "A Layer's sources are its entries, keyed by id; the code field goes".
 
 ### Task 3: The `SourceType` family and the id↔code translators go
 
