@@ -1,6 +1,7 @@
 import StudioTip from '../../../primitives/components/StudioTip/StudioTip';
 import Glyph from '../../../primitives/components/Glyph/Glyph';
 import ZoomControls from '../../../timeline/components/ZoomControls/ZoomControls';
+import Button from '../../../../../../src/components/common/Button/Button';
 import CloseIcon from '../../../../../../src/components/icons/CloseIcon/CloseIcon';
 import { clipRegistry } from '../../../../../../src/data/animation/clips/clipRegistry';
 import { exitTakeover } from '../../../../../../src/state/takeover/takeoverActions';
@@ -71,48 +72,40 @@ function TopBar({ keysOpen, onToggleKeys }: Props) {
       </div>
       <div className={s.right}>
         <StudioTip name="Undo" keys={['⌘', 'Z']} state={undoLabel ?? undefined}>
-          <button
-            type="button"
-            className={s.button}
+          <Button
+            size="compact"
             aria-label={undoLabel === null ? 'Undo' : `Undo ${undoLabel}`}
             disabled={undoLabel === null}
             onClick={() => dispatch(undone())}
           >
             <Glyph id="undo" size={16} />
-          </button>
+          </Button>
         </StudioTip>
         <StudioTip name="Redo" keys={['⇧', '⌘', 'Z']} state={redoLabel ?? undefined}>
-          <button
-            type="button"
-            className={s.button}
+          <Button
+            size="compact"
             aria-label={redoLabel === null ? 'Redo' : `Redo ${redoLabel}`}
             disabled={redoLabel === null}
             onClick={() => dispatch(redone())}
           >
             <Glyph id="redo" size={16} />
-          </button>
+          </Button>
         </StudioTip>
         <span className={s.grow} />
         <StudioTip name="Keys" keys={['?']}>
-          <button
-            type="button"
-            className={s.button}
+          <Button
+            size="compact"
             aria-label="Keyboard shortcuts"
             aria-pressed={keysOpen}
             onClick={onToggleKeys}
           >
             ?
-          </button>
+          </Button>
         </StudioTip>
         <StudioTip name="Close studio" keys={['Esc']}>
-          <button
-            type="button"
-            className={s.button}
-            aria-label="Close studio"
-            onClick={() => dispatch(exitTakeover())}
-          >
+          <Button size="compact" aria-label="Close studio" onClick={() => dispatch(exitTakeover())}>
             <CloseIcon size={16} />
-          </button>
+          </Button>
         </StudioTip>
       </div>
     </header>

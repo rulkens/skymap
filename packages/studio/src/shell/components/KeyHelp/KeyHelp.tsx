@@ -1,5 +1,6 @@
 import { useEffect, useRef, type KeyboardEvent } from 'react';
 import Kbd from '../../../primitives/components/Kbd/Kbd';
+import Button from '../../../../../../src/components/common/Button/Button';
 import CloseIcon from '../../../../../../src/components/icons/CloseIcon/CloseIcon';
 import { STUDIO_KEYS } from '../../data/studioKeys';
 import { KEY_GROUPS } from './KeyHelp.constants';
@@ -21,15 +22,15 @@ function KeyHelp({ onClose }: Props) {
     <div className={s.root} role="dialog" aria-label="Keyboard shortcuts" onKeyDown={onKeyDown}>
       <div className={s.head}>
         <span className={s.title}>Keys</span>
-        <button
+        <Button
           ref={close}
-          type="button"
-          className={s.close}
+          variant="quiet"
+          size="compact"
           aria-label="Close keys"
           onClick={onClose}
         >
           <CloseIcon size={14} />
-        </button>
+        </Button>
       </div>
       <div className={s.groups}>
         {KEY_GROUPS.map((group) => (

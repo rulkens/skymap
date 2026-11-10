@@ -43,9 +43,7 @@ function RowInspector({ row, rows, draft, resolution }: Props) {
         title={formatRowTitle(row.label)}
       />
       {row.errors.map((reason) => (
-        <AlertChip key={reason} tone="error">
-          {REASON_TEXT[reason]}
-        </AlertChip>
+        <AlertChip key={reason}>{REASON_TEXT[reason]}</AlertChip>
       ))}
       {subject !== null &&
         fields.map((field, i) => (

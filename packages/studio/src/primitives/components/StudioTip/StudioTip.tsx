@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import cx from 'classnames';
+import Kbd from '../Kbd/Kbd';
 import { tipWarmth } from '../../data/tipWarmth';
 import { CLOSE_GRACE_MS, EDGE_PX, GAP_PX, OPEN_DELAY_MS, WARM_MS } from './StudioTip.constants';
 import s from './StudioTip.module.css';
@@ -12,13 +13,11 @@ type Props = {
   readonly meaning?: ReactNode;
   readonly keys?: readonly string[];
   readonly state?: ReactNode;
-  /** Preferred side; flips when the viewport has no room. */
-  readonly side?: 'top' | 'bottom';
-  readonly className?: string;
   readonly children: ReactNode;
 };
 
-function StudioTip({ name, meaning, keys, state, side = 'top', className, children }: Props) {
+/** Opens above its anchor, below when the viewport has no room above. */
+function StudioTip({ name, meaning, keys, state, children }: Props) {
   const anchor = useRef<HTMLSpanElement>(null);
   const tip = useRef<HTMLSpanElement>(null);
   const timer = useRef(0);
@@ -26,7 +25,7 @@ function StudioTip({ name, meaning, keys, state, side = 'top', className, childr
   const [x, setX] = useState(0);
   const [y, setY] = useState(0);
   const [caret, setCaret] = useState(0);
-  const [below, setBelow] = useState(side === 'bottom');
+  const [below, setBelow] = useState(false);
 
   useEffect(() => () => window.clearTimeout(timer.current), []);
 
@@ -53,14 +52,14 @@ function StudioTip({ name, meaning, keys, state, side = 'top', className, childr
     const h = el.offsetHeight;
     const roomAbove = a.top - GAP_PX - h >= EDGE_PX;
     const roomBelow = a.bottom + GAP_PX + h <= window.innerHeight - EDGE_PX;
-    const goBelow = side === 'bottom' ? roomBelow || !roomAbove : !roomAbove && roomBelow;
+    const goBelow = !roomAbove && roomBelow;
     const centre = a.left + a.width / 2;
     const left = Math.min(Math.max(centre - w / 2, EDGE_PX), window.innerWidth - EDGE_PX - w);
     setBelow(goBelow);
     setX(left);
     setY(goBelow ? a.bottom + GAP_PX : a.top - GAP_PX - h);
     setCaret(centre - left);
-  }, [side]);
+  }, []);
 
   useLayoutEffect(() => {
     const el = tip.current;
@@ -91,7 +90,7 @@ function StudioTip({ name, meaning, keys, state, side = 'top', className, childr
   return (
     <span
       ref={anchor}
-      className={cx(s.anchor, className)}
+      className={s.anchor}
       onPointerEnter={show}
       onPointerLeave={hide}
       onFocus={(e) => e.target.matches(':focus-visible') && setOpen(true)}
@@ -112,9 +111,7 @@ function StudioTip({ name, meaning, keys, state, side = 'top', className, childr
           {keys && keys.length > 0 && (
             <span className={s.keys}>
               {keys.map((k) => (
-                <kbd key={k} className={s.key}>
-                  {k}
-                </kbd>
+                <Kbd key={k}>{k}</Kbd>
               ))}
             </span>
           )}

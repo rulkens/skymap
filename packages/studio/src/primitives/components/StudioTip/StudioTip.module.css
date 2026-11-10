@@ -85,19 +85,6 @@
   display: inline-flex;
   gap: var(--space-1);
 }
-.key {
-  min-width: var(--space-8);
-  padding: 0 var(--space-2);
-  border: 1px solid var(--border-control);
-  border-bottom-width: 2px;
-  border-radius: var(--radius-sm);
-  background: var(--surface-control);
-  font-family: var(--font-family-mono);
-  font-size: var(--font-size-sm);
-  line-height: var(--line-height-base);
-  text-align: center;
-  color: var(--color-fg-muted);
-}
 .meaning {
   color: var(--color-fg-tertiary);
 }

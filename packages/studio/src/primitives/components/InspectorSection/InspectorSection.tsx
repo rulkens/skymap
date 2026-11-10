@@ -1,15 +1,9 @@
-import type { ReactNode } from 'react';
 import s from './InspectorSection.module.css';
 
-type Props = { readonly title: string; readonly aside?: ReactNode };
+type Props = { readonly title: string };
 
-function InspectorSection({ title, aside }: Props) {
-  return (
-    <p className={s.root}>
-      <span>{title}</span>
-      {aside && <span className={s.aside}>{aside}</span>}
-    </p>
-  );
+function InspectorSection({ title }: Props) {
+  return <p className={s.root}>{title}</p>;
 }
 
 export default InspectorSection;

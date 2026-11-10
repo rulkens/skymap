@@ -1,3 +1,4 @@
+import Button from '../../../../../../src/components/common/Button/Button';
 import CloseIcon from '../../../../../../src/components/icons/CloseIcon/CloseIcon';
 import { exitTakeover } from '../../../../../../src/state/takeover/takeoverActions';
 import { useAppDispatch } from '../../../../../../src/store/hooks';
@@ -9,10 +10,10 @@ function NarrowNotice() {
   return (
     <div className={s.root}>
       <p className={s.text}>Needs a wider screen</p>
-      <button type="button" className={s.close} onClick={() => dispatch(exitTakeover())}>
+      <Button size="compact" onClick={() => dispatch(exitTakeover())}>
         <CloseIcon size={14} />
         Close
-      </button>
+      </Button>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 .root {
   display: grid;
-  grid-template-columns: 10ch minmax(0, 1fr) var(--space-8);
+  grid-template-columns: 10ch minmax(0, 1fr) var(--space-12);
   grid-auto-rows: minmax(var(--space-12), auto);
   column-gap: var(--space-4);
   align-content: start;

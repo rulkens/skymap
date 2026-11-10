@@ -1,4 +1,5 @@
 import StudioTip from '../../../primitives/components/StudioTip/StudioTip';
+import Button from '../../../../../../src/components/common/Button/Button';
 import MinusIcon from '../../../../../../src/components/icons/MinusIcon/MinusIcon';
 import PlusIcon from '../../../../../../src/components/icons/PlusIcon/PlusIcon';
 import { selectPlayheadSec, selectViewport } from '../../../session/state/selectors';
@@ -33,37 +34,38 @@ function ZoomControls() {
   return (
     <div className={s.root} role="group" aria-label="Zoom">
       <StudioTip name="Zoom out">
-        <button
-          type="button"
-          className={s.button}
+        <Button
+          variant="quiet"
+          size="compact"
           aria-label="Zoom out"
           disabled={!resolved || viewport === null}
           onClick={() => zoom(ZOOM_FACTOR)}
         >
           <MinusIcon size={14} />
-        </button>
+        </Button>
       </StudioTip>
       <StudioTip name="Fit clip">
-        <button
-          type="button"
+        <Button
+          variant="quiet"
+          size="compact"
           className={s.level}
           aria-pressed={viewport === null}
           disabled={!resolved}
           onClick={() => dispatch(viewportSet(null))}
         >
           {level}
-        </button>
+        </Button>
       </StudioTip>
       <StudioTip name="Zoom in">
-        <button
-          type="button"
-          className={s.button}
+        <Button
+          variant="quiet"
+          size="compact"
           aria-label="Zoom in"
           disabled={!resolved}
           onClick={() => zoom(1 / ZOOM_FACTOR)}
         >
           <PlusIcon size={14} />
-        </button>
+        </Button>
       </StudioTip>
     </div>
   );

@@ -15,9 +15,3 @@
   flex: 1;
   border-top: 1px solid var(--border-divider);
 }
-.aside {
-  order: 2;
-  letter-spacing: 0;
-  text-transform: none;
-  color: var(--color-fg-tertiary);
-}

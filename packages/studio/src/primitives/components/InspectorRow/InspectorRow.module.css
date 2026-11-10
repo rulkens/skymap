@@ -34,32 +34,16 @@
   color: var(--color-fg);
   white-space: nowrap;
 }
-.span {
-  grid-column: 2 / -1;
-}
 .resetCell {
   display: grid;
   place-items: center;
 }
+/* Dim until hovered: the Button's quiet look, in the tertiary ink. */
 .reset {
-  display: grid;
-  place-items: center;
-  width: var(--space-8);
-  height: var(--space-8);
-  padding: 0;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: none;
   color: var(--color-fg-tertiary);
-  font: inherit;
-  cursor: pointer;
-}
-.reset:focus-visible {
-  outline: 2px solid var(--color-accent);
 }
 @media (hover: hover) {
-  .reset:hover {
+  .reset:hover:not(:disabled) {
     color: var(--color-fg);
-    background: var(--surface-control);
   }
 }

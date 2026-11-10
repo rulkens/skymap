@@ -1,15 +1,9 @@
-import type { GlyphId } from '../../../@types/kinds/GlyphId';
-import Glyph from '../Glyph/Glyph';
 import s from './SegmentedField.module.css';
 
 type Props = {
   readonly value: string;
   readonly label: string;
-  readonly options: readonly {
-    readonly value: string;
-    readonly text: string;
-    readonly glyph?: GlyphId;
-  }[];
+  readonly options: readonly { readonly value: string; readonly text: string }[];
   readonly onChange: (value: string) => void;
 };
 
@@ -24,7 +18,6 @@ function SegmentedField({ value, label, options, onChange }: Props) {
           aria-checked={o.value === value}
           onClick={() => onChange(o.value)}
         >
-          {o.glyph && <Glyph id={o.glyph} />}
           {o.text}
         </button>
       ))}
