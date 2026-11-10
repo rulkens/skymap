@@ -824,9 +824,9 @@ Renders one `FieldSpec` against a subject with the widget from `FIELD_CONTROLS`;
 `fallback` dim; editing dispatches `paramEdited({ ref, param, value: fromDisplay(shown), label: spec.label, gesture })`;
 `↺` dispatches `value: undefined`; `readOnly` or `readout` renders `ReadoutField`.
 
-- [ ] Test `editing Distance to 950 dispatches one paramEdited with 950 and the field label`.
-- [ ] Test `reset clears an optional param` (`fade` on an `osc`).
-- [ ] Test `a degrees field dispatches radians`.
+- [x] Test `editing Distance to 950 dispatches one paramEdited with 950 and the field label`.
+- [x] Test `reset clears an optional param` (`fade` on an `osc`).
+- [x] Test `a degrees field dispatches radians`.
 
 ### Task 5.3: `Inspector`
 

@@ -1,0 +1,89 @@
+// @vitest-environment jsdom
+import { afterEach, describe, expect, it } from 'vitest';
+import { configureStore } from '@reduxjs/toolkit';
+import { Provider } from 'react-redux';
+import { cleanup, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { rootReducer } from '../../../../../src/store/rootReducer';
+import { oscillate } from '../../../../../src/services/engine/animation/effectHelpers';
+import FieldRow from '../../../src/inspector/components/FieldRow/FieldRow';
+import { inspectorSpec } from '../../../src/inspector/utils/inspectorSpec';
+import { rowSubject } from '../../../src/inspector/utils/rowSubject';
+import { injectStudioSlice } from '../../../src/session/state/injectStudioSlice';
+import { studioOpened } from '../../../src/session/state/studioSlice';
+import { selectDraft, selectStudioState } from '../../../src/session/state/selectors';
+import type { ClipData } from '../../../../../src/@types/animation/ClipData';
+import type { RowKind } from '../../../src/@types/rows/RowKind';
+import type { RowRef } from '../../../src/@types/rows/RowRef';
+
+afterEach(cleanup);
+
+const PREVIEW = {
+  startPose: { target: [0, 0, 0] as [number, number, number], yaw: 0, pitch: 0, distance: 10 },
+  simDays: 2451545,
+  frame: 'equatorial' as const,
+  fovYRad: 0.8,
+};
+const START_POSE = {
+  target: [0, 0, 0] as [number, number, number],
+  yaw: 0,
+  pitch: 0,
+  distance: 300,
+};
+
+function setup(draft: ClipData, kind: RowKind, rowRef: RowRef, fieldKey: string) {
+  injectStudioSlice();
+  const store = configureStore({ reducer: rootReducer });
+  store.dispatch(studioOpened({ clipId: 'cosmicFlows', draft, preview: PREVIEW }));
+  const spec = inspectorSpec(kind).fields.find((f) => f.key === fieldKey)!;
+  const subject = rowSubject(selectDraft(store.getState())!, rowRef)!;
+  render(
+    <Provider store={store}>
+      <FieldRow spec={spec} subject={subject} rowRef={rowRef} />
+    </Provider>,
+  );
+  return store;
+}
+
+describe('FieldRow', () => {
+  it('editing Distance to 950 dispatches one paramEdited with 950 and the field label', async () => {
+    const store = setup(
+      { start: START_POSE, timeline: [] },
+      'start',
+      { kind: 'start' },
+      'distance',
+    );
+    const field = screen.getByRole('textbox', { name: 'Distance' });
+    await userEvent.clear(field);
+    await userEvent.type(field, '950{Enter}');
+
+    const state = selectStudioState(store.getState());
+    expect((state.draft!.start as typeof START_POSE).distance).toBe(950);
+    expect(state.history.past).toHaveLength(1);
+    expect(state.history.past[0]!.label).toBe('Distance');
+  });
+
+  it('reset clears an optional param', async () => {
+    const store = setup(
+      { timeline: [oscillate('distance', { amp: 5, period: 4, fade: 2 })] },
+      'osc',
+      { kind: 'effect', path: [0] },
+      'fade',
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Reset Fade to default' }));
+
+    expect(selectDraft(store.getState())!.timeline[0]).not.toHaveProperty('fade');
+  });
+
+  it('a degrees field dispatches radians', async () => {
+    const store = setup({ start: START_POSE, timeline: [] }, 'start', { kind: 'start' }, 'yaw');
+    const field = screen.getByRole('textbox', { name: 'Turn' });
+    await userEvent.clear(field);
+    await userEvent.type(field, '90{Enter}');
+
+    expect((selectDraft(store.getState())!.start as typeof START_POSE).yaw).toBeCloseTo(
+      Math.PI / 2,
+      10,
+    );
+  });
+});
