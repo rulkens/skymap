@@ -49,7 +49,7 @@ export function* clipBodySaga(id: ClipId): Generator {
           frozenSimDays,
           frameBasis,
         );
-        yield* call(playClipSeam, resolved, orientation);
+        yield* call(playClipSeam, resolved, orientation, 'revert' as const);
       }),
       exit: take(exitTakeover),
     });

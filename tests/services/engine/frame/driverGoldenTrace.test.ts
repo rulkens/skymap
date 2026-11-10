@@ -211,6 +211,7 @@ function runScript(): Trace {
         liveWorldPose(state),
       ),
       frame: DEFAULT_ORIENTATION,
+      atEnd: 'revert',
     }),
   );
   const clipLeg = trace.length;

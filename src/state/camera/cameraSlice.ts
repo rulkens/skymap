@@ -71,12 +71,12 @@ const cameraSlice = createSlice({
       camera.tween = null;
     },
 
-    // A FRESH `{ data, frame }` wrapper each time: the clip clock detects a new
+    // A FRESH `{ data, frame, atEnd }` wrapper each time: the clip clock detects a new
     // clip by reference inequality, not deep descriptor equality. `data` must
     // already be resolved (no `start: 'live'` sentinel) — `resolveClipStart` runs
     // at the dispatch site. `frame` is the orientation frame live at dispatch time;
     // the driver holds the clip against THIS frame for its whole run.
-    clipStarted: (camera, action: PayloadAction<{ data: ClipData; frame: OrientationFrameId }>) => {
+    clipStarted: (camera, action: PayloadAction<NonNullable<CameraState['clip']>>) => {
       camera.clip = action.payload;
     },
     // Clears BOTH `clip` and `tween`: a tween planted before or during the clip is

@@ -53,7 +53,7 @@ const bodyArm: FramedCameraPose = {
 };
 
 const clipData: ClipData = { timeline: [] };
-const clip = { data: clipData, frame: DEFAULT_ORIENTATION } as const;
+const clip = { data: clipData, frame: DEFAULT_ORIENTATION, atEnd: 'revert' } as const;
 
 const tween: CameraTweenDescriptor = {
   from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 0.43 },

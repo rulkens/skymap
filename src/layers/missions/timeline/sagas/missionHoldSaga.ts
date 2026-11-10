@@ -132,7 +132,7 @@ export function* missionHoldSaga(
 
 function* flyIn(pose: CameraPose): Generator {
   const playClip = yield* getContext<SagaContext['playClip']>('playClip');
-  yield* call(playClip, flyToPoseClip(pose), yield* select(selectOrientation));
+  yield* call(playClip, flyToPoseClip(pose), yield* select(selectOrientation), 'revert' as const);
 }
 
 /** The mission camera's zero-offset pose at `days`, for the fly in; null pre-bootstrap. */

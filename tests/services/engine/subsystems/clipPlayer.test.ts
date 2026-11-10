@@ -80,7 +80,7 @@ function makeStore() {
 /** Install a clip into the store at the given start time. */
 function installClip(store: TestStore, data: ClipData): ClipData {
   const resolved = resolveClipStart(data, LIVE_POSE);
-  store.dispatch(clipStarted({ data: resolved, frame: DEFAULT_ORIENTATION }));
+  store.dispatch(clipStarted({ data: resolved, frame: DEFAULT_ORIENTATION, atEnd: 'revert' }));
   return resolved;
 }
 

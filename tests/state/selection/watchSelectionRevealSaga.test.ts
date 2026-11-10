@@ -86,7 +86,11 @@ describe('watchSelectionRevealSaga', () => {
   it('does nothing during a clip', () => {
     const h = build();
     h.store.dispatch(
-      clipStarted({ data: { start: 'live', timeline: [] }, frame: DEFAULT_ORIENTATION }),
+      clipStarted({
+        data: { start: 'live', timeline: [] },
+        frame: DEFAULT_ORIENTATION,
+        atEnd: 'revert',
+      }),
     );
     h.store.dispatch(updateSelectionFocus(ISS));
     expect(h.writes).toEqual([]);

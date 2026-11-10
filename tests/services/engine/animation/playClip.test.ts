@@ -104,7 +104,7 @@ describe('playClip', () => {
       getLivePose: () => LIVE_POSE,
     });
 
-    const p = playClip(makeClip('live'), FRAME);
+    const p = playClip(makeClip('live'), FRAME, 'revert');
 
     // Before the clip ends the Promise is still pending.
     let settled = false;
@@ -136,7 +136,7 @@ describe('playClip', () => {
       getLivePose: () => LIVE_POSE,
     });
 
-    const p = playClip(makeClip('live'), FRAME);
+    const p = playClip(makeClip('live'), FRAME, 'revert');
 
     // Invoke the [CANCEL] hook — what redux-saga's middleware does when a race
     // sibling wins and the task owning this Promise is cancelled. CANCEL is
@@ -166,7 +166,7 @@ describe('playClip', () => {
     });
 
     const originalClip = makeClip('live');
-    playClip(originalClip, FRAME);
+    playClip(originalClip, FRAME, 'revert');
 
     // Find the clipStarted dispatch and inspect its payload.
     const startClipCall = dispatchSpy.mock.calls.find(

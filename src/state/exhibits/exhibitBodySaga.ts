@@ -82,7 +82,7 @@ export function* exhibitBodySaga(
     yield* put(commitCameraPose(absoluteArm(pose)));
   } else {
     const { exit } = yield* race({
-      landed: call(playClip, flyToPoseClip(pose), orientation),
+      landed: call(playClip, flyToPoseClip(pose), orientation, 'revert' as const),
       exit: take(exitTakeover),
     });
     if (exit) return;

@@ -73,7 +73,9 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
     });
 
     // The fresh wrapper object is what starts the clip epoch on tick 1.
-    store.dispatch(clipStarted({ data: cosmicFlows.data, frame: DEFAULT_ORIENTATION }));
+    store.dispatch(
+      clipStarted({ data: cosmicFlows.data, frame: DEFAULT_ORIENTATION, atEnd: 'revert' }),
+    );
 
     // Threads the epoch across ticks, as `runFrame` does through the runtime.
     let clipEpoch = UNSTARTED_EPOCHS.clip;

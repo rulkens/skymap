@@ -335,7 +335,7 @@ describe('commitOnEdge — clip deactivation', () => {
     // Activate the clip driver. `frame` matches the store's default orientation
     // so the driver's re-encode is a no-op — this test only cares about the
     // commit-on-edge boolean, not the pose value.
-    store.dispatch(clipStarted({ data: clip, frame: DEFAULT_ORIENTATION }));
+    store.dispatch(clipStarted({ data: clip, frame: DEFAULT_ORIENTATION, atEnd: 'revert' }));
     // Seed register.winner so there's no spurious commit on the first frame.
     state.cameraRuntime = {
       ...state.cameraRuntime,
@@ -417,6 +417,7 @@ describe('commitOnEdge — clip deactivation', () => {
       clipStarted({
         data: { start: { target: [1, 2, 3], yaw: 0, pitch: 0, distance: 80 }, timeline: [] },
         frame: DEFAULT_ORIENTATION,
+        atEnd: 'revert',
       }),
     );
     expect(

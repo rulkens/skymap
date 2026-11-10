@@ -334,7 +334,9 @@ describe('watchFocusTweenSaga', () => {
   const MINIMAL_CLIP: ClipData = { start: 'live', timeline: [] };
 
   it('watchFocusTweenSaga plants no tween while a clip is active', async () => {
-    store.dispatch(clipStarted({ data: MINIMAL_CLIP, frame: DEFAULT_ORIENTATION }));
+    store.dispatch(
+      clipStarted({ data: MINIMAL_CLIP, frame: DEFAULT_ORIENTATION, atEnd: 'revert' }),
+    );
     store.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
     await flush();
     expect(store.getState()[cameraRoute].tween).toBeNull();

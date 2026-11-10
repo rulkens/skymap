@@ -116,7 +116,9 @@ export function replayInput(
     if (stepped.fovYRad !== undefined) emit(setFovYRad(stepped.fovYRad));
     // While it plays, the clip swallows every pose-moving step (`stepRegister`).
     if (stepped.clip !== undefined) {
-      emit(clipStarted({ data: stepped.clip, frame: rootState.settings.orientation }));
+      emit(
+        clipStarted({ data: stepped.clip, frame: rootState.settings.orientation, atEnd: 'revert' }),
+      );
     }
     return { frame: framed.frame, pose: stepped.pose };
   };

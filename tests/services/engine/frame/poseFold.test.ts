@@ -753,6 +753,7 @@ describe('runFrame — the regime fold', () => {
           near,
         ),
         frame: DEFAULT_ORIENTATION,
+        atEnd: 'revert',
       }),
     );
 

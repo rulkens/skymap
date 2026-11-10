@@ -84,7 +84,7 @@ export function* pausableDwellSaga(
   while (true) {
     // The ambient clip runs only while the clock runs. A post-pause slice
     // replays it from the start (see the module header for the trade-off).
-    const driftTask = paused ? null : yield* fork(playClip, dwellClip, frame);
+    const driftTask = paused ? null : yield* fork(playClip, dwellClip, frame, 'keep' as const);
     const sliceStartedAt = Date.now();
 
     // One race. The `timeout` arm is present only while running; when paused the

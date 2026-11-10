@@ -100,7 +100,7 @@ describe('playClip — flyout seam', () => {
     // registers the end-resolver, attaches the [CANCEL] hook, and dispatches
     // clipStarted. The Promise resolves on the deferred clipEnded frame.
     let settled = false;
-    const p = playClip(flyout.data, DEFAULT_ORIENTATION);
+    const p = playClip(flyout.data, DEFAULT_ORIENTATION, 'revert');
     void p.then(() => {
       settled = true;
     });

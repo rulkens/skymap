@@ -11,6 +11,7 @@ import { resolveClipStart, clipStarted } from '../../../state/camera/cameraSlice
 import type { ClipData } from '../../../@types/animation/ClipData';
 import type { CameraPose } from '../../../@types/camera/pose/CameraPose';
 import type { OrientationFrameId } from '../../../@types/camera/orientation/OrientationFrameId';
+import type { ClipSceneEnd } from '../../../@types/animation/ClipSceneEnd';
 import type { AppDispatch } from '../../../store/types';
 import type { ClipPlayer } from '../../../@types/engine/subsystems/ClipPlayer';
 
@@ -25,10 +26,14 @@ type PlayClipDeps = {
 
 export function createPlayClip(
   deps: PlayClipDeps,
-): (clip: ClipData, frame: OrientationFrameId) => Promise<void> {
+): (clip: ClipData, frame: OrientationFrameId, atEnd: ClipSceneEnd) => Promise<void> {
   const { store, clipPlayer, getLivePose } = deps;
 
-  return function playClip(clip: ClipData, frame: OrientationFrameId): Promise<void> {
+  return function playClip(
+    clip: ClipData,
+    frame: OrientationFrameId,
+    atEnd: ClipSceneEnd,
+  ): Promise<void> {
     // Fresh object every call, even when `start` was already concrete: the clip
     // epoch resets on `camera.clip` reference identity.
     const resolvedClip = resolveClipStart(clip, getLivePose());
@@ -45,7 +50,7 @@ export function createPlayClip(
 
     // `frame` is pinned at dispatch time so a later orientation switch re-expresses
     // the clip's pose instead of reinterpreting it (clip row in cameraDrivers.ts).
-    store.dispatch(clipStarted({ data: resolvedClip, frame }));
+    store.dispatch(clipStarted({ data: resolvedClip, frame, atEnd }));
 
     return p;
   };

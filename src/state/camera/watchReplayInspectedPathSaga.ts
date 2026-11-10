@@ -59,7 +59,7 @@ export function* watchReplayInspectedPathSaga() {
     if (clip === null || frame === null) return; // nothing calculated yet — no-op
 
     yield* race({
-      run: call(playClipSeam, clip, frame),
+      run: call(playClipSeam, clip, frame, 'revert' as const),
       stop: take(exitTakeover),
     });
   });

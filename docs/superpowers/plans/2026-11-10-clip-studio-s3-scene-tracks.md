@@ -251,9 +251,12 @@ Required, no default (spec §9, Decision 4). Call sites: `visitBeatSaga.ts:122` 
 `clipBodySaga.ts:52`, `exhibitBodySaga.ts:85`, `watchReplayInspectedPathSaga.ts:62` and `replayInput.ts:119` pass
 `'revert'`. The player ignores it until Task 2.2. No new test: type plumbing the compiler checks.
 
-- [ ] Add the type, thread it, update call sites and test helpers.
-- [ ] `npm run typecheck:fast`; `npx vitest run tests/state/tour tests/state/camera tests/services/engine/animation`.
-- [ ] Commit: "A play says what happens to its scene at the end".
+As built: a sixth call site, `missionHoldSaga.ts` (an exhibit's fly-to-pose clip, no scene), passes `'revert'`.
+Saga `call`s pass the literal `as const`: typed-redux-saga widens a bare string literal.
+
+- [x] Add the type, thread it, update call sites and test helpers.
+- [x] `npm run typecheck:fast`; `npx vitest run tests/state/tour tests/state/camera tests/services/engine/animation`.
+- [x] Commit: "A play says what happens to its scene at the end".
 
 ### Task 2.2: the player evaluates, publishes and ends
 
