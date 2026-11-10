@@ -13,7 +13,7 @@ import { describe, expect, it } from 'vitest';
 import type { ObjectKind } from '../../../packages/website/src/@types/ObjectKind';
 import { OBJECT_ROWS, OBJECT_SECTIONS } from '../../../packages/website/src/data/objectCatalogue';
 import { objectSubLists } from '../../../packages/website/src/utils/objectSubLists';
-import { tourRegistry } from '../../../src/data/animation/tours/tourRegistry';
+import { APP_TOUR_REGISTRY } from '../../../src/compositions/appTours';
 import { BODY_PICK_ROWS } from '../../../src/data/bodies/bodyPickRows';
 import { SCENE_MESH_BODIES } from '../../../src/data/bodies/sceneMeshBodies';
 import { PROBE_SPHERE_ROSTER } from '../../../src/layers/probeSpheres/spheres/data/probeSphereRoster';
@@ -65,7 +65,7 @@ const RESOLVES: Record<ObjectKind, (id: string) => boolean> = {
   supercluster: (id) => structureIds.has(id),
   void: (id) => structureIds.has(id),
   exhibit: (id) => id in APP_EXHIBIT_REGISTRY,
-  tour: (id) => id in tourRegistry,
+  tour: (id) => id in APP_TOUR_REGISTRY,
   place: () => false,
 };
 
@@ -124,7 +124,7 @@ describe('object catalogue', () => {
     ).toEqual([...structureIds].sort());
     expect(ids('exhibit')).toEqual(Object.keys(APP_EXHIBIT_REGISTRY).sort());
     expect(ids('tour')).toEqual(
-      Object.values(tourRegistry)
+      Object.values(APP_TOUR_REGISTRY)
         .filter((tour) => tour.dev !== true)
         .map((tour) => tour.id)
         .sort(),

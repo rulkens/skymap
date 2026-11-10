@@ -86,7 +86,7 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import type { Writable } from 'node:stream';
-import { tourRegistry } from '../../src/data/animation/tours/tourRegistry';
+import { APP_TOUR_REGISTRY } from '../../src/compositions/appTours';
 import { clipRegistry } from '../../src/data/animation/clips/clipRegistry';
 import { FOLD_SETTLE_MS } from '../../src/state/tour/foldSettleMs';
 import type { Tour } from '../../src/@types/animation/tour/Tour';
@@ -875,10 +875,10 @@ async function main(): Promise<void> {
       }
       take = { kind: 'clip', id: clip.id, loopFrames };
     } else {
-      const tour = (tourRegistry as Record<string, Tour>)[options.tourId];
+      const tour = (APP_TOUR_REGISTRY as Record<string, Tour>)[options.tourId];
       if (tour === undefined) {
         throw new Error(
-          `unknown tour '${options.tourId}' — known: ${Object.keys(tourRegistry).join(', ')}`,
+          `unknown tour '${options.tourId}' — known: ${Object.keys(APP_TOUR_REGISTRY).join(', ')}`,
         );
       }
       const beats: BeatRange = options.beats ?? { from: 0, to: tour.beats.length - 1 };

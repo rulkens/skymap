@@ -39,7 +39,7 @@ import { isWorldArm } from '../../services/engine/camera/arms/world/isWorldArm';
 import { selectionKindOf } from '../../services/engine/selection/selectionKindOf';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { APP_EXHIBIT_REGISTRY } from '../../compositions/appExhibits';
-import { tourRegistry } from '../../data/animation/tours/tourRegistry';
+import { APP_TOUR_REGISTRY } from '../../compositions/appTours';
 import { clipFactories } from '../../data/animation/clips/clipRegistry';
 import { isKeyOf } from '../../utils/object/isKeyOf';
 import { absoluteArm } from '../../utils/camera/arms/absoluteArm';
@@ -180,7 +180,7 @@ export function* navigateSaga(
       );
       return OK;
     case 'tour':
-      if (!isKeyOf(tourRegistry, view.id)) return UNKNOWN_ID;
+      if (!isKeyOf(APP_TOUR_REGISTRY, view.id)) return UNKNOWN_ID;
       // A live start begins on the home framing, as from the splash.
       if (transition === 'cut') yield* call(homeSaga);
       return yield* call(firstClipSaga, startTour(view.id), transition);

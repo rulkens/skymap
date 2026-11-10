@@ -191,7 +191,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
     id: 'search-tours',
     about: 'app',
     text: 'The search finds two tours by name, “The Long Way Out” and “Named Cosmic Web”.',
-    source: `${REPO_BLOB}/src/data/animation/tours/tourRegistry.ts`,
+    source: `${REPO_BLOB}/src/compositions/appTours.ts`,
     sourceLabel: `the tours, ${IN_REPO}`,
     checked: CHECKED,
   },
