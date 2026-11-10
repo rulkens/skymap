@@ -15,7 +15,7 @@ import { ancestorChains } from '../../utils/ancestorChains';
 import { selectionRelation } from '../../utils/selectionRelation';
 import { familyStyle } from '../../utils/familyStyle';
 import { viewWindow } from '../../utils/window/viewWindow';
-import { useWheelPan } from './useWheelPan';
+import { useTimelineWheel } from './useTimelineWheel';
 import { useAppDispatch, useAppSelector } from '../../../../../../src/store/hooks';
 import s from './TimelinePane.module.css';
 
@@ -28,14 +28,15 @@ function TimelinePane() {
   const playheadSec = useAppSelector(selectPlayheadSec);
   const chains = useMemo(() => ancestorChains(timeline?.rows ?? []), [timeline]);
   const track = useRef<HTMLDivElement>(null);
-  const onWheel = useWheelPan(track, viewport, timeline);
+  const root = useRef<HTMLDivElement>(null);
+  useTimelineWheel(root, track, timeline !== null);
   if (timeline === null) return null;
   const window = viewWindow(viewport, timeline);
   const selectedIndex = timeline.rows.findIndex((row) => row.id === standIn);
   const end = timeline.durationSec === null ? null : timeToPercent(timeline.durationSec, window);
 
   return (
-    <div className={s.root} onWheel={onWheel}>
+    <div ref={root} className={s.root}>
       <div className={s.head}>
         <div className={s.headOutline}>
           <span className={s.headLabel}>Step</span>

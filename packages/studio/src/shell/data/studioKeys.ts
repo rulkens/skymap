@@ -61,6 +61,21 @@ export const STUDIO_KEYS: readonly StudioKey[] = [
     matches: (e) => plain(e) && e.key === 'End',
   },
   {
+    id: 'zoomIn',
+    group: 'Playhead',
+    label: 'Zoom in',
+    chips: ['='],
+    // `+` is shift+= on most layouts; either zooms in.
+    matches: (e) => !e.metaKey && !e.ctrlKey && !e.altKey && (e.key === '=' || e.key === '+'),
+  },
+  {
+    id: 'zoomOut',
+    group: 'Playhead',
+    label: 'Zoom out',
+    chips: ['-'],
+    matches: (e) => plain(e) && e.key === '-',
+  },
+  {
     id: 'undo',
     group: 'Clip',
     label: 'Undo',

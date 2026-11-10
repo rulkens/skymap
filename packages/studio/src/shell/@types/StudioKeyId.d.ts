@@ -8,5 +8,7 @@ export type StudioKeyId =
   | 'redo'
   | 'start'
   | 'end'
+  | 'zoomIn'
+  | 'zoomOut'
   | 'escape'
   | 'help';

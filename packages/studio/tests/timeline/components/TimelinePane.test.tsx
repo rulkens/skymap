@@ -44,6 +44,19 @@ describe('TimelinePane', () => {
     expect(selectViewport(store.getState())).toEqual({ startSec: 3, endSec: 5 });
   });
 
+  it('⌘/ctrl+wheel zooms about the time under the pointer; zooming back out returns to Fit', () => {
+    // Fit spans 0-9.6 s over a 1000 px track starting at x 0, so x 250 is 2.4 s.
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(1000);
+    const store = mount({ timeline: [seq([dollyTo(300, 4), dollyTo(950, 4)])] });
+    const pane = screen.getByRole('tree').parentElement!;
+
+    fireEvent.wheel(pane, { deltaY: -100, ctrlKey: true, clientX: 250 });
+    expect(selectViewport(store.getState())).toEqual({ startSec: 1.2, endSec: 6 });
+
+    fireEvent.wheel(pane, { deltaY: 100, metaKey: true, clientX: 250 });
+    expect(selectViewport(store.getState())).toBeNull();
+  });
+
   it('clicking a row selects it; clicking its twisty toggles collapse without selecting', () => {
     const store = mount({ timeline: [seq([dollyTo(300, 4), dollyTo(950, 4)])] });
 

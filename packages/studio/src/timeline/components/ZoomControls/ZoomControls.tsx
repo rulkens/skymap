@@ -6,8 +6,8 @@ import { selectPlayheadSec, selectViewport } from '../../../session/state/select
 import { viewportSet } from '../../../session/state/studioSlice';
 import { selectTimeline } from '../../state/selectTimeline';
 import { viewWindow } from '../../utils/window/viewWindow';
-import { zoomWindow } from '../../utils/window/zoomWindow';
-import { ZOOM_FACTOR } from './ZoomControls.constants';
+import { zoomedViewport } from '../../utils/window/zoomedViewport';
+import { ZOOM_FACTOR } from '../../data/zoom';
 import { useAppDispatch, useAppSelector } from '../../../../../../src/store/hooks';
 import s from './ZoomControls.module.css';
 
@@ -22,9 +22,8 @@ function ZoomControls() {
   const current = timeline === null ? null : viewWindow(viewport, timeline);
 
   const zoom = (factor: number) => {
-    if (fit !== null && current !== null) {
-      dispatch(viewportSet(zoomWindow(current, fit, factor, playheadSec)));
-    }
+    if (timeline !== null)
+      dispatch(viewportSet(zoomedViewport(viewport, timeline, factor, playheadSec)));
   };
   const level =
     viewport === null || fit === null || current === null

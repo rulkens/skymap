@@ -7,7 +7,11 @@ import { dollyTo, seq } from '../../../../../src/services/engine/animation/effec
 import { exitTakeover } from '../../../../../src/state/takeover/takeoverActions';
 import { useStudioKeys } from '../../../src/shell/hooks/useStudioKeys';
 import { paramEdited, rowSelected } from '../../../src/session/state/studioSlice';
-import { selectSelection, selectUndoLabel } from '../../../src/session/state/selectors';
+import {
+  selectSelection,
+  selectUndoLabel,
+  selectViewport,
+} from '../../../src/session/state/selectors';
 import { openStudioStore } from '../../helpers/openStudioStore';
 
 afterEach(cleanup);
@@ -45,6 +49,16 @@ describe('useStudioKeys', () => {
     fireEvent.keyDown(dock, { key: 'ArrowDown' });
 
     expect(selectSelection(store.getState())).toEqual({ kind: 'effect', path: [0] });
+  });
+
+  it('= zooms in about the playhead and - zooms back out to Fit', () => {
+    const { store, dock } = mount();
+
+    fireEvent.keyDown(dock, { key: '=' });
+    expect(selectViewport(store.getState())).toEqual({ startSec: 0, endSec: 4.8 });
+
+    fireEvent.keyDown(dock, { key: '-' });
+    expect(selectViewport(store.getState())).toBeNull();
   });
 
   it('the first Escape clears the selection, the next ends the takeover', () => {

@@ -8,11 +8,20 @@
 import {
   playheadSet,
   redone,
+  viewportSet,
   rowSelected,
   rowToggled,
   undone,
 } from '../../session/state/studioSlice';
-import { selectSelection, selectRedoLabel, selectUndoLabel } from '../../session/state/selectors';
+import {
+  selectPlayheadSec,
+  selectRedoLabel,
+  selectSelection,
+  selectUndoLabel,
+  selectViewport,
+} from '../../session/state/selectors';
+import { ZOOM_FACTOR } from '../../timeline/data/zoom';
+import { zoomedViewport } from '../../timeline/utils/window/zoomedViewport';
 import { selectSelectionStandInId } from '../../timeline/state/selectSelectionStandInId';
 import { selectTimeline } from '../../timeline/state/selectTimeline';
 import { exitTakeover } from '../../../../../src/state/takeover/takeoverActions';
@@ -51,6 +60,18 @@ export function runStudioKey(id: StudioKeyId, state: RootState): UnknownAction[]
       return [playheadSet(0)];
     case 'end':
       return timeline.durationSec === null ? null : [playheadSet(timeline.durationSec)];
+    case 'zoomIn':
+    case 'zoomOut': {
+      if (timeline.durationSec === null) return null;
+      const factor = id === 'zoomIn' ? 1 / ZOOM_FACTOR : ZOOM_FACTOR;
+      const next = zoomedViewport(
+        selectViewport(state),
+        timeline,
+        factor,
+        selectPlayheadSec(state),
+      );
+      return [viewportSet(next)];
+    }
     case 'help':
       return null;
   }
