@@ -578,7 +578,7 @@ otherwise `formatQuantity` covers it. Do not add a formatter without a caller in
 `pitch`, `roll` → turn) and `CHANNEL_FAMILY_LEGEND: readonly { family; name; glyph }[]` in legend order
 (Distance, Look-at, Turn · tilt, Layers, Settings · focus).
 
-- [ ] Test `the legend lists every family exactly once` (structural invariant).
+- [x] Test `the legend lists every family exactly once` (structural invariant).
 
 ### Task 2.3: the row-kind registry
 
