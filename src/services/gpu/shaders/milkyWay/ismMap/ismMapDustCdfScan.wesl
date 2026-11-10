@@ -10,7 +10,7 @@
 // optionally capped, channel dot this file's own evalWeight computes below
 // (ported from the CPU's former density() closure); arm-biased activity
 // reweights by a packed per-(ring,arm) envelope mirroring
-// buildArmProximityEnvelope/armBiasedDensity (hiiRegions.ts:484-539).
+// buildArmProximityEnvelope/armBiasedDensity (buildDigVeil.ts).
 
 import package::milkyWay::ismMap::ismMapShear::ismMapRingRadius;
 
@@ -78,7 +78,7 @@ fn ismMapDustRingEdges(ring: u32, rings: u32, rMin: f32, rMax: f32) -> vec2<f32>
 // evalWeight — base channel weight, ring-mean-normalised and optionally
 // capped (armBias<=0 branch — the CPU's former density() closure, ported
 // verbatim including its zero-guards), OR reweighted toward the nearest arm
-// ridge (armBias>0 branch, armBiasedDensity, hiiRegions.ts:527-539) — the
+// ridge (armBias>0 branch, armBiasedDensity, buildDigVeil.ts) — the
 // two branches are mutually exclusive callers (dust's own CDF vs. DIG's),
 // never combined.
 //

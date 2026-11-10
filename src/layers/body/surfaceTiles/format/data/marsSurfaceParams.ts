@@ -2,7 +2,7 @@
  *  spec §4.3), the tile shading matched to the base globe, and the base
  *  globe's colour grade (`src/` cannot import the `tools/` recipe module). */
 
-import type { ColourGrade } from '../../../../../@types/scene/ColourGrade';
+import type { ColourGrade } from '../../../textures/@types/ColourGrade';
 import type { SurfaceTileShading } from '../@types/SurfaceTileShading';
 import { BODY_AMBIENT_LIGHT } from '../../../../../data/bodies/bodyAmbientLight';
 

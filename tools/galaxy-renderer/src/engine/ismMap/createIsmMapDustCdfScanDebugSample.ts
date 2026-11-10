@@ -8,7 +8,7 @@
  * fixture via ismMapRingMeans, so the GPU scan and the CPU reference can
  * never disagree about what the ring means ARE.
  */
-import { createIsmMapDustCdfScan } from '../../../../../src/services/gpu/renderers/galaxyField/ismMap/createIsmMapDustCdfScan';
+import { createIsmMapDustCdfScan } from '../../../../../src/layers/milkyWay/field/dustCdf/render/createIsmMapDustCdfScan';
 import { ismMapRingMeans } from '../../../../../src/utils/galaxy/ismMapRingMeans';
 import type { GalaxyIsmMap } from '../../../../../src/@types/galaxy/GalaxyIsmMap';
 

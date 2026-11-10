@@ -31,7 +31,7 @@ vi.mock('../../../../src/services/engine/camera/framing/homePose', () => ({
   homePose: (...args: unknown[]) => homePoseSpy(...(args as Parameters<typeof homePoseSpy>)),
 }));
 
-vi.mock('../../../../src/services/engine/helpers/buildGalaxyInfo', () => ({
+vi.mock('../../../../src/layers/galaxyCatalog/records/present/buildGalaxyInfo', () => ({
   buildGalaxyInfo: vi.fn(),
 }));
 

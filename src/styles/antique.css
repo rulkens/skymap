@@ -277,6 +277,9 @@
   --exhibit-notes-width: 384px;
   --exhibit-notes-max-height: calc(100dvh - 56px - 96px);
   --exhibit-running-head-display: flex;
+  --exhibit-kicker-display: flex;
+  --exhibit-caption-beat: 0.14s;
+  --exhibit-section-gap: var(--space-8);
   --exhibit-scale-display: flex;
   --exhibit-scroller-padding: var(--space-6) var(--space-12) var(--space-12);
   --exhibit-scroller-padding-phone: var(--space-6) var(--space-8) var(--space-12);

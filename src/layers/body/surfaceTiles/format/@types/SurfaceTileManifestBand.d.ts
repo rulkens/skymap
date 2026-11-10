@@ -1,4 +1,4 @@
-import type { LonLatBounds } from '../../../../../@types/scene/LonLatBounds';
+import type { LonLatBounds } from './LonLatBounds';
 import type { SurfaceTileProvenance } from './SurfaceTileProvenance';
 import type { SurfaceTileProduct } from './SurfaceTileProduct';
 

@@ -12,7 +12,7 @@ import { SOLAR_RADIUS_KM } from '../../../data/bodies/solarRadiusKm';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { footprintRadiusMpc } from '../../../utils/selection/footprintRadiusMpc';
-import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../../data/bodies/seededStarCatalogsBySource';
+import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../seededStars/data/seededStarCatalogsBySource';
 import { STAR_FOCUS_PREFIX } from '../../../services/url/starFocusId';
 import { encodeStarFocusId } from './utils/encodeStarFocusId';
 import { decodeStarFocusId } from './utils/decodeStarFocusId';

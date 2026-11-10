@@ -22,6 +22,7 @@ function setup(body: readonly ExhibitSection[] = []) {
       lede="Two probes"
       body={body}
       enterDelaySec={0}
+      learnedGestures={{ look: false, zoom: false }}
       onExit={onExit}
       onNotesCover={onNotesCover}
       onCaptionCover={vi.fn<(cover: ViewCover | null) => void>()}
@@ -31,33 +32,29 @@ function setup(body: readonly ExhibitSection[] = []) {
 }
 
 describe('ExhibitOverlay hide toggle', () => {
-  it('flips aria-pressed and the label on click, and back', () => {
+  it('flips its label on click, and back', () => {
     setup();
-    const toggle = screen.getByRole('button', { name: 'Hide exhibit' });
-    expect(toggle).toHaveAttribute('aria-pressed', 'false');
-    fireEvent.click(toggle);
-    const shown = screen.getByRole('button', { name: 'Show exhibit' });
-    expect(shown).toHaveAttribute('aria-pressed', 'true');
-    fireEvent.click(shown);
-    expect(screen.getByRole('button', { name: 'Hide exhibit' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Hide text' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Show text' }));
+    expect(screen.getByRole('button', { name: 'Hide text' })).toBeInTheDocument();
   });
 
   it('keeps the toggle outside the faded content, so only it survives hidden', () => {
     setup();
-    fireEvent.click(screen.getByRole('button', { name: 'Hide exhibit' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Hide text' }));
     const content = document.querySelector(`.${styles.content}`);
     expect(content).toContainElement(screen.getByText('Voyager'));
     expect(content).toContainElement(screen.getByText('Exit view'));
-    expect(content).not.toContainElement(screen.getByRole('button', { name: 'Show exhibit' }));
+    expect(content).not.toContainElement(screen.getByRole('button', { name: 'Show text' }));
     expect(document.querySelector(`.${styles.root}`)).toHaveClass(styles.hidden as string);
   });
 
   it('clears the notes cover while hidden and restores it when shown again', () => {
     const { onNotesCover } = setup([NOTE]);
     expect(onNotesCover).toHaveBeenLastCalledWith(expect.objectContaining({ edge: 'right' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Hide exhibit' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Hide text' }));
     expect(onNotesCover).toHaveBeenLastCalledWith(null);
-    fireEvent.click(screen.getByRole('button', { name: 'Show exhibit' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Show text' }));
     expect(onNotesCover).toHaveBeenLastCalledWith(expect.objectContaining({ edge: 'right' }));
   });
 });

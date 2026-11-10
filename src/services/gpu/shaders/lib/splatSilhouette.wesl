@@ -7,6 +7,8 @@
 // basis; this is that footprint, extracted so the vertex stages cannot
 // drift apart.
 
+import package::lib::camera::ndcFromTangent;
+
 const SPLAT_CUT: f32 = 4.5;
 
 // splatNdc — one corner's NDC of a component's silhouette quad.
@@ -15,8 +17,8 @@ const SPLAT_CUT: f32 = 4.5;
 //   xv, yv, zv  — the component centre's VIEW-space offset from the eye
 //                 (across camRight, across camUp, along camFwd)
 //   r           — the component's boundRadius (world-space max sigma)
-//   tanHalfFov, aspect, shift — the camera's projection terms (io.wesl's
-//                 params.xyz), used to map view-space tangent slopes to NDC
+//   frustum     — (tanLeft, tanRight, tanDown, tanUp), io.wesl's frustum,
+//                 used to map view-space tangent slopes to NDC
 //   capHalfNdc  — screen-space quad cap (the quad-cap lever), io.wesl's perf.x; 0 disables
 //
 // capHalfNdc truncates the returned quad's own half-extent, which truncates
@@ -50,9 +52,7 @@ fn splatNdc(
   yv: f32,
   zv: f32,
   r: f32,
-  tanHalfFov: f32,
-  aspect: f32,
-  shift: f32,
+  frustum: vec4<f32>,
   capHalfNdc: f32,
 ) -> vec2<f32> {
   let bound = SPLAT_CUT * r;
@@ -88,15 +88,11 @@ fn splatNdc(
     let cosThetaC = sqrt(max(0.0, 1.0 - sinThetaC * sinThetaC));
     let cosA = zv / distEye; // signed: negative when the centre trails the eye.
 
-    // Diagonal frustum half-tangent. The fs's own ray reconstruction (this
-    // file's callers) is d = camRight*(ndc.x+shift)*tanHalfFov*aspect +
-    // camUp*ndc.y*tanHalfFov + camFwd — so shift re-centres the x tangent
-    // range to [(shift-1), (shift+1)]*tanHalfFov*aspect over ndc.x in [-1,1];
-    // its farthest-from-axis edge is tanHalfFov*aspect*(1+|shift|), which is
-    // what tanHalfX below bounds (a widening, not the tighter true half-width,
-    // so the cone we test against is never narrower than the real frustum's).
-    let tanHalfX = tanHalfFov * aspect * (1.0 + abs(shift));
-    let tanHalfDiag = sqrt(tanHalfX * tanHalfX + tanHalfFov * tanHalfFov);
+    // Diagonal frustum half-tangent: each axis's farthest-from-axis edge, so
+    // an off-centre window widens the cone (never narrower than the real
+    // frustum's, though not the tightest bound either).
+    let tanHalf = max(abs(frustum.xz), abs(frustum.yw));
+    let tanHalfDiag = sqrt(tanHalf.x * tanHalf.x + tanHalf.y * tanHalf.y);
     let cosHalfDiag = 1.0 / sqrt(1.0 + tanHalfDiag * tanHalfDiag);
     let sinHalfDiag = tanHalfDiag * cosHalfDiag;
 
@@ -117,7 +113,7 @@ fn splatNdc(
 
   if (zv < 1.3 * r || denom <= 1e-6 || discX <= 0.0 || discY <= 0.0) {
     if (capHalfNdc > 0.0 && zv > 1e-4) {
-      let ndcC = vec2<f32>(xv / zv / (tanHalfFov * aspect) - shift, yv / zv / tanHalfFov);
+      let ndcC = ndcFromTangent(vec2<f32>(xv, yv) / zv, frustum);
       return ndcC + corner * capHalfNdc;
     }
     return corner;
@@ -136,14 +132,12 @@ fn splatNdc(
   let tyLo = (yv * zv - sY) / denom;
   let tyHi = (yv * zv + sY) / denom;
 
-  // Tangent space -> NDC via the same tanHalfFov/aspect/shift split the
-  // fragment stage inverts back into a ray.
-  let ndcXLo = txLo / (tanHalfFov * aspect) - shift;
-  let ndcXHi = txHi / (tanHalfFov * aspect) - shift;
-  let ndcYLo = tyLo / tanHalfFov;
-  let ndcYHi = tyHi / tanHalfFov;
-  let mid = vec2<f32>(ndcXLo + ndcXHi, ndcYLo + ndcYHi) * 0.5;
-  var half = vec2<f32>(ndcXHi - ndcXLo, ndcYHi - ndcYLo) * 0.5;
+  // Tangent space -> NDC through the same frustum the fragment stage
+  // inverts back into a ray.
+  let ndcLo = ndcFromTangent(vec2<f32>(txLo, tyLo), frustum);
+  let ndcHi = ndcFromTangent(vec2<f32>(txHi, tyHi), frustum);
+  let mid = (ndcLo + ndcHi) * 0.5;
+  var half = (ndcHi - ndcLo) * 0.5;
   if (capHalfNdc > 0.0) {
     half = min(half, vec2<f32>(capHalfNdc, capHalfNdc));
   }

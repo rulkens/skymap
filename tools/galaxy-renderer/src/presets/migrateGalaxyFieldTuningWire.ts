@@ -11,8 +11,8 @@
  * its keys, so an absent section stays absent — loading a partial preset
  * leaves the rest of the tuning alone.
  */
-import type { GalaxyFieldTuning } from '../../../../src/@types/galaxy/GalaxyFieldTuning';
-import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../src/services/engine/galaxyGenerator/v2/galaxyFieldMixture';
+import type { GalaxyFieldTuning } from '../../../../src/layers/milkyWay/field/mixture/@types/GalaxyFieldTuning';
+import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../src/layers/milkyWay/field/mixture/utils/galaxyFieldMixture';
 
 const SECTION_KEYS = [
   'disc',
@@ -102,7 +102,7 @@ function migrateDust(dust: Record<string, unknown>): Record<string, unknown> {
  * defaults-fill pass below, which copies `shells` WHOLESALE (like `dig`/
  * `youngStars` already do) rather than deep-merging it — a preset naming
  * only some of the seven re-enters with a partial `shells` bag, which is why
- * every read of these fields in `hiiRegions.ts`/`dustBubblePlacements.ts`
+ * every read of these fields in `buildHiiShellsAndYoungWithSegments.ts`/`buildDustBubblePlacements.ts`
  * carries its own `?? default` guard rather than assuming presence.
  */
 const HII_SHELLS_LIFT_KEYS = [

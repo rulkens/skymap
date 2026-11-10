@@ -6,7 +6,7 @@
 
 import type { ReactNode } from 'react';
 import cx from 'classnames';
-import type { SatelliteInfo } from '../../../../../@types/engine/SatelliteInfo';
+import type { SatelliteInfo } from '../../../selection/@types/SatelliteInfo';
 import type { CardLayout } from '../../../../../@types/components/infoCard/CardLayout';
 import { SATELLITE_CLASS_EYEBROWS } from '../../data/satelliteClassEyebrows';
 import { formatSimClock } from '../../../../../utils/time/formatSimClock';

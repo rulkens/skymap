@@ -3,7 +3,7 @@
  * `build()` result against `key`, recomputing only when a later `key` isn't
  * `Object.is`-equal element-for-element to the cached one (so a NaN-bearing
  * key still hits, unlike `===`). Each call site owns its own memo instance
- * (`hiiRegions.ts`'s two dust-CDF caches, `galaxyIsmMapArmForcing.ts`'s
+ * (`buildHiiShellsAndYoungWithSegments.ts`'s two dust-CDF caches, `buildGalaxyIsmMapArmForcing.ts`'s
  * forcing field) — sound under any interleaving since a key miss just
  * rebuilds, so a wrong hit can only cost performance, never correctness.
  */

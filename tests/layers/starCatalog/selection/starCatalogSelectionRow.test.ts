@@ -11,7 +11,7 @@ import { unpackPick } from '../../../../src/data/selectionEncoding';
 import { type StarRowFixture } from '../../../support/selectionResolverOver';
 import { starRowRuntime } from '../../../support/layerPickCodes';
 import { fakePickCode } from '../../../support/fakePickCode';
-import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../../../src/data/bodies/seededStarCatalogsBySource';
+import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../../../src/layers/starCatalog/seededStars/data/seededStarCatalogsBySource';
 import { relErr } from '../../../support/relErr';
 import type { PlacedRow } from '../../../../src/@types/engine/selection/PlacedRow';
 

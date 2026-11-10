@@ -10,6 +10,9 @@
 import { useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import cx from 'classnames';
 
+import ActionPill from '../common/ActionPill/ActionPill';
+import CompactInfoTip from '../common/CompactInfoTip/CompactInfoTip';
+import GestureHint from '../GestureHint/GestureHint';
 import StopIcon from '../icons/StopIcon/StopIcon';
 import EyeIcon from '../icons/EyeIcon/EyeIcon';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -17,6 +20,7 @@ import { useViewCover } from '../../hooks/useViewCover';
 import { useActiveSection } from '../../hooks/useActiveSection';
 import SectionScale from './SectionScale/SectionScale';
 import type { ExhibitSection } from '../../@types/exhibits/ExhibitSection';
+import type { CameraGesture } from '../../@types/ui/CameraGesture';
 import type { ViewCover } from '../../@types/layout/ViewCover';
 import styles from './ExhibitOverlay.module.css';
 
@@ -26,6 +30,7 @@ export type ExhibitOverlayProps = {
   readonly body: readonly ExhibitSection[];
   /** Seconds to wait before the copy animates in — the fly-in's near-landing. */
   readonly enterDelaySec: number;
+  readonly learnedGestures: Readonly<Record<CameraGesture, boolean>>;
   readonly onExit: () => void;
   /** Both must be stable; see `useViewCover`. */
   readonly onNotesCover: (cover: ViewCover | null) => void;
@@ -37,6 +42,7 @@ function ExhibitOverlay({
   lede,
   body,
   enterDelaySec,
+  learnedGestures,
   onExit,
   onNotesCover,
   onCaptionCover,
@@ -49,13 +55,13 @@ function ExhibitOverlay({
   const clock = { '--exhibit-enter-delay': `${enterDelaySec}s` } as CSSProperties;
 
   // Desktop: the notes column covers the right. Phone: the caption text covers
-  // the bottom; the kicker is its top line, since the caption box itself fills
+  // the bottom; the title is its top line, since the caption box itself fills
   // the first screen there.
   const isMobile = useIsMobile();
   const notesRef = useRef<HTMLDivElement>(null);
-  const kickerRef = useRef<HTMLDivElement>(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
   useViewCover(notesRef, 'right', !hidden && !isMobile && body.length > 0, onNotesCover);
-  useViewCover(kickerRef, 'bottom', !hidden && isMobile, onCaptionCover);
+  useViewCover(titleRef, 'bottom', !hidden && isMobile, onCaptionCover);
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [activeSection, jumpToSection] = useActiveSection(scrollerRef);
 
@@ -67,10 +73,12 @@ function ExhibitOverlay({
 
         <div className={styles.caption}>
           <div className={cx(styles.slip, styles.captionSlip)}>
-            <div ref={kickerRef} className={styles.titleRow}>
+            <div className={cx(styles.titleRow, styles.kicker)}>
               <span className={cx(styles.cartouche, styles.kickerLabel)}>Exhibit</span>
             </div>
-            <h1 className={styles.title}>{label}</h1>
+            <h1 ref={titleRef} className={styles.title}>
+              {label}
+            </h1>
             <p className={styles.lede}>{lede}</p>
           </div>
         </div>
@@ -100,24 +108,39 @@ function ExhibitOverlay({
           </div>
         ) : null}
 
-        <button type="button" className={styles.exitPill} onClick={onExit}>
-          <span className={styles.exitIcon}>
-            <StopIcon size={13} />
-          </span>
-          <span className={styles.exitLabel}>Exit view</span>
-          <span className={styles.exitKey}>Esc</span>
-        </button>
+        {/* The dock centres Exit; the hint places itself against it. */}
+        <div className={styles.dock}>
+          <ActionPill
+            className={styles.exit}
+            icon={<StopIcon size={13} />}
+            label="Exit view"
+            keyHint={isMobile ? undefined : 'Esc'}
+            aria-keyshortcuts={isMobile ? undefined : 'Escape'}
+            onClick={onExit}
+          />
+          {/* A phone-width overlay is a scrolling column that takes every touch, so no hint. */}
+          {isMobile ? null : (
+            <GestureHint
+              gestures={['look', 'zoom']}
+              learned={learnedGestures}
+              className={styles.gestureHint}
+            />
+          )}
+        </div>
       </div>
 
-      <button
-        type="button"
-        className={styles.hideToggle}
-        aria-label={hidden ? 'Show exhibit' : 'Hide exhibit'}
-        aria-pressed={hidden}
-        onClick={() => setHidden((h) => !h)}
-      >
-        <EyeIcon size={18} struck={hidden} />
-      </button>
+      <div className={styles.hideToggleSpot}>
+        <CompactInfoTip label={hidden ? 'Show text' : 'Hide text'} placement="bottom" align="end">
+          <button
+            type="button"
+            className={styles.hideToggle}
+            aria-label={hidden ? 'Show text' : 'Hide text'}
+            onClick={() => setHidden((h) => !h)}
+          >
+            <EyeIcon size={18} struck={hidden} />
+          </button>
+        </CompactInfoTip>
+      </div>
     </div>
   );
 }

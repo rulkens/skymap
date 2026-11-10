@@ -9,7 +9,7 @@ import { describe, it, expect } from 'vitest';
 import { satellitesSourceCounts } from '../../../../../src/layers/satellites/catalog/load/satellitesSourceCounts';
 import { Source } from '../../../../../src/data/source';
 import type { SatellitesRuntime } from '../../../../../src/layers/satellites/@types/SatellitesRuntime';
-import type { SatelliteCatalog } from '../../../../../src/@types/satellites/SatelliteCatalog';
+import type { SatelliteCatalog } from '../../../../../src/layers/satellites/catalog/@types/SatelliteCatalog';
 
 describe('satellitesSourceCounts', () => {
   it('reports the catalog size each time the catalog lands', async () => {

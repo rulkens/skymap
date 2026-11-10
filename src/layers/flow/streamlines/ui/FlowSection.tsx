@@ -21,8 +21,8 @@
  */
 
 import { memo } from 'react';
-import type { FlowSettings } from '../../../../@types/settings/FlowSettings';
-import type { FlowFieldDefaults } from '../../../../@types/data/flow/FlowFieldDefaults';
+import type { FlowSettings } from '../../@types/FlowSettings';
+import type { FlowFieldDefaults } from '../../@types/FlowFieldDefaults';
 import CollapsibleSection from '../../../../components/SettingsPanel/CollapsibleSection';
 import FlowRow from './FlowRow';
 

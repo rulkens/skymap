@@ -5,7 +5,7 @@
  */
 
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
-import type { FilamentCloud } from '../../../@types/data/filament/FilamentCloud';
+import type { FilamentCloud } from './FilamentCloud';
 import type { FilamentReq } from '../filaments/@types/FilamentReq';
 import type { FilamentRenderer } from '../filaments/@types/FilamentRenderer';
 

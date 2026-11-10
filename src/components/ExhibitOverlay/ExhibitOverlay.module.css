@@ -130,14 +130,17 @@
 .captionSlip > * {
   animation: exhibitEnterRise 0.9s ease-out both;
 }
-.captionSlip > *:nth-child(1) {
+/* The kicker is a look's own line; `--exhibit-caption-beat` pushes title and lede back a
+   step behind it, and is 0 where there is none. */
+.kicker {
+  display: var(--exhibit-kicker-display, none);
   animation-delay: calc(var(--exhibit-enter-delay) + 0.1s);
 }
-.captionSlip > *:nth-child(2) {
-  animation-delay: calc(var(--exhibit-enter-delay) + 0.24s);
+.captionSlip > .title {
+  animation-delay: calc(var(--exhibit-enter-delay) + 0.1s + var(--exhibit-caption-beat, 0s));
 }
-.captionSlip > *:nth-child(3) {
-  animation-delay: calc(var(--exhibit-enter-delay) + 0.4s);
+.captionSlip > .lede {
+  animation-delay: calc(var(--exhibit-enter-delay) + 0.24s + var(--exhibit-caption-beat, 0s));
 }
 
 .kickerLabel {
@@ -241,7 +244,7 @@
   scrollbar-color: var(--color-fg-ghost) transparent;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--exhibit-section-gap, var(--space-12));
   padding: var(--exhibit-scroller-padding, 0 0 28px);
   counter-reset: exhibit-section;
   mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
@@ -252,7 +255,7 @@
 .sectionGroup {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-8);
   counter-increment: exhibit-section;
   scroll-margin-top: var(--space-6);
   animation: exhibitEnterRise 0.9s ease-out
@@ -271,7 +274,7 @@
 .section {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-4);
 }
 
 .sectionHeading {
@@ -298,6 +301,25 @@
   color: var(--color-accent);
 }
 
+/* Key and Sources are reference, not story: a mono label in the fact labels' voice,
+   a step brighter so a block's name outranks its rows. */
+.blockLabel {
+  margin: 0;
+  font: var(--font-size-sm) / 1 var(--font-family-mono);
+  letter-spacing: var(--letter-spacing-wider);
+  text-transform: uppercase;
+  color: var(--color-fg-base);
+}
+
+/* The switch belongs to the prose above it: pulled up so it sits closer to that
+   section than to the next. */
+.sectionGroup:has(> .switches) {
+  margin-top: calc(-1 * var(--space-4));
+}
+
+/* Sora Thin (100) — self-hosted in global.css for this component only (spec
+ * §4.3); the body-font token rollout to InfoCard/tour captions is a separate
+ * PR, so this weight/family pair is not tokenized. */
 .sectionBody {
   margin: 0;
   font-family: var(--font-family-exhibit-body);
@@ -335,7 +357,7 @@
   outline-offset: 2px;
 }
 
-/* A hairline fading out to the right, ruled above each data block. */
+/* A hairline fading out to the right: the one break between the story and its sources. */
 .rule {
   display: var(--exhibit-rule-display, block);
   height: 1px;
@@ -356,7 +378,7 @@
 .key {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-3);
 }
 
 /* The gradient itself comes from the section's `ramp` stops, inline. A look on paper lays
@@ -378,71 +400,11 @@
   color: var(--color-fg-tertiary);
 }
 
-/* The switch: a pill in the plain look, the kit's check box (`--toggle-*`) in the antique,
-   where it leads its label as a check box does. */
-.toggleRow {
-  margin-top: 4px;
-  padding: 0;
-  width: 100%;
-  pointer-events: auto;
-  display: flex;
-  align-items: center;
-  justify-content: var(--exhibit-toggle-justify, space-between);
-  gap: var(--space-4);
-  background: none;
-  border: none;
-  cursor: pointer;
-  text-align: left;
-}
-.toggleRow:focus-visible {
-  outline: var(--focus-ring-width, 2px) solid var(--color-accent);
-  outline-offset: 3px;
-}
-
-.toggleLabel {
-  font-family: var(--font-family-mono);
-  font-size: var(--font-size-md);
-  line-height: 1.4;
-  color: var(--color-fg);
-}
-
-.toggleState {
-  color: var(--color-fg-tertiary);
-}
-
-.track {
-  position: relative;
-  flex: 0 0 auto;
-  order: var(--exhibit-toggle-order, 0);
-  width: var(--toggle-width, 30px);
-  height: var(--toggle-height, 16px);
-  border-radius: var(--toggle-radius, 999px);
-  border: 1px solid var(--toggle-rule, var(--border-control));
-  background: var(--toggle-image, var(--surface-control));
-}
-.trackOn {
-  background: var(--toggle-image-on, var(--exhibit-switch-on));
-}
-
-.knob {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  display: var(--toggle-thumb-display, block);
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--color-fg);
-}
-.knobOn {
-  left: 16px;
-}
-
 /* ── Facts ──────────────────────────────────────────────────────────── */
 .facts {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px 16px;
+  gap: var(--space-8);
 }
 /* Facts have no heading: their number sits on the inset's top rule, knocked out of it. */
 .facts::before {
@@ -459,12 +421,12 @@
 .fact {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: var(--space-2);
 }
 
 .factLabel {
   font-family: var(--font-family-label);
-  font-size: max(var(--font-size-xs), var(--font-size-label-min));
+  font-size: max(var(--font-size-sm), var(--font-size-label-min));
   line-height: 1;
   letter-spacing: var(--letter-spacing-wider);
   text-transform: var(--label-case);
@@ -489,7 +451,7 @@
   display: grid;
   grid-template-columns: 64px minmax(0, 1fr);
   gap: 10px;
-  padding: 5px 0;
+  padding: var(--space-3) 0;
   pointer-events: auto;
   text-decoration: none;
 }
@@ -500,7 +462,7 @@
 
 .sourceRole {
   font-family: var(--font-family-label);
-  font-size: max(var(--font-size-xs), var(--font-size-label-min));
+  font-size: max(var(--font-size-sm), var(--font-size-label-min));
   line-height: 1.6;
   letter-spacing: var(--letter-spacing-wider);
   text-transform: var(--label-case);
@@ -510,7 +472,7 @@
 .sourceText {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: var(--space-1);
 }
 
 .sourceTitle {
@@ -518,7 +480,7 @@
   align-items: center;
   gap: 6px;
   font-family: var(--font-family-mono);
-  font-size: var(--font-size-md);
+  font-size: max(var(--font-size-sm), var(--font-size-label-min));
   line-height: 1.4;
   color: var(--color-accent);
 }
@@ -533,75 +495,104 @@
   color: var(--color-fg-tertiary);
 }
 
-/* ── Exit pill (bottom-center): a tablet where a look draws one ─────── */
-.exitPill {
-  composes: tablet from '../common/tablet.module.css';
+/* ── Switches: centred in the column, lighter than the dock's pills ── */
+.switches {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-4);
+}
+
+.switchButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  /* Tap area, not a spacing rung: past the 24px minimum, light enough for a text column. */
+  height: 28px;
+  padding: 0 var(--space-5);
+  border: 1px solid var(--border-hover);
+  border-radius: 999px;
+  background: none;
+  color: var(--color-fg-base);
+  font: var(--font-size-sm) / 1 var(--font-family-mono);
+  letter-spacing: var(--letter-spacing-widest);
+  text-transform: uppercase;
+  text-shadow: none;
+  cursor: pointer;
+  pointer-events: auto;
+  transition:
+    color var(--duration-color) ease,
+    border-color var(--duration-color) ease,
+    background-color var(--duration-color) ease;
+}
+@media (hover: hover) {
+  .switchButton:hover {
+    color: var(--color-fg);
+    border-color: var(--color-accent);
+  }
+}
+.switchButton:active {
+  background: var(--surface-control-active);
+}
+.switchButton:focus-visible {
+  color: var(--color-fg);
+  border-color: var(--color-accent);
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* ── Dock: Exit, and the gesture hint (bottom-center) ──────────────── */
+.dock {
   position: absolute;
   left: 50%;
   bottom: 20px;
   transform: translateX(-50%);
-  pointer-events: auto;
+  /* Flex, so no inline line box pads the dock below Exit and the hint centres on the pill. */
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 14px 6px 6px;
-  background: var(--framed-control-ground, var(--surface-soft));
-  -webkit-backdrop-filter: blur(var(--blur-card));
-  backdrop-filter: blur(var(--blur-card));
-  border: 2px solid var(--border-hover);
-  border-radius: var(--radius-pill);
-  cursor: pointer;
-  color: var(--color-fg-base);
-  text-shadow: var(--exhibit-text-shadow-control);
-  /* Fade only — the pill is centred by its own transform. */
+}
+
+.exit {
   animation: exhibitEnterFade 0.9s ease-out calc(var(--exhibit-enter-delay) + 0.9s) both;
 }
-.exitPill:hover,
-.exitPill:focus-visible {
-  color: var(--color-fg);
-  border-color: var(--color-accent);
-}
-.exitPill:focus-visible,
-.hideToggle:focus-visible {
-  outline: var(--focus-ring-width, 2px) solid var(--color-accent);
-  outline-offset: 2px;
-}
 
-.exitIcon {
-  display: flex;
-  width: 24px;
-  height: 24px;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-fg-tertiary);
+/*
+ * Above Exit on a wide screen. Narrower, centred there it would run into the caption's lede
+ * (left edge 44px, up to 520px wide), so it moves beside Exit, on the line under the caption
+ * and the notes. Below 920px Exit (~150px) plus the ~350px hint no longer fits right of
+ * centre; the hint is the one that goes, as it is only a hint.
+ */
+.gestureHint {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + var(--space-5));
+  transform: translateX(-50%);
+  animation: exhibitEnterFade 0.9s ease-out calc(var(--exhibit-enter-delay) + 0.9s) both;
 }
-
-.exitLabel {
-  font-family: var(--font-family-label);
-  font-size: max(var(--font-size-sm), var(--font-size-label-min));
-  line-height: 1;
-  letter-spacing: 0.18em;
-  text-transform: var(--label-case);
+@media (max-width: 1500px) {
+  .gestureHint {
+    left: calc(100% + var(--space-6));
+    bottom: 50%;
+    transform: translateY(50%);
+  }
 }
-
-.exitKey {
-  padding: 2px 5px;
-  border: 1px solid var(--border-control);
-  border-radius: var(--radius-sm);
-  font-family: var(--font-family-mono);
-  font-size: var(--font-size-xs);
-  line-height: 1;
-  color: var(--color-fg-muted);
+@media (max-width: 920px) {
+  .gestureHint {
+    display: none;
+  }
 }
 
 /* ── Hide toggle (top-right) ───────────────────────────────────────── */
-/* Just the icon: a bare button for the a11y (label, pressed, focus ring). It
-   is the one control that survives `hidden`, so it never fades with the rest. */
-.hideToggle {
-  composes: tablet from '../common/tablet.module.css';
+/* Just the icon: a bare button for the a11y (label, focus ring), named by its
+   tip. It is the one control that survives `hidden`, so it never fades with the
+   rest. The spot holds the position so the tip's wrapper sits inside it. */
+.hideToggleSpot {
   position: absolute;
   top: 8px;
   right: 8px;
+  animation: exhibitEnterFade 0.9s ease-out calc(var(--exhibit-enter-delay) + 0.9s) both;
+}
+.hideToggle {
+  composes: tablet from '../common/tablet.module.css';
   width: 32px;
   height: 32px;
   padding: 0;
@@ -615,7 +606,6 @@
   cursor: pointer;
   color: var(--color-fg-tertiary);
   filter: var(--exhibit-icon-shadow);
-  animation: exhibitEnterFade 0.9s ease-out calc(var(--exhibit-enter-delay) + 0.9s) both;
 }
 /* Dimmer at rest while everything else is gone, still readable. */
 .hidden .hideToggle {
@@ -628,6 +618,8 @@
 }
 .hideToggle:focus-visible {
   color: var(--color-fg);
+  outline: var(--focus-ring-width, 2px) solid var(--color-accent);
+  outline-offset: 2px;
 }
 
 @media (forced-colors: active) {
@@ -693,10 +685,9 @@
   .sectionGroup {
     scroll-margin-top: calc(48px + env(safe-area-inset-top, 0px));
   }
-  .exitPill {
+  .dock {
     position: fixed;
     bottom: calc(20px + env(safe-area-inset-bottom, 0px));
-    background: var(--framed-control-ground, var(--exhibit-control-ground-phone));
   }
   /* The column scrolls here, so `.content` stays in flow and the toggle is pinned
      to the viewport; hidden, the root lets touches through to the field again. */
@@ -707,7 +698,7 @@
     overflow: hidden;
     pointer-events: none;
   }
-  .hideToggle {
+  .hideToggleSpot {
     position: fixed;
     top: calc(8px + env(safe-area-inset-top, 0px));
   }

@@ -7,7 +7,7 @@ import { describe, it, expect, vi } from 'vitest';
 import type { Mat4 } from 'wgpu-matrix';
 import { createFilamentRenderer } from '../../../../../src/layers/cosmicWebFilaments/filaments/render/filamentRenderer';
 import type { FadeUniformsBgl } from '../../../../../src/@types/rendering/FadeUniformsBgl';
-import type { FilamentCloud } from '../../../../../src/@types/data/filament/FilamentCloud';
+import type { FilamentCloud } from '../../../../../src/layers/cosmicWebFilaments/@types/FilamentCloud';
 
 function mockDevice(pipelines: GPURenderPipelineDescriptor[]): GPUDevice {
   return {

@@ -7,7 +7,7 @@ import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { Mat4 } from 'wgpu-matrix';
 import { Source } from '../../../../../src/data/source';
-import type { GalaxyRow } from '../../../../../src/@types/engine/GalaxyRow';
+import type { GalaxyRow } from '../../../../../src/layers/galaxyCatalog/records/@types/GalaxyRow';
 import type { StructureInfo } from '../../../../../src/@types/data/structure/StructureInfo';
 import { MILKY_WAY_CENTER_WORLD } from '../../../../../src/data/milkyWay/galacticCenter';
 import { makeGalaxyRow } from '../../../../fixtures/makeGalaxyRow';

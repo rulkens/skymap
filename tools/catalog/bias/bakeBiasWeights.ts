@@ -6,7 +6,7 @@
  */
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { SourceType } from '../../../src/@types/data/SourceType';
-import { galaxyCatalogFluxLimit } from '../../../src/data/galaxyCatalog/galaxyCatalogFluxLimits';
+import { galaxyCatalogFluxLimit } from '../../../src/layers/galaxyCatalog/records/data/galaxyCatalogFluxLimits';
 import { absoluteFromApparent } from '../../../src/utils/math/absoluteFromApparent';
 import { vMaxWeight } from '../../../src/utils/math/vMaxWeight';
 import type { BiasWeightKind } from '../../@types/catalog/BiasWeightKind';

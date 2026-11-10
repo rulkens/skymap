@@ -11,7 +11,7 @@ import { FlowTuningSection } from './FlowTuningSection';
 import { useAppDispatch, useAppSelector } from '../../../../store/hooks';
 import { selectFlow } from '../../state/flow/selectors';
 import { setFlow } from '../../state/flow/slice';
-import type { FlowFieldDefaults } from '../../../../@types/data/flow/FlowFieldDefaults';
+import type { FlowFieldDefaults } from '../../@types/FlowFieldDefaults';
 
 function FlowTuningSectionContainer(): React.ReactElement {
   const dispatch = useAppDispatch();

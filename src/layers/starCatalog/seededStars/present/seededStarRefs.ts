@@ -5,7 +5,7 @@
  */
 
 import type { SeededStarRef } from '../@types/SeededStarRef';
-import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../../../data/bodies/seededStarCatalogsBySource';
+import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../data/seededStarCatalogsBySource';
 
 export const SEEDED_STAR_REFS: ReadonlyMap<string, SeededStarRef> = new Map(
   [...SEEDED_STAR_CATALOGS_BY_SOURCE].flatMap(([source, row]) =>

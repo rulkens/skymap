@@ -25,7 +25,7 @@
  * never mutated. `enabled` / `mode` are not GPU-numeric, so they pass through.
  */
 
-import type { FlowSettings } from '../../../../@types/settings/FlowSettings';
+import type { FlowSettings } from '../../@types/FlowSettings';
 import { MAX_PARTICLES, MIN_TRAIL_STEP } from '../data/flowFieldConstants';
 
 export function clampFlowParams(flow: FlowSettings): FlowSettings {

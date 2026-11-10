@@ -8,6 +8,7 @@
 
 import package::milkyWay::field::fieldSplat::io::FieldSplatOut;
 import package::lib::splatSilhouette::SPLAT_CUT;
+import package::lib::camera::cameraRayFromNdc;
 import package::lib::gaussianIntegral::gaussianRayCoeffs;
 import package::milkyWay::field::io::u;
 import package::milkyWay::field::io::comps;
@@ -27,14 +28,7 @@ import package::milkyWay::field::dustAttenuation::componentEmission;
 fn fs(input: FieldSplatOut) -> @location(0) vec4<f32> {
   // Reconstructs the world-space ray from the interpolated NDC rather than
   // passing one down from the vertex stage: cheap and avoids an extra varying.
-  let tanHalfFov = u.params.x;
-  let aspect = u.params.y;
-  let shift = u.params.z;
-  let d = normalize(
-    u.camRight.xyz * ((input.ndc.x + shift) * tanHalfFov * aspect)
-      + u.camUp.xyz * (input.ndc.y * tanHalfFov)
-      + u.camFwd.xyz,
-  );
+  let d = cameraRayFromNdc(input.ndc, u.camRight.xyz, u.camUp.xyz, u.camFwd.xyz, u.frustum);
   let o = u.eye.xyz;
 
   let rec = comps[input.inst];
@@ -81,12 +75,12 @@ fn fs(input: FieldSplatOut) -> @location(0) vec4<f32> {
     rec.color,
   );
 
-  // Exposure (params.w) multiplies emission only, never the attenuation
+  // Exposure (eye.w) multiplies emission only, never the attenuation
   // above: the dust column is physical, not a look knob that should
   // brighten or dim with the field's whole-frame exposure. debugView.w is
   // the combined galaxy dimming weight (io.wesl's debugView doc) — 1 with
   // every debug view off, so this multiply is a no-op at the default.
   // Alpha 0: the additive upsample folds this into HDR and the compositor
   // forces 1.0, so a quad writing coverage would swamp nothing usefully.
-  return vec4<f32>(emission * u.params.w * u.debugView.w, 0.0);
+  return vec4<f32>(emission * u.eye.w * u.debugView.w, 0.0);
 }

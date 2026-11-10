@@ -5,7 +5,7 @@
  * beyond `box` so its own edge posts get a true central difference.
  */
 import type { HeightSource } from './@types/HeightSource';
-import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
+import type { LonLatBounds } from '../../src/layers/body/surfaceTiles/format/@types/LonLatBounds';
 import { heightLatticeStepDeg } from '../utils/textures/heightLatticeStepDeg';
 import { slopeLatticeFromPosts } from '../utils/textures/slopeLatticeFromPosts';
 import type { SlopeLattice } from './@types/SlopeLattice';

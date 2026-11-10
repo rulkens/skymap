@@ -17,7 +17,7 @@ import { missionEventMs } from '../../events/utils/missionEventMs';
 import { timelineAxisLabels } from '../utils/timelineAxisLabels';
 import { timelineFraction } from '../utils/timelineFraction';
 import { timelineInstant } from '../utils/timelineInstant';
-import type { MissionEvent } from '../../../../@types/missions/MissionEvent';
+import type { MissionEvent } from '../../events/@types/MissionEvent';
 import type { TimelineAxis } from '../@types/TimelineAxis';
 import type { MissionStop } from '../../missionCamera/@types/MissionStop';
 import type { TimelineLane } from '../@types/TimelineLane';

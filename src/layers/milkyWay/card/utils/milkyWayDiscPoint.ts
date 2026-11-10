@@ -9,8 +9,8 @@ import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { GalaxyDescription } from '../../../../@types/galaxy/GalaxyDescription';
 import type { AntiqueMilkyWayName } from '../../../../@types/rendering/AntiqueMilkyWayName';
 import { MILKY_WAY_DISC_RADIUS_KPC } from '../../../../data/milkyWay/galacticCenter';
-import { armRidgeAngle } from '../../../../services/engine/galaxyGenerator/v2/armRidgeGeometry';
-import { warpHeight } from '../../../../utils/galaxy/warpHeight';
+import { armRidgeAngle } from '../../field/arms/utils/armRidgeAngle';
+import { warpHeight } from '../../field/mixture/utils/warpHeight';
 
 export function milkyWayDiscPoint(
   at: AntiqueMilkyWayName['at'],

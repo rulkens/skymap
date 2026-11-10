@@ -8,7 +8,7 @@ import { describe, it, expect } from 'vitest';
 
 import { starSearch } from '../../../../../src/layers/starCatalog/selection/present/starSearch';
 import { starCatalogSelectionRow } from '../../../../../src/layers/starCatalog/selection/starCatalogSelectionRow';
-import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../../../../src/data/bodies/seededStarCatalogsBySource';
+import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../../../../src/layers/starCatalog/seededStars/data/seededStarCatalogsBySource';
 import type { LayerSearchEntry } from '../../../../../src/@types/engine/layer/LayerSearchEntry';
 import { type StarRowFixture } from '../../../../support/selectionResolverOver';
 import { starRowRuntime } from '../../../../support/layerPickCodes';

@@ -5,7 +5,7 @@
  */
 import { satelliteOpacity } from './satelliteOpacity';
 import { julianDaysToUnixMs } from '../../../../utils/time/julianDaysToUnixMs';
-import type { SatelliteCatalog } from '../../../../@types/satellites/SatelliteCatalog';
+import type { SatelliteCatalog } from '../../catalog/@types/SatelliteCatalog';
 
 export function satelliteLayerOpacity(
   catalog: Pick<SatelliteCatalog, 'fetchedAtMs'> | null,

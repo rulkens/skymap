@@ -92,7 +92,7 @@ export type ParsedRecord = {
    */
   angularMajorAxisArcsec?: number;
   /**
-   * Per-source classification byte (see `src/data/galaxyCatalog/sourceClass.ts`).
+   * Per-source classification byte (see `src/layers/galaxyCatalog/records/data/sourceClass.ts`).
    * Defaults to `0` (unknown); Milliquas populates it with the AGN letter
    * (Q/A/B/K/N/S → enum 1..6), DESI Deep with the LSS tracer
    * (BGS/LRG/ELG/QSO → enum 1..4). Flat byte mirrors the .bin format (v5,
@@ -103,7 +103,7 @@ export type ParsedRecord = {
 
   /**
    * Milliquas-only parent-survey enum byte (see `milliquasParentSurveyPrefix`
-   * in `src/data/galaxyCatalog/sourceClass.ts`). Other parsers leave it `0`.
+   * in `src/layers/galaxyCatalog/records/data/sourceClass.ts`). Other parsers leave it `0`.
    * Milliquas matches the Name column prefix (`SDSS`, `2MASX`, `GAIA`, …) so
    * the runtime can reconstruct `"<PARENT> J<RA><Dec>"` at hover time. Same
    * flat-byte rationale as `classByte`.

@@ -44,6 +44,7 @@ describe('App antique look', () => {
         uiHidden: false,
         debugPanelOpen: false,
         paletteTab: 'highlights',
+        learnedGestures: { look: false, zoom: false },
         splash: { visible: false, dismissedVersion: 1 },
       },
     });

@@ -10,7 +10,7 @@
  */
 
 import type { BodyTextureId } from '../../../../@types/data/BodyTextureId';
-import type { BodyTextureSpec } from '../../../../@types/scene/BodyTextureSpec';
+import type { BodyTextureSpec } from '../@types/BodyTextureSpec';
 import { MARS_GLOBE_GRADE } from '../../surfaceTiles/format/data/marsSurfaceParams';
 
 // Keyed by id rather than an array so a missing or extra body is a compile error,

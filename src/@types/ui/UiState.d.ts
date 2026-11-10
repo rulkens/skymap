@@ -12,6 +12,7 @@
  * tour id + `beatIndex`), keeping this slice to app-level chrome.
  */
 
+import type { CameraGesture } from './CameraGesture';
 import type { PaletteTabId } from '../palette/PaletteTabId';
 
 export type UiState = {
@@ -24,4 +25,6 @@ export type UiState = {
     visible: boolean;
     dismissedVersion: number | null;
   };
+  /** Gestures this session has already made; never persisted, so a new visit teaches them again. */
+  learnedGestures: Record<CameraGesture, boolean>;
 };

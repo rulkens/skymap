@@ -2,7 +2,7 @@
  *  (design §7): a fixed step order, not a stage list, so the bench and the
  *  bake can never drift into applying steps in a different sequence.
  *  `grade` is the shared `ColourGrade` main also uses for body-tier bakes. */
-import type { ColourGrade } from '../../../src/@types/scene/ColourGrade';
+import type { ColourGrade } from '../../../src/layers/body/textures/@types/ColourGrade';
 
 export type AlbedoRecipe = {
   readonly version: 1;

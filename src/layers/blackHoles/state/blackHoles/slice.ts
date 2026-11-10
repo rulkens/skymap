@@ -3,7 +3,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import { initialState } from './initialState';
-import type { BlackHoleId } from '../../../../@types/data/blackHole/BlackHoleId';
+import type { BlackHoleId } from '../../@types/BlackHoleId';
 import type { BlackHolesSettings } from '../../@types/BlackHolesSettings';
 
 export const blackHolesSlice = createSlice({

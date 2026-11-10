@@ -7,7 +7,7 @@
  *
  * `density` is caller-supplied: every seeding tier (dust, HII, DIG) weights
  * channels differently, see call sites. `radius`/`angle` are the texel's own
- * centre, letting a caller reweight by arm proximity (`hiiRegions.ts`'s
+ * centre, letting a caller reweight by arm proximity (`buildHiiShellsAndYoungWithSegments.ts`'s
  * `armBias`).
  *
  * texelArea is an annular-SECTOR area (`0.5 x dTheta x (rOuter^2 -

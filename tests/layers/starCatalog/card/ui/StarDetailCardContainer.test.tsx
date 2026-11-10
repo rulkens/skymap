@@ -12,7 +12,7 @@ import { createTestStore } from '../../../../support/createTestStore';
 import { factsReported, layerFactsSeeded } from '../../../../../src/state/engine/engineSlice';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { Source } from '../../../../../src/data/source';
-import type { FamousStarMetaEntry } from '../../../../../src/@types/loading/FamousStarMetaEntry';
+import type { FamousStarMetaEntry } from '../../../../../src/layers/starCatalog/card/@types/FamousStarMetaEntry';
 import type { StarCatalogTarget } from '../../../../../src/layers/starCatalog/selection/@types/StarCatalogTarget';
 
 const siriusMeta: FamousStarMetaEntry = {

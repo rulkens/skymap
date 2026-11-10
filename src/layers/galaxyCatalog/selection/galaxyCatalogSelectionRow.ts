@@ -9,7 +9,7 @@
 import { Source } from '../../../data/source';
 import { GALAXY_CATALOG_SOURCES } from '../sources/galaxyCatalogSources';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
-import { encodeGalaxyId } from '../../../services/url/encodeGalaxyId';
+import { encodeGalaxyId } from './utils/encodeGalaxyId';
 import { cartesianToRaDec } from '../../../utils/math/cartesianToRaDec';
 import { placedGalaxyRow } from './utils/placedGalaxyRow';
 import { FAMOUS_GALAXY_NAMES } from '../famousGalaxies/data/famousGalaxyNames.generated';

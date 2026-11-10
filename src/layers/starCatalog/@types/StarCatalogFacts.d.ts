@@ -4,7 +4,7 @@
  * panel's chunk-pool resize outcome.
  */
 
-import type { FamousStarMetaEntry } from '../../../@types/loading/FamousStarMetaEntry';
+import type { FamousStarMetaEntry } from '../card/@types/FamousStarMetaEntry';
 
 export type StarCatalogFacts = {
   readonly famousStarsMeta: readonly FamousStarMetaEntry[];

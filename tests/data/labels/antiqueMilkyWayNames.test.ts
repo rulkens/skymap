@@ -3,7 +3,7 @@ import { ANTIQUE_MILKY_WAY_NAMES } from '../../../src/data/labels/antiqueMilkyWa
 import { MILKY_WAY_GALAXY_PARAMS } from '../../../src/data/milkyWay/milkyWayGalaxyParams';
 import { MILKY_WAY_DISC_RADIUS_KPC } from '../../../src/data/milkyWay/galacticCenter';
 import { describeGalaxy } from '../../../src/services/engine/galaxyGenerator/shared/describeGalaxy';
-import { armRidgeAngle } from '../../../src/services/engine/galaxyGenerator/v2/armRidgeGeometry';
+import { armRidgeAngle } from '../../../src/layers/milkyWay/field/arms/utils/armRidgeAngle';
 
 const R0_KPC = 8.178;
 const geometry = describeGalaxy(MILKY_WAY_GALAXY_PARAMS);
