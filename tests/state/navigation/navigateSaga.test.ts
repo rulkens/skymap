@@ -27,6 +27,7 @@ import { selectTakeoverSource } from '../../../src/state/takeover/selectors';
 import { openExhibit } from '../../../src/state/exhibits/exhibitActions';
 import { startTour } from '../../../src/state/tour/tourActions';
 import { startClip } from '../../../src/state/camera/clipActions';
+import { openStudio } from '../../../src/state/studio/studioActions';
 import { exitTakeover } from '../../../src/state/takeover/takeoverActions';
 import {
   clipStarted,
@@ -234,6 +235,7 @@ describe('navigateSaga', () => {
     ['exhibit', openExhibit.match],
     ['tour', startTour.match],
     ['clip', startClip.match],
+    ['studio', openStudio.match],
   ] as const)('an unknown %s id fails without dispatching its start', async (kind, started) => {
     const h = build();
     const outcome = await h.navigate({ view: { kind, id: 'nope' } }, 'cut');
@@ -241,6 +243,14 @@ describe('navigateSaga', () => {
     expect(outcome).toEqual({ ok: false, reason: 'unknown-id' });
     expect(h.count(started)).toBe(0);
     expect(selectTakeoverSource(h.store.getState())).toBeNull();
+  });
+
+  it('navigate #studio=cosmicFlows dispatches openStudio', async () => {
+    const h = build();
+    const outcome = await h.navigate({ view: { kind: 'studio', id: 'cosmicFlows' } }, 'fly');
+
+    expect(outcome).toEqual({ ok: true });
+    expect(h.recorded.filter(openStudio.match).map((a) => a.payload)).toEqual(['cosmicFlows']);
   });
 
   it.each(PLAYS)('navigate %s reveals after the first clipStarted', async (kind, id, started) => {

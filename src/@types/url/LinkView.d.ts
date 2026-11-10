@@ -10,4 +10,4 @@ export type LinkView =
   | { readonly kind: 'home' }
   | { readonly kind: 'focus'; readonly id: string; readonly pose?: FramedCameraPose }
   | { readonly kind: 'pose'; readonly pose: FramedCameraPose }
-  | { readonly kind: 'exhibit' | 'tour' | 'clip'; readonly id: string };
+  | { readonly kind: 'exhibit' | 'tour' | 'clip' | 'studio'; readonly id: string };

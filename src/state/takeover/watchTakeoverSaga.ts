@@ -1,6 +1,6 @@
 /**
  * watchTakeoverSaga — the single mutual-exclusion point for every takeover
- * source (`startTour`, `openExhibit`, `startClip`). A superseding request cancels the running
+ * source (`startTour`, `openExhibit`, `startClip`, `openStudio`). A superseding request cancels the running
  * takeover and waits for the whole cancelled bracket to settle before the
  * successor starts, so the successor snapshots the user's pre-takeover scene
  * and not a mid-takeover one.
@@ -17,11 +17,13 @@ import { exhibitBodySaga } from '../exhibits/exhibitBodySaga';
 import { openExhibit } from '../exhibits/exhibitActions';
 import { clipBodySaga } from '../camera/clipBodySaga';
 import { startClip } from '../camera/clipActions';
+import { studioBodySaga } from '../studio/studioBodySaga';
+import { openStudio } from '../studio/studioActions';
 import { tourRegistry } from '../../data/animation/tours/tourRegistry';
 import { APP_EXHIBIT_REGISTRY } from '../../compositions/appExhibits';
 import type { TakeoverSource } from '../../@types/takeover/TakeoverSource';
 
-const startRequests = [startTour, openExhibit, startClip];
+const startRequests = [startTour, openExhibit, startClip, openStudio];
 
 export function* watchTakeoverSaga() {
   let running: Task | undefined;
@@ -60,6 +62,10 @@ export function* watchTakeoverSaga() {
       const id = action.payload;
       source = { kind: 'clip', id };
       body = () => clipBodySaga(id);
+    } else if (openStudio.match(action)) {
+      const id = action.payload;
+      source = { kind: 'studio', id };
+      body = () => studioBodySaga(id);
     } else {
       // `take(startRequests)` widens `action` to `any` — typed-redux-saga
       // can't narrow a `take` over a mixed-creator array — so this branch is

@@ -29,6 +29,7 @@ import { exitTakeover, takeoverEnded } from '../takeover/takeoverActions';
 import { selectTakeoverSource } from '../takeover/selectors';
 import { openExhibit } from '../exhibits/exhibitActions';
 import { startTour } from '../tour/tourActions';
+import { openStudio } from '../studio/studioActions';
 import { selectCameraBase } from '../camera/selectors';
 import { selectTimeState } from '../time/selectors';
 import { selectOrientation } from '../settings/selectors';
@@ -129,7 +130,11 @@ export function* navigateSaga(
   // supersede, which would overwrite the link's settings; ending it first lands
   // them after that restore. A hash change has already ended it
   // (`applyNavigation`); this serves an arrival during which a remote started one.
-  const startsTakeover = view.kind === 'exhibit' || view.kind === 'tour' || view.kind === 'clip';
+  const startsTakeover =
+    view.kind === 'exhibit' ||
+    view.kind === 'tour' ||
+    view.kind === 'clip' ||
+    view.kind === 'studio';
   if (startsTakeover && (yield* select(selectTakeoverSource)) !== null) {
     yield* all([take(takeoverEnded), put(exitTakeover())]);
   }
@@ -181,5 +186,11 @@ export function* navigateSaga(
         yield* put(clearSelection());
       }
       return yield* call(firstClipSaga, startClip(view.id), transition);
+    case 'studio':
+      if (!isKeyOf(clipFactories, view.id)) return UNKNOWN_ID;
+      // The studio pins the live pose as the preview start (Q7), so a cut lands home first.
+      if (transition === 'cut') yield* call(homeSaga);
+      yield* put(openStudio(view.id));
+      return OK;
   }
 }

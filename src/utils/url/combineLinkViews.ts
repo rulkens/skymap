@@ -7,7 +7,9 @@ import type { LinkView } from '../../@types/url/LinkView';
  */
 export function combineLinkViews(a: LinkView, b: LinkView): LinkView {
   for (const v of [a, b]) {
-    if (v.kind === 'exhibit' || v.kind === 'tour' || v.kind === 'clip') return v;
+    if (v.kind === 'exhibit' || v.kind === 'tour' || v.kind === 'clip' || v.kind === 'studio') {
+      return v;
+    }
   }
   if (a.kind === 'home') return b;
   if (b.kind === 'home') return a;

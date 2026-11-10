@@ -273,7 +273,7 @@ const poseSource: HashParamSource = {
 };
 
 /**
- * `exhibit` / `tour` / `clip` — a takeover link. The read names the subject and
+ * `exhibit` / `tour` / `clip` / `studio` — a takeover link. The read names the subject and
  * `navigateSaga` validates the id against its registry. The write mirrors what
  * is running, however it started, so a reload or a shared copy reopens it.
  * Absence restores nothing here: leaving the running takeover is
@@ -329,4 +329,5 @@ export const HASH_PARAM_SOURCES: readonly HashParamSource[] = [
   takeoverSource('tour'),
   takeoverSource('clip'),
   layersSource,
+  takeoverSource('studio'),
 ];
