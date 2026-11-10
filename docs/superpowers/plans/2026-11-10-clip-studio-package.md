@@ -282,7 +282,7 @@ the weaker, true contract. A span looked up by a draft path is still the right w
 spans exactly the leaf's window); only compile-error paths can name a deeper node, and `buildTimeline` trims
 those (Task 2.4).
 
-- [ ] Test `resolveClipFoci keeps every draft path, structural kind and waypoint count`: for every
+- [x] Test `resolveClipFoci keeps every draft path, structural kind and waypoint count`: for every
       `clipRegistry` clip, with a stub resolver that resolves any id, walk the draft; every draft path exists
       in the resolved tree, `seq`/`all`/`fork` stay put, flyPath waypoint counts match, and a draft node whose
       resolved kind differs is a `lookAtId` or `aimAlong` that became an `all` of two `set` tweens.

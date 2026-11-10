@@ -59,6 +59,9 @@ import type { ClipData } from '../../../../src/@types/animation/ClipData';
 import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { clipRegistry } from '../../../../src/data/animation/clips/clipRegistry';
+import type { Effect } from '../../../../src/@types/animation/Effect';
+import type { SelectionResolver } from '../../../../src/@types/engine/selection/SelectionResolver';
 import { installAppSelectionKinds } from '../../../support/installAppSelectionKinds';
 
 installAppSelectionKinds();
@@ -655,5 +658,56 @@ describe('resolveClipFoci rewrites aimAlong to an aimAt bearing', () => {
     expect(dirG[0]).toBeCloseTo(dirE[0], 6);
     expect(dirG[1]).toBeCloseTo(dirE[1], 6);
     expect(dirG[2]).toBeCloseTo(dirE[2], 6);
+  });
+});
+
+// Path preservation: the clip studio indexes the authored draft by paths computed on the
+// resolved clip (clip-studio plan, Task 0.4).
+describe('resolveClipFoci path preservation', () => {
+  // Any id resolves to Virgo's row, so every registry clip resolves without a catalog.
+  const virgoRef = RESOLVER.resolveFocusId('galaxy-cluster-virgo')!;
+  const ANY_ID: SelectionResolver = {
+    ...RESOLVER,
+    resolveFocusId: () => virgoRef,
+    extractRow: (_ref, simDays) => RESOLVER.extractRow(virgoRef, simDays),
+  };
+
+  const childrenOf = (e: Effect): Effect[] =>
+    e.kind === 'seq' || e.kind === 'all' ? e.children : e.kind === 'fork' ? [e.child] : [];
+
+  // `aimAt` = `all([yaw tween, pitch tween])`: what lookAtId and aimAlong become.
+  const isAimPair = (e: Effect): boolean =>
+    e.kind === 'all' && e.children.length === 2 && e.children.every((c) => c.kind === 'set');
+
+  function walk(draft: Effect, resolved: Effect, where: string): void {
+    if (draft.kind === 'seq' || draft.kind === 'all' || draft.kind === 'fork') {
+      expect(resolved.kind, where).toBe(draft.kind);
+      const d = childrenOf(draft);
+      const r = childrenOf(resolved);
+      expect(r.length, where).toBe(d.length);
+      d.forEach((c, i) => walk(c, r[i]!, `${where}.${i}`));
+      return;
+    }
+    if (draft.kind === 'flyPath') {
+      expect(resolved.kind, where).toBe('flyPath');
+      expect((resolved as typeof draft).waypoints.length, where).toBe(draft.waypoints.length);
+      return;
+    }
+    // Only lookAtId and aimAlong change shape (leaf to an all of two tweens); other id leaves stay leaves.
+    if (draft.kind === 'lookAtId' || draft.kind === 'aimAlong') {
+      expect(isAimPair(resolved), where).toBe(true);
+    } else {
+      expect(childrenOf(resolved), where).toEqual([]);
+    }
+  }
+
+  it('resolveClipFoci keeps every draft path, structural kind and waypoint count', () => {
+    const clips = Object.values(clipRegistry);
+    expect(clips.length).toBeGreaterThan(0);
+    for (const clip of clips) {
+      const resolved = resolveClipFoci(clip.data, ANY_ID, FOV_Y, POSE, SIM_DAYS);
+      expect(resolved.timeline.length, clip.id).toBe(clip.data.timeline.length);
+      clip.data.timeline.forEach((e, i) => walk(e, resolved.timeline[i]!, `${clip.id}.${i}`));
+    }
   });
 });
