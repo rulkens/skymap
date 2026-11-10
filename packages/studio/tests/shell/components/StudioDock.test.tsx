@@ -105,4 +105,15 @@ describe('StudioDock', () => {
     );
     expect(screen.getByText('No steps')).toBeInTheDocument();
   });
+
+  it('a sideways swipe anywhere in the dock never reaches the browser as a back gesture', () => {
+    mount();
+    // At Fit nothing pans, so the timeline itself would let the swipe through.
+    const reachesBrowser = (target: Element, init: WheelEventInit) => fireEvent.wheel(target, init);
+    for (const target of [screen.getByRole('tree'), screen.getByRole('region', { name: /Clip/ })]) {
+      expect(reachesBrowser(target, { deltaX: -40, deltaY: 5 })).toBe(false);
+      expect(reachesBrowser(target, { deltaY: -40, shiftKey: true })).toBe(false);
+      expect(reachesBrowser(target, { deltaX: 5, deltaY: 40 })).toBe(true);
+    }
+  });
 });

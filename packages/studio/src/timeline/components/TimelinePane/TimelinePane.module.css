@@ -1,7 +1,5 @@
 .root {
   position: relative;
-  /* A sideways swipe pans the timeline; it must not turn into the browser's back gesture. */
-  overscroll-behavior-x: none;
   display: grid;
   grid-template-rows: var(--row-h) minmax(0, 1fr);
   min-height: 0;

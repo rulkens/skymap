@@ -9,6 +9,7 @@ import Inspector from '../../../inspector/components/Inspector/Inspector';
 import { useDockHeight } from '../../hooks/useDockHeight';
 import { useFocusRescue } from '../../hooks/useFocusRescue';
 import { useKeysOverlay } from '../../hooks/useKeysOverlay';
+import { useNoSwipeBack } from '../../hooks/useNoSwipeBack';
 import { useStudioKeys } from '../../hooks/useStudioKeys';
 import { clipRegistry } from '../../../../../../src/data/animation/clips/clipRegistry';
 import { useIsMobile } from '../../../../../../src/hooks/useIsMobile';
@@ -25,6 +26,7 @@ function StudioDock({ clipId }: Props) {
   const keys = useKeysOverlay(root);
   const onKeyDown = useStudioKeys(keys.toggle);
   useFocusRescue(root);
+  useNoSwipeBack(root);
   // Focus lives in the dock so its keys work at once, and a click on a row (not focusable) lands here.
   useEffect(() => root.current?.focus({ preventScroll: true }), []);
 
