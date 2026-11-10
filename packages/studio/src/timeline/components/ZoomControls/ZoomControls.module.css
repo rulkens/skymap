@@ -1,0 +1,39 @@
+.root {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  white-space: nowrap;
+}
+.button,
+.level {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--space-12);
+  min-height: var(--space-12);
+  padding: 0 var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-fg-base);
+  font: inherit;
+  cursor: pointer;
+}
+.level {
+  min-width: calc(var(--space-12) * 2);
+  font-variant-numeric: tabular-nums;
+}
+.button:hover,
+.level:hover {
+  background: var(--surface-control);
+}
+.button:focus-visible,
+.level:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+.button:disabled,
+.level:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

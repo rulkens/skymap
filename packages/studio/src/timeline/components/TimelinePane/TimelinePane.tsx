@@ -5,7 +5,10 @@ import OutlineRow from '../OutlineRow/OutlineRow';
 import TrackLane from '../TrackLane/TrackLane';
 import { CHANNEL_FAMILY_LEGEND } from '../../../data/channelFamilies';
 import { rowSelected, rowToggled } from '../../../session/state/studioSlice';
-import { selectViewport } from '../../../session/state/selectors';
+import { selectPlayheadSec, selectViewport } from '../../../session/state/selectors';
+import Playhead from '../Playhead/Playhead';
+import Ruler from '../Ruler/Ruler';
+import { timeToPercent } from '../../utils/timeToPercent';
 import { selectSelectionStandInId } from '../../state/selectSelectionStandInId';
 import { selectTimeline } from '../../state/selectTimeline';
 import { ancestorChains } from '../../utils/ancestorChains';
@@ -20,9 +23,11 @@ function TimelinePane() {
   const timeline = useAppSelector(selectTimeline);
   const standIn = useAppSelector(selectSelectionStandInId);
   const viewport = useAppSelector(selectViewport);
+  const playheadSec = useAppSelector(selectPlayheadSec);
   const chains = useMemo(() => ancestorChains(timeline?.rows ?? []), [timeline]);
   if (timeline === null) return null;
   const window = viewWindow(viewport, timeline);
+  const end = timeline.durationSec === null ? null : timeToPercent(timeline.durationSec, window);
 
   return (
     <div className={s.root}>
@@ -39,6 +44,7 @@ function TimelinePane() {
             ))}
           </span>
         </div>
+        <Ruler timeline={timeline} window={window} playheadSec={playheadSec} />
       </div>
       <div className={s.rows} role="tree" aria-label="Steps">
         {timeline.rows.map((row, index) => (
@@ -59,6 +65,15 @@ function TimelinePane() {
           </div>
         ))}
         {timeline.rows.length <= 1 && <p className={s.empty}>No steps</p>}
+      </div>
+      <div className={s.overlay} aria-hidden>
+        {end !== null && (
+          <>
+            <span className={s.afterEnd} style={{ left: `${end}%` }} />
+            <span className={s.endLine} style={{ left: `${end}%` }} />
+          </>
+        )}
+        <Playhead playheadSec={playheadSec} window={window} />
       </div>
     </div>
   );

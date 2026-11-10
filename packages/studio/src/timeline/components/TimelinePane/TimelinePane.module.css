@@ -45,6 +45,8 @@
   position: relative;
   overflow-x: hidden;
   overflow-y: auto;
+  /* A classic scrollbar would narrow the lanes against the header's ruler and the overlay. */
+  scrollbar-width: none;
   min-height: 0;
 }
 .row {
@@ -52,6 +54,34 @@
 }
 .selected {
   background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+}
+/* Spans exactly the track area (right of the outline, short of the track padding), so percent left
+   positions match the lanes' and the ruler's. Clicks fall through to the rows. */
+.overlay {
+  position: absolute;
+  top: var(--row-h);
+  bottom: 0;
+  left: var(--outline-w);
+  right: var(--track-pad);
+  overflow: hidden;
+  pointer-events: none;
+}
+.afterEnd {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  background: repeating-linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--color-fg-ghost) 16%, transparent) 0 var(--space-1),
+    transparent var(--space-1) var(--space-4)
+  );
+}
+.endLine {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px dashed var(--color-fg-tertiary);
 }
 .empty {
   position: absolute;
