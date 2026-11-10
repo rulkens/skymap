@@ -1,6 +1,6 @@
 /**
  * GalaxyPointPrintRenderer — the galaxy points' print twin for the antique look:
- * one point per galaxy into `antique-print-points` (`points/printVertex.wesl`),
+ * one point per galaxy into `antique-print-points` (`points/vertexPrint.wesl`),
  * from the visual pass's own vertex buffers and an image of its uniforms.
  */
 

@@ -74,6 +74,13 @@ fidelity and slop** — surplus helpers, dead paths, tests that restate code,
 comments over budget. One fix round, run by the branch's own implementer. No
 re-review.
 
+The review brief also names the conventions skills and docs the touched files
+fall under (`.wesl` → `wesl-shaders`, `src/components/**` → `create-component`,
+anything a person sees → `ui-ux.md`) and asks the reviewer to hold each touched
+file to them **whole, not just its changed lines**: code that came in from a
+spike sits outside every task diff (the stellar-streams shaders shipped
+all-in-one that way).
+
 Exception: a task the plan tags `review: yes` gets one mid-branch review,
 given the diff **and** the task contract **and** the named spec section — a
 diff alone produces confident spec verdicts that quietly redefine the spec.

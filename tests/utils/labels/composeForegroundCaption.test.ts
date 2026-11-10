@@ -5,7 +5,7 @@ import type { FocusUniformsValue } from '../../../src/@types/rendering/FocusUnif
 import type { ForegroundCaption } from '../../../src/services/engine/presentation/foregroundCaption';
 import { CAPTION_PRIORITY_SCALE } from '../../../src/data/labels/captionPriorityScale';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
-import { ZERO_FOCUS } from '../../../src/services/engine/subsystems/structureFocusSubsystem';
+import { ZERO_FOCUS } from '../../../src/services/engine/subsystems/recedingFocusSubsystem';
 
 const ctxWith = (focus: FocusUniformsValue): CaptionComposeContext => ({
   camPos: [0, 0, 0],

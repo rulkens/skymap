@@ -1,4 +1,4 @@
-import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/structureFocusSubsystem';
+import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/recedingFocusSubsystem';
 import { describe, expect, it, vi } from 'vitest';
 import { mat4 } from 'wgpu-matrix';
 import { produceMilkyWayLabel as produceMilkyWayLabelFor } from '../../../../../src/layers/milkyWay/card/present/produceMilkyWayLabel';
@@ -141,6 +141,23 @@ describe('produceMilkyWayLabel', () => {
     expect(label.worldPos).toEqual([0, 0, 0]);
     expect(label.lift?.subjectSizePx).toBeGreaterThan(0);
     expect(label.leader).toBeUndefined();
+  });
+
+  it('gates its pick at the galactic centre, as the disc does, not at the Sun', () => {
+    const ctx = makeCtx(0.5);
+    const kpcSphere = (center: Vec3) =>
+      ({
+        ...ctx,
+        snapshot: {
+          ...ctx.snapshot,
+          focus: { center, apparentRadiusMpc: 0.001, physicalRadiusMpc: 0.0005, blend: 1 },
+        },
+      }) as FrameView;
+    const pickOf = (c: FrameView) =>
+      produceMilkyWayLabelFor(PICK_CODE)(makeState(), c, 1).labels[0]!.pickId;
+
+    expect(pickOf(kpcSphere([0, 0, 0]))).toBeUndefined();
+    expect(pickOf(kpcSphere([...MILKY_WAY_CENTER_WORLD] as Vec3))).toBeDefined();
   });
 
   it('emits one label carrying a leader when enabled', () => {

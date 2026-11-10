@@ -108,6 +108,7 @@ pnpm-debug.log*
 !/data/pgc_aliases.json
 !/data/raw/**/README.md
 !/data/raw/**/*.sha256
+!/data/raw/streams/wikipedia_streams_cache.json
 !/data/raw/fonts/*.ttf
 !/data/raw/fonts/OFL*.txt
 # Antique-look ornament source art, its provenance and the title fonts: inputs

@@ -258,7 +258,7 @@ Owner ruling 2026-11-07: keep the generic galaxy engraving with these names; the
 - Open: Greek letters (τ Ceti) need Greek in the IM Fell atlas (rebake + R2 sync); a constellation name anchored off the plate or under the title is dropped, not moved along its figure; English galaxy titles (Whirlpool Galaxy) await a ruling on a Latin form or a catalogue title with the modern gloss.
 
 ### Task 32: Galaxies engraved, not contoured; route B phase 2 (review 7 #1 and #2)
-**Files:** `shaders/antiqueLook/{fragment,printPoint,glyphs,glow,nebula}.wesl`, `galaxyCatalog/points/printVertex.wesl`,
+**Files:** `shaders/antiqueLook/{fragment,printPoint,glyphs,glow,nebula}.wesl`, `galaxyCatalog/points/vertexPrint.wesl`,
 `layers/galaxyCatalog/pointSprites/{passes/galaxyPointsPrintPass,render/galaxyPointPrintRenderer,render/printUniformBytesOf}.ts`,
 `data/rendering/{antiqueLook,frameSections}.ts`, `executeFrame.ts`, `utils/gpu/antiqueLook/placeAntiqueOrnaments.ts`, `web.wesl`
 - [x] Every point galaxy prints as a catalogue dot (`galaxy-points-print`, before the stars, forward Z); point sprites and the cosmic structure discs leave the print.

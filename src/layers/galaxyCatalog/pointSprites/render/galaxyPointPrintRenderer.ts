@@ -6,7 +6,7 @@
  * pick renderer does: no buffer is written by two pipelines.
  */
 
-import vsCode from '../../../../services/gpu/shaders/galaxyCatalog/points/printVertex.wesl?static';
+import vsCode from '../../../../services/gpu/shaders/galaxyCatalog/points/vertexPrint.wesl?static';
 import fsCode from '../../../../services/gpu/shaders/antiqueLook/printPoint.wesl?static';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { PickSourceDraw } from '../@types/PickSourceDraw';

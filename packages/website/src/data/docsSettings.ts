@@ -631,6 +631,15 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
         firstValue: false,
       },
       {
+        name: 'Stellar streams',
+        control: 'switch',
+        does: 'Shows the stellar streams round the Milky Way: long trails of stars torn from dwarf galaxies and globular clusters. They come into view as the camera pulls back past about 13,000 light-years from the Sun. Their file is fetched the first time the switch goes on.',
+        values: SWITCH,
+        first: OFF,
+        state: 'stellarStreams.enabled',
+        firstValue: false,
+      },
+      {
         name: 'Light-time spheres',
         control: 'switch',
         does: 'Shows spheres round Earth whose radius is the distance light has travelled in a given time.',

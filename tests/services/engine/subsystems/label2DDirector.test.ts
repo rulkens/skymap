@@ -60,7 +60,6 @@ function makeHighlightState(hover: string | null, select: string | null): Engine
 
 // Identity vp + 1000×1000 canvas: a label at world [x,y,0] projects to screen
 // ((x·0.5+0.5)·1000, (1−(y·0.5+0.5))·1000). So [0,0,0] → centre (500,500);
-// |x| or |y| ≥ ~0.1 separates two anchors past the 48 px declutter margin;
 // |x| or |y| > 1 lands the anchor off-screen (never dropped, never blocks).
 //
 // `nowMs` is the frame's stamped clock: the appear/disappear envelope is a
@@ -551,7 +550,7 @@ describe('label2DDirector', () => {
     dir.attachRenderers(labelStub as never, lineStub as never, defaultMeasure);
 
     // Two labels at the same world point (both project to screen centre, so
-    // within the 48 px margin). The higher declutter priority wins.
+    // their rects overlap). The higher declutter priority wins.
     const big: Label2D = { ...SAMPLE_LABEL, id: 'big', declutterPriority: 100 };
     const small: Label2D = { ...SAMPLE_LABEL, id: 'small', declutterPriority: 10 };
     dir.registerProducer(makeProducer('pbig', [big]));
@@ -621,8 +620,8 @@ describe('label2DDirector', () => {
       const measure = () => ({ minX: -50, minY: -30, maxX: 50, maxY: 0 });
       dir.attachRenderers(labelStub as never, lineStub as never, measure);
 
-      // B sits 40 screen px BELOW A (screen y 500 → 540). Anchor distance is
-      // inside the old 48 px point margin, but A's text occupies y∈[470,500]
+      // B sits 40 screen px BELOW A (screen y 500 → 540). The anchors are
+      // close, but A's text occupies y∈[470,500]
       // and B's y∈[510,540] — visually clear. Neither may be culled.
       const a: Label2D = { ...RECT_LABEL, id: 'a', worldPos: [0, 0, 0], declutterPriority: 100 };
       const b: Label2D = { ...RECT_LABEL, id: 'b', worldPos: [0, -0.08, 0], declutterPriority: 10 };
@@ -641,8 +640,8 @@ describe('label2DDirector', () => {
       const measure = () => ({ minX: -150, minY: -15, maxX: 150, maxY: 15 });
       dir.attachRenderers(labelStub as never, lineStub as never, measure);
 
-      // B sits 100 screen px RIGHT of A (screen x 500 → 600) — outside the
-      // old 48 px point margin, but the 300 px-wide rects overlap by 200 px.
+      // B sits 100 screen px RIGHT of A (screen x 500 → 600), but the
+      // 300 px-wide rects overlap by 200 px.
       const a: Label2D = { ...RECT_LABEL, id: 'a', worldPos: [0, 0, 0], declutterPriority: 100 };
       const b: Label2D = { ...RECT_LABEL, id: 'b', worldPos: [0.2, 0, 0], declutterPriority: 10 };
       dir.registerProducer(makeProducer('p', [a, b]));
@@ -905,7 +904,7 @@ describe('label2DDirector', () => {
       // Mirrors `labelsNearPass.ts:269`'s candidate filter
       // (`baseTarget === 0 || screenPx === null` never enters the cull).
       // Without it, `zeroTarget`'s huge declutter priority would win the
-      // screenSeparation contest and cull `visible` — which would then
+      // declutter and cull `visible` — which would then
       // never show, even though it has a real, positive target.
       const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
       const labelStub = makeLabelStub();
@@ -1038,7 +1037,7 @@ describe('label2DDirector', () => {
       // it always survives declutter — but the PRODUCER's own `fadeAlpha`
       // falls to 0 (e.g. a caption's distance-band fade closing), moved from
       // `labelsNearPass.ts`'s demand-drop tail
-      // (`declutterByScreenSeparationArm`'s target read is `label.fadeAlpha`
+      // (`applyExponentialEnvelope`'s target read is `label.fadeAlpha`
       // when a label survives, so this exercises that branch rather than the
       // `survivorIds`-driven one the cull test above pins). Must ease, not
       // pop, and the render-loop wake vote must go quiet once settled.
@@ -1078,7 +1077,7 @@ describe('label2DDirector', () => {
       expect(lastAlphaOf()).toBeUndefined();
     });
 
-    it('the higher caption priority survives a screenSeparation collision', () => {
+    it('the higher caption priority survives a NEAR0 collision', () => {
       // `declutterPriority` composed exactly as `produceConstellationCaptions` and
       // `produceLightTimeCaptions` do — `priority * CAPTION_PRIORITY_SCALE` — so the
       // authored priority dominates the collision regardless of any size term.
@@ -1247,8 +1246,8 @@ describe('label2DDirector', () => {
     it('a caption standing under a lifted planet caption survives: the cull reads where the text is drawn', () => {
       // The Curiosity case: a rover at the sub-camera point projects within a
       // pixel of its host planet's anchor, but the planet's text is lifted
-      // 1.5x its apparent diameter up the screen. A separation cull on the
-      // pre-lift anchors drops the rover against text 600 px away.
+      // 1.5x its apparent diameter up the screen. A cull at the pre-lift
+      // anchors drops the rover against text 600 px away.
       const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
       const labelStub = makeLabelStub();
       const lineStub = makeLineStub();
@@ -1385,17 +1384,37 @@ describe('label2DDirector', () => {
       });
     });
 
+    it('two long names whose anchors are far apart but whose texts overlap keep only one', () => {
+      // The stellar-streams case: `Cetus-New` and `AAU-ATLAS` anchored 60 px
+      // apart, each name several times wider than that.
+      const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
+      const labelStub = makeLabelStub();
+      dir.attachRenderers(labelStub as never, makeLineStub() as never, defaultMeasure);
+
+      const name = (id: string, x: number, declutterPriority: number): Label2D => ({
+        ...SAMPLE_LABEL,
+        id,
+        text: 'Cetus-New',
+        worldPos: [x, 0, 0],
+        minPixelSize: 30,
+        declutterPriority,
+        fadeAlpha: 1,
+      });
+      dir.registerProducer(makeProducer('p', [name('kept', 0, 2), name('culled', 0.12, 1)]));
+
+      dir.runFrame(makeState(), makeNear0Ctx(0));
+      const flushedIds = (labelStub.setLabels.mock.calls.at(-1)![0] as Label2D[]).map((l) => l.id);
+      expect(flushedIds).toEqual(['kept']);
+    });
+
     it('smoothstepRamp keeps flushing a remembered emission until the ramp hits 0 (mirrors the exponential absence test above)', () => {
-      // An ad hoc config pairing the NEW screenSeparation declutter arm with
-      // the UNCHANGED smoothstepRamp envelope — not one of the two real
-      // director instances, but a deliberate cross so this test exercises
-      // this task's new declutter code while pinning that smoothstepRamp's
-      // absence rule did NOT get swapped for exponentialApproach's (spec
-      // §12: the two rules are the most plausible port error, and swapping
-      // them is invisible in a settled frame).
+      // An ad hoc config: smoothstepRamp without COSMO's other settings,
+      // pinning that its absence rule did NOT get swapped for
+      // exponentialApproach's (spec §12: the two rules are the most plausible
+      // port error, and swapping them is invisible in a settled frame).
       const config: Label2DDirectorConfig = {
         project: cosmoLabelProjection,
-        declutter: { mode: 'screenSeparation', minSeparationPx: 48 },
+        declutterPadPx: 8,
         envelope: { mode: 'smoothstepRamp', durationMs: 300 },
         lift: null,
       };
@@ -1426,9 +1445,9 @@ describe('label2DDirector', () => {
       const lineStub = makeLineStub();
       dir.attachRenderers(labelStub as never, lineStub as never, measure);
 
-      // Same world point (screen separation 0, well inside the 48 px margin)
-      // — declutter culls one. Both carry `lift`, so if the lift stage ran
-      // over the PRE-declutter set, `measure` would be called for both.
+      // Same world point — declutter culls one. Both carry `lift`, so if the
+      // lift stage ran over the PRE-declutter set, `measure` would be called
+      // for both a second time.
       const big: Label2D = {
         ...SAMPLE_LABEL,
         id: 'big',
@@ -1459,12 +1478,11 @@ describe('label2DDirector', () => {
 
       dir.runFrame(makeState(), makeNear0Ctx(0));
 
-      // `measure` is called ONLY inside the lift stage for this director
-      // (screenSeparation's declutter arm never reads it) — exactly one
-      // call proves neither the declutter-culled label nor the
-      // envelope-dropped (zero-target) label ever reached the lift.
-      expect(measure).toHaveBeenCalledTimes(1);
-      expect(measure).toHaveBeenCalledWith(big);
+      // Declutter measures each visible label once; the lift measures only
+      // its survivors. So `big` twice, `small` once (culled), `zero` never
+      // (zero alpha skips the declutter and the envelope drops it).
+      const callsFor = (l: Label2D) => measure.mock.calls.filter(([arg]) => arg === l).length;
+      expect([big, small, zeroTarget].map(callsFor)).toEqual([2, 1, 0]);
     });
 
     it('a label without a lift field is emitted unlifted (the constellation-shaped case, by data absence)', () => {
@@ -1481,7 +1499,8 @@ describe('label2DDirector', () => {
 
       dir.runFrame(makeState(), makeNear0Ctx(0));
 
-      expect(measure).not.toHaveBeenCalled();
+      // Once, by the declutter; an unlifted label never reaches the lift's measure.
+      expect(measure).toHaveBeenCalledTimes(1);
       expect(labelStub.setLabels).toHaveBeenLastCalledWith([constellationLike]);
     });
   });

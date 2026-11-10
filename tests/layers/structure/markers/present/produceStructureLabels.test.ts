@@ -1,4 +1,4 @@
-import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/structureFocusSubsystem';
+import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/recedingFocusSubsystem';
 import { describe, expect, it } from 'vitest';
 import { produceStructureLabels } from '../../../../../src/layers/structure/markers/present/produceStructureLabels';
 import { createStructureStore } from '../../../../../src/layers/structure/catalog/load/createStructureStore';

@@ -92,7 +92,7 @@ function makeState(over: {
     subsystems: {
       texturedDisks: null,
       fades: { isAnyAnimating: () => over.fadesAnimating ?? false },
-      structureFocus: { isAwake: () => over.focusAwake ?? false },
+      recedingFocus: { isAwake: () => over.focusAwake ?? false },
     },
   } as unknown as EngineState;
 }
@@ -121,7 +121,7 @@ describe('shouldKeepTicking', () => {
     expect(shouldKeepTicking(state, restingRoot, 1000, NO_ANIM, CAMERA_DRIVERS)).toBe(true);
   });
 
-  it('structure-focus fade awake → true', () => {
+  it('focus fade awake → true', () => {
     const state = makeState({ focusAwake: true });
     expect(shouldKeepTicking(state, restingRoot, 1000, NO_ANIM, CAMERA_DRIVERS)).toBe(true);
   });

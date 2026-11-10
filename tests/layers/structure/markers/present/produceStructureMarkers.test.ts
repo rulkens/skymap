@@ -1,4 +1,4 @@
-import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/structureFocusSubsystem';
+import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/recedingFocusSubsystem';
 import { describe, expect, it } from 'vitest';
 import { mat4 } from 'wgpu-matrix';
 import { produceStructureMarkers } from '../../../../../src/layers/structure/markers/present/produceStructureMarkers';

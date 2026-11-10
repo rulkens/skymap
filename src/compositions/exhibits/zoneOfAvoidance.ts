@@ -21,7 +21,16 @@ const MILKY_WAY_WITH_MARKER = { ...milkyWayInitialState, enabled: true, labelEna
 
 // Only the band and the galaxies take clicks; any other hit opens a card the copy never mentions.
 const PICK_BAND_AND_GALAXIES = {
-  off: ['structure', 'milkyWay', 'body', 'craft', 'starCatalog', 'blackHole', 'satellite'],
+  off: [
+    'structure',
+    'milkyWay',
+    'body',
+    'craft',
+    'starCatalog',
+    'blackHole',
+    'satellite',
+    'stellarStream',
+  ],
 };
 
 /**

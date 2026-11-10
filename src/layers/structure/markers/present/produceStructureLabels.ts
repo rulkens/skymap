@@ -25,7 +25,7 @@ import { STRUCTURE_MARKER_STYLES } from './structureMarkerStyles';
 import { structureApparentRadiusFade } from './structureApparentRadiusFade';
 import { structureIdOf } from './structureIdOf';
 import { wrapLabelName } from '../utils/wrapLabelName';
-import { isPickableUnderFocus } from '../../../../utils/structure/isPickableUnderFocus';
+import { isSubjectPickableUnderFocus } from '../../../../utils/structure/isSubjectPickableUnderFocus';
 import type { StructureScale } from '../../../../@types/data/structure/StructureScale';
 import { STRUCTURE_IDS_BY_SCALE } from '../../../../data/structure/structureIdsByScale';
 
@@ -129,7 +129,9 @@ export function produceStructureLabels(
 
       labels.push({
         id: p.id,
-        pickId: isPickableUnderFocus(p.worldPos, ctx.snapshot.focus) ? subjectId : undefined,
+        pickId: isSubjectPickableUnderFocus(subjectId, p.worldPos, ctx.snapshot)
+          ? subjectId
+          : undefined,
         subjectId,
         worldPos: anchor,
         // Long names ("Perseus-Pisces Supercluster") break onto two balanced

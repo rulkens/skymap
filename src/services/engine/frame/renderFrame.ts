@@ -27,7 +27,7 @@ import { VIEW_RIGS } from '../../../data/rendering/viewRigs';
 export function renderFrame(input: RenderFrameInput): void {
   const { canvas, views, state, device, context, timingService, renderedTargets } = input;
 
-  // The shared structure-focus uniform, before any pass or the later pick submit
+  // The shared focus uniform, before any pass or the later pick submit
   // reads it; blend=0 at rest makes the per-vertex multiplier a no-op.
   state.gpu.focusUniform?.write(canvas.snapshot.focus);
 

@@ -9,7 +9,7 @@ import type { StarCatalogPrintRenderer } from '../@types/StarCatalogPrintRendere
 import type { StarCatalogPickResources } from '../@types/StarCatalogPickResources';
 import type { StarCatalogSourceType } from '../../@types/StarCatalogSourceType';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
-import vsCode from '../../../../services/gpu/shaders/starCatalog/printVertex.wesl?static';
+import vsCode from '../../../../services/gpu/shaders/starCatalog/vertexPrint.wesl?static';
 import fsCode from '../../../../services/gpu/shaders/antiqueLook/printPoint.wesl?static';
 import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
 import { writeCameraPrefix } from '../../../../services/gpu/lib/cameraUniforms';

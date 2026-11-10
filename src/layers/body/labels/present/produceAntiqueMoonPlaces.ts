@@ -67,7 +67,7 @@ const bandOf = (place: AntiqueMoonPlace): number =>
     : SEA.test(place.name)
       ? SEA_BAND
       : 1;
-// The director's antique pad (`ANTIQUE_LABEL_DECLUTTER`, 8) and a margin for the set
+// The director's declutter pad (`declutterPadPx`, 8) and a margin for the set
 // glyphs over `antiqueNameBoxPx`'s estimate.
 const SEA_PAD_PX = 16;
 // A placement's fade (its reveal, facing and light ramps) sharpened to a cut.

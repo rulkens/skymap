@@ -1,6 +1,6 @@
 // starCatalog/leafRecord.wesl — one cut-list instance decoded into its star:
 // the node lookup, the box rebuild and the record words. The visual and pick
-// stage (vertex.wesl) and the antique print stage (printVertex.wesl) all read
+// stage (vertex.wesl) and the antique print stage (vertexPrint.wesl) all read
 // records through leafRecord, so they place and rank every star alike.
 // Bindings: @group(1) cut* (cutIo.wesl structs and this stream's list),
 // @group(2) records.

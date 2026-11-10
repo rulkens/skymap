@@ -27,7 +27,7 @@ import { refoldTo } from '../camera/arms/refoldTo';
 import { spacecraftPresent } from '../../../utils/scene/spacecraftPresent';
 import { HOSTLESS_MESH_BODIES } from '../../../data/bodies/hostlessMeshBodies';
 import { poseFromBodyArm } from '../../../utils/camera/arms/poseFromBodyArm';
-import { ZERO_FOCUS } from '../subsystems/structureFocusSubsystem';
+import { ZERO_FOCUS } from '../subsystems/recedingFocusSubsystem';
 import { skyCapturesInBand } from './skyCapturesInBand';
 import { createFramePlannerResultStore } from './createFramePlannerResultStore';
 import { sceneBodyCoverageOf } from '../../../utils/visibility/sceneBodyCoverageOf';
@@ -127,7 +127,7 @@ export function deriveFrameContext(
 
   // `focus`, `focusBlend` and `focusPickId` are at-rest placeholders that `runFrame`
   // overwrites the moment the ready gate passes, before any consumer reads them:
-  // deriving them here would tick the structureFocus fade controller, a once-per-frame
+  // deriving them here would tick the recedingFocus fade controller, a once-per-frame
   // side effect this (speculatively callable) function must not have.
   return {
     isReady: true,

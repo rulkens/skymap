@@ -8,7 +8,7 @@
 import type { StarPointPrintRenderer } from '../@types/StarPointPrintRenderer';
 import type { PrintStar } from '../@types/PrintStar';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
-import vsCode from '../../../../services/gpu/shaders/bodies/starPoints/printVertex.wesl?static';
+import vsCode from '../../../../services/gpu/shaders/bodies/starPoints/vertexPrint.wesl?static';
 import fsCode from '../../../../services/gpu/shaders/antiqueLook/printPoint.wesl?static';
 import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
 import { writeCameraPrefix } from '../../../../services/gpu/lib/cameraUniforms';
@@ -17,7 +17,7 @@ import {
   ANTIQUE_PRINT_POINTS_FORMAT,
 } from '../../../../data/rendering/antiqueLook';
 
-/** position xyz, then absMag and fade: `printVertex.wesl`'s locations 0 and 1. */
+/** position xyz, then absMag and fade: `vertexPrint.wesl`'s locations 0 and 1. */
 const FLOATS_PER_STAR = 5;
 const CAMERA_UNIFORM_BYTES = 80;
 const NO_VIEWPORT: readonly [number, number] = [1, 1];

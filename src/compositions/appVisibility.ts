@@ -24,6 +24,7 @@ import { missionsVisibility } from '../layers/missions/visibility';
 import { probeSpheresVisibility } from '../layers/probeSpheres/visibility';
 import { satellitesVisibility } from '../layers/satellites/visibility';
 import { starCatalogVisibility } from '../layers/starCatalog/visibility';
+import { stellarStreamsVisibility } from '../layers/stellarStreams/visibility';
 import { structureVisibility } from '../layers/structure/visibility';
 import { zoneOfAvoidanceVisibility } from '../layers/zoneOfAvoidance/visibility';
 
@@ -37,6 +38,7 @@ export const APP_VISIBILITY_REGISTRY = [
   ...satellitesVisibility,
   ...zoneOfAvoidanceVisibility,
   ...localBubbleVisibility,
+  ...stellarStreamsVisibility,
   ...lightTimeVisibility,
   ...cosmicHorizonVisibility,
   ...constellationsVisibility,

@@ -69,7 +69,7 @@ import package::starCatalog::io::VSOut;
 import package::starCatalog::io::StarUniforms;
 import package::starCatalog::leafRecord::leafRecord;
 import package::starCatalog::leafRecord::cutRefineThresholdSq;
-import package::starCatalog::tint::starTint;
+import package::lib::starTint::starTint;
 import package::lib::camera::worldToClip;
 import package::lib::billboard::triCorner;
 import package::lib::billboard::expandBillboardScreen;

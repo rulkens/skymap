@@ -28,7 +28,7 @@ import { createFadeRegistry } from '../animation/fadeRegistry';
 import { createLabel2DDirector } from './subsystems/label2DDirector';
 import { COSMO_LABEL_DIRECTOR } from '../../data/labels/cosmoLabelDirectorConfig';
 import { FOREGROUND_LABEL_DIRECTOR } from '../../data/labels/foregroundLabelDirectorConfig';
-import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsystem';
+import { createRecedingFocusSubsystem } from './subsystems/recedingFocusSubsystem';
 import { createClipPlayer } from './subsystems/clipPlayer';
 import { createClipPathInspector } from './subsystems/clipPathInspector';
 import { datumOnlyTerrainHeight } from '../../utils/camera/terrain/datumOnlyTerrainHeight';
@@ -197,7 +197,7 @@ export function createEngine(
       cosmoLabelDirector: createLabel2DDirector(COSMO_LABEL_DIRECTOR),
       foregroundLabelDirector: createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR),
 
-      structureFocus: createStructureFocusSubsystem({
+      recedingFocus: createRecedingFocusSubsystem({
         requestRender: () => state.subsystems.scheduler.requestRender(),
       }),
 
@@ -384,7 +384,7 @@ export function createEngine(
 
     state.subsystems.cosmoLabelDirector.destroy();
     state.subsystems.foregroundLabelDirector.destroy();
-    state.subsystems.structureFocus.destroy();
+    state.subsystems.recedingFocus.destroy();
     state.subsystems.pickDriver?.destroy();
     state.subsystems.pickDriver = null;
     state.subsystems.loadProgress?.destroy();
