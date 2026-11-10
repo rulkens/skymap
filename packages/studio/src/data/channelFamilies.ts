@@ -12,6 +12,15 @@ export const CHANNEL_FAMILY: Record<Channel, ChannelFamily> = {
   roll: 'turn',
 };
 
+/** Each family's tint token (`src/styles/tokens.css`), keyed so a new family fails to compile here. */
+export const CHANNEL_FAMILY_TINT: Record<ChannelFamily, string> = {
+  distance: 'var(--color-channel-distance)',
+  lookAt: 'var(--color-channel-look-at)',
+  turn: 'var(--color-channel-turn)',
+  layers: 'var(--color-channel-layers)',
+  settings: 'var(--color-channel-settings)',
+};
+
 export const CHANNEL_FAMILY_LEGEND: readonly {
   readonly family: ChannelFamily;
   readonly name: string;

@@ -1,11 +1,5 @@
-/* The dock owns the tokens its parts share: one hue per channel family (dataviz-checked against
-   this surface, in legend order) and the grid sizes the top bar, outline header and rows align to. */
+/* The dock owns the sizes its parts share: the grid the top bar, outline header and rows align to. */
 .dock {
-  --ch-distance: #3987e5;
-  --ch-lookAt: #199e70;
-  --ch-turn: #c98500;
-  --ch-layers: #d55181;
-  --ch-settings: #d95926;
   /* Opaque (alpha dropped): marks use it as a knockout and the renderer must not show through. */
   --dock-bg: color-mix(
     in srgb,
