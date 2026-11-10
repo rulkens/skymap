@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import DockGrabber from '../DockGrabber/DockGrabber';
 import KeyBar from '../KeyBar/KeyBar';
 import KeyHelp from '../KeyHelp/KeyHelp';
@@ -7,6 +7,8 @@ import TopBar from '../TopBar/TopBar';
 import TimelinePane from '../../../timeline/components/TimelinePane/TimelinePane';
 import Inspector from '../../../inspector/components/Inspector/Inspector';
 import { useDockHeight } from '../../hooks/useDockHeight';
+import { useFocusRescue } from '../../hooks/useFocusRescue';
+import { useKeysOverlay } from '../../hooks/useKeysOverlay';
 import { useStudioKeys } from '../../hooks/useStudioKeys';
 import { clipRegistry } from '../../../../../../src/data/animation/clips/clipRegistry';
 import { useIsMobile } from '../../../../../../src/hooks/useIsMobile';
@@ -20,9 +22,9 @@ function StudioDock({ clipId }: Props) {
   const narrow = useIsMobile();
   const root = useRef<HTMLElement>(null);
   const [fraction, setFraction] = useDockHeight();
-  const [keysOpen, setKeysOpen] = useState(false);
-  const toggleKeys = useCallback(() => setKeysOpen((open) => !open), []);
-  const onKeyDown = useStudioKeys(toggleKeys);
+  const keys = useKeysOverlay(root);
+  const onKeyDown = useStudioKeys(keys.toggle);
+  useFocusRescue(root);
   // Focus lives in the dock so its keys work at once, and a click on a row (not focusable) lands here.
   useEffect(() => root.current?.focus({ preventScroll: true }), []);
 
@@ -40,7 +42,7 @@ function StudioDock({ clipId }: Props) {
         <NarrowNotice />
       ) : (
         <>
-          <TopBar keysOpen={keysOpen} onToggleKeys={toggleKeys} />
+          <TopBar keysOpen={keys.open} onToggleKeys={keys.toggle} />
           <div className={s.body}>
             <TimelinePane />
             <aside className={s.inspector} aria-label="Inspector">
@@ -48,7 +50,7 @@ function StudioDock({ clipId }: Props) {
             </aside>
           </div>
           <KeyBar />
-          {keysOpen && <KeyHelp onClose={() => setKeysOpen(false)} />}
+          {keys.open && <KeyHelp onClose={keys.close} />}
         </>
       )}
     </section>

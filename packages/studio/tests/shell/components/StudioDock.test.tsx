@@ -1,11 +1,13 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
 
 import { dollyTo, seq } from '../../../../../src/services/engine/animation/effectHelpers';
 import { exitTakeover } from '../../../../../src/state/takeover/takeoverActions';
 import StudioDock from '../../../src/shell/components/StudioDock/StudioDock';
+import { paramEdited } from '../../../src/session/state/studioSlice';
 import { selectSelection } from '../../../src/session/state/selectors';
 import { openStudioStore } from '../../helpers/openStudioStore';
 
@@ -54,6 +56,44 @@ describe('StudioDock', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Close' }));
     expect(dispatch).toHaveBeenCalledWith(exitTakeover());
     expect(screen.queryByRole('tree')).toBeNull();
+  });
+
+  it('closing the keys overlay gives focus back to its opener', async () => {
+    const user = userEvent.setup();
+    mount();
+    const dock = screen.getByRole('region', { name: /Clip studio/ });
+    const opener = screen.getByRole('button', { name: 'Keyboard shortcuts' });
+
+    await user.click(opener);
+    await user.click(screen.getByRole('button', { name: 'Close keys' }));
+    expect(opener).toHaveFocus();
+
+    dock.focus();
+    await user.keyboard('?');
+    expect(screen.getByRole('button', { name: 'Close keys' })).toHaveFocus();
+    await user.keyboard('{Escape}');
+    expect(dock).toHaveFocus();
+  });
+
+  it('a focused Undo that turns disabled hands focus to the dock', async () => {
+    const user = userEvent.setup();
+    const { store } = mount();
+    act(() => {
+      store.dispatch(
+        paramEdited({
+          ref: { kind: 'effect', path: [0, 0] },
+          param: 'to',
+          value: 500,
+          label: 'Distance',
+          gesture: null,
+        }),
+      );
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Undo Distance' }));
+
+    const dock = screen.getByRole('region', { name: /Clip studio/ });
+    await waitFor(() => expect(dock).toHaveFocus());
   });
 
   it('an empty clip says No steps', () => {
