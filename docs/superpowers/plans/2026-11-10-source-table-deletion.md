@@ -17,7 +17,7 @@ evidence.
 
 **Spec:** `docs/superpowers/specs/2026-11-10-source-table-deletion-design.md`.
 
-**Precondition:** the prep PR (`2026-11-10-source-table-deletion-prep.md`) is merged; this branch starts from
+**Precondition:** the prep PR (`completed/2026-11-10-source-table-deletion-prep.md`) is merged; this branch starts from
 main after it.
 
 ## Global Constraints
