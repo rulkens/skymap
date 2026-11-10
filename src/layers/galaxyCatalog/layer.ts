@@ -14,6 +14,7 @@ import { GALAXY_CATALOG_SOURCE_ROWS } from './sources/galaxyCatalogSourceRows';
 import { create } from './create';
 import { destroy } from './destroy';
 import { galaxyCatalogPlanner } from './frame';
+import { galaxyDisksPlanner } from './disks/present/galaxyDisksPlanner';
 import { galaxyCatalogAssetRows } from './records/load/galaxyCatalogAssetRows';
 import { galaxyCatalogSourceCounts } from './records/load/galaxyCatalogSourceCounts';
 import { galaxyPointSpritesPass } from './pointSprites/passes/galaxyPointSpritesPass';
@@ -64,7 +65,7 @@ export const galaxyCatalogLayer = defineLayer({
     kinds: galaxyCatalogSelectionKinds,
     rows: (runtime) => [galaxyCatalogSelectionRow(runtime)],
   },
-  planners: (runtime) => [galaxyCatalogPlanner(runtime)],
+  planners: (runtime) => [galaxyCatalogPlanner(runtime), galaxyDisksPlanner(runtime)],
   ui: [
     { slot: 'main', content: GalaxiesSectionContainer, title: 'Galaxies' },
     { slot: 'debug', content: GalaxyProvenanceSectionContainer },
