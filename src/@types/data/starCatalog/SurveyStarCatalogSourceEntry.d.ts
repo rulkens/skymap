@@ -15,7 +15,7 @@ import type { OctreeBudgets } from '../../octree/OctreeBudgets';
 export type SurveyStarCatalogSourceEntry = SourceEntryBase & {
   readonly type: 'starCatalog';
   /** Stable numeric tag; registry key only — not persisted, not packed. */
-  readonly code: number;
+  readonly code: string;
   /** `skst`: one `-<tier>.bin` per tier; `octree`: one index plus chunks serve every tier. */
   readonly format: StarCatalogFormat;
   /** Filename stem the fetcher builds the format's path from. */

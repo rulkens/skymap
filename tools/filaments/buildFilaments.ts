@@ -447,7 +447,7 @@ type TaggedPositions = {
   /** Apparent magnitude in the survey's flux-limit band. */
   magG: Float32Array;
   /** Per-galaxy source tag (one of Source.TwoMRS, Source.Glade). */
-  sources: Uint8Array;
+  sources: SourceType[];
   /**
    * Per-galaxy HEALPix angular re-weight in [1, WEIGHT_CAP].
    *
@@ -602,7 +602,7 @@ function readMergedPositions(activeSources: ReadonlySet<SourceKey>): TaggedPosit
   const totalRaw = loaded.reduce((acc, l) => acc + l.cloud.count, 0);
   const positions = new Float32Array(totalRaw * 3);
   const magG = new Float32Array(totalRaw);
-  const sources = new Uint8Array(totalRaw);
+  const sources = new Array<SourceType>(totalRaw);
   const angularWeights = new Float32Array(totalRaw);
   let kept = 0;
   for (const { cloud, source, angular } of loaded) {
@@ -722,7 +722,7 @@ function applyMalmquistDuplication(input: TaggedPositions): Float32Array {
     const z = input.positions[i * 3 + 2]!;
     const D = Math.sqrt(x * x + y * y + z * z);
     const magG = input.magG[i]!;
-    const mLim = galaxyCatalogFluxLimit(input.sources[i]! as SourceType);
+    const mLim = galaxyCatalogFluxLimit(input.sources[i]!);
 
     // Compute the uncapped V_max raw weight first.  Bail safely to
     // raw = 1 if any input is NaN/inf (e.g. a galaxy with missing

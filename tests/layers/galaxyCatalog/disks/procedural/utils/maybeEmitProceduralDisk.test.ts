@@ -18,6 +18,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { Source } from '../../../../../../src/data/source';
 import { maybeEmitProceduralDisk } from '../../../../../../src/layers/galaxyCatalog/disks/procedural/utils/maybeEmitProceduralDisk';
 
 describe('maybeEmitProceduralDisk', () => {
@@ -51,7 +52,7 @@ describe('maybeEmitProceduralDisk', () => {
       1.0, // sbAmp
       base.fadeStartPx,
       base.fadeEndPx,
-      1,
+      Source.SDSS,
       0,
     );
     expect(r).toBeNull();
@@ -70,7 +71,7 @@ describe('maybeEmitProceduralDisk', () => {
       1.0, // sbAmp
       base.fadeStartPx,
       base.fadeEndPx,
-      1,
+      Source.SDSS,
       0,
     );
     expect(r).toBeNull();
@@ -89,7 +90,7 @@ describe('maybeEmitProceduralDisk', () => {
       1.0, // sbAmp
       base.fadeStartPx,
       base.fadeEndPx,
-      1,
+      Source.SDSS,
       0,
     );
     expect(r).not.toBeNull();
@@ -109,7 +110,7 @@ describe('maybeEmitProceduralDisk', () => {
       1.0, // sbAmp
       base.fadeStartPx,
       base.fadeEndPx,
-      1,
+      Source.SDSS,
       0,
     );
     expect(atEnd!.crossfadeAlpha).toBeCloseTo(1, 6);
@@ -127,7 +128,7 @@ describe('maybeEmitProceduralDisk', () => {
       1.0, // sbAmp
       base.fadeStartPx,
       base.fadeEndPx,
-      1,
+      Source.SDSS,
       0,
     );
     expect(farPast!.crossfadeAlpha).toBeCloseTo(1, 6);
@@ -149,7 +150,7 @@ describe('maybeEmitProceduralDisk', () => {
       1.0, // sbAmp
       base.fadeStartPx,
       base.fadeEndPx,
-      1,
+      Source.SDSS,
       0,
     );
     expect(r!.crossfadeAlpha).toBeCloseTo(0.15625, 6);
@@ -168,7 +169,7 @@ describe('maybeEmitProceduralDisk', () => {
       1.0, // sbAmp
       base.fadeStartPx,
       base.fadeEndPx,
-      1,
+      Source.SDSS,
       0,
     );
     expect(r).not.toBeNull();

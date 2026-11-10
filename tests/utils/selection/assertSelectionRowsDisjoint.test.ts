@@ -29,7 +29,7 @@ describe('assertSelectionRowsDisjoint', () => {
   it('throws on a repeated pick source code', () => {
     expect(() =>
       assertSelectionRowsDisjoint([row('galaxy', [Source.SDSS]), row('star', [Source.SDSS])]),
-    ).toThrow(/SDSS|1/);
+    ).toThrow(/sdss/);
   });
 
   it('throws on a repeated type', () => {

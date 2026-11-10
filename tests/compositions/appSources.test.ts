@@ -3,8 +3,8 @@ import { Source } from '../../src/data/source';
 import { APP_SOURCE_REGISTRY } from '../../src/compositions/appSources';
 
 describe('Source.FamousGalaxy', () => {
-  it('has integer value 4 (next free slot after Glade=3)', () => {
-    expect(Source.FamousGalaxy).toBe(4);
+  it('is the famous galaxy entry’s id', () => {
+    expect(Source.FamousGalaxy).toBe('famousGalaxy');
   });
 });
 
@@ -20,9 +20,9 @@ describe('APP_SOURCE_REGISTRY ids', () => {
 });
 
 describe('Source enum — structure codes (cluster/supercluster/void)', () => {
-  it('appends Cluster=5, Supercluster=6, Void=7 to the enum', () => {
-    expect(Source.GalaxyCluster).toBe(5);
-    expect(Source.Supercluster).toBe(6);
-    expect(Source.Void).toBe(7);
+  it('names the structure sources by their ids', () => {
+    expect(Source.GalaxyCluster).toBe('galaxy-cluster');
+    expect(Source.Supercluster).toBe('supercluster');
+    expect(Source.Void).toBe('void');
   });
 });

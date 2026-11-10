@@ -12,5 +12,5 @@ import type { SourceEntryBase } from '../SourceEntryBase';
 export type ZoneOfAvoidanceSourceEntry = SourceEntryBase & {
   readonly type: 'zoneOfAvoidance';
   /** Stable numeric tag; not persisted, only used as the registry key. */
-  readonly code: number;
+  readonly code: string;
 };

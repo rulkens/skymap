@@ -1,77 +1,74 @@
 /**
- * Stable numeric tag for every data source: a `.bin` byte for galaxy catalog rows and a
- * registry key. Never a pick code: the pick word's 6-bit codes come from the runtime
- * allocator (`createPickCodeAllocator`). Wire-format contract, so it runs over the comment budget.
- *
- * Append, never renumber: values are baked into every `.bin`.
- * Retired and unassigned: 0, 10, 12-14. Insertion order here is cosmetic; the VALUE is the contract.
+ * Transitional alias table: each member's value is its source entry's id, so ids key every
+ * registry, asset and ref. Never a pick code (`createPickCodeAllocator` allocates those).
+ * Deleted once call sites name the ids directly.
  */
 export const Source = {
   /** Sloan Digital Sky Survey galaxy catalog. */
-  SDSS: 1,
+  SDSS: 'sdss',
   /** 2MASS Redshift Survey galaxy catalog. */
-  TwoMRS: 2,
+  TwoMRS: '2mrs',
   /** GLADE v2.3: pre-merged HyperLEDA, GWGC, 2MASS XSC, 2MPZ, 6dFGS, SDSS-DR12Q with cross-match dedup. */
-  Glade: 3,
+  Glade: 'glade',
   /** Hand-picked well-known galaxies; M31, M33, M81, NGC 253 are too near for 2MRS/GLADE's small-z filter, so they carry their own positions. */
-  FamousGalaxy: 4,
+  FamousGalaxy: 'famousGalaxy',
   /** Cluster anchors; a pick's 26-bit `localIdx` indexes the structure table (`selectionEncoding.ts`). */
-  GalaxyCluster: 5,
+  GalaxyCluster: 'galaxy-cluster',
   /** Supercluster anchors; same encoding as GalaxyCluster. */
-  Supercluster: 6,
+  Supercluster: 'supercluster',
   /** Void anchors; same encoding as GalaxyCluster. */
-  Void: 7,
+  Void: 'void',
   /** Milliquas v8 (Flesch 2023) AGN point sources. */
-  Milliquas: 8,
+  Milliquas: 'milliquas',
   /** Cosmic-web filament skeleton (DisPerSE): one global asset, registry key only. */
-  Filaments: 9,
+  Filaments: 'filaments',
   /** MCPM cosmic-web density volume (SDSS DR17 VAC), tier-aware. */
-  Mcpm: 11,
+  Mcpm: 'mcpm',
   /** Nearby galaxy-group anchors; same encoding as GalaxyCluster, seed-only. */
-  GalaxyGroup: 15,
+  GalaxyGroup: 'galaxy-group',
   /** Procedural Milky-Way disk overlay; pickable via `milkyWayPickRenderer`. */
-  MilkyWay: 16,
+  MilkyWay: 'milkyWay',
   /** CF4++ peculiar-velocity flow field (`flowfield.scfd`); registry key only. */
-  Flow: 17,
+  Flow: 'flow',
   /** DESI DR1 deep cone (Corona Borealis, NGC-only) to z ≈ 3.5; own `.bin`. */
-  DesiDeep: 18,
+  DesiDeep: 'desiDeep',
   /** DESI DR1 declination-band wedge (see `DESI_PATCHES`); own `.bin`. */
-  DesiWedge: 19,
+  DesiWedge: 'desiWedge',
   /** DESI DR1 Sloan Great Wall: depth-bounded ellipsoid union (`makeEllipsoidUnionFilter`), pure BGS; own `.bin`. */
-  DesiSgw: 20,
+  DesiSgw: 'desiSgw',
   /**
    * Curated nearby-star map; identity is the seed id, including the Sun's dot, since the star layers share one seed table.
    */
-  FamousStar: 21,
+  FamousStar: 'famousStar',
   /** True-scale Solar-System bodies; pickable via `drawPick`, not persisted. */
-  Planet: 22,
+  Planet: 'planet',
   /** Textured true-scale Earth; pickable via `drawPick`, not persisted. */
-  Earth: 23,
+  Earth: 'earth',
   /** Survey-wide Gaia stars (tiered `stars-<tier>.bin`); leaf stars are pickable, identity is the record index. */
-  GaiaStars: 24,
+  GaiaStars: 'gaiaStars',
   /** True-3D constellation figures (`constellations.json`); registry key only. */
-  Constellations: 25,
+  Constellations: 'constellations',
   /** The Sun, its own row so the star map's gate stays a membership test. */
-  Sun: 26,
+  Sun: 'sun',
   /** Sagittarius A\*: draws nothing. */
-  SgrAStar: 27,
+  SgrAStar: 'sgr-a-star',
   /** The 39 bound S-stars; their own seed table. */
-  SStar: 28,
+  SStar: 'sStar',
   /** Zone-of-avoidance band; pickable. */
-  ZoneOfAvoidance: 29,
+  ZoneOfAvoidance: 'zoneOfAvoidance',
   /** 2MRS Polyphorm density volume; registry key only, default-off test field. */
-  Polyphorm2MRS: 30,
+  Polyphorm2MRS: 'polyphorm-2mrs',
   /** MCPM workbench promoted-export volume (`tools/volumes/promoteWorkbenchExport.ts`); registry key only. */
-  McpmWorkbench: 31,
+  McpmWorkbench: 'mcpm-workbench',
   /** All missions-Layer craft under one code; the pick index runs over `MISSION_CRAFT_IDS`. */
-  Craft: 32,
+  Craft: 'craft',
   /** Milky Way structure markers drawn by the NEAR0 marker pass; same encoding as GalaxyCluster, seed-only. */
-  OpenCluster: 33,
-  GlobularCluster: 34,
-  Nebula: 35,
-  GcCluster: 36,
+  OpenCluster: 'open-cluster',
+  GlobularCluster: 'globular-cluster',
+  Nebula: 'nebula',
+  GcCluster: 'gc-cluster',
   /** The satellites Layer's points; the pick index runs over the day's catalog. */
-  Satellite: 37,
+  Satellite: 'satellites',
   /** Vesta, Ceres and Bennu's label checkbox; they pick as `Planet` rows. */
-  SmallBody: 38,
+  SmallBody: 'small-body',
 } as const;

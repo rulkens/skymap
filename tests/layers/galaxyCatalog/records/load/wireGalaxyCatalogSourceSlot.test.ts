@@ -85,7 +85,7 @@ describe('wireGalaxyCatalogSourceSlot', () => {
 
     expect(h.deps.publish).toHaveBeenCalledTimes(1);
     const patch = vi.mocked(h.deps.publish).mock.calls[0]![0] as {
-      provenanceCounts: Record<number, unknown>;
+      provenanceCounts: Record<string, unknown>;
     };
     expect(patch.provenanceCounts[Source.SDSS]).toBe(h.records.get(Source.SDSS)!.stats.provenance);
   });
@@ -150,7 +150,7 @@ describe('wireGalaxyCatalogSourceSlot', () => {
     expect(h.catalogs.has(Source.SDSS)).toBe(false);
     expect(h.bumpCatalogsVersion).toHaveBeenCalledOnce();
     const patch = vi.mocked(h.deps.publish).mock.calls[0]![0] as {
-      provenanceCounts: Record<number, unknown>;
+      provenanceCounts: Record<string, unknown>;
     };
     expect(patch.provenanceCounts[Source.SDSS]).toBeUndefined();
     expect(galaxyCatalogFetcher).toHaveBeenCalledTimes(1);

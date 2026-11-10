@@ -11,7 +11,7 @@ import type { StructureScale } from './StructureScale';
 export type StructureSourceEntry = SourceEntryBase & {
   readonly type: 'structure';
   /** Stable numeric tag, matching the upper 6 bits of the packed pick ID. */
-  readonly code: number;
+  readonly code: string;
   /**
    * Cosmic structures are regions of the galaxy distribution (their InfoCard counts
    * member galaxies); Milky Way structures sit inside our Galaxy and draw in the

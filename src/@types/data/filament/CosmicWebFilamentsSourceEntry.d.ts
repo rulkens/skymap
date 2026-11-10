@@ -13,7 +13,7 @@ import type { SourceEntryBase } from '../SourceEntryBase';
 export type CosmicWebFilamentsSourceEntry = SourceEntryBase & {
   readonly type: 'cosmicWebFilaments';
   /** Stable numeric tag; not persisted, only used as the registry key. */
-  readonly code: number;
+  readonly code: string;
   /** Filename stem under `public/data/` (the loader appends `.bin`). */
   readonly binBaseName: string;
 };

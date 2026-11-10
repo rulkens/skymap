@@ -1,14 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { installOctreePool } from '../../../src/services/octree/installOctreePool';
-import type { SourceType } from '../../../src/@types/data/SourceType';
+import { Source } from '../../../src/data/source';
 import type { Octree } from '../../../src/@types/octree/Octree';
 import type { OctreeChunkStream } from '../../../src/@types/octree/OctreeChunkStream';
 import type { OctreePoolHost } from '../../../src/@types/octree/OctreePoolHost';
 
 type Records = { readonly count: number };
 
-const SOURCE = 7 as SourceType;
+const SOURCE = Source.Void;
 const FORMAT = { chunkPath: () => 'unused', decodeRecords: (): Records => ({ count: 0 }) };
 // A degenerate bake (a `--limit` dev run): no index records, no chunks.
 const EMPTY = { chunks: [], chunkCount: 0, records: { count: 0 } } as unknown as Octree<Records>;

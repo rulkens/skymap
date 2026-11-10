@@ -50,8 +50,9 @@ function idOf(source: GalaxyCatalogSourceType): GalaxyCatalogId {
 // structured-clone round-trip.
 const testRunner: BuildRunner = async (input) => buildPointInterleavedBuffer(input);
 
-/** Far from every `Source` value, so a store that writes the catalog value instead fails. */
-const PICK_CODE_OF = (source: GalaxyCatalogSourceType): number => source + 40;
+/** Distinct from the source id, so a store that writes the id instead of the pick code fails. */
+const PICK_CODE_OF = (source: GalaxyCatalogSourceType): number =>
+  Object.values(Source).indexOf(source) + 40;
 
 // ─── Test helpers ─────────────────────────────────────────────────────────────
 

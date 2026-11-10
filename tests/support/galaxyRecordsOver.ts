@@ -1,5 +1,6 @@
 import { GALAXY_CATALOG_SOURCE_RECORD } from '../../src/layers/galaxyCatalog/sources/galaxyCatalogSourceRecord';
 import { flatGalaxyRecordSource } from '../../src/layers/galaxyCatalog/records/load/flatGalaxyRecordSource';
+import type { SourceType } from '../../src/@types/data/SourceType';
 import type { GalaxyCatalog } from '../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogSourceType } from '../../src/layers/galaxyCatalog/@types/GalaxyCatalogSourceType';
 import type { GalaxyRecordSource } from '../../src/layers/galaxyCatalog/records/@types/GalaxyRecordSource';
@@ -10,7 +11,7 @@ import type { GalaxyRecordSource } from '../../src/layers/galaxyCatalog/records/
  * consumer a `catalogs` map.
  */
 export function galaxyRecordsOver(
-  catalogs: ReadonlyMap<number, GalaxyCatalog>,
+  catalogs: ReadonlyMap<SourceType, GalaxyCatalog>,
 ): Map<GalaxyCatalogSourceType, GalaxyRecordSource> {
   const records = new Map<GalaxyCatalogSourceType, GalaxyRecordSource>();
   for (const [source, catalog] of catalogs) {

@@ -4,5 +4,5 @@ import type { SourceEntryBase } from '../SourceEntryBase';
 export type SatelliteSourceEntry = SourceEntryBase & {
   readonly type: 'satellite';
   /** Stable numeric tag; not persisted, packed into the pick texture. */
-  readonly code: number;
+  readonly code: string;
 };

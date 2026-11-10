@@ -181,7 +181,7 @@ describe('galaxyPointSpritesPass.draw', () => {
       makeGalaxyCatalogFade({ sdss: 0.5, famousGalaxy: 0.25 }),
     );
     const settings = drawSpy.mock.calls[0]![3] as Record<string, unknown>;
-    const fadeOf = settings.fadeOpacityOf as (source: number) => number;
+    const fadeOf = settings.fadeOpacityOf as (source: string) => number;
     expect(fadeOf(Source.SDSS)).toBe(0.5);
     expect(fadeOf(Source.FamousGalaxy)).toBe(0.25);
   });

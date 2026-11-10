@@ -11,7 +11,7 @@ import type { SourceEntryBase } from '../SourceEntryBase';
 export type FlowSourceEntry = SourceEntryBase & {
   readonly type: 'flow';
   /** Stable numeric tag; not persisted, only used as the registry key. */
-  readonly code: number;
+  readonly code: string;
   /** Filename stem under `public/data/` (the loader appends `.scfd`). */
   readonly binBaseName: string;
 };

@@ -220,7 +220,7 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
       ctx,
       state,
     );
-    const settings = drawSpy.mock.calls[0]![3] as { fadeOpacityOf: (source: number) => number };
+    const settings = drawSpy.mock.calls[0]![3] as { fadeOpacityOf: (source: string) => number };
     return settings.fadeOpacityOf(Source.SDSS);
   }
 

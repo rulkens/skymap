@@ -20,6 +20,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createProceduralDiskRenderer } from '../../../../../../src/layers/galaxyCatalog/disks/procedural/render/proceduralDiskRenderer';
 import { FLOATS_PER_INSTANCE } from '../../../../../../src/layers/galaxyCatalog/disks/quad/render/instancedQuadRenderer';
+import { Source } from '../../../../../../src/data/source';
 import { packSelection } from '../../../../../../src/data/selectionEncoding';
 import type { ProceduralDiskInstance } from '../../../../../../src/layers/galaxyCatalog/disks/procedural/@types/ProceduralDiskInstance';
 
@@ -78,12 +79,19 @@ function makeStubInit() {
       focusBgl:
         {} as unknown as import('../../../../../../src/@types/rendering/FocusUniformsBgl').FocusUniformsBgl,
       reversedZ: false,
-      pickCodeOf: (source: number) => source + 40,
+      pickCodeOf: (source: string) => FAKE_PICK_CODES[source]!,
     },
     writeBufferCalls,
     renderPipelines,
   };
 }
+
+/** Distinct from the source ids, so a draw that writes the id instead of the pick code fails. */
+const FAKE_PICK_CODES: Readonly<Record<string, number>> = {
+  [Source.SDSS]: 41,
+  [Source.TwoMRS]: 42,
+  [Source.Glade]: 43,
+};
 
 // Stub shared focus bind group passed into draw() — only bound, never read.
 const FOCUS_BIND_GROUP = {} as unknown as GPUBindGroup;
@@ -101,7 +109,7 @@ function fakeProceduralInstance(
     colourIndex: 0.7,
     crossfadeAlpha: 0.5,
     procFadeOut: 1,
-    source: 1,
+    source: Source.SDSS,
     localIdx: 0,
     sbAmp: 1,
     ...overrides,
@@ -135,8 +143,8 @@ describe('proceduralDiskRenderer pack loop (Task R2)', () => {
     } as unknown as GPURenderPassEncoder;
 
     const instances: ProceduralDiskInstance[] = [
-      fakeProceduralInstance({ source: 1, localIdx: 7 }),
-      fakeProceduralInstance({ source: 3, localIdx: 1_000_000 }),
+      fakeProceduralInstance({ source: Source.SDSS, localIdx: 7 }),
+      fakeProceduralInstance({ source: Source.Glade, localIdx: 1_000_000 }),
     ];
 
     renderer.draw(
@@ -155,7 +163,7 @@ describe('proceduralDiskRenderer pack loop (Task R2)', () => {
     // Reinterpret the same bytes as u32 to inspect the bitcast-written slot 6.
     const u32 = new Uint32Array(visualPayload.buffer);
 
-    // The catalog maps through `pickCodeOf` (source + 40 here).
+    // The catalog maps through `pickCodeOf` (`FAKE_PICK_CODES` here).
     expect(u32[6]).toBe(packSelection(41, 7));
     expect(u32[FLOATS_PER_INSTANCE + 6]).toBe(packSelection(43, 1_000_000));
   });
@@ -311,9 +319,9 @@ describe('proceduralDiskRenderer.pickDisks draw count', () => {
       100,
       FOCUS_BIND_GROUP,
       [
-        fakeProceduralInstance({ source: 1, localIdx: 42 }),
-        fakeProceduralInstance({ source: 2, localIdx: 99 }),
-        fakeProceduralInstance({ source: 3, localIdx: 7 }),
+        fakeProceduralInstance({ source: Source.SDSS, localIdx: 42 }),
+        fakeProceduralInstance({ source: Source.TwoMRS, localIdx: 99 }),
+        fakeProceduralInstance({ source: Source.Glade, localIdx: 7 }),
       ],
     );
 
@@ -352,9 +360,9 @@ describe('proceduralDiskRenderer.pickDisks draw count', () => {
       100,
       FOCUS_BIND_GROUP,
       [
-        fakeProceduralInstance({ source: 1, localIdx: 10 }),
-        fakeProceduralInstance({ source: 1, localIdx: 11 }),
-        fakeProceduralInstance({ source: 1, localIdx: 12 }),
+        fakeProceduralInstance({ source: Source.SDSS, localIdx: 10 }),
+        fakeProceduralInstance({ source: Source.SDSS, localIdx: 11 }),
+        fakeProceduralInstance({ source: Source.SDSS, localIdx: 12 }),
       ],
     );
     const pickPass1 = makeStubPass();

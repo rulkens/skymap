@@ -14,5 +14,5 @@ import type { SourceEntryBase } from '../SourceEntryBase';
 export type MilkyWaySourceEntry = SourceEntryBase & {
   readonly type: 'milkyWay';
   /** Stable numeric tag; not persisted, only used as the registry key. */
-  readonly code: number;
+  readonly code: string;
 };

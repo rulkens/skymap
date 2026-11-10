@@ -3,8 +3,7 @@
  *
  * What can actually break here is not the row's field values (a compiler-checked
  * literal) but its CONSEQUENCES in the derived key domains — the settings row it
- * seeds, the cluster it seeds it in, the label domain it must stay out of, and
- * the pick-code budget it eats into. Each of those is a separate file that reads
+ * seeds, the cluster it seeds it in, and the label domain it must stay out of. Each of those is a separate file that reads
  * the registry and would fail silently, not loudly.
  */
 
@@ -16,7 +15,6 @@ import { SUN_ENTRY } from '../../../src/layers/starCatalog/sources/sun';
 import { BODY_SOURCE_IDS } from '../../../src/data/bodies/bodySourceIds';
 import { STAR_CATALOG_IDS } from '../../../src/data/starCatalog/starCatalogIds';
 import { INITIAL_SETTINGS } from '../../../src/state/settings/initialSettings';
-import { SELECTION_SOURCE_SHIFT } from '../../../src/data/selectionEncoding';
 
 describe('the S-star source row', () => {
   it('seeds a STAR-catalog settings row', () => {
@@ -35,15 +33,10 @@ describe('the S-star source row', () => {
     expect(BODY_SOURCE_IDS).not.toContain(SUN_ENTRY.id);
   });
 
-  it('every registry code fits the pick texture’s source field, uniquely', () => {
-    // The packed identity gives the source code `32 - SELECTION_SOURCE_SHIFT`
-    // bits with the all-ones value reserved as the no-hit sentinel, so 62 is the
-    // last usable code. Nothing else checks the ceiling, and overflowing it would
-    // corrupt `localIdx` rather than fail: the OR would carry into the index.
-    const codes = Object.values(APP_SOURCE_REGISTRY).map((entry) => entry.code);
-    const maxCode = (1 << (32 - SELECTION_SOURCE_SHIFT)) - 1 - 1;
-    expect(Math.max(...codes)).toBeLessThanOrEqual(maxCode);
-    expect(new Set(codes).size).toBe(codes.length);
+  it('the registry is keyed by each entry’s code, and the S-star row is in it', () => {
+    // A `Source` member that drifts from its entry's id would key the row under a
+    // name no asset, setting or ref uses.
+    for (const [key, entry] of Object.entries(APP_SOURCE_REGISTRY)) expect(key).toBe(entry.code);
     expect(APP_SOURCE_REGISTRY[Source.SStar]).toBe(S_STAR_ENTRY);
   });
 });

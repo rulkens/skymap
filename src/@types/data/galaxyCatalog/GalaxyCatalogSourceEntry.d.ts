@@ -14,7 +14,7 @@ import type { Tier } from '../Tier';
 export type GalaxyCatalogSourceEntry = SourceEntryBase & {
   readonly type: 'galaxyCatalog';
   /** Stable numeric tag, matching the `.bin` file format byte. */
-  readonly code: number;
+  readonly code: string;
   /**
    * Filename stem under `public/data/` (and on R2). Tier-aware sources get
    * `-<tier>` appended by `tierFilenameForSource`.

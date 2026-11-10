@@ -742,7 +742,7 @@ async function runCli(): Promise<void> {
 
   // Capture per-source input counts up front so the summary can report
   // the dedup drop rate per survey, not just the merged total.
-  const inputCounts: Record<number, number> = {
+  const inputCounts: Partial<Record<SourceType, number>> = {
     [Source.SDSS]: sdss.length,
     [Source.TwoMRS]: twoMrs.length,
     [Source.Glade]: glade.length,

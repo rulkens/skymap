@@ -16,5 +16,5 @@ import type { SourceEntryBase } from '../SourceEntryBase';
 export type ConstellationsSourceEntry = SourceEntryBase & {
   readonly type: 'constellations';
   /** Stable numeric tag; not persisted, only used as the registry key. */
-  readonly code: number;
+  readonly code: string;
 };

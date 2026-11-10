@@ -10,6 +10,7 @@ import { galaxyCatalogPlanner } from '../../../src/layers/galaxyCatalog/frame';
 import { Source } from '../../../src/data/source';
 import { galaxyCatalogIdOf } from '../../../src/utils/galaxyCatalogIdOf';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
+import type { SourceType } from '../../../src/@types/data/SourceType';
 import { makeGalaxyCatalogFade } from '../../fixtures/makeGalaxyCatalogFade';
 import { makeGalaxyCatalogItems } from '../../fixtures/makeGalaxyCatalogItems';
 import type { GalaxyCatalogSourceType } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogSourceType';
@@ -71,7 +72,7 @@ function makeState(select: SelectionRowBase | null): PassState {
 }
 
 // No committed pgcAlias, so the alias-index reconcile stays inert here.
-function makeRuntime(catalogs: Map<number, GalaxyCatalog>) {
+function makeRuntime(catalogs: Map<SourceType, GalaxyCatalog>) {
   const publish = vi.fn();
   const runtime = {
     catalogs,

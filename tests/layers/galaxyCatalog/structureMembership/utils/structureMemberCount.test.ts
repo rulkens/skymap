@@ -43,7 +43,7 @@ const cluster: StructureInfo = {
 function cloudFrom(map: Partial<Record<SourceType, GalaxyCatalog>>) {
   return galaxyRecordsOver(
     new Map(
-      Object.entries(map).map(([source, catalog]) => [Number(source) as SourceType, catalog]),
+      Object.entries(map).map(([source, catalog]) => [source as SourceType, catalog]),
     ),
   );
 }

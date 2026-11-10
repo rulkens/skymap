@@ -17,7 +17,7 @@ import { galaxyRecordsOver } from '../../../../support/galaxyRecordsOver';
 const fakeCatalogs = (objIdsBySource: Partial<Record<SourceType, BigUint64Array>>) => {
   const catalogs = new Map<SourceType, GalaxyCatalog>();
   for (const [source, objIDs] of Object.entries(objIdsBySource)) {
-    catalogs.set(Number(source) as SourceType, makeGalaxyCatalog(objIDs.length, { objIDs }));
+    catalogs.set(source as SourceType, makeGalaxyCatalog(objIDs.length, { objIDs }));
   }
   return galaxyRecordsOver(catalogs).values();
 };

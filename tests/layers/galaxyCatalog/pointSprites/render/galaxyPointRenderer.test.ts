@@ -50,7 +50,8 @@ function idOf(source: GalaxyCatalogSourceType): GalaxyCatalogId {
 // same pure function the worker would call — bit-identical behaviour without a
 // structured-clone round-trip.
 const testRunner: BuildRunner = async (input) => buildPointInterleavedBuffer(input);
-const PICK_CODE_OF = (source: GalaxyCatalogSourceType): number => source + 40;
+const PICK_CODE_OF = (source: GalaxyCatalogSourceType): number =>
+  Object.values(Source).indexOf(source) + 40;
 
 // ─── Test helpers ─────────────────────────────────────────────────────────────
 

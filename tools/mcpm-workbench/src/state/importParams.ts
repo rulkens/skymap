@@ -91,9 +91,14 @@ function optionalSourceList(
   const v = obj[field];
   if (v === undefined) return undefined;
   if (!Array.isArray(v)) fail(`"${field}" must be an array of source ids`);
+  if (v.length > 0 && v.every((id) => typeof id === 'number')) {
+    fail(
+      `"${field}" holds numeric source codes from before source ids — re-export the preset from the current workbench`,
+    );
+  }
   const known = new Set<SourceType>(WORKBENCH_SOURCES);
   for (const id of v) {
-    if (typeof id !== 'number' || !known.has(id as SourceType)) {
+    if (typeof id !== 'string' || !known.has(id as SourceType)) {
       fail(`"${field}" contains unknown source id ${JSON.stringify(id)}`);
     }
   }
