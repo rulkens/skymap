@@ -265,5 +265,26 @@ recommendation and the owner's ruling.
   knots on the lane only. **Decision:** selectable child rows, folded by default past about 8
   waypoints. The labelled knots stay on the lane when the rows are folded.
 
+## Q21: An edit view and a camera view (supersedes Q10)
+
+**The question:** The owner asked for "an edit view and a camera view". The camera view is what the
+clip's camera sees at the playhead. The edit view is a free 3D view from outside, showing the path,
+the look-at line and the camera frustum (the clip-path debug overlay). Should they be one viewport
+with a toggle, or both visible at once?
+
+**Considerations:**
+
+- **Option A (toggle, renamed):** one viewport that switches between Camera view and Edit view. It
+  replaces Follow / Free with clearer names and needs no engine change.
+- **Option B (both at once, picture-in-picture):** the edit view is the main viewport and the camera
+  view sits in a swappable inset. The framing and the result are visible together. The renderer
+  must draw the scene twice per frame, which is a big engine change at roughly double the GPU cost.
+- **Option C (side-by-side split):** the same engine cost as B, with each view at half width.
+
+**Decision:** B, both views at once as picture-in-picture, swappable. This supersedes Q10's Follow /
+Free toggle: the edit camera is always free and the camera view always follows the playhead. A
+second view of the scene is ground preparation for the spec. The existing cubemap and probe
+captures, which already render the scene from other poses, are where to look for a seam.
+
 _Still open (engineering, to be proposed in the spec):_ how the studio's RTK state plugs into the
 app store.
