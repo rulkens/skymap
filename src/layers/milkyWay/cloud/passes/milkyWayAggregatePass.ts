@@ -15,22 +15,16 @@ import type { MilkyWayRuntime } from '../../@types/MilkyWayRuntime';
 import { deriveMilkyWayCloudAlpha } from '../present/milkyWayCloudLiveness';
 import { milkyWayCamPosModel } from '../render/milkyWayCamPosModel';
 import { milkyWayModelCached } from '../render/milkyWayModelCached';
-import { selectMilkyWayParts } from '../../state/milkyWay/selectors';
+import { isMilkyWayCloudLive } from '../present/isMilkyWayCloudLive';
 
 export function milkyWayAggregatePass(runtime: MilkyWayRuntime): ContentPass<'milkyWayDisk'> {
   return {
     name: 'milky-way-aggregate',
     fade: 'milkyWayDisk',
 
-    // Shared with the upsample consumer — see `milkyWayCloudLiveness` on why
-    // they must answer identically. The cloud part also gates `mw-aggregate`'s
-    // allocation, so neither reads a released row.
-    enabled(state, ctx, _view, fade) {
-      return (
-        selectMilkyWayParts(state.settings.milkyWay).cloud &&
-        deriveMilkyWayCloudAlpha(ctx, fade, runtime.pickCode) !== null
-      );
-    },
+    // The cloud part also gates `mw-aggregate`'s allocation, so this pass and
+    // the upsample never read a released row.
+    enabled: (state, ctx, _view, fade) => isMilkyWayCloudLive(state, ctx, fade, runtime.pickCode),
 
     draw(pass, view, ctx, state, fade) {
       const fadeAlpha = deriveMilkyWayCloudAlpha(ctx, fade, runtime.pickCode);

@@ -5,8 +5,8 @@
  * Dust stays here, full-res in HDR — its per-channel transmittance has to
  * land on the real cosmological accumulation; the ADDITIVE star pass lives in
  * `milkyWayAggregatePass` (see that layer's header). `enabled` is the
- * `cloudDust` part over `deriveMilkyWayCloudAlpha`, the alpha it shares with
- * the aggregate producer and its upsample consumer (`milkyWayCloudLiveness`).
+ * `cloudDust` part over `isMilkyWayCloudLive`, the rule the aggregate
+ * producer and its upsample consumer share.
  *
  * Slab is NEAR0, not COSMO: COSMO's near plane (10 kpc) would slice the
  * disc's ~9.5 kpc near edge mid-crossfade with the approach fade. NEAR0's
@@ -28,6 +28,7 @@ import { milkyWayModelCached } from '../render/milkyWayModelCached';
 import { isPickableUnderFocus } from '../../../../utils/structure/isPickableUnderFocus';
 import { MILKY_WAY_CENTER_WORLD } from '../../../../data/milkyWay/galacticCenter';
 import { selectMilkyWayParts } from '../../state/milkyWay/selectors';
+import { isMilkyWayCloudLive } from '../present/isMilkyWayCloudLive';
 
 /**
  * Camera origin distance (Mpc) below which the impostor stops taking clicks —
@@ -57,7 +58,7 @@ export function milkyWayPass(runtime: MilkyWayRuntime): ContentPass<'milkyWayDis
     // the field's dust that extincts.
     enabled: (state, ctx, _view, fade) =>
       selectMilkyWayParts(state.settings.milkyWay).cloudDust &&
-      deriveMilkyWayCloudAlpha(ctx, fade, runtime.pickCode) !== null,
+      isMilkyWayCloudLive(state, ctx, fade, runtime.pickCode),
 
     // Composed over the alpha, NOT over `enabled`: the impostor picks in every
     // renderer mode, so the disc stays clickable when the dust is off. It is

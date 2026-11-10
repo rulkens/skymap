@@ -4,15 +4,14 @@
  * correct here — unlike `starAggregateUpsamplePass`, these records aren't
  * Gaia photometry and need no LOD-symmetry fix — so this draws through its
  * own handle. Runs immediately before `milkyWayPass`'s dust pass, so dust
- * multiplies the upsampled starlight too; `enabled` shares the cloud part and
- * `deriveMilkyWayCloudAlpha` with the producer so the two can't disagree.
+ * multiplies the upsampled starlight too; `enabled` is the producer's own
+ * `isMilkyWayCloudLive`, so the two can't disagree.
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { MilkyWayRuntime } from '../../@types/MilkyWayRuntime';
 import { createUpsamplePass } from '../../../../services/engine/frame/passes/createUpsamplePass';
-import { deriveMilkyWayCloudAlpha } from '../present/milkyWayCloudLiveness';
-import { selectMilkyWayParts } from '../../state/milkyWay/selectors';
+import { isMilkyWayCloudLive } from '../present/isMilkyWayCloudLive';
 
 export function milkyWayUpsamplePass(runtime: MilkyWayRuntime): ContentPass<'milkyWayDisk'> {
   return createUpsamplePass<'milkyWayDisk'>({
@@ -20,8 +19,6 @@ export function milkyWayUpsamplePass(runtime: MilkyWayRuntime): ContentPass<'mil
     sourceTargetId: 'mw-aggregate',
     fade: 'milkyWayDisk',
     handleOf: () => runtime.additiveUpsample,
-    enabled: (state, ctx, fade) =>
-      selectMilkyWayParts(state.settings.milkyWay).cloud &&
-      deriveMilkyWayCloudAlpha(ctx, fade, runtime.pickCode) !== null,
+    enabled: (state, ctx, fade) => isMilkyWayCloudLive(state, ctx, fade, runtime.pickCode),
   });
 }
