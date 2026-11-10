@@ -30,6 +30,9 @@
   min-height: 0;
 }
 .inspector {
+  /* One row the panel fills, so a tall panel scrolls inside it. */
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
   min-height: 0;
   border-left: 1px solid var(--border-divider);
 }
