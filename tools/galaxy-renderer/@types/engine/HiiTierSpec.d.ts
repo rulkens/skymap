@@ -1,22 +1,12 @@
 /**
- * HiiTierSpec — one row of `data/hiiTiers.ts`'s `HII_TIERS`, the table that
- * drives each tier's target, divisor, bind group, header and timing slot
- * across the engine and the shared field renderer, instead of copy-pasting
- * DIG's split two more times.
+ * HiiTierSpec — one row of `data/hiiTiers.ts`'s `HII_TIERS`: which render-bag
+ * divisor sizes each HII tier's own reduced target in the tool.
  */
 import type { HiiTier } from '../../../../src/layers/milkyWay/field/starFormation/@types/HiiTier';
 import type { RenderSettings } from './RenderSettings';
 
 export type HiiTierSpec = {
   readonly kind: HiiTier;
-  /**
-   * `field.hiiSegments`' own label for this tier (`buildHiiShellsAndYoungWithSegments.ts`'s
-   * `buildHiiRegionsWithSegments`) — restated here, not imported, since that
-   * function returns plain string literals with no exported constant. Also
-   * this tier's GPU-timing slot name (`timingSlots.ts`): one string serves
-   * both, since a pass and the segment it draws are the same span.
-   */
-  readonly label: string;
   /** Which `RenderSettings` lane sizes this tier's own reduced target. */
   readonly divisorKey: keyof Pick<RenderSettings, 'shellsDivisor' | 'digDivisor' | 'youngDivisor'>;
 };

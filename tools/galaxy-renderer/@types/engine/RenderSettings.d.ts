@@ -66,7 +66,7 @@ export type RenderSettings = {
   readonly fieldDivisor: number;
   /** Downsample divisor of the dust-column map's own offscreen. Separate from `fieldDivisor` because the dust splat is much higher-frequency than the smooth emission field — see `defaultRenderSettings.ts`. Also reallocates rather than riding the uniform. */
   readonly dustDivisor: number;
-  /** Downsample divisor of `hiiTex`, now home to the `hii:extras` span alone (background extras' whole HII contribution — see `HiiTierSpec`'s own doc for why it can't split further). 1 by default for the same firefly reason `shellsDivisor` is: a shell embedded in an extra is still small and bright. Also reallocates rather than riding the uniform. */
+  /** Downsample divisor of `hiiTex`, now home to the `hii:extras` span alone (background extras' whole HII contribution — see `hiiSplat/extrasFragment.wesl`'s header for why it can't split further). 1 by default for the same firefly reason `shellsDivisor` is: a shell embedded in an extra is still small and bright. Also reallocates rather than riding the uniform. */
   readonly extrasDivisor: number;
   /** Downsample divisor of the shells tier's own offscreen (`data/hiiTiers.ts`'s `HII_TIERS`) — a shell sprite is small and bright by construction, so sharing a coarser target collapses it under a texel and bloom promotes the spike into a firefly. Also reallocates rather than riding the uniform. */
   readonly shellsDivisor: number;
