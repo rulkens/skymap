@@ -15,3 +15,4 @@ Perf gate: not run: slice 1 adds no per-frame work (compileClip spans run once p
 - G2 follow-ups (4 rulings) · sonnet · →bcf9ca467 · done
 - Landing: pushed 2f751f6a4 (wave B complete); typecheck:fast clean
 - Wave C dispatched from 2f751f6a4: G4 Tasks 4.1–4.5 (sonnet), G5 Tasks 5.1–5.3 + Q38 Slider compact variant (sonnet); round-3 mock designer running in parallel
+- G5 Q38 + Tasks 5.1–5.3 · sonnet · 946b908bc, ca0953603, 2073c587b, f3f9dc1b9 · done; studio tests 25 files/68 green, typecheck:fast clean. Deviations: head eyebrow follows mock (`Top level · 12/18`); only percent fields are sliders (only ones with min+max); channel pick options local Record (engine exports no list); error chips have no action yet. Open: head glyph not family-tinted (InspectorHead has no family prop, no --ch-* tokens outside mock) → controller in Task 6.1 / tokens. Task 6.1 mounts inspector/components/Inspector/Inspector.tsx
