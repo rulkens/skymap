@@ -31,7 +31,7 @@ import package::milkyWay::ismMap::ismMapGrid::IsmMapGrid;
 const DUST_SURVIVAL_FLOOR_FRAC: f32 = 0.01;
 
 // grid: the log-radial bounds THIS galaxy's grid was built over
-// (galaxyIsmMapArmForcing.ts's ismMapGridRadius) — written once per ISM-map
+// (buildGalaxyIsmMapArmForcing.ts's ismMapGridRadius) — written once per ISM-map
 // rebuild, not every frame like io.wesl's 'u' above.
 @group(0) @binding(1) var ismMapTex: texture_2d<f32>;
 @group(0) @binding(2) var ismMapSmp: sampler;
@@ -51,14 +51,11 @@ fn vs(@builtin(vertex_index) vi: u32) -> FullscreenOut {
 
 @fragment
 fn fs(input: FullscreenOut) -> @location(0) vec4<f32> {
-  let tanHalfFov = u.params.x;
-  let aspect = u.params.y;
-  let shift = u.params.z;
   // FullscreenOut carries 'uv' (its @builtin(position) is FRAMEBUFFER
   // pixels in the fragment stage, not NDC) — cameraRayFromUv undoes
   // fullscreenVertex's own uv transform to recover the NDC
   // fieldSplat/fragment.wesl's fs reconstructs its ray from.
-  let d = cameraRayFromUv(input.uv, u.camRight.xyz, u.camUp.xyz, u.camFwd.xyz, tanHalfFov, aspect, shift);
+  let d = cameraRayFromUv(input.uv, u.camRight.xyz, u.camUp.xyz, u.camFwd.xyz, u.frustum);
   let o = u.eye.xyz;
 
   // Disc-plane (y=0) intersection; a ray parallel to or diverging from the

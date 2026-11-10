@@ -1,5 +1,5 @@
 /**
- * starTintFromBpRp — the CPU evaluation of starCatalog/tint.wesl's `starTint`,
+ * starTintFromBpRp — the CPU evaluation of lib/starTint.wesl's `starTint`,
  * the ONE canonical Gaia BP−RP → linear-RGB stellar-tint ramp.
  *
  * ## Why a CPU twin exists
@@ -10,12 +10,14 @@
  * point cloud it rose out of. Rather than pick a second, freely-drifting
  * blackbody path (that is `temperatureToLinearRgb`, which keys on kelvin — a
  * different input domain, deliberately independent), we mirror the exact
- * BP−RP ramp here. This function and `starCatalog/tint.wesl`'s `starTint` are
+ * BP−RP ramp here. This function and `lib/starTint.wesl`'s `starTint` are
  * two evaluations of ONE ramp and must be kept in lockstep: any change to the
  * anchors or breakpoints in the WESL must be mirrored here (and vice versa),
- * and the tests in `starTintFromBpRp.test.ts` guard the shared values.
+ * and `starTint.parity.test.ts` reads the WESL to guard the shared values. The
+ * stellar-stream captions use it too, matching the streaks that
+ * `stellarStreams/streaks/vertex.wesl` tints.
  *
- * ## Anchors and breakpoints (copied VERBATIM from tint.wesl:48-58)
+ * ## Anchors and breakpoints (copied VERBATIM from lib/starTint.wesl)
  *
  *   ob = vec3(0.6, 0.7, 1.0)    // O/B blue-white   at BP−RP -0.30
  *   af = vec3(1.0, 1.0, 0.98)   // A/F white        at BP−RP  0.30
@@ -50,10 +52,10 @@ function mix(a: Vec3, b: Vec3, t: number): Vec3 {
 
 /**
  * Gaia BP−RP colour → linear RGB (0..1), the shape `starRenderer.draw`
- * expects. Evaluates the same ramp as `starCatalog/tint.wesl`'s `starTint`.
+ * expects. Evaluates the same ramp as `lib/starTint.wesl`'s `starTint`.
  */
 export function starTintFromBpRp(bpRp: number): Vec3 {
-  // Spectral-class anchors (linear RGB) — VERBATIM from tint.wesl.
+  // Spectral-class anchors (linear RGB) — VERBATIM from lib/starTint.wesl.
   const ob: Vec3 = [0.6, 0.7, 1.0]; // O/B blue-white
   const af: Vec3 = [1.0, 1.0, 0.98]; // A/F white
   const gc: Vec3 = [1.0, 0.97, 0.85]; // G yellow-white

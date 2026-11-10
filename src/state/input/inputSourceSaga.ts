@@ -32,10 +32,10 @@ import type { BindingTable } from '../../@types/input/BindingTable';
 import type { DeviceEvent } from '../../@types/input/DeviceEvent';
 import type { HeldIntent } from '../../@types/input/HeldIntent';
 import type { Motion } from '../../@types/input/Motion';
-import type { SourceId } from '../../@types/input/SourceId';
+import type { InputSourceId } from '../../@types/input/InputSourceId';
 import type { UnitPoint } from '../../@types/input/UnitPoint';
 
-export function* inputSourceSaga(source: SourceId, channel: EventChannel<DeviceEvent>) {
+export function* inputSourceSaga(source: InputSourceId, channel: EventChannel<DeviceEvent>) {
   // Latched at each press: a `shift+c` mid-gesture must not change the running gesture's intent,
   // nor the table its tap is judged by. The next press reads the new scheme.
   let bindings: BindingTable = CONTROL_BINDINGS.skymap;

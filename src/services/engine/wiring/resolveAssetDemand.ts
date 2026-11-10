@@ -6,6 +6,7 @@
  */
 
 import { visibilityEntryOf } from '../../../utils/visibility/visibilityEntryOf';
+import { sceneBodyCoverageOf } from '../../../utils/visibility/sceneBodyCoverageOf';
 import { bodyFootprintRadiusM } from '../../../utils/scene/bodyFootprintRadiusM';
 import { innerBoundRadiusM } from '../../../utils/occlusion/innerBoundRadiusM';
 import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
@@ -51,6 +52,24 @@ function resolveSize(demand: DeclaredDemand): Pick<DemandResolution, 'sizeRadius
   };
 }
 
+// The frame admits a covered body only while its show item is on, so its size-gated asset
+// waits on that same switch. Two covering items cannot fold into one `shown`.
+function coveringShown(
+  demand: DeclaredDemand,
+  entries: readonly VisibilityEntry[],
+): DeclaredDemand['shown'] {
+  if (demand.size === undefined) return undefined;
+  const coveredBy = sceneBodyCoverageOf(entries).get(demand.size.body)?.coveredBy ?? NONE;
+  if (coveredBy.length > 1) {
+    throw new Error(`size body '${demand.size.body}' is covered by more than one show item`);
+  }
+  const identity = coveredBy[0];
+  if (identity === undefined) return undefined;
+  return identity.item === undefined
+    ? identity.address
+    : { address: identity.address, items: [identity.item] };
+}
+
 export function resolveAssetDemand(
   demand: DeclaredDemand,
   gates: AssetWiringRow['gates'],
@@ -60,9 +79,10 @@ export function resolveAssetDemand(
     demand.shown ??
     (gates === undefined || typeof gates === 'string'
       ? gates
-      : { address: gates.address, items: [gates.item] });
+      : { address: gates.address, items: [gates.item] }) ??
+    coveringShown(demand, entries);
   if (shown === undefined) {
-    // A body is drawn whatever the switches say, so a size gate alone needs no switch to read.
+    // An uncovered body is drawn whatever the switches say, so its size gate needs no switch.
     if (demand.size === undefined || demand.near !== undefined) {
       throw new Error('declares neither `shown` nor `gates`');
     }

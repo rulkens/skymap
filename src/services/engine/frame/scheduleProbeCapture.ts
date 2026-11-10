@@ -10,6 +10,7 @@
 
 import type { CaptureFace } from '../../../@types/engine/frame/CaptureFace';
 import type { CubeFace } from '../../../@types/rendering/CubeFace';
+import type { CubemapCaptureKey } from '../../../@types/rendering/CubemapCaptureKey';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { MeshPresentation } from '../../../@types/scene/MeshPresentation';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
@@ -24,19 +25,19 @@ import { sceneBodyPartition } from './sceneBodyPartition';
 import { sceneBodyStates } from './sceneBodyStates';
 import type { PositionedId } from '../../../@types/scene/PositionedId';
 import { ALL_CUBE_FACES } from '../../../data/rendering/cubemapCaptures';
-import { captureTimingSlotName } from './timing/captureTimingSlotName';
 
 export function scheduleProbeCapture(input: {
   readonly state: EngineState;
   readonly ctx: FrameView;
+  readonly captureOn: (key: CubemapCaptureKey) => boolean;
 }): ReadonlyMap<CubeFace, CaptureFace> | null {
   const { state, ctx } = input;
   const runtime = state.cubemapCaptures.probe;
   runtime.subject = null;
   runtime.due = false;
+  runtime.refreshOwedInMs = null;
   const renderer = state.gpu.meshBodyRenderer;
-  if (renderer === null || state.settings.debug.disabledPasses[captureTimingSlotName('probe')])
-    return null;
+  if (renderer === null || !input.captureOn('probe')) return null;
 
   // The oldest refresh wins, a never-refreshed body oldest of all — so N bodies
   // resolving at once cycle through the one in-flight probe in turn.
@@ -44,14 +45,24 @@ export function scheduleProbeCapture(input: {
   let refreshedAtMs = Number.POSITIVE_INFINITY;
   let dueCount = 0;
   const roster = bodySlabRosterIds(ctx.snapshot.meshBodies);
+  const dueInMs = new Map<string, number>();
   for (const body of sceneBodyPartition(state, ctx, roster, () => false).meshes) {
     const at = runtime.refreshedAtMs.get(body.id) ?? Number.NEGATIVE_INFINITY;
     if (ctx.snapshot.nowMs - at >= PROBE_REFRESH_INTERVAL_MS) dueCount++;
+    dueInMs.set(body.id, Math.max(0, at + PROBE_REFRESH_INTERVAL_MS - ctx.snapshot.nowMs));
     if (at < refreshedAtMs) {
       refreshedAtMs = at;
       subject = body;
     }
   }
+  // This frame rendered after each drawn body's last capture, so each owes one
+  // refresh: the scene may have changed (a texture landing) since its probe.
+  const owedInMs = (except: string | null): number | null => {
+    let soonest: number | null = null;
+    for (const [id, ms] of dueInMs) if (id !== except) soonest = Math.min(soonest ?? ms, ms);
+    return soonest;
+  };
+  runtime.refreshOwedInMs = owedInMs(null);
   if (subject === null || ctx.snapshot.nowMs - refreshedAtMs < PROBE_REFRESH_INTERVAL_MS)
     return null;
 
@@ -70,7 +81,10 @@ export function scheduleProbeCapture(input: {
     axes,
     bodyStates: ctx.snapshot.bodyStates,
   });
-  if (!capture.isReady) return null;
+  if (!capture.isReady) {
+    runtime.refreshOwedInMs = null;
+    return null;
+  }
   const faces = new Map<CubeFace, CaptureFace>();
   for (const face of ALL_CUBE_FACES) {
     const faceCtx = deriveView(
@@ -92,6 +106,7 @@ export function scheduleProbeCapture(input: {
   }
   runtime.subject = subject.id;
   runtime.refreshedAtMs.set(subject.id, ctx.snapshot.nowMs);
+  runtime.refreshOwedInMs = owedInMs(subject.id);
   runtime.due = dueCount > 1;
   return faces;
 }

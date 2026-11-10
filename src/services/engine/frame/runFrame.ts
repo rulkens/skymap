@@ -39,8 +39,8 @@ import { selectPendingInput } from '../../../state/input/selectors';
 import { selectViewCoverPx } from '../../../state/viewCover/selectors';
 import { NO_INSETS_PX } from '../../../data/layout/noInsetsPx';
 import { inputConsumed } from '../../../state/input/inputSlice';
-import { isKind } from '../../../utils/selection/isKind';
-import type { StructureInfo } from '../../../@types/data/structure/StructureInfo';
+import { selectionKindShown } from '../presentation/selectionKindShown';
+import { isRecedingFocusRow } from '../../../utils/selection/isRecedingFocusRow';
 
 /**
  * Idle-tick cadence for a LIVE sim clock, ms. At the 127 km tile standoff the
@@ -183,19 +183,22 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // Next pass's size gates measure against this frame's views.
   state.drawPxPerRad = views.reduce((max, view) => Math.max(max, view.drawPxPerRad), 0);
 
-  // `produceFocusUniforms(nowMs)` TICKS the focus fade, so it runs EXACTLY ONCE
+  // `produceFocus(nowMs)` TICKS the focus fade, so it runs EXACTLY ONCE
   // per frame, before every consumer of the blend (label director, markers,
   // render settings); all of them read the captured value, never a fresh call.
   const focusRow = state.selectionRows.focus;
-  const focusedStructure = isKind<StructureInfo>(focusRow, 'structure') ? focusRow : null;
-  state.subsystems.structureFocus.update(focusedStructure, nowMs);
-  const focusUniforms = state.subsystems.structureFocus.produceFocusUniforms(nowMs);
-  snapshot.focusBlend = focusUniforms.blend;
-  snapshot.focus = focusUniforms;
-  snapshot.focusPickId = encodeSelectionPick(
-    state.selectionKindRows,
-    state.subsystems.structureFocus.lastFocusRef(),
+  state.subsystems.recedingFocus.update(
+    state.selection.focus,
+    isRecedingFocusRow(focusRow) ? focusRow : null,
+    nowMs,
   );
+  // A focus recedes the scene only while its subject's kind is shown, measured at the frame camera.
+  const focus = state.subsystems.recedingFocus.produceFocus(nowMs, (ref) =>
+    selectionKindShown(state, canvas, ref.type),
+  );
+  snapshot.focus = focus.uniforms;
+  snapshot.focusBlend = focus.blend;
+  snapshot.focusPickId = encodeSelectionPick(state.selectionKindRows, focus.ref);
 
   // Before the GPU dispatch (they upload the label buffers). Three statements,
   // not `a() || b() || c()`: each call FLUSHES as a side effect and `||`
@@ -242,11 +245,15 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     deps.controlSchemes[next.scheme].drivers,
   );
 
+  const probeOwedInMs = state.cubemapCaptures.probe.refreshOwedInMs;
   if (keepTicking) {
     state.subsystems.scheduler.requestRender();
   } else if (selectIsLiveTicking(rootState)) {
     // At rest with a live sim clock: a coarse heartbeat (see LIVE_IDLE_TICK_MS)
     // the scheduler ignores while a frame is already queued.
     state.subsystems.scheduler.requestIdleFrame(LIVE_IDLE_TICK_MS);
+  } else if (probeOwedInMs !== null) {
+    // At rest with a probe older than this frame: one wake when it falls due.
+    state.subsystems.scheduler.requestIdleFrame(probeOwedInMs);
   }
 }

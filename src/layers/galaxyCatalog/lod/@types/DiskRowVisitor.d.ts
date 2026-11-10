@@ -13,24 +13,24 @@
  */
 
 import type { GalaxyColumnBlock } from '../../records/@types/GalaxyColumnBlock';
-import type { GalaxyCatalogSourceType } from '../../@types/GalaxyCatalogSourceType';
+import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
 
 export type DiskRowVisitor = {
   /** Source bit is clear this frame, or every view is occluded → clear this body's sticky map for it. */
-  onSourceHidden(source: GalaxyCatalogSourceType): void;
+  onSourceHidden(source: GalaxyCatalogId): void;
   /**
    * Before a block's row loop → purgeStrideWindow(stickyMap, windowStart, windowEnd),
    * both ordinals; a row's ordinal is `ordinalBase + i`.
    */
   beginBlock(
-    source: GalaxyCatalogSourceType,
+    source: GalaxyCatalogId,
     windowStart: number,
     windowEnd: number,
     ordinalBase: number,
   ): void;
   /** One surviving row `i` of `block`; geometry (camDist, px) already computed by the walk. */
   onRow(
-    source: GalaxyCatalogSourceType,
+    source: GalaxyCatalogId,
     block: GalaxyColumnBlock,
     i: number,
     x: number,
@@ -40,7 +40,7 @@ export type DiskRowVisitor = {
     px: number,
   ): void;
   /** After the source's last block → push this body's sticky values into its output accumulator. */
-  endSource(source: GalaxyCatalogSourceType): void;
+  endSource(source: GalaxyCatalogId): void;
   /** After all sources → sort back-to-front, stash on the subsystem's lastOutput. */
   endFrame(): void;
 };

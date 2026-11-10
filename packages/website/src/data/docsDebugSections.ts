@@ -69,6 +69,12 @@ export const DOCS_DEBUG_SECTIONS: readonly DocsDebugSection[] = [
     file: 'src/layers/localBubble/shell/ui/LocalBubbleTuningSectionContainer.tsx',
   },
   {
+    heading: 'Stellar streams tuning',
+    shows:
+      'Each stream is drawn twice, as sharp streaks and as a wide haze; for each, its brightness, size, stretch along the orbit, smallest size on screen and drift. A button puts both back to their defaults.',
+    file: 'src/layers/stellarStreams/streaks/ui/StellarStreamsTuningSectionContainer.tsx',
+  },
+  {
     heading: 'Sgr A* lens tuning',
     shows:
       'The drawn ring of gas round the black hole (its radii, tilt, flicker and colour) and the size of the sky picture that is bent round it.',
@@ -102,6 +108,12 @@ export const DOCS_DEBUG_SECTIONS: readonly DocsDebugSection[] = [
     shows:
       'Three sliders for Earth: how bright its atmosphere is drawn, how much light the night side keeps, and how wide the Sun’s glint on the oceans is.',
     file: 'src/layers/body/earth/ui/EarthTuningSectionContainer.tsx',
+  },
+  {
+    heading: 'Probe spheres',
+    shows:
+      'The colour, metalness and roughness of the three mirror spheres that show what a model’s reflection is lit by: one in orbit, one in Søndermarken, one in Jezero crater. The spheres are drawn only with layers=probeSpheres in the link.',
+    file: 'src/layers/probeSpheres/spheres/ui/ProbeSpheresTuningSectionContainer.tsx',
   },
   {
     heading: 'Debug Overlays',

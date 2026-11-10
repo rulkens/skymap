@@ -17,7 +17,7 @@ import { join } from 'node:path';
 import sharp from 'sharp';
 
 import type { SurfaceImagerySource } from './@types/SurfaceImagerySource';
-import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
+import type { LonLatBounds } from '../../src/layers/body/surfaceTiles/format/@types/LonLatBounds';
 
 /** EOX only ever harvests z13 (`fetchEoxTiles.ts`'s header) — coarser levels
  *  are derived at bake time by the existing 2x2 average, same as BMNG. */

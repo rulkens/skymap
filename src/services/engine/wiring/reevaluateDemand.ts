@@ -30,14 +30,11 @@ export function evaluateRows(state: EngineState, rows: readonly AssetWiringRow[]
       const { slot } = row;
       const kind = slot.state().kind;
       const lastRequest = slot.lastRequest();
-      // The queue dedups by string key; no string `AssetKey` is a bare numeral, so
-      // stringifying cannot collide it with a numeric `Source` code.
-      const queueKey = String(row.key);
       const verdict = evaluateAssetDemand(row, ctx, state.visibilityEntries);
       // Enqueue edge: only an idle slot with demand; load() stays a re-fetch primitive.
       if (kind === 'idle' && verdict.demand) {
         batch.push({
-          key: queueKey,
+          key: row.key,
           // NEGATED: `popHighestPriority` pops the LARGEST (thumbnails rank by pixel
           // size), but the wiring table fetches lower first; flip at this one site.
           priority: -row.priority,
@@ -57,7 +54,7 @@ export function evaluateRows(state: EngineState, rows: readonly AssetWiringRow[]
       // Drop edge: an idle slot whose demand went false may still sit unstarted in the
       // queue, and `release()` only runs on a committed slot, so nothing else retracts it.
       else if (kind === 'idle') {
-        queue.drop(queueKey);
+        queue.drop(row.key);
       }
       // Evict edge: `release` is separate from `demand` to encode hysteresis (load
       // inside X, evict outside 2X). Idle slots go to the drop edge.
@@ -80,7 +77,7 @@ export function evaluateRows(state: EngineState, rows: readonly AssetWiringRow[]
       }
     } catch (err) {
       // A throwing declaration costs one asset, not the whole table.
-      console.warn(`reevaluateDemand: row '${String(row.key)}' threw during evaluation`, err);
+      console.warn(`reevaluateDemand: row '${row.key}' threw during evaluation`, err);
     }
   }
   // Outside the per-row guard: a throw from queue scheduling is an engine bug to surface.

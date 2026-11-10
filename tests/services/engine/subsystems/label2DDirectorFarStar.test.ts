@@ -39,7 +39,7 @@ import type { Label2D } from '../../../../src/@types/rendering/Label2D';
 import type { MarkerLine } from '../../../../src/@types/rendering/MarkerLine';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { symmetricFrustum } from '../../../../src/utils/camera/frustum/symmetricFrustum';
-import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
+import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/recedingFocusSubsystem';
 import { positionedBodiesOf } from '../../../helpers/frame/positionedBodiesOf';
 import { SEEDED_STAR_CATALOGS } from '../../../../src/data/bodies/seededStarCatalogs';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';

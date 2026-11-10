@@ -64,7 +64,7 @@ describe('createEarthRenderer', () => {
     expect(typeof renderer.setMap).toBe('function');
     expect(renderer.setMap.length).toBe(2);
     expect(typeof renderer.draw).toBe('function');
-    expect(renderer.draw.length).toBe(2);
+    expect(renderer.draw.length).toBe(3);
 
     const bitmap = { width: 4, height: 2 } as unknown as ImageBitmap;
     expect(() => renderer.setMap('surface', bitmap)).not.toThrow();
@@ -80,14 +80,15 @@ describe('createEarthRenderer', () => {
       setIndexBuffer: vi.fn(),
       drawIndexed: vi.fn(),
     } as unknown as GPURenderPassEncoder;
-    expect(() => renderer.draw(pass, new Float32Array(28))).not.toThrow();
+    expect(() => renderer.draw(pass, new Float32Array(28), false)).not.toThrow();
     expect(pass.drawIndexed).toHaveBeenCalledTimes(1);
   });
 
   it('bakes the given targetFormat into the pipeline colour target', () => {
     const renderPipelines: GPURenderPipelineDescriptor[] = [];
     createEarthRenderer(mockDevice({ renderPipelines }), 'rgba16float', 'depth32float', false);
-    expect(renderPipelines).toHaveLength(1);
+    // The pair differs only in cull mode: back, and front for a mirrored capture face.
+    expect(renderPipelines.map((d) => d.primitive!.cullMode)).toEqual(['back', 'front']);
     const target = Array.from(renderPipelines[0]!.fragment!.targets!)[0]!;
     expect(target!.format).toBe('rgba16float');
   });

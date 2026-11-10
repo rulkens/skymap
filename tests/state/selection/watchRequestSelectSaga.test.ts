@@ -7,7 +7,6 @@ import { watchRequestSelectSaga } from '../../../src/state/selection/watchReques
 import { requestSelect } from '../../../src/state/selection/requestSelect';
 import { engineSourceCountReported } from '../../../src/state/engine/engineSlice';
 import { selectionRoute } from '../../../src/store/constants';
-import { Source } from '../../../src/data/source';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import { selectionResolverOver } from '../../support/selectionResolverOver';
 import type { GalaxyRowFixture, StructureRowFixture } from '../../support/selectionResolverOver';
@@ -44,7 +43,7 @@ describe('watchRequestSelectSaga', () => {
     // the deferral cases can land the cloud mid-test.
     const galaxies = {
       get catalogs() {
-        return cloudPresent ? new Map([[Source.SDSS, makeCloud(1237668393006604288n)]]) : new Map();
+        return cloudPresent ? new Map([['sdss', makeCloud(1237668393006604288n)]]) : new Map();
       },
     } as unknown as GalaxyRowFixture;
     const structures: StructureRowFixture = { byId: () => null, byCategory: () => [] };
@@ -73,11 +72,11 @@ describe('watchRequestSelectSaga', () => {
     expect(store.getState()[selectionRoute].select).toBeNull();
 
     cloudPresent = true;
-    store.dispatch(engineSourceCountReported({ source: Source.SDSS, count: 1 }));
+    store.dispatch(engineSourceCountReported({ source: 'sdss', count: 1 }));
     await flush();
     expect(store.getState()[selectionRoute].select).toEqual({
       type: 'galaxyCatalog',
-      source: Source.SDSS,
+      source: 'sdss',
       index: 0,
     });
   });
@@ -92,11 +91,11 @@ describe('watchRequestSelectSaga', () => {
     expect(store.getState()[selectionRoute].select).toBeNull();
 
     cloudPresent = true;
-    store.dispatch(engineSourceCountReported({ source: Source.SDSS, count: 1 }));
+    store.dispatch(engineSourceCountReported({ source: 'sdss', count: 1 }));
     await flush();
     expect(store.getState()[selectionRoute].select).toEqual({
       type: 'galaxyCatalog',
-      source: Source.SDSS,
+      source: 'sdss',
       index: 0,
     });
   });

@@ -53,11 +53,11 @@ export type EngineGpuHandles = {
   sourceBgl: SourceUniformsBgl | null;
   /**
    * Canonical FocusUniforms bind-group layout, shared by every pipeline rendering the
-   * structure-focus dim (points @group(3), impostor disks @group(1), the pick pass).
+   * focus dim (points @group(3), impostor disks @group(1), the pick pass).
    */
   focusBgl: FocusUniformsBgl | null;
   /**
-   * The single shared structure-focus uniform (buffer + bind group + packer), written
+   * The single shared focus uniform (buffer + bind group + packer), written
    * once per frame in `renderFrame`. Its bind group is built against `focusBgl` and
    * bound at each pipeline's own group slot; the pick pass binds the same buffer so non-
    * members of a focused structure are not hit-testable.

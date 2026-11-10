@@ -16,6 +16,7 @@ import { objectSubLists } from '../../../packages/website/src/utils/objectSubLis
 import { tourRegistry } from '../../../src/data/animation/tours/tourRegistry';
 import { BODY_PICK_ROWS } from '../../../src/data/bodies/bodyPickRows';
 import { SCENE_MESH_BODIES } from '../../../src/data/bodies/sceneMeshBodies';
+import { PROBE_SPHERE_ROSTER } from '../../../src/layers/probeSpheres/spheres/data/probeSphereRoster';
 import { SEEDED_STAR_CATALOGS } from '../../../src/data/bodies/seededStarCatalogs';
 import { APP_EXHIBIT_REGISTRY } from '../../../src/compositions/appExhibits';
 import { EARTH_PLACES } from '../../../src/data/palette/earthPlaces';
@@ -26,7 +27,7 @@ import { BODY_FOCUS_PREFIX } from '../../../src/services/url/bodyFocusId';
 import { decodeStarFocusId } from '../../../src/layers/starCatalog/selection/utils/decodeStarFocusId';
 import { MILKY_WAY_FOCUS_ID } from '../../../src/services/url/milkyWayFocusId';
 import { STAR_FOCUS_PREFIX } from '../../../src/services/url/starFocusId';
-import { isRegistryBodyId } from '../../../src/utils/scene/isRegistryBodyId';
+import { isHostBodyId } from '../../../src/utils/scene/isHostBodyId';
 import { linkIntentFrom } from '../../../src/utils/url/linkIntentFrom';
 
 const ROOT = resolve(import.meta.dirname, '../../..');
@@ -39,6 +40,7 @@ const ids = (...kinds: ObjectKind[]) =>
   rowsOf(...kinds)
     .map((row) => row.id)
     .sort();
+const isCraftId = (id: string) => SCENE_MESH_BODIES.some((body) => body.id === id);
 const structureIds = new Set(buildStaticAnchorStructures().map((structure) => structure.id));
 
 /** Whether the app has something behind an id of a `focus` link, by the same decoder or table the app resolves it with. */
@@ -46,13 +48,12 @@ const RESOLVES: Record<ObjectKind, (id: string) => boolean> = {
   sun: (id) => decodeStarFocusId(id, false) !== null,
   star: (id) => decodeStarFocusId(id, false) !== null,
   sStar: (id) => decodeStarFocusId(id, false) !== null,
-  planet: (id) => isRegistryBodyId(id.slice(BODY_FOCUS_PREFIX.length)),
-  moon: (id) => isRegistryBodyId(id.slice(BODY_FOCUS_PREFIX.length)),
-  spacecraft: (id) => isRegistryBodyId(id.slice(BODY_FOCUS_PREFIX.length)),
-  model: (id) => isRegistryBodyId(id.slice(BODY_FOCUS_PREFIX.length)),
+  planet: (id) => isHostBodyId(id.slice(BODY_FOCUS_PREFIX.length)),
+  moon: (id) => isHostBodyId(id.slice(BODY_FOCUS_PREFIX.length)),
+  spacecraft: (id) => isCraftId(id.slice(BODY_FOCUS_PREFIX.length)),
+  model: (id) => isCraftId(id.slice(BODY_FOCUS_PREFIX.length)),
   milkyWay: (id) => id === MILKY_WAY_FOCUS_ID,
-  blackHole: (id) =>
-    BLACK_HOLE_SOURCE_ROWS.some(([, hole]) => encodeBlackHoleFocusId(hole.id) === id),
+  blackHole: (id) => BLACK_HOLE_SOURCE_ROWS.some((hole) => encodeBlackHoleFocusId(hole.id) === id),
   // The app's resolver takes any id of the famous-galaxy shape; the list it checks against is in its data files (below).
   galaxy: (id) => /^[a-z0-9]+$/.test(id),
   'open-cluster': (id) => structureIds.has(id),
@@ -100,7 +101,10 @@ describe('object catalogue', () => {
     const prefixed = (prefix: string, rows: readonly { id: string }[]) =>
       rows.map((row) => `${prefix}${row.id}`).sort();
     expect(ids('planet', 'moon', 'spacecraft', 'model')).toEqual(
-      prefixed(BODY_FOCUS_PREFIX, [...Object.values(BODY_PICK_ROWS).flat(), ...SCENE_MESH_BODIES]),
+      prefixed(BODY_FOCUS_PREFIX, [
+        ...Object.values(BODY_PICK_ROWS).flat(),
+        ...SCENE_MESH_BODIES.filter((body) => !PROBE_SPHERE_ROSTER.has(body.id)),
+      ]),
     );
     expect(ids('sun', 'star', 'sStar')).toEqual(
       prefixed(STAR_FOCUS_PREFIX, Object.values(SEEDED_STAR_CATALOGS).flat()),

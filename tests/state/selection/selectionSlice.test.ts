@@ -9,18 +9,14 @@ import reducer, {
 import { requestFocus } from '../../../src/state/selection/requestFocus';
 import { requestSelect } from '../../../src/state/selection/requestSelect';
 import { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsSlice';
-import { Source } from '../../../src/data/source';
 import type { SelectionState } from '../../../src/@types/store/SelectionState';
 
-const ref = { type: 'galaxyCatalog', source: Source.SDSS, index: 7 } as const;
+const ref = { type: 'galaxyCatalog', source: 'sdss', index: 7 } as const;
 
 describe('selectionSlice', () => {
   it('dedups a structurally-equal write (same slot reference returned)', () => {
     const a = reducer(undefined, updateSelectionFocus(ref));
-    const b = reducer(
-      a,
-      updateSelectionFocus({ type: 'galaxyCatalog', source: Source.SDSS, index: 7 }),
-    );
+    const b = reducer(a, updateSelectionFocus({ type: 'galaxyCatalog', source: 'sdss', index: 7 }));
     // No-op: the focus slot reference is unchanged (Immer returns the same draft).
     expect(b.focus).toBe(a.focus);
   });

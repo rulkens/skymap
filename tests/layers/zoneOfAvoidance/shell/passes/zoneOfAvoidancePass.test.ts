@@ -10,6 +10,7 @@ import { zoneOfAvoidancePass } from '../../../../../src/layers/zoneOfAvoidance/s
 import { ZONE_OF_AVOIDANCE_SHELL } from '../../../../../src/layers/zoneOfAvoidance/shell/data/zoneOfAvoidanceShell';
 import { MILKY_WAY_RADIUS_MPC } from '../../../../../src/data/milkyWay/milkyWayRadiusMpc';
 import { symmetricFrustum } from '../../../../../src/utils/camera/frustum/symmetricFrustum';
+import { STRONG_RECESSION } from '../../../../../src/data/strongRecession';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { ZoneOfAvoidanceRuntime } from '../../../../../src/layers/zoneOfAvoidance/@types/ZoneOfAvoidanceRuntime';
@@ -23,8 +24,10 @@ const PASS_STUB = {
 
 const INSIDE_CAM_DIST = MILKY_WAY_RADIUS_MPC * 10;
 
-function makeCtx(): FrameView {
+// `focusBlend` > 0 is a receding focus fading in or held (a structure or a stream).
+function makeCtx(focusBlend = 0): FrameView {
   return {
+    snapshot: { focusBlend, focusPickId: null },
     cam: { position: [0, 0, INSIDE_CAM_DIST] } as never,
     frustum: symmetricFrustum(1, 1280 / 720),
     canvasSize: { width: 1280, height: 720 },
@@ -66,6 +69,26 @@ describe('zoneOfAvoidancePass.draw', () => {
     expect(args[3]).toBe(state.settings.zoneOfAvoidance);
     expect(args[4]).toBe(ZONE_OF_AVOIDANCE_SHELL);
     expect(args[5]).toBeCloseTo(0.5, 6); // the handed value, inside the window
+  });
+
+  it('recedes under a focus like the other guides', () => {
+    const drawSpy = vi.fn();
+    zoneOfAvoidancePass(makeRuntime({ draw: drawSpy })).draw(
+      PASS_STUB,
+      {} as never,
+      makeCtx(1),
+      liveState(),
+      0.5,
+    );
+    expect(drawSpy.mock.calls[0]![5]).toBeCloseTo(0.5 * STRONG_RECESSION, 6);
+  });
+});
+
+describe('zoneOfAvoidancePass.pickEnabled', () => {
+  it('takes no pick while a focus fades in or is held, and takes it at rest', () => {
+    const pass = zoneOfAvoidancePass(makeRuntime());
+    expect(pass.pickEnabled!(liveState(), makeCtx(0), {} as never, 1)).toBe(true);
+    expect(pass.pickEnabled!(liveState(), makeCtx(0.05), {} as never, 1)).toBe(false);
   });
 });
 

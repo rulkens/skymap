@@ -1,5 +1,5 @@
 import type { AlbedoRecipe } from '../../textures/@types/AlbedoRecipe';
-import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
+import type { LonLatBounds } from '../../../src/layers/body/surfaceTiles/format/@types/LonLatBounds';
 
 export type FieldBody = {
   readonly box: LonLatBounds;

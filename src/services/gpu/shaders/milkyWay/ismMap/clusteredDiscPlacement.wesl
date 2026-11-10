@@ -70,12 +70,10 @@ fn cloudFrameFromWarpSurface(ws: WarpSurfaceFrame) -> CloudFrame {
   return CloudFrame(ws.along, ws.across, ws.pole);
 }
 
-// cdpRingIndexForSample/cdpAzIndexForAngle — ismMapRingIndexForSample.ts /
-// ismMapAzIndexForAngle.ts ported verbatim: the nearest-texel FLOOR bucket
-// sampleGalaxyIsmMap.ts/sampleIsmMapOrientation.ts both share. Deliberately
-// NOT ismMapDustCdfScan.wesl's own round-to-nearest ismMapRingRadius inverse
-// (that one backs the scan's AREA term, this backs a placement SAMPLE — the
-// two CPU originals are different functions on purpose).
+// cdpRingIndexForSample/cdpAzIndexForAngle — the nearest-texel FLOOR bucket
+// every placement sample reads. Deliberately NOT ismMapDustCdfScan.wesl's own
+// round-to-nearest ismMapRingRadius inverse (that one backs the scan's AREA
+// term, this backs a placement SAMPLE — different functions on purpose).
 fn cdpRingIndexForSample(radius: f32, rings: u32, rMin: f32, rMax: f32) -> u32 {
   let clamped = clamp(radius, rMin, rMax);
   var lo = 0u;
@@ -109,7 +107,7 @@ fn cdpRingIndexForRadius(radius: f32, rings: u32, rMin: f32, rMax: f32) -> u32 {
   return u32(clamp(ring, 0, i32(rings - 1u)));
 }
 
-// sampleOrientationNearest — sampleIsmMapOrientation.ts ported verbatim:
+// sampleOrientationNearest —
 // nearest-texel read of the packed (cos2theta, sin2theta) double-angle
 // vector (orientationTex's .xy — createIsmMapOrientation.ts). Returns
 // (angle, coherence).
@@ -205,7 +203,7 @@ const CDP_DISC_SURFACE_WEIGHTS: vec4<f32> = vec4<f32>(0.1667, 0.3065, 0.2131, 0.
 // mode 2u's arm-lane rejection-loop bound.
 const CDP_ARM_FADE_REJECTION_TRIES: u32 = 24u;
 
-// radialTilt — armParticleCloud.ts's own helper (:149-152), ported fresh:
+// radialTilt — deriveArmCloudCount.ts's own helper (:149-152), ported fresh:
 // no WGSL home elsewhere (armRidge.wesl's ridge vocabulary has no bias/tilt
 // concept, and only mode 2u's placement density plus placeArmCloud.wesl's
 // own flux-weight cancellation ever read it).
@@ -332,7 +330,7 @@ fn buildClusteredDiscPlacementChild(
       hasOrientation, orientationTex, orientRings, orientAz, orientRMin, orientRMax,
     );
   } else {
-    // mode 2u ('analytic') — placeAnalyticComplex. armParticleCloud.ts's
+    // mode 2u ('analytic') — placeAnalyticComplex. deriveArmCloudCount.ts's
     // buildClusteredDiscPlacement call never passes ismMapOrientation (this
     // tier has no map-seeded mode), so rotateFrameToOrientation would always
     // be a no-op here — skipped outright rather than threading a dead

@@ -4,12 +4,12 @@
  */
 
 import type { Vec2 } from '../../../../@types/math/Vec2';
-import type { StarCatalogSourceType } from '../../@types/StarCatalogSourceType';
+import type { StarCatalogId } from '../../@types/StarCatalogId';
 import type { OctreeDrawStream } from '../../../../@types/octree/OctreeDrawStream';
 import type { StarFocusSphere } from './StarFocusSphere';
 
 export type StarCatalogCutDrawArgs = {
-  readonly source: StarCatalogSourceType;
+  readonly source: StarCatalogId;
   readonly stream: OctreeDrawStream;
   /** A sky-cubemap face: reads the capture cut, not the frame's. */
   readonly capture: boolean;

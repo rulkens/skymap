@@ -8,7 +8,7 @@
 
 import type { EngineStatus } from '../engine/EngineStatus';
 import type { ScaleInfo } from '../engine/ScaleInfo';
-import type { SourceType } from '../data/SourceType';
+import type { SourceId } from '../data/SourceId';
 import type { LoadProgressState } from '../loading/LoadProgressState';
 import type { LayerSearchEntry } from '../engine/layer/LayerSearchEntry';
 
@@ -33,7 +33,7 @@ export type CoreEngineSliceState = {
    * targets' live format.
    */
   hdrCapable: boolean;
-  sourceCounts: Partial<Record<SourceType, number>>;
+  sourceCounts: Partial<Record<SourceId, number>>;
   loadProgress: LoadProgressState | null;
   /**
    * Palette rows published by each Layer's `search` feed, keyed by Layer name

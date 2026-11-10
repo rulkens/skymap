@@ -19,7 +19,7 @@ import {
 } from '../../../../../src/layers/galaxyCatalog/pointSprites/render/galaxyPointVertexLayout';
 import type { Mat4 } from 'wgpu-matrix';
 import type { GalaxyPointDrawSettings } from '../../../../../src/layers/galaxyCatalog/pointSprites/@types/GalaxyPointDrawSettings';
-import type { ProvenanceFilter } from '../../../../../src/@types/settings/ProvenanceFilter';
+import type { ProvenanceFilter } from '../../../../../src/layers/galaxyCatalog/@types/ProvenanceFilter';
 import { PROVENANCE_FILTER_CODE } from '../../../../../src/layers/galaxyCatalog/provenance/data/provenanceFilter';
 import { packSelection } from '../../../../../src/data/selectionEncoding';
 

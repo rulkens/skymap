@@ -7,7 +7,6 @@ import { describe, it, expect, vi } from 'vitest';
 import { createOctreeCutGpu } from '../../../../src/services/gpu/octree/octreeCutGpu';
 import { FADE_STEP_FLOAT_INDEX } from '../../../../src/services/gpu/octree/octreeCutLayout';
 import { NODE_FADE_MAX_DT_MS, NODE_FADE_MS } from '../../../../src/data/octree/octreeNodeFade';
-import { Source } from '../../../../src/data/source';
 import { starOctreeFromSkst } from '../../../../src/layers/starCatalog/survey/utils/starOctreeFromSkst';
 import type { StarCutInputs } from '../../../../src/layers/starCatalog/octreeCut/@types/StarCutInputs';
 
@@ -38,7 +37,7 @@ function frame(nowMs: number): StarCutInputs {
       refineThreshold: 0.05,
       worldSpread: 1,
       leafMarginRad: 0,
-      sources: [{ source: Source.GaiaStars, opacity: 1, drawBudget: 10 }],
+      sources: [{ source: 'gaiaStars', opacity: 1, drawBudget: 10 }],
     },
     nowMs,
     sizePx: 2.5,
@@ -81,7 +80,7 @@ function setup() {
   };
   const encoder = { beginComputePass: vi.fn(() => pass) } as unknown as GPUCommandEncoder;
   const gpu = createOctreeCutGpu(device as unknown as GPUDevice);
-  gpu.upload(Source.GaiaStars, CATALOG, 0);
+  gpu.upload('gaiaStars', CATALOG, 0);
   const encode = (nowMs: number, recut = true) =>
     gpu.encode(encoder, frame(nowMs), recut, () => ({}));
   return { gpu, device, encoder, pass, encode, fadeSteps };
@@ -132,12 +131,12 @@ describe('octreeCutGpu capture cut', () => {
 describe('octreeCutGpu lifecycle', () => {
   it('has no draw before the first encode, and an empty catalog releases the state', () => {
     const { gpu, encode, encoder } = setup();
-    expect(gpu.drawOf(Source.GaiaStars, 'leaf', false)).toBeNull();
+    expect(gpu.drawOf('gaiaStars', 'leaf', false)).toBeNull();
     encode(0);
-    expect(gpu.drawOf(Source.GaiaStars, 'leaf', false)).not.toBeNull();
+    expect(gpu.drawOf('gaiaStars', 'leaf', false)).not.toBeNull();
 
-    gpu.upload(Source.GaiaStars, EMPTY, 0);
-    expect(gpu.drawOf(Source.GaiaStars, 'leaf', false)).toBeNull();
+    gpu.upload('gaiaStars', EMPTY, 0);
+    expect(gpu.drawOf('gaiaStars', 'leaf', false)).toBeNull();
     const passesBefore = vi.mocked(encoder.beginComputePass).mock.calls.length;
     encode(16);
     expect(vi.mocked(encoder.beginComputePass).mock.calls.length).toBe(passesBefore);

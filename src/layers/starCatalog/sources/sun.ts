@@ -1,5 +1,4 @@
 import type { SeededStarCatalogSourceEntry } from '../../../@types/data/starCatalog/SeededStarCatalogSourceEntry';
-import { Source } from '../../../data/source';
 
 /**
  * The Sun — the near-field descent's aim point, and the origin the whole
@@ -17,7 +16,6 @@ import { Source } from '../../../data/source';
  */
 export const SUN_ENTRY = {
   type: 'starCatalog',
-  code: Source.Sun,
   id: 'sun',
   label: 'Sun',
   // A single body at the near-field origin, not a sky patch — allSky:true

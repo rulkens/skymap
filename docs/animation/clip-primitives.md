@@ -122,7 +122,9 @@ throws naming both windows (windows are half-open `[start, end)`, so segments th
 merely touch at an endpoint do not clash). `vel` and `osc` are additive layers and
 never clash with `base` or each other. This is why `spin('yaw')` +
 `oscillate('pitch')` + `rate('distance')` coexist freely, but `all([dollyTo(…),
-dollyTo(…)])` does not.
+dollyTo(…)])` does not. The one exception is the blend pair of a `seq` with `overlap`:
+the incoming segment carries `blendIn` over the shared window, and the two crossfade
+(see [Blending a seq](#blending-a-seq)).
 
 **A `flyPath` is a composite base writer** — it declares and drives `target`,
 `distance`, `yaw` and `pitch` over its window. `compileClip` runs a companion check,
@@ -227,7 +229,7 @@ legal snap, same as `aimAt`.
 
 | Helper | Signature                          | What it does                                                                                                                                                                                         |
 | ------ | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `seq`  | `seq(children: Effect[]) → Effect` | Play children **in order**; each starts when the previous ends. Block duration is the sum.                                                                                                           |
+| `seq`  | `seq(children: Effect[], { overlap? }) → Effect` | Play children **in order**; each starts when the previous ends, or `overlap` seconds before it. Block duration is the sum less the overlaps. See "Blending a seq".                                                                                                           |
 | `all`  | `all(children: Effect[]) → Effect` | Play children **concurrently**; the block ends when the **longest** child ends.                                                                                                                      |
 | `fork` | `fork(child: Effect) → Effect`     | Start `child` concurrently but **do not** wait for it — the block's duration ignores a fork. A `fork`ed perpetual `spin`/`oscillate` runs "under" the awaited timeline and is cancelled at clip end. |
 | `hold` | `hold(sec) → Effect`               | A timed **dwell**: advance the clock by `sec` holding the current pose. The "slow down at a meaningful scale" beat.                                                                                  |
@@ -236,6 +238,61 @@ legal snap, same as `aimAt`.
 > `hold` and `wait` are both timeline spacers; the distinction is intent — `hold`
 > reads as a deliberate camera dwell, `wait` as a delay before something else fires.
 > Both leave the pose where it was.
+
+#### Blending a seq
+
+`seq(children, { overlap })` lets the steps run into each other. `overlap` is a number
+(the same for every join) or an array with one entry per join between steps that have
+a duration. Zero-length steps (scene cues, `show`/`hide`, `focus`) don't count, so
+adding a cue never shifts the overlaps after it. Step i+1 starts `overlap[i]` seconds
+before step i ends. The top-level `timeline` stays a plain seq; wrap the steps in one
+to blend them.
+
+```ts
+seq([dollyTo(300, 4), dollyTo(900, 4)], { overlap: 0 }); // no stop at 4 s
+seq([dollyTo(400, 4), spin('yaw', { by: 1, over: 4 })], { overlap: 1.5 });
+```
+
+Each channel crosses a join by its own writers' windows, not by the overlap number:
+
+| windows on the channel                  | result                 |
+| --------------------------------------- | ---------------------- |
+| overlapping                           | crossfade             |
+| abutting, in a seq with `overlap` set | velocity-matched join |
+| a gap, or a seq without `overlap`     | rest, as before       |
+
+A channel written on one side of a join just runs; channels on different steps run
+together through the overlap.
+
+**Crossfade.** Inside the overlap the value is a smootherstep mix of the two plans, in
+the channel's space. Value and velocity stay continuous, and the mix never overshoots
+either plan. The incoming move starts from the outgoing one's planned end. A reversal
+turns around inside the window.
+
+**Matched join.** Where a channel's two writers touch (written on both sides of the
+join, neither of zero length), both moves keep their windows but the stop between them
+goes. Both curves become cubic Hermite, meeting at the harmonic mean of their average
+speeds: never faster than twice the slower move, and zero at a reversal.
+The outer ends keep their ease's end speed.
+
+**Rules.** Each is a compile error naming the seq and the join, never a clamp:
+overlaps are finite and ≥ 0, and an array has one per join; an overlap fits inside both
+neighbouring steps, and step i−1 never reaches step i+1; at most two writers are live
+on a channel, and the incoming move may not end before the outgoing one; no blend or
+join across a change of reference frame (a join whose outgoing move opens a frame
+leg needs a zero-length `over: 0` snap of that channel at the leg start so it can read its
+span); both sides of a join use the same space; no composite move (`flyPath`,
+`geodesic`) or looping spin in a blend or join; and cues
+that set the same thing must still fire in written order. `all` keeps one writer per
+channel. `rate` and `oscillate` layers shift with their step and are not blended.
+
+**Known limits.**
+
+- The author picks overlaps that keep fast turns off a narrow lens; stars sweep at the
+  turn rate over the lens angle, and the compiler doesn't check it.
+- No blending across clip boundaries (a clip into its dwell).
+- A `target` join keeps its change of direction: only the speed is matched, so a
+  corner stays a corner.
 
 ### Camera paths (`flyPath`)
 
@@ -418,7 +475,7 @@ handed value = fade(FadeRegistry)  ×  recession(entry, focus blend)  ×  clip(c
   label entry with `of` also takes its thing's clip, so `fade(['constellations'], 0, 2)`
   dims the names with the lines.
 
-> **Galaxy points carry one extra factor, off this product.** Under structure focus
+> **Galaxy points carry one extra factor, off this product.** Under receding focus
 > the points shader multiplies each galaxy's alpha by a per-vertex **isolation**
 > factor: non-members of the focused structure ramp to 0.08, members stay 1.0. It is
 > geometric (distance from the structure centre vs its radius), driven by the same

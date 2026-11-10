@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { actionForRow } from '../../../src/utils/palette/actionForRow';
-import { Source } from '../../../src/data/source';
 import { APP_EXHIBIT_REGISTRY } from '../../../src/compositions/appExhibits';
 import { tourRegistry } from '../../../src/data/animation/tours/tourRegistry';
 import type { FamousGalaxyMetaEntry } from '../../../src/@types/loading/FamousGalaxyMetaEntry';
@@ -18,7 +17,8 @@ const M31: FamousGalaxyMetaEntry = {
 const NGC4565: AliasIndexEntry = {
   pgc: 42038,
   names: ['NGC 4565'],
-  source: Source.Glade,
+  sourceLabel: 'GLADE',
+  focusId: 'pgc-42038',
 };
 
 const COMA: StructureSearchEntry = {

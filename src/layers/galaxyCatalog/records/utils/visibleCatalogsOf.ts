@@ -8,14 +8,12 @@
 
 import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
 import { GALAXY_CATALOG_SOURCES } from '../../sources/galaxyCatalogSources';
-import { galaxyCatalogIdOf } from '../../../../utils/galaxyCatalogIdOf';
 
 export function visibleCatalogsOf(
   fade: Readonly<Record<GalaxyCatalogId, number>>,
 ): ReadonlySet<GalaxyCatalogId> {
   const visible = new Set<GalaxyCatalogId>();
-  for (const src of GALAXY_CATALOG_SOURCES) {
-    const id = galaxyCatalogIdOf(src);
+  for (const id of GALAXY_CATALOG_SOURCES) {
     if (fade[id] > 0) visible.add(id);
   }
   return visible;

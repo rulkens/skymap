@@ -89,7 +89,8 @@ describe('Settings page', () => {
     /^debug\./,
     /^(surfaceTileDebug|terrainPickMarker)\./,
     /^missions\.(craft|speed)$/,
-    /^(constellations|lightTime|zoneOfAvoidance)\.labelEnabled$/,
+    /^(constellations|lightTime|zoneOfAvoidance|stellarStreams)\.labelEnabled$/,
+    /^stellarStreams\.(streak|haze)\.\w+$/,
     /^missions\.items\.[\w-]+\.labelEnabled$/,
     /^picking\./,
     /^focusMoves\.(eased|geodesic)\./,
@@ -107,6 +108,7 @@ describe('Settings page', () => {
     /^milkyWay\.(enabled|starSizeScale|exposure|starPxMin|starPxMax|softness|lodApparent|aggregateDivisor|starCount)$/,
     /^cosmicWebDensity\.items\.[\w-]+\.(contrast|densityScale|paletteId|trim|exposure|bands|intensity)$/,
     /^zoneOfAvoidance\.(intensity|radialFalloff|edgeSharpness|color|labelColor)$/,
+    /^probeSpheres\./,
   ];
 
   it('starts every setting where the app does', () => {

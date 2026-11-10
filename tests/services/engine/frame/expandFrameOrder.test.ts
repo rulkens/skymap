@@ -99,6 +99,8 @@ describe('expandFrameOrder', () => {
       'milky-way-upsample',
       'milky-way',
       'local-bubble',
+      'stellar-streams-haze-upsample',
+      'stellar-streams',
       'light-time-spheres',
       'star-points',
       'star-catalog',
@@ -108,6 +110,7 @@ describe('expandFrameOrder', () => {
       'body-glints',
       'mission-glints',
       'earth-scene-glints',
+      'probe-sphere-glints',
       'black-hole-marker',
     ]);
     // The merged step bills the bare group key, as today: the roster line
@@ -360,6 +363,7 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
       'mission-meshes',
       'body-meshes',
       'earth-scene-meshes',
+      'probe-sphere-meshes',
     ]);
   });
 

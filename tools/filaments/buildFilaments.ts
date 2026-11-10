@@ -72,7 +72,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve, dirname, basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { SourceType } from '../../src/@types/data/SourceType';
+import type { GalaxyCatalogId } from '../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 
 import {
@@ -87,8 +87,7 @@ import {
 } from '../../src/layers/cosmicWebFilaments/filaments/data/filamentBinaryFormat';
 import { FormatVersionError } from '../../src/data/formatVersionError';
 import type { GalaxyCatalog } from '../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import { Source } from '../../src/data/source';
-import { galaxyCatalogFluxLimit } from '../../src/data/galaxyCatalog/galaxyCatalogFluxLimits';
+import { galaxyCatalogFluxLimit } from '../../src/layers/galaxyCatalog/records/data/galaxyCatalogFluxLimits';
 import { absoluteFromApparent } from '../../src/utils/math/absoluteFromApparent';
 import { dMaxFromAbsolute } from '../../src/utils/math/dMaxFromAbsolute';
 import { mulberry32 } from '../../src/utils/random/mulberry32';
@@ -446,8 +445,8 @@ type TaggedPositions = {
   positions: Float32Array;
   /** Apparent magnitude in the survey's flux-limit band. */
   magG: Float32Array;
-  /** Per-galaxy source tag (one of Source.TwoMRS, Source.Glade). */
-  sources: Uint8Array;
+  /** Per-galaxy source tag (one of '2mrs', 'glade'). */
+  sources: GalaxyCatalogId[];
   /**
    * Per-galaxy HEALPix angular re-weight in [1, WEIGHT_CAP].
    *
@@ -469,8 +468,8 @@ type TaggedPositions = {
 
 /**
  * Master list of survey `.bin` files this orchestrator knows how to
- * read.  Each entry pairs the on-disk filename with the `Source` enum
- * value used downstream (for HEALPix angular weights and galaxyCatalogFluxLimit
+ * read.  Each entry pairs the on-disk filename with the source id
+ * used downstream (for HEALPix angular weights and galaxyCatalogFluxLimit
  * lookups) and the lowercase canonical CLI key the `--sources` flag
  * accepts.  Adding a fourth survey would mean appending one row here
  * plus extending `VALID_SOURCE_KEYS` and `SourceKey`.
@@ -483,9 +482,9 @@ type TaggedPositions = {
  * filter rather than a parallel code path.
  */
 const ALL_SOURCE_FILES = [
-  { name: 'sdss.bin', source: Source.SDSS, key: 'sdss' as const },
-  { name: '2mrs.bin', source: Source.TwoMRS, key: '2mrs' as const },
-  { name: 'glade.bin', source: Source.Glade, key: 'glade' as const },
+  { name: 'sdss.bin', source: 'sdss', key: 'sdss' as const },
+  { name: '2mrs.bin', source: '2mrs', key: '2mrs' as const },
+  { name: 'glade.bin', source: 'glade', key: 'glade' as const },
 ] as const;
 
 /**
@@ -516,7 +515,7 @@ const ALL_SOURCE_FILES = [
  * 200 Mpc cut).
  */
 function readMergedPositions(activeSources: ReadonlySet<SourceKey>): TaggedPositions {
-  // Per-source: which `.bin` to read, and which Source enum value to
+  // Per-source: which `.bin` to read, and which source id to
   // tag every surviving galaxy with.  The tag drives the right
   // galaxyCatalogFluxLimit() lookup in the Malmquist pass — m_lim is in the
   // K_s band for 2MRS (11.75), B band for GLADE (18.0), r band for
@@ -531,7 +530,7 @@ function readMergedPositions(activeSources: ReadonlySet<SourceKey>): TaggedPosit
   // and render-time Malmquist treatments consistent.
   const sourceFiles = ALL_SOURCE_FILES.filter((s) => activeSources.has(s.key));
 
-  type LoadedCloud = { cloud: GalaxyCatalog; source: SourceType; angular: Float32Array };
+  type LoadedCloud = { cloud: GalaxyCatalog; source: GalaxyCatalogId; angular: Float32Array };
   const loaded: LoadedCloud[] = [];
   for (const { name, source } of sourceFiles) {
     // `name` is the bare, un-tiered filename (`sdss.bin`/`glade.bin` are
@@ -602,7 +601,7 @@ function readMergedPositions(activeSources: ReadonlySet<SourceKey>): TaggedPosit
   const totalRaw = loaded.reduce((acc, l) => acc + l.cloud.count, 0);
   const positions = new Float32Array(totalRaw * 3);
   const magG = new Float32Array(totalRaw);
-  const sources = new Uint8Array(totalRaw);
+  const sources = new Array<GalaxyCatalogId>(totalRaw);
   const angularWeights = new Float32Array(totalRaw);
   let kept = 0;
   for (const { cloud, source, angular } of loaded) {
@@ -722,7 +721,7 @@ function applyMalmquistDuplication(input: TaggedPositions): Float32Array {
     const z = input.positions[i * 3 + 2]!;
     const D = Math.sqrt(x * x + y * y + z * z);
     const magG = input.magG[i]!;
-    const mLim = galaxyCatalogFluxLimit(input.sources[i]! as SourceType);
+    const mLim = galaxyCatalogFluxLimit(input.sources[i]!);
 
     // Compute the uncapped V_max raw weight first.  Bail safely to
     // raw = 1 if any input is NaN/inf (e.g. a galaxy with missing

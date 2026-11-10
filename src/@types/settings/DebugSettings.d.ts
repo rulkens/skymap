@@ -25,10 +25,12 @@ export type DebugSettings = {
   matteWhite: boolean;
   /**
    * A uniform fill light on mesh bodies (craft, shape-model moons), as a fraction
-   * of sunlight from every direction: 0 is the app's own look. Only the site shot
-   * tool sets it, to open up a craft's shadow side against black space.
+   * of sunlight from every direction, on top of `MESH_SELF_BOUNCE`: 0 is the app's own
+   * look. Only the site shot tool sets it, to open up a craft's shadow side.
    */
   meshAmbient: number;
+  /** The mesh bodies' self-bounce fill (`MESH_SELF_BOUNCE` its default), live-tunable. */
+  meshSelfBounce: number;
   /**
    * Decouples the frame's pass SHAPE from GPU-timing collection: `'auto'`
    * reproduces the timing-derived choice, keeping `?gpuTimings` byte-identical.

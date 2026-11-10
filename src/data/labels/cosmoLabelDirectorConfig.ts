@@ -3,7 +3,7 @@ import { cosmoLabelProjection } from '../../services/engine/frame/cosmoLabelProj
 
 /**
  * The COSMO slab's `Label2DDirector` config — today's hard-wiring restated
- * as data (`Label2DDirectorConfig`, spec §4.3). `padPx: 8` is breathing
+ * as data (`Label2DDirectorConfig`, spec §4.3). `declutterPadPx: 8` is breathing
  * margin around every label's measured text rect before the padded-rect
  * overlap test — see `declutterByBboxOverlap`'s docblock for why padded
  * rects rather than anchor distance. `durationMs: 300` is the appear/
@@ -14,7 +14,7 @@ import { cosmoLabelProjection } from '../../services/engine/frame/cosmoLabelProj
  */
 export const COSMO_LABEL_DIRECTOR: Label2DDirectorConfig = {
   project: cosmoLabelProjection,
-  declutter: { mode: 'bboxOverlap', padPx: 8 },
+  declutterPadPx: 8,
   envelope: { mode: 'smoothstepRamp', durationMs: 300 },
   lift: null,
 };

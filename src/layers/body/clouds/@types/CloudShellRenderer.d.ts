@@ -16,6 +16,12 @@ export type CloudShellRenderer = Renderer & {
    * Draw the shell for one `CloudShellUniforms` record (80 B). `inside` (camera
    * below the shell radius) selects the front-cull pipeline: the outside
    * pipeline's back-cull discards every triangle once the camera is inside.
+   * `mirrored` = `viewFlipsWinding`, which swaps the two.
    */
-  draw(pass: GPURenderPassEncoder, uniforms: Float32Array, inside: boolean): void;
+  draw(
+    pass: GPURenderPassEncoder,
+    uniforms: Float32Array,
+    inside: boolean,
+    mirrored: boolean,
+  ): void;
 };

@@ -108,6 +108,7 @@ pnpm-debug.log*
 !/data/pgc_aliases.json
 !/data/raw/**/README.md
 !/data/raw/**/*.sha256
+!/data/raw/streams/wikipedia_streams_cache.json
 !/data/raw/fonts/*.ttf
 !/data/raw/fonts/OFL.txt
 # Hand-drawn scene-workbench mesh outlines: authored input, not a bake output.
@@ -226,3 +227,9 @@ packages/desktop/build/
 packages/desktop/release/
 # Brand bitmaps from `npm run brand -w packages/desktop` (dist runs it first); the source is src/brand.
 packages/desktop/resources/
+
+# `?mock=<name>` mockups are scratch; only the example and its README are kept (src/dev/mocks/README.md).
+/src/dev/mocks/*
+!/src/dev/mocks/README.md
+!/src/dev/mocks/example.tsx
+!/src/dev/mocks/example.module.css

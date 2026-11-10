@@ -86,11 +86,8 @@ function assertSweep(
 
 const CORE_ALLOWED: Readonly<Record<string, number>> = {
   '@types/data/starCatalog/SeededStarCatalogId.d': 1,
-  '@types/engine/GalaxyRow.d': 1,
-  'data/bodies/seededStarCatalogsBySource': 1,
   'services/engine/wiring/galaxyCatalogRequest': 2,
   'state/selection/captureGalaxyFocusIds': 1,
-  'utils/galaxyCatalogIdOf': 3,
 };
 
 const coreFiles = walk('src').filter(
@@ -325,50 +322,9 @@ function layerOwnedTypes(): Map<string, string> {
   }
 }
 
-// Today's `src/@types/` files only one Layer reaches. Exact: a new one fails, and so does a row
-// that stopped being one; each clears by a move (a row only another row imports moves with it),
-// so a move-only PR empties it (docs/BACKLOG.md).
-const LAYER_OWNED_TYPES_ALLOWED: Readonly<Record<string, string>> = {
-  '@types/data/BodyTextureKey': 'body',
-  '@types/data/BodyTextureSlotKey': 'body',
-  '@types/data/SurfaceEffect': 'body',
-  '@types/data/blackHole/BlackHoleId': 'blackHoles',
-  '@types/data/filament/FilamentCloud': 'cosmicWebFilaments',
-  '@types/data/flow/FlowFieldDefaults': 'flow',
-  '@types/data/flow/FlowMode': 'flow',
-  '@types/data/galaxyCatalog/GalaxyCatalogColumn': 'galaxyCatalog',
-  '@types/data/galaxyCatalog/GalaxyCatalogFieldSpec': 'galaxyCatalog',
-  '@types/data/shellMesh/ShellMesh': 'localBubble',
-  '@types/data/shellMesh/ShellMeshDtype': 'localBubble',
-  '@types/data/structure/structureCatalog/StructureCatalog': 'structure',
-  '@types/data/volume/CosmicWebDensityFieldId': 'cosmicWebDensity',
-  '@types/engine/BlackHoleInfo': 'blackHoles',
-  '@types/engine/SatelliteInfo': 'satellites',
-  '@types/loading/FamousStarMetaEntry': 'starCatalog',
-  '@types/missions/MissionEvent': 'missions',
-  '@types/satellites/SatelliteCatalog': 'satellites',
-  '@types/scene/BodyTextureSpec': 'body',
-  '@types/scene/ChromaCalibration': 'body',
-  '@types/scene/ColourGrade': 'body',
-  '@types/scene/ColourTreatment': 'body',
-  '@types/scene/HeightTileHeader': 'body',
-  '@types/scene/LonLatBounds': 'body',
-  '@types/settings/FlowSettings': 'flow',
-  '@types/settings/ProvenanceAxisSettings': 'galaxyCatalog',
-  '@types/settings/ProvenanceFilter': 'galaxyCatalog',
-};
-
 describe("a src/@types file only one Layer imports lives in that Layer's @types/", () => {
-  it('matches its ALLOWED row exactly', () => {
-    const owned = layerOwnedTypes();
-    const offenders = [
-      ...[...owned]
-        .filter(([key, layer]) => LAYER_OWNED_TYPES_ALLOWED[key] !== layer)
-        .map(([key, layer]) => `'${key}': '${layer}',`),
-      ...Object.keys(LAYER_OWNED_TYPES_ALLOWED)
-        .filter((key) => !owned.has(key))
-        .map((key) => `stale ALLOWED row '${key}': delete it`),
-    ];
+  it('has none left in src/@types', () => {
+    const offenders = [...layerOwnedTypes()].map(([key, layer]) => `'${key}': '${layer}'`);
     assertNoOffenders(
       offenders,
       'Only one Layer imports each of these: `npm run move-files -- src/<key>.d.ts ' +

@@ -21,7 +21,6 @@ import { INITIAL_SETTINGS } from '../../../src/state/settings/initialSettings';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { galaxyPointSpritesPass } from '../../../src/layers/galaxyCatalog/pointSprites/passes/galaxyPointSpritesPass';
 import { deriveMilkyWayCloudAlpha } from '../../../src/layers/milkyWay/cloud/present/milkyWayCloudLiveness';
-import { Source } from '../../../src/data/source';
 import { APP_VISIBILITY_REGISTRY } from '../../../src/compositions/appVisibility';
 import { gatePassByFade } from '../../../src/services/engine/layer/gatePassByFade';
 import { resolveFadeValue } from '../../../src/services/engine/presentation/resolveFadeValue';
@@ -35,6 +34,7 @@ import type { SlabView } from '../../../src/@types/engine/frame/SlabView';
 import { makeGalaxyCatalogItems } from '../../fixtures/makeGalaxyCatalogItems';
 import { galaxyRowRuntime } from '../../support/layerPickCodes';
 import { milkyWayPickCode } from '../../support/layerPickCodes';
+import { ZERO_FOCUS } from '../../../src/services/engine/subsystems/recedingFocusSubsystem';
 
 // `clipOpacityOf` answers `factor` for every call. Typed rather than bare
 // `vi.fn()`, which fails tsc.
@@ -170,7 +170,7 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
   // `galaxyPointRenderer` rides `state.gpu` now (D13), not this ctx.
   function makeDrawCtx(nowMs: number, camPos: Readonly<[number, number, number]>): FrameView {
     return {
-      snapshot: { nowMs, focusBlend: 0 },
+      snapshot: { nowMs, focusBlend: 0, focus: ZERO_FOCUS },
       drawCamPos: camPos,
       fovYRad: FOV_Y_RAD,
       canvasSize: CANVAS,
@@ -219,8 +219,8 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
       ctx,
       state,
     );
-    const settings = drawSpy.mock.calls[0]![3] as { fadeOpacityOf: (source: number) => number };
-    return settings.fadeOpacityOf(Source.SDSS);
+    const settings = drawSpy.mock.calls[0]![3] as { fadeOpacityOf: (source: string) => number };
+    return settings.fadeOpacityOf('sdss');
   }
 
   it('a playing fade([survey], 0, …) cue reduces the drawn survey point opacity', () => {

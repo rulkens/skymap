@@ -72,7 +72,7 @@ import type { SurfaceBakeBand } from './@types/SurfaceBakeBand';
 import type { SurfaceBodyBake } from './@types/SurfaceBodyBake';
 import type { SurfaceImagerySource } from './@types/SurfaceImagerySource';
 import { underfillImagerySource } from './underfillImagerySource';
-import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
+import type { LonLatBounds } from '../../src/layers/body/surfaceTiles/format/@types/LonLatBounds';
 
 /** Default band for a caller that doesn't clamp — degenerates
  *  `candidateTileIndices` back to the whole grid at every level. */

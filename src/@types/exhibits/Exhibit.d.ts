@@ -5,6 +5,7 @@
  * owns restore.
  */
 
+import type { Effect } from '../animation/Effect';
 import type { CameraPose } from '../camera/pose/CameraPose';
 import type { SettingsSnapshot } from '../engine/settings/SettingsSnapshot';
 import type { ExhibitId } from './ExhibitId';
@@ -20,6 +21,9 @@ export type Exhibit = {
   /** When set, `pose.distance` is re-derived at fly time so a sphere of this
    *  radius fits the live viewport — see `sphereFitDistance`. */
   fitRadiusMpc?: number;
+  /** A timeline played from `pose` once the camera is there (fly-in or cut),
+   *  before the hold's drift starts. */
+  arrival?: Effect[];
   /** The italic line under the title — the exhibit's one-sentence claim. */
   lede: string;
   body: readonly ExhibitSection[];

@@ -18,14 +18,11 @@
  * this planner imports both.
  */
 
-import { Source } from '../../../../../data/source';
 import { GALAXY_CATALOG_SOURCE_RECORD } from '../../../sources/galaxyCatalogSourceRecord';
 import { pickColourIndex } from '../../../appearance/data/colourIndex';
-import {
-  absoluteFromApparent,
-  cartesianToRaDec,
-  smoothstep,
-} from '../../../../../utils/math/index';
+import { absoluteFromApparent } from '../../../../../utils/math/absoluteFromApparent';
+import { cartesianToRaDec } from '../../../../../utils/math/cartesianToRaDec';
+import { smoothstep } from '../../../../../utils/math/smoothstep';
 import { galaxySbAmp } from '../../../appearance/utils/galaxySbAmp';
 import { diskQuadExtentMpc } from '../../../lod/utils/diskQuadExtentMpc';
 import { purgeStrideWindow } from '../../../lod/utils/purgeStrideWindow';
@@ -43,7 +40,7 @@ import type { DiskRowVisitor } from '../../../lod/@types/DiskRowVisitor';
 import type { TileStreamSubsystem } from '../../../../../@types/engine/subsystems/tileStreamSubsystem/TileStreamSubsystem';
 import type { SlotStore } from '../../../../../@types/cache/SlotStore';
 import type { ProceduralDiskInstance } from '../@types/ProceduralDiskInstance';
-import type { GalaxyCatalogSourceType } from '../../../@types/GalaxyCatalogSourceType';
+import type { GalaxyCatalogId } from '../../../@types/GalaxyCatalogId';
 import type { GalaxyRecordSource } from '../../../records/@types/GalaxyRecordSource';
 import type { ProceduralDiskSubsystem } from '../@types/ProceduralDiskSubsystem';
 import type { ProceduralDiskFrameInput } from '../@types/ProceduralDiskFrameInput';
@@ -63,16 +60,13 @@ export function createProceduralDiskSubsystem(
 ): ProceduralDiskSubsystem {
   const atlas = deps.atlas;
 
-  const stickyProcDisksBySource = new Map<
-    GalaxyCatalogSourceType,
-    Map<number, ProceduralDiskInstance>
-  >();
+  const stickyProcDisksBySource = new Map<GalaxyCatalogId, Map<number, ProceduralDiskInstance>>();
 
   // Initialised to a frozen empty output so consumers that read
   // `lastOutput` before the first frame see valid data.
   let lastOutput: ProceduralDiskFrameOutput = { instances: [] };
 
-  function stickyFor(source: GalaxyCatalogSourceType): Map<number, ProceduralDiskInstance> {
+  function stickyFor(source: GalaxyCatalogId): Map<number, ProceduralDiskInstance> {
     let sticky = stickyProcDisksBySource.get(source);
     if (!sticky) {
       sticky = new Map();
@@ -179,7 +173,7 @@ export function createProceduralDiskSubsystem(
           // fade-IN band so the two passes hand off in lockstep. Everything
           // else keeps procFadeOut at 1.0.
           let final = emitted;
-          if (atlas && source === Source.FamousGalaxy) {
+          if (atlas && source === 'famousGalaxy') {
             const [ra, dec] = cartesianToRaDec(x, y, z);
             const key = galaxyCacheKey(ra, dec);
             if (atlas.isLoaded(key)) {

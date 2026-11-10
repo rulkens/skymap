@@ -9,7 +9,7 @@
  */
 
 import type { Vec3 } from '../../../../@types/math/Vec3';
-import type { GalaxyCatalogSourceType } from '../../@types/GalaxyCatalogSourceType';
+import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
 import type { GalaxyProvenanceSettings } from '../../@types/GalaxyProvenanceSettings';
 
 export type GalaxyPointDrawSettings = {
@@ -42,7 +42,7 @@ export type GalaxyPointDrawSettings = {
   /** Procedural-disk crossfade band — pixel threshold above which points render zero-alpha (hand-off to disk pass). */
   pxFadeEnd: number;
   /**
-   * Shared structure-focus bind group for the @group(3) FocusUniforms
+   * Shared focus bind group for the @group(3) FocusUniforms
    * binding. The engine owns the single focus buffer (written once per
    * frame in renderFrame) and hands its bind group here; the vertex stage
    * dims non-members of the focused POI. At rest (`blend: 0`) the shader
@@ -52,12 +52,9 @@ export type GalaxyPointDrawSettings = {
   /**
    * Look up the opacity for a given source. Called once per source per frame
    * from the points draw loop; the renderer skips a source at exactly 0 and
-   * writes any other value into the per-source fade ring's `viewSlot` slot. The
-   * renderer passes the numeric source code; the `galaxyPointSpritesPass`
-   * closure resolves it to the catalog's string id and reads the value core
-   * hands the pass.
+   * writes any other value into the per-source fade ring's `viewSlot` slot.
    */
-  readonly fadeOpacityOf: (source: GalaxyCatalogSourceType) => number;
+  readonly fadeOpacityOf: (source: GalaxyCatalogId) => number;
   /**
    * `FrameView.viewSlot` — which view-slot buffer this call's
    * per-frame uniform/fade writes land in (Task 13b). `0` for the main view;

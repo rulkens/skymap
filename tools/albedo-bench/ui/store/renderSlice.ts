@@ -1,6 +1,6 @@
 import { createSlice, type Draft, type PayloadAction } from '@reduxjs/toolkit';
 import type { FieldArrow } from '../../@types/FieldArrow';
-import type { LonLatBounds } from '../../../../src/@types/scene/LonLatBounds';
+import type { LonLatBounds } from '../../../../src/layers/body/surfaceTiles/format/@types/LonLatBounds';
 import type { FieldResult } from '../../@types/FieldResult';
 import type { RenderState } from '../../@types/RenderState';
 

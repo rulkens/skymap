@@ -138,8 +138,8 @@ export type GalaxyCatalog = {
   /**
    * Per-record source-interpreted classification byte — length === count.
    *
-   * The byte's meaning depends on which `Source` this catalog belongs
-   * to: for `Source.Milliquas` it encodes the AGN class letter
+   * The byte's meaning depends on which catalog this is:
+   * for `milliquas` it encodes the AGN class letter
    * (1=Q, 2=A, 3=B, 4=K, 5=N, 6=S), for every other source it is
    * always 0 ("unclassified") today.  Future morphology work on
    * SDSS or GLADE can re-use the same slot with a different lookup
@@ -184,7 +184,7 @@ export type GalaxyCatalog = {
   /**
    * Per-record parent-survey enum byte — length === count.
    *
-   * Only meaningful for `Source.Milliquas` rows: Milliquas Names are
+   * Only meaningful for `milliquas` rows: Milliquas Names are
    * almost always shaped `"<PARENT_SURVEY> J<RA><Dec>"`, where
    * PARENT_SURVEY is one of a small fixed set (SDSS, 2MASX, GAIA,
    * WISEA, NVSS, FIRST, 6dFGS).  At parse time we detect the prefix

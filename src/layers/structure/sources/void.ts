@@ -1,9 +1,7 @@
 import type { StructureSourceEntry } from '../../../@types/data/structure/StructureSourceEntry';
-import { Source } from '../../../data/source';
 
 export const VOID_ENTRY = {
   type: 'structure',
-  code: Source.Void,
   id: 'void',
   label: 'Void',
   allSky: true,

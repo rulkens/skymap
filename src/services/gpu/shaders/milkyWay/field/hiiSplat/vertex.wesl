@@ -22,9 +22,6 @@ fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) inst: u32) -> Hii
   let camRight = u.camRight.xyz;
   let camUp = u.camUp.xyz;
   let camFwd = u.camFwd.xyz;
-  let tanHalfFov = u.params.x;
-  let aspect = u.params.y;
-  let shift = u.params.z;
 
   // View-space offset of the centre: zv along the gaze, xv/yv across it.
   let rel = center - eye;
@@ -52,7 +49,7 @@ fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) inst: u32) -> Hii
     }
   }
 
-  let ndc = splatNdc(corner, xv, yv, zv, boundRadius, tanHalfFov, aspect, shift, u.perf.x);
+  let ndc = splatNdc(corner, xv, yv, zv, boundRadius, u.frustum, u.perf.x);
   out.pos = vec4<f32>(ndc, 0.0, 1.0);
   out.ndc = ndc;
   return out;

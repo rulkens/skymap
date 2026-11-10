@@ -10,7 +10,7 @@ import type { AerialBundleResources } from '../@types/AerialBundleResources';
 import type { AerialPerspectiveRenderer } from '../@types/AerialPerspectiveRenderer';
 import { FROXEL_DIMS } from '../data/froxelVolume';
 import { ATMOSPHERE_UNIFORM_FLOATS } from './packAtmosphereUniforms';
-import { FOREGROUND_DEPTH_FORMAT } from '../../../../data/renderTargetFormats';
+import { PROBE_FACE_DEPTH_STATE } from '../data/probeFaceDepthState';
 import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
 import bakeCode from '../../../../services/gpu/shaders/atmosphere/aerialPerspective/bake.wesl?static';
 import applyCode from '../../../../services/gpu/shaders/atmosphere/aerialPerspective/fragment.wesl?static';
@@ -161,24 +161,18 @@ export function createAerialPerspectiveRenderer(
     'fsAerialAdd',
     ADD_BLEND,
   );
-  // The probe face's body step attaches the probe depth, so its pipelines must name that
-  // format; they never test or write it, and the ground passes after them overdraw the sky.
-  const SKY_DEPTH: GPUDepthStencilState = {
-    format: FOREGROUND_DEPTH_FORMAT,
-    depthWriteEnabled: false,
-    depthCompare: 'always',
-  };
+  // The ground passes after the probe sky overdraw it.
   const skyMultiplyPipeline = createApplyPipeline(
     'atmosphere-probe-sky-multiply-pipeline',
-    'fsAerialMultiply',
+    'fsProbeSkyMultiply',
     MULTIPLY_BLEND,
-    SKY_DEPTH,
+    PROBE_FACE_DEPTH_STATE,
   );
   const skyAddPipeline = createApplyPipeline(
     'atmosphere-probe-sky-add-pipeline',
     'fsAerialAdd',
     ADD_BLEND,
-    SKY_DEPTH,
+    PROBE_FACE_DEPTH_STATE,
   );
 
   type BodyBinding = {

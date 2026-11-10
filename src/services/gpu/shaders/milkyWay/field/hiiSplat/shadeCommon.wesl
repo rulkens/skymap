@@ -9,6 +9,7 @@
 
 import package::milkyWay::field::hiiSplat::io::HiiSplatOut;
 import package::lib::splatSilhouette::SPLAT_CUT;
+import package::lib::camera::cameraRayFromNdc;
 import package::lib::gaussianIntegral::gaussianRayCoeffs;
 import package::milkyWay::field::io::u;
 import package::milkyWay::field::io::comps;
@@ -40,14 +41,7 @@ struct HiiComponentShading {
 // dust-attenuated emission every HII fragment starts from. Callers must
 // return vec4(0) without evaluating anything else when '.cut' is true.
 fn baseHiiShading(input: HiiSplatOut) -> HiiComponentShading {
-  let tanHalfFov = u.params.x;
-  let aspect = u.params.y;
-  let shift = u.params.z;
-  let d = normalize(
-    u.camRight.xyz * ((input.ndc.x + shift) * tanHalfFov * aspect)
-      + u.camUp.xyz * (input.ndc.y * tanHalfFov)
-      + u.camFwd.xyz,
-  );
+  let d = cameraRayFromNdc(input.ndc, u.camRight.xyz, u.camUp.xyz, u.camFwd.xyz, u.frustum);
   let o = u.eye.xyz;
 
   let rec = comps[input.inst];
@@ -122,5 +116,5 @@ fn quadCapFeather(corner: vec2<f32>) -> f32 {
 // which is physical) times the combined debug-view dimming weight
 // (io.wesl's debugView.w doc).
 fn hiiExposureMultiply(emission: vec3<f32>) -> vec3<f32> {
-  return emission * u.params.w * u.debugView.w;
+  return emission * u.eye.w * u.debugView.w;
 }

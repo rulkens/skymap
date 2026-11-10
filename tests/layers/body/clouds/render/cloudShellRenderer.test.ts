@@ -81,7 +81,8 @@ describe('createCloudShellRenderer — outside/inside pipeline pair', () => {
     expect(inside.primitive!.cullMode).toBe('front');
   });
 
-  it('draws with the front-cull pipeline when inside, back-cull when outside', () => {
+  // A capture face mirrors winding, so the outside wall then needs the front cull.
+  it('draws front-cull inside and back-cull outside, swapped in a mirrored view', () => {
     const { descOf, renderer } = build();
     const cullModeOf = (p: unknown): GPUCullMode | undefined => descOf.get(p)?.primitive?.cullMode;
     const pass = {
@@ -92,12 +93,14 @@ describe('createCloudShellRenderer — outside/inside pipeline pair', () => {
       drawIndexed: vi.fn(),
     } as unknown as GPURenderPassEncoder;
 
-    renderer.draw(pass, new Float32Array(CLOUD_SHELL_UNIFORM_FLOATS), false);
-    renderer.draw(pass, new Float32Array(CLOUD_SHELL_UNIFORM_FLOATS), true);
+    renderer.draw(pass, new Float32Array(CLOUD_SHELL_UNIFORM_FLOATS), false, false);
+    renderer.draw(pass, new Float32Array(CLOUD_SHELL_UNIFORM_FLOATS), true, false);
+    renderer.draw(pass, new Float32Array(CLOUD_SHELL_UNIFORM_FLOATS), false, true);
+    renderer.draw(pass, new Float32Array(CLOUD_SHELL_UNIFORM_FLOATS), true, true);
 
     const setPipelineSpy = pass.setPipeline as unknown as ReturnType<typeof vi.fn>;
-    expect(cullModeOf(setPipelineSpy.mock.calls[0]![0])).toBe('back');
-    expect(cullModeOf(setPipelineSpy.mock.calls[1]![0])).toBe('front');
+    const culls = setPipelineSpy.mock.calls.map((call) => cullModeOf(call[0]));
+    expect(culls).toEqual(['back', 'front', 'front', 'back']);
   });
 
   // The shell's map is a second full copy of Earth's clouds; release must free it

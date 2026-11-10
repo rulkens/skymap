@@ -7,7 +7,6 @@ import { milkyWaySearch } from '../../../src/layers/milkyWay/card/present/milkyW
 import { starSearch } from '../../../src/layers/starCatalog/selection/present/starSearch';
 import { MILKY_WAY_FOCUS_ID } from '../../../src/services/url/milkyWayFocusId';
 import { rankPaletteMatches } from '../../../src/utils/palette/rankPaletteMatches';
-import { Source } from '../../../src/data/source';
 import type { FamousGalaxyMetaEntry } from '../../../src/@types/loading/FamousGalaxyMetaEntry';
 import type { AliasIndexEntry } from '../../../src/@types/engine/AliasIndexEntry';
 import type { StructureSearchEntry } from '../../../src/@types/engine/StructureSearchEntry';
@@ -30,7 +29,7 @@ const COMA: StructureSearchEntry = {
 };
 
 function alias(names: readonly string[], pgc: number): AliasIndexEntry {
-  return { pgc, names, source: Source.Glade };
+  return { pgc, names, sourceLabel: 'GLADE', focusId: `pgc-${pgc}` };
 }
 
 describe('rankPaletteMatches', () => {

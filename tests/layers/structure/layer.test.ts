@@ -12,7 +12,7 @@ import { createStructureStore } from '../../../src/layers/structure/catalog/load
 import { CONTENT_PASSES } from '../../../src/services/engine/frame/passes';
 import { FRAME_ORDER_PASS_NAMES } from '../../../src/services/engine/frame/frameOrderPassNames';
 import { COSMO, NEAR0 } from '../../../src/services/engine/frame/slabs';
-import { ZERO_FOCUS } from '../../../src/services/engine/subsystems/structureFocusSubsystem';
+import { ZERO_FOCUS } from '../../../src/services/engine/subsystems/recedingFocusSubsystem';
 import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
 import { structurePickCodes } from '../../support/layerPickCodes';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
