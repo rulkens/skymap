@@ -11,17 +11,17 @@
 
 import type { GalaxyIsmMap } from '../../../../../src/@types/galaxy/GalaxyIsmMap';
 import type { GalaxyIsmMapOrientation } from '../../../../../src/@types/galaxy/GalaxyIsmMapOrientation';
-import type { GalaxyIsmMapGridRadius } from '../../../../../src/@types/galaxy/GalaxyIsmMapGridRadius';
+import type { GalaxyIsmMapGridRadius } from '../../../../../src/layers/milkyWay/field/ismMap/@types/GalaxyIsmMapGridRadius';
 import {
   ISM_MAP_AZ,
   ISM_MAP_RINGS,
-} from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
+} from '../../../../../src/layers/milkyWay/field/ismMap/utils/galaxyIsmMapArmForcing';
 
 import { createReadbackQueue } from '../gpu/createReadbackQueue';
 import { decodeOrientationTexels } from './decodeOrientationTexels';
 import { decodeIsmMapTexels } from './decodeIsmMapTexels';
-import type { IsmMapGenerator } from '../../../../../src/@types/galaxy/IsmMapGenerator';
-import type { IsmMapOrientation } from '../../../../../src/@types/galaxy/IsmMapOrientation';
+import type { IsmMapGenerator } from '../../../../../src/layers/milkyWay/field/ismMap/@types/IsmMapGenerator';
+import type { IsmMapOrientation } from '../../../../../src/layers/milkyWay/field/ismMap/@types/IsmMapOrientation';
 
 export type IsmMapReadbacks = {
   /** Null until the first copy lands, and again whenever `dropIfGridMoved` invalidates it. */

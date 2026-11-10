@@ -258,7 +258,7 @@ Outbound links on galaxy cards go to SDSS Explorer or NASA/IPAC NED, plus Wikipe
 | K5 | Famous-galaxy curator | Fetch a photo of a famous galaxy, crop it, mark its disc, remove foreground stars and save it for the app. | Local only: `npm run curate-famous` (port 5200). | `tools/famous-curator/vite.config.ts:22-31`; `tools/famous-curator/ui/App.tsx:439-520` | dev-only (not deployed) |
 | K6 | Structure audit page | A single report page about the code itself: which parts import which, cycles, convention and test gaps. | Local only: `npm run structure-audit`, then open the generated file. | `tools/structure-audit/structureAuditDefaults.ts:5` | dev-only |
 
-The procedural galaxy on `/galaxy/` (generator "v2") is not what the main app draws. The main app's Milky Way uses the older "v1" star-sprite generator; the v2 renderer's only caller is the tool. Source: `tools/galaxy-renderer/src/engine/createGalaxyEngine.ts:161`; `src/layers/milkyWay/create.ts` (v1 imports); `src/services/engine/galaxyGenerator/v2/README.md`.
+The procedural galaxy on `/galaxy/` (generator "v2") is not what the main app draws. The main app's Milky Way uses the older "v1" star-sprite generator; the v2 renderer's only caller is the tool. Source: `tools/galaxy-renderer/src/engine/createGalaxyEngine.ts:161`; `src/layers/milkyWay/create.ts` (v1 imports); `src/layers/milkyWay/field/README.md`.
 
 ## Command-line tools
 
@@ -682,7 +682,7 @@ Developers
 | Reference / URL parameters | table (b) | `src/state/url/hashParamSources.ts` | — |
 | Reference / Settings | table (c) | — | — |
 | Reference / Object catalogue | table (d) | `data/seeds/*.seed.json`; `ATTRIBUTIONS.md` | Messier and Caldwell catalogue pages [find URL]; MCXC https://heasarc.gsfc.nasa.gov/W3Browse/rosat/mcxc.html |
-| Tools / Galaxy Explorer | K1 | `tools/galaxy-renderer/README.md`; `src/services/engine/galaxyGenerator/v2/README.md` | Hubble sequence explainer [find URL] |
+| Tools / Galaxy Explorer | K1 | `tools/galaxy-renderer/README.md`; `src/layers/milkyWay/field/README.md` | Hubble sequence explainer [find URL] |
 | Tools / MCPM Workbench | K2 | `tools/mcpm-workbench/README.md` | MCPM paper https://arxiv.org/abs/2204.01256 ; SDSS MCPM value-added catalogue https://www.sdss4.org/dr17/data_access/value-added-catalogs/?vac_id=cosmic-web-environmental-densities-from-mcpm-slimemold |
 | Tools / Flow Workbench | K3 | `tools/flow-workbench/README.md` (stale, see mismatch 13) | Cosmicflows-4 paper https://doi.org/10.3847/1538-4357/ac94d8 |
 | Tools / Local-only workbenches | K4–K6 | `tools/scene-workbench/README.md`, `tools/famous-curator/README.md`, `tools/structure-audit/README.md` | PDAL, COLMAP, OpenMVS, StarNet [find URL each] |

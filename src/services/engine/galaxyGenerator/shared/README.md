@@ -2,7 +2,7 @@
 
 Turns one `GalaxyParams` preset into one `GalaxyDescription`, then hands that to
 each tier: `v1/` packs it into `GENERATION_UBO` bytes and binds them to its
-compute shaders; `v2/` builds its Gaussian mixtures from it. That is the whole
+compute shaders; the milkyWay Layer's `field/` builds its Gaussian mixtures from it. That is the whole
 reason this folder exists: **one galaxy, one description, two renderings.**
 
 ## Flow
@@ -38,7 +38,7 @@ seeded preset are pinned to it — reorder a draw, add one, or skip one and ever
 galaxy in the gallery rerolls. A pinned value (`barAngleDeg`, `armAges[a]`)
 still consumes its draw for exactly that reason.
 
-**`v2` depends on this folder through DATA, not imports.** Nothing under `v2/`
+**`v2` depends on this folder through DATA, not imports.** Nothing under `src/layers/milkyWay/field/`
 imports anything here; the wiring happens in the caller
 (`tools/galaxy-renderer/src/engine/sprites/generateGalaxy.ts`).
 Grepping the import graph alone will tell you this folder is v1-only. It is not.

@@ -1,6 +1,6 @@
 /**
  * SpursSection — interarm spurs/feathers
- * (`src/services/engine/galaxyGenerator/v2/armSpurGeometry.ts` +
+ * (`src/layers/milkyWay/field/arms/utils/armSpurGeometry.ts` +
  * `armSpurParticleCloud.ts`): short sprite feathers rooted along each arm at
  * quasi-regular intervals, filling the interarm gap the ridge chain and the
  * arm cloud both leave empty at larger radii. Own section, own header pill
@@ -8,7 +8,7 @@
  * of the arm excess, not a settings drawer folded into ARM CLOUD's own body.
  */
 import type { ReactNode } from 'react';
-import type { GalaxyArmSpurTuning } from '../../../../../src/@types/galaxy/GalaxyArmSpurTuning';
+import type { GalaxyArmSpurTuning } from '../../../../../src/layers/milkyWay/field/arms/@types/GalaxyArmSpurTuning';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { fieldTuningPatched } from '../../state/slices/fieldTuningSlice';
 import { sectionToggled } from '../../state/slices/uiSlice';

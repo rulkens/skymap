@@ -15,7 +15,7 @@ import type { MilkyWayFadeReadout } from '../../@types/engine/MilkyWayFadeReadou
 import type { PassTiming } from '../../@types/engine/PassTiming';
 import type { RenderSettings } from '../../@types/engine/RenderSettings';
 import type { LodSettings } from '../../@types/engine/LodSettings';
-import type { HiiTier } from '../../../../src/@types/galaxy/HiiTier';
+import type { HiiTier } from '../../../../src/layers/milkyWay/field/starFormation/@types/HiiTier';
 import type { GalaxyIsmMap } from '../../../../src/@types/galaxy/GalaxyIsmMap';
 import type { Vec2 } from '../../../../src/@types/math/Vec2';
 
@@ -27,8 +27,8 @@ import { createFrameTimer } from './timing/createFrameTimer';
 import { createReportThrottle } from './timing/createReportThrottle';
 import { TIMING_SLOTS } from './timing/timingSlots';
 import { createRafLoop } from './createRafLoop';
-import { createGalaxyFieldRenderer } from '../../../../src/services/gpu/renderers/galaxyField/createGalaxyFieldRenderer';
-import type { GalaxyFieldRenderTargets } from '../../../../src/@types/galaxy/GalaxyFieldRenderTargets';
+import { createGalaxyFieldRenderer } from '../../../../src/layers/milkyWay/field/render/createGalaxyFieldRenderer';
+import type { GalaxyFieldRenderTargets } from '../../../../src/layers/milkyWay/field/@types/GalaxyFieldRenderTargets';
 import { createGalaxyRenderTargets } from './gpu/createGalaxyRenderTargets';
 import type { TargetDivisors } from './gpu/createGalaxyRenderTargets';
 import { readTextureChannelSum } from './gpu/readTextureChannelSum';
@@ -39,8 +39,8 @@ import { encodeBloomPyramid } from './post/encodeBloomPyramid';
 import { createGradePipeline } from './post/createGradePipeline';
 import { createCloudPipelines } from './sprites/createCloudPipelines';
 import { encodeSceneComposites } from './passes/encodeSceneComposites';
-import { encodeSplatPass } from '../../../../src/services/gpu/renderers/galaxyField/field/encodeSplatPass';
-import { findHiiSegment } from '../../../../src/services/gpu/renderers/galaxyField/field/findHiiSegment';
+import { encodeSplatPass } from '../../../../src/layers/milkyWay/field/render/encodeSplatPass';
+import { findHiiSegment } from '../../../../src/layers/milkyWay/field/starFormation/utils/findHiiSegment';
 import { encodeStarPass } from './sprites/encodeStarPass';
 import { encodeTransmittanceDust } from './sprites/encodeTransmittanceDust';
 import { createArmRidgeDebugSample } from './field/createArmRidgeDebugSample';
@@ -62,7 +62,7 @@ import { createAdditiveUpsample } from '../../../../src/services/gpu/passes/addi
 import { DEFAULT_RENDER_SETTINGS } from '../data/defaultRenderSettings';
 import { DEFAULT_LOD_SETTINGS } from '../data/defaultLodSettings';
 import { HII_TIERS } from '../data/hiiTiers';
-import { mapHiiTiers } from '../../../../src/data/hiiTiers';
+import { mapHiiTiers } from '../../../../src/layers/milkyWay/field/starFormation/data/hiiTiers';
 
 /** HDR working format for the scene + bloom pyramid — the runtime's `hdr` row. */
 const HDR: GPUTextureFormat = 'rgba16float';

@@ -48,7 +48,7 @@ Two curated spines already exist: `ATTRIBUTIONS.md` (per-dataset citation, licen
 **Milky Way / morphology** (tabled in `docs/research/milky-way/literature.md`)
 
 - Freudenreich 1998 (the load-bearing model); Drimmel & Spergel 2001; Chen+2019 (warp); Bland-Hawthorn & Gerhard 2016; Licquia & Newman 2016; Wegg & Gerhard 2013 → `src/data/milkyWay/milkyWayGalaxyParams.ts`.
-- Reid+2019, Reid+2014 (arm widths) → `galaxyGenerator/v2/armRidgeGeometry.ts`.
+- Reid+2019, Reid+2014 (arm widths) → `layers/milkyWay/field/arms/utils/armRidgeGeometry.ts`.
 - Rix & Zaritsky 1995; Antoja+2011; Vogel & Ostriker 2006; Kim & Ostriker 2002/2017.
 - Bulge / bar decomposition: Laurikainen+2010, Salo+2015, Buta+2015, Gao+2019, Gadotti 2009, Kormendy & Kennicutt 2004 → `galaxyGenerator/shared/galaxyLightDecomposition.ts`.
 - SF / ISM: Gerola & Seiden 1978, Dobbs & Baba 2014, Kennicutt 1989.
@@ -86,7 +86,7 @@ Two curated spines already exist: `ATTRIBUTIONS.md` (per-dataset citation, licen
 - **Atmospheres** — three-LUT pipeline, 9 bodies with [M]/[D]/[L]-tagged constituent tables — `src/data/bodies/atmosphereParams.ts`.
 - **Saturn's rings** — Chandrasekhar single-scattering slab, analytic planet shadow.
 - **Black hole** — Schwarzschild photon-orbit ODE → bending-angle LUT — `src/utils/lensing/buildSchwarzschildDeflectionLut.ts`.
-- **Milky Way** — Gaussian-mixture fit to Freudenreich 1998, analytic arm ridges, bar, HII, ISM map — `galaxyGenerator/v2/*`.
+- **Milky Way** — Gaussian-mixture fit to Freudenreich 1998, analytic arm ridges, bar, HII, ISM map — `layers/milkyWay/field/`.
 - **Dust** — CCM89 baked at sRGB primaries; Edenhofer volume; multiplicative transmittance.
 - **Cosmic web** — DisPerSE skeleton with a radial-selection correction; MCPM raymarch; CF4++ advection.
 - **Horizon shell** — particle horizon at 14.3 Gpc.

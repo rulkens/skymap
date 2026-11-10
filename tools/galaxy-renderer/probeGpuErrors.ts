@@ -23,7 +23,7 @@ import type { GalaxyEngineHandle } from './@types/engine/GalaxyEngineHandle';
 import type { GalaxyIsmMap } from '../../src/@types/galaxy/GalaxyIsmMap';
 import type { GalaxyDescription } from '../../src/@types/galaxy/GalaxyDescription';
 import type { GalaxyFieldArmRecord } from '../../src/@types/galaxy/GalaxyFieldArmRecord';
-import type { GalaxyFieldTuning } from '../../src/@types/galaxy/GalaxyFieldTuning';
+import type { GalaxyFieldTuning } from '../../src/layers/milkyWay/field/mixture/@types/GalaxyFieldTuning';
 import { ismMapRingMeans } from '../../src/utils/galaxy/ismMapRingMeans';
 import { buildIsmMapDustCdf } from '../../src/utils/galaxy/buildIsmMapDustCdf';
 import { ismMapRingIndexForRadius } from '../../src/utils/galaxy/ismMapRingIndexForRadius';
@@ -35,23 +35,23 @@ import {
   armRidgeFrameAt,
   armExcessSurfaceShape,
   armColor,
-} from '../../src/services/engine/galaxyGenerator/v2/armRidgeGeometry';
+} from '../../src/layers/milkyWay/field/arms/utils/armRidgeGeometry';
 import { describeGalaxy } from '../../src/services/engine/galaxyGenerator/shared/describeGalaxy';
 import { MILKY_WAY_GALAXY_PARAMS } from '../../src/data/milkyWay/milkyWayGalaxyParams';
-import { DEFAULT_GALAXY_DUST_PARAMS } from '../../src/services/engine/galaxyGenerator/v2/defaultGalaxyDustParams';
-import { DEFAULT_GALAXY_FIELD_TUNING } from '../../src/services/engine/galaxyGenerator/v2/galaxyFieldMixture';
-import { buildArmSpurs } from '../../src/services/engine/galaxyGenerator/v2/armSpurGeometry';
-import { deriveArmSpurCloudCount } from '../../src/services/engine/galaxyGenerator/v2/armSpurParticleCloud';
+import { DEFAULT_GALAXY_DUST_PARAMS } from '../../src/layers/milkyWay/field/dust/data/defaultGalaxyDustParams';
+import { DEFAULT_GALAXY_FIELD_TUNING } from '../../src/layers/milkyWay/field/mixture/utils/galaxyFieldMixture';
+import { buildArmSpurs } from '../../src/layers/milkyWay/field/arms/utils/armSpurGeometry';
+import { deriveArmSpurCloudCount } from '../../src/layers/milkyWay/field/arms/utils/armSpurParticleCloud';
 import {
   deriveArmCloudCount,
   radialTilt,
   tiltReferenceRadius,
-} from '../../src/services/engine/galaxyGenerator/v2/armParticleCloud';
-import { discLightScaleLength } from '../../src/utils/galaxy/discLightScaleLength';
-import { buildHiiShellsAndYoungWithSegments } from '../../src/services/engine/galaxyGenerator/v2/hiiRegions';
-import { computePlaceDustBudget } from '../../src/services/gpu/renderers/galaxyField/ismMap/computePlaceDustBudget';
-import { computeDigVeilBudget } from '../../src/services/gpu/renderers/galaxyField/ismMap/computeDigVeilBudget';
-import { FIELD_COMPONENT_FLOATS } from '../../src/services/gpu/renderers/galaxyField/field/packFieldUniforms';
+} from '../../src/layers/milkyWay/field/arms/utils/armParticleCloud';
+import { discLightScaleLength } from '../../src/layers/milkyWay/field/mixture/utils/discLightScaleLength';
+import { buildHiiShellsAndYoungWithSegments } from '../../src/layers/milkyWay/field/starFormation/utils/hiiRegions';
+import { computePlaceDustBudget } from '../../src/layers/milkyWay/field/placement/utils/computePlaceDustBudget';
+import { computeDigVeilBudget } from '../../src/layers/milkyWay/field/placement/utils/computeDigVeilBudget';
+import { FIELD_COMPONENT_FLOATS } from '../../src/layers/milkyWay/field/header/render/packFieldUniforms';
 
 const VIEWPORT = { width: 1400, height: 900 };
 // A control change reaches the GPU through store → engineBridge → the next rAF,

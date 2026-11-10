@@ -4,7 +4,7 @@
  * across the engine and the shared field renderer, instead of copy-pasting
  * DIG's split two more times.
  */
-import type { HiiTier } from '../../../../src/@types/galaxy/HiiTier';
+import type { HiiTier } from '../../../../src/layers/milkyWay/field/starFormation/@types/HiiTier';
 import type { RenderSettings } from './RenderSettings';
 
 export type HiiTierSpec = {

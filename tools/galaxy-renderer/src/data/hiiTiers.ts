@@ -4,9 +4,9 @@
  * and order come from `src/data/hiiTiers.ts`, which the shared field renderer
  * loops over too, so the two orders cannot drift.
  */
-import type { HiiTier } from '../../../../src/@types/galaxy/HiiTier';
+import type { HiiTier } from '../../../../src/layers/milkyWay/field/starFormation/@types/HiiTier';
 import type { HiiTierSpec } from '../../@types/engine/HiiTierSpec';
-import { HII_TIER_KINDS } from '../../../../src/data/hiiTiers';
+import { HII_TIER_KINDS } from '../../../../src/layers/milkyWay/field/starFormation/data/hiiTiers';
 
 const TIER_LANES: Record<HiiTier, Omit<HiiTierSpec, 'kind'>> = {
   shells: { label: 'hii:shells', divisorKey: 'shellsDivisor' },
