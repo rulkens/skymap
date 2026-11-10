@@ -111,7 +111,7 @@ describe('Inspector', () => {
     expect(screen.getByRole('combobox', { name: 'Ease' })).toBeTruthy();
   });
 
-  it("a Fly's waypoint chips read their object's name or Point, and a chip selects its waypoint", async () => {
+  it("a Fly's title and waypoint chips read their objects' names, and a chip selects its waypoint", async () => {
     const store = open({
       timeline: [flyPath([atFocus('body-earth' as FocusId), atPoint([5, 0, 0], 8)], { over: 6 })],
     });
@@ -123,6 +123,7 @@ describe('Inspector', () => {
     );
     store.dispatch(rowSelected({ kind: 'effect', path: [0] }));
     show(store);
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(/^Fly via Earth, point 2$/);
     expect(screen.getByRole('button', { name: 'Pass 1, Earth' })).toHaveTextContent('1Earth');
     await userEvent.click(screen.getByRole('button', { name: 'Settle 2, Point' }));
 

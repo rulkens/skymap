@@ -3,6 +3,8 @@ import type { CSSProperties } from 'react';
 import cx from 'classnames';
 import Glyph from '../../../primitives/components/Glyph/Glyph';
 import { useObjectName } from '../../../session/hooks/useObjectName';
+import { useObjectIndex } from '../../../session/hooks/useObjectIndex';
+import { labelValue } from '../../../kinds/utils/object/labelValue';
 import { CHANNEL_FAMILY_LEGEND } from '../../../data/channelFamilies';
 import { ROW_KINDS } from '../../../kinds/data/rowKinds';
 import { familyStyle } from '../../utils/familyStyle';
@@ -23,7 +25,8 @@ type Props = {
 function OutlineRow({ row, ancestors, selected, relation, onSelect, onToggle }: Props) {
   const group = ROW_KINDS[row.kind].mark === 'group';
   const invalid = row.errors.length > 0;
-  const { op, value, qualifier } = row.label;
+  const { op, qualifier } = row.label;
+  const value = labelValue(row.label, useObjectIndex());
   const subjectName = useObjectName(row.label.subject);
   // An open block's children are its rows below; only a folded one summarises them.
   const members = row.collapsed ? row.members : undefined;

@@ -5,27 +5,36 @@ import { Provider } from 'react-redux';
 
 import {
   all,
+  atFocus,
+  atPoint,
   dollyTo,
   fade,
+  flyPath,
   seq,
 } from '../../../../../src/services/engine/animation/effectHelpers';
+import { layerSearchReported } from '../../../../../src/state/engine/engineSlice';
 import TimelinePane from '../../../src/timeline/components/TimelinePane/TimelinePane';
-import { viewportSet } from '../../../src/session/state/studioSlice';
+import { draftResolved, viewportSet } from '../../../src/session/state/studioSlice';
 import {
   selectCollapsed,
+  selectRevision,
   selectSelection,
   selectViewport,
 } from '../../../src/session/state/selectors';
 import { openStudioStore } from '../../helpers/openStudioStore';
 import type { ClipData } from '../../../../../src/@types/animation/ClipData';
+import type { FocusId } from '../../../../../src/@types/animation/FocusId';
+import type { PathWaypoint } from '../../../../../src/@types/animation/PathWaypoint';
 
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
 });
 
-const mount = (draft: ClipData) => {
-  const store = openStudioStore(draft);
+const mount = (draft: ClipData, resolved?: ClipData) => {
+  const store = openStudioStore(draft, { resolve: resolved === undefined });
+  if (resolved)
+    store.dispatch(draftResolved({ revision: selectRevision(store.getState()), data: resolved }));
   render(
     <Provider store={store}>
       <TimelinePane />
@@ -112,5 +121,17 @@ describe('TimelinePane', () => {
     mount({ timeline: [seq([fade(['flow'], 0, 3), dollyTo(300, 4)])] });
 
     expect(screen.getByText('→ 0 %').parentElement!.style.width).toBe('62.5%');
+  });
+
+  it("a Fly's outline row reads its waypoints by name", () => {
+    const fly = (first: PathWaypoint) => flyPath([first, atPoint([5, 0, 0], 8)], { over: 6 });
+    const store = mount(
+      { timeline: [fly(atFocus('body-earth' as FocusId))] },
+      { timeline: [fly(atPoint([1, 0, 0], 2))] },
+    );
+    const earth = { id: 'body-earth', names: ['Earth'], class: 'primary' as const };
+    act(() => void store.dispatch(layerSearchReported({ layer: 'body', rows: [earth] })));
+
+    expect(screen.getAllByRole('treeitem')[1]).toHaveTextContent('via Earth, point 2');
   });
 });

@@ -13,7 +13,6 @@ import { formatVec3 } from '../utils/formatVec3';
 import { overField } from '../utils/fields/overField';
 import { readoutField } from '../utils/fields/readoutField';
 import { toField } from '../utils/fields/toField';
-import { formatNameList } from '../../utils/format/formatNameList';
 import { formatNumber } from '../../utils/format/formatNumber';
 import { formatQuantity } from '../../utils/format/formatQuantity';
 import { formatMpc } from '../../utils/format/formatMpc';
@@ -144,7 +143,8 @@ export const cameraKinds: Pick<
     label: (s) => ({
       name: 'Fly',
       op: '',
-      value: `via ${formatNameList(s.waypoints.map((w, i) => ('id' in w ? w.id : `point ${i + 1}`)))}`,
+      value: 'via',
+      subjects: s.waypoints.map((w) => ('id' in w ? w.id : null)),
     }),
     fields: [
       { key: 'waypoints', param: 'waypoints', label: 'Waypoints', control: 'waypoints' },
