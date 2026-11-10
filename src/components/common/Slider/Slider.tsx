@@ -27,11 +27,6 @@
  * edge and 1 at the right, so the fill edge and the pointer agree. There is no
  * native `<input type=range>`, so slider semantics are supplied explicitly via
  * `role="slider"` + `aria-value*` and arrow-key handling.
- *
- * `size="compact"` tightens padding, radius and type through tokens and nothing else, for hosts
- * that name the control themselves (the clip studio's inspector rows): the label then stays only
- * as the accessible name, and the root honours `--field-border-style` / `--field-bg` so a host
- * can dim it. The default size is untouched.
  */
 
 import { useRef, useState, type PointerEvent, type KeyboardEvent, type ReactNode } from 'react';

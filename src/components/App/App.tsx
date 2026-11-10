@@ -52,7 +52,7 @@ export function App(): React.ReactElement {
   const uiStackHidden = useAppSelector(selectUiStackHidden);
   const debugPanelOpen = useAppSelector(selectDebugPanelOpen);
 
-  // A running tour or exhibit hides the HUD stack (derived, not a `setUiHidden`
+  // A running tour, exhibit or the studio hides the HUD stack (derived, not a `setUiHidden`
   // write). A registry clip keeps the HUD: the debug panel's Stop must stay in reach.
   const tourActive = useAppSelector(selectTourActive);
 
