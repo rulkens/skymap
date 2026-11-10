@@ -19,7 +19,7 @@ import { debugViewWeights } from './debugViewWeights';
 import { deriveMilkyWayFade } from './deriveMilkyWayFade';
 import { shiftedFrustum } from '../../../../../src/services/engine/camera/lens/utils/shiftedFrustum';
 
-export type FrameView = {
+export type ToolFrameView = {
   readonly view: Float32Array;
   readonly proj: Float32Array;
   readonly viewProj: Float32Array;
@@ -40,7 +40,7 @@ export function deriveFrameView(input: {
   readonly shiftX: number;
   readonly viewportPx: Vec2;
   readonly render: RenderSettings;
-}): FrameView {
+}): ToolFrameView {
   const { eye, fov, dist, viewportPx, render } = input;
   const view = mat4.lookAt(eye, input.target, [0, 1, 0]);
   // Near/far track orbit distance, the same adaptation the app's NEAR0 slab

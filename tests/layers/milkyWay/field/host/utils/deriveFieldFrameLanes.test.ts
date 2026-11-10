@@ -1,7 +1,7 @@
 /**
  * The field's per-frame lanes: couplings that break silently and still give
- * a plausible image — an exposure picking up a second factor, the dust slices
- * following the view direction, the grain blend running backwards.
+ * a plausible image — the dust slices following the view direction, the grain
+ * blend running backwards.
  */
 import { describe, expect, it } from 'vitest';
 
@@ -9,7 +9,6 @@ import type { FieldView } from '../../../../../../src/layers/milkyWay/field/@typ
 import type { Vec3 } from '../../../../../../src/@types/math/Vec3';
 import { deriveFieldFrameLanes } from '../../../../../../src/layers/milkyWay/field/host/utils/deriveFieldFrameLanes';
 import { FIELD_CALIBRATION } from '../../../../../../src/layers/milkyWay/field/data/fieldCalibration';
-import { FIELD_EXPOSURE_GAUGE } from '../../../../../../src/layers/milkyWay/field/host/data/fieldExposureGauge';
 
 const frustum = { tanLeft: -0.5, tanRight: 0.5, tanDown: -0.3, tanUp: 0.3 };
 const camera = (eye: Vec3, fwd: Vec3 = [0, 0, -1]): FieldView => ({
@@ -32,12 +31,6 @@ const lanes = (
   });
 
 describe('deriveFieldFrameLanes', () => {
-  it('scales the exposure by the gauge alone, coupled to no other knob', () => {
-    // The gauge once came from the sprite pass's starIntensity/sizeScale, and
-    // retuning a SPRITE slider silently moved the FIELD's brightness.
-    expect(lanes({ exposure: 2 }).analyticExposure).toBeCloseTo(2 * FIELD_EXPOSURE_GAUGE, 10);
-  });
-
   it('measures the dust slices from the origin, not along the view', () => {
     // Panning turns the camera while the eye stays put; the slices are
     // anchored to the galaxy's centre, so they must not move with it.

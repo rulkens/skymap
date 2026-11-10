@@ -38,6 +38,7 @@ import type { Vec3 } from '../../../../../@types/math/Vec3';
 import { armColor } from '../../arms/utils/armColor';
 import { armExcessSurfaceShape } from '../../arms/utils/armExcessSurfaceShape';
 import { armCrossSigma } from '../../arms/utils/armCrossSigma';
+import { TAU_ROOT3 } from '../../starFormation/data/tauRoot3';
 
 /**
  * Per-galaxy component cap, not a shader limit: `io.wesl`'s `comps` is a
@@ -101,7 +102,6 @@ function shapeOf(
 }
 
 const TAU_ROOT = Math.sqrt(2 * Math.PI);
-const TAU_ROOT3 = (2 * Math.PI) ** 1.5;
 
 /**
  * Inside-out formation: the bulge and bar hold the old, metal-rich stars

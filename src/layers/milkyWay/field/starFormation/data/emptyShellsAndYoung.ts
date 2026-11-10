@@ -1,4 +1,4 @@
-import { HiiShellsAndYoungResult } from '../@types/HiiShellsAndYoungResult';
+import type { HiiShellsAndYoungResult } from '../@types/HiiShellsAndYoungResult';
 
 export const EMPTY_SHELLS_AND_YOUNG: HiiShellsAndYoungResult = {
   components: [],

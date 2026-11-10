@@ -15,6 +15,7 @@ import type { GalaxyDescription } from '../../../../../@types/galaxy/GalaxyDescr
 import type { GalaxyFieldArmRecord } from '../../../../../@types/galaxy/GalaxyFieldArmRecord';
 import type { GalaxyFieldComponent } from '../../mixture/@types/GalaxyFieldComponent';
 import type { GalaxyFieldTuning } from '../../mixture/@types/GalaxyFieldTuning';
+import { TAU_ROOT3 } from '../data/tauRoot3';
 
 /**
  * Hard ceiling across every arm and spur combined, well inside the comps
@@ -48,8 +49,6 @@ const YOUNG_SCALE_HEIGHT_PC = 100;
  * a measurement.
  */
 const YOUNG_FLUX_REF = 0.005;
-
-const TAU_ROOT3 = (2 * Math.PI) ** 1.5;
 
 /** Mirrors splatSilhouette.wesl's own `SPLAT_CUT` — parity guarded by tests/services/gpu/shaders/constants.parity.test.ts so the two can't silently drift. */
 export const SPLAT_CUT_SIGMA = 4.5;

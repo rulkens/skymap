@@ -5,12 +5,12 @@
  */
 import type { FieldHostTuning } from '../../../../../src/layers/milkyWay/field/host/@types/FieldHostTuning';
 import type { IsmMapSeedingLanes } from '../../../../../src/layers/milkyWay/field/header/@types/IsmMapSeedingLanes';
-import type { FrameView } from './deriveFrameView';
+import type { ToolFrameView } from './deriveFrameView';
 import type { RenderSettings } from '../../../@types/engine/RenderSettings';
 
 export function fieldHostRender(
   render: RenderSettings,
-  views: Pick<FrameView, 'debugViews' | 'galaxyWeight'>,
+  views: Pick<ToolFrameView, 'debugViews' | 'galaxyWeight'>,
   ismMapSeeding: IsmMapSeedingLanes,
 ): FieldHostTuning['render'] {
   return {

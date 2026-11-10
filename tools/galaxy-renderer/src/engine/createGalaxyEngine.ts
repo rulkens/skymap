@@ -58,7 +58,7 @@ import {
 import { createBloomPyramid } from '../../../../src/services/gpu/passes/bloomPyramid';
 import { createCompositor } from '../../../../src/services/gpu/passes/compositor';
 import { createAdditiveUpsample } from '../../../../src/services/gpu/passes/additiveUpsample';
-import type { FrameView } from './frame/deriveFrameView';
+import type { ToolFrameView } from './frame/deriveFrameView';
 import { DEFAULT_RENDER_SETTINGS } from '../data/defaultRenderSettings';
 import { DEFAULT_LOD_SETTINGS } from '../data/defaultLodSettings';
 import { DUST_MAP_FORMAT } from '../../../../src/layers/milkyWay/field/host/data/dustMapFormat';
@@ -265,7 +265,7 @@ export async function createGalaxyEngine(
   }
 
   /** The field host's whole tuning for this frame; null until `setParams` gives the galaxy a geometry. */
-  function fieldHostTuning(views: FrameView): FieldHostTuning | null {
+  function fieldHostTuning(views: ToolFrameView): FieldHostTuning | null {
     const geometry = model.geometry;
     if (!geometry) return null;
     return {
