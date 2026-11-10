@@ -15,15 +15,12 @@ export const selectRoute = createSelector(
 export const selectMilkyWay = selectRoute;
 
 const PARTS_BY_RENDERER: Readonly<Record<MilkyWayRenderer, MilkyWayParts>> = {
-  v1: Object.freeze({ cloud: true, cloudDust: true, field: false }),
-  v2: Object.freeze({ cloud: false, cloudDust: false, field: true }),
-  both: Object.freeze({ cloud: true, cloudDust: false, field: true }),
+  v1: { cloud: true, cloudDust: true, field: false },
+  v2: { cloud: false, cloudDust: false, field: true },
+  both: { cloud: true, cloudDust: false, field: true },
 };
 
-/**
- * The only reader of `renderer`. One frozen row per renderer, so a caller
- * comparing parts by identity sees a change only when the renderer changes.
- */
+/** The only reader of `renderer`. */
 export function selectMilkyWayParts(settings: MilkyWaySettings): MilkyWayParts {
   return PARTS_BY_RENDERER[settings.renderer];
 }

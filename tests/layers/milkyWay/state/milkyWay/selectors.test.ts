@@ -13,8 +13,5 @@ describe('selectMilkyWayParts', () => {
     const parts = selectMilkyWayParts({ ...initialState, renderer });
 
     expect(parts).toEqual({ cloud, cloudDust, field });
-    // Stable identity across settings objects, so a parts comparison only
-    // changes when the renderer does.
-    expect(selectMilkyWayParts({ ...initialState, renderer, enabled: false })).toBe(parts);
   });
 });

@@ -198,8 +198,8 @@ export type MilkyWayFieldTuning = {
   `FieldTargetId` list.
 - **No migration.** Nothing persists the slice (there is no `localStorage`, and tour snapshots are in-memory), so moving
   the knobs breaks no saved state.
-- **Defaults.** The field group's defaults come from the §5 calibration row: divisors field 6, dust map 5, extras 1,
-  shells 1, young 2, DIG 4, as the tool has them today.
+- **Defaults.** The field group's defaults come from the §5 calibration row: divisors field 6, dust map 5, shells 1,
+  young 2, DIG 4, as the tool has them today. The tool's extras divisor (1) stays out: the app allocates no extras.
 
 ## 7. The Layer
 
@@ -215,7 +215,7 @@ export type MilkyWayFieldTuning = {
 Each of these lands as a plain addition:
 
 - **Targets.**
-  - One `RenderTargetSpec` row per `FieldTargetId` (ids `mw-field-*`). Each has `scale: (s) => s.settings.milkyWay.field.divisors[id]`
+  - One `RenderTargetSpec` row per `AppFieldTargetId`, every `FieldTargetId` but the tool-only `extras` (ids `mw-field-*`). Each has `scale: (s) => s.settings.milkyWay.field.divisors[id]`
     and `allocateWhen` = the `field` part. The formats are HDR, except the dust map, which uses `DUST_MAP_FORMAT`.
   - `mw-aggregate` gains `allocateWhen` = the `cloud` part.
 - **Lifecycle.** The runtime holds the host lazily.

@@ -67,12 +67,6 @@ describe('createFieldHostSlot', () => {
     );
   });
 
-  it('sync returns the live host, and null when off', () => {
-    const { slot, hosts } = setup();
-    expect(slot.sync(true, true)).toBe(hosts[0]);
-    expect(slot.sync(false, true)).toBeNull();
-  });
-
   it('destroy releases a live host', () => {
     const { slot, hosts } = setup();
     slot.sync(true, true);

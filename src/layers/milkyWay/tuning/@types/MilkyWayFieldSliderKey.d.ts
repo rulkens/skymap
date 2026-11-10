@@ -1,4 +1,4 @@
-import type { FieldTargetId } from '../../field/@types/FieldTargetId';
+import type { AppFieldTargetId } from '../../field/@types/AppFieldTargetId';
 
-/** Keys of the `field` settings group that surface as sliders: the exposure and one divisor per field target. */
-export type MilkyWayFieldSliderKey = 'exposure' | FieldTargetId;
+/** Keys of the `field` settings group that surface as sliders: the exposure and one divisor per app field target. */
+export type MilkyWayFieldSliderKey = 'exposure' | AppFieldTargetId;

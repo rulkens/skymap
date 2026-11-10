@@ -1,4 +1,4 @@
-import type { FieldTargetId } from '../@types/FieldTargetId';
+import type { AppFieldTargetId } from '../@types/AppFieldTargetId';
 import { FIELD_TARGET_IDS } from './fieldTargetIds';
 
 /**
@@ -7,5 +7,5 @@ import { FIELD_TARGET_IDS } from './fieldTargetIds';
  * there, and at its divisor of 1 the row held ~66 MB at 4K.
  */
 export const APP_FIELD_TARGET_IDS = FIELD_TARGET_IDS.filter(
-  (id): id is Exclude<FieldTargetId, 'extras'> => id !== 'extras',
+  (id): id is AppFieldTargetId => id !== 'extras',
 );
