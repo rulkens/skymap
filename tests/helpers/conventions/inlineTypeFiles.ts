@@ -56,7 +56,6 @@ export const INLINE_TYPE_FILES: ReadonlySet<string> = new Set([
   'src/services/engine/galaxyGenerator/v1/carveDustLayout.ts',
   'src/services/engine/galaxyGenerator/v1/carveStarLayout.ts',
   'src/services/engine/galaxyGenerator/v1/splitStarBudget.ts',
-  'src/layers/milkyWay/field/starFormation/utils/hiiRegions.ts',
   'src/services/engine/gpuHandles/gpuHandleRegistry.ts',
   'src/services/engine/helpers/famousDisplayName.ts',
   'src/services/engine/presentation/famousLabelStyle.ts',

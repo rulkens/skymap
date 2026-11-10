@@ -282,7 +282,7 @@
 // GalaxyFieldComponent) sizes the per-instance quad in fieldSplat/vertex.wesl
 // and hiiSplat/vertex.wesl. textureWeight
 // (GalaxyFieldComponent's own field) is 0 (untouched) for every producer
-// except hiiRegions.ts's pushes — hiiSplat's fragments mix ITS MAGNITUDE
+// except buildHiiShellsAndYoungWithSegments.ts's pushes — hiiSplat's fragments mix ITS MAGNITUDE
 // against hiiNoiseTerm or starGrainTerm (erosionFragment.wesl/youngFragment.wesl/
 // extrasFragment.wesl; see dustDetail's own doc above).
 // The SIGN, not a second lane, is what picks the texture: positive (shell,

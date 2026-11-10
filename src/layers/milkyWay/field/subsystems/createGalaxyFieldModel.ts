@@ -19,12 +19,8 @@ import type { GalaxyFieldModel } from '../@types/GalaxyFieldModel';
 import type { HiiSegment } from '../starFormation/@types/HiiSegment';
 import { transformGalaxyFieldComponent } from '../mixture/utils/transformGalaxyFieldComponent';
 import { buildGalaxyFieldMixture } from '../mixture/utils/galaxyFieldMixture';
-import {
-  buildHiiRegions,
-  buildHiiShellsAndYoungWithSegments,
-  EMPTY_SHELLS_AND_YOUNG,
-} from '../starFormation/utils/hiiRegions';
-import type { HiiShellsAndYoungResult } from '../starFormation/utils/hiiRegions';
+import { buildHiiShellsAndYoungWithSegments } from '../starFormation/utils/buildHiiShellsAndYoungWithSegments';
+import type { HiiShellsAndYoungResult } from '../starFormation/@types/HiiShellsAndYoungResult';
 import { createDerived } from '../../../../services/gpu/lib/createDerived';
 import { deriveDustHeaderLanes } from '../dust/utils/deriveDustHeaderLanes';
 import { packFieldSlices } from '../render/packFieldSlices';
@@ -33,6 +29,8 @@ import { computeDigVeilBudget } from '../placement/utils/computeDigVeilBudget';
 import type { DigVeilBudget } from '../placement/@types/DigVeilBudget';
 import { computePlaceDustBudget } from '../placement/utils/computePlaceDustBudget';
 import type { PlaceDustBudget } from '../placement/@types/PlaceDustBudget';
+import { EMPTY_SHELLS_AND_YOUNG } from '../starFormation/data/emptyShellsAndYoung';
+import { buildHiiRegions } from '../starFormation/utils/buildHiiRegions';
 
 export function createGalaxyFieldModel(deps: {
   readonly input: () => GalaxyFieldMixtureInput;

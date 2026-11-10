@@ -16,7 +16,7 @@ import {
   DEFAULT_GALAXY_FIELD_TUNING,
   buildGalaxyFieldMixture,
 } from '../../../../../../src/layers/milkyWay/field/mixture/utils/galaxyFieldMixture';
-import { buildHiiRegions } from '../../../../../../src/layers/milkyWay/field/starFormation/utils/hiiRegions';
+import { buildHiiRegions } from '../../../../../../src/layers/milkyWay/field/starFormation/utils/buildHiiRegions';
 import { REFERENCE_GALAXIES } from '../../../../../../tools/galaxy-renderer/src/data/referenceGalaxies';
 import type { GalaxyFieldComponent } from '../../../../../../src/layers/milkyWay/field/mixture/@types/GalaxyFieldComponent';
 import type { GalaxyParams } from '../../../../../../src/@types/galaxy/GalaxyParams';

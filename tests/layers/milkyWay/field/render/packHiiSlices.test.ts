@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { packHiiSlices } from '../../../../../src/layers/milkyWay/field/render/packHiiSlices';
 import { FIELD_COMPONENT_FLOATS } from '../../../../../src/layers/milkyWay/field/header/render/packFieldUniforms';
 import type { GalaxyFieldComponent } from '../../../../../src/layers/milkyWay/field/mixture/@types/GalaxyFieldComponent';
-import type { HiiShellsAndYoungResult } from '../../../../../src/layers/milkyWay/field/starFormation/utils/hiiRegions';
+import type { HiiShellsAndYoungResult } from '../../../../../src/layers/milkyWay/field/starFormation/@types/HiiShellsAndYoungResult';
 
 const component = (amplitude: number): GalaxyFieldComponent => ({
   amplitude,

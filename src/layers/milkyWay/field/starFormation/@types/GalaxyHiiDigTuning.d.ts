@@ -1,8 +1,8 @@
 /**
  * GalaxyHiiDigTuning — the diffuse ionized gas (DIG) veil's own tunable
- * complex/children structure (`hiiRegions.ts`'s DIG block), nested under
+ * complex/children structure (`buildDigVeil.ts`'s DIG block), nested under
  * `GalaxyHiiTuning` the way `GalaxyArmCloudTuning` nests under
- * `GalaxyArmTuning`. See `hiiRegions.ts` for the placement/scatter it drives.
+ * `GalaxyArmTuning`. See `buildDigVeil.ts` for the placement/scatter it drives.
  */
 export type GalaxyHiiDigTuning = {
   /**
@@ -23,7 +23,7 @@ export type GalaxyHiiDigTuning = {
   /**
    * Scaler on the run's own recent-event population — the veil's complex
    * count is DERIVED from how much star formation the current run actually
-   * produced (`hiiRegions.ts`'s `DIG_COMPLEXES_PER_EVENT`), not a fixed
+   * produced (`digVeilBudget.ts`'s `DIG_COMPLEXES_PER_EVENT`), not a fixed
    * number; 1 is the neutral default, 0 turns the veil off regardless of `fraction`.
    */
   readonly complexes: number;
@@ -31,7 +31,7 @@ export type GalaxyHiiDigTuning = {
   readonly childrenPerComplex: number;
   /**
    * 0..1: concentrates map-seeded complexes toward the analytic arm
-   * envelope (`hiiRegions.ts`'s `buildArmProximityEnvelope`) — a
+   * envelope (`buildDigVeil.ts`'s `buildArmProximityEnvelope`) — a
    * reweighting of the SAME `activity` CDF every complex draws from, not
    * a second placement path. 0 = pure map density.
    */

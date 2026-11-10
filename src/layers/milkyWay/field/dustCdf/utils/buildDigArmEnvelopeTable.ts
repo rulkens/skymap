@@ -1,5 +1,5 @@
 /**
- * buildDigArmEnvelopeTable — `hiiRegions.ts`'s `buildArmProximityEnvelope`,
+ * buildDigArmEnvelopeTable — `buildDigVeil.ts`'s `buildArmProximityEnvelope`,
  * re-expressed as a packed per-(ring,arm) table instead of a
  * `(radius, angle) => number` closure: `ismMapDustCdfScan.wesl`'s
  * `armBiased` weight mode needs the closure's own per-ring intermediates

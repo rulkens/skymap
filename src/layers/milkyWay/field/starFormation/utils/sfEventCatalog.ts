@@ -3,7 +3,7 @@
  * function of (geometry, starFormation, seed) → flat SF-event data. No
  * engine state, no clock, no global RNG — a Worker/GPU-compute-pass
  * candidate. Dust bubbles (`buildDustBubblePlacements.ts`) and HII star-forming
- * knots (`hiiRegions.ts`) both read this one catalog so cavities and their
+ * knots (`buildHiiShellsAndYoungWithSegments.ts`) both read this one catalog so cavities and their
  * glow correlate instead of being two independent sprinkles.
  */
 import { distance3 } from '../../../../../utils/math/distance3';

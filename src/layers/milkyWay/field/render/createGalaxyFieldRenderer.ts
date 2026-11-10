@@ -27,7 +27,7 @@ import {
   DEFAULT_GALAXY_FIELD_TUNING,
   GALAXY_FIELD_MAX_COMPONENTS,
 } from '../mixture/utils/galaxyFieldMixture';
-import { DIG_MAX_COUNT, HII_MAX_COUNT } from '../starFormation/utils/hiiRegions';
+import { DIG_MAX_COUNT } from '../starFormation/data/digVeilBudget';
 import { MAX_PARTICLE_COUNT } from '../dust/utils/dustParticleCloud';
 import { YOUNG_CHAIN_MAX_COMPONENTS } from '../starFormation/utils/youngStarChain';
 
@@ -60,6 +60,7 @@ import { GALAXY_FIELD_STAGES } from '../data/galaxyFieldStages';
 import dustNoiseBakeWgsl from '../../../../services/gpu/shaders/milkyWay/field/dustNoiseBake.wesl?static';
 import warpNoiseBakeWgsl from '../../../../services/gpu/shaders/milkyWay/field/warpNoiseBake.wesl?static';
 import starGrainBakeWgsl from '../../../../services/gpu/shaders/milkyWay/field/starGrainBake.wesl?static';
+import { HII_MAX_COUNT } from '../starFormation/data/hiiMaxCount';
 
 /** Baked ONCE at construction — fixed octave bands, no camera/galaxy input, never re-baked per frame. Each `workgroupSize` matches its shader's own `@workgroup_size`. */
 const BAKED_VOLUMES = {
@@ -295,7 +296,7 @@ export function createGalaxyFieldRenderer(
 
   /** The HII tier's own tier-global texture knobs — cheap to derive, so read straight off `fieldTuning.hii` rather than cached like `dustHeaderLanes`. */
   function hiiTextureLanes(): HiiTextureLanes {
-    // `?? 0`/`?? 1`: the same stale-stored-tuning guard `hiiRegions.ts`
+    // `?? 0`/`?? 1`: the same stale-stored-tuning guard `buildHiiShellsAndYoungWithSegments.ts`
     // applies at its own per-group `texture` reads — a preset saved before
     // this knob existed carries no such key.
     return {

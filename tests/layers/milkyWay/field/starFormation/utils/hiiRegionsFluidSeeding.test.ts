@@ -3,7 +3,7 @@
  * fluid sim's own young-event window instead of the parallel arm-ridge
  * catalog, so the tier's output tracks `eventRate`/`impulseDuration`/`steps`
  * rather than `starFormation.sfActivity`. `'none'` keeps the pre-existing
- * catalog behaviour untouched — see `hiiRegions.test.ts` for the
+ * catalog behaviour untouched — see `buildHiiRegions.test.ts` for the
  * map-seeding/DIG coverage, orthogonal to this file. `youngStars` is zeroed
  * throughout: the chain producer places off arm geometry alone
  * (`youngStarChain.ts`), so it would otherwise pollute every catalog-only
@@ -16,7 +16,7 @@ import { DEFAULT_GALAXY_STAR_FORMATION_PARAMS } from '../../../../../../src/laye
 import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../../../src/layers/milkyWay/field/mixture/utils/galaxyFieldMixture';
 import { buildGalaxyIsmMapFluidEvents } from '../../../../../../src/layers/milkyWay/field/ismMap/utils/buildGalaxyIsmMapFluidEvents';
 import { ISM_MAP_RINGS } from '../../../../../../src/layers/milkyWay/field/ismMap/data/ismMapRings';
-import { buildHiiRegions } from '../../../../../../src/layers/milkyWay/field/starFormation/utils/hiiRegions';
+import { buildHiiRegions } from '../../../../../../src/layers/milkyWay/field/starFormation/utils/buildHiiRegions';
 import { ismMapRingRadius } from '../../../../../../src/utils/galaxy/ismMapRingRadius';
 import { warpHeight } from '../../../../../../src/layers/milkyWay/field/mixture/utils/warpHeight';
 import type { GalaxyFieldTuning } from '../../../../../../src/layers/milkyWay/field/mixture/@types/GalaxyFieldTuning';
@@ -144,9 +144,9 @@ describe('buildHiiRegions — fluid generator seeding', () => {
 
     // Independent reconstruction of the placement, off SHARED geometry
     // utilities (`ismMapGridRadius`/`ismMapRingRadius`/`warpHeight`) rather
-    // than off `hiiRegions.ts`'s own (private) placement function — the same
+    // than off `buildHiiShellsAndYoungWithSegments.ts`'s own (private) placement function — the same
     // "reuse the shared ridge/grid truth, not the function under test"
-    // technique `hiiRegions.test.ts`'s own armBias test uses via
+    // technique `buildHiiRegions.test.ts`'s own armBias test uses via
     // `armRidgeAngle`.
     const grid = ismMapGridRadius(geometry);
     const angle = (event.az * 2 * Math.PI) / ISM_MAP_AZ;
@@ -167,7 +167,7 @@ describe('buildHiiRegions — fluid generator seeding', () => {
     expect(regions.length).toBeGreaterThan(0);
 
     // A single HII region's own Strömgren radius is at most a few hundred
-    // parsecs (`hiiRegionGeometry.ts`'s `RADIUS_MIN_PC`/`LUMINOSITY_MAX`) —
+    // parsecs (`hiiLuminosityOf.ts`'s `RADIUS_MIN_PC`/`LUMINOSITY_MAX`) —
     // a small fraction of the whole disc's `outerRadius`. Every sprite
     // clustering within that fraction of `expectedCenter` (rather than, say,
     // scattered across the disc via a wrong transform, or sitting on the

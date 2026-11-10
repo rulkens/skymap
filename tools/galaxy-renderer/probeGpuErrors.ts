@@ -37,7 +37,7 @@ import { buildArmSpurs } from '../../src/layers/milkyWay/field/arms/utils/buildA
 import { deriveArmSpurCloudCount } from '../../src/layers/milkyWay/field/armClouds/utils/deriveArmSpurCloudCount';
 import { deriveArmCloudCount } from '../../src/layers/milkyWay/field/armClouds/utils/deriveArmCloudCount';
 import { discLightScaleLength } from '../../src/layers/milkyWay/field/mixture/utils/discLightScaleLength';
-import { buildHiiShellsAndYoungWithSegments } from '../../src/layers/milkyWay/field/starFormation/utils/hiiRegions';
+import { buildHiiShellsAndYoungWithSegments } from '../../src/layers/milkyWay/field/starFormation/utils/buildHiiShellsAndYoungWithSegments';
 import { computePlaceDustBudget } from '../../src/layers/milkyWay/field/placement/utils/computePlaceDustBudget';
 import { computeDigVeilBudget } from '../../src/layers/milkyWay/field/placement/utils/computeDigVeilBudget';
 import { FIELD_COMPONENT_FLOATS } from '../../src/layers/milkyWay/field/header/render/packFieldUniforms';
@@ -2145,7 +2145,7 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
 
         // (4) Sigma-distribution parity — NOT a flux check. DIG's own CPU
         // brightness law (`amplitude = digAmplitudeBase / (TAU_ROOT3 *
-        // sigma^3)`, hiiRegions.ts:634) is position-INDEPENDENT: unlike the
+        // sigma^3)`, buildDigVeil.ts) is position-INDEPENDENT: unlike the
         // arm/spur tiers' `armExcessSurfaceShape(placedRadius, ...)`, no
         // quantity derived from a record's OWN amplitude+invCov can ever be
         // an independent check of its PLACEMENT — substituting the shader's

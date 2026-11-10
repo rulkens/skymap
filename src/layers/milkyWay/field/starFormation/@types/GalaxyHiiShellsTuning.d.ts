@@ -1,6 +1,6 @@
 /**
  * GalaxyHiiShellsTuning — the emission-shell tier's own tunable knobs
- * (`hiiRegions.ts`'s per-region shell + embedded-OB-cluster sprites), nested
+ * (`buildHiiShellsAndYoungWithSegments.ts`'s per-region shell + embedded-OB-cluster sprites), nested
  * under `GalaxyHiiTuning` the way `GalaxyHiiDigTuning`/`GalaxyYoungStarsTuning`
  * nest their own tiers.
  */

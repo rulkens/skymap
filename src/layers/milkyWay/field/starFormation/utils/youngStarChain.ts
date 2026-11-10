@@ -7,7 +7,7 @@
  */
 import { armCrossSigma } from '../../arms/utils/armCrossSigma';
 import { buildArmSpurs } from '../../arms/utils/buildArmSpurs';
-import { HII_CLUSTER_COLOR } from './hiiRegionGeometry';
+import { HII_CLUSTER_COLOR } from '../data/hiiClusterColor';
 import { sampleArmRidgeNodes } from '../../arms/utils/sampleArmRidgeNodes';
 import { inverseCovarianceFromFrame } from '../../mixture/utils/inverseCovarianceFromFrame';
 import { pcToUnits } from '../../mixture/utils/pcToUnits';
@@ -41,7 +41,7 @@ const YOUNG_SCALE_HEIGHT_PC = 100;
 /**
  * Free-standing per-luminosity flux anchor (spec §3, Q3) — total tier flux
  * at `brightness` 1 is `geometry.luminosity * YOUNG_FLUX_REF`, the same
- * "fraction of the galaxy's own luminosity" idiom `hiiRegions.ts`'s
+ * "fraction of the galaxy's own luminosity" idiom `buildHiiShellsAndYoungWithSegments.ts`'s
  * `HII_LUMINOSITY_SHARE` uses, standing in until the pivot to
  * `clusterFluxSum` (Q3's one-line anchor swap) wires this tier back into
  * the HII pass' own flux ledger. A visual-calibration starting point, not

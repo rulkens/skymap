@@ -319,14 +319,14 @@ Shared rules for A1–A4:
 - Tests `hiiRegions.test.ts` and `sfEventAgeBands.test.ts` (split)
 - `inlineTypeFiles.ts` (row)
 
-- [ ] `hiiRegionGeometry.ts`:
+- [x] `hiiRegionGeometry.ts`:
   - Extract `hiiRadiusUnits`, and `HII_AGE_GATE` and `HII_CLUSTER_COLOR` → data.
   - `npm run move-files -- P/starFormation/utils/hiiRegionGeometry.ts P/starFormation/utils/hiiLuminosityOf.ts`.
-- [ ] `sfEventAgeBands.ts`:
+- [x] `sfEventAgeBands.ts`:
   - Extract `deriveComplexCount`, and `RECENT_EVENT_AGE_FRAC_CEIL` → data.
   - `npm run move-files -- P/starFormation/utils/sfEventAgeBands.ts P/starFormation/utils/fluidMidAgeEventWindow.ts`.
   - Split the test: `describe('deriveComplexCount')` (today L51-65) → its own file.
-- [ ] `hiiRegions.ts` (914 lines, order matters):
+- [x] `hiiRegions.ts` (914 lines, order matters):
   - Replace the local `HiiRegionSegment` (today L650) with the existing `HiiSegment` type. The two
     are structurally identical (`{ label, first, count }`).
   - Extract `HiiShellsAndYoungResult` to `@types`. `export`, extract and move `RegionPlan` and
@@ -340,7 +340,7 @@ Shared rules for A1–A4:
     `buildHiiRegionsWithSegments`.
   - `npm run move-files -- P/starFormation/utils/hiiRegions.ts P/starFormation/utils/buildHiiRegions.ts`.
   - Split the test: `describe('buildHiiRegionsWithSegments')` (today L342-368) → its own file.
-- [ ] Resulting counts: `starFormation/utils` 11, `starFormation/data` 10. Commit.
+- [x] Resulting counts: `starFormation/utils` 11, `starFormation/data` 10. Commit.
 
 ## Prep 1: the field camera is a `FieldView`
 

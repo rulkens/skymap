@@ -7,7 +7,7 @@
  * data`, no engine state, no Math.random — same discipline as
  * `sfEventCatalog.ts`.
  */
-import { HII_AGE_GATE } from '../../starFormation/utils/hiiRegionGeometry';
+import { HII_AGE_GATE } from '../../starFormation/data/hiiAgeGate';
 import { buildSfEventCatalog } from '../../starFormation/utils/sfEventCatalog';
 import { pcToUnits } from '../../mixture/utils/pcToUnits';
 import type { GalaxyDustParams } from '../@types/GalaxyDustParams';

@@ -1,6 +1,6 @@
 /**
  * createIsmMapPlaceDigVeil — the GPU placement kernel for the DIG veil,
- * mirroring `buildDigVeil`'s complex/children placement loop (`hiiRegions.ts`).
+ * mirroring `buildDigVeil`'s complex/children placement loop (`buildHiiShellsAndYoungWithSegments.ts`).
  * The CPU decides slot COUNT (`computeDigVeilBudget.ts`); `placeDigVeil.wesl`
  * decides slot CONTENT, including the map-usability gate itself (`usesMap`),
  * so nothing on this path depends on a CPU `ismMap` readback.
@@ -15,7 +15,7 @@ import {
 } from './packPlaceDigVeilParams';
 import type { PlaceDigVeilParamsInput } from './packPlaceDigVeilParams';
 import { FIELD_COMPONENT_FLOATS } from '../../header/render/packFieldUniforms';
-import { DIG_MAX_COUNT } from '../../starFormation/utils/hiiRegions';
+import { DIG_MAX_COUNT } from '../../starFormation/data/digVeilBudget';
 import type { PlaceDigVeilDispatchInput } from '../@types/PlaceDigVeilDispatchInput';
 import type { IsmMapPlaceDigVeil } from '../@types/IsmMapPlaceDigVeil';
 

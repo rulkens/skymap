@@ -358,7 +358,7 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
       // `brightness` plays now.
       brightness: 1,
       // Scaler on the run's own recent-event population (see
-      // hiiRegions.ts's DIG_COMPLEXES_PER_EVENT), not an absolute count —
+      // digVeilBudget.ts's DIG_COMPLEXES_PER_EVENT), not an absolute count —
       // 1 is the neutral default.
       complexes: 1,
       childrenPerComplex: 4,
@@ -842,7 +842,7 @@ const ARM_DISC_DEBIT_CLAMP_FRACTION = 0.9;
  * same cap: `armCloudCount`/`spurCloudCount` below are computed BEFORE
  * `pushArmRidges` runs and folded into its `reservedComponents`, so the
  * ridge chain's own budget shrinks to leave room rather than the three
- * tiers racing for the same slots. HII regions (`hiiRegions.ts`) don't
+ * tiers racing for the same slots. HII regions (`buildHiiShellsAndYoungWithSegments.ts`) don't
  * compete for this cap — they render into their own target off their own
  * buffer (`createGalaxyEngine.ts`'s `hiiTex`/`hiiCompsBuf`), so they never
  * reserve any of it.

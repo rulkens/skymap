@@ -314,7 +314,7 @@ export function packFieldComponents(
     out[base + 9] = c.color[1];
     out[base + 10] = c.color[2];
     // textureWeight (io.wesl's comps doc) — 0 (untouched) for every producer
-    // except hiiRegions.ts's pushes.
+    // except buildHiiShellsAndYoungWithSegments.ts's pushes.
     out[base + 11] = c.textureWeight ?? 0;
     out[base + 12] = c.center[0];
     out[base + 13] = c.center[1];
