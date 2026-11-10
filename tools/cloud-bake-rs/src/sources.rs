@@ -20,11 +20,11 @@ const N21_BAND: usize = 40;
 const HYBRID_RAMP: f32 = 120.0;
 const SPECK_MAX: usize = 400;
 
-/// What geofill needs of a source to time-stamp its cells: the VIIRS satellite's pass phase (0 = NOAA-20,
-/// 1 = NOAA-21 half an orbit behind) and, for an orbit, the UTC minutes within which its swath was imaged.
+/// What geofill needs of a source to time-stamp its cells: which VIIRS satellite imaged it (0 = NOAA-20,
+/// 1 = NOAA-21, see `orbit::N21_AFTER_N20`) and, for an orbit, the UTC minutes its swath was imaged within.
 #[derive(Clone, Copy)]
 pub struct Swath {
-    pub phase: usize,
+    pub sat: usize,
     pub window: Option<(f64, f64)>,
 }
 
@@ -203,7 +203,7 @@ fn load_orbit(m: &OrbitMeta, lut: &[f32]) -> Source {
     Source {
         name: m.name.clone(),
         swath: Swath {
-            phase: 0,
+            sat: 0,
             window: Some(m.window),
         },
         y0,
@@ -247,7 +247,7 @@ pub fn load_mosaics(mosaics: &Path, lut: &[f32]) -> Vec<Source> {
     ];
     spec.iter()
         .filter(|s| mosaics.join(format!("{}.jpg", s.1)).exists())
-        .map(|&(name, f, bias, band, gain, phase)| {
+        .map(|&(name, f, bias, band, gain, sat)| {
             let (w, h, px) = rgb(&mosaics.join(format!("{f}.jpg")));
             assert_eq!((w, h), (W, H));
             let dark: Vec<bool> = px
@@ -272,10 +272,7 @@ pub fn load_mosaics(mosaics: &Path, lut: &[f32]) -> Vec<Source> {
             eprintln!("    {name}: filled {n} speck px");
             Source {
                 name: name.into(),
-                swath: Swath {
-                    phase,
-                    window: None,
-                },
+                swath: Swath { sat, window: None },
                 y0: 0,
                 h: H,
                 op,

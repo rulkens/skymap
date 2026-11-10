@@ -8,7 +8,7 @@ use crate::fetch::{self, FrameReq};
 use crate::filters::{gaussian, median3_u8, Edge};
 use crate::geodecode::{lon_in, view_angle, Decoder};
 use crate::grid::{arc, block_any, lon, subsample, H, W};
-use crate::orbit::{Orbit, HALF_SWATH, P};
+use crate::orbit::{Orbit, HALF_SWATH, N21_AFTER_N20, P};
 use crate::sources::Swath;
 use crate::sources_table::geo;
 use rayon::prelude::*;
@@ -137,11 +137,10 @@ fn plan(
     jobs
 }
 
-fn passes(orb: &Orbit, phase: f64) -> Vec<(f64, f64)> {
-    let t_node0 = orb.tn - phase * P;
+fn passes(orb: &Orbit) -> Vec<(f64, f64)> {
     (-3..18)
         .filter_map(|n| {
-            let tn = t_node0 + n as f64 * P;
+            let tn = orb.tn + n as f64 * P;
             let (t0, t1) = ((tn - P / 4.0).max(0.0), (tn + P / 4.0).min(1440.0));
             (t1 > t0).then_some((t0, t1))
         })
@@ -175,12 +174,12 @@ fn cell_times(labels: &[i8], swaths: &[Swath], need: &[bool], orb: &Orbit) -> Ve
             )
         })
         .collect();
-    let cand: Vec<Vec<Vec<(f64, f64)>>> = [0.0, 0.5]
+    let cand: Vec<Vec<Vec<(f64, f64)>>> = [*orb, orb.shifted(N21_AFTER_N20)]
         .iter()
-        .map(|&ph| {
-            passes(orb, ph)
+        .map(|o| {
+            passes(o)
                 .iter()
-                .map(|&(t0, t1)| orb.pass_time(&pts, ph, t0, t1, 0.1))
+                .map(|&(t0, t1)| o.pass_time(&pts, t0, t1, 0.1))
                 .collect()
         })
         .collect();
@@ -195,7 +194,7 @@ fn cell_times(labels: &[i8], swaths: &[Swath], need: &[bool], orb: &Orbit) -> Ve
             .enumerate()
             .fold(0, |b, (i, &v)| if v > n[b] { i } else { b });
         let sw = &swaths[k];
-        let tsds: Vec<(f64, f64)> = cand[sw.phase].iter().map(|p| p[j]).collect();
+        let tsds: Vec<(f64, f64)> = cand[sw.sat].iter().map(|p| p[j]).collect();
         if let Some((lo, hi)) = sw.window {
             let best = tsds.iter().filter(|(t, _)| *t >= lo && *t <= hi).fold(
                 None,

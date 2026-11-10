@@ -61,7 +61,7 @@ prints its own banner to stdout, so use `npm run -s bake-clouds` or read the las
   "date": "2026-11-09",
   "exit": 0,
   "coverage": 0.767,
-  "orbit": { "tn": 89.0, "lon_n": 174.25, "ltan": 13.1, "median_dt_min": 2.0 },
+  "orbit": { "tn": 87.0, "lon_n": 181.05, "ltan": 13.52, "median_dt_min": 2.0 },
   "calibration": { "mtg_goes_e_k": 4.77, "mtg_iodc_k": 4.4 },
   "skipped": { "missing": 0, "broken": 0 },
   "fetched": { "requests": 0, "mb": 0.0, "cached": 394 },
@@ -71,7 +71,8 @@ prints its own banner to stdout, so use `npm run -s bake-clouds` or read the las
 ```
 
 `coverage`, `orbit` and `calibration` are `null` when the run stopped before computing them.
-`orbit` is fitted per day from that day's granule footprints.
+`orbit` (NOAA-20) is fitted per day from that day's granule footprints: LTAN from where the swaths lie,
+then the node time from when.
 
 ## Cache
 
