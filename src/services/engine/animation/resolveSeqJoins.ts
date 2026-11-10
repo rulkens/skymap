@@ -124,7 +124,7 @@ export function resolveSeqJoins(
       const abut = Math.abs(b.startSec - a.endSec) <= ABUT_EPS;
       const zeroLength = a.endSec === a.startSec || b.endSec === b.startSec;
       if (abut && zeroLength) continue;
-      const refusal = (message: string) => new CompileFault(message, 'joinRefused', [a, b], ch);
+      const refusal = (message: string) => new CompileFault(message, 'joinRefused', [a, b]);
       if (!('segKind' in a) || !('segKind' in b)) {
         throw refusal(`${prefix}a composite move cannot blend or join on '${ch}'`);
       }
@@ -146,7 +146,6 @@ export function resolveSeqJoins(
           `${prefix}three writers are live on '${ch}' at ${b.startSec}s`,
           'threeWriters',
           [third, a, b].sort(byStartSec),
-          ch,
         );
       }
       // A join reads its spans at compile time from `a`'s folded `from`, so no leg may

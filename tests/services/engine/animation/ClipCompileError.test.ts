@@ -35,7 +35,6 @@ describe('ClipCompileError', () => {
       [0, 0],
       [0, 1],
     ]);
-    expect(e.channel).toBe('distance');
     expect(e.spans.map((s) => s.path)).toEqual(
       expect.arrayContaining([
         [0, 0],
@@ -64,7 +63,6 @@ describe('ClipCompileError', () => {
       [0, 0, 1],
       [0, 1],
     ]);
-    expect(e.channel).toBe('distance');
   });
 
   it('cueOrder names the cue', () => {
@@ -87,7 +85,6 @@ describe('ClipCompileError', () => {
       [0, 0],
       [0, 1],
     ]);
-    expect(e.channel).toBe('distance');
   });
 
   it('flyPath names the flyPath', () => {

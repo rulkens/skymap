@@ -131,7 +131,7 @@ function refusedAt<T>(reason: ClipCompileReason, path: EffectPath, acc: Accum, r
   try {
     return run();
   } catch (e) {
-    throw new ClipCompileError((e as Error).message, reason, [path], acc.spans, undefined, e);
+    throw new ClipCompileError((e as Error).message, reason, [path], acc.spans, e);
   }
 }
 
@@ -471,7 +471,7 @@ function reportedByPath<T>(acc: Accum, run: () => T): T {
   } catch (e) {
     if (!(e instanceof CompileFault)) throw e;
     const paths = e.culprits.map((c) => acc.origin.get(c)!);
-    throw new ClipCompileError(e.message, e.reason, paths, acc.spans, e.channel, e);
+    throw new ClipCompileError(e.message, e.reason, paths, acc.spans, e);
   }
 }
 

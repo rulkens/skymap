@@ -40,7 +40,6 @@ export function validateCompositeExclusivity(
               `move the conflicting camera action outside it.`,
             'compositeClash',
             [track, seg],
-            ch,
           );
         }
         if (seg.frame !== undefined && cameraArmKindOf(seg.frame) !== 'absolute') {
@@ -50,7 +49,6 @@ export function validateCompositeExclusivity(
               `channels on in Mpc, which a body-framed endpoint reads as metres.`,
             'compositeClash',
             [track, seg],
-            ch,
           );
         }
       }
@@ -63,7 +61,6 @@ export function validateCompositeExclusivity(
               `would silently win.`,
             'compositeClash',
             [track, other],
-            ch,
           );
         }
       }

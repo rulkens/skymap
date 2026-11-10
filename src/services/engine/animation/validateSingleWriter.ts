@@ -82,7 +82,6 @@ export function validateSingleWriter(baseTracks: Record<Channel, BaseSegment[]>)
             `[${a.startSec},${a.endSec}) overlaps [${b.startSec},${b.endSec})`,
           'twoWriters',
           [a, b],
-          ch,
         );
       }
       const { startSec, endSec } = b.blendIn;
@@ -92,7 +91,6 @@ export function validateSingleWriter(baseTracks: Record<Channel, BaseSegment[]>)
             `the overlap of [${a.startSec},${a.endSec}) and [${b.startSec},${b.endSec})`,
           'blendWindow',
           [a, b],
-          ch,
         );
       }
       if (c !== undefined) {
@@ -101,7 +99,6 @@ export function validateSingleWriter(baseTracks: Record<Channel, BaseSegment[]>)
             `[${a.startSec},${a.endSec}) still runs at ${c.startSec}`,
           'threeWriters',
           [a, b, c],
-          ch,
         );
       }
     }
