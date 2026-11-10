@@ -9,7 +9,7 @@ import { createStructureKinds } from './structureKinds';
 import { subjectKinds } from './subjectKinds';
 import { overField } from '../utils/fields/overField';
 import { readoutField } from '../utils/fields/readoutField';
-import { formatQuantity } from '../../utils/format/formatQuantity';
+import { formatMpc } from '../../utils/format/formatMpc';
 import type { RowKindRegistry } from '../../@types/kinds/RowKindRegistry';
 
 export const ROW_KINDS: RowKindRegistry = {
@@ -41,7 +41,7 @@ export const ROW_KINDS: RowKindRegistry = {
       const name = s.last ? 'Settle' : 'Pass';
       return 'id' in s
         ? { name, op: '→', value: '', subject: s.id }
-        : { name, op: '→', value: formatQuantity(s.distance, 'Mpc') };
+        : { name, op: '→', value: formatMpc(s.distance) };
     },
     fields: [
       // `at` and `distance` exist only on a point waypoint; a subject waypoint leaves them out.

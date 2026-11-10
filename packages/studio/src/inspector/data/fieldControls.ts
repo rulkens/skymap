@@ -3,6 +3,7 @@
  * Angles are stored in radians and speeds in radians per second, percent as 0–1; the inspector
  * converts at the widget boundary so the draft only ever holds engine units.
  */
+import { relativeStep } from '../utils/relativeStep';
 import type { FieldControl } from '../../@types/kinds/FieldControl';
 import type { FieldWidget } from '../@types/FieldWidget';
 
@@ -16,7 +17,7 @@ const angle = {
 
 export const FIELD_CONTROLS: Record<FieldControl, FieldWidget> = {
   seconds: { widget: 'number', unit: 's', step: 0.1, min: 0 },
-  mpc: { widget: 'number', unit: 'Mpc', step: 0.1, min: 0 },
+  mpc: { widget: 'number', unit: 'Mpc', step: relativeStep, min: 0 },
   degrees: { widget: 'number', unit: '°', step: 1, ...angle },
   degreesPerSec: { widget: 'number', unit: '°/s', step: 0.1, ...angle },
   percent: {

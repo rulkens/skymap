@@ -2,7 +2,8 @@
 export type FieldWidget = {
   readonly widget: 'number' | 'pick' | 'toggle' | 'readout';
   readonly unit?: string;
-  readonly step?: number;
+  /** A function steps relative to the shown value (Mpc spans many decades). */
+  readonly step?: number | ((shown: number) => number);
   readonly min?: number;
   /** With `min`, the number widget becomes a slider. */
   readonly max?: number;

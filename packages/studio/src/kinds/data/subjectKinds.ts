@@ -11,6 +11,7 @@ import { easeField } from '../utils/fields/easeField';
 import { overField } from '../utils/fields/overField';
 import { readoutField } from '../utils/fields/readoutField';
 import { resolvedPosition } from '../utils/resolvedPosition';
+import { formatMpc } from '../../utils/format/formatMpc';
 import type { RowKindRegistry } from '../../@types/kinds/RowKindRegistry';
 
 export const subjectKinds: Pick<
@@ -42,7 +43,7 @@ export const subjectKinds: Pick<
       overField(),
       easeField(),
     ],
-    resolved: (e) => (e.kind === 'set' ? formatQuantity(e.to, 'Mpc') : ''),
+    resolved: (e) => (e.kind === 'set' ? formatMpc(e.to) : ''),
   },
   lookAtId: {
     glyph: 'aim',

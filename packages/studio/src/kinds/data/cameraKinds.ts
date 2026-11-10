@@ -16,6 +16,7 @@ import { toField } from '../utils/fields/toField';
 import { formatNameList } from '../../utils/format/formatNameList';
 import { formatNumber } from '../../utils/format/formatNumber';
 import { formatQuantity } from '../../utils/format/formatQuantity';
+import { formatMpc } from '../../utils/format/formatMpc';
 import {
   DEFAULT_ALIGN_SEC,
   DEFAULT_LINGER,
@@ -180,7 +181,7 @@ export const cameraKinds: Pick<
     glyph: 'dist',
     mark: 'composite',
     writes: () => ['distance', 'lookAt'],
-    label: (s) => ({ name: 'Zoom-pan', op: '→', value: formatQuantity(s.to.distance, 'Mpc') }),
+    label: (s) => ({ name: 'Zoom-pan', op: '→', value: formatMpc(s.to.distance) }),
     fields: [
       readoutField('to', 'Destination'),
       overField('Duration', { optional: true }),
