@@ -31,7 +31,7 @@ function TimelinePane() {
   const onWheel = useWheelPan(track, viewport, timeline);
   if (timeline === null) return null;
   const window = viewWindow(viewport, timeline);
-  const selectedAncestors = chains[timeline.rows.findIndex((row) => row.id === standIn)] ?? [];
+  const selectedIndex = timeline.rows.findIndex((row) => row.id === standIn);
   const end = timeline.durationSec === null ? null : timeToPercent(timeline.durationSec, window);
 
   return (
@@ -53,17 +53,9 @@ function TimelinePane() {
       </div>
       <div className={s.rows} role="tree" aria-label="Steps">
         {timeline.rows.map((row, index) => {
-          const relation = selectionRelation(row, chains[index]!, standIn, selectedAncestors);
+          const relation = selectionRelation(timeline.rows, chains, index, selectedIndex);
           return (
-            <div
-              key={row.id}
-              role="none"
-              className={cx(
-                s.row,
-                row.id === standIn && s.selected,
-                relation.insideAt !== null && s.inside,
-              )}
-            >
+            <div key={row.id} role="none" className={cx(s.row, row.id === standIn && s.selected)}>
               <OutlineRow
                 row={row}
                 ancestors={chains[index]!}

@@ -36,11 +36,11 @@
   border-left-color: var(--color-accent);
 }
 .contains {
-  border-top-color: color-mix(in srgb, var(--color-accent) 55%, transparent);
+  border-top-color: var(--color-accent);
 }
 .contains::before,
 .contains::after {
-  border-left-color: color-mix(in srgb, var(--color-accent) 55%, transparent);
+  border-left-color: var(--color-accent);
 }
 .invalid {
   border-top-style: dashed;

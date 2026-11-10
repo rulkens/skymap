@@ -21,5 +21,5 @@
 /* The selected block's window, through every step inside it. */
 .bandSelected {
   border-color: color-mix(in srgb, var(--color-accent) 70%, transparent);
-  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
 }

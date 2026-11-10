@@ -16,9 +16,10 @@
 .selected {
   box-shadow: inset 2px 0 0 var(--color-accent);
 }
-/* A block the selection sits in: a half-strength edge, the superset of the selected row. */
-.contains {
-  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--color-accent) 45%, transparent);
+/* A step inside the selected block: the same hue, fainter, so the block reads as one set. Outline
+   only: in the lanes the block's band carries it, bounded to its window. */
+.inside {
+  background: color-mix(in srgb, var(--color-accent) 6%, transparent);
 }
 .rail {
   position: absolute;
@@ -36,7 +37,12 @@
 }
 /* The selected block's rail, down every step inside it: the set drawn as one bracket. */
 .railSelected {
-  border-left: 2px solid var(--color-accent);
+  border-left-width: 2px;
+  border-left-color: var(--color-accent);
+}
+/* The path from a block holding the selection down to it: 1 px, where the set's rail is 2 px. */
+.railPath {
+  border-left-color: var(--color-accent);
 }
 .railAll.railSelected {
   border-right-color: var(--color-accent);
@@ -76,6 +82,15 @@
   color: var(--color-fg-base);
   background: transparent;
   box-shadow: inset 0 0 0 1px var(--color-fg-dim);
+}
+/* A block the selection sits in: its own icon, at its own indent, takes the accent. */
+.contains .iconGroup {
+  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 20%, transparent);
+  box-shadow: inset 0 0 0 1px var(--color-accent);
+}
+.contains .nameGroup {
+  color: var(--color-accent);
 }
 .iconBackground {
   background: transparent;

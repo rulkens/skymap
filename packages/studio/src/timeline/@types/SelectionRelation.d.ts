@@ -4,4 +4,6 @@ export type SelectionRelation = {
   readonly insideAt: number | null;
   /** A block the selection sits in. */
   readonly contains: boolean;
+  /** Rail depths on the path from a holding block down to the selected row. */
+  readonly pathAt: readonly number[];
 };

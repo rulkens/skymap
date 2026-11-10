@@ -29,6 +29,7 @@ function OutlineRow({ row, ancestors, selected, relation, onSelect, onToggle }: 
       className={cx(
         s.root,
         selected && s.selected,
+        relation.insideAt !== null && s.inside,
         relation.contains && s.contains,
         invalid && s.invalid,
       )}
@@ -46,6 +47,7 @@ function OutlineRow({ row, ancestors, selected, relation, onSelect, onToggle }: 
             ancestor.kind === 'all' && s.railAll,
             ancestor.kind === 'fork' && s.railFork,
             k === relation.insideAt && s.railSelected,
+            relation.pathAt.includes(k) && s.railPath,
           )}
           style={{ '--k': k } as CSSProperties}
           aria-hidden
