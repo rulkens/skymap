@@ -155,14 +155,16 @@ export function createClipPlayer(deps: ClipPlayerDeps): ClipPlayer {
 
   // `keep` commits the view to intent while the clip is still live (the overlay then equals
   // intent, so nothing is published and ramps in flight carry on); `revert` drops the overlay
-  // and publishes the difference. `suspendDuringClip` keeps the committed focus from flying.
+  // and publishes the difference. The focus commits as a cut: the clip already placed the
+  // camera, and a `stop()` from a saga cancel runs the focus tween saga after `clipEnded`,
+  // past `suspendDuringClip`.
   function finish(): void {
     const ending = clip;
     if (ending?.atEnd === 'keep') {
       const intent = store.getState();
       const scene = view(intent);
       store.dispatch(mergeSnapshot(captureSettings(scene)));
-      if (applied.focus > 0) store.dispatch(updateSelectionFocus(scene.selection.focus));
+      if (applied.focus > 0) store.dispatch(updateSelectionFocus(scene.selection.focus, 'cut'));
       if (scene.settings.orientation !== intent.settings.orientation) {
         store.dispatch(setOrientation(scene.settings.orientation));
       }

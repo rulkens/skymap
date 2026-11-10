@@ -227,10 +227,10 @@ backlog item stands.
 > The getters read the view, so anything `sceneView` calls that reads them would recurse. The fold takes plain
 > values only: the focus row is extracted in `tick` and handed in.
 
-> [!RISK] `suspendDuringClip` stays load-bearing
-> A `keep` commit dispatches `updateSelectionFocus` while the clip is still active, so `watchFocusTweenSaga` must stay
-> parked then, or the camera would fly to the committed focus. Its docblock (`suspendDuringClip.ts:27-32`) changes
-> its reason: focus steps no longer dispatch.
+> [!RISK] A `keep` commit's focus must not fly the camera
+> A `keep` commit dispatches `updateSelectionFocus` while the clip is still active. On a natural end
+> `suspendDuringClip` keeps `watchFocusTweenSaga` parked; a play cancelled from a saga reaches the workers only after
+> `clipEnded`, past that guard, so the commit dispatches the focus as a `'cut'`. Focus steps no longer dispatch.
 
 Smaller: publication happens in `tick`, before `fades.tick(nowMs)` (`runFrame.ts:260`), so a ramp starts on the
 previous frame's stamp. That is today's skew too. The view memo keys on store slice identities, which change on

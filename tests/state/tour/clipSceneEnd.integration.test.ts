@@ -6,6 +6,8 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { configureStore, type Action } from '@reduxjs/toolkit';
+import createSagaMiddleware from 'redux-saga';
+import { call, fork, race, take } from 'typed-redux-saga';
 
 import { rootReducer } from '../../../src/store/rootReducer';
 import { createFadeRegistry } from '../../../src/services/animation/fadeRegistry';
@@ -19,11 +21,14 @@ import { cosmicFlows } from '../../../src/compositions/clips/cosmicFlows';
 import { APP_VISIBILITY_REGISTRY } from '../../../src/compositions/appVisibility';
 import { setVisibility } from '../../../src/state/settings/setVisibilityAction';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
+import { watchFocusTweenSaga } from '../../../src/state/selection/watchFocusTweenSaga';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
 
 const START = { target: [0, 0, 0] as [number, number, number], yaw: 0, pitch: 0, distance: 1 };
 const FLOW = { address: 'flow' } as const;
+const VIRGO = { type: 'structure', id: 'virgo' };
+const SKIP = 'test/skip';
 
 function makeEngine(boot: readonly Action[] = []) {
   const store = configureStore({ reducer: rootReducer });
@@ -76,6 +81,43 @@ describe("a clip's scene at its end", () => {
     const mid = fades.opacityOf(FLOW, 3000);
     expect(mid).toBeGreaterThan(0.05);
     expect(mid).toBeLessThan(0.95);
+  });
+
+  it('a keep play stopped by a saga cancel commits its focus without a camera flight', () => {
+    // A tour's skip, Prev, exit or pause cancels `playClip` inside saga execution, which
+    // runs the commit's takers only after `clipEnded` lands, past `suspendDuringClip`.
+    const sagas = createSagaMiddleware();
+    const store = configureStore({
+      reducer: rootReducer,
+      middleware: (d) => d({ serializableCheck: false, immutableCheck: false }).concat(sagas),
+    });
+    const extractRow = vi.fn(() => null);
+    sagas.setContext({ selection: { extractRow }, cameraRuntime: () => ({}) });
+    const player = createClipPlayer({
+      store,
+      getCameraRuntime: () => {
+        throw new Error('no frame roll here');
+      },
+      extractFocusRow: () => ({ row: null, focusId: null }),
+      syncVisibility: () => {},
+    });
+    const playClip = createPlayClip({ store, clipPlayer: player, getLivePose: () => START });
+    const clip: ClipData = { timeline: [{ kind: 'focus', ref: VIRGO }, hold(5)] };
+    sagas.run(function* () {
+      yield* fork(watchFocusTweenSaga);
+      yield* race({
+        played: call(playClip, clip, DEFAULT_ORIENTATION, 'keep' as const),
+        skipped: take(SKIP),
+      });
+    });
+    let epoch = UNSTARTED_EPOCHS.clip;
+    epoch = player.tick(epoch, 0).clipEpoch;
+    player.tick(epoch, 1000);
+
+    store.dispatch({ type: SKIP });
+    expect(store.getState().camera.clip).toBeNull();
+    expect(store.getState().selection.focus).toEqual(VIRGO);
+    expect(extractRow).not.toHaveBeenCalled();
   });
 
   it("a standalone clip's scene reverts at its end", async () => {
