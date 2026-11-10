@@ -48,9 +48,21 @@ An `--out` file ending in `.png` is written as PNG without `--png`; any other na
 
 ## Capture path
 
-Before shooting, the tool awaits `window.__skymap.settled()`: it resolves after the first frame
-with no fade or label animation running (always at least one frame, never times out). Auto-rotate
-and a playing clock do not hold it back.
+Before shooting, the tool awaits `window.__skymap.settled()`. It resolves after two frames in a
+row with nothing left to wait for: no focus flight or frame turn, no asset loading (including one
+the destination only asks for once the camera nears it, such as a cosmic-web density cube), no
+Layer still streaming tiles, no fade or label animation, and no frame that threw (a throwing frame
+draws nothing, so the canvas would be blank). It never times out itself; `--timeout` is the
+deadline. `window.__skymap.unsettled()` lists what it still waits for. Auto-rotate and a playing
+clock do not hold it back; a playing `clip` or `tour` is not waited for either.
+
+### Page stability
+
+- **Code**: the page keeps the code it booted with. After boot the tool drops Vite's HMR messages,
+  so an edit elsewhere in a shared tree can't hot-swap a module or reload the page mid-shot.
+- **Wrong view**: a reload during boot (Vite's dependency-optimize reload) reopens the link itself.
+  Reloading in place would boot from the hash the app has rewritten, which no longer carries `pose`.
+  A page that reloads after boot fails the shot.
 
 ### Page stability
 
@@ -84,7 +96,10 @@ an overlay canvas, which takes about 15 s at 1280×720, so a shot takes a minute
 ## Timeouts and exit code
 
 A link that does not settle within `--timeout` still gets an image of whatever is on screen, with a
-notice on stderr. A link whose boot throws is reported on stderr and the remaining links still run.
+notice on stderr naming what it still waited for (`camera flight`, `asset <key> loading`,
+`last frame threw`, …). Every other browser call is bounded too, so a Chromium whose GPU process
+wedges (seen while another browser held the GPU) fails the shot instead of hanging the run; a
+launch whose WebGPU probe wedges is retried once. A link whose boot throws is reported on stderr and the remaining links still run.
 The exit code is 1 if any shot timed out, errored or wrote no file; page console errors alone do
 not change it.
 
