@@ -9,18 +9,18 @@
  * rather than a regenerate.
  */
 
-import type { DebugViewKind } from '../../../../../src/@types/galaxy/DebugViewKind';
+import type { DebugViewKind } from '../../../../../src/layers/milkyWay/field/header/@types/DebugViewKind';
 import type { EngineStats } from '../../../@types/engine/EngineStats';
 import type { InstanceDraw } from '../../../@types/engine/InstanceDraw';
 import type { LodSettings } from '../../../@types/engine/LodSettings';
 import type { OrientationDiagnostics } from '../../../@types/engine/OrientationDiagnostics';
 import type { RenderSettings } from '../../../@types/engine/RenderSettings';
-import type { IsmMapSeedingLanes } from '../../../../../src/@types/galaxy/IsmMapSeedingLanes';
-import type { YoungStarsLanes } from '../../../../../src/@types/galaxy/YoungStarsLanes';
+import type { IsmMapSeedingLanes } from '../../../../../src/layers/milkyWay/field/header/@types/IsmMapSeedingLanes';
+import type { YoungStarsLanes } from '../../../../../src/layers/milkyWay/field/header/@types/YoungStarsLanes';
 
 import type { ExtraGalaxySpec } from '../../../../../src/@types/galaxy/ExtraGalaxySpec';
 import type { GalaxyDescription } from '../../../../../src/@types/galaxy/GalaxyDescription';
-import type { GalaxyFieldTuning } from '../../../../../src/@types/galaxy/GalaxyFieldTuning';
+import type { GalaxyFieldTuning } from '../../../../../src/layers/milkyWay/field/mixture/@types/GalaxyFieldTuning';
 import type { GalaxyParams } from '../../../../../src/@types/galaxy/GalaxyParams';
 import type { GalaxyIsmMap } from '../../../../../src/@types/galaxy/GalaxyIsmMap';
 
@@ -31,10 +31,10 @@ import {
   buildHiiCavityPlacements,
   BUBBLE_BUDGET,
   HII_CAVITY_BUDGET,
-} from '../../../../../src/services/engine/galaxyGenerator/v2/dustBubblePlacements';
-import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyFieldMixture';
-import { ismMapGridRadius } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
-import type { GalaxyIsmMapGridRadius } from '../../../../../src/@types/galaxy/GalaxyIsmMapGridRadius';
+} from '../../../../../src/layers/milkyWay/field/dust/utils/dustBubblePlacements';
+import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../../src/layers/milkyWay/field/mixture/utils/galaxyFieldMixture';
+import { ismMapGridRadius } from '../../../../../src/layers/milkyWay/field/ismMap/utils/galaxyIsmMapArmForcing';
+import type { GalaxyIsmMapGridRadius } from '../../../../../src/layers/milkyWay/field/ismMap/@types/GalaxyIsmMapGridRadius';
 import { normalizeGenerationSeed } from '../../../../../src/utils/galaxy/normalizeGenerationSeed';
 import { areaWeightedMeanIsmMapChannel } from '../../../../../src/utils/galaxy/areaWeightedMeanIsmMapChannel';
 import { ismMapRingMeans } from '../../../../../src/utils/galaxy/ismMapRingMeans';
@@ -42,18 +42,18 @@ import { arrayMean } from '../../../../../src/utils/math/arrayMean';
 
 import { DEBUG_VIEWS } from '../../data/debugViews';
 import { createKeyedRebuild } from '../../../../../src/services/gpu/lib/createKeyedRebuild';
-import { createGrowOnlyRecordBuffer } from '../../../../../src/services/gpu/renderers/galaxyField/gpu/createGrowOnlyRecordBuffer';
-import type { GrowOnlyRecordBuffer } from '../../../../../src/@types/galaxy/GrowOnlyRecordBuffer';
+import { createGrowOnlyRecordBuffer } from '../../../../../src/layers/milkyWay/field/render/createGrowOnlyRecordBuffer';
+import type { GrowOnlyRecordBuffer } from '../../../../../src/layers/milkyWay/field/@types/GrowOnlyRecordBuffer';
 import { generateGalaxy } from '../sprites/generateGalaxy';
 import { orientationCoherenceStats } from '../ismMap/orientationCoherenceStats';
 import { createIsmMapReadbacks } from '../ismMap/createIsmMapReadbacks';
 import {
   BUBBLE_RECORD_FLOATS,
   packBubbleInstances,
-} from '../../../../../src/services/gpu/renderers/galaxyField/field/packBubbleInstances';
-import type { GalaxyFieldRenderer } from '../../../../../src/@types/galaxy/GalaxyFieldRenderer';
-import type { GalaxyFieldExtra } from '../../../../../src/@types/galaxy/GalaxyFieldExtra';
-import type { GalaxyFieldMixtureInput } from '../../../../../src/@types/galaxy/GalaxyFieldMixtureInput';
+} from '../../../../../src/layers/milkyWay/field/render/packBubbleInstances';
+import type { GalaxyFieldRenderer } from '../../../../../src/layers/milkyWay/field/@types/GalaxyFieldRenderer';
+import type { GalaxyFieldExtra } from '../../../../../src/layers/milkyWay/field/mixture/@types/GalaxyFieldExtra';
+import type { GalaxyFieldMixtureInput } from '../../../../../src/layers/milkyWay/field/mixture/@types/GalaxyFieldMixtureInput';
 
 /**
  * A single generated extra galaxy. The UBO is retained rather than destroyed

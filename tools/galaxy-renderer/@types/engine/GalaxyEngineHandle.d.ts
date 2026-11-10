@@ -9,7 +9,7 @@
  */
 
 import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
-import type { GalaxyFieldTuning } from '../../../../src/@types/galaxy/GalaxyFieldTuning';
+import type { GalaxyFieldTuning } from '../../../../src/layers/milkyWay/field/mixture/@types/GalaxyFieldTuning';
 import type { GalaxyIsmMap } from '../../../../src/@types/galaxy/GalaxyIsmMap';
 import type { RenderSettings } from './RenderSettings';
 import type { LodSettings } from './LodSettings';

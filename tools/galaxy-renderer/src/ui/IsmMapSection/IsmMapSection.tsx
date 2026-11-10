@@ -8,9 +8,9 @@
  * shown whenever the generator is active.
  */
 import type { ReactNode } from 'react';
-import type { GalaxyIsmMapFluidParams } from '../../../../../src/@types/galaxy/GalaxyIsmMapFluidParams';
-import type { GalaxyIsmMapGeneratorKind } from '../../../../../src/@types/galaxy/GalaxyIsmMapGeneratorKind';
-import type { GalaxyIsmMapParams } from '../../../../../src/@types/galaxy/GalaxyIsmMapParams';
+import type { GalaxyIsmMapFluidParams } from '../../../../../src/layers/milkyWay/field/ismMap/@types/GalaxyIsmMapFluidParams';
+import type { GalaxyIsmMapGeneratorKind } from '../../../../../src/layers/milkyWay/field/ismMap/@types/GalaxyIsmMapGeneratorKind';
+import type { GalaxyIsmMapParams } from '../../../../../src/layers/milkyWay/field/ismMap/@types/GalaxyIsmMapParams';
 import type { OrientationDiagnostics } from '../../../@types/engine/OrientationDiagnostics';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { fieldTuningPatched } from '../../state/slices/fieldTuningSlice';

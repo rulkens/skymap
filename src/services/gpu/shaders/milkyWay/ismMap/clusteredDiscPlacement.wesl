@@ -70,12 +70,10 @@ fn cloudFrameFromWarpSurface(ws: WarpSurfaceFrame) -> CloudFrame {
   return CloudFrame(ws.along, ws.across, ws.pole);
 }
 
-// cdpRingIndexForSample/cdpAzIndexForAngle — ismMapRingIndexForSample.ts /
-// ismMapAzIndexForAngle.ts ported verbatim: the nearest-texel FLOOR bucket
-// sampleGalaxyIsmMap.ts/sampleIsmMapOrientation.ts both share. Deliberately
-// NOT ismMapDustCdfScan.wesl's own round-to-nearest ismMapRingRadius inverse
-// (that one backs the scan's AREA term, this backs a placement SAMPLE — the
-// two CPU originals are different functions on purpose).
+// cdpRingIndexForSample/cdpAzIndexForAngle — the nearest-texel FLOOR bucket
+// every placement sample reads. Deliberately NOT ismMapDustCdfScan.wesl's own
+// round-to-nearest ismMapRingRadius inverse (that one backs the scan's AREA
+// term, this backs a placement SAMPLE — different functions on purpose).
 fn cdpRingIndexForSample(radius: f32, rings: u32, rMin: f32, rMax: f32) -> u32 {
   let clamped = clamp(radius, rMin, rMax);
   var lo = 0u;
@@ -109,7 +107,7 @@ fn cdpRingIndexForRadius(radius: f32, rings: u32, rMin: f32, rMax: f32) -> u32 {
   return u32(clamp(ring, 0, i32(rings - 1u)));
 }
 
-// sampleOrientationNearest — sampleIsmMapOrientation.ts ported verbatim:
+// sampleOrientationNearest —
 // nearest-texel read of the packed (cos2theta, sin2theta) double-angle
 // vector (orientationTex's .xy — createIsmMapOrientation.ts). Returns
 // (angle, coherence).

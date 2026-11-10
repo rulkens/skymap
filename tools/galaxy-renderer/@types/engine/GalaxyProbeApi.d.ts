@@ -10,9 +10,9 @@
  * inside the field renderer.
  */
 
-import type { FieldSliceCounts } from '../../../../src/@types/galaxy/FieldSliceCounts';
-import type { HiiSegment } from '../../../../src/@types/galaxy/HiiSegment';
-import type { GalaxyFieldMixtureResult } from '../../../../src/@types/galaxy/GalaxyFieldMixtureResult';
+import type { FieldSliceCounts } from '../../../../src/layers/milkyWay/field/@types/FieldSliceCounts';
+import type { HiiSegment } from '../../../../src/layers/milkyWay/field/starFormation/@types/HiiSegment';
+import type { GalaxyFieldMixtureResult } from '../../../../src/layers/milkyWay/field/mixture/@types/GalaxyFieldMixtureResult';
 
 export type GalaxyProbeApi = {
   // Live production state — NOT copies — that `peekRecords`' caller reads to

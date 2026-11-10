@@ -6,7 +6,7 @@ say which is which:
 | folder          | tier                                                                          |
 | --------------- | ----------------------------------------------------------------------------- |
 | `sprites/`      | **v1** — the sprite-star tier (`galaxyGenerator/v1/`), scheduled for deletion |
-| `field/`        | **v2** — the analytic Gaussian-mixture field (`galaxyGenerator/v2/`)          |
+| `field/`        | **v2** — the analytic Gaussian-mixture field (`milkyWay/field/`)              |
 | `ismMap/`       | **v2** — the fluid ISM-map generator and its orientation chain                |
 | everything else | tier-independent: both tiers use it, or neither does                          |
 
@@ -20,12 +20,12 @@ sprites/   encodeStarPass, encodeTransmittanceDust, packCloudUniforms,
            toMilkyWayTuning, generateGalaxy
 field/     createArmRidgeDebugSample — the one field-tier module still local
            to the tool; the pipelines, packers and encode passes it debugs
-           moved to src/services/gpu/renderers/galaxyField/field/
+           moved to src/layers/milkyWay/field/render/
 ismMap/     createIsmMapDustCdfScanDebugSample, createIsmMapReadbacks,
            decodeIsmMapTexels, decodeOrientationTexels,
            orientationCoherenceStats — readback and diagnostic paths the
            matcher/probe drive; the generator and its placement/orientation
-           chain moved to src/services/gpu/renderers/galaxyField/ismMap/
+           chain moved to src/layers/milkyWay/field/ismMap/
 
 model/     createGalaxyModel — what a galaxy IS; drives BOTH tiers
 frame/     deriveFrameView + the pure per-frame arithmetic under it
@@ -35,7 +35,7 @@ post/      encodeBloomPyramid, packGradeUniforms, gradeIsActive
 gpu/       createGalaxyRenderTargets, createReadbackQueue,
            readTextureChannelSum — the field/ISM render targets stay HERE,
            host-owned; only the grow-only record buffer and the volume-bake
-           helper moved to src/services/gpu/renderers/galaxyField/gpu/
+           helper moved to src/layers/milkyWay/field/render/
 camera/    orbit input
 timing/    the frame median + the per-pass GPU spans (`timingSlots.ts`)
 probe/     the headless readback paths the matcher drives
@@ -46,7 +46,7 @@ shaders/   WESL — mostly symlinks into the runtime's trees (`wesl.toml`).
 
 The v2 field/ISM orchestration — pipelines, packers, encode passes, and
 `createKeyedRebuild` — now lives in
-[`src/services/gpu/renderers/galaxyField/`](../../../../src/services/gpu/renderers/galaxyField/)
+[`src/layers/milkyWay/field/`](../../../../src/layers/milkyWay/field/)
 and [`src/services/gpu/lib/`](../../../../src/services/gpu/lib/); this
 tree keeps only what stayed tool-local (v1 sprites, debug samples, the
 render-target/readback plumbing, and the host that drives both tiers).

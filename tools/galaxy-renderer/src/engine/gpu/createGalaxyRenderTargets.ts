@@ -8,7 +8,7 @@
  * pass factories rebuild theirs per draw, and the field module's own groups
  * are pulled from the textures it is handed each `encode`.
  */
-import type { HiiTier } from '../../../../../src/@types/galaxy/HiiTier';
+import type { HiiTier } from '../../../../../src/layers/milkyWay/field/starFormation/@types/HiiTier';
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
 
 import { BLOOM_LEVELS, bloomScale } from '../../../../../src/data/bloomConstants';

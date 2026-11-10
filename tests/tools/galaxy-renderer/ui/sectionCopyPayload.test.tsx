@@ -19,7 +19,7 @@ import { Provider } from 'react-redux';
 import ArmFieldSection from '../../../../tools/galaxy-renderer/src/ui/ArmFieldSection/ArmFieldSection';
 import { createGalaxyStore } from '../../../../tools/galaxy-renderer/src/state/createStore';
 import { fieldTuningPatched } from '../../../../tools/galaxy-renderer/src/state/slices/fieldTuningSlice';
-import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../src/services/engine/galaxyGenerator/v2/galaxyFieldMixture';
+import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../src/layers/milkyWay/field/mixture/utils/galaxyFieldMixture';
 
 function mount(store: ReturnType<typeof createGalaxyStore>) {
   const writeText = vi.fn<(text: string) => Promise<void>>().mockResolvedValue(undefined);

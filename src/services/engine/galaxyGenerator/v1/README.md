@@ -3,7 +3,7 @@
 > **Read this first.** The generic star bag this folder produces is to be
 > **deleted, not shrunk** — see
 > [`docs/research/milky-way/goal-and-history.md`](../../../../../docs/research/milky-way/goal-and-history.md).
-> The end state is `v2/`'s analytic flux field plus named feature terms (dust,
+> The end state is the milkyWay Layer's `field/` analytic flux field plus named feature terms (dust,
 > star-forming regions, globular clusters) with real data behind them. Keep this
 > tier working; do not invest in tuning it. `splitStarBudget`, `starCount`, the
 > bulge/disc/arm/halo split and `MILKY_WAY_STARS_PER_TIER` are explicitly named

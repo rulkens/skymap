@@ -35,7 +35,7 @@
 import type { AppStore } from './createStore';
 import type { ExtraGalaxySpec } from '../../../../src/@types/galaxy/ExtraGalaxySpec';
 import type { GalaxyEngineHandle } from '../../@types/engine/GalaxyEngineHandle';
-import type { GalaxyFieldTuning } from '../../../../src/@types/galaxy/GalaxyFieldTuning';
+import type { GalaxyFieldTuning } from '../../../../src/layers/milkyWay/field/mixture/@types/GalaxyFieldTuning';
 import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
 import type { RenderSettings } from '../../@types/engine/RenderSettings';
 import { buildExtraSpecs } from '../data/buildExtraSpecs';

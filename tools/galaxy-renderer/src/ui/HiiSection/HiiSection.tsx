@@ -1,6 +1,6 @@
 /**
  * HiiSection — the analytic field's HII-region tier
- * (`src/services/engine/galaxyGenerator/v2/hiiRegions.ts`): discrete
+ * (`src/layers/milkyWay/field/starFormation/utils/hiiRegions.ts`): discrete
  * emission sprites with a limb-brightened shell, an embedded OB cluster
  * core, and a dust cavity they carve into the analytic dust lane. Own
  * section, own header pill (`fieldTuning.hii.enabled`).
@@ -17,11 +17,11 @@
  * slider).
  */
 import type { ReactNode } from 'react';
-import type { GalaxyHiiDigTuning } from '../../../../../src/@types/galaxy/GalaxyHiiDigTuning';
-import type { GalaxyHiiShellsTuning } from '../../../../../src/@types/galaxy/GalaxyHiiShellsTuning';
-import type { GalaxyHiiTuning } from '../../../../../src/@types/galaxy/GalaxyHiiTuning';
-import type { GalaxyStarFormationParams } from '../../../../../src/@types/galaxy/GalaxyStarFormationParams';
-import type { GalaxyYoungStarsTuning } from '../../../../../src/@types/galaxy/GalaxyYoungStarsTuning';
+import type { GalaxyHiiDigTuning } from '../../../../../src/layers/milkyWay/field/starFormation/@types/GalaxyHiiDigTuning';
+import type { GalaxyHiiShellsTuning } from '../../../../../src/layers/milkyWay/field/starFormation/@types/GalaxyHiiShellsTuning';
+import type { GalaxyHiiTuning } from '../../../../../src/layers/milkyWay/field/starFormation/@types/GalaxyHiiTuning';
+import type { GalaxyStarFormationParams } from '../../../../../src/layers/milkyWay/field/starFormation/@types/GalaxyStarFormationParams';
+import type { GalaxyYoungStarsTuning } from '../../../../../src/layers/milkyWay/field/starFormation/@types/GalaxyYoungStarsTuning';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { fieldTuningPatched } from '../../state/slices/fieldTuningSlice';
 import { sectionToggled } from '../../state/slices/uiSlice';

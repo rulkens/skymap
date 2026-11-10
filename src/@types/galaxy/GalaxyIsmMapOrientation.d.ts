@@ -5,7 +5,7 @@
  * scaled by coherence per texel (length `az*rings*2`), never a bare angle —
  * orientation wraps at π (a filament has no head/tail), and only the
  * double-angle form survives interpolation/blending without a false
- * zero-crossing at that wrap. Read by `sampleIsmMapOrientation`.
+ * zero-crossing at that wrap. Read by the WGSL `sampleOrientationNearest`.
  */
 export type GalaxyIsmMapOrientation = {
   readonly az: number;

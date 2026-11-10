@@ -12,7 +12,7 @@ physical area — and on this grid those are very different things.
 ## Verified current state
 
 - `buildGalaxyIsmMapFluidEvents`
-  (`src/services/engine/galaxyGenerator/v2/galaxyIsmMapFluidEvents.ts:106-113`)
+  (`src/layers/milkyWay/field/ismMap/utils/galaxyIsmMapFluidEvents.ts:106-113`)
   accumulates `weights[i] = armBiasFloor + forcing[i]` texel-by-texel with no
   per-texel area factor, then draws an index via `upperBound(weights, rng() *
   total)`.

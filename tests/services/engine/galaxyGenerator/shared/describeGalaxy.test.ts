@@ -16,7 +16,7 @@ import { describeGalaxy } from '../../../../../src/services/engine/galaxyGenerat
 import {
   ARM_SPAN_START_FRAC,
   armRidgeCurvePoint,
-} from '../../../../../src/services/engine/galaxyGenerator/v2/armRidgeGeometry';
+} from '../../../../../src/layers/milkyWay/field/arms/utils/armRidgeGeometry';
 import type { GalaxyParams } from '../../../../../src/@types/galaxy/GalaxyParams';
 
 /**
@@ -88,7 +88,7 @@ describe('describeGalaxy', () => {
   });
 
   // describeGalaxy.ts duplicates ARM_SPAN_START_FRAC rather than importing it
-  // (shared/ must gain no import edge onto v2/ — see that file's own comment)
+  // (shared/ must gain no import edge onto field/ — see that file's own comment)
   // — this is the guard that keeps the duplicate from drifting silently.
   it('an ordinary arm defaults spanStartLogR to log(v2 ARM_SPAN_START_FRAC)', () => {
     const geometry = describeGalaxy({ type: 'Sb', shared: {}, legacy: { starCount: 100000 } });
