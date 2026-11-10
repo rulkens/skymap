@@ -1,8 +1,6 @@
-import { Fragment } from 'react';
 import AlertChip from '../../../primitives/components/AlertChip/AlertChip';
 import InspectorHead from '../../../primitives/components/InspectorHead/InspectorHead';
 import InspectorRow from '../../../primitives/components/InspectorRow/InspectorRow';
-import InspectorSection from '../../../primitives/components/InspectorSection/InspectorSection';
 import ReadoutField from '../../../primitives/components/ReadoutField/ReadoutField';
 import { COMPILE_REASON_TEXT } from '../../../data/compileReasonText';
 import { formatRange } from '../../utils/formatRange';
@@ -46,13 +44,8 @@ function RowInspector({ row, rows, draft, resolution }: Props) {
         <AlertChip key={reason}>{COMPILE_REASON_TEXT[reason].long}</AlertChip>
       ))}
       {subject !== null &&
-        fields.map((field, i) => (
-          <Fragment key={field.key}>
-            {field.section !== undefined && field.section !== fields[i - 1]?.section && (
-              <InspectorSection title={field.section} />
-            )}
-            <FieldRow spec={field} subject={subject} rowRef={row.ref} />
-          </Fragment>
+        fields.map((field) => (
+          <FieldRow key={field.key} spec={field} subject={subject} rowRef={row.ref} />
         ))}
       {resolved !== '' && (
         <InspectorRow label="Resolved">

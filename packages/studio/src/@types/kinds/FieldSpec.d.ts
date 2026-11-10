@@ -16,6 +16,4 @@ export type FieldSpec<T> = {
   /** Absent means the engine decides (no fixed default): shown dim as `auto`; ↺ resets to absent. */
   readonly optional?: true;
   readonly readOnly?: true;
-  /** Inspector section header, e.g. 'Pace'. */
-  readonly section?: string;
 };
