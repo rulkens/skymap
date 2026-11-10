@@ -11,6 +11,7 @@ import { rowContext } from '../../utils/rowContext';
 import { shownFields } from '../../utils/shownFields';
 import { rowSubject } from '../../../draft/utils/rowSubject';
 import FieldRow from '../FieldRow/FieldRow';
+import StartModeField from '../StartModeField/StartModeField';
 import type { ClipData } from '../../../../../../src/@types/animation/ClipData';
 import type { TimelineRow } from '../../../@types/rows/TimelineRow';
 import type { StudioResolution } from '../../../@types/session/StudioResolution';
@@ -43,6 +44,7 @@ function RowInspector({ row, rows, draft, resolution }: Props) {
       {row.errors.map((reason) => (
         <AlertChip key={reason}>{COMPILE_REASON_TEXT[reason].long}</AlertChip>
       ))}
+      {row.ref.kind === 'start' && <StartModeField start={draft.start} />}
       {subject !== null &&
         fields.map((field) => (
           <FieldRow key={field.key} spec={field} subject={subject} rowRef={row.ref} />

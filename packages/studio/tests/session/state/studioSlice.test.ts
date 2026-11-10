@@ -6,6 +6,7 @@ import { dollyTo, hold, seq } from '../../../../../src/services/engine/animation
 import {
   draftResolved,
   paramEdited,
+  startModeSet,
   studioOpened,
   undone,
 } from '../../../src/session/state/studioSlice';
@@ -57,6 +58,28 @@ describe('studioSlice', () => {
 
     expect(selectStudioState(store.getState())).toBe(before);
     expect(selectIsDirty(store.getState())).toBe(false);
+  });
+
+  it('switching a live start to saved pins the preview pose; Undo goes back to live', () => {
+    const store = open();
+
+    store.dispatch(startModeSet('live'));
+    expect(selectIsDirty(store.getState())).toBe(false);
+
+    store.dispatch(startModeSet('saved'));
+    expect(selectDraft(store.getState())!.start).toEqual(PREVIEW.startPose);
+    expect(selectUndoLabel(store.getState())).toBe('Start');
+
+    store.dispatch(undone());
+    expect(selectDraft(store.getState())!.start).toBeUndefined();
+    expect(selectIsDirty(store.getState())).toBe(false);
+  });
+
+  it('switching a saved start to live drops its pose', () => {
+    const store = open('cosmicFlows', { start: PREVIEW.startPose, timeline: [hold(1)] });
+
+    store.dispatch(startModeSet('live'));
+    expect(selectDraft(store.getState())!.start).toBe('live');
   });
 
   it('paramEdited pushes one history entry and bumps the revision', () => {

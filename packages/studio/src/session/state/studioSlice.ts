@@ -11,8 +11,8 @@ import { initialState } from './initialState';
 import { rowSubject } from '../../draft/utils/rowSubject';
 import { setRowParam } from '../../draft/utils/setRowParam';
 import { defaultCollapsed } from '../utils/defaultCollapsed';
+import { commitDraft } from '../utils/commitDraft';
 import { stepHistory } from '../utils/stepHistory';
-import { HISTORY_LIMIT } from '../data/studioLimits';
 import type { ClipData } from '../../../../../src/@types/animation/ClipData';
 import type { ClipId } from '../../../../../src/@types/animation/ClipId';
 import type { RowRef } from '../../@types/rows/RowRef';
@@ -79,19 +79,16 @@ export const studioSlice = createSlice({
       if (base.draft === null) return;
       // Re-committing the value a param already has must not dirty the draft or add an empty Undo.
       if (Object.is(rowSubject(base.draft, payload.ref)?.[payload.param], payload.value)) return;
-      const { past } = base.history;
-      const top = past.at(-1);
-      const coalesce = payload.gesture !== null && top?.gesture === payload.gesture;
-      const entry = { draft: base.draft, label: payload.label, gesture: payload.gesture };
-      return {
-        ...base,
-        draft: setRowParam(base.draft, payload.ref, payload.param, payload.value),
-        revision: base.revision + 1,
-        history: {
-          past: coalesce ? past : [...past, entry].slice(-HISTORY_LIMIT),
-          future: [],
-        },
-      };
+      const next = setRowParam(base.draft, payload.ref, payload.param, payload.value);
+      return commitDraft({ ...base, draft: base.draft }, next, payload.label, payload.gesture);
+    },
+    /** Saved pins the view the preview starts from (the camera as the studio opened); live drops it. */
+    startModeSet: (state, { payload }: PayloadAction<'saved' | 'live'>) => {
+      const base = original(state)!;
+      if (base.draft === null || base.preview === null) return;
+      if ((typeof base.draft.start === 'object' ? 'saved' : 'live') === payload) return;
+      const start = payload === 'saved' ? base.preview.startPose : 'live';
+      return commitDraft({ ...base, draft: base.draft }, { ...base.draft, start }, 'Start', null);
     },
     undone: (state) => stepHistory(original(state)!, 'past'),
     redone: (state) => stepHistory(original(state)!, 'future'),
@@ -122,6 +119,7 @@ export const {
   playheadSet,
   viewportSet,
   paramEdited,
+  startModeSet,
   undone,
   redone,
 } = studioSlice.actions;
