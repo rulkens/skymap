@@ -1,18 +1,26 @@
-//! Cached WMS pulls in the Python cache layout (fetch_granules.py, geofetch.py, the daily-mosaic pull).
-//! Without `--fetch` a cache miss is fatal, so a warm run never touches the network by accident.
+//! Cached WMS pulls into a per-day cache (`<cache>/YYYY-MM-DD/{granules,mosaics,geo}`). With `--offline`
+//! a cache miss is fatal, so a warm run never touches the network by accident. Every cache file is written
+//! as `<path>.part` and renamed, so a killed run leaves nothing that looks cached.
+use crate::date::Date;
 use crate::grid::{H, W};
 use crate::imageio::{rgba, Rgba};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
-use std::time::Instant;
 
 const GIBS: &str = "https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&SRS=EPSG:4326";
 const EUM: &str = "https://view.eumetsat.int/geoserver/ows?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&SRS=EPSG:4326&FORMAT=image/png&TRANSPARENT=TRUE";
-/// The UTC day being baked; CLOUD_BAKE_DAY overrides the spike's original day (the --date flag replaces this).
-pub fn day() -> &'static str {
-    static D: std::sync::OnceLock<String> = std::sync::OnceLock::new();
-    D.get_or_init(|| std::env::var("CLOUD_BAKE_DAY").unwrap_or_else(|_| "2026-11-06".into()))
+
+pub fn day_dir(cache: &Path, date: Date) -> PathBuf {
+    cache.join(date.to_string())
+}
+
+/// WMS TIME for `minute` minutes after `date` 00:00Z. Callers offset slot times by +-30 min, so the
+/// minute may fall in the neighbouring day; naive `h:m` formatting would give hour 24+ or a negative minute.
+pub fn wms_time(date: Date, minute: i32) -> String {
+    let d = date.plus_days(minute.div_euclid(1440));
+    let m = minute.rem_euclid(1440);
+    format!("{d}T{:02}:{:02}:00Z", m / 60, m % 60)
 }
 
 #[derive(Default)]
@@ -41,6 +49,14 @@ fn cached(path: &Path) -> bool {
     std::fs::metadata(path)
         .map(|m| m.len() > 0)
         .unwrap_or(false)
+}
+
+/// Write `<path>.part`, then rename: a cache hit is only ever a complete file.
+pub fn write_atomic(path: &Path, bytes: &[u8]) {
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    let part = PathBuf::from(format!("{}.part", path.display()));
+    std::fs::write(&part, bytes).unwrap();
+    std::fs::rename(&part, path).unwrap();
 }
 
 /// GET with 5 tries; `png` demands a PNG body. A server Warning header lands in `<path>.warn`.
@@ -76,8 +92,7 @@ fn get(url: &str, path: &Path, png: bool) {
             });
         match res {
             Ok((body, warn)) => {
-                std::fs::create_dir_all(path.parent().unwrap()).unwrap();
-                std::fs::write(path, &body).unwrap();
+                write_atomic(path, &body);
                 if let Some(w) = warn {
                     std::fs::write(format!("{}.warn", path.display()), w).unwrap();
                 }
@@ -127,6 +142,7 @@ fn layer(sat: &str) -> String {
 #[derive(Clone)]
 pub struct FrameReq {
     pub sat: &'static str,
+    pub date: Date,
     pub tmin: i32,
     pub x0: usize, // may run past W: wraps
     pub x1: usize,
@@ -160,13 +176,11 @@ fn pieces(frames: &Path, r: &FrameReq) -> Vec<(usize, usize, PathBuf, String)> {
             90.0 - r.y1 as f64 * 180.0 / H as f64,
         );
         let url = format!(
-            "{}&BBOX={lon0:?},{lat0:?},{lon1:?},{lat1:?}&WIDTH={}&HEIGHT={}&TIME={}T{:02}:{:02}:00Z",
+            "{}&BBOX={lon0:?},{lat0:?},{lon1:?},{lat1:?}&WIDTH={}&HEIGHT={}&TIME={}",
             layer(r.sat),
             (c1 - c0) / r.scale,
             (r.y1 - r.y0) / r.scale,
-            day(),
-            r.tmin / 60,
-            r.tmin % 60
+            wms_time(r.date, r.tmin)
         );
         out.push((a, b, path, url));
         a = b;
@@ -174,9 +188,8 @@ fn pieces(frames: &Path, r: &FrameReq) -> Vec<(usize, usize, PathBuf, String)> {
     out
 }
 
-/// Fetch every missing piece: 6 GIBS and 4 EUMETView connections, as the Python. Returns seconds spent.
-pub fn prefetch(frames: &Path, reqs: &[FrameReq], allow: bool) -> f64 {
-    let t0 = Instant::now();
+/// Fetch every missing piece: 6 GIBS and 4 EUMETView connections.
+pub fn prefetch(frames: &Path, reqs: &[FrameReq], allow: bool) {
     let (mut g, mut e) = (Vec::new(), Vec::new());
     for r in reqs {
         for (_, _, path, url) in pieces(frames, r) {
@@ -184,11 +197,7 @@ pub fn prefetch(frames: &Path, reqs: &[FrameReq], allow: bool) -> f64 {
                 STATS.cached.fetch_add(1, Ordering::Relaxed);
                 continue;
             }
-            assert!(
-                allow,
-                "frame not cached (run with --fetch): {}",
-                path.display()
-            );
+            assert!(allow, "frame not cached (--offline): {}", path.display());
             if r.sat == "mtg" || r.sat == "iodc" {
                 e.push((path, url))
             } else {
@@ -204,7 +213,6 @@ pub fn prefetch(frames: &Path, reqs: &[FrameReq], allow: bool) -> f64 {
         s.spawn(|| pool(g, 6, |(p, u)| get(&u, &p, true)));
         s.spawn(|| pool(e, 4, |(p, u)| get(&u, &p, true)));
     });
-    t0.elapsed().as_secs_f64()
 }
 
 /// The RGBA frame of a request, assembled from its cached pieces.
@@ -234,13 +242,16 @@ fn slots() -> Vec<String> {
         .collect()
 }
 
-fn tstr(s: &str) -> String {
-    format!("{}T{}:{}:00Z", day(), &s[..2], &s[2..])
+/// WMS time of a granule slot named `HHMM`.
+fn tstr(date: Date, s: &str) -> String {
+    wms_time(
+        date,
+        s[..2].parse::<i32>().unwrap() * 60 + s[2..].parse::<i32>().unwrap(),
+    )
 }
 
 /// fetch_granules.py `lo` then `hi`: footprints at 1024x512, then each daylit slot's bbox at full res.
-pub fn granules(dir: &Path) -> f64 {
-    let t0 = Instant::now();
+pub fn granules(dir: &Path, date: Date, allow: bool) {
     let lo = dir.join("lo");
     let jobs: Vec<(PathBuf, String)> = slots()
         .iter()
@@ -249,12 +260,13 @@ pub fn granules(dir: &Path) -> f64 {
                 lo.join(format!("{s}.png")),
                 format!(
                     "{GIBS}{GRANULE}&BBOX=-180,-90,180,90&WIDTH=1024&HEIGHT=512&TIME={}",
-                    tstr(s)
+                    tstr(date, s)
                 ),
             )
         })
         .filter(|(p, _)| !cached(p))
         .collect();
+    require_online(&jobs, allow);
     pool(jobs, 6, |(p, u)| get(&u, &p, false));
     let mut foot = serde_json::Map::new();
     for s in slots() {
@@ -275,11 +287,12 @@ pub fn granules(dir: &Path) -> f64 {
             serde_json::json!({"frac": frac, "y0": ys[0], "y1": ys[ys.len() - 1], "cols": cols}),
         );
     }
-    std::fs::write(
-        dir.join("footprints.json"),
-        serde_json::Value::Object(foot.clone()).to_string(),
-    )
-    .unwrap();
+    write_atomic(
+        &dir.join("footprints.json"),
+        serde_json::Value::Object(foot.clone())
+            .to_string()
+            .as_bytes(),
+    );
     let hi = dir.join("hi");
     let mut meta = serde_json::Map::new();
     let mut jobs = Vec::new();
@@ -314,20 +327,27 @@ pub fn granules(dir: &Path) -> f64 {
                         90.0 - y0 as f64 * 180.0 / 4096.0,
                         90.0 - y1 as f64 * 180.0 / 4096.0,
                     );
-                    let url = format!("{GIBS}{GRANULE}&BBOX={lon0:?},{lat0:?},{lon1:?},{lat1:?}&WIDTH={}&HEIGHT={}&TIME={}", x1 - x0, y1 - y0, tstr(s));
+                    let url = format!("{GIBS}{GRANULE}&BBOX={lon0:?},{lat0:?},{lon1:?},{lat1:?}&WIDTH={}&HEIGHT={}&TIME={}", x1 - x0, y1 - y0, tstr(date, s));
                     jobs.push((path, url));
                 }
             }
         }
         meta.insert(s.clone(), serde_json::Value::Array(list));
     }
-    std::fs::write(
-        dir.join("hi_meta.json"),
-        serde_json::Value::Object(meta).to_string(),
-    )
-    .unwrap();
+    write_atomic(
+        &dir.join("hi_meta.json"),
+        serde_json::Value::Object(meta).to_string().as_bytes(),
+    );
+    require_online(&jobs, allow);
     pool(jobs, 6, |(p, u)| get(&u, &p, true));
-    t0.elapsed().as_secs_f64()
+}
+
+fn require_online(jobs: &[(PathBuf, String)], allow: bool) {
+    assert!(
+        allow || jobs.is_empty(),
+        "not cached (--offline): {}",
+        jobs[0].0.display()
+    );
 }
 
 /// Occupied column runs of a 1024-wide footprint, merged across the date line: (start, length).
@@ -352,18 +372,42 @@ fn col_runs(occ: &[bool]) -> Vec<(usize, usize)> {
 }
 
 /// The two GIBS daily true-colour mosaics, whole globe at 8192x4096 JPEG.
-pub fn mosaics(dir: &Path) -> f64 {
-    let t0 = Instant::now();
+pub fn mosaics(dir: &Path, date: Date, allow: bool) {
     let jobs: Vec<(PathBuf, String)> = [("viirs_tc", "VIIRS_NOAA20_CorrectedReflectance_TrueColor"), ("viirs21_tc", "VIIRS_NOAA21_CorrectedReflectance_TrueColor")]
         .iter()
         .map(|(f, l)| {
             (
-                dir.join(format!("{f}_{}.jpg", day())),
-                format!("{GIBS}&STYLES=&LAYERS={l}&FORMAT=image/jpeg&BBOX=-180,-90,180,90&WIDTH=8192&HEIGHT=4096&TIME={}", day()),
+                dir.join(format!("{f}.jpg")),
+                format!("{GIBS}&STYLES=&LAYERS={l}&FORMAT=image/jpeg&BBOX=-180,-90,180,90&WIDTH=8192&HEIGHT=4096&TIME={date}"),
             )
         })
         .filter(|(p, _)| !cached(p))
         .collect();
+    require_online(&jobs, allow);
     pool(jobs, 2, |(p, u)| get(&u, &p, false));
-    t0.elapsed().as_secs_f64()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn d(s: &str) -> Date {
+        Date::parse(s).unwrap()
+    }
+
+    #[test]
+    fn wms_time_rolls_minus_30_into_the_previous_day() {
+        assert_eq!(wms_time(d("2026-11-01"), -30), "2026-10-31T23:30:00Z");
+    }
+
+    #[test]
+    fn wms_time_rolls_1450_into_the_next_day() {
+        assert_eq!(wms_time(d("2026-12-31"), 1450), "2027-01-01T00:10:00Z");
+    }
+
+    #[test]
+    fn wms_time_keeps_0_and_1439_on_the_day() {
+        assert_eq!(wms_time(d("2026-11-09"), 0), "2026-11-09T00:00:00Z");
+        assert_eq!(wms_time(d("2026-11-09"), 1439), "2026-11-09T23:59:00Z");
+    }
 }

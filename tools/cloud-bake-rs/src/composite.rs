@@ -9,7 +9,6 @@ use crate::label::{count_components, small_components};
 use crate::quantile::{qmatch, Interp};
 use crate::seam::{cut, fit_gain, nadirness, CutIn};
 use crate::sources::{Source, F};
-use crate::Timer;
 use rayon::prelude::*;
 
 const GAIN_RAMP: f32 = 50.0;
@@ -25,7 +24,6 @@ pub struct Composite {
 pub fn join_all(
     sources: Vec<Source>,
     display: &Interp,
-    t: &mut Timer,
 ) -> (Vec<f32>, Vec<bool>, Vec<i8>, Vec<String>) {
     let (h, w) = (H / F, W / F);
     let names: Vec<String> = sources.iter().map(|s| s.name.clone()).collect();
@@ -36,7 +34,6 @@ pub fn join_all(
     let mut clip_c = vec![0f32; h * w];
     let zeros_lo = vec![0f32; h * w];
     for (k, src) in sources.into_iter().enumerate() {
-        let tj = crate::Stamp::now();
         let sv = src.full_valid();
         let mut s = src.full_op();
         let o: Vec<bool> = cv
@@ -76,7 +73,6 @@ pub fn join_all(
             lab = svl;
             flow = 0.0;
         } else {
-            let tc = crate::Stamp::now();
             // block means of Af = where(Cv, C, S) and Bf = where(Sv, S, C)
             let af: Vec<f32> = (0..W * H)
                 .into_par_iter()
@@ -102,8 +98,6 @@ pub fn join_all(
                 clip_s,
             };
             (lab, flow) = cut(&x, h, w, display);
-            t.add("composite: cut", tc);
-            let tb = crate::Stamp::now();
             let lab_full = upsample(&lab, h, w, F);
             m = (0..W * H)
                 .into_par_iter()
@@ -125,7 +119,6 @@ pub fn join_all(
                 );
             }
             c = out;
-            t.add("composite: blend", tb);
         }
         c.par_iter_mut().enumerate().for_each(|(i, x)| {
             if !(cv[i] || sv[i]) {
@@ -152,10 +145,9 @@ pub fn join_all(
             .zip(sv.par_iter())
             .for_each(|(a, &b)| *a |= b);
         println!(
-            "  [{k:2}] {:<22} overlap {:.4} gain {g:.3} off {off:+.3} ({npx} px) took {took:.3} flow {flow:.0} {:5.1} s",
+            "  [{k:2}] {:<22} overlap {:.4} gain {g:.3} off {off:+.3} ({npx} px) took {took:.3} flow {flow:.0}",
             src.name,
-            n_ov as f64 / (W * H) as f64,
-            tj.elapsed().as_secs_f64()
+            n_ov as f64 / (W * H) as f64
         );
     }
     (c, cv, labels, names)
@@ -253,9 +245,8 @@ pub fn match_baseline(op: &[f32], mask: &[bool], base: &[f32]) -> Vec<f32> {
 }
 
 impl Composite {
-    pub fn build(sources: Vec<Source>, display: &Interp, base: &[f32], t: &mut Timer) -> Composite {
-        let (mut c, mut cv, labels, names) = join_all(sources, display, t);
-        let t1 = crate::Stamp::now();
+    pub fn build(sources: Vec<Source>, display: &Interp, base: &[f32]) -> Composite {
+        let (mut c, mut cv, labels, names) = join_all(sources, display);
         c.par_iter_mut().for_each(|x| *x = x.clamp(0.0, 1.0));
         fill_holes(&mut c, &mut cv);
         let mask: Vec<bool> = c
@@ -264,7 +255,6 @@ impl Composite {
             .map(|(&x, &v)| v && x > 0.0)
             .collect();
         let op = match_baseline(&c, &mask, base);
-        t.add("holes + match", t1);
         Composite {
             op,
             cv,

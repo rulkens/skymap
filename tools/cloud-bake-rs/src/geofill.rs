@@ -2,13 +2,13 @@
 //! touches gets the UTC time it was observed (orbit model; mosaic cells picked by correlating against geo
 //! IR when two passes compete), gaps take the time of their nearest observed pixel, times quantise to
 //! 10-min slots that cross-fade over ~1 deg, and each slot's frames map to opacity as bake.py ir() does.
+use crate::date::Date;
 use crate::edt::nearest_feature;
 use crate::fetch::{self, FrameReq, SATS};
 use crate::filters::{gaussian, median3_u8, Edge};
 use crate::geodecode::{lon_in, view_angle, Decoder};
 use crate::grid::{arc, block_any, lon, subsample, H, W};
 use crate::orbit::{Orbit, HALF_SWATH, P};
-use crate::Timer;
 use rayon::prelude::*;
 use std::path::Path;
 
@@ -96,7 +96,13 @@ fn groups(m: &[bool]) -> Vec<Vec<bool>> {
 }
 
 /// One request per (slot, connected cell group, satellite), padded by `pad` px.
-fn plan(slot_masks: &[(i32, Vec<bool>)], pad: usize, satc: &[Vec<bool>], scale: usize) -> Vec<Job> {
+fn plan(
+    slot_masks: &[(i32, Vec<bool>)],
+    pad: usize,
+    satc: &[Vec<bool>],
+    scale: usize,
+    date: Date,
+) -> Vec<Job> {
     let mut jobs = Vec::new();
     for (slot, m) in slot_masks {
         for g in groups(m) {
@@ -122,6 +128,7 @@ fn plan(slot_masks: &[(i32, Vec<bool>)], pad: usize, satc: &[Vec<bool>], scale: 
                     slot: *slot,
                     req: FrameReq {
                         sat: k,
+                        date,
                         tmin: *slot,
                         x0,
                         x1: x0 + len,
@@ -420,7 +427,7 @@ fn pick_by_correlation(
     dec: &Decoder,
     frames: &Path,
     allow: bool,
-    t: &mut Timer,
+    date: Date,
 ) {
     let amb: Vec<usize> = (0..HC * WC)
         .filter(|&i| {
@@ -450,7 +457,7 @@ fn pick_by_correlation(
             }
         }
     }
-    let jobs = plan(&by_slot, CORE_PAD, satc, Q);
+    let jobs = plan(&by_slot, CORE_PAD, satc, Q, date);
     println!(
         "  correlation pick: {} ambiguous cells, {} candidate slots, {} frame requests",
         amb.len(),
@@ -458,9 +465,7 @@ fn pick_by_correlation(
         jobs.len()
     );
     let reqs: Vec<FrameReq> = jobs.iter().map(|j| j.req.clone()).collect();
-    let tf = fetch::prefetch(frames, &reqs, allow);
-    t.add_secs("fetch: candidate frames", tf);
-    t.add_secs("fill: correlation pick", -tf);
+    fetch::prefetch(frames, &reqs, allow);
     let (hq, wq) = (H / Q, W / Q);
     let mut a = Acc::new(hq, wq);
     let mut windows: std::collections::HashMap<(usize, i32), Vec<f64>> =
@@ -575,18 +580,11 @@ pub struct Inputs<'a> {
     pub wgt: &'a [f32],
     pub ice: &'a [f32],
     pub base: &'a [f32],
+    pub date: Date,
 }
 
 /// Full-res fill = cov * qmap(blend) + (1 - cov) * baseline, geo frames time-matched to the bordering swaths.
-pub fn build_fill(
-    x: &Inputs,
-    orb: &Orbit,
-    dec: &Decoder,
-    frames: &Path,
-    allow: bool,
-    t: &mut Timer,
-) -> Vec<f32> {
-    let t0 = crate::Stamp::now();
+pub fn build_fill(x: &Inputs, orb: &Orbit, dec: &Decoder, frames: &Path, allow: bool) -> Vec<f32> {
     let support: Vec<bool> = x.wgt.par_iter().map(|&w| (1.0 - w) > 0.005).collect();
     let cs_mask: Vec<bool> = (0..W * H)
         .into_par_iter()
@@ -601,18 +599,14 @@ pub fn build_fill(
     let mut cells = cell_times(x.labels, x.names, &need, orb);
     let satc = satc();
     let reach: Vec<bool> = (0..HC * WC).map(|i| satc.iter().any(|s| s[i])).collect();
-    t.add("fill: observation times", t0);
 
-    let t1 = crate::Stamp::now();
     let (hq, wq) = (H / Q, W / Q);
     let cv4 = subsample(x.cv, H, W, Q);
     let op4 = subsample(x.op, H, W, Q);
     pick_by_correlation(
-        &mut cells, &band_c, &reach, &satc, &op4, &cv4, dec, frames, allow, t,
+        &mut cells, &band_c, &reach, &satc, &op4, &cv4, dec, frames, allow, x.date,
     );
-    t.add("fill: correlation pick", t1);
 
-    let t2 = crate::Stamp::now();
     let tc: Vec<f32> = cells
         .iter()
         .map(|c| c.as_ref().map_or(f32::NAN, |v| v[0].0 as f32))
@@ -676,7 +670,7 @@ pub fn build_fill(
             masks.push((*sl, mc));
         }
     }
-    let jobs = plan(&masks, FILL_PAD, &satc, 1);
+    let jobs = plan(&masks, FILL_PAD, &satc, 1, x.date);
     println!(
         "  fill: {} slots ({} within geo reach), {} frame requests",
         weights.len(),
@@ -684,12 +678,8 @@ pub fn build_fill(
         jobs.len()
     );
     let reqs: Vec<FrameReq> = jobs.iter().map(|j| j.req.clone()).collect();
-    let tf = fetch::prefetch(frames, &reqs, allow);
-    t.add_secs("fetch: fill frames", tf);
-    t.add_secs("fill: slot weights + plan", -tf);
-    t.add("fill: slot weights + plan", t2);
+    fetch::prefetch(frames, &reqs, allow);
 
-    let t3 = crate::Stamp::now();
     let mut a = Acc::new(H, W);
     accumulate(&jobs, dec, frames, &mut a, Some(&weights), |_, _, _| {});
     let blend: Vec<u8> = a
@@ -708,6 +698,5 @@ pub fn build_fill(
             cov * dec.qmap.eval(blend[i] as f32 / 255.0) + (1.0 - cov) * x.base[i]
         })
         .collect();
-    t.add("fill: decode + compose", t3);
     fill
 }

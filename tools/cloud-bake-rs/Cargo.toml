@@ -1,11 +1,8 @@
-# cloud-bake-rs — native port of the phase-2 VIIRS seam-blended cloud bake
-# (scratchpad scripts/seam_viirs_p2.py with P2_FLOW=0 is the executable spec).
+# cloud-bake-rs: bakes the global cloud-opacity map (8192x4096 lossless RGBA WebP) for one UTC day
+# from NASA GIBS and EUMETSAT WMS imagery.
 #
-# WebP: libwebp through the `webp` crate (libwebp-sys builds the C library with
-# `cc`, no cmake), driven with PIL's lossless settings (quality 80, method 4) so
-# file size matches the Python bake; the pure-Rust `image` encoder is ~3x faster
-# but its files are much larger (see README). HTTP: blocking ureq on plain
-# threads, no async runtime.
+# WebP: libwebp through libwebp-sys (builds the C library with `cc`, no cmake). HTTP: blocking
+# ureq on plain threads, no async runtime.
 [package]
 name = "cloud-bake-rs"
 version = "0.1.0"
@@ -13,11 +10,10 @@ edition = "2021"
 
 [dependencies]
 rayon = "1"
-image = { version = "0.25", default-features = false, features = ["png", "jpeg", "tiff", "webp"] }
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "tiff"] }
 libwebp-sys = { version = "0.14", features = ["neon", "sse41"] }
 serde_json = "1"
 mozjpeg = "0.10"
-libc = "0.2"
 ureq = "3"
 
 [profile.release]

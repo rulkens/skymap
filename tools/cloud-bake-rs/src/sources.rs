@@ -219,7 +219,7 @@ pub fn load_orbits(granules: &Path, lut: &[f32]) -> Vec<Source> {
 }
 
 /// The GIBS daily mosaics (JPEG), N20 then N21 as its own source; each speck-filled (p2).
-pub fn load_mosaics(viirs: &Path, lut: &[f32]) -> Vec<Source> {
+pub fn load_mosaics(mosaics: &Path, lut: &[f32]) -> Vec<Source> {
     let spec = [
         (
             "daily mosaic N20",
@@ -232,7 +232,7 @@ pub fn load_mosaics(viirs: &Path, lut: &[f32]) -> Vec<Source> {
     ];
     spec.iter()
         .map(|&(name, f, bias, band, gain)| {
-            let (w, h, px) = rgb(&viirs.join(format!("{f}_{}.jpg", crate::fetch::day())));
+            let (w, h, px) = rgb(&mosaics.join(format!("{f}.jpg")));
             assert_eq!((w, h), (W, H));
             let dark: Vec<bool> = px
                 .par_chunks(3)

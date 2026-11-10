@@ -31,19 +31,19 @@ pub fn parse_args(argv: &[String]) -> Result<Args, String>;   // Err -> message 
 #[derive(Clone, Copy)] pub struct Date { pub y: i32, pub m: u32, pub d: u32 } // parsed from YYYY-MM-DD, validated
 ```
 
-- [ ] Replace the hand-rolled `args()` (`main.rs:99-150`) with `parse_args`; flags exactly
+- [x] Replace the hand-rolled `args()` (`main.rs:99-150`) with `parse_args`; flags exactly
       `--date --baseline --blue-marble --cache --out --offline`, all but `--offline` required.
-- [ ] Thread `Date` through every place that used `fetch::day()` / the `2026-11-06` literal
+- [x] Thread `Date` through every place that used `fetch::day()` / the `2026-11-06` literal
       (`fetch.rs` URL builders and `slots`/`tstr`, `sources.rs` mosaic file name). Delete `day()` and the
       `CLOUD_BAKE_DAY` variable.
-- [ ] Delete: `--no-geofill`/`--geo-ir` and the `geo-ir.webp` fill branch (`main.rs:~300`), `--dump` +
+- [x] Delete: `--no-geofill`/`--geo-ir` and the `geo-ir.webp` fill branch (`main.rs:~300`), `--dump` +
       `dump()`, `--compare`, `--webp-image-crate` + the `image` WebP encoder path (`imageio.rs:~228`) and
       the crate's `webp` feature, `--threads`, `--webp-quality`/`--webp-method` (constants 25.0 / 4),
       the `Timer`/`Stamp`/`cpu_secs` stage table and `alloc.rs` (counting allocator). Keep a single
       total-seconds measurement for the summary line (Task 6).
-- [ ] Tests (`cli.rs`): `parse_args rejects an unknown flag`, `parse_args rejects 2026-02-30 and
+- [x] Tests (`cli.rs`): `parse_args rejects an unknown flag`, `parse_args rejects 2026-02-30 and
       2026-1-5`, `parse_args requires --date --baseline --blue-marble --cache --out`.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 2: Date-keyed cache, atomic writes, day rollover in WMS times
 
@@ -56,17 +56,17 @@ pub fn wms_time(date: Date, minute: i32) -> String;  // "2026-11-09T23:30:00Z"; 
 pub fn day_dir(cache: &Path, date: Date) -> PathBuf;  // <cache>/YYYY-MM-DD
 ```
 
-- [ ] Cache layout `<cache>/YYYY-MM-DD/{granules,mosaics,geo,probe}/…`, replacing the Python layout
+- [x] Cache layout `<cache>/YYYY-MM-DD/{granules,mosaics,geo,probe}/…`, replacing the Python layout
       (`--bake` and its `granules/`, `viirs/`, `geo_p2/` children). `footprints.json` / `hi_meta.json`
       move under `granules/`.
-- [ ] Every cache write and the output WebP go to `<path>.part`, then `rename`. A leftover `.part` is
+- [x] Every cache write and the output WebP go to `<path>.part`, then `rename`. A leftover `.part` is
       never treated as cached.
-- [ ] All WMS `TIME=` values go through `wms_time` (today `fetch.rs:~160` formats `tmin/60:tmin%60`
+- [x] All WMS `TIME=` values go through `wms_time` (today `fetch.rs:~160` formats `tmin/60:tmin%60`
       straight after the date, which yields hour 24+ or negative minutes at the day's edges).
-- [ ] Tests: `wms_time rolls -30 into the previous day` (2026-11-01, -30 → 2026-10-31T23:30:00Z),
+- [x] Tests: `wms_time rolls -30 into the previous day` (2026-11-01, -30 → 2026-10-31T23:30:00Z),
       `wms_time rolls 1450 into the next day` (2026-12-31, 1450 → 2027-01-01T00:10:00Z),
       `wms_time keeps 0 and 1439 on the day`.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 3: Frozen assets compiled in, with provenance
 
@@ -74,17 +74,17 @@ pub fn day_dir(cache: &Path, date: Date) -> PathBuf;  // <cache>/YYYY-MM-DD
 `assets/README.md`; `src/geodecode.rs`, `src/main.rs`; delete `tools/cloud-bake-rs/static-inputs/`
 (move its `viirs-seam-blending.md` research note to `tools/cloud-bake-rs/docs/seam-blending-research.md`)
 
-- [ ] `assets/` gets `static-inputs/ir.xml` and `static-inputs/calib.json` renamed as above;
+- [x] `assets/` gets `static-inputs/ir.xml` and `static-inputs/calib.json` renamed as above;
       `orbit.json` is dropped (Task 4 fits it). `geodecode::Decoder::new` takes the bytes from
       `include_bytes!`/`include_str!`, no paths.
-- [ ] `assets/README.md`: the colour map's upstream (GIBS colormap URL for
+- [x] `assets/README.md`: the colour map's upstream (GIBS colormap URL for
       `GOES-East_ABI_Band13_Clean_Infrared`, fetched 2026-11-06); the tables: `mtg_lut` = EUMETView
       `mtg_fd:ir105_hrfi` grayscale stretch → °C, `iodc_lut` = IODC grey quantile-matched to MTG
       temperatures over their full-overlap 8×8 blocks at 2026-11-06T12:00Z, `qs`/`qr` = quantile map
       from the blended geo-IR opacity to the static map's opacity over geo coverage minus ice sheets, same
       time. Say that refitting is an offline maintainer step and that exit 4 is what asks for it.
-- [ ] No new test (constant plumbing).
-- [ ] Commit.
+- [x] No new test (constant plumbing).
+- [x] Commit.
 
 ### Task 4: Orbit fitted per day `review: yes`
 

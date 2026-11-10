@@ -63,13 +63,6 @@ pub fn baseline(p: &Path) -> Vec<u8> {
         .collect()
 }
 
-/// Alpha channel of an RGBA WebP / PNG.
-pub fn alpha(p: &Path) -> Vec<u8> {
-    let im = rgba(p);
-    assert_eq!((im.w, im.h), (W, H));
-    im.px.par_chunks(4).map(|c| c[3]).collect()
-}
-
 const PREC: u32 = 22; // Pillow PRECISION_BITS = 32 - 8 - 2
 
 /// Pillow precompute_coeffs for BOX + normalize_coeffs_8bpc: per output (xmin, fixed-point weights).
@@ -188,9 +181,12 @@ fn rgba_of(g: &[u8]) -> Vec<u8> {
     g.par_iter().flat_map_iter(|&v| [v, v, v, v]).collect()
 }
 
-/// libwebp lossless; Pillow saves with quality 80, method 4 (for lossless, quality is the effort knob:
-/// q25 is ~3x faster for +2.6% bytes). Returns bytes written.
-pub fn write_webp(path: &Path, g: &[u8], method: i32, quality: f32) -> usize {
+const WEBP_QUALITY: f32 = 25.0;
+const WEBP_METHOD: i32 = 4;
+
+/// libwebp lossless. For lossless, `quality` is the effort knob: 25 / method 4 is ~3x faster than
+/// Pillow's 80 for +2.6% bytes. Written via `.part` + rename. Returns bytes written.
+pub fn write_webp(path: &Path, g: &[u8]) -> usize {
     use libwebp_sys as ffi;
     let px = rgba_of(g);
     // SAFETY: the picture imports from `px` (W*H*4 bytes, stride W*4) and is freed before return; the
@@ -198,8 +194,8 @@ pub fn write_webp(path: &Path, g: &[u8], method: i32, quality: f32) -> usize {
     unsafe {
         let mut cfg = ffi::WebPConfig::new().unwrap();
         cfg.lossless = 1;
-        cfg.quality = quality;
-        cfg.method = method;
+        cfg.quality = WEBP_QUALITY;
+        cfg.method = WEBP_METHOD;
         cfg.thread_level = 1;
         assert!(ffi::WebPValidateConfig(&cfg) != 0);
         let mut pic: ffi::WebPPicture = std::mem::zeroed();
@@ -216,21 +212,11 @@ pub fn write_webp(path: &Path, g: &[u8], method: i32, quality: f32) -> usize {
         let ok = ffi::WebPEncode(&cfg, &mut pic);
         ffi::WebPPictureFree(&mut pic);
         assert!(ok != 0, "webp encode failed: {:?}", pic.error_code);
-        std::fs::write(path, std::slice::from_raw_parts(wr.mem, wr.size)).unwrap();
+        crate::fetch::write_atomic(path, std::slice::from_raw_parts(wr.mem, wr.size));
         let n = wr.size;
         ffi::WebPMemoryWriterClear(&mut wr);
         n
     }
-}
-
-/// The pure-Rust lossless encoder in `image`, for the size/speed comparison only.
-pub fn write_webp_image_crate(path: &Path, g: &[u8]) -> usize {
-    let px = rgba_of(g);
-    let f = std::fs::File::create(path).unwrap();
-    let enc = image::codecs::webp::WebPEncoder::new_lossless(std::io::BufWriter::new(f));
-    enc.encode(&px, W as u32, H as u32, image::ExtendedColorType::Rgba8)
-        .unwrap();
-    std::fs::metadata(path).unwrap().len() as usize
 }
 
 #[cfg(test)]
