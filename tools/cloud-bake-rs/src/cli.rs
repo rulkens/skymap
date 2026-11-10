@@ -12,15 +12,17 @@ pub struct Args {
     pub offline: bool,
 }
 
-const REQUIRED: [&str; 5] = ["--date", "--baseline", "--blue-marble", "--cache", "--out"];
+const REQUIRED: [&str; 4] = ["--baseline", "--blue-marble", "--cache", "--out"];
 
 pub fn parse_args(argv: &[String]) -> Result<Args, String> {
-    let mut vals: [Option<&String>; 5] = [None; 5];
-    let mut offline = false;
+    let mut vals: [Option<&String>; 4] = [None; 4];
+    let (mut date, mut offline) = (None, false);
     let mut it = argv.iter();
     while let Some(k) = it.next() {
         if k == "--offline" {
             offline = true;
+        } else if k == "--date" {
+            date = Some(it.next().ok_or(format!("{k} needs a value"))?);
         } else if let Some(i) = REQUIRED.iter().position(|r| r == k) {
             vals[i] = Some(it.next().ok_or(format!("{k} needs a value"))?);
         } else {
@@ -29,11 +31,11 @@ pub fn parse_args(argv: &[String]) -> Result<Args, String> {
     }
     let get = |i: usize| vals[i].ok_or(format!("{} is required", REQUIRED[i]));
     Ok(Args {
-        date: Date::parse(get(0)?)?,
-        baseline: get(1)?.into(),
-        blue_marble: get(2)?.into(),
-        cache: get(3)?.into(),
-        out: get(4)?.into(),
+        date: date.map_or(Ok(Date::yesterday_utc()), |d| Date::parse(d))?,
+        baseline: get(0)?.into(),
+        blue_marble: get(1)?.into(),
+        cache: get(2)?.into(),
+        out: get(3)?.into(),
         offline,
     })
 }
@@ -66,6 +68,12 @@ mod tests {
             let line = ALL.replace("2026-11-09", d);
             assert!(parse_args(&v(&line)).is_err(), "{d}");
         }
+    }
+
+    #[test]
+    fn parse_args_defaults_the_date_when_it_is_absent() {
+        let line = ALL.replace("--date 2026-11-09 ", "");
+        assert!(parse_args(&v(&line)).is_ok());
     }
 
     #[test]

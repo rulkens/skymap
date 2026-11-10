@@ -259,11 +259,11 @@ export function bmngMonthKey(month: 1 | 2 | … | 12): RawDataKey; // 'textures.
 Owner ruling (simplicity review): the default lives in the binary, so the launcher and a later container
 share it.
 
-- [ ] `--date` becomes optional; absent → the UTC day before the current system date (`SystemTime` →
+- [x] `--date` becomes optional; absent → the UTC day before the current system date (`SystemTime` →
       days since epoch → civil date, in `date.rs`; no date crate).
-- [ ] Test: `civil date from days since epoch` for 0 → 1970-01-01, 20401 → 2025-11-09, 20819 →
+- [x] Test: `civil date from days since epoch` for 0 → 1970-01-01, 20401 → 2025-11-09, 20819 →
       2027-01-01 (pin the conversion; the "yesterday" wrapper is not tested).
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 11: Output is a grey lossy WebP, q80
 

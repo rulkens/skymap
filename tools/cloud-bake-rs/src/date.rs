@@ -44,6 +44,31 @@ impl Date {
         Ok(Date { y, m, d })
     }
 
+    /// The civil date `days` after 1970-01-01 (Howard Hinnant's `civil_from_days`).
+    pub fn from_days_since_epoch(days: i64) -> Date {
+        let z = days + 719_468;
+        let era = z.div_euclid(146_097);
+        let doe = z.rem_euclid(146_097);
+        let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
+        let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+        let mp = (5 * doy + 2) / 153;
+        let m = if mp < 10 { mp + 3 } else { mp - 9 };
+        Date {
+            y: (yoe + era * 400 + (m <= 2) as i64) as i32,
+            m: m as u32,
+            d: (doy - (153 * mp + 2) / 5 + 1) as u32,
+        }
+    }
+
+    /// The UTC day before today: the latest day whose NOAA-20 passes have all arrived.
+    pub fn yesterday_utc() -> Date {
+        let secs = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system clock is before 1970")
+            .as_secs();
+        Date::from_days_since_epoch((secs / 86_400) as i64 - 1)
+    }
+
     /// The date `n` days later (earlier for negative `n`).
     pub fn plus_days(self, n: i32) -> Date {
         let mut r = self;
@@ -83,6 +108,14 @@ mod tests {
         assert!(Date::parse("2024-02-29").is_ok());
         assert!(Date::parse("2100-02-29").is_err());
         assert!(Date::parse("2000-02-29").is_ok());
+    }
+
+    #[test]
+    fn civil_date_from_days_since_epoch() {
+        let d = |n| Date::from_days_since_epoch(n).to_string();
+        assert_eq!(d(0), "1970-01-01");
+        assert_eq!(d(20401), "2025-11-09");
+        assert_eq!(d(20819), "2027-01-01");
     }
 
     #[test]
