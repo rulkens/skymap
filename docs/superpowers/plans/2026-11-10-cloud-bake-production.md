@@ -197,34 +197,34 @@ export const BMNG_VINTAGE = BMNG_MONTHS[7]; // August 2004, unchanged value
 export function bmngMonthKey(month: 1 | 2 | … | 12): RawDataKey; // 'textures.nasaBmngMonth08'
 ```
 
-- [ ] `BMNG_MONTHS` rows: stamp `2004MM`, base
+- [x] `BMNG_MONTHS` rows: stamp `2004MM`, base
       `https://assets.science.nasa.gov/content/dam/science/esd/eo/images/bmng/bmng-topography-bathymetry/<monthname>/`
       (lower-case English month name; all twelve answered 200 on 2026-11-10), label `<Month> 2004`.
-- [ ] Registry: twelve rows `'textures.nasaBmngMonth01'`..`'12'`, built from `BMNG_MONTHS` with keys that
+- [x] Registry: twelve rows `'textures.nasaBmngMonth01'`..`'12'`, built from `BMNG_MONTHS` with keys that
       stay literal in `RawDataKey` (path `data/raw/textures/world.topo.bathy.<stamp>.3x21600x10800.jpg`,
       upstream = baseUrl + file name, fetcher `tools/fetch/fetchTextures.ts`, readme `textures.readme`).
       The old `'textures.nasaBmng'` row is DELETED; its two consumers (`textureSources.ts`,
       `earthSurfaceBake.ts`) use `bmngMonthKey(<vintage month>)` instead. Follow how `BMNG_QUADRANT_KEYS`
       (`tools/utils/io/bmngQuadrantKeys.ts`) feeds `fetchTextures`.
-- [ ] `fetchTextures`: the full pull still fetches only the vintage month (unchanged behaviour); a new
+- [x] `fetchTextures`: the full pull still fetches only the vintage month (unchanged behaviour); a new
       `--bmng-months` flag fetches all twelve (~30 MB each, ~360 MB; behind the existing `--confirm` size
       gate). Update `fetchTextures.test.ts` only where its existing assertions name the deleted key.
-- [ ] Registry rows `'clouds.cache'` (directory `data/raw/clouds/cache`, gitignored) and
+- [x] Registry rows `'clouds.cache'` (directory `data/raw/clouds/cache`, gitignored) and
       `'clouds.readme'` (committed `data/raw/clouds/README.md`).
-- [ ] `bakeClouds.ts`: passes `--date` through only when given (the binary defaults it, Task 10) and
+- [x] `bakeClouds.ts`: passes `--date` through only when given (the binary defaults it, Task 10) and
       `--out` (required) and `--offline`; resolves `textures.earthClouds`, `bmngMonthKey(month of the
       date)` (month of yesterday UTC when no `--date`), `clouds.cache`; spawns `cargo run --release
       --manifest-path tools/cloud-bake-rs/Cargo.toml -- …` with inherited stdio and exits with the child's
       code. A missing month file → message naming `npm run fetch-cloud-inputs`, exit 2.
-- [ ] `package.json`: `"bake-clouds": "tsx tools/clouds/bakeClouds.ts"`,
+- [x] `package.json`: `"bake-clouds": "tsx tools/clouds/bakeClouds.ts"`,
       `"fetch-cloud-inputs": "tsx tools/fetch/fetchTextures.ts --bmng-months"`.
-- [ ] `data/raw/clouds/README.md`: what `cache/` holds (one dir per day), upstreams (GIBS, EUMETView),
+- [x] `data/raw/clouds/README.md`: what `cache/` holds (one dir per day), upstreams (GIBS, EUMETView),
       licences (GIBS/VIIRS/GOES: free incl. commercial with credit; EUMETSAT WMS visualisations: CC BY 4.0,
       "Contains modified EUMETSAT Meteosat data 2026"; Himawari via GIBS: JMA terms unverified, flagged
       medium risk); the ice-mask months are in `data/raw/textures/` (link its README). Add the eleven new
       months to `data/raw/textures/README.md`.
-- [ ] No new TS test: path plumbing and a month lookup (testing.md).
-- [ ] Commit.
+- [x] No new TS test: path plumbing and a month lookup (testing.md).
+- [x] Commit.
 
 ### Task 8: CI job
 

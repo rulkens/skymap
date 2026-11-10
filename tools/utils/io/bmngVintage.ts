@@ -10,18 +10,10 @@
  * baked range — so the two MUST share a month, or a snow line would sit at
  * the frontier this feature exists to make inspectable. The three fields
  * (filename stamp, URL segment, prose label) encode that month three ways
- * and change together.
+ * and change together — now one row of `BMNG_MONTHS`, which
+ * this picks from.
  */
 
-export const BMNG_VINTAGE = {
-  /** `YYYYMM` stamp embedded in every BMNG filename. */
-  stamp: '200408',
+import { BMNG_MONTHS } from './BMNG_MONTHS';
 
-  /** Directory the NASA collection publishes this month under. Written in
-   *  full, not assembled from a slug, so the URL stays greppable. */
-  baseUrl:
-    'https://assets.science.nasa.gov/content/dam/science/esd/eo/images/bmng/bmng-topography-bathymetry/august/',
-
-  /** Human-readable vintage for attribution strings and the tile manifest. */
-  label: 'August 2004',
-} as const;
+export const BMNG_VINTAGE = BMNG_MONTHS[7]!; // August 2004

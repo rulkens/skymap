@@ -99,6 +99,8 @@
     "fetch-2mass-xsc": "tsx tools/fetch/fetch2massXsc.ts",
     "fetch-cf4": "tsx tools/fetch/fetchCosmicflows4.ts",
     "fetch-data": "tsx tools/fetch/fetchPrebuiltData.ts",
+    "fetch-cloud-inputs": "tsx tools/fetch/fetchTextures.ts --bmng-months",
+    "bake-clouds": "tsx tools/clouds/bakeClouds.ts",
     "fetch-desi": "tsx tools/fetch/fetchDesi.ts",
     "fetch-dhm": "tsx tools/fetch/fetchDhm.ts",
     "fetch-eox": "tsx tools/fetch/fetchEoxTiles.ts",

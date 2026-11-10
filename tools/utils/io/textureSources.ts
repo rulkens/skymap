@@ -7,6 +7,7 @@
  * the union and narrows to `string` only for a LITERAL key.
  */
 
+import { BMNG_VINTAGE_KEY } from './bmngVintageKey';
 import type { BodyTextureId } from '../../../src/@types/data/BodyTextureId';
 import type { RingTextureId } from '../../../src/@types/data/RingTextureId';
 import type { TextureKind } from '../../../src/@types/data/TextureKind';
@@ -41,7 +42,7 @@ export const TEXTURE_SOURCES = {
   mercury: { surface: { native: 'textures.sssMercury8k', devFilename: '2k_mercury.jpg' } },
   venus: { surface: { native: 'textures.sssVenus4k', devFilename: '2k_venus_atmosphere.jpg' } },
   earth: {
-    surface: { native: 'textures.nasaBmng', devKey: 'textures.nasaBmngDev' },
+    surface: { native: BMNG_VINTAGE_KEY, devKey: 'textures.nasaBmngDev' },
     night: { native: 'textures.earthNight' },
     material: { native: 'textures.earthWaterMask' },
     // `normal`'s `native` is the ELEVATION heightfield, not the normal map's own

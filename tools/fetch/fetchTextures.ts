@@ -21,6 +21,8 @@ import type { RingTextureId } from '../../src/@types/data/RingTextureId';
 import type { TextureKind } from '../../src/@types/data/TextureKind';
 import { ALL_BODY_TEXTURE_KEYS } from '../../src/layers/body/textures/data/bodyTextureKeys';
 import { BLACK_MARBLE_QUADRANT_KEYS } from '../utils/io/blackMarbleQuadrantKeys';
+import { BMNG_MONTHS } from '../utils/io/BMNG_MONTHS';
+import { bmngMonthKey } from '../utils/io/bmngMonthKey';
 import { BMNG_QUADRANT_KEYS } from '../utils/io/bmngQuadrantKeys';
 import { RAW_DATA, rawDataPath } from '../utils/io/rawDataRegistry';
 import { TEXTURE_SOURCES, type TextureSourceRow } from '../utils/io/textureSources';
@@ -46,6 +48,9 @@ export const FULL_FETCH_APPROX_MB =
 
 /** MB: the 2k SSS variants + the 5400x2700 BMNG sibling. */
 export const DEV_FETCH_APPROX_MB = 7;
+
+/** MB, all twelve 21600x10800 BMNG equirects (~30 MB each) — the cloud bake's ice-mask months. */
+export const BMNG_MONTHS_APPROX_MB = 360;
 
 export type TextureSource = {
   readonly url: string;
@@ -143,6 +148,14 @@ export function textureSourcesFor(dev: boolean): readonly TextureSource[] {
   return [...downloadable.map(fullSource), ...QUADRANT_SOURCES, ...CHROMA_SOURCES];
 }
 
+/** The twelve BMNG equirects (`--bmng-months`); the full pull fetches only the `BMNG_VINTAGE` one. */
+export function bmngMonthSources(): readonly TextureSource[] {
+  return BMNG_MONTHS.map((_, i) => {
+    const key = bmngMonthKey(i + 1);
+    return { url: RAW_DATA[key].upstream, destPath: rawDataPath(key) };
+  });
+}
+
 /**
  * The size gate: a ~1.4 GB pull is not something to start by accident
  * (feedback_announce_big_downloads), so the full set REFUSES without an explicit
@@ -203,11 +216,13 @@ async function main(): Promise<void> {
   const dev = args.includes('--dev');
   const confirm = args.includes('--confirm');
 
-  const sources = textureSourcesFor(dev);
+  const bmngMonths = args.includes('--bmng-months');
 
-  if (requiresConfirm(dev, confirm)) {
+  const sources = bmngMonths ? bmngMonthSources() : textureSourcesFor(dev);
+
+  if (bmngMonths ? !confirm : requiresConfirm(dev, confirm)) {
     process.stderr.write(
-      `fetchTextures: the full raw texture pull is ~${FULL_FETCH_APPROX_MB} MB across ` +
+      `fetchTextures: the ${bmngMonths ? 'twelve-month Blue Marble' : 'full raw texture'} pull is ~${bmngMonths ? BMNG_MONTHS_APPROX_MB : FULL_FETCH_APPROX_MB} MB across ` +
         `${sources.length} sources.\n` +
         `  Re-run with --confirm to proceed, or --dev for the ~${DEV_FETCH_APPROX_MB} MB ` +
         `dev subset (2k SSS variants + the 5400x2700 BMNG Earth).\n`,
