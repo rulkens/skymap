@@ -1,5 +1,28 @@
 # Clip studio handoff (cloud session → Claude CLI, 2026-11-10)
 
+## RESUME HERE (CLI session, 2026-11-10, after wave B)
+
+- Worktree `.claude/worktrees/clip-studio`, branch `feat/clip-studio` (renamed from ccr-4503b6fa-vvpnc3; old
+  remote deleted), pushed through 2f751f6a4. Dev server: `npm run dev` here (was on :5175). `public/data` is
+  linked to main. Mocks restored from the snapshot (gitignored).
+- Done: Task 0, G0 0.1–0.3, 0.4 (contract amended, plan d12212c42), G1 1.1–1.8, G2 2.1–2.6 + 4 contract
+  rulings, G3 3.1–3.4 + Q39 icon rework (34 new icons in src/components/icons, NOT yet visually checked).
+- In flight when this was written (re-dispatch from the plan if lost):
+  - **G4 shell + timeline view, Tasks 4.1–4.5** (sonnet), file set `packages/studio/src/{shell,timeline/components}/**`.
+    On return: log it, push.
+  - **G5 inspector, Tasks 5.1–5.3 + a Q38 task** (sonnet): a compact variant of the app's `src/components/common/Slider`,
+    with NumberField as a thin wrapper over it; file set `packages/studio/src/inspector/**`, NumberField,
+    Slider. On return: log it, push.
+  - **Round-3 mock designer** (mock files only): fixes every round-2 finding plus Q32–Q39; shots go to
+    `data/shots/studio-rounds/round-3-*.jpg`. On return: show the owner the shots, then run a fresh round-3
+    review per `review-brief.md` and loop to 8/10.
+- Next after G4 + G5: Task 6.1 (controller; StudioHost in App, the dock's inspector column, backlog line, smoke
+  test with `#studio=` links), then an icon contact-sheet check, then one whole-branch review (spec fidelity +
+  slop; known: StudioTip draws its own key chips instead of reusing Kbd), then the PR (owner's merge word only).
+- All owner rulings are in the grill transcript (Q1–Q39). Round-2 review: `review-round-2.md` (7/10).
+
+
+
 Temporary: delete this folder before the branch merges (the plan's Task 6.1 / `/feature-done` does).
 
 ## Where things stand
@@ -14,7 +37,9 @@ Temporary: delete this folder before the branch merges (the plan's Task 6.1 / `/
   wave C: G4 (shell + timeline view) and G5 (inspector). Then wave D, Task 6.1. Then one whole-branch review.
   The ledger is `ledger.md` beside this file; copy it into `.superpowers/sdd/2026-11-10-clip-studio-package/progress.md`.
 
-## Open before wave B starts
+## Historical (cloud handoff, now resolved)
+
+### Open before wave B starts
 
 - **Task 0.4's contract is wrong (controller ruling needed).** `resolveClipFoci` turns `lookAtId`/`aimAlong`
   into `aimAt` = `all([yaw, pitch])`, so a draft leaf at path P becomes an `all` with children that exist
