@@ -838,9 +838,9 @@ Selected row → head (glyph tinted by family, eyebrow `<Name> · <parent name> 
 (`ROW_KINDS[kind].resolved` over `effectAt(resolution.data, path)`), and an `AlertChip` per error on the row.
 Nothing selected → the clip head (label, duration, `Start` readout). Dense property grid, no helper sentences.
 
-- [ ] Test `rowContext names the parent and the position among its siblings`.
-- [ ] Test `selecting a subject-bound row shows its Resolved line`.
-- [ ] Test `a selected invalid row shows its error chip as an alert`.
+- [x] Test `rowContext names the parent and the position among its siblings`.
+- [x] Test `selecting a subject-bound row shows its Resolved line`.
+- [x] Test `a selected invalid row shows its error chip as an alert`.
 
 ---
 
