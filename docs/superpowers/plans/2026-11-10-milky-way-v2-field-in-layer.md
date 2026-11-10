@@ -1248,7 +1248,7 @@ export type MilkyWayFieldSliderKey = 'exposure' | FieldTargetId;
 export const MILKY_WAY_FIELD_SLIDER_FIELDS: readonly SliderField<MilkyWayFieldSliderKey>[]; // exposure row + one divisor row per FIELD_TARGET_IDS
 ```
 
-- [ ] The section shows:
+- [x] The section shows:
   - a renderer `<select>` first, as a child of `DebugTuningSection`
     (`BlackHoleLensingTuningSection.tsx:41-61`);
   - the cloud slider rows when `parts.cloud`;
@@ -1257,10 +1257,10 @@ export const MILKY_WAY_FIELD_SLIDER_FIELDS: readonly SliderField<MilkyWayFieldSl
 
   Divisor changes dispatch `setMilkyWayFieldTuning({ divisors: { ...divisors, [id]: v } })`. The
   container memoises the field values object on `settings.milkyWay.field`.
-- [ ] **Test, updated:** the slider parity file asserts the field table too. Its keys sorted equal
+- [x] **Test, updated:** the slider parity file asserts the field table too. Its keys sorted equal
       `['exposure', ...FIELD_TARGET_IDS]` sorted, and every row has `step > 0` and
       `min ≤ default ≤ max` against `MILKY_WAY_FIELD_TUNING_DEFAULTS`.
-- [ ] Update the website's debug-section prose to mention the renderer switch. Commit.
+- [x] Update the website's debug-section prose to mention the renderer switch. Commit.
 
 ### Task B10: Docs
 
