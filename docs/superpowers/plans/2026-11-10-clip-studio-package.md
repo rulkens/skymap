@@ -605,14 +605,14 @@ otherwise `formatQuantity` covers it. Do not add a formatter without a caller in
   per-join overlap arrays and the start pose as `readout`. Defaults: use the helper defaults in
   `src/services/engine/animation/pathDefaults.ts` as `fallback`, never a copied number.
 
-- [ ] Test `every kind labels a helper-built effect with a non-empty name of at most 11 characters` (one
+- [x] Test `every kind labels a helper-built effect with a non-empty name of at most 11 characters` (one
       `effectHelpers`-built sample per kind; the table of samples is the test's fixture).
-- [ ] Test `labels follow the naming table`: hand-written expectations for `dollyTo(300, 4)` →
+- [x] Test `labels follow the naming table`: hand-written expectations for `dollyTo(300, 4)` →
       `{ name: 'Distance', op: '→', value: '300 Mpc' }`; `fade(['flow'], 0, 3)` →
       `{ name: 'Fade', op: '→', value: '0 %', qualifier: 'flow' }`; `oscillate('pitch', …)` → `Bob tilt`, `±`;
       `moveTargetId(focusId('m31'), 3)` → `{ name: 'Look-at', op: '→', subject: 'm31' }`; an overlapped seq →
       `In order`, value `Distance ×2 · blend 1 s`.
-- [ ] Test `every field's param exists on its kind's helper-built sample or is an optional param of that arm`
+- [x] Test `every field's param exists on its kind's helper-built sample or is an optional param of that arm`
       (catches a misspelt `param` the `Extract<keyof …>` cannot, for union-typed controls).
 
 ### Task 2.4: `buildTimeline`
