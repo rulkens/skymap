@@ -185,7 +185,11 @@ export function* navigateSaga(
     case 'studio':
       if (!isKeyOf(clipFactories, view.id)) return UNKNOWN_ID;
       // The studio pins the live pose as the preview start (Q7), so a cut lands home first.
-      if (transition === 'cut') yield* call(homeSaga);
+      if (transition === 'cut') {
+        yield* call(homeSaga);
+        // As for a clip: home's seeded Earth card must not sit under the dock.
+        yield* put(clearSelection());
+      }
       yield* put(openStudio(view.id));
       return OK;
   }
