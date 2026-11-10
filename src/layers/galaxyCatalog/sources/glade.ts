@@ -17,6 +17,7 @@ export const GLADE_ENTRY = {
   // GLADE's g/r slots hold B and J: B−J is a long optical-to-NIR
   // baseline that separates early- from late-type galaxies cleanly.
   colourSpec: { slotA: 'g', slotB: 'r', rangeMin: 0.5, rangeMax: 3.5, kPerZ: 1.0 },
+  typeColour: { slotA: 'g', slotB: 'r', thresholds: 'B-J' },
   // B-band parent samples (HyperLEDA, GWGC) — effective limit ≈ 18.
   mLim: 18.0,
   // Norberg et al. 2002 b_J Schechter as a stand-in for B (close

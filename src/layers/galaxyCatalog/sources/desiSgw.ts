@@ -35,6 +35,8 @@ export const DESI_SGW_ENTRY = {
   // blue half. kPerZ is 0: the wall spans only z ≈ 0.055–0.095, a thin enough
   // shell that a K-correction coefficient would barely move the ramp.
   colourSpec: { slotA: 'g', slotB: 'r', rangeMin: 0.35, rangeMax: 1.05, kPerZ: 0.0 },
+  // g−r on the u−r thresholds: the mixed BGS/LRG/ELG/QSO sample has no single red sequence.
+  typeColour: { slotA: 'g', slotB: 'r', thresholds: 'u-r' },
   // BGS_BRIGHT's r-band selection limit (r < 19.5); the box is pure BGS, so
   // this is the actual limit rather than a representative one. Not load-bearing
   // — vMaxWeight short-circuits rather than upweighting an unphysical volume.

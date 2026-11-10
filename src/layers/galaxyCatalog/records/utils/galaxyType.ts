@@ -1,10 +1,11 @@
 /**
  * Catalog-aware galaxy type: each catalog carries different photometric bands, so one set of
- * colour thresholds would mis-classify non-SDSS rows. `COLOUR_INDEX_BY_CATALOG` names the
- * bands and the classifier per catalog.
+ * colour thresholds would mis-classify non-SDSS rows. Each entry's `typeColour` names its
+ * slots and thresholds.
  */
 
-import { COLOUR_INDEX_BY_CATALOG } from '../data/colourIndexByCatalog';
+import { GALAXY_CATALOG_SOURCE_RECORD } from '../../sources/galaxyCatalogSourceRecord';
+import { GALAXY_TYPE_CLASSIFIERS } from '../data/galaxyTypeClassifiers';
 import type { GalaxyTypeInfo } from '../@types/GalaxyTypeInfo';
 import type { GalaxyTypeMags } from '../@types/GalaxyTypeMags';
 import type { GalaxyCatalogSourceType } from '../../@types/GalaxyCatalogSourceType';
@@ -13,7 +14,8 @@ import type { GalaxyCatalogSourceType } from '../../@types/GalaxyCatalogSourceTy
 const UNKNOWN: GalaxyTypeInfo = { category: 'green', description: 'Unknown galaxy type' };
 
 export function galaxyType(source: GalaxyCatalogSourceType, mags: GalaxyTypeMags): GalaxyTypeInfo {
-  const { bluer, redder, classify } = COLOUR_INDEX_BY_CATALOG[source];
-  const index = mags[bluer] - mags[redder];
-  return Number.isFinite(index) ? classify(index) : UNKNOWN;
+  const { slotA, slotB, thresholds } = GALAXY_CATALOG_SOURCE_RECORD[source].typeColour;
+  const slots = { u: mags.magU, g: mags.magG, r: mags.magR, i: mags.magI, z: mags.magZ };
+  const index = slots[slotA] - slots[slotB];
+  return Number.isFinite(index) ? GALAXY_TYPE_CLASSIFIERS[thresholds](index) : UNKNOWN;
 }

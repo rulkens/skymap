@@ -39,6 +39,8 @@ export const DESI_DEEP_ENTRY = {
   // of that range to one ramp end, and the low-z BGS near-field where colour
   // actually reads needs little correction anyway.
   colourSpec: { slotA: 'g', slotB: 'r', rangeMin: 0.35, rangeMax: 1.05, kPerZ: 0.0 },
+  // g−r on the u−r thresholds: the mixed BGS/LRG/ELG/QSO sample has no single red sequence.
+  typeColour: { slotA: 'g', slotB: 'r', thresholds: 'u-r' },
   // BGS_BRIGHT's r-band selection limit (r < 19.5) is the tightest of the
   // four tracers; used as a single representative limit for the whole
   // mixed-tracer catalog, same rationale as Milliquas's single mLim across a

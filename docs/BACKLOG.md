@@ -30,7 +30,6 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Tag the remaining body-id fields** `ready` — `RotationElements.id`, `SampledTrack.id`, `BodySpec` seeds stay plain `string` after #941; tag them at definition. → [details](backlog/2026-10-23-tag-remaining-body-id-fields.md)
 - [ ] **A per-body slab declaration on `LayerBody`** `needs-design` — the slab roster `near0SphereBodies` drops is a hand-kept core list beside the Layers' own slab rows; one declaration per body would replace both. → [details](backlog/2026-10-28-per-body-slab-declaration.md)
 - [ ] **Selection-kind-facts follow-ups** `ready` — 64-bit pick target, `GlobularCluster` naming clash, six core one-kind branches. → [details](backlog/2026-11-05-selection-kind-facts-followups.md)
-- [ ] **`galaxyType` as a per-entry colour-index fact** `needs-design` — after the Source-deletion prep moves the switch into galaxyCatalog, each catalog entry could declare its colour index instead of a hand-written arm.
 - [ ] **`encodeGalaxyId` reads `durableId.prefix`** `needs-design` — the `sdss-`/`pgc-` branch duplicates each entry's `durableId.prefix`; settle with J8.
 - [ ] **Two types named `SourceId`** `ready` — `src/@types/data/SourceId.d.ts` and the unrelated `src/@types/input/SourceId.d.ts`; rename one.
 - [ ] **Source ids mix casing** `needs-design` — `'galaxy-cluster'`/`'small-body'` against `'gaiaStars'`; visibility and links store them, so a rename needs a link-compat answer.
