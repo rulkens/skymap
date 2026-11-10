@@ -366,5 +366,25 @@ The plan is `docs/superpowers/plans/2026-11-10-clip-studio-package.md`.
 - **Q31 Save as new:** options were the ▾ half of a split Save button, its own text button, or a ⋯
   menu only. **Decision:** the split button.
 
+## Q32–Q37: Round-2 asks (2026-11-10)
+
+- **Q14 / Q32 Crossfade treatment:** compared as crops (`round-2-xfade-t{1,2,3}-crop.jpg`). **Decision:** T1,
+  tapered bars plus Stop / No stop / Blend join chips, with the T3 value curve in the inspector only. Per the
+  round-2 review, the taper runs linearly across exactly the overlap window, and the chip fits inside it.
+- **Q33 Saving values that depend on the sim date:** options were body-frame literals, world literals at the
+  pinned date, or blocking Save. **Decision:** body-frame literals. The Start is saved as its `b,<body>,…` pose
+  and aim/roll in the body's frame, so the file stays `(simDays) => Clip` and is correct on any date.
+  `aimAlong` needs a `frame` (spec work).
+- **Q34 Clip-level loop flag:** options were an End row in every clip, an inspector clip setting, or a top-bar
+  toggle. **Decision:** an End row in every clip, mirroring Start. It carries stop / loop and the seam check
+  pose(End) = pose(0).
+- **Q35 3D frame box in the Edit view:** options were real size plus a fixed playhead dot, a minimum of about
+  40 px, or real size only. **Decision:** real size plus a fixed-size playhead dot on the route.
+- **Q36 Path recompute:** options were on commit for drags and live otherwise, always live, or only on commit.
+  **Decision:** on commit for drags, live for every other edit.
+- **Q37 Edit-view labels:** options were dimmed scene labels with the path leading, all labels as in the app,
+  or path knots and subjects only. **Decision:** all labels as in the app, against the reviewer's
+  recommendation. The Edit view follows the app's existing label settings; the inset keeps labels off (Q21).
+
 _Settled in the plan:_ the studio's RTK slice is injected into the app store through
-`combineSlices().inject` (ADR 0016). Still open: Q14, the crossfade treatment.
+`combineSlices().inject` (ADR 0016). Q14 is ruled (Q32).

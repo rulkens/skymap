@@ -101,3 +101,8 @@ and the asks in full.
 - "Having well-designed tooltips does a lot": one shared, designed tooltip across the studio (name,
   one-line meaning, kbd shortcut, optional state line; fast and consistent open, focus opens it,
   never covers its control). Review the `round-2-tooltips` contact sheet and tip consistency.
+- Q32–Q37 (2026-11-10): crossfade = T1 tapered bars (linear over exactly the overlap) + Stop / No
+  stop / Blend join chips, T3 curve in the inspector only; date-dependent values save as body-frame
+  literals; an End row in every clip carries stop / loop + seam check; Edit-view frame box at real
+  size + a fixed playhead dot; path recomputes on commit for drags, live otherwise; the Edit view
+  shows ALL scene labels as in the app (owner overrode the reviewer); the inset keeps labels off.
