@@ -1024,18 +1024,18 @@ export function deriveFieldView(frame: FrameView, toGalaxy: Mat4): FieldView;
 seven callers (grep `pcToUnits`), `src/layers/milkyWay/cloud/render/milkyWayModelMatrix.ts`
 (`MILKY_WAY_MODEL_SCALE`), `src/data/milkyWay/milkyWayGalaxyParams.ts`, and the matching test.
 
-- [ ] Investigate first, and write the finding into the commit body. The field's `pcToUnits` says
+- [x] Investigate first, and write the finding into the commit body. The field's `pcToUnits` says
       1 unit = 1.6667 kpc. The placement (`MILKY_WAY_MODEL_SCALE`, 17.5 kpc / 10 units) implies 1.75.
       Find which number the generator's geometry (`describeGalaxy(MILKY_WAY_GALAXY_PARAMS)`) actually
       uses for its outer radius, and which one v1's sprite cloud uses. The right constant is the one
       that makes the field and the cloud the same size under one model matrix.
-- [ ] Derive the constant from that one source (the galaxy params or the model scale) instead of a
+- [x] Derive the constant from that one source (the galaxy params or the model scale) instead of a
       second literal, so the two can't drift again.
-- [ ] Test: `it('the field and the cloud share one kpc-per-unit scale')`, pinning `pcToUnits(1000)`
+- [x] Test: `it('the field and the cloud share one kpc-per-unit scale')`, pinning `pcToUnits(1000)`
       against the scale the placement uses.
-- [ ] If the fix changes the tool's look (pc-sized features such as HII radii, dust bubbles or the DIG
+- [x] If the fix changes the tool's look (pc-sized features such as HII radii, dust bubbles or the DIG
       veil rescale by about 5%), say so in the reply. The B11 shots carry it to the user.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task B4: Target rows, and `mw-aggregate` allocated only for the cloud
 
