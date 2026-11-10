@@ -7,7 +7,8 @@
  * tool-only grade trailer reads. Each field target's view is made once per
  * allocation: the field module's bind-group cache keys on view identity.
  */
-import type { FieldTarget } from '../../../../../src/layers/milkyWay/field/@types/FieldTarget';
+import type { FieldRow } from '../../../@types/engine/FieldRow';
+import type { FieldRowKey } from '../../../@types/engine/FieldRowKey';
 import type { FieldTargetId } from '../../../../../src/layers/milkyWay/field/@types/FieldTargetId';
 import type { GalaxyFieldRenderTargets } from '../../../../../src/layers/milkyWay/field/@types/GalaxyFieldRenderTargets';
 import type { HiiTier } from '../../../../../src/layers/milkyWay/field/starFormation/@types/HiiTier';
@@ -79,12 +80,9 @@ export function createGalaxyRenderTargets(
    * module binds. A reallocation replaces both, which is what tells the
    * module's bind-group cache to rebuild.
    */
-  const fieldRows = new Map<
-    FieldTargetId | 'dustView',
-    { readonly texture: GPUTexture; readonly target: FieldTarget }
-  >();
+  const fieldRows = new Map<FieldRowKey, FieldRow>();
   // Non-null: every reader runs after `rebuildAll` has allocated every row.
-  const row = (key: FieldTargetId | 'dustView') => fieldRows.get(key)!;
+  const row = (key: FieldRowKey) => fieldRows.get(key)!;
   let bloomMips: GPUTexture[] = [];
   const RA_TB = GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING;
   const COPY_SRC = GPUTextureUsage.COPY_SRC;
@@ -114,7 +112,7 @@ export function createGalaxyRenderTargets(
   }
 
   function allocateFieldRow(
-    key: FieldTargetId | 'dustView',
+    key: FieldRowKey,
     label: string,
     w: number,
     h: number,

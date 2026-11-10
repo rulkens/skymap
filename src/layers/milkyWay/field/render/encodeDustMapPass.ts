@@ -23,14 +23,11 @@ export function encodeDustMapPass({
   readonly pipeline: GPURenderPipeline;
   /** The group `createFieldPipelines.sync` produced for THIS encode, against this frame's own resources. */
   readonly bindGroup: GPUBindGroup;
-  /** The primary's dust component count — zero still OPENS the pass, as the clear that empties the map. */
+  /** The primary's dust component count — zero still clears. */
   readonly instanceCount: number;
 }): void {
   const pass = beginClearPass(enc, 'galaxy:dustMapPass', targetView, timestampWrites);
-  // At zero count the clear IS the pass: `beginClearPass`'s `loadOp: 'clear'` empties the map
-  // whether or not a draw follows. Issuing the draw anyway rasterizes nothing
-  // and Chrome flags it — "Draw with an instance count of 0 is unusual" —
-  // because it is far more often a bug than a deliberate clear.
+  // Chrome warns on a zero-instance draw ("instance count of 0 is unusual"), so skip it.
   if (instanceCount > 0) {
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, bindGroup);

@@ -198,9 +198,9 @@ export function createFieldPipelines(deps: FieldPipelineDeps): FieldPipelines {
   // ---- dust-map presentation pipeline ("JWST" view) ----
   // `milkyWay/field/dustPresent/`: a fullscreen triangle over `dustMapTex`,
   // mapping its column to a hot palette. Drawn ALONGSIDE fieldSplatPipe's
-  // emission draw, gated on `render.dustViewIntensity > 0` (`drawFrame`'s own
-  // gate) — the four debug views crossfade independently. No blend: it is the
-  // pass's only draw into a freshly cleared `dustViewTex`.
+  // emission draw, gated on `targets.dustView && debugViews.dust > 0` inside the
+  // renderer — the four debug views crossfade independently. No blend: it is
+  // the pass's only draw into a freshly cleared dust-view target.
   const dustPresentVsMod = makeShader(dustPresentVsWgsl, 'galaxy:dustPresent.vertex');
   const dustPresentFsMod = makeShader(dustPresentFsWgsl, 'galaxy:dustPresent.fragment');
   const dustPresentPipe = device.createRenderPipeline({

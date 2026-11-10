@@ -17,7 +17,7 @@ export const TIMING_SLOTS: readonly string[] = [
   'stars',
   // The dust-column splat — one quad per Gaussian dust component — into its
   // OWN reduced-resolution `dustMapTex`, at `dustDivisor` rather than the
-  // field's. See `drawFrame`'s three-disjunct gate for when it is encoded.
+  // field's. Encoded every frame the field encodes, so its row never drops.
   'dustMap',
   // The analytic Gaussian-mixture splat into `fieldTex` alone. The JWST
   // dustPresent pass runs ADDITIONALLY, into its own `dustViewTex`, and
