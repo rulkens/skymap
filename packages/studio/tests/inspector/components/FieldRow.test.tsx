@@ -7,12 +7,14 @@ import {
   atPoint,
   fade,
   flyPath,
+  geodesic,
   oscillate,
   scene,
   show,
 } from '../../../../../src/services/engine/animation/effectHelpers';
 import { setFlowEnabled } from '../../../../../src/layers/flow/state/flow/slice';
 import { setLabelsFocusedOnly } from '../../../../../src/state/settings/core/labelsSlice';
+import { DEFAULT_GEODESIC_TUNING } from '../../../../../src/data/camera/focusMoveDefaults';
 import FieldRow from '../../../src/inspector/components/FieldRow/FieldRow';
 import { inspectorSpec } from '../../../src/inspector/utils/inspectorSpec';
 import { rowSubject } from '../../../src/draft/utils/rowSubject';
@@ -128,6 +130,25 @@ describe('FieldRow', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Reset Pass by to default' }));
     const { passBy } = selectDraft(store.getState())!.timeline[0] as { passBy: unknown };
     expect(passBy).toEqual(flyPath([atPoint([5, 0, 0], 8)], { over: 10 }).passBy);
+  });
+
+  it("a zoom-pan's speed and bounds show only while its duration is auto; ↺ writes the default", async () => {
+    const tuning = { ...DEFAULT_GEODESIC_TUNING, minMs: 1500 };
+    const timed = geodesic({ target: [0, 0, 0], distance: 950 }, tuning, 0.8, 6);
+    setup({ timeline: [timed] }, 'geodesic', EFFECT, 'tuning');
+    expect(screen.queryByRole('slider', { name: 'Shortest' })).toBeNull();
+    cleanup();
+
+    const { over: _auto, ...untimed } = timed;
+    const store = setup({ timeline: [untimed] }, 'geodesic', EFFECT, 'tuning');
+    expect(screen.getByRole('slider', { name: 'Shortest' })).toHaveAttribute(
+      'aria-valuenow',
+      '1.5',
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Reset Shortest to default' }));
+    expect((selectDraft(store.getState())!.timeline[0] as typeof timed).tuning).toEqual(
+      DEFAULT_GEODESIC_TUNING,
+    );
   });
 
   it('Enter on an unchanged degrees field adds no Undo, though the radian round trip is inexact', async () => {

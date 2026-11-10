@@ -25,5 +25,7 @@ export type FieldControl =
   /** A Fly's curve and its pass-by, each one object edited as several rows. */
   | 'spline'
   | 'passBy'
+  /** A zoom-pan's tuning record, edited as several rows. */
+  | 'geodesicTuning'
   /** A Fly's waypoints as chips that select them. */
   | 'waypoints';

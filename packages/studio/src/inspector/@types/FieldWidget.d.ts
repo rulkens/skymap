@@ -10,6 +10,7 @@ export type FieldWidget = {
     | 'object'
     | 'spline'
     | 'passBy'
+    | 'geodesicTuning'
     | 'waypoints';
   /** Layers widget: offer a per-item entry's items too. */
   readonly items?: boolean;

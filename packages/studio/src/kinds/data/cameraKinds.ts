@@ -216,7 +216,7 @@ export const cameraKinds: Pick<
     fields: [
       readoutField('to', 'Destination'),
       overField('Duration', { optional: true }),
-      readoutField('tuning', 'Tuning'),
+      { key: 'tuning', param: 'tuning', label: 'Tuning', control: 'geodesicTuning' },
       readoutField('fovYRad', 'FOV'),
     ],
   },
