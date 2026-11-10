@@ -68,11 +68,11 @@ export type RenderSettings = {
   readonly dustDivisor: number;
   /** Downsample divisor of `hiiTex`, now home to the `hii:extras` span alone (background extras' whole HII contribution — see `hiiSplat/extrasFragment.wesl`'s header for why it can't split further). 1 by default for the same firefly reason `shellsDivisor` is: a shell embedded in an extra is still small and bright. Also reallocates rather than riding the uniform. */
   readonly extrasDivisor: number;
-  /** Downsample divisor of the shells tier's own offscreen (`data/hiiTiers.ts`'s `HII_TIERS`) — a shell sprite is small and bright by construction, so sharing a coarser target collapses it under a texel and bloom promotes the spike into a firefly. Also reallocates rather than riding the uniform. */
+  /** Downsample divisor of the shells tier's own offscreen — a shell sprite is small and bright by construction, so sharing a coarser target collapses it under a texel and bloom promotes the spike into a firefly. Also reallocates rather than riding the uniform. */
   readonly shellsDivisor: number;
-  /** Downsample divisor of the young-stars tier's own offscreen (`data/hiiTiers.ts`'s `HII_TIERS`) — same firefly reasoning as `shellsDivisor`: a young-stars association is small and bright, not a candidate for the field's coarser compromise. Also reallocates rather than riding the uniform. */
+  /** Downsample divisor of the young-stars tier's own offscreen — same firefly reasoning as `shellsDivisor`: a young-stars association is small and bright, not a candidate for the field's coarser compromise. Also reallocates rather than riding the uniform. */
   readonly youngDivisor: number;
-  /** Downsample divisor of the DIG (diffuse ionized gas) tier's own offscreen (`data/hiiTiers.ts`'s `HII_TIERS`, the original split `shellsDivisor`/`youngDivisor` generalize) — DIG is the biggest, softest of the HII tier's quads (worst overdraw contributor at close zoom) but also its lowest-frequency content, so it tolerates a much coarser target than shells/young do. Also reallocates rather than riding the uniform. */
+  /** Downsample divisor of the DIG (diffuse ionized gas) tier's own offscreen (the original split `shellsDivisor`/`youngDivisor` generalize) — DIG is the biggest, softest of the HII tier's quads (worst overdraw contributor at close zoom) but also its lowest-frequency content, so it tolerates a much coarser target than shells/young do. Also reallocates rather than riding the uniform. */
   readonly digDivisor: number;
   /**
    * boundRadius multiple (an HII component's own truncation-sphere sigma

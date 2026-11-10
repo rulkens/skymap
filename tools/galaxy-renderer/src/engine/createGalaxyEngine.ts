@@ -15,7 +15,6 @@ import type { MilkyWayFadeReadout } from '../../@types/engine/MilkyWayFadeReadou
 import type { PassTiming } from '../../@types/engine/PassTiming';
 import type { RenderSettings } from '../../@types/engine/RenderSettings';
 import type { LodSettings } from '../../@types/engine/LodSettings';
-import type { HiiTier } from '../../../../src/layers/milkyWay/field/starFormation/@types/HiiTier';
 import type { GalaxyIsmMap } from '../../../../src/@types/galaxy/GalaxyIsmMap';
 import type { Vec2 } from '../../../../src/@types/math/Vec2';
 
@@ -62,7 +61,6 @@ import { createAdditiveUpsample } from '../../../../src/services/gpu/passes/addi
 import type { FrameView } from './frame/deriveFrameView';
 import { DEFAULT_RENDER_SETTINGS } from '../data/defaultRenderSettings';
 import { DEFAULT_LOD_SETTINGS } from '../data/defaultLodSettings';
-import { HII_TIERS } from '../data/hiiTiers';
 import { DUST_MAP_FORMAT } from '../../../../src/layers/milkyWay/field/host/data/dustMapFormat';
 
 /** HDR working format for the scene + bloom pyramid — the runtime's `hdr` row. */
@@ -239,16 +237,15 @@ export async function createGalaxyEngine(
   const camera = createOrbitCameraInput(canvas, { autoRotate: opts.autoRotate !== false });
 
   // The targets module never reads the render bag, so every divisor is handed
-  // at once — `tiers` built off `HII_TIERS`' own `divisorKey` so a fourth tier
-  // row is the only edit a fourth divisor needs here.
+  // at once.
   const allDivisors = (): TargetDivisors => ({
     aggregate: render.aggregateDivisor,
     field: render.fieldDivisor,
-    dust: render.dustDivisor,
-    hii: render.extrasDivisor,
-    tiers: Object.fromEntries(
-      HII_TIERS.map((tier) => [tier.kind, render[tier.divisorKey]]),
-    ) as Record<HiiTier, number>,
+    dustMap: render.dustDivisor,
+    extras: render.extrasDivisor,
+    shells: render.shellsDivisor,
+    young: render.youngDivisor,
+    dig: render.digDivisor,
   });
 
   // Reused scratch for the per-frame uniform packs — no per-frame allocation.

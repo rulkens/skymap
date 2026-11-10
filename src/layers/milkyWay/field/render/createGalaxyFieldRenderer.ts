@@ -11,6 +11,7 @@
 import type { DustHeaderLanes } from '../dust/@types/DustHeaderLanes';
 import type { FieldFramePlan } from '../@types/FieldFramePlan';
 import type { FieldSliceCounts } from '../@types/FieldSliceCounts';
+import type { FieldTarget } from '../@types/FieldTarget';
 import type { GalaxyFieldFrame } from '../@types/GalaxyFieldFrame';
 import type { GalaxyFieldMixtureInput } from '../mixture/@types/GalaxyFieldMixtureInput';
 import type { GalaxyFieldMixtureResult } from '../mixture/@types/GalaxyFieldMixtureResult';
@@ -328,6 +329,7 @@ export function createGalaxyFieldRenderer(
     const fieldCounts = fieldPack.get().counts;
     const hiiSegments = hiiPack.get().segments;
     const central = centralField.get();
+    const sizeOf = ({ sizePx }: FieldTarget): Vec2 => [sizePx.width, sizePx.height];
 
     const headers = buildFieldHeaderInputs({
       camera: frame.camera,
@@ -343,13 +345,10 @@ export function createGalaxyFieldRenderer(
         spurCloudReservation: central.spurCloudReservation,
       },
       targetSizes: {
-        field: [frameTargets.field.sizePx.width, frameTargets.field.sizePx.height],
-        dustMapHeightPx: frameTargets.dustMap.sizePx.height,
-        hii: [frameTargets.extras.sizePx.width, frameTargets.extras.sizePx.height],
-        tiers: mapHiiTiers<Vec2>((kind) => [
-          frameTargets[kind].sizePx.width,
-          frameTargets[kind].sizePx.height,
-        ]),
+        field: sizeOf(frameTargets.field),
+        dustMap: sizeOf(frameTargets.dustMap),
+        extras: sizeOf(frameTargets.extras),
+        ...mapHiiTiers((kind) => sizeOf(frameTargets[kind])),
       },
     });
     packFieldHeaderUniforms(headers.field, fieldData);

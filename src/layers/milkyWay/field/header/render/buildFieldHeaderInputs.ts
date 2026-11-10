@@ -9,6 +9,7 @@
  */
 import type { Vec2 } from '../../../../../@types/math/Vec2';
 import type { DustHeaderLanes } from '../../dust/@types/DustHeaderLanes';
+import type { FieldTargetId } from '../../@types/FieldTargetId';
 import type { FieldView } from '../../@types/FieldView';
 import type { FieldHeaderInput } from '../@types/FieldHeaderInput';
 import type { FieldSliceCounts } from '../../@types/FieldSliceCounts';
@@ -36,19 +37,13 @@ type FieldHeaderModelLanes = {
   readonly spurCloudReservation: { readonly offset: number; readonly count: number } | null;
 };
 
-/** Each pass's own target resolution, derived from the target texture's own `.width`/`.height` at `encode` time (this module never touches the texture itself). */
-type FieldHeaderTargetSizes = {
-  readonly field: Vec2;
-  readonly dustMapHeightPx: number;
-  readonly hii: Vec2;
-  readonly tiers: Readonly<Record<HiiTier, Vec2>>;
-};
 type FieldHeaderInputsDeps = {
   readonly camera: FieldView;
   readonly frame: FieldHeaderFrameLanes;
   readonly render: FieldHostTuning['render'];
   readonly model: FieldHeaderModelLanes;
-  readonly targetSizes: FieldHeaderTargetSizes;
+  /** Each target's own resolution, off its `sizePx` at `encode` time (this module never touches a texture). */
+  readonly targetSizes: Readonly<Record<FieldTargetId, Vec2>>;
 };
 
 type FieldHeaderInputs = {
@@ -78,7 +73,7 @@ export function buildFieldHeaderInputs(deps: FieldHeaderInputsDeps): FieldHeader
       detail: model.dustHeaderLanes.detail,
       // VIEW-dependent, unlike every other lane in this bag.
       slices: dustSlices,
-      mapHeightPx: targetSizes.dustMapHeightPx,
+      mapHeightPx: targetSizes.dustMap[1],
     },
     // Each present shader reads its own view's lane out of this; bubble's
     // does so through its own bind group, bound to THIS header's `fieldUbo`
@@ -123,7 +118,7 @@ export function buildFieldHeaderInputs(deps: FieldHeaderInputsDeps): FieldHeader
     exposure,
     emissionCount: model.hiiCount,
     primaryCount: model.hiiCount,
-    targetSizePx: targetSizes.hii,
+    targetSizePx: targetSizes.extras,
     dust: {
       count: 0,
       extinctionRgb: model.dustHeaderLanes.extinctionRgb,
@@ -161,7 +156,7 @@ export function buildFieldHeaderInputs(deps: FieldHeaderInputsDeps): FieldHeader
   // shader's footprint gates and dustMapTex UV reconstruction with — reusing
   // `hii.targetSizePx` here would silently hand every tier's splat the
   // extras target's resolution instead of its own.
-  const tiers = mapHiiTiers((kind) => ({ ...hii, targetSizePx: targetSizes.tiers[kind] }));
+  const tiers = mapHiiTiers((kind) => ({ ...hii, targetSizePx: targetSizes[kind] }));
 
   return { field, hii, tiers };
 }

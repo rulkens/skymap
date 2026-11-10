@@ -15,23 +15,15 @@ import type { HiiTier } from '../../../../../src/layers/milkyWay/field/starForma
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
 
 import { BLOOM_LEVELS, bloomScale } from '../../../../../src/data/bloomConstants';
-import { HII_TIERS } from '../../data/hiiTiers';
 import { mapHiiTiers } from '../../../../../src/layers/milkyWay/field/starFormation/data/hiiTiers';
+import { FIELD_TARGET_IDS } from '../../../../../src/layers/milkyWay/field/data/fieldTargetIds';
 import { reducedTargetSize } from '../../../../../src/utils/gpu/reducedTargetSize';
 
 /**
- * The reduced targets' divisors, each its own live slider — `tiers` is keyed
- * by `HiiTier` (`data/hiiTiers.ts`'s `HII_TIERS`) rather than three more
- * named fields, so a fourth tier is one table row, not a third field here
- * plus a third `reallocateIfResized` call below.
+ * The reduced targets' divisors, each its own live slider, keyed like the
+ * field's targets so a new `FieldTargetId` fails to compile until it has one.
  */
-export type TargetDivisors = {
-  readonly aggregate: number;
-  readonly field: number;
-  readonly dust: number;
-  readonly hii: number;
-  readonly tiers: Readonly<Record<HiiTier, number>>;
-};
+export type TargetDivisors = Readonly<Record<FieldTargetId | 'aggregate', number>>;
 
 /**
  * Textures are getters, never snapshot properties: every one of them is
@@ -165,12 +157,20 @@ export function createGalaxyRenderTargets(
   }
 
   /**
-   * One HII sub-tier's target (`data/hiiTiers.ts`'s `HII_TIERS`): shells and
+   * One HII sub-tier's target: shells and
    * young stars split off for the same firefly reason as `extras`; DIG, the
    * softest and lowest-frequency content, tolerates a much coarser divisor.
    */
   function allocateTier(kind: HiiTier, w: number, h: number): void {
     allocateFieldRow(kind, `galaxy:hiiTierTex:${kind}`, w, h, formats.hdr, RA_TB);
+  }
+
+  function allocateFieldTarget(id: FieldTargetId, w: number, h: number): void {
+    if (id === 'field') allocateField(w, h);
+    // `allocateDust` covers `dustView` too — see its doc.
+    else if (id === 'dustMap') allocateDust(w, h);
+    else if (id === 'extras') allocateExtras(w, h);
+    else allocateTier(id, w, h);
   }
 
   /**
@@ -192,18 +192,10 @@ export function createGalaxyRenderTargets(
       if (tex && tex.width === w && tex.height === h) return;
       allocate(w, h);
     };
-    const rowTex = (key: FieldTargetId): GPUTexture | undefined => fieldRows.get(key)?.texture;
     reallocateIfResized(aggregateTex, divisors.aggregate, allocateAggregate);
-    reallocateIfResized(rowTex('field'), divisors.field, allocateField);
-    // `allocateDust` covers `dustView` too — see its doc.
-    reallocateIfResized(rowTex('dustMap'), divisors.dust, allocateDust);
-    reallocateIfResized(rowTex('extras'), divisors.hii, allocateExtras);
-    // One call per row of `HII_TIERS` rather than one hand-written
-    // `reallocateIfResized` line per tier — a fourth tier is a table row, not
-    // a fourth line here.
-    for (const tier of HII_TIERS) {
-      reallocateIfResized(rowTex(tier.kind), divisors.tiers[tier.kind], (w, h) =>
-        allocateTier(tier.kind, w, h),
+    for (const id of FIELD_TARGET_IDS) {
+      reallocateIfResized(fieldRows.get(id)?.texture, divisors[id], (w, h) =>
+        allocateFieldTarget(id, w, h),
       );
     }
   }
