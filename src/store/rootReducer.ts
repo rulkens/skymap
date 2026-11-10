@@ -1,31 +1,13 @@
 /**
- * rootReducer — the Redux store's single combine point.
+ * rootReducer — the Redux store's single combine point. Each route key comes from a `./constants`
+ * literal, so the literal types flow into `RootState` and a misspelt route fails at compile time.
  *
- * The store combines slices — `settings`, `ui`, `tier`, `camera`,
- * `selection`, `selectionRows`, `tour`, `takeover`, `engine`, and `time` — via
- * `combineReducers`.
- * This forward-compatible shape derives `RootState` from the combine and makes
- * new sibling routes additive edits here rather than structural migrations
- * across every call site. A flat single reducer would have forced a migration
- * the moment `tier` lifted out of the settings slice into its own root slice.
- *
- * `camera` holds the camera Intent (base pose, tween descriptor, auto-rotate).
- * The selection fold adds two sibling routes: `selection` holds
- * the raw identity-Intent refs (hover/select/focus); `selectionRows` is the
- * saga-owned derived display cache that InfoCard reads. `engine` holds the
- * observable runtime state the engine reports (lifecycle status, per-source
- * galaxy counts, per-structure counts, load progress, scale-bar descriptor).
- * `time` holds the sim-clock intent (live/manual mode, the (simDays, realMs)
- * anchor, rate-ladder index, direction, pause) from which the current instant is
- * derived on demand — no per-frame store write.
- *
- * Each route key comes from a `./constants` literal (not an inline `'settings'`
- * / `'ui'` / `'tier'` / `'camera'`) so the literal types flow into `RootState`
- * and the reducer wiring shares the exact keys that selectors read by — a
- * misspelt route fails at compile time, not runtime.
+ * `combineSlices`, not `combineReducers`, so a lazily loaded chunk can `inject` its own slice
+ * after the store exists (ADR 0016). The static routes below are the app's whole `RootState`; an
+ * injected slice is unknown to it and reads through its own `injectInto` selectors.
  */
 
-import { combineReducers } from '@reduxjs/toolkit';
+import { combineSlices } from '@reduxjs/toolkit';
 
 import {
   settingsRoute,
@@ -58,7 +40,7 @@ import inputReducer from '../state/input/inputSlice';
 import remoteReducer from '../state/remote/remoteSlice';
 import viewCoverReducer from '../state/viewCover/viewCoverSlice';
 
-export const rootReducer = combineReducers({
+export const rootReducer = combineSlices({
   [settingsRoute]: settingsReducer,
   [uiRoute]: uiReducer,
   [tierRoute]: tierReducer,
