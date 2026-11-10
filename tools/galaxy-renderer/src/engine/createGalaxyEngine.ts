@@ -59,11 +59,6 @@ import {
 import { createBloomPyramid } from '../../../../src/services/gpu/passes/bloomPyramid';
 import { createCompositor } from '../../../../src/services/gpu/passes/compositor';
 import { createAdditiveUpsample } from '../../../../src/services/gpu/passes/additiveUpsample';
-import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../src/layers/milkyWay/field/mixture/utils/galaxyFieldMixture';
-import { DEFAULT_GALAXY_PARAMS } from '../data/defaultGalaxyParams';
-import { describeGalaxy } from '../../../../src/services/engine/galaxyGenerator/shared/describeGalaxy';
-import { FIELD_CALIBRATION } from '../../../../src/layers/milkyWay/field/data/fieldCalibration';
-import { debugViewWeights } from './frame/debugViewWeights';
 import type { FrameView } from './frame/deriveFrameView';
 import { DEFAULT_RENDER_SETTINGS } from '../data/defaultRenderSettings';
 import { DEFAULT_LOD_SETTINGS } from '../data/defaultLodSettings';
@@ -154,38 +149,20 @@ export async function createGalaxyEngine(
   // One internal render bag, merged by `setRender`. Seeded from the same two
   // constants the UI pushes on its first sync, so it can't drift from the
   // store slice + preset envelope — and, through them, the app's own
-  // defaults. Declared before the field host and the model: the host's initial tuning
-  // and the model's rebuild gates read it.
+  // defaults. Declared before the model: its rebuild gates read it.
   const render = { ...DEFAULT_RENDER_SETTINGS, ...DEFAULT_LOD_SETTINGS };
 
   // ---- the analytic field: the host the app shares ----
   // `debug` carries the renderer and readbacks only the tool's diagnostics
   // reach. Both hooks feed `model`, which is in scope by the time either fires
   // (nothing rebuilds at construction).
-  // The model that owns the real tuning needs the host's readbacks, so the
-  // host starts from the boot preset's geometry; `drawFrame` replaces it with
-  // the model's from the first `setParams` on.
-  const { host, debug } = createGalaxyFieldHost(
-    device,
-    {
-      makeShader,
-      hdrFormat: HDR,
-      dustMapFormat: DUST_MAP_FORMAT,
-      onIsmMapLanded: () => model.noteIsmMapLanded(),
-      onOrientationRebuilt: (grid) => model.noteOrientationRebuilt(grid),
-    },
-    {
-      geometry: describeGalaxy(DEFAULT_GALAXY_PARAMS),
-      seed: 0,
-      extras: [],
-      field: DEFAULT_GALAXY_FIELD_TUNING,
-      render: fieldHostRender(
-        render,
-        { debugViews: debugViewWeights(render), galaxyWeight: 1 },
-        FIELD_CALIBRATION.render.ismMapSeeding,
-      ),
-    },
-  );
+  const { host, debug } = createGalaxyFieldHost(device, {
+    makeShader,
+    hdrFormat: HDR,
+    dustMapFormat: DUST_MAP_FORMAT,
+    onIsmMapLanded: () => model.noteIsmMapLanded(),
+    onOrientationRebuilt: (grid) => model.noteOrientationRebuilt(grid),
+  });
 
   // Tool-only grade trailer — see `packGradeUniforms` for the lanes. The bloom
   // and compositor uniforms are owned by their shared factories below.
@@ -495,7 +472,8 @@ export async function createGalaxyEngine(
     if (hostTuning) host.setTuning(hostTuning);
     host.ensureFresh();
     const plan = host.plan();
-    // No tuning yet means no headers to pack, so nothing of the field draws.
+    // Untuned, the host plans and encodes nothing on its own; this gate is for
+    // the tool's dust view and overlays below, which the plan does not cover.
     const fieldLive = render.analyticField && hostTuning !== null;
 
     const timingCtx = timing.beginFrame();

@@ -4,6 +4,7 @@
  * sets `youngStars.invMeanNorm`, and the frame-lane derivation. The renderer
  * and the readbacks come back as `debug` for the tool's diagnostics.
  */
+import type { FieldFramePlan } from '../../@types/FieldFramePlan';
 import type { FieldHostTuning } from '../@types/FieldHostTuning';
 import type { GalaxyFieldHost } from '../@types/GalaxyFieldHost';
 import type { GalaxyFieldHostDebug } from '../@types/GalaxyFieldHostDebug';
@@ -18,10 +19,11 @@ import { deriveFieldFrameLanes } from '../utils/deriveFieldFrameLanes';
 import { ismMapGridRadius } from '../../ismMap/utils/ismMapGridRadius';
 import { planFieldFrame } from '../utils/planFieldFrame';
 
+const EMPTY_PLAN: FieldFramePlan = { encodes: [], composites: [] };
+
 export function createGalaxyFieldHost(
   device: GPUDevice,
   deps: GalaxyFieldHostDeps,
-  initialTuning: FieldHostTuning,
 ): { host: GalaxyFieldHost; debug: GalaxyFieldHostDebug } {
   // The hook fires only from a rebuild inside `setMixture`/`stepIsmMap`, never
   // during construction, so `readbacks` is initialised by the time it runs.
@@ -40,8 +42,9 @@ export function createGalaxyFieldHost(
     orientation: renderer.ismMapOrientation,
   });
 
-  // Held, not applied: the renderer builds nothing until the first `setTuning`.
-  let tuning = initialTuning;
+  // One value gates both encode and composites: untuned, the plan is empty
+  // and `encode` returns, so no stale or unbuilt target is ever drawn.
+  let tuning: FieldHostTuning | null = null;
   // Keyed on (map identity, gamma) rather than computed at the landing: gamma
   // is a live knob that can move on its own between landings.
   let youngStarsMeanCache: {
@@ -78,9 +81,10 @@ export function createGalaxyFieldHost(
       renderer.stepIsmMap();
     },
 
-    plan: () => planFieldFrame(renderer.hiiSegments),
+    plan: () => (tuning ? planFieldFrame(renderer.hiiSegments) : EMPTY_PLAN),
 
     encode(encoder, plan, camera, exposure, targets, timestampWrites): void {
+      if (!tuning) return;
       const { render } = tuning;
       renderer.encode(encoder, plan, targets, {
         camera,
@@ -100,7 +104,7 @@ export function createGalaxyFieldHost(
     setTuning(next): void {
       // Only a moved grid invalidates a cached map: content one rebuild stale
       // over the same grid is kept (see `dropIfGridMoved`).
-      if (next.geometry !== tuning.geometry) {
+      if (next.geometry !== tuning?.geometry) {
         readbacks.dropIfGridMoved(ismMapGridRadius(next.geometry));
       }
       tuning = next;
