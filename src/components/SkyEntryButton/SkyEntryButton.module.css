@@ -1,7 +1,7 @@
 /*
- * SkyEntryButton.module.css — a pill at the bottom centre. The desktop lifts it above the time
- * bar's row so a narrow window never puts the two side by side; the phone stacks it above the
- * scale bracket's slot (`--scale-clearance`, from BottomStack).
+ * SkyEntryButton.module.css — places and fades the pill at the bottom centre. The desktop lifts it
+ * above the time bar's row so a narrow window never puts the two side by side; the phone stacks it
+ * above the scale bracket's slot (`--scale-clearance`, from BottomStack).
  */
 
 .root {
@@ -9,30 +9,14 @@
   left: 50%;
   bottom: calc(var(--corner-offset) + var(--time-toolbar-height) + var(--space-3));
   z-index: 10;
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-4);
+  display: flex;
   max-width: calc(100vw - 2 * var(--corner-offset));
-  height: var(--touch-target);
-  box-sizing: border-box;
-  padding: 0 var(--space-8);
-  border: 1px solid var(--border-control);
-  border-radius: 999px;
-  background: var(--surface-card-strong);
-  -webkit-backdrop-filter: blur(var(--blur-card));
-  backdrop-filter: blur(var(--blur-card));
-  box-shadow: var(--shadow-card);
-  color: var(--color-accent);
-  /* md, not the label's lg, so `--scale-bar-width`'s ch reads the scale bar's glyphs. */
+  /* The scale bar's font, so `--scale-bar-width`'s ch below measures its glyphs. */
   font: var(--font-size-md) / var(--line-height-tight) var(--font-family-mono);
-  white-space: nowrap;
-  cursor: pointer;
+  pointer-events: none;
   transform: translateX(-50%);
   opacity: 0;
-  transition:
-    opacity var(--duration-base) var(--ease-standard),
-    background-color var(--duration-color) ease,
-    border-color var(--duration-color) ease;
+  transition: opacity var(--duration-base) var(--ease-standard);
 }
 
 /* Too narrow to centre clear of the left stack: centre on the band between it and the scale bar. */
@@ -50,35 +34,6 @@
 
 .visible {
   opacity: 1;
-}
-
-@media (hover: hover) {
-  .root:hover {
-    border-color: var(--border-hover);
-    background: var(--surface-control-active);
-  }
-}
-
-.root:active {
-  background: var(--surface-control-active);
-}
-
-.root:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
-  border-color: var(--border-hover);
-}
-
-.label {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: var(--color-fg);
-  font-size: var(--font-size-lg);
-  letter-spacing: var(--letter-spacing-tight);
-}
-
-.key {
-  composes: key from '../common/keyHint.module.css';
 }
 
 @media (prefers-reduced-motion: reduce) {

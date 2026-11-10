@@ -6,6 +6,7 @@
 
 import type { ReactNode } from 'react';
 import cx from 'classnames';
+import ActionPill from '../common/ActionPill/ActionPill';
 import HorizonIcon from '../icons/HorizonIcon/HorizonIcon';
 import styles from './SkyEntryButton.module.css';
 
@@ -25,27 +26,24 @@ function SkyEntryButton({
   onEnter,
   onPreview,
 }: SkyEntryButtonProps): ReactNode {
+  // The fade sits on a wrapper: the pill's own transition is its hover, and two `transition`
+  // rules on one element would fight over the cascade order of two modules.
   return (
-    <button
-      type="button"
-      className={cx(styles.root, phone && styles.phone, visible && styles.visible)}
-      inert={!visible}
-      aria-hidden={!visible || undefined}
-      aria-keyshortcuts={phone ? undefined : 'S'}
-      onClick={onEnter}
-      onPointerEnter={() => onPreview(true)}
-      onPointerLeave={() => onPreview(false)}
-      onFocus={() => onPreview(true)}
-      onBlur={() => onPreview(false)}
-    >
-      <HorizonIcon size={16} />
-      <span className={styles.label}>{label}</span>
-      {!phone && (
-        <kbd className={styles.key} aria-hidden="true">
-          S
-        </kbd>
-      )}
-    </button>
+    <div className={cx(styles.root, phone && styles.phone, visible && styles.visible)}>
+      <ActionPill
+        icon={<HorizonIcon size={16} />}
+        label={label}
+        keyHint={phone ? undefined : 'S'}
+        inert={!visible}
+        aria-hidden={!visible || undefined}
+        aria-keyshortcuts={phone ? undefined : 'S'}
+        onClick={onEnter}
+        onPointerEnter={() => onPreview(true)}
+        onPointerLeave={() => onPreview(false)}
+        onFocus={() => onPreview(true)}
+        onBlur={() => onPreview(false)}
+      />
+    </div>
   );
 }
 

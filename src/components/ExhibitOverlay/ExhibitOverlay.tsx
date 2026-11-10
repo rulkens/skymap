@@ -7,7 +7,9 @@
  */
 
 import { useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import cx from 'classnames';
 
+import ActionPill from '../common/ActionPill/ActionPill';
 import StopIcon from '../icons/StopIcon/StopIcon';
 import EyeIcon from '../icons/EyeIcon/EyeIcon';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -54,7 +56,7 @@ function ExhibitOverlay({
   useViewCover(kickerRef, 'bottom', !hidden && isMobile, onCaptionCover);
 
   return (
-    <div className={hidden ? `${styles.root} ${styles.hidden}` : styles.root} style={clock}>
+    <div className={cx(styles.root, hidden && styles.hidden)} style={clock}>
       <div className={styles.content}>
         <div className={styles.vignetteCaption} aria-hidden="true" />
         <div className={styles.vignetteNotes} aria-hidden="true" />
@@ -79,13 +81,14 @@ function ExhibitOverlay({
           </div>
         ) : null}
 
-        <button type="button" className={styles.exitPill} onClick={onExit}>
-          <span className={styles.exitIcon}>
-            <StopIcon size={13} />
-          </span>
-          <span className={styles.exitLabel}>Exit view</span>
-          <span className={styles.exitKey}>Esc</span>
-        </button>
+        <ActionPill
+          className={styles.exit}
+          icon={<StopIcon size={13} />}
+          label="Exit view"
+          keyHint={isMobile ? undefined : 'Esc'}
+          aria-keyshortcuts={isMobile ? undefined : 'Escape'}
+          onClick={onExit}
+        />
       </div>
 
       <button

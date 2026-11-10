@@ -7,6 +7,7 @@
 import type { ReactNode } from 'react';
 import cx from 'classnames';
 import SkyCompass from './SkyCompass/SkyCompass';
+import ActionPill from '../common/ActionPill/ActionPill';
 import CloseIcon from '../icons/CloseIcon/CloseIcon';
 import styles from './SkyHud.module.css';
 
@@ -44,29 +45,18 @@ function SkyHud({
       <SkyCompass azimuthDeg={azimuthDeg} />
       <p className={styles.heading}>{heading}</p>
       <div className={styles.actions}>
-        <button
-          type="button"
-          className={styles.button}
-          onClick={onLeave}
+        <ActionPill
+          icon={<CloseIcon size={12} />}
+          label="Leave"
+          keyHint={phone ? undefined : 'Esc'}
           aria-keyshortcuts={phone ? undefined : 'Escape'}
-        >
-          <CloseIcon size={12} />
-          Leave
-          {!phone && (
-            <kbd className={styles.key} aria-hidden="true">
-              Esc
-            </kbd>
-          )}
-        </button>
+          onClick={onLeave}
+        />
         {onSkipToTonight !== null && (
-          <button type="button" className={styles.button} onClick={onSkipToTonight}>
-            Skip to tonight
-          </button>
+          <ActionPill label="Skip to tonight" onClick={onSkipToTonight} />
         )}
         {onSkipToRise !== null && (
-          <button type="button" className={styles.button} onClick={onSkipToRise}>
-            Skip to when it rises
-          </button>
+          <ActionPill label="Skip to when it rises" onClick={onSkipToRise} />
         )}
       </div>
       {riseNote !== null && <p className={styles.note}>{riseNote}</p>}
