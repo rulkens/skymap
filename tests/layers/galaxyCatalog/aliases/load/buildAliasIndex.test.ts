@@ -23,6 +23,12 @@ const fakeCatalogs = (objIdsBySource: Partial<Record<SourceType, BigUint64Array>
 };
 
 describe('buildAliasIndex', () => {
+  it('gives each row the focus id the galaxy deep-links by', () => {
+    const records = fakeCatalogs({ [Source.Glade]: new BigUint64Array([123n]) });
+    const aliasMap = new Map<bigint, readonly string[]>([[123n, ['NGC 123']]]);
+    expect(buildAliasIndex({ records, aliasMap })[0]!.focusId).toBe('pgc-123');
+  });
+
   it('emits one entry per (source, pgc) the source holds where the PGC has aliases', () => {
     const records = fakeCatalogs({
       [Source.Glade]: new BigUint64Array([100n, 200n, 300n]),
@@ -33,8 +39,8 @@ describe('buildAliasIndex', () => {
     ]);
     const out = buildAliasIndex({ records, aliasMap });
     expect(out).toEqual([
-      { pgc: 100, names: ['NGC 1'], source: Source.Glade },
-      { pgc: 300, names: ['NGC 3'], source: Source.Glade },
+      { pgc: 100, names: ['NGC 1'], sourceLabel: 'GLADE', focusId: 'pgc-100' },
+      { pgc: 300, names: ['NGC 3'], sourceLabel: 'GLADE', focusId: 'pgc-300' },
     ]);
   });
 
@@ -72,7 +78,7 @@ describe('buildAliasIndex', () => {
       [200n, ['T']],
     ]);
     const out = buildAliasIndex({ records, aliasMap });
-    expect(out.map((e) => e.source)).toEqual([Source.Glade, Source.TwoMRS]);
+    expect(out.map((e) => e.focusId)).toEqual(['pgc-100', 'pgc-200']);
     expect(out.map((e) => e.pgc)).toEqual([100, 200]);
   });
 });

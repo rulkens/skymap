@@ -1,5 +1,3 @@
-import type { SourceType } from '../data/SourceType';
-
 /**
  * Joined per-source alias index entry.  Built lazily on first palette open
  * by `buildAliasIndex` from `pgc_aliases.json` ∩ each pgc-claiming source's
@@ -13,5 +11,8 @@ import type { SourceType } from '../data/SourceType';
 export type AliasIndexEntry = {
   pgc: number;
   names: readonly string[];
-  source: SourceType;
+  /** Display label of the catalog holding the row ("GLADE"); with `pgc` it is the row's identity. */
+  sourceLabel: string;
+  /** The `#focus=` id a pick of this row navigates to, filled in by `buildAliasIndex`. */
+  focusId: string;
 };

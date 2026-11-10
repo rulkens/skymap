@@ -89,7 +89,7 @@ describe('galaxyCatalog frame — alias index reconcile', () => {
     const calls = aliasCalls(publish);
     expect(calls).toHaveLength(1);
     expect(calls[0]![0]).toEqual({
-      aliasIndex: [{ pgc: 100, names: ['NGC 1'], source: Source.Glade }],
+      aliasIndex: [{ pgc: 100, names: ['NGC 1'], sourceLabel: 'GLADE', focusId: 'pgc-100' }],
     });
   });
 
@@ -124,7 +124,7 @@ describe('galaxyCatalog frame — alias index reconcile', () => {
     tick.plan(SNAPSHOT, VIEWS, STATE, FADE);
     expect(aliasCalls(publish)).toHaveLength(1);
     expect(aliasCalls(publish)[0]![0]).toEqual({
-      aliasIndex: [{ pgc: 100, names: ['NGC 1'], source: Source.Glade }],
+      aliasIndex: [{ pgc: 100, names: ['NGC 1'], sourceLabel: 'GLADE', focusId: 'pgc-100' }],
     });
 
     // Tier swap: this source's array is replaced wholesale (100n dropped,
@@ -138,7 +138,7 @@ describe('galaxyCatalog frame — alias index reconcile', () => {
     const calls = aliasCalls(publish);
     expect(calls).toHaveLength(2);
     expect(calls[1]![0]).toEqual({
-      aliasIndex: [{ pgc: 200, names: ['NGC 2'], source: Source.Glade }],
+      aliasIndex: [{ pgc: 200, names: ['NGC 2'], sourceLabel: 'GLADE', focusId: 'pgc-200' }],
     });
   });
 });

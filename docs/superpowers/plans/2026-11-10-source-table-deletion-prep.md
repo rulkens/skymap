@@ -139,25 +139,25 @@ export type AliasIndexEntry = {
   `CommandPalette`, `usePaletteSearch` never touch it; only test fixtures write it).
 - `actionForRow`'s `alias` arm returns `{ kind: 'focus', focusId: row.entry.focusId }`.
 
-- [ ] **Step 1: Write the failing test** in `buildAliasIndex.test.ts`:
+- [x] **Step 1: Write the failing test** in `buildAliasIndex.test.ts`:
       `it('gives each row the focus id the galaxy deep-links by')` — a pgc-claiming non-SDSS record holding
       `pgc-123` yields an entry with `focusId: 'pgc-123'`. Change the existing fixtures from `source` to
       `focusId`.
-- [ ] **Step 2: Run it** — `npx vitest run tests/layers/galaxyCatalog/aliases` → FAIL (`focusId` undefined).
-- [ ] **Step 3: Change the type, then fill `focusId`** in `buildAliasIndex` with
+- [x] **Step 2: Run it** — `npx vitest run tests/layers/galaxyCatalog/aliases` → FAIL (`focusId` undefined).
+- [x] **Step 3: Change the type, then fill `focusId`** in `buildAliasIndex` with
       `encodeGalaxyId({ source: record.source, famousId: null, objId: pgc, ra: 0, dec: 0, distMpc: 0 })`, so
       the `pgc-` grammar keeps its one home. Move the comment at `actionForRow.ts:29-30` about bigint along
       with it.
-- [ ] **Step 4: Point `actionForRow` at `row.entry.focusId`** and drop its `encodeGalaxyId` import. Fix the
+- [x] **Step 4: Point `actionForRow` at `row.entry.focusId`** and drop its `encodeGalaxyId` import. Fix the
       three test fixtures that build `AliasIndexEntry` (`source: Source.Glade` → `focusId: 'pgc-…'`).
-- [ ] **Step 5: Move `encodeGalaxyId`.** Its importers are now only `galaxyCatalogSelectionRow.ts` and
+- [x] **Step 5: Move `encodeGalaxyId`.** Its importers are now only `galaxyCatalogSelectionRow.ts` and
       `buildAliasIndex.ts`, both in the Layer:
       `npm run move-files -- src/services/url/encodeGalaxyId.ts src/layers/galaxyCatalog/selection/utils/encodeGalaxyId.ts --dry`,
       then without `--dry`. Grep `services/url/encodeGalaxyId` and fix `docsReferenceFacts.ts:256` by hand.
-- [ ] **Step 6: Verify.** `npm run typecheck`, then
+- [x] **Step 6: Verify.** `npm run typecheck`, then
       `npx vitest run tests/conventions tests/layers/galaxyCatalog tests/utils/palette tests/components/CommandPalette`
       → green, the new test included.
-- [ ] **Step 7: Commit** — "Palette alias rows carry their focus id; encodeGalaxyId moves into galaxyCatalog".
+- [x] **Step 7: Commit** — "Palette alias rows carry their focus id; encodeGalaxyId moves into galaxyCatalog".
 
 ### Task 3: `SEEDED_STAR_CATALOGS_BY_SOURCE` moves into `starCatalog`
 
