@@ -67,3 +67,4 @@ Perf gate: not run: slice 1 adds no per-frame work (compileClip spans run once p
 - Last fixes landed: 7be4a2c7a (popover stubs, StudioDock 20/20), 75dbc6ef7 (Fly names), 4b92a65f5 (drop focusId Resolved, reverts 8f901f182), 2fa0feed0 (FOV°, blend s).
 - Second deletion audit running (opus, read-only) → docs/design/clip-studio/deletion-audit-2.md. Then: apply safe-now (agent), owner rulings, /feature-done, PR.
 - Audit 2: ~−14 LOC safe-now (<1% of +3042). Applying safe-now + look-at units (formatPosition at lookAt label + resolvedPosition) via agent. Queued owner ruling: merge TOGGLE_OPTIONS (Off/On) and ON_OFF_OPTIONS (On/Off) into one Off/On list — ask with S4 Q2.
+- 2026-11-10: /feature-done READY (1907 files / 32329 tests, typecheck clean); completion commit 8dcaf46fd; PR #1116 opened, CI watching. Merge only on "merge this PR". Open: toggle-list order ruling (Off/On merge), S4 Q1 (2g5w) then 11 more S4 Qs one by one; S3 G2/G3 running on feat/clip-studio-s3.
