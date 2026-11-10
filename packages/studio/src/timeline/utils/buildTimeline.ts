@@ -3,7 +3,7 @@
  * and the collapsed row ids. Structure, names, values and families come from the draft and
  * ROW_KINDS; every time comes from `compile.spans` by path, never recomputed. A fork is its own
  * row with its child beneath it; a flyPath's waypoints are child rows windowed by its `knotSecs`.
- * The last waypoint is renamed Settle here because a waypoint subject cannot know its position.
+ * A waypoint subject carries `last`, which the registry labels Settle.
  */
 import { ROW_KINDS } from '../../kinds/data/rowKinds';
 import { rowKey } from '../../draft/utils/rowKey';
@@ -17,7 +17,6 @@ import type { Effect } from '../../../../../src/@types/animation/Effect';
 import type { EffectPath } from '../../../../../src/@types/animation/EffectPath';
 import type { EffectSpan } from '../../../../../src/@types/animation/EffectSpan';
 import type { RowKind } from '../../@types/rows/RowKind';
-import type { RowLabel } from '../../@types/rows/RowLabel';
 import type { RowRef } from '../../@types/rows/RowRef';
 import type { RowSubjects } from '../../@types/rows/RowSubjects';
 import type { Timeline } from '../../@types/rows/Timeline';
@@ -50,13 +49,11 @@ export function buildTimeline(
     subject: RowSubjects[K],
     where: Pick<TimelineRow, 'depth' | 'parentId' | 'background' | 'expandable'>,
     times: Pick<TimelineRow, 'startSec' | 'endSec' | 'tailEndSec' | 'duration'>,
-    label?: (base: RowLabel) => RowLabel,
   ): string => {
     const spec = ROW_KINDS[kind];
     const id = rowKey(ref);
     const writes = spec.writes(subject);
     const family = UNTINTED_MARKS.has(spec.mark) ? null : (writes[0] ?? null);
-    const base = spec.label(subject);
     rows.push({
       id,
       ref,
@@ -66,7 +63,7 @@ export function buildTimeline(
       family,
       glyph: spec.glyph ?? familyGlyph(family),
       writes,
-      label: label === undefined ? base : label(base),
+      label: spec.label(subject),
       ...times,
       errors: ref.kind === 'effect' ? (culprits.get(ref.path.join('.')) ?? []) : [],
     });
@@ -111,7 +108,7 @@ export function buildTimeline(
       push(
         { kind: 'waypoint', path, index },
         'waypoint',
-        waypoint,
+        { ...waypoint, last: index === waypoints.length - 1 },
         { depth: depth + 1, parentId: id, background, expandable: false },
         {
           startSec: start,
@@ -119,7 +116,6 @@ export function buildTimeline(
           tailEndSec: end,
           duration: start === null || end === null ? '–' : formatDuration(end - start),
         },
-        index === waypoints.length - 1 ? (base) => ({ ...base, name: 'Settle' }) : undefined,
       );
     });
   };

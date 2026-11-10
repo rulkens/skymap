@@ -1,8 +1,7 @@
 /**
  * ROW_KINDS: the one registry of what the studio knows about each row kind (A5). The mapped type over
  * every `Effect['kind']` plus the two pseudo-rows makes a missing kind a compile error. Adding a kind
- * is one entry in a family file. A waypoint is labelled Pass here; `buildTimeline` renames the last
- * one Settle, since a subject cannot know its position in the path.
+ * is one entry in a family file. A waypoint is labelled Pass, or Settle when it is the last of its path.
  */
 import { cameraKinds } from './cameraKinds';
 import { sceneKinds } from './sceneKinds';
@@ -37,10 +36,12 @@ export const ROW_KINDS: RowKindRegistry = {
     glyph: 'pass',
     mark: 'knot',
     writes: () => ['distance', 'lookAt', 'turn'],
-    label: (s) =>
-      'id' in s
-        ? { name: 'Pass', op: '→', value: '', subject: s.id }
-        : { name: 'Pass', op: '→', value: formatQuantity(s.distance, 'Mpc') },
+    label: (s) => {
+      const name = s.last ? 'Settle' : 'Pass';
+      return 'id' in s
+        ? { name, op: '→', value: '', subject: s.id }
+        : { name, op: '→', value: formatQuantity(s.distance, 'Mpc') };
+    },
     fields: [
       overField('Leg time'),
       { key: 'linger', param: 'linger', label: 'Linger', control: 'percent' },

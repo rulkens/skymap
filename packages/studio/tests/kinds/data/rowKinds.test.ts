@@ -71,7 +71,7 @@ const SAMPLES: { readonly [K in RowKind]: RowSubjects[K] } = {
   all: all([dollyTo(1, 2), tween('yaw', { to: 1, over: 2 })]),
   fork: fork(oscillate('pitch', { amp: 0.09, period: 16 })),
   start: { target: [0, 0, 0], yaw: 0.5, pitch: -0.3, distance: 10 },
-  waypoint: atPoint([1, 2, 3], 5, { yaw: 1, pitch: 0, over: 2, linger: 0.5 }),
+  waypoint: { ...atPoint([1, 2, 3], 5, { yaw: 1, pitch: 0, over: 2, linger: 0.5 }), last: false },
 };
 
 const entries = Object.keys(SAMPLES) as RowKind[];
@@ -111,6 +111,8 @@ describe('ROW_KINDS', () => {
       value: '',
       subject: 'm31',
     });
+    expect(ROW_KINDS.waypoint.label(SAMPLES.waypoint).name).toBe('Pass');
+    expect(ROW_KINDS.waypoint.label({ ...SAMPLES.waypoint, last: true }).name).toBe('Settle');
     const overlapped = seq([dollyTo(300, 4), dollyTo(950, 4)], { overlap: 1 });
     expect(ROW_KINDS.seq.label(overlapped)).toEqual({
       name: 'In order',
