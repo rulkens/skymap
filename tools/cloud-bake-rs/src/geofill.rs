@@ -9,6 +9,7 @@ use crate::filters::{gaussian, median3_u8, Edge};
 use crate::geodecode::{lon_in, view_angle, Decoder};
 use crate::grid::{arc, block_any, lon, subsample, H, W};
 use crate::orbit::{Orbit, HALF_SWATH, P};
+use crate::sources::Swath;
 use crate::sources_table::geo;
 use rayon::prelude::*;
 use std::path::Path;
@@ -31,7 +32,7 @@ fn slot_of(t: f64) -> i32 {
 /// Per satellite, the time cells it can contribute to (view angle < 78 deg, longitude window + 1 cell).
 fn satc() -> Vec<Vec<bool>> {
     geo()
-        .map(|s| s.id)
+        .map(|s| s.view())
         .map(|k| {
             let inwin: Vec<bool> = (0..WC)
                 .map(|c| lon_in(k, lon(c * CELL + CELL / 2)))
@@ -148,12 +149,12 @@ fn passes(orb: &Orbit, phase: f64) -> Vec<(f64, f64)> {
 }
 
 /// Per time cell: candidate passes from the cell's majority source, nearest nadir first.
-fn cell_times(labels: &[i8], names: &[String], need: &[bool], orb: &Orbit) -> Vec<Option<Cands>> {
+fn cell_times(labels: &[i8], swaths: &[Swath], need: &[bool], orb: &Orbit) -> Vec<Option<Cands>> {
     let counts: Vec<Vec<u32>> = (0..HC * WC)
         .into_par_iter()
         .map(|cell| {
             let (r, c) = (cell / WC, cell % WC);
-            let mut n = vec![0u32; names.len()];
+            let mut n = vec![0u32; swaths.len()];
             for y in r * CELL..(r + 1) * CELL {
                 for &l in &labels[y * W + c * CELL..y * W + (c + 1) * CELL] {
                     if l >= 0 {
@@ -193,13 +194,9 @@ fn cell_times(labels: &[i8], names: &[String], need: &[bool], orb: &Orbit) -> Ve
             .iter()
             .enumerate()
             .fold(0, |b, (i, &v)| if v > n[b] { i } else { b });
-        let nm = &names[k];
-        let ph = if nm.contains("N21") { 1 } else { 0 };
-        let tsds: Vec<(f64, f64)> = cand[ph].iter().map(|p| p[j]).collect();
-        if let Some(win) = nm.strip_prefix("N20 ") {
-            let (a, b) = win.split_once('-').unwrap();
-            let m = |s: &str| fetch::slot_minute(s) as f64;
-            let (lo, hi) = (m(a) - 3.0, m(b) + 9.0);
+        let sw = &swaths[k];
+        let tsds: Vec<(f64, f64)> = cand[sw.phase].iter().map(|p| p[j]).collect();
+        if let Some((lo, hi)) = sw.window {
             let best = tsds.iter().filter(|(t, _)| *t >= lo && *t <= hi).fold(
                 None,
                 |b: Option<(f64, f64)>, &x| match b {
@@ -558,7 +555,7 @@ fn wrap_nearest(has: &[bool], val: &[f32], h: usize, w: usize) -> Vec<f32> {
 
 pub struct Inputs<'a> {
     pub labels: &'a [i8],
-    pub names: &'a [String],
+    pub swaths: &'a [Swath],
     pub cv: &'a [bool],
     pub op: &'a [f32],
     pub wgt: &'a [f32],
@@ -587,7 +584,7 @@ pub fn build_fill(
         .map(|i| x.cv[i] && x.wgt[i] < 0.999 && x.ice[i] < 0.5)
         .collect();
     let band_c = block_any(&band_mask, H, W, CELL);
-    let mut cells = cell_times(x.labels, x.names, &need, orb);
+    let mut cells = cell_times(x.labels, x.swaths, &need, orb);
     let satc = satc();
     let reach: Vec<bool> = (0..HC * WC).map(|i| satc.iter().any(|s| s[i])).collect();
 

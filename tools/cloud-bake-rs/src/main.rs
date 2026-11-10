@@ -97,7 +97,7 @@ fn main() {
     let orb = fit.orbit;
     let x = geofill::Inputs {
         labels: &comp.labels,
-        names: &comp.names,
+        swaths: &comp.swaths,
         cv: &comp.cv,
         op: &comp.op,
         wgt: &wgt,

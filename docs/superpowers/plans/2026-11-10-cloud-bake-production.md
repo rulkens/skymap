@@ -58,7 +58,7 @@ pub fn day_dir(cache: &Path, date: Date) -> PathBuf;  // <cache>/YYYY-MM-DD
 ```
 
 - [x] Cache layout `<cache>/YYYY-MM-DD/{granules,mosaics,geo,probe}/…`, replacing the Python layout
-      (`--bake` and its `granules/`, `viirs/`, `geo_p2/` children). `footprints.json` / `hi_meta.json`
+      (`--bake` and its `granules/`, `viirs/`, `geo_p2/` children). `footprints.json`
       move under `granules/`.
 - [x] Every cache write and the output WebP go to `<path>.part`, then `rename`. A leftover `.part` is
       never treated as cached.

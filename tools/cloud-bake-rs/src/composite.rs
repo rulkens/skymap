@@ -8,7 +8,7 @@ use crate::grid::{block_majority, block_mean, smoothstep, subsample, upsample, H
 use crate::label::{count_components, small_components};
 use crate::quantile::{qmatch, Interp};
 use crate::seam::{cut, fit_gain, nadirness, CutIn};
-use crate::sources::{Source, F};
+use crate::sources::{Source, Swath, F};
 use rayon::prelude::*;
 
 const GAIN_RAMP: f32 = 50.0;
@@ -18,15 +18,15 @@ pub struct Composite {
     pub op: Vec<f32>,
     pub cv: Vec<bool>,
     pub labels: Vec<i8>,
-    pub names: Vec<String>,
+    pub swaths: Vec<Swath>,
 }
 
 pub fn join_all(
     sources: Vec<Source>,
     display: &Interp,
-) -> (Vec<f32>, Vec<bool>, Vec<i8>, Vec<String>) {
+) -> (Vec<f32>, Vec<bool>, Vec<i8>, Vec<Swath>) {
     let (h, w) = (H / F, W / F);
-    let names: Vec<String> = sources.iter().map(|s| s.name.clone()).collect();
+    let swaths: Vec<Swath> = sources.iter().map(|s| s.swath).collect();
     let mut c = vec![0f32; W * H];
     let mut cv = vec![false; W * H];
     let mut labels = vec![-1i8; W * H];
@@ -150,7 +150,7 @@ pub fn join_all(
             n_ov as f64 / (W * H) as f64
         );
     }
-    (c, cv, labels, names)
+    (c, cv, labels, swaths)
 }
 
 /// Enclosed no-data holes under HOLE_MAX px filled by push-pull interpolation from the composite.
@@ -246,7 +246,7 @@ pub fn match_baseline(op: &[f32], mask: &[bool], base: &[f32]) -> Vec<f32> {
 
 impl Composite {
     pub fn build(sources: Vec<Source>, display: &Interp, base: &[f32]) -> Composite {
-        let (mut c, mut cv, labels, names) = join_all(sources, display);
+        let (mut c, mut cv, labels, swaths) = join_all(sources, display);
         c.par_iter_mut().for_each(|x| *x = x.clamp(0.0, 1.0));
         fill_holes(&mut c, &mut cv);
         let mask: Vec<bool> = c
@@ -259,7 +259,7 @@ impl Composite {
             op,
             cv,
             labels,
-            names,
+            swaths,
         }
     }
 }

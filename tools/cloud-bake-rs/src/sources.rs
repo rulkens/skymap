@@ -20,8 +20,17 @@ const N21_BAND: usize = 40;
 const HYBRID_RAMP: f32 = 120.0;
 const SPECK_MAX: usize = 400;
 
+/// What geofill needs of a source to time-stamp its cells: the VIIRS satellite's pass phase (0 = NOAA-20,
+/// 1 = NOAA-21 half an orbit behind) and, for an orbit, the UTC minutes within which its swath was imaged.
+#[derive(Clone, Copy)]
+pub struct Swath {
+    pub phase: usize,
+    pub window: Option<(f64, f64)>,
+}
+
 pub struct Source {
     pub name: String,
+    pub swath: Swath,
     pub y0: usize, // first row of the band
     pub h: usize,
     pub op: Vec<f32>,
@@ -96,6 +105,7 @@ fn fill_specks(op: &mut [f32], valid: &mut [bool], h: usize) -> usize {
 pub struct OrbitMeta {
     pub name: String,
     pub pieces: Vec<(PathBuf, usize, usize)>, // path, x0, y0
+    pub window: (f64, f64),
 }
 
 /// The granule slots grouped into orbits: slots 6 minutes apart belong together. Pieces that never
@@ -121,6 +131,11 @@ pub fn orbit_groups(slots: &SlotPieces) -> Vec<OrbitMeta> {
         .iter()
         .map(|g| OrbitMeta {
             name: format!("N20 {}-{}", slots[g[0]].0, slots[*g.last().unwrap()].0),
+            // a granule is imaged up to 3 min before its slot and 9 after
+            window: (
+                mins[g[0]] as f64 - 3.0,
+                mins[*g.last().unwrap()] as f64 + 9.0,
+            ),
             pieces: g
                 .iter()
                 .flat_map(|&i| slots[i].1.iter().cloned())
@@ -187,6 +202,10 @@ fn load_orbit(m: &OrbitMeta, lut: &[f32]) -> Source {
     );
     Source {
         name: m.name.clone(),
+        swath: Swath {
+            phase: 0,
+            window: Some(m.window),
+        },
         y0,
         h,
         op,
@@ -215,12 +234,20 @@ pub fn load_mosaics(mosaics: &Path, lut: &[f32]) -> Vec<Source> {
             MOSAIC_BIAS,
             MOSAIC_BAND,
             false,
+            0,
         ),
-        ("daily mosaic N21", "viirs21_tc", N21_BIAS, N21_BAND, true),
+        (
+            "daily mosaic N21",
+            "viirs21_tc",
+            N21_BIAS,
+            N21_BAND,
+            true,
+            1,
+        ),
     ];
     spec.iter()
         .filter(|s| mosaics.join(format!("{}.jpg", s.1)).exists())
-        .map(|&(name, f, bias, band, gain)| {
+        .map(|&(name, f, bias, band, gain, phase)| {
             let (w, h, px) = rgb(&mosaics.join(format!("{f}.jpg")));
             assert_eq!((w, h), (W, H));
             let dark: Vec<bool> = px
@@ -245,6 +272,10 @@ pub fn load_mosaics(mosaics: &Path, lut: &[f32]) -> Vec<Source> {
             eprintln!("    {name}: filled {n} speck px");
             Source {
                 name: name.into(),
+                swath: Swath {
+                    phase,
+                    window: None,
+                },
                 y0: 0,
                 h: H,
                 op,

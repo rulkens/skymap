@@ -6,25 +6,16 @@ use crate::grid::{lat, lon, smoothstep64, W};
 use crate::imageio::Rgba;
 use crate::label::{closing, fill_holes, small_components};
 use crate::quantile::Interp;
+use crate::sources_table::{by_id, geo, Decode, GeoView};
 use std::collections::HashMap;
 
-pub fn sub_lon(sat: &str) -> f64 {
-    match sat {
-        "goes_e" => -75.2,
-        "goes_w" => -137.0,
-        "hima" => 140.7,
-        "mtg" => 0.0,
-        _ => 45.5,
-    }
+/// Zero outside the satellite's fetched longitude window (`GeoView::lon_window`), if it has one.
+pub fn lon_in(v: &GeoView, lon: f64) -> bool {
+    v.lon_window.is_none_or(|w| (w.0..=w.3).contains(&lon))
 }
 
-/// Only IODC has a longitude window (fetched for 28.125..118.125 E and ramped in from the cut edges).
-pub fn lon_in(sat: &str, lon: f64) -> bool {
-    sat != "iodc" || (28.125..=118.125).contains(&lon)
-}
-
-pub fn view_angle(sat: &str, row: usize, col: usize) -> f64 {
-    (lat(row).to_radians().cos() * (lon(col) - sub_lon(sat)).to_radians().cos())
+pub fn view_angle(v: &GeoView, row: usize, col: usize) -> f64 {
+    (lat(row).to_radians().cos() * (lon(col) - v.sub_lon).to_radians().cos())
         .clamp(-1.0, 1.0)
         .acos()
         .to_degrees()
@@ -40,8 +31,7 @@ pub struct Decoder {
     exact: HashMap<u32, f32>,
     core: Interp,     // cold-core greys -> T
     warm_rev: Interp, // ambiguous greys reassigned to the warm ramp
-    mtg_lut: Vec<f32>,
-    iodc_lut: Vec<f32>,
+    luts: HashMap<&'static str, Vec<f32>>,
     pub qmap: Interp, // frozen 12:00Z blend -> baseline quantile map
 }
 
@@ -118,8 +108,12 @@ impl Decoder {
             exact,
             core,
             warm_rev,
-            mtg_lut: arr("mtg_lut").iter().map(|&v| v as f32).collect(),
-            iodc_lut: arr("iodc_lut").iter().map(|&v| v as f32).collect(),
+            luts: geo()
+                .filter_map(|s| match s.view().decode {
+                    Decode::GreyLut(k) => Some((k, arr(k).iter().map(|&v| v as f32).collect())),
+                    Decode::GibsColourMap => None,
+                })
+                .collect(),
             qmap,
         }
     }
@@ -193,13 +187,9 @@ impl Decoder {
         t
     }
 
-    /// MTG / IODC grey -> temperature through the frozen LUT (NaN where transparent).
-    fn lut_t(&self, sat: &str, a: &Rgba) -> Vec<f32> {
-        let lut = if sat == "mtg" {
-            &self.mtg_lut
-        } else {
-            &self.iodc_lut
-        };
+    /// EUMETView grey -> temperature through the frozen LUT `key` (NaN where transparent).
+    fn lut_t(&self, key: &str, a: &Rgba) -> Vec<f32> {
+        let lut = &self.luts[key];
         a.px.chunks_exact(4)
             .map(|c| {
                 if c[3] > 0 {
@@ -214,24 +204,24 @@ impl Decoder {
     /// Brightness temperature of a frame in degrees C (NaN where transparent), the decode the bake
     /// applies before any view-angle weighting; differences between satellites are kelvin.
     pub fn temperature(&self, r: &FrameReq, a: &Rgba) -> Vec<f32> {
-        if r.sat == "mtg" || r.sat == "iodc" {
-            self.lut_t(r.sat, a)
-        } else {
-            self.gibs_t(a, 20000 / (r.scale * r.scale))
+        match by_id(r.sat).view().decode {
+            Decode::GreyLut(key) => self.lut_t(key, a),
+            Decode::GibsColourMap => self.gibs_t(a, 20000 / (r.scale * r.scale)),
         }
     }
 
     /// geofill.py sat_layer: (w * val, w, fade) over the request's window at its scale.
     pub fn layer(&self, r: &FrameReq, mut a: Rgba) -> (Vec<f32>, Vec<f32>, Vec<f32>) {
         let s = r.scale;
+        let v = by_id(r.sat).view();
         let (h, w) = (a.h, a.w);
         let rows: Vec<usize> = (0..h).map(|i| r.y0 + i * s).collect();
         let cols: Vec<usize> = (0..w).map(|j| (r.x0 + j * s) % W).collect();
         let ang: Vec<f64> = rows
             .iter()
-            .flat_map(|&y| cols.iter().map(move |&x| view_angle(r.sat, y, x)))
+            .flat_map(|&y| cols.iter().map(move |&x| view_angle(v, y, x)))
             .collect();
-        if r.sat != "mtg" && r.sat != "iodc" {
+        if matches!(v.decode, Decode::GibsColourMap) {
             for i in 0..h * w {
                 let c = &mut a.px[i * 4..i * 4 + 4];
                 if ang[i] > 75.0 && c[0] == 255 && c[1] == 255 && c[2] == 255 {
@@ -244,10 +234,10 @@ impl Decoder {
         let mut ok: Vec<f64> = t.iter().map(|v| !v.is_nan() as u8 as f64).collect();
         for i in 0..h * w {
             let lo = lon(cols[i % w]);
-            if r.sat == "iodc" {
-                ok[i] *= smoothstep64(28.125, 38.0, lo) * (1.0 - smoothstep64(108.0, 118.125, lo));
+            if let Some((a, b, c, d)) = v.lon_window {
+                ok[i] *= smoothstep64(a, b, lo) * (1.0 - smoothstep64(c, d, lo));
             }
-            ok[i] *= lon_in(r.sat, lo) as u8 as f64;
+            ok[i] *= lon_in(v, lo) as u8 as f64;
         }
         let mut wv = vec![0f32; h * w];
         let mut wk = vec![0f32; h * w];
