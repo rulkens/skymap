@@ -270,16 +270,22 @@ programmer errors, not draft errors.
 - [ ] Test `a valid clip compiles exactly as before` is the existing suite; run all of
       `tests/services/engine/animation/`.
 
-### Task 0.4: resolution preserves effect paths
+### Task 0.4: resolution preserves every draft path (amended 2026-11-10)
 
 **Files:** `tests/services/engine/animation/resolveClipFoci.test.ts`
 
-The studio indexes the authored draft with paths computed on the resolved clip. Pin it:
+The studio indexes the authored draft with paths computed on the resolved clip. The original contract
+("every path exists in both trees") is false: `resolveClipFoci` rewrites `lookAtId` and `aimAlong` to
+`aimAt(...)` = `all([yaw tween, pitch tween])`, so a draft leaf at path P becomes an `all` at P with children
+that exist only in the resolved tree (7 registry clips). Controller ruling: keep the engine as it is and pin
+the weaker, true contract. A span looked up by a draft path is still the right window (the resolved `all` at P
+spans exactly the leaf's window); only compile-error paths can name a deeper node, and `buildTimeline` trims
+those (Task 2.4).
 
-- [ ] Test `resolveClipFoci keeps every effect path, structural kind and waypoint count`: for every
-      `clipRegistry` clip, with the stub resolver this file already uses (extend it to resolve any id), walk
-      both trees; every path exists in both, `seq`/`all`/`fork` stay put, flyPath waypoint counts match.
-- [ ] No source change expected; if the test fails, stop and report.
+- [ ] Test `resolveClipFoci keeps every draft path, structural kind and waypoint count`: for every
+      `clipRegistry` clip, with a stub resolver that resolves any id, walk the draft; every draft path exists
+      in the resolved tree, `seq`/`all`/`fork` stay put, flyPath waypoint counts match, and a draft node whose
+      resolved kind differs is a `lookAtId` or `aimAlong` that became an `all` of two `set` tweens.
 
 ---
 
@@ -618,7 +624,8 @@ otherwise `formatQuantity` covers it. Do not add a formatter without a caller in
 Walks the draft (Start row first, then the timeline in order; flyPath waypoints as child rows), applies
 collapse, takes times from `compile.spans` by path (`null` while `compile` is `null`), waypoint windows from the
 flyPath span's `knotSecs` (`[previous knot, this knot]`), tails from the effect's own `over`/window (perpetual
-osc to `durationSec`), `errors` from `compile.error.paths`, duration strings via `formatDuration` (`end` for a
+osc to `durationSec`), `errors` from `compile.error.paths`, each trimmed to its longest prefix that exists in the draft (Task 0.4: an
+error can name a child of a resolved `aimAt`), duration strings via `formatDuration` (`end` for a
 perpetual osc, `∞` for a looping spin, `–` unresolved), label/writes/family from `ROW_KINDS`, and `cueSecs`
 from step starts, cue times and End.
 
@@ -630,6 +637,7 @@ from step starts, cue times and End.
 - [ ] Test `a group writes the union of its children's families`.
 - [ ] Test `an invalid compile marks exactly the culprit rows` (`all([dollyTo(300, 4), dollyTo(500, 6)])`).
 - [ ] Test `without a compile every row is unresolved` (`startSec` null, duration `–`).
+- [ ] Test `an error inside a resolved lookAtId marks the lookAtId row` (two `lookAtId`s overlapping in one `all`).
 
 ### Task 2.5: ruler steps and snapping
 
