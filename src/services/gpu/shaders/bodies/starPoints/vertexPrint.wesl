@@ -1,13 +1,13 @@
 // bodies/starPoints/vertexPrint.wesl — the seeded stars' print stage for the
 // antique look: one point per star in 'antique-print-points'
-// (antiqueLook/printPoint.wesl). Positions are camera-relative Mpc with a
+// (antiqueLook/shared/printPoint.wesl). Positions are camera-relative Mpc with a
 // rebased view-projection, as vertex.wesl's.
 
 import package::lib::camera::CameraUniforms;
 import package::lib::camera::worldToClip;
-import package::antiqueLook::printPoint::PrintPointOut;
-import package::antiqueLook::printPoint::apparentMagnitude;
-import package::antiqueLook::printPoint::printPoint;
+import package::antiqueLook::shared::printPoint::PrintPointOut;
+import package::antiqueLook::shared::printPoint::apparentMagnitude;
+import package::antiqueLook::shared::printPoint::printPoint;
 
 @group(0) @binding(0) var<uniform> cam: CameraUniforms;
 

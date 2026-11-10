@@ -1,5 +1,5 @@
 /**
- * packAntiqueMaskDepth — the `MaskDepth` uniform `antiqueLook/mask.wesl` declares
+ * packAntiqueMaskDepth — the `MaskDepth` uniform `antiqueLook/passes/maskFragment.wesl` declares
  * (its struct is the byte map): the camera's forward and, per plate body in the
  * plate's order, the depth row's near plane in that body's radii. Infinite-far
  * reversed-Z only (depth = near / view z); any other row, or none, writes 0, the

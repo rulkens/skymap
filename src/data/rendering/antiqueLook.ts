@@ -118,7 +118,7 @@ export const ANTIQUE_GEOGRAPHY_FORMAT: GPUTextureFormat = 'rgba8unorm';
  * `moon` layer, so it takes that array's format. */
 export const ANTIQUE_MOON_FORMAT: GPUTextureFormat = 'rgba8unorm';
 
-/** The print-points row (`antiqueLook/printPoint.wesl`): xy NDC and a magnitude need
+/** The print-points row (`antiqueLook/shared/printPoint.wesl`): xy NDC and a magnitude need
  * floats; its depth ranks the points in a texel by magnitude. */
 export const ANTIQUE_PRINT_POINTS_FORMAT: GPUTextureFormat = 'rgba16float';
 export const ANTIQUE_PRINT_POINTS_DEPTH: GPUTextureFormat = 'depth32float';

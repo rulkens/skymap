@@ -1,7 +1,7 @@
 /**
  * A star's glyph class from its catalogue entry, evaluated from the shaders' own
- * text: `apparentMagnitude` (antiqueLook/printPoint.wesl) and the glyph rank
- * (antiqueLook/glyphs.wesl) run here in JS through a few WGSL built-in shims, so
+ * text: `apparentMagnitude` (antiqueLook/shared/printPoint.wesl) and the glyph rank
+ * (antiqueLook/glyphs/vertex.wesl) run here in JS through a few WGSL built-in shims, so
  * a slipped log base, distance unit or ladder direction fails on named stars.
  */
 import { describe, expect, it } from 'vitest';
@@ -27,7 +27,7 @@ const SHIMS = {
 };
 
 function apparentMagnitudeFromShader(): (absMag: number, d2Mpc2: number) => number {
-  const printPoint = readShaderSource(`${DIR}/antiqueLook/printPoint.wesl`);
+  const printPoint = readShaderSource(`${DIR}/antiqueLook/shared/printPoint.wesl`);
   const photometry = readShaderSource(`${DIR}/lib/starPhotometry.wesl`);
   const body = /fn apparentMagnitude\(absMag: f32, d2Mpc2: f32\) -> f32 \{([\s\S]*?)\n\}/.exec(
     printPoint,
@@ -39,12 +39,17 @@ function apparentMagnitudeFromShader(): (absMag: number, d2Mpc2: number) => numb
     LOG10_2: weslF32(printPoint, 'LOG10_2'),
   };
   const scope = { ...SHIMS, ...consts };
-  const fn = new Function(...Object.keys(scope), 'absMag', 'd2Mpc2', body.replace(/\blet\b/g, 'const'));
+  const fn = new Function(
+    ...Object.keys(scope),
+    'absMag',
+    'd2Mpc2',
+    body.replace(/\blet\b/g, 'const'),
+  );
   return (absMag, d2Mpc2) => fn(...Object.values(scope), absMag, d2Mpc2);
 }
 
 function glyphClassFromShader(): (mag: number) => number {
-  const glyphs = readShaderSource(`${DIR}/antiqueLook/glyphs.wesl`);
+  const glyphs = readShaderSource(`${DIR}/antiqueLook/glyphs/vertex.wesl`);
   const rank = /let rank = (.*);/.exec(glyphs)?.[1];
   if (rank === undefined) throw new Error('glyphs.wesl lacks its rank line');
   const fn = new Function(...Object.keys(SHIMS), 's', `return ${rank};`);

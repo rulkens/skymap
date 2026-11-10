@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { readShaderSource } from '../../../../tools/utils/wgsl/readShaderSource';
 
 const JUPITER = readShaderSource('src/services/gpu/shaders/antiqueLook/bodies/jupiter.wesl');
-const PIGMENTS = readShaderSource('src/services/gpu/shaders/antiqueLook/pigments.wesl');
+const PIGMENTS = readShaderSource('src/services/gpu/shaders/antiqueLook/shared/pigments.wesl');
 
 describe('Jupiter print', () => {
   it("washes the spot in the pigment table's rose madder", () => {

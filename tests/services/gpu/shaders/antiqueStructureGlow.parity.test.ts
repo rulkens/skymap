@@ -10,9 +10,9 @@ import { readShaderSource } from '../../../../tools/utils/wgsl/readShaderSource'
 
 describe('structureGlow.wesl', () => {
   it('boxes exactly one glow texel of the structure row', () => {
-    const block = readShaderSource('src/services/gpu/shaders/antiqueLook/structureGlow.wesl').match(
-      /const BLOCK: f32 = ([0-9.]+);/,
-    );
+    const block = readShaderSource(
+      'src/services/gpu/shaders/antiqueLook/passes/structureGlowFragment.wesl',
+    ).match(/const BLOCK: f32 = ([0-9.]+);/);
     expect(Number(block?.[1])).toBe((ANTIQUE_CELL * 4) / ANTIQUE_STRUCTURE_CELL);
   });
 });

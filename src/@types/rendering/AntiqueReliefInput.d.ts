@@ -1,6 +1,6 @@
 /**
  * AntiqueReliefInput — one frame's values for the relief pass's record
- * (`shaders/antiqueLook/relief.wesl` holds the byte map). Everything is in the
+ * (`shaders/antiqueLook/passes/reliefFragment.wesl` holds the byte map). Everything is in the
  * engraved body's fixed axes, metres, about the eye: the frame of the body row
  * whose depth the pass reads.
  */

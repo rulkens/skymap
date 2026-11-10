@@ -14,13 +14,11 @@ import { describe, expect, it } from 'vitest';
 const SHADERS_DIR = fileURLToPath(new URL('../../src/services/gpu/shaders/', import.meta.url));
 
 const ALLOWED: readonly string[] = [
-  'antiqueLook',
   'atmosphere/aerialPerspective',
   'atmosphere/shell',
   'bloom',
   'bodies',
   'bodies/blackHoleLensing',
-  'bodies/earth/antiqueMap',
   'bodies/star',
   'cubeFaceBlit',
   'labels',

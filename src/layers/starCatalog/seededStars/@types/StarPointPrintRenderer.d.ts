@@ -1,6 +1,6 @@
 /**
  * StarPointPrintRenderer — the seeded stars' print twin for the antique look:
- * one point per star in `antique-print-points` (`antiqueLook/printPoint.wesl`),
+ * one point per star in `antique-print-points` (`antiqueLook/shared/printPoint.wesl`),
  * from an instance buffer of its own, so it never touches what
  * `starPointRenderer` uploads for the visual draw.
  */

@@ -50,10 +50,10 @@ import package::lib::sphere::TexturedBodyUniforms;
 import package::lib::bodyLighting::litShade;
 import package::lib::limbDarkening::limbDarkening;
 import package::lib::normalMap::perturbNormal;
-import package::antiqueLook::engraving::inkLine;
+import package::antiqueLook::shared::engraving::inkLine;
 import package::lib::util::hash21Hq;
 import package::antiqueLook::bodies::moonRow::encodeMoonRow;
-import package::antiqueLook::groundNoise::groundNoiseAt;
+import package::antiqueLook::shared::groundNoise::groundNoiseAt;
 
 @group(0) @binding(0) var<uniform> u: TexturedBodyUniforms;
 @group(0) @binding(1) var bodySampler: sampler;
@@ -466,7 +466,7 @@ fn fsMoonPrint(in: TexturedBodyVSOut) -> @location(0) vec4<f32> {
     (rims.y > 0.5 && fine * fine > BRIGHT_FLOOR) || rims.w > 0.5, mix(support, min(support, MARE_GROUND), blanket));
 }
 
-// The Moon's ground in the shared relief row (`relief.wesl`'s contract), from the normal
+// The Moon's ground in the shared relief row (`passes/reliefFragment.wesl`'s contract), from the normal
 // map at SLOPE_GAIN: rg the screen fall line, b the ground noise, a a hachure's weight on
 // a slope past RELIEF_SLOPE.x (both flanks of a rim, so the plate draws its crest), a hint
 // of stipple weight on flats (ground, so a crest between flanks still prints), 0 by night

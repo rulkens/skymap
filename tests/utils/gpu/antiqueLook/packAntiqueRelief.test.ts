@@ -19,7 +19,7 @@ import { readShaderSource } from '../../../../tools/utils/wgsl/readShaderSource'
 import { wgslPrimitiveLayout } from '../../../../tools/utils/wgsl/wgslPrimitiveLayout';
 import type { AntiqueReliefInput } from '../../../../src/@types/rendering/AntiqueReliefInput';
 
-const SHADER = 'src/services/gpu/shaders/antiqueLook/relief.wesl';
+const SHADER = 'src/services/gpu/shaders/antiqueLook/passes/reliefFragment.wesl';
 const MARS_M = 3_390_000;
 const MARS = ANTIQUE_RELIEF_BODIES['mars']!;
 
@@ -100,6 +100,7 @@ describe('packAntiqueRelief', () => {
     const point = [120, -40, -900, 1];
     const clip = vec4d.transformMat4(point, relief.vp);
     const back = vec4d.transformMat4(clip, invVp);
-    for (let k = 0; k < 3; k++) expect(Math.abs(back[k]! / back[3]! - point[k]!)).toBeLessThan(1e-4 * 900);
+    for (let k = 0; k < 3; k++)
+      expect(Math.abs(back[k]! / back[3]! - point[k]!)).toBeLessThan(1e-4 * 900);
   });
 });

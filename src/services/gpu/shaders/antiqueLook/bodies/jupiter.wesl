@@ -5,13 +5,13 @@
 // the spot Hooke (1664) and Cassini (1665) recorded: a hatched oval with a darker rim
 // collar inside a firm outline, laid with rose madder pooling toward its core.
 
-import package::antiqueLook::plateBodies::BodyPrint;
-import package::antiqueLook::engraving::crossHatch;
-import package::antiqueLook::engraving::inkLine;
-import package::antiqueLook::paper::vnoise;
-import package::antiqueLook::pigments::applyWash;
-import package::antiqueLook::pigments::luma;
-import package::antiqueLook::pigments::pigmentAt;
+import package::antiqueLook::shared::plateBodies::BodyPrint;
+import package::antiqueLook::shared::engraving::crossHatch;
+import package::antiqueLook::shared::engraving::inkLine;
+import package::antiqueLook::shared::paper::vnoise;
+import package::antiqueLook::shared::pigments::applyWash;
+import package::antiqueLook::shared::pigments::luma;
+import package::antiqueLook::shared::pigments::pigmentAt;
 
 // The plain's lightness over the light round it (the brightest of a ring LIGHT_REACH of
 // the radius out, so the limb's darkening divides out and the form's shade lays it back
@@ -64,7 +64,7 @@ const SPOT_COLLAR = vec2<f32>(0.9, 1.0);
 const SPOT_RING_GAP: f32 = 1.3;
 const SPOT_NEAR: f32 = 1.3; // past this q nothing of the spot's is drawn
 const SPOT_WASH = vec2<f32>(0.05, 0.22); // rose madder at the collar, at the core
-const ROSE_MADDER: f32 = 7.0; // `pigments.wesl`
+const ROSE_MADDER: f32 = 7.0; // `shared/pigments.wesl`
 
 struct JupiterPrintIn {
   form: vec3<f32>, // along the bands

@@ -1,5 +1,5 @@
 /**
- * AntiquePlateBody — one globe the plate ray-casts (`antiqueLook/plateBodies.wesl`),
+ * AntiquePlateBody — one globe the plate ray-casts (`antiqueLook/shared/plateBodies.wesl`),
  * in world (equatorial) axes, lengths in the body's radii.
  */
 

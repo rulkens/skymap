@@ -1,7 +1,7 @@
 import type { AntiqueBodyPrint } from '../../@types/rendering/AntiqueBodyPrint';
 
 /** Globes the plate ray-casts per frame, the widest on screen first; mirrored by the
- * `items` array length in `antiqueLook/plateBodies.wesl`. */
+ * `items` array length in `antiqueLook/shared/plateBodies.wesl`. */
 export const ANTIQUE_PLATE_BODY_CAPACITY = 4;
 
 /** The `PlateBodies` uniform: a 16-byte count header, then 80 bytes per record. */
@@ -18,7 +18,7 @@ export const ANTIQUE_BODY_PRINTS: Readonly<Record<string, AntiqueBodyPrint>> = {
   saturn: 'jupiter',
 };
 
-/** The record's code per convention; mirrored by `PRINT_*` in `antiqueLook/plateBodies.wesl`. */
+/** The record's code per convention; mirrored by `PRINT_*` in `antiqueLook/shared/plateBodies.wesl`. */
 export const ANTIQUE_BODY_PRINT_CODES: Readonly<Record<AntiqueBodyPrint, number>> = {
   plain: 0,
   earth: 1,

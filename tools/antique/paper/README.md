@@ -2,7 +2,7 @@
 
 Builds `public/antique/paper.webp` (a seamless 2048² laid-paper tile: albedo in rgb, relief in
 alpha) and `public/antique/stains.webp` (a full-sheet ageing mask: R toning, G foxing, B tide
-lines), which `shaders/antiqueLook/paperBake.wesl` bakes into the plate's sheet.
+lines), which `shaders/antiqueLook/passes/paperBakeFragment.wesl` bakes into the plate's sheet.
 
 ## Sources (CC0 only)
 

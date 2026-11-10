@@ -1,5 +1,5 @@
 /**
- * AntiqueReliefBody — how the relief pass (`antiqueLook/relief.wesl`) engraves one body's
+ * AntiqueReliefBody — how the relief pass (`antiqueLook/passes/reliefFragment.wesl`) engraves one body's
  * ground: what its height model resolves, how much its slopes are steepened, and whether
  * lit slopes take ink at all.
  */

@@ -1,6 +1,6 @@
 /**
  * A resolved galaxy's stipple tone, evaluated from the plate shader's own text
- * (`galaxyTone` in antiqueLook/fragment.wesl) through WGSL built-in shims. The
+ * (`galaxyTone` in antiqueLook/passes/plateFragment.wesl) through WGSL built-in shims. The
  * inputs are the print's luma as measured on the face-on Milky Way: the bar at
  * the print's white, an arm near 0.6, an inter-arm gap near 0.25, each over the
  * 1/16 band round it. A tone that saturated on the arms printed bar and arms alike.
@@ -31,7 +31,7 @@ const SHIMS = {
 };
 
 function galaxyToneFromShader(): (light: number, lowL: number, nucleus: number) => number {
-  const plate = readShaderSource('src/services/gpu/shaders/antiqueLook/fragment.wesl');
+  const plate = readShaderSource('src/services/gpu/shaders/antiqueLook/passes/plateFragment.wesl');
   const body = /fn galaxyTone\(light: f32, lowL: f32, nucleus: f32\) -> f32 \{([\s\S]*?)\n\}/.exec(
     plate,
   )?.[1];
@@ -86,7 +86,7 @@ describe('antique galaxy stipple tone', () => {
     // Print lumas under the highlight shoulder (mw-face): the lobes' flank ~0.83, crests ~0.9.
     const flank = tone(0.83, 0.8, 0.83);
     const discMax = weslF32(
-      readShaderSource('src/services/gpu/shaders/antiqueLook/fragment.wesl'),
+      readShaderSource('src/services/gpu/shaders/antiqueLook/passes/plateFragment.wesl'),
       'GALAXY_DISC_MAX',
     );
     expect(flank - discMax).toBeGreaterThan(0.08);

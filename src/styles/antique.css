@@ -3,7 +3,7 @@
  * ink, a double-rule frame, IM Fell type. `App` stamps `data-look="antique"` on <html> while
  * settings.antique is on; everything here re-points tokens (bar one inheritance fix at the
  * end), so a component reads no look.
- * Ink is the canvas pass's `INK` (shaders/antiqueLook/fragment.wesl). Every text token
+ * Ink is the canvas pass's `INK` (shaders/antiqueLook/passes/plateFragment.wesl). Every text token
  * clears 4.5:1 on --antique-paper; the faintest, --color-fg-ghost, sits at 5.2:1, and holds
  * 4.5:1 over all but the darkest specks of the laid paper the panels are cut from.
  */

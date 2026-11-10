@@ -17,7 +17,7 @@ import {
 } from '../../../../src/data/rendering/antiquePlateBodies';
 import type { AntiquePlateBody } from '../../../../src/@types/rendering/AntiquePlateBody';
 
-const SHADER = readFileSync('src/services/gpu/shaders/antiqueLook/plateBodies.wesl', 'utf8');
+const SHADER = readFileSync('src/services/gpu/shaders/antiqueLook/shared/plateBodies.wesl', 'utf8');
 
 const saturn: AntiquePlateBody = {
   centre: [1, 2, 3],

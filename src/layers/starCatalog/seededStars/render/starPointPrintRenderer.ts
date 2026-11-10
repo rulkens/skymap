@@ -9,7 +9,7 @@ import type { StarPointPrintRenderer } from '../@types/StarPointPrintRenderer';
 import type { PrintStar } from '../@types/PrintStar';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import vsCode from '../../../../services/gpu/shaders/bodies/starPoints/vertexPrint.wesl?static';
-import fsCode from '../../../../services/gpu/shaders/antiqueLook/printPoint.wesl?static';
+import fsCode from '../../../../services/gpu/shaders/antiqueLook/passes/printPointFragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
 import { writeCameraPrefix } from '../../../../services/gpu/lib/cameraUniforms';
 import {

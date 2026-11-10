@@ -1,7 +1,7 @@
 /**
  * packAntiquePlateBodies — up to ANTIQUE_PLATE_BODY_CAPACITY records, in the
  * order given (the caller ranks them), into the `PlateBodies` uniform that
- * `shaders/antiqueLook/plateBodies.wesl` declares; that struct is the byte map.
+ * `shaders/antiqueLook/shared/plateBodies.wesl` declares; that struct is the byte map.
  */
 
 import type { AntiquePlateBody } from '../../../@types/rendering/AntiquePlateBody';

@@ -1,5 +1,5 @@
 /**
- * `starGlyph` (antiqueLook/glyphs.wesl) evaluated from the shader's own text through
+ * `starGlyph` (antiqueLook/glyphs/fragment.wesl) evaluated from the shader's own text through
  * a few WGSL built-in shims: a ray's ink must stop at its tip, not run on as a
  * half-ink hairline to the quad's edge.
  */
@@ -29,8 +29,12 @@ const SHIMS = {
   step: (edge: number, x: number) => (x >= edge ? 1 : 0),
 };
 
-const SOURCE = readShaderSource('src/services/gpu/shaders/antiqueLook/glyphs.wesl');
-const RAY_REACH = Number(/const RAY_REACH: f32 = ([0-9.]+);/.exec(SOURCE)?.[1]);
+const SOURCE = readShaderSource('src/services/gpu/shaders/antiqueLook/glyphs/fragment.wesl');
+const RAY_REACH = Number(
+  /const RAY_REACH: f32 = ([0-9.]+);/.exec(
+    readShaderSource('src/services/gpu/shaders/antiqueLook/glyphs/io.wesl'),
+  )?.[1],
+);
 
 function starGlyphFromShader(): (q: V2, r: number, rays: number) => number {
   const body = /fn starGlyph\(q: vec2<f32>, r: f32, rays: f32\) -> f32 \{([\s\S]*?)\n\}/.exec(

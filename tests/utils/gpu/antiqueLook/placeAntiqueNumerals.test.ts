@@ -181,9 +181,9 @@ describe('placeAntiqueNumerals', () => {
       g.centrePx[0] < SIZE.width / 4 && g.centrePx[1] > rows && g.centrePx[1] < SIZE.height - rows;
     const left = glyphs.filter(isLeft);
     // The plate shader inks numbers only within its reach of the edge.
-    const reach = readShaderSource('src/services/gpu/shaders/antiqueLook/fragment.wesl').match(
-      /NUMERAL_SIDE_REACH: f32 = ([\d.]+)/,
-    );
+    const reach = readShaderSource(
+      'src/services/gpu/shaders/antiqueLook/passes/plateFragment.wesl',
+    ).match(/NUMERAL_SIDE_REACH: f32 = ([\d.]+)/);
     expect(Number(reach?.[1])).toBe(ANTIQUE_SIDE_NUMERAL_REACH_UNITS);
     expect(left.some((g) => Math.round(g.rect[0] * 12) === 10)).toBe(true); // the carry's °
     for (const g of left) {

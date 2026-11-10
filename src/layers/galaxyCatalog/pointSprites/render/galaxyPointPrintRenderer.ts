@@ -7,7 +7,7 @@
  */
 
 import vsCode from '../../../../services/gpu/shaders/galaxyCatalog/points/vertexPrint.wesl?static';
-import fsCode from '../../../../services/gpu/shaders/antiqueLook/printPoint.wesl?static';
+import fsCode from '../../../../services/gpu/shaders/antiqueLook/passes/printPointFragment.wesl?static';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { PickSourceDraw } from '../@types/PickSourceDraw';
 import type { GalaxyPointPrintRenderer } from '../@types/GalaxyPointPrintRenderer';

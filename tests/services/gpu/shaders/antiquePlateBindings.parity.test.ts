@@ -18,7 +18,7 @@ import { readShaderSource } from '../../../../tools/utils/wgsl/readShaderSource'
 /** Four slots under the hard limit, for a row that truly cannot be a layer. */
 const PLATE_TEXTURE_BUDGET = 12;
 
-const PLATE = readShaderSource('src/services/gpu/shaders/antiqueLook/fragment.wesl');
+const PLATE = readShaderSource('src/services/gpu/shaders/antiqueLook/passes/plateFragment.wesl');
 
 function plateLayout(): GPUBindGroupLayoutEntry[] {
   const layouts: GPUBindGroupLayoutDescriptor[] = [];
@@ -92,7 +92,7 @@ describe('the antique plate bindings', () => {
   });
 
   it("names the glow's and the web level's layers in glyphs.wesl as the plate does", () => {
-    const glyphs = readShaderSource('src/services/gpu/shaders/antiqueLook/glyphs.wesl');
+    const glyphs = readShaderSource('src/services/gpu/shaders/antiqueLook/glyphs/vertex.wesl');
     const layer = (name: string) =>
       new RegExp(`const\\s+${name}\\s*:\\s*i32\\s*=\\s*(\\d+)\\s*;`).exec(glyphs)?.[1];
     expect(layer('GLOW_LAYER')).toBe(String(ANTIQUE_LOW_LAYERS.glow));

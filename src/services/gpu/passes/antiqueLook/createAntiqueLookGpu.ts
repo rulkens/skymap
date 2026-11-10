@@ -6,20 +6,23 @@
  */
 
 import vsCode from '../../shaders/antiqueLook/vertex.wesl?static';
-import paperCode from '../../shaders/antiqueLook/paperBake.wesl?static';
-import maskCode from '../../shaders/antiqueLook/mask.wesl?static';
-import reduceCode from '../../shaders/antiqueLook/reduce.wesl?static';
-import glowCode from '../../shaders/antiqueLook/glow.wesl?static';
-import nebulaCode from '../../shaders/antiqueLook/nebula.wesl?static';
-import skyFloorCode from '../../shaders/antiqueLook/skyFloor.wesl?static';
-import structureGlowCode from '../../shaders/antiqueLook/structureGlow.wesl?static';
-import glyphsCode from '../../shaders/antiqueLook/glyphs.wesl?static';
-import bodySignsCode from '../../shaders/antiqueLook/bodySigns.wesl?static';
-import decorCode from '../../shaders/antiqueLook/decor.wesl?static';
-import plateCode from '../../shaders/antiqueLook/fragment.wesl?static';
-import landBlurCode from '../../shaders/antiqueLook/landBlur.wesl?static';
-import reliefCode from '../../shaders/antiqueLook/relief.wesl?static';
-import webCode from '../../shaders/antiqueLook/web.wesl?static';
+import paperCode from '../../shaders/antiqueLook/passes/paperBakeFragment.wesl?static';
+import maskCode from '../../shaders/antiqueLook/passes/maskFragment.wesl?static';
+import reduceCode from '../../shaders/antiqueLook/passes/reduceFragment.wesl?static';
+import glowCode from '../../shaders/antiqueLook/passes/glowFragment.wesl?static';
+import nebulaCode from '../../shaders/antiqueLook/passes/nebulaFragment.wesl?static';
+import skyFloorCode from '../../shaders/antiqueLook/passes/skyFloor.wesl?static';
+import structureGlowCode from '../../shaders/antiqueLook/passes/structureGlowFragment.wesl?static';
+import glyphsVsCode from '../../shaders/antiqueLook/glyphs/vertex.wesl?static';
+import glyphsFsCode from '../../shaders/antiqueLook/glyphs/fragment.wesl?static';
+import bodySignsVsCode from '../../shaders/antiqueLook/bodySigns/vertex.wesl?static';
+import bodySignsFsCode from '../../shaders/antiqueLook/bodySigns/fragment.wesl?static';
+import decorVsCode from '../../shaders/antiqueLook/decor/vertex.wesl?static';
+import decorFsCode from '../../shaders/antiqueLook/decor/fragment.wesl?static';
+import plateCode from '../../shaders/antiqueLook/passes/plateFragment.wesl?static';
+import landBlurCode from '../../shaders/antiqueLook/passes/landBlurFragment.wesl?static';
+import reliefCode from '../../shaders/antiqueLook/passes/reliefFragment.wesl?static';
+import webCode from '../../shaders/antiqueLook/passes/webFragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import {
   ANTIQUE_GLYPH_BYTES,
@@ -43,7 +46,7 @@ const ARRAY = { texture: { sampleType: 'float', viewDimension: '2d-array' } } as
 const UNIFORM = { buffer: { type: 'uniform' } } as const;
 const SAMPLER = { sampler: { type: 'filtering' } } as const;
 const STORAGE = { buffer: { type: 'read-only-storage' } } as const;
-// foreground:0's colour and its depth32float (`mask.wesl`), read with `textureLoad`.
+// foreground:0's colour and its depth32float (`passes/maskFragment.wesl`), read with `textureLoad`.
 const COVER = { texture: { sampleType: 'unfilterable-float' } } as const;
 
 export function createAntiqueLookGpu(
@@ -147,7 +150,12 @@ export function createAntiqueLookGpu(
   });
   // Star glyphs scatter: their own vertex stage, a strip per instance, MAX blend
   // so overlapping glyphs and halos keep the stronger, never sum.
-  const glyphsModule = createShaderModuleWithDevLog(device, glyphsCode, 'antiqueLook.glyphs');
+  const glyphsVs = createShaderModuleWithDevLog(device, glyphsVsCode, 'antiqueLook.glyphs.vertex');
+  const glyphsFs = createShaderModuleWithDevLog(
+    device,
+    glyphsFsCode,
+    'antiqueLook.glyphs.fragment',
+  );
   const glyphsLayout = device.createBindGroupLayout({
     label: 'antique-look-glyphs-bgl',
     entries: [
@@ -165,16 +173,25 @@ export function createAntiqueLookGpu(
       label: 'antique-look-glyphs-layout',
       bindGroupLayouts: [glyphsLayout],
     }),
-    vertex: { module: glyphsModule, entryPoint: 'vs' },
+    vertex: { module: glyphsVs, entryPoint: 'vs' },
     fragment: {
-      module: glyphsModule,
+      module: glyphsFs,
       entryPoint: 'fs',
       targets: [{ format: 'rgba8unorm', blend: { color: max, alpha: max } }],
     },
     primitive: { topology: 'triangle-strip' },
   });
   // Body signs ride the glyphs' pass and target: a ring and dot per named body below a globe.
-  const signsModule = createShaderModuleWithDevLog(device, bodySignsCode, 'antiqueLook.bodySigns');
+  const signsVs = createShaderModuleWithDevLog(
+    device,
+    bodySignsVsCode,
+    'antiqueLook.bodySigns.vertex',
+  );
+  const signsFs = createShaderModuleWithDevLog(
+    device,
+    bodySignsFsCode,
+    'antiqueLook.bodySigns.fragment',
+  );
   const signsLayout = device.createBindGroupLayout({
     label: 'antique-look-signs-bgl',
     entries: [
@@ -189,9 +206,9 @@ export function createAntiqueLookGpu(
       label: 'antique-look-signs-layout',
       bindGroupLayouts: [signsLayout],
     }),
-    vertex: { module: signsModule, entryPoint: 'vs' },
+    vertex: { module: signsVs, entryPoint: 'vs' },
     fragment: {
-      module: signsModule,
+      module: signsFs,
       entryPoint: 'fs',
       targets: [{ format: 'rgba8unorm', blend: { color: max, alpha: max } }],
     },
@@ -208,7 +225,8 @@ export function createAntiqueLookGpu(
     [HDR_TARGET_FORMAT],
     'fsLevel',
   );
-  const decorModule = createShaderModuleWithDevLog(device, decorCode, 'antiqueLook.decor');
+  const decorVs = createShaderModuleWithDevLog(device, decorVsCode, 'antiqueLook.decor.vertex');
+  const decorFs = createShaderModuleWithDevLog(device, decorFsCode, 'antiqueLook.decor.fragment');
   const both = GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT;
   const decorLayout = device.createBindGroupLayout({
     label: 'antique-look-decor-bgl',
@@ -226,9 +244,9 @@ export function createAntiqueLookGpu(
       label: 'antique-look-decor-layout',
       bindGroupLayouts: [decorLayout],
     }),
-    vertex: { module: decorModule, entryPoint: 'vs' },
+    vertex: { module: decorVs, entryPoint: 'vs' },
     fragment: {
-      module: decorModule,
+      module: decorFs,
       entryPoint: 'fs',
       targets: [
         { format: 'rgba8unorm', blend: { color: max, alpha: max } },

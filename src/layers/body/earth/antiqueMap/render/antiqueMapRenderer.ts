@@ -24,9 +24,12 @@ import {
 import { decodeAntiqueEarthMap } from '../load/decodeAntiqueEarthMap';
 import { antiqueTownSigns } from '../utils/antiqueTownSigns';
 import { ANTIQUE_EARTH_TOWNS } from '../../../../../data/labels/antiqueEarthTowns';
-import fillCode from '../../../../../services/gpu/shaders/bodies/earth/antiqueMap/fill.wesl?static';
-import lineCode from '../../../../../services/gpu/shaders/bodies/earth/antiqueMap/line.wesl?static';
-import signCode from '../../../../../services/gpu/shaders/bodies/earth/antiqueMap/sign.wesl?static';
+import fillVsCode from '../../../../../services/gpu/shaders/bodies/earth/antiqueMap/fill/vertex.wesl?static';
+import fillFsCode from '../../../../../services/gpu/shaders/bodies/earth/antiqueMap/fill/fragment.wesl?static';
+import lineVsCode from '../../../../../services/gpu/shaders/bodies/earth/antiqueMap/line/vertex.wesl?static';
+import lineFsCode from '../../../../../services/gpu/shaders/bodies/earth/antiqueMap/line/fragment.wesl?static';
+import signVsCode from '../../../../../services/gpu/shaders/bodies/earth/antiqueMap/sign/vertex.wesl?static';
+import signFsCode from '../../../../../services/gpu/shaders/bodies/earth/antiqueMap/sign/fragment.wesl?static';
 
 const MAX_BLEND: GPUBlendState = {
   color: { operation: 'max', srcFactor: 'one', dstFactor: 'one' },
@@ -73,14 +76,17 @@ export function createAntiqueMapRenderer(
       size: ANTIQUE_MAP_UNIFORM_FLOATS * 4,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
-    const fillModule = createShaderModuleWithDevLog(device, fillCode, 'antique-map.fill');
-    const lineModule = createShaderModuleWithDevLog(device, lineCode, 'antique-map.line');
-    const signModule = createShaderModuleWithDevLog(device, signCode, 'antique-map.sign');
+    const fillVs = createShaderModuleWithDevLog(device, fillVsCode, 'antique-map.fill.vertex');
+    const fillFs = createShaderModuleWithDevLog(device, fillFsCode, 'antique-map.fill.fragment');
+    const lineVs = createShaderModuleWithDevLog(device, lineVsCode, 'antique-map.line.vertex');
+    const lineFs = createShaderModuleWithDevLog(device, lineFsCode, 'antique-map.line.fragment');
+    const signVs = createShaderModuleWithDevLog(device, signVsCode, 'antique-map.sign.vertex');
+    const signFs = createShaderModuleWithDevLog(device, signFsCode, 'antique-map.sign.fragment');
     const fill = device.createRenderPipeline({
       label: 'antique-map-fill-pipeline',
       layout: 'auto',
       vertex: {
-        module: fillModule,
+        module: fillVs,
         entryPoint: 'vs',
         buffers: [
           {
@@ -90,7 +96,7 @@ export function createAntiqueMapRenderer(
         ],
       },
       fragment: {
-        module: fillModule,
+        module: fillFs,
         entryPoint: 'fs',
         targets: [{ format: ANTIQUE_GEOGRAPHY_FORMAT, writeMask: GPUColorWrite.RED }],
       },
@@ -100,7 +106,7 @@ export function createAntiqueMapRenderer(
       label: 'antique-map-line-pipeline',
       layout: 'auto',
       vertex: {
-        module: lineModule,
+        module: lineVs,
         entryPoint: 'vs',
         // The vertex array twice, the second slot bound one vertex on: segment i is (i, i + 1).
         buffers: [0, 2].map((first) => ({
@@ -113,7 +119,7 @@ export function createAntiqueMapRenderer(
         })),
       },
       fragment: {
-        module: lineModule,
+        module: lineFs,
         entryPoint: 'fs',
         targets: [
           {
@@ -129,7 +135,7 @@ export function createAntiqueMapRenderer(
       label: 'antique-map-sign-pipeline',
       layout: 'auto',
       vertex: {
-        module: signModule,
+        module: signVs,
         entryPoint: 'vs',
         buffers: [
           {
@@ -143,7 +149,7 @@ export function createAntiqueMapRenderer(
         ],
       },
       fragment: {
-        module: signModule,
+        module: signFs,
         entryPoint: 'fs',
         targets: [
           // Replacing, in painter order: a nearer hill's body covers the one behind.

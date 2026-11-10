@@ -3,10 +3,10 @@
 // family of its own thickening with the albedo, all under one thin red-lead wash.
 // No coast, no water: Mars has no water edges. Reads the lightness its albedo mask fed the land row (`ANTIQUE_ALBEDO_MASK`), 0 on the darkest ground.
 
-import package::antiqueLook::plateBodies::BodyPrint;
-import package::antiqueLook::engraving::crossHatch;
-import package::antiqueLook::pigments::applyWash;
-import package::antiqueLook::pigments::pigmentAt;
+import package::antiqueLook::shared::plateBodies::BodyPrint;
+import package::antiqueLook::shared::engraving::crossHatch;
+import package::antiqueLook::shared::pigments::applyWash;
+import package::antiqueLook::shared::pigments::pigmentAt;
 
 // The darkest marking's tone: one family (the first starts near 0.5 in
 // `crossHatch`), never crossed, so the shade's own hatching still reads over it.

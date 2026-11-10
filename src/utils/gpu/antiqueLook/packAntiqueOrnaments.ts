@@ -1,6 +1,6 @@
 /**
  * packAntiqueOrnaments — this frame's instances into `AntiqueOrnaments`
- * (`shaders/antiqueLook/ornaments.wesl` holds the byte map). Rows past
+ * (`shaders/antiqueLook/shared/ornaments.wesl` holds the byte map). Rows past
  * `ANTIQUE_MAX_ORNAMENTS` are dropped; the list is authored far below it.
  */
 

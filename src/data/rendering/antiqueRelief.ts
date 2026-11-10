@@ -1,6 +1,6 @@
 import type { AntiqueReliefBody } from '../../@types/rendering/AntiqueReliefBody';
 
-/** The antique look's terrain relief (`antiqueLook/relief.wesl`): which bodies' ground is
+/** The antique look's terrain relief (`antiqueLook/passes/reliefFragment.wesl`): which bodies' ground is
  * engraved as shadow hachures, the plate light, and the record's size. */
 
 /** Bodies whose ground the relief pass engraves, and how; any other keeps its plain print.

@@ -1,5 +1,5 @@
 // points/vertexPrint.wesl — the galaxy points' print stage for the antique look:
-// one point per galaxy in 'antique-print-points' (antiqueLook/printPoint.wesl),
+// one point per galaxy in 'antique-print-points' (antiqueLook/shared/printPoint.wesl),
 // at the intensity the visual stage gives it, so a culled or faded galaxy (a
 // filter, the Malmquist cut, a resolved disk's crossfade) never prints a dot.
 // Bindings as vertex.wesl's, so the canonical source and focus layouts bind.
@@ -10,9 +10,9 @@ import package::galaxyCatalog::points::vertexBody::galaxyPointVertex;
 import package::lib::camera::worldToClip;
 import package::lib::sourceUniforms::SourceUniforms;
 import package::lib::focusUniforms::FocusUniforms;
-import package::antiqueLook::printPoint::PrintPointOut;
-import package::antiqueLook::printPoint::printGalaxyPoint;
-import package::antiqueLook::printPoint::printPointNone;
+import package::antiqueLook::shared::printPoint::PrintPointOut;
+import package::antiqueLook::shared::printPoint::printGalaxyPoint;
+import package::antiqueLook::shared::printPoint::printPointNone;
 
 @group(0) @binding(0) var<uniform> u: Uniforms;
 @group(2) @binding(0) var<uniform> source: SourceUniforms;

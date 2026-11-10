@@ -45,7 +45,7 @@ scratchpad, the grades in the PR description.
 - [x] Re-pack with the c.1690 Dutch cartouche / ship / whale once sourced (round 3).
 
 ### Task 5: Paper
-**Files:** `tools/antique/paper/`, `public/antique/{paper,stains}.webp`, `src/services/gpu/shaders/antiqueLook/paperBake.wesl`
+**Files:** `tools/antique/paper/`, `public/antique/{paper,stains}.webp`, `src/services/gpu/shaders/antiqueLook/passes/paperBakeFragment.wesl`
 - [x] Tile quilted from CC0 1687 laid-paper margins; stain mask; decoded unpremultiplied.
 
 ### Task 6: Labels for the period
@@ -149,7 +149,7 @@ Open: the depth cover holds only the last body row's depth, so a second globe in
 Owner ruling 2026-11-07: keep the generic galaxy engraving with these names; the offline arm-steered engraving is not ported. Open: the names are straight (no text-on-path).
 
 ### Task 18: The cosmic web charted (owner pick: variant D, spines + isobaths; void names cosmos-only)
-**Files:** `src/data/rendering/antiqueLook.ts`, `src/services/gpu/shaders/antiqueLook/fragment.wesl`,
+**Files:** `src/data/rendering/antiqueLook.ts`, `src/services/gpu/shaders/antiqueLook/passes/plateFragment.wesl`,
 `src/services/gpu/shaders/filaments/*.wesl`, `src/layers/cosmicWebFilaments/filaments/{passes,render}/*`,
 `src/services/gpu/passes/antiqueLook/{antiqueLook,createAntiqueLookGpu}.ts`, `src/data/labels/antiqueLabelRules.ts`,
 `tools/antique/look/views.json`
@@ -197,7 +197,7 @@ Owner ruling 2026-11-07: keep the generic galaxy engraving with these names; the
 
 ### Task 23: Plate textures packed into arrays (owner GO 2026-11-07)
 **Files:** `src/data/rendering/antiqueLook.ts`, `src/services/gpu/passes/antiqueLook/{antiqueLook,antiqueLookTargetRows,createAntiqueLookGpu}.ts`,
-`src/services/gpu/shaders/antiqueLook/fragment.wesl`, `tests/services/gpu/shaders/antiquePlateBindings.parity.test.ts`
+`src/services/gpu/shaders/antiqueLook/passes/plateFragment.wesl`, `tests/services/gpu/shaders/antiquePlateBindings.parity.test.ts`
 - [x] The nine rows the look writes and the plate reads become layers of `antique-full` (rgba8), `antique-quarter` and `antique-low` (rgba16f): the plate samples 10 textures, budget 12, a new row is a layer (62ece682d).
 
 ### Task 24: The chrome weathered (owner: "too clean … do something with its background")
@@ -295,7 +295,7 @@ Owner ruling 2026-11-07: keep the generic galaxy engraving with these names; the
 - [ ] Open: craters hatched on the side the current Sun shades while the plain's albedo shows the mosaic's own shadows on the other (fidelity); Eratosthenes' dark floor carries mare lines; the historian wants an even ~10% highland floor instead of patches; Copernicus' mare ruling uniform and heavy (mare engine); rings as clean circles without floors or peaks; rover unshaded.
 
 ### Task 35: Jupiter by hand (review 8 #4: "ruled like a machine drew it")
-**Files:** `shaders/antiqueLook/bodies/jupiter.wesl`, `shaders/antiqueLook/fragment.wesl` (its call), `tests/services/gpu/shaders/antiqueJupiter.parity.test.ts`
+**Files:** `shaders/antiqueLook/bodies/jupiter.wesl`, `shaders/antiqueLook/passes/plateFragment.wesl` (its call), `tests/services/gpu/shaders/antiqueJupiter.parity.test.ts`
 - [x] Line weight read off the plain render's own lightness per pixel (chroma-weighted, over the light across the bands), not fixed belt latitudes: belts swell, zones keep a light ruling, a belt's detail swells and thins its lines; no polar stipple.
 - [x] Lines drift, taper, open and close, and bend round what stands out of their band; a small globe cut plainer (wider-set lines, near-paper zones).
 - [x] Pale ovals and the darkest dark features outlined, broken; the Red Spot (not moved) a hatched core, a thin inner ring and a bold broken outline, rose madder pooling granular at the core.

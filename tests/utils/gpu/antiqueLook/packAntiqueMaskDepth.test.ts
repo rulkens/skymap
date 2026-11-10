@@ -55,14 +55,14 @@ describe('packAntiqueMaskDepth', () => {
     ).toEqual([0, 0, 0, 0]);
   });
 
-  it('mask.wesl and fragment.wesl share the nearer-surface code, under reduce’s 0.5', () => {
+  it('maskFragment.wesl and plateFragment.wesl share the nearer-surface code, under reduce’s 0.5', () => {
     const code = (file: string) =>
       Number(
         /const NEARER_SURFACE: f32 = ([\d.]+);/.exec(
           readFileSync(`src/services/gpu/shaders/antiqueLook/${file}`, 'utf8'),
         )?.[1],
       );
-    expect(code('fragment.wesl')).toBe(code('mask.wesl'));
-    expect(code('mask.wesl')).toBeLessThan(0.5);
+    expect(code('passes/plateFragment.wesl')).toBe(code('passes/maskFragment.wesl'));
+    expect(code('passes/maskFragment.wesl')).toBeLessThan(0.5);
   });
 });

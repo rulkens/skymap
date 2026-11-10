@@ -3,13 +3,13 @@
 // lines off it. Reads the land share its ocean mask fed the land row; Earth alone
 // has water edges.
 
-import package::antiqueLook::plateBodies::BodyPrint;
-import package::antiqueLook::engraving::contourLines;
-import package::antiqueLook::engraving::seaDistance;
-import package::antiqueLook::engraving::waterLines;
-import package::antiqueLook::pigments::applyWash;
-import package::antiqueLook::pigments::pigmentAt;
-import package::antiqueLook::paper::vnoise;
+import package::antiqueLook::shared::plateBodies::BodyPrint;
+import package::antiqueLook::shared::engraving::contourLines;
+import package::antiqueLook::shared::engraving::seaDistance;
+import package::antiqueLook::shared::engraving::waterLines;
+import package::antiqueLook::shared::pigments::applyWash;
+import package::antiqueLook::shared::pigments::pigmentAt;
+import package::antiqueLook::shared::paper::vnoise;
 
 // What the plate hands the module, in print units but for the shares.
 struct EarthPrintIn {
@@ -68,7 +68,7 @@ fn earthPrint(col: vec3<f32>, cover: f32, e: EarthPrintIn) -> BodyPrint {
   return BodyPrint(washed, max(lines * (1.0 - signPaper), signInk));
 }
 
-// Its ground up close (`relief.wesl`'s texel `relief`, b its height phase), cut as the
+// Its ground up close (`passes/reliefFragment.wesl`'s texel `relief`, b its height phase), cut as the
 // engravers of the 1600s shaded a form: lines that follow it round (Mellan's Moon, 1635;
 // Merian's mountains), evenly spaced and swelling with the shade, the lit side and the
 // plains left paper. Not contours: no line exists where the slope is lit. Below the mesh's

@@ -166,7 +166,9 @@ describe('antique look records ↔ WGSL structs', () => {
     for (const [i, ray] of ['rayTR', 'rayBL', 'rayBR'].entries())
       expect(offsetOf(packed, 1026 + i)).toBe(offsets.get(ray)! + 12);
     // paper (bit 2) and depth cover, the bit mask.wesl tests.
-    const depthBit = readShaderSource(`${DIR}/mask.wesl`).match(/FLAG_DEPTH_COVER: u32 = (\d+)u/);
+    const depthBit = readShaderSource(`${DIR}/passes/maskFragment.wesl`).match(
+      /FLAG_DEPTH_COVER: u32 = (\d+)u/,
+    );
     expect(Number(depthBit?.[1])).toBe(0b1000);
     expect(new Uint32Array(packed)[offsets.get('flags')! / 4]).toBe(0b1100);
     for (const [i, value] of [1072, 1073, 1077].entries())
@@ -175,7 +177,7 @@ describe('antique look records ↔ WGSL structs', () => {
   });
 
   it("fragment.wesl's HIDE_* bits follow ANTIQUE_PLATE_ROWS' order", () => {
-    const source = readShaderSource(`${DIR}/fragment.wesl`);
+    const source = readShaderSource(`${DIR}/passes/plateFragment.wesl`);
     const bits = [...source.matchAll(/const HIDE_(\w+): u32 = (\d+)u;/g)].map(([, name, bit]) => [
       name!.toLowerCase(),
       Number(bit),
@@ -184,9 +186,9 @@ describe('antique look records ↔ WGSL structs', () => {
   });
 
   it('packAntiqueOrnaments writes AntiqueOrnaments row by row', () => {
-    const { length, row, header } = listOf('ornaments.wesl', 'AntiqueOrnaments', 'Ornament');
+    const { length, row, header } = listOf('shared/ornaments.wesl', 'AntiqueOrnaments', 'Ornament');
     expect(length).toBe(ANTIQUE_MAX_ORNAMENTS);
-    const grid = readShaderSource(`${DIR}/ornaments.wesl`).match(
+    const grid = readShaderSource(`${DIR}/shared/ornaments.wesl`).match(
       /grid\s*:\s*array<vec4<f32>,\s*(\d+)>/,
     );
     expect(Number(grid?.[1])).toBe(ANTIQUE_MAX_ORNAMENTS * ANTIQUE_ORNAMENT_GRID_VEC4);
@@ -238,7 +240,11 @@ describe('antique look records ↔ WGSL structs', () => {
   });
 
   it('packAntiqueGlyphs writes AntiqueLettering row by row', () => {
-    const { length, row, header } = listOf('fragment.wesl', 'AntiqueLettering', 'Glyph');
+    const { length, row, header } = listOf(
+      'passes/plateFragment.wesl',
+      'AntiqueLettering',
+      'Glyph',
+    );
     expect(length).toBe(ANTIQUE_MAX_GLYPHS);
     expect(row.layout.size * length + header.offsets.get('items')!).toBe(ANTIQUE_GLYPH_BYTES);
     const packed = packAntiqueGlyphs([

@@ -1,7 +1,7 @@
 /**
  * StarCatalogPrintRenderer — the survey stars' print twin for the antique look:
  * the frame cut's leaves as one point each in `antique-print-points`
- * (`antiqueLook/printPoint.wesl`). Shares the visual renderer's layouts,
+ * (`antiqueLook/shared/printPoint.wesl`). Shares the visual renderer's layouts,
  * records and cut lists (`StarCatalogPickResources`), like the pick twin, and
  * owns only its camera uniform.
  */

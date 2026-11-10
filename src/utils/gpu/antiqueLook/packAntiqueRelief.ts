@@ -1,5 +1,5 @@
 /**
- * packAntiqueRelief — `AntiqueReliefInput` into the record `shaders/antiqueLook/relief.wesl`
+ * packAntiqueRelief — `AntiqueReliefInput` into the record `shaders/antiqueLook/passes/reliefFragment.wesl`
  * declares; that file's table is the byte map. The eye is split into a whole-cell anchor
  * (integers) and a small remainder, both from f64, so the shader's noise stays pinned to
  * the ground to the millimetre at any distance from the body's centre.

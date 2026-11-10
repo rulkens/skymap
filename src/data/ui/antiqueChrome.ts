@@ -9,7 +9,7 @@ import type { FoxingParams } from '../../@types/ui/antiqueChrome/FoxingParams';
 import type { InkWearParams } from '../../@types/ui/antiqueChrome/InkWearParams';
 import type { PaperParams } from '../../@types/ui/antiqueChrome/PaperParams';
 
-/** The canvas pass's `INK` (shaders/antiqueLook/fragment.wesl). */
+/** The canvas pass's `INK` (shaders/antiqueLook/passes/plateFragment.wesl). */
 export const ANTIQUE_CHROME_INK = '#2b2118';
 /** The paper the panels are cut from. */
 export const ANTIQUE_CHROME_GROUND = '#f7efda';
@@ -69,7 +69,7 @@ export const INK_WEAR: InkWearParams = {
   breakSpan: 0.18,
 };
 
-/** The colourist's box (shaders/antiqueLook/pigments.wesl): gamboge marks hover and press, verdigris what is on. */
+/** The colourist's box (shaders/antiqueLook/shared/pigments.wesl): gamboge marks hover and press, verdigris what is on. */
 export const ANTIQUE_GAMBOGE = '#e6bd4d';
 export const ANTIQUE_VERDIGRIS = '#6b9e80';
 /** How deep a full wash lies; hover lays a lighter one. */

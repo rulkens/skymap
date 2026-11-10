@@ -8,10 +8,10 @@
 
 import package::lib::util::hash21Hq;
 import package::antiqueLook::bodies::moonRow::decodeMoonRow;
-import package::antiqueLook::engraving::fallCrest;
-import package::antiqueLook::engraving::fallLines;
-import package::antiqueLook::engraving::quantileCut;
-import package::antiqueLook::engraving::scatter;
+import package::antiqueLook::shared::engraving::fallCrest;
+import package::antiqueLook::shared::engraving::fallLines;
+import package::antiqueLook::shared::engraving::quantileCut;
+import package::antiqueLook::shared::engraving::scatter;
 
 // Lommel–Seeliger brightness 2·L/(L + ndv) on the terrain's light L: ~1 across the
 // whole full disc (no limb darkening), falling only at the terminator. Paper from 0.16
