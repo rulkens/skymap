@@ -25,6 +25,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Engine & State
 
+- [ ] **Fly-path leg pacing from a near-body start** `needs-design` — `famousFlythrough` from an Earth-close live start spends ~103 of 107 s on its first leg; `buildPathTrack.ts`'s arc metric is dominated by log distance from ~1e-7 Mpc, so the other 11 legs flash past (seen in the clip studio, Q42).
 - [ ] **Tag the remaining body-id fields** `ready` — `RotationElements.id`, `SampledTrack.id`, `BodySpec` seeds stay plain `string` after #941; tag them at definition. → [details](backlog/2026-10-23-tag-remaining-body-id-fields.md)
 - [ ] **A per-body slab declaration on `LayerBody`** `needs-design` — the slab roster `near0SphereBodies` drops is a hand-kept core list beside the Layers' own slab rows; one declaration per body would replace both. → [details](backlog/2026-10-28-per-body-slab-declaration.md)
 - [ ] **Empty the Layer type-ownership allow-list (move-only PR)** `ready` — 27 `src/@types/` files only one Layer reaches, each cleared by a move, listed in `layerImportBoundary.test.ts`. → [details](backlog/2026-11-06-layer-type-ownership-allow-list.md)

@@ -401,5 +401,15 @@ own. Every icon is an app icon component under `src/components/icons/`, drawn in
 frame; missing ones are added there. The registry keeps a plain `GlyphId` string; the studio's `Glyph` maps it
 to the app icon component.
 
+## Q40–Q42: Round-3 asks (owner, 2026-11-10)
+
+- **Q40 Read-only:** with no dev server a clip still takes edits, kept in memory (as Q28); Save and Save as new
+  are disabled with the reason in their tips; the status reads `Preview · can't save here`. No Copy-as-TS.
+- **Q41 Design loop ends at 8/10 (round 3).** The round-3 minors (`docs/design/clip-studio/review-round-3.md`)
+  are fixed in the real build, not in another mock round: slice-1 ones now, the rest in the slice that brings
+  their control.
+- **Q42 famousFlythrough pacing:** from an Earth-close start the first leg takes ~103 of 107 s (the path's arc
+  metric is dominated by log distance). Backlogged, not fixed on this branch.
+
 _Settled in the plan:_ the studio's RTK slice is injected into the app store through
 `combineSlices().inject` (ADR 0016). Q14 is ruled (Q32).
