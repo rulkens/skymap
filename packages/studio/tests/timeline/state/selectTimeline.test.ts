@@ -8,11 +8,13 @@ import {
   draftResolved,
   paramEdited,
   rowSelected,
+  rowToggled,
   studioOpened,
 } from '../../../src/session/state/studioSlice';
 import { selectRevision, selectDraft } from '../../../src/session/state/selectors';
 import { selectTimeline } from '../../../src/timeline/state/selectTimeline';
 import { selectSelectedRow } from '../../../src/timeline/state/selectSelectedRow';
+import { selectSelectionStandInId } from '../../../src/timeline/state/selectSelectionStandInId';
 import type { ClipData } from '../../../../../src/@types/animation/ClipData';
 import type { PreviewPins } from '../../../src/@types/session/PreviewPins';
 
@@ -76,6 +78,18 @@ describe('timeline selectors', () => {
     const timeline = selectTimeline(store.getState())!;
     expect(timeline.error).toMatchObject({ reason: 'seqOverlap' });
     expect(timeline.rows.filter((r) => r.errors.length > 0).map((r) => r.id)).toEqual(['e:0']);
+  });
+
+  it('a selection survives folding its group, and the folded group stands in for it', () => {
+    const store = open();
+    store.dispatch(rowSelected({ kind: 'effect', path: [0, 1] }));
+    expect(selectSelectionStandInId(store.getState())).toBe('e:0.1');
+
+    store.dispatch(rowToggled('e:0'));
+
+    expect(selectTimeline(store.getState())!.rows.map((r) => r.id)).toEqual(['start', 'e:0']);
+    expect(selectSelectedRow(store.getState())?.id).toBe('e:0.1');
+    expect(selectSelectionStandInId(store.getState())).toBe('e:0');
   });
 
   it('selectSelectedRow returns the selected visible row', () => {
