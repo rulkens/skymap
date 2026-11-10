@@ -62,9 +62,7 @@ export const ANTIQUE_NUMERAL_UNITS = 22;
  * dotted halos. The unresolved aggregate (`star-upsample`) still feeds the print.
  * Likewise a galaxy point prints only as its catalogue dot (a field of sprites grew
  * contour islands in the low band); resolved galaxies' disks still feed the print.
- * The cosmic structures' discs went too: their outlines drew rings round empty paper,
- * so a structure is named on the plate, not ringed. The density and the filaments
- * give way to their `-print` twins. */
+ * The density and the filaments give way to their `-print` twins. */
 export const ANTIQUE_HIDDEN_PASSES: readonly string[] = [
   'star-points',
   'star-catalog',
@@ -76,7 +74,6 @@ export const ANTIQUE_HIDDEN_PASSES: readonly string[] = [
   'cosmic-web-density-upsample',
   'cosmic-web-filaments',
   'point-sprites',
-  'structure-markers-cosmo',
 ];
 
 /** Passes that exist only for the look: they draw nothing with it off. */
@@ -101,6 +98,7 @@ export const ANTIQUE_MOVED_PASSES: Readonly<Record<string, string>> = {
   'mission-trails': 'antique-lines',
   'cosmic-web-filaments-print': 'antique-lines',
   'structure-markers-near': 'antique-structures',
+  'structure-markers-cosmo': 'antique-lines',
 };
 
 /** The structure markers' row is half res: their halos are soft, and the low band

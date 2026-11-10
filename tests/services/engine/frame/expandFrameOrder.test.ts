@@ -301,6 +301,13 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     expect(empty.some((step) => step.kind === 'render' && step.capture !== undefined)).toBe(false);
   });
 
+  it('antique draws the cosmic structure markers onto the line row, where a 1-px ring survives', () => {
+    // On the print they fall to the quarter-res reduce, which averages a ring away.
+    const home = (name: string) =>
+      program({ antique: true }).find((step) => step.kind === 'render' && namesOf(step).includes(name));
+    expect(home('structure-markers-cosmo')).toMatchObject({ target: ANTIQUE_TARGETS.lines });
+  });
+
   it('expands the foreground chain in painter order', () => {
     // Chain [NEAR0, 3, 2] — an out-of-numeric-order chain, as a painter-order
     // chain legitimately is (index order is assignment order, not draw order):
