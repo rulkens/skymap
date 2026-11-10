@@ -80,32 +80,32 @@ unchanged. Each commit adds no `CORE_ALLOWED` row and no type-ownership exceptio
   `tools/filaments/buildFilaments.ts`), leave that parameter as `SourceType`: the feature plan narrows it with
   `ParsedRecord.source`.
 
-- [ ] **Step 1: Remove the four `galaxyType*` re-exports from `src/utils/math/index.ts`** and point their
+- [x] **Step 1: Remove the four `galaxyType*` re-exports from `src/utils/math/index.ts`** and point their
       importers at the files directly (only `buildGalaxyInfo.ts:25-45` imports `galaxyType` through the
       barrel). Do this first, so move-files never rewrites a core barrel line into a Layer path.
-- [ ] **Step 2: Write the manifest and dry-run it.** One `moves.json` with every move above, sources and their
+- [x] **Step 2: Write the manifest and dry-run it.** One `moves.json` with every move above, sources and their
       tests:
       `npm run move-files -- --manifest <scratch>/moves.json --dry` → lists each move, no unresolved findings.
-- [ ] **Step 3: Apply.** `npm run move-files -- --manifest <scratch>/moves.json`. Exit 1 means the moves are
+- [x] **Step 3: Apply.** `npm run move-files -- --manifest <scratch>/moves.json`. Exit 1 means the moves are
       written: fix each `file:line` it lists, don't re-run.
-- [ ] **Step 4: Grep the old paths** (`utils/math/galaxyType`, `engine/helpers/buildGalaxyInfo`,
+- [x] **Step 4: Grep the old paths** (`utils/math/galaxyType`, `engine/helpers/buildGalaxyInfo`,
       `data/galaxyCatalog/sourceClass`, `data/galaxyCatalog/galaxyCatalogFluxLimits`, `engine/GalaxyInfo`,
       `galaxyCatalog/GalaxyType`) across `src tools tests packages docs` and fix the strings: the `vi.mock` in
       `wireInput.test.ts`, the five URLs in `docsGuideFacts.ts`, any doc mention.
-- [ ] **Step 5: Cut the composition reads.** `buildGalaxyInfo.ts:16,88,248` and
+- [x] **Step 5: Cut the composition reads.** `buildGalaxyInfo.ts:16,88,248` and
       `galaxyCatalogFluxLimits.ts:9,15,26` read `APP_SOURCE_REGISTRY`; read the Layer's own entry instead
       (`galaxyEntryOf` at `records/utils/galaxyEntryOf.ts`, or `GALAXY_CATALOG_SOURCE_RECORD`). The
       `no file under src/layers imports src/compositions` sweep fails until this is done.
-- [ ] **Step 6: Narrow `galaxyType`'s parameter** to `GalaxyCatalogSourceType` and delete the switch arms for
+- [x] **Step 6: Narrow `galaxyType`'s parameter** to `GalaxyCatalogSourceType` and delete the switch arms for
       non-galaxy members (the switch stays exhaustive over the galaxy members). Narrow the other moved
       functions per the Interfaces block. No new test: the compiler checks exhaustiveness and the moved
       `galaxyType.test.ts` keeps every existing case.
-- [ ] **Step 7: Update the ledger row.** `src/compositions/README.md:36`: the `galaxyType` switch now lives in
+- [x] **Step 7: Update the ledger row.** `src/compositions/README.md:36`: the `galaxyType` switch now lives in
       `src/layers/galaxyCatalog/records/utils/galaxyType.ts`; status DONE (it moved out of core), noting that
       the per-entry colour-index fact is backlogged.
-- [ ] **Step 8: Verify.** `npm run typecheck`, then
+- [x] **Step 8: Verify.** `npm run typecheck`, then
       `npx vitest run tests/conventions tests/layers/galaxyCatalog tests/services/engine` → all green.
-- [ ] **Step 9: Commit** — "galaxyType, buildGalaxyInfo, sourceClass and flux limits move into galaxyCatalog".
+- [x] **Step 9: Commit** — "galaxyType, buildGalaxyInfo, sourceClass and flux limits move into galaxyCatalog".
 
 ### Task 2: Alias rows carry their focus id; `encodeGalaxyId` moves into `galaxyCatalog`
 

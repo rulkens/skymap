@@ -12,15 +12,15 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { buildGalaxyInfo } from '../../../../src/services/engine/helpers/buildGalaxyInfo';
-import { extractGalaxyRow } from '../../../../src/layers/galaxyCatalog/records/present/extractGalaxyRow';
-import { Source } from '../../../../src/data/source';
-import { DESI_TRACER_CLASS } from '../../../../src/data/galaxyCatalog/sourceClass';
-import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import { fallbackOrientation } from '../../../../src/utils/random/fallbackOrientation';
-import { cartesianToRaDecZ } from '../../../../src/utils/math/cartesianToRaDecZ';
-import { FAMOUS_GALAXY_NAMES } from '../../../../src/layers/galaxyCatalog/famousGalaxies/data/famousGalaxyNames.generated';
-import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
+import { buildGalaxyInfo } from '../../../../../src/layers/galaxyCatalog/records/present/buildGalaxyInfo';
+import { extractGalaxyRow } from '../../../../../src/layers/galaxyCatalog/records/present/extractGalaxyRow';
+import { Source } from '../../../../../src/data/source';
+import { DESI_TRACER_CLASS } from '../../../../../src/layers/galaxyCatalog/records/data/sourceClass';
+import type { GalaxyCatalog } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
+import { fallbackOrientation } from '../../../../../src/utils/random/fallbackOrientation';
+import { cartesianToRaDecZ } from '../../../../../src/utils/math/cartesianToRaDecZ';
+import { FAMOUS_GALAXY_NAMES } from '../../../../../src/layers/galaxyCatalog/famousGalaxies/data/famousGalaxyNames.generated';
+import { makeGalaxyCatalog } from '../../../../fixtures/makeGalaxyCatalog';
 
 // ─── Test helpers ───────────────────────────────────────────────────────────
 

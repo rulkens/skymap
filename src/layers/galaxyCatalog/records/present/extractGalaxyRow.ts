@@ -16,7 +16,7 @@ import { Source } from '../../../../data/source';
 import { famousGalaxyNamesFor } from '../../famousGalaxies/utils/famousGalaxyNamesFor';
 import type { GalaxyCatalog } from '../../../../@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogSourceType } from '../../@types/GalaxyCatalogSourceType';
-import type { GalaxyRow } from '../../../../@types/engine/GalaxyRow';
+import type { GalaxyRow } from '../@types/GalaxyRow';
 
 export function extractGalaxyRow(
   cloud: GalaxyCatalog | undefined,

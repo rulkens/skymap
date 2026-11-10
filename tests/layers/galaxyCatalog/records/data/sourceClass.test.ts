@@ -9,8 +9,8 @@ import { describe, it, expect } from 'vitest';
 import {
   sourceClassLabel,
   milliquasParentSurveyPrefix,
-} from '../../../src/data/galaxyCatalog/sourceClass';
-import { Source } from '../../../src/data/source';
+} from '../../../../../src/layers/galaxyCatalog/records/data/sourceClass';
+import { Source } from '../../../../../src/data/source';
 
 describe('sourceClassLabel', () => {
   it('returns null for Milliquas byte 0 (unclassified)', () => {

@@ -35,7 +35,7 @@ import { Source } from '../../src/data/source';
 import {
   MILLIQUAS_CLASS_BYTE,
   MILLIQUAS_PARENT_SURVEY_BYTE,
-} from '../../src/data/galaxyCatalog/sourceClass';
+} from '../../src/layers/galaxyCatalog/records/data/sourceClass';
 import { isPlausibleMagnitude } from '../utils/math/isPlausibleMagnitude';
 import { nonCommentLines, type ParsedRecord } from './common';
 

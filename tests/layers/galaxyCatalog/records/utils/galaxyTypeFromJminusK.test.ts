@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { galaxyTypeFromJminusK } from '../../../src/utils/math/galaxyTypeFromJminusK';
+import { galaxyTypeFromJminusK } from '../../../../../src/layers/galaxyCatalog/records/utils/galaxyTypeFromJminusK';
 
 describe('galaxyTypeFromJminusK', () => {
   it('J−K < 0.85 is blue', () => {

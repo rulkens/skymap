@@ -13,7 +13,7 @@ import { Source } from '../../src/data/source';
 
 import { placedGalaxyRow } from '../../src/layers/galaxyCatalog/selection/utils/placedGalaxyRow';
 
-import type { GalaxyRow } from '../../src/@types/engine/GalaxyRow';
+import type { GalaxyRow } from '../../src/layers/galaxyCatalog/records/@types/GalaxyRow';
 
 export function makeGalaxyRow(overrides: Partial<GalaxyRow> = {}) {
   return placedGalaxyRow({

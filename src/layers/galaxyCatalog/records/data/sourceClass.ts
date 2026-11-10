@@ -30,8 +30,8 @@
  * values — append, never renumber.
  */
 
-import { Source } from '../source';
-import type { SourceType } from '../../@types/data/SourceType';
+import { Source } from '../../../../data/source';
+import type { SourceType } from '../../../../@types/data/SourceType';
 
 /**
  * Milliquas AGN class enum.  Letters Q/A/B/K/N/S come from the

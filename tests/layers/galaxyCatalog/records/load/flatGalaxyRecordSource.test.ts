@@ -13,7 +13,7 @@ import { GALAXY_CATALOG_SOURCE_RECORD } from '../../../../../src/layers/galaxyCa
 import { makeGalaxyCatalog } from '../../../../fixtures/makeGalaxyCatalog';
 import { FAMOUS_GALAXY_NAMES } from '../../../../../src/layers/galaxyCatalog/famousGalaxies/data/famousGalaxyNames.generated';
 import type { GalaxyCatalog } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import type { GalaxyRow } from '../../../../../src/@types/engine/GalaxyRow';
+import type { GalaxyRow } from '../../../../../src/layers/galaxyCatalog/records/@types/GalaxyRow';
 import type { GalaxyCatalogSourceType } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogSourceType';
 
 const sourceOver = (source: GalaxyCatalogSourceType, catalog: GalaxyCatalog) =>

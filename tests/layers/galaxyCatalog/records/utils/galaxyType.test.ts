@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { galaxyType } from '../../../src/utils/math/galaxyType';
-import { Source } from '../../../src/data/source';
+import { galaxyType } from '../../../../../src/layers/galaxyCatalog/records/utils/galaxyType';
+import { Source } from '../../../../../src/data/source';
 
 describe('galaxyType', () => {
   it('SDSS dispatches to u−r classifier', () => {

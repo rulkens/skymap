@@ -33,7 +33,7 @@ import { selectionRoute, selectionRowsRoute } from '../../../src/store/constants
 import { Source } from '../../../src/data/source';
 import { makeGalaxyRow } from '../../fixtures/makeGalaxyRow';
 import type { RootState } from '../../../src/store/types';
-import type { GalaxyRow } from '../../../src/@types/engine/GalaxyRow';
+import type { GalaxyRow } from '../../../src/layers/galaxyCatalog/records/@types/GalaxyRow';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 import { MILKY_WAY_ROW } from '../../fixtures/milkyWayRow';
 import { placedStructureRow } from '../../../src/layers/structure/selection/utils/placedStructureRow';

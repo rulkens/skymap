@@ -11,7 +11,7 @@ import { galaxyRecordBridge } from '../../../../../src/layers/galaxyCatalog/sele
 import { Source } from '../../../../../src/data/source';
 import type { GalaxyCatalogSourceType } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogSourceType';
 import type { GalaxyRecordSource } from '../../../../../src/layers/galaxyCatalog/records/@types/GalaxyRecordSource';
-import type { GalaxyRow } from '../../../../../src/@types/engine/GalaxyRow';
+import type { GalaxyRow } from '../../../../../src/layers/galaxyCatalog/records/@types/GalaxyRow';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;

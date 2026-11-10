@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { galaxyTypeFromColor } from '../../../src/utils/math/galaxyTypeFromColor';
+import { galaxyTypeFromColor } from '../../../../../src/layers/galaxyCatalog/records/utils/galaxyTypeFromColor';
 
 describe('galaxyTypeFromColor', () => {
   it('classifies u−r > 2.2 as a red, quiescent galaxy', () => {

@@ -8,19 +8,19 @@
  * the data the galaxy catalog provides.
  *
  * The dispatch table here mirrors (but does not import) the band-slot
- * mapping in each source entry's `bandLabels` (`src/compositions/appSources.ts`). Keeping the two in sync
+ * mapping in each source entry's `bandLabels` (`sources/galaxyCatalogSourceRows.ts`). Keeping the two in sync
  * is the price of putting the photometric band layout in one place and the
  * classification thresholds in another — review both whenever a new source
  * is added.
  */
 
-import { Source } from '../../data/source';
-import type { GalaxyTypeInfo } from '../../@types/data/galaxyCatalog/GalaxyTypeInfo';
-import type { GalaxyTypeMags } from '../../@types/data/galaxyCatalog/GalaxyTypeMags';
+import { Source } from '../../../../data/source';
+import type { GalaxyTypeInfo } from '../@types/GalaxyTypeInfo';
+import type { GalaxyTypeMags } from '../@types/GalaxyTypeMags';
 import { galaxyTypeFromColor } from './galaxyTypeFromColor';
 import { galaxyTypeFromBminusJ } from './galaxyTypeFromBminusJ';
 import { galaxyTypeFromJminusK } from './galaxyTypeFromJminusK';
-import type { SourceType } from '../../@types/data/SourceType';
+import type { GalaxyCatalogSourceType } from '../../@types/GalaxyCatalogSourceType';
 
 /**
  * Fallback when the source's required bands are missing or non-finite.
@@ -29,7 +29,7 @@ import type { SourceType } from '../../@types/data/SourceType';
  */
 const UNKNOWN: GalaxyTypeInfo = { category: 'green', description: 'Unknown galaxy type' };
 
-export function galaxyType(source: SourceType, mags: GalaxyTypeMags): GalaxyTypeInfo {
+export function galaxyType(source: GalaxyCatalogSourceType, mags: GalaxyTypeMags): GalaxyTypeInfo {
   switch (source) {
     case Source.SDSS: {
       // SDSS u−r is the canonical red-sequence/blue-cloud discriminator
@@ -49,7 +49,7 @@ export function galaxyType(source: SourceType, mags: GalaxyTypeMags): GalaxyType
     }
     case Source.FamousGalaxy: {
       // Famous entries use SDSS-style optical slots (see the entry's `bandLabels` in
-      // `compositions/appSources.ts`).  Fall back to u−r like SDSS; most curated entries
+      // `sources/*.ts`).  Fall back to u−r like SDSS; most curated entries
       // won't carry photometry so UNKNOWN is the usual outcome — that's
       // fine, the InfoCard shows a neutral colour swatch.
       const ur = mags.magU - mags.magR;
@@ -69,51 +69,12 @@ export function galaxyType(source: SourceType, mags: GalaxyTypeMags): GalaxyType
     case Source.DesiSgw: {
       // DESI patches (deep cone + dec-band wedge + Sloan Great Wall): g in
       // g-slot, r in r-slot (DERED optical fluxes; see the entry's `bandLabels` in
-      // `compositions/appSources.ts`). g−r is the natural SDSS-like optical discriminator, so
+      // `sources/*.ts`). g−r is the natural SDSS-like optical discriminator, so
       // this reuses the SDSS-style colour classifier — the mixed BGS/LRG/ELG/QSO
       // population doesn't have a single established red-sequence threshold, but
       // a coarse "red vs blue" InfoCard tag is all this branch needs to provide.
       const gr = mags.magG - mags.magR;
       return Number.isFinite(gr) ? galaxyTypeFromColor(gr) : UNKNOWN;
     }
-    case Source.GalaxyCluster:
-    case Source.Supercluster:
-    case Source.Void:
-    case Source.GalaxyGroup:
-    case Source.OpenCluster:
-    case Source.GlobularCluster:
-    case Source.Nebula:
-    case Source.GcCluster:
-    case Source.Filaments:
-    case Source.Mcpm:
-    case Source.Polyphorm2MRS:
-    case Source.McpmWorkbench:
-    case Source.MilkyWay:
-    case Source.Flow:
-    case Source.FamousStar:
-    case Source.Planet:
-    case Source.Earth:
-    case Source.Sun:
-    case Source.SgrAStar:
-    case Source.SStar:
-    case Source.Craft:
-    case Source.Satellite:
-    case Source.SmallBody:
-    case Source.GaiaStars:
-    case Source.Constellations:
-    case Source.ZoneOfAvoidance:
-      // Non-galaxy catalog sources have no galaxy type. Most (structure
-      // markers, filaments, volumes, the Milky-Way + flow overlays, and body
-      // sources like the planets, Earth and the Sun) carry no per-record photometry
-      // at all. The Gaia star catalog is the exception that proves the rule:
-      // it's a point-source star survey whose records DO carry photometry,
-      // but stellar photometry is not galaxy photometry, so it has no galaxy
-      // classification either. Reaching this branch
-      // indicates the InfoCard is rendering a galaxy row for a
-      // non-galaxy catalog pick / handle; route those through their own info
-      // panel instead.
-      throw new Error(
-        `galaxyType: non-galaxy catalog source ${source} has no galaxy classification`,
-      );
   }
 }

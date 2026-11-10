@@ -1,5 +1,5 @@
 import type { GalaxyCatalogSourceType } from '../../@types/GalaxyCatalogSourceType';
-import type { GalaxyRow } from '../../../../@types/engine/GalaxyRow';
+import type { GalaxyRow } from '../../records/@types/GalaxyRow';
 import type { GalaxyCatalogRef } from './GalaxyCatalogRef';
 
 /**

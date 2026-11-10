@@ -4,10 +4,10 @@
  * via the Redux `selectionRows` slice (saga-resolved display cache).
  */
 
-import type { GalaxyTypeInfo } from '../data/galaxyCatalog/GalaxyTypeInfo';
-import { Source } from '../../data/source';
-import type { BandLabels } from '../data/galaxyCatalog/BandLabels';
-import type { SourceType } from '../data/SourceType';
+import type { GalaxyTypeInfo } from './GalaxyTypeInfo';
+import { Source } from '../../../../data/source';
+import type { BandLabels } from '../../../../@types/data/galaxyCatalog/BandLabels';
+import type { SourceType } from '../../../../@types/data/SourceType';
 
 /**
  * Display data for a single galaxy point, computed on-demand from the raw
