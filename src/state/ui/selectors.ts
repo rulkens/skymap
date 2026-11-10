@@ -43,9 +43,10 @@ export const selectSplashVisible = (state: RootState): boolean => selectUi(state
 export const selectSplashDismissedVersion = (state: RootState): number | null =>
   selectUi(state).splash.dismissedVersion;
 
-/** The HUD stack is faded out: hidden by Tab, under the splash, or yielded to a tour or exhibit. */
+/** The HUD stack is faded out: hidden by Tab, under the splash, or yielded to a tour, exhibit or the clip studio. */
 export const selectUiStackHidden = (state: RootState): boolean =>
   selectUiHidden(state) ||
   selectSplashVisible(state) ||
   selectTourActive(state) ||
-  selectTakeoverSource(state)?.kind === 'exhibit';
+  selectTakeoverSource(state)?.kind === 'exhibit' ||
+  selectTakeoverSource(state)?.kind === 'studio';

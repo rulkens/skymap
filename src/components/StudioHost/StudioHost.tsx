@@ -1,0 +1,21 @@
+import { lazy, Suspense } from 'react';
+import { useAppSelector } from '../../store/hooks';
+import { selectTakeoverSource } from '../../state/takeover/selectors';
+
+// The studio is its own chunk (packages/studio README, A2): fetched only when a `#studio=` link opens it.
+const StudioDock = lazy(() =>
+  import('../../../packages/studio/src/studioEntry').then((m) => ({ default: m.StudioDock })),
+);
+
+/** Mounts the clip studio's dock while the `#studio=<clipId>` takeover is up. */
+function StudioHost() {
+  const source = useAppSelector(selectTakeoverSource);
+  if (source?.kind !== 'studio') return null;
+  return (
+    <Suspense fallback={null}>
+      <StudioDock clipId={source.id} />
+    </Suspense>
+  );
+}
+
+export default StudioHost;

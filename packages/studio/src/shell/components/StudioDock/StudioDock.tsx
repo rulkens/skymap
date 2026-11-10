@@ -5,6 +5,7 @@ import KeyHelp from '../KeyHelp/KeyHelp';
 import NarrowNotice from '../NarrowNotice/NarrowNotice';
 import TopBar from '../TopBar/TopBar';
 import TimelinePane from '../../../timeline/components/TimelinePane/TimelinePane';
+import Inspector from '../../../inspector/components/Inspector/Inspector';
 import { useDockHeight } from '../../hooks/useDockHeight';
 import { useStudioKeys } from '../../hooks/useStudioKeys';
 import { clipRegistry } from '../../../../../../src/data/animation/clips/clipRegistry';
@@ -42,8 +43,9 @@ function StudioDock({ clipId }: Props) {
           <TopBar keysOpen={keysOpen} onToggleKeys={toggleKeys} />
           <div className={s.body}>
             <TimelinePane />
-            {/* Task 6.1 mounts the inspector in this column. */}
-            <aside className={s.inspector} aria-label="Inspector" />
+            <aside className={s.inspector} aria-label="Inspector">
+              <Inspector />
+            </aside>
           </div>
           <KeyBar />
           {keysOpen && <KeyHelp onClose={() => setKeysOpen(false)} />}

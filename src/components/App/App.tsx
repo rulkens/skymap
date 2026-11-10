@@ -31,6 +31,7 @@ import { useAppSelector } from '../../store/hooks';
 import TourOverlayContainer from '../containers/TourOverlayContainer';
 import TourBeatRailContainer from '../containers/TourBeatRailContainer';
 import ExhibitOverlayContainer from '../containers/ExhibitOverlayContainer';
+import StudioHost from '../StudioHost/StudioHost';
 import { isCinemaMode } from '../../utils/url/isCinemaMode';
 import { selectTourActive } from '../../state/tour/selectors';
 import { selectTakeoverSource } from '../../state/takeover/selectors';
@@ -117,6 +118,7 @@ export function App(): React.ReactElement {
       </div>
       {tourOverlay}
       {exhibitOverlay}
+      <StudioHost />
       {/* Progress chrome: interactive session only, never the cinema frames. */}
       {tourActive && <TourBeatRailContainer />}
       <SplashContainer />
