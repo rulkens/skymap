@@ -41,4 +41,6 @@ export const FIELD_CONTROLS: Record<FieldControl, FieldWidget> = {
   subjectPosition: { widget: 'object', pick: 'position' },
   focusSubject: { widget: 'object', pick: 'focusId', clearable: true },
   focusRef: { widget: 'object', pick: 'ref', clearable: true },
+  spline: { widget: 'spline' },
+  passBy: { widget: 'passBy' },
 };

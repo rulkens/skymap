@@ -11,6 +11,8 @@ import PickField from '../../../primitives/components/PickField/PickField';
 import ReadoutField from '../../../primitives/components/ReadoutField/ReadoutField';
 import SegmentedField from '../../../primitives/components/SegmentedField/SegmentedField';
 import SettingsActionField from '../SettingsActionField/SettingsActionField';
+import SplineField from '../SplineField/SplineField';
+import PassByField from '../PassByField/PassByField';
 import ObjectPicker from '../ObjectPicker/ObjectPicker';
 import { FIELD_CONTROLS } from '../../data/fieldControls';
 import { EASE_OPTIONS } from '../../data/easeOptions';
@@ -23,6 +25,8 @@ import { TOGGLE_OPTIONS } from './FieldRow.constants';
 import type { FieldSpec } from '../../../@types/kinds/FieldSpec';
 import type { ParamValue } from '../../../@types/kinds/ParamValue';
 import type { SettingsAction } from '../../../../../../src/compositions/@types/SettingsAction';
+import type { SplineConfig } from '../../../../../../src/@types/animation/SplineConfig';
+import type { PassByConfig } from '../../../../../../src/@types/animation/PassByConfig';
 import type { RowRef } from '../../../@types/rows/RowRef';
 import type { InspectorSubject } from '../../../@types/rows/InspectorSubject';
 
@@ -50,14 +54,22 @@ function FieldRow({ spec, subject, rowRef }: Props) {
   const { resetTo } = spec;
   const hasDefault = resetTo !== undefined || canBeAbsent;
   const atDefault = resetTo === undefined ? !authored : sameParamValue(stored, resetTo);
-  const edit = (value: ParamValue, gesture: string | null) =>
-    dispatch(paramEdited({ ref: rowRef, param: spec.param, value, label: spec.label, gesture }));
+  const edit = (value: ParamValue, gesture: string | null, label = spec.label) =>
+    dispatch(paramEdited({ ref: rowRef, param: spec.param, value, label, gesture }));
 
-  // Several rows of its own (setting, catalog, value), so it is not wrapped in one row here.
+  // Several rows of their own, so they are not wrapped in one row here.
   if (widget.widget === 'settingsAction') {
     return (
       <SettingsActionField action={stored as SettingsAction} onChange={(v) => edit(v, null)} />
     );
+  }
+  if (widget.widget === 'spline') {
+    const value = stored as SplineConfig | undefined;
+    return <SplineField value={value} spaced={spec.group} onChange={(v, l, g) => edit(v, g, l)} />;
+  }
+  if (widget.widget === 'passBy') {
+    const value = stored as PassByConfig | undefined;
+    return <PassByField value={value} spaced={spec.group} onChange={(v, l, g) => edit(v, g, l)} />;
   }
 
   let field;

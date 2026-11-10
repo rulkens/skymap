@@ -108,6 +108,28 @@ describe('FieldRow', () => {
     expect(screen.getByRole('button', { name: 'Reset Ramp to default' })).toBeInTheDocument();
   });
 
+  it('an Early turn Fly has no Head-on knobs, and ↺ on its curve writes the default Head-on', async () => {
+    const waypoints = [atPoint([5, 0, 0], 8)];
+    const early = flyPath(waypoints, { over: 10, spline: { kind: 'centripetal' } });
+    const store = setup({ timeline: [early] }, 'flyPath', EFFECT, 'spline');
+    expect(screen.queryByRole('slider', { name: 'Overshoot' })).toBeNull();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Reset Curve to default' }));
+    const { spline } = selectDraft(store.getState())!.timeline[0] as typeof early;
+    expect(spline).toEqual(flyPath(waypoints, { over: 10 }).spline);
+  });
+
+  it("an absent pass-by is the engine's 0 radii with no side, and ↺ writes the default", async () => {
+    const { passBy: _absent, ...fly } = flyPath([atPoint([5, 0, 0], 8)], { over: 10 });
+    const store = setup({ timeline: [fly] }, 'flyPath', EFFECT, 'passBy');
+    expect(screen.getByRole('slider', { name: 'Pass by' })).toHaveAttribute('aria-valuenow', '0');
+    expect(screen.queryByRole('radiogroup', { name: 'Side' })).toBeNull();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Reset Pass by to default' }));
+    const { passBy } = selectDraft(store.getState())!.timeline[0] as { passBy: unknown };
+    expect(passBy).toEqual(flyPath([atPoint([5, 0, 0], 8)], { over: 10 }).passBy);
+  });
+
   it('Enter on an unchanged degrees field adds no Undo, though the radian round trip is inexact', async () => {
     const store = setup(
       { start: { ...START_POSE, yaw: 0.1 }, timeline: [] },

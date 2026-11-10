@@ -21,4 +21,7 @@ export type FieldControl =
   | 'subjectPosition'
   /** A Focus step's object: its focus id or (`focusRef`) selection ref, or none to clear the focus. */
   | 'focusSubject'
-  | 'focusRef';
+  | 'focusRef'
+  /** A Fly's curve and its pass-by, each one object edited as several rows. */
+  | 'spline'
+  | 'passBy';
