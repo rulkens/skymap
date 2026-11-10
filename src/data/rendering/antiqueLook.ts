@@ -98,7 +98,7 @@ export const ANTIQUE_MOVED_PASSES: Readonly<Record<string, string>> = {
   'mission-trails': 'antique-lines',
   'cosmic-web-filaments-print': 'antique-lines',
   'structure-markers-near': 'antique-structures',
-  'structure-markers-cosmo': 'antique-lines',
+  'structure-markers-cosmo': 'antique-structures',
 };
 
 /** The structure markers' row is half res: their halos are soft, and the low band

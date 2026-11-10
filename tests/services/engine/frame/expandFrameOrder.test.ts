@@ -301,11 +301,11 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     expect(empty.some((step) => step.kind === 'render' && step.capture !== undefined)).toBe(false);
   });
 
-  it('antique draws the cosmic structure markers onto the line row, where a 1-px ring survives', () => {
-    // On the print they fall to the quarter-res reduce, which averages a ring away.
+  it('antique draws the cosmic structure markers onto the structures row, the one the Milky Way discs take', () => {
+    // There the plate outlines them as dotted contours; on the print the reduce averages a ring away.
     const home = (name: string) =>
       program({ antique: true }).find((step) => step.kind === 'render' && namesOf(step).includes(name));
-    expect(home('structure-markers-cosmo')).toMatchObject({ target: ANTIQUE_TARGETS.lines });
+    expect(home('structure-markers-cosmo')).toMatchObject({ target: ANTIQUE_TARGETS.structures });
   });
 
   it('expands the foreground chain in painter order', () => {

@@ -43,6 +43,7 @@ import {
   RING_PICK_MIN_ALPHA,
 } from './structureMarkerStyles';
 import { structureApparentRadiusFade } from './structureApparentRadiusFade';
+import { STRUCTURE_ANTIQUE_HALO_RGB } from '../data/structureAntiqueHaloRgb';
 import { structureIdOf } from './structureIdOf';
 import { isPickableUnderFocus } from '../../../../utils/structure/isPickableUnderFocus';
 import { structurePickId } from '../../picking/utils/structurePickId';
@@ -63,6 +64,7 @@ export function produceStructureMarkers(
   fade: Readonly<Record<StructureId, number>>,
 ): readonly StructureMarkerDescriptor[] {
   const out: StructureMarkerDescriptor[] = [];
+  const antique = state.settings.antique.enabled;
   // CSS px per rad: the style's ring-size gates are authored in CSS px.
   const pxPerRad = ctx.drawPxPerRad / ctx.snapshot.devicePixelRatio;
   const [cx, cy, cz] = ctx.drawCamPos;
@@ -109,10 +111,11 @@ export function produceStructureMarkers(
       fadeAlpha * sigWeight * catFade * emphasisOf(RING_ENTRY, ctx.snapshot, pickId);
 
     // Halo: style at-rest alpha × per-frame fade baked into alpha.
+    const [hr, hg, hb] = (antique && STRUCTURE_ANTIQUE_HALO_RGB[p.category]) || style.haloColor;
     const haloColor: Vec4 = [
-      style.haloColor[0],
-      style.haloColor[1],
-      style.haloColor[2],
+      hr,
+      hg,
+      hb,
       style.haloColor[3] * weightedFade,
     ];
 

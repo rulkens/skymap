@@ -32,9 +32,11 @@ const ONE = makeStructureFade();
 function makeState(
   selectedStructureId: string | null = null,
   focusedStructureId: string | null = selectedStructureId,
+  antique = false,
 ): TestState {
   return {
     store: createStructureStore(),
+    settings: { antique: { enabled: antique } },
     selection: {
       select: selectedStructureId !== null ? { type: 'structure', id: selectedStructureId } : null,
       focus: focusedStructureId !== null ? { type: 'structure', id: focusedStructureId } : null,
@@ -77,6 +79,31 @@ const rec = (
   }) as StructureInfo;
 
 describe('produceStructureMarkers', () => {
+  it('antique tints each cosmic kind\'s halo to its own pigment, keeping alpha; plain keeps the style', () => {
+    const kinds = ['galaxy-cluster', 'supercluster', 'void'] as const;
+    const halo = (antique: boolean) => {
+      const state = makeState(null, null, antique);
+      state.store.setGroup(
+        'bulk',
+        kinds.map((c) => rec(c, c)),
+      );
+      return produceStructureMarkers(
+        { store: state.store, pickCodes: PICK_CODES },
+        state,
+        makeCtx(),
+        ONE,
+      ).map((m) => m.haloColor);
+    };
+    const plain = halo(false);
+    const inked = halo(true);
+    kinds.forEach((c, i) => {
+      expect(plain[i]!.slice(0, 3)).toEqual([...STRUCTURE_MARKER_STYLES[c].haloColor.slice(0, 3)]);
+      expect(inked[i]!.slice(0, 3)).not.toEqual(plain[i]!.slice(0, 3));
+      expect(inked[i]![3]).toBe(plain[i]![3]);
+    });
+    expect(new Set(inked.map((h) => h.slice(0, 3).join())).size).toBe(3);
+  });
+
   it('emits one descriptor per marker-bearing structure in all() order (anchors → bulk)', () => {
     const state = makeState();
     state.store.setGroup('bulk', [rec('b1'), rec('b2')]);

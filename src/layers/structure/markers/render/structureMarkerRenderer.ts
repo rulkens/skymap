@@ -501,6 +501,7 @@ export function createStructureMarkerRenderer(
     viewportSize: Vec2,
     pxPerRad: number,
     devicePixelRatio: number,
+    voidHalo = false,
   ): void {
     if (
       !device ||
@@ -544,7 +545,7 @@ export function createStructureMarkerRenderer(
     // visual output); load-bearing for the pick path.
     pass.setPipeline(haloPipeline);
     for (const cat of categories) {
-      if (cat === 'void') continue; // explicit skip per spec
+      if (cat === 'void' && !voidHalo) continue; // explicit skip per spec
       if (bucketCounts[cat] === 0) continue;
       const bg = sourceBindGroups[cat];
       if (!bg) continue;

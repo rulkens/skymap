@@ -37,7 +37,7 @@ export function createStructureMarkersPass(
       return live(fade);
     },
 
-    draw(pass, view, ctx, _state, fade) {
+    draw(pass, view, ctx, state, fade) {
       // Upload THIS view's planned markers: one instance buffer is correct only because a
       // `perView` section is its own submit (`renderFrame`'s view-identity batching).
       renderer.setMarkers(ctx.snapshot.plans.get(planner, ctx), view.camPos);
@@ -49,6 +49,7 @@ export function createStructureMarkersPass(
         view.viewportPx,
         ctx.drawPxPerRad,
         ctx.snapshot.devicePixelRatio,
+        state.settings.antique.enabled,
       );
     },
 
