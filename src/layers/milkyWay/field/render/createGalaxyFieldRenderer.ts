@@ -45,6 +45,7 @@ import { encodeDustMapPass } from './encodeDustMapPass';
 import { encodeDustPresentPass } from './encodeDustPresentPass';
 import { encodeSplatPass } from './encodeSplatPass';
 import { findHiiSegment } from '../starFormation/utils/findHiiSegment';
+import { fieldTargetOf } from '../utils/fieldTargetOf';
 import {
   FIELD_COMPONENT_FLOATS,
   FIELD_HEADER_BUFFER_SIZE,
@@ -406,15 +407,13 @@ export function createGalaxyFieldRenderer(
         // small and bright enough that a coarser shared target collapses it
         // under a texel. The segment only gives the range; a stale plan clears
         // the target with an empty draw rather than leaving it uncleared.
-        const target = frameTargets[id];
-        if (!target) continue;
         const segment = findHiiSegment(hiiSegments, `hii:${id}`);
         const extras = id === 'extras';
         encodeSplatPass({
           enc: encoder,
           label: `galaxy:hiiPass:${id}`,
           timestampWrites: timestampWrites(id),
-          targetView: target.view,
+          targetView: fieldTargetOf(frameTargets, id).view,
           pipeline: extras ? fieldPipelines.hiiExtrasPipe : fieldPipelines.hiiTierPipeline(id),
           bindGroup: extras ? groups.hii : groups.tier(id),
           instanceCount: segment?.count ?? 0,

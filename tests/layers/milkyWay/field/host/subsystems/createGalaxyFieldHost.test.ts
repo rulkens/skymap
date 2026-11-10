@@ -24,6 +24,7 @@ const makeHost = () =>
     makeShader: () => ({}) as GPUShaderModule,
     hdrFormat: 'rgba16float',
     dustMapFormat: 'rgba16float',
+    targetIds: [],
     onIsmMapLanded: () => {},
     onOrientationRebuilt: () => {},
   }).host;

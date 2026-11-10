@@ -21,6 +21,7 @@ import { createFieldHostSlot } from './field/host/subsystems/createFieldHostSlot
 import { createGalaxyFieldHost } from './field/host/subsystems/createGalaxyFieldHost';
 import { milkyWayFieldHostTuningFor } from './field/host/utils/milkyWayFieldHostTuningFor';
 import { DUST_MAP_FORMAT } from './field/host/data/dustMapFormat';
+import { APP_FIELD_TARGET_IDS } from './field/data/appFieldTargetIds';
 
 export function create(deps: LayerCoreDeps): MilkyWayRuntime {
   const pickCode = deps.pickCode(MILKY_WAY_ENTRY.id);
@@ -48,6 +49,7 @@ export function create(deps: LayerCoreDeps): MilkyWayRuntime {
           makeShader: (code, label) => createShaderModuleWithDevLog(deps.ctx.device, code, label),
           hdrFormat: HDR_TARGET_FORMAT,
           dustMapFormat: DUST_MAP_FORMAT,
+          targetIds: APP_FIELD_TARGET_IDS,
           // The app renders on demand, and the landing sets `invMeanNorm`.
           onIsmMapLanded: deps.requestRender,
         }).host,

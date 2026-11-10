@@ -62,6 +62,7 @@ import type { ToolFrameView } from './frame/deriveFrameView';
 import { DEFAULT_RENDER_SETTINGS } from '../data/defaultRenderSettings';
 import { DEFAULT_LOD_SETTINGS } from '../data/defaultLodSettings';
 import { DUST_MAP_FORMAT } from '../../../../src/layers/milkyWay/field/host/data/dustMapFormat';
+import { FIELD_TARGET_IDS } from '../../../../src/layers/milkyWay/field/data/fieldTargetIds';
 
 /** HDR working format for the scene + bloom pyramid — the runtime's `hdr` row. */
 const HDR: GPUTextureFormat = 'rgba16float';
@@ -158,6 +159,7 @@ export async function createGalaxyEngine(
     makeShader,
     hdrFormat: HDR,
     dustMapFormat: DUST_MAP_FORMAT,
+    targetIds: FIELD_TARGET_IDS,
     onIsmMapLanded: () => model.noteIsmMapLanded(),
     onOrientationRebuilt: (grid) => model.noteOrientationRebuilt(grid),
   });
