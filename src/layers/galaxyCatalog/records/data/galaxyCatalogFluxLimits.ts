@@ -1,8 +1,8 @@
 /**
  * Per-galaxy catalog flux limits and Schechter luminosity-function parameters —
  * thin accessors over the Layer's own entries. The actual numbers live on each
- * galaxy catalog entry (`sources/galaxyCatalogSourceRows.ts`); this module only adds the non-galaxy catalog throw
- * guard so callers that hand us a raw `Source` get a loud error rather
+ * galaxy catalog entry (`sources/galaxyCatalogSourceRows.ts`); this module only adds the
+ * non-galaxy catalog throw guard so callers that hand us a raw `Source` get a loud error rather
  * than silently reading `undefined`.
  */
 

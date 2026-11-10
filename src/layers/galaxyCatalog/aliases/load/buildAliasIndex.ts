@@ -1,8 +1,8 @@
 /**
  * Pure alias-index builder: joins the PGC→names alias map against every
  * pgc-claiming source's `hasDurableId`, so the palette lists a name only when a
- * loaded source holds that galaxy. One entry per (source, pgc), each carrying its `#focus=` id, sources by
- * claim rank, entries in alias-file order within a source; equal-score
+ * loaded source holds that galaxy. One entry per (source, pgc), each carrying its
+ * `#focus=` id, sources by claim rank, entries in alias-file order within a source; equal-score
  * palette ties may come in that order.
  */
 
@@ -19,8 +19,8 @@ export function buildAliasIndex(input: BuildAliasIndexInput): AliasIndexEntry[] 
     for (const [pgc, names] of aliasMap) {
       if (pgc === 0n || names.length === 0) continue; // no HyperLEDA match / key without values
       if (!record.hasDurableId(`pgc-${pgc}`)) continue;
-      // ra/dec/distMpc are unused: a PGC objId (> 0) takes the catalog-id rung before the pos@ rung.
-      // `objId` is bigint because the ladder is shared with SDSS's 19-digit objID.
+      // ra/dec/distMpc are unused: a PGC objId (> 0) takes the catalog-id rung
+      // before the pos@ rung.
       const focusId = encodeGalaxyId({
         source: record.source,
         famousId: null,

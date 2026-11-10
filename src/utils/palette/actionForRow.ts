@@ -2,7 +2,8 @@
  * actionForRow — map a selected `ScoredRow` to the `PaletteAction` the container dispatches.
  * Focus kinds name the thing by URL deep-link id through the ONE `requestFocus` command
  * (`watchRequestFocusSaga` resolves the ref), so the palette never builds a ref. Alias rows carry
- * their id, built by `buildAliasIndex`, so the 'pgc-' grammar keeps one home. Fallback arms exist only so TS narrows.
+ * their id, built by `buildAliasIndex`, so the 'pgc-' grammar keeps one home. Fallback arms exist
+ * only so TS narrows.
  */
 
 import type { ScoredRow } from '../../@types/palette/ScoredRow';

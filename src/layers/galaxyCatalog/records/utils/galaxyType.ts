@@ -8,8 +8,8 @@
  * the data the galaxy catalog provides.
  *
  * The dispatch table here mirrors (but does not import) the band-slot
- * mapping in each source entry's `bandLabels` (`sources/galaxyCatalogSourceRows.ts`). Keeping the two in sync
- * is the price of putting the photometric band layout in one place and the
+ * mapping in each source entry's `bandLabels` (`sources/galaxyCatalogSourceRows.ts`).
+ * Keeping the two in sync is the price of putting the photometric band layout in one place and the
  * classification thresholds in another — review both whenever a new source
  * is added.
  */
