@@ -3,7 +3,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { Provider } from 'react-redux';
 
-import { all, dollyTo, seq } from '../../../../../src/services/engine/animation/effectHelpers';
+import {
+  all,
+  dollyTo,
+  fade,
+  seq,
+} from '../../../../../src/services/engine/animation/effectHelpers';
 import TimelinePane from '../../../src/timeline/components/TimelinePane/TimelinePane';
 import { viewportSet } from '../../../src/session/state/studioSlice';
 import {
@@ -91,5 +96,12 @@ describe('TimelinePane', () => {
     const group = screen.getAllByRole('treeitem')[1]!;
     expect(group.textContent).toContain('⚠');
     expect(group).not.toHaveAttribute('aria-invalid');
+  });
+
+  it("a fade's bar runs for its fade, though the clip does not wait for it", () => {
+    // The fade awaits nothing, so the dolly runs 0-4 s and Fit spans 0-4.8 s; the 3 s fade is 62.5 %.
+    mount({ timeline: [seq([fade(['flow'], 0, 3), dollyTo(300, 4)])] });
+
+    expect(screen.getByText('→ 0 %').parentElement!.style.width).toBe('62.5%');
   });
 });
