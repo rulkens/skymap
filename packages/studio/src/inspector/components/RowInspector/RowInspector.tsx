@@ -7,7 +7,7 @@ import { formatRange } from '../../utils/formatRange';
 import { formatRowTitle } from '../../utils/formatRowTitle';
 import { inspectorSpec } from '../../utils/inspectorSpec';
 import { resolvedText } from '../../utils/resolvedText';
-import { rowContext } from '../../utils/rowContext';
+import { rowWhere } from '../../utils/rowWhere';
 import { shownFields } from '../../utils/shownFields';
 import { rowSubject } from '../../../draft/utils/rowSubject';
 import FieldRow from '../FieldRow/FieldRow';
@@ -28,16 +28,13 @@ function RowInspector({ row, rows, draft, resolution }: Props) {
   const spec = inspectorSpec(row.kind);
   const subject = rowSubject(draft, row.ref);
   const fields = subject === null ? [] : shownFields(spec.fields, subject);
-  const context = rowContext(rows, row);
   const resolved = resolvedText(row, resolution);
-  const where =
-    row.ref.kind === 'start' ? 'Start' : `${context.parent} · ${context.index}/${context.count}`;
 
   return (
     <>
       <InspectorHead
         glyph={row.glyph}
-        where={where}
+        where={rowWhere(rows, row)}
         range={formatRange(row.startSec, row.endSec)}
         title={formatRowTitle(row.label)}
       />
