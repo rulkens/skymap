@@ -557,13 +557,13 @@ redo returns to. `label` names the edit for "Undo Distance".
 
 ### Task 2.1: naming-table formatters
 
-**Files:** `packages/studio/src/utils/format/{formatDuration,formatQuantity,formatNameList,formatTimecode}.ts`, tests
+**Files:** `packages/studio/src/utils/format/{formatQuantity,formatNameList,formatTimecode}.ts`, tests
 
 Rules (round-1 naming table): a space before units; one decimal only below 10; a true minus `−`; lists show two
 names then `+N`. Reuse `src/utils/format/formatDistance.ts` for Mpc if its ladder gives `300 Mpc` / `0.78 Mpc`;
 otherwise `formatQuantity` covers it. Do not add a formatter without a caller in this group.
 
-- `formatDuration(sec: number): string`: `4 s`, `1.5 s`, `11 s`, `0 s`.
+- `formatQuantity(x, 's')` gives durations: `4 s`, `1.5 s`, `11 s`, `0 s` (the planned `formatDuration` wrapper was deleted in the deletion audit).
 - `formatQuantity(value: number, unit: string): string`: `300 Mpc`, `5.2°`, `−20°`, `1.4°/s`, `0 %`.
 - `formatNameList(names: readonly string[]): string`: `flow`, `flow, labels`, `flow, labels +2`.
 - `formatTimecode(sec: number): string`: `7.4 s` below 60, `1:47.5` from 60 (ruler head and readout).
@@ -625,7 +625,7 @@ Walks the draft (Start row first, then the timeline in order; flyPath waypoints 
 collapse, takes times from `compile.spans` by path (`null` while `compile` is `null`), waypoint windows from the
 flyPath span's `knotSecs` (`[previous knot, this knot]`), tails from the effect's own `over`/window (perpetual
 osc to `durationSec`), `errors` from `compile.error.paths`, each trimmed to its longest prefix that exists in the draft (Task 0.4: an
-error can name a child of a resolved `aimAt`), duration strings via `formatDuration` (`end` for a
+error can name a child of a resolved `aimAt`), duration strings via `formatQuantity(x, 's')` (`end` for a
 perpetual osc, `∞` for a looping spin, `–` unresolved), label/writes/family from `ROW_KINDS`, and `cueSecs`
 from step starts, cue times and End.
 

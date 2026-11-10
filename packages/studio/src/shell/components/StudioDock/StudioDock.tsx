@@ -45,9 +45,9 @@ function StudioDock({ clipId }: Props) {
           <TopBar keysOpen={keys.open} onToggleKeys={keys.toggle} />
           <div className={s.body}>
             <TimelinePane />
-            <aside className={s.inspector} aria-label="Inspector">
+            <div className={s.inspector}>
               <Inspector />
-            </aside>
+            </div>
           </div>
           <KeyBar />
           {keys.open && <KeyHelp onClose={keys.close} />}
