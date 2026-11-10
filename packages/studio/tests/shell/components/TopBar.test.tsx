@@ -5,6 +5,7 @@ import { Provider } from 'react-redux';
 
 import { all, dollyTo, seq } from '../../../../../src/services/engine/animation/effectHelpers';
 import { exitTakeover } from '../../../../../src/state/takeover/takeoverActions';
+import { openStudio } from '../../../../../src/state/studio/studioActions';
 import TopBar from '../../../src/shell/components/TopBar/TopBar';
 import { paramEdited, rowToggled } from '../../../src/session/state/studioSlice';
 import { openStudioStore } from '../../helpers/openStudioStore';
@@ -26,6 +27,15 @@ function mount(draft: ClipData = DRAFT) {
 }
 
 describe('TopBar', () => {
+  it('the title is a clip picker: choosing another clip opens it in the studio', () => {
+    const { dispatch } = mount();
+    const picker = screen.getByRole('combobox', { name: 'Clip' });
+    expect(picker).toHaveValue('cosmicFlows');
+
+    fireEvent.change(picker, { target: { value: 'famousFlythrough' } });
+    expect(dispatch).toHaveBeenCalledWith(openStudio('famousFlythrough'));
+  });
+
   it('Undo names the last edit and is disabled with nothing to undo', () => {
     const { store } = mount();
     expect(screen.getByRole('button', { name: 'Undo' })).toBeDisabled();

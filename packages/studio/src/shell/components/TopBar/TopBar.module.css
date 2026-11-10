@@ -28,15 +28,6 @@
 .grow {
   flex: 1;
 }
-.title {
-  margin: 0;
-  overflow: hidden;
-  font-family: var(--font-family-display);
-  font-size: var(--font-size-input);
-  font-weight: 400;
-  color: var(--color-fg);
-  text-overflow: ellipsis;
-}
 .tag {
   padding: 0 var(--space-3);
   border: 1px solid var(--border-control);

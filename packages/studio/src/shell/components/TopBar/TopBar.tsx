@@ -1,9 +1,9 @@
 import StudioTip from '../../../primitives/components/StudioTip/StudioTip';
 import Glyph from '../../../primitives/components/Glyph/Glyph';
+import ClipPicker from '../ClipPicker/ClipPicker';
 import ZoomControls from '../../../timeline/components/ZoomControls/ZoomControls';
 import Button from '../../../../../../src/components/common/Button/Button';
 import CloseIcon from '../../../../../../src/components/icons/CloseIcon/CloseIcon';
-import { clipRegistry } from '../../../../../../src/data/animation/clips/clipRegistry';
 import { exitTakeover } from '../../../../../../src/state/takeover/takeoverActions';
 import { redone, undone } from '../../../session/state/studioSlice';
 import {
@@ -45,7 +45,7 @@ function TopBar({ keysOpen, onToggleKeys }: Props) {
   return (
     <header className={s.root} aria-label="Clip">
       <div className={s.left}>
-        <h2 className={s.title}>{clipId === null ? '' : clipRegistry[clipId].label}</h2>
+        {clipId !== null && <ClipPicker clipId={clipId} />}
         <span className={s.tag}>Hand-written</span>
         {failure !== null ? (
           <span className={s.alert} role="alert">
