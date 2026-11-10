@@ -16,7 +16,7 @@ import {
   milkyWayFieldSliderPatch,
 } from '../../../../../src/layers/milkyWay/tuning/data/milkyWayFieldSliderFields';
 import type { MilkyWayFieldSliderKey } from '../../../../../src/layers/milkyWay/tuning/@types/MilkyWayFieldSliderKey';
-import { FIELD_TARGET_IDS } from '../../../../../src/layers/milkyWay/field/data/fieldTargetIds';
+import { APP_FIELD_TARGET_IDS } from '../../../../../src/layers/milkyWay/field/data/appFieldTargetIds';
 import { MILKY_WAY_FIELD_TUNING_DEFAULTS } from '../../../../../src/layers/milkyWay/field/data/milkyWayFieldTuningDefaults';
 import { MILKY_WAY_CLOUD_TUNING_DEFAULTS } from '../../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
 
@@ -44,9 +44,9 @@ describe('MILKY_WAY_FIELD_SLIDER_FIELDS — parity with the field knobs', () => 
     ...MILKY_WAY_FIELD_TUNING_DEFAULTS.divisors,
   };
 
-  it('covers exposure and every field target', () => {
+  it('covers exposure and every app field target', () => {
     const keys = MILKY_WAY_FIELD_SLIDER_FIELDS.map((f) => f.key).sort();
-    expect(keys).toEqual(['exposure', ...FIELD_TARGET_IDS].sort());
+    expect(keys).toEqual(['exposure', ...APP_FIELD_TARGET_IDS].sort());
   });
 
   it('every slider spans its default with a positive step', () => {

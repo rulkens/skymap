@@ -6,7 +6,7 @@ import { fieldTargetRowId } from './fieldTargetRowId';
 
 /**
  * The field's targets as the host reads them, from the `mw-field-*` rows. No
- * `dustView`: the JWST debug view is the tool's. Throws while the rows are
+ * `dustView` or `extras`: the JWST debug view and the extras are the tool's. Throws while the rows are
  * released, so a caller gates on the field part as the rows' `allocateWhen` does.
  */
 export function fieldRenderTargetsOf(targets: RenderTargets): GalaxyFieldRenderTargets {
@@ -17,7 +17,6 @@ export function fieldRenderTargetsOf(targets: RenderTargets): GalaxyFieldRenderT
   return {
     dustMap: target('dustMap'),
     field: target('field'),
-    extras: target('extras'),
     shells: target('shells'),
     young: target('young'),
     dig: target('dig'),

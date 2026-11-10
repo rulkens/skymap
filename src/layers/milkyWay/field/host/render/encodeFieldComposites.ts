@@ -17,5 +17,8 @@ export function encodeFieldComposites(
   plan: FieldFramePlan,
   targets: GalaxyFieldRenderTargets,
 ): void {
-  for (const id of plan.composites) upsample.draw(pass, targets[id].view);
+  for (const id of plan.composites) {
+    const target = targets[id];
+    if (target) upsample.draw(pass, target.view);
+  }
 }
