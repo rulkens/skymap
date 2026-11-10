@@ -107,6 +107,34 @@ describe('Inspector', () => {
     });
   });
 
+  it("a waypoint's unset Linger reads the Fly's, dim, and its own one is bright with ↺ back to it", async () => {
+    const store = open({
+      timeline: [
+        flyPath([atFocus('m31' as FocusId), atPoint([5, 0, 0], 8)], { over: 6, linger: 0.4 }),
+      ],
+    });
+    store.dispatch(rowSelected({ kind: 'waypoint', path: [0], index: 0 }));
+    show(store);
+    expect(screen.getByRole('slider', { name: 'Linger' })).toHaveAttribute('aria-valuenow', '40');
+    expect(screen.queryByRole('button', { name: 'Reset Linger to default' })).toBeNull();
+
+    act(() => {
+      store.dispatch(
+        paramEdited({
+          ref: { kind: 'waypoint', path: [0], index: 0 },
+          param: 'linger',
+          value: 0.9,
+          label: '',
+          gesture: null,
+        }),
+      );
+    });
+    await userEvent.click(screen.getByRole('button', { name: 'Reset Linger to default' }));
+    expect(
+      (selectDraft(store.getState())!.timeline[0] as { waypoints: object[] }).waypoints[0],
+    ).not.toHaveProperty('linger');
+  });
+
   it('a subject waypoint shows no Distance, and its unset Leg time reads auto with no reset', () => {
     const store = open({
       timeline: [flyPath([atFocus('m31' as FocusId), atPoint([5, 0, 0], 8)], { over: 6 })],

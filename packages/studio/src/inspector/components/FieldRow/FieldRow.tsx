@@ -52,7 +52,8 @@ function FieldRow({ spec, subject, rowRef }: Props) {
   const authored = subject[spec.param] !== undefined;
   const canBeAbsent = spec.fallback !== undefined || spec.optional === true;
   const auto = !authored && spec.optional === true;
-  const stored = subject[spec.param] ?? spec.fallback;
+  const fallback = typeof spec.fallback === 'function' ? spec.fallback(subject) : spec.fallback;
+  const stored = subject[spec.param] ?? fallback;
   const { resetTo } = spec;
   const hasDefault = resetTo !== undefined || canBeAbsent;
   const atDefault = resetTo === undefined ? !authored : sameParamValue(stored, resetTo);

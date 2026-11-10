@@ -8,7 +8,6 @@ import { sceneKinds } from './sceneKinds';
 import { createStructureKinds } from './structureKinds';
 import { subjectKinds } from './subjectKinds';
 import { overField } from '../utils/fields/overField';
-import { readoutField } from '../utils/fields/readoutField';
 import { formatMpc } from '../../utils/format/formatMpc';
 import type { RowKindRegistry } from '../../@types/kinds/RowKindRegistry';
 
@@ -44,11 +43,19 @@ export const ROW_KINDS: RowKindRegistry = {
         : { name, op: '→', value: formatMpc(s.distance) };
     },
     fields: [
-      // `at` and `distance` exist only on a point waypoint; a subject waypoint leaves them out.
-      readoutField('at', 'Position'),
+      // `id` exists only on a subject waypoint, `at` and `distance` only on a point one.
+      { key: 'id', param: 'id', label: 'Subject', control: 'subject' },
+      { key: 'at', param: 'at', label: 'Position', control: 'subjectPosition' },
       { key: 'distance', param: 'distance', label: 'Distance', control: 'mpc' },
-      overField('Leg time', { optional: true }),
-      { key: 'linger', param: 'linger', label: 'Linger', control: 'percent', optional: true },
+      { ...overField('Leg time', { optional: true }), group: true },
+      {
+        key: 'linger',
+        param: 'linger',
+        label: 'Linger',
+        control: 'percent',
+        fallback: (s) => s.pathLinger,
+        range: { min: 0, max: 100, step: 5 },
+      },
       { key: 'yaw', param: 'yaw', label: 'Turn', control: 'degrees', optional: true },
       { key: 'pitch', param: 'pitch', label: 'Tilt', control: 'degrees', optional: true },
     ],

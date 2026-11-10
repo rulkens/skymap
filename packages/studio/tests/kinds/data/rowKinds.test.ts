@@ -71,8 +71,14 @@ const SAMPLES: { readonly [K in RowKind]: RowSubjects[K] } = {
   all: all([dollyTo(1, 2), tween('yaw', { to: 1, over: 2 })]),
   fork: fork(oscillate('pitch', { amp: 0.09, period: 16 })),
   start: { target: [0, 0, 0], yaw: 0.5, pitch: -0.3, distance: 10 },
-  waypoint: { ...atPoint([1, 2, 3], 5, { yaw: 1, pitch: 0, over: 2, linger: 0.5 }), last: false },
+  waypoint: {
+    ...atPoint([1, 2, 3], 5, { yaw: 1, pitch: 0, over: 2, linger: 0.5 }),
+    last: false,
+    pathLinger: 0.7,
+  },
 };
+/** A waypoint's fields span both arms: the point sample above, and a subject one. */
+const SUBJECT_WAYPOINT: RowSubjects['waypoint'] = { ...atFocus(M31), last: true, pathLinger: 0.7 };
 
 const entries = Object.keys(SAMPLES) as RowKind[];
 
@@ -131,7 +137,11 @@ describe('ROW_KINDS', () => {
   it("every field's param exists on its kind's helper-built sample", () => {
     for (const kind of entries) {
       for (const field of ROW_KINDS[kind].fields) {
-        expect(SAMPLES[kind], `${kind}.${field.param}`).toHaveProperty(field.param);
+        const arms = kind === 'waypoint' ? [SAMPLES.waypoint, SUBJECT_WAYPOINT] : [SAMPLES[kind]];
+        expect(
+          arms.some((arm) => typeof arm === 'object' && field.param in arm),
+          `${kind}.${field.param}`,
+        ).toBe(true);
       }
     }
   });
