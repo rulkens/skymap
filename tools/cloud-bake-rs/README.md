@@ -61,7 +61,7 @@ prints its own banner to stdout, so use `npm run -s bake-clouds` or read the las
   "date": "2026-11-09",
   "exit": 0,
   "coverage": 0.767,
-  "orbit": { "tn": 87.0, "lon_n": 181.05, "ltan": 13.52, "median_dt_min": 2.0 },
+  "orbit": { "tn": 88.0, "lon_n": 180.8, "ltan": 13.52, "median_dt_min": 2.0 },
   "calibration": { "mtg_goes_e_k": 4.77, "mtg_iodc_k": 4.4 },
   "skipped": { "missing": 0, "broken": 0 },
   "fetched": { "requests": 0, "mb": 0.0, "cached": 394 },

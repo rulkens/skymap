@@ -4,13 +4,13 @@
 use rayon::prelude::*;
 use std::f64::consts::{PI, TAU};
 
-pub const P: f64 = 101.44; // nodal period, min
+pub const P: f64 = 101.50; // nodal period, min: SGP4 on CelesTrak TLEs, NOAA-20 and -21, 2026-11
 pub const HALF_SWATH: f64 = 1520.0 / 6371.0; // VIIRS half swath, radians of arc
 const INC_DEG: f64 = 98.74;
 /// NOAA-21's ascending node relative to NOAA-20's: (minutes later, degrees of longitude east). The two
 /// keep station by manoeuvre, so this is a measurement that can go stale: SGP4 on CelesTrak TLEs for
-/// 2026-11-06 and -09 gives 43.9 min and -12.8 deg, GIBS OrbitTracks labels 43.9 and -12.7. A pure time
-/// shift would give -11.0 deg; NOAA-21 crosses the equator ~7 min earlier in local time.
+/// 2026-11-06 and -09 gives 43.9-44.0 min and -12.8 deg, GIBS OrbitTracks labels 43.9 and -12.7. A
+/// pure time shift would give -11.0 deg; NOAA-21 crosses the equator ~7 min earlier in local time.
 pub const N21_AFTER_N20: (f64, f64) = (43.9, -12.8);
 
 /// Width and height of a low-res granule footprint (`granules/lo/<HHMM>.png`).
@@ -186,18 +186,18 @@ fn argmin(v: &[f64]) -> usize {
     (0..v.len()).fold(0, |b, i| if v[i] < v[b] { i } else { b })
 }
 
-/// Median |pass time - sample time| for the orbit with node time `tn` and local time `ltan` (h).
-fn misfit(pts: &[(f64, f64)], ts: &[f64], ltan: f64, tn: f64) -> f64 {
+/// Median signed and median absolute (pass time - sample time) for the orbit with node time `tn` and
+/// local time `ltan` (h).
+fn misfit(pts: &[(f64, f64)], ts: &[f64], ltan: f64, tn: f64) -> (f64, f64) {
     let o = Orbit {
         tn,
         lon_n: 15.0 * (ltan - tn / 60.0),
     };
     let pass = o.pass_time(pts, 0.0, 1440.0, 0.5);
-    median(
-        pass.iter()
-            .zip(ts)
-            .map(|(&(tt, _), &t)| (tt - t).abs())
-            .collect(),
+    let dt: Vec<f64> = pass.iter().zip(ts).map(|(&(tt, _), &t)| tt - t).collect();
+    (
+        median(dt.clone()),
+        median(dt.iter().map(|d| d.abs()).collect()),
     )
 }
 
@@ -215,8 +215,9 @@ fn plane_offset(ps: &[[f64; 3]], ts: &[f64], ltan: f64) -> f64 {
 
 /// LTAN 13.0..=14.0 h at 0.005 h from the swath geometry, then node time [0, P) at 0.5 min from the
 /// slot times. Times alone barely move when the tracks shift sideways: they left LTAN loose by ~0.4 h
-/// (6 deg of track longitude) on 2026-11-06. Err when the footprints are too few or the best orbit
-/// still misses their times by more than MAX_MEDIAN_DT_MIN.
+/// (6 deg of track longitude) on 2026-11-06. Slot binning makes median |dt| flat over tn +-1.5 min, so
+/// tn is where the signed median crosses zero, among node times whose median |dt| passes the gate (that
+/// keeps out the zero half an orbit away). Err when the footprints are too few or no orbit passes.
 pub fn fit(footprints: &Footprints) -> Result<OrbitFit, String> {
     let (pts, ts) = samples(footprints, SAMPLES_PER_SLOT);
     if pts.len() < MIN_FIT_SAMPLES {
@@ -237,16 +238,20 @@ pub fn fit(footprints: &Footprints) -> Result<OrbitFit, String> {
     let tns: Vec<f64> = (0..(P / 0.5).ceil() as usize)
         .map(|j| j as f64 * 0.5)
         .collect();
-    let errs: Vec<f64> = tns
+    let errs: Vec<(f64, f64)> = tns
         .par_iter()
         .map(|&tn| misfit(&pts, &ts, ltan, tn))
         .collect();
-    let (tn, err) = (tns[argmin(&errs)], errs[argmin(&errs)]);
-    if err > MAX_MEDIAN_DT_MIN {
+    let Some(j) = (0..tns.len())
+        .filter(|&j| errs[j].1 <= MAX_MEDIAN_DT_MIN)
+        .min_by(|&a, &b| errs[a].0.abs().total_cmp(&errs[b].0.abs()))
+    else {
+        let best = errs.iter().map(|e| e.1).fold(f64::INFINITY, f64::min);
         return Err(format!(
-            "orbit unfit: median |dt| {err:.2} min, limit {MAX_MEDIAN_DT_MIN}"
+            "orbit unfit: median |dt| {best:.2} min, limit {MAX_MEDIAN_DT_MIN}"
         ));
-    }
+    };
+    let (tn, err) = (tns[j], errs[j].1);
     Ok(OrbitFit {
         orbit: Orbit {
             tn,
@@ -302,8 +307,8 @@ mod tests {
         // NOAA-20 on 2026-11-06 (CelesTrak TLE + GIBS track labels). Slot-binned times alone fit this day
         // 0.19 h of LTAN off, 2.9 deg of ground-track longitude; 0.3 deg needs the swath geometry.
         let truth = Orbit {
-            tn: 44.0,
-            lon_n: 15.0 * (13.54 - 44.0 / 60.0),
+            tn: 43.52,
+            lon_n: 15.0 * (13.54 - 43.52 / 60.0),
         };
         let px: Vec<(f64, f64)> = (0..FOOT_H)
             .flat_map(|y| (0..FOOT_W).map(move |x| (y, x)))
@@ -323,18 +328,17 @@ mod tests {
             .collect();
         let f = fit(&footprints).unwrap();
         assert!((f.ltan - 13.54).abs() * 15.0 <= 0.3, "ltan {}", f.ltan);
-        // Times binned into 6-min slots leave median |dt| flat over tn +-1.5 min; the grid takes the first.
-        assert!((f.orbit.tn - 44.0).abs() <= 1.5, "tn {}", f.orbit.tn);
+        assert!((f.orbit.tn - 43.52).abs() <= 0.5, "tn {}", f.orbit.tn);
         assert!(f.median_dt_min <= 3.0, "median {}", f.median_dt_min);
     }
 
     #[test]
     fn noaa21_passes_over_45n_when_and_where_sgp4_puts_it_on_2026_11_06() {
-        // SGP4 on CelesTrak TLEs: NOAA-20's day fits (43.91 min, 192.07 deg); NOAA-21 crossed 45 N at
+        // SGP4 on CelesTrak TLEs: NOAA-20's day fits (43.52 min, 192.17 deg); NOAA-21 crossed 45 N at
         // these (UTC minute, lon).
         let n21 = Orbit {
-            tn: 43.91,
-            lon_n: 192.07,
+            tn: 43.52,
+            lon_n: 192.17,
         }
         .shifted(N21_AFTER_N20);
         for (t, lon) in [(810.8, -10.3), (912.3, -35.6), (1013.8, -61.0)] {
