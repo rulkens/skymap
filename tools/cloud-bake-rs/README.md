@@ -53,7 +53,8 @@ source other than the `required` NOAA-20 mosaic (`src/sources_table.rs`) is skip
 
 ## Summary line
 
-stdout carries exactly one JSON line at the end (on exit 0, 3 and 4); logs go to stderr:
+stdout carries exactly one JSON line at the end (on exit 0, 3 and 4); logs go to stderr. `npm run`
+prints its own banner to stdout, so use `npm run -s bake-clouds` or read the last line:
 
 ```json
 {
@@ -91,22 +92,22 @@ and the frozen MTG/IODC grey-to-temperature tables. Provenance and refit notes i
 
 One module per stage, plus the numeric primitives the stages share.
 
-| module                                        | what                                                            |
-| --------------------------------------------- | --------------------------------------------------------------- |
-| `cli`, `date`                                 | the command line and the UTC date as values; WMS time strings   |
-| `sources_table`                               | every WMS layer in one table, with the `required` column        |
-| `fetch`                                       | cached, concurrent WMS pulls into the day cache                 |
-| `probe`, `verdict`, `summary`                 | calibration probe, the exit-code decision, the stdout JSON line |
-| `sources`                                     | the 13 sources; orbits held as row bands                        |
-| `seam`                                        | the per-join seam decision at 2048x1024                         |
-| `maxflow`                                     | Boykov–Kolmogorov on the wrapped grid                           |
-| `blend`                                       | Laplacian-pyramid blend, windowed                               |
-| `composite`                                   | the join loop and its tail                                      |
-| `orbit`                                       | pass times                                                      |
-| `geodecode`                                   | IR frame -> opacity layer                                       |
-| `geofill`                                     | time-matched gap fill                                           |
-| `imageio`                                     | decoders, Pillow's BOX resize, the WebP writer                  |
-| `edt`, `label`, `filters`, `quantile`, `grid` | distance transform, components, filters, percentiles            |
+| module                                        | what                                                                          |
+| --------------------------------------------- | ----------------------------------------------------------------------------- |
+| `cli`, `date`                                 | the command line and the UTC date as values                                   |
+| `sources_table`                               | every WMS layer in one table, with the `required` column                      |
+| `fetch`                                       | cached, concurrent WMS pulls into the day cache; WMS time strings             |
+| `probe`, `verdict`, `summary`                 | calibration probe, the exit-code decision, the stdout JSON line               |
+| `sources`                                     | every source in `sources_table`, loaded and decoded; orbits held as row bands |
+| `seam`                                        | the per-join seam decision at 2048x1024                                       |
+| `maxflow`                                     | Boykov–Kolmogorov on the wrapped grid                                         |
+| `blend`                                       | Laplacian-pyramid blend, windowed                                             |
+| `composite`                                   | the join loop and its tail                                                    |
+| `orbit`                                       | pass times                                                                    |
+| `geodecode`                                   | IR frame -> opacity layer                                                     |
+| `geofill`                                     | time-matched gap fill                                                         |
+| `imageio`                                     | decoders, Pillow's BOX resize, the WebP writer                                |
+| `edt`, `label`, `filters`, `quantile`, `grid` | distance transform, components, filters, percentiles                          |
 
 Two departures from a line-by-line port, both exact:
 
@@ -131,8 +132,6 @@ Warm cache (`--offline`), Apple M-series laptop, 2026-11-10: total 73.9 s on 1 t
 on all cores (the `seconds` field of the summary line). Output is identical at every thread count. The
 WebP encode (libwebp, single-threaded, quality 80 method 4) is ~9 s of that and the floor beyond a few
 threads. Peak RSS is ~5.3 GB on macOS, whose allocator keeps freed pages; on Linux expect ~3 GB.
-The stage-by-stage table from the spike, and the Python's 195 to 209 s, are no longer reproducible: the
-per-stage timer was removed with the other spike flags.
 
 ## Tests
 

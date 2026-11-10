@@ -30,10 +30,11 @@ run, never a global or environment variable. WMS times are built from the date p
 rolling over into the neighbouring day when the offset leaves [0, 1440).
 
 **Orbit.** Fitted per day from that day's granule footprints (a port of the spike's `fit_orbit.py`):
-coarse grid over LTAN 13.0–14.0 h × node time [0, P) at 0.5 min, then a fine pass (0.01 h × 0.1 min),
-minimising the median |pass time − slot time| over footprint samples within ±30° latitude. On
+coarse grid over LTAN 13.0–14.0 h × node time [0, P) at 0.5 min (no fine pass: both measured days end
+on coarse values), minimising the median |pass time − slot time| over footprint samples within ±30° latitude. On
 2026-11-06 and 2026-11-09 the fit reaches a median of 2.0 min; the node moved from 45.0 min / 186.0° to
-89.0 min / 174.25° between them, so a frozen orbit is wrong after one day.
+89.0 min / 174.25° between them, so a frozen orbit is wrong after one day. A median above 5 min
+(`median_dt_min`) means the model no longer explains the footprints: exit 3.
 
 **Ice mask month.** The mask is cut from the Blue Marble 2004 month whose calendar month matches the
 bake date (owner ruling: the month nearest the bake date). All twelve 21600×10800 equirects live in
@@ -44,8 +45,8 @@ the app's `BMNG_VINTAGE` is a pick from that table (August), so no month or URL 
 the same total cloud amount (6 Nov 0.267, 9 Nov 0.261 mean opacity). A fixed transfer curve is
 backlogged (owner ruling).
 
-**Missing data.** A missing, non-PNG or all-black granule or geostationary frame is skipped with a
-warning; the bake continues without it. A frame is all-black when, among its non-transparent pixels,
+**Missing data.** A missing or non-PNG granule or geostationary frame, or an all-black geostationary frame,
+is skipped with a warning; the bake continues without it. A frame is all-black when, among its non-transparent pixels,
 ≥ 99% have R = G = B = 0 (GOES-East once served one). A source whose row in the source table says
 `required` (only the NOAA-20 daily mosaic: it patches the NOAA-20 swaths) is fatal when missing, as is
 having too few granules to fit the orbit.
@@ -58,8 +59,9 @@ nothing and exits 3. `MIN_COVERAGE` is measured, not guessed: 0.9 × the lower o
 stretch that is fixed per product). Each bake fetches a probe at 12:00Z of its day: MTG + GOES-East over
 their Atlantic overlap and MTG + IODC over their Indian Ocean overlap, decodes both with the bake's own
 decoders and takes the median |ΔT| in kelvin over pixels valid in both. Above `MAX_CAL_DRIFT_K` on
-either pair: exit 4, nothing written. The threshold is 2 × the larger value measured on 6 and 9 Nov,
-and at least 3 K.
+either pair: exit 4, nothing written. The measured inter-satellite floor is 4–5 K (view angle and timing, not
+calibration), so `MAX_CAL_DRIFT_K` = 10.3 K, 2 × the larger measured value: it catches stretch or LUT
+breaks, not ~5 K drift.
 
 **Exit codes.**
 
@@ -127,5 +129,4 @@ the required mosaic as a code special case (now a field on its row).
 - A second run with `--offline` reproduces the file byte for byte.
 - Baking 2026-11-06 and 2026-11-09 both succeed and look right in the app (owner's eye, via the spike's
   Cloud map switch).
-- A day with a dropped frame still bakes; a deliberately broken calibration (tables offset by 10 K in a
-  test) exits 4.
+- A day with a dropped frame still bakes; the drift measure fed a 10 K offset in a unit test gives ~10 K.

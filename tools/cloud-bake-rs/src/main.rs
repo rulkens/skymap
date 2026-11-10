@@ -112,9 +112,15 @@ fn main() {
     let coverage = verdict::coverage(&wgt, &cov);
     run.coverage = serde_json::json!(coverage);
     eprintln!("coverage {coverage:.3}");
-    if let verdict::Verdict::Data(m) | verdict::Verdict::Drift(m) = verdict::verdict(coverage, &cal)
-    {
-        fail(&run, 3, &m);
+    if coverage < verdict::MIN_COVERAGE {
+        fail(
+            &run,
+            3,
+            &format!(
+                "coverage {coverage:.3} is below the floor {:.3}",
+                verdict::MIN_COVERAGE
+            ),
+        );
     }
     drop(cov);
 

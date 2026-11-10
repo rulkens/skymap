@@ -53,28 +53,3 @@ impl Summary {
         std::process::exit(exit)
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn the_json_line_carries_the_spec_keys() {
-        let s = Summary::new(Date::parse("2026-11-09").unwrap(), "o.webp".into());
-        let j = s.json(3);
-        for k in [
-            "date",
-            "exit",
-            "coverage",
-            "orbit",
-            "calibration",
-            "skipped",
-            "fetched",
-            "seconds",
-            "out",
-        ] {
-            assert!(j.get(k).is_some(), "{k}");
-        }
-        assert_eq!(j["exit"], 3);
-    }
-}

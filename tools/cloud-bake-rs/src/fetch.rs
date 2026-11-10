@@ -162,8 +162,10 @@ fn get(url: &str, path: &Path, magic: &[u8]) -> Fetched {
     skip(path, last)
 }
 
-/// Fetch every job on `n` threads. Offline, a job is a cache miss and so missing data.
+/// Fetch every job not already cached, on `n` threads. Offline, a job is a cache miss and so missing data.
 fn fetch_all(jobs: Vec<(PathBuf, String)>, n: usize, magic: &[u8], allow: bool) {
+    let (hit, jobs): (Vec<_>, Vec<_>) = jobs.into_iter().partition(|(p, _)| cached(p));
+    STATS.cached.fetch_add(hit.len(), Ordering::Relaxed);
     if allow {
         pool(jobs, n, |(p, u)| {
             get(&u, &p, magic);
@@ -247,10 +249,6 @@ pub fn prefetch(frames: &Path, reqs: &[FrameReq], allow: bool) {
     let (mut g, mut e) = (Vec::new(), Vec::new());
     for r in reqs {
         for (_, _, path, url) in pieces(frames, r) {
-            if cached(&path) {
-                STATS.cached.fetch_add(1, Ordering::Relaxed);
-                continue;
-            }
             match by_id(r.sat).host {
                 Host::Eumetsat => e.push((path, url)),
                 Host::Gibs => g.push((path, url)),
@@ -327,7 +325,6 @@ pub fn granules(dir: &Path, date: Date, allow: bool) -> Footprints {
                 ),
             )
         })
-        .filter(|(p, _)| !cached(p))
         .collect();
     fetch_all(jobs, 6, PNG, allow);
     let mut foot = serde_json::Map::new();
@@ -359,12 +356,6 @@ pub fn granules(dir: &Path, date: Date, allow: bool) -> Footprints {
             mask: m,
         });
     }
-    write_atomic(
-        &dir.join("footprints.json"),
-        serde_json::Value::Object(foot.clone())
-            .to_string()
-            .as_bytes(),
-    );
     let hi = dir.join("hi");
     let mut meta = serde_json::Map::new();
     let mut jobs = Vec::new();
@@ -390,18 +381,21 @@ pub fn granules(dir: &Path, date: Date, allow: bool) -> Footprints {
                 let (x0, x1) = (a as usize * 8, (a + l) as usize * 8);
                 let path = hi.join(format!("{s}_{k}{p}.png"));
                 list.push(serde_json::json!({"path": path.to_str().unwrap(), "x0": x0, "y0": y0}));
-                if !cached(&path) {
-                    let (lon0, lon1) = (
-                        -180.0 + x0 as f64 * 360.0 / 8192.0,
-                        -180.0 + x1 as f64 * 360.0 / 8192.0,
-                    );
-                    let (lat1, lat0) = (
-                        90.0 - y0 as f64 * 180.0 / 4096.0,
-                        90.0 - y1 as f64 * 180.0 / 4096.0,
-                    );
-                    let url = format!("{granule}&BBOX={lon0:?},{lat0:?},{lon1:?},{lat1:?}&WIDTH={}&HEIGHT={}&TIME={}", x1 - x0, y1 - y0, tstr(date, s));
-                    jobs.push((path, url));
-                }
+                let (lon0, lon1) = (
+                    -180.0 + x0 as f64 * 360.0 / 8192.0,
+                    -180.0 + x1 as f64 * 360.0 / 8192.0,
+                );
+                let (lat1, lat0) = (
+                    90.0 - y0 as f64 * 180.0 / 4096.0,
+                    90.0 - y1 as f64 * 180.0 / 4096.0,
+                );
+                let url = format!(
+                    "{granule}&BBOX={lon0:?},{lat0:?},{lon1:?},{lat1:?}&WIDTH={}&HEIGHT={}&TIME={}",
+                    x1 - x0,
+                    y1 - y0,
+                    tstr(date, s)
+                );
+                jobs.push((path, url));
             }
         }
         meta.insert(s.clone(), serde_json::Value::Array(list));
@@ -448,7 +442,6 @@ pub fn mosaics(dir: &Path, date: Date, allow: bool) -> Result<(), String> {
                 ),
             )
         })
-        .filter(|(p, _)| !cached(p))
         .collect();
     fetch_all(jobs, 2, JPEG, allow);
     match crate::sources_table::mosaics()

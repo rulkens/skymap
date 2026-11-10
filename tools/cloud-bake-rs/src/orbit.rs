@@ -15,6 +15,9 @@ const SAMPLES_PER_SLOT: usize = 150;
 // A full day gives ~7,000-10,000 samples; under four slots' worth the granules are essentially
 // missing and any fit would be noise.
 const MIN_FIT_SAMPLES: usize = 600;
+// Median |pass time - sample time| of a good fit; the slot binning alone puts a floor under it. Measured
+// 2026-11-06 and 2026-11-09: 2.0 min. Above 5 the orbit model no longer explains the footprints.
+const MAX_MEDIAN_DT_MIN: f64 = 5.0;
 
 /// One granule slot: its start minute (UTC) and its swath mask (alpha > 0), FOOT_W x FOOT_H.
 pub struct Footprint {
@@ -88,8 +91,7 @@ impl Orbit {
         // out in longitude from the point and stop where even the distance to a sample's meridian
         // half-plane, r sin(dlon) with r the point's distance from the axis, beats the best. The
         // samples are tiled three times around the circle so the walk never wraps, between infinite-
-        // longitude sentinels that end it without a bounds check (which doubled the fit's time).
-        // Ties go to the earlier sample, as in the time-ordered brute force this replaced.
+        // longitude sentinels that end it without a bounds check. Ties go to the earlier sample.
         let n = samples.len();
         if n == 0 {
             return vec![(f64::NAN, PI); pts.len()];
@@ -202,7 +204,8 @@ fn grid(l0: f64, ln: usize, ls: f64, n0: f64, nn: usize, ns: f64) -> Vec<(f64, f
         .collect()
 }
 
-/// Coarse grid LTAN 13.0..=14.0 h x node time [0, P) at 0.5 min, then a fine pass around the best.
+/// Coarse grid LTAN 13.0..=14.0 h x node time [0, P) at 0.5 min. Err when the footprints are too few
+/// or the best orbit still misses them by more than MAX_MEDIAN_DT_MIN.
 pub fn fit(footprints: &Footprints) -> Result<OrbitFit, String> {
     let (pts, ts) = samples(footprints);
     if pts.len() < MIN_FIT_SAMPLES {
@@ -212,11 +215,12 @@ pub fn fit(footprints: &Footprints) -> Result<OrbitFit, String> {
         ));
     }
     let coarse = grid(13.0, 21, 0.05, 0.0, (P / 0.5).ceil() as usize, 0.5);
-    let (e0, l0, n0) = best_on(&pts, &ts, &coarse, 0.5);
-    let fine = grid(l0 - 0.05, 11, 0.01, n0 - 0.5, 11, 0.1);
-    let (e1, l1, n1) = best_on(&pts, &ts, &fine, 0.1);
-    // the fine pass only replaces the coarse best when strictly better, as in fit_orbit.py
-    let (err, ltan, tn) = if e1 < e0 { (e1, l1, n1) } else { (e0, l0, n0) };
+    let (err, ltan, tn) = best_on(&pts, &ts, &coarse, 0.5);
+    if err > MAX_MEDIAN_DT_MIN {
+        return Err(format!(
+            "orbit unfit: median |dt| {err:.2} min, limit {MAX_MEDIAN_DT_MIN}"
+        ));
+    }
     Ok(OrbitFit {
         tn,
         lon_n: 15.0 * (ltan - tn / 60.0),

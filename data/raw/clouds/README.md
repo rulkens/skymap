@@ -12,6 +12,6 @@ static fallback cloud map is `textures.earthClouds` there too.
 
 | Upstream                                                          | Data                                                     | Terms                                                                                                          |
 | ----------------------------------------------------------------- | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| NASA GIBS (`gibs.earthdata.nasa.gov`)                             | VIIRS (NOAA-20 / Suomi NPP) swaths and mosaic; GOES-East | NASA open data: free including commercial use, with credit                                                     |
+| NASA GIBS (`gibs.earthdata.nasa.gov`)                             | VIIRS (NOAA-20 / NOAA-21) swaths and mosaic; GOES-East and GOES-West | NASA open data: free including commercial use, with credit                                                     |
 | NASA GIBS, Himawari layer                                         | Himawari frames                                          | JMA terms unverified; flagged medium risk                                                                      |
 | EUMETView (`view.eumetsat.int`)                                   | Meteosat MTG and IODC WMS visualisations                 | CC BY 4.0; credit "Contains modified EUMETSAT Meteosat data 2026" (the year of the data)                       |

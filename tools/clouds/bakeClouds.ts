@@ -1,7 +1,7 @@
 /**
  * `npm run bake-clouds -- --out <file.webp> [--date YYYY-MM-DD] [--offline]` — fills the Rust cloud bake's
- * path flags from the raw-data registry and runs it. `--date` is passed through only when given: the
- * binary owns the default (yesterday, UTC). Exits with the binary's code (see tools/cloud-bake-rs/README.md);
+ * path flags from the raw-data registry and runs it. The launcher always passes `--date` (default
+ * yesterday, UTC) so its Blue Marble month and the baked day cannot disagree around midnight. Exits with the binary's code (see tools/cloud-bake-rs/README.md);
  * 2 here also means the month's Blue Marble file has not been fetched.
  */
 
@@ -23,6 +23,10 @@ if (!values.out) {
 
 const MS_PER_DAY = 86_400_000;
 const day = values.date ?? new Date(Date.now() - MS_PER_DAY).toISOString().slice(0, 10);
+if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) {
+  console.error(`bakeClouds: --date must be YYYY-MM-DD, got ${day}`);
+  process.exit(2);
+}
 const blueMarble = rawDataPath(bmngMonthKey(Number(day.slice(5, 7))));
 if (!existsSync(blueMarble)) {
   console.error(
@@ -32,7 +36,8 @@ if (!existsSync(blueMarble)) {
 }
 
 const flags = [
-  ...(values.date ? ['--date', values.date] : []),
+  '--date',
+  day,
   '--baseline',
   rawDataPath('textures.earthClouds'),
   '--blue-marble',
