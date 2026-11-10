@@ -43,7 +43,6 @@ describe('SkyHudContainer', () => {
   it('shows while standing, and gives way to a tour', () => {
     const { store } = mount();
     expect(hud()).not.toBeNull();
-    expect(screen.getByText('180° · 34° up')).toBeTruthy();
 
     act(() => {
       store.dispatch(takeoverStarted({ kind: 'tour', id: 'webShowcase' }));

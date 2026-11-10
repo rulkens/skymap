@@ -224,9 +224,9 @@ phone. Mockups: grill Q8 (variant B2), shot in the real UI; rebuild them with th
 
 - **Compass** (bottom centre): the place title (display face) with a small "Sky" tag; a ribbon about 120°
   wide with ticks every 5°, numbers every 15°, cardinal and intercardinal letters, faded at both ends; an
-  accent caret under the centre; below it the readout "180° · 34° up". It reads the sky view readout row
+  accent caret under the centre; no numeric readout (owner, 2026-11-10). It reads the sky view readout row
   (`{ azimuthRad, altitudeRad, fovYRad } | null`, rounded to 0.5°) so it follows a drag live.
-- **Leave** under the readout: "Leave" with `Esc` printed dim. With **Skip to tonight** (D6) and **Skip to
+- **Leave** under the compass: "Leave" with `Esc` printed dim. With **Skip to tonight** (D6) and **Skip to
   when it rises** (§7) beside it when they apply; each jumps the clock with `manualPausedAtActions` and is
   undone by the Time bar's "Now".
 - **Readout in the scale bar's slot**: field of view and the spot's coordinates (desktop `ScaleBar`, phone

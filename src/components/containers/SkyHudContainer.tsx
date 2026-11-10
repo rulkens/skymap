@@ -21,7 +21,6 @@ import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { julianDaysToUnixMs } from '../../utils/time/julianDaysToUnixMs';
 import { unixMsToJulianDays } from '../../utils/time/unixMsToJulianDays';
 import { placeLabel } from '../../utils/places/placeLabel';
-import { headingLabel } from '../../utils/sky/headingLabel';
 import { altAzFromSpot } from '../../utils/sky/altAzFromSpot';
 import { declinationAt } from '../../utils/sky/declinationAt';
 import { neverRises } from '../../utils/sky/neverRises';
@@ -91,7 +90,6 @@ function SkyHudContainer({ phone }: SkyHudContainerProps): ReactNode {
       phone={phone}
       place={placeLabel(view.spot).text}
       azimuthDeg={radToDeg(view.azimuthRad)}
-      heading={headingLabel(view.azimuthRad, view.altitudeRad)}
       onLeave={onLeave}
       onSkipToTonight={sunSets ? onSkipToTonight : null}
       onSkipToRise={risesLater ? onSkipToRise : null}

@@ -312,8 +312,8 @@ Design source: the grill mockups (Q5 hover ring `g1`, Q6 phone label `p4`, Q8 HU
 with `npm run shot` at 1728×1000 and 400×850 and compare. Behaviour per spec §4.4 and §6: the button shows on
 `selectSkyEntry`, `S` printed dim; desktop hover/focus shows the centre ring + place line; phone label carries
 `placeLabel` ("Look up from near Copenhagen" / coordinates); the HUD mounts while the sky view is non-null and no
-tour, exhibit or clip runs; compass ribbon ~120°, ticks 5°, numbers 15°, letters, caret, readout
-"180° · 34° up"; Leave with `Esc`; "Skip to tonight" while the sun is above 0° (to `nextSunBelowAt(−18°)`, else
+tour, exhibit or clip runs; compass ribbon ~120°, ticks 5°, numbers 15°, letters, caret (no readout);
+Leave with `Esc`; "Skip to tonight" while the sun is above 0° (to `nextSunBelowAt(−18°)`, else
 the sun's lowest point that night); "Skip to when it rises" from Task 9; both via `manualPausedAtActions`.
 Navigation sky rows: Drag "look around", Wheel "field of view", "Wheel out at 120°" "lift off", Esc
 "close card, then leave".

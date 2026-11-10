@@ -1,6 +1,6 @@
 /**
- * SkyHud — what says "you are standing here, looking there": the place, the horizon compass and
- * its readout, then the one way out (Leave, Esc) with the clock skips that apply beside it. Bottom
+ * SkyHud — what says "you are standing here, looking there": the place and the horizon compass,
+ * then the one way out (Leave, Esc) with the clock skips that apply beside it. Bottom
  * centre on both layouts; the phone lifts it above the dock and the scale slot and prints no keys.
  */
 
@@ -15,8 +15,6 @@ export type SkyHudProps = {
   readonly phone: boolean;
   readonly place: string;
   readonly azimuthDeg: number;
-  /** "180° · 34° up". */
-  readonly heading: string;
   readonly onLeave: () => void;
   /** Null while the sun is down at the spot. */
   readonly onSkipToTonight: (() => void) | null;
@@ -30,7 +28,6 @@ function SkyHud({
   phone,
   place,
   azimuthDeg,
-  heading,
   onLeave,
   onSkipToTonight,
   onSkipToRise,
@@ -43,7 +40,6 @@ function SkyHud({
         <span className={styles.place}>{place}</span>
       </h2>
       <SkyCompass azimuthDeg={azimuthDeg} />
-      <p className={styles.heading}>{heading}</p>
       <div className={styles.actions}>
         <ActionPill
           icon={<CloseIcon size={12} />}
