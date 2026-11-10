@@ -24,4 +24,6 @@ export type FieldControl =
   | 'focusRef'
   /** A Fly's curve and its pass-by, each one object edited as several rows. */
   | 'spline'
-  | 'passBy';
+  | 'passBy'
+  /** A Fly's waypoints as chips that select them. */
+  | 'waypoints';

@@ -1,5 +1,5 @@
 import { useAppDispatch, useAppSelector } from '../../../../../../src/store/hooks';
-import { objectPicked, paramEdited } from '../../../session/state/studioSlice';
+import { objectPicked, paramEdited, rowSelected } from '../../../session/state/studioSlice';
 import { selectPick } from '../../../session/state/selectors';
 import { isPickFor } from '../../../session/utils/isPickFor';
 import { sameParamValue } from '../../../draft/utils/sameParamValue';
@@ -13,6 +13,7 @@ import SegmentedField from '../../../primitives/components/SegmentedField/Segmen
 import SettingsActionField from '../SettingsActionField/SettingsActionField';
 import SplineField from '../SplineField/SplineField';
 import PassByField from '../PassByField/PassByField';
+import WaypointsField from '../WaypointsField/WaypointsField';
 import ObjectPicker from '../ObjectPicker/ObjectPicker';
 import { FIELD_CONTROLS } from '../../data/fieldControls';
 import { EASE_OPTIONS } from '../../data/easeOptions';
@@ -27,6 +28,7 @@ import type { ParamValue } from '../../../@types/kinds/ParamValue';
 import type { SettingsAction } from '../../../../../../src/compositions/@types/SettingsAction';
 import type { SplineConfig } from '../../../../../../src/@types/animation/SplineConfig';
 import type { PassByConfig } from '../../../../../../src/@types/animation/PassByConfig';
+import type { PathWaypoint } from '../../../../../../src/@types/animation/PathWaypoint';
 import type { RowRef } from '../../../@types/rows/RowRef';
 import type { InspectorSubject } from '../../../@types/rows/InspectorSubject';
 
@@ -102,6 +104,14 @@ function FieldRow({ spec, subject, rowRef }: Props) {
             gesture,
           )
         }
+      />
+    );
+  } else if (widget.widget === 'waypoints' && rowRef.kind === 'effect') {
+    const { path } = rowRef;
+    field = (
+      <WaypointsField
+        waypoints={stored as readonly PathWaypoint[]}
+        onSelect={(index) => dispatch(rowSelected({ kind: 'waypoint', path, index }))}
       />
     );
   } else if (widget.widget === 'layers') {

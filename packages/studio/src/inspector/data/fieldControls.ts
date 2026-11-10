@@ -43,4 +43,5 @@ export const FIELD_CONTROLS: Record<FieldControl, FieldWidget> = {
   focusRef: { widget: 'object', pick: 'ref', clearable: true },
   spline: { widget: 'spline' },
   passBy: { widget: 'passBy' },
+  waypoints: { widget: 'waypoints' },
 };

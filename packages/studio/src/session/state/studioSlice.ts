@@ -16,6 +16,7 @@ import { commitDraft } from '../utils/commitDraft';
 import { stepHistory } from '../utils/stepHistory';
 import { isPickFor } from '../utils/isPickFor';
 import { rowKey } from '../../draft/utils/rowKey';
+import { ancestorKeys } from '../../draft/utils/ancestorKeys';
 import type { ClipData } from '../../../../../src/@types/animation/ClipData';
 import type { ClipId } from '../../../../../src/@types/animation/ClipId';
 import type { ParamValue } from '../../@types/kinds/ParamValue';
@@ -55,9 +56,14 @@ export const studioSlice = createSlice({
     refNamed: (state, { payload }: PayloadAction<{ key: string; name: string }>) => {
       state.refNames[payload.key] = payload.name;
     },
+    /** Unfolds the blocks holding the row, so the outline shows it (a waypoint chip picks one inside a folded Fly). */
     rowSelected: (state, { payload }: PayloadAction<RowRef | null>) => {
       // A stored-as-is value, never mutated in place, so re-typing it to Immer's Draft is sound.
       state.selection = payload as Draft<RowRef> | null;
+      if (payload !== null && payload.kind !== 'start') {
+        const holders = ancestorKeys(payload);
+        state.collapsed = state.collapsed.filter((id) => !holders.includes(id));
+      }
     },
     rowToggled: (state, { payload }: PayloadAction<string>) => {
       const { collapsed } = state;

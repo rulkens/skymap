@@ -9,7 +9,8 @@ export type FieldWidget = {
     | 'settingsAction'
     | 'object'
     | 'spline'
-    | 'passBy';
+    | 'passBy'
+    | 'waypoints';
   /** Layers widget: offer a per-item entry's items too. */
   readonly items?: boolean;
   /** Object widget: what a pick stores, the object's focus id, position or selection ref. */

@@ -147,6 +147,7 @@ export const cameraKinds: Pick<
       value: `via ${formatNameList(s.waypoints.map((w, i) => ('id' in w ? w.id : `point ${i + 1}`)))}`,
     }),
     fields: [
+      { key: 'waypoints', param: 'waypoints', label: 'Waypoints', control: 'waypoints' },
       { ...overField('Travel time'), group: true },
       // fallback: what buildPathTrack flies with the param absent; resetTo: what flyPath() stamps.
       {

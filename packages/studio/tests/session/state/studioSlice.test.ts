@@ -2,15 +2,24 @@ import { describe, it, expect } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../../../src/store/rootReducer';
-import { dollyTo, hold, seq } from '../../../../../src/services/engine/animation/effectHelpers';
+import {
+  atPoint,
+  dollyTo,
+  flyPath,
+  hold,
+  seq,
+} from '../../../../../src/services/engine/animation/effectHelpers';
 import {
   draftResolved,
   paramEdited,
+  rowSelected,
+  rowToggled,
   startModeSet,
   studioOpened,
   undone,
 } from '../../../src/session/state/studioSlice';
 import {
+  selectCollapsed,
   selectCurrentResolution,
   selectDraft,
   selectIsDirty,
@@ -45,6 +54,17 @@ const edit = (value: number, gesture: string | null, label = 'Distance') =>
   paramEdited({ ref: DISTANCE, param: 'to', value, label, gesture });
 
 describe('studioSlice', () => {
+  it('selecting a row unfolds the blocks around it, so the outline shows it, and keeps it folded', () => {
+    const fly = flyPath([atPoint([1, 0, 0], 2)], { over: 4 });
+    const store = open('cosmicFlows', { timeline: [seq([fly, hold(1)])] });
+    for (const id of ['e:0', 'e:0.0']) store.dispatch(rowToggled(id));
+
+    store.dispatch(rowSelected({ kind: 'effect', path: [0, 0] }));
+    expect(selectCollapsed(store.getState())).toEqual(['e:0.0']);
+    store.dispatch(rowSelected({ kind: 'waypoint', path: [0, 0], index: 0 }));
+    expect(selectCollapsed(store.getState())).toEqual([]);
+  });
+
   it('an edit to the value the param already has changes nothing: clean, no Undo, same revision', () => {
     const store = open();
     const before = selectStudioState(store.getState());

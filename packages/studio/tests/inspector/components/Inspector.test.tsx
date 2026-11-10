@@ -92,6 +92,21 @@ describe('Inspector', () => {
     expect(screen.getByRole('combobox', { name: 'Ease' })).toBeTruthy();
   });
 
+  it("a Fly's waypoint chip selects that waypoint", async () => {
+    const store = open({
+      timeline: [flyPath([atFocus('m31' as FocusId), atPoint([5, 0, 0], 8)], { over: 6 })],
+    });
+    store.dispatch(rowSelected({ kind: 'effect', path: [0] }));
+    show(store);
+    await userEvent.click(screen.getByRole('button', { name: 'Settle 2, point' }));
+
+    expect(selectStudioState(store.getState()).selection).toEqual({
+      kind: 'waypoint',
+      path: [0],
+      index: 1,
+    });
+  });
+
   it('a subject waypoint shows no Distance, and its unset Leg time reads auto with no reset', () => {
     const store = open({
       timeline: [flyPath([atFocus('m31' as FocusId), atPoint([5, 0, 0], 8)], { over: 6 })],
