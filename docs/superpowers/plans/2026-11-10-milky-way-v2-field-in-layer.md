@@ -999,7 +999,7 @@ export function deriveFieldView(frame: FrameView, toGalaxy: Mat4): FieldView;
 - The app's `toGalaxy` is the memoised `inverse(milkyWayModelCached())` that `milkyWayCamPosModel`
   already holds. Extract that inverse into `src/layers/milkyWay/cloud/render/milkyWayInverseModelCached.ts`
   and have both use it.
-- [ ] **Test:**
+- [x] **Test:**
       `it('with the identity, rays built from the FieldView land on their own NDC under frame.vp')`.
   - Build a `FrameView` fixture with `frustum = shiftedFrustum(0.8, 16/9, [0.3, −0.2])`,
     `vp = computeViewProj(cam, frustum)` and `cam.roll = 0.4`.
@@ -1009,12 +1009,12 @@ export function deriveFieldView(frame: FrameView, toGalaxy: Mat4): FieldView;
   - Also assert `view.eye` equals `drawCamPos` and `view.frustum` is `frame.frustum` (`toBe`).
   - The oracle is the app's real projection, so this pins the basis, its handedness, the roll and
     the asymmetric frustum together.
-- [ ] **Test:** `it('in the galaxy frame, the eye is milkyWayCamPosModel's and rays stay parallel')`.
+- [x] **Test:** `it('in the galaxy frame, the eye is milkyWayCamPosModel's and rays stay parallel')`.
   - With `toGalaxy = milkyWayInverseModelCached()`, `view.eye` ≈ `milkyWayCamPosModel(drawCamPos)`
     (1e-9 relative).
   - Map `fwd + right·t.x + up·t.y` back by `milkyWayModelCached()` as a direction; it must be
     parallel to the world-frame ray (cross product ≈ 0).
-- [ ] Commit.
+- [x] Commit.
 
 ### Task B3b: One kpc-per-unit scale for the field and its placement
 
