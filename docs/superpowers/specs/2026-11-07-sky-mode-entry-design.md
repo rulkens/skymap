@@ -107,19 +107,18 @@ six reactors; sky is the first takeover with its own HUD, a registry pays at the
 
 Each is its own commit, behaviour-preserving, with its test.
 
-- **P1. Arms report a pushed zoom limit; freshness is decided once.** Replace `clip?: ClipData` in the step
-  result with `pushed?: 'in' | 'out'`; `replayInput` emits `zoomLimitPushed({ arm, edge, anchorLocalM })`
-  (the cursor anchor for a body push). A zoom `InputStep` carries `fresh: boolean`, set once in the input
-  layer from the wheel clock (a notch after `SKY_EXIT_PAUSE_MS` of quiet, the constant moved to
-  `src/data/camera/` and renamed for its new job); the sky arm's `SkyWheelMemory.lastWheelMs` goes, and no arm
-  keeps a wheel clock. The sky arm returns `pushed: 'out'` for a fresh notch its widest lens ate, where it
-  returned its clip today (`skyCameraArm.ts:70`), carrying the `skyExitLift` clip as a value (it needs
-engine-only context: `hostOrThrow`, `groundRadiusAtM`, `foldToWorld`); a new saga decides to play it on
-(sky, out). The body arm
-  returns `pushed: 'in'` for a fresh zoom-in at the floor (definition: §4.2); the saga ignores (body, in)
-  until the feature. First check: the saga can read the framed sky pose at the push (the at-rest commit); if
-  it cannot, stop and report. Tests: the lift still plays from a fresh wheel-out at the widest lens; a
-  trackpad tail does not.
+- **P1. Arms report a pushed zoom limit; freshness is decided once.** The step result's `clip?: ClipData`
+  becomes `pushed?: ZoomLimitPush`, a value without an `arm` tag: `{ edge: 'out', lift }` from the sky arm
+  for a fresh wheel-out its widest lens ate (the `skyExitLift` clip built by the arm, which alone has the
+  engine ctx), `{ edge: 'in', body, pointLocalM }` from the body arm for a fresh zoom-in that starts at the
+  floor (definition: §4.2), the cursor anchor in body-fixed metres. `replayInput` only reports it
+  (`zoomLimitPushed`); `watchZoomLimitSaga` plays the lift on `out` and ignores `in` until the feature,
+  which derives the sky spot from `body` + `pointLocalM` where it needs it. A zoom `InputStep` carries
+  `fresh: boolean`, stamped once by the `input` slice: each source keeps its own `lastWheelMs`
+  (`Motion.eventMs` is the SOURCE's clock) and a notch is fresh after `FRESH_WHEEL_PAUSE_MS`
+  (`src/data/input/freshWheelPauseMs.ts`) of that source's wheel quiet, a folded run judged by its first
+  event. No arm or runtime keeps a wheel clock. Tests: the lift still plays from a fresh wheel-out at the
+  widest lens; a trackpad tail does not.
 - **P2. Frame readouts become rows.** The two hand-written blocks in `runFrame` (`engineScaleChanged`,
   `runFrame.ts:160`; `engineBodyDistanceReported`, `runFrame.ts:220`) become rows of one table walked once a
   frame. Store keys, reducers and their dedup/throttle stay; no reader changes. Mind the frame-file purity
