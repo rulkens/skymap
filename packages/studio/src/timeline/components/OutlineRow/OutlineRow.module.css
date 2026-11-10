@@ -1,0 +1,134 @@
+/* The outline's columns: Step (name + indent) | Value | Dur | five channel slots. The dock's
+   --outline-w, --name-w and --indent set them, so the header row in TimelinePane lines up. */
+.root {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--name-w) minmax(0, 1fr) 6ch calc(var(--space-6) * 5);
+  column-gap: var(--space-4);
+  align-items: center;
+  min-width: 0;
+  padding: 0 var(--space-4) 0 var(--space-8);
+  cursor: pointer;
+}
+.invalid {
+  box-shadow: inset 2px 0 0 var(--color-fg);
+}
+.selected {
+  box-shadow: inset 2px 0 0 var(--color-accent);
+}
+.rail {
+  position: absolute;
+  top: 0;
+  bottom: -1px;
+  left: calc(var(--space-8) + var(--k) * var(--indent) + var(--space-2));
+  border-left: 1px solid var(--color-fg-tertiary);
+}
+.railAll {
+  width: var(--space-1);
+  border-right: 1px solid var(--color-fg-tertiary);
+}
+.railFork {
+  border-left-style: dashed;
+}
+.step {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  padding-left: calc(var(--d, 0) * var(--indent));
+}
+.twisty {
+  flex: none;
+  width: var(--space-5);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-fg-tertiary);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+.twisty:focus-visible {
+  outline: 2px solid var(--color-accent);
+}
+.icon {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: var(--space-10);
+  height: calc(var(--row-h) - var(--space-4));
+  border-radius: var(--radius-sm);
+  color: var(--c, var(--color-fg-dim));
+  background: color-mix(in srgb, var(--c, transparent) 18%, transparent);
+}
+.iconGroup {
+  color: var(--color-fg-base);
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--color-fg-dim);
+}
+.iconBackground {
+  background: transparent;
+  outline: 1px dashed var(--c);
+  outline-offset: -1px;
+}
+.name {
+  overflow: hidden;
+  color: var(--color-fg-base);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.nameGroup {
+  color: var(--color-fg);
+  font-weight: 500;
+}
+.value {
+  display: flex;
+  min-width: 0;
+  white-space: nowrap;
+}
+.op {
+  flex: none;
+  width: 2ch;
+  color: var(--color-fg-tertiary);
+}
+.subject {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-right: var(--space-2);
+  color: var(--color-fg);
+}
+.val {
+  flex: none;
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--color-fg);
+  text-overflow: ellipsis;
+}
+.qualifier {
+  overflow: hidden;
+  color: var(--color-fg-tertiary);
+  text-overflow: ellipsis;
+  white-space: pre;
+}
+.dur {
+  text-align: right;
+  font-size: var(--font-size-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-fg-tertiary);
+  white-space: nowrap;
+}
+.durInvalid {
+  color: var(--color-fg);
+}
+.slots {
+  display: grid;
+  grid-template-columns: repeat(5, var(--space-6));
+  justify-items: center;
+}
+.slot {
+  display: grid;
+  place-items: center;
+  width: var(--space-6);
+  color: var(--c);
+}

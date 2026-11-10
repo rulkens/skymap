@@ -1,0 +1,70 @@
+.bracket {
+  position: absolute;
+  top: calc(50% + var(--space-2));
+  height: 0;
+  border-top: 2px solid var(--color-fg-tertiary);
+}
+.bracket::before,
+.bracket::after {
+  content: '';
+  position: absolute;
+  top: calc(var(--space-2) * -1 - 1px);
+  height: var(--space-5);
+  border-left: 2px solid var(--color-fg-tertiary);
+}
+.bracket::before {
+  left: 0;
+}
+.bracket::after {
+  right: 0;
+}
+.seq::after {
+  right: -1px;
+  height: 0;
+  border-left: var(--space-3) solid var(--color-fg-tertiary);
+  border-top: var(--space-2) solid transparent;
+  border-bottom: var(--space-2) solid transparent;
+}
+.all {
+  border-top: 4px double var(--color-fg-tertiary);
+}
+.selected {
+  border-top-color: var(--color-accent);
+}
+.selected::before,
+.selected::after {
+  border-left-color: var(--color-accent);
+}
+.collapsed {
+  top: calc(var(--space-3) + var(--space-1));
+}
+.label {
+  position: absolute;
+  left: var(--space-4);
+  bottom: var(--space-2);
+  font-size: var(--font-size-sm);
+  line-height: 1;
+  color: var(--color-fg-tertiary);
+  white-space: nowrap;
+}
+.collapsed .label {
+  display: none;
+}
+.zero {
+  position: absolute;
+  top: var(--space-2);
+  bottom: var(--space-2);
+  width: var(--space-2);
+  transform: translateX(-50%);
+  border-left: 1px solid var(--color-fg-tertiary);
+  border-right: 1px solid var(--color-fg-tertiary);
+}
+.zeroLabel {
+  position: absolute;
+  top: 50%;
+  margin-left: var(--space-4);
+  transform: translateY(-50%);
+  font-size: var(--font-size-sm);
+  color: var(--color-fg-tertiary);
+  white-space: nowrap;
+}

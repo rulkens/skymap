@@ -1,0 +1,35 @@
+.root {
+  position: relative;
+  overflow: hidden;
+  margin-right: var(--track-pad);
+}
+.band {
+  position: absolute;
+  top: 0;
+  bottom: -1px;
+  border-inline: 1px solid color-mix(in srgb, var(--color-fg-ghost) 60%, transparent);
+  background: color-mix(in srgb, var(--color-fg-ghost) 7%, transparent);
+  pointer-events: none;
+}
+.all {
+  border-left: 3px double color-mix(in srgb, var(--color-fg-ghost) 70%, transparent);
+}
+.fork {
+  border-inline-style: dashed;
+}
+.tag {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0 var(--space-2);
+  border: 1px dashed var(--color-fg-faint);
+  border-radius: var(--radius-sm);
+  background: var(--dock-bg);
+  color: var(--color-fg-tertiary);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-tight);
+  z-index: 2;
+}

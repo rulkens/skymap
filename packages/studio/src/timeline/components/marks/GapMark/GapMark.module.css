@@ -1,0 +1,13 @@
+.root {
+  position: absolute;
+  top: var(--space-3);
+  bottom: var(--space-3);
+  border: 1px dashed var(--color-fg-faint);
+  border-radius: var(--radius-sm);
+}
+.hold {
+  background: color-mix(in srgb, var(--color-fg-ghost) 12%, transparent);
+}
+.selected {
+  border-color: var(--color-fg);
+}
