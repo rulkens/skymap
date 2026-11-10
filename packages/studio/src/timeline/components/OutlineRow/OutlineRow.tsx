@@ -1,3 +1,4 @@
+import type { SelectionRelation } from '../../@types/SelectionRelation';
 import type { CSSProperties } from 'react';
 import cx from 'classnames';
 import Glyph from '../../../primitives/components/Glyph/Glyph';
@@ -13,18 +14,24 @@ type Props = {
   readonly ancestors: readonly TimelineRow[];
   /** The row, or the folded ancestor standing in for a hidden selection. */
   readonly selected: boolean;
+  readonly relation: SelectionRelation;
   readonly onSelect: () => void;
   readonly onToggle: () => void;
 };
 
-function OutlineRow({ row, ancestors, selected, onSelect, onToggle }: Props) {
+function OutlineRow({ row, ancestors, selected, relation, onSelect, onToggle }: Props) {
   const group = ROW_KINDS[row.kind].mark === 'group';
   const invalid = row.errors.length > 0;
   const { op, subject, value, qualifier } = row.label;
   return (
     <div
       role="treeitem"
-      className={cx(s.root, selected && s.selected, invalid && s.invalid)}
+      className={cx(
+        s.root,
+        selected && s.selected,
+        relation.contains && s.contains,
+        invalid && s.invalid,
+      )}
       aria-level={row.depth + 1}
       aria-selected={selected}
       aria-expanded={row.expandable ? !row.collapsed : undefined}
@@ -38,6 +45,7 @@ function OutlineRow({ row, ancestors, selected, onSelect, onToggle }: Props) {
             s.rail,
             ancestor.kind === 'all' && s.railAll,
             ancestor.kind === 'fork' && s.railFork,
+            k === relation.insideAt && s.railSelected,
           )}
           style={{ '--k': k } as CSSProperties}
           aria-hidden

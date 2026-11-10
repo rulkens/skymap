@@ -35,6 +35,13 @@
 .selected::after {
   border-left-color: var(--color-accent);
 }
+.contains {
+  border-top-color: color-mix(in srgb, var(--color-accent) 55%, transparent);
+}
+.contains::before,
+.contains::after {
+  border-left-color: color-mix(in srgb, var(--color-accent) 55%, transparent);
+}
 .invalid {
   border-top-style: dashed;
   border-top-color: var(--color-fg);

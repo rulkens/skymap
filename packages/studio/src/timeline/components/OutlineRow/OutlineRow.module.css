@@ -16,6 +16,10 @@
 .selected {
   box-shadow: inset 2px 0 0 var(--color-accent);
 }
+/* A block the selection sits in: a half-strength edge, the superset of the selected row. */
+.contains {
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--color-accent) 45%, transparent);
+}
 .rail {
   position: absolute;
   top: 0;
@@ -29,6 +33,13 @@
 }
 .railFork {
   border-left-style: dashed;
+}
+/* The selected block's rail, down every step inside it: the set drawn as one bracket. */
+.railSelected {
+  border-left: 2px solid var(--color-accent);
+}
+.railAll.railSelected {
+  border-right-color: var(--color-accent);
 }
 .step {
   display: flex;

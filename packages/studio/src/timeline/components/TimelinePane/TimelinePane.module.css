@@ -57,6 +57,10 @@
 .selected {
   background: color-mix(in srgb, var(--color-accent) 14%, transparent);
 }
+/* A step inside the selected block: the same hue, fainter, so the block reads as one set. */
+.inside {
+  background: color-mix(in srgb, var(--color-accent) 6%, transparent);
+}
 /* Spans exactly the track area (right of the outline, short of the track padding), so percent left
    positions match the lanes' and the ruler's. Clicks fall through to the rows. */
 .overlay {

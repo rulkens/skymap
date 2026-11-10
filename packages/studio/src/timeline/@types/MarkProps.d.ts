@@ -6,4 +6,6 @@ export type MarkProps = {
   readonly row: TimelineRow;
   readonly window: TimeWindow;
   readonly selected: boolean;
+  /** A block the selection sits in; only group marks draw it. */
+  readonly contains?: boolean;
 };

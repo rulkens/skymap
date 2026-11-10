@@ -12,6 +12,7 @@ import { timeToPercent } from '../../utils/window/timeToPercent';
 import { selectSelectionStandInId } from '../../state/selectSelectionStandInId';
 import { selectTimeline } from '../../state/selectTimeline';
 import { ancestorChains } from '../../utils/ancestorChains';
+import { selectionRelation } from '../../utils/selectionRelation';
 import { familyStyle } from '../../utils/familyStyle';
 import { viewWindow } from '../../utils/window/viewWindow';
 import { useWheelPan } from './useWheelPan';
@@ -30,6 +31,7 @@ function TimelinePane() {
   const onWheel = useWheelPan(track, viewport, timeline);
   if (timeline === null) return null;
   const window = viewWindow(viewport, timeline);
+  const selectedAncestors = chains[timeline.rows.findIndex((row) => row.id === standIn)] ?? [];
   const end = timeline.durationSec === null ? null : timeToPercent(timeline.durationSec, window);
 
   return (
@@ -50,24 +52,38 @@ function TimelinePane() {
         <Ruler timeline={timeline} window={window} playheadSec={playheadSec} />
       </div>
       <div className={s.rows} role="tree" aria-label="Steps">
-        {timeline.rows.map((row, index) => (
-          <div key={row.id} role="none" className={cx(s.row, row.id === standIn && s.selected)}>
-            <OutlineRow
-              row={row}
-              ancestors={chains[index]!}
-              selected={row.id === standIn}
-              onSelect={() => dispatch(rowSelected(row.ref))}
-              onToggle={() => dispatch(rowToggled(row.id))}
-            />
-            <TrackLane
-              row={row}
-              ancestors={chains[index]!}
-              window={window}
-              selected={row.id === standIn}
-              onSelect={() => dispatch(rowSelected(row.ref))}
-            />
-          </div>
-        ))}
+        {timeline.rows.map((row, index) => {
+          const relation = selectionRelation(row, chains[index]!, standIn, selectedAncestors);
+          return (
+            <div
+              key={row.id}
+              role="none"
+              className={cx(
+                s.row,
+                row.id === standIn && s.selected,
+                relation.insideAt !== null && s.inside,
+              )}
+            >
+              <OutlineRow
+                row={row}
+                ancestors={chains[index]!}
+                selected={row.id === standIn}
+                relation={relation}
+                onSelect={() => dispatch(rowSelected(row.ref))}
+                onToggle={() => dispatch(rowToggled(row.id))}
+              />
+              <TrackLane
+                row={row}
+                ancestors={chains[index]!}
+                window={window}
+                selected={row.id === standIn}
+                selectedId={standIn}
+                contains={relation.contains}
+                onSelect={() => dispatch(rowSelected(row.ref))}
+              />
+            </div>
+          );
+        })}
         {timeline.rows.length <= 1 && <p className={s.empty}>No steps</p>}
       </div>
       <div ref={track} className={s.overlay} aria-hidden>

@@ -13,11 +13,14 @@ type Props = {
   readonly ancestors: readonly TimelineRow[];
   readonly window: TimeWindow;
   readonly selected: boolean;
+  readonly selectedId: string | null;
+  /** A block the selection sits in. */
+  readonly contains: boolean;
   /** Aria-hidden like the rest of the lane: keyboard selection is the outline's. */
   readonly onSelect: () => void;
 };
 
-function TrackLane({ row, ancestors, window, selected, onSelect }: Props) {
+function TrackLane({ row, ancestors, window, selected, selectedId, contains, onSelect }: Props) {
   const Mark = TRACK_MARKS[ROW_KINDS[row.kind].mark];
   return (
     <div className={s.root} style={familyStyle(row.family)} aria-hidden onClick={onSelect}>
@@ -29,12 +32,13 @@ function TrackLane({ row, ancestors, window, selected, onSelect }: Props) {
               s.band,
               ancestor.kind === 'all' && s.all,
               ancestor.kind === 'fork' && s.fork,
+              ancestor.id === selectedId && s.bandSelected,
             )}
             style={spanStyle(ancestor.startSec, ancestor.endSec, window)}
           />
         ),
       )}
-      <Mark row={row} window={window} selected={selected} />
+      <Mark row={row} window={window} selected={selected} contains={contains} />
     </div>
   );
 }
