@@ -31,3 +31,39 @@ Perf gate: not run: slice 1 adds no per-frame work (compileClip spans run once p
 - Fix wave A · sonnet · ca1ab6524 f9c88386c f831fb3b5 9548ed558 34ed481bf 52705dc4f 2b71055c0 · done: chunk-load guard (saga try/catch + lazy .catch, test), selectStudioActive + unlessStudio gate on escape/\/[/]/shift+n, takeoverKinds Record + isTakeoverView, comments, Q43 clearSelection on studio home cut (test), Q44 rootReducer test deleted. Note: with the gate, the dock MUST dispatch exitTakeover on Escape with no selection (wave B contract). concernFolderShape flaked once mid-wave B. Hold push until wave B lands.
 - Deletion audit · opus · 43ef1f1a9 (+52 −216, safe-now) + controller 3988eb49d (nested aside → div, plan text). ~2% removable, verdict "little to remove". Skipped per audit rec: childEffects helper (fold into S2), selectRevision kept. ASK queued after smoke set sJ9g: delete engine-side `channel` on CompileFault/ClipCompileError (only tests read it; ~18 LOC, rec delete).
 - feature-done status: tests + tsc green, 0 open boxes, no new TODOs, leanness done; waiting on owner smoke (sJ9g). On READY: git mv plan → completed, delete docs/design/clip-studio/, commit, push, open PR, watch CI.
+
+## 2026-11-10 evening: owner smoke feedback round (RESUME HERE)
+- Smoke sJ9g: 11/11 pass. Rulings Mqkf: channel deleted (18655c35d), zoom now (aaa5bc230), Fork rename (1aa5b3504), row multi-select → S2 backlog (c7d60e151). Q46/Q47 logged in grill session.
+- Landed today: lane click selects, Saved/Live start, no lane labels, Sequence/All names, layer picker, Set-step editor, block highlighting (+ review fixes 675cee451; owner: no dimming), clip picker (22fa699f9), zoomed-bar fix (e012a56bc).
+- Background agents (each commits+pushes its own work, no attribution lines):
+  1. studio-fixes: drop "· x/y" in inspector head everywhere; real osc wave; shared object selector/search (Start Look-at + every subject field: look-at/aim/move-target/focus/distance-bound/waypoints, show names not FocusIds); block Value column → icons only when collapsed, head title = block name.
+  2. bar-bugs: back-swipe preventDefault on horizontal wheel over dock; draw fade bars to tailEndSec.
+  3. fly-design: Fly + waypoint inspector design proposal (design only) → scratchpad fly-inspector-design.md → owner picks → implementer.
+  4. S2 spec+plan (docs only) → docs/superpowers/{specs,plans}/2026-11-10-clip-studio-s2-structure-edits.md
+  5. S3 spec+plan (docs only) → .../2026-11-10-clip-studio-s3-scene-tracks.md
+- Owner directive: "continue with all the other planned work" — plan S2/S3 now; S4+ after; edits via subagents to keep main context clear.
+- Then slice-1 close-out: second deletion audit, /feature-done (plan → completed, archive this ledger, delete docs/design/clip-studio/), PR, CI; merge only on "merge this PR".
+- Landed: bar fixes e012a56bc f1d56c79e fa529df79; head d91a9e935; real wave 3f9cb65ad; ObjectPicker 483f5a1f8 (554 lines, over the 300 stop); block icons 88e5a056e.
+- Fly design proposal: scratchpad fly-inspector-design.md + fly/mock-all.png; owner ask A1jv open (6 Qs) → then an implementer builds it (~300 lines + tests).
+- Running: picker follow-ups (Period>0 bug, scene focus picker via saga, moveTarget/aimAlong positions, Locating…, kind chips, title ◎); S2 spec+plan; S3 spec+plan.
+- S3 spec+plan landed 074511920 (8 tasks / 4 dispatches). 6 owner Qs queued (tours keep end scene; panel shows user's settings during a clip; revert with default durations; atEnd required; no perf clip scenario; prep PR split) → batch with S2's Qs after A1jv is answered.
+- S2 spec+plan landed 108b3e169 (22 tasks / 5 dispatches, prep P1–P4). Owner Qs queued: Q-A..Q-K (spec §9; Q-J prep PR split; refactor-ground checkpoint sign-off). Batch with S3's 6 after A1jv.
+- Running: fix agent for startModeSet missing from REVISION_ACTIONS (found by S2 planner); picker follow-ups.
+- Landed: start re-resolve fix d7aec2a50; picker follow-ups cf90a5f39 bb0e53d66 a17a2ab5e 488436859 327532e4d 880474e81 (positiveSeconds, focus refs + names saga, moveTarget position, Locating…/timeout, Layer chips, no ◎ in title). Left: aimAlong (direction, readout), osc fade envelope, raw SDSS/pos@ ids, focusId Resolved line shows raw id.
+- Waiting: owner A1jv (Fly). Then: Fly implementer → second deletion audit → /feature-done → PR. S2+S3 Qs batch after A1jv.
+- A1jv answered: mock pass; ↺ writes default; waypoint add/remove/reorder ALL in S2 (update S2 plan Q-G accordingly); curve "Head-on/Early turn"; ease ids kept; geodesic Tuning designed now. Fly implementer running.
+- Ask c9Kg open: S2+S3 plan rulings (11 Qs).
+- Owner asked for scrubbing → S4 spec+plan agent running (docs only). Order: S3 → S4 (scrub needs S3's sceneView); camera-only scrub could come earlier — mention to owner.
+- c9Kg answered: all S2/S3 recommendations accepted (prep rides feature PRs). Docs agent recording them + adding waypoint add/remove/reorder to S2 plan.
+- Running: Fly implementer, S4 spec+plan, rulings docs agent. Next: Fly lands → second deletion audit → /feature-done → PR (slice 1). Then S2/S3 execution on new branches after slice 1 merges (owner "merge this PR").
+- S3 implementation started: agent in its own worktree, branch feat/clip-studio-s3 (stacked on feat/clip-studio), G0 prep + perf baseline (own dev server :5181) + G1; stops before G2 for review.
+- S4 spec+plan landed 377802387 (14 tasks / 5 dispatches). Ask mXnj open (12 S4 rulings, incl. SagaContext growth for clipAt). S4 asks S3 for 4 amendments (wraps seed; replaced-clip-without-end publishes crossings; view past End = intent when paused; no paused mid-roll promise) → fold into S3 G2 brief.
+- Fly inspector landed: df6aeeeeb 09c0ac27f 355e626ed f2dfe3d32 420195ec9 81bb072e6 c19581e34 03bfe90c2 (↺ writes default, when/range/group, Spline/PassBy composites, WaypointsField select-only, waypoint fields, panel scroll, geodesic Tuning). Follow-up agent: chip names, Resolved names, "custom" readouts.
+- Flakes under load seen: layerImportBoundary, StudioDock "closing the keys overlay gives focus back" (pass alone).
+- Next: after follow-ups land → second deletion audit (whole branch) → /feature-done → PR.
+- Names landed: eafff57f4 (chips), 8f901f182 (Resolved), f2c63cec5 (geodesic Destination). Running: Fly label names, drop duplicate Resolved, FOV degrees, Blend units, StudioDock flaky test (jsdom showPopover).
+- S4 Qs now one-by-one (owner asked, with contract context): 2g5w = Q1 clipAt. Then playClip transport param, CameraState.clip.transport, then the 9 UX Qs.
+- S3 G0+G1 done on feat/clip-studio-s3 (worktree .claude/worktrees/agent-a6e7359f61bd6ff44, HEAD 1a19a4bd6, cut from f2dfe3d32 — rebase later): 9ad62a74f 64497c71c 7f4db289f(perf baseline) cf9a88146 1a19a4bd6. Deviations in plan "As built": cues kept until 2.2; fade segments supersede (spec wording "ascending startSec", owner may ack). G2+G3+perf-after dispatched to same agent with S4 constraints.
+- Last fixes landed: 7be4a2c7a (popover stubs, StudioDock 20/20), 75dbc6ef7 (Fly names), 4b92a65f5 (drop focusId Resolved, reverts 8f901f182), 2fa0feed0 (FOV°, blend s).
+- Second deletion audit running (opus, read-only) → docs/design/clip-studio/deletion-audit-2.md. Then: apply safe-now (agent), owner rulings, /feature-done, PR.
+- Audit 2: ~−14 LOC safe-now (<1% of +3042). Applying safe-now + look-at units (formatPosition at lookAt label + resolvedPosition) via agent. Queued owner ruling: merge TOGGLE_OPTIONS (Off/On) and ON_OFF_OPTIONS (On/Off) into one Off/On list — ask with S4 Q2.

@@ -1,7 +1,7 @@
 # Clip studio package (slice 1): implementation plan
 
 > **For agentic workers:** execute with `subagent-driven-development` under
-> [`sdd-execution.md`](../conventions/sdd-execution.md), except that the owner asked for **parallel work
+> [`sdd-execution.md`](../../conventions/sdd-execution.md), except that the owner asked for **parallel work
 > packages** (Q26): the groups below have disjoint file sets and an explicit wave order. One commit per task.
 
 **Goal:** start `packages/studio`, the clip studio, as production code: a lazily loaded timeline editor
@@ -9,7 +9,7 @@ behind `#studio=<clipId>` that opens any registry clip, shows its real structure
 tracks, lets a person select steps, edit their parameters in a schema-driven inspector, and undo/redo.
 No engine change beyond the compiler's ground preparation; no saving yet.
 
-**Decision record:** [`docs/grill-sessions/clip-studio-2026-11-07.md`](../../grill-sessions/clip-studio-2026-11-07.md)
+**Decision record:** [`docs/grill-sessions/clip-studio-2026-11-07.md`](../../../grill-sessions/clip-studio-2026-11-07.md)
 (Q1–Q26 and the owner's design preferences). There is no spec: Q26 is an explicit owner override of the
 spec-first convention, so this plan carries the Ground preparation section a spec would. The design
 reference is the mock code in `src/dev/mocks/studio/` (`StudioD*.tsx`, `InspectorGrid.tsx`, `StudioTip.tsx`,

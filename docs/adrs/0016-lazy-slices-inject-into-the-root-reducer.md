@@ -6,7 +6,7 @@
 - **Supersedes:** —
 - **Superseded by:** —
 - **Related:** `docs/grill-sessions/clip-studio-2026-11-07.md` (Q8, Q26–Q28),
-  `docs/superpowers/plans/2026-11-10-clip-studio-package.md` (A3), `packages/studio/README.md`
+  `docs/superpowers/plans/completed/2026-11-10-clip-studio-package.md` (A3), `packages/studio/README.md`
 
 ## Context
 

@@ -351,7 +351,7 @@ keep serving as the design reference.
   moving saving earlier. **Decision:** memory only. Edits survive Close and reopen, but not a
   reload.
 
-The plan is `docs/superpowers/plans/2026-11-10-clip-studio-package.md`.
+The plan is `docs/superpowers/plans/completed/2026-11-10-clip-studio-package.md`.
 
 ## Q29–Q31: Top bar (from the top-bar design pass)
 
@@ -405,7 +405,7 @@ to the app icon component.
 
 - **Q40 Read-only:** with no dev server a clip still takes edits, kept in memory (as Q28); Save and Save as new
   are disabled with the reason in their tips; the status reads `Preview · can't save here`. No Copy-as-TS.
-- **Q41 Design loop ends at 8/10 (round 3).** The round-3 minors (`docs/design/clip-studio/review-round-3.md`)
+- **Q41 Design loop ends at 8/10 (round 3).** The round-3 minors (`docs/design/clip-studio/review-round-3.md`, removed at slice-1 completion; see git history)
   are fixed in the real build, not in another mock round: slice-1 ones now, the rest in the slice that brings
   their control.
 - **Q42 famousFlythrough pacing:** from an Earth-close start the first leg takes ~103 of 107 s (the path's arc

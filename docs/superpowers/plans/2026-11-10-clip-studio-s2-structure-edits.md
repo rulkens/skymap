@@ -90,7 +90,7 @@ packages/studio/src/inspector/components/WaypointsField/                        
 packages/studio/src/shell/{data/studioKeys.ts,@types/StudioKey.d.ts,@types/StudioKeyId.d.ts,
   utils/runStudioKey.ts,hooks/useStudioKeys.ts,components/KeyHelp/}                          2.4
 packages/studio/src/timeline/components/marks/{BarMark,GroupMark}/                           3.2
-packages/studio/README.md, docs/design/clip-studio/HANDOFF.md (if still present)             4.1
+packages/studio/README.md             4.1
 ```
 
 ---
