@@ -103,7 +103,7 @@ const SETTINGS_STUB = {
   },
 } as unknown as EngineState['settings'];
 
-// The selection row's reads: one SDSS catalog, codes far from every `Source` value.
+// The selection row's reads: one SDSS catalog, codes far from the dense low ones.
 const ROW_RUNTIME = galaxyRowRuntime(
   { catalogs: new Map([['sdss', makeGalaxyCatalog(64)]]) },
   fakePickCode(),

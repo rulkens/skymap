@@ -1,9 +1,8 @@
 /**
  * The Layer's future `sources` field (`Layer.d.ts`'s `Sources` bound), in
  * `GALAXY_CATALOG_SOURCES` order: draw order for `catalogStore`'s
- * back-to-front iteration, UI order for the panel. Listed explicitly, not
- * derived from `Source`, so a new enum code isn't silently promoted into
- * the UI and the visibility set.
+ * back-to-front iteration, UI order for the panel. Listed explicitly, so a new
+ * entry isn't silently promoted into the UI and the visibility set.
  */
 
 import type { SourceEntry } from '../../../@types/data/SourceEntry';

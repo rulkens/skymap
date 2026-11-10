@@ -7,7 +7,7 @@ import type { OctreeCutInputs } from '../../../../@types/octree/OctreeCutInputs'
 import type { OctreeCutSourceInput } from '../../../../@types/octree/OctreeCutSourceInput';
 import type { StarCatalogId } from '../../@types/StarCatalogId';
 
-// The octree cut is generic over `StarCatalogId`; this Layer's cut only ever carries its own codes.
+// The octree cut is generic over `SourceId`; this Layer's cut only ever carries its own ids.
 export type StarCutInputs = OctreeCutInputs & {
   readonly cut: {
     readonly sources: readonly (OctreeCutSourceInput & {

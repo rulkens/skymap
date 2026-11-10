@@ -4,12 +4,12 @@
  *
  * A "patch" is one way of sampling the same survey: a pencil-beam cone, a
  * declination-band wedge, and (later) a flat great-circle slab. Each row
- * pairs a `Source` code + `.bin` stem with a `makeFilter()` factory that
+ * pairs a source id + `.bin` stem with a `makeFilter()` factory that
  * builds the row-membership predicate the parser runs per FITS row. The
  * build (`loadDesiPatch` in `buildAllBins.ts`) loops this table, feeds each
  * patch's kept rows through `crossMatch` under its own source, and emits one
  * `.bin` per patch — so adding a new drill geometry is one row here plus one
- * `Source` registration, not a cloned pipeline path.
+ * source entry, not a cloned pipeline path.
  *
  * Adding a patch with a *new* geometry also adds one filter util alongside
  * `makeConeFilter` / `makeDecBandFilter` (e.g. a `makeGreatCircleBandFilter`
@@ -28,7 +28,7 @@ import { makeEllipsoidUnionFilter } from '../utils/math/makeEllipsoidUnionFilter
  *   - `key`        — short human tag (`'cone'` | `'wedge'` | …), used in
  *                    per-patch build logs and by the census diagnostic to
  *                    find the cone row.
- *   - `source`     — the `Source` this patch's rows are stamped with and
+ *   - `source`     — the id this patch's rows are stamped with and
  *                    bucketed under; also the single source of truth for the
  *                    runtime `.bin` stem, via `APP_SOURCE_REGISTRY[source].binBaseName`
  *                    (`tierFilenameForSource`) — no separate `binName` field

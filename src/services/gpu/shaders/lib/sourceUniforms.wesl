@@ -1,7 +1,8 @@
 // lib/sourceUniforms.wesl — per-source 6-bit pick-ID uniform for the
 // points pipeline.
 //
-// Carries this draw's 6-bit source pick code (allocated per source id by createPickCodeAllocator). The points vertex stage reads
+// Carries this draw's 6-bit source pick code (allocated per
+// source id by createPickCodeAllocator). The points vertex stage reads
 // 'source.sourceCode' and composes each instance's packed identity as
 // '(sourceCode << 26u) | instance_index' for the selection-halo +
 // pick-output paths.

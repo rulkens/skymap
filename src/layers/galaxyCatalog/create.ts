@@ -86,9 +86,9 @@ export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRu
   });
 
   const points = new Map<GalaxyCatalogId, AssetSlot<GalaxyCatalog, GalaxyCatalogReq>>(
-    GALAXY_CATALOG_SOURCES.map((code) => [
-      code,
-      wireGalaxyCatalogSourceSlot(GALAXY_CATALOG_SOURCE_RECORD[code], deps, {
+    GALAXY_CATALOG_SOURCES.map((id) => [
+      id,
+      wireGalaxyCatalogSourceSlot(GALAXY_CATALOG_SOURCE_RECORD[id], deps, {
         pointRenderer,
         catalogs,
         records,

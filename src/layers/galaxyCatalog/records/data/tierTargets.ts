@@ -28,7 +28,6 @@ import { galaxyEntryOf } from '../utils/galaxyEntryOf';
 import { GALAXY_CATALOG_DATA_PREFIX } from './galaxyCatalogFormat';
 import { shipsTierVariants } from '../../../../utils/loading/shipsTierVariants';
 import type { Tier } from '../../../../@types/data/Tier';
-import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
 
 /**
  * Returns the per-tier point-count cap for a source, or `undefined` for

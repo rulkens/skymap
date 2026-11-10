@@ -14,9 +14,6 @@ export function makeGalaxyCatalogItems(
   of: (id: GalaxyCatalogId) => Partial<GalaxyCatalogItemSettings> = () => ({}),
 ): Record<GalaxyCatalogId, GalaxyCatalogItemSettings> {
   return Object.fromEntries(
-    GALAXY_CATALOG_SOURCES.map((source) => {
-      const id = source;
-      return [id, { enabled: true, labelEnabled: true, ...of(id) }];
-    }),
+    GALAXY_CATALOG_SOURCES.map((id) => [id, { enabled: true, labelEnabled: true, ...of(id) }]),
   ) as Record<GalaxyCatalogId, GalaxyCatalogItemSettings>;
 }

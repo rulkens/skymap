@@ -72,7 +72,7 @@ export function wireGalaxyCatalogSourceSlot(
   slot.subscribe((s) => {
     if (s.kind !== 'ready' && s.kind !== 'idle') return;
     const published: Partial<Record<GalaxyCatalogId, ProvenanceCounts>> = {};
-    for (const [code, record] of galaxy.records) published[code] = record.stats.provenance;
+    for (const [id, record] of galaxy.records) published[id] = record.stats.provenance;
     deps.publish({ provenanceCounts: published });
   });
 

@@ -13,7 +13,6 @@
  */
 
 import { galaxyEntryOf } from '../../records/utils/galaxyEntryOf';
-import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
 import { distanceMpcToRedshift } from '../../../../utils/math/distanceMpcToRedshift';
 
 /**

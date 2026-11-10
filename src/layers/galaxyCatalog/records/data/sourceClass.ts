@@ -26,8 +26,8 @@
  * cleanly.
  *
  * The byte values below are persisted in `.bin` files (see
- * `galaxyCatalogFormat.ts`).  Treat them like the `Source` enum
- * values — append, never renumber.
+ * `galaxyCatalogFormat.ts`).  Append, never renumber: the `.bin` format
+ * contract fixes them.
  */
 
 import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';

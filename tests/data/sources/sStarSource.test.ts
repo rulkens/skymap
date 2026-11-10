@@ -3,8 +3,8 @@
  *
  * What can actually break here is not the row's field values (a compiler-checked
  * literal) but its CONSEQUENCES in the derived key domains — the settings row it
- * seeds, the cluster it seeds it in, and the label domain it must stay out of. Each of those is a separate file that reads
- * the registry and would fail silently, not loudly.
+ * seeds, the cluster it seeds it in, and the label domain it must stay out of. Each of those is a
+ * separate file that reads the registry and would fail silently, not loudly.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -32,10 +32,7 @@ describe('the S-star source row', () => {
     expect(BODY_SOURCE_IDS).not.toContain(SUN_ENTRY.id);
   });
 
-  it('the registry is keyed by each entry’s id, and the S-star row is in it', () => {
-    // A `Source` member that drifts from its entry's id would key the row under a
-    // name no asset, setting or ref uses.
-    for (const [key, entry] of Object.entries(APP_SOURCE_REGISTRY)) expect(key).toBe(entry.id);
+  it('the S-star row is in the registry', () => {
     expect(APP_SOURCE_REGISTRY['sStar']).toBe(S_STAR_ENTRY);
   });
 });

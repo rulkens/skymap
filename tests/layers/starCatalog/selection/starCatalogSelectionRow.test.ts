@@ -16,7 +16,7 @@ import type { PlacedRow } from '../../../../src/@types/engine/selection/PlacedRo
 
 /**
  * Pool index 7 maps to ordinal 1007 while its chunk is resident; nothing else
- * maps. Codes from 40 up, so a row that packs a `Source` value fails.
+ * maps. Codes from 40 up, so a row that skips `pickCode` fails.
  */
 function runtime(resident: boolean) {
   const stars = {
@@ -46,7 +46,7 @@ describe('starCatalogSelectionRow', () => {
     expect(starCatalogSelectionRow(runtime(false)).encodePick(REF)).toBeNull();
   });
 
-  it('seeded and survey refs round-trip under non-survey codes', () => {
+  it('seeded and survey refs round-trip under allocator codes', () => {
     const row = starCatalogSelectionRow(runtime(true));
     for (const ref of [
       REF,

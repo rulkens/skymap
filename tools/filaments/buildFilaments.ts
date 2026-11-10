@@ -468,8 +468,8 @@ type TaggedPositions = {
 
 /**
  * Master list of survey `.bin` files this orchestrator knows how to
- * read.  Each entry pairs the on-disk filename with the `Source` enum
- * value used downstream (for HEALPix angular weights and galaxyCatalogFluxLimit
+ * read.  Each entry pairs the on-disk filename with the source id
+ * used downstream (for HEALPix angular weights and galaxyCatalogFluxLimit
  * lookups) and the lowercase canonical CLI key the `--sources` flag
  * accepts.  Adding a fourth survey would mean appending one row here
  * plus extending `VALID_SOURCE_KEYS` and `SourceKey`.

@@ -6,14 +6,14 @@ import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 import { galaxyRowRuntime } from '../../../support/layerPickCodes';
 import { fakePickCode } from '../../../support/fakePickCode';
 
-/** Every catalog loaded, under codes from 40 up: no code equals any `Source` value. */
+/** Every catalog loaded, under codes from 40 up, clear of the dense low codes. */
 function rowOverAllCatalogs() {
   const catalogs = new Map(GALAXY_CATALOG_SOURCES.map((s) => [s, makeGalaxyCatalog(16)] as const));
   return galaxyCatalogSelectionRow(galaxyRowRuntime({ catalogs }, fakePickCode()));
 }
 
 describe('galaxyCatalogSelectionRow pick codes', () => {
-  it('encodePick then resolvePick round-trips under non-survey codes', () => {
+  it('encodePick then resolvePick round-trips under allocator codes', () => {
     const row = rowOverAllCatalogs();
     for (const ref of [
       { type: 'galaxyCatalog', source: 'sdss', index: 12 },

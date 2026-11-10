@@ -14,9 +14,6 @@ export function makeGalaxyCatalogFade(
   rest = 1,
 ): Record<GalaxyCatalogId, number> {
   return Object.fromEntries(
-    GALAXY_CATALOG_SOURCES.map((source) => {
-      const id = source;
-      return [id, overrides[id] ?? rest];
-    }),
+    GALAXY_CATALOG_SOURCES.map((id) => [id, overrides[id] ?? rest]),
   ) as Record<GalaxyCatalogId, number>;
 }

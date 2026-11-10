@@ -1,7 +1,7 @@
 /**
  * The Layer's `sources` field, in `Stars` panel order: the survey bin first,
- * then the three seeded catalogs. Listed explicitly, not derived from
- * `Source`, so a new enum code isn't silently promoted into the panel.
+ * then the three seeded catalogs. Listed explicitly, so a new
+ * entry isn't silently promoted into the panel.
  */
 
 import type { SourceEntry } from '../../../@types/data/SourceEntry';

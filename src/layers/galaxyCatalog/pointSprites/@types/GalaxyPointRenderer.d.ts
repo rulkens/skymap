@@ -20,7 +20,7 @@ export type GalaxyPointRenderer = {
   unload(id: GalaxyCatalogId): void;
   /** Total number of points across every loaded source. */
   totalCount(): number;
-  /** Every loaded source's GPU buffer in `Source` enum order; a fresh generator per call. */
+  /** Every loaded source's GPU buffer in draw order; a fresh generator per call. */
   loadedSources(): IterableIterator<{
     source: GalaxyCatalogId;
     vertexBuffer: GPUBuffer;

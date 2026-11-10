@@ -431,7 +431,7 @@ function loadMilliquas(path: string | undefined): MilliquasParseResult {
  * of `desiPatches`.
  *
  * The patch supplies both its membership filter (`patch.makeFilter()`) and the
- * `Source` every kept row is stamped with, so the four-tracer read loop is
+ * source id every kept row is stamped with, so the four-tracer read loop is
  * identical across geometries — a new patch is one `DESI_PATCHES` row, not a
  * cloned loader.
  *
@@ -742,9 +742,9 @@ async function runCli(): Promise<void> {
   // Capture per-source input counts up front so the summary can report
   // the dedup drop rate per survey, not just the merged total.
   const inputCounts: Partial<Record<GalaxyCatalogId, number>> = {
-    ['sdss']: sdss.length,
-    ['2mrs']: twoMrs.length,
-    ['glade']: glade.length,
+    sdss: sdss.length,
+    '2mrs': twoMrs.length,
+    glade: glade.length,
   };
   DESI_PATCHES.forEach((patch, i) => {
     inputCounts[patch.source] = desiPatches[i]!.length;
@@ -845,12 +845,13 @@ async function runCli(): Promise<void> {
 
   // Per-source dedup report. Subtracting kept from input gives the number
   // of records dropped as duplicates of a higher-priority survey's row.
-  for (const source of [
+  const dedupReportOrder: GalaxyCatalogId[] = [
     'sdss',
     '2mrs',
     'glade',
     ...DESI_PATCHES.map((patch) => patch.source),
-  ] as GalaxyCatalogId[]) {
+  ];
+  for (const source of dedupReportOrder) {
     const kept = (bySource.get(source) ?? []).length;
     const input = inputCounts[source] ?? 0;
     const dropped = input - kept;

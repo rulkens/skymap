@@ -1,6 +1,6 @@
 /**
  * createPickCodeAllocator — hands each Layer's pick sources a 6-bit code for the pick word.
- * Codes are per engine and per session: never persisted, never a catalog `Source` value.
+ * Codes are per engine and per session: never persisted.
  * They run densely from 1 in first-ask order; 63 is the all-ones sentinel and 0 is never
  * handed out, so codes run 1..62.
  */
