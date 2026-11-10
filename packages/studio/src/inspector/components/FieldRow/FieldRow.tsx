@@ -8,6 +8,7 @@ import SegmentedField from '../../../primitives/components/SegmentedField/Segmen
 import { FIELD_CONTROLS } from '../../data/fieldControls';
 import { PICK_OPTIONS } from '../../data/pickOptions';
 import { readoutText } from '../../utils/readoutText';
+import { TOGGLE_OPTIONS } from './FieldRow.constants';
 import type { FieldSpec } from '../../../@types/kinds/FieldSpec';
 import type { RowRef } from '../../../@types/rows/RowRef';
 import type { InspectorSubject } from '../../@types/InspectorSubject';
@@ -17,11 +18,6 @@ type Props = {
   readonly subject: InspectorSubject;
   readonly rowRef: RowRef;
 };
-
-const TOGGLE_OPTIONS = [
-  { value: 'off', text: 'Off' },
-  { value: 'on', text: 'On' },
-];
 
 /** One field of the selected row. An absent param shows its fallback dim; an authored one is bright with ↺. */
 function FieldRow({ spec, subject, rowRef }: Props) {

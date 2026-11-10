@@ -4,11 +4,11 @@ import InspectorHead from '../../../primitives/components/InspectorHead/Inspecto
 import InspectorRow from '../../../primitives/components/InspectorRow/InspectorRow';
 import InspectorSection from '../../../primitives/components/InspectorSection/InspectorSection';
 import ReadoutField from '../../../primitives/components/ReadoutField/ReadoutField';
-import { effectAt } from '../../../draft/utils/effectAt';
 import { REASON_TEXT } from '../../data/reasonText';
 import { formatRange } from '../../utils/formatRange';
 import { formatRowTitle } from '../../utils/formatRowTitle';
 import { inspectorSpec } from '../../utils/inspectorSpec';
+import { resolvedText } from '../../utils/resolvedText';
 import { rowContext } from '../../utils/rowContext';
 import { rowSubject } from '../../utils/rowSubject';
 import FieldRow from '../FieldRow/FieldRow';
@@ -23,15 +23,6 @@ type Props = {
   readonly draft: ClipData;
   readonly resolution: StudioResolution | null;
 };
-
-/** Q22: a subject-bound step shows its subject in the head and fields; the numbers it resolved to appear only here. */
-function resolvedText(row: TimelineRow, resolution: StudioResolution | null): string {
-  const { resolved } = inspectorSpec(row.kind);
-  if (!resolved || row.ref.kind !== 'effect') return '';
-  const effect =
-    resolution !== null && 'data' in resolution ? effectAt(resolution.data, row.ref.path) : null;
-  return (effect && resolved(effect)) || '–';
-}
 
 function RowInspector({ row, rows, draft, resolution }: Props) {
   const spec = inspectorSpec(row.kind);
