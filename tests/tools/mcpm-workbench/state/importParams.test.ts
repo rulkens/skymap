@@ -10,7 +10,6 @@
 import { describe, expect, it } from 'vitest';
 import type { GridBox } from '../../../../tools/mcpm-workbench/@types/GridBox';
 import type { McpmParams } from '../../../../tools/mcpm-workbench/@types/McpmParams';
-import { Source } from '../../../../src/data/source';
 import { exportParams } from '../../../../tools/mcpm-workbench/src/state/exportParams';
 import { importParams } from '../../../../tools/mcpm-workbench/src/state/importParams';
 
@@ -33,7 +32,7 @@ const GRID_BOX: GridBox = {
   rotation: [0, 0, 0, 1],
 };
 
-const SOURCES = [Source.SDSS, Source.TwoMRS] as const;
+const SOURCES = ['sdss', '2mrs'] as const;
 const EXPORT_INPUT = {
   params: PARAMS,
   agentCount: 5_300_000,
@@ -140,9 +139,10 @@ describe('importParams', () => {
     // A galaxy cluster is a real source id but not one of the workbench's toggleable
     // galaxy-catalog sources — importParams must reject it against the ladder,
     // not merely check "is this a string".
-    preset.sources = [Source.SDSS, Source.GalaxyCluster];
+    preset.sources = ['sdss', 'galaxy-cluster'];
 
-    expect(() => importParams(JSON.stringify(preset))).toThrow(/unknown source id.*galaxy-cluster/i,
+    expect(() => importParams(JSON.stringify(preset))).toThrow(
+      /unknown source id.*galaxy-cluster/i,
     );
   });
 

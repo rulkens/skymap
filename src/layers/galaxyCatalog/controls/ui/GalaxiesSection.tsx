@@ -7,7 +7,6 @@
  */
 
 import { memo } from 'react';
-import { Source } from '../../../../data/source';
 import { GALAXY_CATALOG_SOURCE_RECORD } from '../../sources/galaxyCatalogSourceRecord';
 import { BiasMode } from '../../../../data/galaxyCatalog/biasMode';
 import type { BiasMode as BiasModeT } from '../../@types/BiasMode';
@@ -25,14 +24,14 @@ import styles from '../../../../components/SettingsPanel/SettingsPanel.module.cs
  * footprint-limited appendices to that ladder.
  */
 const TOGGLEABLE_SOURCES: readonly GalaxyCatalogId[] = [
-  Source.FamousGalaxy,
-  Source.TwoMRS,
-  Source.SDSS,
-  Source.Glade,
-  Source.Milliquas,
-  Source.DesiDeep,
-  Source.DesiWedge,
-  Source.DesiSgw,
+  'famousGalaxy',
+  '2mrs',
+  'sdss',
+  'glade',
+  'milliquas',
+  'desiDeep',
+  'desiWedge',
+  'desiSgw',
 ];
 
 // ── Props ──────────────────────────────────────────────────────────────────────

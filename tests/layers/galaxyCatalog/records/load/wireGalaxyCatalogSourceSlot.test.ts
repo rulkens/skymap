@@ -19,7 +19,6 @@ vi.mock('../../../../../src/layers/galaxyCatalog/records/load/galaxyCatalogFetch
 
 import { wireGalaxyCatalogSourceSlot } from '../../../../../src/layers/galaxyCatalog/records/load/wireGalaxyCatalogSourceSlot';
 import { galaxyCatalogFetcher } from '../../../../../src/layers/galaxyCatalog/records/load/galaxyCatalogFetcher';
-import { Source } from '../../../../../src/data/source';
 import { GALAXY_CATALOG_SOURCE_RECORD } from '../../../../../src/layers/galaxyCatalog/sources/galaxyCatalogSourceRecord';
 import { installSlotReadyWake } from '../../../../../src/services/engine/wiring/installSlotReadyWake';
 import type { LayerCoreDeps } from '../../../../../src/@types/engine/layer/LayerCoreDeps';
@@ -68,7 +67,7 @@ describe('wireGalaxyCatalogSourceSlot', () => {
 
   it('mints an idle slot named after the registry entry', () => {
     const h = harness();
-    const slot = wireGalaxyCatalogSourceSlot(GALAXY_CATALOG_SOURCE_RECORD[Source.SDSS], h.deps, h);
+    const slot = wireGalaxyCatalogSourceSlot(GALAXY_CATALOG_SOURCE_RECORD['sdss'], h.deps, h);
 
     expect(slot.name).toBe('sdss-points');
     expect(slot.state().kind).toBe('idle');
@@ -78,15 +77,15 @@ describe('wireGalaxyCatalogSourceSlot', () => {
     const h = harness();
     vi.mocked(galaxyCatalogFetcher).mockResolvedValue(fakeCloud(42));
 
-    const slot = wireGalaxyCatalogSourceSlot(GALAXY_CATALOG_SOURCE_RECORD[Source.SDSS], h.deps, h);
-    void slot.load({ source: Source.SDSS, tier: 'medium' });
+    const slot = wireGalaxyCatalogSourceSlot(GALAXY_CATALOG_SOURCE_RECORD['sdss'], h.deps, h);
+    void slot.load({ source: 'sdss', tier: 'medium' });
     await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
 
     expect(h.deps.publish).toHaveBeenCalledTimes(1);
     const patch = vi.mocked(h.deps.publish).mock.calls[0]![0] as {
       provenanceCounts: Record<string, unknown>;
     };
-    expect(patch.provenanceCounts[Source.SDSS]).toBe(h.records.get(Source.SDSS)!.stats.provenance);
+    expect(patch.provenanceCounts['sdss']).toBe(h.records.get('sdss')!.stats.provenance);
   });
 
   it('commit uploads the cloud to the renderer and writes it into the runtime catalogs', async () => {
@@ -94,17 +93,17 @@ describe('wireGalaxyCatalogSourceSlot', () => {
     const cloud = fakeCloud(7);
     vi.mocked(galaxyCatalogFetcher).mockResolvedValue(cloud);
 
-    const slot = wireGalaxyCatalogSourceSlot(GALAXY_CATALOG_SOURCE_RECORD[Source.Glade], h.deps, h);
-    void slot.load({ source: Source.Glade, tier: 'small' });
+    const slot = wireGalaxyCatalogSourceSlot(GALAXY_CATALOG_SOURCE_RECORD['glade'], h.deps, h);
+    void slot.load({ source: 'glade', tier: 'small' });
     await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
 
     expect(h.upload).toHaveBeenCalledOnce();
     expect(h.upload).toHaveBeenCalledWith(
-      GALAXY_CATALOG_SOURCE_RECORD[Source.Glade].id,
+      GALAXY_CATALOG_SOURCE_RECORD['glade'].id,
       cloud,
-      h.records.get(Source.Glade)!.stats,
+      h.records.get('glade')!.stats,
     );
-    expect(h.catalogs.get(Source.Glade)).toBe(cloud);
+    expect(h.catalogs.get('glade')).toBe(cloud);
     // A stale alias row set would otherwise linger past this commit — the
     // alias index reconcile keys on this bump to know its build is out of date.
     expect(h.bumpCatalogsVersion).toHaveBeenCalledOnce();
@@ -117,17 +116,17 @@ describe('wireGalaxyCatalogSourceSlot', () => {
     const requestRender = vi.fn();
     vi.mocked(galaxyCatalogFetcher).mockResolvedValue(fakeCloud(5));
 
-    const slot = wireGalaxyCatalogSourceSlot(GALAXY_CATALOG_SOURCE_RECORD[Source.SDSS], h.deps, h);
+    const slot = wireGalaxyCatalogSourceSlot(GALAXY_CATALOG_SOURCE_RECORD['sdss'], h.deps, h);
     installSlotReadyWake(
       requestRender,
       new Map([['sdss-points', slot as unknown as AssetSlot<unknown, unknown>]]),
     );
 
-    void slot.load({ source: Source.SDSS, tier: 'medium' });
+    void slot.load({ source: 'sdss', tier: 'medium' });
     await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
     requestRender.mockClear();
 
-    void slot.load({ source: Source.SDSS, tier: 'medium' });
+    void slot.load({ source: 'sdss', tier: 'medium' });
     await vi.waitFor(() => expect(h.upload).toHaveBeenCalledTimes(2));
     await vi.waitFor(() => expect(requestRender).toHaveBeenCalled());
   });
@@ -135,8 +134,8 @@ describe('wireGalaxyCatalogSourceSlot', () => {
   it('release unloads the renderer, drops the catalog and provenance, and republishes without the source', async () => {
     const h = harness();
     vi.mocked(galaxyCatalogFetcher).mockResolvedValue(fakeCloud(42));
-    const slot = wireGalaxyCatalogSourceSlot(GALAXY_CATALOG_SOURCE_RECORD[Source.SDSS], h.deps, h);
-    void slot.load({ source: Source.SDSS, tier: 'medium' });
+    const slot = wireGalaxyCatalogSourceSlot(GALAXY_CATALOG_SOURCE_RECORD['sdss'], h.deps, h);
+    void slot.load({ source: 'sdss', tier: 'medium' });
     await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
     h.bumpCatalogsVersion.mockClear();
     vi.mocked(h.deps.publish).mockClear();
@@ -145,13 +144,13 @@ describe('wireGalaxyCatalogSourceSlot', () => {
 
     expect(slot.state().kind).toBe('idle');
     expect(slot.committed()).toBeNull();
-    expect(h.unload).toHaveBeenCalledExactlyOnceWith(GALAXY_CATALOG_SOURCE_RECORD[Source.SDSS].id);
-    expect(h.catalogs.has(Source.SDSS)).toBe(false);
+    expect(h.unload).toHaveBeenCalledExactlyOnceWith(GALAXY_CATALOG_SOURCE_RECORD['sdss'].id);
+    expect(h.catalogs.has('sdss')).toBe(false);
     expect(h.bumpCatalogsVersion).toHaveBeenCalledOnce();
     const patch = vi.mocked(h.deps.publish).mock.calls[0]![0] as {
       provenanceCounts: Record<string, unknown>;
     };
-    expect(patch.provenanceCounts[Source.SDSS]).toBeUndefined();
+    expect(patch.provenanceCounts['sdss']).toBeUndefined();
     expect(galaxyCatalogFetcher).toHaveBeenCalledTimes(1);
   });
 });

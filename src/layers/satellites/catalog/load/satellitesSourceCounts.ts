@@ -9,7 +9,6 @@ import type { SatelliteCatalog } from '../@types/SatelliteCatalog';
 import type { SatellitesRuntime } from '../../@types/SatellitesRuntime';
 
 import { callbackIterable } from '../../../../utils/async/callbackIterable';
-import { Source } from '../../../../data/source';
 
 export function satellitesSourceCounts(
   runtime: SatellitesRuntime,
@@ -20,7 +19,7 @@ export function satellitesSourceCounts(
       const catalog = runtime.propagator.catalog();
       if (catalog === null || catalog === reported) return;
       reported = catalog;
-      emit({ source: Source.Satellite, count: catalog.noradId.length });
+      emit({ source: 'satellites', count: catalog.noradId.length });
     });
   });
 }

@@ -20,7 +20,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createProceduralDiskRenderer } from '../../../../../../src/layers/galaxyCatalog/disks/procedural/render/proceduralDiskRenderer';
 import { FLOATS_PER_INSTANCE } from '../../../../../../src/layers/galaxyCatalog/disks/quad/render/instancedQuadRenderer';
-import { Source } from '../../../../../../src/data/source';
 import { packSelection } from '../../../../../../src/data/selectionEncoding';
 import type { ProceduralDiskInstance } from '../../../../../../src/layers/galaxyCatalog/disks/procedural/@types/ProceduralDiskInstance';
 
@@ -88,9 +87,9 @@ function makeStubInit() {
 
 /** Distinct from the source ids, so a draw that writes the id instead of the pick code fails. */
 const FAKE_PICK_CODES: Readonly<Record<string, number>> = {
-  [Source.SDSS]: 41,
-  [Source.TwoMRS]: 42,
-  [Source.Glade]: 43,
+  ['sdss']: 41,
+  ['2mrs']: 42,
+  ['glade']: 43,
 };
 
 // Stub shared focus bind group passed into draw() — only bound, never read.
@@ -109,7 +108,7 @@ function fakeProceduralInstance(
     colourIndex: 0.7,
     crossfadeAlpha: 0.5,
     procFadeOut: 1,
-    source: Source.SDSS,
+    source: 'sdss',
     localIdx: 0,
     sbAmp: 1,
     ...overrides,
@@ -143,8 +142,8 @@ describe('proceduralDiskRenderer pack loop (Task R2)', () => {
     } as unknown as GPURenderPassEncoder;
 
     const instances: ProceduralDiskInstance[] = [
-      fakeProceduralInstance({ source: Source.SDSS, localIdx: 7 }),
-      fakeProceduralInstance({ source: Source.Glade, localIdx: 1_000_000 }),
+      fakeProceduralInstance({ source: 'sdss', localIdx: 7 }),
+      fakeProceduralInstance({ source: 'glade', localIdx: 1_000_000 }),
     ];
 
     renderer.draw(
@@ -319,9 +318,9 @@ describe('proceduralDiskRenderer.pickDisks draw count', () => {
       100,
       FOCUS_BIND_GROUP,
       [
-        fakeProceduralInstance({ source: Source.SDSS, localIdx: 42 }),
-        fakeProceduralInstance({ source: Source.TwoMRS, localIdx: 99 }),
-        fakeProceduralInstance({ source: Source.Glade, localIdx: 7 }),
+        fakeProceduralInstance({ source: 'sdss', localIdx: 42 }),
+        fakeProceduralInstance({ source: '2mrs', localIdx: 99 }),
+        fakeProceduralInstance({ source: 'glade', localIdx: 7 }),
       ],
     );
 
@@ -360,9 +359,9 @@ describe('proceduralDiskRenderer.pickDisks draw count', () => {
       100,
       FOCUS_BIND_GROUP,
       [
-        fakeProceduralInstance({ source: Source.SDSS, localIdx: 10 }),
-        fakeProceduralInstance({ source: Source.SDSS, localIdx: 11 }),
-        fakeProceduralInstance({ source: Source.SDSS, localIdx: 12 }),
+        fakeProceduralInstance({ source: 'sdss', localIdx: 10 }),
+        fakeProceduralInstance({ source: 'sdss', localIdx: 11 }),
+        fakeProceduralInstance({ source: 'sdss', localIdx: 12 }),
       ],
     );
     const pickPass1 = makeStubPass();

@@ -6,7 +6,6 @@ import { describe, it, expect } from 'vitest';
 
 import { starCatalogAssetRows } from '../../../../../src/layers/starCatalog/survey/load/starCatalogAssetRows';
 import { expandCompanionRows } from '../../../../../src/utils/loading/expandCompanionRows';
-import { Source } from '../../../../../src/data/source';
 import type { AssetKey } from '../../../../../src/@types/loading/AssetKey';
 import type { StarCatalogRuntime } from '../../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 
@@ -30,8 +29,8 @@ describe('starCatalogAssetRows req builders', () => {
   });
 
   it('gaiaStars carries its source + tier', () => {
-    expect(rowFor(Source.GaiaStars).req('medium')).toEqual({
-      source: Source.GaiaStars,
+    expect(rowFor('gaiaStars').req('medium')).toEqual({
+      source: 'gaiaStars',
       tier: 'medium',
     });
   });

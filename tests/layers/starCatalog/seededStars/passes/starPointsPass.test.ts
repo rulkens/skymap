@@ -31,7 +31,6 @@ import { positionedSeededStars } from '../../../../../src/layers/starCatalog/see
 import { distanceMpc } from '../../../../../src/utils/math/distanceMpc';
 import { projectToScreenPx } from '../../../../../src/utils/camera/projection/projectToScreenPx';
 import { FAMOUS_STAR_PICK_RADIUS_PX } from '../../../../../src/layers/starCatalog/seededStars/data/famousStarPickRadiusPx';
-import { Source } from '../../../../../src/data/source';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../../src/data/selectionEncoding';
 import { makeBodyItems } from '../../../../fixtures/makeBodyItems';
 import { makeSlab } from '../../../../fixtures/makeSlab';
@@ -485,7 +484,7 @@ describe('the Galactic Centre footprint exclusion', () => {
   const sStarIdsIn = (stamped: readonly number[]): string[] =>
     SCENE_S_STARS.filter((star, seedIndex) =>
       stamped.includes(
-        packSelection(PICK_CODES.pickCodeOf(Source.SStar), seedIndex + PICK_SENTINEL_OFFSET),
+        packSelection(PICK_CODES.pickCodeOf('sStar'), seedIndex + PICK_SENTINEL_OFFSET),
       ),
     ).map((star) => star.id);
 

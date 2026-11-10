@@ -11,7 +11,6 @@ import { describe, it, expect } from 'vitest';
 import { createPickCodeAllocator } from '../../../../src/services/engine/selection/createPickCodeAllocator';
 import { composeSelectionRows } from '../../../../src/services/engine/selection/composeSelectionRows';
 import { unpackPick } from '../../../../src/data/selectionEncoding';
-import { Source } from '../../../../src/data/source';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { createAppStore } from '../../../../src/store/createAppStore';
 import { hashBodyFor } from '../../../../src/state/url/hashBodyFor';
@@ -71,11 +70,11 @@ function casesUnder(allocator: PickCodeAllocator) {
     kind(
       galaxyCatalogSelectionRow(
         galaxyRowRuntime(
-          { catalogs: new Map([[Source.SDSS, makeGalaxyCatalog(16)]]) },
+          { catalogs: new Map([['sdss', makeGalaxyCatalog(16)]]) },
           pickCode('galaxyCatalog'),
         ),
       ),
-      { type: 'galaxyCatalog', source: Source.SDSS, index: 12 },
+      { type: 'galaxyCatalog', source: 'sdss', index: 12 },
     ),
     kind(
       starCatalogSelectionRow(
@@ -84,7 +83,7 @@ function casesUnder(allocator: PickCodeAllocator) {
           pickCode('starCatalog'),
         ),
       ),
-      { type: 'starCatalog', source: Source.FamousStar, index: 3 },
+      { type: 'starCatalog', source: 'famousStar', index: 3 },
     ),
     kind(bodySelectionRow({ pickCodes: bodyPickCodes(pickCode('body')) }), {
       type: 'body',

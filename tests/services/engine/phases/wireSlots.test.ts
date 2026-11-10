@@ -10,7 +10,6 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Source } from '../../../../src/data/source';
 import { GALAXY_CATALOG_SOURCES } from '../../../../src/layers/galaxyCatalog/sources/galaxyCatalogSources';
 import { galaxyCatalogVisibility } from '../../../../src/layers/galaxyCatalog/visibility';
 import { cosmicWebDensityVisibility } from '../../../../src/layers/cosmicWebDensity/visibility';
@@ -168,10 +167,10 @@ function bootPointSlots(): Map<SourceId, ReturnType<typeof makeFakeSlot>> {
   const famous = makeFakeSlot('famous-points');
   famous.fire({ kind: 'loading', req: {}, attempt: 1 } as never);
   return new Map<SourceId, ReturnType<typeof makeFakeSlot>>([
-    [Source.SDSS, makeFakeSlot('sdss-points')],
-    [Source.TwoMRS, makeFakeSlot('2mrs-points')],
-    [Source.Glade, makeFakeSlot('glade-points')],
-    [Source.FamousGalaxy, famous],
+    ['sdss', makeFakeSlot('sdss-points')],
+    ['2mrs', makeFakeSlot('2mrs-points')],
+    ['glade', makeFakeSlot('glade-points')],
+    ['famousGalaxy', famous],
   ]);
 }
 
@@ -400,10 +399,10 @@ describe('wireSlots', () => {
     const gladeSlot = makeFakeSlot('glade-points');
     const famousSlot = makeFakeSlot('famous-points');
     const points = new Map<SourceId, ReturnType<typeof makeFakeSlot>>([
-      [Source.SDSS, sdssSlot],
-      [Source.TwoMRS, twoMrsSlot],
-      [Source.Glade, gladeSlot],
-      [Source.FamousGalaxy, famousSlot],
+      ['sdss', sdssSlot],
+      ['2mrs', twoMrsSlot],
+      ['glade', gladeSlot],
+      ['famousGalaxy', famousSlot],
     ]);
     const state = makeState({ points });
     const deps = makeDeps();
@@ -446,10 +445,10 @@ describe('wireSlots', () => {
     const gladeSlot = makeFakeSlot('glade-points');
     const famousSlot = makeFakeSlot('famous-points');
     const points = new Map<SourceId, ReturnType<typeof makeFakeSlot>>([
-      [Source.SDSS, sdssSlot],
-      [Source.TwoMRS, twoMrsSlot],
-      [Source.Glade, gladeSlot],
-      [Source.FamousGalaxy, famousSlot],
+      ['sdss', sdssSlot],
+      ['2mrs', twoMrsSlot],
+      ['glade', gladeSlot],
+      ['famousGalaxy', famousSlot],
     ]);
     const state = makeState({ points });
     const deps = makeDeps();
@@ -526,7 +525,7 @@ describe('wireSlots', () => {
   // a gated identity waits at 0 and its slot's commit is what raises it.
   it('a gated visibility identity seeds at 0 and its slot commit raises it', async () => {
     const sdssSlot = makeFakeSlot('sdss-points');
-    const state = makeState({ points: new Map([[Source.SDSS, sdssSlot]]) });
+    const state = makeState({ points: new Map([['sdss', sdssSlot]]) });
     const fades = state.subsystems.fades;
 
     await wireSlots(state, makeDeps());
@@ -549,10 +548,10 @@ describe('wireSlots', () => {
     const gladeSlot = makeFakeSlot('glade-points');
     const famousSlot = makeFakeSlot('famous-points');
     const points = new Map<SourceId, ReturnType<typeof makeFakeSlot>>([
-      [Source.SDSS, sdssSlot],
-      [Source.TwoMRS, twoMrsSlot],
-      [Source.Glade, gladeSlot],
-      [Source.FamousGalaxy, famousSlot],
+      ['sdss', sdssSlot],
+      ['2mrs', twoMrsSlot],
+      ['glade', gladeSlot],
+      ['famousGalaxy', famousSlot],
     ]);
     const state = makeState({ points });
     const deps = makeDeps();

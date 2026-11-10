@@ -223,16 +223,16 @@ export function catalogPickCodes<K extends string>(
 
 - Consumes: Task 1's member→id values (the table itself is the map).
 
-- [ ] **Step 1: Substitute.** A throwaway script outside the repo reads the member→id map from
+- [x] **Step 1: Substitute.** A throwaway script outside the repo reads the member→id map from
       `src/data/source.ts` and, **only in files that import from `data/source`**, replaces `Source.<Member>`
       with `'<id>'` and removes the emptied import. Run `npm run format`.
-- [ ] **Step 2: Delete `src/data/source.ts`.** `grep -rn "data/source'" src tools tests packages` → nothing.
-- [ ] **Step 3: Fix the stale comments and add the ADR 0013 note.**
+- [x] **Step 2: Delete `src/data/source.ts`.** `grep -rn "data/source'" src tools tests packages` → nothing.
+- [x] **Step 3: Fix the stale comments and add the ADR 0013 note.**
       `grep -rniE "Source (code|enum)|numeric Source|Source\.[A-Z]" src tools tests packages` → nothing left that
       describes the deleted table.
-- [ ] **Step 4: Verify.** `npm run typecheck`, `npm test` → green; bin parity as in Task 1 Step 9 → equal to
+- [x] **Step 4: Verify.** `npm run typecheck`, `npm test` → green; bin parity as in Task 1 Step 9 → equal to
       `bins-before.txt`.
-- [ ] **Step 5: Commit** — "The Source table is deleted; sources are named by their ids".
+- [x] **Step 5: Commit** — "The Source table is deleted; sources are named by their ids".
 
 ### Task 5: Before/after evidence
 

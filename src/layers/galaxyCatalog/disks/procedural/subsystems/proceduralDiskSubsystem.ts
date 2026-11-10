@@ -18,7 +18,6 @@
  * this planner imports both.
  */
 
-import { Source } from '../../../../../data/source';
 import { GALAXY_CATALOG_SOURCE_RECORD } from '../../../sources/galaxyCatalogSourceRecord';
 import { pickColourIndex } from '../../../appearance/data/colourIndex';
 import {
@@ -176,7 +175,7 @@ export function createProceduralDiskSubsystem(
           // fade-IN band so the two passes hand off in lockstep. Everything
           // else keeps procFadeOut at 1.0.
           let final = emitted;
-          if (atlas && source === Source.FamousGalaxy) {
+          if (atlas && source === 'famousGalaxy') {
             const [ra, dec] = cartesianToRaDec(x, y, z);
             const key = galaxyCacheKey(ra, dec);
             if (atlas.isLoaded(key)) {

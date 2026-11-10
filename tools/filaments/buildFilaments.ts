@@ -87,7 +87,6 @@ import {
 } from '../../src/layers/cosmicWebFilaments/filaments/data/filamentBinaryFormat';
 import { FormatVersionError } from '../../src/data/formatVersionError';
 import type { GalaxyCatalog } from '../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import { Source } from '../../src/data/source';
 import { galaxyCatalogFluxLimit } from '../../src/layers/galaxyCatalog/records/data/galaxyCatalogFluxLimits';
 import { absoluteFromApparent } from '../../src/utils/math/absoluteFromApparent';
 import { dMaxFromAbsolute } from '../../src/utils/math/dMaxFromAbsolute';
@@ -446,7 +445,7 @@ type TaggedPositions = {
   positions: Float32Array;
   /** Apparent magnitude in the survey's flux-limit band. */
   magG: Float32Array;
-  /** Per-galaxy source tag (one of Source.TwoMRS, Source.Glade). */
+  /** Per-galaxy source tag (one of '2mrs', 'glade'). */
   sources: GalaxyCatalogId[];
   /**
    * Per-galaxy HEALPix angular re-weight in [1, WEIGHT_CAP].
@@ -483,9 +482,9 @@ type TaggedPositions = {
  * filter rather than a parallel code path.
  */
 const ALL_SOURCE_FILES = [
-  { name: 'sdss.bin', source: Source.SDSS, key: 'sdss' as const },
-  { name: '2mrs.bin', source: Source.TwoMRS, key: '2mrs' as const },
-  { name: 'glade.bin', source: Source.Glade, key: 'glade' as const },
+  { name: 'sdss.bin', source: 'sdss', key: 'sdss' as const },
+  { name: '2mrs.bin', source: '2mrs', key: '2mrs' as const },
+  { name: 'glade.bin', source: 'glade', key: 'glade' as const },
 ] as const;
 
 /**
@@ -516,7 +515,7 @@ const ALL_SOURCE_FILES = [
  * 200 Mpc cut).
  */
 function readMergedPositions(activeSources: ReadonlySet<SourceKey>): TaggedPositions {
-  // Per-source: which `.bin` to read, and which Source enum value to
+  // Per-source: which `.bin` to read, and which source id to
   // tag every surviving galaxy with.  The tag drives the right
   // galaxyCatalogFluxLimit() lookup in the Malmquist pass — m_lim is in the
   // K_s band for 2MRS (11.75), B band for GLADE (18.0), r band for

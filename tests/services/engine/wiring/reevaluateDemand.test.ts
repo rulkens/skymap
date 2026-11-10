@@ -4,14 +4,13 @@
  * row does not load; a loading/ready slot is left alone (the idle-guard against a re-fetch storm); a
  * non-idle slot whose request drifted reloads in place, never releases; a throwing predicate is caught
  * and does not stop later rows. Each stub row carries its stub slot, also indexed in
- * `state.slotsByKey` under the row's numeric SourceId key (as `createLayers` does).
+ * `state.slotsByKey` under the row's SourceId key (as `createLayers` does).
  */
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { evaluateRows } from '../../../../src/services/engine/wiring/reevaluateDemand';
 import { galaxyCatalogRequest } from '../../../../src/services/engine/wiring/galaxyCatalogRequest';
 import { createAssetSlot } from '../../../../src/services/loading/AssetSlot';
-import { Source } from '../../../../src/data/source';
 import { clampTier } from '../../../../src/utils/math/clampTier';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { PriorityQueue } from '../../../../src/utils/concurrency/priorityQueue';
@@ -144,16 +143,16 @@ afterEach(() => {
 describe('evaluateRows', () => {
   it('loads a row whose demand returns true', () => {
     const slot = stubSlot();
-    const state = makeState(new Map([[Source.SDSS, slot]]));
-    evaluateRows(state, [row(slot, Source.SDSS, () => true)]);
+    const state = makeState(new Map([['sdss', slot]]));
+    evaluateRows(state, [row(slot, 'sdss', () => true)]);
     expect(slot.load).toHaveBeenCalledTimes(1);
-    expect(slot.load).toHaveBeenCalledWith({ source: Source.SDSS, tier: 'medium' });
+    expect(slot.load).toHaveBeenCalledWith({ source: 'sdss', tier: 'medium' });
   });
 
   it('does not load a row whose demand returns false', () => {
     const slot = stubSlot();
-    const state = makeState(new Map([[Source.SDSS, slot]]));
-    evaluateRows(state, [row(slot, Source.SDSS, () => false)]);
+    const state = makeState(new Map([['sdss', slot]]));
+    evaluateRows(state, [row(slot, 'sdss', () => false)]);
     expect(slot.load).not.toHaveBeenCalled();
   });
 
@@ -163,15 +162,15 @@ describe('evaluateRows', () => {
     const glade = stubSlot();
     const state = makeState(
       new Map([
-        [Source.SDSS, sdss],
-        [Source.Glade, glade],
+        ['sdss', sdss],
+        ['glade', glade],
       ]),
     );
     evaluateRows(state, [
-      row(sdss, Source.SDSS, () => {
+      row(sdss, 'sdss', () => {
         throw new Error('boom');
       }),
-      row(glade, Source.Glade, () => true),
+      row(glade, 'glade', () => true),
     ]);
     // First row's throw is swallowed + warned; the second row still loads.
     expect(sdss.load).not.toHaveBeenCalled();
@@ -181,8 +180,8 @@ describe('evaluateRows', () => {
 
   it('does not re-load a slot that is already ready', () => {
     const slot = stubSlot('ready');
-    const state = makeState(new Map([[Source.SDSS, slot]]));
-    evaluateRows(state, [row(slot, Source.SDSS, () => true)]);
+    const state = makeState(new Map([['sdss', slot]]));
+    evaluateRows(state, [row(slot, 'sdss', () => true)]);
     // Demanded, but the slot already holds data — the idle-guard skips it so a
     // toggle-driven re-eval doesn't abort + re-fetch a ready galaxy catalog.
     expect(slot.load).not.toHaveBeenCalled();
@@ -190,8 +189,8 @@ describe('evaluateRows', () => {
 
   it('releases a ready slot whose release predicate returns true', () => {
     const slot = stubSlot('ready');
-    const state = makeState(new Map([[Source.SDSS, slot]]));
-    evaluateRows(state, [row(slot, Source.SDSS, () => false, { release: () => true })]);
+    const state = makeState(new Map([['sdss', slot]]));
+    evaluateRows(state, [row(slot, 'sdss', () => false, { release: () => true })]);
     expect(slot.release).toHaveBeenCalledTimes(1);
     expect(slot.load).not.toHaveBeenCalled();
   });
@@ -201,16 +200,16 @@ describe('evaluateRows', () => {
     // payload still committed and drawing. Nothing but this edge frees it, so a
     // `ready`-only gate pins a whole-globe texture in VRAM for the session.
     const slot = stubSlot('error');
-    const state = makeState(new Map([[Source.SDSS, slot]]));
-    evaluateRows(state, [row(slot, Source.SDSS, () => false, { release: () => true })]);
+    const state = makeState(new Map([['sdss', slot]]));
+    evaluateRows(state, [row(slot, 'sdss', () => false, { release: () => true })]);
     expect(slot.release).toHaveBeenCalledTimes(1);
   });
 
   it('leaves a loading slot whose row says release alone, and releases it once ready', () => {
     // The evict edge fires on `ready`/`error` only: a fetch in flight finishes, then goes.
     const slot = stubSlot('loading');
-    const state = makeState(new Map([[Source.SDSS, slot]]));
-    const rows = [row(slot, Source.SDSS, () => false, { release: () => true })];
+    const state = makeState(new Map([['sdss', slot]]));
+    const rows = [row(slot, 'sdss', () => false, { release: () => true })];
     evaluateRows(state, rows);
     expect(slot.release).not.toHaveBeenCalled();
     expect(slot.load).not.toHaveBeenCalled();
@@ -221,23 +220,23 @@ describe('evaluateRows', () => {
 
   it('does not release a ready slot whose release predicate returns false', () => {
     const slot = stubSlot('ready');
-    const state = makeState(new Map([[Source.SDSS, slot]]));
-    evaluateRows(state, [row(slot, Source.SDSS, () => false, { release: () => false })]);
+    const state = makeState(new Map([['sdss', slot]]));
+    evaluateRows(state, [row(slot, 'sdss', () => false, { release: () => false })]);
     expect(slot.release).not.toHaveBeenCalled();
   });
 
   it('never releases a row with no release predicate (load-once default)', () => {
     const slot = stubSlot('ready');
-    const state = makeState(new Map([[Source.SDSS, slot]]));
-    evaluateRows(state, [row(slot, Source.SDSS, () => true)]);
+    const state = makeState(new Map([['sdss', slot]]));
+    evaluateRows(state, [row(slot, 'sdss', () => true)]);
     expect(slot.release).not.toHaveBeenCalled();
   });
 
   it('does not release an idle slot even when the release predicate is true', () => {
     // The drop edge claims every idle slot before the evict edge is reached.
     const slot = stubSlot('idle');
-    const state = makeState(new Map([[Source.SDSS, slot]]));
-    evaluateRows(state, [row(slot, Source.SDSS, () => false, { release: () => true })]);
+    const state = makeState(new Map([['sdss', slot]]));
+    evaluateRows(state, [row(slot, 'sdss', () => false, { release: () => true })]);
     expect(slot.release).not.toHaveBeenCalled();
   });
 
@@ -260,26 +259,26 @@ describe('evaluateRows', () => {
       });
       return slot;
     };
-    const sdss = recordingSlot(Source.SDSS);
-    const glade = recordingSlot(Source.Glade);
-    const twoMrs = recordingSlot(Source.TwoMRS);
+    const sdss = recordingSlot('sdss');
+    const glade = recordingSlot('glade');
+    const twoMrs = recordingSlot('2mrs');
     const state = makeState(
       new Map([
-        [Source.SDSS, sdss],
-        [Source.Glade, glade],
-        [Source.TwoMRS, twoMrs],
+        ['sdss', sdss],
+        ['glade', glade],
+        ['2mrs', twoMrs],
       ]),
     );
 
     evaluateRows(state, [
-      ranked(sdss, Source.SDSS, 60),
-      ranked(glade, Source.Glade, 10),
-      ranked(twoMrs, Source.TwoMRS, 0),
+      ranked(sdss, 'sdss', 60),
+      ranked(glade, 'glade', 10),
+      ranked(twoMrs, '2mrs', 0),
     ]);
 
     // Exactly ASSET_QUEUE_CONCURRENCY loads, and they are the two best ranks in
     // rank order — SDSS, first in the array and worst-ranked, waits its turn.
-    expect(started).toEqual([Source.TwoMRS, Source.Glade]);
+    expect(started).toEqual(['2mrs', 'glade']);
   });
 
   it('does not start a queued fetch whose demand turned false while it waited', async () => {
@@ -294,16 +293,16 @@ describe('evaluateRows', () => {
     let demanded = true;
     const state = makeState(
       new Map([
-        [Source.TwoMRS, first],
-        [Source.Glade, second],
-        [Source.SDSS, waiting],
+        ['2mrs', first],
+        ['glade', second],
+        ['sdss', waiting],
       ]),
     );
 
     evaluateRows(state, [
-      ranked(first, Source.TwoMRS, 0),
-      ranked(second, Source.Glade, 1),
-      { ...ranked(waiting, Source.SDSS, 2), demand: stubDemand(() => demanded) },
+      ranked(first, '2mrs', 0),
+      ranked(second, 'glade', 1),
+      { ...ranked(waiting, 'sdss', 2), demand: stubDemand(() => demanded) },
     ]);
     expect(waiting.load).not.toHaveBeenCalled();
 
@@ -317,16 +316,16 @@ describe('evaluateRows', () => {
 
 describe('evaluateRows — drift edge', () => {
   const drifted = (kind: LoadState<unknown>['kind']) =>
-    stubSlot(kind, { source: Source.SDSS, tier: 'small' });
+    stubSlot(kind, { source: 'sdss', tier: 'small' });
 
   it('a ready slot whose request drifted is re-loaded, not released', () => {
     // The headline of the drift edge: a tier swap replaces the resident payload
     // in place. Releasing would blank the catalog for the length of the refetch.
     const slot = drifted('ready');
-    const state = makeState(new Map([[Source.SDSS, slot]]));
-    evaluateRows(state, [row(slot, Source.SDSS, () => true)]);
+    const state = makeState(new Map([['sdss', slot]]));
+    evaluateRows(state, [row(slot, 'sdss', () => true)]);
     expect(slot.load).toHaveBeenCalledTimes(1);
-    expect(slot.load).toHaveBeenCalledWith({ source: Source.SDSS, tier: 'medium' });
+    expect(slot.load).toHaveBeenCalledWith({ source: 'sdss', tier: 'medium' });
     expect(slot.release).not.toHaveBeenCalled();
   });
 
@@ -334,8 +333,8 @@ describe('evaluateRows — drift edge', () => {
     // A slot that gave up at the old request is not stuck: the new request is a
     // different fetch, so the edge is not gated on `ready`.
     const slot = drifted('error');
-    const state = makeState(new Map([[Source.SDSS, slot]]));
-    evaluateRows(state, [row(slot, Source.SDSS, () => true)]);
+    const state = makeState(new Map([['sdss', slot]]));
+    evaluateRows(state, [row(slot, 'sdss', () => true)]);
     expect(slot.load).toHaveBeenCalledTimes(1);
   });
 
@@ -343,9 +342,7 @@ describe('evaluateRows — drift edge', () => {
     // Drift answers WHICH request, never WHETHER — an undemanded row stays put.
     const slot = drifted('ready');
     const queue = stubQueue();
-    evaluateRows(makeState(new Map([[Source.SDSS, slot]]), queue), [
-      row(slot, Source.SDSS, () => false),
-    ]);
+    evaluateRows(makeState(new Map([['sdss', slot]]), queue), [row(slot, 'sdss', () => false)]);
     expect(slot.load).not.toHaveBeenCalled();
     expect(slot.release).not.toHaveBeenCalled();
     expect(queue.enqueueMany).toHaveBeenCalledWith([]);
@@ -355,8 +352,8 @@ describe('evaluateRows — drift edge', () => {
     // Both reasons apply; the distance edge wins, and the released slot comes
     // back through the idle edges rather than reloading at the old distance.
     const slot = drifted('ready');
-    const state = makeState(new Map([[Source.SDSS, slot]]));
-    evaluateRows(state, [row(slot, Source.SDSS, () => true, { release: () => true })]);
+    const state = makeState(new Map([['sdss', slot]]));
+    evaluateRows(state, [row(slot, 'sdss', () => true, { release: () => true })]);
     expect(slot.release).toHaveBeenCalledTimes(1);
     expect(slot.load).not.toHaveBeenCalled();
   });
@@ -367,11 +364,9 @@ describe('evaluateRows — drift edge', () => {
     // be dropped on the floor. `load()` aborts the superseded attempt itself.
     const slot = drifted('loading');
     const queue = stubQueue();
-    evaluateRows(makeState(new Map([[Source.SDSS, slot]]), queue), [
-      row(slot, Source.SDSS, () => true),
-    ]);
+    evaluateRows(makeState(new Map([['sdss', slot]]), queue), [row(slot, 'sdss', () => true)]);
     expect(slot.load).toHaveBeenCalledTimes(1);
-    expect(slot.load).toHaveBeenCalledWith({ source: Source.SDSS, tier: 'medium' });
+    expect(slot.load).toHaveBeenCalledWith({ source: 'sdss', tier: 'medium' });
     expect(queue.enqueueMany).toHaveBeenCalledWith([]);
   });
 
@@ -402,10 +397,10 @@ describe('evaluateRows — drift edge', () => {
     };
 
     const queue = new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY);
-    const state = makeState(new Map([[Source.SDSS, slot]]), queue);
+    const state = makeState(new Map([['sdss', slot]]), queue);
     const rows = [
-      row(slot, Source.SDSS, () => true, {
-        req: (tier) => galaxyCatalogRequest(Source.SDSS, tier),
+      row(slot, 'sdss', () => true, {
+        req: (tier) => galaxyCatalogRequest('sdss', tier),
       }),
     ];
 
@@ -429,7 +424,7 @@ describe('evaluateRows — drift edge', () => {
     // state behind for a retry policy to act on.
     expect(slot.state()).toMatchObject({
       kind: 'loading',
-      req: galaxyCatalogRequest(Source.SDSS, 'small'),
+      req: galaxyCatalogRequest('sdss', 'small'),
     });
   });
 });

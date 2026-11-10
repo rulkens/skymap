@@ -82,7 +82,6 @@ import { CUTOFF_MPC } from './localVolumeCutoff';
 import type { Cf4CatalogIndex } from '../parsers/cosmicflows4';
 import { loadCf4CatalogIndex } from '../parsers/cosmicflows4';
 import { DEFAULT_GALAXY_DIAMETER_KPC } from '../../src/utils/math/defaultGalaxyDiameterKpc';
-import { Source } from '../../src/data/source';
 import { APP_SOURCE_REGISTRY } from '../../src/compositions/appSources';
 import type { GalaxyCatalog } from '../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import {
@@ -743,9 +742,9 @@ async function runCli(): Promise<void> {
   // Capture per-source input counts up front so the summary can report
   // the dedup drop rate per survey, not just the merged total.
   const inputCounts: Partial<Record<GalaxyCatalogId, number>> = {
-    [Source.SDSS]: sdss.length,
-    [Source.TwoMRS]: twoMrs.length,
-    [Source.Glade]: glade.length,
+    ['sdss']: sdss.length,
+    ['2mrs']: twoMrs.length,
+    ['glade']: glade.length,
   };
   DESI_PATCHES.forEach((patch, i) => {
     inputCounts[patch.source] = desiPatches[i]!.length;
@@ -841,17 +840,17 @@ async function runCli(): Promise<void> {
         `  famous-seed dedup: dropped ${milliquasFamousDropped.toLocaleString()} Milliquas rows that match a famous-seed position\n`,
       );
     }
-    bySource.set(Source.Milliquas, milliquasKept);
+    bySource.set('milliquas', milliquasKept);
   }
 
   // Per-source dedup report. Subtracting kept from input gives the number
   // of records dropped as duplicates of a higher-priority survey's row.
   for (const source of [
-    Source.SDSS,
-    Source.TwoMRS,
-    Source.Glade,
+    'sdss',
+    '2mrs',
+    'glade',
     ...DESI_PATCHES.map((patch) => patch.source),
-  ]) {
+  ] as GalaxyCatalogId[]) {
     const kept = (bySource.get(source) ?? []).length;
     const input = inputCounts[source] ?? 0;
     const dropped = input - kept;

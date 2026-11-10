@@ -13,7 +13,6 @@
 import type { GalaxyCatalogId } from '../../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import { GALAXY_CATALOG_IDS } from '../../../../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Source } from '../../../../../../src/data/source';
 import { createGalaxyAtlasSubsystem } from '../../../../../../src/layers/galaxyCatalog/thumbnailAtlas/subsystems/galaxyAtlasSubsystem';
 import { createTexturedDiskSubsystem } from '../../../../../../src/layers/galaxyCatalog/disks/textured/subsystems/texturedDiskSubsystem';
 import { createDiskPlannerWalk } from '../../../../../../src/layers/galaxyCatalog/lod/subsystems/diskPlannerWalk';
@@ -132,7 +131,7 @@ describe('createTexturedDiskSubsystem', () => {
       atlas,
       fetcher,
     });
-    const clouds = new Map([[Source.SDSS, makeDenseCloud(2)]]);
+    const clouds = new Map([['sdss' as const, makeDenseCloud(2)]]);
 
     runTexturedSolo(walk, sys, makeInput(clouds));
     await new Promise((r) => setTimeout(r, 0));
@@ -153,7 +152,7 @@ describe('createTexturedDiskSubsystem', () => {
         atlas,
         fetcher: async () => makeFakeBitmap(),
       });
-      const clouds = new Map([[Source.SDSS, makeDenseCloud(1)]]);
+      const clouds = new Map([['sdss' as const, makeDenseCloud(1)]]);
       // Frame 1 (nowMs=0): enqueues the fetch.
       runTexturedSolo(walk, sys, makeInput(clouds, undefined, [], 0, sourceOpacity));
       await new Promise((r) => setTimeout(r, 0));
@@ -182,7 +181,7 @@ describe('createTexturedDiskSubsystem', () => {
     });
     const ATLAS_SLOTS = 256;
     const SPACING = 0.00001;
-    const clouds = new Map([[Source.SDSS, makeDenseCloud(ATLAS_SLOTS * 8, 0.7, 45, SPACING)]]);
+    const clouds = new Map([['sdss' as const, makeDenseCloud(ATLAS_SLOTS * 8, 0.7, 45, SPACING)]]);
     const [ra, dec] = cartesianToRaDec(10, 0, 0);
     const firstRowKey = galaxyCacheKey(ra, dec);
 
@@ -203,7 +202,7 @@ describe('createTexturedDiskSubsystem', () => {
     const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
     const walk = createDiskPlannerWalk({ decimationFactor: 1 });
     const sys = createTexturedDiskSubsystem({ device, atlas, fetcher });
-    const clouds = new Map([[Source.SDSS, makeDenseCloud(1)]]);
+    const clouds = new Map([['sdss' as const, makeDenseCloud(1)]]);
 
     runTexturedSolo(walk, sys, makeInput(clouds));
     expect(pending.length).toBe(1); // the fetch really is outstanding
@@ -218,7 +217,7 @@ describe('createTexturedDiskSubsystem', () => {
       atlas,
       fetcher: async () => makeFakeBitmap(),
     });
-    const clouds = new Map([[Source.SDSS, makeDenseCloud(1)]]);
+    const clouds = new Map([['sdss' as const, makeDenseCloud(1)]]);
 
     // Frame 1 (nowMs=0) enqueues; the bitmap lands and stamps its arrival.
     runTexturedSolo(walk, sys, makeInput(clouds, undefined, [], 0));
@@ -268,7 +267,7 @@ describe('createTexturedDiskSubsystem', () => {
       fetcher,
       hiResFamous,
     });
-    const clouds = new Map([[Source.FamousGalaxy, makeDenseCloud(2)]]);
+    const clouds = new Map([['famousGalaxy' as const, makeDenseCloud(2)]]);
     const meta = makeFamousMeta(2);
 
     runTexturedSolo(walk, sys, makeInput(clouds, undefined, meta));
@@ -307,7 +306,7 @@ describe('createTexturedDiskSubsystem', () => {
       fetcher,
       hiResFamous: initial,
     });
-    const clouds = new Map([[Source.FamousGalaxy, makeDenseCloud(1)]]);
+    const clouds = new Map([['famousGalaxy' as const, makeDenseCloud(1)]]);
     const meta = makeFamousMeta(1);
     runTexturedSolo(walk, sys, makeInput(clouds, undefined, meta));
     await new Promise((r) => setTimeout(r, 0));
@@ -343,7 +342,7 @@ describe('createTexturedDiskSubsystem', () => {
       atlas,
       fetcher,
     });
-    const clouds = new Map([[Source.SDSS, makeDenseCloud(1)]]);
+    const clouds = new Map([['sdss' as const, makeDenseCloud(1)]]);
     runTexturedSolo(walk, sys, makeInput(clouds));
     await new Promise((r) => setTimeout(r, 0));
     const callsBefore = fetcher.mock.calls.length;
@@ -367,7 +366,7 @@ describe('createTexturedDiskSubsystem', () => {
       atlas,
       fetcher,
     });
-    const clouds = new Map([[Source.FamousGalaxy, makeDenseCloud(1)]]);
+    const clouds = new Map([['famousGalaxy' as const, makeDenseCloud(1)]]);
     const meta: FamousGalaxyMetaEntry[] = [
       { id: 'ngc-224', names: ['Andromeda'], description: '', type: 'spiral' },
     ];
@@ -408,7 +407,7 @@ describe('createTexturedDiskSubsystem', () => {
       positionAngleDeg: new Float32Array([45]),
       diameterKpc: new Float32Array([50]),
     });
-    const clouds = new Map([[Source.FamousGalaxy, catalog]]);
+    const clouds = new Map([['famousGalaxy' as const, catalog]]);
     const meta = makeFamousMeta(1);
 
     runTexturedSolo(walk, sys, makeInput(clouds, undefined, meta));

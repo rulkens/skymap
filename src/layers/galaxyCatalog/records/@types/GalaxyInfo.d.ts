@@ -5,7 +5,6 @@
  */
 
 import type { GalaxyTypeInfo } from './GalaxyTypeInfo';
-import { Source } from '../../../../data/source';
 import type { BandLabels } from '../../../../@types/data/galaxyCatalog/BandLabels';
 import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
 
@@ -145,8 +144,8 @@ export type GalaxyInfo = {
    * when the source doesn't define one.
    *
    * Values come from `sourceClassLabel(source, classByte)`:
-   * `Source.Milliquas` rows carry an AGN class (e.g. `"Quasar"`,
-   * `"BL Lac"`, `"Seyfert-1 broad"`); `Source.DesiDeep` rows carry the
+   * `'milliquas'` rows carry an AGN class (e.g. `"Quasar"`,
+   * `"BL Lac"`, `"Seyfert-1 broad"`); `'desiDeep'` rows carry the
    * LSS tracer population (e.g. `"Luminous Red Galaxy (LRG)"`,
    * `"Quasar (QSO)"`).  For SDSS / 2MRS / GLADE / Famous rows the field
    * is `undefined` and InfoCard consumers are expected
@@ -273,7 +272,7 @@ export type GalaxyInfo = {
   diameterProvenance: string;
 
   /**
-   * Famous-galaxy identity, present only when `source === Source.FamousGalaxy`.
+   * Famous-galaxy identity, present only when `source === 'famousGalaxy'`.
    *
    * Copied off the row's compiled-in `FAMOUS_GALAXY_NAMES` entry, so it is there
    * before any sidecar loads. The prose (description, morphology) is not: the

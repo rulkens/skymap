@@ -1,4 +1,3 @@
-import { Source } from '../../../data/source';
 import { buildGalaxyInfo } from '../records/present/buildGalaxyInfo';
 import type { SelectionKindFacts } from '../../../@types/engine/layer/SelectionKindFacts';
 import type { GalaxyCatalogRef } from './@types/GalaxyCatalogRef';
@@ -22,7 +21,7 @@ export const galaxyCatalogSelectionKinds: readonly SelectionKindFacts<
       ring: { radii: 4, slab: 'cosmo' },
     },
     // Only famous galaxies carry captions; a survey galaxy is InfoCard text only.
-    mayHaveLabel: (ref) => ref.source === Source.FamousGalaxy,
+    mayHaveLabel: (ref) => ref.source === 'famousGalaxy',
     toFocusable: (row) => ({
       ...buildGalaxyInfo(row),
       ref: { type: 'galaxyCatalog', source: row.source, index: row.index },

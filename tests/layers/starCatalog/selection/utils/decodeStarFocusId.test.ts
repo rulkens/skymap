@@ -10,23 +10,22 @@ import { describe, it, expect } from 'vitest';
 import { decodeStarFocusId } from '../../../../../src/layers/starCatalog/selection/utils/decodeStarFocusId';
 import { SCENE_STARS } from '../../../../../src/data/bodies/sceneStars';
 import { SCENE_S_STARS } from '../../../../../src/data/bodies/sceneSStars';
-import { Source } from '../../../../../src/data/source';
 
 describe('decodeStarFocusId', () => {
   it('resolves a seed id to its own table and index, with no survey loaded', () => {
     expect(decodeStarFocusId('star-sirius', false)).toEqual({
       type: 'starCatalog',
-      source: Source.FamousStar,
+      source: 'famousStar',
       index: SCENE_STARS.findIndex((star) => star.id === 'sirius'),
     });
     expect(decodeStarFocusId('star-sun', false)).toEqual({
       type: 'starCatalog',
-      source: Source.Sun,
+      source: 'sun',
       index: 0,
     });
     expect(decodeStarFocusId('star-s2', false)).toEqual({
       type: 'starCatalog',
-      source: Source.SStar,
+      source: 'sStar',
       index: SCENE_S_STARS.findIndex((star) => star.id === 's2'),
     });
   });
@@ -35,7 +34,7 @@ describe('decodeStarFocusId', () => {
     expect(decodeStarFocusId('star-42', false)).toBeNull();
     expect(decodeStarFocusId('star-42', true)).toEqual({
       type: 'starCatalog',
-      source: Source.GaiaStars,
+      source: 'gaiaStars',
       index: 42,
     });
   });

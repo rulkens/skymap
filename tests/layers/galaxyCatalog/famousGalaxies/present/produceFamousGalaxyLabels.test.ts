@@ -9,7 +9,6 @@ import {
   MIN_LABEL_CLEARANCE_PX,
 } from '../../../../../src/services/engine/presentation/leaderLineStyle';
 import { ATLAS_FONT_SIZE } from '../../../../../src/data/fonts';
-import { Source } from '../../../../../src/data/source';
 import {
   packSelection,
   PICK_SENTINEL_OFFSET,
@@ -121,7 +120,7 @@ function seed(
 ): FamousRuntime {
   seedNames(...entries);
   return {
-    catalogs: new Map([[Source.FamousGalaxy, famousCatalog(positions, diameters)]]),
+    catalogs: new Map([['famousGalaxy', famousCatalog(positions, diameters)]]),
     pickCodes: PICK_CODES,
   };
 }
@@ -274,7 +273,7 @@ describe('produceFamousGalaxyLabels', () => {
   it('focusedOnly mode: emits only the focused famous galaxy', () => {
     const state = makeState({
       focusedOnly: true,
-      focus: { type: 'galaxyCatalog', source: Source.FamousGalaxy, index: 1 },
+      focus: { type: 'galaxyCatalog', source: 'famousGalaxy', index: 1 },
     });
     const runtime = seed(
       [
@@ -294,7 +293,7 @@ describe('produceFamousGalaxyLabels', () => {
       null,
       { type: 'structure', id: 'cluster-virgo' },
       { type: 'milkyWay' },
-      { type: 'galaxyCatalog', source: Source.SDSS, index: 0 },
+      { type: 'galaxyCatalog', source: 'sdss', index: 0 },
     ];
     for (const focus of cases) {
       const state = makeState({ focusedOnly: true, focus });
@@ -327,7 +326,7 @@ describe('produceFamousGalaxyLabels', () => {
     expect(labels.map((l) => l.id)).toEqual(['famous-a', 'famous-c']);
     for (const label of labels) {
       const pick = unpackPick(label.pickId!)!;
-      expect(pick.sourceCode).toBe(PICK_CODES.pickCodeOf(Source.FamousGalaxy));
+      expect(pick.sourceCode).toBe(PICK_CODES.pickCodeOf('famousGalaxy'));
       expect(famousNames[pick.localIdx]!.id).toBe(label.id.replace('famous-', ''));
     }
   });
@@ -362,7 +361,7 @@ describe('produceFamousGalaxyLabels', () => {
     const out = under.find((l) => l.id === 'famous-out')!;
     expect(out.fadeAlpha).toBeGreaterThan(0);
     expect(out.subjectId).toBe(
-      packSelection(PICK_CODES.pickCodeOf(Source.FamousGalaxy), 1 + PICK_SENTINEL_OFFSET),
+      packSelection(PICK_CODES.pickCodeOf('famousGalaxy'), 1 + PICK_SENTINEL_OFFSET),
     );
   });
 });

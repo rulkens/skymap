@@ -12,7 +12,6 @@
  *                          the decoder still reads legacy `pos@<ra>,<dec>`.
  */
 
-import { Source } from '../../../../data/source';
 import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
 
 export function encodeGalaxyId(galaxy: {
@@ -25,7 +24,7 @@ export function encodeGalaxyId(galaxy: {
 }): string {
   if (galaxy.famousId) return galaxy.famousId;
   if (galaxy.objId > 0n) {
-    return galaxy.source === Source.SDSS ? `sdss-${galaxy.objId}` : `pgc-${galaxy.objId}`;
+    return galaxy.source === 'sdss' ? `sdss-${galaxy.objId}` : `pgc-${galaxy.objId}`;
   }
   return `pos@${galaxy.ra.toFixed(4)},${galaxy.dec.toFixed(4)},${galaxy.distMpc.toFixed(2)}`;
 }

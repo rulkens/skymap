@@ -4,7 +4,6 @@ import { focusTweenDescriptor } from '../../../src/state/camera/focusTweenDescri
 import { arrivalFraming } from '../../../src/services/engine/camera/framing/arrivalFraming';
 import { selectionKindOf } from '../../../src/services/engine/selection/selectionKindOf';
 import { MILKY_WAY_CENTER_WORLD } from '../../../src/data/milkyWay/galacticCenter';
-import { Source } from '../../../src/data/source';
 import { makeGalaxyRow } from '../../fixtures/makeGalaxyRow';
 import type { CameraPose } from '../../../src/@types/camera/pose/CameraPose';
 import type { FocusMotion } from '../../../src/@types/camera/focusMotion/FocusMotion';
@@ -30,7 +29,7 @@ const arrivalAt = (type: string, radiusMpc: number) =>
 
 const galaxyRow = (over: Partial<GalaxyRow> = {}) =>
   makeGalaxyRow({
-    source: Source.SDSS,
+    source: 'sdss',
     index: 7,
     objId: '12345',
     x: 1,

@@ -29,7 +29,6 @@ import { createStarCatalogSlot } from './survey/load/starCatalogSlot';
 import { createFamousStarsMetaSlot } from './card/load/famousStarsMetaSlot';
 import { STAR_CATALOG_SOURCE_ROWS } from './sources/starCatalogSourceRows';
 import { catalogPickCodes } from '../../utils/picking/catalogPickCodes';
-import { Source } from '../../data/source';
 import type { StarColumns } from './survey/@types/StarColumns';
 
 export function create(deps: LayerCoreDeps<StarCatalogFacts>): StarCatalogRuntime {
@@ -56,7 +55,7 @@ export function create(deps: LayerCoreDeps<StarCatalogFacts>): StarCatalogRuntim
     device,
     renderer.pickResources(),
     SLAB_REVERSED_Z[NEAR0]!,
-    pickCodes.pickCodeOf(Source.GaiaStars),
+    pickCodes.pickCodeOf('gaiaStars'),
   );
   const starRenderer = createStarRenderer(
     device,

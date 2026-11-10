@@ -6,7 +6,6 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { galaxyDisksPlanner } from '../../../../../src/layers/galaxyCatalog/disks/present/galaxyDisksPlanner';
-import { Source } from '../../../../../src/data/source';
 import { makeGalaxyCatalogFade } from '../../../../fixtures/makeGalaxyCatalogFade';
 import { makeGalaxyCatalogItems } from '../../../../fixtures/makeGalaxyCatalogItems';
 import { FRUSTUM_FLOATS_PER_VIEW } from '../../../../../src/data/camera/frustumFloatsPerView';
@@ -50,14 +49,14 @@ function walkInputFor(
 describe('galaxyDisksPlanner — handed value', () => {
   it('the planner walk hides a catalog whose handed value is 0', () => {
     const input = walkInputFor(makeGalaxyCatalogFade({ sdss: 0 }));
-    expect(input.visibleCatalogs.has(Source.SDSS)).toBe(false);
-    expect(input.visibleCatalogs.has(Source.TwoMRS)).toBe(true);
+    expect(input.visibleCatalogs.has('sdss')).toBe(false);
+    expect(input.visibleCatalogs.has('2mrs')).toBe(true);
   });
 
   it('the LOD disks take the planner handed value', () => {
     const input = walkInputFor(makeGalaxyCatalogFade({ sdss: 0.25 }));
-    expect(input.sourceOpacity(Source.SDSS)).toBe(0.25);
-    expect(input.sourceOpacity(Source.TwoMRS)).toBe(1);
+    expect(input.sourceOpacity('sdss')).toBe(0.25);
+    expect(input.sourceOpacity('2mrs')).toBe(1);
   });
 });
 

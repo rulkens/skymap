@@ -20,7 +20,6 @@
 import type { GalaxyCatalogId } from '../../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import { GALAXY_CATALOG_IDS } from '../../../../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { describe, it, expect } from 'vitest';
-import { Source } from '../../../../../../src/data/source';
 import {
   createProceduralDiskSubsystem,
   type ProceduralDiskDeps,
@@ -101,7 +100,7 @@ describe('createProceduralDiskSubsystem', () => {
   it('emits one ProceduralDiskInstance per galaxy above 8 px with finite orientation', () => {
     const walk = createDiskPlannerWalk({ decimationFactor: 1 });
     const sys = createProceduralDiskSubsystem();
-    const clouds = new Map([[Source.SDSS, makeDenseCloud(4)]]);
+    const clouds = new Map([['sdss' as const, makeDenseCloud(4)]]);
     const out = runProceduralSolo(walk, sys, makeInput(clouds));
     expect(out.instances.length).toBe(4);
   });
@@ -110,7 +109,7 @@ describe('createProceduralDiskSubsystem', () => {
   // source whose live opacity is 0.25 must scale `sbAmp` — the fragment's
   // sole brightness/alpha multiplier — by 0.25.
   it('scales sbAmp by the source opacity sampled via sourceOpacity', () => {
-    const clouds = new Map([[Source.SDSS, makeDenseCloud(1)]]);
+    const clouds = new Map([['sdss' as const, makeDenseCloud(1)]]);
 
     const full = runProceduralSolo(
       createDiskPlannerWalk({ decimationFactor: 1 }),
@@ -130,7 +129,7 @@ describe('createProceduralDiskSubsystem', () => {
   it('emits nothing for a cloud whose source bit is clear', () => {
     const walk = createDiskPlannerWalk({ decimationFactor: 1 });
     const sys = createProceduralDiskSubsystem();
-    const clouds = new Map([[Source.SDSS, makeDenseCloud(4)]]);
+    const clouds = new Map([['sdss' as const, makeDenseCloud(4)]]);
     const out = runProceduralSolo(walk, sys, makeInput(clouds, new Set()));
     expect(out.instances.length).toBe(0);
   });
@@ -138,7 +137,7 @@ describe('createProceduralDiskSubsystem', () => {
   it('skips galaxies with NaN orientation', () => {
     const walk = createDiskPlannerWalk({ decimationFactor: 1 });
     const sys = createProceduralDiskSubsystem();
-    const clouds = new Map([[Source.SDSS, makeDenseCloud(4, NaN, NaN)]]);
+    const clouds = new Map([['sdss' as const, makeDenseCloud(4, NaN, NaN)]]);
     const out = runProceduralSolo(walk, sys, makeInput(clouds));
     expect(out.instances.length).toBe(0);
   });
@@ -146,7 +145,7 @@ describe('createProceduralDiskSubsystem', () => {
   it('decimationFactor=2 walks half the cloud per frame, sticky map covers gap', () => {
     const walk = createDiskPlannerWalk({ decimationFactor: 2 });
     const sys = createProceduralDiskSubsystem();
-    const clouds = new Map([[Source.SDSS, makeDenseCloud(4)]]);
+    const clouds = new Map([['sdss' as const, makeDenseCloud(4)]]);
     const out1 = runProceduralSolo(walk, sys, makeInput(clouds));
     expect(out1.instances.length).toBe(2);
     const out2 = runProceduralSolo(walk, sys, makeInput(clouds));
@@ -162,12 +161,12 @@ describe('createProceduralDiskSubsystem', () => {
     // known to produce 4 emitted instances.
     const walk = createDiskPlannerWalk({ decimationFactor: 1 });
     const sys = createProceduralDiskSubsystem();
-    const clouds = new Map([[Source.SDSS, makeDenseCloud(4)]]);
+    const clouds = new Map([['sdss' as const, makeDenseCloud(4)]]);
     const out = runProceduralSolo(walk, sys, makeInput(clouds));
     expect(out.instances.length).toBe(4);
     // Every instance must carry the SDSS source code.
     for (const ins of out.instances) {
-      expect(ins.source).toBe(Source.SDSS);
+      expect(ins.source).toBe('sdss');
     }
     // Back-to-front sort reorders instances, so check the SET of localIdx
     // values rather than positional order.
@@ -215,7 +214,7 @@ describe('createProceduralDiskSubsystem', () => {
       // absent (tests + back-compat).
       const walk = createDiskPlannerWalk({ decimationFactor: 1 });
       const sys = createProceduralDiskSubsystem();
-      const clouds = new Map([[Source.FamousGalaxy, makeDenseCloud(2)]]);
+      const clouds = new Map([['famousGalaxy' as const, makeDenseCloud(2)]]);
       const out = runProceduralSolo(walk, sys, makeInput(clouds));
       expect(out.instances.length).toBe(2);
       for (const ins of out.instances) expect(ins.procFadeOut).toBe(1.0);

@@ -10,25 +10,24 @@ import {
   sourceClassLabel,
   milliquasParentSurveyPrefix,
 } from '../../../../../src/layers/galaxyCatalog/records/data/sourceClass';
-import { Source } from '../../../../../src/data/source';
 
 describe('sourceClassLabel', () => {
   it('returns null for Milliquas byte 0 (unclassified)', () => {
-    expect(sourceClassLabel(Source.Milliquas, 0)).toBeNull();
+    expect(sourceClassLabel('milliquas', 0)).toBeNull();
   });
 
   it('returns null for DESI byte 0 (unclassified) and unrecognised DESI bytes', () => {
-    expect(sourceClassLabel(Source.DesiDeep, 0)).toBeNull();
-    expect(sourceClassLabel(Source.DesiDeep, 99)).toBeNull();
-    expect(sourceClassLabel(Source.DesiWedge, 0)).toBeNull();
-    expect(sourceClassLabel(Source.DesiSgw, 0)).toBeNull();
+    expect(sourceClassLabel('desiDeep', 0)).toBeNull();
+    expect(sourceClassLabel('desiDeep', 99)).toBeNull();
+    expect(sourceClassLabel('desiWedge', 0)).toBeNull();
+    expect(sourceClassLabel('desiSgw', 0)).toBeNull();
   });
 
   it('returns null for an unrecognised Milliquas class byte', () => {
     // Defensive: a future Milliquas release might introduce a new
     // class letter we don't recognise yet.  The function should
     // degrade to null rather than crash the InfoCard.
-    expect(sourceClassLabel(Source.Milliquas, 99)).toBeNull();
+    expect(sourceClassLabel('milliquas', 99)).toBeNull();
   });
 });
 

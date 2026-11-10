@@ -21,7 +21,6 @@ import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTi
 import { rotYMat3 } from '../../../helpers/camera/rotYMat3';
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
-import { Source } from '../../../../src/data/source';
 import { APP_CUBEMAP_CAPTURE_REGISTRY } from '../../../../src/compositions/appCubemapCaptures';
 import { SCENE_SUN } from '../../../../src/data/bodies/sceneSun';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
@@ -583,7 +582,7 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
     // halves the altitude and with it the bracket.
     const halfWayStar = {
       type: 'starCatalog',
-      source: Source.GaiaStars,
+      source: 'gaiaStars',
       index: 0,
       id: null,
       label: 'Field star',

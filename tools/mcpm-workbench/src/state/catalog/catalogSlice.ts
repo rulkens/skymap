@@ -4,7 +4,6 @@ import type { CatalogPoints } from '../../../@types/CatalogPoints';
 import type { CatalogSlice } from '../../../@types/CatalogSlice';
 import type { GalaxyCatalogId } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import type { Tier } from '../../../../../src/@types/data/Tier';
-import { Source } from '../../../../../src/data/source';
 
 /**
  * defaultCatalogSlice — SDSS + 2MRS + GLADE at the `medium` tier (spec §10's
@@ -15,7 +14,7 @@ import { Source } from '../../../../../src/data/source';
  * carries all three; `large` is still an explicit opt-in via the panel.
  */
 export const defaultCatalogSlice: CatalogSlice = {
-  sources: [Source.SDSS, Source.TwoMRS, Source.Glade],
+  sources: ['sdss', '2mrs', 'glade'],
   tier: 'medium',
   points: null,
   pointCount: 0,
@@ -37,14 +36,14 @@ export const defaultCatalogSlice: CatalogSlice = {
  * and the preset validator key off.
  */
 export const WORKBENCH_SOURCES: readonly GalaxyCatalogId[] = [
-  Source.FamousGalaxy,
-  Source.TwoMRS,
-  Source.SDSS,
-  Source.Glade,
-  Source.Milliquas,
-  Source.DesiDeep,
-  Source.DesiWedge,
-  Source.DesiSgw,
+  'famousGalaxy',
+  '2mrs',
+  'sdss',
+  'glade',
+  'milliquas',
+  'desiDeep',
+  'desiWedge',
+  'desiSgw',
 ];
 
 // Pure array helper, not a slice reducer — it transforms a `sources` array in

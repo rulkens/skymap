@@ -35,7 +35,6 @@ import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { STAR_RESOLVE_PX } from '../../../../../src/data/bodies/starResolvePx';
 import { unpackPick } from '../../../../../src/data/selectionEncoding';
 import { makeSlab } from '../../../../fixtures/makeSlab';
-import { Source } from '../../../../../src/data/source';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { StarCatalogRuntime } from '../../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
@@ -117,7 +116,7 @@ function makeRuntime(
     catalog === null
       ? { loadedCatalogs: () => [] }
       : {
-          loadedCatalogs: () => [{ source: Source.GaiaStars, octree: catalog }],
+          loadedCatalogs: () => [{ source: 'gaiaStars', octree: catalog }],
           // A v1 catalog has no chunks: its pool index is its ordinal.
           poolRecordIndex: (_source: unknown, ordinal: number) => ordinal,
           snapshotPickSlots: () => {},
@@ -273,7 +272,7 @@ describe('fieldStarSpherePass.drawPick', () => {
     expect(drawSphere).toHaveBeenCalledTimes(1);
     // The nearest resolvable record is the middle star, index 1.
     const decoded = unpackPick(packedId)!;
-    expect(decoded.sourceCode).toBe(PICK_CODES.pickCodeOf(Source.GaiaStars));
+    expect(decoded.sourceCode).toBe(PICK_CODES.pickCodeOf('gaiaStars'));
     expect(decoded.localIdx).toBe(1);
   });
 });

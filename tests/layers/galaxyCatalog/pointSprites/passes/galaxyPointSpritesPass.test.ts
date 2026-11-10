@@ -7,7 +7,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { Mat4 } from 'wgpu-matrix';
 
-import { Source } from '../../../../../src/data/source';
 import { packSelection } from '../../../../../src/data/selectionEncoding';
 import { BiasMode } from '../../../../../src/data/galaxyCatalog/biasMode';
 import { DEFAULT_GALAXY_PROVENANCE } from '../../../../../src/layers/galaxyCatalog/state/defaults';
@@ -106,7 +105,7 @@ const SETTINGS_STUB = {
 
 // The selection row's reads: one SDSS catalog, codes far from every `Source` value.
 const ROW_RUNTIME = galaxyRowRuntime(
-  { catalogs: new Map([[Source.SDSS, makeGalaxyCatalog(64)]]) },
+  { catalogs: new Map([['sdss', makeGalaxyCatalog(64)]]) },
   fakePickCode(),
 );
 
@@ -146,7 +145,7 @@ describe('galaxyPointSpritesPass.draw', () => {
     // Selection is sourced from state.selection.select, not the settings stub.
     const { state, runtime, drawSpy } = makeStateWithRenderer({
       selection: {
-        select: { type: 'galaxyCatalog', source: Source.SDSS, index: 42 } as SelectionRefBase,
+        select: { type: 'galaxyCatalog', source: 'sdss', index: 42 } as SelectionRefBase,
         hover: null,
         focus: null,
       } as unknown as EngineState['selection'],
@@ -156,7 +155,7 @@ describe('galaxyPointSpritesPass.draw', () => {
     // Selection lives on arg[3].selectedPacked (the GalaxyPointDrawSettings
     // record).
     // The stamp's word without its `+ PICK_SENTINEL_OFFSET`, under the allocator's code.
-    const expected = packSelection(ROW_RUNTIME.pickCodes.pickCodeOf(Source.SDSS), 42);
+    const expected = packSelection(ROW_RUNTIME.pickCodes.pickCodeOf('sdss'), 42);
     const drawSettings = drawSpy.mock.calls[0]![3] as Record<string, unknown>;
     expect(drawSettings.selectedPacked).toBe(expected);
   });
@@ -182,8 +181,8 @@ describe('galaxyPointSpritesPass.draw', () => {
     );
     const settings = drawSpy.mock.calls[0]![3] as Record<string, unknown>;
     const fadeOf = settings.fadeOpacityOf as (source: string) => number;
-    expect(fadeOf(Source.SDSS)).toBe(0.5);
-    expect(fadeOf(Source.FamousGalaxy)).toBe(0.25);
+    expect(fadeOf('sdss')).toBe(0.5);
+    expect(fadeOf('famousGalaxy')).toBe(0.25);
   });
 
   it('threads view.vp / view.viewportPx / view.camPos to renderer.draw', () => {
@@ -205,7 +204,7 @@ describe('galaxyPointSpritesPass.drawPick', () => {
   it('drawPick picks exactly the catalogs whose handed value is above 0', () => {
     // Pick follows the same value the draw does: SDSS is handed 0.5 and Glade 0,
     // whatever the switches say, so the picker gets SDSS and not Glade.
-    const loaded = [Source.SDSS, Source.Glade].map((source) => ({
+    const loaded = ['sdss', 'glade'].map((source) => ({
       source,
       vertexBuffer: {} as GPUBuffer,
       count: 1,
@@ -223,6 +222,6 @@ describe('galaxyPointSpritesPass.drawPick', () => {
       makeGalaxyCatalogFade({ sdss: 0.5, glade: 0 }),
     );
     const passedSources = drawPointsSpy.mock.calls[0]![1] as ReadonlyArray<{ source: number }>;
-    expect(passedSources.map((s) => s.source)).toEqual([Source.SDSS]);
+    expect(passedSources.map((s) => s.source)).toEqual(['sdss']);
   });
 });

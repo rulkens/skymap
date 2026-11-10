@@ -12,7 +12,6 @@
 
 import { describe, it, expect } from 'vitest';
 import { iauName } from '../../../src/utils/math/iauName';
-import { Source } from '../../../src/data/source';
 
 describe('iauName', () => {
   it('produces the canonical SDSS designation for a known (RA, Dec) pair', () => {
@@ -23,25 +22,25 @@ describe('iauName', () => {
     // docstring example in sdssName.ts shows ".76+...45.6" which is the
     // *rounded* form — the implementation truncates, so we pin the actual
     // truncated string here.
-    expect(iauName(Source.SDSS, 188.7365, 1.396)).toBe('SDSS J123456.75+012345.5');
+    expect(iauName('sdss', 188.7365, 1.396)).toBe('SDSS J123456.75+012345.5');
   });
 
   it('uses the 2MASX prefix for 2MRS rows (2MRS rows carry 2MASS XSC IDs)', () => {
     // The string after "J" must be identical regardless of source — only the
     // prefix changes — so we use the same coords as the SDSS test above.
-    expect(iauName(Source.TwoMRS, 188.7365, 1.396)).toBe('2MASX J123456.75+012345.5');
+    expect(iauName('2mrs', 188.7365, 1.396)).toBe('2MASX J123456.75+012345.5');
   });
 
   it('emits a leading - for negative declinations', () => {
     // Southern-hemisphere objects (Dec < 0) get a leading minus.
-    const name = iauName(Source.SDSS, 0, -45.5);
+    const name = iauName('sdss', 0, -45.5);
     expect(name).toContain('-453000.0');
   });
 
   it('wraps negative RA values into [0, 360)', () => {
     // -10° wraps to 350° → 23h20m. The point is that the function never
     // emits "-" inside the RA portion or fails on negative input.
-    const name = iauName(Source.SDSS, -10, 0);
+    const name = iauName('sdss', -10, 0);
     expect(name).toMatch(/^SDSS J2320/);
   });
 
@@ -53,14 +52,14 @@ describe('iauName', () => {
     // The point is that truncation is sticky on the lower side: small noise
     // *below* a tick boundary never decrements a digit, only crossings of a
     // hundredth-of-a-second boundary increment.
-    const truncated = iauName(Source.SDSS, 188.736500001, 1.396);
+    const truncated = iauName('sdss', 188.736500001, 1.396);
     expect(truncated).toBe('SDSS J123456.76+012345.5');
   });
 
   it('clamps Dec values above +90 to +90', () => {
     // Dec is a physical angle bounded by ±90; out-of-range inputs (e.g. from
     // upstream bug) are clamped rather than producing nonsensical strings.
-    const name = iauName(Source.SDSS, 0, 95);
+    const name = iauName('sdss', 0, 95);
     expect(name).toContain('+900000.0');
   });
 });

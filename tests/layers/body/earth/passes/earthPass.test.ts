@@ -29,7 +29,6 @@ import { innerBoundRadiusM } from '../../../../../src/utils/occlusion/innerBound
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { EARTH_SURFACE_PARAMS } from '../../../../../src/layers/body/surfaceTiles/format/data/earthSurfaceParams';
 import { CLOUD_SHELL_PARAMS } from '../../../../../src/layers/body/clouds/data/cloudShellParams';
-import { Source } from '../../../../../src/data/source';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../../src/data/selectionEncoding';
 import { BODY_PICK_MIN_RADIUS_PX } from '../../../../../src/services/engine/helpers/minPickRadiusMpc';
 import { makeSlab } from '../../../../fixtures/makeSlab';
@@ -589,7 +588,7 @@ describe('earthPass.drawPick', () => {
     ];
     expect(pass).toBe(PASS_STUB);
     expect(args.packedId).toBe(
-      packSelection(PICK_CODES.pickCodeOf(Source.Earth), 0 + PICK_SENTINEL_OFFSET),
+      packSelection(PICK_CODES.pickCodeOf('earth'), 0 + PICK_SENTINEL_OFFSET),
     );
 
     // The mvp and camLocal MUST share one floored radius (drawFlooredSpherePick's invariant).

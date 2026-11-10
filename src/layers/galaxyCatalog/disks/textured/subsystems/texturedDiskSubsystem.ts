@@ -19,7 +19,6 @@
  * it land / is the load-fade still ramping?" (per-frame planning state).
  */
 
-import { Source } from '../../../../../data/source';
 import type { Destroyable } from '../../../../../@types/rendering/Destroyable';
 import type { DiskInstance } from '../@types/DiskInstance';
 import type { DiskRowVisitor } from '../../../lod/@types/DiskRowVisitor';
@@ -150,7 +149,7 @@ export function createTexturedDiskSubsystem(
       },
 
       onRow(source, block, i, x, y, z, _camDist, px) {
-        if (source !== Source.FamousGalaxy && px < APPARENT_SIZE_THRESHOLD_PX) return;
+        if (source !== 'famousGalaxy' && px < APPARENT_SIZE_THRESHOLD_PX) return;
         // Famous meta, the hi-res fold and the sticky map all key by ordinal.
         const ordinal = ordinalBase + i;
 
@@ -160,7 +159,7 @@ export function createTexturedDiskSubsystem(
         // SDSS/DSS chain (fetchGalaxyBitmap's `if (famousId)` shortcut) and
         // memoising the wrong bitmap until LRU eviction. Skip and let the
         // walk retry next frame — same pattern as hiResFamousSubsystem.
-        if (source === Source.FamousGalaxy && famousGalaxiesMeta[ordinal]?.id === undefined) return;
+        if (source === 'famousGalaxy' && famousGalaxiesMeta[ordinal]?.id === undefined) return;
 
         const dKpcRow = block.diameterKpc[i]!;
         const sizeWorldMpc = diskQuadExtentMpc(dKpcRow);
@@ -175,7 +174,7 @@ export function createTexturedDiskSubsystem(
         // render values).  An absent calibration leaves the placement
         // bit-identical to the catalog path.
         const cal =
-          source === Source.FamousGalaxy ? famousGalaxiesMeta[ordinal]?.calibration : undefined;
+          source === 'famousGalaxy' ? famousGalaxiesMeta[ordinal]?.calibration : undefined;
         const placement = resolveDiskPlacement(sizeWorldMpc, ar, pa, cal);
 
         const [ra, dec] = cartesianToRaDec(x, y, z);
@@ -190,8 +189,7 @@ export function createTexturedDiskSubsystem(
         if (!atlas.isLoaded(key)) {
           // The onRow guard above already proved this id is defined for
           // Famous rows, so it's safe to capture here at enqueue time.
-          const famousId =
-            source === Source.FamousGalaxy ? famousGalaxiesMeta[ordinal]!.id : undefined;
+          const famousId = source === 'famousGalaxy' ? famousGalaxiesMeta[ordinal]!.id : undefined;
           atlas.enqueueFetch({
             key,
             priority: px,
@@ -240,7 +238,7 @@ export function createTexturedDiskSubsystem(
           // the shader's `hiResLayerIdx >= 0` gate skips.  The famous catalog is
           // flat, so its ordinal is the Famous-source-local key `byFamousIdx` uses.
           const hiRes = hiResLayerFold(
-            source === Source.FamousGalaxy ? hiResFamous?.lastOutput.byFamousIdx : undefined,
+            source === 'famousGalaxy' ? hiResFamous?.lastOutput.byFamousIdx : undefined,
             ordinal,
           );
           stickyDisks.set(ordinal, {

@@ -6,7 +6,6 @@ import type { CompanionAssetRow } from '../../../../@types/loading/CompanionAsse
 import type { GalaxyCatalogRegistryEntry } from '../../@types/GalaxyCatalogRegistryEntry';
 import type { GalaxyCatalogRuntime } from '../../@types/GalaxyCatalogRuntime';
 
-import { Source } from '../../../../data/source';
 import { GALAXY_CATALOG_SOURCE_RECORD } from '../../sources/galaxyCatalogSourceRecord';
 import { GALAXY_CATALOG_SOURCES } from '../../sources/galaxyCatalogSources';
 import { HI_RES_LAYER_SIDE_BY_TIER } from '../../hiResFamous/data/hiResLayerSideByTier';
@@ -48,7 +47,7 @@ export function galaxyCatalogAssetRows(
     {
       key: 'famousGalaxiesMeta',
       slot: runtime.famousGalaxiesMeta,
-      companionOf: Source.FamousGalaxy,
+      companionOf: 'famousGalaxy',
     },
 
     // Lazy: only demanded while the command palette is open — see

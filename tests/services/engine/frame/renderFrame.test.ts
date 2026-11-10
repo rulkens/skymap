@@ -6,7 +6,6 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Source } from '../../../../src/data/source';
 import { packSelection } from '../../../../src/data/selectionEncoding';
 import { BiasMode } from '../../../../src/data/galaxyCatalog/biasMode';
 import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
@@ -325,7 +324,7 @@ function makeInput(
   const galaxyRuntime = {
     // An SDSS catalog, for the selected-highlight case.
     ...galaxyRowRuntime({
-      catalogs: new Map([[Source.SDSS, makeGalaxyCatalog(64)]]),
+      catalogs: new Map([['sdss', makeGalaxyCatalog(64)]]),
     }),
     pointRenderer: galaxyPointRenderer,
     proceduralDisks: { lastOutput: { instances: [] } },
@@ -653,7 +652,7 @@ describe('renderFrame', () => {
       settings: {
         selected: {
           type: 'galaxyCatalog',
-          source: Source.SDSS,
+          source: 'sdss',
           index: 42,
         } as SelectionRefBase,
       },

@@ -6,7 +6,6 @@
 import { describe, it, expect } from 'vitest';
 
 import { starCatalogSelectionRow } from '../../../../src/layers/starCatalog/selection/starCatalogSelectionRow';
-import { Source } from '../../../../src/data/source';
 import { unpackPick } from '../../../../src/data/selectionEncoding';
 import { type StarRowFixture } from '../../../support/selectionResolverOver';
 import { starRowRuntime } from '../../../support/layerPickCodes';
@@ -32,9 +31,9 @@ function runtime(resident: boolean) {
   return starRowRuntime(stars, fakePickCode());
 }
 
-const GAIA_CODE = runtime(true).pickCodes.pickCodeOf(Source.GaiaStars);
+const GAIA_CODE = runtime(true).pickCodes.pickCodeOf('gaiaStars');
 const PICK = { sourceCode: GAIA_CODE, localIdx: 7 };
-const REF = { type: 'starCatalog', source: Source.GaiaStars, index: 1007 } as const;
+const REF = { type: 'starCatalog', source: 'gaiaStars', index: 1007 } as const;
 
 describe('starCatalogSelectionRow', () => {
   it('starCatalogSelectionRow: a pick raced by an eviction resolves to null, never another star', () => {
@@ -47,12 +46,12 @@ describe('starCatalogSelectionRow', () => {
     expect(starCatalogSelectionRow(runtime(false)).encodePick(REF)).toBeNull();
   });
 
-  it('seeded and survey refs round-trip under non-Source codes', () => {
+  it('seeded and survey refs round-trip under non-survey codes', () => {
     const row = starCatalogSelectionRow(runtime(true));
     for (const ref of [
       REF,
-      { type: 'starCatalog', source: Source.FamousStar, index: 3 },
-      { type: 'starCatalog', source: Source.SStar, index: 2 },
+      { type: 'starCatalog', source: 'famousStar', index: 3 },
+      { type: 'starCatalog', source: 'sStar', index: 2 },
     ] as const) {
       const pick = unpackPick(row.encodePick(ref)!)!;
       expect(pick.sourceCode).toBeGreaterThanOrEqual(40);
@@ -61,11 +60,11 @@ describe('starCatalogSelectionRow', () => {
   });
 
   it('places Alpha Centauri at its photosphere radius, in Mpc', () => {
-    const stars = SEEDED_STAR_CATALOGS_BY_SOURCE.get(Source.FamousStar)!.stars;
+    const stars = SEEDED_STAR_CATALOGS_BY_SOURCE.get('famousStar')!.stars;
     const index = stars.findIndex((star) => star.id === 'alpha-centauri');
     const row = starCatalogSelectionRow(
       starRowRuntime({ renderer: null as never, chunkStreams: new Map() }),
-    ).extractRow({ type: 'starCatalog', source: Source.FamousStar, index }, 0) as PlacedRow;
+    ).extractRow({ type: 'starCatalog', source: 'famousStar', index }, 0) as PlacedRow;
     expect(relErr(row.radiusMpc, 2.7531547855022603e-14)).toBeLessThan(1e-12);
   });
 });

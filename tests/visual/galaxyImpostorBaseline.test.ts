@@ -19,7 +19,6 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { Source } from '../../src/data/source';
 import { GALAXY_CATALOG_IDS } from '../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { createGalaxyAtlasSubsystem } from '../../src/layers/galaxyCatalog/thumbnailAtlas/subsystems/galaxyAtlasSubsystem';
 import { createProceduralDiskSubsystem } from '../../src/layers/galaxyCatalog/disks/procedural/subsystems/proceduralDiskSubsystem';
@@ -126,7 +125,7 @@ describe('galaxy-impostor visual baseline', () => {
       const walk = createDiskPlannerWalk({ decimationFactor: 1 });
 
       const cam = makeCam();
-      const records = galaxyRecordsOver(new Map([[Source.SDSS, makeCloud(8)]]));
+      const records = galaxyRecordsOver(new Map([['sdss', makeCloud(8)]]));
       const pxPerRad = 720 / (2 * Math.tan(cam.fovYRad / 2));
 
       // One shared walk drives both bodies per frame — the same call the engine

@@ -18,7 +18,6 @@ import { SCALE_FADE_BANDS } from '../../../../../src/data/scaleFadeBands';
 import { fadeBand } from '../../../../../src/utils/math/fadeBand';
 import { rebaseViewProj } from '../../../../../src/utils/camera/projection/rebaseViewProj';
 import { narrowMat4 } from '../../../../../src/utils/math/narrowMat4';
-import { Source } from '../../../../../src/data/source';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../../src/data/selectionEncoding';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { makeSlab } from '../../../../fixtures/makeSlab';
@@ -382,8 +381,7 @@ describe('bodyGlintsPass.drawPick', () => {
     // Jupiter is seed index 3 in the planet table.
     const jupiter = args.points.find(
       (p) =>
-        p.packedId ===
-        packSelection(PICK_CODES.pickCodeOf(Source.Planet), 3 + PICK_SENTINEL_OFFSET),
+        p.packedId === packSelection(PICK_CODES.pickCodeOf('planet'), 3 + PICK_SENTINEL_OFFSET),
     )!;
     expect(jupiter).toBeDefined();
     // A heliocentric planet carries the PLANET priority class (1) — the datum the
@@ -395,8 +393,7 @@ describe('bodyGlintsPass.drawPick', () => {
     // the label. Mars is a heliocentric planet, so it carries class 1 too.
     const mars = args.points.find(
       (p) =>
-        p.packedId ===
-        packSelection(PICK_CODES.pickCodeOf(Source.Planet), 2 + PICK_SENTINEL_OFFSET),
+        p.packedId === packSelection(PICK_CODES.pickCodeOf('planet'), 2 + PICK_SENTINEL_OFFSET),
     )!;
     expect(mars).toBeDefined();
     expect(mars.bandClass).toBe(1);
@@ -485,10 +482,10 @@ describe('bodyGlintsPass.drawPick', () => {
 
     const byId = (code: number, idx: number) =>
       args.points.find((p) => p.packedId === packSelection(code, idx + PICK_SENTINEL_OFFSET))!;
-    const earthPt = byId(PICK_CODES.pickCodeOf(Source.Earth), 0);
+    const earthPt = byId(PICK_CODES.pickCodeOf('earth'), 0);
     expect(earthPt.bandClass).toBe(0);
-    expect(byId(PICK_CODES.pickCodeOf(Source.Planet), 3).bandClass).toBe(1); // Jupiter — planet
-    expect(byId(PICK_CODES.pickCodeOf(Source.Planet), 10).bandClass).toBe(2); // Io — moon
+    expect(byId(PICK_CODES.pickCodeOf('planet'), 3).bandClass).toBe(1); // Jupiter — planet
+    expect(byId(PICK_CODES.pickCodeOf('planet'), 10).bandClass).toBe(2); // Io — moon
     expect(earthPt.posRelCamMpc[0]).toBeCloseTo(EARTH_RESOLVED.positionMpc[0] - CAM_POS[0], 20);
   });
 
@@ -506,8 +503,7 @@ describe('bodyGlintsPass.drawPick', () => {
     expect(
       argsB.points.some(
         (p) =>
-          p.packedId ===
-          packSelection(PICK_CODES.pickCodeOf(Source.Earth), 0 + PICK_SENTINEL_OFFSET),
+          p.packedId === packSelection(PICK_CODES.pickCodeOf('earth'), 0 + PICK_SENTINEL_OFFSET),
       ),
     ).toBe(false);
   });
@@ -540,8 +536,7 @@ describe('bodyGlintsPass.drawPick', () => {
 
     const [, args] = pickRenderer.drawPoints.mock.calls[0]!;
     const earthPt = args.points.find(
-      (p) =>
-        p.packedId === packSelection(PICK_CODES.pickCodeOf(Source.Earth), 0 + PICK_SENTINEL_OFFSET),
+      (p) => p.packedId === packSelection(PICK_CODES.pickCodeOf('earth'), 0 + PICK_SENTINEL_OFFSET),
     );
     expect(earthPt).toBeDefined();
     expect(earthPt!.bandClass).toBe(0);
@@ -566,8 +561,7 @@ describe('bodyGlintsPass.drawPick', () => {
     const classOf = (idx: number) =>
       args.points.find(
         (p) =>
-          p.packedId ===
-          packSelection(PICK_CODES.pickCodeOf(Source.Planet), idx + PICK_SENTINEL_OFFSET),
+          p.packedId === packSelection(PICK_CODES.pickCodeOf('planet'), idx + PICK_SENTINEL_OFFSET),
       )!.bandClass;
     expect(classOf(3)).toBe(1); // Jupiter — heliocentric planet
     expect(classOf(10)).toBe(2); // Io — satellite moon
@@ -593,8 +587,7 @@ describe('bodyGlintsPass Earth stamp follows the Earth caption band', () => {
 
     const [, args] = pickRenderer.drawPoints.mock.calls[0]!;
     const stamped = args.points.some(
-      (p) =>
-        p.packedId === packSelection(PICK_CODES.pickCodeOf(Source.Earth), 0 + PICK_SENTINEL_OFFSET),
+      (p) => p.packedId === packSelection(PICK_CODES.pickCodeOf('earth'), 0 + PICK_SENTINEL_OFFSET),
     );
     expect(viewBandOf(APP_VISIBILITY_REGISTRY, 'label:body', 'earth', ctx) > 0).toBe(captioned);
     expect(stamped).toBe(captioned);

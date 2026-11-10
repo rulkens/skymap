@@ -7,7 +7,6 @@
 
 import { describe, it, expect } from 'vitest';
 import { buildAliasIndex } from '../../../../../src/layers/galaxyCatalog/aliases/load/buildAliasIndex';
-import { Source } from '../../../../../src/data/source';
 import type { GalaxyCatalog } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogId } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import { makeGalaxyCatalog } from '../../../../fixtures/makeGalaxyCatalog';
@@ -25,7 +24,7 @@ const fakeCatalogs = (objIdsBySource: Partial<Record<GalaxyCatalogId, BigUint64A
 describe('buildAliasIndex', () => {
   it('emits one entry per (source, pgc) the source holds where the PGC has aliases', () => {
     const records = fakeCatalogs({
-      [Source.Glade]: new BigUint64Array([100n, 200n, 300n]),
+      ['glade']: new BigUint64Array([100n, 200n, 300n]),
     });
     const aliasMap = new Map<bigint, readonly string[]>([
       [100n, ['NGC 1']],
@@ -40,7 +39,7 @@ describe('buildAliasIndex', () => {
 
   it('skips zero PGCs (unmatched cross-match rows)', () => {
     const records = fakeCatalogs({
-      [Source.Glade]: new BigUint64Array([0n, 100n]),
+      ['glade']: new BigUint64Array([0n, 100n]),
     });
     const aliasMap = new Map<bigint, readonly string[]>([[100n, ['NGC 1']]]);
     const out = buildAliasIndex({ records, aliasMap });
@@ -50,7 +49,7 @@ describe('buildAliasIndex', () => {
 
   it('skips PGCs whose alias list is empty', () => {
     const records = fakeCatalogs({
-      [Source.Glade]: new BigUint64Array([100n]),
+      ['glade']: new BigUint64Array([100n]),
     });
     const aliasMap = new Map<bigint, readonly string[]>([[100n, []]]);
     expect(buildAliasIndex({ records, aliasMap })).toEqual([]);
@@ -64,8 +63,8 @@ describe('buildAliasIndex', () => {
 
   it('walks multiple sources in order', () => {
     const records = fakeCatalogs({
-      [Source.Glade]: new BigUint64Array([100n]),
-      [Source.TwoMRS]: new BigUint64Array([200n]),
+      ['glade']: new BigUint64Array([100n]),
+      ['2mrs']: new BigUint64Array([200n]),
     });
     const aliasMap = new Map<bigint, readonly string[]>([
       [100n, ['G']],

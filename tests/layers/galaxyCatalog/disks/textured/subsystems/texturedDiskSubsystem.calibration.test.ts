@@ -10,7 +10,7 @@
  *   - the nucleus offset (`nucleusCorner`) slides the quad so the curated
  *     nucleus lands on the catalog point.
  *
- * Only `Source.FamousGalaxy` rows consult the calibration; every other source —
+ * Only `'famousGalaxy'` rows consult the calibration; every other source —
  * and every uncalibrated Famous row — stays bit-identical to the catalog
  * path with a centred ([0, 0]) nucleus.
  */
@@ -18,7 +18,6 @@
 import type { GalaxyCatalogId } from '../../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import { GALAXY_CATALOG_IDS } from '../../../../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Source } from '../../../../../../src/data/source';
 import { createGalaxyAtlasSubsystem } from '../../../../../../src/layers/galaxyCatalog/thumbnailAtlas/subsystems/galaxyAtlasSubsystem';
 import { createTexturedDiskSubsystem } from '../../../../../../src/layers/galaxyCatalog/disks/textured/subsystems/texturedDiskSubsystem';
 import { createProceduralDiskSubsystem } from '../../../../../../src/layers/galaxyCatalog/disks/procedural/subsystems/proceduralDiskSubsystem';
@@ -191,18 +190,14 @@ describe('texturedDiskSubsystem famous calibration', () => {
       diskRadiusFrac: 0.5,
       deprojected: false,
     };
-    const disks = await emitOne(
-      Source.FamousGalaxy,
-      makeDenseCloud(1),
-      metaWithCalibration(0, cal),
-    );
+    const disks = await emitOne('famousGalaxy', makeDenseCloud(1), metaWithCalibration(0, cal));
     expect(disks.length).toBe(1);
     expect(disks[0]!.sizeWorld).toBeCloseTo(uncalibratedSize * 2, 10);
   });
 
   it('uncalibrated rows use catalog size and orientation', async () => {
     const disks = await emitOne(
-      Source.FamousGalaxy,
+      'famousGalaxy',
       makeDenseCloud(1, 0.7, 45),
       metaWithoutCalibration(1),
     );
@@ -226,7 +221,7 @@ describe('texturedDiskSubsystem famous calibration', () => {
       deprojected: true,
     };
     const disks = await emitOne(
-      Source.FamousGalaxy,
+      'famousGalaxy',
       makeDenseCloud(1, 0.7, 45),
       metaWithCalibration(0, cal),
     );
@@ -244,7 +239,7 @@ describe('texturedDiskSubsystem famous calibration', () => {
       deprojected: false,
     };
     const disks = await emitOne(
-      Source.FamousGalaxy,
+      'famousGalaxy',
       makeDenseCloud(1, 0.7, 45),
       metaWithCalibration(0, cal),
     );
@@ -259,15 +254,11 @@ describe('texturedDiskSubsystem famous calibration', () => {
       diskRadiusFrac: 1,
       deprojected: false,
     };
-    const disks = await emitOne(
-      Source.FamousGalaxy,
-      makeDenseCloud(1),
-      metaWithCalibration(0, cal),
-    );
+    const disks = await emitOne('famousGalaxy', makeDenseCloud(1), metaWithCalibration(0, cal));
     expect(disks[0]!.nucleusOffset).toEqual([-0.5, 0]);
   });
 
-  it('calibration only affects Source.FamousGalaxy rows', async () => {
+  it('calibration only affects famousGalaxy rows', async () => {
     // A non-Famous source with a same-index meta entry carrying a
     // calibration must be ignored — catalog geometry stands, nucleus
     // stays centred.
@@ -276,11 +267,7 @@ describe('texturedDiskSubsystem famous calibration', () => {
       diskRadiusFrac: 0.5,
       deprojected: true,
     };
-    const disks = await emitOne(
-      Source.SDSS,
-      makeDenseCloud(1, 0.7, 45),
-      metaWithCalibration(0, cal),
-    );
+    const disks = await emitOne('sdss', makeDenseCloud(1, 0.7, 45), metaWithCalibration(0, cal));
     expect(disks.length).toBe(1);
     expect(disks[0]!.sizeWorld).toBeCloseTo(uncalibratedSize, 10);
     // Catalog 0.7 round-trips through the Float32Array store, so the
@@ -299,7 +286,7 @@ describe('texturedDiskSubsystem famous calibration', () => {
     // catalog Float32 value bit-for-bit (toBe, not toBeCloseTo).
     const sentinel = fallbackOrientation(0n, 187.7, 12.4);
     const cloud = makeDenseCloud(1, sentinel.axisRatio, sentinel.positionAngleDeg);
-    const disks = await emitOne(Source.FamousGalaxy, cloud, metaWithoutCalibration(1));
+    const disks = await emitOne('famousGalaxy', cloud, metaWithoutCalibration(1));
     expect(disks.length).toBe(1);
     const d = disks[0]!;
     expect(d.x).toBe(cloud.positions[0]);
@@ -325,16 +312,12 @@ describe('procedural ↔ textured orientation convergence', () => {
       deprojected: true,
     };
 
-    const texturedDisks = await emitOne(Source.FamousGalaxy, cloud, metaWithCalibration(0, cal));
+    const texturedDisks = await emitOne('famousGalaxy', cloud, metaWithCalibration(0, cal));
     expect(texturedDisks.length).toBe(1);
 
     const walk = createDiskPlannerWalk({ decimationFactor: 1 });
     const proc = createProceduralDiskSubsystem();
-    const procOut = runProceduralSolo(
-      walk,
-      proc,
-      makeInput(new Map([[Source.FamousGalaxy, cloud]])),
-    );
+    const procOut = runProceduralSolo(walk, proc, makeInput(new Map([['famousGalaxy', cloud]])));
     expect(procOut.instances.length).toBe(1);
 
     const t = texturedDisks[0]!;

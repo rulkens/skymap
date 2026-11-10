@@ -8,7 +8,6 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { Source } from '../../../src/data/source';
 import { APP_SOURCE_REGISTRY } from '../../../src/compositions/appSources';
 import { S_STAR_ENTRY } from '../../../src/layers/starCatalog/sources/s-star';
 import { SUN_ENTRY } from '../../../src/layers/starCatalog/sources/sun';
@@ -37,6 +36,6 @@ describe('the S-star source row', () => {
     // A `Source` member that drifts from its entry's id would key the row under a
     // name no asset, setting or ref uses.
     for (const [key, entry] of Object.entries(APP_SOURCE_REGISTRY)) expect(key).toBe(entry.id);
-    expect(APP_SOURCE_REGISTRY[Source.SStar]).toBe(S_STAR_ENTRY);
+    expect(APP_SOURCE_REGISTRY['sStar']).toBe(S_STAR_ENTRY);
   });
 });

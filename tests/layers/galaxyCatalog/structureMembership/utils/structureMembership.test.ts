@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { structureMembership } from '../../../../../src/layers/galaxyCatalog/structureMembership/utils/structureMembership';
-import { Source } from '../../../../../src/data/source';
 import { makeGalaxyCatalog } from '../../../../fixtures/makeGalaxyCatalog';
 import { galaxyRecordsOver } from '../../../../support/galaxyRecordsOver';
 import type { GalaxyCatalog } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
@@ -36,7 +35,7 @@ describe('structureMembership — pure cone search', () => {
       [10, 0, 0],
       [20, 0, 0],
     ]);
-    expect(structureMembership(recordsOf([Source.SDSS, catalog]), [0, 0, 0], 10)).toBe(1);
+    expect(structureMembership(recordsOf(['sdss', catalog]), [0, 0, 0], 10)).toBe(1);
   });
 
   it('sums members across multiple catalogs', () => {
@@ -50,11 +49,7 @@ describe('structureMembership — pure cone search', () => {
       [0, 2, 0], // inside
       [0, 100, 0], // outside
     ]);
-    const count = structureMembership(
-      recordsOf([Source.SDSS, sdss], [Source.TwoMRS, twomrs]),
-      [0, 0, 0],
-      10,
-    );
+    const count = structureMembership(recordsOf(['sdss', sdss], ['2mrs', twomrs]), [0, 0, 0], 10);
     expect(count).toBe(4);
   });
 });

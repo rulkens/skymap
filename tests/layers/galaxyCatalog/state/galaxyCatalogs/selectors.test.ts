@@ -3,7 +3,6 @@ import { describe, it, expect } from 'vitest';
 import { selectVisibleCatalogs } from '../../../../../src/layers/galaxyCatalog/state/galaxyCatalogs/selectors';
 import { INITIAL_SETTINGS } from '../../../../../src/state/settings/initialSettings';
 import { settingsRoute } from '../../../../../src/store/constants';
-import { Source } from '../../../../../src/data/source';
 import { GALAXY_CATALOG_SOURCES } from '../../../../../src/layers/galaxyCatalog/sources/galaxyCatalogSources';
 import type { RootState } from '../../../../../src/store/types';
 import type { EngineSettingsState } from '../../../../../src/@types/settings/EngineSettingsState';

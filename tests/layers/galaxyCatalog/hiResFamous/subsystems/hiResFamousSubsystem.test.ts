@@ -23,7 +23,6 @@
 import type { GalaxyCatalogId } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import { GALAXY_CATALOG_IDS } from '../../../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { describe, it, expect, vi } from 'vitest';
-import { Source } from '../../../../../src/data/source';
 import { createHiResFamousSubsystem } from '../../../../../src/layers/galaxyCatalog/hiResFamous/subsystems/hiResFamousSubsystem';
 import { createHiResFamousTexture } from '../../../../../src/layers/galaxyCatalog/hiResFamous/load/hiResFamousTexture';
 import type { GalaxyCatalog } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
@@ -142,7 +141,7 @@ describe('createHiResFamousSubsystem', () => {
     });
     const fetcher = vi.fn(async () => makeFakeBitmap());
     const sys = createHiResFamousSubsystem({ texture, requestRender: () => {}, fetcher });
-    const clouds = new Map([[Source.FamousGalaxy, makeFamousCloud(1)]]);
+    const clouds = new Map([['famousGalaxy' as const, makeFamousCloud(1)]]);
     // Camera far enough to put apparent size well below 120 px.
     const out = sys.runFrame(makeInput(clouds, camDistFor(50), makeFamousNames(1)));
     expect(out.byFamousIdx.get(0)?.hiResLayerIdx ?? -1).toBe(-1);
@@ -162,7 +161,7 @@ describe('createHiResFamousSubsystem', () => {
     const bitmap = makeFakeBitmap();
     const fetcher = vi.fn(async () => bitmap);
     const sys = createHiResFamousSubsystem({ texture, requestRender: () => {}, fetcher });
-    const clouds = new Map([[Source.FamousGalaxy, makeFamousCloud(1)]]);
+    const clouds = new Map([['famousGalaxy' as const, makeFamousCloud(1)]]);
     const meta = makeFamousNames(1);
     const input = makeInput(clouds, camDistFor(140), meta);
 
@@ -206,7 +205,7 @@ describe('createHiResFamousSubsystem', () => {
       texture.uploadBitmap(0, makeFakeBitmap());
       const fetcher = vi.fn(async () => makeFakeBitmap());
       const sys = createHiResFamousSubsystem({ texture, requestRender: () => {}, fetcher });
-      const clouds = new Map([[Source.FamousGalaxy, makeFamousCloud(1)]]);
+      const clouds = new Map([['famousGalaxy' as const, makeFamousCloud(1)]]);
       // Nudge camDist a hair closer so the FP roundtrip `targetPx →
       // camDist → px_observed` lands at-or-just-above the target.  The
       // smoothstep is steep enough at the boundaries that 0.01 px of
@@ -240,7 +239,7 @@ describe('createHiResFamousSubsystem', () => {
     const sys = createHiResFamousSubsystem({ texture, requestRender: () => {}, fetcher });
     // SDSS-source cloud, camera close enough that any planner that walked
     // it would fire on every galaxy.  Expect zero emissions and zero fetches.
-    const clouds = new Map([[Source.SDSS, makeFamousCloud(3)]]);
+    const clouds = new Map([['sdss' as const, makeFamousCloud(3)]]);
     const out = sys.runFrame(makeInput(clouds, camDistFor(300), makeFamousNames(3)));
     expect(out.byFamousIdx.size).toBe(0);
     expect(fetcher).not.toHaveBeenCalled();
@@ -291,7 +290,7 @@ describe('createHiResFamousSubsystem', () => {
       positionAngleDeg: new Float32Array(count).fill(45),
       diameterKpc: diameters,
     });
-    const clouds = new Map([[Source.FamousGalaxy, cloud]]);
+    const clouds = new Map([['famousGalaxy' as const, cloud]]);
     const meta = makeFamousNames(count);
     // Camera close enough that every galaxy clears the 120 px gate —
     // pin to the smallest galaxy (i=0, diameter 220 kpc): cam distance
@@ -319,7 +318,7 @@ describe('createHiResFamousSubsystem', () => {
     const markFailedSpy = vi.spyOn(texture, 'markFailed');
     const fetcher = vi.fn(async () => null);
     const sys = createHiResFamousSubsystem({ texture, requestRender: () => {}, fetcher });
-    const clouds = new Map([[Source.FamousGalaxy, makeFamousCloud(1)]]);
+    const clouds = new Map([['famousGalaxy' as const, makeFamousCloud(1)]]);
     const meta = makeFamousNames(1);
     const input = makeInput(clouds, camDistFor(230), meta);
 
@@ -350,7 +349,7 @@ describe('createHiResFamousSubsystem', () => {
     texture.initTexture();
     const fetcher = vi.fn(async () => null);
     const sys = createHiResFamousSubsystem({ texture, requestRender: () => {}, fetcher });
-    const clouds = new Map([[Source.FamousGalaxy, makeFamousCloud(1)]]);
+    const clouds = new Map([['famousGalaxy' as const, makeFamousCloud(1)]]);
     const meta = makeFamousNames(1);
     const input = makeInput(clouds, camDistFor(230), meta);
 
@@ -403,7 +402,7 @@ describe('createHiResFamousSubsystem', () => {
     // Spread them so each picks up a unique row index.
     cloud.positions[1 * 3 + 1] = 0.001;
     cloud.positions[2 * 3 + 1] = 0.002;
-    const clouds = new Map([[Source.FamousGalaxy, cloud]]);
+    const clouds = new Map([['famousGalaxy' as const, cloud]]);
     const meta = makeFamousNames(3);
     sys.runFrame(makeInput(clouds, camDistFor(230), meta));
 
