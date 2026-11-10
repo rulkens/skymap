@@ -417,5 +417,10 @@ to the app icon component.
 - **Q44** `tests/store/rootReducer.test.ts` is deleted: it tests RTK, and a revert already fails typecheck.
 - **Q45** The icons slice 1 doesn't draw yet stay; later slices use them.
 
+Owner feedback while smoke testing (2026-11-10):
+
+- **Q46** Lanes carry no labels; the outline names every row. The blocks are named Sequence and All, as in the code.
+- **Q47** Selecting a block marks the steps inside it, and selecting a step marks the blocks around it. Rows unrelated to the selection are not dimmed.
+
 _Settled in the plan:_ the studio's RTK slice is injected into the app store through
 `combineSlices().inject` (ADR 0016). Q14 is ruled (Q32).
