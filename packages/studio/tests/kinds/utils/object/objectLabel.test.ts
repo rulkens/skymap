@@ -5,7 +5,13 @@ import { Source } from '../../../../../../src/data/source';
 import type { ObjectIndex } from '../../../../src/@types/kinds/ObjectIndex';
 
 const ALIAS = { pgc: 2557, names: ['Andromeda Galaxy', 'M31'], source: Source.Glade };
-const INDEX: ObjectIndex = { famous: [], aliases: [ALIAS], structures: [], layerRows: [] };
+const INDEX: ObjectIndex = {
+  famous: [],
+  aliases: [ALIAS],
+  structures: [],
+  layerRows: [],
+  refNames: {},
+};
 
 describe('objectLabel', () => {
   it('names a catalog galaxy by the focus id the palette gives its search row', () => {

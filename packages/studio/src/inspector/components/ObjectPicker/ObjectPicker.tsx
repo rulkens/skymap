@@ -11,35 +11,41 @@ type Props = {
   /** What the field reads while not typing: the object's name, or the position it stored. */
   readonly value: string;
   readonly onPick: (focusId: string) => void;
+  /** Given, emptying the field offers None, which calls it. */
+  readonly onClear?: () => void;
 };
 
 /**
  * Picks an object by name with the app's own search: type to filter, ↑/↓, Enter picks, Escape puts
  * the value back (a second Escape leaves the field). The list opens in place, like LayerPickField.
  */
-function ObjectPicker({ label, value, onPick }: Props) {
+function ObjectPicker({ label, value, onPick, onClear }: Props) {
   const index = useObjectIndex();
   const listId = useId();
   const [query, setQuery] = useState<string | null>(null);
   const [active, setActive] = useState(0);
   const typed = query?.trim() ?? '';
   const matches = useMemo(() => (typed === '' ? [] : objectMatches(index, typed)), [index, typed]);
+  // Null is None: offered only while the field is emptied, never beside search results.
+  const options: readonly (ObjectMatch | null)[] =
+    onClear !== undefined && query !== null && typed === '' ? [null] : matches;
 
   const close = () => {
     setQuery(null);
     setActive(0);
   };
-  const pick = (match: ObjectMatch) => {
-    onPick(match.focusId);
+  const pick = (match: ObjectMatch | null) => {
+    if (match === null) onClear?.();
+    else onPick(match.focusId);
     close();
   };
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault();
-      setActive((i) => wrapIndex(i, e.key === 'ArrowDown' ? 1 : -1, matches.length));
+      setActive((i) => wrapIndex(i, e.key === 'ArrowDown' ? 1 : -1, options.length));
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      const match = matches[active];
+      const match = options[active];
       if (match !== undefined) pick(match);
     } else if (e.key === 'Escape') {
       e.preventDefault();
@@ -54,10 +60,10 @@ function ObjectPicker({ label, value, onPick }: Props) {
         className={s.input}
         role="combobox"
         aria-label={label}
-        aria-expanded={matches.length > 0}
+        aria-expanded={options.length > 0}
         aria-controls={listId}
         aria-autocomplete="list"
-        aria-activedescendant={matches[active] ? `${listId}-${active}` : undefined}
+        aria-activedescendant={options[active] !== undefined ? `${listId}-${active}` : undefined}
         placeholder="Search objects"
         spellCheck={false}
         value={query ?? value}
@@ -69,11 +75,11 @@ function ObjectPicker({ label, value, onPick }: Props) {
         }}
         onKeyDown={onKeyDown}
       />
-      {matches.length > 0 && (
+      {options.length > 0 && (
         <ul id={listId} role="listbox" aria-label={label} className={s.list}>
-          {matches.map((match, i) => (
+          {options.map((match, i) => (
             <li
-              key={match.focusId}
+              key={match?.focusId ?? 'none'}
               id={`${listId}-${i}`}
               role="option"
               aria-selected={i === active}
@@ -83,8 +89,8 @@ function ObjectPicker({ label, value, onPick }: Props) {
               onMouseEnter={() => setActive(i)}
               onClick={() => pick(match)}
             >
-              <span className={s.name}>{match.name}</span>
-              <span className={s.kind}>{match.kind}</span>
+              <span className={s.name}>{match?.name ?? 'None'}</span>
+              {match !== null && <span className={s.kind}>{match.kind}</span>}
             </li>
           ))}
         </ul>

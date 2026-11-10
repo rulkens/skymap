@@ -22,14 +22,16 @@ import {
   studioOpened,
   undone,
 } from '../../../src/session/state/studioSlice';
-import { positionPicked } from '../../../src/session/state/positionPicked';
+import { objectPicked } from '../../../src/session/state/objectPicked';
 import {
   selectCurrentResolution,
   selectDraft,
   selectIsDirty,
   selectPreview,
+  selectRefNames,
   selectRevision,
 } from '../../../src/session/state/selectors';
+import { refKey } from '../../../../../src/utils/selection/refKey';
 import { selectionResolverOver } from '../../../../../tests/support/selectionResolverOver';
 import { installAppSelectionKinds } from '../../../../../tests/support/installAppSelectionKinds';
 import type { ClipId } from '../../../../../src/@types/animation/ClipId';
@@ -162,11 +164,12 @@ describe('studioSessionSaga', () => {
     const before = selectDraft(h.store.getState())!;
 
     h.store.dispatch(
-      positionPicked({
+      objectPicked({
         ref: { kind: 'start' },
         param: 'target',
         label: 'Look-at',
         focusId: 'body-mars',
+        stores: 'position',
       }),
     );
     await flush();
@@ -176,6 +179,33 @@ describe('studioSessionSaga', () => {
     expect(selectDraft(h.store.getState())!.start).toMatchObject({ target: mars.positionMpc });
     h.store.dispatch(undone());
     expect(selectDraft(h.store.getState())).toEqual(before);
+  });
+
+  it("a picked object becomes a focus step's ref, one Undo step, and the step is named as its card names it", async () => {
+    const h = harness();
+    h.run('cosmicFlows');
+    await flush();
+    const preview = selectPreview(h.store.getState())!;
+    const draft = { timeline: [{ kind: 'focus' as const, ref: null }] };
+    h.store.dispatch(studioOpened({ clipId: 'cosmicFlows', draft, preview }));
+    await flush();
+
+    h.store.dispatch(
+      objectPicked({
+        ref: { kind: 'effect', path: [0] },
+        param: 'ref',
+        label: 'Subject',
+        focusId: 'body-mars',
+        stores: 'ref',
+      }),
+    );
+    await flush();
+
+    const mars = FIXTURE.resolveFocusId('body-mars')!;
+    expect(selectDraft(h.store.getState())!.timeline[0]).toEqual({ kind: 'focus', ref: mars });
+    expect(selectRefNames(h.store.getState())).toEqual({ [refKey(mars)]: 'Mars' });
+    h.store.dispatch(undone());
+    expect(selectDraft(h.store.getState())).toEqual(draft);
   });
 
   it('ending the takeover keeps the draft in the slice', async () => {

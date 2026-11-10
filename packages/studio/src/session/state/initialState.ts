@@ -8,6 +8,7 @@ export const initialState: StudioState = {
   revision: 0,
   preview: null,
   resolution: null,
+  refNames: {},
   selection: null,
   collapsed: [],
   playheadSec: 0,

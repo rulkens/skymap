@@ -6,7 +6,7 @@
  */
 import { call, fork, getContext, put, select } from 'typed-redux-saga';
 
-import { pickPositionSaga } from './pickPositionSaga';
+import { pickObjectSaga } from './pickObjectSaga';
 import { resolveDraftSaga } from './resolveDraftSaga';
 import { studioOpened } from '../state/studioSlice';
 import { withFrozenClockSaga } from '../../../../../src/state/time/withFrozenClockSaga';
@@ -25,7 +25,7 @@ export function* studioSessionSaga(id: ClipId): Generator {
     // A copy: the runtime may hand out the engine's own displayed pose, and the store freezes state.
     const preview = { startPose: structuredClone(from), simDays, frame, fovYRad };
     yield* put(studioOpened({ clipId: id, draft: clipFactories[id](simDays).data, preview }));
-    yield* fork(pickPositionSaga);
+    yield* fork(pickObjectSaga);
     yield* call(resolveDraftSaga);
   });
 }

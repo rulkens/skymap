@@ -1,12 +1,13 @@
 /**
  * resolveDraftSaga — keeps the slice's resolution cache on the current draft revision: on open and
  * on every edit, start switch, undo and redo, wait for the draft's foci, resolve it against the
- * pinned preview and land it tagged with its revision (A6). The latest revision wins: a newer one
- * cancels a resolve still waiting. The calls are the ones `clipBodySaga` makes before playing a clip.
+ * pinned preview and land it tagged with its revision (A6), and name its Focus steps. The latest
+ * revision wins: a newer one cancels work still waiting. The calls are the ones `clipBodySaga` makes before playing a clip.
  */
-import { call, cancel, fork, getContext, put, select, take } from 'typed-redux-saga';
+import { all, call, cancel, fork, getContext, put, select, take } from 'typed-redux-saga';
 import type { Task } from 'redux-saga';
 
+import { nameFocusRefsSaga } from './nameFocusRefsSaga';
 import {
   draftResolved,
   paramEdited,
@@ -44,12 +45,16 @@ function* resolveRevisionSaga(selection: SagaContext['selection']): Generator {
   yield* put(draftResolved(resolution));
 }
 
+function* reviseSaga(selection: SagaContext['selection']): Generator {
+  yield* all([call(resolveRevisionSaga, selection), call(nameFocusRefsSaga, selection)]);
+}
+
 export function* resolveDraftSaga(): Generator {
   const selection = yield* getContext<SagaContext['selection']>('selection');
-  let pending: Task = yield* fork(resolveRevisionSaga, selection);
+  let pending: Task = yield* fork(reviseSaga, selection);
   while (true) {
     yield* take(REVISION_ACTIONS);
     yield* cancel(pending);
-    pending = yield* fork(resolveRevisionSaga, selection);
+    pending = yield* fork(reviseSaga, selection);
   }
 }

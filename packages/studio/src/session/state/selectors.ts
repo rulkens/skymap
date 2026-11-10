@@ -25,6 +25,7 @@ export const {
   selectPlayheadSec,
   selectViewport,
   selectPreview,
+  selectRefNames,
   selectIsDirty,
   selectUndoLabel,
   selectRedoLabel,

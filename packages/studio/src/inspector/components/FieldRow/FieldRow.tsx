@@ -1,6 +1,6 @@
 import { useAppDispatch } from '../../../../../../src/store/hooks';
 import { paramEdited } from '../../../session/state/studioSlice';
-import { positionPicked } from '../../../session/state/positionPicked';
+import { objectPicked } from '../../../session/state/objectPicked';
 import { useObjectIndex } from '../../../session/hooks/useObjectIndex';
 import InspectorRow from '../../../primitives/components/InspectorRow/InspectorRow';
 import NumberField from '../../../primitives/components/NumberField/NumberField';
@@ -95,15 +95,17 @@ function FieldRow({ spec, subject, rowRef }: Props) {
     );
   } else if (widget.widget === 'object') {
     const { param, label } = spec;
+    const { pick } = widget;
     field = (
       <ObjectPicker
         label={label}
         value={objectText(stored, objects)}
         onPick={(focusId) =>
-          widget.position
-            ? dispatch(positionPicked({ ref: rowRef, param, label, focusId }))
-            : edit(focusId, null)
+          pick === 'focusId'
+            ? edit(focusId, null)
+            : dispatch(objectPicked({ ref: rowRef, param, label, focusId, stores: pick! }))
         }
+        onClear={widget.clearable ? () => edit(null, null) : undefined}
       />
     );
   } else if (widget.widget === 'pick') {

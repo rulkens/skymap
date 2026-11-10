@@ -9,4 +9,6 @@ export type ObjectIndex = {
   readonly aliases: readonly AliasIndexEntry[];
   readonly structures: readonly StructureSearchEntry[];
   readonly layerRows: readonly LayerSearchEntry[];
+  /** Focus steps' selection refs by `refKey`, named in the studio slice (the palette never holds refs). */
+  readonly refNames: Readonly<Record<string, string>>;
 };

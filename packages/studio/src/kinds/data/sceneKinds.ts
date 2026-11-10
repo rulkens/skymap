@@ -6,7 +6,6 @@
 import { describeSettingsAction } from '../utils/describeSettingsAction';
 import { easeField } from '../utils/fields/easeField';
 import { formatAddresses } from '../utils/formatAddresses';
-import { formatSelectionRef } from '../utils/formatSelectionRef';
 import { overField } from '../utils/fields/overField';
 import { readoutField } from '../utils/fields/readoutField';
 import { formatQuantity } from '../../utils/format/formatQuantity';
@@ -64,8 +63,11 @@ export const sceneKinds: Pick<
     glyph: 'focus',
     mark: 'cue',
     writes: () => ['settings'],
-    label: (s) => ({ name: 'Focus', op: '', value: formatSelectionRef(s.ref) }),
-    fields: [readoutField('ref', 'Subject')],
+    label: (s) =>
+      s.ref === null
+        ? { name: 'Focus', op: '', value: 'none' }
+        : { name: 'Focus', op: '', value: '', subject: s.ref },
+    fields: [{ key: 'ref', param: 'ref', label: 'Subject', control: 'focusRef' }],
   },
   frameTo: {
     glyph: 'frame',

@@ -105,7 +105,7 @@ export const subjectKinds: Pick<
       s.id === null
         ? { name: 'Focus', op: '', value: 'none' }
         : { name: 'Focus', op: '', value: '', subject: s.id },
-    fields: [subjectField()],
+    fields: [{ ...subjectField(), control: 'focusSubject' }],
     resolved: (e) => (e.kind === 'focus' ? formatSelectionRef(e.ref) : ''),
   },
 };

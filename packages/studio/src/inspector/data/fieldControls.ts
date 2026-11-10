@@ -37,6 +37,8 @@ export const FIELD_CONTROLS: Record<FieldControl, FieldWidget> = {
   layers: { widget: 'layers', items: false },
   layerItems: { widget: 'layers', items: true },
   settingsAction: { widget: 'settingsAction' },
-  subject: { widget: 'object', position: false },
-  subjectPosition: { widget: 'object', position: true },
+  subject: { widget: 'object', pick: 'focusId' },
+  subjectPosition: { widget: 'object', pick: 'position' },
+  focusSubject: { widget: 'object', pick: 'focusId', clearable: true },
+  focusRef: { widget: 'object', pick: 'ref', clearable: true },
 };

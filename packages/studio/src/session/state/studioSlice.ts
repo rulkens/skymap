@@ -49,6 +49,9 @@ export const studioSlice = createSlice({
     draftResolved: (state, { payload }: PayloadAction<StudioResolution>) => {
       if (payload.revision === state.revision) state.resolution = payload;
     },
+    refNamed: (state, { payload }: PayloadAction<{ key: string; name: string }>) => {
+      state.refNames[payload.key] = payload.name;
+    },
     rowSelected: (state, { payload }: PayloadAction<RowRef | null>) => {
       // A stored-as-is value, never mutated in place, so re-typing it to Immer's Draft is sound.
       state.selection = payload as Draft<RowRef> | null;
@@ -105,6 +108,7 @@ export const studioSlice = createSlice({
     selectPlayheadSec: (s) => s.playheadSec,
     selectViewport: (s) => s.viewport,
     selectPreview: (s) => s.preview,
+    selectRefNames: (s) => s.refNames,
     selectIsDirty: (s) => s.draft !== s.baseline,
     selectUndoLabel: (s) => s.history.past.at(-1)?.label ?? null,
     selectRedoLabel: (s) => s.history.future.at(-1)?.label ?? null,
@@ -117,6 +121,7 @@ export const studioSlice = createSlice({
 export const {
   studioOpened,
   draftResolved,
+  refNamed,
   rowSelected,
   rowToggled,
   playheadSet,

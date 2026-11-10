@@ -10,8 +10,10 @@ export type FieldWidget = {
     | 'object';
   /** Layers widget: offer a per-item entry's items too. */
   readonly items?: boolean;
-  /** Object widget: store the picked object's position, not its focus id. */
-  readonly position?: boolean;
+  /** Object widget: what a pick stores, the object's focus id, position or selection ref. */
+  readonly pick?: 'focusId' | 'position' | 'ref';
+  /** Object widget: also offers None, stored as null. */
+  readonly clearable?: true;
   readonly unit?: string;
   /** A function steps relative to the shown value (Mpc spans many decades). */
   readonly step?: number | ((shown: number) => number);

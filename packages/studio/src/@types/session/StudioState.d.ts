@@ -20,6 +20,8 @@ export type StudioState = {
   readonly revision: number;
   readonly preview: PreviewPins | null;
   readonly resolution: StudioResolution | null;
+  /** Focus steps' selection refs as their cards name them, by `refKey`; `resolveDraftSaga` fills it. */
+  readonly refNames: Readonly<Record<string, string>>;
   readonly selection: RowRef | null;
   /** Row ids. */
   readonly collapsed: readonly string[];

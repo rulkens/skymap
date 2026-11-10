@@ -18,4 +18,7 @@ export type FieldControl =
   | 'settingsAction'
   /** An object picked by name: its focus id, or (`subjectPosition`) its position at the preview instant. */
   | 'subject'
-  | 'subjectPosition';
+  | 'subjectPosition'
+  /** A Focus step's object: its focus id or (`focusRef`) selection ref, or none to clear the focus. */
+  | 'focusSubject'
+  | 'focusRef';
