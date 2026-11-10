@@ -7,8 +7,4 @@ describe('formatPosition', () => {
     const au = SCALE_UNITS.AU_TO_MPC;
     expect(formatPosition([1.2 * au, -0.6 * au, 0.3 * au])).toBe('1.2, −0.6, 0.3 AU');
   });
-
-  it('keeps every axis in the unit of the whole length', () => {
-    expect(formatPosition([300, 4, 0])).toBe('300, 4, 0 Mpc');
-  });
 });

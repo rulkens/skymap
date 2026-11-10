@@ -12,7 +12,6 @@ type Props = {
   /** Outermost first. */
   readonly ancestors: readonly TimelineRow[];
   readonly window: TimeWindow;
-  readonly selected: boolean;
   readonly selectedId: string | null;
   /** A block the selection sits in. */
   readonly contains: boolean;
@@ -20,7 +19,7 @@ type Props = {
   readonly onSelect: () => void;
 };
 
-function TrackLane({ row, ancestors, window, selected, selectedId, contains, onSelect }: Props) {
+function TrackLane({ row, ancestors, window, selectedId, contains, onSelect }: Props) {
   const Mark = TRACK_MARKS[ROW_KINDS[row.kind].mark];
   return (
     <div className={s.root} style={familyStyle(row.family)} aria-hidden onClick={onSelect}>
@@ -38,7 +37,7 @@ function TrackLane({ row, ancestors, window, selected, selectedId, contains, onS
           />
         ),
       )}
-      <Mark row={row} window={window} selected={selected} contains={contains} />
+      <Mark row={row} window={window} selected={row.id === selectedId} contains={contains} />
     </div>
   );
 }

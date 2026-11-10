@@ -3,7 +3,6 @@
  * and the collapsed row ids. Structure, names, values and families come from the draft and
  * ROW_KINDS; every time comes from `compile.spans` by path, never recomputed. A fork is its own
  * row with its child beneath it; a flyPath's waypoints are child rows windowed by its `knotSecs`.
- * A waypoint subject carries `last`, which the registry labels Settle.
  */
 import { rowKey } from '../../draft/utils/rowKey';
 import { waypointSubject } from '../../draft/utils/waypointSubject';
