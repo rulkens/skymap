@@ -49,7 +49,7 @@ export function buildTimeline(
     subject: RowSubjects[K],
     where: Pick<TimelineRow, 'depth' | 'parentId' | 'background' | 'expandable'>,
     times: Pick<TimelineRow, 'startSec' | 'endSec' | 'tailEndSec' | 'duration'>,
-    knotSecs?: readonly number[],
+    extra: Pick<TimelineRow, 'knotSecs' | 'wave'> = {},
   ): string => {
     const spec = ROW_KINDS[kind];
     const id = rowKey(ref);
@@ -71,7 +71,7 @@ export function buildTimeline(
       writes,
       label: spec.label(subject),
       ...times,
-      ...(knotSecs === undefined ? {} : { knotSecs }),
+      ...extra,
       errors: pathKey === null ? [] : (culprits.get(pathKey) ?? []),
       hidesErrors:
         collapsed &&
@@ -107,7 +107,18 @@ export function buildTimeline(
         tailEndSec: rowTailEndSec(effect, path, spanAt, draft, clipEndSec),
         duration: rowDurationText(effect, path, spanAt, draft),
       },
-      span?.knotSecs,
+      {
+        ...(span?.knotSecs === undefined ? {} : { knotSecs: span.knotSecs }),
+        // The evaluator's phase rule: a windowed bob's sine starts at its window, a perpetual one at clip 0.
+        ...(effect.kind === 'osc' && span !== undefined
+          ? {
+              wave: {
+                periodSec: effect.period,
+                zeroSec: effect.over === undefined ? 0 : span.startSec,
+              },
+            }
+          : {}),
+      },
     );
     if (folded.has(id)) return;
     children.forEach((child, index) =>

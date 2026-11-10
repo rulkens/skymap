@@ -4,6 +4,7 @@
  */
 import type { ClipCompileReason } from '../../../../../src/@types/animation/ClipCompileReason';
 import type { GlyphId } from '../kinds/GlyphId';
+import type { OscWave } from './OscWave';
 import type { ChannelFamily } from './ChannelFamily';
 import type { RowKind } from './RowKind';
 import type { RowLabel } from './RowLabel';
@@ -36,6 +37,8 @@ export type TimelineRow = {
   readonly tailEndSec: number | null;
   /** A flyPath's waypoint arrival times (the compiler's `knotSecs`), for its lane's knots. */
   readonly knotSecs?: readonly number[];
+  /** An osc's sine, for its lane's wave. */
+  readonly wave?: OscWave;
   readonly errors: readonly ClipCompileReason[];
   /** Folded over a culprit: the outline flags it ⚠ so the error stays findable. */
   readonly hidesErrors: boolean;

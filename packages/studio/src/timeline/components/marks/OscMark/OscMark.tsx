@@ -1,22 +1,29 @@
 import cx from 'classnames';
 import { spanStyle } from '../../../utils/spanStyle';
-import { WAVE_SEC } from './OscMark.constants';
+import { oscWaveAt } from '../../../utils/oscWaveAt';
+import { MAX_POINTS, POINTS_PER_CYCLE } from './OscMark.constants';
 import type { MarkProps } from '../../../@types/MarkProps';
 import s from './OscMark.module.css';
 
-/** A wave over the oscillation's visible extent; its cycles are decorative, the period is the inspector's. */
+/** The oscillation's sine at its real period and phase, drawn over the visible part of its extent. */
 function OscMark({ row, window, selected }: MarkProps) {
-  const end = row.tailEndSec;
-  if (row.startSec === null || end === null || end <= row.startSec) return null;
-  const length = end - row.startSec;
-  const points = Array.from({ length: 121 }, (_, i) => {
-    const t = (i / 120) * length;
-    return `${t},${1 - 0.8 * Math.sin((2 * Math.PI * t) / WAVE_SEC)}`;
+  const { wave, startSec, tailEndSec } = row;
+  if (wave === undefined || startSec === null || tailEndSec === null || !(wave.periodSec > 0)) {
+    return null;
+  }
+  const from = Math.max(startSec, window.startSec);
+  const to = Math.min(tailEndSec, window.endSec);
+  if (to <= from) return null;
+  const length = to - from;
+  const count = Math.min(MAX_POINTS, Math.ceil((length / wave.periodSec) * POINTS_PER_CYCLE));
+  const points = Array.from({ length: count + 1 }, (_, i) => {
+    const t = (i / count) * length;
+    return `${t},${1 - 0.8 * oscWaveAt(wave, from + t)}`;
   }).join(' ');
   return (
     <svg
       className={cx(s.root, selected && s.selected, row.errors.length > 0 && s.invalid)}
-      style={spanStyle(row.startSec, end, window)}
+      style={spanStyle(from, to, window)}
       viewBox={`0 0 ${length} 2`}
       preserveAspectRatio="none"
       aria-hidden

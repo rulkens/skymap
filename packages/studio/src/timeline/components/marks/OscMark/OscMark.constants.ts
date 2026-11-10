@@ -1,2 +1,3 @@
-/** Seconds per drawn wave cycle: decorative, the same at every zoom and for every oscillation. */
-export const WAVE_SEC = 4;
+/** Enough samples for a smooth cycle; the cap bounds a short period zoomed far out, where cycles blur anyway. */
+export const POINTS_PER_CYCLE = 24;
+export const MAX_POINTS = 2000;
