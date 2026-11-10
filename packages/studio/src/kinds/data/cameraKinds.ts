@@ -16,6 +16,7 @@ import { toField } from '../utils/fields/toField';
 import { formatNumber } from '../../utils/format/formatNumber';
 import { formatQuantity } from '../../utils/format/formatQuantity';
 import { formatMpc } from '../../utils/format/formatMpc';
+import { formatPosition } from '../../utils/format/formatPosition';
 import {
   DEFAULT_ALIGN_SEC,
   DEFAULT_LINGER,
@@ -56,7 +57,7 @@ export const cameraKinds: Pick<
     glyph: 'look',
     mark: 'bar',
     writes: () => ['lookAt'],
-    label: (s) => ({ name: 'Look-at', op: '→', value: formatVec3(s.to, 'Mpc') }),
+    label: (s) => ({ name: 'Look-at', op: '→', value: formatPosition(s.to) }),
     fields: [
       { key: 'to', param: 'to', label: 'Target', control: 'subjectPosition' },
       overField(),

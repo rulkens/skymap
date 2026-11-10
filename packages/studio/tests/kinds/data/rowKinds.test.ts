@@ -31,6 +31,7 @@ import {
   wait,
 } from '../../../../../src/services/engine/animation/effectHelpers';
 import { focusId } from '../../../../../src/utils/animation/focusId';
+import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { setFlowEnabled } from '../../../../../src/layers/flow/state/flow/slice';
 import type { Effect } from '../../../../../src/@types/animation/Effect';
 import type { RowKind } from '../../../src/@types/rows/RowKind';
@@ -154,5 +155,12 @@ describe('ROW_KINDS', () => {
     expect(ROW_KINDS.lookAtId.resolved?.(aim)).toBe('90°, −29°');
     expect(ROW_KINDS.lookAtId.resolved?.(hold(1))).toBe('');
     expect(ROW_KINDS.moveTargetId.resolved?.(moveTarget([10, 0, 0], 3))).toBe('10, 0, 0 Mpc');
+  });
+
+  it('a look-at at Mars reads AU in its label and Resolved line, not 0, 0, 0 Mpc', () => {
+    const au = SCALE_UNITS.AU_TO_MPC;
+    const mars = moveTarget([1.2 * au, -0.6 * au, -0.3 * au], 3);
+    expect(ROW_KINDS.setVec.label(mars).value).toBe('1.2, −0.6, −0.3 AU');
+    expect(ROW_KINDS.moveTargetId.resolved?.(mars)).toBe('1.2, −0.6, −0.3 AU');
   });
 });
