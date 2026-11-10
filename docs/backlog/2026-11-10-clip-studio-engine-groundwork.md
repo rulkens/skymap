@@ -6,7 +6,7 @@ its own plan; decisions Q1–Q39 are in `docs/grill-sessions/clip-studio-2026-11
 
 | Slice | Content | Why it is separate |
 | --- | --- | --- |
-| S2 Structure edits | Add from a palette, delete, duplicate, wrap/unwrap (seq/all), reorder (keys + drag), edge-drag `over`, blend-overlap drag, join objects and the crossfade treatment (Q14, T1 ruled as Q32) | Pure reducers over the draft; drag affordances, no engine |
+| S2 Structure edits | Add from a palette, delete, duplicate, wrap/unwrap (seq/all), reorder (keys + drag), multi-select rows (shift/⌘-click) for those edits, edge-drag `over` (right edge only; a left edge in a Sequence is unruled), blend-overlap drag, join objects and the crossfade treatment (Q14, T1 ruled as Q32) | Pure reducers over the draft; drag affordances, no engine |
 | S3 Scene as pure tracks (Q1, Q2) | Compile cues into per-address tracks evaluated every frame; replaces edge-triggered cue firing for every clip; clips revert their scene at end (`cosmicFlows` behaviour change called out) | Engine change with app-wide reach; scrubbing is only truthful after it |
 | S4 Seek and transport | `clipPlayer` pause/seek, the studio drives the preview from the playhead, Play/Pause/Loop, after-end frame, "Use current view" on camera steps (Q6, Q23), Play on the narrow notice | Needs S3; first slice where the 3D view follows the timeline |
 | S5 Path overlay | The clip-path inspector's route, look-at line and frustum at the playhead, fed by the studio's resolved draft; Fly tuning in the inspector; the composite speed-curve lane (Q19) and knot drags (Q18) | Reuses `computeClipPath`; needs evaluation at the playhead (S4) |
