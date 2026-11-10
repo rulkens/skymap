@@ -1,7 +1,7 @@
 /**
- * MilkyWayTuningSection — DebugPanel subsection for the Milky Way: the renderer
- * switch first, then the v1 cloud rows when the cloud draws and the v2 field
- * rows (and its dust toggle) when the field draws. Dev-only; the
+ * MilkyWayTuningSection — DebugPanel subsections for the Milky Way: the v1
+ * cloud rows when the cloud draws, then the renderer switch, then a field
+ * section (rows and dust toggle) when the field draws. Dev-only; the
  * explorer-facing SettingsPanel surfaces only the visibility toggle. The copy
  * button promotes a tuned cloud session to code via `formatMilkyWayCloudTuningDefaults`.
  */
@@ -10,6 +10,7 @@ import type { ReactElement } from 'react';
 import type { MilkyWaySettings } from '../../@types/MilkyWaySettings';
 import type { MilkyWayFieldTuning } from '../../@types/MilkyWayFieldTuning';
 import type { MilkyWayRenderer } from '../../@types/MilkyWayRenderer';
+import type { MilkyWayFieldSliderKey } from '../@types/MilkyWayFieldSliderKey';
 import type { MilkyWayCloudTuning } from '../../../../@types/settings/MilkyWayCloudTuning';
 import {
   MILKY_WAY_CLOUD_SLIDER_FIELDS,
@@ -20,14 +21,15 @@ import { selectMilkyWayParts } from '../../state/milkyWay/selectors';
 import { MILKY_WAY_CLOUD_TUNING_DEFAULTS } from '../../../../services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import { formatMilkyWayCloudTuningDefaults } from '../utils/formatMilkyWayCloudTuningDefaults';
 import CopyButton from '../../../../components/common/CopyButton/CopyButton';
-import DebugSection from '../../../../components/DebugPanel/DebugSection';
-import DebugSlider from '../../../../components/DebugPanel/DebugSlider';
+import DebugTuningSection from '../../../../components/DebugPanel/DebugTuningSection';
 import sliderStyles from '../../../../components/DebugPanel/DebugSlider.module.css';
 import toggleStyles from '../../../../components/DebugPanel/DebugOverlayToggles.module.css';
 import { milkyWayFieldSliderPatch } from '../utils/milkyWayFieldSliderPatch';
 
 export type MilkyWayTuningSectionProps = {
   milkyWay: MilkyWaySettings;
+  /** The field slider values, memoised by the container. */
+  fieldValues: Readonly<Record<MilkyWayFieldSliderKey, number>>;
   onCloudChange: (patch: Partial<MilkyWayCloudTuning>) => void;
   onFieldChange: (patch: Partial<MilkyWayFieldTuning>) => void;
   onRendererChange: (renderer: MilkyWayRenderer) => void;
@@ -37,77 +39,65 @@ const RENDERERS: readonly MilkyWayRenderer[] = ['v1', 'v2', 'both'];
 
 export function MilkyWayTuningSection({
   milkyWay,
+  fieldValues,
   onCloudChange,
   onFieldChange,
   onRendererChange,
 }: MilkyWayTuningSectionProps): ReactElement {
   const parts = selectMilkyWayParts(milkyWay);
-  const fieldValues = { exposure: milkyWay.field.exposure, ...milkyWay.field.divisors };
   return (
-    <DebugSection title="Milky Way tuning">
-      <div
-        className={sliderStyles.root}
-        title="Which Milky Way draws: v1 star sprites, v2 analytic field, or both summed."
+    <>
+      <DebugTuningSection
+        title="Milky Way tuning"
+        fields={parts.cloud ? MILKY_WAY_CLOUD_SLIDER_FIELDS : []}
+        values={milkyWay.cloud}
+        onSliderChange={(k, v) => onCloudChange(milkyWayCloudSliderPatch(k, v))}
       >
-        <span className={sliderStyles.label}>renderer</span>
-        <span className={sliderStyles.readout}>{milkyWay.renderer}</span>
-        <select
-          aria-label="renderer"
-          value={milkyWay.renderer}
-          onChange={(e) => onRendererChange(e.target.value as MilkyWayRenderer)}
+        <div
+          className={sliderStyles.root}
+          title="Which Milky Way draws: v1 star sprites, v2 analytic field, or both summed."
         >
-          {RENDERERS.map((r) => (
-            <option key={r} value={r}>
-              {r}
-            </option>
-          ))}
-        </select>
-      </div>
-      {parts.cloud &&
-        MILKY_WAY_CLOUD_SLIDER_FIELDS.map((f) => (
-          <DebugSlider
-            key={f.key}
-            label={f.label}
-            value={milkyWay.cloud[f.key]}
-            min={f.min}
-            max={f.max}
-            step={f.step}
-            readout={f.format(milkyWay.cloud[f.key])}
-            title={f.title}
-            onChange={(v) => onCloudChange(milkyWayCloudSliderPatch(f.key, v))}
+          <span className={sliderStyles.label}>renderer</span>
+          <select
+            aria-label="renderer"
+            value={milkyWay.renderer}
+            onChange={(e) => onRendererChange(e.target.value as MilkyWayRenderer)}
+          >
+            {RENDERERS.map((r) => (
+              <option key={r} value={r}>
+                {r}
+              </option>
+            ))}
+          </select>
+        </div>
+        {parts.cloud && (
+          <CopyButton
+            text={formatMilkyWayCloudTuningDefaults(
+              milkyWay.cloud,
+              MILKY_WAY_CLOUD_TUNING_DEFAULTS,
+            )}
+            label="Copy changed defaults"
+            title="Paste into MILKY_WAY_CLOUD_TUNING_DEFAULTS in milkyWayCalibration.ts"
           />
-        ))}
-      {parts.cloud && (
-        <CopyButton
-          text={formatMilkyWayCloudTuningDefaults(milkyWay.cloud, MILKY_WAY_CLOUD_TUNING_DEFAULTS)}
-          label="Copy changed defaults"
-          title="Paste into MILKY_WAY_CLOUD_TUNING_DEFAULTS in milkyWayCalibration.ts"
-        />
-      )}
-      {parts.field &&
-        MILKY_WAY_FIELD_SLIDER_FIELDS.map((f) => (
-          <DebugSlider
-            key={f.key}
-            label={f.label}
-            value={fieldValues[f.key]}
-            min={f.min}
-            max={f.max}
-            step={f.step}
-            readout={f.format(fieldValues[f.key])}
-            title={f.title}
-            onChange={(v) => onFieldChange(milkyWayFieldSliderPatch(milkyWay.field, f.key, v))}
-          />
-        ))}
+        )}
+      </DebugTuningSection>
       {parts.field && (
-        <label className={toggleStyles.checkRow}>
-          <input
-            type="checkbox"
-            checked={milkyWay.field.dust}
-            onChange={(e) => onFieldChange({ dust: e.target.checked })}
-          />
-          <span>field dust</span>
-        </label>
+        <DebugTuningSection
+          title="Milky Way field tuning"
+          fields={MILKY_WAY_FIELD_SLIDER_FIELDS}
+          values={fieldValues}
+          onSliderChange={(k, v) => onFieldChange(milkyWayFieldSliderPatch(milkyWay.field, k, v))}
+        >
+          <label className={toggleStyles.checkRow}>
+            <input
+              type="checkbox"
+              checked={milkyWay.field.dust}
+              onChange={(e) => onFieldChange({ dust: e.target.checked })}
+            />
+            <span>field dust</span>
+          </label>
+        </DebugTuningSection>
       )}
-    </DebugSection>
+    </>
   );
 }
