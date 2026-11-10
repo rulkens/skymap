@@ -5,6 +5,7 @@ import { SLIDER_GESTURE_MS } from './NumberField.constants';
 type Props = {
   readonly value: number;
   readonly label: string;
+  readonly unit?: string;
   readonly step: number;
   readonly min: number;
   readonly max: number;
@@ -12,7 +13,7 @@ type Props = {
 };
 
 /** The app's compact Slider; commits less than `SLIDER_GESTURE_MS` apart share one gesture (one history entry). */
-function RangedNumberField({ value, label, step, min, max, onCommit }: Props) {
+function RangedNumberField({ value, label, unit, step, min, max, onCommit }: Props) {
   const id = useId();
   const sessions = useRef(0);
   const last = useRef({ at: -Infinity, gesture: '' });
@@ -24,6 +25,7 @@ function RangedNumberField({ value, label, step, min, max, onCommit }: Props) {
       min={min}
       max={max}
       step={step}
+      format={unit ? (v) => `${v} ${unit}` : undefined}
       onChange={(v) => {
         const now = performance.now();
         if (now - last.current.at > SLIDER_GESTURE_MS) {

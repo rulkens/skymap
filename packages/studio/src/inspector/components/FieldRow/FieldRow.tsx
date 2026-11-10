@@ -39,6 +39,7 @@ function FieldRow({ spec, subject, rowRef }: Props) {
     field = (
       <NumberField
         label={spec.label}
+        unit={widget.unit}
         value={widget.toDisplay ? widget.toDisplay(shown) : shown}
         step={widget.step}
         min={widget.min}
@@ -70,7 +71,6 @@ function FieldRow({ spec, subject, rowRef }: Props) {
     <InspectorRow
       label={spec.label}
       tip={spec.tip}
-      unit={widget.unit}
       dim={!authored && spec.fallback !== undefined}
       onReset={resettable ? () => edit(undefined, null) : undefined}
     >

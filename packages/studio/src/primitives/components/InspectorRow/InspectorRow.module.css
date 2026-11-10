@@ -37,11 +37,6 @@
 .span {
   grid-column: 2 / -1;
 }
-.unit {
-  font-size: var(--font-size-sm);
-  color: var(--color-fg-tertiary);
-  white-space: nowrap;
-}
 .resetCell {
   display: grid;
   place-items: center;

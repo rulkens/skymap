@@ -6,13 +6,14 @@ import s from './NumberField.module.css';
 type Props = {
   readonly value: number;
   readonly label: string;
+  readonly unit?: string;
   readonly step?: number;
   readonly min?: number;
   /** `gesture` is the same string for every commit of one focus session (history coalesces on it). */
   readonly onCommit: (value: number, gesture: string) => void;
 };
 
-function TextNumberField({ value, label, step = 1, min, onCommit }: Props) {
+function TextNumberField({ value, label, unit, step = 1, min, onCommit }: Props) {
   const id = useId();
   const sessions = useRef(0);
   const gesture = useRef('');
@@ -42,21 +43,24 @@ function TextNumberField({ value, label, step = 1, min, onCommit }: Props) {
   };
 
   return (
-    <input
-      className={s.root}
-      type="text"
-      inputMode="decimal"
-      aria-label={label}
-      aria-invalid={invalid || undefined}
-      value={shown}
-      onChange={(e) => setText(e.target.value)}
-      onFocus={() => (gesture.current = `${id}:${sessions.current++}`)}
-      onBlur={() => {
-        if (text !== undefined && !invalid && parsed !== value) commit(parsed);
-        else setText(undefined);
-      }}
-      onKeyDown={onKeyDown}
-    />
+    <span className={s.root}>
+      <input
+        className={s.input}
+        type="text"
+        inputMode="decimal"
+        aria-label={label}
+        aria-invalid={invalid || undefined}
+        value={shown}
+        onChange={(e) => setText(e.target.value)}
+        onFocus={() => (gesture.current = `${id}:${sessions.current++}`)}
+        onBlur={() => {
+          if (text !== undefined && !invalid && parsed !== value) commit(parsed);
+          else setText(undefined);
+        }}
+        onKeyDown={onKeyDown}
+      />
+      {unit && <span className={s.unit}>{unit}</span>}
+    </span>
   );
 }
 

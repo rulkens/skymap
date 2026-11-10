@@ -1,20 +1,37 @@
+/* The pill's box (Slider compact), unfilled: value and unit sit together at the right inside. */
 .root {
   flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
   min-width: 0;
   min-height: calc(var(--space-12) - var(--space-2));
   padding: 0 var(--space-4);
   border: 1px var(--field-border-style, solid) var(--border-control);
   border-radius: var(--radius-sm);
-  background: var(--field-bg, var(--surface-control));
+  background: var(--field-bg, transparent);
+}
+.root:focus-within {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+.root:has(.input[aria-invalid='true']) {
+  border: 2px solid var(--color-fg-muted);
+}
+.input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: none;
   color: inherit;
   font: inherit;
   font-variant-numeric: tabular-nums;
   text-align: right;
 }
-.root:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 1px;
-}
-.root[aria-invalid='true'] {
-  border: 2px solid var(--color-fg-muted);
+.unit {
+  font-size: var(--font-size-sm);
+  color: var(--color-fg-tertiary);
+  white-space: nowrap;
 }

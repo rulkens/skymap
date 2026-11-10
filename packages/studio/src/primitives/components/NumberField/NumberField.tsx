@@ -5,6 +5,8 @@ type Props = {
   readonly value: number;
   readonly label: string;
   readonly step?: number;
+  /** Shown inside the field, right beside the value. */
+  readonly unit?: string;
   readonly min?: number;
   /** With `min`, a slider; unbounded values stay a text input. */
   readonly max?: number;

@@ -10,7 +10,7 @@ describe('InspectorRow', () => {
   it('reset calls onReset and is labelled for its field', async () => {
     const onReset = vi.fn();
     render(
-      <InspectorRow label="Duration" unit="s" onReset={onReset}>
+      <InspectorRow label="Duration" onReset={onReset}>
         <input aria-label="Duration" />
       </InspectorRow>,
     );

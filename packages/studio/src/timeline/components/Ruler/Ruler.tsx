@@ -4,9 +4,10 @@ import Glyph from '../../../primitives/components/Glyph/Glyph';
 import { formatDuration } from '../../../utils/format/formatDuration';
 import { formatTimecode } from '../../../utils/format/formatTimecode';
 import { familyStyle } from '../../utils/familyStyle';
+import { labelUnderHead } from '../../utils/labelUnderHead';
 import { rulerSteps } from '../../utils/rulerSteps';
 import { timeToPercent } from '../../utils/timeToPercent';
-import { AFTER_END_CAPTION_PX, EPSILON, TICK_LABEL_PX } from './Ruler.constants';
+import { AFTER_END_CAPTION_PX, EPSILON, HEAD_WIDTH_PX, TICK_LABEL_PX } from './Ruler.constants';
 import { useRulerScrub } from './useRulerScrub';
 import { useTrackWidth } from './useTrackWidth';
 import type { TimeWindow } from '../../../@types/session/TimeWindow';
@@ -40,6 +41,7 @@ function Ruler({ timeline, window, playheadSec }: Props) {
   }, [timeline.rows]);
   const { durationSec, loop } = timeline;
   const at = (sec: number) => ({ left: `${timeToPercent(sec, window)}%` });
+  const headPx = timeToPercent(playheadSec, window) * (trackPx / 100);
   let labelled = false;
 
   return (
@@ -51,10 +53,13 @@ function Ruler({ timeline, window, playheadSec }: Props) {
           durationSec !== null &&
           timeToPercent(sec, window) * (trackPx / 100) + TICK_LABEL_PX >
             trackPx - AFTER_END_CAPTION_PX;
-        if (isMajor && !clipsCaption) labelled = true;
+        const tickPx = timeToPercent(sec, window) * (trackPx / 100);
+        const showLabel =
+          isMajor && !clipsCaption && !labelUnderHead(tickPx, TICK_LABEL_PX, headPx, HEAD_WIDTH_PX);
+        if (showLabel) labelled = true;
         return (
           <span key={sec} className={cx(s.tick, isMajor && s.major)} style={at(sec)}>
-            {isMajor && !clipsCaption && <span className={s.tickLabel}>{label}</span>}
+            {showLabel && <span className={s.tickLabel}>{label}</span>}
           </span>
         );
       })}

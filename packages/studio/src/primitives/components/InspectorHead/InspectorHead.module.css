@@ -20,6 +20,7 @@
   text-overflow: ellipsis;
 }
 .range {
+  flex: none;
   margin-left: auto;
   color: var(--color-fg-tertiary);
   font-variant-numeric: tabular-nums;

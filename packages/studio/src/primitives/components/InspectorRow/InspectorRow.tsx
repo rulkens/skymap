@@ -7,17 +7,16 @@ type Props = {
   readonly label: string;
   /** Dots the label and opens a one-line tip on hover and focus. */
   readonly tip?: string;
-  readonly unit?: string;
   /** The value is the default: fields inside render dashed and dim. */
   readonly dim?: boolean;
   /** Authored value: shows ↺, which calls this. */
   readonly onReset?: () => void;
-  /** The control takes the unit and reset columns too (segmented controls). */
+  /** The control takes the reset column too (segmented controls). */
   readonly span?: boolean;
   readonly children: ReactNode;
 };
 
-function InspectorRow({ label, tip, unit, dim, onReset, span, children }: Props) {
+function InspectorRow({ label, tip, dim, onReset, span, children }: Props) {
   return (
     <div className={cx(s.root, dim && s.dim)}>
       <span className={s.label}>
@@ -34,7 +33,6 @@ function InspectorRow({ label, tip, unit, dim, onReset, span, children }: Props)
       <span className={cx(s.control, span && s.span)}>{children}</span>
       {!span && (
         <>
-          <span className={s.unit}>{unit}</span>
           <span className={s.resetCell}>
             {onReset && (
               <button
