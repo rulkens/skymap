@@ -211,19 +211,6 @@ describe('studioSessionSaga', () => {
     expect(selectDraft(h.store.getState())).toEqual(draft);
   });
 
-  it("a focus-id step's resolved ref is named as its card names it", async () => {
-    const h = harness();
-    h.run('cosmicFlows');
-    await flush();
-    const preview = selectPreview(h.store.getState())!;
-    const draft = { timeline: [focus(focusId('body-mars'))] };
-    h.store.dispatch(studioOpened({ clipId: 'cosmicFlows', draft, preview }));
-    await flush();
-
-    const mars = FIXTURE.resolveFocusId('body-mars')!;
-    expect(selectRefNames(h.store.getState())).toEqual({ [refKey(mars)]: 'Mars' });
-  });
-
   it('a pick whose object never loads gives up, says so and changes nothing', async () => {
     vi.useFakeTimers();
     const h = harness({ ...FIXTURE, extractRow: () => null });

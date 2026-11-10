@@ -4,7 +4,6 @@ import type { ChannelFamily } from '../rows/ChannelFamily';
 import type { RowLabel } from '../rows/RowLabel';
 import type { FieldSpec } from './FieldSpec';
 import type { GlyphId } from './GlyphId';
-import type { ObjectIndex } from './ObjectIndex';
 import type { MarkShape } from './MarkShape';
 
 export type RowKindSpec<T> = {
@@ -15,5 +14,5 @@ export type RowKindSpec<T> = {
   readonly label: (subject: T) => RowLabel;
   readonly fields: readonly FieldSpec<T>[];
   /** Subject-bound kinds: the inspector's Resolved line from the same path in the resolved clip (Q22). */
-  readonly resolved?: (resolved: Effect, objects: ObjectIndex) => string;
+  readonly resolved?: (resolved: Effect) => string;
 };

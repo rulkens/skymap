@@ -11,7 +11,6 @@ import { overField } from '../utils/fields/overField';
 import { subjectField } from '../utils/fields/subjectField';
 import { resolvedPosition } from '../utils/resolvedPosition';
 import { formatMpc } from '../../utils/format/formatMpc';
-import { objectText } from '../utils/object/objectText';
 import type { RowKindRegistry } from '../../@types/kinds/RowKindRegistry';
 
 export const subjectKinds: Pick<
@@ -105,7 +104,7 @@ export const subjectKinds: Pick<
       s.id === null
         ? { name: 'Focus', op: '', value: 'none' }
         : { name: 'Focus', op: '', value: '', subject: s.id },
+    // No `resolved`: its ref is the Subject's own object, which the Subject field already names.
     fields: [{ ...subjectField(), control: 'focusSubject' }],
-    resolved: (e, objects) => (e.kind === 'focus' ? objectText(e.ref, objects) : ''),
   },
 };

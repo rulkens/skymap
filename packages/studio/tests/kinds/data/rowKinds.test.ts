@@ -151,11 +151,8 @@ describe('ROW_KINDS', () => {
       tween('yaw', { to: Math.PI / 2, over: 2 }),
       tween('pitch', { to: -0.5, over: 2 }),
     ]);
-    const objects = { famous: [], aliases: [], structures: [], layerRows: [], refNames: {} };
-    expect(ROW_KINDS.lookAtId.resolved?.(aim, objects)).toBe('90°, −29°');
-    expect(ROW_KINDS.lookAtId.resolved?.(hold(1), objects)).toBe('');
-    expect(ROW_KINDS.moveTargetId.resolved?.(moveTarget([10, 0, 0], 3), objects)).toBe(
-      '10, 0, 0 Mpc',
-    );
+    expect(ROW_KINDS.lookAtId.resolved?.(aim)).toBe('90°, −29°');
+    expect(ROW_KINDS.lookAtId.resolved?.(hold(1))).toBe('');
+    expect(ROW_KINDS.moveTargetId.resolved?.(moveTarget([10, 0, 0], 3))).toBe('10, 0, 0 Mpc');
   });
 });

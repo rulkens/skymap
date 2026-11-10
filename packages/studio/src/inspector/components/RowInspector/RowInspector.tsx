@@ -29,8 +29,8 @@ function RowInspector({ row, rows, draft, resolution }: Props) {
   const spec = inspectorSpec(row.kind);
   const subject = rowSubject(draft, row.ref);
   const fields = subject === null ? [] : shownFields(spec.fields, subject);
+  const resolved = resolvedText(row, resolution);
   const objects = useObjectIndex();
-  const resolved = resolvedText(row, resolution, objects);
 
   return (
     <>
