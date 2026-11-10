@@ -1,6 +1,7 @@
 # Production cloud bake: design
 
-**Status:** approved shape (dash asks 4Z9q and oXKr, 2026-11-09/10). **Plan:** [`2026-11-10-cloud-bake-production.md`](../plans/2026-11-10-cloud-bake-production.md).
+**Status:** approved shape (dash asks 4Z9q, oXKr, s8Qq; amended by NLCF 2026-11-10: simplicity-review
+findings and the output size). **Plan:** [`2026-11-10-cloud-bake-production.md`](../plans/2026-11-10-cloud-bake-production.md).
 
 ## Goal
 
@@ -22,7 +23,8 @@ re-fitting the calibration tables inside a bake; cache eviction; date ranges (a 
 
 ## Behaviour
 
-**Day.** `--date YYYY-MM-DD`. The launcher defaults it to yesterday (UTC), the latest complete day:
+**Day.** `--date YYYY-MM-DD`. The binary defaults it to yesterday (UTC), so the launcher and a later
+container share one rule, the latest complete day:
 NOAA-20 passes for the current day keep arriving for hours. The date is a value threaded through the
 run, never a global or environment variable. WMS times are built from the date plus a minute offset,
 rolling over into the neighbouring day when the offset leaves [0, 1440).
@@ -34,9 +36,9 @@ minimising the median |pass time − slot time| over footprint samples within ±
 89.0 min / 174.25° between them, so a frozen orbit is wrong after one day.
 
 **Ice mask month.** The mask is cut from the Blue Marble 2004 month whose calendar month matches the
-bake date (owner ruling: the month nearest the bake date). All twelve 21600×10800 equirects are fetched
-once (~360 MB) into `data/raw/clouds/bmng/`; they are independent of the app's `BMNG_VINTAGE`, which
-stays the app's look.
+bake date (owner ruling: the month nearest the bake date). All twelve 21600×10800 equirects live in
+`data/raw/textures/` (~360 MB, `npm run fetch-cloud-inputs`), described by one `BMNG_MONTHS` table;
+the app's `BMNG_VINTAGE` is a pick from that table (August), so no month or URL exists twice.
 
 **Opacity distribution.** Unchanged: each bake is quantile-matched to the static map, so every day has
 the same total cloud amount (6 Nov 0.267, 9 Nov 0.261 mean opacity). A fixed transfer curve is
@@ -44,8 +46,9 @@ backlogged (owner ruling).
 
 **Missing data.** A missing, non-PNG or all-black granule or geostationary frame is skipped with a
 warning; the bake continues without it. A frame is all-black when, among its non-transparent pixels,
-≥ 99% have R = G = B = 0 (GOES-East once served one). Missing the NOAA-20 daily mosaic (the display
-match uses it) or having too few granules to fit the orbit is fatal.
+≥ 99% have R = G = B = 0 (GOES-East once served one). A source whose row in the source table says
+`required` (only the NOAA-20 daily mosaic: it patches the NOAA-20 swaths) is fatal when missing, as is
+having too few granules to fit the orbit.
 
 **Coverage floor.** Coverage = fraction of texels whose final value comes from a same-day observation
 (VIIRS or geostationary IR) rather than the static map fallback. Below `MIN_COVERAGE` the bake writes
@@ -68,7 +71,9 @@ and at least 3 K.
 | 3 | data: coverage below floor, N20 mosaic missing, orbit unfit, every host unreachable | retry later |
 | 4 | calibration drift | page a human: refit the tables |
 
-**Output.** One 8192×4096 lossless RGBA WebP at `--out`, alpha = cloud opacity, written to
+**Output.** One 8192×4096 lossy WebP at `--out`, quality 80, grey value = cloud opacity, no alpha
+(owner ruling: the old RGBA stored opacity four times; 6.0 MB against 19.6 MB lossless, 99th-percentile
+error 11/255). It matches the shape of the static source map. Written to
 `<out>.part` and renamed, so a killed run never leaves a valid-looking file. Cache files are written the
 same way. stdout gets exactly one JSON line at the end (on success and on exit 3/4); logs go to
 stderr.
@@ -82,7 +87,7 @@ stderr.
 ## Shape
 
 ```
-cloud-bake-rs --date 2026-11-09 --baseline <cloud_combined_8192.tif> --blue-marble <bmng month jpg> \
+cloud-bake-rs [--date 2026-11-09] --baseline <cloud_combined_8192.tif> --blue-marble <bmng month jpg> \
   --cache <dir> --out <file.webp> [--offline]
 ```
 
@@ -90,29 +95,30 @@ cloud-bake-rs --date 2026-11-09 --baseline <cloud_combined_8192.tif> --blue-marb
   tables are compiled in (`include_bytes!` from `tools/cloud-bake-rs/assets/`, provenance in
   `assets/README.md`). `--offline` = cache only, a miss counts as missing data.
 - `tools/clouds/bakeClouds.ts` (`npm run bake-clouds -- [--date D] --out <file>`) fills the flags from
-  the raw-data registry: `textures.earthClouds`, the month's file under `clouds.blueMarbleMonths`, and
-  `clouds.cache`. `tools/fetch/fetchCloudInputs.ts` (`npm run fetch-cloud-inputs`) pulls the twelve
-  months with `.part` + rename and a `clouds.sha256` sidecar.
+  the raw-data registry: `textures.earthClouds`, the month's `textures.nasaBmngMonthMM` row, and
+  `clouds.cache`. `npm run fetch-cloud-inputs` is `fetchTextures --bmng-months`.
 - Cache: `<cache>/<YYYY-MM-DD>/{granules,mosaics,geo,probe}/…` — one directory per day, so eviction is
   deleting a directory.
-- Sources live in one table in the crate (id, host, layer, kind), replacing the `match` on satellite
+- Sources live in one table in the crate (id, host, layer, kind, required), replacing the `match` on satellite
   names.
 - Removed: `--no-geofill`/`--geo-ir`, `--dump`, `--compare`, `--webp-image-crate`, `--threads` (use
-  `RAYON_NUM_THREADS`), `--webp-quality`/`--webp-method` (constants: 25 / 4), the per-stage CPU timing
+  `RAYON_NUM_THREADS`), `--webp-quality`/`--webp-method` (the lossy q80 writer replaces them), the per-stage CPU timing
   table and the counting allocator. The two Python behaviours kept on purpose (constant seam DELTA
   term, coarsest band from the rejected side) stay, documented as deliberate.
 - CI: a `cloud-bake-rs` job in `ci.yml` runs `cargo test --release`.
 
 ## Ground preparation
 
-None needed: the repo side lands as additions at existing seams (three registry rows, a launcher, a
-fetcher, two npm scripts, a CI job, a DATA.md row); the crate itself is uncommitted, so reshaping it is
+None needed: the repo side lands as additions at existing seams (registry rows, a launcher, a fetcher
+flag, two npm scripts, a CI job, a DATA.md row); the crate itself is uncommitted, so reshaping it is
 the feature. The independent greenfield pass (2026-11-10) derived the same shape — paths as flags,
 registry-filled launcher, compiled-in assets, date-keyed cache — and proposed two extras that were
 trimmed: a separate report file plus a log-format flag (one stdout JSON line instead) and a fixed
 publish directory (`--out` stays explicit until the tiles design). Adjacent, not taken: `tools/stars-rs`
 joins `data/raw/...` paths itself instead of going through the registry, and no Rust ran in CI before
-this; both backlogged.
+this; both backlogged. The design-time simplicity review (2026-11-10) found three knots, all taken:
+Blue Marble months in two homes (now one table), the default date in the launcher (now the binary), and
+the required mosaic as a code special case (now a field on its row).
 
 ## Success criteria
 

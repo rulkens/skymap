@@ -5,8 +5,9 @@
 (`src/layers/body/**`, `tests/state/settings/makeSettingsFixture.ts`, `public/cloud-candidates/`) are
 NOT part of this PR: never stage them.
 
-**Execution:** lean SDD (`docs/superpowers/conventions/sdd-execution.md`). Three dispatches: A = Tasks
-1–3, B = Tasks 4–6, C = Tasks 7–9. One plan, no parallel PRs; no perf gate (no renderer change).
+**Execution:** lean SDD (`docs/superpowers/conventions/sdd-execution.md`). Dispatches: A = Tasks
+1–3, B1 = Task 4, B2 = Tasks 5, 6, 10, 11 (crate), C = Tasks 7–9. Tasks 10–11 were added after the
+simplicity review and the file-size ruling (2026-11-10). One plan, no parallel PRs; no perf gate (no renderer change).
 
 Crate tests run with `cargo test --release --manifest-path tools/cloud-bake-rs/Cargo.toml`. A warm
 cache for manual runs: the spike's downloads for 2026-11-06 sit in
@@ -121,7 +122,8 @@ pub fn fit(footprints: &Footprints) -> Result<OrbitFit, String>; // Err when < M
 ```rust
 pub enum Fetched { Ok(PathBuf), Missing(String), Broken(String) }
 pub fn is_all_black(rgba: &[u8]) -> bool; // >= 99% of pixels with alpha > 0 have R = G = B = 0
-pub struct Source { pub id: &'static str, pub host: Host, pub layer: &'static str, pub kind: Kind }
+pub struct Source { pub id: &'static str, pub host: Host, pub layer: &'static str, pub kind: Kind,
+                     pub required: bool } // missing/broken required source -> exit 3
 pub const SOURCES: &[Source];           // replaces SATS + layer()'s match (fetch.rs:111-122)
 ```
 
@@ -130,7 +132,9 @@ pub const SOURCES: &[Source];           // replaces SATS + layer()'s match (fetc
 - [ ] A missing/broken granule piece drops that piece; a slot with no pieces drops the slot; a
       missing/broken geostationary frame drops it from the fill plan (its slot falls back as if out of
       geo reach). Each skip logs one stderr line and counts into `skipped.missing` / `skipped.broken`.
-- [ ] Missing NOAA-20 daily mosaic → exit 3. The NOAA-21 mosaic missing → skipped.
+- [ ] `required` is a field on the row, not a branch on a source id (owner ruling, simplicity review):
+      only the NOAA-20 daily mosaic is `required: true` (it patches the NOAA-20 swaths in `hybridise`);
+      a required source missing or broken → exit 3, any other → skipped.
 - [ ] Tests: `is_all_black flags a black opaque frame`, `is_all_black ignores transparent pixels`
       (mostly transparent frame with a few grey pixels → false), `a granule slot with every piece missing
       is dropped without panicking` (at the `load_orbits` level, with a tiny temp cache).
@@ -169,34 +173,56 @@ pub fn verdict(coverage: f64, cal: &Calibration) -> Verdict;
       (synthetic temperature grids through the median-|ΔT| function).
 - [ ] Commit.
 
-### Task 7: Registry rows, Blue Marble months fetcher, launcher, npm scripts
+### Task 7: Blue Marble months in one table, cache rows, launcher, npm scripts
 
-**Files:** `tools/utils/io/rawDataRegistry.ts`, new `tools/clouds/data/BMNG_MONTHS.ts`, new
-`tools/fetch/fetchCloudInputs.ts`, new `tools/clouds/bakeClouds.ts`, `package.json`,
-new `data/raw/clouds/README.md`, `.gitignore` (`/tools/cloud-bake-rs/target/` beside the stars-rs line)
+**Files:** new `tools/utils/io/BMNG_MONTHS.ts`, `tools/utils/io/bmngVintage.ts`,
+`tools/utils/io/rawDataRegistry.ts`, new `tools/utils/io/bmngMonthKey.ts`, `tools/utils/io/textureSources.ts`,
+`tools/textures/surfaceBodies/earthSurfaceBake.ts`, `tools/fetch/fetchTextures.ts`,
+`tests/tools/fetch/fetchTextures.test.ts`, `data/raw/textures/README.md`, new `tools/clouds/bakeClouds.ts`,
+`package.json`, new `data/raw/clouds/README.md`
 
-- [ ] Registry rows: `'clouds.cache'` (directory `data/raw/clouds/cache`, gitignored),
-      `'clouds.blueMarbleMonths'` (directory `data/raw/clouds/bmng`, gitignored, fetcher
-      `tools/fetch/fetchCloudInputs.ts`), `'clouds.readme'` (committed), `'clouds.sha256'` (committed).
-- [ ] `BMNG_MONTHS`: twelve `{ stamp: '2004MM', baseUrl }`, base
-      `https://assets.science.nasa.gov/content/dam/science/esd/eo/images/bmng/bmng-topography-bathymetry/<monthname>/`,
-      file `world.topo.bathy.<stamp>.3x21600x10800.jpg` (all twelve answered 200 on 2026-11-10).
-- [ ] `fetchCloudInputs.ts`: downloads missing months (~30 MB each, ~360 MB total; print that before
-      starting), `.part` + rename, sha256 into the `clouds.sha256` sidecar. Reuse fetchTextures' download +
-      checksum helper (`tools/fetch/fetchTextures.ts:~200-240`); if it is inline there, extract it to
-      `tools/utils/io/<fn>.ts` first (one symbol per utils file) and point both callers at it.
-- [ ] `bakeClouds.ts`: `--date` (default yesterday UTC) and `--out` (required), plus `--offline`
-      passed through; resolves `textures.earthClouds`, the date's calendar month under
-      `clouds.blueMarbleMonths`, `clouds.cache`; spawns `cargo run --release --manifest-path
-      tools/cloud-bake-rs/Cargo.toml -- …` with inherited stdio and exits with the child's code. A
-      missing month file → message naming `npm run fetch-cloud-inputs`, exit 2.
+Owner ruling (simplicity review, 2026-11-10): ONE home for Blue Marble months. All twelve equirects live
+in `data/raw/textures/` beside today's August file; one table describes them; the app's vintage is a
+pick from that table.
+
+**Contract:**
+
+```ts
+// tools/utils/io/BMNG_MONTHS.ts — the twelve 2004 months, January first
+export const BMNG_MONTHS: readonly { stamp: `2004${string}`; baseUrl: string; label: string }[];
+// tools/utils/io/bmngVintage.ts — keeps its doc comment; becomes a pick
+export const BMNG_VINTAGE = BMNG_MONTHS[7]; // August 2004, unchanged value
+// tools/utils/io/bmngMonthKey.ts
+export function bmngMonthKey(month: 1 | 2 | … | 12): RawDataKey; // 'textures.nasaBmngMonth08'
+```
+
+- [ ] `BMNG_MONTHS` rows: stamp `2004MM`, base
+      `https://assets.science.nasa.gov/content/dam/science/esd/eo/images/bmng/bmng-topography-bathymetry/<monthname>/`
+      (lower-case English month name; all twelve answered 200 on 2026-11-10), label `<Month> 2004`.
+- [ ] Registry: twelve rows `'textures.nasaBmngMonth01'`..`'12'`, built from `BMNG_MONTHS` with keys that
+      stay literal in `RawDataKey` (path `data/raw/textures/world.topo.bathy.<stamp>.3x21600x10800.jpg`,
+      upstream = baseUrl + file name, fetcher `tools/fetch/fetchTextures.ts`, readme `textures.readme`).
+      The old `'textures.nasaBmng'` row is DELETED; its two consumers (`textureSources.ts`,
+      `earthSurfaceBake.ts`) use `bmngMonthKey(<vintage month>)` instead. Follow how `BMNG_QUADRANT_KEYS`
+      (`tools/utils/io/bmngQuadrantKeys.ts`) feeds `fetchTextures`.
+- [ ] `fetchTextures`: the full pull still fetches only the vintage month (unchanged behaviour); a new
+      `--bmng-months` flag fetches all twelve (~30 MB each, ~360 MB; behind the existing `--confirm` size
+      gate). Update `fetchTextures.test.ts` only where its existing assertions name the deleted key.
+- [ ] Registry rows `'clouds.cache'` (directory `data/raw/clouds/cache`, gitignored) and
+      `'clouds.readme'` (committed `data/raw/clouds/README.md`).
+- [ ] `bakeClouds.ts`: passes `--date` through only when given (the binary defaults it, Task 10) and
+      `--out` (required) and `--offline`; resolves `textures.earthClouds`, `bmngMonthKey(month of the
+      date)` (month of yesterday UTC when no `--date`), `clouds.cache`; spawns `cargo run --release
+      --manifest-path tools/cloud-bake-rs/Cargo.toml -- …` with inherited stdio and exits with the child's
+      code. A missing month file → message naming `npm run fetch-cloud-inputs`, exit 2.
 - [ ] `package.json`: `"bake-clouds": "tsx tools/clouds/bakeClouds.ts"`,
-      `"fetch-cloud-inputs": "tsx tools/fetch/fetchCloudInputs.ts"`.
-- [ ] `data/raw/clouds/README.md`: what's in `bmng/` and `cache/`, upstreams (GIBS, EUMETView, NASA
-      BMNG), licences (GIBS/VIIRS/GOES/Blue Marble: free incl. commercial with credit; EUMETSAT WMS
-      visualisations: CC BY 4.0, "Contains modified EUMETSAT Meteosat data 2026"; Himawari via GIBS: JMA
-      terms unverified, flagged medium risk).
-- [ ] No TS test: path plumbing and a calendar-month lookup (testing.md).
+      `"fetch-cloud-inputs": "tsx tools/fetch/fetchTextures.ts --bmng-months"`.
+- [ ] `data/raw/clouds/README.md`: what `cache/` holds (one dir per day), upstreams (GIBS, EUMETView),
+      licences (GIBS/VIIRS/GOES: free incl. commercial with credit; EUMETSAT WMS visualisations: CC BY 4.0,
+      "Contains modified EUMETSAT Meteosat data 2026"; Himawari via GIBS: JMA terms unverified, flagged
+      medium risk); the ice-mask months are in `data/raw/textures/` (link its README). Add the eleven new
+      months to `data/raw/textures/README.md`.
+- [ ] No new TS test: path plumbing and a month lookup (testing.md).
 - [ ] Commit.
 
 ### Task 8: CI job
@@ -225,25 +251,56 @@ new `data/raw/clouds/README.md`, `.gitignore` (`/tools/cloud-bake-rs/target/` be
       same total cloud amount every day) and "Rust tools: registry paths + CI for stars-rs" (`ready`).
 - [ ] Commit.
 
+### Task 10: `--date` defaults to yesterday (UTC) in the binary
+
+**Files:** `tools/cloud-bake-rs/src/cli.rs`, `src/date.rs`
+
+Owner ruling (simplicity review): the default lives in the binary, so the launcher and a later container
+share it.
+
+- [ ] `--date` becomes optional; absent → the UTC day before the current system date (`SystemTime` →
+      days since epoch → civil date, in `date.rs`; no date crate).
+- [ ] Test: `civil date from days since epoch` for 0 → 1970-01-01, 20401 → 2025-11-09, 20819 →
+      2027-01-01 (pin the conversion; the "yesterday" wrapper is not tested).
+- [ ] Commit.
+
+### Task 11: Output is a grey lossy WebP, q80
+
+**Files:** `tools/cloud-bake-rs/src/imageio.rs`, `src/main.rs`
+
+Owner ruling 2026-11-10: the RGBA output stored opacity four times (RGB were copies of alpha). The output
+becomes an 8192×4096 lossy WebP whose grey value is opacity, no alpha — the same shape as the static
+source map (`cloud_combined_8192.tif`). Measured on the 9 Nov bake: q80 = 6.0 MB (lossless was 19.6 MB),
+99th-percentile error 11/255, PSNR 37.8 dB; cwebp encode ~9 s.
+
+- [ ] Encode with libwebp's lossy RGB encoder (R = G = B = opacity) at quality 80, method 4, through the
+      existing `libwebp-sys` dependency; keep `write_atomic`. Remove the lossless writer and its constants.
+- [ ] Test: `grey lossy WebP round-trips within 32/255` on a small synthetic gradient + noise image
+      (decode with the existing decoder; asserts the encoder wiring, channel order and no alpha).
+- [ ] Commit.
+
 ---
 
 ## Definition of Done
 
 **Deliverables:** `tools/cloud-bake-rs` committed with `cli.rs`, `verdict.rs`, `probe.rs`, `assets/`
-(+ README); `tools/clouds/bakeClouds.ts`, `tools/clouds/data/BMNG_MONTHS.ts`,
-`tools/fetch/fetchCloudInputs.ts`; registry rows `clouds.cache`, `clouds.blueMarbleMonths`,
-`clouds.readme`, `clouds.sha256`; npm scripts `bake-clouds`, `fetch-cloud-inputs`; CI job
+(+ README); `tools/clouds/bakeClouds.ts`, `tools/utils/io/BMNG_MONTHS.ts` (+ `bmngMonthKey.ts`,
+`BMNG_VINTAGE` as a pick); registry rows `textures.nasaBmngMonth01..12` (replacing `textures.nasaBmng`),
+`clouds.cache`, `clouds.readme`; an 8192×4096 grey lossy (q80) WebP output; npm scripts `bake-clouds`, `fetch-cloud-inputs`; CI job
 `cloud-bake-rs`; `data/raw/clouds/README.md`; DATA.md section + row; two backlog items.
 
 **Observable behaviours (manual smoke):**
 
 - `npm run fetch-cloud-inputs` pulls twelve months once; a second run downloads nothing.
-- `npm run bake-clouds -- --out <f>` bakes yesterday from an empty day cache: exit 0, one JSON line with
+- `npm run bake-clouds -- --out <f>` (no `--date`) bakes yesterday from an empty day cache: exit 0, one JSON line with
   coverage, orbit, calibration, skipped and fetched counts.
 - The same command with `--offline` produces a byte-identical file.
 - `--date 2026-11-06` and `--date 2026-11-09` both exit 0; the owner checks both in the app via the
-  spike's Cloud map switch (copy to `public/cloud-candidates/`).
+  spike's Cloud map switch (the controller converts grey to the spike's RGBA when copying to
+  `public/cloud-candidates/`), and judges q80 on the globe.
+- `npm run fetch-textures` (full pull) still fetches only the August month; the surface bake still reads
+  August.
 - `--offline` against an empty cache exits 3 with nothing written; `--date 2026-02-30` exits 2.
 
-**Deferred:** the Container, schedule and R2 upload; a publish path; app code; a fixed transfer curve;
+**Deferred:** the animated layer (geostationary snapshots, discussed 2026-11-10), the Container, schedule and R2 upload; a publish path; app code; a fixed transfer curve;
 refitting calibration in-bake; cache eviction; stars-rs registry/CI.
