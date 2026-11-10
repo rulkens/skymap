@@ -18,27 +18,16 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import type { SourceType } from '../../../../../src/@types/data/SourceType';
 import { createCatalogStore } from '../../../../../src/layers/galaxyCatalog/pointSprites/render/catalogStore';
 import type { BuildRunner } from '../../../../../src/layers/galaxyCatalog/pointSprites/@types/BuildRunner';
 import { buildPointInterleavedBuffer } from '../../../../../src/layers/galaxyCatalog/pointSprites/render/buildPointInterleavedBuffer';
 import { Source } from '../../../../../src/data/source';
-import { GALAXY_CATALOG_SOURCE_RECORD } from '../../../../../src/layers/galaxyCatalog/sources/galaxyCatalogSourceRecord';
 import type { GalaxyCatalog } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogId } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
-import type { GalaxyCatalogSourceType } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogSourceType';
 import { makeGalaxyCatalog } from '../../../../fixtures/makeGalaxyCatalog';
 
 /** Stats are the record source's to compute; these suites only exercise buffers. */
 const STATS = { magOffset: 0, medianAbsMag: -20.5 };
-
-// The store keys its catalogs by the string `GalaxyCatalogId`; these tests
-// still reason in terms of the numeric `Source` codes (the `loadedSources()`
-// iterator yields `source`), so resolve the id at each upload/unload call
-// site through the registry.
-function idOf(source: GalaxyCatalogSourceType): GalaxyCatalogId {
-  return GALAXY_CATALOG_SOURCE_RECORD[source].id;
-}
 
 // `GPUBufferUsage` and friends come from the shared
 // `tests/setup/webgpuGlobals.ts` setupFile.
@@ -51,7 +40,7 @@ function idOf(source: GalaxyCatalogSourceType): GalaxyCatalogId {
 const testRunner: BuildRunner = async (input) => buildPointInterleavedBuffer(input);
 
 /** Distinct from the source id, so a store that writes the id instead of the pick code fails. */
-const PICK_CODE_OF = (source: GalaxyCatalogSourceType): number =>
+const PICK_CODE_OF = (source: GalaxyCatalogId): number =>
   Object.values(Source).indexOf(source) + 40;
 
 // ─── Test helpers ─────────────────────────────────────────────────────────────
@@ -116,9 +105,9 @@ describe('catalogStore.totalCount', () => {
       pickCodeOf: PICK_CODE_OF,
       buildRunner: testRunner,
     });
-    await store.upload(idOf(Source.SDSS), makeCloud(100), STATS);
-    await store.upload(idOf(Source.TwoMRS), makeCloud(50), STATS);
-    await store.upload(idOf(Source.Glade), makeCloud(25), STATS);
+    await store.upload(Source.SDSS, makeCloud(100), STATS);
+    await store.upload(Source.TwoMRS, makeCloud(50), STATS);
+    await store.upload(Source.Glade, makeCloud(25), STATS);
     expect(store.totalCount()).toBe(175);
   });
 });
@@ -139,10 +128,10 @@ describe('catalogStore.unload', () => {
       pickCodeOf: PICK_CODE_OF,
       buildRunner: testRunner,
     });
-    await store.upload(idOf(Source.SDSS), makeCloud(10), STATS);
+    await store.upload(Source.SDSS, makeCloud(10), STATS);
     expect(destroyed).toEqual([]);
 
-    store.unload(idOf(Source.SDSS));
+    store.unload(Source.SDSS);
 
     expect(destroyed.length).toBe(minted);
     expect(store.totalCount()).toBe(0);
@@ -156,9 +145,9 @@ describe('catalogStore.unload', () => {
       pickCodeOf: PICK_CODE_OF,
       buildRunner: testRunner,
     });
-    await store.upload(idOf(Source.SDSS), makeCloud(1000), STATS);
-    store.unload(idOf(Source.SDSS));
-    await store.upload(idOf(Source.SDSS), makeCloud(750), STATS);
+    await store.upload(Source.SDSS, makeCloud(1000), STATS);
+    store.unload(Source.SDSS);
+    await store.upload(Source.SDSS, makeCloud(750), STATS);
 
     expect(Array.from(store.loadedSources()).map((e) => e.count)).toEqual([750]);
   });
@@ -177,8 +166,8 @@ describe('catalogStore.loadedSources', () => {
     // GALAXY_CATALOG_SOURCES is ordered smallest-catalogue → largest:
     //   [Famous, TwoMRS, SDSS, Glade]
     // so TwoMRS comes before SDSS.
-    await store.upload(idOf(Source.SDSS), makeCloud(100), STATS);
-    await store.upload(idOf(Source.TwoMRS), makeCloud(50), STATS);
+    await store.upload(Source.SDSS, makeCloud(100), STATS);
+    await store.upload(Source.TwoMRS, makeCloud(50), STATS);
 
     const entries = Array.from(store.loadedSources());
 
@@ -212,7 +201,7 @@ describe('catalogStore.upload — regression: replace, not append', () => {
     const cloudA = makeCloud(1000);
     const cloudB = makeCloud(500);
 
-    await store.upload(idOf(Source.SDSS), cloudA, STATS);
+    await store.upload(Source.SDSS, cloudA, STATS);
     const firstEntry = Array.from(store.loadedSources()).find((e) => e.source === Source.SDSS);
     expect(firstEntry).toBeDefined();
     const firstBuffer = firstEntry!.vertexBuffer;
@@ -222,7 +211,7 @@ describe('catalogStore.upload — regression: replace, not append', () => {
     // each upload's buffer has its own `destroy` we can spy on independently.
     const destroySpy = vi.spyOn(firstBuffer, 'destroy');
 
-    await store.upload(idOf(Source.SDSS), cloudB, STATS);
+    await store.upload(Source.SDSS, cloudB, STATS);
     expect(destroySpy).toHaveBeenCalledTimes(1);
 
     // Bookkeeping reflects the second upload's count, not the sum.
@@ -258,7 +247,7 @@ describe('catalogStore.upload — regression: parallel-upload rebake race', () =
     // post-bake rebake reliably fires while GLADE's worker is still running.
     // Without the fix, SDSS's rebake re-bakes GLADE using the OLD (larger)
     // cloud reference and stomps the in-flight GLADE-medium upload.
-    const delaysMs = new Map<SourceType, number>([
+    const delaysMs = new Map<GalaxyCatalogId, number>([
       [Source.SDSS, 2],
       [Source.Glade, 30],
     ]);
@@ -281,12 +270,12 @@ describe('catalogStore.upload — regression: parallel-upload rebake race', () =
     // Seed with the "prior tier" layout so the rebake has stale offsets to act
     // on. Counts only have to differ from the new ones — the race is in the
     // ordering, not the volume — so these stand in for the real ~0.5M/2M tiers.
-    await store.upload(idOf(Source.SDSS), makeCloud(497), STATS);
-    await store.upload(idOf(Source.Glade), makeCloud(1995), STATS);
+    await store.upload(Source.SDSS, makeCloud(497), STATS);
+    await store.upload(Source.Glade, makeCloud(1995), STATS);
 
     // Tier swap: kick off both in parallel, the way `engine.setTier` does.
-    const sdssPromise = store.upload(idOf(Source.SDSS), makeCloud(156), STATS);
-    const gladePromise = store.upload(idOf(Source.Glade), makeCloud(400), STATS);
+    const sdssPromise = store.upload(Source.SDSS, makeCloud(156), STATS);
+    const gladePromise = store.upload(Source.Glade, makeCloud(400), STATS);
 
     await Promise.all([sdssPromise, gladePromise]);
 
@@ -320,7 +309,7 @@ describe('catalogStore SourceUniforms', () => {
       pickCodeOf: PICK_CODE_OF,
       buildRunner: testRunner,
     });
-    await store.upload(idOf(Source.SDSS), makeCloud(4), STATS);
+    await store.upload(Source.SDSS, makeCloud(4), STATS);
     expect(writes.map((u32) => u32[0])).toEqual([PICK_CODE_OF(Source.SDSS)]);
   });
 });

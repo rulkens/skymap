@@ -21,7 +21,7 @@ import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientation
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
-import type { SourceType } from '../../../../src/@types/data/SourceType';
+import type { SourceId } from '../../../../src/@types/data/SourceId';
 import type { CosmicWebDensityRuntime } from '../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
 import { cosmicWebDensityAssetRows } from '../../../../src/layers/cosmicWebDensity/densityCubes/load/cosmicWebDensityAssetRows';
 import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../../../../src/layers/cosmicWebDensity/sources/cosmicWebDensitySourceRows';
@@ -105,7 +105,7 @@ const BOOT_GALAXY_CATALOG_ITEMS: GalaxyCatalogItemLeaves = {
   desiSgw: { enabled: false },
 };
 
-type PointSlotOverrides = Partial<Record<SourceType, StubSlot>>;
+type PointSlotOverrides = Partial<Record<SourceId, StubSlot>>;
 type NamedSlotOverrides = Partial<{
   famousGalaxiesMeta: StubSlot;
   structureCatalog: StubSlot;
@@ -121,7 +121,7 @@ type MakeStateOptions = {
   namedSlots?: NamedSlotOverrides;
 };
 
-const ALL_POINT_SOURCES: readonly SourceType[] = [
+const ALL_POINT_SOURCES: readonly SourceId[] = [
   Source.SDSS,
   Source.TwoMRS,
   Source.Glade,
@@ -142,7 +142,7 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
     namedSlots = {},
   } = opts;
 
-  const points = new Map<SourceType, AssetSlot<unknown, unknown>>(
+  const points = new Map<SourceId, AssetSlot<unknown, unknown>>(
     ALL_POINT_SOURCES.map((src) => [
       src,
       (pointSlots[src] ?? stubSlot()) as AssetSlot<unknown, unknown>,

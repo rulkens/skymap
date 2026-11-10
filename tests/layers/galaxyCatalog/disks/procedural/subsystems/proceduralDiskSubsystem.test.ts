@@ -29,7 +29,6 @@ import { createDiskPlannerWalk } from '../../../../../../src/layers/galaxyCatalo
 import { runProceduralSolo } from '../../../../../services/engine/subsystems/diskWalkHarness';
 import type { GalaxyCatalog } from '../../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { OrbitCamera } from '../../../../../../src/@types/camera/orbitCamera/OrbitCamera';
-import type { SourceType } from '../../../../../../src/@types/data/SourceType';
 import { makeGalaxyCatalog } from '../../../../../fixtures/makeGalaxyCatalog';
 import { galaxyRecordsOver } from '../../../../../support/galaxyRecordsOver';
 
@@ -76,9 +75,9 @@ function makeCam(): OrbitCamera {
 }
 
 function makeInput(
-  catalogs: Map<SourceType, GalaxyCatalog>,
+  catalogs: Map<GalaxyCatalogId, GalaxyCatalog>,
   visibleCatalogs: ReadonlySet<GalaxyCatalogId> = ALL_CATALOGS,
-  sourceOpacity: (source: SourceType) => number = () => 1,
+  sourceOpacity: (source: GalaxyCatalogId) => number = () => 1,
 ) {
   const cam = makeCam();
   return {

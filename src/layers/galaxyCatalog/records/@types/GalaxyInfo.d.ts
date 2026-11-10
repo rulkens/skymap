@@ -7,7 +7,7 @@
 import type { GalaxyTypeInfo } from './GalaxyTypeInfo';
 import { Source } from '../../../../data/source';
 import type { BandLabels } from '../../../../@types/data/galaxyCatalog/BandLabels';
-import type { SourceType } from '../../../../@types/data/SourceType';
+import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
 
 /**
  * Display data for a single galaxy point, computed on-demand from the raw
@@ -205,7 +205,7 @@ export type GalaxyInfo = {
    * decides whether SDSS-specific affordances (Explorer link, SDSS image
    * cutout) are shown for this point.
    */
-  source: SourceType;
+  source: GalaxyCatalogId;
 
   /**
    * Display label for the source (e.g. "SDSS", "2MRS", "GLADE").  Pre-resolved

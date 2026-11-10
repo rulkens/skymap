@@ -29,7 +29,6 @@ import { createElement } from 'react';
 import GalaxiesSection from '../../../../../src/layers/galaxyCatalog/controls/ui/GalaxiesSection';
 import { BiasMode } from '../../../../../src/data/galaxyCatalog/biasMode';
 import type { BiasMode as BiasModeT } from '../../../../../src/layers/galaxyCatalog/@types/BiasMode';
-import type { SourceType } from '../../../../../src/@types/data/SourceType';
 import { Source } from '../../../../../src/data/source';
 import { GALAXY_CATALOG_IDS } from '../../../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import type { GalaxyCatalogId } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
@@ -42,7 +41,7 @@ function baseProps() {
   return {
     title: 'Galaxies',
     visibleCatalogs: ALL_ON,
-    onToggleSource: vi.fn<(source: SourceType, visible: boolean) => void>(),
+    onToggleSource: vi.fn<(source: GalaxyCatalogId, visible: boolean) => void>(),
     pointSize: 2.5,
     onPointSizeChange: vi.fn<(v: number) => void>(),
     depthFadeEnabled: true,
@@ -94,7 +93,7 @@ describe('GalaxiesSection', () => {
 
   describe('callbacks', () => {
     it('calls onToggleSource with source and false when a catalog checkbox is unchecked', () => {
-      const onToggleSource = vi.fn<(source: SourceType, visible: boolean) => void>();
+      const onToggleSource = vi.fn<(source: GalaxyCatalogId, visible: boolean) => void>();
       const props = { ...baseProps(), visibleCatalogs: ALL_ON, onToggleSource };
       const { container } = render(createElement(GalaxiesSection, props));
 
@@ -125,7 +124,7 @@ describe('GalaxiesSection', () => {
     });
 
     it('calls onToggleSource for all TOGGLEABLE_SOURCES when master is toggled from noneOn', () => {
-      const onToggleSource = vi.fn<(source: SourceType, visible: boolean) => void>();
+      const onToggleSource = vi.fn<(source: GalaxyCatalogId, visible: boolean) => void>();
       const props = { ...baseProps(), visibleCatalogs: new Set<GalaxyCatalogId>(), onToggleSource };
       const { container } = render(createElement(GalaxiesSection, props));
 

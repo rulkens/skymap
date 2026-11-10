@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { SourceType } from '../src/@types/data/SourceType';
+import type { GalaxyCatalogId } from '../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 
 // Note: we import from `tools/catalog/crossMatch` rather than the documented
 // `tools/catalog/buildAllBins` path because the latter pulls in `node:fs`/`node:url`,
@@ -22,7 +22,13 @@ import type { ParsedRecord } from '../tools/parsers/common';
  * the same sentinel the real parsers emit when a galaxy catalog lacks that band
  * (see common.ts), so the merger is exercised with realistic input.
  */
-function rec(source: SourceType, ra: number, dec: number, z: number, objID = 0n): ParsedRecord {
+function rec(
+  source: GalaxyCatalogId,
+  ra: number,
+  dec: number,
+  z: number,
+  objID = 0n,
+): ParsedRecord {
   return {
     source,
     objID,

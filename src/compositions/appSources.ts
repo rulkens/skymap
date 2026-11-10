@@ -9,7 +9,6 @@
  */
 
 import type { SourceEntry } from '../@types/data/SourceEntry';
-import type { SourceType } from '../@types/data/SourceType';
 
 import { GALAXY_CATALOG_SOURCE_RECORD } from '../layers/galaxyCatalog/sources/galaxyCatalogSourceRecord';
 import { STRUCTURE_SOURCE_ROWS } from '../layers/structure/sources/structureSourceRows';
@@ -40,4 +39,4 @@ export const APP_SOURCE_REGISTRY = {
   ...sourceRecordOf(MISSIONS_SOURCE_ROWS),
   ...sourceRecordOf(SATELLITES_SOURCE_ROWS),
   ...sourceRecordOf(STRUCTURE_SOURCE_ROWS),
-} as const satisfies Readonly<Record<SourceType, SourceEntry>>;
+} as const satisfies Readonly<Record<string, SourceEntry>>;

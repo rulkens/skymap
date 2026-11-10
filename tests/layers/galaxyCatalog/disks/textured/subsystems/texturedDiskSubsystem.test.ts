@@ -20,7 +20,6 @@ import { createDiskPlannerWalk } from '../../../../../../src/layers/galaxyCatalo
 import { runTexturedSolo } from '../../../../../services/engine/subsystems/diskWalkHarness';
 import type { GalaxyCatalog } from '../../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { OrbitCamera } from '../../../../../../src/@types/camera/orbitCamera/OrbitCamera';
-import type { SourceType } from '../../../../../../src/@types/data/SourceType';
 import type { HiResFamousSubsystem } from '../../../../../../src/layers/galaxyCatalog/hiResFamous/@types/HiResFamousSubsystem';
 import type { FamousGalaxyMetaEntry } from '../../../../../../src/@types/loading/FamousGalaxyMetaEntry';
 import { makeGalaxyCatalog } from '../../../../../fixtures/makeGalaxyCatalog';
@@ -98,11 +97,11 @@ function makeCam(): OrbitCamera {
 }
 
 function makeInput(
-  catalogs: Map<SourceType, GalaxyCatalog>,
+  catalogs: Map<GalaxyCatalogId, GalaxyCatalog>,
   visibleCatalogs: ReadonlySet<GalaxyCatalogId> = ALL_CATALOGS,
   famousGalaxiesMeta: readonly FamousGalaxyMetaEntry[] = [],
   nowMs = 0,
-  sourceOpacity: (source: SourceType) => number = () => 1,
+  sourceOpacity: (source: GalaxyCatalogId) => number = () => 1,
 ) {
   const cam = makeCam();
   return {

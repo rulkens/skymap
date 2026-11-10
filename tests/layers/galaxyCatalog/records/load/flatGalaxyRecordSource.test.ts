@@ -14,9 +14,9 @@ import { makeGalaxyCatalog } from '../../../../fixtures/makeGalaxyCatalog';
 import { FAMOUS_GALAXY_NAMES } from '../../../../../src/layers/galaxyCatalog/famousGalaxies/data/famousGalaxyNames.generated';
 import type { GalaxyCatalog } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyRow } from '../../../../../src/layers/galaxyCatalog/records/@types/GalaxyRow';
-import type { GalaxyCatalogSourceType } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogSourceType';
+import type { GalaxyCatalogId } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 
-const sourceOver = (source: GalaxyCatalogSourceType, catalog: GalaxyCatalog) =>
+const sourceOver = (source: GalaxyCatalogId, catalog: GalaxyCatalog) =>
   flatGalaxyRecordSource(GALAXY_CATALOG_SOURCE_RECORD[source], catalog);
 
 describe('flatGalaxyRecordSource', () => {

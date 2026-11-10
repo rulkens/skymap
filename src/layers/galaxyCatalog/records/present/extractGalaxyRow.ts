@@ -15,13 +15,13 @@
 import { Source } from '../../../../data/source';
 import { famousGalaxyNamesFor } from '../../famousGalaxies/utils/famousGalaxyNamesFor';
 import type { GalaxyCatalog } from '../../../../@types/data/galaxyCatalog/GalaxyCatalog';
-import type { GalaxyCatalogSourceType } from '../../@types/GalaxyCatalogSourceType';
+import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
 import type { GalaxyRow } from '../@types/GalaxyRow';
 
 export function extractGalaxyRow(
   cloud: GalaxyCatalog | undefined,
   idx: number,
-  source: GalaxyCatalogSourceType,
+  source: GalaxyCatalogId,
 ): GalaxyRow | null {
   if (!cloud) return null;
   if (idx < 0 || idx >= cloud.count) return null;

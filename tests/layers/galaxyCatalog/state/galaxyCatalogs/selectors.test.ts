@@ -5,7 +5,6 @@ import { INITIAL_SETTINGS } from '../../../../../src/state/settings/initialSetti
 import { settingsRoute } from '../../../../../src/store/constants';
 import { Source } from '../../../../../src/data/source';
 import { GALAXY_CATALOG_SOURCES } from '../../../../../src/layers/galaxyCatalog/sources/galaxyCatalogSources';
-import { galaxyCatalogIdOf } from '../../../../../src/utils/galaxyCatalogIdOf';
 import type { RootState } from '../../../../../src/store/types';
 import type { EngineSettingsState } from '../../../../../src/@types/settings/EngineSettingsState';
 
@@ -23,8 +22,8 @@ describe('selectVisibleCatalogs', () => {
     const visible = selectVisibleCatalogs(root);
 
     for (const s of GALAXY_CATALOG_SOURCES) {
-      const { enabled } = root[settingsRoute].galaxyCatalogs.items[galaxyCatalogIdOf(s)];
-      expect(visible.has(galaxyCatalogIdOf(s))).toBe(enabled);
+      const { enabled } = root[settingsRoute].galaxyCatalogs.items[s];
+      expect(visible.has(s)).toBe(enabled);
     }
   });
 

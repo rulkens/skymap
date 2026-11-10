@@ -17,7 +17,7 @@
  * geometry has to satisfy.
  */
 import type { DesiTracer } from '../parsers/desiFits';
-import type { SourceType } from '../../src/@types/data/SourceType';
+import type { GalaxyCatalogId } from '../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import { Source } from '../../src/data/source';
 import { makeConeFilter } from '../utils/math/makeConeFilter';
 import { makeDecBandFilter } from '../utils/math/makeDecBandFilter';
@@ -51,7 +51,7 @@ import { makeEllipsoidUnionFilter } from '../utils/math/makeEllipsoidUnionFilter
  */
 export type DesiPatch = {
   key: string;
-  source: SourceType;
+  source: GalaxyCatalogId;
   makeFilter: () => (raDeg: number, decDeg: number, z: number) => boolean;
 };
 

@@ -10,7 +10,7 @@ import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
 import type { StarCatalogFacts } from './@types/StarCatalogFacts';
 import type { StarCatalogRuntime } from './@types/StarCatalogRuntime';
 import type { OctreeChunkStream } from '../../@types/octree/OctreeChunkStream';
-import type { StarCatalogSourceType } from './@types/StarCatalogSourceType';
+import type { StarCatalogId } from './@types/StarCatalogId';
 
 import { HDR_TARGET_FORMAT, FOREGROUND_DEPTH_FORMAT } from '../../data/renderTargetFormats';
 import { SLAB_REVERSED_Z, NEAR0 } from '../../services/engine/frame/slabs';
@@ -82,7 +82,7 @@ export function create(deps: LayerCoreDeps<StarCatalogFacts>): StarCatalogRuntim
 
   const aggregateUpsample = createStarAggregateUpsample(device, HDR_TARGET_FORMAT);
 
-  const chunkStreams = new Map<StarCatalogSourceType, OctreeChunkStream<StarColumns>>();
+  const chunkStreams = new Map<StarCatalogId, OctreeChunkStream<StarColumns>>();
   const poolHost: OctreePoolHost<StarColumns> = {
     renderer,
     chunkStreams,

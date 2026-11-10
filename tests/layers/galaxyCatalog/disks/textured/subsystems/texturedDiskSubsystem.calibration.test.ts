@@ -31,7 +31,6 @@ import { paddedRadiusMpc } from '../../../../../../src/layers/galaxyCatalog/appe
 import { fallbackOrientation } from '../../../../../../src/utils/random/fallbackOrientation';
 import type { GalaxyCatalog } from '../../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { OrbitCamera } from '../../../../../../src/@types/camera/orbitCamera/OrbitCamera';
-import type { SourceType } from '../../../../../../src/@types/data/SourceType';
 import type { FamousGalaxyMetaEntry } from '../../../../../../src/@types/loading/FamousGalaxyMetaEntry';
 import type { FamousCalibration } from '../../../../../../src/@types/loading/FamousCalibration';
 import { makeGalaxyCatalog } from '../../../../../fixtures/makeGalaxyCatalog';
@@ -97,7 +96,7 @@ function makeCam(): OrbitCamera {
 }
 
 function makeInput(
-  catalogs: Map<SourceType, GalaxyCatalog>,
+  catalogs: Map<GalaxyCatalogId, GalaxyCatalog>,
   famousGalaxiesMeta: FamousGalaxyMetaEntry[] = [],
   visibleCatalogs: ReadonlySet<GalaxyCatalogId> = ALL_CATALOGS,
 ) {
@@ -155,7 +154,7 @@ function metaWithoutCalibration(count: number): FamousGalaxyMetaEntry[] {
  * index 0 of a 1-row cloud so the sort order is unambiguous.
  */
 async function emitOne(
-  source: SourceType,
+  source: GalaxyCatalogId,
   cloud: GalaxyCatalog,
   famousGalaxiesMeta: FamousGalaxyMetaEntry[],
 ) {

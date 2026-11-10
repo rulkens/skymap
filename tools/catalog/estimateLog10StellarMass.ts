@@ -7,10 +7,10 @@
  */
 import { absoluteFromApparent } from '../../src/utils/math/absoluteFromApparent';
 import { Source } from '../../src/data/source';
-import type { SourceType } from '../../src/@types/data/SourceType';
+import type { GalaxyCatalogId } from '../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 
 export type StellarMassEstimateInput = {
-  readonly source: SourceType;
+  readonly source: GalaxyCatalogId;
   readonly magU: number;
   readonly magG: number;
   readonly magR: number;

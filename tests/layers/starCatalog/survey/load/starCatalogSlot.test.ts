@@ -12,7 +12,7 @@ import { STAR_CATALOG_SOURCE_RECORD } from '../../../../../src/layers/starCatalo
 import type { OctreeChunkStream } from '../../../../../src/@types/octree/OctreeChunkStream';
 import type { StarCatalogRuntime } from '../../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { StarCatalogRenderer } from '../../../../../src/layers/starCatalog/survey/@types/StarCatalogRenderer';
-import type { SourceType } from '../../../../../src/@types/data/SourceType';
+import type { StarCatalogId } from '../../../../../src/layers/starCatalog/@types/StarCatalogId';
 import type { StarColumns } from '../../../../../src/layers/starCatalog/survey/@types/StarColumns';
 
 const fetchSpy = vi.hoisted(() => vi.fn(async () => ({ recordCount: 0, nodes: { count: 0 } })));
@@ -28,7 +28,7 @@ function setup(override: { value: number | null }) {
     return 0;
   });
   const release = vi.fn<StarCatalogRenderer['release']>();
-  const chunkStreams = new Map<SourceType, OctreeChunkStream<StarColumns>>();
+  const chunkStreams = new Map<StarCatalogId, OctreeChunkStream<StarColumns>>();
   const host = {
     renderer: { upload, release } as unknown as StarCatalogRenderer,
     chunkStreams,

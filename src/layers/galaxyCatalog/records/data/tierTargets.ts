@@ -28,7 +28,7 @@ import { galaxyEntryOf } from '../utils/galaxyEntryOf';
 import { GALAXY_CATALOG_DATA_PREFIX } from './galaxyCatalogFormat';
 import { shipsTierVariants } from '../../../../utils/loading/shipsTierVariants';
 import type { Tier } from '../../../../@types/data/Tier';
-import type { SourceType } from '../../../../@types/data/SourceType';
+import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
 
 /**
  * Returns the per-tier point-count cap for a source, or `undefined` for
@@ -39,7 +39,7 @@ import type { SourceType } from '../../../../@types/data/SourceType';
  *   0          → exclude this source from this tier.
  *   positive N → keep the brightest N.
  */
-export function tierTarget(source: SourceType, tier?: Tier): number | undefined {
+export function tierTarget(source: string, tier?: Tier): number | undefined {
   const entry = galaxyEntryOf(source);
   if (entry === undefined || tier === undefined) return undefined;
   // The `as const` on the Layer's rows narrows each entry's `tierTargets`
@@ -58,7 +58,7 @@ export function tierTarget(source: SourceType, tier?: Tier): number | undefined 
  * discriminated union themselves. Tier-independent — the floor is a single
  * per-source value the build applies to whichever tier is being capped.
  */
-export function fluxSupplementMagLimitFor(source: SourceType): number | undefined {
+export function fluxSupplementMagLimitFor(source: string): number | undefined {
   const entry = galaxyEntryOf(source);
   if (entry === undefined) return undefined;
   // `as const` narrows each entry to its own literal shape, so entries that
@@ -80,7 +80,7 @@ export function fluxSupplementMagLimitFor(source: SourceType): number | undefine
  * A non-galaxy-catalog source throws rather than returning a sentinel string,
  * so a buggy caller stays loud instead of silently 404-ing.
  */
-export function tierFilenameForSource(source: SourceType, tier?: Tier): string {
+export function tierFilenameForSource(source: string, tier?: Tier): string {
   const entry = galaxyEntryOf(source);
   if (entry === undefined) {
     throw new Error(`tierFilenameForSource: no base filename for source ${source}`);

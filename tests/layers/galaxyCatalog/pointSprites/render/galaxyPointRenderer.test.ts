@@ -24,22 +24,13 @@ import type { BuildRunner } from '../../../../../src/layers/galaxyCatalog/pointS
 import { VIEW_SLOT_COUNT } from '../../../../../src/utils/gpu/createViewSlotUniformRing';
 import { buildPointInterleavedBuffer } from '../../../../../src/layers/galaxyCatalog/pointSprites/render/buildPointInterleavedBuffer';
 import { Source } from '../../../../../src/data/source';
-import { GALAXY_CATALOG_SOURCE_RECORD } from '../../../../../src/layers/galaxyCatalog/sources/galaxyCatalogSourceRecord';
 import type { GalaxyCatalog } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogId } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
-import type { GalaxyCatalogSourceType } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogSourceType';
 import type { Mat4 } from 'wgpu-matrix';
 import { makeGalaxyCatalog } from '../../../../fixtures/makeGalaxyCatalog';
 
 /** Stats are the record source's to compute; these suites only exercise buffers. */
 const STATS = { magOffset: 0, medianAbsMag: -20.5 };
-
-// GalaxyPointRenderer keys its catalogs by the string `GalaxyCatalogId`; these
-// tests still reason in terms of the numeric `Source` codes, so resolve the
-// id at each upload call site through the registry.
-function idOf(source: GalaxyCatalogSourceType): GalaxyCatalogId {
-  return GALAXY_CATALOG_SOURCE_RECORD[source].id;
-}
 
 // `GPUBufferUsage` and friends come from the shared
 // `tests/setup/webgpuGlobals.ts` setupFile.
@@ -50,7 +41,7 @@ function idOf(source: GalaxyCatalogSourceType): GalaxyCatalogId {
 // same pure function the worker would call — bit-identical behaviour without a
 // structured-clone round-trip.
 const testRunner: BuildRunner = async (input) => buildPointInterleavedBuffer(input);
-const PICK_CODE_OF = (source: GalaxyCatalogSourceType): number =>
+const PICK_CODE_OF = (source: GalaxyCatalogId): number =>
   Object.values(Source).indexOf(source) + 40;
 
 // ─── Test helpers ─────────────────────────────────────────────────────────────
@@ -203,10 +194,10 @@ describe('GalaxyPointRenderer.destroy', () => {
     // vertex buffer, the per-view-slot FadeUniforms ring (Task 13b), and the
     // SourceUniforms 16-byte uniform.
     const perUpload = VIEW_SLOT_COUNT + 2;
-    await renderer.upload(idOf(Source.SDSS), makeCloud(2), STATS);
+    await renderer.upload(Source.SDSS, makeCloud(2), STATS);
     expect(buffers).toHaveLength(VIEW_SLOT_COUNT + perUpload);
 
-    await renderer.upload(idOf(Source.TwoMRS), makeCloud(3), STATS);
+    await renderer.upload(Source.TwoMRS, makeCloud(3), STATS);
     expect(buffers).toHaveLength(VIEW_SLOT_COUNT + 2 * perUpload);
 
     // Sanity: every tracked buffer starts at 0 destroys.
@@ -229,8 +220,8 @@ describe('GalaxyPointRenderer.destroy', () => {
       focusBgl: makeStubFocusBgl(),
       buildRunner: testRunner,
     });
-    await renderer.upload(idOf(Source.SDSS), makeCloud(2), STATS);
-    await renderer.upload(idOf(Source.TwoMRS), makeCloud(3), STATS);
+    await renderer.upload(Source.SDSS, makeCloud(2), STATS);
+    await renderer.upload(Source.TwoMRS, makeCloud(3), STATS);
     expect(Array.from(renderer.loadedSources())).toHaveLength(2);
 
     renderer.destroy();
@@ -254,8 +245,8 @@ describe('GalaxyPointRenderer.draw — GalaxyPointDrawSettings shape', () => {
       focusBgl: makeStubFocusBgl(),
       buildRunner: testRunner,
     });
-    await renderer.upload(idOf(Source.SDSS), makeCloud(10), STATS);
-    await renderer.upload(idOf(Source.Glade), makeCloud(10), STATS);
+    await renderer.upload(Source.SDSS, makeCloud(10), STATS);
+    await renderer.upload(Source.Glade, makeCloud(10), STATS);
 
     const drawnCounts: number[] = [];
     const pass = {
@@ -308,7 +299,7 @@ describe('GalaxyPointRenderer.draw — viewSlot (Task 13b)', () => {
       focusBgl: makeStubFocusBgl(),
       buildRunner: testRunner,
     });
-    await renderer.upload(idOf(Source.SDSS), makeCloud(2), STATS);
+    await renderer.upload(Source.SDSS, makeCloud(2), STATS);
 
     const bindGroupsAt0: unknown[] = [];
     const bindGroupsAt1: unknown[] = [];

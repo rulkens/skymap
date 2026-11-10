@@ -9,15 +9,15 @@ import { describe, it, expect } from 'vitest';
 import { buildAliasIndex } from '../../../../../src/layers/galaxyCatalog/aliases/load/buildAliasIndex';
 import { Source } from '../../../../../src/data/source';
 import type { GalaxyCatalog } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import type { SourceType } from '../../../../../src/@types/data/SourceType';
+import type { GalaxyCatalogId } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import { makeGalaxyCatalog } from '../../../../fixtures/makeGalaxyCatalog';
 import { galaxyRecordsOver } from '../../../../support/galaxyRecordsOver';
 
 /** The flat record sources over catalogs carrying only these `objIDs`. */
-const fakeCatalogs = (objIdsBySource: Partial<Record<SourceType, BigUint64Array>>) => {
-  const catalogs = new Map<SourceType, GalaxyCatalog>();
+const fakeCatalogs = (objIdsBySource: Partial<Record<GalaxyCatalogId, BigUint64Array>>) => {
+  const catalogs = new Map<GalaxyCatalogId, GalaxyCatalog>();
   for (const [source, objIDs] of Object.entries(objIdsBySource)) {
-    catalogs.set(source as SourceType, makeGalaxyCatalog(objIDs.length, { objIDs }));
+    catalogs.set(source as GalaxyCatalogId, makeGalaxyCatalog(objIDs.length, { objIDs }));
   }
   return galaxyRecordsOver(catalogs).values();
 };

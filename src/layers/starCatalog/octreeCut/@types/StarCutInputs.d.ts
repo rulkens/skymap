@@ -5,13 +5,13 @@
 
 import type { OctreeCutInputs } from '../../../../@types/octree/OctreeCutInputs';
 import type { OctreeCutSourceInput } from '../../../../@types/octree/OctreeCutSourceInput';
-import type { StarCatalogSourceType } from '../../@types/StarCatalogSourceType';
+import type { StarCatalogId } from '../../@types/StarCatalogId';
 
-// The octree cut is generic over `SourceType`; this Layer's cut only ever carries its own codes.
+// The octree cut is generic over `StarCatalogId`; this Layer's cut only ever carries its own codes.
 export type StarCutInputs = OctreeCutInputs & {
   readonly cut: {
     readonly sources: readonly (OctreeCutSourceInput & {
-      readonly source: StarCatalogSourceType;
+      readonly source: StarCatalogId;
     })[];
   };
   readonly sizePx: number;

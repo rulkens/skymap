@@ -4,10 +4,10 @@ import { Source } from '../../../../../src/data/source';
 import { makeGalaxyCatalog } from '../../../../fixtures/makeGalaxyCatalog';
 import { galaxyRecordsOver } from '../../../../support/galaxyRecordsOver';
 import type { GalaxyCatalog } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import type { SourceType } from '../../../../../src/@types/data/SourceType';
+import type { GalaxyCatalogId } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 
 /** The flat record sources over these (source, catalog) pairs, in order. */
-function recordsOf(...pairs: readonly (readonly [SourceType, GalaxyCatalog])[]) {
+function recordsOf(...pairs: readonly (readonly [GalaxyCatalogId, GalaxyCatalog])[]) {
   return [...galaxyRecordsOver(new Map(pairs)).values()];
 }
 

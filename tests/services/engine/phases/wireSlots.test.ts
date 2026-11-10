@@ -30,7 +30,7 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
-import type { SourceType } from '../../../../src/@types/data/SourceType';
+import type { SourceId } from '../../../../src/@types/data/SourceId';
 
 // Every fetcher is a no-op resolved Promise: slots whose `.load()` fires inside wireSlots
 // (famousGalaxiesMeta, filaments, the density cubes) just need to reach `ready`. The per-source point
@@ -164,10 +164,10 @@ function makeFakeSlot(name: string): FakeSlot {
  * `loading` so the famous-galaxies-meta demand predicate (`slotState(Famous) !== 'idle'`)
  * reads true.  Idle galaxy catalog fakes never re-run demand — the live-boot shape.
  */
-function bootPointSlots(): Map<SourceType, ReturnType<typeof makeFakeSlot>> {
+function bootPointSlots(): Map<SourceId, ReturnType<typeof makeFakeSlot>> {
   const famous = makeFakeSlot('famous-points');
   famous.fire({ kind: 'loading', req: {}, attempt: 1 } as never);
-  return new Map<SourceType, ReturnType<typeof makeFakeSlot>>([
+  return new Map<SourceId, ReturnType<typeof makeFakeSlot>>([
     [Source.SDSS, makeFakeSlot('sdss-points')],
     [Source.TwoMRS, makeFakeSlot('2mrs-points')],
     [Source.Glade, makeFakeSlot('glade-points')],
@@ -197,7 +197,7 @@ const errorValue = (msg: string): LoadState<unknown> => ({
  *  predicate reads true. */
 function makeState(
   overrides: Partial<{
-    points: Map<SourceType, ReturnType<typeof makeFakeSlot>>;
+    points: Map<SourceId, ReturnType<typeof makeFakeSlot>>;
     markerCategoryVisibility: Record<string, boolean>;
     labelCategoryVisibility: Record<string, boolean>;
   }> = {},
@@ -399,7 +399,7 @@ describe('wireSlots', () => {
     const twoMrsSlot = makeFakeSlot('2mrs-points');
     const gladeSlot = makeFakeSlot('glade-points');
     const famousSlot = makeFakeSlot('famous-points');
-    const points = new Map<SourceType, ReturnType<typeof makeFakeSlot>>([
+    const points = new Map<SourceId, ReturnType<typeof makeFakeSlot>>([
       [Source.SDSS, sdssSlot],
       [Source.TwoMRS, twoMrsSlot],
       [Source.Glade, gladeSlot],
@@ -445,7 +445,7 @@ describe('wireSlots', () => {
     const twoMrsSlot = makeFakeSlot('2mrs-points');
     const gladeSlot = makeFakeSlot('glade-points');
     const famousSlot = makeFakeSlot('famous-points');
-    const points = new Map<SourceType, ReturnType<typeof makeFakeSlot>>([
+    const points = new Map<SourceId, ReturnType<typeof makeFakeSlot>>([
       [Source.SDSS, sdssSlot],
       [Source.TwoMRS, twoMrsSlot],
       [Source.Glade, gladeSlot],
@@ -548,7 +548,7 @@ describe('wireSlots', () => {
     const twoMrsSlot = makeFakeSlot('2mrs-points');
     const gladeSlot = makeFakeSlot('glade-points');
     const famousSlot = makeFakeSlot('famous-points');
-    const points = new Map<SourceType, ReturnType<typeof makeFakeSlot>>([
+    const points = new Map<SourceId, ReturnType<typeof makeFakeSlot>>([
       [Source.SDSS, sdssSlot],
       [Source.TwoMRS, twoMrsSlot],
       [Source.Glade, gladeSlot],

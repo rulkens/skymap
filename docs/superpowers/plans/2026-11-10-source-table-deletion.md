@@ -196,15 +196,15 @@ export function catalogPickCodes<K extends string>(
 - Produces: no `SourceType`, `GalaxyCatalogSourceType` or `StarCatalogSourceType` anywhere. `Source` itself still
   exists (Task 4 deletes it); its values now type as the Layer id literals.
 
-- [ ] **Step 1: Swap the types**, Layer by Layer, then core, then tools; `npm run typecheck` after each Layer
+- [x] **Step 1: Swap the types**, Layer by Layer, then core, then tools; `npm run typecheck` after each Layer
       keeps the fallout local.
-- [ ] **Step 2: Delete each translator** listed above. Where the code mapped a ref's source to an id to test
+- [x] **Step 2: Delete each translator** listed above. Where the code mapped a ref's source to an id to test
       visibility, the ref's `source` is the id: test it directly.
-- [ ] **Step 3: `AssetKey = string`** and drop the `String()` in `createLayers`.
-- [ ] **Step 4: Delete the four files**, the `CORE_ALLOWED` row and the ledger mention.
-- [ ] **Step 5: Verify.** `npm run typecheck`, `npm test` → green. `grep -rn "SourceType\|galaxyCatalogIdOf" src
+- [x] **Step 3: `AssetKey = string`** and drop the `String()` in `createLayers`.
+- [x] **Step 4: Delete the four files**, the `CORE_ALLOWED` row and the ledger mention.
+- [x] **Step 5: Verify.** `npm run typecheck`, `npm test` → green. `grep -rn "SourceType\|galaxyCatalogIdOf" src
       tools tests packages` → only `docs/` history. No new test: a type swap and identity deletions.
-- [ ] **Step 6: Commit** — "Sources are typed by their ids; the SourceType family and its translators go".
+- [x] **Step 6: Commit** — "Sources are typed by their ids; the SourceType family and its translators go".
 
 ### Task 4: `Source.X` becomes the id literal; `src/data/source.ts` is deleted
 

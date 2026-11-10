@@ -2,7 +2,7 @@ import { createSlice, type Draft, type PayloadAction } from '@reduxjs/toolkit';
 import type { AgentWeights } from '../../../@types/AgentWeights';
 import type { CatalogPoints } from '../../../@types/CatalogPoints';
 import type { CatalogSlice } from '../../../@types/CatalogSlice';
-import type { SourceType } from '../../../../../src/@types/data/SourceType';
+import type { GalaxyCatalogId } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import type { Tier } from '../../../../../src/@types/data/Tier';
 import { Source } from '../../../../../src/data/source';
 
@@ -36,7 +36,7 @@ export const defaultCatalogSlice: CatalogSlice = {
  * the one spelling of "which sources exist" both the Data-section toggles
  * and the preset validator key off.
  */
-export const WORKBENCH_SOURCES: readonly SourceType[] = [
+export const WORKBENCH_SOURCES: readonly GalaxyCatalogId[] = [
   Source.FamousGalaxy,
   Source.TwoMRS,
   Source.SDSS,
@@ -51,10 +51,10 @@ export const WORKBENCH_SOURCES: readonly SourceType[] = [
 // isolation (no `CatalogSlice` in or out), so it stays a plain function the
 // UI composes with `setCatalogSources` rather than a case reducer.
 export function toggleCatalogSource(
-  current: readonly SourceType[],
-  s: SourceType,
+  current: readonly GalaxyCatalogId[],
+  s: GalaxyCatalogId,
   on: boolean,
-): readonly SourceType[] {
+): readonly GalaxyCatalogId[] {
   const enabled = new Set(current);
   if (on) enabled.add(s);
   else enabled.delete(s);
@@ -65,8 +65,8 @@ export const catalogSlice = createSlice({
   name: 'catalog',
   initialState: defaultCatalogSlice,
   reducers: {
-    setCatalogSources: (state, action: PayloadAction<readonly SourceType[]>) => {
-      state.sources = action.payload as Draft<SourceType[]>;
+    setCatalogSources: (state, action: PayloadAction<readonly GalaxyCatalogId[]>) => {
+      state.sources = action.payload as Draft<GalaxyCatalogId[]>;
     },
     setCatalogTier: (state, action: PayloadAction<Tier>) => {
       state.tier = action.payload;

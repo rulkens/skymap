@@ -50,7 +50,7 @@ import {
 import { resolve, join, dirname } from 'node:path';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
-import type { SourceType } from '../../src/@types/data/SourceType';
+import type { GalaxyCatalogId } from '../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 
 import { parseSdssCsv } from '../parsers/sdssCsv';
 import { parseTwoMrs, parseXscShapeCsv } from '../parsers/twoMrs';
@@ -742,7 +742,7 @@ async function runCli(): Promise<void> {
 
   // Capture per-source input counts up front so the summary can report
   // the dedup drop rate per survey, not just the merged total.
-  const inputCounts: Partial<Record<SourceType, number>> = {
+  const inputCounts: Partial<Record<GalaxyCatalogId, number>> = {
     [Source.SDSS]: sdss.length,
     [Source.TwoMRS]: twoMrs.length,
     [Source.Glade]: glade.length,
@@ -793,7 +793,7 @@ async function runCli(): Promise<void> {
   // Bucket the merged stream back out per source so we can write one
   // file per survey. Using a Map preserves insertion order, which keeps
   // the log output tidy.
-  const bySource = new Map<SourceType, ParsedRecord[]>();
+  const bySource = new Map<GalaxyCatalogId, ParsedRecord[]>();
   for (const r of merged) {
     let arr = bySource.get(r.source);
     if (!arr) {

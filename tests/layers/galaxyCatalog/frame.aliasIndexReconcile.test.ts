@@ -10,7 +10,7 @@ import { galaxyCatalogPlanner } from '../../../src/layers/galaxyCatalog/frame';
 import { makeGalaxyCatalogFade } from '../../fixtures/makeGalaxyCatalogFade';
 import { makeGalaxyCatalogItems } from '../../fixtures/makeGalaxyCatalogItems';
 import { Source } from '../../../src/data/source';
-import type { SourceType } from '../../../src/@types/data/SourceType';
+import type { GalaxyCatalogId } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
@@ -36,7 +36,7 @@ function makeRuntime(opts: {
   catalogsVersion: () => number;
 }) {
   const publish = vi.fn();
-  const catalogs = new Map<SourceType, GalaxyCatalog>([
+  const catalogs = new Map<GalaxyCatalogId, GalaxyCatalog>([
     [Source.Glade, makeGalaxyCatalog(1, { objIDs: new BigUint64Array([100n]) })],
   ]);
   const runtime = {
@@ -99,7 +99,7 @@ describe('galaxyCatalog frame — alias index reconcile', () => {
   // `catalogs` array — main never rebuilds here, so a stale row set lingers.
   it('rebuilds and republishes on a second catalogsVersion bump with the sidecar already committed', () => {
     let catalogsVersion = 1;
-    const catalogs = new Map<SourceType, GalaxyCatalog>([
+    const catalogs = new Map<GalaxyCatalogId, GalaxyCatalog>([
       [Source.Glade, makeGalaxyCatalog(1, { objIDs: new BigUint64Array([100n]) })],
     ]);
     const committed = {

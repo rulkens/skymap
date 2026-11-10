@@ -31,7 +31,7 @@
  */
 
 import { Source } from '../../../../data/source';
-import type { GalaxyCatalogSourceType } from '../../@types/GalaxyCatalogSourceType';
+import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
 
 /**
  * Milliquas AGN class enum.  Letters Q/A/B/K/N/S come from the
@@ -122,10 +122,7 @@ const PARENT_SURVEY_LABEL: Record<number, string> = {
  * "DESI tracer" row; sources with no class semantics never display
  * the row at all.
  */
-export function sourceClassLabel(
-  source: GalaxyCatalogSourceType,
-  classByte: number,
-): string | null {
+export function sourceClassLabel(source: GalaxyCatalogId, classByte: number): string | null {
   if (source === Source.Milliquas) return MILLIQUAS_CLASS_LABEL[classByte] ?? null;
   // All DESI patches (deep cone + dec-band wedge + Sloan Great Wall) stamp the
   // same tracer classByte, so they share the tracer-label lookup. (The SGW patch

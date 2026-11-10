@@ -25,7 +25,7 @@ import type { DiskInstance } from '../@types/DiskInstance';
 import type { DiskRowVisitor } from '../../../lod/@types/DiskRowVisitor';
 import type { HiResFamousSubsystem } from '../../../hiResFamous/@types/HiResFamousSubsystem';
 import type { TexturedDiskDeps } from '../@types/TexturedDiskDeps';
-import type { GalaxyCatalogSourceType } from '../../../@types/GalaxyCatalogSourceType';
+import type { GalaxyCatalogId } from '../../../@types/GalaxyCatalogId';
 import type { TexturedDiskSubsystemWithTestSeam } from '../@types/TexturedDiskSubsystemWithTestSeam';
 import { fetchGalaxyBitmap } from '../../../thumbnailAtlas/utils/fetchGalaxyBitmap';
 import { createDeadHostSet } from '../../../../../utils/network/createDeadHostSet';
@@ -89,7 +89,7 @@ export function createTexturedDiskSubsystem(
     bitmapReadyTime.delete(key);
   });
 
-  const stickyDisksBySource = new Map<GalaxyCatalogSourceType, Map<number, DiskInstance>>();
+  const stickyDisksBySource = new Map<GalaxyCatalogId, Map<number, DiskInstance>>();
 
   let frameCounter = 0;
   let destroyed = false;
@@ -103,7 +103,7 @@ export function createTexturedDiskSubsystem(
 
   let lastOutput: TexturedDiskFrameOutput = { disks: [] };
 
-  function stickyFor(source: GalaxyCatalogSourceType): Map<number, DiskInstance> {
+  function stickyFor(source: GalaxyCatalogId): Map<number, DiskInstance> {
     let sticky = stickyDisksBySource.get(source);
     if (!sticky) {
       sticky = new Map();

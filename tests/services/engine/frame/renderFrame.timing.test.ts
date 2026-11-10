@@ -40,7 +40,7 @@ import type { RenderFrameInput } from '../../../../src/@types/engine/frame/Rende
 import type { OrbitCamera } from '../../../../src/@types/camera/orbitCamera/OrbitCamera';
 import type { GpuTimingService } from '../../../../src/@types/gpu/timing/GpuTimingService';
 import type { TimingSlotName } from '../../../../src/@types/gpu/timing/TimingSlotName';
-import type { SourceType } from '../../../../src/@types/data/SourceType';
+import type { SourceId } from '../../../../src/@types/data/SourceId';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 import { INITIAL_SETTINGS } from '../../../../src/state/settings/initialSettings';
 import { galaxyRowRuntime } from '../../../support/layerPickCodes';
@@ -299,7 +299,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
   const settings = {
     pointSizePx: 2.5,
     brightness: 1.0,
-    selected: null as { source: SourceType; localIdx: number } | null,
+    selected: null as { source: SourceId; localIdx: number } | null,
     biasMode: BiasMode.None,
     absMagLimit: -19,
     depthFadeEnabled: true,

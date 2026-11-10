@@ -1,8 +1,8 @@
-import type { GalaxyCatalogSourceType } from './GalaxyCatalogSourceType';
+import type { GalaxyCatalogId } from './GalaxyCatalogId';
 
-/** The asset rows this Layer authors: one per catalog `.bin` (by its source code) and its sidecars. */
+/** The asset rows this Layer authors: one per catalog `.bin` (by its id) and its sidecars. */
 export type GalaxyCatalogAssetKey =
-  | GalaxyCatalogSourceType
+  | GalaxyCatalogId
   | 'famousGalaxiesMeta'
   | 'pgcAlias'
   // A GPU allocation, not a fetch; its request is keyed on `layerSide`, not the tier.

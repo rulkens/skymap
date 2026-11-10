@@ -28,7 +28,6 @@ import { createHiResFamousSubsystem } from '../../../../../src/layers/galaxyCata
 import { createHiResFamousTexture } from '../../../../../src/layers/galaxyCatalog/hiResFamous/load/hiResFamousTexture';
 import type { GalaxyCatalog } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { OrbitCamera } from '../../../../../src/@types/camera/orbitCamera/OrbitCamera';
-import type { SourceType } from '../../../../../src/@types/data/SourceType';
 import type { FamousGalaxyName } from '../../../../../src/layers/galaxyCatalog/famousGalaxies/@types/FamousGalaxyName';
 import { makeGalaxyCatalog } from '../../../../fixtures/makeGalaxyCatalog';
 
@@ -120,7 +119,7 @@ function camDistFor(px: number, diameterKpc = 50): number {
 
 /** The frame input; `famousNames` replaces the mocked compiled-in table the subsystem reads ids from. */
 function makeInput(
-  catalogs: Map<SourceType, GalaxyCatalog>,
+  catalogs: Map<GalaxyCatalogId, GalaxyCatalog>,
   camDist: number,
   famousNames: readonly FamousGalaxyName[],
   visibleCatalogs: ReadonlySet<GalaxyCatalogId> = ALL_CATALOGS,

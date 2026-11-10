@@ -72,7 +72,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve, dirname, basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { SourceType } from '../../src/@types/data/SourceType';
+import type { GalaxyCatalogId } from '../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 
 import {
@@ -447,7 +447,7 @@ type TaggedPositions = {
   /** Apparent magnitude in the survey's flux-limit band. */
   magG: Float32Array;
   /** Per-galaxy source tag (one of Source.TwoMRS, Source.Glade). */
-  sources: SourceType[];
+  sources: GalaxyCatalogId[];
   /**
    * Per-galaxy HEALPix angular re-weight in [1, WEIGHT_CAP].
    *
@@ -531,7 +531,7 @@ function readMergedPositions(activeSources: ReadonlySet<SourceKey>): TaggedPosit
   // and render-time Malmquist treatments consistent.
   const sourceFiles = ALL_SOURCE_FILES.filter((s) => activeSources.has(s.key));
 
-  type LoadedCloud = { cloud: GalaxyCatalog; source: SourceType; angular: Float32Array };
+  type LoadedCloud = { cloud: GalaxyCatalog; source: GalaxyCatalogId; angular: Float32Array };
   const loaded: LoadedCloud[] = [];
   for (const { name, source } of sourceFiles) {
     // `name` is the bare, un-tiered filename (`sdss.bin`/`glade.bin` are
@@ -602,7 +602,7 @@ function readMergedPositions(activeSources: ReadonlySet<SourceKey>): TaggedPosit
   const totalRaw = loaded.reduce((acc, l) => acc + l.cloud.count, 0);
   const positions = new Float32Array(totalRaw * 3);
   const magG = new Float32Array(totalRaw);
-  const sources = new Array<SourceType>(totalRaw);
+  const sources = new Array<GalaxyCatalogId>(totalRaw);
   const angularWeights = new Float32Array(totalRaw);
   let kept = 0;
   for (const { cloud, source, angular } of loaded) {

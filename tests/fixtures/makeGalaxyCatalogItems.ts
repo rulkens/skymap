@@ -6,7 +6,6 @@
  */
 
 import { GALAXY_CATALOG_SOURCES } from '../../src/layers/galaxyCatalog/sources/galaxyCatalogSources';
-import { galaxyCatalogIdOf } from '../../src/utils/galaxyCatalogIdOf';
 
 import type { GalaxyCatalogId } from '../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import type { GalaxyCatalogItemSettings } from '../../src/layers/galaxyCatalog/@types/GalaxyCatalogItemSettings';
@@ -16,7 +15,7 @@ export function makeGalaxyCatalogItems(
 ): Record<GalaxyCatalogId, GalaxyCatalogItemSettings> {
   return Object.fromEntries(
     GALAXY_CATALOG_SOURCES.map((source) => {
-      const id = galaxyCatalogIdOf(source);
+      const id = source;
       return [id, { enabled: true, labelEnabled: true, ...of(id) }];
     }),
   ) as Record<GalaxyCatalogId, GalaxyCatalogItemSettings>;

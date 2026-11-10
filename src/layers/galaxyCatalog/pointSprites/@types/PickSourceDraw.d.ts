@@ -15,10 +15,10 @@
  * `drawPoints()`.
  */
 
-import type { SourceType } from '../../../../@types/data/SourceType';
+import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
 
 export type PickSourceDraw = {
-  source: SourceType;
+  source: GalaxyCatalogId;
   vertexBuffer: GPUBuffer;
   count: number;
   /**

@@ -24,7 +24,7 @@ import { SURFACE_STANDOFF_RADII } from '../../../utils/camera/orbitCamera/clampD
 import type { DriverGeometry } from '../../../@types/engine/camera/DriverGeometry';
 import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKindRow';
 import type { StarCatalogRuntime } from '../@types/StarCatalogRuntime';
-import type { SourceType } from '../../../@types/data/SourceType';
+import type { StarCatalogId } from '../@types/StarCatalogId';
 import type { SceneBodyId } from '../../../@types/scene/SceneBodyId';
 import type { StarCatalogRef } from './@types/StarCatalogRef';
 
@@ -47,7 +47,7 @@ function starDriver(poseId: SceneBodyId | null, radiusM: number): DriverGeometry
 }
 
 /** The committed survey catalog of `source`, or null before it lands. */
-function catalogOf(runtime: Pick<StarCatalogRuntime, 'renderer'>, source: SourceType) {
+function catalogOf(runtime: Pick<StarCatalogRuntime, 'renderer'>, source: StarCatalogId) {
   for (const loaded of runtime.renderer.loadedCatalogs()) {
     if (loaded.source === source) return loaded.octree;
   }

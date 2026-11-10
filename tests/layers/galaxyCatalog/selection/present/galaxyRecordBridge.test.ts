@@ -9,7 +9,7 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { galaxyRecordBridge } from '../../../../../src/layers/galaxyCatalog/selection/present/galaxyRecordBridge';
 import { Source } from '../../../../../src/data/source';
-import type { GalaxyCatalogSourceType } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogSourceType';
+import type { GalaxyCatalogId } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import type { GalaxyRecordSource } from '../../../../../src/layers/galaxyCatalog/records/@types/GalaxyRecordSource';
 import type { GalaxyRow } from '../../../../../src/layers/galaxyCatalog/records/@types/GalaxyRow';
 
@@ -20,7 +20,7 @@ function deferred<T>() {
 }
 
 function fakeSource(
-  source: GalaxyCatalogSourceType,
+  source: GalaxyCatalogId,
   lookups: Partial<GalaxyRecordSource>,
 ): GalaxyRecordSource {
   return {
@@ -84,7 +84,7 @@ describe('galaxyRecordBridge', () => {
   it('pgc decode prefers the lower rank when two sources hold the id', async () => {
     const gladeLookup = deferred<number | null>();
     let gladeAnswer: number | null | Promise<number | null> = 3;
-    const records = new Map<GalaxyCatalogSourceType, GalaxyRecordSource>([
+    const records = new Map<GalaxyCatalogId, GalaxyRecordSource>([
       [Source.TwoMRS, fakeSource(Source.TwoMRS, { resolveDurableId: () => 7 })],
       [Source.Glade, fakeSource(Source.Glade, { resolveDurableId: () => gladeAnswer })],
     ]);

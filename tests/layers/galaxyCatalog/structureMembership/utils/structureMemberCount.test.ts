@@ -1,16 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import { structureMemberCount } from '../../../../../src/layers/galaxyCatalog/structureMembership/utils/structureMemberCount';
 import { Source } from '../../../../../src/data/source';
-import { galaxyCatalogIdOf } from '../../../../../src/utils/galaxyCatalogIdOf';
 import { makeGalaxyCatalog } from '../../../../fixtures/makeGalaxyCatalog';
 import { galaxyRecordsOver } from '../../../../support/galaxyRecordsOver';
 import type { GalaxyCatalog } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import type { SourceType } from '../../../../../src/@types/data/SourceType';
+import type { GalaxyCatalogId } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import type { StructureInfo } from '../../../../../src/@types/data/structure/StructureInfo';
 
 /** The visible catalogs covering the two catalogs this file's fixtures populate. */
-const SDSS_AND_TWOMRS = new Set([galaxyCatalogIdOf(Source.SDSS), galaxyCatalogIdOf(Source.TwoMRS)]);
-const SDSS_ONLY = new Set([galaxyCatalogIdOf(Source.SDSS)]);
+const SDSS_AND_TWOMRS = new Set([Source.SDSS, Source.TwoMRS]);
+const SDSS_ONLY = new Set([Source.SDSS]);
 
 /**
  * Minimal GalaxyCatalog from (x,y,z) tuples — only `positions`/`count` are
@@ -40,11 +39,9 @@ const cluster: StructureInfo = {
 };
 
 /** The flat record sources over a per-source catalog map. */
-function cloudFrom(map: Partial<Record<SourceType, GalaxyCatalog>>) {
+function cloudFrom(map: Partial<Record<GalaxyCatalogId, GalaxyCatalog>>) {
   return galaxyRecordsOver(
-    new Map(
-      Object.entries(map).map(([source, catalog]) => [source as SourceType, catalog]),
-    ),
+    new Map(Object.entries(map).map(([source, catalog]) => [source as GalaxyCatalogId, catalog])),
   );
 }
 

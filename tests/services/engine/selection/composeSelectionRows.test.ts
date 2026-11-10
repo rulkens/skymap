@@ -51,7 +51,7 @@ import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/Ga
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 import type { Octree } from '../../../../src/@types/octree/Octree';
 import { starOctreeFromSkst } from '../../../../src/layers/starCatalog/survey/utils/starOctreeFromSkst';
-import type { SourceType } from '../../../../src/@types/data/SourceType';
+import type { SourceId } from '../../../../src/@types/data/SourceId';
 import type { SelectionKindRow } from '../../../../src/@types/engine/layer/SelectionKindRow';
 import type { StarColumns } from '../../../../src/layers/starCatalog/survey/@types/StarColumns';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
@@ -116,7 +116,7 @@ const galaxies: GalaxyRowFixture = {
 const FAMOUS_ID = FAMOUS_GALAXY_NAMES[0]!.id;
 
 /** The same fixture with only the named sources loaded. */
-function galaxiesWith(...sources: readonly SourceType[]): GalaxyRowFixture {
+function galaxiesWith(...sources: readonly SourceId[]): GalaxyRowFixture {
   return {
     ...galaxies,
     catalogs: new Map([...galaxies.catalogs].filter(([code]) => sources.includes(code))),

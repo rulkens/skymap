@@ -30,9 +30,7 @@ export function evaluateRows(state: EngineState, rows: readonly AssetWiringRow[]
       const { slot } = row;
       const kind = slot.state().kind;
       const lastRequest = slot.lastRequest();
-      // The queue dedups by string key; no string `AssetKey` is a bare numeral, so
-      // stringifying cannot collide it with a numeric `Source` code.
-      const queueKey = String(row.key);
+      const queueKey = row.key;
       const verdict = evaluateAssetDemand(row, ctx, state.visibilityEntries);
       // Enqueue edge: only an idle slot with demand; load() stays a re-fetch primitive.
       if (kind === 'idle' && verdict.demand) {

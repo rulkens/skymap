@@ -4,7 +4,7 @@
  * row does not load; a loading/ready slot is left alone (the idle-guard against a re-fetch storm); a
  * non-idle slot whose request drifted reloads in place, never releases; a throwing predicate is caught
  * and does not stop later rows. Each stub row carries its stub slot, also indexed in
- * `state.slotsByKey` under the row's numeric SourceType key (as `createLayers` does).
+ * `state.slotsByKey` under the row's numeric SourceId key (as `createLayers` does).
  */
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
@@ -24,7 +24,7 @@ import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { AssetDemand } from '../../../../src/@types/loading/AssetDemand';
 import type { AssetDemandVerdict } from '../../../../src/@types/loading/AssetDemandVerdict';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
-import type { SourceType } from '../../../../src/@types/data/SourceType';
+import type { SourceId } from '../../../../src/@types/data/SourceId';
 import type { Tier } from '../../../../src/@types/data/Tier';
 import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 
@@ -85,7 +85,7 @@ function stubSlot(
  *  try/catches each row, so a missing queue would be a swallowed TypeError that turns every
  *  `expect(slot.load)` into a silent failure. */
 function makeState(
-  points: Map<SourceType, AssetSlot<unknown, unknown>>,
+  points: Map<SourceId, AssetSlot<unknown, unknown>>,
   assetQueue: unknown = new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY),
 ): EngineState {
   return {
@@ -111,7 +111,7 @@ function makeState(
 
 function row(
   slot: AssetSlot<unknown, unknown>,
-  key: SourceType,
+  key: SourceId,
   demand: DemandFn,
   opts: { release?: DemandFn; req?: AssetWiringRow['req'] } = {},
 ): AssetWiringRow {
@@ -131,7 +131,7 @@ function stubQueue() {
  *  `priority` is the thing under test rather than an irrelevant field. */
 function ranked(
   slot: AssetSlot<unknown, unknown>,
-  key: SourceType,
+  key: SourceId,
   priority: number,
 ): AssetWiringRow {
   return { ...row(slot, key, () => true), priority };
@@ -249,10 +249,10 @@ describe('evaluateRows', () => {
     // array, hold one of the two pipes for 22 s ahead of everything the opening
     // view draws. Rows here are ordered worst-rank-first so array order and rank
     // order disagree completely.
-    const started: SourceType[] = [];
+    const started: SourceId[] = [];
     /** A slot whose load records its source and never settles, so the pass's
      *  two concurrency slots stay occupied for the whole assertion. */
-    const recordingSlot = (source: SourceType) => {
+    const recordingSlot = (source: SourceId) => {
       const slot = stubSlot();
       slot.load.mockImplementation(() => {
         started.push(source);

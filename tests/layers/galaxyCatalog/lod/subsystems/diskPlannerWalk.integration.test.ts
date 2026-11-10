@@ -37,7 +37,6 @@ import {
 } from '../../../../../src/layers/galaxyCatalog/lod/data/galaxyLodBands';
 import type { GalaxyCatalog } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { OrbitCamera } from '../../../../../src/@types/camera/orbitCamera/OrbitCamera';
-import type { SourceType } from '../../../../../src/@types/data/SourceType';
 import { makeGalaxyCatalog } from '../../../../fixtures/makeGalaxyCatalog';
 import { galaxyRecordsOver } from '../../../../support/galaxyRecordsOver';
 
@@ -125,7 +124,7 @@ function pxPerRadFor(cam: OrbitCamera): number {
 }
 
 function makeInput(
-  catalogs: Map<SourceType, GalaxyCatalog>,
+  catalogs: Map<GalaxyCatalogId, GalaxyCatalog>,
   visibleCatalogs: ReadonlySet<GalaxyCatalogId> = ALL_CATALOGS,
 ) {
   const cam = makeCam();
@@ -172,7 +171,7 @@ describe('diskPlannerWalk drives both bodies', () => {
   it('one walk drives both bodies with output identical to running each solo', async () => {
     // A famous cloud and a non-famous cloud — both near the camera, so every
     // row clears both bodies' px gates and emits.
-    const catalogs = new Map<SourceType, GalaxyCatalog>([
+    const catalogs = new Map<GalaxyCatalogId, GalaxyCatalog>([
       [Source.FamousGalaxy, makeDenseCloud(2)],
       [Source.SDSS, makeDenseCloud(2)],
     ]);
@@ -218,7 +217,7 @@ describe('diskPlannerWalk drives both bodies', () => {
 
   it('one walk.runFrame call populates BOTH lastOutputs in a single frame', async () => {
     // Warm the atlas so the textured body has a bitmap to emit on the observed frame.
-    const catalogs = new Map<SourceType, GalaxyCatalog>([[Source.SDSS, makeDenseCloud(2)]]);
+    const catalogs = new Map<GalaxyCatalogId, GalaxyCatalog>([[Source.SDSS, makeDenseCloud(2)]]);
     const input = makeInput(catalogs);
 
     const rig = makeMergedRig();
@@ -242,7 +241,9 @@ describe('diskPlannerWalk drives both bodies', () => {
     // shared cursor yields window {0,1,2} on frame 1, {3,4,5} on frame 2. Both
     // bodies must advance through the SAME window (one cursor), not independently.
     const count = 6;
-    const catalogs = new Map<SourceType, GalaxyCatalog>([[Source.SDSS, makeDenseCloud(count)]]);
+    const catalogs = new Map<GalaxyCatalogId, GalaxyCatalog>([
+      [Source.SDSS, makeDenseCloud(count)],
+    ]);
     const input = makeInput(catalogs);
 
     // Key → local-index map: the textured body enqueues by RA/Dec-derived key;
@@ -325,7 +326,7 @@ describe('diskPlannerWalk drives both bodies', () => {
 
     // Run the textured body solo for a source, capturing atlas.enqueueFetch.
     // Returns the spy (its inferred MockInstance type carries `.mock`).
-    async function texEnqueueFetchFor(source: SourceType) {
+    async function texEnqueueFetchFor(source: GalaxyCatalogId) {
       const device = makeFakeDevice();
       const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
       const spy = vi.spyOn(atlas, 'enqueueFetch');
@@ -335,7 +336,7 @@ describe('diskPlannerWalk drives both bodies', () => {
         fetcher: async () => makeFakeBitmap(),
       });
       const walk = createDiskPlannerWalk({ decimationFactor: 1 });
-      const catalogs = new Map<SourceType, GalaxyCatalog>([
+      const catalogs = new Map<GalaxyCatalogId, GalaxyCatalog>([
         [source, makeSingletonCloud(rowX, diameterKpc)],
       ]);
       runTexturedSolo(walk, tex, {

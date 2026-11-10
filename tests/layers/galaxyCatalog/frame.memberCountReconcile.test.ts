@@ -8,12 +8,10 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { galaxyCatalogPlanner } from '../../../src/layers/galaxyCatalog/frame';
 import { Source } from '../../../src/data/source';
-import { galaxyCatalogIdOf } from '../../../src/utils/galaxyCatalogIdOf';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
-import type { SourceType } from '../../../src/@types/data/SourceType';
 import { makeGalaxyCatalogFade } from '../../fixtures/makeGalaxyCatalogFade';
 import { makeGalaxyCatalogItems } from '../../fixtures/makeGalaxyCatalogItems';
-import type { GalaxyCatalogSourceType } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogSourceType';
+import type { GalaxyCatalogId } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
@@ -36,7 +34,7 @@ const CLUSTER = placedStructureRow({
 });
 
 /** The two catalogs this file's fixtures populate. */
-const SDSS_AND_TWOMRS: readonly GalaxyCatalogSourceType[] = [Source.SDSS, Source.TwoMRS];
+const SDSS_AND_TWOMRS: readonly GalaxyCatalogId[] = [Source.SDSS, Source.TwoMRS];
 
 function catalogAt(positions: ReadonlyArray<readonly [number, number, number]>): GalaxyCatalog {
   const flat = new Float32Array(positions.length * 3);
@@ -49,11 +47,8 @@ const SNAPSHOT = { nowMs: 0 } as unknown as ReadyFrameContext;
 const VIEWS = [galaxyPlannerViewOf()];
 
 /** `visible` are the catalogs core hands a value above 0: they are the mask. */
-function fadeOf(visible: readonly GalaxyCatalogSourceType[] = SDSS_AND_TWOMRS) {
-  return makeGalaxyCatalogFade(
-    Object.fromEntries(visible.map((s) => [galaxyCatalogIdOf(s), 1])),
-    0,
-  );
+function fadeOf(visible: readonly GalaxyCatalogId[] = SDSS_AND_TWOMRS) {
+  return makeGalaxyCatalogFade(Object.fromEntries(visible.map((s) => [s, 1])), 0);
 }
 
 function makeState(select: SelectionRowBase | null): PassState {
@@ -72,7 +67,7 @@ function makeState(select: SelectionRowBase | null): PassState {
 }
 
 // No committed pgcAlias, so the alias-index reconcile stays inert here.
-function makeRuntime(catalogs: Map<SourceType, GalaxyCatalog>) {
+function makeRuntime(catalogs: Map<GalaxyCatalogId, GalaxyCatalog>) {
   const publish = vi.fn();
   const runtime = {
     catalogs,

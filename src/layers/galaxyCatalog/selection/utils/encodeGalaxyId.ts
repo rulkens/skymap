@@ -13,10 +13,10 @@
  */
 
 import { Source } from '../../../../data/source';
-import type { SourceType } from '../../../../@types/data/SourceType';
+import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
 
 export function encodeGalaxyId(galaxy: {
-  readonly source: SourceType;
+  readonly source: GalaxyCatalogId;
   readonly famousId: string | null;
   readonly objId: bigint;
   readonly ra: number;

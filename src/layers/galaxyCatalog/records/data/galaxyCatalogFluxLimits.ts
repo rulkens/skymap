@@ -8,10 +8,10 @@
 
 import { galaxyEntryOf } from '../utils/galaxyEntryOf';
 import type { SchechterTriple } from '../../../../@types/data/galaxyCatalog/SchechterTriple';
-import type { SourceType } from '../../../../@types/data/SourceType';
+import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
 
 /** Per-galaxy catalog apparent-magnitude flux limit (band varies — see `bandLabels`). */
-export function galaxyCatalogFluxLimit(source: SourceType): number {
+export function galaxyCatalogFluxLimit(source: string): number {
   const entry = galaxyEntryOf(source);
   if (entry === undefined) {
     throw new Error(
@@ -22,7 +22,7 @@ export function galaxyCatalogFluxLimit(source: SourceType): number {
 }
 
 /** Per-galaxy catalog Schechter triple for the band that defines the flux limit. */
-export function galaxyCatalogSchechter(source: SourceType): SchechterTriple {
+export function galaxyCatalogSchechter(source: string): SchechterTriple {
   const entry = galaxyEntryOf(source);
   if (entry === undefined) {
     throw new Error(

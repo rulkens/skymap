@@ -6,7 +6,6 @@
  */
 
 import { GALAXY_CATALOG_SOURCES } from '../../src/layers/galaxyCatalog/sources/galaxyCatalogSources';
-import { galaxyCatalogIdOf } from '../../src/utils/galaxyCatalogIdOf';
 
 import type { GalaxyCatalogId } from '../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 
@@ -16,7 +15,7 @@ export function makeGalaxyCatalogFade(
 ): Record<GalaxyCatalogId, number> {
   return Object.fromEntries(
     GALAXY_CATALOG_SOURCES.map((source) => {
-      const id = galaxyCatalogIdOf(source);
+      const id = source;
       return [id, overrides[id] ?? rest];
     }),
   ) as Record<GalaxyCatalogId, number>;

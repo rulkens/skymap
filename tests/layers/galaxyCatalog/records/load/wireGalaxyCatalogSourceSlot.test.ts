@@ -10,7 +10,6 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { SourceType } from '../../../../../src/@types/data/SourceType';
 
 // The mint helper hands every entry this fetcher; stub it so each test
 // controls the resolved catalog instead of hitting the network.
@@ -27,7 +26,7 @@ import type { LayerCoreDeps } from '../../../../../src/@types/engine/layer/Layer
 import type { GalaxyCatalog } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { AssetSlot } from '../../../../../src/@types/loading/AssetSlot';
 import type { GalaxyCatalogFacts } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogFacts';
-import type { GalaxyCatalogSourceType } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogSourceType';
+import type { GalaxyCatalogId } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import type { GalaxyRecordSource } from '../../../../../src/layers/galaxyCatalog/records/@types/GalaxyRecordSource';
 import { makeGalaxyCatalog } from '../../../../fixtures/makeGalaxyCatalog';
 
@@ -45,8 +44,8 @@ function harness() {
     loadedSources: () => [],
     totalCount: () => 0,
   } as never;
-  const catalogs = new Map<SourceType, GalaxyCatalog>();
-  const records = new Map<GalaxyCatalogSourceType, GalaxyRecordSource>();
+  const catalogs = new Map<GalaxyCatalogId, GalaxyCatalog>();
+  const records = new Map<GalaxyCatalogId, GalaxyRecordSource>();
   const famousMeta = () => [];
   const bumpCatalogsVersion = vi.fn();
   const deps = {
