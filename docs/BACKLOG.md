@@ -281,6 +281,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Docs & process
 
+- [ ] **Antique-branch fix PRs** `process` — eight generic fixes split off the antique branch into their own PRs; 1–7 being cut, 8 (dpr labels + line widths) not started. → [details](backlog/2026-11-10-antique-branch-fix-prs.md)
 - [ ] **Website docs rows per Layer UI entry are hand-copied** `needs-design` — a new debug section, settings leaf, script or toggle needs a hand row in `packages/website/src/data/` (tests catch the omission); the `ui` entries carry no docs metadata to derive them from.
 - [ ] **`matteHiddenPasses` has no coverage test** `ready` — `tools/site/matteHiddenPasses.ts` is a hand list; its test only checks listed names exist, so a new sky pass silently stays in matte shots. Classify every FRAME_ORDER pass, or give `ContentPass` a sky/subject role.
 - [ ] **Commercial build that cannot ship non-commercial data** `needs-design` — Gaia, Hipparcos, DSS2, EOX 2025 and others forbid commercial use or need permission; a build flag leaves them out, and a guard keyed on `ATTRIBUTIONS.md` markers fails any build that would ship them. → [details](backlog/2026-10-12-commercial-build.md)
