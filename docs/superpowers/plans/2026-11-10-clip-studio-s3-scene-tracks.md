@@ -208,20 +208,21 @@ Folding is not dispatching: `selectionRowsSlice`'s "only `watchSelectionRowsSaga
 is untouched. `clipFactorAt`: 1 before the first segment or with no segments; inside a segment
 `from + (to − from) · smoothstep(u)` using `src/utils/math/smoothstep.ts`; after the last, its `to`.
 
-- [ ] Test `sceneView folds the applied steps over intent and leaves the rest` (show at 1, hide at 3; applied 1 →
+- [x] Test `sceneView folds the applied steps over intent and leaves the rest` (show at 1, hide at 3; applied 1 →
       switch on; the root's own settings object unchanged).
-- [ ] Test `sceneView carries each kind into the view` — one assertion per kind: a scoped `show('survey:sdss')`
+- [x] Test `sceneView carries each kind into the view` — one assertion per kind: a scoped `show('survey:sdss')`
       sets that item, a `scene(setFlowEnabled(true))` sets `flow.enabled`, a `frameTo('supergalactic')` sets
       `settings.orientation` (guards a reducer silently dropping a folded action).
-- [ ] Test `sceneView focus: a null step clears, no focus step leaves the intent focus` (and the focus row and
+- [x] Test `sceneView focus: a null step clears, no focus step leaves the intent focus` (and the focus row and
       `focusId` come from the `focusRow` argument).
-- [ ] Test `sceneView with nothing applied is the root itself`.
-- [ ] Test `clipFactorAt follows the segments, holding the last value after them` (mid-ramp value, value after,
-      1 before).
-- [ ] No test for `countAtOrBefore` beyond its use (a boundary at `atSec === t` is covered by the view test's
-      step at exactly t, which must apply).
-- [ ] `npx vitest run tests/services/engine/animation tests/utils/animation`.
-- [ ] Commit: "A clip's scene evaluates at any t".
+- [x] Test `sceneView with nothing applied is the root itself`.
+- [x] Test `clipFactorAt follows the segments, holding the last value after them` (mid-ramp value, value after,
+      1 before). Landed with Task 1.1.
+- [x] ~~No test for `countAtOrBefore` beyond its use~~ As built: `countAtOrBefore` has its own boundary test.
+      `sceneView` takes counts, not `t`, so no view test reaches it before Task 2.2, and `≤` vs `<` at `atSec === t`
+      is exactly the boundary `testing.md` keeps a test for.
+- [x] `npx vitest run tests/services/engine/animation tests/utils/animation`.
+- [x] Commit: "A clip's scene evaluates at any t".
 
 ---
 
