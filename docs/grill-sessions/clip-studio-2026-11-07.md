@@ -252,5 +252,18 @@ recommendation and the owner's ruling.
 - **Q17 Snap:** options were on by default or off by default. **Decision:** on by default, with ⌥ to
   scrub freely and ⇧ for fine control.
 
+## Q18–Q20: Fly-path asks (from the famousFlythrough mock)
+
+- **Q18 Dragging a waypoint along the timeline:** options were to pin that leg and let the other
+  legs re-split, to pin both neighbouring legs, or no drag. **Decision:** pin the dragged leg's
+  `over`, and let the other unpinned legs re-share the remaining time by arc length. The knots that
+  shift show as ghosts while dragging.
+- **Q19 A composite's lane:** options were the evaluated speed curve with knots, or a flat bar with
+  knots. **Decision:** the speed curve with knots: ramp, the slow-downs at waypoints, and the
+  settle. The same lane serves `geodesic`.
+- **Q20 Where waypoints appear:** options were child rows folded past about 8, always child rows, or
+  knots on the lane only. **Decision:** selectable child rows, folded by default past about 8
+  waypoints. The labelled knots stay on the lane when the rows are folded.
+
 _Still open (engineering, to be proposed in the spec):_ how the studio's RTK state plugs into the
 app store.
