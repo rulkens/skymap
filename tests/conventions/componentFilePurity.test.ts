@@ -1,6 +1,6 @@
 /**
- * The website's and the desktop pages' component and hook files declare only their component or
- * hook (and its own `Props`): a module-level constant goes to `<Name>.constants.ts` beside it, a
+ * The website's, the desktop pages' and the studio package's component and hook files declare only
+ * their component or hook (and its own `Props`): a module-level constant goes to `<Name>.constants.ts` beside it, a
  * helper function to `utils/<fn>.ts` (in the dev overlay, `dev/<area>/<fn>.ts`) or, when it renders,
  * to a component file of its own. Owner rule of 2026-11-02; the app's `src/` gets it later. Types
  * are noInlineTypes.test.ts's to police.
@@ -15,6 +15,7 @@ const ROOTS = [
   'packages/website/src',
   'packages/desktop/src/control',
   'packages/desktop/src/brand',
+  'packages/studio/src',
 ];
 
 // A page entry (`main.tsx`) is a script whose statements are its job (createRoot, the asset table).
