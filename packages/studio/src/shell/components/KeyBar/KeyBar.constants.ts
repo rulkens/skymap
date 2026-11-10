@@ -4,5 +4,5 @@ export const MARK_LEGEND = [
   { shape: 'diamond', name: 'cue' },
   { shape: 'hollow', name: 'show · hide' },
   { shape: 'tail', name: 'fade' },
-  { shape: 'background', name: 'background' },
+  { shape: 'background', name: 'fork' },
 ] as const;

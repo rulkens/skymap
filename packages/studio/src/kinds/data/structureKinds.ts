@@ -77,7 +77,7 @@ export function createStructureKinds(
       glyph: 'fork',
       mark: 'group',
       writes: (s) => union([s.child]),
-      label: (s) => ({ name: 'Background', op: '', value: groupValue([s.child]) }),
+      label: (s) => ({ name: 'Fork', op: '', value: groupValue([s.child]) }),
       fields: [],
     },
   };
