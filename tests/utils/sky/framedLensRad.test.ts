@@ -12,9 +12,9 @@ describe('framedLensRad', () => {
     expect(framedLensRad(radiusMpc, 0.78, 60 * DEG, false) / DEG).toBeCloseTo(9, 6);
   });
 
-  it('never widens the lens, and never goes under the 1′ stop', () => {
+  it('never widens the lens, and never frames under 0.5°', () => {
     expect(framedLensRad(0.1, 0.78, 5 * DEG, false)).toBe(5 * DEG);
-    expect(framedLensRad(1e-12, 1, 60 * DEG, false) / DEG).toBeCloseTo(1 / 60, 9);
+    expect(framedLensRad(1e-12, 1, 60 * DEG, false) / DEG).toBeCloseTo(0.5, 9);
   });
 
   it('a star halves the lens down to 10°', () => {

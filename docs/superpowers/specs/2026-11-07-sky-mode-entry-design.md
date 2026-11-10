@@ -245,8 +245,9 @@ puts today.
 - **Direction**: the selection row's `positionMpc` seen from the standing eye, turned into azimuth and altitude
   in the spot's east-north-up frame at the current sim time (a new `altAzFromSpot` helper; the conversion
   already exists for a view's forward vector in `skyPoseFromBodyArm.ts:17`).
-- **Lens**: angular diameter `2·atan(radiusMpc / distance)`; lens = `clamp(3 × diameter, LENS_MIN_DEG,
-  current lens)`, so a search never widens the view. Star rows (`starCatalog`) use D4.
+- **Lens**: angular diameter `2·atan(radiusMpc / distance)`; lens = `clamp(3 × diameter, 0.5°, current lens)`,
+  so a search never widens the view and never lands where most images blur (the wheel still reaches 1′, owner
+  ruling 2026-11-10). Star rows (`starCatalog`) use D4.
 - **Motion**: a short tween of yaw, pitch and lens in the sky frame. If the camera tween cannot target a
   sky-frame pose, use a camera-level clip (`clipStarted`, never `startClip`, which would preempt the sky
   takeover) with the sky arm's channels (clips already drive the sky arm with `frame: { sky }`, see
