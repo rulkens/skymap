@@ -451,6 +451,28 @@ and factor tracks. "Cue" stays as authoring vocabulary in tour files (a step tha
   | local-group | 4.4 | 0.827 |
   | full-survey | 4.4 | 0.842 |
 
+- After, final HEAD `2827a2631`. A single after run swung both ways far past noise against the table above
+  (earth-surface 24.6 → 10.9 ms, full-survey 4.4 → 14.1 ms GPU), so the gate is a **paired A/B**: the G0 HEAD
+  (`7f4db289f`, a scratch worktree on port 5183) and the final HEAD (port 5182) alternated A-B-A-B-A-B, all
+  scenarios, both tools, 21:15–21:25. Each cell lists the three rounds; Δ is median B − median A. Verdict: **no
+  regression**. Every GPU Δ (−1.4 … +1.2 ms) and CPU Δ (−0.13 … +0.14 ms) sits inside its own per-round spread,
+  and the CPU deltas carry both signs, which a per-getter cost would not.
+
+  | scenario | GPU A (G0) | GPU B (S3) | GPU Δ | CPU A (G0) | CPU B (S3) | CPU Δ |
+  | --- | --- | --- | --- | --- | --- | --- |
+  | earth-surface | 17.8/15.3/16.7 | 10.9/15.8/18.6 | −0.9 | 1.727/1.734/1.698 | 5.023/1.711/1.696 | −0.016 |
+  | earth-copenhagen-500km | 27.2/27.2/27.0 | 26.5/26.5/26.3 | −0.7 | 2.175/2.168/1.950 | 2.012/2.043/2.059 | −0.125 |
+  | mars-jezero-146km | 17.2/15.6/15.5 | 15.6/15.0/15.5 | −0.1 | 2.071/2.090/2.042 | 2.043/1.979/2.011 | −0.060 |
+  | solar-system | 10.3/13.0/10.3 | 9.9/10.2/10.3 | −0.1 | 1.427/1.503/1.466 | 1.441/1.416/1.417 | −0.049 |
+  | star-field | 9.5/10.4/11.0 | 12.1/10.2/10.8 | +0.4 | 1.258/1.283/1.270 | 1.250/1.244/1.263 | −0.020 |
+  | milky-way | 16.9/13.7/14.7 | 15.0/15.4/13.0 | +0.3 | 1.664/1.563/1.620 | 1.593/1.575/1.567 | −0.045 |
+  | milky-way-outside | 25.6/25.5/25.9 | 36.9/25.8/25.7 | +0.2 | 1.663/1.548/1.562 | 1.697/1.586/1.670 | +0.108 |
+  | milky-way-close | 28.6/29.4/28.9 | 50.7/29.5/30.2 | +1.2 | 1.602/1.543/1.544 | 1.569/1.525/1.578 | +0.025 |
+  | galactic-centre | 8.6/11.5/10.3 | 8.9/8.6/9.5 | −1.4 | 1.928/1.892/1.879 | 2.264/1.911/1.862 | +0.019 |
+  | sgr-a-star-lens | 18.1/22.1/21.9 | 16.8/22.3/21.6 | −0.3 | 2.019/2.012/1.981 | 2.155/2.214/1.983 | +0.143 |
+  | local-group | 5.9/7.3/4.8 | 7.0/5.9/6.5 | +0.6 | 1.289/1.017/1.027 | 1.088/1.069/1.086 | +0.059 |
+  | full-survey | 13.4/15.1/15.6 | 16.0/10.2/17.3 | +0.9 | 0.947/0.862/0.866 | 0.873/0.879/0.891 | +0.013 |
+
 **Deferral boundary (out of scope)**
 
 - Seek, pause, transport and the seed of registry and frame-tween ramps at an arbitrary t (S4).
