@@ -1,11 +1,8 @@
 /**
- * findHiiSegment — the one lookup `drawFrame`'s per-tier HII passes and the
- * `hii:extras` pass share to find their own span in `model.hiiSegments`
- * (`first`/`count` in RECORDS). Folds "has a span" and "that span is
- * nonempty" into one call, so a tier with no content (or no span at all —
- * DIG off, no extras on screen) reads as a single `undefined`: `planFieldFrame`
- * drops that tier, rather than issuing a zero-count draw call (a wasted API
- * round trip whose `firstInstance` points at a range no shader ever reads).
+ * findHiiSegment — a tier's span in the packed `hiiSegments` (`first`/`count`
+ * in RECORDS), or `undefined` when it has none or an empty one. `planFieldFrame`
+ * uses it to decide which tiers encode; the renderer uses it only for the
+ * instance range.
  */
 import type { HiiSegment } from '../@types/HiiSegment';
 
