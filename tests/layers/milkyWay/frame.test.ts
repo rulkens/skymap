@@ -15,7 +15,7 @@ function makeRuntime(reconcile = vi.fn()): MilkyWayRuntime {
 }
 
 function stateStub(enabled: boolean, starCount: number): PassState {
-  return { settings: { milkyWay: { enabled, starCount } } } as unknown as PassState;
+  return { settings: { milkyWay: { enabled, cloud: { starCount } } } } as unknown as PassState;
 }
 
 const snapshotStub = {} as ReadyFrameContext;

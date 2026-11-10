@@ -105,7 +105,7 @@ describe('Settings page', () => {
     /^galaxyCatalogs\.items\.(sdss|2mrs|glade|milliquas|desiDeep|desiWedge|desiSgw)\.labelEnabled$/,
     /^starCatalogs\.items\.(gaiaStars|sStar)\.labelEnabled$/,
     /^starCatalogs\.(refineThreshold|glowOverlap|exposure(Near|Mid|Far)X|aggregateIntensityCap|chunkSlotsOverride)$/,
-    /^milkyWay\.(enabled|starSizeScale|exposure|starPxMin|starPxMax|softness|lodApparent|aggregateDivisor|starCount)$/,
+    /^milkyWay\.(enabled|renderer|cloud\.\w+|field\..+)$/,
     /^cosmicWebDensity\.items\.[\w-]+\.(contrast|densityScale|paletteId|trim|exposure|bands|intensity)$/,
     /^zoneOfAvoidance\.(intensity|radialFalloff|edgeSharpness|color|labelColor)$/,
     /^probeSpheres\./,

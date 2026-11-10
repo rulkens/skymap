@@ -81,7 +81,7 @@ export function milkyWayPass(runtime: MilkyWayRuntime): ContentPass<'milkyWayDis
         // The live look knobs, same as the aggregate row. The dust pass reads
         // only the model scale and fade out of the shared uniform struct, but it
         // packs the whole struct, so the values still have to be present.
-        tuning: state.settings.milkyWay,
+        tuning: state.settings.milkyWay.cloud,
         buffers: runtime.cloud.buffers(),
       });
     },

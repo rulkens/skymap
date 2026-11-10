@@ -923,7 +923,7 @@ setMilkyWayRenderer(state, a: PayloadAction<MilkyWayRenderer>)
 `MILKY_WAY_FIELD_TUNING_DEFAULTS = { exposure: FIELD_CALIBRATION.exposure, dust: true, divisors:
 FIELD_CALIBRATION.divisors }`.
 
-- [ ] Rename the incumbents (D2), each as `npm run refactor -- rename <file>#<symbol> <newName>`:
+- [x] Rename the incumbents (D2), each as `npm run refactor -- rename <file>#<symbol> <newName>`:
   - `src/@types/settings/MilkyWayTuning.d.ts#MilkyWayTuning` → `MilkyWayCloudTuning`;
   - `…/v1/milkyWayCalibration.ts#MILKY_WAY_TUNING_DEFAULTS` → `MILKY_WAY_CLOUD_TUNING_DEFAULTS`
     (pass `--no-file-rename`);
@@ -936,22 +936,22 @@ FIELD_CALIBRATION.divisors }`.
   - `formatMilkyWayTuningDefaults` → `formatMilkyWayCloudTuningDefaults`.
 
   Then grep for each old name across `src tools tests docs packages`.
-- [ ] Nest the settings. The `.cloud` readers:
+- [x] Nest the settings. The `.cloud` readers:
   - `milkyWayPass.ts:84`, `milkyWayAggregatePass.ts:51` (`tuning: state.settings.milkyWay.cloud`);
   - `milkyWayAggregateTarget.ts:15`, `frame.ts:20`;
   - `MilkyWayTuningSection.tsx:27,33`.
 
   `reseedMilkyWayStarCountSaga` dispatches `setMilkyWayCloudTuning({ starCount })`. Persistence
   needs no migration: none exists (`src/state/persistedValues.ts`).
-- [ ] **Test, new:** `slice.test.ts` (milkyWay settings reducers):
+- [x] **Test, new:** `slice.test.ts` (milkyWay settings reducers):
   - `it('a cloud patch merges into cloud and leaves field and renderer')`: `cloud.exposure` changes,
     and `field` and `renderer` stay `toBe` the previous objects/values.
   - `it('a field patch merges into field and leaves cloud')`.
   - `it('setMilkyWayRenderer sets only renderer')`.
-- [ ] **Test, updated:** `milkyWayCloudSliderFields.test.ts` runs its two asserts against
+- [x] **Test, updated:** `milkyWayCloudSliderFields.test.ts` runs its two asserts against
       `MILKY_WAY_CLOUD_TUNING_DEFAULTS`. Repoint the four fixture tests above to
       `milkyWay: { cloud: { … } }`.
-- [ ] Commit.
+- [x] Commit.
 
 ## The feature
 

@@ -91,7 +91,7 @@ const TUNING = {
   aggregateDivisor: 3,
   // Never read by the renderer (it feeds generation, not the uniform pack
   // this draw-args fixture exercises) — present only because `tuning` is
-  // typed as the full `MilkyWayTuning` shape.
+  // typed as the full `MilkyWayCloudTuning` shape.
   starCount: 150000,
 };
 

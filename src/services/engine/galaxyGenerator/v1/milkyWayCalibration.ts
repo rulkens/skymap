@@ -6,12 +6,12 @@
  * per-tier star budget, sprite size, brightness) — a visual-gate tuning pass
  * touches only this file, never the shared preset the tool's gallery reads.
  *
- * Exception: the look knobs are BOOT values (`MILKY_WAY_TUNING_DEFAULTS`)
- * that `settings.milkyWay` spreads in; the renderer reads the live settings
+ * Exception: the look knobs are BOOT values (`MILKY_WAY_CLOUD_TUNING_DEFAULTS`)
+ * that `settings.milkyWay.cloud` copies; the renderer reads the live settings
  * copy, which is what lets the DebugPanel sliders move them without a reload.
  */
 import type { Tier } from '../../../../@types/data/Tier';
-import type { MilkyWayTuning } from '../../../../@types/settings/MilkyWayTuning';
+import type { MilkyWayCloudTuning } from '../../../../@types/settings/MilkyWayCloudTuning';
 import { MILKY_WAY_RADIUS_MPC } from '../../../../data/milkyWay/milkyWayRadiusMpc';
 import { MILKY_WAY_GALAXY_PARAMS } from '../../../../data/milkyWay/milkyWayGalaxyParams';
 import { outerRadiusOf } from '../shared/outerRadiusOf';
@@ -23,13 +23,13 @@ import { outerRadiusOf } from '../shared/outerRadiusOf';
  * carrying three independently-tunable numbers that could quietly drift
  * apart.
  *
- * Not read by `milkyWayCloud.generate` — the live `settings.milkyWay.starCount`
+ * Not read by `milkyWayCloud.generate` — the live `settings.milkyWay.cloud.starCount`
  * is an absolute count, not a per-tier multiplier, so generation never
  * indexes this table directly. It is read by `reseedMilkyWayStarCountSaga`,
  * which re-seeds `starCount` from here on every explicit tier change (see
- * `MilkyWayTuning`'s docblock for why: an absolute count would otherwise
+ * `MilkyWayCloudTuning`'s docblock for why: an absolute count would otherwise
  * decouple the cloud from tier LOD entirely) and by
- * `MILKY_WAY_TUNING_DEFAULTS` below for the boot value.
+ * `MILKY_WAY_CLOUD_TUNING_DEFAULTS` below for the boot value.
  *
  * `GalaxyLegacyParams.starCount` is optional on the type, even though this
  * particular preset always sets it — the `|| 0` satisfies the type checker
@@ -54,21 +54,21 @@ export const MILKY_WAY_STARS_PER_TIER: Record<Tier, number> = {
 export const MILKY_WAY_MODEL_SCALE = MILKY_WAY_RADIUS_MPC / outerRadiusOf(MILKY_WAY_GALAXY_PARAMS);
 
 /**
- * Boot values of the star-cloud look knobs — the seed `settings.milkyWay`
- * spreads in, and from there the only home of these numbers. Each is a
+ * Boot values of the star-cloud look knobs — the seed `settings.milkyWay.cloud`
+ * copies, and from there the only home of these numbers. Each is a
  * starting point rather than a settled fact, which is why the live values ride
  * settings (the DebugPanel's "Milky Way tuning" sliders write them) instead of
  * being read straight from this module by the renderer. The knobs' semantics
- * live on `MilkyWayTuning`; the notes here are why each number is what it is.
+ * live on `MilkyWayCloudTuning`; the notes here are why each number is what it is.
  *
  * One object rather than a scalar per knob because every one of them has
  * exactly one consumer — the settings seed. Separate constants would only add
  * a hop between the number and the field it seeds.
  */
-export const MILKY_WAY_TUNING_DEFAULTS: MilkyWayTuning = {
+export const MILKY_WAY_CLOUD_TUNING_DEFAULTS: MilkyWayCloudTuning = {
   // starSizeScale / exposure / softness / starPxMax below were dialled as ONE
   // visual-gate pass toward the smooth-field end of the count/size trade (the
-  // "Celestia end" note in `MILKY_WAY_SLIDER_FIELDS`): half the star budget,
+  // "Celestia end" note in `MILKY_WAY_CLOUD_SLIDER_FIELDS`): half the star budget,
   // fatter and softer splats, exposure cut to hold total light. Under additive
   // blending that light goes as roughly count * exposure * size^2, so moving
   // any one of them alone changes brightness rather than only shape.
@@ -101,7 +101,7 @@ export const MILKY_WAY_TUNING_DEFAULTS: MilkyWayTuning = {
   // literal: medium IS the tier the preset is tuned against, and the tier
   // slice always boots at 'medium' (see `tierSlice.ts`), so the two can't
   // drift apart. Moving it live is a count/size trade-off exploration, not a
-  // steady-state look — see `MILKY_WAY_SLIDER_FIELDS`'s `starCount` row.
+  // steady-state look — see `MILKY_WAY_CLOUD_SLIDER_FIELDS`'s `starCount` row.
   starCount: MILKY_WAY_STARS_PER_TIER.medium,
 };
 

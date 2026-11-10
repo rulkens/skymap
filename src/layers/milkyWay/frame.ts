@@ -17,7 +17,7 @@ export function milkyWayPlanner(
     name: 'milky-way',
     scope: 'once',
     plan: (_snapshot, _views, state) => {
-      runtime.cloud.reconcile(state.settings.milkyWay.starCount);
+      runtime.cloud.reconcile(state.settings.milkyWay.cloud.starCount);
       return {
         value: undefined,
         awake: false,

@@ -190,7 +190,7 @@ export function createMilkyWayCloudRenderer(init: Init): MilkyWayCloudRenderer {
     f32[41] = 0;
     f32[42] = 0;
     f32[43] = 0;
-    // The look knobs are the caller's live `settings.milkyWay` values, so a
+    // The look knobs are the caller's live `settings.milkyWay.cloud` values, so a
     // DebugPanel slider drag lands on the very next frame. Only the model
     // scale is fixed — it derives from the generation preset's radius.
     // params0 = (fadeAlpha, exposure, modelScale, glowSoftness).

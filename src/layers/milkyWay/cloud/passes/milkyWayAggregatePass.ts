@@ -44,11 +44,10 @@ export function milkyWayAggregatePass(runtime: MilkyWayRuntime): ContentPass<'mi
         camPosModel: milkyWayCamPosModel(ctx.drawCamPos),
         model: milkyWayModelCached(),
         fadeAlpha,
-        // The live look knobs — `MilkyWaySettings` widens to `MilkyWayTuning`,
-        // so the cluster passes straight through. Read here rather than in the
-        // renderer so a DebugPanel slider drag lands on the next frame with no
+        // The live look knobs, the settings' `cloud` group as is. Read here
+        // rather than in the renderer so a DebugPanel slider drag lands on the next frame with no
         // imperative setter in between.
-        tuning: state.settings.milkyWay,
+        tuning: state.settings.milkyWay.cloud,
         buffers: runtime.cloud.buffers(),
       });
     },

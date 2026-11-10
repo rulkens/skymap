@@ -12,6 +12,6 @@ export const MILKY_WAY_AGGREGATE_TARGET: RenderTargetSpec = {
   id: 'mw-aggregate',
   format: HDR_TARGET_FORMAT,
   depth: null,
-  scale: (state) => state.settings.milkyWay.aggregateDivisor,
+  scale: (state) => state.settings.milkyWay.cloud.aggregateDivisor,
   clearValue: { r: 0, g: 0, b: 0, a: 0 },
 };

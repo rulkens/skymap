@@ -10,15 +10,15 @@ import { memo, useCallback } from 'react';
 import { MilkyWayTuningSection } from './MilkyWayTuningSection';
 import { useAppDispatch, useAppSelector } from '../../../../store/hooks';
 import { selectMilkyWay } from '../../state/milkyWay/selectors';
-import { setMilkyWayTuning } from '../../state/milkyWay/slice';
-import type { MilkyWayTuning } from '../../../../@types/settings/MilkyWayTuning';
+import { setMilkyWayCloudTuning } from '../../state/milkyWay/slice';
+import type { MilkyWayCloudTuning } from '../../../../@types/settings/MilkyWayCloudTuning';
 
 function MilkyWayTuningSectionContainer(): React.ReactElement {
   const dispatch = useAppDispatch();
   const milkyWay = useAppSelector(selectMilkyWay);
 
   const onChange = useCallback(
-    (patch: Partial<MilkyWayTuning>) => dispatch(setMilkyWayTuning(patch)),
+    (patch: Partial<MilkyWayCloudTuning>) => dispatch(setMilkyWayCloudTuning(patch)),
     [dispatch],
   );
 

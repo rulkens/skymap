@@ -1,9 +1,10 @@
 /**
- * MilkyWayTuning — the Milky Way star-cloud's per-frame LOOK knobs, kept apart
- * from `MilkyWaySettings` (adds `enabled` / `labelEnabled`) so a knob patch
- * can never flip the layer's visibility by accident. Shared by three
- * consumers: `MILKY_WAY_TUNING_DEFAULTS` (calibration seed), `setMilkyWayTuning`
- * (patch payload), `MilkyWayCloudDrawArgs.tuning` (per-frame renderer arg).
+ * MilkyWayCloudTuning — the v1 star cloud's per-frame LOOK knobs, the
+ * `cloud` group of `MilkyWaySettings`, so a knob patch can never flip the
+ * layer's visibility or touch the field by accident. Shared by three
+ * consumers: `MILKY_WAY_CLOUD_TUNING_DEFAULTS` (calibration seed),
+ * `setMilkyWayCloudTuning` (patch payload), `MilkyWayCloudDrawArgs.tuning`
+ * (per-frame renderer arg).
  *
  * Most fields reach the frame via `milkyWayCloudRenderer.writeUniforms`;
  * `aggregateDivisor` resizes the star pass's offscreen target instead;
@@ -11,7 +12,7 @@
  * still change the NEXT frame — the mechanism just differs.
  */
 
-export type MilkyWayTuning = {
+export type MilkyWayCloudTuning = {
   /**
    * Dimensionless multiplier on each generated star sprite's world size — the
    * one lever that trades sprite count for sprite area without regenerating
@@ -73,7 +74,7 @@ export type MilkyWayTuning = {
    * uniform-write/render-target paths the other fields take.
    *
    * `totalStarBudget` floors the total at 20,000 regardless of what's
-   * requested, so `MILKY_WAY_SLIDER_FIELDS`'s `starCount.min` must match —
+   * requested, so `MILKY_WAY_CLOUD_SLIDER_FIELDS`'s `starCount.min` must match —
    * a lower `min` would let the slider display a count the renderer ignores.
    */
   starCount: number;

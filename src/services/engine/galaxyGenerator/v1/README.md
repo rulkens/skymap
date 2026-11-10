@@ -48,7 +48,7 @@ Shaders: `gpu/shaders/milkyWay/sprites/{generate,generateStars,generateDust}.wes
 
 `milkyWayCalibration.ts` is the placement/LOD/look side rather than generation:
 physical size, per-tier star budget, the approach-fade band, and the boot values
-`settings.milkyWay` spreads in so the DebugPanel sliders can move them live.
+`settings.milkyWay.cloud` copies so the DebugPanel sliders can move them live.
 `milkyWayModelMatrix` / `milkyWayModelCached` (`src/layers/milkyWay/cloud/render/`)
 place the locally-generated cloud in world space; `milkyWayFadeAlpha`
 (`src/layers/milkyWay/cloud/present/`) fades it out by apparent disc diameter.
@@ -81,6 +81,6 @@ called with `extra = null`, placement is entirely draw-side. The tool's
 background extras do the opposite and fold their transform into the UBO.
 
 **`milkyWayCloud` (`src/layers/milkyWay/cloud/render/`) carries no notion of
-`Tier`.** `settings.milkyWay.starCount` is an absolute count;
+`Tier`.** `settings.milkyWay.cloud.starCount` is an absolute count;
 `reseedMilkyWayStarCountSaga` (`src/layers/milkyWay/tuning/sagas/`) re-seeds it from
 `milkyWayCalibration`'s per-tier table on an explicit tier change.
