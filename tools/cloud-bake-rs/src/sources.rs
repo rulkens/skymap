@@ -200,11 +200,11 @@ fn load_orbit(m: &OrbitMeta, lut: &[f32]) -> Source {
     let fringe = dilate_roll(&inv, h, W, 2, h == H, true);
     valid.par_iter_mut().zip(fringe).for_each(|(v, f)| *v &= !f);
     let nv = valid.iter().filter(|&&b| b).count();
-    println!(
+    eprintln!(
         "    filled specks {:.4} of swath",
         n_speck as f64 / nv as f64
     );
-    println!(
+    eprintln!(
         "  {}: {} pieces, {:.3} of globe, opaque near-black px {}",
         m.name,
         m.pieces.len(),
@@ -268,7 +268,7 @@ pub fn load_mosaics(mosaics: &Path, lut: &[f32]) -> Vec<Source> {
                 })
                 .collect();
             let n = fill_specks(&mut op, &mut valid, H);
-            println!("    {name}: filled {n} speck px");
+            eprintln!("    {name}: filled {n} speck px");
             Source {
                 name: name.into(),
                 y0: 0,
@@ -348,7 +348,7 @@ pub fn hybridise(orbits: &mut [Source], mos: &Source) {
             kept.0 += k as usize;
             kept.1 += o.valid[i] as usize;
         }
-        println!(
+        eprintln!(
             "    {}: granule values kept on {:.2} of the swath",
             o.name,
             kept.0 as f64 / kept.1 as f64

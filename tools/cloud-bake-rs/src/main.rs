@@ -1,5 +1,7 @@
 //! cloud-bake-rs: bakes one UTC day's global cloud-opacity map. Stages: load sources, join them into a
-//! composite, fill the gaps from time-matched geostationary IR, write an 8192x4096 lossless RGBA WebP.
+//! composite, fill the gaps from time-matched geostationary IR, write an 8192x4096 WebP. stdout carries
+//! exactly one JSON line (summary.rs); everything else goes to stderr. Exit: 0 written, 2 usage, 3 data,
+//! 4 calibration drift (see the spec); a panic is 1.
 mod blend;
 mod cli;
 mod composite;
@@ -14,48 +16,58 @@ mod imageio;
 mod label;
 mod maxflow;
 mod orbit;
+mod probe;
 mod quantile;
 mod seam;
 mod sources;
 mod sources_table;
+mod summary;
+mod verdict;
 
 use grid::{smoothstep, subsample, H, W};
 use rayon::prelude::*;
 
+fn usage_error(msg: &str) -> ! {
+    eprintln!("cloud-bake-rs: {msg}");
+    std::process::exit(2)
+}
+
 fn main() {
     let argv: Vec<String> = std::env::args().skip(1).collect();
-    let a = match cli::parse_args(&argv) {
-        Ok(a) => a,
-        Err(e) => {
-            eprintln!("cloud-bake-rs: {e}");
-            std::process::exit(2);
+    let a = cli::parse_args(&argv).unwrap_or_else(|e| usage_error(&e));
+    for p in [&a.baseline, &a.blue_marble] {
+        if !p.is_file() {
+            usage_error(&format!("cannot read {}", p.display()));
         }
+    }
+    let mut run = summary::Summary::new(a.date, a.out.clone());
+    let fail = |run: &summary::Summary, code: i32, msg: &str| -> ! {
+        eprintln!("cloud-bake-rs: {msg}");
+        run.finish(code)
     };
-    let t00 = std::time::Instant::now();
     let day = fetch::day_dir(&a.cache, a.date);
     let (granules, mosaics_dir, geo) = (day.join("granules"), day.join("mosaics"), day.join("geo"));
-    println!(
+    eprintln!(
         "baking {} (threads: {})",
         a.date,
         rayon::current_num_threads()
     );
+    let dec = geodecode::Decoder::new();
+    let cal = probe::probe(a.date, &a.cache, a.offline, &dec).unwrap_or_else(|e| fail(&run, 3, &e));
+    run.calibration =
+        serde_json::json!({"mtg_goes_e_k": cal.mtg_goes_e_k, "mtg_iodc_k": cal.mtg_iodc_k});
+    if let Some(m) = verdict::drift(&cal) {
+        fail(&run, 4, &m);
+    }
     let footprints = fetch::granules(&granules, a.date, !a.offline);
-    let fit = match orbit::fit(&footprints) {
-        Ok(f) => f,
-        Err(e) => {
-            eprintln!("cloud-bake-rs: {e}");
-            std::process::exit(3);
-        }
-    };
+    let fit = orbit::fit(&footprints).unwrap_or_else(|e| fail(&run, 3, &e));
     drop(footprints);
-    println!(
+    run.orbit = serde_json::json!({"tn": fit.tn, "lon_n": fit.lon_n, "ltan": fit.ltan, "median_dt_min": fit.median_dt_min});
+    eprintln!(
         "orbit: tn {:.2} min, lon_n {:.2}, LTAN {:.2} h, median |dt| {:.2} min",
         fit.tn, fit.lon_n, fit.ltan, fit.median_dt_min
     );
-    if let Err(e) = fetch::mosaics(&mosaics_dir, a.date, !a.offline) {
-        eprintln!("cloud-bake-rs: {e}");
-        std::process::exit(3);
-    }
+    fetch::mosaics(&mosaics_dir, a.date, !a.offline).unwrap_or_else(|e| fail(&run, 3, &e));
 
     let ice = imageio::ice_sheets(&a.blue_marble);
     let base: Vec<f32> = imageio::baseline(&a.baseline)
@@ -86,7 +98,6 @@ fn main() {
         tn: fit.tn,
         lon_n: fit.lon_n,
     };
-    let dec = geodecode::Decoder::new();
     let x = geofill::Inputs {
         labels: &comp.labels,
         names: &comp.names,
@@ -97,7 +108,15 @@ fn main() {
         base: &base,
         date: a.date,
     };
-    let fill = geofill::build_fill(&x, &orb, &dec, &geo, !a.offline);
+    let (fill, cov) = geofill::build_fill(&x, &orb, &dec, &geo, !a.offline);
+    let coverage = verdict::coverage(&wgt, &cov);
+    run.coverage = serde_json::json!(coverage);
+    eprintln!("coverage {coverage:.3}");
+    if let verdict::Verdict::Data(m) | verdict::Verdict::Drift(m) = verdict::verdict(coverage, &cal)
+    {
+        fail(&run, 3, &m);
+    }
+    drop(cov);
 
     let out: Vec<f32> = (0..W * H)
         .into_par_iter()
@@ -106,11 +125,11 @@ fn main() {
     let g = imageio::to_u8(&out);
     drop((out, fill, wgt));
     let bytes = imageio::write_webp(&a.out, &g);
-    println!(
-        "wrote {} ({:.1} MB) in {:.1} s; sources: {}",
+    eprintln!(
+        "wrote {} ({:.1} MB); sources: {}",
         a.out.display(),
         bytes as f64 / 1e6,
-        t00.elapsed().as_secs_f64(),
         fetch::stats_line()
     );
+    run.finish(0)
 }

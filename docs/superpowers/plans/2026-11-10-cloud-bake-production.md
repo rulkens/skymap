@@ -157,22 +157,22 @@ pub enum Verdict { Ok, Data(String), Drift(String) }            // exit 0 / 3 / 
 pub fn verdict(coverage: f64, cal: &Calibration) -> Verdict;
 ```
 
-- [ ] Coverage = fraction of the 8192×4096 texels whose final value is ≥ 50% same-day observation
+- [x] Coverage = fraction of the 8192×4096 texels whose final value is ≥ 50% same-day observation
       (VIIRS composite weight or geofill weight) rather than static-map fallback.
-- [ ] Probe: at `wms_time(date, 720)` fetch MTG + GOES-East over lon −75..−30, lat −60..60 and MTG +
+- [x] Probe: at `wms_time(date, 720)` fetch MTG + GOES-East over lon −75..−30, lat −60..60 and MTG +
       IODC over lon 30..60, lat −60..60, at 1/4 of full resolution, into `<day>/probe/`; decode with the
       bake's decoders; median |ΔT| over pixels valid in both. A probe frame that is missing/broken →
       that pair is skipped with a warning (not exit 4).
-- [ ] Order: probe first (cheap, fails fast on drift), then the bake; on exit 3/4 nothing is written.
-- [ ] Measure coverage and both drift values for 2026-11-06 and 2026-11-09; set
+- [x] Order: probe first (cheap, fails fast on drift), then the bake; on exit 3/4 nothing is written.
+- [x] Measure coverage and both drift values for 2026-11-06 and 2026-11-09; set
       `MIN_COVERAGE = 0.9 × min(coverage)`, `MAX_CAL_DRIFT_K = max(3.0, 2 × max(drift))`; put the
       measured values in a comment beside the constants.
-- [ ] Exit codes: 0 / 2 / 3 / 4 as above, panics stay 1. The final stdout line is the spec's JSON
+- [x] Exit codes: 0 / 2 / 3 / 4 as above, panics stay 1. The final stdout line is the spec's JSON
       object (`serde_json`), printed on 0, 3 and 4.
-- [ ] Tests: `verdict is Data below MIN_COVERAGE`, `verdict is Drift when either pair exceeds
+- [x] Tests: `verdict is Data below MIN_COVERAGE`, `verdict is Drift when either pair exceeds
       MAX_CAL_DRIFT_K`, `probe drift is near zero for identical decodes and ~10 K for a 10 K offset`
       (synthetic temperature grids through the median-|ΔT| function).
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 7: Blue Marble months in one table, cache rows, launcher, npm scripts
 

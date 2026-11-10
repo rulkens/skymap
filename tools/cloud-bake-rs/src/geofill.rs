@@ -462,7 +462,7 @@ fn pick_by_correlation(
         }
     }
     let jobs = plan(&by_slot, CORE_PAD, satc, Q, date);
-    println!(
+    eprintln!(
         "  correlation pick: {} ambiguous cells, {} candidate slots, {} frame requests",
         amb.len(),
         by_slot.len(),
@@ -556,7 +556,7 @@ fn pick_by_correlation(
     } else {
         (best[best.len() / 2 - 1] + best[best.len() / 2]) / 2.0
     };
-    println!("  correlation: decided {decided}, undecided {}, changed {changed}, median best corr {med:.3}", amb.len() - decided);
+    eprintln!("  correlation: decided {decided}, undecided {}, changed {changed}, median best corr {med:.3}", amb.len() - decided);
 }
 
 /// Value of the nearest `has` pixel for every pixel, longitude periodic.
@@ -588,7 +588,14 @@ pub struct Inputs<'a> {
 }
 
 /// Full-res fill = cov * qmap(blend) + (1 - cov) * baseline, geo frames time-matched to the bordering swaths.
-pub fn build_fill(x: &Inputs, orb: &Orbit, dec: &Decoder, frames: &Path, allow: bool) -> Vec<f32> {
+/// Also returns `cov`, the weight each texel's fill takes from geostationary observation.
+pub fn build_fill(
+    x: &Inputs,
+    orb: &Orbit,
+    dec: &Decoder,
+    frames: &Path,
+    allow: bool,
+) -> (Vec<f32>, Vec<f32>) {
     let support: Vec<bool> = x.wgt.par_iter().map(|&w| (1.0 - w) > 0.005).collect();
     let cs_mask: Vec<bool> = (0..W * H)
         .into_par_iter()
@@ -675,7 +682,7 @@ pub fn build_fill(x: &Inputs, orb: &Orbit, dec: &Decoder, frames: &Path, allow: 
         }
     }
     let jobs = plan(&masks, FILL_PAD, &satc, 1, x.date);
-    println!(
+    eprintln!(
         "  fill: {} slots ({} within geo reach), {} frame requests",
         weights.len(),
         masks.len(),
@@ -695,12 +702,13 @@ pub fn build_fill(x: &Inputs, orb: &Orbit, dec: &Decoder, frames: &Path, allow: 
         })
         .collect();
     let blend = median3_u8(&blend, H, W);
+    let cov: Vec<f32> = (0..W * H)
+        .into_par_iter()
+        .map(|i| a.cov[i].clamp(0.0, 1.0) * (1.0 - x.ice[i]))
+        .collect();
     let fill = (0..W * H)
         .into_par_iter()
-        .map(|i| {
-            let cov = a.cov[i].clamp(0.0, 1.0) * (1.0 - x.ice[i]);
-            cov * dec.qmap.eval(blend[i] as f32 / 255.0) + (1.0 - cov) * x.base[i]
-        })
+        .map(|i| cov[i] * dec.qmap.eval(blend[i] as f32 / 255.0) + (1.0 - cov[i]) * x.base[i])
         .collect();
-    fill
+    (fill, cov)
 }

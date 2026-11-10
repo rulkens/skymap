@@ -193,6 +193,34 @@ impl Decoder {
         t
     }
 
+    /// MTG / IODC grey -> temperature through the frozen LUT (NaN where transparent).
+    fn lut_t(&self, sat: &str, a: &Rgba) -> Vec<f32> {
+        let lut = if sat == "mtg" {
+            &self.mtg_lut
+        } else {
+            &self.iodc_lut
+        };
+        a.px.chunks_exact(4)
+            .map(|c| {
+                if c[3] > 0 {
+                    lut[c[0] as usize]
+                } else {
+                    f32::NAN
+                }
+            })
+            .collect()
+    }
+
+    /// Brightness temperature of a frame in degrees C (NaN where transparent), the decode the bake
+    /// applies before any view-angle weighting; differences between satellites are kelvin.
+    pub fn temperature(&self, r: &FrameReq, a: &Rgba) -> Vec<f32> {
+        if r.sat == "mtg" || r.sat == "iodc" {
+            self.lut_t(r.sat, a)
+        } else {
+            self.gibs_t(a, 20000 / (r.scale * r.scale))
+        }
+    }
+
     /// geofill.py sat_layer: (w * val, w, fade) over the request's window at its scale.
     pub fn layer(&self, r: &FrameReq, mut a: Rgba) -> (Vec<f32>, Vec<f32>, Vec<f32>) {
         let s = r.scale;
@@ -204,21 +232,9 @@ impl Decoder {
             .flat_map(|&y| cols.iter().map(move |&x| view_angle(r.sat, y, x)))
             .collect();
         let (t, mut ok): (Vec<f32>, Vec<f64>) = if r.sat == "mtg" || r.sat == "iodc" {
-            let lut = if r.sat == "mtg" {
-                &self.mtg_lut
-            } else {
-                &self.iodc_lut
-            };
-            (0..h * w)
-                .map(|i| {
-                    let c = &a.px[i * 4..i * 4 + 4];
-                    if c[3] > 0 {
-                        (lut[c[0] as usize], 1.0)
-                    } else {
-                        (f32::NAN, 0.0)
-                    }
-                })
-                .unzip()
+            let t = self.lut_t(r.sat, &a);
+            let ok = t.iter().map(|v| !v.is_nan() as u8 as f64).collect();
+            (t, ok)
         } else {
             for i in 0..h * w {
                 let c = &mut a.px[i * 4..i * 4 + 4];

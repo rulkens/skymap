@@ -144,7 +144,7 @@ pub fn join_all(
         cv.par_iter_mut()
             .zip(sv.par_iter())
             .for_each(|(a, &b)| *a |= b);
-        println!(
+        eprintln!(
             "  [{k:2}] {:<22} overlap {:.4} gain {g:.3} off {off:+.3} ({npx} px) took {took:.3} flow {flow:.0}",
             src.name,
             n_ov as f64 / (W * H) as f64
@@ -204,7 +204,7 @@ pub fn fill_holes(c: &mut [f32], cv: &mut [bool]) {
             })
             .collect();
     }
-    println!(
+    eprintln!(
         "  enclosed holes filled: {} components, {n} px",
         count_components(&hole, H, W)
     );
@@ -235,7 +235,7 @@ pub fn match_baseline(op: &[f32], mask: &[bool], base: &[f32]) -> Vec<f32> {
             cnt += 1;
         }
     }
-    println!(
+    eprintln!(
         "  match: src mean {:.3} -> {:.3} over {:.2} of globe",
         a / cnt as f64,
         b / cnt as f64,
