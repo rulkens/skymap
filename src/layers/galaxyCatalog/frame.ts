@@ -120,6 +120,7 @@ export function galaxyCatalogPlanner(
           catalogs: runtime.catalogs,
           visibleCatalogs,
           pxPerRad,
+          viewPlanes,
         });
       }
 

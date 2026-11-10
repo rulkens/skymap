@@ -26,6 +26,7 @@ import { maxVisibleCamDistSq } from '../utils/maxVisibleCamDistSq';
 import { apparentSizePxAtDistance } from '../utils/apparentSizePxAtDistance';
 import { PROCEDURAL_DISK_FADE_START_PX } from '../data/galaxyLodBands';
 import { DISK_WALK_DECIMATION } from '../data/diskWalkDecimation';
+import { VIEW_CULL_RADIUS_PER_EXTENT } from '../data/viewCullRadiusPerExtent';
 import { sphereInAnyFrustum } from '../../../../utils/camera/frustum/sphereInAnyFrustum';
 import { diskQuadExtentMpc } from '../utils/diskQuadExtentMpc';
 import { sphereBehindAnyCone } from '../../../../utils/occlusion/sphereBehindAnyCone';
@@ -46,10 +47,6 @@ import type { DiskPlannerWalkDeps } from '../@types/DiskPlannerWalkDeps';
  * galaxyAtlasSubsystem.ts) — a full stride cycle's worth of atlas capacity.
  */
 export const DISK_ROW_ACCEPT_BUDGET = 2048;
-
-// Cull sphere per quad extent: the quad's corner reaches √2 of its half-extent,
-// and a famous thumbnail's calibration can widen the quad past the catalog size.
-const VIEW_CULL_RADIUS_PER_EXTENT = 2;
 
 export function createDiskPlannerWalk(deps: DiskPlannerWalkDeps = {}): DiskPlannerWalk {
   const decimationFactor = Math.max(1, Math.floor(deps.decimationFactor ?? DISK_WALK_DECIMATION));
