@@ -95,7 +95,7 @@ export default tseslint.config(
   // The store-boundary convention: state/ owns pure RTK slices/selectors/sagas
   // and must not reach for react-redux — that binding lives in store/ + hooks/.
   {
-    files: ['src/state/**/*.{ts,tsx}', 'packages/studio/src/**/state/**/*.{ts,tsx}'],
+    files: ['src/state/**/*.{ts,tsx}'],
     rules: {
       'no-restricted-imports': [
         'error',

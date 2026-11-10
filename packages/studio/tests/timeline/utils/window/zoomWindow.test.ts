@@ -19,7 +19,6 @@ describe('zoomWindow', () => {
   it('clamps to the clip and keeps the head in view near its end', () => {
     const window = zoomWindow({ startSec: 0, endSec: 40 }, FIT, 0.5, 119)!;
     expect(window).toEqual({ startSec: 100, endSec: 120 });
-    expect(119).toBeGreaterThanOrEqual(window.startSec);
   });
 
   it('zooming out to the whole clip is Fit', () => {

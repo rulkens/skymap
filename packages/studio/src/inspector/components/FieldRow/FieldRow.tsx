@@ -87,7 +87,6 @@ function FieldRow({ spec, subject, rowRef }: Props) {
   return (
     <InspectorRow
       label={spec.label}
-      tip={spec.tip}
       dim={!authored && canBeAbsent}
       onReset={authored && canBeAbsent && !spec.readOnly ? () => edit(undefined, null) : undefined}
     >

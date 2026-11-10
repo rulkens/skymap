@@ -1,8 +1,5 @@
-/**
- * studioActions — `openStudio(id)` opens a registry clip in the clip studio as a takeover
- * (`watchTakeoverSaga`); `exitTakeover` closes it. Reducer-less, like `startClip`: the studio's
- * own state lives in the lazily injected slice inside `packages/studio`.
- */
+/** Opens a registry clip in the studio as a takeover; reducer-less, like `startClip`, since the
+ * studio's own state lives in the slice `packages/studio` injects. */
 import { createAction } from '@reduxjs/toolkit';
 
 import type { ClipId } from '../../@types/animation/ClipId';

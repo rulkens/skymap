@@ -1,7 +1,7 @@
 import InspectorHead from '../../../primitives/components/InspectorHead/InspectorHead';
 import InspectorRow from '../../../primitives/components/InspectorRow/InspectorRow';
 import ReadoutField from '../../../primitives/components/ReadoutField/ReadoutField';
-import { formatDuration } from '../../../utils/format/formatDuration';
+import { formatQuantity } from '../../../utils/format/formatQuantity';
 
 type Props = {
   readonly label: string;
@@ -17,7 +17,7 @@ function ClipInspector({ label, durationSec, start }: Props) {
     <>
       <InspectorHead
         where="Clip"
-        range={durationSec === null ? undefined : formatDuration(durationSec)}
+        range={durationSec === null ? undefined : formatQuantity(durationSec, 's')}
         title={label}
       />
       <InspectorRow label="Start">

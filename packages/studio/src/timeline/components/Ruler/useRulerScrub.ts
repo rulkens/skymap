@@ -24,7 +24,7 @@ export function useRulerScrub(window: TimeWindow, cueSecs: readonly number[]) {
     const from = last.current;
     const fine = event.shiftKey && from !== null;
     const raw = fine ? from.sec + (event.clientX - from.x) * secPerPx * FINE_FACTOR : pointerSec;
-    const sec = event.altKey || event.shiftKey ? raw : snapTime(raw, cueSecs, secPerPx).sec;
+    const sec = event.altKey || event.shiftKey ? raw : snapTime(raw, cueSecs, secPerPx);
     last.current = { x: event.clientX, sec };
     dispatch(playheadSet(sec));
   };

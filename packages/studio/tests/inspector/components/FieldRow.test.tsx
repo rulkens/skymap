@@ -1,15 +1,13 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from 'vitest';
-import { configureStore } from '@reduxjs/toolkit';
 import { Provider } from 'react-redux';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { rootReducer } from '../../../../../src/store/rootReducer';
 import { oscillate } from '../../../../../src/services/engine/animation/effectHelpers';
 import FieldRow from '../../../src/inspector/components/FieldRow/FieldRow';
 import { inspectorSpec } from '../../../src/inspector/utils/inspectorSpec';
 import { rowSubject } from '../../../src/draft/utils/rowSubject';
-import { studioOpened } from '../../../src/session/state/studioSlice';
+import { openStudioStore } from '../../helpers/openStudioStore';
 import { selectDraft, selectStudioState } from '../../../src/session/state/selectors';
 import type { ClipData } from '../../../../../src/@types/animation/ClipData';
 import type { RowKind } from '../../../src/@types/rows/RowKind';
@@ -17,12 +15,6 @@ import type { RowRef } from '../../../src/@types/rows/RowRef';
 
 afterEach(cleanup);
 
-const PREVIEW = {
-  startPose: { target: [0, 0, 0] as [number, number, number], yaw: 0, pitch: 0, distance: 10 },
-  simDays: 2451545,
-  frame: 'equatorial' as const,
-  fovYRad: 0.8,
-};
 const START_POSE = {
   target: [0, 0, 0] as [number, number, number],
   yaw: 0,
@@ -31,8 +23,7 @@ const START_POSE = {
 };
 
 function setup(draft: ClipData, kind: RowKind, rowRef: RowRef, fieldKey: string) {
-  const store = configureStore({ reducer: rootReducer });
-  store.dispatch(studioOpened({ clipId: 'cosmicFlows', draft, preview: PREVIEW }));
+  const store = openStudioStore(draft, { resolve: false });
   const spec = inspectorSpec(kind).fields.find((f) => f.key === fieldKey)!;
   const subject = rowSubject(selectDraft(store.getState())!, rowRef)!;
   render(

@@ -7,7 +7,7 @@
  */
 import { ROW_KINDS } from '../../kinds/data/rowKinds';
 import { rowKey } from '../../draft/utils/rowKey';
-import { formatDuration } from '../../utils/format/formatDuration';
+import { formatQuantity } from '../../utils/format/formatQuantity';
 import { familyGlyph } from './familyGlyph';
 import { rowDurationText } from './rowDurationText';
 import { rowTailEndSec } from './rowTailEndSec';
@@ -126,7 +126,7 @@ export function buildTimeline(
           startSec: start,
           endSec: end,
           tailEndSec: end,
-          duration: start === null || end === null ? '–' : formatDuration(end - start),
+          duration: start === null || end === null ? '–' : formatQuantity(end - start, 's'),
         },
       );
     });

@@ -10,14 +10,13 @@ import s from './StudioTip.module.css';
 // child (the CompactInfoTip landmine), so placement is computed against the viewport here.
 type Props = {
   readonly name: string;
-  readonly meaning?: ReactNode;
   readonly keys?: readonly string[];
   readonly state?: ReactNode;
   readonly children: ReactNode;
 };
 
 /** Opens above its anchor, below when the viewport has no room above. */
-function StudioTip({ name, meaning, keys, state, children }: Props) {
+function StudioTip({ name, keys, state, children }: Props) {
   const anchor = useRef<HTMLSpanElement>(null);
   const tip = useRef<HTMLSpanElement>(null);
   const timer = useRef(0);
@@ -68,7 +67,7 @@ function StudioTip({ name, meaning, keys, state, children }: Props) {
       if (!el.matches(':popover-open')) el.showPopover();
       place();
     } else if (el.matches(':popover-open')) el.hidePopover();
-  }, [open, place, name, meaning, state]);
+  }, [open, place, name, state]);
 
   useEffect(() => {
     if (!open) return;
@@ -116,7 +115,6 @@ function StudioTip({ name, meaning, keys, state, children }: Props) {
             </span>
           )}
         </span>
-        {meaning && <span className={s.meaning}>{meaning}</span>}
         {state && <span className={s.state}>{state}</span>}
       </span>
     </span>

@@ -16,11 +16,7 @@ export function compileTimeline(resolved: ClipData, frame: OrientationFrameId): 
     return { ok: true, spans, durationSec };
   } catch (error) {
     if (!(error instanceof ClipCompileError)) throw error;
-    const { reason, paths, channel, message, spans } = error;
-    return {
-      ok: false,
-      spans,
-      error: { reason, paths, message, ...(channel === undefined ? {} : { channel }) },
-    };
+    const { reason, paths, spans } = error;
+    return { ok: false, spans, error: { reason, paths } };
   }
 }

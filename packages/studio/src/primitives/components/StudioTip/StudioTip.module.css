@@ -85,9 +85,6 @@
   display: inline-flex;
   gap: var(--space-1);
 }
-.meaning {
-  color: var(--color-fg-tertiary);
-}
 .state {
   margin-top: var(--space-1);
   padding-top: var(--space-2);

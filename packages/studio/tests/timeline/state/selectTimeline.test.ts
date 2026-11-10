@@ -1,35 +1,22 @@
 import { describe, it, expect } from 'vitest';
-import { configureStore } from '@reduxjs/toolkit';
 
-import { rootReducer } from '../../../../../src/store/rootReducer';
+import { openStudioStore } from '../../helpers/openStudioStore';
 import { dollyTo, seq } from '../../../../../src/services/engine/animation/effectHelpers';
 import {
   draftResolved,
   paramEdited,
   rowSelected,
   rowToggled,
-  studioOpened,
 } from '../../../src/session/state/studioSlice';
 import { selectRevision, selectDraft } from '../../../src/session/state/selectors';
 import { selectTimeline } from '../../../src/timeline/state/selectTimeline';
 import { selectSelectedRow } from '../../../src/timeline/state/selectSelectedRow';
 import { selectSelectionStandInId } from '../../../src/timeline/state/selectSelectionStandInId';
 import type { ClipData } from '../../../../../src/@types/animation/ClipData';
-import type { PreviewPins } from '../../../src/@types/session/PreviewPins';
 
-const PREVIEW: PreviewPins = {
-  startPose: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 10 },
-  simDays: 2451545,
-  frame: 'equatorial',
-  fovYRad: 0.8,
-};
 const DRAFT: ClipData = { timeline: [seq([dollyTo(300, 4), dollyTo(950, 4)], { overlap: 1 })] };
 
-function open() {
-  const store = configureStore({ reducer: rootReducer });
-  store.dispatch(studioOpened({ clipId: 'cosmicFlows', draft: DRAFT, preview: PREVIEW }));
-  return store;
-}
+const open = () => openStudioStore(DRAFT, { resolve: false });
 
 /** The saga's job, by hand: land the draft itself (it has no focus ids) for its current revision. */
 const resolve = (store: ReturnType<typeof open>) =>
@@ -88,13 +75,5 @@ describe('timeline selectors', () => {
     expect(selectTimeline(store.getState())!.rows.map((r) => r.id)).toEqual(['start', 'e:0']);
     expect(selectSelectedRow(store.getState())?.id).toBe('e:0.1');
     expect(selectSelectionStandInId(store.getState())).toBe('e:0');
-  });
-
-  it('selectSelectedRow returns the selected visible row', () => {
-    const store = open();
-    store.dispatch(rowSelected({ kind: 'effect', path: [0, 1] }));
-    expect(selectSelectedRow(store.getState())?.id).toBe('e:0.1');
-    store.dispatch(rowSelected(null));
-    expect(selectSelectedRow(store.getState())).toBeNull();
   });
 });

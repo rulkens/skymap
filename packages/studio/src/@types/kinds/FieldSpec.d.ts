@@ -8,8 +8,6 @@ export type FieldSpec<T> = {
   readonly param: KeysOfUnion<Exclude<T, string | undefined>>;
   /** At most 11 characters, the naming vocabulary. */
   readonly label: string;
-  /** One line, no full stop. */
-  readonly tip?: string;
   readonly control: FieldControl | ((subject: T) => FieldControl);
   /** Shown dim while the param is absent; ↺ resets the param to absent. */
   readonly fallback?: number | string | boolean;

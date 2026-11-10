@@ -1,10 +1,8 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from 'vitest';
-import { configureStore } from '@reduxjs/toolkit';
 import { Provider } from 'react-redux';
 import { act, cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { rootReducer } from '../../../../../src/store/rootReducer';
 import {
   atFocus,
   atPoint,
@@ -14,13 +12,9 @@ import {
   flyPath,
   seq,
 } from '../../../../../src/services/engine/animation/effectHelpers';
+import { openStudioStore } from '../../helpers/openStudioStore';
 import Inspector from '../../../src/inspector/components/Inspector/Inspector';
-import {
-  draftResolved,
-  paramEdited,
-  rowSelected,
-  studioOpened,
-} from '../../../src/session/state/studioSlice';
+import { draftResolved, paramEdited, rowSelected } from '../../../src/session/state/studioSlice';
 import {
   selectDraft,
   selectRevision,
@@ -31,18 +25,7 @@ import type { FocusId } from '../../../../../src/@types/animation/FocusId';
 
 afterEach(cleanup);
 
-const PREVIEW = {
-  startPose: { target: [0, 0, 0] as [number, number, number], yaw: 0, pitch: 0, distance: 10 },
-  simDays: 2451545,
-  frame: 'equatorial' as const,
-  fovYRad: 0.8,
-};
-
-function open(draft: ClipData) {
-  const store = configureStore({ reducer: rootReducer });
-  store.dispatch(studioOpened({ clipId: 'cosmicFlows', draft, preview: PREVIEW }));
-  return store;
-}
+const open = (draft: ClipData) => openStudioStore(draft, { resolve: false });
 
 const resolveWith = (store: ReturnType<typeof open>, data: ClipData) =>
   store.dispatch(draftResolved({ revision: selectRevision(store.getState()), data }));

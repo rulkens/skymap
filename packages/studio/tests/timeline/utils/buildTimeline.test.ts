@@ -1,8 +1,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { buildTimeline } from '../../../src/timeline/utils/buildTimeline';
-import { compileClip } from '../../../../../src/services/engine/animation/compileClip';
-import { ClipCompileError } from '../../../../../src/services/engine/animation/ClipCompileError';
+import { compileTimeline } from '../../../src/timeline/utils/compileTimeline';
 import {
   aimAt,
   all,
@@ -20,20 +19,9 @@ import {
 } from '../../../../../src/services/engine/animation/effectHelpers';
 import { focusId } from '../../../../../src/utils/animation/focusId';
 import type { ClipData } from '../../../../../src/@types/animation/ClipData';
-import type { TimelineCompile } from '../../../src/@types/rows/TimelineCompile';
 import type { TimelineRow } from '../../../src/@types/rows/TimelineRow';
 
-/** The real compiler over `resolved`, in the shape the timeline model takes. */
-function compiled(resolved: ClipData): TimelineCompile {
-  try {
-    const clip = compileClip(resolved);
-    return { ok: true, spans: clip.spans, durationSec: clip.durationSec };
-  } catch (error) {
-    if (!(error instanceof ClipCompileError)) throw error;
-    const { reason, paths, channel, message, spans } = error;
-    return { ok: false, spans, error: { reason, paths, message, ...(channel ? { channel } : {}) } };
-  }
-}
+const compiled = (resolved: ClipData) => compileTimeline(resolved, 'equatorial');
 
 const rowOf = (rows: readonly TimelineRow[], id: string): TimelineRow => {
   const row = rows.find((r) => r.id === id);
@@ -153,7 +141,7 @@ describe('buildTimeline', () => {
   it('an invalid compile marks exactly the culprit rows', () => {
     const draft: ClipData = { timeline: [all([dollyTo(300, 4), dollyTo(500, 6)])] };
     const timeline = buildTimeline(draft, compiled(draft), []);
-    expect(timeline.error).toMatchObject({ reason: 'twoWriters', channel: 'distance' });
+    expect(timeline.error).toMatchObject({ reason: 'twoWriters' });
     expect(timeline.durationSec).toBeNull();
     const marked = timeline.rows.filter((r) => r.errors.length > 0).map((r) => r.id);
     expect(marked).toEqual(['e:0.0', 'e:0.1']);

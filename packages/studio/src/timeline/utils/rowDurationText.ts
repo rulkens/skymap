@@ -3,7 +3,7 @@
  * compiler does not await it; a perpetual `osc` and a fork of one say `end`; a looping spin `∞`.
  * Everything else is the awaited window from the compiler's span, and `–` while it has none.
  */
-import { formatDuration } from '../../utils/format/formatDuration';
+import { formatQuantity } from '../../utils/format/formatQuantity';
 import { effectAt } from '../../draft/utils/effectAt';
 import type { ClipData } from '../../../../../src/@types/animation/ClipData';
 import type { Effect } from '../../../../../src/@types/animation/Effect';
@@ -21,11 +21,11 @@ export function rowDurationText(
   switch (effect.kind) {
     case 'show':
     case 'hide':
-      return formatDuration(effect.over ?? 0);
+      return formatQuantity(effect.over ?? 0, 's');
     case 'fade':
-      return formatDuration(effect.over);
+      return formatQuantity(effect.over, 's');
     case 'osc':
-      return effect.over === undefined ? 'end' : formatDuration(effect.over);
+      return effect.over === undefined ? 'end' : formatQuantity(effect.over, 's');
     case 'spin':
       if (effect.loop === true) return '∞';
       break;
@@ -35,5 +35,5 @@ export function rowDurationText(
       return child === null ? '–' : rowDurationText(child, childPath, spanAt, draft);
     }
   }
-  return formatDuration(span.endSec - span.startSec);
+  return formatQuantity(span.endSec - span.startSec, 's');
 }

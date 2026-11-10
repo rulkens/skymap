@@ -44,9 +44,6 @@ const appFiles = walkFiles('src', ['.ts', '.tsx']).filter((file) =>
 const packageFiles = walkFiles(`${PACKAGE}src`, ['.ts', '.tsx']);
 
 describe('studio import boundary (lazy chunk)', () => {
-  expect(appFiles).toBeDefined();
-  expect(packageFiles).toBeDefined();
-
   it('src/ never imports the package statically', () => {
     const offenders = appFiles.flatMap((file) =>
       staticSpecifiers(parseOnlyProject.addSourceFileAtPath(file))

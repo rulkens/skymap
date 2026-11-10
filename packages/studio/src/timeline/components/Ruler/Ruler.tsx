@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import cx from 'classnames';
 import Glyph from '../../../primitives/components/Glyph/Glyph';
-import { formatDuration } from '../../../utils/format/formatDuration';
+import { formatQuantity } from '../../../utils/format/formatQuantity';
 import { formatTimecode } from '../../../utils/format/formatTimecode';
 import { familyStyle } from '../../utils/familyStyle';
 import { formatTickLabel } from '../../utils/ruler/formatTickLabel';
@@ -82,7 +82,7 @@ function Ruler({ timeline, window, playheadSec }: Props) {
                 Loop
               </>
             ) : (
-              `End ${formatDuration(durationSec)}`
+              `End ${formatQuantity(durationSec, 's')}`
             )}
           </span>
           {afterEndShown && <span className={s.after}>after end</span>}
