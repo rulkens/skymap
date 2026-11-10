@@ -47,7 +47,7 @@ Shaders: `gpu/shaders/milkyWay/sprites/{generate,generateStars,generateDust}.wes
 (the billboard draw). Neither moves with this folder.
 
 `milkyWayCalibration.ts` is the placement/LOD/look side rather than generation:
-physical size, per-tier star budget, the approach-fade band, and the boot values
+per-tier star budget, the approach-fade band, and the boot values
 `settings.milkyWay.cloud` copies so the DebugPanel sliders can move them live.
 `milkyWayModelMatrix` / `milkyWayModelCached` (`src/layers/milkyWay/cloud/render/`)
 place the locally-generated cloud in world space; `milkyWayFadeAlpha`
@@ -56,10 +56,11 @@ place the locally-generated cloud in world space; `milkyWayFadeAlpha`
 ## Landmines
 
 **Some of `milkyWayCalibration` will outlive this tier.**
-`MILKY_WAY_RADIUS_MPC`, `MILKY_WAY_MODEL_SCALE` and the fade thresholds describe
-where the Milky Way _is_, not how it is sampled — an analytic-field renderer will
-want them too. They sit here only because every current consumer is the sprite
-path. Promote them rather than deleting them with the rest.
+The fade thresholds describe where the Milky Way _is_, not how it is sampled — an
+analytic-field renderer will want them too. They sit here only because every
+current consumer is the sprite path. Promote them rather than deleting them with
+the rest, as `MILKY_WAY_RADIUS_MPC` and `MILKY_WAY_MODEL_SCALE` already were
+(`src/data/milkyWay/`).
 
 **Buffers are sized to carved CAPACITY, not to live stars.** Dead slots
 rasterize nothing; a population's `iterations` is a CPU loop bound, and some

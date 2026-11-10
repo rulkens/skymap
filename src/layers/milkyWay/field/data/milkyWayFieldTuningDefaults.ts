@@ -5,6 +5,5 @@ import { FIELD_CALIBRATION } from './fieldCalibration';
 export const MILKY_WAY_FIELD_TUNING_DEFAULTS: MilkyWayFieldTuning = {
   exposure: FIELD_CALIBRATION.exposure,
   dust: true,
-  // A copy: the store deep-freezes its initial state, and the tool's row stays its own.
-  divisors: { ...FIELD_CALIBRATION.divisors },
+  divisors: FIELD_CALIBRATION.divisors,
 };

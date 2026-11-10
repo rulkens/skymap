@@ -110,8 +110,9 @@ does not edit.
 > **Units: the field must use v1's `GalaxyParams`.** `toGalaxy = inverse(milkyWayModelCached())`
 > is right only if the host's geometry is `describeGalaxy(MILKY_WAY_GALAXY_PARAMS)`, the input the
 > cloud uses (`cloud/render/milkyWayCloud.ts:20,72`). The test in Task B3 pins the eye against
-> `milkyWayCamPosModel`. A separate issue, not fixed here: `pcToUnits` (`field/mixture/utils/`)
-> assumes 1.6667 kpc per unit, while the placement implies 1.75 (17.5 kpc / 10).
+> `milkyWayCamPosModel`. Task B3b's finding: the placement implies 17.5 kpc / 10.5 units =
+> 1.6667 kpc per unit, which `pcToUnits` already had, only rounded as a literal; it now derives
+> from `MILKY_WAY_MODEL_SCALE` (`src/data/milkyWay/milkyWayModelScale.ts`).
 
 > [!RISK]
 > **arms/utils would hold 17 files, over the cap of 15.** Splitting `armRidgeGeometry`,
@@ -1327,5 +1328,5 @@ export const MILKY_WAY_FIELD_SLIDER_FIELDS: readonly SliderField<MilkyWayFieldSl
 - Letting a `ContentCompute` declare the targets it writes so `touched` sees them. It is the deeper
   fix behind the composite's disabled-compute gate (B6), and it grows the frame contract, which
   needs the owner's yes.
-- The `pcToUnits` 1.6667 vs 1.75 kpc discrepancy. The stale `timedSlotsOf.ts:4` doc ("nothing
-  for a compute"): offer it as an adjacent fix, don't fold it in.
+- The stale `timedSlotsOf.ts:4` doc ("nothing for a compute"): offer it as an adjacent fix, don't
+  fold it in.

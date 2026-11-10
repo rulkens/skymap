@@ -181,7 +181,7 @@ export type MilkyWaySettings = {
   enabled: boolean;
   labelEnabled: boolean;
   renderer: MilkyWayRenderer; // 'v1' | 'v2' | 'both', default 'v1'
-  cloud: MilkyWayTuning;   // today's eight knobs, unchanged
+  cloud: MilkyWayCloudTuning; // today's eight knobs, unchanged
   field: MilkyWayFieldTuning;
 };
 export type MilkyWayFieldTuning = {

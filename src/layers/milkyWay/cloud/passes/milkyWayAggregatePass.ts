@@ -45,8 +45,8 @@ export function milkyWayAggregatePass(runtime: MilkyWayRuntime): ContentPass<'mi
         model: milkyWayModelCached(),
         fadeAlpha,
         // The live look knobs, the settings' `cloud` group as is. Read here
-        // rather than in the renderer so a DebugPanel slider drag lands on the next frame with no
-        // imperative setter in between.
+        // rather than in the renderer so a DebugPanel slider drag lands on the
+        // next frame with no imperative setter in between.
         tuning: state.settings.milkyWay.cloud,
         buffers: runtime.cloud.buffers(),
       });

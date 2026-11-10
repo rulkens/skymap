@@ -3,7 +3,7 @@ import { MILKY_WAY_DISC_RADIUS_KPC } from '../../../../../../src/data/milkyWay/g
 import { MILKY_WAY_GALAXY_PARAMS } from '../../../../../../src/data/milkyWay/milkyWayGalaxyParams';
 import { pcToUnits } from '../../../../../../src/layers/milkyWay/field/mixture/utils/pcToUnits';
 import { describeGalaxy } from '../../../../../../src/services/engine/galaxyGenerator/shared/describeGalaxy';
-import { MILKY_WAY_MODEL_SCALE } from '../../../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
+import { MILKY_WAY_MODEL_SCALE } from '../../../../../../src/data/milkyWay/milkyWayModelScale';
 
 describe('pcToUnits', () => {
   it('the field and the cloud share one kpc-per-unit scale', () => {

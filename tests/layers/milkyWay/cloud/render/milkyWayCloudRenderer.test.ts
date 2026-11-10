@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createMilkyWayCloudRenderer } from '../../../../../src/layers/milkyWay/cloud/render/milkyWayCloudRenderer';
 import { GEN_RECORD_BYTES } from '../../../../../src/services/engine/galaxyGenerator/v1/genRecordBytes';
-import { MILKY_WAY_MODEL_SCALE } from '../../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
+import { MILKY_WAY_MODEL_SCALE } from '../../../../../src/data/milkyWay/milkyWayModelScale';
 import type { MilkyWayCloudBuffers } from '../../../../../src/layers/milkyWay/cloud/@types/MilkyWayCloudBuffers';
 import type { MilkyWayCloudDrawArgs } from '../../../../../src/layers/milkyWay/cloud/@types/MilkyWayCloudDrawArgs';
 

@@ -28,7 +28,7 @@ import starsCode from '../../../../services/gpu/shaders/milkyWay/sprites/stars.w
 import dustCode from '../../../../services/gpu/shaders/milkyWay/sprites/dust.wesl?static';
 import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
 import { GEN_RECORD_BYTES } from '../../../../services/engine/galaxyGenerator/v1/genRecordBytes';
-import { MILKY_WAY_MODEL_SCALE } from '../../../../services/engine/galaxyGenerator/v1/milkyWayCalibration';
+import { MILKY_WAY_MODEL_SCALE } from '../../../../data/milkyWay/milkyWayModelScale';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { MilkyWayCloudRenderer } from '../@types/MilkyWayCloudRenderer';
 import type { MilkyWayCloudDrawArgs } from '../@types/MilkyWayCloudDrawArgs';

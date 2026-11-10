@@ -4,7 +4,7 @@
  * outerRadius of 10.5, so 1 unit = 1.6667 kpc). Reading it rather than a
  * literal keeps pc-sized features the size the model matrix draws them at.
  */
-import { MILKY_WAY_MODEL_SCALE } from '../../../../../services/engine/galaxyGenerator/v1/milkyWayCalibration';
+import { MILKY_WAY_MODEL_SCALE } from '../../../../../data/milkyWay/milkyWayModelScale';
 
 const PC_PER_UNIT = MILKY_WAY_MODEL_SCALE * 1e6;
 

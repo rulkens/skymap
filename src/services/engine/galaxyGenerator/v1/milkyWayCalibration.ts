@@ -2,8 +2,8 @@
  * milkyWayCalibration — every hand-tuned constant the Milky Way point-cloud
  * renderer needs, in one file. `MILKY_WAY_GALAXY_PARAMS` decides what the
  * galaxy *looks like* generatively (arm count, bar, warp, ...); this module
- * decides how the generated cloud is placed and lit in the scene (size,
- * per-tier star budget, sprite size, brightness) — a visual-gate tuning pass
+ * decides how the generated cloud is lit and faded in the scene (per-tier
+ * star budget, sprite size, brightness) — a visual-gate tuning pass
  * touches only this file, never the shared preset the tool's gallery reads.
  *
  * Exception: the look knobs are BOOT values (`MILKY_WAY_CLOUD_TUNING_DEFAULTS`)
@@ -12,9 +12,7 @@
  */
 import type { Tier } from '../../../../@types/data/Tier';
 import type { MilkyWayCloudTuning } from '../../../../@types/settings/MilkyWayCloudTuning';
-import { MILKY_WAY_RADIUS_MPC } from '../../../../data/milkyWay/milkyWayRadiusMpc';
 import { MILKY_WAY_GALAXY_PARAMS } from '../../../../data/milkyWay/milkyWayGalaxyParams';
-import { outerRadiusOf } from '../shared/outerRadiusOf';
 
 /**
  * Per-tier star-count SEEDS. `medium` IS the preset's `starCount` — the tier
@@ -43,16 +41,6 @@ export const MILKY_WAY_STARS_PER_TIER: Record<Tier, number> = {
   medium: presetStarCount,
   large: presetStarCount * 2,
 };
-
-/**
- * Local-galaxy-units -> Mpc. The generator works in the units `outerRadiusOf`
- * returns (roughly tens of "local" units); this scale is the one number that
- * reconciles those units with the app's Mpc-scaled scene, derived rather than
- * hand-picked so it always matches whatever `MILKY_WAY_GALAXY_PARAMS.radius`
- * currently is.
- */
-export const MILKY_WAY_MODEL_SCALE = MILKY_WAY_RADIUS_MPC / outerRadiusOf(MILKY_WAY_GALAXY_PARAMS);
-
 /**
  * Boot values of the star-cloud look knobs — the seed `settings.milkyWay.cloud`
  * copies, and from there the only home of these numbers. Each is a

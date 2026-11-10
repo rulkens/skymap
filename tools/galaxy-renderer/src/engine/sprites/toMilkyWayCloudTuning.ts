@@ -1,5 +1,5 @@
 /**
- * toMilkyWayTuning — the tool's render bag, viewed as the app's
+ * toMilkyWayCloudTuning — the tool's render bag, viewed as the app's
  * `MilkyWayCloudTuning`: the shape `packCloudUniforms` and the shared shaders
  * speak. Two knobs are renamed rather than shared outright — the tool's
  * `starIntensity` is the app's per-sprite `exposure` (the tool already spells
@@ -21,7 +21,7 @@ import type { MilkyWayCloudTuning } from '../../../../../src/@types/settings/Mil
  * view reads the field, so the honest available number beats retaining a
  * second copy of the request to satisfy a shape.
  */
-export function toMilkyWayTuning(
+export function toMilkyWayCloudTuning(
   render: RenderSettings & LodSettings,
   starCount: number,
 ): MilkyWayCloudTuning {
