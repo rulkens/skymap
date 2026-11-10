@@ -120,6 +120,16 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         manual: DATA,
       },
       {
+        scripts: ['fetch-cloud-inputs'],
+        does: 'Downloads the twelve Blue Marble months of 2004, about 360 MB, which the cloud bake matches its map to. It runs fetch-textures with --bmng-months and needs -- --confirm.',
+        manual: 'data/raw/clouds/README.md',
+      },
+      {
+        scripts: ['bake-clouds'],
+        does: 'Bakes one day’s global cloud map from weather-satellite imagery with tools/cloud-bake-rs. Options: --date, --out and --offline.',
+        manual: 'tools/cloud-bake-rs/README.md',
+      },
+      {
         scripts: ['import-mesh', 'prebake-mesh', 'build-meshes'],
         does: 'Take a 3D model from its download to the mesh and textures the app loads. The first two run Blender.',
         manual: DATA,
