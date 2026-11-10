@@ -4,7 +4,7 @@ Temporary: delete this folder before the branch merges (the plan's Task 6.1 / `/
 
 ## Where things stand
 
-- **Branch** `ccr-4503b6fa-vvpnc3`. Decisions: `docs/grill-sessions/clip-studio-2026-11-07.md` (Q1–Q31).
+- **Branch** `feat/clip-studio`. Decisions: `docs/grill-sessions/clip-studio-2026-11-07.md` (Q1–Q31).
   Plan: `docs/superpowers/plans/2026-11-10-clip-studio-package.md` (slice 1, 29 tasks, waves 0/A/B/C/D).
 - **Done and pushed:** Task 0 (EffectPath / EffectSpan types), G0 Tasks 0.1–0.3 (compileClip spans,
   flyPath knot times, `ClipCompileError` with paths), and G1 Tasks 1.1–1.8 (package scaffold, `combineSlices`
