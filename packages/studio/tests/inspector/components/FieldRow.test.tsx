@@ -87,6 +87,22 @@ describe('FieldRow', () => {
     expect(selectStudioState(store.getState()).history.past).toHaveLength(0);
   });
 
+  it('an unset param the engine decides reads auto and takes a typed value', async () => {
+    const store = setup(
+      { timeline: [oscillate('distance', { amp: 5, period: 4 })] },
+      'osc',
+      { kind: 'effect', path: [0] },
+      'over',
+    );
+    const field = screen.getByRole('textbox', { name: 'Window' });
+    expect(field).toHaveValue('');
+    expect(field).toHaveAttribute('placeholder', 'auto');
+    expect(screen.queryByRole('button', { name: /Reset/ })).toBeNull();
+
+    await userEvent.type(field, '6{Enter}');
+    expect(selectDraft(store.getState())!.timeline[0]).toMatchObject({ over: 6 });
+  });
+
   it('a degrees field dispatches radians', async () => {
     const store = setup({ start: START_POSE, timeline: [] }, 'start', { kind: 'start' }, 'yaw');
     const field = screen.getByRole('textbox', { name: 'Turn' });

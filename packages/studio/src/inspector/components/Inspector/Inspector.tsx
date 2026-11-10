@@ -29,7 +29,14 @@ function Inspector() {
           start={timeline.rows[0]?.label.value ?? ''}
         />
       ) : (
-        <RowInspector row={row} rows={timeline.rows} draft={draft} resolution={resolution} />
+        // Keyed by row: a slider's gesture must not carry over to the next row's (one Undo each).
+        <RowInspector
+          key={row.id}
+          row={row}
+          rows={timeline.rows}
+          draft={draft}
+          resolution={resolution}
+        />
       )}
     </InspectorPanel>
   );

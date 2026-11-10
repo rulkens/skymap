@@ -7,13 +7,13 @@ import type { FieldSpec } from '../../../@types/kinds/FieldSpec';
 
 export function overField<T extends { readonly over?: number }>(
   label = 'Duration',
-  fallback?: number,
+  absent: Pick<FieldSpec<T>, 'fallback' | 'optional'> = {},
 ): FieldSpec<T> {
   return {
     key: 'over',
     param: 'over' as FieldSpec<T>['param'],
     label,
     control: 'seconds',
-    ...(fallback === undefined ? {} : { fallback }),
+    ...absent,
   };
 }

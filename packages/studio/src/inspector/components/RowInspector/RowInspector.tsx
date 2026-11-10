@@ -10,6 +10,7 @@ import { formatRowTitle } from '../../utils/formatRowTitle';
 import { inspectorSpec } from '../../utils/inspectorSpec';
 import { resolvedText } from '../../utils/resolvedText';
 import { rowContext } from '../../utils/rowContext';
+import { shownFields } from '../../utils/shownFields';
 import { rowSubject } from '../../../draft/utils/rowSubject';
 import FieldRow from '../FieldRow/FieldRow';
 import type { ClipData } from '../../../../../../src/@types/animation/ClipData';
@@ -27,6 +28,7 @@ type Props = {
 function RowInspector({ row, rows, draft, resolution }: Props) {
   const spec = inspectorSpec(row.kind);
   const subject = rowSubject(draft, row.ref);
+  const fields = subject === null ? [] : shownFields(spec.fields, subject);
   const context = rowContext(rows, row);
   const resolved = resolvedText(row, resolution);
   const where =
@@ -46,9 +48,9 @@ function RowInspector({ row, rows, draft, resolution }: Props) {
         </AlertChip>
       ))}
       {subject !== null &&
-        spec.fields.map((field, i) => (
+        fields.map((field, i) => (
           <Fragment key={field.key}>
-            {field.section !== undefined && field.section !== spec.fields[i - 1]?.section && (
+            {field.section !== undefined && field.section !== fields[i - 1]?.section && (
               <InspectorSection title={field.section} />
             )}
             <FieldRow spec={field} subject={subject} rowRef={row.ref} />

@@ -7,6 +7,5 @@ export type FieldControl =
   | 'percent'
   | 'number'
   | 'ease'
-  | 'channel'
   | 'toggle'
   | 'readout';

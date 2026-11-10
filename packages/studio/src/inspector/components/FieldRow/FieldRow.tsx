@@ -6,8 +6,9 @@ import PickField from '../../../primitives/components/PickField/PickField';
 import ReadoutField from '../../../primitives/components/ReadoutField/ReadoutField';
 import SegmentedField from '../../../primitives/components/SegmentedField/SegmentedField';
 import { FIELD_CONTROLS } from '../../data/fieldControls';
-import { PICK_OPTIONS } from '../../data/pickOptions';
+import { EASE_OPTIONS } from '../../data/easeOptions';
 import { readoutText } from '../../utils/readoutText';
+import { AUTO_TEXT } from '../../../data/autoText';
 import { TOGGLE_OPTIONS } from './FieldRow.constants';
 import type { FieldSpec } from '../../../@types/kinds/FieldSpec';
 import type { RowRef } from '../../../@types/rows/RowRef';
@@ -19,24 +20,29 @@ type Props = {
   readonly rowRef: RowRef;
 };
 
-/** One field of the selected row. An absent param shows its fallback dim; an authored one is bright with ↺. */
+/**
+ * One field of the selected row. An absent param shows dim: its fallback, or `auto` when the engine
+ * decides; an authored one is bright with ↺ back to absent. A required param is always authored.
+ */
 function FieldRow({ spec, subject, rowRef }: Props) {
   const dispatch = useAppDispatch();
   const control = typeof spec.control === 'function' ? spec.control(subject) : spec.control;
   const widget = FIELD_CONTROLS[control];
   const authored = subject[spec.param] !== undefined;
+  const canBeAbsent = spec.fallback !== undefined || spec.optional === true;
+  const auto = !authored && spec.optional === true;
   const stored = subject[spec.param] ?? spec.fallback;
   const edit = (value: number | string | boolean | undefined, gesture: string | null) =>
     dispatch(paramEdited({ ref: rowRef, param: spec.param, value, label: spec.label, gesture }));
-  // Only a param with a fallback is optional, so only it can go back to absent.
-  const resettable = authored && spec.fallback !== undefined && !spec.readOnly;
 
   let field;
   if (spec.readOnly || widget.widget === 'readout') {
-    field = <ReadoutField>{readoutText(spec.param, subject[spec.param])}</ReadoutField>;
+    field = (
+      <ReadoutField>{auto ? AUTO_TEXT : readoutText(spec.param, subject[spec.param])}</ReadoutField>
+    );
   } else if (widget.widget === 'number') {
     const shown = Number(stored ?? 0);
-    const display = widget.toDisplay ? widget.toDisplay(shown) : shown;
+    const display = auto ? null : widget.toDisplay ? widget.toDisplay(shown) : shown;
     field = (
       <NumberField
         label={spec.label}
@@ -62,8 +68,8 @@ function FieldRow({ spec, subject, rowRef }: Props) {
     field = (
       <PickField
         label={spec.label}
-        value={String(stored ?? '')}
-        options={control === 'ease' ? PICK_OPTIONS.ease : PICK_OPTIONS.channel}
+        value={String(stored)}
+        options={EASE_OPTIONS}
         onChange={(v) => edit(v, null)}
       />
     );
@@ -82,8 +88,8 @@ function FieldRow({ spec, subject, rowRef }: Props) {
     <InspectorRow
       label={spec.label}
       tip={spec.tip}
-      dim={!authored && spec.fallback !== undefined}
-      onReset={resettable ? () => edit(undefined, null) : undefined}
+      dim={!authored && canBeAbsent}
+      onReset={authored && canBeAbsent && !spec.readOnly ? () => edit(undefined, null) : undefined}
     >
       {field}
     </InspectorRow>

@@ -30,7 +30,6 @@ export const FIELD_CONTROLS: Record<FieldControl, FieldWidget> = {
   },
   number: { widget: 'number', step: 0.1 },
   ease: { widget: 'pick' },
-  channel: { widget: 'pick' },
   toggle: { widget: 'toggle' },
   readout: { widget: 'readout' },
 };

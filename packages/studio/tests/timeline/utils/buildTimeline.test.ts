@@ -87,6 +87,7 @@ describe('buildTimeline', () => {
     const { rows } = buildTimeline(draft, compiled(draft), []);
     const waypoints = rows.filter((r) => r.kind === 'waypoint');
     expect(waypoints.map((r) => r.label.name)).toEqual(['Pass', 'Pass', 'Settle']);
+    expect(waypoints.map((r) => r.glyph)).toEqual(['pass', 'pass', 'settle']);
     expect(waypoints[0]!.startSec).toBe(rowOf(rows, 'e:0').startSec);
     expect(waypoints[1]!.startSec).toBe(waypoints[0]!.endSec);
     expect(waypoints[2]!.startSec).toBe(waypoints[1]!.endSec);

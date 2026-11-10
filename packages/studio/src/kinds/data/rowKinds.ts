@@ -1,7 +1,7 @@
 /**
  * ROW_KINDS: the one registry of what the studio knows about each row kind (A5). The mapped type over
  * every `Effect['kind']` plus the two pseudo-rows makes a missing kind a compile error. Adding a kind
- * is one entry in a family file. A waypoint is labelled Pass, or Settle when it is the last of its path.
+ * is one entry in a family file. A waypoint is Pass, or Settle (label and glyph) when it is the last of its path.
  */
 import { cameraKinds } from './cameraKinds';
 import { sceneKinds } from './sceneKinds';
@@ -34,7 +34,7 @@ export const ROW_KINDS: RowKindRegistry = {
     ],
   },
   waypoint: {
-    glyph: 'pass',
+    glyph: (s) => (s.last ? 'settle' : 'pass'),
     mark: 'knot',
     writes: () => ['distance', 'lookAt', 'turn'],
     label: (s) => {
@@ -44,13 +44,13 @@ export const ROW_KINDS: RowKindRegistry = {
         : { name, op: '→', value: formatQuantity(s.distance, 'Mpc') };
     },
     fields: [
-      // `at` and `distance` exist only on a point waypoint; an id waypoint reads them from its subject.
+      // `at` and `distance` exist only on a point waypoint; a subject waypoint leaves them out.
       readoutField('at', 'Position'),
       { key: 'distance', param: 'distance', label: 'Distance', control: 'mpc' },
-      overField('Leg time'),
-      { key: 'linger', param: 'linger', label: 'Linger', control: 'percent' },
-      { key: 'yaw', param: 'yaw', label: 'Turn', control: 'degrees' },
-      { key: 'pitch', param: 'pitch', label: 'Tilt', control: 'degrees' },
+      overField('Leg time', { optional: true }),
+      { key: 'linger', param: 'linger', label: 'Linger', control: 'percent', optional: true },
+      { key: 'yaw', param: 'yaw', label: 'Turn', control: 'degrees', optional: true },
+      { key: 'pitch', param: 'pitch', label: 'Tilt', control: 'degrees', optional: true },
     ],
   },
 };

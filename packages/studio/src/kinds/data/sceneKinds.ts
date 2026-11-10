@@ -21,14 +21,14 @@ export const sceneKinds: Pick<
     mark: 'cue',
     writes: () => ['layers'],
     label: (s) => ({ name: 'Show', op: '', value: formatAddresses(s.args) }),
-    fields: [readoutField('args', 'Layers'), overField('Fade in')],
+    fields: [readoutField('args', 'Layers'), overField('Fade in', { fallback: 0 })],
   },
   hide: {
     glyph: 'hide',
     mark: 'cue',
     writes: () => ['layers'],
     label: (s) => ({ name: 'Hide', op: '', value: formatAddresses(s.args) }),
-    fields: [readoutField('args', 'Layers'), overField('Fade out')],
+    fields: [readoutField('args', 'Layers'), overField('Fade out', { fallback: 0 })],
   },
   fade: {
     glyph: 'fade',

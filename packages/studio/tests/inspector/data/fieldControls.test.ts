@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { FIELD_CONTROLS } from '../../../src/inspector/data/fieldControls';
-import { PICK_OPTIONS } from '../../../src/inspector/data/pickOptions';
+import { EASE_OPTIONS } from '../../../src/inspector/data/easeOptions';
 
 describe('FIELD_CONTROLS', () => {
   it('degrees round-trip: 63° stores 1.0996 rad and shows 63°', () => {
@@ -21,8 +21,7 @@ describe('FIELD_CONTROLS', () => {
     expect(FIELD_CONTROLS.mpc.fromDisplay).toBeUndefined();
   });
 
-  it('offers every ease and channel', () => {
-    expect(PICK_OPTIONS.ease).toHaveLength(31);
-    expect(PICK_OPTIONS.channel.map((o) => o.value)).toContain('target');
+  it('offers every ease', () => {
+    expect(EASE_OPTIONS).toHaveLength(31);
   });
 });

@@ -62,7 +62,10 @@ export function buildTimeline(
       ...where,
       collapsed: where.expandable && folded.has(id),
       family,
-      glyph: spec.glyph ?? familyGlyph(family),
+      glyph:
+        typeof spec.glyph === 'function'
+          ? spec.glyph(subject)
+          : (spec.glyph ?? familyGlyph(family)),
       writes,
       label: spec.label(subject),
       ...times,

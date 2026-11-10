@@ -4,8 +4,8 @@
  * set, spin, rate and osc span several channels, so they leave `glyph` out and the model uses the
  * icon of the row's channel family.
  */
+import { CHANNEL_NAME } from '../../data/channelNames';
 import { channelControl } from '../utils/channelControl';
-import { channelField } from '../utils/fields/channelField';
 import { channelValue } from '../utils/channelValue';
 import { easeField } from '../utils/fields/easeField';
 import { familyOf } from '../utils/familyOf';
@@ -25,14 +25,6 @@ import {
 import type { Channel } from '../../../../../src/@types/animation/Channel';
 import type { RowKindRegistry } from '../../@types/kinds/RowKindRegistry';
 
-const SET_NAME: Record<Channel, string> = {
-  distance: 'Distance',
-  yaw: 'Turn',
-  pitch: 'Tilt',
-  roll: 'Roll',
-  fov: 'FOV',
-  target: 'Look-at',
-};
 const RATE_NAME: Record<Channel, string> = {
   distance: 'Zoom speed',
   yaw: 'Turn speed',
@@ -57,8 +49,8 @@ export const cameraKinds: Pick<
   set: {
     mark: 'bar',
     writes: (s) => familyOf(s.ch),
-    label: (s) => ({ name: SET_NAME[s.ch], op: '→', value: channelValue(s.ch, s.to) }),
-    fields: [channelField(), toField(), overField(), easeField()],
+    label: (s) => ({ name: CHANNEL_NAME[s.ch], op: '→', value: channelValue(s.ch, s.to) }),
+    fields: [readoutField('ch', 'Channel'), toField(), overField(), easeField()],
   },
   setVec: {
     glyph: 'look',
@@ -71,13 +63,13 @@ export const cameraKinds: Pick<
     mark: 'bar',
     writes: (s) => familyOf(s.ch),
     label: (s) => ({
-      name: SET_NAME[s.ch],
+      name: CHANNEL_NAME[s.ch],
       op: s.by < 0 ? '−' : '+',
       value: channelValue(s.ch, Math.abs(s.by)),
       ...(s.loop === true ? { qualifier: 'loops' } : {}),
     }),
     fields: [
-      channelField(),
+      readoutField('ch', 'Channel'),
       {
         key: 'by',
         param: 'by',
@@ -101,7 +93,7 @@ export const cameraKinds: Pick<
           : formatQuantity((s.to * 180) / Math.PI, '°/s'),
     }),
     fields: [
-      channelField(),
+      readoutField('ch', 'Channel'),
       {
         key: 'to',
         param: 'to',
@@ -124,10 +116,10 @@ export const cameraKinds: Pick<
         : {}),
     }),
     fields: [
-      channelField(),
+      readoutField('ch', 'Channel'),
       { key: 'amp', param: 'amp', label: 'Swing', control: (s) => channelControl(s.ch) },
       { key: 'period', param: 'period', label: 'Period', control: 'seconds' },
-      overField('Window'),
+      overField('Window', { optional: true }),
       { key: 'fade', param: 'fade', label: 'Fade', control: 'seconds', fallback: 0 },
       easeField(),
     ],
@@ -180,8 +172,8 @@ export const cameraKinds: Pick<
         control: 'seconds',
         fallback: DEFAULT_LINGER_SEC,
       },
-      readoutField('spline', 'Spline'),
-      readoutField('passBy', 'Pass by'),
+      { ...readoutField('spline', 'Spline'), optional: true },
+      { ...readoutField('passBy', 'Pass by'), optional: true },
     ],
   },
   geodesic: {
@@ -191,7 +183,7 @@ export const cameraKinds: Pick<
     label: (s) => ({ name: 'Zoom-pan', op: '→', value: formatQuantity(s.to.distance, 'Mpc') }),
     fields: [
       readoutField('to', 'Destination'),
-      overField(),
+      overField('Duration', { optional: true }),
       readoutField('tuning', 'Tuning'),
       readoutField('fovYRad', 'FOV'),
     ],

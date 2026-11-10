@@ -8,7 +8,7 @@ import type { MarkShape } from './MarkShape';
 
 export type RowKindSpec<T> = {
   /** Omitted when the glyph depends on the channel (set, spin, rate, osc): the model takes its family's. */
-  readonly glyph?: GlyphId;
+  readonly glyph?: GlyphId | ((subject: T) => GlyphId);
   readonly mark: MarkShape;
   readonly writes: (subject: T) => readonly ChannelFamily[];
   readonly label: (subject: T) => RowLabel;

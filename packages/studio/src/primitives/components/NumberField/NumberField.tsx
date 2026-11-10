@@ -2,7 +2,8 @@ import RangedNumberField from '../RangedNumberField/RangedNumberField';
 import TextNumberField from '../TextNumberField/TextNumberField';
 
 type Props = {
-  readonly value: number;
+  /** Null: unset, the engine decides; the field reads `auto` until a number is typed. */
+  readonly value: number | null;
   readonly label: string;
   readonly step?: number;
   /** Shown inside the field, right beside the value. */
@@ -14,11 +15,12 @@ type Props = {
   readonly onCommit: (value: number, gesture: string) => void;
 };
 
-function NumberField({ min, max, step = 1, ...rest }: Props) {
-  return min !== undefined && max !== undefined ? (
-    <RangedNumberField {...rest} step={step} min={min} max={max} />
+function NumberField({ value, min, max, step = 1, ...rest }: Props) {
+  // A slider always shows a value, so an unset one is typed in first.
+  return min !== undefined && max !== undefined && value !== null ? (
+    <RangedNumberField {...rest} value={value} step={step} min={min} max={max} />
   ) : (
-    <TextNumberField {...rest} step={step} min={min} />
+    <TextNumberField {...rest} value={value} step={step} min={min} max={max} />
   );
 }
 

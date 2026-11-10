@@ -13,6 +13,8 @@ export type FieldSpec<T> = {
   readonly control: FieldControl | ((subject: T) => FieldControl);
   /** Shown dim while the param is absent; ↺ resets the param to absent. */
   readonly fallback?: number | string | boolean;
+  /** Absent means the engine decides (no fixed default): shown dim as `auto`; ↺ resets to absent. */
+  readonly optional?: true;
   readonly readOnly?: true;
   /** Inspector section header, e.g. 'Pace'. */
   readonly section?: string;

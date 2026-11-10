@@ -2,11 +2,16 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
 import { Provider } from 'react-redux';
-import { cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { rootReducer } from '../../../../../src/store/rootReducer';
 import {
+  atFocus,
+  atPoint,
   dollyTo,
   dollyToId,
+  fade,
+  flyPath,
   seq,
 } from '../../../../../src/services/engine/animation/effectHelpers';
 import Inspector from '../../../src/inspector/components/Inspector/Inspector';
@@ -17,7 +22,11 @@ import {
   rowSelected,
   studioOpened,
 } from '../../../src/session/state/studioSlice';
-import { selectDraft, selectRevision } from '../../../src/session/state/selectors';
+import {
+  selectDraft,
+  selectRevision,
+  selectStudioState,
+} from '../../../src/session/state/selectors';
 import type { ClipData } from '../../../../../src/@types/animation/ClipData';
 import type { FocusId } from '../../../../../src/@types/animation/FocusId';
 
@@ -76,6 +85,46 @@ describe('Inspector', () => {
     show(store);
 
     expect(screen.getByRole('alert').textContent).toContain('Blend is longer');
+  });
+
+  it('a subject waypoint shows no Distance, and its unset Leg time reads auto with no reset', () => {
+    const store = open({
+      timeline: [flyPath([atFocus('m31' as FocusId), atPoint([5, 0, 0], 8)], { over: 6 })],
+    });
+    store.dispatch(rowSelected({ kind: 'waypoint', path: [0], index: 0 }));
+    show(store);
+
+    expect(screen.queryByText('Distance')).toBeNull();
+    expect(screen.queryByText('Position')).toBeNull();
+    expect(screen.getByRole('textbox', { name: 'Leg time' })).toHaveAttribute(
+      'placeholder',
+      'auto',
+    );
+    expect(screen.queryByRole('button', { name: 'Reset Leg time to default' })).toBeNull();
+  });
+
+  it('a channel step shows its channel as a name, not a pick', () => {
+    const store = open({ timeline: [dollyTo(300, 4)] });
+    store.dispatch(rowSelected({ kind: 'effect', path: [0] }));
+    show(store);
+
+    expect(screen.queryByRole('combobox', { name: 'Channel' })).toBeNull();
+    expect(screen.getByText('Distance', { selector: 'span' })).toBeTruthy();
+  });
+
+  it('slider edits on two rows within one gesture window stay two Undo steps', async () => {
+    const user = userEvent.setup();
+    const store = open({ timeline: [fade(['flow'], 0.5, 2), fade(['flow'], 0.5, 2)] });
+    store.dispatch(rowSelected({ kind: 'effect', path: [0] }));
+    show(store);
+    screen.getByRole('slider', { name: 'Level' }).focus();
+    await user.keyboard('{ArrowRight}');
+
+    act(() => void store.dispatch(rowSelected({ kind: 'effect', path: [1] })));
+    screen.getByRole('slider', { name: 'Level' }).focus();
+    await user.keyboard('{ArrowRight}');
+
+    expect(selectStudioState(store.getState()).history.past).toHaveLength(2);
   });
 
   it('with nothing selected it shows the clip and its Start', () => {
