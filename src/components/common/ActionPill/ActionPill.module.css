@@ -1,0 +1,83 @@
+/*
+ * ActionPill.module.css — frosted glass on a full round, the label in letterspaced mono caps.
+ * No position, transform or animation here: those belong to the consumer's `className`.
+ */
+
+.root {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-5);
+  max-width: 100%;
+  /* Tap area, not a spacing rung: the icon pill's 40, the touch target on a phone. */
+  height: 40px;
+  padding: 0 var(--space-7);
+  border: 2px solid var(--border-hover);
+  border-radius: 999px;
+  background: var(--surface-soft);
+  -webkit-backdrop-filter: blur(var(--blur-card));
+  backdrop-filter: blur(var(--blur-card));
+  color: var(--color-fg-base);
+  font: var(--font-size-sm) / 1 var(--font-family-mono);
+  letter-spacing: var(--letter-spacing-widest);
+  text-transform: uppercase;
+  text-shadow: none;
+  white-space: nowrap;
+  cursor: pointer;
+  /* HUD overlays are click-through; the pill is the part that takes the pointer. */
+  pointer-events: auto;
+  transition:
+    color var(--duration-color) ease,
+    border-color var(--duration-color) ease,
+    background-color var(--duration-color) ease;
+}
+
+.withIcon {
+  padding-left: var(--space-3);
+}
+
+@media (hover: hover) {
+  .root:hover {
+    color: var(--color-fg);
+    border-color: var(--color-accent);
+  }
+}
+
+.root:active {
+  background: var(--surface-control-active);
+}
+
+.root:focus-visible {
+  color: var(--color-fg);
+  border-color: var(--color-accent);
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: var(--space-12);
+  height: var(--space-12);
+  color: var(--color-fg-tertiary);
+}
+
+.label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.key {
+  composes: key from '../keyHint.module.css';
+  flex-shrink: 0;
+  text-transform: none;
+}
+
+@media (max-width: 768px) {
+  .root {
+    height: var(--touch-target);
+  }
+}
