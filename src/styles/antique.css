@@ -172,6 +172,31 @@
   --panel-extra-basis: 100%;
   --panel-extra-order: 1;
   --panel-extra-margin: calc(var(--frame-border) - var(--frame-slice));
+  /* A collapsed panel (Navigation, Settings) folds into a ruled band: a double rule above
+   * and below (a 3px double border draws 1px, 1px gap, 1px), the title set small and centred. */
+  --band-frame-image: none;
+  --band-border-width: 3px 0;
+  --band-border-style: double;
+  --band-radius: 0;
+  --band-min-height: 0;
+  --band-width: 176px;
+  --band-chevron-size: 12px;
+  --band-chevron-order: 1;
+  --band-chevron-margin: 0 0 0 var(--space-4);
+  --band-hover-color: var(--antique-rubric);
+  --band-chevron-color: var(--color-fg);
+  --band-hover-ground: rgb(60 40 20 / 10%);
+  --band-title-row-margin: 0;
+  --band-flank-display: none;
+  --band-title-flex: 1;
+  --band-title-justify: center;
+  --band-title-height: 22px;
+  --band-cartouche-border: 0;
+  --band-cartouche-image: none;
+  --band-title-padding: 0 var(--space-4);
+  --band-extra-display: none;
+  --band-transition: width var(--duration-base) var(--ease-standard), min-height var(--duration-base) var(--ease-standard),
+    border-width var(--duration-base) var(--ease-standard);
   /* The InfoCard: the name lifts above the eyebrow bar into the cartouche. */
   --card-header-display: flex;
   --card-headline-order: -1;

@@ -31,7 +31,7 @@ export function Panel({ title, ariaLabel, headerExtra, children }: PanelProps): 
   const bodyId = `${useId()}-body`;
 
   return (
-    <div className={styles.panel} aria-label={ariaLabel}>
+    <div className={cx(styles.panel, !open && styles.collapsed)} aria-label={ariaLabel}>
       <div className={styles.titleRow}>
         <button
           type="button"

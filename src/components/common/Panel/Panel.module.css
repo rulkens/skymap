@@ -16,6 +16,7 @@
   border-radius: var(--radius-xl);
   box-shadow: var(--framed-shadow, var(--shadow-panel));
   min-height: var(--framed-min-height, auto);
+  transition: var(--band-transition, none);
 
   color: var(--color-fg-base);
   font: var(--font-size-md) / var(--line-height-base) var(--font-family-mono);
@@ -31,6 +32,61 @@
   margin: var(--panel-title-row-margin, 0);
   border-bottom: var(--panel-title-rule, 1px solid var(--border-default));
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+}
+
+/*
+ * Collapsed: the antique frame folds into a ruled band. Every `--band-*` hook is unset in the
+ * plain look, so each declaration falls back to the expanded value and nothing changes there.
+ * `border-image` can't tween, so the frame swaps for the rules at once while the box's height,
+ * rule widths and title margins glide.
+ */
+.collapsed {
+  border-image: var(--band-frame-image, var(--frame-image, none));
+  border-width: var(--band-border-width, var(--frame-border, 1px));
+  border-style: var(--band-border-style, solid);
+  border-radius: var(--band-radius, var(--radius-xl));
+  min-height: var(--band-min-height, var(--framed-min-height, auto));
+  width: var(--band-width, var(--panel-width));
+}
+
+.collapsed .titleRow {
+  margin: var(--band-title-row-margin, var(--panel-title-row-margin, 0));
+}
+
+.collapsed .titleRow::before,
+.collapsed .titleRow::after {
+  display: var(--band-flank-display, var(--framed-flank-display, none));
+}
+
+.collapsed .titleButton {
+  flex: var(--band-title-flex, var(--panel-title-flex, 1));
+  justify-content: var(--band-title-justify, flex-start);
+  min-height: var(--band-title-height, var(--title-cartouche-height, auto));
+  border-width: var(--band-cartouche-border, var(--title-cartouche-border, 0));
+  border-image: var(--band-cartouche-image, var(--title-cartouche-image, none));
+  padding: var(--band-title-padding, var(--panel-title-padding, var(--space-5) var(--space-7)));
+}
+
+.collapsed .titleButton .chevron {
+  font-size: var(--band-chevron-size, var(--font-size-xxs));
+  color: var(--band-chevron-color, var(--color-fg-ghost));
+  order: var(--band-chevron-order, 0);
+  margin: var(--band-chevron-margin, 0 var(--space-3) 0 0);
+}
+
+@media (hover: hover) {
+  .collapsed .titleButton:hover {
+    background: var(--band-hover-ground, transparent);
+  }
+
+  .collapsed .titleButton:hover .title,
+  .collapsed .titleButton:hover .chevron {
+    color: var(--band-hover-color, var(--panel-title-color, var(--color-fg-dim)));
+  }
+}
+
+.collapsed .headerExtra {
+  display: var(--band-extra-display, flex);
 }
 
 /* A real <button>: focus, Enter/Space and `aria-expanded` come free. */
@@ -125,6 +181,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .panel,
   .chevron,
   .bodyWrapper,
   .body {
