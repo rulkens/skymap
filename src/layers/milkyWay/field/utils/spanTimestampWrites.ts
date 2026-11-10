@@ -14,6 +14,7 @@ export function spanTimestampWrites(
   plan: FieldFramePlan,
 ): (id: FieldTargetId) => GPURenderPassTimestampWrites | undefined {
   const last = plan.encodes.at(-1);
+  // null: not asked yet; undefined: claimed, but timing is off; else the slot's writes.
   let claimed: GPUComputePassTimestampWrites | undefined | null = null;
   return (id) => {
     const first = claimed === null;

@@ -1,8 +1,8 @@
 /**
  * The milkyWay Layer's whole runtime: the generated point cloud, its
  * two-pass renderer, the pick impostor, the additive upsample (the aggregate
- * offscreen's and the field targets'),
- * the v2 field's host slot and the disk's pick code. Non-null throughout —
+ * offscreen's and the field targets'), the v2 field's host slot and the
+ * disk's pick code. Non-null throughout —
  * `create` builds them all before returning, which is what lets the passes
  * read them without a null check; the slot itself holds its host lazily.
  */

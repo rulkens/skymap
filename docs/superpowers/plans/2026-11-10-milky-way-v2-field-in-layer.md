@@ -994,7 +994,7 @@ export function deriveFieldView(frame: FrameView, toGalaxy: Mat4): FieldView;
 - `eye` = `toGalaxy · frame.drawCamPos`, as a point.
 - The world basis is rebuilt from `frame.cam` exactly as `computeViewProj.ts:100-110` does:
   `orbitForwardOf`, then `imagePlaneBasis(fwd, cam.roll ?? 0, frameUp(cam.upBasis, …))`, with
-  `right`, `up` = `basis.rolledUp` and `fwd`. Then `toGalaxy` is applied to each as a direction
+  `right`, `up` = `basis.up` and `fwd`. Then `toGalaxy` is applied to each as a direction
   (w = 0) and the result normalised.
 - `frustum` is `frame.frustum`, the same object: a rotation plus uniform scale keeps angles.
 - The app's `toGalaxy` is the memoised `inverse(milkyWayModelCached())` that `milkyWayCamPosModel`

@@ -1,8 +1,8 @@
 /**
  * create — the five handles, in construction order: the pick impostor, the
  * generated cloud, its two-pass renderer, the additive upsample (shared by
- * the aggregate offscreen and the field targets),
- * and the v2 field's slot, which builds no host until the field part is on.
+ * the aggregate offscreen and the field targets), and the v2 field's slot,
+ * which builds no host until the field part is on.
  */
 
 import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
