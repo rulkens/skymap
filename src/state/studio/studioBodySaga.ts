@@ -12,10 +12,16 @@ import type { ClipId } from '../../@types/animation/ClipId';
 export function* studioBodySaga(id: ClipId): Generator {
   yield* race({
     run: call(function* () {
-      const { studioSessionSaga } = yield* call(
-        () => import('../../../packages/studio/src/studioEntry'),
-      );
-      yield* call(studioSessionSaga, id);
+      // A chunk that will not load (offline, a stale deploy) must end this body, not throw into
+      // `watchTakeoverSaga`: its death would stop every app saga.
+      try {
+        const { studioSessionSaga } = yield* call(
+          () => import('../../../packages/studio/src/studioEntry'),
+        );
+        yield* call(studioSessionSaga, id);
+      } catch (error) {
+        console.error('studio: could not load the studio chunk', error);
+      }
     }),
     exit: take(exitTakeover),
   });

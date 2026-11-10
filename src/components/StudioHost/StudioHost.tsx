@@ -4,7 +4,10 @@ import { selectTakeoverSource } from '../../state/takeover/selectors';
 
 // The studio is its own chunk (packages/studio README, A2): fetched only when a `#studio=` link opens it.
 const StudioDock = lazy(() =>
-  import('../../../packages/studio/src/studioEntry').then((m) => ({ default: m.StudioDock })),
+  import('../../../packages/studio/src/studioEntry')
+    .then((m) => ({ default: m.StudioDock }))
+    // A failed fetch (the saga ends the takeover too) must not throw into React and unmount the app.
+    .catch(() => ({ default: () => null })),
 );
 
 /** Mounts the clip studio's dock while the `#studio=<clipId>` takeover is up. */
