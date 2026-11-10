@@ -16,6 +16,9 @@ export function framedLensRad(
 ): number {
   const wanted = isStar
     ? Math.max(SKY_STAR_LENS_MIN_RAD, currentLensRad / 2)
-    : Math.max(SKY_SEARCH_LENS_MIN_RAD, SKY_FRAMED_DIAMETERS * 2 * Math.atan(radiusMpc / distanceMpc));
+    : Math.max(
+        SKY_SEARCH_LENS_MIN_RAD,
+        SKY_FRAMED_DIAMETERS * 2 * Math.atan(radiusMpc / distanceMpc),
+      );
   return Math.min(currentLensRad, wanted);
 }
