@@ -11,11 +11,11 @@ describe('rowWhere', () => {
   );
   const row = (id: string) => rows.find((r) => r.id === id)!;
 
-  it('names the parent block and the position among its siblings', () => {
-    expect(rowWhere(rows, row('e:0.1'))).toBe('Sequence · 2/2');
+  it('names the parent block', () => {
+    expect(rowWhere(rows, row('e:0.1'))).toBe('Sequence');
   });
 
-  it('gives a top-level step no position', () => {
+  it('names a top-level step Top level', () => {
     expect(rowWhere(rows, row('e:1'))).toBe('Top level');
   });
 

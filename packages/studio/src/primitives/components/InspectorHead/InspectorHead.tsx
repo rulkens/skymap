@@ -4,7 +4,7 @@ import s from './InspectorHead.module.css';
 
 type Props = {
   readonly glyph?: GlyphId;
-  /** Where the row sits (path, index). */
+  /** Where the row sits: its block, Start, or Clip. */
   readonly where: string;
   readonly range?: string;
   /** Names the row and its value once; the grid below does not repeat it. */
