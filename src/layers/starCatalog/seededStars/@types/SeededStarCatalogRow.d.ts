@@ -1,5 +1,5 @@
-import type { SeededStarCatalogId } from './SeededStarCatalogId';
-import type { StarBody } from '../../scene/StarBody';
+import type { SeededStarCatalogId } from '../../../../@types/data/starCatalog/SeededStarCatalogId';
+import type { StarBody } from '../../../../@types/scene/StarBody';
 
 /** One seeded catalog's `SEEDED_STAR_CATALOGS_BY_SOURCE` row — its own seed
  *  table id alongside the stars, keyed by source in the map itself. */

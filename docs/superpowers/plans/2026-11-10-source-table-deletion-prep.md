@@ -180,16 +180,16 @@ export type AliasIndexEntry = {
   core: `seededStarCatalogs.ts` is not part of this move, so `SeededStarCatalogId` keeps a core importer and
   its `CORE_ALLOWED` row.
 
-- [ ] **Step 1: Move both files in one manifest**, `--dry` first, then applied.
-- [ ] **Step 2: Cut the composition read.** The moved file builds its map from `SOURCE_ENTRIES`
+- [x] **Step 1: Move both files in one manifest**, `--dry` first, then applied.
+- [x] **Step 2: Cut the composition read.** The moved file builds its map from `SOURCE_ENTRIES`
       (`src/data/sourceEntries.ts`, which reads `APP_SOURCE_REGISTRY`); build it from the Layer's own
       `STAR_CATALOG_SOURCE_ROWS` (`src/layers/starCatalog/sources/starCatalogSourceRows.ts`) instead, same
       filter (`binBaseName === null`).
-- [ ] **Step 3: Delete the `CORE_ALLOWED` row** and update the ledger row at `src/compositions/README.md:33`
+- [x] **Step 3: Delete the `CORE_ALLOWED` row** and update the ledger row at `src/compositions/README.md:33`
       (the `every ALLOWED file is a row of the composition ledger` test checks the two agree).
-- [ ] **Step 4: Verify.** `npm run typecheck` (it covers the website), then
+- [x] **Step 4: Verify.** `npm run typecheck` (it covers the website), then
       `npx vitest run tests/conventions tests/layers/starCatalog` → green. No new test: a move.
-- [ ] **Step 5: Commit** — "SEEDED_STAR_CATALOGS_BY_SOURCE moves into starCatalog".
+- [x] **Step 5: Commit** — "SEEDED_STAR_CATALOGS_BY_SOURCE moves into starCatalog".
 
 ---
 
