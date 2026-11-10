@@ -1,16 +1,12 @@
-# cloud-bake-rs — phase-2 VIIRS cloud bake (feasibility spike)
+# cloud-bake-rs — daily global cloud map
 
-Native Rust port of the live-cloud candidate bake that produced
-`public/cloud-candidates/viirs-seamless.webp`: NOAA-20 VIIRS granule orbits and the two GIBS daily
-mosaics joined into one composite with min-cut seams and multiband blends, the gaps filled from
-geostationary IR matched to the time of the bordering swath, written as an 8192x4096 lossless RGBA
-WebP whose alpha is cloud opacity.
-
-The executable spec is the Python pipeline in the live-cloud session scratchpad
-(`scripts/seam_viirs_p2.py` run with `P2_FLOW=0`, plus `seam_viirs.py`, `geofill.py`, `geofetch.py`,
-`orbit.py`, `fetch_granules.py` and `bake.py`'s `write()` / `match_baseline()` / `ice_sheets()`).
-Motion flow (`flowmorph.py`) is not ported, by ruling. Nothing here is wired into npm scripts or a
-workspace; it is a spike for a Cloudflare Container run.
+Bakes one day's cloud opacity map for the whole Earth. NOAA-20 VIIRS granule orbits and the GIBS daily
+mosaics are joined into one composite with min-cut seams and multiband blends; the gaps are filled from
+geostationary infrared (GOES-East/West, Himawari, Meteosat MTG and IODC) matched to the time of the
+bordering swath. The result is an 8192x4096 equirect lossy WebP (quality 80, ~6 MB) whose grey value is
+cloud opacity, with no alpha: the same shape as the static `cloud_combined_8192.tif`. Any UTC day can be
+baked unattended; a day that fails a check exits non-zero with nothing written. Design:
+[`docs/superpowers/specs/2026-11-10-cloud-bake-production-design.md`](../../docs/superpowers/specs/2026-11-10-cloud-bake-production-design.md).
 
 ## Prerequisites
 
@@ -21,44 +17,96 @@ libjpeg-turbo's SIMD decoder; without it the build falls back to plain C.
 ## Usage
 
 ```bash
-cargo run --release -- --bake <scratchpad>/bake --textures <repo>/data/raw/textures \
-  --out ../../public/cloud-candidates/viirs-seamless-rust.webp [flags]
+npm run fetch-cloud-inputs -- --confirm   # once: the twelve Blue Marble months, ~360 MB
+npm run bake-clouds -- --out cloud.webp   # yesterday (UTC); add --date 2026-11-09 and/or --offline
 ```
 
-| flag | meaning |
-| --- | --- |
-| `--bake <dir>` | the Python cache layout: `granules/` (`hi_meta.json`, `hi/`, `orbit.json`), `viirs/` (daily mosaics), `geo_p2/` (`calib.json`, `frames/`); the colour map is read from `<dir>/../gibs/colormaps/ir.xml` |
-| `--textures <dir>` | `cloud_combined_8192.tif` (baseline) and `world.topo.bathy.200412.3x21600x10800.jpg` (Blue Marble, for the ice mask) |
-| `--out <file>` | the WebP to write |
-| `--fetch` | fetch whatever is missing (granule footprints + granules, both mosaics, every geostationary frame the fill plans), concurrently: 6 GIBS and 4 EUMETView connections, as the Python. Without it a cache miss is fatal |
-| `--no-geofill --geo-ir <geo-ir.webp>` | fill the gaps from the single 12:00Z `geo-ir.webp` instead (the Python's `P2_GEOFILL=0`) |
-| `--threads <n>` | rayon pool size (default: all cores, or `RAYON_NUM_THREADS`) |
-| `--webp-quality <q>` / `--webp-method <m>` | libwebp lossless effort, default 25 / 4 (Pillow's 80 is ~10 s slower for 2.6% fewer bytes) |
-| `--compare <ref.webp>` | print mean / p99 / max absolute alpha difference against a reference |
-| `--dump <dir>` | write the composite stage (`op.f32`, `cv.u8`, `labels.i8`) for stage-wise parity checks |
-| `--webp-image-crate <file>` | also encode with the pure-Rust `image` encoder, for the size/speed comparison |
+`tools/clouds/bakeClouds.ts` fills the path flags from the raw-data registry (`textures.earthClouds`, the
+`textures.nasaBmngMonthMM` row for the date's month, `clouds.cache`) and runs
+`cargo run --release -- …`. It exits with the binary's code, or 2 if the month's Blue Marble file is
+missing. The binary knows no repo layout; run it directly with every path as a flag:
 
-`orbit.json` (the fitted NOAA-20 node), `calib.json` (the frozen 12:00Z MTG/IODC LUTs and quantile map)
-and `ir.xml` (the GIBS IR colour map) are static inputs, as they are for the Python; everything else is
-fetched by `--fetch`. The date (2026-11-06) is fixed, as in the Python.
+| flag                  | meaning                                                                                               |
+| --------------------- | ----------------------------------------------------------------------------------------------------- |
+| `--date YYYY-MM-DD`   | the UTC day to bake; default yesterday (UTC), the latest complete day. A bad date exits 2             |
+| `--baseline <tif>`    | required: `cloud_combined_8192.tif`, the static map the bake is quantile-matched to and falls back on |
+| `--blue-marble <jpg>` | required: the 21600x10800 Blue Marble 2004 month matching the date; the ice-sheet mask is cut from it |
+| `--cache <dir>`       | required: download cache, see below                                                                   |
+| `--out <file.webp>`   | required: the WebP to write, via `<file>.part` and a rename                                           |
+| `--offline`           | cache only: a miss counts as missing data and nothing is fetched                                      |
+
+Threads: all cores, or `RAYON_NUM_THREADS`.
+
+## Exit codes
+
+| code | meaning                                                                                                | scheduler                      |
+| ---- | ------------------------------------------------------------------------------------------------------ | ------------------------------ |
+| 0    | written; warnings possible                                                                             | none                           |
+| 1    | internal error (panic)                                                                                 | page a human                   |
+| 2    | usage or config: bad flag, bad date, unreadable input or asset                                         | page a human                   |
+| 3    | data: coverage below `MIN_COVERAGE` (0.690), NOAA-20 mosaic missing, orbit unfit, no calibration probe | retry later                    |
+| 4    | calibration drift above `MAX_CAL_DRIFT_K` (10.3 K)                                                     | page a human: refit the tables |
+
+Both thresholds live in `src/verdict.rs` with the measurements behind them (coverage measured 0.768 on
+2026-11-06 and 2026-11-09; the inter-satellite floor is 4 to 5 K). A missing or all-black frame from any
+source other than the `required` NOAA-20 mosaic (`src/sources_table.rs`) is skipped with a warning.
+
+## Summary line
+
+stdout carries exactly one JSON line at the end (on exit 0, 3 and 4); logs go to stderr:
+
+```json
+{
+  "date": "2026-11-09",
+  "exit": 0,
+  "coverage": 0.767,
+  "orbit": { "tn": 89.0, "lon_n": 174.25, "ltan": 13.1, "median_dt_min": 2.0 },
+  "calibration": { "mtg_goes_e_k": 4.77, "mtg_iodc_k": 4.4 },
+  "skipped": { "missing": 0, "broken": 0 },
+  "fetched": { "requests": 0, "mb": 0.0, "cached": 394 },
+  "seconds": 25.7,
+  "out": "cloud.webp"
+}
+```
+
+`coverage`, `orbit` and `calibration` are `null` when the run stopped before computing them.
+`orbit` is fitted per day from that day's granule footprints.
+
+## Cache
+
+`<cache>/<YYYY-MM-DD>/{granules,mosaics,geo,probe}/`: one directory per day, so evicting a day is
+deleting its directory. Files are written to `.part` and renamed, so a killed run leaves no
+valid-looking file. A cold day downloads about 90 MB (6 GIBS and 4 EUMETView connections), roughly
+2 minutes. `--offline` on a filled day reproduces the output byte for byte.
+Registry row `clouds.cache`; upstreams and licences in
+[`data/raw/clouds/README.md`](../../data/raw/clouds/README.md).
+
+## Assets
+
+`assets/` is compiled into the binary, so a bake cannot run against other tables: the GIBS IR colour map
+and the frozen MTG/IODC grey-to-temperature tables. Provenance and refit notes in
+[`assets/README.md`](assets/README.md).
 
 ## Modules
 
 One module per stage, plus the numeric primitives the stages share.
 
-| module | Python | what |
-| --- | --- | --- |
-| `fetch` | `fetch_granules.py`, `geofetch.py` | cached WMS pulls, same file layout |
-| `sources` | `load_orbits`, `load_mosaics`, `fill_specks`, `hybridise` | the 13 sources; orbits held as row bands |
-| `seam` | `fit_gain`, `nadirness`, `edge_weights`, `cut` | the per-join seam decision at 2048x1024 |
-| `maxflow` | PyMaxflow | Boykov–Kolmogorov on the wrapped grid |
-| `blend` | `multiband` | Laplacian-pyramid blend, windowed |
-| `composite` | `composite`, `fill_holes`, `match_baseline` | the join loop and its tail |
-| `orbit` | `orbit.py` | pass times |
-| `geodecode` | `gibs_T`, `sat_layer`, `bake.py ir()` | IR frame -> opacity layer |
-| `geofill` | `geofill.py` | time-matched gap fill |
-| `imageio` | PIL | decoders, Pillow's BOX resize, the WebP writer |
-| `edt`, `label`, `filters`, `quantile`, `grid` | scipy / numpy | distance transform, components, filters, percentiles |
+| module                                        | what                                                            |
+| --------------------------------------------- | --------------------------------------------------------------- |
+| `cli`, `date`                                 | the command line and the UTC date as values; WMS time strings   |
+| `sources_table`                               | every WMS layer in one table, with the `required` column        |
+| `fetch`                                       | cached, concurrent WMS pulls into the day cache                 |
+| `probe`, `verdict`, `summary`                 | calibration probe, the exit-code decision, the stdout JSON line |
+| `sources`                                     | the 13 sources; orbits held as row bands                        |
+| `seam`                                        | the per-join seam decision at 2048x1024                         |
+| `maxflow`                                     | Boykov–Kolmogorov on the wrapped grid                           |
+| `blend`                                       | Laplacian-pyramid blend, windowed                               |
+| `composite`                                   | the join loop and its tail                                      |
+| `orbit`                                       | pass times                                                      |
+| `geodecode`                                   | IR frame -> opacity layer                                       |
+| `geofill`                                     | time-matched gap fill                                           |
+| `imageio`                                     | decoders, Pillow's BOX resize, the WebP writer                  |
+| `edt`, `label`, `filters`, `quantile`, `grid` | distance transform, components, filters, percentiles            |
 
 Two departures from a line-by-line port, both exact:
 
@@ -68,28 +116,10 @@ Two departures from a line-by-line port, both exact:
 - **Max-flow labels.** The label is "can reach the sink in the residual graph", the unique minimal sink
   side of the min cut, so it does not depend on the max-flow algorithm or its visiting order.
 
-## Parity
+## Deliberate Python behaviours
 
-Against the Python on the same cached inputs the alpha channel differs by at most 1/255 (rounding), in
-both modes:
-
-| run | reference | mean abs | p99 | max |
-| --- | --- | --- | --- | --- |
-| `--no-geofill` | `bake/viirs-p2-noflow.webp` (the shipped `viirs-seamless.webp`) | 0.099/255 | 1 | 1 |
-| default (geofill) | Python geofill on the same no-flow composite | 0.099/255 | 1 | 1 |
-
-What it took, for whoever touches this next:
-
-- JPEGs decode through libjpeg-turbo, as in Pillow. The pure-Rust decoder differs by 1 LSB here and
-  there, which moves the mosaics' `max(RGB) < 12` no-data test, the speck masks, the enclosed-hole set
-  and a few cut paths (~2000 px off by more than 32/255).
-- Candidate pass times are sampled as numpy's `arange` fills them (`start + i * ((start + step) -
-  start)`): they land on 10-minute slot boundaries, and the last ulp picks which frame is fetched.
-- scipy quirks reproduced on purpose: `distance_transform_edt` of an all-true mask measures from
-  (-1, 0) (hybridise hits it on orbits with no overlap); `binary_closing` erodes at the frame border.
-
-Two Python behaviours that look like bugs are kept on purpose; "fixing" them was tried 2026-11-07 and
-made the crops worse:
+The pipeline is a port of a Python prototype. Two of its behaviours look like bugs and are kept on purpose;
+"fixing" them was tried 2026-11-07 and made the crops worse:
 
 - the seam cut's DELTA term is a constant per edge (a real cloud-edge cost moved cuts into worse places);
 - the coarsest pyramid band takes the side the seam rejected, so each side keeps the low frequencies of the
@@ -97,36 +127,20 @@ made the crops worse:
 
 ## Performance
 
-Warm cache, Apple M-series laptop that other jobs were also loading (wall seconds; the Python took 209 s
-with flow, ~195 s without):
-
-| stage | 1 thread | 2 threads | 4 threads |
-| --- | --- | --- | --- |
-| load (ice mask, baseline, granules, mosaics, hybridise) | 13.8 | 8.7 | 5.9 |
-| composite (13 joins: cut + blend + rest, holes, match) | 12.9 | 8.0 | 5.5 |
-| feather + geofill (times, correlation pick, slots, decode) | 7.6 | 4.5 | 2.8 |
-| WebP write (libwebp, single-threaded) | 15.0 | 12.2 | 14.0 |
-| **total** | **49.3** | **33.4** | **28.2** |
-
-The WebP write is the floor beyond 2 threads. For lossless, libwebp's `quality` is the effort knob
-(Pillow's libwebp 1.6 on this image): q80 19.0 MB / 17.5 s CPU, q50 19.2 MB / 8.1 s, q25 19.5 MB /
-5.1 s, q0 m0 21.9 MB / 1.3 s. The pure-Rust `image` encoder writes 37.5 MB.
-
-Peak live Rust heap is 2.55 GB at any thread count; libwebp adds ~0.8 GB during the write (when the
-heap is already lower) and the Blue Marble decode ~0.7 GB at the start. macOS reports ~5 GB max RSS
-because its allocator keeps freed pages; on Linux each full-grid buffer is its own mmap, so expect
-~3 GB.
-
-A cold run (`--fetch` into an empty cache) downloads 91.7 MB in 778 requests: ~125 s of network
-(granules 39 s, mosaics 20 s, geostationary frames 66 s, EUMETView being the slow host), on top of the
-compute above.
+Warm cache (`--offline`), Apple M-series laptop, 2026-11-10: total 73.9 s on 1 thread, 31.7 s on 4, **25.7 s**
+on all cores (the `seconds` field of the summary line). Output is identical at every thread count. The
+WebP encode (libwebp, single-threaded, quality 80 method 4) is ~9 s of that and the floor beyond a few
+threads. Peak RSS is ~5.3 GB on macOS, whose allocator keeps freed pages; on Linux expect ~3 GB.
+The stage-by-stage table from the spike, and the Python's 195 to 209 s, are no longer reproducible: the
+per-stage timer was removed with the other spike flags.
 
 ## Tests
 
 ```bash
-cargo test --release
+cargo test --release --manifest-path tools/cloud-bake-rs/Cargo.toml
 ```
 
-Max-flow against brute-force min cuts (value and minimal sink side, with the date-line wrap), the EDT
-and its nearest-feature indices against brute force, connected components and hole filling, numpy's
-percentile and interp, and Pillow's two-pass BOX rounding.
+CI runs the same command (job `cloud-bake-rs`). Max-flow against brute-force min cuts, the EDT and its
+indices against brute force, components and hole filling, numpy's percentile and interp, Pillow's BOX
+rounding, the CLI parser, date arithmetic and WMS time rollover, the orbit fit on synthetic footprints,
+the coverage and calibration verdicts, the summary keys and the grey WebP round trip.

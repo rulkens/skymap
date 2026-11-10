@@ -104,6 +104,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Rendering
 
+- [ ] **Cloud bake: fixed transfer curve** `needs-design` — the per-day quantile match forces the same total cloud amount every day. → [details](backlog/2026-11-10-cloud-fixed-transfer-curve.md)
 - [ ] **Earth's ground draws grey-white at night up close** `needs-design` — diagnosed: the surface tiles' Black Marble emissive, painted flat at street level from ~8.6° of Sun altitude down. → [details](backlog/2026-11-06-earth-night-ground-haze.md)
 - [ ] **The swap chain gets linear values with no sRGB encode** `needs-design` — `bgra8unorm` plus no OETF crushes mid-tones ~3×; every look is tuned to it, so fixing it needs its own spec and a re-tune. → [details](backlog/2026-11-06-swap-chain-no-srgb-encode.md)
 - [ ] **Dark stair-steps off EOX coastlines** `needs-debug` — blocky rims in the water around regions, strongest at Tanegashima; cause not diagnosed. → [details](backlog/2026-11-05-eox-coast-stair-steps.md)
@@ -274,6 +275,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Docs & process
 
+- [ ] **Rust tools: registry paths + CI for stars-rs** `ready` — stars-rs joins `data/raw` paths itself and no CI job runs its tests; follow `cloud-bake-rs`. → [details](backlog/2026-11-10-rust-tools-registry-and-ci.md)
 - [ ] **Commercial build that cannot ship non-commercial data** `needs-design` — Gaia, Hipparcos, DSS2, EOX 2025 and others forbid commercial use or need permission; a build flag leaves them out, and a guard keyed on `ATTRIBUTIONS.md` markers fails any build that would ship them. → [details](backlog/2026-10-12-commercial-build.md)
 
 - [ ] **Website docs pages into folders with structure files** `ready` — the 27 docs pages get a folder and a `.structure.yaml` each like the landing pages (job moves out of front matter), and `components/docs/` is sub-grouped by kind.

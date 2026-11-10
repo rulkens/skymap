@@ -240,17 +240,17 @@ export function bmngMonthKey(month: 1 | 2 | … | 12): RawDataKey; // 'textures.
 **Files:** `tools/cloud-bake-rs/README.md`, `docs/DATA.md`, `docs/BACKLOG.md`, new
 `docs/backlog/2026-11-10-cloud-fixed-transfer-curve.md`, new `docs/backlog/2026-11-10-rust-tools-registry-and-ci.md`
 
-- [ ] Crate README rewritten for the production tool: purpose, `npm run fetch-cloud-inputs` +
+- [x] Crate README rewritten for the production tool: purpose, `npm run fetch-cloud-inputs` +
       `npm run bake-clouds`, the CLI table, exit codes, the summary line, cache layout, assets, the two
       deliberate Python behaviours (keep the existing paragraph), performance (keep the measured table,
       re-measure the total once), tests. Drop every reference to the scratchpad Python as "the spec" and
       to parity flags.
-- [ ] `DATA.md`: a "Live clouds" subsection under "Solar system & Earth imagery" (3–5 sentences, link
+- [x] `DATA.md`: a "Live clouds" subsection under "Solar system & Earth imagery" (3–5 sentences, link
       to the crate README and `data/raw/clouds/README.md`) and a refresh-orders row
       (`fetch-cloud-inputs` → `bake-clouds`, no R2 sync yet).
-- [ ] Backlog: "Cloud bake: fixed transfer curve" (`needs-design`: per-day quantile match forces the
+- [x] Backlog: "Cloud bake: fixed transfer curve" (`needs-design`: per-day quantile match forces the
       same total cloud amount every day) and "Rust tools: registry paths + CI for stars-rs" (`ready`).
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 10: `--date` defaults to yesterday (UTC) in the binary
 
