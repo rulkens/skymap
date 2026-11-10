@@ -90,9 +90,31 @@ export function createEngine(
   // "no frame has run yet" sentinel that seeds the first interval to 0.
   const frameStats = { fps: 0, cpuMs: 0, lastStartMs: 0 };
 
-  // The engine's only read of the root (enforced by `engineRootRead.test.ts`), so a
-  // playing clip's scene overlay reaches every engine reader through one seam.
-  const readRoot = (): RootState => cb.store.getState();
+  // Before `state`: the root read goes through it. Its hooks reach `state` and `selection`
+  // lazily, from `tick`, never at construction.
+  const clipPlayer = createClipPlayer({
+    store: cb.store,
+    getCameraRuntime: () => state.cameraRuntime,
+    // At the last drawn sim instant, never a wall-clock read (the recorder steps the clock).
+    extractFocusRow: (ref) => {
+      const row = selection.extractRow(ref, state.cameraRuntime.outputs.simDays);
+      return { row, focusId: (ref && row && selection.focusIdOf(ref)) || null };
+    },
+    syncVisibility: (settings, overMs) =>
+      syncVisibilityTargets(
+        {
+          settings,
+          subsystems: state.subsystems,
+          visibilityEntries: state.visibilityEntries,
+          visibilityGates: state.visibilityGates,
+        },
+        overMs,
+      ),
+  });
+
+  // The engine's only read of the root (enforced by `engineRootRead.test.ts`): intent with a
+  // playing clip's scene folded in, so the overlay reaches every engine reader at once.
+  const readRoot = (): RootState => clipPlayer.view(cb.store.getState());
 
   // Seeded with placeholders; wireInput re-seeds once the initial OrbitCamera
   // exists. The register seeds from the camera slice's initial `base` — the
@@ -201,25 +223,7 @@ export function createEngine(
         requestRender: () => state.subsystems.scheduler.requestRender(),
       }),
 
-      clipPlayer: createClipPlayer({
-        store: cb.store,
-        getCameraRuntime: () => state.cameraRuntime,
-        // At the last drawn sim instant, never a wall-clock read (the recorder steps the clock).
-        extractFocusRow: (ref) => {
-          const row = selection.extractRow(ref, state.cameraRuntime.outputs.simDays);
-          return { row, focusId: (ref && row && selection.focusIdOf(ref)) || null };
-        },
-        syncVisibility: (settings, overMs) =>
-          syncVisibilityTargets(
-            {
-              settings,
-              subsystems: state.subsystems,
-              visibilityEntries: state.visibilityEntries,
-              visibilityGates: state.visibilityGates,
-            },
-            overMs,
-          ),
-      }),
+      clipPlayer,
 
       clipPathInspector: createClipPathInspector(),
 

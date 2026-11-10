@@ -363,12 +363,18 @@ Tests that imported `applySceneEffect` to replay cues switch to `sceneActionsOf`
 the player; their assertions about what a beat leaves behind (Virgo focus into beat 3, the pole never reverted at a
 beat boundary) must still hold under `'keep'`.
 
-- [ ] Test (integration, tour) `a beat's enter-clip scene holds through its dwell` (enter clip shows `flow`; during
+As built: the player is constructed before `state` in `engine.ts` (the root read goes through it, and the camera
+seed reads the root before `state` exists); the camera sim harness reads its root through the player too. Both
+tests live in `tests/state/tour/clipSceneEnd.integration.test.ts` and drive two `playClip` calls with `keep`
+the way the tour does, not `visitBeatSaga` (its focus resolution needs real catalogs); the test-file migrations
+this task listed landed with Task 2.2.
+
+- [x] Test (integration, tour) `a beat's enter-clip scene holds through its dwell` (enter clip shows `flow`; during
       the dwell the switch is on in the store and the fade target is 1).
-- [ ] Test (integration) `a standalone clip's scene reverts at its end` (the `cosmicFlows` shape: hidden web layers
+- [x] Test (integration) `a standalone clip's scene reverts at its end` (the `cosmicFlows` shape: hidden web layers
       come back, `flow.enabled` back to the pre-clip value, the store never written mid-clip).
-- [ ] `npx vitest run tests/state tests/data/animation tests/services/engine`.
-- [ ] Commit: "The engine reads a playing clip's scene through its root".
+- [x] `npx vitest run tests/state tests/data/animation tests/services/engine`.
+- [x] Commit: "The engine reads a playing clip's scene through its root".
 
 ---
 
