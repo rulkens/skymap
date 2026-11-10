@@ -555,8 +555,8 @@ const ARM_RIDGE_FIXTURE_ARM_B: GalaxyFieldArmRecord = {
 };
 
 const ARM_RIDGE_FIXTURE_LOG_R = [-0.5, 0.4, 0.9, 1.6];
-// Fix round 1: armExcessSurfaceShape's own two args (not geometry fields —
-// see armRidgeFrameAt.ts's own signature) and armColor's per-sample inputs,
+// armExcessSurfaceShape's own two args (not geometry fields — see its
+// signature in `arms/utils/armExcessSurfaceShape.ts`) and armColor's inputs,
 // mirroring armRidgeDebugSample.wesl's H_LIGHT/EXCESS_SCALE_RATIO/
 // YOUNG_FRACTION/RADIAL_T.
 const ARM_RIDGE_FIXTURE_H_LIGHT = 2.5;
@@ -1327,8 +1327,8 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
         console.error(`  readback:placeArmSpurCloud count matches budget math (${first.count})`);
 
         // (2.5) Task 15's flux-weight-sum renorm — ringReduce.wesl's
-        // csArmSpurFluxWeightSum output must match a CPU recomputation of
-        // deriveArmSpurCloudCount.ts:199-203's own sum (a bare '1/weightSum',
+        // csArmSpurFluxWeightSum output must match a CPU sum of the read-back
+        // flux weights (a bare '1/weightSum',
         // NOT 'spurFlux/weightSum' — placeArmSpurCloud.wesl already bakes
         // spurFlux into 'flux' itself, that file's own doc). This reads
         // `spurCloudRenormBuffer` directly (`renormScale`, the SAME buffer
@@ -1622,8 +1622,8 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
       // sprite — no survival filter on this tier); (4) flux parity —
       // independent reconstruction of `cloudFlux * fluxWeight_i`, extended
       // one step past `readback:placeArmSpurCloud`'s own derivation with the
-      // radial-tilt cancellation (`radialTilt`, deriveArmCloudCount.ts's own
-      // export) `deriveArmCloudCount.ts:220-231` divides back out.
+      // radial-tilt cancellation (`armClouds/utils/radialTilt.ts`) that
+      // `placeArmCloud.wesl`'s flux weight divides back out.
       name: 'readback:placeArmCloud',
       run: async (page) => {
         await settleFrames(page, SETTLE_FRAMES);
@@ -1702,8 +1702,8 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
         console.error(`  readback:placeArmCloud count matches budget math (${first.count})`);
 
         // (2.5) Task 15's flux-weight-sum renorm — ringReduce.wesl's
-        // csArmCloudFluxWeightSum output must match a CPU recomputation of
-        // deriveArmCloudCount.ts:232-235's own sum (a bare '1/weightSum', NOT
+        // csArmCloudFluxWeightSum output must match a CPU sum of the read-back
+        // flux weights (a bare '1/weightSum', NOT
         // 'cloudFlux/weightSum' — placeArmCloud.wesl already bakes cloudFlux
         // into 'flux' itself, that file's own doc). Reads
         // `armCloudRenormBuffer` directly, same "validates the kernel, not

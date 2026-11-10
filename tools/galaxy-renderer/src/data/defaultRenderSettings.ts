@@ -98,7 +98,8 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   // debug presentation of the ISM-map generator's output.
   ismMapViewIntensity: 0,
   // 0 at boot, same rationale — and the pass-chain gate: it only
-  // (re-)dispatches while this is above 0 (see createGalaxyModel.ts).
+  // (re-)dispatches while this is above 0 (the field host's
+  // `orientationViewWanted`).
   orientationViewIntensity: 0,
   // All four at 1: the composite is unchanged from before these knobs
   // existed until the user moves one — same "identity until touched"

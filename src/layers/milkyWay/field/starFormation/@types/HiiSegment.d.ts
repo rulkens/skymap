@@ -1,8 +1,7 @@
 /**
- * HiiSegment — one contiguous instance range of `model.hiiComps` (`first`/
- * `count` in RECORDS, not bytes): the `instanceCount`/`firstInstance` bounds
- * `createGalaxyFieldRenderer`'s encode pass hands to each `HII_TIERS` row's
- * own draw call, and what `buildHiiRegionsWithSegments` labels its tiers with.
+ * HiiSegment — one contiguous instance range of the renderer's `hiiComps`
+ * (`first`/`count` in RECORDS, not bytes): the `instanceCount`/`firstInstance`
+ * bounds `createGalaxyFieldRenderer`'s encode hands to each HII target's draw, and what `buildHiiRegionsWithSegments` labels its tiers with.
  */
 export type HiiSegment = {
   readonly label: string;

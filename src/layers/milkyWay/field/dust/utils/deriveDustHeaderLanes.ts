@@ -1,7 +1,7 @@
 /**
  * deriveDustHeaderLanes — the galaxy-dependent dust lanes of the field header,
  * as one pure function over the same inputs the dust RESERVATION is built
- * from. `drawFrame` reads the result every frame; it changes only when the
+ * from. The renderer's encode reads the result every frame; it changes only when the
  * dust params, the geometry or the `dust.enabled` pill do.
  */
 import type { GalaxyDustParams } from '../@types/GalaxyDustParams';
@@ -39,7 +39,7 @@ export function deriveDustHeaderLanes(
   // R comes from the disc shape the particle cloud's mass budget is anchored
   // to, not from the built mixture: the cloud's own components carry no
   // comparable radial sigma to max over. Computed even with dust off, because
-  // R sizes the slice geometry `drawFrame` packs regardless — degenerate slice
+  // R sizes the slice geometry each frame packs regardless — degenerate slice
   // edges are wrong header state, not a harmless no-op.
   let reachR = DUST_REACH_FLOOR;
   if (geometry) {

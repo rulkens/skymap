@@ -2,9 +2,9 @@
  * encodeSplatPass — one additive Gaussian-mixture splat (one instanced quad
  * per component, `fieldSplat/`'s field variant or `hiiSplat/`'s HII variants)
  * into its own reduced-resolution target — the smooth field, `hii:extras`,
- * and every `HII_TIERS` tier share this encoding, differing only in label,
+ * and every HII tier share this encoding, differing only in label,
  * timing slot, target, pipeline, bind group and instance range. `firstInstance`
- * lets a tier draw its own span of the SHARED `model.hiiComps.getBuffer()`
+ * lets a tier draw its own span of the SHARED `hiiComps.getBuffer()`
  * with no shader change — `@builtin(instance_index)` includes the offset.
  */
 import { beginClearPass } from '../../../../services/gpu/lib/beginClearPass';

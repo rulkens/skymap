@@ -19,7 +19,7 @@ export const DIG_SCALE_HEIGHT_PC = 300;
 export const DIG_FLUX_RATIO_MAX = 4;
 /**
  * Component-budget ceiling for the DIG veil, exported so a caller sizing a
- * fixed-capacity buffer (`createGalaxyModel.ts`'s `HII_MAX_COUNT +
+ * fixed-capacity buffer (the field renderer's `hiiComps`, `HII_MAX_COUNT +
  * DIG_MAX_COUNT`) has a worst case to reserve against: `dig.complexes` and
  * `dig.childrenPerComplex` are live-tunable, so their product needs a
  * ceiling the way `HII_MAX_COUNT`/`ARM_CLOUD_MAX_COUNT` ceiling their own

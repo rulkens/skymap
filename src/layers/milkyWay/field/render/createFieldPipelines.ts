@@ -70,7 +70,7 @@ type FieldPipelines = {
   readonly hiiExtrasPipe: GPURenderPipeline;
   readonly dustMapPipe: GPURenderPipeline;
   readonly dustPresentPipe: GPURenderPipeline;
-  /** Which pipeline draws a given `HII_TIERS` row — see its own doc below. */
+  /** Which pipeline draws a given HII tier — see its own doc below. */
   hiiTierPipeline(kind: HiiTier): GPURenderPipeline;
 
   /**
@@ -155,13 +155,13 @@ export function createFieldPipelines(deps: FieldPipelineDeps): FieldPipelines {
     },
     primitive: { topology: 'triangle-list' },
   });
-  // HII_TIERS' 'young' tier — youngFragment.wesl keeps the starGrainTerm
+  // The 'young' tier — youngFragment.wesl keeps the starGrainTerm
   // branch only, {0,1,2,3,6,7,8,10,11,12,13}: no 4/5 (dustNoiseTex/Smp) —
   // starGrain.wesl's own warp tap rides warpNoiseTex (12/13), not dustNoiseTex.
   const hiiYoungPipe = device.createRenderPipeline(
     hiiPipeDescriptor(hiiYoungFsMod, 'galaxy:hiiYoungPipe'),
   );
-  // HII_TIERS' 'shells' AND 'dig' both route here (hiiTierPipeline below) —
+  // The 'shells' AND 'dig' tiers both route here (hiiTierPipeline below) —
   // erosionFragment.wesl serves both with its ridged-noise-only term,
   // {0,1,2,4,5,6}: no star-grain, warp-noise or ISM-cartesian bindings.
   const hiiErosionPipe = device.createRenderPipeline(

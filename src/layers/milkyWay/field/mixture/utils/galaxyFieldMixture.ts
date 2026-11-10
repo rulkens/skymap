@@ -844,7 +844,7 @@ const ARM_DISC_DEBIT_CLAMP_FRACTION = 0.9;
  * ridge chain's own budget shrinks to leave room rather than the three
  * tiers racing for the same slots. HII regions (`buildHiiShellsAndYoungWithSegments.ts`) don't
  * compete for this cap — they render into their own target off their own
- * buffer (`createGalaxyEngine.ts`'s `hiiTex`/`hiiCompsBuf`), so they never
+ * buffer (the field renderer's `hiiComps`), so they never
  * reserve any of it.
  */
 export function buildGalaxyFieldMixture(

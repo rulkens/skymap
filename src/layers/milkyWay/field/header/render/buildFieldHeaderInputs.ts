@@ -1,7 +1,7 @@
 /**
  * buildFieldHeaderInputs — the three `FieldHeaderInput` object literals one
  * frame needs (the primary field draw, the `hii:extras` draw, and every
- * `HII_TIERS` row), assembled from explicit inputs rather than an engine
+ * HII tier), assembled from explicit inputs rather than an engine
  * closure — pure arithmetic so a test can reach it without a device
  * (`packFieldHeaderUniforms` + `queue.writeBuffer` stay put). The three share
  * one `camera` and mostly diverge on which lanes carry REAL values versus
@@ -156,7 +156,7 @@ export function buildFieldHeaderInputs(deps: FieldHeaderInputsDeps): FieldHeader
     ismMapChannels,
   };
 
-  // Every `HII_TIERS` row's own header — identical to `hii` above (same
+  // Every HII tier's own header — identical to `hii` above (same
   // whole-tier `primaryCount`, so the dust-attenuation gate is correct for
   // whichever sub-range a given pass draws) EXCEPT `targetSizePx`: each tier
   // has its OWN reduced target, and that lane is what `counts2.w` feeds the

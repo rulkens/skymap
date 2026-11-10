@@ -17,7 +17,7 @@ export type IsmMapGenerator = {
   /** Debug-only staging buffer for `createIsmMapReadbacks.ts`'s `requestRingMeans` — see `IsmMapOutput`'s own doc. */
   readonly ringMeansReadbackBuffer: GPUBuffer;
   readonly mapSampler: GPUSampler;
-  /** The "seeding" debug view's radial envelope divisor — see `IsmMapOutput`'s own doc. Not tied to `rebuild()`: the readback landing (`createGalaxyModel.ts`) calls this directly once the CPU-side ring means are computed. */
+  /** The "seeding" debug view's radial envelope divisor — see `IsmMapOutput`'s own doc. Not tied to `rebuild()`: the tool's readback landing (`createGalaxyModel.ts`) calls this directly once the CPU-side ring means are computed. */
   writeRingMeans(means: Float32Array): void;
   /**
    * Rerun whichever generator `tuning.ismMap.generator` names over `geometry`,

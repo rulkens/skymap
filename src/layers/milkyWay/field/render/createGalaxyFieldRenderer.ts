@@ -403,7 +403,7 @@ export function createGalaxyFieldRenderer(
         });
       } else {
         // An HII target, a tier or the background extras' (which can't split
-        // into tiers — see `HiiTierSpec`), each at its own divisor: a shell is
+        // into tiers — see `hiiSplat/extrasFragment.wesl`), each at its own divisor: a shell is
         // small and bright enough that a coarser shared target collapses it
         // under a texel. The segment only gives the range; a stale plan clears
         // the target with an empty draw rather than leaving it uncleared.

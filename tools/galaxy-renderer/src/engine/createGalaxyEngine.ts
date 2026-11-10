@@ -634,7 +634,7 @@ export async function createGalaxyEngine(
     // persistent GPU texture, always non-null, whose CONTENT is only
     // meaningful once the `ismMap` stage row has run at least once (setParams).
     getIsmMapTexture: (): GPUTexture => debug.renderer.ismMapGenerator.texture,
-    // The CPU-side readback of the same output (`scheduleIsmMapReadback`):
+    // The CPU-side readback of the same output (`createIsmMapReadbacks`):
     // null until the first one lands. `placeDust.wesl` reads the GPU texture
     // directly, never this readback; it feeds the seeding debug view and
     // `youngStars.invMeanNorm`'s contrast normalisation instead.

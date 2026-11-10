@@ -35,7 +35,7 @@ export type GalaxyEngineHandle = {
   // and future consumers.
   getIsmMapTexture(): GPUTexture;
   // The same output read back to the CPU, once per generation — null until
-  // the first readback lands (`createGalaxyModel.ts`'s `scheduleIsmMapReadback`).
+  // the first readback lands (the field host's `createIsmMapReadbacks`).
   // Off the placement path since Task 10 — `placeDust.wesl` reads the GPU
   // texture directly; this feeds the seeding debug view and
   // `youngStars.invMeanNorm` instead.

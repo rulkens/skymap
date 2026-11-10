@@ -5,8 +5,8 @@
  * `DEFAULT_GALAXY_FIELD_TUNING`).
  *
  * CONTRACT: a section is replaced WHOLESALE, never merged field by field.
- * `createGalaxyModel`'s `setFieldTuning` reads reference identity per section
- * to decide which rebuilds a change actually needs.
+ * `subsystems/createGalaxyFieldModel.ts`'s nodes key on each section's
+ * reference identity to decide which rebuilds a change actually needs.
  */
 import type { GalaxyArmTuning } from '../../arms/@types/GalaxyArmTuning';
 import type { GalaxyDiscTuning } from './GalaxyDiscTuning';

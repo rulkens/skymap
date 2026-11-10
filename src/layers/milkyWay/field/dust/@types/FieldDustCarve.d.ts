@@ -2,7 +2,7 @@
  * FieldDustCarve — S5's silhouette-carving lanes (io.wesl's `dustCarve`,
  * dustMap.wesl's `dustCarveMask`/`stretchNoiseCoord`). Cached the same
  * cadence as `FieldDustNoise` — only changes when the dust params or
- * geometry do, not every `drawFrame`.
+ * geometry do, not every frame.
  */
 export type FieldDustCarve = {
   /**

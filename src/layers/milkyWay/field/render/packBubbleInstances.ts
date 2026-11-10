@@ -11,7 +11,7 @@
  *
  * Relics land first (kind 0), cavities second (kind 1) — the shader's own
  * palette switch depends on the lane value alone, not record order, but
- * `createGalaxyModel.ts`'s `rebuildBubblePlacements` sizes the buffer to
+ * the tool's `createGalaxyModel.ts` `rebuildBubblePlacements` sizes the buffer to
  * `relics.length + cavities.length` and expects that contiguous layout.
  */
 import type { DustBubblePlacement } from '../dust/@types/DustBubblePlacement';

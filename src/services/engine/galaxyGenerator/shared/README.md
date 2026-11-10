@@ -69,8 +69,9 @@ this folder by design: `StarBudget`, the count shares it quantises and the
 per-sprite brightness those divide by all live under `v1/`, and
 `GalaxyDescription` carries no sprite quantity — so a re-introduction has to add
 the import edge the landmine above forbids. It is worth the guard: sprite count
-goes as N^(1/3), so an `emissionScale` or `buildHiiShellsAndYoungWithSegments.tierFlux` anchored on it
-would change brightness by 26% per tier step with the structure untouched —
+goes as N^(1/3), so the mixture's emission or the HII `tierFlux`
+(`src/layers/milkyWay/field/starFormation/utils/buildHiiShellsAndYoungWithSegments.ts`)
+anchored on it would change brightness by 26% per tier step with the structure untouched —
 invisible on screen, since the sprite bag itself drifts by the same factor.
 Both scale off `GalaxyDescription.luminosity`, a function of size alone.
 

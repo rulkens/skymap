@@ -7,7 +7,7 @@
  * packFieldUniforms — the packers for the analytic Milky Way field pass.
  *
  * Two packers, not one, because the header and the components change at
- * different rates: `packFieldHeaderUniforms` runs every `drawFrame` (its
+ * different rates: `packFieldHeaderUniforms` runs every frame (its
  * `exposure` lane tracks the per-frame visibility fade), while
  * `packFieldComponents` only needs to run when a mixture actually changes —
  * a galaxy (re)generated, an extra set replaced, or the field tuning
@@ -202,7 +202,7 @@ export function packFieldHeaderUniforms(input: FieldHeaderInput, dst?: Float32Ar
   // same reason dustDetail's .yz do (io.wesl's doc) — ismMapPresent.wesl's
   // "seeding" debug view. .z carries the placement CAP (`ismMapSeeding.cap`),
   // .w the mean of the map's own per-ring dust means
-  // (`arrayMean(ismMapRingMeans(...))`, `createGalaxyModel.ts`'s
+  // (`arrayMean(ismMapRingMeans(...))`, the tool's `createGalaxyModel.ts`
   // `ismMapSeedingView` getter) — the divisor of the radial-envelope term
   // both sides of the CDF density share. Per-RING, not one flat map-wide
   // mean, is what keeps the cap from also flattening the radial profile (see

@@ -27,9 +27,9 @@ export type FieldHeaderInput = {
    */
   readonly primaryCount: number;
   /**
-   * The pixel size of THIS pass's own target (`fieldTex` for the field
-   * header, `hiiTex` for the `hii:extras` one, each `HII_TIERS` tier's own
-   * texture for its own header) — not the canvas, and not dustMapTex, which
+   * The pixel size of THIS pass's own target (`field` for the field header,
+   * `extras` for the `hii:extras` one, each HII tier's own target for its
+   * own header) — not the canvas, and not dustMapTex, which
    * carries its own divisor. Feeds `counts2.w`, which dustAttenuation.wesl's
    * componentEmission reads for its footprint gates AND turns a fragment position into a normalized
    * dustMapTex UV with (io.wesl's DUST MAP doc) — so this must always be the

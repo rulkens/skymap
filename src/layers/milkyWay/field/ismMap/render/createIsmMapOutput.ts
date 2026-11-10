@@ -54,10 +54,10 @@ export type IsmMapOutput = {
    * Writes the "seeding" debug view's radial envelope divisor —
    * `ismMapRingMeans(map, texel => texel.dust)`'s ISM_MAP_RINGS-length array,
    * the CPU twin of `ismMapPresent.wesl`'s own ring-indexed read. Called
-   * whenever the ISM-map readback lands (`createGalaxyModel.ts`'s
+   * whenever the ISM-map readback lands (the tool's `createGalaxyModel.ts`'s
    * `recomputeIsmMapSeedingMeans`), not every frame — same cadence as
    * `writeGrid`, but from the readback landing rather than the rebuild that
-   * requested it (see `scheduleIsmMapReadback`'s own determinism note).
+   * requested it (`host/render/createIsmMapReadbacks.ts`).
    */
   writeRingMeans(means: Float32Array): void;
   /** Zero-fills `texture` and `dustBlurTexture` — the disabled/no-geometry path, shared by both generators so neither leaves the other's stale content on screen. */

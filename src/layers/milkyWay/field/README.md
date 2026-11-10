@@ -7,9 +7,10 @@ through one integrates to `erf`/`erfc` in closed form
 evaluated per fragment with no marching and no sampling noise. This is the tier
 that replaces `v1/`'s star bag.
 
-Everything here is **pure** `(geometry, tuning, params, seed) → flat data`: no
+The builders are **pure** `(geometry, tuning, params, seed) → flat data`: no
 `Math.random`, no `Date`, no device handle. That invariant is what keeps a
-Worker or compute-pass port open, and it is worth preserving.
+Worker or compute-pass port open, and it is worth preserving. The device lives
+only in the GPU halves: the `render/` folders, `subsystems/` and `host/`.
 
 ## The three builders
 
@@ -17,7 +18,7 @@ Dust, arm-cloud and arm-spur-cloud placement moved GPU-side
 (`placeDust.wesl`, `placeArmCloud.wesl`, `placeArmSpurCloud.wesl` under
 `src/services/gpu/shaders/milkyWay/ismMap/`); their files here survive only as the
 constants/budget-derivation halves the GPU dispatch hosts
-(`tools/galaxy-renderer/src/engine/ismMap/`) still read. Those halves live in
+(`placement/render/`) still read. Those halves live in
 `armClouds/` (counts, radial tilt, footprint integral, ceilings); `arms/` keeps
 the ridge vocabulary and spur records.
 
@@ -39,8 +40,14 @@ The `arms/utils/armRidge*.ts` files hold the ridge curve/width/colour vocabulary
 consumer shares; re-deriving a ridge anywhere else is the mistake it exists to
 prevent.
 
-Only the tool (`tools/galaxy-renderer/`) drives this tier today. The runtime has
-no analytic-field renderer yet.
+## `host/` — the one way in
+
+`host/subsystems/createGalaxyFieldHost.ts` is the narrow `GalaxyFieldHost` the
+app and the tool share: per frame `setTuning`, `ensureFresh`, `plan`, then
+`encode` with that plan. It owns the renderer, the ISM-map readbacks behind
+`youngStars.invMeanNorm`, and the per-frame lane derivation
+(`host/utils/deriveFieldFrameLanes.ts`). Until its first `setTuning` it plans
+and encodes nothing. Only the tool (`tools/galaxy-renderer/`) drives it today.
 
 ## Landmines
 

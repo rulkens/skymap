@@ -3,7 +3,7 @@
  * glowing shells: isotropic Gaussian sprites on each event's Stromgren
  * sphere, plus an optional embedded OB cluster. Limb brightening falls out
  * of line-of-sight column density through a radially-jittered shell, not a
- * rim term. Drawn into its own target (`hiiTex`), never folded into
+ * rim term. Drawn into its own targets off `hiiComps`, never folded into
  * `galaxyFieldMixture.ts`'s output: a shell sprite is small and bright by
  * construction, and sharing the smooth field's downsampled target
  * collapses it into a bloom firefly.
@@ -200,10 +200,10 @@ function fluidEventCenter(
  * (`buildGalaxyIsmMapFluidEvents` is pure and capped at `ISM_MAP_FLUID_MAX_EVENTS`)
  * and avoids plumbing a live event list through every `hiiMixtureOf` call
  * site. This is sound ONLY because `createIsmMapFluidRunner.ts`'s `rebuild`
- * and this module's caller (`buildHiiRegions`, via `createGalaxyModel.ts`'s
- * `hiiMixtureOf`) are handed the SAME seed bits: the runner gets
- * `currentSeed()` (`normalizeGenerationSeed(lastParams?.seed)`, signed
- * int32), this gets `geometry.seed` (the SAME value `>>> 0`-reinterpreted at
+ * and this module's callers (`subsystems/createGalaxyFieldModel.ts`'s
+ * `centralHii`, and `buildHiiRegions` for extras) are handed the SAME seed
+ * bits: the runner gets `FieldHostTuning.seed` (the tool's
+ * `normalizeGenerationSeed`, signed int32), this gets `geometry.seed` (the SAME value `>>> 0`-reinterpreted at
  * `describeGalaxy.ts`'s pack site) — both collapse to the identical int32
  * once XORed against `buildGalaxyIsmMapFluidEvents`' own salt, so the two
  * calls reproduce the SAME event list. If either call site ever derives its
@@ -301,7 +301,7 @@ function resolveEventLifecyclePopulation(
 /**
  * buildHiiShellsAndYoungWithSegments — the shell/cluster and young-stars
  * tiers' full computation (`buildHiiRegionsWithSegments`'s own body, MINUS
- * the DIG veil loop) — extracted so `createGalaxyModel.ts`'s central-galaxy
+ * the DIG veil loop) — extracted so `createGalaxyFieldModel.ts`'s central-galaxy
  * path can run it WITHOUT also running `buildDigVeil`'s CPU placement loop:
  * DIG moved GPU-side (Task 8, `placeDigVeil.wesl` + `computeDigVeilBudget.ts`),
  * shells/young did not (the coordinator's own "minimal restructure" ruling —
