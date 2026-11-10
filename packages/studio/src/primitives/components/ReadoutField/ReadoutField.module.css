@@ -1,0 +1,6 @@
+.root {
+  overflow: hidden;
+  color: var(--color-fg-tertiary);
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+}

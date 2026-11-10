@@ -19,7 +19,7 @@ beforeEach(() => {
   HTMLElement.prototype.hidePopover = hidePopover;
   HTMLElement.prototype.matches = function (this: HTMLElement, sel: string) {
     return sel === ':popover-open' ? open.has(this) : matches.call(this, sel);
-  };
+  } as typeof matches;
 });
 afterEach(() => {
   cleanup();

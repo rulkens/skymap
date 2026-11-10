@@ -712,10 +712,10 @@ Split of the mock's `InspectorGrid.tsx` into one component per file; the panel d
 reverts, ↑/↓ step (⇧ ×10); one gesture id per focus session; unparsable text stays in the field with
 `aria-invalid`. `PickField` is a styled native `<select>`.
 
-- [ ] Test `NumberField commits the typed value on Enter and reverts on Escape`.
-- [ ] Test `NumberField arrow steps share one gesture id until blur`.
-- [ ] Test `NumberField keeps unparsable text and marks it invalid without committing`.
-- [ ] Test `InspectorRow reset calls onReset and is labelled for its field`.
+- [x] Test `NumberField commits the typed value on Enter and reverts on Escape`.
+- [x] Test `NumberField arrow steps share one gesture id until blur`.
+- [x] Test `NumberField keeps unparsable text and marks it invalid without committing`.
+- [x] Test `InspectorRow reset calls onReset and is labelled for its field`.
 
 ---
 

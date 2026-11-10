@@ -1,0 +1,12 @@
+.root {
+  display: grid;
+  grid-template-columns: 8ch minmax(0, 1fr) 3ch var(--space-8);
+  grid-auto-rows: minmax(var(--space-12), auto);
+  column-gap: var(--space-4);
+  align-content: start;
+  align-items: center;
+  min-height: 0;
+  padding: var(--space-5) var(--space-8) var(--space-4);
+  overflow: hidden;
+  font-size: var(--font-size-md);
+}
