@@ -27,6 +27,11 @@
  * edge and 1 at the right, so the fill edge and the pointer agree. There is no
  * native `<input type=range>`, so slider semantics are supplied explicitly via
  * `role="slider"` + `aria-value*` and arrow-key handling.
+ *
+ * `size="compact"` tightens padding, radius and type through tokens and nothing else, for hosts
+ * that name the control themselves (the clip studio's inspector rows): the label then stays only
+ * as the accessible name, and the root honours `--field-border-style` / `--field-bg` so a host
+ * can dim it. The default size is untouched.
  */
 
 import { useRef, useState, type PointerEvent, type KeyboardEvent, type ReactNode } from 'react';
@@ -43,6 +48,7 @@ export type SliderProps = {
   /** Formats the value shown inside the pill. Defaults to fixed decimals derived from `step`. */
   readonly format?: (value: number) => string;
   readonly disabled?: boolean;
+  readonly size?: 'default' | 'compact';
 };
 
 /** Decimal places implied by a step (0.1 → 1, 0.01 → 2, 5 → 0). */
@@ -71,6 +77,7 @@ function Slider({
   onChange,
   format,
   disabled = false,
+  size = 'default',
 }: SliderProps): ReactNode {
   const rectRef = useRef<DOMRect | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -144,7 +151,12 @@ function Slider({
 
   return (
     <div
-      className={cx(styles.root, dragging && styles.dragging, disabled && styles.disabled)}
+      className={cx(
+        styles.root,
+        size === 'compact' && styles.compact,
+        dragging && styles.dragging,
+        disabled && styles.disabled,
+      )}
       role="slider"
       aria-label={label}
       aria-valuemin={min}

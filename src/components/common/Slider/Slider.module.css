@@ -110,3 +110,29 @@
 .disabled:hover .value {
   color: var(--color-fg-muted);
 }
+
+/*
+ * Compact: the host row already shows the name, so the label stays for assistive tech only. The
+ * custom properties let a host dim the pill (dashed, transparent) without a prop; unset they fall
+ * back to the default look.
+ */
+.compact {
+  padding: var(--space-1) var(--space-4);
+  gap: var(--space-4);
+  border-style: var(--field-border-style, solid);
+  border-radius: var(--radius-sm);
+  background: var(--field-bg, var(--surface-control));
+}
+
+.compact .label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.compact .value {
+  margin-inline-start: auto;
+  font-size: var(--font-size-sm);
+}

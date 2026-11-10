@@ -73,4 +73,18 @@ describe('NumberField', () => {
     expect(field).toHaveAttribute('aria-invalid', 'true');
     expect(onCommit).not.toHaveBeenCalled();
   });
+
+  it('a ranged field is the app slider and keyboard steps share one gesture', async () => {
+    const onCommit = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <NumberField label="Level" value={0.5} step={0.1} min={0} max={1} onCommit={onCommit} />,
+    );
+    const slider = screen.getByRole('slider', { name: 'Level' });
+    expect(slider).toHaveAttribute('aria-valuemax', '1');
+    slider.focus();
+    await user.keyboard('{ArrowRight}{End}');
+    expect(onCommit.mock.calls.map((c) => c[0])).toEqual([0.6, 1]);
+    expect(onCommit.mock.calls[0]?.[1]).toBe(onCommit.mock.calls[1]?.[1]);
+  });
 });
