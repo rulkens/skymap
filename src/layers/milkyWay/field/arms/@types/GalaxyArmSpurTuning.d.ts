@@ -1,5 +1,5 @@
 /**
- * GalaxyArmSpurTuning — interarm spurs/feathers (`armSpurGeometry.ts`'s
+ * GalaxyArmSpurTuning — interarm spurs/feathers (`buildArmSpurs.ts`'s
  * `deriveArmSpurs`), nested under `GalaxyArmTuning` the way
  * `GalaxyArmCloudTuning` is: a sub-tier of the arm excess, not its own
  * top-level section.
@@ -17,7 +17,7 @@ export type GalaxyArmSpurTuning = {
   /**
    * Multiplier on the base root-spacing law (feather spacing 300-800 pc,
    * La Vigne, Vogel & Ostriker 2006, re-expressed in disc-scale-length units
-   * by `armSpurGeometry.ts`). 1 is that law exactly.
+   * by `buildArmSpurs.ts`). 1 is that law exactly.
    */
   readonly spacing: number;
   /**
@@ -41,7 +41,7 @@ export type GalaxyArmSpurTuning = {
   readonly elongation: number;
   /**
    * 0..1 how strongly a spur forces the ISM map's fluid gas, against its
-   * parent arm's own forcing (`galaxyIsmMapArmForcing.ts`). Default 0.5, not
+   * parent arm's own forcing (`buildGalaxyIsmMapArmForcing.ts`). Default 0.5, not
    * 1: a spur is a short, low-mass offshoot, not a second arm — weighting it
    * as strongly as its parent would overdrive event placement along it.
    */

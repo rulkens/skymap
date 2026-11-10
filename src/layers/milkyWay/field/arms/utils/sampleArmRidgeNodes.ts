@@ -7,12 +7,14 @@
  * end — an arm isn't periodic like a ring) and its fade*clump*survival
  * modulation, left un-normalized so each consumer picks its own law.
  */
-import { armFadeEnvelope, armRidgeCurvePoint, armRidgeFrameAt } from './armRidgeGeometry';
+import { armRidgeFrameAt } from './armRidgeFrameAt';
 import { distance3 } from '../../../../../utils/math/distance3';
 import type { GalaxyArmRidgeNode } from '../@types/GalaxyArmRidgeNode';
 import type { GalaxyDescription } from '../../../../../@types/galaxy/GalaxyDescription';
 import type { GalaxyFieldArmRecord } from '../../../../../@types/galaxy/GalaxyFieldArmRecord';
 import type { Vec3 } from '../../../../../@types/math/Vec3';
+import { armFadeEnvelope } from './armFadeEnvelope';
+import { armRidgeCurvePoint } from './armRidgeCurvePoint';
 
 /** armStarSample's along-arm low-frequency modulation; 1 (no modulation) when clumpAmount is 0. */
 function armClumpMod(logR: number, geometry: GalaxyDescription, arm: GalaxyFieldArmRecord): number {

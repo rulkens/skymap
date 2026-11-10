@@ -1,14 +1,10 @@
-import type { HiiTier } from '../starFormation/@types/HiiTier';
+import type { FieldTarget } from './FieldTarget';
+import type { FieldTargetId } from './FieldTargetId';
 
 /**
- * Render targets the HOST allocates and owns. `GPUTexture` rather than
- * `GPUTextureView`: every field/HII/tier header packs `targetSizePx` off the
- * target's own pixel size, and a view exposes no dimensions.
+ * Render targets the HOST allocates and owns, one per `FieldTargetId`.
+ * `dustView` is the debug JWST view's target; absent, its pass never encodes.
  */
-export type GalaxyFieldRenderTargets = {
-  readonly fieldTex: GPUTexture;
-  readonly dustMapTex: GPUTexture;
-  readonly dustViewTex: GPUTexture;
-  readonly hiiTex: GPUTexture;
-  readonly hiiTiers: Readonly<Record<HiiTier, GPUTexture>>;
+export type GalaxyFieldRenderTargets = Readonly<Record<FieldTargetId, FieldTarget>> & {
+  readonly dustView?: FieldTarget;
 };

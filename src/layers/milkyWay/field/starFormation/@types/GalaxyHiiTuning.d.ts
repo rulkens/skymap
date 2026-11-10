@@ -3,10 +3,10 @@ import type { GalaxyHiiShellsTuning } from './GalaxyHiiShellsTuning';
 import type { GalaxyYoungStarsTuning } from './GalaxyYoungStarsTuning';
 
 /**
- * GalaxyHiiTuning — the HII-region tier (`hiiRegions.ts`)'s cross-tier root.
+ * GalaxyHiiTuning — the HII-region tier (`buildHiiShellsAndYoungWithSegments.ts`)'s cross-tier root.
  * Everything tier-specific lives in one of the three nested bags below, each
  * with its OWN `brightness` GAIN multiplied against this root's master (see
- * each bag's own doc for how the two compose, and `hiiRegions.ts`'s
+ * each bag's own doc for how the two compose, and `buildHiiShellsAndYoungWithSegments.ts`'s
  * `buildHiiRegions`/`buildDigVeil` for where).
  */
 export type GalaxyHiiTuning = {

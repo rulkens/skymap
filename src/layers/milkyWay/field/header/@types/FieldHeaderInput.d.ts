@@ -6,7 +6,7 @@
 import type { Vec2 } from '../../../../../@types/math/Vec2';
 
 import type { DebugViewWeights } from './DebugViewWeights';
-import type { FieldCamera } from './FieldCamera';
+import type { FieldView } from '../../@types/FieldView';
 import type { FieldDust } from '../../dust/@types/FieldDust';
 import type { HiiTextureLanes } from './HiiTextureLanes';
 import type { IsmMapChannelWeights } from './IsmMapChannelWeights';
@@ -14,7 +14,9 @@ import type { IsmMapSeedingLanes } from './IsmMapSeedingLanes';
 import type { YoungStarsLanes } from './YoungStarsLanes';
 
 export type FieldHeaderInput = {
-  readonly camera: FieldCamera;
+  readonly camera: FieldView;
+  /** Whole-field intensity multiplier: emission only, never the dust attenuation. */
+  readonly exposure: number;
   /** The draw call's own instance count — dust components are never drawn as quads. */
   readonly emissionCount: number;
   /**
@@ -25,9 +27,9 @@ export type FieldHeaderInput = {
    */
   readonly primaryCount: number;
   /**
-   * The pixel size of THIS pass's own target (`fieldTex` for the field
-   * header, `hiiTex` for the `hii:extras` one, each `HII_TIERS` tier's own
-   * texture for its own header) — not the canvas, and not dustMapTex, which
+   * The pixel size of THIS pass's own target (`field` for the field header,
+   * `extras` for the `hii:extras` one, each HII tier's own target for its
+   * own header) — not the canvas, and not dustMapTex, which
    * carries its own divisor. Feeds `counts2.w`, which dustAttenuation.wesl's
    * componentEmission reads for its footprint gates AND turns a fragment position into a normalized
    * dustMapTex UV with (io.wesl's DUST MAP doc) — so this must always be the
@@ -66,7 +68,7 @@ export type FieldHeaderInput = {
    */
   readonly youngStars?: YoungStarsLanes;
   /**
-   * `deriveFrameView.ts`'s per-frame blend of `render.starGrainFeatureScaleNear`/
+   * `deriveFieldFrameLanes`'s per-frame blend of `render.starGrainFeatureScaleNear`/
    * `Far` by camera distance — packs to `io.wesl`'s free `dustDetail.w` lane
    * (that struct's own doc), the multiplier `hiiSplat/starGrain.wesl`'s `starGrainTerm`
    * applies to the baked star-grain point's fixed sigma to get its per-octave

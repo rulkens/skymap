@@ -7,9 +7,10 @@ through one integrates to `erf`/`erfc` in closed form
 evaluated per fragment with no marching and no sampling noise. This is the tier
 that replaces `v1/`'s star bag.
 
-Everything here is **pure** `(geometry, tuning, params, seed) → flat data`: no
+The builders are **pure** `(geometry, tuning, params, seed) → flat data`: no
 `Math.random`, no `Date`, no device handle. That invariant is what keeps a
-Worker or compute-pass port open, and it is worth preserving.
+Worker or compute-pass port open, and it is worth preserving. The device lives
+only in the GPU halves: the `render/` folders, `subsystems/` and `host/`.
 
 ## The three builders
 
@@ -17,13 +18,15 @@ Dust, arm-cloud and arm-spur-cloud placement moved GPU-side
 (`placeDust.wesl`, `placeArmCloud.wesl`, `placeArmSpurCloud.wesl` under
 `src/services/gpu/shaders/milkyWay/ismMap/`); their files here survive only as the
 constants/budget-derivation halves the GPU dispatch hosts
-(`tools/galaxy-renderer/src/engine/ismMap/`) still read.
+(`placement/render/`) still read. Those halves live in
+`armClouds/` (counts, radial tilt, footprint integral, ceilings); `arms/` keeps
+the ridge vocabulary and spur records.
 
-| entry point                                                               | output                                   | drawn by                                     |
-| ------------------------------------------------------------------------- | ---------------------------------------- | -------------------------------------------- |
-| `buildGalaxyFieldMixture` (emission)                                      | disc, bulge, bar, arm ridges             | `milkyWay/field/splat.wesl`                  |
-| `buildHiiRegions`                                                         | Strömgren shells + OB cores              | `splat.wesl`, own target                     |
-| `buildGalaxyIsmMapArmForcing` + `sfEventCatalog` / `dustBubblePlacements` | ISM-map forcing grid, SF events, bubbles | `ismMapFluidStep.wesl`, `bubblePresent.wesl` |
+| entry point                                                                    | output                                   | drawn by                                     |
+| ------------------------------------------------------------------------------ | ---------------------------------------- | -------------------------------------------- |
+| `buildGalaxyFieldMixture` (emission)                                           | disc, bulge, bar, arm ridges             | `milkyWay/field/splat.wesl`                  |
+| `buildHiiRegions`                                                              | Strömgren shells + OB cores              | `splat.wesl`, own target                     |
+| `buildGalaxyIsmMapArmForcing` + `sfEventCatalog` / `buildDustBubblePlacements` | ISM-map forcing grid, SF events, bubbles | `ismMapFluidStep.wesl`, `bubblePresent.wesl` |
 
 All three take the same `GalaxyDescription` that `shared/describeGalaxy` produced
 and `v1/packGenerationUniforms` wrote into v1's generation UBO — which is what
@@ -33,12 +36,22 @@ those are `v1/`'s, along with the per-population brightness that converts one
 into the other. This tier applies no such multiplier — `light` times
 `luminosity` IS what a population emits, and its flux is a function of
 `luminosity` alone.
-`armRidgeGeometry.ts` holds the ridge curve/width/colour vocabulary every arm
+The `arms/utils/armRidge*.ts` files hold the ridge curve/width/colour vocabulary every arm
 consumer shares; re-deriving a ridge anywhere else is the mistake it exists to
 prevent.
 
-Only the tool (`tools/galaxy-renderer/`) drives this tier today. The runtime has
-no analytic-field renderer yet.
+## `host/` — the one way in
+
+`host/subsystems/createGalaxyFieldHost.ts` is the narrow `GalaxyFieldHost` the
+app and the tool share: per frame `setTuning`, `ensureFresh`, `plan`, then
+`encode` with that plan. It owns the renderer, the ISM-map readbacks behind
+`youngStars.invMeanNorm`, and the per-frame lane derivation
+(`host/utils/deriveFieldFrameLanes.ts`). Until its first `setTuning` it plans
+and encodes nothing. Only the tool (`tools/galaxy-renderer/`) drives it today.
+
+## `pipelines/` — the render pipelines
+
+`pipelines/render/` holds the field's pipeline factories (`createFieldPipelines`, `createBubblePresentPipeline`); `pipelines/@types/` holds the types of their bind-group and dependency contracts.
 
 ## Landmines
 

@@ -1,6 +1,6 @@
 /**
- * dustSliceEdges — the dust map's per-frame depth-slice partition, extracted
- * from `drawFrame`'s per-frame block.
+ * dustSliceEdges — the dust map's per-frame depth-slice partition, read by
+ * `deriveFieldFrameLanes`.
  *
  * Full derivation lives in `io.wesl`'s `dustSlices` doc; short version: the
  * spacing between tNear and tFar is GEOMETRIC (equal ratios per slice), which

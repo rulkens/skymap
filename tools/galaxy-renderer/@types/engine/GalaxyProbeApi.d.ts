@@ -42,7 +42,7 @@ export type GalaxyProbeApi = {
   // `ismMapRingMeans.ts`'s CPU loop over `getIsmMapData()`.
   requestRingMeansReadback(): Promise<Float32Array>;
   // Debug-only: numeric-validation exception (`createArmRidgeDebugSample.ts`)
-  // — armRidge.wesl vs. armRidgeGeometry.ts.
+  // — armRidge.wesl vs. arms/utils/armRidge*.ts.
   requestArmRidgeSampleReadback(): Promise<Float32Array>;
   // Debug-only: numeric-validation exception
   // (`createIsmMapDustCdfScanDebugSample.ts`) — ismMapDustCdfScan.wesl's

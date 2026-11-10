@@ -8,7 +8,7 @@
  * module's constructor. The arm/spur cloud flux-weight-sum dispatches are
  * the same shape, one level simpler.
  */
-import { ISM_MAP_RINGS } from '../utils/galaxyIsmMapArmForcing';
+import { ISM_MAP_RINGS } from '../data/ismMapRings';
 
 import ringReduceWgsl from '../../../../../services/gpu/shaders/milkyWay/ismMap/ringReduce.wesl?static';
 import type { IsmMapRingReduce } from '../@types/IsmMapRingReduce';

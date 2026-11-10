@@ -1,7 +1,7 @@
 /**
  * createIsmMapPlaceArmSpurCloud — the GPU placement kernel for the arm-spur
  * cloud tier. The CPU decides slot COUNT and the per-spur pick-weight table
- * (`armSpurParticleCloud.ts`'s budget math, `packArmSpurCloudRecords.ts`);
+ * (`deriveArmSpurCloudCount.ts`'s budget math, `packArmSpurCloudRecords.ts`);
  * `placeArmSpurCloud.wesl` decides slot CONTENT — the weighted spur pick,
  * the rejection-sampled position, the Gaussian cross/pole scatter.
  * `dispatchPlaceArmSpurCloud` rebuilds its bind group every call: the
@@ -17,7 +17,7 @@ import { ARM_SPUR_CLOUD_RECORD_FLOATS, packArmSpurCloudRecords } from './packArm
 import { createGrowOnlyRecordBuffer } from '../../render/createGrowOnlyRecordBuffer';
 import { discLightScaleLength } from '../../mixture/utils/discLightScaleLength';
 import { FIELD_COMPONENT_FLOATS } from '../../header/render/packFieldUniforms';
-import { SPUR_CLOUD_MAX_COUNT } from '../../arms/utils/armSpurParticleCloud';
+import { SPUR_CLOUD_MAX_COUNT } from '../../armClouds/data/spurCloudMaxCount';
 import type { PlaceArmSpurCloudDispatchInput } from '../@types/PlaceArmSpurCloudDispatchInput';
 import type { IsmMapPlaceArmSpurCloud } from '../@types/IsmMapPlaceArmSpurCloud';
 
@@ -66,7 +66,7 @@ export function createIsmMapPlaceArmSpurCloud(
   /**
    * Encodes the dispatch, or returns null when there is nothing to place —
    * `spurArms.length === 0` (no roots this galaxy) or `weightSum <= 0` (every
-   * pick weight collapsed, `armSpurParticleCloud.ts`'s own `!(weightSum > 0)`
+   * pick weight collapsed, `deriveArmSpurCloudCount.ts`'s own `!(weightSum > 0)`
    * bail-out) both mean `placeArmSpurCloud.wesl`'s weighted pick would divide
    * by an inert or empty table — the CPU-side guard mirrors that early
    * return rather than letting the shader index an empty array.

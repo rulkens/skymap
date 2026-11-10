@@ -8,7 +8,7 @@
 
 import type { GalaxyFieldProbe } from '../@types/GalaxyFieldProbe';
 import type { GalaxyFieldStageContext } from '../../@types/GalaxyFieldStageContext';
-import type { FieldBindGroups } from '../../render/createFieldPipelines';
+import type { FieldBindGroups } from '../../pipelines/@types/FieldBindGroups';
 import { findHiiSegment } from '../../starFormation/utils/findHiiSegment';
 import { FIELD_COMPONENT_FLOATS } from '../../header/render/packFieldUniforms';
 import { buildArmCloudDispatchInput } from '../../placement/utils/buildArmCloudDispatchInput';

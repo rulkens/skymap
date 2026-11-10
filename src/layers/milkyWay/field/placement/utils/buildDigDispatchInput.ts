@@ -2,14 +2,12 @@
 
 import type { GalaxyDescription } from '../../../../../@types/galaxy/GalaxyDescription';
 import type { GalaxyFieldStageContext } from '../../@types/GalaxyFieldStageContext';
-import {
-  ISM_MAP_AZ,
-  ISM_MAP_RINGS,
-  ismMapGridRadiusOrDefault,
-} from '../../ismMap/utils/galaxyIsmMapArmForcing';
+import { ISM_MAP_RINGS } from '../../ismMap/data/ismMapRings';
 import { findHiiSegment } from '../../starFormation/utils/findHiiSegment';
 import type { DigVeilBudget } from '../@types/DigVeilBudget';
 import type { PlaceDigVeilDispatchInput } from '../@types/PlaceDigVeilDispatchInput';
+import { ismMapGridRadiusOrDefault } from '../../ismMap/utils/ismMapGridRadiusOrDefault';
+import { ISM_MAP_AZ } from '../../ismMap/data/ismMapAz';
 
 export function buildDigDispatchInput(
   ctx: GalaxyFieldStageContext,

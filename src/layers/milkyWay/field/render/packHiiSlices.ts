@@ -11,7 +11,7 @@
 
 import type { GalaxyFieldComponent } from '../mixture/@types/GalaxyFieldComponent';
 import type { HiiSegment } from '../starFormation/@types/HiiSegment';
-import type { HiiShellsAndYoungResult } from '../starFormation/utils/hiiRegions';
+import type { HiiShellsAndYoungResult } from '../starFormation/@types/HiiShellsAndYoungResult';
 import { FIELD_COMPONENT_FLOATS, packFieldComponents } from '../header/render/packFieldUniforms';
 
 export function packHiiSlices(

@@ -1,37 +1,34 @@
 /**
  * buildFieldHeaderInputs — the three `FieldHeaderInput` object literals one
  * frame needs (the primary field draw, the `hii:extras` draw, and every
- * `HII_TIERS` row), assembled from explicit inputs rather than an engine
+ * HII tier), assembled from explicit inputs rather than an engine
  * closure — pure arithmetic so a test can reach it without a device
  * (`packFieldHeaderUniforms` + `queue.writeBuffer` stay put). The three share
  * one `camera` and mostly diverge on which lanes carry REAL values versus
  * the packer's own inert defaults — see each field's own comment below.
  */
 import type { Vec2 } from '../../../../../@types/math/Vec2';
-import type { Vec3 } from '../../../../../@types/math/Vec3';
 import type { DustHeaderLanes } from '../../dust/@types/DustHeaderLanes';
-import type { FieldCamera } from '../@types/FieldCamera';
+import type { FieldTargetId } from '../../@types/FieldTargetId';
+import type { FieldView } from '../../@types/FieldView';
 import type { FieldHeaderInput } from '../@types/FieldHeaderInput';
 import type { FieldSliceCounts } from '../../@types/FieldSliceCounts';
 import type { HiiTextureLanes } from '../@types/HiiTextureLanes';
 import type { HiiTier } from '../../starFormation/@types/HiiTier';
-import type { IsmMapSeedingLanes } from '../@types/IsmMapSeedingLanes';
 import type { YoungStarsLanes } from '../@types/YoungStarsLanes';
 
 import { mapHiiTiers } from '../../starFormation/data/hiiTiers';
 import type { FieldHeaderFrameLanes } from '../@types/FieldHeaderFrameLanes';
-import type { FieldHeaderRenderLanes } from '../@types/FieldHeaderRenderLanes';
+import type { FieldHostTuning } from '../../host/@types/FieldHostTuning';
 
 /**
  * The lanes no `render`/`frame` value can supply — one snapshot per frame.
- * Six of eight are the module's own state (`fieldCounts` through
- * `spurCloudReservation`); `ismMapSeeding`/`youngStars` are the two the host
- * still owns, derived from the CPU-side ISM-map readback.
+ * All but `youngStars` are the renderer's own state; `youngStars` the host
+ * derives from the CPU-side ISM-map readback.
  */
 type FieldHeaderModelLanes = {
   readonly fieldCounts: FieldSliceCounts;
   readonly dustHeaderLanes: DustHeaderLanes;
-  readonly ismMapSeeding: IsmMapSeedingLanes;
   readonly hiiCount: number;
   readonly hiiTexture: HiiTextureLanes;
   readonly youngStars: YoungStarsLanes;
@@ -40,21 +37,13 @@ type FieldHeaderModelLanes = {
   readonly spurCloudReservation: { readonly offset: number; readonly count: number } | null;
 };
 
-/** Each pass's own target resolution, derived from the target texture's own `.width`/`.height` at `encode` time (this module never touches the texture itself). */
-type FieldHeaderTargetSizes = {
-  readonly field: Vec2;
-  readonly dustMapHeightPx: number;
-  readonly hii: Vec2;
-  readonly tiers: Readonly<Record<HiiTier, Vec2>>;
-};
 type FieldHeaderInputsDeps = {
-  readonly eye: Vec3;
-  readonly fov: number;
-  readonly shiftX: number;
+  readonly camera: FieldView;
   readonly frame: FieldHeaderFrameLanes;
-  readonly render: FieldHeaderRenderLanes;
+  readonly render: FieldHostTuning['render'];
   readonly model: FieldHeaderModelLanes;
-  readonly targetSizes: FieldHeaderTargetSizes;
+  /** Each target's own resolution, off its `sizePx` at `encode` time (this module never touches a texture). */
+  readonly targetSizes: Readonly<Record<FieldTargetId, Vec2>>;
 };
 
 type FieldHeaderInputs = {
@@ -64,23 +53,14 @@ type FieldHeaderInputs = {
 };
 
 export function buildFieldHeaderInputs(deps: FieldHeaderInputsDeps): FieldHeaderInputs {
-  const { eye, fov, shiftX, frame, render, model, targetSizes } = deps;
-  const { debugViews, galaxyWeight, ismMapChannels, dustSlices, starGrainFeatureScale } = frame;
-
-  // Shared ray basis — `aspect` is the PROJECTION's (the canvas's), not any
-  // reduced target's: the fullscreen triangle covers a divisor-scaled target,
-  // but the frustum it must reconstruct is the one `proj` was built with.
-  const camera: FieldCamera = {
-    eye,
-    view: frame.view,
-    fov,
-    aspect: frame.aspect,
-    lensShiftX: shiftX,
-    exposure: frame.analyticExposure,
-  };
+  const { camera, frame, render, model, targetSizes } = deps;
+  const { debugViews, galaxyWeight, ismMapChannels } = render;
+  const { dustSlices, starGrainFeatureScale } = frame;
+  const exposure = frame.analyticExposure;
 
   const field: FieldHeaderInput = {
     camera,
+    exposure,
     emissionCount: model.fieldCounts.emission,
     primaryCount: model.fieldCounts.primary,
     targetSizePx: targetSizes.field,
@@ -93,7 +73,7 @@ export function buildFieldHeaderInputs(deps: FieldHeaderInputsDeps): FieldHeader
       detail: model.dustHeaderLanes.detail,
       // VIEW-dependent, unlike every other lane in this bag.
       slices: dustSlices,
-      mapHeightPx: targetSizes.dustMapHeightPx,
+      mapHeightPx: targetSizes.dustMap[1],
     },
     // Each present shader reads its own view's lane out of this; bubble's
     // does so through its own bind group, bound to THIS header's `fieldUbo`
@@ -104,7 +84,7 @@ export function buildFieldHeaderInputs(deps: FieldHeaderInputsDeps): FieldHeader
     // ismMapPresent.wesl binds ONLY this header (createIsmMapOutput.ts's
     // presentBindGroup) — the HII header below omits this and packs the
     // seeding lanes inert.
-    ismMapSeeding: model.ismMapSeeding,
+    ismMapSeeding: render.ismMapSeeding,
     // Task 15 — real only on THIS header (arm/spur cloud components exist
     // only in fieldComps, never hiiComps); `null` reservation packs the
     // absent-range default (`FieldHeaderInput`'s own doc).
@@ -135,9 +115,10 @@ export function buildFieldHeaderInputs(deps: FieldHeaderInputsDeps): FieldHeader
   // frequency as a side effect of a fix that is only about attenuation.
   const hii: FieldHeaderInput = {
     camera,
+    exposure,
     emissionCount: model.hiiCount,
     primaryCount: model.hiiCount,
-    targetSizePx: targetSizes.hii,
+    targetSizePx: targetSizes.extras,
     dust: {
       count: 0,
       extinctionRgb: model.dustHeaderLanes.extinctionRgb,
@@ -168,14 +149,14 @@ export function buildFieldHeaderInputs(deps: FieldHeaderInputsDeps): FieldHeader
     ismMapChannels,
   };
 
-  // Every `HII_TIERS` row's own header — identical to `hii` above (same
+  // Every HII tier's own header — identical to `hii` above (same
   // whole-tier `primaryCount`, so the dust-attenuation gate is correct for
   // whichever sub-range a given pass draws) EXCEPT `targetSizePx`: each tier
   // has its OWN reduced target, and that lane is what `counts2.w` feeds the
   // shader's footprint gates and dustMapTex UV reconstruction with — reusing
   // `hii.targetSizePx` here would silently hand every tier's splat the
   // extras target's resolution instead of its own.
-  const tiers = mapHiiTiers((kind) => ({ ...hii, targetSizePx: targetSizes.tiers[kind] }));
+  const tiers = mapHiiTiers((kind) => ({ ...hii, targetSizePx: targetSizes[kind] }));
 
   return { field, hii, tiers };
 }

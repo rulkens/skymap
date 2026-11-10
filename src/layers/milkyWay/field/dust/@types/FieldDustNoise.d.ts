@@ -2,7 +2,7 @@
  * FieldDustNoise — the dust-noise erosion lane (io.wesl's `dustNoise`). Unlike
  * the camera/exposure lanes these come from the renderer's `dustHeaderLanes`
  * node — they only change when the dust params or geometry do, not every
- * `drawFrame`.
+ * frame.
  */
 
 export type FieldDustNoise = {

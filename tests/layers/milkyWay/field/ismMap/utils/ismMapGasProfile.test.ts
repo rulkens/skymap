@@ -1,7 +1,7 @@
 /**
  * ismMapGasProfile — mirrors ismMapFluidStep.wesl's own `gasProfile` fn. The
  * one thing worth pinning here: the gasFloor=1 identity, since two other
- * modules (galaxyIsmMapFluidEvents.ts's rejection sampler, the WESL seed)
+ * modules (buildGalaxyIsmMapFluidEvents.ts's rejection sampler, the WESL seed)
  * both depend on it collapsing to exactly 1.0 for their own byte-identical
  * invariants.
  */

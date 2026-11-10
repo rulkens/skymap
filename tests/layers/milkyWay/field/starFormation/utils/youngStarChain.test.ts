@@ -66,7 +66,7 @@ function totalFlux(components: readonly GalaxyFieldComponent[]): number {
   return components.reduce((sum, component) => sum + componentFlux(component), 0);
 }
 
-/** In-plane radius from `center`'s [x, y, z], `y` the pole axis — hiiRegions.test.ts's own convention. */
+/** In-plane radius from `center`'s [x, y, z], `y` the pole axis — buildHiiRegions.test.ts's own convention. */
 function fluxWeightedMeanRadius(components: readonly GalaxyFieldComponent[]): number {
   let fluxSum = 0;
   let weightedRadiusSum = 0;
@@ -105,7 +105,7 @@ describe('buildYoungStarChain', () => {
     // width cranked far past its UI ceiling so sigmaAcross dominates both
     // sigmaAlong (spacing-derived) and the fixed pole sigma — boundRadius
     // then reads as sigmaAcross itself, the same "dominate the max" technique
-    // hiiRegions.test.ts's own sizeScale tests use.
+    // buildHiiRegions.test.ts's own sizeScale tests use.
     const nodes = buildYoungStarChain(geometry, tuningWith({ width: 200 }), 7);
     expect(nodes.length).toBeGreaterThan(4);
     // Pushed in increasing-radius order (sampleArmRidgeNodes walks outward

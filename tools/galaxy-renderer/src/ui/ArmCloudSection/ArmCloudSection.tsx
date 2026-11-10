@@ -1,6 +1,6 @@
 /**
  * ArmCloudSection — the arm ridge's stochastic sprite twin
- * (`src/layers/milkyWay/field/arms/utils/armParticleCloud.ts`): thousands of small Gaussian
+ * (`src/layers/milkyWay/field/armClouds/utils/deriveArmCloudCount.ts`): thousands of small Gaussian
  * sprites scattered along the same log-spiral ridge `ArmFieldSection`'s
  * deterministic blobs sit on. Its own section, own header pill
  * (`fieldTuning.arms.cloud.enabled`), same idiom as `DustCloudSection` — the

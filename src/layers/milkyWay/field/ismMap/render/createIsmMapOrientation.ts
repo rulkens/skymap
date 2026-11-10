@@ -4,12 +4,12 @@
  * whether the generator that wrote it is running): field blur (separable) ->
  * tensor -> tensor blur (separable) -> coherence, plus the overlay that
  * presents it. Entirely GPU-side, so the zero-initialised source texture
- * makes `dispatch` safe before the generator has ever run. The perf GATE
+ * makes `dispatchOrientation` safe before the generator has ever run. The perf GATE
  * stays with the caller — it reads the render bag and field tuning, neither
  * of which this module should know about.
  */
 import { ADDITIVE_BLEND } from '../../../../../services/gpu/lib/blendStates';
-import { ISM_MAP_AZ, ISM_MAP_RINGS, ISM_MAP_WORKGROUP_SIZE } from '../utils/galaxyIsmMapArmForcing';
+import { ISM_MAP_WORKGROUP_SIZE } from '../data/ismMapWorkgroupSize';
 import { alignedBytesPerRow } from '../../../../../utils/gpu/alignedBytesPerRow';
 
 import orientationPresentWgsl from '../../../../../services/gpu/shaders/milkyWay/ismMap/orientationPresent.wesl?static';
@@ -18,6 +18,8 @@ import ismMapOrientationTensorWgsl from '../../../../../services/gpu/shaders/mil
 import ismMapOrientationTensorBlurWgsl from '../../../../../services/gpu/shaders/milkyWay/ismMap/ismMapOrientationTensorBlur.wesl?static';
 import ismMapOrientationCoherenceWgsl from '../../../../../services/gpu/shaders/milkyWay/ismMap/ismMapOrientationCoherence.wesl?static';
 import type { IsmMapOrientation } from '../@types/IsmMapOrientation';
+import { ISM_MAP_AZ } from '../data/ismMapAz';
+import { ISM_MAP_RINGS } from '../data/ismMapRings';
 
 export function createIsmMapOrientation(
   device: GPUDevice,
@@ -277,7 +279,7 @@ export function createIsmMapOrientation(
     presentPipeline: presentPipe,
     presentBindGroup,
 
-    dispatch({
+    dispatchOrientation({
       grid,
       sigmaDerivTexels,
       sigmaIntegTexels,

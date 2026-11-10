@@ -1,6 +1,6 @@
 /**
  * createIsmMapPlaceArmCloud — the GPU placement kernel for the arm-cloud
- * tier. The CPU decides slot COUNT (`deriveArmCloudCount`, `armParticleCloud.ts`)
+ * tier. The CPU decides slot COUNT (`deriveArmCloudCount`, `deriveArmCloudCount.ts`)
  * and the per-arm pick-weight table (`packArmCloudArmRecords.ts` ports
  * `armAgeWeight` verbatim); `placeArmCloud.wesl` decides slot CONTENT — the
  * arm pick, the rejection-sampled position, and the complex/child clumping
@@ -16,17 +16,15 @@ import {
 import { ARM_CLOUD_ARM_RECORD_FLOATS, packArmCloudArmRecords } from './packArmCloudArmRecords';
 import { createGrowOnlyRecordBuffer } from '../../render/createGrowOnlyRecordBuffer';
 import { discLightScaleLength } from '../../mixture/utils/discLightScaleLength';
-import { armCrossSigma } from '../../arms/utils/armRidgeGeometry';
-import {
-  ARM_CLOUD_MAX_COUNT,
-  COMPLEX_HEIGHT_RATIO,
-  COMPLEX_SPREAD_RATIO,
-  tiltReferenceRadius,
-} from '../../arms/utils/armParticleCloud';
+import { armCrossSigma } from '../../arms/utils/armCrossSigma';
+import { COMPLEX_SPREAD_RATIO } from '../../armClouds/data/complexSpreadRatio';
 import { DISC_SIGMA_RATIOS, DISC_SURFACE_WEIGHTS } from '../../mixture/data/discSurfaceFit';
 import { FIELD_COMPONENT_FLOATS } from '../../header/render/packFieldUniforms';
 import type { PlaceArmCloudDispatchInput } from '../@types/PlaceArmCloudDispatchInput';
 import type { IsmMapPlaceArmCloud } from '../@types/IsmMapPlaceArmCloud';
+import { tiltReferenceRadius } from '../../armClouds/utils/tiltReferenceRadius';
+import { ARM_CLOUD_MAX_COUNT } from '../../armClouds/data/armCloudMaxCount';
+import { COMPLEX_HEIGHT_RATIO } from '../../armClouds/data/complexHeightRatio';
 
 const PLACE_ARM_CLOUD_WORKGROUP_SIZE = 256;
 

@@ -10,7 +10,7 @@ import {
   BUBBLE_RECORD_FLOATS,
   packBubbleInstances,
 } from '../../../../../src/layers/milkyWay/field/render/packBubbleInstances';
-import type { DustBubblePlacement } from '../../../../../src/layers/milkyWay/field/dust/utils/dustBubblePlacements';
+import type { DustBubblePlacement } from '../../../../../src/layers/milkyWay/field/dust/@types/DustBubblePlacement';
 
 describe('packBubbleInstances', () => {
   it('packs relics then cavities contiguously, at stride BUBBLE_RECORD_FLOATS, with kind 0 then 1', () => {

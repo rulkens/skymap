@@ -56,7 +56,7 @@ export function parseGalaxyPreset(json: string): {
       render.ismMapStarsWeight = value;
     }
     // Pre-rename presets spell the `hii:extras` pass's divisor `hiiDivisor`,
-    // from before HII_TIERS gave shells/young/dig their own targets and
+    // from before shells/young/dig got their own targets and
     // divisors and left this one governing extras alone.
     else if (key === 'hiiDivisor') {
       render.extrasDivisor = value;

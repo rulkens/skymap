@@ -17,7 +17,8 @@ export type GalaxyFieldProbe = {
    * `null` until the first `encode` has synced; afterwards it reflects the LAST
    * `encode`'s resources — a `setMixture` that regrew `fieldComps` leaves this
    * bound to the destroyed buffer until the next `encode`. Probe callers must
-   * render a frame between mutation and readback (`settleFrames` already does).
+   * render a frame between mutation and readback (`settleFrames` already does),
+   * and with the field ON: the tool encodes nothing while `analyticField` is off.
    */
   readonly fieldSplatBG: GPUBindGroup | null;
 };

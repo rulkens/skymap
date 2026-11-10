@@ -1,5 +1,5 @@
 /**
- * buildDigArmEnvelopeTable — `hiiRegions.ts`'s `buildArmProximityEnvelope`,
+ * buildDigArmEnvelopeTable — `buildDigVeil.ts`'s `buildArmProximityEnvelope`,
  * re-expressed as a packed per-(ring,arm) table instead of a
  * `(radius, angle) => number` closure: `ismMapDustCdfScan.wesl`'s
  * `armBiased` weight mode needs the closure's own per-ring intermediates
@@ -9,11 +9,13 @@
  * once per CDF-scan dispatch, not once per placed particle.
  */
 import { armAgeWeight } from '../../arms/utils/dustLaneFeatures';
-import { armCrossSigma, armFadeEnvelope, armRidgeAngle } from '../../arms/utils/armRidgeGeometry';
+import { armRidgeAngle } from '../../arms/utils/armRidgeAngle';
 import { ismMapRingRadius } from '../../../../../utils/galaxy/ismMapRingRadius';
 import type { GalaxyDescription } from '../../../../../@types/galaxy/GalaxyDescription';
 import type { GalaxyFieldTuning } from '../../mixture/@types/GalaxyFieldTuning';
 import type { IsmMapCdfArmEnvelopeEntry } from '../@types/IsmMapCdfArmEnvelopeEntry';
+import { armFadeEnvelope } from '../../arms/utils/armFadeEnvelope';
+import { armCrossSigma } from '../../arms/utils/armCrossSigma';
 
 export function buildDigArmEnvelopeTable(
   geometry: GalaxyDescription,

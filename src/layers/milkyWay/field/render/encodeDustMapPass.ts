@@ -3,10 +3,9 @@
  * `dustMapTex` (`dustMap.wesl`, additive, four depth-sliced optical depths),
  * the map both dustAttenuation.wesl's componentEmission and the JWST view read.
  *
- * RETURNS the new value of the caller's "holds anything but zeros" latch, and
- * the caller MUST assign it — a skipped pass leaves whatever the last frame
- * wrote, so the latch is what makes skipping safe across a nonzero -> zero
- * transition (the caller's own `dustMap.populated` slot).
+ * Encoded on every frame the field encodes, dust or not: a skipped pass would
+ * leave the last frame's dust in the map, and an empty clear of a reduced
+ * target costs less than tracking whether it holds any.
  */
 import { beginClearPass } from '../../../../services/gpu/lib/beginClearPass';
 
@@ -24,20 +23,15 @@ export function encodeDustMapPass({
   readonly pipeline: GPURenderPipeline;
   /** The group `createFieldPipelines.sync` produced for THIS encode, against this frame's own resources. */
   readonly bindGroup: GPUBindGroup;
-  /** The primary's dust component count — zero still OPENS the pass, as the clear that empties the map. */
+  /** The primary's dust component count — zero still clears. */
   readonly instanceCount: number;
-}): boolean {
+}): void {
   const pass = beginClearPass(enc, 'galaxy:dustMapPass', targetView, timestampWrites);
-  // The zero-count frame is a real case (the clearing frame above), and on it
-  // the clear IS the pass: `beginClearPass`'s `loadOp: 'clear'` empties the map
-  // whether or not a draw follows. Issuing the draw anyway rasterizes nothing
-  // and Chrome flags it — "Draw with an instance count of 0 is unusual" —
-  // because it is far more often a bug than a deliberate clear.
+  // Chrome warns on a zero-instance draw ("instance count of 0 is unusual"), so skip it.
   if (instanceCount > 0) {
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, bindGroup);
     pass.draw(6, instanceCount);
   }
   pass.end();
-  return instanceCount > 0;
 }

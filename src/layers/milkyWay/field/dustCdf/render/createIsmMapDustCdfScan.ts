@@ -21,7 +21,7 @@ import type { IsmMapDustCdfScan } from '../@types/IsmMapDustCdfScan';
 
 export type { IsmMapCdfChannelWeights, IsmMapCdfArmEnvelopeEntry };
 
-/** Headroom over any real preset's arm count (hiiRegions.ts callers run well under this) — just sizes the fixed armEnvelopeBuffer allocation. */
+/** Headroom over any real preset's arm count (buildHiiShellsAndYoungWithSegments.ts callers run well under this) — just sizes the fixed armEnvelopeBuffer allocation. */
 const ISM_MAP_CDF_MAX_ARM_COUNT = 8;
 
 export function createIsmMapDustCdfScan(

@@ -8,39 +8,45 @@ import { describe, expect, it } from 'vitest';
 
 import { buildFieldHeaderInputs } from '../../../../../../src/layers/milkyWay/field/header/render/buildFieldHeaderInputs';
 import { deriveFrameView } from '../../../../../../tools/galaxy-renderer/src/engine/frame/deriveFrameView';
-import type { RenderSettings } from '../../../../../../tools/galaxy-renderer/@types/engine/RenderSettings';
+import { deriveFieldFrameLanes } from '../../../../../../src/layers/milkyWay/field/host/utils/deriveFieldFrameLanes';
+import { FIELD_CALIBRATION } from '../../../../../../src/layers/milkyWay/field/data/fieldCalibration';
 import { DEFAULT_RENDER_SETTINGS } from '../../../../../../tools/galaxy-renderer/src/data/defaultRenderSettings';
-import { HII_TIERS } from '../../../../../../tools/galaxy-renderer/src/data/hiiTiers';
+import { HII_TIER_KINDS } from '../../../../../../src/layers/milkyWay/field/starFormation/data/hiiTiers';
+import type { HiiTier } from '../../../../../../src/layers/milkyWay/field/starFormation/@types/HiiTier';
 
-const render: RenderSettings = {
-  ...DEFAULT_RENDER_SETTINGS,
+const render = {
+  ...FIELD_CALIBRATION.render,
   hiiNearFadeStart: 101,
   hiiNearFadeEnd: 102,
   starGrainWarpAmp: 103,
   hiiQuadCap: 104,
+  ismMapSeeding: { weight: 9, cap: 10, globalMean: 11 },
 };
 
-const frame = deriveFrameView({
+const { camera } = deriveFrameView({
   eye: [0, 0, 30],
   target: [0, 0, 0],
   fov: (45 * Math.PI) / 180,
   dist: 30,
   shiftX: 0.1,
   viewportPx: [1600, 900],
-  render,
+  render: DEFAULT_RENDER_SETTINGS,
+});
+const frame = deriveFieldFrameLanes({
+  camera,
+  exposure: DEFAULT_RENDER_SETTINGS.analyticExposure,
   dustReachR: 5,
+  render,
 });
 
 // Distinct per-tier target sizes, so a tier that reuses a sibling's (or
 // `hii`'s) resolution is caught rather than passing by coincidence.
 const tierTargetSizePx = Object.fromEntries(
-  HII_TIERS.map((tier, i) => [tier.kind, [200 + i, 300 + i]]),
-) as Record<(typeof HII_TIERS)[number]['kind'], [number, number]>;
+  HII_TIER_KINDS.map((kind, i) => [kind, [200 + i, 300 + i]]),
+) as Record<HiiTier, [number, number]>;
 
 const inputs = buildFieldHeaderInputs({
-  eye: [1, 2, 3],
-  fov: 1.1,
-  shiftX: 0.1,
+  camera,
   frame,
   render,
   model: {
@@ -52,7 +58,6 @@ const inputs = buildFieldHeaderInputs({
       reachR: 5,
       detail: 8,
     },
-    ismMapSeeding: { weight: 9, cap: 10, globalMean: 11 },
     hiiCount: 42,
     hiiTexture: { scale: 12, contrast: 13 },
     youngStars: { contrastGamma: 14, invMeanNorm: 15 },
@@ -61,9 +66,9 @@ const inputs = buildFieldHeaderInputs({
   },
   targetSizes: {
     field: [400, 500],
-    dustMapHeightPx: 600,
-    hii: [700, 800],
-    tiers: tierTargetSizePx,
+    dustMap: [550, 600],
+    extras: [700, 800],
+    ...tierTargetSizePx,
   },
 });
 
@@ -77,9 +82,9 @@ describe('buildFieldHeaderInputs', () => {
     expect(inputs.hii.primaryCount).toBe(42);
   });
 
-  it('gives every HII_TIERS row its own target size, not a shared one', () => {
-    for (const tier of HII_TIERS) {
-      expect(inputs.tiers[tier.kind]!.targetSizePx).toEqual(tierTargetSizePx[tier.kind]);
+  it('gives every HII tier its own target size, not a shared one', () => {
+    for (const kind of HII_TIER_KINDS) {
+      expect(inputs.tiers[kind]!.targetSizePx).toEqual(tierTargetSizePx[kind]);
     }
     // None of the tiers accidentally inherited the `hii:extras` target.
     expect(inputs.tiers.shells!.targetSizePx).not.toEqual(inputs.hii.targetSizePx);

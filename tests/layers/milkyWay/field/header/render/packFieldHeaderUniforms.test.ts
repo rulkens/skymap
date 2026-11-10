@@ -41,18 +41,16 @@ function at(member: string): number {
 // Distinct integers, exactly representable in f32, none of them 0 — so every
 // sentinel lands in exactly one place and no zero-filled lane can match one.
 const EMISSION_COUNT = 7;
-const view = new Float32Array(16);
-for (let i = 0; i < 16; i++) view[i] = 12000 + i;
 
 const input: FieldHeaderInput = {
   camera: {
     eye: [11000, 11001, 11002],
-    view,
-    fov: 1,
-    aspect: 13000,
-    lensShiftX: 13001,
-    exposure: 13002,
+    right: [12000, 12001, 12002],
+    up: [12003, 12004, 12005],
+    fwd: [12006, 12007, 12008],
+    frustum: { tanLeft: 13000, tanRight: 13001, tanDown: 13003, tanUp: 13004 },
   },
+  exposure: 13002,
   emissionCount: EMISSION_COUNT,
   primaryCount: 14002,
   targetSizePx: [15000, 15001],
@@ -104,14 +102,16 @@ describe('packFieldHeaderUniforms ↔ milkyWay/field/io.wesl FieldUniforms', () 
 
   it('puts every vec4 where the shader declares it', () => {
     expect(observed(11000)).toBe(at('eye'));
-    // The basis rows are a stride-4 gather off a column-major view matrix,
-    // and camFwd is NEGATED — a transposed read would find these swapped.
+    // Exposure rides the eye's free w lane, not a vec4 of its own.
+    expect(observed(13002)).toBe(at('eye') + 12);
     expect(observed(12000)).toBe(at('camRight'));
-    expect(observed(12001)).toBe(at('camUp'));
-    expect(observed(-12002)).toBe(at('camFwd'));
-    // params.x is tan(fov/2), a transformed value with no sentinel; aspect
-    // rides lane 1.
-    expect(observed(13000)).toBe(at('params') + 4);
+    expect(observed(12003)).toBe(at('camUp'));
+    expect(observed(12006)).toBe(at('camFwd'));
+    expect(observed(13000)).toBe(at('frustum'));
+    expect(observed(13001)).toBe(at('frustum') + 4);
+    expect(observed(13003)).toBe(at('frustum') + 8);
+    expect(observed(13004)).toBe(at('frustum') + 12);
+    expect(struct.offsets.has('params')).toBe(false);
     // counts.x/.y are both emissionCount, so only lanes 2 and 3 are uniquely
     // locatable.
     expect(observed(14001)).toBe(at('counts') + 8);
@@ -141,7 +141,7 @@ describe('packFieldHeaderUniforms ↔ milkyWay/field/io.wesl FieldUniforms', () 
     // dustDetail.y/.z are the HII tier's own tier-global texture scale/
     // contrast, unrelated to S4's own strength lane at .x — they ride this
     // vec4's two free lanes (io.wesl's dustDetail doc). .w is
-    // starGrainFeatureScale (deriveFrameView.ts's near/far distance blend),
+    // starGrainFeatureScale (deriveFieldFrameLanes's near/far distance blend),
     // splat.wesl's starGrainTerm calibration knob.
     expect(observed(25000)).toBe(at('dustDetail') + 4);
     expect(observed(25001)).toBe(at('dustDetail') + 8);

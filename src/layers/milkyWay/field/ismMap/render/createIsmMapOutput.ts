@@ -8,13 +8,14 @@
  * texture/bind-group regardless of whether the generator is running.
  */
 import { ADDITIVE_BLEND } from '../../../../../services/gpu/lib/blendStates';
-import { ISM_MAP_AZ, ISM_MAP_RINGS } from '../utils/galaxyIsmMapArmForcing';
+import { ISM_MAP_RINGS } from '../data/ismMapRings';
 import type { GalaxyIsmMapGridRadius } from '../@types/GalaxyIsmMapGridRadius';
 import { alignedBytesPerRow } from '../../../../../utils/gpu/alignedBytesPerRow';
 
 import ismMapPresentWgsl from '../../../../../services/gpu/shaders/milkyWay/ismMap/ismMapPresent.wesl?static';
 import ismMapDustBlurWgsl from '../../../../../services/gpu/shaders/milkyWay/ismMap/ismMapDustBlur.wesl?static';
 import ismMapCartesianBakeWgsl from '../../../../../services/gpu/shaders/milkyWay/ismMap/ismMapCartesianBake.wesl?static';
+import { ISM_MAP_AZ } from '../data/ismMapAz';
 
 /** Mirrored by BLUR_FACTOR in ismMapDustBlur.wesl; also sets the S4 high-pass crossover (~8 texels, roughly the scale the dust splats stop resolving). */
 const DUST_BLUR_FACTOR = 8;
@@ -53,10 +54,10 @@ export type IsmMapOutput = {
    * Writes the "seeding" debug view's radial envelope divisor —
    * `ismMapRingMeans(map, texel => texel.dust)`'s ISM_MAP_RINGS-length array,
    * the CPU twin of `ismMapPresent.wesl`'s own ring-indexed read. Called
-   * whenever the ISM-map readback lands (`createGalaxyModel.ts`'s
+   * whenever the ISM-map readback lands (the tool's `createGalaxyModel.ts`'s
    * `recomputeIsmMapSeedingMeans`), not every frame — same cadence as
    * `writeGrid`, but from the readback landing rather than the rebuild that
-   * requested it (see `scheduleIsmMapReadback`'s own determinism note).
+   * requested it (`host/render/createIsmMapReadbacks.ts`).
    */
   writeRingMeans(means: Float32Array): void;
   /** Zero-fills `texture` and `dustBlurTexture` — the disabled/no-geometry path, shared by both generators so neither leaves the other's stale content on screen. */

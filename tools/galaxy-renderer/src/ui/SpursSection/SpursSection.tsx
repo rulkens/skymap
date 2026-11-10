@@ -1,7 +1,7 @@
 /**
  * SpursSection — interarm spurs/feathers
- * (`src/layers/milkyWay/field/arms/utils/armSpurGeometry.ts` +
- * `armSpurParticleCloud.ts`): short sprite feathers rooted along each arm at
+ * (`src/layers/milkyWay/field/arms/utils/buildArmSpurs.ts` +
+ * `deriveArmSpurCloudCount.ts`): short sprite feathers rooted along each arm at
  * quasi-regular intervals, filling the interarm gap the ridge chain and the
  * arm cloud both leave empty at larger radii. Own section, own header pill
  * (`fieldTuning.arms.spurs.enabled`), the `ArmCloudSection` idiom — a sub-tier

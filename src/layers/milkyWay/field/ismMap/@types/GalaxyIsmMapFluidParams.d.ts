@@ -9,7 +9,7 @@
 export type GalaxyIsmMapFluidParams = {
   /** Advection iterations per rebuild. */
   readonly steps: number;
-  /** Events spawned per step, on average — total events over a run is ~`eventRate * steps` (capped, see `galaxyIsmMapFluidEvents.ts`). */
+  /** Events spawned per step, on average — total events over a run is ~`eventRate * steps` (capped, see `buildGalaxyIsmMapFluidEvents.ts`). */
   readonly eventRate: number;
   /** Outward kernel-velocity amplitude an event starts at, in texels/step; decays to 0 over `impulseDuration`. */
   readonly impulseStrength: number;
@@ -38,7 +38,7 @@ export type GalaxyIsmMapFluidParams = {
   readonly gasRegen: number;
   /** Blend rate of the per-texel `activity` trace toward this step's event intensity (`w' = mix(w, eventStamp, emaRate)`) — an EMA. */
   readonly emaRate: number;
-  /** Velocity term pointing up the arm-forcing field's gradient, in texels/step per unit forcing-gradient — the SAME baked field `galaxyIsmMapArmForcing.ts` builds, read here as a texture instead of biasing event placement. Damped by `ismMapFluidStep.wesl`'s own `ARM_GATHER_SAT` as local dust piles up. */
+  /** Velocity term pointing up the arm-forcing field's gradient, in texels/step per unit forcing-gradient — the SAME baked field `buildGalaxyIsmMapArmForcing.ts` builds, read here as a texture instead of biasing event placement. Damped by `ismMapFluidStep.wesl`'s own `ARM_GATHER_SAT` as local dust piles up. */
   readonly armGather: number;
   /**
    * Drag on the shear velocity by the arm-forcing field at THIS texel (not
@@ -85,7 +85,7 @@ export type GalaxyIsmMapFluidParams = {
   /** `gasProfile`'s r→∞ floor fraction [0,1] — the flat HI component underneath the exponential decline. 1 makes the profile identically 1.0 everywhere (the pre-profile, uniform-seed calibration). */
   readonly gasFloor: number;
   /**
-   * Placement floor for `galaxyIsmMapFluidEvents.ts`'s CDF, [0,1] dimensionless
+   * Placement floor for `buildGalaxyIsmMapFluidEvents.ts`'s CDF, [0,1] dimensionless
    * — the floor becomes `ARM_BIAS_FLOOR * (1 - eventArmBias)`, so 0 (default)
    * is today's fixed `ARM_BIAS_FLOOR` bias (byte-identical) and 1 zeroes the
    * floor entirely, turning the bias into a hard gate: every event lands

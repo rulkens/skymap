@@ -1,8 +1,7 @@
-import type { IsmMapSeedingLanes } from '../header/@types/IsmMapSeedingLanes';
+import type { FieldHostTuning } from '../host/@types/FieldHostTuning';
 import type { YoungStarsLanes } from '../header/@types/YoungStarsLanes';
-import type { TimingSlotName } from '../../../../@types/gpu/timing/TimingSlotName';
-import type { Vec3 } from '../../../../@types/math/Vec3';
-import type { FieldHeaderRenderLanes } from '../header/@types/FieldHeaderRenderLanes';
+import type { FieldTargetId } from './FieldTargetId';
+import type { FieldView } from './FieldView';
 import type { FieldHeaderFrameLanes } from '../header/@types/FieldHeaderFrameLanes';
 
 /**
@@ -10,19 +9,15 @@ import type { FieldHeaderFrameLanes } from '../header/@types/FieldHeaderFrameLan
  * — the half of the encode inputs no `GPUTexture` can supply.
  */
 export type GalaxyFieldFrame = {
-  readonly eye: Vec3;
-  readonly fov: number;
-  readonly shiftX: number;
+  readonly camera: FieldView;
   readonly view: FieldHeaderFrameLanes;
-  /** `analyticField` gates every pass below, never the header writes. */
-  readonly render: FieldHeaderRenderLanes & { readonly analyticField: boolean };
-  /** Host-owned because both are derived from the CPU ISM-map readback. */
-  readonly ismMapSeeding: IsmMapSeedingLanes;
+  readonly render: FieldHostTuning['render'];
+  /** Its `invMeanNorm` is derived by the host from the CPU ISM-map readback. */
   readonly youngStars: YoungStarsLanes;
   /**
-   * `gpuTimingService.descriptorFor`. Called ONLY where a pass is actually
-   * encoded: asking for a descriptor marks its slot consumed, which is what
-   * makes a skipped pass's HUD row vanish rather than freeze.
+   * Timestamps by target. Called ONLY where a pass is actually encoded: asking
+   * for a descriptor marks its slot consumed, which is what makes a skipped
+   * pass's HUD row vanish rather than freeze.
    */
-  readonly timestampWrites?: (slot: TimingSlotName) => GPURenderPassTimestampWrites | undefined;
+  readonly timestampWrites?: (id: FieldTargetId) => GPURenderPassTimestampWrites | undefined;
 };

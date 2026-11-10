@@ -9,15 +9,10 @@
  * LOD tier or sprite constant can move them.
  */
 
-import { deriveArmCloudCount } from '../../arms/utils/armParticleCloud';
-import {
-  armColor,
-  armCrossSigma,
-  armExcessSurfaceShape,
-  armRidgeCurvePoint,
-} from '../../arms/utils/armRidgeGeometry';
-import { buildArmSpurs } from '../../arms/utils/armSpurGeometry';
-import { deriveArmSpurCloudCount } from '../../arms/utils/armSpurParticleCloud';
+import { deriveArmCloudCount } from '../../armClouds/utils/deriveArmCloudCount';
+import { armRidgeCurvePoint } from '../../arms/utils/armRidgeCurvePoint';
+import { buildArmSpurs } from '../../arms/utils/buildArmSpurs';
+import { deriveArmSpurCloudCount } from '../../armClouds/utils/deriveArmSpurCloudCount';
 import { DEFAULT_GALAXY_DUST_PARAMS } from '../../dust/data/defaultGalaxyDustParams';
 import { DEFAULT_GALAXY_ISM_MAP_FLUID_PARAMS } from '../../ismMap/data/defaultGalaxyIsmMapFluidParams';
 import { DEFAULT_GALAXY_ISM_MAP_PARAMS } from '../../ismMap/data/defaultGalaxyIsmMapParams';
@@ -40,6 +35,10 @@ import type { GalaxyFieldMixtureResult } from '../@types/GalaxyFieldMixtureResul
 import type { GalaxyDescription } from '../../../../../@types/galaxy/GalaxyDescription';
 import type { GalaxyFieldTuning } from '../@types/GalaxyFieldTuning';
 import type { Vec3 } from '../../../../../@types/math/Vec3';
+import { armColor } from '../../arms/utils/armColor';
+import { armExcessSurfaceShape } from '../../arms/utils/armExcessSurfaceShape';
+import { armCrossSigma } from '../../arms/utils/armCrossSigma';
+import { TAU_ROOT3 } from '../../starFormation/data/tauRoot3';
 
 /**
  * Per-galaxy component cap, not a shader limit: `io.wesl`'s `comps` is a
@@ -103,7 +102,6 @@ function shapeOf(
 }
 
 const TAU_ROOT = Math.sqrt(2 * Math.PI);
-const TAU_ROOT3 = (2 * Math.PI) ** 1.5;
 
 /**
  * Inside-out formation: the bulge and bar hold the old, metal-rich stars
@@ -114,7 +112,7 @@ const TAU_ROOT3 = (2 * Math.PI) ** 1.5;
  * (old DISC_COLOR's luma was ~0.9) so this reads as a hue shift, not a
  * change in exposure — DISC_COLOR_OUTER trades some of that back for its hue
  * (blue is inherently the lowest-luma primary), the same trade
- * `armRidgeGeometry.ts`'s ARM_COLOR_YOUNG already makes.
+ * `armColor.ts`'s ARM_COLOR_YOUNG already makes.
  */
 const DISC_COLOR_INNER = [1.0, 0.87, 0.66] as const;
 const DISC_COLOR_OUTER = [0.68, 0.8, 1.0] as const;
@@ -360,7 +358,7 @@ export const DEFAULT_GALAXY_FIELD_TUNING: GalaxyFieldTuning = {
       // `brightness` plays now.
       brightness: 1,
       // Scaler on the run's own recent-event population (see
-      // hiiRegions.ts's DIG_COMPLEXES_PER_EVENT), not an absolute count —
+      // digVeilBudget.ts's DIG_COMPLEXES_PER_EVENT), not an absolute count —
       // 1 is the neutral default.
       complexes: 1,
       childrenPerComplex: 4,
@@ -618,8 +616,8 @@ function clampedArmSpurShare(tuning: GalaxyFieldTuning): number {
  *
  * The returned total is the FULL excess regardless of `cloudShare`/`spurShare`:
  * this function renders only `1 - cloudShare - spurShare` of it, and
- * `buildGalaxyFieldMixture` hands the rest to `armParticleCloud.ts` and
- * `armSpurParticleCloud.ts` as those tiers' own flux budgets — the three
+ * `buildGalaxyFieldMixture` hands the rest to `deriveArmCloudCount.ts` and
+ * `deriveArmSpurCloudCount.ts` as those tiers' own flux budgets — the three
  * rendered totals still sum to this return value, so the disc debit (which
  * uses the full value) stays correct either way. The caller passes the shares
  * each tier will REALLY carry, never the raw tuning: deriving them here
@@ -840,13 +838,13 @@ const ARM_DISC_DEBIT_CLAMP_FRACTION = 0.9;
  * (`pushWarpedOuterDisc`, `pushArmRidges`) plus each component's own
  * linearised shear (`shapeOf`) or true surface frame.
  *
- * `armParticleCloud.ts`'s and `armSpurParticleCloud.ts`'s sprites share this
+ * `deriveArmCloudCount.ts`'s and `deriveArmSpurCloudCount.ts`'s sprites share this
  * same cap: `armCloudCount`/`spurCloudCount` below are computed BEFORE
  * `pushArmRidges` runs and folded into its `reservedComponents`, so the
  * ridge chain's own budget shrinks to leave room rather than the three
- * tiers racing for the same slots. HII regions (`hiiRegions.ts`) don't
+ * tiers racing for the same slots. HII regions (`buildHiiShellsAndYoungWithSegments.ts`) don't
  * compete for this cap — they render into their own target off their own
- * buffer (`createGalaxyEngine.ts`'s `hiiTex`/`hiiCompsBuf`), so they never
+ * buffer (the field renderer's `hiiComps`), so they never
  * reserve any of it.
  */
 export function buildGalaxyFieldMixture(

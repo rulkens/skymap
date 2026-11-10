@@ -13,7 +13,7 @@ import {
   SIZE_MAX_PC,
   SIZE_MIN_PC,
 } from '../../dust/utils/dustParticleCloud';
-import { dustDiscShape, dustSigmaR } from '../../dust/utils/galaxyDustMixture';
+import { dustDiscShape } from '../../dust/utils/dustDiscShape';
 import { DISC_SIGMA_RATIOS, DISC_SURFACE_WEIGHTS } from '../../mixture/data/discSurfaceFit';
 import { dustExtinctionRgb } from '../../dust/utils/dustExtinctionRgb';
 import { stretchExtinctionChroma } from '../../dust/utils/stretchExtinctionChroma';
@@ -21,6 +21,7 @@ import { pcToUnits } from '../../mixture/utils/pcToUnits';
 import type { GalaxyDescription } from '../../../../../@types/galaxy/GalaxyDescription';
 import type { GalaxyDustParams } from '../../dust/@types/GalaxyDustParams';
 import type { PlaceDustBudget } from '../@types/PlaceDustBudget';
+import { dustSigmaR } from '../../dust/utils/dustSigmaR';
 
 export function computePlaceDustBudget(
   geometry: GalaxyDescription,

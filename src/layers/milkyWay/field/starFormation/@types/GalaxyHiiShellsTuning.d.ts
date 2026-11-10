@@ -1,6 +1,6 @@
 /**
  * GalaxyHiiShellsTuning — the emission-shell tier's own tunable knobs
- * (`hiiRegions.ts`'s per-region shell + embedded-OB-cluster sprites), nested
+ * (`buildHiiShellsAndYoungWithSegments.ts`'s per-region shell + embedded-OB-cluster sprites), nested
  * under `GalaxyHiiTuning` the way `GalaxyHiiDigTuning`/`GalaxyYoungStarsTuning`
  * nest their own tiers.
  */
@@ -41,7 +41,7 @@ export type GalaxyHiiShellsTuning = {
    * Multiplies the noise sample's frequency relative to the dust noise
    * volume's own tile size (`io.wesl`'s `dustNoise.x`) — 1 samples at the
    * SAME scale dust erosion does. Feeds the whole HII texture lane
-   * (`createGalaxyModel.ts`'s `hiiTexture`) shared by every group even
+   * (the field renderer's `hiiTextureLanes`) shared by every group even
    * though it's stored here; only each group's own `texture` weight varies.
    */
   readonly textureScale: number;

@@ -15,13 +15,13 @@ import {
   DIG_MAX_COUNT,
   DIG_SCALE_HEIGHT_PC,
   DIG_SIGMA_MAX_PC,
-  DIG_SIGMA_MIN_PC,
-} from '../../starFormation/utils/hiiRegions';
-import { deriveComplexCount } from '../../starFormation/utils/sfEventAgeBands';
+} from '../../starFormation/data/digVeilBudget';
+import { deriveComplexCount } from '../../starFormation/utils/deriveComplexCount';
 import { pcToUnits } from '../../mixture/utils/pcToUnits';
 import type { GalaxyDescription } from '../../../../../@types/galaxy/GalaxyDescription';
 import type { GalaxyFieldTuning } from '../../mixture/@types/GalaxyFieldTuning';
 import type { DigVeilBudget } from '../@types/DigVeilBudget';
+import { DIG_SIGMA_MIN_PC } from '../../starFormation/data/digVeilBudget';
 
 export function computeDigVeilBudget(
   geometry: GalaxyDescription,

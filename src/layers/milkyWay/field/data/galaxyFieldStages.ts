@@ -12,17 +12,15 @@
 import type { GalaxyFieldStageContext } from '../@types/GalaxyFieldStageContext';
 import type { GalaxyFieldStageName } from '../@types/GalaxyFieldStageName';
 import type { Stage } from '../../../../@types/gpu/Stage';
-import {
-  ISM_MAP_AZ,
-  ISM_MAP_RINGS,
-  ismMapGridRadiusOrDefault,
-} from '../ismMap/utils/galaxyIsmMapArmForcing';
+import { ISM_MAP_RINGS } from '../ismMap/data/ismMapRings';
 import { ISM_MAP_AMBIENT_DUST } from '../ismMap/data/ismMapAmbientDust';
 import { buildDigArmEnvelopeTable } from '../dustCdf/utils/buildDigArmEnvelopeTable';
 import { buildArmCloudDispatchInput } from '../placement/utils/buildArmCloudDispatchInput';
 import { buildDigDispatchInput } from '../placement/utils/buildDigDispatchInput';
 import { buildDustDispatchInput } from '../placement/utils/buildDustDispatchInput';
 import { buildSpurCloudDispatchInput } from '../placement/utils/buildSpurCloudDispatchInput';
+import { ismMapGridRadiusOrDefault } from '../ismMap/utils/ismMapGridRadiusOrDefault';
+import { ISM_MAP_AZ } from '../ismMap/data/ismMapAz';
 
 export const GALAXY_FIELD_STAGES: readonly Stage<GalaxyFieldStageName, GalaxyFieldStageContext>[] =
   [
@@ -168,7 +166,7 @@ export const GALAXY_FIELD_STAGES: readonly Stage<GalaxyFieldStageName, GalaxyFie
           ctx.input.fieldTuning.ismMap.generator === 'fluid'
             ? ctx.input.fieldTuning.ismMapFluid
             : { gasFloor: 1, gasScaleLength: 1 };
-        ctx.chain.orientation.dispatch({
+        ctx.chain.orientation.dispatchOrientation({
           grid: ismMapGridRadiusOrDefault(ctx.input.geometry),
           sigmaDerivTexels: ctx.input.sigmaDerivTexels,
           sigmaIntegTexels: ctx.input.sigmaIntegTexels,

@@ -1,6 +1,6 @@
 /**
  * packIsmMapCdfArmEnvelope — `ismMapDustCdfScan.wesl`'s `armEnvelopeBuf`:
- * `buildArmProximityEnvelope`'s CPU closure (`hiiRegions.ts:484-518`)
+ * `buildArmProximityEnvelope`'s CPU closure (`buildDigVeil.ts`)
  * output, PACKED per (ring, arm) rather than re-derived in WGSL — a caller
  * runs that closure's `refresh(radius)` once per ring (the same cost its
  * own CPU cache already pays) and hands the ridgeAngle/weight/invSigma

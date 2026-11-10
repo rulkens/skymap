@@ -28,30 +28,26 @@ import { ismMapRingMeans } from '../../src/utils/galaxy/ismMapRingMeans';
 import { buildIsmMapDustCdf } from '../../src/utils/galaxy/buildIsmMapDustCdf';
 import { ismMapRingIndexForRadius } from '../../src/utils/galaxy/ismMapRingIndexForRadius';
 import { arrayMean } from '../../src/utils/math/arrayMean';
-import {
-  armRidgeAngle,
-  armFadeEnvelope,
-  armCrossSigma,
-  armRidgeFrameAt,
-  armExcessSurfaceShape,
-  armColor,
-} from '../../src/layers/milkyWay/field/arms/utils/armRidgeGeometry';
+import { armRidgeAngle } from '../../src/layers/milkyWay/field/arms/utils/armRidgeAngle';
 import { describeGalaxy } from '../../src/services/engine/galaxyGenerator/shared/describeGalaxy';
 import { MILKY_WAY_GALAXY_PARAMS } from '../../src/data/milkyWay/milkyWayGalaxyParams';
 import { DEFAULT_GALAXY_DUST_PARAMS } from '../../src/layers/milkyWay/field/dust/data/defaultGalaxyDustParams';
 import { DEFAULT_GALAXY_FIELD_TUNING } from '../../src/layers/milkyWay/field/mixture/utils/galaxyFieldMixture';
-import { buildArmSpurs } from '../../src/layers/milkyWay/field/arms/utils/armSpurGeometry';
-import { deriveArmSpurCloudCount } from '../../src/layers/milkyWay/field/arms/utils/armSpurParticleCloud';
-import {
-  deriveArmCloudCount,
-  radialTilt,
-  tiltReferenceRadius,
-} from '../../src/layers/milkyWay/field/arms/utils/armParticleCloud';
+import { buildArmSpurs } from '../../src/layers/milkyWay/field/arms/utils/buildArmSpurs';
+import { deriveArmSpurCloudCount } from '../../src/layers/milkyWay/field/armClouds/utils/deriveArmSpurCloudCount';
+import { deriveArmCloudCount } from '../../src/layers/milkyWay/field/armClouds/utils/deriveArmCloudCount';
 import { discLightScaleLength } from '../../src/layers/milkyWay/field/mixture/utils/discLightScaleLength';
-import { buildHiiShellsAndYoungWithSegments } from '../../src/layers/milkyWay/field/starFormation/utils/hiiRegions';
+import { buildHiiShellsAndYoungWithSegments } from '../../src/layers/milkyWay/field/starFormation/utils/buildHiiShellsAndYoungWithSegments';
 import { computePlaceDustBudget } from '../../src/layers/milkyWay/field/placement/utils/computePlaceDustBudget';
 import { computeDigVeilBudget } from '../../src/layers/milkyWay/field/placement/utils/computeDigVeilBudget';
 import { FIELD_COMPONENT_FLOATS } from '../../src/layers/milkyWay/field/header/render/packFieldUniforms';
+import { armColor } from '../../src/layers/milkyWay/field/arms/utils/armColor';
+import { armFadeEnvelope } from '../../src/layers/milkyWay/field/arms/utils/armFadeEnvelope';
+import { armExcessSurfaceShape } from '../../src/layers/milkyWay/field/arms/utils/armExcessSurfaceShape';
+import { armCrossSigma } from '../../src/layers/milkyWay/field/arms/utils/armCrossSigma';
+import { armRidgeFrameAt } from '../../src/layers/milkyWay/field/arms/utils/armRidgeFrameAt';
+import { radialTilt } from '../../src/layers/milkyWay/field/armClouds/utils/radialTilt';
+import { tiltReferenceRadius } from '../../src/layers/milkyWay/field/armClouds/utils/tiltReferenceRadius';
 
 const VIEWPORT = { width: 1400, height: 900 };
 // A control change reaches the GPU through store → engineBridge → the next rAF,
@@ -71,7 +67,7 @@ const RING_MEANS_TOLERANCE = 1e-3;
 
 // `readback:armRidgeSample`'s max-|CPU-GPU| budget — armRidge.wesl's
 // armRidgeAngle/armFadeEnvelope/armCrossSigma/armRidgeFrameAt/
-// armExcessSurfaceShape/armColor vs. armRidgeGeometry.ts's own CPU output at
+// armExcessSurfaceShape/armColor vs. the arms/utils CPU output at
 // the SAME literal fixture (armRidgeDebugSample.wesl's own consts, mirrored
 // below). f32 vs. f64 trig/exp over small inputs, so this tolerance is
 // generous next to RING_MEANS_TOLERANCE's summed-value budget.
@@ -559,8 +555,8 @@ const ARM_RIDGE_FIXTURE_ARM_B: GalaxyFieldArmRecord = {
 };
 
 const ARM_RIDGE_FIXTURE_LOG_R = [-0.5, 0.4, 0.9, 1.6];
-// Fix round 1: armExcessSurfaceShape's own two args (not geometry fields —
-// see armRidgeGeometry.ts's own signature) and armColor's per-sample inputs,
+// armExcessSurfaceShape's own two args (not geometry fields — see its
+// signature in `arms/utils/armExcessSurfaceShape.ts`) and armColor's inputs,
 // mirroring armRidgeDebugSample.wesl's H_LIGHT/EXCESS_SCALE_RATIO/
 // YOUNG_FRACTION/RADIAL_T.
 const ARM_RIDGE_FIXTURE_H_LIGHT = 2.5;
@@ -1331,8 +1327,8 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
         console.error(`  readback:placeArmSpurCloud count matches budget math (${first.count})`);
 
         // (2.5) Task 15's flux-weight-sum renorm — ringReduce.wesl's
-        // csArmSpurFluxWeightSum output must match a CPU recomputation of
-        // armSpurParticleCloud.ts:199-203's own sum (a bare '1/weightSum',
+        // csArmSpurFluxWeightSum output must match a CPU sum of the read-back
+        // flux weights (a bare '1/weightSum',
         // NOT 'spurFlux/weightSum' — placeArmSpurCloud.wesl already bakes
         // spurFlux into 'flux' itself, that file's own doc). This reads
         // `spurCloudRenormBuffer` directly (`renormScale`, the SAME buffer
@@ -1368,7 +1364,7 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
         // `colorSum_i * amplitude_i * renormScale * TAU_ROOT3/sqrt(det_i)`)
         // got the color factor right (armColor is not a unit-sum RGB vector,
         // ~3-4x observed before that fix) but still missed ~1.5-1.7x —
-        // `params.w`/`debugView.w` (exposure/galaxyWeight, both baked into
+        // `eye.w`/`debugView.w` (exposure/galaxyWeight, both baked into
         // the rendered texel by fieldSplat/fragment.wesl's fs) are additional
         // unknown-to-the-probe multipliers no amount of per-record CPU
         // recomputation can reach without re-deriving the whole frame-view
@@ -1384,7 +1380,7 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
         // is the driving knob (not `sizeScale`, which `deriveArmSpurCloudCount`'s
         // own coverage-preserving design keeps weightSum ~invariant to either
         // way — no discriminating power): elongation moves
-        // `deriveArmSpurCloudCount` (hence weightSum, `armSpurParticleCloud.ts`'s
+        // `deriveArmSpurCloudCount` (hence weightSum, `deriveArmSpurCloudCount.ts`'s
         // own fluxWeight has no elongation term) WITHOUT moving spurFlux, so a
         // CORRECTLY renormalized tier's isolated rendered total is elongation-
         // INVARIANT by the amplitude := flux/(TAU_ROOT3*sigmas) identity — a
@@ -1626,8 +1622,8 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
       // sprite — no survival filter on this tier); (4) flux parity —
       // independent reconstruction of `cloudFlux * fluxWeight_i`, extended
       // one step past `readback:placeArmSpurCloud`'s own derivation with the
-      // radial-tilt cancellation (`radialTilt`, armParticleCloud.ts's own
-      // export) `armParticleCloud.ts:220-231` divides back out.
+      // radial-tilt cancellation (`armClouds/utils/radialTilt.ts`) that
+      // `placeArmCloud.wesl`'s flux weight divides back out.
       name: 'readback:placeArmCloud',
       run: async (page) => {
         await settleFrames(page, SETTLE_FRAMES);
@@ -1706,8 +1702,8 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
         console.error(`  readback:placeArmCloud count matches budget math (${first.count})`);
 
         // (2.5) Task 15's flux-weight-sum renorm — ringReduce.wesl's
-        // csArmCloudFluxWeightSum output must match a CPU recomputation of
-        // armParticleCloud.ts:232-235's own sum (a bare '1/weightSum', NOT
+        // csArmCloudFluxWeightSum output must match a CPU sum of the read-back
+        // flux weights (a bare '1/weightSum', NOT
         // 'cloudFlux/weightSum' — placeArmCloud.wesl already bakes cloudFlux
         // into 'flux' itself, that file's own doc). Reads
         // `armCloudRenormBuffer` directly, same "validates the kernel, not
@@ -1732,7 +1728,7 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
         // `readback:placeArmSpurCloud`'s own (2.6) — a whole-field-sum
         // comparison isn't clean (ridge-chain residual emission unrelated to
         // Task 15), and an ABSOLUTE prediction (even color-weighted) can't
-        // reach `params.w`/`debugView.w` (exposure/galaxyWeight) from the
+        // reach `eye.w`/`debugView.w` (exposure/galaxyWeight) from the
         // probe's own vantage point. `requestArmCloudRenderedFluxSum`
         // isolates this reservation's own instance range through the REAL
         // `fieldSplatPipe`/`fieldSplatBG`; comparing a RATIO of two such
@@ -1830,7 +1826,7 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
         // placeArmCloud.wesl's own SPRITE_POLE_RATIO — mirrored, no parity
         // test (same treatment placeArmSpurCloud.wesl's own copy gets — the
         // shader has no TS twin to test it against; formerly
-        // armParticleCloud.ts's own copy too, before Task 16 deleted it
+        // deriveArmCloudCount.ts's own copy too, before Task 16 deleted it
         // along with the CPU placement body that used it).
         const SPRITE_POLE_RATIO = 0.6;
         const TAU_ROOT3_TS = (2 * Math.PI) ** 1.5;
@@ -2149,7 +2145,7 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
 
         // (4) Sigma-distribution parity — NOT a flux check. DIG's own CPU
         // brightness law (`amplitude = digAmplitudeBase / (TAU_ROOT3 *
-        // sigma^3)`, hiiRegions.ts:634) is position-INDEPENDENT: unlike the
+        // sigma^3)`, buildDigVeil.ts) is position-INDEPENDENT: unlike the
         // arm/spur tiers' `armExcessSurfaceShape(placedRadius, ...)`, no
         // quantity derived from a record's OWN amplitude+invCov can ever be
         // an independent check of its PLACEMENT — substituting the shader's

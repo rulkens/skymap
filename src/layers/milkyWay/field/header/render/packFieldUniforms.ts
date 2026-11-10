@@ -7,7 +7,7 @@
  * packFieldUniforms — the packers for the analytic Milky Way field pass.
  *
  * Two packers, not one, because the header and the components change at
- * different rates: `packFieldHeaderUniforms` runs every `drawFrame` (its
+ * different rates: `packFieldHeaderUniforms` runs every frame (its
  * `exposure` lane tracks the per-frame visibility fade), while
  * `packFieldComponents` only needs to run when a mixture actually changes —
  * a galaxy (re)generated, an extra set replaced, or the field tuning
@@ -21,20 +21,13 @@
  *
  * ## Why a camera BASIS and not an inverse view-projection
  *
- * The shader needs a world-space ray per fragment. Both routes work; this one
- * is the least invasive, because every input already exists in the frame loop:
- * the camera's world right/up rows come off the view matrix exactly as
- * `packCloudUniforms` reads them for the billboards, the forward axis is the
- * negated third row, and fov/aspect/lens-shift are the arguments the engine
- * just built its projection from. An inverse-VP route would add a matrix
- * inverse per frame plus the [0,1]-vs-[-1,1] depth bookkeeping, to reconstruct
- * numbers the engine had in hand a line earlier.
- *
- * The lens shift is passed through because the engine writes one into
- * `proj[8]` to keep the galaxy centred in the panel-free part of the canvas.
- * That term subtracts from x_ndc, so the shader adds it back; omitting it
- * would slide the analytic field against the sprites whenever a side panel
- * opens — a divergence that looks like a projection bug, not a framing one.
+ * The shader needs a ray per fragment, and `FieldView` already hands this
+ * packer the basis and the four frustum tangents in the galaxy frame, so the
+ * ray is `right·t.x + up·t.y + fwd` with no matrix inverse and no
+ * [0,1]-vs-[-1,1] depth bookkeeping. The frustum carries the lens shift (the
+ * engine slides the window to keep the galaxy centred in the panel-free part
+ * of the canvas); dropping it would slide the analytic field against the
+ * sprites whenever a side panel opens.
  */
 
 import type { GalaxyFieldComponent } from '../../mixture/@types/GalaxyFieldComponent';
@@ -44,7 +37,7 @@ import type { HiiTextureLanes } from '../@types/HiiTextureLanes';
 import type { IsmMapSeedingLanes } from '../@types/IsmMapSeedingLanes';
 import type { YoungStarsLanes } from '../@types/YoungStarsLanes';
 
-/** Float count of `io.wesl`'s `FieldUniforms` header — 17 vec4, camera + params + counts + counts2 + dustExtinction + dustNoise + dustSlices + debugView + ismMapChannels + bubbleView + dustDetail + dustCarve + youngStars + perf. */
+/** Float count of `io.wesl`'s `FieldUniforms` header — 17 vec4, camera + frustum + counts + counts2 + dustExtinction + dustNoise + dustSlices + debugView + ismMapChannels + bubbleView + dustDetail + dustCarve + youngStars + perf. */
 export const FIELD_HEADER_FLOATS = 68;
 
 /** Byte size of the header struct, for `createBuffer`. */
@@ -114,6 +107,7 @@ const NO_YOUNG_STARS: YoungStarsLanes = {
 export function packFieldHeaderUniforms(input: FieldHeaderInput, dst?: Float32Array): Float32Array {
   const {
     camera: cam,
+    exposure,
     emissionCount,
     primaryCount,
     targetSizePx,
@@ -126,36 +120,32 @@ export function packFieldHeaderUniforms(input: FieldHeaderInput, dst?: Float32Ar
   const ismMapSeeding = input.ismMapSeeding ?? INERT_ISM_MAP_SEEDING;
   const youngStars = input.youngStars ?? NO_YOUNG_STARS;
   const out = dst ?? new Float32Array(FIELD_HEADER_FLOATS);
-  const { view } = cam;
 
-  // eye 0..3.
+  // eye 0..3 = (eye xyz, exposure).
   out[0] = cam.eye[0];
   out[1] = cam.eye[1];
   out[2] = cam.eye[2];
-  out[3] = 0;
+  out[3] = exposure;
 
-  // camRight 4..7, camUp 8..11, camFwd 12..15. A lookAt view matrix's rotation
-  // ROWS are the camera's world axes (the transpose of an orthonormal
-  // rotation); wgpu-matrix stores column-major, so each row is a stride-4
-  // gather. Row 2 points AWAY from the target, hence the negation.
-  out[4] = view[0]!;
-  out[5] = view[4]!;
-  out[6] = view[8]!;
+  // camRight 4..7, camUp 8..11, camFwd 12..15.
+  out[4] = cam.right[0];
+  out[5] = cam.right[1];
+  out[6] = cam.right[2];
   out[7] = 0;
-  out[8] = view[1]!;
-  out[9] = view[5]!;
-  out[10] = view[9]!;
+  out[8] = cam.up[0];
+  out[9] = cam.up[1];
+  out[10] = cam.up[2];
   out[11] = 0;
-  out[12] = -view[2]!;
-  out[13] = -view[6]!;
-  out[14] = -view[10]!;
+  out[12] = cam.fwd[0];
+  out[13] = cam.fwd[1];
+  out[14] = cam.fwd[2];
   out[15] = 0;
 
-  // params 16..19 = (tanHalfFov, aspect, lensShiftX, exposure).
-  out[16] = Math.tan(cam.fov / 2);
-  out[17] = cam.aspect;
-  out[18] = cam.lensShiftX;
-  out[19] = cam.exposure;
+  // frustum 16..19 = (tanLeft, tanRight, tanDown, tanUp).
+  out[16] = cam.frustum.tanLeft;
+  out[17] = cam.frustum.tanRight;
+  out[18] = cam.frustum.tanDown;
+  out[19] = cam.frustum.tanUp;
 
   // counts 20..23 = (emissionCount, dustOffset, dustCount, primaryCount).
   // dustOffset is not an input: dust is always appended AFTER every emission
@@ -212,7 +202,7 @@ export function packFieldHeaderUniforms(input: FieldHeaderInput, dst?: Float32Ar
   // same reason dustDetail's .yz do (io.wesl's doc) — ismMapPresent.wesl's
   // "seeding" debug view. .z carries the placement CAP (`ismMapSeeding.cap`),
   // .w the mean of the map's own per-ring dust means
-  // (`arrayMean(ismMapRingMeans(...))`, `createGalaxyModel.ts`'s
+  // (`arrayMean(ismMapRingMeans(...))`, the tool's `createGalaxyModel.ts`
   // `ismMapSeedingView` getter) — the divisor of the radial-envelope term
   // both sides of the CDF density share. Per-RING, not one flat map-wide
   // mean, is what keeps the cap from also flattening the radial profile (see
@@ -314,7 +304,7 @@ export function packFieldComponents(
     out[base + 9] = c.color[1];
     out[base + 10] = c.color[2];
     // textureWeight (io.wesl's comps doc) — 0 (untouched) for every producer
-    // except hiiRegions.ts's pushes.
+    // except buildHiiShellsAndYoungWithSegments.ts's pushes.
     out[base + 11] = c.textureWeight ?? 0;
     out[base + 12] = c.center[0];
     out[base + 13] = c.center[1];

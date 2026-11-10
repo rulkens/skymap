@@ -7,7 +7,7 @@
  * `IsmMapOutput`'s stable objects, never to the runner directly, so
  * flipping the toggle never touches their bind groups.
  */
-import { ismMapGridRadiusOrDefault } from '../utils/galaxyIsmMapArmForcing';
+import { ismMapGridRadiusOrDefault } from '../utils/ismMapGridRadiusOrDefault';
 import { createIsmMapOutput } from './createIsmMapOutput';
 import { createIsmMapFluidRunner } from './createIsmMapFluidRunner';
 import type { IsmMapGenerator } from '../@types/IsmMapGenerator';

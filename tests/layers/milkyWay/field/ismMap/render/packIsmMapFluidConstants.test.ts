@@ -74,7 +74,7 @@ const input: IsmMapFluidConstantsInput = {
     gatherOffset: SENTINEL.gatherOffset,
     starsDeposit: SENTINEL.starsDeposit,
     starsDecay: SENTINEL.starsDecay,
-    // CPU-only (galaxyIsmMapFluidEvents.ts) — no UBO member, not part of this
+    // CPU-only (buildGalaxyIsmMapFluidEvents.ts) — no UBO member, not part of this
     // parity guard's sentinel set.
     eventArmBias: 0,
   },

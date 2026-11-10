@@ -190,14 +190,9 @@ describe('no file under src/layers imports src/state or src/store (outside ui/sa
 // if one were threaded in. Zero at HEAD outside `ui/`/`sagas/`, and every store write in
 // the runtime sequence is a `deps` field, a published fact, `put()` from a declared saga,
 // or deleted (Ruling 17).
-// GPU compute dispatch (`chain.orientation.dispatch({...})`), not a store write.
-const GPU_DISPATCH_FILES = ['src/layers/milkyWay/field/data/galaxyFieldStages.ts'];
-
 describe('no file under src/layers dispatches (outside ui/sagas)', () => {
   const files = walk('src/layers').filter(
-    (file) =>
-      !LAYER_STORE_REACH_DIRS.some((dir) => file.includes(dir)) &&
-      !GPU_DISPATCH_FILES.includes(file),
+    (file) => !LAYER_STORE_REACH_DIRS.some((dir) => file.includes(dir)),
   );
   expect(files.length).toBeGreaterThan(0);
 

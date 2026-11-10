@@ -1,4 +1,5 @@
 import type { DustHeaderLanes } from '../dust/@types/DustHeaderLanes';
+import type { FieldFramePlan } from './FieldFramePlan';
 import type { FieldSliceCounts } from './FieldSliceCounts';
 import type { GalaxyFieldMixtureResult } from '../mixture/@types/GalaxyFieldMixtureResult';
 import type { HiiSegment } from '../starFormation/@types/HiiSegment';
@@ -13,7 +14,7 @@ import type { GalaxyFieldProbe } from '../probe/@types/GalaxyFieldProbe';
 export type GalaxyFieldRenderer = {
   /**
    * Rebuild whatever the moved half of `input` feeds. Idempotent: a call in
-   * which nothing moved (the host re-pushes its whole render bag on any knob)
+   * which nothing moved (the host passes its whole tuning every frame, each section identity-keyed)
    * does no work.
    */
   setMixture(input: GalaxyFieldMixtureInput): void;
@@ -26,13 +27,14 @@ export type GalaxyFieldRenderer = {
    */
   stepIsmMap(): { readonly done: boolean };
   /**
-   * Pack this frame's five headers, then encode the dust-map, dust-present,
-   * field-splat and HII-tier passes into the caller's encoder. The only
-   * ordering owned here is what is intrinsic to one galaxy's own passes
-   * (dustMap before field); where they sit in the frame is the host's call.
+   * Pack this frame's five headers, then encode exactly `plan.encodes`, in
+   * its order, into the caller's encoder (plus the debug dust view, iff
+   * `targets.dustView` is present and its weight is above 0). Where the passes
+   * sit in the frame is the host's call.
    */
   encode(
     encoder: GPUCommandEncoder,
+    plan: FieldFramePlan,
     targets: GalaxyFieldRenderTargets,
     frame: GalaxyFieldFrame,
   ): void;
@@ -41,7 +43,7 @@ export type GalaxyFieldRenderer = {
 
   readonly fieldCounts: FieldSliceCounts;
   readonly dustHeaderLanes: DustHeaderLanes;
-  /** `hiiComps`' buffer-wide segmentation — the host's composite gates read it. */
+  /** `hiiComps`' buffer-wide segmentation — `planFieldFrame` reads it. */
   readonly hiiSegments: readonly HiiSegment[];
   readonly armCloudReservation: GalaxyFieldMixtureResult['armCloudReservation'];
   readonly spurCloudReservation: GalaxyFieldMixtureResult['spurCloudReservation'];

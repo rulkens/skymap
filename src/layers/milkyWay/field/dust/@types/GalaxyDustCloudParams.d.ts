@@ -2,7 +2,7 @@
  * GalaxyDustCloudParams — the structured 3D dust particle cloud: thousands
  * of small anisotropic Gaussians standing in for individual GMC/cloud
  * complexes, giving the dust field actual volumetric depth. This is the
- * galaxy's ONLY dust tier (see `galaxyDustMixture.ts`), carrying the
+ * galaxy's ONLY dust tier (see `dustDiscShape.ts`), carrying the
  * galaxy's FULL measured `tau`. See `dustParticleCloud.ts` for the
  * size/mass/placement model. Refiners are ×measured-default scalers where
  * 1.0 reproduces the literature value.

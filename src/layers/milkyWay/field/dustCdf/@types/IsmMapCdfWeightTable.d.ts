@@ -9,7 +9,7 @@ import type { IsmMapCdfArmEnvelopeEntry } from './IsmMapCdfArmEnvelopeEntry';
  * convention). 'armBiased': `placeDigVeil` — the bare channel dot
  * (no ring normalisation), reweighted toward `entries`' packed ridge
  * envelope (`buildArmProximityEnvelope`/`armBiasedDensity`,
- * `hiiRegions.ts:484-539`). `entries` is ring-major, length `rings *
+ * `buildDigVeil.ts`). `entries` is ring-major, length `rings *
  * armCount` — see `packIsmMapCdfArmEnvelope.ts`'s own doc for how a caller
  * fills it (one `refresh(radius)` per ring, not per texel).
  */

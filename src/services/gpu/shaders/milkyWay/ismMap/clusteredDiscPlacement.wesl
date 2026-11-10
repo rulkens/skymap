@@ -203,7 +203,7 @@ const CDP_DISC_SURFACE_WEIGHTS: vec4<f32> = vec4<f32>(0.1667, 0.3065, 0.2131, 0.
 // mode 2u's arm-lane rejection-loop bound.
 const CDP_ARM_FADE_REJECTION_TRIES: u32 = 24u;
 
-// radialTilt — armParticleCloud.ts's own helper (:149-152), ported fresh:
+// radialTilt — deriveArmCloudCount.ts's own helper (:149-152), ported fresh:
 // no WGSL home elsewhere (armRidge.wesl's ridge vocabulary has no bias/tilt
 // concept, and only mode 2u's placement density plus placeArmCloud.wesl's
 // own flux-weight cancellation ever read it).
@@ -330,7 +330,7 @@ fn buildClusteredDiscPlacementChild(
       hasOrientation, orientationTex, orientRings, orientAz, orientRMin, orientRMax,
     );
   } else {
-    // mode 2u ('analytic') — placeAnalyticComplex. armParticleCloud.ts's
+    // mode 2u ('analytic') — placeAnalyticComplex. deriveArmCloudCount.ts's
     // buildClusteredDiscPlacement call never passes ismMapOrientation (this
     // tier has no map-seeded mode), so rotateFrameToOrientation would always
     // be a no-op here — skipped outright rather than threading a dead

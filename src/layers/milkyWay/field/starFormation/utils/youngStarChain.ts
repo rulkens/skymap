@@ -5,9 +5,9 @@
  * their spurs. Pure `(geometry, tuning, seed) -> flat data`, same discipline
  * as every other `field/` builder — no `ismMap`/`starFormation` input.
  */
-import { armCrossSigma } from '../../arms/utils/armRidgeGeometry';
-import { buildArmSpurs } from '../../arms/utils/armSpurGeometry';
-import { HII_CLUSTER_COLOR } from './hiiRegionGeometry';
+import { armCrossSigma } from '../../arms/utils/armCrossSigma';
+import { buildArmSpurs } from '../../arms/utils/buildArmSpurs';
+import { HII_CLUSTER_COLOR } from '../data/hiiClusterColor';
 import { sampleArmRidgeNodes } from '../../arms/utils/sampleArmRidgeNodes';
 import { inverseCovarianceFromFrame } from '../../mixture/utils/inverseCovarianceFromFrame';
 import { pcToUnits } from '../../mixture/utils/pcToUnits';
@@ -15,6 +15,7 @@ import type { GalaxyDescription } from '../../../../../@types/galaxy/GalaxyDescr
 import type { GalaxyFieldArmRecord } from '../../../../../@types/galaxy/GalaxyFieldArmRecord';
 import type { GalaxyFieldComponent } from '../../mixture/@types/GalaxyFieldComponent';
 import type { GalaxyFieldTuning } from '../../mixture/@types/GalaxyFieldTuning';
+import { TAU_ROOT3 } from '../data/tauRoot3';
 
 /**
  * Hard ceiling across every arm and spur combined, well inside the comps
@@ -41,15 +42,13 @@ const YOUNG_SCALE_HEIGHT_PC = 100;
 /**
  * Free-standing per-luminosity flux anchor (spec §3, Q3) — total tier flux
  * at `brightness` 1 is `geometry.luminosity * YOUNG_FLUX_REF`, the same
- * "fraction of the galaxy's own luminosity" idiom `hiiRegions.ts`'s
+ * "fraction of the galaxy's own luminosity" idiom `buildHiiShellsAndYoungWithSegments.ts`'s
  * `HII_LUMINOSITY_SHARE` uses, standing in until the pivot to
  * `clusterFluxSum` (Q3's one-line anchor swap) wires this tier back into
  * the HII pass' own flux ledger. A visual-calibration starting point, not
  * a measurement.
  */
 const YOUNG_FLUX_REF = 0.005;
-
-const TAU_ROOT3 = (2 * Math.PI) ** 1.5;
 
 /** Mirrors splatSilhouette.wesl's own `SPLAT_CUT` — parity guarded by tests/services/gpu/shaders/constants.parity.test.ts so the two can't silently drift. */
 export const SPLAT_CUT_SIGMA = 4.5;
