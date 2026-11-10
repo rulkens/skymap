@@ -1,4 +1,4 @@
-/** The selection ref of every Focus step in the draft that focuses something (not `ref: null`). */
+/** The selection ref of every focus effect in a clip that focuses something (not `ref: null`). */
 import { effectAt } from './effectAt';
 import { effectPaths } from './effectPaths';
 import type { ClipData } from '../../../../../src/@types/animation/ClipData';

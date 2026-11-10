@@ -4,7 +4,6 @@
  * Resolved line. A resolved effect of any other kind reads as an empty string, never throws.
  */
 import { formatDegrees } from '../utils/formatDegrees';
-import { formatSelectionRef } from '../utils/formatSelectionRef';
 import { formatNumber } from '../../utils/format/formatNumber';
 import { formatQuantity } from '../../utils/format/formatQuantity';
 import { easeField } from '../utils/fields/easeField';
@@ -12,6 +11,7 @@ import { overField } from '../utils/fields/overField';
 import { subjectField } from '../utils/fields/subjectField';
 import { resolvedPosition } from '../utils/resolvedPosition';
 import { formatMpc } from '../../utils/format/formatMpc';
+import { objectText } from '../utils/object/objectText';
 import type { RowKindRegistry } from '../../@types/kinds/RowKindRegistry';
 
 export const subjectKinds: Pick<
@@ -106,6 +106,6 @@ export const subjectKinds: Pick<
         ? { name: 'Focus', op: '', value: 'none' }
         : { name: 'Focus', op: '', value: '', subject: s.id },
     fields: [{ ...subjectField(), control: 'focusSubject' }],
-    resolved: (e) => (e.kind === 'focus' ? formatSelectionRef(e.ref) : ''),
+    resolved: (e, objects) => (e.kind === 'focus' ? objectText(e.ref, objects) : ''),
   },
 };

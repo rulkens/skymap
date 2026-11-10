@@ -10,12 +10,19 @@ import {
   dollyToId,
   fade,
   flyPath,
+  focus,
   seq,
 } from '../../../../../src/services/engine/animation/effectHelpers';
 import { layerSearchReported } from '../../../../../src/state/engine/engineSlice';
 import { openStudioStore } from '../../helpers/openStudioStore';
 import Inspector from '../../../src/inspector/components/Inspector/Inspector';
-import { draftResolved, paramEdited, rowSelected } from '../../../src/session/state/studioSlice';
+import {
+  draftResolved,
+  paramEdited,
+  refNamed,
+  rowSelected,
+} from '../../../src/session/state/studioSlice';
+import { refKey } from '../../../../../src/utils/selection/refKey';
 import {
   selectDraft,
   selectRevision,
@@ -48,6 +55,17 @@ describe('Inspector', () => {
     expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(/^Distance → m31$/);
     expect(screen.getByText('Resolved')).toBeTruthy();
     expect(screen.getByText('950 Mpc')).toBeTruthy();
+  });
+
+  it("a focus-id step's Resolved line names its ref", () => {
+    const ref = { type: 'structure', id: 'void-bootes-void' };
+    const store = open({ timeline: [focus('void-bootes-void' as FocusId)] });
+    resolveWith(store, { timeline: [{ kind: 'focus', ref }] });
+    store.dispatch(refNamed({ key: refKey(ref), name: 'Boötes Void' }));
+    store.dispatch(rowSelected({ kind: 'effect', path: [0] }));
+    show(store);
+
+    expect(screen.getByText('Resolved').nextSibling).toHaveTextContent('Boötes Void');
   });
 
   it('a selected invalid row shows its error chip as an alert', () => {

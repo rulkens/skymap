@@ -1,7 +1,7 @@
 /**
  * resolveDraftSaga — keeps the slice's resolution cache on the current draft revision: on open and
  * on every edit, start switch, undo and redo, wait for the draft's foci, resolve it against the
- * pinned preview and land it tagged with its revision (A6), and name its Focus steps. The latest
+ * pinned preview and land it tagged with its revision (A6), and name the focus refs of both. The latest
  * revision wins: a newer one cancels work still waiting. The calls are the ones `clipBodySaga` makes before playing a clip.
  */
 import { all, call, cancel, fork, getContext, put, select, take } from 'typed-redux-saga';
@@ -43,10 +43,13 @@ function* resolveRevisionSaga(selection: SagaContext['selection']): Generator {
     resolution = { revision, message: error instanceof Error ? error.message : String(error) };
   }
   yield* put(draftResolved(resolution));
+  if ('data' in resolution) yield* call(nameFocusRefsSaga, selection, resolution.data);
 }
 
 function* reviseSaga(selection: SagaContext['selection']): Generator {
-  yield* all([call(resolveRevisionSaga, selection), call(nameFocusRefsSaga, selection)]);
+  const { draft } = yield* select(selectStudioState);
+  if (draft === null) return;
+  yield* all([call(resolveRevisionSaga, selection), call(nameFocusRefsSaga, selection, draft)]);
 }
 
 export function* resolveDraftSaga(): Generator {
