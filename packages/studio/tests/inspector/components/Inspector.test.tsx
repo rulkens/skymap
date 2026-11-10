@@ -44,7 +44,7 @@ describe('Inspector', () => {
     store.dispatch(rowSelected({ kind: 'effect', path: [0] }));
     show(store);
 
-    expect(screen.getByRole('heading', { level: 2 }).textContent).toContain('◎m31');
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(/^Distance → m31$/);
     expect(screen.getByText('Resolved')).toBeTruthy();
     expect(screen.getByText('950 Mpc')).toBeTruthy();
   });
