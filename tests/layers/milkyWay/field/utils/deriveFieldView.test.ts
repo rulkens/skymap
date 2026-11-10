@@ -10,6 +10,11 @@ import { milkyWayModelCached } from '../../../../../src/layers/milkyWay/cloud/re
 import { shiftedFrustum } from '../../../../../src/services/engine/camera/lens/utils/shiftedFrustum';
 import { computeViewProj } from '../../../../../src/utils/camera/projection/computeViewProj';
 import { createOrbitCamera } from '../../../../../src/utils/camera/orbitCamera/createOrbitCamera';
+import { deriveView } from '../../../../../src/services/engine/frame/deriveView';
+import { domeFaceRotations } from '../../../../../src/utils/dome/domeFaceRotations';
+import { DOME_PARAMS } from '../../../../../src/data/rendering/domeParams';
+import { symmetricFrustum } from '../../../../../src/utils/camera/frustum/symmetricFrustum';
+import { frameViewsAt } from '../../../../helpers/frame/frameViewsAt';
 
 const NDCS: readonly [number, number][] = [
   [-1, -1],
@@ -48,6 +53,16 @@ function rayDir(view: FieldView, [x, y]: readonly [number, number]): Vec3 {
   return [0, 1, 2].map((i) => fwd[i]! + right[i]! * tx + up[i]! * ty) as Vec3;
 }
 
+function expectRaysLandOnNdc(view: FieldView, vp: FrameView['vp']): void {
+  for (const ndc of NDCS) {
+    const d = rayDir(view, ndc);
+    const p = [0, 1, 2].map((i) => view.eye[i]! + 0.005 * d[i]!);
+    const clip = vec4.transformMat4([p[0]!, p[1]!, p[2]!, 1], Float64Array.from(vp));
+    expect(clip[0]! / clip[3]!).toBeCloseTo(ndc[0], 5);
+    expect(clip[1]! / clip[3]!).toBeCloseTo(ndc[1], 5);
+  }
+}
+
 describe('deriveFieldView', () => {
   it('with the identity, rays built from the FieldView land on their own NDC under frame.vp', () => {
     const frame = frameFixture();
@@ -55,13 +70,32 @@ describe('deriveFieldView', () => {
 
     expect(view.eye).toEqual(frame.drawCamPos);
     expect(view.frustum).toBe(frame.frustum);
-    for (const ndc of NDCS) {
-      const d = rayDir(view, ndc);
-      const p = [0, 1, 2].map((i) => view.eye[i]! + 0.005 * d[i]!);
-      const clip = vec4.transformMat4([p[0]!, p[1]!, p[2]!, 1], frame.vp);
-      expect(clip[0]! / clip[3]!).toBeCloseTo(ndc[0], 5);
-      expect(clip[1]! / clip[3]!).toBeCloseTo(ndc[1], 5);
-    }
+    expectRaysLandOnNdc(view, frame.vp);
+  });
+
+  it("a dome face's FieldView carries that face's basis and frustum, not the main view's", () => {
+    // Each rig view is its own submit, so the field follows the view it is handed.
+    const [canvas] = frameViewsAt({
+      eyeMpc: [0.01, -0.004, 0.02],
+      forward: [1, 0.3, 0.2],
+      distanceMpc: 0.05,
+    });
+    const face = deriveView(canvas!.snapshot, canvas!.cam, {
+      id: 'dome:test',
+      rotation: domeFaceRotations(DOME_PARAMS.tiltDeg)[1]!,
+      eyeOffsetMpc: [0, 0, 0],
+      frustum: symmetricFrustum(Math.PI / 2, 1),
+      sizePx: { width: 512, height: 512 },
+      slot: DOME_PARAMS.viewSlotBase + 1,
+      kind: 'frame',
+    });
+    const main = deriveFieldView(canvas!, mat4.identity());
+    const view = deriveFieldView(face, mat4.identity());
+
+    expect(view.frustum).toBe(face.frustum);
+    expect(view.frustum).not.toEqual(main.frustum);
+    expect(vec3n.dot(view.fwd, main.fwd)).toBeLessThan(0.99);
+    expectRaysLandOnNdc(view, face.vp);
   });
 
   it("in the galaxy frame, the eye is milkyWayCamPosModel's and rays stay parallel", () => {
