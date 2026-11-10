@@ -30,6 +30,7 @@ import { COSMO_LABEL_DIRECTOR } from '../../data/labels/cosmoLabelDirectorConfig
 import { FOREGROUND_LABEL_DIRECTOR } from '../../data/labels/foregroundLabelDirectorConfig';
 import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsystem';
 import { createClipPlayer } from './subsystems/clipPlayer';
+import { syncVisibilityTargets } from './wiring/syncVisibilityTargets';
 import { createClipPathInspector } from './subsystems/clipPathInspector';
 import { datumOnlyTerrainHeight } from '../../utils/camera/terrain/datumOnlyTerrainHeight';
 import { FRAME_ORDER } from './frame/frameOrder';
@@ -202,8 +203,22 @@ export function createEngine(
 
       clipPlayer: createClipPlayer({
         store: cb.store,
-        requestRender: () => state.subsystems.scheduler.requestRender(),
-        getEngineState: () => state,
+        getCameraRuntime: () => state.cameraRuntime,
+        // At the last drawn sim instant, never a wall-clock read (the recorder steps the clock).
+        extractFocusRow: (ref) => {
+          const row = selection.extractRow(ref, state.cameraRuntime.outputs.simDays);
+          return { row, focusId: (ref && row && selection.focusIdOf(ref)) || null };
+        },
+        syncVisibility: (settings, overMs) =>
+          syncVisibilityTargets(
+            {
+              settings,
+              subsystems: state.subsystems,
+              visibilityEntries: state.visibilityEntries,
+              visibilityGates: state.visibilityGates,
+            },
+            overMs,
+          ),
       }),
 
       clipPathInspector: createClipPathInspector(),

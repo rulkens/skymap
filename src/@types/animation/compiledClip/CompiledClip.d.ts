@@ -1,11 +1,11 @@
 /**
- * CompiledClip — the output of `compileClip`; what the evaluator and cue-firer
- * both read.
+ * CompiledClip — the output of `compileClip`; what the camera evaluator and the
+ * clip player both read.
  *
  * `compileClip` walks a `ClipData` effect tree once and flattens it into three
- * families of per-channel tracks plus a time-ordered cue list. The evaluator
- * (Task 6) then processes these flat arrays each frame without re-traversing the
- * tree; the cue-firer scans `cues` linearly as the clock advances.
+ * families of per-channel tracks plus the scene's tracks. The evaluator then
+ * processes these flat arrays each frame without re-traversing the tree; the
+ * clip player evaluates `scene` at the clip clock (`sceneView`, `clipFactorAt`).
  *
  * ### Why flatten at all, instead of evaluating the tree directly?
  *
@@ -27,16 +27,16 @@
  *   - **Oscillation** (`oscTracks`): zero-mean sine bobs (`osc`); perpetual,
  *     no window. Additive with both base and velocity.
  *
- * Scene effects (`show`/`hide`/`fade`/`scene`/`focus`) are one-shot cues fired
- * when the playback clock crosses their `atSec`; they do not drive frame-level
- * interpolation, so they live outside the track families.
+ * Scene effects (`show`/`hide`/`scene`/`frameTo` steps, `focus` steps, `fade`
+ * factor segments) are evaluated at t as an overlay on intent, never dispatched;
+ * they move what is drawn, not the camera, so they live outside the track families.
  *
  * ### Sub-shapes are private compile artifacts
  *
- * `BaseSegment`, `VelRamp`, `OscTrack`, `CompositeSample`, `CompositeTrack`, and
- * `SceneCue` (each in its own sibling file, per the one-type-per-file
+ * `BaseSegment`, `VelRamp`, `OscTrack`, `CompositeSample`, `CompositeTrack` and
+ * the `SceneTracks` family (each in its own sibling file, per the one-type-per-file
  * convention) are internal representations produced by `compileClip` and
- * consumed only by the evaluator (Task 6) and the cue-firer (Task 7). They
+ * consumed only by the evaluator and the clip player. They
  * are NOT intended as independently useful public API — the `compiledClip/`
  * folder is what now marks them as one family, in place of the single shared
  * file that used to carry that meaning; their fields stay inseparable from
@@ -49,19 +49,18 @@ import type { BaseSegment } from './BaseSegment';
 import type { VelRamp } from './VelRamp';
 import type { OscTrack } from './OscTrack';
 import type { CompositeTrack } from './CompositeTrack';
-import type { SceneCue } from './SceneCue';
 import type { SceneTracks } from './SceneTracks';
 import type { EffectSpan } from '../EffectSpan';
 
 /**
  * CompiledClip — the fully flattened, evaluator-ready form of a `ClipData`.
  *
- * Produced by `compileClip` (Task 4) from a `ClipData`. Consumed by the
- * evaluator (Task 6) each frame and the cue-firer (Task 7) on each clock tick.
+ * Produced by `compileClip` from a `ClipData`. Consumed by the camera evaluator
+ * and the clip player each frame.
  *
  * All times are in seconds relative to the clip's start. A leading `wait` in
  * the source timeline simply shifts the cursor, so `baseTracks`, `velTracks`,
- * `oscTracks`, and `cues` all carry those later absolute times directly.
+ * `oscTracks`, and `scene` all carry those later absolute times directly.
  */
 export type CompiledClip = {
   /** The concrete starting camera pose. `'live'` is resolved upstream before
@@ -86,10 +85,6 @@ export type CompiledClip = {
   /** Oscillation tracks from `osc` actions, across all channels. The evaluator
    *  sums contributions per channel each frame. */
   readonly oscTracks: OscTrack[];
-
-  /** Time-ordered (ascending `atSec`) list of scene cues to fire; the clip player's input
-   *  until it evaluates `scene` instead (S3 G2 deletes it with the cue path). */
-  readonly cues: SceneCue[];
 
   /** The clip's scene as tracks, a pure function of the clip clock (`sceneView`, `clipFactorAt`). */
   readonly scene: SceneTracks;

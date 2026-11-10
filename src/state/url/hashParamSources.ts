@@ -233,8 +233,8 @@ const orientationSource: HashParamSource = {
   // key to carry. `computeSceneEntering`'s beat-boundary fold excludes
   // `frameTo` for the same reason (see its header): orientation carries
   // forward live instead. The tour's own restore (`restoreSceneSaga`, via
-  // `requestOrientationChange`) and a beat's live `frameTo` cue (dispatched
-  // directly by `applySceneEffect` as the clip plays) both reach
+  // `requestOrientationChange`) and a tour clip's `keep` end (the clip player
+  // commits its `frameTo` steps' frame) both reach
   // `setOrientation` by those other paths, covered below. If `orientation`
   // ever moves back onto `SettingsSnapshot`, this list must grow to include
   // `mergeSnapshot`.

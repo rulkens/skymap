@@ -19,8 +19,8 @@
  *
  * `compileClip` drives a single recursive `walk` helper that carries an
  * "absolute start time" (the cursor position in the overall timeline) and
- * accumulates into four mutable arrays (`baseSegs`, `velRamps`, `oscTracks`,
- * `cues`). The walk returns the AWAITED duration of the subtree it processed
+ * accumulates into mutable arrays (`baseSegs`, `velRamps`, `oscTracks`, the
+ * scene's `steps` / `focus` / `fades`, …). The walk returns the AWAITED duration of the subtree it processed
  * (fork children return 0 because a fork never keeps a scope alive).
  *
  * Structural nodes dispatch to:
@@ -89,7 +89,6 @@ import type { BaseSegment } from '../../../@types/animation/compiledClip/BaseSeg
 import type { VelRamp } from '../../../@types/animation/compiledClip/VelRamp';
 import type { OscTrack } from '../../../@types/animation/compiledClip/OscTrack';
 import type { CompositeTrack } from '../../../@types/animation/compiledClip/CompositeTrack';
-import type { SceneCue } from '../../../@types/animation/compiledClip/SceneCue';
 import type { SceneStep } from '../../../@types/animation/compiledClip/SceneStep';
 import type { FocusStep } from '../../../@types/animation/compiledClip/FocusStep';
 import type { FactorSegment } from '../../../@types/animation/compiledClip/FactorSegment';
@@ -113,8 +112,6 @@ type Accum = {
   readonly baseSegs: BaseSegment[];
   readonly velRamps: VelRamp[];
   readonly oscTracks: OscTrack[];
-  // Every scene effect as a fire-once cue: the clip player's input until it evaluates `scene`.
-  readonly cues: SceneCue[];
   // `steps`, `focus` and `fades` are in push (tree) order; `compileClip` time-sorts them.
   readonly steps: SceneStep[];
   readonly focus: FocusStep[];
@@ -447,7 +444,6 @@ function walkNode(effect: Effect, path: EffectPath, atSec: number, acc: Accum): 
     case 'scene':
     case 'focus':
     case 'frameTo': {
-      acc.cues.push(emitted(acc, path, { atSec, effect }));
       if (effect.kind === 'focus') acc.focus.push(emitted(acc, path, { atSec, ref: effect.ref }));
       else if (effect.kind === 'fade') acc.fades.push(emitted(acc, path, { atSec, effect }));
       else acc.steps.push(emitted(acc, path, { atSec, effect }));
@@ -538,7 +534,6 @@ export function compileClip(data: ClipData, frameBasis?: Mat3): CompiledClip {
     baseSegs: [],
     velRamps: [],
     oscTracks: [],
-    cues: [],
     steps: [],
     focus: [],
     fades: [],
@@ -557,8 +552,6 @@ export function compileClip(data: ClipData, frameBasis?: Mat3): CompiledClip {
   for (const [i, effect] of data.timeline.entries()) {
     awaitedDur += walk(effect, [i], awaitedDur, acc);
   }
-
-  const sortedCues: SceneCue[] = [...acc.cues].sort((a, b) => a.atSec - b.atSec);
 
   const baseTracks = reportedByPath(acc, () => {
     validateSeqCueOrder(acc.seqs, acc.steps);
@@ -584,7 +577,6 @@ export function compileClip(data: ClipData, frameBasis?: Mat3): CompiledClip {
     baseTracks,
     velTracks: acc.velRamps,
     oscTracks: acc.oscTracks,
-    cues: sortedCues,
     scene: {
       steps: [...acc.steps].sort((a, b) => a.atSec - b.atSec),
       focus: [...acc.focus].sort((a, b) => a.atSec - b.atSec),

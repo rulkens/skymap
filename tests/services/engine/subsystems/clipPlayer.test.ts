@@ -1,295 +1,341 @@
 /**
- * clipPlayer — unit tests for the side-effecting Resource that owns the clip's
- * scene cues, the `clipOpacity` channel, and clip-completion lifecycle.
- *
- * ### Test strategy
- *
- * All tests use a REAL store (`configureStore({ reducer: rootReducer })`), real
- * `compileClip` (via `createClipPlayer`), real `createClipOpacityChannel`, and
- * the real epoch primitives. Only `applySceneEffect` is mocked for the routing
- * test — we need to assert it is called for non-fade cues but NOT for fade
- * cues, and module-level mocking is the only TS-safe way to spy on a named
- * export.
- *
- * ### Epoch behaviour
- *
- * `tick(clipEpoch, nowMs)` advances the epoch it is handed against
- * `camera.clip` REFERENCE identity and returns it. On the first tick after
- * `clipStarted(data)` the ref is new → `startMs = nowMs`, elapsed = 0 s.
- * Subsequent ticks at `nowMs = startMs + N*1000` yield N seconds. `makePlayer`
- * threads the returned epoch back in, the way `runFrame` does through
- * `cameraRuntime.epochs.clip`.
- *
- * ### Two-frame deferred completion
- *
- * On the frame elapsed first reaches durationSec: `pendingEnd` is set but
- * `clipEnded` is NOT dispatched. On the NEXT tick: `clipEnded` IS dispatched and
- * internal state resets. The test "dispatches clipEnded the frame AFTER the clip
- * reaches durationSec" pins this ordering explicitly.
+ * clipPlayer against a real store, real compile and the real epoch primitives. Only the two
+ * engine hooks are fakes: `syncVisibility` records what reached the fade registry, and the
+ * camera runtime hands a fixed up-basis to a frame roll. `makePlayer` threads the returned clip
+ * epoch back into the next tick, as `runFrame` does.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { configureStore } from '@reduxjs/toolkit';
+import { describe, it, expect, vi } from 'vitest';
+import { configureStore, type Action } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../../src/store/rootReducer';
-import { clipStarted, clipEnded, resolveClipStart } from '../../../../src/state/camera/cameraSlice';
+import {
+  clipStarted,
+  clipEnded,
+  resolveClipStart,
+  startFrameTween,
+} from '../../../../src/state/camera/cameraSlice';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import {
   UNSTARTED_EPOCHS,
   elapsedMs,
 } from '../../../../src/services/engine/camera/drivers/cameraEpochs';
 import { createClipPlayer } from '../../../../src/services/engine/subsystems/clipPlayer';
-import { applySceneEffect } from '../../../../src/services/animation/applySceneEffect';
-import { fade, hide, seq, hold } from '../../../../src/services/engine/animation/effectHelpers';
+import { setFlowEnabled } from '../../../../src/layers/flow/state/flow/slice';
+import { mergeSnapshot } from '../../../../src/state/settings/mergeSnapshotAction';
+import { setOrientation } from '../../../../src/state/settings/core/orientationSlice';
+import { updateSelectionFocus } from '../../../../src/state/selection/selectionSlice';
+import { FRAME_TWEEN_MS } from '../../../../src/state/camera/watchOrientationChangeSaga';
+import { IDENTITY_MAT3 } from '../../../../src/utils/math/identityMat3';
+import {
+  fade,
+  frameTo,
+  hide,
+  hold,
+  seq,
+  show,
+  wait,
+} from '../../../../src/services/engine/animation/effectHelpers';
 import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
+import type { ClipSceneEnd } from '../../../../src/@types/animation/ClipSceneEnd';
 import type { CameraEpochs } from '../../../../src/@types/engine/camera/CameraEpochs';
-import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-
-// ---------------------------------------------------------------------------
-// Module-level mock for applySceneEffect
-//
-// Using vi.mock (not vi.spyOn) because applySceneEffect is a named function
-// export — TypeScript rejects vi.spyOn on ES module named exports in strict
-// mode. The hoisted factory pattern makes a typed mock available to test bodies.
-// ---------------------------------------------------------------------------
-
-const { mockApplySceneEffect } = vi.hoisted(() => ({
-  mockApplySceneEffect:
-    vi.fn<typeof import('../../../../src/services/animation/applySceneEffect').applySceneEffect>(),
-}));
-
-vi.mock('../../../../src/services/animation/applySceneEffect', () => ({
-  applySceneEffect: mockApplySceneEffect,
-}));
-
-const mockedApplySceneEffect = vi.mocked(applySceneEffect);
-
-// ---------------------------------------------------------------------------
-// Fixtures
-// ---------------------------------------------------------------------------
+import type { CameraRuntime } from '../../../../src/@types/engine/state/CameraRuntime';
+import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
+import type { SelectionRefBase } from '../../../../src/@types/engine/selection/SelectionRefBase';
 
 const LIVE_POSE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 };
+const VIRGO = { type: 'structure', id: 'virgo' };
+const VIRGO_ROW = { row: { type: 'structure' }, focusId: 'virgo' };
 
 type TestStore = ReturnType<typeof makeStore>;
 
 function makeStore() {
-  return configureStore({ reducer: rootReducer });
+  const store = configureStore({ reducer: rootReducer });
+  store.dispatch(setFlowEnabled(false));
+  return store;
 }
 
-/** Install a clip into the store at the given start time. */
-function installClip(store: TestStore, data: ClipData): ClipData {
+function installClip(store: TestStore, data: ClipData, atEnd: ClipSceneEnd = 'revert'): void {
   const resolved = resolveClipStart(data, LIVE_POSE);
-  store.dispatch(clipStarted({ data: resolved, frame: DEFAULT_ORIENTATION, atEnd: 'revert' }));
-  return resolved;
+  store.dispatch(clipStarted({ data: resolved, frame: DEFAULT_ORIENTATION, atEnd }));
 }
 
-/** Minimal stub EngineState for the getEngineState dep. */
-function makeEngineStateStub(): EngineState {
-  return {} as unknown as EngineState;
-}
-
-/**
- * A player plus a `tick(nowMs)` that threads the returned clip epoch back into
- * the next call — the frame's job, done here so tests read like the old
- * single-argument API.
- */
-function makePlayer(store: TestStore, requestRender: () => void = () => {}) {
-  const player = createClipPlayer({ store, requestRender, getEngineState: makeEngineStateStub });
+function makePlayer(store: TestStore) {
+  const syncVisibility = vi.fn<(settings: EngineSettingsState, overMs?: number) => void>();
+  const extractFocusRow = vi.fn((ref: SelectionRefBase | null) =>
+    ref === null ? { row: null, focusId: null } : VIRGO_ROW,
+  );
+  const runtime = { outputs: { upBasis: IDENTITY_MAT3 } } as unknown as CameraRuntime;
+  const player = createClipPlayer({
+    store,
+    getCameraRuntime: () => runtime,
+    extractFocusRow,
+    syncVisibility,
+  });
   let epoch: CameraEpochs['clip'] = UNSTARTED_EPOCHS.clip;
   const tick = (nowMs: number): CameraEpochs['clip'] => {
     epoch = player.tick(epoch, nowMs).clipEpoch;
     return epoch;
   };
-  return { player, tick };
+  const view = () => player.view(store.getState());
+  return { player, tick, view, syncVisibility, extractFocusRow };
 }
 
-// ---------------------------------------------------------------------------
-// Test setup
-// ---------------------------------------------------------------------------
+const typesOf = (calls: readonly (readonly unknown[])[]) => calls.map((c) => (c[0] as Action).type);
 
-beforeEach(() => {
-  mockedApplySceneEffect.mockClear();
+describe('clipPlayer scene', () => {
+  it('a show step reaches the view at its atSec and the store is never written mid-clip', () => {
+    const store = makeStore();
+    const { tick, view } = makePlayer(store);
+    installClip(store, { timeline: [seq([wait(1), show(['flow']), hold(5)])] });
+    const intent = store.getState().settings;
+
+    tick(0);
+    expect(view().settings.flow.enabled).toBe(false);
+    tick(1000);
+    expect(view().settings.flow.enabled).toBe(true);
+    tick(3000);
+    expect(store.getState().settings).toBe(intent);
+  });
+
+  it('each crossed visibility step syncs with its own over', () => {
+    const store = makeStore();
+    const { tick, syncVisibility } = makePlayer(store);
+    installClip(store, {
+      timeline: [seq([wait(1), show(['flow'], 4), wait(1), hide(['flow'], 1), hold(5)])],
+    });
+
+    tick(0);
+    expect(syncVisibility).not.toHaveBeenCalled();
+    tick(2500);
+    expect(syncVisibility.mock.calls.map(([s, over]) => [s.flow.enabled, over])).toEqual([
+      [true, 4000],
+      [false, 1000],
+    ]);
+  });
+
+  it('a frameTo step starts a frame tween from the live basis and puts its frame in the view', () => {
+    const store = makeStore();
+    const { tick, view } = makePlayer(store);
+    installClip(store, { timeline: [frameTo('supergalactic', { over: 2 }), hold(5)] });
+    const dispatch = vi.spyOn(store, 'dispatch');
+
+    tick(0);
+    expect(dispatch).toHaveBeenCalledWith(
+      startFrameTween({
+        fromQuat: [0, 0, 0, 1],
+        to: 'supergalactic',
+        durationMs: 2000,
+        easing: 'easeInOutCubic',
+      }),
+    );
+    expect(view().settings.orientation).toBe('supergalactic');
+    expect(store.getState().settings.orientation).toBe(DEFAULT_ORIENTATION);
+  });
+
+  it('clipOpacityOf is the factor at t whatever frames were skipped', () => {
+    const store = makeStore();
+    const { player, tick } = makePlayer(store);
+    // A retarget mid-ramp supersedes: from 2 s the second ramp runs from the 0.5 reached there.
+    installClip(store, {
+      timeline: [fade(['flow'], 0, 4), seq([wait(2), fade(['flow'], 1, 2), hold(5)])],
+    });
+
+    tick(0);
+    expect(player.clipOpacityOf('flow')).toBe(1);
+    tick(1000);
+    expect(player.clipOpacityOf('flow')).toBeCloseTo(0.84375, 12);
+    tick(3000);
+    expect(player.clipOpacityOf('flow')).toBeCloseTo(0.75, 12);
+    expect(player.clipOpacityOf('survey')).toBe(1);
+  });
+
+  it('revert: at the end the view is the store again and visibility re-syncs with default durations', () => {
+    const store = makeStore();
+    const { player, tick, view, syncVisibility } = makePlayer(store);
+    installClip(store, {
+      timeline: [
+        show(['flow'], 0),
+        frameTo('galactic', { over: 0.5 }),
+        fade(['survey'], 0, 0),
+        hold(1),
+      ],
+    });
+    tick(0);
+    tick(1000);
+    syncVisibility.mockClear();
+    const dispatch = vi.spyOn(store, 'dispatch');
+
+    tick(2000);
+    expect(store.getState().camera.clip).toBeNull();
+    expect(view()).toBe(store.getState());
+    expect(syncVisibility).toHaveBeenCalledWith(store.getState().settings);
+    expect(syncVisibility.mock.calls[0]![0].flow.enabled).toBe(false);
+    expect(dispatch).toHaveBeenCalledWith(
+      startFrameTween({
+        fromQuat: [0, 0, 0, 1],
+        to: DEFAULT_ORIENTATION,
+        durationMs: FRAME_TWEEN_MS,
+        easing: 'easeInOutCubic',
+      }),
+    );
+    expect(player.clipOpacityOf('survey')).toBe(1);
+  });
+
+  it("keep: at the end the store holds the view's settings, focus and orientation before clipEnded", () => {
+    const store = makeStore();
+    const { tick, syncVisibility } = makePlayer(store);
+    installClip(
+      store,
+      {
+        timeline: [
+          show(['flow']),
+          { kind: 'focus', ref: VIRGO },
+          frameTo('galactic', { over: 1 }),
+          hold(1),
+        ],
+      },
+      'keep',
+    );
+    tick(0);
+    tick(1000);
+    syncVisibility.mockClear();
+    const dispatch = vi.spyOn(store, 'dispatch');
+
+    tick(2000);
+    expect(typesOf(dispatch.mock.calls)).toEqual([
+      mergeSnapshot.type,
+      updateSelectionFocus.type,
+      setOrientation.type,
+      clipEnded.type,
+    ]);
+    const { settings, selection } = store.getState();
+    expect(settings.flow.enabled).toBe(true);
+    expect(settings.orientation).toBe('galactic');
+    expect(selection.focus).toEqual(VIRGO);
+    expect(syncVisibility).not.toHaveBeenCalled();
+  });
+
+  it('keep: stop() commits the steps reached by the stop instant, not later ones', () => {
+    const store = makeStore();
+    const { player, tick } = makePlayer(store);
+    installClip(
+      store,
+      { timeline: [seq([show(['flow']), wait(2), hide(['label:milkyWay']), hold(5)])] },
+      'keep',
+    );
+    tick(0);
+    tick(1000);
+
+    player.stop();
+    expect(store.getState().camera.clip).toBeNull();
+    expect(store.getState().settings.flow.enabled).toBe(true);
+    expect(store.getState().settings.milkyWay.labelEnabled).toBe(true);
+  });
+
+  it('a looping clip re-evaluates each lap from intent; a step at 0 holds across the wrap with no publish', () => {
+    const store = makeStore();
+    const { tick, view, syncVisibility } = makePlayer(store);
+    installClip(store, {
+      timeline: [hide(['label:milkyWay'], 0), seq([wait(1), show(['flow']), hold(1)])],
+      loop: true,
+    });
+
+    tick(0);
+    tick(1500);
+    expect(view().settings.flow.enabled).toBe(true);
+    syncVisibility.mockClear();
+
+    tick(2100); // 0.1 s into lap 2: the show at 1 s no longer applies, the hide at 0 does.
+    expect(view().settings.flow.enabled).toBe(false);
+    expect(view().settings.milkyWay.labelEnabled).toBe(false);
+    expect(syncVisibility).toHaveBeenCalledTimes(1);
+    expect(syncVisibility.mock.calls[0]![0].flow.enabled).toBe(false);
+
+    syncVisibility.mockClear();
+    tick(3000); // lap 2 crosses the show again.
+    tick(4100); // lap 3: the show drops again; the hide at 0 never re-publishes on its own.
+    tick(4200);
+    expect(syncVisibility.mock.calls.map(([s]) => s.milkyWay.labelEnabled)).toEqual([false, false]);
+  });
+
+  it('a lap that crosses back over only a step at 0 publishes nothing', () => {
+    const store = makeStore();
+    const { tick, syncVisibility } = makePlayer(store);
+    installClip(store, { timeline: [hide(['label:milkyWay'], 0), hold(2)], loop: true });
+
+    tick(0);
+    syncVisibility.mockClear();
+    tick(2100);
+    tick(4100);
+    expect(syncVisibility).not.toHaveBeenCalled();
+  });
+
+  it('a replaced clip publishes its crossings and leaves the end resolver alone', () => {
+    const store = makeStore();
+    const { player, tick, view, syncVisibility } = makePlayer(store);
+    const onEnd = vi.fn<() => void>();
+    player.registerEndResolver(onEnd);
+    installClip(store, { timeline: [show(['flow'], 0), hold(5)] });
+    tick(0);
+    syncVisibility.mockClear();
+
+    installClip(store, { timeline: [seq([wait(1), hide(['label:milkyWay'], 2), hold(5)])] });
+    tick(500);
+    expect(view().settings.flow.enabled).toBe(false);
+    expect(syncVisibility.mock.calls.map(([s, over]) => [s.flow.enabled, over])).toEqual([
+      [false, undefined],
+    ]);
+    tick(1500);
+    expect(syncVisibility.mock.calls.at(-1)![1]).toBe(2000);
+    expect(onEnd).not.toHaveBeenCalled();
+    expect(store.getState().camera.clip).not.toBeNull();
+  });
+
+  it('view is memoized: the same root and applied counts return the same object', () => {
+    const store = makeStore();
+    const { player, tick } = makePlayer(store);
+    installClip(store, { timeline: [show(['flow']), hold(5)] });
+    tick(0);
+    const root = store.getState();
+
+    const first = player.view(root);
+    expect(first).not.toBe(root);
+    tick(1000);
+    expect(player.view(root)).toBe(first);
+  });
 });
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-
-describe('clipPlayer', () => {
-  it('fires a cue when elapsed crosses its atSec', () => {
-    const store = makeStore();
-    const requestRender = vi.fn<() => void>();
-    const { player, tick } = makePlayer(store, requestRender);
-
-    // Clip: fade(['survey'], 0, 0) at atSec=0 (snap to 0), then hold(5).
-    const data: ClipData = {
-      timeline: [fade(['survey'], 0, 0), hold(5)],
-    };
-    installClip(store, data);
-
-    // Tick at t=0: the epoch starts at 0, elapsed=0.
-    // Cue at atSec=0 is in (-Infinity, 0] — fires.
-    tick(0);
-    expect(player.clipOpacityOf('survey', 0)).toBe(0);
-
-    // Second tick at t=0 (same elapsed). prevElapsed is now 0.
-    // Cue at atSec=0 is NOT in (0, 0] — does NOT re-fire.
-    // requestRender was called once (first tick only).
-    tick(0);
-    expect(requestRender).toHaveBeenCalledTimes(1);
-  });
-
-  it('fires cues in (prevElapsed, elapsed] across a tick window', () => {
-    const store = makeStore();
-    const { player, tick } = makePlayer(store);
-
-    // Two fade cues: survey at atSec=0, cosmicWebFilaments at atSec=3.
-    // seq([fade@0, hold(3), fade@3, hold(5)]) — hold(3) advances cursor to 3.
-    const data: ClipData = {
-      timeline: [
-        seq([fade(['survey'], 0, 0), hold(3), fade(['cosmicWebFilaments'], 0, 0), hold(5)]),
-      ],
-    };
-    installClip(store, data);
-
-    // Tick 1 at t=0: elapsed=0. prevElapsed=-Inf. Fires cue@0 (survey).
-    tick(0);
-    expect(player.clipOpacityOf('survey', 0)).toBe(0);
-    expect(player.clipOpacityOf('cosmicWebFilaments', 0)).toBe(1); // not yet
-
-    // Tick 2 at t=4000: elapsed=4. prevElapsed=0. Fires cue@3 (cosmicWebFilaments) in (0,4].
-    tick(4000);
-    expect(player.clipOpacityOf('survey', 4000)).toBe(0); // still faded
-    expect(player.clipOpacityOf('cosmicWebFilaments', 4000)).toBe(0); // now faded
-  });
-
+describe('clipPlayer lifecycle', () => {
   it('dispatches clipEnded the frame AFTER the clip reaches durationSec (post-produce defer)', () => {
     const store = makeStore();
-    const dispatchSpy = vi.spyOn(store, 'dispatch');
     const { tick } = makePlayer(store);
+    installClip(store, { timeline: [hold(2)] });
+    const dispatch = vi.spyOn(store, 'dispatch');
 
-    // Simple 2-second clip: hold(2).
-    const data: ClipData = { timeline: [hold(2)] };
-    installClip(store, data);
-
-    const endClipType = clipEnded().type;
-
-    // Tick 1 at t=0: starts the epoch, elapsed=0 (not at duration yet).
-    dispatchSpy.mockClear();
     tick(0);
-    const types1 = dispatchSpy.mock.calls.map((c) => (c[0] as { type?: string }).type);
-    expect(types1).not.toContain(endClipType);
-
-    // Tick 2 at t=2000: elapsed=2 = durationSec. Sets pendingEnd=true.
-    // clipEnded must NOT be dispatched on THIS frame (post-produce safety).
-    dispatchSpy.mockClear();
     tick(2000);
-    const types2 = dispatchSpy.mock.calls.map((c) => (c[0] as { type?: string }).type);
-    expect(types2).not.toContain(endClipType);
-    // Clip is still active — produce step runs evaluateClip at saturation.
+    // The produce step of this frame runs saturated, with the clip still active.
+    expect(typesOf(dispatch.mock.calls)).not.toContain(clipEnded.type);
     expect(store.getState().camera.clip).not.toBeNull();
 
-    // Tick 3 (any nowMs): pendingEnd was true → dispatches clipEnded NOW.
-    dispatchSpy.mockClear();
     tick(3000);
-    const types3 = dispatchSpy.mock.calls.map((c) => (c[0] as { type?: string }).type);
-    expect(types3).toContain(endClipType);
-    // Clip is now null in the store.
+    expect(typesOf(dispatch.mock.calls)).toContain(clipEnded.type);
     expect(store.getState().camera.clip).toBeNull();
   });
 
-  it('fade cue drives clipOpacity; clipOpacityOf reflects it; resets to 1 on clipEnded', () => {
+  it('loop: true rebases the epoch instead of ending; stop still terminates it', () => {
     const store = makeStore();
     const { player, tick } = makePlayer(store);
+    installClip(store, { timeline: [hold(2)], loop: true });
 
-    // Clip: fade(['survey'], 0, 0) at t=0 (snap to 0), hold(1). Duration = 1 s.
-    const data: ClipData = { timeline: [fade(['survey'], 0, 0), hold(1)] };
-    installClip(store, data);
-
-    // Tick 1: elapsed=0, cue fires, survey snaps to 0.
     tick(0);
-    expect(player.clipOpacityOf('survey', 0)).toBe(0);
-
-    // Tick 2: elapsed=1 = durationSec → pendingEnd set. Clip still active.
-    tick(1000);
-    expect(player.clipOpacityOf('survey', 1000)).toBe(0);
-
-    // Tick 3: pendingEnd was true → clipEnded dispatched → reset() called → all factors back to 1.
     tick(2000);
-    expect(player.clipOpacityOf('survey', 2000)).toBe(1);
-  });
-
-  it('stop dispatches clipEnded and resets the cursor + clipOpacity', () => {
-    const store = makeStore();
-    const dispatchSpy = vi.spyOn(store, 'dispatch');
-    const { player, tick } = makePlayer(store);
-
-    // Clip with a fade cue; clip is long so it won't complete naturally.
-    const data: ClipData = { timeline: [fade(['survey'], 0, 0), hold(60)] };
-    installClip(store, data);
-
-    // Tick to fire the fade cue.
-    tick(0);
-    expect(player.clipOpacityOf('survey', 0)).toBe(0);
-
-    // stop() dispatches clipEnded and resets clipOpacity.
-    dispatchSpy.mockClear();
-    player.stop();
-
-    const dispatchedTypes = dispatchSpy.mock.calls.map((c) => (c[0] as { type?: string }).type);
-    expect(dispatchedTypes).toContain(clipEnded().type);
-    // clipOpacity reset → factor back to 1.
-    expect(player.clipOpacityOf('survey', 0)).toBe(1);
-    // Clip cleared from the store.
-    expect(store.getState().camera.clip).toBeNull();
-  });
-
-  it('loop: true rewinds the epoch + cue cursor instead of ending; a top-of-timeline cue re-fires each lap; stop still terminates it', () => {
-    const store = makeStore();
-    const dispatchSpy = vi.spyOn(store, 'dispatch');
-    const { player, tick } = makePlayer(store);
-
-    // A 2-second looping clip with a scene cue at atSec=0. `hide` routes
-    // through applySceneEffect (mocked), so its call count proves whether the
-    // cue actually re-fires on a second lap, not just whether elapsed wraps.
-    const data: ClipData = { timeline: [hide(['flow']), hold(2)], loop: true };
-    installClip(store, data);
-    mockedApplySceneEffect.mockClear();
-
-    const endClipType = clipEnded().type;
-
-    // Lap 1, t=0: elapsed=0, cue fires once.
-    tick(0);
-    expect(mockedApplySceneEffect).toHaveBeenCalledTimes(1);
-
-    // t=2000: elapsed=2=durationSec. A non-looping clip would set pendingEnd
-    // here; a looping one rewinds instead — no clipEnded, clip stays active.
-    dispatchSpy.mockClear();
-    tick(2000);
-    const typesAtWrap = dispatchSpy.mock.calls.map((c) => (c[0] as { type?: string }).type);
-    expect(typesAtWrap).not.toContain(endClipType);
-    expect(store.getState().camera.clip).not.toBeNull();
-
-    // Lap 2, t=2100 (100ms into the rebased epoch ⇒ wrapped elapsed ≈ 0.1s):
-    // the atSec=0 cue is back in (prevElapsed, elapsed] and fires again —
-    // proof the cue cursor rewound alongside the epoch, not just one of them.
-    tick(2100);
-    expect(mockedApplySceneEffect).toHaveBeenCalledTimes(2);
-
-    // Many more laps still never end the clip on their own.
-    dispatchSpy.mockClear();
-    tick(4000);
     tick(4100);
-    const typesAfterMoreLaps = dispatchSpy.mock.calls.map((c) => (c[0] as { type?: string }).type);
-    expect(typesAfterMoreLaps).not.toContain(endClipType);
     expect(store.getState().camera.clip).not.toBeNull();
 
-    // Only stop() ends a looping clip.
-    dispatchSpy.mockClear();
     player.stop();
-    const typesAfterStop = dispatchSpy.mock.calls.map((c) => (c[0] as { type?: string }).type);
-    expect(typesAfterStop).toContain(endClipType);
     expect(store.getState().camera.clip).toBeNull();
   });
 
@@ -323,80 +369,32 @@ describe('clipPlayer', () => {
     expect(elapsedMs(clipEpoch, 5000)).toBe(0);
   });
 
-  it('the player holds no reference to the runtime', () => {
-    // The engine state the player can reach carries its own (stale) epochs;
-    // replacing `cameraRuntime` wholesale must not change what `tick` returns —
-    // the epoch is the argument's, advanced, and nothing else.
+  it('the epoch is the argument, advanced, and nothing else', () => {
     const store = makeStore();
-    const engineState = {
-      cameraRuntime: { epochs: UNSTARTED_EPOCHS },
-    } as unknown as EngineState;
-    const player = createClipPlayer({
-      store,
-      requestRender: () => {},
-      getEngineState: () => engineState,
-    });
+    const { player } = makePlayer(store);
     installClip(store, { timeline: [hold(5)] });
     const handed: CameraEpochs['clip'] = { ref: store.getState().camera.clip, startMs: 1000 };
 
-    engineState.cameraRuntime = {
-      epochs: { ...UNSTARTED_EPOCHS, clip: { ref: store.getState().camera.clip, startMs: 0 } },
-    } as unknown as EngineState['cameraRuntime'];
     const { clipEpoch } = player.tick(handed, 1500);
 
     expect(clipEpoch).toBe(handed);
     expect(elapsedMs(clipEpoch, 1500)).toBe(500);
   });
 
-  it('routes a non-fade cue through applySceneEffect; fade cue does NOT call applySceneEffect', () => {
+  it('destroy drops the scene and settles an in-flight playClip end-resolver', () => {
     const store = makeStore();
-    const { tick } = makePlayer(store);
-
-    // Two cues both at atSec=0:
-    //   - fade(['survey'], 0, 0): must NOT call applySceneEffect (clipPlayer's own)
-    //   - hide(['flow']): MUST call applySceneEffect
-    // seq accumulates: fade returns 0 duration (scene cue), hide returns 0.
-    // Both at cursor=0 → atSec=0 for both.
-    const data: ClipData = {
-      timeline: [seq([fade(['survey'], 0, 0), hide(['flow']), hold(5)])],
-    };
-    installClip(store, data);
-    mockedApplySceneEffect.mockClear();
-
-    // Tick at t=0: both cues at atSec=0 fire.
-    tick(0);
-
-    // hide cue routes through applySceneEffect; fade cue does NOT.
-    expect(mockedApplySceneEffect).toHaveBeenCalledTimes(1);
-    const calledEffect = mockedApplySceneEffect.mock.calls[0]?.[0];
-    expect(calledEffect?.kind).toBe('hide');
-  });
-
-  it('destroy resets clipOpacity to 1 and clears internal state', () => {
-    const store = makeStore();
-    const { player, tick } = makePlayer(store);
-
-    const data: ClipData = { timeline: [fade(['survey'], 0, 0), hold(5)] };
-    installClip(store, data);
-
-    tick(0); // fires fade cue → survey = 0
-    expect(player.clipOpacityOf('survey', 0)).toBe(0);
-
-    player.destroy();
-    // After destroy, clipOpacity is reset — all layers return 1.
-    expect(player.clipOpacityOf('survey', 0)).toBe(1);
-  });
-
-  it('destroy settles an in-flight playClip end-resolver', () => {
-    const store = makeStore();
-    const { player } = makePlayer(store);
-
+    const { player, tick, view } = makePlayer(store);
     let settled = false;
     player.registerEndResolver(() => {
       settled = true;
     });
+    installClip(store, { timeline: [fade(['survey'], 0, 0), show(['flow']), hold(5)] });
+    tick(0);
+    expect(player.clipOpacityOf('survey')).toBe(0);
 
     player.destroy();
     expect(settled).toBe(true);
+    expect(player.clipOpacityOf('survey')).toBe(1);
+    expect(view()).toBe(store.getState());
   });
 });

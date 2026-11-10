@@ -318,19 +318,36 @@ Behaviour, per tick (all synchronous inside `tick`; nothing deferred to a later 
 
 Tests (rewrite `clipPlayer.test.ts`; keep the epoch, deferred-end, runtime-free, rebased-loop and destroy tests):
 
-- [ ] `a show step reaches the view at its atSec and the store is never written mid-clip`.
-- [ ] `each crossed visibility step syncs with its own over` (show over 4 and hide over 1 crossed in one tick → two
+**As built (G2):**
+
+- **The cue path's last test users migrate here, not in 2.3**, so this commit stays green: `cueOver.integration`
+  now drives the real player over a real registry (a step's `over` reaches the ramp), `frameLadder` writes each
+  beat's `frameTo` steps through `sceneActionsOf` (what the `keep` end commits), `tour.integration` reads the
+  factor at the last ticked t. Stale `applySceneEffect` mentions in six comments go with the deletion.
+- **`getCameraRuntime` instead of `getEngineState`**: a frame roll needs only the live up-basis. `ClipPlayerDeps`
+  moves to `@types/engine/subsystems/`, so `clipPlayer.ts` leaves the inline-type ledger.
+- **A wrap publishes only when the applied step count drops** (counts are prefixes of one sorted list, so equal
+  counts mean the same applied steps): a lap that re-crosses only a step at 0 publishes nothing at all. The
+  publish goes through one function, `publishWrap`, today the same default-duration difference publish a
+  revert uses; S4 routes it through its seed (S4 spec §9.1).
+- **A clip replaced while live** (S4 spec §9.2) hands its published scene back to intent at the default durations,
+  then publishes the new clip's crossings; it never seeds and leaves the end resolver to the play that
+  registered it. Test `a replaced clip publishes its crossings and leaves the end resolver alone`.
+- `keep` commits focus when a focus step has applied (not merely exists), and a loop's t is `elapsed mod d`.
+
+- [x] `a show step reaches the view at its atSec and the store is never written mid-clip`.
+- [x] `each crossed visibility step syncs with its own over` (show over 4 and hide over 1 crossed in one tick → two
       syncs, 4000 then 1000, each against the view as of its step).
-- [ ] `a frameTo step starts a frame tween from the live basis and puts its frame in the view`.
-- [ ] `clipOpacityOf is the factor at t whatever frames were skipped` (tick at 0 then at 3.5: value equals
-      `clipFactorAt` at 3.5).
-- [ ] `revert: at the end the view is the store again and visibility re-syncs with default durations`.
-- [ ] `keep: at the end the store holds the view's settings, focus and orientation before clipEnded`.
-- [ ] `keep: stop() commits the steps reached by the stop instant, not later ones`.
-- [ ] `a looping clip re-evaluates each lap from intent; a step at 0 holds across the wrap with no publish`.
-- [ ] `view is memoized: the same root and applied counts return the same object`.
-- [ ] `npx vitest run tests/services/engine/subsystems tests/services/engine/presentation`.
-- [ ] Commit: "A clip's scene is evaluated at t, never dispatched".
+- [x] `a frameTo step starts a frame tween from the live basis and puts its frame in the view`.
+- [x] `clipOpacityOf is the factor at t whatever frames were skipped` (hand-computed values on a superseding
+      retarget: 0.84375 at 1 s, 0.75 at 3 s after skipping 2 s).
+- [x] `revert: at the end the view is the store again and visibility re-syncs with default durations`.
+- [x] `keep: at the end the store holds the view's settings, focus and orientation before clipEnded`.
+- [x] `keep: stop() commits the steps reached by the stop instant, not later ones`.
+- [x] `a looping clip re-evaluates each lap from intent; a step at 0 holds across the wrap with no publish`.
+- [x] `view is memoized: the same root and applied counts return the same object`.
+- [x] `npx vitest run tests/services/engine/subsystems tests/services/engine/presentation`.
+- [x] Commit: "A clip's scene is evaluated at t, never dispatched".
 
 ### Task 2.3: the engine reads the view; tests that fired cues by hand migrate
 

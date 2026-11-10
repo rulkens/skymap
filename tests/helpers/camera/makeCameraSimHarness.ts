@@ -109,8 +109,9 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
   if (realClipPlayer) {
     state.subsystems.clipPlayer = createClipPlayer({
       store,
-      requestRender: () => {},
-      getEngineState: () => state,
+      getCameraRuntime: () => state.cameraRuntime,
+      extractFocusRow: () => ({ row: null, focusId: null }),
+      syncVisibility: () => {},
     });
   }
 

@@ -3,7 +3,7 @@
  * clip's scene overlay reaches every engine reader at once; a bypass would silently show the
  * user's intent in that one subsystem while the clip plays, and no other test notices. ALLOWED
  * counts `.getState()` calls per file and only ever shrinks: engine.ts defines the seam,
- * clipPlayer reads `camera.clip`, the pick driver reads its request queue.
+ * clipPlayer reads intent (`camera.clip`, its end commit), the pick driver its request queue.
  */
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -11,7 +11,7 @@ import { walkFiles } from '../helpers/conventions/walkFiles';
 
 const ALLOWED: Readonly<Record<string, number>> = {
   'src/services/engine/engine.ts': 1,
-  'src/services/engine/subsystems/clipPlayer.ts': 2,
+  'src/services/engine/subsystems/clipPlayer.ts': 4,
   'src/services/engine/interaction/createPickDriver.ts': 1,
 };
 

@@ -19,7 +19,7 @@ export function resolveVisibilityOpacity(
   const { fades, clipPlayer } = state.subsystems;
   const { nowMs } = snapshot;
   const entry = visibilityEntryOf(state.visibilityEntries, address);
-  const own = fades.opacityOf({ address, item }, nowMs) * clipPlayer.clipOpacityOf(address, nowMs);
+  const own = fades.opacityOf({ address, item }, nowMs) * clipPlayer.clipOpacityOf(address);
   if (!('label' in entry) || entry.of === undefined) return own;
-  return own * clipPlayer.clipOpacityOf(entry.of as VisibilityAddress, nowMs);
+  return own * clipPlayer.clipOpacityOf(entry.of as VisibilityAddress);
 }
