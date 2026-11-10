@@ -13,5 +13,7 @@ export type FieldView = {
   readonly right: Vec3; // unit
   readonly up: Vec3; // unit
   readonly fwd: Vec3; // unit, into the screen
-  readonly frustum: ViewFrustum; // carries any lens shift: tanLeft/tanDown ≤ 0 when centred
+  /** The full projection's, never a reduced target's: a divisor-scaled target still reconstructs the
+   *  frustum `proj` was built with. Carries any lens shift (tanLeft/tanDown ≤ 0 when centred). */
+  readonly frustum: ViewFrustum;
 };

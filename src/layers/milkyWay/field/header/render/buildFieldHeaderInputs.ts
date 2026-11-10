@@ -63,9 +63,6 @@ type FieldHeaderInputs = {
 export function buildFieldHeaderInputs(deps: FieldHeaderInputsDeps): FieldHeaderInputs {
   const { camera, frame, render, model, targetSizes } = deps;
   const { debugViews, galaxyWeight, ismMapChannels, dustSlices, starGrainFeatureScale } = frame;
-  // `camera.frustum` is the PROJECTION's, not any reduced target's: the
-  // fullscreen triangle covers a divisor-scaled target, but the frustum it
-  // must reconstruct is the one `proj` was built with.
   const exposure = frame.analyticExposure;
 
   const field: FieldHeaderInput = {

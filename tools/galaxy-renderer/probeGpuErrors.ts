@@ -1364,7 +1364,7 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
         // `colorSum_i * amplitude_i * renormScale * TAU_ROOT3/sqrt(det_i)`)
         // got the color factor right (armColor is not a unit-sum RGB vector,
         // ~3-4x observed before that fix) but still missed ~1.5-1.7x —
-        // `params.w`/`debugView.w` (exposure/galaxyWeight, both baked into
+        // `eye.w`/`debugView.w` (exposure/galaxyWeight, both baked into
         // the rendered texel by fieldSplat/fragment.wesl's fs) are additional
         // unknown-to-the-probe multipliers no amount of per-record CPU
         // recomputation can reach without re-deriving the whole frame-view
@@ -1728,7 +1728,7 @@ function buildSteps(url: string, sections: SectionRow[]): readonly ExerciseStep[
         // `readback:placeArmSpurCloud`'s own (2.6) — a whole-field-sum
         // comparison isn't clean (ridge-chain residual emission unrelated to
         // Task 15), and an ABSOLUTE prediction (even color-weighted) can't
-        // reach `params.w`/`debugView.w` (exposure/galaxyWeight) from the
+        // reach `eye.w`/`debugView.w` (exposure/galaxyWeight) from the
         // probe's own vantage point. `requestArmCloudRenderedFluxSum`
         // isolates this reservation's own instance range through the REAL
         // `fieldSplatPipe`/`fieldSplatBG`; comparing a RATIO of two such
