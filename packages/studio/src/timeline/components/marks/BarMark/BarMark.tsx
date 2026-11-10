@@ -1,5 +1,6 @@
 import cx from 'classnames';
 import { spanStyle } from '../../../utils/spanStyle';
+import { stuckLabelInset } from '../../../utils/stuckLabelInset';
 import type { MarkProps } from '../../../@types/MarkProps';
 import s from './BarMark.module.css';
 
@@ -8,9 +9,7 @@ function BarMark({ row, window, selected }: MarkProps) {
   if (row.startSec === null || row.endSec === null) return null;
   const { op, value, subject } = row.label;
   const text = [op, subject, value].filter(Boolean).join(' ');
-  // Zoomed past the bar's start, its label sticks to the window's left edge.
-  const hidden = (window.startSec - row.startSec) / (row.endSec - row.startSec || 1);
-  const stuck = Math.min(100, Math.max(0, hidden * 100));
+  const stuck = stuckLabelInset(row.startSec, row.endSec, window);
   return (
     <span
       className={cx(s.root, selected && s.selected, row.errors.length > 0 && s.invalid)}
