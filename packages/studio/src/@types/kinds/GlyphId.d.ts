@@ -1,4 +1,4 @@
-/** Every glyph the studio draws: one 16-unit stroke path each in `GLYPH_PATHS`. */
+/** Every glyph the studio draws: an app icon component each, mapped in `primitives/data/glyphIcons.ts` (Q39). */
 export type GlyphId =
   | 'start'
   | 'wait'
