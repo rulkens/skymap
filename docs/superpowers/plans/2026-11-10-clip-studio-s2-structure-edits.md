@@ -11,11 +11,11 @@ length, and select and set the joins of a Sequence with the T1 crossfade treatme
 (the reviewer's document). **Decisions:** [`docs/grill-sessions/clip-studio-2026-11-07.md`](../../grill-sessions/clip-studio-2026-11-07.md).
 **Slice 1:** [`2026-11-10-clip-studio-package.md`](2026-11-10-clip-studio-package.md) (A1–A8 vocabulary).
 
-**Follows the spec's recommendations on Q-A to Q-K** until the owner rules otherwise; a ruling that differs changes
-the tasks named beside it in the spec's §9.
+**Builds the owner's rulings** on Q-A to Q-K (spec §9, 2026-11-10; grill session Q54–Q64).
 
-**Starts after** the object-picker work on `feat/clip-studio` is committed (it edits `FieldRow`, `RowInspector`,
-`OutlineRow`, `TimelinePane`, `BarMark`, `rowKinds`, `subjectKinds`). Run the pre-flight conflict scan against
+**Starts after** the object-picker work and the Fly inspector redesign on `feat/clip-studio` are committed (they edit
+`FieldRow`, `RowInspector`, `OutlineRow`, `TimelinePane`, `BarMark`, `rowKinds`, `subjectKinds`, `cameraKinds`; the
+redesign brings the Fly's waypoint chip list, `WaypointsField`, with display and selection only). Run the pre-flight conflict scan against
 whatever is uncommitted then. P1 and the S3 plan
 ([`2026-11-10-clip-studio-s3-scene-tracks.md`](2026-11-10-clip-studio-s3-scene-tracks.md)) both edit
 `compileClip.ts`; whichever lands second adapts its walk change to the other's.
@@ -31,12 +31,11 @@ whatever is uncommitted then. P1 and the S3 plan
 | --- | --- | --- | --- |
 | D1 | P1–P4 (ground preparation) | Opus | each its own commit, before any feature commit; three are `review: yes` |
 | D2 | 1.1–1.6 (structure core) | Opus | pure draft utils and the slice that commits them; one mental model (lists, remap, joins, history) |
-| D3 | 2.1–2.5 (selection, actions, keys, palette, leftovers) | Sonnet | inspector and shell surfaces over D2's actions |
+| D3 | 2.1–2.6 (selection, actions, keys, palette, leftovers, waypoint add) | Sonnet | inspector and shell surfaces over D2's actions |
 | D4 | 3.1–3.6 (joins, taper, lane drags, row drag) | Sonnet | the timeline's lanes and pointer gestures |
 | D5 | 4.1 (controller) | — | docs, smoke, shots |
 
-PR packaging of D1 (own PR or on this branch) is the owner's call at the checkpoint (spec Q-J); either way P1–P4
-are their own commits, first.
+P1–P4 ride the S2 feature PR (spec Q-J), each its own commit, before any feature commit.
 
 ---
 
@@ -62,6 +61,7 @@ packages/studio/src/kinds/utils/paletteItems.ts                    2.2
 packages/studio/src/@types/kinds/PaletteItem.d.ts                  2.2
 packages/studio/src/inspector/components/{SelectionActions,MultiInspector,JoinInspector}/  2.3, 3.3
 packages/studio/src/timeline/components/AddPalette/                2.5
+packages/studio/src/inspector/components/WaypointAdd/              2.6
 packages/studio/src/timeline/utils/{seqJoinDetails,edgeValue,joinDragEntry}.ts             3.1, 3.4, 3.5
 packages/studio/src/timeline/utils/drop/dropTarget.ts              3.6
 packages/studio/src/timeline/components/TrackLane/{useEdgeDrag,useJoinDrag}.ts             3.4, 3.5
@@ -85,7 +85,8 @@ packages/studio/src/session/sagas/resolveDraftSaga.ts                           
 packages/studio/src/@types/kinds/RowKindSpec.d.ts, kinds/data/{cameraKinds,subjectKinds,sceneKinds,
   structureKinds,rowKinds}.ts                                                                2.2, 3.3
 packages/studio/src/inspector/components/{Inspector,RowInspector}/,
-  primitives/components/{InspectorHead,AlertChip}/                                           2.3
+  primitives/components/{InspectorHead,AlertChip}/                                           2.3, 2.6
+packages/studio/src/inspector/components/WaypointsField/                                     2.6
 packages/studio/src/shell/{data/studioKeys.ts,@types/StudioKey.d.ts,@types/StudioKeyId.d.ts,
   utils/runStudioKey.ts,hooks/useStudioKeys.ts,components/KeyHelp/}                          2.4
 packages/studio/src/timeline/components/marks/{BarMark,GroupMark}/                           3.2
@@ -197,8 +198,8 @@ Behaviour unchanged (every selection still has one row): no new test.
 with the last one it started; on a change it cancels the pending resolve and starts the new one. `REVISION_ACTIONS`
 goes. Any reducer that bumps `revision` is resolved with no list to keep.
 
-- [ ] Test (fails before the change) `switching the start mode resolves the new revision`: open, resolve,
-      `startModeSet('live')` → `selectCurrentResolution` is non-null for the new revision.
+- [ ] The start-mode test d7aec2a50 added (`packages/studio/tests/session/sagas/studioSessionSaga.test.ts`) stays
+      green with the list gone; it is the regression this prep generalises.
 - [ ] Test `an action that keeps the revision starts no resolve`: after a resolve, `rowSelected(…)` lands no
       `draftResolved`.
 - [ ] Existing session-saga tests stay green.
@@ -217,9 +218,10 @@ goes. Any reducer that bumps `revision` is resolved with no list to keep.
 export type JoinRef = { readonly seq: EffectPath; readonly index: number };
 /** Before `index` in the list `owner` holds: [] the top level, a seq/all/fork path its children, a flyPath path its waypoints. */
 export type ListSlot = { readonly owner: EffectPath; readonly index: number };
+/** `min`/`max` are the list's capacity: a fork 1–1, a flyPath's waypoints 1–Infinity, every other list 0–Infinity. */
 export type DraftList =
-  | { readonly kind: 'effects'; readonly items: readonly Effect[]; readonly max: number }   // Infinity; 1 for a fork
-  | { readonly kind: 'waypoints'; readonly items: readonly PathWaypoint[] };
+  | { readonly kind: 'effects'; readonly items: readonly Effect[]; readonly min: number; readonly max: number }
+  | { readonly kind: 'waypoints'; readonly items: readonly PathWaypoint[]; readonly min: 1; readonly max: number };
 export type WrapGroup = 'seq' | 'all' | 'fork';
 /** A structure edit's result; utils return null when the edit is refused. */
 export type StructureEdit = {
@@ -257,8 +259,9 @@ mirrors in `packages/studio/tests/draft/utils/lists/`
   moving), and the slot is not inside a moving block. Every insert, move and drop asks this; nothing else decides
   placement.
 - `insertRows(draft, slot, items: readonly (Effect | PathWaypoint)[]): StructureEdit | null`
-- `removeRows(draft, refs): StructureEdit | null`: top-most refs; Start ignored; null when nothing removable is left
-  (only Start, or a fork's lone child whose fork is not also selected).
+- `removeRows(draft, refs): StructureEdit | null`: top-most refs; Start ignored; a list's targets are skipped when
+  removing them would leave it below its `min` and its owner is not also selected (a fork's lone child, a flyPath's
+  last waypoint); null when nothing removable is left.
 - `moveRows(draft, refs, to: ListSlot): StructureEdit | null`: `to` addresses the draft **before** the move; the rows
   land where that slot was.
 
@@ -271,6 +274,7 @@ choice, one commit each).
 - [ ] Test `removeRows keeps untouched subtrees by identity`.
 - [ ] Test `removeRows refuses a fork's lone child, and deletes it with its fork`.
 - [ ] Test `removeRows deletes one waypoint and leaves effect paths alone`.
+- [ ] Test `removeRows refuses a Fly's only waypoint, and deletes it with its Fly`.
 - [ ] Test `insertRows puts items before the index, shifts the rest and selects the new rows`.
 - [ ] Test `insertRows refuses an effect in a waypoint list and a second child in a fork`.
 - [ ] Test `moveRows carries a block and its descendants`: move `seq` at `[1]` (one child) to slot `{ owner: [2],
@@ -369,7 +373,7 @@ folds), `packages/studio/tests/session/state/studioSlice.test.ts`
 - `selectionEdit(id: SelectionEditId, state: RootState): SelectionEditResult`: builds the action for the current
   selection (move: one slot past the block's neighbour) and returns it only when its util accepts the current draft;
   otherwise `{ refused }` in a few words per spec §3.2 (`Select steps in one block`, `Delete the Fork, or unwrap
-  it`, …). The key handler and the action row both call it; nothing else builds these actions.
+  it`, `A Fly needs a waypoint`, …). The key handler and the action row both call it; nothing else builds these actions.
 
 - [ ] Test `a refused structure edit changes nothing` (same state object; history and revision unchanged).
 - [ ] Test `undoing a delete restores the row, its fold and the selection it had`.
@@ -377,6 +381,7 @@ folds), `packages/studio/tests/session/state/studioSlice.test.ts`
 - [ ] Test `joinsSet edits with one gesture coalesce into one Blend entry`.
 - [ ] Test `selectionEdit labels a delete by the row's Name, and several rows as N steps`.
 - [ ] Test `selectionEdit refuses a wrap across blocks with its reason`.
+- [ ] Test `selectionEdit refuses deleting a Fly's only waypoint with A Fly needs a waypoint`.
 
 ---
 
@@ -438,9 +443,13 @@ export type PaletteItem = {
 export function paletteItems(pins: PreviewPins): readonly PaletteItem[];   // sections in legend order, Timing last
 ```
 
-Offered per spec §3.3 (Q-I). Defaults: the pinned start's distance and angles where a value is needed,
+Offered (Q-I): Distance, Turn, Tilt, Roll, FOV (`set`, one maker per channel); Turn +, Tilt + (`spin`); Turn speed
+(`rate`); Bob tilt (`osc`); Look-at to a point (`setVec`); the subject steps Look-at, Distance, Aim, Strafe, Turn,
+Focus; Show, Hide, Fade, Set, Frame; Hold, Wait, empty Sequence, empty All; Fly (`flyPath` with one waypoint at the
+default subject; more come from Task 2.6). Not offered: Zoom-pan (`geodesic`), `aimAlong`, the resolved `focus` arm,
+Fork (made by wrapping). Defaults: the pinned start's distance and angles where a value is needed,
 `focusId('milkyWay')` for subjects, durations from named constants in `paletteDefaults.ts`. `lengthParam`: `'over'`
-for timed moves, subject steps and cues with a tail; `'sec'` for Hold and Wait; `null` for Start, waypoints, blocks,
+for timed moves (a Fly's travel time included), subject steps and cues with a tail; `'sec'` for Hold and Wait; `null` for Start, waypoints, blocks,
 Fork, Set, Focus and a perpetual Bob (`over` unset).
 
 - [ ] Test `every palette maker builds a step of its own kind with a non-empty Name` (all kinds, fixture pins).
@@ -498,6 +507,39 @@ object-specific, extract its list into a primitive in this task's first commit (
 - [ ] Test `typing filters the palette and Enter adds the match right after the selected step, selected`.
 - [ ] Test `Escape closes the palette and focus returns to the + button`.
 
+### Task 2.6: add a waypoint from the Fly inspector
+
+**Files:** `packages/studio/src/inspector/components/WaypointAdd/` (new: `.tsx`, `.module.css`),
+`packages/studio/src/inspector/components/WaypointsField/WaypointsField.tsx` (the dashed `+` chip at the list's end),
+`packages/studio/src/inspector/components/RowInspector/RowInspector.tsx` (a waypoint's `Add after`, under its
+fields), `packages/studio/tests/inspector/components/WaypointAdd.test.tsx`
+
+**Contract:**
+
+```ts
+type Props = {
+  /** The flyPath effect the waypoint joins. */
+  readonly fly: EffectPath;
+  /** Inserted before this waypoint index: the waypoint count for `+`, i + 1 for waypoint i's Add after. */
+  readonly index: number;
+  /** The chip list's dashed `+` chip, or the waypoint inspector's quiet `Add after` button. */
+  readonly variant: 'chip' | 'button';
+};
+```
+
+A press opens the shared `ObjectPicker` in place, focused. A pick dispatches one
+`rowsInserted({ slot: { owner: fly, index }, items: [{ id }], label })`, label `Add Settle` when it appends and
+`Add Pass` otherwise; `insertRows` selects the new waypoint. The item is `{ id }` alone: no `over`, `linger`, `yaw`
+or `pitch`, so the engine gives its leg the arc-length share of the travel time, pinned legs keep their seconds,
+and it inherits the Fly's Linger. Escape or a blur closes the picker with nothing dispatched and focus back on the
+control. Remove needs no code here: it is the action row's Delete on the selected waypoint (Tasks 1.2, 1.6, 2.3).
+Its StudioTip names it; no key (adding needs a pick).
+
+- [ ] Test `picking an object from the + chip appends a waypoint that carries only its id, selected, and Undo
+      names it Add Settle`.
+- [ ] Test `Add after on the first of three waypoints inserts at index 1`.
+- [ ] Test `Escape closes the picker and adds no waypoint`.
+
 ---
 
 ## D4: Joins, taper and lane gestures
@@ -543,7 +585,8 @@ names it); a click calls `clickJoinSelection`. Visual details are checked by sho
 
 **Files:** `packages/studio/src/inspector/components/JoinInspector/` (new), `packages/studio/src/inspector/components/Inspector/Inspector.tsx`,
 `packages/studio/src/kinds/data/structureKinds.ts` (the seq's `overlap` Blend field goes, spec Q-D),
-`packages/studio/src/inspector/components/RowInspector/RowInspector.tsx` (a Sequence lists its joins as buttons),
+`packages/studio/src/inspector/components/RowInspector/RowInspector.tsx` (a Sequence lists its joins as buttons; a
+click selects one join, ⌘/Ctrl-click adds it through `clickJoinSelection`),
 `packages/studio/tests/inspector/components/JoinInspector.test.tsx`
 
 Per spec §3.7: head, `Stop | No stop | Blend` segment (`SegmentedField`), the Blend field (`RangedNumberField`,
@@ -621,7 +664,7 @@ depth; edge autoscroll; Escape cancels; release dispatches one `rowsMoved` (`Mov
 the spec and this plan (tick boxes, rulings recorded)
 
 - [ ] Smoke per the Definition of Done; shots at 1728 × 1000 of: the palette open, a multi-row selection with the
-      action row, a join selected with its inspector, a blend taper, a drag in flight, a refused action's tip. Send
+      action row, a join selected with its inspector, a blend taper, a drag in flight, a refused action's tip, the waypoint picker open from the `+` chip. Send
       them as dash checks, one section each.
 - [ ] ui-ux.md self-check, one line per item, in the PR body.
 
@@ -635,8 +678,8 @@ the spec and this plan (tick boxes, rulings recorded)
 - `TimelineRow.details` (`knot`, `wave`, `members`, `join`, `taper`); `StudioSelection` (rows, joins);
   `HistoryEntry` with selection and folds; `resolveDraftSaga` keyed on the revision.
 - `draft/utils/lists`, `draft/utils/groups`, `draft/utils/joins`; the eight slice actions; `selectionEdit`.
-- Registry `palette` and `lengthParam` on every kind; `AddPalette`, `SelectionActions`, `MultiInspector`,
-  `JoinInspector`; the Edit key group in `?`.
+- Registry `palette` and `lengthParam` on every kind (Fly offered); `AddPalette`, `SelectionActions`,
+  `MultiInspector`, `JoinInspector`, `WaypointAdd`; the Edit key group in `?`.
 - The backlog's S2 row points at this plan; the slice-1 leftovers line is gone.
 
 **Smoke** (`npm run dev`; `#studio=cosmicFlows` unless named)
@@ -655,10 +698,14 @@ the spec and this plan (tick boxes, rulings recorded)
   window; click the chip → join inspector; choose Stop → `⌃ Stop` and abutting bars; Undo, Redo.
 - Select two joins (⌘-click chips) and set Blend on both.
 - `#studio=famousFlythrough`: unfold the waypoints; delete one, duplicate one, ⌥↑ one; none leaves the Fly.
+- On its Fly: the chip list's `+` opens the object picker; a pick appends a Settle waypoint, selected, and
+  `Undo Add Settle` removes it; a waypoint's `Add after` inserts after it; Escape in the picker adds nothing.
+- The palette adds a Fly with one waypoint; with that waypoint selected, Delete is disabled with
+  `A Fly needs a waypoint`.
 - Delete a Fork's child alone: Delete is disabled with `Delete the Fork, or unwrap it`.
 - Toggle Start saved/live: the timeline stays timed (P4).
 - The inspector head glyph carries the row's family tint.
 
 **Deferral boundary** (do not chase): T3 value curve (S5), knot drags and leg pinning (S5), the Fly inspector's
-fields and its waypoint add control (Fly redesign), moving a bar in time, ⇧↑/⇧↓ range extend, indent/outdent keys,
+fields and its chip list's display and selection (Fly redesign), computed leg seconds (S5), moving a bar in time, ⇧↑/⇧↓ range extend, indent/outdent keys,
 palette drag-to-insert, multi-row unwrap, reason-specific error fixes, seek/play (S4), saving (S8).

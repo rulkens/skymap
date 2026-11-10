@@ -424,3 +424,45 @@ Owner feedback while smoke testing (2026-11-10):
 
 _Settled in the plan:_ the studio's RTK slice is injected into the app store through
 `combineSlices().inject` (ADR 0016). Q14 is ruled (Q32).
+
+## Q48–Q53: S3 spec asks (owner, 2026-11-10)
+
+From `docs/superpowers/specs/2026-11-10-clip-studio-s3-scene-tracks.md` §9.
+
+- **Q48 Tours and the end scene:** options were `atEnd: 'keep'` on the tour's call sites, the tour folding the
+  clip into intent after `playClip` resolves (one frame of reverted scene), or one compiled tour timeline.
+  **Decision:** tours keep each beat clip's end scene (`'keep'` at `visitBeatSaga` and `pausableDwellSaga`);
+  standalone clips revert.
+- **Q49** During a clip the panel, the remote and the URL show the user's own settings, not the clip's.
+  Accepted, against publishing the view into Redux.
+- **Q50** A standalone clip's revert fades with the default durations (600 ms in, 100 ms out, 1 s frame roll).
+  No snap.
+- **Q51** `atEnd` is required at every `playClip` call, no default.
+- **Q52** No perf scenario plays a clip; the harness prices the always-on part.
+- **Q53** S3's prep refactors ride the S3 feature PR.
+
+## Q54–Q64: S2 spec asks (owner, 2026-11-10)
+
+From `docs/superpowers/specs/2026-11-10-clip-studio-s2-structure-edits.md` §9. These answers sign off its
+refactor-ground checkpoint.
+
+- **Q54 (Q-J)** S2's prep refactors P1–P4 ride the S2 feature PR, each its own commit, first.
+- **Q55 (Q-C) Left edge:** options were the join before the step, no left edge, or a Wait grown before it.
+  **Decision:** inside a Sequence a step's left edge is the join before it: drag left blends, back to its start
+  un-blends. No left edge elsewhere; a delay is a Wait row.
+- **Q56 (Q-D)** The Sequence inspector's single Blend field is replaced by its list of joins, selectable, several
+  at once.
+- **Q57 (Q-H)** Deleting a Fork's only child alone is refused, tip `Delete the Fork, or unwrap it`.
+- **Q58 (Q-K)** Keys: A, Delete/Backspace, ⌘D, ⌘G, ⌥⌘G, ⇧⌘G, ⌥↑/⌥↓.
+- **Q59 (Q-I)** The palette lists what the spec's §3.3 lists.
+- **Q60 (Q-A)** A join's treatment stays on the Sequence's `overlap`, which gains `'stop'` entries; a `join?` field
+  on each step is rejected.
+- **Q61 (Q-B)** Rows keep paths, remapped after edits; an editor document with node ids is rejected.
+- **Q62 (Q-E)** An error chip's action selects all culprits only; no reason-specific fixes.
+- **Q63 (Q-F)** The join inspector's value curve (T3) moves to S5.
+- **Q64 (Q-G) Waypoint edits:** waypoint add, remove and reorder all land in S2, not in the Fly inspector PR.
+  Delete, duplicate and reorder ride S2's list machinery. Add comes from the Fly inspector's chip list: a `+`
+  at its end and an `Add after` on a waypoint open the shared object picker; a pick inserts and selects the
+  waypoint, Escape adds nothing. The new waypoint takes its arc-length share of the travel time and pinned legs
+  keep their seconds; a removal re-shares the unpinned legs (Q18). The only waypoint cannot be removed. Fly joins
+  the palette.

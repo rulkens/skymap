@@ -9,9 +9,9 @@ function of the clip clock, read by the engine as an overlay on intent, revertin
 caller keeps it. The edge-triggered cue path (`applySceneEffect`, `clipOpacityChannel`, the cue cursor) is deleted.
 
 **Spec:** [`2026-11-10-clip-studio-s3-scene-tracks.md`](../specs/2026-11-10-clip-studio-s3-scene-tracks.md) (the
-reviewer's document; tasks below carry what implementers need). **Decisions:** grill session Q1 (C) and Q2 (B);
-spec §9 holds the open questions this plan assumes answered as recommended (`keep` for tours, `atEnd` required,
-default revert durations, no clip perf scenario).
+reviewer's document; tasks below carry what implementers need). **Decisions:** grill session Q1 (C), Q2 (B) and
+Q48–Q53, recorded in spec §9: `keep` for tours and `revert` elsewhere, intent shown during a clip, default revert
+durations, `atEnd` required, no clip perf scenario. G0's prep commits ride the S3 feature PR.
 
 **Landmines to keep in view:** values, not shared mutable state (#1071 was reverted for scheduling next-frame work
 through state flags; nothing here may defer work to a later frame); sagas have no settle signal; an action a
@@ -234,7 +234,7 @@ playClip: (clip: ClipData, frame: OrientationFrameId, atEnd: ClipSceneEnd) => Pr
 clipStarted: PayloadAction<{ data: ClipData; frame: OrientationFrameId; atEnd: ClipSceneEnd }>;
 ```
 
-Required, no default (spec §9 q4). Call sites: `visitBeatSaga.ts:122` and `pausableDwellSaga.ts:87` pass `'keep'`;
+Required, no default (spec §9, Decision 4). Call sites: `visitBeatSaga.ts:122` and `pausableDwellSaga.ts:87` pass `'keep'`;
 `clipBodySaga.ts:52`, `exhibitBodySaga.ts:85`, `watchReplayInspectedPathSaga.ts:62` and `replayInput.ts:119` pass
 `'revert'`. The player ignores it until Task 2.2. No new test: type plumbing the compiler checks.
 
@@ -291,7 +291,8 @@ Behaviour, per tick (all synchronous inside `tick`; nothing deferred to a later 
      `scene.focus.length > 0`, then `setOrientation(view.settings.orientation)` if it differs from the store's
      (not `requestOrientationChange`: the view already shows that frame, so nothing should roll or re-express);
      then `clipEnded()`, reset, end-resolver.
-   - `'revert'`: `clipEnded()`, reset; then `syncVisibility(store settings)` with no `overMs`, and if the clip's
+   - `'revert'` (default durations, never a snap: Decision 3): `clipEnded()`, reset; then
+     `syncVisibility(store settings)` with no `overMs` (registry 600 ms in, 100 ms out), and if the clip's
      view orientation differs from the store's, `startFrameTween` from the live basis to the store's frame over
      `FRAME_TWEEN_MS`; then the end-resolver.
    - The factor is 1 after either (no channel to reset: no clip, no factor).

@@ -1,8 +1,8 @@
 # Clip studio S3: a clip's scene as pure tracks
 
-**Status:** draft, awaiting owner approval · **Date:** 2026-11-10 · **Branch:** `feat/clip-studio`
+**Status:** open questions ruled by the owner 2026-11-10 (§9) · **Date:** 2026-11-10 · **Branch:** `feat/clip-studio`
 **Decision record:** [`clip-studio-2026-11-07.md`](../../grill-sessions/clip-studio-2026-11-07.md) Q1 (C, scene as pure
-tracks, for every clip) and Q2 (B, a clip's scene always reverts at its end).
+tracks, for every clip), Q2 (B, a clip's scene always reverts at its end) and this spec's rulings Q48–Q53.
 **Plan:** [`2026-11-10-clip-studio-s3-scene-tracks.md`](../plans/2026-11-10-clip-studio-s3-scene-tracks.md)
 
 ## Goal
@@ -20,7 +20,7 @@ After S3:
   folded over the live intent by the real reducers. The engine reads intent through that overlay while the clip
   is live.
 - A clip's scene **reverts** at its end (Q2). A tour asks the player to **keep** each clip's end scene, which the
-  player commits to intent in the same frame the clip ends, so tours chain without a seam (open question 1).
+  player commits to intent in the same frame the clip ends, so tours chain without a seam (Decision 1).
 - The edge-triggered path is deleted for every clip (tours, exhibits, standalone clips, the inspector replay, the
   recorder): `applySceneEffect`, `clipOpacityChannel` and the cue cursor go.
 
@@ -261,7 +261,7 @@ Price it with the harness, before (on the ground-prep HEAD) and after, on this w
 `npm run perf -- --url http://localhost:<port>` and `npm run perf:cpu -- --url http://localhost:<port>`, all
 scenarios. Those poses play no clip, so they price the always-on part: the getter indirection and the
 `clipOpacityOf` path inside `resolveVisibilityOpacity` (4 call sites, every faded pass). The clip-on part costs
-per crossing, not per frame, so it gets no scenario (open question 5).
+per crossing, not per frame, so it gets no scenario (Decision 5).
 
 ## 7. What S4 builds on
 
@@ -288,7 +288,7 @@ priced below.
 | `camera.clip` = `{ data, frame }` → `{ data, frame, atEnd }` (`cameraSlice.ts:79-81`) | additive | `clipStarted` dispatchers: `playClip.ts:48`, `replayInput.ts:119` |
 | `ClipPlayer.clipOpacityOf(address, nowMs)` → `(address)`; `+ view(root)` | narrowing + additive | 4 call sites of `clipOpacityOf` in 2 files; 18 test files stub it |
 
-**Prep, in order (each its own commit, before the feature)**
+**Prep, in order (each its own commit, before the feature, both riding the S3 feature PR: Decision 6)**
 
 1. **One root read for the engine.** Bolt-on removed: without it, the overlay has to be added separately at the
    three getters, `runFrame`'s `stored` (`runFrame.ts:87`), `createLayers`' closure (`createLayers.ts:104`) and
@@ -319,20 +319,21 @@ priced below.
 `stubResolveClipFoci`-style placeholders, which would retire `validateSeqCueOrder`; `fadeController.ts` keeps a
 private `smoothstep` beside `src/utils/math/smoothstep.ts`.
 
-## 9. Open questions (each with a recommendation)
+## 9. Decisions
 
-1. **Tours keep each clip's end scene through `atEnd: 'keep'`.** Q2 says a clip never writes intent; under `keep`
+Ruled by the owner on 2026-11-10 (grill session Q48–Q53).
+
+1. **Tours keep each clip's end scene; every other play reverts.** Q2 says a clip never writes intent; under `keep`
    the player writes it on the tour's behalf, in the tick the clip ends, inside the tour's snapshot bracket.
-   Alternatives: the tour folds the clip into intent after `playClip` resolves, which leaves one rendered frame of
-   reverted scene in which switches flip off and back, reaching asset demand; or a tour compiled as one timeline,
-   rejected above. **Recommend `keep` for the two tour call sites, `revert` everywhere else.**
-2. **The panel, remote and URL show intent during a clip** (behaviour change 4). Alternative: publish the view
-   into Redux so selectors can read it, which builds a mirror of state that has a home. **Recommend accepting it.**
-3. **Revert durations at a standalone clip's end.** **Recommend the defaults** (registry 600/100 ms, the default
-   frame roll). Alternative: snap.
-4. **`atEnd` is required at every `playClip` call** rather than defaulting to `'revert'`. **Recommend required**:
-   five call sites, and each one states what happens to the scene.
-5. **A perf scenario that plays a clip.** **Recommend none**: the clip-on cost is per step crossing and bounded;
-   the harness prices the always-on part.
-6. **Prep packaging: separate PR, or riding the feature PR?** Owner ask, every time. Both prep commits are small
-   and change no behaviour; **leaning toward riding the feature PR**, owner's call.
+   **Ruling:** `atEnd: 'keep'` at `visitBeatSaga` and `pausableDwellSaga`, `'revert'` at the other call sites.
+   Rejected: the tour folding the clip into intent after `playClip` resolves (one rendered frame of reverted scene
+   that reaches asset demand), and a tour compiled as one timeline (§8).
+2. **The panel, remote and URL show intent during a clip** (behaviour change 4). **Ruling: accepted.** Rejected:
+   publishing the view into Redux, a mirror of state that has a home.
+3. **Revert durations at a standalone clip's end.** **Ruling: the defaults**, registry 600 ms in and 100 ms out, the
+   1 s frame roll (`FRAME_TWEEN_MS`). No snap.
+4. **`atEnd` at `playClip`.** **Ruling: required at every call, no default**: five call sites, each one states what
+   happens to the scene.
+5. **A perf scenario that plays a clip.** **Ruling: none.** The clip-on cost is per step crossing and bounded; the
+   harness prices the always-on part.
+6. **Prep packaging.** **Ruling: both prep commits ride the S3 feature PR**, each its own commit, first.
