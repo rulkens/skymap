@@ -115,7 +115,7 @@ describe('ROW_KINDS', () => {
     expect(ROW_KINDS.waypoint.label({ ...SAMPLES.waypoint, last: true }).name).toBe('Settle');
     const overlapped = seq([dollyTo(300, 4), dollyTo(950, 4)], { overlap: 1 });
     expect(ROW_KINDS.seq.label(overlapped)).toEqual({
-      name: 'In order',
+      name: 'Sequence',
       op: '',
       value: 'Distance ×2 · blend 1 s',
     });

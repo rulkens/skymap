@@ -4,19 +4,13 @@ import { timeToPercent } from '../../../utils/window/timeToPercent';
 import type { MarkProps } from '../../../@types/MarkProps';
 import s from './GroupMark.module.css';
 
-/** A bracket over the group's window (arrowhead for In order, double rule for Together); a zero-length one is a tick. */
+/** A bracket over the group's window (arrowhead for Sequence, double rule for All); a zero-length one is a tick. Unlabelled: the outline names it. */
 function GroupMark({ row, window, selected }: MarkProps) {
   if (row.startSec === null || row.endSec === null) return null;
-  const { name } = row.label;
   const invalid = row.errors.length > 0;
   if (row.endSec === row.startSec) {
     const at = { left: `${timeToPercent(row.startSec, window)}%` };
-    return (
-      <>
-        <span className={cx(s.zero, invalid && s.invalid)} style={at} />
-        <span className={s.zeroLabel} style={at}>{`${name} · 0 s`}</span>
-      </>
-    );
+    return <span className={cx(s.zero, invalid && s.invalid)} style={at} />;
   }
   return (
     <span
@@ -29,9 +23,7 @@ function GroupMark({ row, window, selected }: MarkProps) {
         invalid && s.invalid,
       )}
       style={spanStyle(row.startSec, row.endSec, window)}
-    >
-      <span className={s.label}>{name}</span>
-    </span>
+    />
   );
 }
 

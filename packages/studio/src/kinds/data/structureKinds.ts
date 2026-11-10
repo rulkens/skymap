@@ -52,7 +52,7 @@ export function createStructureKinds(
       mark: 'group',
       writes: (s) => union(s.children),
       label: (s) => ({
-        name: 'In order',
+        name: 'Sequence',
         op: '',
         value: groupValue(s.children, blendOf(s.overlap)),
       }),
@@ -70,7 +70,7 @@ export function createStructureKinds(
       glyph: 'all',
       mark: 'group',
       writes: (s) => union(s.children),
-      label: (s) => ({ name: 'Together', op: '', value: groupValue(s.children) }),
+      label: (s) => ({ name: 'All', op: '', value: groupValue(s.children) }),
       fields: [],
     },
     fork: {

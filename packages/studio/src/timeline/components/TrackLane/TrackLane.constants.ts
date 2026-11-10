@@ -23,6 +23,3 @@ export const TRACK_MARKS: Record<MarkShape, ComponentType<MarkProps>> = {
   composite: CompositeMark,
   knot: KnotMark,
 };
-
-/** A fork's rows put their Background tag left of the mark when the start leaves this much room (percent). */
-export const TAG_ROOM_PERCENT = 7;

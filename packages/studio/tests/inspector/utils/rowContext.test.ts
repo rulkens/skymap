@@ -11,7 +11,7 @@ describe('rowContext', () => {
       [],
     );
     const second = rows.find((r) => r.id === 'e:0.1')!;
-    expect(rowContext(rows, second)).toEqual({ parent: 'In order', index: 2, count: 2 });
+    expect(rowContext(rows, second)).toEqual({ parent: 'Sequence', index: 2, count: 2 });
     const last = rows.find((r) => r.id === 'e:1')!;
     // Start is not counted among the top-level steps.
     expect(rowContext(rows, last)).toEqual({ parent: 'Top level', index: 2, count: 2 });

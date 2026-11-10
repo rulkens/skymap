@@ -2,10 +2,6 @@
   position: absolute;
   top: var(--space-3);
   bottom: var(--space-3);
-  display: flex;
-  align-items: center;
-  padding-left: var(--space-3);
-  overflow: hidden;
   border-top: 2px solid var(--c, var(--color-fg-dim));
   border-bottom: 2px solid var(--c, var(--color-fg-dim));
   background: color-mix(in srgb, var(--c, var(--color-fg-dim)) 14%, transparent);
@@ -16,11 +12,6 @@
 .invalid {
   border-style: dashed;
   border-color: var(--color-fg);
-}
-.text {
-  font-size: var(--font-size-sm);
-  color: var(--color-fg);
-  white-space: nowrap;
 }
 .knot {
   position: absolute;
