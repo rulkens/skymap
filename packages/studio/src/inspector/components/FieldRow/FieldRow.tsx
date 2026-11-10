@@ -1,6 +1,7 @@
-import { useAppDispatch } from '../../../../../../src/store/hooks';
-import { paramEdited } from '../../../session/state/studioSlice';
-import { objectPicked } from '../../../session/state/objectPicked';
+import { useAppDispatch, useAppSelector } from '../../../../../../src/store/hooks';
+import { objectPicked, paramEdited } from '../../../session/state/studioSlice';
+import { selectPick } from '../../../session/state/selectors';
+import { isPickFor } from '../../../session/utils/isPickFor';
 import { useObjectIndex } from '../../../session/hooks/useObjectIndex';
 import InspectorRow from '../../../primitives/components/InspectorRow/InspectorRow';
 import NumberField from '../../../primitives/components/NumberField/NumberField';
@@ -37,6 +38,7 @@ type Props = {
 function FieldRow({ spec, subject, rowRef }: Props) {
   const dispatch = useAppDispatch();
   const objects = useObjectIndex();
+  const pick = useAppSelector(selectPick);
   const control = typeof spec.control === 'function' ? spec.control(subject) : spec.control;
   const widget = FIELD_CONTROLS[control];
   const authored = subject[spec.param] !== undefined;
@@ -95,15 +97,17 @@ function FieldRow({ spec, subject, rowRef }: Props) {
     );
   } else if (widget.widget === 'object') {
     const { param, label } = spec;
-    const { pick } = widget;
+    const stores = widget.pick;
+    const pending = pick !== null && isPickFor(pick, { ref: rowRef, param }) ? pick : null;
     field = (
       <ObjectPicker
         label={label}
         value={objectText(stored, objects)}
+        pending={pending && { name: objectText(pending.focusId, objects), failed: pending.failed }}
         onPick={(focusId) =>
-          pick === 'focusId'
+          stores === 'focusId'
             ? edit(focusId, null)
-            : dispatch(objectPicked({ ref: rowRef, param, label, focusId, stores: pick! }))
+            : dispatch(objectPicked({ ref: rowRef, param, label, focusId, stores: stores! }))
         }
         onClear={widget.clearable ? () => edit(null, null) : undefined}
       />

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Provider } from 'react-redux';
-import { cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { lookAtId } from '../../../../../src/services/engine/animation/effectHelpers';
 import { focusId } from '../../../../../src/utils/animation/focusId';
@@ -9,8 +9,7 @@ import { layerSearchReported } from '../../../../../src/state/engine/engineSlice
 import FieldRow from '../../../src/inspector/components/FieldRow/FieldRow';
 import { inspectorSpec } from '../../../src/inspector/utils/inspectorSpec';
 import { rowSubject } from '../../../src/draft/utils/rowSubject';
-import { objectPicked } from '../../../src/session/state/objectPicked';
-import { refNamed } from '../../../src/session/state/studioSlice';
+import { objectPicked, pickFailed, refNamed } from '../../../src/session/state/studioSlice';
 import { selectStudioState } from '../../../src/session/state/selectors';
 import { refKey } from '../../../../../src/utils/selection/refKey';
 import { openStudioStore } from '../../helpers/openStudioStore';
@@ -93,6 +92,33 @@ describe('ObjectPicker', () => {
         focusId: 'body-mars',
         stores: 'position',
       }),
+    );
+  });
+
+  it('a pick shows Locating until it lands, and says so when the object never loads', () => {
+    const start = { target: [1, 2, 3] as [number, number, number], yaw: 0, pitch: 0, distance: 9 };
+    const store = openStudioStore({ start, timeline: [] }, { resolve: false });
+    const pick = {
+      ref: { kind: 'start' },
+      param: 'target',
+      label: 'Look-at',
+      focusId: 'body-mars',
+      stores: 'position',
+    } as const;
+    renderField(store, 'start', 'target', { kind: 'start' });
+
+    act(() => {
+      store.dispatch(objectPicked(pick));
+    });
+    expect(screen.getByRole('status')).toHaveTextContent('Locating Mars…');
+
+    act(() => {
+      store.dispatch(pickFailed(pick));
+    });
+    expect(screen.getByRole('alert')).toHaveTextContent('Mars did not load');
+    expect(screen.getByRole('combobox', { name: 'Look-at' })).toHaveProperty(
+      'value',
+      '1, 2, 3 Mpc',
     );
   });
 

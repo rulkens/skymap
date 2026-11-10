@@ -10,6 +10,8 @@ type Props = {
   readonly label: string;
   /** What the field reads while not typing: the object's name, or the position it stored. */
   readonly value: string;
+  /** A pick still being located, or one whose object never loaded. */
+  readonly pending?: { readonly name: string; readonly failed: boolean } | null;
   readonly onPick: (focusId: string) => void;
   /** Given, emptying the field offers None, which calls it. */
   readonly onClear?: () => void;
@@ -19,7 +21,7 @@ type Props = {
  * Picks an object by name with the app's own search: type to filter, ↑/↓, Enter picks, Escape puts
  * the value back (a second Escape leaves the field). The list opens in place, like LayerPickField.
  */
-function ObjectPicker({ label, value, onPick, onClear }: Props) {
+function ObjectPicker({ label, value, pending, onPick, onClear }: Props) {
   const index = useObjectIndex();
   const listId = useId();
   const [query, setQuery] = useState<string | null>(null);
@@ -94,6 +96,16 @@ function ObjectPicker({ label, value, onPick, onClear }: Props) {
             </li>
           ))}
         </ul>
+      )}
+      {query === null && pending && !pending.failed && (
+        <span role="status" className={s.empty}>
+          Locating {pending.name}…
+        </span>
+      )}
+      {query === null && pending?.failed && (
+        <span role="alert" className={s.failed}>
+          {pending.name} did not load. Pick it again to retry.
+        </span>
       )}
       {typed !== '' && matches.length === 0 && (
         <span role="status" className={s.empty}>

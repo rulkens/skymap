@@ -6,6 +6,7 @@ import type { ClipData } from '../../../../../src/@types/animation/ClipData';
 import type { ClipId } from '../../../../../src/@types/animation/ClipId';
 import type { RowRef } from '../rows/RowRef';
 import type { DraftHistory } from './DraftHistory';
+import type { PickStatus } from './PickStatus';
 import type { PreviewPins } from './PreviewPins';
 import type { StudioResolution } from './StudioResolution';
 import type { TimeWindow } from './TimeWindow';
@@ -22,6 +23,7 @@ export type StudioState = {
   readonly resolution: StudioResolution | null;
   /** Focus steps' selection refs as their cards name them, by `refKey`; `resolveDraftSaga` fills it. */
   readonly refNames: Readonly<Record<string, string>>;
+  readonly pick: PickStatus | null;
   readonly selection: RowRef | null;
   /** Row ids. */
   readonly collapsed: readonly string[];

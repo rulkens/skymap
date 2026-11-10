@@ -17,20 +17,22 @@ import { focusId } from '../../../../../src/utils/animation/focusId';
 import { studioSessionSaga } from '../../../src/session/sagas/studioSessionSaga';
 import {
   draftResolved,
+  objectPicked,
   paramEdited,
   startModeSet,
   studioOpened,
   undone,
 } from '../../../src/session/state/studioSlice';
-import { objectPicked } from '../../../src/session/state/objectPicked';
 import {
   selectCurrentResolution,
   selectDraft,
   selectIsDirty,
   selectPreview,
+  selectPick,
   selectRefNames,
   selectRevision,
 } from '../../../src/session/state/selectors';
+import { PICK_TIMEOUT_MS } from '../../../src/session/data/studioLimits';
 import { refKey } from '../../../../../src/utils/selection/refKey';
 import { selectionResolverOver } from '../../../../../tests/support/selectionResolverOver';
 import { installAppSelectionKinds } from '../../../../../tests/support/installAppSelectionKinds';
@@ -177,6 +179,7 @@ describe('studioSessionSaga', () => {
     const { simDays } = selectPreview(h.store.getState())!;
     const mars = FIXTURE.extractRow(FIXTURE.resolveFocusId('body-mars'), simDays) as PlacedRow;
     expect(selectDraft(h.store.getState())!.start).toMatchObject({ target: mars.positionMpc });
+    expect(selectPick(h.store.getState())).toBeNull();
     h.store.dispatch(undone());
     expect(selectDraft(h.store.getState())).toEqual(before);
   });
@@ -206,6 +209,28 @@ describe('studioSessionSaga', () => {
     expect(selectRefNames(h.store.getState())).toEqual({ [refKey(mars)]: 'Mars' });
     h.store.dispatch(undone());
     expect(selectDraft(h.store.getState())).toEqual(draft);
+  });
+
+  it('a pick whose object never loads gives up, says so and changes nothing', async () => {
+    vi.useFakeTimers();
+    const h = harness({ ...FIXTURE, extractRow: () => null });
+    h.run('cosmicFlows');
+    await vi.advanceTimersByTimeAsync(0);
+    const before = selectDraft(h.store.getState());
+    const pick = {
+      ref: { kind: 'start' },
+      param: 'target',
+      label: 'Look-at',
+      focusId: 'body-mars',
+      stores: 'position',
+    } as const;
+
+    h.store.dispatch(objectPicked(pick));
+    expect(selectPick(h.store.getState())).toMatchObject({ focusId: 'body-mars', failed: false });
+    await vi.advanceTimersByTimeAsync(PICK_TIMEOUT_MS);
+
+    expect(selectPick(h.store.getState())).toMatchObject({ focusId: 'body-mars', failed: true });
+    expect(selectDraft(h.store.getState())).toBe(before);
   });
 
   it('ending the takeover keeps the draft in the slice', async () => {

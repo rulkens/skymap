@@ -26,6 +26,7 @@ export const {
   selectViewport,
   selectPreview,
   selectRefNames,
+  selectPick,
   selectIsDirty,
   selectUndoLabel,
   selectRedoLabel,

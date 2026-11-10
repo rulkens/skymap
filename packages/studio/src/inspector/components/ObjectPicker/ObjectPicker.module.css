@@ -54,3 +54,11 @@
 .empty {
   color: var(--color-fg-tertiary);
 }
+.empty,
+.failed {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.failed {
+  color: var(--color-fg);
+}

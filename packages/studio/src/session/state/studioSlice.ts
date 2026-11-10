@@ -14,9 +14,12 @@ import { setRowParam } from '../../draft/utils/setRowParam';
 import { defaultCollapsed } from '../utils/defaultCollapsed';
 import { commitDraft } from '../utils/commitDraft';
 import { stepHistory } from '../utils/stepHistory';
+import { isPickFor } from '../utils/isPickFor';
+import { rowKey } from '../../draft/utils/rowKey';
 import type { ClipData } from '../../../../../src/@types/animation/ClipData';
 import type { ClipId } from '../../../../../src/@types/animation/ClipId';
 import type { ParamValue } from '../../@types/kinds/ParamValue';
+import type { ObjectPick } from '../../@types/session/ObjectPick';
 import type { RowRef } from '../../@types/rows/RowRef';
 import type { PreviewPins } from '../../@types/session/PreviewPins';
 import type { StudioResolution } from '../../@types/session/StudioResolution';
@@ -34,7 +37,7 @@ export const studioSlice = createSlice({
       const revision = base.revision + 1;
       // Q28: an unsaved draft survives Close and reopening the same clip.
       if (base.clipId === payload.clipId && base.draft !== base.baseline) {
-        return { ...base, preview: payload.preview, revision, resolution: null };
+        return { ...base, preview: payload.preview, revision, resolution: null, pick: null };
       }
       return {
         ...initialState,
@@ -68,6 +71,17 @@ export const studioSlice = createSlice({
     viewportSet: (state, { payload }: PayloadAction<TimeWindow | null>) => {
       state.viewport = payload;
     },
+    /** An intent the saga answers with `paramEdited` or `pickFailed`; the field shows it locating. */
+    objectPicked: (state, { payload }: PayloadAction<ObjectPick>) => {
+      const { ref, param, focusId } = payload;
+      state.pick = { row: rowKey(ref), param, focusId, failed: false };
+    },
+    pickFailed: (state, { payload }: PayloadAction<ObjectPick>) => {
+      const { pick } = state;
+      if (pick !== null && isPickFor(pick, payload) && pick.focusId === payload.focusId) {
+        pick.failed = true;
+      }
+    },
     paramEdited: (
       state,
       {
@@ -80,11 +94,14 @@ export const studioSlice = createSlice({
         gesture: string | null;
       }>,
     ) => {
-      const base = original(state)!;
-      if (base.draft === null) return;
+      const before = original(state)!;
+      // Any edit of the field settles its pick, the saga's answer included.
+      const base =
+        before.pick && isPickFor(before.pick, payload) ? { ...before, pick: null } : before;
+      if (base.draft === null) return base;
       // Re-committing the value a param already has must not dirty the draft or add an empty Undo.
       if (sameParamValue(rowSubject(base.draft, payload.ref)?.[payload.param], payload.value))
-        return;
+        return base;
       const next = setRowParam(base.draft, payload.ref, payload.param, payload.value);
       return commitDraft({ ...base, draft: base.draft }, next, payload.label, payload.gesture);
     },
@@ -109,6 +126,7 @@ export const studioSlice = createSlice({
     selectViewport: (s) => s.viewport,
     selectPreview: (s) => s.preview,
     selectRefNames: (s) => s.refNames,
+    selectPick: (s) => s.pick,
     selectIsDirty: (s) => s.draft !== s.baseline,
     selectUndoLabel: (s) => s.history.past.at(-1)?.label ?? null,
     selectRedoLabel: (s) => s.history.future.at(-1)?.label ?? null,
@@ -122,6 +140,8 @@ export const {
   studioOpened,
   draftResolved,
   refNamed,
+  objectPicked,
+  pickFailed,
   rowSelected,
   rowToggled,
   playheadSet,
