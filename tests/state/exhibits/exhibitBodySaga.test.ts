@@ -23,6 +23,7 @@ import { section } from '../../../src/utils/exhibits/section';
 import { proseKind } from '../../../src/components/ExhibitOverlay/kinds/proseKind';
 import type { Exhibit } from '../../../src/@types/exhibits/Exhibit';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
+import type { Effect } from '../../../src/@types/animation/Effect';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 
 const EXHIBIT: Exhibit = {
@@ -209,6 +210,52 @@ describe('exhibitBodySaga', () => {
     await new Promise((r) => setTimeout(r, 0));
 
     expect(flownDistance).toBe(fitExhibit.pose!.distance);
+  });
+
+  it('plays the arrival after the fly lands, and the drift waits for it', async () => {
+    // The drift is `autoRotate`, a lower-priority camera driver: starting it
+    // under a still-playing arrival would fight the clip for yaw.
+    const arrival: Effect[] = [];
+    let finishArrival = () => {};
+    const playClip = vi
+      .fn<(clip: ClipData) => Promise<void>>()
+      .mockImplementation((clip) =>
+        clip.timeline === arrival
+          ? new Promise<void>((r) => (finishArrival = r))
+          : Promise.resolve(),
+      );
+    const { store, sagaMiddleware } = buildStore(playClip);
+
+    sagaMiddleware.run(function* () {
+      yield* exhibitBodySaga({ ...EXHIBIT, arrival }, 'fly');
+    });
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(playClip).toHaveBeenCalledTimes(2);
+    expect(playClip.mock.calls[1]![0].timeline).toBe(arrival);
+    expect(store.getState().camera.autoRotate.active).toBe(false);
+
+    finishArrival();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(store.getState().camera.autoRotate.active).toBe(true);
+  });
+
+  it('starts the arrival from the exhibit pose on a cut, not from the live camera', async () => {
+    // A `'live'` start read the camera before the cut's commit reached it, so a
+    // linked exhibit played its arrival from the pre-cut view.
+    const arrival: Effect[] = [];
+    const playClip = vi
+      .fn<(clip: ClipData) => Promise<void>>()
+      .mockImplementation(() => new Promise<void>(() => {}));
+    const { sagaMiddleware } = buildStore(playClip);
+
+    sagaMiddleware.run(function* () {
+      yield* exhibitBodySaga({ ...EXHIBIT, arrival }, 'cut');
+    });
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(playClip).toHaveBeenCalledTimes(1);
+    expect(playClip.mock.calls[0]![0]).toEqual({ start: EXHIBIT.pose, timeline: arrival });
   });
 
   it('exits during the fly-in without waiting for it to land', async () => {
