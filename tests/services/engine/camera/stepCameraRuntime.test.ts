@@ -591,8 +591,7 @@ describe('stepCameraRuntime — the openspace scheme', () => {
         factor: 1.2,
         duringGesture: false,
         cursorPx: null,
-        firstEventMs: 0,
-        lastEventMs: 0,
+        fresh: false,
       },
     ]);
     const after = h.state.cameraRuntime.register.pose;
@@ -709,8 +708,7 @@ describe('stepCameraRuntime — the openspace scheme', () => {
         factor: 1.25,
         duringGesture: false,
         cursorPx: null,
-        firstEventMs: 0,
-        lastEventMs: 0,
+        fresh: false,
       },
     ]);
     const lenses = out.actions.filter((a) => setFovYRad.match(a)).map((a) => a.payload as number);
@@ -757,8 +755,7 @@ describe('stepCameraRuntime — the openspace scheme', () => {
         factor: 1.5,
         duringGesture: true,
         cursorPx: null,
-        firstEventMs: 0,
-        lastEventMs: 0,
+        fresh: false,
       },
     ]);
     const pinched = worldOf(h.state.cameraRuntime.register.pose).distance;

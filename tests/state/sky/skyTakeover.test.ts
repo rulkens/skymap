@@ -222,8 +222,8 @@ describe('the sky takeover', () => {
 
   it('a push at the floor enters at the cursor anchor', () => {
     const store = build();
+    store.dispatch(zoomLimitPushed({ edge: 'in', body: EARTH, pointLocalM: POINT }));
     const spot = skySpotAt(EARTH, POINT);
-    store.dispatch(zoomLimitPushed({ edge: 'in', spot, pointLocalM: POINT }));
     expect(selectTakeoverSource(state(store))).toMatchObject({ kind: 'sky', spot });
     // The glide ends standing on the anchor, not on the datum point under the spot.
     expect(offPoint(glideTarget(state(store).camera.clip!.data), POINT)).toBeLessThan(4);

@@ -47,14 +47,18 @@ describe('watchZoomLimitSaga', () => {
 
   it('a floor push enters sky mode at its anchor', () => {
     const store = build();
-    store.dispatch(zoomLimitPushed({ edge: 'in', spot: SPOT, pointLocalM: [6_371_000, 0, 0] }));
+    store.dispatch(
+      zoomLimitPushed({ edge: 'in', body: SPOT.body, pointLocalM: [6_371_000, 0, 0] }),
+    );
     expect(store.seen).toContainEqual(enterSky({ spot: SPOT, pointLocalM: [6_371_000, 0, 0] }));
   });
 
   it('a floor push during a show does not enter', () => {
     const store = build();
     store.dispatch(takeoverStarted({ kind: 'tour', id: 'grandTour' }));
-    store.dispatch(zoomLimitPushed({ edge: 'in', spot: SPOT, pointLocalM: [6_371_000, 0, 0] }));
+    store.dispatch(
+      zoomLimitPushed({ edge: 'in', body: SPOT.body, pointLocalM: [6_371_000, 0, 0] }),
+    );
     expect(store.seen.map((a) => a.type)).not.toContain(enterSky.type);
   });
 

@@ -41,7 +41,6 @@ export function seedCameraRuntime(args: {
     follow: null,
     gesture: { key: frameKey(pose.frame), value: rowFor(pose.frame).emptyMemory },
     tilt: EMPTY_TILT_MEMORY,
-    lastWheelMs: -Infinity,
     zoomLimitPress: null,
     navigator: NAV_AT_REST,
     scheme: settings.cameraControls.scheme,

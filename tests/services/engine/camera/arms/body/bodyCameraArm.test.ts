@@ -28,7 +28,6 @@ import { DEFAULT_CAMERA_TUNING } from '../../../../../../src/data/camera/cameraT
 import { datumOnlyTerrainHeight } from '../../../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 import { bodyFixedEyeM } from '../../../../../../src/utils/camera/surfaceFrame/bodyFixedEyeM';
 import { normalize3 } from '../../../../../../src/utils/math/normalize3';
-import { skySpotRadial } from '../../../../../../src/utils/geo/skySpotRadial';
 import { earthArm } from '../../../../../fixtures/earthArm';
 import { cursorRayBodyLocal } from '../../../../../../src/utils/camera/terrain/cursorRayBodyLocal';
 import { raySphereRoots } from '../../../../../../src/utils/math/raySphereRoots';
@@ -130,10 +129,7 @@ describe('the body arm’s floor push', () => {
       Math.hypot(...p.map((c, i) => c - pushed.pointLocalM[i]!));
     expect(gap(underCursor)).toBeLessThan(0.5);
     expect(gap(nadir)).toBeGreaterThan(2);
-    expect(pushed.spot.body).toBe(EARTH_ID);
-    const radial = skySpotRadial(pushed.spot);
-    const along = normalize3(pushed.pointLocalM);
-    for (let i = 0; i < 3; i++) expect(radial[i]).toBeCloseTo(along[i]!, 9);
+    expect(pushed.body).toBe(EARTH_ID);
   });
 
   it('a zoom-in that starts above the floor reports nothing', () => {

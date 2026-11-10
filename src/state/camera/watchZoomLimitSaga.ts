@@ -17,13 +17,15 @@ import { exitTakeover } from '../takeover/takeoverActions';
 import { enterSky } from '../sky/enterSky';
 import { inputLiftOffRequested } from '../input/inputSlice';
 import { SKY_HOSTS } from '../../data/sky/skyHosts';
+import { skySpotAt } from '../../utils/geo/skySpotAt';
 
 export function* watchZoomLimitSaga() {
   yield* takeEvery(zoomLimitPushed, function* ({ payload }) {
     if (payload.edge === 'in') {
       const free = (yield* select(selectTakeoverSource)) === null;
-      if (free && SKY_HOSTS.has(payload.spot.body)) {
-        yield* put(enterSky({ spot: payload.spot, pointLocalM: [...payload.pointLocalM] }));
+      if (free && SKY_HOSTS.has(payload.body)) {
+        const spot = skySpotAt(payload.body, payload.pointLocalM);
+        yield* put(enterSky({ spot, pointLocalM: [...payload.pointLocalM] }));
       }
       return;
     }

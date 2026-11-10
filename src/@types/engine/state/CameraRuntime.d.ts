@@ -36,9 +36,6 @@ export type CameraRuntime = {
   /** Keyed by the register's `frameKey`: an arm change wipes it to that arm's `emptyMemory`. */
   readonly gesture: CameraArmMemory;
   readonly tilt: TiltMemory;
-  /** The device-event time (ms, the source's clock) of the last zoom notch drained, `−∞` before
-   * one: the ONE wheel clock a notch's `fresh` is read off, so no arm keeps its own. */
-  readonly lastWheelMs: number;
   /** Zoom spent against a limit by the notches since the last fresh one (`zoomLimitPressStep`). */
   readonly zoomLimitPress: ZoomLimitPress | null;
   /** Stepped before the pick, so it lives here and not in a row's `own`. */

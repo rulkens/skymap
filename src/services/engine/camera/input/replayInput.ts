@@ -7,7 +7,7 @@
  * incumbent's fresh `getState()` per step did. The store commits only at
  * gesture end and per at-rest notch; a following camera's notch rides the
  * return as `followDistanceTarget`. Whether a notch an arm reports at its zoom
- * limit pushes it is decided here, once, off the wheel clock.
+ * limit pushes it is decided here, once, off the `fresh` its source stamped.
  */
 
 import type { UnknownAction } from '@reduxjs/toolkit';
@@ -23,7 +23,6 @@ import { cameraArmKindOf } from '../arms/cameraArmKindOf';
 import { sameFrame } from '../arms/sameFrame';
 import { zoomedDistance } from './utils/zoomedDistance';
 import { zoomLimitPressStep } from './utils/zoomLimitPressStep';
-import { FRESH_WHEEL_PAUSE_MS } from '../../../../data/input/freshWheelPauseMs';
 import { absoluteArm } from '../../../../utils/camera/arms/absoluteArm';
 import { bodyMovesThisFrame } from '../../../../utils/scene/bodyMovesThisFrame';
 import { selectFocusRow } from '../../../../state/selection/selectors';
@@ -53,8 +52,6 @@ export function replayInput(
     readonly gesture: MemOf[CameraArmKind];
     readonly tilt: TiltMemory;
     readonly follow: FollowMemory | null;
-    /** The last wheel notch's device-event time, ms (`−∞` before one). */
-    readonly lastWheelMs: number;
     readonly zoomLimitPress: ZoomLimitPress | null;
   },
   steps: readonly RawInputStep[],
@@ -76,7 +73,6 @@ export function replayInput(
   readonly tilt: TiltMemory;
   readonly follow: FollowMemory | null;
   readonly followDistanceTarget: number | null;
-  readonly lastWheelMs: number;
   readonly zoomLimitPress: ZoomLimitPress | null;
   readonly actions: readonly UnknownAction[];
   /** The navigator's input, in order; a `gestureEnd` is also handled here. */
@@ -96,7 +92,6 @@ export function replayInput(
   let tilt = prev.tilt;
   let follow = prev.follow;
   let followDistanceTarget: number | null = null;
-  let lastWheelMs = prev.lastWheelMs;
   let zoomLimitPress = prev.zoomLimitPress;
   // What the arm reported pressed against its zoom limit, written by `stepRow`, per step.
   let pressed: ZoomLimitPush | undefined;
@@ -211,8 +206,6 @@ export function replayInput(
 
   for (const step of steps) {
     pressed = undefined;
-    // On the EVENT clock: a frame hitch inside a momentum tail must not read as quiet.
-    const fresh = step.kind === 'zoom' && step.firstEventMs - lastWheelMs >= FRESH_WHEEL_PAUSE_MS;
     switch (step.kind) {
       case 'gestureStart':
         // The latch itself is the arm's; the first drag step takes it, carrying
@@ -246,10 +239,8 @@ export function replayInput(
         break;
 
       case 'zoom': {
-        // Every zoom step restarts the quiet, swallowed or not: a tail that ran into a clip
-        // or a floor is still a tail.
-        const { firstEventMs: _firstEventMs, lastEventMs, ...zoom } = step;
-        lastWheelMs = lastEventMs;
+        // No arm sees `fresh`: only the press fold below reads it.
+        const { fresh: _fresh, ...zoom } = step;
         // The settles are priced per unit of zoom, not per step (user ruling
         // 2026-09-10): a trackpad twitch must not spend a mouse notch's decay.
         const logZoom = Math.abs(Math.log(step.factor));
@@ -326,7 +317,7 @@ export function replayInput(
     const limit = zoomLimitPressStep(
       zoomLimitPress,
       pressed,
-      step.kind === 'zoom' ? { lnZoom: Math.abs(Math.log(step.factor)), fresh } : null,
+      step.kind === 'zoom' ? { lnZoom: Math.abs(Math.log(step.factor)), fresh: step.fresh } : null,
     );
     zoomLimitPress = limit.press;
     if (limit.push !== null) emit(zoomLimitPushed(limit.push));
@@ -338,7 +329,6 @@ export function replayInput(
     tilt,
     follow,
     followDistanceTarget,
-    lastWheelMs,
     zoomLimitPress,
     actions,
     navSteps,
