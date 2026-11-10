@@ -6,6 +6,7 @@ import LayerPickField from '../../../primitives/components/LayerPickField/LayerP
 import PickField from '../../../primitives/components/PickField/PickField';
 import ReadoutField from '../../../primitives/components/ReadoutField/ReadoutField';
 import SegmentedField from '../../../primitives/components/SegmentedField/SegmentedField';
+import SettingsActionField from '../SettingsActionField/SettingsActionField';
 import { FIELD_CONTROLS } from '../../data/fieldControls';
 import { EASE_OPTIONS } from '../../data/easeOptions';
 import { layerOptions } from '../../utils/layerOptions';
@@ -15,6 +16,7 @@ import { AUTO_TEXT } from '../../../data/autoText';
 import { TOGGLE_OPTIONS } from './FieldRow.constants';
 import type { FieldSpec } from '../../../@types/kinds/FieldSpec';
 import type { ParamValue } from '../../../@types/kinds/ParamValue';
+import type { SettingsAction } from '../../../../../../src/compositions/@types/SettingsAction';
 import type { RowRef } from '../../../@types/rows/RowRef';
 import type { InspectorSubject } from '../../../@types/rows/InspectorSubject';
 
@@ -38,6 +40,13 @@ function FieldRow({ spec, subject, rowRef }: Props) {
   const stored = subject[spec.param] ?? spec.fallback;
   const edit = (value: ParamValue, gesture: string | null) =>
     dispatch(paramEdited({ ref: rowRef, param: spec.param, value, label: spec.label, gesture }));
+
+  // Several rows of its own (setting, catalog, value), so it is not wrapped in one row here.
+  if (widget.widget === 'settingsAction') {
+    return (
+      <SettingsActionField action={stored as SettingsAction} onChange={(v) => edit(v, null)} />
+    );
+  }
 
   let field;
   if (spec.readOnly || widget.widget === 'readout') {

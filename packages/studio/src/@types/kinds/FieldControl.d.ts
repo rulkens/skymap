@@ -11,4 +11,6 @@ export type FieldControl =
   | 'readout'
   /** Visibility addresses: whole layers, or with items for show and hide. */
   | 'layers'
-  | 'layerItems';
+  | 'layerItems'
+  /** A Set step's whole settings action: which setting and its value. */
+  | 'settingsAction';

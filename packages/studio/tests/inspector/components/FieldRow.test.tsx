@@ -3,7 +3,14 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { Provider } from 'react-redux';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { fade, oscillate, show } from '../../../../../src/services/engine/animation/effectHelpers';
+import {
+  fade,
+  oscillate,
+  scene,
+  show,
+} from '../../../../../src/services/engine/animation/effectHelpers';
+import { setFlowEnabled } from '../../../../../src/layers/flow/state/flow/slice';
+import { setLabelsFocusedOnly } from '../../../../../src/state/settings/core/labelsSlice';
 import FieldRow from '../../../src/inspector/components/FieldRow/FieldRow';
 import { inspectorSpec } from '../../../src/inspector/utils/inspectorSpec';
 import { rowSubject } from '../../../src/draft/utils/rowSubject';
@@ -124,5 +131,26 @@ describe('FieldRow', () => {
 
     expect(screen.getByRole('checkbox', { name: 'survey' })).toBeInTheDocument();
     expect(screen.queryByRole('checkbox', { name: 'milliquas' })).toBeNull();
+  });
+
+  it('a Set step switches its setting and keeps the on/off value', async () => {
+    const store = setup({ timeline: [scene(setFlowEnabled(true))] }, 'scene', EFFECT, 'action');
+    const action = () => (selectDraft(store.getState())!.timeline[0] as { action: unknown }).action;
+
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Setting' }), 'labels');
+    expect(action()).toEqual(setLabelsFocusedOnly(true));
+  });
+
+  it('a catalog Set step offers the catalogs and an on/off', async () => {
+    const store = setup({ timeline: [scene(setFlowEnabled(false))] }, 'scene', EFFECT, 'action');
+    expect(screen.getByRole('radio', { name: 'Off' })).toBeChecked();
+
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Setting' }), 'catalog');
+    const { payload } = (
+      selectDraft(store.getState())!.timeline[0] as {
+        action: { payload: { id: string; enabled: boolean } };
+      }
+    ).action;
+    expect(payload).toEqual({ id: 'famousGalaxy', enabled: false });
   });
 });

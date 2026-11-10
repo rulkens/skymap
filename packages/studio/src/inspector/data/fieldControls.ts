@@ -35,4 +35,5 @@ export const FIELD_CONTROLS: Record<FieldControl, FieldWidget> = {
   readout: { widget: 'readout' },
   layers: { widget: 'layers', items: false },
   layerItems: { widget: 'layers', items: true },
+  settingsAction: { widget: 'settingsAction' },
 };

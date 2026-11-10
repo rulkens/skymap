@@ -58,7 +58,7 @@ export const sceneKinds: Pick<
     mark: 'cue',
     writes: () => ['settings'],
     label: (s) => ({ name: 'Set', op: '', value: describeSettingsAction(s.action) }),
-    fields: [readoutField('action', 'Setting')],
+    fields: [{ key: 'action', param: 'action', label: 'Setting', control: 'settingsAction' }],
   },
   focus: {
     glyph: 'focus',

@@ -1,6 +1,6 @@
 /** How one `FieldControl` is drawn and converted: the widget, its unit suffix, and stored ↔ shown numbers. */
 export type FieldWidget = {
-  readonly widget: 'number' | 'pick' | 'toggle' | 'readout' | 'layers';
+  readonly widget: 'number' | 'pick' | 'toggle' | 'readout' | 'layers' | 'settingsAction';
   /** Layers widget: offer a per-item entry's items too. */
   readonly items?: boolean;
   readonly unit?: string;
