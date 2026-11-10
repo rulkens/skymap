@@ -76,6 +76,9 @@ import { validateSeqOverlap } from './validateSeqOverlap';
 import { validateSeqCueOrder } from './validateSeqCueOrder';
 import { resolveSeqJoins } from './resolveSeqJoins';
 import { baseTracksOf } from './baseTracksOf';
+import { ClipCompileError } from './ClipCompileError';
+import { CompileFault } from './CompileFault';
+import type { ClipCompileReason } from '../../../@types/animation/ClipCompileReason';
 import type { SeqOverlap } from '../../../@types/animation/SeqOverlap';
 import type { SeqSteps } from '../../../@types/animation/SeqSteps';
 import type { StepSpan } from '../../../@types/animation/StepSpan';
@@ -106,6 +109,9 @@ type Accum = {
   readonly compositeTracks: CompositeTrack[];
   readonly seqs: SeqSteps[];
   readonly spans: EffectSpan[];
+  // Which effect emitted each base segment, composite track and cue, so a
+  // validator's `CompileFault` (it names those objects) reports effect paths.
+  readonly origin: Map<object, EffectPath>;
   // The resolved clip start pose — the seed of every channel's running value, so
   // a composite leaf can start from where the camera is (`startPoseAt`).
   readonly start: CameraPose;
@@ -114,6 +120,20 @@ type Accum = {
   // Absent ⇒ identity (world-frame aim), so every non-frame caller is unchanged.
   readonly frameBasis?: Mat3;
 };
+
+function emitted<T extends object>(acc: Accum, path: EffectPath, item: T): T {
+  acc.origin.set(item, path);
+  return item;
+}
+
+// A mid-walk refusal, wrapped once at the node being walked: it alone knows the path.
+function refusedAt<T>(reason: ClipCompileReason, path: EffectPath, acc: Accum, run: () => T): T {
+  try {
+    return run();
+  } catch (e) {
+    throw new ClipCompileError((e as Error).message, reason, [path], acc.spans, undefined, e);
+  }
+}
 
 // A composite leaf starts from the running value of each channel at `atSec`,
 // so it continues the previous move rather than snapping to the clip start.
@@ -161,7 +181,9 @@ function walkOverlappedSeq(
   const joins = Math.max(children.filter(hasDuration).length - 1, 0);
   // Rule 1 needs only the join count (infinite steps make rule 2 vacuous); rule 2
   // needs the real durations, so it runs again after the walk.
-  const per = validateSeqOverlap(atSec, overlap, Array(joins + 1).fill(Infinity));
+  const per = refusedAt('seqOverlap', path, acc, () =>
+    validateSeqOverlap(atSec, overlap, Array(joins + 1).fill(Infinity)),
+  );
   const lens = () => [acc.baseSegs.length, acc.compositeTracks.length, acc.cues.length] as const;
   const span = (a: readonly number[], b: readonly number[]): StepSpan => ({
     segs: [a[0]!, b[0]!],
@@ -185,7 +207,10 @@ function walkOverlappedSeq(
     const startSec = durs.length === 0 ? atSec : endSec - per[durs.length - 1]!;
     flush(startSec);
     const dur = walk(child, [...path, i], startSec, acc);
-    if (dur <= 0) throw new Error(`seq at ${atSec}s: a step with a duration compiled to ${dur}s`);
+    if (dur <= 0) {
+      const message = `seq at ${atSec}s: a step with a duration compiled to ${dur}s`;
+      throw new ClipCompileError(message, 'seqOverlap', [path], acc.spans);
+    }
     durs.push(dur);
     endSec = startSec + dur;
     const after = lens();
@@ -195,7 +220,7 @@ function walkOverlappedSeq(
   flush(endSec);
   steps.push(span(pendingFrom, lens()));
   acc.seqs.push({ startSec: atSec, steps });
-  validateSeqOverlap(atSec, overlap, durs);
+  refusedAt('seqOverlap', path, acc, () => validateSeqOverlap(atSec, overlap, durs));
   return endSec - atSec;
 }
 
@@ -263,33 +288,37 @@ function walkNode(effect: Effect, path: EffectPath, atSec: number, acc: Accum): 
 
     // --- Camera leaves: scalar tween (set) ---
     case 'set': {
-      acc.baseSegs.push({
-        segKind: 'tween',
-        channel: effect.ch,
-        startSec: atSec,
-        endSec: atSec + effect.over,
-        to: effect.to,
-        curve: { kind: 'ease', ease: effect.ease },
-        space: effect.space,
-        // Conditional so an untagged endpoint compiles to the byte-identical
-        // segment it always did — `frame` absent, not `frame: undefined`.
-        ...(effect.frame !== undefined ? { frame: effect.frame } : {}),
-      });
+      acc.baseSegs.push(
+        emitted(acc, path, {
+          segKind: 'tween',
+          channel: effect.ch,
+          startSec: atSec,
+          endSec: atSec + effect.over,
+          to: effect.to,
+          curve: { kind: 'ease', ease: effect.ease },
+          space: effect.space,
+          // Conditional so an untagged endpoint compiles to the byte-identical
+          // segment it always did — `frame` absent, not `frame: undefined`.
+          ...(effect.frame !== undefined ? { frame: effect.frame } : {}),
+        }),
+      );
       return effect.over;
     }
 
     // --- Camera leaves: Vec3 tween (setVec) ---
     case 'setVec': {
-      acc.baseSegs.push({
-        segKind: 'tween',
-        channel: effect.ch,
-        startSec: atSec,
-        endSec: atSec + effect.over,
-        to: effect.to,
-        curve: { kind: 'ease', ease: effect.ease },
-        space: 'lin',
-        ...(effect.frame !== undefined ? { frame: effect.frame } : {}),
-      });
+      acc.baseSegs.push(
+        emitted(acc, path, {
+          segKind: 'tween',
+          channel: effect.ch,
+          startSec: atSec,
+          endSec: atSec + effect.over,
+          to: effect.to,
+          curve: { kind: 'ease', ease: effect.ease },
+          space: 'lin',
+          ...(effect.frame !== undefined ? { frame: effect.frame } : {}),
+        }),
+      );
       return effect.over;
     }
 
@@ -299,16 +328,18 @@ function walkNode(effect: Effect, path: EffectPath, atSec: number, acc: Accum): 
       // channel value rather than interpolating toward an absolute bearing.
       // `space` falls back to CHANNEL_SPACE[ch] since spin has no `space`
       // field in CameraAction.
-      acc.baseSegs.push({
-        segKind: 'spin',
-        channel: effect.ch,
-        startSec: atSec,
-        endSec: atSec + effect.over,
-        to: effect.by,
-        curve: { kind: 'ease', ease: effect.ease },
-        space: CHANNEL_SPACE[effect.ch],
-        ...(effect.loop !== undefined ? { loop: effect.loop } : {}),
-      });
+      acc.baseSegs.push(
+        emitted(acc, path, {
+          segKind: 'spin',
+          channel: effect.ch,
+          startSec: atSec,
+          endSec: atSec + effect.over,
+          to: effect.by,
+          curve: { kind: 'ease', ease: effect.ease },
+          space: CHANNEL_SPACE[effect.ch],
+          ...(effect.loop !== undefined ? { loop: effect.loop } : {}),
+        }),
+      );
       return effect.over;
     }
 
@@ -322,21 +353,23 @@ function walkNode(effect: Effect, path: EffectPath, atSec: number, acc: Accum): 
         }
         return w;
       });
-      const track = buildPathTrack({
-        start: startPoseAt(atSec, acc),
-        startSec: atSec,
-        over: effect.over,
-        ease: effect.ease,
-        waypoints,
-        align: effect.align,
-        rampSec: effect.rampSec,
-        linger: effect.linger,
-        lingerSec: effect.lingerSec,
-        spline: effect.spline,
-        passBy: effect.passBy,
-        frameBasis: acc.frameBasis,
-      });
-      acc.compositeTracks.push(track);
+      const track = refusedAt('flyPath', path, acc, () =>
+        buildPathTrack({
+          start: startPoseAt(atSec, acc),
+          startSec: atSec,
+          over: effect.over,
+          ease: effect.ease,
+          waypoints,
+          align: effect.align,
+          rampSec: effect.rampSec,
+          linger: effect.linger,
+          lingerSec: effect.lingerSec,
+          spline: effect.spline,
+          passBy: effect.passBy,
+          frameBasis: acc.frameBasis,
+        }),
+      );
+      acc.compositeTracks.push(emitted(acc, path, track));
       // A dwell (`linger` + `lingerSec`) ADDS time, so the real duration is the
       // track's — not the authored `over` (the cruise budget). Return it so the
       // cursor and the single-writer window land on the true end.
@@ -353,7 +386,7 @@ function walkNode(effect: Effect, path: EffectPath, atSec: number, acc: Accum): 
         fovYRad: effect.fovYRad,
         over: effect.over,
       });
-      acc.compositeTracks.push(track);
+      acc.compositeTracks.push(emitted(acc, path, track));
       return track.endSec - atSec;
     }
 
@@ -402,7 +435,7 @@ function walkNode(effect: Effect, path: EffectPath, atSec: number, acc: Accum): 
     case 'scene':
     case 'focus':
     case 'frameTo': {
-      acc.cues.push({ atSec, effect });
+      acc.cues.push(emitted(acc, path, { atSec, effect }));
       return 0;
     }
 
@@ -431,6 +464,17 @@ function walkNode(effect: Effect, path: EffectPath, atSec: number, acc: Accum): 
 // compileClip — public entry point.
 // ---------------------------------------------------------------------------
 
+// Post-walk validators name compiled objects; report them by the effects that emitted them.
+function reportedByPath<T>(acc: Accum, run: () => T): T {
+  try {
+    return run();
+  } catch (e) {
+    if (!(e instanceof CompileFault)) throw e;
+    const paths = e.culprits.map((c) => acc.origin.get(c)!);
+    throw new ClipCompileError(e.message, e.reason, paths, acc.spans, e.channel, e);
+  }
+}
+
 /**
  * compileClip — pure function; walks `data.timeline` once and produces the
  * flat `CompiledClip` the evaluator and cue-firer consume.
@@ -447,9 +491,9 @@ function walkNode(effect: Effect, path: EffectPath, atSec: number, acc: Accum): 
  *                    omit it.
  * @returns           A `CompiledClip` ready for the evaluator.
  *
- * @throws      Throws via `validateSingleWriter` when a base-layer write clash
- *              is detected on a channel (two overlapping `[start, end)` windows
- *              on the same channel's base track).
+ * @throws      `ClipCompileError` naming the effects at fault when the clip
+ *              breaks a rule (writer clash, seq overlap, cue order, flyPath
+ *              timing); a plain `Error` for an unresolved focus effect.
  */
 export function compileClip(data: ClipData, frameBasis?: Mat3): CompiledClip {
   // Resolve the starting pose — 'live' and absent both fall through to the
@@ -466,6 +510,7 @@ export function compileClip(data: ClipData, frameBasis?: Mat3): CompiledClip {
     compositeTracks: [],
     seqs: [],
     spans: [],
+    origin: new Map(),
     start,
     frameBasis,
   };
@@ -478,22 +523,25 @@ export function compileClip(data: ClipData, frameBasis?: Mat3): CompiledClip {
     awaitedDur += walk(effect, [i], awaitedDur, acc);
   }
 
-  validateSeqCueOrder(acc.seqs, acc.cues);
-
   const sortedCues: SceneCue[] = [...acc.cues].sort((a, b) => a.atSec - b.atSec);
 
-  // After the walk, so a segment walked before the composite it follows (an
-  // earlier `all` sibling) still picks it up.
-  const baseSegs = resolveSeqJoins(
-    acc.baseSegs.map((seg) => continuedFromComposite(seg, acc)),
-    acc.compositeTracks,
-    acc.seqs,
-    start,
-  );
-  const baseTracks = baseTracksOf(baseSegs);
-
-  validateSingleWriter(baseTracks);
-  validateCompositeExclusivity(baseTracks, acc.compositeTracks);
+  const baseTracks = reportedByPath(acc, () => {
+    validateSeqCueOrder(acc.seqs, acc.cues);
+    // Both passes keep array positions, so a rewritten segment inherits its
+    // original's path by index.
+    const inherit = (segs: readonly BaseSegment[]) =>
+      segs.forEach((seg, i) => acc.origin.set(seg, acc.origin.get(acc.baseSegs[i]!)!));
+    // After the walk, so a segment walked before the composite it follows (an
+    // earlier `all` sibling) still picks it up.
+    const continued = acc.baseSegs.map((seg) => continuedFromComposite(seg, acc));
+    inherit(continued);
+    const resolved = resolveSeqJoins(continued, acc.compositeTracks, acc.seqs, start);
+    inherit(resolved);
+    const tracks = baseTracksOf(resolved);
+    validateSingleWriter(tracks);
+    validateCompositeExclusivity(tracks, acc.compositeTracks);
+    return tracks;
+  });
 
   return {
     start,
