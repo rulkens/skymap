@@ -7,7 +7,6 @@ use crate::imageio::Rgba;
 use crate::label::{closing, fill_holes, small_components};
 use crate::quantile::Interp;
 use std::collections::HashMap;
-use std::path::Path;
 
 pub fn sub_lon(sat: &str) -> f64 {
     match sat {
@@ -31,6 +30,10 @@ pub fn view_angle(sat: &str, row: usize, col: usize) -> f64 {
         .to_degrees()
 }
 
+/// Frozen inputs, provenance in assets/README.md; compiled in so a bake cannot run against other tables.
+const COLORMAP_XML: &str = include_str!("../assets/gibs-ir-colormap.xml");
+const CALIB_JSON: &str = include_str!("../assets/geo-calib.json");
+
 pub struct Decoder {
     e: Vec<[f32; 4]>,
     warm: Vec<[f32; 4]>,
@@ -43,8 +46,8 @@ pub struct Decoder {
 }
 
 impl Decoder {
-    pub fn new(colormap: &Path, calib: &Path) -> Decoder {
-        let xml = std::fs::read_to_string(colormap).unwrap();
+    pub fn new() -> Decoder {
+        let xml = COLORMAP_XML;
         let mut e = Vec::new();
         for line in xml.lines() {
             let Some(i) = line.find("rgb=\"") else {
@@ -99,8 +102,7 @@ impl Decoder {
             xp: warm.iter().rev().map(|c| c[0] as f64).collect(),
             fp: warm.iter().rev().map(|c| c[3] as f64).collect(),
         };
-        let cal: serde_json::Value =
-            serde_json::from_str(&std::fs::read_to_string(calib).unwrap()).unwrap();
+        let cal: serde_json::Value = serde_json::from_str(CALIB_JSON).unwrap();
         let arr = |k: &str| {
             cal[k]
                 .as_array()
