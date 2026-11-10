@@ -7,7 +7,7 @@ export type IsmMapOrientation = {
   readonly presentPipeline: GPURenderPipeline;
   readonly presentBindGroup: GPUBindGroup;
   /** Run the six passes over the current source texture. The caller gates this; it does not gate itself. */
-  dispatch(input: {
+  dispatchOrientation(input: {
     readonly grid: GalaxyIsmMapGridRadius;
     readonly sigmaDerivTexels: number;
     readonly sigmaIntegTexels: number;

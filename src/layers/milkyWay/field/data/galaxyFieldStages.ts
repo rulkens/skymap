@@ -166,7 +166,7 @@ export const GALAXY_FIELD_STAGES: readonly Stage<GalaxyFieldStageName, GalaxyFie
           ctx.input.fieldTuning.ismMap.generator === 'fluid'
             ? ctx.input.fieldTuning.ismMapFluid
             : { gasFloor: 1, gasScaleLength: 1 };
-        ctx.chain.orientation.dispatch({
+        ctx.chain.orientation.dispatchOrientation({
           grid: ismMapGridRadiusOrDefault(ctx.input.geometry),
           sigmaDerivTexels: ctx.input.sigmaDerivTexels,
           sigmaIntegTexels: ctx.input.sigmaIntegTexels,

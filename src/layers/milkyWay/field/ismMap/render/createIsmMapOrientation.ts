@@ -4,7 +4,7 @@
  * whether the generator that wrote it is running): field blur (separable) ->
  * tensor -> tensor blur (separable) -> coherence, plus the overlay that
  * presents it. Entirely GPU-side, so the zero-initialised source texture
- * makes `dispatch` safe before the generator has ever run. The perf GATE
+ * makes `dispatchOrientation` safe before the generator has ever run. The perf GATE
  * stays with the caller — it reads the render bag and field tuning, neither
  * of which this module should know about.
  */
@@ -279,7 +279,7 @@ export function createIsmMapOrientation(
     presentPipeline: presentPipe,
     presentBindGroup,
 
-    dispatch({
+    dispatchOrientation({
       grid,
       sigmaDerivTexels,
       sigmaIntegTexels,
