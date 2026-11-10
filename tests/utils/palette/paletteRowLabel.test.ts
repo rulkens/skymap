@@ -80,6 +80,15 @@ describe('paletteRowLabel', () => {
         'Voyager 1',
         'Object',
       ],
+      [
+        {
+          kind: 'layer',
+          entry: { id: 'body-mars', names: ['Mars'], class: 'primary', chip: 'Solar System' },
+          score: 0,
+        },
+        'Mars',
+        'Solar System',
+      ],
     ];
     for (const [row, name, kind] of cases) expect(paletteRowLabel(row)).toEqual({ name, kind });
   });
