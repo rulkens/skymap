@@ -663,8 +663,8 @@ from step starts, cue times and End.
 - `selectTimeline`: over draft, compile, collapsed → `buildTimeline`; `null` with no draft.
 - `selectSelectedRow`: the selected `TimelineRow` or `null`.
 
-- [ ] Test `the timeline is unresolved until the current revision resolves, then timed`.
-- [ ] Test `an edit that breaks the clip yields an error timeline with the culprits marked` (store-level:
+- [x] Test `the timeline is unresolved until the current revision resolves, then timed`.
+- [x] Test `an edit that breaks the clip yields an error timeline with the culprits marked` (store-level:
       open, resolve, `paramEdited` an overlap past its step, resolve again).
 
 ---
