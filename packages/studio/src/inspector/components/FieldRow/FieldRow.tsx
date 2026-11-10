@@ -2,6 +2,7 @@ import { useAppDispatch, useAppSelector } from '../../../../../../src/store/hook
 import { objectPicked, paramEdited } from '../../../session/state/studioSlice';
 import { selectPick } from '../../../session/state/selectors';
 import { isPickFor } from '../../../session/utils/isPickFor';
+import { sameParamValue } from '../../../draft/utils/sameParamValue';
 import { useObjectIndex } from '../../../session/hooks/useObjectIndex';
 import InspectorRow from '../../../primitives/components/InspectorRow/InspectorRow';
 import NumberField from '../../../primitives/components/NumberField/NumberField';
@@ -32,8 +33,9 @@ type Props = {
 };
 
 /**
- * One field of the selected row. An absent param shows dim: its fallback, or `auto` when the engine
- * decides; an authored one is bright with ↺ back to absent. A required param is always authored.
+ * One field of the selected row, showing the value the engine uses. A row with a default is dim at it
+ * and bright with ↺ back to it otherwise: the `resetTo` value, or absent (its fallback, or `auto` when
+ * the engine decides). A required param with no `resetTo` is always authored.
  */
 function FieldRow({ spec, subject, rowRef }: Props) {
   const dispatch = useAppDispatch();
@@ -45,6 +47,9 @@ function FieldRow({ spec, subject, rowRef }: Props) {
   const canBeAbsent = spec.fallback !== undefined || spec.optional === true;
   const auto = !authored && spec.optional === true;
   const stored = subject[spec.param] ?? spec.fallback;
+  const { resetTo } = spec;
+  const hasDefault = resetTo !== undefined || canBeAbsent;
+  const atDefault = resetTo === undefined ? !authored : sameParamValue(stored, resetTo);
   const edit = (value: ParamValue, gesture: string | null) =>
     dispatch(paramEdited({ ref: rowRef, param: spec.param, value, label: spec.label, gesture }));
 
@@ -135,8 +140,8 @@ function FieldRow({ spec, subject, rowRef }: Props) {
   return (
     <InspectorRow
       label={spec.label}
-      dim={!authored && canBeAbsent}
-      onReset={authored && canBeAbsent && !spec.readOnly ? () => edit(undefined, null) : undefined}
+      dim={hasDefault && atDefault}
+      onReset={hasDefault && !atDefault && !spec.readOnly ? () => edit(resetTo, null) : undefined}
     >
       {field}
     </InspectorRow>

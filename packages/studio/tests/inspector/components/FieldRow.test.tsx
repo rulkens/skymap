@@ -75,6 +75,39 @@ describe('FieldRow', () => {
     expect(selectDraft(store.getState())!.timeline[0]).not.toHaveProperty('fade');
   });
 
+  // ↺ used to remove the param, and buildPathTrack reads an absent ramp, linger or linger window as
+  // off: one click switched the dwell and the ramp off while the row showed the default.
+  it.each([
+    ['align', 'Align-in'],
+    ['rampSec', 'Ramp'],
+    ['linger', 'Linger'],
+    ['lingerSec', 'Linger for'],
+  ] as const)(
+    '↺ on a tuned Fly %s writes the value a default Fly flies with',
+    async (key, label) => {
+      const waypoints = [atPoint([5, 0, 0], 8)];
+      const tuned = flyPath(waypoints, {
+        over: 10,
+        align: 2,
+        rampSec: 3,
+        linger: 0.2,
+        lingerSec: 3,
+      });
+      const store = setup({ timeline: [tuned] }, 'flyPath', EFFECT, key);
+      await userEvent.click(screen.getByRole('button', { name: `Reset ${label} to default` }));
+
+      const fly = selectDraft(store.getState())!.timeline[0] as typeof tuned;
+      expect(fly[key]).toBe(flyPath(waypoints, { over: 10 })[key]);
+    },
+  );
+
+  it("an absent Fly Ramp is the engine's 0 s, so it reads bright with ↺ to the default", () => {
+    const { rampSec: _absent, ...fly } = flyPath([atPoint([5, 0, 0], 8)], { over: 10 });
+    setup({ timeline: [fly] }, 'flyPath', EFFECT, 'rampSec');
+
+    expect(screen.getByRole('button', { name: 'Reset Ramp to default' })).toBeInTheDocument();
+  });
+
   it('Enter on an unchanged degrees field adds no Undo, though the radian round trip is inexact', async () => {
     const store = setup(
       { start: { ...START_POSE, yaw: 0.1 }, timeline: [] },

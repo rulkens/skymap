@@ -9,8 +9,10 @@ export type FieldSpec<T> = {
   /** At most 11 characters, the naming vocabulary. */
   readonly label: string;
   readonly control: FieldControl | ((subject: T) => FieldControl);
-  /** Shown dim while the param is absent; ↺ resets the param to absent. */
+  /** What the engine uses while the param is absent; ↺ removes the param unless `resetTo` is set. */
   readonly fallback?: number | string | boolean;
+  /** The authoring default: ↺ writes it, and the row is dim while the value equals it. */
+  readonly resetTo?: number | string | boolean;
   /** Absent means the engine decides (no fixed default): shown dim as `auto`; ↺ resets to absent. */
   readonly optional?: true;
   readonly readOnly?: true;
