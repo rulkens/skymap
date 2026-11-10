@@ -6,7 +6,7 @@
  * 0.075°/px tuning grid (16 * 0.075 = 1.2°).
  */
 
-import type { ColourGrade } from '../../../src/@types/scene/ColourGrade';
+import type { ColourGrade } from '../../../src/layers/body/textures/@types/ColourGrade';
 import type { AlbedoDelight } from '../@types/AlbedoDelight';
 
 export const MARS_VIKING_DELIGHT: AlbedoDelight = {

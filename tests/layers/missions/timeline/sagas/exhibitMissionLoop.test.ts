@@ -7,7 +7,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import createSagaMiddleware from 'redux-saga';
 import { configureStore } from '@reduxjs/toolkit';
 
-import { voyagerMissions } from '../../../../../src/layers/missions/exhibits/voyagerMissions';
+import { voyagerMissions } from '../../../../../src/layers/missions/exhibits/voyagerMissions/voyagerMissions';
 import { MISSION_SPEEDS } from '../../../../../src/layers/missions/timeline/data/missionSpeeds';
 import { MISSION_EVENTS } from '../../../../../src/layers/missions/events/data/missionEvents.generated';
 import { exhibitBodySaga } from '../../../../../src/state/exhibits/exhibitBodySaga';

@@ -371,7 +371,7 @@ const PERF_SLIDERS: readonly RenderSliderSpec[] = [
     max: 16,
     step: 0.5,
     format: (v) => v.toFixed(1),
-    info: "Multiplier on the baked star-grain point's fixed sigma that sets the point's visible extent — the feature size hiiSplat/starGrain.wesl's per-octave band-limit fades against, not the bare sigma. Calibrated at close approach; deriveFrameView.ts blends this toward 'Grain feature far' as the camera pulls out.",
+    info: "Multiplier on the baked star-grain point's fixed sigma that sets the point's visible extent — the feature size hiiSplat/starGrain.wesl's per-octave band-limit fades against, not the bare sigma. Calibrated at close approach; the field blends this toward 'Grain feature far' as the camera pulls out.",
   },
   {
     key: 'starGrainFeatureScaleFar',

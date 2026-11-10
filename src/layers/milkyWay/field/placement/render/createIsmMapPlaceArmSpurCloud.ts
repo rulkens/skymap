@@ -1,0 +1,179 @@
+/**
+ * createIsmMapPlaceArmSpurCloud — the GPU placement kernel for the arm-spur
+ * cloud tier. The CPU decides slot COUNT and the per-spur pick-weight table
+ * (`deriveArmSpurCloudCount.ts`'s budget math, `packArmSpurCloudRecords.ts`);
+ * `placeArmSpurCloud.wesl` decides slot CONTENT — the weighted spur pick,
+ * the rejection-sampled position, the Gaussian cross/pole scatter.
+ * `dispatchPlaceArmSpurCloud` rebuilds its bind group every call: the
+ * per-spur records buffer is recreated whenever its byte size changes.
+ */
+import placeArmSpurCloudWgsl from '../../../../../services/gpu/shaders/milkyWay/ismMap/placeArmSpurCloud.wesl?static';
+
+import {
+  packPlaceArmSpurCloudParams,
+  PLACE_ARM_SPUR_CLOUD_PARAMS_BUFFER_SIZE,
+} from './packPlaceArmSpurCloudParams';
+import { ARM_SPUR_CLOUD_RECORD_FLOATS, packArmSpurCloudRecords } from './packArmSpurCloudRecords';
+import { createGrowOnlyRecordBuffer } from '../../render/createGrowOnlyRecordBuffer';
+import { discLightScaleLength } from '../../mixture/utils/discLightScaleLength';
+import { FIELD_COMPONENT_FLOATS } from '../../header/render/packFieldUniforms';
+import { SPUR_CLOUD_MAX_COUNT } from '../../armClouds/data/spurCloudMaxCount';
+import type { PlaceArmSpurCloudDispatchInput } from '../@types/PlaceArmSpurCloudDispatchInput';
+import type { IsmMapPlaceArmSpurCloud } from '../@types/IsmMapPlaceArmSpurCloud';
+
+const PLACE_ARM_SPUR_CLOUD_WORKGROUP_SIZE = 256;
+
+export function createIsmMapPlaceArmSpurCloud(
+  device: GPUDevice,
+  deps: { readonly makeShader: (code: string, label: string) => GPUShaderModule },
+): IsmMapPlaceArmSpurCloud {
+  const mod = deps.makeShader(placeArmSpurCloudWgsl, 'galaxy:placeArmSpurCloud');
+  const pipeline = device.createComputePipeline({
+    label: 'galaxy:placeArmSpurCloudPipe',
+    layout: 'auto',
+    compute: { module: mod, entryPoint: 'cs' },
+  });
+  const paramsBuffer = device.createBuffer({
+    label: 'galaxy:placeArmSpurCloudParams',
+    size: PLACE_ARM_SPUR_CLOUD_PARAMS_BUFFER_SIZE,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+  const recordsBuffer = createGrowOnlyRecordBuffer({
+    device,
+    label: 'galaxy:placeArmSpurCloudRecords',
+    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+    floatsPerRecord: ARM_SPUR_CLOUD_RECORD_FLOATS,
+    initialCapacity: 1,
+  });
+  const readbackByteSize = SPUR_CLOUD_MAX_COUNT * FIELD_COMPONENT_FLOATS * 4;
+  const readbackBuffer = device.createBuffer({
+    label: 'galaxy:placeArmSpurCloudReadback',
+    size: readbackByteSize,
+    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+  });
+  // fluxWeightOut — see IsmMapPlaceArmSpurCloud.fluxWeightBuffer's own doc above.
+  const fluxWeightBuffer = device.createBuffer({
+    label: 'galaxy:placeArmSpurCloudFluxWeight',
+    size: SPUR_CLOUD_MAX_COUNT * 4,
+    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
+  });
+  const fluxWeightReadbackBuffer = device.createBuffer({
+    label: 'galaxy:placeArmSpurCloudFluxWeightReadback',
+    size: SPUR_CLOUD_MAX_COUNT * 4,
+    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+  });
+
+  /**
+   * Encodes the dispatch, or returns null when there is nothing to place —
+   * `spurArms.length === 0` (no roots this galaxy) or `weightSum <= 0` (every
+   * pick weight collapsed, `deriveArmSpurCloudCount.ts`'s own `!(weightSum > 0)`
+   * bail-out) both mean `placeArmSpurCloud.wesl`'s weighted pick would divide
+   * by an inert or empty table — the CPU-side guard mirrors that early
+   * return rather than letting the shader index an empty array.
+   */
+  function encode(enc: GPUCommandEncoder, input: PlaceArmSpurCloudDispatchInput): boolean {
+    if (input.count <= 0 || input.spurArms.length === 0) return false;
+    const { buffer: recordsData, weightSum } = packArmSpurCloudRecords(
+      input.spurArms,
+      input.geometry,
+      input.tuning,
+    );
+    if (!(weightSum > 0)) return false;
+
+    recordsBuffer.write(recordsData);
+    const buf = recordsBuffer.getBuffer();
+
+    const { geometry, tuning } = input;
+    device.queue.writeBuffer(
+      paramsBuffer,
+      0,
+      packPlaceArmSpurCloudParams({
+        seed: input.seed,
+        count: input.count,
+        spurCount: input.spurArms.length,
+        reservationOffset: input.offset,
+        spurFlux: input.flux,
+        weightSum,
+        elongation: tuning.arms.spurs.elongation,
+        sizeScale: tuning.arms.spurs.sizeScale,
+        widthScale: tuning.arms.widthScale,
+        excessScaleRatio: tuning.arms.excessScaleRatio,
+        hLight: discLightScaleLength(geometry),
+        diskHeight: geometry.diskHeight,
+        armStartRadius: geometry.armStartRadius,
+        armInnerRampW: geometry.armInnerRampW,
+        armFullRadius: geometry.armFullRadius,
+        waveAmount: geometry.waveAmount,
+        diskScaleLen: geometry.diskScaleLen,
+        warpStrength: geometry.warpStrength,
+        warpTwist: geometry.warpTwist,
+        warpStartRadius: geometry.warpStartRadius,
+        outerRadius: geometry.outerRadius,
+      }),
+    );
+
+    const bindGroup = device.createBindGroup({
+      label: 'galaxy:placeArmSpurCloudBG',
+      layout: pipeline.getBindGroupLayout(0),
+      entries: [
+        { binding: 0, resource: { buffer: paramsBuffer } },
+        { binding: 1, resource: { buffer: buf } },
+        { binding: 2, resource: { buffer: input.fieldCompsBuffer } },
+        { binding: 3, resource: { buffer: fluxWeightBuffer } },
+      ],
+    });
+    const pass = enc.beginComputePass({ label: 'galaxy:placeArmSpurCloudPass' });
+    pass.setPipeline(pipeline);
+    pass.setBindGroup(0, bindGroup);
+    pass.dispatchWorkgroups(Math.ceil(input.count / PLACE_ARM_SPUR_CLOUD_WORKGROUP_SIZE));
+    pass.end();
+    return true;
+  }
+
+  return {
+    dispatchPlaceArmSpurCloud(enc, input): void {
+      encode(enc, input);
+    },
+
+    async dispatchAndReadbackArmSpurCloud(
+      input,
+    ): Promise<{ readonly records: Float32Array; readonly fluxWeight: Float32Array }> {
+      const enc = device.createCommandEncoder({ label: 'galaxy:placeArmSpurCloudDebugDispatch' });
+      if (!encode(enc, input)) {
+        return { records: new Float32Array(0), fluxWeight: new Float32Array(0) };
+      }
+      const byteSize = input.count * FIELD_COMPONENT_FLOATS * 4;
+      const byteOffset = input.offset * FIELD_COMPONENT_FLOATS * 4;
+      enc.copyBufferToBuffer(input.fieldCompsBuffer, byteOffset, readbackBuffer, 0, byteSize);
+      const fluxWeightByteSize = input.count * 4;
+      enc.copyBufferToBuffer(fluxWeightBuffer, 0, fluxWeightReadbackBuffer, 0, fluxWeightByteSize);
+      device.queue.submit([enc.finish()]);
+
+      await Promise.all([
+        readbackBuffer.mapAsync(GPUMapMode.READ, 0, byteSize),
+        fluxWeightReadbackBuffer.mapAsync(GPUMapMode.READ, 0, fluxWeightByteSize),
+      ]);
+      try {
+        return {
+          records: new Float32Array(readbackBuffer.getMappedRange(0, byteSize).slice(0)),
+          fluxWeight: new Float32Array(
+            fluxWeightReadbackBuffer.getMappedRange(0, fluxWeightByteSize).slice(0),
+          ),
+        };
+      } finally {
+        readbackBuffer.unmap();
+        fluxWeightReadbackBuffer.unmap();
+      }
+    },
+
+    fluxWeightBuffer,
+
+    dispose(): void {
+      paramsBuffer.destroy();
+      recordsBuffer.destroy();
+      readbackBuffer.destroy();
+      fluxWeightBuffer.destroy();
+      fluxWeightReadbackBuffer.destroy();
+    },
+  };
+}

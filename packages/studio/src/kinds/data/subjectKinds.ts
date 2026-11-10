@@ -4,7 +4,6 @@
  * Resolved line. A resolved effect of any other kind reads as an empty string, never throws.
  */
 import { formatDegrees } from '../utils/formatDegrees';
-import { formatSelectionRef } from '../utils/formatSelectionRef';
 import { formatNumber } from '../../utils/format/formatNumber';
 import { formatQuantity } from '../../utils/format/formatQuantity';
 import { easeField } from '../utils/fields/easeField';
@@ -105,7 +104,7 @@ export const subjectKinds: Pick<
       s.id === null
         ? { name: 'Focus', op: '', value: 'none' }
         : { name: 'Focus', op: '', value: '', subject: s.id },
+    // No `resolved`: its ref is the Subject's own object, which the Subject field already names.
     fields: [{ ...subjectField(), control: 'focusSubject' }],
-    resolved: (e) => (e.kind === 'focus' ? formatSelectionRef(e.ref) : ''),
   },
 };

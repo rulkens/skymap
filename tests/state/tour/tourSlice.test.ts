@@ -13,7 +13,7 @@ import {
   selectTourBeatTitles,
   selectTourCanPrev,
 } from '../../../src/state/tour/selectors';
-import { tourRegistry } from '../../../src/data/animation/tours/tourRegistry';
+import { APP_TOUR_REGISTRY } from '../../../src/compositions/appTours';
 import type { TourRuntimeState } from '../../../src/@types/animation/tour/TourRuntimeState';
 import type { RootState } from '../../../src/store/types';
 
@@ -94,7 +94,7 @@ describe('tour selectors', () => {
       dwellSec: 0,
     };
     expect(selectActiveTour(asState(runtime, false))).toBeNull();
-    expect(selectActiveTour(asState(runtime, true))).toBe(tourRegistry.webShowcase);
+    expect(selectActiveTour(asState(runtime, true))).toBe(APP_TOUR_REGISTRY.webShowcase);
   });
 
   it('selectActiveTour returns null for an unknown id', () => {
@@ -115,9 +115,9 @@ describe('tour selectors', () => {
       dwellSec: 0,
     };
     const titles = selectTourBeatTitles(asState(runtime, true));
-    expect(titles).toHaveLength(tourRegistry.webShowcase.beats.length);
+    expect(titles).toHaveLength(APP_TOUR_REGISTRY.webShowcase.beats.length);
     titles.forEach((title, i) => {
-      expect(title).toBe(tourRegistry.webShowcase.beats[i]?.caption?.title ?? null);
+      expect(title).toBe(APP_TOUR_REGISTRY.webShowcase.beats[i]?.caption?.title ?? null);
     });
   });
 

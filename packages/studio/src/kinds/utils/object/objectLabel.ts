@@ -6,8 +6,6 @@ import { paletteRowLabel } from '../../../../../../src/utils/palette/paletteRowL
 import type { PaletteRowLabel } from '../../../../../../src/@types/palette/PaletteRowLabel';
 import type { ObjectIndex } from '../../../@types/kinds/ObjectIndex';
 
-const PGC_ID = /^pgc-(\d+)$/;
-
 export function objectLabel(id: string, index: ObjectIndex): PaletteRowLabel | null {
   const famous = index.famous.find((e) => e.id === id);
   if (famous) return paletteRowLabel({ kind: 'famous', entry: famous, score: 0 });
@@ -15,7 +13,6 @@ export function objectLabel(id: string, index: ObjectIndex): PaletteRowLabel | n
   if (structure) return paletteRowLabel({ kind: 'structure', entry: structure, score: 0 });
   const layer = index.layerRows.find((e) => e.id === id);
   if (layer) return paletteRowLabel({ kind: 'layer', entry: layer, score: 0 });
-  const pgc = PGC_ID.exec(id)?.[1];
-  const alias = pgc === undefined ? undefined : index.aliases.find((e) => e.pgc === Number(pgc));
+  const alias = index.aliases.find((e) => e.focusId === id);
   return alias ? paletteRowLabel({ kind: 'alias', entry: alias, score: 0 }) : null;
 }

@@ -14,7 +14,7 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
 import type { LayerCoreDeps } from '../../../@types/engine/layer/LayerCoreDeps';
 import type { SourceCountReport } from '../../../@types/engine/layer/SourceCountReport';
-import type { SourceType } from '../../../@types/data/SourceType';
+import type { SourceId } from '../../../@types/data/SourceId';
 import type { Label2DDirector } from '../../../@types/engine/subsystems/Label2DDirector';
 
 import { createPickCodeAllocator } from '../selection/createPickCodeAllocator';
@@ -73,7 +73,7 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
   // `galaxyPointRenderer.totalCount()` by construction (per-source last count, summed,
   // replaced on tier swap). The echo is per-arrival, so a catalog enabled mid-session
   // echoes too.
-  const countBySource = new Map<SourceType, number>();
+  const countBySource = new Map<SourceId, number>();
   function* consumeSourceCountSaga(report: SourceCountReport): SagaIterator {
     yield* put(engineSourceCountReported(report));
     // A catalog landing IS a content change for the sky capture keyed on it.
@@ -166,7 +166,7 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
   // only correct over a list holding both. Layer rows lead: the queue breaks equal
   // ranks by array order, so body textures load ahead of craft meshes.
   state.assetRows = expandCompanionRows(
-    concatUniqueRows('createLayers: asset keys', (row) => String(row.key), [
+    concatUniqueRows('createLayers: asset keys', (row) => row.key, [
       ...instances.map((instance) => instance.assets),
       meshAssetRows(state),
     ]),

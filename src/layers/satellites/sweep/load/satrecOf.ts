@@ -4,7 +4,7 @@
  * thread builds the selected and focused satellites' satrecs, per frame.
  */
 import { json2satrec } from './satelliteJsCore';
-import type { SatelliteCatalog } from '../../../../@types/satellites/SatelliteCatalog';
+import type { SatelliteCatalog } from '../../catalog/@types/SatelliteCatalog';
 
 export function satrecOf(cat: SatelliteCatalog, k: number): ReturnType<typeof json2satrec> {
   return json2satrec({

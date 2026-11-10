@@ -6,7 +6,7 @@
  * cos(lat) blowup at wide spans, measured as an outright crash at 90°.
  */
 import type { AlbedoRecipe } from '../../textures/@types/AlbedoRecipe';
-import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
+import type { LonLatBounds } from '../../../src/layers/body/surfaceTiles/format/@types/LonLatBounds';
 import type { PreviewSunFit } from '../@types/PreviewSunFit';
 
 const DEG_TO_RAD = Math.PI / 180;

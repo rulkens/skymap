@@ -1,7 +1,7 @@
 import type { AgentInitMode } from '../../@types/AgentInitMode';
 import type { GridBox } from '../../@types/GridBox';
 import type { McpmParams } from '../../@types/McpmParams';
-import type { SourceType } from '../../../../src/@types/data/SourceType';
+import type { GalaxyCatalogId } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { Vec4 } from '../../../../src/@types/math/Vec4';
 import { DECAY_WG_EDGE } from '../sim/encodeStep';
@@ -16,7 +16,7 @@ export type ImportedParams = {
   /** S15: undefined ⇒ leave the current catalog selection untouched — every preset
    * saved before this field existed (and any preset that simply omits it) must
    * still import cleanly. */
-  readonly sources?: readonly SourceType[];
+  readonly sources?: readonly GalaxyCatalogId[];
 };
 
 // Mirrors buildRhizomeVolume.ts's own "Voxel-size spread assert" (rule 6): a
@@ -87,17 +87,22 @@ function vec4(obj: Record<string, unknown>, field: string): Vec4 {
 function optionalSourceList(
   obj: Record<string, unknown>,
   field: string,
-): readonly SourceType[] | undefined {
+): readonly GalaxyCatalogId[] | undefined {
   const v = obj[field];
   if (v === undefined) return undefined;
   if (!Array.isArray(v)) fail(`"${field}" must be an array of source ids`);
-  const known = new Set<SourceType>(WORKBENCH_SOURCES);
+  if (v.length > 0 && v.every((id) => typeof id === 'number')) {
+    fail(
+      `"${field}" holds numeric source codes from before source ids — re-export the preset from the current workbench`,
+    );
+  }
+  const known = new Set<GalaxyCatalogId>(WORKBENCH_SOURCES);
   for (const id of v) {
-    if (typeof id !== 'number' || !known.has(id as SourceType)) {
+    if (typeof id !== 'string' || !known.has(id as GalaxyCatalogId)) {
       fail(`"${field}" contains unknown source id ${JSON.stringify(id)}`);
     }
   }
-  return v as SourceType[];
+  return v as GalaxyCatalogId[];
 }
 
 /**

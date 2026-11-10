@@ -7,7 +7,6 @@
  */
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { CatalogPoints } from '../../@types/CatalogPoints';
-import { Source } from '../../../../src/data/source';
 import { gaussian } from '../../../../src/utils/random/gaussian';
 import { mulberry32 } from '../../../../src/utils/random/mulberry32';
 import { uniformInSphere } from '../../../../src/utils/random/uniformInSphere';
@@ -42,5 +41,5 @@ export function syntheticCatalog(): CatalogPoints {
     }
   }
 
-  return { positions, log10StellarMass, count, sources: [Source.SDSS] };
+  return { positions, log10StellarMass, count, sources: ['sdss'] };
 }

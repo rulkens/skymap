@@ -7,7 +7,7 @@ import { MILKY_WAY_CENTER_WORLD } from '../../../src/data/milkyWay/galacticCente
 import { makeGalaxyRow } from '../../fixtures/makeGalaxyRow';
 import type { CameraPose } from '../../../src/@types/camera/pose/CameraPose';
 import type { FocusMotion } from '../../../src/@types/camera/focusMotion/FocusMotion';
-import type { GalaxyRow } from '../../../src/@types/engine/GalaxyRow';
+import type { GalaxyRow } from '../../../src/layers/galaxyCatalog/records/@types/GalaxyRow';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 import { MILKY_WAY_ROW } from '../../fixtures/milkyWayRow';
 import { placedStructureRow } from '../../../src/layers/structure/selection/utils/placedStructureRow';
@@ -29,7 +29,7 @@ const arrivalAt = (type: string, radiusMpc: number) =>
 
 const galaxyRow = (over: Partial<GalaxyRow> = {}) =>
   makeGalaxyRow({
-    source: 1,
+    source: 'sdss',
     index: 7,
     objId: '12345',
     x: 1,

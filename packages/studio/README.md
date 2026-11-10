@@ -3,7 +3,7 @@
 The clip studio: a timeline editor for registry clips. It opens any clip in `clipRegistry`, shows
 its structure and the compiler's timing as an outline beside tracks, and edits step parameters with
 undo. Slice 1 neither saves nor seeks; the plan and its later slices are in
-`docs/superpowers/plans/2026-11-10-clip-studio-package.md`, the decisions in
+`docs/superpowers/plans/completed/2026-11-10-clip-studio-package.md`, the decisions in
 `docs/grill-sessions/clip-studio-2026-11-07.md`.
 
 ## Opening it

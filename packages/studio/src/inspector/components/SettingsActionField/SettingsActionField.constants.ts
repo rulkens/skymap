@@ -9,7 +9,7 @@ export const SETTING_OPTIONS = [
 /** Shown only on a step that already tunes the flow: tuning has no on/off to switch from. */
 export const TUNING_OPTION = { value: 'tuning', text: 'Flow tuning' };
 
-export const CATALOG_OPTIONS = GALAXY_CATALOG_SOURCE_ROWS.map(([, entry]) => ({
+export const CATALOG_OPTIONS = GALAXY_CATALOG_SOURCE_ROWS.map((entry) => ({
   value: entry.id,
   text: entry.label,
 }));

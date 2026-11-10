@@ -12,9 +12,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createAppStore } from '../../../../src/store/createAppStore';
 import { engineLoadProgressChanged } from '../../../../src/state/engine/engineSlice';
-import { Source } from '../../../../src/data/source';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
-import type { SourceType } from '../../../../src/@types/data/SourceType';
+import type { SourceId } from '../../../../src/@types/data/SourceId';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { LoadProgressState } from '../../../../src/@types/loading/LoadProgressState';
 import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
@@ -50,7 +49,7 @@ function makeProgressState(): EngineState {
   return {
     subsystems: { loadProgress: null },
     // The starCatalog Layer's Gaia slot is the real-world example this fixture stands in for.
-    slotsByKey: new Map([[Source.GaiaStars as SourceType, stubSlot('gaia-stars')]]),
+    slotsByKey: new Map([['gaiaStars' as SourceId, stubSlot('gaia-stars')]]),
   } as unknown as EngineState;
 }
 

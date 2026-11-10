@@ -7,12 +7,11 @@ import { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsS
 import { takeoverStarted } from '../../../src/state/takeover/takeoverActions';
 import { beatChanged, setPaused } from '../../../src/state/tour/tourSlice';
 import { setSimDays } from '../../../src/state/time/timeSlice';
-import { tourRegistry } from '../../../src/data/animation/tours/tourRegistry';
+import { APP_TOUR_REGISTRY } from '../../../src/compositions/appTours';
 import { bodyDriverGeometry } from '../../../src/utils/scene/bodyDriverGeometry';
 import type { ToggleRow } from '../../../src/@types/settings/ToggleRow';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
-import { Source } from '../../../src/data/source';
 import { extractGalaxyRow } from '../../../src/layers/galaxyCatalog/records/present/extractGalaxyRow';
 import { placedGalaxyRow } from '../../../src/layers/galaxyCatalog/selection/utils/placedGalaxyRow';
 import { FAMOUS_GALAXY_NAMES } from '../../../src/layers/galaxyCatalog/famousGalaxies/data/famousGalaxyNames.generated';
@@ -56,7 +55,7 @@ describe('selectDomeStatus', () => {
       kind: 'tour',
       id: 'grandTour',
       beatIndex: 3,
-      beatCount: tourRegistry.grandTour.beats.length,
+      beatCount: APP_TOUR_REGISTRY.grandTour.beats.length,
       paused: true,
     });
   });
@@ -76,7 +75,7 @@ describe('selectDomeStatus', () => {
   it('names a focused famous galaxy as its card does, before any sidecar lands', () => {
     const m31 = FAMOUS_GALAXY_NAMES.findIndex((name) => name.id === 'm31');
     const cloud = makeGalaxyCatalog(FAMOUS_GALAXY_NAMES.length);
-    const row = placedGalaxyRow(extractGalaxyRow(cloud, m31, Source.FamousGalaxy)!);
+    const row = placedGalaxyRow(extractGalaxyRow(cloud, m31, 'famousGalaxy')!);
     const state = stateAfter(setSelectionRow({ slot: 'focus', row, focusId: 'm31' }));
     expect(selectDomeStatus(state, NO_ROWS, NO_ROWS, 0).focus).toEqual({
       name: 'Andromeda Galaxy',

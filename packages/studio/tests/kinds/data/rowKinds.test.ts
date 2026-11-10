@@ -31,6 +31,7 @@ import {
   wait,
 } from '../../../../../src/services/engine/animation/effectHelpers';
 import { focusId } from '../../../../../src/utils/animation/focusId';
+import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { setFlowEnabled } from '../../../../../src/layers/flow/state/flow/slice';
 import type { Effect } from '../../../../../src/@types/animation/Effect';
 import type { RowKind } from '../../../src/@types/rows/RowKind';
@@ -71,8 +72,14 @@ const SAMPLES: { readonly [K in RowKind]: RowSubjects[K] } = {
   all: all([dollyTo(1, 2), tween('yaw', { to: 1, over: 2 })]),
   fork: fork(oscillate('pitch', { amp: 0.09, period: 16 })),
   start: { target: [0, 0, 0], yaw: 0.5, pitch: -0.3, distance: 10 },
-  waypoint: { ...atPoint([1, 2, 3], 5, { yaw: 1, pitch: 0, over: 2, linger: 0.5 }), last: false },
+  waypoint: {
+    ...atPoint([1, 2, 3], 5, { yaw: 1, pitch: 0, over: 2, linger: 0.5 }),
+    last: false,
+    pathLinger: 0.7,
+  },
 };
+/** A waypoint's fields span both arms: the point sample above, and a subject one. */
+const SUBJECT_WAYPOINT: RowSubjects['waypoint'] = { ...atFocus(M31), last: true, pathLinger: 0.7 };
 
 const entries = Object.keys(SAMPLES) as RowKind[];
 
@@ -131,7 +138,11 @@ describe('ROW_KINDS', () => {
   it("every field's param exists on its kind's helper-built sample", () => {
     for (const kind of entries) {
       for (const field of ROW_KINDS[kind].fields) {
-        expect(SAMPLES[kind], `${kind}.${field.param}`).toHaveProperty(field.param);
+        const arms = kind === 'waypoint' ? [SAMPLES.waypoint, SUBJECT_WAYPOINT] : [SAMPLES[kind]];
+        expect(
+          arms.some((arm) => typeof arm === 'object' && field.param in arm),
+          `${kind}.${field.param}`,
+        ).toBe(true);
       }
     }
   });
@@ -144,5 +155,12 @@ describe('ROW_KINDS', () => {
     expect(ROW_KINDS.lookAtId.resolved?.(aim)).toBe('90°, −29°');
     expect(ROW_KINDS.lookAtId.resolved?.(hold(1))).toBe('');
     expect(ROW_KINDS.moveTargetId.resolved?.(moveTarget([10, 0, 0], 3))).toBe('10, 0, 0 Mpc');
+  });
+
+  it('a look-at at Mars reads AU in its label and Resolved line, not 0, 0, 0 Mpc', () => {
+    const au = SCALE_UNITS.AU_TO_MPC;
+    const mars = moveTarget([1.2 * au, -0.6 * au, -0.3 * au], 3);
+    expect(ROW_KINDS.setVec.label(mars).value).toBe('1.2, −0.6, −0.3 AU');
+    expect(ROW_KINDS.moveTargetId.resolved?.(mars)).toBe('1.2, −0.6, −0.3 AU');
   });
 });

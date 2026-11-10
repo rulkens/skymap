@@ -3,11 +3,10 @@ import {
   famousGalaxiesMetaFetcher,
   parseFamousGalaxiesMeta,
 } from '../../../../../src/layers/galaxyCatalog/famousGalaxies/load/famousGalaxiesMetaFetcher';
-import { Source } from '../../../../../src/data/source';
 import { useFetchMock } from '../../../../setup/fetchMock';
 
 /** The fetcher ignores the request; any well-typed `GalaxyCatalogReq` will do. */
-const REQ = { source: Source.FamousGalaxy, tier: 'medium' as const };
+const REQ = { source: 'famousGalaxy' as const, tier: 'medium' as const };
 
 describe('parseFamousGalaxiesMeta', () => {
   it('parses valid array', () => {

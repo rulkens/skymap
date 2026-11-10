@@ -2,9 +2,9 @@
 
 **Decisions:** [`docs/grill-sessions/clip-studio-2026-11-07.md`](../../grill-sessions/clip-studio-2026-11-07.md)
 (Q6 structure edits in v1, Q14/Q32 crossfade treatment, Q17 snap, Q18 waypoint drags, Q28 memory only, Q30 keys,
-Q38 sliders, Q46 names, Q47 selection marks; this spec's own rulings Q54–Q64). **Slice 1:** [`docs/superpowers/plans/2026-11-10-clip-studio-package.md`](../plans/2026-11-10-clip-studio-package.md)
+Q38 sliders, Q46 names, Q47 selection marks; this spec's own rulings Q54–Q64). **Slice 1:** [`docs/superpowers/plans/completed/2026-11-10-clip-studio-package.md`](../plans/completed/2026-11-10-clip-studio-package.md)
 (architecture A1–A8; this spec uses its vocabulary). **Design reference:** the round-3 mock states `join-selected`,
-`deep` and the T1 crops (`docs/design/clip-studio/review-round-3.md`, "Crossfades and joins"). **Plan:**
+`deep` and the T1 crops (`docs/design/clip-studio/review-round-3.md` in git history, "Crossfades and joins"). **Plan:**
 [`docs/superpowers/plans/2026-11-10-clip-studio-s2-structure-edits.md`](../plans/2026-11-10-clip-studio-s2-structure-edits.md).
 
 This spec is written against the architecture after the prep in **Ground preparation**. Its open questions were ruled

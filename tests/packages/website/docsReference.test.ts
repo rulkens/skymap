@@ -24,7 +24,7 @@ import {
 import type { OrientationFrameId } from '../../../src/@types/camera/orientation/OrientationFrameId';
 import type { LabelCategory } from '../../../src/@types/engine/data/LabelCategory';
 import { APP_COMPOSITION } from '../../../src/compositions/app';
-import { tourRegistry } from '../../../src/data/animation/tours/tourRegistry';
+import { APP_TOUR_REGISTRY } from '../../../src/compositions/appTours';
 import { APP_EXHIBIT_REGISTRY } from '../../../src/compositions/appExhibits';
 import { FLOW_SLIDER_FIELDS } from '../../../src/layers/flow/streamlines/data/flowFields';
 import { orientationFrameLabel } from '../../../src/data/orientation/orientationFrameLabel';
@@ -89,7 +89,8 @@ describe('Settings page', () => {
     /^debug\./,
     /^(surfaceTileDebug|terrainPickMarker)\./,
     /^missions\.(craft|speed)$/,
-    /^(constellations|lightTime|zoneOfAvoidance)\.labelEnabled$/,
+    /^(constellations|lightTime|zoneOfAvoidance|stellarStreams)\.labelEnabled$/,
+    /^stellarStreams\.(streak|haze)\.\w+$/,
     /^missions\.items\.[\w-]+\.labelEnabled$/,
     /^picking\./,
     /^focusMoves\.(eased|geodesic)\./,
@@ -273,7 +274,9 @@ describe('URL parameters page', () => {
     expect(sorted(DOCS_EXHIBIT_IDS.map((row) => row.id))).toEqual(
       sorted(Object.keys(APP_EXHIBIT_REGISTRY)),
     );
-    expect(sorted(DOCS_TOUR_IDS.map((row) => row.id))).toEqual(sorted(Object.keys(tourRegistry)));
+    expect(sorted(DOCS_TOUR_IDS.map((row) => row.id))).toEqual(
+      sorted(Object.keys(APP_TOUR_REGISTRY)),
+    );
   });
 
   it('lists every way a focus id can begin, each with an example the app reads', () => {

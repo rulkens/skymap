@@ -14,7 +14,7 @@ import type { ReactNode } from 'react';
 import {
   RING_BLOBS_PER_RING,
   WARP_RING_COUNT,
-} from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyFieldMixture';
+} from '../../../../../src/layers/milkyWay/field/mixture/utils/galaxyFieldMixture';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { fieldTuningPatched } from '../../state/slices/fieldTuningSlice';
 import { renderPatched } from '../../state/slices/renderSlice';

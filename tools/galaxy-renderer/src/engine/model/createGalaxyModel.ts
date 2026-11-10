@@ -1,59 +1,52 @@
 /**
  * createGalaxyModel — what a galaxy IS, as opposed to how a frame draws it:
  * the central galaxy's sprite buffers, the background extras, the bubble
- * overlay's placements, and the CPU readbacks of the ISM-map chain. The
- * analytic mixtures, the ISM map itself and every GPU record buffer they
- * pack into belong to `createGalaxyFieldRenderer`; this file feeds it
- * (`setMixture`) and reads its lanes back out. `setParams` / `setFieldTuning`
- * / `setExtras` are the only writers; a tuning slider is a CPU rebuild
- * rather than a regenerate.
+ * overlay's placements and the ISM readbacks' diagnostics. The analytic field
+ * belongs to the field host; this file exposes what the engine puts into its
+ * `FieldHostTuning` (`geometry`, `fieldExtras`, `fieldTuning`, `seed`).
+ * `setParams` / `setFieldTuning` / `setExtras` are the only writers; a tuning
+ * slider is a CPU rebuild rather than a regenerate.
  */
 
-import type { DebugViewKind } from '../../../../../src/@types/galaxy/DebugViewKind';
+import type { DebugViewKind } from '../../../../../src/layers/milkyWay/field/header/@types/DebugViewKind';
 import type { EngineStats } from '../../../@types/engine/EngineStats';
 import type { InstanceDraw } from '../../../@types/engine/InstanceDraw';
 import type { LodSettings } from '../../../@types/engine/LodSettings';
 import type { OrientationDiagnostics } from '../../../@types/engine/OrientationDiagnostics';
 import type { RenderSettings } from '../../../@types/engine/RenderSettings';
-import type { IsmMapSeedingLanes } from '../../../../../src/@types/galaxy/IsmMapSeedingLanes';
-import type { YoungStarsLanes } from '../../../../../src/@types/galaxy/YoungStarsLanes';
+import type { IsmMapSeedingLanes } from '../../../../../src/layers/milkyWay/field/header/@types/IsmMapSeedingLanes';
 
 import type { ExtraGalaxySpec } from '../../../../../src/@types/galaxy/ExtraGalaxySpec';
 import type { GalaxyDescription } from '../../../../../src/@types/galaxy/GalaxyDescription';
-import type { GalaxyFieldTuning } from '../../../../../src/@types/galaxy/GalaxyFieldTuning';
+import type { GalaxyFieldTuning } from '../../../../../src/layers/milkyWay/field/mixture/@types/GalaxyFieldTuning';
 import type { GalaxyParams } from '../../../../../src/@types/galaxy/GalaxyParams';
 import type { GalaxyIsmMap } from '../../../../../src/@types/galaxy/GalaxyIsmMap';
+import type { IsmMapGenerator } from '../../../../../src/layers/milkyWay/field/ismMap/@types/IsmMapGenerator';
+import type { IsmMapReadbacks } from '../../../../../src/layers/milkyWay/field/host/@types/IsmMapReadbacks';
 
 import { createGenerationPipelines } from '../../../../../src/services/engine/galaxyGenerator/v1/createGenerationPipelines';
 import { GENERATION_UBO } from '../../../../../src/services/engine/galaxyGenerator/shared/generationUboLayout';
-import {
-  buildDustBubblePlacements,
-  buildHiiCavityPlacements,
-  BUBBLE_BUDGET,
-  HII_CAVITY_BUDGET,
-} from '../../../../../src/services/engine/galaxyGenerator/v2/dustBubblePlacements';
-import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyFieldMixture';
-import { ismMapGridRadius } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
-import type { GalaxyIsmMapGridRadius } from '../../../../../src/@types/galaxy/GalaxyIsmMapGridRadius';
+import { buildDustBubblePlacements } from '../../../../../src/layers/milkyWay/field/dust/utils/buildDustBubblePlacements';
+import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../../src/layers/milkyWay/field/mixture/utils/galaxyFieldMixture';
+import type { GalaxyIsmMapGridRadius } from '../../../../../src/layers/milkyWay/field/ismMap/@types/GalaxyIsmMapGridRadius';
 import { normalizeGenerationSeed } from '../../../../../src/utils/galaxy/normalizeGenerationSeed';
-import { areaWeightedMeanIsmMapChannel } from '../../../../../src/utils/galaxy/areaWeightedMeanIsmMapChannel';
 import { ismMapRingMeans } from '../../../../../src/utils/galaxy/ismMapRingMeans';
 import { arrayMean } from '../../../../../src/utils/math/arrayMean';
 
 import { DEBUG_VIEWS } from '../../data/debugViews';
 import { createKeyedRebuild } from '../../../../../src/services/gpu/lib/createKeyedRebuild';
-import { createGrowOnlyRecordBuffer } from '../../../../../src/services/gpu/renderers/galaxyField/gpu/createGrowOnlyRecordBuffer';
-import type { GrowOnlyRecordBuffer } from '../../../../../src/@types/galaxy/GrowOnlyRecordBuffer';
+import { createGrowOnlyRecordBuffer } from '../../../../../src/layers/milkyWay/field/render/createGrowOnlyRecordBuffer';
+import type { GrowOnlyRecordBuffer } from '../../../../../src/layers/milkyWay/field/@types/GrowOnlyRecordBuffer';
 import { generateGalaxy } from '../sprites/generateGalaxy';
 import { orientationCoherenceStats } from '../ismMap/orientationCoherenceStats';
-import { createIsmMapReadbacks } from '../ismMap/createIsmMapReadbacks';
 import {
   BUBBLE_RECORD_FLOATS,
   packBubbleInstances,
-} from '../../../../../src/services/gpu/renderers/galaxyField/field/packBubbleInstances';
-import type { GalaxyFieldRenderer } from '../../../../../src/@types/galaxy/GalaxyFieldRenderer';
-import type { GalaxyFieldExtra } from '../../../../../src/@types/galaxy/GalaxyFieldExtra';
-import type { GalaxyFieldMixtureInput } from '../../../../../src/@types/galaxy/GalaxyFieldMixtureInput';
+} from '../../../../../src/layers/milkyWay/field/render/packBubbleInstances';
+import type { GalaxyFieldExtra } from '../../../../../src/layers/milkyWay/field/mixture/@types/GalaxyFieldExtra';
+import { BUBBLE_BUDGET } from '../../../../../src/layers/milkyWay/field/dust/data/bubbleBudget';
+import { HII_CAVITY_BUDGET } from '../../../../../src/layers/milkyWay/field/dust/data/hiiCavityBudget';
+import { buildHiiCavityPlacements } from '../../../../../src/layers/milkyWay/field/dust/utils/buildHiiCavityPlacements';
 
 /**
  * A single generated extra galaxy. The UBO is retained rather than destroyed
@@ -74,9 +67,11 @@ type Extra = {
 
 export type GalaxyModelDeps = {
   readonly device: GPUDevice;
-  /** Owns the analytic mixtures, the ISM-map chain and both comps buffers — see its own header. */
-  readonly field: GalaxyFieldRenderer;
-  /** The engine's live bag, merged in place by `setRender`. Read for two debug-view weights and the orientation chain's two sigmas. */
+  /** The field host's ISM readbacks (`GalaxyFieldHostDebug`): the seeding view and the orientation diagnostics read them. */
+  readonly readbacks: IsmMapReadbacks;
+  /** Only for `writeRingMeans`, the non-fluid generator's seeding-view fallback. */
+  readonly ismMapGenerator: IsmMapGenerator;
+  /** The engine's live bag, merged in place by `setRender`. Read for the bubble and seeding views. */
   readonly render: Readonly<RenderSettings & LodSettings>;
   readonly onStats?: (stats: EngineStats) => void;
   readonly onOrientationDiagnostics?: (diagnostics: OrientationDiagnostics) => void;
@@ -86,32 +81,25 @@ export type GalaxyModel = {
   setParams(params: GalaxyParams): Promise<void>;
   setFieldTuning(patch: Partial<GalaxyFieldTuning>): void;
   setExtras(specs: readonly ExtraGalaxySpec[]): Promise<void>;
-  /** Re-push the render-derived mixture inputs the engine just merged into its bag. */
-  noteRenderChanged(): void;
   /**
-   * Run the per-frame rebuild gates, in their own dependency order. The caller
-   * must do this BEFORE the frame's encoder exists: a rebuild can replace
-   * `bubbleComps`'s buffer, which a recorded draw would already hold, and the
-   * orientation chain submits an encoder that must precede the frame's.
+   * Run the bubble overlay's rebuild gate. The caller must do this BEFORE the
+   * frame's encoder exists: a rebuild can replace `bubbleComps`'s buffer,
+   * which a recorded draw would already hold.
    */
   ensureFresh(): { readonly bubblesLive: boolean };
 
-  /** `createGalaxyFieldRenderer`'s two host hooks — the CPU readback path it deliberately does not own. */
-  noteIsmMapRebuilt(grid: GalaxyIsmMapGridRadius): void;
+  /** The field host's two hooks: the ISM readback landed; the orientation field was rebuilt. */
+  noteIsmMapLanded(): void;
   noteOrientationRebuilt(grid: GalaxyIsmMapGridRadius): void;
 
   readonly starCount: number;
-  /**
-   * §5's shader-side young-stars stars-map read (`hiiSplat/youngFragment.wesl`'s
-   * `g3.w` branch) — `contrastGamma` reads `fieldTuning.hii.youngStars.contrast`
-   * live, `invMeanNorm` is `areaWeightedMeanIsmMapChannel`'s texel-area-
-   * weighted `pow(stars, contrastGamma)` mean, inverted and memoized per
-   * (map identity, gamma) since gamma can move between readback landings.
-   */
-  readonly youngStars: YoungStarsLanes;
+  /** Null until the first `setParams`; the engine builds no `FieldHostTuning` before it. */
+  readonly geometry: GalaxyDescription | null;
+  /** A new array identity per `setExtras`, which is how the field's idempotence check sees the move. */
+  readonly fieldExtras: readonly GalaxyFieldExtra[];
+  readonly fieldTuning: GalaxyFieldTuning;
+  readonly seed: number;
   readonly bubbleComps: GrowOnlyRecordBuffer;
-  /** Null until the first SSPSF readback lands. */
-  readonly ismMapData: GalaxyIsmMap | null;
   /**
    * The ISM-map "seeding" debug view's three scalar lanes. `globalMean` is
    * cached at the readback landing, not recomputed per frame; `weight` and
@@ -119,18 +107,6 @@ export type GalaxyModel = {
    * on a rebuild.
    */
   readonly ismMapSeedingView: IsmMapSeedingLanes;
-  /**
-   * Debug-only (member docs live on `GalaxyProbeApi.d.ts`). Callback-style
-   * because the engine wraps it in a `Promise` on the way out; the four
-   * placement readbacks and `peekRecords` are field-owned, so the host calls
-   * `field.probe` directly for those.
-   */
-  readonly probe: {
-    requestRingMeansReadback(
-      onLand: (means: Float32Array) => void,
-      onError?: (err: unknown) => void,
-    ): void;
-  };
   /**
    * Central galaxy then every extra. Rebuilt per call rather than cached: every
    * buffer in them is reallocated by `setParams`/`setExtras`, so a captured
@@ -142,7 +118,7 @@ export type GalaxyModel = {
 };
 
 export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
-  const { device, field, render } = deps;
+  const { device, readbacks, render } = deps;
 
   // One debug view's live weight, through `DEBUG_VIEWS` rather than a named
   // settings key — what the rebuild gates' `wanted` predicates read.
@@ -196,35 +172,6 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   // instead, so a stale value sitting here between a drop and the next landing
   // is simply never read.
   let ismMapGlobalMeanDust = 0;
-  // §5's `invMeanNorm` cache — keyed on (map identity, gamma) rather than
-  // recomputed at readback landing like `ismMapGlobalMeanDust` above: gamma is
-  // a live tuning knob that can move on its own between readbacks, so the
-  // `youngStars` getter recomputes lazily instead.
-  let youngStarsMeanCache: {
-    readonly map: GalaxyIsmMap | null;
-    readonly gamma: number;
-    readonly invMeanNorm: number;
-  } | null = null;
-
-  // The SSPSF chain's two CPU-side copies and the single queue that fills
-  // them — see `createIsmMapReadbacks`.
-  const readbacks = createIsmMapReadbacks({
-    device,
-    ismMapGenerator: field.ismMapGenerator,
-    orientation: field.ismMapOrientation,
-  });
-  /** Every input the field renderer's rebuild is a function of, from this file's cached state plus the live render bag. */
-  function mixtureInput(): GalaxyFieldMixtureInput {
-    return {
-      geometry: fieldGeometry,
-      fieldTuning,
-      seed: currentSeed(),
-      extras: fieldExtras,
-      sigmaDerivTexels: render.orientationSigmaDerivTexels,
-      sigmaIntegTexels: render.orientationSigmaIntegTexels,
-      orientationViewWanted: viewIntensity('orientation') > 0,
-    };
-  }
 
   /**
    * The seeding debug view's density means, off the SAME extractor
@@ -241,31 +188,8 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     const ringMeans = ismMapRingMeans(map, (texel) => texel.dust);
     ismMapGlobalMeanDust = arrayMean(ringMeans);
     if (fieldTuning.ismMap.generator !== 'fluid') {
-      field.ismMapGenerator.writeRingMeans(ringMeans);
+      deps.ismMapGenerator.writeRingMeans(ringMeans);
     }
-  }
-
-  /**
-   * invMeanNormFor — §5's `1 / (area-weighted mean of pow(stars, gamma))`,
-   * memoized against `youngStarsMeanCache`. No map yet, or a map whose shaped
-   * mean is 0 (quiet disc, cleared tracer), returns 1: the identity
-   * multiplier, not a divide-by-zero — hiiSplat/youngFragment.wesl only ever
-   * reaches this lane behind a component's own `starsWeight > 0` gate.
-   */
-  function invMeanNormFor(map: GalaxyIsmMap | null, gamma: number): number {
-    if (
-      youngStarsMeanCache &&
-      Object.is(youngStarsMeanCache.map, map) &&
-      youngStarsMeanCache.gamma === gamma
-    ) {
-      return youngStarsMeanCache.invMeanNorm;
-    }
-    const shapedMean = map
-      ? areaWeightedMeanIsmMapChannel(map, (texel) => Math.pow(Math.max(texel.stars, 0), gamma))
-      : 0;
-    const invMeanNorm = shapedMean > 0 ? 1 / shapedMean : 1;
-    youngStarsMeanCache = { map, gamma, invMeanNorm };
-    return invMeanNorm;
   }
 
   /**
@@ -306,8 +230,8 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   });
 
   /**
-   * setParams — regenerate the central galaxy, then hand the field renderer
-   * the new geometry so it rebuilds everything derived from it.
+   * setParams — regenerate the central galaxy; the engine hands the new
+   * geometry to the field host on its next frame.
    *
    * Exactly one `writeBuffer`, one encoder and one `submit`, for a buffer
    * nothing else touches concurrently — so queue submission order alone makes
@@ -333,12 +257,7 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     dustCount = generated.dustCount;
 
     fieldGeometry = generated.geometry;
-    // `ismMapGridRadius` depends on `fieldGeometry` alone, so most params —
-    // dust `share`, cloud counts, colours — leave the grid untouched and the
-    // cached readbacks usable; see `dropIfGridMoved`.
-    readbacks.dropIfGridMoved(ismMapGridRadius(fieldGeometry));
     bubblePlacements.invalidate();
-    field.setMixture(mixtureInput());
 
     device.queue.submit([enc.finish()]);
     deps.onStats?.({ stars: generated.plannedStars, dust: generated.dustCount });
@@ -348,8 +267,8 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
   // mixture is a pure function of geometry + tuning, so a slider drag is
   // CPU-only work the next frame's header pack picks up.
   //
-  // Only the bubble overlay's own gate is decided here — the field renderer
-  // owns the per-section identity checks for everything IT rebuilds. The three
+  // Only the bubble overlay's own gate is decided here — the field host's
+  // renderer owns the per-section identity checks for everything IT rebuilds. The three
   // sections tested below are the ones `buildSfEventCatalog` reads, and `arms`
   // enters through `widthScale` alone (`armCrossSigma`), never the ridge/cloud
   // knobs, so a whole-section check would rebuild the overlay on an arm-cloud
@@ -364,7 +283,6 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     ) {
       bubblePlacements.invalidate();
     }
-    field.setMixture(mixtureInput());
   }
 
   /** Torn down from two places — `setExtras` replacing the list, and `destroy`. */
@@ -427,7 +345,6 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     }
     device.queue.submit([enc.finish()]);
     fieldExtras = extras.map((e) => ({ geometry: e.fieldGeometry, transform: e.transform }));
-    field.setMixture(mixtureInput());
   }
 
   return {
@@ -435,27 +352,13 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     setFieldTuning,
     setExtras,
 
-    noteRenderChanged(): void {
-      field.setMixture(mixtureInput());
-    },
+    ensureFresh: (): { readonly bubblesLive: boolean } => ({
+      bubblesLive: bubblePlacements.ensureFresh(),
+    }),
 
-    ensureFresh(): { readonly bubblesLive: boolean } {
-      const bubblesLive = bubblePlacements.ensureFresh();
-      field.stepIsmMap();
-      return { bubblesLive };
-    },
-
-    /**
-     * What happens WHEN the one-per-generation copy of `ismMapTex` lands.
-     * Fired from the field renderer's own two rebuild exits with the grid it
-     * just wrote, so `GalaxyIsmMap.rMin/rMax` always matches the CONTENT being
-     * copied. Diagnostics-only: neither dust nor the HII tier reads this
-     * landing to place anything; what remains is the "seeding" view's means.
-     */
-    noteIsmMapRebuilt(grid: GalaxyIsmMapGridRadius): void {
-      readbacks.requestIsmMap(grid, (map) => {
-        recomputeIsmMapSeedingMeans(map);
-      });
+    /** The seeding view's means; the host already holds the landed map for `invMeanNorm`. */
+    noteIsmMapLanded(): void {
+      if (readbacks.ismMapData) recomputeIsmMapSeedingMeans(readbacks.ismMapData);
     },
 
     /**
@@ -479,17 +382,19 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
     get starCount(): number {
       return starCount;
     },
-    get youngStars(): YoungStarsLanes {
-      // `?? 1`: the stale-stored-tuning guard a preset saved before
-      // `youngStars.contrast` existed needs — 1 (gamma identity) is that
-      // field's own neutral default.
-      const gamma = fieldTuning.hii.youngStars?.contrast ?? 1;
-      return { contrastGamma: gamma, invMeanNorm: invMeanNormFor(readbacks.ismMapData, gamma) };
+    get geometry(): GalaxyDescription | null {
+      return fieldGeometry;
+    },
+    get fieldExtras(): readonly GalaxyFieldExtra[] {
+      return fieldExtras;
+    },
+    get fieldTuning(): GalaxyFieldTuning {
+      return fieldTuning;
+    },
+    get seed(): number {
+      return currentSeed();
     },
     bubbleComps,
-    get ismMapData(): GalaxyIsmMap | null {
-      return readbacks.ismMapData;
-    },
     get ismMapSeedingView(): IsmMapSeedingLanes {
       // Gated on the LIVE readback, not the cached mean: a grid move can null
       // `ismMapData` while the mean above still holds the previous grid's
@@ -506,12 +411,6 @@ export function createGalaxyModel(deps: GalaxyModelDeps): GalaxyModel {
         // own inert default, not a value this getter invents.
         cap: fieldTuning.dust.cloud.dustPlacementCap ?? 0,
       };
-    },
-
-    probe: {
-      requestRingMeansReadback(onLand, onError): void {
-        readbacks.requestRingMeans(onLand, onError);
-      },
     },
 
     starInstances(): InstanceDraw[] {

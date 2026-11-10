@@ -12,12 +12,12 @@ import { STAR_CATALOG_SOURCE_RECORD } from '../../sources/starCatalogSourceRecor
 import type { AssetSlot } from '../../../../@types/loading/AssetSlot';
 import type { Octree } from '../../../../@types/octree/Octree';
 import type { StarCatalogReq } from '../@types/StarCatalogReq';
-import type { StarCatalogSourceType } from '../../@types/StarCatalogSourceType';
+import type { StarCatalogId } from '../../@types/StarCatalogId';
 import type { OctreePoolHost } from '../../../../@types/octree/OctreePoolHost';
 import type { StarColumns } from '../@types/StarColumns';
 
 export function createStarCatalogSlot(
-  source: StarCatalogSourceType,
+  source: StarCatalogId,
   host: OctreePoolHost<StarColumns>,
   chunkSlotsOverride: () => number | null,
 ): AssetSlot<Octree<StarColumns>, StarCatalogReq> {

@@ -4,13 +4,13 @@
  * stored row, and the card container joins the famous-star sidecar.
  */
 
-import type { StarCatalogSourceType } from './StarCatalogSourceType';
+import type { StarCatalogId } from './StarCatalogId';
 import type { StarInfoDetail } from './StarInfoDetail';
 
 export type StarInfo = {
   /** Union tag — what every card-target lookup keys on. */
   readonly type: 'starCatalog';
-  readonly source: StarCatalogSourceType;
+  readonly source: StarCatalogId;
   /** Seed-table index, or the bin-stable record index for a survey star. */
   readonly index: number;
   /** Durable seed id; null for a survey star, which has none. */

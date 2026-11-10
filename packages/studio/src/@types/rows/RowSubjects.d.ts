@@ -6,6 +6,6 @@ import type { EffectKind } from './EffectKind';
 
 export type RowSubjects = { readonly [K in EffectKind]: Extract<Effect, { kind: K }> } & {
   readonly start: ClipData['start'];
-  /** `last` is the one thing a waypoint needs from its path: the final one is labelled Settle. */
-  readonly waypoint: PathWaypoint & { readonly last: boolean };
+  /** From its path: the last one is labelled Settle, and an unset linger takes the path's. */
+  readonly waypoint: PathWaypoint & { readonly last: boolean; readonly pathLinger: number };
 };

@@ -14,7 +14,8 @@ import { attachResizeWake } from '../interaction/attachResizeWake';
 import { DEFAULT_FOV_Y_RAD, NEAR_CLIP_MPC, FAR_CLIP_MPC } from '../camera/framing/cameraFraming';
 import { homePose } from '../camera/framing/homePose';
 import { seedCameraRuntime } from '../camera/seedCameraRuntime';
-import { unixMsToJulianDays } from '../../../utils/time/unixMsToJulianDays';
+import { deriveSimDays } from '../../../utils/time/deriveSimDays';
+import { selectTimeState } from '../../../state/time/selectors';
 import { commitCameraPose } from '../../../state/camera/cameraSlice';
 import { selectOrientation } from '../../../state/settings/selectors';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
@@ -74,10 +75,11 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   });
 
   // The neutral base the runtime starts from: the composition's home pose at
-  // the live wall-clock instant `arrivalSaga`'s `goLive` anchored to. The view
-  // itself is `arrivalSaga`'s, which commits over this base in the same
-  // dispatch, before any frame draws.
-  const simDays = unixMsToJulianDays(Date.now());
+  // the clock `arrivalSaga` already set (a link's `t=`, else live). The view
+  // itself is `arrivalSaga`'s, which commits over this base before any frame
+  // draws; a focus link keeps this base's yaw and pitch, so a wall-clock base
+  // framed the same link differently on every load.
+  const simDays = deriveSimDays(selectTimeState(deps.readRoot()), performance.now());
   // The URL's orientation is already in the store: `createEngine` dispatches
   // `setSagaContext` SYNCHRONOUSLY, before the async bootstrap this phase
   // runs inside, and `arrivalSaga` lands it on that boot read, before it

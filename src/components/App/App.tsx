@@ -109,16 +109,17 @@ export function App(): React.ReactElement {
         <Suspense>
           <LazyCommandPaletteContainer />
         </Suspense>
-        {/* `handleRef.current` set means the engine finished constructing: no subscribe race. */}
-        {debugPanelOpen && handleRef.current && (
-          <Suspense>
-            <LazyDebugPanelContainer engineHandleRef={handleRef} />
-          </Suspense>
-        )}
       </div>
       {tourOverlay}
       {exhibitOverlay}
       <StudioHost />
+      {/* Outside the HUD stack, which a tour, exhibit or the studio hides: `d` summons it explicitly.
+          `handleRef.current` set means the engine finished constructing: no subscribe race. */}
+      {debugPanelOpen && handleRef.current && (
+        <Suspense>
+          <LazyDebugPanelContainer engineHandleRef={handleRef} />
+        </Suspense>
+      )}
       {/* Progress chrome: interactive session only, never the cinema frames. */}
       {tourActive && <TourBeatRailContainer />}
       <SplashContainer />

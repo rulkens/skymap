@@ -9,7 +9,7 @@ import { SAMPLED_BODY_IDS } from '../../../../../src/data/bodies/sampledBodyIds'
 import { MISSION_EMPHASIS_DIM } from '../../../../../src/layers/missions/trails/data/missionTrailStyle';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
 import { trajectoryRegistry } from '../../../../../src/services/bodies/trajectoryRegistry';
-import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/structureFocusSubsystem';
+import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/recedingFocusSubsystem';
 import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
 import { SCENE_MESH_BODIES } from '../../../../../src/data/bodies/sceneMeshBodies';

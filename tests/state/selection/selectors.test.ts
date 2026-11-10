@@ -30,10 +30,9 @@ import {
 } from '../../../src/state/selection/selectionSlice';
 import { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsSlice';
 import { selectionRoute, selectionRowsRoute } from '../../../src/store/constants';
-import { Source } from '../../../src/data/source';
 import { makeGalaxyRow } from '../../fixtures/makeGalaxyRow';
 import type { RootState } from '../../../src/store/types';
-import type { GalaxyRow } from '../../../src/@types/engine/GalaxyRow';
+import type { GalaxyRow } from '../../../src/layers/galaxyCatalog/records/@types/GalaxyRow';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 import { MILKY_WAY_ROW } from '../../fixtures/milkyWayRow';
 import { placedStructureRow } from '../../../src/layers/structure/selection/utils/placedStructureRow';
@@ -72,7 +71,7 @@ installAppSelectionKinds();
 
 // --- fixtures -----------------------------------------------------------------
 
-const galaxyRef: SelectionRefBase = { type: 'galaxyCatalog', source: Source.SDSS, index: 7 };
+const galaxyRef: SelectionRefBase = { type: 'galaxyCatalog', source: 'sdss', index: 7 };
 
 const galaxyRow = makeGalaxyRow({
   index: 7,
@@ -131,7 +130,7 @@ describe('selectHoveredFocusable', () => {
     store.dispatch(updateSelectionHover(galaxyRef));
     store.dispatch(setSelectionRow({ slot: 'hover', row: galaxyRow }));
     const target = selectHoveredFocusable(store.getState());
-    expect(target).toMatchObject({ type: 'galaxyCatalog', source: Source.SDSS });
+    expect(target).toMatchObject({ type: 'galaxyCatalog', source: 'sdss' });
   });
 
   it('returns the StructureInfo with its ref for a structure row', () => {
@@ -175,14 +174,14 @@ const KIND_CASES = [
   kindCase(
     galaxyCatalogSelectionRow(
       galaxyRowRuntime({
-        catalogs: new Map([[Source.SDSS, makeGalaxyCatalog(16)]]),
+        catalogs: new Map([['sdss', makeGalaxyCatalog(16)]]),
       }),
     ),
-    { type: 'galaxyCatalog', source: Source.SDSS, index: 12 },
+    { type: 'galaxyCatalog', source: 'sdss', index: 12 },
   ),
   kindCase(
     starCatalogSelectionRow(starRowRuntime({ renderer: null as never, chunkStreams: new Map() })),
-    { type: 'starCatalog', source: Source.FamousStar, index: 3 },
+    { type: 'starCatalog', source: 'famousStar', index: 3 },
   ),
   kindCase(bodySelectionRow({ pickCodes: bodyPickCodes() }), {
     type: 'body',

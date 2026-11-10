@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
 import { parseSdssCsv } from '../../tools/parsers/sdssCsv';
-import { Source } from '../../src/data/source';
 
 /**
  * Tiny inline CSV exercising the three behaviours we care about most:
@@ -39,7 +38,7 @@ describe('parseSdssCsv', () => {
     const r = records[0]!;
     // Source tag must be SDSS — this is what lets the merger and the GPU
     // bitmask filter recognise where the record came from.
-    expect(r.source).toBe(Source.SDSS);
+    expect(r.source).toBe('sdss');
     // RA/Dec/z come straight from the CSV; we use `toBeCloseTo` because
     // parseFloat → IEEE-754 doesn't always give bit-exact decimals back.
     expect(r.ra).toBeCloseTo(180.5, 6);

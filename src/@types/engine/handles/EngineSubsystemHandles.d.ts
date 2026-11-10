@@ -18,7 +18,7 @@
  */
 
 import type { Label2DDirector } from '../subsystems/Label2DDirector';
-import type { StructureFocusSubsystem } from '../subsystems/StructureFocusSubsystem';
+import type { RecedingFocusSubsystem } from '../subsystems/RecedingFocusSubsystem';
 import type { ClipPlayer } from '../subsystems/ClipPlayer';
 import type { ClipPathInspector } from '../subsystems/ClipPathInspector';
 import type { RenderScheduler } from '../subsystems/RenderScheduler';
@@ -73,21 +73,21 @@ export type EngineSubsystemHandles = {
   cosmoLabelDirector: Label2DDirector;
   /**
    * The NEAR0 sibling of `cosmoLabelDirector` — same `createLabel2DDirector`
-   * factory, `screenSeparation`/`exponentialApproach`/lift arms instead of
-   * COSMO's `bboxOverlap`/`smoothstepRamp`/no-lift (`FOREGROUND_LABEL_DIRECTOR`
+   * factory, `exponentialApproach`/lift arms instead of COSMO's
+   * `smoothstepRamp`/no-lift (`FOREGROUND_LABEL_DIRECTOR`
    * in `src/data/labels/`). Attaches `labelRendererNear` +
    * `markerLineRendererNear` at the same two sites `cosmoLabelDirector`
    * attaches its own pair.
    */
   foregroundLabelDirector: Label2DDirector;
   /**
-   * Structure focus-mode subsystem — drives the "dim everything outside the
-   * selected structure" effect. Selection-driven: `runFrame` calls
-   * `update(selectedStructure, nowMs)` each frame and threads
-   * `produceFocusUniforms(nowMs)` into the points draw. Constructed
+   * Focus-mode subsystem — drives the recession of the rest of the scene,
+   * and a structure's "dim everything outside it" sphere. Selection-driven: `runFrame` calls
+   * `update(focus, row, nowMs)` each frame and threads
+   * `produceFocus(nowMs, shownOf)` into the snapshot. Constructed
    * eagerly; no GPU dep, non-null from t=0.
    */
-  structureFocus: StructureFocusSubsystem;
+  recedingFocus: RecedingFocusSubsystem;
   /**
    * Clip-player Resource — evaluates the active clip's scene at the clip clock
    * (the `view` overlay the engine reads, the clip factor) and runs the end of

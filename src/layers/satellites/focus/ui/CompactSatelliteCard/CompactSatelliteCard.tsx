@@ -4,7 +4,7 @@
  */
 
 import type { ReactNode } from 'react';
-import type { SatelliteInfo } from '../../../../../@types/engine/SatelliteInfo';
+import type { SatelliteInfo } from '../../../selection/@types/SatelliteInfo';
 import CardRow from '../../../../../components/InfoCard/CardRow/CardRow';
 import styles from '../../../../../components/InfoCard/compactChrome.module.css';
 import local from './CompactSatelliteCard.module.css';

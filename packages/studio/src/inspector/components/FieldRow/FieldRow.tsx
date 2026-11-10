@@ -14,6 +14,7 @@ import SettingsActionField from '../SettingsActionField/SettingsActionField';
 import SplineField from '../SplineField/SplineField';
 import PassByField from '../PassByField/PassByField';
 import WaypointsField from '../WaypointsField/WaypointsField';
+import GeodesicTuningField from '../GeodesicTuningField/GeodesicTuningField';
 import ObjectPicker from '../ObjectPicker/ObjectPicker';
 import { FIELD_CONTROLS } from '../../data/fieldControls';
 import { EASE_OPTIONS } from '../../data/easeOptions';
@@ -29,6 +30,7 @@ import type { SettingsAction } from '../../../../../../src/compositions/@types/S
 import type { SplineConfig } from '../../../../../../src/@types/animation/SplineConfig';
 import type { PassByConfig } from '../../../../../../src/@types/animation/PassByConfig';
 import type { PathWaypoint } from '../../../../../../src/@types/animation/PathWaypoint';
+import type { GeodesicTuning } from '../../../../../../src/@types/camera/focusMotion/GeodesicTuning';
 import type { RowRef } from '../../../@types/rows/RowRef';
 import type { InspectorSubject } from '../../../@types/rows/InspectorSubject';
 
@@ -52,7 +54,8 @@ function FieldRow({ spec, subject, rowRef }: Props) {
   const authored = subject[spec.param] !== undefined;
   const canBeAbsent = spec.fallback !== undefined || spec.optional === true;
   const auto = !authored && spec.optional === true;
-  const stored = subject[spec.param] ?? spec.fallback;
+  const fallback = typeof spec.fallback === 'function' ? spec.fallback(subject) : spec.fallback;
+  const stored = subject[spec.param] ?? fallback;
   const { resetTo } = spec;
   const hasDefault = resetTo !== undefined || canBeAbsent;
   const atDefault = resetTo === undefined ? !authored : sameParamValue(stored, resetTo);
@@ -68,6 +71,16 @@ function FieldRow({ spec, subject, rowRef }: Props) {
   if (widget.widget === 'spline') {
     const value = stored as SplineConfig | undefined;
     return <SplineField value={value} spaced={spec.group} onChange={(v, l, g) => edit(v, g, l)} />;
+  }
+  if (widget.widget === 'geodesicTuning') {
+    return (
+      <GeodesicTuningField
+        value={stored as GeodesicTuning}
+        over={subject.over as number | undefined}
+        spaced={spec.group}
+        onChange={(v, l, g) => edit(v, g, l)}
+      />
+    );
   }
   if (widget.widget === 'passBy') {
     const value = stored as PassByConfig | undefined;

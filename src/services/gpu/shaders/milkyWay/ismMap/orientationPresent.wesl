@@ -49,10 +49,7 @@ fn vs(@builtin(vertex_index) vi: u32) -> FullscreenOut {
 
 @fragment
 fn fs(input: FullscreenOut) -> @location(0) vec4<f32> {
-  let tanHalfFov = u.params.x;
-  let aspect = u.params.y;
-  let shift = u.params.z;
-  let d = cameraRayFromUv(input.uv, u.camRight.xyz, u.camUp.xyz, u.camFwd.xyz, tanHalfFov, aspect, shift);
+  let d = cameraRayFromUv(input.uv, u.camRight.xyz, u.camUp.xyz, u.camFwd.xyz, u.frustum);
   let o = u.eye.xyz;
 
   // Disc-plane (y=0) intersection; a ray parallel to or diverging from the

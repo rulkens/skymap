@@ -6,7 +6,7 @@
  */
 import { encodeSatelliteFocusId } from './encodeSatelliteFocusId';
 import type { LayerSearchEntry } from '../../../../@types/engine/layer/LayerSearchEntry';
-import type { SatelliteCatalog } from '../../../../@types/satellites/SatelliteCatalog';
+import type { SatelliteCatalog } from '../../catalog/@types/SatelliteCatalog';
 import type { SatellitesRuntime } from '../../@types/SatellitesRuntime';
 
 const loadedCatalog = (runtime: SatellitesRuntime): Promise<SatelliteCatalog> =>

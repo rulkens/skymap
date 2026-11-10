@@ -30,8 +30,8 @@
  * header is a plain typed-array view with no padding to reason about.
  */
 import type { ScalarFieldFrameKind } from '../../../../@types/data/volume/ScalarFieldFrameKind';
-import type { ShellMesh } from '../../../../@types/data/shellMesh/ShellMesh';
-import type { ShellMeshDtype } from '../../../../@types/data/shellMesh/ShellMeshDtype';
+import type { ShellMesh } from '../../@types/ShellMesh';
+import type { ShellMeshDtype } from '../../@types/ShellMeshDtype';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import { FRAME_KIND_TO_ID, ID_TO_FRAME_KIND } from '../../../../data/volume/scalarFieldFormat';
 

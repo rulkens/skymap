@@ -3,6 +3,7 @@
  * marker shows. Inside the lens band the marker has faded and the lens is a
  * fullscreen triangle that cannot stamp a point, so the caption's own ink box
  * (`labelsNearPass.drawPick`, packing the same selection id) takes the click there.
+ * A hole outside the focus sphere is not a target either.
  * `pickEnabled` and `drawPick` both call this, so the gate and the stamp cannot
  * disagree.
  */
@@ -12,9 +13,16 @@ import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { BlackHoleRow } from '../../@types/BlackHoleRow';
 import { sceneBodyStates } from '../../../../services/engine/frame/sceneBodyStates';
 import { GLINT_MIN_BRIGHTNESS } from '../../../../data/rendering/glintMinBrightness';
+import { isPickableUnderFocus } from '../../../../utils/structure/isPickableUnderFocus';
 import { blackHoleMarkerBrightness } from './blackHoleMarkerBrightness';
+import { blackHoleAnchorId } from './blackHoleAnchorId';
 
 export function blackHolePickable(row: BlackHoleRow, state: PassState, ctx: FrameView): boolean {
   const states = sceneBodyStates(state, ctx);
-  return blackHoleMarkerBrightness(row, ctx.drawCamPos, states) > GLINT_MIN_BRIGHTNESS;
+  const anchor = states.get(blackHoleAnchorId(row));
+  return (
+    anchor !== undefined &&
+    isPickableUnderFocus(anchor.positionMpc, ctx.snapshot.focus) &&
+    blackHoleMarkerBrightness(row, ctx.drawCamPos, states) > GLINT_MIN_BRIGHTNESS
+  );
 }

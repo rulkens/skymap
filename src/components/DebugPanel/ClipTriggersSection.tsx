@@ -6,7 +6,7 @@
  * The spike camera *drivers* (`?webshow` et al.) were torn down once the
  * animation system landed, leaving no in-browser way to trigger a clip. This
  * section fills that gap with plain buttons — no URL gate. It iterates
- * `clipRegistry` / `tourRegistry`, so adding a clip or tour to a registry adds a
+ * `clipRegistry` / `APP_TOUR_REGISTRY`, so adding a clip or tour to a registry adds a
  * button here with zero edits. Play/stop/tour are fire-and-forget dispatches
  * wired by `ClipTriggersSectionContainer` (`startClip` / `exitTakeover` /
  * `startTour` request actions, each naming a registered id), the same way the
@@ -34,7 +34,7 @@ import { useState, type ReactElement } from 'react';
 import type { ClipId } from '../../@types/animation/ClipId';
 import type { TourId } from '../../@types/animation/tour/TourId';
 import { clipRegistry } from '../../data/animation/clips/clipRegistry';
-import { tourRegistry } from '../../data/animation/tours/tourRegistry';
+import { APP_TOUR_REGISTRY } from '../../compositions/appTours';
 import styles from './ClipTriggersSection.module.css';
 
 export type ClipTriggersSectionProps = {
@@ -51,7 +51,7 @@ export type ClipTriggersSectionProps = {
 // Registry rows → buttons. No switch, no per-clip control-flow edit: a new
 // registry entry is a new button.
 const CLIPS = Object.values(clipRegistry);
-const TOURS = Object.values(tourRegistry);
+const TOURS = Object.values(APP_TOUR_REGISTRY);
 
 export function ClipTriggersSection({
   clipActive,

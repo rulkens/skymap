@@ -1,18 +1,9 @@
 /**
- * isSceneSettled — has everything the current view asked for arrived? No asset
- * slot loading or committing, no Layer planner voting `loading` last frame (a
- * surface still streaming its tiles), and no fade running. The tour's cold-load
- * gate polls it through `SagaContext.sceneSettled`.
+ * isSceneSettled — has everything the current view asked for arrived? The tour's
+ * cold-load gate polls it through `SagaContext.sceneSettled`.
  */
-import type { EngineState } from '../../../@types/engine/state/EngineState';
+import { sceneUnsettledReasons } from './sceneUnsettledReasons';
 
-export function isSceneSettled(
-  state: Pick<EngineState, 'booted' | 'fadesAnimating' | 'layersLoading' | 'slotsByKey'>,
-): boolean {
-  if (!state.booted || state.fadesAnimating || state.layersLoading) return false;
-  for (const slot of state.slotsByKey.values()) {
-    const kind = slot.state().kind;
-    if (kind === 'loading' || kind === 'committing') return false;
-  }
-  return true;
+export function isSceneSettled(state: Parameters<typeof sceneUnsettledReasons>[0]): boolean {
+  return sceneUnsettledReasons(state).length === 0;
 }

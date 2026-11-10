@@ -1,6 +1,6 @@
 /**
  * exhibitBodySaga — an exhibit's takeover body: apply its settings and then a
- * link's `layers` over them, fly (or, on a `'cut'` entry, cut) to its pose, then hold, turning slowly, until the
+ * link's `layers` over them, fly (or, on a `'cut'` entry, cut) to its pose, play its arrival, then hold, turning slowly, until the
  * viewer exits. `runTakeoverSaga` and `withSceneSnapshotSaga` own the bracket;
  * this only decides when the body returns. `exitTakeover` is the only abort
  * arm — an exhibit has no beat loop, so orbiting mid-fly or mid-hold must not
@@ -78,11 +78,14 @@ export function* exhibitBodySaga(
         }
       : authored;
 
-  if (entry === 'cut') {
-    yield* put(commitCameraPose(absoluteArm(pose)));
-  } else {
+  const clips = entry === 'cut' ? [] : [flyToPoseClip(pose)];
+  if (entry === 'cut') yield* put(commitCameraPose(absoluteArm(pose)));
+  // Started from `pose` as a value: a `'live'` start reads the camera before a
+  // cut's commit has reached it, and would play from the pre-cut view.
+  if (exhibit.arrival) clips.push({ start: pose, timeline: exhibit.arrival });
+  for (const clip of clips) {
     const { exit } = yield* race({
-      landed: call(playClip, flyToPoseClip(pose), orientation, 'revert' as const),
+      played: call(playClip, clip, orientation, 'revert' as const),
       exit: take(exitTakeover),
     });
     if (exit) return;

@@ -7,7 +7,7 @@ untouched by the plan.
 
 ## The bug
 
-`pushArmRidges` (`src/services/engine/galaxyGenerator/v2/galaxyFieldMixture.ts`)
+`pushArmRidges` (`src/layers/milkyWay/field/mixture/utils/galaxyFieldMixture.ts`)
 documents a flux-conservation invariant: splitting arm flux across the ridge
 chain / arm-cloud tier / spur-cloud tier via `arms.cloud.share` and
 `arms.spurs.share` should leave total rendered flux unchanged regardless of

@@ -69,7 +69,6 @@ function TimelinePane() {
                 row={row}
                 ancestors={chains[index]!}
                 window={window}
-                selected={row.id === standIn}
                 selectedId={standIn}
                 contains={relation.contains}
                 onSelect={() => dispatch(rowSelected(row.ref))}

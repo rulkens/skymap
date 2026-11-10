@@ -44,7 +44,6 @@ import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/selection/mil
 import { satellitesSelectionRow } from '../../../src/layers/satellites/selection/satellitesSelectionRow';
 import { buildSatelliteCatalog } from '../../../tools/satellites/buildSatelliteCatalog';
 import { ISS } from '../../layers/satellites/fixtures/celestrakRecords';
-import { Source } from '../../../src/data/source';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { foldToWorld } from '../../../src/services/engine/camera/arms/foldToWorld';
 import { ARRIVAL_TIMEOUT_MS } from '../../../src/data/arrival/arrivalTimeoutMs';
@@ -257,7 +256,7 @@ describe('arrivalSaga', () => {
     h.arrive({ view: { kind: 'focus', id: 'satellite-25544' }, t: Date.UTC(2026, 9, 28, 12) });
     h.boot();
     await flush();
-    h.store.dispatch(engineSourceCountReported({ source: Source.Satellite, count: 1 }));
+    h.store.dispatch(engineSourceCountReported({ source: 'satellites', count: 1 }));
     await flush();
 
     const reveal = h.recorded.findIndex(

@@ -13,10 +13,10 @@ import { formatVec3 } from '../utils/formatVec3';
 import { overField } from '../utils/fields/overField';
 import { readoutField } from '../utils/fields/readoutField';
 import { toField } from '../utils/fields/toField';
-import { formatNameList } from '../../utils/format/formatNameList';
 import { formatNumber } from '../../utils/format/formatNumber';
 import { formatQuantity } from '../../utils/format/formatQuantity';
 import { formatMpc } from '../../utils/format/formatMpc';
+import { formatPosition } from '../../utils/format/formatPosition';
 import {
   DEFAULT_ALIGN_SEC,
   DEFAULT_LINGER,
@@ -57,7 +57,7 @@ export const cameraKinds: Pick<
     glyph: 'look',
     mark: 'bar',
     writes: () => ['lookAt'],
-    label: (s) => ({ name: 'Look-at', op: '→', value: formatVec3(s.to, 'Mpc') }),
+    label: (s) => ({ name: 'Look-at', op: '→', value: formatPosition(s.to) }),
     fields: [
       { key: 'to', param: 'to', label: 'Target', control: 'subjectPosition' },
       overField(),
@@ -144,7 +144,8 @@ export const cameraKinds: Pick<
     label: (s) => ({
       name: 'Fly',
       op: '',
-      value: `via ${formatNameList(s.waypoints.map((w, i) => ('id' in w ? w.id : `point ${i + 1}`)))}`,
+      value: 'via',
+      subjects: s.waypoints.map((w) => ('id' in w ? w.id : null)),
     }),
     fields: [
       { key: 'waypoints', param: 'waypoints', label: 'Waypoints', control: 'waypoints' },
@@ -216,7 +217,7 @@ export const cameraKinds: Pick<
     fields: [
       readoutField('to', 'Destination'),
       overField('Duration', { optional: true }),
-      readoutField('tuning', 'Tuning'),
+      { key: 'tuning', param: 'tuning', label: 'Tuning', control: 'geodesicTuning' },
       readoutField('fovYRad', 'FOV'),
     ],
   },

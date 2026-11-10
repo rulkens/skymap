@@ -12,7 +12,7 @@ import { SOLAR_RADIUS_KM } from '../../../data/bodies/solarRadiusKm';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { footprintRadiusMpc } from '../../../utils/selection/footprintRadiusMpc';
-import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../../data/bodies/seededStarCatalogsBySource';
+import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../seededStars/data/seededStarCatalogsBySource';
 import { STAR_FOCUS_PREFIX } from '../../../services/url/starFocusId';
 import { encodeStarFocusId } from './utils/encodeStarFocusId';
 import { decodeStarFocusId } from './utils/decodeStarFocusId';
@@ -24,7 +24,7 @@ import { SURFACE_STANDOFF_RADII } from '../../../utils/camera/orbitCamera/clampD
 import type { DriverGeometry } from '../../../@types/engine/camera/DriverGeometry';
 import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKindRow';
 import type { StarCatalogRuntime } from '../@types/StarCatalogRuntime';
-import type { SourceType } from '../../../@types/data/SourceType';
+import type { StarCatalogId } from '../@types/StarCatalogId';
 import type { SceneBodyId } from '../../../@types/scene/SceneBodyId';
 import type { StarCatalogRef } from './@types/StarCatalogRef';
 
@@ -47,7 +47,7 @@ function starDriver(poseId: SceneBodyId | null, radiusM: number): DriverGeometry
 }
 
 /** The committed survey catalog of `source`, or null before it lands. */
-function catalogOf(runtime: Pick<StarCatalogRuntime, 'renderer'>, source: SourceType) {
+function catalogOf(runtime: Pick<StarCatalogRuntime, 'renderer'>, source: StarCatalogId) {
   for (const loaded of runtime.renderer.loadedCatalogs()) {
     if (loaded.source === source) return loaded.octree;
   }
@@ -59,7 +59,7 @@ export function starCatalogSelectionRow(
 ): SelectionKindRow<StarCatalogRef> {
   return {
     type: 'starCatalog',
-    pickSources: STAR_CATALOG_SOURCE_ROWS.map(([source]) => runtime.pickCodes.pickCodeOf(source)),
+    pickSources: STAR_CATALOG_SOURCE_ROWS.map((entry) => runtime.pickCodes.pickCodeOf(entry.id)),
     resolvePick: (pick) => {
       const source = runtime.pickCodes.catalogOfPickCode(pick.sourceCode);
       if (source === null) return null;

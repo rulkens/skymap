@@ -14,12 +14,12 @@
  */
 
 import { PROVENANCE_AXES } from '../../../../data/provenanceAxes';
-import type { SourceType } from '../../../../@types/data/SourceType';
+import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
 import type { ProvenanceAxisId } from '../../../../@types/settings/ProvenanceAxisId';
 import type { ProvenanceCounts } from '../../../../@types/engine/ProvenanceCounts';
 
 export function sumProvenanceCounts(
-  bySource: Partial<Record<SourceType, ProvenanceCounts>>,
+  bySource: Partial<Record<GalaxyCatalogId, ProvenanceCounts>>,
 ): ProvenanceCounts {
   const estimated = {} as Record<ProvenanceAxisId, number>;
   for (const axis of PROVENANCE_AXES) estimated[axis.id] = 0;

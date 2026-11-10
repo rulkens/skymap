@@ -3,9 +3,9 @@
  * and the collapsed row ids. Structure, names, values and families come from the draft and
  * ROW_KINDS; every time comes from `compile.spans` by path, never recomputed. A fork is its own
  * row with its child beneath it; a flyPath's waypoints are child rows windowed by its `knotSecs`.
- * A waypoint subject carries `last`, which the registry labels Settle.
  */
 import { rowKey } from '../../draft/utils/rowKey';
+import { waypointSubject } from '../../draft/utils/waypointSubject';
 import { formatQuantity } from '../../utils/format/formatQuantity';
 import { rowFace } from './rowFace';
 import { groupMembers } from './groupMembers';
@@ -84,7 +84,8 @@ export function buildTimeline(
         : effect.kind === 'fork'
           ? [effect.child]
           : [];
-    const waypoints = effect.kind === 'flyPath' ? effect.waypoints : [];
+    const fly = effect.kind === 'flyPath' ? effect : null;
+    const waypoints = fly?.waypoints ?? [];
     const id = push(
       { kind: 'effect', path },
       effect.kind,
@@ -114,14 +115,14 @@ export function buildTimeline(
     children.forEach((child, index) =>
       visit(child, [...path, index], depth + 1, id, background || effect.kind === 'fork'),
     );
-    waypoints.forEach((waypoint, index) => {
+    waypoints.forEach((_, index) => {
       const knots = span?.knotSecs;
       const start = knots === undefined ? null : index === 0 ? span!.startSec : knots[index - 1]!;
       const end = knots?.[index] ?? null;
       push(
         { kind: 'waypoint', path, index },
         'waypoint',
-        { ...waypoint, last: index === waypoints.length - 1 },
+        waypointSubject(fly!, index),
         { depth: depth + 1, parentId: id, background, expandable: false },
         {
           startSec: start,

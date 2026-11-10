@@ -10,8 +10,10 @@ import {
   dollyToId,
   fade,
   flyPath,
+  focus,
   seq,
 } from '../../../../../src/services/engine/animation/effectHelpers';
+import { layerSearchReported } from '../../../../../src/state/engine/engineSlice';
 import { openStudioStore } from '../../helpers/openStudioStore';
 import Inspector from '../../../src/inspector/components/Inspector/Inspector';
 import { draftResolved, paramEdited, rowSelected } from '../../../src/session/state/studioSlice';
@@ -47,6 +49,15 @@ describe('Inspector', () => {
     expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(/^Distance → m31$/);
     expect(screen.getByText('Resolved')).toBeTruthy();
     expect(screen.getByText('950 Mpc')).toBeTruthy();
+  });
+
+  it('a focus-id step has no Resolved line: its Subject already names the object', () => {
+    const store = open({ timeline: [focus('m31' as FocusId)] });
+    resolveWith(store, { timeline: [{ kind: 'focus', ref: { type: 'famous', id: 'm31' } }] });
+    store.dispatch(rowSelected({ kind: 'effect', path: [0] }));
+    show(store);
+
+    expect(screen.queryByText('Resolved')).toBeNull();
   });
 
   it('a selected invalid row shows its error chip as an alert', () => {
@@ -92,19 +103,55 @@ describe('Inspector', () => {
     expect(screen.getByRole('combobox', { name: 'Ease' })).toBeTruthy();
   });
 
-  it("a Fly's waypoint chip selects that waypoint", async () => {
+  it("a Fly's title and waypoint chips read their objects' names, and a chip selects its waypoint", async () => {
     const store = open({
-      timeline: [flyPath([atFocus('m31' as FocusId), atPoint([5, 0, 0], 8)], { over: 6 })],
+      timeline: [flyPath([atFocus('body-earth' as FocusId), atPoint([5, 0, 0], 8)], { over: 6 })],
     });
+    store.dispatch(
+      layerSearchReported({
+        layer: 'body',
+        rows: [{ id: 'body-earth', names: ['Earth'], class: 'primary' }],
+      }),
+    );
     store.dispatch(rowSelected({ kind: 'effect', path: [0] }));
     show(store);
-    await userEvent.click(screen.getByRole('button', { name: 'Settle 2, point' }));
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(/^Fly via Earth, point 2$/);
+    expect(screen.getByRole('button', { name: 'Pass 1, Earth' })).toHaveTextContent('1Earth');
+    await userEvent.click(screen.getByRole('button', { name: 'Settle 2, Point' }));
 
     expect(selectStudioState(store.getState()).selection).toEqual({
       kind: 'waypoint',
       path: [0],
       index: 1,
     });
+  });
+
+  it("a waypoint's unset Linger reads the Fly's, dim, and its own one is bright with ↺ back to it", async () => {
+    const store = open({
+      timeline: [
+        flyPath([atFocus('m31' as FocusId), atPoint([5, 0, 0], 8)], { over: 6, linger: 0.4 }),
+      ],
+    });
+    store.dispatch(rowSelected({ kind: 'waypoint', path: [0], index: 0 }));
+    show(store);
+    expect(screen.getByRole('slider', { name: 'Linger' })).toHaveAttribute('aria-valuenow', '40');
+    expect(screen.queryByRole('button', { name: 'Reset Linger to default' })).toBeNull();
+
+    act(() => {
+      store.dispatch(
+        paramEdited({
+          ref: { kind: 'waypoint', path: [0], index: 0 },
+          param: 'linger',
+          value: 0.9,
+          label: '',
+          gesture: null,
+        }),
+      );
+    });
+    await userEvent.click(screen.getByRole('button', { name: 'Reset Linger to default' }));
+    expect(
+      (selectDraft(store.getState())!.timeline[0] as { waypoints: object[] }).waypoints[0],
+    ).not.toHaveProperty('linger');
   });
 
   it('a subject waypoint shows no Distance, and its unset Leg time reads auto with no reset', () => {

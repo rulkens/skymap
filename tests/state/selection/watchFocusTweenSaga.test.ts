@@ -31,7 +31,6 @@ import { structureSelectionRow } from '../../../src/layers/structure/selection/s
 import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/selection/milkyWaySelectionRow';
 import { starCatalogSelectionRow } from '../../../src/layers/starCatalog/selection/starCatalogSelectionRow';
 import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
-import { Source } from '../../../src/data/source';
 import { NO_KINDS_OFF } from '../../support/noKindsOff';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
 import type { CameraPose } from '../../../src/@types/camera/pose/CameraPose';
@@ -55,7 +54,7 @@ const NO_SURVEY_STARS = {
 
 const SIRIUS_REF = {
   type: 'starCatalog' as const,
-  source: Source.FamousStar,
+  source: 'famousStar',
   index: SCENE_STARS.findIndex((star) => star.id === 'sirius'),
 };
 
@@ -182,9 +181,7 @@ describe('watchFocusTweenSaga', () => {
   // A survey star's row needs its bin; with none committed the ref extracts to
   // nothing, so the tween must not fire (and must not throw on a null row).
   it('a survey-star focus with no bin loaded → no row, no tween', async () => {
-    store.dispatch(
-      updateSelectionFocus({ type: 'starCatalog', source: Source.GaiaStars, index: 1 }),
-    );
+    store.dispatch(updateSelectionFocus({ type: 'starCatalog', source: 'gaiaStars', index: 1 }));
     await flush();
     expect(store.getState()[cameraRoute].tween).toBeNull();
     expect(sagaErrors).toEqual([]);

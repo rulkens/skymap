@@ -5,7 +5,7 @@
  * windowed to a contiguous `BeatRange` — the recorder hook passes one so a
  * single-beat take doesn't replay the whole tour; omitted means the full run.
  * `watchTakeoverSaga` picks it up — a new start supersedes any in-progress
- * takeover — looks the id up in `tourRegistry`, and runs `tourBodySaga` on
+ * takeover — looks the id up in `APP_TOUR_REGISTRY`, and runs `tourBodySaga` on
  * the resolved tour under `runTakeoverSaga`. The action is
  * fully serializable (an id plus a plain index range, no callbacks).
  *

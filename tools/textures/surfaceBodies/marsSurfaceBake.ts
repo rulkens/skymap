@@ -5,7 +5,7 @@
  * the sphere-to-datum gap (+6,190 m) so heights land on the scene's datum.
  */
 
-import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
+import type { LonLatBounds } from '../../../src/layers/body/surfaceTiles/format/@types/LonLatBounds';
 import {
   MARS_DATUM_OFFSET_M,
   MARS_IAU_SPHERE_RADIUS_M,

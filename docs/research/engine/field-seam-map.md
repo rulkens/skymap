@@ -3,7 +3,7 @@
 ## 1. TOOL SIDE — end-to-end v2 field render chain
 
 **Data build (pure, device-free, CPU):**
-- `buildGalaxyFieldMixture` — `src/services/engine/galaxyGenerator/v2/galaxyFieldMixture.ts:1` (cap `GALAXY_FIELD_MAX_COMPONENTS = 3000`, line 59) turns `GalaxyDescription` + `GalaxyFieldTuning` into flat `GalaxyFieldComponent[]` (disc/bulge/bar/arm ridges). Component shape: `src/@types/galaxy/GalaxyFieldComponent.ts:13` — amplitude, inverse-covariance diag/off-diag, color, center, boundRadius, optional textureWeight/starsWeight.
+- `buildGalaxyFieldMixture` — `src/layers/milkyWay/field/mixture/utils/galaxyFieldMixture.ts:1` (cap `GALAXY_FIELD_MAX_COMPONENTS = 3000`, line 59) turns `GalaxyDescription` + `GalaxyFieldTuning` into flat `GalaxyFieldComponent[]` (disc/bulge/bar/arm ridges). Component shape: `src/@types/galaxy/GalaxyFieldComponent.ts:13` — amplitude, inverse-covariance diag/off-diag, color, center, boundRadius, optional textureWeight/starsWeight.
 - `buildHiiRegions` (`v2/hiiRegions.ts`) — Strömgren shells + OB cores, same component shape, separate list.
 - `buildGalaxyIsmMapArmForcing` + `sfEventCatalog.ts` + `dustBubblePlacements.ts` — ISM-map forcing grid, SF-event catalog, dust-bubble placements. Per `v2/README.md:16-20`, GPU placement (dust/arm-cloud/arm-spur-cloud) has moved to WGSL (`ismMap/placeDust.wesl`, `placeArmCloud.wesl`, `placeArmSpurCloud.wesl`); the `v2/*.ts` files now only supply constants/budgets that the GPU dispatch hosts in `tools/galaxy-renderer/src/engine/ismMap/` read.
 - All three builders consume the same `GalaxyDescription` (`shared/describeGalaxy`) that v1's `packGenerationUniforms` also consumes — v2/README.md:28-35: "makes the field and the sprites two renderings of one galaxy."
@@ -50,7 +50,7 @@
 
 **Already shared (single source of truth in `src/`):**
 - All `src/services/gpu/shaders/milkyWay/field/*.wesl` and `.../ismMap/*.wesl` — symlinked into the tool per `wesl.toml`.
-- v2 data builders (`galaxyGenerator/v2/*.ts`) + `galaxyGenerator/shared/*` — pure, device-free, currently only imported by the tool.
+- v2 data builders (`src/layers/milkyWay/field/**/utils/*.ts`) + `galaxyGenerator/shared/*` — pure, device-free, currently only imported by the tool.
 - `src/services/gpu/passes/bloomPyramid.ts`, `compositor.ts`, `additiveUpsample.ts`, `src/services/gpu/lib/blendStates.ts` — factories the tool imports directly (createGalaxyEngine.ts:82-85).
 - `gpuTimingService.ts`, `shaderCompileLogger.ts`, `hasUrlGate.ts` — imported whole by the tool.
 - `src/@types/galaxy/*` — shared data contracts.

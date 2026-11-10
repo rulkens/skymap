@@ -98,4 +98,11 @@ if (typeof window !== 'undefined') {
   if (typeof Element.prototype.scrollTo !== 'function') {
     Element.prototype.scrollTo = () => {};
   }
+
+  // jsdom omits the Popover API (its `:popover-open` always matches false), so a hover tip
+  // opening mid-test (StudioTip) would throw; no-ops stand in, a test can still spy on them.
+  if (typeof HTMLElement.prototype.showPopover !== 'function') {
+    HTMLElement.prototype.showPopover = () => {};
+    HTMLElement.prototype.hidePopover = () => {};
+  }
 }

@@ -7,13 +7,10 @@
  */
 
 import { memo } from 'react';
-import { Source } from '../../../../data/source';
 import { GALAXY_CATALOG_SOURCE_RECORD } from '../../sources/galaxyCatalogSourceRecord';
-import { galaxyCatalogIdOf } from '../../../../utils/galaxyCatalogIdOf';
 import { BiasMode } from '../../../../data/galaxyCatalog/biasMode';
 import type { BiasMode as BiasModeT } from '../../@types/BiasMode';
 import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
-import type { GalaxyCatalogSourceType } from '../../@types/GalaxyCatalogSourceType';
 import CollapsibleSection from '../../../../components/SettingsPanel/CollapsibleSection';
 import Slider from '../../../../components/common/Slider/Slider';
 import styles from '../../../../components/SettingsPanel/SettingsPanel.module.css';
@@ -26,15 +23,15 @@ import styles from '../../../../components/SettingsPanel/SettingsPanel.module.cs
  * pencil-beam, dec-band wedge, and Sloan Great Wall sit last as
  * footprint-limited appendices to that ladder.
  */
-const TOGGLEABLE_SOURCES: readonly GalaxyCatalogSourceType[] = [
-  Source.FamousGalaxy,
-  Source.TwoMRS,
-  Source.SDSS,
-  Source.Glade,
-  Source.Milliquas,
-  Source.DesiDeep,
-  Source.DesiWedge,
-  Source.DesiSgw,
+const TOGGLEABLE_SOURCES: readonly GalaxyCatalogId[] = [
+  'famousGalaxy',
+  '2mrs',
+  'sdss',
+  'glade',
+  'milliquas',
+  'desiDeep',
+  'desiWedge',
+  'desiSgw',
 ];
 
 // ── Props ──────────────────────────────────────────────────────────────────────
@@ -44,12 +41,12 @@ type GalaxiesSectionProps = {
   /** Ids of the currently-visible galaxy catalogs. */
   visibleCatalogs: ReadonlySet<GalaxyCatalogId>;
   /** Called when the user toggles a single catalog on or off. */
-  onToggleSource: (source: GalaxyCatalogSourceType, visible: boolean) => void;
+  onToggleSource: (source: GalaxyCatalogId, visible: boolean) => void;
   /**
    * Per-source loaded point counts. Absent entries (catalog not yet loaded)
    * render the toggle without a count rather than a misleading "0".
    */
-  sourceCounts?: Partial<Record<GalaxyCatalogSourceType, number>>;
+  sourceCounts?: Partial<Record<GalaxyCatalogId, number>>;
   /** Current point size in pixels. */
   pointSize: number;
   /** Called when the user moves the point-size slider. */
@@ -113,7 +110,7 @@ function GalaxiesSection({
   // Tri-state click convention (Windows Explorer / Finder / GitHub file-tree):
   //   "none" → set all on; "all" or "mixed" → clear everything.
   const enabledCount = TOGGLEABLE_SOURCES.reduce<number>(
-    (n, s) => (visibleCatalogs.has(galaxyCatalogIdOf(s)) ? n + 1 : n),
+    (n, s) => (visibleCatalogs.has(s) ? n + 1 : n),
     0,
   );
   const allOn = enabledCount === TOGGLEABLE_SOURCES.length;
@@ -156,7 +153,7 @@ function GalaxiesSection({
                 id={`toggle-source-${s}`}
                 type="checkbox"
                 className={styles.toggle}
-                checked={visibleCatalogs.has(galaxyCatalogIdOf(s))}
+                checked={visibleCatalogs.has(s)}
                 onChange={(e) => onToggleSource(s, e.target.checked)}
               />
             </div>

@@ -78,6 +78,7 @@ function makeSnapshot(
       missions: { ...f.missions },
       missionTrails: { ...f.missionTrails, enabled: !f.missionTrails.enabled },
       satellites: { ...f.satellites, enabled: !f.satellites.enabled },
+      stellarStreams: { ...f.stellarStreams, enabled: !f.stellarStreams.enabled },
       sStarTrails: { ...f.sStarTrails, enabled: !f.sStarTrails.enabled },
       starCatalogs: { ...f.starCatalogs, enabled: !f.starCatalogs.enabled },
       bodies: { ...f.bodies },

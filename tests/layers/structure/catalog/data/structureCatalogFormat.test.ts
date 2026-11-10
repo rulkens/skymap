@@ -25,7 +25,7 @@ import {
   decodeStructureCatalog,
   emptyStructureCatalog,
 } from '../../../../../src/layers/structure/catalog/data/structureCatalogFormat';
-import type { StructureCatalog } from '../../../../../src/@types/data/structure/structureCatalog/StructureCatalog';
+import type { StructureCatalog } from '../../../../../src/layers/structure/catalog/@types/StructureCatalog';
 
 /** Build a two-record test catalog with known field values. */
 function makeCatalog(): StructureCatalog {

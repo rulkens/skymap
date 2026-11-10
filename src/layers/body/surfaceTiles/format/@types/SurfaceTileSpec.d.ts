@@ -4,7 +4,7 @@
  * ever been fetched. Membership in the registry IS the "this body tiles"
  * predicate — there is no separate boolean to drift out of sync with it.
  */
-import type { SurfaceEffect } from '../../../../../@types/data/SurfaceEffect';
+import type { SurfaceEffect } from './SurfaceEffect';
 import type { SurfaceTileShading } from './SurfaceTileShading';
 
 export type SurfaceTileSpec = {

@@ -16,7 +16,7 @@ function WaypointsField({ waypoints, onSelect }: Props) {
     <span className={s.root}>
       {waypoints.map((w, i) => {
         const last = i === waypoints.length - 1;
-        const name = 'id' in w ? objectText(w.id, objects) : 'point';
+        const name = 'id' in w ? objectText(w.id, objects) : 'Point';
         return (
           <button
             key={i}
@@ -28,7 +28,7 @@ function WaypointsField({ waypoints, onSelect }: Props) {
           >
             <span className={s.n}>{i + 1}</span>
             {'id' in w && <Glyph id="subject" size={10} />}
-            {'id' in w ? w.id : name}
+            <span className={s.name}>{name}</span>
             {last && <Glyph id="settle" size={10} />}
           </button>
         );

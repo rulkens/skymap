@@ -66,13 +66,13 @@ export type RenderSettings = {
   readonly fieldDivisor: number;
   /** Downsample divisor of the dust-column map's own offscreen. Separate from `fieldDivisor` because the dust splat is much higher-frequency than the smooth emission field — see `defaultRenderSettings.ts`. Also reallocates rather than riding the uniform. */
   readonly dustDivisor: number;
-  /** Downsample divisor of `hiiTex`, now home to the `hii:extras` span alone (background extras' whole HII contribution — see `HiiTierSpec`'s own doc for why it can't split further). 1 by default for the same firefly reason `shellsDivisor` is: a shell embedded in an extra is still small and bright. Also reallocates rather than riding the uniform. */
+  /** Downsample divisor of `hiiTex`, now home to the `hii:extras` span alone (background extras' whole HII contribution — see `hiiSplat/extrasFragment.wesl`'s header for why it can't split further). 1 by default for the same firefly reason `shellsDivisor` is: a shell embedded in an extra is still small and bright. Also reallocates rather than riding the uniform. */
   readonly extrasDivisor: number;
-  /** Downsample divisor of the shells tier's own offscreen (`data/hiiTiers.ts`'s `HII_TIERS`) — a shell sprite is small and bright by construction, so sharing a coarser target collapses it under a texel and bloom promotes the spike into a firefly. Also reallocates rather than riding the uniform. */
+  /** Downsample divisor of the shells tier's own offscreen — a shell sprite is small and bright by construction, so sharing a coarser target collapses it under a texel and bloom promotes the spike into a firefly. Also reallocates rather than riding the uniform. */
   readonly shellsDivisor: number;
-  /** Downsample divisor of the young-stars tier's own offscreen (`data/hiiTiers.ts`'s `HII_TIERS`) — same firefly reasoning as `shellsDivisor`: a young-stars association is small and bright, not a candidate for the field's coarser compromise. Also reallocates rather than riding the uniform. */
+  /** Downsample divisor of the young-stars tier's own offscreen — same firefly reasoning as `shellsDivisor`: a young-stars association is small and bright, not a candidate for the field's coarser compromise. Also reallocates rather than riding the uniform. */
   readonly youngDivisor: number;
-  /** Downsample divisor of the DIG (diffuse ionized gas) tier's own offscreen (`data/hiiTiers.ts`'s `HII_TIERS`, the original split `shellsDivisor`/`youngDivisor` generalize) — DIG is the biggest, softest of the HII tier's quads (worst overdraw contributor at close zoom) but also its lowest-frequency content, so it tolerates a much coarser target than shells/young do. Also reallocates rather than riding the uniform. */
+  /** Downsample divisor of the DIG (diffuse ionized gas) tier's own offscreen (the original split `shellsDivisor`/`youngDivisor` generalize) — DIG is the biggest, softest of the HII tier's quads (worst overdraw contributor at close zoom) but also its lowest-frequency content, so it tolerates a much coarser target than shells/young do. Also reallocates rather than riding the uniform. */
   readonly digDivisor: number;
   /**
    * boundRadius multiple (an HII component's own truncation-sphere sigma
@@ -102,10 +102,10 @@ export type RenderSettings = {
    * sigma (see that function's own header for why bare sigma fades the
    * grain too early). One static value can't serve both the close-approach
    * look and the whole-galaxy framing, so this is the NEAR end of a pair —
-   * `deriveFrameView.ts` blends `starGrainFeatureScaleNear`/`Far` by log
+   * `deriveFieldFrameLanes` blends `starGrainFeatureScaleNear`/`Far` by log
    * camera distance (in disc radii) into the single scalar the header still
    * carries. Calibrated at close approach (camera at/inside the disc);
-   * defaults to 4 (`defaultRenderSettings.ts`).
+   * defaults to 4 (`FIELD_CALIBRATION`).
    */
   readonly starGrainFeatureScaleNear: number;
   /**
@@ -147,7 +147,7 @@ export type RenderSettings = {
    * 1.0 is the calibration point the field was tuned at by eye against the
    * reference gallery, NOT a parity point with the sprite field — the sprite
    * pass's own `starIntensity`/`sizeScale` no longer factor in at all (see
-   * `deriveFrameView.ts`'s `FIELD_EXPOSURE_GAUGE`); absolute
+   * `FIELD_EXPOSURE_GAUGE`); absolute
    * flux is anchored on `GalaxyDescription.luminosity` instead.
    */
   readonly analyticExposure: number;
@@ -243,7 +243,7 @@ export type RenderSettings = {
   readonly ismMapSeedingViewWeight: number;
   /**
    * Bubble-view crossfade weight: 0 = pure galaxy, 1 = the SF-event
-   * catalog's own bubble/cavity placements alone (dustBubblePlacements.ts),
+   * catalog's own bubble/cavity placements alone (buildDustBubblePlacements.ts),
    * same seam as `ismMapViewIntensity`/`orientationViewIntensity`. That
    * catalog is a SECOND, independent star-formation model — resolved from
    * the same `sfEventCatalog.ts` events the ISM-map generator never sees —

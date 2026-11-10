@@ -50,7 +50,7 @@ import type { Vec2 } from '../../../../@types/math/Vec2';
 import type { Vec4 } from '../../../../@types/math/Vec4';
 import type { ScalarCube } from '../../../../@types/data/volume/ScalarCube';
 import type { FlowField } from '../@types/FlowField';
-import type { FlowSettings } from '../../../../@types/settings/FlowSettings';
+import type { FlowSettings } from '../../@types/FlowSettings';
 import type { ClaimTimestampWrites } from '../../../../@types/gpu/timing/ClaimTimestampWrites';
 import type { FlowFieldRenderer } from '../@types/FlowFieldRenderer';
 import type { Renderer } from '../../../../@types/rendering/Renderer';

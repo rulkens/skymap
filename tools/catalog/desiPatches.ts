@@ -4,12 +4,12 @@
  *
  * A "patch" is one way of sampling the same survey: a pencil-beam cone, a
  * declination-band wedge, and (later) a flat great-circle slab. Each row
- * pairs a `Source` code + `.bin` stem with a `makeFilter()` factory that
+ * pairs a source id + `.bin` stem with a `makeFilter()` factory that
  * builds the row-membership predicate the parser runs per FITS row. The
  * build (`loadDesiPatch` in `buildAllBins.ts`) loops this table, feeds each
  * patch's kept rows through `crossMatch` under its own source, and emits one
  * `.bin` per patch — so adding a new drill geometry is one row here plus one
- * `Source` registration, not a cloned pipeline path.
+ * source entry, not a cloned pipeline path.
  *
  * Adding a patch with a *new* geometry also adds one filter util alongside
  * `makeConeFilter` / `makeDecBandFilter` (e.g. a `makeGreatCircleBandFilter`
@@ -17,8 +17,7 @@
  * geometry has to satisfy.
  */
 import type { DesiTracer } from '../parsers/desiFits';
-import type { SourceType } from '../../src/@types/data/SourceType';
-import { Source } from '../../src/data/source';
+import type { GalaxyCatalogId } from '../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import { makeConeFilter } from '../utils/math/makeConeFilter';
 import { makeDecBandFilter } from '../utils/math/makeDecBandFilter';
 import { makeEllipsoidUnionFilter } from '../utils/math/makeEllipsoidUnionFilter';
@@ -29,7 +28,7 @@ import { makeEllipsoidUnionFilter } from '../utils/math/makeEllipsoidUnionFilter
  *   - `key`        — short human tag (`'cone'` | `'wedge'` | …), used in
  *                    per-patch build logs and by the census diagnostic to
  *                    find the cone row.
- *   - `source`     — the `Source` this patch's rows are stamped with and
+ *   - `source`     — the id this patch's rows are stamped with and
  *                    bucketed under; also the single source of truth for the
  *                    runtime `.bin` stem, via `APP_SOURCE_REGISTRY[source].binBaseName`
  *                    (`tierFilenameForSource`) — no separate `binName` field
@@ -51,7 +50,7 @@ import { makeEllipsoidUnionFilter } from '../utils/math/makeEllipsoidUnionFilter
  */
 export type DesiPatch = {
   key: string;
-  source: SourceType;
+  source: GalaxyCatalogId;
   makeFilter: () => (raDeg: number, decDeg: number, z: number) => boolean;
 };
 
@@ -89,7 +88,7 @@ export const DESI_PATCHES: readonly DesiPatch[] = [
   // makes the census diagnostic's re-center a one-line edit in one place.
   {
     key: 'cone',
-    source: Source.DesiDeep,
+    source: 'desiDeep',
     makeFilter: () => makeConeFilter(DESI_CONE.raDeg, DESI_CONE.decDeg, DESI_CONE.radiusDeg),
   },
   // ── Wedge — a 2.5°-thick, 65°-long dec-band fan through Corona Borealis ─
@@ -113,7 +112,7 @@ export const DESI_PATCHES: readonly DesiPatch[] = [
   // candidate future patch where its flatness is genuinely clean.
   {
     key: 'wedge',
-    source: Source.DesiWedge,
+    source: 'desiWedge',
     makeFilter: () => makeDecBandFilter(30.65, 1.25, 205, 270),
   },
   // ── Sloan Great Wall — a sculpted ellipsoid union around one structure ──
@@ -140,7 +139,7 @@ export const DESI_PATCHES: readonly DesiPatch[] = [
   // true-depth extent read as a structure rather than a slab.
   {
     key: 'sgw',
-    source: Source.DesiSgw,
+    source: 'desiSgw',
     makeFilter: () =>
       makeEllipsoidUnionFilter(
         [

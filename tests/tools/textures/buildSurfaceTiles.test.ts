@@ -10,7 +10,7 @@ import { surfaceTilePath } from '../../../src/layers/body/surfaceTiles/format/ut
 import type { SurfaceImagerySource } from '../../../tools/textures/@types/SurfaceImagerySource';
 import type { HeightSource } from '../../../tools/textures/@types/HeightSource';
 import type { SurfaceTileManifest } from '../../../src/layers/body/surfaceTiles/format/@types/SurfaceTileManifest';
-import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
+import type { LonLatBounds } from '../../../src/layers/body/surfaceTiles/format/@types/LonLatBounds';
 import type { SurfaceTileProduct } from '../../../src/layers/body/surfaceTiles/format/@types/SurfaceTileProduct';
 
 const TILE_PX = 512;

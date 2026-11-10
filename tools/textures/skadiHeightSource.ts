@@ -10,7 +10,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import type { HeightSource } from './@types/HeightSource';
-import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
+import type { LonLatBounds } from '../../src/layers/body/surfaceTiles/format/@types/LonLatBounds';
 import { boundsOverlap } from '../utils/textures/boundsOverlap';
 import { heightLatticeBounds } from '../utils/textures/heightLatticeBounds';
 import { heightLatticeStepDeg } from '../utils/textures/heightLatticeStepDeg';

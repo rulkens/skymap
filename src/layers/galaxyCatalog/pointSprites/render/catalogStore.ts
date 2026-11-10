@@ -15,7 +15,6 @@
 
 import type { GalaxyCatalog } from '../../../../@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
-import type { GalaxyCatalogSourceType } from '../../@types/GalaxyCatalogSourceType';
 import type { BuildPointInterleavedBufferInput } from '../@types/BuildPointInterleavedBufferInput';
 import type { BuildPointInterleavedBufferResult } from '../@types/BuildPointInterleavedBufferResult';
 import type { GalaxyPointStats } from '../@types/GalaxyPointStats';
@@ -54,21 +53,6 @@ function defaultWorkerRunner(
   );
 }
 
-// The public key is the string `GalaxyCatalogId`; the GPU-facing `sourceCode`
-// and the draw order are numeric. Both derive from the Layer's own rows.
-
-/** String `GalaxyCatalogId` → numeric `Source` code. */
-const CODE_OF_ID = new Map<GalaxyCatalogId, GalaxyCatalogSourceType>(
-  GALAXY_CATALOG_SOURCES.map((code) => [GALAXY_CATALOG_SOURCE_RECORD[code].id, code]),
-);
-
-/** Draw order paired with string ids: keys the id-keyed map while emitting the numeric `sourceCode`. */
-const CATALOG_DRAW_ORDER: readonly { code: GalaxyCatalogSourceType; id: GalaxyCatalogId }[] =
-  GALAXY_CATALOG_SOURCES.map((code) => ({
-    code,
-    id: GALAXY_CATALOG_SOURCE_RECORD[code].id,
-  }));
-
 /**
  * Allocate an empty store; everything is created lazily per catalog in `upload`.
  *
@@ -81,8 +65,8 @@ export function createCatalogStore(init: {
   device: GPUDevice;
   fadeBgl: FadeUniformsBgl;
   sourceBgl: SourceUniformsBgl;
-  /** The pick code the SourceUniforms carry — never the catalog `Source` value. */
-  pickCodeOf: (source: GalaxyCatalogSourceType) => number;
+  /** The pick code the SourceUniforms carry — never the catalog id. */
+  pickCodeOf: (source: GalaxyCatalogId) => number;
   buildRunner?: BuildRunner;
 }): CatalogStore {
   const { device, fadeBgl, sourceBgl } = init;
@@ -92,10 +76,6 @@ export function createCatalogStore(init: {
 
   /** Free the catalog's GPU buffers and forget it; a no-op for one never uploaded. */
   function unload(id: GalaxyCatalogId): void {
-    const source = CODE_OF_ID.get(id);
-    if (source === undefined) {
-      throw new Error(`catalogStore cannot unload unknown galaxy catalog id '${id}'`);
-    }
     const stale = galaxyCatalogs.get(id);
     if (stale) {
       stale.buffer.destroy();
@@ -119,13 +99,9 @@ export function createCatalogStore(init: {
     galaxyCatalog: GalaxyCatalog,
     stats: GalaxyPointStats,
   ): Promise<void> {
-    const source = CODE_OF_ID.get(id);
-    if (source === undefined) {
-      throw new Error(`catalogStore cannot upload unknown galaxy catalog id '${id}'`);
-    }
-    const entry = GALAXY_CATALOG_SOURCE_RECORD[source];
+    const entry = GALAXY_CATALOG_SOURCE_RECORD[id];
 
-    const result = await buildRunner({ cloud: galaxyCatalog, source, stats });
+    const result = await buildRunner({ cloud: galaxyCatalog, source: id, stats });
     const { interleaved } = result;
 
     const prev = galaxyCatalogs.get(id);
@@ -158,7 +134,7 @@ export function createCatalogStore(init: {
     const sourceScratch = new ArrayBuffer(16);
     const sourceU32 = new Uint32Array(sourceScratch);
     const sourceF32 = new Float32Array(sourceScratch);
-    sourceU32[0] = init.pickCodeOf(source) >>> 0;
+    sourceU32[0] = init.pickCodeOf(id) >>> 0;
     sourceF32[1] = entry.sbBoost;
     sourceF32[2] = entry.falloffHalfMpc;
     device.queue.writeBuffer(sourceBuffer, 0, sourceScratch);
@@ -186,16 +162,16 @@ export function createCatalogStore(init: {
 
   /** Fresh iterator per call, so a caller may `unload()` between iterations. */
   function* loadedSourcesGen(): IterableIterator<{
-    source: GalaxyCatalogSourceType;
+    source: GalaxyCatalogId;
     vertexBuffer: GPUBuffer;
     count: number;
     sourceBuffer: GPUBuffer;
   }> {
-    for (const { code, id } of CATALOG_DRAW_ORDER) {
+    for (const id of GALAXY_CATALOG_SOURCES) {
       const entry = galaxyCatalogs.get(id);
       if (!entry) continue;
       yield {
-        source: code,
+        source: id,
         vertexBuffer: entry.buffer,
         count: entry.count,
         sourceBuffer: entry.sourceBuffer,
@@ -203,7 +179,7 @@ export function createCatalogStore(init: {
     }
   }
   function loadedSources(): IterableIterator<{
-    source: GalaxyCatalogSourceType;
+    source: GalaxyCatalogId;
     vertexBuffer: GPUBuffer;
     count: number;
     sourceBuffer: GPUBuffer;
@@ -213,11 +189,11 @@ export function createCatalogStore(init: {
 
   /** `loadedSources()` order with the bind groups attached. */
   function* entriesGen(): IterableIterator<CatalogDrawEntry> {
-    for (const { code, id } of CATALOG_DRAW_ORDER) {
+    for (const id of GALAXY_CATALOG_SOURCES) {
       const entry = galaxyCatalogs.get(id);
       if (!entry) continue;
       yield {
-        source: code,
+        source: id,
         count: entry.count,
         vertexBuffer: entry.buffer,
         fade: entry.fade,
