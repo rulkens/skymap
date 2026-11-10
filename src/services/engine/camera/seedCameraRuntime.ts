@@ -23,7 +23,7 @@ import { CONST_J2000 } from '../../../data/time/constJ2000';
 import { symmetricFrustum } from '../../../utils/camera/frustum/symmetricFrustum';
 
 export function seedCameraRuntime(args: {
-  /** Only the two slices the seed reads; call sites still hand over `store.getState()`. */
+  /** Only the two slices the seed reads; call sites hand over the whole root. */
   readonly state: Pick<RootState, 'camera' | 'settings'>;
   readonly projection: CameraProjection;
 }): CameraRuntime {

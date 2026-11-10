@@ -366,6 +366,7 @@ function makeDeps(): BootstrapDeps {
   return {
     canvas: { width: 800, height: 600 } as HTMLCanvasElement,
     cb,
+    readRoot: () => cb.store.getState(),
     composition: STUB_COMPOSITION,
     frameRef: { current: () => {} },
     handleRef: { current: null },

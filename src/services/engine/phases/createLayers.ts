@@ -101,8 +101,8 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
       sourceBgl,
       focusBgl,
       focusUniform,
-      settings: () => deps.cb.store.getState().settings,
-      debugPanelOpen: () => deps.cb.store.getState().ui.debugPanelOpen,
+      settings: () => deps.readRoot().settings,
+      debugPanelOpen: () => deps.readRoot().ui.debugPanelOpen,
       requestRender,
       pickCode: (pickSourceId: string) => pickCodes.codeOf(layer.name, pickSourceId),
     };

@@ -8,12 +8,15 @@ import type { EngineCallbacks } from '../EngineCallbacks';
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 import type { ControlScheme } from '../camera/ControlScheme';
 import type { ControlSchemeId } from '../camera/ControlSchemeId';
+import type { RootState } from '../../../store/types';
 
 export type RunFrameDeps = {
   /** createEngine arg — for resize + viewport reads. */
   canvas: HTMLCanvasElement;
   /** createEngine arg — carries the Redux store the frame loop dispatches through (camera pose, `engineScaleChanged`). */
   cb: EngineCallbacks;
+  /** The engine's one root read (`BootstrapDeps.readRoot`); the frame's store snapshot comes from it. */
+  readonly readRoot: () => RootState;
   /** GPU device handle from `initGpu`. */
   device: GPUDevice;
   /** Swap-chain context handle from `initGpu`. */

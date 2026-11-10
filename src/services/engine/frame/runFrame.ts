@@ -84,7 +84,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
 
   // The frame's ONE store snapshot. The camera step runs before `deriveFrameContext`
   // so a camera-only-ready frame still makes progress before the missing-GPU return.
-  const stored = deps.cb.store.getState();
+  const stored = deps.readRoot();
   const canvasPx: Vec2 = [deps.canvas.clientWidth || 1, deps.canvas.clientHeight || 1];
   const pending = selectPendingInput(stored);
   const steps = pendingToInputSteps(pending, canvasPx);

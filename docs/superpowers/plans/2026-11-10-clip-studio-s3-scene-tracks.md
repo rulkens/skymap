@@ -71,9 +71,9 @@ Convention test `engineRootRead.test.ts`: scan `src/services/engine/**` and `src
 playing clip's scene reaches it". This test earns its place: a bypass silently ignores the S3 overlay and nothing
 else fails.
 
-- [ ] Add `readRoot`, route the reads above, add the test.
-- [ ] `npm run typecheck:fast`; `npx vitest run tests/conventions/engineRootRead.test.ts tests/services/engine/frame`.
-- [ ] Commit: "Engine reads the root through one seam".
+- [x] Add `readRoot`, route the reads above, add the test.
+- [x] `npm run typecheck:fast`; `npx vitest run tests/conventions/engineRootRead.test.ts tests/services/engine/frame`.
+- [x] Commit: "Engine reads the root through one seam".
 
 ### Task 0.2: `sceneActionsOf` becomes the one scene write table
 

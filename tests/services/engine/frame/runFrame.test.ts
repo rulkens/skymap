@@ -212,6 +212,7 @@ function makeDeps(store = makeStore()): RunFrameDeps {
       clientHeight: 0,
     } as unknown as HTMLCanvasElement,
     cb: { store } as unknown as RunFrameDeps['cb'],
+    readRoot: () => store.getState(),
     device: {} as unknown as GPUDevice,
     context: {} as unknown as GPUCanvasContext,
     timingService: createDisabledGpuTimingService(),

@@ -67,6 +67,7 @@ describe('installLoadProgress → engineLoadProgressChanged', () => {
     const deps: BootstrapDeps = {
       canvas: {} as HTMLCanvasElement,
       cb: { store } as unknown as BootstrapDeps['cb'],
+      readRoot: () => store.getState(),
       composition: STUB_COMPOSITION,
       frameRef: { current: () => {} },
       handleRef: { current: null },

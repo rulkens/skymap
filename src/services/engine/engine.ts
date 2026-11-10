@@ -14,6 +14,7 @@ import type { EngineHandle } from '../../@types/engine/EngineHandle';
 import type { EngineComposition } from '../../@types/engine/EngineComposition';
 import type { Layer } from '../../@types/engine/layer/Layer';
 import type { EngineState } from '../../@types/engine/state/EngineState';
+import type { RootState } from '../../store/types';
 
 import { seedCameraRuntime } from './camera/seedCameraRuntime';
 import { NEAR_CLIP_MPC, FAR_CLIP_MPC } from './camera/framing/cameraFraming';
@@ -88,11 +89,15 @@ export function createEngine(
   // "no frame has run yet" sentinel that seeds the first interval to 0.
   const frameStats = { fps: 0, cpuMs: 0, lastStartMs: 0 };
 
+  // The engine's only read of the root (enforced by `engineRootRead.test.ts`), so a
+  // playing clip's scene overlay reaches every engine reader through one seam.
+  const readRoot = (): RootState => cb.store.getState();
+
   // Seeded with placeholders; wireInput re-seeds once the initial OrbitCamera
   // exists. The register seeds from the camera slice's initial `base` — the
   // single home for the pre-bootstrap placeholder pose, arm tag included.
   const cameraRuntime = seedCameraRuntime({
-    state: cb.store.getState(),
+    state: readRoot(),
     projection: { fovYRad: 0, aspect: 1, near: NEAR_CLIP_MPC, far: FAR_CLIP_MPC },
   });
 
@@ -123,23 +128,23 @@ export function createEngine(
   const store = cb.store;
 
   const state: EngineState = {
-    // These getters delegate straight to the store: sagas and sub-handle
+    // These getters delegate straight to the root: sagas and sub-handle
     // setters own the writes, per-frame readers reach the authoritative object
     // here, and there is no engine-side mirror to drift.
     get settings() {
-      return store.getState().settings;
+      return readRoot().settings;
     },
     get tier() {
-      return store.getState().tier;
+      return readRoot().tier;
     },
     get selection() {
-      return store.getState().selection;
+      return readRoot().selection;
     },
     get selectionRows() {
-      return store.getState().selectionRows;
+      return readRoot().selectionRows;
     },
     get ui() {
-      return store.getState().ui;
+      return readRoot().ui;
     },
     picking: {
       // Pick-throttle state only; hover/select live on the Redux `selection` slice.
@@ -296,6 +301,7 @@ export function createEngine(
   const bootstrapDeps: BootstrapDeps = {
     canvas,
     cb,
+    readRoot,
     composition,
     frameRef,
     handleRef,
@@ -445,7 +451,7 @@ export function createEngine(
       // `liveWorldPose` + `deriveBodyStates` at `outputs.simDays`. `liveSimDays`
       // alone resolves fresh — it is what the epoch-mismatch check compares against.
       cameraDebug: () => {
-        const rootState = store.getState();
+        const rootState = readRoot();
         const time = selectTimeState(rootState);
         const { register, gesture, tilt, outputs } = state.cameraRuntime;
         const bodyStates = deriveBodyStates(outputs.simDays);

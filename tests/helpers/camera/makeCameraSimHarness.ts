@@ -122,6 +122,7 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
       clientHeight: canvasSize,
     },
     cb: { store },
+    readRoot: () => store.getState(),
     device: {},
     context: {},
     timingService: {},
