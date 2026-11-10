@@ -7,7 +7,7 @@
 import { BLACK_HOLE_SOURCE_ROWS } from '../../sources/blackHoleSourceRows';
 import { SGR_A_STAR_ENTRY } from '../../sources/sgrAStar';
 import { encodeBlackHoleFocusId } from './encodeBlackHoleFocusId';
-import type { BlackHoleId } from '../../../../@types/data/blackHole/BlackHoleId';
+import type { BlackHoleId } from '../../@types/BlackHoleId';
 import type { LayerSearchEntry } from '../../../../@types/engine/layer/LayerSearchEntry';
 
 // A query matches a NAME verbatim, not a normalised form, so the American

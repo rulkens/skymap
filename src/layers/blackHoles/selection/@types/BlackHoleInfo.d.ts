@@ -1,4 +1,4 @@
-import type { BlackHoleId } from '../../../../@types/data/blackHole/BlackHoleId';
+import type { BlackHoleId } from '../../@types/BlackHoleId';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 
 /**

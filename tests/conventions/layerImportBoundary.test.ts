@@ -325,25 +325,9 @@ function layerOwnedTypes(): Map<string, string> {
   }
 }
 
-// The `src/@types/` files only one Layer reaches that cannot move: each is derived from
-// `APP_SOURCE_REGISTRY` (compositions), which a Layer may not import. Exact: a new offender
-// fails, and so does a row that stopped being one.
-const LAYER_OWNED_TYPES_ALLOWED: Readonly<Record<string, string>> = {
-  '@types/data/blackHole/BlackHoleId': 'blackHoles',
-  '@types/data/volume/CosmicWebDensityFieldId': 'cosmicWebDensity',
-};
-
 describe("a src/@types file only one Layer imports lives in that Layer's @types/", () => {
-  it('matches its ALLOWED row exactly', () => {
-    const owned = layerOwnedTypes();
-    const offenders = [
-      ...[...owned]
-        .filter(([key, layer]) => LAYER_OWNED_TYPES_ALLOWED[key] !== layer)
-        .map(([key, layer]) => `'${key}': '${layer}',`),
-      ...Object.keys(LAYER_OWNED_TYPES_ALLOWED)
-        .filter((key) => !owned.has(key))
-        .map((key) => `stale ALLOWED row '${key}': delete it`),
-    ];
+  it('has none left in src/@types', () => {
+    const offenders = [...layerOwnedTypes()].map(([key, layer]) => `'${key}': '${layer}'`);
     assertNoOffenders(
       offenders,
       'Only one Layer imports each of these: `npm run move-files -- src/<key>.d.ts ' +
