@@ -36,7 +36,7 @@ The owner's (grill Q-numbers in brackets) and those carried from the 2026-10-28 
 | R10 | **By day** the HUD offers "Skip to tonight". [Q12] |
 | R11 | **Esc** closes an open card first; the next Esc leaves sky mode. [Q13] |
 | R12 | **Below the horizon**: face where it rises and offer "Skip to when it rises"; something that never rises from here says so and offers nothing. [Q14] |
-| R13 | Ground and horizon are the real terrain and atmosphere; eye height 1.7 m; perspective lens 0.5°–120°. (Draft R1, R3, R7.) |
+| R13 | Ground and horizon are the real terrain and atmosphere; eye height 1.7 m; perspective lens 1′–120° (floor lowered from 0.5°, owner ruling 2026-11-10). (Draft R1, R3, R7.) |
 | R14 | Sky mode is a **takeover**, a fourth `TakeoverSource` kind. (Draft R5.) |
 | R15 | Leave restores **the camera only**: time, toggles and settings changed while standing stay. (Draft D2.) |
 | R16 | **Push counter** (owner, 2026-11-09): stale notches pressed in a row against a limit sum their \|ln f\| in the drain and push at 0.35; a fresh notch still pushes at once. One rule for both edges; arms stay stateless. |
@@ -230,7 +230,8 @@ phone. Mockups: grill Q8 (variant B2), shot in the real UI; rebuild them with th
   when it rises** (§7) beside it when they apply; each jumps the clock with `manualPausedAtActions` and is
   undone by the Time bar's "Now".
 - **Readout in the scale bar's slot**: field of view and the spot's coordinates (desktop `ScaleBar`, phone
-  `ScaleBracket`).
+  `ScaleBracket`). The field reads degrees down to 1°, arcminutes below ("field 5′"), as does the settings
+  lens slider, which runs on a log scale so the arcminute end gets real travel.
 - **Navigation panel**: rows keyed by mode; sky rows are Drag "look around", Wheel "field of view",
   "Wheel out at 120°" "lift off", Esc "close card, then leave".
 - **Phone**: a narrower ribbon (fits 400 px with the side gutters), the same Leave row, inside the safe-area

@@ -24,7 +24,7 @@ Grill transcript: `docs/grill-sessions/sky-mode-entry-ux-2026-11-07.md`.
   400 px shots, reduced-motion branch). Copy is literal and sentence case: "Look up from here",
   "Look up from near Copenhagen", "Leave", "Skip to tonight", "Skip to when it rises",
   "Never rises from here", "Doesn't rise in the next two days".
-- Constants: `SKY_ENTRY_MAX_ALT_M = 20_000`; place radius 25 km; lens `LENS_MIN_DEG` 0.5 to `LENS_MAX_DEG`
+- Constants: `SKY_ENTRY_MAX_ALT_M = 20_000`; place radius 25 km; lens `LENS_MIN_DEG` 1′ (1/60°) to `LENS_MAX_DEG`
   120; fresh wheel pause 250 ms; arrival looks 15° up; below-horizon look 10° up; star lens = half the
   current, min 10°, never wider; framed lens = `3 × angular diameter`; night = sun 18° below the horizon.
 - Esc and Leave restore; links, Back, the hash and the remote end sky mode without restoring (D13).
@@ -278,7 +278,7 @@ skyLookFor(row: PlacedRow, spot: SkySpot, simDays: number, currentLensRad: numbe
 Standing (sky view non-null): `look` → a short sky-frame tween (or camera-level clip, never `startClip`) of
 yaw, pitch, lens; `belowHorizon` → face the rise azimuth at 10°, keep the lens, expose `riseAt`/`neverRises`
 to the HUD (store field on the sky takeover or a small slice; builder's choice, one writer). Lens: sized rows
-`clamp(3 × 2·atan(r/d), 0.5°, current)`; star rows (`starCatalog`) half the current, min 10°, never wider.
+`clamp(3 × 2·atan(r/d), 1′, current)`; star rows (`starCatalog`) half the current, min 10°, never wider.
 **The body you stand on, or the Sun-system body hosting the spot, falls back to `requestFocus` (fly).**
 
 - [x] Tests: `a pick while standing keeps focus and the sky frame`; `M31 frames at about 3 × its diameter`;
@@ -349,5 +349,5 @@ rows; `SkyEntryButton`, `SkyHud`.
 - `#pose=k,earth,0.21859354349348772,0.9716130157244841,3.141592653589793,0.6&t=2026-11-07T22:00:00Z`
   shows the HUD; Leave lifts off.
 
-**Out of scope:** sky grids, the `sky=` URL row, the lens on the pose codec and recorder, perf at a 0.5°
+**Out of scope:** sky grids, the `sky=` URL row, the lens on the pose codec and recorder, perf at a 1′
 lens, a gazetteer, the body-arm declined-by-reference fix, the pole camera basis.
