@@ -841,6 +841,29 @@ Run by the controller, not committed; the result goes to the ledger and the user
 
 **Branch:** a fresh branch off main after PR A merges.
 
+## Prep 4a: a stable Gaussian cut
+
+### Task B0: `gaussianRayCoeffs` computes its cut value without cancellation
+
+`review: yes` (shader; owner ruling 2026-11-10: its own commit at the start of PR B).
+
+**Files:** `src/services/gpu/shaders/lib/gaussianIntegral.wesl` (`gaussianRayCoeffs`, `:61`), its TS
+twin if one exists (grep `gaussianRayCoeffs`), and the test that pins it.
+
+- [ ] The finding (PR A's A11 bisect): `q = max(c − b²/a, 0)` cancels in f32. For a compact HII shell
+      about 31 kpc from the eye, c ≈ 4·10⁸ while q ≈ 10, so a 1-ULP change to the ray swings q across
+      `SPLAT_CUT²` (`hiiSplat/shadeCommon.wesl:76`). Whether far, compact shells draw is therefore
+      numerically random, and it gets worse at app distances.
+- [ ] Fix: q is invariant to sliding `o` along the ray, so compute q from `o' = o − d·dot(o, d)` (with
+      unit `d`; if `d` isn't unit, use `dot(o, d)/dot(d, d)`). a and b keep using the original `o`.
+- [ ] Test: a CPU twin or f64 oracle shows the new q matches f64 within a small relative error at
+      c ≈ 4·10⁸, where the old form is off by ≥ 1 unit. If no TS twin exists, write the test against
+      a TS transcription of both forms and say so in its header (the WGSL itself is checked by the
+      tool shots).
+- [ ] Re-shoot the A11 outside pose: the sub-pixel shell at (423, 393) should be stable across runs
+      on both sides of the A5 change. Report any HII tier whose look changes.
+- [ ] Commit.
+
 ## Prep 4: nested settings
 
 ### Task B1: `cloud` / `field` / `renderer` settings, with setters
