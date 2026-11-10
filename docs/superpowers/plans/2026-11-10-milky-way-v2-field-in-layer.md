@@ -966,7 +966,7 @@ export type MilkyWayParts = { readonly cloud: boolean; readonly cloudDust: boole
 export function selectMilkyWayParts(settings: MilkyWaySettings): MilkyWayParts; // the only reader of `renderer`
 ```
 
-- [ ] **Test:** `it.each` over the three rows:
+- [x] **Test:** `it.each` over the three rows:
 
 | `renderer` | `cloud` | `cloudDust` | `field` |
 | --- | --- | --- | --- |
@@ -975,7 +975,7 @@ export function selectMilkyWayParts(settings: MilkyWaySettings): MilkyWayParts; 
 | `'both'` | true | false | true |
 
   Return one frozen constant per row, so callers get stable identity.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task B3: `deriveFieldView`
 
