@@ -1,6 +1,6 @@
 /**
  * compileClip — flatten a `ClipData` effect tree into the per-channel tracks
- * and cue list that the evaluator (Task 6) and cue-firer (Task 7) consume.
+ * and scene tracks that the camera evaluator and the clip player consume.
  *
  * ### Why compile, not interpret?
  *
@@ -505,7 +505,7 @@ function reportedByPath<T>(acc: Accum, run: () => T): T {
 
 /**
  * compileClip — pure function; walks `data.timeline` once and produces the
- * flat `CompiledClip` the evaluator and cue-firer consume.
+ * flat `CompiledClip` the camera evaluator and the clip player consume.
  *
  * The only side effects are the allocations needed to build the output arrays
  * and the `Record<Channel, BaseSegment[]>` map — no engine state is read or

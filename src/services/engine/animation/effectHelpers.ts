@@ -400,9 +400,9 @@ export function hide(
  * fade — move the transient clip opacity of `args` to `to` over `over`
  * seconds.
  *
- * Does NOT touch intent (the layer stays loaded/enabled). Only drives
- * `clipOpacity` — the clip-owned channel that multiplies into final alpha.
- * Resets to 1 at clip end. Use for cross-dissolve and "load behind mask then
+ * Does NOT touch the switch (the layer stays loaded/enabled). Only drives the
+ * clip factor (`clipOpacityOf`), which multiplies into final alpha and is back
+ * to 1 at clip end. Use for cross-dissolve and "load behind mask then
  * reveal" idioms.
  */
 export function fade(

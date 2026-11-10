@@ -9,10 +9,9 @@
  * because there is nothing here but the id/label envelope — the choreography
  * lives in `tours/grandTour/`.
  *
- * Caveat for standalone playback: a registry clip runs without
- * `withSceneSnapshotSaga`, so a beat's scene cues (the opening hide sweep,
- * focusedOnly flips) persist after the clip ends — wind them back via the
- * settings panel or a reload.
+ * Played standalone a beat reverts its scene at its end (the opening hide sweep,
+ * focusedOnly flips, its focus and pole), where the tour keeps it for the next
+ * beat; a beat that relies on an earlier beat's scene looks bare on its own.
  */
 
 import type { Clip } from '../../../@types/animation/Clip';

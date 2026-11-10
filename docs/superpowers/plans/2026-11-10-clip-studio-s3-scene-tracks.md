@@ -395,8 +395,14 @@ ADR content: a clip's scene is an overlay folded over intent at t and never disp
 subsystems that animate user changes; `revert` by default, `keep` for tours with the commit in the end tick; why
 not affine overlays or a concatenated tour (spec §8). Comment budget per `comments.md`.
 
-- [ ] Write the ADR and update the files above. No test.
-- [ ] Commit: "docs: a clip's scene is an overlay evaluated at t".
+As built: ADR 0017 (`docs/adrs/0017-clip-scene-is-an-overlay.md`), written to S4 spec §9.4 (a paused frame
+inside a roll shows the destination; the ADR promises no mid-roll pole). Beyond the list above, the stale
+mechanism comments in `EngineSubsystemHandles.d.ts`, `effectHelpers.ts` (`fade`), `compileClip.ts`,
+`runFrame.ts`, `docs/tour/implementation-notes.md` and the emphasize-cue backlog detail now name the overlay
+and factor tracks. "Cue" stays as authoring vocabulary in tour files (a step that applies at its beat).
+
+- [x] Write the ADR and update the files above. No test.
+- [x] Commit: "docs: a clip's scene is an overlay evaluated at t".
 
 ---
 

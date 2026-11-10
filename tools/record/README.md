@@ -180,14 +180,14 @@ A clip take is always played whole — `--beats` windows a tour and is rejected
 alongside `--clip`.
 
 **Known artifact, not a recorder bug:** the last captured frame of a clip
-take can show `fade()` cues already snapped back to opacity 1. On natural
+take can show the clip's scene already reverting: `fade()` factors snapped back
+to 1 and the first frame of the fade back to the viewer's own layers. On natural
 completion, `clipPlayer.tick()`'s deferred-completion branch dispatches
-`clipEnded()` and resets the clip's opacity channel to factor 1 in the same
-synchronous call (`resetState()` in
-`src/services/engine/subsystems/clipPlayer.ts`); the recorder polls the done
-flag before granting the next frame, so the frame captured on the completing
-grant already shows the reset. This is pre-existing engine behaviour, not
-something the harness can settle around.
+`clipEnded()`, drops the clip's scene and starts the revert fades in the same
+synchronous call (`finish()` in `src/services/engine/subsystems/clipPlayer.ts`);
+the recorder polls the done flag before granting the next frame, so the frame
+captured on the completing grant already shows it. This is engine behaviour,
+not something the harness can settle around.
 
 ### Looping clips (`ClipData.loop: true`, e.g. `earthUniverseLoop`)
 

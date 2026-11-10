@@ -3,8 +3,8 @@
  * clip-start instant, wait for its foci, play it through the `playClip` seam,
  * and end on `exitTakeover` as tour and exhibit bodies do. Cancellation reaches
  * the seam's `[CANCEL]` hook, which stops the player.
- * A clip leaves the scene alone; what it holds is the sim clock, frozen so
- * nothing drifts under a scripted move (`withFrozenClockSaga`).
+ * The clip's scene reverts at its end (`'revert'`); what the body holds is the
+ * sim clock, frozen so nothing drifts under a scripted move (`withFrozenClockSaga`).
  */
 import { call, race, take, getContext, select } from 'typed-redux-saga';
 

@@ -89,13 +89,13 @@ export type EngineSubsystemHandles = {
    */
   structureFocus: StructureFocusSubsystem;
   /**
-   * Clip-player Resource — owns the active clip's scene cues, the
-   * `clipOpacity` channel (per-layer transient opacity), and clip-completion
-   * lifecycle (`endClip` dispatch with the two-frame post-produce defer).
+   * Clip-player Resource — evaluates the active clip's scene at the clip clock
+   * (the `view` overlay the engine reads, the clip factor) and runs the end of
+   * the play (`clipEnded` with the two-frame post-produce defer, revert or keep).
    *
-   * Constructed eagerly (no GPU dep), non-null from t=0. `tick(nowMs)` is
-   * the first step of `runFrame` (Task 12), before the camera produce step,
-   * so scene cues fire before the pose is evaluated on each frame.
+   * Constructed eagerly (no GPU dep), non-null from t=0. `tick` is the first
+   * step of `runFrame`, before the camera produce step, so a step's frame roll
+   * is in the store before the pose is evaluated each frame.
    */
   clipPlayer: ClipPlayer;
   /**

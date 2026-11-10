@@ -30,12 +30,11 @@ channel. They compose by lerp-toward-1, never multiply.**
   `focus()`, resolved to the structure id string. New `SceneEffect` arm
   (`{ kind: 'emphasize', structureId, to: 0 | 1, over }`), constructed only in
   `effectHelpers.ts`. Default ramp 0.4 s.
-- Channel: per-structure-id fade controllers, clip-scoped, `reset()` at clip
-  end/stop — exactly `clipOpacityChannel`'s shape keyed by structure id with
-  rest value 0. Extract ONE generic keyed-fade channel and instantiate both
-  (second identical channel = the consolidation trigger). Closed-form ramps
-  from the frame clock (`ctx.nowMs` / last-tick default) — deterministic under
-  the stepped recorder clock.
+- Channel: since S3 (ADR 0017) a clip's `fade` is compiled into per-address
+  `FactorSegment`s and read with `clipFactorAt(segments, t)`; an emphasis lift
+  is the same shape keyed by structure id with rest value 0, so compile it the
+  same way (generalise the factor tracks' key, not a second channel). Pure in
+  the clip clock, so deterministic under the stepped recorder clock.
 - Producers (`produceStructureMarkers`, `produceStructureLabels`) compose the
   lift over the DIMMING factors only, never the visibility gate:
 
@@ -90,10 +89,10 @@ timeline, not the channel.
 
 ## Pointers
 
-- `src/services/animation/clipOpacityChannel.ts` — the channel shape to
-  generalize (keyed controllers, `lastTickNowMs` default, reset-on-clip-end).
-- `src/services/engine/subsystems/clipPlayer.ts` — `fireCue` 'fade' branch is
-  the wiring precedent; reset sites in `resetState`/`stop`/`destroy`.
+- `src/services/engine/animation/compileClip.ts` (`factorsOf`) and
+  `clipFactorAt.ts` — the factor tracks to generalise.
+- `src/services/engine/subsystems/clipPlayer.ts` — `clipOpacityOf` is the read
+  precedent; the factor is 1 once the clip ends.
 - `src/@types/animation/SceneEffect.ts` — the cue union; `effectHelpers.ts`
   `focus()` for the `FocusId` addressing + resolution pattern.
 - `src/layers/structure/present/produceStructureMarkers.ts` (~line 140)

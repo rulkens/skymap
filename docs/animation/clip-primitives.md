@@ -20,9 +20,10 @@
 A **clip** is a plain serializable object (`ClipData`) — a timeline of `Effect`s.
 The camera **pose** at any instant is a **pure** function `evaluateClip(data, t)`:
 no per-frame accumulator, no hidden state, same `(data, t)` in → same pose out. The
-clip's **scene** changes (show a layer, fade it, change a setting, set focus) are
-_cues_ that fire edge-triggered from a frame-ticked `clipPlayer` as the clock
-crosses them. You **author** clips with the one-line helper constructors below; you
+clip's **scene** (show a layer, fade it, change a setting, set focus, roll the pole)
+is pure in `t` too: `compileClip` turns it into _steps_, and the engine reads intent
+with the steps applied at `t` folded in, an overlay the clip never dispatches. At the
+clip's end the scene reverts, unless the caller asked to keep it (a tour does). You **author** clips with the one-line helper constructors below; you
 never write the raw `{ kind: … }` objects by hand.
 
 ```ts
@@ -383,15 +384,22 @@ never sailing past.
 
 ### Scene effects (visibility, settings, focus)
 
-Scene effects are timeline **cues** — they fire as the clock crosses them, not every
-frame. They change what's _drawn_, not where the camera _is_.
+Scene effects are timeline **steps**: each applies from its `atSec` on, and the clip's
+scene at `t` is intent with every step at or before `t` folded in. They change what's
+_drawn_, not where the camera _is_, and they never write intent while the clip plays:
+the panel, the remote and the URL keep the user's own settings. At the end the play's
+`atEnd` decides: `'revert'` (every standalone play) fades the scene back to intent at
+the default durations; `'keep'` (the tour's beat clips) commits it to intent, so the
+next beat starts from it. The animation between targets (a layer's fade, a pole roll)
+runs in the subsystems that animate a user's own change, started as the clock crosses
+the step. See [ADR 0017](../adrs/0017-clip-scene-is-an-overlay.md).
 
 | Helper    | Signature                                                           | What it does                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | --------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `show`    | `show(args: VisibilityArg[], over?) → SceneEffect`                  | Turn things **on** (visibility **intent**) and fade them in. `over` omitted → default fade; `0` → instant; `N` → custom seconds. Dispatches `setVisibility`, the write the panel rows make, carrying `over`.                                                                                                                                                                                                                                           |
-| `hide`    | `hide(args, over?) → SceneEffect`                                   | Turn layers **off** (intent) and fade them out. Same duration rules.                                                                                                                                                                                                                                                                                                                                                                                   |
-| `fade`    | `fade(args, to, over) → SceneEffect`                                | A **transient** opacity move to `to` (0–1) over `over` seconds that **does not touch intent** — the layer stays loaded/enabled, only its drawn opacity moves. The cross-dissolve / mask / fade-to-black idiom. Writes the clip-owned `clipOpacity` channel (see Opacity below). Resets to 1 at clip end.                                                                                                                                               |
-| `scene`   | `scene(action: SettingsAction) → SceneEffect`                       | Dispatch a non-visibility settings change. `SettingsAction` is a **narrow** union — `setFlowEnabled`, `setFlow`, `setGalaxyCatalogVisible`, `setLabelsFocusedOnly` — widened as tour beats need more knobs. It's the same action a UI control dispatches; every reconcile saga fires for free. `setLabelsFocusedOnly(true)` is the tour's label declutter: only the focused subject's label draws (multiplies on top of the per-layer label toggles).  |
+| `show`    | `show(args: VisibilityArg[], over?) → SceneEffect`                  | Turn things **on** (the switch the panel rows write) and fade them in. `over` omitted → default fade; `0` → instant; `N` → custom seconds.                                                                                                                                                                                                                                                                                                             |
+| `hide`    | `hide(args, over?) → SceneEffect`                                   | Turn layers **off** and fade them out. Same duration rules.                                                                                                                                                                                                                                                                                                                                                                                            |
+| `fade`    | `fade(args, to, over) → SceneEffect`                                | A **transient** opacity move to `to` (0–1) over `over` seconds that **does not touch the switch** — the layer stays loaded/enabled, only its drawn opacity moves. The cross-dissolve / mask / fade-to-black idiom. Drives the clip factor (see Opacity below), back to 1 at clip end.                                                                                                                                                                   |
+| `scene`   | `scene(action: SettingsAction) → SceneEffect`                       | A non-visibility settings change, folded into the clip's scene. `SettingsAction` is a **narrow** union — `setFlowEnabled`, `setFlow`, `setGalaxyCatalogVisible`, `setLabelsFocusedOnly` — widened as tour beats need more knobs; each is the action a UI control dispatches, and the engine reads its knob per frame. `setLabelsFocusedOnly(true)` is the tour's label declutter: only the focused subject's label draws.                              |
 | `focus`   | `focus(id: FocusId \| null) → FocusBoundEffect`                     | Build an **unresolved** `focusId` cue addressed by a durable `FocusId` (`null` clears focus). `resolveClipFoci` rewrites it to the concrete `{ kind: 'focus', ref }` `SceneEffect` at play time. On a **structure** ref this engages focus mode — non-member galaxies dim toward 0.08 (a per-galaxy geometric isolation) and drop out of picking, while surrounding layers (filaments, volumes, structure rings, labels) recede. `null` releases both. |
 | `frameTo` | `frameTo(frame: OrientationFrameId, { over, ease? }) → SceneEffect` | Roll the horizon to another orientation frame over `over` seconds (`ease` defaults `'easeInOutCubic'`). The eye does **not** move and its aim does not change — only which way is up. Authored **in the clip**, never on the beat, so an act owns its pole; a clip pins the frame it started under, so a switch mid-clip cannot reinterpret its authored yaws. A tour restores the viewer's pre-tour frame when it ends.                               |
 
@@ -412,8 +420,8 @@ otherwise every item (`'survey'`, `'structureRing'`).
   Template-literal typed, so a bad item is a compile error.
 
 Every arg takes one path: `setVisibilityActionsFor` builds its `setVisibility`
-writes, each carrying the cue's `over`, and the reactive fade sync that write wakes
-ramps over it.
+writes (through `sceneActionsOf`), the clip's scene folds them, and the player hands
+the fade registry the step's `over` as the clock crosses it.
 
 ### Focus IDs and deferred resolution
 
@@ -463,17 +471,18 @@ handed value = fade(FadeRegistry)  ×  recession(entry, focus blend)  ×  clip(c
 ```
 
 - **`fade`** — the visibility fade in the shared `FadeRegistry`, heading for each
-  entry's target (switch, gating slot, `of`). `show`/`hide` move this (and the
-  underlying enabled-intent).
+  entry's target (switch, gating slot, `of`) in the scene the engine reads.
+  `show`/`hide` move this.
 - **`recession`** — the focus recession an entry declares (`recession: 'strong' |
   'mild'`): under focus the receding entries (filaments, volumes, structure rings,
   labels) dim toward their strength. Galaxy points do **not** recede here. `focus(id)`
   moves this.
-- **`clip`** — the clip-owned transient channel (`ClipOpacityChannel`, one private
-  `FadeController` per address, lazily created). `fade()` moves _only_ this. It
-  defaults to 1 for every untouched address and **resets to 1 when the clip ends**. A
-  label entry with `of` also takes its thing's clip, so `fade(['constellations'], 0, 2)`
-  dims the names with the lines.
+- **`clip`** — the clip factor, `clipFactorAt(segments, t)` over the address's
+  compiled `fade()` segments, on the fade controller's smoothstep curve (a retarget
+  mid-ramp starts from the value reached). `fade()` moves _only_ this. It is 1 for
+  every untouched address and **back to 1 when the clip ends**. A label entry with
+  `of` also takes its thing's clip, so `fade(['constellations'], 0, 2)` dims the
+  names with the lines.
 
 > **Galaxy points carry one extra factor, off this product.** Under structure focus
 > the points shader multiplies each galaxy's alpha by a per-vertex **isolation**
@@ -484,12 +493,12 @@ handed value = fade(FadeRegistry)  ×  recession(entry, focus blend)  ×  clip(c
 > cluster"; `recession` handles the chrome, the isolation factor handles the
 > galaxy field.
 
-This is why **`fade()` can dim an intent-bearing layer without desyncing it from
-intent**: `fade(['survey'], 0, 3)` drives `clip(survey) → 0` while the `survey`
-fade stays 1 (galaxies stay loaded). And it's why the "load but
-don't show" trick works: `fade(['flow'], 0, 0)` masks the layer to 0, then
-`scene(setFlowEnabled(true))` raises intent behind the mask, then
-`fade(['flow'], 1, 3)` reveals it — no flash.
+This is why **`fade()` can dim a switched-on layer without moving its switch**:
+`fade(['survey'], 0, 3)` drives `clip(survey) → 0` while the `survey` fade stays 1
+(galaxies stay loaded). And it's why the "load but don't show" trick works:
+`fade(['flow'], 0, 0)` masks the layer to 0, then `scene(setFlowEnabled(true))`
+switches it on in the clip's scene behind the mask, then `fade(['flow'], 1, 3)`
+reveals it — no flash.
 
 ---
 
@@ -524,12 +533,12 @@ concrete layer keys.
 const cosmicFlows: ClipData = {
   start: 'live',
   timeline: [
-    hide(['volumeField', 'filaments'], 0), // instant intent off
+    hide(['volumeField', 'filaments'], 0), // instant off
     fade(['flow'], 0, 0), // mask flow to 0…
     scene(setFlowEnabled(true)), // …load it behind the mask
     seq([
       hold(2),
-      all([fade(['flow'], 1, 3), fade(['survey'], 0, 3)]), // crossfade (intent untouched)
+      all([fade(['flow'], 1, 3), fade(['survey'], 0, 3)]), // crossfade (switches untouched)
     ]),
     fade(['flow', 'milkyWayDisk', 'structureRing', 'label:structure'], 0, 3), // per-layer fade to black
   ],
@@ -555,14 +564,16 @@ const groupTour: ClipData = {
 > animation needs a runtime decision ("wait until this galaxy's image loads", "fly to
 > whichever structure the user picked"), it is a **saga** that _composes_ clips.
 
-- **Layer 1 — clips (this document).** Pure camera + scripted scene cues. Played by
-  the `playClip` seam. Used directly by recording spikes and the clip-path inspector.
+- **Layer 1 — clips (this document).** Pure camera + a scene evaluated at `t`.
+  Played by the `playClip` seam, whose caller says whether the scene reverts or is
+  kept at the end. Used directly by recording spikes and the clip-path inspector.
 - **Layer 2 — the tour (`src/state/tour/`).** The guided tour: `Tour` + `BeatData`
   (`caption`, `dwellSec`, `clip`), `guidedTourSaga` / `visitBeatSaga`,
   capture/restore around clips, click-to-advance. Beat clips are built by helpers
   like `flyToClip(id)` (camera only) and `flyAndFocusOnClip(id)` (prepends a
-  `focus(id)` cue). A beat _plays clips_ and `put`s plain Redux actions; it does not
-  introduce new clip primitives.
+  `focus(id)` step). A beat _plays clips_ with `'keep'`, so each beat starts from the
+  scene the last one left, and `put`s plain Redux actions; it does not introduce new
+  clip primitives.
 
 If you're reaching for a primitive that needs to _react_ — to input, to load state,
 to a user choice — it belongs in a saga, not a clip.

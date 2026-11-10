@@ -1,59 +1,13 @@
 /**
- * SceneEffect — the tagged-union of scene mutations a clip can cue.
- *
- * Scene effects are timeline CUES, not frame-driven: they fire once as the
- * playback clock crosses them, then are done. They change what is DRAWN (which
- * layers are visible, which setting is active, what is focused), not where the
- * CAMERA is. That separation is intentional — camera motion and scene state are
- * independent axes of a clip, and keeping them separate lets the evaluator handle
- * each without knowledge of the other.
- *
- * Every arm is a plain serializable object. `effectHelpers.ts` (Task 3) is the
- * ONLY constructor — authors never write raw `{ kind: … }` objects. Plan C
- * imports this type and does NOT redeclare it; this file is the ONE canonical
- * home.
- *
- * ### The six arms
- *
- *   - `show` / `hide` — visibility INTENT. Dispatches the same settings actions
- *     the UI does (`setVisibility`), which fades in/out over `over` seconds.
- *     `over` omitted → default fade duration; `0` → instant.
- *
- *   - `fade` — transient opacity move. Does NOT touch intent; only drives
- *     `clipOpacity` (the clip-owned channel that multiplies into final alpha).
- *     The layer stays loaded/enabled behind the fade. Resets to 1 at clip end.
- *     The cross-dissolve and "load behind mask then reveal" idioms both use this.
- *
- *   - `scene` — a non-visibility settings change. `action` is a `SettingsAction`
- *     (a narrow union of settings-slice creators the clip model has approved);
- *     every reconcile saga fires for free. Widens in Plan C as the tour needs more
- *     knobs.
- *
- *   - `focus` — set the selection focus to `ref` (or `null` to clear). Drives the
- *     structure-isolation dim (`emphasisOf` recession). A ref carries
- *     a galaxyCatalog/structure/milkyWay discriminant and the durable id.
- *
- *   - `frameTo` — cue-style orientation-frame reorientation. Fires
- *     `setOrientation(frame)` (persists the target pole past the clip) then
- *     `startFrameTween` (rolls the up-basis toward it over `over` seconds). Like
- *     the other cues it awaits ZERO duration — a beat that wants to dwell through
- *     the roll sequences a `wait(over)` after it. The alternative — an awaited
- *     camera-track writer — was rejected: the roll composes over the LIVE basis
- *     `B(t)` captured at fire time (symmetric with the interactive
- *     `watchOrientationChangeSaga`'s roll), so a `frameTo` firing mid-roll
- *     continues from wherever the pole is rather than snapping back to a
- *     steady pole. `commitCameraPose` is not dispatched here — see
- *     `stepCameraRuntime`, the loop stage that re-encodes `base` itself.
- *
- * ### `args` are visibility addresses
- *
- * `show`/`hide`/`fade` name the addresses `APP_VISIBILITY_REGISTRY` derives: show keys
- * (`'flow'`, `'survey'`), label addresses (`'label:milkyWay'`) and, for
- * `show`/`hide`, one item of a per-item entry (`'survey:milliquas'`,
- * `'label:structure:void'`). `'labels'` is expanded at construction, so a stored
- * effect holds atomic addresses only. Every arg takes one path at fire time
- * (`setVisibilityActionsFor`, the write carrying `over`). `fade` has no scoped
- * form: the clip channel is keyed by address.
+ * SceneEffect — the scene changes a clip can make: what is drawn, never where the camera is.
+ * `compileClip` turns them into steps applied from their `atSec` on (`CompiledClip.scene`);
+ * the engine reads intent with the applied steps folded in, and the clip never dispatches
+ * them (ADR 0017). `show`/`hide` move a switch, `fade` only the clip factor (back to 1 at
+ * the end), `scene` one approved settings action, `focus` the selection focus (`null`
+ * clears), `frameTo` the orientation frame, rolled from the live up-basis over `over` s.
+ * Each awaits zero time. `effectHelpers.ts` is the only constructor. `args` are the visibility addresses
+ * `APP_VISIBILITY_REGISTRY` derives (`'labels'` expanded at construction); `show`/`hide`
+ * also take one item of a per-item entry (`'survey:milliquas'`); `fade` has no scoped form.
  */
 
 import type { VisibilityAddress } from './VisibilityAddress';
