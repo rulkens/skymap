@@ -4,7 +4,7 @@
  * a heliosphere or milestone stop); `encounter` is that planet's flyby, null at launch.
  */
 
-import type { MissionEvent } from '../../../../@types/missions/MissionEvent';
+import type { MissionEvent } from '../../events/@types/MissionEvent';
 
 export type MissionStop = {
   /** Unix ms of the stop's first event: the leg boundary on the axis and on the clock. */

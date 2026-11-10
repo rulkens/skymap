@@ -1,6 +1,6 @@
 import type { AlbedoRecipe } from '../../textures/@types/AlbedoRecipe';
 import type { HeightSource } from '../../textures/@types/HeightSource';
-import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
+import type { LonLatBounds } from '../../../src/layers/body/surfaceTiles/format/@types/LonLatBounds';
 import type { SunField } from '../../textures/@types/SunField';
 import type { SurfaceImagerySource } from '../../textures/@types/SurfaceImagerySource';
 

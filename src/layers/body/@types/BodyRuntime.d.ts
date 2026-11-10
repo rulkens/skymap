@@ -10,7 +10,7 @@ import type { AtmosphereShellRenderer } from '../atmosphere/@types/AtmosphereShe
 import type { BodyGlintRenderer } from '../../../@types/rendering/BodyGlintRenderer';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { BodyTextureReq } from '../textures/@types/BodyTextureReq';
-import type { BodyTextureSlotKey } from '../../../@types/data/BodyTextureSlotKey';
+import type { BodyTextureSlotKey } from './BodyTextureSlotKey';
 import type { SurfaceTileStream } from '../surfaceTiles/stream/@types/SurfaceTileStream';
 import type { SurfaceTilePlan } from '../surfaceTiles/plan/@types/SurfaceTilePlan';
 import type { BodyFacts } from './BodyFacts';

@@ -1,5 +1,5 @@
-import type { SatelliteClass } from '../satellites/SatelliteClass';
-import type { Vec3 } from '../math/Vec3';
+import type { SatelliteClass } from '../../../../@types/satellites/SatelliteClass';
+import type { Vec3 } from '../../../../@types/math/Vec3';
 
 /**
  * SatelliteInfo — the display-ready projection of a selected or hovered satellite: what its card

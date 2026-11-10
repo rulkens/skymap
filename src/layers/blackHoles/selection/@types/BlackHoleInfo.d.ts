@@ -1,5 +1,5 @@
-import type { BlackHoleId } from '../data/blackHole/BlackHoleId';
-import type { Vec3 } from '../math/Vec3';
+import type { BlackHoleId } from '../../@types/BlackHoleId';
+import type { Vec3 } from '../../../../@types/math/Vec3';
 
 /**
  * BlackHoleInfo — the display-ready projection of a selected/hovered black

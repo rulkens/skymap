@@ -1,6 +1,6 @@
 import { selectEngineFacts } from '../../../../state/engine/selectors';
 import type { RootState } from '../../../../store/types';
-import type { FamousStarMetaEntry } from '../../../../@types/loading/FamousStarMetaEntry';
+import type { FamousStarMetaEntry } from '../@types/FamousStarMetaEntry';
 
 /** A stable empty list for the pre-seed window, so a subscriber sees no spurious change. */
 const NO_FAMOUS_STARS_META: readonly FamousStarMetaEntry[] = [];

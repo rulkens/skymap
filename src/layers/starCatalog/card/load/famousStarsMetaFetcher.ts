@@ -16,7 +16,7 @@
  * (5xx, retry).
  */
 import type { Fetcher } from '../../../../@types/loading/Fetcher';
-import type { FamousStarMetaEntry } from '../../../../@types/loading/FamousStarMetaEntry';
+import type { FamousStarMetaEntry } from '../@types/FamousStarMetaEntry';
 import type { FamousStarsPayload } from '../@types/FamousStarsPayload';
 import { HttpError, dataUrl } from '../../../../services/loading/fetchWithProgress';
 

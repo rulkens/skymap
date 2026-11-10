@@ -11,7 +11,7 @@
 import { BODY_TEXTURE_REGISTRY } from './bodyTextureRegistry';
 import { SCENE_RINGS } from '../../../../data/bodies/sceneRings';
 import type { BodyTextureId } from '../../../../@types/data/BodyTextureId';
-import type { BodyTextureKey } from '../../../../@types/data/BodyTextureKey';
+import type { BodyTextureKey } from '../@types/BodyTextureKey';
 import type { TextureKind } from '../../../../@types/data/TextureKind';
 
 export const ALL_BODY_TEXTURE_KEYS: readonly BodyTextureKey[] = [

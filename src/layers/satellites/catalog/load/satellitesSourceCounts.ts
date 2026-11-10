@@ -5,7 +5,7 @@
  */
 
 import type { SourceCountReport } from '../../../../@types/engine/layer/SourceCountReport';
-import type { SatelliteCatalog } from '../../../../@types/satellites/SatelliteCatalog';
+import type { SatelliteCatalog } from '../@types/SatelliteCatalog';
 import type { SatellitesRuntime } from '../../@types/SatellitesRuntime';
 
 import { callbackIterable } from '../../../../utils/async/callbackIterable';

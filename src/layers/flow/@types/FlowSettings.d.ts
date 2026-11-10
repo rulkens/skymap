@@ -17,7 +17,7 @@
  * The tunable defaults are the spike's hand-dialled advect look — see
  * `DEFAULT_FLOW`, which owns those values outright.
  */
-import type { FlowFieldDefaults } from '../data/flow/FlowFieldDefaults';
+import type { FlowFieldDefaults } from './FlowFieldDefaults';
 
 /**
  * The live flow slice = the master `enabled` gate plus the eight look/motion

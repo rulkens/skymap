@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import type { ShellMesh } from '../../../../../src/@types/data/shellMesh/ShellMesh';
-import type { ShellMeshDtype } from '../../../../../src/@types/data/shellMesh/ShellMeshDtype';
+import type { ShellMesh } from '../../../../../src/layers/localBubble/@types/ShellMesh';
+import type { ShellMeshDtype } from '../../../../../src/layers/localBubble/@types/ShellMeshDtype';
 import {
   decodeShellMesh,
   encodeShellMesh,

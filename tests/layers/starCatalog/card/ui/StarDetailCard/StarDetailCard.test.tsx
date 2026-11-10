@@ -14,7 +14,7 @@ import { SGR_A_STAR_ENTRY } from '../../../../../../src/layers/blackHoles/source
 import { SCALE_UNITS } from '../../../../../../src/data/scaleUnits';
 import { Source } from '../../../../../../src/data/source';
 import { starRowDriver } from '../../../../../fixtures/starRowDriver';
-import type { FamousStarMetaEntry } from '../../../../../../src/@types/loading/FamousStarMetaEntry';
+import type { FamousStarMetaEntry } from '../../../../../../src/layers/starCatalog/card/@types/FamousStarMetaEntry';
 import type { StarInfo } from '../../../../../../src/layers/starCatalog/@types/StarInfo';
 
 // A Sun-like dwarf 12 pc out: absMag 4.67, BP−RP 0.82 (in range → no '~').

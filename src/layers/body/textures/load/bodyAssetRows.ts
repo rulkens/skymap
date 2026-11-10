@@ -15,7 +15,7 @@ import type { AssetWiringRow } from '../../../../@types/loading/AssetWiringRow';
 import type { BodyAssetKey } from '../../@types/BodyAssetKey';
 import type { BodyTextureId } from '../../../../@types/data/BodyTextureId';
 import type { RingTextureId } from '../../../../@types/data/RingTextureId';
-import type { BodyTextureKey } from '../../../../@types/data/BodyTextureKey';
+import type { BodyTextureKey } from '../@types/BodyTextureKey';
 import type { TextureKind } from '../../../../@types/data/TextureKind';
 import type { Tier } from '../../../../@types/data/Tier';
 import type { BodyRuntime } from '../../@types/BodyRuntime';

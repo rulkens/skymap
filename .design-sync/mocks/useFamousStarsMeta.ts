@@ -11,7 +11,7 @@
  * Fixture body-star ids MUST match an `id` here for the merge to light up.
  */
 
-import type { FamousStarMetaEntry } from '../../src/@types/loading/FamousStarMetaEntry';
+import type { FamousStarMetaEntry } from '../../src/layers/starCatalog/card/@types/FamousStarMetaEntry';
 import type { UseFamousStarsMetaReturn } from '../../src/@types/engine/UseFamousStarsMetaReturn';
 
 const MOCK_META: readonly FamousStarMetaEntry[] = [

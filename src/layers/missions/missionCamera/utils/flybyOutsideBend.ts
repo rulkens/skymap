@@ -3,7 +3,7 @@
  * of the trajectory's bend. Fixed per event, so a view built on it does not swing as the craft turns.
  */
 
-import type { MissionEvent } from '../../../../@types/missions/MissionEvent';
+import type { MissionEvent } from '../../events/@types/MissionEvent';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import { normalize3 } from '../../../../utils/math/normalize3';
 import { unixMsToJulianDays } from '../../../../utils/time/unixMsToJulianDays';

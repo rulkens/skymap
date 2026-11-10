@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import type { MissionEvent } from '../../../../../src/@types/missions/MissionEvent';
+import type { MissionEvent } from '../../../../../src/layers/missions/events/@types/MissionEvent';
 import { MISSION_EVENTS } from '../../../../../src/layers/missions/events/data/missionEvents.generated';
 import { trajectoryRegistry } from '../../../../../src/services/bodies/trajectoryRegistry';
 import { bodyRelativeState } from '../../../../../src/layers/missions/missionCamera/utils/bodyRelativeState';

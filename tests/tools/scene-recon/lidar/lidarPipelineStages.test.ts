@@ -10,7 +10,7 @@ import {
   lidarPipelineStages,
   type LidarBakeSpec,
 } from '../../../../tools/scene-recon/lidar/lidarPipelineStages';
-import type { LonLatBounds } from '../../../../src/@types/scene/LonLatBounds';
+import type { LonLatBounds } from '../../../../src/layers/body/surfaceTiles/format/@types/LonLatBounds';
 import type { GroupAnchor } from '../../../../tools/scene-workbench/@types/GroupAnchor';
 
 const BOUNDS: LonLatBounds = { west: 12.4, east: 12.6, south: 55.6, north: 55.7 };

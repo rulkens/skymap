@@ -1,4 +1,4 @@
-import type { Vec2 } from '../math/Vec2';
+import type { Vec2 } from '../../../../@types/math/Vec2';
 
 /**
  * ChromaCalibration — the fitted linear map inverting a published enhanced-colour
