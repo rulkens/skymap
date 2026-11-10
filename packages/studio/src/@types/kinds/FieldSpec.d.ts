@@ -16,4 +16,10 @@ export type FieldSpec<T> = {
   /** Absent means the engine decides (no fixed default): shown dim as `auto`; ↺ resets to absent. */
   readonly optional?: true;
   readonly readOnly?: true;
+  /** Shown only while true: a knob that matters in some states only. */
+  readonly when?: (subject: T) => boolean;
+  /** Slider bounds and step in shown units, in place of the control's. */
+  readonly range?: { readonly min: number; readonly max: number; readonly step: number };
+  /** Opens a group of rows: space above it. */
+  readonly group?: true;
 };

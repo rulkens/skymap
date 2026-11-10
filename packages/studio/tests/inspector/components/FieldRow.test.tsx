@@ -136,22 +136,21 @@ describe('FieldRow', () => {
     expect(selectDraft(store.getState())!.timeline[0]).toMatchObject({ over: 6 });
   });
 
-  it.each([
-    ['osc', 'period', 'Period', oscillate('distance', { amp: 5, period: 4 })],
-    ['flyPath', 'align', 'Align-in', flyPath([atPoint([5, 0, 0], 8)], { over: 10, align: 2 })],
-  ] as const)(
-    'a %s %s of 0 is held above 0: the engine divides by it',
-    async (kind, key, label, effect) => {
-      const store = setup({ timeline: [effect] }, kind, EFFECT, key);
-      const field = screen.getByRole('textbox', { name: label });
-      await userEvent.clear(field);
-      await userEvent.type(field, '0{Enter}');
+  it('a bob period of 0 is held above 0: the engine divides by it', async () => {
+    const store = setup(
+      { timeline: [oscillate('distance', { amp: 5, period: 4 })] },
+      'osc',
+      EFFECT,
+      'period',
+    );
+    const field = screen.getByRole('textbox', { name: 'Period' });
+    await userEvent.clear(field);
+    await userEvent.type(field, '0{Enter}');
 
-      expect(
-        (selectDraft(store.getState())!.timeline[0] as unknown as Record<string, number>)[key],
-      ).toBeGreaterThan(0);
-    },
-  );
+    expect(
+      (selectDraft(store.getState())!.timeline[0] as { period: number }).period,
+    ).toBeGreaterThan(0);
+  });
 
   it('a degrees field dispatches radians', async () => {
     const store = setup({ start: START_POSE, timeline: [] }, 'start', { kind: 'start' }, 'yaw');

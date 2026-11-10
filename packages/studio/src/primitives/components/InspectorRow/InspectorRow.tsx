@@ -7,14 +7,16 @@ type Props = {
   readonly label: string;
   /** The value is the default: fields inside render dashed and dim. */
   readonly dim?: boolean;
+  /** Opens a group: space above. */
+  readonly spaced?: boolean;
   /** Authored value: shows ↺, which calls this. */
   readonly onReset?: () => void;
   readonly children: ReactNode;
 };
 
-function InspectorRow({ label, dim, onReset, children }: Props) {
+function InspectorRow({ label, dim, spaced, onReset, children }: Props) {
   return (
-    <div className={cx(s.root, dim && s.dim)}>
+    <div className={cx(s.root, dim && s.dim, spaced && s.spaced)}>
       <span className={s.label}>{label}</span>
       <span className={s.control}>{children}</span>
       <span className={s.resetCell}>

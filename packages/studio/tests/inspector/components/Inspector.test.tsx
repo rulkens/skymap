@@ -68,6 +68,30 @@ describe('Inspector', () => {
     expect(screen.getByRole('alert').textContent).toContain('Blend is longer');
   });
 
+  it('a Fly shows Linger for only with a Linger, and Ease only without a Ramp', () => {
+    const waypoints = [atPoint([5, 0, 0], 8)];
+    const store = open({ timeline: [flyPath(waypoints, { over: 6 })] });
+    store.dispatch(rowSelected({ kind: 'effect', path: [0] }));
+    show(store);
+    expect(screen.getByRole('slider', { name: 'Linger for' })).toBeTruthy();
+    expect(screen.queryByText('Ease')).toBeNull();
+
+    act(() => {
+      for (const param of ['linger', 'rampSec'])
+        store.dispatch(
+          paramEdited({
+            ref: { kind: 'effect', path: [0] },
+            param,
+            value: 0,
+            label: '',
+            gesture: null,
+          }),
+        );
+    });
+    expect(screen.queryByRole('slider', { name: 'Linger for' })).toBeNull();
+    expect(screen.getByRole('combobox', { name: 'Ease' })).toBeTruthy();
+  });
+
   it('a subject waypoint shows no Distance, and its unset Leg time reads auto with no reset', () => {
     const store = open({
       timeline: [flyPath([atFocus('m31' as FocusId), atPoint([5, 0, 0], 8)], { over: 6 })],

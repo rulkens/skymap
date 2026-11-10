@@ -6,6 +6,9 @@
   align-items: baseline;
   min-height: var(--space-12);
 }
+.spaced {
+  margin-top: var(--space-4);
+}
 .dim {
   --field-border-style: dashed;
   --field-bg: transparent;

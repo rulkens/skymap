@@ -73,9 +73,12 @@ function FieldRow({ spec, subject, rowRef }: Props) {
         label={spec.label}
         unit={widget.unit}
         value={display}
-        step={typeof widget.step === 'function' ? widget.step(display ?? 0) : widget.step}
-        min={widget.min}
-        max={widget.max}
+        step={
+          spec.range?.step ??
+          (typeof widget.step === 'function' ? widget.step(display ?? 0) : widget.step)
+        }
+        min={spec.range?.min ?? widget.min}
+        max={spec.range?.max ?? widget.max}
         // The shown number back unchanged is no edit: a degrees round trip can move the last bit.
         onCommit={(v, gesture) =>
           edit(
@@ -141,6 +144,7 @@ function FieldRow({ spec, subject, rowRef }: Props) {
     <InspectorRow
       label={spec.label}
       dim={hasDefault && atDefault}
+      spaced={spec.group}
       onReset={hasDefault && !atDefault && !spec.readOnly ? () => edit(resetTo, null) : undefined}
     >
       {field}

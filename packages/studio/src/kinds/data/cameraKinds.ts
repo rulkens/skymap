@@ -147,25 +147,8 @@ export const cameraKinds: Pick<
       value: `via ${formatNameList(s.waypoints.map((w, i) => ('id' in w ? w.id : `point ${i + 1}`)))}`,
     }),
     fields: [
-      overField('Duration'),
-      easeField(),
+      { ...overField('Travel time'), group: true },
       // fallback: what buildPathTrack flies with the param absent; resetTo: what flyPath() stamps.
-      {
-        key: 'align',
-        param: 'align',
-        label: 'Align-in',
-        control: 'positiveSeconds',
-        fallback: DEFAULT_ALIGN_SEC,
-        resetTo: DEFAULT_ALIGN_SEC,
-      },
-      {
-        key: 'rampSec',
-        param: 'rampSec',
-        label: 'Ramp',
-        control: 'seconds',
-        fallback: 0,
-        resetTo: DEFAULT_RAMP_SEC,
-      },
       {
         key: 'linger',
         param: 'linger',
@@ -173,6 +156,7 @@ export const cameraKinds: Pick<
         control: 'percent',
         fallback: 0,
         resetTo: DEFAULT_LINGER,
+        range: { min: 0, max: 100, step: 5 },
       },
       {
         key: 'lingerSec',
@@ -181,9 +165,32 @@ export const cameraKinds: Pick<
         control: 'seconds',
         fallback: 0,
         resetTo: DEFAULT_LINGER_SEC,
+        range: { min: 0, max: 6, step: 0.1 },
+        when: (s) => (s.linger ?? 0) > 0,
       },
       { ...readoutField('spline', 'Spline'), optional: true },
       { ...readoutField('passBy', 'Pass by'), optional: true },
+      {
+        key: 'rampSec',
+        param: 'rampSec',
+        label: 'Ramp',
+        control: 'seconds',
+        fallback: 0,
+        resetTo: DEFAULT_RAMP_SEC,
+        range: { min: 0, max: 6, step: 0.1 },
+        group: true,
+      },
+      // A ramp replaces the named ease (buildPathTrack), so Ease shows only without one.
+      { ...easeField(), when: (s) => (s.rampSec ?? 0) === 0 },
+      {
+        key: 'align',
+        param: 'align',
+        label: 'Align-in',
+        control: 'positiveSeconds',
+        fallback: DEFAULT_ALIGN_SEC,
+        resetTo: DEFAULT_ALIGN_SEC,
+        range: { min: 0.05, max: 3, step: 0.05 },
+      },
     ],
   },
   geodesic: {
