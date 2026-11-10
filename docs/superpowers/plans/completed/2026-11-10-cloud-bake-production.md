@@ -1,6 +1,6 @@
 # Production cloud bake: plan
 
-**Spec:** [`2026-11-10-cloud-bake-production-design.md`](../specs/2026-11-10-cloud-bake-production-design.md).
+**Spec:** [`2026-11-10-cloud-bake-production-design.md`](../../specs/completed/2026-11-10-cloud-bake-production-design.md).
 **Branch:** `worktree-live-cloud-layer-tiles`. The comparison spike's app edits in this worktree
 (`src/layers/body/**`, `tests/state/settings/makeSettingsFixture.ts`, `public/cloud-candidates/`) are
 NOT part of this PR: never stage them.

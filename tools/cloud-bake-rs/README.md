@@ -6,7 +6,7 @@ geostationary infrared (GOES-East/West, Himawari, Meteosat MTG and IODC) matched
 bordering swath. The result is an 8192x4096 equirect lossy WebP (quality 80, ~6 MB) whose grey value is
 cloud opacity, with no alpha: the same shape as the static `cloud_combined_8192.tif`. Any UTC day can be
 baked unattended; a day that fails a check exits non-zero with nothing written. Design:
-[`docs/superpowers/specs/2026-11-10-cloud-bake-production-design.md`](../../docs/superpowers/specs/2026-11-10-cloud-bake-production-design.md).
+[`docs/superpowers/specs/completed/2026-11-10-cloud-bake-production-design.md`](../../docs/superpowers/specs/completed/2026-11-10-cloud-bake-production-design.md).
 
 ## Prerequisites
 

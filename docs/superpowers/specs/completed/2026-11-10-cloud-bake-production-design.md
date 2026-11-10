@@ -1,7 +1,7 @@
 # Production cloud bake: design
 
 **Status:** approved shape (dash asks 4Z9q, oXKr, s8Qq; amended by NLCF 2026-11-10: simplicity-review
-findings and the output size). **Plan:** [`2026-11-10-cloud-bake-production.md`](../plans/2026-11-10-cloud-bake-production.md).
+findings and the output size). **Plan:** [`2026-11-10-cloud-bake-production.md`](../../plans/completed/2026-11-10-cloud-bake-production.md).
 
 ## Goal
 
