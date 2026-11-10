@@ -36,6 +36,12 @@
 .n {
   color: var(--color-fg-dim);
 }
+.name {
+  max-width: 14ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 @media (hover: hover) {
   .chip:hover {
     background: var(--surface-control-hover);

@@ -12,6 +12,7 @@ import {
   flyPath,
   seq,
 } from '../../../../../src/services/engine/animation/effectHelpers';
+import { layerSearchReported } from '../../../../../src/state/engine/engineSlice';
 import { openStudioStore } from '../../helpers/openStudioStore';
 import Inspector from '../../../src/inspector/components/Inspector/Inspector';
 import { draftResolved, paramEdited, rowSelected } from '../../../src/session/state/studioSlice';
@@ -92,13 +93,20 @@ describe('Inspector', () => {
     expect(screen.getByRole('combobox', { name: 'Ease' })).toBeTruthy();
   });
 
-  it("a Fly's waypoint chip selects that waypoint", async () => {
+  it("a Fly's waypoint chips read their object's name or Point, and a chip selects its waypoint", async () => {
     const store = open({
-      timeline: [flyPath([atFocus('m31' as FocusId), atPoint([5, 0, 0], 8)], { over: 6 })],
+      timeline: [flyPath([atFocus('body-earth' as FocusId), atPoint([5, 0, 0], 8)], { over: 6 })],
     });
+    store.dispatch(
+      layerSearchReported({
+        layer: 'body',
+        rows: [{ id: 'body-earth', names: ['Earth'], class: 'primary' }],
+      }),
+    );
     store.dispatch(rowSelected({ kind: 'effect', path: [0] }));
     show(store);
-    await userEvent.click(screen.getByRole('button', { name: 'Settle 2, point' }));
+    expect(screen.getByRole('button', { name: 'Pass 1, Earth' })).toHaveTextContent('1Earth');
+    await userEvent.click(screen.getByRole('button', { name: 'Settle 2, Point' }));
 
     expect(selectStudioState(store.getState()).selection).toEqual({
       kind: 'waypoint',
