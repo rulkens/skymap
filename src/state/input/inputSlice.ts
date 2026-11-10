@@ -11,7 +11,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import type { InputState } from '../../@types/input/InputState';
-import type { SourceId } from '../../@types/input/SourceId';
+import type { InputSourceId } from '../../@types/input/InputSourceId';
 import type { HeldIntent } from '../../@types/input/HeldIntent';
 import type { Motion } from '../../@types/input/Motion';
 import type { UnitPoint } from '../../@types/input/UnitPoint';
@@ -28,19 +28,25 @@ const inputSlice = createSlice({
   name: 'input',
   initialState,
   reducers: {
-    inputSourceAttached: (input, action: PayloadAction<{ source: SourceId; aspect: number }>) => {
+    inputSourceAttached: (
+      input,
+      action: PayloadAction<{ source: InputSourceId; aspect: number }>,
+    ) => {
       input.sources[action.payload.source] = { aspect: action.payload.aspect };
     },
-    inputSourceResized: (input, action: PayloadAction<{ source: SourceId; aspect: number }>) => {
+    inputSourceResized: (
+      input,
+      action: PayloadAction<{ source: InputSourceId; aspect: number }>,
+    ) => {
       input.sources[action.payload.source] = { aspect: action.payload.aspect };
     },
-    inputSourceDetached: (input, action: PayloadAction<{ source: SourceId }>) => {
+    inputSourceDetached: (input, action: PayloadAction<{ source: InputSourceId }>) => {
       delete input.sources[action.payload.source];
     },
 
     inputGestureStarted: (
       input,
-      action: PayloadAction<{ source: SourceId; intent: HeldIntent }>,
+      action: PayloadAction<{ source: InputSourceId; intent: HeldIntent }>,
     ) => {
       const { source } = action.payload;
       if (input.owner !== null && input.owner !== source) {
@@ -50,13 +56,16 @@ const inputSlice = createSlice({
       input.pending.push({ kind: 'start', source });
       input.pick.hover = { at: null, seq: ++input.pickSeq };
     },
-    inputGestureEnded: (input, action: PayloadAction<{ source: SourceId }>) => {
+    inputGestureEnded: (input, action: PayloadAction<{ source: InputSourceId }>) => {
       if (input.owner !== action.payload.source) return;
       input.pending.push({ kind: 'end', source: input.owner });
       input.owner = null;
     },
 
-    inputMoved: (input, action: PayloadAction<{ source: SourceId; motion: readonly Motion[] }>) => {
+    inputMoved: (
+      input,
+      action: PayloadAction<{ source: InputSourceId; motion: readonly Motion[] }>,
+    ) => {
       const { source, motion } = action.payload;
       const record = input.sources[source];
       if (record === undefined) return;
@@ -83,11 +92,14 @@ const inputSlice = createSlice({
       }
     },
 
-    inputHovered: (input, action: PayloadAction<{ source: SourceId; at: UnitPoint | null }>) => {
+    inputHovered: (
+      input,
+      action: PayloadAction<{ source: InputSourceId; at: UnitPoint | null }>,
+    ) => {
       if (input.owner !== null) return;
       input.pick.hover = { at: action.payload.at, seq: ++input.pickSeq };
     },
-    inputTapped: (input, action: PayloadAction<{ source: SourceId; at: UnitPoint }>) => {
+    inputTapped: (input, action: PayloadAction<{ source: InputSourceId; at: UnitPoint }>) => {
       input.pick.select = { at: action.payload.at, seq: ++input.pickSeq };
     },
 

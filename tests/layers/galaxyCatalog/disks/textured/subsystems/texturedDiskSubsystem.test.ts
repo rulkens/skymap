@@ -26,7 +26,7 @@ import type { HiResFamousPerGalaxyState } from '../../../../../../src/layers/gal
 import type { HiResFamousFrameOutput } from '../../../../../../src/layers/galaxyCatalog/hiResFamous/@types/HiResFamousFrameOutput';
 import { galaxyRecordsOver } from '../../../../../support/galaxyRecordsOver';
 import { galaxyCacheKey } from '../../../../../../src/layers/galaxyCatalog/lod/utils/galaxyCacheKey';
-import { cartesianToRaDec } from '../../../../../../src/utils/math/index';
+import { cartesianToRaDec } from '../../../../../../src/utils/math/cartesianToRaDec';
 
 const ALL_CATALOGS: ReadonlySet<GalaxyCatalogId> = new Set(GALAXY_CATALOG_IDS);
 
