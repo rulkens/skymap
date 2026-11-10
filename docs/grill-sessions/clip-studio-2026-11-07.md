@@ -353,5 +353,18 @@ keep serving as the design reference.
 
 The plan is `docs/superpowers/plans/2026-11-10-clip-studio-package.md`.
 
+## Q29–Q31: Top bar (from the top-bar design pass)
+
+- **Q29 Layout:** options were A (centred transport, like a media player), B (the bar's three groups
+  aligned with the dock's columns: identity over the outline, transport from 0 s over the timeline,
+  zoom over the ruler's end, undo/Save/close over the inspector), and C (minimal, with a ⋯ menu).
+  **Decision:** B. Each control sits over what it acts on.
+- **Q30 Hidden shortcuts vs ui-ux.md Interaction 6:** options were to amend the rule (tooltips plus a
+  `?` overlay), to keep a footer key strip, or to show keys while a modifier is held. **Decision:**
+  amend the rule. Keys live in the control's tooltip and in the `?` overlay. The footer strip and the
+  outline's "+ Add A" hint fold into `?`. ui-ux.md Interaction 6 is rewritten to match.
+- **Q31 Save as new:** options were the ▾ half of a split Save button, its own text button, or a ⋯
+  menu only. **Decision:** the split button.
+
 _Settled in the plan:_ the studio's RTK slice is injected into the app store through
 `combineSlices().inject` (ADR 0016). Still open: Q14, the crossfade treatment.

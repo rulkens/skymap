@@ -1,9 +1,6 @@
-# Clip studio design mocks (temporary snapshot)
+# Clip studio design handoff (temporary)
 
-`mock-snapshot.tar.gz` backs up the gitignored design mocks (`src/dev/mocks/studio*`) from the
-clip-studio design review loop, so a reclaimed cloud container doesn't lose them. Restore it with
-`tar xzf docs/design/clip-studio/mock-snapshot.tar.gz` from the repo root. Shots land in the
-gitignored `data/shots/studio-rounds/`.
-
-Decisions live in `docs/grill-sessions/clip-studio-2026-11-07.md`. **Delete this folder before
-the branch merges**: the spec and plan replace it.
+Start at `HANDOFF.md`. This folder holds the design-loop material a cloud session produced: the mock
+snapshot (`mock-snapshot.tar.gz`, restores the gitignored `src/dev/mocks/studio*`), the shoot helper,
+the standing review brief, the round-1 review and the SDD ledger. **Delete this folder before the
+branch merges**: the plan, the grill transcript and the package replace it.
