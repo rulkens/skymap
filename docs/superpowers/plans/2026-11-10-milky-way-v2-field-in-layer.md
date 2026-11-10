@@ -1267,14 +1267,14 @@ export const MILKY_WAY_FIELD_SLIDER_FIELDS: readonly SliderField<MilkyWayFieldSl
 **Files:** `src/layers/milkyWay/field/README.md`, `docs/research/engine/field-seam-map.md`,
 `docs/research/engine/decisions.md`, `docs/RENDERER.md`, `src/services/engine/galaxyGenerator/shared/README.md`
 
-- [ ] In `field/README.md`, replace "Only the tool drives this tier today" (today `v2/README.md:40`)
+- [x] In `field/README.md`, replace "Only the tool drives this tier today" (today `v2/README.md:40`)
       with: the app draws it behind `renderer`, and the tool and the app share `field/host/`.
-- [ ] Rewrite `field-seam-map.md` §2 against the post-PR-B files.
-- [ ] Set Track C's status in `decisions.md` (around `:808`) to landed behind the debug switch.
-- [ ] Add a renderer-map entry in `docs/RENDERER.md` § "Renderer quick map": `mw-field` compute →
+- [x] Rewrite `field-seam-map.md` §2 against the post-PR-B files.
+- [x] Set Track C's status in `decisions.md` (around `:808`) to landed behind the debug switch.
+- [x] Add a renderer-map entry in `docs/RENDERER.md` § "Renderer quick map": `mw-field` compute →
       `milky-way-field` composite, the per-view limit, and compute-written targets clearing
       themselves.
-- [ ] Fix the stale "`v2/`" mentions in `shared/README.md:5,20,41,47-48`. Commit.
+- [x] Fix the stale "`v2/`" mentions in `shared/README.md:5,20,41,47-48`. Commit.
 
 ### Task B11: Verification (controller-owned)
 

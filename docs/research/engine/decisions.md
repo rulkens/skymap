@@ -1382,7 +1382,10 @@ deletion — follow-up PRs, each mechanical.
 - **Track B** = P3 — own spec + plan ("galaxy field renderer extraction").
   Independent of the ladder; parallelizable in its own worktree/session.
 - **Track C** = F1–F3 — executes after Track B + rungs 1–3 merge (not all
-  seven).
+  seven). **Status: landed behind the debug switch** (`settings.milkyWay.renderer`,
+  default `'v1'`): the field draws inside the milkyWay Layer, reusing
+  `{kind:'milkyWay'}` and the `milkyWayDisk` fade as #7 required. See
+  `docs/research/engine/field-seam-map.md` §2.
 
 ## Spun off to backlog (not this effort)
 
