@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { galaxyTypeFromBminusJ } from '../../../src/utils/math/galaxyTypeFromBminusJ';
+import { galaxyTypeFromBminusJ } from '../../../../../src/layers/galaxyCatalog/records/utils/galaxyTypeFromBminusJ';
 
 describe('galaxyTypeFromBminusJ', () => {
   it('B−J < 1.5 is blue (star-forming)', () => {

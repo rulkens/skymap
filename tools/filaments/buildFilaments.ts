@@ -88,7 +88,7 @@ import {
 import { FormatVersionError } from '../../src/data/formatVersionError';
 import type { GalaxyCatalog } from '../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import { Source } from '../../src/data/source';
-import { galaxyCatalogFluxLimit } from '../../src/data/galaxyCatalog/galaxyCatalogFluxLimits';
+import { galaxyCatalogFluxLimit } from '../../src/layers/galaxyCatalog/records/data/galaxyCatalogFluxLimits';
 import { absoluteFromApparent } from '../../src/utils/math/absoluteFromApparent';
 import { dMaxFromAbsolute } from '../../src/utils/math/dMaxFromAbsolute';
 import { mulberry32 } from '../../src/utils/random/mulberry32';

@@ -33,8 +33,8 @@ describe('buildAliasIndex', () => {
     ]);
     const out = buildAliasIndex({ records, aliasMap });
     expect(out).toEqual([
-      { pgc: 100, names: ['NGC 1'], source: Source.Glade },
-      { pgc: 300, names: ['NGC 3'], source: Source.Glade },
+      { pgc: 100, names: ['NGC 1'], sourceLabel: 'GLADE', focusId: 'pgc-100' },
+      { pgc: 300, names: ['NGC 3'], sourceLabel: 'GLADE', focusId: 'pgc-300' },
     ]);
   });
 
@@ -72,7 +72,7 @@ describe('buildAliasIndex', () => {
       [200n, ['T']],
     ]);
     const out = buildAliasIndex({ records, aliasMap });
-    expect(out.map((e) => e.source)).toEqual([Source.Glade, Source.TwoMRS]);
+    expect(out.map((e) => e.sourceLabel)).toEqual(['GLADE', '2MRS']);
     expect(out.map((e) => e.pgc)).toEqual([100, 200]);
   });
 });

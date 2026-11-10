@@ -1,5 +1,5 @@
 import { BODY_FOCUS } from '../../../data/selection/bodyFocus';
-import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../../data/bodies/seededStarCatalogsBySource';
+import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../seededStars/data/seededStarCatalogsBySource';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { starDetail } from './utils/starDetail';
 import type { SelectionKindFacts } from '../../../@types/engine/layer/SelectionKindFacts';

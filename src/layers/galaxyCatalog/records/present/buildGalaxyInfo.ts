@@ -12,16 +12,16 @@
  * `row.objId` is the decimal string of the catalog objID; we parse it back to
  * a bigint once here because the SDSS/PGC URL + name logic compares it to 0n.
  */
-import { Source } from '../../../data/source';
-import { APP_SOURCE_REGISTRY } from '../../../compositions/appSources';
+import { Source } from '../../../../data/source';
+import { GALAXY_CATALOG_SOURCE_RECORD } from '../../sources/galaxyCatalogSourceRecord';
 import {
   DESI_TRACER_CLASS,
   sourceClassLabel,
   milliquasParentSurveyPrefix,
-} from '../../../data/galaxyCatalog/sourceClass';
-import { famousDisplayName } from './famousDisplayName';
-import { famousWikipediaTitle } from '../../../utils/format/famousWikipediaTitle';
-import { wikipediaUrl } from '../../../utils/format/wikipediaUrl';
+} from '../data/sourceClass';
+import { famousDisplayName } from '../../../../services/engine/helpers/famousDisplayName';
+import { famousWikipediaTitle } from '../../../../utils/format/famousWikipediaTitle';
+import { wikipediaUrl } from '../../../../utils/format/wikipediaUrl';
 import {
   cartesianToRaDecZ,
   formatRaSexagesimal,
@@ -32,7 +32,6 @@ import {
   hubbleVelocityKmS,
   absoluteMagnitude,
   earthEraForLookback,
-  galaxyType,
   sdssExplorerUrl,
   sdssThumbnailUrl,
   dssThumbnailUrl,
@@ -42,9 +41,10 @@ import {
   nedByNameUrl,
   nedNearPositionUrl,
   PC_TO_LY,
-} from '../../../utils/math';
-import type { GalaxyInfo } from '../../../@types/engine/GalaxyInfo';
-import type { GalaxyRow } from '../../../@types/engine/GalaxyRow';
+} from '../../../../utils/math';
+import { galaxyType } from '../utils/galaxyType';
+import type { GalaxyInfo } from '../@types/GalaxyInfo';
+import type { GalaxyRow } from '../@types/GalaxyRow';
 
 /**
  * DESI tracers whose .bin magnitudes are per-tracer synthetic display
@@ -85,12 +85,7 @@ export function buildGalaxyInfo(row: GalaxyRow): GalaxyInfo {
     ? { magU: NaN, magG: NaN, magR: NaN, magI: NaN, magZ: NaN }
     : row;
 
-  const entry = APP_SOURCE_REGISTRY[source];
-  if (entry.type !== 'galaxyCatalog') {
-    throw new Error(
-      `buildGalaxyInfo: non-galaxy catalog source ${source} has no photometric bands`,
-    );
-  }
+  const entry = GALAXY_CATALOG_SOURCE_RECORD[source];
   const bands = entry.bandLabels;
 
   const candidatePairs: Array<[keyof typeof bands, keyof typeof bands, number]> = [
@@ -245,7 +240,7 @@ export function buildGalaxyInfo(row: GalaxyRow): GalaxyInfo {
     bands,
     colours,
     source,
-    sourceLabel: APP_SOURCE_REGISTRY[source].label,
+    sourceLabel: entry.label,
     agnClass,
     ...(suppressPhotometry ? { photometryNote: 'no photometry in source catalog' } : {}),
     catalogues,

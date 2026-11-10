@@ -1,7 +1,7 @@
 /**
  * GalaxyTypeMags — subset of mag fields needed for galaxy classification.
  *
- * The galaxy-type dispatcher (`src/utils/math/galaxyType.ts`) only needs
+ * The galaxy-type dispatcher (`src/layers/galaxyCatalog/records/utils/galaxyType.ts`) only needs
  * the five magnitude slots; this narrow shape keeps callers (the engine,
  * the InfoCard builder) from having to pass a full `GalaxyCatalog` row.
  */

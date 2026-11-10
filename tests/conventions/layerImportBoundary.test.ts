@@ -86,8 +86,6 @@ function assertSweep(
 
 const CORE_ALLOWED: Readonly<Record<string, number>> = {
   '@types/data/starCatalog/SeededStarCatalogId.d': 1,
-  '@types/engine/GalaxyRow.d': 1,
-  'data/bodies/seededStarCatalogsBySource': 1,
   'services/engine/wiring/galaxyCatalogRequest': 2,
   'state/selection/captureGalaxyFocusIds': 1,
   'utils/galaxyCatalogIdOf': 3,
