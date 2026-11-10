@@ -1169,25 +1169,25 @@ export function milkyWayFieldCompute(
 // spanTimestampWrites(claim, plan)).
 ```
 
-- [ ] `layer.ts` passes `milkyWayPlanner(runtime)` to the compute and the composite as their
+- [x] `layer.ts` passes `milkyWayPlanner(runtime)` to the compute and the composite as their
       `planner` handle: the store keys by `planner.name` (`createFramePlannerResultStore.ts:30`),
       so a second construction is only a typed handle onto the same result.
-- [ ] Add `{ kind: 'compute', name: 'mw-field' }` to SCENE's compute line beside
+- [x] Add `{ kind: 'compute', name: 'mw-field' }` to SCENE's compute line beside
       `aerial-perspective`. The slot `mw-field-compute` derives automatically
       (`computeTimingSlotName`).
-- [ ] The field passes clear their targets themselves (`beginClearPass`). Compute-written targets
+- [x] The field passes clear their targets themselves (`beginClearPass`). Compute-written targets
       are invisible to `touched` (`executeFrame.ts:193`), so nothing else clears them.
-- [ ] **Test, new:** `milkyWayFieldAlpha`:
+- [x] **Test, new:** `milkyWayFieldAlpha`:
   - `it('is null when the mw-field-compute toggle is off, so the composite never adds stale targets')`:
     a planner value with a host and a visible pose gives a number; with
     `settings.debug.disabledPasses['mw-field-compute'] = true` it gives null.
-- [ ] **Test, new:** `spanTimestampWrites`:
+- [x] **Test, new:** `spanTimestampWrites`:
   - `it('brackets the first and last encoded pass with one claim')`: with
     `encodes = ['dustMap', 'field', 'young']`, asking for all three in order gives begin, nothing,
     end, and `claim` is called exactly once.
   - `it('a single-pass plan gets both indices')`.
   - `it('never claims when no pass asks')`.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task B7: The `milky-way-field` composite pass
 

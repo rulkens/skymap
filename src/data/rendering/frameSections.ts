@@ -102,6 +102,9 @@ export const SCENE: FrameSection = {
     // its own submit, so the bake lands after the previous view's apply and before this
     // view's; no once-scope PRELUDE line could give that ordering.
     { kind: 'compute', name: 'aerial-perspective' },
+    // The v2 Milky Way field into its own `mw-field-*` targets, composited by
+    // `milky-way-field` on the hdr NEAR0 line. Per view for the same reason.
+    { kind: 'compute', name: 'mw-field' },
     // Reduced-res density raymarch, merged into HDR by `cosmic-web-density-upsample`
     // inside the hdr COSMO step below, so this render must precede that step.
     { kind: 'render', target: 'cosmic-web-density', slab: COSMO, passes: ['cosmic-web-density'] },
