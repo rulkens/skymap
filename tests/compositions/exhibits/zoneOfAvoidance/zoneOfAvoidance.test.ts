@@ -7,13 +7,13 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { zoneOfAvoidance } from '../../../src/compositions/exhibits/zoneOfAvoidance';
-import { APP_COMPOSITION } from '../../../src/compositions/app';
-import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
-import { layerSelectionKinds } from '../../../src/utils/layer/layerSelectionKinds';
-import { earthSceneSelectionRow } from '../../../src/layers/earthScenes/selection/earthSceneSelectionRow';
-import { probeSphereSelectionRow } from '../../../src/layers/probeSpheres/selection/probeSphereSelectionRow';
-import type { SelectionKindRow } from '../../../src/@types/engine/layer/SelectionKindRow';
+import { zoneOfAvoidance } from '../../../../src/compositions/exhibits/zoneOfAvoidance/zoneOfAvoidance';
+import { APP_COMPOSITION } from '../../../../src/compositions/app';
+import { composeSelectionRows } from '../../../../src/services/engine/selection/composeSelectionRows';
+import { layerSelectionKinds } from '../../../../src/utils/layer/layerSelectionKinds';
+import { earthSceneSelectionRow } from '../../../../src/layers/earthScenes/selection/earthSceneSelectionRow';
+import { probeSphereSelectionRow } from '../../../../src/layers/probeSpheres/selection/probeSphereSelectionRow';
+import type { SelectionKindRow } from '../../../../src/@types/engine/layer/SelectionKindRow';
 
 const types = layerSelectionKinds(APP_COMPOSITION.layers).map((kind) => kind.type);
 const rows = types.map((type, code) =>

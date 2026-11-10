@@ -3100,17 +3100,18 @@ and where they come from".
 
 ### Links to papers, repositories and reference pages
 
-<!-- attribution: id=outbound-links; hosts=arxiv.org,doi.org,github.com,caniuse.com,opensource.org -->
+<!-- attribution: id=outbound-links; hosts=arxiv.org,doi.org,github.com,caniuse.com,opensource.org,www.youtube.com -->
 
 - **What:** Plain links in the app's exhibits, credits and page head: papers
-  on arXiv and by DOI, repositories on GitHub, the WebGPU support table, the
-  MIT licence text. Nothing is fetched from them.
+  on arXiv and by DOI, repositories on GitHub, a Nature video on YouTube, the
+  WebGPU support table, the MIT licence text. Nothing is fetched or embedded.
 - **By:** Their respective owners.
 - **Licence:** None applies to a link.
 - **Use:** Reference only
 - **Attribution:** None.
 - **Upstream:** the links themselves.
-- **Enters skymap:** `src/data/exhibits/*.ts`, `src/components/Splash/`,
+- **Enters skymap:** the exhibits' `*.copy.ts` (`src/compositions/exhibits/`,
+  `src/layers/*/exhibits/`), `src/components/Splash/`,
   `src/unsupportedPage.ts`, `index.html`.
 - **Modified:** Not applicable.
 - **Checked:** 2026-10-07: no page opened.

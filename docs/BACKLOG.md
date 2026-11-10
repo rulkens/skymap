@@ -262,7 +262,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **The dome doesn't know which phones steer it** `needs-design` — nothing shows a phone joining or dropping, any phone with the code steers, and a fourth is refused without being told. → [details](backlog/2026-11-03-remote-who-is-connected.md)
 - [ ] **A dome reload gives a new room code** `needs-design` — the dome keeps its code in memory only (`createLocalTransport.ts:75`), so a reloaded page hosts without `?last=` and the relay issues a fresh code; every phone pairs again.
 - [ ] **More controls on the phone remote** `needs-design` — no command for data size, exposure, captions, full screen or showing the dome's interface (Tab on its keyboard). → [details](backlog/2026-11-03-remote-more-controls.md)
-- [ ] **Duplicate names in the remote's menus** `ready` — "Cosmic Flows" is both an exhibit and a clip (`src/data/exhibits/cosmicFlows.ts`, `src/data/animation/clips/cosmicFlows.ts`) and "Galactic Centre" shows twice in the label switches; rename or merge so each entry reads once.
+- [ ] **Duplicate names in the remote's menus** `ready` — "Cosmic Flows" is both an exhibit and a clip (`src/compositions/exhibits/cosmicFlows/cosmicFlows.ts`, `src/data/animation/clips/cosmicFlows.ts`) and "Galactic Centre" shows twice in the label switches; rename or merge so each entry reads once.
 
 ## Desktop app
 

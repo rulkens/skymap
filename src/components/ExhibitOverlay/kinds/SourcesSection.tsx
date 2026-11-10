@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 
-import ExternalLinkIcon from '../../icons/ExternalLinkIcon/ExternalLinkIcon';
+import PlayIcon from '../../icons/PlayIcon/PlayIcon';
 import type { ExhibitSourcesSection } from '../../../@types/exhibits/ExhibitSourcesSection';
 import styles from '../ExhibitOverlay.module.css';
 
@@ -15,7 +15,7 @@ function SourcesSection({ data }: SourcesSectionProps): ReactNode {
     <>
       <div className={styles.rule} aria-hidden="true" />
       <div className={styles.section}>
-        <h2 className={styles.sectionHeading}>{data.heading}</h2>
+        <h2 className={styles.blockLabel}>{data.heading}</h2>
         <div className={styles.sourceList}>
           {data.links.map((link) => (
             <a
@@ -28,8 +28,8 @@ function SourcesSection({ data }: SourcesSectionProps): ReactNode {
               <span className={styles.sourceRole}>{link.role}</span>
               <span className={styles.sourceText}>
                 <span className={styles.sourceTitle}>
+                  {link.video && <PlayIcon size={11} />}
                   {link.title}
-                  <ExternalLinkIcon size={9} />
                 </span>
                 <span className={styles.sourceCitation}>{link.citation}</span>
               </span>
