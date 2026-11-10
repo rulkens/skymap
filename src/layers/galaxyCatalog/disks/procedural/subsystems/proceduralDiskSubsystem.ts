@@ -20,11 +20,9 @@
 
 import { GALAXY_CATALOG_SOURCE_RECORD } from '../../../sources/galaxyCatalogSourceRecord';
 import { pickColourIndex } from '../../../appearance/data/colourIndex';
-import {
-  absoluteFromApparent,
-  cartesianToRaDec,
-  smoothstep,
-} from '../../../../../utils/math/index';
+import { absoluteFromApparent } from '../../../../../utils/math/absoluteFromApparent';
+import { cartesianToRaDec } from '../../../../../utils/math/cartesianToRaDec';
+import { smoothstep } from '../../../../../utils/math/smoothstep';
 import { galaxySbAmp } from '../../../appearance/utils/galaxySbAmp';
 import { diskQuadExtentMpc } from '../../../lod/utils/diskQuadExtentMpc';
 import { purgeStrideWindow } from '../../../lod/utils/purgeStrideWindow';
