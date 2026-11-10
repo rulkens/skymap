@@ -274,11 +274,11 @@ becomes an 8192×4096 lossy WebP whose grey value is opacity, no alpha — the s
 source map (`cloud_combined_8192.tif`). Measured on the 9 Nov bake: q80 = 6.0 MB (lossless was 19.6 MB),
 99th-percentile error 11/255, PSNR 37.8 dB; cwebp encode ~9 s.
 
-- [ ] Encode with libwebp's lossy RGB encoder (R = G = B = opacity) at quality 80, method 4, through the
+- [x] Encode with libwebp's lossy RGB encoder (R = G = B = opacity) at quality 80, method 4, through the
       existing `libwebp-sys` dependency; keep `write_atomic`. Remove the lossless writer and its constants.
-- [ ] Test: `grey lossy WebP round-trips within 32/255` on a small synthetic gradient + noise image
+- [x] Test: `grey lossy WebP round-trips within 32/255` on a small synthetic gradient + noise image
       (decode with the existing decoder; asserts the encoder wiring, channel order and no alpha).
-- [ ] Commit.
+- [x] Commit.
 
 ---
 

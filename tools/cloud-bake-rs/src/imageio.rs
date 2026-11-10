@@ -1,5 +1,5 @@
-//! Decoders, PIL's BOX resize (exact fixed-point port, for the Blue Marble ice mask) and the lossless WebP
-//! writer with bake.py `write()`'s layout: RGB = grey, A = Rec.709 luminance of that grey (= the grey).
+//! Decoders, PIL's BOX resize (exact fixed-point port, for the Blue Marble ice mask) and the output
+//! writer: a grey lossy WebP (R = G = B = opacity, no alpha), the shape of the static source map.
 use crate::grid::{lat, lon, smoothstep, smoothstep64, H, W};
 use image::ImageReader;
 use rayon::prelude::*;
@@ -188,44 +188,29 @@ pub fn to_u8(grey: &[f32]) -> Vec<u8> {
         .collect()
 }
 
-fn rgba_of(g: &[u8]) -> Vec<u8> {
-    g.par_iter().flat_map_iter(|&v| [v, v, v, v]).collect()
-}
+/// libwebp's default effort is method 4; quality 80 measured 6.0 MB against 19.6 MB lossless on the 9 Nov
+/// bake, 99th-percentile error 11/255.
+const WEBP_QUALITY: f32 = 80.0;
 
-const WEBP_QUALITY: f32 = 25.0;
-const WEBP_METHOD: i32 = 4;
-
-/// libwebp lossless. For lossless, `quality` is the effort knob: 25 / method 4 is ~3x faster than
-/// Pillow's 80 for +2.6% bytes. Written via `.part` + rename. Returns bytes written.
-pub fn write_webp(path: &Path, g: &[u8]) -> usize {
+/// Lossy WebP of a `w` x `h` grey image, written via `.part` + rename. Returns bytes written.
+pub fn write_webp(path: &Path, g: &[u8], w: usize, h: usize) -> usize {
     use libwebp_sys as ffi;
-    let px = rgba_of(g);
-    // SAFETY: the picture imports from `px` (W*H*4 bytes, stride W*4) and is freed before return; the
-    // memory writer owns the output buffer until WebPMemoryWriterClear.
+    let rgb: Vec<u8> = g.par_iter().flat_map_iter(|&v| [v, v, v]).collect();
+    // SAFETY: `rgb` is w*h*3 bytes with stride w*3; libwebp allocates `out`, which is freed with WebPFree
+    // after the bytes are copied out by write_atomic.
     unsafe {
-        let mut cfg = ffi::WebPConfig::new().unwrap();
-        cfg.lossless = 1;
-        cfg.quality = WEBP_QUALITY;
-        cfg.method = WEBP_METHOD;
-        cfg.thread_level = 1;
-        assert!(ffi::WebPValidateConfig(&cfg) != 0);
-        let mut pic: ffi::WebPPicture = std::mem::zeroed();
-        assert!(ffi::WebPPictureInit(&mut pic));
-        pic.use_argb = 1;
-        pic.width = W as i32;
-        pic.height = H as i32;
-        assert!(ffi::WebPPictureImportRGBA(&mut pic, px.as_ptr(), (W * 4) as i32) != 0);
-        drop(px);
-        let mut wr: ffi::WebPMemoryWriter = std::mem::zeroed();
-        ffi::WebPMemoryWriterInit(&mut wr);
-        pic.writer = Some(ffi::WebPMemoryWrite);
-        pic.custom_ptr = &mut wr as *mut _ as *mut std::ffi::c_void;
-        let ok = ffi::WebPEncode(&cfg, &mut pic);
-        ffi::WebPPictureFree(&mut pic);
-        assert!(ok != 0, "webp encode failed: {:?}", pic.error_code);
-        crate::fetch::write_atomic(path, std::slice::from_raw_parts(wr.mem, wr.size));
-        let n = wr.size;
-        ffi::WebPMemoryWriterClear(&mut wr);
+        let mut out: *mut u8 = std::ptr::null_mut();
+        let n = ffi::WebPEncodeRGB(
+            rgb.as_ptr(),
+            w as i32,
+            h as i32,
+            (w * 3) as i32,
+            WEBP_QUALITY,
+            &mut out,
+        );
+        assert!(n > 0, "webp encode failed");
+        crate::fetch::write_atomic(path, std::slice::from_raw_parts(out, n));
+        ffi::WebPFree(out as *mut std::ffi::c_void);
         n
     }
 }
@@ -233,6 +218,35 @@ pub fn write_webp(path: &Path, g: &[u8]) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn grey_lossy_webp_round_trips_within_32_255() {
+        use libwebp_sys as ffi;
+        let (w, h) = (64usize, 48usize);
+        let g: Vec<u8> = (0..w * h)
+            .map(|i| ((i % w) * 4 + (i / w) * 2 + (i * 2654435761) % 11) as u8)
+            .collect();
+        let path =
+            std::env::temp_dir().join(format!("cloud-bake-webp-{}.webp", std::process::id()));
+        write_webp(&path, &g, w, h);
+        let bytes = std::fs::read(&path).unwrap();
+        std::fs::remove_file(&path).unwrap();
+        // SAFETY: the buffer is libwebp's own w*h*3 RGB output, read once and freed.
+        let rgb = unsafe {
+            let (mut dw, mut dh) = (0i32, 0i32);
+            let p = ffi::WebPDecodeRGB(bytes.as_ptr(), bytes.len(), &mut dw, &mut dh);
+            assert_eq!((dw as usize, dh as usize), (w, h));
+            let v = std::slice::from_raw_parts(p, w * h * 3).to_vec();
+            ffi::WebPFree(p as *mut std::ffi::c_void);
+            v
+        };
+        for (i, &want) in g.iter().enumerate() {
+            for c in 0..3 {
+                let err = (rgb[i * 3 + c] as i32 - want as i32).abs();
+                assert!(err <= 32, "px {i} ch {c}: {} vs {want}", rgb[i * 3 + c]);
+            }
+        }
+    }
 
     #[test]
     fn is_all_black_flags_a_black_opaque_frame() {

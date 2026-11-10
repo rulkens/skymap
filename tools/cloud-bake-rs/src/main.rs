@@ -124,7 +124,7 @@ fn main() {
         .collect();
     let g = imageio::to_u8(&out);
     drop((out, fill, wgt));
-    let bytes = imageio::write_webp(&a.out, &g);
+    let bytes = imageio::write_webp(&a.out, &g, W, H);
     eprintln!(
         "wrote {} ({:.1} MB); sources: {}",
         a.out.display(),
