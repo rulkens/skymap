@@ -183,7 +183,7 @@
 // never pays for a sample it would just multiply by zero. .w is the SAME
 // free lane the seeding view's cap and dustDetail.wesl's legacy/swept blend
 // weight passed through before each moved on — now starGrainFeatureScale,
-// deriveFrameView.ts's per-frame blend of render.starGrainFeatureScaleNear/
+// deriveFieldFrameLanes's per-frame blend of render.starGrainFeatureScaleNear/
 // Far by camera distance (defaults 2/15, live-tunable): starGrain.wesl's
 // starGrainTerm multiplies it by STAR_GRAIN_POINT_SIGMA_FRAC (the baked
 // point's fixed sigma-as-tile-fraction, starGrain.wesl's own const) to get the

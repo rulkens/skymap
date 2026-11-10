@@ -141,7 +141,7 @@ describe('packFieldHeaderUniforms ↔ milkyWay/field/io.wesl FieldUniforms', () 
     // dustDetail.y/.z are the HII tier's own tier-global texture scale/
     // contrast, unrelated to S4's own strength lane at .x — they ride this
     // vec4's two free lanes (io.wesl's dustDetail doc). .w is
-    // starGrainFeatureScale (deriveFrameView.ts's near/far distance blend),
+    // starGrainFeatureScale (deriveFieldFrameLanes's near/far distance blend),
     // splat.wesl's starGrainTerm calibration knob.
     expect(observed(25000)).toBe(at('dustDetail') + 4);
     expect(observed(25001)).toBe(at('dustDetail') + 8);

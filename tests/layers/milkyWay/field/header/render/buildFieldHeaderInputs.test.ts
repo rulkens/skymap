@@ -8,6 +8,8 @@ import { describe, expect, it } from 'vitest';
 
 import { buildFieldHeaderInputs } from '../../../../../../src/layers/milkyWay/field/header/render/buildFieldHeaderInputs';
 import { deriveFrameView } from '../../../../../../tools/galaxy-renderer/src/engine/frame/deriveFrameView';
+import { deriveFieldFrameLanes } from '../../../../../../src/layers/milkyWay/field/host/utils/deriveFieldFrameLanes';
+import { FIELD_CALIBRATION } from '../../../../../../src/layers/milkyWay/field/data/fieldCalibration';
 import type { RenderSettings } from '../../../../../../tools/galaxy-renderer/@types/engine/RenderSettings';
 import { DEFAULT_RENDER_SETTINGS } from '../../../../../../tools/galaxy-renderer/src/data/defaultRenderSettings';
 import { HII_TIERS } from '../../../../../../tools/galaxy-renderer/src/data/hiiTiers';
@@ -20,7 +22,7 @@ const render: RenderSettings = {
   hiiQuadCap: 104,
 };
 
-const frame = deriveFrameView({
+const { camera } = deriveFrameView({
   eye: [0, 0, 30],
   target: [0, 0, 0],
   fov: (45 * Math.PI) / 180,
@@ -28,7 +30,12 @@ const frame = deriveFrameView({
   shiftX: 0.1,
   viewportPx: [1600, 900],
   render,
+});
+const frame = deriveFieldFrameLanes({
+  camera,
+  exposure: render.analyticExposure,
   dustReachR: 5,
+  render: FIELD_CALIBRATION.render,
 });
 
 // Distinct per-tier target sizes, so a tier that reuses a sibling's (or
@@ -38,7 +45,7 @@ const tierTargetSizePx = Object.fromEntries(
 ) as Record<(typeof HII_TIERS)[number]['kind'], [number, number]>;
 
 const inputs = buildFieldHeaderInputs({
-  camera: frame.camera,
+  camera,
   frame,
   render,
   model: {

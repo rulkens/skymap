@@ -102,10 +102,10 @@ export type RenderSettings = {
    * sigma (see that function's own header for why bare sigma fades the
    * grain too early). One static value can't serve both the close-approach
    * look and the whole-galaxy framing, so this is the NEAR end of a pair —
-   * `deriveFrameView.ts` blends `starGrainFeatureScaleNear`/`Far` by log
+   * `deriveFieldFrameLanes` blends `starGrainFeatureScaleNear`/`Far` by log
    * camera distance (in disc radii) into the single scalar the header still
    * carries. Calibrated at close approach (camera at/inside the disc);
-   * defaults to 4 (`defaultRenderSettings.ts`).
+   * defaults to 4 (`FIELD_CALIBRATION`).
    */
   readonly starGrainFeatureScaleNear: number;
   /**
@@ -147,7 +147,7 @@ export type RenderSettings = {
    * 1.0 is the calibration point the field was tuned at by eye against the
    * reference gallery, NOT a parity point with the sprite field — the sprite
    * pass's own `starIntensity`/`sizeScale` no longer factor in at all (see
-   * `deriveFrameView.ts`'s `FIELD_EXPOSURE_GAUGE`); absolute
+   * `FIELD_EXPOSURE_GAUGE`); absolute
    * flux is anchored on `GalaxyDescription.luminosity` instead.
    */
   readonly analyticExposure: number;

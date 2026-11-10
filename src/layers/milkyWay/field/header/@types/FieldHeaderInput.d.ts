@@ -68,7 +68,7 @@ export type FieldHeaderInput = {
    */
   readonly youngStars?: YoungStarsLanes;
   /**
-   * `deriveFrameView.ts`'s per-frame blend of `render.starGrainFeatureScaleNear`/
+   * `deriveFieldFrameLanes`'s per-frame blend of `render.starGrainFeatureScaleNear`/
    * `Far` by camera distance — packs to `io.wesl`'s free `dustDetail.w` lane
    * (that struct's own doc), the multiplier `hiiSplat/starGrain.wesl`'s `starGrainTerm`
    * applies to the baked star-grain point's fixed sigma to get its per-octave

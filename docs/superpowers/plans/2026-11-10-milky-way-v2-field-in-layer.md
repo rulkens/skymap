@@ -621,26 +621,26 @@ ismMapChannels, dustSlices, starGrainFeatureScale }`. This task also creates
 `src/layers/milkyWay/field/host/@types/FieldHostTuning.d.ts` with the shape pinned in Task A9's
 contract, because `deriveFieldFrameLanes` reads its `render` member.
 
-- [ ] Move `FIELD_EXPOSURE_GAUGE` (`deriveFrameView.ts:40`, with its landmine doc) to
+- [x] Move `FIELD_EXPOSURE_GAUGE` (`deriveFrameView.ts:40`, with its landmine doc) to
       `host/data/fieldExposureGauge.ts`, and the `STAR_GRAIN_SCALE_NEAR_R/FAR_R` anchors
       (`:48-49`) into `deriveFieldFrameLanes`.
   - `analyticExposure = exposure · FIELD_EXPOSURE_GAUGE`. The tool passes
     `render.analyticExposure · fade.alpha`, the same product as today's `:150`.
   - `dustSlices` and the grain blend use `|camera.eye|`, which is in the galaxy frame.
-- [ ] `defaultRenderSettings.ts`:
+- [x] `defaultRenderSettings.ts`:
   - The divisor rows read `FIELD_CALIBRATION.divisors`: `fieldDivisor` ← `field`,
     `dustDivisor` ← `dustMap`, `extrasDivisor` ← `extras`, `shells/young/digDivisor` ← the tiers.
   - The fade, grain, quad-cap and sigma rows read `FIELD_CALIBRATION.render`, and
     `analyticExposure` reads `FIELD_CALIBRATION.exposure`. The tool's own debug-view, weight and
     seeding settings override the neutral lanes in that row.
   - The tool keeps its own knobs and its own tuning surface.
-- [ ] Tests:
+- [x] Tests:
   - Move the three frame-lane `it`s from `deriveFrameView.test.ts` (exposure independence from the
     sprite knobs, dust slices from the origin, the grain blend) to `deriveFieldFrameLanes.test.ts`,
     adapted to the new input.
   - The near-plane and lens-shift tests stay with `deriveFrameView`.
   - No new assertions.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task A9: `createGalaxyFieldHost`, `planFieldFrame`, and a renderer that encodes the plan
 

@@ -48,6 +48,7 @@ import { createGalaxyModel } from './model/createGalaxyModel';
 import { gradeIsActive } from './post/gradeIsActive';
 import { toMilkyWayTuning } from './sprites/toMilkyWayTuning';
 import { deriveFrameView } from './frame/deriveFrameView';
+import { deriveFieldFrameLanes } from '../../../../src/layers/milkyWay/field/host/utils/deriveFieldFrameLanes';
 import { createOffscreenProbe } from './probe/createOffscreenProbe';
 import { CLOUD_UNIFORM_FLOATS, packCloudUniforms } from './sprites/packCloudUniforms';
 import {
@@ -410,7 +411,6 @@ export async function createGalaxyEngine(
       shiftX,
       viewportPx: [canvas.width, canvas.height],
       render,
-      dustReachR: field.dustHeaderLanes.reachR,
     });
     const { viewProj: vp, fade, galaxyWeight, debugViews } = frameView;
     lastFade = fade;
@@ -502,7 +502,24 @@ export async function createGalaxyEngine(
     const fieldTargets = targets.fieldTargets;
     field.encode(enc, fieldTargets, {
       camera: frameView.camera,
-      view: frameView,
+      // The fade folds into the exposure, the same product the app's
+      // visibility alpha makes.
+      view: deriveFieldFrameLanes({
+        camera: frameView.camera,
+        exposure: render.analyticExposure * fade.alpha,
+        dustReachR: field.dustHeaderLanes.reachR,
+        render: {
+          ...render,
+          debugViews,
+          galaxyWeight,
+          ismMapChannels: {
+            gasWeight: render.ismMapGasWeight,
+            starsWeight: render.ismMapStarsWeight,
+            activityWeight: render.ismMapActivityWeight,
+            dustWeight: render.ismMapDustWeight,
+          },
+        },
+      }),
       render,
       ismMapSeeding: model.ismMapSeedingView,
       youngStars: model.youngStars,
