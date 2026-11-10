@@ -71,7 +71,7 @@
 //
 // dustNoise (offset 128) erodes the primary's whole dust slice
 // (dustMap.wesl's fs) — the particle cloud is the ONLY dust tier (see
-// galaxyDustMixture.ts's header on the CPU side for why there is no
+// dustDiscShape.ts's header on the CPU side for why there is no
 // kiloparsec-scale smooth-disc component alongside it), so a single noise
 // sample here erodes texture rather than reading as one giant blotch.
 // tileUnits (.x) is the world span of one full wrap of dustNoiseBake.wesl's
@@ -132,7 +132,7 @@
 // zeroing three isolates the fourth.
 //
 // bubbleView (offset 192) is bubblePresent.wesl's own crossfade weight —
-// the SF-event catalog's (dustBubblePlacements.ts) bubble/cavity overlay, a
+// the SF-event catalog's (buildDustBubblePlacements.ts) bubble/cavity overlay, a
 // SECOND, independent star-formation model drawn alongside ismMap's own view
 // so the two can be compared directly. Not folded into debugView: that vec4
 // is full (dust/ismMap/orientation/galaxyWeight), and reusing
@@ -302,7 +302,7 @@
 // two re-readings, not two new fields: amplitude (emission) is the
 // component's central V-band extinction density, per unit length; color
 // (emission) is the per-channel A_lambda/A_V extinction ratio
-// (galaxyDustMixture.ts's dustExtinctionRgb), not a tint — carried per
+// (dustDiscShape.ts's dustExtinctionRgb), not a tint — carried per
 // component for a future per-extra dust loop, but NOT what the primary
 // galaxy's attenuation actually reads: dustMap.wesl sums every dust
 // component down to four depth-sliced tau columns before dustAttenuation.wesl's

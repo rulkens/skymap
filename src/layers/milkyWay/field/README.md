@@ -21,11 +21,11 @@ constants/budget-derivation halves the GPU dispatch hosts
 `armClouds/` (counts, radial tilt, footprint integral, ceilings); `arms/` keeps
 the ridge vocabulary and spur records.
 
-| entry point                                                               | output                                   | drawn by                                     |
-| ------------------------------------------------------------------------- | ---------------------------------------- | -------------------------------------------- |
-| `buildGalaxyFieldMixture` (emission)                                      | disc, bulge, bar, arm ridges             | `milkyWay/field/splat.wesl`                  |
-| `buildHiiRegions`                                                         | Strömgren shells + OB cores              | `splat.wesl`, own target                     |
-| `buildGalaxyIsmMapArmForcing` + `sfEventCatalog` / `dustBubblePlacements` | ISM-map forcing grid, SF events, bubbles | `ismMapFluidStep.wesl`, `bubblePresent.wesl` |
+| entry point                                                                    | output                                   | drawn by                                     |
+| ------------------------------------------------------------------------------ | ---------------------------------------- | -------------------------------------------- |
+| `buildGalaxyFieldMixture` (emission)                                           | disc, bulge, bar, arm ridges             | `milkyWay/field/splat.wesl`                  |
+| `buildHiiRegions`                                                              | Strömgren shells + OB cores              | `splat.wesl`, own target                     |
+| `buildGalaxyIsmMapArmForcing` + `sfEventCatalog` / `buildDustBubblePlacements` | ISM-map forcing grid, SF events, bubbles | `ismMapFluidStep.wesl`, `bubblePresent.wesl` |
 
 All three take the same `GalaxyDescription` that `shared/describeGalaxy` produced
 and `v1/packGenerationUniforms` wrote into v1's generation UBO — which is what

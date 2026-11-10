@@ -243,7 +243,7 @@ export type RenderSettings = {
   readonly ismMapSeedingViewWeight: number;
   /**
    * Bubble-view crossfade weight: 0 = pure galaxy, 1 = the SF-event
-   * catalog's own bubble/cavity placements alone (dustBubblePlacements.ts),
+   * catalog's own bubble/cavity placements alone (buildDustBubblePlacements.ts),
    * same seam as `ismMapViewIntensity`/`orientationViewIntensity`. That
    * catalog is a SECOND, independent star-formation model — resolved from
    * the same `sfEventCatalog.ts` events the ISM-map generator never sees —

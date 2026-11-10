@@ -273,17 +273,17 @@ Shared rules for A1–A4:
 - `P/dust/data/{bubbleBudget,hiiCavityBudget}.ts` (create)
 - `inlineTypeFiles.ts` (the two rows)
 
-- [ ] `galaxyDustMixture.ts`:
+- [x] `galaxyDustMixture.ts`:
   - `export` `DustDiscShape`, extract it to `@types`, and move it to `.d.ts`.
   - Extract `dustSigmaR`.
   - `npm run move-files -- P/dust/utils/galaxyDustMixture.ts P/dust/utils/dustDiscShape.ts`.
-- [ ] `dustBubblePlacements.ts`:
+- [x] `dustBubblePlacements.ts`:
   - Extract `DustBubblePlacement` to `@types`.
   - `export` and extract `armEventCenter` and `armReaches` (shared by both builders; extract
     refuses otherwise).
   - Extract `buildHiiCavityPlacements`, `HII_CAVITY_BUDGET` and `BUBBLE_BUDGET`.
   - `npm run move-files -- P/dust/utils/dustBubblePlacements.ts P/dust/utils/buildDustBubblePlacements.ts`.
-- [ ] Resulting count: `dust/utils` 11. Commit.
+- [x] Resulting count: `dust/utils` 11. Commit.
 
 ### Task A3: Split the ISM-map builders
 

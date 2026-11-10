@@ -14,7 +14,7 @@
  * so only the surviving four terms are listed; their removed weight share
  * still anchors that function's flux budget.
  *
- * `galaxyDustMixture.ts` reuses this exact fit at the dust disc's own scale
+ * `dustDiscShape.ts` reuses this exact fit at the dust disc's own scale
  * length — same dimensionless profile, different h.
  */
 export const DISC_SIGMA_RATIOS = [0.35, 0.65, 1.15, 1.9] as const;

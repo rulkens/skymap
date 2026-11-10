@@ -3,7 +3,7 @@
  * gate splitting `sfEventCatalog.ts`'s events into glowing knots (young) and
  * swept dust cavities (old), the Kennicutt luminosity draw, and the
  * Strömgren radius that follows from it. Imported by both `hiiRegions.ts`
- * (emission) and `dustBubblePlacements.ts` (cavities) so the two tiers
+ * (emission) and `buildDustBubblePlacements.ts` (cavities) so the two tiers
  * cannot drift apart on where one event's phase ends and the next begins.
  */
 import { pcToUnits } from '../../mixture/utils/pcToUnits';

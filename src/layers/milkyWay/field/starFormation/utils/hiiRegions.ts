@@ -175,7 +175,7 @@ type RegionPlan = {
   readonly clusterCount: number;
 };
 
-/** World centre of one SF event, resolved on the warp surface — identical technique to `dustBubblePlacements.ts`, not re-derived. */
+/** World centre of one SF event, resolved on the warp surface — identical technique to `buildDustBubblePlacements.ts`, not re-derived. */
 function eventCenter(event: SfEvent, geometry: GalaxyDescription): Vec3 | undefined {
   const arm = geometry.arms[event.armIndex];
   if (!arm) return undefined;

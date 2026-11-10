@@ -102,7 +102,7 @@ function migrateDust(dust: Record<string, unknown>): Record<string, unknown> {
  * defaults-fill pass below, which copies `shells` WHOLESALE (like `dig`/
  * `youngStars` already do) rather than deep-merging it — a preset naming
  * only some of the seven re-enters with a partial `shells` bag, which is why
- * every read of these fields in `hiiRegions.ts`/`dustBubblePlacements.ts`
+ * every read of these fields in `hiiRegions.ts`/`buildDustBubblePlacements.ts`
  * carries its own `?? default` guard rather than assuming presence.
  */
 const HII_SHELLS_LIFT_KEYS = [

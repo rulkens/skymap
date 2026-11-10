@@ -4,7 +4,7 @@
  * byte-for-byte — a mismatch is silent garbage on screen, not a crash.
  *
  * packBubbleInstances — packs the bubble-view overlay's two independent
- * placement lists (relic bubbles, HII cavities — dustBubblePlacements.ts)
+ * placement lists (relic bubbles, HII cavities — buildDustBubblePlacements.ts)
  * into one instance buffer: `@location(0)` `vec4<f32>` (center.xyz, radius)
  * and `@location(1)` `f32` kind, at an instance-stepped `arrayStride` of
  * `BUBBLE_RECORD_FLOATS * 4`.
@@ -14,7 +14,7 @@
  * `createGalaxyModel.ts`'s `rebuildBubblePlacements` sizes the buffer to
  * `relics.length + cavities.length` and expects that contiguous layout.
  */
-import type { DustBubblePlacement } from '../dust/utils/dustBubblePlacements';
+import type { DustBubblePlacement } from '../dust/@types/DustBubblePlacement';
 
 /** Floats per instance: a vec4 (center.xyz, radius) then a kind lane. */
 export const BUBBLE_RECORD_FLOATS = 5;

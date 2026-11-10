@@ -26,12 +26,7 @@ import type { GalaxyIsmMap } from '../../../../../src/@types/galaxy/GalaxyIsmMap
 
 import { createGenerationPipelines } from '../../../../../src/services/engine/galaxyGenerator/v1/createGenerationPipelines';
 import { GENERATION_UBO } from '../../../../../src/services/engine/galaxyGenerator/shared/generationUboLayout';
-import {
-  buildDustBubblePlacements,
-  buildHiiCavityPlacements,
-  BUBBLE_BUDGET,
-  HII_CAVITY_BUDGET,
-} from '../../../../../src/layers/milkyWay/field/dust/utils/dustBubblePlacements';
+import { buildDustBubblePlacements } from '../../../../../src/layers/milkyWay/field/dust/utils/buildDustBubblePlacements';
 import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../../src/layers/milkyWay/field/mixture/utils/galaxyFieldMixture';
 import { ismMapGridRadius } from '../../../../../src/layers/milkyWay/field/ismMap/utils/galaxyIsmMapArmForcing';
 import type { GalaxyIsmMapGridRadius } from '../../../../../src/layers/milkyWay/field/ismMap/@types/GalaxyIsmMapGridRadius';
@@ -54,6 +49,9 @@ import {
 import type { GalaxyFieldRenderer } from '../../../../../src/layers/milkyWay/field/@types/GalaxyFieldRenderer';
 import type { GalaxyFieldExtra } from '../../../../../src/layers/milkyWay/field/mixture/@types/GalaxyFieldExtra';
 import type { GalaxyFieldMixtureInput } from '../../../../../src/layers/milkyWay/field/mixture/@types/GalaxyFieldMixtureInput';
+import { BUBBLE_BUDGET } from '../../../../../src/layers/milkyWay/field/dust/data/bubbleBudget';
+import { HII_CAVITY_BUDGET } from '../../../../../src/layers/milkyWay/field/dust/data/hiiCavityBudget';
+import { buildHiiCavityPlacements } from '../../../../../src/layers/milkyWay/field/dust/utils/buildHiiCavityPlacements';
 
 /**
  * A single generated extra galaxy. The UBO is retained rather than destroyed

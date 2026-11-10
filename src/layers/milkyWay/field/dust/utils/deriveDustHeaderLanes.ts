@@ -7,7 +7,7 @@
 import type { GalaxyDustParams } from '../@types/GalaxyDustParams';
 import type { GalaxyDescription } from '../../../../../@types/galaxy/GalaxyDescription';
 import { DISC_SIGMA_RATIOS } from '../../mixture/data/discSurfaceFit';
-import { dustDiscShape, dustSigmaR } from './galaxyDustMixture';
+import { dustDiscShape } from './dustDiscShape';
 import { dustNoiseTileUnits } from './dustParticleCloud';
 import { dustExtinctionRgb } from './dustExtinctionRgb';
 import { stretchExtinctionChroma } from './stretchExtinctionChroma';
@@ -15,6 +15,7 @@ import { stretchExtinctionChroma } from './stretchExtinctionChroma';
 import type { DustHeaderLanes } from '../@types/DustHeaderLanes';
 import type { FieldDustCarve } from '../@types/FieldDustCarve';
 import type { FieldDustNoise } from '../@types/FieldDustNoise';
+import { dustSigmaR } from './dustSigmaR';
 
 /**
  * Floor for R — small next to any real galaxy's scale (generator units where
