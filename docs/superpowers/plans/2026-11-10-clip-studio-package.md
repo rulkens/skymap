@@ -206,14 +206,14 @@ window; the fork records `[atSec, atSec]`. Zero-length children of an overlapped
 actually fire at (the next step's start). Existing tests that `toEqual` a whole `CompiledClip` are updated to
 ignore or include `spans`; no other compiled field changes.
 
-- [ ] Test `spans: an overlapped seq starts its second step overlap seconds early`:
+- [x] Test `spans: an overlapped seq starts its second step overlap seconds early`:
       `seq([dollyTo(300, 4), dollyTo(950, 4)], { overlap: 1 })` → child spans `[0,4]` and `[3,7]`, seq `[0,7]`.
-- [ ] Test `spans: a cue inside an overlapped seq fires at the next step's start`:
+- [x] Test `spans: a cue inside an overlapped seq fires at the next step's start`:
       `seq([dollyTo(300, 4), show(['flow']), dollyTo(950, 4)], { overlap: 1 })` → the show's span is `[3,3]`.
-- [ ] Test `spans: a forked child keeps its own window while the fork awaits nothing`:
+- [x] Test `spans: a forked child keeps its own window while the fork awaits nothing`:
       `[wait(2), fork(dollyTo(300, 5)), hold(1)]` → fork `[2,2]`, its child (path `[1,0]`) `[2,7]`, hold `[2,3]`.
-- [ ] Test `spans: all ends on its longest child`: `all([dollyTo(1, 2), spin('yaw', { by: 1, over: 5 })])` → `[0,5]`.
-- [ ] Implement; `npm test -- compileClip` green.
+- [x] Test `spans: all ends on its longest child`: `all([dollyTo(1, 2), spin('yaw', { by: 1, over: 5 })])` → `[0,5]`.
+- [x] Implement; `npm test -- compileClip` green.
 
 ### Task 0.2: flyPath knot arrival times
 
@@ -225,11 +225,11 @@ ignore or include `spans`; no other compiled field changes.
 per waypoint; geodesic omits it). `buildPathTrack` fills it from the same time warp it samples with (dwell
 included); `compileClip` copies it onto the flyPath's `EffectSpan.knotSecs`.
 
-- [ ] Test `knotSecs: one per waypoint, strictly increasing, the last equal to endSec` (3 `atPoint` waypoints).
-- [ ] Test `knotSecs: a dwell moves later knots by the dwell time`: same path with `linger: 0.7, lingerSec: 1.4`
+- [x] Test `knotSecs: one per waypoint, strictly increasing, the last equal to endSec` (3 `atPoint` waypoints).
+- [x] Test `knotSecs: a dwell moves later knots by the dwell time`: same path with `linger: 0.7, lingerSec: 1.4`
       → each knot after the first is later than without dwell, and `endSec` grows by the summed dwell.
-- [ ] Test `spans: a flyPath span carries its track's knotSecs`.
-- [ ] Implement; targeted tests green.
+- [x] Test `spans: a flyPath span carries its track's knotSecs`.
+- [x] Implement; targeted tests green.
 
 ### Task 0.3: `ClipCompileError` names the effects at fault
 
@@ -261,13 +261,13 @@ through `continuedFromComposite` and `resolveSeqJoins`, which preserve array pos
 wrapped once, at the deepest node being walked. "Unresolved focus effect" throws stay plain `Error`s: they are
 programmer errors, not draft errors.
 
-- [ ] Test `twoWriters names both clashing effects`: `all([dollyTo(300, 4), dollyTo(500, 6)])` → paths
+- [x] Test `twoWriters names both clashing effects`: `all([dollyTo(300, 4), dollyTo(500, 6)])` → paths
       `[[0,0],[0,1]]`, reason `twoWriters`, channel `distance`, spans include both children.
-- [ ] Test `seqOverlap names the seq`: `seq([dollyTo(1, 2), dollyTo(2, 2)], { overlap: 3 })` → paths `[[0]]`.
-- [ ] Test `threeWriters names the three`, `cueOrder names the cue`, `compositeClash names the composite and the
+- [x] Test `seqOverlap names the seq`: `seq([dollyTo(1, 2), dollyTo(2, 2)], { overlap: 3 })` → paths `[[0]]`.
+- [x] Test `threeWriters names the three`, `cueOrder names the cue`, `compositeClash names the composite and the
       base writer`, `flyPath names the flyPath` (an empty waypoint list): one test each, smallest clip that
       triggers it.
-- [ ] Test `a valid clip compiles exactly as before` is the existing suite; run all of
+- [x] Test `a valid clip compiles exactly as before` is the existing suite; run all of
       `tests/services/engine/animation/`.
 
 ### Task 0.4: resolution preserves every draft path (amended 2026-11-10)
@@ -302,10 +302,10 @@ module map of A1, the A2 boundary, in ≤ 60 lines), `tsconfig.json`, `vitest.co
 `tests/helpers/conventions/utilsFunctionSweepFiles.ts`, `tests/conventions/studioImportBoundary.test.ts` (new),
 `CLAUDE.md` ("Where to look": one line, `packages/studio/  clip studio (lazy #studio chunk) — README`)
 
-- [ ] Wire per A1. The utils sweep covers `packages/studio/src/**/utils/`.
-- [ ] `studioImportBoundary` rules per A2, empty allowlist. Its roots may be nearly empty at this commit; the
+- [x] Wire per A1. The utils sweep covers `packages/studio/src/**/utils/`.
+- [x] `studioImportBoundary` rules per A2, empty allowlist. Its roots may be nearly empty at this commit; the
       rules must still run (assert the swept file list is defined, not non-empty).
-- [ ] `npm run typecheck:fast`, `npm test -- conventions` green.
+- [x] `npm run typecheck:fast`, `npm test -- conventions` green.
 
 ### Task 1.2: root reducer becomes `combineSlices`; injection seam; ADR 0016
 
@@ -316,11 +316,11 @@ module map of A1, the A2 boundary, in ≤ 60 lines), `tsconfig.json`, `vitest.co
 **Contract:** `export const rootReducer = combineSlices({ [settingsRoute]: …, … })` with the same routes and
 reducers; `RootState = ReturnType<typeof rootReducer>` unchanged in shape.
 
-- [ ] Test `a slice injected after store creation reads initialState before its first action and its own state
+- [x] (Deleted later by Q44: it tested RTK.) Test `a slice injected after store creation reads initialState before its first action and its own state
       after`: a throwaway `createSlice` injected into `rootReducer` after `createAppStore()`; its `injectInto`
       selector returns `initialState` immediately, and the reduced value after one of its actions.
-- [ ] `createAppStore.test.ts` and the full store tests stay green (no static route changes).
-- [ ] ADR 0016: context (lazy chunk needs state, Q26's open question), decision (A3), consequences (app
+- [x] `createAppStore.test.ts` and the full store tests stay green (no static route changes).
+- [x] ADR 0016: context (lazy chunk needs state, Q26's open question), decision (A3), consequences (app
       `RootState` unaware of lazy slices; a lazy slice reads through `injectInto` selectors; the serializable
       and immutable checks walk injected state too).
 
@@ -333,8 +333,8 @@ reducers; `RootState = ReturnType<typeof rootReducer>` unchanged in shape.
 pause at one `nowMs`, derive the frozen sim instant from it, run `body`, and in `finally` give the clock back
 exactly as `clipBodySaga` does today (live re-snaps, a playing manual clock resumes, a paused one stays).
 
-- [ ] Move the bracket out of `clipBodySaga` unchanged; `clipBodySaga` calls it.
-- [ ] Existing `clipBodySaga` tests pin the behaviour; if none covers the live re-snap branch, add
+- [x] Move the bracket out of `clipBodySaga` unchanged; `clipBodySaga` calls it.
+- [x] Existing `clipBodySaga` tests pin the behaviour; if none covers the live re-snap branch, add
       `withFrozenClockSaga re-snaps a live clock on exit`.
 
 ### Task 1.4: `#studio=<clipId>` takeover route and lazy body
@@ -355,9 +355,9 @@ exactly as `clipBodySaga` does today (live re-snaps, a playing manual clock resu
 - `studioBodySaga(id)`: `call` the dynamic `import('../../../packages/studio/src/studioEntry')`, then
   `call(studioSessionSaga, id)`.
 
-- [ ] Test `navigate #studio=<unknown> is UNKNOWN_ID and opens nothing`.
-- [ ] Test `navigate #studio=cosmicFlows dispatches openStudio('cosmicFlows')`.
-- [ ] Test `studioBodySaga runs the package session saga for its clip` (mock the dynamic import with `vi.mock`).
+- [x] Test `navigate #studio=<unknown> is UNKNOWN_ID and opens nothing`.
+- [x] Test `navigate #studio=cosmicFlows dispatches openStudio('cosmicFlows')`.
+- [x] Test `studioBodySaga runs the package session saga for its clip` (mock the dynamic import with `vi.mock`).
 
 ### Task 1.5: package contract types
 
@@ -489,15 +489,15 @@ redo returns to. `label` names the edit for "Undo Distance".
 - `setRowParam(data: ClipData, ref: RowRef, param: string, value: number | string | boolean | undefined): ClipData`:
   `undefined` removes an optional param; a `waypoint` ref edits `waypoints[index]` of the flyPath at `path`.
 
-- [ ] Test `updateEffectAt keeps every sibling subtree by identity` (only the spine is new).
-- [ ] Test `setRowParam sets a nested effect's param` (`over` of `[1,0]` in a two-level clip).
-- [ ] Test `setRowParam with undefined removes an optional param` (`fade` on an `osc`).
-- [ ] Test `setRowParam edits one waypoint` (`linger` on waypoint 2 of a flyPath; the others keep identity).
-- [ ] Test `rowKey distinguishes effect and waypoint refs at the same path`.
+- [x] Test `updateEffectAt keeps every sibling subtree by identity` (only the spine is new).
+- [x] Test `setRowParam sets a nested effect's param` (`over` of `[1,0]` in a two-level clip).
+- [x] Test `setRowParam with undefined removes an optional param` (`fade` on an `osc`).
+- [x] Test `setRowParam edits one waypoint` (`linger` on waypoint 2 of a flyPath; the others keep identity).
+- [x] Test `rowKey distinguishes effect and waypoint refs at the same path`.
 
 ### Task 1.7: the studio slice, injection and selectors
 
-**Files:** `packages/studio/src/session/state/{studioSlice,initialState,selectors,injectStudioSlice}.ts`,
+**Files:** `packages/studio/src/session/state/{studioSlice,initialState,selectors}.ts`,
 `packages/studio/src/session/data/studioLimits.ts` (`HISTORY_LIMIT = 100`),
 `packages/studio/src/session/utils/defaultCollapsed.ts`, tests mirrored **review: yes**
 
@@ -518,17 +518,17 @@ redo returns to. `label` names the edit for "Undo Distance".
 `selectRevision`, `selectSelection`, `selectCollapsed`, `selectPlayheadSec`, `selectViewport`,
 `selectPreview`, `selectIsDirty`, `selectUndoLabel` / `selectRedoLabel` (`null` when unavailable),
 `selectCurrentResolution` (the resolution only when its revision is the draft's, else `null`).
-`injectStudioSlice()` calls `rootReducer.inject(studioSlice)`; idempotent.
+`selectors.ts` binds the slice with `studioSlice.injectInto(rootReducer)` (fix wave B replaced the planned `injectStudioSlice()`); importing it injects, idempotently.
 
-- [ ] Test `paramEdited pushes one history entry and bumps the revision`.
-- [ ] Test `edits with the same gesture coalesce into one entry; a new gesture starts another`.
-- [ ] Test `undoing back to the opened draft makes the studio clean again` (`selectIsDirty` false, the draft is
+- [x] Test `paramEdited pushes one history entry and bumps the revision`.
+- [x] Test `edits with the same gesture coalesce into one entry; a new gesture starts another`.
+- [x] Test `undoing back to the opened draft makes the studio clean again` (`selectIsDirty` false, the draft is
       the baseline object).
-- [ ] Test `an edit after undo clears redo`.
-- [ ] Test `history keeps at most HISTORY_LIMIT entries, dropping the oldest`.
-- [ ] Test `reopening the same clip keeps an unsaved draft; opening another replaces it`.
-- [ ] Test `a resolution for a stale revision is ignored by selectCurrentResolution`.
-- [ ] Test `defaultCollapsed folds a flyPath past 8 waypoints and nothing else`.
+- [x] Test `an edit after undo clears redo`.
+- [x] Test `history keeps at most HISTORY_LIMIT entries, dropping the oldest`.
+- [x] Test `reopening the same clip keeps an unsaved draft; opening another replaces it`.
+- [x] Test `a resolution for a stale revision is ignored by selectCurrentResolution`.
+- [x] Test `defaultCollapsed folds a flyPath past 8 waypoints and nothing else`.
 
 ### Task 1.8: the session saga
 
@@ -536,7 +536,7 @@ redo returns to. `label` names the edit for "Undo Distance".
 `packages/studio/src/studioEntry.ts` (export `studioSessionSaga`), tests mirrored **review: yes**
 
 **Contract:**
-- `studioSessionSaga(id: ClipId)`: `injectStudioSlice()`; `withFrozenClockSaga(simDays => …)`: wait until
+- `studioSessionSaga(id: ClipId)`: `withFrozenClockSaga(simDays => …)`: wait until
   `cameraRuntime()` is non-null (`waitUntilSaga`), pin `PreviewPins` (runtime `from` and `fovYRad`, the frozen
   `simDays`, `selectOrientation`), `put(studioOpened({ clipId: id, draft: clipFactories[id](simDays).data, preview }))`,
   then run `resolveDraftSaga` until cancelled (the takeover ends). Nothing is cleared on exit (A4).
@@ -546,10 +546,10 @@ redo returns to. `label` names the edit for "Undo Distance".
   and `put(draftResolved({ revision, data }))`; a throw lands `{ revision, message }`. A newer revision
   supersedes a pending wait (latest wins). The same calls `clipBodySaga` makes, cited there.
 
-- [ ] Test `the session opens the clip at the frozen instant with the pinned preview`.
-- [ ] Test `each edit is resolved and tagged with its revision`.
-- [ ] Test `a revision still waiting for foci is superseded by a newer one`.
-- [ ] Test `ending the takeover keeps the draft in the slice`.
+- [x] Test `the session opens the clip at the frozen instant with the pinned preview`.
+- [x] Test `each edit is resolved and tagged with its revision`.
+- [x] Test `a revision still waiting for foci is superseded by a newer one`.
+- [x] Test `ending the takeover keeps the draft in the slice`.
 
 ---
 
