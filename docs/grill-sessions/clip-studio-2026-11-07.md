@@ -283,8 +283,15 @@ with a toggle, or both visible at once?
 
 **Decision:** B, both views at once as picture-in-picture, swappable. This supersedes Q10's Follow /
 Free toggle: the edit camera is always free and the camera view always follows the playhead. A
-second view of the scene is ground preparation for the spec. The existing cubemap and probe
-captures, which already render the scene from other poses, are where to look for a seam.
+second view of the scene is ground preparation for the spec, but not an engine rewrite. Dome mode
+already renders several views through the view-rig seam (`src/data/rendering/viewRigs.ts`: `dome` is
+five cube-face `ViewSpec`s, each rendering into its own `output` texture, composited by
+`domeResamplePass`). PiP is a third rig: the canvas view from the edit camera, plus one inset view into
+its own texture, plus a composite pass. The groundwork is the inset's independent camera. A
+`ViewSpec` is today "the same pose, turned and offset", and the inset needs a second pose that may be
+metres from Earth while the edit camera is Mpc away. It also needs per-view evaluation of whatever
+reads the one main camera: scale-band fades, LOD planning, data demand and body slabs. Labels start
+off in the inset, as they are in dome views.
 
 _Still open (engineering, to be proposed in the spec):_ how the studio's RTK state plugs into the
 app store.
