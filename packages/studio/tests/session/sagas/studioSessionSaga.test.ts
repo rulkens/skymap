@@ -18,6 +18,7 @@ import { studioSessionSaga } from '../../../src/session/sagas/studioSessionSaga'
 import {
   draftResolved,
   paramEdited,
+  startModeSet,
   studioOpened,
   undone,
 } from '../../../src/session/state/studioSlice';
@@ -115,6 +116,19 @@ describe('studioSessionSaga', () => {
     const edited = selectCurrentResolution(h.store.getState());
     expect(edited?.revision).toBe(selectRevision(h.store.getState()));
     expect(edited).toMatchObject({ data: { timeline: [{ children: [{ to: 950 }, {}] }] } });
+  });
+
+  it('switching the start re-resolves the timeline', async () => {
+    const h = harness();
+    h.run('flyout');
+    await flush();
+
+    h.store.dispatch(startModeSet('saved'));
+    await flush();
+
+    const resolved = selectCurrentResolution(h.store.getState());
+    expect(resolved).toMatchObject({ data: { start: RUNTIME.from } });
+    expect(resolved?.revision).toBe(selectRevision(h.store.getState()));
   });
 
   it('a revision still waiting for foci is superseded by a newer one', async () => {

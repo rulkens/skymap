@@ -1,13 +1,20 @@
 /**
  * resolveDraftSaga — keeps the slice's resolution cache on the current draft revision: on open and
- * on every edit, undo and redo, wait for the draft's foci, resolve it against the pinned preview
- * and land it tagged with its revision (A6). The latest revision wins: a newer one cancels a
- * resolve still waiting. The calls are the ones `clipBodySaga` makes before playing a clip.
+ * on every edit, start switch, undo and redo, wait for the draft's foci, resolve it against the
+ * pinned preview and land it tagged with its revision (A6). The latest revision wins: a newer one
+ * cancels a resolve still waiting. The calls are the ones `clipBodySaga` makes before playing a clip.
  */
 import { call, cancel, fork, getContext, put, select, take } from 'typed-redux-saga';
 import type { Task } from 'redux-saga';
 
-import { draftResolved, paramEdited, redone, studioOpened, undone } from '../state/studioSlice';
+import {
+  draftResolved,
+  paramEdited,
+  redone,
+  startModeSet,
+  studioOpened,
+  undone,
+} from '../state/studioSlice';
 import { selectStudioState } from '../state/selectors';
 import { clipFociReady } from '../../../../../src/state/tour/clipFociReady';
 import { waitUntilSaga } from '../../../../../src/state/tour/waitUntilSaga';
@@ -17,7 +24,7 @@ import { ORIENTATION_FRAMES } from '../../../../../src/data/orientation/orientat
 import type { SagaContext } from '../../../../../src/store/types';
 import type { StudioResolution } from '../../@types/session/StudioResolution';
 
-const REVISION_ACTIONS = [studioOpened, paramEdited, undone, redone];
+const REVISION_ACTIONS = [studioOpened, paramEdited, startModeSet, undone, redone];
 
 function* resolveRevisionSaga(selection: SagaContext['selection']): Generator {
   const { draft, preview, revision } = yield* select(selectStudioState);
