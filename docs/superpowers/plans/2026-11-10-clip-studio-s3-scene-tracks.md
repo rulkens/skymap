@@ -388,6 +388,23 @@ not affine overlays or a concatenated tour (spec §8). Comment budget per `comme
 - `npm run perf` and `npm run perf:cpu` (all scenarios, `--url` this worktree's server) on the G0 HEAD and on the
   final HEAD, both in the ledger; no scenario regresses beyond run-to-run noise. A regression halts landing for the
   owner's ruling.
+- Baseline, G0 HEAD `64497c71c` (2026-11-10, this machine). GPU = `npm run perf` MERGED median ms; CPU = sum of
+  `npm run perf:cpu` row means, ms per frame.
+
+  | scenario | GPU | CPU |
+  | --- | --- | --- |
+  | earth-surface | 24.6 | 2.018 |
+  | earth-copenhagen-500km | 26.2 | 2.219 |
+  | mars-jezero-146km | 44.8 | 2.140 |
+  | solar-system | 21.2 | 1.601 |
+  | star-field | 9.7 | 1.402 |
+  | milky-way | 30.7 | 1.701 |
+  | milky-way-outside | 26.0 | 1.659 |
+  | milky-way-close | 43.5 | 1.721 |
+  | galactic-centre | 10.2 | 2.158 |
+  | sgr-a-star-lens | 36.2 | 2.279 |
+  | local-group | 4.4 | 0.827 |
+  | full-survey | 4.4 | 0.842 |
 
 **Deferral boundary (out of scope)**
 
