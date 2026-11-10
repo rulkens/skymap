@@ -12,7 +12,7 @@ import {
   selectStudioClipId,
   selectUndoLabel,
 } from '../../../session/state/selectors';
-import { selectTimeline } from '../../../timeline/state/selectTimeline';
+import { selectFullTimeline } from '../../../timeline/state/selectFullTimeline';
 import { compileErrorLine } from '../../utils/compileErrorLine';
 import { useAppDispatch, useAppSelector } from '../../../../../../src/store/hooks';
 import s from './TopBar.module.css';
@@ -26,7 +26,8 @@ type Props = {
 function TopBar({ keysOpen, onToggleKeys }: Props) {
   const dispatch = useAppDispatch();
   const clipId = useAppSelector(selectStudioClipId);
-  const timeline = useAppSelector(selectTimeline);
+  // The full tree: a culprit folded inside a group still names itself here.
+  const timeline = useAppSelector(selectFullTimeline);
   const resolution = useAppSelector(selectCurrentResolution);
   const dirty = useAppSelector(selectIsDirty);
   const undoLabel = useAppSelector(selectUndoLabel);

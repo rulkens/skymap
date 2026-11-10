@@ -53,6 +53,8 @@ export function buildTimeline(
   ): string => {
     const spec = ROW_KINDS[kind];
     const id = rowKey(ref);
+    const collapsed = where.expandable && folded.has(id);
+    const pathKey = ref.kind === 'effect' ? ref.path.join('.') : null;
     const writes = spec.writes(subject);
     const family = UNTINTED_MARKS.has(spec.mark) ? null : (writes[0] ?? null);
     rows.push({
@@ -60,7 +62,7 @@ export function buildTimeline(
       ref,
       kind,
       ...where,
-      collapsed: where.expandable && folded.has(id),
+      collapsed,
       family,
       glyph:
         typeof spec.glyph === 'function'
@@ -70,7 +72,11 @@ export function buildTimeline(
       label: spec.label(subject),
       ...times,
       ...(knotSecs === undefined ? {} : { knotSecs }),
-      errors: ref.kind === 'effect' ? (culprits.get(ref.path.join('.')) ?? []) : [],
+      errors: pathKey === null ? [] : (culprits.get(pathKey) ?? []),
+      hidesErrors:
+        collapsed &&
+        pathKey !== null &&
+        [...culprits.keys()].some((culprit) => culprit.startsWith(`${pathKey}.`)),
     });
     return id;
   };

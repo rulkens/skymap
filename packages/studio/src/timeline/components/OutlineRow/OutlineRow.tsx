@@ -78,9 +78,9 @@ function OutlineRow({ row, ancestors, selected, onSelect, onToggle }: Props) {
         <span className={s.val}>{value}</span>
         {qualifier !== undefined && <span className={s.qualifier}> · {qualifier}</span>}
       </span>
-      <span className={cx(s.dur, invalid && s.durInvalid)}>
+      <span className={cx(s.dur, (invalid || row.hidesErrors) && s.durInvalid)}>
         {row.duration}
-        {invalid && ' ⚠'}
+        {(invalid || row.hidesErrors) && ' ⚠'}
       </span>
       <span className={s.slots}>
         {CHANNEL_FAMILY_LEGEND.map(({ family, glyph }) => (

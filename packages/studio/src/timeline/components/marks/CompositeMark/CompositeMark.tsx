@@ -15,8 +15,9 @@ function CompositeMark({ row, window, selected }: MarkProps) {
       >
         <span className={s.text}>{row.label.name}</span>
       </span>
-      {row.knotSecs?.map((sec) => (
-        <span key={sec} className={s.knot} style={{ left: `${timeToPercent(sec, window)}%` }} />
+      {row.knotSecs?.map((sec, index) => (
+        // By index: two knots can arrive at the same second.
+        <span key={index} className={s.knot} style={{ left: `${timeToPercent(sec, window)}%` }} />
       ))}
     </>
   );

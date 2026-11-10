@@ -14,6 +14,7 @@ import {
   lookAtId,
   moveTarget,
   oscillate,
+  rate,
   seq,
   tween,
 } from '../../../../../src/services/engine/animation/effectHelpers';
@@ -74,6 +75,33 @@ describe('buildTimeline', () => {
       duration: 'end',
     });
     expect(rowOf(rows, 'e:1').background).toBe(false);
+  });
+
+  it('a rate holds its speed until the next rate on its channel, else to the clip end', () => {
+    const draft: ClipData = {
+      timeline: [
+        seq([
+          rate('yaw', { to: 0.1, over: 1 }),
+          hold(2),
+          rate('yaw', { to: 0, over: 1 }),
+          rate('pitch', { to: 0.1, over: 1 }),
+          hold(3),
+        ]),
+      ],
+    };
+    const { rows } = buildTimeline(draft, compiled(draft), []);
+    expect(rowOf(rows, 'e:0.0').tailEndSec).toBe(3);
+    expect(rowOf(rows, 'e:0.2').tailEndSec).toBe(8);
+    expect(rowOf(rows, 'e:0.3').tailEndSec).toBe(8);
+  });
+
+  it('a folded group over a culprit is flagged, the culprit stays the only invalid row', () => {
+    const draft: ClipData = { timeline: [seq([all([dollyTo(300, 4), dollyTo(500, 4)])])] };
+    const { rows } = buildTimeline(draft, compiled(draft), ['e:0']);
+    expect(rows.map((r) => r.id)).toEqual(['start', 'e:0']);
+    expect(rowOf(rows, 'e:0')).toMatchObject({ errors: [], hidesErrors: true });
+    const unfolded = buildTimeline(draft, compiled(draft), []).rows;
+    expect(unfolded.every((r) => r.hidesErrors === false)).toBe(true);
   });
 
   it('waypoint rows span consecutive knot times and the last is Settle', () => {

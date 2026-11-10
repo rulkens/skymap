@@ -37,4 +37,6 @@ export type TimelineRow = {
   /** A flyPath's waypoint arrival times (the compiler's `knotSecs`), for its lane's knots. */
   readonly knotSecs?: readonly number[];
   readonly errors: readonly ClipCompileReason[];
+  /** Folded over a culprit: the outline flags it ⚠ so the error stays findable. */
+  readonly hidesErrors: boolean;
 };

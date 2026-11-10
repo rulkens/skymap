@@ -11,3 +11,6 @@
 .selected {
   border-color: var(--color-fg);
 }
+.invalid {
+  border: 2px dashed var(--color-fg);
+}

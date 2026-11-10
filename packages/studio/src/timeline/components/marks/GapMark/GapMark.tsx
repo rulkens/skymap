@@ -8,7 +8,12 @@ function GapMark({ row, window, selected }: MarkProps) {
   if (row.startSec === null || row.endSec === null) return null;
   return (
     <span
-      className={cx(s.root, row.kind === 'hold' && s.hold, selected && s.selected)}
+      className={cx(
+        s.root,
+        row.kind === 'hold' && s.hold,
+        selected && s.selected,
+        row.errors.length > 0 && s.invalid,
+      )}
       style={spanStyle(row.startSec, row.endSec, window)}
     />
   );

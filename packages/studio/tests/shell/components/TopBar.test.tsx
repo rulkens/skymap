@@ -6,7 +6,7 @@ import { Provider } from 'react-redux';
 import { all, dollyTo, seq } from '../../../../../src/services/engine/animation/effectHelpers';
 import { exitTakeover } from '../../../../../src/state/takeover/takeoverActions';
 import TopBar from '../../../src/shell/components/TopBar/TopBar';
-import { paramEdited } from '../../../src/session/state/studioSlice';
+import { paramEdited, rowToggled } from '../../../src/session/state/studioSlice';
 import { openStudioStore } from '../../helpers/openStudioStore';
 import type { ClipData } from '../../../../../src/@types/animation/ClipData';
 
@@ -50,6 +50,14 @@ describe('TopBar', () => {
     const { dispatch } = mount();
     fireEvent.click(screen.getByRole('button', { name: 'Close studio' }));
     expect(dispatch).toHaveBeenCalledWith(exitTakeover());
+  });
+
+  it('the error line still names a culprit folded inside a group', () => {
+    const { store } = mount({ timeline: [seq([all([dollyTo(300, 4), dollyTo(500, 4)])])] });
+    act(() => void store.dispatch(rowToggled('e:0')));
+    const alert = screen.getByRole('alert');
+    expect(alert.textContent).toContain('Distance');
+    expect(alert.textContent).toMatch(/0–4 s/);
   });
 
   it('a compile error shows one alert line naming the culprit', () => {

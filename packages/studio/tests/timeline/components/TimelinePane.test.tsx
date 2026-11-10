@@ -62,4 +62,14 @@ describe('TimelinePane', () => {
     expect(invalid.length).toBeGreaterThan(0);
     expect(invalid[0]!.textContent).toContain('⚠');
   });
+
+  it('a folded group hiding a culprit shows the warning without being marked invalid itself', () => {
+    const store = mount({ timeline: [seq([all([dollyTo(300, 4), dollyTo(500, 4)])])] });
+    fireEvent.click(screen.getByRole('button', { name: 'Fold In order' }));
+
+    expect(selectCollapsed(store.getState())).toEqual(['e:0']);
+    const group = screen.getAllByRole('treeitem')[1]!;
+    expect(group.textContent).toContain('⚠');
+    expect(group).not.toHaveAttribute('aria-invalid');
+  });
 });

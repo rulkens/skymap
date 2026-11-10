@@ -35,6 +35,18 @@
 .selected::after {
   border-left-color: var(--color-accent);
 }
+.invalid {
+  border-top-style: dashed;
+  border-top-color: var(--color-fg);
+}
+.invalid::before,
+.invalid::after {
+  border-left-color: var(--color-fg);
+}
+.zero.invalid {
+  border-style: dashed;
+  border-color: var(--color-fg);
+}
 .collapsed {
   top: calc(var(--space-3) + var(--space-1));
 }
