@@ -11,6 +11,7 @@ import { rowWhere } from '../../utils/rowWhere';
 import { shownFields } from '../../utils/shownFields';
 import { rowSubject } from '../../../draft/utils/rowSubject';
 import { useObjectIndex } from '../../../session/hooks/useObjectIndex';
+import CurrentViewButton from '../CurrentViewButton/CurrentViewButton';
 import FieldRow from '../FieldRow/FieldRow';
 import StartModeField from '../StartModeField/StartModeField';
 import type { ClipData } from '../../../../../../src/@types/animation/ClipData';
@@ -48,6 +49,9 @@ function RowInspector({ row, rows, draft, resolution }: Props) {
         fields.map((field) => (
           <FieldRow key={field.key} spec={field} subject={subject} rowRef={row.ref} />
         ))}
+      {(row.ref.kind === 'start' || spec.fromView !== null) && (
+        <CurrentViewButton rowRef={row.ref} />
+      )}
       {resolved !== '' && (
         <InspectorRow label="Resolved">
           <ReadoutField>{resolved}</ReadoutField>

@@ -176,7 +176,7 @@ describe('advanceEpochs', () => {
 
   it('the clip row is passed through untouched', () => {
     const clipEpoch: Epoch<NonNullable<CameraState['clip']>> = {
-      ref: { data: { timeline: [] }, frame: 'equatorial', atEnd: 'revert' },
+      ref: { data: { timeline: [] }, frame: 'equatorial', atEnd: 'revert', transport: null },
       startMs: 5000,
     };
     const intent = makeCameraState();

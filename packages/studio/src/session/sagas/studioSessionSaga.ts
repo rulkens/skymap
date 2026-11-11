@@ -1,13 +1,15 @@
 /**
  * studioSessionSaga — the studio takeover's body inside the chunk: inject the slice, freeze the
  * clock, pin the preview (Q7: start pose, lens, sim instant and orientation frame as the clip
- * opens), open the clip's draft, and keep it resolved and its picks answered until the takeover
- * ends. Nothing is cleared on exit: the draft stays in the slice for a reopen (A4, Q28).
+ * opens), open the clip's draft, and keep it resolved, previewed in the 3D view and its picks
+ * answered until the takeover ends. Nothing is cleared on exit: the draft stays in the slice for a reopen (A4, Q28).
  */
 import { call, fork, getContext, put, select } from 'typed-redux-saga';
 
 import { pickObjectSaga } from './pickObjectSaga';
+import { previewSaga } from './previewSaga';
 import { resolveDraftSaga } from './resolveDraftSaga';
+import { viewUsedSaga } from './viewUsedSaga';
 import { studioOpened } from '../state/studioSlice';
 import { withFrozenClockSaga } from '../../../../../src/state/time/withFrozenClockSaga';
 import { waitUntilSaga } from '../../../../../src/state/tour/waitUntilSaga';
@@ -26,6 +28,8 @@ export function* studioSessionSaga(id: ClipId): Generator {
     const preview = { startPose: structuredClone(from), simDays, frame, fovYRad };
     yield* put(studioOpened({ clipId: id, draft: clipFactories[id](simDays).data, preview }));
     yield* fork(pickObjectSaga);
+    yield* fork(previewSaga);
+    yield* fork(viewUsedSaga);
     yield* call(resolveDraftSaga);
   });
 }

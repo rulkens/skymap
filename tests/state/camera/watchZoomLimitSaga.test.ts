@@ -34,6 +34,7 @@ describe('watchZoomLimitSaga', () => {
       data: LIFT,
       frame: 'galactic',
       atEnd: 'revert',
+      transport: null,
     });
   });
 

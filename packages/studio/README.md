@@ -2,7 +2,8 @@
 
 The clip studio: a timeline editor for registry clips. It opens any clip in `clipRegistry`, shows
 its structure and the compiler's timing as an outline beside tracks, and edits step parameters with
-undo. Slice 1 neither saves nor seeks; the plan and its later slices are in
+undo, and previews the clip in the 3D view at the playhead: scrubbing seeks camera and scene,
+Play/Pause/Loop run it (S4). It does not save yet; the plan and its later slices are in
 `docs/superpowers/plans/completed/2026-11-10-clip-studio-package.md`, the decisions in
 `docs/grill-sessions/clip-studio-2026-11-07.md`.
 
@@ -30,12 +31,13 @@ src/
   data/            cross-module data (channel families)
   utils/format/    naming-table formatters
   draft/utils/     pure addressing and edits over the authored ClipData tree
-  session/         the studio slice (injected), its selectors and the session sagas
+  session/         the studio slice (injected), its selectors and the session sagas; previewSaga is
+                   the one writer of camera.clip while the studio is open
   kinds/data/      the row-kind registry: one entry per Effect kind, plus start and waypoint
   timeline/        the derived timeline model, its selectors, outline/ruler/track components
   primitives/      glyphs, tooltip, key chip, inspector grid
   inspector/       field controls and the inspector panel
-  shell/           dock, top bar, key bar, key table
+  shell/           dock, top bar, transport controls, key bar, key table
 ```
 
 ## Boundary

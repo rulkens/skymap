@@ -19,7 +19,7 @@
   padding-inline: var(--space-8) var(--space-4);
 }
 .centre {
-  justify-content: flex-end;
+  justify-content: space-between;
   padding-inline: var(--space-4);
 }
 .right {

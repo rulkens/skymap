@@ -72,6 +72,7 @@ describe('hash history integrity', () => {
         fovYRad: 0.8,
         aspect: 1,
         upBasisQuat: [0, 0, 0, 1],
+        clipAt: null,
       }),
     });
     while (selectArrivalPending(handle.store.getState())) await flush();

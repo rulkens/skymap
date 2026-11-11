@@ -43,6 +43,7 @@ function makeClipStub(factor: number): ClipPlayer {
     registerEndResolver: vi.fn<(onEnd: () => void) => void>(),
     clipOpacityOf: vi.fn<(address: VisibilityAddress) => number>(() => factor),
     view: (root) => root,
+    clipAt: () => null,
     destroy: vi.fn<() => void>(),
   };
 }
@@ -65,6 +66,8 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
       },
       extractFocusRow: () => ({ row: null, focusId: null }),
       syncVisibility: () => {},
+      visibilityTargets: () => [],
+      getFades: () => ({ setImmediate: () => {}, fadeTo: () => {}, targetOf: () => null }),
     });
 
     // The fresh wrapper object is what starts the clip epoch on tick 1.

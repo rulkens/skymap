@@ -1,7 +1,8 @@
 /**
- * clipPlayer against a real store, real compile and the real epoch primitives. Only the two
- * engine hooks are fakes: `syncVisibility` records what reached the fade registry, and the
- * camera runtime hands a fixed up-basis to a frame roll. `makePlayer` threads the returned clip
+ * clipPlayer against a real store, real compile and the real epoch primitives. Only the engine
+ * hooks are fakes: `syncVisibility` and `fades` record what reached the fade registry (the seed
+ * table knows two identities, flow and the Milky Way label), and the camera runtime hands a fixed
+ * up-basis to a frame roll. `makePlayer` threads the returned clip
  * epoch back into the next tick, as `runFrame` does.
  */
 
@@ -12,6 +13,9 @@ import { rootReducer } from '../../../../src/store/rootReducer';
 import {
   clipStarted,
   clipEnded,
+  clipDataReplaced,
+  clipTransportSet,
+  clearFrameTween,
   resolveClipStart,
   startFrameTween,
 } from '../../../../src/state/camera/cameraSlice';
@@ -43,10 +47,14 @@ import type { CameraEpochs } from '../../../../src/@types/engine/camera/CameraEp
 import type { CameraRuntime } from '../../../../src/@types/engine/state/CameraRuntime';
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
 import type { SelectionRefBase } from '../../../../src/@types/engine/selection/SelectionRefBase';
+import type { FadeIdentity } from '../../../../src/@types/animation/FadeIdentity';
+import type { ClipTransport } from '../../../../src/@types/animation/ClipTransport';
 
 const LIVE_POSE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 };
 const VIRGO = { type: 'structure', id: 'virgo' };
 const VIRGO_ROW = { row: { type: 'structure' }, focusId: 'virgo' };
+const FLOW: FadeIdentity = { address: 'flow' };
+const MW_LABEL: FadeIdentity = { address: 'label:milkyWay' };
 
 type TestStore = ReturnType<typeof makeStore>;
 
@@ -61,8 +69,23 @@ function installClip(store: TestStore, data: ClipData, atEnd: ClipSceneEnd = 're
   store.dispatch(clipStarted({ data: resolved, frame: DEFAULT_ORIENTATION, atEnd }));
 }
 
+function transportClip(store: TestStore, data: ClipData, transport: ClipTransport): void {
+  installClip(store, data);
+  store.dispatch(clipTransportSet(transport));
+}
+
 function makePlayer(store: TestStore) {
   const syncVisibility = vi.fn<(settings: EngineSettingsState, overMs?: number) => void>();
+  // Each identity's target, starting where intent puts it (flow off, the label on).
+  const targets = new Map([
+    [FLOW.address, 0],
+    [MW_LABEL.address, 1],
+  ]);
+  const fades = {
+    setImmediate: vi.fn((id: FadeIdentity, value: number) => void targets.set(id.address, value)),
+    fadeTo: vi.fn((id: FadeIdentity, to: number, _ms: number) => void targets.set(id.address, to)),
+    targetOf: (id: FadeIdentity) => targets.get(id.address) ?? null,
+  };
   const extractFocusRow = vi.fn((ref: SelectionRefBase | null) =>
     ref === null ? { row: null, focusId: null } : VIRGO_ROW,
   );
@@ -72,6 +95,11 @@ function makePlayer(store: TestStore) {
     getCameraRuntime: () => runtime,
     extractFocusRow,
     syncVisibility,
+    visibilityTargets: (list) => [
+      { id: FLOW, targets: list.map((s) => (s.flow.enabled ? 1 : 0)) },
+      { id: MW_LABEL, targets: list.map((s) => (s.milkyWay.labelEnabled ? 1 : 0)) },
+    ],
+    getFades: () => fades,
   });
   let epoch: CameraEpochs['clip'] = UNSTARTED_EPOCHS.clip;
   const tick = (nowMs: number): CameraEpochs['clip'] => {
@@ -79,7 +107,7 @@ function makePlayer(store: TestStore) {
     return epoch;
   };
   const view = () => player.view(store.getState());
-  return { player, tick, view, syncVisibility, extractFocusRow };
+  return { player, tick, view, syncVisibility, extractFocusRow, fades };
 }
 
 const typesOf = (calls: readonly (readonly unknown[])[]) => calls.map((c) => (c[0] as Action).type);
@@ -234,9 +262,9 @@ describe('clipPlayer scene', () => {
     expect(store.getState().settings.milkyWay.labelEnabled).toBe(true);
   });
 
-  it('a looping clip re-evaluates each lap from intent; a step at 0 holds across the wrap with no publish', () => {
+  it('a looping clip re-evaluates each lap from intent; a lap that drops a step seeds it at t', () => {
     const store = makeStore();
-    const { tick, view, syncVisibility } = makePlayer(store);
+    const { tick, view, syncVisibility, fades } = makePlayer(store);
     installClip(store, {
       timeline: [hide(['label:milkyWay'], 0), seq([wait(1), show(['flow']), hold(1)])],
       loop: true,
@@ -250,19 +278,23 @@ describe('clipPlayer scene', () => {
     tick(2100); // 0.1 s into lap 2: the show at 1 s no longer applies, the hide at 0 does.
     expect(view().settings.flow.enabled).toBe(false);
     expect(view().settings.milkyWay.labelEnabled).toBe(false);
-    expect(syncVisibility).toHaveBeenCalledTimes(1);
-    expect(syncVisibility.mock.calls[0]![0].flow.enabled).toBe(false);
+    expect(syncVisibility).not.toHaveBeenCalled();
+    expect(fades.setImmediate.mock.calls).toEqual([
+      [FLOW, 0],
+      [MW_LABEL, 0],
+    ]);
+    expect(fades.fadeTo).not.toHaveBeenCalled();
 
-    syncVisibility.mockClear();
-    tick(3000); // lap 2 crosses the show again.
-    tick(4100); // lap 3: the show drops again; the hide at 0 never re-publishes on its own.
-    tick(4200);
-    expect(syncVisibility.mock.calls.map(([s]) => s.milkyWay.labelEnabled)).toEqual([false, false]);
+    fades.setImmediate.mockClear();
+    tick(3000); // lap 2 crosses the show again: a crossing, published as S3 does.
+    expect(syncVisibility.mock.calls.map(([s]) => s.flow.enabled)).toEqual([true]);
+    tick(4100); // lap 3: the show drops again and seeds again.
+    expect(fades.setImmediate).toHaveBeenCalledTimes(2);
   });
 
   it('a lap that crosses back over only a step at 0 publishes nothing', () => {
     const store = makeStore();
-    const { tick, syncVisibility } = makePlayer(store);
+    const { tick, syncVisibility, fades } = makePlayer(store);
     installClip(store, { timeline: [hide(['label:milkyWay'], 0), hold(2)], loop: true });
 
     tick(0);
@@ -270,6 +302,7 @@ describe('clipPlayer scene', () => {
     tick(2100);
     tick(4100);
     expect(syncVisibility).not.toHaveBeenCalled();
+    expect(fades.setImmediate).not.toHaveBeenCalled();
   });
 
   it('a replaced clip publishes its crossings and leaves the end resolver alone', () => {
@@ -396,5 +429,184 @@ describe('clipPlayer lifecycle', () => {
     expect(settled).toBe(true);
     expect(player.clipOpacityOf('survey')).toBe(1);
     expect(view()).toBe(store.getState());
+  });
+});
+
+describe('clipPlayer transport', () => {
+  // A 4 s show of flow from 2 s; the clip runs to 11 s.
+  const SHOW_AT_2 = { timeline: [seq([wait(2), show(['flow'], 4), hold(5)])] };
+
+  it('a paused transport evaluates at atSec on every frame', () => {
+    const store = makeStore();
+    const { tick } = makePlayer(store);
+    transportClip(store, SHOW_AT_2, { kind: 'paused', atSec: 3, camera: 'clip' });
+
+    expect(elapsedMs(tick(1000), 1000)).toBe(3000);
+    expect(elapsedMs(tick(1500), 1500)).toBe(3000);
+  });
+
+  it('a new transport object re-anchors even when its numbers are the old ones', () => {
+    const store = makeStore();
+    const { tick } = makePlayer(store);
+    transportClip(store, SHOW_AT_2, { kind: 'running', fromSec: 0, loop: null });
+    tick(0);
+    expect(elapsedMs(tick(1000), 1000)).toBe(1000);
+
+    store.dispatch(clipTransportSet({ kind: 'running', fromSec: 0, loop: null }));
+    expect(elapsedMs(tick(2000), 2000)).toBe(0);
+    expect(elapsedMs(tick(2500), 2500)).toBe(500);
+  });
+
+  it('a running transport holds at its end, reports held, and never ends', () => {
+    const store = makeStore();
+    const { player, tick } = makePlayer(store);
+    const onEnd = vi.fn<() => void>();
+    player.registerEndResolver(onEnd);
+    transportClip(store, { timeline: [hold(2)] }, { kind: 'running', fromSec: 0, loop: null });
+
+    tick(0);
+    expect(player.clipAt()).toEqual({ sec: 0, held: false });
+    tick(3000);
+    tick(3100);
+    expect(player.clipAt()).toEqual({ sec: 2, held: true });
+    expect(store.getState().camera.clip).not.toBeNull();
+    expect(onEnd).not.toHaveBeenCalled();
+  });
+
+  it('a loop span wraps inside the span with the overshoot carried', () => {
+    const store = makeStore();
+    const { player, tick } = makePlayer(store);
+    const loop = { startSec: 2, endSec: 4 };
+    transportClip(store, SHOW_AT_2, { kind: 'running', fromSec: 2, loop });
+
+    tick(0);
+    tick(2500);
+    expect(player.clipAt()).toEqual({ sec: 2.5, held: false });
+  });
+
+  it('a paused seek sets each touched identity to its value at t and starts no ramp', () => {
+    const store = makeStore();
+    const { tick, fades } = makePlayer(store);
+    transportClip(store, SHOW_AT_2, { kind: 'paused', atSec: 4, camera: 'clip' });
+
+    tick(0);
+    expect(fades.setImmediate.mock.calls).toEqual([[FLOW, 0.5]]);
+    expect(fades.fadeTo).not.toHaveBeenCalled();
+  });
+
+  it('play from mid-ramp resumes the ramp for its remaining time', () => {
+    const store = makeStore();
+    const { tick, fades } = makePlayer(store);
+    transportClip(store, SHOW_AT_2, { kind: 'running', fromSec: 4, loop: null });
+
+    tick(0);
+    expect(fades.setImmediate.mock.calls).toEqual([[FLOW, 0.5]]);
+    expect(fades.fadeTo.mock.calls).toEqual([[FLOW, 1, 2000]]);
+  });
+
+  it('a data swap keeps t and re-seeds; the end resolver is untouched', () => {
+    const store = makeStore();
+    const { player, tick, fades } = makePlayer(store);
+    const onEnd = vi.fn<() => void>();
+    player.registerEndResolver(onEnd);
+    transportClip(store, SHOW_AT_2, { kind: 'paused', atSec: 4, camera: 'clip' });
+    tick(0);
+    fades.setImmediate.mockClear();
+
+    // The same show from 1 s: at 4 s it is 3/4 through, smoothstep(0.75) = 0.84375.
+    const edited = { timeline: [seq([wait(1), show(['flow'], 4), hold(5)])] };
+    store.dispatch(clipDataReplaced(resolveClipStart(edited, LIVE_POSE)));
+    expect(elapsedMs(tick(500), 500)).toBe(4000);
+    expect(fades.setImmediate.mock.calls).toEqual([[FLOW, 0.84375]]);
+    expect(onEnd).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['paused', { kind: 'paused', atSec: 4, camera: 'clip' }],
+    ['running', { kind: 'running', fromSec: 4, loop: null }],
+  ] as const)(
+    'a data swap returns an identity no step touches any more to intent (%s)',
+    (_, at) => {
+      const store = makeStore();
+      const { tick, fades } = makePlayer(store);
+      transportClip(
+        store,
+        { timeline: [seq([wait(2), hide(['label:milkyWay'], 0), hold(5)])] },
+        at,
+      );
+      tick(0);
+      expect(fades.setImmediate).toHaveBeenLastCalledWith(MW_LABEL, 0);
+
+      // The author swaps the hidden layer: the label is in no step now.
+      const edited = { timeline: [seq([wait(2), hide(['flow'], 0), hold(5)])] };
+      store.dispatch(clipDataReplaced(resolveClipStart(edited, LIVE_POSE)));
+      tick(100);
+      expect(fades.targetOf(MW_LABEL)).toBe(1);
+    },
+  );
+
+  it('past the end the view is intent and the clip factor is 1', () => {
+    const store = makeStore();
+    const { player, tick, view, fades } = makePlayer(store);
+    transportClip(
+      store,
+      { timeline: [show(['flow'], 0), fade(['survey'], 0, 0), hold(2)] },
+      { kind: 'paused', atSec: 5, camera: 'clip' },
+    );
+
+    tick(0);
+    expect(view()).toBe(store.getState());
+    expect(player.clipOpacityOf('survey')).toBe(1);
+    expect(fades.setImmediate.mock.calls).toEqual([[FLOW, 0]]);
+  });
+
+  it('a paused seek inside a frame roll shows its destination; playing from there resumes it', () => {
+    const store = makeStore();
+    const { tick } = makePlayer(store);
+    transportClip(
+      store,
+      { timeline: [frameTo('supergalactic', { over: 2, ease: 'linear' }), hold(5)] },
+      { kind: 'running', fromSec: 0, loop: null },
+    );
+    tick(0); // the continuous play starts the roll
+    const dispatch = vi.spyOn(store, 'dispatch');
+
+    store.dispatch(clipTransportSet({ kind: 'paused', atSec: 1, camera: 'clip' }));
+    tick(100);
+    expect(dispatch).toHaveBeenCalledWith(clearFrameTween());
+
+    store.dispatch(clipTransportSet({ kind: 'running', fromSec: 1, loop: null }));
+    tick(200);
+    const roll = dispatch.mock.calls.map(([a]) => a).find((a) => startFrameTween.match(a));
+    expect(roll?.payload).toMatchObject({
+      to: 'supergalactic',
+      durationMs: 1000,
+      easing: 'linear',
+    });
+  });
+
+  it('new data and a seek in one frame leave no frame roll on a paused head', () => {
+    const store = makeStore();
+    const { tick } = makePlayer(store);
+    const parked = { timeline: [frameTo('supergalactic', { over: 1 }), hold(5)] };
+    transportClip(store, parked, { kind: 'paused', atSec: 3, camera: 'clip' });
+    tick(0);
+    expect(store.getState().camera.frameTween).toBeNull();
+
+    store.dispatch(clipDataReplaced(resolveClipStart({ ...parked }, LIVE_POSE)));
+    store.dispatch(clipTransportSet({ kind: 'paused', atSec: 4, camera: 'clip' }));
+    tick(100);
+    expect(store.getState().camera.frameTween).toBeNull();
+  });
+
+  it('an untransported play never seeds on its first frame', () => {
+    // The tour-seam guard: a ramp a `keep` commit carried across the seam must keep running.
+    const store = makeStore();
+    const { tick, fades } = makePlayer(store);
+    installClip(store, SHOW_AT_2);
+
+    tick(0);
+    tick(4000);
+    expect(fades.setImmediate).not.toHaveBeenCalled();
   });
 });

@@ -2,6 +2,7 @@ import StudioTip from '../../../primitives/components/StudioTip/StudioTip';
 import Glyph from '../../../primitives/components/Glyph/Glyph';
 import ClipPicker from '../ClipPicker/ClipPicker';
 import ZoomControls from '../../../timeline/components/ZoomControls/ZoomControls';
+import TransportControls from '../TransportControls/TransportControls';
 import Button from '../../../../../../src/components/common/Button/Button';
 import CloseIcon from '../../../../../../src/components/icons/CloseIcon/CloseIcon';
 import { exitTakeover } from '../../../../../../src/state/takeover/takeoverActions';
@@ -13,8 +14,7 @@ import {
   selectStudioClipId,
   selectUndoLabel,
 } from '../../../session/state/selectors';
-import { selectFullTimeline } from '../../../timeline/state/selectFullTimeline';
-import { compileErrorLine } from '../../utils/compileErrorLine';
+import { selectFailureLine } from '../../state/selectFailureLine';
 import { useAppDispatch, useAppSelector } from '../../../../../../src/store/hooks';
 import s from './TopBar.module.css';
 
@@ -23,23 +23,16 @@ type Props = {
   readonly onToggleKeys: () => void;
 };
 
-/** Three groups aligned with the dock's columns below: the clip and its state | zoom | undo, keys, close. */
+/** Three groups aligned with the dock's columns below: the clip and its state | transport, zoom | undo, keys, close. */
 function TopBar({ keysOpen, onToggleKeys }: Props) {
   const dispatch = useAppDispatch();
   const clipId = useAppSelector(selectStudioClipId);
-  // The full tree: a culprit folded inside a group still names itself here.
-  const timeline = useAppSelector(selectFullTimeline);
   const resolution = useAppSelector(selectCurrentResolution);
+  const failure = useAppSelector(selectFailureLine);
   const dirty = useAppSelector(selectIsDirty);
   const undoLabel = useAppSelector(selectUndoLabel);
   const redoLabel = useAppSelector(selectRedoLabel);
 
-  const failure =
-    timeline?.error != null
-      ? compileErrorLine(timeline.error, timeline.rows)
-      : resolution !== null && 'message' in resolution
-        ? resolution.message
-        : null;
   const resolving = failure === null && resolution === null;
 
   return (
@@ -68,6 +61,7 @@ function TopBar({ keysOpen, onToggleKeys }: Props) {
         )}
       </div>
       <div className={s.centre}>
+        <TransportControls />
         <ZoomControls />
       </div>
       <div className={s.right}>

@@ -6,12 +6,19 @@ import { Provider } from 'react-redux';
 import { dollyTo, seq } from '../../../../../src/services/engine/animation/effectHelpers';
 import { exitTakeover } from '../../../../../src/state/takeover/takeoverActions';
 import { useStudioKeys } from '../../../src/shell/hooks/useStudioKeys';
-import { paramEdited, rowSelected } from '../../../src/session/state/studioSlice';
+import {
+  paramEdited,
+  played,
+  playheadSet,
+  rowSelected,
+} from '../../../src/session/state/studioSlice';
 import {
   selectSelection,
+  selectTransport,
   selectUndoLabel,
   selectViewport,
 } from '../../../src/session/state/selectors';
+import { clipStarted } from '../../../../../src/state/camera/cameraSlice';
 import { openStudioStore } from '../../helpers/openStudioStore';
 
 afterEach(cleanup);
@@ -126,5 +133,54 @@ describe('useStudioKeys', () => {
     fireEvent.keyDown(slider, { key: 'ArrowDown' });
 
     expect(selectSelection(store.getState())).toEqual({ kind: 'start' });
+  });
+
+  it('Space at End plays from 0; Space while playing pauses', () => {
+    const { store, dock } = mount();
+    // The preview is live: Play waits for it.
+    store.dispatch(clipStarted({ data: { timeline: [] }, frame: 'equatorial', atEnd: 'revert' }));
+    store.dispatch(playheadSet(8));
+
+    fireEvent.keyDown(dock, { key: ' ' });
+    expect(selectTransport(store.getState())).toEqual({ kind: 'running', fromSec: 0, loop: null });
+
+    fireEvent.keyDown(dock, { key: ' ' });
+    expect(selectTransport(store.getState())).toEqual({ kind: 'paused', atSec: 0, camera: 'clip' });
+  });
+
+  it('End while playing pauses at End', () => {
+    const { store, dock } = mount();
+    store.dispatch(played({ fromSec: 1, loop: null }));
+
+    fireEvent.keyDown(dock, { key: 'End' });
+    expect(selectTransport(store.getState())).toEqual({ kind: 'paused', atSec: 8, camera: 'clip' });
+  });
+
+  it("Space on a focused button is the button's", () => {
+    const { dispatch, dock } = mount();
+    const button = inside(dock, '<button>Undo</button>');
+    button.focus();
+    fireEvent.keyDown(button, { key: ' ' });
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+
+  it('L while playing outside the selected span resumes from its start', () => {
+    const { store, dock } = mount();
+    store.dispatch(rowSelected({ kind: 'effect', path: [0, 1] }));
+    store.dispatch(played({ fromSec: 1, loop: null }));
+
+    fireEvent.keyDown(dock, { key: 'l' });
+    const loop = { startSec: 4, endSec: 8 };
+    expect(selectTransport(store.getState())).toEqual({ kind: 'running', fromSec: 4, loop });
+  });
+
+  it("holding Space toggles once; the auto-repeat is swallowed, not the page's", () => {
+    const { store, dock } = mount();
+    store.dispatch(clipStarted({ data: { timeline: [] }, frame: 'equatorial', atEnd: 'revert' }));
+
+    fireEvent.keyDown(dock, { key: ' ' });
+    const repeatKept = fireEvent.keyDown(dock, { key: ' ', repeat: true });
+    expect(selectTransport(store.getState()).kind).toBe('running');
+    expect(repeatKept).toBe(false);
   });
 });

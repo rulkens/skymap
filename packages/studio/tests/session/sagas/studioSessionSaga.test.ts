@@ -50,6 +50,7 @@ const RUNTIME: LiveCameraRuntime = {
   fovYRad: 0.9,
   aspect: 16 / 9,
   upBasisQuat: [0, 0, 0, 1],
+  clipAt: null,
 };
 const FIXTURE = selectionResolverOver({ byId: () => null, byCategory: () => [] });
 const EDIT_DISTANCE = paramEdited({
@@ -71,7 +72,13 @@ function harness(selection: SelectionResolver = FIXTURE) {
     reducer: rootReducer,
     middleware: (g) => g().concat(recorder, mw),
   });
-  mw.setContext({ selection, cameraRuntime: () => RUNTIME });
+  // The preview's engine seams: a play that never ends, a frame that never comes.
+  mw.setContext({
+    selection,
+    cameraRuntime: () => RUNTIME,
+    playClip: () => new Promise<void>(() => {}),
+    nextFrame: () => new Promise<void>(() => {}),
+  });
   const run = (id: ClipId) => mw.run(studioSessionSaga, id);
   return { store, recorded, run };
 }

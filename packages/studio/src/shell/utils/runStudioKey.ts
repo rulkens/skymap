@@ -3,9 +3,14 @@
  * (nothing to undo, a leaf row to fold), so the key keeps its default. Escape clears the selection
  * first and then closes the studio: the app's own Escape stands down while the studio is open.
  * `help` is the overlay's, not the store's, so it is not here. Folding acts on the visible row that
- * stands for the selection, the same one the outline highlights.
+ * stands for the selection, the same one the outline highlights. The transport buttons dispatch
+ * through here too, so a key and its button cannot disagree. Play waits for the preview to start.
  */
 import {
+  followResumed,
+  loopToggled,
+  paused,
+  played,
   playheadSet,
   redone,
   viewportSet,
@@ -14,12 +19,18 @@ import {
   undone,
 } from '../../session/state/studioSlice';
 import {
+  selectLoop,
   selectPlayheadSec,
   selectRedoLabel,
   selectSelection,
+  selectTransport,
   selectUndoLabel,
   selectViewport,
 } from '../../session/state/selectors';
+import { selectSelectedRow } from '../../timeline/state/selectSelectedRow';
+import { playFrom } from '../../session/utils/playFrom';
+import { loopSpanOf } from '../../session/utils/loopSpanOf';
+import { selectClipActive } from '../../../../../src/state/camera/selectors';
 import { ZOOM_FACTOR } from '../../timeline/data/zoom';
 import { zoomedViewport } from '../../timeline/utils/window/zoomedViewport';
 import { selectSelectionStandInId } from '../../timeline/state/selectSelectionStandInId';
@@ -58,8 +69,30 @@ export function runStudioKey(id: StudioKeyId, state: RootState): UnknownAction[]
       return selectRedoLabel(state) === null ? null : [redone()];
     case 'start':
       return [playheadSet(0)];
-    case 'end':
-      return timeline.durationSec === null ? null : [playheadSet(timeline.durationSec)];
+    case 'end': {
+      if (timeline.durationSec === null) return null;
+      const end = playheadSet(timeline.durationSec);
+      return selectTransport(state).kind === 'running' ? [paused(), end] : [end];
+    }
+    case 'play': {
+      if (selectTransport(state).kind === 'running') return [paused()];
+      if (!selectClipActive(state)) return null;
+      const loop = selectLoop(state) ? loopSpanOf(selectSelectedRow(state), timeline) : null;
+      const head = selectPlayheadSec(state);
+      return [played({ fromSec: playFrom(head, timeline.durationSec ?? Infinity, loop), loop })];
+    }
+    case 'loop': {
+      if (selectTransport(state).kind !== 'running') return [loopToggled()];
+      // The span is read at the press (Q-I): pressing L twice takes the selection anew.
+      const loop = selectLoop(state) ? null : loopSpanOf(selectSelectedRow(state), timeline);
+      const head = selectPlayheadSec(state);
+      const fromSec = playFrom(head, timeline.durationSec ?? Infinity, loop);
+      return [loopToggled(), played({ fromSec, loop })];
+    }
+    case 'follow': {
+      const transport = selectTransport(state);
+      return transport.kind === 'paused' && transport.camera === 'free' ? [followResumed()] : null;
+    }
     case 'zoomIn':
     case 'zoomOut': {
       if (timeline.durationSec === null) return null;

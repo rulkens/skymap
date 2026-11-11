@@ -13,6 +13,8 @@ import { formatVec3 } from '../utils/formatVec3';
 import { overField } from '../utils/fields/overField';
 import { readoutField } from '../utils/fields/readoutField';
 import { toField } from '../utils/fields/toField';
+import { setFromView } from '../utils/fromView/setFromView';
+import { setVecFromView } from '../utils/fromView/setVecFromView';
 import { formatNumber } from '../../utils/format/formatNumber';
 import { formatQuantity } from '../../utils/format/formatQuantity';
 import { formatMpc } from '../../utils/format/formatMpc';
@@ -49,6 +51,7 @@ export const cameraKinds: Pick<
 > = {
   set: {
     mark: 'bar',
+    fromView: setFromView,
     writes: (s) => familyOf(s.ch),
     label: (s) => ({ name: CHANNEL_NAME[s.ch], op: '→', value: channelValue(s.ch, s.to) }),
     fields: [readoutField('ch', 'Channel'), toField(), overField(), easeField()],
@@ -56,6 +59,7 @@ export const cameraKinds: Pick<
   setVec: {
     glyph: 'look',
     mark: 'bar',
+    fromView: setVecFromView,
     writes: () => ['lookAt'],
     label: (s) => ({ name: 'Look-at', op: '→', value: formatPosition(s.to) }),
     fields: [
@@ -66,6 +70,7 @@ export const cameraKinds: Pick<
   },
   spin: {
     mark: 'bar',
+    fromView: null,
     writes: (s) => familyOf(s.ch),
     label: (s) => ({
       name: CHANNEL_NAME[s.ch],
@@ -88,6 +93,7 @@ export const cameraKinds: Pick<
   },
   rate: {
     mark: 'rate',
+    fromView: null,
     writes: (s) => familyOf(s.ch),
     label: (s) => ({
       name: RATE_NAME[s.ch],
@@ -111,6 +117,7 @@ export const cameraKinds: Pick<
   },
   osc: {
     mark: 'osc',
+    fromView: null,
     writes: (s) => familyOf(s.ch),
     label: (s) => ({
       name: BOB_NAME[s.ch],
@@ -132,6 +139,7 @@ export const cameraKinds: Pick<
   aimAlong: {
     glyph: 'aimAlong',
     mark: 'bar',
+    fromView: null,
     writes: () => ['turn'],
     label: (s) => ({ name: 'Aim', op: '→', value: `along ${formatVec3(s.forward)}` }),
     fields: [readoutField('forward', 'Direction'), overField(), easeField()],
@@ -139,6 +147,7 @@ export const cameraKinds: Pick<
   flyPath: {
     glyph: 'fly',
     mark: 'composite',
+    fromView: null,
     // One composite writer over all four camera channels for its window.
     writes: () => ['distance', 'lookAt', 'turn'],
     label: (s) => ({
@@ -212,6 +221,7 @@ export const cameraKinds: Pick<
   geodesic: {
     glyph: 'dist',
     mark: 'composite',
+    fromView: null,
     writes: () => ['distance', 'lookAt'],
     label: (s) => ({ name: 'Zoom-pan', op: '→', value: formatMpc(s.to.distance) }),
     fields: [

@@ -2,8 +2,9 @@
  * studioSlice — the studio's one state home, injected into the app's root reducer (ADR 0016).
  * History reducers work on `original(state)`, the plain base, so drafts keep their identity:
  * undoing to the opened draft restores the baseline object itself, which is how clean is detected.
- * `revision` bumps whenever the resolved form could change (an edit, undo, redo, an open with new
- * preview pins); `draftResolved` only lands for the current revision (A6).
+ * `revision` bumps whenever the resolved form could change (an edit, undo, redo, a re-pin, an open
+ * with new preview pins); `draftResolved` only lands for the current revision (A6). Every transport
+ * change assigns a new object: the engine re-anchors the clip clock on its identity.
  */
 import { createSlice, original, type Draft, type PayloadAction } from '@reduxjs/toolkit';
 
@@ -17,7 +18,11 @@ import { stepHistory } from '../utils/stepHistory';
 import { isPickFor } from '../utils/isPickFor';
 import { rowKey } from '../../draft/utils/rowKey';
 import { ancestorKeys } from '../../draft/utils/ancestorKeys';
+import { updateEffectAt } from '../../draft/utils/updateEffectAt';
+import { VIEW_USED_LABEL } from '../data/viewUsedLabel';
+import type { CameraPose } from '../../../../../src/@types/camera/pose/CameraPose';
 import type { ClipData } from '../../../../../src/@types/animation/ClipData';
+import type { Effect } from '../../../../../src/@types/animation/Effect';
 import type { ClipId } from '../../../../../src/@types/animation/ClipId';
 import type { ParamValue } from '../../@types/kinds/ParamValue';
 import type { ObjectPick } from '../../@types/session/ObjectPick';
@@ -25,6 +30,14 @@ import type { RowRef } from '../../@types/rows/RowRef';
 import type { PreviewPins } from '../../@types/session/PreviewPins';
 import type { StudioResolution } from '../../@types/session/StudioResolution';
 import type { TimeWindow } from '../../@types/session/TimeWindow';
+import type { ClipSpan } from '../../../../../src/@types/animation/ClipSpan';
+import type { ClipClock } from '../../../../../src/@types/animation/ClipClock';
+import type { StudioState } from '../../@types/session/StudioState';
+
+/** The head shown: where a paused clock stands, else the t the last frame drew. */
+function headOf(s: StudioState): number {
+  return s.transport.kind === 'paused' ? s.transport.atSec : s.followedSec;
+}
 
 export const studioSlice = createSlice({
   name: 'studio',
@@ -38,7 +51,16 @@ export const studioSlice = createSlice({
       const revision = base.revision + 1;
       // Q28: an unsaved draft survives Close and reopening the same clip.
       if (base.clipId === payload.clipId && base.draft !== base.baseline) {
-        return { ...base, preview: payload.preview, revision, resolution: null, pick: null };
+        const head = headOf(base);
+        const transport = { kind: 'paused', atSec: head, camera: 'clip' } as const;
+        return {
+          ...base,
+          preview: payload.preview,
+          revision,
+          resolution: null,
+          pick: null,
+          transport,
+        };
       }
       return {
         ...initialState,
@@ -71,8 +93,47 @@ export const studioSlice = createSlice({
         ? collapsed.filter((id) => id !== payload)
         : [...collapsed, payload];
     },
+    /** A seek: paused stays paused (and re-attaches a free camera), running re-anchors there. */
     playheadSet: (state, { payload }: PayloadAction<number>) => {
-      state.playheadSec = Math.max(0, payload);
+      const sec = Math.max(0, payload);
+      const { transport } = state;
+      if (transport.kind === 'paused') {
+        state.transport = { kind: 'paused', atSec: sec, camera: 'clip' };
+        return;
+      }
+      state.transport = { kind: 'running', fromSec: sec, loop: transport.loop };
+      state.followedSec = sec;
+    },
+    played: (state, { payload }: PayloadAction<{ fromSec: number; loop: ClipSpan | null }>) => {
+      state.transport = { kind: 'running', fromSec: payload.fromSec, loop: payload.loop };
+      state.followedSec = payload.fromSec;
+    },
+    /** Lands on the t the last frame drew, so the next frame redraws it exactly. */
+    paused: (state) => {
+      if (state.transport.kind === 'running') {
+        state.transport = { kind: 'paused', atSec: state.followedSec, camera: 'clip' };
+      }
+    },
+    /** The engine's drawn t; a held clock (the end, nowhere to wrap) pauses there. */
+    playheadFollowed: (state, { payload }: PayloadAction<ClipClock>) => {
+      if (state.transport.kind !== 'running') return;
+      state.followedSec = payload.sec;
+      if (payload.held) state.transport = { kind: 'paused', atSec: payload.sec, camera: 'clip' };
+    },
+    /** The flag alone: a running play re-anchors through `played`, which `runStudioKey` sends. */
+    loopToggled: (state) => {
+      state.loop = !state.loop;
+    },
+    freeLookStarted: (state) => {
+      const { transport } = state;
+      if (transport.kind === 'paused' && transport.camera === 'free') return;
+      state.transport = { kind: 'paused', atSec: headOf(state), camera: 'free' };
+    },
+    followResumed: (state) => {
+      const { transport } = state;
+      if (transport.kind === 'paused' && transport.camera === 'free') {
+        state.transport = { kind: 'paused', atSec: transport.atSec, camera: 'clip' };
+      }
     },
     viewportSet: (state, { payload }: PayloadAction<TimeWindow | null>) => {
       state.viewport = payload;
@@ -119,6 +180,27 @@ export const studioSlice = createSlice({
       const start = payload === 'saved' ? base.preview.startPose : 'live';
       return commitDraft({ ...base, draft: base.draft }, { ...base.draft, start }, 'Start', null);
     },
+    /** An intent `viewUsedSaga` answers with `startPinned` or `rowReplaced`. */
+    viewUsed: (_state, _action: PayloadAction<RowRef>) => {},
+    /** The preview starts from `pose` (Q7); a Saved start takes it too, as one Undo step. */
+    startPinned: (state, { payload }: PayloadAction<{ pose: CameraPose; fovYRad: number }>) => {
+      const base = original(state)!;
+      if (base.draft === null || base.preview === null) return;
+      const preview = { ...base.preview, startPose: payload.pose, fovYRad: payload.fovYRad };
+      const pinned = { ...base, draft: base.draft, preview };
+      if (typeof base.draft.start !== 'object') return { ...pinned, revision: base.revision + 1 };
+      return commitDraft(pinned, { ...base.draft, start: payload.pose }, VIEW_USED_LABEL, null);
+    },
+    /** Use current view's write into an effect row, as one Undo step. */
+    rowReplaced: (
+      state,
+      { payload }: PayloadAction<{ ref: Extract<RowRef, { kind: 'effect' }>; effect: Effect }>,
+    ) => {
+      const base = original(state)!;
+      if (base.draft === null) return;
+      const next = updateEffectAt(base.draft, payload.ref.path, () => payload.effect);
+      return commitDraft({ ...base, draft: base.draft }, next, VIEW_USED_LABEL, null);
+    },
     undone: (state) => stepHistory(original(state)!, 'past'),
     redone: (state) => stepHistory(original(state)!, 'future'),
   },
@@ -128,7 +210,9 @@ export const studioSlice = createSlice({
     selectRevision: (s) => s.revision,
     selectSelection: (s) => s.selection,
     selectCollapsed: (s) => s.collapsed,
-    selectPlayheadSec: (s) => s.playheadSec,
+    selectPlayheadSec: headOf,
+    selectTransport: (s) => s.transport,
+    selectLoop: (s) => s.loop,
     selectViewport: (s) => s.viewport,
     selectPreview: (s) => s.preview,
     selectRefNames: (s) => s.refNames,
@@ -151,9 +235,18 @@ export const {
   rowSelected,
   rowToggled,
   playheadSet,
+  played,
+  paused,
+  playheadFollowed,
+  loopToggled,
+  freeLookStarted,
+  followResumed,
   viewportSet,
   paramEdited,
   startModeSet,
+  viewUsed,
+  startPinned,
+  rowReplaced,
   undone,
   redone,
 } = studioSlice.actions;

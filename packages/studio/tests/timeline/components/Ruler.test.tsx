@@ -5,7 +5,8 @@ import { Provider } from 'react-redux';
 
 import { dollyTo, seq } from '../../../../../src/services/engine/animation/effectHelpers';
 import Ruler from '../../../src/timeline/components/Ruler/Ruler';
-import { selectPlayheadSec } from '../../../src/session/state/selectors';
+import { selectPlayheadSec, selectTransport } from '../../../src/session/state/selectors';
+import { played } from '../../../src/session/state/studioSlice';
 import { selectTimeline } from '../../../src/timeline/state/selectTimeline';
 import { openStudioStore } from '../../helpers/openStudioStore';
 
@@ -19,7 +20,7 @@ function mount(window = WINDOW) {
   const store = openStudioStore({ timeline: [seq([dollyTo(300, 4), dollyTo(950, 4)])] });
   render(
     <Provider store={store}>
-      <Ruler timeline={selectTimeline(store.getState())!} window={window} playheadSec={0} />
+      <Ruler timeline={selectTimeline(store.getState())!} window={window} />
     </Provider>,
   );
   const ruler = screen.getByLabelText('Timeline ruler');
@@ -54,5 +55,28 @@ describe('Ruler', () => {
     const { store, ruler } = mount();
     fireEvent.pointerDown(ruler, { clientX: x(3.97), altKey: true });
     expect(selectPlayheadSec(store.getState())).toBeCloseTo(3.97, 5);
+  });
+
+  it('a drag that starts while playing pauses and resumes from the release point', () => {
+    const { store, ruler } = mount();
+    const loop = { startSec: 0, endSec: 8 };
+    store.dispatch(played({ fromSec: 1, loop }));
+
+    fireEvent.pointerDown(ruler, { clientX: x(2), altKey: true });
+    expect(selectTransport(store.getState()).kind).toBe('paused');
+    fireEvent.pointerMove(ruler, { clientX: x(3), altKey: true });
+    expect(selectTransport(store.getState()).kind).toBe('paused');
+    fireEvent.pointerUp(ruler);
+    expect(selectTransport(store.getState())).toEqual({ kind: 'running', fromSec: 3, loop });
+  });
+
+  it('a release outside the loop resumes from the loop start', () => {
+    const { store, ruler } = mount();
+    const loop = { startSec: 0, endSec: 4 };
+    store.dispatch(played({ fromSec: 1, loop }));
+
+    fireEvent.pointerDown(ruler, { clientX: x(6), altKey: true });
+    fireEvent.pointerUp(ruler);
+    expect(selectTransport(store.getState())).toEqual({ kind: 'running', fromSec: 0, loop });
   });
 });

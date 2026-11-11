@@ -6,6 +6,13 @@
   touch-action: none;
   user-select: none;
 }
+.loop {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-inline: 1px solid var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 16%, transparent);
+}
 .tick {
   position: absolute;
   bottom: 0;

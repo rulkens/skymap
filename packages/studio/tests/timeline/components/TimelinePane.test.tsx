@@ -14,7 +14,7 @@ import {
 } from '../../../../../src/services/engine/animation/effectHelpers';
 import { layerSearchReported } from '../../../../../src/state/engine/engineSlice';
 import TimelinePane from '../../../src/timeline/components/TimelinePane/TimelinePane';
-import { draftResolved, viewportSet } from '../../../src/session/state/studioSlice';
+import { draftResolved, playheadSet, viewportSet } from '../../../src/session/state/studioSlice';
 import {
   selectCollapsed,
   selectRevision,
@@ -25,6 +25,19 @@ import { openStudioStore } from '../../helpers/openStudioStore';
 import type { ClipData } from '../../../../../src/@types/animation/ClipData';
 import type { FocusId } from '../../../../../src/@types/animation/FocusId';
 import type { PathWaypoint } from '../../../../../src/@types/animation/PathWaypoint';
+
+// Counts outline-row renders, so a test can tell whether a head move reached the rows.
+const rowRenders = vi.hoisted(() => ({ count: 0 }));
+vi.mock('../../../src/timeline/components/OutlineRow/OutlineRow', async (load) => {
+  const { default: OutlineRow } =
+    await load<typeof import('../../../src/timeline/components/OutlineRow/OutlineRow')>();
+  return {
+    default: (props: Parameters<typeof OutlineRow>[0]) => {
+      rowRenders.count++;
+      return OutlineRow(props);
+    },
+  };
+});
 
 afterEach(() => {
   cleanup();
@@ -44,6 +57,14 @@ const mount = (draft: ClipData, resolved?: ClipData) => {
 };
 
 describe('TimelinePane', () => {
+  it('a playhead change re-renders the ruler and the line, not the rows', () => {
+    const store = mount({ timeline: [seq([dollyTo(300, 4), dollyTo(950, 4)])] });
+    const before = rowRenders.count;
+    act(() => void store.dispatch(playheadSet(2)));
+    expect(rowRenders.count).toBe(before);
+    expect(screen.getByLabelText('Timeline ruler').textContent).toContain('2.0 s');
+  });
+
   it('a sideways swipe pans a zoomed timeline; a plain vertical wheel does not', () => {
     // Steps end at 8 s, so Fit spans 0-9.6 s; a 1000 px track at a 2 s window is 2 ms per px.
     vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(1000);
