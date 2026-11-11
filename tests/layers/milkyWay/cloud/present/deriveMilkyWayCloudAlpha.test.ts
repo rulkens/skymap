@@ -6,7 +6,7 @@
 import { describe, it, expect } from 'vitest';
 import type { Mat4 } from 'wgpu-matrix';
 
-import { deriveMilkyWayCloudAlpha } from '../../../../../src/layers/milkyWay/cloud/present/milkyWayCloudLiveness';
+import { deriveMilkyWayCloudAlpha } from '../../../../../src/layers/milkyWay/cloud/present/deriveMilkyWayCloudAlpha';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { STRONG_RECESSION } from '../../../../../src/data/strongRecession';

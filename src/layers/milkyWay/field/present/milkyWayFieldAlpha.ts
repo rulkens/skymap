@@ -12,7 +12,7 @@ import type { PassState } from '../../../../@types/engine/frame/PassState';
 import type { MilkyWayRuntime } from '../../@types/MilkyWayRuntime';
 import type { FieldPlannerValue } from '../host/@types/FieldPlannerValue';
 import { computeTimingSlotName } from '../../../../services/engine/frame/timing/computeTimingSlotName';
-import { deriveMilkyWayCloudAlpha } from '../../cloud/present/milkyWayCloudLiveness';
+import { deriveMilkyWayCloudAlpha } from '../../cloud/present/deriveMilkyWayCloudAlpha';
 import { MILKY_WAY_FIELD_COMPUTE_NAME } from '../data/milkyWayFieldComputeName';
 
 export function milkyWayFieldAlpha(

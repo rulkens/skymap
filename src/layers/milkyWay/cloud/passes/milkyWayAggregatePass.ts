@@ -12,7 +12,7 @@
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { MilkyWayRuntime } from '../../@types/MilkyWayRuntime';
-import { deriveMilkyWayCloudAlpha } from '../present/milkyWayCloudLiveness';
+import { deriveMilkyWayCloudAlpha } from '../present/deriveMilkyWayCloudAlpha';
 import { milkyWayCamPosModel } from '../render/milkyWayCamPosModel';
 import { milkyWayModelCached } from '../render/milkyWayModelCached';
 import { isMilkyWayCloudLive } from '../present/isMilkyWayCloudLive';

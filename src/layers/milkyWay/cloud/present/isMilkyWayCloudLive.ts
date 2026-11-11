@@ -7,7 +7,7 @@
  */
 import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { PassState } from '../../../../@types/engine/frame/PassState';
-import { deriveMilkyWayCloudAlpha } from './milkyWayCloudLiveness';
+import { deriveMilkyWayCloudAlpha } from './deriveMilkyWayCloudAlpha';
 import { selectMilkyWayParts } from '../../state/milkyWay/selectors';
 
 export function isMilkyWayCloudLive(
