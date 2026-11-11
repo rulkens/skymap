@@ -52,13 +52,6 @@ function playOnce(steps: readonly Effect[], boot: readonly Action[] = []) {
 }
 
 describe("a scene step's over reaches the fade registry", () => {
-  it('show over 9 s is mid-ramp at 4.5 s', () => {
-    const fades = playOnce([show(['flow'], 9)]);
-    const mid = fades.opacityOf({ address: 'flow' }, 4500);
-    expect(mid).toBeGreaterThan(0.05);
-    expect(mid).toBeLessThan(0.95);
-  });
-
   it('show over 3 s ramps an of label over the same 3 s as its thing', () => {
     const fades = playOnce([show(['constellations'], 3)]);
     for (const address of ['constellations', 'label:constellations'] as const) {

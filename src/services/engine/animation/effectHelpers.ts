@@ -414,11 +414,10 @@ export function fade(
 }
 
 /**
- * scene — dispatch a settings action as a one-shot cue.
+ * scene — fold a settings action into the clip's scene from its beat on.
  *
  * `action` is a `SettingsAction` — a narrow union of settings-slice creators
- * the clip model has approved. Every reconcile saga fires for free. The union
- * widens in Plan C as the tour needs additional knobs.
+ * the clip model has approved, widened as the tour needs additional knobs.
  */
 export function scene(action: SettingsAction): SceneEffect & { kind: 'scene' } {
   return { kind: 'scene', action };
