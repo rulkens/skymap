@@ -65,7 +65,11 @@ function manifestOf(prefix: string): SurfaceTileManifest {
     ],
   };
 }
-const MANIFESTS = { earth: manifestOf('earth-tiles/v8'), mars: manifestOf('mars-tiles/v2') };
+const MANIFESTS = {
+  earth: manifestOf('earth-tiles/v8'),
+  mars: manifestOf('mars-tiles/v2'),
+  moon: manifestOf('moon-tiles/v1'),
+};
 
 const SLOT = {
   slot: 0,
