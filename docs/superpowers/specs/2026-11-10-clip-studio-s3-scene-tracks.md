@@ -40,7 +40,7 @@ export type SceneTracks = {
   readonly steps: readonly SceneStep[];
   /** focus() writes, ascending atSec; `ref: null` is an explicit clear. */
   readonly focus: readonly FocusStep[];
-  /** fade() per address: the clip factor's segments, ascending, non-overlapping. */
+  /** fade() per address: the clip factor's segments in ascending startSec; a later segment supersedes the earlier one from its start. */
   readonly factors: Readonly<Partial<Record<VisibilityAddress, readonly FactorSegment[]>>>;
 };
 
