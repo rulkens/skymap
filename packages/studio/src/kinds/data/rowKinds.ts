@@ -19,6 +19,7 @@ export const ROW_KINDS: RowKindRegistry = {
   start: {
     glyph: 'start',
     mark: 'start',
+    fromView: null,
     writes: () => ['distance', 'lookAt', 'turn'],
     label: (s) => ({
       name: 'Start',
@@ -35,6 +36,7 @@ export const ROW_KINDS: RowKindRegistry = {
   waypoint: {
     glyph: (s) => (s.last ? 'settle' : 'pass'),
     mark: 'knot',
+    fromView: null,
     writes: () => ['distance', 'lookAt', 'turn'],
     label: (s) => {
       const name = s.last ? 'Settle' : 'Pass';

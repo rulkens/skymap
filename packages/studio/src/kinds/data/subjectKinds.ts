@@ -9,6 +9,7 @@ import { formatQuantity } from '../../utils/format/formatQuantity';
 import { easeField } from '../utils/fields/easeField';
 import { overField } from '../utils/fields/overField';
 import { subjectField } from '../utils/fields/subjectField';
+import { fixedFormOf } from '../utils/fromView/fixedFormOf';
 import { resolvedPosition } from '../utils/resolvedPosition';
 import { formatMpc } from '../../utils/format/formatMpc';
 import type { RowKindRegistry } from '../../@types/kinds/RowKindRegistry';
@@ -20,6 +21,7 @@ export const subjectKinds: Pick<
   moveTargetId: {
     glyph: 'look',
     mark: 'bar',
+    fromView: fixedFormOf,
     writes: () => ['lookAt'],
     label: (s) => ({ name: 'Look-at', op: '→', value: '', subject: s.id }),
     fields: [subjectField(), overField(), easeField()],
@@ -28,6 +30,7 @@ export const subjectKinds: Pick<
   dollyToId: {
     glyph: 'dist',
     mark: 'bar',
+    fromView: fixedFormOf,
     writes: () => ['distance'],
     label: (s) => ({
       name: 'Distance',
@@ -47,6 +50,7 @@ export const subjectKinds: Pick<
   lookAtId: {
     glyph: 'aim',
     mark: 'bar',
+    fromView: fixedFormOf,
     writes: () => ['turn'],
     label: (s) => ({ name: 'Aim', op: '→', value: '', subject: s.id }),
     fields: [subjectField(), overField(), easeField()],
@@ -59,6 +63,7 @@ export const subjectKinds: Pick<
   strafeId: {
     glyph: 'strafe',
     mark: 'bar',
+    fromView: fixedFormOf,
     writes: () => ['lookAt'],
     label: (s) => ({
       name: 'Strafe',
@@ -78,6 +83,7 @@ export const subjectKinds: Pick<
   spinToId: {
     glyph: 'turn',
     mark: 'bar',
+    fromView: fixedFormOf,
     writes: () => ['turn'],
     label: (s) => ({
       name: 'Turn',
@@ -99,6 +105,7 @@ export const subjectKinds: Pick<
   focusId: {
     glyph: 'focus',
     mark: 'cue',
+    fromView: null,
     writes: () => ['settings'],
     label: (s) =>
       s.id === null

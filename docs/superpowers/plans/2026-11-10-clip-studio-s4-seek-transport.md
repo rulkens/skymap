@@ -442,14 +442,20 @@ has `fromView` → `rowReplaced({ ref, effect: fromView(subject, view), label: '
 `dollyToId` → `set` distance, `spinToId` → `set` yaw, `lookAtId` → `all([set yaw, set pitch])`, each keeping the
 step's `over` and `ease`. Every other kind: `null`.
 
-- [ ] Test `a view captured after a frame roll is re-expressed in the clip's pinned frame` (hand-computed: a pose
+As built: the saga is `viewUsedSaga.ts` (named for the action it answers, like `pickObjectSaga`), because
+`componentFilePurity` reads any `use<Name>.ts` as a hook file; the label lives in `session/data/viewUsedLabel.ts`.
+The quaternion-to-matrix step `resolveFrameBasis` kept private is now `src/utils/math/quaternionToMatrix.ts`, which
+both use. `startPinned` and `rowReplaced` join `REVISION_ACTIONS`, and the Start test runs the whole session saga so it
+also sees the re-pin resolve. `set` and `setVec` drop a body `frame` when filled, since the capture is absolute.
+
+- [x] Test `a view captured after a frame roll is re-expressed in the clip's pinned frame` (hand-computed: a pose
       looking along the supergalactic pole captured under the supergalactic basis, pinned frame equatorial; assert the
       pinned yaw/pitch).
-- [ ] Test `Use current view on a bound Look-at replaces it by a Look-at point at the drawn target; Undo restores it`.
-- [ ] Test `Use current view on Start re-pins the preview and bumps the revision; a Live start stays live`.
-- [ ] Test `fixedFormOf: Aim becomes an All of Turn and Tilt at the drawn angles`.
-- [ ] `npx vitest run packages/studio/tests/kinds packages/studio/tests/session`.
-- [ ] Commit: "Clip studio: Use current view fills a camera step from the drawn camera".
+- [x] Test `Use current view on a bound Look-at replaces it by a Look-at point at the drawn target; Undo restores it`.
+- [x] Test `Use current view on Start re-pins the preview and bumps the revision; a Live start stays live`.
+- [x] Test `fixedFormOf: Aim becomes an All of Turn and Tilt at the drawn angles`.
+- [x] `npx vitest run packages/studio/tests/kinds packages/studio/tests/session`.
+- [x] Commit: "Clip studio: Use current view fills a camera step from the drawn camera".
 
 ---
 

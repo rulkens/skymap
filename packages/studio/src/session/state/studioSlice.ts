@@ -2,8 +2,8 @@
  * studioSlice — the studio's one state home, injected into the app's root reducer (ADR 0016).
  * History reducers work on `original(state)`, the plain base, so drafts keep their identity:
  * undoing to the opened draft restores the baseline object itself, which is how clean is detected.
- * `revision` bumps whenever the resolved form could change (an edit, undo, redo, an open with new
- * preview pins); `draftResolved` only lands for the current revision (A6). Every transport
+ * `revision` bumps whenever the resolved form could change (an edit, undo, redo, a re-pin, an open
+ * with new preview pins); `draftResolved` only lands for the current revision (A6). Every transport
  * change assigns a new object: the engine re-anchors the clip clock on its identity.
  */
 import { createSlice, original, type Draft, type PayloadAction } from '@reduxjs/toolkit';
@@ -18,7 +18,11 @@ import { stepHistory } from '../utils/stepHistory';
 import { isPickFor } from '../utils/isPickFor';
 import { rowKey } from '../../draft/utils/rowKey';
 import { ancestorKeys } from '../../draft/utils/ancestorKeys';
+import { updateEffectAt } from '../../draft/utils/updateEffectAt';
+import { VIEW_USED_LABEL } from '../data/viewUsedLabel';
+import type { CameraPose } from '../../../../../src/@types/camera/pose/CameraPose';
 import type { ClipData } from '../../../../../src/@types/animation/ClipData';
+import type { Effect } from '../../../../../src/@types/animation/Effect';
 import type { ClipId } from '../../../../../src/@types/animation/ClipId';
 import type { ParamValue } from '../../@types/kinds/ParamValue';
 import type { ObjectPick } from '../../@types/session/ObjectPick';
@@ -179,6 +183,28 @@ export const studioSlice = createSlice({
       const start = payload === 'saved' ? base.preview.startPose : 'live';
       return commitDraft({ ...base, draft: base.draft }, { ...base.draft, start }, 'Start', null);
     },
+    /** An intent `viewUsedSaga` answers with `startPinned` or `rowReplaced`. */
+    viewUsed: (_state, _action: PayloadAction<RowRef>) => {},
+    /** The preview starts from `pose` (Q7); a Saved start takes it too, as one Undo step. */
+    startPinned: (state, { payload }: PayloadAction<{ pose: CameraPose; fovYRad: number }>) => {
+      const base = original(state)!;
+      if (base.draft === null || base.preview === null) return;
+      const preview = { ...base.preview, startPose: payload.pose, fovYRad: payload.fovYRad };
+      const pinned = { ...base, draft: base.draft, preview };
+      if (typeof base.draft.start !== 'object') return { ...pinned, revision: base.revision + 1 };
+      return commitDraft(pinned, { ...base.draft, start: payload.pose }, VIEW_USED_LABEL, null);
+    },
+    rowReplaced: (
+      state,
+      {
+        payload,
+      }: PayloadAction<{ ref: Extract<RowRef, { kind: 'effect' }>; effect: Effect; label: string }>,
+    ) => {
+      const base = original(state)!;
+      if (base.draft === null) return;
+      const next = updateEffectAt(base.draft, payload.ref.path, () => payload.effect);
+      return commitDraft({ ...base, draft: base.draft }, next, payload.label, null);
+    },
     undone: (state) => stepHistory(original(state)!, 'past'),
     redone: (state) => stepHistory(original(state)!, 'future'),
   },
@@ -222,6 +248,9 @@ export const {
   viewportSet,
   paramEdited,
   startModeSet,
+  viewUsed,
+  startPinned,
+  rowReplaced,
   undone,
   redone,
 } = studioSlice.actions;

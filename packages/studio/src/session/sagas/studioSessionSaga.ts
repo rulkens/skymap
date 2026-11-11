@@ -9,6 +9,7 @@ import { call, fork, getContext, put, select } from 'typed-redux-saga';
 import { pickObjectSaga } from './pickObjectSaga';
 import { previewSaga } from './previewSaga';
 import { resolveDraftSaga } from './resolveDraftSaga';
+import { viewUsedSaga } from './viewUsedSaga';
 import { studioOpened } from '../state/studioSlice';
 import { withFrozenClockSaga } from '../../../../../src/state/time/withFrozenClockSaga';
 import { waitUntilSaga } from '../../../../../src/state/tour/waitUntilSaga';
@@ -28,6 +29,7 @@ export function* studioSessionSaga(id: ClipId): Generator {
     yield* put(studioOpened({ clipId: id, draft: clipFactories[id](simDays).data, preview }));
     yield* fork(pickObjectSaga);
     yield* fork(previewSaga);
+    yield* fork(viewUsedSaga);
     yield* call(resolveDraftSaga);
   });
 }

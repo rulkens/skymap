@@ -8,27 +8,12 @@
  * `mat3.fromQuat` from wgpu-matrix, the view-projection path's library).
  */
 
-import { mat3 } from 'wgpu-matrix';
 import type { Mat3 } from '../../../../@types/math/Mat3';
 import type { OrientationFrameId } from '../../../../@types/camera/orientation/OrientationFrameId';
 import type { FrameTween } from '../../../../@types/camera/focusMotion/FrameTween';
 import { ORIENTATION_FRAMES } from '../../../../data/orientation/orientationFrames';
+import { quaternionToMatrix } from '../../../../utils/math/quaternionToMatrix';
 import { frameRollQuatAt } from './frameRollQuatAt';
-
-/** Strip wgpu-matrix's vec4 column padding (indices 3, 7, 11) to a tight Mat3. */
-function toRegistryMat3(padded: Float32Array | number[]): Mat3 {
-  return [
-    padded[0]!,
-    padded[1]!,
-    padded[2]!,
-    padded[4]!,
-    padded[5]!,
-    padded[6]!,
-    padded[8]!,
-    padded[9]!,
-    padded[10]!,
-  ];
-}
 
 /** Total: a null tween is the steady basis; `EASE` clamps to [0, 1], so an
  * over-elapsed roll settles on the destination exactly. */
@@ -46,5 +31,5 @@ export function resolveFrameBasis(
   // A 0 ms tween is a `frameTo` snap: at elapsed 0 the fraction would be 0/0.
   const u = durationMs > 0 ? frameTweenElapsedMs / durationMs : 1;
   const q = frameRollQuatAt(frameTween.fromQuat, frameTween.to, frameTween.easing, u);
-  return toRegistryMat3(mat3.fromQuat(q));
+  return quaternionToMatrix(q);
 }
