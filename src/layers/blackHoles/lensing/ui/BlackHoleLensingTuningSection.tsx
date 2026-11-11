@@ -13,13 +13,11 @@
 
 import type { ReactElement } from 'react';
 import type { BlackHoleLensingTuning } from '../../@types/BlackHoleLensingTuning';
-import type { HexString } from '../../../../@types/math/HexString';
-import { hexToLinearRgb } from '../../../../utils/color/hexToLinearRgb';
-import { linearRgbToHex } from '../../../../utils/color/linearRgbToHex';
 import {
   BLACK_HOLE_LENSING_SLIDER_FIELDS,
   blackHoleLensingSliderPatch,
 } from './blackHoleLensingSliderFields';
+import DebugColorRow from '../../../../components/DebugPanel/DebugColorRow';
 import DebugTuningSection from '../../../../components/DebugPanel/DebugTuningSection';
 import sliderStyles from '../../../../components/DebugPanel/DebugSlider.module.css';
 
@@ -59,22 +57,12 @@ export function BlackHoleLensingTuningSection({
           ))}
         </select>
       </div>
-      <div
-        className={sliderStyles.root}
+      <DebugColorRow
+        label="emissionTint"
         title="Overall tint multiplier on the annulus emission's summed output, linear RGB (picker speaks sRGB). [1,1,1] is a no-op."
-      >
-        <span className={sliderStyles.label}>emissionTint</span>
-        <span className={sliderStyles.readout}>{linearRgbToHex(tuning.emissionTint)}</span>
-        <input
-          type="color"
-          aria-label="emissionTint"
-          value={linearRgbToHex(tuning.emissionTint)}
-          onChange={(e) => {
-            const emissionTint = hexToLinearRgb(e.target.value as HexString);
-            onChange({ emissionTint });
-          }}
-        />
-      </div>
+        value={tuning.emissionTint}
+        onChange={(emissionTint) => onChange({ emissionTint })}
+      />
     </DebugTuningSection>
   );
 }

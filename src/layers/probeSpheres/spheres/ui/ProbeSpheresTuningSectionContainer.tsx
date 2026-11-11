@@ -5,12 +5,10 @@
  */
 
 import { memo, useCallback } from 'react';
+import DebugColorRow from '../../../../components/DebugPanel/DebugColorRow';
 import DebugTuningSection from '../../../../components/DebugPanel/DebugTuningSection';
-import sliderStyles from '../../../../components/DebugPanel/DebugSlider.module.css';
 import sectionStyles from '../../../../components/DebugPanel/debugSection.module.css';
 import { useAppDispatch, useAppSelector } from '../../../../store/hooks';
-import { hexToLinearRgb } from '../../../../utils/color/hexToLinearRgb';
-import { linearRgbToHex } from '../../../../utils/color/linearRgbToHex';
 import { selectProbeSpheres } from '../../state/probeSpheres/selectors';
 import { setProbeSpheresMaterial } from '../../state/probeSpheres/slice';
 import { PROBE_SPHERE_SLIDER_FIELDS } from '../data/probeSphereSliderFields';
@@ -21,7 +19,6 @@ import { requestFocus } from '../../../../state/selection/requestFocus';
 import { setVisibility } from '../../../../state/settings/setVisibilityAction';
 import DebugSlider from '../../../../components/DebugPanel/DebugSlider';
 import { setMeshSelfBounce } from '../../../../state/settings/core/debugSlice';
-import type { HexString } from '../../../../@types/math/HexString';
 
 function ProbeSpheresTuningSectionContainer(): React.ReactElement {
   const dispatch = useAppDispatch();
@@ -34,7 +31,6 @@ function ProbeSpheresTuningSectionContainer(): React.ReactElement {
     [dispatch],
   );
   const selfBounce = useAppSelector((s) => s.settings.debug.meshSelfBounce);
-  const hex = linearRgbToHex(probeSpheres.color);
 
   return (
     <DebugTuningSection
@@ -74,19 +70,11 @@ function ProbeSpheresTuningSectionContainer(): React.ReactElement {
         title="Fill light a sunlit mesh bounces onto itself, as a fraction of sunlight"
         onChange={(value) => dispatch(setMeshSelfBounce(value))}
       />
-      <label className={sliderStyles.root}>
-        <span className={sliderStyles.label}>Colour</span>
-        <span className={sliderStyles.readout}>{hex}</span>
-        <input
-          type="color"
-          value={hex}
-          onChange={(e) =>
-            dispatch(
-              setProbeSpheresMaterial({ color: hexToLinearRgb(e.target.value as HexString) }),
-            )
-          }
-        />
-      </label>
+      <DebugColorRow
+        label="Colour"
+        value={probeSpheres.color}
+        onChange={(color) => dispatch(setProbeSpheresMaterial({ color }))}
+      />
     </DebugTuningSection>
   );
 }

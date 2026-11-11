@@ -39,10 +39,10 @@
 
 No new test: this is an extraction with no new behaviour.
 
-- [ ] Follow the `create-component` skill's rules, adapted to the flat `DebugPanel/` folder. Reuse `DebugSlider.module.css` classes as the current copies do. Keep `aria-label` set to the label.
-- [ ] Replace all four copies. `grep -rn 'type="color"' src` must return only `DebugColorRow.tsx`.
-- [ ] Run `npm run typecheck:fast`.
-- [ ] Commit: `Debug panels share one colour row`.
+- [x] Follow the `create-component` skill's rules, adapted to the flat `DebugPanel/` folder. Reuse `DebugSlider.module.css` classes as the current copies do. Keep `aria-label` set to the label.
+- [x] Replace all four copies. `grep -rn 'type="color"' src` must return only `DebugColorRow.tsx`.
+- [x] Run `npm run typecheck:fast`.
+- [x] Commit: `Debug panels share one colour row`.
 
 ### Task 2: Profile table and group assignment
 

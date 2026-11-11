@@ -7,17 +7,14 @@
 import type { ReactElement } from 'react';
 import type { ZoneOfAvoidanceSettings } from '../../@types/ZoneOfAvoidanceSettings';
 import type { ZoneOfAvoidanceTuning } from '../../@types/ZoneOfAvoidanceTuning';
-import type { HexString } from '../../../../@types/math/HexString';
-import { hexToLinearRgb } from '../../../../utils/color/hexToLinearRgb';
-import { linearRgbToHex } from '../../../../utils/color/linearRgbToHex';
 import { formatZoneOfAvoidanceTuningDefaults } from '../utils/formatZoneOfAvoidanceTuningDefaults';
 import {
   ZONE_OF_AVOIDANCE_SLIDER_FIELDS,
   zoneOfAvoidanceSliderPatch,
 } from '../data/zoneOfAvoidanceSliderFields';
 import CopyButton from '../../../../components/common/CopyButton/CopyButton';
+import DebugColorRow from '../../../../components/DebugPanel/DebugColorRow';
 import DebugTuningSection from '../../../../components/DebugPanel/DebugTuningSection';
-import sliderStyles from '../../../../components/DebugPanel/DebugSlider.module.css';
 
 export type ZoneOfAvoidanceTuningSectionProps = {
   zoneOfAvoidance: ZoneOfAvoidanceSettings;
@@ -35,35 +32,18 @@ export function ZoneOfAvoidanceTuningSection({
       values={zoneOfAvoidance}
       onSliderChange={(k, v) => onChange(zoneOfAvoidanceSliderPatch(k, v))}
     >
-      <div className={sliderStyles.root} title="Veil tint, linear RGB (picker speaks sRGB).">
-        <span className={sliderStyles.label}>color</span>
-        <span className={sliderStyles.readout}>{linearRgbToHex(zoneOfAvoidance.color)}</span>
-        <input
-          type="color"
-          aria-label="color"
-          value={linearRgbToHex(zoneOfAvoidance.color)}
-          onChange={(e) => {
-            const color = hexToLinearRgb(e.target.value as HexString);
-            onChange({ color });
-          }}
-        />
-      </div>
-      <div
-        className={sliderStyles.root}
+      <DebugColorRow
+        label="color"
+        title="Veil tint, linear RGB (picker speaks sRGB)."
+        value={zoneOfAvoidance.color}
+        onChange={(color) => onChange({ color })}
+      />
+      <DebugColorRow
+        label="labelColor"
         title="Curved-lettering tint, linear RGB (picker speaks sRGB)."
-      >
-        <span className={sliderStyles.label}>labelColor</span>
-        <span className={sliderStyles.readout}>{linearRgbToHex(zoneOfAvoidance.labelColor)}</span>
-        <input
-          type="color"
-          aria-label="labelColor"
-          value={linearRgbToHex(zoneOfAvoidance.labelColor)}
-          onChange={(e) => {
-            const labelColor = hexToLinearRgb(e.target.value as HexString);
-            onChange({ labelColor });
-          }}
-        />
-      </div>
+        value={zoneOfAvoidance.labelColor}
+        onChange={(labelColor) => onChange({ labelColor })}
+      />
       <CopyButton
         text={formatZoneOfAvoidanceTuningDefaults(zoneOfAvoidance)}
         label="Copy current defaults"
