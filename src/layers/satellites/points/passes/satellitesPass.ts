@@ -25,6 +25,8 @@ import { sceneOccluderSpheres } from '../../../../services/engine/frame/sceneOcc
 import { near0OverlayClipScale } from '../../../../services/engine/frame/near0OverlayClipScale';
 import { near0OverlayVpF32 } from '../../../../services/engine/frame/near0OverlayVpF32';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
+import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
+import { normalize3 } from '../../../../utils/math/normalize3';
 import { sweepAgeOpacity } from '../subsystems/sweepAgeOpacity';
 import { satelliteLayerOpacity } from '../subsystems/satelliteLayerOpacity';
 import { composeTemeToWorld } from '../../sweep/subsystems/composeTemeToWorld';
@@ -65,6 +67,11 @@ export function satellitesPass(runtime: SatellitesRuntime): ContentPass<'satelli
         (earth.positionMpc[2] - eye[2]) / SCALE_UNITS.KM_TO_MPC,
       ],
       temeToWorld: composeTemeToWorld(earth.orientation, simDays),
+      sunDir: normalize3([
+        RENDER_ORIGIN_MPC[0] - earth.positionMpc[0],
+        RENDER_ORIGIN_MPC[1] - earth.positionMpc[1],
+        RENDER_ORIGIN_MPC[2] - earth.positionMpc[2],
+      ]),
       opacity: opacityOf(simDays),
       classOpacity: [fade.active, fade.debris, fade.other],
       occluders: sceneOccluderSpheres(state, ctx),

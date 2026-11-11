@@ -15,6 +15,8 @@ export type SatellitePointFrame = {
   readonly simMs: number;
   readonly earthKm: Readonly<Vec3>;
   readonly temeToWorld: Readonly<Mat3>;
+  /** World-space unit vector from Earth to the Sun, normalised in f64. */
+  readonly sunDir: Readonly<Vec3>;
   /** Distance and data-window fade, times the show toggle's master value. */
   readonly opacity: number;
   /** Each class's own toggle fade, in `SATELLITE_CLASSES` order. */

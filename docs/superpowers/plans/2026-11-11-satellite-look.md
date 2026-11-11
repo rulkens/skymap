@@ -187,10 +187,10 @@ Starting constants, to be tuned by eye in the final step: `AREA_REF_M2 22.68`, `
 
 No new unit test: the maths has no test harness here and the parity test already pins the layout. Verification is the eye check below.
 
-- [ ] Implement. `pick.wesl` keeps its fixed footprint and reads no lighting.
-- [ ] Run `npm run typecheck:fast` and the parity test.
-- [ ] Shoot `focus=body-earth&t=2026-11-01T22:00:00Z&layers=satellites` and look for colours and an unlit night-side wedge.
-- [ ] Commit: `Satellites catch sunlight, fall into Earth's shadow and flash from their panels`.
+- [x] Implement. `pick.wesl` keeps its fixed footprint and reads no lighting.
+- [x] Run `npm run typecheck:fast` and the parity test.
+- [x] Shoot `focus=body-earth&t=2026-11-01T22:00:00Z&layers=satellites` and look for colours and an unlit night-side wedge.
+- [x] Commit: `Satellites catch sunlight, fall into Earth's shadow and flash from their panels`.
 
 ### Task 5: Colour tuning
 
