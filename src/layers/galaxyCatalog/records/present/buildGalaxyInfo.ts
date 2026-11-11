@@ -12,7 +12,6 @@
  * `row.objId` is the decimal string of the catalog objID; we parse it back to
  * a bigint once here because the SDSS/PGC URL + name logic compares it to 0n.
  */
-import { Source } from '../../../../data/source';
 import { GALAXY_CATALOG_SOURCE_RECORD } from '../../sources/galaxyCatalogSourceRecord';
 import {
   DESI_TRACER_CLASS,
@@ -22,26 +21,24 @@ import {
 import { famousDisplayName } from '../../../../services/engine/helpers/famousDisplayName';
 import { famousWikipediaTitle } from '../../../../utils/format/famousWikipediaTitle';
 import { wikipediaUrl } from '../../../../utils/format/wikipediaUrl';
-import {
-  cartesianToRaDecZ,
-  formatRaSexagesimal,
-  formatDecSexagesimal,
-  iauName,
-  iauRaDecSuffix,
-  lookbackTimeGyr,
-  hubbleVelocityKmS,
-  absoluteMagnitude,
-  earthEraForLookback,
-  sdssExplorerUrl,
-  sdssThumbnailUrl,
-  dssThumbnailUrl,
-  sdssNavigateUrl,
-  aladinLiteUrl,
-  galaxyThumbnailFovArcmin,
-  nedByNameUrl,
-  nedNearPositionUrl,
-  PC_TO_LY,
-} from '../../../../utils/math';
+import { cartesianToRaDecZ } from '../../../../utils/math/cartesianToRaDecZ';
+import { formatRaSexagesimal } from '../../../../utils/math/formatRaSexagesimal';
+import { formatDecSexagesimal } from '../../../../utils/math/formatDecSexagesimal';
+import { iauName } from '../../../../utils/math/iauName';
+import { iauRaDecSuffix } from '../../../../utils/math/iauRaDecSuffix';
+import { lookbackTimeGyr } from '../../../../utils/math/lookbackTimeGyr';
+import { hubbleVelocityKmS } from '../../../../utils/math/hubbleVelocityKmS';
+import { absoluteMagnitude } from '../../../../utils/math/absoluteMagnitude';
+import { earthEraForLookback } from '../../../../utils/math/earthEraForLookback';
+import { sdssExplorerUrl } from '../../../../utils/math/sdssExplorerUrl';
+import { sdssThumbnailUrl } from '../../../../utils/math/sdssThumbnailUrl';
+import { dssThumbnailUrl } from '../../../../utils/math/dssThumbnailUrl';
+import { sdssNavigateUrl } from '../../../../utils/math/sdssNavigateUrl';
+import { aladinLiteUrl } from '../../../../utils/math/aladinLiteUrl';
+import { galaxyThumbnailFovArcmin } from '../../../../utils/math/galaxyThumbnailFovArcmin';
+import { nedByNameUrl } from '../../../../utils/math/nedByNameUrl';
+import { nedNearPositionUrl } from '../../../../utils/math/nedNearPositionUrl';
+import { PC_TO_LY } from '../../../../utils/math/constants';
 import { galaxyType } from '../utils/galaxyType';
 import type { GalaxyInfo } from '../@types/GalaxyInfo';
 import type { GalaxyRow } from '../@types/GalaxyRow';
@@ -79,7 +76,7 @@ export function buildGalaxyInfo(row: GalaxyRow): GalaxyInfo {
   // stray non-BGS SGW row (if the selection ever caught one) would still be
   // caught by the classByte check rather than silently painting synthetic mags.
   const suppressPhotometry =
-    (source === Source.DesiDeep || source === Source.DesiWedge || source === Source.DesiSgw) &&
+    (source === 'desiDeep' || source === 'desiWedge' || source === 'desiSgw') &&
     DESI_NO_PHOTOMETRY_TRACERS.has(row.classByte);
   const { magU, magG, magR, magI, magZ } = suppressPhotometry
     ? { magU: NaN, magG: NaN, magR: NaN, magI: NaN, magZ: NaN }
@@ -101,21 +98,21 @@ export function buildGalaxyInfo(row: GalaxyRow): GalaxyInfo {
     colours.push({ label: `${bands[a]}−${bands[b]}`, value });
   }
 
-  const isSdss = source === Source.SDSS;
+  const isSdss = source === 'sdss';
   const famousEntry = row.famous;
   let primaryCatalogue: { label: string; href: string } | null;
   if (isSdss && objID > 0n) {
     primaryCatalogue = { label: 'SDSS Explorer', href: sdssExplorerUrl(objID) };
-  } else if (source === Source.TwoMRS) {
+  } else if (source === '2mrs') {
     primaryCatalogue = { label: 'NED', href: nedNearPositionUrl(ra, dec) };
-  } else if (source === Source.Glade) {
+  } else if (source === 'glade') {
     primaryCatalogue = {
       label: 'NED',
       href: objID > 0n ? nedByNameUrl(`PGC ${objID}`) : nedNearPositionUrl(ra, dec),
     };
   } else if (famousEntry) {
     primaryCatalogue = { label: 'NED', href: nedByNameUrl(famousEntry.names[0]!) };
-  } else if (source === Source.SDSS) {
+  } else if (source === 'sdss') {
     primaryCatalogue = { label: 'NED', href: nedNearPositionUrl(ra, dec) };
   } else {
     primaryCatalogue = null;
@@ -154,11 +151,11 @@ export function buildGalaxyInfo(row: GalaxyRow): GalaxyInfo {
   let provenance: string;
   if (isFallback) {
     provenance = 'deterministic fallback';
-  } else if (source === Source.SDSS) {
+  } else if (source === 'sdss') {
     provenance = 'SDSS exp+deV blend';
-  } else if (source === Source.TwoMRS) {
+  } else if (source === '2mrs') {
     provenance = '2MASS XSC sup_phi';
-  } else if (source === Source.Glade) {
+  } else if (source === 'glade') {
     provenance = 'HyperLEDA PGC';
   } else {
     provenance = 'deterministic fallback';
@@ -172,11 +169,11 @@ export function buildGalaxyInfo(row: GalaxyRow): GalaxyInfo {
   let diameterProvenance: string;
   if (row.diameterIsFallback) {
     diameterProvenance = 'fallback (30 kpc)';
-  } else if (source === Source.SDSS) {
+  } else if (source === 'sdss') {
     diameterProvenance = 'SDSS petroR50_r';
-  } else if (source === Source.TwoMRS) {
+  } else if (source === '2mrs') {
     diameterProvenance = '2MRS Riso';
-  } else if (source === Source.Glade) {
+  } else if (source === 'glade') {
     diameterProvenance = 'GLADE Tully';
   } else {
     diameterProvenance = 'fallback (30 kpc)';
@@ -185,7 +182,7 @@ export function buildGalaxyInfo(row: GalaxyRow): GalaxyInfo {
   const agnClass = sourceClassLabel(source, row.classByte) ?? undefined;
   const parentSurveyPrefix = milliquasParentSurveyPrefix(row.parentSurveyByte);
   const milliquasDisplayName =
-    source === Source.Milliquas && parentSurveyPrefix !== null
+    source === 'milliquas' && parentSurveyPrefix !== null
       ? `${parentSurveyPrefix} ${iauRaDecSuffix(ra, dec)}`
       : undefined;
 
@@ -232,9 +229,7 @@ export function buildGalaxyInfo(row: GalaxyRow): GalaxyInfo {
       [
         famous ? famousDisplayName(famous) : undefined,
         milliquasDisplayName,
-        (source === Source.TwoMRS || source === Source.Glade) && objID > 0n
-          ? `PGC ${objID}`
-          : undefined,
+        (source === '2mrs' || source === 'glade') && objID > 0n ? `PGC ${objID}` : undefined,
         iauName(source, ra, dec),
       ].find((c) => c !== undefined && c.length > 0) ?? iauName(source, ra, dec),
     bands,

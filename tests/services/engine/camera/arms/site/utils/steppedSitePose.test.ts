@@ -77,10 +77,10 @@ describe('steppedSitePose', () => {
     const sequence: readonly InputStep[] = [
       drag(220, -140),
       drag(-90, -600),
-      { kind: 'zoom', factor: 0.3, duringGesture: false, cursorPx: null },
+      { kind: 'zoom', factor: 0.3, duringGesture: false, cursorPx: null, fresh: false },
       drag(-410, 305),
       drag(770, 48),
-      { kind: 'zoom', factor: 5, duringGesture: true, cursorPx: [10, 10] },
+      { kind: 'zoom', factor: 5, duringGesture: true, cursorPx: [10, 10], fresh: false },
       drag(33, -720),
     ];
 
@@ -95,7 +95,13 @@ describe('steppedSitePose', () => {
     let pose: SitePose = { ...POSE, rangeM: 100 };
     for (let i = 0; i < 10; i += 1) {
       // 0.01 folds through the per-notch clamp to 0.5, so this is 100 × 0.5^10.
-      pose = step(pose, { kind: 'zoom', factor: 0.01, duringGesture: false, cursorPx: null });
+      pose = step(pose, {
+        kind: 'zoom',
+        factor: 0.01,
+        duringGesture: false,
+        cursorPx: null,
+        fresh: false,
+      });
     }
     expect(pose.rangeM).toBeCloseTo(ROVER.standoffRadii * ROVER.boundingRadiusM, 12);
   });
@@ -106,11 +112,23 @@ describe('steppedSitePose', () => {
     // notch defeated it, so every wheel notch at the floor wrote a no-op pose.
     let pinned: SitePose = { ...POSE, rangeM: 100 };
     for (let i = 0; i < 10; i += 1) {
-      pinned = step(pinned, { kind: 'zoom', factor: 0.01, duringGesture: false, cursorPx: null });
+      pinned = step(pinned, {
+        kind: 'zoom',
+        factor: 0.01,
+        duringGesture: false,
+        cursorPx: null,
+        fresh: false,
+      });
     }
-    expect(step(pinned, { kind: 'zoom', factor: 0.5, duringGesture: false, cursorPx: null })).toBe(
-      pinned,
-    );
+    expect(
+      step(pinned, {
+        kind: 'zoom',
+        factor: 0.5,
+        duringGesture: false,
+        cursorPx: null,
+        fresh: false,
+      }),
+    ).toBe(pinned);
   });
 
   it('a non-drag, non-zoom input returns its pose by reference', () => {

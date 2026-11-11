@@ -3,7 +3,7 @@
  * upsample handle. Non-null throughout: `create` builds each before returning.
  */
 
-import type { StarCatalogSourceType } from './StarCatalogSourceType';
+import type { StarCatalogId } from './StarCatalogId';
 import type { Octree } from '../../../@types/octree/Octree';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { StarCatalogReq } from '../survey/@types/StarCatalogReq';
@@ -23,15 +23,12 @@ import type { CatalogPickCodes } from '../../../@types/engine/selection/CatalogP
 
 export type StarCatalogRuntime = {
   /** One slot per survey source. */
-  readonly catalogs: ReadonlyMap<
-    StarCatalogSourceType,
-    AssetSlot<Octree<StarColumns>, StarCatalogReq>
-  >;
+  readonly catalogs: ReadonlyMap<StarCatalogId, AssetSlot<Octree<StarColumns>, StarCatalogReq>>;
   /** A source's chunk stream while its committed index names chunks; the slot's commit fills it and release clears it. */
-  readonly chunkStreams: Map<StarCatalogSourceType, OctreeChunkStream<StarColumns>>;
+  readonly chunkStreams: Map<StarCatalogId, OctreeChunkStream<StarColumns>>;
   readonly famousStarsMeta: AssetSlot<FamousStarsPayload, void>;
   /** Catalog ↔ pick code; every pick word this Layer stamps or decodes goes through it. */
-  readonly pickCodes: CatalogPickCodes<StarCatalogSourceType>;
+  readonly pickCodes: CatalogPickCodes<StarCatalogId>;
   readonly renderer: StarCatalogRenderer;
   readonly pickRenderer: StarCatalogPickRenderer;
   /** The antique look's print twins (`starCatalogPrintPass`, `starPointsPrintPass`). */

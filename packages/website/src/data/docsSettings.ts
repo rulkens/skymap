@@ -538,6 +538,34 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
         'galaxyCatalogs.items.famousGalaxy.labelEnabled',
         'the named galaxies',
       ),
+      label('Famous Stars', 'starCatalogs.items.famousStar.labelEnabled', 'the named stars'),
+      {
+        ...label('Sun', 'starCatalogs.items.sun.labelEnabled', ''),
+        does: 'Shows the name of the Sun.',
+      },
+      {
+        ...label('Milky Way', 'milkyWay.labelEnabled', ''),
+        does: 'Shows the name of the Milky Way.',
+      },
+      {
+        ...label('Galactic Centre', 'blackHoles.items.sgr-a-star.labelEnabled', ''),
+        does: 'Shows the name of Sagittarius A*.',
+      },
+      label('Planets', 'bodies.items.planet.labelEnabled', 'the planets and the moons'),
+      {
+        ...label('Earth', 'bodies.items.earth.labelEnabled', ''),
+        does: 'Shows the name of Earth.',
+      },
+      label(
+        'Small bodies',
+        'bodies.items.small-body.labelEnabled',
+        'the asteroids Vesta and Bennu and the dwarf planet Ceres',
+      ),
+      label(
+        'Spacecraft',
+        'missions.items.craft.labelEnabled',
+        'the spacecraft and the other 3D models',
+      ),
       label(
         'Galaxy clusters',
         'structures.items.galaxy-cluster.labelEnabled',
@@ -549,29 +577,6 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
         'Galaxy groups',
         'structures.items.galaxy-group.labelEnabled',
         'the groups of galaxies',
-      ),
-      {
-        ...label('Milky Way', 'milkyWay.labelEnabled', ''),
-        does: 'Shows the name of the Milky Way.',
-      },
-      label('Famous Stars', 'starCatalogs.items.famousStar.labelEnabled', 'the named stars'),
-      label('Planets', 'bodies.items.planet.labelEnabled', 'the planets and the moons'),
-      {
-        ...label('Earth', 'bodies.items.earth.labelEnabled', ''),
-        does: 'Shows the name of Earth.',
-      },
-      {
-        ...label('Sun', 'starCatalogs.items.sun.labelEnabled', ''),
-        does: 'Shows the name of the Sun.',
-      },
-      {
-        ...label('Galactic Centre', 'blackHoles.items.sgr-a-star.labelEnabled', ''),
-        does: 'Shows the name of Sagittarius A*.',
-      },
-      label(
-        'Spacecraft',
-        'missions.items.craft.labelEnabled',
-        'the spacecraft and the other 3D models',
       ),
       label('Open clusters', 'structures.items.open-cluster.labelEnabled', 'the open clusters'),
       label(
@@ -588,11 +593,6 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
         'Galactic Centre',
         'structures.items.gc-cluster.labelEnabled',
         'the star clusters near the centre of the Milky Way',
-      ),
-      label(
-        'Small bodies',
-        'bodies.items.small-body.labelEnabled',
-        'the asteroids Vesta and Bennu and the dwarf planet Ceres',
       ),
       {
         name: 'S-star trails',

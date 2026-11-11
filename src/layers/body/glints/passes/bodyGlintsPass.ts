@@ -19,7 +19,6 @@ import type { BodyRuntime } from '../../@types/BodyRuntime';
 import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { BodyGlintPick } from '../../../../@types/rendering/bodyPickRenderer/BodyGlintPick';
-import { Source } from '../../../../data/source';
 import { SCENE_PLANETS } from '../../../../data/bodies/scenePlanets';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { bodySceneBodyPartition } from '../../slabs/present/bodySceneBodyPartition';
@@ -136,10 +135,7 @@ export function bodyGlintsPass(runtime: BodyRuntime): ContentPass {
             earthPos[1] - camPos[1],
             earthPos[2] - camPos[2],
           ] as Vec3,
-          packedId: packSelection(
-            runtime.pickCodes.pickCodeOf(Source.Earth),
-            0 + PICK_SENTINEL_OFFSET,
-          ),
+          packedId: packSelection(runtime.pickCodes.pickCodeOf('earth'), 0 + PICK_SENTINEL_OFFSET),
           bandClass: glintBandClass('earth'),
         });
       }
@@ -175,7 +171,7 @@ export function bodyGlintsPass(runtime: BodyRuntime): ContentPass {
             positionMpc[2] - camPos[2],
           ] as Vec3,
           packedId: packSelection(
-            runtime.pickCodes.pickCodeOf(Source.Planet),
+            runtime.pickCodes.pickCodeOf('planet'),
             seedIndex + PICK_SENTINEL_OFFSET,
           ),
           bandClass: glintBandClass(body.id),

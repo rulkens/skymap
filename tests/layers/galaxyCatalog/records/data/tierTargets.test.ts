@@ -13,7 +13,6 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { Source } from '../../../../../src/data/source';
 import {
   tierTarget,
   tierFilenameForSource,
@@ -21,37 +20,33 @@ import {
 
 describe('tierTarget', () => {
   it('small tier excludes SDSS and caps GLADE at 256k', () => {
-    expect(tierTarget(Source.SDSS, 'small')).toBe(0);
-    expect(tierTarget(Source.Glade, 'small')).toBe(256_000);
+    expect(tierTarget('sdss', 'small')).toBe(0);
+    expect(tierTarget('glade', 'small')).toBe(256_000);
   });
 
   it('small tier keeps 2MRS and Famous uncapped (returns undefined)', () => {
-    expect(tierTarget(Source.TwoMRS, 'small')).toBeUndefined();
-    expect(tierTarget(Source.FamousGalaxy, 'small')).toBeUndefined();
+    expect(tierTarget('2mrs', 'small')).toBeUndefined();
+    expect(tierTarget('famousGalaxy', 'small')).toBeUndefined();
   });
 
   it('returns undefined for non-galaxy catalog sources (structures cannot be subsampled)', () => {
-    expect(tierTarget(Source.GalaxyCluster, 'medium')).toBeUndefined();
-    expect(tierTarget(Source.Supercluster, 'small')).toBeUndefined();
-    expect(tierTarget(Source.Void, 'large')).toBeUndefined();
+    expect(tierTarget('galaxy-cluster', 'medium')).toBeUndefined();
+    expect(tierTarget('supercluster', 'small')).toBeUndefined();
+    expect(tierTarget('void', 'large')).toBeUndefined();
   });
 });
 
 describe('tierFilenameForSource', () => {
   it('emits per-tier filenames for subsampled sources (SDSS, GLADE)', () => {
-    expect(tierFilenameForSource(Source.SDSS, 'small')).toBe('galaxy-catalog/v10/sdss-small.bin');
-    expect(tierFilenameForSource(Source.SDSS, 'medium')).toBe('galaxy-catalog/v10/sdss-medium.bin');
-    expect(tierFilenameForSource(Source.SDSS, 'large')).toBe('galaxy-catalog/v10/sdss-large.bin');
-    expect(tierFilenameForSource(Source.Glade, 'medium')).toBe(
-      'galaxy-catalog/v10/glade-medium.bin',
-    );
+    expect(tierFilenameForSource('sdss', 'small')).toBe('galaxy-catalog/v10/sdss-small.bin');
+    expect(tierFilenameForSource('sdss', 'medium')).toBe('galaxy-catalog/v10/sdss-medium.bin');
+    expect(tierFilenameForSource('sdss', 'large')).toBe('galaxy-catalog/v10/sdss-large.bin');
+    expect(tierFilenameForSource('glade', 'medium')).toBe('galaxy-catalog/v10/glade-medium.bin');
   });
 
   it('emits the shared filename for tier-agnostic sources (2MRS, Famous)', () => {
-    expect(tierFilenameForSource(Source.TwoMRS, 'small')).toBe('galaxy-catalog/v10/2mrs.bin');
-    expect(tierFilenameForSource(Source.TwoMRS, 'large')).toBe('galaxy-catalog/v10/2mrs.bin');
-    expect(tierFilenameForSource(Source.FamousGalaxy, 'medium')).toBe(
-      'galaxy-catalog/v10/famous.bin',
-    );
+    expect(tierFilenameForSource('2mrs', 'small')).toBe('galaxy-catalog/v10/2mrs.bin');
+    expect(tierFilenameForSource('2mrs', 'large')).toBe('galaxy-catalog/v10/2mrs.bin');
+    expect(tierFilenameForSource('famousGalaxy', 'medium')).toBe('galaxy-catalog/v10/famous.bin');
   });
 });

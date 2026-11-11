@@ -10,12 +10,22 @@
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { BodyRuntime } from '../../@types/BodyRuntime';
-import { Source } from '../../../../data/source';
+import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
+import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
+import { composeBodySlabMvp } from '../../../../utils/camera/bodyCompose/composeBodySlabMvp';
+import { bodySlabCamLocal } from '../../../../utils/camera/bodyCompose/bodySlabCamLocal';
+import { innerBoundRadiusM } from '../../../../utils/occlusion/innerBoundRadiusM';
+import { sunDirLocal } from '../../../../utils/camera/bodyCompose/sunDirLocal';
+import { narrowMat4 } from '../../../../utils/math/narrowMat4';
+import { packEarthSurfaceUniforms } from '../render/packEarthSurfaceUniforms';
+import { EARTH_SURFACE_PARAMS } from '../../surfaceTiles/format/data/earthSurfaceParams';
+import { CLOUD_SHELL_PARAMS } from '../../clouds/data/cloudShellParams';
+import { cloudDeckFade } from '../../clouds/present/cloudDeckFade';
+import { bodyCameraDistanceMpc } from '../../slabs/present/bodyCameraDistanceMpc';
 import { bodySlabFlooredPick } from '../../../../services/engine/helpers/bodySlabFlooredPick';
 import { prepareBodySurfaceFrame } from '../../slabs/present/prepareBodySurfaceFrame';
 import { viewFlipsWinding } from '../../../../utils/camera/viewRig/viewFlipsWinding';
-import { earthSurfaceUniforms } from '../present/earthSurfaceUniforms';
 
 export function earthPass(runtime: BodyRuntime): ContentPass {
   return {
@@ -26,12 +36,48 @@ export function earthPass(runtime: BodyRuntime): ContentPass {
     },
 
     draw(pass, view, ctx, state) {
-      const uniforms = earthSurfaceUniforms(state, ctx, view);
-      if (uniforms === null) return;
-      runtime.earthRenderer.draw(pass, uniforms, viewFlipsWinding(ctx));
+      const prepared = prepareBodySurfaceFrame(state, ctx, view);
+      if (prepared === null) return;
+      const { body, bodyState: earthState, radiusM } = prepared;
+      // The INNER bound (datum + reliefM[0], never positive), so a below-datum trench is never occluded by the globe.
+      const baseGlobeRadiusM = innerBoundRadiusM(body.surface);
+      const mvp = narrowMat4(
+        composeBodySlabMvp(view.slab.vp, prepared.pose.eyeRelBodyM, baseGlobeRadiusM),
+      );
+      const camLocal = bodySlabCamLocal(prepared.pose.eyeRelBodyM, baseGlobeRadiusM);
+      const radiusMpc = radiusM * SCALE_UNITS.M_TO_MPC;
+
+      const sun = sunDirLocal(earthState.positionMpc, RENDER_ORIGIN_MPC, earthState.orientation);
+      // The deck and the shadow it casts must dissolve together. Known gap: the fade
+      // does not reach the night-side city-lights dimming (nightLights reads
+      // cloudAlphaHere with no strength scalar).
+      const cloudFade = cloudDeckFade(
+        bodyCameraDistanceMpc(earthState.positionMpc, ctx.drawCamPos),
+        radiusMpc,
+      );
+      const cloudShadowStrength = EARTH_SURFACE_PARAMS.cloudShadowStrength * cloudFade;
+
+      runtime.earthRenderer.draw(
+        pass,
+        packEarthSurfaceUniforms(
+          mvp,
+          sun,
+          camLocal,
+          EARTH_SURFACE_PARAMS.roughnessBase,
+          EARTH_SURFACE_PARAMS.f0,
+          EARTH_SURFACE_PARAMS.sunIrradiance,
+          cloudShadowStrength,
+          // The SAME shell cloudShellPass draws.
+          CLOUD_SHELL_PARAMS.radiusRatio,
+          // Live user settings, not the WESL consts.
+          state.settings.earth.ambientLight,
+          state.settings.earth.oceanRoughness,
+        ),
+        viewFlipsWinding(ctx),
+      );
     },
 
-    // Earth is the sole body of Source.Earth (seed index 0); PICK_SENTINEL_OFFSET
+    // Earth is the sole body of 'earth' (seed index 0); PICK_SENTINEL_OFFSET
     // keeps a real hit distinct from the cleared no-hit texel.
     drawPick(pass, view, ctx, state) {
       const pickRenderer = state.gpu.bodyPickRenderer;
@@ -51,10 +97,7 @@ export function earthPass(runtime: BodyRuntime): ContentPass {
       pickRenderer.drawSphere(pass, {
         mvp,
         camPosLocal,
-        packedId: packSelection(
-          runtime.pickCodes.pickCodeOf(Source.Earth),
-          0 + PICK_SENTINEL_OFFSET,
-        ),
+        packedId: packSelection(runtime.pickCodes.pickCodeOf('earth'), 0 + PICK_SENTINEL_OFFSET),
       });
     },
   };

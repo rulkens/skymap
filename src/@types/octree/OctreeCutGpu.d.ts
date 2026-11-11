@@ -3,7 +3,7 @@
  * lists, the compute that fills them, and what a draw binds to read them.
  */
 
-import type { SourceType } from '../data/SourceType';
+import type { SourceId } from '../data/SourceId';
 import type { OctreeChunk } from './OctreeChunk';
 import type { Octree } from './Octree';
 import type { ClaimTimestampWrites } from '../gpu/timing/ClaimTimestampWrites';
@@ -19,19 +19,19 @@ export type OctreeCutGpu = {
    * Build a source's pool-sized buffers (index rows, then `slots` chunk slots);
    * an empty octree releases them. Throws, creating nothing, past a pool cap.
    */
-  upload(source: SourceType, octree: Octree<{ readonly count: number }>, slots: number): void;
+  upload(source: SourceId, octree: Octree<{ readonly count: number }>, slots: number): void;
   /** Destroy a source's buffers (live and capture); a later `upload` builds them afresh. */
-  release(source: SourceType): void;
+  release(source: SourceId): void;
   /** Write a landed chunk's rows into `slot`, zero its fades, then mark its roots resident. */
   uploadChunk(
-    source: SourceType,
+    source: SourceId,
     slot: number,
     chunk: OctreeChunk<{ readonly count: number }>,
     host: OctreeChunkHost,
   ): void;
   /** Mark every root of the slot's `chunk` in `host` unresident, then empty the slot. */
   evictChunk(
-    source: SourceType,
+    source: SourceId,
     slot: number,
     chunk: OctreeChunk<{ readonly count: number }>,
     host: OctreeChunkHost,
@@ -52,6 +52,6 @@ export type OctreeCutGpu = {
    */
   submitCapture(inputs: OctreeCutInputs): void;
   /** `null` until that cut (the frame's, or the capture's) has run for the source. */
-  drawOf(source: SourceType, stream: OctreeDrawStream, capture: boolean): OctreeCutDraw | null;
+  drawOf(source: SourceId, stream: OctreeDrawStream, capture: boolean): OctreeCutDraw | null;
   destroy(): void;
 };

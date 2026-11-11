@@ -1,7 +1,7 @@
 import famousGalaxySeed from '../../../../data/seeds/famous_galaxies.seed.json';
 import structureSeed from '../../../../data/seeds/structure_anchors.seed.json';
 import { MILKY_WAY_NAMES } from '../../../../src/layers/milkyWay/card/data/milkyWayNames';
-import { tourRegistry } from '../../../../src/data/animation/tours/tourRegistry';
+import { APP_TOUR_REGISTRY } from '../../../../src/compositions/appTours';
 import { BODY_SEARCH_NAMES } from '../../../../src/data/bodies/bodySearchNames';
 import { ORBITAL_ELEMENTS } from '../../../../src/data/bodies/orbitalElements';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
@@ -235,7 +235,7 @@ const places = EARTH_PLACES.map(
 );
 
 const milkyWay = focusRow({ name: MILKY_WAY_NAMES[0], kind: 'milkyWay', id: MILKY_WAY_FOCUS_ID });
-const blackHoles = BLACK_HOLE_SOURCE_ROWS.map(([, entry]) =>
+const blackHoles = BLACK_HOLE_SOURCE_ROWS.map((entry) =>
   focusRow({
     name: entry.detailLabel,
     kind: 'blackHole',
@@ -274,7 +274,7 @@ const exhibits = Object.values(APP_EXHIBIT_REGISTRY).map(
 );
 
 // A tour marked `dev` is not in the app's search, so it is not here.
-const tours = Object.values(tourRegistry)
+const tours = Object.values(APP_TOUR_REGISTRY)
   .filter((tour) => tour.dev !== true)
   .map(
     (tour): ObjectRow => ({

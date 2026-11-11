@@ -6,9 +6,8 @@
  */
 
 import type { GalaxyCatalog } from '../../@types/data/galaxyCatalog/GalaxyCatalog';
-import type { GalaxyCatalogSourceType } from './@types/GalaxyCatalogSourceType';
+import type { GalaxyCatalogId } from './@types/GalaxyCatalogId';
 import type { GalaxyRecordSource } from './records/@types/GalaxyRecordSource';
-import type { SourceType } from '../../@types/data/SourceType';
 import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
 import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMetaEntry';
 import type { GalaxyCatalogReq } from '../../@types/loading/GalaxyCatalogReq';
@@ -37,8 +36,8 @@ import { catalogPickCodes } from '../../utils/picking/catalogPickCodes';
 
 export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRuntime {
   const device = deps.ctx.device;
-  const catalogs = new Map<SourceType, GalaxyCatalog>();
-  const records = new Map<GalaxyCatalogSourceType, GalaxyRecordSource>();
+  const catalogs = new Map<GalaxyCatalogId, GalaxyCatalog>();
+  const records = new Map<GalaxyCatalogId, GalaxyRecordSource>();
   // Private cell behind the runtime's getter: the meta slot is its only writer,
   // so nothing has to hand the runtime object to a closure built before it.
   let famousMeta: readonly FamousGalaxyMetaEntry[] = [];
@@ -94,10 +93,10 @@ export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRu
     texturedDiskRenderer,
   });
 
-  const points = new Map<GalaxyCatalogSourceType, AssetSlot<GalaxyCatalog, GalaxyCatalogReq>>(
-    GALAXY_CATALOG_SOURCES.map((code) => [
-      code,
-      wireGalaxyCatalogSourceSlot(GALAXY_CATALOG_SOURCE_RECORD[code], deps, {
+  const points = new Map<GalaxyCatalogId, AssetSlot<GalaxyCatalog, GalaxyCatalogReq>>(
+    GALAXY_CATALOG_SOURCES.map((id) => [
+      id,
+      wireGalaxyCatalogSourceSlot(GALAXY_CATALOG_SOURCE_RECORD[id], deps, {
         pointRenderer,
         catalogs,
         records,

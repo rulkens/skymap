@@ -17,7 +17,6 @@ import {
   engineSourceCountReported,
   engineStatusChanged,
 } from '../../../../src/state/engine/engineSlice';
-import { Source } from '../../../../src/data/source';
 import type { Layer } from '../../../../src/@types/engine/layer/Layer';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
@@ -73,9 +72,9 @@ describe('createLayers — a Layer sourceCounts feed', () => {
       destroy: () => {},
       passes: () => [],
       sourceCounts: async function* () {
-        yield { source: Source.SDSS, count: 3 };
-        yield { source: Source.TwoMRS, count: 4 };
-        yield { source: Source.Glade, count: 0 };
+        yield { source: 'sdss', count: 3 };
+        yield { source: '2mrs', count: 4 };
+        yield { source: 'glade', count: 0 };
       },
     } as unknown as Layer<string, unknown>;
     const state = makeState();
@@ -89,9 +88,9 @@ describe('createLayers — a Layer sourceCounts feed', () => {
 
     const counts = dispatched.filter(engineSourceCountReported.match).map((a) => a.payload);
     expect(counts).toEqual([
-      { source: Source.SDSS, count: 3 },
-      { source: Source.TwoMRS, count: 4 },
-      { source: Source.Glade, count: 0 },
+      { source: 'sdss', count: 3 },
+      { source: '2mrs', count: 4 },
+      { source: 'glade', count: 0 },
     ]);
 
     const statuses = dispatched.filter(engineStatusChanged.match).map((a) => a.payload);

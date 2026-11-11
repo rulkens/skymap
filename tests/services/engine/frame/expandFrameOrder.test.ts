@@ -105,6 +105,7 @@ describe('expandFrameOrder', () => {
     const merged = hdrNear0[0];
     expect(namesOf(merged)).toEqual([
       'milky-way-upsample',
+      'milky-way-field',
       'milky-way',
       'local-bubble',
       'stellar-streams-haze-upsample',

@@ -72,7 +72,7 @@ function stateWithDivisor(
   return {
     settings: {
       antique: { enabled: false },
-      milkyWay: { aggregateDivisor },
+      milkyWay: { renderer: 'v1', cloud: { aggregateDivisor } },
       blackHoleLensingTuning: { cubemapResolutionPx },
     },
     cubemapCaptures: makeCubemapCaptureRuntimes({

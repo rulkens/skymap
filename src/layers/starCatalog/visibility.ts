@@ -17,9 +17,9 @@ const KPC = SCALE_UNITS.KPC_TO_MPC;
 
 // The survey Gaia bin and the S-stars draw no names. A single-parameter `.filter` is what
 // lets `tsc` infer the narrowing predicate.
-const LABEL_BEARING_STAR_CATALOG_IDS = STAR_CATALOG_SOURCE_ROWS.map(([, entry]) => entry)
-  .filter((entry) => entry.bearsLabel)
-  .map((entry) => entry.id);
+const LABEL_BEARING_STAR_CATALOG_IDS = STAR_CATALOG_SOURCE_ROWS.filter(
+  (entry) => entry.bearsLabel,
+).map((entry) => entry.id);
 
 export const starCatalogVisibility = [
   { key: 'sStarTrails', bands: { foreground: FOREGROUND_RECEDE } },

@@ -15,7 +15,6 @@
  *     many rows clear the distance gate (the narrow-FOV admission-sphere bug)
  */
 
-import { galaxyCatalogIdOf } from '../../../../../src/utils/galaxyCatalogIdOf';
 import type { GalaxyCatalogId } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import { GALAXY_CATALOG_IDS } from '../../../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { describe, it, expect } from 'vitest';
@@ -23,7 +22,6 @@ import { mat4 } from 'wgpu-matrix';
 import { frustumPlanesFromViewProj } from '../../../../../src/utils/camera/frustum/frustumPlanesFromViewProj';
 import { occluderConesFrom } from '../../../../../src/utils/occlusion/occluderConesFrom';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
-import { Source } from '../../../../../src/data/source';
 import {
   createDiskPlannerWalk,
   DISK_ROW_ACCEPT_BUDGET,
@@ -32,7 +30,6 @@ import { noopDiskRowVisitor } from '../../../../services/engine/subsystems/diskW
 import type { DiskRowVisitor } from '../../../../../src/layers/galaxyCatalog/lod/@types/DiskRowVisitor';
 import type { GalaxyCatalog } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { OrbitCamera } from '../../../../../src/@types/camera/orbitCamera/OrbitCamera';
-import type { SourceType } from '../../../../../src/@types/data/SourceType';
 import { makeGalaxyCatalog } from '../../../../fixtures/makeGalaxyCatalog';
 import { galaxyRecordsOver } from '../../../../support/galaxyRecordsOver';
 
@@ -83,7 +80,7 @@ function makeCatalog(rows: readonly { distMpc: number; diameterKpc: number }[]):
 const PX_PER_RAD = 600;
 
 function makeInput(
-  catalogs: Map<SourceType, GalaxyCatalog>,
+  catalogs: Map<GalaxyCatalogId, GalaxyCatalog>,
   visibleCatalogs: ReadonlySet<GalaxyCatalogId> = ALL_CATALOGS,
 ) {
   return {
@@ -129,24 +126,24 @@ describe('createDiskPlannerWalk', () => {
       { distMpc: 1.1, diameterKpc: 50 },
       { distMpc: 1.2, diameterKpc: 50 },
     ];
-    const catalogs = new Map<SourceType, GalaxyCatalog>([
-      [Source.SDSS, makeCatalog(rows)],
-      [Source.FamousGalaxy, makeCatalog(rows)],
+    const catalogs = new Map<GalaxyCatalogId, GalaxyCatalog>([
+      ['sdss', makeCatalog(rows)],
+      ['famousGalaxy', makeCatalog(rows)],
     ]);
     const events: WalkEvent[] = [];
     // Only the SDSS bit is set — FamousGalaxy is hidden this frame.
     walk.runFrame(
-      makeInput(catalogs, new Set([galaxyCatalogIdOf(Source.SDSS)])),
+      makeInput(catalogs, new Set(['sdss'])),
       recordingVisitor(events),
       noopDiskRowVisitor(),
     );
     expect(events).toEqual([
-      ['beginBlock', Source.SDSS, 0, 3],
-      ['onRow', Source.SDSS, 0],
-      ['onRow', Source.SDSS, 1],
-      ['onRow', Source.SDSS, 2],
-      ['endSource', Source.SDSS],
-      ['onSourceHidden', Source.FamousGalaxy],
+      ['beginBlock', 'sdss', 0, 3],
+      ['onRow', 'sdss', 0],
+      ['onRow', 'sdss', 1],
+      ['onRow', 'sdss', 2],
+      ['endSource', 'sdss'],
+      ['onSourceHidden', 'famousGalaxy'],
       ['endFrame'],
     ]);
   });
@@ -156,9 +153,9 @@ describe('createDiskPlannerWalk', () => {
     // Row 0: 10 Mpc — beyond the would-be 24-px bound (5 Mpc) but inside the
     // 8-px bound (15 Mpc); px = 12, squarely between the two thresholds.
     // Row 1: 20 Mpc — beyond even the 8-px bound; the early-out must drop it.
-    const catalogs = new Map<SourceType, GalaxyCatalog>([
+    const catalogs = new Map<GalaxyCatalogId, GalaxyCatalog>([
       [
-        Source.SDSS,
+        'sdss',
         makeCatalog([
           { distMpc: 10, diameterKpc: 200 },
           { distMpc: 20, diameterKpc: 200 },
@@ -178,8 +175,8 @@ describe('createDiskPlannerWalk', () => {
     // A tiny galaxy: px = (5 / 1000 / 10) · 600 = 0.3, far below the 8-px
     // procedural gate — but the walk must still deliver it; dropping
     // sub-threshold rows is the BODY's decision inside onRow.
-    const catalogs = new Map<SourceType, GalaxyCatalog>([
-      [Source.SDSS, makeCatalog([{ distMpc: 10, diameterKpc: 5 }])],
+    const catalogs = new Map<GalaxyCatalogId, GalaxyCatalog>([
+      ['sdss', makeCatalog([{ distMpc: 10, diameterKpc: 5 }])],
     ]);
     const rows: { i: number; camDist: number; px: number }[] = [];
     walk.runFrame(makeInput(catalogs), rowCapturingVisitor(rows), noopDiskRowVisitor());
@@ -196,7 +193,7 @@ describe('createDiskPlannerWalk', () => {
       { distMpc: 1.2, diameterKpc: 50 },
       { distMpc: 1.3, diameterKpc: 50 },
     ];
-    const catalogs = new Map<SourceType, GalaxyCatalog>([[Source.SDSS, makeCatalog(rows)]]);
+    const catalogs = new Map<GalaxyCatalogId, GalaxyCatalog>([['sdss', makeCatalog(rows)]]);
 
     const proceduralEvents: WalkEvent[] = [];
     const texturedEvents: WalkEvent[] = [];
@@ -228,7 +225,7 @@ describe('createDiskPlannerWalk', () => {
     // admit a catalog this size in full without the budget.
     const rowCount = DISK_ROW_ACCEPT_BUDGET * 4;
     const rows = Array.from({ length: rowCount }, () => ({ distMpc: 1, diameterKpc: 50 }));
-    const catalogs = new Map<SourceType, GalaxyCatalog>([[Source.SDSS, makeCatalog(rows)]]);
+    const catalogs = new Map<GalaxyCatalogId, GalaxyCatalog>([['sdss', makeCatalog(rows)]]);
     const events: WalkEvent[] = [];
     walk.runFrame(makeInput(catalogs), recordingVisitor(events), noopDiskRowVisitor());
     const onRowCount = events.filter((e) => e[0] === 'onRow').length;
@@ -243,7 +240,7 @@ describe('createDiskPlannerWalk', () => {
       diameterKpc: 50,
     }));
     const rows = [...behind, { distMpc: 1, diameterKpc: 50 }];
-    const catalogs = new Map<SourceType, GalaxyCatalog>([[Source.SDSS, makeCatalog(rows)]]);
+    const catalogs = new Map<GalaxyCatalogId, GalaxyCatalog>([['sdss', makeCatalog(rows)]]);
     // A 0.5° view along +x from the origin, where the camera sits.
     const vp = mat4.multiply(
       mat4.perspective((0.5 * Math.PI) / 180, 1, 0.01, 1e5),
@@ -255,9 +252,7 @@ describe('createDiskPlannerWalk', () => {
       recordingVisitor(events),
       noopDiskRowVisitor(),
     );
-    expect(events.filter((e) => e[0] === 'onRow')).toEqual([
-      ['onRow', Source.SDSS, rows.length - 1],
-    ]);
+    expect(events.filter((e) => e[0] === 'onRow')).toEqual([['onRow', 'sdss', rows.length - 1]]);
   });
 
   describe('a body in front of the galaxies', () => {
@@ -273,8 +268,8 @@ describe('createDiskPlannerWalk', () => {
           mat4.lookAt([0, 0, 0], look, [0, 0, 1]),
         ),
       );
-    const catalogs = new Map<SourceType, GalaxyCatalog>([
-      [Source.SDSS, makeCatalog([{ distMpc: 2, diameterKpc: 50 }])],
+    const catalogs = new Map<GalaxyCatalogId, GalaxyCatalog>([
+      ['sdss', makeCatalog([{ distMpc: 2, diameterKpc: 50 }])],
     ]);
 
     it('hands no row behind the body to onRow', () => {

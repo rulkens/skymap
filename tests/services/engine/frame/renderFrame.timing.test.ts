@@ -40,7 +40,7 @@ import type { RenderFrameInput } from '../../../../src/@types/engine/frame/Rende
 import type { OrbitCamera } from '../../../../src/@types/camera/orbitCamera/OrbitCamera';
 import type { GpuTimingService } from '../../../../src/@types/gpu/timing/GpuTimingService';
 import type { TimingSlotName } from '../../../../src/@types/gpu/timing/TimingSlotName';
-import type { SourceType } from '../../../../src/@types/data/SourceType';
+import type { SourceId } from '../../../../src/@types/data/SourceId';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 import { INITIAL_SETTINGS } from '../../../../src/state/settings/initialSettings';
 import { galaxyRowRuntime } from '../../../support/layerPickCodes';
@@ -240,7 +240,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
   const milkyWayRuntime = {
     cloud: { buffers: () => ({ starBuf: {}, starCount: 0, dustBuf: null, dustCount: 0 }) },
     cloudRenderer: milkyWayCloudRenderer,
-    aggregateUpsample: null,
+    additiveUpsample: null,
   } as unknown as MilkyWayRuntime;
   const proceduralDiskRenderer = makeLoggingRenderer();
   const texturedDiskRenderer = makeLoggingRenderer();
@@ -299,7 +299,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
   const settings = {
     pointSizePx: 2.5,
     brightness: 1.0,
-    selected: null as { source: SourceType; localIdx: number } | null,
+    selected: null as { source: SourceId; localIdx: number } | null,
     biasMode: BiasMode.None,
     absMagLimit: -19,
     depthFadeEnabled: true,
@@ -350,7 +350,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         antique: { enabled: false },
         bias: { mode: settings.biasMode, absMagLimit: settings.absMagLimit },
         thumbnails: { enabled: settings.galaxyTexturesEnabled },
-        milkyWay: { enabled: settings.milkyWayEnabled },
+        milkyWay: { enabled: settings.milkyWayEnabled, renderer: 'v1' },
         cosmicWebFilaments: {
           enabled: settings.filamentsEnabled,
           intensity: settings.filamentIntensity,

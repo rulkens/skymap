@@ -58,7 +58,7 @@ import vsCode from '../../../../../services/gpu/shaders/galaxyCatalog/procedural
 import fsCode from '../../../../../services/gpu/shaders/galaxyCatalog/proceduralDisks/fragment.wesl?static';
 import pickFsCode from '../../../../../services/gpu/shaders/galaxyCatalog/proceduralDisks/pickFragment.wesl?static';
 import type { ProceduralDiskInstance } from '../@types/ProceduralDiskInstance';
-import type { GalaxyCatalogSourceType } from '../../../@types/GalaxyCatalogSourceType';
+import type { GalaxyCatalogId } from '../../../@types/GalaxyCatalogId';
 import type { ProceduralDiskRenderer } from '../@types/ProceduralDiskRenderer';
 import type { Renderer } from '../../../../../@types/rendering/Renderer';
 import type { Vec2 } from '../../../../../@types/math/Vec2';
@@ -95,7 +95,7 @@ type Init = {
    */
   reversedZ: boolean;
   /** The pick word's code for an instance's catalog. */
-  pickCodeOf: (source: GalaxyCatalogSourceType) => number;
+  pickCodeOf: (source: GalaxyCatalogId) => number;
 };
 
 export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer {

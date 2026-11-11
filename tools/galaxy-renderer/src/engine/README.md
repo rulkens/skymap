@@ -18,7 +18,7 @@ createGalaxyEngine.ts   device, the v1 and post pipelines, the per-frame encode;
 createRafLoop.ts        the rAF driver
 
 sprites/   encodeStarPass, encodeTransmittanceDust, packCloudUniforms,
-           toMilkyWayTuning, generateGalaxy
+           toMilkyWayCloudTuning, generateGalaxy
 field/     createArmRidgeDebugSample — the one field-tier module still local
            to the tool; the pipelines, packers and encode passes it debugs
            moved to src/layers/milkyWay/field/render/

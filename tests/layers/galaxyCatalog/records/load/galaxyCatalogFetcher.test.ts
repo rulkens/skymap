@@ -15,7 +15,6 @@ import {
   encodeGalaxyCatalog,
   emptyGalaxyCatalog,
 } from '../../../../../src/layers/galaxyCatalog/records/data/galaxyCatalogFormat';
-import { Source } from '../../../../../src/data/source';
 import { useFetchMock } from '../../../../setup/fetchMock';
 
 describe('galaxyCatalogFetcher', () => {
@@ -38,7 +37,7 @@ describe('galaxyCatalogFetcher', () => {
     // 2MRS has no entry in TIER_TARGETS.medium → target is undefined
     // (i.e. "no cap"), which is NOT 0, so the fetch path runs.
     const cloud = await galaxyCatalogFetcher(
-      { source: Source.TwoMRS, tier: 'medium' },
+      { source: '2mrs', tier: 'medium' },
       new AbortController().signal,
       () => {},
     );

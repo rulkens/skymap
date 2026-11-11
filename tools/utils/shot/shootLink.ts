@@ -52,7 +52,7 @@ export async function shootLink(
   try {
     const page = await withTimeout(context.newPage(), BROWSER_CALL_TIMEOUT_MS, 'opening a page');
     const pageErrors = collectPageErrors(page);
-    const closeHmr = await withTimeout(gateViteHmr(page), BROWSER_CALL_TIMEOUT_MS, 'gating HMR');
+    const closeHmr = await gateViteHmr(page);
     const params = new URLSearchParams(link.search);
     if (opts.hideUi && !params.has('cinema')) params.set('cinema', '');
     const search = params.toString().replace(/=(&|$)/g, '$1');

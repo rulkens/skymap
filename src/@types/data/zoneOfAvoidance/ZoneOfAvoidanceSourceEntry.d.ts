@@ -7,10 +7,8 @@ import type { SourceEntryBase } from '../SourceEntryBase';
  * curved "Zone of Avoidance" lettering is drawn by `zoneOfAvoidancePass`
  * itself, riding the band's own toggle, rather than routing through the
  * label subsystem. No on-disk asset, no per-record identity, so it adds
- * only `code` to the base — mirrors `MilkyWaySourceEntry`.
+ * nothing to the base — mirrors `MilkyWaySourceEntry`.
  */
 export type ZoneOfAvoidanceSourceEntry = SourceEntryBase & {
   readonly type: 'zoneOfAvoidance';
-  /** Stable numeric tag; not persisted, only used as the registry key. */
-  readonly code: number;
 };

@@ -7,14 +7,14 @@ import { describe, expect, it } from 'vitest';
 import { appLink } from '../../../packages/website/src/data/appLink';
 import { HOME_LINKS } from '../../../packages/website/src/data/homeLinks';
 import { linkIntentFrom } from '../../../src/utils/url/linkIntentFrom';
-import { tourRegistry } from '../../../src/data/animation/tours/tourRegistry';
+import { APP_TOUR_REGISTRY } from '../../../src/compositions/appTours';
 import { FEATURED_TABS } from '../../../src/data/palette/featuredTabs';
 
 describe('Home deep links', () => {
   it('the tour link starts a registered tour', () => {
     const { view } = linkIntentFrom(HOME_LINKS.tour);
     expect(view.kind).toBe('tour');
-    expect(Object.keys(tourRegistry)).toContain(view.kind === 'tour' ? view.id : '');
+    expect(Object.keys(APP_TOUR_REGISTRY)).toContain(view.kind === 'tour' ? view.id : '');
     expect(appLink(HOME_LINKS.tour)).toBe('/#tour=grandTour');
   });
 

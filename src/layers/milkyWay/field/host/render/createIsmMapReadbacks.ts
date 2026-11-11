@@ -124,5 +124,7 @@ export function createIsmMapReadbacks(deps: {
     requestRingMeans(onLand, onError): void {
       ringMeansStream.request(onLand, onError);
     },
+
+    cancel: queue.cancel,
   };
 }

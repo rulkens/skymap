@@ -1,4 +1,4 @@
-import type { GalaxyCatalogSourceType } from '../../@types/GalaxyCatalogSourceType';
+import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
 import type { GalaxyRow } from '../../records/@types/GalaxyRow';
 import type { GalaxyCatalogRef } from './GalaxyCatalogRef';
 
@@ -8,11 +8,11 @@ import type { GalaxyCatalogRef } from './GalaxyCatalogRef';
  * settle is announced so the source-count pulse can wake a deferring saga.
  */
 export type GalaxyRecordBridge = {
-  row(source: GalaxyCatalogSourceType, ordinal: number): GalaxyRow | null;
+  row(source: GalaxyCatalogId, ordinal: number): GalaxyRow | null;
   /** `pgc-…` / `sdss-…`: the claiming sources, lowest claim rank first. */
   resolveDurableId(id: string): GalaxyCatalogRef | null;
   /** The angularly nearest answer across every loaded source. */
   resolvePosition(raDeg: number, decDeg: number, distMpc: number | null): GalaxyCatalogRef | null;
   /** Fires with the source whose pending lookup settled while it is still loaded. */
-  onSettle(listener: (source: GalaxyCatalogSourceType) => void): () => void;
+  onSettle(listener: (source: GalaxyCatalogId) => void): () => void;
 };

@@ -1,9 +1,7 @@
 import type { CosmicWebDensitySourceEntry } from '../../../@types/data/volume/CosmicWebDensitySourceEntry';
-import { Source } from '../../../data/source';
 
 export const MCPM_ENTRY = {
   type: 'cosmicWebDensity',
-  code: Source.Mcpm,
   id: 'mcpm',
   label: 'MCPM Cosmic Web',
   allSky: true, // SDSS DR17 VAC, full SDSS volume

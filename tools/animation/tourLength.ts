@@ -13,7 +13,7 @@
  * viewer interaction (skips, pauses).
  */
 
-import { tourRegistry } from '../../src/data/animation/tours/tourRegistry';
+import { APP_TOUR_REGISTRY } from '../../src/compositions/appTours';
 import type { Tour } from '../../src/@types/animation/tour/Tour';
 import { clipDurationSec } from '../utils/animation/clipDurationSec';
 
@@ -23,7 +23,9 @@ function fmtMinSec(sec: number): string {
 
 function printTour(tour: Tour): void {
   console.log(`\n${tour.label} (${tour.id}) — ${tour.beats.length} beats`);
-  console.log(` #  ${'beat'.padEnd(26)} ${'enter'.padStart(7)} ${'dwell'.padStart(7)} ${'total'.padStart(7)}`);
+  console.log(
+    ` #  ${'beat'.padEnd(26)} ${'enter'.padStart(7)} ${'dwell'.padStart(7)} ${'total'.padStart(7)}`,
+  );
   let total = 0;
   tour.beats.forEach((beat, i) => {
     const enter = beat.enterClip ? clipDurationSec(beat.enterClip) : 0;
@@ -34,17 +36,21 @@ function printTour(tour: Tour): void {
       `${String(i).padStart(2)}  ${title.padEnd(26)} ${enter.toFixed(1).padStart(6)}s ${dwell.toFixed(1).padStart(6)}s ${(enter + dwell).toFixed(1).padStart(6)}s`,
     );
   });
-  console.log(`    ${'TOTAL'.padEnd(26)} ${' '.repeat(16)}${total.toFixed(1).padStart(6)}s  (${fmtMinSec(total)})`);
+  console.log(
+    `    ${'TOTAL'.padEnd(26)} ${' '.repeat(16)}${total.toFixed(1).padStart(6)}s  (${fmtMinSec(total)})`,
+  );
 }
 
 const requested = process.argv[2];
 if (requested !== undefined) {
-  const tour = (tourRegistry as Record<string, Tour>)[requested];
+  const tour = (APP_TOUR_REGISTRY as Record<string, Tour>)[requested];
   if (tour === undefined) {
-    console.error(`Unknown tour '${requested}'. Known: ${Object.keys(tourRegistry).join(', ')}`);
+    console.error(
+      `Unknown tour '${requested}'. Known: ${Object.keys(APP_TOUR_REGISTRY).join(', ')}`,
+    );
     process.exit(1);
   }
   printTour(tour);
 } else {
-  for (const tour of Object.values(tourRegistry)) printTour(tour);
+  for (const tour of Object.values(APP_TOUR_REGISTRY)) printTour(tour);
 }

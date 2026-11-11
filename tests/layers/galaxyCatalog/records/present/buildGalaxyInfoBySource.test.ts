@@ -14,7 +14,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildGalaxyInfo } from '../../../../../src/layers/galaxyCatalog/records/present/buildGalaxyInfo';
 import { extractGalaxyRow } from '../../../../../src/layers/galaxyCatalog/records/present/extractGalaxyRow';
-import { Source } from '../../../../../src/data/source';
 import { DESI_TRACER_CLASS } from '../../../../../src/layers/galaxyCatalog/records/data/sourceClass';
 import type { GalaxyCatalog } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import { fallbackOrientation } from '../../../../../src/utils/random/fallbackOrientation';
@@ -92,7 +91,7 @@ describe('buildGalaxyInfo — SDSS source', () => {
     // "fallback (30 kpc)" below.
     cloud.diameterIsFallback[0] = 1;
 
-    const info = buildInfo(cloud, 0, Source.SDSS);
+    const info = buildInfo(cloud, 0, 'sdss');
 
     // Index + objID round-trip from the cloud arrays.
     expect(info.index).toBe(0);
@@ -111,7 +110,7 @@ describe('buildGalaxyInfo — SDSS source', () => {
     expect(info.redshift).toBeCloseTo(redshift, 6);
 
     // Source attribution.
-    expect(info.source).toBe(Source.SDSS);
+    expect(info.source).toBe('sdss');
     expect(info.sourceLabel).toBe('SDSS');
 
     // SDSS prefix on the IAU name; coords match the rounded-down truncation.
@@ -153,7 +152,7 @@ describe('buildGalaxyInfo — SDSS source', () => {
     const cloud = makeCloud(1);
     setPosition(cloud, 0, 100, 0, 0);
     cloud.orientationIsFallback[0] = 1;
-    const info = buildInfo(cloud, 0, Source.SDSS);
+    const info = buildInfo(cloud, 0, 'sdss');
     expect(info.orientation.provenance).toBe('deterministic fallback');
   });
 });
@@ -170,9 +169,9 @@ describe('buildGalaxyInfo — TwoMRS source', () => {
     cloud.magR[0] = 11.5; // H
     cloud.magI[0] = 11.0; // K
 
-    const info = buildInfo(cloud, 0, Source.TwoMRS);
+    const info = buildInfo(cloud, 0, '2mrs');
 
-    expect(info.source).toBe(Source.TwoMRS);
+    expect(info.source).toBe('2mrs');
     expect(info.sourceLabel).toBe('2MRS');
     expect(info.iauName.startsWith('2MASX J')).toBe(true);
 
@@ -203,7 +202,7 @@ describe('buildGalaxyInfo — TwoMRS source', () => {
     const cloud = makeCloud(1);
     cloud.objIDs[0] = 0n;
     setPosition(cloud, 0, 50, 50, 0);
-    const info = buildInfo(cloud, 0, Source.TwoMRS);
+    const info = buildInfo(cloud, 0, '2mrs');
     expect(info.displayName).toBe(info.iauName);
     expect(info.displayName.startsWith('2MASX J')).toBe(true);
   });
@@ -220,7 +219,7 @@ describe('buildGalaxyInfo — Glade source', () => {
     const cloud = makeCloud(1);
     setPosition(cloud, 0, 0, 0, 200);
     cloud.objIDs[0] = 12345n;
-    const info = buildInfo(cloud, 0, Source.Glade);
+    const info = buildInfo(cloud, 0, 'glade');
     expect(info.catalogues[0]!.label).toBe('NED');
     expect(info.catalogues[0]!.href).toContain('ned.ipac.caltech.edu/byname');
     expect(info.catalogues[0]!.href).toContain('PGC+12345');
@@ -237,9 +236,9 @@ describe('buildGalaxyInfo — Famous source', () => {
     const cloud = makeCloud(FAMOUS_GALAXY_NAMES.length);
     setPosition(cloud, 0, 1, 0, 0);
 
-    const info = buildInfo(cloud, 0, Source.FamousGalaxy);
+    const info = buildInfo(cloud, 0, 'famousGalaxy');
 
-    expect(info.source).toBe(Source.FamousGalaxy);
+    expect(info.source).toBe('famousGalaxy');
     expect(info.iauName.startsWith('Famous J')).toBe(true);
     // Famous rows prefer the curated, non-deprojected tile; the DSS sky cutout
     // becomes the fallback shown if the curated tile is missing.
@@ -257,7 +256,7 @@ describe('buildGalaxyInfo — Famous source', () => {
 
   it('omits the famous block when famous.bin is another generation than the bundle', () => {
     // Names are by record index: naming row 0 here could name it after its neighbour.
-    const info = buildInfo(makeCloud(FAMOUS_GALAXY_NAMES.length + 1), 0, Source.FamousGalaxy);
+    const info = buildInfo(makeCloud(FAMOUS_GALAXY_NAMES.length + 1), 0, 'famousGalaxy');
     expect(info.famous).toBeUndefined();
   });
 });
@@ -273,7 +272,7 @@ describe('buildGalaxyInfo — diameter provenance', () => {
     const cloud = makeCloud(1);
     setPosition(cloud, 0, 100, 0, 0);
     cloud.diameterKpc[0] = 25;
-    const info = buildInfo(cloud, 0, Source.SDSS);
+    const info = buildInfo(cloud, 0, 'sdss');
     expect(info.diameterProvenance).toBe('SDSS petroR50_r');
   });
 
@@ -285,7 +284,7 @@ describe('buildGalaxyInfo — diameter provenance', () => {
     setPosition(cloud, 0, 100, 0, 0);
     cloud.diameterKpc[0] = 25; // not the flat 30-kpc default
     cloud.diameterIsFallback[0] = 1;
-    const info = buildInfo(cloud, 0, Source.SDSS);
+    const info = buildInfo(cloud, 0, 'sdss');
     expect(info.diameterProvenance).toBe('fallback (30 kpc)');
   });
 });
@@ -304,7 +303,7 @@ describe('buildGalaxyInfo — blueshifted / zero-z lookback fallback', () => {
     setPosition(cloud, 0, 0.78, 0, 0);
     cloud.spectroscopicZ[0] = -0.0001;
 
-    const info = buildInfo(cloud, 0, Source.SDSS);
+    const info = buildInfo(cloud, 0, 'sdss');
 
     // lookback ≈ distance (Mpc) × PC_TO_LY / 1000 = 0.78 × 3.26156 / 1000.
     expect(info.redshift).toBeLessThanOrEqual(0);
@@ -321,7 +320,7 @@ describe('buildGalaxyInfo — skyViewUrl', () => {
   it('routes SDSS rows to the SDSS Navigate viewer', () => {
     const cloud = makeCloud(1);
     setPosition(cloud, 0, 100, 0, 0);
-    const info = buildInfo(cloud, 0, Source.SDSS);
+    const info = buildInfo(cloud, 0, 'sdss');
     expect(info.skyViewUrl).toContain('skyserver.sdss.org/dr18/VisualTools/navi');
   });
 });
@@ -336,7 +335,7 @@ describe('buildGalaxyInfo — Milliquas source', () => {
     cloud.parentSurveyByte[0] = 1;
     // 1 = Quasar — see MILLIQUAS_CLASS_BYTE.Q.
     cloud.classByte[0] = 1;
-    const info = buildInfo(cloud, 0, Source.Milliquas);
+    const info = buildInfo(cloud, 0, 'milliquas');
     expect(info.displayName.startsWith('SDSS J')).toBe(true);
     // The suffix portion must be byte-identical to iauName's
     // (`MQ J…`) suffix — the whole point of iauRaDecSuffix is that
@@ -350,7 +349,7 @@ describe('buildGalaxyInfo — Milliquas source', () => {
     // stay at the zero-fill default.
     const cloud = makeCloud(1);
     setPosition(cloud, 0, 100, 0, 0);
-    const info = buildInfo(cloud, 0, Source.Milliquas);
+    const info = buildInfo(cloud, 0, 'milliquas');
     expect(info.displayName).toBe(info.iauName);
     expect(info.displayName.startsWith('MQ J')).toBe(true);
     expect(info.agnClass).toBeUndefined();
@@ -360,7 +359,7 @@ describe('buildGalaxyInfo — Milliquas source', () => {
     const cloud = makeCloud(1);
     setPosition(cloud, 0, 100, 0, 0);
     cloud.classByte[0] = 1; // Would mean "Quasar" if source were Milliquas.
-    const info = buildInfo(cloud, 0, Source.SDSS);
+    const info = buildInfo(cloud, 0, 'sdss');
     expect(info.agnClass).toBeUndefined();
   });
 });
@@ -372,7 +371,7 @@ describe('buildGalaxyInfo — DESI Deep source', () => {
     const cloud = makeCloud(1);
     setPosition(cloud, 0, 100, 0, 0);
     cloud.classByte[0] = DESI_TRACER_CLASS.BGS;
-    const info = buildInfo(cloud, 0, Source.DesiDeep);
+    const info = buildInfo(cloud, 0, 'desiDeep');
     expect(info.iauName.startsWith('DESI J')).toBe(true);
     // No famous / Milliquas / PGC rung applies to DESI rows, so the headline
     // falls through the displayName ladder to the coord-based IAU name —
@@ -385,7 +384,7 @@ describe('buildGalaxyInfo — DESI Deep source', () => {
     const cloud = makeCloud(1);
     setPosition(cloud, 0, 100, 0, 0);
     cloud.classByte[0] = DESI_TRACER_CLASS.QSO;
-    const info = buildInfo(cloud, 0, Source.DesiDeep);
+    const info = buildInfo(cloud, 0, 'desiDeep');
     expect(info.agnClass).toBe('Quasar (QSO)');
   });
 
@@ -396,7 +395,7 @@ describe('buildGalaxyInfo — DESI Deep source', () => {
     cloud.magG[0] = 19.0; // g
     cloud.magR[0] = 18.2; // r
     cloud.magI[0] = 17.6; // z — DESI's z-band flux rides in the i slot
-    const info = buildInfo(cloud, 0, Source.DesiDeep);
+    const info = buildInfo(cloud, 0, 'desiDeep');
     expect(info.bands).toEqual({ u: '—', g: 'g', r: 'r', i: 'z', z: '—' });
     // BGS photometry is real (Legacy Surveys fluxes) — mags pass through.
     expect(info.magG).toBeCloseTo(19.0, 3);
@@ -416,7 +415,7 @@ describe('buildGalaxyInfo — DESI Deep source', () => {
       cloud.magG[0] = 20.5;
       cloud.magR[0] = 20.0;
       cloud.magI[0] = 19.5;
-      const info = buildInfo(cloud, 0, Source.DesiDeep);
+      const info = buildInfo(cloud, 0, 'desiDeep');
       expect(Number.isNaN(info.magG)).toBe(true);
       expect(Number.isNaN(info.absoluteMagG)).toBe(true);
       expect(info.colours).toEqual([]);

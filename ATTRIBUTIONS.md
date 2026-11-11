@@ -1817,6 +1817,34 @@ The surface tile manifests under `public/data/images/earth-tiles/` and
   Black Marble, the water mask and the cloud composite (the pages need a
   script to show them).
 
+### Live cloud bake inputs (NASA GIBS and EUMETSAT)
+
+<!-- attribution: id=cloud-bake; keys=clouds.* -->
+
+- **What:** The daily satellite imagery `tools/cloud-bake-rs` turns into a
+  global cloud-opacity map: VIIRS (NOAA-20, NOAA-21) swaths and mosaics and
+  GOES-East, GOES-West and Himawari infrared frames from NASA GIBS, and Meteosat
+  MTG and IODC infrared frames from EUMETSAT's EUMETView.
+- **By:** NASA GIBS (VIIRS, GOES); EUMETSAT (Meteosat); the Japan
+  Meteorological Agency (Himawari).
+- **Licence:** GIBS imagery from VIIRS and GOES: free to use, commercial use
+  included, with credit to NASA/GIBS. EUMETView WMS visualisations: CC BY 4.0.
+  Himawari frames come through GIBS and are subject to JMA's terms, which have
+  not been checked; treated as a medium risk until they are.
+- **Use:** Per item
+- **Attribution:** EUMETSAT: "Contains modified EUMETSAT Meteosat data 2026"
+  (the year of the data). NASA: credit NASA GIBS.
+- **Upstream:** <https://gibs.earthdata.nasa.gov/> and
+  <https://view.eumetsat.int/>; details in `data/raw/clouds/README.md`.
+- **Enters skymap:** `npm run bake-clouds` → one cloud map per day. Nothing is
+  shipped yet; the output has no publish path.
+- **Modified:** Yes. Mosaicked, seam-blended, gap-filled and matched to the
+  static cloud map.
+- **Checked:** 2026-11-10, from the maintainer's notes of the terms; the
+  pages were not re-opened for this entry.
+- **Not verified:** JMA's terms for Himawari; the exact credit wording NASA
+  asks of GIBS users.
+
 ### EOxCloudless (Sentinel-2), layer s2cloudless-2025
 
 <!-- attribution: id=eox; keys=eox.*; hosts=cloudless.eox.at -->

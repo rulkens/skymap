@@ -22,7 +22,7 @@ import { MILKY_WAY_FADE_FULL_PX } from '../../src/services/engine/galaxyGenerato
 import { MILKY_WAY_RADIUS_MPC } from '../../src/data/milkyWay/milkyWayRadiusMpc';
 import type { OrbitCamera } from '../../src/@types/camera/orbitCamera/OrbitCamera';
 import type { Mat4 } from 'wgpu-matrix';
-import type { SourceType } from '../../src/@types/data/SourceType';
+import type { SourceId } from '../../src/@types/data/SourceId';
 import type { Slab } from '../../src/@types/engine/frame/Slab';
 import { CONTENT_PASSES } from '../../src/services/engine/frame/passes';
 import { PRELUDE } from '../../src/data/rendering/frameSections';
@@ -275,11 +275,11 @@ describe('renderFrame visual baseline', () => {
       ...makeLoggingRenderer(records, 'milky-way-aggregate', 'drawStars'),
       ...makeLoggingRenderer(records, 'milky-way', 'drawDust'),
     };
-    const aggregateUpsample = makeLoggingRenderer(records, 'milky-way-upsample');
+    const additiveUpsample = makeLoggingRenderer(records, 'milky-way-upsample');
     const milkyWayRuntime = {
       cloud: { buffers: () => ({ starBuf: {}, starCount: 1, dustBuf: null, dustCount: 0 }) },
       cloudRenderer: milkyWayCloudRenderer,
-      aggregateUpsample,
+      additiveUpsample,
     } as unknown as MilkyWayRuntime;
     const proceduralDiskRenderer = makeLoggingRenderer(records, 'procedural-disks');
     const texturedDiskRenderer = makeLoggingRenderer(records, 'textured-disks');
@@ -379,7 +379,7 @@ describe('renderFrame visual baseline', () => {
     const settings = {
       pointSizePx: 2.5,
       brightness: 1.0,
-      selected: null as { source: SourceType; localIdx: number } | null,
+      selected: null as { source: SourceId; localIdx: number } | null,
       biasMode: BiasMode.None,
       absMagLimit: -19,
       depthFadeEnabled: true,
@@ -434,7 +434,7 @@ describe('renderFrame visual baseline', () => {
           antique: { enabled: false },
           bias: { mode: settings.biasMode, absMagLimit: settings.absMagLimit },
           thumbnails: { enabled: settings.galaxyTexturesEnabled },
-          milkyWay: { enabled: settings.milkyWayEnabled },
+          milkyWay: { enabled: settings.milkyWayEnabled, renderer: 'v1' },
           cosmicWebFilaments: {
             enabled: settings.filamentsEnabled,
             intensity: settings.filamentIntensity,

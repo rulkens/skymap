@@ -185,6 +185,30 @@ describe('createReadbackQueue', () => {
     expect(fake.events).toEqual(['submit:a', 'map:a', 'unmap:a', 'submit:b', 'map:b']);
   });
 
+  it('never lands a request still pending when cancel() runs', async () => {
+    // The host cancels before disposing its renderer: a landing after that
+    // would hand a disposed renderer's map to `requestRender`.
+    const fake = makeFake();
+    const queue = createReadbackQueue(fake.device);
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const landed: string[] = [];
+    const s = queue.stream(spec(fake, 's'));
+    const queued = queue.stream(spec(fake, 'queued'));
+
+    s.request((v) => landed.push(v));
+    queued.request((v) => landed.push(v));
+    await vi.waitFor(() => expect(fake.events).toContain('map:s'));
+    queue.cancel();
+    fake.land('s');
+    await vi.waitFor(() => expect(fake.events).toContain('unmap:s'));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(landed).toEqual([]);
+    expect(fake.events).not.toContain('submit:queued');
+    expect(errors).not.toHaveBeenCalled();
+    errors.mockRestore();
+  });
+
   it('unmaps and keeps the stream alive when decode throws', async () => {
     const fake = makeFake();
     const queue = createReadbackQueue(fake.device);

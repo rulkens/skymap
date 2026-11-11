@@ -6,11 +6,10 @@
  * relation for this source, non-positive distance) always yields NaN out.
  */
 import { absoluteFromApparent } from '../../src/utils/math/absoluteFromApparent';
-import { Source } from '../../src/data/source';
-import type { SourceType } from '../../src/@types/data/SourceType';
+import type { GalaxyCatalogId } from '../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 
 export type StellarMassEstimateInput = {
-  readonly source: SourceType;
+  readonly source: GalaxyCatalogId;
   readonly magU: number;
   readonly magG: number;
   readonly magR: number;
@@ -105,13 +104,13 @@ function estimateGlade(input: StellarMassEstimateInput): number {
 /** log10(stellar mass / solar mass), or NaN when this source/photometry can't yield one. */
 export function estimateLog10StellarMass(input: StellarMassEstimateInput): number {
   switch (input.source) {
-    case Source.SDSS:
+    case 'sdss':
       return estimateSdss(input);
-    case Source.TwoMRS:
+    case '2mrs':
       return estimateTwoMrs(input);
-    case Source.Glade:
+    case 'glade':
       return estimateGlade(input);
-    case Source.FamousGalaxy:
+    case 'famousGalaxy':
       return estimateGladeBV(input);
     default:
       return NaN;

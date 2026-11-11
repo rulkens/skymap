@@ -41,7 +41,6 @@ import { unixMsToJulianDays } from '../../../../src/utils/time/unixMsToJulianDay
 import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { INITIAL_SETTINGS } from '../../../../src/state/settings/initialSettings';
-import { Source } from '../../../../src/data/source';
 import { galaxyCatalogSelectionRow } from '../../../../src/layers/galaxyCatalog/selection/galaxyCatalogSelectionRow';
 import { starCatalogSelectionRow } from '../../../../src/layers/starCatalog/selection/starCatalogSelectionRow';
 import { galaxyRowRuntime, starRowRuntime } from '../../../support/layerPickCodes';
@@ -78,10 +77,10 @@ const galaxyRows = expandCompanionRows(
   } as unknown as GalaxyCatalogRuntime),
 );
 const pointRows = galaxyRows.filter((r) => r.gates !== undefined);
-const surveyPoints = pointRows.filter((r) => r.key !== Source.FamousGalaxy);
-const famousPoints = pointRows.filter((r) => r.key === Source.FamousGalaxy);
+const surveyPoints = pointRows.filter((r) => r.key !== 'famousGalaxy');
+const famousPoints = pointRows.filter((r) => r.key === 'famousGalaxy');
 const densityRows = cosmicWebDensityAssetRows({
-  slots: Object.fromEntries(COSMIC_WEB_DENSITY_SOURCE_ROWS.map(([, e]) => [e.id, slot(e.id)])),
+  slots: Object.fromEntries(COSMIC_WEB_DENSITY_SOURCE_ROWS.map((e) => [e.id, slot(e.id)])),
 } as unknown as CosmicWebDensityRuntime);
 const filamentsRows = filamentsAssetRows({ slot: slot('filaments') } as never);
 const flowRows = flowAssetRows({ slot: slot('flow') } as never);
@@ -89,9 +88,9 @@ const structureRows = structureAssetRows({ slot: slot('structure') });
 const constellationRows = constellationsAssetRows({ slot: slot('constellations') } as never);
 const bubbleRows = localBubbleAssetRows({ slot: slot('bubble') } as never);
 const gaiaRow = starCatalogAssetRows({
-  catalogs: new Map([[Source.GaiaStars, slot('gaia')]]),
+  catalogs: new Map([['gaiaStars', slot('gaia')]]),
   famousStarsMeta: slot('famousStarsMeta'),
-} as unknown as StarCatalogRuntime).find((r) => r.key === Source.GaiaStars)!;
+} as unknown as StarCatalogRuntime).find((r) => r.key === 'gaiaStars')!;
 const bodyRows = bodyAssetRows({
   textureSlots: new Map(
     ALL_BODY_TEXTURE_KEYS.map((e) => [bodyTextureSlotKey(e.bodyId, e.kind), slot('texture')]),

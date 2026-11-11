@@ -6,7 +6,6 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Source } from '../../../../src/data/source';
 import { packSelection } from '../../../../src/data/selectionEncoding';
 import { BiasMode } from '../../../../src/data/galaxyCatalog/biasMode';
 import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
@@ -325,7 +324,7 @@ function makeInput(
   const galaxyRuntime = {
     // An SDSS catalog, for the selected-highlight case.
     ...galaxyRowRuntime({
-      catalogs: new Map([[Source.SDSS, makeGalaxyCatalog(64)]]),
+      catalogs: new Map([['sdss', makeGalaxyCatalog(64)]]),
     }),
     pointRenderer: galaxyPointRenderer,
     proceduralDisks: { lastOutput: { instances: [] } },
@@ -341,13 +340,13 @@ function makeInput(
   const milkyWayCloudRenderer = makeMockMilkyWayCloudRenderer(callLog);
   const milkyWayCloud = makeMockMilkyWayCloud();
   // The milkyWay Layer's passes close over their own runtime, mirroring
-  // galaxyRuntime/densityRuntime above. `aggregateUpsample: null` keeps these
+  // galaxyRuntime/densityRuntime above. `additiveUpsample: null` keeps these
   // fixtures free of an upsample blit they don't assert on (the layer's guard
   // is `=== null`, which `undefined` would slip past).
   const milkyWayRuntime = {
     cloud: milkyWayCloud,
     cloudRenderer: milkyWayCloudRenderer,
-    aggregateUpsample: null,
+    additiveUpsample: null,
   } as unknown as MilkyWayRuntime;
   const compositor = makeMockCompositor(callLog);
   // The render-target table backing views. The density row's default view is inert; the
@@ -525,7 +524,7 @@ function makeInput(
           antique: { enabled: false },
           bias: { mode: settings.biasMode, absMagLimit: settings.absMagLimit },
           thumbnails: { enabled: settings.galaxyTexturesEnabled },
-          milkyWay: { enabled: settings.milkyWayEnabled },
+          milkyWay: { enabled: settings.milkyWayEnabled, renderer: 'v1' },
           cosmicWebFilaments: {
             enabled: settings.filamentsEnabled,
             intensity: settings.filamentIntensity,
@@ -656,7 +655,7 @@ describe('renderFrame', () => {
       settings: {
         selected: {
           type: 'galaxyCatalog',
-          source: Source.SDSS,
+          source: 'sdss',
           index: 42,
         } as SelectionRefBase,
       },

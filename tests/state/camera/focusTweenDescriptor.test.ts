@@ -29,7 +29,7 @@ const arrivalAt = (type: string, radiusMpc: number) =>
 
 const galaxyRow = (over: Partial<GalaxyRow> = {}) =>
   makeGalaxyRow({
-    source: 1,
+    source: 'sdss',
     index: 7,
     objId: '12345',
     x: 1,

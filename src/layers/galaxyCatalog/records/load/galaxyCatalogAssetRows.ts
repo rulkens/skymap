@@ -6,7 +6,6 @@ import type { CompanionAssetRow } from '../../../../@types/loading/CompanionAsse
 import type { GalaxyCatalogRegistryEntry } from '../../@types/GalaxyCatalogRegistryEntry';
 import type { GalaxyCatalogRuntime } from '../../@types/GalaxyCatalogRuntime';
 
-import { Source } from '../../../../data/source';
 import { GALAXY_CATALOG_SOURCE_RECORD } from '../../sources/galaxyCatalogSourceRecord';
 import { GALAXY_CATALOG_SOURCES } from '../../sources/galaxyCatalogSources';
 import { HI_RES_LAYER_SIDE_BY_TIER } from '../../hiResFamous/data/hiResLayerSideByTier';
@@ -18,19 +17,23 @@ function pointRow(
   runtime: GalaxyCatalogRuntime,
   entry: GalaxyCatalogRegistryEntry,
 ): AssetWiringRow<unknown, unknown, GalaxyCatalogAssetKey> {
-  const source = entry.code;
   const id = entry.id;
   return {
-    key: source,
-    slot: runtime.points.get(source)!,
-    req: (tier) => galaxyCatalogRequest(source, tier),
+    key: id,
+    slot: runtime.points.get(id)!,
+    req: (tier) => galaxyCatalogRequest(id, tier),
+    // Famous stays resident when switched off: its ids are the names focus links and tour
+    // beats resolve through, and a tour shows it in the clip that first needs one resolved.
     // Target 0 means the tier ships no file for this source (SDSS at `small`); a source
     // with no caps has no target and is listed at every tier.
-    demand: {
-      tiers: TIER_LADDER.filter((tier) => tierTarget(source, tier) !== 0),
-      near: { band: 'deepZoom', edge: 'in', lead: 10, release: 100 },
-      alsoWhen: ['searching'],
-    },
+    demand:
+      id === 'famousGalaxy'
+        ? 'always'
+        : {
+            tiers: TIER_LADDER.filter((tier) => tierTarget(id, tier) !== 0),
+            near: { band: 'deepZoom', edge: 'in', lead: 10, release: 100 },
+            alsoWhen: ['searching'],
+          },
     priority: entry.priority,
     gates: { address: 'survey', item: id },
   };
@@ -43,13 +46,13 @@ export function galaxyCatalogAssetRows(
   | CompanionAssetRow<unknown, unknown, GalaxyCatalogAssetKey>
 )[] {
   return [
-    ...GALAXY_CATALOG_SOURCES.map((code) => pointRow(runtime, GALAXY_CATALOG_SOURCE_RECORD[code])),
+    ...GALAXY_CATALOG_SOURCES.map((id) => pointRow(runtime, GALAXY_CATALOG_SOURCE_RECORD[id])),
 
     // Loads once the Famous slot leaves `idle`.
     {
       key: 'famousGalaxiesMeta',
       slot: runtime.famousGalaxiesMeta,
-      companionOf: Source.FamousGalaxy,
+      companionOf: 'famousGalaxy',
     },
 
     // Lazy: only demanded while the command palette is open — see

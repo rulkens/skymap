@@ -50,7 +50,7 @@ export const GPU_HANDLE_ROWS = [
   },
   {
     // `state`, not a defaults constant: `mw-aggregate`'s `scale` is a function of
-    // `settings.milkyWay.aggregateDivisor`, which every reconcile re-reads.
+    // `settings.milkyWay.cloud.aggregateDivisor`, which every reconcile re-reads.
     key: 'renderTargets',
     construct: (state: EngineState, deps: GpuHandleConstructDeps) =>
       createRenderTargets(

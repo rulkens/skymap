@@ -12,21 +12,19 @@
  * the row stays JSON-serializable for the RTK slice; `buildGalaxyInfo` parses
  * it back with `BigInt(...)` where it needs the numeric identity.
  */
-import { Source } from '../../../../data/source';
 import { famousGalaxyNamesFor } from '../../famousGalaxies/utils/famousGalaxyNamesFor';
 import type { GalaxyCatalog } from '../../../../@types/data/galaxyCatalog/GalaxyCatalog';
-import type { GalaxyCatalogSourceType } from '../../@types/GalaxyCatalogSourceType';
+import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
 import type { GalaxyRow } from '../@types/GalaxyRow';
 
 export function extractGalaxyRow(
   cloud: GalaxyCatalog | undefined,
   idx: number,
-  source: GalaxyCatalogSourceType,
+  source: GalaxyCatalogId,
 ): GalaxyRow | null {
   if (!cloud) return null;
   if (idx < 0 || idx >= cloud.count) return null;
-  const famous =
-    source === Source.FamousGalaxy ? famousGalaxyNamesFor(cloud.count)?.[idx] : undefined;
+  const famous = source === 'famousGalaxy' ? famousGalaxyNamesFor(cloud.count)?.[idx] : undefined;
 
   return {
     type: 'galaxyCatalog',

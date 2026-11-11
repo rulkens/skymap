@@ -13,7 +13,6 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { starCatalogPass } from '../../../../../src/layers/starCatalog/survey/passes/starCatalogPass';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
-import { Source } from '../../../../../src/data/source';
 import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/recedingFocusSubsystem';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
@@ -56,8 +55,8 @@ function makeFrame(originMpc: Vec3): StarCutInputs {
       worldSpread: 1,
       leafMarginRad: 0.001,
       sources: [
-        { source: Source.GaiaStars, opacity: 1, drawBudget: 100 },
-        { source: Source.GaiaStars, opacity: 1, drawBudget: 100 },
+        { source: 'gaiaStars', opacity: 1, drawBudget: 100 },
+        { source: 'gaiaStars', opacity: 1, drawBudget: 100 },
       ],
     },
     nowMs: 0,
@@ -72,7 +71,7 @@ function makeRuntime(frame: StarCutInputs | null) {
   const drawCut = vi.fn<(pass: GPURenderPassEncoder, args: StarCatalogCutDrawArgs) => void>();
   const catalog = { starCount: 1 } as unknown as Octree<StarColumns>;
   const renderer = {
-    loadedCatalogs: () => [{ source: Source.GaiaStars, octree: catalog }][Symbol.iterator](),
+    loadedCatalogs: () => [{ source: 'gaiaStars', octree: catalog }][Symbol.iterator](),
     getFrameCut: () => frame,
     snapshotPickSlots: () => {},
     drawCut,

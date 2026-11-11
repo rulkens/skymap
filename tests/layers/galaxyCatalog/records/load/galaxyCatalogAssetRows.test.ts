@@ -11,7 +11,6 @@ import { galaxyCatalogVisibility } from '../../../../../src/layers/galaxyCatalog
 import { galaxyCatalogAssetRows } from '../../../../../src/layers/galaxyCatalog/records/load/galaxyCatalogAssetRows';
 import { expandCompanionRows } from '../../../../../src/utils/loading/expandCompanionRows';
 import { sameRequest } from '../../../../../src/utils/loading/sameRequest';
-import { Source } from '../../../../../src/data/source';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import type { AssetKey } from '../../../../../src/@types/loading/AssetKey';
 import type { DemandCtx } from '../../../../../src/@types/loading/DemandCtx';
@@ -51,21 +50,33 @@ describe('galaxyCatalogAssetRows demand', () => {
     };
     const at = (source: AssetKey, tier: Tier) =>
       evaluateAssetDemand(rowFor(source), makeCtx({ settings, tier }), galaxyCatalogVisibility);
-    expect(at(Source.SDSS, 'small')).toEqual({ demand: false, release: true });
-    expect(at(Source.SDSS, 'medium')).toEqual({ demand: true, release: false });
+    expect(at('sdss', 'small')).toEqual({ demand: false, release: true });
+    expect(at('sdss', 'medium')).toEqual({ demand: true, release: false });
     // A source with no tier caps ships at every tier, the smallest included.
-    expect(at(Source.TwoMRS, 'small')).toEqual({ demand: true, release: false });
+    expect(at('2mrs', 'small')).toEqual({ demand: true, release: false });
+  });
+
+  // Released, its ids stop resolving: the grand tour hid every survey, then waited forever
+  // for beat 3's `m31` focus, whose show cue sits in the very clip that wait gates.
+  it('the famous catalog stays resident while switched off, so its ids keep resolving', () => {
+    const settings = { galaxyCatalogs: { items: { famousGalaxy: { enabled: false } } } };
+    const verdict = evaluateAssetDemand(
+      rowFor('famousGalaxy'),
+      makeCtx({ settings }),
+      galaxyCatalogVisibility,
+    );
+    expect(verdict).toEqual({ demand: true, release: false });
   });
 });
 
 describe('galaxyCatalogAssetRows req builders', () => {
   it('a tiered row carries its tier; an untiered one carries only its source', () => {
-    expect(rowFor(Source.SDSS).req('medium')).toEqual({ source: Source.SDSS, tier: 'medium' });
-    expect(rowFor(Source.TwoMRS).req('large')).toEqual({ source: Source.TwoMRS });
+    expect(rowFor('sdss').req('medium')).toEqual({ source: 'sdss', tier: 'medium' });
+    expect(rowFor('2mrs').req('large')).toEqual({ source: '2mrs' });
   });
 
   it("an untiered point source's request is identical across tiers", () => {
-    for (const source of [Source.TwoMRS, Source.FamousGalaxy]) {
+    for (const source of ['2mrs', 'famousGalaxy']) {
       const row = rowFor(source);
       expect(sameRequest(row.req('small'), row.req('large')), `${source} drifted`).toBe(true);
     }
@@ -73,7 +84,7 @@ describe('galaxyCatalogAssetRows req builders', () => {
 
   it("the famous-meta row's request equals the famous point row's request at every tier", () => {
     const meta = rowFor('famousGalaxiesMeta');
-    const point = rowFor(Source.FamousGalaxy);
+    const point = rowFor('famousGalaxy');
     for (const tier of ['small', 'medium', 'large'] as const) {
       expect(sameRequest(meta.req(tier), point.req(tier)), `drifted at ${tier}`).toBe(true);
     }
