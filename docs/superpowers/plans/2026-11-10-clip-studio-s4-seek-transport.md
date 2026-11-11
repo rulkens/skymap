@@ -184,13 +184,13 @@ export function rampAt(
 Curve: `src/utils/math/smoothstep.ts`, the curve `fadeController.ts:40` uses, so a seek lands where a play would.
 `overMs: 0` is a step (value = `to` from its instant). Changes are ascending by `atSec`.
 
-- [ ] Test `mid-ramp value and remaining time` (start 0, one change to 1 over 4000 ms at 2 s; at t = 4: value 0.5,
+- [x] Test `mid-ramp value and remaining time` (start 0, one change to 1 over 4000 ms at 2 s; at t = 4: value 0.5,
       remainingMs 2000).
-- [ ] Test `a change mid-ramp starts from where the ramp stood` (start 0; to 1 over 4000 ms at 0; to 0 over
+- [x] Test `a change mid-ramp starts from where the ramp stood` (start 0; to 1 over 4000 ms at 0; to 0 over
       1000 ms at 2: at t = 2.5 the value is 0.5 · (1 − smoothstep(0.5)) = 0.25, target 0, remaining 500).
-- [ ] Test `after the last ramp: its target, nothing remaining; before the first change: null`.
-- [ ] `npx vitest run tests/utils/animation`.
-- [ ] Commit: "A fade's value at any t, as a continuous play would show it".
+- [x] Test `after the last ramp: its target, nothing remaining; before the first change: null`.
+- [x] `npx vitest run tests/utils/animation`.
+- [x] Commit: "A fade's value at any t, as a continuous play would show it".
 
 ### Task 1.3: the player runs a transport
 
