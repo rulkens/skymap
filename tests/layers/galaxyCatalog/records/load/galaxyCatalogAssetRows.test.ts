@@ -55,6 +55,18 @@ describe('galaxyCatalogAssetRows demand', () => {
     // A source with no tier caps ships at every tier, the smallest included.
     expect(at('2mrs', 'small')).toEqual({ demand: true, release: false });
   });
+
+  // Released, its ids stop resolving: the grand tour hid every survey, then waited forever
+  // for beat 3's `m31` focus, whose show cue sits in the very clip that wait gates.
+  it('the famous catalog stays resident while switched off, so its ids keep resolving', () => {
+    const settings = { galaxyCatalogs: { items: { famousGalaxy: { enabled: false } } } };
+    const verdict = evaluateAssetDemand(
+      rowFor('famousGalaxy'),
+      makeCtx({ settings }),
+      galaxyCatalogVisibility,
+    );
+    expect(verdict).toEqual({ demand: true, release: false });
+  });
 });
 
 describe('galaxyCatalogAssetRows req builders', () => {
