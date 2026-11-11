@@ -25,12 +25,12 @@ const PEAKS: readonly [number, number, number][] = [
 ];
 const WORLD = { west: -180, east: 180, south: -90, north: 90 };
 
-// Gaussian ranges (~300 km wide) rising from a 100 m deep sea.
+// Gaussian ranges (~120 km wide: steep enough that the 80 km window sees a range) rising from a 100 m deep sea.
 const peakDirs = PEAKS.map(([lonDeg, latDeg]) => lonLatDegToDirection({ lonDeg, latDeg }));
 const heightAt = (lonDeg: number, latDeg: number) => {
   const p = lonLatDegToDirection({ lonDeg, latDeg });
   return PEAKS.reduce(
-    (h, [, , top], k) => h + top * Math.exp(-(((distance3(p, peakDirs[k]!) * R) / 300) ** 2)),
+    (h, [, , top], k) => h + top * Math.exp(-(((distance3(p, peakDirs[k]!) * R) / 120) ** 2)),
     -100,
   );
 };

@@ -5,7 +5,8 @@
  * spacing) above a threshold that grows with the spacing, so coarse levels
  * keep only real ranges. The sea counts as 0 m in the min, so a coast is not
  * "relief" down to the sea floor. Importance reads one fixed 80 km window at
- * every level, so hill sizes compare across levels.
+ * every level, so hill sizes compare across levels, and gates the candidates:
+ * no range in that window, no hill.
  */
 
 import type { HeightGrid } from '../@types/HeightGrid';
@@ -23,8 +24,14 @@ const ELEVATION_WEIGHT = 0.25;
 /** No-data and sea read this low in the max windows, so they never win one. */
 const VOID_M = -1e4;
 
-/** Metres of local relief a post needs to count as hilly at this spacing: 1,094 m at 133 km, 274 m at 8 km. */
-const reliefThresholdM = (spacingKm: number) => 600 * Math.sqrt(spacingKm / 40);
+/** Fine levels' scaled threshold falls to farmland (274 m at 8 km); a 1690 engraver drew none of it. */
+const MIN_RELIEF_M = 800;
+/** A hill stands only inside a range: 80 km relief below this is downs, valleys, plateau edge, left bare. */
+const MIN_RANGE_RELIEF_M = 1000;
+
+/** Metres of local relief a post needs to count as hilly at this spacing: 1,094 m at 133 km, then the floor. */
+const reliefThresholdM = (spacingKm: number) =>
+  Math.max(MIN_RELIEF_M, 600 * Math.sqrt(spacingKm / 40));
 
 export function findMolehillCandidates(
   grid: HeightGrid,
@@ -54,6 +61,7 @@ export function findMolehillCandidates(
       importanceHigh ??= windowExtremum(forMax, grid, IMPORTANCE_RADIUS_KM, 'max');
       importanceLow ??= windowExtremum(forMin, grid, IMPORTANCE_RADIUS_KM, 'min');
       const importanceRelief = importanceHigh[k]! - importanceLow[k]!;
+      if (importanceRelief < MIN_RANGE_RELIEF_M) continue;
       candidates.push({
         lonDeg: -180 + (i0 + ii) * step,
         latDeg: 90 - (j0 + jj) * step,
