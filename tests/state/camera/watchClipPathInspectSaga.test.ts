@@ -48,6 +48,7 @@ const RUNTIME: LiveCameraRuntime = {
   fovYRad: 0.8,
   aspect: 16 / 9,
   upBasisQuat: [0, 0, 0, 1],
+  clipAt: null,
 };
 
 type ComputeFn = (

@@ -97,6 +97,8 @@ export type LiveCameraRuntime = {
   fovYRad: number;
   aspect: number;
   upBasisQuat: Vec4;
+  /** The clip clock the last frame drew; `held` when a transported clip is clamped at its end. Null with no clip. */
+  clipAt: { readonly sec: number; readonly held: boolean } | null;
 };
 /**
  * The debug clip-path inspector seam — the non-reactive bridge the

@@ -67,7 +67,13 @@ describe('watchGoHomeSaga', () => {
     // The focus tween saga runs too: Home's own Earth focus write funnels through it.
     mw.run(watchGoHomeSaga);
     mw.run(watchFocusTweenSaga);
-    cameraRuntime = () => ({ from: FROM, fovYRad: FOV, aspect: 16 / 9, upBasisQuat: [0, 0, 0, 1] });
+    cameraRuntime = () => ({
+      from: FROM,
+      fovYRad: FOV,
+      aspect: 16 / 9,
+      upBasisQuat: [0, 0, 0, 1],
+      clipAt: null,
+    });
     mw.setContext({
       cameraRuntime: () => cameraRuntime(),
       selection: composeSelectionRows(

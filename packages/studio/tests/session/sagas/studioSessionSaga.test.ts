@@ -50,6 +50,7 @@ const RUNTIME: LiveCameraRuntime = {
   fovYRad: 0.9,
   aspect: 16 / 9,
   upBasisQuat: [0, 0, 0, 1],
+  clipAt: null,
 };
 const FIXTURE = selectionResolverOver({ byId: () => null, byCategory: () => [] });
 const EDIT_DISTANCE = paramEdited({

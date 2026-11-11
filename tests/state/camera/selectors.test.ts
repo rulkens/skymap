@@ -25,6 +25,7 @@ import {
   commitCameraPose,
   clipStarted,
   clipEnded,
+  clipTransportSet,
   startFrameTween,
 } from '../../../src/state/camera/cameraSlice';
 import { inputGestureStarted } from '../../../src/state/input/inputSlice';
@@ -118,6 +119,18 @@ describe('selectCameraActive', () => {
     store.dispatch(setAutoRotate({ active: false, rate: 0.001 }));
     store.dispatch(clipStarted(clip));
 
+    expect(selectCameraActive(store.getState())).toBe(true);
+  });
+
+  it('a paused clip does not keep the loop awake; a running one does', () => {
+    // Without this the studio idles at 60 fps for as long as it is open.
+    const store = makeStore();
+    store.dispatch(setAutoRotate({ active: false, rate: 0.001 }));
+    store.dispatch(clipStarted(clip));
+    store.dispatch(clipTransportSet({ kind: 'paused', atSec: 1, camera: 'clip' }));
+    expect(selectCameraActive(store.getState())).toBe(false);
+
+    store.dispatch(clipTransportSet({ kind: 'running', fromSec: 1, loop: null }));
     expect(selectCameraActive(store.getState())).toBe(true);
   });
 

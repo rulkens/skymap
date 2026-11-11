@@ -88,6 +88,7 @@ const LIVE: LiveCameraRuntime = {
   fovYRad: 0.8,
   aspect: 1,
   upBasisQuat: [0, 0, 0, 1],
+  clipAt: null,
 };
 const BOOT_BASE = absoluteArm({ target: [0, 0, 0], yaw: 0.5, pitch: -0.2, distance: 9 });
 const J2000_MS = Date.UTC(2000, 0, 1, 12);

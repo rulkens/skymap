@@ -365,6 +365,7 @@ export function createEngine(
             fovYRad: state.cameraRuntime.outputs.projection.fovYRad,
             aspect: state.cameraRuntime.outputs.projection.aspect,
             upBasisQuat: liveUpBasisQuat(state.cameraRuntime),
+            clipAt: clipPlayer.clipAt(),
           }
         : null,
     sceneSettled: () => isSceneSettled(state),

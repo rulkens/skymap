@@ -279,12 +279,14 @@ clipAt: { readonly sec: number; readonly held: boolean } | null;
   This refines the existing term; it adds no new one.
 - `clipOwnsCamera` becomes `camera.clip !== null && !(transport?.kind === 'paused' && transport.camera === 'free')`.
 
-- [ ] Test `a paused clip does not keep the loop awake; a running one does` (`selectCameraActive`). It earns its
+As built: Q-F ruled A (owner, 2026-11-11). The sim test lives in `tests/services/engine/camera/clipFreeLook.test.ts`.
+
+- [x] Test `a paused clip does not keep the loop awake; a running one does` (`selectCameraActive`). It earns its
       place: without it the studio idles at 60 fps for as long as it is open.
-- [ ] Test (camera sim harness, `tests/helpers/camera/makeCameraSimHarness.ts`) `in free look a sky drag moves the
+- [x] Test (camera sim harness, `tests/helpers/camera/makeCameraSimHarness.ts`) `in free look a sky drag moves the
       camera from the drawn pose, and re-attaching shows the pose at t again`.
-- [ ] `npm run typecheck:fast`; `npx vitest run tests/state/camera tests/services/engine/camera`.
-- [ ] Commit: "The drawn clip time reaches sagas; a paused clip lets the loop sleep".
+- [x] `npm run typecheck:fast`; `npx vitest run tests/state/camera tests/services/engine/camera`.
+- [x] Commit: "The drawn clip time reaches sagas; a paused clip lets the loop sleep".
 
 ### Task 1.5: a scrub can be priced
 

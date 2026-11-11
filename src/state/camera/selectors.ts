@@ -35,11 +35,12 @@ export const selectAutoRotateRate = (state: RootState): number =>
 // Camera term of the loop-continuation predicate (spec §4). The auto-rotate term
 // carries the same arm gate as the driver it stands for: in a body arm the flag is
 // stored intent with nothing acting on it, and an ungated term would pin the loop
-// at 60 fps. A held gesture is NOT gated — the surface controller is a gesture driver.
+// at 60 fps. A held gesture is NOT gated — the surface controller is a gesture driver. A clip
+// keeps it awake only while its clock runs: a paused one (the studio) redraws on a seek's wake.
 export const selectCameraActive = (state: RootState): boolean => {
   const c = selectCameraIntent(state);
   return (
-    c.clip !== null ||
+    (c.clip !== null && c.clip.transport?.kind !== 'paused') ||
     selectGestureHeld(state) ||
     c.tween !== null ||
     (c.autoRotate.active && isWorldArm(c.base)) ||

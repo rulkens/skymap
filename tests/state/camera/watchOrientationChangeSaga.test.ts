@@ -40,7 +40,13 @@ describe('watchOrientationChangeSaga', () => {
       middleware: (getDefault) => getDefault().concat(middleware),
     });
     middleware.run(watchOrientationChangeSaga);
-    cameraRuntime = () => ({ from: FROM, fovYRad: 0.8, aspect: 16 / 9, upBasisQuat: LIVE_QUAT });
+    cameraRuntime = () => ({
+      from: FROM,
+      fovYRad: 0.8,
+      aspect: 16 / 9,
+      upBasisQuat: LIVE_QUAT,
+      clipAt: null,
+    });
     middleware.setContext({ cameraRuntime: () => cameraRuntime() });
     return created;
   }
