@@ -143,9 +143,12 @@ export function replayInput(
     // A pose-moving step is swallowed while a clip owns the camera (the driver
     // table's rule, both arms) or while a body arm's host is unresolved — the
     // cell's `hostOrThrow` would throw. The pointer edges still reach the arm:
-    // the latch tracks the POINTER, and they re-tag nothing.
+    // the latch tracks the POINTER, and they re-tag nothing. The clip still owns
+    // its hand-off frame: its end pose rides the register until this frame's edge
+    // bakes it, so a step from the stale `base` would be baked in its place.
     const moves = step.kind === 'drag' || step.kind === 'zoom';
-    if (moves && (camera.clip !== null || (!worldArm && hostOf(base.frame, ctx) === null))) {
+    const clipOwns = camera.clip !== null || winnerLastFrame === 'clip';
+    if (moves && (clipOwns || (!worldArm && hostOf(base.frame, ctx) === null))) {
       return true;
     }
     // The two-finger drag is a surface handle (owner ruling 2026-11-03): only
