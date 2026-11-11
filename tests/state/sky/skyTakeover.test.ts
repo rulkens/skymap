@@ -10,10 +10,10 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import createSagaMiddleware from 'redux-saga';
 import { configureStore } from '@reduxjs/toolkit';
 
-vi.mock('../../../src/data/animation/tours/tourRegistry', async () => {
+vi.mock('../../../src/compositions/appTours', async () => {
   const { dwellDrift } = await import('../../../src/state/tour/dwellDrift');
   const beat = { enterClip: { start: 'live', timeline: [] }, dwellClip: dwellDrift(9999) };
-  return { tourRegistry: { demo: { id: 'demo', label: 'Demo', beats: [beat] } } };
+  return { APP_TOUR_REGISTRY: { demo: { id: 'demo', label: 'Demo', beats: [beat] } } };
 });
 
 import { rootReducer } from '../../../src/store/rootReducer';
