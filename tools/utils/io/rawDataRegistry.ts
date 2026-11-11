@@ -1438,6 +1438,42 @@ export const RAW_DATA = {
     source: 'committed',
     description: 'Provenance for the Viking MDIM 2.1 mosaic — upstream, grid, COG conversion.',
   },
+
+  // ─── Moon surface sources — fetched by hand, no fetchers ───────────────
+  // Same COG + leaf-symlink arrangement as Mars; the strip originals are deleted.
+
+  'lroc.wacGlobal100m': {
+    path: 'data/raw/lroc/Lunar_LRO_LROC-WAC_Mosaic_global_100m_June2013_cog.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'LROC WAC global morphologic mosaic, JPEG COG of the USGS 100 m mosaic: 109164x54582 grey Byte, NoData 0, equirectangular on the 1,737,400 m sphere, edge-registered, shot at 55-75 deg incidence, Sun from the east west of lon -90 and from the west elsewhere.',
+    upstream:
+      'https://planetarymaps.usgs.gov/mosaic/Lunar_LRO_LROC-WAC_Mosaic_global_100m_June2013.tif',
+    readme: 'lroc.readme',
+  },
+  'lroc.readme': {
+    path: 'data/raw/lroc/README.md',
+    kind: 'file',
+    source: 'committed',
+    description: 'Provenance for the LROC WAC mosaic — upstream, grid, lighting, COG conversion.',
+  },
+  'lola.ldem118m': {
+    path: 'data/raw/lola/Lunar_LRO_LOLA_Global_LDEM_118m_Mar2014_cog.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'LOLA 118 m global LDEM, Float32 tiled COG of the Int16 half-metre USGS mosaic (unscaled; sharp cannot read signed 16-bit): 92160x46080 metres above the 1,737,400 m sphere, NoData -32768, equirectangular, edge-registered.',
+    upstream: 'https://planetarymaps.usgs.gov/mosaic/Lunar_LRO_LOLA_Global_LDEM_118m_Mar2014.tif',
+    readme: 'lola.readme',
+  },
+  'lola.readme': {
+    path: 'data/raw/lola/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the LOLA DEM — upstream, grid, vertical reference, COG conversion.',
+  },
   'hirise.gale.dtm': {
     path: 'data/raw/hirise/gale/MSL_Gale_DEM_Mosaic_1m_v3_cog.tif',
     kind: 'file',
