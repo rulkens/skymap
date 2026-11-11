@@ -14,8 +14,7 @@ import type { AlbedoDelight } from '../@types/AlbedoDelight';
 // Flatten and tame stay off: on the Moon low-frequency brightness is albedo.
 export const MOON_WAC_DELIGHT: AlbedoDelight = {
   reliefShade: 0.35,
-  photoSunAzDeg: 270,
-  photoSunElDeg: 20,
+  photoSun: { kind: 'fixed', azDeg: 270, elDeg: 20 },
   reliefExaggeration: 4,
   flatten: 0,
   flattenRadiusDeg: 1.2,

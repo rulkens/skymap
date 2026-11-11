@@ -20,8 +20,7 @@ const IDENTITY_GRADE: ColourGrade = {
 
 const NO_DELIGHT: AlbedoDelight = {
   reliefShade: 0,
-  photoSunAzDeg: 64,
-  photoSunElDeg: 28,
+  photoSun: { kind: 'fixed', azDeg: 64, elDeg: 28 },
   reliefExaggeration: 6,
   flatten: 0,
   flattenRadiusDeg: 1.2,
@@ -70,6 +69,31 @@ function tiltedHeightSource(gradientMPerDeg: number): HeightSource {
   };
 }
 
+/** Height rising eastward by `gradientMPerDeg` per degree of longitude: a
+ *  west-facing slope everywhere but the antimeridian, the east-west twin of
+ *  `tiltedHeightSource`. */
+function eastRisingHeightSource(gradientMPerDeg: number): HeightSource {
+  const attribution = 'synthetic east-rising plane (test only)';
+  return {
+    id: 'east-rising-plane',
+    attribution,
+    maxLevel: Number.POSITIVE_INFINITY,
+    coverage: [{ west: -180, east: 180, south: -90, north: 90 }],
+    provenance: { sourceId: 'east-rising-plane', attribution, vintage: 'n/a' },
+    async readGrid(z, i0, _j0, nx, ny) {
+      const step = heightLatticeStepDeg(z);
+      const out = new Float32Array(nx * ny);
+      for (let j = 0; j < ny; j++) {
+        for (let i = 0; i < nx; i++) out[j * nx + i] = gradientMPerDeg * (-180 + (i0 + i) * step);
+      }
+      return out;
+    },
+    async boundsInBox() {
+      return [-Math.abs(gradientMPerDeg) * 180, Math.abs(gradientMPerDeg) * 180];
+    },
+  };
+}
+
 describe('delightedImagerySource', () => {
   it('returns the input bytes when every delighting knob is off, under an identity grade', async () => {
     const pixels = [10, 20, 30, 255, 200, 150, 100, 128, 0, 0, 0, 0];
@@ -93,8 +117,7 @@ describe('delightedImagerySource', () => {
     // the two cases swap, or collapse to the same value (mutation-verified).
     const DELIGHT: AlbedoDelight = {
       reliefShade: 0.8,
-      photoSunAzDeg: 0,
-      photoSunElDeg: 45,
+      photoSun: { kind: 'fixed', azDeg: 0, elDeg: 45 },
       reliefExaggeration: 1,
       flatten: 0,
       flattenRadiusDeg: 1.2,
@@ -126,5 +149,36 @@ describe('delightedImagerySource', () => {
 
     expect(awayOut![0]).toBeGreaterThan(GREY[0]!);
     expect(facingOut![0]).toBeLessThan(GREY[0]!);
+  });
+
+  it('flips a subsolar photo Sun at the seam, so the same slope de-lights oppositely on each side', async () => {
+    // Seam at 0°: the Sun is east of cells at −20° and west of cells at +20°.
+    // An east-rising slope faces west — away from the Sun at −20° (photo dark,
+    // must brighten), toward it at +20° (photo bright, must darken). Drop the
+    // flip and both sides move the same way.
+    const DELIGHT: AlbedoDelight = {
+      reliefShade: 0.8,
+      photoSun: { kind: 'subsolar', offsetDeg: 45, seamLonDeg: 0 },
+      reliefExaggeration: 1,
+      flatten: 0,
+      flattenRadiusDeg: 1.2,
+      knee: 0.7,
+      tame: 0,
+      keepIce: 0,
+    };
+    const GREY = [128, 128, 128, 255];
+    const source = delightedImagerySource(
+      fixedRaster(GREY),
+      eastRisingHeightSource(2000),
+      DELIGHT,
+      IDENTITY_GRADE,
+      MARS_IAU_SPHERE_RADIUS_M,
+    );
+
+    const sunEast = await source.readBox({ west: -21, east: -20, south: 0, north: 1 }, 1, 1);
+    const sunWest = await source.readBox({ west: 20, east: 21, south: 0, north: 1 }, 1, 1);
+
+    expect(sunEast![0]).toBeGreaterThan(GREY[0]!);
+    expect(sunWest![0]).toBeLessThan(GREY[0]!);
   });
 });
