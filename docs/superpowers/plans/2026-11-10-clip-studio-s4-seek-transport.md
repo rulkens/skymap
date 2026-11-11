@@ -152,11 +152,16 @@ playClip: (clip: ClipData, frame: OrientationFrameId, atEnd: ClipSceneEnd, trans
 `clipDataReplaced` must keep the transport object's identity (assign `camera.clip.data`; never rebuild the clip):
 the player anchors on that identity, so a rebuilt object would restart a running clock at every edit.
 
-- [ ] Test `clipDataReplaced keeps the transport object and the frame`.
-- [ ] Test `clipTransportSet and clipDataReplaced do nothing with no clip live` (a late saga step on close must not
+As built: `clipStarted` takes no `transport` and stores `null`; a transport arrives only by
+`clipTransportSet`, so `playClip` keeps its S3 signature (the optional `transport` parameter is SagaContext growth
+awaiting the owner; the preview starts with `playClip` then `clipTransportSet` in the same saga step, before any
+frame can run).
+
+- [x] Test `clipDataReplaced keeps the transport object and the frame`.
+- [x] Test `clipTransportSet and clipDataReplaced do nothing with no clip live` (a late saga step on close must not
       resurrect a play).
-- [ ] `npx vitest run tests/state/camera tests/services/engine/animation`.
-- [ ] Commit: "A live clip can be under transport".
+- [x] `npx vitest run tests/state/camera tests/services/engine/animation`.
+- [x] Commit: "A live clip can be under transport".
 
 ### Task 1.2: `rampAt`, the opacity a continuous play shows at t
 

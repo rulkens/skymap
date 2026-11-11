@@ -15,6 +15,8 @@ import reducer, {
   cancelCameraTween,
   setAutoRotate,
   clipStarted,
+  clipTransportSet,
+  clipDataReplaced,
   clipEnded,
   resolveClipStart,
   commitCameraPose,
@@ -91,6 +93,29 @@ describe('cameraSlice — clip lifecycle', () => {
     const cleared = reducer(withBoth, clipEnded());
     expect(cleared.clip).toBeNull();
     expect(cleared.tween).toBeNull();
+  });
+
+  it('clipDataReplaced keeps the transport object and the frame', () => {
+    // The player anchors a running clock on the transport's identity: a rebuilt one restarts it.
+    const transport = { kind: 'running', fromSec: 2, loop: null } as const;
+    const live = reducer(
+      reducer(base(), clipStarted({ data: clipData, frame: clipFrame, atEnd: 'revert' })),
+      clipTransportSet(transport),
+    );
+    const edited = { ...clipData, timeline: [] };
+    const next = reducer(live, clipDataReplaced(edited));
+    expect(next.clip!.transport).toBe(live.clip!.transport);
+    expect(next.clip!.frame).toBe(clipFrame);
+    expect(next.clip!.data).toBe(edited);
+  });
+
+  it('clipTransportSet and clipDataReplaced do nothing with no clip live', () => {
+    const idle = base();
+    const afterTransport = reducer(
+      idle,
+      clipTransportSet({ kind: 'paused', atSec: 1, camera: 'clip' }),
+    );
+    expect(reducer(afterTransport, clipDataReplaced(clipData)).clip).toBeNull();
   });
 });
 

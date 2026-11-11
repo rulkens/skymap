@@ -23,6 +23,7 @@ import type { CameraPose } from '../../@types/camera/pose/CameraPose';
 import type { FramedCameraPose } from '../../@types/camera/pose/FramedCameraPose';
 import type { CameraTweenDescriptor } from '../../@types/camera/focusMotion/CameraTweenDescriptor';
 import type { ClipData } from '../../@types/animation/ClipData';
+import type { ClipTransport } from '../../@types/animation/ClipTransport';
 import type { FrameTween } from '../../@types/camera/focusMotion/FrameTween';
 import type { OrientationFrameId } from '../../@types/camera/orientation/OrientationFrameId';
 
@@ -76,8 +77,21 @@ const cameraSlice = createSlice({
     // already be resolved (no `start: 'live'` sentinel) — `resolveClipStart` runs
     // at the dispatch site. `frame` is the orientation frame live at dispatch time;
     // the driver holds the clip against THIS frame for its whole run.
-    clipStarted: (camera, action: PayloadAction<NonNullable<CameraState['clip']>>) => {
-      camera.clip = action.payload;
+    // Every play starts straight through; a transport arrives by `clipTransportSet`.
+    clipStarted: (
+      camera,
+      action: PayloadAction<Omit<NonNullable<CameraState['clip']>, 'transport'>>,
+    ) => {
+      camera.clip = { ...action.payload, transport: null };
+    },
+    // Both no-op with no clip live, so a late saga step on close cannot resurrect a play.
+    clipTransportSet: (camera, action: PayloadAction<ClipTransport>) => {
+      if (camera.clip !== null) camera.clip.transport = action.payload;
+    },
+    // Assigns `data` alone: the player anchors on the transport object, and a rebuilt clip
+    // would restart a running clock at every edit.
+    clipDataReplaced: (camera, action: PayloadAction<ClipData>) => {
+      if (camera.clip !== null) camera.clip.data = action.payload;
     },
     // Clears BOTH `clip` and `tween`: a tween planted before or during the clip is
     // dormant while the clip@95 driver wins, but once the clip deactivates an
@@ -133,6 +147,8 @@ export const {
   setCameraTuning,
   setFovYRad,
   clipStarted,
+  clipTransportSet,
+  clipDataReplaced,
   clipEnded,
   startFrameTween,
   clearFrameTween,
