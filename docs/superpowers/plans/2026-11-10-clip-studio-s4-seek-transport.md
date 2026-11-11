@@ -391,16 +391,22 @@ Behaviour:
    is running, or paused with `camera: 'clip'`, puts `freeLookStarted()`. The put is synchronous, so the frame that
    consumes the motion already sees the camera free.
 
-- [ ] Test `the preview starts paused at the head once the draft resolves`.
-- [ ] Test `a seek sends one clipTransportSet and nothing else`.
-- [ ] Test `an edit swaps the data into the live play` (no `clipEnded`, no second `playClip`).
-- [ ] Test `a failed resolution keeps the last good data`.
-- [ ] Test `while playing, each frame follows the drawn t; pausing stops the follow` (a fake `nextFrame` and
+As built: `playClip` keeps its S3 signature (its optional `transport` parameter awaits the owner, ask 7D1X): the saga
+forks `playClip(data, frame, 'revert')`, which dispatches `clipStarted` synchronously, then puts
+`clipTransportSet(transport)` in the same step, so no frame sees the untransported play. Data is sent only when the
+revision compiles (`selectPlayableData`, over the timeline's own compile), so an invalid draft never reaches the
+player's `compileClip`. Test added: `a held follow pauses the studio at the end`.
+
+- [x] Test `the preview starts paused at the head once the draft resolves`.
+- [x] Test `a seek sends one clipTransportSet and nothing else`.
+- [x] Test `an edit swaps the data into the live play` (no `clipEnded`, no second `playClip`).
+- [x] Test `a failed resolution keeps the last good data`.
+- [x] Test `while playing, each frame follows the drawn t; pausing stops the follow` (a fake `nextFrame` and
       `cameraRuntime`).
-- [ ] Test `a sky drag while following starts free look`.
-- [ ] Test `closing the studio stops the preview` (cancel the session; the `playClip` cancel hook ran).
-- [ ] `npx vitest run packages/studio/tests/session`.
-- [ ] Commit: "Clip studio: the 3D view follows the playhead".
+- [x] Test `a sky drag while following starts free look`.
+- [x] Test `closing the studio stops the preview` (cancel the session; the `playClip` cancel hook ran).
+- [x] `npx vitest run packages/studio/tests/session`.
+- [x] Commit: "Clip studio: the 3D view follows the playhead".
 
 ### Task 2.3: Use current view
 
