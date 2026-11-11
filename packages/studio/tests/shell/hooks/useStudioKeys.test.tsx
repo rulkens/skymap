@@ -163,4 +163,14 @@ describe('useStudioKeys', () => {
     fireEvent.keyDown(button, { key: ' ' });
     expect(dispatch).not.toHaveBeenCalled();
   });
+
+  it('L while playing outside the selected span resumes from its start', () => {
+    const { store, dock } = mount();
+    store.dispatch(rowSelected({ kind: 'effect', path: [0, 1] }));
+    store.dispatch(played({ fromSec: 1, loop: null }));
+
+    fireEvent.keyDown(dock, { key: 'l' });
+    const loop = { startSec: 4, endSec: 8 };
+    expect(selectTransport(store.getState())).toEqual({ kind: 'running', fromSec: 4, loop });
+  });
 });

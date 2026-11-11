@@ -69,4 +69,14 @@ describe('Ruler', () => {
     fireEvent.pointerUp(ruler);
     expect(selectTransport(store.getState())).toEqual({ kind: 'running', fromSec: 3, loop });
   });
+
+  it('a release outside the loop resumes from the loop start', () => {
+    const { store, ruler } = mount();
+    const loop = { startSec: 0, endSec: 4 };
+    store.dispatch(played({ fromSec: 1, loop }));
+
+    fireEvent.pointerDown(ruler, { clientX: x(6), altKey: true });
+    fireEvent.pointerUp(ruler);
+    expect(selectTransport(store.getState())).toEqual({ kind: 'running', fromSec: 0, loop });
+  });
 });

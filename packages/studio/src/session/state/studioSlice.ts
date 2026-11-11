@@ -119,13 +119,9 @@ export const studioSlice = createSlice({
       state.followedSec = payload.sec;
       if (payload.held) state.transport = { kind: 'paused', atSec: payload.sec, camera: 'clip' };
     },
-    /** `span` is read at the press (Q-I): pressing L twice takes the selection anew. */
-    loopToggled: (state, { payload }: PayloadAction<{ span: ClipSpan | null }>) => {
+    /** The flag alone: a running play re-anchors through `played`, which `runStudioKey` sends. */
+    loopToggled: (state) => {
       state.loop = !state.loop;
-      if (state.transport.kind === 'running') {
-        const loop = state.loop ? payload.span : null;
-        state.transport = { kind: 'running', fromSec: state.followedSec, loop };
-      }
     },
     freeLookStarted: (state) => {
       const { transport } = state;

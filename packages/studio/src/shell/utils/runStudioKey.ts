@@ -81,8 +81,14 @@ export function runStudioKey(id: StudioKeyId, state: RootState): UnknownAction[]
       const head = selectPlayheadSec(state);
       return [played({ fromSec: playFrom(head, timeline.durationSec ?? Infinity, loop), loop })];
     }
-    case 'loop':
-      return [loopToggled({ span: loopSpanOf(selectSelectedRow(state), timeline) })];
+    case 'loop': {
+      if (selectTransport(state).kind !== 'running') return [loopToggled()];
+      // The span is read at the press (Q-I): pressing L twice takes the selection anew.
+      const loop = selectLoop(state) ? null : loopSpanOf(selectSelectedRow(state), timeline);
+      const head = selectPlayheadSec(state);
+      const fromSec = playFrom(head, timeline.durationSec ?? Infinity, loop);
+      return [loopToggled(), played({ fromSec, loop })];
+    }
     case 'follow': {
       const transport = selectTransport(state);
       return transport.kind === 'paused' && transport.camera === 'free' ? [followResumed()] : null;
