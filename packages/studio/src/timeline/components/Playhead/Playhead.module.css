@@ -1,0 +1,9 @@
+.root {
+  position: absolute;
+  top: calc(var(--space-1) * -1);
+  bottom: 0;
+  width: 1px;
+  background: var(--color-fg);
+  box-shadow: 0 0 0 1px var(--surface-card-strong);
+  z-index: 3;
+}

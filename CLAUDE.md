@@ -36,6 +36,7 @@ src/services/engine/galaxyGenerator/  v1/ sprite stars (to be deleted),
 src/state/  RTK slices/selectors/sagas per domain; forbids react-redux (see store/)
 tools/utils/io/rawDataRegistry.ts  every path into data/raw/ goes through here;
                                    VizieR ReadMes sit beside their files (byte layouts!)
+packages/studio/  clip studio (lazy #studio chunk) — README
 docs/BACKLOG.md  ground-truth list of what's next
 docs/superpowers/plans/ + specs/  active plans and specs; shipped → */completed/
 tests/  Vitest suite — mirrors src/ tree

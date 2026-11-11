@@ -1,0 +1,26 @@
+.root {
+  position: absolute;
+  top: var(--space-3);
+  bottom: var(--space-3);
+  border-top: 2px solid var(--c, var(--color-fg-dim));
+  border-bottom: 2px solid var(--c, var(--color-fg-dim));
+  background: color-mix(in srgb, var(--c, var(--color-fg-dim)) 14%, transparent);
+}
+.selected {
+  border-color: var(--color-fg);
+}
+.invalid {
+  border-style: dashed;
+  border-color: var(--color-fg);
+}
+.knot {
+  position: absolute;
+  top: 50%;
+  width: var(--space-4);
+  height: var(--space-4);
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: var(--c, var(--color-fg-dim));
+  box-shadow: 0 0 0 2px var(--dock-bg);
+  z-index: 2;
+}

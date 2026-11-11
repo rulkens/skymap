@@ -46,6 +46,7 @@
 
 import type { BaseSegment } from '../../../@types/animation/compiledClip/BaseSegment';
 import type { Channel } from '../../../@types/animation/Channel';
+import { CompileFault } from './CompileFault';
 
 /**
  * validateSingleWriter — assert that no two `[startSec, endSec)` windows on
@@ -56,8 +57,8 @@ import type { Channel } from '../../../@types/animation/Channel';
  * with the ones that start before it ends on the same channel.
  *
  * @param baseTracks  The per-channel base-segment arrays from `CompiledClip`.
- * @throws            `Error` naming the channel and both overlapping windows
- *                    when a clash is detected.
+ * @throws            `CompileFault` naming the channel and the overlapping
+ *                    segments when a clash is detected.
  */
 export function validateSingleWriter(baseTracks: Record<Channel, BaseSegment[]>): void {
   for (const ch of Object.keys(baseTracks) as Channel[]) {
@@ -76,22 +77,28 @@ export function validateSingleWriter(baseTracks: Record<Channel, BaseSegment[]>)
       const [b, c] = overlapping;
       if (b === undefined) continue;
       if (b.blendIn === undefined) {
-        throw new Error(
+        throw new CompileFault(
           `single-writer violation on channel '${ch}': ` +
             `[${a.startSec},${a.endSec}) overlaps [${b.startSec},${b.endSec})`,
+          'twoWriters',
+          [a, b],
         );
       }
       const { startSec, endSec } = b.blendIn;
       if (startSec !== b.startSec || endSec !== a.endSec || a.endSec > b.endSec) {
-        throw new Error(
+        throw new CompileFault(
           `blend window [${startSec},${endSec}) on channel '${ch}' does not match ` +
             `the overlap of [${a.startSec},${a.endSec}) and [${b.startSec},${b.endSec})`,
+          'blendWindow',
+          [a, b],
         );
       }
       if (c !== undefined) {
-        throw new Error(
+        throw new CompileFault(
           `three writers live at once on channel '${ch}': ` +
             `[${a.startSec},${a.endSec}) still runs at ${c.startSec}`,
+          'threeWriters',
+          [a, b, c],
         );
       }
     }

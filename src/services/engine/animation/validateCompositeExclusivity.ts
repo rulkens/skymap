@@ -13,6 +13,7 @@ import type { BaseSegment } from '../../../@types/animation/compiledClip/BaseSeg
 import type { CompositeTrack } from '../../../@types/animation/compiledClip/CompositeTrack';
 import type { Channel } from '../../../@types/animation/Channel';
 import { cameraArmKindOf } from '../camera/arms/cameraArmKindOf';
+import { CompileFault } from './CompileFault';
 
 export function validateCompositeExclusivity(
   baseTracks: Record<Channel, BaseSegment[]>,
@@ -22,36 +23,44 @@ export function validateCompositeExclusivity(
     const declared = new Set<string>(track.channels);
     const written = Object.keys(track.sample(0));
     if (written.length !== declared.size || written.some((k) => !declared.has(k))) {
-      throw new Error(
+      throw new CompileFault(
         `composite track [${track.startSec}, ${track.endSec}) declares channels ` +
           `[${[...declared].join(', ')}] but its sample writes [${written.join(', ')}].`,
+        'compositeClash',
+        [track],
       );
     }
     for (const ch of track.channels) {
       for (const seg of baseTracks[ch]) {
         const overlaps = seg.startSec < track.endSec && track.startSec < seg.endSec;
         if (overlaps) {
-          throw new Error(
+          throw new CompileFault(
             `composite window [${track.startSec}, ${track.endSec}) overlaps a base '${ch}' writer ` +
               `[${seg.startSec}, ${seg.endSec}). The composite owns '${ch}' for its window — ` +
               `move the conflicting camera action outside it.`,
+            'compositeClash',
+            [track, seg],
           );
         }
         if (seg.frame !== undefined && cameraArmKindOf(seg.frame) !== 'absolute') {
-          throw new Error(
+          throw new CompileFault(
             `a frame-tagged base '${ch}' writer [${seg.startSec}, ${seg.endSec}) shares '${ch}' ` +
               `with a composite [${track.startSec}, ${track.endSec}). A composite hands its ` +
               `channels on in Mpc, which a body-framed endpoint reads as metres.`,
+            'compositeClash',
+            [track, seg],
           );
         }
       }
       for (const other of compositeTracks) {
         const overlaps = other.startSec < track.endSec && track.startSec < other.endSec;
         if (other !== track && overlaps && other.channels.includes(ch)) {
-          throw new Error(
+          throw new CompileFault(
             `composite windows [${track.startSec}, ${track.endSec}) and [${other.startSec}, ` +
               `${other.endSec}) both write '${ch}'. Sequence them; overlapping, the later one ` +
               `would silently win.`,
+            'compositeClash',
+            [track, other],
           );
         }
       }

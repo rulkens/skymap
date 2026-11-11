@@ -15,6 +15,7 @@ const ROOTS = [
   'packages/desktop/src',
   'packages/desktop/scripts',
   'packages/desktop/tests',
+  'packages/studio/src',
 ];
 const SKIP = ['tools/stars-rs/target', 'tools/vendor-types', '/node_modules/'];
 const JS_SUFFIX = /\.[cm]?js$/;

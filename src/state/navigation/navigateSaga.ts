@@ -29,12 +29,14 @@ import { exitTakeover, takeoverEnded } from '../takeover/takeoverActions';
 import { selectTakeoverSource } from '../takeover/selectors';
 import { openExhibit } from '../exhibits/exhibitActions';
 import { startTour } from '../tour/tourActions';
+import { openStudio } from '../studio/studioActions';
 import { selectCameraBase } from '../camera/selectors';
 import { selectTimeState } from '../time/selectors';
 import { selectOrientation } from '../settings/selectors';
 import { framingPose } from '../../services/engine/camera/framing/framingPose';
 import { hostFacingPose } from '../../services/engine/camera/framing/hostFacingPose';
 import { homePose } from '../../services/engine/camera/framing/homePose';
+import { isTakeoverView } from '../../utils/url/isTakeoverView';
 import { isWorldArm } from '../../services/engine/camera/arms/world/isWorldArm';
 import { selectionKindOf } from '../../services/engine/selection/selectionKindOf';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
@@ -141,8 +143,7 @@ export function* navigateSaga(
   // supersede, which would overwrite the link's settings; ending it first lands
   // them after that restore. A hash change has already ended it
   // (`applyNavigation`); this serves an arrival during which a remote started one.
-  const startsTakeover = view.kind === 'exhibit' || view.kind === 'tour' || view.kind === 'clip';
-  if (startsTakeover && (yield* select(selectTakeoverSource)) !== null) {
+  if (isTakeoverView(view) && (yield* select(selectTakeoverSource)) !== null) {
     yield* all([take(takeoverEnded), put(exitTakeover())]);
   }
   yield* call(applyLinkSettingsSaga, intent);
@@ -193,5 +194,15 @@ export function* navigateSaga(
         yield* put(clearSelection());
       }
       return yield* call(firstClipSaga, startClip(view.id), transition);
+    case 'studio':
+      if (!isKeyOf(clipFactories, view.id)) return UNKNOWN_ID;
+      // The studio pins the live pose as the preview start (Q7), so a cut lands home first.
+      if (transition === 'cut') {
+        yield* call(homeSaga);
+        // As for a clip: home's seeded Earth card must not sit under the dock.
+        yield* put(clearSelection());
+      }
+      yield* put(openStudio(view.id));
+      return OK;
   }
 }

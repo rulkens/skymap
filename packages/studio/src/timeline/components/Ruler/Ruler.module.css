@@ -1,0 +1,89 @@
+.root {
+  position: relative;
+  margin-right: var(--track-pad);
+  overflow: hidden;
+  cursor: col-resize;
+  touch-action: none;
+  user-select: none;
+}
+.tick {
+  position: absolute;
+  bottom: 0;
+  height: var(--space-2);
+  border-left: 1px solid var(--border-default);
+}
+.major {
+  height: var(--space-4);
+  border-left-color: var(--border-hover);
+}
+.tickLabel {
+  position: absolute;
+  bottom: var(--space-3);
+  left: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-fg-dim);
+  white-space: nowrap;
+}
+.notch {
+  position: absolute;
+  bottom: 0;
+  width: var(--space-2);
+  height: var(--space-2);
+  transform: translateX(-50%);
+  background: var(--c, var(--color-fg-dim));
+  z-index: 1;
+}
+.end {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding-left: var(--space-2);
+  border-left: 1px dashed var(--color-fg-tertiary);
+  background: var(--dock-bg);
+  color: var(--color-fg-tertiary);
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+  z-index: 1;
+}
+.after {
+  position: absolute;
+  right: var(--space-2);
+  bottom: var(--space-1);
+  font-size: var(--font-size-sm);
+  line-height: 1;
+  color: var(--color-fg-dim);
+}
+.head {
+  /* The tag's minimum width: a t = 0 tag sits whole inside the track, its tip off the line. */
+  --head-inset: var(--space-12);
+  position: absolute;
+  top: var(--space-1);
+  min-width: var(--space-12);
+  height: calc(var(--row-h) - var(--space-4));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--space-2);
+  transform: translateX(-50%);
+  border-radius: var(--radius-sm);
+  background: var(--color-fg);
+  color: var(--color-bg);
+  font-size: var(--font-size-sm);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  cursor: grab;
+  z-index: 4;
+}
+.head::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--space-2) * -1 - 1px);
+  transform: translateX(-50%);
+  border: var(--space-2) solid transparent;
+  border-top-color: var(--color-fg);
+  border-bottom: 0;
+}

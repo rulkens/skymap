@@ -17,6 +17,6 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "types": ["node", "@webgpu/types", "vite/client"]
   },
-  "include": ["src", "tests"],
+  "include": ["src", "tests", "packages/studio/src", "packages/studio/tests"],
   "exclude": ["tools"]
 }

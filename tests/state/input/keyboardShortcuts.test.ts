@@ -117,4 +117,20 @@ describe('KEYBOARD_SHORTCUTS', () => {
       expect(run(stateWith({ tour: TOUR, takeover: takeover(true) }))).toEqual(action());
     }
   });
+
+  it('the studio owns Escape and the clock keys: none of them acts while it runs', () => {
+    const studio = stateWith({
+      time: time(3, false),
+      takeover: { active: { kind: 'studio' as const, id: 'cosmicFlows' } },
+    } as Partial<RootState>);
+    for (const keys of ['escape', '\\', '[', ']', 'shift+n']) {
+      expect(byKeys(keys).run(studio)).toBeNull();
+    }
+    const clip = stateWith({
+      time: time(3, false),
+      takeover: { active: { kind: 'clip' as const, id: 'cosmicFlows' } },
+    } as Partial<RootState>);
+    expect(byKeys('escape').run(clip)).not.toBeNull();
+    expect(byKeys('\\').run(clip)).not.toBeNull();
+  });
 });

@@ -1,0 +1,18 @@
+.root {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--space-12);
+  padding: 0 var(--space-1) 0 var(--space-4);
+  border: 2px solid var(--color-fg-muted);
+  border-radius: var(--radius-md);
+  color: var(--color-fg);
+  white-space: nowrap;
+}
+.text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

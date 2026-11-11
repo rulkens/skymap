@@ -1,0 +1,44 @@
+/* Fields read --field-border-style / --field-bg, so a dim row restyles them with no prop per field. */
+.root {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: subgrid;
+  align-items: baseline;
+  min-height: var(--space-12);
+}
+.spaced {
+  margin-top: var(--space-4);
+}
+.dim {
+  --field-border-style: dashed;
+  --field-bg: transparent;
+}
+.dim .control {
+  color: var(--color-fg-tertiary);
+}
+.label {
+  font-size: var(--font-size-sm);
+  color: var(--color-fg-label);
+  white-space: nowrap;
+}
+.control {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  color: var(--color-fg);
+  white-space: nowrap;
+}
+.resetCell {
+  display: grid;
+  place-items: center;
+}
+/* Dim until hovered: the Button's quiet look, in the tertiary ink. */
+.reset {
+  color: var(--color-fg-tertiary);
+}
+@media (hover: hover) {
+  .reset:hover:not(:disabled) {
+    color: var(--color-fg);
+  }
+}

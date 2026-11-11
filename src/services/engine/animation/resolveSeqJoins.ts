@@ -20,6 +20,7 @@ import { easeEndSlopes } from './easeEndSlopes';
 import { legIndexAt } from './legIndexAt';
 import { segmentValueAt } from './segmentValueAt';
 import { unwrappedEndOf } from './unwrappedEndOf';
+import { CompileFault } from './CompileFault';
 import { sameFrame } from '../camera/arms/sameFrame';
 import { DEFAULT_FOV_Y_RAD } from '../camera/framing/cameraFraming';
 import { byStartSec } from '../../../utils/animation/byStartSec';
@@ -123,22 +124,29 @@ export function resolveSeqJoins(
       const abut = Math.abs(b.startSec - a.endSec) <= ABUT_EPS;
       const zeroLength = a.endSec === a.startSec || b.endSec === b.startSec;
       if (abut && zeroLength) continue;
+      const refusal = (message: string) => new CompileFault(message, 'joinRefused', [a, b]);
       if (!('segKind' in a) || !('segKind' in b)) {
-        throw new Error(`${prefix}a composite move cannot blend or join on '${ch}'`);
+        throw refusal(`${prefix}a composite move cannot blend or join on '${ch}'`);
       }
       if (a.loop || b.loop) {
-        throw new Error(`${prefix}a looping spin cannot blend or join on '${ch}'`);
+        throw refusal(`${prefix}a looping spin cannot blend or join on '${ch}'`);
       }
       if (!abut && b.endSec < a.endSec) {
-        throw new Error(
+        throw refusal(
           `${prefix}the incoming '${ch}' move ends at ${b.endSec}s, before the outgoing one (${a.endSec}s)`,
         );
       }
-      if (
-        !abut &&
-        writers.some((w) => w !== a && w !== b && w.startSec <= b.startSec && b.startSec < w.endSec)
-      ) {
-        throw new Error(`${prefix}three writers are live on '${ch}' at ${b.startSec}s`);
+      const third = abut
+        ? undefined
+        : writers.find(
+            (w) => w !== a && w !== b && w.startSec <= b.startSec && b.startSec < w.endSec,
+          );
+      if (third !== undefined) {
+        throw new CompileFault(
+          `${prefix}three writers are live on '${ch}' at ${b.startSec}s`,
+          'threeWriters',
+          [third, a, b].sort(byStartSec),
+        );
       }
       // A join reads its spans at compile time from `a`'s folded `from`, so no leg may
       // open after the writer before `a` starts; only a zero-length snap at the leg
@@ -153,7 +161,7 @@ export function resolveSeqJoins(
       if (changeSec !== undefined) {
         const what = abut ? `join at ${b.startSec}s` : `blend [${b.startSec},${a.endSec})`;
         const remedy = abut ? `; snap '${ch}' at ${changeSec}s so the join can read its span` : '';
-        throw new Error(
+        throw refusal(
           `${prefix}the '${ch}' ${what} crosses a frame change at ${changeSec}s${remedy}`,
         );
       }
@@ -162,7 +170,7 @@ export function resolveSeqJoins(
         continue;
       }
       if (a.space !== b.space) {
-        throw new Error(`${prefix}the '${ch}' join runs '${a.space}' into '${b.space}'`);
+        throw refusal(`${prefix}the '${ch}' join runs '${a.space}' into '${b.space}'`);
       }
       const slopes = joinSlopes(
         averageVelocity(a, froms.get(a)!),

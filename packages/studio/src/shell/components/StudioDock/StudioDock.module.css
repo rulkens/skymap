@@ -1,0 +1,38 @@
+/* The dock owns the sizes its parts share: the grid the top bar, outline header and rows align to. */
+.dock {
+  /* Opaque (alpha dropped): marks use it as a knockout and the renderer must not show through. */
+  --dock-bg: color-mix(
+    in srgb,
+    rgb(from var(--surface-card-strong) r g b / 1),
+    var(--color-bg) 75%
+  );
+  --outline-w: 510px;
+  --row-h: var(--space-12);
+  --name-w: 176px;
+  --indent: var(--space-6);
+  --track-pad: var(--space-8);
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  background: var(--dock-bg);
+  border-top: 1px solid var(--border-card);
+  color: var(--color-fg-base);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-md);
+  outline: none;
+  pointer-events: auto;
+}
+.body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--panel-width);
+  min-height: 0;
+}
+.inspector {
+  /* One row the panel fills, so a tall panel scrolls inside it. */
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  min-height: 0;
+  border-left: 1px solid var(--border-divider);
+}

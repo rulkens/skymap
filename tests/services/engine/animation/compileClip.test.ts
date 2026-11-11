@@ -13,6 +13,7 @@ import { validateCompositeExclusivity } from '../../../../src/services/engine/an
 import { evaluateClip } from '../../../../src/services/engine/camera/clips/evaluateClip';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
 import type { CompositeTrack } from '../../../../src/@types/animation/compiledClip/CompositeTrack';
+import type { EffectSpan } from '../../../../src/@types/animation/EffectSpan';
 import {
   tween,
   dollyTo,
@@ -452,5 +453,69 @@ describe('seq overlap', () => {
         }),
       ]),
     ).toThrow(/seq at 0s, join 2/);
+  });
+});
+
+describe('spans', () => {
+  const window = (clip: { spans: readonly EffectSpan[] }, path: readonly number[]) => {
+    const span = clip.spans.find((s) => s.path.join() === path.join());
+    return span && [span.startSec, span.endSec];
+  };
+
+  it('an overlapped seq starts its second step overlap seconds early', () => {
+    const clip = compileClip({
+      timeline: [seq([dollyTo(300, 4), dollyTo(950, 4)], { overlap: 1 })],
+    });
+    expect(window(clip, [0, 0])).toEqual([0, 4]);
+    expect(window(clip, [0, 1])).toEqual([3, 7]);
+    expect(window(clip, [0])).toEqual([0, 7]);
+  });
+
+  it("a cue inside an overlapped seq fires at the next step's start", () => {
+    const clip = compileClip({
+      timeline: [seq([dollyTo(300, 4), show(['flow']), dollyTo(950, 4)], { overlap: 1 })],
+    });
+    expect(window(clip, [0, 1])).toEqual([3, 3]);
+  });
+
+  it('a forked child keeps its own window while the fork awaits nothing', () => {
+    const clip = compileClip({ timeline: [wait(2), fork(dollyTo(300, 5)), hold(1)] });
+    expect(window(clip, [1])).toEqual([2, 2]);
+    expect(window(clip, [1, 0])).toEqual([2, 7]);
+    expect(window(clip, [2])).toEqual([2, 3]);
+  });
+
+  it('all ends on its longest child', () => {
+    const clip = compileClip({
+      timeline: [all([dollyTo(1, 2), spin('yaw', { by: 1, over: 5 })])],
+    });
+    expect(window(clip, [0])).toEqual([0, 5]);
+  });
+
+  it('lists every walked effect once, parent before children', () => {
+    const clip = compileClip({
+      timeline: [seq([dollyTo(300, 4), show(['flow']), dollyTo(950, 4)], { overlap: 1 })],
+    });
+    expect(clip.spans.map((s) => s.path.join())).toEqual(['0', '0,0', '0,1', '0,2']);
+  });
+
+  it('a flyPath span carries its track knotSecs', () => {
+    const clip = compileClip({
+      start: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 10 },
+      timeline: [
+        wait(1),
+        flyPath([atPoint([10, 0, 0], 10), atPoint([20, 0, 0], 10)], {
+          over: 6,
+          linger: 0.5,
+          lingerSec: 1,
+        }),
+      ],
+    });
+    const span = clip.spans.find((s) => s.path.join() === '1')!;
+    expect(span.knotSecs).toHaveLength(2);
+    clip.compositeTracks[0]!.knotSecs!.forEach((k, i) =>
+      expect(span.knotSecs![i]).toBeCloseTo(k, 9),
+    );
+    expect(span.knotSecs!.at(-1)).toBe(span.endSec);
   });
 });

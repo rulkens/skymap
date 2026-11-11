@@ -43,6 +43,7 @@ export type SliderProps = {
   /** Formats the value shown inside the pill. Defaults to fixed decimals derived from `step`. */
   readonly format?: (value: number) => string;
   readonly disabled?: boolean;
+  readonly size?: 'default' | 'compact';
 };
 
 /** Decimal places implied by a step (0.1 → 1, 0.01 → 2, 5 → 0). */
@@ -71,6 +72,7 @@ function Slider({
   onChange,
   format,
   disabled = false,
+  size = 'default',
 }: SliderProps): ReactNode {
   const rectRef = useRef<DOMRect | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -144,7 +146,12 @@ function Slider({
 
   return (
     <div
-      className={cx(styles.root, dragging && styles.dragging, disabled && styles.disabled)}
+      className={cx(
+        styles.root,
+        size === 'compact' && styles.compact,
+        dragging && styles.dragging,
+        disabled && styles.disabled,
+      )}
       role="slider"
       aria-label={label}
       aria-valuemin={min}

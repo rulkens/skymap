@@ -25,6 +25,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Engine & State
 
+- [ ] **Fly-path leg pacing from a near-body start** `needs-design` — `famousFlythrough` from an Earth-close live start spends ~103 of 107 s on its first leg; `buildPathTrack.ts`'s arc metric is dominated by log distance from ~1e-7 Mpc, so the other 11 legs flash past (seen in the clip studio, Q42).
 - [ ] **`appSettingsSlices` drift is untested** `ready` — a Layer's `settings` missing from `src/compositions/appSettingsSlices.ts` passes every test, and `sourceRegistryCoverage.test.ts:4-5` claims `appSettingsSlices.test.ts` closes that hole; add the identity test `appVisibility.test.ts:78` has.
 - [ ] **Asset priority rungs are hand-picked** `ready` — each row picks the "next free rung" by reading comments (`satellitesAssetRows.ts:51`); `AssetWiringRow.d.ts:26-31` says ranks must be distinct, no test checks it.
 - [ ] **Tag the remaining body-id fields** `ready` — `RotationElements.id`, `SampledTrack.id`, `BodySpec` seeds stay plain `string` after #941; tag them at definition. → [details](backlog/2026-10-23-tag-remaining-body-id-fields.md)
@@ -243,6 +244,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## UI & UX
 
+- [ ] **Clip studio engine groundwork (scene tracks, seek, PiP rig, detach, save)** `ready` — after slice 1, each slice its own plan. → [details](backlog/2026-11-10-clip-studio-engine-groundwork.md)
 - [ ] **M31's card tags a measured diameter as fallback** `needs-repro` — "fallback (30 kpc)" beside 40.4 kpc, with an oversized ring. → [details](backlog/2026-11-06-m31-diameter-fallback-tag.md)
 - [ ] **InfoCard live phase + apparent-mag rows** `needs-design` — grow the engine time pub with phase angle + apparent magnitude for the focused body (distance row shipped in #472). → [details](backlog/2026-07-21-infocard-phase-apparent-mag-rows.md)
 - [ ] **"You are here" label continuity** `needs-design` — the label fades out below 2 kpc (its `youAreHere` band, `in: SURVEY_DEEP_ZOOM`, `milkyWay/visibility.ts`); decide whether it hands off toward the Sun/Earth instead of vanishing. → [details](backlog/2026-07-22-you-are-here-label-continuity.md)

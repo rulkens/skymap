@@ -1,0 +1,10 @@
+.root {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  white-space: nowrap;
+}
+.level {
+  min-width: calc(var(--space-12) * 2);
+  font-variant-numeric: tabular-nums;
+}

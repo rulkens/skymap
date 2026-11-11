@@ -57,7 +57,7 @@ export default tseslint.config(
 
   // Product code → root tsconfig.json (discovered via projectService).
   {
-    files: ['src/**/*.{ts,tsx}'],
+    files: ['src/**/*.{ts,tsx}', 'packages/studio/src/**/*.{ts,tsx}'],
     plugins,
     languageOptions: {
       parser: tseslint.parser,

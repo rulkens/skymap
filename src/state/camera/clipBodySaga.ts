@@ -4,9 +4,9 @@
  * and end on `exitTakeover` as tour and exhibit bodies do. Cancellation reaches
  * the seam's `[CANCEL]` hook, which stops the player.
  * A clip leaves the scene alone; what it holds is the sim clock, frozen so
- * nothing drifts under a scripted move and restored in its own `finally`.
+ * nothing drifts under a scripted move (`withFrozenClockSaga`).
  */
-import { call, race, take, getContext, put, select } from 'typed-redux-saga';
+import { call, race, take, getContext, select } from 'typed-redux-saga';
 
 import { exitTakeover } from '../takeover/takeoverActions';
 import { clipFactories } from '../../data/animation/clips/clipRegistry';
@@ -15,28 +15,19 @@ import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { selectOrientation } from '../settings/selectors';
 import { clipFociReady } from '../tour/clipFociReady';
 import { waitUntilSaga } from '../tour/waitUntilSaga';
-import { pause, resume } from '../time/timeSlice';
-import { goLiveNowAction } from '../time/goLiveNowAction';
-import { deriveSimDays } from '../../utils/time/deriveSimDays';
+import { withFrozenClockSaga } from '../time/withFrozenClockSaga';
 import type { ClipId } from '../../@types/animation/ClipId';
-import type { RootState, SagaContext } from '../../store/types';
+import type { SagaContext } from '../../store/types';
 
 export function* clipBodySaga(id: ClipId): Generator {
   const playClipSeam = yield* getContext<SagaContext['playClip']>('playClip');
   const selection = yield* getContext<SagaContext['selection']>('selection');
   const cameraRuntime = yield* getContext<SagaContext['cameraRuntime']>('cameraRuntime');
 
-  // The frozen clip-start instant, derived at the SAME `nowMs` the `pause`
-  // re-anchors from, so it equals the sim time the clock holds for the whole
-  // clip. An instant-dependent clip (`earthFlyout`) opens on the bodies the
-  // frozen frame draws; static clips ignore the argument.
-  const nowMs = performance.now();
-  const priorTime = yield* select((state: RootState) => state.time);
-  const { mode: priorMode, paused: priorPaused } = priorTime;
-  const frozenSimDays = deriveSimDays(priorTime, nowMs);
-  const clip = clipFactories[id](frozenSimDays);
-  yield* put(pause({ nowMs }));
-  try {
+  // An instant-dependent clip (`earthFlyout`) opens on the bodies the frozen
+  // frame draws; static clips ignore the argument.
+  yield* withFrozenClockSaga(function* (frozenSimDays) {
+    const clip = clipFactories[id](frozenSimDays);
     yield* race({
       run: call(function* () {
         // `compileClip` throws on an unresolved id-bearing cue, so wait for
@@ -62,14 +53,5 @@ export function* clipBodySaga(id: ClipId): Generator {
       }),
       exit: take(exitTakeover),
     });
-  } finally {
-    // Give back what the clip interrupted: live re-snaps to the wall clock,
-    // a playing manual clock resumes, and a paused one stays paused — the
-    // clip's own `pause` only re-anchored it, which moves no sim time.
-    if (priorMode === 'live') {
-      yield* put(goLiveNowAction());
-    } else if (!priorPaused) {
-      yield* put(resume({ nowMs: performance.now() }));
-    }
-  }
+  });
 }

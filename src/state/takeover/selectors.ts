@@ -10,6 +10,10 @@ import { EXHIBIT_COPY_LEAD_SEC } from '../../data/exhibits/exhibitCopyLeadSec';
 import type { RootState } from '../../store/types';
 import type { TakeoverSource } from '../../@types/takeover/TakeoverSource';
 
+/** The clip studio is up: its dock owns Escape and the frozen clock instant (Q7). */
+export const selectStudioActive = (state: RootState): boolean =>
+  selectTakeoverSource(state)?.kind === 'studio';
+
 export const selectTakeoverSource = (state: RootState): TakeoverSource | null =>
   state[takeoverRoute].active;
 

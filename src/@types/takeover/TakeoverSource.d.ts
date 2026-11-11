@@ -13,4 +13,5 @@ import type { Transition } from '../navigation/Transition';
 export type TakeoverSource =
   | { kind: 'tour'; id: TourId }
   | { kind: 'exhibit'; id: ExhibitId; entry: Transition }
-  | { kind: 'clip'; id: ClipId };
+  | { kind: 'clip'; id: ClipId }
+  | { kind: 'studio'; id: ClipId };

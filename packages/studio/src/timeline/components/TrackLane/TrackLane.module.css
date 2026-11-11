@@ -1,0 +1,25 @@
+.root {
+  position: relative;
+  overflow: hidden;
+  margin-right: var(--track-pad);
+  cursor: pointer;
+}
+.band {
+  position: absolute;
+  top: 0;
+  bottom: -1px;
+  border-inline: 1px solid color-mix(in srgb, var(--color-fg-ghost) 60%, transparent);
+  background: color-mix(in srgb, var(--color-fg-ghost) 7%, transparent);
+  pointer-events: none;
+}
+.all {
+  border-left: 3px double color-mix(in srgb, var(--color-fg-ghost) 70%, transparent);
+}
+.fork {
+  border-inline-style: dashed;
+}
+/* The selected block's window, through every step inside it. */
+.bandSelected {
+  border-color: color-mix(in srgb, var(--color-accent) 70%, transparent);
+  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+}

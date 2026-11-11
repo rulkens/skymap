@@ -71,6 +71,15 @@ export const DOCS_URL_PARAMS: readonly DocsUrlParam[] = [
     skipsWelcome: true,
   },
   {
+    name: 'studio',
+    part: 'hash',
+    value: 'The name of one camera flight',
+    example: 'studio=cosmicFlows',
+    does: 'Opens that flight in the clip studio: its steps on a timeline you can edit, with the clock paused while it is open.',
+    unknown: TAKEOVER_UNKNOWN,
+    skipsWelcome: true,
+  },
+  {
     name: 'pose',
     part: 'hash',
     value: 'A letter and a list of numbers, with commas between them',

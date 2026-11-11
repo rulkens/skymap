@@ -33,6 +33,11 @@
   background: var(--surface-control-active);
 }
 
+.root[aria-pressed='true'] {
+  background: var(--surface-control-active);
+  color: var(--color-fg);
+}
+
 .root:disabled {
   opacity: 0.45;
   cursor: not-allowed;
@@ -72,4 +77,30 @@
   color: var(--color-fg);
   background: none;
   border-color: transparent;
+}
+
+/* ── quiet — no chrome until hovered ────────────────────────────────── */
+.quiet {
+  border-color: transparent;
+  background: transparent;
+  color: var(--color-fg-base);
+}
+
+@media (hover: hover) {
+  .quiet:hover:not(:disabled) {
+    border-color: transparent;
+    background: var(--surface-control);
+  }
+}
+
+/* ── compact — a 24 px target for icon buttons in dense bars ────────── */
+.compact {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  min-width: var(--space-12);
+  min-height: var(--space-12);
+  padding: 0 var(--space-3);
+  letter-spacing: 0;
 }

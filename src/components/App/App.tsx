@@ -31,6 +31,7 @@ import { useAppSelector } from '../../store/hooks';
 import TourOverlayContainer from '../containers/TourOverlayContainer';
 import TourBeatRailContainer from '../containers/TourBeatRailContainer';
 import ExhibitOverlayContainer from '../containers/ExhibitOverlayContainer';
+import StudioHost from '../StudioHost/StudioHost';
 import { isCinemaMode } from '../../utils/url/isCinemaMode';
 import { selectTourActive } from '../../state/tour/selectors';
 import { selectTakeoverSource } from '../../state/takeover/selectors';
@@ -51,7 +52,7 @@ export function App(): React.ReactElement {
   const uiStackHidden = useAppSelector(selectUiStackHidden);
   const debugPanelOpen = useAppSelector(selectDebugPanelOpen);
 
-  // A running tour or exhibit hides the HUD stack (derived, not a `setUiHidden`
+  // A running tour, exhibit or the studio hides the HUD stack (derived, not a `setUiHidden`
   // write). A registry clip keeps the HUD: the debug panel's Stop must stay in reach.
   const tourActive = useAppSelector(selectTourActive);
 
@@ -111,7 +112,8 @@ export function App(): React.ReactElement {
       </div>
       {tourOverlay}
       {exhibitOverlay}
-      {/* Outside the HUD stack, which a tour or exhibit hides: `d` summons it explicitly.
+      <StudioHost />
+      {/* Outside the HUD stack, which a tour, exhibit or the studio hides: `d` summons it explicitly.
           `handleRef.current` set means the engine finished constructing: no subscribe race. */}
       {debugPanelOpen && handleRef.current && (
         <Suspense>

@@ -1,0 +1,16 @@
+.root {
+  flex: 1;
+  min-width: 0;
+  min-height: calc(var(--space-12) - var(--space-2));
+  padding: 0 var(--space-4);
+  border: 1px var(--field-border-style, solid) var(--border-control);
+  border-radius: var(--radius-sm);
+  background: var(--field-bg, var(--surface-control));
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.root:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}

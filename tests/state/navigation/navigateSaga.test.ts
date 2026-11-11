@@ -27,6 +27,7 @@ import { selectTakeoverSource } from '../../../src/state/takeover/selectors';
 import { openExhibit } from '../../../src/state/exhibits/exhibitActions';
 import { startTour } from '../../../src/state/tour/tourActions';
 import { startClip } from '../../../src/state/camera/clipActions';
+import { openStudio } from '../../../src/state/studio/studioActions';
 import { exitTakeover } from '../../../src/state/takeover/takeoverActions';
 import {
   clipStarted,
@@ -57,6 +58,8 @@ import { worldArmOf } from '../../fixtures/worldArmOf';
 import type { StructureRowFixture } from '../../support/selectionResolverOver';
 import type { LinkIntent } from '../../../src/@types/url/LinkIntent';
 import type { Transition } from '../../../src/@types/navigation/Transition';
+import type { EngineHomeConfig } from '../../../src/@types/engine/EngineHomeConfig';
+import { EARTH_HOME } from '../../../src/data/selection/earthHome';
 import { bodyPickCodes, milkyWayPickCode, structureRowRuntime } from '../../support/layerPickCodes';
 import { installAppSelectionKinds } from '../../support/installAppSelectionKinds';
 
@@ -76,7 +79,7 @@ const CLIP_STARTED: Parameters<typeof clipStarted>[0] = {
   frame: 'equatorial',
 };
 
-function build() {
+function build(home: EngineHomeConfig = { focus: null, seedSelection: false }) {
   const recorded: Action[] = [];
   const recorder: Middleware = () => (next) => (action) => {
     recorded.push(action as Action);
@@ -103,7 +106,7 @@ function build() {
       aspect: 16 / 9,
       upBasisQuat: [0, 0, 0, 1],
     }),
-    home: { focus: null, seedSelection: false },
+    home,
     playClip,
   });
   for (const saga of [
@@ -244,6 +247,7 @@ describe('navigateSaga', () => {
     ['exhibit', openExhibit.match],
     ['tour', startTour.match],
     ['clip', startClip.match],
+    ['studio', openStudio.match],
   ] as const)('an unknown %s id fails without dispatching its start', async (kind, started) => {
     const h = build();
     const outcome = await h.navigate({ view: { kind, id: 'nope' } }, 'cut');
@@ -251,6 +255,22 @@ describe('navigateSaga', () => {
     expect(outcome).toEqual({ ok: false, reason: 'unknown-id' });
     expect(h.count(started)).toBe(0);
     expect(selectTakeoverSource(h.store.getState())).toBeNull();
+  });
+
+  it('navigate #studio=cosmicFlows dispatches openStudio', async () => {
+    const h = build();
+    const outcome = await h.navigate({ view: { kind: 'studio', id: 'cosmicFlows' } }, 'fly');
+
+    expect(outcome).toEqual({ ok: true });
+    expect(h.recorded.filter(openStudio.match).map((a) => a.payload)).toEqual(['cosmicFlows']);
+  });
+
+  it('the cut branch of #studio= leaves no selection under the dock', async () => {
+    const h = build(EARTH_HOME);
+    await h.navigate({ view: { kind: 'studio', id: 'cosmicFlows' } }, 'cut');
+    await flush();
+
+    expect(selectSelectedRef(h.store.getState())).toBeNull();
   });
 
   it.each(PLAYS)('navigate %s reveals after the first clipStarted', async (kind, id, started) => {

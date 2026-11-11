@@ -8,6 +8,7 @@
 import type { SeqSteps } from '../../../@types/animation/SeqSteps';
 import type { SceneCue } from '../../../@types/animation/compiledClip/SceneCue';
 import { cueOrderKeys } from './cueOrderKeys';
+import { CompileFault } from './CompileFault';
 
 export function validateSeqCueOrder(seqs: readonly SeqSteps[], cues: readonly SceneCue[]): void {
   for (const { startSec, steps } of seqs) {
@@ -18,8 +19,10 @@ export function validateSeqCueOrder(seqs: readonly SeqSteps[], cues: readonly Sc
         const keys = cueOrderKeys(a);
         for (const b of later) {
           if (b.atSec >= a.atSec || !cueOrderKeys(b).some((key) => keys.includes(key))) continue;
-          throw new Error(
+          throw new CompileFault(
             `seq at ${startSec}s, join ${k + 1}: a '${b.effect.kind}' written after a '${a.effect.kind}' fires earlier (${b.atSec}s < ${a.atSec}s) and sets the same thing; the tour rebuilds scenes in written order`,
+            'cueOrder',
+            [b],
           );
         }
       }
