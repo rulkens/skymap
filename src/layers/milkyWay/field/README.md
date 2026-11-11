@@ -47,7 +47,9 @@ app and the tool share: per frame `setTuning`, `ensureFresh`, `plan`, then
 `encode` with that plan. It owns the renderer, the ISM-map readbacks behind
 `youngStars.invMeanNorm`, and the per-frame lane derivation
 (`host/utils/deriveFieldFrameLanes.ts`). Until its first `setTuning` it plans
-and encodes nothing. Only the tool (`tools/galaxy-renderer/`) drives it today.
+and encodes nothing. The app draws it behind the `renderer` debug setting
+(the milkyWay Layer's `computes` and `passes`); the tool and the app share
+`host/`.
 
 ## `pipelines/` — the render pipelines
 

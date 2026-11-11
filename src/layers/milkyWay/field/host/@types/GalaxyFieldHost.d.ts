@@ -13,7 +13,7 @@ import type { GalaxyFieldRenderTargets } from '../../@types/GalaxyFieldRenderTar
 export type GalaxyFieldHost = {
   /** Step the ISM chain; a rebuild requests the readback that sets invMeanNorm. Once per frame, never per view. */
   ensureFresh(): void;
-  /** planFieldFrame over the renderer's packed segments. Called once per frame, by the planner. */
+  /** planFieldFrame over the renderer's packed segments and the host's `targetIds`. Called once per frame, by the planner. */
   plan(): FieldFramePlan;
   encode(
     encoder: GPUCommandEncoder,

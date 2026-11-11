@@ -7,7 +7,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { deriveMilkyWayFade } from '../../../../../tools/galaxy-renderer/src/engine/frame/deriveMilkyWayFade';
-import { MILKY_WAY_MODEL_SCALE } from '../../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
+import { MILKY_WAY_MODEL_SCALE } from '../../../../../src/data/milkyWay/milkyWayModelScale';
 import { MILKY_WAY_CENTER_WORLD } from '../../../../../src/data/milkyWay/galacticCenter';
 
 const FOV = (45 * Math.PI) / 180;

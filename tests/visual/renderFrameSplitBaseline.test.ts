@@ -275,11 +275,11 @@ describe('renderFrame visual baseline', () => {
       ...makeLoggingRenderer(records, 'milky-way-aggregate', 'drawStars'),
       ...makeLoggingRenderer(records, 'milky-way', 'drawDust'),
     };
-    const aggregateUpsample = makeLoggingRenderer(records, 'milky-way-upsample');
+    const additiveUpsample = makeLoggingRenderer(records, 'milky-way-upsample');
     const milkyWayRuntime = {
       cloud: { buffers: () => ({ starBuf: {}, starCount: 1, dustBuf: null, dustCount: 0 }) },
       cloudRenderer: milkyWayCloudRenderer,
-      aggregateUpsample,
+      additiveUpsample,
     } as unknown as MilkyWayRuntime;
     const proceduralDiskRenderer = makeLoggingRenderer(records, 'procedural-disks');
     const texturedDiskRenderer = makeLoggingRenderer(records, 'textured-disks');
@@ -432,7 +432,7 @@ describe('renderFrame visual baseline', () => {
           bloom: { enabled: false, strength: 1, threshold: 1 },
           bias: { mode: settings.biasMode, absMagLimit: settings.absMagLimit },
           thumbnails: { enabled: settings.galaxyTexturesEnabled },
-          milkyWay: { enabled: settings.milkyWayEnabled },
+          milkyWay: { enabled: settings.milkyWayEnabled, renderer: 'v1' },
           cosmicWebFilaments: {
             enabled: settings.filamentsEnabled,
             intensity: settings.filamentIntensity,

@@ -2,7 +2,7 @@
  * ZoneOfAvoidanceTuning — the Zone-of-Avoidance guide band's per-frame LOOK
  * knobs, kept apart from `ZoneOfAvoidanceSettings` (adds `enabled`) so a
  * knob patch can never flip the layer's visibility by accident — the same
- * split `MilkyWayTuning` makes.
+ * split `MilkyWayCloudTuning` makes.
  *
  * Values here are visual-pass placeholders, tuned live via the DebugPanel
  * tuning section; the shape and the direction of each knob are the

@@ -9,4 +9,5 @@ export type Motion = {
   readonly ratio: number; // 1 for orbit / pan
   readonly at: UnitPoint | null; // null for a pinch
   readonly held: boolean; // false for a wheel notch with no gesture open on its source
+  readonly eventMs: number; // the device event's `t`: its source's clock, never the frame's
 };

@@ -37,7 +37,9 @@ describe('reseedMilkyWayStarCountSaga', () => {
       store.dispatch(setTier(tier));
       await flush();
 
-      expect(store.getState().settings.milkyWay.starCount).toBe(MILKY_WAY_STARS_PER_TIER[tier]);
+      expect(store.getState().settings.milkyWay.cloud.starCount).toBe(
+        MILKY_WAY_STARS_PER_TIER[tier],
+      );
     },
   );
 });

@@ -29,7 +29,6 @@ const CTX: CameraArmCtx = {
   frustum: symmetricFrustum(1, 1920 / 1080),
   fovYRad: 1,
   tuning: TUNING,
-  nowMs: 0,
 };
 
 // Inside Earth's tilt band with an off-target roll, so the zoom's roll ride has work to do.
@@ -51,7 +50,7 @@ describe('absoluteCameraArm', () => {
       null,
       EMPTY_TILT_MEMORY,
       FRAMED,
-      { kind: 'zoom', factor: Math.exp(z), duringGesture: false, cursorPx: null },
+      { kind: 'zoom', factor: Math.exp(z), duringGesture: false, cursorPx: null, fresh: false },
       CTX,
     ).pose;
     const nudged = absoluteCameraArm.nudge(EMPTY_TILT_MEMORY, FRAMED, { zoom: z }, CTX).pose;
