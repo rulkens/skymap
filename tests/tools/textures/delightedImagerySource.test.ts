@@ -42,54 +42,31 @@ function fixedRaster(bytes: readonly number[]): SurfaceImagerySource {
   };
 }
 
-/** A globally uniform north-south slope — height rises by `gradientMPerDeg`
- *  per degree of latitude. Constant in longitude, so its normal (and the
- *  relief-shading ratio it produces) is the SAME everywhere: one scalar tilt
- *  to compare a "faces the sun" case against a "faces away" one. */
-function tiltedHeightSource(gradientMPerDeg: number): HeightSource {
-  const attribution = 'synthetic tilted plane (test only)';
+/** A globally uniform slope: height rises `northMPerDeg` per degree of latitude
+ *  and `eastMPerDeg` per degree of longitude. One tilt everywhere (but the
+ *  antimeridian), to compare a "faces the sun" case against a "faces away" one. */
+function planeHeightSource(northMPerDeg: number, eastMPerDeg: number): HeightSource {
+  const attribution = 'synthetic plane (test only)';
+  const maxAbs = Math.abs(northMPerDeg) * 90 + Math.abs(eastMPerDeg) * 180;
   return {
-    id: 'tilted-plane',
+    id: 'plane',
     attribution,
     maxLevel: Number.POSITIVE_INFINITY,
     coverage: [{ west: -180, east: 180, south: -90, north: 90 }],
-    provenance: { sourceId: 'tilted-plane', attribution, vintage: 'n/a' },
-    async readGrid(z, _i0, j0, nx, ny) {
+    provenance: { sourceId: 'plane', attribution, vintage: 'n/a' },
+    async readGrid(z, i0, j0, nx, ny) {
       const step = heightLatticeStepDeg(z);
       const out = new Float32Array(nx * ny);
       for (let j = 0; j < ny; j++) {
         const lat = 90 - (j0 + j) * step;
-        out.fill(gradientMPerDeg * lat, j * nx, (j + 1) * nx);
+        for (let i = 0; i < nx; i++) {
+          out[j * nx + i] = northMPerDeg * lat + eastMPerDeg * (-180 + (i0 + i) * step);
+        }
       }
       return out;
     },
     async boundsInBox() {
-      return [-Math.abs(gradientMPerDeg) * 90, Math.abs(gradientMPerDeg) * 90];
-    },
-  };
-}
-
-/** Height rising eastward by `gradientMPerDeg` per degree of longitude: a
- *  west-facing slope everywhere but the antimeridian, the east-west twin of
- *  `tiltedHeightSource`. */
-function eastRisingHeightSource(gradientMPerDeg: number): HeightSource {
-  const attribution = 'synthetic east-rising plane (test only)';
-  return {
-    id: 'east-rising-plane',
-    attribution,
-    maxLevel: Number.POSITIVE_INFINITY,
-    coverage: [{ west: -180, east: 180, south: -90, north: 90 }],
-    provenance: { sourceId: 'east-rising-plane', attribution, vintage: 'n/a' },
-    async readGrid(z, i0, _j0, nx, ny) {
-      const step = heightLatticeStepDeg(z);
-      const out = new Float32Array(nx * ny);
-      for (let j = 0; j < ny; j++) {
-        for (let i = 0; i < nx; i++) out[j * nx + i] = gradientMPerDeg * (-180 + (i0 + i) * step);
-      }
-      return out;
-    },
-    async boundsInBox() {
-      return [-Math.abs(gradientMPerDeg) * 180, Math.abs(gradientMPerDeg) * 180];
+      return [-maxAbs, maxAbs];
     },
   };
 }
@@ -131,14 +108,14 @@ describe('delightedImagerySource', () => {
 
     const awayFromSun = delightedImagerySource(
       fixedRaster(GREY),
-      tiltedHeightSource(GRADIENT_M_PER_DEG),
+      planeHeightSource(GRADIENT_M_PER_DEG, 0),
       DELIGHT,
       IDENTITY_GRADE,
       MARS_IAU_SPHERE_RADIUS_M,
     );
     const facingSun = delightedImagerySource(
       fixedRaster(GREY),
-      tiltedHeightSource(-GRADIENT_M_PER_DEG),
+      planeHeightSource(-GRADIENT_M_PER_DEG, 0),
       DELIGHT,
       IDENTITY_GRADE,
       MARS_IAU_SPHERE_RADIUS_M,
@@ -169,7 +146,7 @@ describe('delightedImagerySource', () => {
     const GREY = [128, 128, 128, 255];
     const source = delightedImagerySource(
       fixedRaster(GREY),
-      eastRisingHeightSource(2000),
+      planeHeightSource(0, 2000),
       DELIGHT,
       IDENTITY_GRADE,
       MARS_IAU_SPHERE_RADIUS_M,

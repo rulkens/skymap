@@ -11,8 +11,5 @@ export const MOON_DATUM_OFFSET_M = MOON_SOURCE_SPHERE_RADIUS_M - MOON_DATUM_RADI
 // gdalinfo -mm on the LOLA LDEM 118 m COG, 2026-11-11.
 export const MOON_SPHERE_RELIEF_M = [-9_128.5, 10_781.5] as const;
 
-// Starting values (Mars's); tuned at the eye check against the base globe.
-const MOON_ROUGHNESS = 0.9;
-const MOON_F0 = 0.03;
-
-export const MOON_SURFACE_SHADING = orenNayarMatchedShading(MOON_ROUGHNESS, MOON_F0);
+// Mars's roughness and f0; the 2026-11-11 eye check found no reason to differ.
+export const MOON_SURFACE_SHADING = orenNayarMatchedShading(0.9, 0.03);

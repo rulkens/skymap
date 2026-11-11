@@ -1,14 +1,14 @@
 /**
  * delightedImagerySource — wrap a photographic `SurfaceImagerySource` (a
  * mosaic with its own baked-in sun) so it reads flat under the renderer's
- * real-time lighting, then apply a `ColourGrade`. Maths and constants are the
- * albedo bench's, landed verbatim (`AlbedoDelight`'s doc comment); a later PR
- * replaces this with a shared implementation. Identity fields are `source`'s.
+ * real-time lighting, then apply a `ColourGrade`. Maths and constants come from
+ * the albedo bench (`AlbedoDelight`'s doc comment), plus a per-cell photo Sun
+ * (`PhotoSun`). Identity fields are `source`'s.
  *
  * `S` (relief-shading removal) and `B` (low-pass of the delit luminance) are
  * LOW-frequency fields, built ONCE on a whole-globe coarse grid and sampled
  * bilinearly per output pixel — building them per tile would decode the
- * mosaic and MOLA thousands of times over.
+ * mosaic and the DEM thousands of times over.
  */
 
 import type { LonLatBounds } from '../../src/layers/body/surfaceTiles/format/@types/LonLatBounds';
@@ -20,7 +20,7 @@ import type { HeightSource } from './@types/HeightSource';
 import type { PhotoSun } from './@types/PhotoSun';
 import type { SurfaceImagerySource } from './@types/SurfaceImagerySource';
 
-/** The coarse field's level: fine enough to resolve MOLA's own relief, coarse
+/** The coarse field's level: fine enough to resolve the DEM's own relief, coarse
  *  enough that a whole-globe field is a few million cells, not billions. */
 const COARSE_LEVEL = 5;
 

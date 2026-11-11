@@ -1447,7 +1447,7 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'gitignored',
     description:
-      'LROC WAC global morphologic mosaic, JPEG COG of the USGS 100 m mosaic: 109164x54582 grey Byte, NoData 0, equirectangular on the 1,737,400 m sphere, edge-registered, shot at 55-75 deg incidence with the Sun from the west.',
+      'LROC WAC global morphologic mosaic, JPEG COG of the USGS 100 m mosaic: 109164x54582 grey Byte, NoData 0, equirectangular on the 1,737,400 m sphere, edge-registered, shot at 55-75 deg incidence, Sun from the east west of lon -90 and from the west elsewhere.',
     upstream:
       'https://planetarymaps.usgs.gov/mosaic/Lunar_LRO_LROC-WAC_Mosaic_global_100m_June2013.tif',
     readme: 'lroc.readme',
