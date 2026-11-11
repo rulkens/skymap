@@ -22,6 +22,9 @@ camera. A debug panel tunes the colour of each group.
 - A DebugPanel section tuning each group's colour and an ambient floor live, with reset and copy-as-defaults
   (ambient added at the owner's request after the first build).
 - The selected satellite's orbit ring uses its group colour.
+- No fade after the data's fetch time (owner, after tuning against a faded layer): positions only drift, so the card
+  marks a fit over 14 days old with an age chip. Before the fetch the Layer still fades, since unlaunched objects
+  would show. The card says "Brightness: Modelled" as a row, not a sentence.
 
 **Non-goals**
 
