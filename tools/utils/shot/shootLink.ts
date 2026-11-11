@@ -2,10 +2,13 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import type { Browser } from '@playwright/test';
 import { bootHookedPage } from '../browser/bootHookedPage';
+import { gateViteHmr } from '../browser/gateViteHmr';
+import { wasReloaded } from '../browser/wasReloaded';
 import { collectPageErrors } from '../browser/collectPageErrors';
 import { dispatchActions } from '../browser/dispatchActions';
 import { warnIfWrongCheckout } from '../browser/warnIfWrongCheckout';
 import { readCanvas } from './readCanvas';
+import { withTimeout } from '../async/withTimeout';
 import { labelDeclutterActions } from '../capture/labelDeclutterActions';
 import { SHOT_JPEG_QUALITY } from './SHOT_JPEG_QUALITY';
 import type { SkymapWindow } from '../../../src/@types/automation/SkymapWindow';
@@ -14,13 +17,16 @@ import type { ShotOptions } from '../../shot/@types/ShotOptions';
 import type { ShotOutcome } from '../../shot/@types/ShotOutcome';
 
 const TIMED_OUT = Symbol('timedOut');
+/** Bounds the browser calls outside the settle race; Playwright never times them out. */
+const BROWSER_CALL_TIMEOUT_MS = 20_000;
 
 /**
  * shootLink — boot one deep link in its own context and screenshot whatever is
  * on screen. A subject that never resolves or a boot that throws still yields a
  * image: a picture of the failure is more useful to a reader than none. The boot
  * catches its own errors, so a rejection landing after the timer won is never
- * unhandled.
+ * unhandled. Every other browser call is bounded too: a wedged GPU process left
+ * them pending, and the run hung for hours.
  */
 export async function shootLink(
   browser: Browser,
@@ -35,13 +41,18 @@ export async function shootLink(
     warnCheckout: boolean;
   },
 ): Promise<ShotOutcome> {
-  const context = await browser.newContext({
-    viewport: { width: opts.width, height: opts.height },
-    deviceScaleFactor: opts.dpr,
-  });
+  const context = await withTimeout(
+    browser.newContext({
+      viewport: { width: opts.width, height: opts.height },
+      deviceScaleFactor: opts.dpr,
+    }),
+    BROWSER_CALL_TIMEOUT_MS,
+    'opening a browser context',
+  );
   try {
-    const page = await context.newPage();
+    const page = await withTimeout(context.newPage(), BROWSER_CALL_TIMEOUT_MS, 'opening a page');
     const pageErrors = collectPageErrors(page);
+    const closeHmr = await gateViteHmr(page);
     const params = new URLSearchParams(link.search);
     if (opts.hideUi && !params.has('cinema')) params.set('cinema', '');
     const search = params.toString().replace(/=(&|$)/g, '$1');
@@ -51,6 +62,7 @@ export async function shootLink(
     const boot = (async (): Promise<string | null> => {
       try {
         await bootHookedPage(page, url);
+        closeHmr();
         booted = true;
         if (opts.warnCheckout) await warnIfWrongCheckout(page);
         if (opts.hideLabels) {
@@ -58,6 +70,8 @@ export async function shootLink(
         }
         // Waits out label fades too, which a single frame after the dispatch would still show.
         await page.evaluate(() => (window as unknown as SkymapWindow).__skymap!.settled());
+        // A reload boots from the rewritten hash, so it would be another view.
+        if (await wasReloaded(page)) throw new Error('the page reloaded after it booted');
         return null;
       } catch (err) {
         return (err instanceof Error ? err.message : String(err)).split('\n')[0] ?? '';
@@ -71,13 +85,24 @@ export async function shootLink(
     clearTimeout(timer);
     const timedOut = raced === TIMED_OUT;
     let error = timedOut ? null : raced;
+    const unsettled = !timedOut
+      ? []
+      : await withTimeout(
+          page.evaluate(() => (window as unknown as SkymapWindow).__skymap?.unsettled() ?? []),
+          BROWSER_CALL_TIMEOUT_MS,
+          'asking what is unsettled',
+        ).catch(() => []);
 
     let path: string | null = null;
     try {
       let image: Buffer | undefined;
       // The canvas alone, so hidden UI leaves no chrome; only a booted page has the hook.
       if (opts.hideUi && !timedOut && error === null) {
-        image = await readCanvas(page, opts.format).catch(() => undefined);
+        image = await withTimeout(
+          readCanvas(page, opts.format),
+          BROWSER_CALL_TIMEOUT_MS,
+          'reading the canvas',
+        ).catch(() => undefined);
       }
       image ??= await page.screenshot({
         type: opts.format,
@@ -91,8 +116,8 @@ export async function shootLink(
     } catch (err) {
       error ??= err instanceof Error ? err.message : String(err);
     }
-    return { path, booted, timedOut, error, pageErrors };
+    return { path, booted, timedOut, unsettled, error, pageErrors };
   } finally {
-    await context.close();
+    await withTimeout(context.close(), BROWSER_CALL_TIMEOUT_MS, 'closing the page').catch(() => {});
   }
 }

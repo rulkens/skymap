@@ -21,26 +21,24 @@ import {
 import { famousDisplayName } from '../../../../services/engine/helpers/famousDisplayName';
 import { famousWikipediaTitle } from '../../../../utils/format/famousWikipediaTitle';
 import { wikipediaUrl } from '../../../../utils/format/wikipediaUrl';
-import {
-  cartesianToRaDecZ,
-  formatRaSexagesimal,
-  formatDecSexagesimal,
-  iauName,
-  iauRaDecSuffix,
-  lookbackTimeGyr,
-  hubbleVelocityKmS,
-  absoluteMagnitude,
-  earthEraForLookback,
-  sdssExplorerUrl,
-  sdssThumbnailUrl,
-  dssThumbnailUrl,
-  sdssNavigateUrl,
-  aladinLiteUrl,
-  galaxyThumbnailFovArcmin,
-  nedByNameUrl,
-  nedNearPositionUrl,
-  PC_TO_LY,
-} from '../../../../utils/math';
+import { cartesianToRaDecZ } from '../../../../utils/math/cartesianToRaDecZ';
+import { formatRaSexagesimal } from '../../../../utils/math/formatRaSexagesimal';
+import { formatDecSexagesimal } from '../../../../utils/math/formatDecSexagesimal';
+import { iauName } from '../../../../utils/math/iauName';
+import { iauRaDecSuffix } from '../../../../utils/math/iauRaDecSuffix';
+import { lookbackTimeGyr } from '../../../../utils/math/lookbackTimeGyr';
+import { hubbleVelocityKmS } from '../../../../utils/math/hubbleVelocityKmS';
+import { absoluteMagnitude } from '../../../../utils/math/absoluteMagnitude';
+import { earthEraForLookback } from '../../../../utils/math/earthEraForLookback';
+import { sdssExplorerUrl } from '../../../../utils/math/sdssExplorerUrl';
+import { sdssThumbnailUrl } from '../../../../utils/math/sdssThumbnailUrl';
+import { dssThumbnailUrl } from '../../../../utils/math/dssThumbnailUrl';
+import { sdssNavigateUrl } from '../../../../utils/math/sdssNavigateUrl';
+import { aladinLiteUrl } from '../../../../utils/math/aladinLiteUrl';
+import { galaxyThumbnailFovArcmin } from '../../../../utils/math/galaxyThumbnailFovArcmin';
+import { nedByNameUrl } from '../../../../utils/math/nedByNameUrl';
+import { nedNearPositionUrl } from '../../../../utils/math/nedNearPositionUrl';
+import { PC_TO_LY } from '../../../../utils/math/constants';
 import { galaxyType } from '../utils/galaxyType';
 import type { GalaxyInfo } from '../@types/GalaxyInfo';
 import type { GalaxyRow } from '../@types/GalaxyRow';

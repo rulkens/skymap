@@ -3,7 +3,7 @@
  * middleware, exercising the start-request kinds the watcher handles.
  *
  * `watchTakeoverSaga` is the `startTour`/`openExhibit`/`startClip` watcher: for a tour it
- * resolves the dispatched `TourId` against `tourRegistry` and runs `tourBodySaga`
+ * resolves the dispatched `TourId` against `APP_TOUR_REGISTRY` and runs `tourBodySaga`
  * under `runTakeoverSaga`. The registry is MOCKED here with two controlled tours —
  * a `demo` tour whose single narration beat auto-advances, and a `webShowcase`
  * tour whose beat dwells effectively forever — so each test drives timing
@@ -51,10 +51,10 @@ import { configureStore } from '@reduxjs/toolkit';
 // mutate no settings; restore tests dispatch a volumes flip mid-run (standing
 // in for an in-clip scene cue) so the wind-back is observable. Inlined in the
 // factory (vi.mock is hoisted above the imports).
-vi.mock('../../../src/data/animation/tours/tourRegistry', async () => {
+vi.mock('../../../src/compositions/appTours', async () => {
   const { dwellDrift } = await import('../../../src/state/tour/dwellDrift');
   return {
-    tourRegistry: {
+    APP_TOUR_REGISTRY: {
       demo: {
         id: 'demo',
         label: 'Demo',

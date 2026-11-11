@@ -27,7 +27,7 @@
  *
  * `startClip`'s guard cannot rely SOLELY on `runTour`'s store-state check.
  * `camera.clip` is only written by `clipStarted`, which `playClip` and the sky
- * exit (`replayInput`) dispatch. `playClip` dispatches it only
+ * exit (`watchZoomLimitSaga`) dispatch. `playClip` dispatches it only
  * AFTER `clipBodySaga`'s `waitUntilSaga(clipFociReady && cameraRuntime)` clears —
  * an arbitrarily long window (catalog/structure loads) during which
  * `selectClipActive` reads false. A second `startClip` in that window would

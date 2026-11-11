@@ -28,7 +28,7 @@ import starsCode from '../../../../services/gpu/shaders/milkyWay/sprites/stars.w
 import dustCode from '../../../../services/gpu/shaders/milkyWay/sprites/dust.wesl?static';
 import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
 import { GEN_RECORD_BYTES } from '../../../../services/engine/galaxyGenerator/v1/genRecordBytes';
-import { MILKY_WAY_MODEL_SCALE } from '../../../../services/engine/galaxyGenerator/v1/milkyWayCalibration';
+import { MILKY_WAY_MODEL_SCALE } from '../../../../data/milkyWay/milkyWayModelScale';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { MilkyWayCloudRenderer } from '../@types/MilkyWayCloudRenderer';
 import type { MilkyWayCloudDrawArgs } from '../@types/MilkyWayCloudDrawArgs';
@@ -190,7 +190,7 @@ export function createMilkyWayCloudRenderer(init: Init): MilkyWayCloudRenderer {
     f32[41] = 0;
     f32[42] = 0;
     f32[43] = 0;
-    // The look knobs are the caller's live `settings.milkyWay` values, so a
+    // The look knobs are the caller's live `settings.milkyWay.cloud` values, so a
     // DebugPanel slider drag lands on the very next frame. Only the model
     // scale is fixed — it derives from the generation preset's radius.
     // params0 = (fadeAlpha, exposure, modelScale, glowSoftness).

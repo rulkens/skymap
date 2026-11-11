@@ -3,7 +3,9 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import { initialState } from './initialState';
-import type { MilkyWayTuning } from '../../../../@types/settings/MilkyWayTuning';
+import type { MilkyWayCloudTuning } from '../../../../@types/settings/MilkyWayCloudTuning';
+import type { MilkyWayFieldTuning } from '../../@types/MilkyWayFieldTuning';
+import type { MilkyWayRenderer } from '../../@types/MilkyWayRenderer';
 
 export const milkyWaySlice = createSlice({
   name: 'settings/milkyWay',
@@ -16,15 +18,25 @@ export const milkyWaySlice = createSlice({
     setMilkyWayLabelEnabled: (milkyWay, action: PayloadAction<boolean>) => {
       milkyWay.labelEnabled = action.payload;
     },
-    // Star-cloud look knobs, patched leaf-by-leaf from the DebugPanel sliders.
-    // The payload is `MilkyWayTuning`, not `MilkyWaySettings`, so the two
-    // visibility axes keep their own single writers above and can never be
-    // flipped by a knob patch — the same split `setFlow` makes.
-    setMilkyWayTuning: (milkyWay, action: PayloadAction<Partial<MilkyWayTuning>>) => {
-      Object.assign(milkyWay, action.payload);
+    setMilkyWayRenderer: (milkyWay, action: PayloadAction<MilkyWayRenderer>) => {
+      milkyWay.renderer = action.payload;
+    },
+    // Each knob group has its own writer, so a slider patch can never reach the
+    // other group or flip a visibility axis — the same split `setFlow` makes.
+    setMilkyWayCloudTuning: (milkyWay, action: PayloadAction<Partial<MilkyWayCloudTuning>>) => {
+      Object.assign(milkyWay.cloud, action.payload);
+    },
+    // A shallow merge: a `divisors` patch replaces the whole record.
+    setMilkyWayFieldTuning: (milkyWay, action: PayloadAction<Partial<MilkyWayFieldTuning>>) => {
+      Object.assign(milkyWay.field, action.payload);
     },
   },
 });
 
-export const { setMilkyWayEnabled, setMilkyWayLabelEnabled, setMilkyWayTuning } =
-  milkyWaySlice.actions;
+export const {
+  setMilkyWayEnabled,
+  setMilkyWayLabelEnabled,
+  setMilkyWayRenderer,
+  setMilkyWayCloudTuning,
+  setMilkyWayFieldTuning,
+} = milkyWaySlice.actions;

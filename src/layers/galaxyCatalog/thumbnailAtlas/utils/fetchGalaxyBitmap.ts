@@ -24,7 +24,8 @@
  * compensate per galaxy.
  */
 
-import { sdssThumbnailUrl, dssThumbnailUrl } from '../../../../utils/math/index';
+import { sdssThumbnailUrl } from '../../../../utils/math/sdssThumbnailUrl';
+import { dssThumbnailUrl } from '../../../../utils/math/dssThumbnailUrl';
 import { GALAXY_ATLAS_SLOT_SIDE } from '../data/galaxyAtlasSlotSide';
 import { dataUrl } from '../../../../services/loading/fetchWithProgress';
 import type { FetchGalaxyBitmapInput } from '../@types/FetchGalaxyBitmapInput';

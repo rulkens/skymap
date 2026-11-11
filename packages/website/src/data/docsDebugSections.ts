@@ -82,7 +82,8 @@ export const DOCS_DEBUG_SECTIONS: readonly DocsDebugSection[] = [
   },
   {
     heading: 'Milky Way tuning',
-    shows: 'The size, exposure, softness and number of the points the Milky Way is drawn with.',
+    shows:
+      'A switch for which Milky Way is drawn (the point sprites, the smooth analytic field, or both added together). For the points: size, exposure, softness and number. For the field: its exposure, a dust switch and how coarse each of its render targets is.',
     file: 'src/layers/milkyWay/tuning/ui/MilkyWayTuningSection.tsx',
   },
   {

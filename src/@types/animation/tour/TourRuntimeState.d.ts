@@ -2,7 +2,7 @@
  * TourRuntimeState — the irreducible runtime facts of a playing guided tour,
  * held in the `tour` Redux slice. Everything else the overlay shows (the beat
  * count, the active caption) is DERIVED by selectors from the
- * takeover's tour id + `beatIndex` through `tourRegistry`. Which tour runs, if
+ * takeover's tour id + `beatIndex` through `APP_TOUR_REGISTRY`. Which tour runs, if
  * any, lives on the `takeover` slice, not here.
  *
  * Fields:

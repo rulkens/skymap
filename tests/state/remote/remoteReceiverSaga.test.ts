@@ -160,7 +160,7 @@ describe('remoteReceiverSaga', () => {
   it("a remote's device events reach the input slice under remote:<id>", async () => {
     const { device, input } = await setup();
     await device('a', resize(200, 100), press('down'));
-    expect(input().sources['remote:a']).toEqual({ aspect: 2 });
+    expect(input().sources['remote:a']?.aspect).toBe(2);
     expect(input().owner).toBe('remote:a');
   });
 
@@ -197,7 +197,7 @@ describe('remoteReceiverSaga', () => {
     await vi.advanceTimersByTimeAsync(3000);
     expect(input().sources['remote:a']).toBeUndefined();
     await device('a', press('down'));
-    expect(input().sources['remote:a']).toEqual({ aspect: 3 });
+    expect(input().sources['remote:a']?.aspect).toBe(3);
     expect(input().owner).toBe('remote:a');
   });
 

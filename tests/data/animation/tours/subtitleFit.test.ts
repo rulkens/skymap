@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { tourRegistry } from '../../../../src/data/animation/tours/tourRegistry';
+import { APP_TOUR_REGISTRY } from '../../../../src/compositions/appTours';
 import { SUBTITLE_MIN_READ_SEC } from '../../../../src/data/animation/subtitleTiming';
 import { lineSchedule } from '../../../../src/utils/animation/lineSchedule';
 import { compileClip } from '../../../../src/services/engine/animation/compileClip';
@@ -37,7 +37,7 @@ const FROM = { target: [0, 0, 0] as [number, number, number], yaw: 0, pitch: 0, 
 describe('subtitle fit', () => {
   it('every tour beat gives each subtitle line its reading floor', () => {
     const tooShort: string[] = [];
-    for (const tour of Object.values(tourRegistry)) {
+    for (const tour of Object.values(APP_TOUR_REGISTRY)) {
       tour.beats.forEach((beat, i) => {
         if (!beat.caption) return;
         const resolved = resolveClipFoci(beat.dwellClip, RESOLVER, 0.8, FROM, 2451545);

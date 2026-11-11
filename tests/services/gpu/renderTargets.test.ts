@@ -71,7 +71,7 @@ function stateWithDivisor(
 ): EngineState {
   return {
     settings: {
-      milkyWay: { aggregateDivisor },
+      milkyWay: { renderer: 'v1', cloud: { aggregateDivisor } },
       blackHoleLensingTuning: { cubemapResolutionPx },
     },
     cubemapCaptures: makeCubemapCaptureRuntimes({

@@ -89,7 +89,13 @@ function worldPoseAtHR(hr: number, roll: number): CameraPose {
 }
 
 function zoomStepOf(lnf: number): InputStep {
-  return { kind: 'zoom', factor: Math.exp(lnf), duringGesture: false, cursorPx: null };
+  return {
+    kind: 'zoom',
+    factor: Math.exp(lnf),
+    duringGesture: false,
+    cursorPx: null,
+    fresh: false,
+  };
 }
 
 describe('singular-locus recession (round 7)', () => {

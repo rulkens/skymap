@@ -12,20 +12,19 @@
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { MilkyWayRuntime } from '../../@types/MilkyWayRuntime';
-import { deriveMilkyWayCloudAlpha } from '../present/milkyWayCloudLiveness';
+import { deriveMilkyWayCloudAlpha } from '../present/deriveMilkyWayCloudAlpha';
 import { milkyWayCamPosModel } from '../render/milkyWayCamPosModel';
 import { milkyWayModelCached } from '../render/milkyWayModelCached';
+import { isMilkyWayCloudLive } from '../present/isMilkyWayCloudLive';
 
 export function milkyWayAggregatePass(runtime: MilkyWayRuntime): ContentPass<'milkyWayDisk'> {
   return {
     name: 'milky-way-aggregate',
     fade: 'milkyWayDisk',
 
-    // Shared with the upsample consumer and the dust row — see
-    // `milkyWayCloudLiveness` on why all three must answer identically.
-    enabled(_state, ctx, _view, fade) {
-      return deriveMilkyWayCloudAlpha(ctx, fade, runtime.pickCode) !== null;
-    },
+    // The cloud part also gates `mw-aggregate`'s allocation, so this pass and
+    // the upsample never read a released row.
+    enabled: (state, ctx, _view, fade) => isMilkyWayCloudLive(state, ctx, fade, runtime.pickCode),
 
     draw(pass, view, ctx, state, fade) {
       const fadeAlpha = deriveMilkyWayCloudAlpha(ctx, fade, runtime.pickCode);
@@ -44,11 +43,10 @@ export function milkyWayAggregatePass(runtime: MilkyWayRuntime): ContentPass<'mi
         camPosModel: milkyWayCamPosModel(ctx.drawCamPos),
         model: milkyWayModelCached(),
         fadeAlpha,
-        // The live look knobs — `MilkyWaySettings` widens to `MilkyWayTuning`,
-        // so the cluster passes straight through. Read here rather than in the
-        // renderer so a DebugPanel slider drag lands on the next frame with no
-        // imperative setter in between.
-        tuning: state.settings.milkyWay,
+        // The live look knobs, the settings' `cloud` group as is. Read here
+        // rather than in the renderer so a DebugPanel slider drag lands on the
+        // next frame with no imperative setter in between.
+        tuning: state.settings.milkyWay.cloud,
         buffers: runtime.cloud.buffers(),
       });
     },

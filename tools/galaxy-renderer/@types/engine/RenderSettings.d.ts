@@ -19,7 +19,7 @@
  * their identity defaults (1 and 0). Same for `gammaEncode`.
  *
  * The star-pass block at the bottom is the compositing half of the app's
- * `MilkyWayTuning` under this bag's own names: the tool draws with the app's
+ * `MilkyWayCloudTuning` under this bag's own names: the tool draws with the app's
  * `milkyWay/sprites/` shaders into the app's reduced-resolution star target, so
  * every knob it does carry means the same thing here. Two of that type's eight
  * are absent, both because they belong to a different stage — `lodApparent` is
@@ -50,17 +50,17 @@ export type RenderSettings = {
   /** Tone curve, seeded from the app's DEFAULT_TONE_MAP_CURVE (Reinhard-extended). */
   readonly tonemap: ToneMapCurve;
 
-  /** Sprite world-size multiplier — the app's `MilkyWayTuning.starSizeScale`. */
+  /** Sprite world-size multiplier — the app's `MilkyWayCloudTuning.starSizeScale`. */
   readonly sizeScale: number;
-  /** Sprite emission factor — the app's `MilkyWayTuning.exposure`, a different quantity from this file's own `exposure` field above; see `defaultRenderSettings.ts`. */
+  /** Sprite emission factor — the app's `MilkyWayCloudTuning.exposure`, a different quantity from this file's own `exposure` field above; see `defaultRenderSettings.ts`. */
   readonly starIntensity: number;
-  /** Sprite half-extent FLOOR in pixels of the star target (the anti-sparkle lever) — the app's `MilkyWayTuning.starPxMin`. */
+  /** Sprite half-extent FLOOR in pixels of the star target (the anti-sparkle lever) — the app's `MilkyWayCloudTuning.starPxMin`. */
   readonly starPxMin: number;
-  /** Sprite half-extent CAP in pixels of the star target — the app's `MilkyWayTuning.starPxMax`. */
+  /** Sprite half-extent CAP in pixels of the star target — the app's `MilkyWayCloudTuning.starPxMax`. */
   readonly starPxMax: number;
-  /** Fragment profile blend, 0 = tight core+glow, 1 = broad Gaussian at equal integral — the app's `MilkyWayTuning.softness`. */
+  /** Fragment profile blend, 0 = tight core+glow, 1 = broad Gaussian at equal integral — the app's `MilkyWayCloudTuning.softness`. */
   readonly softness: number;
-  /** Downsample divisor of the star pass's offscreen — the app's `MilkyWayTuning.aggregateDivisor`. The one knob here that reaches the frame by reallocating a texture rather than by riding the uniform, and the one `starPxMin`/`starPxMax` are stated in the pixels of. */
+  /** Downsample divisor of the star pass's offscreen — the app's `MilkyWayCloudTuning.aggregateDivisor`. The one knob here that reaches the frame by reallocating a texture rather than by riding the uniform, and the one `starPxMin`/`starPxMax` are stated in the pixels of. */
   readonly aggregateDivisor: number;
   /** Downsample divisor of the ANALYTIC field's own offscreen. Separate from `aggregateDivisor` because the field is fill-bound and low-frequency: it takes a far coarser target than sprites do without a visible difference. Also reallocates rather than riding the uniform. */
   readonly fieldDivisor: number;

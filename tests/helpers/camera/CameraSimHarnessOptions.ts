@@ -1,3 +1,4 @@
+import type { Saga } from 'redux-saga';
 import type { SimBodyId } from './SimBodyId';
 
 /** Options for {@link import('./makeCameraSimHarness').makeCameraSimHarness}. */
@@ -15,4 +16,7 @@ export type CameraSimHarnessOptions = {
   /** Wire the real `createClipPlayer` over the harness store instead of the
    * inert tick stub — for scripts whose legs include a clip. */
   readonly realClipPlayer?: boolean;
+  /** Sagas run over the harness store, for scripts whose frame actions wake one
+   * (a pushed zoom limit's `watchZoomLimitSaga`). */
+  readonly sagas?: readonly Saga[];
 };

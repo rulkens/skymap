@@ -25,6 +25,7 @@ import type { EngineState } from '../../../../../src/@types/engine/state/EngineS
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import type { MilkyWayRuntime } from '../../../../../src/layers/milkyWay/@types/MilkyWayRuntime';
+import type { MilkyWayRenderer } from '../../../../../src/layers/milkyWay/@types/MilkyWayRenderer';
 
 // Neither `enabled` nor `pickEnabled` reads `view` — both derive their answer
 // from ctx/state alone — so an opaque stub satisfies the 3-arg signature.
@@ -37,7 +38,9 @@ const PASS = milkyWayPass({} as unknown as MilkyWayRuntime);
 // Fully faded in (the handed value is 1), so both gates reduce to camera distance.
 // The value is a MULTIPLIER in `deriveMilkyWayCloudAlpha`: 0 makes every case vacuously
 // unpickable.
-const STATE = { settings: { milkyWay: { enabled: true } } } as unknown as EngineState;
+const stateFor = (renderer: MilkyWayRenderer): EngineState =>
+  ({ settings: { milkyWay: { enabled: true, renderer } } }) as unknown as EngineState;
+const STATE = stateFor('v1');
 
 // 720-px viewport, 60° fovY, tangent-exact.
 const MW_PX_PER_RAD = 720 / (2 * Math.tan(Math.PI / 3 / 2));
@@ -82,13 +85,19 @@ describe('milkyWayPass pick vs draw', () => {
     expect(PASS.pickEnabled!(STATE, outside, VIEW_STUB, 1)).toBe(true);
   });
 
-  it('stays unpickable wherever it is invisible — pick is a strict subset of draw', () => {
-    // `pickEnabled` composes over `enabled` rather than restating its terms, so an
-    // invisible disc cannot come back as a click target. A dissolved disc is handed 0
+  it('stays unpickable wherever the disc is invisible', () => {
+    // `pickEnabled` composes over the cloud's alpha rather than restating its terms, so
+    // an invisible disc cannot come back as a click target. A dissolved disc is handed 0
     // (the distance bands are core's).
     const outside = makeCtx([0, 0, 0.15]);
     expect(PASS.enabled(STATE, outside, VIEW_STUB, 0)).toBe(false);
     expect(PASS.pickEnabled!(STATE, outside, VIEW_STUB, 0)).toBe(false);
+  });
+
+  it('in v2 the dust draw is off but the pick impostor still picks', () => {
+    const outside = makeCtx([0, 0, 0.15]);
+    expect(PASS.enabled(stateFor('v2'), outside, VIEW_STUB, 1)).toBe(false);
+    expect(PASS.pickEnabled!(stateFor('v2'), outside, VIEW_STUB, 1)).toBe(true);
   });
 });
 

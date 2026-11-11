@@ -31,6 +31,8 @@ export type EngineDebugHandle = {
   readonly timingService: GpuTimingService;
   /** Marks the scene dirty on the render-on-demand scheduler; the perf harness needs it, else a static vantage stalls once the loop sleeps. */
   readonly requestRender: () => void;
+  /** What `settled()` still waits for, one phrase each (a camera flight, an asset loading, a throwing frame); empty once settled. */
+  readonly unsettled: () => readonly string[];
   /** Rolling CPU-side frame stats (fps + JS-body ms + idle) — no GPU query. */
   readonly frameStats: () => FrameStats;
   readonly passOverrides: PassOverridesHandle;

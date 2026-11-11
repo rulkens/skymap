@@ -135,7 +135,7 @@ function makeState(): EngineState {
       // aggregateDivisor is what the `mw-aggregate` row's `scale` function
       // resolves on every reconcile, so the fixture carries its boot value
       // rather than leaving that reader to resolve undefined.
-      milkyWay: { enabled: false, aggregateDivisor: 2 },
+      milkyWay: { enabled: false, cloud: { aggregateDivisor: 2 } },
       cosmicWebFilaments: { enabled: false, intensity: 1 },
       cosmicWebDensity: { enabled: false },
     },
@@ -272,6 +272,7 @@ describe('runFrame — the input drain runs before the produce step', () => {
       ratio: 1,
       at: { x: 1.5, y: 1 },
       held: true,
+      eventMs: 0,
     } as const;
     store.dispatch(inputMoved({ source: 'canvas', motion: [motion] }));
 

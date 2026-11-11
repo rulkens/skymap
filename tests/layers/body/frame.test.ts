@@ -6,6 +6,8 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { surfaceTilePlanner } from '../../../src/layers/body/frame';
+import { planSurfaceTiles } from '../../../src/layers/body/surfaceTiles/plan/subsystems/planSurfaceTiles';
+import { SURFACE_TILE_CROSSFADE_MS } from '../../../src/layers/body/surfaceTiles/format/data/surfaceTileParams';
 import { createSurfaceTileStream } from '../../../src/layers/body/surfaceTiles/stream/subsystems/surfaceTileStream';
 import { IDLE_SURFACE_TILE_PLAN } from '../../../src/layers/body/surfaceTiles/plan/subsystems/idleSurfaceTilePlan';
 import { throttleWithTrailingCall } from '../../../src/utils/throttle/throttleWithTrailingCall';
@@ -15,6 +17,19 @@ import type { BodyFacts } from '../../../src/layers/body/@types/BodyFacts';
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
+import type { SurfaceTilePlan } from '../../../src/layers/body/surfaceTiles/plan/@types/SurfaceTilePlan';
+
+// Passes through to the real planner; one test stubs the plan it returns.
+vi.mock(
+  '../../../src/layers/body/surfaceTiles/plan/subsystems/planSurfaceTiles',
+  async (importOriginal) => {
+    const real =
+      await importOriginal<
+        typeof import('../../../src/layers/body/surfaceTiles/plan/subsystems/planSurfaceTiles')
+      >();
+    return { planSurfaceTiles: vi.fn(real.planSurfaceTiles) };
+  },
+);
 
 const STATE = {
   tier: 'medium',
@@ -64,6 +79,25 @@ describe('surfaceTilePlanner', () => {
     expect(result.settling).toBe(false);
     expect(runtime.surfaceTiles.plan.awake).toBe(true);
     expect(apply).toHaveBeenCalledWith(runtime.surfaceTiles.plan);
+  });
+
+  it('a landed tile still crossfading from its fallback votes awake and loading, never settling', () => {
+    // Bug caught: the loop slept, and `settled()` resolved, mid-crossfade, so the
+    // frame froze half-blended and two shots of one link differed.
+    const fadingTile = { albedo: { fallback: {}, readyAtMs: 1000 } };
+    const runtime = {
+      surfaceTiles: { stream: { apply: vi.fn() }, plan: IDLE_SURFACE_TILE_PLAN },
+      textureSlots: new Map(),
+      debugPanelOpen: () => false,
+    } as unknown as BodyRuntime;
+    const plan = { ...IDLE_SURFACE_TILE_PLAN, cut: [fadingTile] } as unknown as SurfaceTilePlan;
+    vi.mocked(planSurfaceTiles).mockReturnValueOnce(plan).mockReturnValueOnce(plan);
+    const planner = surfaceTilePlanner(runtime);
+
+    const mid = planner.plan(snapshotAt(1000 + SURFACE_TILE_CROSSFADE_MS / 2), [], STATE);
+    expect([mid.awake, mid.loading, mid.settling]).toEqual([true, true, false]);
+    const done = planner.plan(snapshotAt(1000 + SURFACE_TILE_CROSSFADE_MS), [], STATE);
+    expect([done.awake, done.loading]).toEqual([false, false]);
   });
 
   it('the tile readout publishes only while the debug panel is open, at most every 250 ms', () => {

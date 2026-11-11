@@ -33,18 +33,17 @@
 - Per-frame pass order in `drawFrame` (createGalaxyEngine.ts:820-1051+): `stars` (v1 sprites, gated `render.spriteField`) → if `analytic` gate: `dustMap` (gated on dust count / debug view / stale-latch) → optional `dustPresent` (JWST debug) → `field` splat (unconditional) → each `HII_TIERS` splat with content → `hii:extras` splat → single `scene` pass additively compositing aggregate+field+HII tiers+dust-view via `encodeSceneComposites`, then diagnostic overlays → bloom pyramid → `composite` (exposure+tone curve) → optional `grade` (tool-only).
 - Dust is **multiplicative**, applied in the dust pass, not part of the additive emission mixture — "Emission-only is closed form; emission with self-absorption is not... dust is a separate multiplicative screen."
 
-## 2. APP SIDE — current Milky Way render path (v1 only)
+## 2. APP SIDE — the shipped wiring (v1 cloud and v2 field in one Layer)
 
-- **`frameProgram.ts`** (`src/services/engine/frame/frameProgram.ts:80-153`) — the FRAME as data. Relevant steps: `{render, target:'star-aggregates', slab:NEAR0}` (line 99), `{render, target:'mw-aggregate', slab:NEAR0}` (line 112), then `{render, target:'hdr', slab:NEAR0}` (line 119) — `milky-way-upsample` and `milky-way` (dust) merge INTO that hdr/NEAR0 step as *layers*, not their own frameProgram steps. NO `field`/`dustMap`/`hii` step or target exists anywhere in `frameProgram.ts` (full-file read).
-- **`milkyWayAggregateLayer.ts`** (passes/milkyWayAggregateLayer.ts:39-89) — v1 additive star sprites into `mw-aggregate` offscreen (`slab: NEAR0`, `blend: 'additive'`), gated by `deriveMilkyWayCloudAlpha`. Calls `cloudRenderer.drawStars`.
-- **`milkyWayUpsampleLayer.ts`** (passes/milkyWayUpsampleLayer.ts:49-68) — composites `mw-aggregate` back into `hdr` via shared `createAdditiveUpsample` (`state.gpu.milkyWayAggregateUpsample`), same gate.
-- **`milkyWayLayer.ts`** (passes/milkyWayLayer.ts:75-164) — v1's multiplicative dust pass, full-res in `hdr`/NEAR0, plus pick aspect (`drawPick`), same shared gate, plus pick-only gate (`MILKY_WAY_PICK_MIN_DISTANCE_MPC`, line 73).
-- **`milkyWayCloudLiveness.ts`** (frame/milkyWayCloudLiveness.ts:38-61) — `deriveMilkyWayCloudAlpha(state, ctx)`, the ONE shared visibility/alpha derivation for all three layers: far-side `milkyWayVisible` gate, near-side `SCALE_FADE_BANDS.milkyWayApproachSun` fade, `state.subsystems.fades.opacityOf({kind:'milkyWay'})`. Returns `number|null`.
-- **v1 path** (`src/services/engine/galaxyGenerator/v1/`): `milkyWayCloud.ts` (`createMilkyWayCloud`, wired in `initGpu.ts:23,344`), `milkyWayCalibration.ts` (`MILKY_WAY_RADIUS_MPC`, `MILKY_WAY_MODEL_SCALE`, `MILKY_WAY_STARS_PER_TIER`, `MILKY_WAY_TUNING_DEFAULTS`, lines 1-116), `milkyWayModelCached.ts`/`milkyWayModelMatrix.ts` (world placement), `milkyWayFadeAlpha.ts` (apparent-size fade). `v1/README.md:1-10`: tier is "**scheduled for deletion**".
-- **Bootstrap**: `phases/initGpu.ts:23-30,222,329-345,389` constructs `createMilkyWayCloud`, `createMilkyWayCloudRenderer` (`src/services/gpu/renderers/milkyWay/milkyWayCloudRenderer.ts` — only `sprites/stars.wesl`/`sprites/dust.wesl`), `createMilkyWayPickRenderer`, `state.gpu.milkyWayAggregateUpsample = createAdditiveUpsample(device,'rgba16float')`. `engine.ts` owns/tears down (lines 284,329-345,846-891). Layer registration: `passes/index.ts:203-205,270-272,370-372` — `CONTENT_LAYERS` includes the three MW layers in order.
-- **LOD tiers**: `MILKY_WAY_STARS_PER_TIER` (v1/milkyWayCalibration.ts:52-56) — small=preset*0.5, medium=preset, large=preset*2. `watchTierSaga.ts` re-seeds `settings.milkyWay.starCount` from it on tier change (`MilkyWayTuning.starCount` docblock, `src/@types/settings/MilkyWayTuning.d.ts:64-79`).
-- **Settings** (`src/state/settings/initialState.ts:153-157`): `settings.milkyWay = { enabled, labelEnabled, ...MILKY_WAY_TUNING_DEFAULTS }` — types `MilkyWaySettings.d.ts:21-26`, `MilkyWayTuning.d.ts:14-80` (`starSizeScale`, `exposure`, `starPxMin/Max`, `softness`, `lodApparent`, `aggregateDivisor`, `starCount`) — all v1 knobs, singleton-overlay pattern.
-- Render target row: `src/services/gpu/renderTargets.ts:160,199` — `'mw-aggregate'` `{format:'rgba16float', depth:null, scale: mwAggregateDivisor}` (rationale comment line 66).
+Both renderers live in `src/layers/milkyWay/`. `settings.milkyWay.renderer` (`'v1' | 'v2' | 'both'`, default `'v1'`) picks the parts that draw; `selectMilkyWayParts` (`state/milkyWay/selectors.ts`) is its only reader. Knobs are grouped: `settings.milkyWay.cloud` (v1) and `settings.milkyWay.field` (`exposure`, `dust`, per-target `divisors`; defaults from `FIELD_CALIBRATION`, shared with the tool). The DebugPanel section (`tuning/ui/MilkyWayTuningSection.tsx`) holds the switch and both sets of rows.
+
+- **Host.** `field/host/subsystems/createGalaxyFieldHost.ts` is the narrow `GalaxyFieldHost` (`setTuning`, `ensureFresh`, `plan`, `encode`) that the app and the tool share. `createFieldHostSlot.ts` creates it lazily when the field part first turns on and frees it when it turns off.
+- **Planner.** `frame.ts` `milkyWayPlanner` (scope `'once'`) reconciles the cloud's star count, syncs the host and calls `host.plan()` once per frame. Its `FieldPlannerValue` (`{ host, plan }` or null) is what the compute and the composite both read, so they cannot disagree.
+- **Compute.** `field/computes/milkyWayFieldCompute.ts`, row `mw-field` (scope `'perView'`): encodes every pass the plan names into the `mw-field-*` targets, in every view. It reads fade `milkyWayDisk`.
+- **Targets.** `field/render/fieldTargetRows.ts`: one `mw-field-<id>` row per `FIELD_TARGET_IDS` entry, scaled by the live divisor and allocated only while the field part draws. The field's passes clear them themselves.
+- **Composite.** `field/passes/milkyWayFieldPass.ts`, pass `milky-way-field`: adds the targets into `hdr` right after `milky-way-upsample` and before the v1 dust pass `milky-way`, so cloud dust extincts the field's light.
+- **v1 path.** `cloud/` keeps the sprite cloud: `milkyWayAggregatePass` into `mw-aggregate`, `milkyWayUpsamplePass`, `milkyWayPass` (dust and pick). Tier is scheduled for deletion (`src/services/engine/galaxyGenerator/v1/README.md`).
+- **Timing.** `field/utils/spanTimestampWrites.ts` spans the compute's passes under `mw-field-compute` for `?gpuTimings`.
 
 ## 3. SHARED/GAP
 
@@ -91,9 +90,9 @@
 | `timing/*` | tool frame-median + GPU-timing windows; app TIMED_SLOTS needs field/dustMap/hii:* rows mirroring timingSlots.ts:12-65 |
 | `data/hiiTiers.ts`, `defaultRenderSettings.ts`, `defaultLodSettings.ts` | tool-only settings shape; app MilkyWaySettings carries only v1 knobs |
 
-## 4. Existing app settings/flags referencing v2/analytic/flux field
+## 4. App settings referencing the field
 
-**None.** Grep of `src/state` + `src/components` for analyticField/fluxField/v2/galaxyFieldMixture/fieldTuning: zero matches. `v2/README.md:40-41`: "Only the tool drives this tier today. The runtime has no analytic-field renderer yet."
+`settings.milkyWay.renderer` and `settings.milkyWay.field` (§2). Written before the landing, when the app had none.
 
 ## Summary
 1. Shaders + pure data builders already unified in `src/`; the tool consumes them via symlink.

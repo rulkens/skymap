@@ -731,8 +731,8 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
             onChange={(v) => dispatch(renderPatched({ bloomThreshold: v }))}
             path="render.bloomThreshold"
           />
-          {/* The star-pass block. These are the app's `MilkyWayTuning` knobs,
-              over the app's own ranges (`src/layers/milkyWay/tuning/data/milkyWaySliderFields.ts`),
+          {/* The star-pass block. These are the app's `MilkyWayCloudTuning` knobs,
+              over the app's own ranges (`src/layers/milkyWay/tuning/data/milkyWayCloudSliderFields.ts`),
               driving the app's own `milkyWay/sprites/` shaders — so a number read
               off this panel can be typed straight into the app's DebugPanel.
               `Star size` and `Star intensity` keep this tool's narrower spike

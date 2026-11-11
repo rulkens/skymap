@@ -340,13 +340,13 @@ function makeInput(
   const milkyWayCloudRenderer = makeMockMilkyWayCloudRenderer(callLog);
   const milkyWayCloud = makeMockMilkyWayCloud();
   // The milkyWay Layer's passes close over their own runtime, mirroring
-  // galaxyRuntime/densityRuntime above. `aggregateUpsample: null` keeps these
+  // galaxyRuntime/densityRuntime above. `additiveUpsample: null` keeps these
   // fixtures free of an upsample blit they don't assert on (the layer's guard
   // is `=== null`, which `undefined` would slip past).
   const milkyWayRuntime = {
     cloud: milkyWayCloud,
     cloudRenderer: milkyWayCloudRenderer,
-    aggregateUpsample: null,
+    additiveUpsample: null,
   } as unknown as MilkyWayRuntime;
   const compositor = makeMockCompositor(callLog);
   // The render-target table backing views. The density row's default view is inert; the
@@ -521,7 +521,7 @@ function makeInput(
           bloom: { enabled: settings.bloomEnabled, strength: 1, threshold: 1 },
           bias: { mode: settings.biasMode, absMagLimit: settings.absMagLimit },
           thumbnails: { enabled: settings.galaxyTexturesEnabled },
-          milkyWay: { enabled: settings.milkyWayEnabled },
+          milkyWay: { enabled: settings.milkyWayEnabled, renderer: 'v1' },
           cosmicWebFilaments: {
             enabled: settings.filamentsEnabled,
             intensity: settings.filamentIntensity,

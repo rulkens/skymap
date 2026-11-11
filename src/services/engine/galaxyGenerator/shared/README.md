@@ -17,7 +17,7 @@ describeGalaxy(params) → GalaxyDescription   ← every construction-time RNG d
   ├──► v1: galaxyPopulationCountShares (light ÷ SPRITE_POPULATION_BRIGHTNESS) →
   │        splitStarBudget → carveStarLayout/carveDustLayout →
   │        packGenerationUniforms → queue.writeBuffer → generate.wesl
-  └──► v2: buildGalaxyFieldMixture(description, …)
+  └──► field/: buildGalaxyFieldMixture(description, …)
 ```
 
 The whole right-hand branch — how many sprites, carved into which slots, packed
@@ -38,14 +38,14 @@ seeded preset are pinned to it — reorder a draw, add one, or skip one and ever
 galaxy in the gallery rerolls. A pinned value (`barAngleDeg`, `armAges[a]`)
 still consumes its draw for exactly that reason.
 
-**`v2` depends on this folder through DATA, not imports.** Nothing under `src/layers/milkyWay/field/`
+**The milkyWay Layer's `field/` depends on this folder through DATA, not imports.** Nothing under `src/layers/milkyWay/field/`
 imports anything here; the wiring happens in the caller
 (`tools/galaxy-renderer/src/engine/sprites/generateGalaxy.ts`).
 Grepping the import graph alone will tell you this folder is v1-only. It is not.
 
 **`shared/` must never import `v1/`.** v1 is scheduled for deletion (see
-`v1/README.md`); an edge in that direction takes v2 down with it. The dependency
-runs `v1 → shared` and `v2 ← shared` (by data), never back.
+`v1/README.md`); an edge in that direction takes the field down with it. The dependency
+runs `v1 → shared` and `field/ ← shared` (by data), never back.
 
 **Light is the source, star counts are derived — never the reverse.**
 `galaxyLightDecomposition` is a Hubble-stage table from the literature (sources

@@ -51,7 +51,13 @@ function poseAt(eyeM: Vec3, basisLocal: Mat3): BodyFixedPose {
 }
 
 function zoomOut(): InputStep {
-  return { kind: 'zoom', factor: Math.exp(0.1), duringGesture: false, cursorPx: null };
+  return {
+    kind: 'zoom',
+    factor: Math.exp(0.1),
+    duringGesture: false,
+    cursorPx: null,
+    fresh: false,
+  };
 }
 
 function tiltOf(pose: BodyFixedPose): number {

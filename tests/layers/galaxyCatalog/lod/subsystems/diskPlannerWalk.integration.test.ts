@@ -28,7 +28,7 @@ import {
   runProceduralSolo,
   runTexturedSolo,
 } from '../../../../services/engine/subsystems/diskWalkHarness';
-import { cartesianToRaDec } from '../../../../../src/utils/math/index';
+import { cartesianToRaDec } from '../../../../../src/utils/math/cartesianToRaDec';
 import { galaxyCacheKey } from '../../../../../src/layers/galaxyCatalog/lod/utils/galaxyCacheKey';
 import {
   PROCEDURAL_DISK_FADE_START_PX,

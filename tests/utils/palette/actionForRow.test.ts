@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { actionForRow } from '../../../src/utils/palette/actionForRow';
 import { APP_EXHIBIT_REGISTRY } from '../../../src/compositions/appExhibits';
-import { tourRegistry } from '../../../src/data/animation/tours/tourRegistry';
+import { APP_TOUR_REGISTRY } from '../../../src/compositions/appTours';
 import type { FamousGalaxyMetaEntry } from '../../../src/@types/loading/FamousGalaxyMetaEntry';
 import type { AliasIndexEntry } from '../../../src/@types/engine/AliasIndexEntry';
 import type { StructureSearchEntry } from '../../../src/@types/engine/StructureSearchEntry';
@@ -61,7 +61,7 @@ describe('actionForRow', () => {
   });
 
   it('a tour row → a tour action carrying the registry id, not a focus', () => {
-    const tour = tourRegistry.grandTour;
+    const tour = APP_TOUR_REGISTRY.grandTour;
     expect(actionForRow({ kind: 'tour', tour, score: 0 })).toEqual({
       kind: 'tour',
       tourId: tour.id,

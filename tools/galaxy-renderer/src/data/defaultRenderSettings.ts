@@ -13,7 +13,7 @@
  * because matching a piece of reference astrophotography sometimes wants them;
  * moving one is then a visible, deliberate departure from app parity.
  *
- * The star-pass block is the whole of `MILKY_WAY_TUNING_DEFAULTS`
+ * The star-pass block is the whole of `MILKY_WAY_CLOUD_TUNING_DEFAULTS`
  * (`src/services/engine/galaxyGenerator/v1/milkyWayCalibration.ts`) minus two knobs that live
  * elsewhere: `lodApparent`, which lives in `DEFAULT_LOD_SETTINGS` instead, and
  * `starCount`, which feeds generation rather than compositing and so lives on
@@ -24,7 +24,7 @@
  * those are not merely similar knobs — they are the same knobs, so every one
  * is seeded rather than hand-copied.
  *
- * `starIntensity` is seeded from `MILKY_WAY_TUNING_DEFAULTS.exposure`, which is
+ * `starIntensity` is seeded from `MILKY_WAY_CLOUD_TUNING_DEFAULTS.exposure`, which is
  * a DIFFERENT quantity from `DEFAULT_EXPOSURE` above despite the shared word:
  * `DEFAULT_EXPOSURE` is the post-chain linear multiplier applied to the whole
  * composited frame before the tone curve (this file's `exposure` field), while
@@ -47,7 +47,7 @@ import {
 import {
   MILKY_WAY_FADE_FULL_PX,
   MILKY_WAY_FADE_GONE_PX,
-  MILKY_WAY_TUNING_DEFAULTS,
+  MILKY_WAY_CLOUD_TUNING_DEFAULTS,
 } from '../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import { FIELD_CALIBRATION } from '../../../../src/layers/milkyWay/field/data/fieldCalibration';
 
@@ -59,12 +59,12 @@ export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   vignette: 0,
   gammaEncode: false,
   tonemap: DEFAULT_TONE_MAP_CURVE,
-  sizeScale: MILKY_WAY_TUNING_DEFAULTS.starSizeScale,
-  starIntensity: MILKY_WAY_TUNING_DEFAULTS.exposure,
-  starPxMin: MILKY_WAY_TUNING_DEFAULTS.starPxMin,
-  starPxMax: MILKY_WAY_TUNING_DEFAULTS.starPxMax,
-  softness: MILKY_WAY_TUNING_DEFAULTS.softness,
-  aggregateDivisor: MILKY_WAY_TUNING_DEFAULTS.aggregateDivisor,
+  sizeScale: MILKY_WAY_CLOUD_TUNING_DEFAULTS.starSizeScale,
+  starIntensity: MILKY_WAY_CLOUD_TUNING_DEFAULTS.exposure,
+  starPxMin: MILKY_WAY_CLOUD_TUNING_DEFAULTS.starPxMin,
+  starPxMax: MILKY_WAY_CLOUD_TUNING_DEFAULTS.starPxMax,
+  softness: MILKY_WAY_CLOUD_TUNING_DEFAULTS.softness,
+  aggregateDivisor: MILKY_WAY_CLOUD_TUNING_DEFAULTS.aggregateDivisor,
   // The analytic field's rows: the shared calibration row, which carries
   // each value's reasoning.
   fieldDivisor: FIELD_CALIBRATION.divisors.field,

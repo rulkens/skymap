@@ -37,7 +37,11 @@ export function surfaceZoomStep(
   rememberedTiltRad: number,
   tuning: CameraTuning,
   focusPivotM: Readonly<Vec3> | null,
-): BodyFixedPose {
+): {
+  readonly pose: BodyFixedPose;
+  /** The point the notch zoomed about, body-fixed metres; null for a dive at the sky. */
+  readonly anchorM: Readonly<Vec3> | null;
+} {
   const latched = gesture?.anchorLocalM ?? null;
   // Past the anchor's own tangent plane the anchor is behind the horizon and
   // zooming toward it is a teleport, so the pick is taken fresh (C §6.7). The
@@ -91,7 +95,7 @@ export function surfaceZoomStep(
   // framing; a dive with one settles about it (pixel-locked). An unfocused
   // recession settles about the eye — anchor-pivoting there cancels ~h/(R+h)
   // of every correction (measured), and it has nothing to hold.
-  if (factor < 1 && anchorM === null) return stepped;
+  if (factor < 1 && anchorM === null) return { pose: stepped, anchorM };
   // The pre-notch readout, against the pre-notch reference: the azimuth
   // deviation the recession ride preserves rather than re-authoring, and the
   // tilt deviation from the band mapping (ruling 12) — what the zoom did NOT
@@ -102,7 +106,7 @@ export function surfaceZoomStep(
     preInBlendFrame === null
       ? null
       : preInBlendFrame.tiltRad - mappedTiltRad(rememberedTiltRad, hrPre, tuning);
-  return settledZoomPose(
+  const pose = settledZoomPose(
     stepped,
     focusPivotM ?? (factor < 1 ? anchorM : null),
     factor < 1,
@@ -118,4 +122,5 @@ export function surfaceZoomStep(
     Math.abs(Math.log(spentZoomFactor(factor))),
     tuning,
   );
+  return { pose, anchorM };
 }

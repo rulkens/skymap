@@ -240,7 +240,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
   const milkyWayRuntime = {
     cloud: { buffers: () => ({ starBuf: {}, starCount: 0, dustBuf: null, dustCount: 0 }) },
     cloudRenderer: milkyWayCloudRenderer,
-    aggregateUpsample: null,
+    additiveUpsample: null,
   } as unknown as MilkyWayRuntime;
   const proceduralDiskRenderer = makeLoggingRenderer();
   const texturedDiskRenderer = makeLoggingRenderer();
@@ -349,7 +349,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         bloom: { enabled: false, strength: 1, threshold: 1 },
         bias: { mode: settings.biasMode, absMagLimit: settings.absMagLimit },
         thumbnails: { enabled: settings.galaxyTexturesEnabled },
-        milkyWay: { enabled: settings.milkyWayEnabled },
+        milkyWay: { enabled: settings.milkyWayEnabled, renderer: 'v1' },
         cosmicWebFilaments: {
           enabled: settings.filamentsEnabled,
           intensity: settings.filamentIntensity,

@@ -132,7 +132,7 @@ fn fs(i: VSOut) -> @location(0) vec4<f32> {
   // exposure knob.
   let exposure = u.params0.y;
   // Blend the tight core+glow profile toward a broad Gaussian, from the
-  // settings.milkyWay softness knob. A tight-cored sprite needs dozens of
+  // settings.milkyWay.cloud softness knob. A tight-cored sprite needs dozens of
   // overlaps per pixel before a field of them reads smooth; a broad one needs
   // a handful, which is why Celestia-style renderers use few large soft
   // splats. Both profiles are normalised to the same integral over the unit

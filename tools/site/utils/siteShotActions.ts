@@ -12,7 +12,7 @@ import { startTour } from '../../../src/state/tour/tourActions';
 import { CURRENT_SPLASH_VERSION } from '../../../src/state/ui/splashStorage';
 import { dismissSplash, setDebugPanelOpen } from '../../../src/state/ui/uiSlice';
 import { linkIntentFrom } from '../../../src/utils/url/linkIntentFrom';
-import { tourRegistry } from '../../../src/data/animation/tours/tourRegistry';
+import { APP_TOUR_REGISTRY } from '../../../src/compositions/appTours';
 import { CAPTURE_HIDDEN_PASSES } from '../../utils/capture/hiddenPasses';
 
 /**
@@ -41,14 +41,14 @@ export function siteShotActions({
   if (settings.debugPanel) actions.push(setDebugPanelOpen(true));
   if (settings.tourStep !== undefined) {
     const { view } = linkIntentFrom(link);
-    if (view.kind !== 'tour' || !(view.id in tourRegistry)) {
+    if (view.kind !== 'tour' || !(view.id in APP_TOUR_REGISTRY)) {
       throw new Error(`tourStep needs a link to a registered tour, got "${link}"`);
     }
     // The runner boots a tour step on its `layers` alone, which a visitor's first visit covers with the welcome screen.
     // Last: the tour restores and rewrites settings itself, so it must own the scene from here.
     actions.push(
       dismissSplash(CURRENT_SPLASH_VERSION),
-      startTour(view.id as keyof typeof tourRegistry, {
+      startTour(view.id as keyof typeof APP_TOUR_REGISTRY, {
         from: settings.tourStep,
         to: settings.tourStep,
       }),

@@ -33,17 +33,19 @@ import { selectCameraBase } from '../camera/selectors';
 import { selectTimeState } from '../time/selectors';
 import { selectOrientation } from '../settings/selectors';
 import { framingPose } from '../../services/engine/camera/framing/framingPose';
+import { hostFacingPose } from '../../services/engine/camera/framing/hostFacingPose';
 import { homePose } from '../../services/engine/camera/framing/homePose';
 import { isWorldArm } from '../../services/engine/camera/arms/world/isWorldArm';
 import { selectionKindOf } from '../../services/engine/selection/selectionKindOf';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { APP_EXHIBIT_REGISTRY } from '../../compositions/appExhibits';
-import { tourRegistry } from '../../data/animation/tours/tourRegistry';
+import { APP_TOUR_REGISTRY } from '../../compositions/appTours';
 import { clipFactories } from '../../data/animation/clips/clipRegistry';
 import { isKeyOf } from '../../utils/object/isKeyOf';
 import { absoluteArm } from '../../utils/camera/arms/absoluteArm';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { isCinemaMode } from '../../utils/url/isCinemaMode';
+import type { BodySelectionRow } from '../../@types/engine/selection/BodySelectionRow';
 import type { LinkIntent } from '../../@types/url/LinkIntent';
 import type { Transition } from '../../@types/navigation/Transition';
 import type { NavigateOutcome } from '../../@types/navigation/NavigateOutcome';
@@ -86,7 +88,17 @@ function* frameFocusSaga(runtime: LiveCameraRuntime): SagaGenerator<NavigateOutc
   // reports its pre-commit placeholder for one frame.
   const base = yield* select(selectCameraBase);
   const from = isWorldArm(base) ? base.pose : runtime.from;
-  yield* put(commitCameraPose(absoluteArm(framingPose(row, runtime.fovYRad, from))));
+  // A moon is framed from its host: a link names the moon, not the view it inherits.
+  const hostFacing =
+    row.type === 'body'
+      ? hostFacingPose(
+          (row as BodySelectionRow).id,
+          deriveSimDays(yield* select(selectTimeState), performance.now()),
+          runtime.fovYRad,
+          ORIENTATION_FRAMES[yield* select(selectOrientation)],
+        )
+      : null;
+  yield* put(commitCameraPose(absoluteArm(hostFacing ?? framingPose(row, runtime.fovYRad, from))));
   return OK;
 }
 
@@ -168,7 +180,7 @@ export function* navigateSaga(
       );
       return OK;
     case 'tour':
-      if (!isKeyOf(tourRegistry, view.id)) return UNKNOWN_ID;
+      if (!isKeyOf(APP_TOUR_REGISTRY, view.id)) return UNKNOWN_ID;
       // A live start begins on the home framing, as from the splash.
       if (transition === 'cut') yield* call(homeSaga);
       return yield* call(firstClipSaga, startTour(view.id), transition);

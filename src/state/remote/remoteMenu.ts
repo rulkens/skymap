@@ -5,7 +5,7 @@
 
 import { APP_EXHIBIT_REGISTRY } from '../../compositions/appExhibits';
 import { clipRegistry } from '../../data/animation/clips/clipRegistry';
-import { tourRegistry } from '../../data/animation/tours/tourRegistry';
+import { APP_TOUR_REGISTRY } from '../../compositions/appTours';
 import type { RemoteMenuItem } from '../../@types/remote/RemoteMenuItem';
 import type { RemoteMenu } from '../../@types/remote/RemoteMenu';
 
@@ -14,7 +14,7 @@ const listed = <Id extends string>(
 ): RemoteMenuItem<Id>[] => rows.filter((row) => !row.dev).map(({ id, label }) => ({ id, label }));
 
 export const REMOTE_MENU: RemoteMenu = {
-  tours: listed(Object.values(tourRegistry)),
+  tours: listed(Object.values(APP_TOUR_REGISTRY)),
   exhibits: listed(Object.values(APP_EXHIBIT_REGISTRY)),
   clips: listed(Object.values(clipRegistry)),
 };

@@ -30,8 +30,17 @@ const drag = (dx: number): Motion => ({
   ratio: 1,
   at: null,
   held: true,
+  eventMs: 0,
 });
-const wheel: Motion = { intent: 'zoom', dx: 0, dy: 0, ratio: 1.1, at: null, held: false };
+const wheel: Motion = {
+  intent: 'zoom',
+  dx: 0,
+  dy: 0,
+  ratio: 1.1,
+  at: null,
+  held: false,
+  eventMs: 0,
+};
 const move = (...motion: Motion[]) => inputMoved({ source: 'canvas', motion });
 const press = () => inputGestureStarted({ source: 'canvas', intent: 'orbit' });
 

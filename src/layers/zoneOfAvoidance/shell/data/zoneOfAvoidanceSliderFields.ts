@@ -1,7 +1,7 @@
 /**
  * ZONE_OF_AVOIDANCE_SLIDER_FIELDS — the one enumeration of the guide band's
  * scalar tuning knobs, with the UI metadata each needs. Same shape as
- * `src/layers/milkyWay/tuning/data/milkyWaySliderFields.ts`: label, range, granularity and
+ * `src/layers/milkyWay/tuning/data/milkyWayCloudSliderFields.ts`: label, range, granularity and
  * formatting live in ONE row per knob, and the DebugPanel section iterates
  * this list rather than re-spelling sliders by hand. `color` and
  * `labelColor` (each a `Vec3`) aren't here — the section wires each as a
@@ -54,7 +54,7 @@ export const ZONE_OF_AVOIDANCE_SLIDER_FIELDS: readonly ZoneOfAvoidanceSliderFiel
  * Build a `ZoneOfAvoidanceTuning` patch for one slider field. The cast is
  * sound: every `ZoneOfAvoidanceSliderKey` addresses a number-valued leaf, but
  * a computed-key object literal widens to `{ [k: string]: number }`, which
- * the compiler won't narrow on its own — the same trick `milkyWaySliderPatch`
+ * the compiler won't narrow on its own — the same trick `milkyWayCloudSliderPatch`
  * uses.
  */
 export function zoneOfAvoidanceSliderPatch(

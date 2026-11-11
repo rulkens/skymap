@@ -62,7 +62,7 @@ const ALLOWED: Readonly<Record<string, number>> = {
   'frame/pickProgram': 5,
   'frame/projectFramePose': 1,
   'frame/runBloom': 1,
-  'frame/runFrame': 3,
+  'frame/runFrame': 1,
   'frame/sceneOccluderSpheres': 1,
   'frame/slabs': 18,
   'frame/visibleSlabBodies': 2,
@@ -129,6 +129,7 @@ const SWEPT_DIRS = [
   ['frame', FRAME_DIR] as const,
   ['frame/timing', FRAME_DIR + 'timing/'] as const,
   ['frame/passes', FRAME_DIR + 'passes/'] as const,
+  ['frame/readouts', FRAME_DIR + 'readouts/'] as const,
   ...LAYER_PASS_DIRS,
   ...DESKTOP_MODULE_DIRS,
 ];

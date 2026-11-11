@@ -4,9 +4,9 @@
  *
  * Dust stays here, full-res in HDR — its per-channel transmittance has to
  * land on the real cosmological accumulation; the ADDITIVE star pass lives in
- * `milkyWayAggregatePass` (see that layer's header). `enabled` delegates to
- * `deriveMilkyWayCloudAlpha`, shared with the aggregate producer and its
- * upsample consumer so the three can't disagree (`milkyWayCloudLiveness`).
+ * `milkyWayAggregatePass` (see that layer's header). `enabled` is the
+ * `cloudDust` part over `isMilkyWayCloudLive`, the rule the aggregate
+ * producer and its upsample consumer share.
  *
  * Slab is NEAR0, not COSMO: COSMO's near plane (10 kpc) would slice the
  * disc's ~9.5 kpc near edge mid-crossfade with the approach fade. NEAR0's
@@ -22,11 +22,13 @@
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { MilkyWayRuntime } from '../../@types/MilkyWayRuntime';
-import { deriveMilkyWayCloudAlpha } from '../present/milkyWayCloudLiveness';
+import { deriveMilkyWayCloudAlpha } from '../present/deriveMilkyWayCloudAlpha';
 import { milkyWayCamPosModel } from '../render/milkyWayCamPosModel';
 import { milkyWayModelCached } from '../render/milkyWayModelCached';
 import { isPickableUnderFocus } from '../../../../utils/structure/isPickableUnderFocus';
 import { MILKY_WAY_CENTER_WORLD } from '../../../../data/milkyWay/galacticCenter';
+import { selectMilkyWayParts } from '../../state/milkyWay/selectors';
+import { isMilkyWayCloudLive } from '../present/isMilkyWayCloudLive';
 
 /**
  * Camera origin distance (Mpc) below which the impostor stops taking clicks —
@@ -52,11 +54,15 @@ export function milkyWayPass(runtime: MilkyWayRuntime): ContentPass<'milkyWayDis
     name: 'milky-way',
     fade: 'milkyWayDisk',
 
-    enabled: (_state, ctx, _view, fade) =>
-      deriveMilkyWayCloudAlpha(ctx, fade, runtime.pickCode) !== null,
+    // The dust draws only with the cloud's own light; under the v2 field it is
+    // the field's dust that extincts.
+    enabled: (state, ctx, _view, fade) =>
+      selectMilkyWayParts(state.settings.milkyWay).cloudDust &&
+      isMilkyWayCloudLive(state, ctx, fade, runtime.pickCode),
 
-    // Narrower than `enabled` — composed over it so pick stays a strict
-    // subset of draw; see `MILKY_WAY_PICK_MIN_DISTANCE_MPC` above.
+    // Composed over the alpha, NOT over `enabled`: the impostor picks in every
+    // renderer mode, so the disc stays clickable when the dust is off. It is
+    // narrower than the alpha; see `MILKY_WAY_PICK_MIN_DISTANCE_MPC` above.
     pickEnabled(_state, ctx, view, fade) {
       if (deriveMilkyWayCloudAlpha(ctx, fade, runtime.pickCode) === null) return false;
       if (!isPickableUnderFocus(MILKY_WAY_CENTER_WORLD, ctx.snapshot.focus)) return false;
@@ -81,7 +87,7 @@ export function milkyWayPass(runtime: MilkyWayRuntime): ContentPass<'milkyWayDis
         // The live look knobs, same as the aggregate row. The dust pass reads
         // only the model scale and fade out of the shared uniform struct, but it
         // packs the whole struct, so the values still have to be present.
-        tuning: state.settings.milkyWay,
+        tuning: state.settings.milkyWay.cloud,
         buffers: runtime.cloud.buffers(),
       });
     },

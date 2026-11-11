@@ -3,7 +3,7 @@
  *
  * The 20,000 floor is a hard minimum, not a taste choice: a smaller bag leaves
  * populations with single-digit counts and the disc stops reading as a disc.
- * `MilkyWayTuning`'s `starCount` slider documents the same floor.
+ * `MilkyWayCloudTuning`'s `starCount` slider documents the same floor.
  */
 import type { GalaxyParams } from '../../../../@types/galaxy/GalaxyParams';
 

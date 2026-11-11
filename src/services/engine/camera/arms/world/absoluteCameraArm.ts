@@ -56,7 +56,13 @@ export const absoluteCameraArm: CameraArmRow<'absolute'> = {
             null,
             tilt,
             framed,
-            { kind: 'zoom', factor: Math.exp(zoom), duringGesture: false, cursorPx: null },
+            {
+              kind: 'zoom',
+              factor: Math.exp(zoom),
+              duringGesture: false,
+              cursorPx: null,
+              fresh: false,
+            },
             ctx,
           ).pose;
     return {

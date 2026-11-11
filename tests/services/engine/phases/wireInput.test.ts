@@ -69,6 +69,8 @@ import { wireInput } from '../../../../src/services/engine/phases/wireInput';
 // could drift from GPU_HANDLE_ROWS.
 import { GPU_HANDLE_ROWS } from '../../../../src/services/engine/gpuHandles/gpuHandleRegistry';
 import { selectSelectedRef, selectFocusRef } from '../../../../src/state/selection/selectors';
+import { manualPausedAtActions } from '../../../../src/state/time/enterManualPausedAt';
+import { unixMsToJulianDays } from '../../../../src/utils/time/unixMsToJulianDays';
 
 function makeState(): EngineState {
   return {
@@ -189,6 +191,25 @@ describe('wireInput', () => {
       ORIENTATION_FRAMES.ecliptic,
     );
     expect(state.booted).toBe(true);
+  });
+
+  it("frames the boot camera at a linked `t=`'s instant, not the wall clock", async () => {
+    // A focus link with no pose keeps this base's yaw and pitch, so a wall-clock
+    // base made the same link frame differently on every load.
+    const state = makeState();
+    const deps = makeDeps();
+    const instant = new Date('2026-09-18T06:00:00Z');
+    for (const action of manualPausedAtActions(instant)) deps.cb.store.dispatch(action);
+    homePoseSpy.mockClear();
+
+    await wireInput(state, deps);
+
+    expect(homePoseSpy).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      unixMsToJulianDays(instant.getTime()),
+      expect.anything(),
+    );
   });
 
   it('seeds the runtime off the PRE-commit store, so frame one reads the boot commit as outside', async () => {

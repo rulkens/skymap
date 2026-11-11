@@ -102,6 +102,9 @@ export const SCENE: FrameSection = {
     // its own submit, so the bake lands after the previous view's apply and before this
     // view's; no once-scope PRELUDE line could give that ordering.
     { kind: 'compute', name: 'aerial-perspective' },
+    // The v2 Milky Way field into its own `mw-field-*` targets, composited by
+    // `milky-way-field` on the hdr NEAR0 line. Per view for the same reason.
+    { kind: 'compute', name: 'mw-field' },
     // Reduced-res density raymarch, merged into HDR by `cosmic-web-density-upsample`
     // inside the hdr COSMO step below, so this render must precede that step.
     { kind: 'render', target: 'cosmic-web-density', slab: COSMO, passes: ['cosmic-web-density'] },
@@ -155,6 +158,9 @@ export const SCENE: FrameSection = {
     //
     // `milky-way-upsample` precedes `milky-way` so the cloud's own starlight is folded
     // in before the dust multiplies; swapping them leaves the cloud's stars un-extincted.
+    // `milky-way-field` (the v2 field's targets, written by `mw-field`) sits between
+    // them as placement only: v1 dust is off whenever the field draws, and the
+    // field's own dust is in-shader.
     //
     // `local-bubble` follows `milky-way` immediately, NOT a listing choice: anything
     // accumulated after the dust multiply escapes it, and the shell's additive Fresnel
@@ -170,6 +176,7 @@ export const SCENE: FrameSection = {
       slab: NEAR0,
       passes: [
         'milky-way-upsample',
+        'milky-way-field',
         'milky-way',
         'local-bubble',
         'stellar-streams-haze-upsample',

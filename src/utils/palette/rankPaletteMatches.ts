@@ -6,7 +6,7 @@
 import { scoreFamousMatch } from './scoreFamousMatch';
 import { scoreAliasMatch } from './scoreAliasMatch';
 import { APP_EXHIBIT_REGISTRY } from '../../compositions/appExhibits';
-import { tourRegistry } from '../../data/animation/tours/tourRegistry';
+import { APP_TOUR_REGISTRY } from '../../compositions/appTours';
 import { EARTH_PLACES } from '../../data/palette/earthPlaces';
 import type { ScoredRow } from '../../@types/palette/ScoredRow';
 import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMetaEntry';
@@ -51,7 +51,7 @@ export function rankPaletteMatches(
     })
     .filter((s) => s.score > 0);
 
-  const tourScored: ScoredRow[] = Object.values(tourRegistry)
+  const tourScored: ScoredRow[] = Object.values(APP_TOUR_REGISTRY)
     .filter((tour) => tour.dev !== true)
     .map<ScoredRow>((tour) => {
       const raw = scoreFamousMatch({ id: tour.id, names: [tour.label], description: '' }, query);

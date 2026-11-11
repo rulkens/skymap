@@ -89,6 +89,14 @@ URL and attribution string reads it from there.
 | Full pull  | `world.topo.bathy.200408.3x21600x10800.jpg` | 21600×10800 | 27,216,225 bytes |
 | Dev subset | `world.topo.bathy.200408.3x5400x2700.jpg`   | 5400×2700   | 2,308,163 bytes  |
 
+### The other eleven months (cloud bake ice mask)
+
+`npm run fetch-cloud-inputs -- --confirm` also pulls the other eleven 21600×10800 equirects
+(`world.topo.bathy.2004MM.3x21600x10800.jpg`, about 30 MB each, 360 MB for all twelve). The
+cloud bake cuts its ice mask from the month matching the bake date. The app never reads them: it
+uses only the vintage month above. One table (`tools/utils/io/BMNG_MONTHS.ts`) describes the
+twelve; same NASA media guidelines and credit.
+
 ### Quadrants (the surface tile pyramid's source)
 
 The eight files composite to 86400×43200, about 464 m per texel and four pyramid

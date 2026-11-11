@@ -95,6 +95,12 @@ describe('decodeFramedPose', () => {
     expect(decodeFramedPose(encodeFramedPose(EVEREST_ARM).replace('earth', 'sirius'))).toBeNull();
   });
 
+  it('rejects a craft as a body or sky frame: the arm tree hosts no mesh body', () => {
+    // A cold `#pose=b,hubble,…` threw `hostOrThrow` every frame (2026-11-08).
+    expect(decodeFramedPose(encodeFramedPose(EVEREST_ARM).replace('earth', 'hubble'))).toBeNull();
+    expect(decodeFramedPose(SKY_LINK.replace('earth', 'perseverance'))).toBeNull();
+  });
+
   it('rejects a site id outside SURFACE_FIXED_SITES', () => {
     const junk = encodeFramedPose(SITE_ARM).replace('curiosity', 'not-a-site');
     expect(decodeFramedPose(junk)).toBeNull();

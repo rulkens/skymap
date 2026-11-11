@@ -32,10 +32,10 @@ import type { BindingTable } from '../../@types/input/BindingTable';
 import type { DeviceEvent } from '../../@types/input/DeviceEvent';
 import type { HeldIntent } from '../../@types/input/HeldIntent';
 import type { Motion } from '../../@types/input/Motion';
-import type { SourceId } from '../../@types/input/SourceId';
+import type { InputSourceId } from '../../@types/input/InputSourceId';
 import type { UnitPoint } from '../../@types/input/UnitPoint';
 
-export function* inputSourceSaga(source: SourceId, channel: EventChannel<DeviceEvent>) {
+export function* inputSourceSaga(source: InputSourceId, channel: EventChannel<DeviceEvent>) {
   // Latched at each press: a `shift+c` mid-gesture must not change the running gesture's intent,
   // nor the table its tap is judged by. The next press reads the new scheme.
   let bindings: BindingTable = CONTROL_BINDINGS.skymap;
@@ -102,11 +102,27 @@ export function* inputSourceSaga(source: SourceId, channel: EventChannel<DeviceE
             break;
           case 'drag':
             if (held === null) break;
-            motion.push({ intent: held, dx: g.dx, dy: g.dy, ratio: 1, at: g.at, held: true });
+            motion.push({
+              intent: held,
+              dx: g.dx,
+              dy: g.dy,
+              ratio: 1,
+              at: g.at,
+              held: true,
+              eventMs: event.t,
+            });
             buffer();
             break;
           case 'pinch':
-            motion.push({ intent: 'zoom', dx: 0, dy: 0, ratio: g.ratio, at: null, held: true });
+            motion.push({
+              intent: 'zoom',
+              dx: 0,
+              dy: 0,
+              ratio: g.ratio,
+              at: null,
+              held: true,
+              eventMs: event.t,
+            });
             buffer();
             break;
           case 'wheel':
@@ -117,6 +133,7 @@ export function* inputSourceSaga(source: SourceId, channel: EventChannel<DeviceE
               ratio: g.ratio,
               at: g.at,
               held: held !== null,
+              eventMs: event.t,
             });
             buffer();
             break;

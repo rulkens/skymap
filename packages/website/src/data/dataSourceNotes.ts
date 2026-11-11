@@ -410,6 +410,14 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     scene: 'earth-and-its-surface',
     figure: 'earth-terminator',
   },
+  'cloud-bake': {
+    description:
+      'Daily NASA GIBS and EUMETSAT weather-satellite imagery that tools/cloud-bake-rs turns into a cloud-opacity map.',
+    about:
+      'A separate tool, not yet shipped in the app, turns a day of weather-satellite frames into one global cloud-opacity map: VIIRS on NOAA-20 and NOAA-21, GOES-East and GOES-West and Himawari through NASA GIBS, and Meteosat MTG and IODC through EUMETSAT’s EUMETView.',
+    shows: 'Nothing yet. The clouds on Earth are still the Blue Marble ones.',
+    scene: 'earth-and-its-surface',
+  },
   eox: {
     description:
       'Cloud-free Sentinel-2 imagery of Earth, in the regions where Skymap goes closer than Blue Marble reaches.',

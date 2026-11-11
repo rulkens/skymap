@@ -175,7 +175,7 @@ describe('rankPaletteMatches — scene-body rows', () => {
 
   it('keeps dev tours out of search while user-facing ones rank', () => {
     // `demoTour` is a harness for the tour machinery and carries `dev: true`.
-    // Nothing else hides it: it is a full `tourRegistry` row, so its label
+    // Nothing else hides it: it is a full `APP_TOUR_REGISTRY` row, so its label
     // scores like any other and only the flag keeps it out of a user's results.
     expect(rankPaletteMatches([M31], [], [], [], 'demo tour')).toEqual([]);
     const rows = rankPaletteMatches([M31], [], [], [], 'named cosmic web');

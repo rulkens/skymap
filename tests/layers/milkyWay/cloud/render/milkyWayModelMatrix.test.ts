@@ -27,7 +27,7 @@ import {
   GAL_Z_EQ,
   ORIENTATION_FRAMES,
 } from '../../../../../src/data/orientation/orientationFrames';
-import { MILKY_WAY_MODEL_SCALE } from '../../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
+import { MILKY_WAY_MODEL_SCALE } from '../../../../../src/data/milkyWay/milkyWayModelScale';
 import { milkyWayModelMatrix } from '../../../../../src/layers/milkyWay/cloud/render/milkyWayModelMatrix';
 
 /**

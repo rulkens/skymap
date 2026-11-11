@@ -1,6 +1,6 @@
 import { OBJECT_ROWS } from '../../../packages/website/src/data/objectCatalogue';
 import { clipFactories } from '../../../src/data/animation/clips/clipRegistry';
-import { tourRegistry } from '../../../src/data/animation/tours/tourRegistry';
+import { APP_TOUR_REGISTRY } from '../../../src/compositions/appTours';
 import { APP_EXHIBIT_REGISTRY } from '../../../src/compositions/appExhibits';
 import { HASH_PARAM_SOURCES } from '../../../src/state/url/hashParamSources';
 import { linkIntentFrom } from '../../../src/utils/url/linkIntentFrom';
@@ -13,7 +13,7 @@ const NAMED = new Set(OBJECT_ROWS.map((row) => row.id));
 const FROM_DATA = /^(?:pgc-\d+|sdss-\d+|pos@.+|star-\d+|[a-z]+-bulk-.+)$/;
 const TAKEOVERS = {
   exhibit: APP_EXHIBIT_REGISTRY,
-  tour: tourRegistry,
+  tour: APP_TOUR_REGISTRY,
   clip: clipFactories,
 };
 

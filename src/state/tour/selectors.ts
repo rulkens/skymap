@@ -6,7 +6,7 @@
  * The slice stores only `beatIndex / paused / dwellNonce / dwellSec`;
  * everything else the overlay renders — the beat count, the
  * active caption — is DERIVED here by resolving the takeover's tour id against
- * `tourRegistry` and indexing its beats. This is the whole reason the runtime
+ * `APP_TOUR_REGISTRY` and indexing its beats. This is the whole reason the runtime
  * state can stay so small: the registry is already the single source of truth
  * for tour content, so duplicating any of it into the slice would only invite
  * drift. (`dwellSec` is the one exception: the compiled duration of the beat's
@@ -22,7 +22,7 @@
 
 import { createSelector } from '@reduxjs/toolkit';
 import { tourRoute } from '../../store/constants';
-import { tourRegistry } from '../../data/animation/tours/tourRegistry';
+import { APP_TOUR_REGISTRY } from '../../compositions/appTours';
 import { selectTakeoverSource } from '../takeover/selectors';
 import type { RootState } from '../../store/types';
 import type { TourRuntimeState } from '../../@types/animation/tour/TourRuntimeState';
@@ -46,7 +46,7 @@ export const selectTourDwellNonce = (state: RootState): number =>
 export const selectActiveTour = (state: RootState): Tour | null => {
   const source = selectTakeoverSource(state);
   if (source?.kind !== 'tour') return null;
-  return (tourRegistry as Record<string, Tour>)[source.id] ?? null;
+  return (APP_TOUR_REGISTRY as Record<string, Tour>)[source.id] ?? null;
 };
 
 export const selectTourTotal = (state: RootState): number =>

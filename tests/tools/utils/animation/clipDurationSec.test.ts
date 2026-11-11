@@ -10,7 +10,7 @@ import {
 } from '../../../../src/services/engine/animation/effectHelpers';
 import { focusId } from '../../../../src/utils/animation/focusId';
 import { dwellDrift } from '../../../../src/state/tour/dwellDrift';
-import { tourRegistry } from '../../../../src/data/animation/tours/tourRegistry';
+import { APP_TOUR_REGISTRY } from '../../../../src/compositions/appTours';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
 
 describe('clipDurationSec', () => {
@@ -32,7 +32,7 @@ describe('clipDurationSec', () => {
     // The invariant the tour-length tool relies on: any beat authored into
     // the registry stays statically measurable — no clip shape may sneak in
     // that needs live data to compile.
-    for (const tour of Object.values(tourRegistry)) {
+    for (const tour of Object.values(APP_TOUR_REGISTRY)) {
       for (const beat of tour.beats) {
         const enter = beat.enterClip ? clipDurationSec(beat.enterClip) : 0;
         const dwell = clipDurationSec(beat.dwellClip);

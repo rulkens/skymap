@@ -38,7 +38,7 @@ function poseAt(eyeM: Vec3, basisLocal: Mat3): BodyFixedPose {
 }
 
 function zoom(factor: number): InputStep {
-  return { kind: 'zoom', factor, duringGesture: false, cursorPx: null };
+  return { kind: 'zoom', factor, duringGesture: false, cursorPx: null, fresh: false };
 }
 
 function tiltDrag(px: number): InputStep {

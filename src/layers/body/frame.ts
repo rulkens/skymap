@@ -14,6 +14,7 @@ import { planSurfaceTiles } from './surfaceTiles/plan/subsystems/planSurfaceTile
 import { surfaceTileOverOf } from './surfaceTiles/plan/subsystems/surfaceTileOverOf';
 import { surfaceTileDebugSnapshotOf } from './surfaceTiles/debug/subsystems/surfaceTileDebugSnapshotOf';
 import { bodySurfaceTier } from './textures/load/bodySurfaceTier';
+import { surfaceTileFadeWeight } from './surfaceTiles/patch/subsystems/surfaceTileFadeWeight';
 import {
   NO_TERRAIN_PICK_MARKER_READOUT,
   terrainPickMarkerReadoutOf,
@@ -42,11 +43,16 @@ export function surfaceTilePlanner(
               : NO_TERRAIN_PICK_MARKER_READOUT,
         });
       }
+      // A landed tile's crossfade runs on real time with no fetch left to wake the
+      // loop, so it votes too, or the frame would freeze (and settle) half-blended.
+      const fading = tiles.plan.cut.some(
+        (t) => surfaceTileFadeWeight(t.albedo, snapshot.nowMs) < 1,
+      );
       return {
         value: undefined,
-        awake: tiles.plan.awake,
+        awake: tiles.plan.awake || fading,
         settling: false,
-        loading: tiles.plan.awake,
+        loading: tiles.plan.awake || fading,
       };
     },
   };

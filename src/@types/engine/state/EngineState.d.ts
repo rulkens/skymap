@@ -54,7 +54,7 @@ export type EngineState = {
   /** True once `wireInput` seeded the first real camera pose. The gate every
    * pre-bootstrap bail reads; there is no boot camera object to read from. */
   booted: boolean;
-  /** Whether the last frame had a fade or label animation running; `settled()` polls it. */
+  /** Whether the last frame had a fade or label animation running; `isSceneSettled` reads it. */
   fadesAnimating: boolean;
   /** Whether a Layer planner voted `loading` last frame; `isSceneSettled` reads it. */
   layersLoading: boolean;
