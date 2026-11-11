@@ -19,7 +19,8 @@ camera. A debug panel tunes the colour of each group.
 - A colour per group, where a group is a major constellation, an orbit regime, debris, or other.
 - Brightness from solar-panel area, with the order of objects true and the range compressed.
 - Modelled specular glints from each object's panels.
-- A DebugPanel section tuning each group's colour live, with reset and copy-as-defaults.
+- A DebugPanel section tuning each group's colour and an ambient floor live, with reset and copy-as-defaults
+  (ambient added at the owner's request after the first build).
 - The selected satellite's orbit ring uses its group colour.
 
 **Non-goals**
@@ -27,7 +28,7 @@ camera. A debug panel tunes the colour of each group.
 - 3D models. A later effort; the owner's ruling is real models for ISS, Hubble, Tiangong and Starlink, all else dots.
 - Velocity streaks and fleet-wide orbit rings (backlogged, spec `2026-10-28-earth-satellites-design.md` §5.4).
 - Debris tumble flicker. Debris has no usable panel data, so it stays diffuse.
-- Tuning anything but colour. Panel areas and glint constants are code.
+- Tuning anything but colour and ambient. Panel areas and glint constants are code.
 - Any change to `satellites.satg`.
 
 **Anti-goals**
@@ -44,7 +45,7 @@ satelliteProfileCodes       catalog → Uint8Array, once per load, on the main t
 GPU profile table           uniform array, written at start and when a colour changes
 SatelliteInstance           + profileCode (index into the table), filled in the per-sweep upload
 points/illumination.wesl    Earth shadow, phase, panel glint; called from the vertex stage
-settings.satelliteColors    tuned colours; the planner compares by reference and writes the table
+settings.satelliteTuning    { colors, ambient }; the planner compares colors by reference and writes the table
 ```
 
 ## 4. How it works
@@ -81,8 +82,9 @@ between those dates get the wrong Starlink row.
 **Lighting**, in world axes in the vertex stage, per dot:
 
 - *Shadow.* A cylinder along the anti-Sun direction with Earth's radius, widened by the penumbra (the Sun's 0.267°
-  half-angle times distance behind Earth) and smoothstepped across it. An eclipsed dot keeps a small residual so the
-  object is not lost entirely; picking is unaffected.
+  half-angle times distance behind Earth) and smoothstepped across it. Picking is unaffected.
+- *Ambient.* A floor every dot gets, sunlit or eclipsed (`ambient + phase · lit`), so an object in shadow is not lost
+  entirely. Tunable, default 0.04.
 - *Phase.* Lambert-sphere phase, compressed.
 - *Range and area.* `pow(area / ref, areaExp) · pow(refKm / range, rangeExp)`, both exponents under the physical
   values, tuned by eye.
@@ -97,9 +99,9 @@ in an additive HDR target poisons the frame.
 Well-tracking panels throw light back towards the Sun, so glints appear when the camera is on the sunward side and
 not in night-side views. That is the correct behaviour of the model.
 
-**Tuning.** `settings.satelliteColors` maps each profile id to linear RGB. The planner, which runs before any encoder
-exists, compares that object by reference and rewrites the GPU table on change. An edit touches neither the instances
-nor the sweep. The ring reads the same state.
+**Tuning.** `settings.satelliteTuning.colors` maps each profile id to linear RGB. The planner, which runs before any
+encoder exists, compares that object by reference and rewrites the GPU table on change. An edit touches neither the
+instances nor the sweep. The ring reads the same state. `ambient` rides the per-frame uniform.
 
 **Honesty.** The satellite card states that brightness and flashes are modelled.
 
