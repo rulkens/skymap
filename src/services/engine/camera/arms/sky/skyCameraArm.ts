@@ -56,29 +56,22 @@ export const skyCameraArm: ClimbRow<'sky'> = {
       const pose = skyLookedPose(framed.pose, dragPx, ctx.fovYRad, ctx.viewportPx[1]);
       return { pose, memory, tilt };
     }
-    if (input.kind === 'liftOff') {
-      return {
-        pose: framed.pose,
-        memory,
-        tilt,
-        pressed: { edge: 'out', lift: skyExitLift(framed, ctx) },
-      };
+    if (input.kind === 'zoom') {
+      const fovYRad = skyZoomedLens(ctx.fovYRad, input.factor);
+      // The pose stays by reference, so `replayInput` commits no pose for a lens notch.
+      if (fovYRad !== ctx.fovYRad) return { pose: framed.pose, memory, tilt, fovYRad };
     }
-    if (input.kind !== 'zoom') return { pose: framed.pose, memory, tilt };
-    const fovYRad = skyZoomedLens(ctx.fovYRad, input.factor);
-    // The pose stays by reference, so `replayInput` commits no pose for a lens notch.
-    if (fovYRad !== ctx.fovYRad) return { pose: framed.pose, memory, tilt, fovYRad };
     // A wheel-out the widest lens ate whole presses the limit; the drain decides whether it
     // pushes. The lift rides the push as a value; once played, its end commit (a body-arm
     // pose) leaves the sky.
-    return input.factor > 1
-      ? {
-          pose: framed.pose,
-          memory,
-          tilt,
-          pressed: { edge: 'out', lift: skyExitLift(framed, ctx) },
-        }
-      : { pose: framed.pose, memory, tilt };
+    const lifts = input.kind === 'liftOff' || (input.kind === 'zoom' && input.factor > 1);
+    if (!lifts) return { pose: framed.pose, memory, tilt };
+    return {
+      pose: framed.pose,
+      memory,
+      tilt,
+      pressed: { edge: 'out', lift: skyExitLift(framed, ctx) },
+    };
   },
 
   nudge(tilt, framed, { look, zoom }, ctx) {

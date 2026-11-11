@@ -142,7 +142,7 @@ describe('watchKeyboardEventsSaga', () => {
     const { store, recorded } = buildHarness();
     await flush();
     store.dispatch(updateSelectionFocus({ type: 'body', id: EARTH }, 'cut'));
-    store.dispatch(engineSkyViewReported({ spot: SPOT, azimuthRad: 0, altitudeRad: 0.3 }));
+    store.dispatch(engineSkyViewReported({ spot: SPOT, azimuthRad: 0 }));
     const before = recorded.length;
 
     h.emit!('escape');

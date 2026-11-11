@@ -7,5 +7,4 @@ import type { SkySpot } from '../camera/pose/SkySpot';
 export type SkyView = {
   readonly spot: SkySpot;
   readonly azimuthRad: number;
-  readonly altitudeRad: number;
 } | null;

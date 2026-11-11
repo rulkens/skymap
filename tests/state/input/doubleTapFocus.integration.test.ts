@@ -122,7 +122,6 @@ describe('double-tap focus', () => {
       engineSkyViewReported({
         spot: { body: EARTH, lonRad: 0.2186, latRad: 0.9716 },
         azimuthRad: 0,
-        altitudeRad: 0.3,
       }),
     );
   };

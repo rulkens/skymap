@@ -30,7 +30,7 @@ The owner's (grill Q-numbers in brackets) and those carried from the 2026-10-28 
 | R4  | The button shows only **below 20 km**, with terrain of a terrain host (Earth, Mars) under the view centre. [Q4] |
 | R5  | **Desktop preview**: hovering or focusing the button shows a ring at the view centre with the place and coordinates beside it. **Phone**: the place goes in the button label, no ring. [Q5, Q6] |
 | R6  | **Place names**: the nearest `EARTH_PLACES` entry within 25 km, else coordinates. [Q7] |
-| R7  | **Sky HUD**: a horizon compass at the bottom centre (place title, cardinal ribbon, caret, heading and altitude below), a readout in the scale bar's slot, the Navigation panel listing the sky gestures. [Q8] |
+| R7  | **Sky HUD**: a horizon compass at the bottom centre (place title, cardinal ribbon, caret), a readout in the scale bar's slot, the Navigation panel listing the sky gestures. [Q8] |
 | R8  | **One exit button, Leave (Esc)**, under the compass readout; lift-off stays the wheel-out gesture. [Q9] |
 | R9  | **Search while standing** turns the view to face the result and frames it by angular size; stars zoom in a little and keep context. [Q10, Q11] |
 | R10 | **By day** the HUD offers "Skip to tonight". [Q12] |
@@ -224,7 +224,7 @@ phone. Mockups: grill Q8 (variant B2), shot in the real UI; rebuild them with th
 - **Compass** (bottom centre): the place title (display face) with a small "Sky" tag; a ribbon about 120°
   wide with ticks every 5°, numbers every 15°, cardinal and intercardinal letters, faded at both ends; an
   accent caret under the centre; no numeric readout (owner, 2026-11-10). It reads the sky view readout row
-  (`{ azimuthRad, altitudeRad, fovYRad } | null`, rounded to 0.5°) so it follows a drag live.
+  (`{ spot, azimuthRad } | null`, azimuth rounded to 0.5°) so it follows a drag live.
 - **Leave** under the compass: "Leave" with `Esc` printed dim. With **Skip to tonight** (D6) and **Skip to
   when it rises** (§7) beside it when they apply; each jumps the clock with `manualPausedAtActions` and is
   undone by the Time bar's "Now".

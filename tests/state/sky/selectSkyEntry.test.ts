@@ -45,7 +45,7 @@ describe('selectSkyEntry', () => {
 
   it('is null while standing', () => {
     const store = storeAt(5_000);
-    store.dispatch(engineSkyViewReported({ spot: SPOT, azimuthRad: 0, altitudeRad: 0 }));
+    store.dispatch(engineSkyViewReported({ spot: SPOT, azimuthRad: 0 }));
     expect(entry(store)).toBeNull();
   });
 

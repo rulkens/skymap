@@ -68,12 +68,8 @@
 
 .note {
   margin: 0;
-  font-size: var(--font-size-md);
-  font-variant-numeric: tabular-nums;
-}
-
-.note {
   color: var(--color-fg-tertiary);
+  font-size: var(--font-size-md);
 }
 
 .actions {

@@ -242,8 +242,6 @@ export function replayInput(
         break;
 
       case 'zoom': {
-        // No arm sees `fresh`: only the press fold below reads it.
-        const { fresh: _fresh, ...zoom } = step;
         // The settles are priced per unit of zoom, not per step (user ruling
         // 2026-09-10): a trackpad twitch must not spend a mouse notch's decay.
         const logZoom = Math.abs(Math.log(step.factor));
@@ -260,7 +258,7 @@ export function replayInput(
         // view: an at-rest notch would zoom that stale pose and snap back to it.
         // It rides the live register instead, as a held gesture's does.
         const notch: InputStep = {
-          ...zoom,
+          ...step,
           duringGesture: args.navOwns || step.duringGesture,
         };
         if (!ridesTheFollow && stepRegister(notch)) break;

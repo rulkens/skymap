@@ -27,7 +27,7 @@ const NOON = unixMsToJulianDays(Date.UTC(2026, 10, 7, 12));
 function mount(spot = SPOT, simDays = NOON) {
   const store = configureStore({ reducer: rootReducer });
   store.dispatch(goLive({ simDays, nowMs: performance.now() }));
-  store.dispatch(engineSkyViewReported({ spot, azimuthRad: Math.PI, altitudeRad: 0.6 }));
+  store.dispatch(engineSkyViewReported({ spot, azimuthRad: Math.PI }));
   const dispatch = vi.spyOn(store, 'dispatch');
   render(
     <Provider store={store}>
