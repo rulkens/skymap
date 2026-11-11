@@ -18,4 +18,6 @@ export type IsmMapReadbacks = {
   dropIfGridMoved(grid: GalaxyIsmMapGridRadius): void;
   /** Debug-only, for the probe's CPU-vs-GPU ring-means check; `onError` because its awaiter is a Promise. */
   requestRingMeans(onLand: (means: Float32Array) => void, onError?: (err: unknown) => void): void;
+  /** Terminal, before the renderer that owns the staging buffers is disposed. */
+  cancel(): void;
 };

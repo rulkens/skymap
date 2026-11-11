@@ -10,7 +10,7 @@
 import type { Vec2 } from '../../../../@types/math/Vec2';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { MilkyWayCloudBuffers } from './MilkyWayCloudBuffers';
-import type { MilkyWayTuning } from '../../../../@types/settings/MilkyWayTuning';
+import type { MilkyWayCloudTuning } from '../../../../@types/settings/MilkyWayCloudTuning';
 
 export type MilkyWayCloudDrawArgs = {
   /** Combined view-projection matrix (16 floats) — `ctx.vp`. */
@@ -33,8 +33,8 @@ export type MilkyWayCloudDrawArgs = {
   readonly model: Float32Array;
   /** Distance-fade × toggle-opacity, already composed, in [0, 1]. */
   readonly fadeAlpha: number;
-  /** Live star-cloud look knobs — `state.settings.milkyWay`. */
-  readonly tuning: MilkyWayTuning;
+  /** Live star-cloud look knobs — `state.settings.milkyWay.cloud`. */
+  readonly tuning: MilkyWayCloudTuning;
   /** The generation pass's current instance buffers + counts. */
   readonly buffers: MilkyWayCloudBuffers;
 };

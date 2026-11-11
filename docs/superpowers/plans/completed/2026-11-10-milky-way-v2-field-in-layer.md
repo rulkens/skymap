@@ -110,8 +110,9 @@ does not edit.
 > **Units: the field must use v1's `GalaxyParams`.** `toGalaxy = inverse(milkyWayModelCached())`
 > is right only if the host's geometry is `describeGalaxy(MILKY_WAY_GALAXY_PARAMS)`, the input the
 > cloud uses (`cloud/render/milkyWayCloud.ts:20,72`). The test in Task B3 pins the eye against
-> `milkyWayCamPosModel`. A separate issue, not fixed here: `pcToUnits` (`field/mixture/utils/`)
-> assumes 1.6667 kpc per unit, while the placement implies 1.75 (17.5 kpc / 10).
+> `milkyWayCamPosModel`. Task B3b's finding: the placement implies 17.5 kpc / 10.5 units =
+> 1.6667 kpc per unit, which `pcToUnits` already had, only rounded as a literal; it now derives
+> from `MILKY_WAY_MODEL_SCALE` (`src/data/milkyWay/milkyWayModelScale.ts`).
 
 > [!RISK]
 > **arms/utils would hold 17 files, over the cap of 15.** Splitting `armRidgeGeometry`,
@@ -824,14 +825,14 @@ export function encodeFieldComposites(
 ### Task A11: Tool identity pair (controller-owned)
 
 Run by the controller, not committed; the result goes to the ledger and the user.
-- [ ] Write a scratch Playwright script (`<scratch>/toolShots.mts`, run with `npx tsx`). Launch
+- [x] Write a scratch Playwright script (`<scratch>/toolShots.mts`, run with `npx tsx`). Launch
       Chromium as `probeGpuErrors.ts:237-252` does, open `npm run galaxy-renderer`'s server, and
       wait about 60 frames for the ISM chain to settle.
-- [ ] Shoot the PNGs at two poses:
+- [x] Shoot the PNGs at two poses:
   - the default preset's outside view;
   - an in-disc view, reached by a fixed sequence of wheel and drag inputs.
-- [ ] Shoot at **BASE** (main after PR 0) twice, to establish the noise floor, and at **HEAD** once.
-- [ ] Report per pose: differing-pixel count and largest channel delta (BASE vs BASE, BASE vs HEAD).
+- [x] Shoot at **BASE** (main after PR 0) twice, to establish the noise floor, and at **HEAD** once.
+- [x] Report per pose: differing-pixel count and largest channel delta (BASE vs BASE, BASE vs HEAD).
       Send the pairs to the user as dash checks. The user gives the verdict; a 1-LSB difference is
       expected (top RISK).
 
@@ -850,19 +851,19 @@ Run by the controller, not committed; the result goes to the ledger and the user
 **Files:** `src/services/gpu/shaders/lib/gaussianIntegral.wesl` (`gaussianRayCoeffs`, `:61`), its TS
 twin if one exists (grep `gaussianRayCoeffs`), and the test that pins it.
 
-- [ ] The finding (PR A's A11 bisect): `q = max(c − b²/a, 0)` cancels in f32. For a compact HII shell
+- [x] The finding (PR A's A11 bisect): `q = max(c − b²/a, 0)` cancels in f32. For a compact HII shell
       about 31 kpc from the eye, c ≈ 4·10⁸ while q ≈ 10, so a 1-ULP change to the ray swings q across
       `SPLAT_CUT²` (`hiiSplat/shadeCommon.wesl:76`). Whether far, compact shells draw is therefore
       numerically random, and it gets worse at app distances.
-- [ ] Fix: q is invariant to sliding `o` along the ray, so compute q from `o' = o − d·dot(o, d)` (with
+- [x] Fix: q is invariant to sliding `o` along the ray, so compute q from `o' = o − d·dot(o, d)` (with
       unit `d`; if `d` isn't unit, use `dot(o, d)/dot(d, d)`). a and b keep using the original `o`.
-- [ ] Test: a CPU twin or f64 oracle shows the new q matches f64 within a small relative error at
+- [x] Test: a CPU twin or f64 oracle shows the new q matches f64 within a small relative error at
       c ≈ 4·10⁸, where the old form is off by ≥ 1 unit. If no TS twin exists, write the test against
       a TS transcription of both forms and say so in its header (the WGSL itself is checked by the
       tool shots).
-- [ ] Re-shoot the A11 outside pose: the sub-pixel shell at (423, 393) should be stable across runs
+- [x] Re-shoot the A11 outside pose: the sub-pixel shell at (423, 393) should be stable across runs
       on both sides of the A5 change. Report any HII tier whose look changes.
-- [ ] Commit.
+- [x] Commit.
 
 ## Prep 4: nested settings
 
@@ -923,7 +924,7 @@ setMilkyWayRenderer(state, a: PayloadAction<MilkyWayRenderer>)
 `MILKY_WAY_FIELD_TUNING_DEFAULTS = { exposure: FIELD_CALIBRATION.exposure, dust: true, divisors:
 FIELD_CALIBRATION.divisors }`.
 
-- [ ] Rename the incumbents (D2), each as `npm run refactor -- rename <file>#<symbol> <newName>`:
+- [x] Rename the incumbents (D2), each as `npm run refactor -- rename <file>#<symbol> <newName>`:
   - `src/@types/settings/MilkyWayTuning.d.ts#MilkyWayTuning` → `MilkyWayCloudTuning`;
   - `…/v1/milkyWayCalibration.ts#MILKY_WAY_TUNING_DEFAULTS` → `MILKY_WAY_CLOUD_TUNING_DEFAULTS`
     (pass `--no-file-rename`);
@@ -936,22 +937,22 @@ FIELD_CALIBRATION.divisors }`.
   - `formatMilkyWayTuningDefaults` → `formatMilkyWayCloudTuningDefaults`.
 
   Then grep for each old name across `src tools tests docs packages`.
-- [ ] Nest the settings. The `.cloud` readers:
+- [x] Nest the settings. The `.cloud` readers:
   - `milkyWayPass.ts:84`, `milkyWayAggregatePass.ts:51` (`tuning: state.settings.milkyWay.cloud`);
   - `milkyWayAggregateTarget.ts:15`, `frame.ts:20`;
   - `MilkyWayTuningSection.tsx:27,33`.
 
   `reseedMilkyWayStarCountSaga` dispatches `setMilkyWayCloudTuning({ starCount })`. Persistence
   needs no migration: none exists (`src/state/persistedValues.ts`).
-- [ ] **Test, new:** `slice.test.ts` (milkyWay settings reducers):
+- [x] **Test, new:** `slice.test.ts` (milkyWay settings reducers):
   - `it('a cloud patch merges into cloud and leaves field and renderer')`: `cloud.exposure` changes,
     and `field` and `renderer` stay `toBe` the previous objects/values.
   - `it('a field patch merges into field and leaves cloud')`.
   - `it('setMilkyWayRenderer sets only renderer')`.
-- [ ] **Test, updated:** `milkyWayCloudSliderFields.test.ts` runs its two asserts against
+- [x] **Test, updated:** `milkyWayCloudSliderFields.test.ts` runs its two asserts against
       `MILKY_WAY_CLOUD_TUNING_DEFAULTS`. Repoint the four fixture tests above to
       `milkyWay: { cloud: { … } }`.
-- [ ] Commit.
+- [x] Commit.
 
 ## The feature
 
@@ -966,7 +967,7 @@ export type MilkyWayParts = { readonly cloud: boolean; readonly cloudDust: boole
 export function selectMilkyWayParts(settings: MilkyWaySettings): MilkyWayParts; // the only reader of `renderer`
 ```
 
-- [ ] **Test:** `it.each` over the three rows:
+- [x] **Test:** `it.each` over the three rows:
 
 | `renderer` | `cloud` | `cloudDust` | `field` |
 | --- | --- | --- | --- |
@@ -975,7 +976,7 @@ export function selectMilkyWayParts(settings: MilkyWaySettings): MilkyWayParts; 
 | `'both'` | true | false | true |
 
   Return one frozen constant per row, so callers get stable identity.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task B3: `deriveFieldView`
 
@@ -993,13 +994,13 @@ export function deriveFieldView(frame: FrameView, toGalaxy: Mat4): FieldView;
 - `eye` = `toGalaxy · frame.drawCamPos`, as a point.
 - The world basis is rebuilt from `frame.cam` exactly as `computeViewProj.ts:100-110` does:
   `orbitForwardOf`, then `imagePlaneBasis(fwd, cam.roll ?? 0, frameUp(cam.upBasis, …))`, with
-  `right`, `up` = `basis.rolledUp` and `fwd`. Then `toGalaxy` is applied to each as a direction
+  `right`, `up` = `basis.up` and `fwd`. Then `toGalaxy` is applied to each as a direction
   (w = 0) and the result normalised.
 - `frustum` is `frame.frustum`, the same object: a rotation plus uniform scale keeps angles.
 - The app's `toGalaxy` is the memoised `inverse(milkyWayModelCached())` that `milkyWayCamPosModel`
   already holds. Extract that inverse into `src/layers/milkyWay/cloud/render/milkyWayInverseModelCached.ts`
   and have both use it.
-- [ ] **Test:**
+- [x] **Test:**
       `it('with the identity, rays built from the FieldView land on their own NDC under frame.vp')`.
   - Build a `FrameView` fixture with `frustum = shiftedFrustum(0.8, 16/9, [0.3, −0.2])`,
     `vp = computeViewProj(cam, frustum)` and `cam.roll = 0.4`.
@@ -1009,12 +1010,12 @@ export function deriveFieldView(frame: FrameView, toGalaxy: Mat4): FieldView;
   - Also assert `view.eye` equals `drawCamPos` and `view.frustum` is `frame.frustum` (`toBe`).
   - The oracle is the app's real projection, so this pins the basis, its handedness, the roll and
     the asymmetric frustum together.
-- [ ] **Test:** `it('in the galaxy frame, the eye is milkyWayCamPosModel's and rays stay parallel')`.
+- [x] **Test:** `it('in the galaxy frame, the eye is milkyWayCamPosModel's and rays stay parallel')`.
   - With `toGalaxy = milkyWayInverseModelCached()`, `view.eye` ≈ `milkyWayCamPosModel(drawCamPos)`
     (1e-9 relative).
   - Map `fwd + right·t.x + up·t.y` back by `milkyWayModelCached()` as a direction; it must be
     parallel to the world-frame ray (cross product ≈ 0).
-- [ ] Commit.
+- [x] Commit.
 
 ### Task B3b: One kpc-per-unit scale for the field and its placement
 
@@ -1024,18 +1025,18 @@ export function deriveFieldView(frame: FrameView, toGalaxy: Mat4): FieldView;
 seven callers (grep `pcToUnits`), `src/layers/milkyWay/cloud/render/milkyWayModelMatrix.ts`
 (`MILKY_WAY_MODEL_SCALE`), `src/data/milkyWay/milkyWayGalaxyParams.ts`, and the matching test.
 
-- [ ] Investigate first, and write the finding into the commit body. The field's `pcToUnits` says
+- [x] Investigate first, and write the finding into the commit body. The field's `pcToUnits` says
       1 unit = 1.6667 kpc. The placement (`MILKY_WAY_MODEL_SCALE`, 17.5 kpc / 10 units) implies 1.75.
       Find which number the generator's geometry (`describeGalaxy(MILKY_WAY_GALAXY_PARAMS)`) actually
       uses for its outer radius, and which one v1's sprite cloud uses. The right constant is the one
       that makes the field and the cloud the same size under one model matrix.
-- [ ] Derive the constant from that one source (the galaxy params or the model scale) instead of a
+- [x] Derive the constant from that one source (the galaxy params or the model scale) instead of a
       second literal, so the two can't drift again.
-- [ ] Test: `it('the field and the cloud share one kpc-per-unit scale')`, pinning `pcToUnits(1000)`
+- [x] Test: `it('the field and the cloud share one kpc-per-unit scale')`, pinning `pcToUnits(1000)`
       against the scale the placement uses.
-- [ ] If the fix changes the tool's look (pc-sized features such as HII radii, dust bubbles or the DIG
+- [x] If the fix changes the tool's look (pc-sized features such as HII radii, dust bubbles or the DIG
       veil rescale by about 5%), say so in the reply. The B11 shots carry it to the user.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task B4: Target rows, and `mw-aggregate` allocated only for the cloud
 
@@ -1055,12 +1056,12 @@ export const FIELD_TARGET_ROWS: readonly RenderTargetSpec[];
 export function fieldRenderTargetsOf(targets: RenderTargets): GalaxyFieldRenderTargets;
 ```
 
-- [ ] `MILKY_WAY_AGGREGATE_TARGET` gains `allocateWhen: (s) => selectMilkyWayParts(s.settings.milkyWay).cloud`.
+- [x] `MILKY_WAY_AGGREGATE_TARGET` gains `allocateWhen: (s) => selectMilkyWayParts(s.settings.milkyWay).cloud`.
       B8 gates both passes that read it on the same part; `viewOf`/`sizeOf` throw on a released row.
-- [ ] `layer.ts` `targets: [MILKY_WAY_AGGREGATE_TARGET, ...FIELD_TARGET_ROWS]`.
-- [ ] Confirm the usage `renderTargets.ts` allocates includes `TEXTURE_BINDING`, since the field
+- [x] `layer.ts` `targets: [MILKY_WAY_AGGREGATE_TARGET, ...FIELD_TARGET_ROWS]`.
+- [x] Confirm the usage `renderTargets.ts` allocates includes `TEXTURE_BINDING`, since the field
       shaders sample the dust map.
-- [ ] No new test: the rows are data, and `checkFrameOrder` already rejects malformed rows at boot.
+- [x] No new test: the rows are data, and `checkFrameOrder` already rejects malformed rows at boot.
       Commit.
 
 ### Task B5: The host slot and the planner lifecycle
@@ -1091,7 +1092,7 @@ export function createFieldHostSlot(deps: {
 }): FieldHostSlot;
 ```
 
-- [ ] The real `tuningFor` is built once in `create.ts`:
+- [x] The real `tuningFor` is built once in `create.ts`:
   - `geometry` is `describeGalaxy(MILKY_WAY_GALAXY_PARAMS)` (see the units RISK), with the matching
     `seed`.
   - `extras` is a frozen `[]`.
@@ -1099,14 +1100,14 @@ export function createFieldHostSlot(deps: {
   - `render` is `FIELD_CALIBRATION.render` as it stands (its neutral debug lanes included); the app
     hand-builds no inert lane.
   - `onIsmMapLanded` is `deps.requestRender`, because the app renders on demand.
-- [ ] `MilkyWayRuntime` gains `readonly fieldHost: FieldHostSlot`.
+- [x] `MilkyWayRuntime` gains `readonly fieldHost: FieldHostSlot`.
   - `milkyWayPlanner` (once scope, type `FrameContentPlanner<FieldPlannerValue>`) calls
     `const host = runtime.fieldHost.sync(parts.field, state.settings.milkyWay.field.dust)` after the
     cloud reconcile, then returns `value: host === null ? null : { host, plan: host.plan() }`. This
     is the only `plan()` call in a frame.
   - `destroy.ts` calls `fieldHost.destroy()`.
   - With `'v1'` nothing is created at startup.
-- [ ] **Test, new:** `createFieldHostSlot` (a fake `create` that counts calls and records
+- [x] **Test, new:** `createFieldHostSlot` (a fake `create` that counts calls and records
       `setTuning`/`ensureFresh`/`destroy`):
   - `it('creates on the first field frame and not again while on')`.
   - `it('destroys when the field part turns off, and recreates when it returns')`.
@@ -1115,9 +1116,9 @@ export function createFieldHostSlot(deps: {
     `tuningFor(false)`.
   - `it('sync returns the live host, and null when off')`.
   - `it('destroy releases a live host')`.
-- [ ] **Test, updated:** `frame.test.ts`,
+- [x] **Test, updated:** `frame.test.ts`,
       `it('the planner value carries the host and its plan only while the field part is on')`.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task B6: The `mw-field` compute, its gate and the timing span
 
@@ -1168,25 +1169,25 @@ export function milkyWayFieldCompute(
 // spanTimestampWrites(claim, plan)).
 ```
 
-- [ ] `layer.ts` passes `milkyWayPlanner(runtime)` to the compute and the composite as their
+- [x] `layer.ts` passes `milkyWayPlanner(runtime)` to the compute and the composite as their
       `planner` handle: the store keys by `planner.name` (`createFramePlannerResultStore.ts:30`),
       so a second construction is only a typed handle onto the same result.
-- [ ] Add `{ kind: 'compute', name: 'mw-field' }` to SCENE's compute line beside
+- [x] Add `{ kind: 'compute', name: 'mw-field' }` to SCENE's compute line beside
       `aerial-perspective`. The slot `mw-field-compute` derives automatically
       (`computeTimingSlotName`).
-- [ ] The field passes clear their targets themselves (`beginClearPass`). Compute-written targets
+- [x] The field passes clear their targets themselves (`beginClearPass`). Compute-written targets
       are invisible to `touched` (`executeFrame.ts:193`), so nothing else clears them.
-- [ ] **Test, new:** `milkyWayFieldAlpha`:
+- [x] **Test, new:** `milkyWayFieldAlpha`:
   - `it('is null when the mw-field-compute toggle is off, so the composite never adds stale targets')`:
     a planner value with a host and a visible pose gives a number; with
     `settings.debug.disabledPasses['mw-field-compute'] = true` it gives null.
-- [ ] **Test, new:** `spanTimestampWrites`:
+- [x] **Test, new:** `spanTimestampWrites`:
   - `it('brackets the first and last encoded pass with one claim')`: with
     `encodes = ['dustMap', 'field', 'young']`, asking for all three in order gives begin, nothing,
     end, and `claim` is called exactly once.
   - `it('a single-pass plan gets both indices')`.
   - `it('never claims when no pass asks')`.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task B7: The `milky-way-field` composite pass
 
@@ -1197,7 +1198,7 @@ export function milkyWayFieldCompute(
   `src/layers/milkyWay/{create,destroy}.ts` and
   `src/layers/milkyWay/cloud/passes/milkyWayUpsamplePass.ts`.
 
-- [ ] `milkyWayFieldPass(runtime, planner): ContentPass<'milkyWayDisk'>`:
+- [x] `milkyWayFieldPass(runtime, planner): ContentPass<'milkyWayDisk'>`:
   - name `'milky-way-field'`,
     `enabled = milkyWayFieldAlpha(runtime, planner, state, ctx, fade) !== null`, so it also skips
     when the compute is DebugPanel-disabled;
@@ -1205,13 +1206,13 @@ export function milkyWayFieldCompute(
     `encodeFieldComposites(pass, runtime.additiveUpsample, plan,
     fieldRenderTargetsOf(ctx.snapshot.renderTargets))`;
   - no pick.
-- [ ] Insert `'milky-way-field'` right after `'milky-way-upsample'` on the hdr NEAR0 line, so v1
+- [x] Insert `'milky-way-field'` right after `'milky-way-upsample'` on the hdr NEAR0 line, so v1
       dust (`milky-way`) extincts field light as it does the cloud's.
-- [ ] Runtime member `aggregateUpsample` → `additiveUpsample`, since it now serves both. Hand-edit
+- [x] Runtime member `aggregateUpsample` → `additiveUpsample`, since it now serves both. Hand-edit
       it; it is a property, not an exported symbol, so `refactor rename` doesn't apply. The sites are
       `MilkyWayRuntime.d.ts`, `create.ts`, `destroy.ts` and `milkyWayUpsamplePass.ts`; grep the old
       name.
-- [ ] No new test: `checkFrameOrder` validates the line at boot, and B11 checks the pixels. Commit.
+- [x] No new test: `checkFrameOrder` validates the line at boot, and B11 checks the pixels. Commit.
 
 ### Task B8: v1 gates
 
@@ -1220,16 +1221,16 @@ export function milkyWayFieldCompute(
 **Files:** `src/layers/milkyWay/cloud/passes/{milkyWayAggregatePass,milkyWayUpsamplePass,milkyWayPass}.ts`,
 `tests/layers/milkyWay/cloud/passes/milkyWayPass.test.ts`
 
-- [ ] `milky-way-aggregate` and `milky-way-upsample`:
+- [x] `milky-way-aggregate` and `milky-way-upsample`:
       `enabled = parts.cloud && deriveMilkyWayCloudAlpha(...) !== null`. This matches B4's
       `allocateWhen`.
-- [ ] `milky-way`: `enabled = parts.cloudDust && alpha !== null`. Leave `pickEnabled` and `drawPick`
+- [x] `milky-way`: `enabled = parts.cloudDust && alpha !== null`. Leave `pickEnabled` and `drawPick`
       untouched; `pickProgram.ts:17` filters picks by `pickEnabled ?? enabled`, so the impostor
       still picks in `'v2'`.
-- [ ] **Test, new:** in `milkyWayPass.test.ts`,
+- [x] **Test, new:** in `milkyWayPass.test.ts`,
       `it('in v2 the dust draw is off but the pick impostor still picks')`. With
       `renderer: 'v2'`, `enabled` is false and `pickEnabled` is true at a pickable pose.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task B9: DebugPanel rows
 
@@ -1247,7 +1248,7 @@ export type MilkyWayFieldSliderKey = 'exposure' | FieldTargetId;
 export const MILKY_WAY_FIELD_SLIDER_FIELDS: readonly SliderField<MilkyWayFieldSliderKey>[]; // exposure row + one divisor row per FIELD_TARGET_IDS
 ```
 
-- [ ] The section shows:
+- [x] The section shows:
   - a renderer `<select>` first, as a child of `DebugTuningSection`
     (`BlackHoleLensingTuningSection.tsx:41-61`);
   - the cloud slider rows when `parts.cloud`;
@@ -1256,28 +1257,28 @@ export const MILKY_WAY_FIELD_SLIDER_FIELDS: readonly SliderField<MilkyWayFieldSl
 
   Divisor changes dispatch `setMilkyWayFieldTuning({ divisors: { ...divisors, [id]: v } })`. The
   container memoises the field values object on `settings.milkyWay.field`.
-- [ ] **Test, updated:** the slider parity file asserts the field table too. Its keys sorted equal
+- [x] **Test, updated:** the slider parity file asserts the field table too. Its keys sorted equal
       `['exposure', ...FIELD_TARGET_IDS]` sorted, and every row has `step > 0` and
       `min ≤ default ≤ max` against `MILKY_WAY_FIELD_TUNING_DEFAULTS`.
-- [ ] Update the website's debug-section prose to mention the renderer switch. Commit.
+- [x] Update the website's debug-section prose to mention the renderer switch. Commit.
 
 ### Task B10: Docs
 
 **Files:** `src/layers/milkyWay/field/README.md`, `docs/research/engine/field-seam-map.md`,
 `docs/research/engine/decisions.md`, `docs/RENDERER.md`, `src/services/engine/galaxyGenerator/shared/README.md`
 
-- [ ] In `field/README.md`, replace "Only the tool drives this tier today" (today `v2/README.md:40`)
+- [x] In `field/README.md`, replace "Only the tool drives this tier today" (today `v2/README.md:40`)
       with: the app draws it behind `renderer`, and the tool and the app share `field/host/`.
-- [ ] Rewrite `field-seam-map.md` §2 against the post-PR-B files.
-- [ ] Set Track C's status in `decisions.md` (around `:808`) to landed behind the debug switch.
-- [ ] Add a renderer-map entry in `docs/RENDERER.md` § "Renderer quick map": `mw-field` compute →
+- [x] Rewrite `field-seam-map.md` §2 against the post-PR-B files.
+- [x] Set Track C's status in `decisions.md` (around `:808`) to landed behind the debug switch.
+- [x] Add a renderer-map entry in `docs/RENDERER.md` § "Renderer quick map": `mw-field` compute →
       `milky-way-field` composite, the per-view limit, and compute-written targets clearing
       themselves.
-- [ ] Fix the stale "`v2/`" mentions in `shared/README.md:5,20,41,47-48`. Commit.
+- [x] Fix the stale "`v2/`" mentions in `shared/README.md:5,20,41,47-48`. Commit.
 
 ### Task B11: Verification (controller-owned)
 
-- [ ] **First light.** Run a scratch Playwright script against your own dev server. It reuses
+- [x] **First light.** Run a scratch Playwright script against your own dev server. It reuses
       `npm run shot`'s settle wait (`window.__skymap.settled()`) and switches with
       `window.__skymap.dispatch(setMilkyWayRenderer(...))`.
   - Poses: the Milky Way pose and an in-disc pose, each in `'v1'`, `'v2'` and `'both'`.
@@ -1286,9 +1287,9 @@ export const MILKY_WAY_FIELD_SLIDER_FIELDS: readonly SliderField<MilkyWayFieldSl
   - Send each as a dash check with its deep link. The user gives the verdict.
   - If the first landing of `invMeanNorm` pops visibly, report it; the spec then adds a seed value
     to `FIELD_CALIBRATION`.
-- [ ] **Cost.** Read `.claude/skills/perf/SKILL.md`. Run `npm run perf -- --url http://localhost:<port>`
+- [x] **Cost.** Read `.claude/skills/perf/SKILL.md`. Run `npm run perf -- --url http://localhost:<port>`
       with the default `'v1'` at PR B's BASE and HEAD. The two must match.
-- [ ] **Field cost.** Read the `mw-field-compute` row with `?gpuTimings` in `'v2'` at the Milky Way
+- [x] **Field cost.** Read the `mw-field-compute` row with `?gpuTimings` in `'v2'` at the Milky Way
       pose. Record it in the ledger; it is not gated.
 
 ---
@@ -1327,5 +1328,5 @@ export const MILKY_WAY_FIELD_SLIDER_FIELDS: readonly SliderField<MilkyWayFieldSl
 - Letting a `ContentCompute` declare the targets it writes so `touched` sees them. It is the deeper
   fix behind the composite's disabled-compute gate (B6), and it grows the frame contract, which
   needs the owner's yes.
-- The `pcToUnits` 1.6667 vs 1.75 kpc discrepancy. The stale `timedSlotsOf.ts:4` doc ("nothing
-  for a compute"): offer it as an adjacent fix, don't fold it in.
+- The stale `timedSlotsOf.ts:4` doc ("nothing for a compute"): offer it as an adjacent fix, don't
+  fold it in.

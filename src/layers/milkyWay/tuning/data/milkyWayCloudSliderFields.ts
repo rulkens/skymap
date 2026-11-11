@@ -1,11 +1,11 @@
 /**
- * MILKY_WAY_SLIDER_FIELDS — the one enumeration of the Milky-Way star cloud's
+ * MILKY_WAY_CLOUD_SLIDER_FIELDS — the one enumeration of the Milky-Way star cloud's
  * tuning knobs, with the UI metadata each needs. Same shape as
  * `layers/flow/streamlines/data/flowFields.ts`: label, range, granularity and formatting live in
  * ONE row per knob, and the DebugPanel section iterates this list rather than
  * re-spelling sliders by hand. A parity test
- * (`tests/layers/milkyWay/tuning/data/milkyWaySliderFields.test.ts`) fails if a
- * `MilkyWayTuning` leaf is added without a matching row.
+ * (`tests/layers/milkyWay/tuning/data/milkyWayCloudSliderFields.test.ts`) fails if a
+ * `MilkyWayCloudTuning` leaf is added without a matching row.
  *
  * The RANGES test whether a much larger, much dimmer-per-sprite splat reads
  * as a smooth galaxy rather than visible particles (the Celestia/Space Engine
@@ -20,11 +20,11 @@
  * offscreen; `starCount` regenerates the cloud outright (destroy + allocate +
  * compute dispatch) when it no longer matches the buffers in force.
  */
-import type { MilkyWayTuning } from '../../../../@types/settings/MilkyWayTuning';
-import type { MilkyWaySliderKey } from '../@types/MilkyWaySliderKey';
-import type { MilkyWaySliderField } from '../@types/MilkyWaySliderField';
+import type { MilkyWayCloudTuning } from '../../../../@types/settings/MilkyWayCloudTuning';
+import type { MilkyWayCloudSliderKey } from '../@types/MilkyWayCloudSliderKey';
+import type { SliderField } from '../../../../@types/data/SliderField';
 
-export const MILKY_WAY_SLIDER_FIELDS: readonly MilkyWaySliderField[] = [
+export const MILKY_WAY_CLOUD_SLIDER_FIELDS: readonly SliderField<MilkyWayCloudSliderKey>[] = [
   {
     key: 'starSizeScale',
     label: 'starSize',
@@ -145,15 +145,15 @@ export const MILKY_WAY_SLIDER_FIELDS: readonly MilkyWaySliderField[] = [
  */
 
 /**
- * Build a `MilkyWayTuning` patch for one slider field. The cast is sound:
- * every `MilkyWaySliderKey` addresses a number-valued leaf, but a
+ * Build a `MilkyWayCloudTuning` patch for one slider field. The cast is sound:
+ * every `MilkyWayCloudSliderKey` addresses a number-valued leaf, but a
  * computed-key object literal widens to `{ [k: string]: number }`, which the
  * compiler won't narrow on its own. Localising the cast here keeps the
  * section component type-clean — the same trick `flowSliderPatch` uses.
  */
-export function milkyWaySliderPatch(
-  key: MilkyWaySliderKey,
+export function milkyWayCloudSliderPatch(
+  key: MilkyWayCloudSliderKey,
   value: number,
-): Partial<MilkyWayTuning> {
-  return { [key]: value } as Partial<MilkyWayTuning>;
+): Partial<MilkyWayCloudTuning> {
+  return { [key]: value } as Partial<MilkyWayCloudTuning>;
 }

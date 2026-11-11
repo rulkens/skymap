@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { formatMilkyWayTuningDefaults } from '../../../../../src/layers/milkyWay/tuning/utils/formatMilkyWayTuningDefaults';
-import type { MilkyWayTuning } from '../../../../../src/@types/settings/MilkyWayTuning';
+import { formatMilkyWayCloudTuningDefaults } from '../../../../../src/layers/milkyWay/tuning/utils/formatMilkyWayCloudTuningDefaults';
+import type { MilkyWayCloudTuning } from '../../../../../src/@types/settings/MilkyWayCloudTuning';
 
-const defaults: MilkyWayTuning = {
+const defaults: MilkyWayCloudTuning = {
   starSizeScale: 0.7,
   exposure: 0.11,
   starPxMin: 1,
@@ -13,7 +13,7 @@ const defaults: MilkyWayTuning = {
   starCount: 75000,
 };
 
-describe('formatMilkyWayTuningDefaults', () => {
+describe('formatMilkyWayCloudTuningDefaults', () => {
   it('emits only the changed keys, in defaults property order — not the tuning object own key order', () => {
     // `tuning` is built with its OWN key order exactly reversed relative to
     // `defaults` (starCount first, starSizeScale last). A formatter that
@@ -23,15 +23,15 @@ describe('formatMilkyWayTuningDefaults', () => {
     const reversedBase = Object.fromEntries(
       [...Object.keys(defaults)]
         .reverse()
-        .map((key) => [key, defaults[key as keyof MilkyWayTuning]]),
-    ) as MilkyWayTuning;
-    const tuning: MilkyWayTuning = {
+        .map((key) => [key, defaults[key as keyof MilkyWayCloudTuning]]),
+    ) as MilkyWayCloudTuning;
+    const tuning: MilkyWayCloudTuning = {
       ...reversedBase,
       exposure: 0.2,
       starCount: 250000,
     };
 
-    expect(formatMilkyWayTuningDefaults(tuning, defaults)).toBe(
+    expect(formatMilkyWayCloudTuningDefaults(tuning, defaults)).toBe(
       '  exposure: 0.2,\n  starCount: 250000,',
     );
   });
@@ -40,8 +40,8 @@ describe('formatMilkyWayTuningDefaults', () => {
     // The regression this guards against: reaching for the same
     // toLocaleString() the starCount slider row uses for DISPLAY would emit
     // "starCount: 150,000," — a syntax error once pasted into source.
-    const tuning: MilkyWayTuning = { ...defaults, starCount: 150000 };
+    const tuning: MilkyWayCloudTuning = { ...defaults, starCount: 150000 };
 
-    expect(formatMilkyWayTuningDefaults(tuning, defaults)).toBe('  starCount: 150000,');
+    expect(formatMilkyWayCloudTuningDefaults(tuning, defaults)).toBe('  starCount: 150000,');
   });
 });

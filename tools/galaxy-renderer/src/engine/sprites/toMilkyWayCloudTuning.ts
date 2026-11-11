@@ -1,6 +1,6 @@
 /**
- * toMilkyWayTuning — the tool's render bag, viewed as the app's
- * `MilkyWayTuning`: the shape `packCloudUniforms` and the shared shaders
+ * toMilkyWayCloudTuning — the tool's render bag, viewed as the app's
+ * `MilkyWayCloudTuning`: the shape `packCloudUniforms` and the shared shaders
  * speak. Two knobs are renamed rather than shared outright — the tool's
  * `starIntensity` is the app's per-sprite `exposure` (the tool already spells
  * `exposure` for the post chain's whole-frame multiplier, a different
@@ -11,20 +11,20 @@
  */
 import type { LodSettings } from '../../../@types/engine/LodSettings';
 import type { RenderSettings } from '../../../@types/engine/RenderSettings';
-import type { MilkyWayTuning } from '../../../../../src/@types/settings/MilkyWayTuning';
+import type { MilkyWayCloudTuning } from '../../../../../src/@types/settings/MilkyWayCloudTuning';
 
 /**
  * @param starCount the carved CAPACITY, not the count the generator was asked
  * for. In the app those are one field, because the request lives on
- * `MilkyWayTuning` itself; in the tool the request is a `GalaxyParams` knob
+ * `MilkyWayCloudTuning` itself; in the tool the request is a `GalaxyParams` knob
  * and only the realised capacity survives `setParams`. No consumer of this
  * view reads the field, so the honest available number beats retaining a
  * second copy of the request to satisfy a shape.
  */
-export function toMilkyWayTuning(
+export function toMilkyWayCloudTuning(
   render: RenderSettings & LodSettings,
   starCount: number,
-): MilkyWayTuning {
+): MilkyWayCloudTuning {
   return {
     starSizeScale: render.sizeScale,
     exposure: render.starIntensity,

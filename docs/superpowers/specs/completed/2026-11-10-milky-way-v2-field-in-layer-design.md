@@ -38,7 +38,8 @@ From 2026-09-25 (the brief):
 From 2026-11-10 (the checkpoint):
 
 - **Settings are nested,** in `cloud` and `field` groups, named for their concern modules (§6).
-- **In `'both'`, the light sums.** Each renderer draws at full weight, so each term matches its solo mode exactly.
+- **In `'both'`, the light sums.** Each renderer draws at full weight. The field term matches `'v2'` exactly; the cloud
+  term is v1 without its dust, because the "v1 dust off whenever v2 is on" ruling wins (`cloudDust`, §7).
 - **The shape is signed off:** `FieldView`, targets as `{ view, sizePx }`, and the host in `src/` with one frame plan.
 - **The whole v2 engine moves into the Layer,** as the concern module `src/layers/milkyWay/field/`, beside `cloud/`.
   That covers the renderer, the v2 generator, the host, and every type and helper only the field reaches. This
@@ -181,7 +182,7 @@ export type MilkyWaySettings = {
   enabled: boolean;
   labelEnabled: boolean;
   renderer: MilkyWayRenderer; // 'v1' | 'v2' | 'both', default 'v1'
-  cloud: MilkyWayTuning;   // today's eight knobs, unchanged
+  cloud: MilkyWayCloudTuning; // today's eight knobs, unchanged
   field: MilkyWayFieldTuning;
 };
 export type MilkyWayFieldTuning = {
@@ -197,8 +198,8 @@ export type MilkyWayFieldTuning = {
   `FieldTargetId` list.
 - **No migration.** Nothing persists the slice (there is no `localStorage`, and tour snapshots are in-memory), so moving
   the knobs breaks no saved state.
-- **Defaults.** The field group's defaults come from the §5 calibration row: divisors field 6, dust map 5, extras 1,
-  shells 1, young 2, DIG 4, as the tool has them today.
+- **Defaults.** The field group's defaults come from the §5 calibration row: divisors field 6, dust map 5, shells 1,
+  young 2, DIG 4, as the tool has them today. The tool's extras divisor (1) stays out: the app allocates no extras.
 
 ## 7. The Layer
 
@@ -214,7 +215,7 @@ export type MilkyWayFieldTuning = {
 Each of these lands as a plain addition:
 
 - **Targets.**
-  - One `RenderTargetSpec` row per `FieldTargetId` (ids `mw-field-*`). Each has `scale: (s) => s.settings.milkyWay.field.divisors[id]`
+  - One `RenderTargetSpec` row per `AppFieldTargetId`, every `FieldTargetId` but the tool-only `extras` (ids `mw-field-*`). Each has `scale: (s) => s.settings.milkyWay.field.divisors[id]`
     and `allocateWhen` = the `field` part. The formats are HDR, except the dust map, which uses `DUST_MAP_FORMAT`.
   - `mw-aggregate` gains `allocateWhen` = the `cloud` part.
 - **Lifecycle.** The runtime holds the host lazily.

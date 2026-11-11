@@ -1,15 +1,13 @@
 /**
- * milkyWayCloudLiveness — the ONE derivation of "is the Milky Way point cloud live
- * this frame, and at what opacity?", shared by the aggregate producer, the upsample
- * consumer and the dust pass, so the upsample can never composite an offscreen
- * nobody wrote. The disk's handed value carries the toggle and its fade-out tail;
- * its distance bands are folded in by core; the final `alpha > 0` gate below covers the
- * apparent-size band. Its focus
- * emphasis is composed here once, for all three, keyed on the disk's own pick word, with the
- * focus sphere's dim at the Galactic Centre on top, as the galaxy disks take it on the GPU.
+ * deriveMilkyWayCloudAlpha — the point cloud's opacity this frame, or null when
+ * it is not drawn: `isMilkyWayCloudLive` gates on it, the passes draw with it.
+ * The handed value carries the toggle, its fade-out tail and core's distance
+ * bands; this adds the apparent-size band and the focus emphasis, keyed on
+ * the disk's own pick word, with the focus sphere's dim at the Galactic
+ * Centre on top, as the galaxy disks take it on the GPU.
  *
- * Uses the CANVAS height, not the slab view's viewport: the aggregate layer renders
- * into a FRACTION of the canvas, so `view.viewportPx` would split the three gates.
+ * Uses the CANVAS height, not the slab view's viewport: the aggregate layer
+ * renders into a FRACTION of the canvas, so `view.viewportPx` would split the gates.
  */
 
 import type { FrameView } from '../../../../@types/engine/frame/FrameView';
