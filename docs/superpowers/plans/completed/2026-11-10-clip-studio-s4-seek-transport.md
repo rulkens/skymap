@@ -1,7 +1,7 @@
 # Clip studio S4 (seek and transport): implementation plan
 
 > **For agentic workers:** execute with `subagent-driven-development` under
-> [`sdd-execution.md`](../conventions/sdd-execution.md): the dispatches below group consecutive tasks by cognitive
+> [`sdd-execution.md`](../../conventions/sdd-execution.md): the dispatches below group consecutive tasks by cognitive
 > locality; one commit per task; one whole-branch review at the end; CI is the gate. Ask the two pre-flight
 > questions (parallelism, perf gate) before P1; this plan expects the perf gate to run (DoD).
 
@@ -9,9 +9,9 @@
 exist; the view past End shows where the clip leaves the viewer; "Use current view" fills camera steps from the drawn
 camera, with a free look to fly there first.
 
-**Spec:** [`2026-11-10-clip-studio-s4-seek-transport.md`](../specs/2026-11-10-clip-studio-s4-seek-transport.md) (the
+**Spec:** [`2026-11-10-clip-studio-s4-seek-transport.md`](../../specs/completed/2026-11-10-clip-studio-s4-seek-transport.md) (the
 reviewer's document; tasks below carry what implementers need). **Decisions:** the grill session
-([`clip-studio-2026-11-07.md`](../../grill-sessions/clip-studio-2026-11-07.md)) and the spec's §11, which this plan
+([`clip-studio-2026-11-07.md`](../../../grill-sessions/clip-studio-2026-11-07.md)) and the spec's §11, which this plan
 assumes answered as recommended until ruled (free look on drag, reverted scene past End, pause at End, a press
 pauses playback for the gesture, destination frame when paused mid-roll, `LiveCameraRuntime.clipAt`, bound steps
 replaced by their Fixed form, Space/L/F, loop span read at press, the `--scrub` perf flag, seeding into the registry).
@@ -472,7 +472,7 @@ also sees the re-pin resolve. `set` and `setVec` drop a body `frame` when filled
 
 ## D4: UI surfaces
 
-Every task here follows [`ui-ux.md`](../conventions/ui-ux.md): icons from `src/components/icons/` (Q39: `PlayIcon`,
+Every task here follows [`ui-ux.md`](../../conventions/ui-ux.md): icons from `src/components/icons/` (Q39: `PlayIcon`,
 `PauseIcon`, `LoopIcon`, `CameraIcon` exist), `StudioTip` with name, key chips and state (Q30), the app's `Button`.
 
 ### Task 3.1: transport controls and the narrow notice
@@ -564,7 +564,9 @@ rulings)
       reverted; Space plays and the held follow pauses at 20 s; L loops 0–20 s with the ruler tint; a sky drag shows
       `Free look`, F follows; the narrow notice has Play; Use current view on a Distance step writes 140 kpc as one
       `Use current view` entry). Dash checks are the controller's to send.
-- [ ] ui-ux.md self-check, one line per item, in the PR body. (No PR for this slice yet.)
+- [x] ui-ux.md self-check, one line per item, in the PR body (2026-11-11, dev server :5192). Item 4 fails: a sky
+      drag leaves focus on the page body and the studio keys live on the dock, so F, Space and L do nothing until
+      the dock is clicked again; waits on the owner's ruling.
 
 ---
 

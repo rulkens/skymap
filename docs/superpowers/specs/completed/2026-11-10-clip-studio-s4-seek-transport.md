@@ -1,13 +1,13 @@
 # Clip studio S4: seek and transport
 
 **Status:** draft, awaiting owner approval · **Date:** 2026-11-10 · **Branch:** `feat/clip-studio`
-**Decision record:** [`clip-studio-2026-11-07.md`](../../grill-sessions/clip-studio-2026-11-07.md) Q6 (Use current
+**Decision record:** [`clip-studio-2026-11-07.md`](../../../grill-sessions/clip-studio-2026-11-07.md) Q6 (Use current
 view), Q7 (preview pins), Q13 (Play on the narrow notice), Q16 (loop scope), Q17 (snap), Q21 (PiP, supersedes Q10),
 Q23 (Use current view on a bound step), Q29 (transport over the timeline), Q30 (keys in tips), Q52 (no clip perf
 scenario, reopened for scrubbing in Q-J).
-**Builds on:** [S3 spec](completed/2026-11-10-clip-studio-s3-scene-tracks.md) (`sceneView`, `clipFactorAt`, the overlay, `atEnd`;
+**Builds on:** [S3 spec](2026-11-10-clip-studio-s3-scene-tracks.md) (`sceneView`, `clipFactorAt`, the overlay, `atEnd`;
 its §7 is the contract this spec seeks with). **Plan:**
-[`2026-11-10-clip-studio-s4-seek-transport.md`](../plans/2026-11-10-clip-studio-s4-seek-transport.md)
+[`2026-11-10-clip-studio-s4-seek-transport.md`](../../plans/completed/2026-11-10-clip-studio-s4-seek-transport.md)
 
 Items marked _(open, Q-x)_ carry a recommendation and wait on the owner; the plan follows the recommendation until
 ruled otherwise.
