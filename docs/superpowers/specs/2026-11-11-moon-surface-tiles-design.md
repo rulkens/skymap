@@ -39,10 +39,11 @@ This change gives the Moon a global tile pyramid: the LROC WAC 100 m mosaic, de-
     `gdal_translate` line.
 - Datum: the scene's Moon is 1,737,000 m; the sources sit on the 1,737,400 m sphere, so the bake adds
   `MOON_SOURCE_SPHERE_RADIUS_M − MOON_DATUM_RADIUS_M` = +400 m, derived, never a literal.
-- The WAC "morphologic" mosaic is shot at 55–75° incidence. Crops at four longitudes (2026-11-11) all
-  show the Sun from the west, so one fixed photo Sun (`delightedImagerySource`) holds below ~65°
-  latitude. Above that, hard cast shadows carry no detail to recover: accepted for this PR, flagged
-  at the eye check.
+- The WAC "morphologic" mosaic is shot at 55–75° incidence. A slope-vs-brightness fit (2026-11-11)
+  puts its Sun over the equator ~72° of longitude from each point, east of it from −180° to −90° and
+  west of it from −90° to +180°, so no fixed photo Sun fits: `delightedImagerySource` takes a
+  `PhotoSun` union whose `subsolar` variant models this. Above ~65° latitude, hard cast shadows
+  carry no detail to recover: accepted for this PR, flagged at the eye check.
 - Licence: LROC WAC and LOLA are NASA products, public domain (NASA/GSFC/Arizona State University;
   NASA/GSFC LOLA team; USGS Astrogeology).
 - A missing `moon-tiles/manifest.json` degrades to the base globe (`fetchSurfaceTileManifest` returns
@@ -96,9 +97,9 @@ underfill. Dev mode: z4 albedo only, like Mars.
 
 ### Recipe
 
-`moonAlbedoRecipe.ts`: the photo Sun at azimuth ~270° (from the west), elevation ~25°;
-`keepIce: 0` (the Moon is colourless everywhere, so the ice guard would undo the flattening on every
-pixel). The grade tints the grey WAC to the base globe: per-channel gain and offset fitted so the
+`moonAlbedoRecipe.ts`: a `subsolar` photo Sun (offset ~72°, seam at −90°); `flatten`, `tame` and
+`keepIce` off, since the Moon's low-frequency brightness (maria, highlands, rays) is albedo, not
+mosaic drift. The grade tints the grey WAC to the base globe: per-channel gain and offset fitted so the
 graded z4 level matches the Solar System Scope texture's mean and spread at the same resolution. The
 fit is a one-off measurement; its numbers and date go in the recipe's comment.
 

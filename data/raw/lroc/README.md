@@ -24,10 +24,14 @@ Global albedo source for the Moon's surface-tile `albedo` product (z3–z7).
 ## Lighting
 
 A "morphologic" mosaic: every frame was shot at 55–75° incidence to bring out
-relief, so the shading is baked in. Crops at four longitudes (2026-11-11) all
-show the Sun from the west, which is what lets the bake de-light it against one
-fixed photo Sun. Above ~65° latitude the shadows are hard and cast, with no
-detail left under them to recover.
+relief, so the shading is baked in. Fitting WAC brightness against LOLA slopes
+(2026-11-11) shows the Sun over the equator about 72° of longitude from each
+point: **east** of it from −180° to −90°, **west** of it from −90° to +180°,
+with a hard seam at −90° and another at the antimeridian. So the Sun's azimuth
+follows latitude (≈245° at 65N, 270° at the equator, ≈300° at 65S on the
+west-lit side), and the bake de-lights against that subsolar Sun
+(`moonAlbedoRecipe.ts`), not one fixed direction. Above ~65° latitude the
+shadows are hard and cast, with no detail left under them to recover.
 
 ## COG conversion
 
