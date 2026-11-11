@@ -285,7 +285,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Docs & process
 
-- [ ] **Antique-branch fix PRs** `process` — eight generic fixes split off the antique branch into their own PRs; 1–7 being cut, 8 (dpr labels + line widths) not started. → [details](backlog/2026-11-10-antique-branch-fix-prs.md)
+- [ ] **Antique-branch fix PRs** `process` — eight generic fixes split off the antique branch; 1–7 merged, only 8 (dpr labels + line widths) not started. → [details](backlog/2026-11-10-antique-branch-fix-prs.md)
 - [ ] **Rust tools: registry paths + CI for stars-rs** `ready` — stars-rs joins `data/raw` paths itself and no CI job runs its tests; follow `cloud-bake-rs`. → [details](backlog/2026-11-10-rust-tools-registry-and-ci.md)
 - [ ] **Website docs rows per Layer UI entry are hand-copied** `needs-design` — a new debug section, settings leaf, script or toggle needs a hand row in `packages/website/src/data/` (tests catch the omission); the `ui` entries carry no docs metadata to derive them from.
 - [ ] **`matteHiddenPasses` has no coverage test** `ready` — `tools/site/matteHiddenPasses.ts` is a hand list; its test only checks listed names exist, so a new sky pass silently stays in matte shots. Classify every FRAME_ORDER pass, or give `ContentPass` a sky/subject role.
