@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { MARS_IAU_SPHERE_RADIUS_M } from '../../../src/layers/body/surfaceTiles/format/data/marsSurfaceParams';
 import type { ColourGrade } from '../../../src/layers/body/textures/@types/ColourGrade';
 import type { AlbedoDelight } from '../../../tools/textures/@types/AlbedoDelight';
 import { constantHeightSource } from '../../../tools/textures/constantHeightSource';
@@ -77,6 +78,7 @@ describe('delightedImagerySource', () => {
       constantHeightSource(0),
       NO_DELIGHT,
       IDENTITY_GRADE,
+      MARS_IAU_SPHERE_RADIUS_M,
     );
     const out = await wrapped.readBox({ west: 0, east: 1, south: 0, north: 1 }, 3, 1);
     expect(Array.from(out!)).toEqual(pixels);
@@ -109,12 +111,14 @@ describe('delightedImagerySource', () => {
       tiltedHeightSource(GRADIENT_M_PER_DEG),
       DELIGHT,
       IDENTITY_GRADE,
+      MARS_IAU_SPHERE_RADIUS_M,
     );
     const facingSun = delightedImagerySource(
       fixedRaster(GREY),
       tiltedHeightSource(-GRADIENT_M_PER_DEG),
       DELIGHT,
       IDENTITY_GRADE,
+      MARS_IAU_SPHERE_RADIUS_M,
     );
 
     const awayOut = await awayFromSun.readBox(box, 1, 1);

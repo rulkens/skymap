@@ -13,7 +13,6 @@
 
 import type { LonLatBounds } from '../../src/layers/body/surfaceTiles/format/@types/LonLatBounds';
 import type { ColourGrade } from '../../src/layers/body/textures/@types/ColourGrade';
-import { MARS_IAU_SPHERE_RADIUS_M } from '../../src/layers/body/surfaceTiles/format/data/marsSurfaceParams';
 import { gradeRgbaInPlace } from '../utils/image/gradeRgbaInPlace';
 import { heightLatticeStepDeg } from '../utils/textures/heightLatticeStepDeg';
 import type { AlbedoDelight } from './@types/AlbedoDelight';
@@ -65,6 +64,7 @@ async function buildReliefShadeField(
   width: number,
   gridHeight: number,
   stepDeg: number,
+  sphereRadiusM: number,
 ): Promise<Float32Array> {
   const posts = await height.readGrid(COARSE_LEVEL, 0, 0, width + 1, gridHeight + 1);
   if (posts === null) {
@@ -83,7 +83,7 @@ async function buildReliefShadeField(
     }
   }
 
-  const dy = MARS_IAU_SPHERE_RADIUS_M * ((stepDeg * Math.PI) / 180);
+  const dy = sphereRadiusM * ((stepDeg * Math.PI) / 180);
   const light = sunDirection(delight.photoSunAzDeg, delight.photoSunElDeg);
   const hex = delight.reliefExaggeration;
   const hs = delight.reliefShade;
@@ -198,13 +198,14 @@ async function buildCoarseFields(
   source: SurfaceImagerySource,
   height: HeightSource,
   delight: AlbedoDelight,
+  sphereRadiusM: number,
 ): Promise<CoarseFields> {
   const stepDeg = heightLatticeStepDeg(COARSE_LEVEL);
   const width = Math.round(360 / stepDeg);
   const gridHeight = Math.round(180 / stepDeg);
   const relightRatio =
     delight.reliefShade > 0
-      ? await buildReliefShadeField(height, delight, width, gridHeight, stepDeg)
+      ? await buildReliefShadeField(height, delight, width, gridHeight, stepDeg, sphereRadiusM)
       : new Float32Array(width * gridHeight).fill(1);
   let lowPass: Float32Array = new Float32Array(0);
   if (delight.flatten > 0) {
@@ -250,6 +251,7 @@ export function delightedImagerySource(
   height: HeightSource,
   delight: AlbedoDelight,
   grade: ColourGrade,
+  sphereRadiusM: number,
 ): SurfaceImagerySource {
   let fields: Promise<CoarseFields> | undefined;
 
@@ -266,7 +268,7 @@ export function delightedImagerySource(
       const out = new Uint8Array(raster);
 
       if (needsDelight(delight)) {
-        fields ??= buildCoarseFields(source, height, delight);
+        fields ??= buildCoarseFields(source, height, delight, sphereRadiusM);
         const { width, height: fieldHeight, relightRatio, lowPass } = await fields;
         const span = Math.max(1e-3, 1 - delight.knee);
         for (let py = 0; py < heightPx; py++) {

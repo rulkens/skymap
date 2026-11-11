@@ -388,6 +388,7 @@ async function bands({ dev }: { dev: boolean }): Promise<readonly SurfaceBakeBan
           mola(),
           MARS_VIKING_DELIGHT,
           MARS_VIKING_GRADE,
+          MARS_IAU_SPHERE_RADIUS_M,
         ),
         minLevel: BAKE_MIN_LEVEL,
       },
@@ -400,6 +401,7 @@ async function bands({ dev }: { dev: boolean }): Promise<readonly SurfaceBakeBan
     globalHeight,
     MARS_VIKING_DELIGHT,
     MARS_VIKING_GRADE,
+    MARS_IAU_SPHERE_RADIUS_M,
   );
   const sites: SurfaceBakeBand[] = [];
   for (const site of marsSites()) sites.push(await siteBand(site, global, globalHeight));
