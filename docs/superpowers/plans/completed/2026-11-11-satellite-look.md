@@ -8,7 +8,7 @@
 
 **Tech Stack:** TypeScript, React, Redux Toolkit, WebGPU, WESL.
 
-**Spec:** `docs/superpowers/specs/2026-11-11-satellite-look-design.md`
+**Spec:** `docs/superpowers/specs/completed/2026-11-11-satellite-look-design.md`
 
 ## Global Constraints
 
@@ -234,14 +234,14 @@ No new test: copy and docs.
 
 ## Definition of Done
 
-**Deliverables:** `SATELLITE_PROFILES`, `illumination.wesl`, `settings.satelliteColors`, `DebugColorRow`, and the `Satellite colours` DebugPanel section.
+**Deliverables:** `SATELLITE_PROFILES`, `illumination.wesl`, `settings.satelliteTuning`, `DebugColorRow`, and the `Satellite tuning` DebugPanel section.
 
 **Smoke, on this worktree's server** (`layers=satellites` turns the Layer on; the local catalog's window requires a `t` near 2026-11-01):
 
-- [ ] `focus=body-earth&t=2026-11-01T22:00:00Z&layers=satellites`: dots differ in colour by group.
-- [ ] Night-side pose with the same `t`: a dark wedge through the shell behind Earth.
-- [ ] Sunward pose with the clock running: occasional brief flashes.
-- [ ] Debug panel: a colour edit with the clock paused shows on the next frame; Reset restores it; the selected ring follows it.
-- [ ] A selected eclipsed satellite stays pickable and followable.
+- [x] `focus=body-earth&t=2026-11-01T22:00:00Z&layers=satellites`: dots differ in colour by group.
+- [x] Night-side pose with the same `t`: a dark wedge through the shell behind Earth.
+- [x] Sunward pose with the clock running: occasional brief flashes.
+- [x] Debug panel: a colour edit with the clock paused shows on the next frame; Reset restores it; the selected ring follows it.
+- [x] A selected eclipsed satellite stays pickable and followable.
 
-**Out of scope:** 3D models, velocity streaks, fleet-wide rings, debris flicker, tuning anything but colour, any catalog format change.
+**Out of scope:** 3D models, velocity streaks, fleet-wide rings, debris flicker, tuning anything but colour, ambient and dot size, any catalog format change.
