@@ -483,10 +483,14 @@ Rows in the `Playhead` group: `play` (Space, label `Play / Pause`), `loop` (L), 
 `end` while playing returns `[paused(), playheadSet(d)]`; `start` while playing returns `[playheadSet(0)]` (keeps
 playing). Space matches `e.key === ' '` unmodified; `controlOwnsKey` keeps it for a focused button.
 
-- [ ] Test `Space at End plays from 0`.
-- [ ] Test `End while playing pauses at End`.
-- [ ] `npx vitest run packages/studio/tests/shell`.
-- [ ] Commit: "Clip studio: Space plays, L loops, F follows".
+As built: landed before 3.1, so the transport buttons dispatch through `runStudioKey` (`play`, `loop`, `follow`)
+and a key and its button cannot disagree. Play returns nothing until the preview is live (`selectClipActive`); a
+focused button keeps Space (`controlOwnsKey`). Test added: `Space on a focused button is the button's`.
+
+- [x] Test `Space at End plays from 0`.
+- [x] Test `End while playing pauses at End`.
+- [x] `npx vitest run packages/studio/tests/shell`.
+- [x] Commit: "Clip studio: Space plays, L loops, F follows".
 
 ### Task 3.3: the ruler pauses for a gesture and shows the loop
 
