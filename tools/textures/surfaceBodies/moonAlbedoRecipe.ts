@@ -1,20 +1,18 @@
 /**
- * moonAlbedoRecipe — the LROC WAC de-light and grade. The WAC morphologic
- * mosaic is shot at 55–75° incidence, Sun from the west east of lon −88°.
- * Known limit: west of −88° the mosaic's Sun is from the EAST, so this fixed
- * photo Sun doubles the relief there instead of removing it.
+ * moonAlbedoRecipe — the LROC WAC de-light and grade. WAC's Sun stands over the
+ * equator ~72° of longitude away, east of each point west of −90°, west of it
+ * elsewhere (fitted 2026-11-11, `data/raw/lroc/README.md`).
  */
 
 import type { ColourGrade } from '../../../src/layers/body/textures/@types/ColourGrade';
 import type { AlbedoDelight } from '../@types/AlbedoDelight';
 
-// Tuned 2026-11-11 on de-lit z6 pixels, east/west inner-wall brightness
-// (raw → de-lit): Copernicus 1.66 → 0.83, Tycho 2.69 → 1.25, King 2.38 → 1.11.
-// No fixed Sun gets all three nearer 1: the mosaic's Sun follows latitude.
+// Inner-wall E/W (N/S) on de-lit z6, raw → de-lit, 2026-11-11: Copernicus 1.66 (1.22)
+// → 0.88 (1.17), Tycho 2.69 (0.77) → 1.16 (0.94), King 2.38 (1.02) → 1.18 (0.93).
 // Flatten and tame stay off: on the Moon low-frequency brightness is albedo.
 export const MOON_WAC_DELIGHT: AlbedoDelight = {
-  reliefShade: 0.35,
-  photoSun: { kind: 'fixed', azDeg: 270, elDeg: 20 },
+  reliefShade: 0.3,
+  photoSun: { kind: 'subsolar', offsetDeg: 72, seamLonDeg: -90 },
   reliefExaggeration: 4,
   flatten: 0,
   flattenRadiusDeg: 1.2,
@@ -23,15 +21,14 @@ export const MOON_WAC_DELIGHT: AlbedoDelight = {
   keepIce: 0,
 };
 
-// Fitted 2026-11-11 through `gradeRgbaInPlace` (refit until the clip at 1 was
-// absorbed) so the graded z4 matches the Solar System Scope 8k Moon, |lat| < 60°:
-// mean 0.582/0.569/0.566, sd 0.161/0.155/0.159 per channel. 2.9% of pixels
-// clip, where the SSS map has none: the de-lit WAC has a longer bright tail.
+// Graded z4 matches the SSS 8k Moon at |lat| < 60° (mean 0.582/0.569/0.566, sd
+// 0.161/0.155/0.159). 1.1% clips white; a gamma only trades that for crushed
+// shadows (γ 1.6: 0.4% white, 1.1% black) — WAC's tails are heavier than SSS's.
 export const MOON_WAC_GRADE: ColourGrade = {
   ev: 0,
   contrast: 1,
   gamma: 1,
   saturation: 1,
-  gain: [1.4768, 1.4284, 1.4597],
-  offset: [0.1992, 0.1988, 0.1878],
+  gain: [1.8025, 1.7422, 1.7823],
+  offset: [0.1325, 0.1344, 0.1218],
 };
