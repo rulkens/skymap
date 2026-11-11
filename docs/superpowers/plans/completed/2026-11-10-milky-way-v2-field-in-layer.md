@@ -825,14 +825,14 @@ export function encodeFieldComposites(
 ### Task A11: Tool identity pair (controller-owned)
 
 Run by the controller, not committed; the result goes to the ledger and the user.
-- [ ] Write a scratch Playwright script (`<scratch>/toolShots.mts`, run with `npx tsx`). Launch
+- [x] Write a scratch Playwright script (`<scratch>/toolShots.mts`, run with `npx tsx`). Launch
       Chromium as `probeGpuErrors.ts:237-252` does, open `npm run galaxy-renderer`'s server, and
       wait about 60 frames for the ISM chain to settle.
-- [ ] Shoot the PNGs at two poses:
+- [x] Shoot the PNGs at two poses:
   - the default preset's outside view;
   - an in-disc view, reached by a fixed sequence of wheel and drag inputs.
-- [ ] Shoot at **BASE** (main after PR 0) twice, to establish the noise floor, and at **HEAD** once.
-- [ ] Report per pose: differing-pixel count and largest channel delta (BASE vs BASE, BASE vs HEAD).
+- [x] Shoot at **BASE** (main after PR 0) twice, to establish the noise floor, and at **HEAD** once.
+- [x] Report per pose: differing-pixel count and largest channel delta (BASE vs BASE, BASE vs HEAD).
       Send the pairs to the user as dash checks. The user gives the verdict; a 1-LSB difference is
       expected (top RISK).
 
@@ -1278,7 +1278,7 @@ export const MILKY_WAY_FIELD_SLIDER_FIELDS: readonly SliderField<MilkyWayFieldSl
 
 ### Task B11: Verification (controller-owned)
 
-- [ ] **First light.** Run a scratch Playwright script against your own dev server. It reuses
+- [x] **First light.** Run a scratch Playwright script against your own dev server. It reuses
       `npm run shot`'s settle wait (`window.__skymap.settled()`) and switches with
       `window.__skymap.dispatch(setMilkyWayRenderer(...))`.
   - Poses: the Milky Way pose and an in-disc pose, each in `'v1'`, `'v2'` and `'both'`.
@@ -1287,9 +1287,9 @@ export const MILKY_WAY_FIELD_SLIDER_FIELDS: readonly SliderField<MilkyWayFieldSl
   - Send each as a dash check with its deep link. The user gives the verdict.
   - If the first landing of `invMeanNorm` pops visibly, report it; the spec then adds a seed value
     to `FIELD_CALIBRATION`.
-- [ ] **Cost.** Read `.claude/skills/perf/SKILL.md`. Run `npm run perf -- --url http://localhost:<port>`
+- [x] **Cost.** Read `.claude/skills/perf/SKILL.md`. Run `npm run perf -- --url http://localhost:<port>`
       with the default `'v1'` at PR B's BASE and HEAD. The two must match.
-- [ ] **Field cost.** Read the `mw-field-compute` row with `?gpuTimings` in `'v2'` at the Milky Way
+- [x] **Field cost.** Read the `mw-field-compute` row with `?gpuTimings` in `'v2'` at the Milky Way
       pose. Record it in the ledger; it is not gated.
 
 ---
