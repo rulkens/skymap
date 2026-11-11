@@ -6,7 +6,7 @@
 
 **Architecture:** one `moon` row in `SURFACE_TILE_REGISTRY` (no effects), one `moonSurfaceBake` row in `SURFACE_BODY_BAKES`, a `moonSurfaceParams.ts` shared by the body row and the bake. No runtime code changes.
 
-**Spec:** `docs/superpowers/specs/2026-11-11-moon-surface-tiles-design.md`. Prep: PR on branch `moon-surface-tiles-prep` (de-light takes `sphereRadiusM`; `WHOLE_GLOBE_BOUNDS`); this branch is stacked on it.
+**Spec:** `docs/superpowers/specs/completed/2026-11-11-moon-surface-tiles-design.md`. Prep: #1119, merged (de-light takes `sphereRadiusM`; `WHOLE_GLOBE_BOUNDS`).
 
 ## Global Constraints
 
