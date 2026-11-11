@@ -55,3 +55,4 @@ Owner smoke p2R2: all five pass; push go. Draft PR #1123. Main merged in (34e7ba
 Deletion audit (opus): safe-now 4 of 5 applied in 73c3e0bb0 (kept the exact-string copy test, the only two-row join check); R1-R4 (about -60 LOC) asked in the dash.
 Full suite on merged tree: 33334 passed, 1 failed (noStoredRegimeFlag, untouched area, passes alone: load flake); typecheck clean.
 DoD audit READY; completion moves follow.
+Owner rulings b8Qs: R2 applied in b417391ec (LoadedSatelliteCatalog carries profileCodes; propagator.profileCodes() removed). R1, R3, R4 declined.
