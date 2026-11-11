@@ -527,8 +527,13 @@ A `CameraIcon` button labelled `Use current view` in the inspector of every row 
 the Start row; it dispatches `viewUsed(ref)`. Its tip says `Free look: drag the sky first` while following. No test
 (UI wiring over 2.3's tested saga).
 
+As built: one `CurrentViewButton` (its own row under the step's fields, compact `Button` with icon and text), which
+`RowInspector` renders for the Start row and every kind with `fromView`; `StartModeField` is unchanged. The button
+works whether the camera is free or following: the tip only adds the free-look hint. Typechecked; the shot is the
+controller's.
+
 - [ ] Build; shoot one row inspector with the button.
-- [ ] Commit: "Clip studio: Use current view in the inspector".
+- [x] Commit: "Clip studio: Use current view in the inspector".
 
 ---
 
