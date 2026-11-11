@@ -14,7 +14,7 @@ import { sceneOccluderSpheres } from '../../../../services/engine/frame/sceneOcc
 import { writeOrbitTrailRecord } from '../../../../utils/orbit/writeOrbitTrailRecord';
 import { SCENE_EARTH } from '../../../../data/bodies/sceneEarth';
 import { SATELLITE_CLASSES } from '../../../../data/satellites/satelliteClasses';
-import { SATELLITE_POINT_STYLE } from '../../points/data/satellitePointStyle';
+import { SATELLITE_PROFILES } from '../../points/data/satelliteProfiles';
 import { satelliteLayerOpacity } from '../../points/subsystems/satelliteLayerOpacity';
 import { satelliteOrbitEllipse } from '../subsystems/satelliteOrbitEllipse';
 import { composeTemeToWorld } from '../../sweep/subsystems/composeTemeToWorld';
@@ -39,6 +39,8 @@ export function satelliteOrbitsPass(runtime: SatellitesRuntime): ContentPass<'sa
       const { simDays } = ctx.snapshot;
       const eye = ctx.drawCamPos;
       const catalog = runtime.propagator.catalog()!;
+      const codes = runtime.propagator.profileCodes();
+      if (codes === null) return;
       const opacity = satelliteLayerOpacity(catalog, simDays);
       const ks = selectedSatelliteIndices(state.selection, catalog);
       if (staging.length < ks.length * INSTANCE_FLOATS) {
@@ -65,7 +67,7 @@ export function satelliteOrbitsPass(runtime: SatellitesRuntime): ContentPass<'sa
             eyeMpc: eye,
             pxPerRad: ctx.drawPxPerRad,
             ...orbit,
-            color: SATELLITE_POINT_STYLE.color,
+            color: state.settings.satelliteColors[SATELLITE_PROFILES[codes[k]!]!.id],
             fade: classFade * opacity,
           },
           staging,

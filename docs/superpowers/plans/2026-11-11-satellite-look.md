@@ -215,12 +215,12 @@ Follow `src/layers/blackHoles/state/lensingTuning/` for the slice and `BlackHole
 
 The planner compares `state.settings.satelliteColors` by reference, after its early returns and before the upload, and calls `renderer.writeProfiles(packSatelliteProfiles(colors))` when it changed. The ring takes `state.settings.satelliteColors[SATELLITE_PROFILES[codes[k]!]!.id]`. `SATELLITE_POINT_STYLE.color` is deleted.
 
-- [ ] Add tests:
+- [x] Add tests:
   - `the profile table is written once per colour object` in `frame.test.ts`: with a fake runtime, two `plan` calls with the same `satelliteColors` reference write once, and a new reference writes again.
   - `formatSatelliteColorDefaults emits only changed rows` and `its output is a valid object-literal fragment`, with hand-written expected strings. Do not use the function to build the expectation.
-- [ ] Run them and see them fail, then implement, then see them pass.
-- [ ] Run `npm run typecheck:fast`.
-- [ ] Commit: `Debug panel tunes satellite colours per group`.
+- [x] Run them and see them fail, then implement, then see them pass.
+- [x] Run `npm run typecheck:fast`.
+- [x] Commit: `Debug panel tunes satellite colours per group`.
 
 ### Task 6: Card note and docs
 

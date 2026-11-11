@@ -12,15 +12,13 @@ import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { SatellitePointRenderer } from '../@types/SatellitePointRenderer';
 import type { SatelliteSweep } from '../../sweep/@types/SatelliteSweep';
 import type { SatellitePointFrame } from '../@types/SatellitePointFrame';
-import type { SatelliteProfileId } from '../@types/SatelliteProfileId';
-import type { Vec3 } from '../../../../@types/math/Vec3';
 import vsCode from '../../../../services/gpu/shaders/satellites/points/vertex.wesl?static';
 import fsCode from '../../../../services/gpu/shaders/satellites/points/fragment.wesl?static';
 import pickCode from '../../../../services/gpu/shaders/satellites/points/pick.wesl?static';
 import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../../../../services/gpu/lib/blendStates';
 import { SATELLITE_POINT_STYLE } from '../data/satellitePointStyle';
-import { SATELLITE_PROFILES } from '../data/satelliteProfiles';
+import { initialState as DEFAULT_SATELLITE_COLORS } from '../../state/satelliteColors/initialState';
 import { packSatelliteProfiles } from './packSatelliteProfiles';
 import { NEAR0, SLAB_REVERSED_Z } from '../../../../services/engine/frame/slabs';
 import { pickDepthFormat } from '../../../../services/engine/frame/pickProgram';
@@ -115,10 +113,7 @@ export function createSatellitePointRenderer({
     },
   });
 
-  const defaultColors = Object.fromEntries(
-    SATELLITE_PROFILES.map(({ id, color }) => [id, color]),
-  ) as Record<SatelliteProfileId, Vec3>;
-  const profileDefaults = packSatelliteProfiles(defaultColors);
+  const profileDefaults = packSatelliteProfiles(DEFAULT_SATELLITE_COLORS);
   const profileBuffer = device.createBuffer({
     label: 'satellite-points-profiles',
     size: profileDefaults.byteLength,
