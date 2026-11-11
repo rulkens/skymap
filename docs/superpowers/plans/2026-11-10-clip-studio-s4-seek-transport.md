@@ -115,9 +115,9 @@ The clip row's `isActive` (`cameraDrivers.ts:242`), the swallow check (`replayIn
 and `selectCameraActive` mean other things ("a clip is live", "the loop must tick") and stay. No test (a moved
 predicate; the existing driver and replay tests cover it).
 
-- [ ] Add the util, route the three reads.
-- [ ] `npx vitest run tests/services/engine/camera`.
-- [ ] Commit: "One predicate says when a clip owns the camera".
+- [x] Add the util, route the three reads.
+- [x] `npx vitest run tests/services/engine/camera`.
+- [x] Commit: "One predicate says when a clip owns the camera".
 
 ---
 

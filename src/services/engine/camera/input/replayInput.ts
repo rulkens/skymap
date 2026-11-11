@@ -22,6 +22,7 @@ import { cameraArmKindOf } from '../arms/cameraArmKindOf';
 import { sameFrame } from '../arms/sameFrame';
 import { zoomedDistance } from './utils/zoomedDistance';
 import { absoluteArm } from '../../../../utils/camera/arms/absoluteArm';
+import { clipOwnsCamera } from '../../../../utils/camera/clipOwnsCamera';
 import { bodyMovesThisFrame } from '../../../../utils/scene/bodyMovesThisFrame';
 import { selectFocusRow } from '../../../../state/selection/selectors';
 import cameraReducer, {
@@ -141,7 +142,7 @@ export function replayInput(
     // cell's `hostOrThrow` would throw. The pointer edges still reach the arm:
     // the latch tracks the POINTER, and they re-tag nothing.
     const moves = step.kind === 'drag' || step.kind === 'zoom';
-    if (moves && (camera.clip !== null || (!worldArm && hostOf(base.frame, ctx) === null))) {
+    if (moves && (clipOwnsCamera(camera) || (!worldArm && hostOf(base.frame, ctx) === null))) {
       return true;
     }
     // The two-finger drag is a surface handle (owner ruling 2026-11-03): only
@@ -214,7 +215,11 @@ export function replayInput(
         // mismatch — the fold owns regime edges; a commit here must never flip one.
         // Skipped while a navigator row authors the release: its edge commit bakes
         // the nudged register, once.
-        if (camera.clip === null && !navAuthors && sameFrame(register.frame, camera.base.frame)) {
+        if (
+          !clipOwnsCamera(camera) &&
+          !navAuthors &&
+          sameFrame(register.frame, camera.base.frame)
+        ) {
           emit(commitCameraPose(register));
         }
         navAuthors = false;

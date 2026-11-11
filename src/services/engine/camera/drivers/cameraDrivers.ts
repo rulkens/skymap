@@ -25,6 +25,7 @@ import type { Vec2 } from '../../../../@types/math/Vec2';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { CameraPose } from '../../../../@types/camera/pose/CameraPose';
 import { absoluteArm } from '../../../../utils/camera/arms/absoluteArm';
+import { clipOwnsCamera } from '../../../../utils/camera/clipOwnsCamera';
 import { eyeMpcOf } from '../../../../utils/camera/orbitPose/eyeMpcOf';
 import { orbitAnglesLookingAlong } from '../../../../utils/camera/orbitPose/orbitAnglesLookingAlong';
 import { focusMoveClip } from '../clips/focusMoveClip';
@@ -239,7 +240,7 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
     // to a clip whose commit-on-edge bakes its own final pose would be
     // discarded at pointerup (`replayInput` swallows the steps too).
     commitsOnEdge: 'register',
-    isActive: (s) => s.camera.clip !== null,
+    isActive: (s) => clipOwnsCamera(s.camera),
     // `clip.frame` (pinned at dispatch) is the STEADY basis the path's
     // tangents encode through — a fixed reference keeps `evaluateClip`'s
     // compile cache stable across an orientation switch; the result is
