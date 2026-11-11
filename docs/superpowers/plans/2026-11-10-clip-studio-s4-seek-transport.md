@@ -96,12 +96,12 @@ docs/animation/clip-primitives.md, the S3 ADR, packages/studio/README.md        
 click time through `useAppStore().getState()`, as `useTimelineWheel.ts:44` does, instead of subscribing
 (`ZoomControls.tsx:19`). No behaviour change.
 
-- [ ] Test (jsdom) `a playhead change re-renders the ruler and the line, not the rows`: wrap the pane in a React
+- [x] Test (jsdom) `a playhead change re-renders the ruler and the line, not the rows`: wrap the pane in a React
       `Profiler` per row (or spy on `OutlineRow`'s render), dispatch `playheadSet(2)`, assert no row rendered again.
       This earns its place: during play the head moves every frame, and a re-added subscription re-renders every
       row at 60 Hz with no test or type error to say so.
-- [ ] `npm run typecheck:fast`; `npx vitest run packages/studio/tests/timeline`.
-- [ ] Commit: "Clip studio: only the ruler and the playhead line follow the head".
+- [x] `npm run typecheck:fast`; `npx vitest run packages/studio/tests/timeline`.
+- [x] Commit: "Clip studio: only the ruler and the playhead line follow the head".
 
 ### Task P2: one predicate for "the clip owns the camera"
 

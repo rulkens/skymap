@@ -19,7 +19,7 @@ function mount(window = WINDOW) {
   const store = openStudioStore({ timeline: [seq([dollyTo(300, 4), dollyTo(950, 4)])] });
   render(
     <Provider store={store}>
-      <Ruler timeline={selectTimeline(store.getState())!} window={window} playheadSec={0} />
+      <Ruler timeline={selectTimeline(store.getState())!} window={window} />
     </Provider>,
   );
   const ruler = screen.getByLabelText('Timeline ruler');

@@ -8,7 +8,7 @@ import { selectTimeline } from '../../state/selectTimeline';
 import { viewWindow } from '../../utils/window/viewWindow';
 import { zoomedViewport } from '../../utils/window/zoomedViewport';
 import { ZOOM_FACTOR } from '../../data/zoom';
-import { useAppDispatch, useAppSelector } from '../../../../../../src/store/hooks';
+import { useAppDispatch, useAppSelector, useAppStore } from '../../../../../../src/store/hooks';
 import s from './ZoomControls.module.css';
 
 /** Zoom out, Fit (the level reads here), zoom in: each zooms about the playhead and keeps it in view. */
@@ -16,14 +16,18 @@ function ZoomControls() {
   const dispatch = useAppDispatch();
   const timeline = useAppSelector(selectTimeline);
   const viewport = useAppSelector(selectViewport);
-  const playheadSec = useAppSelector(selectPlayheadSec);
+  const store = useAppStore();
   const resolved = timeline !== null && timeline.durationSec !== null;
   const fit = timeline === null ? null : viewWindow(null, timeline);
   const current = timeline === null ? null : viewWindow(viewport, timeline);
 
   const zoom = (factor: number) => {
     if (timeline !== null)
-      dispatch(viewportSet(zoomedViewport(viewport, timeline, factor, playheadSec)));
+      dispatch(
+        viewportSet(
+          zoomedViewport(viewport, timeline, factor, selectPlayheadSec(store.getState())),
+        ),
+      );
   };
   const level =
     viewport === null || fit === null || current === null

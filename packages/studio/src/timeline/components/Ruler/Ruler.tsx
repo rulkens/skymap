@@ -10,6 +10,8 @@ import { rulerSteps } from '../../utils/ruler/rulerSteps';
 import { timeToPercent } from '../../utils/window/timeToPercent';
 import { AFTER_END_CAPTION_PX, EPSILON, HEAD_WIDTH_PX, TICK_LABEL_PX } from './Ruler.constants';
 import { useRulerScrub } from './useRulerScrub';
+import { selectPlayheadSec } from '../../../session/state/selectors';
+import { useAppSelector } from '../../../../../../src/store/hooks';
 import { useTrackWidth } from './useTrackWidth';
 import type { TimeWindow } from '../../../@types/session/TimeWindow';
 import type { ChannelFamily } from '../../../@types/rows/ChannelFamily';
@@ -19,11 +21,11 @@ import s from './Ruler.module.css';
 type Props = {
   readonly timeline: Timeline;
   readonly window: TimeWindow;
-  readonly playheadSec: number;
 };
 
 /** The time axis: ticks, a notch per cue in its channel's tint, the End flag and the playhead's readout. Click or drag to seek. */
-function Ruler({ timeline, window, playheadSec }: Props) {
+function Ruler({ timeline, window }: Props) {
+  const playheadSec = useAppSelector(selectPlayheadSec);
   const { ref, ...handlers } = useRulerScrub(window, timeline.cueSecs);
   const trackPx = useTrackWidth(ref);
   const span = window.endSec - window.startSec;

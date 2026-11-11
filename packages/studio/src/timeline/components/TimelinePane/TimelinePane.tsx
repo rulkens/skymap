@@ -5,7 +5,7 @@ import OutlineRow from '../OutlineRow/OutlineRow';
 import TrackLane from '../TrackLane/TrackLane';
 import { CHANNEL_FAMILY_LEGEND } from '../../../data/channelFamilies';
 import { rowSelected, rowToggled } from '../../../session/state/studioSlice';
-import { selectPlayheadSec, selectViewport } from '../../../session/state/selectors';
+import { selectViewport } from '../../../session/state/selectors';
 import Playhead from '../Playhead/Playhead';
 import Ruler from '../Ruler/Ruler';
 import { timeToPercent } from '../../utils/window/timeToPercent';
@@ -25,7 +25,6 @@ function TimelinePane() {
   const timeline = useAppSelector(selectTimeline);
   const standIn = useAppSelector(selectSelectionStandInId);
   const viewport = useAppSelector(selectViewport);
-  const playheadSec = useAppSelector(selectPlayheadSec);
   const chains = useMemo(() => ancestorChains(timeline?.rows ?? []), [timeline]);
   const track = useRef<HTMLDivElement>(null);
   const root = useRef<HTMLDivElement>(null);
@@ -50,7 +49,7 @@ function TimelinePane() {
             ))}
           </span>
         </div>
-        <Ruler timeline={timeline} window={window} playheadSec={playheadSec} />
+        <Ruler timeline={timeline} window={window} />
       </div>
       <div className={s.rows} role="tree" aria-label="Steps">
         {timeline.rows.map((row, index) => {
@@ -85,7 +84,7 @@ function TimelinePane() {
             <span className={s.endLine} style={{ left: `${end}%` }} />
           </>
         )}
-        <Playhead playheadSec={playheadSec} window={window} />
+        <Playhead window={window} />
       </div>
     </div>
   );
