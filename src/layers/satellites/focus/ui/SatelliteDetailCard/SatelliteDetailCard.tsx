@@ -58,6 +58,9 @@ function SatelliteDetailCard({
         <CardRow label="Orbit fitted" value={formatSimClock(new Date(target.epochMs))} />
         <CardRow label="Source" value="CelesTrak" />
       </div>
+      <div className={cx(styles.cardSection, styles.cardTypeLine)}>
+        Brightness and flashes are modelled from sunlight and typical panel size.
+      </div>
     </div>
   );
 }

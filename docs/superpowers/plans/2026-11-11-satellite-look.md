@@ -228,9 +228,9 @@ The planner compares `state.settings.satelliteColors` by reference, after its ea
 
 No new test: copy and docs.
 
-- [ ] Add one line to the card: `Brightness and flashes are modelled from sunlight and typical panel size.`
-- [ ] Update the RENDERER.md Earth satellites bullet: profile table at binding 3, per-instance code, lighting in `illumination.wesl`, and that glints use a modelled attitude.
-- [ ] Commit: `Satellite card says its brightness is modelled`.
+- [x] Add one line to the card: `Brightness and flashes are modelled from sunlight and typical panel size.`
+- [x] Update the RENDERER.md Earth satellites bullet: profile table at binding 3, per-instance code, lighting in `illumination.wesl`, and that glints use a modelled attitude.
+- [x] Commit: `Satellite card says its brightness is modelled`.
 
 ## Definition of Done
 
