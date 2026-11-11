@@ -10,6 +10,8 @@ import type { AntiqueGlyphSheet } from './AntiqueGlyphSheet';
 export type AntiqueSheetAssets = {
   readonly paper: { readonly tile: GPUTextureView; readonly stains: GPUTextureView } | null;
   readonly ornaments: GPUTextureView | null;
+  /** Earth's 80 km relief for the relief pass's range gate (`earth-range-relief.png`). */
+  readonly rangeRelief: GPUTextureView | null;
   readonly glyphs: {
     readonly view: GPUTextureView;
     /** The bitmap is closed on upload, so only its layout is kept. */

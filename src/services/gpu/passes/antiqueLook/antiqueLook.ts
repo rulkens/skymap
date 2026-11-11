@@ -142,7 +142,7 @@ export function createAntiqueLook(init: {
     const hasBodies = ctx.snapshot.renderedTargets.has('foreground:0');
     // Inside an atmosphere the day sky fills foreground:0's alpha; its depth tells body from sky.
     const depthCover = hasBodies && bodyRowSlabs(ctx).insideAtmosphere.length > 0;
-    const { paper: paperAssets, ornaments: atlas, glyphs } = assets;
+    const { paper: paperAssets, ornaments: atlas, glyphs, rangeRelief } = assets;
     const rays = viewCornerRays(basis, ctx.frustum, size);
     const rulings = antiquePlateRulings(state, ctx, { projection, basis, rays, unitPx }, hasBodies);
     const [x, y, z] = ctx.drawCamPos;
@@ -364,6 +364,7 @@ export function createAntiqueLook(init: {
       fullScreen(encoder, 'relief', [reliefView], g.relief, [
         io.bodyDepth.view,
         { buffer: g.reliefUniforms },
+        rangeRelief ?? g.empty,
       ]);
     }
     // The plate's arrays are written only here, so the Moon's row is copied into its layer.

@@ -309,7 +309,7 @@ export function createAntiqueLookGpu(
       ],
       [targetFormat],
     ),
-    relief: stage('relief', reliefCode, [COVER, UNIFORM], [ANTIQUE_RELIEF_FORMAT]),
+    relief: stage('relief', reliefCode, [COVER, UNIFORM, TEXTURE], [ANTIQUE_RELIEF_FORMAT]),
     reliefUniforms,
     uniforms,
     ornaments,

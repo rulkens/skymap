@@ -211,6 +211,11 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         manual: 'tools/antique/earth/buildAntiqueEarth.ts',
       },
       {
+        scripts: ['bake-range-relief'],
+        does: 'Writes the antique atlas look’s map of mountain ranges, the relief of each 80 km stretch of Earth from the ETOPO heights, so the close-up hachures are drawn in ranges and not on hill country.',
+        manual: 'tools/antique/earth/bakeRangeRelief.ts',
+      },
+      {
         scripts: ['bake-moon-craters'],
         does: 'Writes the antique atlas look’s Moon crater table, every named crater 12 km across or more, its rim measured on the Moon’s height map and its print weight from its depth, from the IAU gazetteer and NASA’s laser altimeter heights.',
         manual: 'tools/antique/moon/bakeMoonCraters.ts',

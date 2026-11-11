@@ -22,4 +22,7 @@ export type AntiqueReliefBody = {
    * lines along the height's contours, swelling with the shade, at heights that are whole
    * fractions of this period, m (`isoLines`: a quarter of it down to 1/256). */
   readonly contourPeriodM: number | null;
+  /** Hachures print only where the ground's 80 km relief (the baked range-relief map) clears
+   * this ramp, m: nothing below `low`, full above `high`; null: ungated. */
+  readonly rangeGateM: readonly [low: number, high: number] | null;
 };

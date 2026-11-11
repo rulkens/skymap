@@ -69,6 +69,10 @@ describe('packAntiqueRelief', () => {
     expect(new Float32Array(packAntiqueRelief(earth))[at('wideNormal')]).toBe(1);
     expect(f32[at('heightPeriodM')]).toBe(MARS.contourPeriodM);
     expect(new Float32Array(packAntiqueRelief(earth))[at('heightPeriodM')]).toBe(2048);
+    // Mars is ungated (high 0); Earth carries its ramp.
+    expect([f32[at('rangeGateM')], f32[at('rangeGateM') + 1]]).toEqual([0, 0]);
+    const gate = new Float32Array(packAntiqueRelief(earth));
+    expect([gate[at('rangeGateM')], gate[at('rangeGateM') + 1]]).toEqual([900, 1100]);
   });
 
   it('splits the eye into whole anchor cells and a small f32 remainder', () => {

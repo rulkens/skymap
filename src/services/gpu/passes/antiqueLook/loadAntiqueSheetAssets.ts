@@ -1,6 +1,6 @@
 /**
  * loadAntiqueSheetAssets — starts fetching the look's static images (paper
- * tile and stains, ornament atlas) and setting its digits, and returns a live
+ * tile and stains, ornament atlas, Earth's range relief) and setting its digits, and returns a live
  * view of them that fills in as each lands. `onLanded` fires per asset: the
  * render loop may be asleep at rest, and an asset landing is a reason to draw;
  * the paper also invalidates the baked sheet. A failure leaves that asset null
@@ -14,11 +14,12 @@ import { fetchAntiqueBitmap } from '../../../../utils/gpu/antiqueLook/fetchAntiq
 
 export function loadAntiqueSheetAssets(
   device: GPUDevice,
-  onLanded: (asset: 'paper' | 'ornaments' | 'glyphs') => void,
+  onLanded: (asset: 'paper' | 'ornaments' | 'glyphs' | 'rangeRelief') => void,
 ): AntiqueSheetAssets {
   let paper: AntiqueSheetAssets['paper'] = null;
   let ornaments: AntiqueSheetAssets['ornaments'] = null;
   let glyphs: AntiqueSheetAssets['glyphs'] = null;
+  let rangeRelief: AntiqueSheetAssets['rangeRelief'] = null;
   let destroyed = false;
   const textures: GPUTexture[] = [];
 
@@ -67,6 +68,13 @@ export function loadAntiqueSheetAssets(
       onLanded('ornaments');
     })
     .catch(warn('ornaments'));
+  fetchAntiqueBitmap('earth-range-relief.png')
+    .then((bitmap) => {
+      if (!stillWanted(bitmap)) return;
+      rangeRelief = upload('antique-look-range-relief', bitmap);
+      onLanded('rangeRelief');
+    })
+    .catch(warn('range relief'));
   buildAntiqueGlyphSheet()
     .then(({ bitmap, ...sheet }) => {
       if (!stillWanted(bitmap)) return;
@@ -86,12 +94,15 @@ export function loadAntiqueSheetAssets(
     get ornaments() {
       return ornaments;
     },
+    get rangeRelief() {
+      return rangeRelief;
+    },
     get glyphs() {
       return glyphs;
     },
     destroy() {
       destroyed = true;
-      paper = ornaments = glyphs = null;
+      paper = ornaments = glyphs = rangeRelief = null;
       textures.forEach((texture) => texture.destroy());
     },
   };

@@ -14,12 +14,11 @@ import type { MolehillCandidate } from '../@types/MolehillCandidate';
 import type { MolehillLevelPlan } from '../@types/MolehillLevelPlan';
 import { heightLatticeStepDeg } from '../../../utils/textures/heightLatticeStepDeg';
 import { lonLatDegToDirection } from '../../../../src/utils/geo/lonLatDegToDirection';
+import { RANGE_WINDOW_KM } from '../data/rangeWindowKm';
 import { createSphereHash } from './createSphereHash';
 import { findMolehillCandidates } from './findMolehillCandidates';
 
 const KM_PER_DEG = 111.195;
-/** The widest window `findMolehillCandidates` opens besides the spacing's own. */
-const IMPORTANCE_RADIUS_KM = 40;
 /** Posts per band read: bounds the dozen grid-sized arrays a band's filters hold. */
 const BAND_POSTS = 8_000_000;
 
@@ -40,7 +39,7 @@ export async function placeMolehills(
     const postKm = step * KM_PER_DEG;
     const postsRound = Math.round(360 / step);
     const wraps = box.east - box.west >= 360;
-    const marginKm = Math.max(spacingKm / 2, IMPORTANCE_RADIUS_KM);
+    const marginKm = Math.max(spacingKm / 2, RANGE_WINDOW_KM);
     const marginRows = Math.ceil(marginKm / postKm) + 1;
     const rowFirst = Math.ceil((90 - box.north) / step);
     const rowLast = Math.floor((90 - box.south) / step);

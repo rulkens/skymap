@@ -50,5 +50,8 @@ export function packAntiqueRelief(
   f32[54] = input.body.wideNormal ? 1 : 0;
   f32[55] = input.reveal;
   f32[56] = input.body.contourPeriodM ?? 0;
+  const [gateLow, gateHigh] = input.body.rangeGateM ?? [0, 0];
+  f32[58] = gateLow;
+  f32[59] = gateHigh;
   return out;
 }

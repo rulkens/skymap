@@ -13,6 +13,7 @@
 // | 216 wideNormal (`AntiqueReliefBody`, per body); 220 reveal (`packAntiqueRelief.ts`) |
 // | 224 heightPeriodM: > 0, b holds the height phase over it instead of the noise          |
 // |     (`AntiqueReliefBody.contourPeriodM`)                                               |
+// | 232 rangeGateM: low, high m of 80 km relief; high 0 = ungated (`rangeGate`)            |
 
 import package::antiqueLook::io::VSOut;
 import package::antiqueLook::shared::groundNoise::groundNoiseAt;
@@ -36,13 +37,19 @@ struct ReliefUniforms {
   wideNormal: f32,
   reveal: f32,
   heightPeriodM: f32,
+  rangeGateM: vec2<f32>,
 }
 
 // foreground:0's depth (reversed-Z: 0 is the far clear, so sky).
 @group(0) @binding(0) var depthTex: texture_2d<f32>;
 @group(0) @binding(1) var<uniform> r: ReliefUniforms;
+// Earth's 80 km relief, grey = metres / RANGE_RELIEF_STEP_M, equirectangular (`bakeRangeRelief.ts`);
+// 1 px while it loads, which reads as ungated.
+@group(0) @binding(2) var rangeTex: texture_2d<f32>;
 
 const RELIEF_HALO: f32 = -2.0;
+const RANGE_RELIEF_STEP_M: f32 = 16.0;
+const PI: f32 = 3.14159265;
 // The normal's stencil, print units: wide enough to smooth the mesh's facets.
 const NORMAL_UNITS: f32 = 1.5;
 // A paper gap this wide behind every nearer profile, at this relative depth step.
@@ -71,6 +78,28 @@ const TRUSTED_SLOPE: f32 = 0.6;
 fn depthAt(ip: vec2<i32>) -> f32 {
   let size = vec2<i32>(textureDimensions(depthTex));
   return textureLoad(depthTex, clamp(ip, vec2<i32>(0), size - 1), 0).r;
+}
+
+// 0 on hill country, 1 inside a range, over the body's relief ramp: bilinear over the map's
+// pixels, wrapping at the antimeridian. `pos` is body-fixed, lon east of +x, lat up +z.
+fn rangeGate(pos: vec3<f32>) -> f32 {
+  let dims = vec2<i32>(textureDimensions(rangeTex));
+  if (r.rangeGateM.y <= 0.0 || dims.x < 2) {
+    return 1.0;
+  }
+  let lon = atan2(pos.y, pos.x);
+  let lat = asin(clamp(pos.z / length(pos), -1.0, 1.0));
+  let f = vec2<f32>(lon / (2.0 * PI) + 0.5, 0.5 - lat / PI) * vec2<f32>(dims) - 0.5;
+  let base = vec2<i32>(floor(f));
+  let t = fract(f);
+  var relief = 0.0;
+  for (var k = 0; k < 4; k++) {
+    let o = vec2<i32>(k & 1, k >> 1u);
+    let q = base + o;
+    let v = textureLoad(rangeTex, vec2<i32>((q.x + dims.x) % dims.x, clamp(q.y, 0, dims.y - 1)), 0).r;
+    relief += v * select(1.0 - t.x, t.x, o.x == 1) * select(1.0 - t.y, t.y, o.y == 1);
+  }
+  return smoothstep(r.rangeGateM.x, r.rangeGateM.y, relief * 255.0 * RANGE_RELIEF_STEP_M);
 }
 
 fn eyeRel(ip: vec2<i32>, d: f32) -> vec3<f32> {
@@ -178,5 +207,5 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // steps, so a whole period wraps onto every step.
   let hb = select(noise, fract(length(r.eyeRelBody + p) / r.heightPeriodM), r.heightPeriodM > 0.0);
   // Hachures fade in as a body's far relief signs fade out (`revealDetail`).
-  return vec4<f32>(fall, hb, select(-fade, stroke * r.reveal, stroke > 0.0));
+  return vec4<f32>(fall, hb, select(-fade, stroke * r.reveal * rangeGate(r.eyeRelBody + p), stroke > 0.0));
 }

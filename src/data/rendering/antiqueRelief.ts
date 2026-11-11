@@ -8,10 +8,11 @@ import type { AntiqueReliefBody } from '../../@types/rendering/AntiqueReliefBody
  * 9° one), every landform stroked, inked by the plain render's shade. Earth: ETOPO's z7
  * posts ~2.4 km apart outside the skadi boxes, so the exaggeration lifts the coarse mesh's ranges off the flats; only the
  * shade side inked, as a 1690 engraver drew a mountain (hachures by slope are Lehmann's,
- * 1799); handed over from the map's molehills (ANTIQUE_MAP_DETAIL levels 7..8). */
+ * 1799); handed over from the map's molehills (ANTIQUE_MAP_DETAIL levels 7..8), and only inside
+ * a range: the gate's ramp is 200 m around the molehills' own 1,000 m cut (`findMolehillCandidates.ts`). */
 export const ANTIQUE_RELIEF_BODIES: Readonly<Record<string, AntiqueReliefBody>> = {
-  mars: { cellM: 1, exaggeration: [2, 3], slopeInk: 1, wideNormal: false, revealDetail: null, contourPeriodM: 512 },
-  earth: { cellM: 1500, exaggeration: [1.3, 2.5], slopeInk: 0, wideNormal: true, revealDetail: [7, 8], contourPeriodM: 2048 },
+  mars: { cellM: 1, exaggeration: [2, 3], slopeInk: 1, wideNormal: false, revealDetail: null, contourPeriodM: 512, rangeGateM: null },
+  earth: { cellM: 1500, exaggeration: [1.3, 2.5], slopeInk: 0, wideNormal: true, revealDetail: [7, 8], contourPeriodM: 2048, rangeGateM: [900, 1100] },
 };
 
 /** Above this altitude over the datum the ground is too small to engrave: no pass. */

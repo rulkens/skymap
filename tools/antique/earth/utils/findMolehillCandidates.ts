@@ -12,10 +12,11 @@
 import type { HeightGrid } from '../@types/HeightGrid';
 import type { MolehillCandidate } from '../@types/MolehillCandidate';
 import { heightLatticeStepDeg } from '../../../utils/textures/heightLatticeStepDeg';
+import { RANGE_WINDOW_KM } from '../data/rangeWindowKm';
+import { rangeRelief } from './rangeRelief';
 import { windowExtremum } from './windowExtremum';
 
 const KM_PER_DEG = 111.195;
-const IMPORTANCE_RADIUS_KM = 40;
 /** Below this many metres of relief over 80 km a hill draws smallest; 3,000 m draws largest. */
 const IMPORTANCE_FLOOR_M = 300;
 const IMPORTANCE_SPAN_M = 2700;
@@ -48,8 +49,7 @@ export function findMolehillCandidates(
   const threshold = reliefThresholdM(spacingKm);
 
   const candidates: MolehillCandidate[] = [];
-  let importanceHigh: Float32Array | undefined;
-  let importanceLow: Float32Array | undefined;
+  let importanceRelief: Float32Array | undefined;
   for (let jj = 0; jj < ny; jj++)
     for (let ii = 0; ii < nx; ii++) {
       const k = jj * nx + ii;
@@ -58,18 +58,14 @@ export function findMolehillCandidates(
       if (elevation <= 0 || relief < threshold || elevation < crest[k]! - 1e-3 || !isCore(ii, jj))
         continue;
       // Lazily: most bands of the ocean never need the 80 km windows.
-      importanceHigh ??= windowExtremum(forMax, grid, IMPORTANCE_RADIUS_KM, 'max');
-      importanceLow ??= windowExtremum(forMin, grid, IMPORTANCE_RADIUS_KM, 'min');
-      const importanceRelief = importanceHigh[k]! - importanceLow[k]!;
-      if (importanceRelief < MIN_RANGE_RELIEF_M) continue;
+      importanceRelief ??= rangeRelief(grid, RANGE_WINDOW_KM);
+      const rangeM = importanceRelief[k]!;
+      if (rangeM < MIN_RANGE_RELIEF_M) continue;
       candidates.push({
         lonDeg: -180 + (i0 + ii) * step,
         latDeg: 90 - (j0 + jj) * step,
         score: relief + ELEVATION_WEIGHT * elevation,
-        importance: Math.min(
-          1,
-          Math.max(0, (importanceRelief - IMPORTANCE_FLOOR_M) / IMPORTANCE_SPAN_M),
-        ),
+        importance: Math.min(1, Math.max(0, (rangeM - IMPORTANCE_FLOOR_M) / IMPORTANCE_SPAN_M)),
       });
     }
   return candidates;

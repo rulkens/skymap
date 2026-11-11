@@ -39,6 +39,7 @@
     "build-all": "tsx tools/catalog/buildAllBins.ts && npm run build-data-manifest",
     "build-surface-tiles": "tsx tools/textures/buildSurfaceTiles.ts",
     "pack-ornaments": "tsx tools/antique/packOrnaments.ts",
+    "bake-range-relief": "tsx tools/antique/earth/bakeRangeRelief.ts",
     "build-antique-earth": "tsx tools/antique/earth/buildAntiqueEarth.ts",
     "bake-moon-craters": "tsx tools/antique/moon/bakeMoonCraters.ts",
     "bake-moon-far-side-places": "tsx tools/antique/moon/bakeMoonFarSidePlaces.ts",
