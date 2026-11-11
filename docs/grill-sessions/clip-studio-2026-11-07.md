@@ -466,3 +466,10 @@ refactor-ground checkpoint.
   waypoint, Escape adds nothing. The new waypoint takes its arc-length share of the travel time and pinned legs
   keep their seconds; a removal re-shares the unpinned legs (Q18). The only waypoint cannot be removed. Fly joins
   the palette.
+
+## Q65–Q66: S3 smoke rulings (owner, 2026-11-11)
+
+- **Q65** Fade segments: the spec's "non-overlapping" gives way to the as-built rule. Segments sit in ascending
+  `startSec`, and a later segment supersedes the earlier one from its start.
+- **Q66** An exhibit's arrival clip reverts its scene at its end (it has no scene steps today). Revisit if an
+  arrival gets scene steps.
