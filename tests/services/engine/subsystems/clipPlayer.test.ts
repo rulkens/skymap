@@ -595,6 +595,20 @@ describe('clipPlayer transport', () => {
     });
   });
 
+  it('new data and a seek in one frame leave no frame roll on a paused head', () => {
+    const store = makeStore();
+    const { tick } = makePlayer(store);
+    const parked = { timeline: [frameTo('supergalactic', { over: 1 }), hold(5)] };
+    transportClip(store, parked, { kind: 'paused', atSec: 3, camera: 'clip' });
+    tick(0);
+    expect(store.getState().camera.frameTween).toBeNull();
+
+    store.dispatch(clipDataReplaced(resolveClipStart({ ...parked }, LIVE_POSE)));
+    store.dispatch(clipTransportSet({ kind: 'paused', atSec: 4, camera: 'clip' }));
+    tick(100);
+    expect(store.getState().camera.frameTween).toBeNull();
+  });
+
   it('an untransported play never seeds on its first frame', () => {
     // The tour-seam guard: a ramp a `keep` commit carried across the seam must keep running.
     const store = makeStore();

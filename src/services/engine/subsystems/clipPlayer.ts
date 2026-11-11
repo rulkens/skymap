@@ -221,14 +221,12 @@ export function createClipPlayer(deps: ClipPlayerDeps): ClipPlayer {
     memoRoot = memoView = memoApplied = null;
   }
 
-  // A new play, or the transported play continuing with new data or a new transport (true). A new
-  // play replacing a live clip hands its published scene over to the new clip's start and leaves
-  // the end resolver to the play that registered it.
+  // A new play, or the transported play continuing with new data, a new transport or both (true).
+  // Transported to transported is always one play: whoever owns a transport ends its play with
+  // `stop()`, which resets the player first. A new play replacing a live clip hands its published
+  // scene over to the new clip's start and leaves the end resolver to the play that registered it.
   function enter(next: NonNullable<CameraState['clip']>, root: RootState): boolean {
-    const continuing =
-      clip !== null &&
-      next.transport !== null &&
-      (next.data === clip.data || next.transport === clip.transport);
+    const continuing = clip?.transport != null && next.transport !== null;
     if (continuing) {
       if (next.data === clip!.data) clip = next;
       else compile(next);
