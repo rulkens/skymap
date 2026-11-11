@@ -12,6 +12,7 @@ import {
 } from '../../../src/layers/body/surfaceTiles/format/data/marsSurfaceParams';
 import { SCENE_PLANETS } from '../../../src/data/bodies/scenePlanets';
 import { SURFACE_FIXED_SITES } from '../../../src/data/bodies/surfaceFixedSites';
+import { WHOLE_GLOBE_BOUNDS } from '../../../src/layers/body/surfaceTiles/format/data/wholeGlobeBounds';
 import { SURFACE_TILE_PX } from '../../../src/layers/body/surfaceTiles/format/data/surfaceTileParams';
 import { SURFACE_TILE_REGISTRY } from '../../../src/layers/body/surfaceTiles/format/data/surfaceTileRegistry';
 import { TIER_LADDER } from '../../../src/data/tierLadder';
@@ -79,11 +80,6 @@ const DATUM_CHECK_LIMIT_M = 200;
 const GUSEV_GREY_STRETCH = [10, 206] as const;
 const ENDEAVOUR_GREY_STRETCH = [58, 247] as const;
 
-/** The global mosaics' headers put the outer edges ±0.004° past ±180/±90
- *  (pixel-size rounding on Viking's 256 px/° grid, 92160/360); the true grid
- *  is exactly global. */
-const WHOLE_GLOBE: LonLatBounds = { west: -180, east: 180, south: -90, north: 90 };
-
 const RAD_TO_DEG = 180 / Math.PI;
 
 /** An equirectangular (lat_ts 0, lon0 0) GeoTIFF on the IAU sphere, from its
@@ -120,7 +116,9 @@ function viking(maxLevel: number): SurfaceImagerySource {
       path: rawDataPath('viking.mdim21'),
       width: 92160,
       height: 46080,
-      bounds: WHOLE_GLOBE,
+      // The header's edges sit ±0.004° past ±180/±90 (pixel-size rounding
+      // on Viking's 256 px/° grid, 92160/360); the true grid is exactly global.
+      bounds: WHOLE_GLOBE_BOUNDS,
     },
     maxLevel,
   });
@@ -136,7 +134,7 @@ function mola(): HeightSource {
       path: rawDataPath('mola.dem463'),
       width: 46080,
       height: 23040,
-      bounds: WHOLE_GLOBE,
+      bounds: WHOLE_GLOBE_BOUNDS,
     },
     nodata: -32768,
     offsetM: MARS_DATUM_OFFSET_M,
