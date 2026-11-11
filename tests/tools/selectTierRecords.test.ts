@@ -22,14 +22,13 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { Source } from '../../src/data/source';
 import { selectTierRecords } from '../../tools/catalog/selectTierRecords';
 import { subsampleByAbsMag } from '../../tools/catalog/subsampleByAbsMag';
 import type { ParsedRecord } from '../../tools/parsers/common';
 
 function rec(overrides: Partial<ParsedRecord>): ParsedRecord {
   return {
-    source: Source.Glade,
+    source: 'glade',
     objID: 0n,
     ra: 0,
     dec: 0,

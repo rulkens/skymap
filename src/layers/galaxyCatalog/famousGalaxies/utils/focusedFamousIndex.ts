@@ -1,4 +1,3 @@
-import { Source } from '../../../../data/source';
 import type { SelectionRefBase } from '../../../../@types/engine/selection/SelectionRefBase';
 import { isKind } from '../../../../utils/selection/isKind';
 import type { GalaxyCatalogRef } from '../../selection/@types/GalaxyCatalogRef';
@@ -14,7 +13,7 @@ import type { GalaxyCatalogRef } from '../../selection/@types/GalaxyCatalogRef';
  * the label identity.
  */
 export function focusedFamousIndex(ref: SelectionRefBase | null): number | null {
-  return isKind<GalaxyCatalogRef>(ref, 'galaxyCatalog') && ref.source === Source.FamousGalaxy
+  return isKind<GalaxyCatalogRef>(ref, 'galaxyCatalog') && ref.source === 'famousGalaxy'
     ? ref.index
     : null;
 }

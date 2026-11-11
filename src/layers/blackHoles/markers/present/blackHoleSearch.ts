@@ -17,7 +17,7 @@ const SEARCH_ALIASES: Readonly<Record<BlackHoleId, readonly string[]>> = {
 };
 
 export async function* blackHoleSearch(): AsyncIterable<readonly LayerSearchEntry[]> {
-  yield BLACK_HOLE_SOURCE_ROWS.map(([, entry]) => ({
+  yield BLACK_HOLE_SOURCE_ROWS.map((entry) => ({
     id: encodeBlackHoleFocusId(entry.id),
     class: 'primary' as const,
     names: [entry.label, entry.detailLabel, ...SEARCH_ALIASES[entry.id]],

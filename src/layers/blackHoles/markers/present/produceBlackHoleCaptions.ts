@@ -26,8 +26,6 @@ import { blackHoleAnchorId } from './blackHoleAnchorId';
  */
 const BLACK_HOLE_CAPTION_TINT: Readonly<Vec3> = [1, 0.66, 0.32];
 
-const ENTRIES = BLACK_HOLE_SOURCE_ROWS.map(([, entry]) => entry);
-
 export function produceBlackHoleCaptions(
   pickCode: number,
 ): LayerScreenLabel<'blackHole'>['produceLabels'] {
@@ -37,7 +35,7 @@ export function produceBlackHoleCaptions(
 
     const labels = BLACK_HOLES.map((row, i) => {
       const caption = bodyCaption(
-        findByIdOrThrow(ENTRIES, row.id, 'produceBlackHoleCaptions'),
+        findByIdOrThrow(BLACK_HOLE_SOURCE_ROWS, row.id, 'produceBlackHoleCaptions'),
         schwarzschildRadiusM(row.massSolar),
         states.get(blackHoleAnchorId(row))!.positionMpc,
         BLACK_HOLE_CAPTION_TINT,

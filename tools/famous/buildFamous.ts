@@ -31,7 +31,6 @@ import {
   encodeGalaxyCatalog,
   GALAXY_CATALOG_DATA_PREFIX,
 } from '../../src/layers/galaxyCatalog/records/data/galaxyCatalogFormat';
-import { Source } from '../../src/data/source';
 import { resolveFamousOrientation } from './resolveFamousOrientation';
 import type { GalaxyCatalog } from '../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { FamousGalaxyMetaEntry } from '../../src/@types/loading/FamousGalaxyMetaEntry';
@@ -222,7 +221,7 @@ async function main(): Promise<void> {
     // adopted distance from entryToXyz — after the photometry assignment
     // so the estimator sees the filled mags, not the NaN pre-fill.
     cloud.log10StellarMass[i] = estimateLog10StellarMass({
-      source: Source.FamousGalaxy,
+      source: 'famousGalaxy',
       magU: cloud.magU[i]!,
       magG: cloud.magG[i]!,
       magR: cloud.magR[i]!,
@@ -254,12 +253,6 @@ async function main(): Promise<void> {
   process.stderr.write(`wrote famous_galaxies_meta.json\n`);
   await writeFamousGalaxyNames(entries);
   process.stderr.write(`wrote famousGalaxyNames.generated.ts\n`);
-
-  // Quick sanity reference: log the Source enum value baked into the
-  // renderer.  The renderer keys per-source pipelines on this number,
-  // so a mismatch would silently misroute Famous draws into the wrong
-  // pipeline — better to have it in the build log too.
-  process.stderr.write(`Source.FamousGalaxy = ${Source.FamousGalaxy}\n`);
 }
 
 // Allow the script to be both executed (CLI) and imported (tests).

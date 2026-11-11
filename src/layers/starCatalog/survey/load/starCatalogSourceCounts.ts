@@ -15,7 +15,7 @@ import type { SourceCountReport } from '../../../../@types/engine/layer/SourceCo
 import type { StarCatalogRuntime } from '../../@types/StarCatalogRuntime';
 
 import { callbackIterable } from '../../../../utils/async/callbackIterable';
-import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../../../data/bodies/seededStarCatalogsBySource';
+import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../seededStars/data/seededStarCatalogsBySource';
 
 export function starCatalogSourceCounts(
   runtime: StarCatalogRuntime,

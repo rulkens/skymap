@@ -7,7 +7,6 @@
  * exists for.
  */
 import { describe, expect, it } from 'vitest';
-import { Source } from '../../../../src/data/source';
 import { parsePolyphyTraceSidecar } from '../../../../tools/parsers/polyphyTraceSidecar';
 import { autoFitGridBox } from '../../../../tools/mcpm-workbench/src/field/autoFitGridBox';
 import { emitTraceSidecar } from '../../../../tools/mcpm-workbench/src/export/emitTraceSidecar';
@@ -32,7 +31,7 @@ function pointsFixture(): CatalogPoints {
     positions: new Float32Array(0),
     log10StellarMass: new Float32Array(0),
     count: 1_642_391,
-    sources: [Source.SDSS, Source.TwoMRS, Source.Glade],
+    sources: ['sdss', '2mrs', 'glade'],
   };
 }
 

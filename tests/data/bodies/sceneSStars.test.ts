@@ -15,7 +15,6 @@ import { rankPaletteMatches } from '../../../src/utils/palette/rankPaletteMatche
 import { starSearch } from '../../../src/layers/starCatalog/selection/present/starSearch';
 import { encodeStarFocusId } from '../../../src/layers/starCatalog/selection/utils/encodeStarFocusId';
 import type { LayerSearchEntry } from '../../../src/@types/engine/layer/LayerSearchEntry';
-import { Source } from '../../../src/data/source';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import type { StarRowFixture } from '../../support/selectionResolverOver';
 import { testPickCode } from '../../support/testPickCode';
@@ -49,7 +48,7 @@ describe('SCENE_S_STARS', () => {
 
     const sourceCode = testPickCode('starCatalog')('sStar');
     const ref = resolver.resolvePick({ sourceCode, localIdx: s2Index });
-    expect(ref).toEqual({ type: 'starCatalog', source: Source.SStar, index: s2Index });
+    expect(ref).toEqual({ type: 'starCatalog', source: 'sStar', index: s2Index });
     expect(resolver.extractRow(ref, CONST_J2000)).toMatchObject({ id: 's2', label: 'S2' });
 
     expect(SCENE_BODIES.some((body) => body.id === 's2')).toBe(true);
@@ -64,7 +63,7 @@ describe('SCENE_S_STARS', () => {
     for await (const batch of starSearch()) starRows.push(...batch);
     const s2Id = encodeStarFocusId({
       type: 'starCatalog',
-      source: Source.SStar,
+      source: 'sStar',
       index: SCENE_S_STARS.findIndex((star) => star.id === 's2'),
     });
     const s2Rows = rankPaletteMatches([], [], [], starRows, 'S2').filter(

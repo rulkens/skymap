@@ -12,15 +12,13 @@ import { bodyCodeOf } from '../../../src/layers/body/selection/present/bodyCodeO
 import { bodySelectionRow } from '../../../src/layers/body/selection/bodySelectionRow';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
 import { NO_KINDS_OFF } from '../../support/noKindsOff';
-import { fakePickCode } from '../../support/fakePickCode';
 import { bodyPickCodes } from '../../support/layerPickCodes';
 import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../src/data/bodies/scenePlanets';
 import { unpackPick } from '../../../src/data/selectionEncoding';
-import { Source } from '../../../src/data/source';
 
 // Codes from 40 up, so no expectation below can pass on a catalog value.
-const pickCodes = bodyPickCodes(fakePickCode());
+const pickCodes = bodyPickCodes();
 const sceneBodyPickId = (id: string) => pickIdOf(id, bodyCodeOf(pickCodes));
 const resolver = composeSelectionRows(
   () => [bodySelectionRow({ pickCodes })],
@@ -33,11 +31,11 @@ describe('sceneBodyPickId', () => {
   // GPU stamp — only these sourceCode assertions catch that.
   it('routes each seeded body to the table its own geometry pick indexes', () => {
     const earth = unpackPick(sceneBodyPickId(SCENE_EARTH.id)!)!;
-    expect(earth.sourceCode).toBe(pickCodes.pickCodeOf(Source.Earth));
+    expect(earth.sourceCode).toBe(pickCodes.pickCodeOf('earth'));
     expect(earth.localIdx).toBe(0);
 
     const planet = unpackPick(sceneBodyPickId('moon')!)!;
-    expect(planet.sourceCode).toBe(pickCodes.pickCodeOf(Source.Planet));
+    expect(planet.sourceCode).toBe(pickCodes.pickCodeOf('planet'));
     expect(SCENE_PLANETS[planet.localIdx]?.id).toBe('moon');
   });
 

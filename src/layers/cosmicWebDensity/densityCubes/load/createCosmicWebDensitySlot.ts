@@ -12,7 +12,7 @@ import type { VolumeFieldRenderer } from '../../../../@types/rendering/VolumeFie
 import type { CosmicWebDensityReq } from '../@types/CosmicWebDensityReq';
 
 export function createCosmicWebDensitySlot(
-  entry: (typeof COSMIC_WEB_DENSITY_SOURCE_ROWS)[number][1],
+  entry: (typeof COSMIC_WEB_DENSITY_SOURCE_ROWS)[number],
   renderer: VolumeFieldRenderer<CosmicWebDensityFieldId>,
 ): AssetSlot<ScalarCube, CosmicWebDensityReq> {
   const id = entry.id;

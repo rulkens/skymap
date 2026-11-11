@@ -8,10 +8,9 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { galaxyRecordBridge } from '../../../../../src/layers/galaxyCatalog/selection/present/galaxyRecordBridge';
-import { Source } from '../../../../../src/data/source';
-import type { GalaxyCatalogSourceType } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogSourceType';
+import type { GalaxyCatalogId } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import type { GalaxyRecordSource } from '../../../../../src/layers/galaxyCatalog/records/@types/GalaxyRecordSource';
-import type { GalaxyRow } from '../../../../../src/@types/engine/GalaxyRow';
+import type { GalaxyRow } from '../../../../../src/layers/galaxyCatalog/records/@types/GalaxyRow';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -20,7 +19,7 @@ function deferred<T>() {
 }
 
 function fakeSource(
-  source: GalaxyCatalogSourceType,
+  source: GalaxyCatalogId,
   lookups: Partial<GalaxyRecordSource>,
 ): GalaxyRecordSource {
   return {
@@ -45,52 +44,52 @@ describe('galaxyRecordBridge', () => {
   it('returns null while a lookup is pending, then the settled value after one pulse', async () => {
     const pending = deferred<GalaxyRow | null>();
     const records = new Map([
-      [Source.Glade, fakeSource(Source.Glade, { loadRow: () => pending.promise })],
+      ['glade' as const, fakeSource('glade', { loadRow: () => pending.promise })],
     ]);
     const bridge = galaxyRecordBridge(records);
     const settled = vi.fn();
     bridge.onSettle(settled);
 
-    expect(bridge.row(Source.Glade, 4)).toBeNull();
-    expect(bridge.row(Source.Glade, 4)).toBeNull();
+    expect(bridge.row('glade', 4)).toBeNull();
+    expect(bridge.row('glade', 4)).toBeNull();
     pending.resolve(rowAt(4));
     await flush();
 
-    expect(settled).toHaveBeenCalledExactlyOnceWith(Source.Glade);
-    expect(bridge.row(Source.Glade, 4)).toEqual(rowAt(4));
+    expect(settled).toHaveBeenCalledExactlyOnceWith('glade');
+    expect(bridge.row('glade', 4)).toEqual(rowAt(4));
   });
 
   it("a released source's settled row is never served", async () => {
     const pending = deferred<GalaxyRow | null>();
     const records = new Map([
-      [Source.Glade, fakeSource(Source.Glade, { loadRow: () => pending.promise })],
+      ['glade' as const, fakeSource('glade', { loadRow: () => pending.promise })],
     ]);
     const bridge = galaxyRecordBridge(records);
     const settled = vi.fn();
     bridge.onSettle(settled);
-    expect(bridge.row(Source.Glade, 4)).toBeNull();
+    expect(bridge.row('glade', 4)).toBeNull();
 
     // A tier swap commits a fresh source while the old lookup is in flight.
-    records.set(Source.Glade, fakeSource(Source.Glade, { loadRow: (o) => rowAt(o + 100) }));
+    records.set('glade', fakeSource('glade', { loadRow: (o) => rowAt(o + 100) }));
     pending.resolve(rowAt(4));
     await flush();
 
     expect(settled).not.toHaveBeenCalled();
-    expect(bridge.row(Source.Glade, 4)).toEqual(rowAt(104));
-    records.delete(Source.Glade);
-    expect(bridge.row(Source.Glade, 4)).toBeNull();
+    expect(bridge.row('glade', 4)).toEqual(rowAt(104));
+    records.delete('glade');
+    expect(bridge.row('glade', 4)).toBeNull();
   });
 
   it('pgc decode prefers the lower rank when two sources hold the id', async () => {
     const gladeLookup = deferred<number | null>();
     let gladeAnswer: number | null | Promise<number | null> = 3;
-    const records = new Map<GalaxyCatalogSourceType, GalaxyRecordSource>([
-      [Source.TwoMRS, fakeSource(Source.TwoMRS, { resolveDurableId: () => 7 })],
-      [Source.Glade, fakeSource(Source.Glade, { resolveDurableId: () => gladeAnswer })],
+    const records = new Map<GalaxyCatalogId, GalaxyRecordSource>([
+      ['2mrs', fakeSource('2mrs', { resolveDurableId: () => 7 })],
+      ['glade', fakeSource('glade', { resolveDurableId: () => gladeAnswer })],
     ]);
     expect(galaxyRecordBridge(records).resolveDurableId('pgc-2789')).toEqual({
       type: 'galaxyCatalog',
-      source: Source.Glade,
+      source: 'glade',
       index: 3,
     });
 
@@ -102,7 +101,7 @@ describe('galaxyRecordBridge', () => {
     await flush();
     expect(bridge.resolveDurableId('pgc-2789')).toEqual({
       type: 'galaxyCatalog',
-      source: Source.TwoMRS,
+      source: '2mrs',
       index: 7,
     });
   });

@@ -5,13 +5,12 @@
 
 import { describe, it, expect } from 'vitest';
 import { sumProvenanceCounts } from '../../../../../src/layers/galaxyCatalog/provenance/utils/sumProvenanceCounts';
-import { Source } from '../../../../../src/data/source';
 
 describe('sumProvenanceCounts', () => {
   it('accumulates total and per-axis estimated counts across sources', () => {
     const bySource = {
-      [Source.SDSS]: { total: 10, estimated: { orientation: 2, size: 1 } },
-      [Source.Glade]: { total: 5, estimated: { orientation: 0, size: 3 } },
+      ['sdss']: { total: 10, estimated: { orientation: 2, size: 1 } },
+      ['glade']: { total: 5, estimated: { orientation: 0, size: 3 } },
     };
 
     expect(sumProvenanceCounts(bySource)).toEqual({

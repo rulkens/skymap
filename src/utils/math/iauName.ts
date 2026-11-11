@@ -23,7 +23,7 @@
 
 import { iauRaDecSuffix } from './iauRaDecSuffix';
 import { APP_SOURCE_REGISTRY } from '../../compositions/appSources';
-import type { SourceType } from '../../@types/data/SourceType';
+import type { SourceId } from '../../@types/data/SourceId';
 
 /**
  * Galaxy catalog-aware IAU designation.  Returns "<prefix> J<RA><Dec>" where the
@@ -34,7 +34,7 @@ import type { SourceType } from '../../@types/data/SourceType';
  * designation. Reaching the throw means a structure pick is being formatted by
  * galaxy-headline code; route structure picks through their dedicated info path.
  */
-export function iauName(source: SourceType, raDeg: number, decDeg: number): string {
+export function iauName(source: SourceId, raDeg: number, decDeg: number): string {
   const entry = APP_SOURCE_REGISTRY[source];
   if (entry.type !== 'galaxyCatalog') {
     throw new Error(`iauName: structure source ${source} has no IAU designation`);

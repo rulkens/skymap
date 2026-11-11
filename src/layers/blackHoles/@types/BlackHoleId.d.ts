@@ -5,4 +5,4 @@ import type { BLACK_HOLE_SOURCE_ROWS } from '../sources/blackHoleSourceRows';
  * `settings.blackHoles.items`. Follows the Layer's own rows tuple, so a second
  * hole widens the union by existing.
  */
-export type BlackHoleId = (typeof BLACK_HOLE_SOURCE_ROWS)[number][1]['id'];
+export type BlackHoleId = (typeof BLACK_HOLE_SOURCE_ROWS)[number]['id'];

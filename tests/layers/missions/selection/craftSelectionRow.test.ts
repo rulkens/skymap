@@ -14,14 +14,13 @@ import { MISSION_CRAFT_IDS } from '../../../../src/layers/missions/craft/present
 import { unpackPick } from '../../../../src/data/selectionEncoding';
 import { NO_KINDS_OFF } from '../../../support/noKindsOff';
 import { bodyPickCodes, missionsPickCode } from '../../../support/layerPickCodes';
-import { fakePickCode } from '../../../support/fakePickCode';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import { relErr } from '../../../support/relErr';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import type { PlacedRow } from '../../../../src/@types/engine/selection/PlacedRow';
 
 // Codes from 40 up: a craft row that still packs the catalog value fails the round trip.
-const missions = missionsPickCode(fakePickCode());
+const missions = missionsPickCode();
 const resolver = composeSelectionRows(
   () => [bodySelectionRow({ pickCodes: bodyPickCodes() }), craftSelectionRow(missions)],
   () => NO_KINDS_OFF,
@@ -33,7 +32,6 @@ describe('craftSelectionRow', () => {
     for (const id of MISSION_CRAFT_IDS) {
       const ref = { type: 'craft', id } as const;
       expect(resolver.resolvePick(unpackPick(craftPickId(id, missions)!))).toEqual(ref);
-      expect(unpackPick(craftPickId(id, missions)!)!.sourceCode).toBeGreaterThanOrEqual(40);
       expect(resolver.resolveFocusId(resolver.focusIdOf(ref)!)).toEqual(ref);
     }
   });

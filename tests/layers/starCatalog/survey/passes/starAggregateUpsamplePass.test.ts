@@ -10,7 +10,6 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { starAggregateUpsamplePass } from '../../../../../src/layers/starCatalog/survey/passes/starAggregateUpsamplePass';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
-import { Source } from '../../../../../src/data/source';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { PassState } from '../../../../../src/@types/engine/frame/PassState';
 import type { StarCatalogRuntime } from '../../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
@@ -58,7 +57,7 @@ function makeCatalog(): Octree<StarColumns> {
 }
 
 function makeRuntime(upsample: unknown): StarCatalogRuntime {
-  const loaded = [{ source: Source.GaiaStars, octree: makeCatalog() }];
+  const loaded = [{ source: 'gaiaStars', octree: makeCatalog() }];
   const renderer = {
     upload: vi.fn(),
     loadedCatalogs: vi.fn(() => loaded[Symbol.iterator]()),

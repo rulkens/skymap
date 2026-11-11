@@ -23,7 +23,7 @@ export function expandCompanionRows(
     const parent = ownByKey.get(row.companionOf);
     if (parent === undefined) {
       throw new Error(
-        `expandCompanionRows: '${String(row.key)}' companions '${String(row.companionOf)}', which is missing or is itself a companion`,
+        `expandCompanionRows: '${row.key}' companions '${String(row.companionOf)}', which is missing or is itself a companion`,
       );
     }
     return {

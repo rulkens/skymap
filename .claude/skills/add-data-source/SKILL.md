@@ -175,15 +175,14 @@ walk you to anything missed.
 | --- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | 1   | Source code        | `src/data/source.ts`                                                                                                                                | The append-only pick code (rules below)                                                         |
 | 2   | Registry row       | `src/layers/structure/sources/<x>.ts` (new, a `StructureSourceEntry`) + import and line in `src/layers/structure/sources/structureSourceRows.ts`                                                | `id`, `scale`, the copy fields `detailLabel` / `shortLabel` / `plural`          |
-| 3   | Non-survey guard   | `src/utils/math/galaxyType.ts` (`case Source.X`)                                                                                                    | Keeps the `switch` exhaustive; a structure has no galaxy type                                   |
-| 4   | Record arm         | `src/@types/data/structure/StructureInfo.d.ts` (`XRecord` + the union)                                                                              | The category's own fields, if any (`nebulaKind`)                                                   |
-| 5   | Style row          | `src/layers/structure/markers/present/structureMarkerStyles.ts`                                                                                         | Colours, sizes, `labelPlacement`; a `Record<StructureId, …>`, so it fails to compile |
-| 6   | Distance band      | `src/layers/structure/visibility.ts`  | Nothing to edit: the category joins `STRUCTURE_IDS_BY_SCALE` through its registry row's `scale` and takes that scale's band (below) |
-| 7   | Build switch       | `src/layers/structure/catalog/load/buildStaticAnchorStructures.ts` (`SeedEntry` fields + `case 'x'`)                                                               | Maps a seed row to the record arm; the switch is exhaustive over `StructureId`                  |
-| 8   | Seed parser        | `tools/parsers/parseStructureSeed.ts`                                                                                                               | Per-category fields: what is required, what is rejected elsewhere                               |
-| 9   | Card row (if any)  | `src/layers/structure/cards/ui/StructureDetailCard/StructureDetailCard.tsx`; copy in `src/data/structure/` (`nebulaKindLabels.ts`, which stays in core)                       | A per-category fact such as a nebula's Type                                                     |
-| 10  | Seed rows          | `data/seeds/structure_anchors.seed.json` (plain `git add`)                                                                                          | The data; fields below                                                                          |
-| 11  | Tests              | `tests/data/structureAnchors.test.ts`, `tests/tools/parsers/parseStructureSeed.test.ts`, `tests/layers/structure/catalog/load/buildStaticAnchorStructures.test.ts` | Seed sanity, each parser rule, each new arm |
+| 3  | Record arm         | `src/@types/data/structure/StructureInfo.d.ts` (`XRecord` + the union)                                                                              | The category's own fields, if any (`nebulaKind`)                                                   |
+| 4  | Style row          | `src/layers/structure/markers/present/structureMarkerStyles.ts`                                                                                         | Colours, sizes, `labelPlacement`; a `Record<StructureId, …>`, so it fails to compile |
+| 5  | Distance band      | `src/layers/structure/visibility.ts`  | Nothing to edit: the category joins `STRUCTURE_IDS_BY_SCALE` through its registry row's `scale` and takes that scale's band (below) |
+| 6  | Build switch       | `src/layers/structure/catalog/load/buildStaticAnchorStructures.ts` (`SeedEntry` fields + `case 'x'`)                                                               | Maps a seed row to the record arm; the switch is exhaustive over `StructureId`                  |
+| 7  | Seed parser        | `tools/parsers/parseStructureSeed.ts`                                                                                                               | Per-category fields: what is required, what is rejected elsewhere                               |
+| 8  | Card row (if any)  | `src/layers/structure/cards/ui/StructureDetailCard/StructureDetailCard.tsx`; copy in `src/data/structure/` (`nebulaKindLabels.ts`, which stays in core)                       | A per-category fact such as a nebula's Type                                                     |
+| 9  | Seed rows          | `data/seeds/structure_anchors.seed.json` (plain `git add`)                                                                                          | The data; fields below                                                                          |
+| 10 | Tests              | `tests/data/structureAnchors.test.ts`, `tests/tools/parsers/parseStructureSeed.test.ts`, `tests/layers/structure/catalog/load/buildStaticAnchorStructures.test.ts` | Seed sanity, each parser rule, each new arm |
 
 ### Source code (step 1)
 
@@ -208,7 +207,7 @@ walk you to anything missed.
 - `bearsLabel` and `bearsMarker` are `true` and `labelLayer` is `'structure'`
   for every structure row; copy the neighbour's row.
 
-### Distance band (step 6)
+### Distance band (step 5)
 
 The structure Layer's `structureRing` entry in `src/layers/structure/visibility.ts` carries two
 bands, each limited to one scale's ids via `STRUCTURE_IDS_BY_SCALE`: `cosmic` (the survey's
@@ -216,7 +215,7 @@ deep-zoom band) and `milkyWayPlaces` (full out to two Galaxy radii, gone at the 
 gate). The category's labels follow its ring through the label entry's `of`. A new category needs
 no band edit; only a genuinely new window means a new band on that entry.
 
-### Style row (step 5)
+### Style row (step 4)
 
 Colour, size and fade fields as for any structure; the one that carries a decision:
 
@@ -230,7 +229,7 @@ _nearer_ distance. Focus framing is uniform (the structure kind's `focus` in
 `src/layers/structure/selection/kinds.ts`, applied to the row's
 `radiusMpc` by `arrivalFraming`); no per-category edit.
 
-### Seed parser and seed rows (steps 8, 10)
+### Seed parser and seed rows (steps 7, 9)
 
 - Add the category's own fields to `StructureSeedEntry` and validate them beside
   the existing checks: `nebulaKind` is required on `nebula` and rejected
@@ -263,7 +262,7 @@ is the one list not derived: add the category **only if** it has a bulk
 ## Verify
 
 - `npm run typecheck` clean (this is what flushes the totality sites).
-- `npm test` — add the parser, seed-sanity and build tests from step 11.
+- `npm test` — add the parser, seed-sanity and build tests from step 10.
 - Visual: `/dev` + `/link-data`, then confirm the category renders (rings +
   labels where `labelPlacement` says), the **Settings toggle shows a count**,
   clicking a ring opens the InfoCard, the card's Wikipedia link opens the right

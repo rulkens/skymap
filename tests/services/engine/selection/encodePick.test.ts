@@ -6,7 +6,6 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { Source } from '../../../../src/data/source';
 import { unpackPick } from '../../../../src/data/selectionEncoding';
 import { structurePickId } from '../../../../src/layers/structure/picking/utils/structurePickId';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
@@ -68,7 +67,7 @@ describe('SelectionKindRow.encodePick', () => {
   });
 
   it('starCatalog and galaxyCatalog pack their own source and index', () => {
-    const star = { type: 'starCatalog', source: Source.FamousStar, index: 3 } as const;
+    const star = { type: 'starCatalog', source: 'famousStar', index: 3 } as const;
     expect(
       roundTrip(
         starCatalogSelectionRow(
@@ -77,8 +76,8 @@ describe('SelectionKindRow.encodePick', () => {
         star,
       ),
     ).toEqual(star);
-    const galaxy = { type: 'galaxyCatalog', source: Source.SDSS, index: 12 } as const;
-    const catalogs = new Map([[Source.SDSS, makeGalaxyCatalog(16)]]);
+    const galaxy = { type: 'galaxyCatalog', source: 'sdss', index: 12 } as const;
+    const catalogs = new Map([['sdss' as const, makeGalaxyCatalog(16)]]);
     const row = galaxyCatalogSelectionRow(galaxyRowRuntime({ catalogs }));
     expect(roundTrip(row, galaxy)).toEqual(galaxy);
   });

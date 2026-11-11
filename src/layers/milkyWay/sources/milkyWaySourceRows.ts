@@ -3,12 +3,8 @@
  * `compositions/appSources.ts` collects into `APP_SOURCE_REGISTRY` for the Milky Way disk overlay.
  */
 
-import type { SourceType } from '../../../@types/data/SourceType';
 import type { SourceEntry } from '../../../@types/data/SourceEntry';
 
-import { Source } from '../../../data/source';
 import { MILKY_WAY_ENTRY } from './milky-way';
 
-export const MILKY_WAY_SOURCE_ROWS = [
-  [Source.MilkyWay, MILKY_WAY_ENTRY],
-] as const satisfies readonly (readonly [SourceType, SourceEntry])[];
+export const MILKY_WAY_SOURCE_ROWS = [MILKY_WAY_ENTRY] as const satisfies readonly SourceEntry[];

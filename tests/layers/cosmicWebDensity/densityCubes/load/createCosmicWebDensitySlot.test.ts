@@ -20,7 +20,7 @@ describe('createCosmicWebDensitySlot', () => {
       upload: vi.fn(),
       unload: vi.fn(),
     } as unknown as VolumeFieldRenderer<CosmicWebDensityFieldId>;
-    const entry = COSMIC_WEB_DENSITY_SOURCE_ROWS[1][1];
+    const entry = COSMIC_WEB_DENSITY_SOURCE_ROWS[1];
     const slot = createCosmicWebDensitySlot(entry, renderer);
 
     void slot.load({ binBaseName: entry.binBaseName });

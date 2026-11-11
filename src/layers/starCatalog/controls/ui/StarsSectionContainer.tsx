@@ -20,9 +20,8 @@
  *
  * Per-catalog loaded counts ride the same engine slice the Galaxies section
  * reads: the star-catalog slot dispatches `engineSourceCountReported` as each
- * bin lands, keyed by the catalog's numeric `SourceType`. Because the section
- * iterates string `StarCatalogId`s, this container re-keys `selectSourceCounts`
- * (a `SourceType` map) into a `StarCatalogId` map via the registry, memoized on
+ * bin lands, keyed by the catalog id. This container narrows
+ * `selectSourceCounts` to a `StarCatalogId` map, memoized on
  * the raw counts so the child's `memo` still bails on unrelated re-renders. A
  * seeded catalog reports no count and simply renders without a chip — the same
  * contract a not-yet-loaded survey row keeps.
@@ -45,9 +44,7 @@ import {
   setStarCatalogVisible,
 } from '../../state/starCatalogs/slice';
 import { STAR_CATALOG_IDS } from '../../../../data/starCatalog/starCatalogIds';
-import { SOURCE_ENTRIES } from '../../../../data/sourceEntries';
 import type { StarCatalogId } from '../../@types/StarCatalogId';
-import type { SourceType } from '../../../../@types/data/SourceType';
 import type { LayerMainSectionProps } from '../../../../@types/engine/layer/LayerMainSectionProps';
 
 function StarsSectionContainer({ title }: LayerMainSectionProps): React.ReactElement {
@@ -55,16 +52,15 @@ function StarsSectionContainer({ title }: LayerMainSectionProps): React.ReactEle
 
   const { enabled, sizePx, brightness, items } = useAppSelector(selectStarCatalogs);
 
-  // Per-catalog loaded counts from the engine slice, keyed by numeric
-  // `SourceType`. Re-key into the string `StarCatalogId` domain the section
-  // iterates; memoized on the raw counts so the derived map keeps a stable
-  // identity across unrelated re-renders (preserving the child's `memo` bail).
+  // Per-catalog loaded counts from the engine slice, narrowed to the
+  // `StarCatalogId` domain the section iterates; memoized on the raw counts so
+  // the derived map keeps a stable identity across unrelated re-renders
+  // (preserving the child's `memo` bail).
   const sourceCounts = useAppSelector(selectSourceCounts);
   const counts = useMemo<Partial<Record<StarCatalogId, number>>>(() => {
     const byId: Partial<Record<StarCatalogId, number>> = {};
     for (const id of STAR_CATALOG_IDS) {
-      const code = SOURCE_ENTRIES.find((e) => e.id === id)?.code as SourceType | undefined;
-      const count = code !== undefined ? sourceCounts[code] : undefined;
+      const count = sourceCounts[id];
       if (count !== undefined) byId[id] = count;
     }
     return byId;

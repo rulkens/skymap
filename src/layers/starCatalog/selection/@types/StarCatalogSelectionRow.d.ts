@@ -1,4 +1,4 @@
-import type { StarCatalogSourceType } from '../../@types/StarCatalogSourceType';
+import type { StarCatalogId } from '../../@types/StarCatalogId';
 import type { DriverGeometry } from '../../../../@types/engine/camera/DriverGeometry';
 import type { PlacedRow } from '../../../../@types/engine/selection/PlacedRow';
 import type { Vec3 } from '../../../../@types/math/Vec3';
@@ -10,7 +10,7 @@ import type { Vec3 } from '../../../../@types/math/Vec3';
  */
 export type StarCatalogSelectionRow = {
   readonly type: 'starCatalog';
-  readonly source: StarCatalogSourceType;
+  readonly source: StarCatalogId;
   readonly index: number;
   readonly id: string | null;
   readonly label: string;

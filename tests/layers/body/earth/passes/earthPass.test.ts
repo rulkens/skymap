@@ -29,7 +29,6 @@ import { innerBoundRadiusM } from '../../../../../src/utils/occlusion/innerBound
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { EARTH_SURFACE_PARAMS } from '../../../../../src/layers/body/surfaceTiles/format/data/earthSurfaceParams';
 import { CLOUD_SHELL_PARAMS } from '../../../../../src/layers/body/clouds/data/cloudShellParams';
-import { Source } from '../../../../../src/data/source';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../../src/data/selectionEncoding';
 import { BODY_PICK_MIN_RADIUS_PX } from '../../../../../src/services/engine/helpers/minPickRadiusMpc';
 import { makeSlab } from '../../../../fixtures/makeSlab';
@@ -60,11 +59,10 @@ import { prepareBodySurfaceFrame } from '../../../../../src/layers/body/slabs/pr
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 import { createFramePlannerResultStore } from '../../../../../src/services/engine/frame/createFramePlannerResultStore';
 import { bodyPickCodes } from '../../../../support/layerPickCodes';
-import { fakePickCode } from '../../../../support/fakePickCode';
 import type { SurfaceTileProduct } from '../../../../../src/layers/body/surfaceTiles/format/@types/SurfaceTileProduct';
 
 // Codes from 40 up: a stamp that packs a catalog value fails every id match below.
-const PICK_CODES = bodyPickCodes(fakePickCode());
+const PICK_CODES = bodyPickCodes();
 
 // Stub the snapshot to the fixtures below, reusing each one's own positionMpc/orientation refs so
 // toBe(...) holds. Mars is seeded too, for the second-bodyId memo test.
@@ -589,7 +587,7 @@ describe('earthPass.drawPick', () => {
     ];
     expect(pass).toBe(PASS_STUB);
     expect(args.packedId).toBe(
-      packSelection(PICK_CODES.pickCodeOf(Source.Earth), 0 + PICK_SENTINEL_OFFSET),
+      packSelection(PICK_CODES.pickCodeOf('earth'), 0 + PICK_SENTINEL_OFFSET),
     );
 
     // The mvp and camLocal MUST share one floored radius (drawFlooredSpherePick's invariant).

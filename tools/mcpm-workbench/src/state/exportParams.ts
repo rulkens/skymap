@@ -1,7 +1,7 @@
 import type { AgentInitMode } from '../../@types/AgentInitMode';
 import type { GridBox } from '../../@types/GridBox';
 import type { McpmParams } from '../../@types/McpmParams';
-import type { SourceType } from '../../../../src/@types/data/SourceType';
+import type { GalaxyCatalogId } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 
 /**
  * MCPM_PARAM_KEYS — McpmParams' field list, derived from a `Record<keyof McpmParams, …>`
@@ -46,7 +46,7 @@ export type McpmParamsPreset = {
   readonly agentCount: number;
   readonly initMode: AgentInitMode;
   readonly gridBox: GridBox;
-  readonly sources: readonly SourceType[];
+  readonly sources: readonly GalaxyCatalogId[];
 };
 
 /**
@@ -61,7 +61,7 @@ export function exportParams(input: {
   readonly agentCount: number;
   readonly initMode: AgentInitMode;
   readonly gridBox: GridBox;
-  readonly sources: readonly SourceType[];
+  readonly sources: readonly GalaxyCatalogId[];
 }): string {
   const preset: McpmParamsPreset = {
     format: MCPM_PARAMS_FORMAT,

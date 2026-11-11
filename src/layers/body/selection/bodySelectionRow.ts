@@ -33,10 +33,10 @@ export function bodySelectionRow(
   };
   return {
     type: 'body',
-    pickSources: BODY_SOURCE_ROWS.map(([source]) => pickCodes.pickCodeOf(source)),
+    pickSources: BODY_SOURCE_ROWS.map((entry) => pickCodes.pickCodeOf(entry.id)),
     resolvePick: (pick) => {
       const source = pickCodes.catalogOfPickCode(pick.sourceCode);
-      const entry = BODY_SOURCE_ROWS.find(([s]) => s === source)?.[1];
+      const entry = BODY_SOURCE_ROWS.find((e) => e.id === source);
       if (!entry) return null;
       const seeds = BODY_PICK_ROWS[entry.id as BodySourceId];
       const body = seeds[pick.localIdx];

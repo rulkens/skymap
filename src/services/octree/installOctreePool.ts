@@ -7,13 +7,13 @@
  */
 import { createOctreeChunkStream } from './octreeChunkStream';
 import type { Octree } from '../../@types/octree/Octree';
-import type { SourceType } from '../../@types/data/SourceType';
+import type { SourceId } from '../../@types/data/SourceId';
 import type { OctreePoolHost } from '../../@types/octree/OctreePoolHost';
 import type { OctreeStreamFormat } from '../../@types/octree/OctreeStreamFormat';
 
 export function installOctreePool<C extends { readonly count: number }>(
   host: OctreePoolHost<C>,
-  source: SourceType,
+  source: SourceId,
   octree: Octree<C>,
   slots: number,
   format: OctreeStreamFormat<C>,

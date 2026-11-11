@@ -12,7 +12,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fetchGalaxyBitmap } from '../../../../../src/layers/galaxyCatalog/thumbnailAtlas/utils/fetchGalaxyBitmap';
 import { createDeadHostSet } from '../../../../../src/utils/network/createDeadHostSet';
-import { sdssThumbnailUrl, dssThumbnailUrl } from '../../../../../src/utils/math/index';
+import { sdssThumbnailUrl } from '../../../../../src/utils/math/sdssThumbnailUrl';
+import { dssThumbnailUrl } from '../../../../../src/utils/math/dssThumbnailUrl';
 
 // Capture originals so we can restore them and not leak across tests
 // (vitest workers are reused across files — see tests/setup/fetchMock.ts

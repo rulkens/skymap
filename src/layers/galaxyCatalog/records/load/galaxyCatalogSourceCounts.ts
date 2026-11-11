@@ -8,7 +8,7 @@
  */
 
 import type { SourceCountReport } from '../../../../@types/engine/layer/SourceCountReport';
-import type { GalaxyCatalogSourceType } from '../../@types/GalaxyCatalogSourceType';
+import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
 import type { GalaxyCatalogRuntime } from '../../@types/GalaxyCatalogRuntime';
 
 import { callbackIterable } from '../../../../utils/async/callbackIterable';
@@ -17,7 +17,7 @@ export function galaxyCatalogSourceCounts(
   runtime: GalaxyCatalogRuntime,
 ): AsyncIterable<SourceCountReport> {
   return callbackIterable<SourceCountReport>((emit) => {
-    const countOf = (source: GalaxyCatalogSourceType): number =>
+    const countOf = (source: GalaxyCatalogId): number =>
       runtime.records.get(source)?.recordCount ?? 0;
     const unsubscribes = [...runtime.points].map(([source, slot]) =>
       slot.subscribe((state) => {

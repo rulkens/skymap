@@ -7,7 +7,6 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { starAggregatesPass } from '../../../../../src/layers/starCatalog/survey/passes/starAggregatesPass';
-import { Source } from '../../../../../src/data/source';
 import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/recedingFocusSubsystem';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
@@ -52,7 +51,7 @@ const FRAME: StarCutInputs = {
     refineThreshold: 0.05,
     worldSpread: 1,
     leafMarginRad: 0.001,
-    sources: [{ source: Source.GaiaStars, opacity: 1, drawBudget: 100 }],
+    sources: [{ source: 'gaiaStars', opacity: 1, drawBudget: 100 }],
   },
   nowMs: 0,
   sizePx: 2.5,

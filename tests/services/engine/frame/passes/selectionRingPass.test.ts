@@ -6,8 +6,7 @@ import type { EngineState } from '../../../../../src/@types/engine/state/EngineS
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { Mat4 } from 'wgpu-matrix';
-import { Source } from '../../../../../src/data/source';
-import type { GalaxyRow } from '../../../../../src/@types/engine/GalaxyRow';
+import type { GalaxyRow } from '../../../../../src/layers/galaxyCatalog/records/@types/GalaxyRow';
 import type { StructureInfo } from '../../../../../src/@types/data/structure/StructureInfo';
 import { MILKY_WAY_CENTER_WORLD } from '../../../../../src/data/milkyWay/galacticCenter';
 import { makeGalaxyRow } from '../../../../fixtures/makeGalaxyRow';
@@ -89,7 +88,7 @@ function makeRendererSpy() {
 // `positionMpc` and `radiusMpc` that placement derives from x/y/z and diameterKpc.
 function galaxyRow(overrides: Partial<GalaxyRow> = {}) {
   return makeGalaxyRow({
-    source: Source.Glade,
+    source: 'glade',
     z: 100, // 100 Mpc away on +z
     diameterKpc: 60, // 60 kpc galaxy
     axisRatio: 1,
@@ -119,7 +118,7 @@ const BODY_ROW: SelectionRowBase = bodyRowAt('jupiter', [1e-9, 2e-9, -3e-9]);
 // it and the NEAR0 sibling must own it.
 const STAR_ROW: StarCatalogSelectionRow = {
   type: 'starCatalog',
-  source: Source.GaiaStars,
+  source: 'gaiaStars',
   index: 7,
   id: null,
   label: 'Field star',

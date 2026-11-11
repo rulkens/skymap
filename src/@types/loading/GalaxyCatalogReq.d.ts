@@ -1,4 +1,4 @@
-import type { SourceType } from '../data/SourceType';
+import type { SourceId } from '../data/SourceId';
 import type { Tier } from '../data/Tier';
 
 /**
@@ -11,4 +11,4 @@ import type { Tier } from '../data/Tier';
  * and the file it names cannot disagree — build it through `galaxyCatalogRequest`,
  * never by hand.
  */
-export type GalaxyCatalogReq = { source: SourceType; tier?: Tier };
+export type GalaxyCatalogReq = { source: SourceId; tier?: Tier };

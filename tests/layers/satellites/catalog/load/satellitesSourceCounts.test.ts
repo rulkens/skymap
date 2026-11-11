@@ -7,7 +7,6 @@
 import { describe, it, expect } from 'vitest';
 
 import { satellitesSourceCounts } from '../../../../../src/layers/satellites/catalog/load/satellitesSourceCounts';
-import { Source } from '../../../../../src/data/source';
 import type { SatellitesRuntime } from '../../../../../src/layers/satellites/@types/SatellitesRuntime';
 import type { SatelliteCatalog } from '../../../../../src/layers/satellites/catalog/@types/SatelliteCatalog';
 
@@ -30,7 +29,7 @@ describe('satellitesSourceCounts', () => {
     for (const l of listeners) l(); // loading: no catalog yet, nothing to report
     catalog = { noradId: new Uint32Array(3) } as unknown as SatelliteCatalog;
     for (const l of listeners) l();
-    expect((await first).value).toEqual({ source: Source.Satellite, count: 3 });
+    expect((await first).value).toEqual({ source: 'satellites', count: 3 });
     await feed.return?.();
   });
 });

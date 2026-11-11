@@ -23,9 +23,8 @@ import { STAR_RESOLVE_PX } from '../../../../data/bodies/starResolvePx';
 import { starTintFromBpRp } from '../../../../utils/color/starTintFromBpRp';
 import { drawFlooredSpherePick } from '../render/drawFlooredSpherePick';
 import { nearestResolvableStar } from '../utils/nearestResolvableStar';
-import { STAR_CATALOG_SOURCE_RECORD } from '../../sources/starCatalogSourceRecord';
 import { octreeResidency } from '../../../../services/octree/octreeResidency';
-import type { StarCatalogSourceType } from '../../@types/StarCatalogSourceType';
+import type { StarCatalogId } from '../../@types/StarCatalogId';
 import type { StarColumns } from '../../survey/@types/StarColumns';
 
 /** The star this layer currently draws a sphere for — the presence memory. */
@@ -40,7 +39,7 @@ const presentByCatalog = new WeakMap<Octree<StarColumns>, PresentStar | null>();
 /** The sole loaded star catalog (first committed Gaia catalog), or null. */
 function currentCatalog(
   runtime: Pick<StarCatalogRuntime, 'renderer'>,
-): { source: StarCatalogSourceType; octree: Octree<StarColumns> } | null {
+): { source: StarCatalogId; octree: Octree<StarColumns> } | null {
   for (const loaded of runtime.renderer.loadedCatalogs()) return loaded;
   return null;
 }
@@ -104,7 +103,7 @@ export function fieldStarSpherePass(runtime: StarCatalogRuntime): ContentPass<'s
       // The presence query needs the live catalog; null (no catalog committed
       // yet), or one handed 0, disables before any distance math.
       const loaded = currentCatalog(runtime);
-      if (loaded === null || fade[STAR_CATALOG_SOURCE_RECORD[loaded.source].id] === 0) {
+      if (loaded === null || fade[loaded.source] === 0) {
         return false;
       }
       const catalog = loaded.octree;
@@ -144,7 +143,7 @@ export function fieldStarSpherePass(runtime: StarCatalogRuntime): ContentPass<'s
         IDENTITY_MAT3,
       );
       // Narrow here, at the GPU draw call — composeBodyMvp returns f64.
-      const opacity = fade[STAR_CATALOG_SOURCE_RECORD[loaded.source].id];
+      const opacity = fade[loaded.source];
       runtime.starRenderer.draw(pass, narrowMat4(mvp), starTintFromBpRp(present.bpRp), opacity);
     },
 

@@ -50,7 +50,6 @@ import type { Label2DProducerOutput } from '../../../../@types/engine/subsystems
 import type { GalaxyCatalogRuntime } from '../../@types/GalaxyCatalogRuntime';
 import type { FamousGalaxyName } from '../@types/FamousGalaxyName';
 import type { GalaxyCatalog } from '../../../../@types/data/galaxyCatalog/GalaxyCatalog';
-import { Source } from '../../../../data/source';
 import { famousGalaxyNamesFor } from '../utils/famousGalaxyNamesFor';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
@@ -149,9 +148,9 @@ export function produceFamousGalaxyLabels(
   return (state, ctx, fade) => {
     const empty: Label2DProducerOutput = { labels: [], awake: false };
 
-    const catalog = runtime.catalogs.get(Source.FamousGalaxy);
+    const catalog = runtime.catalogs.get('famousGalaxy');
     if (catalog === undefined || catalog.count === 0) return empty;
-    const famousCode = runtime.pickCodes.pickCodeOf(Source.FamousGalaxy);
+    const famousCode = runtime.pickCodes.pickCodeOf('famousGalaxy');
 
     // focusedOnly mode: only the focused subject's label draws. A famous focus
     // is a positional catalog ref; anything else focused (a structure, the

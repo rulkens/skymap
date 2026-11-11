@@ -3,7 +3,6 @@ import type { Slice } from '@reduxjs/toolkit';
 import type { Layer } from '../../../@types/engine/layer/Layer';
 import type { LayerCoreDeps } from '../../../@types/engine/layer/LayerCoreDeps';
 import type { LayerInstance } from '../../../@types/engine/layer/LayerInstance';
-import type { SourceType } from '../../../@types/data/SourceType';
 import type { SourceEntry } from '../../../@types/data/SourceEntry';
 
 /**
@@ -14,7 +13,7 @@ import type { SourceEntry } from '../../../@types/data/SourceEntry';
 export function instantiateLayer<
   Runtime,
   Settings extends readonly Slice[],
-  Sources extends readonly (readonly [SourceType, SourceEntry])[],
+  Sources extends readonly SourceEntry[],
   Facts,
 >(
   layer: Layer<string, Runtime, Settings, Sources, Facts>,

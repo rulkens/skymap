@@ -13,7 +13,6 @@
  */
 
 import { galaxyEntryOf } from '../../records/utils/galaxyEntryOf';
-import type { SourceType } from '../../../../@types/data/SourceType';
 import { distanceMpcToRedshift } from '../../../../utils/math/distanceMpcToRedshift';
 
 /**
@@ -38,7 +37,7 @@ export const UNKNOWN_COLOUR_RAMP_POSITION = 1.05;
  * points pass and the procedural-disk impostor for the same galaxy.
  */
 export function pickColourIndex(
-  source: SourceType,
+  source: string,
   magU: number,
   magG: number,
   magR: number,

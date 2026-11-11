@@ -6,10 +6,9 @@
  * pgc-/sdss-/pos@/famous branches mutually exclusive (composeSelectionRows.ts).
  */
 
-import { Source } from '../../../data/source';
 import { GALAXY_CATALOG_SOURCES } from '../sources/galaxyCatalogSources';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
-import { encodeGalaxyId } from '../../../services/url/encodeGalaxyId';
+import { encodeGalaxyId } from './utils/encodeGalaxyId';
 import { cartesianToRaDec } from '../../../utils/math/cartesianToRaDec';
 import { placedGalaxyRow } from './utils/placedGalaxyRow';
 import { FAMOUS_GALAXY_NAMES } from '../famousGalaxies/data/famousGalaxyNames.generated';
@@ -74,11 +73,11 @@ export function galaxyCatalogSelectionRow(runtime: Records): SelectionKindRow<Ga
 
 /** A compiled-in id resolves once `famous.bin` is resident; the meta sidecar is not waited on. */
 function resolveFamous(id: string, deps: Records): GalaxyCatalogRef | null {
-  const record = deps.records.get(Source.FamousGalaxy);
+  const record = deps.records.get('famousGalaxy');
   const names = record ? famousGalaxyNamesFor(record.recordCount) : null;
   const index = names ? names.findIndex((m) => m.id === id) : -1;
   if (index < 0) return null;
-  return { type: 'galaxyCatalog', source: Source.FamousGalaxy, index };
+  return { type: 'galaxyCatalog', source: 'famousGalaxy', index };
 }
 
 function encodeGalaxy(ref: GalaxyCatalogRef, deps: Records): string | null {

@@ -7,12 +7,11 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createStarCatalogSlot } from '../../../../../src/layers/starCatalog/survey/load/starCatalogSlot';
 import { resizeStarPools } from '../../../../../src/layers/starCatalog/survey/load/resizeStarPools';
-import { Source } from '../../../../../src/data/source';
 import { STAR_CATALOG_SOURCE_RECORD } from '../../../../../src/layers/starCatalog/sources/starCatalogSourceRecord';
 import type { OctreeChunkStream } from '../../../../../src/@types/octree/OctreeChunkStream';
 import type { StarCatalogRuntime } from '../../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { StarCatalogRenderer } from '../../../../../src/layers/starCatalog/survey/@types/StarCatalogRenderer';
-import type { SourceType } from '../../../../../src/@types/data/SourceType';
+import type { StarCatalogId } from '../../../../../src/layers/starCatalog/@types/StarCatalogId';
 import type { StarColumns } from '../../../../../src/layers/starCatalog/survey/@types/StarColumns';
 
 const fetchSpy = vi.hoisted(() => vi.fn(async () => ({ recordCount: 0, nodes: { count: 0 } })));
@@ -28,20 +27,20 @@ function setup(override: { value: number | null }) {
     return 0;
   });
   const release = vi.fn<StarCatalogRenderer['release']>();
-  const chunkStreams = new Map<SourceType, OctreeChunkStream<StarColumns>>();
+  const chunkStreams = new Map<StarCatalogId, OctreeChunkStream<StarColumns>>();
   const host = {
     renderer: { upload, release } as unknown as StarCatalogRenderer,
     chunkStreams,
     requestRender: () => {},
   };
-  const slot = createStarCatalogSlot(Source.GaiaStars, host, () => override.value);
-  const runtime = { poolHost: host, catalogs: new Map([[Source.GaiaStars, slot]]) };
+  const slot = createStarCatalogSlot('gaiaStars', host, () => override.value);
+  const runtime = { poolHost: host, catalogs: new Map([['gaiaStars', slot]]) };
   return { slot, upload, release, chunkStreams, runtime: runtime as unknown as StarCatalogRuntime };
 }
 
-const REQ = { source: Source.GaiaStars, tier: 'medium' } as const;
+const REQ = { source: 'gaiaStars', tier: 'medium' } as const;
 const tierSlots = () => {
-  return STAR_CATALOG_SOURCE_RECORD[Source.GaiaStars].budgets.medium.slots;
+  return STAR_CATALOG_SOURCE_RECORD['gaiaStars'].budgets.medium.slots;
 };
 
 describe('starCatalogSlot commit', () => {
@@ -60,7 +59,7 @@ describe('starCatalogSlot release', () => {
     const { slot, release } = setup({ value: null });
     await slot.load(REQ);
     slot.release();
-    expect(release).toHaveBeenCalledExactlyOnceWith(Source.GaiaStars);
+    expect(release).toHaveBeenCalledExactlyOnceWith('gaiaStars');
   });
 });
 
@@ -78,10 +77,10 @@ describe('resizeStarPools', () => {
     const { slot, chunkStreams, runtime } = setup({ value: null });
     await slot.load(REQ);
     const destroy = vi.fn();
-    chunkStreams.set(Source.GaiaStars, { destroy } as unknown as OctreeChunkStream<StarColumns>);
+    chunkStreams.set('gaiaStars', { destroy } as unknown as OctreeChunkStream<StarColumns>);
     expect(resizeStarPools(runtime, 512)).toBe(`only ${POOL_CAP} slots fit`);
     expect(destroy).not.toHaveBeenCalled();
-    expect(chunkStreams.has(Source.GaiaStars)).toBe(true);
+    expect(chunkStreams.has('gaiaStars')).toBe(true);
     expect(resizeStarPools(runtime, 128)).toBeNull();
     expect(destroy).toHaveBeenCalledOnce();
   });

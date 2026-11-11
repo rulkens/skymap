@@ -22,7 +22,6 @@ import {
   unpackPick,
   PICK_SENTINEL_OFFSET,
 } from '../../../../../src/data/selectionEncoding';
-import { Source } from '../../../../../src/data/source';
 import { selectionResolverOver } from '../../../../support/selectionResolverOver';
 import { starRowRuntime } from '../../../../support/layerPickCodes';
 import type { StarRowFixture } from '../../../../support/selectionResolverOver';
@@ -137,7 +136,7 @@ describe('produceStarCaptions', () => {
     expect(proxima.priority).toBe(famousStar.priority);
     expect(proxima.pickId).toBe(
       packSelection(
-        STAR_RT.pickCodes.pickCodeOf(Source.FamousStar),
+        STAR_RT.pickCodes.pickCodeOf('famousStar'),
         PROXIMA_INDEX + PICK_SENTINEL_OFFSET,
       ),
     );
@@ -145,7 +144,7 @@ describe('produceStarCaptions', () => {
     const sun = out.find((l) => l.id === SUN_ID)!;
     expect(sun.priority).toBe(sunStyle.priority);
     expect(sun.pickId).toBe(
-      packSelection(STAR_RT.pickCodes.pickCodeOf(Source.Sun), PICK_SENTINEL_OFFSET),
+      packSelection(STAR_RT.pickCodes.pickCodeOf('sun'), PICK_SENTINEL_OFFSET),
     );
   });
 
@@ -164,7 +163,7 @@ describe('produceStarCaptions', () => {
     const proximaPick = unpackPick(proxima.pickId!)!;
     expect(resolver.resolvePick(proximaPick)).toEqual({
       type: 'starCatalog',
-      source: Source.FamousStar,
+      source: 'famousStar',
       index: PROXIMA_INDEX,
     });
 
@@ -172,7 +171,7 @@ describe('produceStarCaptions', () => {
     const sunPick = unpackPick(sun.pickId!)!;
     expect(resolver.resolvePick(sunPick)).toEqual({
       type: 'starCatalog',
-      source: Source.Sun,
+      source: 'sun',
       index: 0,
     });
   });

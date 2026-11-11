@@ -1,5 +1,5 @@
 /**
- * milkyWayCloudLiveness — the point cloud's opacity this frame, or null when
+ * deriveMilkyWayCloudAlpha — the point cloud's opacity this frame, or null when
  * it is not drawn: `isMilkyWayCloudLive` gates on it, the passes draw with it.
  * The handed value carries the toggle, its fade-out tail and core's distance
  * bands; this adds the apparent-size band and the focus emphasis, keyed on
