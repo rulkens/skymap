@@ -471,8 +471,12 @@ Play dispatches `played({ fromSec: playFrom(…), loop: loop ? loopSpanOf(…) :
 Play disabled, tip `Resolving subjects`; never compiled → disabled, tip names the error. `NarrowNotice` gains the same
 Play/Pause button before Close (Q13). No test (UI wiring over tested actions).
 
-- [ ] Build; shoot at 1728 wide: paused, playing, looping, free look; and the narrow notice at 400 wide.
-- [ ] Commit: "Clip studio: Play, Pause and Loop in the top bar and on the narrow notice".
+As built: Play/Pause is its own `PlayButton`, shared by `TransportControls` and `NarrowNotice`; both dispatch
+through `runStudioKey` (`useStudioCommand`). The alert line's failure text moved into `selectFailureLine`, read by the
+top bar and by Play's disabled tip. Shots are taken in the D5 live check.
+
+- [x] Build; shoot at 1728 wide: paused, playing, looping, free look; and the narrow notice at 400 wide.
+- [x] Commit: "Clip studio: Play, Pause and Loop in the top bar and on the narrow notice".
 
 ### Task 3.2: keys
 
