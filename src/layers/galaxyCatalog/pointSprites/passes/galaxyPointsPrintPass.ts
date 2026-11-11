@@ -6,7 +6,6 @@
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { GalaxyCatalogRuntime } from '../../@types/GalaxyCatalogRuntime';
-import { galaxyCatalogIdOf } from '../../../../utils/galaxyCatalogIdOf';
 import { printUniformBytesOf } from '../render/printUniformBytesOf';
 import { PRINT_MIN_FADE } from '../data/printMinFade';
 
@@ -19,7 +18,7 @@ export function galaxyPointsPrintPass(runtime: GalaxyCatalogRuntime): ContentPas
 
     draw(pass, view, ctx, state, fade) {
       const sources = Array.from(runtime.pointRenderer.loadedSources()).filter(
-        (s) => fade[galaxyCatalogIdOf(s.source)] >= PRINT_MIN_FADE,
+        (s) => fade[s.source] >= PRINT_MIN_FADE,
       );
       runtime.pointPrintRenderer.draw(pass, sources, printUniformBytesOf(view, ctx, state));
     },

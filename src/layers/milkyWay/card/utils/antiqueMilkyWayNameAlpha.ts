@@ -8,7 +8,7 @@ import type { EngineState } from '../../../../@types/engine/state/EngineState';
 import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import { ANTIQUE_MILKY_WAY_NAME_REVEAL } from '../../../../data/labels/antiqueMilkyWayNameReveal';
 import { MILKY_WAY_DISC_RADIUS_KPC } from '../../../../data/milkyWay/galacticCenter';
-import { MILKY_WAY_MODEL_SCALE } from '../../../../services/engine/galaxyGenerator/v1/milkyWayCalibration';
+import { MILKY_WAY_MODEL_SCALE } from '../../../../data/milkyWay/milkyWayModelScale';
 import { milkyWayCamPosModel } from '../../cloud/render/milkyWayCamPosModel';
 import { antiqueLookOn } from '../../../../utils/render/antiqueLookOn';
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';

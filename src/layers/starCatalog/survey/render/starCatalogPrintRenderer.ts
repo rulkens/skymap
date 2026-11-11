@@ -7,7 +7,7 @@
 
 import type { StarCatalogPrintRenderer } from '../@types/StarCatalogPrintRenderer';
 import type { StarCatalogPickResources } from '../@types/StarCatalogPickResources';
-import type { StarCatalogSourceType } from '../../@types/StarCatalogSourceType';
+import type { StarCatalogId } from '../../@types/StarCatalogId';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import vsCode from '../../../../services/gpu/shaders/starCatalog/vertexPrint.wesl?static';
 import fsCode from '../../../../services/gpu/shaders/antiqueLook/passes/printPointFragment.wesl?static';
@@ -63,7 +63,7 @@ export function createStarCatalogPrintRenderer(
   });
   const uniformScratch = new Float32Array(STAR_UNIFORM_BYTES / 4);
 
-  function draw(pass: GPURenderPassEncoder, source: StarCatalogSourceType, vp: Float32Array): void {
+  function draw(pass: GPURenderPassEncoder, source: StarCatalogId, vp: Float32Array): void {
     const recordsBindGroup = resources.recordsBindGroup(source);
     const leaves = resources.leafDraw(source);
     if (recordsBindGroup === null || leaves === null) return;
