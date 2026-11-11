@@ -1,4 +1,4 @@
-import type { SatelliteCatalog } from '../../catalog/@types/SatelliteCatalog';
+import type { LoadedSatelliteCatalog } from './LoadedSatelliteCatalog';
 import type { SatelliteSweep } from './SatelliteSweep';
 
 /**
@@ -7,9 +7,7 @@ import type { SatelliteSweep } from './SatelliteSweep';
 export type SatellitePropagator = {
   start(file: ArrayBuffer): Promise<void>;
   stop(): void;
-  catalog(): SatelliteCatalog | null;
-  /** Each catalog object's profile code; null exactly when `catalog()` is. */
-  profileCodes(): Uint8Array | null;
+  catalog(): LoadedSatelliteCatalog | null;
   latest(): SatelliteSweep | null;
   request(simMs: number): void;
 };

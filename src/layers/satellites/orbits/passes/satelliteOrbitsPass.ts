@@ -39,7 +39,6 @@ export function satelliteOrbitsPass(runtime: SatellitesRuntime): ContentPass<'sa
       const { simDays } = ctx.snapshot;
       const eye = ctx.drawCamPos;
       const catalog = runtime.propagator.catalog()!;
-      const codes = runtime.propagator.profileCodes()!;
       const opacity = satelliteLayerOpacity(catalog, simDays);
       const ks = selectedSatelliteIndices(state.selection, catalog);
       if (staging.length < ks.length * INSTANCE_FLOATS) {
@@ -66,7 +65,10 @@ export function satelliteOrbitsPass(runtime: SatellitesRuntime): ContentPass<'sa
             eyeMpc: eye,
             pxPerRad: ctx.drawPxPerRad,
             ...orbit,
-            color: state.settings.satelliteTuning.colors[SATELLITE_PROFILES[codes[k]!]!.id],
+            color:
+              state.settings.satelliteTuning.colors[
+                SATELLITE_PROFILES[catalog.profileCodes[k]!]!.id
+              ],
             fade: classFade * opacity,
           },
           staging,

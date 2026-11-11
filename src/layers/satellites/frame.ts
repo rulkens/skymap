@@ -42,7 +42,7 @@ export function satellitesPlanner(
 
       const latest = propagator.latest();
       if (latest !== null && latest !== drawn?.sweep) {
-        renderer.upload(latest, catalog.classCode, propagator.profileCodes()!);
+        renderer.upload(latest, catalog.classCode, catalog.profileCodes);
         drawn = { sweep: latest, simMs: latest.simMs, atMs: snapshot.nowMs };
         runtime.scheduleWake();
       }
