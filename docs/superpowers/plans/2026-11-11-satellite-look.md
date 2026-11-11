@@ -93,7 +93,7 @@ The table's comments cite each area's basis, one short line per source: 22.68 fr
 
 Rules, first match wins: class is `debris` (`SATELLITE_CLASSES`) or the name has a `DEB` token → `debris`. Class is `other` or the name has an `R/B` token → `other`. Name starts with `STARLINK` → `starlink-v1` when the designator's year and launch number are before 2023-026, else `starlink-v2-mini` (including an unparseable designator). `ONEWEB`, `KUIPER`, `QIANFAN`, or `HULIANWANG`/`GUOWANG` → that row. Then, from `a = cbrt(398600.4418 / n²)` with `n` in rad/s, apogee `a(1+e) − 6378` and perigee `a(1−e) − 6378` in km: `geo` if |rev/day − 1.0027| < 0.05 and e < 0.05; `leo` if apogee < 2000; `meo` if perigee > 2000, apogee < 35000 and e < 0.3; otherwise `heo`.
 
-- [ ] Write these tests, each asserting the row's `id` through `SATELLITE_PROFILES[code]`:
+- [x] Write these tests, each asserting the row's `id` through `SATELLITE_PROFILES[code]`:
   - `debris class wins over a constellation name` (`STARLINK-1234`, class debris → `debris`)
   - `a DEB token in an active object is debris` (`STARLINK-1234 DEB`, class active → `debris`)
   - `a rocket body is other, whatever its class` (`SL-4 R/B`, class active → `other`)
@@ -103,8 +103,8 @@ Rules, first match wins: class is `debris` (`SATELLITE_CLASSES`) or the name has
   - `Hulianwang and Guowang names share a row` (`HULIANWANG DIGUI-01`, `GUOWANG-01` → `guowang`)
   - `regimes classify real orbits` (15.5 rev/day, e 0.001 → `leo`; 2.005, 0.01 → `meo`; 1.0027, 0.0002 → `geo`; 2.0, 0.74 → `heo`), all with the name `TBA`, class active
   - `profile ids are unique and fit the GPU table` (structural)
-- [ ] Run them and see them fail, then implement, then see them pass: `npx vitest run tests/layers/satellites/points/subsystems/satelliteProfileCode.test.ts`.
-- [ ] Commit: `Satellites get a look profile per constellation or orbit`.
+- [x] Run them and see them fail, then implement, then see them pass: `npx vitest run tests/layers/satellites/points/subsystems/satelliteProfileCode.test.ts`.
+- [x] Commit: `Satellites get a look profile per constellation or orbit`.
 
 ### Task 3: Profile table and index on the GPU
 
