@@ -39,6 +39,7 @@ playwright-report/
 # build artefact rebuilt by `cargo build`, never repo content. Cargo.lock IS
 # committed (it pins the exact dependency graph the reproducible builder needs).
 /tools/stars-rs/target/
+/tools/cloud-bake-rs/target/
 
 # `npm run structure-audit` output — a generated page, rebuilt on every run.
 /tools/structure-audit/out/

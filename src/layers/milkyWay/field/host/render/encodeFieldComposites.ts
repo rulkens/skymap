@@ -10,6 +10,7 @@
 import type { AdditiveUpsample } from '../../../../../@types/rendering/AdditiveUpsample';
 import type { FieldFramePlan } from '../../@types/FieldFramePlan';
 import type { GalaxyFieldRenderTargets } from '../../@types/GalaxyFieldRenderTargets';
+import { fieldTargetOf } from '../../utils/fieldTargetOf';
 
 export function encodeFieldComposites(
   pass: GPURenderPassEncoder,
@@ -17,5 +18,5 @@ export function encodeFieldComposites(
   plan: FieldFramePlan,
   targets: GalaxyFieldRenderTargets,
 ): void {
-  for (const id of plan.composites) upsample.draw(pass, targets[id].view);
+  for (const id of plan.composites) upsample.draw(pass, fieldTargetOf(targets, id).view);
 }

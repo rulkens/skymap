@@ -9,6 +9,10 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
 
 import { replayInput } from '../../../../../src/services/engine/camera/input/replayInput';
+import { skyCameraArm } from '../../../../../src/services/engine/camera/arms/sky/skyCameraArm';
+import { LENS_MAX_DEG } from '../../../../../src/data/camera/lensMaxDeg';
+import { degToRad } from '../../../../../src/utils/math/degToRad';
+import { zoomLimitPushed } from '../../../../../src/state/camera/zoomLimitPushed';
 import { isBodyArm } from '../../../../../src/services/engine/camera/arms/body/isBodyArm';
 import * as surfaceStepModule from '../../../../../src/services/engine/camera/arms/body/gesture/surfaceStep';
 import { EMPTY_SURFACE_GESTURE_MEMORY } from '../../../../../src/services/engine/camera/arms/body/gesture/surfaceStep';
@@ -35,8 +39,8 @@ import { ORIENTATION_FRAMES } from '../../../../../src/data/orientation/orientat
 import { earthArm } from '../../../../fixtures/earthArm';
 import { worldArmOf } from '../../../../fixtures/worldArmOf';
 import { bodyDriverGeometry } from '../../../../../src/utils/scene/bodyDriverGeometry';
-import type { FramedCameraPose } from '../../../../../src/@types/camera/pose/FramedCameraPose';
 import type { InputStep } from '../../../../../src/@types/camera/input/InputStep';
+import type { FramedCameraPose } from '../../../../../src/@types/camera/pose/FramedCameraPose';
 import type { DriverId } from '../../../../../src/@types/engine/camera/DriverId';
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
@@ -77,8 +81,8 @@ function ctxOf(
       frustum: symmetricFrustum(Math.PI / 3, 1),
       fovYRad: Math.PI / 3,
       tuning: store.getState().camera.tuning,
-      nowMs: overrides.nowMs ?? 0,
     },
+    nowMs: overrides.nowMs ?? 0,
     rootState: store.getState(),
     winnerLastFrame: overrides.winnerLastFrame ?? 'resting',
     lastWinnerRidesWheel: ridesWheelTarget(CAMERA_DRIVERS, overrides.winnerLastFrame ?? 'resting'),
@@ -87,11 +91,12 @@ function ctxOf(
   };
 }
 
-const atRestZoom = (factor: number): InputStep => ({
+const atRestZoom = (factor: number, fresh = false): InputStep => ({
   kind: 'zoom',
   factor,
   duringGesture: false,
   cursorPx: [500, 500],
+  fresh,
 });
 
 /** Geocentric range of a body arm, metres — the anchor is the body centre. */
@@ -268,6 +273,7 @@ describe('replayInput', () => {
       pose,
       gesture: prev,
       tilt,
+      zoomAnchorM: null,
     }));
 
     const next = replayInput(
@@ -285,6 +291,34 @@ describe('replayInput', () => {
     expect(next.register.pose).toBe(arm.pose);
   });
 
+  it('a fresh wheel-out at the widest lens reports edge out with a lift clip, and starts none', () => {
+    const store = makeStore();
+    store.dispatch(
+      commitCameraPose({
+        frame: { sky: { body: asSceneBodyId('earth'), lonRad: 0.2, latRad: 0.9 } },
+        pose: { azimuthRad: 1, altitudeRad: 0.3 },
+      }),
+    );
+    store.dispatch(setFovYRad(degToRad(LENS_MAX_DEG)));
+    const next = replayInput(
+      {
+        register: store.getState().camera.base,
+        gesture: null,
+        tilt: EMPTY_TILT_MEMORY,
+        follow: null,
+      },
+      [atRestZoom(1.1, true)],
+      ctxOf(store),
+    );
+
+    expect(next.actions).toHaveLength(1);
+    const [pushed] = next.actions;
+    if (!zoomLimitPushed.match(pushed) || pushed.payload.edge !== 'out') {
+      throw new Error('expected one zoomLimitPushed out');
+    }
+    expect(pushed.payload.lift.timeline.length).toBeGreaterThan(0);
+  });
+
   it('two lens notches in one drain compound', () => {
     // The second notch must read the lens the first emitted, not the drain-start
     // ctx's; and a lens notch moves no pose, so it commits none.
@@ -297,7 +331,12 @@ describe('replayInput', () => {
     const lens = store.getState().camera.fovYRad;
 
     const next = replayInput(
-      { register: sky, gesture: null, tilt: EMPTY_TILT_MEMORY, follow: null },
+      {
+        register: sky,
+        gesture: null,
+        tilt: EMPTY_TILT_MEMORY,
+        follow: null,
+      },
       [atRestZoom(1.25), atRestZoom(1.25)],
       ctxOf(store),
     );
@@ -341,7 +380,15 @@ describe('replayInput', () => {
         tilt: EMPTY_TILT_MEMORY,
         follow: null,
       },
-      [{ kind: 'zoom', factor: f, duringGesture: false, cursorPx: [700, 500] }],
+      [
+        {
+          kind: 'zoom',
+          factor: f,
+          duringGesture: false,
+          cursorPx: [700, 500],
+          fresh: false,
+        },
+      ],
       ctxOf(store),
     );
 
@@ -710,7 +757,13 @@ describe('replayInput', () => {
       },
       [
         { kind: 'gestureStart' },
-        { kind: 'zoom', factor: Math.exp(0.1), duringGesture: true, cursorPx: [500, 500] },
+        {
+          kind: 'zoom',
+          factor: Math.exp(0.1),
+          duringGesture: true,
+          cursorPx: [500, 500],
+          fresh: false,
+        },
       ],
       ctxOf(store),
     );
@@ -737,7 +790,13 @@ describe('replayInput', () => {
       },
       [
         { kind: 'gestureStart' },
-        { kind: 'zoom', factor: 1e-6, duringGesture: true, cursorPx: null },
+        {
+          kind: 'zoom',
+          factor: 1e-6,
+          duringGesture: true,
+          cursorPx: null,
+          fresh: false,
+        },
       ],
       ctxOf(store),
     );

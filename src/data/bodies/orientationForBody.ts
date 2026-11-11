@@ -11,6 +11,7 @@ import { rotationRowById } from './rotationElements';
 import { bodyHostId } from './positionDrivers';
 import { SITE_GROUND_UPS_ENU } from './siteGroundHeights.generated';
 import { CONST_J2000 } from '../time/constJ2000';
+import { jupiterGrsTextureLongitudeOffsetDeg } from '../../utils/orbit/jupiterGrsTextureLongitudeOffsetDeg';
 import { rotationFromIau } from '../../utils/orbit/rotationFromIau';
 import { rotationLookAt } from '../../utils/orbit/rotationLookAt';
 import { rotationTidallyLocked } from '../../utils/orbit/rotationTidallyLocked';
@@ -58,7 +59,12 @@ export function orientationForBody(
         poleRaDeg: row.poleRaDeg + (row.poleRaRateDegPerCty ?? 0) * centuries,
         poleDecDeg: row.poleDecDeg + (row.poleDecRateDegPerCty ?? 0) * centuries,
       };
-      return rotationFromIau(pole, row.primeMeridianDeg + row.spinRateDegPerDay * days);
+      // Jupiter's texture is a fixed ~2000 frame; turning it keeps the Red Spot at its real longitude.
+      const textureTurnDeg = id === 'jupiter' ? jupiterGrsTextureLongitudeOffsetDeg(simDays) : 0;
+      return rotationFromIau(
+        pole,
+        row.primeMeridianDeg + row.spinRateDegPerDay * days + textureTurnDeg,
+      );
     }
     case 'lookAt':
       return rotationLookAt(

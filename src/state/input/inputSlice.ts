@@ -5,7 +5,8 @@
  * One source at a time owns a held gesture; a second source's start takes it
  * over by closing the first. Unheld motion (a wheel notch with no gesture open)
  * passes from any source. Motion is stamped with its source's aspect when it is
- * folded, so a resize never re-reads motion already queued.
+ * folded, so a resize never re-reads motion already queued, and a zoom with its
+ * `fresh`: `Motion.eventMs` is the SOURCE's clock, so the wheel quiet is per source.
  */
 
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
@@ -15,6 +16,7 @@ import type { InputSourceId } from '../../@types/input/InputSourceId';
 import type { HeldIntent } from '../../@types/input/HeldIntent';
 import type { Motion } from '../../@types/input/Motion';
 import type { UnitPoint } from '../../@types/input/UnitPoint';
+import { FRESH_WHEEL_PAUSE_MS } from '../../data/input/freshWheelPauseMs';
 
 const initialState: InputState = {
   sources: {},
@@ -32,13 +34,17 @@ const inputSlice = createSlice({
       input,
       action: PayloadAction<{ source: InputSourceId; aspect: number }>,
     ) => {
-      input.sources[action.payload.source] = { aspect: action.payload.aspect };
+      input.sources[action.payload.source] = {
+        aspect: action.payload.aspect,
+        lastWheelMs: -Infinity,
+      };
     },
     inputSourceResized: (
       input,
       action: PayloadAction<{ source: InputSourceId; aspect: number }>,
     ) => {
-      input.sources[action.payload.source] = { aspect: action.payload.aspect };
+      const record = input.sources[action.payload.source];
+      if (record !== undefined) record.aspect = action.payload.aspect;
     },
     inputSourceDetached: (input, action: PayloadAction<{ source: InputSourceId }>) => {
       delete input.sources[action.payload.source];
@@ -71,6 +77,9 @@ const inputSlice = createSlice({
       if (record === undefined) return;
       for (const m of motion) {
         if (m.held && input.owner !== source) continue;
+        // Every notch restarts the quiet, folded or not: a tail that runs on is still a tail.
+        const fresh = m.intent === 'zoom' && m.eventMs - record.lastWheelMs >= FRESH_WHEEL_PAUSE_MS;
+        if (m.intent === 'zoom') record.lastWheelMs = m.eventMs;
         const tail = input.pending[input.pending.length - 1];
         if (
           tail?.kind === 'motion' &&
@@ -85,9 +94,16 @@ const inputSlice = createSlice({
             dy: tail.dy + m.dy,
             ratio: tail.ratio * m.ratio,
             at: m.at,
+            eventMs: m.eventMs,
           };
         } else {
-          input.pending.push({ kind: 'motion', source, aspect: record.aspect, ...m });
+          input.pending.push({
+            kind: 'motion',
+            source,
+            aspect: record.aspect,
+            fresh,
+            ...m,
+          });
         }
       }
     },

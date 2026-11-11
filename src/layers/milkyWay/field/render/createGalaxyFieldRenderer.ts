@@ -45,6 +45,7 @@ import { encodeDustMapPass } from './encodeDustMapPass';
 import { encodeDustPresentPass } from './encodeDustPresentPass';
 import { encodeSplatPass } from './encodeSplatPass';
 import { findHiiSegment } from '../starFormation/utils/findHiiSegment';
+import { fieldTargetOf } from '../utils/fieldTargetOf';
 import {
   FIELD_COMPONENT_FLOATS,
   FIELD_HEADER_BUFFER_SIZE,
@@ -347,7 +348,8 @@ export function createGalaxyFieldRenderer(
       targetSizes: {
         field: sizeOf(frameTargets.field),
         dustMap: sizeOf(frameTargets.dustMap),
-        extras: sizeOf(frameTargets.extras),
+        // Only the `hii:extras` pass reads this size, and it never runs without the target.
+        extras: sizeOf(frameTargets.extras ?? frameTargets.field),
         ...mapHiiTiers((kind) => sizeOf(frameTargets[kind])),
       },
     });
@@ -411,7 +413,7 @@ export function createGalaxyFieldRenderer(
           enc: encoder,
           label: `galaxy:hiiPass:${id}`,
           timestampWrites: timestampWrites(id),
-          targetView: frameTargets[id].view,
+          targetView: fieldTargetOf(frameTargets, id).view,
           pipeline: extras ? fieldPipelines.hiiExtrasPipe : fieldPipelines.hiiTierPipeline(id),
           bindGroup: extras ? groups.hii : groups.tier(id),
           instanceCount: segment?.count ?? 0,
