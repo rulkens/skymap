@@ -64,7 +64,7 @@ shows the roll's destination, not a mid-roll pole: the roll runs on wall time, n
 ### Neutral / forward-looking
 
 - Two folds remain: the tour's over unresolved beats in written order, the clip's over compiled steps
-  in time order. `validateSeqCueOrder` keeps their orders agreeing until the tour fold can evaluate
+  in time order. `validateSeqStepOrder` keeps their orders agreeing until the tour fold can evaluate
   compiled tracks.
 
 ## Rejected alternatives

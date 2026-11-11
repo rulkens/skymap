@@ -109,7 +109,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **framedClipArm decodes with the current basis** `deferred` — `cameraDrivers.ts` passes the current basis where the clip pinned another; harmless until a `decode` cell reads a basis. → [details](backlog/2026-11-03-framed-clip-arm-decode-basis.md)
 - [ ] **Earth point in the URL hash** `needs-design` — `#site=lon,lat[,alt]` snapping over a coordinate via the existing `flyToLonLat` saga; the typable subset of the pose codec. → [details](backlog/2026-09-15-earth-point-url-hash.md)
 - [ ] **Sub-pixel craft and scene glints can't be picked** `ready` — `glintsPassOver` (missions, earthScenes, blackHoles) has no `drawPick`, so an unresolved craft drawn as a glint takes no click.
-- [ ] **Tour scene fold beside the compiled scene tracks** `needs-design` — `computeSceneEntering` re-folds beat scenes that a clip's compiled scene steps already express; unifying them would retire `validateSeqCueOrder`.
+- [ ] **Tour scene fold beside the compiled scene tracks** `needs-design` — `computeSceneEntering` re-folds beat scenes that a clip's compiled scene steps already express; unifying them would retire `validateSeqStepOrder`.
 - [ ] **`fadeController.ts` keeps a private smoothstep** `ready` — swap it for `src/utils/math/smoothstep.ts`.
 
 ## Rendering

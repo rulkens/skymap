@@ -74,7 +74,7 @@ import { buildPathTrack } from './buildPathTrack';
 import { buildGeodesicTrack } from './buildGeodesicTrack';
 import { hasDuration } from './hasDuration';
 import { validateSeqOverlap } from './validateSeqOverlap';
-import { validateSeqCueOrder } from './validateSeqCueOrder';
+import { validateSeqStepOrder } from './validateSeqStepOrder';
 import { resolveSeqJoins } from './resolveSeqJoins';
 import { baseTracksOf } from './baseTracksOf';
 import { ClipCompileError } from './ClipCompileError';
@@ -554,7 +554,7 @@ export function compileClip(data: ClipData, frameBasis?: Mat3): CompiledClip {
   }
 
   const baseTracks = reportedByPath(acc, () => {
-    validateSeqCueOrder(acc.seqs, acc.steps);
+    validateSeqStepOrder(acc.seqs, acc.steps);
     // Both passes keep array positions, so a rewritten segment inherits its
     // original's path by index.
     const inherit = (segs: readonly BaseSegment[]) =>
