@@ -1,36 +1,22 @@
 /**
  * ScaleBar — bottom-right distance legend. Presentational: the engine hands
  * over a formatted label and a pixel width; the bracket shape is CSS borders.
- * While standing a distance means nothing, so the lens and the spot take its place.
  */
 
 import type { ReactNode } from 'react';
 import type { ScaleInfo } from '../../@types/engine/ScaleInfo';
 import styles from './ScaleBar.module.css';
-import type { StandingReadout } from '../../@types/sky/StandingReadout';
 
-export type ScaleBarProps = {
-  readonly scale: ScaleInfo;
-  readonly standing: StandingReadout | null;
+type ScaleBarProps = {
+  scale: ScaleInfo;
 };
 
-function ScaleBar({ scale, standing }: ScaleBarProps): ReactNode {
+export function ScaleBar({ scale }: ScaleBarProps): ReactNode {
   return (
-    <div className={styles.root} aria-label="Scale reference">
-      {standing === null ? (
-        <>
-          <span className={styles.scaleLabel}>{scale.label}</span>
-          {/* Inline width: it changes every frame on zoom. */}
-          <span className={styles.scaleLine} style={{ width: scale.widthPx + 'px' }} />
-        </>
-      ) : (
-        <>
-          <span className={styles.field}>{standing.field}</span>
-          <span className={styles.spot}>{standing.spot}</span>
-        </>
-      )}
+    <div className={styles.scaleBar} aria-label="Scale reference">
+      <span className={styles.scaleLabel}>{scale.label}</span>
+      {/* Inline width: it changes every frame on zoom. */}
+      <span className={styles.scaleLine} style={{ width: scale.widthPx + 'px' }} />
     </div>
   );
 }
-
-export default ScaleBar;

@@ -1,30 +1,22 @@
 /**
  * ScaleBracketContainer — store boundary for the phone scale legend. Reads the
  * same `selectScale` the desktop ScaleBar does and shows the bracket for two
- * seconds after the label or width last changed; while standing, the lens and
- * the spot instead, for two seconds after the lens last changed.
+ * seconds after the label or width last changed; none while standing.
  */
 
 import { memo } from 'react';
 import ScaleBracket from '../ScaleBracket/ScaleBracket';
 import { useAppSelector } from '../../store/hooks';
 import { selectScale, selectSkyView } from '../../state/engine/selectors';
-import { selectFovYRad } from '../../state/camera/selectors';
 import { useRecentlyChanged } from '../../hooks/useRecentlyChanged';
-import { standingReadout } from '../../utils/sky/standingReadout';
 
 const SCALE_VISIBLE_MS = 2000;
 
-function ScaleBracketContainer(): React.ReactElement {
+function ScaleBracketContainer(): React.ReactElement | null {
   const scale = useAppSelector(selectScale);
-  const view = useAppSelector(selectSkyView);
-  const fovYRad = useAppSelector(selectFovYRad);
-  const standing = standingReadout(view, fovYRad);
-  const changing = useRecentlyChanged(
-    standing === null ? `${scale.label}|${scale.widthPx}` : standing.field,
-    SCALE_VISIBLE_MS,
-  );
-  return <ScaleBracket scale={scale} standing={standing} visible={changing} />;
+  const standing = useAppSelector(selectSkyView) !== null;
+  const changing = useRecentlyChanged(`${scale.label}|${scale.widthPx}`, SCALE_VISIBLE_MS);
+  return standing ? null : <ScaleBracket scale={scale} visible={changing} />;
 }
 
 export default memo(ScaleBracketContainer);

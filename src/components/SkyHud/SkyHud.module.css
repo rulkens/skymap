@@ -41,28 +41,15 @@
 }
 
 .title {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-5);
   max-width: 100%;
   margin: 0;
-  font-weight: normal;
-}
-
-.tag {
-  color: var(--color-accent);
-  font: var(--font-size-sm) / 1 var(--font-family-mono);
-  letter-spacing: var(--letter-spacing-widest);
-  text-transform: uppercase;
-}
-
-.place {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--color-fg);
   font-family: var(--font-family-display);
   font-size: 1.375rem;
+  font-weight: normal;
   line-height: var(--line-height-tight);
 }
 

@@ -35,10 +35,7 @@ function SkyHud({
 }: SkyHudProps): ReactNode {
   return (
     <section className={cx(styles.root, phone && styles.phone)} aria-label="Sky mode">
-      <h2 className={styles.title}>
-        <span className={styles.tag}>Sky</span>
-        <span className={styles.place}>{place}</span>
-      </h2>
+      <h2 className={styles.title}>{place}</h2>
       <SkyCompass azimuthDeg={azimuthDeg} />
       <div className={styles.actions}>
         <ActionPill
