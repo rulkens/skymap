@@ -72,6 +72,7 @@ export function satellitesPass(runtime: SatellitesRuntime): ContentPass<'satelli
         RENDER_ORIGIN_MPC[1] - earth.positionMpc[1],
         RENDER_ORIGIN_MPC[2] - earth.positionMpc[2],
       ]),
+      ambient: state.settings.satelliteTuning.ambient,
       opacity: opacityOf(simDays),
       classOpacity: [fade.active, fade.debris, fade.other],
       occluders: sceneOccluderSpheres(state, ctx),

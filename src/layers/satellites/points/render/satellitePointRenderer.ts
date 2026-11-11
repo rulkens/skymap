@@ -53,6 +53,7 @@ export const SATELLITE_UNIFORM_OFFSETS = {
   sizePx: 124,
   temeToWorld2: 128,
   sunDir: 144,
+  ambient: 156,
   classOpacity: 160,
   pickBase: 172,
 } as const;
@@ -191,6 +192,7 @@ export function createSatellitePointRenderer({
     u.set(frame.classOpacity, o.classOpacity / 4);
     u[o.sizePx / 4] = sizePx;
     u.set(frame.sunDir, o.sunDir / 4);
+    u[o.ambient / 4] = frame.ambient;
     device.queue.writeBuffer(buffer, 0, u);
   }
 

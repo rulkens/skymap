@@ -23,8 +23,13 @@ function planThrough(writeProfiles: SatellitesRuntime['renderer']['writeProfiles
     simRate: { observe: vi.fn() },
     scheduleWake: vi.fn(),
   } as unknown as SatellitesRuntime);
-  return (satelliteColors: SatelliteColors) =>
-    planner.plan(SNAPSHOT, [], { settings: { satelliteColors } } as unknown as PassState, FADE);
+  return (colors: SatelliteColors, ambient = 0.04) =>
+    planner.plan(
+      SNAPSHOT,
+      [],
+      { settings: { satelliteTuning: { colors, ambient } } } as unknown as PassState,
+      FADE,
+    );
 }
 
 function colorsOf(red: number): SatelliteColors {
@@ -40,7 +45,7 @@ describe('satellitesPlanner', () => {
     const colors = colorsOf(0.1);
 
     plan(colors);
-    plan(colors);
+    plan(colors, 0.5);
     expect(writeProfiles).toHaveBeenCalledTimes(1);
 
     plan(colorsOf(0.2));

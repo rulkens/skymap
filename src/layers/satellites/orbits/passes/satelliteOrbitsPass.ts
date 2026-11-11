@@ -66,7 +66,7 @@ export function satelliteOrbitsPass(runtime: SatellitesRuntime): ContentPass<'sa
             eyeMpc: eye,
             pxPerRad: ctx.drawPxPerRad,
             ...orbit,
-            color: state.settings.satelliteColors[SATELLITE_PROFILES[codes[k]!]!.id],
+            color: state.settings.satelliteTuning.colors[SATELLITE_PROFILES[codes[k]!]!.id],
             fade: classFade * opacity,
           },
           staging,

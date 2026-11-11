@@ -81,10 +81,10 @@ export const DOCS_DEBUG_SECTIONS: readonly DocsDebugSection[] = [
     file: 'src/layers/blackHoles/lensing/ui/BlackHoleLensingTuningSection.tsx',
   },
   {
-    heading: 'Satellite colours',
+    heading: 'Satellite tuning',
     shows:
-      'One colour for each satellite group, by constellation or orbit. A button puts them back to their defaults and another copies the changed ones.',
-    file: 'src/layers/satellites/controls/ui/SatelliteColorsSection.tsx',
+      'An ambient light every satellite gets, and one colour for each satellite group, by constellation or orbit. A button puts them back to their defaults and another copies the changed colours.',
+    file: 'src/layers/satellites/controls/ui/SatelliteTuningSection.tsx',
   },
   {
     heading: 'Milky Way tuning',

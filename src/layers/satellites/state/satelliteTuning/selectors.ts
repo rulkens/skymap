@@ -1,13 +1,13 @@
 import { createSelector } from '@reduxjs/toolkit';
 
 import { selectSettings } from '../../../../state/settings/selectSettings';
-import type { SatelliteColors } from '../../@types/SatelliteColors';
+import type { SatelliteTuning } from '../../@types/SatelliteTuning';
 
 /** The one root hop for this slice, spelled `selectRoute` in every slice. */
 export const selectRoute = createSelector(
   [selectSettings],
-  (settings): SatelliteColors => settings.satelliteColors,
+  (settings): SatelliteTuning => settings.satelliteTuning,
 );
 
 /** The whole cluster, under the slice's own name. */
-export const selectSatelliteColors = selectRoute;
+export const selectSatelliteTuning = selectRoute;

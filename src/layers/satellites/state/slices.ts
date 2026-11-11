@@ -4,7 +4,7 @@
  * reason `galaxyCatalogLayerSettings`'s header spells out.
  */
 
-import { satelliteColorsSlice } from './satelliteColors/slice';
+import { satelliteTuningSlice } from './satelliteTuning/slice';
 import { satellitesSlice } from './satellites/slice';
 
-export const satellitesLayerSettings = [satellitesSlice, satelliteColorsSlice] as const;
+export const satellitesLayerSettings = [satellitesSlice, satelliteTuningSlice] as const;

@@ -74,7 +74,7 @@ import { initialState as localBubbleInitialState } from '../../../src/layers/loc
 import { initialState as stellarStreamsInitialState } from '../../../src/layers/stellarStreams/state/stellarStreams/initialState';
 import { initialState as probeSpheresInitialState } from '../../../src/layers/probeSpheres/state/probeSpheres/initialState';
 import { initialState as satellitesInitialState } from '../../../src/layers/satellites/state/satellites/initialState';
-import { initialState as satelliteColorsInitialState } from '../../../src/layers/satellites/state/satelliteColors/initialState';
+import { initialState as satelliteTuningInitialState } from '../../../src/layers/satellites/state/satelliteTuning/initialState';
 import { initialState as constellationsInitialState } from '../../../src/layers/constellations/state/constellations/initialState';
 import { DEBUG_OVERLAY_ROWS } from '../../../src/data/debug/debugOverlayRows';
 import { DEFAULT_CAMERA_CONTROLS } from '../../../src/data/camera/openSpaceNavigation';
@@ -130,7 +130,7 @@ export function makeSettingsFixture(
     localBubble: { ...localBubbleInitialState },
     probeSpheres: { ...probeSpheresInitialState },
     satellites: { ...satellitesInitialState },
-    satelliteColors: { ...satelliteColorsInitialState },
+    satelliteTuning: { ...satelliteTuningInitialState },
     stellarStreams: {
       ...stellarStreamsInitialState,
       streak: { ...stellarStreamsInitialState.streak },

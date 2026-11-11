@@ -35,8 +35,8 @@ export function satellitesPlanner(
       if (!SATELLITE_CLASSES.some((cls) => fade[cls] > 0)) return IDLE;
       if (satelliteLayerOpacity(catalog, snapshot.simDays) <= 0) return IDLE;
 
-      if (state.settings.satelliteColors !== writtenColors) {
-        writtenColors = state.settings.satelliteColors;
+      if (state.settings.satelliteTuning.colors !== writtenColors) {
+        writtenColors = state.settings.satelliteTuning.colors;
         renderer.writeProfiles(packSatelliteProfiles(writtenColors));
       }
 

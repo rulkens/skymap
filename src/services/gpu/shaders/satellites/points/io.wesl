@@ -25,7 +25,7 @@ struct SatelliteProfile {
 // Group 0 bindings 0-1 belong to lib/trailOcclusion; this is binding 2. 'earthKm' is Earth's
 // centre minus the eye in world axes (composed in f64 on the CPU), 'temeToWorld*' the columns of
 // the TEME to world rotation, 'dtSec' the sim seconds since the sweep, 'sunDir' the world unit
-// vector from Earth to the Sun.
+// vector from Earth to the Sun, 'ambient' the light every dot gets, sunlit or eclipsed.
 struct SatelliteUniforms {
   cam: CameraUniforms,
   earthKm: vec3<f32>,
@@ -36,6 +36,7 @@ struct SatelliteUniforms {
   sizePx: f32,
   temeToWorld2: vec3<f32>,
   sunDir: vec3<f32>,
+  ambient: f32,
   classOpacity: vec3<f32>,
   // Pick only: the packed pick word of catalog index 0 (source code and sentinel offset folded in
   // on the CPU).
