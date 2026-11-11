@@ -11,6 +11,7 @@ import { timeToPercent } from '../../utils/window/timeToPercent';
 import { AFTER_END_CAPTION_PX, EPSILON, HEAD_WIDTH_PX, TICK_LABEL_PX } from './Ruler.constants';
 import { useRulerScrub } from './useRulerScrub';
 import { selectPlayheadSec } from '../../../session/state/selectors';
+import { selectShownLoop } from '../../state/selectShownLoop';
 import { useAppSelector } from '../../../../../../src/store/hooks';
 import { useTrackWidth } from './useTrackWidth';
 import type { TimeWindow } from '../../../@types/session/TimeWindow';
@@ -23,9 +24,10 @@ type Props = {
   readonly window: TimeWindow;
 };
 
-/** The time axis: ticks, a notch per cue in its channel's tint, the End flag and the playhead's readout. Click or drag to seek. */
+/** The time axis: ticks, a notch per cue in its channel's tint, the looped span, the End flag and the playhead's readout. Click or drag to seek. */
 function Ruler({ timeline, window }: Props) {
   const playheadSec = useAppSelector(selectPlayheadSec);
+  const looped = useAppSelector(selectShownLoop);
   const { ref, ...handlers } = useRulerScrub(window, timeline.cueSecs);
   const trackPx = useTrackWidth(ref);
   const span = window.endSec - window.startSec;
@@ -51,6 +53,15 @@ function Ruler({ timeline, window }: Props) {
 
   return (
     <div ref={ref} className={s.root} {...handlers} aria-label="Timeline ruler">
+      {looped !== null && (
+        <span
+          className={s.loop}
+          style={{
+            ...at(looped.startSec),
+            width: `${timeToPercent(looped.endSec, window) - timeToPercent(looped.startSec, window)}%`,
+          }}
+        />
+      )}
       {ticks.map((sec) => {
         const isMajor = Math.abs(sec / major - Math.round(sec / major)) < EPSILON;
         const tickPx = timeToPercent(sec, window) * (trackPx / 100);

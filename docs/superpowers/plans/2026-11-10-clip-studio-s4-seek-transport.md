@@ -505,9 +505,12 @@ A press while playing dispatches `paused()` and remembers it in a ref (gesture-l
 lost capture after such a press dispatches `played({ fromSec: <release head>, loop })`. While `loop` is on, the ruler
 tints the looped span (`color-mix` of the accent token).
 
-- [ ] Test (jsdom) `a drag that starts while playing pauses and resumes from the release point`.
-- [ ] `npx vitest run packages/studio/tests/timeline`.
-- [ ] Commit: "Clip studio: scrubbing while playing pauses for the drag".
+As built: the release resumes with the paused play's own loop span. The tint shows the running loop, or while paused
+with Loop on, what Play would loop (`selectShownLoop`), edged as well as filled so colour is not the only signal.
+
+- [x] Test (jsdom) `a drag that starts while playing pauses and resumes from the release point`.
+- [x] `npx vitest run packages/studio/tests/timeline`.
+- [x] Commit: "Clip studio: scrubbing while playing pauses for the drag".
 
 ### Task 3.4: the Use current view button
 
