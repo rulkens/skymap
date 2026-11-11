@@ -20,7 +20,7 @@
  * padding + border stay inside this width). If the clock format, the
  * readout/pill padding, or the readout letter-spacing changes, this calc
  * follows. The inline-width scaleLine reads in real px within the box; see the
- * SCALE_TARGET_PX coupling comment in runFrame.ts for why ≤120 px fits here.
+ * SCALE_TARGET_PX coupling comment in src/data/layout/scaleTargetPx.ts for why ≤120 px fits here.
  */
 .scaleBar {
   position: fixed;

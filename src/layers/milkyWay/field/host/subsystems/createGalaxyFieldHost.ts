@@ -81,7 +81,7 @@ export function createGalaxyFieldHost(
       renderer.stepIsmMap();
     },
 
-    plan: () => (tuning ? planFieldFrame(renderer.hiiSegments) : EMPTY_PLAN),
+    plan: () => (tuning ? planFieldFrame(renderer.hiiSegments, deps.targetIds) : EMPTY_PLAN),
 
     encode(encoder, plan, camera, exposure, targets, timestampWrites): void {
       if (!tuning) return;
@@ -119,6 +119,7 @@ export function createGalaxyFieldHost(
     },
 
     destroy(): void {
+      readbacks.cancel();
       renderer.dispose();
     },
   };

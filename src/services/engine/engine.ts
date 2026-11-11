@@ -153,8 +153,6 @@ export function createEngine(
     ]),
   ) as CubemapCaptureRuntimes;
 
-  const store = cb.store;
-
   const state: EngineState = {
     // These getters delegate straight to the root: sagas and sub-handle
     // setters own the writes, per-frame readers reach the authoritative object
@@ -337,7 +335,7 @@ export function createEngine(
 
   // The single clip-run seam the saga context exposes.
   const playClip = createPlayClip({
-    store,
+    store: cb.store,
     clipPlayer: state.subsystems.clipPlayer,
     getLivePose: () => liveClipStartPose(state),
   });

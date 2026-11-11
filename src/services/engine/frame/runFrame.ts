@@ -5,12 +5,13 @@
  * `stepCameraRuntime` (the camera as one pure step over the frame's ONE store
  * snapshot) → THE one `state.cameraRuntime` assignment → the step's actions,
  * in order → the frame context, the planners, the GPU dispatch and the
- * keep-ticking vote. Non-camera dispatches (scale bar, body distance) stay here.
+ * keep-ticking vote. Non-camera store facts go through `FRAME_READOUT_ROWS`.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
 import type { Vec2 } from '../../../@types/math/Vec2';
+import type { FrameReadoutCtx } from '../../../@types/engine/frame/FrameReadoutCtx';
 
 import { orientDeltasWatched, recordOrientDeltas } from '../camera/orientation/orientDeltas';
 import { stepCameraRuntime } from '../camera/stepCameraRuntime';
@@ -24,19 +25,14 @@ import { deriveFrameContext } from './frameContext';
 import { deriveView } from './deriveView';
 import { frameContextInputOf } from './frameContextInputOf';
 import { frameBodyStates } from './frameBodyStates';
-import { sceneBodyStates } from './sceneBodyStates';
 import { renderFrame } from './renderFrame';
 import { VIEW_RIGS } from '../../../data/rendering/viewRigs';
 import { drawPickDebugOverlay } from './drawPickDebugOverlay';
+import { FRAME_READOUT_ROWS } from './readouts/frameReadoutRows';
 import { reevaluateDemand } from '../wiring/reevaluateDemand';
-import { computeScaleInfo } from '../helpers/scaleBar';
-import { engineScaleChanged, engineBodyDistanceReported } from '../../../state/engine/engineSlice';
 import { deriveSimDays } from '../../../utils/time/deriveSimDays';
 import { selectTimeState, selectIsLiveTicking } from '../../../state/time/selectors';
-import { throttleByTime } from '../../../utils/throttle/throttleByTime';
 import { cpuSpans } from '../../../utils/perf/cpuSpans';
-import { distanceMpc } from '../../../utils/math/distanceMpc';
-import { selectionDriver } from '../../../utils/selection/selectionDriver';
 import { encodeSelectionPick } from '../../../utils/selection/encodeSelectionPick';
 import { pendingToInputSteps } from '../../../utils/input/pendingToInputSteps';
 import { selectPendingInput } from '../../../state/input/selectors';
@@ -45,18 +41,6 @@ import { NO_INSETS_PX } from '../../../data/layout/noInsetsPx';
 import { inputConsumed } from '../../../state/input/inputSlice';
 import { selectionKindShown } from '../presentation/selectionKindShown';
 import { isRecedingFocusRow } from '../../../utils/selection/isRecedingFocusRow';
-
-/**
- * Scale-bar width, CSS px. Must stay under the ScaleBar panel's ~145 px content
- * box (it hugs the TimeBar pill; see ScaleBar.module.css) or the legend clamps.
- */
-const SCALE_TARGET_PX = 120;
-
-/**
- * ~4 Hz gate for the InfoCard's live distance row. Module scope on purpose: a
- * per-frame `throttleByTime(250)` would reset its closure and defeat itself.
- */
-const publishBodyDistanceGate = throttleByTime(250);
 
 /**
  * Idle-tick cadence for a LIVE sim clock, ms. At the 127 km tile standoff the
@@ -156,24 +140,24 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     bodyStates,
   });
 
-  // `clientWidth`/`clientHeight` are CSS px; backing-store `width`/`height`
-  // silently breaks the bar on retina.
-  if (state.booted) {
-    const scaleInfo = computeScaleInfo({
-      cam: { distance: input.altitudeMpc, fovYRad: cam.fovYRad },
-      canvasSize: { width: deps.canvas.clientWidth, height: deps.canvas.clientHeight },
-      targetPx: SCALE_TARGET_PX,
-    });
-    if (scaleInfo !== null) {
-      deps.cb.store.dispatch(engineScaleChanged(scaleInfo));
-    }
-  }
-
   // Minted here so `renderFrame` gets the SAME mutable `Set`; passes see only the
   // `ReadonlySet` on `snapshot.renderedTargets`.
   const renderedTargets = new Set<string>();
   // The 'not ready' branch is the window before cam + GPU handles populate.
   const snapshot = deriveFrameContext(state, input, renderedTargets);
+  // Ahead of the ready return: each row gates on `booted`/`isReady` itself.
+  const frame: FrameReadoutCtx = {
+    nowMs,
+    booted: state.booted,
+    isReady: snapshot.isReady,
+    canvasCssPx: { width: deps.canvas.clientWidth, height: deps.canvas.clientHeight },
+    camPosMpc: cam.position,
+    fovYRad: cam.fovYRad,
+    altitudeMpc: input.altitudeMpc,
+    focusRow: state.selectionRows.focus,
+    bodyStates,
+  };
+  for (const row of FRAME_READOUT_ROWS) row.publish(frame, deps.cb.store.dispatch);
   if (!snapshot.isReady) {
     // Bootstrap populates the handles without waking any channel: keep polling.
     state.subsystems.scheduler.requestRender();
@@ -217,21 +201,6 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   snapshot.focus = focus.uniforms;
   snapshot.focusBlend = focus.blend;
   snapshot.focusPickId = encodeSelectionPick(state.selectionKindRows, focus.ref);
-
-  // Camera→focused-body distance for the InfoCard (the store-boundary rule:
-  // React never reads the engine snapshot). Null unless an orbital body in this
-  // frame's snapshot is focused.
-  if (publishBodyDistanceGate(nowMs)) {
-    let focusedBodyDistanceMpc: number | null = null;
-    const focusId = selectionDriver(focusRow)?.poseId ?? null;
-    if (focusId !== null) {
-      const bodyState = sceneBodyStates(state, canvas).get(focusId);
-      if (bodyState !== undefined) {
-        focusedBodyDistanceMpc = distanceMpc(canvas.drawCamPos, bodyState.positionMpc);
-      }
-    }
-    deps.cb.store.dispatch(engineBodyDistanceReported(focusedBodyDistanceMpc));
-  }
 
   // Before the GPU dispatch (they upload the label buffers). Three statements,
   // not `a() || b() || c()`: each call FLUSHES as a side effect and `||`

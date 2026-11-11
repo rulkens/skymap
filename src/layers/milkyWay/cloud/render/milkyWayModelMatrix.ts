@@ -55,7 +55,7 @@
  */
 import { GAL_X_EQ, GAL_Y_EQ, GAL_Z_EQ } from '../../../../data/orientation/orientationFrames';
 import { MILKY_WAY_CENTER_WORLD } from '../../../../data/milkyWay/galacticCenter';
-import { MILKY_WAY_MODEL_SCALE } from '../../../../services/engine/galaxyGenerator/v1/milkyWayCalibration';
+import { MILKY_WAY_MODEL_SCALE } from '../../../../data/milkyWay/milkyWayModelScale';
 
 export function milkyWayModelMatrix(): Float32Array {
   const k = MILKY_WAY_MODEL_SCALE;

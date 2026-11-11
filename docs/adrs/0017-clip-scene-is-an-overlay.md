@@ -5,8 +5,8 @@
 - **Decision-makers:** project owner, Claude
 - **Supersedes:** —
 - **Superseded by:** —
-- **Related:** `docs/superpowers/specs/2026-11-10-clip-studio-s3-scene-tracks.md` (the design),
-  `docs/superpowers/plans/2026-11-10-clip-studio-s3-scene-tracks.md`,
+- **Related:** `docs/superpowers/specs/completed/2026-11-10-clip-studio-s3-scene-tracks.md` (the design),
+  `docs/superpowers/plans/completed/2026-11-10-clip-studio-s3-scene-tracks.md`,
   `docs/grill-sessions/clip-studio-2026-11-07.md` (Q1, Q2), ADR 0001 and ADR 0012 (the fade registry
   and its data-arrival gate), `docs/animation/clip-primitives.md`
 
@@ -77,7 +77,7 @@ end a paused transport shows intent with every factor at 1: the play's end with 
 ### Neutral / forward-looking
 
 - Two folds remain: the tour's over unresolved beats in written order, the clip's over compiled steps
-  in time order. `validateSeqCueOrder` keeps their orders agreeing until the tour fold can evaluate
+  in time order. `validateSeqStepOrder` keeps their orders agreeing until the tour fold can evaluate
   compiled tracks.
 
 ## Rejected alternatives

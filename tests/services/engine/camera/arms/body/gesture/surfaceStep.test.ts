@@ -112,7 +112,7 @@ function drag(mode: 'orbit' | 'pan', startPx: Vec2, endPx: Vec2): InputStep {
 
 /** `cursorPx: null` is the pinch case — no single cursor, so screen centre. */
 function zoom(factor: number, duringGesture: boolean, cursorPx: Vec2 | null = null): InputStep {
-  return { kind: 'zoom', factor, duringGesture, cursorPx };
+  return { kind: 'zoom', factor, duringGesture, cursorPx, fresh: false };
 }
 
 function eyeOf(pose: BodyFixedPose): Vec3 {
@@ -1139,7 +1139,13 @@ describe('surfaceStep', () => {
 
   it('a zoom step never authors tilt', () => {
     const prevTilt: TiltMemory = { hostId: asSceneBodyId('earth'), rememberedTiltRad: 0.4 };
-    const step: InputStep = { kind: 'zoom', factor: 0.5, duringGesture: false, cursorPx: null };
+    const step: InputStep = {
+      kind: 'zoom',
+      factor: 0.5,
+      duringGesture: false,
+      cursorPx: null,
+      fresh: false,
+    };
     const { pose, gesture, tilt } = surfaceStep(
       EMPTY_SURFACE_GESTURE_MEMORY,
       prevTilt,
@@ -1200,7 +1206,13 @@ describe('the zoom settle is priced per unit of zoom, not per step (F1, ruling 2
   function recede(factor: number, steps: number): number {
     const driver = makeSurfaceDriver();
     let pose = headedPose();
-    const step: InputStep = { kind: 'zoom', factor, duringGesture: false, cursorPx: null };
+    const step: InputStep = {
+      kind: 'zoom',
+      factor,
+      duringGesture: false,
+      cursorPx: null,
+      fresh: false,
+    };
     for (let i = 0; i < steps; i += 1)
       pose = driver.apply(pose, step, VIEWPORT, FOV, R, POLE, TUNING);
     return headingOf(pose);

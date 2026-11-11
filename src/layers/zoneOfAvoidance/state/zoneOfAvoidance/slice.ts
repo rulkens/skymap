@@ -18,7 +18,7 @@ export const zoneOfAvoidanceSlice = createSlice({
       zoneOfAvoidance.enabled = action.payload;
     },
     // Band look knobs, patched leaf-by-leaf — the same visibility/tuning split
-    // `setMilkyWayTuning` makes, so a knob patch can never flip `enabled`.
+    // `setMilkyWayCloudTuning` makes, so a knob patch can never flip `enabled`.
     setZoneOfAvoidanceTuning: (
       zoneOfAvoidance,
       action: PayloadAction<Partial<ZoneOfAvoidanceTuning>>,

@@ -16,7 +16,7 @@
  * rather than recursive dispatch), and enables the single-writer validation
  * (Task 5) to run over the compiled tracks rather than the raw tree.
  *
- * ### The three track families and one cue list
+ * ### The three track families and the scene
  *
  * Camera motion is modelled as three additive layers (spec §3):
  *   - **Base** (`baseTracks`): absolute-position tweens (`set`/`setVec`) and

@@ -171,7 +171,15 @@ describe('previewSaga', () => {
   it('a sky drag while following starts free look', () => {
     const h = harness();
     h.resolve();
-    const motion = { intent: 'orbit', dx: 0.1, dy: 0, ratio: 1, at: null, held: true } as const;
+    const motion = {
+      intent: 'orbit',
+      dx: 0.1,
+      dy: 0,
+      ratio: 1,
+      at: null,
+      held: true,
+      eventMs: 0,
+    } as const;
     h.store.dispatch(inputMoved({ source: 'canvas', motion: [motion] }));
     expect(h.store.getState().camera.clip?.transport).toEqual({
       kind: 'paused',

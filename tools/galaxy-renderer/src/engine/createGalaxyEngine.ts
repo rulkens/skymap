@@ -45,7 +45,7 @@ import { createArmRidgeDebugSample } from './field/createArmRidgeDebugSample';
 import { createIsmMapDustCdfScanDebugSample } from './ismMap/createIsmMapDustCdfScanDebugSample';
 import { createGalaxyModel } from './model/createGalaxyModel';
 import { gradeIsActive } from './post/gradeIsActive';
-import { toMilkyWayTuning } from './sprites/toMilkyWayTuning';
+import { toMilkyWayCloudTuning } from './sprites/toMilkyWayCloudTuning';
 import { deriveFrameView } from './frame/deriveFrameView';
 import { fieldHostRender } from './frame/fieldHostRender';
 import { createOffscreenProbe } from './probe/createOffscreenProbe';
@@ -62,6 +62,7 @@ import type { ToolFrameView } from './frame/deriveFrameView';
 import { DEFAULT_RENDER_SETTINGS } from '../data/defaultRenderSettings';
 import { DEFAULT_LOD_SETTINGS } from '../data/defaultLodSettings';
 import { DUST_MAP_FORMAT } from '../../../../src/layers/milkyWay/field/host/data/dustMapFormat';
+import { FIELD_TARGET_IDS } from '../../../../src/layers/milkyWay/field/data/fieldTargetIds';
 
 /** HDR working format for the scene + bloom pyramid — the runtime's `hdr` row. */
 const HDR: GPUTextureFormat = 'rgba16float';
@@ -158,6 +159,7 @@ export async function createGalaxyEngine(
     makeShader,
     hdrFormat: HDR,
     dustMapFormat: DUST_MAP_FORMAT,
+    targetIds: FIELD_TARGET_IDS,
     onIsmMapLanded: () => model.noteIsmMapLanded(),
     onOrientationRebuilt: (grid) => model.noteOrientationRebuilt(grid),
   });
@@ -429,7 +431,7 @@ export async function createGalaxyEngine(
     // `fadeAlpha` carries `debugGalaxyWeight`, dimming the legacy sprites the
     // same way the analytic field's fieldSplat/hiiSplat shaders do: a
     // symmetric dim, never a hard suppression of the primary alone.
-    const tuning = toMilkyWayTuning(render, model.starCount);
+    const tuning = toMilkyWayCloudTuning(render, model.starCount);
     const aggregatePx = targets.reducedSize(render.aggregateDivisor);
     // Each pack's own target height gives its focal term (symmetric fovY).
     const pxPerRadOf = (heightPx: number): number => heightPx / (2 * Math.tan(fov / 2));

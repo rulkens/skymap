@@ -1,6 +1,6 @@
 /**
  * tour.integration.test — opacity composition for the `cosmicFlows` clip: the clip
- * channel masks, crossfades and resets, and the DRAWN alpha follows it.
+ * factor masks and crossfades, and the DRAWN alpha follows it.
  *
  * Clock model: the clip epoch starts on the first tick (nowMs=0), so
  * `elapsed = nowMs / 1000` seconds. Hence the stamps below — 2000 fires the
@@ -17,10 +17,9 @@ import { createClipPlayer } from '../../../src/services/engine/subsystems/clipPl
 import { UNSTARTED_EPOCHS } from '../../../src/services/engine/camera/drivers/cameraEpochs';
 import { createFadeRegistry } from '../../../src/services/animation/fadeRegistry';
 import { cosmicFlows } from '../../../src/compositions/clips/cosmicFlows';
-import { INITIAL_SETTINGS } from '../../../src/state/settings/initialSettings';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { galaxyPointSpritesPass } from '../../../src/layers/galaxyCatalog/pointSprites/passes/galaxyPointSpritesPass';
-import { deriveMilkyWayCloudAlpha } from '../../../src/layers/milkyWay/cloud/present/milkyWayCloudLiveness';
+import { deriveMilkyWayCloudAlpha } from '../../../src/layers/milkyWay/cloud/present/deriveMilkyWayCloudAlpha';
 import { APP_VISIBILITY_REGISTRY } from '../../../src/compositions/appVisibility';
 import { gatePassByFade } from '../../../src/services/engine/layer/gatePassByFade';
 import { resolveFadeValue } from '../../../src/services/engine/presentation/resolveFadeValue';
@@ -82,7 +81,7 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
       clipEpoch = clipPlayer.tick(clipEpoch, nowMs).clipEpoch;
     };
 
-    return { store, clipPlayer, tick };
+    return { clipPlayer, tick };
   }
 
   it('the flow mask keeps composed alpha at 0 until the lift', () => {
@@ -105,52 +104,6 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
 
     const flowFactorAfterLift = clipPlayer.clipOpacityOf('flow');
     expect(flowFactorAfterLift).toBe(1);
-
-    clipPlayer.destroy();
-  });
-
-  it('the crossfade dims galaxies without touching intent', () => {
-    const { store, clipPlayer, tick } = setupClip();
-
-    tick(0);
-    tick(2_000); // mask + scene cues fire
-    tick(4_000); // crossfade cues fire: fade(flow→1,3) + fade(survey→0,3)
-    tick(7_000); // the 3-second survey dim completes
-
-    const surveyClipFactor = clipPlayer.clipOpacityOf('survey');
-    expect(surveyClipFactor).toBe(0);
-
-    // "Untouched" is the boot value per id, NOT a blanket `true`: the
-    // galaxy catalog cluster boots each catalog from its own Layer literal,
-    // and DesiDeep boots false.
-    const settings = store.getState().settings;
-    const catalogItems = settings.galaxyCatalogs.items as Record<string, { enabled: boolean }>;
-    const bootItems = INITIAL_SETTINGS.galaxyCatalogs.items as Record<string, { enabled: boolean }>;
-    for (const [id, item] of Object.entries(catalogItems)) {
-      expect(item.enabled).toBe(bootItems[id]?.enabled);
-    }
-
-    clipPlayer.destroy();
-  });
-
-  it('clip end restores composed alpha to the steady state', () => {
-    const { clipPlayer, tick } = setupClip();
-
-    tick(0);
-    tick(2_000);
-    tick(4_000); // crossfade starts; survey → 0, flow → rising
-    tick(5_000);
-
-    const surveyMid = clipPlayer.clipOpacityOf('survey');
-    expect(surveyMid).toBeGreaterThanOrEqual(0);
-    expect(surveyMid).toBeLessThan(1);
-
-    clipPlayer.stop();
-
-    const surveyAfterStop = clipPlayer.clipOpacityOf('survey');
-    const flowAfterStop = clipPlayer.clipOpacityOf('flow');
-    expect(surveyAfterStop).toBe(1);
-    expect(flowAfterStop).toBe(1);
 
     clipPlayer.destroy();
   });

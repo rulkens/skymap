@@ -1,0 +1,21 @@
+# cloud-bake-rs: bakes the global cloud-opacity map (8192x4096 grey lossy WebP, q80) for one UTC day
+# from NASA GIBS and EUMETSAT WMS imagery.
+#
+# WebP: libwebp through libwebp-sys (builds the C library with `cc`, no cmake). HTTP: blocking
+# ureq on plain threads, no async runtime.
+[package]
+name = "cloud-bake-rs"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+rayon = "1"
+image = { version = "0.25", default-features = false, features = ["png", "tiff"] }
+libwebp-sys = { version = "0.14", features = ["neon", "sse41"] }
+serde_json = "1"
+mozjpeg = "0.10"
+ureq = "3"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
