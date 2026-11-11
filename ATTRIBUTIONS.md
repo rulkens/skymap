@@ -2094,6 +2094,52 @@ bake credits "HiRISE: NASA/JPL/University of Arizona".
   addresses tried answered 404).
 - **Not verified:** the CC0 statement as it stands on 2026-10-07.
 
+## Moon surface
+
+Baked by `npm run build-surface-tiles -- --body moon` into `moon-tiles/`.
+
+### LROC WAC global mosaic
+
+<!-- attribution: id=lroc-wac; keys=lroc.* -->
+
+- **What:** Lunar LRO LROC WAC Global Morphologic Mosaic, 100 m.
+- **By:** Speyerer et al., LROC team (NASA/GSFC/Arizona State University);
+  publisher USGS Astrogeology Science Center.
+- **Licence:** Public domain, as a NASA product hosted by USGS Astrogeology.
+- **Use:** Free, no credit asked
+- **Attribution:** None asked. Ours: "LROC WAC mosaic: NASA/GSFC/Arizona State
+  University, USGS Astrogeology (public domain)."
+- **Upstream:** <https://planetarymaps.usgs.gov/mosaic/Lunar_LRO_LROC-WAC_Mosaic_global_100m_June2013.tif>
+- **Enters skymap:** fetched by hand (`data/raw/lroc/README.md`) →
+  `tools/textures/surfaceBodies/moonSurfaceBake.ts`.
+- **Modified:** Yes. Re-tiled, de-lit against LOLA and tinted to the base
+  globe's colour.
+- **Checked:** 2026-11-11: the record page
+  (<https://astrogeology.usgs.gov/search/map/moon_lro_lroc_wac_global_morphologic_mosaic_100m>)
+  answers HTTP 403 to a script.
+- **Not verified:** the record's own access and use constraints.
+
+### LOLA global heights
+
+<!-- attribution: id=lola-ldem; keys=lola.* -->
+
+- **What:** Lunar LRO LOLA Global LDEM, 118 m.
+- **By:** Smith et al., NASA/GSFC LOLA team; publisher USGS Astrogeology
+  Science Center.
+- **Licence:** Public domain, as a NASA product hosted by USGS Astrogeology.
+- **Use:** Free, no credit asked
+- **Attribution:** None asked. Ours: "LOLA 118 m DEM: NASA/GSFC LOLA team, USGS
+  Astrogeology (public domain)."
+- **Upstream:** <https://planetarymaps.usgs.gov/mosaic/Lunar_LRO_LOLA_Global_LDEM_118m_Mar2014.tif>
+- **Enters skymap:** fetched by hand (`data/raw/lola/README.md`) →
+  `moonSurfaceBake.ts`.
+- **Modified:** Yes. Converted to Float32 metres, re-gridded, raised 400 m to
+  the scene's datum.
+- **Checked:** 2026-11-11: the record page
+  (<https://astrogeology.usgs.gov/search/map/moon_lro_lola_global_ldem_118m>)
+  answers HTTP 403 to a script.
+- **Not verified:** the record's own access and use constraints.
+
 ## 3D models
 
 Each model is shipped as a derivative under `public/data/meshes/<key>*`; the
