@@ -16,8 +16,8 @@ import { closeBitmap } from '../../../../utils/gpu/closeBitmap';
 
 import type { AssetSlot } from '../../../../@types/loading/AssetSlot';
 import type { BodyTextureReq } from '../@types/BodyTextureReq';
-import type { BodyTextureKey } from '../../../../@types/data/BodyTextureKey';
-import type { BodyTextureSlotKey } from '../../../../@types/data/BodyTextureSlotKey';
+import type { BodyTextureKey } from '../@types/BodyTextureKey';
+import type { BodyTextureSlotKey } from '../../@types/BodyTextureSlotKey';
 import type { BodyTextureSinks } from '../@types/BodyTextureSinks';
 
 /** Route a committed bitmap to every renderer that consumes `entry`. */

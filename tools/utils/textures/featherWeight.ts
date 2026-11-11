@@ -1,4 +1,4 @@
-import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
+import type { LonLatBounds } from '../../../src/layers/body/surfaceTiles/format/@types/LonLatBounds';
 
 /**
  * featherWeight — 1 inside `core`, 0 on or outside `outer`, a smoothstep

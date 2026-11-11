@@ -1,4 +1,4 @@
-import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
+import type { LonLatBounds } from '../../../src/layers/body/surfaceTiles/format/@types/LonLatBounds';
 import type { FieldArrow } from './FieldArrow';
 
 /** `originalBox`/`adjustedBox` are the boxes the displayed images were

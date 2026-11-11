@@ -11,7 +11,7 @@
  * generated body-facts tables.
  */
 
-import type { GalaxyInfo } from '../../src/@types/engine/GalaxyInfo';
+import type { GalaxyInfo } from '../../src/layers/galaxyCatalog/records/@types/GalaxyInfo';
 import type { StructureInfo } from '../../src/@types/data/structure/StructureInfo';
 import type { MilkyWayInfo } from '../../src/@types/engine/MilkyWayInfo';
 import type { FieldStarInfo } from '../../src/@types/engine/FieldStarInfo';

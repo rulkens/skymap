@@ -3,7 +3,7 @@
  * the baked cavity-wall mesh, drawn as an additive Fresnel shell.
  */
 
-import type { ShellMesh } from '../../../../@types/data/shellMesh/ShellMesh';
+import type { ShellMesh } from '../../@types/ShellMesh';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 
 export type LocalBubbleRenderer = {

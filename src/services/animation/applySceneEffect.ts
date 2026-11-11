@@ -44,8 +44,7 @@ export function applySceneEffect(
     }
 
     case 'focus': {
-      // `null` clears focus, driving structureFocus recession to 0 and
-      // de-isolating every structure.
+      // `null` clears focus, driving the focus recession back to 0.
       store.dispatch(updateSelectionFocus(effect.ref));
       return;
     }

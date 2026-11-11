@@ -8,7 +8,6 @@
 
 import { describe, it, expect } from 'vitest';
 import { buildPointInterleavedBuffer } from '../../../../../src/layers/galaxyCatalog/pointSprites/render/buildPointInterleavedBuffer';
-import { Source } from '../../../../../src/data/source';
 import { makeGalaxyCatalog } from '../../../../fixtures/makeGalaxyCatalog';
 import type { GalaxyCatalog } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 
@@ -31,7 +30,7 @@ describe('buildPointInterleavedBuffer', () => {
     const cloud = makeCloud(3);
     const result = buildPointInterleavedBuffer({
       cloud,
-      source: Source.SDSS,
+      source: 'sdss',
       stats: STATS,
     });
     expect(result.interleaved).toBeInstanceOf(Float32Array);
@@ -45,7 +44,7 @@ describe('buildPointInterleavedBuffer', () => {
     cloud.magG.set([18, 18]); // identical so per-galaxy-catalog shift is zero
     const { interleaved } = buildPointInterleavedBuffer({
       cloud,
-      source: Source.SDSS,
+      source: 'sdss',
       stats: STATS,
     });
     expect(interleaved[0 * SLOTS + 0]).toBeCloseTo(10);
@@ -61,7 +60,7 @@ describe('buildPointInterleavedBuffer', () => {
     cloud.angularWeight.set([128, 255, 0]);
     const { interleaved } = buildPointInterleavedBuffer({
       cloud,
-      source: Source.SDSS,
+      source: 'sdss',
       stats: STATS,
     });
     expect(interleaved[0 * SLOTS + 9]).toBe(1);
@@ -75,7 +74,7 @@ describe('buildPointInterleavedBuffer', () => {
     cloud.diameterIsFallback.set([0, 0, 1]);
     const { interleaved, isFallbackArr } = buildPointInterleavedBuffer({
       cloud,
-      source: Source.SDSS,
+      source: 'sdss',
       stats: STATS,
     });
     expect([0, 1, 2].map((r) => Math.sign(interleaved[r * SLOTS + 5]!))).toEqual([1, -1, 1]);
@@ -95,7 +94,7 @@ describe('buildPointInterleavedBuffer', () => {
     cloud.magZ.set([NaN]);
     const { interleaved } = buildPointInterleavedBuffer({
       cloud,
-      source: Source.SDSS,
+      source: 'sdss',
       stats: STATS,
     });
     expect(interleaved[4]).toBeCloseTo(1.05, 5);

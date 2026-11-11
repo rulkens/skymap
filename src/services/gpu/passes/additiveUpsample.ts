@@ -15,10 +15,8 @@
  *
  * Given those, upsampling the sum and adding it to HDR is mathematically
  * what drawing every contributor straight into HDR would have produced,
- * up to reconstruction error.  Two subsystems satisfy the contract today
- * — the cosmological scalar-volume raymarch and the Milky Way cloud's
- * star aggregate — and each holds its own instance, so their gates stay
- * independent.
+ * up to reconstruction error.  Each subsystem that satisfies the contract
+ * holds its own instance, so their gates stay independent.
  *
  * ### Why a dedicated pass rather than part of the tone-map composite
  *

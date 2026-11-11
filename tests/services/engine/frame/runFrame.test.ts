@@ -9,6 +9,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
+import { RECEDE_ALL_FOCUS_SPHERE } from '../../../../src/data/selection/recedeAllFocusSphere';
 
 // Mocked so the FPS-wiring fixtures don't drive the real demand table and the dedicated test can
 // assert the per-frame call (runFrame calls it every tick so any state change re-derives loads).
@@ -76,6 +77,8 @@ import { setSimDays } from '../../../../src/state/time/timeSlice';
 import { rootReducer } from '../../../../src/store/rootReducer';
 import type { RunFrameDeps } from '../../../../src/@types/engine/frame/RunFrameDeps';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
+import type { VisibilityEntry } from '../../../../src/@types/engine/layer/VisibilityEntry';
+import { stellarStreamsVisibility } from '../../../../src/layers/stellarStreams/visibility';
 import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 import type { CameraDriver } from '../../../../src/@types/engine/camera/CameraDriver';
 import type { DriverId } from '../../../../src/@types/engine/camera/DriverId';
@@ -83,7 +86,7 @@ import type { ClipPlayer } from '../../../../src/@types/engine/subsystems/ClipPl
 import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/FrameContentPlanner';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/layers/galaxyCatalog/state/defaults';
-import { createStructureFocusSubsystem } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
+import { createRecedingFocusSubsystem } from '../../../../src/services/engine/subsystems/recedingFocusSubsystem';
 import {
   inputSourceAttached,
   inputGestureStarted,
@@ -200,6 +203,7 @@ function makeState(): EngineState {
     // Read unconditionally by `runFrame`'s NEAR0 altitude line, before the
     // ready gate.
     selectionRows: { focus: null },
+    selection: { hover: null, select: null, focus: null },
   } as unknown as EngineState;
 }
 
@@ -849,7 +853,7 @@ describe('runFrame — the label-director wake fold', () => {
         proceduralDisks: null,
         diskPlannerWalk: null,
         hiResFamous: null,
-        structureFocus: createStructureFocusSubsystem({ requestRender: vi.fn() }),
+        recedingFocus: createRecedingFocusSubsystem({ requestRender: vi.fn() }),
         fades: { tick: vi.fn(), opacityOf: () => 0, isAnyAnimating: () => false },
         cosmoLabelDirector: { runFrame: vi.fn(cosmoRunFrame) },
         foregroundLabelDirector: { runFrame: vi.fn(foregroundRunFrame) },
@@ -882,7 +886,7 @@ describe('runFrame — the label-director wake fold', () => {
       () => false,
       () => false,
     );
-    const structureFocus = createStructureFocusSubsystem({ requestRender: vi.fn() }, 0);
+    const recedingFocus = createRecedingFocusSubsystem({ requestRender: vi.fn() }, 0);
     const state = {
       ...base,
       selectionKindRows: [
@@ -894,13 +898,20 @@ describe('runFrame — the label-director wake fold', () => {
       subsystems: {
         ...base.subsystems,
         scheduler: { requestRender: vi.fn(), requestIdleFrame: vi.fn() },
-        structureFocus,
+        recedingFocus,
       },
     } as unknown as EngineState;
     // Virgo was focused and settled; the focus is already cleared (the fixture's
     // focus row is null), so the frames below tick its fade-out.
-    structureFocus.update({ id: 'virgo', worldPos: [1, 0, 0], physicalRadiusMpc: 2 } as never, 0);
-    structureFocus.produceFocusUniforms(500);
+    recedingFocus.update(
+      { type: 'structure', id: 'virgo' },
+      {
+        type: 'structure',
+        focusRegion: { center: [1, 0, 0], apparentRadiusMpc: 2, physicalRadiusMpc: 2 },
+      },
+      0,
+    );
+    recedingFocus.produceFocus(500, () => 1);
     const deps = makeCamDeps(state);
     const snapshotAt = (nowMs: number) => {
       runFrame(state, deps, nowMs);
@@ -914,6 +925,90 @@ describe('runFrame — the label-director wake fold', () => {
     const settled = snapshotAt(1100);
     expect(settled.focusBlend).toBe(0);
     expect(settled.focusPickId).toBeNull();
+  });
+
+  it('a focused stream ramps the blend under its own pick word, its subjectOnly region as the recede-all sphere', () => {
+    const STREAM_WORD = 7;
+    const base = makeReadyState(
+      () => false,
+      () => false,
+    );
+    const stream = { type: 'stellarStream', slug: 'cetus-palca' };
+    const state = {
+      ...base,
+      selection: { hover: null, select: null, focus: stream },
+      selectionRows: { focus: { type: 'stellarStream', focusRegion: 'subjectOnly' } },
+      selectionKindRows: [{ type: 'stellarStream', encodePick: () => STREAM_WORD }],
+      subsystems: {
+        ...base.subsystems,
+        scheduler: { requestRender: vi.fn(), requestIdleFrame: vi.fn() },
+        recedingFocus: createRecedingFocusSubsystem({ requestRender: vi.fn() }, 0),
+      },
+    } as unknown as EngineState;
+    const deps = makeCamDeps(state);
+    runFrame(state, deps, 0);
+    runFrame(state, deps, 500);
+
+    const snapshot = vi.mocked(state.subsystems.cosmoLabelDirector.runFrame).mock.lastCall![1]
+      .snapshot;
+    expect(snapshot.focusBlend).toBe(1);
+    expect(snapshot.focusPickId).toBe(STREAM_WORD);
+    expect(snapshot.focus).toEqual({ ...RECEDE_ALL_FOCUS_SPHERE, blend: 1 });
+  });
+
+  describe("a focused stream recedes the scene only while the streams' show entry is visible", () => {
+    function focusedStreamFrame(visibilityEntries: readonly VisibilityEntry[], fade: number) {
+      const base = makeReadyState(
+        () => false,
+        () => false,
+      );
+      const recedingFocus = createRecedingFocusSubsystem({ requestRender: vi.fn() }, 0);
+      const state = {
+        ...base,
+        visibilityEntries,
+        selection: { hover: null, select: null, focus: { type: 'stellarStream', slug: 'gd-1' } },
+        selectionRows: { focus: { type: 'stellarStream', focusRegion: 'subjectOnly' } },
+        selectionKindRows: [{ type: 'stellarStream', encodePick: () => 7 }],
+        subsystems: {
+          ...base.subsystems,
+          scheduler: { requestRender: vi.fn(), requestIdleFrame: vi.fn() },
+          fades: { ...base.subsystems.fades, opacityOf: () => fade },
+          recedingFocus,
+        },
+      } as unknown as EngineState;
+      const deps = makeCamDeps(state);
+      runFrame(state, deps, 0);
+      runFrame(state, deps, 500);
+      return {
+        snapshot: vi.mocked(state.subsystems.cosmoLabelDirector.runFrame).mock.lastCall![1]
+          .snapshot,
+        drawn: recedingFocus.lastFocus(),
+      };
+    }
+    // No band, so only the switch speaks; the fixture camera sits 100 Mpc out.
+    const SWITCH_ONLY: readonly VisibilityEntry[] = [
+      { key: 'stellarStreams', selects: ['stellarStream'] },
+    ];
+
+    it('shown: recedes as before', () => {
+      const { snapshot } = focusedStreamFrame(SWITCH_ONLY, 1);
+      expect(snapshot.focusBlend).toBe(1);
+      expect(snapshot.focus.blend).toBe(1);
+    });
+
+    it('switched off: un-receded and pickable, in the frame and in what a pick reads back', () => {
+      const { snapshot, drawn } = focusedStreamFrame(SWITCH_ONLY, 0);
+      expect(snapshot.focusBlend).toBe(0);
+      expect(snapshot.focus.blend).toBe(0);
+      expect(drawn.blend).toBe(0);
+      expect(drawn.uniforms.blend).toBe(0);
+    });
+
+    it('out of its band: un-receded', () => {
+      const { snapshot } = focusedStreamFrame(stellarStreamsVisibility, 1);
+      expect(snapshot.focusBlend).toBe(0);
+      expect(snapshot.focus.blend).toBe(0);
+    });
   });
 });
 
@@ -953,15 +1048,13 @@ describe('runFrame — the planner keep-ticking fold', () => {
         proceduralDisks: null,
         diskPlannerWalk: null,
         hiResFamous: null,
-        structureFocus: {
+        recedingFocus: {
           update: vi.fn(),
-          produceFocusUniforms: vi.fn(() => ({
-            center: [1, 2, 3],
-            apparentRadiusMpc: 1,
-            physicalRadiusMpc: 1,
+          produceFocus: vi.fn(() => ({
+            uniforms: { center: [1, 2, 3], apparentRadiusMpc: 1, physicalRadiusMpc: 1, blend: 0.5 },
             blend: 0.5,
+            ref: null,
           })),
-          lastFocusRef: () => null,
           isAwake: () => false,
         },
         fades: { tick: vi.fn(), opacityOf: () => 0, isAnyAnimating: () => false },

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createFlowFieldRenderer } from '../../../../../src/layers/flow/streamlines/render/flowFieldRenderer';
 import type { ScalarCube } from '../../../../../src/@types/data/volume/ScalarCube';
-import type { FlowSettings } from '../../../../../src/@types/settings/FlowSettings';
+import type { FlowSettings } from '../../../../../src/layers/flow/@types/FlowSettings';
 import { HEAD_SPEED_SCALE } from '../../../../../src/layers/flow/streamlines/data/flowFieldConstants';
 
 /**

@@ -13,7 +13,7 @@
 //
 // Storing the raw pre-knee scalar in alpha (rather than reading it back off a
 // colour channel) is what lets the knee be applied to the true summed scalar
-// independent of tint: the O/B blue tint is NOT r = 1 (tint.wesl), so no single
+// independent of tint: the O/B blue tint is NOT r = 1 (lib/starTint.wesl), so no single
 // channel is a valid scalar proxy.
 //
 // ## The composite = the leaf formula, applied to the sum

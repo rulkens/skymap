@@ -1,7 +1,7 @@
 # Tour and clip recorder
 
 An offline authoring tool that plays a skymap take — a tour ("The Long Way
-Out" and any other entry in `tourRegistry`), optionally windowed to a beat
+Out" and any other entry in `APP_TOUR_REGISTRY`), optionally windowed to a beat
 range, or a standalone clip from `clipRegistry` — frame by frame and encodes
 it straight to an mp4: a deterministic, film-quality take, not a live
 capture. It drives headless Chromium with Playwright, hands the page's clock
@@ -65,7 +65,7 @@ positional tour id and with `--beats` — see [Clip takes](#clip-takes) below:
 | `--rebuild`  | off                                                 | with `--serve`, force a fresh build even if `tools/record/.build/` already has one                                                                                                                       |
 | `--dome`     | off                                                 | fulldome fisheye take — see [Fulldome (Wisdome)](#fulldome-wisdome); implies `--size 4096x4096 --dpr 1 --fps 30` (`--fps 60` also accepted), encodes with `libx264` at level 6.1 instead of VideoToolbox |
 | `--frames`   | none — plays to the take's natural end              | stop after this many CAPTURED frames (positive integer); the take ends at min(natural end, a looping clip's cycle, `--frames`) — never a way to run a loop twice                                         |
-| positional   | `grandTour`                                         | tour id, must exist in `tourRegistry`; rejected alongside `--clip`                                                                                                                                       |
+| positional   | `grandTour`                                         | tour id, must exist in `APP_TOUR_REGISTRY`; rejected alongside `--clip`                                                                                                                                  |
 
 `--size` always means the pixels that land in the mp4; `--dpr` only chooses
 how they are produced. At the default `--dpr 1` the viewport IS the film
@@ -232,6 +232,14 @@ The guarantee this buys is bounded: matching frame counts and the same sim
 instant across two takes, not bit-identical mp4s. Pixel-level determinism
 between takes is `npm run spike-virtual-time`'s standing job, not this
 harness's.
+
+The one input a take does not control is the galaxy-thumbnail services (SDSS
+ImgCutout, CDS hips2fits): the page fetches them live, and which dots turn
+into images depends on how those hosts answer that day. Virtual time pauses
+while any fetch is pending, so the harness bounds every request to another
+origin at `EXTERNAL_FETCH_DEADLINE_MS` (8 s). A host that is slow or down
+costs a few timed-out thumbnails, not the take; a take recorded during an
+outage shows plain dots where another day's take shows cutouts.
 
 ## Frame 0 and scene dressing
 

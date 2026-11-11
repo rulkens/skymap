@@ -60,6 +60,7 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
           'fetch-dhm',
           'fetch-eox',
           'fetch-gaia',
+          'fetch-galstreams',
           'fetch-height',
           'fetch-horizons',
           'fetch-hyperleda',
@@ -68,6 +69,7 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
           'fetch-skraafoto',
           'fetch-structures',
           'fetch-textures',
+          'fetch-vasiliev2021',
           'fetch-voyager-windows',
         ],
         family: 'fetch-<source>',
@@ -98,6 +100,11 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         scripts: ['build-mcpm', 'build-dust', 'build-flow-field', 'build-local-bubble'],
         does: 'Write the density field of the cosmic web, the dust near the Sun, the CF4++ velocity field and the shell of the Local Bubble.',
         manual: DATA,
+      },
+      {
+        scripts: ['build-stellar-streams'],
+        does: 'Write the particles of the stellar streams around the Milky Way: Sagittarius from an N-body model, the others from the galstreams tracks that fetch-vasiliev2021 and fetch-galstreams downloaded.',
+        manual: 'tools/streams/README.md',
       },
       {
         scripts: ['build-ephemeris-corrections', 'build-planet-facts'],
@@ -165,6 +172,11 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         scripts: ['shot'],
         does: 'Takes a picture of any link into the app, in a headless browser, and prints the file’s path.',
         manual: 'tools/shot/README.md',
+      },
+      {
+        scripts: ['mock'],
+        does: 'Shows a design mockup on top of the running app and takes a new picture of it each time you save it, in about a third of a second.',
+        manual: 'tools/mock/README.md',
       },
       {
         scripts: ['capture-featured'],

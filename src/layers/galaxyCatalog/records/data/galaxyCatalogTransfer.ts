@@ -10,8 +10,8 @@
  */
 
 import type { GalaxyCatalog } from '../../../../@types/data/galaxyCatalog/GalaxyCatalog';
-import type { GalaxyCatalogColumn } from '../../../../@types/data/galaxyCatalog/GalaxyCatalogColumn';
-import type { GalaxyCatalogFieldSpec } from '../../../../@types/data/galaxyCatalog/GalaxyCatalogFieldSpec';
+import type { GalaxyCatalogColumn } from '../@types/GalaxyCatalogColumn';
+import type { GalaxyCatalogFieldSpec } from '../@types/GalaxyCatalogFieldSpec';
 import type { ClonedGalaxyCatalog } from '../@types/ClonedGalaxyCatalog';
 import { GALAXY_CATALOG_FIELD_SPECS } from './galaxyCatalogFormat';
 

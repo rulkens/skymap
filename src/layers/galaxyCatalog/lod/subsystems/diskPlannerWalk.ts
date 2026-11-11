@@ -20,7 +20,6 @@
  * shared loop.
  */
 
-import { galaxyCatalogIdOf } from '../../../../utils/galaxyCatalogIdOf';
 import { strideWindow } from '../utils/strideWindow';
 import { maxVisibleCamDistSq } from '../utils/maxVisibleCamDistSq';
 import { apparentSizePxAtDistance } from '../utils/apparentSizePxAtDistance';
@@ -35,7 +34,7 @@ import type { Destroyable } from '../../../../@types/rendering/Destroyable';
 import type { DiskPlannerWalk } from '../@types/DiskPlannerWalk';
 import type { DiskRowVisitor } from '../@types/DiskRowVisitor';
 import type { DiskWalkInput } from '../@types/DiskWalkInput';
-import type { GalaxyCatalogSourceType } from '../../@types/GalaxyCatalogSourceType';
+import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
 import type { DiskPlannerWalkDeps } from '../@types/DiskPlannerWalkDeps';
 
 /**
@@ -53,7 +52,7 @@ export function createDiskPlannerWalk(deps: DiskPlannerWalkDeps = {}): DiskPlann
 
   // The shared stride cursors: which row each block's decimated window resumes
   // from next frame, by source then ordinal base. One map for BOTH bodies.
-  const strideStartBySource = new Map<GalaxyCatalogSourceType, Map<number, number>>();
+  const strideStartBySource = new Map<GalaxyCatalogId, Map<number, number>>();
 
   function runFrame(
     input: DiskWalkInput,
@@ -79,7 +78,7 @@ export function createDiskPlannerWalk(deps: DiskPlannerWalkDeps = {}): DiskPlann
     let acceptedThisFrame = 0;
 
     for (const [source, record] of records) {
-      if (rowsHidden || !visibleCatalogs.has(galaxyCatalogIdOf(source))) {
+      if (rowsHidden || !visibleCatalogs.has(source)) {
         procedural.onSourceHidden(source);
         textured.onSourceHidden(source);
         continue;

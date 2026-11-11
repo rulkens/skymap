@@ -23,7 +23,7 @@ import { enterSky } from '../sky/enterSky';
 import { selectTakeoverSource } from './selectors';
 import { selectCameraBase, selectFovYRad } from '../camera/selectors';
 import { selectFocusRef } from '../selection/selectors';
-import { tourRegistry } from '../../data/animation/tours/tourRegistry';
+import { APP_TOUR_REGISTRY } from '../../compositions/appTours';
 import { APP_EXHIBIT_REGISTRY } from '../../compositions/appExhibits';
 import type { TakeoverSource } from '../../@types/takeover/TakeoverSource';
 
@@ -53,7 +53,7 @@ export function* watchTakeoverSaga() {
     let source: TakeoverSource;
     let body: () => Generator;
     if (startTour.match(action)) {
-      const tour = tourRegistry[action.payload.id];
+      const tour = APP_TOUR_REGISTRY[action.payload.id];
       source = { kind: 'tour', id: tour.id };
       body = () => withSceneSnapshotSaga(() => tourBodySaga(tour, action.payload.beats));
     } else if (openExhibit.match(action)) {

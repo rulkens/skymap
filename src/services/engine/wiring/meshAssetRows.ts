@@ -24,13 +24,15 @@ import type { MeshPresentation } from '../../../@types/scene/MeshPresentation';
 /** One row per mesh body: loads when it is `resolvePx` across (where its glint hands over), releases below half that. */
 function meshBodyRow(state: Pick<EngineState, 'gpu'>, body: MeshPresentation): AssetWiringRow {
   const { resolvePx } = findByIdOrThrow(SCENE_BODIES, body.id, 'meshBodyRow');
+  // A generated mesh has no baked tiers to clamp to.
+  const ceiling = MESH_ASSETS[body.meshKey]?.tierCeiling;
   return {
     key: meshBodySlotKey(body.id),
     // `commit`/`onRelease` re-read `state.gpu.meshBodyRenderer` at call time, so the
     // slot can be minted before that renderer exists.
     slot: createAssetSlot<MeshAsset, MeshReq>({
       name: `${body.id}-mesh`,
-      fetch: meshFetcher,
+      fetch: body.buildMesh ?? meshFetcher,
       // `setMesh` copies every bitmap into its own texture; close the decoded copies.
       commit: async (asset) => {
         state.gpu.meshBodyRenderer?.setMesh(body.id, asset);
@@ -41,7 +43,7 @@ function meshBodyRow(state: Pick<EngineState, 'gpu'>, body: MeshPresentation): A
     }),
     req: (tier) => ({
       meshKey: body.meshKey,
-      tier: clampTier(tier, MESH_ASSETS[body.meshKey]!.tierCeiling),
+      tier: ceiling === undefined ? tier : clampTier(tier, ceiling),
     }),
     demand: { size: { body: body.id, loadPx: resolvePx, releasePx: resolvePx / 2 } },
     priority: 10, // same rank as body textures — rarely co-demanded with the planet family

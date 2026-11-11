@@ -12,15 +12,14 @@ import StarDetailCard from '../../../../../../src/layers/starCatalog/card/ui/Sta
 import { starCatalogSelectionKinds } from '../../../../../../src/layers/starCatalog/selection/kinds';
 import { SGR_A_STAR_ENTRY } from '../../../../../../src/layers/blackHoles/sources/sgrAStar';
 import { SCALE_UNITS } from '../../../../../../src/data/scaleUnits';
-import { Source } from '../../../../../../src/data/source';
 import { starRowDriver } from '../../../../../fixtures/starRowDriver';
-import type { FamousStarMetaEntry } from '../../../../../../src/@types/loading/FamousStarMetaEntry';
+import type { FamousStarMetaEntry } from '../../../../../../src/layers/starCatalog/card/@types/FamousStarMetaEntry';
 import type { StarInfo } from '../../../../../../src/layers/starCatalog/@types/StarInfo';
 
 // A Sun-like dwarf 12 pc out: absMag 4.67, BP−RP 0.82 (in range → no '~').
 const fieldStar: StarInfo = {
   type: 'starCatalog',
-  source: Source.GaiaStars,
+  source: 'gaiaStars',
   index: 0,
   id: null,
   displayName: 'Field star',
@@ -55,7 +54,7 @@ const rigelMeta: FamousStarMetaEntry = {
 
 const rigel: StarInfo = {
   type: 'starCatalog',
-  source: Source.FamousStar,
+  source: 'famousStar',
   index: 1,
   id: 'rigel',
   displayName: 'Rigel',
@@ -128,7 +127,7 @@ describe('StarDetailCard', () => {
     // lookup or an unwired card block fails here rather than only in the browser.
     const target = starCatalogSelectionKinds[0]!.toFocusable({
       type: 'starCatalog',
-      source: Source.SStar,
+      source: 'sStar',
       index: 0,
       id: 's2',
       label: 'S2',
@@ -158,7 +157,7 @@ describe('StarDetailCard', () => {
     // would read "0 m" — a fact about the frame, not about the star.
     const sun: StarInfo = {
       type: 'starCatalog',
-      source: Source.Sun,
+      source: 'sun',
       index: 0,
       id: 'sun',
       displayName: 'Sun',

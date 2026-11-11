@@ -9,7 +9,7 @@
  */
 
 import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
-import type { GalaxyFieldTuning } from '../../../../src/@types/galaxy/GalaxyFieldTuning';
+import type { GalaxyFieldTuning } from '../../../../src/layers/milkyWay/field/mixture/@types/GalaxyFieldTuning';
 import type { GalaxyIsmMap } from '../../../../src/@types/galaxy/GalaxyIsmMap';
 import type { RenderSettings } from './RenderSettings';
 import type { LodSettings } from './LodSettings';
@@ -35,7 +35,7 @@ export type GalaxyEngineHandle = {
   // and future consumers.
   getIsmMapTexture(): GPUTexture;
   // The same output read back to the CPU, once per generation — null until
-  // the first readback lands (`createGalaxyModel.ts`'s `scheduleIsmMapReadback`).
+  // the first readback lands (the field host's `createIsmMapReadbacks`).
   // Off the placement path since Task 10 — `placeDust.wesl` reads the GPU
   // texture directly; this feeds the seeding debug view and
   // `youngStars.invMeanNorm` instead.

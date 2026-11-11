@@ -7,7 +7,7 @@ import { DESI_PATCHES } from '../../tools/catalog/desiPatches';
  * of the two identity axes (key / source) would silently merge or overwrite
  * two patches' outputs. `source` uniqueness already guarantees unique `.bin`
  * stems too — the stem comes from `APP_SOURCE_REGISTRY[source].binBaseName`, one
- * registry entry per `Source` — so there is no separate binName axis to pin.
+ * registry entry per source — so there is no separate binName axis to pin.
  * These pin the axes are all distinct.
  */
 describe('DESI_PATCHES', () => {

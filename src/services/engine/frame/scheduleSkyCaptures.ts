@@ -24,11 +24,11 @@ import { deriveView } from './deriveView';
 import { regionRelativeDistanceMpc } from '../../../utils/regions/regionRelativeDistanceMpc';
 import { sceneBodyStates } from './sceneBodyStates';
 import { ALL_CUBE_FACES } from '../../../data/rendering/cubemapCaptures';
-import { captureTimingSlotName } from './timing/captureTimingSlotName';
 
 export function scheduleSkyCaptures(input: {
   readonly state: EngineState;
   readonly ctx: FrameView;
+  readonly captureOn: (key: CubemapCaptureKey) => boolean;
 }): CaptureFaceContexts {
   const { state, ctx } = input;
   const bodyStates = sceneBodyStates(state, ctx);
@@ -61,7 +61,7 @@ export function scheduleSkyCaptures(input: {
       }
     }
     // Before the stale check, so an unticked row keeps its bake record and bakes once re-ticked.
-    if (!bandActive || state.settings.debug.disabledPasses[captureTimingSlotName(key)]) continue;
+    if (!bandActive || !input.captureOn(key)) continue;
     // A `rebakeOnSettings: false` row reads its bake as current whatever the
     // settings (or catalog content) do; only a band re-entry (which nulls the
     // record) re-bakes it — content bumps obey the same gate as settings writes.

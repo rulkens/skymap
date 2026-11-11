@@ -14,7 +14,7 @@ import { sendJson } from '../../utils/http/sendJson.ts';
 import { statusForError } from '../../utils/http/statusForError.ts';
 import type { ErrorStatusRule } from '../../@types/http/ErrorStatusRule.ts';
 import type { AlbedoRecipe } from '../../textures/@types/AlbedoRecipe.ts';
-import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds.ts';
+import type { LonLatBounds } from '../../../src/layers/body/surfaceTiles/format/@types/LonLatBounds.ts';
 import type { SunField } from '../../textures/@types/SunField.ts';
 import { fitSunField } from '../../textures/fitSunField.ts';
 import { geoTiffImagerySource } from '../../textures/geoTiffImagerySource.ts';

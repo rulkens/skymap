@@ -29,7 +29,6 @@ import { bodySelectionRow } from '../../../src/layers/body/selection/bodySelecti
 import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/selection/milkyWaySelectionRow';
 import { zoneOfAvoidanceSelectionRow } from '../../../src/layers/zoneOfAvoidance/selection/zoneOfAvoidanceSelectionRow';
 import { galaxyCatalogSelectionRow } from '../../../src/layers/galaxyCatalog/selection/galaxyCatalogSelectionRow';
-import { Source } from '../../../src/data/source';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
 import { NO_KINDS_OFF } from '../../support/noKindsOff';
@@ -52,7 +51,7 @@ const AT = { x: 0.5, y: 0.5 };
 const EARTH = asSceneBodyId('earth');
 const GALAXIES = {
   catalogs: new Map([
-    [Source.SDSS, makeGalaxyCatalog(1, { positions: new Float32Array([90, 0, 40]) })],
+    ['sdss' as const, makeGalaxyCatalog(1, { positions: new Float32Array([90, 0, 40]) })],
   ]),
 } as unknown as GalaxyRowFixture;
 
@@ -130,7 +129,7 @@ describe('double-tap focus', () => {
 
   it.each([
     ['the Milky Way', { type: 'milkyWay' }, 'milkyWay'],
-    ['a galaxy', { type: 'galaxyCatalog', source: Source.SDSS, index: 0 }, 'sdss-1'],
+    ['a galaxy', { type: 'galaxyCatalog', source: 'sdss' as const, index: 0 }, 'sdss-1'],
   ])('standing, a double-tap on %s turns the head as a search pick does', async (_, ref, id) => {
     const { store, seen, doubleTap } = build();
     stand(store);

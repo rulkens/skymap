@@ -19,8 +19,6 @@ import { encodeBlackHoleFocusId } from '../markers/present/encodeBlackHoleFocusI
 import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKindRow';
 import type { BlackHoleRef } from './@types/BlackHoleRef';
 
-const ENTRIES = BLACK_HOLE_SOURCE_ROWS.map(([, entry]) => entry);
-
 export function blackHoleSelectionRow(pickCode: number): SelectionKindRow<BlackHoleRef> {
   return {
     type: 'blackHole',
@@ -35,7 +33,7 @@ export function blackHoleSelectionRow(pickCode: number): SelectionKindRow<BlackH
     },
     extractRow: (ref, simDays) => {
       const row = BLACK_HOLES.find((hole) => hole.id === ref.id);
-      const entry = ENTRIES.find((e) => e.id === ref.id);
+      const entry = BLACK_HOLE_SOURCE_ROWS.find((e) => e.id === ref.id);
       if (!row || !entry) return null;
       const anchorId = blackHoleAnchorId(row);
       const p = deriveBodyStates(simDays).get(anchorId)!.positionMpc;

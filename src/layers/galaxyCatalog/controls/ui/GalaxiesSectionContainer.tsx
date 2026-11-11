@@ -28,8 +28,7 @@ import {
   setGalaxyFalloffStrength,
 } from '../../state/galaxyCatalogs/slice';
 import { setBiasMode, setAbsMagLimit } from '../../state/bias/slice';
-import { galaxyCatalogIdOf } from '../../../../utils/galaxyCatalogIdOf';
-import type { GalaxyCatalogSourceType } from '../../@types/GalaxyCatalogSourceType';
+import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
 import type { BiasMode as BiasModeT } from '../../@types/BiasMode';
 import type { LayerMainSectionProps } from '../../../../@types/engine/layer/LayerMainSectionProps';
 
@@ -51,8 +50,8 @@ function GalaxiesSectionContainer({ title }: LayerMainSectionProps): React.React
   const falloffStrength = useAppSelector(selectGalaxyFalloffStrength);
 
   const onToggleSource = useCallback(
-    (source: GalaxyCatalogSourceType, enabled: boolean) =>
-      dispatch(setGalaxyCatalogVisible({ id: galaxyCatalogIdOf(source), enabled })),
+    (source: GalaxyCatalogId, enabled: boolean) =>
+      dispatch(setGalaxyCatalogVisible({ id: source, enabled })),
     [dispatch],
   );
 

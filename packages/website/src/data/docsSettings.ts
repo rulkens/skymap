@@ -538,6 +538,34 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
         'galaxyCatalogs.items.famousGalaxy.labelEnabled',
         'the named galaxies',
       ),
+      label('Famous Stars', 'starCatalogs.items.famousStar.labelEnabled', 'the named stars'),
+      {
+        ...label('Sun', 'starCatalogs.items.sun.labelEnabled', ''),
+        does: 'Shows the name of the Sun.',
+      },
+      {
+        ...label('Milky Way', 'milkyWay.labelEnabled', ''),
+        does: 'Shows the name of the Milky Way.',
+      },
+      {
+        ...label('Galactic Centre', 'blackHoles.items.sgr-a-star.labelEnabled', ''),
+        does: 'Shows the name of Sagittarius A*.',
+      },
+      label('Planets', 'bodies.items.planet.labelEnabled', 'the planets and the moons'),
+      {
+        ...label('Earth', 'bodies.items.earth.labelEnabled', ''),
+        does: 'Shows the name of Earth.',
+      },
+      label(
+        'Small bodies',
+        'bodies.items.small-body.labelEnabled',
+        'the asteroids Vesta and Bennu and the dwarf planet Ceres',
+      ),
+      label(
+        'Spacecraft',
+        'missions.items.craft.labelEnabled',
+        'the spacecraft and the other 3D models',
+      ),
       label(
         'Galaxy clusters',
         'structures.items.galaxy-cluster.labelEnabled',
@@ -549,29 +577,6 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
         'Galaxy groups',
         'structures.items.galaxy-group.labelEnabled',
         'the groups of galaxies',
-      ),
-      {
-        ...label('Milky Way', 'milkyWay.labelEnabled', ''),
-        does: 'Shows the name of the Milky Way.',
-      },
-      label('Famous Stars', 'starCatalogs.items.famousStar.labelEnabled', 'the named stars'),
-      label('Planets', 'bodies.items.planet.labelEnabled', 'the planets and the moons'),
-      {
-        ...label('Earth', 'bodies.items.earth.labelEnabled', ''),
-        does: 'Shows the name of Earth.',
-      },
-      {
-        ...label('Sun', 'starCatalogs.items.sun.labelEnabled', ''),
-        does: 'Shows the name of the Sun.',
-      },
-      {
-        ...label('Galactic Centre', 'blackHoles.items.sgr-a-star.labelEnabled', ''),
-        does: 'Shows the name of Sagittarius A*.',
-      },
-      label(
-        'Spacecraft',
-        'missions.items.craft.labelEnabled',
-        'the spacecraft and the other 3D models',
       ),
       label('Open clusters', 'structures.items.open-cluster.labelEnabled', 'the open clusters'),
       label(
@@ -588,11 +593,6 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
         'Galactic Centre',
         'structures.items.gc-cluster.labelEnabled',
         'the star clusters near the centre of the Milky Way',
-      ),
-      label(
-        'Small bodies',
-        'bodies.items.small-body.labelEnabled',
-        'the asteroids Vesta and Bennu and the dwarf planet Ceres',
       ),
       {
         name: 'S-star trails',
@@ -628,6 +628,15 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
         values: SWITCH,
         first: OFF,
         state: 'localBubble.enabled',
+        firstValue: false,
+      },
+      {
+        name: 'Stellar streams',
+        control: 'switch',
+        does: 'Shows the stellar streams round the Milky Way: long trails of stars torn from dwarf galaxies and globular clusters. They come into view as the camera pulls back past about 13,000 light-years from the Sun. Their file is fetched the first time the switch goes on.',
+        values: SWITCH,
+        first: OFF,
+        state: 'stellarStreams.enabled',
         firstValue: false,
       },
       {

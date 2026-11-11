@@ -219,46 +219,50 @@ export function createEarthRenderer(
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'earth.vertex');
   const fsModule = createShaderModuleWithDevLog(device, fsCode, 'earth.fragment');
 
-  const pipeline = device.createRenderPipeline({
-    label: 'earth-pipeline',
-    layout: device.createPipelineLayout({
-      label: 'earth-pipeline-layout',
-      bindGroupLayouts: [bindGroupLayout],
-    }),
-    vertex: {
-      module: vsModule,
-      entryPoint: 'vs',
-      buffers: [
-        {
-          arrayStride: 12, // 3 × f32 position
-          attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }],
-        },
-        {
-          arrayStride: 8, // 2 × f32 uv
-          attributes: [{ shaderLocation: 1, offset: 0, format: 'float32x2' }],
-        },
-        {
-          arrayStride: 12, // 3 × f32 tangent (unit +u=east)
-          attributes: [{ shaderLocation: 2, offset: 0, format: 'float32x3' }],
-        },
-      ],
-    },
-    fragment: {
-      module: fsModule,
-      entryPoint: 'fs',
-      targets: [{ format: targetFormat }],
-    },
-    primitive: {
-      topology: 'triangle-list',
-      frontFace: 'ccw', // CCW = outward-facing (matches cubeSphereMesh winding)
-      cullMode: 'back', // discard inward-facing (inner-surface) triangles
-    },
-    depthStencil: {
-      format: depthFormat,
-      depthWriteEnabled: true,
-      depthCompare: resolveDepthCompare('nearer', reversedZ),
-    },
-  });
+  // `cullMode` is the one difference: a capture face mirrors winding (`viewFlipsWinding`).
+  const createPipeline = (cullMode: GPUCullMode): GPURenderPipeline =>
+    device.createRenderPipeline({
+      label: `earth-pipeline-cull-${cullMode}`,
+      layout: device.createPipelineLayout({
+        label: 'earth-pipeline-layout',
+        bindGroupLayouts: [bindGroupLayout],
+      }),
+      vertex: {
+        module: vsModule,
+        entryPoint: 'vs',
+        buffers: [
+          {
+            arrayStride: 12, // 3 × f32 position
+            attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }],
+          },
+          {
+            arrayStride: 8, // 2 × f32 uv
+            attributes: [{ shaderLocation: 1, offset: 0, format: 'float32x2' }],
+          },
+          {
+            arrayStride: 12, // 3 × f32 tangent (unit +u=east)
+            attributes: [{ shaderLocation: 2, offset: 0, format: 'float32x3' }],
+          },
+        ],
+      },
+      fragment: {
+        module: fsModule,
+        entryPoint: 'fs',
+        targets: [{ format: targetFormat }],
+      },
+      primitive: {
+        topology: 'triangle-list',
+        frontFace: 'ccw', // CCW = outward-facing (matches cubeSphereMesh winding)
+        cullMode, // 'back' discards inward-facing (inner-surface) triangles
+      },
+      depthStencil: {
+        format: depthFormat,
+        depthWriteEnabled: true,
+        depthCompare: resolveDepthCompare('nearer', reversedZ),
+      },
+    });
+  const pipeline = createPipeline('back');
+  const mirroredPipeline = createPipeline('front');
 
   function setMap(kind: TextureKind, bitmap: ImageBitmap): void {
     // `isLinearTextureKind` is shared with the fetcher's decode path and the filename helper.
@@ -331,9 +335,9 @@ export function createEarthRenderer(
     return (committed.get(kind) ?? placeholders.get(kind)!).createView();
   }
 
-  function draw(pass: GPURenderPassEncoder, uniforms: Float32Array): void {
+  function draw(pass: GPURenderPassEncoder, uniforms: Float32Array, mirrored: boolean): void {
     device.queue.writeBuffer(uniformBuffer, 0, uniforms);
-    pass.setPipeline(pipeline);
+    pass.setPipeline(mirrored ? mirroredPipeline : pipeline);
     pass.setBindGroup(0, bindGroup);
     pass.setVertexBuffer(0, positionBuffer);
     pass.setVertexBuffer(1, uvBuffer);

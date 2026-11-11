@@ -15,9 +15,11 @@ export const PRELUDE: FrameSection = {
     // Plan rows come first (`checkFrameOrder`'s boot rule), before any GPU step reads
     // what they publish (`runPlanSteps`).
     { kind: 'plan', name: 'galaxy-catalog' },
+    { kind: 'plan', name: 'galaxy-disks' },
     { kind: 'plan', name: 'flow' },
     { kind: 'plan', name: 'star-catalog' },
     { kind: 'plan', name: 'milky-way' },
+    { kind: 'plan', name: 'stellar-streams' },
     { kind: 'plan', name: 'satellites' },
     // Once for every view: a dome's faces share one atlas, so one cut spans them all.
     { kind: 'plan', name: 'surface-tiles' },
@@ -66,9 +68,11 @@ export const PRELUDE: FrameSection = {
     // own probe); `star-spheres` / `field-star-sphere` (the Sun stays analytic, a
     // sub-pixel Sun would smear into a false highlight); glints and `orbit-trails`
     // (not environment); `atmosphere-shell` (classifies rays by a sampled scene depth a
-    // capture face never resolves, and its pipeline has no depth state) — inside an
-    // atmosphere `atmosphere-probe-sky` draws the sky instead, FIRST, so the ground
-    // passes overdraw it. NEAR0 is empty because the blit rides COSMO.
+    // capture face never resolves, and its pipeline has no depth state). In its place:
+    // inside an atmosphere `atmosphere-probe-sky` draws the sky FIRST, so the ground
+    // passes overdraw it; outside, `atmosphere-probe-shell` draws the shell LAST, as the
+    // live view does over globe and rings, with far depth: its rays end at the analytic
+    // globe. NEAR0 is empty because the blit rides COSMO.
     {
       kind: 'capture',
       captures: ['probe'],
@@ -82,6 +86,7 @@ export const PRELUDE: FrameSection = {
         'planets',
         'textured-bodies',
         'rings',
+        'atmosphere-probe-shell',
       ],
     },
   ],
@@ -131,6 +136,14 @@ export const SCENE: FrameSection = {
     // so cost drops by the divisor squared). Precedes the hdr NEAR0 step, where its
     // consumer `milky-way-upsample` and the dust that extincts it live.
     { kind: 'render', target: 'mw-aggregate', slab: NEAR0, passes: ['milky-way-aggregate'] },
+    // The streams' wide haze at half res, same reasoning; composited by
+    // `stellar-streams-haze-upsample` on the hdr NEAR0 line below.
+    {
+      kind: 'render',
+      target: 'stellar-streams-haze',
+      slab: NEAR0,
+      passes: ['stellar-streams-haze'],
+    },
     // Near-field HDR roster. NEAR0 because COSMO's 0.01 Mpc near plane would clip these
     // kpc-to-parsec anchors; it accumulates into the SAME hdr target, ahead of the one
     // tone-map.
@@ -159,6 +172,8 @@ export const SCENE: FrameSection = {
         'milky-way-upsample',
         'milky-way',
         'local-bubble',
+        'stellar-streams-haze-upsample',
+        'stellar-streams',
         'light-time-spheres',
         'star-points',
         'star-catalog',
@@ -179,7 +194,13 @@ export const SCENE: FrameSection = {
       kind: 'render',
       target: 'hdr',
       slab: NEAR0,
-      passes: ['body-glints', 'mission-glints', 'earth-scene-glints', 'black-hole-marker'],
+      passes: [
+        'body-glints',
+        'mission-glints',
+        'earth-scene-glints',
+        'probe-sphere-glints',
+        'black-hole-marker',
+      ],
       slot: 'POST_LENSING',
     },
     // Near-field foreground bodies into their own depth-bearing target, expanded over
@@ -219,6 +240,7 @@ export const SCENE: FrameSection = {
         'mission-meshes',
         'body-meshes',
         'earth-scene-meshes',
+        'probe-sphere-meshes',
       ],
     },
     // Aerial-perspective apply, on the enclosing body's painter row (the row that

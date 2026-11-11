@@ -12,6 +12,7 @@ import { cosmicWebFilamentsLayerSettings } from '../layers/cosmicWebFilaments/st
 import { flowLayerSettings } from '../layers/flow/state/slices';
 import { galaxyCatalogLayerSettings } from '../layers/galaxyCatalog/state/slices';
 import { localBubbleLayerSettings } from '../layers/localBubble/state/slices';
+import { stellarStreamsLayerSettings } from '../layers/stellarStreams/state/slices';
 import { milkyWayLayerSettings } from '../layers/milkyWay/state/slices';
 import { starCatalogLayerSettings } from '../layers/starCatalog/state/slices';
 import { structureLayerSettings } from '../layers/structure/state/slices';
@@ -21,6 +22,7 @@ import { lightTimeLayerSettings } from '../layers/lightTime/state/slices';
 import { missionsLayerSettings } from '../layers/missions/state/slices';
 import { satellitesLayerSettings } from '../layers/satellites/state/slices';
 import { cosmicHorizonLayerSettings } from '../layers/cosmicHorizon/state/slices';
+import { probeSpheresLayerSettings } from '../layers/probeSpheres/state/slices';
 
 export const APP_SETTINGS_SLICE_REGISTRY = [
   ...blackHolesLayerSettings,
@@ -30,6 +32,7 @@ export const APP_SETTINGS_SLICE_REGISTRY = [
   ...flowLayerSettings,
   ...galaxyCatalogLayerSettings,
   ...localBubbleLayerSettings,
+  ...stellarStreamsLayerSettings,
   ...milkyWayLayerSettings,
   ...starCatalogLayerSettings,
   ...structureLayerSettings,
@@ -39,4 +42,5 @@ export const APP_SETTINGS_SLICE_REGISTRY = [
   ...missionsLayerSettings,
   ...satellitesLayerSettings,
   ...cosmicHorizonLayerSettings,
+  ...probeSpheresLayerSettings,
 ] as const;

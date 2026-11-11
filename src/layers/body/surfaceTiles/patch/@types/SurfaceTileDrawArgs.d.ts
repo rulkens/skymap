@@ -1,6 +1,6 @@
 import type { SurfaceCutTile } from '../../plan/@types/SurfaceCutTile';
 import type { Vec3 } from '../../../../../@types/math/Vec3';
-import type { SurfaceEffect } from '../../../../../@types/data/SurfaceEffect';
+import type { SurfaceEffect } from '../../format/@types/SurfaceEffect';
 import type { SurfaceTileShading } from '../../format/@types/SurfaceTileShading';
 import type { SurfaceEffectInputs } from './SurfaceEffectInputs';
 
@@ -20,6 +20,8 @@ export type SurfaceTileDrawArgs = {
   readonly radiusM: number;
   /** The body slab's own eye-relative view-projection (`view.vp`). */
   readonly vp: Float32Array;
+  /** `viewFlipsWinding`: a capture face, drawn with the cull mode swapped. */
+  readonly mirrored: boolean;
   /** Sun direction in the engaged body's local (unrotated) frame, matching `EarthSurfaceUniforms.sunDirLocal`'s convention. */
   readonly sunDirLocal: Readonly<Vec3>;
   /** The engaged body's registry row: `effects` picks the fragment variant,

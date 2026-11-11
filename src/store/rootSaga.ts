@@ -30,6 +30,7 @@ import { watchEnterSkyHereSaga } from '../state/sky/watchEnterSkyHereSaga';
 import { watchSkyClockToSaga } from '../state/sky/watchSkyClockToSaga';
 import { watchKeyboardEventsSaga } from '../state/input/watchKeyboardEventsSaga';
 import { watchInputWakeSaga } from '../state/input/watchInputWakeSaga';
+import { watchGestureLearnedSaga } from '../state/ui/watchGestureLearnedSaga';
 import { watchLogCameraStateSaga } from '../state/camera/watchLogCameraStateSaga';
 import { watchClipPathInspectSaga } from '../state/camera/watchClipPathInspectSaga';
 import { watchReplayInspectedPathSaga } from '../state/camera/watchReplayInspectedPathSaga';
@@ -59,6 +60,7 @@ export function* mainSaga() {
     watchSkyClockToSaga(),
     watchKeyboardEventsSaga(),
     watchInputWakeSaga(),
+    watchGestureLearnedSaga(),
     watchLogCameraStateSaga(),
     watchClipPathInspectSaga(),
     watchReplayInspectedPathSaga(),

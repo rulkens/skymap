@@ -58,7 +58,7 @@ export const selectVisibleCatalogs = createSelector(
   [selectRoute],
   (route): ReadonlySet<GalaxyCatalogId> => {
     const visible = new Set<GalaxyCatalogId>();
-    for (const [, { id }] of GALAXY_CATALOG_SOURCE_ROWS) {
+    for (const { id } of GALAXY_CATALOG_SOURCE_ROWS) {
       if (route.items[id].enabled) visible.add(id);
     }
     return visible;

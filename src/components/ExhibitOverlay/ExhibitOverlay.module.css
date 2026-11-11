@@ -98,7 +98,7 @@
   text-shadow: 0 2px 16px rgba(0, 0, 0, 0.85);
 }
 
-/* Kicker, title, lede arrive in reading order, a beat apart. */
+/* Title, then lede, arrive in reading order, a beat apart. */
 .caption > * {
   animation: exhibitEnterRise 0.9s ease-out both;
 }
@@ -107,28 +107,6 @@
 }
 .caption > *:nth-child(2) {
   animation-delay: calc(var(--exhibit-enter-delay) + 0.24s);
-}
-.caption > *:nth-child(3) {
-  animation-delay: calc(var(--exhibit-enter-delay) + 0.4s);
-}
-
-.kicker {
-  display: flex;
-  align-items: center;
-  gap: 13px;
-  font-family: var(--font-family-mono);
-  font-size: 10px;
-  line-height: 1;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--color-fg-label);
-}
-.kicker::before {
-  content: '';
-  display: block;
-  width: 28px;
-  height: 1px;
-  background: var(--color-accent);
 }
 
 .title {
@@ -175,16 +153,12 @@
   top: 40px;
   right: 44px;
   width: 360px;
-  /* Keeps the column inside short windows; it scrolls instead of clipping. */
-  max-height: calc(100dvh - 40px - 32px);
-  overflow-y: auto;
-  pointer-events: auto;
   overscroll-behavior: contain;
-  scrollbar-width: thin;
   scrollbar-color: var(--color-fg-ghost) transparent;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  /* Space does the grouping: a clear break between sections, tight inside one. */
+  gap: var(--space-12);
   text-shadow: 0 1px 12px rgba(0, 0, 0, 0.9);
   /* A long column scrolls instead of running off the viewport. It opts back into
      pointer events so the wheel scrolls it; the text column no longer orbits the
@@ -202,7 +176,7 @@
 .sectionGroup {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-8);
   animation: exhibitEnterRise 0.9s ease-out
     calc(var(--exhibit-enter-delay) + 0.55s + var(--i) * 0.13s) both;
 }
@@ -210,7 +184,7 @@
 .section {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-4);
 }
 
 .sectionHeading {
@@ -221,6 +195,22 @@
   line-height: 1.1;
   color: #ffffff;
   text-wrap: balance;
+}
+
+/* Key and Sources are reference, not story: a mono label in the fact labels' voice,
+   a step brighter so a block's name outranks its rows. */
+.blockLabel {
+  margin: 0;
+  font: var(--font-size-sm) / 1 var(--font-family-mono);
+  letter-spacing: var(--letter-spacing-wider);
+  text-transform: uppercase;
+  color: var(--color-fg-base);
+}
+
+/* The switch belongs to the prose above it: pulled up so it sits closer to that
+   section than to the next. */
+.sectionGroup:has(> .switches) {
+  margin-top: calc(-1 * var(--space-4));
 }
 
 /* Sora Thin (100) — self-hosted in global.css for this component only (spec
@@ -256,7 +246,7 @@
   outline-offset: 2px;
 }
 
-/* A hairline fading out to the right, ruled above each data block. */
+/* A hairline fading out to the right: the one break between the story and its sources. */
 .rule {
   height: 1px;
   background: linear-gradient(90deg, rgba(160, 200, 255, 0.28), rgba(160, 200, 255, 0));
@@ -266,7 +256,7 @@
 .key {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-3);
 }
 
 /* The gradient itself comes from the section's `ramp` stops, inline. */
@@ -284,77 +274,22 @@
   color: var(--color-fg-tertiary);
 }
 
-.toggleRow {
-  margin-top: 4px;
-  padding: 0;
-  width: 100%;
-  pointer-events: auto;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: none;
-  border: none;
-  cursor: pointer;
-  text-align: left;
-}
-.toggleRow:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 3px;
-}
-
-.toggleLabel {
-  font-family: var(--font-family-mono);
-  font-size: 11px;
-  line-height: 1.4;
-  color: var(--color-fg);
-}
-
-.toggleState {
-  color: var(--color-fg-tertiary);
-}
-
-.track {
-  position: relative;
-  flex: 0 0 auto;
-  width: 30px;
-  height: 16px;
-  border-radius: 999px;
-  border: 1px solid rgba(160, 200, 255, 0.25);
-  background: var(--surface-control);
-}
-.trackOn {
-  background: rgba(168, 208, 255, 0.45);
-}
-
-.knob {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--color-fg);
-}
-.knobOn {
-  left: 16px;
-}
-
 /* ── Facts ──────────────────────────────────────────────────────────── */
 .facts {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px 16px;
+  gap: var(--space-8);
 }
 
 .fact {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: var(--space-2);
 }
 
 .factLabel {
   font-family: var(--font-family-mono);
-  font-size: 9px;
+  font-size: var(--font-size-sm);
   line-height: 1;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -379,7 +314,7 @@
   display: grid;
   grid-template-columns: 64px minmax(0, 1fr);
   gap: 10px;
-  padding: 5px 0;
+  padding: var(--space-3) 0;
   pointer-events: auto;
   text-decoration: none;
 }
@@ -390,7 +325,7 @@
 
 .sourceRole {
   font-family: var(--font-family-mono);
-  font-size: 9px;
+  font-size: var(--font-size-sm);
   line-height: 1.6;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -400,7 +335,7 @@
 .sourceText {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: var(--space-1);
 }
 
 .sourceTitle {
@@ -408,7 +343,7 @@
   align-items: center;
   gap: 6px;
   font-family: var(--font-family-mono);
-  font-size: 11px;
+  font-size: var(--font-size-sm);
   line-height: 1.4;
   color: var(--color-accent);
 }
@@ -423,23 +358,103 @@
   color: var(--color-fg-tertiary);
 }
 
-/* ── Exit pill (bottom-center) ─────────────────────────────────────── */
-.exit {
+/* ── Switches: centred in the column, lighter than the dock's pills ── */
+.switches {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-4);
+}
+
+.switchButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  /* Tap area, not a spacing rung: past the 24px minimum, light enough for a text column. */
+  height: 28px;
+  padding: 0 var(--space-5);
+  border: 1px solid var(--border-hover);
+  border-radius: 999px;
+  background: none;
+  color: var(--color-fg-base);
+  font: var(--font-size-sm) / 1 var(--font-family-mono);
+  letter-spacing: var(--letter-spacing-widest);
+  text-transform: uppercase;
+  text-shadow: none;
+  cursor: pointer;
+  pointer-events: auto;
+  transition:
+    color var(--duration-color) ease,
+    border-color var(--duration-color) ease,
+    background-color var(--duration-color) ease;
+}
+@media (hover: hover) {
+  .switchButton:hover {
+    color: var(--color-fg);
+    border-color: var(--color-accent);
+  }
+}
+.switchButton:active {
+  background: var(--surface-control-active);
+}
+.switchButton:focus-visible {
+  color: var(--color-fg);
+  border-color: var(--color-accent);
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* ── Dock: Exit, and the gesture hint (bottom-center) ──────────────── */
+.dock {
   position: absolute;
   left: 50%;
   bottom: 20px;
   transform: translateX(-50%);
-  /* Fade only — the pill is centred by its own transform. */
+  /* Flex, so no inline line box pads the dock below Exit and the hint centres on the pill. */
+  display: flex;
+}
+
+.exit {
   animation: exhibitEnterFade 0.9s ease-out calc(var(--exhibit-enter-delay) + 0.9s) both;
 }
 
+/*
+ * Above Exit on a wide screen. Narrower, centred there it would run into the caption's lede
+ * (left edge 44px, up to 520px wide), so it moves beside Exit, on the line under the caption
+ * and the notes. Below 920px Exit (~150px) plus the ~350px hint no longer fits right of
+ * centre; the hint is the one that goes, as it is only a hint.
+ */
+.gestureHint {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + var(--space-5));
+  transform: translateX(-50%);
+  animation: exhibitEnterFade 0.9s ease-out calc(var(--exhibit-enter-delay) + 0.9s) both;
+}
+@media (max-width: 1500px) {
+  .gestureHint {
+    left: calc(100% + var(--space-6));
+    bottom: 50%;
+    transform: translateY(50%);
+  }
+}
+@media (max-width: 920px) {
+  .gestureHint {
+    display: none;
+  }
+}
+
 /* ── Hide toggle (top-right) ───────────────────────────────────────── */
-/* Just the icon: a bare button for the a11y (label, pressed, focus ring). It
-   is the one control that survives `hidden`, so it never fades with the rest. */
-.hideToggle {
+/* Just the icon: a bare button for the a11y (label, focus ring), named by its
+   tip. It is the one control that survives `hidden`, so it never fades with the
+   rest. The spot holds the position so the tip's wrapper sits inside it. */
+.hideToggleSpot {
   position: absolute;
   top: 8px;
   right: 8px;
+  animation: exhibitEnterFade 0.9s ease-out calc(var(--exhibit-enter-delay) + 0.9s) both;
+}
+.hideToggle {
   width: 32px;
   height: 32px;
   padding: 0;
@@ -453,7 +468,6 @@
   cursor: pointer;
   color: var(--color-fg-tertiary);
   filter: drop-shadow(0 1px 6px rgba(0, 0, 0, 0.85));
-  animation: exhibitEnterFade 0.9s ease-out calc(var(--exhibit-enter-delay) + 0.9s) both;
 }
 /* Dimmer at rest while everything else is gone, still readable. */
 .hidden .hideToggle {
@@ -527,7 +541,7 @@
     background: linear-gradient(to bottom, transparent 0, rgba(0, 0, 0, 0.8) 48px);
     animation: exhibitEnterFade 1.8s ease-out var(--exhibit-enter-delay) both;
   }
-  .exit {
+  .dock {
     position: fixed;
     bottom: calc(20px + env(safe-area-inset-bottom, 0px));
   }
@@ -540,7 +554,7 @@
     overflow: hidden;
     pointer-events: none;
   }
-  .hideToggle {
+  .hideToggleSpot {
     position: fixed;
     top: calc(8px + env(safe-area-inset-top, 0px));
   }

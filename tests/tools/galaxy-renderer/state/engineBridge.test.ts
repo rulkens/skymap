@@ -28,7 +28,7 @@ import { DEFAULT_GALAXY_PARAMS } from '../../../../tools/galaxy-renderer/src/dat
 import { DEFAULT_RENDER_SETTINGS } from '../../../../tools/galaxy-renderer/src/data/defaultRenderSettings';
 import { DEFAULT_LOD_SETTINGS } from '../../../../tools/galaxy-renderer/src/data/defaultLodSettings';
 import { DEFAULT_EXTRAS_STATE } from '../../../../tools/galaxy-renderer/src/data/defaultExtrasState';
-import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../src/services/engine/galaxyGenerator/v2/galaxyFieldMixture';
+import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../src/layers/milkyWay/field/mixture/utils/galaxyFieldMixture';
 import { mulberry32 } from '../../../../src/utils/random/mulberry32';
 import type { GalaxyEngineHandle } from '../../../../tools/galaxy-renderer/@types/engine/GalaxyEngineHandle';
 

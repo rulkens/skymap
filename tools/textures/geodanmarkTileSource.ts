@@ -17,7 +17,7 @@ import { join } from 'node:path';
 import sharp from 'sharp';
 
 import type { SurfaceImagerySource } from './@types/SurfaceImagerySource';
-import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
+import type { LonLatBounds } from '../../src/layers/body/surfaceTiles/format/@types/LonLatBounds';
 import { SURFACE_TILE_PX } from '../../src/layers/body/surfaceTiles/format/data/surfaceTileParams';
 import { surfaceTileColumns } from '../../src/layers/body/surfaceTiles/format/utils/surfaceTileColumns';
 

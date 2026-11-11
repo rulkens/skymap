@@ -134,8 +134,11 @@ describe('createAtmosphereShellRenderer — the MULTIPLY/ADD pair', () => {
   it('builds one multiplicative and one additive shell pipeline', () => {
     const { renderPipelines } = build();
     // The three LUT bakes go through createComputePipeline, so every render
-    // pipeline here is a shell pass: the outside pair, the aerial pair, the probe-sky pair.
+    // pipeline here is a shell pass: the outside pair, the probe-shell pair, the aerial
+    // pair, the probe-sky pair.
     expect(renderPipelines.map(blendRole)).toEqual([
+      'multiply',
+      'add',
       'multiply',
       'add',
       'multiply',
@@ -145,11 +148,12 @@ describe('createAtmosphereShellRenderer — the MULTIPLY/ADD pair', () => {
     ]);
   });
 
-  it('gives the probe-sky pair the depth format a probe face attaches', () => {
+  it('gives both probe pairs the depth format a probe face attaches', () => {
     // A probe face's body step attaches the probe depth; a pipeline naming no depth
-    // format is rejected there, and the sky that face should hold is silently missing.
-    const [, , , , multiply, add] = build().renderPipelines as GPURenderPipelineDescriptor[];
-    for (const desc of [multiply!, add!]) {
+    // format is rejected there, and the atmosphere that face should hold is silently missing.
+    const probe = build().renderPipelines.filter((desc) => desc.label?.includes('probe'));
+    expect(probe).toHaveLength(4);
+    for (const desc of probe) {
       expect(desc.depthStencil?.format).toBe(FOREGROUND_DEPTH_FORMAT);
       expect(desc.depthStencil?.depthWriteEnabled).toBe(false);
     }

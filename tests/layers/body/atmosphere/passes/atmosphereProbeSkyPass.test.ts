@@ -7,6 +7,7 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { atmosphereProbeSkyPass } from '../../../../../src/layers/body/atmosphere/passes/atmosphereProbeSkyPass';
+import { atmosphereProbeShellPass } from '../../../../../src/layers/body/atmosphere/passes/atmosphereProbeShellPass';
 import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneEarth';
 import { bodySlabsOf } from '../../../../helpers/frame/bodySlabsOf';
 import { makeSlab } from '../../../../fixtures/makeSlab';
@@ -76,5 +77,19 @@ describe('atmosphereProbeSkyPass.enabled', () => {
 
     expect(pass.enabled(STATE, makeCtx(EYE_INSIDE_M), view)).toBe(true);
     expect(pass.enabled(STATE, makeCtx(EYE_OUTSIDE_M), view)).toBe(false);
+  });
+});
+
+// Its complement lives here to share the face-ctx fixture: both drawing doubles the
+// in-scatter, neither leaves an orbiting probe's planet bare and dark.
+describe('atmosphereProbeShellPass.enabled', () => {
+  it('draws the shell only into a probe captured outside it', () => {
+    const pass = atmosphereProbeShellPass({
+      atmosphereShellRenderer: { drawProbeShell: vi.fn() },
+    } as unknown as BodyRuntime);
+    const view = makeBodyView(asSceneBodyId('earth'));
+
+    expect(pass.enabled(STATE, makeCtx(EYE_INSIDE_M), view)).toBe(false);
+    expect(pass.enabled(STATE, makeCtx(EYE_OUTSIDE_M), view)).toBe(true);
   });
 });

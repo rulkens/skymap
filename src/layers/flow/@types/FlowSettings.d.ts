@@ -1,0 +1,30 @@
+/**
+ * FlowSettings — the user-facing state of the CF4++ flow-field overlay layer.
+ *
+ * Flow is a singleton overlay layer (see
+ * `docs/superpowers/conventions/singleton-overlay-layers.md`): all of its
+ * user-facing state lives in `settings.flow`, exactly as `filaments` /
+ * `milkyWay` do. This is the shape of that slice — the master `enabled` gate
+ * plus the look/motion knobs the flow renderer reads every frame.
+ *
+ * Named (rather than inlined into `EngineSettingsState`) because three
+ * consumers reference the same shape and would otherwise re-spell it: the
+ * settings bag itself (`EngineSettingsState.flow`), the `DEFAULT_FLOW` seed in
+ * `layers/flow/state/defaults.ts`, and the flow renderer's per-frame param
+ * argument (`flowFieldRenderer.encodeCompute` / `draw` / `isAnimating`). One
+ * type, one source of truth.
+ *
+ * The tunable defaults are the spike's hand-dialled advect look — see
+ * `DEFAULT_FLOW`, which owns those values outright.
+ */
+import type { FlowFieldDefaults } from './FlowFieldDefaults';
+
+/**
+ * The live flow slice = the master `enabled` gate plus the eight look/motion
+ * knobs. The knob shape + per-field docs live on `FlowFieldDefaults`, which is
+ * the `setFlow` patch bound — so a tuning slider can never smuggle the gate.
+ */
+export type FlowSettings = {
+  /** Master layer gate (default-off; the cube demand-loads on first enable). */
+  enabled: boolean;
+} & FlowFieldDefaults;

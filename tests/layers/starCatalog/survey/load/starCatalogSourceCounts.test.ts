@@ -9,8 +9,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { starCatalogSourceCounts } from '../../../../../src/layers/starCatalog/survey/load/starCatalogSourceCounts';
-import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../../../../src/data/bodies/seededStarCatalogsBySource';
-import { Source } from '../../../../../src/data/source';
+import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../../../../src/layers/starCatalog/seededStars/data/seededStarCatalogsBySource';
 import type { LoadState } from '../../../../../src/@types/loading/LoadState';
 import type { SkstCatalog } from '../../../../../src/@types/data/starCatalog/SkstCatalog';
 import type { SourceCountReport } from '../../../../../src/@types/engine/layer/SourceCountReport';
@@ -53,7 +52,7 @@ describe('starCatalogSourceCounts', () => {
     const gaia = fakeSlot<SkstCatalog>();
     const famous = fakeSlot<unknown>();
     const runtime = {
-      catalogs: new Map([[Source.GaiaStars, gaia.slot]]),
+      catalogs: new Map([['gaiaStars', gaia.slot]]),
       famousStarsMeta: famous.slot,
     } as unknown as StarCatalogRuntime;
 
@@ -76,7 +75,7 @@ describe('starCatalogSourceCounts', () => {
     const gaia = fakeSlot<SkstCatalog>();
     const famous = fakeSlot<unknown>();
     const runtime = {
-      catalogs: new Map([[Source.GaiaStars, gaia.slot]]),
+      catalogs: new Map([['gaiaStars', gaia.slot]]),
       famousStarsMeta: famous.slot,
     } as unknown as StarCatalogRuntime;
 
@@ -85,7 +84,7 @@ describe('starCatalogSourceCounts', () => {
 
     const reports = await drain(iterator, SEEDED_SOURCES.length + 1);
 
-    expect(reports.map((r) => r.source)).toEqual([...SEEDED_SOURCES, Source.GaiaStars]);
-    expect(reports.at(-1)).toEqual({ source: Source.GaiaStars, count: 1234 });
+    expect(reports.map((r) => r.source)).toEqual([...SEEDED_SOURCES, 'gaiaStars']);
+    expect(reports.at(-1)).toEqual({ source: 'gaiaStars', count: 1234 });
   });
 });

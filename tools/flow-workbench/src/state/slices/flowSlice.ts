@@ -29,8 +29,8 @@
  * `mode` (a union with its own setter) — so the slider wiring can't accidentally
  * write a number into a non-numeric field.
  */
-import type { FlowSettings } from '../../../../../src/@types/settings/FlowSettings';
-import type { FlowMode } from '../../../../../src/@types/data/flow/FlowMode';
+import type { FlowSettings } from '../../../../../src/layers/flow/@types/FlowSettings';
+import type { FlowMode } from '../../../../../src/layers/flow/@types/FlowMode';
 import { DEFAULT_FLOW } from '../../../../../src/layers/flow/state/defaults';
 
 export const defaultFlowSlice: FlowSettings = { ...DEFAULT_FLOW, enabled: true };

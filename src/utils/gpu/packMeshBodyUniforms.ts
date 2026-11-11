@@ -1,5 +1,5 @@
 /**
- * packMeshBodyUniforms — pure packer for the 160-byte `MeshBodyUniforms` struct.
+ * packMeshBodyUniforms — pure packer for the 176-byte `MeshBodyUniforms` struct.
  * The layout lives ONCE, beside the struct, in `shaders/bodies/meshBody/io.wesl`'s
  * header — read it there; the writes below are in that order. It MATCHES
  * `packLitBodyUniforms`'s first 80 bytes byte-for-byte (keep the two in step by
@@ -9,6 +9,7 @@
 
 import type { Mat3 } from '../../@types/math/Mat3';
 import type { Vec3 } from '../../@types/math/Vec3';
+import type { MeshMaterialFactors } from '../../@types/rendering/MeshMaterialFactors';
 import { MESH_BODY_UNIFORM_FLOATS } from '../../data/mesh/meshBodyUniformLayout';
 
 export function packMeshBodyUniforms(args: {
@@ -19,6 +20,7 @@ export function packMeshBodyUniforms(args: {
   readonly camPosLocal: Readonly<Vec3>;
   readonly sinSunAngularRadius: number;
   readonly ambient: number;
+  readonly material: MeshMaterialFactors;
 }): Float32Array {
   const out = new Float32Array(MESH_BODY_UNIFORM_FLOATS);
   out.set(args.mvp.subarray(0, 16), 0);
@@ -42,6 +44,11 @@ export function packMeshBodyUniforms(args: {
   out[33] = args.camPosLocal[1];
   out[34] = args.camPosLocal[2];
   out[35] = args.sinSunAngularRadius;
-  out[36] = args.ambient; // byte 144; 148..159 are the struct's padding
+  out[36] = args.ambient; // byte 144
+  out[37] = args.material.metallic;
+  out[38] = args.material.roughness; // byte 152; 156 is padding
+  out[40] = args.material.baseColor[0]; // byte 160; 172..175 are the struct's padding
+  out[41] = args.material.baseColor[1];
+  out[42] = args.material.baseColor[2];
   return out;
 }

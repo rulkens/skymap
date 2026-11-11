@@ -36,7 +36,7 @@ import sharp from 'sharp';
 
 import { levelFittingWidth } from '../../src/layers/body/surfaceTiles/format/utils/levelFittingWidth';
 import type { SurfaceImagerySource } from './@types/SurfaceImagerySource';
-import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
+import type { LonLatBounds } from '../../src/layers/body/surfaceTiles/format/@types/LonLatBounds';
 import { QUADRANT_COLUMNS } from './data/quadrantColumns';
 import { QUADRANT_ROWS } from './data/quadrantRows';
 import type { ImageryQuadrant } from './@types/ImageryQuadrant';

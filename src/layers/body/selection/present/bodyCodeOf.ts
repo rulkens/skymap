@@ -5,10 +5,10 @@
 
 import type { CatalogPickCodes } from '../../../../@types/engine/selection/CatalogPickCodes';
 import type { BodySourceEntry } from '../../../../@types/data/body/BodySourceEntry';
-import type { SourceType } from '../../../../@types/data/SourceType';
+import type { BodySourceId } from '../../../../@types/data/body/BodySourceId';
 
 export function bodyCodeOf(
-  pickCodes: CatalogPickCodes<SourceType>,
+  pickCodes: CatalogPickCodes<BodySourceId>,
 ): (entry: BodySourceEntry) => number {
-  return (entry) => pickCodes.pickCodeOf(entry.code as SourceType);
+  return (entry) => pickCodes.pickCodeOf(entry.id as BodySourceId);
 }

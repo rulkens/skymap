@@ -31,6 +31,7 @@ import { SUB_PIXEL_BODY_CULL_PX } from '../../../../services/engine/frame/subPix
 import { sceneBodyStates } from '../../../../services/engine/frame/sceneBodyStates';
 import type { PositionedId } from '../../../../@types/scene/PositionedId';
 import { SCENE_EARTH } from '../../../../data/bodies/sceneEarth';
+import { viewFlipsWinding } from '../../../../utils/camera/viewRig/viewFlipsWinding';
 
 /** The descent-fade multiplier, and whether the camera is inside the shell radius. */
 type CloudShellDraw = {
@@ -110,6 +111,7 @@ export function cloudShellPass(runtime: BodyRuntime): ContentPass {
           state.settings.earth.ambientLight,
         ),
         insideShell,
+        viewFlipsWinding(ctx),
       );
     },
   };

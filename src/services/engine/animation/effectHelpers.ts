@@ -56,6 +56,7 @@ import type { SettingsAction } from '../../../compositions/@types/SettingsAction
 import type { PathWaypoint } from '../../../@types/animation/PathWaypoint';
 import type { SplineConfig } from '../../../@types/animation/SplineConfig';
 import type { PassByConfig } from '../../../@types/animation/PassByConfig';
+import type { SeqOverlap } from '../../../@types/animation/SeqOverlap';
 import { CHANNEL_SPACE } from './channelSpace';
 import {
   DEFAULT_ALIGN_SEC,
@@ -320,11 +321,17 @@ export function wait(sec: number): Effect & { kind: 'wait' } {
  * seq — play children in order; each starts when the previous ends.
  *
  * The primary sequencing node. The block's duration is the sum of all
- * children's durations. Perpetual children (looping spin, oscillate) inside a
+ * children's durations, less any `overlap` (each step then starts that many
+ * seconds before the previous ends). Perpetual children (looping spin, oscillate) inside a
  * `seq` will stall it; fork them instead.
  */
-export function seq(children: Effect[]): Effect & { kind: 'seq' } {
-  return { kind: 'seq', children };
+export function seq(
+  children: Effect[],
+  opts?: { readonly overlap?: SeqOverlap },
+): Effect & { kind: 'seq' } {
+  return opts?.overlap === undefined
+    ? { kind: 'seq', children }
+    : { kind: 'seq', children, overlap: opts.overlap };
 }
 
 /**

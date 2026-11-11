@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 
 import { formatClockDate } from '../utils/formatClockDate';
 import { missionEventMs } from '../../events/utils/missionEventMs';
-import type { MissionEvent } from '../../../../@types/missions/MissionEvent';
+import type { MissionEvent } from '../../events/@types/MissionEvent';
 import styles from './ExhibitTimeline.module.css';
 
 export type TimelineEventCardProps = {

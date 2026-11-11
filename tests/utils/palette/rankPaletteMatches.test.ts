@@ -9,7 +9,6 @@ import { MILKY_WAY_FOCUS_ID } from '../../../src/services/url/milkyWayFocusId';
 import { rankPaletteMatches } from '../../../src/utils/palette/rankPaletteMatches';
 import { paletteRowLabel } from '../../../src/utils/palette/paletteRowLabel';
 import { actionForRow } from '../../../src/utils/palette/actionForRow';
-import { Source } from '../../../src/data/source';
 import type { FamousGalaxyMetaEntry } from '../../../src/@types/loading/FamousGalaxyMetaEntry';
 import type { AliasIndexEntry } from '../../../src/@types/engine/AliasIndexEntry';
 import type { StructureSearchEntry } from '../../../src/@types/engine/StructureSearchEntry';
@@ -36,7 +35,7 @@ const COMA: StructureSearchEntry = {
 };
 
 function alias(names: readonly string[], pgc: number): AliasIndexEntry {
-  return { pgc, names, source: Source.Glade };
+  return { pgc, names, sourceLabel: 'GLADE', focusId: `pgc-${pgc}` };
 }
 
 describe('rankPaletteMatches', () => {
@@ -197,7 +196,7 @@ describe('rankPaletteMatches — scene-body rows', () => {
 
   it('keeps dev tours out of search while user-facing ones rank', () => {
     // `demoTour` is a harness for the tour machinery and carries `dev: true`.
-    // Nothing else hides it: it is a full `tourRegistry` row, so its label
+    // Nothing else hides it: it is a full `APP_TOUR_REGISTRY` row, so its label
     // scores like any other and only the flag keeps it out of a user's results.
     expect(rankPaletteMatches([M31], [], [], [], 'demo tour', NO_SKY)).toEqual([]);
     const rows = rankPaletteMatches([M31], [], [], [], 'named cosmic web', NO_SKY);

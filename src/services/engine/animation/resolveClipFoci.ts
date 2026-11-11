@@ -146,22 +146,16 @@ function walkEffect(
   switch (effect.kind) {
     // ── Structural nodes — recurse ──────────────────────────────────────────
     case 'seq':
-      return {
-        kind: 'seq',
-        children: effect.children.map((c) =>
-          walkEffect(c, resolve, fovYRad, from, simDays, frameBasis),
-        ),
-      };
     case 'all':
       return {
-        kind: 'all',
+        ...effect,
         children: effect.children.map((c) =>
           walkEffect(c, resolve, fovYRad, from, simDays, frameBasis),
         ),
       };
     case 'fork':
       return {
-        kind: 'fork',
+        ...effect,
         child: walkEffect(effect.child, resolve, fovYRad, from, simDays, frameBasis),
       };
 

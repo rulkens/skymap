@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { ColourGrade } from '../../../src/@types/scene/ColourGrade';
+import type { ColourGrade } from '../../../src/layers/body/textures/@types/ColourGrade';
 import type { AlbedoDelight } from '../../../tools/textures/@types/AlbedoDelight';
 import { constantHeightSource } from '../../../tools/textures/constantHeightSource';
 import { delightedImagerySource } from '../../../tools/textures/delightedImagerySource';

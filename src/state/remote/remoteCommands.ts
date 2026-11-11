@@ -8,7 +8,7 @@
 import type { UnknownAction } from '@reduxjs/toolkit';
 import { APP_EXHIBIT_REGISTRY } from '../../compositions/appExhibits';
 import { clipRegistry } from '../../data/animation/clips/clipRegistry';
-import { tourRegistry } from '../../data/animation/tours/tourRegistry';
+import { APP_TOUR_REGISTRY } from '../../compositions/appTours';
 import { RATE_LADDER } from '../../data/time/rateLadder';
 import { SKY_HOSTS } from '../../data/sky/skyHosts';
 import { setControlScheme } from '../settings/core/cameraControlsSlice';
@@ -53,7 +53,7 @@ function parsePaletteAction(raw: unknown): PaletteAction | undefined {
     }
     case 'tour': {
       const { tourId } = raw;
-      if (typeof tourId !== 'string' || !isKeyOf(tourRegistry, tourId)) return undefined;
+      if (typeof tourId !== 'string' || !isKeyOf(APP_TOUR_REGISTRY, tourId)) return undefined;
       return { kind: 'tour', tourId };
     }
     case 'flyTo': {

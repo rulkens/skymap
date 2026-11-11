@@ -1,4 +1,4 @@
-import type { MissionEvent } from '../../../../@types/missions/MissionEvent';
+import type { MissionEvent } from '../@types/MissionEvent';
 import { MISSION_FLYBY_LEAD_DAYS } from '../data/missionFlybyLeadDays';
 import { DAY_MS } from '../../../../data/time/dayMs';
 import { missionEventMs } from './missionEventMs';

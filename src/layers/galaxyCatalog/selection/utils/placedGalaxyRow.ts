@@ -1,6 +1,6 @@
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { FALLBACK_DIAMETER_KPC } from '../../appearance/data/fallbackDiameterKpc';
-import type { GalaxyRow } from '../../../../@types/engine/GalaxyRow';
+import type { GalaxyRow } from '../../records/@types/GalaxyRow';
 import type { GalaxyCatalogSelectionRow } from '../@types/GalaxyCatalogSelectionRow';
 
 /** A galaxy's selection row: the record plus the placement core frames and rings it by. */

@@ -1,8 +1,8 @@
 /**
  * SURVEYS_OFF — the `galaxyCatalogs` cluster with every survey silenced but the
  * famous galaxies kept as named landmarks, the backdrop both field exhibits
- * want. Shared because each exhibit's "Galaxies" toggle restores it too, and a
- * second copy would drift the moment a catalog is added.
+ * want. Shared so the two cannot drift when a catalog is added; `GALAXIES_SWITCH`
+ * reads the same rows to switch them back on.
  */
 
 import { initialState as galaxyCatalogsInitialState } from '../../../layers/galaxyCatalog/state/galaxyCatalogs/initialState';

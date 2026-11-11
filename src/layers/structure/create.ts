@@ -23,7 +23,7 @@ import { wireStructureProjection } from './catalog/load/wireStructureProjection'
 export function create(deps: LayerCoreDeps<StructureFacts>): StructureRuntime {
   const store = createStructureStore();
   const pickCodes = catalogPickCodes(
-    STRUCTURE_IDS.map((id) => [id, { id }] as const),
+    STRUCTURE_IDS.map((id) => ({ id })),
     deps.pickCode,
   );
   const cosmoRenderer = createStructureMarkerRenderer(

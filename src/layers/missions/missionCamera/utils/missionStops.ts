@@ -4,7 +4,7 @@
  * planet it flew past — of a moon-and-planet stop, the planet, the body that orbits the Sun.
  */
 
-import type { MissionEvent } from '../../../../@types/missions/MissionEvent';
+import type { MissionEvent } from '../../events/@types/MissionEvent';
 import type { MissionStop } from '../@types/MissionStop';
 import { bodyHostId } from '../../../../data/bodies/positionDrivers';
 import { DAY_MS } from '../../../../data/time/dayMs';

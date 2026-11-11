@@ -1,6 +1,6 @@
 import { useAppSelector } from '../../../../store/hooks';
 import { selectFamousGalaxiesMeta } from '../../../../state/engine/selectors';
-import type { GalaxyInfo } from '../../../../@types/engine/GalaxyInfo';
+import type { GalaxyInfo } from '../../records/@types/GalaxyInfo';
 import type { FamousGalaxyMetaEntry } from '../../../../@types/loading/FamousGalaxyMetaEntry';
 
 /**

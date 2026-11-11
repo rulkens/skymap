@@ -4,7 +4,6 @@ import type { EngineState } from '../../../../../src/@types/engine/state/EngineS
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { StructureInfo } from '../../../../../src/@types/data/structure/StructureInfo';
-import { Source } from '../../../../../src/data/source';
 import { near0RingRadiusPx } from '../../../../../src/services/engine/helpers/near0RingRadiusPx';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
@@ -32,7 +31,7 @@ function makeRendererSpy() {
 // The star arm — a self-contained display projection of a picked survey star.
 const STAR_ROW: StarCatalogSelectionRow = {
   type: 'starCatalog',
-  source: Source.GaiaStars,
+  source: 'gaiaStars',
   index: 7,
   id: null,
   label: 'Field star',
@@ -45,7 +44,7 @@ const STAR_ROW: StarCatalogSelectionRow = {
 // A galaxy row — yields a NON-null halo, but tagged COSMO. It exercises the
 // distinction between "no halo" and "halo for the other slab".
 const GALAXY_ROW: SelectionRowBase = makeGalaxyRow({
-  source: Source.Glade,
+  source: 'glade',
   z: 100,
   diameterKpc: 60,
   axisRatio: 1,
@@ -105,7 +104,7 @@ describe('near0SelectionRingPass.enabled', () => {
 // sprite (which clamps clip-z) survives.
 const FAR_STAR_ROW: StarCatalogSelectionRow = {
   type: 'starCatalog',
-  source: Source.GaiaStars,
+  source: 'gaiaStars',
   index: 3,
   id: null,
   label: 'Field star',

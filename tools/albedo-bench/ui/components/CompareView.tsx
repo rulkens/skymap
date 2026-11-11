@@ -9,7 +9,7 @@
  * showing its last fit; refitting live at large spans is the expensive path.
  */
 import { useEffect, useRef, useState } from 'react';
-import type { LonLatBounds } from '../../../../src/@types/scene/LonLatBounds';
+import type { LonLatBounds } from '../../../../src/layers/body/surfaceTiles/format/@types/LonLatBounds';
 import type { FieldArrow } from '../../@types/FieldArrow';
 import { MAX_SPAN_DEG, MIN_SPAN_DEG, clampLat, wrapLon } from '../viewPresets';
 import type { ViewMode } from '../../@types/ViewMode';

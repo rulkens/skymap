@@ -6,7 +6,7 @@
  * `capture` (`blackHoleAnchorId`), not carried here — see deletion-audit N2.
  */
 
-import type { BlackHoleId } from '../../../@types/data/blackHole/BlackHoleId';
+import type { BlackHoleId } from './BlackHoleId';
 import type { BLACK_HOLE_SKY_CAPTURES } from '../lensing/data/blackHoleSkyCaptures';
 import type { Vec3 } from '../../../@types/math/Vec3';
 

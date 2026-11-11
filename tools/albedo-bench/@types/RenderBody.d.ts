@@ -1,5 +1,5 @@
 import type { AlbedoRecipe } from '../../textures/@types/AlbedoRecipe';
-import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
+import type { LonLatBounds } from '../../../src/layers/body/surfaceTiles/format/@types/LonLatBounds';
 import type { RenderLight } from './RenderLight';
 
 /** `original` is the raw imagery, so only `adjusted` carries a recipe. */

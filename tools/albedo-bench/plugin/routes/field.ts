@@ -7,7 +7,7 @@
  * must scale the same way so the two share the cached fit.
  */
 import type { AlbedoRecipe } from '../../../textures/@types/AlbedoRecipe.ts';
-import type { LonLatBounds } from '../../../../src/@types/scene/LonLatBounds.ts';
+import type { LonLatBounds } from '../../../../src/layers/body/surfaceTiles/format/@types/LonLatBounds.ts';
 import type { SunField } from '../../../textures/@types/SunField.ts';
 import { previewSunFit } from '../previewSunFit.ts';
 import type { FieldBody } from '../../@types/FieldBody';
