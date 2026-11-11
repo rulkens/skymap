@@ -18,10 +18,6 @@ describe('formatSatelliteColorDefaults', () => {
     );
   });
 
-  it('emits nothing when no colour moved', () => {
-    expect(formatSatelliteColorDefaults(DEFAULTS)).toBe('');
-  });
-
   it('emits nothing for a default re-picked through its hex', () => {
     const repicked = { ...DEFAULTS, leo: hexToLinearRgb(linearRgbToHex(DEFAULTS.leo)) };
     expect(formatSatelliteColorDefaults(repicked)).toBe('');

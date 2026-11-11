@@ -17,17 +17,16 @@ function planThrough(writeProfiles: SatellitesRuntime['renderer']['writeProfiles
     propagator: {
       catalog: () => ({ fetchedAtMs: julianDaysToUnixMs(SIM_DAYS), classCode: new Uint8Array(0) }),
       latest: () => null,
-      profileCodes: () => new Uint8Array(0),
       request: vi.fn(),
     },
     simRate: { observe: vi.fn() },
     scheduleWake: vi.fn(),
   } as unknown as SatellitesRuntime);
-  return (colors: SatelliteColors, ambient = 0.04) =>
+  return (colors: SatelliteColors) =>
     planner.plan(
       SNAPSHOT,
       [],
-      { settings: { satelliteTuning: { colors, ambient } } } as unknown as PassState,
+      { settings: { satelliteTuning: { colors } } } as unknown as PassState,
       FADE,
     );
 }
@@ -45,7 +44,7 @@ describe('satellitesPlanner', () => {
     const colors = colorsOf(0.1);
 
     plan(colors);
-    plan(colors, 0.5);
+    plan(colors);
     expect(writeProfiles).toHaveBeenCalledTimes(1);
 
     plan(colorsOf(0.2));
