@@ -66,11 +66,11 @@ export const MOON_SURFACE_SHADING: SurfaceTileShading;
 
 ### Task 5: Grade fit, full bake, eye check
 
-- [ ] Fit `MOON_WAC_GRADE`: per channel, gain/offset so the graded, de-lit z4 level matches the Solar System Scope 8k Moon's mean and standard deviation (both at z4, valid pixels only, |lat| < 60°). Record numbers + date in the recipe comment. Commit.
-- [ ] Full bake (`--body moon`, background). Report tile counts and archive bytes per product.
-- [ ] Eye check with `npm run shot` at three poses (mare edge, highland crater, ~70° latitude), before (main) and after; tune roughness / de-light knobs if the hand-off from the base globe pops. Re-bake under the same prefix only before any publish.
+- [x] Fit `MOON_WAC_GRADE`: per channel, gain/offset so the graded, de-lit z4 level matches the Solar System Scope 8k Moon's mean and standard deviation (both at z4, valid pixels only, |lat| < 60°). Record numbers + date in the recipe comment. Commit.
+- [x] Full bake (`--body moon`, background). Report tile counts and archive bytes per product.
+- [x] Eye check with `npm run shot` at three poses (mare edge, highland crater, ~70° latitude), before (main) and after; tune roughness / de-light knobs if the hand-off from the base globe pops. Re-bake under the same prefix only before any publish.
 
 ### Task 6: Docs and close-out
 
-- [ ] `docs/DATA.md` Moon section (Task 1) final; backlog the two adjacent findings (`marsSurfaceBake` re-inlines `marsGlobalRasters`' grids; polar cast shadows in WAC) as `docs/backlog/` detail files with index lines.
-- [ ] `/feature-done`; plan + spec to `*/completed/`. PR stacked on the prep PR.
+- [x] `docs/DATA.md` Moon section (Task 1) final; backlog the two adjacent findings (`marsSurfaceBake` re-inlines `marsGlobalRasters`' grids; polar cast shadows in WAC) as `docs/backlog/` detail files with index lines.
+- [x] `/feature-done`; plan + spec to `*/completed/`. PR stacked on the prep PR.
