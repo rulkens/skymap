@@ -3,9 +3,9 @@
  * accumulation, under the trails' occlusion (lib/trailOcclusion.wesl owns group 0 bindings 0-1;
  * ours are 2, the uniforms, and 3, the profile table). One instance = one satellite: its TEME
  * state at the last sweep, packed densely from the valid objects, so a decayed object costs no
- * vertex work. `drawPick` stamps the
- * same instances into the overlay pick target (r32uint), wider than the dot so it can be clicked;
- * it has its own uniform and bind group, so a pick never rewrites what the frame drew with.
+ * vertex work. `drawPick` stamps the same instances into the overlay pick target (r32uint), wider
+ * than the dot so it can be clicked; it has its own uniform and bind group, so a pick never
+ * rewrites what the frame drew with.
  * @module
  */
 
@@ -19,8 +19,8 @@ import pickCode from '../../../../services/gpu/shaders/satellites/points/pick.we
 import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../../../../services/gpu/lib/blendStates';
 import { SATELLITE_POINT_STYLE } from '../data/satellitePointStyle';
-import { initialState as DEFAULT_SATELLITE_COLORS } from '../../state/satelliteColors/initialState';
-import { packSatelliteProfiles } from './packSatelliteProfiles';
+import { SATELLITE_PROFILE_BYTES } from './packSatelliteProfiles';
+import { SATELLITE_PROFILE_CAPACITY } from '../data/satelliteProfileCapacity';
 import { NEAR0, SLAB_REVERSED_Z } from '../../../../services/engine/frame/slabs';
 import { pickDepthFormat } from '../../../../services/engine/frame/pickProgram';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
@@ -114,13 +114,11 @@ export function createSatellitePointRenderer({
     },
   });
 
-  const profileDefaults = packSatelliteProfiles(DEFAULT_SATELLITE_COLORS);
   const profileBuffer = device.createBuffer({
     label: 'satellite-points-profiles',
-    size: profileDefaults.byteLength,
+    size: SATELLITE_PROFILE_CAPACITY * SATELLITE_PROFILE_BYTES,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
-  writeProfiles(profileDefaults);
 
   const drawBinding = createBinding('satellite-points', SATELLITE_POINT_STYLE.radiusPx);
   const pickBinding = createBinding('satellite-points-pick', SATELLITE_POINT_STYLE.pickRadiusPx);

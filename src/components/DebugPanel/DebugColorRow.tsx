@@ -23,7 +23,7 @@ export type DebugColorRowProps = {
 function DebugColorRow({ label, value, title, onChange }: DebugColorRowProps): ReactNode {
   const hex = linearRgbToHex(value);
   return (
-    <div className={styles.root} title={title}>
+    <label className={styles.root} title={title}>
       <span className={styles.label}>{label}</span>
       <span className={styles.readout}>{hex}</span>
       <input
@@ -32,7 +32,7 @@ function DebugColorRow({ label, value, title, onChange }: DebugColorRowProps): R
         value={hex}
         onChange={(e) => onChange(hexToLinearRgb(e.target.value as HexString))}
       />
-    </div>
+    </label>
   );
 }
 

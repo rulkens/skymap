@@ -1,7 +1,6 @@
 /**
  * ProbeSpheresTuningSectionContainer — the probe spheres' DebugPanel material and its store
- * boundary in one file, as `LocalBubbleTuningSectionContainer`. The colour is stored linear;
- * the native picker speaks sRGB.
+ * boundary in one file, as `LocalBubbleTuningSectionContainer`.
  */
 
 import { memo, useCallback } from 'react';

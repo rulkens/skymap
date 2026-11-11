@@ -4,12 +4,12 @@
  * Names match by whole token so `DEBUT-1` is not debris. Blank or odd input falls through to a
  * regime row rather than throwing.
  */
+import { EARTH_GM_KM3_S2 } from '../../../../data/earthGmKm3S2';
 import { SATELLITE_CLASSES } from '../../../../data/satellites/satelliteClasses';
 import { SATELLITE_PROFILES } from '../data/satelliteProfiles';
 import type { SatelliteProfileId } from '../@types/SatelliteProfileId';
 import type { SatelliteProfileInput } from '../@types/SatelliteProfileInput';
 
-const MU_KM3_S2 = 398600.4418;
 const EARTH_RADIUS_KM = 6378;
 const SIDEREAL_REV_PER_DAY = 1.0027;
 // Starlink V2 Mini launches begin at 2023-026.
@@ -25,7 +25,7 @@ function launchBeforeV2Mini(cosparId: string): boolean {
 
 function regime(meanMotion: number, e: number): SatelliteProfileId {
   const n = (meanMotion * 2 * Math.PI) / 86400;
-  const a = Math.cbrt(MU_KM3_S2 / (n * n));
+  const a = Math.cbrt(EARTH_GM_KM3_S2 / (n * n));
   const apogee = a * (1 + e) - EARTH_RADIUS_KM;
   const perigee = a * (1 - e) - EARTH_RADIUS_KM;
   if (Math.abs(meanMotion - SIDEREAL_REV_PER_DAY) < 0.05 && e < 0.05) return 'geo';

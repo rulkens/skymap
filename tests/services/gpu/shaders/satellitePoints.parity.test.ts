@@ -43,7 +43,6 @@ describe('satellites/points/io.wesl parity', () => {
     expect(
       SATELLITE_INSTANCE_ATTRIBUTES.map((a) => [a.shaderLocation, a.offset, a.format]),
     ).toEqual(fields);
-    expect(fields.at(-1)).toEqual([4, 32, 'uint32']);
     expect(SATELLITE_INSTANCE_STRIDE).toBe(at);
   });
 

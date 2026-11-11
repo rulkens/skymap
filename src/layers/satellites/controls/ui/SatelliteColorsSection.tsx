@@ -5,7 +5,6 @@ import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { SatelliteColors } from '../../@types/SatelliteColors';
 import type { SatelliteProfileId } from '../../points/@types/SatelliteProfileId';
 import { SATELLITE_PROFILES } from '../../points/data/satelliteProfiles';
-import { initialState as DEFAULT_SATELLITE_COLORS } from '../../state/satelliteColors/initialState';
 import { formatSatelliteColorDefaults } from '../utils/formatSatelliteColorDefaults';
 import Button from '../../../../components/common/Button/Button';
 import CopyButton from '../../../../components/common/CopyButton/CopyButton';
@@ -37,9 +36,9 @@ function SatelliteColorsSection({
       <div className={debugStyles.buttonRow}>
         <Button onClick={onReset}>Reset colours</Button>
         <CopyButton
-          text={formatSatelliteColorDefaults(colors, DEFAULT_SATELLITE_COLORS)}
+          text={formatSatelliteColorDefaults(colors)}
           label="Copy changed colours"
-          title="Changed colours as id: [r, g, b] rows, for SATELLITE_PROFILES"
+          title="Changed rows, ready to paste into SATELLITE_PROFILES"
         />
       </div>
     </DebugSection>

@@ -39,8 +39,7 @@ export function satelliteOrbitsPass(runtime: SatellitesRuntime): ContentPass<'sa
       const { simDays } = ctx.snapshot;
       const eye = ctx.drawCamPos;
       const catalog = runtime.propagator.catalog()!;
-      const codes = runtime.propagator.profileCodes();
-      if (codes === null) return;
+      const codes = runtime.propagator.profileCodes()!;
       const opacity = satelliteLayerOpacity(catalog, simDays);
       const ks = selectedSatelliteIndices(state.selection, catalog);
       if (staging.length < ks.length * INSTANCE_FLOATS) {

@@ -15,10 +15,10 @@ describe('packSatelliteProfiles', () => {
 
     expect(table.length).toBe(128);
     expect([...table.subarray(8, 11)]).toEqual([0.25, 0.5, 0.75]);
-    expect(table[11]).toBeCloseTo(104.96, 3);
-    expect(table[12]).toBe(1);
+    expect(table[11]).toBeCloseTo(SATELLITE_PROFILES[1]!.areaM2, 3);
+    expect(table[12]).toBe(SATELLITE_PROFILES[1]!.glintGain);
     // Row 10 is debris: no panels to flash.
-    expect(table[10 * 8 + 3]).toBe(1);
-    expect(table[10 * 8 + 4]).toBe(0);
+    expect(table[10 * 8 + 3]).toBe(SATELLITE_PROFILES[10]!.areaM2);
+    expect(table[10 * 8 + 4]).toBe(SATELLITE_PROFILES[10]!.glintGain);
   });
 });
