@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { MARS_IAU_SPHERE_RADIUS_M } from '../../../src/layers/body/surfaceTiles/format/data/marsSurfaceParams';
 import type { ColourGrade } from '../../../src/layers/body/textures/@types/ColourGrade';
 import type { AlbedoDelight } from '../../../tools/textures/@types/AlbedoDelight';
 import { constantHeightSource } from '../../../tools/textures/constantHeightSource';
@@ -19,8 +20,7 @@ const IDENTITY_GRADE: ColourGrade = {
 
 const NO_DELIGHT: AlbedoDelight = {
   reliefShade: 0,
-  photoSunAzDeg: 64,
-  photoSunElDeg: 28,
+  photoSun: { kind: 'fixed', azDeg: 64, elDeg: 28 },
   reliefExaggeration: 6,
   flatten: 0,
   flattenRadiusDeg: 1.2,
@@ -42,29 +42,31 @@ function fixedRaster(bytes: readonly number[]): SurfaceImagerySource {
   };
 }
 
-/** A globally uniform north-south slope — height rises by `gradientMPerDeg`
- *  per degree of latitude. Constant in longitude, so its normal (and the
- *  relief-shading ratio it produces) is the SAME everywhere: one scalar tilt
- *  to compare a "faces the sun" case against a "faces away" one. */
-function tiltedHeightSource(gradientMPerDeg: number): HeightSource {
-  const attribution = 'synthetic tilted plane (test only)';
+/** A globally uniform slope: height rises `northMPerDeg` per degree of latitude
+ *  and `eastMPerDeg` per degree of longitude. One tilt everywhere (but the
+ *  antimeridian), to compare a "faces the sun" case against a "faces away" one. */
+function planeHeightSource(northMPerDeg: number, eastMPerDeg: number): HeightSource {
+  const attribution = 'synthetic plane (test only)';
+  const maxAbs = Math.abs(northMPerDeg) * 90 + Math.abs(eastMPerDeg) * 180;
   return {
-    id: 'tilted-plane',
+    id: 'plane',
     attribution,
     maxLevel: Number.POSITIVE_INFINITY,
     coverage: [{ west: -180, east: 180, south: -90, north: 90 }],
-    provenance: { sourceId: 'tilted-plane', attribution, vintage: 'n/a' },
-    async readGrid(z, _i0, j0, nx, ny) {
+    provenance: { sourceId: 'plane', attribution, vintage: 'n/a' },
+    async readGrid(z, i0, j0, nx, ny) {
       const step = heightLatticeStepDeg(z);
       const out = new Float32Array(nx * ny);
       for (let j = 0; j < ny; j++) {
         const lat = 90 - (j0 + j) * step;
-        out.fill(gradientMPerDeg * lat, j * nx, (j + 1) * nx);
+        for (let i = 0; i < nx; i++) {
+          out[j * nx + i] = northMPerDeg * lat + eastMPerDeg * (-180 + (i0 + i) * step);
+        }
       }
       return out;
     },
     async boundsInBox() {
-      return [-Math.abs(gradientMPerDeg) * 90, Math.abs(gradientMPerDeg) * 90];
+      return [-maxAbs, maxAbs];
     },
   };
 }
@@ -77,6 +79,7 @@ describe('delightedImagerySource', () => {
       constantHeightSource(0),
       NO_DELIGHT,
       IDENTITY_GRADE,
+      MARS_IAU_SPHERE_RADIUS_M,
     );
     const out = await wrapped.readBox({ west: 0, east: 1, south: 0, north: 1 }, 3, 1);
     expect(Array.from(out!)).toEqual(pixels);
@@ -91,8 +94,7 @@ describe('delightedImagerySource', () => {
     // the two cases swap, or collapse to the same value (mutation-verified).
     const DELIGHT: AlbedoDelight = {
       reliefShade: 0.8,
-      photoSunAzDeg: 0,
-      photoSunElDeg: 45,
+      photoSun: { kind: 'fixed', azDeg: 0, elDeg: 45 },
       reliefExaggeration: 1,
       flatten: 0,
       flattenRadiusDeg: 1.2,
@@ -106,15 +108,17 @@ describe('delightedImagerySource', () => {
 
     const awayFromSun = delightedImagerySource(
       fixedRaster(GREY),
-      tiltedHeightSource(GRADIENT_M_PER_DEG),
+      planeHeightSource(GRADIENT_M_PER_DEG, 0),
       DELIGHT,
       IDENTITY_GRADE,
+      MARS_IAU_SPHERE_RADIUS_M,
     );
     const facingSun = delightedImagerySource(
       fixedRaster(GREY),
-      tiltedHeightSource(-GRADIENT_M_PER_DEG),
+      planeHeightSource(-GRADIENT_M_PER_DEG, 0),
       DELIGHT,
       IDENTITY_GRADE,
+      MARS_IAU_SPHERE_RADIUS_M,
     );
 
     const awayOut = await awayFromSun.readBox(box, 1, 1);
@@ -122,5 +126,36 @@ describe('delightedImagerySource', () => {
 
     expect(awayOut![0]).toBeGreaterThan(GREY[0]!);
     expect(facingOut![0]).toBeLessThan(GREY[0]!);
+  });
+
+  it('flips a subsolar photo Sun at the seam, so the same slope de-lights oppositely on each side', async () => {
+    // Seam at 0°: the Sun is east of cells at −20° and west of cells at +20°.
+    // An east-rising slope faces west — away from the Sun at −20° (photo dark,
+    // must brighten), toward it at +20° (photo bright, must darken). Drop the
+    // flip and both sides move the same way.
+    const DELIGHT: AlbedoDelight = {
+      reliefShade: 0.8,
+      photoSun: { kind: 'subsolar', offsetDeg: 45, seamLonDeg: 0 },
+      reliefExaggeration: 1,
+      flatten: 0,
+      flattenRadiusDeg: 1.2,
+      knee: 0.7,
+      tame: 0,
+      keepIce: 0,
+    };
+    const GREY = [128, 128, 128, 255];
+    const source = delightedImagerySource(
+      fixedRaster(GREY),
+      planeHeightSource(0, 2000),
+      DELIGHT,
+      IDENTITY_GRADE,
+      MARS_IAU_SPHERE_RADIUS_M,
+    );
+
+    const sunEast = await source.readBox({ west: -21, east: -20, south: 0, north: 1 }, 1, 1);
+    const sunWest = await source.readBox({ west: 20, east: 21, south: 0, north: 1 }, 1, 1);
+
+    expect(sunEast![0]).toBeGreaterThan(GREY[0]!);
+    expect(sunWest![0]).toBeLessThan(GREY[0]!);
   });
 });
