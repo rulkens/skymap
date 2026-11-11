@@ -65,6 +65,7 @@ export const STUDIO_KEYS: readonly StudioKey[] = [
     group: 'Playhead',
     label: 'Play / Pause',
     chips: ['Space'],
+    once: true,
     matches: (e) => plain(e) && e.key === ' ',
   },
   {
@@ -72,6 +73,7 @@ export const STUDIO_KEYS: readonly StudioKey[] = [
     group: 'Playhead',
     label: 'Loop',
     chips: ['L'],
+    once: true,
     matches: (e) => plain(e) && e.key.toLowerCase() === 'l',
   },
   {
@@ -115,6 +117,7 @@ export const STUDIO_KEYS: readonly StudioKey[] = [
     group: 'Clip',
     label: 'Keys',
     chips: ['?'],
+    once: true,
     matches: (e) => e.key === '?' && !e.metaKey && !e.ctrlKey && !e.altKey,
   },
 ];

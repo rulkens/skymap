@@ -173,4 +173,14 @@ describe('useStudioKeys', () => {
     const loop = { startSec: 4, endSec: 8 };
     expect(selectTransport(store.getState())).toEqual({ kind: 'running', fromSec: 4, loop });
   });
+
+  it("holding Space toggles once; the auto-repeat is swallowed, not the page's", () => {
+    const { store, dock } = mount();
+    store.dispatch(clipStarted({ data: { timeline: [] }, frame: 'equatorial', atEnd: 'revert' }));
+
+    fireEvent.keyDown(dock, { key: ' ' });
+    const repeatKept = fireEvent.keyDown(dock, { key: ' ', repeat: true });
+    expect(selectTransport(store.getState()).kind).toBe('running');
+    expect(repeatKept).toBe(false);
+  });
 });

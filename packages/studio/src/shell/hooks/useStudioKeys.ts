@@ -19,6 +19,10 @@ export function useStudioKeys(onToggleKeys: () => void) {
       if (controlOwnsKey(event)) return;
       const key = STUDIO_KEYS.find((candidate) => candidate.matches(event));
       if (key === undefined) return;
+      if (key.once && event.repeat) {
+        event.preventDefault();
+        return;
+      }
       if (key.id === 'help') onToggleKeys();
       else {
         const actions = runStudioKey(key.id, store.getState());
