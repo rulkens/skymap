@@ -104,6 +104,11 @@ npm run perf:cpu -- --url http://localhost:5174 --scenario star-field
 Flags: `--url` (default :5173), `--scenario` (repeatable; default all), `--frames` (default 120),
 every row prints, slowest first. The clock ticks in 0.1 ms steps, so only a mean over many
 frames resolves a row below that.
+
+`--scrub <clipId>` (repeatable) prices a clip-studio scrub instead of the poses: it starts the
+registry clip as `#clip=` does, pauses it, and seeks to a new t every frame across its length, so
+every frame is a jump. The `clip:tick` row is the clip player's share (the seed, the scene fold);
+above 1 ms mean on a dev box is the clip studio's landing gate.
 Headless Chromium on a dev box runs the same JS several times faster than a phone.
 
 ## Gotchas

@@ -304,9 +304,13 @@ As built: Q-F ruled A (owner, 2026-11-11). The sim test lives in `tests/services
 
 No test: harness wiring, verified live (the README's architecture section says the CDP wiring is verified live).
 
-- [ ] Add the span, the hook method, the flag, the README paragraph.
-- [ ] Live: `npm run perf:cpu -- --url http://localhost:<port> --scrub cosmicFlows` prints a `clip:tick` row.
-- [ ] Commit: "perf:cpu can price a scrub".
+As built: `scrubClip` starts the clip with the `startClip` action (the `#clip=` takeover body resolves it, as the
+recorder hook does) and pauses it with `clipTransportSet`; no `playClip` call from the hook. It ends with
+`exitTakeover`.
+
+- [x] Add the span, the hook method, the flag, the README paragraph.
+- [x] Live: `npm run perf:cpu -- --url http://localhost:<port> --scrub cosmicFlows` prints a `clip:tick` row.
+- [x] Commit: "perf:cpu can price a scrub".
 
 ---
 

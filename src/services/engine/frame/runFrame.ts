@@ -70,7 +70,9 @@ const LIVE_IDLE_TICK_MS = 500;
 export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number): void {
   // First statement, by contract: the clip's scene at this frame's t is what demand and the
   // pose read below, and a step's frameTween is seen by this frame's basis.
+  const clipStartMs = cpuSpans.on ? performance.now() : 0;
   const { clipEpoch } = state.subsystems.clipPlayer.tick(state.cameraRuntime.epochs.clip, nowMs);
+  if (cpuSpans.on) cpuSpans.add('clip:tick', clipStartMs);
 
   reevaluateDemand(state);
 

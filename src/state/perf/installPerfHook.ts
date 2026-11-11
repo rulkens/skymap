@@ -13,7 +13,15 @@ import { isPerfMode } from '../../utils/url/isPerfMode';
 import { jsHeapBytes } from '../../utils/perf/jsHeapBytes';
 import { cpuSpans } from '../../utils/perf/cpuSpans';
 import { whenStablyReady } from '../lifecycle/whenStablyReady';
-import { cancelCameraTween, commitCameraPose, setAutoRotate } from '../camera/cameraSlice';
+import {
+  cancelCameraTween,
+  clipTransportSet,
+  commitCameraPose,
+  setAutoRotate,
+} from '../camera/cameraSlice';
+import { startClip } from '../camera/clipActions';
+import { exitTakeover } from '../takeover/takeoverActions';
+import { compileClip } from '../../services/engine/animation/compileClip';
 import { clearSelection } from '../selection/selectionSlice';
 import { setRenderStrategy } from '../settings/core/debugSlice';
 import { requestTier } from '../tier/requestTier';
@@ -28,6 +36,7 @@ import type { PerfSample } from '../../@types/perf/PerfSample';
 import type { RenderStrategy } from '../../@types/engine/frame/RenderStrategy';
 import type { Tier } from '../../@types/data/Tier';
 import type { MemorySnapshot } from '../../@types/perf/MemorySnapshot';
+import type { ClipId } from '../../@types/animation/ClipId';
 
 // Per-frame yaw advance in radians; mirrors the camera slice's inline
 // `initialState.autoRotate.rate`, which the slice does not export.
@@ -116,6 +125,42 @@ async function collectCpu(engine: EngineHandle, frames: number): Promise<Record<
   return out;
 }
 
+// Frames a registry clip gets to resolve its foci and start before the scrub gives up.
+const CLIP_START_FRAMES = 600;
+
+// A scrub makes every frame a jump: the registry clip plays paused (its takeover body resolves
+// it as `#clip=` does) and each frame seeks to the next t across its length, so `clip:tick`
+// prices the seed and the fold. The seek is a `camera/` write, which wakes exactly one frame.
+async function scrubClip(
+  store: AppStore,
+  engine: EngineHandle,
+  id: ClipId,
+  frames: number,
+): Promise<Record<string, number>[]> {
+  store.dispatch(startClip(id));
+  for (let i = 0; store.getState().camera.clip === null; i++) {
+    if (i === CLIP_START_FRAMES) throw new Error(`perf: clip '${id}' never started`);
+    engine.debug.requestRender();
+    await engine.nextFrame();
+  }
+  const { durationSec } = compileClip(store.getState().camera.clip!.data);
+  const out: Record<string, number>[] = [];
+  cpuSpans.on = true;
+  try {
+    for (let i = -PERF_WARMUP_FRAMES; i < frames; i++) {
+      const atSec = (Math.max(0, i) / frames) * durationSec;
+      store.dispatch(clipTransportSet({ kind: 'paused', atSec, camera: 'clip' }));
+      cpuSpans.ms.clear();
+      await engine.nextFrame();
+      if (i >= 0) out.push(Object.fromEntries(cpuSpans.ms));
+    }
+  } finally {
+    cpuSpans.on = false;
+    store.dispatch(exitTakeover());
+  }
+  return out;
+}
+
 // A FRESH `whenStablyReady` rather than a per-source wait: the same engine-ready
 // + loads-settled debounce that gates boot also detects a tier reload completing.
 function setTier(store: AppStore, tier: Tier): Promise<void> {
@@ -130,6 +175,7 @@ export function installPerfHook(store: AppStore, engine: EngineHandle): void {
     setStrategy: (s: RenderStrategy) => store.dispatch(setRenderStrategy(s)),
     collectTimings: (frames: number) => collectTimings(engine, frames),
     collectCpu: (frames: number) => collectCpu(engine, frames),
+    scrubClip: (id: ClipId, frames: number) => scrubClip(store, engine, id, frames),
     setTier: (tier: Tier) => setTier(store, tier),
     getTier: () => selectTier(store.getState()),
     memory: (): MemorySnapshot => ({ gpu: engine.debug.gpuMemory(), jsHeapBytes: jsHeapBytes() }),
