@@ -5,8 +5,8 @@
 - **Decision-makers:** project owner, Claude
 - **Supersedes:** —
 - **Superseded by:** —
-- **Related:** `docs/superpowers/specs/2026-11-10-clip-studio-s3-scene-tracks.md` (the design),
-  `docs/superpowers/plans/2026-11-10-clip-studio-s3-scene-tracks.md`,
+- **Related:** `docs/superpowers/specs/completed/2026-11-10-clip-studio-s3-scene-tracks.md` (the design),
+  `docs/superpowers/plans/completed/2026-11-10-clip-studio-s3-scene-tracks.md`,
   `docs/grill-sessions/clip-studio-2026-11-07.md` (Q1, Q2), ADR 0001 and ADR 0012 (the fade registry
   and its data-arrival gate), `docs/animation/clip-primitives.md`
 

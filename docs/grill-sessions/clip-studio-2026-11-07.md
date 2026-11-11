@@ -427,7 +427,7 @@ _Settled in the plan:_ the studio's RTK slice is injected into the app store thr
 
 ## Q48–Q53: S3 spec asks (owner, 2026-11-10)
 
-From `docs/superpowers/specs/2026-11-10-clip-studio-s3-scene-tracks.md` §9.
+From `docs/superpowers/specs/completed/2026-11-10-clip-studio-s3-scene-tracks.md` §9.
 
 - **Q48 Tours and the end scene:** options were `atEnd: 'keep'` on the tour's call sites, the tour folding the
   clip into intent after `playClip` resolves (one frame of reverted scene), or one compiled tour timeline.

@@ -1,14 +1,14 @@
 # Clip studio S3: a clip's scene as pure tracks — implementation plan
 
 > **For agentic workers:** execute with `subagent-driven-development` under
-> [`sdd-execution.md`](../conventions/sdd-execution.md). One commit per task. Ask the two pre-flight questions
+> [`sdd-execution.md`](../../conventions/sdd-execution.md). One commit per task. Ask the two pre-flight questions
 > (parallelism, perf gate) before Task 0.1; this plan expects the perf gate to run (DoD).
 
 **Goal:** a playing clip's scene (switches, settings writes, focus, orientation frame, `fade` factors) is a pure
 function of the clip clock, read by the engine as an overlay on intent, reverting at the clip's end unless the
 caller keeps it. The edge-triggered cue path (`applySceneEffect`, `clipOpacityChannel`, the cue cursor) is deleted.
 
-**Spec:** [`2026-11-10-clip-studio-s3-scene-tracks.md`](../specs/2026-11-10-clip-studio-s3-scene-tracks.md) (the
+**Spec:** [`2026-11-10-clip-studio-s3-scene-tracks.md`](../../specs/completed/2026-11-10-clip-studio-s3-scene-tracks.md) (the
 reviewer's document; tasks below carry what implementers need). **Decisions:** grill session Q1 (C), Q2 (B) and
 Q48–Q53, recorded in spec §9: `keep` for tours and `revert` elsewhere, intent shown during a clip, default revert
 durations, `atEnd` required, no clip perf scenario. G0's prep commits ride the S3 feature PR.

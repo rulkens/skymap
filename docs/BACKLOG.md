@@ -246,7 +246,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## UI & UX
 
-- [ ] **Clip studio engine groundwork (scene tracks, seek, PiP rig, detach, save)** `ready` — after slice 1, each slice its own plan. → [details](backlog/2026-11-10-clip-studio-engine-groundwork.md)
+- [ ] **Clip studio engine groundwork (seek, PiP rig, detach, save)** `ready` — after slice 1, each slice its own plan. → [details](backlog/2026-11-10-clip-studio-engine-groundwork.md)
 - [ ] **M31's card tags a measured diameter as fallback** `needs-repro` — "fallback (30 kpc)" beside 40.4 kpc, with an oversized ring. → [details](backlog/2026-11-06-m31-diameter-fallback-tag.md)
 - [ ] **InfoCard live phase + apparent-mag rows** `needs-design` — grow the engine time pub with phase angle + apparent magnitude for the focused body (distance row shipped in #472). → [details](backlog/2026-07-21-infocard-phase-apparent-mag-rows.md)
 - [ ] **"You are here" label continuity** `needs-design` — the label fades out below 2 kpc (its `youAreHere` band, `in: SURVEY_DEEP_ZOOM`, `milkyWay/visibility.ts`); decide whether it hands off toward the Sun/Earth instead of vanishing. → [details](backlog/2026-07-22-you-are-here-label-continuity.md)

@@ -1,9 +1,9 @@
 # Clip studio S3: a clip's scene as pure tracks
 
 **Status:** open questions ruled by the owner 2026-11-10 (§9) · **Date:** 2026-11-10 · **Branch:** `feat/clip-studio`
-**Decision record:** [`clip-studio-2026-11-07.md`](../../grill-sessions/clip-studio-2026-11-07.md) Q1 (C, scene as pure
+**Decision record:** [`clip-studio-2026-11-07.md`](../../../grill-sessions/clip-studio-2026-11-07.md) Q1 (C, scene as pure
 tracks, for every clip), Q2 (B, a clip's scene always reverts at its end) and this spec's rulings Q48–Q53.
-**Plan:** [`2026-11-10-clip-studio-s3-scene-tracks.md`](../plans/2026-11-10-clip-studio-s3-scene-tracks.md)
+**Plan:** [`2026-11-10-clip-studio-s3-scene-tracks.md`](../../plans/completed/2026-11-10-clip-studio-s3-scene-tracks.md)
 
 ## Goal
 
