@@ -32,4 +32,7 @@ export type ClipPlayer = {
 
   /** `root` with the live clip's scene at the current t folded in; `root` itself with no clip. Memoized. */
   view(root: RootState): RootState;
+
+  /** The clock the last tick evaluated; `held` when a running transport is clamped at its end. Null with no clip. */
+  clipAt(): { readonly sec: number; readonly held: boolean } | null;
 } & Destroyable;

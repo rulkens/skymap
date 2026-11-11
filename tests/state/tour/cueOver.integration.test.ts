@@ -11,6 +11,7 @@ import { rootReducer } from '../../../src/store/rootReducer';
 import { createFadeRegistry } from '../../../src/services/animation/fadeRegistry';
 import { seedVisibilityFades } from '../../../src/services/engine/wiring/seedVisibilityFades';
 import { syncVisibilityTargets } from '../../../src/services/engine/wiring/syncVisibilityTargets';
+import { visibilityTargetTable } from '../../../src/services/engine/wiring/visibilityTargetTable';
 import { createClipPlayer } from '../../../src/services/engine/subsystems/clipPlayer';
 import { UNSTARTED_EPOCHS } from '../../../src/services/engine/camera/drivers/cameraEpochs';
 import { clipStarted } from '../../../src/state/camera/cameraSlice';
@@ -44,6 +45,8 @@ function playOnce(steps: readonly Effect[], boot: readonly Action[] = []) {
     },
     extractFocusRow: () => ({ row: null, focusId: null }),
     syncVisibility: (settings, overMs) => syncVisibilityTargets({ ...state, settings }, overMs),
+    visibilityTargets: (settings) => visibilityTargetTable(state, settings),
+    getFades: () => fades,
   });
   const data = { start: START, timeline: [...steps, hold(20)] };
   store.dispatch(clipStarted({ data, frame: DEFAULT_ORIENTATION, atEnd: 'revert' }));

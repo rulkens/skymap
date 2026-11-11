@@ -228,24 +228,36 @@ Behaviour, all inside `tick`, synchronous, nothing deferred to a later frame:
      seeds except at a wrap.
 5. **Readback.** `clipAt()` returns the t and `held` of the last tick; null when no clip.
 
+As built:
+
+- **The seed's inputs are two new player deps**: `visibilityTargets(settings[])` (every fade identity's target under
+  each prefix's settings, `wiring/visibilityTargetTable.ts`, the rule `syncVisibilityTargets` applies) and
+  `getFades()` (lazy, as `getCameraRuntime`: the player is built before `state`). The prefix settings are memoized per
+  (compiled clip, intent settings); `publishStep` reads them too instead of folding its own.
+- **Wraps seed through S3's `publishWrap` seam**, now deleted: a transported loop seeds on every wrap; an
+  untransported loop keeps S3's condition (a lap that drops applied steps), so a step at 0 still holds across laps.
+- **"Same play" is decided in `enter`**: a changed `camera.clip` with a transport, whose data OR transport is the one
+  the player had, continues the play (a jump); anything else is a new play, handed over as S3 does.
+- The mid-roll slerp is lifted into `camera/orientation/frameRollQuatAt.ts`, which `resolveFrameBasis` now calls.
+
 Tests (extend the S3 player tests; hand-computed values):
 
-- [ ] `a paused transport evaluates at atSec on every frame` (two ticks 500 ms apart; the returned epoch's elapsed is
+- [x] `a paused transport evaluates at atSec on every frame` (two ticks 500 ms apart; the returned epoch's elapsed is
       `atSec` both times).
-- [ ] `a running transport is anchored at the first frame that sees it` (dispatch at nowMs 1000, first tick at 1016:
+- [x] `a running transport is anchored at the first frame that sees it` (dispatch at nowMs 1000, first tick at 1016:
       elapsed at 1516 is fromSec + 0.5; the recorder's injected clock stays deterministic).
-- [ ] `a new transport object re-anchors even when its numbers are the old ones` (Home pressed twice while playing).
-- [ ] `a running transport holds at its end, reports held, and never ends` (no `clipEnded`, end resolver not fired).
-- [ ] `a loop span wraps inside the span with the overshoot carried`.
-- [ ] `a paused seek sets each touched identity to its value at t and starts no ramp` (a 4 s show at 2, seek to 4:
+- [x] `a new transport object re-anchors even when its numbers are the old ones` (Home pressed twice while playing).
+- [x] `a running transport holds at its end, reports held, and never ends` (no `clipEnded`, end resolver not fired).
+- [x] `a loop span wraps inside the span with the overshoot carried`.
+- [x] `a paused seek sets each touched identity to its value at t and starts no ramp` (a 4 s show at 2, seek to 4:
       `setImmediate(id, 0.5)`, no `fadeTo`).
-- [ ] `play from mid-ramp resumes the ramp for its remaining time` (`fadeTo(id, 1, 2000)`).
-- [ ] `a data swap keeps t and re-seeds; the end resolver is untouched`.
-- [ ] `past the end the view is intent and the clip factor is 1`.
-- [ ] `an untransported play never seeds on its first frame` (a registry ramp in flight on an identity the new clip
+- [x] `play from mid-ramp resumes the ramp for its remaining time` (`fadeTo(id, 1, 2000)`).
+- [x] `a data swap keeps t and re-seeds; the end resolver is untouched`.
+- [x] `past the end the view is intent and the clip factor is 1`.
+- [x] `an untransported play never seeds on its first frame` (a registry ramp in flight on an identity the new clip
       also touches is still ramping after the first tick: the tour-seam guard).
-- [ ] `npx vitest run tests/services/engine/subsystems tests/services/engine/presentation`.
-- [ ] Commit: "A clip under transport pauses, seeks, loops and holds at its end".
+- [x] `npx vitest run tests/services/engine/subsystems tests/services/engine/presentation`.
+- [x] Commit: "A clip under transport pauses, seeks, loops and holds at its end".
 
 ### Task 1.4: t reaches sagas; a paused clip lets the loop sleep; free look frees the camera
 

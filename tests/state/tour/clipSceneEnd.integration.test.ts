@@ -13,6 +13,7 @@ import { rootReducer } from '../../../src/store/rootReducer';
 import { createFadeRegistry } from '../../../src/services/animation/fadeRegistry';
 import { seedVisibilityFades } from '../../../src/services/engine/wiring/seedVisibilityFades';
 import { syncVisibilityTargets } from '../../../src/services/engine/wiring/syncVisibilityTargets';
+import { visibilityTargetTable } from '../../../src/services/engine/wiring/visibilityTargetTable';
 import { createClipPlayer } from '../../../src/services/engine/subsystems/clipPlayer';
 import { createPlayClip } from '../../../src/services/engine/animation/playClip';
 import { UNSTARTED_EPOCHS } from '../../../src/services/engine/camera/drivers/cameraEpochs';
@@ -49,6 +50,8 @@ function makeEngine(boot: readonly Action[] = []) {
     },
     extractFocusRow: () => ({ row: null, focusId: null }),
     syncVisibility: (settings, overMs) => syncVisibilityTargets({ ...state, settings }, overMs),
+    visibilityTargets: (settings) => visibilityTargetTable(state, settings),
+    getFades: () => fades,
   });
   seedVisibilityFades(state);
   const playClip = createPlayClip({ store, clipPlayer: player, getLivePose: () => START });
@@ -100,6 +103,8 @@ describe("a clip's scene at its end", () => {
       },
       extractFocusRow: () => ({ row: null, focusId: null }),
       syncVisibility: () => {},
+      visibilityTargets: () => [],
+      getFades: () => ({ setImmediate: () => {}, fadeTo: () => {} }),
     });
     const playClip = createPlayClip({ store, clipPlayer: player, getLivePose: () => START });
     const clip: ClipData = { timeline: [{ kind: 'focus', ref: VIRGO }, hold(5)] };
