@@ -1,10 +1,6 @@
-/**
- * True when the focused control acts on this key itself, so the studio's keys leave it: a text
- * input (TextNumberField, ObjectPicker) takes every key, a select its arrows and Home/End, and a
- * key some control already default-prevented (the app's Slider, the dock grabber) stays that
- * control's, and a focused button keeps Space (it clicks itself). Escape and ⌘Z on a slider or
- * select still reach the studio.
- */
+/** True when the focused control acts on this key itself: a text input takes every key, a select
+ * its arrows and Home/End, a button Space, and a key a control default-prevented stays its own.
+ * Escape and ⌘Z on a slider or select still reach the studio. */
 const NAVIGATION_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End']);
 
 export function controlOwnsKey(

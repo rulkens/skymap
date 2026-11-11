@@ -21,6 +21,7 @@ import {
   studioOpened,
 } from '../../../src/session/state/studioSlice';
 import { selectDraft, selectRevision, selectTransport } from '../../../src/session/state/selectors';
+import type { ClipClock } from '../../../../../src/@types/animation/ClipClock';
 import type { ClipData } from '../../../../../src/@types/animation/ClipData';
 import type { PreviewPins } from '../../../src/@types/session/PreviewPins';
 
@@ -58,7 +59,7 @@ function harness() {
     getLivePose: () => PREVIEW.startPose,
   });
   let frameDone: () => void = () => {};
-  let clipAt: { sec: number; held: boolean } | null = null;
+  let clipAt: ClipClock | null = null;
   mw.setContext({
     playClip,
     nextFrame: () => new Promise<void>((resolve) => (frameDone = resolve)),

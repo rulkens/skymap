@@ -31,6 +31,7 @@ import type { PreviewPins } from '../../@types/session/PreviewPins';
 import type { StudioResolution } from '../../@types/session/StudioResolution';
 import type { TimeWindow } from '../../@types/session/TimeWindow';
 import type { ClipSpan } from '../../../../../src/@types/animation/ClipSpan';
+import type { ClipClock } from '../../../../../src/@types/animation/ClipClock';
 import type { StudioState } from '../../@types/session/StudioState';
 
 /** The head shown: where a paused clock stands, else the t the last frame drew. */
@@ -114,7 +115,7 @@ export const studioSlice = createSlice({
       }
     },
     /** The engine's drawn t; a held clock (the end, nowhere to wrap) pauses there. */
-    playheadFollowed: (state, { payload }: PayloadAction<{ sec: number; held: boolean }>) => {
+    playheadFollowed: (state, { payload }: PayloadAction<ClipClock>) => {
       if (state.transport.kind !== 'running') return;
       state.followedSec = payload.sec;
       if (payload.held) state.transport = { kind: 'paused', atSec: payload.sec, camera: 'clip' };

@@ -6,6 +6,7 @@
  */
 
 import type { VisibilityAddress } from '../../animation/VisibilityAddress';
+import type { ClipClock } from '../../animation/ClipClock';
 import type { CameraEpochs } from '../camera/CameraEpochs';
 import type { Destroyable } from '../../rendering/Destroyable';
 import type { RootState } from '../../../store/types';
@@ -33,6 +34,6 @@ export type ClipPlayer = {
   /** `root` with the live clip's scene at the current t folded in; `root` itself with no clip. Memoized. */
   view(root: RootState): RootState;
 
-  /** The clock the last tick evaluated; `held` when a running transport is clamped at its end. Null with no clip. */
-  clipAt(): { readonly sec: number; readonly held: boolean } | null;
+  /** The clock the last tick evaluated; null with no clip. */
+  clipAt(): ClipClock | null;
 } & Destroyable;

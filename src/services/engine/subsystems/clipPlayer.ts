@@ -14,10 +14,10 @@ import { sceneView } from '../animation/sceneView';
 import { clipFactorAt } from '../animation/clipFactorAt';
 import { countAtOrBefore } from '../../../utils/animation/countAtOrBefore';
 import { rampAt } from '../../../utils/animation/rampAt';
+import { overMsOf } from '../../../utils/animation/overMsOf';
 import { advanceEpoch, elapsedMs } from '../camera/drivers/cameraEpochs';
 import { liveUpBasisQuat } from '../camera/orientation/liveUpBasisQuat';
 import { frameRollQuatAt } from '../camera/orientation/frameRollQuatAt';
-import { FADE_IN_DURATION_MS, FADE_OUT_DURATION_MS } from '../../animation/fadeController';
 import { ORIENTATION_FRAME_QUATERNIONS } from '../../../data/orientation/orientationFrames';
 import { clipEnded, clearFrameTween, startFrameTween } from '../../../state/camera/cameraSlice';
 import { FRAME_TWEEN_MS } from '../../../state/camera/watchOrientationChangeSaga';
@@ -37,6 +37,7 @@ import type { VisibilityAddress } from '../../../@types/animation/VisibilityAddr
 import type { OrientationFrameId } from '../../../@types/camera/orientation/OrientationFrameId';
 import type { Ease } from '../../../@types/animation/Ease';
 import type { ClipTransport } from '../../../@types/animation/ClipTransport';
+import type { ClipClock } from '../../../@types/animation/ClipClock';
 import type { TargetChange } from '../../../@types/animation/TargetChange';
 import type { FrameTween } from '../../../@types/camera/focusMotion/FrameTween';
 import type { EngineSettingsState } from '../../../@types/settings/EngineSettingsState';
@@ -359,7 +360,7 @@ export function createClipPlayer(deps: ClipPlayerDeps): ClipPlayer {
     return clipFactorAt(compiled.scene.factors[address], t);
   }
 
-  function clipAt(): { readonly sec: number; readonly held: boolean } | null {
+  function clipAt(): ClipClock | null {
     return clip === null ? null : { sec: t, held };
   }
 
@@ -376,12 +377,4 @@ export function createClipPlayer(deps: ClipPlayerDeps): ClipPlayer {
   }
 
   return { tick, stop, clipOpacityOf, view, clipAt, destroy, registerEndResolver };
-}
-
-// A step's own `over`, else the registry's defaults (600 ms in, 100 ms out).
-function overMsOf(step: SceneStep, to: number): number {
-  const { effect } = step;
-  const over = effect.kind === 'show' || effect.kind === 'hide' ? effect.over : undefined;
-  if (over !== undefined) return over * 1000;
-  return to === 1 ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS;
 }

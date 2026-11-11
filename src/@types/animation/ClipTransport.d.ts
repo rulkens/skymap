@@ -1,8 +1,5 @@
-/**
- * Where a clip under transport stands: someone outside the player decides its clock. The player
- * anchors a `running` value at the first frame that sees that OBJECT, so a new value re-anchors
- * even when its numbers repeat (Home pressed twice while playing).
- */
+/** Where a clip under transport stands, decided outside the player. A `running` value anchors at
+ * the first frame that sees that OBJECT, so a new one re-anchors even when its numbers repeat. */
 import type { ClipSpan } from './ClipSpan';
 
 export type ClipTransport =

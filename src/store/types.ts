@@ -52,6 +52,7 @@ import type { ReconcileEffects } from './effects/ReconcileEffects';
 import type { SelectionResolver } from '../@types/engine/selection/SelectionResolver';
 import type { CameraPose } from '../@types/camera/pose/CameraPose';
 import type { Vec4 } from '../@types/math/Vec4';
+import type { ClipClock } from '../@types/animation/ClipClock';
 import type { ClipData } from '../@types/animation/ClipData';
 import type { ClipId } from '../@types/animation/ClipId';
 import type { Mat3 } from '../@types/math/Mat3';
@@ -97,8 +98,8 @@ export type LiveCameraRuntime = {
   fovYRad: number;
   aspect: number;
   upBasisQuat: Vec4;
-  /** The clip clock the last frame drew; `held` when a transported clip is clamped at its end. Null with no clip. */
-  clipAt: { readonly sec: number; readonly held: boolean } | null;
+  /** The clip clock the last frame drew; null with no clip. */
+  clipAt: ClipClock | null;
 };
 /**
  * The debug clip-path inspector seam — the non-reactive bridge the

@@ -1,4 +1,4 @@
-import { smoothstep } from '../math/smoothstep';
+import { valueAt } from './valueAt';
 import type { TargetChange } from '../../@types/animation/TargetChange';
 
 /**
@@ -25,10 +25,4 @@ export function rampAt(
     target: current.to,
     remainingMs: Math.max(0, current.overMs - (t - current.atSec) * 1000),
   };
-}
-
-function valueAt(from: number, change: TargetChange, t: number): number {
-  return (
-    from + (change.to - from) * smoothstep(change.atSec, change.atSec + change.overMs / 1000, t)
-  );
 }
