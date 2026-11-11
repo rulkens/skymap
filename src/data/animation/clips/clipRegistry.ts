@@ -68,6 +68,12 @@ import {
   tourTheEdge,
   tourHomeAgain,
 } from './grandTourBeats';
+import {
+  TELEPHOTO_MOON_SIDE_10M,
+  TELEPHOTO_MOON_SIDE_3M,
+  TELEPHOTO_EARTH_SIDE_10M,
+  TELEPHOTO_EARTH_SIDE_3M,
+} from '../tours/grandTour/earthAndMoonTelephotoPreview';
 
 export const clipFactories: Record<ClipId, (simDays: number) => Clip> = {
   cosmicFlows: () => cosmicFlows,
@@ -106,6 +112,30 @@ export const clipFactories: Record<ClipId, (simDays: number) => Clip> = {
   tourDeepField: () => tourDeepField,
   tourTheEdge: () => tourTheEdge,
   tourHomeAgain: () => tourHomeAgain,
+  teleMoon10M: () => ({
+    id: 'teleMoon10M',
+    label: 'Beat 02 preview — behind the Moon, 10M km',
+    dev: true,
+    data: TELEPHOTO_MOON_SIDE_10M,
+  }),
+  teleMoon3M: () => ({
+    id: 'teleMoon3M',
+    label: 'Beat 02 preview — behind the Moon, 3M km',
+    dev: true,
+    data: TELEPHOTO_MOON_SIDE_3M,
+  }),
+  teleEarth10M: () => ({
+    id: 'teleEarth10M',
+    label: 'Beat 02 preview — behind Earth, 10M km',
+    dev: true,
+    data: TELEPHOTO_EARTH_SIDE_10M,
+  }),
+  teleEarth3M: () => ({
+    id: 'teleEarth3M',
+    label: 'Beat 02 preview — behind Earth, 3M km',
+    dev: true,
+    data: TELEPHOTO_EARTH_SIDE_3M,
+  }),
 };
 
 export const clipRegistry: Record<ClipId, Clip> = Object.fromEntries(
