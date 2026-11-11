@@ -51,7 +51,8 @@ fn vs(@builtin(vertex_index) vid: u32, sat: SatelliteInstance) -> VSOut {
   let areaWeight = pow(areaM2 / AREA_REF_M2, AREA_EXP);
   let rangeWeight = min(pow(RANGE_REF_KM / rangeKm, RANGE_EXP), RANGE_WEIGHT_MAX);
   let phase = pow(lambertPhase(cosPhase), PHASE_EXP);
-  let diffuse = color * areaWeight * rangeWeight * phase * max(lit, ECLIPSED_RESIDUAL);
+  // A mix, not a floor on `lit`: seen from the night side the phase is near zero as well.
+  let diffuse = color * areaWeight * rangeWeight * mix(ECLIPSED_RESIDUAL, phase, lit);
   let glint = GLINT_WHITE * glintGain * areaWeight * lobe * lit * GLINT_PEAK;
   let sizePx = u.sizePx * (1.0 + min(lobe * glintGain * lit, 1.0) * (GLINT_SIZE_MAX - 1.0));
 

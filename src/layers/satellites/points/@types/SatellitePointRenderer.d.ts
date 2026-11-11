@@ -1,7 +1,8 @@
 /**
  * SatellitePointRenderer — one additive dot per satellite into the depthless HDR target. `upload`
- * takes each new worker sweep (the valid objects only, each with its catalog index and class); `draw` extrapolates it to the frame's
- * instant in the vertex stage, so frames between sweeps cost no CPU work per satellite.
+ * takes each new worker sweep (the valid objects only, each with its catalog index, class and
+ * profile); `draw` extrapolates it to the frame's instant in the vertex stage, so frames between
+ * sweeps cost no CPU work per satellite.
  */
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { SatelliteSweep } from '../../sweep/@types/SatelliteSweep';

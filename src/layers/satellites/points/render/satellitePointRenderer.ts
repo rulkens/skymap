@@ -1,8 +1,9 @@
 /**
  * satellitePointRenderer — the satellites as screen-sized additive dots in the depthless HDR
  * accumulation, under the trails' occlusion (lib/trailOcclusion.wesl owns group 0 bindings 0-1;
- * ours are 2, the uniforms, and 3, the profile table). One instance = one satellite: its TEME state at the last sweep, packed
- * densely from the valid objects, so a decayed object costs no vertex work. `drawPick` stamps the
+ * ours are 2, the uniforms, and 3, the profile table). One instance = one satellite: its TEME
+ * state at the last sweep, packed densely from the valid objects, so a decayed object costs no
+ * vertex work. `drawPick` stamps the
  * same instances into the overlay pick target (r32uint), wider than the dot so it can be clicked;
  * it has its own uniform and bind group, so a pick never rewrites what the frame drew with.
  * @module
