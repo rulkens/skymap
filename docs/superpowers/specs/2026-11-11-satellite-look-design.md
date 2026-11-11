@@ -84,7 +84,10 @@ between those dates get the wrong Starlink row.
 - *Shadow.* A cylinder along the anti-Sun direction with Earth's radius, widened by the penumbra (the Sun's 0.267°
   half-angle times distance behind Earth) and smoothstepped across it. Picking is unaffected.
 - *Ambient.* A floor every dot gets, sunlit or eclipsed (`ambient + phase · lit`), so an object in shadow is not lost
-  entirely. Tunable, default 0.04.
+  entirely. Tunable; the owner set the default to 0.45 after eye checks.
+- *Twilight tint.* Sunlight reaching a dot behind the terminator plane skimmed past Earth first. A crude slant
+  optical depth, deepest in blue and falling off with the ray's closest height above the surface (8 km scale), turns
+  it orange to red near the shadow edge. It colours the sunlit glow and both flashes. Refraction is ignored.
 - *Phase.* Lambert-sphere phase, compressed.
 - *Range and area.* `pow(area / ref, areaExp) · pow(refKm / range, rangeExp)`, both exponents under the physical
   values, tuned by eye.
@@ -96,8 +99,13 @@ between those dates get the wrong Starlink row.
 Both normalisations can meet a zero vector (`v ∥ r`, or the Sun along the orbit normal). Those return no glint: a NaN
 in an additive HDR target poisons the frame.
 
-Well-tracking panels throw light back towards the Sun, so glints appear when the camera is on the sunward side and
-not in night-side views. That is the correct behaviour of the model.
+Well-tracking panels throw light back towards the Sun, so panel glints appear when the camera is on the sunward side.
+For the night side there is a second reflector, added at the owner's request:
+
+- *Plate glint.* A flat body face pointing at Earth's centre, as a Starlink's chassis does. It is lit only when the
+  Sun is below the satellite's horizon while the satellite is still sunlit, the band just past the terminator, and
+  mirrors that light up and away from the Sun, towards a night-side camera. Same lobe as the panel. No source gives
+  a chassis area, so every group with `glintGain` gets one strength; no geometry and no table column are added.
 
 **Tuning.** `settings.satelliteTuning.colors` maps each profile id to linear RGB. The planner, which runs before any
 encoder exists, compares that object by reference and rewrites the GPU table on change. An edit touches neither the
