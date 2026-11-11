@@ -11,6 +11,8 @@ export type SatellitePropagator = {
   /** Terminates the worker and drops the catalog and the last sweep. */
   stop(): void;
   catalog(): SatelliteCatalog | null;
+  /** Each catalog object's profile code; null exactly when `catalog()` is. */
+  profileCodes(): Uint8Array | null;
   latest(): SatelliteSweep | null;
   request(simMs: number): void;
 };

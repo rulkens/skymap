@@ -1,7 +1,7 @@
 /**
  * satellitePointRenderer — the satellites as screen-sized additive dots in the depthless HDR
  * accumulation, under the trails' occlusion (lib/trailOcclusion.wesl owns group 0 bindings 0-1;
- * ours is binding 2). One instance = one satellite: its TEME state at the last sweep, packed
+ * ours are 2, the uniforms, and 3, the profile table). One instance = one satellite: its TEME state at the last sweep, packed
  * densely from the valid objects, so a decayed object costs no vertex work. `drawPick` stamps the
  * same instances into the overlay pick target (r32uint), wider than the dot so it can be clicked;
  * it has its own uniform and bind group, so a pick never rewrites what the frame drew with.
@@ -12,12 +12,16 @@ import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { SatellitePointRenderer } from '../@types/SatellitePointRenderer';
 import type { SatelliteSweep } from '../../sweep/@types/SatelliteSweep';
 import type { SatellitePointFrame } from '../@types/SatellitePointFrame';
+import type { SatelliteProfileId } from '../@types/SatelliteProfileId';
+import type { Vec3 } from '../../../../@types/math/Vec3';
 import vsCode from '../../../../services/gpu/shaders/satellites/points/vertex.wesl?static';
 import fsCode from '../../../../services/gpu/shaders/satellites/points/fragment.wesl?static';
 import pickCode from '../../../../services/gpu/shaders/satellites/points/pick.wesl?static';
 import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../../../../services/gpu/lib/blendStates';
 import { SATELLITE_POINT_STYLE } from '../data/satellitePointStyle';
+import { SATELLITE_PROFILES } from '../data/satelliteProfiles';
+import { packSatelliteProfiles } from './packSatelliteProfiles';
 import { NEAR0, SLAB_REVERSED_Z } from '../../../../services/engine/frame/slabs';
 import { pickDepthFormat } from '../../../../services/engine/frame/pickProgram';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
@@ -27,13 +31,14 @@ import {
   createTrailOcclusionUniforms,
 } from '../../../../services/gpu/renderers/bodies/trailOcclusionUniforms';
 
-/** One instance record: posKm (3 floats), velKmS (3 floats), catalog index (u32), class (u32). */
-export const SATELLITE_INSTANCE_STRIDE = 32;
+/** One instance record: posKm and velKmS (3 floats each), then catalog index, class, profile (u32). */
+export const SATELLITE_INSTANCE_STRIDE = 36;
 export const SATELLITE_INSTANCE_ATTRIBUTES: readonly GPUVertexAttribute[] = [
   { shaderLocation: 0, offset: 0, format: 'float32x3' },
   { shaderLocation: 1, offset: 12, format: 'float32x3' },
   { shaderLocation: 2, offset: 24, format: 'uint32' },
   { shaderLocation: 3, offset: 28, format: 'uint32' },
+  { shaderLocation: 4, offset: 32, format: 'uint32' },
 ];
 
 /** Byte offsets inside `SatelliteUniforms` (`satellites/points/io.wesl`). */
@@ -72,11 +77,8 @@ export function createSatellitePointRenderer({
     entries: [
       { binding: 0, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
       { binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'depth' } },
-      {
-        binding: 2,
-        visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-        buffer: { type: 'uniform' },
-      },
+      { binding: 2, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' } },
+      { binding: 3, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' } },
     ],
   });
   const layout = device.createPipelineLayout({
@@ -112,6 +114,17 @@ export function createSatellitePointRenderer({
       depthCompare: resolveDepthCompare('nearer', SLAB_REVERSED_Z[NEAR0]!),
     },
   });
+
+  const defaultColors = Object.fromEntries(
+    SATELLITE_PROFILES.map(({ id, color }) => [id, color]),
+  ) as Record<SatelliteProfileId, Vec3>;
+  const profileDefaults = packSatelliteProfiles(defaultColors);
+  const profileBuffer = device.createBuffer({
+    label: 'satellite-points-profiles',
+    size: profileDefaults.byteLength,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+  writeProfiles(profileDefaults);
 
   const drawBinding = createBinding('satellite-points', SATELLITE_POINT_STYLE.radiusPx);
   const pickBinding = createBinding('satellite-points-pick', SATELLITE_POINT_STYLE.pickRadiusPx);
@@ -154,6 +167,7 @@ export function createSatellitePointRenderer({
                 { binding: 0, resource: { buffer: occluderBuffer } },
                 { binding: 1, resource: frame.depth.view },
                 { binding: 2, resource: { buffer: uniformBuffer } },
+                { binding: 3, resource: { buffer: profileBuffer } },
               ],
             }),
           };
@@ -186,7 +200,11 @@ export function createSatellitePointRenderer({
     device.queue.writeBuffer(buffer, 0, u);
   }
 
-  function upload(next: SatelliteSweep, classCode: Uint8Array): void {
+  function writeProfiles(table: Float32Array): void {
+    device.queue.writeBuffer(profileBuffer, 0, table);
+  }
+
+  function upload(next: SatelliteSweep, classCode: Uint8Array, profileCode: Uint8Array): void {
     const n = next.valid.length;
     let live = 0;
     for (let k = 0; k < n; k++) live += next.valid[k]!;
@@ -199,6 +217,7 @@ export function createSatellitePointRenderer({
       floats.set(next.velKmS.subarray(3 * k, 3 * k + 3), at + 3);
       words[at + 6] = k;
       words[at + 7] = classCode[k]!;
+      words[at + 8] = profileCode[k]!;
       at += SATELLITE_INSTANCE_STRIDE / 4;
     }
     if (instanceBuffer === null || instanceBuffer.size < floats.byteLength) {
@@ -238,11 +257,13 @@ export function createSatellitePointRenderer({
     clear();
     drawBinding.destroy();
     pickBinding.destroy();
+    profileBuffer.destroy();
   }
 
   const renderer: SatellitePointRenderer = {
     label: 'satellitePointRenderer',
     upload,
+    writeProfiles,
     uploaded: () => sweep,
     clear,
     draw: (pass, frame) => record(pass, frame, drawBinding, pipeline),

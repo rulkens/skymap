@@ -142,11 +142,11 @@ Row stride 32. Unused rows are zero.
 
 The renderer owns one profile buffer, created and seeded at construction from the table defaults, shared by the draw and pick bindings. The propagator derives codes in `start` right after parsing and clears them in `stop`, on the same lines as `catalog`.
 
-- [ ] Add tests: `packSatelliteProfiles writes each row at its stride` with hand-written values for row 1's colour at floats 8–10, area at float 11 and gain at float 12; `profile codes clear with the catalog` in the propagator test (null before start and after stop).
-- [ ] Extend the parity test: location 4 in the instance, and `SatelliteProfile` fields against the table above, with the array length equal to `SATELLITE_PROFILE_CAPACITY`.
-- [ ] Implement. The planner passes `propagator.profileCodes()!` beside `catalog.classCode`.
-- [ ] Run `npm run typecheck:fast` and `npx vitest run tests/layers/satellites tests/services/gpu/shaders/satellitePoints.parity.test.ts`.
-- [ ] Commit: `Satellite dots draw in their group's colour`.
+- [x] Add tests: `packSatelliteProfiles writes each row at its stride` with hand-written values for row 1's colour at floats 8–10, area at float 11 and gain at float 12; `profile codes clear with the catalog` in the propagator test (null before start and after stop).
+- [x] Extend the parity test: location 4 in the instance, and `SatelliteProfile` fields against the table above, with the array length equal to `SATELLITE_PROFILE_CAPACITY`.
+- [x] Implement. The planner passes `propagator.profileCodes()!` beside `catalog.classCode`.
+- [x] Run `npm run typecheck:fast` and `npx vitest run tests/layers/satellites tests/services/gpu/shaders/satellitePoints.parity.test.ts`.
+- [x] Commit: `Satellite dots draw in their group's colour`.
 
 ### Task 4: Sunlight, shadow, panel area and glints
 

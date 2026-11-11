@@ -8,8 +8,10 @@ import type { SatelliteSweep } from '../../sweep/@types/SatelliteSweep';
 import type { SatellitePointFrame } from './SatellitePointFrame';
 
 export type SatellitePointRenderer = Renderer & {
-  /** `classCode` is the catalog's column, indexed like the sweep. */
-  upload(sweep: SatelliteSweep, classCode: Uint8Array): void;
+  /** `classCode` and `profileCode` are per catalog object, indexed like the sweep. */
+  upload(sweep: SatelliteSweep, classCode: Uint8Array, profileCode: Uint8Array): void;
+  /** Replaces the GPU profile table (`packSatelliteProfiles`); never between encoded passes. */
+  writeProfiles(table: Float32Array): void;
   /** The sweep last uploaded, or null after `clear`. */
   uploaded(): SatelliteSweep | null;
   clear(): void;

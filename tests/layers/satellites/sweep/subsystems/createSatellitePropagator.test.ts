@@ -85,6 +85,17 @@ describe('createSatellitePropagator', () => {
     expect(worker.sent.map((m) => m.kind)).toEqual(['init']);
   });
 
+  it('profile codes clear with the catalog', async () => {
+    const propagator = make();
+    expect(propagator.profileCodes()).toBeNull();
+    const started = propagator.start(FILE);
+    expect(propagator.profileCodes()).toBeInstanceOf(Uint8Array);
+    FakeWorker.last.reply({ kind: 'ready' });
+    await started;
+    propagator.stop();
+    expect(propagator.profileCodes()).toBeNull();
+  });
+
   it('settles a start that a release interrupts, so the slot never hangs', async () => {
     const propagator = make();
     const started = propagator.start(FILE);
