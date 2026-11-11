@@ -36,8 +36,8 @@
 export function orenNayarMatchedShading(roughness: number, f0: number): SurfaceTileShading;
 ```
 
-- [ ] Move the derivation (and its comment) out of `marsSurfaceParams.ts`; `MARS_SURFACE_SHADING = orenNayarMatchedShading(MARS_ROUGHNESS, 0.03)`, same numbers.
-- [ ] Test: for two roughnesses, `sunIrradiance * A / PI === 1 - BODY_AMBIENT_LIGHT` with `A` from the Oren–Nayar formula. Commit.
+- [x] Move the derivation (and its comment) out of `marsSurfaceParams.ts`; `MARS_SURFACE_SHADING = orenNayarMatchedShading(MARS_ROUGHNESS, 0.03)`, same numbers.
+- [x] Test: for two roughnesses, `sunIrradiance * A / PI === 1 - BODY_AMBIENT_LIGHT` with `A` from the Oren–Nayar formula. Commit.
 
 ### Task 3: Moon params, body row, registry row, preset
 
