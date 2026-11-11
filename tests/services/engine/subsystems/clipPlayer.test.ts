@@ -76,9 +76,15 @@ function transportClip(store: TestStore, data: ClipData, transport: ClipTranspor
 
 function makePlayer(store: TestStore) {
   const syncVisibility = vi.fn<(settings: EngineSettingsState, overMs?: number) => void>();
+  // Each identity's target, starting where intent puts it (flow off, the label on).
+  const targets = new Map([
+    [FLOW.address, 0],
+    [MW_LABEL.address, 1],
+  ]);
   const fades = {
-    setImmediate: vi.fn<(id: FadeIdentity, value: number) => void>(),
-    fadeTo: vi.fn<(id: FadeIdentity, target: number, durationMs: number) => void>(),
+    setImmediate: vi.fn((id: FadeIdentity, value: number) => void targets.set(id.address, value)),
+    fadeTo: vi.fn((id: FadeIdentity, to: number, _ms: number) => void targets.set(id.address, to)),
+    targetOf: (id: FadeIdentity) => targets.get(id.address) ?? null,
   };
   const extractFocusRow = vi.fn((ref: SelectionRefBase | null) =>
     ref === null ? { row: null, focusId: null } : VIRGO_ROW,
@@ -524,6 +530,30 @@ describe('clipPlayer transport', () => {
     expect(fades.setImmediate.mock.calls).toEqual([[FLOW, 0.84375]]);
     expect(onEnd).not.toHaveBeenCalled();
   });
+
+  it.each([
+    ['paused', { kind: 'paused', atSec: 4, camera: 'clip' }],
+    ['running', { kind: 'running', fromSec: 4, loop: null }],
+  ] as const)(
+    'a data swap returns an identity no step touches any more to intent (%s)',
+    (_, at) => {
+      const store = makeStore();
+      const { tick, fades } = makePlayer(store);
+      transportClip(
+        store,
+        { timeline: [seq([wait(2), hide(['label:milkyWay'], 0), hold(5)])] },
+        at,
+      );
+      tick(0);
+      expect(fades.setImmediate).toHaveBeenLastCalledWith(MW_LABEL, 0);
+
+      // The author swaps the hidden layer: the label is in no step now.
+      const edited = { timeline: [seq([wait(2), hide(['flow'], 0), hold(5)])] };
+      store.dispatch(clipDataReplaced(resolveClipStart(edited, LIVE_POSE)));
+      tick(100);
+      expect(fades.targetOf(MW_LABEL)).toBe(1);
+    },
+  );
 
   it('past the end the view is intent and the clip factor is 1', () => {
     const store = makeStore();

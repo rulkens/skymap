@@ -104,7 +104,7 @@ describe("a clip's scene at its end", () => {
       extractFocusRow: () => ({ row: null, focusId: null }),
       syncVisibility: () => {},
       visibilityTargets: () => [],
-      getFades: () => ({ setImmediate: () => {}, fadeTo: () => {} }),
+      getFades: () => ({ setImmediate: () => {}, fadeTo: () => {}, targetOf: () => null }),
     });
     const playClip = createPlayClip({ store, clipPlayer: player, getLivePose: () => START });
     const clip: ClipData = { timeline: [{ kind: 'focus', ref: VIRGO }, hold(5)] };

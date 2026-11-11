@@ -21,5 +21,5 @@ export type ClipPlayerDeps = {
     settings: readonly EngineSettingsState[],
   ) => readonly { readonly id: FadeIdentity; readonly targets: readonly number[] }[];
   /** The registry, read when a seed lands: values set outright, ramps resumed for their remaining time. */
-  readonly getFades: () => Pick<FadeRegistry, 'setImmediate' | 'fadeTo'>;
+  readonly getFades: () => Pick<FadeRegistry, 'setImmediate' | 'fadeTo' | 'targetOf'>;
 };

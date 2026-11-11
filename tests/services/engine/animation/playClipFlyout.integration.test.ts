@@ -83,7 +83,7 @@ describe('playClip — flyout seam', () => {
       extractFocusRow: () => ({ row: null, focusId: null }),
       syncVisibility: () => {},
       visibilityTargets: () => [],
-      getFades: () => ({ setImmediate: () => {}, fadeTo: () => {} }),
+      getFades: () => ({ setImmediate: () => {}, fadeTo: () => {}, targetOf: () => null }),
     });
 
     // Build the real playClip. getLivePose reads register.pose — the same

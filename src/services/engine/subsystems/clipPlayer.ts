@@ -152,7 +152,11 @@ export function createClipPlayer(deps: ClipPlayerDeps): ClipPlayer {
         if (to !== targets[i])
           changes.push({ atSec: steps[i]!.atSec, to, overMs: overMsOf(steps[i]!, to) });
       }
-      if (changes.length === 0) continue;
+      if (changes.length === 0) {
+        // New data may drop the step that named it, whose value would otherwise stay drawn.
+        if (fades.targetOf(id) !== targets[0]) fades.setImmediate(id, targets[0]!);
+        continue;
+      }
       const ramp = pastEnd ? null : rampAt(targets[0]!, changes, t);
       fades.setImmediate(id, ramp?.value ?? targets[0]!);
       if (running && ramp !== null && ramp.remainingMs > 0) {

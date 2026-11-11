@@ -68,7 +68,7 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
       extractFocusRow: () => ({ row: null, focusId: null }),
       syncVisibility: () => {},
       visibilityTargets: () => [],
-      getFades: () => ({ setImmediate: () => {}, fadeTo: () => {} }),
+      getFades: () => ({ setImmediate: () => {}, fadeTo: () => {}, targetOf: () => null }),
     });
 
     // The fresh wrapper object is what starts the clip epoch on tick 1.
