@@ -23,6 +23,8 @@ export const {
   selectSelection,
   selectCollapsed,
   selectPlayheadSec,
+  selectTransport,
+  selectLoop,
   selectViewport,
   selectPreview,
   selectRefNames,

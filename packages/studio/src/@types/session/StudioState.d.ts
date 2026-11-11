@@ -4,6 +4,7 @@
  */
 import type { ClipData } from '../../../../../src/@types/animation/ClipData';
 import type { ClipId } from '../../../../../src/@types/animation/ClipId';
+import type { ClipTransport } from '../../../../../src/@types/animation/ClipTransport';
 import type { RowRef } from '../rows/RowRef';
 import type { DraftHistory } from './DraftHistory';
 import type { PickStatus } from './PickStatus';
@@ -27,7 +28,11 @@ export type StudioState = {
   readonly selection: RowRef | null;
   /** Row ids. */
   readonly collapsed: readonly string[];
-  readonly playheadSec: number;
+  /** The author's intent for the preview's clock; `previewSaga` copies it to `camera.clip`. */
+  readonly transport: ClipTransport;
+  /** The t the last drawn frame showed; written only while running. */
+  readonly followedSec: number;
+  readonly loop: boolean;
   /** Null = fit. */
   readonly viewport: TimeWindow | null;
   readonly history: DraftHistory;

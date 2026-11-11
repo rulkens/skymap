@@ -355,13 +355,17 @@ loopSpanOf(selection: StudioSelection | null, timeline: Timeline): ClipSpan | nu
 transport value is a new object (Immer does this for an assigned union value). Initial: paused at 0, camera
 `'clip'`, `followedSec` 0, `loop` false.
 
-- [ ] Test `a seek while playing re-anchors the play at the seek` (new running object, same loop).
-- [ ] Test `pause lands on the followed t` (followedSec 3.2 → paused at 3.2).
-- [ ] Test `a held follow pauses at the end`.
-- [ ] Test `free look pauses at the shown head and a seek re-attaches` (camera `'free'`, then `playheadSet` → `'clip'`).
-- [ ] Test `playFrom restarts at 0 at End and at the loop start outside the loop`.
-- [ ] `npx vitest run packages/studio/tests/session packages/studio/tests/timeline packages/studio/tests/shell`.
-- [ ] Commit: "Clip studio: the playhead is a transport".
+As built: this branch has no `StudioSelection` (S2 P3 did not land here), so `loopSpanOf` takes the selected
+`TimelineRow` (`selectSelectedRow`); a row of no length loops the whole clip. A seek while running also sets
+`followedSec`, so the head jumps before the next follow lands.
+
+- [x] Test `a seek while playing re-anchors the play at the seek` (new running object, same loop).
+- [x] Test `pause lands on the followed t` (followedSec 3.2 → paused at 3.2).
+- [x] Test `a held follow pauses at the end`.
+- [x] Test `free look pauses at the shown head and a seek re-attaches` (camera `'free'`, then `playheadSet` → `'clip'`).
+- [x] Test `playFrom restarts at 0 at End and at the loop start outside the loop`.
+- [x] `npx vitest run packages/studio/tests/session packages/studio/tests/timeline packages/studio/tests/shell`.
+- [x] Commit: "Clip studio: the playhead is a transport".
 
 ### Task 2.2: the preview saga commands the engine
 
