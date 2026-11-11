@@ -18,7 +18,7 @@ import fsCode from '../../../../services/gpu/shaders/satellites/points/fragment.
 import pickCode from '../../../../services/gpu/shaders/satellites/points/pick.wesl?static';
 import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../../../../services/gpu/lib/blendStates';
-import { SATELLITE_POINT_STYLE } from '../data/satellitePointStyle';
+import { SATELLITE_PICK_RADIUS_PX } from '../data/satellitePickRadiusPx';
 import { SATELLITE_PROFILE_BYTES } from './packSatelliteProfiles';
 import { SATELLITE_PROFILE_CAPACITY } from '../data/satelliteProfileCapacity';
 import { NEAR0, SLAB_REVERSED_Z } from '../../../../services/engine/frame/slabs';
@@ -121,8 +121,11 @@ export function createSatellitePointRenderer({
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
 
-  const drawBinding = createBinding('satellite-points', SATELLITE_POINT_STYLE.radiusPx);
-  const pickBinding = createBinding('satellite-points-pick', SATELLITE_POINT_STYLE.pickRadiusPx);
+  const drawBinding = createBinding('satellite-points', (frame) => frame.dotRadiusPx);
+  // Never narrower than the dot, so a dot tuned large stays clickable to its edge.
+  const pickBinding = createBinding('satellite-points-pick', (frame) =>
+    Math.max(SATELLITE_PICK_RADIUS_PX, frame.dotRadiusPx),
+  );
 
   let instanceBuffer: GPUBuffer | null = null;
   let instanceCount = 0;
@@ -134,7 +137,7 @@ export function createSatellitePointRenderer({
   );
 
   /** One uniform + occluder buffer pair and its bind group, rebuilt when the depth view changes. */
-  function createBinding(label: string, sizePx: number) {
+  function createBinding(label: string, sizePxOf: (frame: SatellitePointFrame) => number) {
     const occluderBuffer = device.createBuffer({
       label: `${label}-occluder-uniform`,
       size: OCCLUDER_UNIFORM_BYTES,
@@ -151,7 +154,7 @@ export function createSatellitePointRenderer({
       bind(frame: SatellitePointFrame): GPUBindGroup {
         occluderUniforms.write(frame.occluders, frame.depth.frame, frame.viewportPx);
         device.queue.writeBuffer(occluderBuffer, 0, occluderUniforms.scratch);
-        writeUniforms(uniformBuffer, frame, sizePx);
+        writeUniforms(uniformBuffer, frame, sizePxOf(frame));
         if (cached === null || cached.depthView !== frame.depth.view) {
           cached = {
             depthView: frame.depth.view,

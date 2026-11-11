@@ -28,7 +28,7 @@ camera. A debug panel tunes the colour of each group.
 - 3D models. A later effort; the owner's ruling is real models for ISS, Hubble, Tiangong and Starlink, all else dots.
 - Velocity streaks and fleet-wide orbit rings (backlogged, spec `2026-10-28-earth-satellites-design.md` §5.4).
 - Debris tumble flicker. Debris has no usable panel data, so it stays diffuse.
-- Tuning anything but colour and ambient. Panel areas and glint constants are code.
+- Tuning anything but colour, ambient and dot size. Panel areas and glint constants are code.
 - Any change to `satellites.satg`.
 
 **Anti-goals**

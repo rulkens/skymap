@@ -7,4 +7,5 @@ export const initialState: SatelliteTuning = {
     SATELLITE_PROFILES.map(({ id, color }) => [id, color]),
   ) as unknown as SatelliteColors,
   ambient: 0.04,
+  dotRadiusPx: 2,
 };

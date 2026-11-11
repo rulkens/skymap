@@ -83,7 +83,7 @@ export const DOCS_DEBUG_SECTIONS: readonly DocsDebugSection[] = [
   {
     heading: 'Satellite tuning',
     shows:
-      'An ambient light every satellite gets, and one colour for each satellite group, by constellation or orbit. A button puts them back to their defaults and another copies the changed colours.',
+      'An ambient light every satellite gets, the size of a dot on screen, and one colour for each satellite group, by constellation or orbit. A button puts them back to their defaults and another copies the changed colours.',
     file: 'src/layers/satellites/controls/ui/SatelliteTuningSection.tsx',
   },
   {

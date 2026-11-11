@@ -16,6 +16,7 @@ export type SatellitePointFrame = {
   readonly temeToWorld: Readonly<Mat3>;
   readonly sunDir: Readonly<Vec3>;
   readonly ambient: number;
+  readonly dotRadiusPx: number;
   readonly opacity: number;
   readonly classOpacity: readonly [number, number, number];
   readonly occluders: { readonly count: number; readonly spheresKm: Float32Array };

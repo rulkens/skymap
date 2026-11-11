@@ -1,8 +1,9 @@
-/** SatelliteTuningSection: the ambient slider, then one colour row per satellite group, dev-only. */
+/** SatelliteTuningSection: the ambient and dot size sliders, then a colour row per group, dev-only. */
 
 import type { ReactElement } from 'react';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { SatelliteTuning } from '../../@types/SatelliteTuning';
+import type { SatelliteTuningSliderKey } from '../../@types/SatelliteTuningSliderKey';
 import type { SatelliteProfileId } from '../../points/@types/SatelliteProfileId';
 import { SATELLITE_PROFILES } from '../../points/data/satelliteProfiles';
 import { SATELLITE_TUNING_SLIDER_FIELDS } from '../data/satelliteTuningSliderFields';
@@ -16,14 +17,14 @@ import debugStyles from '../../../../components/DebugPanel/debugSection.module.c
 export type SatelliteTuningSectionProps = {
   readonly tuning: SatelliteTuning;
   readonly onColorChange: (id: SatelliteProfileId, color: Vec3) => void;
-  readonly onAmbientChange: (ambient: number) => void;
+  readonly onSliderChange: (key: SatelliteTuningSliderKey, value: number) => void;
   readonly onReset: () => void;
 };
 
 function SatelliteTuningSection({
   tuning,
   onColorChange,
-  onAmbientChange,
+  onSliderChange,
   onReset,
 }: SatelliteTuningSectionProps): ReactElement {
   return (
@@ -31,7 +32,7 @@ function SatelliteTuningSection({
       title="Satellite tuning"
       fields={SATELLITE_TUNING_SLIDER_FIELDS}
       values={tuning}
-      onSliderChange={(_key, value) => onAmbientChange(value)}
+      onSliderChange={onSliderChange}
     >
       {SATELLITE_PROFILES.map(({ id, label }) => (
         <DebugColorRow

@@ -6,11 +6,12 @@ import { useAppDispatch, useAppSelector } from '../../../../store/hooks';
 import { selectSatelliteTuning } from '../../state/satelliteTuning/selectors';
 import {
   resetSatelliteTuning,
-  setSatelliteAmbient,
   setSatelliteColor,
+  setSatelliteSlider,
 } from '../../state/satelliteTuning/slice';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { SatelliteProfileId } from '../../points/@types/SatelliteProfileId';
+import type { SatelliteTuningSliderKey } from '../../@types/SatelliteTuningSliderKey';
 
 function SatelliteTuningSectionContainer(): React.ReactElement {
   const dispatch = useAppDispatch();
@@ -19,8 +20,8 @@ function SatelliteTuningSectionContainer(): React.ReactElement {
     (id: SatelliteProfileId, color: Vec3) => dispatch(setSatelliteColor({ id, color })),
     [dispatch],
   );
-  const onAmbientChange = useCallback(
-    (ambient: number) => dispatch(setSatelliteAmbient(ambient)),
+  const onSliderChange = useCallback(
+    (key: SatelliteTuningSliderKey, value: number) => dispatch(setSatelliteSlider({ key, value })),
     [dispatch],
   );
   const onReset = useCallback(() => dispatch(resetSatelliteTuning()), [dispatch]);
@@ -29,7 +30,7 @@ function SatelliteTuningSectionContainer(): React.ReactElement {
     <SatelliteTuningSection
       tuning={tuning}
       onColorChange={onColorChange}
-      onAmbientChange={onAmbientChange}
+      onSliderChange={onSliderChange}
       onReset={onReset}
     />
   );
