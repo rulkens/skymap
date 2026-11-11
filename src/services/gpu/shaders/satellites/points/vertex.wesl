@@ -8,6 +8,8 @@ import package::satellites::points::project::projectSatellite;
 import package::satellites::points::illumination::earthShadowLit;
 import package::satellites::points::illumination::lambertPhase;
 import package::satellites::points::illumination::panelGlint;
+import package::satellites::points::illumination::plateGlint;
+import package::satellites::points::illumination::sunlightTint;
 import package::lib::billboard::quadCorner;
 import package::lib::billboard::expandBillboardScreen;
 
@@ -25,6 +27,7 @@ const RANGE_EXP: f32 = 0.4;
 const RANGE_WEIGHT_MAX: f32 = 2.0;
 const PHASE_EXP: f32 = 0.5;
 const GLINT_PEAK: f32 = 12.0;
+const PLATE_PEAK: f32 = 8.0;
 const GLINT_SIZE_MAX: f32 = 3.0;
 const GLINT_WHITE: vec3<f32> = vec3<f32>(1.0, 0.97, 0.9);
 // Keeps the view direction and the range weight finite with the eye on top of a dot.
@@ -45,14 +48,20 @@ fn vs(@builtin(vertex_index) vid: u32, sat: SatelliteInstance) -> VSOut {
   let viewDir = -p.relKm / rangeKm;
   let cosPhase = dot(u.sunDir, viewDir);
   let lit = earthShadowLit(p.earthRelKm, u.sunDir);
+  let sunlight = lit * sunlightTint(p.earthRelKm, u.sunDir);
   let lobe = panelGlint(p.orbitNormal, u.sunDir, viewDir);
+  let plate = plateGlint(p.earthRelKm, u.sunDir, viewDir);
 
   let areaWeight = pow(areaM2 / AREA_REF_M2, AREA_EXP);
   let rangeWeight = min(pow(RANGE_REF_KM / rangeKm, RANGE_EXP), RANGE_WEIGHT_MAX);
   let phase = pow(lambertPhase(cosPhase), PHASE_EXP);
-  let diffuse = color * areaWeight * rangeWeight * (u.ambient + phase * lit);
-  let glint = GLINT_WHITE * glintGain * areaWeight * lobe * lit * GLINT_PEAK;
-  let sizePx = u.sizePx * (1.0 + min(lobe * glintGain * lit, 1.0) * (GLINT_SIZE_MAX - 1.0));
+  let diffuse = color * areaWeight * rangeWeight * (u.ambient + phase * sunlight);
+  // glintGain also gates the plate: a group with no panels is treated as having no flat body
+  // either. The plate has no published area, so it takes one strength for every group.
+  let flash = glintGain * (areaWeight * lobe * GLINT_PEAK + plate * PLATE_PEAK);
+  let glint = GLINT_WHITE * sunlight * flash;
+  let growth = min((lobe + plate) * glintGain * lit, 1.0);
+  let sizePx = u.sizePx * (1.0 + growth * (GLINT_SIZE_MAX - 1.0));
 
   let corner = quadCorner(vid);
   let offset = expandBillboardScreen(u.cam, p.centre, sizePx, corner);
