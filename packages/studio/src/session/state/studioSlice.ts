@@ -191,16 +191,15 @@ export const studioSlice = createSlice({
       if (typeof base.draft.start !== 'object') return { ...pinned, revision: base.revision + 1 };
       return commitDraft(pinned, { ...base.draft, start: payload.pose }, VIEW_USED_LABEL, null);
     },
+    /** Use current view's write into an effect row, as one Undo step. */
     rowReplaced: (
       state,
-      {
-        payload,
-      }: PayloadAction<{ ref: Extract<RowRef, { kind: 'effect' }>; effect: Effect; label: string }>,
+      { payload }: PayloadAction<{ ref: Extract<RowRef, { kind: 'effect' }>; effect: Effect }>,
     ) => {
       const base = original(state)!;
       if (base.draft === null) return;
       const next = updateEffectAt(base.draft, payload.ref.path, () => payload.effect);
-      return commitDraft({ ...base, draft: base.draft }, next, payload.label, null);
+      return commitDraft({ ...base, draft: base.draft }, next, VIEW_USED_LABEL, null);
     },
     undone: (state) => stepHistory(original(state)!, 'past'),
     redone: (state) => stepHistory(original(state)!, 'future'),

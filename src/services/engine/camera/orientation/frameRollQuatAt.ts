@@ -5,7 +5,10 @@ import type { Vec4 } from '../../../../@types/math/Vec4';
 import type { Ease } from '../../../../@types/animation/Ease';
 import type { OrientationFrameId } from '../../../../@types/camera/orientation/OrientationFrameId';
 
-/** The up-basis quaternion a frame roll from `fromQuat` to `to` stands at, `u` of the way in time. */
+/**
+ * The up-basis quaternion a frame roll from `fromQuat` to `to` stands at, `u` of the way in time.
+ * Slerp, not matrix lerp: a blended matrix is non-orthonormal mid-roll and shears the sky.
+ */
 export function frameRollQuatAt(
   fromQuat: Vec4,
   to: OrientationFrameId,

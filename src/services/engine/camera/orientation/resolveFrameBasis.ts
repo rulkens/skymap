@@ -1,11 +1,6 @@
 /**
- * resolveFrameBasis — the single authority for the camera's orientation
- * basis B(t): the steady registry basis when no frame roll is in flight,
- * else the slerp from the basis captured at switch start (`fromQuat`) to the
- * destination frame's, eased and clamped to the endpoint. Quaternion slerp,
- * not matrix lerp: a blended matrix is non-orthonormal mid-roll and shears
- * the sky; slerp stays on the rotation manifold (`quat.slerp` /
- * `mat3.fromQuat` from wgpu-matrix, the view-projection path's library).
+ * resolveFrameBasis — the single authority for the camera's orientation basis B(t): the steady
+ * registry basis when no frame roll is in flight, else where the roll stands (`frameRollQuatAt`).
  */
 
 import type { Mat3 } from '../../../../@types/math/Mat3';

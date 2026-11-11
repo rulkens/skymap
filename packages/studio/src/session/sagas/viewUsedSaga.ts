@@ -9,7 +9,6 @@ import { getContext, put, select, takeEvery } from 'typed-redux-saga';
 
 import { rowReplaced, startPinned, viewUsed } from '../state/studioSlice';
 import { selectStudioState } from '../state/selectors';
-import { VIEW_USED_LABEL } from '../data/viewUsedLabel';
 import { effectAt } from '../../draft/utils/effectAt';
 import { inspectorSpec } from '../../inspector/utils/inspectorSpec';
 import { reencodePose } from '../../../../../src/services/engine/camera/drivers/utils/reencodePose';
@@ -40,7 +39,7 @@ function* answerViewUsedSaga(
   const effect = effectAt(draft, ref.path);
   const fromView = effect === null ? null : inspectorSpec(effect.kind).fromView;
   if (effect === null || fromView === null) return;
-  yield* put(rowReplaced({ ref, effect: fromView(effect, view), label: VIEW_USED_LABEL }));
+  yield* put(rowReplaced({ ref, effect: fromView(effect, view) }));
 }
 
 export function* viewUsedSaga(): Generator {

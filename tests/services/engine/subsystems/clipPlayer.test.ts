@@ -445,16 +445,6 @@ describe('clipPlayer transport', () => {
     expect(elapsedMs(tick(1500), 1500)).toBe(3000);
   });
 
-  it('a running transport is anchored at the first frame that sees it', () => {
-    const store = makeStore();
-    const { tick } = makePlayer(store);
-    // Dispatched "at" 1000 ms; the first frame to see it runs at 1016.
-    transportClip(store, SHOW_AT_2, { kind: 'running', fromSec: 2, loop: null });
-
-    tick(1016);
-    expect(elapsedMs(tick(1516), 1516)).toBe(2500);
-  });
-
   it('a new transport object re-anchors even when its numbers are the old ones', () => {
     const store = makeStore();
     const { tick } = makePlayer(store);

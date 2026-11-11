@@ -288,7 +288,7 @@ export function createClipPlayer(deps: ClipPlayerDeps): ClipPlayer {
   // and publishes the difference. The focus commits as a cut: the clip already placed the
   // camera, and a `stop()` from a saga cancel runs the focus tween saga after `clipEnded`,
   // past `suspendDuringClip`.
-  function finish(): void {
+  function stop(): void {
     const ending = clip;
     if (ending?.atEnd === 'keep') {
       const intent = store.getState();
@@ -310,7 +310,7 @@ export function createClipPlayer(deps: ClipPlayerDeps): ClipPlayer {
     nowMs: number,
   ): { readonly clipEpoch: CameraEpochs['clip'] } {
     if (pendingEnd) {
-      finish();
+      stop();
       // Advanced against the POST-dispatch clip: the resolver may start the
       // next clip synchronously, and the driver reads this epoch this frame.
       return { clipEpoch: advanceEpoch(clipEpoch, store.getState().camera.clip, nowMs) };
@@ -349,10 +349,6 @@ export function createClipPlayer(deps: ClipPlayerDeps): ClipPlayer {
     evaluate(root);
     if (elapsedSec >= durationSec && !next.data.loop) pendingEnd = true;
     return { clipEpoch: epoch };
-  }
-
-  function stop(): void {
-    finish();
   }
 
   function clipOpacityOf(address: VisibilityAddress): number {
