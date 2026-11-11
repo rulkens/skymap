@@ -51,18 +51,18 @@ export const MOON_SPHERE_RELIEF_M = [-9_128.5, 10_781.5] as const;
 export const MOON_SURFACE_SHADING: SurfaceTileShading;
 ```
 
-- [ ] `moon.ts`: `datumRadiusM: MOON_DATUM_RADIUS_M`, `reliefM` = relief + offset (as `mars.ts`).
-- [ ] Registry row `moon: { manifestKey: 'moon-tiles', effects: [], shading: MOON_SURFACE_SHADING }`.
-- [ ] A Moon fly-to preset (Copernicus, 9.62° N, 20.08° W) in the shape the Mars ones use.
-- [ ] `npm run typecheck`; the compiler names `SURFACE_BODY_BAKES` as missing `moon` — Task 4 fills it, so land Tasks 3 and 4 in one dispatch. Run the tests touching the registry (`tests/layers/body/surfaceTiles/`). Commit.
+- [x] `moon.ts`: `datumRadiusM: MOON_DATUM_RADIUS_M`, `reliefM` = relief + offset (as `mars.ts`).
+- [x] Registry row `moon: { manifestKey: 'moon-tiles', effects: [], shading: MOON_SURFACE_SHADING }`.
+- [x] A Moon fly-to preset (Copernicus, 9.62° N, 20.08° W) in the shape the Mars ones use.
+- [x] `npm run typecheck`; the compiler names `SURFACE_BODY_BAKES` as missing `moon` — Task 4 fills it, so land Tasks 3 and 4 in one dispatch. Run the tests touching the registry (`tests/layers/body/surfaceTiles/`). Commit.
 
 ### Task 4: Moon bake and recipe
 
 **Files:** Create `tools/textures/surfaceBodies/moonSurfaceBake.ts`, `tools/textures/surfaceBodies/moonAlbedoRecipe.ts`. Modify `tools/textures/buildSurfaceTiles.ts` (`SURFACE_BODY_BAKES`, :631).
 
-- [ ] `moonSurfaceBake` per the spec's Bake section: prefix `moon-tiles/v1`, `BAKE_MIN_LEVEL` computed as in `marsSurfaceBake`, global max z7, dev max z4; WAC via `geoTiffImagerySource` (grey Byte reads as RGBA through `readGeoTiffRgbWindow`), LOLA via `geoTiffHeightSource` with `offsetM: MOON_DATUM_OFFSET_M`; `delightedImagerySource(..., MOON_SOURCE_SPHERE_RADIUS_M)`; height underfill `constantHeightSource(0)`. Grids use `WHOLE_GLOBE_BOUNDS`.
-- [ ] `moonAlbedoRecipe.ts`: `MOON_WAC_DELIGHT` (photo Sun az 270, el 25, `keepIce: 0`, other knobs starting from Mars's) and `MOON_WAC_GRADE` (identity until Task 5's fit).
-- [ ] Dev bake smoke: `npm run build-surface-tiles -- --body moon --dev`; check tiles land under `public/data/images/moon-tiles/v1/` and main's `earth-tiles/` and `mars-tiles/` manifests are untouched (mtime). Commit.
+- [x] `moonSurfaceBake` per the spec's Bake section: prefix `moon-tiles/v1`, `BAKE_MIN_LEVEL` computed as in `marsSurfaceBake`, global max z7, dev max z4; WAC via `geoTiffImagerySource` (grey Byte reads as RGBA through `readGeoTiffRgbWindow`), LOLA via `geoTiffHeightSource` with `offsetM: MOON_DATUM_OFFSET_M`; `delightedImagerySource(..., MOON_SOURCE_SPHERE_RADIUS_M)`; height underfill `constantHeightSource(0)`. Grids use `WHOLE_GLOBE_BOUNDS`.
+- [x] `moonAlbedoRecipe.ts`: `MOON_WAC_DELIGHT` (photo Sun az 270, el 25, `keepIce: 0`, other knobs starting from Mars's) and `MOON_WAC_GRADE` (identity until Task 5's fit).
+- [x] Dev bake smoke: `npm run build-surface-tiles -- --body moon --dev`; check tiles land under `public/data/images/moon-tiles/v1/` and main's `earth-tiles/` and `mars-tiles/` manifests are untouched (mtime). Commit.
 
 ### Task 5: Grade fit, full bake, eye check
 

@@ -5,13 +5,22 @@ import { degToRad } from '../../../../../utils/math/degToRad';
 import { moonRatesFromSiderealPeriods } from '../../../../../utils/orbit/moonRatesFromSiderealPeriods';
 import { asSceneBodyId } from '../../../../../utils/scene/asSceneBodyId';
 import { MOON_GREY } from '../../../../../data/bodies/palette';
+import {
+  MOON_DATUM_OFFSET_M,
+  MOON_DATUM_RADIUS_M,
+  MOON_SPHERE_RELIEF_M,
+} from '../../../surfaceTiles/format/data/moonSurfaceParams';
 
 export const MOON: LayerBody = {
   body: satelliteBody({
     id: 'moon',
     label: 'Moon',
-    datumRadiusM: 1737000,
+    datumRadiusM: MOON_DATUM_RADIUS_M,
     albedo: [0.35, 0.34, 0.33],
+    reliefM: [
+      MOON_SPHERE_RELIEF_M[0] + MOON_DATUM_OFFSET_M,
+      MOON_SPHERE_RELIEF_M[1] + MOON_DATUM_OFFSET_M,
+    ],
   }),
   position: {
     kind: 'orbit',
