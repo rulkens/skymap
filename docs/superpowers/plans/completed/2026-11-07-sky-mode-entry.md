@@ -10,7 +10,7 @@ they are in it (compass HUD), leaves it one way (Leave/Esc), and search while st
 requests a view; salvage + archive), then the feature PR on top (readout rows, `sky` takeover saga, search
 look, palette rows, entry button, HUD).
 
-**Spec:** `docs/superpowers/specs/2026-11-07-sky-mode-entry-design.md` (rulings R1–R15, decisions D1–D13).
+**Spec:** `docs/superpowers/specs/completed/2026-11-07-sky-mode-entry-design.md` (rulings R1–R15, decisions D1–D13).
 Grill transcript: `docs/grill-sessions/sky-mode-entry-ux-2026-11-07.md`.
 
 ## Global constraints

@@ -1,7 +1,7 @@
 # Sky mode: what remains after entry and HUD
 
 **Readiness:** `needs-design`. Entry, the `sky` takeover, the HUD and search while standing are specced in
-`docs/superpowers/specs/2026-11-07-sky-mode-entry-design.md`. What is left comes from the 2026-10-28 draft
+`docs/superpowers/specs/completed/2026-11-07-sky-mode-entry-design.md`. What is left comes from the 2026-10-28 draft
 spec, archived with its code as tag `archive/sky-mode`
 (`git show archive/sky-mode:docs/superpowers/specs/2026-10-28-sky-mode-design.md`).
 
