@@ -1,6 +1,6 @@
 /**
  * tour.integration.test — opacity composition for the `cosmicFlows` clip: the clip
- * channel masks, crossfades and resets, and the DRAWN alpha follows it.
+ * factor masks and crossfades, and the DRAWN alpha follows it.
  *
  * Clock model: the clip epoch starts on the first tick (nowMs=0), so
  * `elapsed = nowMs / 1000` seconds. Hence the stamps below — 2000 fires the
@@ -17,7 +17,6 @@ import { createClipPlayer } from '../../../src/services/engine/subsystems/clipPl
 import { UNSTARTED_EPOCHS } from '../../../src/services/engine/camera/drivers/cameraEpochs';
 import { createFadeRegistry } from '../../../src/services/animation/fadeRegistry';
 import { cosmicFlows } from '../../../src/compositions/clips/cosmicFlows';
-import { INITIAL_SETTINGS } from '../../../src/state/settings/initialSettings';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { galaxyPointSpritesPass } from '../../../src/layers/galaxyCatalog/pointSprites/passes/galaxyPointSpritesPass';
 import { deriveMilkyWayCloudAlpha } from '../../../src/layers/milkyWay/cloud/present/deriveMilkyWayCloudAlpha';
@@ -28,7 +27,6 @@ import { resolveFadeValue } from '../../../src/services/engine/presentation/reso
 import type { ClipPlayer } from '../../../src/@types/engine/subsystems/ClipPlayer';
 import type { VisibilityAddress } from '../../../src/@types/animation/VisibilityAddress';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
-import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 import type { SlabView } from '../../../src/@types/engine/frame/SlabView';
 import { makeGalaxyCatalogItems } from '../../fixtures/makeGalaxyCatalogItems';
@@ -43,7 +41,8 @@ function makeClipStub(factor: number): ClipPlayer {
     tick: vi.fn<ClipPlayer['tick']>((clipEpoch) => ({ clipEpoch })),
     stop: vi.fn<() => void>(),
     registerEndResolver: vi.fn<(onEnd: () => void) => void>(),
-    clipOpacityOf: vi.fn<(address: VisibilityAddress, nowMs: number) => number>(() => factor),
+    clipOpacityOf: vi.fn<(address: VisibilityAddress) => number>(() => factor),
+    view: (root) => root,
     destroy: vi.fn<() => void>(),
   };
 }
@@ -52,28 +51,26 @@ function makeStore() {
   return configureStore({ reducer: rootReducer });
 }
 
-// applySceneEffect's show/hide/scene arms only dispatch: the live settings are all they read.
-function makeEngineState(settings: EngineSettingsState): EngineState {
-  return { settings } as unknown as EngineState;
-}
-
 describe('cosmicFlows clip — clipOpacity end-to-end', () => {
   // The cosmicFlows start pose is concrete, not 'live', so `clipStarted` takes it
   // directly with no `resolveClipStart` call.
   function setupClip() {
     const store = makeStore();
 
-    // Lazy per-cue closure, so each cue sees the settings state left by the
-    // dispatches an earlier cue issued.
+    // The factor is the clip player's own; the registry and the frame roll are not under test.
     const clipPlayer = createClipPlayer({
       store,
-      requestRender: () => {},
-      getEngineState: () =>
-        makeEngineState(store.getState().settings as unknown as EngineSettingsState),
+      getCameraRuntime: () => {
+        throw new Error('cosmicFlows rolls no frame');
+      },
+      extractFocusRow: () => ({ row: null, focusId: null }),
+      syncVisibility: () => {},
     });
 
     // The fresh wrapper object is what starts the clip epoch on tick 1.
-    store.dispatch(clipStarted({ data: cosmicFlows.data, frame: DEFAULT_ORIENTATION }));
+    store.dispatch(
+      clipStarted({ data: cosmicFlows.data, frame: DEFAULT_ORIENTATION, atEnd: 'revert' }),
+    );
 
     // Threads the epoch across ticks, as `runFrame` does through the runtime.
     let clipEpoch = UNSTARTED_EPOCHS.clip;
@@ -81,7 +78,7 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
       clipEpoch = clipPlayer.tick(clipEpoch, nowMs).clipEpoch;
     };
 
-    return { store, clipPlayer, tick };
+    return { clipPlayer, tick };
   }
 
   it('the flow mask keeps composed alpha at 0 until the lift', () => {
@@ -91,64 +88,19 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
     tick(2_000); // fire mask + scene cues
     tick(3_000); // between mask and lift
 
-    const flowFactorBeforeLift = clipPlayer.clipOpacityOf('flow', 3_000);
+    const flowFactorBeforeLift = clipPlayer.clipOpacityOf('flow');
     expect(flowFactorBeforeLift).toBe(0);
 
     tick(4_000); // the lift cue fires
 
     // Still near 0 at the exact lift-start moment: smoothstep at t=0.
-    const flowFactorAtLiftStart = clipPlayer.clipOpacityOf('flow', 4_000);
+    const flowFactorAtLiftStart = clipPlayer.clipOpacityOf('flow');
     expect(flowFactorAtLiftStart).toBeCloseTo(0, 5);
 
     tick(7_000);
 
-    const flowFactorAfterLift = clipPlayer.clipOpacityOf('flow', 7_000);
+    const flowFactorAfterLift = clipPlayer.clipOpacityOf('flow');
     expect(flowFactorAfterLift).toBe(1);
-
-    clipPlayer.destroy();
-  });
-
-  it('the crossfade dims galaxies without touching intent', () => {
-    const { store, clipPlayer, tick } = setupClip();
-
-    tick(0);
-    tick(2_000); // mask + scene cues fire
-    tick(4_000); // crossfade cues fire: fade(flow→1,3) + fade(survey→0,3)
-    tick(7_000); // the 3-second survey dim completes
-
-    const surveyClipFactor = clipPlayer.clipOpacityOf('survey', 7_000);
-    expect(surveyClipFactor).toBe(0);
-
-    // "Untouched" is the boot value per id, NOT a blanket `true`: the
-    // galaxy catalog cluster boots each catalog from its own Layer literal,
-    // and DesiDeep boots false.
-    const settings = store.getState().settings;
-    const catalogItems = settings.galaxyCatalogs.items as Record<string, { enabled: boolean }>;
-    const bootItems = INITIAL_SETTINGS.galaxyCatalogs.items as Record<string, { enabled: boolean }>;
-    for (const [id, item] of Object.entries(catalogItems)) {
-      expect(item.enabled).toBe(bootItems[id]?.enabled);
-    }
-
-    clipPlayer.destroy();
-  });
-
-  it('clip end restores composed alpha to the steady state', () => {
-    const { clipPlayer, tick } = setupClip();
-
-    tick(0);
-    tick(2_000);
-    tick(4_000); // crossfade fires; survey → 0, flow → rising
-
-    const surveyMid = clipPlayer.clipOpacityOf('survey', 5_000);
-    expect(surveyMid).toBeGreaterThanOrEqual(0);
-    expect(surveyMid).toBeLessThan(1);
-
-    clipPlayer.stop();
-
-    const surveyAfterStop = clipPlayer.clipOpacityOf('survey', 5_000);
-    const flowAfterStop = clipPlayer.clipOpacityOf('flow', 5_000);
-    expect(surveyAfterStop).toBe(1);
-    expect(flowAfterStop).toBe(1);
 
     clipPlayer.destroy();
   });

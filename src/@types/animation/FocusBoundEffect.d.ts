@@ -22,7 +22,7 @@
  * ### `focusId` vs `kind:'focus'`
  *
  * The `kind:'focus'` arm in `SceneEffect` carries a resolved ref and
- * is what `applySceneEffect` dispatches. `kind:'focusId'` is the clip-authoring
+ * is what a compiled clip's focus steps carry. `kind:'focusId'` is the clip-authoring
  * surface: authors write `focus(id)`, `resolveClipFoci` resolves it to
  * `kind:'focus'` with the matching ref at play time.
  */

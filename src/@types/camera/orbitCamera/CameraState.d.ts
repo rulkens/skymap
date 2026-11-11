@@ -16,13 +16,14 @@ import type { CameraAim } from '../pose/CameraAim';
 import type { ClipData } from '../../animation/ClipData';
 import type { FrameTween } from '../focusMotion/FrameTween';
 import type { OrientationFrameId } from '../orientation/OrientationFrameId';
+import type { ClipSceneEnd } from '../../animation/ClipSceneEnd';
 
 export type CameraState = {
   /** The committed pose AND the frame it lives in — the regime itself (spec §4). */
   base: FramedCameraPose;
   tween: CameraTweenDescriptor | null;
   autoRotate: { active: boolean; rate: number };
-  clip: { data: ClipData; frame: OrientationFrameId } | null;
+  clip: { data: ClipData; frame: OrientationFrameId; atEnd: ClipSceneEnd } | null;
   frameTween: FrameTween | null;
   /** The last re-aim an exhibit's hold asked for; null before any. */
   aim: CameraAim | null;

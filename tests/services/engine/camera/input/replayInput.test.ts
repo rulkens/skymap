@@ -450,6 +450,7 @@ describe('replayInput', () => {
       clipStarted({
         data: { start: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 }, timeline: [] },
         frame: 'ecliptic',
+        atEnd: 'revert',
       }),
     );
 

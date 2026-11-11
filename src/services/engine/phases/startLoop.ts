@@ -39,6 +39,7 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
   const frameDeps: RunFrameDeps = {
     canvas: deps.canvas,
     cb: deps.cb,
+    readRoot: deps.readRoot,
     device: phaseLocals.device,
     context: phaseLocals.context,
     timingService: state.gpu.timingService,

@@ -1,14 +1,14 @@
 # Clip studio S3: a clip's scene as pure tracks — implementation plan
 
 > **For agentic workers:** execute with `subagent-driven-development` under
-> [`sdd-execution.md`](../conventions/sdd-execution.md). One commit per task. Ask the two pre-flight questions
+> [`sdd-execution.md`](../../conventions/sdd-execution.md). One commit per task. Ask the two pre-flight questions
 > (parallelism, perf gate) before Task 0.1; this plan expects the perf gate to run (DoD).
 
 **Goal:** a playing clip's scene (switches, settings writes, focus, orientation frame, `fade` factors) is a pure
 function of the clip clock, read by the engine as an overlay on intent, reverting at the clip's end unless the
 caller keeps it. The edge-triggered cue path (`applySceneEffect`, `clipOpacityChannel`, the cue cursor) is deleted.
 
-**Spec:** [`2026-11-10-clip-studio-s3-scene-tracks.md`](../specs/2026-11-10-clip-studio-s3-scene-tracks.md) (the
+**Spec:** [`2026-11-10-clip-studio-s3-scene-tracks.md`](../../specs/completed/2026-11-10-clip-studio-s3-scene-tracks.md) (the
 reviewer's document; tasks below carry what implementers need). **Decisions:** grill session Q1 (C), Q2 (B) and
 Q48–Q53, recorded in spec §9: `keep` for tours and `revert` elsewhere, intent shown during a clip, default revert
 durations, `atEnd` required, no clip perf scenario. G0's prep commits ride the S3 feature PR.
@@ -71,9 +71,9 @@ Convention test `engineRootRead.test.ts`: scan `src/services/engine/**` and `src
 playing clip's scene reaches it". This test earns its place: a bypass silently ignores the S3 overlay and nothing
 else fails.
 
-- [ ] Add `readRoot`, route the reads above, add the test.
-- [ ] `npm run typecheck:fast`; `npx vitest run tests/conventions/engineRootRead.test.ts tests/services/engine/frame`.
-- [ ] Commit: "Engine reads the root through one seam".
+- [x] Add `readRoot`, route the reads above, add the test.
+- [x] `npm run typecheck:fast`; `npx vitest run tests/conventions/engineRootRead.test.ts tests/services/engine/frame`.
+- [x] Commit: "Engine reads the root through one seam".
 
 ### Task 0.2: `sceneActionsOf` becomes the one scene write table
 
@@ -88,9 +88,9 @@ The tour fold's output is unchanged: `captureSettings` drops `orientation`
 `frameTo` is excluded: it is now folded and dropped by the capture. No new test (a moved function; the frameTo arm
 is asserted through `sceneView` in Task 1.2, and `tests/state/tour/computeSceneEntering.test.ts` must stay green).
 
-- [ ] Move, add the arm, point `computeSceneEntering` at it.
-- [ ] `npx vitest run tests/state/tour`.
-- [ ] Commit: "Scene writes come from one table".
+- [x] Move, add the arm, point `computeSceneEntering` at it.
+- [x] `npx vitest run tests/state/tour`.
+- [x] Commit: "Scene writes come from one table".
 
 **Controller, after dispatch 1:** take the perf baseline on this HEAD (DoD perf gate):
 `npm run perf -- --url http://localhost:<port>` and `npm run perf:cpu -- --url http://localhost:<port>`, all
@@ -148,15 +148,27 @@ falls inside one, which that segment's `endSec` is then cut to). A `fade` whose 
 target appends nothing (the `FadeController.fadeTo` no-op, `fadeController.ts:67-70`). `over: 0` is a segment with
 `startSec === endSec`.
 
-- [ ] Test `scene steps are time-sorted and keep written order at one instant` (two steps at the same `atSec` in
+**As built (G1), three deviations:**
+
+- **`cues` stays until Task 2.2.** The live `clipPlayer.ts` still fires `compiled.cues` (focus and fade included), and
+  the suite must stay green between dispatches, so compile emits `scene` beside `cues` and `SceneStep` is a new file
+  instead of a rename of `SceneCue`. Task 2.2 deletes `CompiledClip.cues`, `Accum.cues`, `sortedCues` and
+  `SceneCue.d.ts` with the cue path.
+- **Segments supersede, they are not cut.** Cutting the first segment's `endSec` changes its smoothstep curve (at
+  t = 1 it would read 0.5 instead of today's 0.84375, and jump at the cut). A later segment instead takes over from
+  its own `startSec`; `clipFactorAt` evaluates the last segment with `startSec ≤ t`. `FactorSegment` and
+  `SceneTracks.factors` say "ascending startSec", not "non-overlapping".
+- **`clipFactorAt` lands here**, with its test, because compile computes each `from` with it.
+
+- [x] Test `scene steps are time-sorted and keep written order at one instant` (two steps at the same `atSec` in
       written order A, B; a later-written step with an earlier `atSec` sorts first).
-- [ ] Test `a fade starts from the factor the previous fade reached` (fade to 0 over 4 s at 0, fade to 1 over 2 s
-      at 2: second segment `from` is the smoothstep value at u = 0.5, i.e. 0.5, first segment cut to end at 2).
-- [ ] Test `a fade to the target already held adds no segment`.
-- [ ] Test `focus(null) compiles to an explicit clear step`.
-- [ ] Update the existing `.cues` assertions in `compileClip.test.ts` and the `validateSeqCueOrder` fixtures to steps.
-- [ ] `npx vitest run tests/services/engine/animation`.
-- [ ] Commit: "A compiled clip carries its scene as tracks".
+- [x] Test `a fade starts from the factor the previous fade reached` (fade to 0 over 4 s at 0, fade to 1 over 2 s
+      at 2: second segment `from` is the smoothstep value at u = 0.5, i.e. 0.5; the first segment keeps its curve).
+- [x] Test `a fade to the target already held adds no segment`.
+- [x] Test `focus(null) compiles to an explicit clear step`.
+- [x] Update the existing `.cues` assertions in `compileClip.test.ts` and the `validateSeqCueOrder` fixtures to steps.
+- [x] `npx vitest run tests/services/engine/animation`.
+- [x] Commit: "A compiled clip carries its scene as tracks".
 
 ### Task 1.2: the pure evaluators
 
@@ -196,20 +208,21 @@ Folding is not dispatching: `selectionRowsSlice`'s "only `watchSelectionRowsSaga
 is untouched. `clipFactorAt`: 1 before the first segment or with no segments; inside a segment
 `from + (to − from) · smoothstep(u)` using `src/utils/math/smoothstep.ts`; after the last, its `to`.
 
-- [ ] Test `sceneView folds the applied steps over intent and leaves the rest` (show at 1, hide at 3; applied 1 →
+- [x] Test `sceneView folds the applied steps over intent and leaves the rest` (show at 1, hide at 3; applied 1 →
       switch on; the root's own settings object unchanged).
-- [ ] Test `sceneView carries each kind into the view` — one assertion per kind: a scoped `show('survey:sdss')`
+- [x] Test `sceneView carries each kind into the view` — one assertion per kind: a scoped `show('survey:sdss')`
       sets that item, a `scene(setFlowEnabled(true))` sets `flow.enabled`, a `frameTo('supergalactic')` sets
       `settings.orientation` (guards a reducer silently dropping a folded action).
-- [ ] Test `sceneView focus: a null step clears, no focus step leaves the intent focus` (and the focus row and
+- [x] Test `sceneView focus: a null step clears, no focus step leaves the intent focus` (and the focus row and
       `focusId` come from the `focusRow` argument).
-- [ ] Test `sceneView with nothing applied is the root itself`.
-- [ ] Test `clipFactorAt follows the segments, holding the last value after them` (mid-ramp value, value after,
-      1 before).
-- [ ] No test for `countAtOrBefore` beyond its use (a boundary at `atSec === t` is covered by the view test's
-      step at exactly t, which must apply).
-- [ ] `npx vitest run tests/services/engine/animation tests/utils/animation`.
-- [ ] Commit: "A clip's scene evaluates at any t".
+- [x] Test `sceneView with nothing applied is the root itself`.
+- [x] Test `clipFactorAt follows the segments, holding the last value after them` (mid-ramp value, value after,
+      1 before). Landed with Task 1.1.
+- [x] ~~No test for `countAtOrBefore` beyond its use~~ As built: `countAtOrBefore` has its own boundary test.
+      `sceneView` takes counts, not `t`, so no view test reaches it before Task 2.2, and `≤` vs `<` at `atSec === t`
+      is exactly the boundary `testing.md` keeps a test for.
+- [x] `npx vitest run tests/services/engine/animation tests/utils/animation`.
+- [x] Commit: "A clip's scene evaluates at any t".
 
 ---
 
@@ -238,9 +251,12 @@ Required, no default (spec §9, Decision 4). Call sites: `visitBeatSaga.ts:122` 
 `clipBodySaga.ts:52`, `exhibitBodySaga.ts:85`, `watchReplayInspectedPathSaga.ts:62` and `replayInput.ts:119` pass
 `'revert'`. The player ignores it until Task 2.2. No new test: type plumbing the compiler checks.
 
-- [ ] Add the type, thread it, update call sites and test helpers.
-- [ ] `npm run typecheck:fast`; `npx vitest run tests/state/tour tests/state/camera tests/services/engine/animation`.
-- [ ] Commit: "A play says what happens to its scene at the end".
+As built: a sixth call site, `missionHoldSaga.ts` (an exhibit's fly-to-pose clip, no scene), passes `'revert'`.
+Saga `call`s pass the literal `as const`: typed-redux-saga widens a bare string literal.
+
+- [x] Add the type, thread it, update call sites and test helpers.
+- [x] `npm run typecheck:fast`; `npx vitest run tests/state/tour tests/state/camera tests/services/engine/animation`.
+- [x] Commit: "A play says what happens to its scene at the end".
 
 ### Task 2.2: the player evaluates, publishes and ends
 
@@ -302,19 +318,36 @@ Behaviour, per tick (all synchronous inside `tick`; nothing deferred to a later 
 
 Tests (rewrite `clipPlayer.test.ts`; keep the epoch, deferred-end, runtime-free, rebased-loop and destroy tests):
 
-- [ ] `a show step reaches the view at its atSec and the store is never written mid-clip`.
-- [ ] `each crossed visibility step syncs with its own over` (show over 4 and hide over 1 crossed in one tick → two
+**As built (G2):**
+
+- **The cue path's last test users migrate here, not in 2.3**, so this commit stays green: `cueOver.integration`
+  now drives the real player over a real registry (a step's `over` reaches the ramp), `frameLadder` writes each
+  beat's `frameTo` steps through `sceneActionsOf` (what the `keep` end commits), `tour.integration` reads the
+  factor at the last ticked t. Stale `applySceneEffect` mentions in six comments go with the deletion.
+- **`getCameraRuntime` instead of `getEngineState`**: a frame roll needs only the live up-basis. `ClipPlayerDeps`
+  moves to `@types/engine/subsystems/`, so `clipPlayer.ts` leaves the inline-type ledger.
+- **A wrap publishes only when the applied step count drops** (counts are prefixes of one sorted list, so equal
+  counts mean the same applied steps): a lap that re-crosses only a step at 0 publishes nothing at all. The
+  publish goes through one function, `publishWrap`, today the same default-duration difference publish a
+  revert uses; S4 routes it through its seed (S4 spec §9.1).
+- **A clip replaced while live** (S4 spec §9.2) hands its published scene back to intent at the default durations,
+  then publishes the new clip's crossings; it never seeds and leaves the end resolver to the play that
+  registered it. Test `a replaced clip publishes its crossings and leaves the end resolver alone`.
+- `keep` commits focus when a focus step has applied (not merely exists), and a loop's t is `elapsed mod d`.
+
+- [x] `a show step reaches the view at its atSec and the store is never written mid-clip`.
+- [x] `each crossed visibility step syncs with its own over` (show over 4 and hide over 1 crossed in one tick → two
       syncs, 4000 then 1000, each against the view as of its step).
-- [ ] `a frameTo step starts a frame tween from the live basis and puts its frame in the view`.
-- [ ] `clipOpacityOf is the factor at t whatever frames were skipped` (tick at 0 then at 3.5: value equals
-      `clipFactorAt` at 3.5).
-- [ ] `revert: at the end the view is the store again and visibility re-syncs with default durations`.
-- [ ] `keep: at the end the store holds the view's settings, focus and orientation before clipEnded`.
-- [ ] `keep: stop() commits the steps reached by the stop instant, not later ones`.
-- [ ] `a looping clip re-evaluates each lap from intent; a step at 0 holds across the wrap with no publish`.
-- [ ] `view is memoized: the same root and applied counts return the same object`.
-- [ ] `npx vitest run tests/services/engine/subsystems tests/services/engine/presentation`.
-- [ ] Commit: "A clip's scene is evaluated at t, never dispatched".
+- [x] `a frameTo step starts a frame tween from the live basis and puts its frame in the view`.
+- [x] `clipOpacityOf is the factor at t whatever frames were skipped` (hand-computed values on a superseding
+      retarget: 0.84375 at 1 s, 0.75 at 3 s after skipping 2 s).
+- [x] `revert: at the end the view is the store again and visibility re-syncs with default durations`.
+- [x] `keep: at the end the store holds the view's settings, focus and orientation before clipEnded`.
+- [x] `keep: stop() commits the steps reached by the stop instant, not later ones`.
+- [x] `a looping clip re-evaluates each lap from intent; a step at 0 holds across the wrap with no publish`.
+- [x] `view is memoized: the same root and applied counts return the same object`.
+- [x] `npx vitest run tests/services/engine/subsystems tests/services/engine/presentation`.
+- [x] Commit: "A clip's scene is evaluated at t, never dispatched".
 
 ### Task 2.3: the engine reads the view; tests that fired cues by hand migrate
 
@@ -330,12 +363,18 @@ Tests that imported `applySceneEffect` to replay cues switch to `sceneActionsOf`
 the player; their assertions about what a beat leaves behind (Virgo focus into beat 3, the pole never reverted at a
 beat boundary) must still hold under `'keep'`.
 
-- [ ] Test (integration, tour) `a beat's enter-clip scene holds through its dwell` (enter clip shows `flow`; during
+As built: the player is constructed before `state` in `engine.ts` (the root read goes through it, and the camera
+seed reads the root before `state` exists); the camera sim harness reads its root through the player too. Both
+tests live in `tests/state/tour/clipSceneEnd.integration.test.ts` and drive two `playClip` calls with `keep`
+the way the tour does, not `visitBeatSaga` (its focus resolution needs real catalogs); the test-file migrations
+this task listed landed with Task 2.2.
+
+- [x] Test (integration, tour) `a beat's enter-clip scene holds through its dwell` (enter clip shows `flow`; during
       the dwell the switch is on in the store and the fade target is 1).
-- [ ] Test (integration) `a standalone clip's scene reverts at its end` (the `cosmicFlows` shape: hidden web layers
+- [x] Test (integration) `a standalone clip's scene reverts at its end` (the `cosmicFlows` shape: hidden web layers
       come back, `flow.enabled` back to the pre-clip value, the store never written mid-clip).
-- [ ] `npx vitest run tests/state tests/data/animation tests/services/engine`.
-- [ ] Commit: "The engine reads a playing clip's scene through its root".
+- [x] `npx vitest run tests/state tests/data/animation tests/services/engine`.
+- [x] Commit: "The engine reads a playing clip's scene through its root".
 
 ---
 
@@ -356,8 +395,14 @@ ADR content: a clip's scene is an overlay folded over intent at t and never disp
 subsystems that animate user changes; `revert` by default, `keep` for tours with the commit in the end tick; why
 not affine overlays or a concatenated tour (spec §8). Comment budget per `comments.md`.
 
-- [ ] Write the ADR and update the files above. No test.
-- [ ] Commit: "docs: a clip's scene is an overlay evaluated at t".
+As built: ADR 0017 (`docs/adrs/0017-clip-scene-is-an-overlay.md`), written to S4 spec §9.4 (a paused frame
+inside a roll shows the destination; the ADR promises no mid-roll pole). Beyond the list above, the stale
+mechanism comments in `EngineSubsystemHandles.d.ts`, `effectHelpers.ts` (`fade`), `compileClip.ts`,
+`runFrame.ts`, `docs/tour/implementation-notes.md` and the emphasize-cue backlog detail now name the overlay
+and factor tracks. "Cue" stays as authoring vocabulary in tour files (a step that applies at its beat).
+
+- [x] Write the ADR and update the files above. No test.
+- [x] Commit: "docs: a clip's scene is an overlay evaluated at t".
 
 ---
 
@@ -388,6 +433,45 @@ not affine overlays or a concatenated tour (spec §8). Comment budget per `comme
 - `npm run perf` and `npm run perf:cpu` (all scenarios, `--url` this worktree's server) on the G0 HEAD and on the
   final HEAD, both in the ledger; no scenario regresses beyond run-to-run noise. A regression halts landing for the
   owner's ruling.
+- Baseline, G0 HEAD `64497c71c` (2026-11-10, this machine). GPU = `npm run perf` MERGED median ms; CPU = sum of
+  `npm run perf:cpu` row means, ms per frame.
+
+  | scenario | GPU | CPU |
+  | --- | --- | --- |
+  | earth-surface | 24.6 | 2.018 |
+  | earth-copenhagen-500km | 26.2 | 2.219 |
+  | mars-jezero-146km | 44.8 | 2.140 |
+  | solar-system | 21.2 | 1.601 |
+  | star-field | 9.7 | 1.402 |
+  | milky-way | 30.7 | 1.701 |
+  | milky-way-outside | 26.0 | 1.659 |
+  | milky-way-close | 43.5 | 1.721 |
+  | galactic-centre | 10.2 | 2.158 |
+  | sgr-a-star-lens | 36.2 | 2.279 |
+  | local-group | 4.4 | 0.827 |
+  | full-survey | 4.4 | 0.842 |
+
+- After, final HEAD `2827a2631`. A single after run swung both ways far past noise against the table above
+  (earth-surface 24.6 → 10.9 ms, full-survey 4.4 → 14.1 ms GPU), so the gate is a **paired A/B**: the G0 HEAD
+  (`7f4db289f`, a scratch worktree on port 5183) and the final HEAD (port 5182) alternated A-B-A-B-A-B, all
+  scenarios, both tools, 21:15–21:25. Each cell lists the three rounds; Δ is median B − median A. Verdict: **no
+  regression**. Every GPU Δ (−1.4 … +1.2 ms) and CPU Δ (−0.13 … +0.14 ms) sits inside its own per-round spread,
+  and the CPU deltas carry both signs, which a per-getter cost would not.
+
+  | scenario | GPU A (G0) | GPU B (S3) | GPU Δ | CPU A (G0) | CPU B (S3) | CPU Δ |
+  | --- | --- | --- | --- | --- | --- | --- |
+  | earth-surface | 17.8/15.3/16.7 | 10.9/15.8/18.6 | −0.9 | 1.727/1.734/1.698 | 5.023/1.711/1.696 | −0.016 |
+  | earth-copenhagen-500km | 27.2/27.2/27.0 | 26.5/26.5/26.3 | −0.7 | 2.175/2.168/1.950 | 2.012/2.043/2.059 | −0.125 |
+  | mars-jezero-146km | 17.2/15.6/15.5 | 15.6/15.0/15.5 | −0.1 | 2.071/2.090/2.042 | 2.043/1.979/2.011 | −0.060 |
+  | solar-system | 10.3/13.0/10.3 | 9.9/10.2/10.3 | −0.1 | 1.427/1.503/1.466 | 1.441/1.416/1.417 | −0.049 |
+  | star-field | 9.5/10.4/11.0 | 12.1/10.2/10.8 | +0.4 | 1.258/1.283/1.270 | 1.250/1.244/1.263 | −0.020 |
+  | milky-way | 16.9/13.7/14.7 | 15.0/15.4/13.0 | +0.3 | 1.664/1.563/1.620 | 1.593/1.575/1.567 | −0.045 |
+  | milky-way-outside | 25.6/25.5/25.9 | 36.9/25.8/25.7 | +0.2 | 1.663/1.548/1.562 | 1.697/1.586/1.670 | +0.108 |
+  | milky-way-close | 28.6/29.4/28.9 | 50.7/29.5/30.2 | +1.2 | 1.602/1.543/1.544 | 1.569/1.525/1.578 | +0.025 |
+  | galactic-centre | 8.6/11.5/10.3 | 8.9/8.6/9.5 | −1.4 | 1.928/1.892/1.879 | 2.264/1.911/1.862 | +0.019 |
+  | sgr-a-star-lens | 18.1/22.1/21.9 | 16.8/22.3/21.6 | −0.3 | 2.019/2.012/1.981 | 2.155/2.214/1.983 | +0.143 |
+  | local-group | 5.9/7.3/4.8 | 7.0/5.9/6.5 | +0.6 | 1.289/1.017/1.027 | 1.088/1.069/1.086 | +0.059 |
+  | full-survey | 13.4/15.1/15.6 | 16.0/10.2/17.3 | +0.9 | 0.947/0.862/0.866 | 0.873/0.879/0.891 | +0.013 |
 
 **Deferral boundary (out of scope)**
 

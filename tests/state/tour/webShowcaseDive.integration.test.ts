@@ -215,11 +215,11 @@ describe('webShowcase dive invariants', () => {
 
     // Activate a clip so camera.clip !== null.
     const beat2Clip = webShowcase.beats[1]!.enterClip!;
-    store.dispatch(clipStarted({ data: beat2Clip, frame: DEFAULT_ORIENTATION }));
+    store.dispatch(clipStarted({ data: beat2Clip, frame: DEFAULT_ORIENTATION, atEnd: 'revert' }));
     expect(store.getState().camera.clip).not.toBeNull(); // guard: clip is active
 
-    // Dispatch a focus update — this is what an in-clip focus() cue would
-    // trigger when applySceneEffect processes it during playback.
+    // Dispatch a focus update — what a `keep` clip's end commit dispatches
+    // while the clip is still active.
     store.dispatch(updateSelectionFocus({ type: 'structure', id: 'galaxy-cluster-virgo-m87' }));
 
     // Give the saga worker a chance to run (it won't reach startCameraTween).

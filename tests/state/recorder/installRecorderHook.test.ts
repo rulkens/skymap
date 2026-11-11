@@ -161,7 +161,7 @@ describe('installRecorderHook', () => {
     expect(dispatched?.payload).toBe('flyout');
 
     // Activation must not resolve it...
-    store.dispatch(clipStarted({ data: clipData, frame: DEFAULT_ORIENTATION }));
+    store.dispatch(clipStarted({ data: clipData, frame: DEFAULT_ORIENTATION, atEnd: 'revert' }));
     await Promise.resolve();
     expect(settled).toBe(false);
 
@@ -198,7 +198,7 @@ describe('installRecorderHook', () => {
 
     const clipData: ClipData = { timeline: [] };
     // Clip A is running (the player's activation write, driven directly).
-    store.dispatch(clipStarted({ data: clipData, frame: DEFAULT_ORIENTATION }));
+    store.dispatch(clipStarted({ data: clipData, frame: DEFAULT_ORIENTATION, atEnd: 'revert' }));
     const dispatchedBefore = actions.filter((action) => action.type === startClip.type).length;
 
     await expect(hook.startClip('earthFlyout')).rejects.toThrow(

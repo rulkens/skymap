@@ -12,6 +12,8 @@ export function* watchZoomLimitSaga() {
   yield* takeEvery(zoomLimitPushed, function* ({ payload }) {
     if (payload.edge !== 'out') return;
     // While it plays, the clip swallows every pose-moving step (`replayInput`'s `stepRegister`).
-    yield* put(clipStarted({ data: payload.lift, frame: yield* select(selectOrientation) }));
+    yield* put(
+      clipStarted({ data: payload.lift, frame: yield* select(selectOrientation), atEnd: 'revert' }),
+    );
   });
 }

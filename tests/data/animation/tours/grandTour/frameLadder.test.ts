@@ -13,20 +13,19 @@
  *
  * This version drives the two production mechanisms `tourBodySaga` composes
  * at every beat boundary — the reconstruction fold (`computeSceneEntering` →
- * `mergeSnapshot`, copied verbatim from `tourBodySaga.ts`) and the beat's
- * own cues actually firing (`applySceneEffect`, the same dispatch table
- * `clipPlayer` calls from) — against the REAL `grandTour` beats, and asserts
- * the resulting `settings.orientation` after each beat.
+ * `mergeSnapshot`, copied verbatim from `tourBodySaga.ts`) and what each beat
+ * clip's `keep` end commits (its `frameTo` steps through `sceneActionsOf`, the
+ * write table `sceneView` folds) — against the REAL `grandTour` beats, and
+ * asserts the resulting `settings.orientation` after each beat.
  *
  * Deliberately NOT run through `tourBodySaga`/`visitBeatSaga` end to end:
  * a real playthrough gates every beat's fly behind `resolveClipFoci`, which
  * needs real loaded catalog / famous-galaxy / structure data for every
  * id-bearing cue in EVERY beat (Local Group members, Virgo, Laniakea, …) —
  * orthogonal to which pole is "up", and fabricating that fixture would dwarf
- * the test it supports. Firing a beat's scene cues directly via
- * `applySceneEffect` reproduces exactly what a real playthrough eventually
- * dispatches for them (`compileClip`'s flattened, atSec-sorted `cues` list),
- * without needing camera-motion resolution at all.
+ * the test it supports. Writing a beat's `frameTo` steps directly reproduces
+ * the orientation the clip player commits at each clip's end, without needing
+ * camera-motion resolution at all.
  */
 import { describe, it, expect } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
@@ -37,23 +36,16 @@ import { mergeSnapshot } from '../../../../../src/state/settings/mergeSnapshotAc
 import { mergeSettingsSnapshot } from '../../../../../src/state/settings/mergeSettingsSnapshot';
 import { computeSceneEntering } from '../../../../../src/state/tour/computeSceneEntering';
 import { captureScene } from '../../../../../src/state/scene/captureScene';
-import { applySceneEffect } from '../../../../../src/services/animation/applySceneEffect';
+import { sceneActionsOf } from '../../../../../src/utils/animation/sceneActionsOf';
 import type { ClipData } from '../../../../../src/@types/animation/ClipData';
 import type { Effect } from '../../../../../src/@types/animation/Effect';
 import type { SceneEffect } from '../../../../../src/@types/animation/SceneEffect';
-import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { OrientationFrameId } from '../../../../../src/@types/camera/orientation/OrientationFrameId';
 import type { RootState } from '../../../../../src/store/types';
 
 /**
  * Walk a clip's effect tree in authored order and collect its `frameTo`
- * leaves — the tree-order equivalent of `compileClip`'s flat, atSec-sorted
- * `cues` list, narrowed to the one cue kind that can move `settings.orientation`.
- * `show`/`hide`/`focus` also route through `applySceneEffect`, but firing them
- * for real needs a live `state.subsystems.fades` (the visibility sync) —
- * standing that up would drag in the whole fade/subsystem wiring for cues this
- * test has no interest in. `frameTo` alone determines the orientation ladder,
- * so only it needs firing.
+ * leaves, the one step kind that moves `settings.orientation`.
  *
  * Unlike `compileClip`, this never touches the unresolved id-bearing motion
  * arms (`moveTargetId`, `focusId`, …) — it simply never looks at them — which
@@ -74,23 +66,11 @@ function makeStore() {
   return configureStore({ reducer: rootReducer });
 }
 
-/**
- * Fire every `frameTo` cue of a clip, in authored order, through the REAL
- * `applySceneEffect` dispatch table — the same function `clipPlayer` calls
- * cue-by-cue during real playback.
- *
- * The `cameraRuntime` stub only needs to satisfy `frameTo`'s
- * `liveUpBasisQuat` read (`outputs.upBasis`, an identity Mat3 is fine —
- * the roll's seed quaternion is not under test here).
- */
-function fireFrameToCues(store: ReturnType<typeof makeStore>, clip: ClipData | undefined): void {
+/** What a beat clip's `keep` end commits of its `frameTo` steps, in authored order. */
+function commitFrameToSteps(store: ReturnType<typeof makeStore>, clip: ClipData | undefined): void {
   if (clip === undefined) return;
-  const state = {
-    settings: store.getState().settings,
-    cameraRuntime: { outputs: { upBasis: [1, 0, 0, 0, 1, 0, 0, 0, 1] } },
-  } as unknown as EngineState;
   for (const effect of collectFrameToEffects(clip.timeline)) {
-    applySceneEffect(effect, { state, store });
+    for (const action of sceneActionsOf(effect, store.getState().settings)) store.dispatch(action);
   }
 }
 
@@ -108,11 +88,10 @@ describe('grand tour frame ladder — effective orientation per beat', () => {
       const baseline = mergeSettingsSnapshot(live, snapshot.settings);
       store.dispatch(mergeSnapshot(computeSceneEntering(baseline, grandTour.beats, i)));
 
-      // The beat "plays": fire its real frameTo cues, enter then dwell — the
-      // order clipPlayer fires them in.
+      // The beat "plays": enter then dwell, each committing its scene at its end.
       const beat = grandTour.beats[i]!;
-      fireFrameToCues(store, beat.enterClip);
-      fireFrameToCues(store, beat.dwellClip);
+      commitFrameToSteps(store, beat.enterClip);
+      commitFrameToSteps(store, beat.dwellClip);
 
       orientationPerBeat.push(store.getState().settings.orientation);
     }

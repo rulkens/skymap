@@ -17,7 +17,7 @@ length, and select and set the joins of a Sequence with the T1 crossfade treatme
 `FieldRow`, `RowInspector`, `OutlineRow`, `TimelinePane`, `BarMark`, `rowKinds`, `subjectKinds`, `cameraKinds`; the
 redesign brings the Fly's waypoint chip list, `WaypointsField`, with display and selection only). Run the pre-flight conflict scan against
 whatever is uncommitted then. P1 and the S3 plan
-([`2026-11-10-clip-studio-s3-scene-tracks.md`](2026-11-10-clip-studio-s3-scene-tracks.md)) both edit
+([`2026-11-10-clip-studio-s3-scene-tracks.md`](completed/2026-11-10-clip-studio-s3-scene-tracks.md)) both edit
 `compileClip.ts`; whichever lands second adapts its walk change to the other's.
 
 **Tech:** as slice 1. Component tests opt into jsdom per file. Store-level tests use

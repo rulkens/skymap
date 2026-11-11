@@ -77,6 +77,7 @@ const PLAYS = [
 const CLIP_STARTED: Parameters<typeof clipStarted>[0] = {
   data: { timeline: [] },
   frame: 'equatorial',
+  atEnd: 'revert',
 };
 
 function build(home: EngineHomeConfig = { focus: null, seedSelection: false }) {

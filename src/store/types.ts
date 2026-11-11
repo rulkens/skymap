@@ -56,6 +56,7 @@ import type { ClipData } from '../@types/animation/ClipData';
 import type { ClipId } from '../@types/animation/ClipId';
 import type { Mat3 } from '../@types/math/Mat3';
 import type { OrientationFrameId } from '../@types/camera/orientation/OrientationFrameId';
+import type { ClipSceneEnd } from '../@types/animation/ClipSceneEnd';
 import type { Task } from 'redux-saga';
 import type { SagaFactory } from '../@types/engine/layer/SagaFactory';
 import type { EngineHomeConfig } from '../@types/engine/EngineHomeConfig';
@@ -173,10 +174,11 @@ export type SagaContext = {
    * `frame` is the orientation frame the CALLER is under right now — pinned
    * onto `camera.clip` so a later orientation switch re-expresses the clip's
    * pose instead of reinterpreting it (see the clip row in cameraDrivers.ts).
+   * `atEnd` says whether the clip's scene reverts or is committed to intent at its end.
    * The engine registers this at construction via `createPlayClip` +
    * `setSagaContext`; tests inject a stub via `sagaMiddleware.setContext`.
    */
-  playClip: (clip: ClipData, frame: OrientationFrameId) => Promise<void>;
+  playClip: (clip: ClipData, frame: OrientationFrameId, atEnd: ClipSceneEnd) => Promise<void>;
   /**
    * The debug clip-path inspector seam — `watchClipPathInspectSaga` calls
    * `compute` on `inspectClipPath` and `clear` on `clearClipPath`. Engine-

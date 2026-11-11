@@ -16,7 +16,6 @@ import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
 import { simulateCameraFrame } from '../../../helpers/camera/simulateCameraFrame';
 import type { CameraSimHarness } from '../../../helpers/camera/CameraSimHarness';
-import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
 import { worldArmOf } from '../../../fixtures/worldArmOf';
 import type { FramedCameraPose } from '../../../../src/@types/camera/pose/FramedCameraPose';
@@ -76,13 +75,13 @@ describe('playClip — flyout seam', () => {
 
     // The real clipPlayer; `simulateFrame` threads the clip epoch it returns
     // into the frame's advance, as `runFrame` does.
+    // flyout has no scene steps (dollyTo/spin compile to camera base tracks), so
+    // the scene hooks never fire.
     const clipPlayer = createClipPlayer({
       store,
-      requestRender: () => {},
-      // flyout has no scene cues (dollyTo/spin compile to camera base tracks,
-      // not show/hide/fade/scene/focus cues), so getEngineState will never be
-      // invoked. A minimal stub satisfies the type.
-      getEngineState: () => ({}) as EngineState,
+      getCameraRuntime: () => state.cameraRuntime,
+      extractFocusRow: () => ({ row: null, focusId: null }),
+      syncVisibility: () => {},
     });
 
     // Build the real playClip. getLivePose reads register.pose — the same
@@ -100,7 +99,7 @@ describe('playClip — flyout seam', () => {
     // registers the end-resolver, attaches the [CANCEL] hook, and dispatches
     // clipStarted. The Promise resolves on the deferred clipEnded frame.
     let settled = false;
-    const p = playClip(flyout.data, DEFAULT_ORIENTATION);
+    const p = playClip(flyout.data, DEFAULT_ORIENTATION, 'revert');
     void p.then(() => {
       settled = true;
     });

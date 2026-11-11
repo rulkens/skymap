@@ -49,8 +49,8 @@
  * bracket to settle, so on a supersede this restore is complete before the
  * successor run's snapshot reads the store.
  *
- * `clipOpacity` is already reset to 1 at clip end by the clip runner, so
- * transient fade-to-black effects need no undo here.
+ * A clip's `fade` factor is back to 1 once the clip ends (the player owns it,
+ * never intent), so transient fade-to-black effects need no undo here.
  */
 
 import { put } from 'typed-redux-saga';

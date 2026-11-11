@@ -69,7 +69,7 @@ describe('watchReplayInspectedPathSaga', () => {
     await flush();
 
     expect(playClip).toHaveBeenCalledTimes(1);
-    expect(playClip).toHaveBeenCalledWith(PINNED, 'ecliptic');
+    expect(playClip).toHaveBeenCalledWith(PINNED, 'ecliptic', 'revert');
   });
 
   it('is a no-op when nothing has been calculated (pinnedClip null)', async () => {
@@ -105,6 +105,6 @@ describe('watchReplayInspectedPathSaga', () => {
 
     expect(playClip).toHaveBeenCalledTimes(1);
     // Compute-time frame ('ecliptic'), NOT the live setting ('galactic').
-    expect(playClip).toHaveBeenCalledWith(PINNED, 'ecliptic');
+    expect(playClip).toHaveBeenCalledWith(PINNED, 'ecliptic', 'revert');
   });
 });

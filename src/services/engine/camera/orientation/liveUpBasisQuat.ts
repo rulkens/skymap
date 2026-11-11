@@ -5,7 +5,7 @@
  * `outputs.upBasis` is the tight 9-float column-major Mat3 `runFrame`
  * resolves once per frame — exactly `matrixToQuaternion`'s input — so both
  * switch surfaces (the orientation saga's runtime accessor in `engine.ts` and
- * the `frameTo` clip cue in `applySceneEffect`) seed a roll from the live pole
+ * a clip's `frameTo` step in `clipPlayer`) seed a roll from the live pole
  * rather than snapping to the committed frame. One conversion, one convention.
  */
 

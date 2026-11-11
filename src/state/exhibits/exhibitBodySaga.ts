@@ -85,7 +85,7 @@ export function* exhibitBodySaga(
   if (exhibit.arrival) clips.push({ start: pose, timeline: exhibit.arrival });
   for (const clip of clips) {
     const { exit } = yield* race({
-      played: call(playClip, clip, orientation),
+      played: call(playClip, clip, orientation, 'revert' as const),
       exit: take(exitTakeover),
     });
     if (exit) return;

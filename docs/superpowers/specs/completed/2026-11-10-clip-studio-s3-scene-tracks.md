@@ -1,9 +1,9 @@
 # Clip studio S3: a clip's scene as pure tracks
 
 **Status:** open questions ruled by the owner 2026-11-10 (§9) · **Date:** 2026-11-10 · **Branch:** `feat/clip-studio`
-**Decision record:** [`clip-studio-2026-11-07.md`](../../grill-sessions/clip-studio-2026-11-07.md) Q1 (C, scene as pure
+**Decision record:** [`clip-studio-2026-11-07.md`](../../../grill-sessions/clip-studio-2026-11-07.md) Q1 (C, scene as pure
 tracks, for every clip), Q2 (B, a clip's scene always reverts at its end) and this spec's rulings Q48–Q53.
-**Plan:** [`2026-11-10-clip-studio-s3-scene-tracks.md`](../plans/2026-11-10-clip-studio-s3-scene-tracks.md)
+**Plan:** [`2026-11-10-clip-studio-s3-scene-tracks.md`](../../plans/completed/2026-11-10-clip-studio-s3-scene-tracks.md)
 
 ## Goal
 
@@ -40,7 +40,7 @@ export type SceneTracks = {
   readonly steps: readonly SceneStep[];
   /** focus() writes, ascending atSec; `ref: null` is an explicit clear. */
   readonly focus: readonly FocusStep[];
-  /** fade() per address: the clip factor's segments, ascending, non-overlapping. */
+  /** fade() per address: the clip factor's segments in ascending startSec; a later segment supersedes the earlier one from its start. */
   readonly factors: Readonly<Partial<Record<VisibilityAddress, readonly FactorSegment[]>>>;
 };
 
@@ -227,10 +227,10 @@ backlog item stands.
 > The getters read the view, so anything `sceneView` calls that reads them would recurse. The fold takes plain
 > values only: the focus row is extracted in `tick` and handed in.
 
-> [!RISK] `suspendDuringClip` stays load-bearing
-> A `keep` commit dispatches `updateSelectionFocus` while the clip is still active, so `watchFocusTweenSaga` must stay
-> parked then, or the camera would fly to the committed focus. Its docblock (`suspendDuringClip.ts:27-32`) changes
-> its reason: focus steps no longer dispatch.
+> [!RISK] A `keep` commit's focus must not fly the camera
+> A `keep` commit dispatches `updateSelectionFocus` while the clip is still active. On a natural end
+> `suspendDuringClip` keeps `watchFocusTweenSaga` parked; a play cancelled from a saga reaches the workers only after
+> `clipEnded`, past that guard, so the commit dispatches the focus as a `'cut'`. Focus steps no longer dispatch.
 
 Smaller: publication happens in `tick`, before `fades.tick(nowMs)` (`runFrame.ts:260`), so a ramp starts on the
 previous frame's stamp. That is today's skew too. The view memo keys on store slice identities, which change on

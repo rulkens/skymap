@@ -52,8 +52,8 @@ const LIVE_IDLE_TICK_MS = 500;
 
 /** `nowMs` is `performance.now()`-shaped, passed in so tests drive the timing. */
 export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number): void {
-  // First statement, by contract: cues fired here are in the store before this frame
-  // derives demand or the pose, and a cue's frameTween is seen by this frame's basis.
+  // First statement, by contract: the clip's scene at this frame's t is what demand and the
+  // pose read below, and a step's frameTween is seen by this frame's basis.
   const { clipEpoch } = state.subsystems.clipPlayer.tick(state.cameraRuntime.epochs.clip, nowMs);
 
   reevaluateDemand(state);
@@ -68,7 +68,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
 
   // The frame's ONE store snapshot. The camera step runs before `deriveFrameContext`
   // so a camera-only-ready frame still makes progress before the missing-GPU return.
-  const stored = deps.cb.store.getState();
+  const stored = deps.readRoot();
   const canvasPx: Vec2 = [deps.canvas.clientWidth || 1, deps.canvas.clientHeight || 1];
   const pending = selectPendingInput(stored);
   const steps = pendingToInputSteps(pending, canvasPx);

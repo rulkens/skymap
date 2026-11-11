@@ -50,6 +50,7 @@ import type { FramedCameraPose } from '../../../src/@types/camera/pose/FramedCam
 import type { HeldIntent } from '../../../src/@types/input/HeldIntent';
 import type { UnitPoint } from '../../../src/@types/input/UnitPoint';
 import type { RunFrameDeps } from '../../../src/@types/engine/frame/RunFrameDeps';
+import type { RootState } from '../../../src/store/types';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
 import { datumOnlyTerrainHeight } from '../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
@@ -97,7 +98,10 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
     gpu: { galaxyPointRenderer: null, renderTargets: null },
     subsystems: {
       scheduler: { requestRender: () => {}, requestIdleFrame: () => {} },
-      clipPlayer: { tick: (clipEpoch: CameraEpochs['clip']) => ({ clipEpoch }) },
+      clipPlayer: {
+        tick: (clipEpoch: CameraEpochs['clip']) => ({ clipEpoch }),
+        view: (root: RootState) => root,
+      },
     },
     booted: true,
     terrainHeightAt: datumOnlyTerrainHeight,
@@ -116,8 +120,9 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
   if (realClipPlayer) {
     state.subsystems.clipPlayer = createClipPlayer({
       store,
-      requestRender: () => {},
-      getEngineState: () => state,
+      getCameraRuntime: () => state.cameraRuntime,
+      extractFocusRow: () => ({ row: null, focusId: null }),
+      syncVisibility: () => {},
     });
   }
 
@@ -129,6 +134,8 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
       clientHeight: canvasSize,
     },
     cb: { store },
+    // As `engine.ts` reads it: through the clip player's view.
+    readRoot: () => state.subsystems.clipPlayer.view(store.getState()),
     device: {},
     context: {},
     timingService: {},

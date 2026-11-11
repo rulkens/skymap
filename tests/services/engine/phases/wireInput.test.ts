@@ -147,12 +147,12 @@ function makeState(): EngineState {
 }
 
 function makeDeps(): BootstrapDeps {
-  const cb: EngineCallbacks = {
-    store: configureStore({ reducer: rootReducer }),
-  } as unknown as EngineCallbacks;
+  const store = configureStore({ reducer: rootReducer });
+  const cb: EngineCallbacks = { store } as unknown as EngineCallbacks;
   return {
     canvas: { width: 800, height: 600 } as HTMLCanvasElement,
     cb,
+    readRoot: () => store.getState(),
     composition: { layers: [], home: EARTH_HOME },
     frameRef: { current: () => {} },
     handleRef: { current: null },
