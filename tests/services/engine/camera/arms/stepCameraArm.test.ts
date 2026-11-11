@@ -95,7 +95,6 @@ function ctxFor(
     frustum: symmetricFrustum(1, 1920 / 1080),
     fovYRad: 1,
     tuning: TUNING,
-    nowMs: 0,
   };
 }
 

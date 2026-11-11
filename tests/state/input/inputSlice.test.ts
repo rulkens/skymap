@@ -21,6 +21,7 @@ import {
 } from '../../../src/state/input/inputSlice';
 import { selectPendingInput, selectPickRequests } from '../../../src/state/input/selectors';
 import { inputRoute } from '../../../src/store/constants';
+import { FRESH_WHEEL_PAUSE_MS } from '../../../src/data/input/freshWheelPauseMs';
 import type { Motion } from '../../../src/@types/input/Motion';
 
 function build() {
@@ -37,23 +38,24 @@ const orbit = (over: Partial<Motion> = {}): Motion => ({
   ratio: 1,
   at: { x: 0.5, y: 0.5 },
   held: true,
+  eventMs: 0,
   ...over,
 });
 
 describe('inputSlice', () => {
-  it('consecutive same-source same-intent motion merges: dx and dy add, ratio multiplies, at is the newest', () => {
+  it('consecutive same-source same-intent motion merges: dx and dy add, ratio multiplies, at and eventMs are the newest', () => {
     const store = build();
     store.dispatch(inputGestureStarted({ source: 'canvas', intent: 'orbit' }));
     store.dispatch(
       inputMoved({
         source: 'canvas',
         motion: [
-          orbit({ ratio: 2 }),
-          orbit({ dx: 0.3, dy: 0.4, ratio: 3, at: { x: 0.1, y: 0.9 } }),
+          orbit({ ratio: 2, eventMs: 10 }),
+          orbit({ dx: 0.3, dy: 0.4, ratio: 3, at: { x: 0.1, y: 0.9 }, eventMs: 20 }),
         ],
       }),
     );
-    store.dispatch(inputMoved({ source: 'canvas', motion: [orbit()] }));
+    store.dispatch(inputMoved({ source: 'canvas', motion: [orbit({ eventMs: 30 })] }));
     expect(selectPendingInput(store.getState())).toEqual([
       { kind: 'start', source: 'canvas' },
       expect.objectContaining({
@@ -62,6 +64,7 @@ describe('inputSlice', () => {
         dy: expect.closeTo(0.8),
         ratio: 6,
         at: { x: 0.5, y: 0.5 },
+        eventMs: 30,
       }),
     ]);
   });
@@ -161,6 +164,57 @@ describe('inputSlice', () => {
     expect(selectPendingInput(store.getState())).toEqual([
       expect.objectContaining({ kind: 'motion', source: 'canvas', dx: 0.1 }),
     ]);
+  });
+
+  describe('wheel freshness', () => {
+    const notch = (eventMs: number): Motion =>
+      orbit({ intent: 'zoom', dx: 0, dy: 0, ratio: 1.1, held: false, eventMs });
+    const freshness = (store: ReturnType<typeof build>) =>
+      selectPendingInput(store.getState()).map((s) => s.kind === 'motion' && s.fresh);
+
+    it('a notch after 250 ms of its source quiet is fresh; one inside it is not', () => {
+      const store = build();
+      store.dispatch(inputMoved({ source: 'canvas', motion: [notch(1000)] }));
+      store.dispatch(inputConsumed());
+      // One short of the pause: not fresh, but it restarts the quiet (a tail is still a tail).
+      const tail = 1000 + FRESH_WHEEL_PAUSE_MS - 1;
+      store.dispatch(inputMoved({ source: 'canvas', motion: [notch(tail)] }));
+      expect(freshness(store)).toEqual([false]);
+      store.dispatch(inputConsumed());
+      const quiet = tail + FRESH_WHEEL_PAUSE_MS;
+      store.dispatch(inputMoved({ source: 'canvas', motion: [notch(quiet)] }));
+      expect(freshness(store)).toEqual([true]);
+      store.dispatch(inputConsumed());
+      store.dispatch(inputMoved({ source: 'canvas', motion: [notch(quiet + 16)] }));
+      expect(freshness(store)).toEqual([false]);
+    });
+
+    it('a folded run is judged by its first event and leaves its last as the clock', () => {
+      const store = build();
+      store.dispatch(inputMoved({ source: 'canvas', motion: [notch(900)] }));
+      store.dispatch(inputConsumed());
+      store.dispatch(inputMoved({ source: 'canvas', motion: [notch(1000), notch(1600)] }));
+      expect(freshness(store)).toEqual([false]);
+      store.dispatch(inputConsumed());
+      store.dispatch(inputMoved({ source: 'canvas', motion: [notch(1700)] }));
+      expect(freshness(store)).toEqual([false]);
+    });
+
+    it('two sources keep their own clocks: a remote notch right after a canvas one is fresh', () => {
+      const store = build();
+      store.dispatch(inputMoved({ source: 'canvas', motion: [notch(1000)] }));
+      store.dispatch(inputMoved({ source: 'remote', motion: [notch(1001)] }));
+      expect(freshness(store)).toEqual([true, true]);
+    });
+
+    it('a resize keeps the wheel clock', () => {
+      const store = build();
+      store.dispatch(inputMoved({ source: 'canvas', motion: [notch(1000)] }));
+      store.dispatch(inputConsumed());
+      store.dispatch(inputSourceResized({ source: 'canvas', aspect: 0.5 }));
+      store.dispatch(inputMoved({ source: 'canvas', motion: [notch(1010)] }));
+      expect(freshness(store)).toEqual([false]);
+    });
   });
 
   it('a stale inputPickResolved leaves a newer request in place', () => {
