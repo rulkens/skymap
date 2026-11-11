@@ -25,6 +25,17 @@ If S3 did not adopt "wraps seed" (spec §9.1), Task 1.3 routes wraps through the
 through state flags: the player reports `held`, it never writes the transport); sagas have no settle signal; an
 action a reducer does not handle drops silently; the loop renders on demand (a seek must be a `camera/` write).
 
+**As built (2026-11-11), rulings:** Q-F ruled A by the owner (`LiveCameraRuntime.clipAt` and the follow loop).
+`playClip`'s optional `transport` parameter was not approved (ask 7D1X open), so nothing adds it: the preview and the
+perf hook set the transport with `clipTransportSet` right after the play starts. Every other §11 question is built as
+recommended and is provisional, each one place to change: Q-A free look (`freeLookSaga` in `previewSaga.ts`,
+`clipOwnsCamera`), Q-B reverted scene past End (`countApplied` and `clipOpacityOf` in `clipPlayer.ts`), Q-C pause at
+End (`playheadFollowed` in `studioSlice.ts`), Q-D pause and resume for a ruler gesture (`useRulerScrub.ts`), Q-E
+destination frame when paused mid-roll (`seed` in `clipPlayer.ts`), Q-G bound steps replaced by their Fixed form
+(`fixedFormOf`), Q-H Space/L/F (`studioKeys.ts`), Q-I loop span read at press (`runStudioKey.ts` `play`/`loop`), Q-J
+the `--scrub` flag and `clip:tick` span, Q-K preps ride this branch, Q-L seed into the registry. The S3 tour fix
+(origin/feat/clip-studio-s3 at b9bfcd969) is merged in.
+
 ---
 
 ## Dispatches
@@ -532,7 +543,7 @@ As built: one `CurrentViewButton` (its own row under the step's fields, compact 
 works whether the camera is free or following: the tip only adds the free-look hint. Typechecked; the shot is the
 controller's.
 
-- [ ] Build; shoot one row inspector with the button.
+- [x] Build; shoot one row inspector with the button.
 - [x] Commit: "Clip studio: Use current view in the inspector".
 
 ---
@@ -544,9 +555,16 @@ the ADR S3's Task 3.1 created (a "Seeking" section: transport on the live clip, 
 ramps, why not clip-clock ramps), `packages/studio/README.md` ("seeks and plays"), this plan and the spec (boxes,
 rulings)
 
-- [ ] Perf gate (DoD).
-- [ ] Live check and shots (DoD), each sent as a dash check with its deep link.
-- [ ] ui-ux.md self-check, one line per item, in the PR body.
+- [x] Perf gate (DoD). `perf:cpu`, all scenarios, on the D1 HEAD and the final HEAD (worktree server :5186): every
+      scenario within run-to-run noise (row sums move ±0.2 ms both ways; the new `clip:tick` row is ≤ 0.011 ms with no
+      clip). Scrub: `clip:tick` mean **0.139 ms** on `cosmicFlows`, **0.097 ms** on `famousFlythrough` (gate 1 ms).
+      The GPU `npm run perf` A/B was not run: no renderer or shader change in this slice.
+- [x] Live check and shots (DoD): a Playwright drive of `#studio=cosmicFlows` on :5186 (ruler drag moves the camera;
+      the flow field is absent at 3.5 s, part-faded at 5.5 s, full at 8 s; past End the final camera with the scene
+      reverted; Space plays and the held follow pauses at 20 s; L loops 0–20 s with the ruler tint; a sky drag shows
+      `Free look`, F follows; the narrow notice has Play; Use current view on a Distance step writes 140 kpc as one
+      `Use current view` entry). Dash checks are the controller's to send.
+- [ ] ui-ux.md self-check, one line per item, in the PR body. (No PR for this slice yet.)
 
 ---
 

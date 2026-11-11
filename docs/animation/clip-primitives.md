@@ -394,6 +394,18 @@ next beat starts from it. The animation between targets (a layer's fade, a pole 
 runs in the subsystems that animate a user's own change, started as the clock crosses
 the step. See [ADR 0017](../adrs/0017-clip-scene-is-an-overlay.md).
 
+**Transport.** A play can be **under transport** (`camera.clip.transport`, set by
+`clipTransportSet`): someone outside the player, today only the clip studio's preview,
+decides where its clock stands, `paused` at a t or `running` from one, optionally looping
+a span. Such a play never ends on its own; its owner pauses or stops it, and the player
+reports the drawn t (`LiveCameraRuntime.clipAt`, `held` at the end). A **jump** (a new
+transport value, new data, a wrap) has no crossings to publish, so the player **seeds**
+the fade registry instead: each layer a step touches is set to the value a continuous
+play would show at t (`rampAt`), and while running its ramp resumes for the time left.
+Paused, nothing ramps, and a paused frame inside a `frameTo` roll shows its destination.
+A play with no transport never seeds except at a lap that drops applied steps, so a ramp
+a tour's `keep` commit carried across a seam is never snapped.
+
 | Helper    | Signature                                                           | What it does                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | --------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `show`    | `show(args: VisibilityArg[], over?) → SceneEffect`                  | Turn things **on** (the switch the panel rows write) and fade them in. `over` omitted → default fade; `0` → instant; `N` → custom seconds.                                                                                                                                                                                                                                                                                                             |

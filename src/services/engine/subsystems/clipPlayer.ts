@@ -108,7 +108,7 @@ export function createClipPlayer(deps: ClipPlayerDeps): ClipPlayer {
   }
 
   // Everything published so far moves to `target` at the default durations (600 ms in, 100 ms
-  // out, the 1 s frame roll): a revert, the hand-over to a replacing clip, a loop lap.
+  // out, the 1 s frame roll): a revert, or the hand-over to a replacing clip.
   function publishDifference(target: RootState): void {
     syncVisibility(target.settings);
     const frame = target.settings.orientation;

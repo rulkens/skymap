@@ -45,6 +45,19 @@ Not decided here: seek, pause and transport (S4). The overlay is evaluable at an
 crossings to publish; S4 seeds the registry and the frame roll instead. A paused frame inside a roll
 shows the roll's destination, not a mid-roll pole: the roll runs on wall time, not on the clip clock.
 
+## Seeking (S4, 2026-11-11)
+
+A play can be under transport: `camera.clip.transport` (`paused` at a t, or `running` from one
+with an optional loop span) owns its clock, anchored at the first frame that sees each transport
+object. A jump (a new transport, new data, any transported wrap) publishes by **seeding** the fade
+registry at t: `setImmediate` to the value a continuous play shows there (`rampAt`, the fade
+controller's curve), then, while running, `fadeTo` for the ramp's remaining time; a mid-roll
+`frameTo` restarts from the slerp at t. Paused seeds start no ramps, because the registry runs on
+wall time while the clip clock stands, so a paused frame inside a roll shows the destination. The
+alternative, ramps evaluated in clip time, makes a paused frame exactly f(t) but is the second ramp
+engine rejected below; seeding keeps the registry's data-arrival gate and label envelope. Past the
+end a paused transport shows intent with every factor at 1: the play's end with `revert`.
+
 ## Consequences
 
 ### Positive
