@@ -1,6 +1,6 @@
 /**
- * AsteroidPointRenderer — one additive dot per catalog row into the depthless HDR target, placed by
- * the Kepler solver's `helio` buffer; draws nothing until the solver has rows.
+ * AsteroidPointRenderer — one additive dot per row the Kepler solver kept, into the depthless HDR
+ * target, drawn indirect from its `visible` list; draws nothing until the solver has rows.
  */
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { AsteroidPointFrame } from './AsteroidPointFrame';

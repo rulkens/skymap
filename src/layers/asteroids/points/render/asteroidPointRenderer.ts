@@ -1,9 +1,9 @@
 /**
  * asteroidPointRenderer — the asteroids as screen-sized additive dots in the depthless HDR
  * accumulation, under the trails' occlusion (lib/trailOcclusion.wesl owns group 0 bindings 0-1; ours
- * are 2, the uniforms, and 3-4, the solver's helio and extra rows). One instance = one catalog row, so
- * the pick word is the row. `drawPick` stamps the same instances wider into the overlay pick target
- * with its own uniform and bind group, so a pick never rewrites what the frame drew with.
+ * are 2, the uniforms, and 3-4, the solver's kept list and its tags). Both draws are indirect over
+ * that list, so the pick culls exactly as the dots do. `drawPick` stamps the same instances wider into
+ * the overlay pick target with its own uniform and bind group, so a pick never rewrites the frame's.
  * @module
  */
 
@@ -33,17 +33,14 @@ export const ASTEROID_UNIFORM_OFFSETS = {
   viewportPx: 64,
   pxPerRad: 72,
   sunFromCamAu: 80,
-  exposure: 92,
+  windowFade: 92,
   classColor: 96,
   selectedCamRelAu: 176,
   selectedRow: 188,
-  windowFade: 192,
-  pickBase: 196,
-  sizePx: 200,
+  pickBase: 192,
+  sizePx: 196,
 } as const;
 export const ASTEROID_UNIFORM_BYTES = 208;
-/** triCorner: one triangle circumscribing the unit disc, half the vertex work of a quad. */
-const VERTICES_PER_DOT = 3;
 
 export function createAsteroidPointRenderer({
   device,
@@ -145,8 +142,8 @@ export function createAsteroidPointRenderer({
                 { binding: 0, resource: { buffer: occluderBuffer } },
                 { binding: 1, resource: frame.depth.view },
                 { binding: 2, resource: { buffer: uniformBuffer } },
-                { binding: 3, resource: { buffer: rows.helio } },
-                { binding: 4, resource: { buffer: rows.extra } },
+                { binding: 3, resource: { buffer: rows.visible } },
+                { binding: 4, resource: { buffer: rows.visibleTags } },
               ],
             }),
           };
@@ -167,7 +164,6 @@ export function createAsteroidPointRenderer({
     u.set(frame.viewportPx, o.viewportPx / 4);
     u[o.pxPerRad / 4] = frame.pxPerRad;
     u.set(frame.sunFromCamAu, o.sunFromCamAu / 4);
-    u[o.exposure / 4] = frame.exposure;
     ASTEROID_CLASSES.forEach((cls, k) => {
       u[o.classColor / 4 + 4 * k + 3] = frame.classFade[cls];
     });
@@ -188,7 +184,7 @@ export function createAsteroidPointRenderer({
     if (rows === null) return;
     pass.setPipeline(target);
     pass.setBindGroup(0, binding.bind(frame, rows));
-    pass.draw(VERTICES_PER_DOT, rows.count);
+    pass.drawIndirect(rows.draws, 0);
   }
 
   return {

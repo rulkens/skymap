@@ -125,10 +125,11 @@ rung is the next free one; the rungs are still hand-picked (an existing backlog 
 n (rad/day), M₀, and one packed word `H·100 : 16 | G : 8 | flags : 8`. The position is
 `A·(cos E − e) + B·sin E`. About 36 MB for 900k rows.
 
-**Compute pass** (`computes?` in the Layer contract) writes `vec4f(helio xyz in AU, r)` per asteroid,
-every frame the Layer draws. There is no "last time" memo: a cache carried between frames is the shape
+**Compute pass** (`computes?` in the Layer contract) solves every asteroid every frame the Layer draws,
+runs §4.4's brightness and §4.5's cull once per row, and appends each kept dot (`vec4f(helio xyz in AU,
+lifted flux)` plus a row/class tag) to a compacted list counted into indirect draw args. There is no "last time" memo: a cache carried between frames is the shape
 of hidden state the owner has pushed back on. A memo is added only if `npm run perf` shows the dispatch
-matters. The vertex shader reads that buffer; Kepler never runs per vertex. The CPU hands time as `dtWholeDays` (an integer held exactly
+matters. The dot and pick draws are `drawIndirect` over that list; Kepler and photometry never run per vertex. The CPU hands time as `dtWholeDays` (an integer held exactly
 in f32) plus `dtFracDays`, so `M = M₀ + n·whole + n·frac` keeps the f32 error near 1–2″ at the window edges.
 
 **Kepler solve** (`shaders/lib/kepler.wesl`, new): reduce M to [−π, π], start from Danby's
@@ -150,7 +151,7 @@ moon-correction window), so a scrub to 1500 shows no positions that are wrong by
 
 ### 4.4 Brightness
 
-In the vertex shader, with r and Δ in AU and the phase angle α from a dot product (no `acos`):
+In the compute pass, with r and Δ in AU and the phase angle α from a dot product (no `acos`):
 
   V = H + 5·log10(r·Δ) − 2.5·log10((1−G)·Φ₁ + G·Φ₂),  Φᵢ = exp(−Aᵢ·tan(α/2)^Bᵢ), A = 3.33/1.87,
   B = 0.63/1.22, tan(α/2) = √((1−cos α)/(1+cos α)).
@@ -176,8 +177,8 @@ Horizons' V at one date, within a stated tolerance.
 Additive screen-sized dots into the depthless HDR accumulation, in the NEAR0 slab, under the trails'
 occlusion, like satellites: `lib::billboard`, `lib::camera`, `lib::trailOcclusion`, `ADDITIVE_BLEND`.
 `frameSections.ts` gains a plan line, the compute, and the two passes beside satellites in
-POST_FOREGROUND (and `tools/site/matteHiddenPasses.ts` the pass names). The vertex shader culls rows
-whose class is off (a class bitmask uniform) and the four mesh-drawn numbers (§4.6). Colours by class are
+POST_FOREGROUND (and `tools/site/matteHiddenPasses.ts` the pass names). The compute pass culls rows
+whose class is off (the class fades) and the four mesh-drawn numbers (§4.6). Colours by class are
 a small table in `points/data/`.
 
 ### 4.6 Skipping the bodies that already draw

@@ -9,7 +9,11 @@ export type AsteroidKeplerRows = {
   readonly elementsB: GPUBuffer;
   /** vec2u per row: M₀ bitcast, then hCenti << 16 | g << 8 | flags. */
   readonly extra: GPUBuffer;
-  /** vec4f per row: heliocentric xyz (AU, equatorial J2000) and r, as of the last solve. */
-  readonly helio: GPUBuffer;
+  /** vec4f per dot the last solve kept: heliocentric xyz (AU, equatorial J2000) and lifted flux. */
+  readonly visible: GPUBuffer;
+  /** u32 per kept dot: row and class (`asteroids/lib/visibleTag.wesl`). */
+  readonly visibleTags: GPUBuffer;
+  /** Indirect draw args, the instance count being the kept dots; the dot and pick draws read it. */
+  readonly draws: GPUBuffer;
   readonly computeGroup: GPUBindGroup;
 };

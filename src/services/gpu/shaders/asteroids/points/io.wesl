@@ -4,19 +4,17 @@
 import package::lib::camera::CameraUniforms;
 
 // Group 0 bindings 0-1 belong to lib/trailOcclusion; this is binding 2. 'cam.viewProj' takes
-// eye-relative Mpc. 'sunFromCamAu' is the Sun minus the eye, composed in f64 on the CPU, so f32
-// never carries the eye's distance from the origin. 'exposure' is the display lift times the
-// Layer's brightness; the flux floor applies after it. 'classColor' is the tint per class in rgb
-// and the class fade in w (0 culls the class). 'selectedRow' (0xFFFFFFFF = none) draws at
+// eye-relative Mpc. 'sunFromCamAu' is the Sun minus this view's eye, composed in f64 on the CPU, so
+// f32 never carries the eye's distance from the origin. 'classColor' is the tint per class in rgb and
+// the class fade in w (the cull on it is the compute's). 'selectedRow' (0xFFFFFFFF = none) draws at
 // 'selectedCamRelAu', the CPU mirror's f64 position, so a followed dot sits on the camera target.
 struct AsteroidUniforms {
   cam: CameraUniforms,
   sunFromCamAu: vec3<f32>,
-  exposure: f32,
+  windowFade: f32,
   classColor: array<vec4<f32>, 5>,
   selectedCamRelAu: vec3<f32>,
   selectedRow: u32,
-  windowFade: f32,
   // Pick only: the packed pick word of row 0 (pick code and sentinel offset folded in on the CPU).
   pickBase: u32,
   sizePx: f32,

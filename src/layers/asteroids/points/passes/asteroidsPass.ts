@@ -1,7 +1,8 @@
 /**
  * asteroidsPass — the asteroid dots, additive into HDR on the NEAR0 line after the body composite,
  * beside the satellites and under the same occlusion (sampled depth plus the analytic body spheres),
- * so a dot behind Jupiter is hidden. The Sun's offset from the eye is composed here in f64 each frame.
+ * so a dot behind Jupiter is hidden. It draws the list the Kepler compute kept, placed about this
+ * view's eye (composed in f64 each frame).
  * The pick stamps the overlay target with the far placeholder for depth, as satellites do.
  */
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
@@ -12,19 +13,16 @@ import type { PassState } from '../../../../@types/engine/frame/PassState';
 import type { SampledDepthBinding } from '../../../../@types/rendering/SampledDepthBinding';
 import type { AsteroidPointFrame } from '../@types/AsteroidPointFrame';
 import type { AsteroidClass } from '../../../../@types/asteroids/AsteroidClass';
-import type { Vec3 } from '../../../../@types/math/Vec3';
 import { rebaseViewProj } from '../../../../utils/camera/projection/rebaseViewProj';
 import { sampledDepthBinding } from '../../../../services/engine/frame/sampledDepthBinding';
 import { sceneOccluderSpheres } from '../../../../services/engine/frame/sceneOccluderSpheres';
 import { near0OverlayClipScale } from '../../../../services/engine/frame/near0OverlayClipScale';
 import { near0OverlayVpF32 } from '../../../../services/engine/frame/near0OverlayVpF32';
-import { SCALE_UNITS } from '../../../../data/scaleUnits';
-import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SELECTION_NONE_SENTINEL } from '../../../../data/selectionEncoding';
-import { asteroidExposureRamp } from '../utils/asteroidExposureRamp';
 import { asteroidWindowFade } from '../../kepler/utils/asteroidWindowFade';
 import { asteroidsDrawn } from '../../kepler/utils/asteroidsDrawn';
 import { asteroidHelioAu } from '../../kepler/utils/asteroidHelioAu';
+import { asteroidSunFromCamAu } from '../../kepler/utils/asteroidSunFromCamAu';
 import { selectedAsteroidRows } from '../../selection/utils/selectedAsteroidRows';
 
 export function asteroidsPass(runtime: AsteroidsRuntime): ContentPass<'asteroids'> {
@@ -36,12 +34,7 @@ export function asteroidsPass(runtime: AsteroidsRuntime): ContentPass<'asteroids
     depth: SampledDepthBinding,
   ): AsteroidPointFrame => {
     const eye = view.camPos;
-    const au = SCALE_UNITS.AU_TO_MPC;
-    const sunFromCamAu: Vec3 = [
-      (RENDER_ORIGIN_MPC[0] - eye[0]) / au,
-      (RENDER_ORIGIN_MPC[1] - eye[1]) / au,
-      (RENDER_ORIGIN_MPC[2] - eye[2]) / au,
-    ];
+    const sunFromCamAu = asteroidSunFromCamAu(eye);
     // The followed dot is placed in f64 here: the shader's f32 helio + sunFromCamAu would jitter
     // it against the camera that is following the f64 CPU mirror.
     const catalog = runtime.slot.current()?.catalog;
@@ -58,8 +51,6 @@ export function asteroidsPass(runtime: AsteroidsRuntime): ContentPass<'asteroids
       viewportPx: view.viewportPx,
       pxPerRad: ctx.drawPxPerRad,
       sunFromCamAu,
-      exposure:
-        asteroidExposureRamp(Math.hypot(...sunFromCamAu)) * state.settings.asteroids.brightness,
       windowFade: asteroidWindowFade(ctx.snapshot.simDays),
       classFade: fade,
       selectedRow: selectedRow ?? SELECTION_NONE_SENTINEL,

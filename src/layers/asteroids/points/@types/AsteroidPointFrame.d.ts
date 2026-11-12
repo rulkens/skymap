@@ -12,8 +12,6 @@ export type AsteroidPointFrame = {
   readonly viewportPx: readonly [number, number];
   readonly pxPerRad: number;
   readonly sunFromCamAu: Readonly<Vec3>;
-  /** `asteroidExposureRamp` × the Layer's brightness. */
-  readonly exposure: number;
   readonly windowFade: number;
   readonly classFade: Readonly<Record<AsteroidClass, number>>;
   /** Catalog row drawn at `selectedCamRelAu`; `SELECTION_NONE_SENTINEL` for none. */
