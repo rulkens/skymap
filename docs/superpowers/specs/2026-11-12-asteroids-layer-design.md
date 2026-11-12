@@ -157,9 +157,17 @@ In the vertex shader, with r and Δ in AU and the phase angle α from a dot prod
 
 The flux is `pow(10, −0.4·V)`, which is the stars' `fluxApp` convention (theirs is
 `10^(−0.4·absMag)·D_REF²/d²` with D_REF = 10 pc, the same number). It feeds `starPeakIntensity` and
-`STAR_FLUX_EXPOSURE` from `shaders/lib/starPhotometry.wesl`. There is no distance ramp, since the Layer
-only shows inside the Solar System, where the stars' ramp is 1 at the default. Dots under the flux floor
-are discarded to save fill. A row with no H draws at a fixed dim flux (the builder picks it and states it).
+`STAR_FLUX_EXPOSURE` from `shaders/lib/starPhotometry.wesl`.
+
+**Display lift** (owner ruling, the stars' approach). At true V, the belt seen from 5–10 AU is V ≈ 19–22,
+about 1e-4 of the calibrated flux, so the structures this Layer exists for would not show. As with
+`starExposureRamp`, a monitor can't dark-adapt, so the flux is multiplied by
+`asteroidExposureRamp(camera distance from the Sun)`. The ramp is exactly 1 out to a near anchor just
+past Earth's orbit, so the view from Earth stays true. Beyond that it rises geometrically (log exposure
+against log distance) to a far anchor, which holds beyond. The builder eye-tunes the anchors on shots:
+from 10 AU above the ecliptic the belt, the Hildas and the Trojans must read clearly. The result is
+multiplied by the Layer's own brightness setting (§4.9). Dots under the flux floor are discarded to save
+fill, and the floor applies after the lift. A row with no H draws at a fixed dim flux (the builder picks it and states it).
 The card shows the same V from the same formula in TypeScript; a test checks a few asteroids against JPL
 Horizons' V at one date, within a stated tolerance.
 
@@ -209,8 +217,9 @@ its `OrbitTrailRenderer` instance, as satellites do. Fade = class fade × window
 
 ### 4.9 Settings
 
-One Settings section: the Layer toggle and the five class toggles, every class on by default. No brightness
-or size knob (no knob without a request).
+One Settings section: the Layer toggle, the five class toggles (every class on by default), and the
+Layer's own brightness slider (owner ruling; default 1, a multiplier on the flux, independent of the
+stars' slider). No size knob.
 
 ## 5. Rulings
 
@@ -220,7 +229,9 @@ or size knob (no knob without a request).
 4. **Orbit ring through a shared `drawOrbitConics` helper**: each Layer keeps its own pass and renderer, and
    the Layer contract does not grow (owner). The helper takes values, not the frame plumbing (owner).
 5. **Mesh skip is a constant in the Layer**, not a body-row field (owner).
-6. My calls, open to challenge: the MPCORB source; a hand refresh, not a cron; the five classes and their
+6. **Faint field: true V plus an exposure lift by camera distance from the Sun**, the stars' approach
+   (owner). **Own brightness slider**, not the stars' (owner).
+7. My calls, open to challenge: the MPCORB source; a hand refresh, not a cron; the five classes and their
    mapping; comets out; the 1900–2100 window; the quantized 23-byte row; the MPC number as identity;
    a names file of its own; the compute pass; the photometry reuse; `picking.off` in the three exhibits.
 

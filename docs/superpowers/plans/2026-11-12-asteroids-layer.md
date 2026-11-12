@@ -113,13 +113,13 @@ export type AsteroidClass = (typeof ASTEROID_CLASSES)[number];   // class code =
 export const ASTEROID_CATALOG_PATHS = { catalog: 'asteroids/asteroids.astb', names: 'asteroids/asteroid-names.bin' } as const;
 ```
 
-- [ ] `fetchMpcorb` downloads `MPCORB.DAT.gz` through the raw-data registry, following
+- [x] `fetchMpcorb` downloads `MPCORB.DAT.gz` through the raw-data registry, following
       `tools/fetch/fetchCelestrak.ts`. No test: plumbing.
-- [ ] Run `npm run fetch-mpcorb` once (94 MB gz, 321 MB unpacked; the owner has been told) through the
+- [x] (Not re-run: the controller had already fetched the file to the registry path.) Run `npm run fetch-mpcorb` once (94 MB gz, 321 MB unpacked; the owner has been told) through the
       registry path. Keep the `.gz` and read it with a gunzip stream: no unpacked copy on disk.
-- [ ] `data/raw/mpcorb/README.md` carries the format doc's column table, the packed-number rules, the
+- [x] `data/raw/mpcorb/README.md` carries the format doc's column table, the packed-number rules, the
       orbit-type values and the header's terms, each with its source URL.
-- [ ] Commit `Asteroids: fetch MPCORB and the shared class list`.
+- [x] Commit `Asteroids: fetch MPCORB and the shared class list`.
 
 ### Task 3: The bake — MPCORB → `.astb` + names (review: yes)
 
@@ -185,19 +185,19 @@ and how to get updated copies. So the bake also writes `public/data/asteroids/mp
 43 header lines verbatim, plus a line saying the elements are derived and quantized, plus the update URL
 https://www.minorplanetcenter.net/iau/MPCORB/MPCORB.DAT. Add it to the same `DATA_FAMILIES` row.
 
-- [ ] Test `decodePackedNumber reads plain, letter and tilde forms` with `00001`→1, `A0000`→100000,
+- [x] Test `decodePackedNumber reads plain, letter and tilde forms` with `00001`→1, `A0000`→100000,
       `~0000`→620000, and one more tilde value checked against the MPC doc.
-- [ ] Test `decodePackedEpoch reads K2555` and one other packed date (values from the doc).
-- [ ] Test `parseMpcorbLine reads Ceres` on the real first data line of the fetched file (pasted as a
+- [x] Test `decodePackedEpoch reads K2555` and one other packed date (values from the doc).
+- [x] Test `parseMpcorbLine reads Ceres` on the real first data line of the fetched file (pasted as a
       fixture): number 1, a within 1e-7 of the line, H, G, class `mainBelt`.
-- [ ] Test `asteroidClassFromOrbitType maps each documented type`.
-- [ ] Test `writer round-trips one row within one quantization step`: write, read back with a
+- [x] Test `asteroidClassFromOrbitType maps each documented type`.
+- [x] Test `writer round-trips one row within one quantization step`: write, read back with a
       tiny reader in the test, assert |Δangle| ≤ 0.5 step and that a is bit-exact as f32.
-- [ ] Test `a gap in numbering writes an ABSENT row and keeps row k = number k + 1`, and `throws on e >= 1`.
-- [ ] Test `blank H writes 0xFFFF`.
-- [ ] `npm run build-asteroids` writes `public/data/asteroids/*` through the manifest like other
+- [x] Test `a gap in numbering writes an ABSENT row and keeps row k = number k + 1`, and `throws on e >= 1`.
+- [x] Test `blank H writes 0xFFFF`.
+- [x] `npm run build-asteroids` writes `public/data/asteroids/*` through the manifest like other
       families. Record row count, raw and brotli sizes in the commit message.
-- [ ] Commit `Asteroids: bake MPCORB into ASTB and a names file`.
+- [x] Commit `Asteroids: bake MPCORB into ASTB and a names file`.
 
 ### Task 4: Decode into the GPU basis (review: yes)
 
@@ -270,8 +270,10 @@ export function asteroidWindowFade(simJd: number): number; // 0 outside, smooths
 **Files:**
 - Create: `src/utils/photometry/asteroidApparentMagnitude.ts`,
   `src/services/gpu/shaders/asteroids/lib/apparentMagnitude.wesl`,
-  `src/layers/asteroids/points/data/asteroidPhotometry.ts`
-- Test: `tests/utils/photometry/asteroidApparentMagnitude.test.ts`
+  `src/layers/asteroids/points/data/asteroidPhotometry.ts`,
+  `src/layers/asteroids/points/utils/asteroidExposureRamp.ts`
+- Test: `tests/utils/photometry/asteroidApparentMagnitude.test.ts`,
+  `tests/layers/asteroids/points/asteroidExposureRamp.test.ts`
 
 **Interfaces — Produces:**
 
@@ -279,8 +281,18 @@ export function asteroidWindowFade(simJd: number): number; // 0 outside, smooths
 // V = H + 5·log10(r·Δ) − 2.5·log10((1−G)Φ₁ + G·Φ₂); Φᵢ = exp(−Aᵢ·tan(α/2)^Bᵢ), A = [3.33, 1.87], B = [0.63, 1.22];
 // tan(α/2) = √((1−cosα)/(1+cosα)), cosα = dot(sun→ast, cam→ast) / (r·Δ).
 export function asteroidApparentMagnitude(h: number, g: number, rAu: number, deltaAu: number, cosPhase: number): number;
-export const ASTEROID_PHOTOMETRY = { noHMagnitude: /* fixed V for rows with no H; state it */, minFlux: /* discard floor */ } as const;
+export const ASTEROID_PHOTOMETRY = {
+  noHMagnitude: /* fixed V for rows with no H; state it */, minFlux: /* discard floor, after the lift */,
+  rampNearAu: 1.5, rampFarAu: /* eye-tuned */, rampFarLift: /* eye-tuned */,
+} as const;
+// Display lift by camera distance from the Sun (owner ruling: the stars' approach, cf. starExposureRamp):
+// exactly 1 at d ≤ rampNearAu; geometric (log lift vs log d) up to rampFarLift at rampFarAu; flat beyond.
+export function asteroidExposureRamp(camSunDistAu: number): number;
 ```
+
+The exposure the shader gets is `asteroidExposureRamp(d) × settings.asteroids.brightness` (Task 7), on top
+of `STAR_FLUX_EXPOSURE`. Tune the far anchors in Task 8 with shots: from 10 AU above the ecliptic, the belt,
+the Hildas' triangle and the Trojan clouds must read clearly, without the belt saturating into a sheet.
 
 The WGSL mirror computes flux as `pow(10, −0.4·V)` and feeds `starPeakIntensity` and `STAR_FLUX_EXPOSURE`
 from `shaders/lib/starPhotometry.wesl:120-166`, the stars' convention (theirs:
@@ -290,6 +302,7 @@ from `shaders/lib/starPhotometry.wesl:120-166`, the stars' convention (theirs:
       2026-01-01T00:00 TT. Take r, Δ, α and V from JPL Horizons (curl the API; record the query in the
       test header) and assert |V − Horizons V| < 0.05 using Horizons' own H and G.
 - [ ] Test `opposition gives the brightest V and no NaN at cosα = 1`.
+- [ ] Test `exposure ramp is exactly 1 inside the near anchor, monotone, and flat past the far anchor`.
 - [ ] Commit `Asteroids: apparent magnitude on CPU and GPU`.
 
 ### Task 7: The Layer skeleton — state, visibility, settings, loading (review: yes)
@@ -310,8 +323,12 @@ from `shaders/lib/starPhotometry.wesl:120-166`, the stars' convention (theirs:
 **Contracts:**
 
 ```ts
-export type AsteroidsSettings = { readonly enabled: boolean; readonly classes: Readonly<Record<AsteroidClass, boolean>> };
-// initialState: enabled false, every class true.
+export type AsteroidsSettings = {
+  readonly enabled: boolean;
+  readonly classes: Readonly<Record<AsteroidClass, boolean>>;
+  readonly brightness: number;   // the Layer's own flux multiplier (owner ruling), independent of the stars'
+};
+// initialState: enabled false, every class true, brightness 1.
 export const asteroidsVisibility = [{
   key: 'asteroids', items: ASTEROID_CLASSES, selects: ['asteroid'],
   bands: { solarSystem: { out: [/* fullWithin */, /* goneBeyond */], from: 'sun' } },
@@ -324,12 +341,14 @@ Copy satellites' patterns: visibility at `src/layers/satellites/visibility.ts`, 
 priority = next free rung after 85, with a comment naming the rung below). The names slot is a second
 asset row that demands only `alsoWhen: ['searching']`. Bands: fully in within 200 AU of the Sun, gone
 beyond 2,000 AU (`SCALE_UNITS`). The Settings section follows `SatellitesSection.tsx`: the master toggle
-plus five class toggles, labels from `asteroidClassLabels`. Load the `create-component` skill and read
+plus five class toggles, labels from `asteroidClassLabels`, and a brightness slider. Copy the stars'
+brightness slider control (find it in `src/layers/starCatalog/controls/ui/`) for the range, the
+log/linear scale and the component. Load the `create-component` skill and read
 `docs/superpowers/conventions/ui-ux.md` before writing it. The slot decodes off the main thread
 (`DecompressionStream` if the CDN serves raw brotli, else a module worker; read how `satellitesSlot`
 fetches).
 
-- [ ] Test `settings start off with every class on` (initialState).
+- [ ] Test `settings start off with every class on and brightness 1` (initialState).
 - [ ] Test `the asset row demands only while shown and inside the band, or while searching` against
       the demand evaluator, the way satellites' asset tests do (`tests/layers/satellites/catalog/`).
 - [ ] Run the app (`/dev`): toggling Asteroids in Settings loads the file once (Network tab), and
@@ -372,7 +391,7 @@ frame the Layer draws, with no memo of the last time (spec §4.3). Its cost is m
 |---|---|---|
 | viewProj (camera-relative) | mat4x4f | 0 |
 | sunFromCamAu | vec3f | 64 |
-| exposure | f32 | 76 |
+| exposure (= asteroidExposureRamp × brightness) | f32 | 76 |
 | viewportPx | vec2f | 80 |
 | pxPerRad | f32 | 88 |
 | classMask | u32 | 92 |
