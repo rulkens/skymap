@@ -44,7 +44,7 @@ const emptyStructures: StructureRowFixture = { byId: () => null, byCategory: () 
 const emptyResolver = selectionResolverOver(emptyStructures);
 
 // 'm87' is a compiled-in famous id, but NO FamousGalaxy cloud is loaded:
-// resolveFocusId returns null for it — the catalog is absent.
+// resolveFocusId answers pending for it — the catalog has not landed.
 const structuresM87NotLoaded: StructureRowFixture = { byId: () => null, byCategory: () => [] };
 const m87NotLoadedResolver = selectionResolverOver(structuresM87NotLoaded);
 
@@ -68,7 +68,7 @@ const m87FlyClip: ClipData = {
 describe('clipFociReady', () => {
   it('clipFociReady is false when a famous id is not yet loaded', () => {
     // m87 is a compiled-in famous id but the FamousGalaxy cloud is absent.
-    // resolveFocusId returns null for 'm87', so the predicate must return false.
+    // resolveFocusId answers pending for 'm87', so the predicate must return false.
     expect(clipFociReady(m87FlyClip, m87NotLoadedResolver)).toBe(false);
   });
 
@@ -106,7 +106,7 @@ describe('clipFociReady', () => {
 
   it('clipFociReady is true for a structure id', () => {
     // Structure ids resolve by format alone — resolveFocusId returns a
-    // selection ref without consulting catalogs or famous ids. The
+    // hit without consulting catalogs or famous ids. The
     // readiness gate must return true regardless of what deps contains.
     const structureClip: ClipData = {
       start: 'live',

@@ -56,8 +56,10 @@ const virgoRow = placedStructureRow({
 
 const earthRow: SelectionRowBase = bodyRowAt('earth', [0, 0, 0]);
 
+// The URL reads only the id, so any ref stands in for the one it was encoded from.
 function focusedOn(row: SelectionRowBase, focusId: string): RootState {
-  return stateAfter(setSelectionRow({ slot: 'focus', row, focusId }));
+  const id = { id: focusId, ref: { type: row.type } };
+  return stateAfter(setSelectionRow({ slot: 'focus', row, id }));
 }
 
 afterEach(() => {
@@ -91,7 +93,11 @@ describe('focus row', () => {
     // still resolved would otherwise republish the OLD id until the new one
     // landed, so Back would restore a URL that never matched the screen.
     const state = stateAfter(
-      setSelectionRow({ slot: 'focus', row: virgoRow, focusId: 'cluster-virgo-m87' }),
+      setSelectionRow({
+        slot: 'focus',
+        row: virgoRow,
+        id: { id: 'cluster-virgo-m87', ref: { type: 'structure', id: 'cluster-virgo-m87' } },
+      }),
       requestFocus({ id: 'm31', transition: 'fly' }),
     );
     expect(focusSource.write(state)).toBe('m31');

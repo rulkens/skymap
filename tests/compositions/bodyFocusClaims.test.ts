@@ -38,7 +38,7 @@ describe('body-<id> focus claims', () => {
   it("every scene body's focus id is claimed by the kind that owns it", () => {
     expect(EARTH_SCENE_BODY_IDS.size).toBeGreaterThan(0);
     for (const { id } of SCENE_BODIES) {
-      const ref = resolver.resolveFocusId(`body-${id}`);
+      const resolution = resolver.resolveFocusId(`body-${id}`);
       const kind = MISSION_CRAFT_IDS.has(id)
         ? 'craft'
         : EARTH_SCENE_BODY_IDS.has(id)
@@ -50,11 +50,11 @@ describe('body-<id> focus claims', () => {
               : null;
       if (kind === null) {
         expect(STAR_IDS.has(id), `${id} is owned by no kind`).toBe(true);
-        expect(ref).toBeNull();
+        expect(resolution).toEqual({ kind: 'absent' });
         continue;
       }
-      expect(ref).toEqual({ type: kind, id });
-      expect(resolver.focusIdOf(ref!)).toBe(`body-${id}`);
+      expect(resolution).toEqual({ kind: 'hit', ref: { type: kind, id } });
+      expect(resolver.focusIdOf({ type: kind, id })).toBe(`body-${id}`);
     }
   });
 });

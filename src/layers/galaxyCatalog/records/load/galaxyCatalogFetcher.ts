@@ -12,7 +12,7 @@
  * decode without any explicit handoff.
  */
 import type { Fetcher } from '../../../../@types/loading/Fetcher';
-import type { GalaxyCatalogReq } from '../../../../@types/loading/GalaxyCatalogReq';
+import type { GalaxyCatalogReq } from '../../@types/GalaxyCatalogReq';
 import type { GalaxyCatalog } from '../../../../@types/data/galaxyCatalog/GalaxyCatalog';
 import { decodeGalaxyCatalog } from '../data/galaxyCatalogFormat';
 import { tierFilenameForSource } from '../data/tierTargets';

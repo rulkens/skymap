@@ -1,4 +1,5 @@
 import type { PickResult } from '../../data/PickResult';
+import type { FocusResolution } from '../selection/FocusResolution';
 import type { SelectionRefBase } from '../selection/SelectionRefBase';
 import type { SelectionRowBase } from '../selection/SelectionRowBase';
 
@@ -18,8 +19,8 @@ export type SelectionKindRow<Ref extends SelectionRefBase = SelectionRefBase> = 
   readonly focusId?: {
     /** Exact knowledge: a prefix, a literal, or a loaded set. Never a catch-all. */
     claims(id: string): boolean;
-    /** A claiming row is authoritative even when this returns null. */
-    decode(id: string): Ref | null;
+    /** A claiming row is authoritative: only it knows whether its data could still bring the id. */
+    decode(id: string): FocusResolution<Ref>;
     encode(ref: Ref): string | null;
   };
 };

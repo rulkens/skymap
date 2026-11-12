@@ -342,10 +342,10 @@ describe('resolveClipFoci rewrites strafeId to a lateral moveTarget', () => {
 describe('resolveClipFoci throws on unresolvable id', () => {
   it('throws when a non-null focusId does not resolve', () => {
     // 'no-such-object' passes the [a-z0-9_-]+ char-class gate and routes to
-    // resolveFamous, which finds no such compiled-in famous id and returns null —
-    // the only id format for which resolveFocusId itself returns null against
-    // this fixture. Structure-prefixed ids (cluster-*, etc.) return a non-null
-    // phantom ref without any existence check, so they would not trigger the throw.
+    // resolveFamous, which finds no such compiled-in famous id —
+    // the only id format for which resolveFocusId itself misses against
+    // this fixture. Structure-prefixed ids (cluster-*, etc.) return a
+    // phantom hit without any existence check, so they would not trigger the throw.
     const id = focusId('no-such-object');
     const clip: ClipData = { timeline: [focus(id)] };
     expect(() => resolveClipFoci(clip, RESOLVER, FOV_Y, POSE, SIM_DAYS)).toThrow(/no-such-object/);

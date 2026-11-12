@@ -1,8 +1,8 @@
-import { GALAXY_CATALOG_SOURCE_RECORD } from '../../../layers/galaxyCatalog/sources/galaxyCatalogSourceRecord';
-import { shipsTierVariants } from '../../../utils/loading/shipsTierVariants';
-import type { GalaxyCatalogReq } from '../../../@types/loading/GalaxyCatalogReq';
-import type { GalaxyCatalogId } from '../../../layers/galaxyCatalog/@types/GalaxyCatalogId';
-import type { Tier } from '../../../@types/data/Tier';
+import { GALAXY_CATALOG_SOURCE_RECORD } from '../../sources/galaxyCatalogSourceRecord';
+import { shipsTierVariants } from '../../../../utils/loading/shipsTierVariants';
+import type { GalaxyCatalogReq } from '../../@types/GalaxyCatalogReq';
+import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';
+import type { Tier } from '../../../../@types/data/Tier';
 
 /** The ONE point-source request. */
 export function galaxyCatalogRequest(source: GalaxyCatalogId, tier: Tier): GalaxyCatalogReq {

@@ -81,11 +81,13 @@ export const selectFocusRow = (state: RootState): SelectionRowBase | null =>
   selectSelectionRows(state).focus;
 
 /**
- * The focus row's `#focus=` id, stored beside the row by the reconciler; null
- * when nothing is focused or the kind has no link form (the dust band).
+ * The focus row's `#focus=` id; null when nothing is focused, the kind has no
+ * link form (the dust band), or the row is unresolved (the id outlives its row).
  */
-export const selectFocusId = (state: RootState): string | null =>
-  selectSelectionRows(state).focusId;
+export const selectFocusId = (state: RootState): string | null => {
+  const rows = selectSelectionRows(state);
+  return rows.focus === null ? null : (rows.ids.focus?.id ?? null);
+};
 
 // --- derived FocusableTargetBase selectors ----------------------------------------
 

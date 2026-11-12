@@ -1,11 +1,11 @@
 /**
  * selectionWriteBySlot — the parametric write table for the selection slots.
  *
- * One action creator per slot, keyed by SelectionSlot. The tier re-anchor (and
- * any other parametric writer) dispatches `SELECTION_WRITE_BY_SLOT[slot](ref)`
- * rather than a predicate chain, so adding a slot is a one-line widening of
- * SelectionState that flows here automatically via the `keyof SelectionState`
- * constraint on SelectionSlot.
+ * One action creator per slot, keyed by SelectionSlot, so a parametric writer
+ * (the re-anchor) dispatches `SELECTION_WRITE_BY_SLOT[slot](ref)` rather than a
+ * predicate chain. Its writes re-point a slot at the thing it already held, so
+ * the focus entry is a `'cut'`: watchFocusTweenSaga skips cuts, and a reload
+ * must never fly the camera.
  */
 import {
   updateSelectionHover,
@@ -22,5 +22,5 @@ export const SELECTION_WRITE_BY_SLOT: Record<
 > = {
   hover: updateSelectionHover,
   select: updateSelectionSelect,
-  focus: updateSelectionFocus,
+  focus: (ref) => updateSelectionFocus(ref, 'cut'),
 };

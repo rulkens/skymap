@@ -10,7 +10,7 @@ import type { GalaxyCatalogId } from './@types/GalaxyCatalogId';
 import type { GalaxyRecordSource } from './records/@types/GalaxyRecordSource';
 import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
 import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMetaEntry';
-import type { GalaxyCatalogReq } from '../../@types/loading/GalaxyCatalogReq';
+import type { GalaxyCatalogReq } from './@types/GalaxyCatalogReq';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { GalaxyCatalogFacts } from './@types/GalaxyCatalogFacts';
 import type { GalaxyCatalogRuntime } from './@types/GalaxyCatalogRuntime';

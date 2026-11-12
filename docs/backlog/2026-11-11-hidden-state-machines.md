@@ -6,13 +6,11 @@
 
 Audit read-only at main f9a85995c. Paths are relative to `src/` unless they start with `tests/`. Reader counts are file counts from `grep -rlE` over `src` and `tests`, not call sites.
 
-> **In flight.** Finding 1 (selection id resolution, `resolveFocusId` pending/absent/hit) and the `watchTierSaga` reference row are being addressed by the J8 work (tier-swap galaxy re-anchor, branch `worktree-tier-swap-galaxy-reanchor`). Treat both as in flight, not open; re-check after it merges before starting either.
-
 ## 1. Ranked summary
 
 | # | Where | Kind | Implicit states | Harm evidence | Verdict | Cost (src / test files) |
 |---|---|---|---|---|---|---|
-| 1 | Selection id resolution (**in flight, J8**): `SelectionResolver.resolveFocusId` returning `null` (`@types/engine/selection/SelectionResolver.d.ts:12`), `state/selection/resolveFocusRefDeferringSaga.ts:16`, `state/navigation/navigateSaga.ts:68`, `layers/galaxyCatalog/selection/present/galaxyRecordBridge.ts:30` | saga + flags (null encodes two states) | `pending` vs `absent` vs `resolved` per request id | `frameFocusSaga` guesses "absent" from engine idle plus `delay(0)`; the deferring loop never ends for a bad id | **convert** | 12 / 16 (`resolveFocusId`), 5 / 2 (`selectPendingFocusId`) |
+| 1 | `navigateSaga.frameFocusSaga` (`state/navigation/navigateSaga.ts:73`) | saga (guess) | `pending` vs `absent` for the focus id | guesses "absent" from engine idle plus `delay(0)`, though `resolveFocusId` now answers `pending \| absent \| hit` | **convert** | 1 / 1 |
 | 2 | Takeover lifecycle: `state/takeover/watchTakeoverSaga.ts:26`, `state/takeover/takeoverSlice.ts` | saga | `idle`, `starting` (request queued, predecessor cancelling), `running`, `ending` (restore in flight) | Recorder `seenActive` latch (`state/recorder/installRecorderHook.ts:71-110`); two `all([take(takeoverEnded), put(exitTakeover())])` handshakes; `settled` Promise outside the store | **convert** | 11 / 4 (`selectTakeoverSource`), 8 / 5 (`takeoverEnded`); `exitTakeover` (25 / 12) stays a signal |
 | 3 | Tour beat: `state/tour/tourBodySaga.ts:71`, `visitBeatSaga.ts:76`, `pausableDwellSaga.ts:73`, `tourSlice.ts` | saga + flags | `waitingFoci`, `flying`, `settling`, `dwelling(running)`, `dwelling(paused)`, then outcome | `tourSlice` header: pause routed through the saga so `paused` never drifts from the saga's state; `remainingMs` only in the saga | **convert** | 4 (sagas, slice) + 9 (`dwellNonce` readers) / 7 |
 | 4 | `PlannerResult` votes: `@types/engine/frame/PlannerResult.d.ts:12` | flags | Only `idle`, `awake`, `loading`, `settling` are meaningful (a total order); 4 of 8 boolean combinations are illegal | `e42e2a00a` "Surface tiles in flight no longer re-bake the sky cubemap every frame"; the fold enforces `settling => loading => awake` by convention | **convert** | 12 / 17 |
@@ -29,31 +27,13 @@ Audit read-only at main f9a85995c. Paths are relative to `src/` unless they star
 | 15 | Follow approach: `@types/engine/camera/FollowMemory.d.ts`, `services/engine/camera/stepCameraRuntime.ts:222` | nullable fields + flag | `none`, `approaching(from, durationMs, distanceTarget)`, `saturated` | Comment: "the two are one fact and cannot disagree on phase" | **maybe** | 9 / 6 |
 | 16 | `missionHoldSaga`: `layers/missions/timeline/sagas/missionHoldSaga.ts:44` | saga (race loop) | `entering`, `flying-in`, `holding`, `playing`; locals `task`, `fly`, `speed`, `mission` | `missionPlaySaga` re-checks `time.profile === profile` because `task` shadows store facts | **maybe** | 2 / not counted |
 | 17 | Foci wait polling: `state/tour/waitUntilSaga.ts:33`, used at `visitBeatSaga.ts:92`, `state/camera/clipBodySaga.ts:45`, `state/camera/watchClipPathInspectSaga.ts:73` | saga (poll) | `waiting-for-foci`, `ready` | No timeout on any foci wait; the recorder latch exists because of this window | **maybe** | 7 / 3 |
-| ref | `state/tier/watchTierSaga.ts:38` (**in flight, J8**) | saga (reference) | `captured`, `written`, `awaiting count pulse i` | Redesign underway | reference, not counted | n/a |
 
-Counts: 7 convert, 10 maybe, 15 leave (section 3), 1 reference.
+Counts: 7 convert, 10 maybe, 15 leave (section 3).
 
 ## 2. Convert and maybe sections
 
-### 1. Selection id resolution (convert, in flight with J8)
-`resolveFocusId` returns `SelectionRefBase | null`. `null` means both "the catalog has not landed yet" and "no such id".
-
-- `galaxyRecordBridge.answer` (`galaxyRecordBridge.ts:30`) already keeps a private `PENDING` symbol, then flattens it to `null` at the boundary.
-- `resolveFocusRefDeferringSaga.ts:16` loops `take([engineSourceCountReported, engineStatusChanged])` until non-null. For an id that never resolves it never returns. Only takeLatest supersession and the `selectPendingFocusId` check after it make that survivable.
-- `navigateSaga.frameFocusSaga` (`navigateSaga.ts:68`) has to guess "absent": it races `setSelectionRow` against `engineLoadProgressChanged(null)`, then `delay(0)`, then checks `status.kind==='ready'` and `loadProgress===null`. Its comment says a count report trails the idle report by an async hop.
-- `watchSelectionRowsSaga` repeats the same three pulses as its gap-fill, a second copy of "what can make an id resolvable".
-
-Missing store fact: the per-request outcome. `selection.pending` holds the id (`selectionSlice.ts`) but not whether it can still resolve.
-
-Sketch:
-```ts
-type Resolution = { kind: 'pending' } | { kind: 'absent' } | { kind: 'hit'; ref: SelectionRefBase };
-// resolver: resolveFocusId(id): Resolution   (bridge PENDING maps to 'pending')
-type PendingRequest = { id: string; transition: Transition; status: 'waiting' | 'unresolvable' };
-reconcilePending(pending: PendingRequest | null, resolution: Resolution): Action[]
-// level-triggered: hit -> updateSelectionFocus; absent while loads are quiet -> mark unresolvable
-```
-`watchSelectionRowsSaga`'s gap-fill is the natural home; `watchRequestFocusSaga` and `watchRequestSelectSaga` become thin. Cost: `resolveFocusId` in 12 src files (4 are `clipFociReady`/`resolveClipFoci` boolean checks that stay trivial) and 16 test files; `selectPendingFocusId` in 5 src and 2 test files. `SagaContext` is not touched, so the layer-contract consent rule does not trigger.
+### 1. frameFocusSaga's absent guess (convert)
+`navigateSaga.frameFocusSaga` (`navigateSaga.ts:73`) has to guess "absent": it races `setSelectionRow` against `engineLoadProgressChanged(null)`, then `delay(0)`, then checks `status.kind==='ready'` and `loadProgress===null`. Its comment says a count report trails the idle report by an async hop. `SelectionResolver.resolveFocusId` now answers `pending | absent | hit`, so the saga can stop on `absent` instead of inferring it from load quiet. Cost: one saga and its test.
 
 ### 2. Takeover lifecycle (convert)
 `takeover.active` is `TakeoverSource | null` (`takeoverSlice.ts`). The real phases live in the watcher: `running: Task`, a `settled` Promise, and the cancel then restore then start sequence (`watchTakeoverSaga.ts:26-80`).
@@ -181,10 +161,7 @@ Sketch: `type PlayerPhase = {kind:'idle'} | {kind:'playing'; prevElapsedSec: num
 A 7-way `race` loop with `task`, `fly`, `speed`, `mission` locals. `task !== null` shadows `time.profile !== null && !paused`; `missionPlaySaga.ts:42` re-reads `s.time.profile === profile` to guard that shadow. The loop already re-reads `paused` from the store each pass, so it is half level-triggered. Moving `speed` and `mission` into store state and making play a reconcile of `(timeState, mission)` would delete the fork/cancel bookkeeping. Do it after finding 8. Cost: 2 src files.
 
 ### 17. Foci-wait polling (maybe)
-`waitUntilSaga(() => clipFociReady(...) && cameraRuntime() !== null)` is called from `visitBeatSaga`, `clipBodySaga` and `watchClipPathInspectSaga`. It polls every 100 ms with no timeout in any of them. A clip with an id that never resolves holds the takeover until `exitTakeover`. Once finding 1 exists, `absent` is a fact and the clip can fail fast. Cost: 7 src, 3 test.
-
-### Reference: watchTierSaga (in flight, J8)
-`state/tier/watchTierSaga.ts:38`. Captures ids, clears hover, writes the tier, then loops `take(engineSourceCountReported && source===...)`. Edge-triggered: a pulse that fires before the first `take` registers would hang the loop. The missing fact is per-source "committed at tier"; the demand loop already tracks the last request per slot. Findings 1 and 5 share its root cause.
+`waitUntilSaga(() => clipFociReady(...) && cameraRuntime() !== null)` is called from `visitBeatSaga`, `clipBodySaga` and `watchClipPathInspectSaga`. It polls every 100 ms with no timeout in any of them. A clip with an id that never resolves holds the takeover until `exitTakeover`. `resolveFocusId` now answers `absent`, so the clip can fail fast. Cost: 7 src, 3 test.
 
 ## 3. Leave verdicts
 
@@ -206,7 +183,7 @@ A 7-way `race` loop with `task`, `fly`, `speed`, `mission` locals. `task !== nul
 
 ## 4. Cross-cutting observations
 
-- Three missing store facts explain most saga findings: engine runtime phase (5), selection-request outcome (1) and takeover phase (2). Each is currently a pulse (`engineStatusChanged`, `engineSourceCountReported`, `factsReported`, `take('*')`) or a poll (`waitUntilSaga`, `sceneSettled`). A fact fixes the lost-update and wait-forever risks together.
+- Two missing store facts explain most saga findings: engine runtime phase (5) and takeover phase (2). Each is currently a pulse (`engineStatusChanged`, `engineSourceCountReported`, `factsReported`, `take('*')`) or a poll (`waitUntilSaga`, `sceneSettled`). A fact fixes the lost-update and wait-forever risks together.
 - `engineStatusChanged` is a catch-all wake: `resolveFocusRefDeferringSaga`, `watchSelectionRowsSaga` and `watchFocusTweenSaga` wait on it because `wireSlots` fires `loading` once Layer rows exist. That is "Layer rows installed" smuggled through a status pulse.
 - "Settled" is defined three times: `isSceneSettled`, `whenStablyReady`, and arrival's `nextFrame` wait. Pick one store-derived selector and make the others read it.
 - State held in saga closures (tour `remainingMs`, takeover `running` Task, `replaceNext`, mission `task`) cannot be inspected by the dash, tests or the recorder. Prefer values in the store with the saga as the effect runner.

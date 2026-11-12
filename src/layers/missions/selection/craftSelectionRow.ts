@@ -14,6 +14,7 @@ import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKin
 import type { SceneBodyId } from '../../../@types/scene/SceneBodyId';
 import { isSceneBodyId } from '../../../utils/scene/isSceneBodyId';
 import type { CraftRef } from './@types/CraftRef';
+import { hitOrAbsent } from '../../../utils/selection/hitOrAbsent';
 
 const isCraftId = (id: string): id is SceneBodyId => isSceneBodyId(id) && MISSION_CRAFT_IDS.has(id);
 
@@ -38,7 +39,7 @@ export function craftSelectionRow(pickCode: number): SelectionKindRow<CraftRef> 
     },
     focusId: {
       claims: (id) => decode(id) !== null,
-      decode,
+      decode: (id) => hitOrAbsent(decode(id)),
       encode: (ref) => `${BODY_FOCUS_PREFIX}${ref.id}`,
     },
   };

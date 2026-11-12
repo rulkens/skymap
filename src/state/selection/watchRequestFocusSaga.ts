@@ -1,27 +1,25 @@
 /**
- * watchRequestFocusSaga — the deep-link / palette FLY command handler.
- * requestFocus carries a durable focus id; this resolves it to a ref via the
- * shared resolveFocusRefDeferringSaga loop, which DEFERS while the id is unresolvable
- * on the catalog-landed pulse — engineSourceCountReported, which every source
- * reports on commit, the Gaia star bin included, so a star deep link resolves too. Once
- * resolved it dispatches updateSelectionFocus(ref, transition); the watchSelectionRowsSaga
- * reconciler then fills the row off that write. takeLatest aborts a stale
- * deferral if a newer requestFocus arrives. Its sibling watchRequestSelectSaga
- * writes the select slot off the same shared loop; React never resolves ids.
+ * watchRequestFocusSaga — the deep-link / palette fly command: resolves the id
+ * (waiting while pending) and writes the focus, which the rows reconciler then
+ * fills. An absent id retires the request with no ref write. takeLatest drops a
+ * stale wait; the select twin is watchRequestSelectSaga.
  */
 import { takeLatest, put, select } from 'typed-redux-saga';
 
 import { requestFocus } from './requestFocus';
-import { updateSelectionFocus } from './selectionSlice';
+import { requestRetired, updateSelectionFocus } from './selectionSlice';
 import { selectPendingFocusId } from './selectors';
 import { resolveFocusRefDeferringSaga } from './resolveFocusRefDeferringSaga';
 
 export function* watchRequestFocusSaga() {
   yield* takeLatest(requestFocus, function* (action) {
     const ref = yield* resolveFocusRefDeferringSaga(action.payload.id);
-    // A request retired while it deferred (a failed arrival, a cleared
-    // selection) must not land when its catalog finally does.
+    // Retired while waiting (a failed arrival, a cleared selection): don't land.
     if ((yield* select(selectPendingFocusId)) !== action.payload.id) return;
-    yield* put(updateSelectionFocus(ref, action.payload.transition));
+    yield* put(
+      ref === null
+        ? requestRetired({ slot: 'focus' })
+        : updateSelectionFocus(ref, action.payload.transition),
+    );
   });
 }

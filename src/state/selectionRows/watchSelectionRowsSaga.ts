@@ -1,30 +1,12 @@
 /**
- * watchSelectionRowsSaga — the reconciler: the SINGLE owner of the selectionRows
- * derived cache. It keeps every row in sync with its selection ref.
- *
- * On a ref change (updateSelection{Hover,Select,Focus}) it re-extracts that one
- * slot. On clearSelection it re-extracts select + focus (the slots that action
- * nulls) so the derived rows clear in lockstep with the refs — Esc / InfoCard ×
- * depend on this. The gap-fill re-extracts any slot whose row is still null but
- * whose ref is set (a deep link resolved before its data landed), and it fires
- * on three pulses: engineSourceCountReported (every source's commit — the
- * galaxy clouds and the Gaia star bin alike), factsReported (a Layer's facts,
- * the structure store's only signal), and engineStatusChanged (`wireSlots`
- * fires 'loading' right after `createLayers` appends each Layer's selection
- * rows — a Layer-only id needs this one to resolve during boot).
- *
- * Keyed on the COMPLETE resolvability set (every selection-slice action ∪ the
- * catalog-, structure- and Layer-rows-landed pulses), so the cache can't
- * hand-sync-drift the way two authoritative homes do — this is what
- * justifies materializing a derived value in the store (see the spec's
- * exception note).
+ * watchSelectionRowsSaga — the SINGLE owner of the selectionRows cache: each
+ * slot's row and durable id, kept in sync with its ref. A ref write (or
+ * clearSelection, for select + focus) re-extracts its slot. Each commit pulse
+ * first re-anchors every slot to its id, since a reload may reorder rows, then
+ * fills slots whose ref landed before its data (a deep link).
  *
  * Every action that writes a selection ref MUST appear here, or its slot's row
  * goes stale — a clear that the UI never sees.
- *
- * It reaches the composed resolver via getContext('selection'), the same seam
- * watchTierSaga reads for its re-anchor capture. The reducers stay free of
- * engine references; only this saga crosses the boundary.
  */
 import { takeEvery, select, put, getContext } from 'typed-redux-saga';
 
@@ -33,6 +15,7 @@ import {
   updateSelectionSelect,
   updateSelectionFocus,
   clearSelection,
+  requestRetired,
 } from '../selection/selectionSlice';
 import {
   engineSourceCountReported,
@@ -40,6 +23,9 @@ import {
   engineStatusChanged,
 } from '../engine/engineSlice';
 import { setSelectionRow } from './selectionRowsSlice';
+import { SELECTION_WRITE_BY_SLOT } from '../selection/selectionWriteBySlot';
+import { reanchorWrites } from '../../utils/selection/reanchorWrites';
+import { shallowEqualRef } from '../../utils/object/shallowEqualRef';
 import { selectTimeState } from '../time/selectors';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { selectionRoute, selectionRowsRoute } from '../../store/constants';
@@ -54,18 +40,18 @@ function* reextract(slot: SelectionSlot) {
   // render path draws it rather than a fixed epoch.
   const simDays = deriveSimDays(yield* select(selectTimeState), performance.now());
   const row = selection.extractRow(ref, simDays);
-  // The id rides the same action as the focus row so the two cannot disagree: no
-  // row, no id (ref-only encoders would otherwise publish an unresolvable ref).
-  // An empty id counts as none.
-  yield* put(
-    slot === 'focus'
-      ? setSelectionRow({
-          slot,
-          row,
-          focusId: (ref && row && selection.focusIdOf(ref)) || null,
-        })
-      : setSelectionRow({ slot, row }),
-  );
+  // An id is encoded only from a resolved row (ref-only encoders would publish
+  // an unresolvable ref); an unresolved row keeps the previous id while its ref
+  // is unchanged, so a released source can still be re-anchored by id.
+  const prev = yield* select((state: RootState) => state[selectionRowsRoute].ids[slot]);
+  const encoded = ref && row ? selection.focusIdOf(ref) : null;
+  const id =
+    ref && encoded
+      ? { id: encoded, ref }
+      : row === null && shallowEqualRef(prev?.ref ?? null, ref)
+        ? prev
+        : null;
+  yield* put(setSelectionRow({ slot, row, id }));
 }
 
 export function* watchSelectionRowsSaga() {
@@ -84,15 +70,32 @@ export function* watchSelectionRowsSaga() {
     yield* reextract('select');
     yield* reextract('focus');
   });
-  // A late catalog, or the Layer rows landing (engineStatusChanged: 'loading',
-  // fired by `wireSlots` right after `createLayers`), makes a previously-
-  // unresolvable ref resolvable — fill the gaps. Extra firings for
-  // already-filled slots are guarded no-ops (row === null && ref !== null).
-  yield* takeEvery([engineSourceCountReported, factsReported, engineStatusChanged], function* () {
-    for (const slot of ['hover', 'select', 'focus'] as const) {
-      const row = yield* select((state: RootState) => state[selectionRowsRoute][slot]);
-      const ref = yield* select((state: RootState) => state[selectionRoute][slot]);
-      if (row === null && ref !== null) yield* reextract(slot);
-    }
-  });
+  // The three pulses: every source's commit, a Layer's facts (structure's only
+  // signal), and `wireSlots`' 'loading' right after `createLayers` appends the
+  // Layer rows; plus `requestRetired`, which hands its slot back. Re-anchor
+  // writes re-enter `reextract`; the gap-fill's extra firings are guarded no-ops.
+  yield* takeEvery(
+    [engineSourceCountReported, factsReported, engineStatusChanged, requestRetired],
+    function* () {
+      const selection = yield* getContext<SagaContext['selection']>('selection');
+      // A pending request owns its slot until it resolves or retires.
+      const anchors = yield* select((state: RootState) => state[selectionRowsRoute].ids);
+      const refs = yield* select((state: RootState) => state[selectionRoute]);
+      const pending: Partial<Record<SelectionSlot, string | null>> = refs.pending;
+      const ids = Object.fromEntries(
+        (Object.keys(anchors) as SelectionSlot[]).map((slot) => [
+          slot,
+          pending[slot] ? null : (anchors[slot]?.id ?? null),
+        ]),
+      ) as Record<SelectionSlot, string | null>;
+      for (const { slot, ref } of reanchorWrites(ids, refs, (id) => selection.resolveFocusId(id))) {
+        yield* put(SELECTION_WRITE_BY_SLOT[slot](ref));
+      }
+      for (const slot of ['hover', 'select', 'focus'] as const) {
+        const row = yield* select((state: RootState) => state[selectionRowsRoute][slot]);
+        const ref = yield* select((state: RootState) => state[selectionRoute][slot]);
+        if (row === null && ref !== null) yield* reextract(slot);
+      }
+    },
+  );
 }

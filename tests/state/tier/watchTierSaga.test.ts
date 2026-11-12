@@ -1,229 +1,68 @@
 /**
- * tierSaga — integration tests over a real store + saga middleware, asserting the observable
- * outcome (tier write, hover clear, re-anchored selection) rather than the effect sequence.
- *
- * Each test builds a FRESH store: `takeLatest` carries per-store worker state and the same-tier
- * no-op depends on the watcher's prior view. Flush a macrotask after each dispatch; a bare
- * microtask is not enough since the saga schedules its continuation on a macrotask.
- *
- * Re-anchor suite: the galaxies fixture's `catalogs` getter is mutable; objID sits at index 0
- * before the swap and index 3 after, so `select.index === 3` proves re-anchoring by durable id.
+ * watchTierSaga — integration tests over a real store + saga middleware, asserting the
+ * observable outcome. Each test builds a FRESH store: `takeLatest` carries per-store worker
+ * state. Flush a macrotask after each dispatch; the saga schedules its continuation on one.
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import createSagaMiddleware from 'redux-saga';
-import { configureStore } from '@reduxjs/toolkit';
+import { configureStore, type Action, type Middleware } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../src/store/rootReducer';
 import { watchTierSaga } from '../../../src/state/tier/watchTierSaga';
-import { engineSourceCountReported } from '../../../src/state/engine/engineSlice';
 import { requestTier } from '../../../src/state/tier/requestTier';
+import { setTier } from '../../../src/state/tier/tierSlice';
 import { selectTier } from '../../../src/state/tier/selectors';
 import {
   updateSelectionSelect,
-  updateSelectionFocus,
   updateSelectionHover,
 } from '../../../src/state/selection/selectionSlice';
 import { selectionRoute } from '../../../src/store/constants';
-import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
-import { bodySelectionRow } from '../../../src/layers/body/selection/bodySelectionRow';
-import { NO_KINDS_OFF } from '../../support/noKindsOff';
-import { galaxyCatalogSelectionRow } from '../../../src/layers/galaxyCatalog/selection/galaxyCatalogSelectionRow';
-import { galaxyRowRuntime } from '../../support/layerPickCodes';
-import type { GalaxyRowFixture } from '../../support/selectionResolverOver';
-import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
-import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import { bodyPickCodes } from '../../support/layerPickCodes';
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-// No source selected: the re-anchor capture skips both slots without ever
-// dereferencing this — the default for tests that never seed a galaxy ref.
-/** The galaxyCatalog Layer's slice with nothing loaded — the default for the
- * cases that never seed a galaxy ref. */
-const NO_GALAXIES = { catalogs: new Map() } as unknown as GalaxyRowFixture;
-
-// ─── Cloud fixture ─────────────────────────────────────────────────────────────
-
-/** Minimal GalaxyCatalog placing `objId` at a given `index` (with `count` rows). */
-function makeCloud(objId: bigint, index: number, count: number): GalaxyCatalog {
-  const objIDs = new BigUint64Array(count);
-  objIDs[index] = objId;
-  return makeGalaxyCatalog(count, {
-    positions: new Float32Array(count * 3).fill(1),
-    spectroscopicZ: new Float32Array(count).fill(0.01),
-    magU: new Float32Array(count).fill(18),
-    magG: new Float32Array(count).fill(17),
-    magR: new Float32Array(count).fill(16),
-    magI: new Float32Array(count).fill(16),
-    magZ: new Float32Array(count).fill(16),
-    objIDs,
-    diameterKpc: new Float32Array(count).fill(30),
-    axisRatio: new Float32Array(count).fill(1),
+function buildStore(log: Action[] = []) {
+  const record: Middleware = () => (next) => (action) => {
+    log.push(action as Action);
+    return next(action);
+  };
+  const sagaMiddleware = createSagaMiddleware();
+  const store = configureStore({
+    reducer: rootReducer,
+    middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(record, sagaMiddleware),
   });
+  sagaMiddleware.run(watchTierSaga);
+  return store;
 }
 
-// ─── Store builder ─────────────────────────────────────────────────────────────
-
 describe('watchTierSaga', () => {
-  let store: ReturnType<typeof buildStore>;
-
-  function buildStore(galaxies: GalaxyRowFixture = NO_GALAXIES) {
-    const sagaMiddleware = createSagaMiddleware();
-    const built = configureStore({
-      reducer: rootReducer,
-      middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(sagaMiddleware),
-    });
-    sagaMiddleware.run(watchTierSaga);
-    sagaMiddleware.setContext({
-      selection: composeSelectionRows(
-        () => [
-          bodySelectionRow({ pickCodes: bodyPickCodes() }),
-          galaxyCatalogSelectionRow(galaxyRowRuntime(galaxies)),
-        ],
-        () => NO_KINDS_OFF,
-      ),
-    });
-    return built;
-  }
-
-  beforeEach(() => {
-    store = buildStore();
-  });
-
-  it('turns the request command into the tier write', async () => {
-    store.dispatch(requestTier('large'));
-    await flush();
-
-    expect(selectTier(store.getState())).toBe('large');
-  });
-
-  it('is a no-op for a same-tier request', async () => {
-    store.dispatch(requestTier('large'));
-    await flush();
-    // Hover is the observable of the worker having run: the saga clears it
-    // unconditionally on a real swap, so a surviving hover proves the
-    // `prev === payload` guard returned before any of the swap duties.
+  it('writes the tier and nothing else', async () => {
+    const store = buildStore();
     const hover = { type: 'galaxyCatalog' as const, source: 'sdss', index: 0 };
+    const select = { type: 'structure' as const, id: 'cluster-virgo' };
     store.dispatch(updateSelectionHover(hover));
+    store.dispatch(updateSelectionSelect(select));
 
-    store.dispatch(requestTier('large')); // already 'large'
+    store.dispatch(requestTier('large'));
     await flush();
 
-    expect(store.getState()[selectionRoute].hover).toEqual(hover);
     expect(selectTier(store.getState())).toBe('large');
+    expect(store.getState()[selectionRoute].hover).toEqual(hover);
+    expect(store.getState()[selectionRoute].select).toEqual(select);
   });
 
-  // ─── Re-anchor tests ──────────────────────────────────────────────────────────
-
-  it('clears the select ref when the galaxy is absent from the new cloud (miss)', async () => {
-    // Before the swap: cloud has objID 99n at index 0.
-    // After the swap:  new cloud does NOT contain objID 99n (miss → clear).
-    const SDSS_OBJ_ID = 99n;
-    let currentCloud = makeCloud(SDSS_OBJ_ID, 0, 1);
-
-    // The galaxyCatalog Layer's slice, read LIVE: the tier swap replaces the
-    // cloud in place and the re-anchor must resolve against the NEW one.
-    const galaxies = {
-      get catalogs() {
-        return new Map([['sdss', currentCloud]]);
-      },
-    } as unknown as GalaxyRowFixture;
-
-    store = buildStore(galaxies);
-    store.dispatch(updateSelectionSelect({ type: 'galaxyCatalog', source: 'sdss', index: 0 }));
+  it('re-requesting the current tier is a no-op', async () => {
+    // State can't show it (setTier to the same tier is a no-op reducer); the action can,
+    // and sagas such as the Milky Way star reseed act on every setTier.
+    const log: Action[] = [];
+    const store = buildStore(log);
+    store.dispatch(requestTier('large'));
+    await flush();
+    log.length = 0;
 
     store.dispatch(requestTier('large'));
     await flush();
 
-    // New cloud: objID 99n is absent — a cloud with a different objID.
-    currentCloud = makeCloud(1n, 0, 1);
-    store.dispatch(engineSourceCountReported({ source: 'sdss', count: 1 }));
-    await flush();
-
-    const selectRef = store.getState()[selectionRoute].select;
-    // Miss: resolveFocusId returns null → slot cleared.
-    expect(selectRef).toBeNull();
-  });
-
-  it('re-anchors both select and focus refs independently', async () => {
-    const SDSS_OBJ_ID_A = 111n;
-    const SDSS_OBJ_ID_B = 222n;
-    // Place both objIDs in the old cloud at indices 0 and 1.
-    let objIDsOld = new BigUint64Array([SDSS_OBJ_ID_A, SDSS_OBJ_ID_B]);
-    let objIDsNew = new BigUint64Array([SDSS_OBJ_ID_B, SDSS_OBJ_ID_A]); // swapped
-
-    function buildCloud(objIDs: BigUint64Array): GalaxyCatalog {
-      const count = objIDs.length;
-      return makeGalaxyCatalog(count, {
-        positions: new Float32Array(count * 3).fill(1),
-        spectroscopicZ: new Float32Array(count).fill(0.01),
-        magU: new Float32Array(count).fill(18),
-        magG: new Float32Array(count).fill(17),
-        magR: new Float32Array(count).fill(16),
-        magI: new Float32Array(count).fill(16),
-        magZ: new Float32Array(count).fill(16),
-        objIDs,
-        diameterKpc: new Float32Array(count).fill(30),
-        axisRatio: new Float32Array(count).fill(1),
-      });
-    }
-
-    let currentCloud = buildCloud(objIDsOld);
-    // The galaxyCatalog Layer's slice, read LIVE: the tier swap replaces the
-    // cloud in place and the re-anchor must resolve against the NEW one.
-    const galaxies = {
-      get catalogs() {
-        return new Map([['sdss', currentCloud]]);
-      },
-    } as unknown as GalaxyRowFixture;
-
-    store = buildStore(galaxies);
-    // select → objID_A at old index 0; focus → objID_B at old index 1.
-    store.dispatch(updateSelectionSelect({ type: 'galaxyCatalog', source: 'sdss', index: 0 }));
-    store.dispatch(updateSelectionFocus({ type: 'galaxyCatalog', source: 'sdss', index: 1 }));
-
-    store.dispatch(requestTier('large'));
-    await flush();
-
-    // New cloud: objIDs swapped — A is now at index 1, B at index 0.
-    currentCloud = buildCloud(objIDsNew);
-    // The saga awaits two count pulses (one per captured slot × same source).
-    // Dispatch twice: the saga's for-loop takes one event per re-anchor.
-    store.dispatch(engineSourceCountReported({ source: 'sdss', count: 1 }));
-    await flush();
-    store.dispatch(engineSourceCountReported({ source: 'sdss', count: 1 }));
-    await flush();
-
-    const state = store.getState()[selectionRoute];
-    // select was objID_A (old index 0) → new index 1.
-    expect(state.select).toEqual({ type: 'galaxyCatalog', source: 'sdss', index: 1 });
-    // focus was objID_B (old index 1) → new index 0.
-    expect(state.focus).toEqual({ type: 'galaxyCatalog', source: 'sdss', index: 0 });
-  });
-
-  it('clears hover unconditionally across the swap', async () => {
-    // hover is cleared by the saga across the swap, regardless of whether the
-    // hovered source reloads or not.
-    store = buildStore();
-    store.dispatch(updateSelectionHover({ type: 'galaxyCatalog', source: 'sdss', index: 0 }));
-
-    store.dispatch(requestTier('large'));
-    await flush();
-
-    expect(store.getState()[selectionRoute].hover).toBeNull();
-  });
-
-  it('does NOT re-anchor tier-agnostic sources (structure ref survives unchanged)', async () => {
-    // Structure refs are durable — they survive the swap with no action needed.
-    store = buildStore();
-    const structureRef = { type: 'structure' as const, id: 'cluster-virgo' };
-    store.dispatch(updateSelectionSelect(structureRef));
-
-    store.dispatch(requestTier('large'));
-    await flush();
-
-    // No count pulse needed — structure refs don't need re-anchoring.
-    expect(store.getState()[selectionRoute].select).toEqual(structureRef);
+    expect(log.filter(setTier.match)).toEqual([]);
   });
 });

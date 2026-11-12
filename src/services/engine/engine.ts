@@ -290,9 +290,8 @@ export function createEngine(
 
   // Every selection kind is a Layer's: `state.selectionKindRows` starts empty and
   // createLayers fills it once, in tuple order. `selection` reads it lazily (never
-  // rebuilds a list), so a deep link or the home ref seen before createLayers
-  // resolves nothing yet and waits on the engineStatusChanged pulse
-  // (resolveFocusRefDeferringSaga, watchSelectionRowsSaga's gap-fill).
+  // rebuilds a list). Before createLayers a focus id answers absent and its request
+  // retires; the home ref waits on the engineStatusChanged pulse (watchSelectionRowsSaga's gap-fill).
   const selection = composeSelectionRows(
     () => state.selectionKindRows,
     () => state.settings.picking.off,
