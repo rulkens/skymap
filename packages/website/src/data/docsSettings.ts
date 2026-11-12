@@ -443,7 +443,7 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
       {
         name: 'Asteroids',
         control: 'switch',
-        does: 'Shows every numbered minor planet the Minor Planet Center lists, as points, when the camera is within 2,000 au of the Sun. Their file downloads only then, while the search is open, or while an asteroid is selected.',
+        does: 'Shows every numbered minor planet the Minor Planet Center lists, as points, when the camera is within 200 au of the Sun. Their file downloads only then, while the search is open, or while an asteroid is selected.',
         values: SWITCH,
         first: OFF,
         state: 'asteroids.enabled',

@@ -1,13 +1,13 @@
 import { ASTEROID_PHOTOMETRY as P } from '../data/asteroidPhotometry';
 
 /**
- * Display lift on the dots' flux by the camera's distance from the Sun, in AU: true flux would leave the
- * belt at ~1e-4 of visible from 5–10 AU, and a monitor can't dark-adapt (cf. `starExposureRamp`).
- * Exactly 1 inside `rampNearAu`, geometric (log lift vs log distance) to `rampFarLift`, flat beyond.
+ * Display lift on the dots' flux by the camera's zoom (its distance to the orbit target, in AU): a dot
+ * near what you frame sits ~zoom away, so a lift ∝ zoom² holds its apparent brightness as you zoom
+ * (cf. `starExposureRamp`: a monitor can't dark-adapt). Clamped to `liftFloorZoomAu`, so a camera
+ * framing Earth still sees the belt, and to `liftCapZoomAu`, past which the dots overlap and a flat lift
+ * holds the field's surface brightness instead.
  */
-export function asteroidExposureRamp(camSunDistAu: number): number {
-  if (camSunDistAu <= P.rampNearAu) return 1;
-  if (camSunDistAu >= P.rampFarAu) return P.rampFarLift;
-  const t = Math.log(camSunDistAu / P.rampNearAu) / Math.log(P.rampFarAu / P.rampNearAu);
-  return P.rampFarLift ** t;
+export function asteroidExposureRamp(zoomAu: number): number {
+  const z = Math.min(Math.max(zoomAu, P.liftFloorZoomAu), P.liftCapZoomAu);
+  return P.liftPerAu2 * z * z;
 }

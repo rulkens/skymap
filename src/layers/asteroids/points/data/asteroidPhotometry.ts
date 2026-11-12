@@ -1,7 +1,6 @@
 /**
  * The dots' brightness anchors. Flux is 10^(−0.4·V) (the stars' fluxApp), lifted by
  * `asteroidExposureRamp` and the Layer's brightness setting before `STAR_FLUX_EXPOSURE`.
- * The ramp is exactly 1 out to `rampNearAu`, just past Earth's orbit, so the view from Earth stays true.
  */
 export const ASTEROID_PHOTOMETRY = {
   /** V for a row MPC gives no H: a typical faint numbered belt asteroid seen from Earth. */
@@ -10,11 +9,13 @@ export const ASTEROID_PHOTOMETRY = {
   minFlux: 10 ** (-0.4 * 16),
   /** Floor on Δ (AU, ~0.4 lunar distance) in V, so a camera on top of a dot can't send its flux to infinity. */
   minDeltaAu: 1e-3,
-  rampNearAu: 1.5,
-  // Eye-tuned top-down from 12 AU, where it lifts ~15.6 mag: the belt's median dot (V ≈ 24.6) lands
-  // near V = 9, past `dotKnee`, so density reads as brightness and the sparse Trojans still show.
-  rampFarAu: 30,
-  rampFarLift: 1e9,
+  // Lift = liftPerAu2 · zoom², zoom clamped to [floor, cap], eye-tuned on shots (2.2e5 to 8.6e5). The
+  // floor is the lift framing Earth or the inner system, where the belt shows as a field of dots among
+  // the stars; at the cap, top-down on the whole belt, its dots start to overlap, so a lift still
+  // growing with zoom² would pile them into a blob (it did at 50 AU).
+  liftPerAu2: 6e3,
+  liftFloorZoomAu: 6,
+  liftCapZoomAu: 12,
   /** Ceiling of a dot's peak (`asteroids/points/fragment.wesl`), far under the stars' knee of 8. */
   dotKnee: 0.2,
   /**

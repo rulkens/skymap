@@ -112,7 +112,9 @@ redistribution, the effort stops there (§8).
 
 One asset row, demand-gated like satellites': it demands while the Layer is on, at least one class is on
 and the camera is within a load radius of the Sun (outside the radius where the Layer fades in, so data is
-resident before the first dot shows), and releases past a larger evict radius. It also demands while the
+resident before the first dot shows), and releases past a larger evict radius. The Layer is full within
+60 AU of the Sun and gone by 200 AU (the distant class reaches ~50–100 AU; zoomed out further, the whole
+catalog is a few pixels and would read as a blob), so the row loads at 300 AU and releases past 500 AU. It also demands while the
 palette is open or an asteroid is selected, so a search or a deep link works from anywhere (the satellites
 rule). Decode happens off the main thread (a worker or `DecompressionStream` + one pass; the builder's
 call). The decoded catalog expands the angles into the equatorial basis the GPU uses (§4.3); the
@@ -163,10 +165,15 @@ The flux is `pow(10, −0.4·V)`, which is the stars' `fluxApp` convention (thei
 **Display lift** (owner ruling, the stars' approach). At true V, the belt seen from 5–10 AU is V ≈ 19–22,
 about 1e-4 of the calibrated flux, so the structures this Layer exists for would not show. As with
 `starExposureRamp`, a monitor can't dark-adapt, so the flux is multiplied by
-`asteroidExposureRamp(camera distance from the Sun)`. The ramp is exactly 1 out to a near anchor just
-past Earth's orbit, so the view from Earth stays true. Beyond that it rises geometrically (log exposure
-against log distance) to a far anchor, which holds beyond. The builder eye-tunes the anchors on shots:
-from 10 AU above the ecliptic the belt, the Hildas and the Trojans must read clearly. The result is
+`asteroidExposureRamp(zoom)`, where zoom is the camera's distance to its orbit target (`cam.distance`): how
+far out the view frames, not where the eye sits. A first cut keyed the lift on the eye's distance from the
+Sun, exactly 1 near Earth; zoomed onto the Sun or framing Earth that left the field at true V, invisible.
+The lift is `K·zoom²` (a dot near what you frame sits ~zoom away, so its apparent brightness holds as you
+zoom) with zoom clamped to [6, 12] AU and K = 6e3, so 2.2e5 to 8.6e5. The floor is the lift framing Earth
+or the inner system, where the belt shows as a field of dots among the stars. At the cap, top-down on the
+whole belt, the dots start to overlap: past it a lift still growing with zoom² piled them into a blob, and
+a flat one holds the field's surface brightness. Eye-tuned on shots near Earth, on the Sun at 3 and 12 AU
+and at 50 AU. The result is
 multiplied by the Layer's own brightness setting (§4.9). Dots under the flux floor are discarded to save
 fill, and the floor applies after the lift. A row with no H draws at a fixed dim flux (the builder picks it and states it).
 The card shows the same V from the same formula in TypeScript; a test checks a few asteroids against JPL

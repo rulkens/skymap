@@ -4,16 +4,17 @@ import { asteroidExposureRamp } from '../../../../src/layers/asteroids/points/ut
 import { ASTEROID_PHOTOMETRY as P } from '../../../../src/layers/asteroids/points/data/asteroidPhotometry';
 
 describe('asteroidExposureRamp', () => {
-  it('exposure ramp is exactly 1 inside the near anchor, monotone, and flat past the far anchor', () => {
-    for (const d of [0, 0.5, 1, P.rampNearAu]) expect(asteroidExposureRamp(d)).toBe(1);
-    let previous = 1;
-    for (let d = P.rampNearAu; d <= P.rampFarAu * 2; d *= 1.1) {
-      const lift = asteroidExposureRamp(d);
+  it('rises with zoom², flat under the floor and past the cap', () => {
+    let previous = 0;
+    for (let z = 1e-6; z <= P.liftCapZoomAu * 100; z *= 1.3) {
+      const lift = asteroidExposureRamp(z);
       expect(lift).toBeGreaterThanOrEqual(previous);
       previous = lift;
     }
-    expect(asteroidExposureRamp(P.rampFarAu * 0.9999) / P.rampFarLift).toBeCloseTo(1, 2);
-    expect(asteroidExposureRamp(P.rampFarAu)).toBe(P.rampFarLift);
-    expect(asteroidExposureRamp(P.rampFarAu * 10)).toBe(P.rampFarLift);
+    const atFloor = asteroidExposureRamp(P.liftFloorZoomAu);
+    const atCap = asteroidExposureRamp(P.liftCapZoomAu);
+    expect(asteroidExposureRamp(0)).toBe(atFloor);
+    expect(asteroidExposureRamp(P.liftCapZoomAu * 1e3)).toBe(atCap);
+    expect(atCap / atFloor).toBeCloseTo((P.liftCapZoomAu / P.liftFloorZoomAu) ** 2, 9);
   });
 });
