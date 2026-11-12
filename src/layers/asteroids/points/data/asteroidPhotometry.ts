@@ -17,4 +17,9 @@ export const ASTEROID_PHOTOMETRY = {
   rampFarLift: 1e9,
   /** Ceiling of a dot's peak (`asteroids/points/fragment.wesl`), far under the stars' knee of 8. */
   dotKnee: 0.2,
+  /**
+   * Floor on the selected dot's peak, enough to saturate `dotKnee`; the vertex shader also lifts that
+   * dot's ceiling by 1 / `dotKnee`, so a followed asteroid shows at full white whatever its flux.
+   */
+  selectedMinPeak: 1,
 } as const;

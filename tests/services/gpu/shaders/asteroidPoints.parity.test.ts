@@ -18,6 +18,7 @@ import {
   KEPLER_WORKGROUP_SIZE,
 } from '../../../../src/layers/asteroids/kepler/render/asteroidKeplerSolver';
 import { ASTEROID_PHOTOMETRY } from '../../../../src/layers/asteroids/points/data/asteroidPhotometry';
+import { ASTEROID_POINT_STYLE } from '../../../../src/layers/asteroids/points/data/asteroidPointStyle';
 import { ASTEROID_FORMAT } from '../../../../src/data/asteroids/asteroidFormat';
 import { ASTEROID_HIDDEN_FLAG } from '../../../../src/layers/asteroids/catalog/data/asteroidHiddenFlag';
 import { ASTEROID_CLASSES } from '../../../../src/data/asteroids/asteroidClasses';
@@ -92,6 +93,9 @@ describe('asteroids shader parity', () => {
     expect(constOf(vertex, 'AU_KM')).toBeCloseTo(SCALE_UNITS.AU_TO_MPC / SCALE_UNITS.KM_TO_MPC, 3);
     expect(constOf(vertex, 'MPC_TO_KM') * SCALE_UNITS.KM_TO_MPC).toBeCloseTo(1, 12);
     expect(constOf(fragment, 'DOT_KNEE')).toBe(ASTEROID_PHOTOMETRY.dotKnee);
+    expect(constOf(vertex, 'SELECTED_RADIUS_PX')).toBe(ASTEROID_POINT_STYLE.selectedRadiusPx);
+    expect(constOf(vertex, 'SELECTED_MIN_PEAK')).toBe(ASTEROID_PHOTOMETRY.selectedMinPeak);
+    expect(constOf(vertex, 'SELECTED_GAIN')).toBeCloseTo(1 / ASTEROID_PHOTOMETRY.dotKnee, 12);
   });
 
   it('the compute holds the one cull; the dot and the pick stamp only read its list', () => {
