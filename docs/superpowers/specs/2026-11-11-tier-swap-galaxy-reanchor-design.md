@@ -108,8 +108,8 @@ export function reanchorWrites(
 ): readonly { slot: SelectionSlot; ref: SelectionRefBase | null }[];
 ```
 
-`pending` → no write; `absent` → `{ slot, ref: null }`; `hit` → a write only when the ref differs (`sameRef`,
-a new `utils/selection/sameRef.ts` comparing `type` plus the ref's own fields).
+`pending` → no write; `absent` → `{ slot, ref: null }`; `hit` → a write only when the ref differs (the existing
+`utils/object/shallowEqualRef.ts`, the slice's own dedup). The focus write is a `'cut'`, so a re-point never flies the camera.
 
 `watchSelectionRowsSaga`'s existing pulse handler (`:91`, on `engineSourceCountReported`, `factsReported`,
 `engineStatusChanged`) runs it before the gap-fill and puts each write through `SELECTION_WRITE_BY_SLOT`. Those
@@ -134,7 +134,7 @@ until the new data commits and pulses.
 
 - **A `hit` while new data is half-committed.** Covered: rows answer `pending` until their data commits.
   `reanchorWrites` is tested on all three answers.
-- **Write storms.** Count pulses are per source commit; `sameRef` keeps writes to real changes.
+- **Write storms.** Count pulses are per source commit; `shallowEqualRef` keeps writes to real changes.
 - **Hover churn.** Hover now re-anchors rather than clearing; a stale hover was the reason for the clear, and
   re-anchoring removes the staleness.
 
