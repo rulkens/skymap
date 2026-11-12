@@ -85,7 +85,7 @@ describe('watchHashWriteSaga', () => {
     // resolution path — a late catalog pulse, the star-count pulse, a direct ref
     // write — arrives here as this one action. Covering it covers all of them.
     buildHarness().dispatch(
-      setSelectionRow({ slot: 'focus', row: virgoRow, focusId: 'cluster-virgo-m87' }),
+      setSelectionRow({ slot: 'focus', row: virgoRow, id: 'cluster-virgo-m87' }),
     );
     await settle();
 
@@ -99,7 +99,7 @@ describe('watchHashWriteSaga', () => {
     // the `focus` row's `write` reads only the FOCUS row — so a slot-blind
     // trigger re-admits, through the derived cache, exactly the `selection/*`
     // hot stream the named-action list was chosen to exclude.
-    buildHarness().dispatch(setSelectionRow({ slot: 'hover', row: virgoRow }));
+    buildHarness().dispatch(setSelectionRow({ slot: 'hover', row: virgoRow, id: null }));
     await settle();
 
     expect(write).not.toHaveBeenCalled();

@@ -57,7 +57,7 @@ const virgoRow = placedStructureRow({
 const earthRow: SelectionRowBase = bodyRowAt('earth', [0, 0, 0]);
 
 function focusedOn(row: SelectionRowBase, focusId: string): RootState {
-  return stateAfter(setSelectionRow({ slot: 'focus', row, focusId }));
+  return stateAfter(setSelectionRow({ slot: 'focus', row, id: focusId }));
 }
 
 afterEach(() => {
@@ -91,7 +91,7 @@ describe('focus row', () => {
     // still resolved would otherwise republish the OLD id until the new one
     // landed, so Back would restore a URL that never matched the screen.
     const state = stateAfter(
-      setSelectionRow({ slot: 'focus', row: virgoRow, focusId: 'cluster-virgo-m87' }),
+      setSelectionRow({ slot: 'focus', row: virgoRow, id: 'cluster-virgo-m87' }),
       requestFocus({ id: 'm31', transition: 'fly' }),
     );
     expect(focusSource.write(state)).toBe('m31');

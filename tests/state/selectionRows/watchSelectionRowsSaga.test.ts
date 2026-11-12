@@ -144,15 +144,16 @@ describe('watchSelectionRowsSaga', () => {
     });
   });
 
-  it('a focus ref change lands the focus id with the row; select and hover carry none', async () => {
+  it('stores the durable id for the select and hover slots, not only focus', async () => {
     const ref = { type: 'galaxyCatalog', source: 'sdss', index: 0 } as const;
     store.dispatch(updateSelectionSelect(ref));
+    store.dispatch(updateSelectionHover(ref));
     await flush();
-    expect(store.getState()[selectionRowsRoute].focusId).toBeNull();
-
-    store.dispatch(updateSelectionFocus(ref));
-    await flush();
-    expect(store.getState()[selectionRowsRoute].focusId).toBe('sdss-1237668');
+    expect(store.getState()[selectionRowsRoute].ids).toEqual({
+      hover: 'sdss-1237668',
+      select: 'sdss-1237668',
+      focus: null,
+    });
   });
 
   it('clearSelection re-extracts select + focus rows to null, leaving hover untouched', async () => {
@@ -168,13 +169,13 @@ describe('watchSelectionRowsSaga', () => {
     expect(store.getState()[selectionRowsRoute].select).not.toBeNull();
     expect(store.getState()[selectionRowsRoute].focus).not.toBeNull();
 
-    expect(store.getState()[selectionRowsRoute].focusId).toBe('sdss-1237668');
+    expect(store.getState()[selectionRowsRoute].ids.focus).toBe('sdss-1237668');
 
     store.dispatch(clearSelection());
     await flush();
     expect(store.getState()[selectionRowsRoute].select).toBeNull();
     expect(store.getState()[selectionRowsRoute].focus).toBeNull();
-    expect(store.getState()[selectionRowsRoute].focusId).toBeNull();
+    expect(store.getState()[selectionRowsRoute].ids.focus).toBeNull();
     // clearSelection leaves hover alone (it clears select + focus only).
     expect(store.getState()[selectionRowsRoute].hover).not.toBeNull();
   });
@@ -184,7 +185,7 @@ describe('watchSelectionRowsSaga', () => {
     store.dispatch(updateSelectionFocus({ type: 'galaxyCatalog', source: 'sdss', index: 0 }));
     await flush();
     expect(store.getState()[selectionRowsRoute].focus).toBeNull();
-    expect(store.getState()[selectionRowsRoute].focusId).toBeNull();
+    expect(store.getState()[selectionRowsRoute].ids.focus).toBeNull();
 
     cloudPresent = true;
     store.dispatch(engineSourceCountReported({ source: 'sdss', count: 1 }));
@@ -193,7 +194,7 @@ describe('watchSelectionRowsSaga', () => {
       type: 'galaxyCatalog',
       objId: '1237668',
     });
-    expect(store.getState()[selectionRowsRoute].focusId).toBe('sdss-1237668');
+    expect(store.getState()[selectionRowsRoute].ids.focus).toBe('sdss-1237668');
   });
 
   it('a star deep link fills on engineSourceCountReported (every source reports the same one pulse)', async () => {
@@ -229,13 +230,13 @@ describe('watchSelectionRowsSaga', () => {
     expect(store.getState()[selectionRowsRoute].focus).toBeNull();
     // Regression: the structure encoder reads only the ref, so the id used to
     // publish (URL, dome status) while the row was still unresolvable.
-    expect(store.getState()[selectionRowsRoute].focusId).toBeNull();
+    expect(store.getState()[selectionRowsRoute].ids.focus).toBeNull();
 
     structure = { id: 'cluster-virgo-m87', category: 'galaxy-cluster' } as unknown as StructureInfo;
     store.dispatch(factsReported({ layer: 'structure', patch: { bulk: 'ready' } }));
     await flush();
     expect(store.getState()[selectionRowsRoute].focus).toMatchObject({ id: 'cluster-virgo-m87' });
-    expect(store.getState()[selectionRowsRoute].focusId).toBe('cluster-virgo-m87');
+    expect(store.getState()[selectionRowsRoute].ids.focus).toBe('cluster-virgo-m87');
   });
 
   it('a milkyWay deep link fills on engineStatusChanged (a Layer-only kind, resolvable only once its row lands)', async () => {

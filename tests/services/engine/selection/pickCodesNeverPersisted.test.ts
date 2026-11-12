@@ -162,7 +162,7 @@ describe('pick codes are never persisted', () => {
       const store = storeOver(run);
       return run.refs.map((ref) => {
         const focusId = run.resolver.focusIdOf(ref!);
-        store.dispatch(setSelectionRow({ slot: 'focus', row: null, focusId }));
+        store.dispatch(setSelectionRow({ slot: 'focus', row: null, id: focusId }));
         store.dispatch(updateSelectionSelect(ref));
         return { hash: hashBodyFor(store.getState()), selection: store.getState().selection };
       });

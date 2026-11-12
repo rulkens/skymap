@@ -22,6 +22,7 @@ import {
   selectHoveredFocusable,
   selectSelectedFocusable,
   selectFocusedFocusable,
+  selectFocusId,
 } from '../../../src/state/selection/selectors';
 import {
   updateSelectionHover,
@@ -117,6 +118,17 @@ describe('selectIsSelectionActive', () => {
   });
 });
 
+describe('selectFocusId', () => {
+  // The URL's `#focus=` row reads this; the per-slot ids must not leak another slot's id into it.
+  it('selectFocusId reads ids.focus', () => {
+    const { store } = createAppStore();
+    store.dispatch(setSelectionRow({ slot: 'select', row: MILKY_WAY_ROW, id: 'milkyWay' }));
+    expect(selectFocusId(store.getState())).toBeNull();
+    store.dispatch(setSelectionRow({ slot: 'focus', row: galaxyRow, id: 'sdss-1' }));
+    expect(selectFocusId(store.getState())).toBe('sdss-1');
+  });
+});
+
 // --- derived card-target selectors via live store -------------------------
 
 describe('selectHoveredFocusable', () => {
@@ -128,14 +140,14 @@ describe('selectHoveredFocusable', () => {
   it('builds a GalaxyInfo from a galaxy row in the hover slot', () => {
     const { store } = createAppStore();
     store.dispatch(updateSelectionHover(galaxyRef));
-    store.dispatch(setSelectionRow({ slot: 'hover', row: galaxyRow }));
+    store.dispatch(setSelectionRow({ slot: 'hover', row: galaxyRow, id: null }));
     const target = selectHoveredFocusable(store.getState());
     expect(target).toMatchObject({ type: 'galaxyCatalog', source: 'sdss' });
   });
 
   it('returns the StructureInfo with its ref for a structure row', () => {
     const { store } = createAppStore();
-    store.dispatch(setSelectionRow({ slot: 'hover', row: structureInfo }));
+    store.dispatch(setSelectionRow({ slot: 'hover', row: structureInfo, id: null }));
     expect(selectHoveredFocusable(store.getState())).toEqual({
       ...structureInfo,
       ref: { type: 'structure', id: 'virgo' },
@@ -146,13 +158,13 @@ describe('selectHoveredFocusable', () => {
 describe('selectSelectedFocusable', () => {
   it('memoizes across an unrelated-slot write: changing hover does not recompute the select focusable', () => {
     const { store } = createAppStore();
-    store.dispatch(setSelectionRow({ slot: 'select', row: MILKY_WAY_ROW }));
+    store.dispatch(setSelectionRow({ slot: 'select', row: MILKY_WAY_ROW, id: null }));
     const a = selectSelectedFocusable(store.getState());
     // A write to the hover slot changes the selectionRows state object but leaves
     // the select slot's row reference untouched — createSelector must return the
     // cached focusable, so identity is preserved. (A plain non-memoized selector
     // would rebuild a fresh object here and fail this assertion.)
-    store.dispatch(setSelectionRow({ slot: 'hover', row: MILKY_WAY_ROW }));
+    store.dispatch(setSelectionRow({ slot: 'hover', row: MILKY_WAY_ROW, id: null }));
     const b = selectSelectedFocusable(store.getState());
     expect(a).toBe(b);
   });
@@ -222,7 +234,7 @@ describe('selectFocusedFocusable', () => {
       const { store } = createAppStore();
       const focusRow = row.extractRow(ref, 0);
       expect(focusRow).not.toBeNull();
-      store.dispatch(setSelectionRow({ slot: 'focus', row: focusRow, focusId: null }));
+      store.dispatch(setSelectionRow({ slot: 'focus', row: focusRow, id: null }));
       expect(selectFocusedFocusable(store.getState())?.ref).toEqual(ref);
     },
   );

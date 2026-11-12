@@ -17,11 +17,12 @@ import type { SelectionRowBase } from '../engine/selection/SelectionRowBase';
  * `SelectionState` automatically widens this type too — no parallel manual
  * update needed.
  *
- * `focusId` is the focus row's durable `#focus=` id, landed in the same action
- * as the row so the two can never disagree: the saga encodes it only when the row
- * resolved, so an unresolvable ref publishes no link. Null when nothing is focused
- * or the kind has no link form.
+ * `ids` holds each slot's durable id (the `#focus=` form), landed in the same
+ * action as its row so the two can never disagree: the saga encodes it only when
+ * the row resolved, so an unresolvable ref publishes no link. The re-anchor reads
+ * it back after a reload moves the ref. Null when the slot is empty or the kind
+ * has no link form.
  */
 export type SelectionRowsState = {
   readonly [K in SelectionSlot]: SelectionRowBase | null;
-} & { readonly focusId: string | null };
+} & { readonly ids: Readonly<Record<SelectionSlot, string | null>> };

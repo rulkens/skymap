@@ -26,7 +26,7 @@
  * row is its consumer. The row's precedence ladder is `pending` first, then the
  * resolved value — so the two rungs have to MEET. They do not meet at the ref.
  *
- * The URL composes from `selectionRows.focusId`, stored with the saga-owned
+ * The URL composes from `selectionRows.ids.focus`, stored with the saga-owned
  * `selectionRows.focus` row, not from the ref: a galaxy id needs the
  * catalog-resolved identity. That row lands one action AFTER the ref, because the reconciler
  * (`watchSelectionRowsSaga`) has to be woken by the ref write to produce it. So

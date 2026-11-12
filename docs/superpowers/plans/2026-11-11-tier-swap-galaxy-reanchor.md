@@ -88,10 +88,10 @@ committed; static rows answer only `hit` or `absent` (spec §4.1 lists which).
 - `watchSelectionRowsSaga › stores the durable id for the select and hover slots, not only focus`
 - `selectors › selectFocusId reads ids.focus` (the URL contract is unchanged)
 
-- [ ] Write the tests and see them fail
-- [ ] Implement
-- [ ] Run the touched tests and typecheck, and confirm they pass
-- [ ] Commit: "Every selection slot keeps its durable id"
+- [x] Write the tests and see them fail
+- [x] Implement
+- [x] Run the touched tests and typecheck, and confirm they pass
+- [x] Commit: "Every selection slot keeps its durable id"
 
 ### Task 3: The re-anchor reconciler  `review: yes`
 

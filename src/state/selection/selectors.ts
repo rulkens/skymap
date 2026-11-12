@@ -85,7 +85,7 @@ export const selectFocusRow = (state: RootState): SelectionRowBase | null =>
  * when nothing is focused or the kind has no link form (the dust band).
  */
 export const selectFocusId = (state: RootState): string | null =>
-  selectSelectionRows(state).focusId;
+  selectSelectionRows(state).ids.focus;
 
 // --- derived FocusableTargetBase selectors ----------------------------------------
 

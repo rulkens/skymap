@@ -25,18 +25,20 @@ import type { SelectionRowsState } from '../../@types/store/SelectionRowsState';
 import type { SelectionSlot } from '../../@types/engine/SelectionSlot';
 import type { SelectionRowBase } from '../../@types/engine/selection/SelectionRowBase';
 
-// Only the focus slot carries an id: the compiler refuses a focus write without one.
-type SetSelectionRowPayload =
-  | {
-      readonly slot: 'focus';
-      readonly row: SelectionRowBase | null;
-      readonly focusId: string | null;
-    }
-  | { readonly slot: Exclude<SelectionSlot, 'focus'>; readonly row: SelectionRowBase | null };
+type SetSelectionRowPayload = {
+  readonly slot: SelectionSlot;
+  readonly row: SelectionRowBase | null;
+  readonly id: string | null;
+};
 
 const selectionRowsSlice = createSlice({
   name: selectionRowsRoute,
-  initialState: { hover: null, select: null, focus: null, focusId: null } as SelectionRowsState,
+  initialState: {
+    hover: null,
+    select: null,
+    focus: null,
+    ids: { hover: null, select: null, focus: null },
+  } as SelectionRowsState,
   reducers: {
     setSelectionRow: (selectionRows, action: PayloadAction<SetSelectionRowPayload>) => {
       // The row is an immutable projection stored as-is — the saga replaces the
@@ -45,7 +47,7 @@ const selectionRowsSlice = createSlice({
       // the Draft type but not castDraft, hence the direct cast.
       const { payload } = action;
       selectionRows[payload.slot] = payload.row as Draft<SelectionRowBase> | null;
-      if (payload.slot === 'focus') selectionRows.focusId = payload.focusId;
+      selectionRows.ids[payload.slot] = payload.id;
     },
   },
 });
