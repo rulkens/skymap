@@ -6,10 +6,15 @@
 export const ASTEROID_PHOTOMETRY = {
   /** V for a row MPC gives no H: a typical faint numbered belt asteroid seen from Earth. */
   noHMagnitude: 21,
-  /** Discard floor on the lifted flux: V = 16, where a 1.5 px dot deposits well under 1/255. */
+  /** Discard floor on the lifted flux: V = 16, where a dot deposits well under 1/255. */
   minFlux: 10 ** (-0.4 * 16),
+  /** Floor on Δ (AU, ~0.4 lunar distance) in V, so a camera on top of a dot can't send its flux to infinity. */
+  minDeltaAu: 1e-3,
   rampNearAu: 1.5,
-  // Provisional until Task 8's shots: lifts a V = 20 belt asteroid seen from 10 AU to about V = 12.
+  // Eye-tuned top-down from 12 AU, where it lifts ~15.6 mag: the belt's median dot (V ≈ 24.6) lands
+  // near V = 9, past `dotKnee`, so density reads as brightness and the sparse Trojans still show.
   rampFarAu: 30,
-  rampFarLift: 1e5,
+  rampFarLift: 1e9,
+  /** Ceiling of a dot's peak (`asteroids/points/fragment.wesl`), far under the stars' knee of 8. */
+  dotKnee: 0.2,
 } as const;

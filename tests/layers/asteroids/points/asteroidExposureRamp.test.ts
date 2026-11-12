@@ -12,7 +12,7 @@ describe('asteroidExposureRamp', () => {
       expect(lift).toBeGreaterThanOrEqual(previous);
       previous = lift;
     }
-    expect(asteroidExposureRamp(P.rampFarAu * 0.999) / P.rampFarLift).toBeCloseTo(1, 2);
+    expect(asteroidExposureRamp(P.rampFarAu * 0.9999) / P.rampFarLift).toBeCloseTo(1, 2);
     expect(asteroidExposureRamp(P.rampFarAu)).toBe(P.rampFarLift);
     expect(asteroidExposureRamp(P.rampFarAu * 10)).toBe(P.rampFarLift);
   });

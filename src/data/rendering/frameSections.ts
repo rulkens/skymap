@@ -34,6 +34,8 @@ export const PRELUDE: FrameSection = {
     { kind: 'compute', name: 'sky-view' },
     // Any line ahead of SCENE's star draws would do; inputs come from the `star-catalog` plan row.
     { kind: 'compute', name: 'star-cut' },
+    // Ahead of the POST_FOREGROUND `asteroids` dots, which read the positions it writes.
+    { kind: 'compute', name: 'asteroid-kepler' },
     // Sky captures run ahead of every other render step so a same-frame lensing draw
     // can sample a cubemap written this frame. Most frames the face list is empty and
     // this line emits nothing (the lens's zero-dispatch guarantee).
@@ -279,7 +281,7 @@ export const SCENE: FrameSection = {
       target: 'hdr',
       slab: NEAR0,
       depth: { sample: 'foreground:0' },
-      passes: ['orbit-trails', 'mission-trails', 'satellite-orbits', 'satellites'],
+      passes: ['orbit-trails', 'mission-trails', 'satellite-orbits', 'satellites', 'asteroids'],
       slot: 'POST_FOREGROUND',
     },
   ],

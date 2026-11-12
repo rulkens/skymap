@@ -1,9 +1,11 @@
 /**
  * asteroidsSlot — the catalog's asset slot. Its committed value is the decoded catalog, so the GPU
- * upload and the CPU mirror read the same columns, and release drops them.
+ * upload and the CPU mirror read the same columns; commit uploads the solver's rows and release
+ * destroys them.
  */
 import type { AssetSlot } from '../../../../@types/loading/AssetSlot';
 import type { AsteroidCatalog } from '../@types/AsteroidCatalog';
+import type { AsteroidKeplerSolver } from '../../kepler/@types/AsteroidKeplerSolver';
 import { createAssetSlot } from '../../../../services/loading/AssetSlot';
 import { dataUrl, fetchWithProgress } from '../../../../services/loading/fetchWithProgress';
 import { runDisposableWorker } from '../../../../utils/worker/runDisposableWorker';
@@ -11,6 +13,7 @@ import { ASTEROID_CATALOG_PATHS } from '../../../../data/asteroids/asteroidCatal
 
 export function createAsteroidsSlot(
   DecodeWorker: new () => Worker,
+  solver: AsteroidKeplerSolver,
 ): AssetSlot<AsteroidCatalog, void> {
   return createAssetSlot({
     name: 'asteroids',
@@ -27,5 +30,9 @@ export function createAsteroidsSlot(
         'asteroid-catalog',
       );
     },
+    commit: async (catalog) => {
+      solver.upload(catalog);
+    },
+    onRelease: () => solver.clear(),
   });
 }

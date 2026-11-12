@@ -34,4 +34,5 @@ export const MATTE_HIDDEN_PASSES: readonly string[] = [
   'mission-trails',
   'satellite-orbits',
   'satellites',
+  'asteroids',
 ];

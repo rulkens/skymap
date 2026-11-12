@@ -9,6 +9,8 @@ import { asteroidsVisibility } from './visibility';
 import { create } from './create';
 import { destroy } from './destroy';
 import { asteroidsAssetRows } from './catalog/load/asteroidsAssetRows';
+import { asteroidKeplerCompute } from './kepler/computes/asteroidKeplerCompute';
+import { asteroidsPass } from './points/passes/asteroidsPass';
 import AsteroidsSectionContainer from './controls/ui/AsteroidsSectionContainer';
 
 export const asteroidsLayer = defineLayer({
@@ -17,7 +19,8 @@ export const asteroidsLayer = defineLayer({
   visibility: asteroidsVisibility,
   create,
   destroy,
-  passes: () => [],
+  computes: (runtime) => [asteroidKeplerCompute(runtime)],
+  passes: (runtime) => [asteroidsPass(runtime)],
   assets: asteroidsAssetRows,
   ui: [{ slot: 'main', content: AsteroidsSectionContainer, title: 'Asteroids' }],
 });

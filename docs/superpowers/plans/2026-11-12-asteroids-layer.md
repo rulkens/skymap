@@ -412,14 +412,14 @@ same function the vertex stage uses (one WGSL fn, both entry points). The pick s
 (`asteroidPointStyle.pickRadiusPx`). The pass gate is the class fade times `asteroidWindowFade`, and it
 draws nothing until buffers exist.
 
-- [ ] Test `uniform offsets match the WGSL struct` (parse `points/io.wesl` the way existing offset parity
+- [x] Test `uniform offsets match the WGSL struct` (parse `points/io.wesl` the way existing offset parity
       tests do; grep `UNIFORM_OFFSETS` in `tests/` for the pattern).
-- [ ] Test `the pick stamp and the dot share one cull`: the pick entry point calls the same WGSL cull fn as
+- [x] Test `the pick stamp and the dot share one cull`: the pick entry point calls the same WGSL cull fn as
       the vertex entry (a source-level check on the linked shader, the way other WGSL parity tests do).
-- [ ] Test `the pass is disabled outside the window` (windowFade 0).
-- [ ] Shot check (`npm run shot`) of the belt from above at
+- [x] Test `the pass is disabled outside the window` (windowFade 0).
+- [x] Shot check (`npm run shot`) of the belt from above at
       `#focus=sun&t=2026-11-12T00:00:00.000Z` with the Layer on. Look at it before committing.
-- [ ] Commit `Asteroids: Kepler compute, dots and pick stamp`.
+- [x] Commit `Asteroids: Kepler compute, dots and pick stamp`.
 
 ### Task 9: Selection, follow, search, cards, exhibits (review: yes)
 
