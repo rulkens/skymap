@@ -348,12 +348,12 @@ log/linear scale and the component. Load the `create-component` skill and read
 (`DecompressionStream` if the CDN serves raw brotli, else a module worker; read how `satellitesSlot`
 fetches).
 
-- [ ] Test `settings start off with every class on and brightness 1` (initialState).
-- [ ] Test `the asset row demands only while shown and inside the band, or while searching` against
+- [x] Test `settings start off with every class on and brightness 1` (initialState).
+- [x] Test `the asset row demands only while shown and inside the band, or while searching` against
       the demand evaluator, the way satellites' asset tests do (`tests/layers/satellites/catalog/`).
-- [ ] Run the app (`/dev`): toggling Asteroids in Settings loads the file once (Network tab), and
+- [x] Run the app (`/dev`): toggling Asteroids in Settings loads the file once (Network tab), and
       toggling off releases it past the evict radius. Note it in the commit; no test (UI wiring).
-- [ ] Commit `Asteroids: Layer skeleton, settings and demand-gated loading`.
+- [x] Commit `Asteroids: Layer skeleton, settings and demand-gated loading`.
 
 ### Task 8: GPU — Kepler compute, dots, pick stamp (review: yes)
 
