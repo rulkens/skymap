@@ -144,11 +144,11 @@ The pulse handler runs `reanchorWrites` first and puts each write via `SELECTION
 - `watchTierSaga › re-requesting the current tier is a no-op`
 - Delete the re-anchor cases (Task 3 covers that behaviour now).
 
-- [ ] Write the tests and see them fail
-- [ ] Implement, delete and move
-- [ ] Run `grep -rn "captureGalaxyFocusIds\|wiring/galaxyCatalogRequest" src tests tools docs --exclude-dir=completed` and confirm nothing comes back
-- [ ] Run typecheck and the touched tests, and confirm they pass
-- [ ] Commit: "Tier knows nothing about selection; the galaxy request lives in its Layer"
+- [x] Write the tests and see them fail
+- [x] Implement, delete and move
+- [x] Run `grep -rn "captureGalaxyFocusIds\|wiring/galaxyCatalogRequest" src tests tools docs --exclude-dir=completed` and confirm nothing comes back
+- [x] Run typecheck and the touched tests, and confirm they pass
+- [x] Commit: "Tier knows nothing about selection; the galaxy request lives in its Layer"
 
 ## Definition of Done
 
