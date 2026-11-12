@@ -12,6 +12,8 @@ export type AsteroidKeplerFrame = {
   /** `asteroidExposureRamp` × the Layer's brightness. */
   readonly exposure: number;
   readonly classFade: Readonly<Record<AsteroidClass, number>>;
+  /** The faintest stored H each class keeps under the brightness budget (`asteroidHLimitCenti`). */
+  readonly hLimitCenti: Readonly<Record<AsteroidClass, number>>;
   /** Catalog row exempt from the flux floor; `SELECTION_NONE_SENTINEL` for none. */
   readonly selectedRow: number;
   /** The discard floor on the lifted flux. */

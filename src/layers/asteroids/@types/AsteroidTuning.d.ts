@@ -2,7 +2,7 @@ import type { AsteroidClassColors } from './AsteroidClassColors';
 
 /**
  * The asteroids Layer's DebugPanel cluster: the class tints and the numeric rows of
- * `ASTEROID_PHOTOMETRY` and `ASTEROID_POINT_STYLE` it exposes, under their table names. The lifted
+ * `ASTEROID_PHOTOMETRY`, `ASTEROID_POINT_STYLE` and `ASTEROID_THINNING` it exposes, under their names. The lifted
  * flux floor is held as its V (`limitingMag`), the unit a person tunes in.
  */
 export type AsteroidTuning = {
@@ -15,4 +15,8 @@ export type AsteroidTuning = {
   readonly selectedRadiusPx: number;
   readonly maxPhaseDimMag: number;
   readonly limitingMag: number;
+  readonly thinBudget: number;
+  readonly thinStartZoomAu: number;
+  readonly thinFullZoomAu: number;
+  readonly thinGainExponent: number;
 };

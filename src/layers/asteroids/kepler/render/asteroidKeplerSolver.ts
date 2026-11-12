@@ -24,10 +24,11 @@ export const KEPLER_UNIFORM_OFFSETS = {
   sunFromCamAu: 16,
   exposure: 28,
   classFade: 32,
-  minFlux: 64,
-  maxPhaseDimMag: 68,
+  hLimitCenti: 64,
+  minFlux: 96,
+  maxPhaseDimMag: 100,
 } as const;
-export const KEPLER_UNIFORM_BYTES = 80;
+export const KEPLER_UNIFORM_BYTES = 112;
 export const KEPLER_WORKGROUP_SIZE = 64;
 /** triCorner: one triangle circumscribing the unit disc, half the vertex work of a quad. */
 const VERTICES_PER_DOT = 3;
@@ -141,6 +142,7 @@ export function createAsteroidKeplerSolver(device: GPUDevice): AsteroidKeplerSol
     uniformF32[o.maxPhaseDimMag / 4] = frame.maxPhaseDimMag;
     ASTEROID_CLASSES.forEach((cls, k) => {
       uniformF32[o.classFade / 4 + k] = frame.classFade[cls];
+      uniformF32[o.hLimitCenti / 4 + k] = frame.hLimitCenti[cls];
     });
     device.queue.writeBuffer(uniformBuffer, 0, uniforms);
     // In the encoder, ordered with the passes: a queue write would land before the whole submit.

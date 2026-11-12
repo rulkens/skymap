@@ -10,8 +10,13 @@ import { SELECTION_NONE_SENTINEL } from '../../../../data/selectionEncoding';
 import { asteroidsDrawn } from '../utils/asteroidsDrawn';
 import { asteroidSunFromCamAu } from '../utils/asteroidSunFromCamAu';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
+import { ASTEROID_CLASSES } from '../../../../data/asteroids/asteroidClasses';
+import { ASTEROID_FORMAT } from '../../../../data/asteroids/asteroidFormat';
+import type { AsteroidClass } from '../../../../@types/asteroids/AsteroidClass';
 import { asteroidExposureRamp } from '../../points/utils/asteroidExposureRamp';
 import { selectedAsteroidRows } from '../../selection/utils/selectedAsteroidRows';
+import { asteroidKeptFraction } from '../utils/asteroidKeptFraction';
+import { asteroidHLimitCenti } from '../utils/asteroidHLimitCenti';
 
 export function asteroidKeplerCompute(runtime: AsteroidsRuntime): ContentCompute<'asteroids'> {
   return {
@@ -25,15 +30,22 @@ export function asteroidKeplerCompute(runtime: AsteroidsRuntime): ContentCompute
       const catalog = runtime.slot.current()?.catalog;
       const selectedRow = catalog ? selectedAsteroidRows(state.selection, catalog)[0] : undefined;
       const tuning = state.settings.asteroidTuning;
+      const zoomAu = ctx.cam.distance / SCALE_UNITS.AU_TO_MPC;
+      const byClass = catalog?.hCentiByClass;
+      const kept = byClass ? asteroidKeptFraction(byClass, fade, zoomAu, tuning) : 1;
       runtime.solver.encode(
         encoder,
         {
           simJd: simDays,
           sunFromCamAu,
-          exposure:
-            asteroidExposureRamp(ctx.cam.distance / SCALE_UNITS.AU_TO_MPC, tuning) *
-            state.settings.asteroids.brightness,
+          exposure: asteroidExposureRamp(zoomAu, tuning) * state.settings.asteroids.brightness,
           classFade: fade,
+          hLimitCenti: Object.fromEntries(
+            ASTEROID_CLASSES.map((cls) => [
+              cls,
+              byClass ? asteroidHLimitCenti(byClass[cls], kept) : ASTEROID_FORMAT.hNone,
+            ]),
+          ) as Record<AsteroidClass, number>,
           selectedRow: selectedRow ?? SELECTION_NONE_SENTINEL,
           minFlux: 10 ** (-0.4 * tuning.limitingMag),
           maxPhaseDimMag: tuning.maxPhaseDimMag,

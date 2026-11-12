@@ -24,6 +24,8 @@ import { asteroidsDrawn } from '../../kepler/utils/asteroidsDrawn';
 import { asteroidHelioAu } from '../../kepler/utils/asteroidHelioAu';
 import { asteroidSunFromCamAu } from '../../kepler/utils/asteroidSunFromCamAu';
 import { selectedAsteroidRows } from '../../selection/utils/selectedAsteroidRows';
+import { asteroidKeptFraction } from '../../kepler/utils/asteroidKeptFraction';
+import { SCALE_UNITS } from '../../../../data/scaleUnits';
 
 export function asteroidsPass(runtime: AsteroidsRuntime): ContentPass<'asteroids'> {
   const frameOf = (
@@ -44,6 +46,14 @@ export function asteroidsPass(runtime: AsteroidsRuntime): ContentPass<'asteroids
         ? null
         : asteroidHelioAu(catalog!, selectedRow, ctx.snapshot.simDays);
     const tuning = state.settings.asteroidTuning;
+    const kept = catalog
+      ? asteroidKeptFraction(
+          catalog.hCentiByClass,
+          fade,
+          ctx.cam.distance / SCALE_UNITS.AU_TO_MPC,
+          tuning,
+        )
+      : 1;
     return {
       vp: near0OverlayVpF32(
         rebaseViewProj(view.slab.vp, eye),
@@ -67,6 +77,7 @@ export function asteroidsPass(runtime: AsteroidsRuntime): ContentPass<'asteroids
       selectedRadiusPx: tuning.selectedRadiusPx,
       dotKnee: tuning.dotKnee,
       classColors: tuning.colors,
+      thinGain: kept ** -tuning.thinGainExponent,
       occluders: sceneOccluderSpheres(state, ctx),
       depth,
     };

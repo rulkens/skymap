@@ -21,6 +21,8 @@ struct AsteroidUniforms {
   selectedRadiusPx: f32,
   // A dot's peak ceiling; the fragment's knee reads it, and the selected dot's gain is its inverse.
   dotKnee: f32,
+  // The brightness budget's lift on the dots it keeps, so the thinned field keeps its light.
+  thinGain: f32,
 };
 
 struct VSOut {

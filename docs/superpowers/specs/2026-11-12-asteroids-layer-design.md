@@ -180,7 +180,19 @@ a flat one holds the field's surface brightness. Eye-tuned at dpr 2 on shots nea
 and 12 AU and at 50 AU; floor and cap landed close, so the zoom term spans under 2×. The result is
 multiplied by the Layer's own brightness setting (§4.9). Dots under the flux floor (V 16 on the
 lifted flux, where a dot deposits well under 1/255) are discarded to save fill, and the floor applies
-after the lift. Every constant in this section is a DebugPanel tuning default (§4.9). A row with no H draws at a fixed dim flux (the builder picks it and states it).
+after the lift. Every constant in this section is a DebugPanel tuning default (§4.9).
+
+**Thinning by brightness** (owner ruling). Zoomed out past the belt, nearly all ~900k rows pass the flux
+floor, and their sub-pixel dots cost ~3.5 ms of raster and blend at the `solar-system` perf pose while
+reading no better than a sixth of them. So the compute also culls by H: past a start zoom (2 AU) each
+class keeps only its intrinsically brightest share, falling geometrically in zoom to a budget of 150k
+dots by 12 AU. The share is budget / rows in the classes shown; the limit is that share's H, one index
+into each class's H column sorted at decode (`sortedHCentiByClass`), so the count holds at the budget
+with no GPU sort, no CPU count and no feedback from last frame's counter. Per class, so the Trojans and
+Hildas thin in step with the belt. The survivors' tint is raised by share^−0.5, so the thinned belt keeps
+most of its light (a full share^−1 whited it out). The selected row is exempt, as from the floor. Framing
+Earth nothing thins: every asteroid draws. Measured: the dot pass's real cost at `solar-system` fell from
+3.5 to 0.5 ms; `earth-surface` (no thinning) stays ~2.0 ms. A row with no H draws at a fixed dim flux (the builder picks it and states it).
 The card shows the same V from the same formula in TypeScript; a test checks a few asteroids against JPL
 Horizons' V at one date, within a stated tolerance.
 
@@ -238,7 +250,8 @@ stars' slider). No size knob.
 
 A dev-only "Asteroid tuning" section in the DebugPanel (owner ruling, the satellites' pattern) moves the
 look live: lift K, floor and cap; dot radius, knee and selected-dot radius; the phase-dimming cap; the
-flux floor as a limiting V; one colour row per class. The `points/data/` tables are the defaults its
+flux floor as a limiting V; the thinning budget, its start and full zooms and its gain; one colour
+row per class. The `points/data/` tables are the defaults its
 slice starts from, and each reaches the compute or the dots by uniform, so no WGSL constant mirrors
 them. A colour row edits the hue and keeps the row's luminance. Reset restores the tables; "Copy
 changed values" emits the moved rows under their table names, ready to paste.

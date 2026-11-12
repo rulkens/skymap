@@ -10,12 +10,14 @@ import { ASTEROID_CLASSES } from '../../../../data/asteroids/asteroidClasses';
 import { ASTEROID_CLASS_COLORS } from '../../points/data/asteroidClassColors';
 import { ASTEROID_PHOTOMETRY } from '../../points/data/asteroidPhotometry';
 import { ASTEROID_POINT_STYLE } from '../../points/data/asteroidPointStyle';
+import { ASTEROID_THINNING } from '../../points/data/asteroidThinning';
 import { linearRgbToHex } from '../../../../utils/color/linearRgbToHex';
 import { scaleToUnitMax } from '../../../../utils/color/scaleToUnitMax';
 
 const NUMBER_TABLES: readonly [string, Readonly<Record<string, number>>][] = [
   ['ASTEROID_PHOTOMETRY', ASTEROID_PHOTOMETRY],
   ['ASTEROID_POINT_STYLE', ASTEROID_POINT_STYLE],
+  ['ASTEROID_THINNING', ASTEROID_THINNING],
 ];
 
 const tidy = (v: number): number => Number(v.toPrecision(6));

@@ -10,6 +10,7 @@ import { FormatVersionError } from '../../../../data/formatVersionError';
 import { perifocalAxesWorld } from '../../../../utils/orbit/perifocalAxesWorld';
 import { ASTEROID_HIDDEN_FLAG } from '../data/asteroidHiddenFlag';
 import { MESH_ASTEROID_NUMBERS } from '../data/meshAsteroidNumbers';
+import { sortedHCentiByClass } from '../utils/sortedHCentiByClass';
 
 const TAU = 2 * Math.PI;
 const COLUMN = { a: 0, e: 1, i: 2, node: 3, peri: 4, m0: 5, h: 6, g: 7, flags: 8 } as const;
@@ -89,5 +90,22 @@ export function parseAsteroidCatalog(buf: ArrayBuffer): AsteroidCatalog {
     extraF32[2 * k] = m0[k]!;
     extra[2 * k + 1] = ((hCenti[k]! << 16) | (g[k]! << 8) | flags[k]!) >>> 0;
   }
-  return { epochJd, count, a, e, i, node, peri, m0, elementsA, elementsB, extra, hCenti, g, flags };
+  const hCentiByClass = sortedHCentiByClass(hCenti, flags);
+  return {
+    epochJd,
+    count,
+    a,
+    e,
+    i,
+    node,
+    peri,
+    m0,
+    elementsA,
+    elementsB,
+    extra,
+    hCenti,
+    g,
+    flags,
+    hCentiByClass,
+  };
 }

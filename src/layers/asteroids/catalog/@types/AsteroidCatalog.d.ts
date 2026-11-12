@@ -1,3 +1,5 @@
+import type { AsteroidClass } from '../../../../@types/asteroids/AsteroidClass';
+
 /**
  * AsteroidCatalog — `asteroids.astb` decoded: row k is minor planet k + 1 in every column. The element
  * columns are the f32 values the GPU receives, so the CPU mirror (follow, card, ring) solves from the
@@ -29,4 +31,6 @@ export type AsteroidCatalog = {
   readonly g: Uint8Array;
   /** The stored flags (`ASTEROID_FORMAT`) plus `ASTEROID_HIDDEN_FLAG`. */
   readonly flags: Uint8Array;
+  /** `sortedHCentiByClass`: each class's drawable H, ascending, for the brightness budget. */
+  readonly hCentiByClass: Readonly<Record<AsteroidClass, Uint16Array>>;
 };

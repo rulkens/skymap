@@ -73,10 +73,10 @@ fn vs(@builtin(vertex_index) vid: u32, @builtin(instance_index) slot: u32) -> VS
   let offset = expandBillboardScreen(u.cam, centre, sizePx, corner);
   let fade = u.classColor[d.cls].w * u.windowFade * clear;
   var peak = starPeakIntensity(1.0, d.flux * fade, toRefPx(sizePx, u.cam.pxPerRad));
-  var rgb = u.classColor[d.cls].rgb;
+  var rgb = u.classColor[d.cls].rgb * u.thinGain;
   if (selected) {
     peak = max(peak, SELECTED_MIN_PEAK * fade);
-    rgb /= u.dotKnee;
+    rgb = u.classColor[d.cls].rgb / u.dotKnee;
   }
   out.clip = vec4<f32>(centre.xy + offset, MID_DEPTH * centre.w, centre.w);
   out.corner = corner;

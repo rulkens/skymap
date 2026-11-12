@@ -23,6 +23,8 @@ export type AsteroidPointFrame = {
   readonly selectedRadiusPx: number;
   readonly dotKnee: number;
   readonly classColors: AsteroidClassColors;
+  /** Tint lift on the dots the brightness budget keeps (`ASTEROID_THINNING.thinGainExponent`). */
+  readonly thinGain: number;
   readonly occluders: { readonly count: number; readonly spheresKm: Float32Array };
   readonly depth: SampledDepthBinding;
 };

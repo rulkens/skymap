@@ -95,11 +95,12 @@ describe('asteroids shader parity', () => {
     expect(cull).toMatch(/HIDDEN_FLAG/);
     expect(cull).toMatch(/classFade\[cls >> 2u\]\[cls & 3u\] <= 0\.0/);
     expect(cull).toMatch(/flux < k\.minFlux/);
+    expect(cull).toMatch(/f32\(hCenti\) > k\.hLimitCenti\[cls >> 2u\]\[cls & 3u\]/);
     const linked = vertexLinked as string;
     for (const entry of ['vs', 'vsPick']) {
       expect(fnBody(linked, entry), entry).toMatch(/= asteroidDot\(slot\);/);
     }
     expect(fnBody(linked, 'asteroidDot')).toMatch(/visible\[slot\]/);
-    expect(linked).not.toMatch(/minFlux|HIDDEN_FLAG/);
+    expect(linked).not.toMatch(/minFlux|hLimitCenti|HIDDEN_FLAG/);
   });
 });

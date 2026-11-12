@@ -40,8 +40,9 @@ export const ASTEROID_UNIFORM_OFFSETS = {
   sizePx: 196,
   selectedRadiusPx: 200,
   dotKnee: 204,
+  thinGain: 208,
 } as const;
-export const ASTEROID_UNIFORM_BYTES = 208;
+export const ASTEROID_UNIFORM_BYTES = 224;
 
 export function createAsteroidPointRenderer({
   device,
@@ -179,6 +180,7 @@ export function createAsteroidPointRenderer({
     u[o.sizePx / 4] = sizePx;
     u[o.selectedRadiusPx / 4] = frame.selectedRadiusPx;
     u[o.dotKnee / 4] = frame.dotKnee;
+    u[o.thinGain / 4] = frame.thinGain;
     device.queue.writeBuffer(buffer, 0, u);
   }
 
