@@ -1,7 +1,7 @@
 /**
  * create — the Kepler solver, the dot renderer that reads its rows, then the slot; the demand loop
- * decides when it loads, and its commit uploads into the solver. `catalogReady` flips after the slot
- * settles, never inside commit, so a pending selection re-extracted on that pulse finds the rows.
+ * decides when it loads, and its commit uploads into the solver. `catalogReady` publishes when the slot
+ * reaches ready (or is released), never inside commit, so a pending selection re-extracted on that pulse finds the rows.
  */
 import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
 import type { AsteroidsFacts } from './@types/AsteroidsFacts';
@@ -17,11 +17,9 @@ export function create(deps: LayerCoreDeps<AsteroidsFacts>): AsteroidsRuntime {
   const solver = createAsteroidKeplerSolver(deps.ctx.device);
   const pickCode = deps.pickCode('asteroid');
   const slot = createAsteroidsSlot(AsteroidCatalogWorker, solver);
-  let catalogReady = false;
-  slot.subscribe(() => {
-    if ((slot.committed() !== null) === catalogReady) return;
-    catalogReady = !catalogReady;
-    deps.publish({ catalogReady });
+  slot.subscribe((state) => {
+    if (state.kind === 'ready') deps.publish({ catalogReady: true });
+    else if (state.kind === 'idle') deps.publish({ catalogReady: false });
   });
   return {
     slot,

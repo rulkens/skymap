@@ -18,6 +18,7 @@ const ROW: MpcorbRow = {
   inclDeg: 10.8,
   e: 0.2229,
   aAu: 1.458,
+  orbitType: 0,
   asteroidClass: 'nearEarth',
   neo: true,
   pha: false,

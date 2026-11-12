@@ -87,6 +87,12 @@ export const DOCS_DEBUG_SECTIONS: readonly DocsDebugSection[] = [
     file: 'src/layers/satellites/controls/ui/SatelliteTuningSection.tsx',
   },
   {
+    heading: 'Asteroid tuning',
+    shows:
+      'How much the asteroid dots are lifted in brightness as you zoom, the size and peak of a dot, the size of the selected dot, the cap on the dimming of an asteroid lit from behind, the faintest magnitude drawn, and one colour for each asteroid class. A button puts them back to their defaults and another copies the changed values.',
+    file: 'src/layers/asteroids/controls/ui/AsteroidTuningSection.tsx',
+  },
+  {
     heading: 'Milky Way tuning',
     shows:
       'A switch for which Milky Way is drawn (the point sprites, the smooth analytic field, or both added together). For the points: size, exposure, softness and number. For the field: its exposure, a dust switch and how coarse each of its render targets is.',

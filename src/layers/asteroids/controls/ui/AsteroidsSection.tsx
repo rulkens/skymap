@@ -52,7 +52,6 @@ function AsteroidsSection({
           />
         </div>
       ))}
-      {/* The stars' brightness range: a trim on the flux, with the exposure ramp doing the big swing. */}
       <div className={styles.panelRow}>
         <Slider
           label="Brightness"

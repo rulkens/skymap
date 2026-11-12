@@ -16,6 +16,8 @@ export type MpcorbRow = {
   readonly inclDeg: number;
   readonly e: number;
   readonly aAu: number;
+  /** MPCORB's orbit type (flags low 6 bits); 0 is unset and lands in the main belt. */
+  readonly orbitType: number;
   readonly asteroidClass: AsteroidClass;
   readonly neo: boolean;
   readonly pha: boolean;

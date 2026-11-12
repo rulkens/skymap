@@ -10,6 +10,7 @@ import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 import { ASTEROID_FOCUS_GEOMETRY } from './data/asteroidFocusGeometry';
+import { ASTEROID_HIDDEN_FLAG } from '../catalog/data/asteroidHiddenFlag';
 import { MESH_ASTEROID_NUMBERS } from '../catalog/data/meshAsteroidNumbers';
 import { footprintRadiusMpc } from '../../../utils/selection/footprintRadiusMpc';
 import { deriveBodyStates } from '../../../services/engine/frame/deriveBodyStates';
@@ -40,10 +41,11 @@ export function asteroidsSelectionRow(runtime: AsteroidsRuntime): SelectionKindR
       ? { type: 'asteroid', number }
       : null;
   };
-  /** The ref's row in the loaded catalog, or -1. */
+  /** The ref's row in the loaded catalog, or -1 (also for a hidden row: ABSENT or drawn as a mesh). */
   const rowOf = (number: number): number => {
     const catalog = runtime.slot.current()?.catalog;
-    return catalog !== undefined && number >= 1 && number <= catalog.count ? number - 1 : -1;
+    if (catalog === undefined || number < 1 || number > catalog.count) return -1;
+    return catalog.flags[number - 1]! & ASTEROID_HIDDEN_FLAG ? -1 : number - 1;
   };
   return {
     type: 'asteroid',

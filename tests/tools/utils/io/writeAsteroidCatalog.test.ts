@@ -17,6 +17,7 @@ const row = (number: number, over: Partial<MpcorbRow> = {}): MpcorbRow => ({
   inclDeg: 10.58803,
   e: 0.0796923,
   aAu: 2.7655526,
+  orbitType: 0,
   asteroidClass: 'jupiterTrojan',
   neo: false,
   pha: true,

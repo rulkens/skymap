@@ -14,4 +14,21 @@ describe('asteroidsSearch', () => {
       { id: 'asteroid-5', class: 'catalog', names: ['(5) Astraea', 'Astraea'], chip: 'Asteroid' },
     ]);
   });
+
+  it('ends without rows, and drops its listener, when the slot is released before loading', async () => {
+    const listeners = new Set<(state: { kind: string }) => void>();
+    const runtime = {
+      slot: {
+        current: () => null,
+        subscribe: (fn: (state: { kind: string }) => void) => {
+          listeners.add(fn);
+          return () => listeners.delete(fn);
+        },
+      },
+    } as unknown as AsteroidsRuntime;
+    const pending = asteroidsSearch(runtime)[Symbol.asyncIterator]().next();
+    listeners.forEach((fn) => fn({ kind: 'idle' }));
+    expect((await pending).done).toBe(true);
+    expect(listeners.size).toBe(0);
+  });
 });

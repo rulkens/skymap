@@ -81,6 +81,9 @@ async function main(): Promise<void> {
   const epochs = [...counts].map(([jd, count]) => `JD ${jd} × ${count}`).join(', ');
   console.log(`buildAsteroids: ${rows.length} numbered rows read; epochs ${epochs}`);
   console.log(`buildAsteroids: ${gaps.length} gaps${gaps.length ? ` (${gaps.join(', ')})` : ''}`);
+  console.log(
+    `buildAsteroids: ${rows.filter((r) => r.orbitType === 0).length} rows with orbit type 0, counted main belt`,
+  );
   if (defaultedG.length)
     console.log(`buildAsteroids: G out of range, default used: ${defaultedG.join(', ')}`);
   console.log(

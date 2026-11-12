@@ -54,6 +54,7 @@ export function parseMpcorbLine(line: string): MpcorbRow {
     inclDeg: numberAt(line, 60, 68, 'incl'),
     e: numberAt(line, 71, 79, 'e'),
     aAu: numberAt(line, 93, 103, 'a'),
+    orbitType: flags & ORBIT_TYPE_MASK,
     asteroidClass: asteroidClassFromOrbitType(flags & ORBIT_TYPE_MASK),
     neo: (flags & MPC_NEO_BIT) !== 0,
     pha: (flags & MPC_PHA_BIT) !== 0,

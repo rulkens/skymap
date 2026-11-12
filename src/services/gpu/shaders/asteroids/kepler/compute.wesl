@@ -46,7 +46,7 @@ const LAST_CLASS: u32 = 4u;
 // DrawIndirectArgs: vertexCount, instanceCount, firstVertex, firstInstance.
 const INSTANCE_COUNT: u32 = 1u;
 
-@group(0) @binding(0) var<uniform> k: KeplerUniforms;
+@group(0) @binding(0) var<uniform> kepler: KeplerUniforms;
 // Per row: A = a·P̂ (AU) and e; B = a·√(1−e²)·Q̂ (AU) and n (rad/day); M₀ bitcast, then the packed word.
 @group(0) @binding(1) var<storage, read> elementsA: array<vec4<f32>>;
 @group(0) @binding(2) var<storage, read> elementsB: array<vec4<f32>>;
@@ -65,32 +65,32 @@ var<workgroup> groupBase: u32;
 fn shownRow(row: u32) -> vec4<f32> {
   let packed = extra[row].y;
   let cls = min(packed & CLASS_MASK, LAST_CLASS);
-  if ((packed & HIDDEN_FLAG) != 0u || k.classFade[cls >> 2u][cls & 3u] <= 0.0) {
+  if ((packed & HIDDEN_FLAG) != 0u || kepler.classFade[cls >> 2u][cls & 3u] <= 0.0) {
     return vec4<f32>(0.0);
   }
   let hCenti = packed >> 16u;
   // Ahead of the solve, so a row the budget drops costs no Kepler iterations.
-  if (f32(hCenti) > k.hLimitCenti[cls >> 2u][cls & 3u] && row != k.selectedRow) {
+  if (f32(hCenti) > kepler.hLimitCenti[cls >> 2u][cls & 3u] && row != kepler.selectedRow) {
     return vec4<f32>(0.0);
   }
   let a = elementsA[row];
   let b = elementsB[row];
-  let m = bitcast<f32>(extra[row].x) + b.w * k.dtWholeDays + b.w * k.dtFracDays;
+  let m = bitcast<f32>(extra[row].x) + b.w * kepler.dtWholeDays + b.w * kepler.dtFracDays;
   let E = solveKeplerFixed(m, a.w);
   let p = a.xyz * (cos(E) - a.w) + b.xyz * sin(E);
   var v = NO_H_MAGNITUDE;
   if (hCenti != H_NONE) {
     let rAu = length(p);
-    let camRelAu = p + k.sunFromCamAu;
+    let camRelAu = p + kepler.sunFromCamAu;
     let deltaAu = max(length(camRelAu), MIN_DELTA_AU);
     let hMag = f32(hCenti) / H_SCALE - H_OFFSET;
     let g = f32((packed >> 8u) & 255u) / G_SCALE - G_OFFSET;
     let cosPhase = dot(p, camRelAu) / max(rAu * deltaAu, 1e-30);
     v = asteroidApparentMagnitude(hMag, g, rAu, deltaAu, cosPhase);
-    v = min(v, hMag + 5.0 * log(rAu * deltaAu) / LOG10 + k.maxPhaseDimMag);
+    v = min(v, hMag + 5.0 * log(rAu * deltaAu) / LOG10 + kepler.maxPhaseDimMag);
   }
-  let flux = pow(10.0, -0.4 * v) * k.exposure;
-  if (flux < k.minFlux && row != k.selectedRow) {
+  let flux = pow(10.0, -0.4 * v) * kepler.exposure;
+  if (flux < kepler.minFlux && row != kepler.selectedRow) {
     return vec4<f32>(0.0);
   }
   // A selected row under the floor keeps a positive flux, so the shown test below holds for it.
@@ -105,7 +105,7 @@ fn main(
   // No early return: every invocation must reach the barriers below.
   let row = gid.x;
   var entry = vec4<f32>(0.0);
-  if (row < k.count) {
+  if (row < kepler.count) {
     entry = shownRow(row);
   }
   let shown = entry.w > 0.0;

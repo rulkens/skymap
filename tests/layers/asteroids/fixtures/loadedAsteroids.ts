@@ -22,6 +22,7 @@ const row = (number: number, name: string | null, h: number | null): MpcorbRow =
   inclDeg: 5 + number,
   e: 0.05 * number,
   aAu: 2 + 0.2 * number,
+  orbitType: 0,
   asteroidClass: 'mainBelt',
   neo: false,
   pha: false,

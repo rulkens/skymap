@@ -22,7 +22,9 @@ const ASTRAEA = { type: 'asteroid', number: 5 } as const;
 
 describe('asteroidsSelectionRow', () => {
   it('pick round-trips row 432 to Eros’s ref and back', () => {
-    const big = { catalog: { count: 1000 } as AsteroidCatalog } as LoadedAsteroids;
+    const big = {
+      catalog: { count: 1000, flags: new Uint8Array(1000) } as AsteroidCatalog,
+    } as LoadedAsteroids;
     const eros = asteroidsSelectionRow(runtimeOver(big));
     const pick = { sourceCode: PICK_CODE, localIdx: 432 };
     expect(eros.resolvePick(pick)).toEqual({ type: 'asteroid', number: 433 });
@@ -62,6 +64,12 @@ describe('asteroidsSelectionRow', () => {
       asteroidsSelectionRow(runtimeOver(null)).extractRow(ASTRAEA, FIXTURE_EPOCH_JD),
     ).toBeNull();
     expect(row.extractRow({ type: 'asteroid', number: 6 }, FIXTURE_EPOCH_JD)).toBeNull();
+  });
+
+  it('leaves a hidden row (the meshed Ceres) unclaimed: no pick code, no extract', () => {
+    const ceres = { type: 'asteroid', number: 1 } as const;
+    expect(row.encodePick(ceres)).toBeNull();
+    expect(row.extractRow(ceres, FIXTURE_EPOCH_JD)).toBeNull();
   });
 
   it('card fields: H unknown for a row with no H, and no now values outside the window', () => {

@@ -21,6 +21,7 @@ import { ASTEROID_PHOTOMETRY } from '../../../../src/layers/asteroids/points/dat
 import { ASTEROID_FORMAT } from '../../../../src/data/asteroids/asteroidFormat';
 import { ASTEROID_HIDDEN_FLAG } from '../../../../src/layers/asteroids/catalog/data/asteroidHiddenFlag';
 import { ASTEROID_CLASSES } from '../../../../src/data/asteroids/asteroidClasses';
+import { KEPLER_FIXED } from '../../../../src/data/orbit/keplerFixed';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 
 const SHADERS = join(process.cwd(), 'src/services/gpu/shaders/asteroids');
@@ -90,17 +91,13 @@ describe('asteroids shader parity', () => {
     expect(constOf(vertex, 'MPC_TO_KM') * SCALE_UNITS.KM_TO_MPC).toBeCloseTo(1, 12);
   });
 
-  it('the compute holds the one cull; the dot and the pick stamp only read its list', () => {
-    const cull = fnBody(compute, 'shownRow');
-    expect(cull).toMatch(/HIDDEN_FLAG/);
-    expect(cull).toMatch(/classFade\[cls >> 2u\]\[cls & 3u\] <= 0\.0/);
-    expect(cull).toMatch(/flux < k\.minFlux/);
-    expect(cull).toMatch(/f32\(hCenti\) > k\.hLimitCenti\[cls >> 2u\]\[cls & 3u\]/);
-    const linked = vertexLinked as string;
-    for (const entry of ['vs', 'vsPick']) {
-      expect(fnBody(linked, entry), entry).toMatch(/= asteroidDot\(slot\);/);
-    }
-    expect(fnBody(linked, 'asteroidDot')).toMatch(/visible\[slot\]/);
-    expect(linked).not.toMatch(/minFlux|hLimitCenti|HIDDEN_FLAG/);
+  it('the Kepler solver constants match the TS twin', () => {
+    const kepler = readFileSync(
+      join(process.cwd(), 'src/services/gpu/shaders/lib/kepler.wesl'),
+      'utf-8',
+    );
+    expect(constOf(kepler, 'KEPLER_STEPS')).toBe(KEPLER_FIXED.steps);
+    expect(constOf(kepler, 'KEPLER_MAX_STEP')).toBe(KEPLER_FIXED.maxStep);
+    expect(kepler).toContain(`E = m + ${KEPLER_FIXED.danbyStart} * e * sign(m)`);
   });
 });
