@@ -22,15 +22,14 @@ struct AsteroidUniforms {
 
 struct VSOut {
   @builtin(position) clip: vec4<f32>,
-  @location(0) relKm: vec3<f32>,
-  @location(1) corner: vec2<f32>,
-  // rgb the class tint, a the peak intensity (starPeakIntensity) the knee compresses.
-  @location(2) @interpolate(flat) tint: vec4<f32>,
+  @location(0) corner: vec2<f32>,
+  // rgb the class tint, a the peak intensity (starPeakIntensity, occlusion folded in) the knee
+  // compresses.
+  @location(1) @interpolate(flat) tint: vec4<f32>,
 };
 
 struct PickOut {
   @builtin(position) clip: vec4<f32>,
-  @location(0) relKm: vec3<f32>,
-  @location(1) corner: vec2<f32>,
-  @location(2) @interpolate(flat) word: u32,
+  @location(0) corner: vec2<f32>,
+  @location(1) @interpolate(flat) word: u32,
 };

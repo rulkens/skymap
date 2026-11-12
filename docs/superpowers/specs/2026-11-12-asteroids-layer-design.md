@@ -187,6 +187,8 @@ Horizons' V at one date, within a stated tolerance.
 
 Additive screen-sized dots into the depthless HDR accumulation, in the NEAR0 slab, under the trails'
 occlusion, like satellites: `lib::billboard`, `lib::camera`, `lib::trailOcclusion`, `ADDITIVE_BLEND`.
+The occlusion test runs once per dot in the vertex stage (`pointClearance`, derivative-free), not per
+fragment, so a hidden dot never rasterises.
 `frameSections.ts` gains a plan line, the compute, and the two passes beside satellites in
 POST_FOREGROUND (and `tools/site/matteHiddenPasses.ts` the pass names). The compute pass culls rows
 whose class is off (the class fades) and the four mesh-drawn numbers (§4.6). Colours by class are

@@ -37,15 +37,36 @@ struct OcclusionUniforms {
 // every texel holds FAR_DEPTH until some row clears it.
 @group(0) @binding(1) var sceneDepth: texture_depth_2d;
 
-// Visibility of the eye->x SEGMENT (eye at the origin) past one sphere
-// (centre.xyz, radius.w, km): 0 inside it, 1 clear of it, one-pixel limb ramp.
-// The [0,1] clamp is what keeps a near arc visible (doc: why occlusion is a segment test).
-fn sphereClearance(x: vec3<f32>, sphere: vec4<f32>) -> f32 {
+// Signed distance (km) from one sphere (centre.xyz, radius.w) to the eye->x SEGMENT (eye at the
+// origin): negative inside it. The [0,1] clamp is what keeps a near arc visible (doc: why occlusion is
+// a segment test).
+fn sphereGap(x: vec3<f32>, sphere: vec4<f32>) -> f32 {
   let c = sphere.xyz;
   let along = clamp(dot(c, x) / max(dot(x, x), 1e-30), 0.0, 1.0);
-  let gap = length(along * x - c) - sphere.w;
+  return length(along * x - c) - sphere.w;
+}
+
+// Visibility of the segment past one sphere: 0 inside it, 1 clear of it, one-pixel limb ramp.
+fn sphereClearance(x: vec3<f32>, sphere: vec4<f32>) -> f32 {
+  let gap = sphereGap(x, sphere);
   let aa = max(fwidth(gap), 1e-6);
   return smoothstep(-aa, aa, gap);
+}
+
+// The spheres cover the sphere bodies; this covers ONE row's terrain and meshes, at screen 'uv'. The
+// depth texture need not match the viewport (the far placeholder is 1x1), so the texel is rescaled
+// while the ray keeps the caller's own uv.
+fn depthClearance(x: vec3<f32>, uv: vec2<f32>) -> f32 {
+  let texel = vec2<i32>(uv * vec2<f32>(textureDimensions(sceneDepth)));
+  let depth = textureLoad(sceneDepth, texel, 0);
+  if (depth == FAR_DEPTH) {
+    return 1.0;
+  }
+  let sceneKm = sceneRayDistance(uv, depth, occ.invMvp, occ.camPosKm);
+  let trailKm = length(x);
+  // Symmetric, so a grazing trail fades instead of stippling along the depth staircase.
+  let tol = DEPTH_CLEARANCE_REL * trailKm;
+  return smoothstep(-tol, tol, sceneKm - trailKm);
 }
 
 // Visibility in [0,1] of the eye-relative trail point 'x' (km) under fragment
@@ -55,19 +76,18 @@ fn trailClearance(x: vec3<f32>, fragPx: vec2<f32>) -> f32 {
   for (var i = 0u; i < occ.count; i++) {
     clear *= sphereClearance(x, occ.spheres[i]);
   }
+  return clear * depthClearance(x, fragPx / occ.viewportPx);
+}
 
-  // The spheres cover the sphere bodies; this covers ONE row's terrain and
-  // meshes. The depth texture need not match the viewport (the far
-  // placeholder is 1x1), so the texel is rescaled while the ray keeps the
-  // fragment's own uv.
-  let texel = vec2<i32>(fragPx * vec2<f32>(textureDimensions(sceneDepth)) / occ.viewportPx);
-  let depth = textureLoad(sceneDepth, texel, 0);
-  if (depth != FAR_DEPTH) {
-    let sceneKm = sceneRayDistance(fragPx / occ.viewportPx, depth, occ.invMvp, occ.camPosKm);
-    let trailKm = length(x);
-    // Symmetric, so a grazing trail fades instead of stippling along the depth staircase.
-    let tol = DEPTH_CLEARANCE_REL * trailKm;
-    clear *= smoothstep(-tol, tol, sceneKm - trailKm);
+// The same test for a point-sized mark at clip position 'clip': no screen derivatives, so a vertex
+// stage runs it once per mark rather than once per fragment; the sphere limb is a hard edge, which a
+// dot a few pixels wide cannot show. The uv mapping is sceneRayUnproject's, inverted.
+fn pointClearance(x: vec3<f32>, clip: vec4<f32>) -> f32 {
+  for (var i = 0u; i < occ.count; i++) {
+    if (sphereGap(x, occ.spheres[i]) < 0.0) {
+      return 0.0;
+    }
   }
-  return clear;
+  let ndc = clip.xy / clip.w;
+  return depthClearance(x, vec2<f32>(ndc.x + 1.0, 1.0 - ndc.y) * 0.5);
 }

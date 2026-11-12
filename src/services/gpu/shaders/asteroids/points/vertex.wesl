@@ -1,7 +1,9 @@
 // asteroids/points/vertex.wesl — one screen-sized dot per row the Kepler compute kept, read from its
 // compacted 'visible' list by a drawIndirect, so the instance index is a list slot, not a catalog row.
 // 'vs' draws, 'vsPick' stamps the pick target; both read the one list, so a row the screen doesn't
-// show can never take a click (the cull itself is the compute's).
+// show can never take a click (the cull itself is the compute's). Both drop a dot a body hides
+// (lib/trailOcclusion's pointClearance); the pick has no scene depth of its own, so it binds the far
+// placeholder and only the occluder spheres drop a stamp.
 //
 // The constants mirror SCALE_UNITS and the selected-dot style, pinned by asteroidPoints.parity.test.ts.
 
@@ -15,7 +17,9 @@ import package::lib::billboard::triCorner;
 import package::lib::billboard::expandBillboardScreen;
 import package::lib::starPhotometry::starPeakIntensity;
 import package::lib::starPhotometry::toRefPx;
+import package::lib::trailOcclusion::pointClearance;
 
+// Group 0 bindings 0-1 are lib/trailOcclusion's.
 @group(0) @binding(2) var<uniform> u: AsteroidUniforms;
 // Heliocentric xyz (AU) and lifted flux per kept dot, and its visibleTag.
 @group(0) @binding(3) var<storage, read> visible: array<vec4<f32>>;
@@ -61,11 +65,16 @@ fn vs(@builtin(vertex_index) vid: u32, @builtin(instance_index) slot: u32) -> VS
   if (centre.w < W_EPS) {
     return out;
   }
+  // Once per dot, not per fragment: a dot behind a body is dropped before it rasterises.
+  let clear = pointClearance(d.relKm, centre);
+  if (clear <= 0.0) {
+    return out;
+  }
   let selected = d.row == u.selectedRow;
   let sizePx = select(u.sizePx, max(u.sizePx, SELECTED_RADIUS_PX), selected);
   let corner = triCorner(vid);
   let offset = expandBillboardScreen(u.cam, centre, sizePx, corner);
-  let fade = u.classColor[d.cls].w * u.windowFade;
+  let fade = u.classColor[d.cls].w * u.windowFade * clear;
   var peak = starPeakIntensity(1.0, d.flux * fade, toRefPx(sizePx, u.cam.pxPerRad));
   var rgb = u.classColor[d.cls].rgb;
   if (selected) {
@@ -73,7 +82,6 @@ fn vs(@builtin(vertex_index) vid: u32, @builtin(instance_index) slot: u32) -> VS
     rgb *= SELECTED_GAIN;
   }
   out.clip = vec4<f32>(centre.xy + offset, MID_DEPTH * centre.w, centre.w);
-  out.relKm = d.relKm;
   out.corner = corner;
   out.tint = vec4<f32>(rgb, peak);
   return out;
@@ -84,13 +92,12 @@ fn vsPick(@builtin(vertex_index) vid: u32, @builtin(instance_index) slot: u32) -
   var out: PickOut;
   let d = asteroidDot(slot);
   let centre = worldToClip(u.cam, d.relKm / MPC_TO_KM);
-  if (centre.w < W_EPS) {
+  if (centre.w < W_EPS || pointClearance(d.relKm, centre) < 0.5) {
     return out;
   }
   let corner = triCorner(vid);
   let offset = expandBillboardScreen(u.cam, centre, u.sizePx, corner);
   out.clip = vec4<f32>(centre.xy + offset, MID_DEPTH * centre.w, centre.w);
-  out.relKm = d.relKm;
   out.corner = corner;
   out.word = u.pickBase + d.row;
   return out;
