@@ -4,8 +4,8 @@
  * so a row moved here decodes to the position the runtime would have computed from its own epoch.
  */
 import type { MpcorbRow } from '../@types/asteroids/MpcorbRow';
+import { GAUSS_K_RAD_PER_DAY } from '../../src/data/asteroids/gaussKRadPerDay';
 
-const GAUSS_K_RAD_PER_DAY = 0.01720209895;
 const DEG_PER_RAD = 180 / Math.PI;
 
 export function propagateToEpoch(row: MpcorbRow, epochJd: number): MpcorbRow {

@@ -227,12 +227,12 @@ export function parseAsteroidCatalog(buffer: ArrayBuffer): AsteroidCatalog;
 
 The decode throws on a wrong magic or version, with the message pattern the other parsers use.
 
-- [ ] Test `decoded basis gives keplerianPositionMpc's position at the epoch` for one synthetic row
+- [x] Test `decoded basis gives keplerianPositionMpc's position at the epoch` for one synthetic row
       (build it in-test with the Task 3 writer): A·(cos E − e) + B·sin E vs
       `src/utils/orbit/keplerianPositionMpc.ts` in the same frame, within 1e-6 AU.
-- [ ] Test `hides the four mesh numbers and ABSENT rows, and no other row`.
-- [ ] Test `rejects a wrong magic`.
-- [ ] Commit `Asteroids: decode ASTB into the equatorial Kepler basis`.
+- [x] Test `hides the four mesh numbers and ABSENT rows, and no other row`.
+- [x] Test `rejects a wrong magic`.
+- [x] Commit `Asteroids: decode ASTB into the equatorial Kepler basis`.
 
 ### Task 5: Kepler solve on GPU and CPU, and the time window (review: yes)
 
