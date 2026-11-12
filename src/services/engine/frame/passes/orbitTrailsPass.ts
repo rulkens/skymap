@@ -3,10 +3,6 @@
  * because AU-to-lunar orbits sit far inside COSMO's 0.01 Mpc near plane. No pass-level `fade`:
  * each trail group carries its own show key, so one switch cannot hide another group's trails.
  * Each group's value carries its entry's distance band, so the pass is off past the foreground gate.
- *
- * HARD INVARIANT: `writeOrbitTrailRecord` takes `view.slab.vp`, NOT `view.vp`: its conic is
- * inverted in f64 to resolve the cancellation between the ~1e-12 Mpc centres and the vp's large
- * translation column; fed the f32-narrowed `view.vp` it misplaces a trail by far more than its stroke.
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
@@ -15,17 +11,13 @@ import { CULL_PX } from '../../../../data/bodies/orbitTrailConstants';
 import { regionRelativeDistanceMpc } from '../../../../utils/regions/regionRelativeDistanceMpc';
 import { keplerianPositionMpc } from '../../../../utils/orbit/keplerianPositionMpc';
 import { keplerianEllipse } from '../../../../utils/orbit/keplerianEllipse';
-import { writeOrbitTrailRecord } from '../../../../utils/orbit/writeOrbitTrailRecord';
-import { sampledDepthBinding } from '../sampledDepthBinding';
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
 import { sceneBodyStates } from '../sceneBodyStates';
-import { sceneOccluderSpheres } from '../sceneOccluderSpheres';
-import { INSTANCE_FLOATS } from '../../../gpu/renderers/bodies/orbitTrailRenderer';
+import { drawOrbitConics } from '../drawOrbitConics';
+import { orbitTrailView } from '../orbitTrailView';
 import { isKind } from '../../../../utils/selection/isKind';
+import type { OrbitTrail } from '../../../../@types/rendering/orbitTrailRenderer/OrbitTrail';
 import type { BodyRef } from '../../../../@types/engine/selection/BodyRef';
-
-// Reused across frames; grown on the first frame that needs more room (the roster is composed at boot).
-let staging = new Float32Array(0);
 
 export const orbitTrailsPass: ContentPass = {
   name: 'orbit-trails',
@@ -57,22 +49,13 @@ export const orbitTrailsPass: ContentPass = {
     if (renderer === null) return;
     // The shared snapshot, never a re-derivation, welds each trail to its body's instant.
     const states = sceneBodyStates(state, ctx);
-    const groups = state.orbitTrailGroups;
-    const limit = groups.reduce((total, group) => total + group.rows.length, 0);
-    if (staging.length < limit * INSTANCE_FLOATS) {
-      staging = new Float32Array(limit * INSTANCE_FLOATS);
-    }
-    const camPos = ctx.drawCamPos;
     const { select, focus } = state.selection;
 
-    // One record per VISIBLE conic; the layout lives in `writeOrbitTrailRecord`.
-    let count = 0;
-    for (const group of groups) {
+    const trails: OrbitTrail[] = [];
+    for (const group of state.orbitTrailGroups) {
       const fade = group.fade(ctx);
       if (fade === 0) continue;
-      const rows = group.rows;
-      for (let i = 0; i < rows.length; i++) {
-        const elements = rows[i]!;
+      for (const elements of group.rows) {
         if (
           group.selectedOnly?.includes(elements.id) &&
           !(isKind<BodyRef>(select, 'body') && select.id === elements.id) &&
@@ -92,36 +75,17 @@ export const orbitTrailsPass: ContentPass = {
         centerMpc[0] += bodyMpc[0] - keplerMpc[0];
         centerMpc[1] += bodyMpc[1] - keplerMpc[1];
         centerMpc[2] += bodyMpc[2] - keplerMpc[2];
-
-        const wrote = writeOrbitTrailRecord(
-          {
-            slabVp: view.slab.vp,
-            viewportPx: view.viewportPx,
-            eyeMpc: camPos,
-            pxPerRad: ctx.drawPxPerRad,
-            centerMpc,
-            semiMajorMpc,
-            semiMinorMpc,
-            eccentricity: orbit.eccentricity,
-            meanAnomalyRad: orbit.meanAnomalyRad,
-            color: elements.color,
-            fade,
-          },
-          staging,
-          count * INSTANCE_FLOATS,
-        );
-        if (wrote) count++;
+        trails.push({
+          centerMpc,
+          semiMajorMpc,
+          semiMinorMpc,
+          eccentricity: orbit.eccentricity,
+          meanAnomalyRad: orbit.meanAnomalyRad,
+          color: elements.color,
+          fade,
+        });
       }
     }
-    if (count > 0) {
-      // `depth` is the second occluder channel (terrain and meshes), in km like the eye-relative orbit points.
-      renderer.draw(pass, {
-        instances: staging,
-        count,
-        occluders: sceneOccluderSpheres(state, ctx),
-        depth: sampledDepthBinding(view.sampledDepth, ctx.bodyPose, ctx.snapshot.renderTargets),
-        showImpostor: state.settings.debug.overlays['orbit-trail-impostor'],
-      });
-    }
+    drawOrbitConics(pass, renderer, trails, orbitTrailView(view, ctx, state));
   },
 };

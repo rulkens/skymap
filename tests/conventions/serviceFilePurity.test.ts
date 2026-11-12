@@ -49,9 +49,9 @@ const DESKTOP_MODULE_DIRS = readdirSync(DESKTOP_MAIN_DIR, { withFileTypes: true 
 
 // Files that still inline helpers, with their current count. `slabs.ts` is the
 // slab vocabulary itself — a genuine multi-symbol module whose split is its own
-// piece of work, not a stray-helper row to trim in passing. `orbitTrailsPass`'s
-// row is its cross-frame `staging` scratch — grown on demand from the roster
-// length, owned by that pass alone, so it has nowhere else to live.
+// piece of work, not a stray-helper row to trim in passing. `drawOrbitConics`'s
+// row is its cross-frame `staging` scratch — grown on demand from the trail
+// count, owned by that helper alone, so it has nowhere else to live.
 const ALLOWED: Readonly<Record<string, number>> = {
   'frame/checkFrameOrder': 2,
   'frame/cosmoLabelProjection': 1,
@@ -66,7 +66,7 @@ const ALLOWED: Readonly<Record<string, number>> = {
   'frame/sceneOccluderSpheres': 1,
   'frame/slabs': 18,
   'frame/visibleSlabBodies': 2,
-  'frame/passes/orbitTrailsPass': 1,
+  'frame/drawOrbitConics': 1,
   'layers/body/glints/passes/bodyGlintsPass': 2,
   'layers/body/clouds/passes/cloudShellPass': 1,
   'layers/body/spheres/passes/planetsPass': 1,
