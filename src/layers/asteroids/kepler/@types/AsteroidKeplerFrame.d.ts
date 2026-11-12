@@ -9,8 +9,8 @@ export type AsteroidKeplerFrame = {
   /** JD (TT). */
   readonly simJd: number;
   readonly sunFromCamAu: Readonly<Vec3>;
-  /** `asteroidExposureRamp` × the Layer's brightness. */
-  readonly exposure: number;
+  /** Per class, `asteroidExposureRamp` × the Layer's brightness. */
+  readonly exposure: Readonly<Record<AsteroidClass, number>>;
   readonly classFade: Readonly<Record<AsteroidClass, number>>;
   /** The faintest stored H each class keeps under the brightness budget (`asteroidHLimitCenti`). */
   readonly hLimitCenti: Readonly<Record<AsteroidClass, number>>;

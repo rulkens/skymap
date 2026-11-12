@@ -9,6 +9,9 @@ export const ASTEROID_PHOTOMETRY = {
   liftPerAu2: 6e3,
   liftFloorZoomAu: 9,
   liftCapZoomAu: 12,
+  // The distant class's own cap: a few thousand dots on a ring 30–50 AU across never overlap, and
+  // under the inner cap a TNO seen from 400 AU sits ~6 mag under the belt's look, so none drew.
+  distantLiftCapZoomAu: 600,
   /** The phase law dims the belt's backlit near side ~7 mag, a hole; capped, it reads as a dimmer arc. */
   maxPhaseDimMag: 3.25,
   /** A dot's peak ceiling, far under the stars' knee of 8, so a patch reads by its dot count. */

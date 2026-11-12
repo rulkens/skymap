@@ -31,6 +31,15 @@ export const ASTEROID_TUNING_SLIDER_FIELDS: readonly SliderField<AsteroidTuningS
     title: 'Zoom past which the lift stops rising (the belt dots start to overlap)',
   },
   {
+    key: 'distantLiftCapZoomAu',
+    label: 'Far lift cap',
+    min: 10,
+    max: 1500,
+    step: 10,
+    format: (v) => `${v.toFixed(0)} AU`,
+    title: 'The lift cap of the objects beyond Neptune, whose dots stay apart far longer',
+  },
+  {
     key: 'dotRadiusPx',
     label: 'Dot size',
     min: 0.5,

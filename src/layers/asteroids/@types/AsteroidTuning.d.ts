@@ -16,6 +16,7 @@ export type AsteroidTuning = {
   readonly liftPerAu2: number;
   readonly liftFloorZoomAu: number;
   readonly liftCapZoomAu: number;
+  readonly distantLiftCapZoomAu: number;
   readonly dotRadiusPx: number;
   readonly sizeKneeH: number;
   readonly sizeMaxScale: number;

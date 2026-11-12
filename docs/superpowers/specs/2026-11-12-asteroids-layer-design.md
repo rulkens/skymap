@@ -178,7 +178,10 @@ The lift is `K·zoom²` (a dot near what you frame sits ~zoom away, so its appar
 zoom) with zoom clamped to [9, 12] AU and K = 6e3, so 4.9e5 to 8.6e5. The floor is the lift framing Earth
 or the inner system, where the belt shows as a field of dots among the stars. At the cap, top-down on the
 whole belt, the dots start to overlap: past it a lift still growing with zoom² piled them into a blob, and
-a flat one holds the field's surface brightness. Eye-tuned at dpr 2 on shots near Earth, on the Sun at 3
+a flat one holds the field's surface brightness. The cap is per class: the distant class (a few thousand
+dots on a ring 30–50 AU across, never overlapping) caps at 600 AU zoom instead, so the Kuiper belt still
+draws where only it is left (§4.2's 400 → 1,500 AU band); under the 12 AU cap a TNO seen from 400 AU sat
+~6 mag under the belt's look and nothing drew. The compute takes the lift as one lane per class. Eye-tuned at dpr 2 on shots near Earth, on the Sun at 3
 and 12 AU and at 50 AU; floor and cap landed close, so the zoom term spans under 2×. The result is
 multiplied by the Layer's own brightness setting (§4.9). A dot sized by H (§4.5) keeps the base dot's
 peak. Dots under the flux floor (V 16 on the

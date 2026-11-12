@@ -13,10 +13,9 @@ import package::asteroids::lib::apparentMagnitude::asteroidApparentMagnitude;
 import package::asteroids::lib::visibleTag::visibleTag;
 import package::lib::math::LOG10;
 
-// 'sunFromCamAu' is the Sun minus the frame's eye, composed in f64 on the CPU; 'exposure' the display
-// lift times the Layer's brightness; 'classFade' one lane per class, [cls >> 2][cls & 3].
-// 'hLimitCenti' the faintest stored H each class keeps under the brightness budget, laid out as
-// classFade. 'selectedRow' (0xFFFFFFFF = none) is exempt from it and from the flux floor 'minFlux', so
+// 'sunFromCamAu' is the Sun minus the frame's eye, composed in f64 on the CPU; 'classFade' one lane per
+// class, [cls >> 2][cls & 3]. 'hLimitCenti' the faintest stored H each class keeps under the brightness
+// budget, and 'exposure' its display lift times the Layer's brightness, both laid out as classFade. 'selectedRow' (0xFFFFFFFF = none) is exempt from it and from the flux floor 'minFlux', so
 // a followed dot always draws. 'maxPhaseDimMag' caps the phase dimming, for the dot only (the card keeps the physical V).
 struct KeplerUniforms {
   dtWholeDays: f32,
@@ -24,9 +23,9 @@ struct KeplerUniforms {
   count: u32,
   selectedRow: u32,
   sunFromCamAu: vec3<f32>,
-  exposure: f32,
   classFade: array<vec4<f32>, 2>,
   hLimitCenti: array<vec4<f32>, 2>,
+  exposure: array<vec4<f32>, 2>,
   minFlux: f32,
   maxPhaseDimMag: f32,
 };
@@ -89,7 +88,7 @@ fn shownRow(row: u32) -> vec4<f32> {
     v = asteroidApparentMagnitude(hMag, g, rAu, deltaAu, cosPhase);
     v = min(v, hMag + 5.0 * log(rAu * deltaAu) / LOG10 + kepler.maxPhaseDimMag);
   }
-  let flux = pow(10.0, -0.4 * v) * kepler.exposure;
+  let flux = pow(10.0, -0.4 * v) * kepler.exposure[cls >> 2u][cls & 3u];
   if (flux < kepler.minFlux && row != kepler.selectedRow) {
     return vec4<f32>(0.0);
   }
