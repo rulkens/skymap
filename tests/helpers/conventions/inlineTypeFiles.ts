@@ -80,7 +80,6 @@ export const INLINE_TYPE_FILES: ReadonlySet<string> = new Set([
   'src/layers/galaxyCatalog/hiResFamous/load/hiResFamousTexture.ts',
   'src/services/gpu/resources/loadEnvBrdfLut.ts',
   'src/state/camera/flyToLonLatActions.ts',
-  'src/state/selectionRows/selectionRowsSlice.ts',
   'src/state/tour/pausableDwellSaga.ts',
   'src/store/createAppStore.ts',
   'src/store/effects/ReconcileEffects.ts',
