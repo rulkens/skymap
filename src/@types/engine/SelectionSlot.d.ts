@@ -3,7 +3,7 @@ import type { SelectionRefBase } from './selection/SelectionRefBase';
 
 /**
  * SelectionSlot — the slot name shared by every selection surface: the
- * `setSelectionRow` payload, the reconciler's `reextract`, and the tier
+ * `setSelectionRow` payload, the reconciler's `reextract`, and the
  * re-anchor's SELECTION_WRITE_BY_SLOT table. Derived from SelectionState so the
  * three stay in lockstep — adding a slot is a one-line widening of
  * SelectionState that flows everywhere.

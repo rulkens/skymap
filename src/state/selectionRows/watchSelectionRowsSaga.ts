@@ -1,30 +1,12 @@
 /**
- * watchSelectionRowsSaga — the reconciler: the SINGLE owner of the selectionRows
- * derived cache. It keeps every row in sync with its selection ref.
- *
- * On a ref change (updateSelection{Hover,Select,Focus}) it re-extracts that one
- * slot. On clearSelection it re-extracts select + focus (the slots that action
- * nulls) so the derived rows clear in lockstep with the refs — Esc / InfoCard ×
- * depend on this. The gap-fill re-extracts any slot whose row is still null but
- * whose ref is set (a deep link resolved before its data landed), and it fires
- * on three pulses: engineSourceCountReported (every source's commit — the
- * galaxy clouds and the Gaia star bin alike), factsReported (a Layer's facts,
- * the structure store's only signal), and engineStatusChanged (`wireSlots`
- * fires 'loading' right after `createLayers` appends each Layer's selection
- * rows — a Layer-only id needs this one to resolve during boot).
- *
- * Keyed on the COMPLETE resolvability set (every ref-writing action ∪ the
- * catalog-, structure- and Layer-rows-landed pulses), so the cache can't
- * hand-sync-drift the way two authoritative homes do — this is what
- * justifies materializing a derived value in the store (see the spec's
- * exception note).
+ * watchSelectionRowsSaga — the SINGLE owner of the selectionRows cache: each
+ * slot's row and durable id, kept in sync with its ref. A ref write (or
+ * clearSelection, for select + focus) re-extracts its slot. Each commit pulse
+ * first re-anchors every slot to its id, since a reload may reorder rows, then
+ * fills slots whose ref landed before its data (a deep link).
  *
  * Every action that writes a selection ref MUST appear here, or its slot's row
  * goes stale — a clear that the UI never sees.
- *
- * It reaches the composed resolver via getContext('selection'), the same seam
- * watchTierSaga reads for its re-anchor capture. The reducers stay free of
- * engine references; only this saga crosses the boundary.
  */
 import { takeEvery, select, put, getContext } from 'typed-redux-saga';
 
@@ -40,6 +22,8 @@ import {
   engineStatusChanged,
 } from '../engine/engineSlice';
 import { setSelectionRow } from './selectionRowsSlice';
+import { SELECTION_WRITE_BY_SLOT } from '../selection/selectionWriteBySlot';
+import { reanchorWrites } from '../../utils/selection/reanchorWrites';
 import { selectTimeState } from '../time/selectors';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { selectionRoute, selectionRowsRoute } from '../../store/constants';
@@ -77,11 +61,17 @@ export function* watchSelectionRowsSaga() {
     yield* reextract('select');
     yield* reextract('focus');
   });
-  // A late catalog, or the Layer rows landing (engineStatusChanged: 'loading',
-  // fired by `wireSlots` right after `createLayers`), makes a previously-
-  // unresolvable ref resolvable — fill the gaps. Extra firings for
-  // already-filled slots are guarded no-ops (row === null && ref !== null).
+  // The three pulses: every source's commit, a Layer's facts (structure's only
+  // signal), and `wireSlots`' 'loading' right after `createLayers` appends the
+  // Layer rows. Re-anchor writes re-enter `reextract`; the gap-fill's extra
+  // firings are guarded no-ops (row === null && ref !== null).
   yield* takeEvery([engineSourceCountReported, factsReported, engineStatusChanged], function* () {
+    const selection = yield* getContext<SagaContext['selection']>('selection');
+    const ids = yield* select((state: RootState) => state[selectionRowsRoute].ids);
+    const refs = yield* select((state: RootState) => state[selectionRoute]);
+    for (const { slot, ref } of reanchorWrites(ids, refs, (id) => selection.resolveFocusId(id))) {
+      yield* put(SELECTION_WRITE_BY_SLOT[slot](ref));
+    }
     for (const slot of ['hover', 'select', 'focus'] as const) {
       const row = yield* select((state: RootState) => state[selectionRowsRoute][slot]);
       const ref = yield* select((state: RootState) => state[selectionRoute][slot]);

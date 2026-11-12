@@ -97,15 +97,16 @@ committed; static rows answer only `hit` or `absent` (spec §4.1 lists which).
 
 **Files:**
 - Create: `src/utils/selection/reanchorWrites.ts`
-- Create: `src/utils/selection/sameRef.ts`
 - Modify: `src/state/selectionRows/watchSelectionRowsSaga.ts:91` (the pulse handler)
-- Test: `tests/utils/selection/reanchorWrites.test.ts`, `tests/utils/selection/sameRef.test.ts`, `tests/state/selectionRows/watchSelectionRowsSaga.test.ts`
+- Modify: `src/state/selection/selectionWriteBySlot.ts` (the focus entry writes a `'cut'`)
+- Test: `tests/utils/selection/reanchorWrites.test.ts`, `tests/state/selectionRows/watchSelectionRowsSaga.test.ts`
 
-**Contract:** `reanchorWrites` as in spec §4.3. `sameRef(a, b): boolean` is structural equality over the ref's own
-fields (`null` equals `null`).
+**Contract:** `reanchorWrites` as in spec §4.3. The ref compare is the existing `shallowEqualRef`
+(`src/utils/object/`, already structural with `null` equal to `null`, and the slice's dedup), not a new `sameRef`.
 
 The pulse handler runs `reanchorWrites` first and puts each write via `SELECTION_WRITE_BY_SLOT`
-(`src/state/selection/selectionWriteBySlot.ts`), then runs the existing gap-fill.
+(`src/state/selection/selectionWriteBySlot.ts`), then runs the existing gap-fill. The table's focus entry is a
+`'cut'`, so a re-anchor never starts a camera tween.
 
 **Tests:**
 - `reanchorWrites › pending leaves the slot alone`
@@ -116,11 +117,12 @@ The pulse handler runs `reanchorWrites` first and puts each write via `SELECTION
 - `watchSelectionRowsSaga › a count pulse after a reload rewrites select and focus to the new index` (resolver fake:
   the id hits index 7, then index 42 after the pulse)
 - `watchSelectionRowsSaga › a reload that keeps the ref puts no selection write`
+- `watchSelectionRowsSaga › a hover over an id that turns absent clears`
 
-- [ ] Write the tests and see them fail
-- [ ] Implement
-- [ ] Run the touched tests, and confirm they pass
-- [ ] Commit: "Selection slots re-anchor to their ids after any reload"
+- [x] Write the tests and see them fail
+- [x] Implement
+- [x] Run the touched tests, and confirm they pass
+- [x] Commit: "Selection slots re-anchor to their ids after any reload"
 
 ### Task 4: Tier forgets selection; galaxy request moves into the Layer
 
@@ -151,7 +153,7 @@ The pulse handler runs `reanchorWrites` first and puts each write via `SELECTION
 ## Definition of Done
 
 - **Deliverables:**
-  - `FocusResolution.d.ts`, `refOfResolution.ts`, `reanchorWrites.ts` and `sameRef.ts` exist.
+  - `FocusResolution.d.ts`, `refOfResolution.ts` and `reanchorWrites.ts` exist.
   - `captureGalaxyFocusIds.ts` is gone.
   - `galaxyCatalogRequest.ts` sits under `src/layers/galaxyCatalog/records/load/`.
   - Ledger row 32 and its two `CORE_ALLOWED` rows are gone.

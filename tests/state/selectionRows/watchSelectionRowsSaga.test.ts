@@ -14,7 +14,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import createSagaMiddleware from 'redux-saga';
-import { configureStore } from '@reduxjs/toolkit';
+import { configureStore, type Action, type Middleware } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../src/store/rootReducer';
 import { watchSelectionRowsSaga } from '../../../src/state/selectionRows/watchSelectionRowsSaga';
@@ -34,7 +34,7 @@ import type { StructureInfo } from '../../../src/@types/data/structure/Structure
 import { setSimDays, pause } from '../../../src/state/time/timeSlice';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
-import { selectionRowsRoute } from '../../../src/store/constants';
+import { selectionRoute, selectionRowsRoute } from '../../../src/store/constants';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import {
   buildStarOctree,
@@ -57,6 +57,9 @@ import { starOctreeFromSkst } from '../../../src/layers/starCatalog/survey/utils
 import type { StarColumns } from '../../../src/layers/starCatalog/survey/@types/StarColumns';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 import type { PlacedRow } from '../../../src/@types/engine/selection/PlacedRow';
+import type { FocusResolution } from '../../../src/@types/engine/selection/FocusResolution';
+import type { SelectionRefBase } from '../../../src/@types/engine/selection/SelectionRefBase';
+import type { SelectionRowBase } from '../../../src/@types/engine/selection/SelectionRowBase';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -285,5 +288,82 @@ describe('watchSelectionRowsSaga', () => {
     const j2000Pos = deriveBodyStates(CONST_J2000).get(asSceneBodyId('earth'))!.positionMpc;
     expect(row).toMatchObject({ type: 'body', id: 'earth', positionMpc: [...expectedPos] });
     expect((row as PlacedRow).positionMpc).not.toEqual([...j2000Pos]);
+  });
+
+  describe('re-anchor after a reload', () => {
+    const at = (index: number) => ({ type: 'galaxyCatalog', source: 'sdss', index }) as const;
+    // The id's live answer, flipped between pulses the way a reload's commit would.
+    let answer: FocusResolution;
+    let log: Action[];
+
+    function buildReanchor() {
+      log = [];
+      const record: Middleware = () => (next) => (action) => {
+        log.push(action as Action);
+        return next(action);
+      };
+      const sagaMiddleware = createSagaMiddleware();
+      const s = configureStore({
+        reducer: rootReducer,
+        middleware: (g) => g().concat(record, sagaMiddleware),
+      });
+      sagaMiddleware.run(watchSelectionRowsSaga);
+      sagaMiddleware.setContext({
+        selection: {
+          extractRow: (ref: SelectionRefBase | null) => ref as SelectionRowBase | null,
+          focusIdOf: () => 'sdss-1',
+          resolveFocusId: () => answer,
+        },
+      });
+      return s;
+    }
+
+    const selectionWrites = () => log.filter((a) => /^selection\/updateSelection/.test(a.type));
+
+    it('a count pulse after a reload rewrites select and focus to the new index', async () => {
+      answer = { kind: 'hit', ref: at(7) };
+      const s = buildReanchor();
+      s.dispatch(updateSelectionSelect(at(7)));
+      s.dispatch(updateSelectionFocus(at(7)));
+      await flush();
+
+      log = [];
+      answer = { kind: 'hit', ref: at(42) };
+      s.dispatch(engineSourceCountReported({ source: 'sdss', count: 100 }));
+      await flush();
+      expect(s.getState()[selectionRoute].select).toEqual(at(42));
+      expect(s.getState()[selectionRoute].focus).toEqual(at(42));
+      expect(s.getState()[selectionRowsRoute].focus).toEqual(at(42));
+      // A re-anchor points at the same galaxy, so the camera must not fly to it.
+      const focusWrite = selectionWrites().find(updateSelectionFocus.match);
+      expect(focusWrite?.meta.transition).toBe('cut');
+    });
+
+    it('a reload that keeps the ref puts no selection write', async () => {
+      answer = { kind: 'hit', ref: at(7) };
+      const s = buildReanchor();
+      s.dispatch(updateSelectionSelect(at(7)));
+      s.dispatch(updateSelectionFocus(at(7)));
+      await flush();
+
+      log = [];
+      answer = { kind: 'hit', ref: { ...at(7) } };
+      s.dispatch(engineSourceCountReported({ source: 'sdss', count: 100 }));
+      await flush();
+      expect(selectionWrites()).toEqual([]);
+    });
+
+    it('a hover over an id that turns absent clears', async () => {
+      answer = { kind: 'hit', ref: at(7) };
+      const s = buildReanchor();
+      s.dispatch(updateSelectionHover(at(7)));
+      await flush();
+
+      answer = { kind: 'absent' };
+      s.dispatch(engineSourceCountReported({ source: 'sdss', count: 100 }));
+      await flush();
+      expect(s.getState()[selectionRoute].hover).toBeNull();
+      expect(s.getState()[selectionRowsRoute].ids.hover).toBeNull();
+    });
   });
 });
