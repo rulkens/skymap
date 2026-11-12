@@ -16,10 +16,11 @@ import { requestFocus } from '../selection/requestFocus';
 import { requestSelect } from '../selection/requestSelect';
 import {
   clearSelection,
+  requestRetired,
   updateSelectionFocus,
   updateSelectionSelect,
 } from '../selection/selectionSlice';
-import { selectFocusRef, selectFocusRow, selectPendingFocusId } from '../selection/selectors';
+import { selectFocusRow, selectPendingFocusId } from '../selection/selectors';
 import { setSelectionRow } from '../selectionRows/selectionRowsSlice';
 import { engineLoadProgressChanged } from '../engine/engineSlice';
 import { selectEngineStatus, selectLoadProgress } from '../engine/selectors';
@@ -60,24 +61,24 @@ function* commitSaga(pose: FramedCameraPose) {
 
 const isLoadIdle = (action: Action): boolean =>
   engineLoadProgressChanged.match(action) && action.payload === null;
+const isFocusRetired = (action: Action): boolean =>
+  requestRetired.match(action) && action.payload.slot === 'focus';
 
 // Commits in the same tick the focus row lands, so the frame that first
 // follows a moving body already reads the commit as its framing and owes no
-// approach. An id still unresolved once every load has gone quiet names
-// nothing the loaded catalogs hold.
+// approach. A retired request (an absent id), or an id still unresolved once
+// every load has gone quiet, names nothing the loaded catalogs hold.
 function* frameFocusSaga(runtime: LiveCameraRuntime): SagaGenerator<NavigateOutcome> {
   while (
     (yield* select(selectPendingFocusId)) !== null ||
     (yield* select(selectFocusRow)) === null
   ) {
-    // An absent id ends its request with a null focus.
-    if (
-      (yield* select(selectPendingFocusId)) === null &&
-      (yield* select(selectFocusRef)) === null
-    ) {
-      return UNKNOWN_ID;
-    }
-    const { idle } = yield* race({ row: take(setSelectionRow), idle: take(isLoadIdle) });
+    const { idle, retired } = yield* race({
+      row: take(setSelectionRow),
+      idle: take(isLoadIdle),
+      retired: take(isFocusRetired),
+    });
+    if (retired !== undefined) return UNKNOWN_ID;
     if (idle === undefined) continue;
     // A catalog's count report, which resolves its ids, trails the idle
     // report it lands with by an async hop; a load that started in that hop

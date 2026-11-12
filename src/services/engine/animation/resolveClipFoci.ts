@@ -1,74 +1,11 @@
 /**
- * resolveClipFoci — a pure rewrite pass that replaces every id-bearing
- * `FocusBoundEffect` in a `ClipData` with its concrete equivalent, BEFORE
- * `compileClip` runs.
- *
- * ### Why a separate pre-pass instead of resolving inside compileClip?
- *
- * `compileClip` is a structural compiler: it flattens the timeline tree into
- * per-channel tracks. Mixing focus resolution into that pass would give it two
- * responsibilities — understanding the timeline structure AND knowing how to
- * look up catalog data. Separating them keeps each function narrow and
- * independently testable. This mirrors the pattern set by `resolveClipStart`
- * in `cameraSlice.ts`, which rewrites `'live'` starts before any compilation
- * happens.
- *
- * ### The id-bearing arms and their concrete replacements
- *
- *   - `moveTargetId(id, over, ease)` → `moveTarget(target, over, ease)`
- *     The target Vec3 comes from `arrivalFor`'s target over the row's focus facts.
- *
- *   - `dollyToId(id, over, ease)`   → `dollyTo(distance, over, ease)`
- *     The distance in Mpc comes from the same framing's distance.
- *
- *   - `lookAtId(id, over, ease)`    → `aimAt({ yaw, pitch }, over, ease)`
- *     The bearing aims the view from the LIVE orbit target (`from.target`,
- *     passed by the caller from the camera runtime) at the subject's framed
- *     position. Because the bearing is baked here — at resolve time — a
- *     `lookAtId` is only correct before anything else moves the target; see
- *     the `lookAtId` helper's docstring.
- *
- *   - `strafeId(id, byDeg, over, ease)` → `moveTarget(displaced, over, ease)`
- *     The live orbit target displaced along the horizontal right axis of the
- *     bearing toward the subject, by `tan(byDeg) × from.distance` — an
- *     angular sidestep that reads the same at every scale. Same baked-at-
- *     resolve caveat as `lookAtId`.
- *
- *   - `spinToId(id, { over, turns, ease })` → `spin('yaw', { by, over, ease })`
- *     `by` is the SHORTEST signed arc from the live yaw to the subject's
- *     bearing (through `frameBasis`, same as `lookAtId`), plus `turns` full
- *     revolutions. Unlike `lookAtId` it writes only yaw — pitch/target/
- *     distance are untouched — so it composes with `dwellDrift`'s pitch bob.
- *     The primitive this whole task adds: a bearing stored as a world
- *     sightline instead of a frame-local radian constant.
- *
- *   - `focusId(id)` or `focusId(null)` → `{ kind: 'focus', ref }`
- *     `null` maps to `{ kind: 'focus', ref: null }`.  A non-null id resolves
- *     through `resolve.resolveFocusId` to a ref.  There is no `focus()`
- *     helper that builds the resolved arm — `focus()` in `effectHelpers.ts`
- *     builds the UNRESOLVED `kind:'focusId'` arm.
- *
- *   - `aimAlong(forward, over, ease)` → `aimAt({ yaw, pitch }, over, ease)`
- *     Same `orbitAnglesLookingAlong(forward, frameBasis)` encode as `lookAtId`,
- *     but `forward` is an authored WORLD vector, not a subject id — no target
- *     lookup, no dependency on `from` at all. Not a `FocusBoundEffect` (it
- *     carries no `FocusId`), but still unresolved until this pass runs; see
- *     the `aimAlong` helper's docstring for why `lookAtId` cannot substitute.
- *
- * ### Why throw on a null resolution instead of silently dropping?
- *
- * The readiness gate (Task 5 `clipFociReady`) guarantees every id resolves
- * before this function is called. A null here means the gate is broken or the
- * clip was dispatched without the gate — a programmer error, not a graceful
- * degradation opportunity. A clear thrown message pinpoints the culprit
- * without confusing the caller with a partially-resolved clip.
- *
- * ### Walk invariants
- *
- * `seq` / `all` recurse into their `children` arrays; `fork` recurses into its
- * single `child`. `FocusBoundEffect` arms and `aimAlong` are rewritten as
- * above. Every other arm (`hold`, `wait`, scalar camera actions, scene
- * effects) passes through unchanged — it carries nothing this pass resolves.
+ * resolveClipFoci — a pure pre-pass that rewrites every id-bearing effect (and
+ * `aimAlong`) in a `ClipData` to its concrete form before `compileClip` runs, so
+ * the compiler stays structural (the `resolveClipStart` pattern). Bearings are
+ * baked from the LIVE pose at resolve time: a `lookAtId`/`strafeId`/`spinToId` is
+ * only right before something else moves the target (see each helper's docstring).
+ * A miss throws: the readiness gate (`clipFociReady`) has already checked every id,
+ * so a miss is a programmer error, not a case to degrade through.
  */
 
 import type { ClipData } from '../../../@types/animation/ClipData';
@@ -88,31 +25,9 @@ import { lerpAngleShortest } from '../../../utils/math/lerpAngleShortest';
 import { refOfResolution } from '../../../utils/selection/refOfResolution';
 
 /**
- * Rewrite every id-bearing leaf in `data` to its concrete equivalent, given
- * the composed resolver `resolve`, the camera's current vertical FOV in
- * radians, and the live camera pose (`lookAtId` bearings are measured from
- * its target; `strafeId` scales degrees into Mpc by its distance; `spinToId`
- * measures its bearing from the same target and its yaw delta from `from.yaw`
- * — callers pass `cameraRuntime.from`).
- *
- * `simDays` is the live sim instant, threaded into `resolve.extractRow`'s
- * body arm so an id-bearing effect that targets a scene body (Earth, a planet,
- * an S-star) resolves to where it is drawn NOW, not a fixed epoch — callers
- * derive it the same way `runFrame`/`watchGoHomeSaga` do.
- *
- * `frameBasis` is the STEADY orientation-frame basis
- * (`ORIENTATION_FRAMES[settings.orientation]`) resolved at this clip boundary.
- * A `lookAtId` bearing is encoded through it so the aim decodes back to the
- * subject under the same frame the render path decodes with (see
- * `orbitAnglesLookingAlong`). Absent ⇒ identity (world-frame bearings), so every
- * non-engine caller and test is unchanged.
- *
- * Returns a new `ClipData` with the same structure but id-bearing leaves
- * replaced. The `start` field is preserved unchanged (that rewrite is
- * `resolveClipStart`'s responsibility).
- *
- * Throws if any non-null id fails to resolve — callers must ensure the
- * readiness gate has cleared before calling this.
+ * `from` is `cameraRuntime.from`; `simDays` the live sim instant, so a body
+ * resolves where it is drawn now. `frameBasis` is the steady orientation basis
+ * bearings encode through (absent ⇒ world frame). `start` is left untouched.
  */
 export function resolveClipFoci(
   data: ClipData,
@@ -130,12 +45,6 @@ export function resolveClipFoci(
 
 // ─── Walk ────────────────────────────────────────────────────────────────────
 
-/**
- * Recursively rewrite one `Effect` node.
- *
- * Structural nodes (`seq`, `all`, `fork`) recurse into their children.
- * Id-bearing leaves are rewritten. Everything else passes through as-is.
- */
 function walkEffect(
   effect: Effect,
   resolve: SelectionResolver,
@@ -145,7 +54,6 @@ function walkEffect(
   frameBasis?: Mat3,
 ): Effect {
   switch (effect.kind) {
-    // ── Structural nodes — recurse ──────────────────────────────────────────
     case 'seq':
     case 'all':
       return {
@@ -160,7 +68,6 @@ function walkEffect(
         child: walkEffect(effect.child, resolve, fovYRad, from, simDays, frameBasis),
       };
 
-    // ── Id-bearing leaves — rewrite ─────────────────────────────────────────
     case 'moveTargetId': {
       const { target } = resolveFraming(effect.id, resolve, fovYRad, simDays);
       return moveTarget(target, effect.over, effect.ease);
@@ -171,9 +78,6 @@ function walkEffect(
       // tighter/looser knob that survives framing-math and catalog changes.
       return dollyTo(distance * (effect.scale ?? 1), effect.over, effect.ease);
     }
-    // The bearing that puts the subject centre-frame beyond the LIVE orbit
-    // target — baked here, so a lookAtId is only valid before the target
-    // moves (see the `lookAtId` helper docstring).
     case 'lookAtId': {
       const { target } = resolveFraming(effect.id, resolve, fovYRad, simDays);
       const forward: Vec3 = [
@@ -183,23 +87,13 @@ function walkEffect(
       ];
       return aimAt(orbitAnglesLookingAlong(forward, frameBasis), effect.over, effect.ease);
     }
-    // A fixed world sightline, not a subject bearing: no target lookup, no
-    // dependency on `from` at all — just the live `frameBasis`. This is what
-    // makes it safe for a cold-open snap, where `from` is whatever pose the
-    // camera happened to hold before the clip started (see the `aimAlong`
-    // helper's docstring).
+    // A world sightline with no `from` dependency: safe for a cold-open snap.
     case 'aimAlong': {
       return aimAt(orbitAnglesLookingAlong(effect.forward, frameBasis), effect.over, effect.ease);
     }
-    // A lateral tracking move: displace the live orbit target along the
-    // horizontal right axis of the bearing toward the subject. That axis is
-    // the `right` of `imagePlaneBasis(forward, 0, frameUp(frameBasis))` — the
-    // reference up is the frame pole (world +Y absent a basis). The strafe still
-    // holds the target's world height fixed (see `displaced` below) and keys its
-    // vertical-bearing guard off the world XZ magnitude — its long-standing
-    // world-frame semantics, left intact. The angular `byDeg` scales into Mpc by
-    // the live camera distance, so the anchor slides ~byDeg degrees across the
-    // frame regardless of scale.
+    // Sidesteps along the bearing's horizontal right axis (frame pole as up),
+    // holding world height; `byDeg` scales by the live distance, so it reads
+    // the same at every scale.
     case 'strafeId': {
       const { target } = resolveFraming(effect.id, resolve, fovYRad, simDays);
       const forward: Vec3 = [
@@ -222,15 +116,9 @@ function walkEffect(
       ];
       return moveTarget(displaced, effect.over, effect.ease);
     }
-    // A bearing is a world sightline, not a frame-local number: `by` is the
-    // shortest signed arc from the LIVE yaw to the subject's bearing (through
-    // `frameBasis`, same encode as `lookAtId`), so the same authored effect
-    // lands on the same subject under any orientation frame. `turns` (default
-    // 0) folds in extra whole revolutions on top of that shortest arc —
-    // negative takes the long way round, matching the `- Math.PI * 2` idiom
-    // `approachM31.ts`'s NET_YAW_RAD established for the same reason. Reusing
-    // `lerpAngleShortest`'s fold (its result at t=1 IS `from.yaw` plus the
-    // shortest delta) avoids re-deriving the mod-2π formula a second time.
+    // The shortest signed arc from the live yaw to the subject's bearing, plus
+    // `turns` whole revolutions (negative: the long way round). Yaw only, so it
+    // composes with `dwellDrift`'s pitch bob.
     case 'spinToId': {
       const { target } = resolveFraming(effect.id, resolve, fovYRad, simDays);
       const forward: Vec3 = [
@@ -243,15 +131,8 @@ function walkEffect(
       const by = shortest + (effect.turns ?? 0) * Math.PI * 2;
       return spin('yaw', { by, over: effect.over, ease: effect.ease });
     }
-    // ── flyPath — resolve each id-bearing waypoint; pass at-form through ──────
-    //
-    // The path-level pacing (`align` / `rampSec` / `linger` / `lingerSec` /
-    // `spline`, whose causalHermite arm carries `turnDelay` / `lookAhead`; plus
-    // `passBy`) carries
-    // through UNCHANGED. Dropping it here would silently strip the helper's pacing
-    // defaults on normal playback (compileClip would see undefined), which only
-    // the inspector masked by re-injecting via applyPathTuning. Each resolved
-    // waypoint also gains its subject `radius` (the pass-by offset unit).
+    // Path pacing must carry through: dropping it strips the helper's defaults
+    // on playback, which only the inspector masked (applyPathTuning).
     case 'flyPath': {
       const waypoints = effect.waypoints.map((w) => {
         if (!('id' in w)) return w; // already concrete
@@ -282,7 +163,6 @@ function walkEffect(
 
     case 'focusId': {
       if (effect.id === null) {
-        // Explicit focus-clear: resolves to a no-op focus cue.
         const focusClear: SceneEffect & { kind: 'focus' } = { kind: 'focus', ref: null };
         return focusClear;
       }
@@ -297,7 +177,6 @@ function walkEffect(
       return focusCue;
     }
 
-    // ── Pass-through — camera actions, scene effects, hold/wait ────────────
     default:
       return effect;
   }
@@ -305,14 +184,7 @@ function walkEffect(
 
 // ─── Resolution helpers ───────────────────────────────────────────────────────
 
-/**
- * Resolve a `FocusId` to a `{ target, distance }` framing pose.
- *
- * The chain is: `resolve.resolveFocusId` → `resolve.extractRow` → `arrivalFor`.
- * Each step can return null only if the id is unknown or the catalog isn't
- * loaded; the readiness gate guarantees neither happens at call time, so a
- * null here is a programming error — we throw with a descriptive message.
- */
+/** id → ref → row → `arrivalFor`; past the readiness gate a miss is a bug. */
 function resolveFraming(
   id: string,
   resolve: SelectionResolver,

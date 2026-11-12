@@ -13,7 +13,7 @@
  * fires 'loading' right after `createLayers` appends each Layer's selection
  * rows — a Layer-only id needs this one to resolve during boot).
  *
- * Keyed on the COMPLETE resolvability set (every selection-slice action ∪ the
+ * Keyed on the COMPLETE resolvability set (every ref-writing action ∪ the
  * catalog-, structure- and Layer-rows-landed pulses), so the cache can't
  * hand-sync-drift the way two authoritative homes do — this is what
  * justifies materializing a derived value in the store (see the spec's

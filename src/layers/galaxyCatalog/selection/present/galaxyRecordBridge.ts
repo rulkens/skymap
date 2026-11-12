@@ -1,10 +1,10 @@
 /**
- * galaxyRecordBridge — serves the synchronous selection row from record
- * sources whose lookups may be promises. A plain value passes straight through
- * (no flat selection waits a pulse); a promise is memoised, answers null (or
- * `pending` for an id) until it settles, and its settle fires `onSettle`, which
- * the source-count feed turns into the pulse `resolveFocusRefDeferringSaga`
- * already retries on.
+ * galaxyRecordBridge — serves the synchronous selection row from record sources
+ * whose lookups may be promises. A plain value passes straight through; a
+ * promise is memoised and answers null (an id: `pending`) until it settles, and
+ * its settle fires `onSettle`, which the source-count feed turns into the pulse
+ * `resolveFocusRefDeferringSaga` retries on. A durable id asks its claimants
+ * lowest rank first; a position answers the angularly nearest loaded row.
  */
 
 import type { GalaxyCatalogId } from '../../@types/GalaxyCatalogId';

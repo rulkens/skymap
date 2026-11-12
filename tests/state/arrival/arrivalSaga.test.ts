@@ -252,7 +252,7 @@ describe('arrivalSaga', () => {
     expect(h.arrivalCommits()).toBe(0);
 
     h.layerRows.landed = true;
-    h.store.dispatch(engineStatusChanged({ kind: 'loading' }));
+    h.store.dispatch(engineSourceCountReported({ source: 'milkyWay', count: 1 }));
     await flush();
 
     expect(h.arrivalCommits()).toBe(1);
@@ -391,7 +391,7 @@ describe('arrivalSaga', () => {
     expect(h.status()).toEqual({ status: 'failed', reason: 'timeout' });
 
     h.layerRows.landed = true;
-    h.store.dispatch(engineStatusChanged({ kind: 'loading' }));
+    h.store.dispatch(engineSourceCountReported({ source: 'milkyWay', count: 1 }));
     await vi.advanceTimersByTimeAsync(0);
 
     expect(selectFocusRef(h.store.getState())).toEqual(EARTH_REF);
@@ -411,7 +411,7 @@ describe('arrivalSaga', () => {
     expect(h.status().status).toBe('pending');
 
     h.layerRows.landed = true;
-    h.store.dispatch(engineStatusChanged({ kind: 'loading' }));
+    h.store.dispatch(engineSourceCountReported({ source: 'milkyWay', count: 1 }));
     await flush();
 
     expect(h.status()).toEqual({ status: 'arrived' });

@@ -1,8 +1,9 @@
 /**
- * The `body` kind is the body Layer's, so before `createLayers` no row extracts Earth: the
- * home ref (seeded at boot) waits on the engineStatusChanged pulse `wireSlots` fires after
- * `createLayers`. If it missed it, the app would open with nothing selected. (A deep link
- * cannot race this: the arrival asks only once the camera runtime exists, after the rows.)
+ * The `body` kind is the body Layer's, so before `createLayers` no row claims or extracts
+ * anything. The home ref (seeded at boot) waits on the engineStatusChanged pulse `wireSlots`
+ * fires after `createLayers`; a focus request instead retires as absent. The boot arrival
+ * never races this (it asks once the camera runtime exists, after the rows); a hash change
+ * during boot does, and loses its focus.
  */
 
 import { describe, expect, it, vi } from 'vitest';
@@ -11,6 +12,8 @@ import { composeSelectionRows } from '../../../src/services/engine/selection/com
 import { bodyLayerWithoutGpu } from '../../helpers/engine/bodyLayerWithoutGpu';
 import { EARTH_HOME } from '../../../src/data/selection/earthHome';
 import { updateSelectionSelect } from '../../../src/state/selection/selectionSlice';
+import { requestFocus } from '../../../src/state/selection/requestFocus';
+import { selectFocusRef, selectPendingFocusId } from '../../../src/state/selection/selectors';
 import { engineStatusChanged } from '../../../src/state/engine/engineSlice';
 import { selectionRowsRoute } from '../../../src/store/constants';
 import { createAppStore } from '../../../src/store/createAppStore';
@@ -69,5 +72,20 @@ describe('the body selection kind at boot', () => {
     await flush();
 
     expect(rows().select).toMatchObject({ type: 'body', id: 'earth' });
+  });
+
+  it('a request before createLayers retires as absent', async () => {
+    const handle = createAppStore();
+    handle.setSagaContext({
+      ...NOOP_SAGA_CONTEXT,
+      selection: composeSelectionRows(
+        () => [],
+        () => NO_KINDS_OFF,
+      ),
+    });
+    handle.store.dispatch(requestFocus({ id: 'body-mars', transition: 'cut' }));
+    await flush();
+    expect(selectPendingFocusId(handle.store.getState())).toBeNull();
+    expect(selectFocusRef(handle.store.getState())).toBeNull();
   });
 });

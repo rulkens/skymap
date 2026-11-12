@@ -99,6 +99,14 @@ const selectionSlice = createSlice({
         meta: { transition },
       }),
     },
+    // An absent id's request ends with no ref write: re-putting the current ref
+    // would re-fly the camera (watchFocusTweenSaga acts on the action).
+    requestRetired: (
+      selection,
+      action: PayloadAction<{ slot: keyof SelectionState['pending'] }>,
+    ) => {
+      selection.pending[action.payload.slot] = null;
+    },
     clearSelection: (selection) => {
       selection.select = null;
       selection.focus = null;
@@ -124,7 +132,12 @@ const selectionSlice = createSlice({
   },
 });
 
-export const { updateSelectionHover, updateSelectionSelect, updateSelectionFocus, clearSelection } =
-  selectionSlice.actions;
+export const {
+  updateSelectionHover,
+  updateSelectionSelect,
+  updateSelectionFocus,
+  requestRetired,
+  clearSelection,
+} = selectionSlice.actions;
 
 export default selectionSlice.reducer;

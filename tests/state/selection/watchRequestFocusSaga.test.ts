@@ -4,10 +4,10 @@ import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../src/store/rootReducer';
 import { watchRequestFocusSaga } from '../../../src/state/selection/watchRequestFocusSaga';
-import { watchSelectionRowsSaga } from '../../../src/state/selectionRows/watchSelectionRowsSaga';
 import { engineSourceCountReported } from '../../../src/state/engine/engineSlice';
 import { requestFocus } from '../../../src/state/selection/requestFocus';
 import { selectPendingFocusId } from '../../../src/state/selection/selectors';
+import { updateSelectionFocus } from '../../../src/state/selection/selectionSlice';
 import { selectionRoute } from '../../../src/store/constants';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import { selectionResolverOver } from '../../support/selectionResolverOver';
@@ -15,6 +15,7 @@ import type { GalaxyRowFixture, StructureRowFixture } from '../../support/select
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
+const MARS = { type: 'body', id: 'mars' };
 
 // One-row SDSS cloud whose objID matches the sdss-<id> deep link below.
 // objIDs is BigUint64Array (unsigned) — NOT BigInt64Array.
@@ -50,8 +51,6 @@ describe('watchRequestFocusSaga', () => {
     } as unknown as GalaxyRowFixture;
     const structures: StructureRowFixture = { byId: () => null, byCategory: () => [] };
     mw.run(watchRequestFocusSaga);
-    // Retires `pending`: its row write is where the request ends.
-    mw.run(watchSelectionRowsSaga);
     mw.setContext({ selection: selectionResolverOver(structures, galaxies) });
     return s;
   }
@@ -96,9 +95,10 @@ describe('watchRequestFocusSaga', () => {
   });
 
   it('an absent id clears the pending focus', async () => {
+    store.dispatch(updateSelectionFocus(MARS));
     store.dispatch(requestFocus({ id: 'body-krypton', transition: 'fly' }));
     await flush();
     expect(selectPendingFocusId(store.getState())).toBeNull();
-    expect(store.getState()[selectionRoute].focus).toBeNull();
+    expect(store.getState()[selectionRoute].focus).toEqual(MARS);
   });
 });

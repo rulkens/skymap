@@ -21,14 +21,20 @@ import { SATELLITE_FOCUS_PREFIX } from '../focus/present/satelliteFocusPrefix';
 import type { SatellitesRuntime } from '../@types/SatellitesRuntime';
 import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKindRow';
 import type { SatelliteRef } from './@types/SatelliteRef';
-import { hitOrAbsent } from '../../../utils/selection/hitOrAbsent';
+import type { FocusResolution } from '../../../@types/engine/selection/FocusResolution';
 
 const FOCUS_ID = /^satellite-(\d+)$/;
 
 export function satellitesSelectionRow(runtime: SatellitesRuntime): SelectionKindRow<SatelliteRef> {
-  const decode = (id: string): SatelliteRef | null => {
+  const decode = (id: string): FocusResolution<SatelliteRef> => {
     const match = FOCUS_ID.exec(id);
-    return match ? { type: 'satellite', noradId: Number(match[1]) } : null;
+    if (!match) return { kind: 'absent' };
+    const catalog = runtime.propagator.catalog();
+    if (catalog === null) return { kind: 'pending' };
+    const noradId = Number(match[1]);
+    return catalogIndexOf(catalog, noradId) < 0
+      ? { kind: 'absent' }
+      : { kind: 'hit', ref: { type: 'satellite', noradId } };
   };
   return {
     type: 'satellite',
@@ -75,7 +81,7 @@ export function satellitesSelectionRow(runtime: SatellitesRuntime): SelectionKin
     },
     focusId: {
       claims: (id) => id.startsWith(SATELLITE_FOCUS_PREFIX),
-      decode: (id) => hitOrAbsent(decode(id)),
+      decode,
       encode: (ref) => encodeSatelliteFocusId(ref.noradId),
     },
   };

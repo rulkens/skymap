@@ -14,18 +14,17 @@ import type { StructureRuntime } from '../@types/StructureRuntime';
 import type { StructureStore } from '../catalog/@types/StructureStore';
 import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKindRow';
 import type { StructureRef } from './@types/StructureRef';
-import { hitOrAbsent } from '../../../utils/selection/hitOrAbsent';
 
 /** A bare token must satisfy this character class to be a structure seed id. */
 const SAFE_ID_RE = /^[a-z0-9_-]+$/i;
 
 export function structureSelectionRow(
-  runtime: { readonly store: Pick<StructureStore, 'byId' | 'byCategory'> } & Pick<
-    StructureRuntime,
-    'pickCodes'
-  >,
+  runtime: {
+    readonly store: Pick<StructureStore, 'byId' | 'byCategory'>;
+    readonly slot: Pick<StructureRuntime['slot'], 'committed'>;
+  } & Pick<StructureRuntime, 'pickCodes'>,
 ): SelectionKindRow<StructureRef> {
-  const { store, pickCodes } = runtime;
+  const { store, pickCodes, slot } = runtime;
   return {
     type: 'structure',
     pickSources: STRUCTURE_IDS.map(pickCodes.pickCodeOf),
@@ -50,7 +49,12 @@ export function structureSelectionRow(
     },
     focusId: {
       claims: (id) => STRUCTURE_IDS.some((cat) => id.startsWith(`${cat}-`)),
-      decode: (id) => hitOrAbsent(SAFE_ID_RE.test(id) ? { type: 'structure', id } : null),
+      // The bulk lands with no count pulse to wake a pending request, so before
+      // it commits a bulk id answers by format.
+      decode: (id) => {
+        const known = store.byId(id) !== null || (slot.committed() === null && SAFE_ID_RE.test(id));
+        return known ? { kind: 'hit', ref: { type: 'structure', id } } : { kind: 'absent' };
+      },
       encode: (ref) => ref.id,
     },
   };

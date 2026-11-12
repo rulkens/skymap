@@ -4,7 +4,7 @@ import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../src/store/rootReducer';
 import { resolveFocusRefDeferringSaga } from '../../../src/state/selection/resolveFocusRefDeferringSaga';
-import { engineStatusChanged } from '../../../src/state/engine/engineSlice';
+import { engineSourceCountReported } from '../../../src/state/engine/engineSlice';
 import type { SelectionRefBase } from '../../../src/@types/engine/selection/SelectionRefBase';
 import type { FocusResolution } from '../../../src/@types/engine/selection/FocusResolution';
 
@@ -30,13 +30,12 @@ describe('resolveFocusRefDeferringSaga', () => {
     await flush();
     expect(outcome).not.toHaveProperty('result');
 
-    // A non-count pulse retries too: `wireSlots` fires this with no catalog landed.
-    store.dispatch(engineStatusChanged({ kind: 'loading' }));
+    store.dispatch(engineSourceCountReported({ source: 'sdss', count: 1 }));
     await flush();
     expect(outcome).not.toHaveProperty('result');
 
     resolution = { kind: 'hit', ref: MILKY_WAY };
-    store.dispatch(engineStatusChanged({ kind: 'loading' }));
+    store.dispatch(engineSourceCountReported({ source: 'sdss', count: 1 }));
     await flush();
     expect(outcome.result).toEqual(MILKY_WAY);
   });

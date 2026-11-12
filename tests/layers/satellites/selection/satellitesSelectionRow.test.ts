@@ -34,7 +34,16 @@ describe('satellitesSelectionRow', () => {
     expect(row.focusId!.decode('satellite-25544')).toEqual({ kind: 'hit', ref: ISS_REF });
     expect(row.focusId!.encode(ISS_REF)).toBe('satellite-25544');
     expect(row.focusId!.decode('satellite-')).toEqual({ kind: 'absent' });
+    expect(row.focusId!.decode('satellite-1')).toEqual({ kind: 'absent' });
     expect(row.focusId!.claims('body-earth')).toBe(false);
+  });
+
+  it('a focus id is pending until a catalog has landed', () => {
+    const cold = satellitesSelectionRow({
+      ...runtime,
+      propagator: { catalog: () => null },
+    } as unknown as SatellitesRuntime);
+    expect(cold.focusId!.decode('satellite-25544')).toEqual({ kind: 'pending' });
   });
 
   it('encodes a pick word that resolves back to the same satellite', () => {

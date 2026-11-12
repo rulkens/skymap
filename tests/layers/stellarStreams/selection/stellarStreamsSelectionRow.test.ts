@@ -46,4 +46,13 @@ describe('stellarStreamsSelectionRow', () => {
     expect(row.focusId!.claims('body-earth')).toBe(false);
     expect(row.focusId!.claims('stream-')).toBe(false);
   });
+
+  it('a slug the committed meta lacks is absent; before the meta lands it answers by format', () => {
+    expect(row.focusId!.decode('stream-nope')).toEqual({ kind: 'absent' });
+    const cold = stellarStreamsSelectionRow({ ...runtime, meta: () => null });
+    expect(cold.focusId!.decode('stream-nope')).toEqual({
+      kind: 'hit',
+      ref: { type: 'stellarStream', slug: 'nope' },
+    });
+  });
 });
