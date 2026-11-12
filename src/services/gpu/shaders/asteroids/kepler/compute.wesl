@@ -11,6 +11,7 @@
 import package::lib::kepler::solveKeplerFixed;
 import package::asteroids::lib::apparentMagnitude::asteroidApparentMagnitude;
 import package::asteroids::lib::visibleTag::visibleTag;
+import package::lib::math::LOG10;
 
 // 'sunFromCamAu' is the Sun minus the frame's eye, composed in f64 on the CPU; 'exposure' the display
 // lift times the Layer's brightness; 'classFade' one lane per class, [cls >> 2][cls & 3].
@@ -29,6 +30,7 @@ const WORKGROUP_SIZE: u32 = 64u;
 const NO_H_MAGNITUDE: f32 = 21.0;
 const MIN_FLUX: f32 = 3.981071705534969e-7;
 const MIN_DELTA_AU: f32 = 0.001;
+const MAX_PHASE_DIM_MAG: f32 = 3.25;
 const CLASS_MASK: u32 = 7u;
 const HIDDEN_FLAG: u32 = 128u;
 const H_NONE: u32 = 65535u;
@@ -77,6 +79,9 @@ fn shownRow(row: u32) -> vec4<f32> {
     let g = f32((packed >> 8u) & 255u) / G_SCALE - G_OFFSET;
     let cosPhase = dot(p, camRelAu) / max(rAu * deltaAu, 1e-30);
     v = asteroidApparentMagnitude(hMag, g, rAu, deltaAu, cosPhase);
+    // The dot only, the card keeps the physical V: phase dimming capped, so the belt's near side, lit
+    // from behind (~7 mag lost), reads as a dimmer arc, not a hole (TS twin maxPhaseDimMag).
+    v = min(v, hMag + 5.0 * log(rAu * deltaAu) / LOG10 + MAX_PHASE_DIM_MAG);
   }
   let flux = pow(10.0, -0.4 * v) * k.exposure;
   if (flux < MIN_FLUX && row != k.selectedRow) {

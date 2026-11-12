@@ -81,6 +81,7 @@ describe('asteroids shader parity', () => {
     expect(constOf(compute, 'NO_H_MAGNITUDE')).toBe(ASTEROID_PHOTOMETRY.noHMagnitude);
     expect(constOf(compute, 'MIN_FLUX') / ASTEROID_PHOTOMETRY.minFlux).toBeCloseTo(1, 12);
     expect(constOf(compute, 'MIN_DELTA_AU')).toBe(ASTEROID_PHOTOMETRY.minDeltaAu);
+    expect(constOf(compute, 'MAX_PHASE_DIM_MAG')).toBe(ASTEROID_PHOTOMETRY.maxPhaseDimMag);
     expect(constOf(compute, 'CLASS_MASK')).toBe(ASTEROID_FORMAT.flagClassMask);
     expect(constOf(compute, 'LAST_CLASS')).toBe(ASTEROID_CLASSES.length - 1);
     expect(constOf(compute, 'HIDDEN_FLAG')).toBe(ASTEROID_HIDDEN_FLAG);

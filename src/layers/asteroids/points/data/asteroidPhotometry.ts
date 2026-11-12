@@ -16,6 +16,12 @@ export const ASTEROID_PHOTOMETRY = {
   liftPerAu2: 6e3,
   liftFloorZoomAu: 6,
   liftCapZoomAu: 12,
+  /**
+   * Most the H-G phase law may dim a dot, in mag (a phase-term floor of ~0.05); the card keeps the
+   * physical V. Seen with the Sun behind it (α ≳ 120°) the near side of the belt lost ~7 mag and read
+   * as a hole; at this cap it reads as the dimmer arc of the ring.
+   */
+  maxPhaseDimMag: 3.25,
   /** Ceiling of a dot's peak (`asteroids/points/fragment.wesl`), far under the stars' knee of 8. */
   dotKnee: 0.2,
   /**

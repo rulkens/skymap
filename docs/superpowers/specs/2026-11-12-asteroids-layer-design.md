@@ -158,6 +158,10 @@ In the compute pass, with r and Δ in AU and the phase angle α from a dot produ
   V = H + 5·log10(r·Δ) − 2.5·log10((1−G)·Φ₁ + G·Φ₂),  Φᵢ = exp(−Aᵢ·tan(α/2)^Bᵢ), A = 3.33/1.87,
   B = 0.63/1.22, tan(α/2) = √((1−cos α)/(1+cos α)).
 
+For the dot only, the phase dimming is capped at 3.25 mag (a phase-term floor of ~0.05): seen with the Sun
+behind it (α ≳ 120°), the near side of the belt lost ~7 mag to the law and read as a hole in the ring; at
+the cap it reads as the ring's dimmer arc. The card keeps the physical V.
+
 The flux is `pow(10, −0.4·V)`, which is the stars' `fluxApp` convention (theirs is
 `10^(−0.4·absMag)·D_REF²/d²` with D_REF = 10 pc, the same number). It feeds `starPeakIntensity` and
 `STAR_FLUX_EXPOSURE` from `shaders/lib/starPhotometry.wesl`.
