@@ -9,8 +9,6 @@ import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEnco
 import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
-import { ASTEROID_CLASSES } from '../../../data/asteroids/asteroidClasses';
-import { ASTEROID_FORMAT } from '../../../data/asteroids/asteroidFormat';
 import { ASTEROID_FOCUS_GEOMETRY } from './data/asteroidFocusGeometry';
 import { MESH_ASTEROID_NUMBERS } from '../catalog/data/meshAsteroidNumbers';
 import { footprintRadiusMpc } from '../../../utils/selection/footprintRadiusMpc';
@@ -19,6 +17,7 @@ import { asteroidHelioAu } from '../kepler/utils/asteroidHelioAu';
 import { asteroidWindowFade } from '../kepler/utils/asteroidWindowFade';
 import { asteroidAbsoluteMagnitude } from '../catalog/utils/asteroidAbsoluteMagnitude';
 import { asteroidNameOf } from '../catalog/utils/asteroidNameOf';
+import { asteroidClassOf } from '../catalog/utils/asteroidClassOf';
 import { asteroidNowAt } from './utils/asteroidNowAt';
 import { asteroidTransientId } from './present/asteroidTransientId';
 import { asteroidLabel } from './present/asteroidLabel';
@@ -78,8 +77,7 @@ export function asteroidsSelectionRow(runtime: AsteroidsRuntime): SelectionKindR
         number: ref.number,
         name,
         label: asteroidLabel(ref.number, name),
-        asteroidClass:
-          ASTEROID_CLASSES[catalog.flags[k]! & ASTEROID_FORMAT.flagClassMask] ?? 'mainBelt',
+        asteroidClass: asteroidClassOf(catalog, k),
         positionMpc,
         semiMajorAu: catalog.a[k]!,
         eccentricity: catalog.e[k]!,

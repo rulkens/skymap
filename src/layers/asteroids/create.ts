@@ -10,6 +10,7 @@ import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';
 import { createAsteroidsSlot } from './catalog/load/asteroidsSlot';
 import { createAsteroidKeplerSolver } from './kepler/render/asteroidKeplerSolver';
 import { createAsteroidPointRenderer } from './points/render/asteroidPointRenderer';
+import { createOrbitTrailRenderer } from '../../services/gpu/renderers/bodies/orbitTrailRenderer';
 import AsteroidCatalogWorker from './catalog/load/parseAsteroidCatalog.worker?worker';
 
 export function create(deps: LayerCoreDeps<AsteroidsFacts>): AsteroidsRuntime {
@@ -31,6 +32,7 @@ export function create(deps: LayerCoreDeps<AsteroidsFacts>): AsteroidsRuntime {
       pickCode,
       solver,
     }),
+    orbitRenderer: createOrbitTrailRenderer(deps.ctx.device, HDR_TARGET_FORMAT),
     pickCode,
   };
 }

@@ -454,13 +454,13 @@ class, a, e, i (deg), period (years), H (or "H unknown"), distance from the Sun 
 and the data epoch. Outside the window it shows the elements but no "now" values. The compact card shows
 name or number, class and V.
 
-- [ ] Test `pick round-trips row 432 to Eros's ref and back`.
-- [ ] Test `focus id asteroid-433 decodes to number 433; asteroid-4 is not claimed`.
-- [ ] Test `claims rejects asteroid-x and asteroid-` (no catch-all).
-- [ ] Test `extractRow places the asteroid where asteroidHelioAu says, in world Mpc`.
-- [ ] Test `search yields named rows only and skips the meshed numbers`.
-- [ ] Test `card shows H unknown for a row with no H, and no now values outside the window`.
-- [ ] Commit `Asteroids: pick, follow, search and cards`.
+- [x] Test `pick round-trips row 432 to Eros's ref and back`.
+- [x] Test `focus id asteroid-433 decodes to number 433; asteroid-4 is not claimed`.
+- [x] Test `claims rejects asteroid-x and asteroid-` (no catch-all).
+- [x] Test `extractRow places the asteroid where asteroidHelioAu says, in world Mpc`.
+- [x] Test `search yields named rows only and skips the meshed numbers`.
+- [x] Test `card shows H unknown for a row with no H, and no now values outside the window`.
+- [x] Commit `Asteroids: pick, follow, search and cards`.
 
 ### Task 10: The selected orbit ring
 
@@ -483,9 +483,9 @@ The pass collects the selected and focused asteroid rows and calls
 `drawOrbitConics(pass, runtime.orbitRenderer, trails, orbitTrailView(view, ctx, state))` (Task 1).
 Fade = class fade × `asteroidWindowFade`.
 
-- [ ] Test `the trail passes through the dot`: the conic point at its own mean anomaly equals
+- [x] Test `the trail passes through the dot`: the conic point at its own mean anomaly equals
       `sunMpc + asteroidHelioAu·AU` within 1e-9 relative.
-- [ ] Commit `Asteroids: the selected asteroid's orbit ring`.
+- [x] Commit `Asteroids: the selected asteroid's orbit ring`.
 
 ### Task 11: Docs, website, attributions
 

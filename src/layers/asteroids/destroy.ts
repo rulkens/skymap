@@ -4,5 +4,6 @@ import type { AsteroidsRuntime } from './@types/AsteroidsRuntime';
 export function destroy(runtime: AsteroidsRuntime): void {
   runtime.slot.release();
   runtime.renderer.destroy();
+  runtime.orbitRenderer.destroy();
   runtime.solver.destroy();
 }
