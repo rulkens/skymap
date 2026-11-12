@@ -113,6 +113,7 @@
     "fetch-height": "tsx tools/fetch/fetchHeightSources.ts",
     "fetch-horizons": "tsx tools/fetch/fetchHorizons.ts",
     "fetch-celestrak": "tsx tools/fetch/fetchCelestrak.ts",
+    "fetch-mpcorb": "tsx tools/fetch/fetchMpcorb.ts",
     "fetch-voyager-windows": "tsx tools/fetch/fetchVoyagerWindows.ts",
     "fetch-hyperleda": "tsx tools/fetch/fetchHyperLeda.ts",
     "fetch-milliquas": "tsx tools/fetch/fetchMilliquas.ts",

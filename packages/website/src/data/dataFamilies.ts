@@ -59,7 +59,7 @@ export const DATA_FAMILIES: readonly DataFamily[] = [
       'The orbits of the planets, moons and Earth’s satellites, the positions they are corrected to, and the figures on each body’s card.',
     pages: 'each',
     sections: [],
-    ids: ['jpl-elements', 'horizons', 'celestrak', 'seed-planet-facts'],
+    ids: ['jpl-elements', 'horizons', 'celestrak', 'mpcorb', 'seed-planet-facts'],
     step: 'planets-moons-and-their-positions',
   },
   {

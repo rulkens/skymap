@@ -299,6 +299,13 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     shows:
       'Nothing yet. The data is fetched daily; the layer that draws the satellites is still being built.',
   },
+  mpcorb: {
+    description:
+      'The Minor Planet Center’s orbits of every numbered asteroid, about 896,000 of them, rewritten daily.',
+    about:
+      'The Minor Planet Center collects the world’s observations of asteroids and comets and publishes an orbit for each object. We take the numbered asteroids, store their orbits in our own compact file and ship the file’s header with it, as the Center asks.',
+    shows: 'Nothing yet. The layer that draws the asteroids is still being built.',
+  },
   'seed-planet-facts': {
     title: 'Fact sheets of the Solar System bodies',
     description:

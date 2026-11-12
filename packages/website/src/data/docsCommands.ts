@@ -66,6 +66,7 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
           'fetch-hyperleda',
           'fetch-local-bubble',
           'fetch-milliquas',
+          'fetch-mpcorb',
           'fetch-skraafoto',
           'fetch-structures',
           'fetch-textures',
