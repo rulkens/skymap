@@ -298,12 +298,12 @@ The WGSL mirror computes flux as `pow(10, −0.4·V)` and feeds `starPeakIntensi
 from `shaders/lib/starPhotometry.wesl:120-166`, the stars' convention (theirs:
 `10^(−0.4·absMag)·D_REF²/d²`, D_REF = 10 pc, which is the same number).
 
-- [ ] Test `matches Horizons V`: three numbered asteroids (e.g. 3 Juno, 433 Eros, 624 Hektor) at
+- [x] Test `matches Horizons V`: three numbered asteroids (e.g. 3 Juno, 433 Eros, 624 Hektor) at
       2026-01-01T00:00 TT. Take r, Δ, α and V from JPL Horizons (curl the API; record the query in the
       test header) and assert |V − Horizons V| < 0.05 using Horizons' own H and G.
-- [ ] Test `opposition gives the brightest V and no NaN at cosα = 1`.
-- [ ] Test `exposure ramp is exactly 1 inside the near anchor, monotone, and flat past the far anchor`.
-- [ ] Commit `Asteroids: apparent magnitude on CPU and GPU`.
+- [x] Test `opposition gives the brightest V and no NaN at cosα = 1`.
+- [x] Test `exposure ramp is exactly 1 inside the near anchor, monotone, and flat past the far anchor`.
+- [x] Commit `Asteroids: apparent magnitude on CPU and GPU`.
 
 ### Task 7: The Layer skeleton — state, visibility, settings, loading (review: yes)
 
