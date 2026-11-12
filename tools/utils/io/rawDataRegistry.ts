@@ -12,7 +12,23 @@
 
 import { resolve } from 'node:path';
 
+import { BMNG_MONTHS } from './BMNG_MONTHS.ts';
 import { BMNG_VINTAGE } from './bmngVintage.ts';
+
+/** One Blue Marble 2004 equirect row; the twelve registry keys below are literal so `RawDataKey` stays closed. */
+function bmngMonthRow(index: number) {
+  const { stamp, baseUrl, label } = BMNG_MONTHS[index]!;
+  const file = `world.topo.bathy.${stamp}.3x21600x10800.jpg`;
+  return {
+    path: `data/raw/textures/${file}`,
+    kind: 'file',
+    source: 'gitignored',
+    description: `NASA Blue Marble Next Generation, ${label} topo+bathymetry equirect, 21600x10800 JPG (NASA media guidelines, credit NASA Earth Observatory). The app's Earth base texture when it is the BMNG_VINTAGE month (also the --dev source for the tile bake); every month is the cloud bake's ice-mask source (npm run fetch-cloud-inputs).`,
+    upstream: `${baseUrl}${file}`,
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  } as const;
+}
 
 export type RawDataEntry = {
   readonly path: string;
@@ -727,15 +743,18 @@ export const RAW_DATA = {
   // tile layer falls back to the base outside the baked window (see
   // `BMNG_VINTAGE` for why).
 
-  'textures.nasaBmng': {
-    path: `data/raw/textures/world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x10800.jpg`,
-    kind: 'file',
-    source: 'gitignored',
-    description: `NASA Blue Marble Next Generation, ${BMNG_VINTAGE.label} topo+bathymetry equirect, 21600x10800 JPG (NASA media guidelines, credit NASA Earth Observatory). Full-res Earth source; also the --dev source for the tile bake.`,
-    upstream: `${BMNG_VINTAGE.baseUrl}world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x10800.jpg`,
-    fetcher: 'tools/fetch/fetchTextures.ts',
-    readme: 'textures.readme',
-  },
+  'textures.nasaBmngMonth01': bmngMonthRow(0),
+  'textures.nasaBmngMonth02': bmngMonthRow(1),
+  'textures.nasaBmngMonth03': bmngMonthRow(2),
+  'textures.nasaBmngMonth04': bmngMonthRow(3),
+  'textures.nasaBmngMonth05': bmngMonthRow(4),
+  'textures.nasaBmngMonth06': bmngMonthRow(5),
+  'textures.nasaBmngMonth07': bmngMonthRow(6),
+  'textures.nasaBmngMonth08': bmngMonthRow(7),
+  'textures.nasaBmngMonth09': bmngMonthRow(8),
+  'textures.nasaBmngMonth10': bmngMonthRow(9),
+  'textures.nasaBmngMonth11': bmngMonthRow(10),
+  'textures.nasaBmngMonth12': bmngMonthRow(11),
   'textures.nasaBmngDev': {
     path: `data/raw/textures/world.topo.bathy.${BMNG_VINTAGE.stamp}.3x5400x2700.jpg`,
     kind: 'file',
@@ -1418,6 +1437,42 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'committed',
     description: 'Provenance for the Viking MDIM 2.1 mosaic — upstream, grid, COG conversion.',
+  },
+
+  // ─── Moon surface sources — fetched by hand, no fetchers ───────────────
+  // Same COG + leaf-symlink arrangement as Mars; the strip originals are deleted.
+
+  'lroc.wacGlobal100m': {
+    path: 'data/raw/lroc/Lunar_LRO_LROC-WAC_Mosaic_global_100m_June2013_cog.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'LROC WAC global morphologic mosaic, JPEG COG of the USGS 100 m mosaic: 109164x54582 grey Byte, NoData 0, equirectangular on the 1,737,400 m sphere, edge-registered, shot at 55-75 deg incidence, Sun from the east west of lon -90 and from the west elsewhere.',
+    upstream:
+      'https://planetarymaps.usgs.gov/mosaic/Lunar_LRO_LROC-WAC_Mosaic_global_100m_June2013.tif',
+    readme: 'lroc.readme',
+  },
+  'lroc.readme': {
+    path: 'data/raw/lroc/README.md',
+    kind: 'file',
+    source: 'committed',
+    description: 'Provenance for the LROC WAC mosaic — upstream, grid, lighting, COG conversion.',
+  },
+  'lola.ldem118m': {
+    path: 'data/raw/lola/Lunar_LRO_LOLA_Global_LDEM_118m_Mar2014_cog.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'LOLA 118 m global LDEM, Float32 tiled COG of the Int16 half-metre USGS mosaic (unscaled; sharp cannot read signed 16-bit): 92160x46080 metres above the 1,737,400 m sphere, NoData -32768, equirectangular, edge-registered.',
+    upstream: 'https://planetarymaps.usgs.gov/mosaic/Lunar_LRO_LOLA_Global_LDEM_118m_Mar2014.tif',
+    readme: 'lola.readme',
+  },
+  'lola.readme': {
+    path: 'data/raw/lola/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the LOLA DEM — upstream, grid, vertical reference, COG conversion.',
   },
   'hirise.gale.dtm': {
     path: 'data/raw/hirise/gale/MSL_Gale_DEM_Mosaic_1m_v3_cog.tif',
@@ -2155,6 +2210,25 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'committed',
     description: 'Provenance for the Horizons vectors — the exact query, body table and span.',
+  },
+
+  // ─── Live cloud bake (tools/cloud-bake-rs) ────────────────────────────
+
+  'clouds.cache': {
+    path: 'data/raw/clouds/cache',
+    kind: 'directory',
+    source: 'gitignored',
+    description:
+      'Cloud bake download cache: one `<YYYY-MM-DD>/` directory per baked day (granules, mosaics, geostationary frames, calibration probe). Eviction = deleting a day directory.',
+    upstream: 'https://gibs.earthdata.nasa.gov/ and https://view.eumetsat.int/',
+    fetcher: 'tools/cloud-bake-rs',
+    readme: 'clouds.readme',
+  },
+  'clouds.readme': {
+    path: 'data/raw/clouds/README.md',
+    kind: 'file',
+    source: 'committed',
+    description: 'Provenance and licences for the live cloud bake inputs.',
   },
 
   // ─── StarNet++ weights (famous-galaxy curator) ────────────────────────

@@ -22,13 +22,18 @@ function pointRow(
     key: id,
     slot: runtime.points.get(id)!,
     req: (tier) => galaxyCatalogRequest(id, tier),
+    // Famous stays resident when switched off: its ids are the names focus links and tour
+    // beats resolve through, and a tour shows it in the clip that first needs one resolved.
     // Target 0 means the tier ships no file for this source (SDSS at `small`); a source
     // with no caps has no target and is listed at every tier.
-    demand: {
-      tiers: TIER_LADDER.filter((tier) => tierTarget(id, tier) !== 0),
-      near: { band: 'deepZoom', edge: 'in', lead: 10, release: 100 },
-      alsoWhen: ['searching'],
-    },
+    demand:
+      id === 'famousGalaxy'
+        ? 'always'
+        : {
+            tiers: TIER_LADDER.filter((tier) => tierTarget(id, tier) !== 0),
+            near: { band: 'deepZoom', edge: 'in', lead: 10, release: 100 },
+            alsoWhen: ['searching'],
+          },
     priority: entry.priority,
     gates: { address: 'survey', item: id },
   };

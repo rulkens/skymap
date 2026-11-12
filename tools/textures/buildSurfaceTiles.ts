@@ -50,6 +50,7 @@ import type { SurfaceTileManifestBand } from '../../src/layers/body/surfaceTiles
 import type { SurfaceTileBand } from '../../src/layers/body/surfaceTiles/format/@types/SurfaceTileBand';
 import { SURFACE_TILE_PRODUCTS } from '../../src/layers/body/surfaceTiles/format/data/surfaceTileProducts';
 import { SURFACE_TILE_PX } from '../../src/layers/body/surfaceTiles/format/data/surfaceTileParams';
+import { WHOLE_GLOBE_BOUNDS } from '../../src/layers/body/surfaceTiles/format/data/wholeGlobeBounds';
 import { HEIGHT_POSTS_PER_TILE } from '../../src/layers/body/surfaceTiles/format/data/heightTileFormat';
 import { surfaceTilePath } from '../../src/layers/body/surfaceTiles/format/utils/surfaceTilePath';
 import { surfaceTileBandFromBounds } from '../../src/layers/body/surfaceTiles/format/utils/surfaceTileBandFromBounds';
@@ -68,6 +69,7 @@ import { SURFACE_FIXED_SITES } from '../../src/data/bodies/surfaceFixedSites';
 import { buildSiteGroundHeights } from './buildSiteGroundHeights';
 import { earthSurfaceBake } from './surfaceBodies/earthSurfaceBake';
 import { marsSurfaceBake } from './surfaceBodies/marsSurfaceBake';
+import { moonSurfaceBake } from './surfaceBodies/moonSurfaceBake';
 import type { SurfaceBakeBand } from './@types/SurfaceBakeBand';
 import type { SurfaceBodyBake } from './@types/SurfaceBodyBake';
 import type { SurfaceImagerySource } from './@types/SurfaceImagerySource';
@@ -77,7 +79,7 @@ import type { LonLatBounds } from '../../src/layers/body/surfaceTiles/format/@ty
 /** Default band for a caller that doesn't clamp — degenerates
  *  `candidateTileIndices` back to the whole grid at every level. */
 const WHOLE_GLOBE_BANDS: readonly SurfaceTileBand[] = [
-  surfaceTileBandFromBounds({ west: -180, east: 180, south: -90, north: 90 }, 0, Infinity),
+  surfaceTileBandFromBounds(WHOLE_GLOBE_BOUNDS, 0, Infinity),
 ];
 
 /**
@@ -631,6 +633,7 @@ export async function bakeAll(
 const SURFACE_BODY_BAKES: Record<SurfaceTileBodyId, SurfaceBodyBake> = {
   earth: earthSurfaceBake,
   mars: marsSurfaceBake,
+  moon: moonSurfaceBake,
 };
 
 /** `--product albedo|height|night`: `parseFlags` stays bool-only by design (see its

@@ -19,6 +19,7 @@ import { seedCameraRuntime } from './camera/seedCameraRuntime';
 import { NEAR_CLIP_MPC, FAR_CLIP_MPC } from './camera/framing/cameraFraming';
 import { liveUpBasisQuat } from './camera/orientation/liveUpBasisQuat';
 import { isSceneSettled } from './helpers/isSceneSettled';
+import { viewUnsettledReasons } from './helpers/viewUnsettledReasons';
 import type { CubemapCaptureRuntimes } from '../../@types/engine/state/CubemapCaptureRuntimes';
 import { APP_CUBEMAP_CAPTURE_REGISTRY } from '../../compositions/appCubemapCaptures';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
@@ -85,8 +86,9 @@ export function createEngine(
 
   // Unlike the GPU timing service this needs no `?gpuTimings` gate and no device,
   // so the DebugPanel always has an fps line. `lastStartMs === 0` doubles as the
-  // "no frame has run yet" sentinel that seeds the first interval to 0.
-  const frameStats = { fps: 0, cpuMs: 0, lastStartMs: 0 };
+  // "no frame has run yet" sentinel that seeds the first interval to 0. `threw`
+  // keeps `settled()` pending: a throwing frame draws nothing, so a shot would be blank.
+  const frameStats = { fps: 0, cpuMs: 0, lastStartMs: 0, threw: false };
 
   // Seeded with placeholders; wireInput re-seeds once the initial OrbitCamera
   // exists. The register seeds from the camera slice's initial `base` — the
@@ -211,7 +213,9 @@ export function createEngine(
           const start = performance.now();
           const intervalMs = frameStats.lastStartMs === 0 ? 0 : start - frameStats.lastStartMs;
           frameStats.lastStartMs = start;
+          frameStats.threw = true;
           frameRef.current();
+          frameStats.threw = false;
           const next = updateFrameStats(frameStats, {
             intervalMs,
             cpuMs: performance.now() - start,
@@ -398,6 +402,11 @@ export function createEngine(
     state.booted = false;
   }
 
+  const unsettled = (): string[] => [
+    ...(frameStats.threw ? ['last frame threw'] : []),
+    ...viewUnsettledReasons(state, store.getState().camera),
+  ];
+
   // The engine's only public surface: imperative operations only — store writes go
   // direct to the store.
   const handle: EngineHandle = {
@@ -405,7 +414,7 @@ export function createEngine(
     settled: () =>
       waitUntilSettled(
         () => state.subsystems.scheduler.nextFrame(),
-        () => state.fadesAnimating,
+        () => unsettled().length > 0,
       ),
     debug: {
       // The Map the bootstrap populates, so the dev panel sees slots as they appear.
@@ -416,6 +425,7 @@ export function createEngine(
         return state.gpu.timingService;
       },
       requestRender: () => state.subsystems.scheduler.requestRender(),
+      unsettled,
       // `idle` is derived, not stored, from the wall-clock gap since the last frame,
       // so a sleeping render-on-demand loop reads "idle" rather than a stale fps.
       frameStats: (): FrameStats => ({

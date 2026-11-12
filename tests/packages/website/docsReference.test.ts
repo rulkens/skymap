@@ -24,7 +24,7 @@ import {
 import type { OrientationFrameId } from '../../../src/@types/camera/orientation/OrientationFrameId';
 import type { LabelCategory } from '../../../src/@types/engine/data/LabelCategory';
 import { APP_COMPOSITION } from '../../../src/compositions/app';
-import { tourRegistry } from '../../../src/data/animation/tours/tourRegistry';
+import { APP_TOUR_REGISTRY } from '../../../src/compositions/appTours';
 import { APP_EXHIBIT_REGISTRY } from '../../../src/compositions/appExhibits';
 import { FLOW_SLIDER_FIELDS } from '../../../src/layers/flow/streamlines/data/flowFields';
 import { orientationFrameLabel } from '../../../src/data/orientation/orientationFrameLabel';
@@ -97,6 +97,7 @@ describe('Settings page', () => {
     /^labels\.focusedOnly$/,
     /^thumbnails\.enabled$/,
     /^blackHoleLensingTuning\./,
+    /^satelliteTuning\./,
     /^bodies\.items\.[\w-]+\.enabled$/,
     /^(constellations|localBubble)\.intensity$/,
     /^earth\.(atmosphereExposure|ambientLight|oceanRoughness)$/,
@@ -105,7 +106,7 @@ describe('Settings page', () => {
     /^galaxyCatalogs\.items\.(sdss|2mrs|glade|milliquas|desiDeep|desiWedge|desiSgw)\.labelEnabled$/,
     /^starCatalogs\.items\.(gaiaStars|sStar)\.labelEnabled$/,
     /^starCatalogs\.(refineThreshold|glowOverlap|exposure(Near|Mid|Far)X|aggregateIntensityCap|chunkSlotsOverride)$/,
-    /^milkyWay\.(enabled|starSizeScale|exposure|starPxMin|starPxMax|softness|lodApparent|aggregateDivisor|starCount)$/,
+    /^milkyWay\.(enabled|renderer|cloud\.\w+|field\..+)$/,
     /^cosmicWebDensity\.items\.[\w-]+\.(contrast|densityScale|paletteId|trim|exposure|bands|intensity)$/,
     /^zoneOfAvoidance\.(intensity|radialFalloff|edgeSharpness|color|labelColor)$/,
     /^probeSpheres\./,
@@ -274,7 +275,9 @@ describe('URL parameters page', () => {
     expect(sorted(DOCS_EXHIBIT_IDS.map((row) => row.id))).toEqual(
       sorted(Object.keys(APP_EXHIBIT_REGISTRY)),
     );
-    expect(sorted(DOCS_TOUR_IDS.map((row) => row.id))).toEqual(sorted(Object.keys(tourRegistry)));
+    expect(sorted(DOCS_TOUR_IDS.map((row) => row.id))).toEqual(
+      sorted(Object.keys(APP_TOUR_REGISTRY)),
+    );
   });
 
   it('lists every way a focus id can begin, each with an example the app reads', () => {

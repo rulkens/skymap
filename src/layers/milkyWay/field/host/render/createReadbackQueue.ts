@@ -60,10 +60,13 @@ export type ReadbackQueue = {
   stream<T>(spec: ReadbackStreamSpec<T>): ReadbackStream<T>;
   /** Buffer-sourced sibling of `stream` — same shared chain, so a buffer readback (e.g. a debug-only compute-output check) can never race a texture one for the same mapped-buffer reason. */
   bufferStream<T>(spec: BufferReadbackStreamSpec<T>): ReadbackStream<T>;
+  /** Terminal: nothing pending or later lands, logs or submits. Call before destroying the staging buffers. */
+  cancel(): void;
 };
 
 export function createReadbackQueue(device: GPUDevice): ReadbackQueue {
   let chain: Promise<void> = Promise.resolve();
+  let cancelled = false;
 
   // Shared by both `stream` and `bufferStream`: only the copy command differs
   // (texture->buffer vs buffer->buffer), everything about queuing/mapping/
@@ -88,7 +91,7 @@ export function createReadbackQueue(device: GPUDevice): ReadbackQueue {
             // rather than submit it and discard the result. Grid and content
             // stay paired because the copy happens immediately before its own
             // map, and callers re-request whenever they re-render the source.
-            if (mine !== token) return;
+            if (mine !== token || cancelled) return;
             const enc = device.createCommandEncoder({ label });
             encodeCopy(enc);
             device.queue.submit([enc.finish()]);
@@ -106,10 +109,12 @@ export function createReadbackQueue(device: GPUDevice): ReadbackQueue {
             // Superseded while the map was pending. The later request is
             // already chained behind this one, so landing now would clobber
             // `onLand`'s target with data that request is about to overwrite.
-            if (mine !== token) return;
+            if (mine !== token || cancelled) return;
             onLand(value);
           })
           .catch((err) => {
+            // A destroyed buffer rejects its pending map: expected after cancel.
+            if (cancelled) return;
             // Always logged (pre-existing behaviour for every caller), and
             // ALSO forwarded to whoever is awaiting `mine`'s own attempt —
             // `mine` never got superseded away from here, since a superseded
@@ -136,6 +141,10 @@ export function createReadbackQueue(device: GPUDevice): ReadbackQueue {
       return chainedStream(spec.label, spec.buffer, spec.decode, (enc) => {
         enc.copyBufferToBuffer(spec.sourceBuffer, 0, spec.buffer, 0, spec.size);
       });
+    },
+
+    cancel(): void {
+      cancelled = true;
     },
   };
 }

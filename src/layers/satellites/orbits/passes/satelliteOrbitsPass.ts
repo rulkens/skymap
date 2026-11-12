@@ -14,7 +14,7 @@ import { sceneOccluderSpheres } from '../../../../services/engine/frame/sceneOcc
 import { writeOrbitTrailRecord } from '../../../../utils/orbit/writeOrbitTrailRecord';
 import { SCENE_EARTH } from '../../../../data/bodies/sceneEarth';
 import { SATELLITE_CLASSES } from '../../../../data/satellites/satelliteClasses';
-import { SATELLITE_POINT_STYLE } from '../../points/data/satellitePointStyle';
+import { SATELLITE_PROFILES } from '../../points/data/satelliteProfiles';
 import { satelliteLayerOpacity } from '../../points/subsystems/satelliteLayerOpacity';
 import { satelliteOrbitEllipse } from '../subsystems/satelliteOrbitEllipse';
 import { composeTemeToWorld } from '../../sweep/subsystems/composeTemeToWorld';
@@ -65,7 +65,10 @@ export function satelliteOrbitsPass(runtime: SatellitesRuntime): ContentPass<'sa
             eyeMpc: eye,
             pxPerRad: ctx.drawPxPerRad,
             ...orbit,
-            color: SATELLITE_POINT_STYLE.color,
+            color:
+              state.settings.satelliteTuning.colors[
+                SATELLITE_PROFILES[catalog.profileCodes[k]!]!.id
+              ],
             fade: classFade * opacity,
           },
           staging,

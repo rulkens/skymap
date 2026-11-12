@@ -7,7 +7,7 @@ import { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsS
 import { takeoverStarted } from '../../../src/state/takeover/takeoverActions';
 import { beatChanged, setPaused } from '../../../src/state/tour/tourSlice';
 import { setSimDays } from '../../../src/state/time/timeSlice';
-import { tourRegistry } from '../../../src/data/animation/tours/tourRegistry';
+import { APP_TOUR_REGISTRY } from '../../../src/compositions/appTours';
 import { bodyDriverGeometry } from '../../../src/utils/scene/bodyDriverGeometry';
 import type { ToggleRow } from '../../../src/@types/settings/ToggleRow';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
@@ -55,7 +55,7 @@ describe('selectDomeStatus', () => {
       kind: 'tour',
       id: 'grandTour',
       beatIndex: 3,
-      beatCount: tourRegistry.grandTour.beats.length,
+      beatCount: APP_TOUR_REGISTRY.grandTour.beats.length,
       paused: true,
     });
   });

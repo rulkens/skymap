@@ -8,7 +8,7 @@
  */
 
 import type { FramedCameraPose } from '../../@types/camera/pose/FramedCameraPose';
-import { isRegistryBodyId } from '../scene/isRegistryBodyId';
+import { isHostBodyId } from '../scene/isHostBodyId';
 import { isSurfaceSiteId } from '../scene/isSurfaceSiteId';
 import { parseFiniteNumbers } from './parseFiniteNumbers';
 import { MIN_DISTANCE_MPC } from '../camera/orbitCamera/clampDistance';
@@ -20,7 +20,7 @@ export function decodeFramedPose(value: string): FramedCameraPose | null {
   if (tag === 'b') {
     if (fields.length !== 17) return null;
     const bodyId = fields[1]!;
-    if (!isRegistryBodyId(bodyId)) return null;
+    if (!isHostBodyId(bodyId)) return null;
     const n = parseFiniteNumbers(fields.slice(2));
     if (n === null) return null;
     return {
@@ -51,7 +51,7 @@ export function decodeFramedPose(value: string): FramedCameraPose | null {
   if (tag === 'k') {
     if (fields.length !== 6) return null;
     const body = fields[1]!;
-    if (!isRegistryBodyId(body)) return null;
+    if (!isHostBodyId(body)) return null;
     const n = parseFiniteNumbers(fields.slice(2));
     if (n === null || Math.abs(n[3]!) > Math.PI / 2) return null;
     return {

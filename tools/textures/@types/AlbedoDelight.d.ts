@@ -1,3 +1,5 @@
+import type { PhotoSun } from './PhotoSun';
+
 /** AlbedoDelight — `delightedImagerySource`'s de-lighting knobs, named after
  *  the albedo bench that tuned them (`.superpowers/sdd/2026-09-17-terrain-f4-mars/
  *  albedo-bench-prototype/`): flatten a baked-in sun out of a photographic
@@ -6,9 +8,8 @@
 export type AlbedoDelight = {
   /** Strength of the relief-shading removal, 0 = none, 1 = full flat-ground ratio. */
   readonly reliefShade: number;
-  /** Azimuth (clockwise from north) and elevation of the mosaic's own baked-in sun. */
-  readonly photoSunAzDeg: number;
-  readonly photoSunElDeg: number;
+  /** The mosaic's own baked-in sun. */
+  readonly photoSun: PhotoSun;
   /** Multiplier on the coarse field's height gradient before it becomes a normal. */
   readonly reliefExaggeration: number;
   /** Strength of the low-frequency flattening, 0 = none, 1 = fully flat. */

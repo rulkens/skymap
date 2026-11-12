@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { paletteRowLabel } from '../../../src/utils/palette/paletteRowLabel';
 import { APP_EXHIBIT_REGISTRY } from '../../../src/compositions/appExhibits';
-import { tourRegistry } from '../../../src/data/animation/tours/tourRegistry';
+import { APP_TOUR_REGISTRY } from '../../../src/compositions/appTours';
 import type { ScoredRow } from '../../../src/@types/palette/ScoredRow';
 
 describe('paletteRowLabel', () => {
@@ -57,8 +57,8 @@ describe('paletteRowLabel', () => {
         'Exhibit',
       ],
       [
-        { kind: 'tour', tour: tourRegistry.grandTour, score: 0 },
-        tourRegistry.grandTour.label,
+        { kind: 'tour', tour: APP_TOUR_REGISTRY.grandTour, score: 0 },
+        APP_TOUR_REGISTRY.grandTour.label,
         'Tour',
       ],
       [

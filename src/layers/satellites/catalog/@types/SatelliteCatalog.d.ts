@@ -4,7 +4,7 @@
  * keep CelesTrak's OMM units verbatim: SGP4 was fitted to them, so nothing is converted here.
  */
 export type SatelliteCatalog = {
-  /** Unix ms when the groups were downloaded; the ±14-day display window is centred on it. */
+  /** Unix ms when the groups were downloaded; the Layer fades out from a fortnight before it. */
   readonly fetchedAtMs: number;
   readonly noradId: Uint32Array;
   /** Index into `SATELLITE_CLASSES`. */

@@ -1793,6 +1793,34 @@ The surface tile manifests under `public/data/images/earth-tiles/` and
   Black Marble, the water mask and the cloud composite (the pages need a
   script to show them).
 
+### Live cloud bake inputs (NASA GIBS and EUMETSAT)
+
+<!-- attribution: id=cloud-bake; keys=clouds.* -->
+
+- **What:** The daily satellite imagery `tools/cloud-bake-rs` turns into a
+  global cloud-opacity map: VIIRS (NOAA-20, NOAA-21) swaths and mosaics and
+  GOES-East, GOES-West and Himawari infrared frames from NASA GIBS, and Meteosat
+  MTG and IODC infrared frames from EUMETSAT's EUMETView.
+- **By:** NASA GIBS (VIIRS, GOES); EUMETSAT (Meteosat); the Japan
+  Meteorological Agency (Himawari).
+- **Licence:** GIBS imagery from VIIRS and GOES: free to use, commercial use
+  included, with credit to NASA/GIBS. EUMETView WMS visualisations: CC BY 4.0.
+  Himawari frames come through GIBS and are subject to JMA's terms, which have
+  not been checked; treated as a medium risk until they are.
+- **Use:** Per item
+- **Attribution:** EUMETSAT: "Contains modified EUMETSAT Meteosat data 2026"
+  (the year of the data). NASA: credit NASA GIBS.
+- **Upstream:** <https://gibs.earthdata.nasa.gov/> and
+  <https://view.eumetsat.int/>; details in `data/raw/clouds/README.md`.
+- **Enters skymap:** `npm run bake-clouds` → one cloud map per day. Nothing is
+  shipped yet; the output has no publish path.
+- **Modified:** Yes. Mosaicked, seam-blended, gap-filled and matched to the
+  static cloud map.
+- **Checked:** 2026-11-10, from the maintainer's notes of the terms; the
+  pages were not re-opened for this entry.
+- **Not verified:** JMA's terms for Himawari; the exact credit wording NASA
+  asks of GIBS users.
+
 ### EOxCloudless (Sentinel-2), layer s2cloudless-2025
 
 <!-- attribution: id=eox; keys=eox.*; hosts=cloudless.eox.at -->
@@ -2065,6 +2093,52 @@ bake credits "HiRISE: NASA/JPL/University of Arizona".
 - **Checked:** 2026-10-07: no record could be opened (the STAC collection
   addresses tried answered 404).
 - **Not verified:** the CC0 statement as it stands on 2026-10-07.
+
+## Moon surface
+
+Baked by `npm run build-surface-tiles -- --body moon` into `moon-tiles/`.
+
+### LROC WAC global mosaic
+
+<!-- attribution: id=lroc-wac; keys=lroc.* -->
+
+- **What:** Lunar LRO LROC WAC Global Morphologic Mosaic, 100 m.
+- **By:** Speyerer et al., LROC team (NASA/GSFC/Arizona State University);
+  publisher USGS Astrogeology Science Center.
+- **Licence:** Public domain, as a NASA product hosted by USGS Astrogeology.
+- **Use:** Free, no credit asked
+- **Attribution:** None asked. Ours: "LROC WAC mosaic: NASA/GSFC/Arizona State
+  University, USGS Astrogeology (public domain)."
+- **Upstream:** <https://planetarymaps.usgs.gov/mosaic/Lunar_LRO_LROC-WAC_Mosaic_global_100m_June2013.tif>
+- **Enters skymap:** fetched by hand (`data/raw/lroc/README.md`) →
+  `tools/textures/surfaceBodies/moonSurfaceBake.ts`.
+- **Modified:** Yes. Re-tiled, de-lit against LOLA and tinted to the base
+  globe's colour.
+- **Checked:** 2026-11-11: the record page
+  (<https://astrogeology.usgs.gov/search/map/moon_lro_lroc_wac_global_morphologic_mosaic_100m>)
+  answers HTTP 403 to a script.
+- **Not verified:** the record's own access and use constraints.
+
+### LOLA global heights
+
+<!-- attribution: id=lola-ldem; keys=lola.* -->
+
+- **What:** Lunar LRO LOLA Global LDEM, 118 m.
+- **By:** Smith et al., NASA/GSFC LOLA team; publisher USGS Astrogeology
+  Science Center.
+- **Licence:** Public domain, as a NASA product hosted by USGS Astrogeology.
+- **Use:** Free, no credit asked
+- **Attribution:** None asked. Ours: "LOLA 118 m DEM: NASA/GSFC LOLA team, USGS
+  Astrogeology (public domain)."
+- **Upstream:** <https://planetarymaps.usgs.gov/mosaic/Lunar_LRO_LOLA_Global_LDEM_118m_Mar2014.tif>
+- **Enters skymap:** fetched by hand (`data/raw/lola/README.md`) →
+  `moonSurfaceBake.ts`.
+- **Modified:** Yes. Converted to Float32 metres, re-gridded, raised 400 m to
+  the scene's datum.
+- **Checked:** 2026-11-11: the record page
+  (<https://astrogeology.usgs.gov/search/map/moon_lro_lola_global_ldem_118m>)
+  answers HTTP 403 to a script.
+- **Not verified:** the record's own access and use constraints.
 
 ## 3D models
 

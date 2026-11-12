@@ -68,7 +68,7 @@ describe('surfaceZoomStep', () => {
       DEFAULT_CAMERA_TUNING,
       null,
     );
-    const newEye = bodyFixedEyeM(stepped);
+    const newEye = bodyFixedEyeM(stepped.pose);
 
     // Loosened to metres (not the bit): the anchor marches over terrain to a
     // pixel-sized tolerance rather than an exact analytic root (F2).

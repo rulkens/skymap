@@ -28,8 +28,8 @@
  * Selection: every row maps to a `PaletteAction` via `utils/palette/actionForRow`; a
  * featured-grid card already carries its own.  Either way it reaches the
  * single `onSelect(action)` callback, and the container dispatches on
- * `action.kind` — for `focus`, `requestFocus({ id, transition })`, the one command→ref
- * bridge — so the palette never resolves a ref itself.
+ * `action.kind` — for `focus`, `requestSelect` plus `requestView({ id })`, which a saga
+ * turns into the one command→ref bridge — so the palette never resolves a ref itself.
  *
  * This file is the shell only: layout + subcomponent wiring.  The transient
  * search state + keyboard nav live in `usePaletteSearch`; the ranking pipeline
