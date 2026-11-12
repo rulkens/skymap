@@ -33,7 +33,7 @@ New versions of this file, updated on a daily basis, will be available at:
           https://www.minorplanetcenter.org/iau/MPCORB/MPCORB.DAT
 ```
 
-`build-asteroids` meets this by writing `public/data/asteroids/mpcorb-header.txt` beside the data: the 43
+`build-asteroids` meets this by writing `public/data/asteroids/v1/mpcorb-header.txt` beside the data: the 43
 header lines verbatim, a line saying the elements are derived and quantized, and the update URL.
 
 The MPC's website use policy (<https://www.minorplanetcenter.net/iau/WWWPolicy.html>, read 2026-11-12)

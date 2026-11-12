@@ -80,6 +80,15 @@ export const DATA_FAMILIES: readonly DataFamily[] = [
     gzipOnWire: true,
   },
   {
+    // MPCORB bake (tools/asteroids/buildAsteroids.ts); the header text carries MPC's terms.
+    label: 'asteroids',
+    dir: null,
+    fileName: /^(?:asteroids\.astb|asteroid-names\.bin|mpcorb-header\.txt)$/,
+    transport: 'wrangler',
+    // Measured (gzip -6, 2026-11-12): astb 20.6 → 17.4 MB, names 444 → 212 KB.
+    gzipOnWire: true,
+  },
+  {
     // Voyager 1/2 Horizons tracks (tools/bodies/buildSpacecraftTracks.ts).
     label: 'spacecraft-tracks',
     dir: null,

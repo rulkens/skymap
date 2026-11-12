@@ -123,6 +123,11 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         manual: DATA,
       },
       {
+        scripts: ['build-asteroids'],
+        does: 'Write the file of asteroid orbits, every numbered minor planet the Minor Planet Center lists, from the file fetch-mpcorb downloaded, with the names and the Center’s terms beside it.',
+        manual: 'data/raw/mpcorb/README.md',
+      },
+      {
         scripts: ['build-textures', 'build-surface-tiles', 'build-site-ground-heights'],
         does: 'Resize the maps of planets and moons to the three data sizes, cut Earth and Mars into tiles, and read the height of the ground under each rover and under Søndermarken.',
         manual: DATA,

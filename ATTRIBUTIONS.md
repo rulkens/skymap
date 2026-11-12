@@ -669,8 +669,8 @@ unclear, and no entry here reads them as a licence.
   (<https://www.minorplanetcenter.net/iau/MPCORB/MPCORB.DAT>).
 - **Upstream:** <https://www.minorplanetcenter.net/iau/MPCORB/MPCORB.DAT.gz>
 - **Enters skymap:** `npm run fetch-mpcorb` → `data/raw/mpcorb/` →
-  `npm run build-asteroids` → `asteroids/asteroids.astb`,
-  `asteroids/asteroid-names.bin` and `asteroids/mpcorb-header.txt` on R2.
+  `npm run build-asteroids` → `asteroids/v1/asteroids.astb`,
+  `asteroid-names.bin` and `mpcorb-header.txt` on R2.
 - **Modified:** Yes. Numbered rows only, quantized to a columnar file, and the
   few rows at another epoch propagated to the shared one by two-body motion.
 - **Checked:** 2026-11-12: <https://www.minorplanetcenter.net/iau/MPCORB.html>,

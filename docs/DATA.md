@@ -20,7 +20,7 @@ Most sources also have a per-directory README under `data/raw/<source>/` with th
 
 ## Binary formats
 
-Nine formats, each a magic + version header followed by fixed- or variable-size records. A version bump makes the decoder reject old files loudly with a "regenerate" error rather than misread stale bytes; the fix is always to re-run the matching build command.
+Ten formats, each a magic + version header followed by fixed- or variable-size records. A version bump makes the decoder reject old files loudly with a "regenerate" error rather than misread stale bytes; the fix is always to re-run the matching build command.
 
 | Format | Magic        | Version | Contents                                                                                                                                                          | Authority                                                                      |
 | ------ | ------------ | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
@@ -33,6 +33,7 @@ Nine formats, each a magic + version header followed by fixed- or variable-size 
 | SATG   | `0x47544153` | 1       | Earth-satellite SGP4 mean elements, columnar: ten f64 element columns, NORAD ids, class bytes, then names and COSPAR ids as a UTF-8 string table. 24-byte header. | [`writeSatelliteCatalog.ts`](../tools/utils/io/writeSatelliteCatalog.ts) |
 | SHEL   | `0x4C454853` | 1       | Baked Local Bubble shell mesh: f16 or f32 positions + normals (pc, 4 components each) and u32 indices, frame tag and centre in a 32-byte header.                  | [`shellMeshFormat.ts`](../src/layers/localBubble/shell/data/shellMeshFormat.ts)               |
 | STRM   | `0x4D525453` | 1       | Stellar-stream particles, GPU-ready: position, unit motion tangent, size, luminosity, colour t (Gaia BP−RP over a fixed span) and stream index, ten f32 per particle; meta sidecar `stellar_streams_meta.json`. 16-byte header + 40 bytes/particle. | [`stellarStreamsFormat.constants.ts`](../src/layers/stellarStreams/catalog/data/stellarStreamsFormat.constants.ts) |
+| ASTB   | `0x42545341` | 1       | Numbered minor planets (MPCORB), columnar, row k = number k + 1: a (f32 AU), e and i, Ω, ω, M₀ (u24, ecliptic J2000 turns), H (u16), G and flags (u8: class, NEO, PHA, ABSENT placeholder for a missing number) at one shared epoch; names in `asteroid-names.bin`, MPC's terms in `mpcorb-header.txt`. 24-byte header + column directory + 23 bytes/row. | [`asteroidFormat.ts`](../src/data/asteroids/asteroidFormat.ts) |
 
 ## `public/data/` layout
 
@@ -46,6 +47,7 @@ Each format has its own `<family>/v<N>/` folder, where `N` is that format's curr
 - `filament/v1/`: `filaments{,-small}.bin`
 - `local-bubble/v1/`: `local-bubble.shell`
 - `stellar-streams/v1/`: `stellar-streams.bin` + `stellar_streams_meta.json`
+- `asteroids/v1/`: `asteroids.astb` + `asteroid-names.bin` + `mpcorb-header.txt` (the MPCORB header, which MPC's terms require beside the data)
 - `satellite-catalog/v1/`: `satellites.satg`. Untracked by design: neither hashed nor in the manifest, because the daily Action overwrites it at this fixed R2 key (docs/DEPLOY.md, "Satellite catalog"). `dataUrl()` passes the unmanifested path through.
 
 Loose JSON (`famous_galaxies_meta`, `famous_stars_meta`, `structures_meta`, `constellations`, `pgc_aliases`) and `images/` stay at the data root: no version gate, since their schemas evolve compatibly and `images/` is unhashed and path-stable.
@@ -288,6 +290,7 @@ Every refresh shares one shape: fetch, build, then `npm run sync-r2-secure` from
 | Stars                  | `fetch-gaia`                                    | `build-stars` (`star-catalog/v2/` index + chunks)                 |
 | Satellites             | `fetch-celestrak` (daily, by the Action)        | `build-satellites` (`satellite-catalog/v1/satellites.satg`; the Action uploads it, no `sync-r2`) |
 | Stellar streams        | `fetch-vasiliev2021` + `fetch-galstreams`       | `build-stellar-streams` (`stellar-streams/v1/`)                  |
+| Asteroids              | `fetch-mpcorb` (MPC rewrites it daily)          | `build-asteroids` (`asteroids/v1/`)                              |
 
 Raw files and built artefacts are gitignored; only provenance READMEs and `.sha256` sidecars are committed. Two small deterministic bakes are the exceptions and live in git under `public/`: the MSDF font atlases in `public/fonts/` (`npm run build-fonts`) and the split-sum environment-BRDF LUT in `public/lut/` (`npm run build-env-brdf-lut`). Full-resolution texture and tile builds run post-merge from the main worktree.
 

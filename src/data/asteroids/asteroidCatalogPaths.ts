@@ -1,8 +1,14 @@
+import { ASTEROID_FORMAT } from './asteroidFormat';
+
 /**
  * Logical data paths of the asteroid files: `build-asteroids` writes them, the manifest hashes them and
- * the Layer fetches them. The names file loads on its own, on the first search.
+ * the Layer fetches the first two (names only on the first search). The `v<N>/` folder follows the ASTB
+ * version, as every family's does (docs/DATA.md). The header carries MPC's redistribution terms.
  */
+const DIR = `asteroids/v${ASTEROID_FORMAT.version}`;
+
 export const ASTEROID_CATALOG_PATHS = {
-  catalog: 'asteroids/asteroids.astb',
-  names: 'asteroids/asteroid-names.bin',
+  catalog: `${DIR}/asteroids.astb`,
+  names: `${DIR}/asteroid-names.bin`,
+  header: `${DIR}/mpcorb-header.txt`,
 } as const;
