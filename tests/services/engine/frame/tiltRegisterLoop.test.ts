@@ -211,6 +211,7 @@ describe('the register loop during an active drag (R12b-1)', () => {
         slot: 'focus',
         row: bodyRowAt('earth', [0, 0, 0]),
         id: null,
+        ref: null,
       }),
     );
     h.frame();

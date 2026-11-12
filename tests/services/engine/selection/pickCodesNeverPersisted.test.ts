@@ -48,6 +48,7 @@ import type { SelectionKindRow } from '../../../../src/@types/engine/layer/Selec
 import type { SatellitesRuntime } from '../../../../src/layers/satellites/@types/SatellitesRuntime';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 import type { SelectionRefBase } from '../../../../src/@types/engine/selection/SelectionRefBase';
+import type { SelectionRowBase } from '../../../../src/@types/engine/selection/SelectionRowBase';
 
 const virgo = { id: 'virgo', category: 'galaxy-cluster' } as StructureInfo;
 const structures = {
@@ -162,7 +163,9 @@ describe('pick codes are never persisted', () => {
       const store = storeOver(run);
       return run.refs.map((ref) => {
         const focusId = run.resolver.focusIdOf(ref!);
-        store.dispatch(setSelectionRow({ slot: 'focus', row: null, id: focusId }));
+        // Any resolved row: the URL publishes an id only beside one.
+        const row = { type: ref!.type } as SelectionRowBase;
+        store.dispatch(setSelectionRow({ slot: 'focus', row, id: focusId, ref: null }));
         store.dispatch(updateSelectionSelect(ref));
         return { hash: hashBodyFor(store.getState()), selection: store.getState().selection };
       });

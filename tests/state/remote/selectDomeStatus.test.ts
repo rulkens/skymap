@@ -66,6 +66,7 @@ describe('selectDomeStatus', () => {
         slot: 'focus',
         row: bodyRowAt('earth', [0, 0, 0]),
         id: 'body-earth',
+        ref: null,
       }),
     );
     expect(selectDomeStatus(state, NO_ROWS, NO_ROWS, 0).focus).toEqual({ name: 'Earth' });
@@ -76,7 +77,7 @@ describe('selectDomeStatus', () => {
     const m31 = FAMOUS_GALAXY_NAMES.findIndex((name) => name.id === 'm31');
     const cloud = makeGalaxyCatalog(FAMOUS_GALAXY_NAMES.length);
     const row = placedGalaxyRow(extractGalaxyRow(cloud, m31, 'famousGalaxy')!);
-    const state = stateAfter(setSelectionRow({ slot: 'focus', row, id: 'm31' }));
+    const state = stateAfter(setSelectionRow({ slot: 'focus', row, id: 'm31', ref: null }));
     expect(selectDomeStatus(state, NO_ROWS, NO_ROWS, 0).focus).toEqual({
       name: 'Andromeda Galaxy',
     });

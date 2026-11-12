@@ -45,7 +45,10 @@ describe('selectionSlice pending', () => {
     const resolved = reducer(requested, updateSelectionFocus(ref));
     expect(resolved.pending.focus).toBe('NGC 224');
 
-    const rowLanded = reducer(resolved, setSelectionRow({ slot: 'focus', row: null, id: null }));
+    const rowLanded = reducer(
+      resolved,
+      setSelectionRow({ slot: 'focus', row: null, id: null, ref: null }),
+    );
     expect(rowLanded.pending.focus).toBeNull();
   });
 
@@ -74,7 +77,7 @@ describe('selectionSlice pending', () => {
     const bothPending = reducer(selectOnly, requestFocus({ id: 'NGC 224', transition: 'fly' }));
     const selectResolved = reducer(
       bothPending,
-      setSelectionRow({ slot: 'select', row: null, id: null }),
+      setSelectionRow({ slot: 'select', row: null, id: null, ref: null }),
     );
     expect(selectResolved.pending).toEqual({ select: null, focus: 'NGC 224' });
   });

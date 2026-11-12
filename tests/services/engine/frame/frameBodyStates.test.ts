@@ -30,6 +30,7 @@ describe('frameBodyStates', () => {
           select: null,
           focus: null,
           ids: { hover: null, select: null, focus: null },
+          extractedFrom: { hover: null, select: null, focus: null },
         },
       },
       [{ type: 'satellite', extractRow } as unknown as SelectionKindRow],

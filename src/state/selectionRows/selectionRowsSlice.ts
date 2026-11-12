@@ -1,35 +1,17 @@
 /**
- * selectionRowsSlice — saga-owned derived display cache. The slice holds one
- * row-or-null per slot (hover / select / focus). It is the READ
- * surface for InfoCard and any UI that needs the resolved, serializable
- * representation of a selected thing.
- *
- * The saga is the ONLY writer. It watches `SelectionState` (the raw ref Intent)
- * for changes, resolves each live ref against the engine's in-memory catalogs,
- * and calls `setSelectionRow` to land the result here. No component, no engine
- * callback, and no other saga should dispatch `setSelectionRow` — only the
- * selection-resolution saga.
- *
- * `setSelectionRow` writes a single slot by key rather than replacing the whole
- * state, so a hover resolution doesn't stomp an in-progress focus resolution.
- * The reducer is an inline Immer mutating reducer: the `selectionRows` draft arg
- * is left UNANNOTATED so RTK infers a writable Draft rather than applying the
- * readonly `SelectionRowsState` type (which would re-introduce TS2540 errors on
- * the draft assignment).
+ * selectionRowsSlice — the saga-owned derived cache (see SelectionRowsState).
+ * `setSelectionRow` writes one slot by key, so a hover resolution never stomps
+ * a focus one. The draft arg stays UNANNOTATED so RTK infers a writable Draft;
+ * annotating it with the readonly state type brings back TS2540.
  */
 
 import { createSlice, type Draft, type PayloadAction } from '@reduxjs/toolkit';
 
 import { selectionRowsRoute } from '../../store/constants';
 import type { SelectionRowsState } from '../../@types/store/SelectionRowsState';
-import type { SelectionSlot } from '../../@types/engine/SelectionSlot';
+import type { SetSelectionRowPayload } from '../../@types/store/SetSelectionRowPayload';
 import type { SelectionRowBase } from '../../@types/engine/selection/SelectionRowBase';
-
-type SetSelectionRowPayload = {
-  readonly slot: SelectionSlot;
-  readonly row: SelectionRowBase | null;
-  readonly id: string | null;
-};
+import type { SelectionRefBase } from '../../@types/engine/selection/SelectionRefBase';
 
 const selectionRowsSlice = createSlice({
   name: selectionRowsRoute,
@@ -38,6 +20,7 @@ const selectionRowsSlice = createSlice({
     select: null,
     focus: null,
     ids: { hover: null, select: null, focus: null },
+    extractedFrom: { hover: null, select: null, focus: null },
   } as SelectionRowsState,
   reducers: {
     setSelectionRow: (selectionRows, action: PayloadAction<SetSelectionRowPayload>) => {
@@ -48,6 +31,7 @@ const selectionRowsSlice = createSlice({
       const { payload } = action;
       selectionRows[payload.slot] = payload.row as Draft<SelectionRowBase> | null;
       selectionRows.ids[payload.slot] = payload.id;
+      selectionRows.extractedFrom[payload.slot] = payload.ref as Draft<SelectionRefBase> | null;
     },
   },
 });

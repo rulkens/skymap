@@ -35,6 +35,8 @@ import { setSimDays, pause } from '../../../src/state/time/timeSlice';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { selectionRoute, selectionRowsRoute } from '../../../src/store/constants';
+import { requestFocus } from '../../../src/state/selection/requestFocus';
+import { selectFocusId } from '../../../src/state/selection/selectors';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import {
   buildStarOctree,
@@ -294,10 +296,13 @@ describe('watchSelectionRowsSaga', () => {
     const at = (index: number) => ({ type: 'galaxyCatalog', source: 'sdss', index }) as const;
     // The id's live answer, flipped between pulses the way a reload's commit would.
     let answer: FocusResolution;
+    // A released source: its rows are gone, so nothing extracts.
+    let released: boolean;
     let log: Action[];
 
     function buildReanchor() {
       log = [];
+      released = false;
       const record: Middleware = () => (next) => (action) => {
         log.push(action as Action);
         return next(action);
@@ -310,7 +315,8 @@ describe('watchSelectionRowsSaga', () => {
       sagaMiddleware.run(watchSelectionRowsSaga);
       sagaMiddleware.setContext({
         selection: {
-          extractRow: (ref: SelectionRefBase | null) => ref as SelectionRowBase | null,
+          extractRow: (ref: SelectionRefBase | null) =>
+            released ? null : (ref as SelectionRowBase | null),
           focusIdOf: () => 'sdss-1',
           resolveFocusId: () => answer,
         },
@@ -364,6 +370,45 @@ describe('watchSelectionRowsSaga', () => {
       await flush();
       expect(s.getState()[selectionRoute].hover).toBeNull();
       expect(s.getState()[selectionRowsRoute].ids.hover).toBeNull();
+    });
+
+    it('a slot with a pending request is not re-anchored', async () => {
+      // The request resolves on its own pulse; a re-anchor put landing after it would undo the pick.
+      answer = { kind: 'hit', ref: at(7) };
+      const s = buildReanchor();
+      s.dispatch(updateSelectionFocus(at(7)));
+      await flush();
+      s.dispatch(requestFocus({ id: 'sdss-2', transition: 'fly' }));
+
+      log = [];
+      answer = { kind: 'hit', ref: at(42) };
+      s.dispatch(engineSourceCountReported({ source: 'sdss', count: 100 }));
+      await flush();
+      expect(selectionWrites().filter(updateSelectionFocus.match)).toEqual([]);
+      expect(s.getState()[selectionRoute].focus).toEqual(at(7));
+    });
+
+    it('a same-ref focus write while the source is released keeps the id; the commit re-points by id', async () => {
+      answer = { kind: 'hit', ref: at(7) };
+      const s = buildReanchor();
+      s.dispatch(updateSelectionFocus(at(7)));
+      await flush();
+
+      released = true;
+      answer = { kind: 'pending' };
+      s.dispatch(updateSelectionFocus(at(7)));
+      await flush();
+      expect(s.getState()[selectionRowsRoute].ids.focus).toBe('sdss-1');
+      // No row, so nothing publishes the id meanwhile.
+      expect(selectFocusId(s.getState())).toBeNull();
+
+      released = false;
+      answer = { kind: 'hit', ref: at(42) };
+      s.dispatch(engineSourceCountReported({ source: 'sdss', count: 100 }));
+      await flush();
+      expect(s.getState()[selectionRoute].focus).toEqual(at(42));
+      expect(s.getState()[selectionRowsRoute].focus).toEqual(at(42));
+      expect(selectFocusId(s.getState())).toBe('sdss-1');
     });
   });
 });

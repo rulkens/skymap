@@ -24,6 +24,7 @@ import {
 import { setSelectionRow } from './selectionRowsSlice';
 import { SELECTION_WRITE_BY_SLOT } from '../selection/selectionWriteBySlot';
 import { reanchorWrites } from '../../utils/selection/reanchorWrites';
+import { shallowEqualRef } from '../../utils/object/shallowEqualRef';
 import { selectTimeState } from '../time/selectors';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { selectionRoute, selectionRowsRoute } from '../../store/constants';
@@ -38,11 +39,16 @@ function* reextract(slot: SelectionSlot) {
   // render path draws it rather than a fixed epoch.
   const simDays = deriveSimDays(yield* select(selectTimeState), performance.now());
   const row = selection.extractRow(ref, simDays);
-  // The id rides the same action as the row so the two cannot disagree: no row,
-  // no id (ref-only encoders would otherwise publish an unresolvable ref). An
-  // empty id counts as none.
-  const id = (ref && row && selection.focusIdOf(ref)) || null;
-  yield* put(setSelectionRow({ slot, row, id }));
+  // An id is encoded only from a resolved row (ref-only encoders would publish
+  // an unresolvable ref); an unresolved row keeps the previous id while the ref
+  // is unchanged, so a released source can still be re-anchored by id.
+  const prev = yield* select((state: RootState) => state[selectionRowsRoute]);
+  const id = row
+    ? (ref && selection.focusIdOf(ref)) || null
+    : shallowEqualRef(prev.extractedFrom[slot], ref)
+      ? prev.ids[slot]
+      : null;
+  yield* put(setSelectionRow({ slot, row, id, ref }));
 }
 
 export function* watchSelectionRowsSaga() {
@@ -67,8 +73,12 @@ export function* watchSelectionRowsSaga() {
   // firings are guarded no-ops (row === null && ref !== null).
   yield* takeEvery([engineSourceCountReported, factsReported, engineStatusChanged], function* () {
     const selection = yield* getContext<SagaContext['selection']>('selection');
-    const ids = yield* select((state: RootState) => state[selectionRowsRoute].ids);
+    // A pending request owns its slot until it resolves or retires.
+    const ids = { ...(yield* select((state: RootState) => state[selectionRowsRoute].ids)) };
     const refs = yield* select((state: RootState) => state[selectionRoute]);
+    for (const slot of Object.keys(refs.pending) as (keyof typeof refs.pending)[]) {
+      if (refs.pending[slot] !== null) ids[slot] = null;
+    }
     for (const { slot, ref } of reanchorWrites(ids, refs, (id) => selection.resolveFocusId(id))) {
       yield* put(SELECTION_WRITE_BY_SLOT[slot](ref));
     }

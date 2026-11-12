@@ -81,7 +81,9 @@ describe('following a transient object', () => {
       } as unknown as SelectionKindRow,
     ];
     h.store.dispatch(updateSelectionFocus(REF, 'cut'));
-    h.store.dispatch(setSelectionRow({ slot: 'focus', row: rowAt(CONST_J2000), id: null }));
+    h.store.dispatch(
+      setSelectionRow({ slot: 'focus', row: rowAt(CONST_J2000), id: null, ref: null }),
+    );
     h.frame(120);
 
     // A quarter orbit later the object is 9,900 km from where it was focused.
