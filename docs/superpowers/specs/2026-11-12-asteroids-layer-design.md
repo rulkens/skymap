@@ -21,7 +21,8 @@ user can find an asteroid in the palette, pick it, follow it, read its card and 
 - Every numbered minor planet (about 900k, MPC numbers 1…N) drawn as an additive point, positioned by
   two-body Kepler from its osculating elements at the simulated time.
 - Brightness is the apparent magnitude from the camera: H-G phase law, distance to the Sun, distance to the
-  camera, phase angle. A V = 6 asteroid and a V = 6 star look the same.
+  camera, phase angle, then lifted for display (§5 ruling 6): the dots are brighter than their true V so
+  the belt shows, and are not photometrically comparable to stars.
 - Five classes that toggle independently in Settings, coloured by class: near-Earth, main belt, Hilda,
   Jupiter trojan, distant (trans-Neptunian and beyond).
 - Pick, palette search by number and name, an InfoCard, camera follow, and the selected asteroid's orbit
@@ -53,10 +54,10 @@ MPCORB.DAT.gz ──▶ npm run fetch-mpcorb ──▶ data/raw/mpcorb/ ──�
    ──▶ public/data/asteroids/asteroids.<hash>.astb + asteroid-names.<hash>.bin ──▶ npm run sync-r2-secure
 
 src/layers/asteroids/
-  layer.ts create.ts destroy.ts frame.ts visibility.ts
-  catalog/{load,subsystems,@types}/   asset rows (demand-gated), decode, catalog record access
-  kepler/{computes,render,subsystems}/  the compute pass that writes heliocentric positions; its CPU mirror
-  points/{passes,render,data,subsystems}/  the dot pass + pick stamp, photometry uniforms, class colours
+  layer.ts create.ts destroy.ts visibility.ts
+  catalog/{load,data,utils,@types}/   asset rows (demand-gated), decode, catalog record access
+  kepler/{computes,render,data,utils,@types}/  the compute pass that writes heliocentric positions; its CPU mirror
+  points/{passes,render,data,utils,@types}/  the dot pass + pick stamp, photometry uniforms, class colours
   orbits/passes/                      the selected asteroid's ring, one call to drawOrbitConics
   selection/                          kinds.ts, asteroidsSelectionRow.ts (pick, focus id, deep link, follow)
   focus/{present,ui}/                 search, detail and compact cards
@@ -82,7 +83,7 @@ distant object → distant; everything else (Hungarias, Mars-crossers, the belt 
 
 - Header: magic `ASTB`, u16 version, u32 count, u32 firstNumber (= 1), f64 epoch JD (TT, shared), column
   directory, each column 4-byte aligned. number = firstNumber + row, and no number column is stored. A
-  missing number (the 2026-11-11 file has one hole in 1…895,910) gets an ABSENT placeholder row.
+  missing number (the 2026-11-11 file has no holes in 1…895,910, so none today) gets an ABSENT placeholder row.
 - MPC's terms (the MPCORB header) allow redistribution with the header shipped beside the data and the
   MPC credited, so the bake writes `mpcorb-header.txt` next to the file.
 - Per row, 23 bytes:
@@ -101,7 +102,7 @@ distant object → distant; everything else (Hungarias, Mars-crossers, the belt 
 - **Shared epoch.** The build propagates the few rows at other epochs to MPCORB's dominant epoch with the
   same two-body model the app runs, so nothing is lost against what the runtime would compute.
 - **Names** go in `asteroid-names.bin` (sorted u32 numbers, u32 offsets, a UTF-8 blob; ~150 KB brotli),
-  loaded on the first palette search, never with the main file.
+  fetched beside the catalog on its slot (a few percent of its size), so a linked asteroid's card is named with no palette open.
 
 Both files are a `DATA_FAMILIES` row (`tools/deploy/r2/dataFamilies.ts`), content-hashed through the
 manifest like stellar streams. Refreshing: `npm run fetch-mpcorb && npm run build-asteroids`, then
@@ -132,11 +133,11 @@ runs §4.4's brightness and §4.5's cull once per row, and appends each kept dot
 lifted flux)` plus a row/class tag) to a compacted list counted into indirect draw args. There is no "last time" memo: a cache carried between frames is the shape
 of hidden state the owner has pushed back on. A memo is added only if `npm run perf` shows the dispatch
 matters. The dot and pick draws are `drawIndirect` over that list; Kepler and photometry never run per vertex. The CPU hands time as `dtWholeDays` (an integer held exactly
-in f32) plus `dtFracDays`, so `M = M₀ + n·whole + n·frac` keeps the f32 error near 1–2″ at the window edges.
+in f32) plus `dtFracDays`, so `M = M₀ + n·whole + n·frac` keeps the f32 error near 1–2″ at the window edges for main-belt rows; near-Earth rows reach about 7″ there, which only the f64 selected dot, drawn at that scale, makes visible.
 
 **Kepler solve** (`shaders/lib/kepler.wesl`, new): reduce M to [−π, π], start from Danby's
 E₀ = M + 0.85·e·sign(M), run 5 Halley iterations with each step clamped to |ΔE| ≤ 1. A test emulates the
-solver in f32 (`Math.fround`) over every catalog row × a grid of M and asserts |E − e·sin E − M| < 2e-7.
+solver in f32 (`Math.fround`) over an eccentricity × M grid (not every row) and asserts |E − e·sin E − M| < 2e-7.
 
 **CPU mirror.** Follow, the card and the ring use the same algorithm in f64 on the same decoded f32
 inputs. The world position is `sun + helio·AU_IN_MPC` in f64. The selected asteroid's dot is drawn at
@@ -202,14 +203,14 @@ Additive screen-sized dots into the depthless HDR accumulation, in the NEAR0 sla
 occlusion, like satellites: `lib::billboard`, `lib::camera`, `lib::trailOcclusion`, `ADDITIVE_BLEND`.
 The occlusion test runs once per dot in the vertex stage (`pointClearance`, derivative-free), not per
 fragment, so a hidden dot never rasterises.
-`frameSections.ts` gains a plan line, the compute, and the two passes beside satellites in
+`frameSections.ts` gains the compute and the two passes beside satellites in
 POST_FOREGROUND (and `tools/site/matteHiddenPasses.ts` the pass names). The compute pass culls rows
 whose class is off (the class fades) and the four mesh-drawn numbers (§4.6). Colours by class are
 a small table in `points/data/`.
 
 ### 4.6 Skipping the bodies that already draw
 
-`src/layers/asteroids/points/data/meshAsteroidNumbers.ts` holds `[1, 4, 101955, 134340]` (owner ruling: a
+`src/layers/asteroids/catalog/data/meshAsteroidNumbers.ts` holds `[1, 4, 101955, 134340]` (owner ruling: a
 constant, like satellites' `HUBBLE_NORAD_ID`). Those rows are never drawn, picked or found by search,
 and the focus-id row does not claim their numbers. Nothing in the app makes such a link, and redirecting
 one to the body would grow the selection-row contract.
@@ -264,7 +265,7 @@ changed values" emits the moved rows under their table names, ready to paste.
 4. **Orbit ring through a shared `drawOrbitConics` helper**: each Layer keeps its own pass and renderer, and
    the Layer contract does not grow (owner). The helper takes values, not the frame plumbing (owner).
 5. **Mesh skip is a constant in the Layer**, not a body-row field (owner).
-6. **Faint field: true V plus an exposure lift by camera distance from the Sun**, the stars' approach
+6. **Faint field: true V plus an exposure lift keyed on zoom (camera to target distance), not distance from the Sun**, the stars' approach
    (owner). **Own brightness slider**, not the stars' (owner).
 7. My calls, open to challenge: the MPCORB source; a hand refresh, not a cron; the five classes and their
    mapping; comets out; the 1900–2100 window; the quantized 23-byte row; the MPC number as identity;
