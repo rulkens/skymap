@@ -13,7 +13,7 @@ import { orbitTrailView } from '../../../../services/engine/frame/orbitTrailView
 import { sceneBodyStates } from '../../../../services/engine/frame/sceneBodyStates';
 import { SCENE_EARTH } from '../../../../data/bodies/sceneEarth';
 import { SATELLITE_CLASSES } from '../../../../data/satellites/satelliteClasses';
-import { SATELLITE_POINT_STYLE } from '../../points/data/satellitePointStyle';
+import { SATELLITE_PROFILES } from '../../points/data/satelliteProfiles';
 import { satelliteLayerOpacity } from '../../points/subsystems/satelliteLayerOpacity';
 import { satelliteOrbitEllipse } from '../subsystems/satelliteOrbitEllipse';
 import { composeTemeToWorld } from '../../sweep/subsystems/composeTemeToWorld';
@@ -51,7 +51,12 @@ export function satelliteOrbitsPass(runtime: SatellitesRuntime): ContentPass<'sa
           earth.positionMpc,
         );
         if (orbit === null) continue;
-        trails.push({ ...orbit, color: SATELLITE_POINT_STYLE.color, fade: classFade * opacity });
+        trails.push({
+          ...orbit,
+          color:
+            state.settings.satelliteTuning.colors[SATELLITE_PROFILES[catalog.profileCodes[k]!]!.id],
+          fade: classFade * opacity,
+        });
       }
       drawOrbitConics(pass, runtime.orbitRenderer, trails, orbitTrailView(view, ctx, state));
     },
