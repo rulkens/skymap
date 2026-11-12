@@ -258,12 +258,12 @@ export function asteroidWindowFade(simJd: number): number; // 0 outside, smooths
 `kepler.wesl` exports `fn solveKeplerFixed(m: f32, e: f32) -> f32`, the same steps as the TS function
 (read the `wesl-shaders` skill first).
 
-- [ ] Test `f32 emulation converges on a grid`: e ∈ {0, 0.1, …, 0.9, 0.95, 0.99} × 721 values of M. With
+- [x] Test `f32 emulation converges on a grid`: e ∈ {0, 0.1, …, 0.9, 0.95, 0.99} × 721 values of M. With
       `Math.fround`, assert |E − e·sin E − M| < 2e-7.
-- [ ] Test `f64 agrees with eccentricAnomalyFromMean` to 1e-12 on the same grid (`src/utils/orbit/eccentricAnomalyFromMean.ts`).
-- [ ] Test `asteroidHelioAu matches the decoded basis at the epoch` (simJd = epochJd).
-- [ ] Test `window fade is 0 before 1900, 1 in 2000, 0 after 2100, and monotone over the last year`.
-- [ ] Commit `Asteroids: one fixed-step Kepler solver for GPU and CPU`.
+- [x] Test `f64 agrees with eccentricAnomalyFromMean` to 1e-12 on the same grid (`src/utils/orbit/eccentricAnomalyFromMean.ts`).
+- [x] Test `asteroidHelioAu matches the decoded basis at the epoch` (simJd = epochJd).
+- [x] Test `window fade is 0 before 1900, 1 in 2000, 0 after 2100, and monotone over the last year`.
+- [x] Commit `Asteroids: one fixed-step Kepler solver for GPU and CPU`.
 
 ### Task 6: Apparent magnitude (review: yes)
 
