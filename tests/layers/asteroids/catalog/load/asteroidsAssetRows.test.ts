@@ -1,6 +1,6 @@
 /**
  * asteroidsAssetRows — the catalog loads only while shown and near the Sun, or while the palette
- * or an asteroid selection lifts it; the names file only while searching.
+ * or an asteroid selection lifts it.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -18,7 +18,7 @@ import type { UiState } from '../../../../../src/@types/ui/UiState';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
 // Slots are carried, never called here.
-const [CATALOG, NAMES] = asteroidsAssetRows({} as AsteroidsRuntime);
+const [CATALOG] = asteroidsAssetRows({} as AsteroidsRuntime);
 
 const auFromSun = (au: number): Vec3 => [au * SCALE_UNITS.AU_TO_MPC, 0, 0];
 const INSIDE = auFromSun(ASTEROID_FADES.fullWithinAu);
@@ -54,10 +54,5 @@ describe('asteroidsAssetRows', () => {
     expect(verdict(CATALOG, INSIDE, { enabled: false })).toEqual(RELEASE);
     expect(verdict(CATALOG, FAR, { paletteOpen: true })).toEqual(LOAD);
     expect(verdict(CATALOG, FAR, { selected: true })).toEqual(LOAD);
-  });
-
-  it('the names file loads on the palette alone, never with the catalog', () => {
-    expect(verdict(NAMES, INSIDE).demand).toBe(false);
-    expect(verdict(NAMES, FAR, { paletteOpen: true }).demand).toBe(true);
   });
 });

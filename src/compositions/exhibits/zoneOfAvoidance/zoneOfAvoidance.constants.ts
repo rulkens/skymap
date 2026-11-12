@@ -20,6 +20,7 @@ export const PICK_BAND_AND_GALAXIES = {
     'starCatalog',
     'blackHole',
     'satellite',
+    'asteroid',
     'stellarStream',
   ],
 };

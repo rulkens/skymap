@@ -24,6 +24,8 @@ import { SELECTION_NONE_SENTINEL } from '../../../../data/selectionEncoding';
 import { asteroidExposureRamp } from '../utils/asteroidExposureRamp';
 import { asteroidWindowFade } from '../../kepler/utils/asteroidWindowFade';
 import { asteroidsDrawn } from '../../kepler/utils/asteroidsDrawn';
+import { asteroidHelioAu } from '../../kepler/utils/asteroidHelioAu';
+import { selectedAsteroidRows } from '../../selection/utils/selectedAsteroidRows';
 
 export function asteroidsPass(runtime: AsteroidsRuntime): ContentPass<'asteroids'> {
   const frameOf = (
@@ -40,6 +42,14 @@ export function asteroidsPass(runtime: AsteroidsRuntime): ContentPass<'asteroids
       (RENDER_ORIGIN_MPC[1] - eye[1]) / au,
       (RENDER_ORIGIN_MPC[2] - eye[2]) / au,
     ];
+    // The followed dot is placed in f64 here: the shader's f32 helio + sunFromCamAu would jitter
+    // it against the camera that is following the f64 CPU mirror.
+    const catalog = runtime.slot.current()?.catalog;
+    const selectedRow = catalog ? selectedAsteroidRows(state.selection, catalog)[0] : undefined;
+    const selectedHelio =
+      selectedRow === undefined
+        ? null
+        : asteroidHelioAu(catalog!, selectedRow, ctx.snapshot.simDays);
     return {
       vp: near0OverlayVpF32(
         rebaseViewProj(view.slab.vp, eye),
@@ -52,8 +62,15 @@ export function asteroidsPass(runtime: AsteroidsRuntime): ContentPass<'asteroids
         asteroidExposureRamp(Math.hypot(...sunFromCamAu)) * state.settings.asteroids.brightness,
       windowFade: asteroidWindowFade(ctx.snapshot.simDays),
       classFade: fade,
-      selectedRow: SELECTION_NONE_SENTINEL,
-      selectedCamRelAu: [0, 0, 0],
+      selectedRow: selectedRow ?? SELECTION_NONE_SENTINEL,
+      selectedCamRelAu:
+        selectedHelio === null
+          ? [0, 0, 0]
+          : [
+              selectedHelio[0] + sunFromCamAu[0],
+              selectedHelio[1] + sunFromCamAu[1],
+              selectedHelio[2] + sunFromCamAu[2],
+            ],
       occluders: sceneOccluderSpheres(state, ctx),
       depth,
     };
