@@ -179,7 +179,8 @@ or the inner system, where the belt shows as a field of dots among the stars. At
 whole belt, the dots start to overlap: past it a lift still growing with zoom² piled them into a blob, and
 a flat one holds the field's surface brightness. Eye-tuned at dpr 2 on shots near Earth, on the Sun at 3
 and 12 AU and at 50 AU; floor and cap landed close, so the zoom term spans under 2×. The result is
-multiplied by the Layer's own brightness setting (§4.9). Dots under the flux floor (V 16 on the
+multiplied by the Layer's own brightness setting (§4.9). A dot sized by H (§4.5) keeps the base dot's
+peak. Dots under the flux floor (V 16 on the
 lifted flux, where a dot deposits well under 1/255) are discarded to save fill, and the floor applies
 after the lift. Every constant in this section is a DebugPanel tuning default (§4.9).
 
@@ -207,6 +208,19 @@ fragment, so a hidden dot never rasterises.
 POST_FOREGROUND (and `tools/site/matteHiddenPasses.ts` the pass names). The compute pass culls rows
 whose class is off (the class fades) and the four mesh-drawn numbers (§4.6). Colours by class are
 a small table in `points/data/`.
+
+**Look modes** (owner rulings, two DebugPanel dropdowns, §4.9). The dot radius defaults to 1.4 px.
+*Size by* `absoluteMagnitude` (the default) grows a dot whose H is under a knee (12) as t², t running
+from 0 at the knee to 1 at Pallas's H 4 (Ceres and Vesta are meshes), up to 2.5× the radius; its peak
+stays the unscaled dot's, so a landmark gains light with its area instead of spreading the same light
+thinner. A row with no H stores 65535, past any knee, so it keeps the base size. `uniform` draws every
+dot at the base radius. The selected dot's radius still wins for its row. *Colour by* `class` (the
+default) is the class tints; `semiMajorAxis` gives the main belt three bands split at the Kirkwood gaps
+(3:1 at 2.5 AU, 5:2 at 2.82 AU): the inner belt warm (S-types dominate), the outer cool (C-types), the
+middle their mix at their mean luminance, all near unit Rec.709 luminance. Banded, not a smooth ramp, so
+the gaps read as seams; other classes keep their tints. The vertex stage reads the solver's element rows
+for a (|A|) and the stored H, so neither mode adds work to the compute. Both modes are values, not
+branches: by class all three bands are the belt's tint, and uniform size is a max scale of 1.
 
 ### 4.6 Skipping the bodies that already draw
 
@@ -247,12 +261,13 @@ its `OrbitTrailRenderer` instance, as satellites do. Fade = class fade × window
 
 One Settings section: the Layer toggle, the five class toggles (every class on by default), and the
 Layer's own brightness slider (owner ruling; default 1, a multiplier on the flux, independent of the
-stars' slider). No size knob.
+stars' slider). No size knob in Settings.
 
 A dev-only "Asteroid tuning" section in the DebugPanel (owner ruling, the satellites' pattern) moves the
-look live: lift K, floor and cap; dot radius, knee and selected-dot radius; the phase-dimming cap; the
-flux floor as a limiting V; the thinning budget, its start and full zooms and its gain; one colour
-row per class. The `points/data/` tables are the defaults its
+look live: the "Size by" and "Colour by" dropdowns (§4.5); lift K, floor and cap; dot radius, the
+size knee and max scale, the dot knee and selected-dot radius; the phase-dimming cap; the flux floor as
+a limiting V; the thinning budget, its start and full zooms and its gain; one colour row per class and
+one per belt-ramp end (`ASTEROID_BELT_RAMP`). The `points/data/` tables are the defaults its
 slice starts from, and each reaches the compute or the dots by uniform, so no WGSL constant mirrors
 them. A colour row edits the hue and keeps the row's luminance. Reset restores the tables; "Copy
 changed values" emits the moved rows under their table names, ready to paste.
@@ -267,7 +282,10 @@ changed values" emits the moved rows under their table names, ready to paste.
 5. **Mesh skip is a constant in the Layer**, not a body-row field (owner).
 6. **Faint field: true V plus an exposure lift keyed on zoom (camera to target distance), not distance from the Sun**, the stars' approach
    (owner). **Own brightness slider**, not the stars' (owner).
-7. My calls, open to challenge: the MPCORB source; a hand refresh, not a cron; the five classes and their
+7. **Look modes as DebugPanel dropdowns**: size by H (default) or uniform; colour by class (default) or
+   by semi-major axis for the main belt; dot radius 1.4 px (owner, 2026-11-12). Banded, not smooth, and
+   the peak kept at the base dot's are my calls (§4.5).
+8. My calls, open to challenge: the MPCORB source; a hand refresh, not a cron; the five classes and their
    mapping; comets out; the 1900–2100 window; the quantized 23-byte row; the MPC number as identity;
    a names file of its own; the compute pass; the photometry reuse; `picking.off` in the three exhibits.
 

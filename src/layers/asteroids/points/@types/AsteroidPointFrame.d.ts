@@ -23,6 +23,11 @@ export type AsteroidPointFrame = {
   readonly selectedRadiusPx: number;
   readonly dotKnee: number;
   readonly classColors: AsteroidClassColors;
+  /** The main belt's tint per Kirkwood band, inner to outer (`asteroidBeltColors`). */
+  readonly beltColors: readonly [Vec3, Vec3, Vec3];
+  /** Size by H (`ASTEROID_POINT_STYLE`); a max scale of 1 draws every dot at `dotRadiusPx`. */
+  readonly sizeKneeH: number;
+  readonly sizeMaxScale: number;
   /** Tint lift on the dots the brightness budget keeps (`ASTEROID_THINNING.thinGainExponent`). */
   readonly thinGain: number;
   readonly occluders: { readonly count: number; readonly spheresKm: Float32Array };

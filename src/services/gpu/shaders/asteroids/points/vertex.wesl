@@ -5,7 +5,8 @@
 // (lib/trailOcclusion's pointClearance); the pick has no scene depth of its own, so it binds the far
 // placeholder and only the occluder spheres drop a stamp.
 //
-// The unit constants mirror SCALE_UNITS, pinned by asteroidPoints.parity.test.ts.
+// The unit constants mirror SCALE_UNITS and MAIN_BELT the class's index in ASTEROID_CLASSES, pinned by
+// asteroidPoints.parity.test.ts.
 
 import package::asteroids::points::io::AsteroidUniforms;
 import package::asteroids::points::io::VSOut;
@@ -24,6 +25,9 @@ import package::lib::trailOcclusion::pointClearance;
 // Heliocentric xyz (AU) and lifted flux per kept dot, and its visibleTag.
 @group(0) @binding(3) var<storage, read> visible: array<vec4<f32>>;
 @group(0) @binding(4) var<storage, read> visibleTags: array<u32>;
+// The solver's rows, by catalog row: A = a·P̂ (AU) and e; M₀ bitcast, then the packed word.
+@group(0) @binding(5) var<storage, read> elementsA: array<vec4<f32>>;
+@group(0) @binding(6) var<storage, read> extra: array<vec2<u32>>;
 
 const AU_KM: f32 = 149597870.7;
 const MPC_TO_KM: f32 = 3.0856775814913673e19;
@@ -35,6 +39,10 @@ const MID_DEPTH: f32 = 0.5;
 // The selected dot's floor peak, enough to saturate the knee; with a gain of 1 / dotKnee lifting its
 // ceiling to the stars' white, a followed dot reads among the stars whatever its flux.
 const SELECTED_MIN_PEAK: f32 = 1.0;
+const MAIN_BELT: u32 = 1u;
+// The Kirkwood gaps at Jupiter's 3:1 and 5:2 resonances, in a (AU): the belt's band seams.
+const MIDDLE_BELT_AU: f32 = 2.5;
+const OUTER_BELT_AU: f32 = 2.82;
 
 struct AsteroidDot {
   relKm: vec3<f32>,
@@ -54,6 +62,21 @@ fn asteroidDot(slot: u32) -> AsteroidDot {
   return AsteroidDot(camRelAu * AU_KM, entry.w, visibleTagClass(tag), row);
 }
 
+fn dotTint(d: AsteroidDot) -> vec3<f32> {
+  if (d.cls != MAIN_BELT) {
+    return u.classColor[d.cls].rgb;
+  }
+  let aAu = length(elementsA[d.row].xyz);
+  return u.beltColor[u32(aAu >= MIDDLE_BELT_AU) + u32(aAu >= OUTER_BELT_AU)].rgb;
+}
+
+// A row with no H stores 65535, far fainter than any knee, so it keeps scale 1.
+fn dotScale(row: u32) -> f32 {
+  let hCenti = f32(extra[row].y >> 16u);
+  let t = saturate((u.sizeKneeHCenti - hCenti) / (u.sizeKneeHCenti - u.sizeFullHCenti));
+  return 1.0 + (u.sizeMaxScale - 1.0) * t * t;
+}
+
 @vertex
 fn vs(@builtin(vertex_index) vid: u32, @builtin(instance_index) slot: u32) -> VSOut {
   var out: VSOut; // zero-initialised: an early return is a degenerate, clipped vertex
@@ -68,15 +91,20 @@ fn vs(@builtin(vertex_index) vid: u32, @builtin(instance_index) slot: u32) -> VS
     return out;
   }
   let selected = d.row == u.selectedRow;
-  let sizePx = select(u.sizePx, max(u.sizePx, u.selectedRadiusPx), selected);
+  let dotPx = u.sizePx * dotScale(d.row);
+  let sizePx = select(dotPx, max(dotPx, u.selectedRadiusPx), selected);
   let corner = triCorner(vid);
   let offset = expandBillboardScreen(u.cam, centre, sizePx, corner);
   let fade = u.classColor[d.cls].w * u.windowFade * clear;
-  var peak = starPeakIntensity(1.0, d.flux * fade, toRefPx(sizePx, u.cam.pxPerRad));
-  var rgb = u.classColor[d.cls].rgb * u.thinGain;
+  // The peak keeps the unscaled dot's, so a dot sized by H grows its light with its area: spread
+  // over it at the same light, a landmark only blurred into the field.
+  let peakPx = select(u.sizePx, sizePx, selected);
+  var peak = starPeakIntensity(1.0, d.flux * fade, toRefPx(peakPx, u.cam.pxPerRad));
+  let tint = dotTint(d);
+  var rgb = tint * u.thinGain;
   if (selected) {
     peak = max(peak, SELECTED_MIN_PEAK * fade);
-    rgb = u.classColor[d.cls].rgb / u.dotKnee;
+    rgb = tint / u.dotKnee;
   }
   out.clip = vec4<f32>(centre.xy + offset, MID_DEPTH * centre.w, centre.w);
   out.corner = corner;

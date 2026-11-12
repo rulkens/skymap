@@ -44,6 +44,7 @@ function structLayout(src: string, name: string): [Record<string, number>, numbe
     'vec3<f32>': [16, 12],
     'array<vec4<f32>, 5>': [16, 80],
     'array<vec4<f32>, 2>': [16, 32],
+    'array<vec4<f32>, 3>': [16, 48],
     f32: [4, 4],
     u32: [4, 4],
   };
@@ -87,6 +88,7 @@ describe('asteroids shader parity', () => {
     expect(constOf(compute, 'G_OFFSET')).toBe(ASTEROID_FORMAT.gOffset);
     expect(constOf(compute, 'G_SCALE')).toBe(ASTEROID_FORMAT.gScale);
     expect(constOf(compute, 'WORKGROUP_SIZE')).toBe(KEPLER_WORKGROUP_SIZE);
+    expect(constOf(vertex, 'MAIN_BELT')).toBe(ASTEROID_CLASSES.indexOf('mainBelt'));
     expect(constOf(vertex, 'AU_KM')).toBeCloseTo(SCALE_UNITS.AU_TO_MPC / SCALE_UNITS.KM_TO_MPC, 3);
     expect(constOf(vertex, 'MPC_TO_KM') * SCALE_UNITS.KM_TO_MPC).toBeCloseTo(1, 12);
   });

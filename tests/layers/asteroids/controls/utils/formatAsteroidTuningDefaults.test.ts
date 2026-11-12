@@ -13,12 +13,16 @@ describe('formatAsteroidTuningDefaults', () => {
       ...initialState,
       limitingMag: 16.300000000000001,
       selectedRadiusPx: 10,
+      sizeKneeH: 11,
+      colorBy: 'semiMajorAxis',
       colors: { ...initialState.colors, hilda: [0.1, 0.2, 0.30000004] },
+      beltRamp: { ...initialState.beltRamp, outer: [0.5, 0.6, 0.7] },
     });
     expect(text).toBe(
       '// ASTEROID_PHOTOMETRY\nlimitingMag: 16.3,\n' +
-        '// ASTEROID_POINT_STYLE\nselectedRadiusPx: 10,\n' +
-        '// ASTEROID_CLASS_COLORS\nhilda: [0.1, 0.2, 0.3],',
+        '// ASTEROID_POINT_STYLE\nselectedRadiusPx: 10,\nsizeKneeH: 11,\n' +
+        '// ASTEROID_CLASS_COLORS\nhilda: [0.1, 0.2, 0.3],\n' +
+        '// ASTEROID_BELT_RAMP\nouter: [0.5, 0.6, 0.7],',
     );
   });
 

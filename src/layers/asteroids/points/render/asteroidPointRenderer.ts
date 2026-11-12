@@ -1,8 +1,9 @@
 /**
  * asteroidPointRenderer — the asteroids as screen-sized additive dots in the depthless HDR
  * accumulation, under the trails' occlusion (lib/trailOcclusion.wesl owns group 0 bindings 0-1; ours
- * are 2, the uniforms, which the fragment's knee reads too, and 3-4, the solver's kept list and its tags). Both draws are indirect over
- * that list, so the pick culls exactly as the dots do. `drawPick` stamps the same instances wider into
+ * are 2, the uniforms, which the fragment's knee reads too, 3-4, the solver's kept list and its tags,
+ * and 5-6, its element rows, for the belt band and the size by H). Both draws are indirect over that
+ * list, so the pick culls exactly as the dots do. `drawPick` stamps the same instances wider into
  * the overlay pick target with its own uniform and bind group, so a pick never rewrites the frame's.
  * @module
  */
@@ -25,6 +26,7 @@ import {
 } from '../../../../services/gpu/renderers/bodies/trailOcclusionUniforms';
 import { ASTEROID_CLASSES } from '../../../../data/asteroids/asteroidClasses';
 import { ASTEROID_POINT_STYLE } from '../data/asteroidPointStyle';
+import { asteroidHCenti } from '../../catalog/utils/asteroidHCenti';
 
 /** Byte offsets inside `AsteroidUniforms` (`asteroids/points/io.wesl`). */
 export const ASTEROID_UNIFORM_OFFSETS = {
@@ -41,8 +43,12 @@ export const ASTEROID_UNIFORM_OFFSETS = {
   selectedRadiusPx: 200,
   dotKnee: 204,
   thinGain: 208,
+  sizeKneeHCenti: 212,
+  sizeFullHCenti: 216,
+  sizeMaxScale: 220,
+  beltColor: 224,
 } as const;
-export const ASTEROID_UNIFORM_BYTES = 224;
+export const ASTEROID_UNIFORM_BYTES = 272;
 
 export function createAsteroidPointRenderer({
   device,
@@ -70,6 +76,8 @@ export function createAsteroidPointRenderer({
       },
       { binding: 3, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
       { binding: 4, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
+      { binding: 5, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
+      { binding: 6, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
     ],
   });
   const layout = device.createPipelineLayout({
@@ -150,6 +158,8 @@ export function createAsteroidPointRenderer({
                 { binding: 2, resource: { buffer: uniformBuffer } },
                 { binding: 3, resource: { buffer: rows.visible } },
                 { binding: 4, resource: { buffer: rows.visibleTags } },
+                { binding: 5, resource: { buffer: rows.elementsA } },
+                { binding: 6, resource: { buffer: rows.extra } },
               ],
             }),
           };
@@ -181,6 +191,10 @@ export function createAsteroidPointRenderer({
     u[o.selectedRadiusPx / 4] = frame.selectedRadiusPx;
     u[o.dotKnee / 4] = frame.dotKnee;
     u[o.thinGain / 4] = frame.thinGain;
+    u[o.sizeKneeHCenti / 4] = asteroidHCenti(frame.sizeKneeH);
+    u[o.sizeFullHCenti / 4] = asteroidHCenti(ASTEROID_POINT_STYLE.sizeFullH);
+    u[o.sizeMaxScale / 4] = frame.sizeMaxScale;
+    frame.beltColors.forEach((color, k) => u.set(color, o.beltColor / 4 + 4 * k));
     device.queue.writeBuffer(buffer, 0, u);
   }
 

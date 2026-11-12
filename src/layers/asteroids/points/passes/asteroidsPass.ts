@@ -24,6 +24,7 @@ import { asteroidsDrawn } from '../../kepler/utils/asteroidsDrawn';
 import { asteroidHelioAu } from '../../kepler/utils/asteroidHelioAu';
 import { asteroidSunFromCamAu } from '../../kepler/utils/asteroidSunFromCamAu';
 import { selectedAsteroidRows } from '../../selection/utils/selectedAsteroidRows';
+import { asteroidBeltColors } from '../utils/asteroidBeltColors';
 import { asteroidKeptFraction } from '../../kepler/utils/asteroidKeptFraction';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 
@@ -77,6 +78,9 @@ export function asteroidsPass(runtime: AsteroidsRuntime): ContentPass<'asteroids
       selectedRadiusPx: tuning.selectedRadiusPx,
       dotKnee: tuning.dotKnee,
       classColors: tuning.colors,
+      beltColors: asteroidBeltColors(tuning),
+      sizeKneeH: tuning.sizeKneeH,
+      sizeMaxScale: tuning.sizeBy === 'uniform' ? 1 : tuning.sizeMaxScale,
       thinGain: kept ** -tuning.thinGainExponent,
       occluders: sceneOccluderSpheres(state, ctx),
       depth,

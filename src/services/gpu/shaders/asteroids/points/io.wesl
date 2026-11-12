@@ -23,6 +23,13 @@ struct AsteroidUniforms {
   dotKnee: f32,
   // The brightness budget's lift on the dots it keeps, so the thinned field keeps its light.
   thinGain: f32,
+  // Size by H, in stored H units: scale 1 from the knee down, t² up to 'sizeMaxScale' at the full H.
+  // A max scale of 1 is the uniform mode.
+  sizeKneeHCenti: f32,
+  sizeFullHCenti: f32,
+  sizeMaxScale: f32,
+  // The main belt's tint per Kirkwood band, inner to outer; all three its class tint in class mode.
+  beltColor: array<vec4<f32>, 3>,
 };
 
 struct VSOut {
