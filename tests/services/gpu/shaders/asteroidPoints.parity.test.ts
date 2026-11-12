@@ -1,6 +1,6 @@
 /**
  * asteroids/{points,kepler}/*.wesl vs the TS side: `AsteroidUniforms` and `KeplerUniforms` against the
- * byte offsets their renderers write, the hand-mirrored constants against their TS tables, and the one
+ * byte offsets their renderers write, the hand-mirrored format constants against their TS tables, and the one
  * cull: the compute keeps the list, both vertex entry points read only it (a pick stamp that culled
  * differently would let an invisible dot take a click).
  */
@@ -18,7 +18,6 @@ import {
   KEPLER_WORKGROUP_SIZE,
 } from '../../../../src/layers/asteroids/kepler/render/asteroidKeplerSolver';
 import { ASTEROID_PHOTOMETRY } from '../../../../src/layers/asteroids/points/data/asteroidPhotometry';
-import { ASTEROID_POINT_STYLE } from '../../../../src/layers/asteroids/points/data/asteroidPointStyle';
 import { ASTEROID_FORMAT } from '../../../../src/data/asteroids/asteroidFormat';
 import { ASTEROID_HIDDEN_FLAG } from '../../../../src/layers/asteroids/catalog/data/asteroidHiddenFlag';
 import { ASTEROID_CLASSES } from '../../../../src/data/asteroids/asteroidClasses';
@@ -27,7 +26,6 @@ import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 const SHADERS = join(process.cwd(), 'src/services/gpu/shaders/asteroids');
 const io = readFileSync(join(SHADERS, 'points/io.wesl'), 'utf-8');
 const vertex = readFileSync(join(SHADERS, 'points/vertex.wesl'), 'utf-8');
-const fragment = readFileSync(join(SHADERS, 'points/fragment.wesl'), 'utf-8');
 const compute = readFileSync(join(SHADERS, 'kepler/compute.wesl'), 'utf-8');
 
 const constOf = (src: string, name: string): number =>
@@ -78,10 +76,7 @@ describe('asteroids shader parity', () => {
 
   it('mirrors the photometry, format and unit constants', () => {
     expect(ASTEROID_CLASSES).toHaveLength(5);
-    expect(constOf(compute, 'NO_H_MAGNITUDE')).toBe(ASTEROID_PHOTOMETRY.noHMagnitude);
-    expect(constOf(compute, 'MIN_FLUX') / ASTEROID_PHOTOMETRY.minFlux).toBeCloseTo(1, 12);
     expect(constOf(compute, 'MIN_DELTA_AU')).toBe(ASTEROID_PHOTOMETRY.minDeltaAu);
-    expect(constOf(compute, 'MAX_PHASE_DIM_MAG')).toBe(ASTEROID_PHOTOMETRY.maxPhaseDimMag);
     expect(constOf(compute, 'CLASS_MASK')).toBe(ASTEROID_FORMAT.flagClassMask);
     expect(constOf(compute, 'LAST_CLASS')).toBe(ASTEROID_CLASSES.length - 1);
     expect(constOf(compute, 'HIDDEN_FLAG')).toBe(ASTEROID_HIDDEN_FLAG);
@@ -93,22 +88,18 @@ describe('asteroids shader parity', () => {
     expect(constOf(compute, 'WORKGROUP_SIZE')).toBe(KEPLER_WORKGROUP_SIZE);
     expect(constOf(vertex, 'AU_KM')).toBeCloseTo(SCALE_UNITS.AU_TO_MPC / SCALE_UNITS.KM_TO_MPC, 3);
     expect(constOf(vertex, 'MPC_TO_KM') * SCALE_UNITS.KM_TO_MPC).toBeCloseTo(1, 12);
-    expect(constOf(fragment, 'DOT_KNEE')).toBe(ASTEROID_PHOTOMETRY.dotKnee);
-    expect(constOf(vertex, 'SELECTED_RADIUS_PX')).toBe(ASTEROID_POINT_STYLE.selectedRadiusPx);
-    expect(constOf(vertex, 'SELECTED_MIN_PEAK')).toBe(ASTEROID_PHOTOMETRY.selectedMinPeak);
-    expect(constOf(vertex, 'SELECTED_GAIN')).toBeCloseTo(1 / ASTEROID_PHOTOMETRY.dotKnee, 12);
   });
 
   it('the compute holds the one cull; the dot and the pick stamp only read its list', () => {
     const cull = fnBody(compute, 'shownRow');
     expect(cull).toMatch(/HIDDEN_FLAG/);
     expect(cull).toMatch(/classFade\[cls >> 2u\]\[cls & 3u\] <= 0\.0/);
-    expect(cull).toMatch(/flux < MIN_FLUX/);
+    expect(cull).toMatch(/flux < k\.minFlux/);
     const linked = vertexLinked as string;
     for (const entry of ['vs', 'vsPick']) {
       expect(fnBody(linked, entry), entry).toMatch(/= asteroidDot\(slot\);/);
     }
     expect(fnBody(linked, 'asteroidDot')).toMatch(/visible\[slot\]/);
-    expect(linked).not.toMatch(/MIN_FLUX|HIDDEN_FLAG/);
+    expect(linked).not.toMatch(/minFlux|HIDDEN_FLAG/);
   });
 });

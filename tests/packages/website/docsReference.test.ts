@@ -98,6 +98,7 @@ describe('Settings page', () => {
     /^thumbnails\.enabled$/,
     /^blackHoleLensingTuning\./,
     /^satelliteTuning\./,
+    /^asteroidTuning\./,
     /^bodies\.items\.[\w-]+\.enabled$/,
     /^(constellations|localBubble)\.intensity$/,
     /^earth\.(atmosphereExposure|ambientLight|oceanRoughness)$/,

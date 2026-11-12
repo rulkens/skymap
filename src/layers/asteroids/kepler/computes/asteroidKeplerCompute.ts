@@ -24,16 +24,19 @@ export function asteroidKeplerCompute(runtime: AsteroidsRuntime): ContentCompute
       const sunFromCamAu = asteroidSunFromCamAu(ctx.drawCamPos);
       const catalog = runtime.slot.current()?.catalog;
       const selectedRow = catalog ? selectedAsteroidRows(state.selection, catalog)[0] : undefined;
+      const tuning = state.settings.asteroidTuning;
       runtime.solver.encode(
         encoder,
         {
           simJd: simDays,
           sunFromCamAu,
           exposure:
-            asteroidExposureRamp(ctx.cam.distance / SCALE_UNITS.AU_TO_MPC) *
+            asteroidExposureRamp(ctx.cam.distance / SCALE_UNITS.AU_TO_MPC, tuning) *
             state.settings.asteroids.brightness,
           classFade: fade,
           selectedRow: selectedRow ?? SELECTION_NONE_SENTINEL,
+          minFlux: 10 ** (-0.4 * tuning.limitingMag),
+          maxPhaseDimMag: tuning.maxPhaseDimMag,
         },
         claimTimestampWrites,
       );

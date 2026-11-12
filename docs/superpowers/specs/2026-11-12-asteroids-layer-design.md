@@ -178,8 +178,9 @@ or the inner system, where the belt shows as a field of dots among the stars. At
 whole belt, the dots start to overlap: past it a lift still growing with zoom² piled them into a blob, and
 a flat one holds the field's surface brightness. Eye-tuned at dpr 2 on shots near Earth, on the Sun at 3
 and 12 AU and at 50 AU; floor and cap landed close, so the zoom term spans under 2×. The result is
-multiplied by the Layer's own brightness setting (§4.9). Dots under the flux floor are discarded to save
-fill, and the floor applies after the lift. A row with no H draws at a fixed dim flux (the builder picks it and states it).
+multiplied by the Layer's own brightness setting (§4.9). Dots under the flux floor (V 16 on the
+lifted flux, where a dot deposits well under 1/255) are discarded to save fill, and the floor applies
+after the lift. Every constant in this section is a DebugPanel tuning default (§4.9). A row with no H draws at a fixed dim flux (the builder picks it and states it).
 The card shows the same V from the same formula in TypeScript; a test checks a few asteroids against JPL
 Horizons' V at one date, within a stated tolerance.
 
@@ -234,6 +235,13 @@ its `OrbitTrailRenderer` instance, as satellites do. Fade = class fade × window
 One Settings section: the Layer toggle, the five class toggles (every class on by default), and the
 Layer's own brightness slider (owner ruling; default 1, a multiplier on the flux, independent of the
 stars' slider). No size knob.
+
+A dev-only "Asteroid tuning" section in the DebugPanel (owner ruling, the satellites' pattern) moves the
+look live: lift K, floor and cap; dot radius, knee and selected-dot radius; the phase-dimming cap; the
+flux floor as a limiting V; one colour row per class. The `points/data/` tables are the defaults its
+slice starts from, and each reaches the compute or the dots by uniform, so no WGSL constant mirrors
+them. A colour row edits the hue and keeps the row's luminance. Reset restores the tables; "Copy
+changed values" emits the moved rows under their table names, ready to paste.
 
 ## 5. Rulings
 

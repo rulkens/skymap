@@ -43,6 +43,7 @@ export function asteroidsPass(runtime: AsteroidsRuntime): ContentPass<'asteroids
       selectedRow === undefined
         ? null
         : asteroidHelioAu(catalog!, selectedRow, ctx.snapshot.simDays);
+    const tuning = state.settings.asteroidTuning;
     return {
       vp: near0OverlayVpF32(
         rebaseViewProj(view.slab.vp, eye),
@@ -62,6 +63,10 @@ export function asteroidsPass(runtime: AsteroidsRuntime): ContentPass<'asteroids
               selectedHelio[1] + sunFromCamAu[1],
               selectedHelio[2] + sunFromCamAu[2],
             ],
+      dotRadiusPx: tuning.dotRadiusPx,
+      selectedRadiusPx: tuning.selectedRadiusPx,
+      dotKnee: tuning.dotKnee,
+      classColors: tuning.colors,
       occluders: sceneOccluderSpheres(state, ctx),
       depth,
     };

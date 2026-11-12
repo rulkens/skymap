@@ -5,7 +5,7 @@
 // (lib/trailOcclusion's pointClearance); the pick has no scene depth of its own, so it binds the far
 // placeholder and only the occluder spheres drop a stamp.
 //
-// The constants mirror SCALE_UNITS and the selected-dot style, pinned by asteroidPoints.parity.test.ts.
+// The unit constants mirror SCALE_UNITS, pinned by asteroidPoints.parity.test.ts.
 
 import package::asteroids::points::io::AsteroidUniforms;
 import package::asteroids::points::io::VSOut;
@@ -32,12 +32,9 @@ const W_EPS: f32 = 0.01;
 // Mid-range in either depth convention: the draw target is depthless, and in the pick every caption
 // stamp (pinned at the near end) out-picks a dot it overlaps.
 const MID_DEPTH: f32 = 0.5;
-// The selected dot: wide enough to stand out as a bead on its own orbit ring (which runs through it,
-// in the class tint), a peak that saturates the knee, and a gain of 1 / DOT_KNEE lifting its ceiling to
-// the stars' white, so a followed dot reads among the stars whatever its flux.
-const SELECTED_RADIUS_PX: f32 = 8.0;
+// The selected dot's floor peak, enough to saturate the knee; with a gain of 1 / dotKnee lifting its
+// ceiling to the stars' white, a followed dot reads among the stars whatever its flux.
 const SELECTED_MIN_PEAK: f32 = 1.0;
-const SELECTED_GAIN: f32 = 5.0;
 
 struct AsteroidDot {
   relKm: vec3<f32>,
@@ -71,7 +68,7 @@ fn vs(@builtin(vertex_index) vid: u32, @builtin(instance_index) slot: u32) -> VS
     return out;
   }
   let selected = d.row == u.selectedRow;
-  let sizePx = select(u.sizePx, max(u.sizePx, SELECTED_RADIUS_PX), selected);
+  let sizePx = select(u.sizePx, max(u.sizePx, u.selectedRadiusPx), selected);
   let corner = triCorner(vid);
   let offset = expandBillboardScreen(u.cam, centre, sizePx, corner);
   let fade = u.classColor[d.cls].w * u.windowFade * clear;
@@ -79,7 +76,7 @@ fn vs(@builtin(vertex_index) vid: u32, @builtin(instance_index) slot: u32) -> VS
   var rgb = u.classColor[d.cls].rgb;
   if (selected) {
     peak = max(peak, SELECTED_MIN_PEAK * fade);
-    rgb *= SELECTED_GAIN;
+    rgb /= u.dotKnee;
   }
   out.clip = vec4<f32>(centre.xy + offset, MID_DEPTH * centre.w, centre.w);
   out.corner = corner;

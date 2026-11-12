@@ -76,6 +76,7 @@ import { initialState as probeSpheresInitialState } from '../../../src/layers/pr
 import { initialState as satellitesInitialState } from '../../../src/layers/satellites/state/satellites/initialState';
 import { initialState as satelliteTuningInitialState } from '../../../src/layers/satellites/state/satelliteTuning/initialState';
 import { initialState as asteroidsInitialState } from '../../../src/layers/asteroids/state/asteroids/initialState';
+import { initialState as asteroidTuningInitialState } from '../../../src/layers/asteroids/state/asteroidTuning/initialState';
 import { initialState as constellationsInitialState } from '../../../src/layers/constellations/state/constellations/initialState';
 import { DEBUG_OVERLAY_ROWS } from '../../../src/data/debug/debugOverlayRows';
 import { DEFAULT_CAMERA_CONTROLS } from '../../../src/data/camera/openSpaceNavigation';
@@ -133,6 +134,7 @@ export function makeSettingsFixture(
     satellites: { ...satellitesInitialState },
     satelliteTuning: { ...satelliteTuningInitialState },
     asteroids: { ...asteroidsInitialState, items: { ...asteroidsInitialState.items } },
+    asteroidTuning: { ...asteroidTuningInitialState },
     stellarStreams: {
       ...stellarStreamsInitialState,
       streak: { ...stellarStreamsInitialState.streak },

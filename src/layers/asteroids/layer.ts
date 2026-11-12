@@ -16,6 +16,7 @@ import { asteroidsSelectionRow } from './selection/asteroidsSelectionRow';
 import { asteroidsSelectionKinds } from './selection/kinds';
 import { asteroidsSearch } from './focus/present/asteroidsSearch';
 import AsteroidsSectionContainer from './controls/ui/AsteroidsSectionContainer';
+import AsteroidTuningSectionContainer from './controls/ui/AsteroidTuningSectionContainer';
 import AsteroidDetailCard from './focus/ui/AsteroidDetailCard/AsteroidDetailCard';
 import CompactAsteroidCard from './focus/ui/CompactAsteroidCard/CompactAsteroidCard';
 import type { AsteroidsFacts } from './@types/AsteroidsFacts';
@@ -37,6 +38,7 @@ export const asteroidsLayer = defineLayer({
   search: (runtime) => asteroidsSearch(runtime),
   ui: [
     { slot: 'main', content: AsteroidsSectionContainer, title: 'Asteroids' },
+    { slot: 'debug', content: AsteroidTuningSectionContainer },
     {
       slot: 'detailCard',
       content: { type: 'asteroid', Detail: AsteroidDetailCard, Compact: CompactAsteroidCard },

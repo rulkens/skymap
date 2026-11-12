@@ -80,6 +80,7 @@ function makeSnapshot(
       satellites: { ...f.satellites, enabled: !f.satellites.enabled },
       satelliteTuning: { ...f.satelliteTuning },
       asteroids: { ...f.asteroids, enabled: !f.asteroids.enabled },
+      asteroidTuning: { ...f.asteroidTuning },
       stellarStreams: { ...f.stellarStreams, enabled: !f.stellarStreams.enabled },
       sStarTrails: { ...f.sStarTrails, enabled: !f.sStarTrails.enabled },
       starCatalogs: { ...f.starCatalogs, enabled: !f.starCatalogs.enabled },

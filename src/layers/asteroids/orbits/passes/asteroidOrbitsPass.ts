@@ -11,7 +11,6 @@ import { drawOrbitConics } from '../../../../services/engine/frame/drawOrbitConi
 import { orbitTrailView } from '../../../../services/engine/frame/orbitTrailView';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { asteroidClassOf } from '../../catalog/utils/asteroidClassOf';
-import { ASTEROID_CLASS_COLORS } from '../../points/data/asteroidClassColors';
 import { asteroidWindowFade } from '../../kepler/utils/asteroidWindowFade';
 import { selectedAsteroidRows } from '../../selection/utils/selectedAsteroidRows';
 import { asteroidOrbitTrail } from '../utils/asteroidOrbitTrail';
@@ -42,7 +41,7 @@ export function asteroidOrbitsPass(runtime: AsteroidsRuntime): ContentPass<'aste
             k,
             simDays,
             RENDER_ORIGIN_MPC,
-            ASTEROID_CLASS_COLORS[cls],
+            state.settings.asteroidTuning.colors[cls],
             classFade * windowFade,
           ),
         );

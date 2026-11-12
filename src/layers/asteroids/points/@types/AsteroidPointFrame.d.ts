@@ -5,6 +5,7 @@
  */
 import type { AsteroidClass } from '../../../../@types/asteroids/AsteroidClass';
 import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { AsteroidClassColors } from '../../@types/AsteroidClassColors';
 import type { SampledDepthBinding } from '../../../../@types/rendering/SampledDepthBinding';
 
 export type AsteroidPointFrame = {
@@ -17,6 +18,11 @@ export type AsteroidPointFrame = {
   /** Catalog row drawn at `selectedCamRelAu`; `SELECTION_NONE_SENTINEL` for none. */
   readonly selectedRow: number;
   readonly selectedCamRelAu: Readonly<Vec3>;
+  /** The tuned dot shape (`ASTEROID_POINT_STYLE`, `ASTEROID_PHOTOMETRY.dotKnee`) and class tints. */
+  readonly dotRadiusPx: number;
+  readonly selectedRadiusPx: number;
+  readonly dotKnee: number;
+  readonly classColors: AsteroidClassColors;
   readonly occluders: { readonly count: number; readonly spheresKm: Float32Array };
   readonly depth: SampledDepthBinding;
 };

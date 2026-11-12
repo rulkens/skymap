@@ -24,8 +24,10 @@ export const KEPLER_UNIFORM_OFFSETS = {
   sunFromCamAu: 16,
   exposure: 28,
   classFade: 32,
+  minFlux: 64,
+  maxPhaseDimMag: 68,
 } as const;
-export const KEPLER_UNIFORM_BYTES = 64;
+export const KEPLER_UNIFORM_BYTES = 80;
 export const KEPLER_WORKGROUP_SIZE = 64;
 /** triCorner: one triangle circumscribing the unit disc, half the vertex work of a quad. */
 const VERTICES_PER_DOT = 3;
@@ -135,6 +137,8 @@ export function createAsteroidKeplerSolver(device: GPUDevice): AsteroidKeplerSol
     uniformU32[o.selectedRow / 4] = frame.selectedRow;
     uniformF32.set(frame.sunFromCamAu, o.sunFromCamAu / 4);
     uniformF32[o.exposure / 4] = frame.exposure;
+    uniformF32[o.minFlux / 4] = frame.minFlux;
+    uniformF32[o.maxPhaseDimMag / 4] = frame.maxPhaseDimMag;
     ASTEROID_CLASSES.forEach((cls, k) => {
       uniformF32[o.classFade / 4 + k] = frame.classFade[cls];
     });

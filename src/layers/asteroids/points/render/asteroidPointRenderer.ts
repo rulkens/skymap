@@ -1,7 +1,7 @@
 /**
  * asteroidPointRenderer — the asteroids as screen-sized additive dots in the depthless HDR
  * accumulation, under the trails' occlusion (lib/trailOcclusion.wesl owns group 0 bindings 0-1; ours
- * are 2, the uniforms, and 3-4, the solver's kept list and its tags). Both draws are indirect over
+ * are 2, the uniforms, which the fragment's knee reads too, and 3-4, the solver's kept list and its tags). Both draws are indirect over
  * that list, so the pick culls exactly as the dots do. `drawPick` stamps the same instances wider into
  * the overlay pick target with its own uniform and bind group, so a pick never rewrites the frame's.
  * @module
@@ -24,7 +24,6 @@ import {
   createTrailOcclusionUniforms,
 } from '../../../../services/gpu/renderers/bodies/trailOcclusionUniforms';
 import { ASTEROID_CLASSES } from '../../../../data/asteroids/asteroidClasses';
-import { ASTEROID_CLASS_COLORS } from '../data/asteroidClassColors';
 import { ASTEROID_POINT_STYLE } from '../data/asteroidPointStyle';
 
 /** Byte offsets inside `AsteroidUniforms` (`asteroids/points/io.wesl`). */
@@ -39,6 +38,8 @@ export const ASTEROID_UNIFORM_OFFSETS = {
   selectedRow: 188,
   pickBase: 192,
   sizePx: 196,
+  selectedRadiusPx: 200,
+  dotKnee: 204,
 } as const;
 export const ASTEROID_UNIFORM_BYTES = 208;
 
@@ -61,7 +62,11 @@ export function createAsteroidPointRenderer({
     entries: [
       { binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' } },
       { binding: 1, visibility: GPUShaderStage.VERTEX, texture: { sampleType: 'depth' } },
-      { binding: 2, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' } },
+      {
+        binding: 2,
+        visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+        buffer: { type: 'uniform' },
+      },
       { binding: 3, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
       { binding: 4, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
     ],
@@ -95,8 +100,11 @@ export function createAsteroidPointRenderer({
     },
   });
 
-  const drawBinding = createBinding('asteroid-points', ASTEROID_POINT_STYLE.dotRadiusPx);
-  const pickBinding = createBinding('asteroid-points-pick', ASTEROID_POINT_STYLE.pickRadiusPx);
+  const drawBinding = createBinding('asteroid-points', (frame) => frame.dotRadiusPx);
+  const pickBinding = createBinding(
+    'asteroid-points-pick',
+    () => ASTEROID_POINT_STYLE.pickRadiusPx,
+  );
 
   const uniformScratch = new Float32Array(ASTEROID_UNIFORM_BYTES / 4);
   const uniformWords = new Uint32Array(uniformScratch.buffer);
@@ -104,12 +112,9 @@ export function createAsteroidPointRenderer({
     pickCode,
     PICK_SENTINEL_OFFSET,
   );
-  ASTEROID_CLASSES.forEach((cls, k) => {
-    uniformScratch.set(ASTEROID_CLASS_COLORS[cls], ASTEROID_UNIFORM_OFFSETS.classColor / 4 + 4 * k);
-  });
 
   /** One uniform + occluder buffer pair and its bind group, rebuilt when the depth view or rows change. */
-  function createBinding(label: string, sizePx: number) {
+  function createBinding(label: string, sizePx: (frame: AsteroidPointFrame) => number) {
     const occluderBuffer = device.createBuffer({
       label: `${label}-occluder-uniform`,
       size: OCCLUDER_UNIFORM_BYTES,
@@ -130,7 +135,7 @@ export function createAsteroidPointRenderer({
       bind(frame: AsteroidPointFrame, rows: AsteroidKeplerRows): GPUBindGroup {
         occluderUniforms.write(frame.occluders, frame.depth.frame, frame.viewportPx);
         device.queue.writeBuffer(occluderBuffer, 0, occluderUniforms.scratch);
-        writeUniforms(uniformBuffer, frame, sizePx);
+        writeUniforms(uniformBuffer, frame, sizePx(frame));
         if (cached === null || cached.depthView !== frame.depth.view || cached.rows !== rows) {
           cached = {
             depthView: frame.depth.view,
@@ -165,12 +170,15 @@ export function createAsteroidPointRenderer({
     u[o.pxPerRad / 4] = frame.pxPerRad;
     u.set(frame.sunFromCamAu, o.sunFromCamAu / 4);
     ASTEROID_CLASSES.forEach((cls, k) => {
+      u.set(frame.classColors[cls], o.classColor / 4 + 4 * k);
       u[o.classColor / 4 + 4 * k + 3] = frame.classFade[cls];
     });
     u.set(frame.selectedCamRelAu, o.selectedCamRelAu / 4);
     uniformWords[o.selectedRow / 4] = frame.selectedRow;
     u[o.windowFade / 4] = frame.windowFade;
     u[o.sizePx / 4] = sizePx;
+    u[o.selectedRadiusPx / 4] = frame.selectedRadiusPx;
+    u[o.dotKnee / 4] = frame.dotKnee;
     device.queue.writeBuffer(buffer, 0, u);
   }
 

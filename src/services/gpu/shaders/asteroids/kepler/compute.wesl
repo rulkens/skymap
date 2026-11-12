@@ -5,7 +5,7 @@
 //
 // Time arrives as whole + fractional days since the element epoch (split in f64 on the CPU), so
 // n·whole and n·frac each keep f32's 7 digits: one f32 dt would lose ~0.01 day at the window edges.
-// The constants mirror the TS tables, and KeplerUniforms asteroidKeplerSolver.ts's
+// The format constants mirror the TS tables, and KeplerUniforms asteroidKeplerSolver.ts's
 // KEPLER_UNIFORM_OFFSETS, both pinned by asteroidPoints.parity.test.ts.
 
 import package::lib::kepler::solveKeplerFixed;
@@ -15,7 +15,8 @@ import package::lib::math::LOG10;
 
 // 'sunFromCamAu' is the Sun minus the frame's eye, composed in f64 on the CPU; 'exposure' the display
 // lift times the Layer's brightness; 'classFade' one lane per class, [cls >> 2][cls & 3].
-// 'selectedRow' (0xFFFFFFFF = none) is exempt from the flux floor, so a followed dot always draws.
+// 'selectedRow' (0xFFFFFFFF = none) is exempt from the flux floor 'minFlux', so a followed dot always
+// draws. 'maxPhaseDimMag' caps the phase dimming, for the dot only (the card keeps the physical V).
 struct KeplerUniforms {
   dtWholeDays: f32,
   dtFracDays: f32,
@@ -24,13 +25,14 @@ struct KeplerUniforms {
   sunFromCamAu: vec3<f32>,
   exposure: f32,
   classFade: array<vec4<f32>, 2>,
+  minFlux: f32,
+  maxPhaseDimMag: f32,
 };
 
 const WORKGROUP_SIZE: u32 = 64u;
+// V for a row MPC gives no H: a typical faint numbered belt asteroid seen from Earth.
 const NO_H_MAGNITUDE: f32 = 21.0;
-const MIN_FLUX: f32 = 3.981071705534969e-7;
 const MIN_DELTA_AU: f32 = 0.001;
-const MAX_PHASE_DIM_MAG: f32 = 3.25;
 const CLASS_MASK: u32 = 7u;
 const HIDDEN_FLAG: u32 = 128u;
 const H_NONE: u32 = 65535u;
@@ -79,12 +81,10 @@ fn shownRow(row: u32) -> vec4<f32> {
     let g = f32((packed >> 8u) & 255u) / G_SCALE - G_OFFSET;
     let cosPhase = dot(p, camRelAu) / max(rAu * deltaAu, 1e-30);
     v = asteroidApparentMagnitude(hMag, g, rAu, deltaAu, cosPhase);
-    // The dot only, the card keeps the physical V: phase dimming capped, so the belt's near side, lit
-    // from behind (~7 mag lost), reads as a dimmer arc, not a hole (TS twin maxPhaseDimMag).
-    v = min(v, hMag + 5.0 * log(rAu * deltaAu) / LOG10 + MAX_PHASE_DIM_MAG);
+    v = min(v, hMag + 5.0 * log(rAu * deltaAu) / LOG10 + k.maxPhaseDimMag);
   }
   let flux = pow(10.0, -0.4 * v) * k.exposure;
-  if (flux < MIN_FLUX && row != k.selectedRow) {
+  if (flux < k.minFlux && row != k.selectedRow) {
     return vec4<f32>(0.0);
   }
   // A selected row under the floor keeps a positive flux, so the shown test below holds for it.

@@ -3,6 +3,7 @@
  * circular-alias reason `galaxyCatalogLayerSettings`'s header spells out.
  */
 
+import { asteroidTuningSlice } from './asteroidTuning/slice';
 import { asteroidsSlice } from './asteroids/slice';
 
-export const asteroidsLayerSettings = [asteroidsSlice] as const;
+export const asteroidsLayerSettings = [asteroidsSlice, asteroidTuningSlice] as const;

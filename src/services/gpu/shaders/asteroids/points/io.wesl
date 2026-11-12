@@ -18,6 +18,9 @@ struct AsteroidUniforms {
   // Pick only: the packed pick word of row 0 (pick code and sentinel offset folded in on the CPU).
   pickBase: u32,
   sizePx: f32,
+  selectedRadiusPx: f32,
+  // A dot's peak ceiling; the fragment's knee reads it, and the selected dot's gain is its inverse.
+  dotKnee: f32,
 };
 
 struct VSOut {
