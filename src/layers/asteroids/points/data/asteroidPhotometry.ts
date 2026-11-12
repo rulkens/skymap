@@ -9,12 +9,12 @@ export const ASTEROID_PHOTOMETRY = {
   minFlux: 10 ** (-0.4 * 16),
   /** Floor on Δ (AU, ~0.4 lunar distance) in V, so a camera on top of a dot can't send its flux to infinity. */
   minDeltaAu: 1e-3,
-  // Lift = liftPerAu2 · zoom², zoom clamped to [floor, cap], eye-tuned on shots (2.2e5 to 8.6e5). The
+  // Lift = liftPerAu2 · zoom², zoom clamped to [floor, cap], eye-tuned on dpr-2 shots (4.9e5 to 8.6e5). The
   // floor is the lift framing Earth or the inner system, where the belt shows as a field of dots among
   // the stars; at the cap, top-down on the whole belt, its dots start to overlap, so a lift still
   // growing with zoom² would pile them into a blob (it did at 50 AU).
   liftPerAu2: 6e3,
-  liftFloorZoomAu: 6,
+  liftFloorZoomAu: 9,
   liftCapZoomAu: 12,
   /**
    * Most the H-G phase law may dim a dot, in mag (a phase-term floor of ~0.05); the card keeps the

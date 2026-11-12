@@ -173,11 +173,11 @@ about 1e-4 of the calibrated flux, so the structures this Layer exists for would
 far out the view frames, not where the eye sits. A first cut keyed the lift on the eye's distance from the
 Sun, exactly 1 near Earth; zoomed onto the Sun or framing Earth that left the field at true V, invisible.
 The lift is `K·zoom²` (a dot near what you frame sits ~zoom away, so its apparent brightness holds as you
-zoom) with zoom clamped to [6, 12] AU and K = 6e3, so 2.2e5 to 8.6e5. The floor is the lift framing Earth
+zoom) with zoom clamped to [9, 12] AU and K = 6e3, so 4.9e5 to 8.6e5. The floor is the lift framing Earth
 or the inner system, where the belt shows as a field of dots among the stars. At the cap, top-down on the
 whole belt, the dots start to overlap: past it a lift still growing with zoom² piled them into a blob, and
-a flat one holds the field's surface brightness. Eye-tuned on shots near Earth, on the Sun at 3 and 12 AU
-and at 50 AU. The result is
+a flat one holds the field's surface brightness. Eye-tuned at dpr 2 on shots near Earth, on the Sun at 3
+and 12 AU and at 50 AU; floor and cap landed close, so the zoom term spans under 2×. The result is
 multiplied by the Layer's own brightness setting (§4.9). Dots under the flux floor are discarded to save
 fill, and the floor applies after the lift. A row with no H draws at a fixed dim flux (the builder picks it and states it).
 The card shows the same V from the same formula in TypeScript; a test checks a few asteroids against JPL
