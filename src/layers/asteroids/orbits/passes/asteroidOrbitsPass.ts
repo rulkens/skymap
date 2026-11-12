@@ -13,6 +13,7 @@ import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { asteroidClassOf } from '../../catalog/utils/asteroidClassOf';
 import { asteroidWindowFade } from '../../kepler/utils/asteroidWindowFade';
 import { selectedAsteroidRows } from '../../selection/utils/selectedAsteroidRows';
+import { asteroidClassFade } from '../../kepler/utils/asteroidClassFade';
 import { asteroidOrbitTrail } from '../utils/asteroidOrbitTrail';
 
 export function asteroidOrbitsPass(runtime: AsteroidsRuntime): ContentPass<'asteroids'> {
@@ -26,7 +27,8 @@ export function asteroidOrbitsPass(runtime: AsteroidsRuntime): ContentPass<'aste
       return selectedAsteroidRows(state.selection, catalog).length > 0;
     },
 
-    draw(pass, view, ctx, state, fade) {
+    draw(pass, view, ctx, state, layerFade) {
+      const fade = asteroidClassFade(layerFade, view.camPos);
       const catalog = runtime.slot.current()!.catalog;
       const { simDays } = ctx.snapshot;
       const windowFade = asteroidWindowFade(simDays);

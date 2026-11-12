@@ -114,8 +114,9 @@ redistribution, the effort stops there (§8).
 One asset row, demand-gated like satellites': it demands while the Layer is on, at least one class is on
 and the camera is within a load radius of the Sun (outside the radius where the Layer fades in, so data is
 resident before the first dot shows), and releases past a larger evict radius. The Layer is full within
-60 AU of the Sun and gone by 200 AU (the distant class reaches ~50–100 AU; zoomed out further, the whole
-catalog is a few pixels and would read as a blob), so the row loads at 300 AU and releases past 500 AU. It also demands while the
+400 AU of the Sun and gone by 1,500 AU for the distant class (TNOs and beyond); every other class fades on
+its own 60 → 200 AU pair, folded into its class fade by distance from the Sun (`asteroidClassFade`; zoomed
+out further they would be a few pixels reading as a blob). The row loads at 2,250 AU and releases past 3,750 AU. It also demands while the
 palette is open or an asteroid is selected, so a search or a deep link works from anywhere (the satellites
 rule). Decode happens off the main thread (a worker or `DecompressionStream` + one pass; the builder's
 call). The decoded catalog expands the angles into the equatorial basis the GPU uses (§4.3); the
