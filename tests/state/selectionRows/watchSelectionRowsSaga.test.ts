@@ -23,6 +23,7 @@ import {
   updateSelectionSelect,
   updateSelectionFocus,
   clearSelection,
+  requestRetired,
 } from '../../../src/state/selection/selectionSlice';
 import {
   engineSourceCountReported,
@@ -155,8 +156,8 @@ describe('watchSelectionRowsSaga', () => {
     store.dispatch(updateSelectionHover(ref));
     await flush();
     expect(store.getState()[selectionRowsRoute].ids).toEqual({
-      hover: 'sdss-1237668',
-      select: 'sdss-1237668',
+      hover: { id: 'sdss-1237668', ref },
+      select: { id: 'sdss-1237668', ref },
       focus: null,
     });
   });
@@ -174,7 +175,7 @@ describe('watchSelectionRowsSaga', () => {
     expect(store.getState()[selectionRowsRoute].select).not.toBeNull();
     expect(store.getState()[selectionRowsRoute].focus).not.toBeNull();
 
-    expect(store.getState()[selectionRowsRoute].ids.focus).toBe('sdss-1237668');
+    expect(store.getState()[selectionRowsRoute].ids.focus?.id).toBe('sdss-1237668');
 
     store.dispatch(clearSelection());
     await flush();
@@ -199,7 +200,7 @@ describe('watchSelectionRowsSaga', () => {
       type: 'galaxyCatalog',
       objId: '1237668',
     });
-    expect(store.getState()[selectionRowsRoute].ids.focus).toBe('sdss-1237668');
+    expect(store.getState()[selectionRowsRoute].ids.focus?.id).toBe('sdss-1237668');
   });
 
   it('a star deep link fills on engineSourceCountReported (every source reports the same one pulse)', async () => {
@@ -241,7 +242,7 @@ describe('watchSelectionRowsSaga', () => {
     store.dispatch(factsReported({ layer: 'structure', patch: { bulk: 'ready' } }));
     await flush();
     expect(store.getState()[selectionRowsRoute].focus).toMatchObject({ id: 'cluster-virgo-m87' });
-    expect(store.getState()[selectionRowsRoute].ids.focus).toBe('cluster-virgo-m87');
+    expect(store.getState()[selectionRowsRoute].ids.focus?.id).toBe('cluster-virgo-m87');
   });
 
   it('a milkyWay deep link fills on engineStatusChanged (a Layer-only kind, resolvable only once its row lands)', async () => {
@@ -398,7 +399,7 @@ describe('watchSelectionRowsSaga', () => {
       answer = { kind: 'pending' };
       s.dispatch(updateSelectionFocus(at(7)));
       await flush();
-      expect(s.getState()[selectionRowsRoute].ids.focus).toBe('sdss-1');
+      expect(s.getState()[selectionRowsRoute].ids.focus?.id).toBe('sdss-1');
       // No row, so nothing publishes the id meanwhile.
       expect(selectFocusId(s.getState())).toBeNull();
 
@@ -409,6 +410,21 @@ describe('watchSelectionRowsSaga', () => {
       expect(s.getState()[selectionRoute].focus).toEqual(at(42));
       expect(s.getState()[selectionRowsRoute].focus).toEqual(at(42));
       expect(selectFocusId(s.getState())).toBe('sdss-1');
+    });
+
+    it('a request that retires after the re-pointing pulse hands its slot back to the re-anchor', async () => {
+      // The request saga retires an absent id on the same pulse, after this handler skipped the slot.
+      answer = { kind: 'hit', ref: at(7) };
+      const s = buildReanchor();
+      s.dispatch(updateSelectionFocus(at(7)));
+      await flush();
+      s.dispatch(requestFocus({ id: 'sdss-2', transition: 'fly' }));
+
+      answer = { kind: 'hit', ref: at(42) };
+      s.dispatch(engineSourceCountReported({ source: 'sdss', count: 100 }));
+      s.dispatch(requestRetired({ slot: 'focus' }));
+      await flush();
+      expect(s.getState()[selectionRoute].focus).toEqual(at(42));
     });
   });
 });

@@ -12,9 +12,8 @@
  * row → no tween; a `zoneOfAvoidance` row (the band has no position) is the
  * same kind of no-op, filtered right after the null check.
  *
- * getContext is read INSIDE the worker (per-action), like watchSelectionWakeSaga and
- * watchTierSaga, because the engine registers its saga context AFTER the root saga
- * forks.
+ * getContext is read INSIDE the worker (per-action), like watchSelectionWakeSaga,
+ * because the engine registers its saga context AFTER the root saga forks.
  */
 import { takeLatest, take, getContext, put, select } from 'typed-redux-saga';
 

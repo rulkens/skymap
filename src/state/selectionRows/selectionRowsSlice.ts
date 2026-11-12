@@ -11,7 +11,7 @@ import { selectionRowsRoute } from '../../store/constants';
 import type { SelectionRowsState } from '../../@types/store/SelectionRowsState';
 import type { SetSelectionRowPayload } from '../../@types/store/SetSelectionRowPayload';
 import type { SelectionRowBase } from '../../@types/engine/selection/SelectionRowBase';
-import type { SelectionRefBase } from '../../@types/engine/selection/SelectionRefBase';
+import type { SelectionAnchor } from '../../@types/engine/selection/SelectionAnchor';
 
 const selectionRowsSlice = createSlice({
   name: selectionRowsRoute,
@@ -20,7 +20,6 @@ const selectionRowsSlice = createSlice({
     select: null,
     focus: null,
     ids: { hover: null, select: null, focus: null },
-    extractedFrom: { hover: null, select: null, focus: null },
   } as SelectionRowsState,
   reducers: {
     setSelectionRow: (selectionRows, action: PayloadAction<SetSelectionRowPayload>) => {
@@ -30,8 +29,7 @@ const selectionRowsSlice = createSlice({
       // the Draft type but not castDraft, hence the direct cast.
       const { payload } = action;
       selectionRows[payload.slot] = payload.row as Draft<SelectionRowBase> | null;
-      selectionRows.ids[payload.slot] = payload.id;
-      selectionRows.extractedFrom[payload.slot] = payload.ref as Draft<SelectionRefBase> | null;
+      selectionRows.ids[payload.slot] = payload.id as Draft<SelectionAnchor> | null;
     },
   },
 });

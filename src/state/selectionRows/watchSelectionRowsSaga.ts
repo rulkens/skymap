@@ -15,6 +15,7 @@ import {
   updateSelectionSelect,
   updateSelectionFocus,
   clearSelection,
+  requestRetired,
 } from '../selection/selectionSlice';
 import {
   engineSourceCountReported,
@@ -40,15 +41,17 @@ function* reextract(slot: SelectionSlot) {
   const simDays = deriveSimDays(yield* select(selectTimeState), performance.now());
   const row = selection.extractRow(ref, simDays);
   // An id is encoded only from a resolved row (ref-only encoders would publish
-  // an unresolvable ref); an unresolved row keeps the previous id while the ref
+  // an unresolvable ref); an unresolved row keeps the previous id while its ref
   // is unchanged, so a released source can still be re-anchored by id.
-  const prev = yield* select((state: RootState) => state[selectionRowsRoute]);
-  const id = row
-    ? (ref && selection.focusIdOf(ref)) || null
-    : shallowEqualRef(prev.extractedFrom[slot], ref)
-      ? prev.ids[slot]
-      : null;
-  yield* put(setSelectionRow({ slot, row, id, ref }));
+  const prev = yield* select((state: RootState) => state[selectionRowsRoute].ids[slot]);
+  const encoded = ref && row ? selection.focusIdOf(ref) : null;
+  const id =
+    ref && encoded
+      ? { id: encoded, ref }
+      : row === null && shallowEqualRef(prev?.ref ?? null, ref)
+        ? prev
+        : null;
+  yield* put(setSelectionRow({ slot, row, id }));
 }
 
 export function* watchSelectionRowsSaga() {
@@ -69,23 +72,30 @@ export function* watchSelectionRowsSaga() {
   });
   // The three pulses: every source's commit, a Layer's facts (structure's only
   // signal), and `wireSlots`' 'loading' right after `createLayers` appends the
-  // Layer rows. Re-anchor writes re-enter `reextract`; the gap-fill's extra
-  // firings are guarded no-ops (row === null && ref !== null).
-  yield* takeEvery([engineSourceCountReported, factsReported, engineStatusChanged], function* () {
-    const selection = yield* getContext<SagaContext['selection']>('selection');
-    // A pending request owns its slot until it resolves or retires.
-    const ids = { ...(yield* select((state: RootState) => state[selectionRowsRoute].ids)) };
-    const refs = yield* select((state: RootState) => state[selectionRoute]);
-    for (const slot of Object.keys(refs.pending) as (keyof typeof refs.pending)[]) {
-      if (refs.pending[slot] !== null) ids[slot] = null;
-    }
-    for (const { slot, ref } of reanchorWrites(ids, refs, (id) => selection.resolveFocusId(id))) {
-      yield* put(SELECTION_WRITE_BY_SLOT[slot](ref));
-    }
-    for (const slot of ['hover', 'select', 'focus'] as const) {
-      const row = yield* select((state: RootState) => state[selectionRowsRoute][slot]);
-      const ref = yield* select((state: RootState) => state[selectionRoute][slot]);
-      if (row === null && ref !== null) yield* reextract(slot);
-    }
-  });
+  // Layer rows; plus `requestRetired`, which hands its slot back. Re-anchor
+  // writes re-enter `reextract`; the gap-fill's extra firings are guarded no-ops.
+  yield* takeEvery(
+    [engineSourceCountReported, factsReported, engineStatusChanged, requestRetired],
+    function* () {
+      const selection = yield* getContext<SagaContext['selection']>('selection');
+      // A pending request owns its slot until it resolves or retires.
+      const anchors = yield* select((state: RootState) => state[selectionRowsRoute].ids);
+      const refs = yield* select((state: RootState) => state[selectionRoute]);
+      const pending: Partial<Record<SelectionSlot, string | null>> = refs.pending;
+      const ids = Object.fromEntries(
+        (Object.keys(anchors) as SelectionSlot[]).map((slot) => [
+          slot,
+          pending[slot] ? null : (anchors[slot]?.id ?? null),
+        ]),
+      ) as Record<SelectionSlot, string | null>;
+      for (const { slot, ref } of reanchorWrites(ids, refs, (id) => selection.resolveFocusId(id))) {
+        yield* put(SELECTION_WRITE_BY_SLOT[slot](ref));
+      }
+      for (const slot of ['hover', 'select', 'focus'] as const) {
+        const row = yield* select((state: RootState) => state[selectionRowsRoute][slot]);
+        const ref = yield* select((state: RootState) => state[selectionRoute][slot]);
+        if (row === null && ref !== null) yield* reextract(slot);
+      }
+    },
+  );
 }

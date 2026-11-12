@@ -1,8 +1,9 @@
 /**
  * galaxyCatalogSelectionRow — the Layer's `SelectionKindRow` for per-point galaxy
- * catalogs. A ref's index is the record ordinal (it drifts on a tier swap; the
- * tier saga re-anchors by durable id); rows and decodes go through the record
- * bridge, so a lookup still loading answers `pending` instead of failing.
+ * catalogs. A ref's index is the record ordinal (it drifts on a tier swap;
+ * the selection reconciler re-anchors by durable id); rows and decodes go
+ * through the record bridge, so a lookup still loading answers `pending`
+ * instead of failing.
  * `claims` makes the pgc-/sdss-/pos@/famous branches mutually exclusive
  * (composeSelectionRows.ts).
  */
@@ -15,17 +16,16 @@ import { placedGalaxyRow } from './utils/placedGalaxyRow';
 import { FAMOUS_GALAXY_NAMES } from '../famousGalaxies/data/famousGalaxyNames.generated';
 import { famousGalaxyNamesFor } from '../famousGalaxies/utils/famousGalaxyNamesFor';
 import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKindRow';
-import type { GalaxyCatalogRuntime } from '../@types/GalaxyCatalogRuntime';
+import type { GalaxyCatalogSelectionRecords } from './@types/GalaxyCatalogSelectionRecords';
 import type { GalaxyCatalogRef } from './@types/GalaxyCatalogRef';
 import type { FocusResolution } from '../../../@types/engine/selection/FocusResolution';
-
-/** The live reads every branch here makes; the runtime satisfies it. */
-type Records = Pick<GalaxyCatalogRuntime, 'records' | 'recordBridge' | 'pickCodes'>;
 
 /** Strict pos@ form, anchored at both ends: `<ra>,<dec>` (legacy) or `<ra>,<dec>,<dMpc>`. */
 const POS_RE = /^pos@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)(?:,(\d+(?:\.\d+)?))?$/;
 
-export function galaxyCatalogSelectionRow(runtime: Records): SelectionKindRow<GalaxyCatalogRef> {
+export function galaxyCatalogSelectionRow(
+  runtime: GalaxyCatalogSelectionRecords,
+): SelectionKindRow<GalaxyCatalogRef> {
   return {
     type: 'galaxyCatalog',
     pickSources: GALAXY_CATALOG_SOURCES.map(runtime.pickCodes.pickCodeOf),
@@ -74,7 +74,10 @@ export function galaxyCatalogSelectionRow(runtime: Records): SelectionKindRow<Ga
 }
 
 /** A compiled-in id resolves once `famous.bin` is resident; the meta sidecar is not waited on. */
-function resolveFamous(id: string, deps: Records): FocusResolution<GalaxyCatalogRef> {
+function resolveFamous(
+  id: string,
+  deps: GalaxyCatalogSelectionRecords,
+): FocusResolution<GalaxyCatalogRef> {
   const record = deps.records.get('famousGalaxy');
   if (!record) return { kind: 'pending' };
   const index = famousGalaxyNamesFor(record.recordCount)?.findIndex((m) => m.id === id) ?? -1;
@@ -82,7 +85,7 @@ function resolveFamous(id: string, deps: Records): FocusResolution<GalaxyCatalog
   return { kind: 'hit', ref: { type: 'galaxyCatalog', source: 'famousGalaxy', index } };
 }
 
-function encodeGalaxy(ref: GalaxyCatalogRef, deps: Records): string | null {
+function encodeGalaxy(ref: GalaxyCatalogRef, deps: GalaxyCatalogSelectionRecords): string | null {
   const row = deps.recordBridge.row(ref.source, ref.index);
   if (!row) return null;
   const [ra, dec] = cartesianToRaDec(row.x, row.y, row.z);

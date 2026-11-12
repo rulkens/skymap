@@ -165,7 +165,8 @@ describe('pick codes are never persisted', () => {
         const focusId = run.resolver.focusIdOf(ref!);
         // Any resolved row: the URL publishes an id only beside one.
         const row = { type: ref!.type } as SelectionRowBase;
-        store.dispatch(setSelectionRow({ slot: 'focus', row, id: focusId, ref: null }));
+        const id = focusId === null ? null : { id: focusId, ref: ref! };
+        store.dispatch(setSelectionRow({ slot: 'focus', row, id }));
         store.dispatch(updateSelectionSelect(ref));
         return { hash: hashBodyFor(store.getState()), selection: store.getState().selection };
       });

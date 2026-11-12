@@ -16,6 +16,7 @@ import { requestFocus } from './requestFocus';
 import { requestSelect } from './requestSelect';
 import { setSelectionRow } from '../selectionRows/selectionRowsSlice';
 import type { SelectionState } from '../../@types/store/SelectionState';
+import type { RequestRetiredPayload } from '../../@types/store/RequestRetiredPayload';
 import type { Transition } from '../../@types/navigation/Transition';
 import type { SelectionRefBase } from '../../@types/engine/selection/SelectionRefBase';
 
@@ -47,10 +48,7 @@ const selectionSlice = createSlice({
     },
     // An absent id's request ends with no ref write: re-putting the current ref
     // would re-fly the camera (watchFocusTweenSaga acts on the action).
-    requestRetired: (
-      selection,
-      action: PayloadAction<{ slot: keyof SelectionState['pending'] }>,
-    ) => {
+    requestRetired: (selection, action: PayloadAction<RequestRetiredPayload>) => {
       selection.pending[action.payload.slot] = null;
     },
     clearSelection: (selection) => {

@@ -10,8 +10,7 @@ import { STRUCTURE_IDS } from '../../../data/structure/structureIds';
 import { structurePickId } from '../picking/utils/structurePickId';
 import { placedStructureRow } from './utils/placedStructureRow';
 import { resolveStructureFromPick } from './present/resolveStructureFromPick';
-import type { StructureRuntime } from '../@types/StructureRuntime';
-import type { StructureStore } from '../catalog/@types/StructureStore';
+import type { StructureSelectionRowRuntime } from './@types/StructureSelectionRowRuntime';
 import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKindRow';
 import type { StructureRef } from './@types/StructureRef';
 
@@ -19,10 +18,7 @@ import type { StructureRef } from './@types/StructureRef';
 const SAFE_ID_RE = /^[a-z0-9_-]+$/i;
 
 export function structureSelectionRow(
-  runtime: {
-    readonly store: Pick<StructureStore, 'byId' | 'byCategory'>;
-    readonly slot: Pick<StructureRuntime['slot'], 'committed'>;
-  } & Pick<StructureRuntime, 'pickCodes'>,
+  runtime: StructureSelectionRowRuntime,
 ): SelectionKindRow<StructureRef> {
   const { store, pickCodes, slot } = runtime;
   return {

@@ -86,7 +86,7 @@ export const selectFocusRow = (state: RootState): SelectionRowBase | null =>
  */
 export const selectFocusId = (state: RootState): string | null => {
   const rows = selectSelectionRows(state);
-  return rows.focus === null ? null : rows.ids.focus;
+  return rows.focus === null ? null : (rows.ids.focus?.id ?? null);
 };
 
 // --- derived FocusableTargetBase selectors ----------------------------------------

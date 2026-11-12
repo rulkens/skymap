@@ -6,11 +6,12 @@
 
 import { describe, it, expect } from 'vitest';
 import createSagaMiddleware from 'redux-saga';
-import { configureStore } from '@reduxjs/toolkit';
+import { configureStore, type Action, type Middleware } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../src/store/rootReducer';
 import { watchTierSaga } from '../../../src/state/tier/watchTierSaga';
 import { requestTier } from '../../../src/state/tier/requestTier';
+import { setTier } from '../../../src/state/tier/tierSlice';
 import { selectTier } from '../../../src/state/tier/selectors';
 import {
   updateSelectionSelect,
@@ -20,11 +21,15 @@ import { selectionRoute } from '../../../src/store/constants';
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-function buildStore() {
+function buildStore(log: Action[] = []) {
+  const record: Middleware = () => (next) => (action) => {
+    log.push(action as Action);
+    return next(action);
+  };
   const sagaMiddleware = createSagaMiddleware();
   const store = configureStore({
     reducer: rootReducer,
-    middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(sagaMiddleware),
+    middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(record, sagaMiddleware),
   });
   sagaMiddleware.run(watchTierSaga);
   return store;
@@ -47,14 +52,17 @@ describe('watchTierSaga', () => {
   });
 
   it('re-requesting the current tier is a no-op', async () => {
-    const store = buildStore();
+    // State can't show it (setTier to the same tier is a no-op reducer); the action can,
+    // and sagas such as the Milky Way star reseed act on every setTier.
+    const log: Action[] = [];
+    const store = buildStore(log);
     store.dispatch(requestTier('large'));
     await flush();
-    const before = store.getState();
+    log.length = 0;
 
     store.dispatch(requestTier('large'));
     await flush();
 
-    expect(store.getState()).toBe(before);
+    expect(log.filter(setTier.match)).toEqual([]);
   });
 });
