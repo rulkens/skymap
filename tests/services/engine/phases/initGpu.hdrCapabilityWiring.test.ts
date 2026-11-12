@@ -240,7 +240,7 @@ function makeDeps(): BootstrapDeps {
     selection: {
       resolvePick: () => null,
       extractRow: () => null,
-      resolveFocusId: () => null,
+      resolveFocusId: () => ({ kind: 'absent' }),
       claimedKind: () => null,
       focusIdOf: () => null,
     },

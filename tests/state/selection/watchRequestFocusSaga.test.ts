@@ -4,8 +4,10 @@ import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../src/store/rootReducer';
 import { watchRequestFocusSaga } from '../../../src/state/selection/watchRequestFocusSaga';
+import { watchSelectionRowsSaga } from '../../../src/state/selectionRows/watchSelectionRowsSaga';
 import { engineSourceCountReported } from '../../../src/state/engine/engineSlice';
 import { requestFocus } from '../../../src/state/selection/requestFocus';
+import { selectPendingFocusId } from '../../../src/state/selection/selectors';
 import { selectionRoute } from '../../../src/store/constants';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import { selectionResolverOver } from '../../support/selectionResolverOver';
@@ -48,6 +50,8 @@ describe('watchRequestFocusSaga', () => {
     } as unknown as GalaxyRowFixture;
     const structures: StructureRowFixture = { byId: () => null, byCategory: () => [] };
     mw.run(watchRequestFocusSaga);
+    // Retires `pending`: its row write is where the request ends.
+    mw.run(watchSelectionRowsSaga);
     mw.setContext({ selection: selectionResolverOver(structures, galaxies) });
     return s;
   }
@@ -89,5 +93,12 @@ describe('watchRequestFocusSaga', () => {
       source: 'sdss',
       index: 0,
     });
+  });
+
+  it('an absent id clears the pending focus', async () => {
+    store.dispatch(requestFocus({ id: 'body-krypton', transition: 'fly' }));
+    await flush();
+    expect(selectPendingFocusId(store.getState())).toBeNull();
+    expect(store.getState()[selectionRoute].focus).toBeNull();
   });
 });

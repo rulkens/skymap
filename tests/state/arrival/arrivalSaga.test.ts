@@ -41,6 +41,8 @@ import { bodySelectionRow } from '../../../src/layers/body/selection/bodySelecti
 import { structureSelectionRow } from '../../../src/layers/structure/selection/structureSelectionRow';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
 import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/selection/milkyWaySelectionRow';
+import type { MilkyWayRef } from '../../../src/layers/milkyWay/selection/@types/MilkyWayRef';
+import type { SelectionKindRow } from '../../../src/@types/engine/layer/SelectionKindRow';
 import { satellitesSelectionRow } from '../../../src/layers/satellites/selection/satellitesSelectionRow';
 import { buildSatelliteCatalog } from '../../../tools/satellites/buildSatelliteCatalog';
 import { ISS } from '../../layers/satellites/fixtures/celestrakRecords';
@@ -110,6 +112,15 @@ function build({
   });
   let booted = false;
   const layerRows = { landed: milkyWayLanded };
+  // A catalog still loading: its row claims the id and answers pending until it lands.
+  const milkyWay = milkyWaySelectionRow(milkyWayPickCode());
+  const lateMilkyWay: SelectionKindRow<MilkyWayRef> = {
+    ...milkyWay,
+    focusId: {
+      ...milkyWay.focusId!,
+      decode: (id) => (layerRows.landed ? milkyWay.focusId!.decode(id) : { kind: 'pending' }),
+    },
+  };
   // Demand loads the catalog only while the section is shown.
   const satellites = {
     propagator: {
@@ -122,7 +133,7 @@ function build({
       () => [
         bodySelectionRow({ pickCodes: bodyPickCodes() }),
         structureSelectionRow(structureRowRuntime(EMPTY_STRUCTURES)),
-        ...(layerRows.landed ? [milkyWaySelectionRow(milkyWayPickCode())] : []),
+        lateMilkyWay,
         satellitesSelectionRow(satellites),
       ],
       () => NO_KINDS_OFF,
@@ -283,8 +294,8 @@ describe('arrivalSaga', () => {
 
   it('the backstop times out to failed', async () => {
     vi.useFakeTimers();
-    const h = build();
-    h.arrive({ view: { kind: 'focus', id: 'pgc-99999999' } });
+    const h = build({ milkyWayLanded: false });
+    h.arrive({ view: { kind: 'focus', id: MILKY_WAY_FOCUS_ID } });
     h.boot();
     await vi.advanceTimersByTimeAsync(ARRIVAL_TIMEOUT_MS - 1);
     expect(h.status().status).toBe('pending');

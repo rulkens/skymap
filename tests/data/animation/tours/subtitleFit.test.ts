@@ -30,7 +30,10 @@ const ANY_STRUCTURE = {
 const BASE = selectionResolverOver({ byId: () => ANY_STRUCTURE, byCategory: () => [] });
 const RESOLVER: SelectionResolver = {
   ...BASE,
-  resolveFocusId: (id) => BASE.resolveFocusId(id) ?? BASE.resolveFocusId('galaxy-group-stub'),
+  resolveFocusId: (id) => {
+    const resolution = BASE.resolveFocusId(id);
+    return resolution.kind === 'hit' ? resolution : BASE.resolveFocusId('galaxy-group-stub');
+  },
 };
 const FROM = { target: [0, 0, 0] as [number, number, number], yaw: 0, pitch: 0, distance: 5 };
 

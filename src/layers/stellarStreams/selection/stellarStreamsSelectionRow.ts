@@ -10,6 +10,7 @@ import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKin
 import type { StellarStreamsRuntime } from '../@types/StellarStreamsRuntime';
 import type { StellarStreamRef } from './@types/StellarStreamRef';
 import type { StellarStreamSelectionRow } from './@types/StellarStreamSelectionRow';
+import { hitOrAbsent } from '../../../utils/selection/hitOrAbsent';
 
 const FOCUS_ID = /^stream-([a-z0-9-]+)$/;
 
@@ -44,7 +45,7 @@ export function stellarStreamsSelectionRow(
       claims: (id) => FOCUS_ID.test(id),
       decode: (id) => {
         const match = FOCUS_ID.exec(id);
-        return match ? { type: 'stellarStream', slug: match[1]! } : null;
+        return hitOrAbsent(match ? { type: 'stellarStream', slug: match[1]! } : null);
       },
       encode: (ref) => encodeStellarStreamFocusId(ref.slug),
     },

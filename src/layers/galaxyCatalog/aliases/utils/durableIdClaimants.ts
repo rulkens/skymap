@@ -7,11 +7,11 @@ import { GALAXY_CATALOG_SOURCE_RECORD } from '../../sources/galaxyCatalogSourceR
  * The record sources whose registry row claims `prefix` ids, lowest rank first:
  * the order a durable id is asked in and the palette joins names in.
  */
-export function durableIdClaimants(
-  records: Iterable<GalaxyRecordSource>,
+export function durableIdClaimants<T extends Pick<GalaxyRecordSource, 'source'>>(
+  records: Iterable<T>,
   prefix: GalaxyDurableIdClaim['prefix'],
-): GalaxyRecordSource[] {
-  const claimOf = (record: GalaxyRecordSource) =>
+): T[] {
+  const claimOf = (record: T) =>
     (GALAXY_CATALOG_SOURCE_RECORD[record.source] as GalaxyCatalogSourceEntry).durableId;
   return [...records]
     .filter((record) => claimOf(record)?.prefix === prefix)

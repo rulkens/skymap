@@ -6,36 +6,44 @@ import { rootReducer } from '../../../src/store/rootReducer';
 import { resolveFocusRefDeferringSaga } from '../../../src/state/selection/resolveFocusRefDeferringSaga';
 import { engineStatusChanged } from '../../../src/state/engine/engineSlice';
 import type { SelectionRefBase } from '../../../src/@types/engine/selection/SelectionRefBase';
+import type { FocusResolution } from '../../../src/@types/engine/selection/FocusResolution';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
+const MILKY_WAY = { type: 'milkyWay' };
+
+function run(resolveFocusId: () => FocusResolution) {
+  const mw = createSagaMiddleware();
+  const store = configureStore({ reducer: rootReducer, middleware: (g) => g().concat(mw) });
+  mw.setContext({ selection: { resolveFocusId } });
+  const outcome: { result?: SelectionRefBase | null } = {};
+  mw.run(function* () {
+    outcome.result = yield* resolveFocusRefDeferringSaga('milkyWay');
+  });
+  return { store, outcome };
+}
+
 describe('resolveFocusRefDeferringSaga', () => {
-  it('resolves once the Layer rows land, without waiting for a catalog', async () => {
-    // A Layer-only id (milkyWay) is unresolvable until createLayers appends its
-    // row — this flag stands in for that, flipped once "createLayers" has run.
-    let layerRowsLanded = false;
-    let result: SelectionRefBase | null | undefined;
-
-    const mw = createSagaMiddleware();
-    const store = configureStore({ reducer: rootReducer, middleware: (g) => g().concat(mw) });
-    mw.setContext({
-      selection: {
-        resolveFocusId: () => (layerRowsLanded ? { type: 'milkyWay' } : null),
-      },
-    });
-    mw.run(function* () {
-      result = yield* resolveFocusRefDeferringSaga('milkyWay');
-    });
-
+  it('keeps waiting while pending', async () => {
+    let resolution: FocusResolution = { kind: 'pending' };
+    const { store, outcome } = run(() => resolution);
     await flush();
-    expect(result).toBeUndefined();
+    expect(outcome).not.toHaveProperty('result');
 
-    layerRowsLanded = true;
-    // wireSlots dispatches this synchronously right after createLayers, with no
-    // catalog having landed yet — the regression this test pins.
+    // A non-count pulse retries too: `wireSlots` fires this with no catalog landed.
     store.dispatch(engineStatusChanged({ kind: 'loading' }));
     await flush();
+    expect(outcome).not.toHaveProperty('result');
 
-    expect(result).toEqual({ type: 'milkyWay' });
+    resolution = { kind: 'hit', ref: MILKY_WAY };
+    store.dispatch(engineStatusChanged({ kind: 'loading' }));
+    await flush();
+    expect(outcome.result).toEqual(MILKY_WAY);
+  });
+
+  it('returns null on absent without waiting', async () => {
+    const { outcome } = run(() => ({ kind: 'absent' }));
+    await flush();
+    expect(outcome.result).toBeNull();
   });
 });

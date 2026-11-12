@@ -1,11 +1,12 @@
 /**
  * watchRequestFocusSaga — the deep-link / palette FLY command handler.
  * requestFocus carries a durable focus id; this resolves it to a ref via the
- * shared resolveFocusRefDeferringSaga loop, which DEFERS while the id is unresolvable
+ * shared resolveFocusRefDeferringSaga loop, which DEFERS while the id is pending
  * on the catalog-landed pulse — engineSourceCountReported, which every source
  * reports on commit, the Gaia star bin included, so a star deep link resolves too. Once
  * resolved it dispatches updateSelectionFocus(ref, transition); the watchSelectionRowsSaga
- * reconciler then fills the row off that write. takeLatest aborts a stale
+ * reconciler then fills the row off that write. An absent id writes a null
+ * focus, whose row retires the pending id. takeLatest aborts a stale
  * deferral if a newer requestFocus arrives. Its sibling watchRequestSelectSaga
  * writes the select slot off the same shared loop; React never resolves ids.
  */

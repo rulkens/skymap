@@ -572,7 +572,7 @@ describe('a move after a composite continues from where it ended', () => {
     // Every focus id resolves to a distinct fake galaxy; only the trailing spin matters here.
     const coord = (id: string, k: number) => ((id.charCodeAt(1) * 7 + k * 13) % 41) - 20;
     const resolve = {
-      resolveFocusId: (id: string) => ({ id }),
+      resolveFocusId: (id: string) => ({ kind: 'hit', ref: { id } }),
       extractRow: (ref: { id: string }) => ({
         type: 'galaxyCatalog',
         positionMpc: [coord(ref.id, 1), coord(ref.id, 2), coord(ref.id, 3)],

@@ -111,6 +111,10 @@ const galaxies: GalaxyRowFixture = {
   ]),
 } as GalaxyRowFixture;
 
+const ABSENT = { kind: 'absent' } as const;
+const PENDING = { kind: 'pending' } as const;
+const hit = <Ref extends SelectionRefBase>(ref: Ref) => ({ kind: 'hit' as const, ref });
+
 /** Famous catalog row 0's compiled-in id: the one-row famous cloud above is that row. */
 const FAMOUS_ID = FAMOUS_GALAXY_NAMES[0]!.id;
 
@@ -374,74 +378,83 @@ async function makeStarCatalog(): Promise<Octree<StarColumns>> {
 // ─── resolveFocusId / focusIdOf (was resolveFocusId.test.ts) ────────────────
 
 describe('resolveFocusId, composed', () => {
-  it('empty id → null', () => {
-    expect(resolver.resolveFocusId('')).toBeNull();
+  it('empty id → absent', () => {
+    expect(resolver.resolveFocusId('')).toEqual(ABSENT);
   });
 
-  it('sdss-<objId> → galaxy ref at the matching index; unloaded or unmatched → null', () => {
-    expect(resolver.resolveFocusId('sdss-1237668393006604288')).toEqual({
-      type: 'galaxyCatalog',
-      source: 'sdss',
-      index: 0,
-    });
-    expect(resolver.resolveFocusId('sdss-9999')).toBeNull();
+  it('sdss-<objId> → galaxy ref at the matching index; unmatched → absent, unloaded → pending', () => {
+    expect(resolver.resolveFocusId('sdss-1237668393006604288')).toEqual(
+      hit({
+        type: 'galaxyCatalog',
+        source: 'sdss',
+        index: 0,
+      }),
+    );
+    expect(resolver.resolveFocusId('sdss-9999')).toEqual(ABSENT);
     const noSdss = selectionResolverOver(structures, galaxiesWith());
-    expect(noSdss.resolveFocusId('sdss-1237668393006604288')).toBeNull();
+    expect(noSdss.resolveFocusId('sdss-1237668393006604288')).toEqual(PENDING);
   });
 
   it('pgc-<objId> → GLADE first, then 2MRS', () => {
-    expect(resolver.resolveFocusId('pgc-99')).toEqual({
-      type: 'galaxyCatalog',
-      source: 'glade',
-      index: 0,
-    });
-    expect(resolver.resolveFocusId('pgc-2789')).toEqual({
-      type: 'galaxyCatalog',
-      source: '2mrs',
-      index: 0,
-    });
+    expect(resolver.resolveFocusId('pgc-99')).toEqual(
+      hit({
+        type: 'galaxyCatalog',
+        source: 'glade',
+        index: 0,
+      }),
+    );
+    expect(resolver.resolveFocusId('pgc-2789')).toEqual(
+      hit({
+        type: 'galaxyCatalog',
+        source: '2mrs',
+        index: 0,
+      }),
+    );
   });
 
-  it('famous id → galaxy ref; unknown famous id → null', () => {
-    expect(resolver.resolveFocusId(FAMOUS_ID)).toEqual({
-      type: 'galaxyCatalog',
-      source: 'famousGalaxy',
-      index: 0,
-    });
-    expect(resolver.resolveFocusId('ngc9999')).toBeNull();
+  it('famous id → galaxy ref; unknown famous id → absent', () => {
+    expect(resolver.resolveFocusId(FAMOUS_ID)).toEqual(
+      hit({
+        type: 'galaxyCatalog',
+        source: 'famousGalaxy',
+        index: 0,
+      }),
+    );
+    expect(resolver.resolveFocusId('ngc9999')).toEqual(ABSENT);
   });
 
-  it('an unloaded famous id is unclaimed by the cloud, decoding to null (claimed, not resolved)', () => {
-    // A compiled-in id but the FamousGalaxy cloud absent: claimed but decode
-    // returns null — D6'2's deferral, not an unclaimed miss.
+  it('an unloaded famous id is claimed but pending', () => {
+    // A compiled-in id but the FamousGalaxy cloud absent: D6'2's deferral, not an unclaimed miss.
     const noCloud = selectionResolverOver(structures, galaxiesWith('sdss', 'glade', '2mrs'));
-    expect(noCloud.resolveFocusId(FAMOUS_ID)).toBeNull();
+    expect(noCloud.resolveFocusId(FAMOUS_ID)).toEqual(PENDING);
   });
 
   it('galaxy-cluster-<seed> → structure ref with the durable id', () => {
-    expect(resolver.resolveFocusId('galaxy-cluster-virgo')).toEqual({
-      type: 'structure',
-      id: 'galaxy-cluster-virgo',
-    });
+    expect(resolver.resolveFocusId('galaxy-cluster-virgo')).toEqual(
+      hit({
+        type: 'structure',
+        id: 'galaxy-cluster-virgo',
+      }),
+    );
   });
 
-  it('structure id with invalid chars → null', () => {
-    expect(resolver.resolveFocusId('galaxy-cluster-virgo m87')).toBeNull();
+  it('structure id with invalid chars → absent', () => {
+    expect(resolver.resolveFocusId('galaxy-cluster-virgo m87')).toEqual(ABSENT);
   });
 
   it('round-trips a milkyWay ref through encode → decode', () => {
     const id = resolver.focusIdOf({ type: 'milkyWay' });
     expect(id).not.toBeNull();
-    expect(resolver.resolveFocusId(id!)).toEqual({ type: 'milkyWay' });
+    expect(resolver.resolveFocusId(id!)).toEqual(hit({ type: 'milkyWay' }));
   });
 
-  it('body-<unknownSeed> → null; round-trips a known body ref', () => {
-    expect(resolver.resolveFocusId('body-krypton')).toBeNull();
+  it('body-<unknownSeed> → absent; round-trips a known body ref', () => {
+    expect(resolver.resolveFocusId('body-krypton')).toEqual(ABSENT);
     // A star is not a body id any more (spec §6), so its old link decodes to nothing.
-    expect(resolver.resolveFocusId('body-sirius')).toBeNull();
+    expect(resolver.resolveFocusId('body-sirius')).toEqual(ABSENT);
     const id = resolver.focusIdOf({ type: 'body', id: asSceneBodyId('earth') });
     expect(id).toBe('body-earth');
-    expect(resolver.resolveFocusId(id!)).toEqual({ type: 'body', id: 'earth' });
+    expect(resolver.resolveFocusId(id!)).toEqual(hit({ type: 'body', id: 'earth' }));
   });
 
   it('round-trips a seeded star id from every seeded table', async () => {
@@ -460,16 +473,16 @@ describe('resolveFocusId, composed', () => {
     ];
     for (const [id, ref] of cases) {
       // Seeded ids decode with no bin loaded at all — only a survey index defers.
-      expect(resolver.resolveFocusId(id)).toEqual(ref);
+      expect(resolver.resolveFocusId(id)).toEqual(hit(ref));
       expect(resolver.focusIdOf(ref)).toBe(id);
     }
-    expect(resolver.resolveFocusId('star-krypton')).toBeNull();
+    expect(resolver.resolveFocusId('star-krypton')).toEqual(ABSENT);
   });
 
-  it('star-<index> defers until a survey catalog is loaded, then round-trips', async () => {
+  it('star-<index> is pending until a survey catalog is loaded, then round-trips', async () => {
     // D6'1: the link defers at the REF stage, so the deep link lands when the
     // bin commits instead of resolving to a record nothing can extract.
-    expect(resolver.resolveFocusId('star-42')).toBeNull();
+    expect(resolver.resolveFocusId('star-42')).toEqual(PENDING);
 
     const loaded = selectionResolverOver(
       structures,
@@ -477,28 +490,33 @@ describe('resolveFocusId, composed', () => {
       starsFixture(await makeStarCatalog()),
     );
     const ref: SelectionRefBase = { type: 'starCatalog', source: 'gaiaStars', index: 42 };
-    expect(loaded.resolveFocusId('star-42')).toEqual(ref);
+    expect(loaded.resolveFocusId('star-42')).toEqual(hit(ref));
     expect(loaded.focusIdOf(ref)).toBe('star-42');
-    expect(loaded.resolveFocusId('star-0')).toEqual({
-      type: 'starCatalog',
-      source: 'gaiaStars',
-      index: 0,
-    });
-    expect(loaded.resolveFocusId('star-abc')).toBeNull();
-    expect(loaded.resolveFocusId('star--1')).toBeNull();
-    expect(loaded.resolveFocusId('star-1e3')).toBeNull();
-    expect(loaded.resolveFocusId('star-1.5')).toBeNull();
+    expect(loaded.resolveFocusId('star-0')).toEqual(
+      hit({
+        type: 'starCatalog',
+        source: 'gaiaStars',
+        index: 0,
+      }),
+    );
+    expect(loaded.resolveFocusId('star-abc')).toEqual(ABSENT);
+    expect(loaded.resolveFocusId('star--1')).toEqual(ABSENT);
+    expect(loaded.resolveFocusId('star-1e3')).toEqual(ABSENT);
+    expect(loaded.resolveFocusId('star-1.5')).toEqual(ABSENT);
   });
 
-  it('pos@ra,dec → nearest galaxy ref within 30 arcsec; beyond it and malformed → null', () => {
+  it('pos@ra,dec → nearest galaxy ref within 30 arcsec; beyond it pending, malformed absent', () => {
     const posOnly = selectionResolverOver(structures, galaxiesWith('sdss'));
-    expect(posOnly.resolveFocusId('pos@0.0000,0.0000')).toEqual({
-      type: 'galaxyCatalog',
-      source: 'sdss',
-      index: 0,
-    });
-    expect(resolver.resolveFocusId('pos@90.0000,89.0000')).toBeNull();
-    expect(resolver.resolveFocusId('pos@1,2,3')).toBeNull();
+    expect(posOnly.resolveFocusId('pos@0.0000,0.0000')).toEqual(
+      hit({
+        type: 'galaxyCatalog',
+        source: 'sdss',
+        index: 0,
+      }),
+    );
+    // A miss stays pending while any source (DESI, Milliquas here) has not committed.
+    expect(resolver.resolveFocusId('pos@90.0000,89.0000')).toEqual(PENDING);
+    expect(resolver.resolveFocusId('pos@1,2,3,4')).toEqual(ABSENT);
   });
 });
 
@@ -507,7 +525,7 @@ describe('focusIdOf ∘ resolveFocusId round-trip', () => {
     const ref: SelectionRefBase = { type: 'galaxyCatalog', source: 'sdss', index: 0 };
     const id = resolver.focusIdOf(ref);
     expect(id).toBe('sdss-1237668393006604288');
-    expect(resolver.resolveFocusId(id!)).toEqual(ref);
+    expect(resolver.resolveFocusId(id!)).toEqual(hit(ref));
   });
 
   it('GLADE ref (objId 0n) → pos@ra,dec,dMpc → same ref; the legacy two-part id still decodes', () => {
@@ -520,31 +538,31 @@ describe('focusIdOf ∘ resolveFocusId round-trip', () => {
     const ref: SelectionRefBase = { type: 'galaxyCatalog', source: 'glade', index: 0 };
     const id = posDeps.focusIdOf(ref);
     expect(id).toBe('pos@0.0000,0.0000,1.00');
-    expect(posDeps.resolveFocusId(id!)).toEqual(ref);
-    expect(posDeps.resolveFocusId('pos@0.0000,0.0000')).toEqual(ref);
+    expect(posDeps.resolveFocusId(id!)).toEqual(hit(ref));
+    expect(posDeps.resolveFocusId('pos@0.0000,0.0000')).toEqual(hit(ref));
     // A distance names a shell: the same direction 2 Mpc further holds nothing.
-    expect(posDeps.resolveFocusId('pos@0.0000,0.0000,3.00')).toBeNull();
+    expect(posDeps.resolveFocusId('pos@0.0000,0.0000,3.00')).toEqual(PENDING);
   });
 
   it('FamousGalaxy ref → famous seed id → same ref', () => {
     const ref: SelectionRefBase = { type: 'galaxyCatalog', source: 'famousGalaxy', index: 0 };
     const id = resolver.focusIdOf(ref);
     expect(id).toBe(FAMOUS_ID);
-    expect(resolver.resolveFocusId(id!)).toEqual(ref);
+    expect(resolver.resolveFocusId(id!)).toEqual(hit(ref));
   });
 
   it('GLADE ref with a catalog id → pgc-<objId> → same ref', () => {
     const ref: SelectionRefBase = { type: 'galaxyCatalog', source: 'glade', index: 0 };
     const id = resolver.focusIdOf(ref);
     expect(id).toBe('pgc-99');
-    expect(resolver.resolveFocusId(id!)).toEqual(ref);
+    expect(resolver.resolveFocusId(id!)).toEqual(hit(ref));
   });
 
   it('structure ref → its durable id → same ref', () => {
     const virgoId = 'galaxy-cluster-virgo';
     const ref: SelectionRefBase = { type: 'structure', id: virgoId };
     expect(resolver.focusIdOf(ref)).toBe(virgoId);
-    expect(resolver.resolveFocusId(virgoId)).toEqual(ref);
+    expect(resolver.resolveFocusId(virgoId)).toEqual(hit(ref));
   });
 });
 
@@ -606,26 +624,34 @@ describe('composeSelectionRows — claim-then-decode contract', () => {
     } as unknown as SelectionKindRow;
   }
 
-  it('a claiming row is authoritative even when its decode is null', () => {
-    const decodeY = vi.fn(() => ({ type: 'y' }));
-    const rows = [stubRow('x', 'x-', () => null), stubRow('y', 'y-', decodeY)];
+  it('a claiming row is authoritative even when its decode is absent', () => {
+    const decodeY = vi.fn(() => hit({ type: 'y' }));
+    const rows = [stubRow('x', 'x-', () => ABSENT), stubRow('y', 'y-', decodeY)];
     const composed = composeSelectionRows(
       () => rows,
       () => NO_KINDS_OFF,
     );
-    expect(composed.resolveFocusId('x-1')).toBeNull();
+    expect(composed.resolveFocusId('x-1')).toEqual(ABSENT);
     expect(decodeY).not.toHaveBeenCalled();
   });
 
-  it('an unclaimed id resolves to null without consulting any decode', () => {
-    const decode = vi.fn(() => ({ type: 'x' }));
+  it('resolveFocusId answers absent when no row claims the id', () => {
+    const decode = vi.fn(() => hit({ type: 'x' }));
     const rows = [stubRow('x', 'x-', decode)];
     const composed = composeSelectionRows(
       () => rows,
       () => NO_KINDS_OFF,
     );
-    expect(composed.resolveFocusId('z-1')).toBeNull();
+    expect(composed.resolveFocusId('z-1')).toEqual(ABSENT);
     expect(decode).not.toHaveBeenCalled();
+  });
+
+  it("resolveFocusId passes a claiming row's pending through", () => {
+    const composed = composeSelectionRows(
+      () => [stubRow('x', 'x-', () => PENDING)],
+      () => NO_KINDS_OFF,
+    );
+    expect(composed.resolveFocusId('x-1')).toEqual(PENDING);
   });
 
   it('rowsOf is read on every call', () => {
@@ -633,12 +659,12 @@ describe('composeSelectionRows — claim-then-decode contract', () => {
     const composed = composeSelectionRows(
       () => {
         calls++;
-        return calls === 1 ? [] : [stubRow('x', 'x-', () => ({ type: 'x' }))];
+        return calls === 1 ? [] : [stubRow('x', 'x-', () => hit({ type: 'x' }))];
       },
       () => NO_KINDS_OFF,
     );
-    expect(composed.resolveFocusId('x-1')).toBeNull();
-    expect(composed.resolveFocusId('x-1')).toEqual({ type: 'x' });
+    expect(composed.resolveFocusId('x-1')).toEqual(ABSENT);
+    expect(composed.resolveFocusId('x-1')).toEqual(hit({ type: 'x' }));
     expect(calls).toBe(2);
   });
 });
@@ -655,7 +681,7 @@ describe('composeSelectionRows — picking gate', () => {
     extractRow: () => VIRGO_ROW,
     focusId: {
       claims: (id) => id.startsWith('galaxy-cluster-'),
-      decode: () => ({ type: 'structure', id: 'virgo' }),
+      decode: () => hit({ type: 'structure' as const, id: 'virgo' }),
       encode: () => 'galaxy-cluster-virgo',
     },
   };
@@ -674,10 +700,9 @@ describe('composeSelectionRows — picking gate', () => {
     );
     expect(structureOff.resolvePick(pick)).toBeNull();
     expect(structureOff.extractRow({ type: 'structure', id: 'virgo' }, SIM_DAYS)).toBe(VIRGO_ROW);
-    expect(structureOff.resolveFocusId('galaxy-cluster-virgo')).toEqual({
-      type: 'structure',
-      id: 'virgo',
-    });
+    expect(structureOff.resolveFocusId('galaxy-cluster-virgo')).toEqual(
+      hit({ type: 'structure', id: 'virgo' }),
+    );
     expect(structureOff.focusIdOf({ type: 'structure', id: 'virgo' })).toBe('galaxy-cluster-virgo');
   });
 });

@@ -33,6 +33,7 @@ import { captureGalaxyFocusIds } from '../selection/captureGalaxyFocusIds';
 import { SELECTION_WRITE_BY_SLOT } from '../selection/selectionWriteBySlot';
 import { updateSelectionHover } from '../selection/selectionSlice';
 import { engineSourceCountReported } from '../engine/engineSlice';
+import { refOfResolution } from '../../utils/selection/refOfResolution';
 import type { RootState, SagaContext } from '../../store/types';
 
 export function* watchTierSaga() {
@@ -64,7 +65,7 @@ export function* watchTierSaga() {
     // — the safe direction for a re-anchor that resolves against the new cloud.
     for (const { slot, source, focusId } of reanchor) {
       yield* take((a: Action) => engineSourceCountReported.match(a) && a.payload.source === source);
-      const ref = selection.resolveFocusId(focusId);
+      const ref = refOfResolution(selection.resolveFocusId(focusId));
       yield* put(SELECTION_WRITE_BY_SLOT[slot](ref)); // hit → re-anchor; miss → null (clears slot)
     }
   });

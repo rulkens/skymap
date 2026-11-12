@@ -42,8 +42,8 @@ export function composeSelectionRows(
     },
 
     resolveFocusId(focusId) {
-      if (!focusId) return null;
-      return claimingRow(focusId)?.focusId!.decode(focusId) ?? null;
+      const row = focusId ? claimingRow(focusId) : null;
+      return row ? row.focusId!.decode(focusId) : { kind: 'absent' };
     },
 
     claimedKind(focusId) {

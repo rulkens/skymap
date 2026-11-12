@@ -22,6 +22,6 @@ describe('milkyWaySearch', () => {
     expect(row!.names).toEqual(MILKY_WAY_NAMES);
     const focusId = milkyWaySelectionRow(milkyWayPickCode()).focusId!;
     expect(focusId.claims(row!.id)).toBe(true);
-    expect(focusId.decode(row!.id)).toEqual({ type: 'milkyWay' });
+    expect(focusId.decode(row!.id)).toEqual({ kind: 'hit', ref: { type: 'milkyWay' } });
   });
 });

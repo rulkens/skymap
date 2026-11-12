@@ -19,7 +19,7 @@ import {
   updateSelectionFocus,
   updateSelectionSelect,
 } from '../selection/selectionSlice';
-import { selectFocusRow, selectPendingFocusId } from '../selection/selectors';
+import { selectFocusRef, selectFocusRow, selectPendingFocusId } from '../selection/selectors';
 import { setSelectionRow } from '../selectionRows/selectionRowsSlice';
 import { engineLoadProgressChanged } from '../engine/engineSlice';
 import { selectEngineStatus, selectLoadProgress } from '../engine/selectors';
@@ -70,6 +70,13 @@ function* frameFocusSaga(runtime: LiveCameraRuntime): SagaGenerator<NavigateOutc
     (yield* select(selectPendingFocusId)) !== null ||
     (yield* select(selectFocusRow)) === null
   ) {
+    // An absent id ends its request with a null focus.
+    if (
+      (yield* select(selectPendingFocusId)) === null &&
+      (yield* select(selectFocusRef)) === null
+    ) {
+      return UNKNOWN_ID;
+    }
     const { idle } = yield* race({ row: take(setSelectionRow), idle: take(isLoadIdle) });
     if (idle === undefined) continue;
     // A catalog's count report, which resolves its ids, trails the idle

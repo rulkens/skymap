@@ -61,10 +61,10 @@ committed; static rows answer only `hit` or `absent` (spec §4.1 lists which).
 - `resolveFocusRefDeferringSaga › returns null on absent without waiting`
 - `watchRequestFocusSaga › an absent id clears the pending focus`
 
-- [ ] Write the tests and see them fail
-- [ ] Implement
-- [ ] Run `npm run typecheck` and the touched test files, and confirm they pass
-- [ ] Commit: "Focus ids resolve to pending, absent or hit"
+- [x] Write the tests and see them fail
+- [x] Implement
+- [x] Run `npm run typecheck` and the touched test files, and confirm they pass
+- [x] Commit: "Focus ids resolve to pending, absent or hit"
 
 ### Task 2: Every selection slot keeps its durable id
 

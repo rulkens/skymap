@@ -85,6 +85,7 @@ import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitPose/orbitAn
 import { imagePlaneBasis } from '../../../utils/camera/orbitPose/imagePlaneBasis';
 import { frameUp } from '../../../utils/camera/orbitPose/frameUp';
 import { lerpAngleShortest } from '../../../utils/math/lerpAngleShortest';
+import { refOfResolution } from '../../../utils/selection/refOfResolution';
 
 /**
  * Rewrite every id-bearing leaf in `data` to its concrete equivalent, given
@@ -285,7 +286,7 @@ function walkEffect(
         const focusClear: SceneEffect & { kind: 'focus' } = { kind: 'focus', ref: null };
         return focusClear;
       }
-      const ref = resolve.resolveFocusId(effect.id);
+      const ref = refOfResolution(resolve.resolveFocusId(effect.id));
       if (ref === null) {
         throw new Error(
           `resolveClipFoci: could not resolve focusId '${effect.id}'. ` +
@@ -318,7 +319,7 @@ function resolveFraming(
   fovYRad: number,
   simDays: number,
 ): FocusFraming {
-  const ref = resolve.resolveFocusId(id);
+  const ref = refOfResolution(resolve.resolveFocusId(id));
   if (ref === null) {
     throw new Error(
       `resolveClipFoci: could not resolve id '${id}' to a selection ref. ` +

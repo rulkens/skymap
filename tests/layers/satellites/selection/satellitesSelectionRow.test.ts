@@ -31,9 +31,9 @@ const ISS_REF = { type: 'satellite', noradId: 25544 } as const;
 
 describe('satellitesSelectionRow', () => {
   it('round-trips a focus id and claims nothing else', () => {
-    expect(row.focusId!.decode('satellite-25544')).toEqual(ISS_REF);
+    expect(row.focusId!.decode('satellite-25544')).toEqual({ kind: 'hit', ref: ISS_REF });
     expect(row.focusId!.encode(ISS_REF)).toBe('satellite-25544');
-    expect(row.focusId!.decode('satellite-')).toBeNull();
+    expect(row.focusId!.decode('satellite-')).toEqual({ kind: 'absent' });
     expect(row.focusId!.claims('body-earth')).toBe(false);
   });
 

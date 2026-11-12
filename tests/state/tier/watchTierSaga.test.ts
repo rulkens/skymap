@@ -142,7 +142,7 @@ describe('watchTierSaga', () => {
     await flush();
 
     const selectRef = store.getState()[selectionRoute].select;
-    // Miss: resolveFocusId returns null → slot cleared.
+    // Miss: no hit → slot cleared.
     expect(selectRef).toBeNull();
   });
 

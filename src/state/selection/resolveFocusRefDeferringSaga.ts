@@ -2,11 +2,11 @@
  * resolveFocusRefDeferringSaga — the shared command->ref bridge both selection
  * command sagas (watchRequestFocusSaga, watchRequestSelectSaga) call. Resolves a
  * durable focus id to a selection ref via the composed resolver, DEFERRING while
- * it is unresolvable on two pulses: engineSourceCountReported (every source's
+ * it is `pending` on two pulses: engineSourceCountReported (every source's
  * catalog-landed pulse) and engineStatusChanged (`wireSlots` fires 'loading'
  * right after `createLayers` appends each Layer's selection rows — a
  * Layer-only id, e.g. `milkyWay`, needs that pulse to resolve during boot).
- * This mirrors the gap-fill in watchSelectionRowsSaga.
+ * An `absent` id answers null at once: nothing that loads later can bring it.
  */
 import { take, getContext } from 'typed-redux-saga';
 
@@ -15,10 +15,10 @@ import type { SagaContext } from '../../store/types';
 
 export function* resolveFocusRefDeferringSaga(focusId: string) {
   const selection = yield* getContext<SagaContext['selection']>('selection');
-  let ref = selection.resolveFocusId(focusId);
-  while (!ref) {
+  let resolution = selection.resolveFocusId(focusId);
+  while (resolution.kind === 'pending') {
     yield* take([engineSourceCountReported, engineStatusChanged]);
-    ref = selection.resolveFocusId(focusId);
+    resolution = selection.resolveFocusId(focusId);
   }
-  return ref;
+  return resolution.kind === 'hit' ? resolution.ref : null;
 }

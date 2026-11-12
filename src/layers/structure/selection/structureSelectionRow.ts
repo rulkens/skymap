@@ -14,6 +14,7 @@ import type { StructureRuntime } from '../@types/StructureRuntime';
 import type { StructureStore } from '../catalog/@types/StructureStore';
 import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKindRow';
 import type { StructureRef } from './@types/StructureRef';
+import { hitOrAbsent } from '../../../utils/selection/hitOrAbsent';
 
 /** A bare token must satisfy this character class to be a structure seed id. */
 const SAFE_ID_RE = /^[a-z0-9_-]+$/i;
@@ -49,7 +50,7 @@ export function structureSelectionRow(
     },
     focusId: {
       claims: (id) => STRUCTURE_IDS.some((cat) => id.startsWith(`${cat}-`)),
-      decode: (id) => (SAFE_ID_RE.test(id) ? { type: 'structure', id } : null),
+      decode: (id) => hitOrAbsent(SAFE_ID_RE.test(id) ? { type: 'structure', id } : null),
       encode: (ref) => ref.id,
     },
   };

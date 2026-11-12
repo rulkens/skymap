@@ -13,6 +13,7 @@ import { EARTH_SCENE_BODY_IDS } from '../scenes/data/earthSceneBodyIds';
 import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKindRow';
 import type { SceneBodyId } from '../../../@types/scene/SceneBodyId';
 import type { EarthSceneRef } from './@types/EarthSceneRef';
+import { hitOrAbsent } from '../../../utils/selection/hitOrAbsent';
 
 const isEarthSceneId = (id: string): id is SceneBodyId =>
   isSceneBodyId(id) && EARTH_SCENE_BODY_IDS.has(id);
@@ -35,7 +36,7 @@ export function earthSceneSelectionRow(): SelectionKindRow<EarthSceneRef> {
     },
     focusId: {
       claims: (id) => decode(id) !== null,
-      decode,
+      decode: (id) => hitOrAbsent(decode(id)),
       encode: (ref) => `${BODY_FOCUS_PREFIX}${ref.id}`,
     },
   };

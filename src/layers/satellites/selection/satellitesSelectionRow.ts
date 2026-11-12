@@ -21,6 +21,7 @@ import { SATELLITE_FOCUS_PREFIX } from '../focus/present/satelliteFocusPrefix';
 import type { SatellitesRuntime } from '../@types/SatellitesRuntime';
 import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKindRow';
 import type { SatelliteRef } from './@types/SatelliteRef';
+import { hitOrAbsent } from '../../../utils/selection/hitOrAbsent';
 
 const FOCUS_ID = /^satellite-(\d+)$/;
 
@@ -74,7 +75,7 @@ export function satellitesSelectionRow(runtime: SatellitesRuntime): SelectionKin
     },
     focusId: {
       claims: (id) => id.startsWith(SATELLITE_FOCUS_PREFIX),
-      decode,
+      decode: (id) => hitOrAbsent(decode(id)),
       encode: (ref) => encodeSatelliteFocusId(ref.noradId),
     },
   };

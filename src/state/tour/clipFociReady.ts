@@ -12,9 +12,9 @@
  * `child`, everything else is a leaf. At id-bearing leaves:
  *
  *   - `moveTargetId(id)` and `dollyToId(id)`: call `resolve.resolveFocusId(id)`;
- *     return false if null.
+ *     return false unless it is a hit.
  *   - `focusId(null)`: a focus-clear cue — always ready (no data needed).
- *   - `focusId(id)`: call `resolve.resolveFocusId(id)`; return false if null.
+ *   - `focusId(id)`: call `resolve.resolveFocusId(id)`; return false unless a hit.
  *
  * ### Why a short-circuit walk instead of `collectFocusIds` + a batch check?
  *
@@ -30,7 +30,7 @@
  *
  * ### Structure and milkyWay ids are always ready
  *
- * The composed resolver's `resolveFocusId` returns a non-null ref for structure-prefixed ids
+ * The composed resolver's `resolveFocusId` returns a hit for structure-prefixed ids
  * (e.g. `galaxy-cluster-virgo-m87`) and for `milkyWay` without consulting the catalog
  * map — the resolution is by id format alone. So structure and milkyWay ids in
  * a clip never block the readiness gate.
@@ -78,16 +78,18 @@ function walkEffect(effect: Effect, resolve: SelectionResolver): boolean {
     case 'lookAtId':
     case 'strafeId':
     case 'spinToId':
-      return resolve.resolveFocusId(effect.id) !== null;
+      return resolve.resolveFocusId(effect.id).kind === 'hit';
     case 'focusId':
       // null is a focus-clear cue: always ready, no data needed.
       if (effect.id === null) return true;
-      return resolve.resolveFocusId(effect.id) !== null;
+      return resolve.resolveFocusId(effect.id).kind === 'hit';
 
     // A flyPath carries id-bearing waypoints; each `atFocus` (id-form) must
     // resolve. Concrete `atPoint` waypoints need no data.
     case 'flyPath':
-      return effect.waypoints.every((w) => !('id' in w) || resolve.resolveFocusId(w.id) !== null);
+      return effect.waypoints.every(
+        (w) => !('id' in w) || resolve.resolveFocusId(w.id).kind === 'hit',
+      );
 
     // ── Pass-through — camera actions, scene effects, hold/wait ────────────
     default:
