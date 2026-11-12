@@ -500,8 +500,8 @@ Fade = class fade × `asteroidWindowFade`.
 
 Copy rules: `docs/superpowers/conventions/ui-ux.md` and the `copy` skill's voice. No test.
 
-- [ ] `npm run build -w packages/website` (or the site's check script) passes.
-- [ ] Commit `Asteroids: docs, website facts and attribution`.
+- [x] `npm run build -w packages/website` (or the site's check script) passes.
+- [x] Commit `Asteroids: docs, website facts and attribution`.
 
 ---
 

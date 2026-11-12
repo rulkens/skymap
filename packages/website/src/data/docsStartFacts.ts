@@ -51,7 +51,7 @@ export const DOCS_START_FACTS: readonly Fact[] = [
   {
     id: 'scene-not-here',
     about: 'app',
-    text: 'There are no asteroids or comets in the scene, no dwarf planet other than Pluto, and no planets of other stars.',
+    text: 'There are no comets in the scene, no unnumbered asteroids, and no planets of other stars.',
     source: `${REPO_BLOB}/src/layers/body/bodies/`,
     sourceLabel: `the list of planets and moons, ${IN_REPO}`,
     checked: CHECKED,
