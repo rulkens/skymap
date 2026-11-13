@@ -1,5 +1,6 @@
 import type { SiteShot } from '../@types/SiteShot';
 import type { SiteShotSettings } from '../@types/SiteShotSettings';
+import { SHARE_CARD_SIZE } from './shareCardSize';
 
 const WIDE = { width: 1280, height: 720 };
 const TALL = { width: 720, height: 900 };
@@ -363,15 +364,52 @@ export const SITE_SHOTS: readonly SiteShot[] = [
     drawn: 'The sphere marking it is drawn; the scarcity of galaxies inside it is measured.',
     alt: 'A thin blue ring on a dark, nearly empty field.',
   },
+  // The link-preview cards (data/shareCards.ts): masters only, each subject lens-shifted right of the logo.
   {
     id: 'og-card',
     link: `focus=body-earth&${NOON}&pose=a,0,0,0,6.14,0.2,6e-16,0,0.42,0`,
     settings: SUBJECT,
-    size: { width: 1200, height: 630 },
+    size: SHARE_CARD_SIZE,
     widths: [],
     title: 'Earth',
     caption: 'For the link-preview card.',
-    alt: 'Earth against a dense field of stars, with the word skymap and the line: the mapped universe at true scale.',
+    alt: 'Earth against a dense field of stars, with the Skymap logo and the line: the mapped universe at true scale.',
+  },
+  {
+    id: 'card-about',
+    link: 'focus=milkyWay&pose=a,-0.000447,-0.007140,-0.003966,-0.6421,0.2356,0.036,0,0.55,0',
+    settings: { ...ONE_GALAXY, exposure: 2.4, settleMs: 4000 },
+    size: SHARE_CARD_SIZE,
+    widths: [],
+    title: 'The Milky Way',
+    alt: 'The Milky Way seen from outside: a barred spiral of pale stars and brown dust.',
+  },
+  {
+    id: 'card-classroom',
+    link: `${JUPITER}&pose=a,0,0,0,-1.9664,0.9133,6.5e-15,0,0.55,0`,
+    settings: { ...SUBJECT, settleMs: 4000 },
+    size: SHARE_CARD_SIZE,
+    widths: [],
+    title: 'Jupiter',
+    alt: 'Jupiter, banded in cream and rust, against a field of stars.',
+  },
+  {
+    id: 'card-features',
+    link: 'focus=body-saturn&t=2017-10-15T12:00:00Z&pose=a,0,0,0,4.1,0.38,1.2e-14,0,0.42,0',
+    settings: { ...SUBJECT, settleMs: 4000 },
+    size: SHARE_CARD_SIZE,
+    widths: [],
+    title: 'Saturn',
+    alt: 'Saturn seen from above its rings, against a field of stars.',
+  },
+  {
+    id: 'card-science',
+    link: 'pose=a,0,0,0,0.9,0.55,1500,0,0.75,0',
+    settings: { ...POINTS_ONLY, settleMs: 3000 },
+    size: SHARE_CARD_SIZE,
+    widths: [],
+    title: 'The SDSS fans',
+    alt: 'A glowing cloud of catalogued galaxies, brightest at its centre.',
   },
   {
     id: 'place-earth',

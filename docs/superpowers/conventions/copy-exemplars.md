@@ -97,6 +97,14 @@ Newest first. One entry per line the owner chose from, in this shape:
 
 A "none, because…" answer goes in the same shape with `Picked: none` and his reason under Why.
 
+- 2026-11-13 · app meta · title (index.html title, og, twitter)
+  - Picked: "Skymap: the mapped universe at true scale, in your browser" (register: plain, the site's own title)
+  - Passed over: "Skymap: fly from Earth to the cosmic web at true scale", "Skymap: the mapped universe at true scale"
+  - Why: none given
+- 2026-11-13 · app meta · description (meta, og, twitter, JSON-LD)
+  - Picked: "Skymap draws the mapped universe in 3D at true scale, from Earth and the planets to stars, galaxies and the cosmic web. Free, no account, in a current browser." (register: plain; the judge ranked it third)
+  - Passed over: "Fly from a Copenhagen park to the cosmic web in one continuous scene built from star and galaxy catalogues. Free, no account, in a current browser." (the site's own, the judge's top), "Catalogued stars and galaxies sit where published surveys put them. Fly from Earth to the cosmic web at true scale. Free, no account, in a current browser."
+  - Why: none given
 - 2026-11-10 · exhibit · cosmicFlows lede
   - Picked: "These ribbons show which way galaxies fall once the expansion of space is taken away. The Milky Way is falling too." (register: on screen)
   - Passed over: "Space carries the galaxies apart as it expands. With that expansion removed, each ribbon shows which way the galaxies near it are falling.", "The Milky Way is on one of these ribbons. Each one shows where galaxies fall once the expansion of space is removed."
