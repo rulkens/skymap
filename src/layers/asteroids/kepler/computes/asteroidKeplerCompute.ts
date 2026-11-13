@@ -40,12 +40,7 @@ export function asteroidKeplerCompute(runtime: AsteroidsRuntime): ContentCompute
         {
           simJd: simDays,
           sunFromCamAu,
-          exposure: Object.fromEntries(
-            ASTEROID_CLASSES.map((cls) => [
-              cls,
-              asteroidExposureRamp(zoomAu, cls, tuning) * state.settings.asteroids.brightness,
-            ]),
-          ) as Record<AsteroidClass, number>,
+          exposure: asteroidExposureRamp(zoomAu, tuning) * state.settings.asteroids.brightness,
           classFade: fade,
           hLimitCenti: Object.fromEntries(
             ASTEROID_CLASSES.map((cls) => [

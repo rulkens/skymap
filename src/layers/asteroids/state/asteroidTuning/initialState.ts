@@ -13,7 +13,6 @@ export const initialState: AsteroidTuning = {
   liftPerAu2: P.liftPerAu2,
   liftFloorZoomAu: P.liftFloorZoomAu,
   liftCapZoomAu: P.liftCapZoomAu,
-  distantLiftCapZoomAu: P.distantLiftCapZoomAu,
   dotRadiusPx: S.dotRadiusPx,
   sizeKneeH: S.sizeKneeH,
   sizeMaxScale: S.sizeMaxScale,
