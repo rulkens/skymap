@@ -11,6 +11,7 @@
 import type { Fetcher } from '../../../../@types/loading/Fetcher';
 import type { BodyTextureReq } from '../@types/BodyTextureReq';
 import { bodyTextureFilename } from '../../../../utils/bodyTextures/bodyTextureFilename';
+import { isGreyTextureKind } from '../../../../utils/bodyTextures/isGreyTextureKind';
 import { isLinearTextureKind } from '../../../../utils/bodyTextures/isLinearTextureKind';
 import { dataUrl } from '../../../../services/loading/fetchWithProgress';
 
@@ -27,9 +28,9 @@ export const bodyTextureFetcher: Fetcher<ImageBitmap, BodyTextureReq> = async (r
     );
   }
   const blob = await res.blob();
-  // Linear maps (material, normal) carry NUMERIC channels; default colour
-  // management would gamma-shift them, so decode raw.
-  if (isLinearTextureKind(req.kind)) {
+  // Linear maps carry NUMERIC channels and a grey map's byte is its coverage;
+  // default colour management would shift either, so decode raw.
+  if (isLinearTextureKind(req.kind) || isGreyTextureKind(req.kind)) {
     return createImageBitmap(blob, { colorSpaceConversion: 'none' });
   }
   return createImageBitmap(blob);
