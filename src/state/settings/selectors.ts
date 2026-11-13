@@ -75,6 +75,11 @@ export const selectFilm = (state: RootState): FilmSettings => selectSettings(sta
 
 export const selectFilmEnabled = (state: RootState): boolean => selectFilm(state).enabled;
 
+export const selectFilmLetterboxOn = (state: RootState): boolean => {
+  const film = selectFilm(state);
+  return film.enabled && film.letterbox;
+};
+
 // --- debug cluster ------------------------------------------------------------
 
 export const selectDebugOverlays = (state: RootState): Record<DebugOverlayKey, boolean> =>
