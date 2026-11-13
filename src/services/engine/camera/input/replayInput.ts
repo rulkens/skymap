@@ -24,7 +24,7 @@ import { zoomedDistance } from './utils/zoomedDistance';
 import { absoluteArm } from '../../../../utils/camera/arms/absoluteArm';
 import { bodyMovesThisFrame } from '../../../../utils/scene/bodyMovesThisFrame';
 import { selectFocusRow } from '../../../../state/selection/selectors';
-import cameraReducer, { commitCameraPose, setFovYRad } from '../../../../state/camera/cameraSlice';
+import cameraIntentReducer, { commitCameraPose, setFovYRad } from '../../../../state/camera/cameraIntentSlice';
 import { zoomLimitPushed } from '../../../../state/camera/zoomLimitPushed';
 
 import type { ClimbableKind } from '../@types/ClimbableKind';
@@ -94,7 +94,7 @@ export function replayInput(
   let navAuthors = args.navOwns;
   const emit = (action: UnknownAction): void => {
     actions.push(action);
-    camera = cameraReducer(camera, action);
+    camera = cameraIntentReducer(camera, action);
   };
 
   /**

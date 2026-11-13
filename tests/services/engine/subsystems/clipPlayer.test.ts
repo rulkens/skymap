@@ -32,7 +32,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../../src/store/rootReducer';
-import { clipStarted, clipEnded, resolveClipStart } from '../../../../src/state/camera/cameraSlice';
+import { clipStarted, clipEnded, resolveClipStart } from '../../../../src/state/camera/cameraIntentSlice';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import {
   UNSTARTED_EPOCHS,

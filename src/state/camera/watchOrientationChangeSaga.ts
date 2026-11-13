@@ -8,7 +8,7 @@
 import { takeLatest, getContext, put } from 'typed-redux-saga';
 
 import { requestOrientationChange } from './orientationActions';
-import { startFrameTween } from './cameraSlice';
+import { startFrameTween } from './cameraIntentSlice';
 import { setOrientation } from '../settings/core/orientationSlice';
 import type { SagaContext } from '../../store/types';
 

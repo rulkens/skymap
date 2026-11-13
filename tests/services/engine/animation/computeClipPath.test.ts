@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createClipPathInspectSeam } from '../../../../src/services/engine/animation/computeClipPath';
-import { resolveClipStart } from '../../../../src/state/camera/cameraSlice';
+import { resolveClipStart } from '../../../../src/state/camera/cameraIntentSlice';
 import { clipRegistry } from '../../../../src/data/animation/clips/clipRegistry';
 import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 import type { ClipPathSnapshot } from '../../../../src/@types/engine/debug/ClipPathSnapshot';

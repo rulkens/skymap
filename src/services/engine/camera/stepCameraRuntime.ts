@@ -46,12 +46,12 @@ import { selectionDriver } from '../../../utils/selection/selectionDriver';
 import { bodyRowAt } from '../../../utils/scene/bodyRowAt';
 import { focusMoveDurationMs } from './clips/focusMoveDurationMs';
 import { selectGestureHeld } from '../../../state/input/selectors';
-import cameraReducer, {
+import cameraIntentReducer, {
   cancelCameraTween,
   clearFrameTween,
   commitCameraPose,
   setFovYRad,
-} from '../../../state/camera/cameraSlice';
+} from '../../../state/camera/cameraIntentSlice';
 
 export function stepCameraRuntime(
   prev: CameraRuntime,
@@ -111,7 +111,7 @@ export function stepCameraRuntime(
       ),
     );
     orientationActions.push(reencodeAction);
-    stored = { ...rawStored, camera: cameraReducer(rawStored.camera, reencodeAction) };
+    stored = { ...rawStored, camera: cameraIntentReducer(rawStored.camera, reencodeAction) };
   }
   const focus = stored.selectionRows.focus;
   // A row framing a body no focus names (the mission's craft) stands it in as the pivot: the
@@ -181,7 +181,7 @@ export function stepCameraRuntime(
   const rootState =
     drained.actions.length === 0
       ? stored
-      : { ...stored, camera: drained.actions.reduce(cameraReducer, stored.camera) };
+      : { ...stored, camera: drained.actions.reduce(cameraIntentReducer, stored.camera) };
   // A table without navigator rows drops navigator input, so a stray `navDrag` cannot
   // nudge a skymap drag. `canvasPx` is CSS pixels, so the rate is the drag's own.
   const navigates = drivers.some((d) => isNavigatorDriverId(d.id));
@@ -368,7 +368,7 @@ export function stepCameraRuntime(
       register: { pose: projected.register, winner: winnerId },
       // Reduce only the tail past `tailStart` — the rest is already folded
       // into `rootState.camera`; identity on an idle frame (empty tail).
-      base: actions.slice(tailStart).reduce(cameraReducer, rootState.camera).base,
+      base: actions.slice(tailStart).reduce(cameraIntentReducer, rootState.camera).base,
       // Tracks the frame `base` is now valid in, whatever this frame did with
       // it — a body arm sees no re-encode above but the switch still lands.
       orientation: stored.settings.orientation,

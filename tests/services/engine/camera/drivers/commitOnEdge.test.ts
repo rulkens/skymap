@@ -15,7 +15,7 @@ import {
   setAutoRotate,
   clipStarted,
   clipEnded,
-} from '../../../../../src/state/camera/cameraSlice';
+} from '../../../../../src/state/camera/cameraIntentSlice';
 import {
   inputConsumed,
   inputGestureEnded,

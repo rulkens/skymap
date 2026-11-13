@@ -7,7 +7,7 @@
 
 import { CANCEL } from 'redux-saga';
 
-import { resolveClipStart, clipStarted } from '../../../state/camera/cameraSlice';
+import { resolveClipStart, clipStarted } from '../../../state/camera/cameraIntentSlice';
 import type { ClipData } from '../../../@types/animation/ClipData';
 import type { CameraPose } from '../../../@types/camera/pose/CameraPose';
 import type { OrientationFrameId } from '../../../@types/camera/orientation/OrientationFrameId';

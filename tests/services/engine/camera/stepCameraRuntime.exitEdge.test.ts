@@ -14,7 +14,7 @@ vi.mock('../../../../src/services/gpu/device', () => ({
 }));
 
 import { isWorldArm } from '../../../../src/services/engine/camera/arms/world/isWorldArm';
-import { aimCamera } from '../../../../src/state/camera/cameraSlice';
+import { aimCamera } from '../../../../src/state/camera/cameraIntentSlice';
 import { setMissionCraft } from '../../../../src/layers/missions/state/missions/slice';
 import { takeoverEnded, takeoverStarted } from '../../../../src/state/takeover/takeoverActions';
 import { setSimDays } from '../../../../src/state/time/timeSlice';

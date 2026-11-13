@@ -93,9 +93,9 @@ import { SITE_CAMERA_ARM } from '../../../../src/services/engine/camera/arms/sit
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
 import { diveUntilEngaged } from '../../../helpers/camera/diveUntilEngaged';
 import { poseAtHR } from '../../../helpers/camera/poseAtHR';
-import { commitCameraPose, startCameraTween } from '../../../../src/state/camera/cameraSlice';
+import { commitCameraPose, startCameraTween } from '../../../../src/state/camera/cameraIntentSlice';
 import { inputGestureEnded, inputGestureStarted } from '../../../../src/state/input/inputSlice';
-import { clipStarted, resolveClipStart } from '../../../../src/state/camera/cameraSlice';
+import { clipStarted, resolveClipStart } from '../../../../src/state/camera/cameraIntentSlice';
 import { all, tween } from '../../../../src/services/engine/animation/effectHelpers';
 import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
 import { eyeMpcOf } from '../../../../src/utils/camera/orbitPose/eyeMpcOf';

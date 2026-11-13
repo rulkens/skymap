@@ -25,7 +25,7 @@ import { hrOfPose } from '../../../helpers/camera/hrOfPose';
 import { tiltOfPose } from '../../../helpers/camera/tiltOfPose';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { liveWorldPose } from '../../../../src/services/engine/helpers/liveWorldPose';
-import { setAutoRotate, startCameraTween } from '../../../../src/state/camera/cameraSlice';
+import { setAutoRotate, startCameraTween } from '../../../../src/state/camera/cameraIntentSlice';
 import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRowsSlice';
 import { eyeMpcOf } from '../../../../src/utils/camera/orbitPose/eyeMpcOf';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';

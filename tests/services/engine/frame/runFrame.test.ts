@@ -62,7 +62,7 @@ import {
   setAutoRotate,
   commitCameraPose,
   startFrameTween,
-} from '../../../../src/state/camera/cameraSlice';
+} from '../../../../src/state/camera/cameraIntentSlice';
 import { setOrientation } from '../../../../src/state/settings/core/orientationSlice';
 import {
   ORIENTATION_FRAMES,

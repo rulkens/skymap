@@ -24,7 +24,7 @@ import {
   commitCameraPose,
   setAutoRotate,
   setFovYRad,
-} from '../../../../../src/state/camera/cameraSlice';
+} from '../../../../../src/state/camera/cameraIntentSlice';
 import { setSelectionRow } from '../../../../../src/state/selectionRows/selectionRowsSlice';
 import { pivotFraming } from '../../../../../src/services/engine/camera/framing/pivotRadiusMpc';
 import { absoluteArm } from '../../../../../src/utils/camera/arms/absoluteArm';

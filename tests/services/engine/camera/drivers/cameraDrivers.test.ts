@@ -46,7 +46,7 @@ import {
   setAutoRotate,
   commitCameraPose,
   clipStarted,
-} from '../../../../../src/state/camera/cameraSlice';
+} from '../../../../../src/state/camera/cameraIntentSlice';
 import { inputGestureStarted } from '../../../../../src/state/input/inputSlice';
 import { setOrientation } from '../../../../../src/state/settings/core/orientationSlice';
 import { setEasedDuration } from '../../../../../src/state/settings/core/focusMovesSlice';

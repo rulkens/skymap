@@ -13,7 +13,7 @@ import { setMilkyWayEnabled } from '../../../src/layers/milkyWay/state/milkyWay/
 import { writeCosmicWebDensityField } from '../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/slice';
 import { setZoneOfAvoidanceEnabled } from '../../../src/layers/zoneOfAvoidance/state/zoneOfAvoidance/slice';
 import { mergeSnapshot } from '../../../src/state/settings/mergeSnapshotAction';
-import { setAutoRotate } from '../../../src/state/camera/cameraSlice';
+import { setAutoRotate } from '../../../src/state/camera/cameraIntentSlice';
 
 describe('watchFadesSaga', () => {
   let store: ReturnType<typeof buildStore>['store'];

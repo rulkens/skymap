@@ -29,7 +29,7 @@ import { watchSelectionRowsSaga } from '../../../src/state/selectionRows/watchSe
 import { watchSelectionRevealSaga } from '../../../src/state/selection/watchSelectionRevealSaga';
 import { setVisibility } from '../../../src/state/settings/setVisibilityAction';
 import { selectSettings } from '../../../src/state/settings/selectSettings';
-import { commitCameraPose, startCameraTween } from '../../../src/state/camera/cameraSlice';
+import { commitCameraPose, startCameraTween } from '../../../src/state/camera/cameraIntentSlice';
 import { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsSlice';
 import { selectFocusRef, selectSelectedRef } from '../../../src/state/selection/selectors';
 import {

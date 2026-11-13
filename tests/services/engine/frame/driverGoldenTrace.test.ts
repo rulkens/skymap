@@ -35,7 +35,7 @@ import {
   resolveClipStart,
   setAutoRotate,
   startCameraTween,
-} from '../../../../src/state/camera/cameraSlice';
+} from '../../../../src/state/camera/cameraIntentSlice';
 import { inputConsumed } from '../../../../src/state/input/inputSlice';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import GOLDEN from '../../../fixtures/camera/driverGoldenTrace.json';

@@ -45,7 +45,7 @@ import {
   aimCamera,
   commitCameraPose,
   startFrameTween,
-} from '../../../../src/state/camera/cameraSlice';
+} from '../../../../src/state/camera/cameraIntentSlice';
 import { setMissionCraft } from '../../../../src/layers/missions/state/missions/slice';
 import { takeoverStarted } from '../../../../src/state/takeover/takeoverActions';
 import { setOrientation } from '../../../../src/state/settings/core/orientationSlice';
@@ -92,7 +92,7 @@ import {
   resolveClipStart,
   setFovYRad,
   startCameraTween,
-} from '../../../../src/state/camera/cameraSlice';
+} from '../../../../src/state/camera/cameraIntentSlice';
 import { inputGestureEnded, inputGestureStarted } from '../../../../src/state/input/inputSlice';
 import {
   setControlScheme,

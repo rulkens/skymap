@@ -10,7 +10,7 @@
  * `frame` pins the orientation frame `from`/`to` were captured under (the
  * setting live at build time), so a mid-tween orientation switch re-expresses
  * the pose instead of reinterpreting its yaw/pitch against a new pole — same
- * contract as `camera.clip.frame` (see CameraState.d.ts).
+ * contract as `camera.clip.frame` (see CameraIntentState.d.ts).
  */
 
 import type { CameraPose } from '../pose/CameraPose';

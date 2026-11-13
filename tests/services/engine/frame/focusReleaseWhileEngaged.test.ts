@@ -38,7 +38,7 @@ import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
 import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTightMat3';
 import { normalize3 } from '../../../../src/utils/math/normalize3';
 import { resume } from '../../../../src/state/time/timeSlice';
-import { clipStarted, resolveClipStart } from '../../../../src/state/camera/cameraSlice';
+import { clipStarted, resolveClipStart } from '../../../../src/state/camera/cameraIntentSlice';
 import { tween } from '../../../../src/services/engine/animation/effectHelpers';
 import { SCENE_BODIES } from '../../../../src/data/bodies/sceneBodies';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';

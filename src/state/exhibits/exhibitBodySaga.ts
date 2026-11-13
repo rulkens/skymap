@@ -12,7 +12,7 @@ import { flyToPoseClip } from '../../data/animation/clips/makers/flyToPoseClip';
 import { clearSelection } from '../selection/selectionSlice';
 import { mergeSnapshot } from '../settings/mergeSnapshotAction';
 import { applyLayerSwitchesSaga } from '../navigation/applyLayerSwitchesSaga';
-import { commitCameraPose, setAutoRotate } from '../camera/cameraSlice';
+import { commitCameraPose, setAutoRotate } from '../camera/cameraIntentSlice';
 import { exitTakeover } from '../takeover/takeoverActions';
 import { selectOrientation } from '../settings/selectors';
 import { sphereFitDistance } from '../../utils/camera/orbitCamera/sphereFitDistance';

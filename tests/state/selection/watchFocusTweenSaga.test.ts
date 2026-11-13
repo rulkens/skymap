@@ -11,7 +11,7 @@ import {
   updateSelectionFocus,
   updateSelectionSelect,
 } from '../../../src/state/selection/selectionSlice';
-import { clipStarted } from '../../../src/state/camera/cameraSlice';
+import { clipStarted } from '../../../src/state/camera/cameraIntentSlice';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
 import {
   setFocusMoveStyle,

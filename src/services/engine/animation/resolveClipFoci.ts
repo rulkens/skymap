@@ -10,7 +10,7 @@
  * responsibilities — understanding the timeline structure AND knowing how to
  * look up catalog data. Separating them keeps each function narrow and
  * independently testable. This mirrors the pattern set by `resolveClipStart`
- * in `cameraSlice.ts`, which rewrites `'live'` starts before any compilation
+ * in `cameraIntentSlice.ts`, which rewrites `'live'` starts before any compilation
  * happens.
  *
  * ### The id-bearing arms and their concrete replacements

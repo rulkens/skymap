@@ -13,7 +13,7 @@ import { rootReducer } from '../../../src/store/rootReducer';
 import { withSceneSnapshotSaga } from '../../../src/state/takeover/withSceneSnapshotSaga';
 import { exitTakeover } from '../../../src/state/takeover/takeoverActions';
 import { setCosmicWebDensityEnabled } from '../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/slice';
-import { setFovYRad } from '../../../src/state/camera/cameraSlice';
+import { setFovYRad } from '../../../src/state/camera/cameraIntentSlice';
 import { setSimDays, pause } from '../../../src/state/time/timeSlice';
 import { unixMsToJulianDays } from '../../../src/utils/time/unixMsToJulianDays';
 import { DEFAULT_FOV_Y_RAD } from '../../../src/services/engine/camera/framing/cameraFraming';

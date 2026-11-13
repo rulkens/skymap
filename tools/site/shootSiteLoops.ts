@@ -15,7 +15,7 @@ import { join } from 'node:path';
 import { siteShot } from '../../packages/website/src/data/siteShot';
 import { SITE_LOOPS } from '../../packages/website/src/data/siteLoops';
 import type { SkymapWindow } from '../../src/@types/automation/SkymapWindow';
-import { cancelCameraTween, commitCameraPose } from '../../src/state/camera/cameraSlice';
+import { cancelCameraTween, commitCameraPose } from '../../src/state/camera/cameraIntentSlice';
 import { setSimDays } from '../../src/state/time/timeSlice';
 import { dispatchActions } from '../utils/browser/dispatchActions';
 import { launchChromium } from '../utils/browser/launchChromium';

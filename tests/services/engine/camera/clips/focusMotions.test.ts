@@ -13,7 +13,7 @@ import { focusMoveClip } from '../../../../../src/services/engine/camera/clips/f
 import { focusMoveDurationMs } from '../../../../../src/services/engine/camera/clips/focusMoveDurationMs';
 import { compileClip } from '../../../../../src/services/engine/animation/compileClip';
 import { evaluateClip } from '../../../../../src/services/engine/camera/clips/evaluateClip';
-import { setFovYRad, startCameraTween } from '../../../../../src/state/camera/cameraSlice';
+import { setFovYRad, startCameraTween } from '../../../../../src/state/camera/cameraIntentSlice';
 import { DEFAULT_GEODESIC_TUNING } from '../../../../../src/data/camera/focusMoveDefaults';
 import { DEFAULT_ORIENTATION } from '../../../../../src/data/defaults';
 import { framingPose } from '../../../../../src/services/engine/camera/framing/framingPose';

@@ -32,7 +32,7 @@ import {
   clipStarted,
   commitCameraPose,
   startCameraTween,
-} from '../../../src/state/camera/cameraSlice';
+} from '../../../src/state/camera/cameraIntentSlice';
 import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import { unixMsToJulianDays } from '../../../src/utils/time/unixMsToJulianDays';
 import { setSimDays } from '../../../src/state/time/timeSlice';

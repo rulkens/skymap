@@ -17,7 +17,7 @@ import { MISSION_EVENTS } from '../../../../../src/layers/missions/events/data/m
 import { ORIENTATION_FRAMES } from '../../../../../src/data/orientation/orientationFrames';
 import { missionPose } from '../../../../../src/layers/missions/exhibits/timeline/missionPose';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
-import { aimCamera } from '../../../../../src/state/camera/cameraSlice';
+import { aimCamera } from '../../../../../src/state/camera/cameraIntentSlice';
 import { inputGestureEnded, inputGestureStarted } from '../../../../../src/state/input/inputSlice';
 import { setMissionCraft } from '../../../../../src/layers/missions/state/missions/slice';
 import { absoluteArm } from '../../../../../src/utils/camera/arms/absoluteArm';

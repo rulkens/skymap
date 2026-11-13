@@ -7,7 +7,7 @@
 
 import type { Epoch } from '../../../../@types/engine/camera/Epoch';
 import type { CameraEpochs } from '../../../../@types/engine/camera/CameraEpochs';
-import type { CameraState } from '../../../../@types/camera/orbitCamera/CameraState';
+import type { CameraIntentState } from '../../../../@types/camera/orbitCamera/CameraIntentState';
 import type { EpochRow } from '../../../../@types/engine/camera/EpochRow';
 import type { SelectionRowBase } from '../../../../@types/engine/selection/SelectionRowBase';
 
@@ -45,9 +45,9 @@ export function elapsedMs(epoch: Epoch<unknown>, nowMs: number): number {
 export function advanceEpochs(
   prev: CameraEpochs,
   inputs: {
-    readonly intent: CameraState;
+    readonly intent: CameraIntentState;
     readonly focus: SelectionRowBase | null;
-    readonly clip: Epoch<NonNullable<CameraState['clip']>>;
+    readonly clip: Epoch<NonNullable<CameraIntentState['clip']>>;
     readonly winnerEpoch: EpochRow | undefined;
     /** The winner DELIVERS the framing (clip/tween); absent reads as no. */
     readonly winnerDelivers?: boolean;

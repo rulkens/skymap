@@ -22,7 +22,7 @@ import { readRegister } from '../../../helpers/camera/readRegister';
 import { bodyArrivalDistanceMpc } from '../../../support/bodyArrivalDistanceMpc';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { liveWorldPose } from '../../../../src/services/engine/helpers/liveWorldPose';
-import { setAutoRotate } from '../../../../src/state/camera/cameraSlice';
+import { setAutoRotate } from '../../../../src/state/camera/cameraIntentSlice';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import type { CameraSimHarness } from '../../../helpers/camera/CameraSimHarness';

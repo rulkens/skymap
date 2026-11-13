@@ -1,5 +1,5 @@
 /**
- * cameraSlice — unit tests for the inline-Immer RTK camera slice.
+ * cameraIntentSlice — unit tests for the inline-Immer RTK camera slice.
  *
  * Each test calls the reducer directly with an action creator's output
  * (`reducer(state, actionCreator(payload))`) and asserts the single field the
@@ -18,7 +18,7 @@ import reducer, {
   clipEnded,
   resolveClipStart,
   commitCameraPose,
-} from '../../../src/state/camera/cameraSlice';
+} from '../../../src/state/camera/cameraIntentSlice';
 import { absoluteArm } from '../../../src/utils/camera/arms/absoluteArm';
 import type { CameraPose } from '../../../src/@types/camera/pose/CameraPose';
 import type { CameraTweenDescriptor } from '../../../src/@types/camera/focusMotion/CameraTweenDescriptor';
@@ -57,7 +57,7 @@ const tween: CameraTweenDescriptor = {
   frame: tweenFrame,
 };
 
-describe('cameraSlice — initial state is serialisable', () => {
+describe('cameraIntentSlice — initial state is serialisable', () => {
   it('contains only plain JSON-safe values (no Set / class instance)', () => {
     const state = base();
     const json = JSON.stringify(state);
@@ -80,7 +80,7 @@ const clipFrame: OrientationFrameId = 'galactic';
 
 const livePose: CameraPose = { target: [10, 20, 30], yaw: 1.0, pitch: -0.5, distance: 50 };
 
-describe('cameraSlice — clip lifecycle', () => {
+describe('cameraIntentSlice — clip lifecycle', () => {
   it('clipEnded also clears a dormant tween', () => {
     // A focus saga may plant a tween before/during a clip; once the clip@95
     // driver deactivates, an un-cleared @60 tween would outrank resting@0.
@@ -94,7 +94,7 @@ describe('cameraSlice — clip lifecycle', () => {
   });
 });
 
-describe('cameraSlice — commitCameraPose identity', () => {
+describe('cameraIntentSlice — commitCameraPose identity', () => {
   it('stores the payload BY REFERENCE, not a copy', () => {
     // `stepCameraRuntime`'s outside-commit check (`base !== prev.base`) and its
     // `next.base` fold both depend on this: a defensive spread here would make

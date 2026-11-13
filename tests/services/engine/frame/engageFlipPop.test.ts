@@ -29,7 +29,7 @@ import { frameUp } from '../../../../src/utils/camera/orbitPose/frameUp';
 import { imagePlaneBasis } from '../../../../src/utils/camera/orbitPose/imagePlaneBasis';
 import { normalize3 } from '../../../../src/utils/math/normalize3';
 import { ORIENT_DECAY } from '../../../../src/services/engine/camera/data/orientDecay';
-import { setCameraTuning } from '../../../../src/state/camera/cameraSlice';
+import { setCameraTuning } from '../../../../src/state/camera/cameraIntentSlice';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';

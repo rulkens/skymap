@@ -42,7 +42,7 @@
  * the route's bearings under, never the live setting at Play time.
  */
 
-import { resolveClipStart } from '../../../state/camera/cameraSlice';
+import { resolveClipStart } from '../../../state/camera/cameraIntentSlice';
 import { compileClip } from './compileClip';
 import { sampleClipPath } from './sampleClipPath';
 import type { ClipData } from '../../../@types/animation/ClipData';

@@ -15,7 +15,7 @@ import {
 import { DEFAULT_CAMERA_TUNING } from '../../../../../src/data/camera/cameraTuning';
 import { DEFAULT_FOV_Y_RAD } from '../../../../../src/services/engine/camera/framing/cameraFraming';
 import type { Epoch } from '../../../../../src/@types/engine/camera/Epoch';
-import type { CameraState } from '../../../../../src/@types/camera/orbitCamera/CameraState';
+import type { CameraIntentState } from '../../../../../src/@types/camera/orbitCamera/CameraIntentState';
 import type { CameraTweenDescriptor } from '../../../../../src/@types/camera/focusMotion/CameraTweenDescriptor';
 import type { FrameTween } from '../../../../../src/@types/camera/focusMotion/FrameTween';
 
@@ -60,7 +60,7 @@ describe('advanceEpoch', () => {
   });
 });
 
-function makeCameraState(overrides?: Partial<CameraState>): CameraState {
+function makeCameraState(overrides?: Partial<CameraIntentState>): CameraIntentState {
   return {
     base: { frame: 'absolute', pose: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 } },
     tween: null,
@@ -175,7 +175,7 @@ describe('advanceEpochs', () => {
   });
 
   it('the clip row is passed through untouched', () => {
-    const clipEpoch: Epoch<NonNullable<CameraState['clip']>> = {
+    const clipEpoch: Epoch<NonNullable<CameraIntentState['clip']>> = {
       ref: { data: { timeline: [] }, frame: 'equatorial' },
       startMs: 5000,
     };

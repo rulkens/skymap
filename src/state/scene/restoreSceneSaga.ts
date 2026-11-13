@@ -58,7 +58,7 @@ import { put } from 'typed-redux-saga';
 import { mergeSnapshot } from '../settings/mergeSnapshotAction';
 import { updateSelectionFocus } from '../selection/selectionSlice';
 import { requestOrientationChange } from '../camera/orientationActions';
-import { setFovYRad } from '../camera/cameraSlice';
+import { setFovYRad } from '../camera/cameraIntentSlice';
 import { restoreTime } from '../time/timeSlice';
 import { unixMsToJulianDays } from '../../utils/time/unixMsToJulianDays';
 import type { SceneSnapshot } from '../../@types/engine/settings/SceneSnapshot';

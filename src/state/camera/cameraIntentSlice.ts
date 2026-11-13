@@ -1,5 +1,5 @@
 /**
- * cameraSlice — the camera's Intent state as one RTK slice.
+ * cameraIntentSlice — the camera's Intent state as one RTK slice.
  *
  * `base` carries the committed resting pose AND the arm it lives in: the arm tag
  * IS the regime, so nothing stores a separate flag. The per-frame pose is DERIVED
@@ -16,7 +16,7 @@ import { DEFAULT_FOV_Y_RAD } from '../../services/engine/camera/framing/cameraFr
 import { absoluteArm } from '../../utils/camera/arms/absoluteArm';
 import { clampCameraTuning } from '../../utils/camera/orbitCamera/clampCameraTuning';
 import { inputGestureStarted } from '../input/inputSlice';
-import type { CameraState } from '../../@types/camera/orbitCamera/CameraState';
+import type { CameraIntentState } from '../../@types/camera/orbitCamera/CameraIntentState';
 import type { CameraAim } from '../../@types/camera/pose/CameraAim';
 import type { CameraTuning } from '../../@types/camera/orbitCamera/CameraTuning';
 import type { CameraPose } from '../../@types/camera/pose/CameraPose';
@@ -29,7 +29,7 @@ import type { OrientationFrameId } from '../../@types/camera/orientation/Orienta
 // `base` is a placeholder bootstrap overwrites via `commitCameraPose`; 0.43 Mpc
 // mirrors `cameraFraming.INITIAL_DISTANCE_MPC` so a pre-bootstrap frame is in the
 // right ballpark.
-const initialState: CameraState = {
+const initialState: CameraIntentState = {
   base: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 0.43 }),
   tween: null,
   autoRotate: {
@@ -45,7 +45,7 @@ const initialState: CameraState = {
   tuning: DEFAULT_CAMERA_TUNING,
 };
 
-const cameraSlice = createSlice({
+const cameraIntentSlice = createSlice({
   name: 'camera',
   initialState,
   reducers: {
@@ -58,7 +58,7 @@ const cameraSlice = createSlice({
     // folds (replayInput), and the fold's disengage retarget — never by a bake
     // here. Break any of them and the teleport re-enters through this reducer.
     // `stepCameraRuntime` treats `base` reference inequality as an outside
-    // commit and relies on `cameraReducer` being the store's reducer; a
+    // commit and relies on `cameraIntentReducer` being the store's reducer; a
     // defensive `{ ...action.payload }` here would misread every loop commit.
     commitCameraPose: (camera, action: PayloadAction<FramedCameraPose>) => {
       camera.base = action.payload;
@@ -137,7 +137,7 @@ export const {
   startFrameTween,
   clearFrameTween,
   aimCamera,
-} = cameraSlice.actions;
+} = cameraIntentSlice.actions;
 
 // Resolution happens at the dispatch site, not in the reducer, which is pure and
 // has no access to the live pose — so the store only ever receives concrete,
@@ -147,4 +147,4 @@ export function resolveClipStart(data: ClipData, live: CameraPose): ClipData {
   return { ...data, start };
 }
 
-export default cameraSlice.reducer;
+export default cameraIntentSlice.reducer;

@@ -19,7 +19,7 @@ import { frameKey } from '../../../../src/services/engine/camera/arms/frameKey';
 import { liveWorldPose } from '../../../../src/services/engine/helpers/liveWorldPose';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
-import { setCameraTuning } from '../../../../src/state/camera/cameraSlice';
+import { setCameraTuning } from '../../../../src/state/camera/cameraIntentSlice';
 import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
 import { eyeMpcOf } from '../../../../src/utils/camera/orbitPose/eyeMpcOf';
 import { frameUp } from '../../../../src/utils/camera/orbitPose/frameUp';

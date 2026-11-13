@@ -46,7 +46,7 @@ import {
 import settingsReducer from '../state/settings/settingsReducer';
 import uiReducer from '../state/ui/uiSlice';
 import tierReducer from '../state/tier/tierSlice';
-import cameraReducer from '../state/camera/cameraSlice';
+import cameraIntentReducer from '../state/camera/cameraIntentSlice';
 import selectionReducer from '../state/selection/selectionSlice';
 import selectionRowsReducer from '../state/selectionRows/selectionRowsSlice';
 import tourReducer from '../state/tour/tourSlice';
@@ -62,7 +62,7 @@ export const rootReducer = combineReducers({
   [settingsRoute]: settingsReducer,
   [uiRoute]: uiReducer,
   [tierRoute]: tierReducer,
-  [cameraRoute]: cameraReducer,
+  [cameraRoute]: cameraIntentReducer,
   [selectionRoute]: selectionReducer,
   [selectionRowsRoute]: selectionRowsReducer,
   [tourRoute]: tourReducer,

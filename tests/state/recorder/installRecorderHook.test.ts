@@ -24,7 +24,7 @@ import { installRecorderHook } from '../../../src/state/recorder/installRecorder
 import { startTour } from '../../../src/state/tour/tourActions';
 import { takeoverStarted, takeoverEnded } from '../../../src/state/takeover/takeoverActions';
 import { startClip } from '../../../src/state/camera/clipActions';
-import { clipStarted, clipEnded } from '../../../src/state/camera/cameraSlice';
+import { clipStarted, clipEnded } from '../../../src/state/camera/cameraIntentSlice';
 import { engineLoadProgressChanged } from '../../../src/state/engine/engineSlice';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { isCinemaMode } from '../../../src/utils/url/isCinemaMode';

@@ -10,7 +10,7 @@ import { createClipOpacityChannel } from '../../animation/clipOpacityChannel';
 import { compileClip } from '../animation/compileClip';
 import { advanceEpoch, elapsedMs } from '../camera/drivers/cameraEpochs';
 import { applySceneEffect } from '../../animation/applySceneEffect';
-import { clipEnded } from '../../../state/camera/cameraSlice';
+import { clipEnded } from '../../../state/camera/cameraIntentSlice';
 import type { ClipPlayer } from '../../../@types/engine/subsystems/ClipPlayer';
 import type { CameraEpochs } from '../../../@types/engine/camera/CameraEpochs';
 import type { VisibilityAddress } from '../../../@types/animation/VisibilityAddress';

@@ -11,7 +11,7 @@ import { frameTo, hide, show } from '../../../src/services/engine/animation/effe
 import { INITIAL_SETTINGS } from '../../../src/state/settings/initialSettings';
 import { setVisibility } from '../../../src/state/settings/setVisibilityAction';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
-import { startFrameTween } from '../../../src/state/camera/cameraSlice';
+import { startFrameTween } from '../../../src/state/camera/cameraIntentSlice';
 import { matrixToQuaternion } from '../../../src/utils/math/matrixToQuaternion';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';

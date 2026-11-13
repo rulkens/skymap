@@ -16,7 +16,7 @@ import { Provider } from 'react-redux';
 
 import CameraStateSection from '../../../src/components/DebugPanel/CameraStateSection';
 import { rootReducer } from '../../../src/store/rootReducer';
-import { setCameraTuning } from '../../../src/state/camera/cameraSlice';
+import { setCameraTuning } from '../../../src/state/camera/cameraIntentSlice';
 import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
 import type { CameraDebugSnapshot } from '../../../src/@types/camera/debug/CameraDebugSnapshot';
 import { QUIET_CAMERA_DEBUG_SNAPSHOT } from '../../fixtures/camera/quietCameraDebugSnapshot';
