@@ -1,5 +1,7 @@
 import sharp from 'sharp';
 
+const WEBP_QUALITY = 80;
+
 /**
  * writeCloudTier — the build's cloud-shell output: one grey channel, the same
  * format the daily bake (`tools/cloud-bake-rs`) writes, so either map can fill
@@ -8,8 +10,6 @@ import sharp from 'sharp';
  * from the one byte. Lossy at the bake's quality: grey cloud has no packed
  * fields to smear, and lossless costs about three times the bytes.
  */
-const WEBP_QUALITY = 80;
-
 export async function writeCloudTier(
   srcPath: string,
   widthPx: number,

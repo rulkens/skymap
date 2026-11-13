@@ -38,7 +38,7 @@ Today `writeCloudTier` (`tools/textures/writeCloudTier.ts`) writes lossless RGBA
 
 - **Files.** `writeCloudTier` writes a grey lossy WebP (quality 80, as the bake). The built-in tiers are rebuilt from `cloud_combined_8192.tif`; the 8192 tier drops to about 6 MB. The filenames change (`earth-clouds-grey-<px>.webp`), so an open tab running old code never receives a grey file, and new code never reads an old RGBA one.
 - **GPU.** Both sinks upload the clouds map as `r8unorm` (one texture format helper decides per kind, replacing the inline choice in `earthRenderer.setMap` and the hard-coded format in `cloudShellRenderer`). `generateMipChain` already renders in the texture's own format.
-- **Shaders.** Coverage reads take `.r` (earth/fragment.wesl ×2, surfaceTile/fragmentEarth.wesl ×2). The shell's colour was the sRGB grey decoded to linear by the `-srgb` format; with `r8unorm` it decodes that itself (`srgbToLinear(c.r)`), and its coverage stays the raw byte, so the deck looks the same.
+- **Shaders.** Coverage reads take `.r` (earth/fragment.wesl ×2, surfaceTile/fragmentEarth.wesl ×2). The shell's colour was the sRGB grey decoded to linear by the `-srgb` format; with `r8unorm` it decodes that itself (`srgbToLinear(c.r)`), and its coverage stays the raw byte, so the deck looks the same per texel; filtered/mipped texels average the sRGB byte before decoding, so mixed cloud-sky texels come out slightly darker (measured: mean image difference 0.1/255 at a whole-globe pose).
 - **The kind rule.** `isAlphaTextureKind` no longer describes clouds; it is renamed or folded so the filename rule still picks WebP for clouds.
 - **Deploy.** The rebuilt tiers go up with `npm run sync-r2-secure`; the old RGBA files stay on R2 until a later cleanup.
 

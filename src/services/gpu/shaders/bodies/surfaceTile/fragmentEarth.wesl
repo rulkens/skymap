@@ -68,7 +68,8 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // through the cloud shell, exactly as 'earth/fragment.wesl' does.
   let roots = raySphere(Ng, l, vec3<f32>(0.0), u.cloudShellRadius);
   let crossing = Ng + roots.y * l;
-  let shadowCoverage = textureSample(cloudTexture, baseSampler, dirToEquirectUv(normalize(crossing))).r;
+  let shadowUv = dirToEquirectUv(normalize(crossing));
+  let shadowCoverage = textureSample(cloudTexture, baseSampler, shadowUv).r;
   let direct = directBase * (1.0 - shadowCoverage * u.cloudShadowStrength);
 
   let colour = direct * u.sunIrradiance + u.ambientLight * baseAlbedo;

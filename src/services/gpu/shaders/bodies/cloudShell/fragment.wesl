@@ -2,8 +2,8 @@
 //
 // Samples an equirectangular grey cloud map ('r8unorm', raw) at the mesh uv --
 // its one byte is the coverage that becomes the shell's alpha AND, decoded as
-// sRGB, the cloud's grey colour -- then shades it with the shared sun-relative Lambert term
-// (the 'u.ambientLight' floor + direct term) so the clouds go dark on the night
+// sRGB, the cloud's grey colour -- then shades it with the shared sun-relative
+// Lambert term (the 'u.ambientLight' floor + direct term) so the clouds go dark on the night
 // side (down to that ambient floor) and stay bright in daylight. The result is
 // emitted as STRAIGHT alpha into the rgba16float foreground colour target; the
 // renderer's OVER blend composites it over the opaque surface already drawn.
@@ -79,9 +79,10 @@ import package::lib::srgb::srgbToLinear;
 
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
-  // The mesh uv is already registered on the prime meridian (see the '## uv / orientation' note),
-  // so it samples straight through. Its u runs 0.5..1.5 unwrapped and the sampler
-  // uses addressModeU 'repeat', so the hardware closes the turn.
+  // The mesh uv is already registered on the prime meridian (see the
+  // '## uv / orientation' note), so it samples straight through. Its u runs
+  // 0.5..1.5 unwrapped and the sampler uses addressModeU 'repeat', so the
+  // hardware closes the turn.
   let v = textureSample(cloudTexture, cloudSampler, in.uv).r;
   // Sun-relative day/night term, decomposed so 'sunIrradiance' scales the DIRECT
   // (sun-lit) portion only -- mirroring the surface, whose direct term is scaled

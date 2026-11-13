@@ -67,7 +67,7 @@ export function bodyTextureFormat(kind: TextureKind): GPUTextureFormat;
   // after:  let v = c.r; return vec4<f32>(vec3<f32>(srgbToLinear(v)) * lit, v * u.cloudOpacity);
   ```
 
-  The RGB used to be the sRGB grey that the `-srgb` format linearised, and the coverage was the raw byte. This reproduces both exactly.
+  The RGB used to be the sRGB grey that the `-srgb` format linearised, and the coverage was the raw byte. This reproduces both per texel; filtered/mipped texels average the sRGB byte before decoding, so mixed cloud-sky texels come out slightly darker (measured: mean image difference 0.1/255 at a whole-globe pose).
 - Reuse an existing sRGB→linear function from the shader lib if there is one (grep `shaders/lib`); otherwise add one there. Read the `wesl-shaders` skill first.
 
 ### Task 5: rebuild the built-in tiers and check them
