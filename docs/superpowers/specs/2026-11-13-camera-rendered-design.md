@@ -65,7 +65,7 @@ that does, and it is the one this spec adds.
   route is a slice name. The alternatives were worse: an exclusion term is the "another
   hand-added term in a wake predicate" bolt-on (`.claude/refactor-ground.md`), and keying the wake
   on the intent reference would add a `select` per action to every route.
-- **D4. One action, `cameraDrawn(RenderedCamera | null)`, built with `prepareAutoBatched`.** RTK
+- **D4. One action, `cameraDrawn(RenderedCameraState | null)`, built with `prepareAutoBatched`.** RTK
   2's `configureStore` already installs `autoBatchEnhancer` (`'raf'`): subscribers hear it at most
   once per frame, the store config is untouched, and sagas (middleware) still see it at once.
 - **D5. Only the engine writes `rendered`: `runFrame` on every booted frame, `destroy()` with
@@ -136,11 +136,11 @@ export type CameraSliceState = {
   /** Where the camera rests and what it was asked to do. Changes on input and intent edges, never because a frame drew. */
   readonly intent: CameraIntentState; // today's CameraState, renamed, plus `tilt: TiltMemory`
   /** What the last frame DREW; only the engine writes it (`runFrame`, `destroy` with null). */
-  readonly rendered: RenderedCamera | null;
+  readonly rendered: RenderedCameraState | null;
 };
 
-// src/@types/engine/RenderedCamera.d.ts (header: the two-camera rule, see §7)
-export type RenderedCamera = {
+// src/@types/engine/RenderedCameraState.d.ts (header: the two-camera rule, see §7)
+export type RenderedCameraState = {
   /** The register plus render-side tilt (`FrameOutputs.displayed`): the share-URL pose. */
   readonly displayed: FramedCameraPose;
   /** `displayed` folded to the world arm (`liveWorldPose`): terrain-floored, sagas' `from`. */
@@ -167,7 +167,7 @@ These are the selectors in `src/state/camera/selectors.ts`. The private `selectC
 reads `.intent`, so every existing camera selector keeps its body.
 
 ```ts
-export const selectRenderedCamera: (s: RootState) => RenderedCamera | null; // sagas only
+export const selectRenderedCamera: (s: RootState) => RenderedCameraState | null; // sagas only
 export const selectScale: (s: RootState) => ScaleInfo; // memoized; INITIAL_SCALE while null
 export const selectFocusedBodyDistanceMpc: (s: RootState) => number | null; // read via useSampledSelector
 export const selectRememberedTilt: (s: RootState) => TiltMemory;
@@ -262,7 +262,7 @@ action, which this spec rejects (a null payload is one action fewer). It agreed 
 - **The two-camera trap.** A reader picks `intent.base` when it wants the screen, or the reverse.
   The rule: `intent` is where it rests and what it was asked, `rendered` is what is shown, only
   the engine writes `rendered`, and the engine never reads it back. It lives in the
-  `CameraSliceState` and `RenderedCamera` headers.
+  `CameraSliceState` and `RenderedCameraState` headers.
   `tests/conventions/renderedCameraWriter.test.ts` enforces it: `cameraDrawn` is imported only by
   `runFrame.ts` and `engine.ts`, and nothing under `src/services/engine/` reads `camera.rendered`
   or `selectRenderedCamera`.
