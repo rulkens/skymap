@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * buildSatellites — data/raw/celestrak/<group>.json → public/data/<SATELLITE_CATALOG_PATH>. The
- * daily Action uploads that file to R2 as is. A catalog under `MIN_OBJECTS` throws instead of
+ * buildSatellites — data/raw/celestrak/<group>.json → the dated live file plus its pointer
+ * (live/v1/, see writeLivePointer). The nightly Action uploads both to R2 as is. A catalog under `MIN_OBJECTS` throws instead of
  * writing: an upstream outage or a changed group list must fail the run, not publish a sky with
  * half its satellites (the app would show it for 14 days).
  */
@@ -13,12 +13,14 @@ import { PROJECT_ROOT } from '../utils/io/projectRoot';
 import { writeSatelliteCatalog } from '../utils/io/writeSatelliteCatalog';
 import { CELESTRAK_GROUPS } from './celestrakGroups';
 import { buildSatelliteCatalog } from './buildSatelliteCatalog';
-import { SATELLITE_CATALOG_PATH } from '../../src/data/satellites/satelliteCatalogPath';
+import { liveFilePath } from '../../src/utils/live/liveFilePath';
+import { writeLivePointer } from '../utils/live/writeLivePointer';
 import { SATELLITE_CLASSES } from '../../src/data/satellites/satelliteClasses';
 import type { CelestrakOmm } from '../@types/satellites/CelestrakOmm';
 
 // ~20k objects on 2026-10-28 (spec §5.1); a quarter less is an outage, not a quiet week.
 const MIN_OBJECTS = 15_000;
+const FILE_NAME = 'satellites.satg';
 
 function main(): void {
   const files = CELESTRAK_GROUPS.map((group) => ({
@@ -37,10 +39,13 @@ function main(): void {
   if (n < MIN_OBJECTS) {
     throw new Error(`buildSatellites: only ${n} objects (floor ${MIN_OBJECTS}); not writing`);
   }
-  const out = join(PROJECT_ROOT, 'public/data', SATELLITE_CATALOG_PATH);
+  const dataRoot = join(PROJECT_ROOT, 'public/data');
+  const date = new Date().toISOString().slice(0, 10);
+  const out = join(dataRoot, liveFilePath('satellites', date, FILE_NAME));
   mkdirSync(dirname(out), { recursive: true });
   const bytes = writeSatelliteCatalog(catalog);
   writeFileSync(out, bytes);
+  writeLivePointer(dataRoot, 'satellites', date, [FILE_NAME]);
   const perClass = SATELLITE_CLASSES.map(
     (cls, code) => `${cls} ${catalog.classCode.filter((c) => c === code).length}`,
   ).join(', ');
