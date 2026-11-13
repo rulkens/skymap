@@ -112,6 +112,10 @@ export type DisplaySectionProps = {
   bloomThreshold: number;
   /** Called with the new threshold as the slider drags. */
   onBloomThresholdChange: (next: number) => void;
+  /** Whether the film look (grain, glow, softer lens) is on. */
+  filmEnabled: boolean;
+  /** Called with the toggled flag when the Film look switch is clicked. */
+  onFilmEnabledChange: (next: boolean) => void;
 };
 
 // ── DisplaySection ─────────────────────────────────────────────────────────────
@@ -143,6 +147,8 @@ function DisplaySection({
   onBloomStrengthChange,
   bloomThreshold,
   onBloomThresholdChange,
+  filmEnabled,
+  onFilmEnabledChange,
 }: DisplaySectionProps) {
   return (
     <CollapsibleSection title="Display">
@@ -236,6 +242,17 @@ function DisplaySection({
           />
         </div>
       </CollapsibleSection>
+
+      <div className={styles.panelRow}>
+        <label htmlFor="film-look">Film look</label>
+        <input
+          id="film-look"
+          type="checkbox"
+          className={styles.toggle}
+          checked={filmEnabled}
+          onChange={(e) => onFilmEnabledChange(e.target.checked)}
+        />
+      </div>
 
       {/* Master toggle drives settings.hdr.enabled, which the swap-chain saga
           watches to reconfigure the surface at runtime. Disabled + hinted

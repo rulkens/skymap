@@ -17,6 +17,7 @@ import { FrameStatsRow } from './FrameStatsRow';
 import { GpuTimingsSection } from './GpuTimingsSection';
 import MemorySectionContainer from '../containers/MemorySectionContainer';
 import FocusMovesTuningSectionContainer from '../containers/FocusMovesTuningSectionContainer';
+import FilmTuningSectionContainer from '../containers/FilmTuningSectionContainer';
 import CameraStateSectionContainer from '../containers/CameraStateSectionContainer';
 import RenderTogglesSectionContainer from '../containers/RenderTogglesSectionContainer';
 import DebugOverlaysSectionContainer from '../containers/DebugOverlaysSectionContainer';
@@ -59,6 +60,7 @@ function DebugPanel({
       ))}
       <DebugOverlaysSectionContainer />
       <FocusMovesTuningSectionContainer />
+      <FilmTuningSectionContainer />
       <ClipTriggersSectionContainer />
       <ClipPathInspectorSectionContainer />
     </div>

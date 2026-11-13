@@ -24,6 +24,7 @@ import LazyInfoCardContainer from '../containers/LazyInfoCardContainer';
 import LazySettingsPanelContainer from '../containers/LazySettingsPanelContainer';
 import LazyCommandPaletteContainer from '../containers/LazyCommandPaletteContainer';
 import LazyDebugPanelContainer from '../containers/LazyDebugPanelContainer';
+import LetterboxBarsContainer from '../containers/LetterboxBarsContainer';
 import ArrivalVeilContainer from '../containers/ArrivalVeilContainer';
 import PairingOverlayContainer from '../containers/PairingOverlayContainer';
 import appStyles from './App.module.css';
@@ -74,6 +75,7 @@ export function App(): React.ReactElement {
     return (
       <>
         {canvas}
+        <LetterboxBarsContainer />
         {tourOverlay}
       </>
     );
@@ -82,6 +84,7 @@ export function App(): React.ReactElement {
   return (
     <>
       {canvas}
+      <LetterboxBarsContainer />
 
       {/* One wrapper so `Tab` fades the whole stack with a single opacity transition. */}
       <div className={cx(appStyles.uiStack, uiStackHidden && appStyles.uiStackHidden)}>

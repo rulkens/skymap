@@ -44,6 +44,15 @@ export const DOCS_URL_PARAMS: readonly DocsUrlParam[] = [
     skipsWelcome: false,
   },
   {
+    name: 'film',
+    part: 'hash',
+    value: '1',
+    example: 'film=1',
+    does: 'Switches the film look on.',
+    unknown: 'Ignored: the look stays off. The parameter is taken out of the address.',
+    skipsWelcome: false,
+  },
+  {
     name: 'exhibit',
     part: 'hash',
     value: 'The name of one exhibit',

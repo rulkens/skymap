@@ -398,6 +398,7 @@ describe('renderFrame visual baseline', () => {
       views: [ctx],
       state: {
         viewRig: 'mono',
+        frameIndex: 0,
         gpu: {
           labelRendererCosmo: labelRenderer,
           label3DRenderer: null,
@@ -430,6 +431,7 @@ describe('renderFrame visual baseline', () => {
           tonemap: { exposure: settings.exposure, curve: settings.toneMapCurve },
           // Bloom off: the split baseline captures the non-bloom program.
           bloom: { enabled: false, strength: 1, threshold: 1 },
+          film: INITIAL_SETTINGS.film,
           bias: { mode: settings.biasMode, absMagLimit: settings.absMagLimit },
           thumbnails: { enabled: settings.galaxyTexturesEnabled },
           milkyWay: { enabled: settings.milkyWayEnabled, renderer: 'v1' },

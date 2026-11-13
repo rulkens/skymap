@@ -718,6 +718,15 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
         values: '0.5° to 120°, in steps of 0.5',
         first: '60°',
       },
+      {
+        name: 'Film look',
+        control: 'switch',
+        does: 'Adds grain, a wider glow and a softer lens, like a filmed shot.',
+        values: SWITCH,
+        first: OFF,
+        state: 'film.enabled',
+        firstValue: false,
+      },
     ],
   },
   {

@@ -61,6 +61,8 @@ function baseProps(overrides?: Partial<DisplaySectionProps>): DisplaySectionProp
     onBloomStrengthChange: vi.fn<(next: number) => void>(),
     bloomThreshold: 7.0,
     onBloomThresholdChange: vi.fn<(next: number) => void>(),
+    filmEnabled: false,
+    onFilmEnabledChange: vi.fn<(next: boolean) => void>(),
     ...overrides,
   };
 }
@@ -156,6 +158,17 @@ describe('DisplaySection', () => {
       fireEvent.click(getByLabelText(/toggle bloom/i));
       expect(onBloomEnabledChange).toHaveBeenCalledOnce();
       expect(onBloomEnabledChange).toHaveBeenCalledWith(false);
+    });
+
+    it('toggles filmEnabled on via the Film look switch', () => {
+      const onFilmEnabledChange = vi.fn<(next: boolean) => void>();
+      const { getByRole, getByLabelText } = render(
+        createElement(DisplaySection, baseProps({ filmEnabled: false, onFilmEnabledChange })),
+      );
+      fireEvent.click(getByRole('button', { name: /display/i }));
+      fireEvent.click(getByLabelText(/^film look$/i));
+      expect(onFilmEnabledChange).toHaveBeenCalledOnce();
+      expect(onFilmEnabledChange).toHaveBeenCalledWith(true);
     });
 
     it('calls onBloomStrengthChange with the stepped value on a keyboard nudge', () => {

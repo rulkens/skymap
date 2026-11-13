@@ -80,8 +80,9 @@ import { requestFocus } from '../selection/requestFocus';
 import { clearSelection } from '../selection/selectionSlice';
 import { selectFocusId, selectFocusRow, selectPendingFocusId } from '../selection/selectors';
 import { setSelectionRow } from '../selectionRows/selectionRowsSlice';
-import { selectOrientation } from '../settings/selectors';
+import { selectFilmEnabled, selectOrientation } from '../settings/selectors';
 import { setOrientation } from '../settings/core/orientationSlice';
+import { setFilmEnabled } from '../settings/core/filmSlice';
 import { goLiveNowAction } from '../time/goLiveNowAction';
 import { selectTimeState } from '../time/selectors';
 import { selectTakeoverSource } from '../takeover/selectors';
@@ -247,6 +248,15 @@ const orientationSource: HashParamSource = {
   readAbsent: () => [setOrientation(DEFAULT_ORIENTATION)],
 };
 
+const filmSource: HashParamSource = {
+  key: 'film',
+  deepLink: false,
+  writesOn: [setFilmEnabled.match],
+  write: (state) => (selectFilmEnabled(state) ? '1' : null),
+  read: (value) => (value === '1' ? { film: true } : {}),
+  readAbsent: () => [setFilmEnabled(false)],
+};
+
 /**
  * `pose` — the `l`-key share URL's exact camera, read-only. It writes nothing
  * (`hashBodyFor` never composes a `pose` param): the rendered pose lands a
@@ -325,6 +335,7 @@ export const HASH_PARAM_SOURCES: readonly HashParamSource[] = [
   focusSource,
   timeSource,
   orientationSource,
+  filmSource,
   takeoverSource('exhibit'),
   takeoverSource('tour'),
   takeoverSource('clip'),

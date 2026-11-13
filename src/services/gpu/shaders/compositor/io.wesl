@@ -1,52 +1,30 @@
-// compositor/io.wesl — shared structs for the unified compositor pass.
-//
-// The compositor is the single 'merge one offscreen texture into a
-// target' primitive: every historical variant (HDR tone-map into the
-// swap chain, straight-alpha foreground OVER the swap chain, additive
-// volume-into-HDR) is one draw through this pass with a different
-// blend mode and optional tone-map. It has no per-vertex inputs — the
-// vertex stage synthesises clip positions from 'vertex_index' alone —
-// so the only cross-stage struct is 'VSOut' carrying the UV.
-//
-// ## Why a separate io module
-//
-// Mirrors the toneMap/, points/, and milkyWay/ splits: io holds the
-// structs, vertex and fragment hold their own bindings. Each stage
-// then compiles a strictly-smaller shader module from disjoint source.
-//
-// ## Why bindings live in fragment.wesl, not here
-//
-// WESL has no global state — '@group(N) @binding(M) var<uniform> X'
-// is module-local and cannot be exported across modules. The fragment
-// file redeclares its texture / sampler / uniform bindings directly,
-// importing 'CompositorUniforms' from this single authoritative place
-// so the layout numbers cannot drift.
+// compositor/io.wesl — the compositor's shared structs, and the byte-layout
+// contract for its uniform buffer: 'compositor.ts' packs 'CompositorUniforms'
+// lane by lane against the table below, so this file runs over the comment
+// budget on purpose. Bindings live in fragment.wesl (WESL cannot export a
+// '@group @binding' var across modules); this struct is the one definition.
 
 // ── Compositor uniform layout ───────────────────────────────────────
 //
-// 32-byte buffer, every lane in use. exposure scales the HDR input,
-// whitepoint² is pre-squared CPU-side for Reinhard-extended,
-// asinhSoftness controls the asinh stretch's linear→log knee, curve
-// selects between Linear / Reinhard / Asinh / Gamma2 / ACES,
-// toneEnabled gates the whole tone-map chain (0 = raw pass-through for
-// LDR / additive sources), and preserveAlpha decides whether the
-// output carries the source's coverage or a forced opaque 1.0. The
-// two alpha-related flags are separate u32s because they answer two
-// independent questions — 'do we tone-map at all' and 'is this a
-// coverage-bearing layer' — and folding them would re-braid them.
-// hdrKnee / hdrHeadroom are the extended-range headroom knobs (see their
-// doc comments below); both are 0 in every SDR draw.
+// 80-byte buffer. toneEnabled gates the whole tone-map chain (0 = raw
+// pass-through for LDR / additive sources) and preserveAlpha decides whether
+// the output carries the source's coverage or a forced opaque 1.0: two u32s
+// because they answer independent questions. hdrKnee / hdrHeadroom are 0 in
+// every SDR draw. Lanes 8–17 are the film grade, written only for a film draw
+// and read only by the FILM pipeline variant (fragment.wesl's 'override FILM').
 //
-// | offset | field         | type |
-// | ------ | ------------- | ---- |
-// | 0      | exposure      | f32  |
-// | 4      | whitepointSq  | f32  |
-// | 8      | asinhSoftness | f32  |
-// | 12     | curve         | u32  |
-// | 16     | toneEnabled   | u32  |
-// | 20     | preserveAlpha | u32  |
-// | 24     | hdrKnee       | f32  |
-// | 28     | hdrHeadroom   | f32  |
+// | offset | field         | type | | offset | field       | type |
+// | ------ | ------------- | ---- | | ------ | ----------- | ---- |
+// | 0      | exposure      | f32  | | 40     | splitTone   | f32  |
+// | 4      | whitepointSq  | f32  | | 44     | grain       | f32  |
+// | 8      | asinhSoftness | f32  | | 48     | grainSizePx | f32  |
+// | 12     | curve         | u32  | | 52     | vignette    | f32  |
+// | 16     | toneEnabled   | u32  | | 56     | chromaticPx | f32  |
+// | 20     | preserveAlpha | u32  | | 60     | softnessPx  | f32  |
+// | 24     | hdrKnee       | f32  | | 64     | squeeze     | f32  |
+// | 28     | hdrHeadroom   | f32  | | 68     | seed        | u32  |
+// | 32     | contrast      | f32  | | 72, 76 | pad         |      |
+// | 36     | lift          | f32  | |        |             |      |
 
 struct CompositorUniforms {
   exposure: f32,
@@ -67,6 +45,21 @@ struct CompositorUniforms {
   // in SDR, where the output is exactly the tone curve's clamped result.
   hdrKnee: f32,
   hdrHeadroom: f32,
+  contrast: f32,
+  lift: f32,
+  splitTone: f32,
+  grain: f32,
+  grainSizePx: f32,
+  vignette: f32,
+  // Aberration smear and edge-softness disc radius, in px at the frame corner.
+  chromaticPx: f32,
+  softnessPx: f32,
+  // Anamorphic ratio 1..2: the softness disc and the vignette stretch along x.
+  squeeze: f32,
+  // Per-frame grain seed, 'EngineState.frameIndex'.
+  seed: u32,
+  pad0: f32,
+  pad1: f32,
 }
 
 // ── vertex-to-fragment interface ────────────────────────────────────

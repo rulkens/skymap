@@ -109,12 +109,14 @@ describe('renderFrame — plan rows', () => {
 
     const state = {
       viewRig: VIEW_RIG_KEY,
+      frameIndex: 0,
       gpu: { focusUniform: null },
       settings: {
         debug: { renderStrategy: 'auto' },
         tonemap: { exposure: 1, curve: 0 },
         hdr: { enabled: false, knee: 0, headroom: 0 },
         bloom: { enabled: false },
+        film: { enabled: false },
       },
       passes: [stubPass],
       planners: [oncePlanner, perViewPlanner],

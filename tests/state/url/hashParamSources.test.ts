@@ -22,6 +22,7 @@ import { requestFocus } from '../../../src/state/selection/requestFocus';
 import { clearSelection } from '../../../src/state/selection/selectionSlice';
 import { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsSlice';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
+import { setFilmEnabled } from '../../../src/state/settings/core/filmSlice';
 import { manualPausedAtActions } from '../../../src/state/time/enterManualPausedAt';
 import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
 import { takeoverEnded, takeoverStarted } from '../../../src/state/takeover/takeoverActions';
@@ -38,6 +39,7 @@ import type { SelectionRowBase } from '../../../src/@types/engine/selection/Sele
 const focusSource = HASH_PARAM_SOURCES.find((source) => source.key === 'focus')!;
 const timeSource = HASH_PARAM_SOURCES.find((source) => source.key === 't')!;
 const orientationSource = HASH_PARAM_SOURCES.find((source) => source.key === 'orientation')!;
+const filmSource = HASH_PARAM_SOURCES.find((source) => source.key === 'film')!;
 const poseSource = HASH_PARAM_SOURCES.find((source) => source.key === 'pose')!;
 
 /** JD 2451545.0 — the J2000.0 epoch, and the instant it names. */
@@ -145,6 +147,16 @@ describe('orientation row', () => {
     // Back/forward off an `#orientation=…` entry must return the pole to the
     // default, not leave the previous entry's frame in place.
     expect(orientationSource.readAbsent()).toEqual([setOrientation(DEFAULT_ORIENTATION)]);
+  });
+});
+
+describe('film row', () => {
+  it('film writes 1 only while on, reads 1 as on, and absent turns it off', () => {
+    expect(filmSource.write(stateAfter(setFilmEnabled(true)))).toBe('1');
+    expect(filmSource.write(stateAfter(setFilmEnabled(false)))).toBeNull();
+    expect(filmSource.read('1')).toEqual({ film: true });
+    expect(filmSource.read('0')).toEqual({});
+    expect(filmSource.readAbsent()).toEqual([setFilmEnabled(false)]);
   });
 });
 

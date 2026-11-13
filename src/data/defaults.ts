@@ -101,6 +101,9 @@ export const DEFAULT_BLOOM_STRENGTH = 0.8;
  */
 export const DEFAULT_BLOOM_THRESHOLD = 2.0;
 
+/** Per-pixel bloom clamp (max channel, HDR): bounds a flickering sprite's swing; large features still bloom over many pixels. */
+export const DEFAULT_BLOOM_CAP = 2.0;
+
 // ── Scalar-volume overlay ────────────────────────────────────────────────────
 
 /**

@@ -20,6 +20,7 @@
 #   src/engine/shaders/compositor       -> src/services/gpu/shaders/compositor
 #   src/engine/shaders/lib/camera.wesl  -> .../shaders/lib/camera.wesl
 #   src/engine/shaders/lib/tonemap.wesl -> src/services/gpu/shaders/lib/tonemap.wesl
+#   src/engine/shaders/lib/film.wesl    -> src/services/gpu/shaders/lib/film.wesl
 #   src/engine/shaders/lib/cloudSprite.wesl -> .../shaders/lib/cloudSprite.wesl
 #   src/engine/shaders/lib/fullscreenTri.wesl -> .../shaders/lib/fullscreenTri.wesl
 #   src/engine/shaders/lib/billboard.wesl     -> .../shaders/lib/billboard.wesl

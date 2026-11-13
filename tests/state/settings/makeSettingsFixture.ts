@@ -79,6 +79,7 @@ import { initialState as constellationsInitialState } from '../../../src/layers/
 import { DEBUG_OVERLAY_ROWS } from '../../../src/data/debug/debugOverlayRows';
 import { DEFAULT_CAMERA_CONTROLS } from '../../../src/data/camera/openSpaceNavigation';
 import { DEFAULT_FOCUS_MOVES } from '../../../src/data/camera/focusMoveDefaults';
+import { DEFAULT_FILM } from '../../../src/data/film/filmDefaults';
 
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
 import type { DebugOverlayKey } from '../../../src/@types/data/debug/DebugOverlayKey';
@@ -118,6 +119,7 @@ export function makeSettingsFixture(
       strength: DEFAULT_BLOOM_STRENGTH,
       threshold: DEFAULT_BLOOM_THRESHOLD,
     },
+    film: DEFAULT_FILM,
     bias: { ...biasInitialState },
     thumbnails: { ...thumbnailsInitialState },
     milkyWay: { ...milkyWayInitialState },

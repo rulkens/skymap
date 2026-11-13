@@ -6,7 +6,7 @@
  * matter. Coverage:
  *
  *   - the exposed surface (label / draw / destroy);
- *   - the pipeline cache: one pipeline per (blend, dstFormat) key,
+ *   - the pipeline cache: one pipeline per (blend, dstFormat, film variant) key,
  *     reused across draws, distinct across blends AND across dst formats
  *     (the same blend into two formats builds two pipelines);
  *   - the blend-state table (replace = no blend, over = straight-alpha
@@ -17,16 +17,19 @@
  *   - the packed uniform bytes (clamped exposure, whitepoint², curve,
  *     toneEnabled, preserveAlpha-from-blend);
  *   - the covering-triangle encode (draw(3,1,0,0), no beginRenderPass);
+ *   - the film variant: grade and seed packed into lanes 8-17, a film-null
+ *     draw reusing the plain pipeline;
  *   - destroy releasing every cached uniform buffer.
  *
  * The JS-mirror curve math itself is exercised in `toneMap.test.ts`.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { createCompositor } from '../../../../src/services/gpu/passes/compositor';
+import { DEFAULT_FILM } from '../../../../src/data/film/filmDefaults';
 import type { ToneMap } from '../../../../src/@types/rendering/ToneMap';
 
 // A basic tone-map for draws where the exact bytes don't matter.
-const TONE: ToneMap = { exposure: 1, curve: 1, hdrKnee: 0, hdrHeadroom: 0 };
+const TONE: ToneMap = { exposure: 1, curve: 1, hdrKnee: 0, hdrHeadroom: 0, film: null };
 
 // Dst formats threaded per draw (the caller resolves these from the dest
 // target). SWAP mirrors the swap chain on macOS; HDR the rgba16float buffer.
@@ -169,7 +172,13 @@ describe('createCompositor', () => {
     const c = make(device);
     const pass = mockPass() as unknown as GPURenderPassEncoder;
 
-    c.draw(pass, SRC, 'replace', { exposure: 1e9, curve: 2, hdrKnee: 0, hdrHeadroom: 0 }, SWAP);
+    c.draw(
+      pass,
+      SRC,
+      'replace',
+      { exposure: 1e9, curve: 2, hdrKnee: 0, hdrHeadroom: 0, film: null },
+      SWAP,
+    );
     const b1 = packedBytes(device, 0);
     const f1 = new Float32Array(b1);
     const u1 = new Uint32Array(b1);
@@ -179,7 +188,13 @@ describe('createCompositor', () => {
     expect(u1[3]).toBe(2); // curve
     expect(u1[4]).toBe(1); // toneEnabled
 
-    c.draw(pass, SRC, 'replace', { exposure: 1e-9, curve: 2, hdrKnee: 0, hdrHeadroom: 0 }, SWAP);
+    c.draw(
+      pass,
+      SRC,
+      'replace',
+      { exposure: 1e-9, curve: 2, hdrKnee: 0, hdrHeadroom: 0, film: null },
+      SWAP,
+    );
     const f2 = new Float32Array(packedBytes(device, 1));
     expect(f2[0]).toBeCloseTo(0.05, 6); // exposure clamped to the lower bound
   });
@@ -214,6 +229,49 @@ describe('createCompositor', () => {
     // exposes no `beginRenderPass`, and the draw completing without
     // throwing proves the compositor only ever called setPipeline /
     // setBindGroup / draw on the pass encoder it was handed.
+  });
+
+  it('film look packs lanes 8..17 and compiles the FILM variant', () => {
+    const device = mockDevice();
+    const c = make(device);
+    const pass = mockPass() as unknown as GPURenderPassEncoder;
+    const grade = DEFAULT_FILM.grade;
+    // HDR on too, so lanes 6-7 and the film lanes are packed into one buffer.
+    const filmTone: ToneMap = { ...TONE, hdrKnee: 4, hdrHeadroom: 0.25, film: { grade, seed: 7 } };
+    c.draw(pass, SRC, 'replace', filmTone, SWAP);
+    const bytes = packedBytes(device, 0);
+    c.draw(pass, SRC, 'replace', TONE, SWAP);
+
+    const f = new Float32Array(bytes);
+    expect([f[6], f[7]]).toEqual([4, 0.25]);
+    const lanes = [
+      grade.contrast,
+      grade.lift,
+      grade.splitTone,
+      grade.grain,
+      grade.grainSizePx,
+      grade.vignette,
+      grade.chromaticPx,
+      grade.softnessPx,
+      grade.squeeze,
+    ].map(Math.fround);
+    expect([...f.slice(8, 17)]).toEqual(lanes);
+    expect(new Uint32Array(bytes)[17]).toBe(7);
+
+    const [filmDesc, plainDesc] = pipelineDescriptors(device);
+    expect(pipelineDescriptors(device)).toHaveLength(2);
+    expect(filmDesc!.fragment!.constants).toEqual({ FILM: 1 });
+    expect(plainDesc!.fragment!.constants).toBeUndefined();
+  });
+
+  it('film null reuses the plain pipeline', () => {
+    const device = mockDevice();
+    const c = make(device);
+    const pass = mockPass() as unknown as GPURenderPassEncoder;
+    c.draw(pass, SRC, 'replace', TONE, SWAP);
+    c.draw(pass, SRC, 'replace', TONE, SWAP);
+    const plain = pipelineDescriptors(device).filter((d) => d.fragment!.constants === undefined);
+    expect(plain).toHaveLength(1);
   });
 
   it('destroy releases every cached uniform buffer', () => {

@@ -16,3 +16,18 @@ export const BLOOM_LEVELS = 5;
  * plausible-looking glow at the wrong width with nothing failing.
  */
 export const bloomScale = (level: number): number => 2 ** (level + 1);
+
+/**
+ * Every fold kind, and the source of the `FoldKind` union; `bloomPyramid`
+ * allocates one fold uniform buffer per entry.
+ */
+export const FOLD_KINDS = ['bloom', 'streak', 'veil'] as const;
+
+/** Tap stride of each streak iteration, in quarter-res texels: 9 taps each compound to a long tail. */
+export const STREAK_STRIDES = [1, 4, 16] as const;
+
+/** Streak falloff at `streakLength = 1`, in quarter-res (`bloom1`) texels. */
+export const STREAK_FALLOFF_TEXELS = 48;
+
+/** Veiling-glare Gaussian sigma in `bloom4` (1/32-res) texels: 8 texels = 256 px of frame. */
+export const VEIL_SIGMA_TEXELS = 8;
