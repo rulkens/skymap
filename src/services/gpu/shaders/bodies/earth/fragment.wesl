@@ -10,17 +10,17 @@
 // docs/superpowers/plans/completed/2026-07-29-earth-surface-virtual-texture-a-to-d.md.
 //
 //   roughness = mix(clamp(mat.r * roughnessBase, MIN_ROUGHNESS, 1), u.oceanRoughness, mat.g)
-//   direct    = pbrDirect(n, v, l, albedo, roughness, f0) * (1 - cloudShadow.a * cloudShadowStrength)
+//   direct    = pbrDirect(n, v, l, albedo, roughness, f0) * (1 - cloudShadow.r * cloudShadowStrength)
 //   colour    = direct * sunIrradiance + ambientLight * albedo
-//   emissive  = nightLights(nightColour, NoL, cloud.a)   // added, not lit
+//   emissive  = nightLights(nightColour, NoL, cloud.r)   // added, not lit
 //   return      colour + emissive
 //
 // The cloud shell (binding 6) couples back onto the surface in two places, both
-// sampling the same sRGB cloud map: a ground-shadow ray toward the sun dims the
+// reading coverage from '.r' of the same grey cloud map: a ground-shadow ray toward the sun dims the
 // DIRECT term (not the ambient floor, so the shadow self-limits at the
-// terminator) where it exits the shell; and the fragment's own cloud alpha dims
-// 'nightLights' city-lights under overcast. The 1x1 transparent placeholder
-// reports alpha 0 before the bitmap lands, so both couplings are inert.
+// terminator) where it exits the shell; and the fragment's own cloud coverage dims
+// 'nightLights' city-lights under overcast. The 1x1 placeholder reports coverage
+// 0 before the bitmap lands, so both couplings are inert.
 //
 // Earth reads a per-draw 'u.ambientLight' uniform rather than the shared
 // 'AMBIENT' const other lit bodies use, so earthshine/moonlight stays
@@ -128,8 +128,8 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let P = normalize(in.normalLocal);
   let roots = raySphere(P, l, vec3<f32>(0.0), u.cloudShellRadius);
   let crossing = P + roots.y * l;
-  let shadowAlpha = textureSample(cloudTexture, earthSampler, dirToEquirectUv(normalize(crossing))).a;
-  let direct = directBase * (1.0 - shadowAlpha * u.cloudShadowStrength);
+  let shadowCoverage = textureSample(cloudTexture, earthSampler, dirToEquirectUv(normalize(crossing))).r;
+  let direct = directBase * (1.0 - shadowCoverage * u.cloudShadowStrength);
 
   let colour = direct * u.sunIrradiance + u.ambientLight * albedo;
 
@@ -139,9 +139,9 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let nightColour = textureSample(nightTexture, earthSampler, in.uv).rgb;
   let NoL = max(dot(n, l), 0.0);
   // Cloud coverage at this fragment's own uv dims city lights (overcast hides
-  // them from orbit); alpha 0 before the map lands makes this a no-op.
-  let cloudAlphaHere = textureSample(cloudTexture, earthSampler, in.uv).a;
-  let emissive = nightLights(nightColour, NoL, cloudAlphaHere);
+  // them from orbit); coverage 0 before the map lands makes this a no-op.
+  let cloudCoverageHere = textureSample(cloudTexture, earthSampler, in.uv).r;
+  let emissive = nightLights(nightColour, NoL, cloudCoverageHere);
 
   return vec4<f32>(colour + emissive, 1.0);
 }

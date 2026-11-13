@@ -1,8 +1,8 @@
 // cloudShell/fragment.wesl — fragment stage for the translucent cloud shell.
 //
-// Samples an equirectangular cloud map at the mesh uv -- RGB is the cloud colour
-// (sRGB, hardware-linearised on read), '.a' is the coverage that becomes the
-// shell's alpha -- then shades it with the shared sun-relative Lambert term
+// Samples an equirectangular grey cloud map ('r8unorm', raw) at the mesh uv --
+// its one byte is the coverage that becomes the shell's alpha AND, decoded as
+// sRGB, the cloud's grey colour -- then shades it with the shared sun-relative Lambert term
 // (the 'u.ambientLight' floor + direct term) so the clouds go dark on the night
 // side (down to that ambient floor) and stay bright in daylight. The result is
 // emitted as STRAIGHT alpha into the rgba16float foreground colour target; the
@@ -10,10 +10,10 @@
 //
 // ## Composition
 //
-//   c       = textureSample(cloudTexture, cloudSampler, uv) // rgb colour, a coverage
+//   v       = textureSample(cloudTexture, cloudSampler, uv).r  // coverage, sRGB grey
 //   lambert = max(dot(normalize(normalLocal), sunDirLocal), 0)
 //   lit     = ambientLight + (1 - ambientLight) * lambert * sunIrradiance  // direct scaled
-//   out     = vec4(c.rgb * lit, c.a * cloudOpacity)         // straight alpha
+//   out     = vec4(srgbToLinear(v) * lit, v * cloudOpacity)    // straight alpha
 //
 // ## Why 'sunIrradiance' scales only the direct term
 //
@@ -66,11 +66,12 @@
 // Output @location(0) writes to the rgba16float foreground colour target with
 // STRAIGHT (non-premultiplied) colour -- the renderer's pipeline uses OVER
 // blending ('src-alpha' / 'one-minus-src-alpha'), the standard translucent
-// overlay. The cloud texture is 'rgba8unorm-srgb', so the sampled RGB is already
-// linear, correct for the HDR target.
+// overlay. 'srgbToLinear' gives the HDR target linear colour, as the old
+// 'rgba8unorm-srgb' RGBA map did in hardware.
 
 import package::bodies::cloudShell::io::VSOut;
 import package::lib::sphere::CloudShellUniforms;
+import package::lib::srgb::srgbToLinear;
 
 @group(0) @binding(0) var<uniform> u: CloudShellUniforms;
 @group(0) @binding(1) var cloudSampler: sampler;
@@ -78,11 +79,10 @@ import package::lib::sphere::CloudShellUniforms;
 
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
-  // RGB = cloud colour (sRGB de-gammad on read), .a = coverage. The mesh uv is
-  // already registered on the prime meridian (see the '## uv / orientation' note),
+  // The mesh uv is already registered on the prime meridian (see the '## uv / orientation' note),
   // so it samples straight through. Its u runs 0.5..1.5 unwrapped and the sampler
   // uses addressModeU 'repeat', so the hardware closes the turn.
-  let c = textureSample(cloudTexture, cloudSampler, in.uv);
+  let v = textureSample(cloudTexture, cloudSampler, in.uv).r;
   // Sun-relative day/night term, decomposed so 'sunIrradiance' scales the DIRECT
   // (sun-lit) portion only -- mirroring the surface, whose direct term is scaled
   // by the same irradiance while its ambient floor is not. The 'u.ambientLight'
@@ -93,5 +93,5 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let lit = u.ambientLight + (1.0 - u.ambientLight) * lambert * u.sunIrradiance;
   // Straight-alpha OVER: colour shaded by the light term, coverage scaled by the
   // per-shell opacity multiplier.
-  return vec4<f32>(c.rgb * lit, c.a * u.cloudOpacity);
+  return vec4<f32>(vec3<f32>(srgbToLinear(v)) * lit, v * u.cloudOpacity);
 }

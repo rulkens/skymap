@@ -68,8 +68,8 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // through the cloud shell, exactly as 'earth/fragment.wesl' does.
   let roots = raySphere(Ng, l, vec3<f32>(0.0), u.cloudShellRadius);
   let crossing = Ng + roots.y * l;
-  let shadowAlpha = textureSample(cloudTexture, baseSampler, dirToEquirectUv(normalize(crossing))).a;
-  let direct = directBase * (1.0 - shadowAlpha * u.cloudShadowStrength);
+  let shadowCoverage = textureSample(cloudTexture, baseSampler, dirToEquirectUv(normalize(crossing))).r;
+  let direct = directBase * (1.0 - shadowCoverage * u.cloudShadowStrength);
 
   let colour = direct * u.sunIrradiance + u.ambientLight * baseAlbedo;
 
@@ -82,8 +82,8 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // 'n', every slope facing away from the sun at noon read as night and lit up
   // with the city's Black Marble glow (Søndermarken's banks turned cream).
   let sunUp = max(dot(Ng, l), 0.0);
-  let cloudAlphaHere = textureSample(cloudTexture, baseSampler, equirectUv).a;
-  let emissive = nightLights(nightColour, sunUp, cloudAlphaHere);
+  let cloudCoverageHere = textureSample(cloudTexture, baseSampler, equirectUv).r;
+  let emissive = nightLights(nightColour, sunUp, cloudCoverageHere);
 
   return vec4<f32>(tileLodOverlay(colour + emissive, in.atlasUvScale.x, u.debugLodOverlay), 1.0);
 }
