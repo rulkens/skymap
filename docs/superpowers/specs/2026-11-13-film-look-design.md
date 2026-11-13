@@ -32,14 +32,13 @@ code, same VRAM.
   and the film block sits under `if (FILM)`. The compositor keys its pipeline cache on
   `${blend}:${dstFormat}:${film}`, passing `constants: { FILM: 1 }` only for the film variant. Off, the
   compiled pipeline is today's code; the only residue is a larger uniform buffer (80 bytes, was 32).
-- **D2. The letterbox is one scissor rect, no shader code.** Every pass that writes the real swap chain
-  (the tone-map composite and the two `OVERLAYS` render steps, main context only: `ctx.output ===
-  undefined`) gets `setScissorRect` to the 2.39:1 band when the letterbox is on. The swap's first touch
-  clears it opaque black, so the pixels outside the band are the bars, overlays included, and the recorder
-  (which captures the canvas) gets them too. One helper, `letterboxScissorOf(film, canvasSize)` in
-  `src/utils/film/`, is the band's only home; the executor applies it in the render-step branch (through
-  `renderGroup`'s `dest`) and the composite branch. The radar's first finding: shader bars plus an overlay
-  scissor would have put the band's formula in WGSL and TS both.
+- **D2. The letterbox is two DOM bars, no frame code.** A `LetterboxBars` component beside the canvas,
+  below the HUD in stacking order and above the canvas, `pointer-events: none`, each bar
+  `height: max(0px, calc((100vh - 100vw / 2.39) / 2))`, shown while `film.enabled && film.letterbox`. It
+  covers the canvas and its GPU overlays (labels, rings) and leaves the HUD panels on top; the recorder and
+  the shot tool capture the composited page (`Page.captureScreenshot`, which already carries the tour's
+  DOM captions), so bars reach recordings. The builder check overturned the in-canvas version: the
+  executor gains no special case, the shader no lane, and the band's formula has one home, the CSS.
 - **D3. Streak has no switch**: `streakStrength === 0` is off (no passes, no fold), the same rule `veil` uses.
 - **D4. The grain seed is a value** from `EngineState.frameIndex`, incremented by `renderFrame` once per
   frame; the compositor holds no counter.
@@ -65,7 +64,7 @@ code, same VRAM.
 - Frame → bloom: `runBloom` reads `state.settings.film` beside `state.settings.bloom` (R4).
 - Pyramid: `fold` addressed by `FoldKind`, `bright` takes a params object; `streak` and `veil` are new methods.
 - Targets: four `allocateWhen` rows. Link: a `HashParamSource` row + `LinkIntent.film?`.
-- UI: a header toggle in Display; two DebugPanel boards.
+- UI: a header toggle in Display; two DebugPanel boards; the letterbox bars component.
 
 ### 3.2 Verdicts
 
@@ -76,7 +75,6 @@ code, same VRAM.
 | `bright(…, cap?)` + WGSL literal floor | bolt-on | becomes `{ threshold, cap, capFloor }`, no literal |
 | `hasUrlGate('film')` in a slice | bolt-on | seventh hand-added gate; dropped (R3) |
 | film cluster, rows, hash row, saga line, UI | growth | existing seams |
-| letterbox scissor in the executor | special case | accepted, one helper, two apply sites (D2) |
 
 ### 3.3 Prep (own commit, first)
 
@@ -248,8 +246,10 @@ Before any film code (after P1): `npm run perf -- --url http://localhost:<this w
 `earth-surface`, `solar-system`, `star-field`, `milky-way`, `local-group`, `full-survey`, 30 frames,
 saved to the scratchpad. After the feature, look **off**, same flags: MERGED `bloom` and the tone-map
 composite slot within run noise (~0.5 ms) on every scenario, plus one control scenario. Any regression
-halts for a ruling. Look **on**: measured separately at `star-sun` and `earth-surface`, reported as a
-price, never folded into the neutral claim.
+halts for a ruling. Look **on**: the harness has no settings seam and no `star-sun` pose, so the price is read from the
+DebugPanel's GPU timings section (`?gpuTimings`) at `#focus=star-sun&film=1` and
+`#focus=body-earth&t=2026-11-12T07:00:00Z&film=1`, `bloom` and `hdr→swap` rows, against the same links
+without `film`; reported as an approximate price, never folded into the neutral claim.
 
 ## 9. Tests (acceptance)
 
@@ -264,30 +264,31 @@ Only what can fail on a real bug the compiler misses:
 - `runBloom.test.ts`: *look off encodes exactly today's pass sequence*; *look on: streak reads bloom0 after
   bright, veil reads bloom4 after the last downsample, the folds precede the bloom fold, and the end
   timestamp still rides the last pass*.
-- `executeFrame.test.ts`: *the tone-map composite and the swap overlay passes get the letterbox scissor
-  when on; no pass gets one when off, and none on an offscreen output*.
 - `hashParamSources.test.ts`: *film writes `1` only when on, reads `1` as on, absent turns it off*.
 - `DisplaySection.test.ts`: *toggles filmEnabled via the header toggle* (the bloom pattern).
-- No tests for the slice, the defaults, the selectors, the saga line (one `put`), or the shaders.
+- No tests for the slice, the defaults, the selectors, the saga line (one `put`), the shaders, or the
+  letterbox bars (presentational, no interaction).
 
 ## 10. Eye checks (DoD smoke, this worktree's port)
 
 - `#focus=star-sun&film=1` vs the same link without `film`: the Sun washes out smoothly, no lobes.
 - `#focus=galaxy-cluster-virgo-m87&film=1`: streaks on the bright cores, grain not repeating across frames.
 - `#focus=body-earth&t=2026-11-12T07:00:00Z&film=1` corner crop: softness and aberration grow toward the corner; Fomalhaut's neighbours unchanged against the no-film shot.
-- Letterbox on (DebugPanel): black bars, labels and rings stop at them.
+- Letterbox on (DebugPanel): black bars over the canvas and its labels, HUD panels still on top; a
+  `npm run shot` of the link carries the bars.
 - Film off: the shot is pixel-identical to main's for the Earth link.
 
 ## 11. Docs and backlog
 
 - `docs/RENDERER.md` quick map: one bullet for the film look (where it lives, the FILM override, the
-  letterbox scissor, the shared predicates).
+  letterbox bars component, the shared predicates).
 - Backlog: `docs/backlog/2026-11-13-film-barrel-distortion.md` (anamorphic barrel distortion needs the
   overlays under the film pass; dropped by R3) with its index line.
 
 ## 12. Left to the builder
 
 - Exact `CollapsibleSection` markup for a body with no sliders; the hint's styling.
+- Where `LetterboxBars` mounts (beside the canvas, under the HUD) and its stacking value.
 - Whether `DebugOverlayToggles` takes the two booleans from a derived `{ enabled, letterbox }` view or the
   board renders two `DebugCheckbox` rows.
 - Test fixture plumbing for `frameIndex` in `renderFrame` tests.
