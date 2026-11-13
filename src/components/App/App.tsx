@@ -75,6 +75,7 @@ export function App(): React.ReactElement {
     return (
       <>
         {canvas}
+        <LetterboxBarsContainer />
         {tourOverlay}
       </>
     );
