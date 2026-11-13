@@ -1,20 +1,22 @@
-/** FilmGradeTuningSectionContainer — store boundary for the DebugPanel film-grade board. */
+/** FilmTuningSectionContainer — store boundary for the DebugPanel film-look board. */
 
 import { memo, useCallback } from 'react';
 import type { ReactNode } from 'react';
-import FilmGradeTuningSection from '../DebugPanel/FilmGradeTuningSection/FilmGradeTuningSection';
+import FilmTuningSection from '../DebugPanel/FilmTuningSection/FilmTuningSection';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectFilm } from '../../state/settings/selectors';
 import {
   setFilmEnabled,
   setFilmLetterbox,
+  tuneFilmGlow,
   tuneFilmGrade,
 } from '../../state/settings/core/filmSlice';
 import type { FilmGrade } from '../../@types/settings/FilmGrade';
+import type { FilmGlow } from '../../@types/settings/FilmGlow';
 
-function FilmGradeTuningSectionContainer(): ReactNode {
+function FilmTuningSectionContainer(): ReactNode {
   const dispatch = useAppDispatch();
-  const { enabled, letterbox, grade } = useAppSelector(selectFilm);
+  const { enabled, letterbox, grade, glow } = useAppSelector(selectFilm);
 
   const onEnabledChange = useCallback((on: boolean) => dispatch(setFilmEnabled(on)), [dispatch]);
   const onLetterboxChange = useCallback(
@@ -25,17 +27,23 @@ function FilmGradeTuningSectionContainer(): ReactNode {
     (tuning: Partial<FilmGrade>) => dispatch(tuneFilmGrade(tuning)),
     [dispatch],
   );
+  const onGlowChange = useCallback(
+    (tuning: Partial<FilmGlow>) => dispatch(tuneFilmGlow(tuning)),
+    [dispatch],
+  );
 
   return (
-    <FilmGradeTuningSection
+    <FilmTuningSection
       enabled={enabled}
       letterbox={letterbox}
       grade={grade}
+      glow={glow}
       onEnabledChange={onEnabledChange}
       onLetterboxChange={onLetterboxChange}
       onGradeChange={onGradeChange}
+      onGlowChange={onGlowChange}
     />
   );
 }
 
-export default memo(FilmGradeTuningSectionContainer);
+export default memo(FilmTuningSectionContainer);

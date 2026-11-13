@@ -135,16 +135,10 @@ export const DOCS_DEBUG_SECTIONS: readonly DocsDebugSection[] = [
     file: `${PANEL}/FocusMovesTuningSection/FocusMovesTuningSection.tsx`,
   },
   {
-    heading: 'Film grade',
+    heading: 'Film look',
     shows:
-      'The film look’s switch and its letterbox, then the grade: contrast, black lift, split tone, grain and grain size, vignette, chromatic aberration, edge softness and the anamorphic squeeze.',
-    file: `${PANEL}/FilmGradeTuningSection/FilmGradeTuningSection.tsx`,
-  },
-  {
-    heading: 'Film glow',
-    shows:
-      'The film look’s bloom side: the firefly cap the Sun may bloom up to, the streak’s threshold, strength, length and blue tint, and the veiling glare.',
-    file: `${PANEL}/FilmGlowTuningSection/FilmGlowTuningSection.tsx`,
+      'The film look’s switch and its letterbox, then two groups. Grade: contrast, black lift, split tone, grain and grain size, vignette, chromatic aberration, edge softness and the anamorphic squeeze. Glow: the firefly cap the Sun may bloom up to, the streak’s threshold, strength, length and blue tint, and the veiling glare.',
+    file: `${PANEL}/FilmTuningSection/FilmTuningSection.tsx`,
   },
   {
     heading: 'Galaxy Provenance',
