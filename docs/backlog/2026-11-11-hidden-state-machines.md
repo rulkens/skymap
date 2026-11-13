@@ -16,7 +16,7 @@ Audit read-only at main f9a85995c. Paths are relative to `src/` unless they star
 | 2 | Takeover lifecycle: `state/takeover/watchTakeoverSaga.ts:26`, `state/takeover/takeoverSlice.ts` | saga | `idle`, `starting` (request queued, predecessor cancelling), `running`, `ending` (restore in flight) | Recorder `seenActive` latch (`state/recorder/installRecorderHook.ts:71-110`); two `all([take(takeoverEnded), put(exitTakeover())])` handshakes; `settled` Promise outside the store | **convert** | 11 / 4 (`selectTakeoverSource`), 8 / 5 (`takeoverEnded`); `exitTakeover` (25 / 12) stays a signal |
 | 3 | Tour beat: `state/tour/tourBodySaga.ts:71`, `visitBeatSaga.ts:76`, `pausableDwellSaga.ts:73`, `tourSlice.ts` | saga + flags | `waitingFoci`, `flying`, `settling`, `dwelling(running)`, `dwelling(paused)`, then outcome | `tourSlice` header: pause routed through the saga so `paused` never drifts from the saga's state; `remainingMs` only in the saga | **convert** | 4 (sagas, slice) + 9 (`dwellNonce` readers) / 7 |
 | 4 | `PlannerResult` votes: `@types/engine/frame/PlannerResult.d.ts:12` | flags | Only `idle`, `awake`, `loading`, `settling` are meaningful (a total order); 4 of 8 boolean combinations are illegal | `e42e2a00a` "Surface tiles in flight no longer re-bake the sky cubemap every frame"; the fold enforces `settling => loading => awake` by convention | **convert** | 12 / 17 |
-| 5 | Engine runtime phase: `cameraRuntime()` null (`services/engine/engine.ts:329`), `state/navigation/liveCameraRuntimeSaga.ts:11`, `watchFocusTweenSaga.ts`, `watchOrientationChangeSaga.ts`, `watchGoHomeSaga.ts`, `watchFlyToLonLatSaga.ts` | saga | null means both pre-bootstrap and post-destroy | `take('*')` wakes on every action; comment "nothing else announces it"; `watchHashReadSaga` header LANDMINE about empty context | **convert** | 3 / 0 (`liveCameraRuntimeSaga`), 10 / 4 (`cameraRuntime()`) |
+| 5 | Engine runtime phase: mostly covered by the camera-rendered spec (2026-11-13); left open: the five sagas that skip pre-boot commands | saga | pre-boot command lost | see section 5 | **convert** (residual) | 5 / 0 |
 | 6 | `ArrivalState`: `@types/state/arrival/ArrivalState.d.ts:6`, `state/arrival/arrivalSaga.ts:27` | flags (type) + saga | `{status, reason?}`: `reason` only legal with `failed`; saga phases `navigating` and `fallback-home` invisible | `whenStablyReady` rebuilds "settled" from three facts | **convert** (type), maybe (saga) | 5 / 3 |
 | 7 | `createSatellitePropagator`: `layers/satellites/sweep/subsystems/createSatellitePropagator.ts:13` | closure flags | `worker`, `ready`, `inFlight`, `abortStart`, `catalog`, `latest` encode `idle`, `starting`, `ready`, `sweeping` | Comment on `abortStart`: "every later commit queues behind it forever" | **convert** | 2 / 1 |
 | 8 | `TimeState`: `@types/time/TimeState.d.ts` | flags | `mode`, `paused`, `profile` give `live-run`, `live-paused`, `manual-run`, `manual-paused`, `profile` | `state/time/timeSlice.ts:159-165` matcher "so a new reducer cannot forget to"; `exitsLive` hand-built clock in `withSceneSnapshotSaga.ts:20`; 3-way restore in `clipBodySaga` | **maybe** | 32 / 15 |
@@ -106,22 +106,16 @@ type PlannerResult<T> = { value: T; activity: PlannerActivity };
 `EngineState.layersLoading` becomes `activity >= 'loading'`; the cubemap scheduler reads `=== 'settling'`. Cost: 12 src files declare `settling:`; 17 test files. Mechanical. This is the one case where the flags form a lattice rather than a phase, so a string union beats a `kind` object.
 
 ### 5. Engine runtime phase (convert)
-`SagaContext.cameraRuntime()` (`engine.ts:329`) returns `null` while `!state.booted`. Sagas then poll or pulse-wait:
+**Mostly covered by** [`specs/2026-11-13-camera-rendered-design.md`](../superpowers/specs/2026-11-13-camera-rendered-design.md):
+`state.engine.renderedCamera` (null = no live engine frame, pre-boot or post-destroy) replaces
+`SagaContext.cameraRuntime()`, the `take('*')` loop in `liveCameraRuntimeSaga`, the
+`engineStatusChanged` loop in `watchFocusTweenSaga` and the `cameraRuntime() !== null` polls.
 
-- `liveCameraRuntimeSaga.ts:11` loops `take('*')`.
-- `watchFocusTweenSaga` loops `take(engineStatusChanged)`.
-- `waitUntilSaga` polls `cameraRuntime() !== null` in three places.
-- `watchGoHomeSaga` and `watchFlyToLonLatSaga` skip the command when null, so the command is lost.
-- `watchOrientationChangeSaga` skips the roll when null.
-
-`null` is also returned after `destroy()` (`engine.ts:399`), so one value means "not yet" and "never again". `EngineStatus.ready` is not that fact: `wireInput` sets `booted` after status events.
-
-Sketch:
-```ts
-type EngineRuntimePhase = { kind: 'booting' } | { kind: 'live' } | { kind: 'destroyed' };
-// dispatched by wireInput (live) and destroy() (destroyed); sagas select it, or take once while booting
-```
-A store fact is not a `SagaContext` change; `cameraRuntime()` stays as the value getter. Cost: 3 src files for the `take('*')` loop, 10 src readers of `cameraRuntime()` that could drop their null branch over time.
+**Left open (spec open question 3):** `watchGoHomeSaga`, `watchFlyToLonLatSaga`,
+`watchOrientationChangeSaga`, `missionHoldSaga` and `exhibitBodySaga` still skip when there is no
+drawn camera, so a command that arrives before boot is lost. Once the spec lands, each one can
+wait on `renderedCameraSaga` with a one-line change; that is a behaviour ruling. Delete this
+section when it is made.
 
 ### 6. ArrivalState (convert type, maybe for saga)
 `ArrivalState = {status: 'pending'|'arrived'|'failed'; reason?}`. `reason` is only legal on `failed`, and the header says `engine-error` means "no view at all".
