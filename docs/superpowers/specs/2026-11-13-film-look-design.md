@@ -220,7 +220,7 @@ Constants in `src/data/bloomConstants.ts`: `STREAK_FALLOFF_TEXELS = 48`, `VEIL_S
 3. if `filmStreakOn`: band-pass seed `bloom1 → streak0` (copy) then `bloom2 → streak0` (upsample, reverse-subtract blend) (D10); streak ×3, sources `streak0 → streak1 → streak0 → streak1`, strides `1, 4, 16`, threshold on iteration 0 only, falloff `streakLength · 48`, tint; the streak fold reads `streak1`
 4. upsample 3..0, same texel scaling
 5. if `filmVeilOn`: veil x `bloom4 → veil0`, veil y `veil0 → veil1`, fold `veil1 → hdr` kind `'veil'` strength `glow.veil`
-6. if `filmStreakOn`: fold `streak0 → hdr` kind `'streak'` strength `streakStrength`
+6. if `filmStreakOn`: fold `streak1 → hdr` kind `'streak'` strength `streakStrength`
 7. fold `bloom0 → hdr` kind `'bloom'` (end timestamp, always last)
 
 Render-target rows (`renderTargetRows`): `streak0`, `streak1` at `bloomScale(1)`, `allocateWhen: filmStreakOn`;
