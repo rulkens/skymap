@@ -1,6 +1,6 @@
 # CelesTrak GP orbit data
 
-Input to `npm run build-satellites`, which writes `a dated file plus pointer under `public/data/live/v1/`
+Input to `npm run build-satellites`, which writes a dated file plus pointer under `public/data/live/v1/`
 (layout in `tools/utils/io/writeSatelliteCatalog.ts`). The JSON files are gitignored; regenerate with
 `npm run fetch-celestrak`. In production nobody runs either by hand: the daily
 `.github/workflows/live-datasets.yml` fetches, builds and uploads to R2 (docs/DEPLOY.md).

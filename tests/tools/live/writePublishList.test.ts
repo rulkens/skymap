@@ -10,11 +10,16 @@ import { writePublishList } from '../../../tools/live/writePublishList';
 function build(withFile: boolean): string {
   const root = mkdtempSync(join(tmpdir(), 'publish-list-'));
   if (withFile) {
-    const file = join(root, liveFilePath('satellites', '2026-11-13', 'satellites.satg'));
+    const file = join(root, liveFilePath('satellites', '2026-11-13T0423Z', 'satellites.satg'));
     mkdirSync(dirname(file), { recursive: true });
     writeFileSync(file, 'x');
   }
-  writeLivePointer(root, 'satellites', '2026-11-13', ['satellites.satg']);
+  writeLivePointer(
+    root,
+    'satellites',
+    new Date('2026-11-13T04:23:00Z'),
+    ['satellites.satg'],
+  );
   return root;
 }
 
@@ -35,5 +40,11 @@ describe('writePublishList', () => {
 
   it('fails when a file the pointer names is missing', () => {
     expect(() => writePublishList('satellites', build(false))).toThrow(/was not built/);
+  });
+
+  it('fails when a registered file is missing from the pointer', () => {
+    const root = build(true);
+    writeLivePointer(root, 'satellites', new Date('2026-11-13T04:23:00Z'), []);
+    expect(() => writePublishList('satellites', root)).toThrow(/pointer lacks/);
   });
 });

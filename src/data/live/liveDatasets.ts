@@ -1,4 +1,4 @@
-/** Every nightly live dataset. The workflow matrix and the app's pointer reads both start here. */
+/** Every nightly live dataset: the workflow matrix reads this; the app hard-codes the ids and file names it fetches. */
 import type { LiveDataset } from '../../@types/live/LiveDataset';
 
 export const LIVE_DATASETS: readonly LiveDataset[] = [

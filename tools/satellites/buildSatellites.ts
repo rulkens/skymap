@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
  * buildSatellites — data/raw/celestrak/<group>.json → the dated live file plus its pointer
- * (live/v1/, see writeLivePointer). The nightly Action uploads both to R2 as is. A catalog under `MIN_OBJECTS` throws instead of
- * writing: an upstream outage or a changed group list must fail the run, not publish a sky with
+ * (live/v1/, see writeLivePointer). The nightly Action uploads both to R2 as is. A catalog under
+ * `MIN_OBJECTS` throws instead of writing: an upstream outage or a changed group list must fail the run, not publish a sky with
  * half its satellites (the app would show it for 14 days).
  */
 import { mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
@@ -14,6 +14,7 @@ import { writeSatelliteCatalog } from '../utils/io/writeSatelliteCatalog';
 import { CELESTRAK_GROUPS } from './celestrakGroups';
 import { buildSatelliteCatalog } from './buildSatelliteCatalog';
 import { liveFilePath } from '../../src/utils/live/liveFilePath';
+import { liveFolderStamp } from '../../src/utils/live/liveFolderStamp';
 import { writeLivePointer } from '../utils/live/writeLivePointer';
 import { SATELLITE_CLASSES } from '../../src/data/satellites/satelliteClasses';
 import type { CelestrakOmm } from '../@types/satellites/CelestrakOmm';
@@ -40,12 +41,12 @@ function main(): void {
     throw new Error(`buildSatellites: only ${n} objects (floor ${MIN_OBJECTS}); not writing`);
   }
   const dataRoot = join(PROJECT_ROOT, 'public/data');
-  const date = new Date().toISOString().slice(0, 10);
-  const out = join(dataRoot, liveFilePath('satellites', date, FILE_NAME));
+  const builtAt = new Date();
+  const out = join(dataRoot, liveFilePath('satellites', liveFolderStamp(builtAt), FILE_NAME));
   mkdirSync(dirname(out), { recursive: true });
   const bytes = writeSatelliteCatalog(catalog);
   writeFileSync(out, bytes);
-  writeLivePointer(dataRoot, 'satellites', date, [FILE_NAME]);
+  writeLivePointer(dataRoot, 'satellites', builtAt, [FILE_NAME]);
   const perClass = SATELLITE_CLASSES.map(
     (cls, code) => `${cls} ${catalog.classCode.filter((c) => c === code).length}`,
   ).join(', ');

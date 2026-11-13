@@ -99,7 +99,7 @@ One registry, `src/data/live/liveDatasets.ts`, lists every nightly dataset (sate
 
 ```
 data/live/v1/<id>.json                       pointer: { date, builtAt, files: name → key }; no-cache
-data/live/v1/files/<id>/<date>/<name>        dated file; immutable, a year's max-age
+data/live/v1/files/<id>/<stamp>/<name>      dated file (stamp = build UTC to the minute, e.g. 2026-11-13T0423Z, so a rerun never overwrites); immutable, a year's max-age
 ```
 
 `.github/workflows/live-datasets.yml` runs every day at 04:23 UTC (and on demand from the Actions tab). Its `plan` job turns the registry into a matrix (`npm run live-matrix`); each row calls the reusable `live-dataset.yml` with `fail-fast: false`, so one failing dataset does not stop the others. That workflow has two jobs: `build` runs the row's npm script (it exits non-zero on bad data, so an outage never reaches R2) and `npm run live-publish-list -- <id>`, which writes `publish.json` (dated files first, pointer last); `upload` has no checkout and no npm, so no install script shares a runner with the key, and `aws s3 cp`s each entry over R2's S3 API (gzipped where the registry says so). The pointer moves only after its files are up. The `v1/` folder is the version gate, and the files stay out of `syncR2.ts` and the manifest on purpose.
@@ -107,6 +107,8 @@ data/live/v1/files/<id>/<date>/<name>        dated file; immutable, a year's max
 The workflows need three repository secrets: `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` from an R2 API token (R2 → Manage API tokens) with **Object Read & Write** on `skymap-data` only, made for these workflows alone so revoking it touches nothing else, and `CLOUDFLARE_ACCOUNT_ID` for the endpoint. It uses the S3 API rather than wrangler because the REST API's only R2 permission, Workers R2 Storage Edit, covers every bucket in the account. A failed run shows in the Actions tab and GitHub's failure email.
 
 Dated files pile up, so expire them once, by hand: `npx wrangler r2 bucket lifecycle add skymap-data live-files-expire-30d data/live/v1/files/ --expire-days 30`.
+
+Right after merging, dispatch "Live datasets" (Actions tab, or `gh workflow run live-datasets.yml`): until its first run the pointer 404s and production shows no satellites.
 
 The old `data/satellite-catalog/v1/satellites.satg` is no longer written. Tabs opened before the switch fade it out after 14 days; delete the key after that.
 

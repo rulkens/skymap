@@ -46,7 +46,7 @@ Each format has its own `<family>/v<N>/` folder, where `N` is that format's curr
 - `filament/v1/`: `filaments{,-small}.bin`
 - `local-bubble/v1/`: `local-bubble.shell`
 - `stellar-streams/v1/`: `stellar-streams.bin` + `stellar_streams_meta.json`
-- `live/v1/`: the nightly live datasets (satellites): a pointer `<id>.json` plus dated files under `files/<id>/<date>/`. Untracked by design: neither hashed nor in the manifest, because the nightly Action publishes them (docs/DEPLOY.md, "Live datasets"). `dataUrl()` passes the unmanifested path through.
+- `live/v1/`: the nightly live datasets (satellites): a pointer `<id>.json` plus dated files under `files/<id>/<stamp>/` (stamp = build time to the minute). Untracked by design: neither hashed nor in the manifest, because the nightly Action publishes them (docs/DEPLOY.md, "Live datasets"). `dataUrl()` passes the unmanifested path through.
 
 Loose JSON (`famous_galaxies_meta`, `famous_stars_meta`, `structures_meta`, `constellations`, `pgc_aliases`) and `images/` stay at the data root: no version gate, since their schemas evolve compatibly and `images/` is unhashed and path-stable.
 

@@ -19,10 +19,6 @@ on:
       timeout-min:
         type: number
         required: true
-      # JSON array of { paths: string[], key: string }; at most two entries are honoured.
-      caches:
-        type: string
-        default: '[]'
 
 permissions:
   contents: read
@@ -45,21 +41,6 @@ jobs:
           cache: 'npm'
 
       - run: npm ci
-
-      # A workflow cannot loop a step, so two optional cache slots; a third cache means a third step.
-      - name: Cache 1
-        if: fromJson(inputs.caches)[0] != null
-        uses: actions/cache@v4
-        with:
-          path: ${{ join(fromJson(inputs.caches)[0].paths, '\n') }}
-          key: ${{ fromJson(inputs.caches)[0].key }}
-
-      - name: Cache 2
-        if: fromJson(inputs.caches)[1] != null
-        uses: actions/cache@v4
-        with:
-          path: ${{ join(fromJson(inputs.caches)[1].paths, '\n') }}
-          key: ${{ fromJson(inputs.caches)[1].key }}
 
       # The build script exits non-zero on bad data, so an upstream outage never reaches R2.
       - name: Build
@@ -110,5 +91,5 @@ jobs:
               args+=(--content-encoding gzip)
             fi
             aws s3 cp "$src" "s3://skymap-data/$(jq -r .key <<<"$entry")" \
-              --endpoint-url "https://$CLOUDFLARE_ACCOUNT_ID.r2.cloudflarestorage.com" "${args[@]}"
+              --endpoint-url "https://$CLOUDFLARE_ACCOUNT_ID.r2.cloudflarestorage.com" "${args[@]}" </dev/null
           done

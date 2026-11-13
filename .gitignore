@@ -234,3 +234,4 @@ packages/desktop/resources/
 !/src/dev/mocks/README.md
 !/src/dev/mocks/example.tsx
 !/src/dev/mocks/example.module.css
+/publish.json

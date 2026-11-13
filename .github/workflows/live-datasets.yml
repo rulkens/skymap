@@ -44,5 +44,4 @@ jobs:
       id: ${{ matrix.dataset.id }}
       build: ${{ matrix.dataset.build }}
       timeout-min: ${{ matrix.dataset.timeoutMin }}
-      caches: ${{ toJson(matrix.dataset.caches) }}
     secrets: inherit
