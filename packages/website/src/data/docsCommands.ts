@@ -117,8 +117,8 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         manual: DATA,
       },
       {
-        scripts: ['build-satellites'],
-        does: 'Write the file of satellite orbits from the CelesTrak groups that fetch-celestrak downloaded. A scheduled GitHub workflow runs both every day and uploads the file.',
+        scripts: ['build-satellites', 'live-satellites'],
+        does: 'Write the file of satellite orbits from the CelesTrak groups that fetch-celestrak downloaded. live-satellites runs both; the Live datasets workflow runs it every day and uploads the file.',
         manual: DATA,
       },
       {
@@ -375,6 +375,10 @@ export const DOCS_COMMANDS_UNLISTED: readonly { why: string; scripts: readonly s
   {
     why: 'build runs them',
     scripts: ['galaxy-renderer:build', 'mcpm-workbench:build', 'flow-workbench:build'],
+  },
+  {
+    why: 'the Live datasets workflow runs them',
+    scripts: ['live-matrix', 'live-publish-list'],
   },
   {
     why: 'they publish, and need the owner’s keys',
