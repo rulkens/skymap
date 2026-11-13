@@ -46,7 +46,7 @@ Each format has its own `<family>/v<N>/` folder, where `N` is that format's curr
 - `filament/v1/`: `filaments{,-small}.bin`
 - `local-bubble/v1/`: `local-bubble.shell`
 - `stellar-streams/v1/`: `stellar-streams.bin` + `stellar_streams_meta.json`
-- `satellite-catalog/v1/`: `satellites.satg`. Untracked by design: neither hashed nor in the manifest, because the daily Action overwrites it at this fixed R2 key (docs/DEPLOY.md, "Satellite catalog"). `dataUrl()` passes the unmanifested path through.
+- `live/v1/`: the nightly live datasets (satellites): a pointer `<id>.json` plus dated files under `files/<id>/<stamp>/` (stamp = build time to the minute). Untracked by design: neither hashed nor in the manifest, because the nightly Action publishes them (docs/DEPLOY.md, "Live datasets"). `dataUrl()` passes the unmanifested path through.
 
 Loose JSON (`famous_galaxies_meta`, `famous_stars_meta`, `structures_meta`, `constellations`, `pgc_aliases`) and `images/` stay at the data root: no version gate, since their schemas evolve compatibly and `images/` is unhashed and path-stable.
 
@@ -286,7 +286,7 @@ Every refresh shares one shape: fetch, build, then `npm run sync-r2-secure` from
 | Earth surface tiles    | `fetch-textures` + `fetch-eox` + `fetch-height` | `build-surface-tiles` (`--dev` for a quick z5 pass, albedo only) |
 | Live clouds            | `fetch-cloud-inputs` (once)                     | `bake-clouds` (a WebP per day; no R2 sync yet)                   |
 | Stars                  | `fetch-gaia`                                    | `build-stars` (`star-catalog/v2/` index + chunks)                 |
-| Satellites             | `fetch-celestrak` (daily, by the Action)        | `build-satellites` (`satellite-catalog/v1/satellites.satg`; the Action uploads it, no `sync-r2`) |
+| Satellites             | `fetch-celestrak` (daily, by the Action)        | `build-satellites` (`live/v1/` pointer + dated `satellites.satg`; the Action uploads them, no `sync-r2`) |
 | Stellar streams        | `fetch-vasiliev2021` + `fetch-galstreams`       | `build-stellar-streams` (`stellar-streams/v1/`)                  |
 
 Raw files and built artefacts are gitignored; only provenance READMEs and `.sha256` sidecars are committed. Two small deterministic bakes are the exceptions and live in git under `public/`: the MSDF font atlases in `public/fonts/` (`npm run build-fonts`) and the split-sum environment-BRDF LUT in `public/lut/` (`npm run build-env-brdf-lut`). Full-resolution texture and tile builds run post-merge from the main worktree.

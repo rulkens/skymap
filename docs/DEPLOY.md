@@ -93,9 +93,24 @@ rclone is configured entirely through `RCLONE_CONFIG_R2_*` environment variables
 
 Rendered takes that are too big to mail (a 4096² dome take is ~2 GB) go to the same bucket under `films/<YYYY-MM-DD>-<take>.mp4`, served at `https://skymap-data.rulkens.com/films/...`. They are one-off deliverables, so they are deliberately outside `syncR2.ts`'s groups: upload with `rclone copyto <file> r2:skymap-data/films/<name>.mp4 --header-upload "Content-Type: video/mp4"` using the S3 credentials above, and list what is there with `rclone ls r2:skymap-data/films/`. The prefix carries a lifecycle rule that deletes objects after 90 days, so a link mailed out is temporary by design and nothing has to be remembered; re-apply the rule with `npx wrangler r2 bucket lifecycle add skymap-data films-expire-90d films/ --expire-days 90` if the bucket is ever recreated.
 
-### Satellite catalog (`data/satellite-catalog/` prefix, daily, automated)
+### Live datasets (`data/live/v1/` prefix, nightly, automated)
 
-`.github/workflows/satellites.yml` runs every day at 04:23 UTC (and on demand from the Actions tab): `npm run fetch-celestrak` and `npm run build-satellites` in one job, then, in a second job with no checkout and no npm (so no install script shares a runner with the key), a gzipped `aws s3 cp` over R2's S3 API of `satellites.satg` to `skymap-data/data/satellite-catalog/v1/satellites.satg` with `Cache-Control: public, max-age=3600`. The key is fixed and overwritten, so a refresh reaches visitors within an hour with no purge; the `v1/` folder is the version gate. The file stays out of `syncR2.ts` and the manifest on purpose: a hashed name would change daily and need a manifest redeploy each time. `build-satellites` refuses to write a catalog under its object floor, so a CelesTrak outage fails the run and R2 keeps the previous day's file. The workflow needs three repository secrets: `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` from an R2 API token (R2 → Manage API tokens) with **Object Read & Write** on `skymap-data` only, made for this workflow alone so revoking it touches nothing else, and `CLOUDFLARE_ACCOUNT_ID` for the endpoint. It uses the S3 API rather than wrangler because the REST API's only R2 permission, Workers R2 Storage Edit, covers every bucket in the account. A failed run shows in the Actions tab and GitHub's failure email.
+One registry, `src/data/live/liveDatasets.ts`, lists every nightly dataset (satellites now). Each is published as dated, never-overwritten files plus a small pointer; the app reads the pointer (`no-cache`) and then the file it names.
+
+```
+data/live/v1/<id>.json                       pointer: { date, builtAt, files: name → key }; no-cache
+data/live/v1/files/<id>/<stamp>/<name>      dated file (stamp = build UTC to the minute, e.g. 2026-11-13T0423Z, so a rerun never overwrites); immutable, a year's max-age
+```
+
+`.github/workflows/live-datasets.yml` runs every day at 04:23 UTC (and on demand from the Actions tab). Its `plan` job turns the registry into a matrix (`npm run live-matrix`); each row calls the reusable `live-dataset.yml` with `fail-fast: false`, so one failing dataset does not stop the others. That workflow has two jobs: `build` runs the row's npm script (it exits non-zero on bad data, so an outage never reaches R2) and `npm run live-publish-list -- <id>`, which writes `publish.json` (dated files first, pointer last); `upload` has no checkout and no npm, so no install script shares a runner with the key, and `aws s3 cp`s each entry over R2's S3 API (gzipped where the registry says so). The pointer moves only after its files are up. The `v1/` folder is the version gate, and the files stay out of `syncR2.ts` and the manifest on purpose.
+
+The workflows need three repository secrets: `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` from an R2 API token (R2 → Manage API tokens) with **Object Read & Write** on `skymap-data` only, made for these workflows alone so revoking it touches nothing else, and `CLOUDFLARE_ACCOUNT_ID` for the endpoint. It uses the S3 API rather than wrangler because the REST API's only R2 permission, Workers R2 Storage Edit, covers every bucket in the account. A failed run shows in the Actions tab and GitHub's failure email.
+
+Dated files pile up, so expire them once, by hand: `npx wrangler r2 bucket lifecycle add skymap-data live-files-expire-30d data/live/v1/files/ --expire-days 30`.
+
+Right after merging, dispatch "Live datasets" (Actions tab, or `gh workflow run live-datasets.yml`): until its first run the pointer 404s and production shows no satellites.
+
+The old `data/satellite-catalog/v1/satellites.satg` is no longer written. Tabs opened before the switch fade it out after 14 days; delete the key after that.
 
 ### Site media (`data/site/` prefix)
 

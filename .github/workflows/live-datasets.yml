@@ -1,0 +1,47 @@
+name: Live datasets
+
+# Nightly refresh of every dataset in src/data/live/liveDatasets.ts (spec: docs/superpowers/specs/2026-11-13-live-datasets-design.md).
+# `plan` turns the registry into a matrix; each row runs the reusable live-dataset.yml. A dataset
+# that fails uploads nothing and leaves its pointer alone, and the others still run.
+
+on:
+  schedule:
+    - cron: '23 4 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: live-datasets
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+      - run: npm ci
+      - id: matrix
+        run: npm run -s live-matrix >> "$GITHUB_OUTPUT"
+
+  run:
+    name: ${{ matrix.dataset.id }}
+    needs: plan
+    strategy:
+      fail-fast: false
+      matrix:
+        dataset: ${{ fromJson(needs.plan.outputs.matrix) }}
+    uses: ./.github/workflows/live-dataset.yml
+    with:
+      id: ${{ matrix.dataset.id }}
+      build: ${{ matrix.dataset.build }}
+      timeout-min: ${{ matrix.dataset.timeoutMin }}
+    secrets: inherit

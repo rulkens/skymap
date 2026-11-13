@@ -5,8 +5,7 @@
  * inactive.
  */
 import { createAssetSlot } from '../../../../services/loading/AssetSlot';
-import { dataUrl, fetchWithProgress } from '../../../../services/loading/fetchWithProgress';
-import { SATELLITE_CATALOG_PATH } from '../../../../data/satellites/satelliteCatalogPath';
+import { fetchLiveFile } from '../../../../services/loading/fetchLiveFile';
 import type { AssetSlot } from '../../../../@types/loading/AssetSlot';
 import type { SatellitePointRenderer } from '../../points/@types/SatellitePointRenderer';
 import type { SatellitePropagator } from '../../sweep/@types/SatellitePropagator';
@@ -18,7 +17,7 @@ export function createSatellitesSlot(
   return createAssetSlot({
     name: 'satellites',
     fetch: (_req, signal, onProgress) =>
-      fetchWithProgress(dataUrl(SATELLITE_CATALOG_PATH), signal, onProgress),
+      fetchLiveFile('satellites', 'satellites.satg', signal, onProgress),
     commit: (file) => propagator.start(file),
     onRelease: () => {
       propagator.stop();
