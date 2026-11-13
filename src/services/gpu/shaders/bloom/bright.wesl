@@ -7,7 +7,7 @@
 //   - Soft threshold: a knee 'f = max(0, l - threshold) / l' on the max-channel
 //     luma, so a pixel just above threshold contributes a little rather than
 //     snapping fully on (a hard threshold pops as the camera drifts).
-//   - Firefly clamp (maxB = 2.0): caps how much any SINGLE pixel can inject
+//   - Firefly clamp (maxB = cap floor, u.w): caps how much any SINGLE pixel can inject
 //     into the pyramid. A tiny sprite flickering in and out then swings the
 //     bloom by a small bounded amount instead of a huge spike — the temporal-
 //     flicker killer for point-like features. Large stable features still
@@ -21,7 +21,7 @@ fn vs(@builtin(vertex_index) vi: u32) -> FullscreenOut { return fullscreenVertex
 
 @group(0) @binding(0) var samp: sampler;
 @group(0) @binding(1) var tex: texture_2d<f32>;
-@group(0) @binding(2) var<uniform> u: vec4<f32>; // x: threshold, y: knee
+@group(0) @binding(2) var<uniform> u: vec4<f32>; // x threshold, y knee, z cap, w cap floor
 
 @fragment
 fn fs(i: FullscreenOut) -> @location(0) vec4<f32> {
@@ -35,7 +35,7 @@ fn fs(i: FullscreenOut) -> @location(0) vec4<f32> {
   // Sun's disc, bright cores) still bloom because their brightness accumulates over many
   // pixels.
   let ol = max(o.r, max(o.g, o.b));
-  let maxB = 2.0;
+  let maxB = u.w;
   if (ol > maxB) { o = o * (maxB / ol); }
   return vec4<f32>(o, 1.0);
 }

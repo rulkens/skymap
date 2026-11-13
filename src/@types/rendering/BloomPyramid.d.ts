@@ -33,6 +33,8 @@
  */
 
 import type { Vec2 } from '../math/Vec2';
+import type { BrightParams } from './BrightParams';
+import type { FoldKind } from './FoldKind';
 
 export type BloomPyramid = {
   readonly label: string;
@@ -43,9 +45,9 @@ export type BloomPyramid = {
    * uniform buffer (safe because it is drawn once per frame — no intra-frame
    * reuse, so no writeBuffer/submit race).
    *
-   * @param threshold Max-channel luma below which a pixel contributes nothing.
+   * @param params Threshold plus the firefly cap and its floor.
    */
-  bright(pass: GPURenderPassEncoder, srcView: GPUTextureView, threshold: number): void;
+  bright(pass: GPURenderPassEncoder, srcView: GPUTextureView, params: BrightParams): void;
   /**
    * Downsample fold `level` (1..4): reads `srcView` (`bloom[level-1]`) and
    * writes the bound `bloom[level]` target opaque (no blend). `srcTexelSize`
@@ -85,13 +87,13 @@ export type BloomPyramid = {
    * multiply the generic compositor's fixed blend table has no slot for — so
    * the fold lives here rather than as a compositor merge.
    *
-   * Uses a SINGLE uniform buffer (like `bright`): the fold is drawn once per
-   * frame, so there is no intra-frame reuse and thus no writeBuffer/submit race
-   * to guard against with a per-level buffer.
+   * Uses one uniform buffer per `kind`: each kind is drawn at most once per
+   * frame, so there is no intra-frame reuse and no writeBuffer/submit race.
    *
-   * @param strength Linear multiplier on the folded bloom (0 = no glow).
+   * @param kind Which glow this fold adds; selects its uniform buffer.
+   * @param strength Linear multiplier on the folded glow (0 = no glow).
    */
-  fold(pass: GPURenderPassEncoder, srcView: GPUTextureView, strength: number): void;
+  fold(pass: GPURenderPassEncoder, srcView: GPUTextureView, kind: FoldKind, strength: number): void;
   /**
    * No-op — sampler, bind-group-layout, pipelines, and the small uniform
    * buffers are GC'd when their last reference drops. Present for teardown

@@ -46,8 +46,10 @@ import foldCode from '../shaders/bloom/fold.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../lib/blendStates';
 import type { BloomPyramid } from '../../../@types/rendering/BloomPyramid';
+import type { BrightParams } from '../../../@types/rendering/BrightParams';
+import type { FoldKind } from '../../../@types/rendering/FoldKind';
 import type { Vec2 } from '../../../@types/math/Vec2';
-import { BLOOM_LEVELS } from '../../../data/bloomConstants';
+import { BLOOM_LEVELS, FOLD_KINDS } from '../../../data/bloomConstants';
 
 // Levels in the pyramid: `bloom0..bloom4`, from the shared `bloomConstants`
 // home so the uniform arrays here, the `renderTargets` rows, and `runBloom`'s
@@ -165,13 +167,18 @@ export function createBloomPyramid(device: GPUDevice, hdrFormat: GPUTextureForma
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
 
-  // Same single-buffer reasoning as brightBuf: the fold is drawn once per frame,
-  // so no intra-frame reuse means no writeBuffer/submit race to dodge.
-  const foldBuf = device.createBuffer({
-    label: 'bloomPyramid-fold-uniform',
-    size: 16,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
+  // One buffer per fold kind: each kind is drawn once per frame, so no
+  // intra-frame reuse, while two kinds in one frame never share a buffer.
+  const foldBufs = Object.fromEntries(
+    FOLD_KINDS.map((kind) => [
+      kind,
+      device.createBuffer({
+        label: `bloomPyramid-fold-${kind}-uniform`,
+        size: 16,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+      }),
+    ]),
+  ) as Record<FoldKind, GPUBuffer>;
 
   // Bind group rebuilt per draw because the source view is a `renderTargets`
   // row recreated on resize; caching would bind a destroyed view. One alloc per
@@ -189,8 +196,12 @@ export function createBloomPyramid(device: GPUDevice, hdrFormat: GPUTextureForma
 
   return {
     label: 'bloomPyramid',
-    bright(pass: GPURenderPassEncoder, srcView: GPUTextureView, threshold: number): void {
-      device.queue.writeBuffer(brightBuf, 0, new Float32Array([threshold, BRIGHT_KNEE, 0, 0]));
+    bright(pass: GPURenderPassEncoder, srcView: GPUTextureView, params: BrightParams): void {
+      device.queue.writeBuffer(
+        brightBuf,
+        0,
+        new Float32Array([params.threshold, BRIGHT_KNEE, params.cap, params.capFloor]),
+      );
       pass.setPipeline(brightPipeline);
       pass.setBindGroup(0, bindFor(srcView, brightBuf));
       pass.draw(3, 1, 0, 0);
@@ -228,10 +239,16 @@ export function createBloomPyramid(device: GPUDevice, hdrFormat: GPUTextureForma
       pass.setBindGroup(0, bindFor(srcView, uniform));
       pass.draw(3, 1, 0, 0);
     },
-    fold(pass: GPURenderPassEncoder, srcView: GPUTextureView, strength: number): void {
-      device.queue.writeBuffer(foldBuf, 0, new Float32Array([strength, 0, 0, 0]));
+    fold(
+      pass: GPURenderPassEncoder,
+      srcView: GPUTextureView,
+      kind: FoldKind,
+      strength: number,
+    ): void {
+      const uniform = foldBufs[kind];
+      device.queue.writeBuffer(uniform, 0, new Float32Array([strength, 0, 0, 0]));
       pass.setPipeline(foldPipeline);
-      pass.setBindGroup(0, bindFor(srcView, foldBuf));
+      pass.setBindGroup(0, bindFor(srcView, uniform));
       pass.draw(3, 1, 0, 0);
     },
     destroy(): void {
@@ -240,7 +257,7 @@ export function createBloomPyramid(device: GPUDevice, hdrFormat: GPUTextureForma
       for (const buf of downTexelBufs) buf.destroy();
       for (const buf of upTexelBufs) buf.destroy();
       brightBuf.destroy();
-      foldBuf.destroy();
+      for (const buf of Object.values(foldBufs)) buf.destroy();
     },
   };
 }

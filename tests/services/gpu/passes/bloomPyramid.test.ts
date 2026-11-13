@@ -92,9 +92,10 @@ describe('createBloomPyramid', () => {
     const d2 = drawAndCapture(ctx, () => bloom.downsample(pass, view, 2, [0.25, 0.25], false));
     const u3 = drawAndCapture(ctx, () => bloom.upsample(pass, view, 3, [0.1, 0.1]));
     const d3 = drawAndCapture(ctx, () => bloom.downsample(pass, view, 3, [0.05, 0.05], false));
+    const f = drawAndCapture(ctx, () => bloom.fold(pass, view, 'bloom', 1));
 
     // Each draw binds exactly the buffer it wrote — no read of a sibling's write.
-    for (const d of [d1, d2, u3, d3]) expect(d.bound).toBe(d.written);
+    for (const d of [d1, d2, u3, d3, f]) expect(d.bound).toBe(d.written);
     // Distinct downsample levels never share a buffer.
     expect(d1.written).not.toBe(d2.written);
     // Downsample and upsample at the SAME level (3) use separate buffers — the

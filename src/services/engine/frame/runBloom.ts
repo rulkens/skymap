@@ -36,6 +36,7 @@ import type { GpuTimingService } from '../../../@types/gpu/timing/GpuTimingServi
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import { BLOOM_LEVELS } from '../../../data/bloomConstants';
+import { DEFAULT_BLOOM_CAP } from '../../../data/defaults';
 import { bloomSrcTexelSize } from './passes/bloomSrcTexelSize';
 import { clearValueOf } from '../../../utils/gpu/clearValueOf';
 
@@ -110,7 +111,11 @@ export function runBloom(
     'clear',
     beginWrites,
   );
-  pyramid.bright(brightPass, viewOf('hdr'), threshold);
+  pyramid.bright(brightPass, viewOf('hdr'), {
+    threshold,
+    cap: DEFAULT_BLOOM_CAP,
+    capFloor: DEFAULT_BLOOM_CAP,
+  });
   brightPass.end();
 
   // Descending downsample chain: bloom[level-1] → bloom[level], clearing each
@@ -146,6 +151,6 @@ export function runBloom(
   // program places the bloom step after the foreground:0→hdr composite). Carries
   // the slot's end.
   const foldPass = openBloomPass(encoder, ctx, state, viewOf('hdr'), 'hdr', 'load', endWrites);
-  pyramid.fold(foldPass, viewOf('bloom0'), strength);
+  pyramid.fold(foldPass, viewOf('bloom0'), 'bloom', strength);
   foldPass.end();
 }
