@@ -10,12 +10,13 @@
  * onto hdr); every other stage is its target's sole producer and overwrites it.
  */
 
-import brightCode from '../shaders/bloom/bright.wesl?static';
-import downsampleCode from '../shaders/bloom/downsample.wesl?static';
-import upsampleCode from '../shaders/bloom/upsample.wesl?static';
-import foldCode from '../shaders/bloom/fold.wesl?static';
-import streakCode from '../shaders/bloom/streak.wesl?static';
-import veilCode from '../shaders/bloom/veil.wesl?static';
+import vertexCode from '../shaders/bloom/vertex.wesl?static';
+import brightFragmentCode from '../shaders/bloom/brightFragment.wesl?static';
+import downsampleFragmentCode from '../shaders/bloom/downsampleFragment.wesl?static';
+import upsampleFragmentCode from '../shaders/bloom/upsampleFragment.wesl?static';
+import foldFragmentCode from '../shaders/bloom/foldFragment.wesl?static';
+import streakFragmentCode from '../shaders/bloom/streakFragment.wesl?static';
+import veilFragmentCode from '../shaders/bloom/veilFragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../lib/blendStates';
 import type { BloomPyramid } from '../../../@types/rendering/BloomPyramid';
@@ -52,25 +53,34 @@ export function createBloomPyramid(device: GPUDevice, hdrFormat: GPUTextureForma
     bindGroupLayouts: [bindGroupLayout],
   });
 
-  const pipelineFor = (stage: string, code: string, additive: boolean): GPURenderPipeline => {
-    const module = createShaderModuleWithDevLog(device, code, `bloom.${stage}`);
+  const vertexModule = createShaderModuleWithDevLog(device, vertexCode, 'bloom.vertex');
+  const pipelineFor = (
+    stage: string,
+    fragmentCode: string,
+    additive: boolean,
+  ): GPURenderPipeline => {
+    const fragmentModule = createShaderModuleWithDevLog(
+      device,
+      fragmentCode,
+      `bloom.${stage}Fragment`,
+    );
     const target: GPUColorTargetState = additive
       ? { format: hdrFormat, blend: ADDITIVE_BLEND }
       : { format: hdrFormat };
     return device.createRenderPipeline({
       label: `bloomPyramid-${stage}-pipeline`,
       layout: pipelineLayout,
-      vertex: { module, entryPoint: 'vs' },
-      fragment: { module, entryPoint: 'fs', targets: [target] },
+      vertex: { module: vertexModule, entryPoint: 'vs' },
+      fragment: { module: fragmentModule, entryPoint: 'fs', targets: [target] },
       primitive: { topology: 'triangle-list' },
     });
   };
-  const brightPipeline = pipelineFor('bright', brightCode, false);
-  const downsamplePipeline = pipelineFor('downsample', downsampleCode, false);
-  const upsamplePipeline = pipelineFor('upsample', upsampleCode, true);
-  const foldPipeline = pipelineFor('fold', foldCode, true);
-  const streakPipeline = pipelineFor('streak', streakCode, false);
-  const veilPipeline = pipelineFor('veil', veilCode, false);
+  const brightPipeline = pipelineFor('bright', brightFragmentCode, false);
+  const downsamplePipeline = pipelineFor('downsample', downsampleFragmentCode, false);
+  const upsamplePipeline = pipelineFor('upsample', upsampleFragmentCode, true);
+  const foldPipeline = pipelineFor('fold', foldFragmentCode, true);
+  const streakPipeline = pipelineFor('streak', streakFragmentCode, false);
+  const veilPipeline = pipelineFor('veil', veilFragmentCode, false);
 
   const uniformBuffer = (label: string, size: number): GPUBuffer =>
     device.createBuffer({

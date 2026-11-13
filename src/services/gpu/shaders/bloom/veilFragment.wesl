@@ -1,14 +1,10 @@
-// bloom/veil.wesl — veiling glare, the lens-scatter wash a bright source throws
+// bloom/veilFragment.wesl — veiling glare, the lens-scatter wash a bright source throws
 // across the frame: one separable Gaussian row (24 taps each side) over bloom4
 // at its own 1/32 resolution. Drawn along x then y into the veil targets and
 // folded into hdr through one bilinear tap, so the skirt is smooth by
 // construction. Taps past the frame read zero: light out of frame does not scatter.
 
 import package::bloom::io::FullscreenOut;
-import package::bloom::io::fullscreenVertex;
-
-@vertex
-fn vs(@builtin(vertex_index) vi: u32) -> FullscreenOut { return fullscreenVertex(vi); }
 
 @group(0) @binding(0) var samp: sampler;
 @group(0) @binding(1) var tex: texture_2d<f32>;

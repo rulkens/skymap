@@ -1,4 +1,4 @@
-// bloom/bright.wesl — the bloom prefilter: hdr → bloom0 (half-res), keeping
+// bloom/brightFragment.wesl — the bloom prefilter: hdr → bloom0 (half-res), keeping
 // only light above a soft threshold so dim structure stays crisp.
 //   - Soft threshold 'f = max(0, l - threshold) / l' on max-channel luma: a pixel
 //     just over threshold contributes a little instead of popping on.
@@ -9,10 +9,6 @@
 //     it and keeps the floor, while the Sun's interior erodes to itself.
 
 import package::bloom::io::FullscreenOut;
-import package::bloom::io::fullscreenVertex;
-
-@vertex
-fn vs(@builtin(vertex_index) vi: u32) -> FullscreenOut { return fullscreenVertex(vi); }
 
 @group(0) @binding(0) var samp: sampler;
 @group(0) @binding(1) var tex: texture_2d<f32>;

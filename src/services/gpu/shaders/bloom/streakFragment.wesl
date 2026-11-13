@@ -1,4 +1,4 @@
-// bloom/streak.wesl — one iteration of the anamorphic streak: a horizontal
+// bloom/streakFragment.wesl — one iteration of the anamorphic streak: a horizontal
 // 9-tap smear at 'u.stride' source texels with exponential falloff over
 // 'u.falloff' texels. Three iterations at strides 1, 4, 16 compound into a
 // smooth tail hundreds of px long. Per-channel falloff ('u.tint' shortens red
@@ -7,10 +7,6 @@
 // 'u.threshold' > 0 (iteration 0 only) applies the streak's own soft threshold.
 
 import package::bloom::io::FullscreenOut;
-import package::bloom::io::fullscreenVertex;
-
-@vertex
-fn vs(@builtin(vertex_index) vi: u32) -> FullscreenOut { return fullscreenVertex(vi); }
 
 // Mirrors StreakTaps (32 bytes).
 struct StreakUniforms {

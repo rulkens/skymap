@@ -16,7 +16,6 @@ const SHADERS_DIR = fileURLToPath(new URL('../../src/services/gpu/shaders/', imp
 const ALLOWED: readonly string[] = [
   'atmosphere/aerialPerspective',
   'atmosphere/shell',
-  'bloom',
   'bodies',
   'bodies/blackHoleLensing',
   'bodies/star',

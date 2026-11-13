@@ -226,8 +226,8 @@ Constants in `src/data/bloomConstants.ts`: `STREAK_FALLOFF_TEXELS = 48`, `VEIL_S
 Render-target rows (`renderTargetRows`): `streak0`, `streak1` at `bloomScale(1)`, `allocateWhen: filmStreakOn`;
 `veil0`, `veil1` at `bloomScale(4)`, `allocateWhen: filmVeilOn`; HDR format, clear `a = 0`.
 
-Shaders: `bloom/streak.wesl` and `bloom/veil.wesl` as in the spike (zeroed off-frame taps, per-channel
-exponential falloff with tint dispersion; separable Gaussian, 24 taps each side). `bloom/bright.wesl`:
+Shaders: `bloom/streakFragment.wesl` and `bloom/veilFragment.wesl` as in the spike (zeroed off-frame taps, per-channel
+exponential falloff with tint dispersion; separable Gaussian, 24 taps each side). `bloom/brightFragment.wesl`:
 `u = [threshold, knee, cap, capFloor]`; `maxB = capFloor`; when `cap > capFloor && f > 0`, erode over the
 3×3 bloom0-texel neighbourhood (±2 hdr texels) and `maxB = clamp(eroded, capFloor, cap)`.
 
