@@ -52,15 +52,15 @@ pub fn rgb(p: &Path) -> (usize, usize, Vec<u8>) {
     (im.width() as usize, im.height() as usize, im.into_raw())
 }
 
-/// A frame the server rendered as black (GOES-East once served one): of the non-transparent pixels, at
-/// least 99% have R = G = B = 0. A frame with no opaque pixel is just empty sky, not broken.
-pub fn is_all_black(rgba: &[u8]) -> bool {
+/// A frame with no image in it: no opaque pixel at all (GOES-East's 2026-10-28 12:00Z frame, Himawari at
+/// 02:40Z) or, of the opaque pixels, at least 99% with R = G = B = 0 (GOES-East once served a black one).
+pub fn is_blank(rgba: &[u8]) -> bool {
     let (mut opaque, mut black) = (0usize, 0usize);
     for c in rgba.chunks_exact(4).filter(|c| c[3] > 0) {
         opaque += 1;
         black += (c[0] | c[1] | c[2] == 0) as usize;
     }
-    opaque > 0 && black * 100 >= opaque * 99
+    black * 100 >= opaque * 99
 }
 
 /// The shipped baseline (cloud_combined_8192.tif, grey RGB) as u8 L.
@@ -249,17 +249,21 @@ mod tests {
     }
 
     #[test]
-    fn is_all_black_flags_a_black_opaque_frame() {
-        assert!(is_all_black(&[0, 0, 0, 255].repeat(100)));
+    fn is_blank_flags_a_black_opaque_frame() {
+        assert!(is_blank(&[0, 0, 0, 255].repeat(100)));
     }
 
     #[test]
-    fn is_all_black_ignores_transparent_pixels() {
-        // 1000 transparent pixels (colour irrelevant) and 4 grey opaque ones: not black
+    fn is_blank_flags_a_fully_transparent_frame() {
+        assert!(is_blank(&[0, 0, 0, 0].repeat(10)));
+    }
+
+    #[test]
+    fn is_blank_ignores_transparent_pixels_around_an_image() {
+        // 1000 transparent pixels (colour irrelevant) and 4 grey opaque ones: an image
         let mut px = [0, 0, 0, 0].repeat(1000);
         px.extend([90, 90, 90, 255].repeat(4));
-        assert!(!is_all_black(&px));
-        assert!(!is_all_black(&[0, 0, 0, 0].repeat(10)));
+        assert!(!is_blank(&px));
     }
 
     #[test]

@@ -39,17 +39,19 @@ Threads: all cores, or `RAYON_NUM_THREADS`.
 
 ## Exit codes
 
-| code | meaning                                                                                                | scheduler                      |
-| ---- | ------------------------------------------------------------------------------------------------------ | ------------------------------ |
-| 0    | written; warnings possible                                                                             | none                           |
-| 1    | internal error (panic)                                                                                 | page a human                   |
-| 2    | usage or config: bad flag, bad date, unreadable input or asset                                         | page a human                   |
-| 3    | data: coverage below `MIN_COVERAGE` (0.690), NOAA-20 mosaic missing, orbit unfit, no calibration probe | retry later                    |
-| 4    | calibration drift above `MAX_CAL_DRIFT_K` (10.3 K)                                                     | page a human: refit the tables |
+| code | meaning                                                                          | scheduler                      |
+| ---- | -------------------------------------------------------------------------------- | ------------------------------ |
+| 0    | written; warnings possible                                                       | none                           |
+| 1    | internal error (panic)                                                           | page a human                   |
+| 2    | usage or config: bad flag, bad date, unreadable input or asset                   | page a human                   |
+| 3    | data: coverage below `MIN_COVERAGE` (0.690), NOAA-20 mosaic missing, orbit unfit | retry later                    |
+| 4    | calibration drift above `MAX_CAL_DRIFT_K` (10.3 K)                               | page a human: refit the tables |
 
 Both thresholds live in `src/verdict.rs` with the measurements behind them (coverage measured 0.768 on
-2026-11-06 and 2026-11-09; the inter-satellite floor is 4 to 5 K). A missing or all-black frame from any
-source other than the `required` NOAA-20 mosaic (`src/sources_table.rs`) is skipped with a warning.
+2026-11-06 and 2026-11-09; the inter-satellite floor is 4 to 5 K). A missing or blank (all-black or
+fully transparent) geostationary frame is retried 10, 20 and 30 minutes either side; one that stays
+unusable, or any other missing source but the `required` NOAA-20 mosaic (`src/sources_table.rs`), is
+skipped with a warning. A calibration pair with no usable time is skipped (`null` in the summary).
 
 ## Summary line
 

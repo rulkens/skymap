@@ -1,6 +1,7 @@
 //! Calibration probe: the MTG and IODC grey->temperature tables are frozen, so each bake checks them
-//! against GOES-East / MTG where two satellites see the same sky at 12:00Z. A stretch change upstream
-//! shows up as a median |dT| jump here, before the bake spends minutes on a wrong decode.
+//! against GOES-East / MTG where two satellites see the same sky at 12:00Z, or the nearest time both
+//! frames are usable (`fetch::first_usable`). A stretch change upstream shows up as a median |dT| jump
+//! here, before the bake spends minutes on a wrong decode.
 use crate::date::Date;
 use crate::fetch::{self, FrameReq};
 use crate::geodecode::Decoder;
@@ -67,35 +68,31 @@ fn drift(
     dir: &Path,
     allow: bool,
     dec: &Decoder,
-) -> Result<f64, String> {
+) -> f64 {
     let reqs = [req(pair.0, date, lon), req(pair.1, date, lon)];
     fetch::prefetch(dir, &reqs, allow);
-    let frames: Vec<_> = reqs.iter().map(|r| fetch::frame(dir, r)).collect();
-    let (Some(a), Some(b)) = (&frames[0], &frames[1]) else {
+    let k = fetch::first_usable(dir, &reqs, allow, |f| {
+        median_abs_diff(
+            &dec.temperature(&reqs[0], &f[0]),
+            &dec.temperature(&reqs[1], &f[1]),
+        )
+    });
+    k.unwrap_or_else(|| {
         eprintln!(
-            "warning: probe {}/{} skipped, a frame is unavailable",
+            "warning: probe {}/{} skipped, no time with both frames usable",
             pair.0, pair.1
         );
-        return Ok(f64::NAN);
-    };
-    median_abs_diff(&dec.temperature(&reqs[0], a), &dec.temperature(&reqs[1], b)).ok_or(format!(
-        "probe {}/{}: no pixel valid in both",
-        pair.0, pair.1
-    ))
+        f64::NAN
+    })
 }
 
-pub fn probe(
-    date: Date,
-    cache: &Path,
-    offline: bool,
-    dec: &Decoder,
-) -> Result<Calibration, String> {
+pub fn probe(date: Date, cache: &Path, offline: bool, dec: &Decoder) -> Calibration {
     let dir = fetch::day_dir(cache, date).join("probe");
     let go = |pair, lon| drift(pair, lon, date, &dir, !offline, dec);
-    Ok(Calibration {
-        mtg_goes_e_k: go(("mtg", "goes_e"), ATLANTIC)?,
-        mtg_iodc_k: go(("mtg", "iodc"), INDIAN)?,
-    })
+    Calibration {
+        mtg_goes_e_k: go(("mtg", "goes_e"), ATLANTIC),
+        mtg_iodc_k: go(("mtg", "iodc"), INDIAN),
+    }
 }
 
 #[cfg(test)]

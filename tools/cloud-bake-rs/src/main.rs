@@ -53,7 +53,7 @@ fn main() {
         rayon::current_num_threads()
     );
     let dec = geodecode::Decoder::new();
-    let cal = probe::probe(a.date, &a.cache, a.offline, &dec).unwrap_or_else(|e| fail(&run, 3, &e));
+    let cal = probe::probe(a.date, &a.cache, a.offline, &dec);
     run.calibration =
         serde_json::json!({"mtg_goes_e_k": cal.mtg_goes_e_k, "mtg_iodc_k": cal.mtg_iodc_k});
     if let Some(m) = verdict::drift(&cal) {
