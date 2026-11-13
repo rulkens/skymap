@@ -756,6 +756,23 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
     ],
   },
   {
+    id: 'film',
+    title: 'Film look',
+    under: 'Display',
+    file: DISPLAY,
+    rows: [
+      {
+        name: 'Film look',
+        control: 'switch',
+        does: 'Adds grain, a wider glow and a softer lens, like a filmed shot.',
+        values: SWITCH,
+        first: OFF,
+        state: 'film.enabled',
+        firstValue: false,
+      },
+    ],
+  },
+  {
     id: 'hdr',
     title: 'HDR',
     under: 'Display',
