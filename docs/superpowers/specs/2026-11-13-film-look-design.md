@@ -54,6 +54,11 @@ code, same VRAM.
   it read half-res `bloom0`). The radar's second finding. `bloom1` at that point holds the Karis
   downsample alone (the upsample folds come later), which also tames fireflies in the streak seed; the Virgo
   eye check confirms the cores still streak.
+- **D10. The streak smears detail, not mass.** The owner's Sun check showed lobes: a one-dimensional smear of
+  the whole disc is a band as bright as the disc with the disc's own top and bottom edges. The streak's source
+  is therefore a band-pass: `streak0 ← bloom1`, then `bloom2` upsampled into it with a reverse-subtract blend,
+  so a uniform interior cancels, a rim leaves a faint soft band, and star cores and galaxy nuclei (quarter-res
+  detail) keep their flare. One extra quarter-res draw, no knob.
 
 ## 3. Ground preparation
 
@@ -212,7 +217,7 @@ Constants in `src/data/bloomConstants.ts`: `STREAK_FALLOFF_TEXELS = 48`, `VEIL_S
 
 1. bright `hdr → bloom0` with `{ threshold, cap: enabled ? glow.cap : DEFAULT_BLOOM_CAP, capFloor: DEFAULT_BLOOM_CAP }` (begin timestamp)
 2. downsample 1..4, texel x scaled by `squeeze` (1 when off)
-3. if `filmStreakOn`: streak ×3, sources `bloom1 → streak0 → streak1 → streak0` (all quarter-res, D9), strides `1, 4, 16`, threshold on iteration 0 only, falloff `streakLength · 48`, tint
+3. if `filmStreakOn`: band-pass seed `bloom1 → streak0` (copy) then `bloom2 → streak0` (upsample, reverse-subtract blend) (D10); streak ×3, sources `streak0 → streak1 → streak0 → streak1`, strides `1, 4, 16`, threshold on iteration 0 only, falloff `streakLength · 48`, tint; the streak fold reads `streak1`
 4. upsample 3..0, same texel scaling
 5. if `filmVeilOn`: veil x `bloom4 → veil0`, veil y `veil0 → veil1`, fold `veil1 → hdr` kind `'veil'` strength `glow.veil`
 6. if `filmStreakOn`: fold `streak0 → hdr` kind `'streak'` strength `streakStrength`
