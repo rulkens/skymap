@@ -57,14 +57,16 @@ that does, and it is the one this spec adds.
     [`intent.md`](../conventions/intent.md) and the step's `intent: rootState.camera`. **Picked.**
   - `rest`: it reads well beside `rendered`, but `tween`, `clip` and `aim` are motions, not rest.
   - `committed`: true of `base`, but `tween` and `clip` are descriptors, not commits.
-- **D3. The wake fix: `rendered` gets its own slice name, `cameraRendered`.** `WAKE_ROUTES` already
-  matches the action-type prefix (`a.type.split('/')[0]`, `watchWakeSaga.ts:56`), and that prefix
-  is the slice name. The intent slice keeps `name: 'camera'`, so every `camera/*` action, and
-  every wake, stays byte-identical. The rendered action is `cameraRendered/drawn`, which no wake
-  route matches. The predicate gets no term and no code change, only a comment line saying a wake
-  route is a slice name. The alternatives were worse: an exclusion term is the "another
-  hand-added term in a wake predicate" bolt-on (`.claude/refactor-ground.md`), and keying the wake
-  on the intent reference would add a `select` per action to every route.
+- **D3. The wake fix: action types name the state path (owner, 2026-11-13).** The two halves are
+  slices named `camera/intent` and `camera/rendered`, so their actions read
+  `camera/intent/commitCameraPose` and `camera/rendered/cameraDrawn`: an action's type says where it
+  writes. `WAKE_ROUTES` becomes a list of state-path prefixes (`settings`, `camera/intent`, `time`,
+  `tier`, `viewCover`) matched with `type.startsWith(route + '/')`, replacing `split('/')[0]`. A new
+  rendered action can never wake the renderer and a new intent action always does, with no term to
+  remember. The three standalone requests (`camera/flyToLonLat`, `camera/zoomLimitPushed`,
+  `camera/logCameraState`) keep their names and stop waking directly: none writes state, and the
+  intent actions their sagas put do wake. Two tests that compare literal type strings
+  (`replayInput.test.ts`, `commitOnEdge.test.ts`) take the new prefix.
 - **D4. One action, `cameraDrawn(RenderedCameraState | null)`, built with `prepareAutoBatched`.** RTK
   2's `configureStore` already installs `autoBatchEnhancer` (`'raf'`): subscribers hear it at most
   once per frame, the store config is untouched, and sagas (middleware) still see it at once.
@@ -159,8 +161,8 @@ export type RenderedCameraState = {
 ```
 
 There are two slices under `src/state/camera/`:
-- `cameraIntentSlice.ts` (`name: 'camera'`) is today's slice, renamed, with `tiltRemembered` added.
-- `cameraRenderedSlice.ts` (`name: 'cameraRendered'`) holds one reducer, `drawn`, prepared with
+- `cameraIntentSlice.ts` (`name: 'camera/intent'`) is today's slice, renamed, with `tiltRemembered` added.
+- `cameraRenderedSlice.ts` (`name: 'camera/rendered'`) holds one reducer, `cameraDrawn`, prepared with
   `prepareAutoBatched`.
 
 These are the selectors in `src/state/camera/selectors.ts`. The private `selectCameraIntent` now
@@ -239,7 +241,7 @@ The incumbent gets its marked name (`cameraIntentSlice` beside `cameraRenderedSl
 plan-style rule 6.
 
 Everything else is growth: the rendered slice under the new joint, the builder at the readout
-loop's site, the default autoBatch enhancer, and the wake set, which needs no term (D3). The
+loop's site, the default autoBatch enhancer, and the wake set, whose routes become state-path prefixes (D3). The
 deletions are the getter and the readout rows.
 
 **Greenfield cross-check.** A fresh agent was given only the data requirements. It proposed a
@@ -255,7 +257,7 @@ action, which this spec rejects (a null payload is one action fewer). It agreed 
 - Tilt has a single home (D15), so it adds no third camera copy.
 - The two derivations of the drawn world pose are accidental and predate this spec (§8). D7
   copies today's derivation, so this spec does not widen the split.
-- The wake fix uses the predicate's existing key and adds no special case.
+- The wake fix keys the predicate on the state path the action names, so it adds no special case.
 
 ## 8. Risks
 
@@ -266,7 +268,7 @@ action, which this spec rejects (a null payload is one action fewer). It agreed 
   `tests/conventions/renderedCameraWriter.test.ts` enforces it: `cameraDrawn` is imported only by
   `runFrame.ts` and `engine.ts`, and nothing under `src/services/engine/` reads `camera.rendered`
   or `selectRenderedCamera`.
-- **The loop never sleeping.** If `cameraRendered/drawn` ever matched a wake route, the loop would
+- **The loop never sleeping.** If `camera/rendered/cameraDrawn` ever matched a wake route, the loop would
   never rest. A `watchWakeSaga` test pins that a drawn write requests no render.
 - **Whole-route readers.** `state.camera` now changes every frame. Selectors read `.intent` or
   `.rendered`, never the route; P1's repoint removes the whole-route reads.
