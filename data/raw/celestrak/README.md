@@ -1,9 +1,9 @@
 # CelesTrak GP orbit data
 
-Input to `npm run build-satellites`, which writes `public/data/satellite-catalog/v1/satellites.satg`
+Input to `npm run build-satellites`, which writes `a dated file plus pointer under `public/data/live/v1/`
 (layout in `tools/utils/io/writeSatelliteCatalog.ts`). The JSON files are gitignored; regenerate with
 `npm run fetch-celestrak`. In production nobody runs either by hand: the daily
-`.github/workflows/satellites.yml` fetches, builds and uploads to R2 (docs/DEPLOY.md).
+`.github/workflows/live-datasets.yml` fetches, builds and uploads to R2 (docs/DEPLOY.md).
 
 - **Upstream:** CelesTrak (T.S. Kelso), `https://celestrak.org/NORAD/elements/gp.php`, mean elements
   derived from the US Space Force catalog. No licence or republishing terms are stated
