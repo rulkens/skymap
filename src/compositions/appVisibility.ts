@@ -9,6 +9,7 @@
 import type { LabelEntry } from '../@types/engine/layer/LabelEntry';
 import type { ShowEntry } from '../@types/engine/layer/ShowEntry';
 import type { ShowKey } from '../@types/animation/ShowKey';
+import { asteroidsVisibility } from '../layers/asteroids/visibility';
 import { blackHolesVisibility } from '../layers/blackHoles/visibility';
 import { bodyVisibility } from '../layers/body/visibility';
 import { constellationsVisibility } from '../layers/constellations/visibility';
@@ -36,6 +37,7 @@ export const APP_VISIBILITY_REGISTRY = [
   ...flowVisibility,
   ...missionsVisibility,
   ...satellitesVisibility,
+  ...asteroidsVisibility,
   ...zoneOfAvoidanceVisibility,
   ...localBubbleVisibility,
   ...stellarStreamsVisibility,

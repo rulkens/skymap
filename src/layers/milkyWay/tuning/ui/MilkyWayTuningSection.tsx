@@ -21,8 +21,8 @@ import { MILKY_WAY_CLOUD_TUNING_DEFAULTS } from '../../../../services/engine/gal
 import { formatMilkyWayCloudTuningDefaults } from '../utils/formatMilkyWayCloudTuningDefaults';
 import CopyButton from '../../../../components/common/CopyButton/CopyButton';
 import DebugSection from '../../../../components/DebugPanel/DebugSection';
+import DebugSelectRow from '../../../../components/DebugPanel/DebugSelectRow';
 import DebugTuningSection from '../../../../components/DebugPanel/DebugTuningSection';
-import sliderStyles from '../../../../components/DebugPanel/DebugSlider.module.css';
 import toggleStyles from '../../../../components/DebugPanel/DebugOverlayToggles.module.css';
 import { milkyWayFieldSliderPatch } from '../utils/milkyWayFieldSliderPatch';
 
@@ -45,23 +45,13 @@ export function MilkyWayTuningSection({
   return (
     <>
       <DebugSection title="Milky Way renderer">
-        <div
-          className={sliderStyles.root}
+        <DebugSelectRow
+          label="renderer"
+          value={milkyWay.renderer}
+          options={RENDERERS}
           title="Which Milky Way draws: v1 star sprites, v2 analytic field, or both summed."
-        >
-          <span className={sliderStyles.label}>renderer</span>
-          <select
-            aria-label="renderer"
-            value={milkyWay.renderer}
-            onChange={(e) => onRendererChange(e.target.value as MilkyWayRenderer)}
-          >
-            {RENDERERS.map((r) => (
-              <option key={r} value={r}>
-                {r}
-              </option>
-            ))}
-          </select>
-        </div>
+          onChange={onRendererChange}
+        />
       </DebugSection>
       {parts.cloud && (
         <DebugTuningSection

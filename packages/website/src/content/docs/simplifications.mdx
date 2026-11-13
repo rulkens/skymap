@@ -113,6 +113,7 @@ For anything you mean to measure, set Density correction to None: the [Settings 
   head={HEAD}
   rows={[
     said('Exposure', 'The exposure on stars rises as the camera pulls back from 1 parsec to 10 kiloparsecs, because a monitor cannot adapt to the dark as an eye does.', 'Nearly 5 times.', 'Nobody: it is what makes both views readable.', 'Limit of a screen.', 'starsDrawn'),
+    said('Asteroid exposure', 'Asteroids start from their real apparent magnitude and are then lifted by up to about 15 magnitudes, because at their true brightness the belt would be invisible. An asteroid lit from behind is dimmed by at most 3.25 magnitudes, and when you are zoomed out only the brightest 150,000 are drawn.', 'An asteroid and a star of the same magnitude do not look alike: the asteroid is far brighter.', 'An amateur who compares an asteroid with a star.', 'Limit of a screen; choice of lift.'),
     row('Fading with distance', 'depart-galaxy-fade', 'At ten times the distance where it became a dot, 5 times fainter where 100 belongs.', 'A specialist.', 'Choice. Distance falloff, in the Settings panel, is the power.'),
     row('The distance used for luminosity', 'depart-luminosity-distance', 'On a card 0.2 magnitudes at a redshift of 0.1 and 0.6 at 0.3; on screen 0.4 at 0.1.', 'A specialist.', 'Not settled.', 'brightness'),
     row('Between catalogues', 'depart-relative-brightness', 'No common scale.', 'A specialist.', 'Limit: the catalogues measure different bands.', 'brightness'),
@@ -169,6 +170,7 @@ For anything you mean to measure, set Density correction to None: the [Settings 
     row('Earth’s place', 'depart-earth-barycentre', 'About 4,700 km.', 'A specialist.', 'Choice.', 'positions'),
     row('Moons on mean orbits', 'depart-mean-moons', 'Not measured.', 'An amateur who checks an eclipse.', 'Choice for the Moon; for Puck, a limit of the reference.', 'positions'),
     row('Figures on a card', 'depart-planet-facts', 'Rounded values.', 'Anyone who quotes them.', 'Choice.', 'cards'),
+    said('Asteroids', 'Each asteroid moves on a two-body orbit with no pull from the planets, drawn only for dates from 1900 to 2100.', 'Grows with the years from 9 June 2026, the epoch of the orbits; not measured.', 'An amateur who looks for a particular asteroid in the sky.', 'Choice.', 'positions'),
     said('Planet maps', 'In the maps of seven planets and the Moon, gaps are filled with fictional terrain and the colours are slightly more saturated, by their maker’s own account.', 'Not stated by their maker.', 'A specialist.', 'Limit of the maps we may use.', 'surfaces'),
     said('Atmospheres', 'Each atmosphere is computed from a model of how light scatters and a table of gases and hazes.', 'Eight of nine tables are in part set by eye.', 'A specialist.', 'Choice.', 'air'),
   ]}
@@ -212,7 +214,7 @@ For anything you mean to measure, set Density correction to None: the [Settings 
 
 ## What is missing altogether
 
-The scene has no asteroids, comets or planets of other stars, and Saturn has the only rings: [What is in the scene](/docs/start/scene/) has the list. Beyond the Solar System the scene holds only what a catalogue we read holds: a galaxy too faint for those surveys is not in the map. No nebula and no star cluster is an object of its own, though a cluster’s stars are there one by one where <Source id="gaia">Gaia</Source> has them.
+The scene has no comets, no planets of other stars, and no centaurs or objects beyond Neptune apart from Pluto; Saturn has the only rings: [What is in the scene](/docs/start/scene/) has the list. Beyond the Solar System the scene holds only what a catalogue we read holds: a galaxy too faint for those surveys is not in the map. No nebula and no star cluster is an object of its own, though a cluster’s stars are there one by one where <Source id="gaia">Gaia</Source> has them.
 
 If you find a departure that is not on this page, <a href={`${REPO_URL}/issues`}>open an issue in the repository</a>.
 

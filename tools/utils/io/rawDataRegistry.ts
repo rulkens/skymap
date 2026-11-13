@@ -2193,6 +2193,26 @@ export const RAW_DATA = {
       'Provenance for the CelesTrak groups: the query, the groups and the download policy.',
   },
 
+  // ─── MPCORB — the Minor Planet Center orbit database (asteroids) ──────
+
+  mpcorb: {
+    path: 'data/raw/mpcorb/MPCORB.DAT.gz',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'MPCORB.DAT, gzipped: one 202-character line of osculating elements per minor planet, numbered objects first. Rewritten daily upstream; `build-asteroids` streams it through gunzip (no unpacked copy on disk).',
+    upstream: 'https://www.minorplanetcenter.net/iau/MPCORB/MPCORB.DAT.gz',
+    fetcher: 'tools/fetch/fetchMpcorb.ts',
+    readme: 'mpcorb.readme',
+  },
+  'mpcorb.readme': {
+    path: 'data/raw/mpcorb/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      "MPC's export-format column table, the packed number and date rules, the orbit-type values and the header's terms, each with its source URL.",
+  },
+
   // ─── JPL Horizons planet and moon vectors (ephemeris-correction fit input)
 
   horizons: {
