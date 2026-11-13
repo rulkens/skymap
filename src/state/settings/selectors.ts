@@ -1,6 +1,6 @@
 /**
  * Core-cluster settings selectors — orientation, camera, tonemap, hdr,
- * bloom, debug, and the eleven clip-path-tuning leaves. Every Layer's own
+ * bloom, film, debug, and the eleven clip-path-tuning leaves. Every Layer's own
  * cluster selectors live in `src/layers/<layer>/state/<slice>/selectors.ts`
  * instead; this module is the one-file-per-cluster-group override of the
  * repo's one-function-per-file rule.
@@ -18,6 +18,7 @@ import type { DebugOverlayKey } from '../../@types/data/debug/DebugOverlayKey';
 import type { CameraControlsSettings } from '../../@types/settings/CameraControlsSettings';
 import type { FocusMoveSettings } from '../../@types/settings/FocusMoveSettings';
 import type { FocusMoveStyle } from '../../@types/camera/focusMotion/FocusMoveStyle';
+import type { FilmSettings } from '../../@types/settings/FilmSettings';
 
 // --- orientation (bare scalar) ------------------------------------------------
 
@@ -67,6 +68,12 @@ export const selectBloomStrength = (state: RootState): number =>
 
 export const selectBloomThreshold = (state: RootState): number =>
   selectSettings(state).bloom.threshold;
+
+// --- film cluster -------------------------------------------------------------
+
+export const selectFilm = (state: RootState): FilmSettings => selectSettings(state).film;
+
+export const selectFilmEnabled = (state: RootState): boolean => selectFilm(state).enabled;
 
 // --- debug cluster ------------------------------------------------------------
 
