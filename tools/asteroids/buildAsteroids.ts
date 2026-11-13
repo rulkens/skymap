@@ -4,6 +4,7 @@
  * numbered minor planet, quantized), `asteroid-names.bin` and `mpcorb-header.txt`. MPC's terms allow
  * redistribution only with the file's header and where to get updates, so the header ships beside the
  * data. The `.gz` is read as a stream (321 MB unpacked). Rows off the dominant epoch are moved onto it.
+ * Rows with no class (orbit type 10, beyond this Layer) ship as ABSENT rows, and without their names.
  */
 import { createReadStream, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -63,7 +64,9 @@ async function main(): Promise<void> {
   const { epochJd, counts } = dominantEpoch(rows);
   const atEpoch = rows.map((row) => propagateToEpoch(row, epochJd));
   const { bytes, gaps, defaultedG } = writeAsteroidCatalog(atEpoch, epochJd);
-  const named = rows.flatMap(({ number, name }) => (name === null ? [] : [{ number, name }]));
+  const named = rows.flatMap(({ number, name, asteroidClass }) =>
+    name === null || asteroidClass === null ? [] : [{ number, name }],
+  );
   const names = writeAsteroidNames(named);
   const catalogOut = write(ASTEROID_CATALOG_PATHS.catalog, bytes);
   const namesOut = write(ASTEROID_CATALOG_PATHS.names, names);
@@ -83,6 +86,9 @@ async function main(): Promise<void> {
   console.log(`buildAsteroids: ${gaps.length} gaps${gaps.length ? ` (${gaps.join(', ')})` : ''}`);
   console.log(
     `buildAsteroids: ${rows.filter((r) => r.orbitType === 0).length} rows with orbit type 0, counted main belt`,
+  );
+  console.log(
+    `buildAsteroids: ${rows.filter((r) => r.asteroidClass === null).length} rows with orbit type 10 written ABSENT`,
   );
   if (defaultedG.length)
     console.log(`buildAsteroids: G out of range, default used: ${defaultedG.join(', ')}`);

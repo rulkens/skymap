@@ -42,7 +42,7 @@ function structLayout(src: string, name: string): [Record<string, number>, numbe
   const sizes: Record<string, [number, number]> = {
     CameraUniforms: [16, 80],
     'vec3<f32>': [16, 12],
-    'array<vec4<f32>, 5>': [16, 80],
+    'array<vec4<f32>, 4>': [16, 64],
     'array<vec4<f32>, 2>': [16, 32],
     'array<vec4<f32>, 3>': [16, 48],
     f32: [4, 4],
@@ -77,7 +77,7 @@ describe('asteroids shader parity', () => {
   });
 
   it('mirrors the photometry, format and unit constants', () => {
-    expect(ASTEROID_CLASSES).toHaveLength(5);
+    expect(ASTEROID_CLASSES).toHaveLength(4);
     expect(constOf(compute, 'MIN_DELTA_AU')).toBe(ASTEROID_PHOTOMETRY.minDeltaAu);
     expect(constOf(compute, 'CLASS_MASK')).toBe(ASTEROID_FORMAT.flagClassMask);
     expect(constOf(compute, 'LAST_CLASS')).toBe(ASTEROID_CLASSES.length - 1);

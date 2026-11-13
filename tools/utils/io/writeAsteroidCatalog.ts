@@ -1,8 +1,9 @@
 /**
  * writeAsteroidCatalog — serialise numbered MPCORB rows to the `asteroids.astb` layout of
  * `ASTEROID_FORMAT`. Rows must be in ascending number order and share `epochJd` (propagate first).
- * A number missing upstream gets an ABSENT placeholder row, so row k is always number k + 1; more than
- * `MAX_GAPS` holes means the parse is wrong, not that MPC dropped them, so it throws. `defaultedG`
+ * A number missing upstream, or a row with no class (left out of the Layer), gets an ABSENT placeholder
+ * row, so row k is always number k + 1; more than `MAX_GAPS` holes means the parse is wrong, not that
+ * MPC dropped them, so it throws. `defaultedG`
  * names the rows whose G the format cannot hold; they are written with MPC's default slope.
  */
 import type { MpcorbRow } from '../../@types/asteroids/MpcorbRow';
@@ -69,13 +70,18 @@ export function writeAsteroidCatalog(
   });
   const at = (column: number, k: number): number => offsets[column]! + F.columns[column]!.bytes * k;
 
-  for (const gap of gaps) {
-    const k = gap - F.firstNumber;
+  const writeAbsent = (number: number): void => {
+    const k = number - F.firstNumber;
     view.setUint16(at(COLUMN.h, k), F.hNone, true);
     bytes[at(COLUMN.flags, k)] = F.flagAbsent;
-  }
+  };
+  gaps.forEach(writeAbsent);
   for (const row of rows) {
     const k = row.number - F.firstNumber;
+    if (row.asteroidClass === null) {
+      writeAbsent(row.number);
+      continue;
+    }
     if (row.epochJd !== epochJd) {
       throw new Error(`writeAsteroidCatalog: (${row.number}) is not at epoch ${epochJd}`);
     }

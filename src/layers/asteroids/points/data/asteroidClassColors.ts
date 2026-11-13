@@ -10,5 +10,4 @@ export const ASTEROID_CLASS_COLORS: AsteroidClassColors = {
   mainBelt: [1.05, 1.0, 0.92],
   hilda: [1.3, 0.78, 1.7],
   jupiterTrojan: [1.45, 0.88, 0.42],
-  distant: [0.6, 0.85, 1.35],
 };

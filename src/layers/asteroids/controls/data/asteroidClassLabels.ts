@@ -6,5 +6,4 @@ export const ASTEROID_CLASS_LABELS: Readonly<Record<AsteroidClass, string>> = {
   mainBelt: 'Main belt',
   hilda: 'Hildas',
   jupiterTrojan: 'Jupiter trojans',
-  distant: 'Distant objects',
 };

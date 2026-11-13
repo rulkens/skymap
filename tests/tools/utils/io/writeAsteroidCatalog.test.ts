@@ -78,6 +78,15 @@ describe('writeAsteroidCatalog', () => {
     expect(read.a(3)).toBe(Math.fround(5.2));
   });
 
+  it('a row with no class is written ABSENT, not as a gap', () => {
+    const { bytes, gaps } = writeAsteroidCatalog([row(1), row(2, { asteroidClass: null })], EPOCH);
+    const read = reader(bytes);
+    expect(gaps).toEqual([]);
+    expect(read.count).toBe(2);
+    expect(read.flags(1)).toBe(F.flagAbsent);
+    expect(read.h(1)).toBe(F.hNone);
+  });
+
   it('throws on e >= 1, on more than 100 gaps and on a row off the shared epoch', () => {
     expect(() => writeAsteroidCatalog([row(1, { e: 1 })], EPOCH)).toThrow(/e = 1/);
     expect(() => writeAsteroidCatalog([row(1, { e: 0.99999999 })], EPOCH)).toThrow();

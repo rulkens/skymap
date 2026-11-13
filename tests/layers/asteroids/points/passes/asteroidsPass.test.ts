@@ -11,7 +11,7 @@ import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView
 import type { PassState } from '../../../../../src/@types/engine/frame/PassState';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 
-const ALL_ON = { nearEarth: 1, mainBelt: 1, hilda: 1, jupiterTrojan: 1, distant: 1 };
+const ALL_ON = { nearEarth: 1, mainBelt: 1, hilda: 1, jupiterTrojan: 1 };
 const MID_WINDOW = (ASTEROID_WINDOW.startJd + ASTEROID_WINDOW.endJd) / 2;
 
 function enabledAt(simDays: number, rows: AsteroidKeplerRows | null = {} as AsteroidKeplerRows) {

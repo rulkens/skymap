@@ -16,7 +16,7 @@ describe('asteroidClassFromOrbitType', () => {
       'mainBelt', // 7 internal
       'hilda', // 8
       'jupiterTrojan', // 9
-      'distant', // 10
+      null, // 10 distant: not in this Layer
     ]);
     expect(asteroidClassFromOrbitType(63)).toBe('mainBelt');
   });

@@ -671,8 +671,9 @@ unclear, and no entry here reads them as a licence.
 - **Enters skymap:** `npm run fetch-mpcorb` → `data/raw/mpcorb/` →
   `npm run build-asteroids` → `asteroids/v1/asteroids.astb`,
   `asteroid-names.bin` and `mpcorb-header.txt` on R2.
-- **Modified:** Yes. Numbered rows only, quantized to a columnar file, and the
-  few rows at another epoch propagated to the shared one by two-body motion.
+- **Modified:** Yes. Numbered rows only, without the centaurs and the objects
+  beyond Neptune (orbit type 10), quantized to a columnar file, and the few rows
+  at another epoch propagated to the shared one by two-body motion.
 - **Checked:** 2026-11-12: <https://www.minorplanetcenter.net/iau/MPCORB.html>,
   <https://www.minorplanetcenter.net/iau/info/MPOrbitFormat.html>,
   <https://www.minorplanetcenter.net/iau/WWWPolicy.html>

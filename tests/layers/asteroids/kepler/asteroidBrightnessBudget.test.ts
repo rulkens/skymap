@@ -8,7 +8,7 @@ import { asteroidHLimitCenti } from '../../../../src/layers/asteroids/kepler/uti
 import { ASTEROID_FORMAT } from '../../../../src/data/asteroids/asteroidFormat';
 import { loadedAsteroids } from '../fixtures/loadedAsteroids';
 
-const ALL_ON = { nearEarth: 1, mainBelt: 1, hilda: 1, jupiterTrojan: 1, distant: 1 };
+const ALL_ON = { nearEarth: 1, mainBelt: 1, hilda: 1, jupiterTrojan: 1 };
 const THIN = { thinBudget: 100, thinStartZoomAu: 2, thinFullZoomAu: 12 };
 const column = (n: number) => new Uint16Array(n);
 const BY_CLASS = {
@@ -16,7 +16,6 @@ const BY_CLASS = {
   mainBelt: column(800),
   hilda: column(0),
   jupiterTrojan: column(200),
-  distant: column(0),
 };
 
 describe('asteroidKeptFraction', () => {

@@ -12,7 +12,7 @@ struct AsteroidUniforms {
   cam: CameraUniforms,
   sunFromCamAu: vec3<f32>,
   windowFade: f32,
-  classColor: array<vec4<f32>, 5>,
+  classColor: array<vec4<f32>, 4>,
   selectedCamRelAu: vec3<f32>,
   selectedRow: u32,
   // Pick only: the packed pick word of row 0 (pick code and sentinel offset folded in on the CPU).

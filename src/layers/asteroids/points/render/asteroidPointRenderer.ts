@@ -36,19 +36,19 @@ export const ASTEROID_UNIFORM_OFFSETS = {
   sunFromCamAu: 80,
   windowFade: 92,
   classColor: 96,
-  selectedCamRelAu: 176,
-  selectedRow: 188,
-  pickBase: 192,
-  sizePx: 196,
-  selectedRadiusPx: 200,
-  dotKnee: 204,
-  thinGain: 208,
-  sizeKneeHCenti: 212,
-  sizeFullHCenti: 216,
-  sizeMaxScale: 220,
-  beltColor: 224,
+  selectedCamRelAu: 160,
+  selectedRow: 172,
+  pickBase: 176,
+  sizePx: 180,
+  selectedRadiusPx: 184,
+  dotKnee: 188,
+  thinGain: 192,
+  sizeKneeHCenti: 196,
+  sizeFullHCenti: 200,
+  sizeMaxScale: 204,
+  beltColor: 208,
 } as const;
-export const ASTEROID_UNIFORM_BYTES = 272;
+export const ASTEROID_UNIFORM_BYTES = 256;
 
 export function createAsteroidPointRenderer({
   device,

@@ -486,15 +486,6 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
         firstValue: true,
       },
       {
-        name: 'Distant objects',
-        control: 'switch',
-        does: 'Shows the minor planets beyond Jupiter that are not trojans: the centaurs and the objects beyond Neptune.',
-        values: SWITCH,
-        first: ON,
-        state: 'asteroids.items.distant.enabled',
-        firstValue: true,
-      },
-      {
         name: 'Brightness',
         control: 'slider',
         does: 'Multiplies the brightness of every asteroid.',

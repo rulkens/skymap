@@ -18,7 +18,8 @@ export type MpcorbRow = {
   readonly aAu: number;
   /** MPCORB's orbit type (flags low 6 bits); 0 is unset and lands in the main belt. */
   readonly orbitType: number;
-  readonly asteroidClass: AsteroidClass;
+  /** null for a row this Layer leaves out (orbit type 10); written as ABSENT. */
+  readonly asteroidClass: AsteroidClass | null;
   readonly neo: boolean;
   readonly pha: boolean;
   readonly name: string | null;

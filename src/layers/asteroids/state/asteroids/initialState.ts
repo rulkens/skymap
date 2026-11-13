@@ -8,7 +8,6 @@ export const initialState: AsteroidsSettings = {
     mainBelt: { enabled: true },
     hilda: { enabled: true },
     jupiterTrojan: { enabled: true },
-    distant: { enabled: true },
   },
   brightness: 1,
 };

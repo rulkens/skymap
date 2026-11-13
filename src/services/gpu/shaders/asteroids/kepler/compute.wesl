@@ -42,7 +42,7 @@ const H_OFFSET: f32 = 5.0;
 const H_SCALE: f32 = 100.0;
 const G_OFFSET: f32 = 0.5;
 const G_SCALE: f32 = 100.0;
-const LAST_CLASS: u32 = 4u;
+const LAST_CLASS: u32 = 3u;
 // DrawIndirectArgs: vertexCount, instanceCount, firstVertex, firstInstance.
 const INSTANCE_COUNT: u32 = 1u;
 

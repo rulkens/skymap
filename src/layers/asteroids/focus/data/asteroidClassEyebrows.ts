@@ -6,5 +6,4 @@ export const ASTEROID_CLASS_EYEBROWS: Readonly<Record<AsteroidClass, string>> = 
   mainBelt: 'Main-belt asteroid',
   hilda: 'Hilda asteroid',
   jupiterTrojan: 'Jupiter trojan',
-  distant: 'Distant minor planet',
 };

@@ -6,5 +6,4 @@ export const ASTEROID_CLASSES = [
   'mainBelt',
   'hilda',
   'jupiterTrojan',
-  'distant',
 ] as const satisfies readonly AsteroidClass[];
