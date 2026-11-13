@@ -23,6 +23,7 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { createCompositor } from '../../../../src/services/gpu/passes/compositor';
+import { DEFAULT_FILM } from '../../../../src/data/film/filmDefaults';
 import type { ToneMap } from '../../../../src/@types/rendering/ToneMap';
 
 // A basic tone-map for draws where the exact bytes don't matter.
@@ -226,6 +227,53 @@ describe('createCompositor', () => {
     // exposes no `beginRenderPass`, and the draw completing without
     // throwing proves the compositor only ever called setPipeline /
     // setBindGroup / draw on the pass encoder it was handed.
+  });
+
+  it('film look packs lanes 8..17 and compiles the FILM variant', () => {
+    const device = mockDevice();
+    const c = make(device);
+    const pass = mockPass() as unknown as GPURenderPassEncoder;
+    const grade = DEFAULT_FILM.grade;
+    // HDR on too, so lanes 6-7 and the film lanes are packed into one buffer.
+    const filmTone: ToneMap = { ...TONE, hdrKnee: 4, hdrHeadroom: 0.25, film: { grade, seed: 7 } };
+    c.draw(pass, SRC, 'replace', filmTone, SWAP);
+    const bytes = packedBytes(device, 0);
+    c.draw(pass, SRC, 'replace', TONE, SWAP);
+
+    const f = new Float32Array(bytes);
+    expect([f[6], f[7]]).toEqual([4, 0.25]);
+    const lanes = [
+      grade.contrast,
+      grade.lift,
+      grade.splitTone,
+      grade.grain,
+      grade.grainSizePx,
+      grade.vignette,
+      grade.chromaticPx,
+      grade.softnessPx,
+      grade.squeeze,
+    ].map(Math.fround);
+    expect([...f.slice(8, 17)]).toEqual(lanes);
+    expect(new Uint32Array(bytes)[17]).toBe(7);
+
+    const [filmDesc, plainDesc] = pipelineDescriptors(device);
+    expect(pipelineDescriptors(device)).toHaveLength(2);
+    expect(filmDesc!.fragment!.constants).toEqual({ FILM: 1 });
+    expect(plainDesc!.fragment!.constants).toBeUndefined();
+  });
+
+  it('film null packs nothing past lane 7 and reuses the plain pipeline', () => {
+    const device = mockDevice();
+    const c = make(device);
+    const pass = mockPass() as unknown as GPURenderPassEncoder;
+    // A film draw first, so stale lanes in the shared scratch buffer would show.
+    c.draw(pass, SRC, 'over', { ...TONE, film: { grade: DEFAULT_FILM.grade, seed: 3 } }, SWAP);
+    c.draw(pass, SRC, 'replace', TONE, SWAP);
+    const plainLanes = new Uint32Array(packedBytes(device, 1)).slice(8, 18);
+    c.draw(pass, SRC, 'replace', TONE, SWAP);
+    expect([...plainLanes]).toEqual(Array(10).fill(0));
+    const plain = pipelineDescriptors(device).filter((d) => d.fragment!.constants === undefined);
+    expect(plain).toHaveLength(1);
   });
 
   it('destroy releases every cached uniform buffer', () => {
