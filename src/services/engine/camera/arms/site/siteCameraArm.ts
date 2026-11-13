@@ -13,6 +13,7 @@ import { positionDriverOrNull } from '../../../../../data/bodies/positionDrivers
 import { bodyFixedEyeM } from '../../../../../utils/camera/surfaceFrame/bodyFixedEyeM';
 import { findByIdOrThrow } from '../../../../../utils/object/findByIdOrThrow';
 import { focusInSubtree } from '../../../../../utils/camera/arms/focusInSubtree';
+import { focusBodyIdOf } from '../../../../../utils/camera/arms/focusBodyIdOf';
 import { siteGroundRadiusM } from '../../../../../utils/camera/arms/siteGroundRadiusM';
 import { sitePointBodyFixed } from '../../../../../utils/camera/arms/sitePointBodyFixed';
 import { sitePoseFromBodyArm } from './utils/sitePoseFromBodyArm';
@@ -135,7 +136,7 @@ export const siteCameraArm: ClimbRow<'site'> = {
   },
 
   engage(parent, ctx) {
-    const focusId = ctx.focusBodyId;
+    const focusId = focusBodyIdOf(ctx.focus);
     if (focusId === null) return null;
     const site = siteRowOf(focusId);
     // An orbit-driven mesh body has no `surfaceFixed` row and can therefore
@@ -153,7 +154,7 @@ export const siteCameraArm: ClimbRow<'site'> = {
   release(framed, ctx) {
     // Nothing is hosted on a site, so its subtree is the site itself: any other
     // focus hands back to the host arm (§4.8), as the band edge does.
-    if (!focusInSubtree(ctx.focusBodyId, framed.frame.site)) return true;
+    if (!focusInSubtree(focusBodyIdOf(ctx.focus), framed.frame.site)) return true;
     const rangeR = framed.pose.rangeM / meshBodyOf(framed.frame.site).boundingRadiusM;
     return rangeR > ctx.tuning.siteDisengageR;
   },

@@ -85,8 +85,7 @@ describe("bodyCameraArm.host's relief shells", () => {
 describe('the body arm’s floor push', () => {
   const ctx: CameraArmCtx = {
     ...ctxWith(datumOnlyTerrainHeight),
-    focusBodyId: null,
-    bodilessFocus: false,
+    focus: { kind: 'none' },
     pivot: pivotFraming(null),
     viewportPx: [100, 100],
     frustum: symmetricFrustum(Math.PI / 3, 1),

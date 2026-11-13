@@ -230,8 +230,7 @@ describe('stepCameraRuntime', () => {
           poseBasis: B,
           upBasis: B,
           terrainHeightAt: datumOnlyTerrainHeight,
-          focusBodyId: asSceneBodyId('earth'),
-          bodilessFocus: false,
+          focus: { kind: 'body', id: asSceneBodyId('earth') },
           pivot: pivotFraming(EARTH_ROW),
           viewportPx: [1000, 1000],
           frustum: symmetricFrustum(Math.PI / 3, 1),
@@ -1062,7 +1061,7 @@ describe('the sky exit lift', () => {
 });
 
 describe('a focus fly that starts while standing', () => {
-  // The Milky Way names no body, so `focusBodyId` is null for it exactly as for no focus;
+  // The Milky Way names no body, so the arms see a bodiless focus, not a body;
   // standing must still let it go, or the fly's end commit lands back on the ground.
   it('leaves the sky frame at once and stays where it lands', () => {
     const SKY = { body: asSceneBodyId('earth'), lonRad: 0.21857, latRad: 0.97158 };

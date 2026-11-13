@@ -16,6 +16,7 @@ import type { CameraProjection } from '../../../@types/camera/projection/CameraP
 import type { CameraRuntime } from '../../../@types/engine/state/CameraRuntime';
 import type { DriverId } from '../../../@types/engine/camera/DriverId';
 import type { CameraArmCtx } from '../../../@types/camera/arms/CameraArmCtx';
+import type { ArmFocus } from '../../../@types/camera/arms/ArmFocus';
 import type { StepInputs } from '../../../@types/engine/camera/StepInputs';
 import type { RootState } from '../../../store/types';
 
@@ -145,11 +146,16 @@ export function stepCameraRuntime(
   // this frame's basis resolves, so they read the previous frame's; the fold
   // reads this frame's. One shared value would move the settle trace.
   const focusBodyId = selectionDriver(focus)?.poseId ?? null;
+  const armFocus: ArmFocus =
+    focusBodyId !== null
+      ? { kind: 'body', id: focusBodyId }
+      : focus !== null
+        ? { kind: 'bodiless' }
+        : { kind: 'none' };
   const armFields = {
     bodies,
     poseBasis,
-    focusBodyId,
-    bodilessFocus: focus !== null && focusBodyId === null,
+    focus: armFocus,
     pivot: pivotFraming(pivotRow),
     viewportPx: canvasPx,
     frustum,
