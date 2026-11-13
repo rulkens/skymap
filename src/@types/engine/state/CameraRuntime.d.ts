@@ -14,6 +14,7 @@ import type { FramedCameraPose } from '../../camera/pose/FramedCameraPose';
 import type { OrientationFrameId } from '../../camera/orientation/OrientationFrameId';
 import type { CameraArmMemory } from '../../camera/arms/CameraArmMemory';
 import type { TiltMemory } from '../../camera/orientation/TiltMemory';
+import type { ZoomLimitPress } from '../../camera/input/ZoomLimitPress';
 import type { FrameOutputs } from './FrameOutputs';
 import type { SceneBodyId } from '../../scene/SceneBodyId';
 import type { Vec2 } from '../../math/Vec2';
@@ -35,6 +36,8 @@ export type CameraRuntime = {
   /** Keyed by the register's `frameKey`: an arm change wipes it to that arm's `emptyMemory`. */
   readonly gesture: CameraArmMemory;
   readonly tilt: TiltMemory;
+  /** Zoom spent against a limit by the notches since the last fresh one (`zoomLimitPressStep`). */
+  readonly zoomLimitPress: ZoomLimitPress | null;
   /** Stepped before the pick, so it lives here and not in a row's `own`. */
   readonly navigator: NavigatorState;
   /** The scheme last frame's winner was picked from: a toggled-away row exists

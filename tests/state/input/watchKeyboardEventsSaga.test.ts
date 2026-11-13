@@ -43,6 +43,14 @@ import { clearSelection } from '../../../src/state/selection/selectionSlice';
 import { exitTakeover, takeoverStarted } from '../../../src/state/takeover/takeoverActions';
 import { stepMissionSpeed } from '../../../src/layers/missions/state/missions/slice';
 import { setRate } from '../../../src/state/time/timeSlice';
+import { updateSelectionFocus } from '../../../src/state/selection/selectionSlice';
+import { selectFocusRef } from '../../../src/state/selection/selectors';
+import { skyEntryReported, skyViewReported } from '../../../src/state/sky/skySlice';
+import { enterSkyHere } from '../../../src/state/sky/enterSkyHere';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+
+const EARTH = asSceneBodyId('earth');
+const SPOT = { body: EARTH, lonRad: 0.2186, latRad: 0.9716 };
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -109,7 +117,7 @@ describe('watchKeyboardEventsSaga', () => {
     await flush();
 
     const after = recorded.slice(before);
-    expect(after).toEqual([clearSelection(), exitTakeover()]);
+    expect(after).toEqual([clearSelection(), exitTakeover({ restore: true })]);
   });
 
   it("runs a running exhibit's kind shortcut ahead of the global row", async () => {
@@ -124,5 +132,37 @@ describe('watchKeyboardEventsSaga', () => {
     h.emit!(']');
     await flush();
     expect(recorded.at(-1)).toEqual(stepMissionSpeed({ step: 1 }));
+  });
+
+  // Clearing focus would release the sky arm under the restore: standing, Esc only leaves.
+  it('keeps focus when Esc leaves sky mode', async () => {
+    const { store, recorded } = buildHarness();
+    await flush();
+    store.dispatch(updateSelectionFocus({ type: 'body', id: EARTH }, 'cut'));
+    store.dispatch(skyViewReported({ spot: SPOT, azimuthRad: 0 }));
+    const before = recorded.length;
+
+    h.emit!('escape');
+    await flush();
+
+    expect(recorded.slice(before)).toEqual([exitTakeover({ restore: true })]);
+    expect(selectFocusRef(store.getState())).not.toBeNull();
+  });
+
+  it('s enters only while the entry is on offer', async () => {
+    const { store, recorded } = buildHarness();
+    await flush();
+    const entry = (altitudeM: number) =>
+      store.dispatch(skyEntryReported({ spot: SPOT, pointLocalM: [1, 2, 3], altitudeM }));
+
+    entry(30_000);
+    h.emit!('s');
+    await flush();
+    expect(recorded).not.toContainEqual(enterSkyHere());
+
+    entry(5_000);
+    h.emit!('s');
+    await flush();
+    expect(recorded).toContainEqual(enterSkyHere());
   });
 });

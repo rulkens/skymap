@@ -2,12 +2,12 @@ import type { CameraArmBasisCtx } from './CameraArmBasisCtx';
 import type { PivotFraming } from './PivotFraming';
 import type { Vec2 } from '../../math/Vec2';
 import type { CameraTuning } from '../orbitCamera/CameraTuning';
-import type { PositionedId } from '../../scene/PositionedId';
+import type { ArmFocus } from './ArmFocus';
 import type { ViewFrustum } from '../projection/ViewFrustum';
 
 /** `CameraArmBasisCtx` plus the gesture-time fields only `engage`/`release`/`step`/`stepCameraArm` need. */
 export type CameraArmCtx = CameraArmBasisCtx & {
-  readonly focusBodyId: PositionedId | null;
+  readonly focus: ArmFocus;
   readonly pivot: PivotFraming;
   readonly viewportPx: Readonly<Vec2>;
   /** The main view's frustum: cursor rays map through it. */

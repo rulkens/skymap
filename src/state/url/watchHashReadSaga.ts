@@ -91,7 +91,8 @@ function* applyNavigation(body: string) {
   const { view } = intent;
   const names = (kind: string, id: string) => view.kind === kind && 'id' in view && view.id === id;
   const takeover = yield* select(selectTakeoverSource);
-  const keepsTakeover = takeover !== null && names(takeover.kind, takeover.id);
+  // Sky mode has no id: no hash names it, so a hash change ends it like preemption (D13).
+  const keepsTakeover = takeover !== null && 'id' in takeover && names(takeover.kind, takeover.id);
 
   // An entry that leaves out the running play's key is one from before it,
   // such as Back to the pre-tour URL. The play's exit restores the scene and

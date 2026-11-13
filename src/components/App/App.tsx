@@ -15,7 +15,9 @@ import { useIsMobile } from '../../hooks/useIsMobile';
 import LoadingBarContainer from '../containers/LoadingBarContainer';
 import StatusBarContainer from '../containers/StatusBarContainer';
 import ScaleBarContainer from '../containers/ScaleBarContainer';
-import NavigationPanel from '../NavigationPanel/NavigationPanel';
+import SkyEntryButtonContainer from '../containers/SkyEntryButtonContainer';
+import SkyHudContainer from '../containers/SkyHudContainer';
+import NavigationPanelContainer from '../containers/NavigationPanelContainer';
 import TopBarContainer from '../containers/TopBarContainer';
 import TimeBarContainer from '../containers/TimeBarContainer';
 import PhoneHudContainer from '../containers/PhoneHudContainer';
@@ -95,9 +97,11 @@ export function App(): React.ReactElement {
               <LazyInfoCardContainer />
             </Suspense>
             <ScaleBarContainer />
+            <SkyEntryButtonContainer phone={false} />
+            <SkyHudContainer phone={false} />
             <TimeBarContainer hidden={paletteOpen || splashVisible} />
             <div className={appStyles.leftStack}>
-              <NavigationPanel />
+              <NavigationPanelContainer />
               <Suspense>
                 <LazySettingsPanelContainer />
               </Suspense>

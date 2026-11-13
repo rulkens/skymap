@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 
 import { pendingToInputSteps } from '../../../src/utils/input/pendingToInputSteps';
 import type { PendingStep } from '../../../src/@types/input/PendingStep';
-import type { InputStep } from '../../../src/@types/camera/input/InputStep';
+import type { RawInputStep } from '../../../src/@types/camera/input/RawInputStep';
 
 const drag = (over: Partial<PendingStep & { kind: 'motion' }>): PendingStep => ({
   kind: 'motion',
@@ -19,7 +19,7 @@ const drag = (over: Partial<PendingStep & { kind: 'motion' }>): PendingStep => (
   ...over,
 });
 
-const dragOf = (step: InputStep | undefined) => {
+const dragOf = (step: RawInputStep | undefined) => {
   if (step?.kind !== 'drag') throw new Error(`expected a drag, got ${step?.kind}`);
   return step;
 };

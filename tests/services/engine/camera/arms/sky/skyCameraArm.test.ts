@@ -75,7 +75,7 @@ function ctxFor(
       calls.push(args);
       return args[0] === 'earth' ? terrainM : 0;
     },
-    focusBodyId,
+    focus: focusBodyId === null ? { kind: 'none' } : { kind: 'body', id: focusBodyId },
     pivot: pivotFraming(null),
     viewportPx: [100, 100],
     frustum: symmetricFrustum(Math.PI / 3, 1),
@@ -120,12 +120,11 @@ const pixelOf = (m: Mat3, d: Vec3, f: number, centre: number): Vec2 => {
   return [centre + (f * along(0)) / z, centre - (f * along(3)) / z];
 };
 
-const wheel = (factor: number, fresh = true): InputStep => ({
+const wheel = (factor: number): InputStep => ({
   kind: 'zoom',
   factor,
   duringGesture: false,
   cursorPx: null,
-  fresh,
 });
 
 const roundTrip = (start: FramedPose<'sky'>) => {
@@ -293,7 +292,7 @@ describe('the sky arm', () => {
     );
     expect(out.pose).toBe(start.pose);
     expect(out.fovYRad).toBeUndefined();
-    expect(out.pushed).toBeUndefined();
+    expect(out.pressed).toBeUndefined();
     const edge = ROW.step(
       ROW.emptyMemory,
       EMPTY_TILT_MEMORY,
@@ -332,6 +331,8 @@ describe('the sky arm', () => {
     expect(ROW.release(start, ctxFor(null))).toBe(false);
     expect(ROW.release(start, ctxFor(EARTH))).toBe(false);
     expect(ROW.release(start, ctxFor(asSceneBodyId('mars')))).toBe(true);
+    // A galaxy: no body id, yet a focus off the host all the same.
+    expect(ROW.release(start, { ...ctxFor(null), focus: { kind: 'bodiless' } })).toBe(true);
   });
 });
 
@@ -349,18 +350,11 @@ describe('the sky exit lift', () => {
       withLens(degToRad(119)),
     );
     expect(reaching.fovYRad).toBe(LENS_MAX);
-    expect(reaching.pushed).toBeUndefined();
+    expect(reaching.pressed).toBeUndefined();
     const out = ROW.step(reaching.memory, EMPTY_TILT_MEMORY, start, wheel(1.1), atMax);
     expect(out.pose).toBe(start.pose);
     expect(out.fovYRad).toBeUndefined();
-    expect(out.pushed?.edge).toBe('out');
-  });
-
-  it('a wheel-out tail at the widest lens stays; only a fresh notch lifts', () => {
-    const notch = (fresh: boolean) =>
-      ROW.step(ROW.emptyMemory, EMPTY_TILT_MEMORY, start, wheel(1.1, fresh), atMax).pushed;
-    expect(notch(false)).toBeUndefined();
-    expect(notch(true)?.edge).toBe('out');
+    expect(out.pressed?.edge).toBe('out');
   });
 
   // −430 m is the Dead Sea: an eye standing there is inside the datum sphere.
@@ -368,9 +362,9 @@ describe('the sky exit lift', () => {
     'the exit lift ends above the spot looking down at the default lens — terrain %d m',
     (terrainM) => {
       const ctx = withLens(LENS_MAX, terrainM);
-      const pushed = ROW.step(ROW.emptyMemory, EMPTY_TILT_MEMORY, start, wheel(1.1), ctx).pushed;
-      if (pushed?.edge !== 'out') throw new Error('expected the sky exit push');
-      const { lift } = pushed;
+      const pressed = ROW.step(ROW.emptyMemory, EMPTY_TILT_MEMORY, start, wheel(1.1), ctx).pressed;
+      if (pressed?.edge !== 'out') throw new Error('expected the sky exit push');
+      const { lift } = pressed;
       const at = (sec: number) =>
         evaluateFramedClip(lift, sec, {
           bodies: ctx.bodies,

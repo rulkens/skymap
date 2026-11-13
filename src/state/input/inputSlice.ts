@@ -108,6 +108,10 @@ const inputSlice = createSlice({
       }
     },
 
+    inputLiftOffRequested: (input) => {
+      input.pending.push({ kind: 'liftOff' });
+    },
+
     inputHovered: (
       input,
       action: PayloadAction<{ source: InputSourceId; at: UnitPoint | null }>,
@@ -142,6 +146,7 @@ export const {
   inputGestureStarted,
   inputGestureEnded,
   inputMoved,
+  inputLiftOffRequested,
   inputHovered,
   inputTapped,
   inputConsumed,

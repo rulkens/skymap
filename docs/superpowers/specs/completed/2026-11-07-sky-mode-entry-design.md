@@ -25,20 +25,21 @@ The owner's (grill Q-numbers in brackets) and those carried from the 2026-10-28 
 | #   | Ruling |
 | --- | ------ |
 | R1  | Entry is a **"Look up from here" button** at the bottom centre, plus the `s` key and palette rows. [Q1, Q5] |
-| R2  | **R6 of the draft is amended**: a fresh wheel-in (or pinch-in) that the surface floor eats whole enters sky mode, guarded like the exit (`SKY_EXIT_PAUSE_MS`, 250 ms of quiet). Zooming in through open air never enters. [Q2] |
+| R2  | **R6 of the draft is amended**: a wheel-in (or pinch-in) at the surface floor enters sky mode when it is fresh (250 ms of wheel quiet), or when the push counter fills (R16); the lift at the widest lens follows the same rule. Zooming in through open air never enters. [Q2] |
 | R3  | **Where you stand**: the push uses the point under the cursor (the wheel's existing anchor); the button, `s` and "Sky from here" use the point under the view centre. [Q3] |
 | R4  | The button shows only **below 20 km**, with terrain of a terrain host (Earth, Mars) under the view centre. [Q4] |
 | R5  | **Desktop preview**: hovering or focusing the button shows a ring at the view centre with the place and coordinates beside it. **Phone**: the place goes in the button label, no ring. [Q5, Q6] |
 | R6  | **Place names**: the nearest `EARTH_PLACES` entry within 25 km, else coordinates. [Q7] |
-| R7  | **Sky HUD**: a horizon compass at the bottom centre (place title, cardinal ribbon, caret, heading and altitude below), a readout in the scale bar's slot, the Navigation panel listing the sky gestures. [Q8] |
+| R7  | **Sky HUD**: a horizon compass at the bottom centre (place title, cardinal ribbon, caret), no scale readout, the Navigation panel listing the sky gestures. [Q8] |
 | R8  | **One exit button, Leave (Esc)**, under the compass readout; lift-off stays the wheel-out gesture. [Q9] |
 | R9  | **Search while standing** turns the view to face the result and frames it by angular size; stars zoom in a little and keep context. [Q10, Q11] |
 | R10 | **By day** the HUD offers "Skip to tonight". [Q12] |
 | R11 | **Esc** closes an open card first; the next Esc leaves sky mode. [Q13] |
 | R12 | **Below the horizon**: face where it rises and offer "Skip to when it rises"; something that never rises from here says so and offers nothing. [Q14] |
-| R13 | Ground and horizon are the real terrain and atmosphere; eye height 1.7 m; perspective lens 0.5°–120°. (Draft R1, R3, R7.) |
+| R13 | Ground and horizon are the real terrain and atmosphere; eye height 1.7 m; perspective lens 1′–120° (floor lowered from 0.5°, owner ruling 2026-11-10). (Draft R1, R3, R7.) |
 | R14 | Sky mode is a **takeover**, a fourth `TakeoverSource` kind. (Draft R5.) |
 | R15 | Leave restores **the camera only**: time, toggles and settings changed while standing stay. (Draft D2.) |
+| R16 | **Push counter** (owner, 2026-11-09): stale notches pressed in a row against a limit sum their \|ln f\| in the drain and push at 0.35; a fresh notch still pushes at once. One rule for both edges; arms stay stateless. |
 
 ### Decisions made in this spec (not rulings — challenge freely)
 
@@ -62,6 +63,7 @@ The owner's (grill Q-numbers in brackets) and those carried from the 2026-10-28 
 - **D11.** `restore` holds the entry camera **and the entry focus**. Entering focuses the spot's body (the
   sky arm releases unless focus is in its body's subtree, `skyCameraArm.ts:103`), so Leave must put focus back
   or the restored pose sits under the wrong focus. Time and settings still stay (R15).
+  It also holds the entry lens (owner, 2026-11-09): the return flight eases the lens back to it.
 - **D12.** Arrival is a camera clip whose last leg is in the `{ sky: spot }` frame, so the engine resolves the
   live ground at play time (clips already do: `clipKeyframeFrames.test.ts`, "a sky → body leg starts at the
   standing eye"). No saga needs terrain; `SagaContext` does not grow.
@@ -72,8 +74,8 @@ The owner's (grill Q-numbers in brackets) and those carried from the 2026-10-28 
 
 ### 3.1 Ideal shape
 
-- **Arms report, sagas decide.** A camera arm's step says only that a zoom limit was pushed
-  (`pushed: 'in' | 'out'`); one saga maps (body, in) to entering sky mode at the cursor point and (sky, out)
+- **Arms report, sagas decide.** A camera arm's step says only that a notch pressed its zoom limit
+  (`pressed`, edge `in` or `out`); the drain decides whether the press pushes it, and one saga maps (body, in) to entering sky mode at the cursor point and (sky, out)
   to the lift-off and the end of the takeover. Arms never know about modes or takeovers.
 - **Engine readouts are rows.** The engine publishes per-frame UI facts through one table of readout rows;
   sky mode adds two rows (entry availability with the centre spot, and the live sky view).
@@ -108,7 +110,7 @@ six reactors; sky is the first takeover with its own HUD, a registry pays at the
 Each is its own commit, behaviour-preserving, with its test.
 
 - **P1. Arms report a pushed zoom limit; freshness is decided once.** The step result's `clip?: ClipData`
-  becomes `pushed?: ZoomLimitPush`, a value without an `arm` tag: `{ edge: 'out', lift }` from the sky arm
+  becomes `pressed?: ZoomLimitPush`, a value without an `arm` tag: `{ edge: 'out', lift }` from the sky arm
   for a fresh wheel-out its widest lens ate (the `skyExitLift` clip built by the arm, which alone has the
   engine ctx), `{ edge: 'in', body, pointLocalM }` from the body arm for a fresh zoom-in that starts at the
   floor (definition: §4.2), the cursor anchor in body-fixed metres. `replayInput` only reports it
@@ -159,16 +161,20 @@ view dispatches nothing.
 All of them dispatch `enterSky({ spot })`. The palette gets a `sky` `PaletteAction` kind and matching
 `ScoredRow` rows; `remoteCommands` parses the same.
 
-**The push** (owner ruling, 2026-11-07): a fresh zoom-in notch whose eye **starts** at the floor height
-(`surfaceFloorM` at the eye, within a small tolerance) reports (body, in), whether or not the notch still
-slides the eye toward the cursor anchor. At the floor the view is usually oblique, so a notch is rarely eaten
+**The push** (owner rulings, 2026-11-07 and 2026-11-09): a zoom-in notch whose eye **starts** at the floor
+height (`surfaceFloorM` at the eye, within a small tolerance) presses the floor, whether or not the notch still
+slides the eye toward the cursor anchor. `replayInput` turns the press into a (body, in) push when the notch is
+fresh, or when the push counter it keeps beside its wheel clock fills: the \|ln f\| of notches pressed in a row
+against the same limit reaches `ZOOM_LIMIT_PUSH_LN` (0.35). Any other step empties the counter; it needs no
+decay clock, because a pause long enough to matter makes the next notch fresh. The lift is the same rule on
+the sky arm's widest lens. At the floor the view is usually oblique, so a notch is rarely eaten
 whole; waiting for that would make the push almost never fire. The arrival then glides to the cursor point
 and stands (§4.3), which finishes the zoom the person was aiming.
 
 ### 4.3 Arrival
 
 `watchTakeoverSaga` builds the source once: `restore = outgoing sky takeover's restore ?? { camera.base,
-focus }` (D11). The sky body saga focuses the spot's body and plays the arrival as a camera-level clip
+camera.fovYRad, focus }` (D11). The sky body saga focuses the spot's body and plays the arrival as a camera-level clip
 (`clipStarted`, never `startClip`, which would preempt the takeover): legs that keep the heading down to the
 floor above the spot, then a zero-length leg in the `{ sky: spot }` frame at that heading, 15° up, keeping
 the lens (D3, D12). From another body or deep space the first leg is the flight to the spot's body that
@@ -189,13 +195,13 @@ with a reduced-motion branch.
 ## 5. The sky takeover
 
 - **Variant**: `{ kind: 'sky'; spot: SkySpot; restore: SkyRestore }` in `TakeoverSource`, with
-  `SkyRestore = { base: FramedCameraPose; focus: FocusRef | null }` (D11). It has no `id`:
+  `SkyRestore = { base: FramedCameraPose; fovYRad: number; focus: FocusRef | null }` (D11). It has no `id`:
   `watchHashReadSaga.ts:92` (`names(takeover.kind, takeover.id)`) must treat sky as named by no hash, so a
   hash change while standing ends it like preemption.
 - **Body saga**, beside `clipBodySaga`, skipping `withSceneSnapshotSaga` like clips (R15), in this order:
   the arrival clip (§4.3); then `race({ leave: take(exitTakeover with restore), left: take(a camera commit
-  whose frame is not sky) })`; then, only if `leave` won, a tween back to `restore.base` and focus back to
-  `restore.focus`. The `left` arm covers lift-off, the card's Focus or `F` flying away and any clip; no
+  whose frame is not sky) })`; then, only if `leave` won, a tween back to `restore.base` (its lens leg easing
+  to `restore.fovYRad`) and focus back to `restore.focus`. The `left` arm covers lift-off, the card's Focus or `F` flying away and any clip; no
   separate rule for each.
 - **`exitTakeover({ restore?: true })`**: Esc and Leave pass `restore: true`; `navigateSaga`,
   `watchHashReadSaga` and the remote do not (D13). Tours and exhibits ignore the flag.
@@ -215,15 +221,16 @@ Mounted while the sky-view readout is non-null (D9) and no tour, exhibit or clip
 phone. Mockups: grill Q8 (variant B2), shot in the real UI; rebuild them with the `mockup` skill
 (`npm run mock`, PR #1085 — the HUD tasks wait for it on main) before building, at 1728 and 400 wide.
 
-- **Compass** (bottom centre): the place title (display face) with a small "Sky" tag; a ribbon about 120°
+- **Compass** (bottom centre): the place title (display face); a ribbon about 120°
   wide with ticks every 5°, numbers every 15°, cardinal and intercardinal letters, faded at both ends; an
-  accent caret under the centre; below it the readout "180° · 34° up". It reads the sky view readout row
-  (`{ azimuthRad, altitudeRad, fovYRad } | null`, rounded to 0.5°) so it follows a drag live.
-- **Leave** under the readout: "Leave" with `Esc` printed dim. With **Skip to tonight** (D6) and **Skip to
+  accent caret under the centre; no numeric readout (owner, 2026-11-10). It reads the sky view readout row
+  (`{ spot, azimuthRad } | null`, azimuth rounded to 0.5°) so it follows a drag live.
+- **Leave** under the compass: "Leave" with `Esc` printed dim. With **Skip to tonight** (D6) and **Skip to
   when it rises** (§7) beside it when they apply; each jumps the clock with `manualPausedAtActions` and is
   undone by the Time bar's "Now".
-- **Readout in the scale bar's slot**: field of view and the spot's coordinates (desktop `ScaleBar`, phone
-  `ScaleBracket`).
+- **No scale readout while standing** (owner, 2026-11-11): a distance means nothing there, so the scale bar
+  (phone: bracket) hides. The settings lens slider reads degrees down to 1°, arcminutes below, and runs on a
+  log scale so the arcminute end gets real travel.
 - **Navigation panel**: rows keyed by mode; sky rows are Drag "look around", Wheel "field of view",
   "Wheel out at 120°" "lift off", Esc "close card, then leave".
 - **Phone**: a narrower ribbon (fits 400 px with the side gutters), the same Leave row, inside the safe-area
@@ -237,8 +244,9 @@ puts today.
 - **Direction**: the selection row's `positionMpc` seen from the standing eye, turned into azimuth and altitude
   in the spot's east-north-up frame at the current sim time (a new `altAzFromSpot` helper; the conversion
   already exists for a view's forward vector in `skyPoseFromBodyArm.ts:17`).
-- **Lens**: angular diameter `2·atan(radiusMpc / distance)`; lens = `clamp(3 × diameter, LENS_MIN_DEG,
-  current lens)`, so a search never widens the view. Star rows (`starCatalog`) use D4.
+- **Lens**: angular diameter `2·atan(radiusMpc / distance)`; lens = `clamp(3 × diameter, 0.5°, current lens)`,
+  so a search never widens the view and never lands where most images blur (the wheel still reaches 1′, owner
+  ruling 2026-11-10). Star rows (`starCatalog`) use D4.
 - **Motion**: a short tween of yaw, pitch and lens in the sky frame. If the camera tween cannot target a
   sky-frame pose, use a camera-level clip (`clipStarted`, never `startClip`, which would preempt the sky
   takeover) with the sky arm's channels (clips already drive the sky arm with `frame: { sky }`, see
@@ -264,8 +272,8 @@ Per `docs/superpowers/conventions/testing.md`: each one fails on a real bug noth
   dispatch with their dedup; P3 a pick still flies outside sky mode.
 - Leave with no takeover (a `#pose=k` link) lifts off.
 - `selectSkyEntry`: false above 20 km, on a miss, on a host without terrain, while standing.
-- Entry: each way in reaches `enterSky` with the spot its row names (centre vs cursor anchor); a push within
-  250 ms of the last notch does not enter; re-entry while standing keeps the first `restore`.
+- Entry: each way in reaches `enterSky` with the spot its row names (centre vs cursor anchor); a small notch
+  within 250 ms of the last one does not enter, a continuous scroll does once it fills the counter; re-entry while standing keeps the first `restore`.
 - Takeover: Leave restores the entry camera and focus; lift-off and a frame change end it without restoring;
   a tour start and a hash change end it without restoring.
 - Esc: with a card open, the first Esc clears the selection and keeps the takeover; the second exits.

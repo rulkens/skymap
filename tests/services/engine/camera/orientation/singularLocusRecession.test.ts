@@ -94,7 +94,6 @@ function zoomStepOf(lnf: number): InputStep {
     factor: Math.exp(lnf),
     duringGesture: false,
     cursorPx: null,
-    fresh: false,
   };
 }
 

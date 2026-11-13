@@ -2,17 +2,23 @@
  * rankPaletteMatches — the command palette's pure ranking pipeline over a non-empty query.
  * Primary named objects share one score-sorted list, so an exact "earth" outranks a famous row
  * that only matched it in its description; alias and structure lists are capped and appended.
+ * Sky rows: typed coordinates lead, each place match is followed by its own "Sky from" row, and
+ * "Sky from here" competes by name only while entry is on offer (spec §4.2).
  */
 import { scoreFamousMatch } from './scoreFamousMatch';
 import { scoreAliasMatch } from './scoreAliasMatch';
 import { APP_EXHIBIT_REGISTRY } from '../../compositions/appExhibits';
 import { APP_TOUR_REGISTRY } from '../../compositions/appTours';
 import { EARTH_PLACES } from '../../data/palette/earthPlaces';
+import { parseLatLonQuery } from '../geo/parseLatLonQuery';
+import { skySpotFromLonLat } from '../geo/skySpotFromLonLat';
+import { asSceneBodyId } from '../scene/asSceneBodyId';
 import type { ScoredRow } from '../../@types/palette/ScoredRow';
 import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMetaEntry';
 import type { AliasIndexEntry } from '../../@types/engine/AliasIndexEntry';
 import type { StructureSearchEntry } from '../../@types/engine/StructureSearchEntry';
 import type { LayerSearchEntry } from '../../@types/engine/layer/LayerSearchEntry';
+import type { PaletteSkyContext } from '../../@types/palette/PaletteSkyContext';
 
 /** Generic substrings like `MCG` match thousands of rows; uncapped, the palette would render a stuttering 5,000-row `<ul>`. */
 const MAX_ALIAS_RESULTS = 50;
@@ -23,12 +29,19 @@ const MAX_STRUCTURE_RESULTS = 50;
 /** Primary-row boost: keeps an alias's longer-query bonus (queries <16 chars) from leapfrogging a primary match. */
 const PRIMARY_TIEBREAK = 5;
 
+/** Typed coordinates are as exact as a query gets: an exact name match's score. */
+const COORDINATES_SCORE = 1000 + PRIMARY_TIEBREAK;
+
+const EARTH = asSceneBodyId('earth');
+const SKY_HERE_NAMES = ['Sky from here', 'Look up from here'];
+
 export function rankPaletteMatches(
   entries: readonly FamousGalaxyMetaEntry[],
   aliasIndex: readonly AliasIndexEntry[] | undefined,
   structures: readonly StructureSearchEntry[] | undefined,
   layerRows: readonly LayerSearchEntry[],
   query: string,
+  sky: PaletteSkyContext,
 ): ScoredRow[] {
   if (query.trim().length === 0) return [];
 
@@ -59,10 +72,38 @@ export function rankPaletteMatches(
     })
     .filter((s) => s.score > 0);
 
-  const placeScored: ScoredRow[] = EARTH_PLACES.map<ScoredRow>((place) => {
+  // Same score as its fly-to and right behind it, so the stable sort keeps the pair together.
+  const placeScored: ScoredRow[] = EARTH_PLACES.flatMap<ScoredRow>((place) => {
     const raw = scoreFamousMatch({ id: place.id, names: place.names, description: '' }, query);
-    return { kind: 'place', entry: place, score: raw > 0 ? raw + PRIMARY_TIEBREAK : 0 };
-  }).filter((s) => s.score > 0);
+    if (raw === 0) return [];
+    const score = raw + PRIMARY_TIEBREAK;
+    const spot = skySpotFromLonLat(EARTH, place);
+    return [
+      { kind: 'place', entry: place, score },
+      { kind: 'sky', spot, place, score },
+    ];
+  });
+
+  const typed = parseLatLonQuery(query);
+  const coordinatesScored: ScoredRow[] =
+    typed === null
+      ? []
+      : [
+          {
+            kind: 'sky',
+            spot: skySpotFromLonLat(sky.host, typed),
+            place: null,
+            score: COORDINATES_SCORE,
+          },
+        ];
+
+  const hereRaw = sky.hereOpen
+    ? scoreFamousMatch({ id: '', names: SKY_HERE_NAMES, description: '' }, query)
+    : 0;
+  const hereScored: ScoredRow[] =
+    hereRaw > 0
+      ? [{ kind: 'sky', spot: 'here', place: null, score: hereRaw + PRIMARY_TIEBREAK }]
+      : [];
 
   // The id is withheld: Layer ids are focus ids (`body-mars`), which would substring-match "bod".
   // `catalog` rows are capped beside the alias rows so a bulk catalog cannot drown named objects.
@@ -82,8 +123,10 @@ export function rankPaletteMatches(
 
   // The sort is stable, so earlier arrays stay ahead on a score tie (famous first).
   const primaryScored = [
+    ...coordinatesScored,
     ...famousScored,
     ...placeScored,
+    ...hereScored,
     ...exhibitScored,
     ...tourScored,
     ...layerPrimaryScored,

@@ -18,6 +18,7 @@ import { bodyFixedEyeM } from '../../../../../utils/camera/surfaceFrame/bodyFixe
 import { decodeBodyFixedChannels } from './utils/decodeBodyFixedChannels';
 import { eyeMpcOf } from '../../../../../utils/camera/orbitPose/eyeMpcOf';
 import { focusInSubtree } from '../../../../../utils/camera/arms/focusInSubtree';
+import { focusBodyIdOf } from '../../../../../utils/camera/arms/focusBodyIdOf';
 import { frameUp } from '../../../../../utils/camera/orbitPose/frameUp';
 import { hostedFocusOverHorizon } from './utils/hostedFocusOverHorizon';
 import { hostedFocusPivotM } from './utils/hostedFocusPivotM';
@@ -50,7 +51,7 @@ function surfaceStepCtxOf(host: HostBody, ctx: CameraArmCtx): SurfaceStepCtx {
     sceneUpLocal: rotateByTranspose(host.state.orientation, frameUp(ctx.upBasis)),
     // Derived from the FOCUS every drain, never carried in the pose: a
     // carried anchor decouples from the rover as soon as a drag turns the arm.
-    focusPivotM: hostedFocusPivotM(ctx.focusBodyId, host.id, host.radiusM),
+    focusPivotM: hostedFocusPivotM(focusBodyIdOf(ctx.focus), host.id, host.radiusM),
     tuning: ctx.tuning,
   };
 }
@@ -105,17 +106,16 @@ export const bodyCameraArm: ClimbRow<'body'> = {
     const surfaceCtx = surfaceStepCtxOf(hostOrThrow(framed.frame, ctx), ctx);
     const stepped = surfaceStep(memory, tilt, framed.pose, input, surfaceCtx);
     const result = { pose: stepped.pose, memory: stepped.gesture, tilt: stepped.tilt };
-    // A fresh zoom-in that STARTS on the floor pushes it, sliding or not (spec §4.2): at the
-    // floor the view is oblique, so a notch is rarely eaten whole.
+    // A zoom-in that STARTS on the floor presses it, sliding or not (spec §4.2): at the floor
+    // the view is oblique, so a notch is rarely eaten whole. The drain decides if it pushes.
     const anchorM = stepped.zoomAnchorM;
     const pushes =
       input.kind === 'zoom' &&
-      input.fresh &&
       input.factor < 1 &&
       anchorM !== null &&
       eyeAtFloor(framed.pose, surfaceCtx.groundRadiusAtM, surfaceCtx.standoffRadii);
     if (!pushes) return result;
-    return { ...result, pushed: { edge: 'in', body: framed.frame.body, pointLocalM: anchorM } };
+    return { ...result, pressed: { edge: 'in', body: framed.frame.body, pointLocalM: anchorM } };
   },
 
   nudge(tilt, framed, delta, ctx) {
@@ -155,7 +155,7 @@ export const bodyCameraArm: ClimbRow<'body'> = {
     if (
       nearest === null ||
       nearest.hr >= ctx.tuning.engageHR ||
-      !focusInSubtree(ctx.focusBodyId, nearest.bodyId)
+      !focusInSubtree(focusBodyIdOf(ctx.focus), nearest.bodyId)
     ) {
       return null;
     }
@@ -164,7 +164,7 @@ export const bodyCameraArm: ClimbRow<'body'> = {
     // this band, and without this it flips regime on every frame of the crossing.
     const host = hostOrThrow({ body: nearest.bodyId }, ctx);
     const arm = toBodyArm(parent.pose, ctx.poseBasis, ctx.upBasis, host.id, host.state);
-    return hostedFocusOverHorizon(bodyFixedEyeM(arm), ctx.focusBodyId, host)
+    return hostedFocusOverHorizon(bodyFixedEyeM(arm), focusBodyIdOf(ctx.focus), host)
       ? null
       : { body: nearest.bodyId };
   },
@@ -172,14 +172,15 @@ export const bodyCameraArm: ClimbRow<'body'> = {
   release(framed, ctx) {
     // A focus OUTSIDE this body's subtree releases the arm so follow can take
     // over next frame; one hosted on it — a rover — keeps it (§4.8).
-    if (!focusInSubtree(ctx.focusBodyId, framed.frame.body)) return true;
+    if (!focusInSubtree(focusBodyIdOf(ctx.focus), framed.frame.body)) return true;
     // Unresolved this frame: hold rather than guess — the caller's next frame retries.
     const host = hostOf(framed.frame, ctx);
     if (host === null) return false;
     // ...but only while the arm can SERVE it: nothing moves the camera from
     // inside a body arm (the pin and the follow pair are both inert here), so a
     // hold past the horizon strands a switch between two rovers forever.
-    if (hostedFocusOverHorizon(bodyFixedEyeM(framed.pose), ctx.focusBodyId, host)) return true;
+    if (hostedFocusOverHorizon(bodyFixedEyeM(framed.pose), focusBodyIdOf(ctx.focus), host))
+      return true;
     const world = toWorldArm(
       framed.pose,
       host.state,

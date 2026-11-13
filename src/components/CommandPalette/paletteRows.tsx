@@ -188,4 +188,23 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
       ? EMPTY_ROW_VIEW
       : glyphRowView(m, m.entry.chip && <span className={styles.source}>{m.entry.chip}</span>),
   place: (m) => (m.kind !== 'place' ? EMPTY_ROW_VIEW : glyphRowView(m, EARTH_CHIP)),
+  sky: (m) => {
+    if (m.kind !== 'sky') return EMPTY_ROW_VIEW;
+    const { name, kind } = paletteRowLabel(m);
+    const where =
+      m.spot === 'here'
+        ? 'here'
+        : `${m.spot.body}:${String(m.spot.lonRad)},${String(m.spot.latRad)}`;
+    return {
+      key: `sky:${where}`,
+      testid: `sky-row-${m.place?.id ?? where}`,
+      leading: (
+        <span className={styles.glyph} aria-hidden="true">
+          {name[0] ?? '·'}
+        </span>
+      ),
+      primary: name,
+      secondary: <span className={styles.source}>{kind}</span>,
+    };
+  },
 };

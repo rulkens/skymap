@@ -38,6 +38,9 @@ import { famousGalaxyNamesFor } from '../../famousGalaxies/utils/famousGalaxyNam
 import { cartesianToRaDec } from '../../../../utils/math/cartesianToRaDec';
 import { fetchGalaxyBitmap } from '../../thumbnailAtlas/utils/fetchGalaxyBitmap';
 import { HI_RES_TRIGGER_PX, HI_RES_FADE_BAND_PX } from '../../lod/data/galaxyLodBands';
+import { VIEW_CULL_RADIUS_PER_EXTENT } from '../../lod/data/viewCullRadiusPerExtent';
+import { diskQuadExtentMpc } from '../../lod/utils/diskQuadExtentMpc';
+import { sphereInAnyFrustum } from '../../../../utils/camera/frustum/sphereInAnyFrustum';
 import type { Destroyable } from '../../../../@types/rendering/Destroyable';
 import type { HiResFamousDeps } from '../@types/HiResFamousDeps';
 import type { HiResFamousSubsystem } from '../@types/HiResFamousSubsystem';
@@ -100,7 +103,7 @@ export function createHiResFamousSubsystem(deps: HiResFamousDeps): HiResFamousSu
   function runFrame(input: HiResFamousFrameInput): HiResFamousFrameOutput {
     if (destroyed) return lastOutput;
 
-    const { cam, catalogs, visibleCatalogs, pxPerRad } = input;
+    const { cam, catalogs, visibleCatalogs, pxPerRad, viewPlanes } = input;
 
     byFamousIdx.clear();
 
@@ -150,6 +153,10 @@ export function createHiResFamousSubsystem(deps: HiResFamousDeps): HiResFamousSu
       const px = (dMpcRow / camDist) * pxPerRad;
 
       if (px < HI_RES_TRIGGER_PX) continue;
+      // In view only, with the disk walk's cull sphere: a narrow lens lifts every famous galaxy
+      // in the sky past the gate, and the largest anywhere would take all LAYER_COUNT layers.
+      const cullRadius = diskQuadExtentMpc(dKpcRow) * VIEW_CULL_RADIUS_PER_EXTENT;
+      if (!sphereInAnyFrustum(viewPlanes, -dx, -dy, -dz, cullRadius)) continue;
 
       const key = String(i);
 

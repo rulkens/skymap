@@ -1,0 +1,43 @@
+/*
+ * SkyEntryButton.module.css — places and fades the pill at the bottom centre. The desktop lifts it
+ * above the time bar's row so a narrow window never puts the two side by side; the phone stacks it
+ * above the scale bracket's slot (`--scale-clearance`, from BottomStack).
+ */
+
+.root {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--corner-offset) + var(--time-toolbar-height) + var(--space-3));
+  z-index: 10;
+  display: flex;
+  max-width: calc(100vw - 2 * var(--corner-offset));
+  /* The scale bar's font, so `--scale-bar-width`'s ch below measures its glyphs. */
+  font: var(--font-size-md) / var(--line-height-tight) var(--font-family-mono);
+  pointer-events: none;
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: opacity var(--duration-base) var(--ease-standard);
+}
+
+/* Too narrow to centre clear of the left stack: centre on the band between it and the scale bar. */
+@media (min-width: 769px) and (max-width: 903px) {
+  .root {
+    left: calc((100vw + var(--panel-width) - var(--scale-bar-width)) / 2);
+    max-width: calc(100vw - var(--panel-width) - var(--scale-bar-width) - 4 * var(--corner-offset));
+  }
+}
+
+.phone {
+  bottom: calc(var(--bottom-stack-height) + var(--sheet-lift) + var(--scale-clearance));
+  z-index: var(--z-bottom-stack);
+}
+
+.visible {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root {
+    transition: none;
+  }
+}

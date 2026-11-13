@@ -27,3 +27,9 @@ Open questions for its brainstorm:
 - How to pick wavelengths and blend several surveys, and how a survey composes with the measured
   starfield and the Milky Way layer, so stars are not counted twice.
 - Tile LOD planning against the narrow-lens screen-space load sky mode's perf pass measures.
+
+**Narrow-lens detail (2026-11-10, owner: "backlog all").** The sky lens now reaches 1′, and three things run
+out of data first: the star field empties below about 0.3° (the Gaia cut is G < 14, ~40 stars/deg²; 1′ wants
+~10⁴/deg², G ≈ 19–20, ~530M stars and an out-of-core bake), famous galaxies blur below about 30′ (every
+hi-res image is 1024² of the whole galaxy; M31's core is a flat wash at 5′), and the Moon. A DSS2 or PanSTARRS
+HiPS layer for narrow fields would cover the stars and the galaxy cores at once; the Moon has surface tiles (#1120).

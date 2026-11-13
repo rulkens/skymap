@@ -7,4 +7,6 @@ export type HiResFamousFrameInput = {
   readonly catalogs: ReadonlyMap<GalaxyCatalogId, GalaxyCatalog>;
   readonly visibleCatalogs: ReadonlySet<GalaxyCatalogId>;
   readonly pxPerRad: number;
+  /** Each view's six frustum planes about `cam.position` (`frustumPlanesFromViewProj`); empty culls nothing. */
+  readonly viewPlanes: Float32Array;
 };

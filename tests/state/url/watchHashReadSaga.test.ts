@@ -47,6 +47,7 @@ import { clearSelection } from '../../../src/state/selection/selectionSlice';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
 import { arrivalPending } from '../../../src/state/arrival/arrivalSlice';
 import { exitTakeover, takeoverStarted } from '../../../src/state/takeover/takeoverActions';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 import { startTour } from '../../../src/state/tour/tourActions';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 
@@ -162,6 +163,19 @@ describe('watchHashReadSaga', () => {
   it("back to a URL without the running tour's key exits the tour", () => {
     const { store, recorded, emit } = buildHarness('');
     store.dispatch(takeoverStarted({ kind: 'tour', id: 'grandTour' }));
+    recorded.length = 0;
+
+    emit('focus=body-mars');
+
+    expect(recorded).toContainEqual(exitTakeover());
+  });
+
+  it('any hash change ends sky mode, plainly: no hash names it (D13)', () => {
+    const { store, recorded, emit } = buildHarness('');
+    const spot = { body: asSceneBodyId('earth'), lonRad: 0.2, latRad: 0.9 };
+    const { base, fovYRad } = store.getState().camera.intent;
+    const restore = { base, fovYRad, focus: null };
+    store.dispatch(takeoverStarted({ kind: 'sky', spot, restore }));
     recorded.length = 0;
 
     emit('focus=body-mars');

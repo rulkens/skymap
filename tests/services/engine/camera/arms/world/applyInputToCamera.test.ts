@@ -128,7 +128,7 @@ describe('applyInputToCamera — zoom floor at a focused body’s surface', () =
     // zoom-in walks the camera thousands of km under the crust.
     const next = fold(
       { ...makePose(), distance: EARTH_RADIUS_MPC * 4 },
-      { kind: 'zoom', factor: 1 / 1e6, duringGesture: true, cursorPx: null, fresh: false },
+      { kind: 'zoom', factor: 1 / 1e6, duringGesture: true, cursorPx: null },
       EARTH_PIVOT,
     );
 

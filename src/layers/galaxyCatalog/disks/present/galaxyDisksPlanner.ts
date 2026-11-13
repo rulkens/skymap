@@ -67,6 +67,7 @@ export function galaxyDisksPlanner(
           catalogs: runtime.catalogs,
           visibleCatalogs,
           pxPerRad,
+          viewPlanes,
         });
       }
 
