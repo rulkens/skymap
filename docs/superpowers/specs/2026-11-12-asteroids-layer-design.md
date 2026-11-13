@@ -218,7 +218,7 @@ a small table in `points/data/`.
 from 0 at the knee to 1 at Pallas's H 4 (Ceres and Vesta are meshes), up to 2.5× the radius; its peak
 stays the unscaled dot's, so a landmark gains light with its area instead of spreading the same light
 thinner. A row with no H stores 65535, past any knee, so it keeps the base size. `uniform` draws every
-dot at the base radius. The selected dot's radius still wins for its row. *Colour by* `class` (the
+dot at the base radius. *Colour by* `class` (the
 default) is the class tints; `semiMajorAxis` gives the main belt three bands split at the Kirkwood gaps
 (3:1 at 2.5 AU, 5:2 at 2.82 AU): the inner belt warm (S-types dominate), the outer cool (C-types), the
 middle their mix at their mean luminance, all near unit Rec.709 luminance. Banded, not a smooth ramp, so
@@ -246,6 +246,8 @@ one to the body would grow the selection-row contract.
 - **Follow.** A `SelectionKindRow` whose `extractRow` returns the CPU-mirror world position;
   `placeLiveSelection` places it under a `transient:asteroid-<number>` id each frame (generic since #974),
   with `driver.placedEachFrame` and `followsSimClock`.
+- **Look.** Selection uses the shared halo (`BODY_FOCUS` ring) and orbit trail, like satellites and
+  bodies; the selected dot draws like any other of its class.
 - **Reveal.** `selects: ['asteroid']` in `visibility.ts`, so a deep link with the Layer off switches it on
   and arrives (the generic reveal).
 - **Card** (`detailCard` ui row, `type: 'asteroid'`): number and name, class, a, e, i, period, H, distance
@@ -269,7 +271,7 @@ stars' slider). No size knob in Settings.
 
 A dev-only "Asteroid tuning" section in the DebugPanel (owner ruling, the satellites' pattern) moves the
 look live: the "Size by" and "Colour by" dropdowns (§4.5); lift K, floor and cap; dot radius, the
-size knee and max scale, the dot knee and selected-dot radius; the phase-dimming cap; the flux floor as
+size knee and max scale, the dot knee; the phase-dimming cap; the flux floor as
 a limiting V; the thinning budget, its start and full zooms and its gain; one colour row per class and
 one per belt-ramp end (`ASTEROID_BELT_RAMP`). The `points/data/` tables are the defaults its
 slice starts from, and each reaches the compute or the dots by uniform, so no WGSL constant mirrors

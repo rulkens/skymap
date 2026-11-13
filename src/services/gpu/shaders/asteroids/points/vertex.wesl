@@ -36,9 +36,6 @@ const W_EPS: f32 = 0.01;
 // Mid-range in either depth convention: the draw target is depthless, and in the pick every caption
 // stamp (pinned at the near end) out-picks a dot it overlaps.
 const MID_DEPTH: f32 = 0.5;
-// The selected dot's floor peak, enough to saturate the knee; with a gain of 1 / dotKnee lifting its
-// ceiling to the stars' white, a followed dot reads among the stars whatever its flux.
-const SELECTED_MIN_PEAK: f32 = 1.0;
 const MAIN_BELT: u32 = 1u;
 // The Kirkwood gaps at Jupiter's 3:1 and 5:2 resonances, in a (AU): the belt's band seams.
 const MIDDLE_BELT_AU: f32 = 2.5;
@@ -90,25 +87,15 @@ fn vs(@builtin(vertex_index) vid: u32, @builtin(instance_index) slot: u32) -> VS
   if (clear <= 0.0) {
     return out;
   }
-  let selected = d.row == u.selectedRow;
-  let dotPx = u.sizePx * dotScale(d.row);
-  let sizePx = select(dotPx, max(dotPx, u.selectedRadiusPx), selected);
   let corner = triCorner(vid);
-  let offset = expandBillboardScreen(u.cam, centre, sizePx, corner);
+  let offset = expandBillboardScreen(u.cam, centre, u.sizePx * dotScale(d.row), corner);
   let fade = u.classColor[d.cls].w * u.windowFade * clear;
   // The peak keeps the unscaled dot's, so a dot sized by H grows its light with its area: spread
   // over it at the same light, a landmark only blurred into the field.
-  let peakPx = select(u.sizePx, sizePx, selected);
-  var peak = starPeakIntensity(1.0, d.flux * fade, toRefPx(peakPx, u.cam.pxPerRad));
-  let tint = dotTint(d);
-  var rgb = tint * u.thinGain;
-  if (selected) {
-    peak = max(peak, SELECTED_MIN_PEAK * fade);
-    rgb = tint / u.dotKnee;
-  }
+  let peak = starPeakIntensity(1.0, d.flux * fade, toRefPx(u.sizePx, u.cam.pxPerRad));
   out.clip = vec4<f32>(centre.xy + offset, MID_DEPTH * centre.w, centre.w);
   out.corner = corner;
-  out.tint = vec4<f32>(rgb, peak);
+  out.tint = vec4<f32>(dotTint(d) * u.thinGain, peak);
   return out;
 }
 

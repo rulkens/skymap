@@ -20,7 +20,6 @@ export type AsteroidTuning = {
   readonly sizeKneeH: number;
   readonly sizeMaxScale: number;
   readonly dotKnee: number;
-  readonly selectedRadiusPx: number;
   readonly maxPhaseDimMag: number;
   readonly limitingMag: number;
   readonly thinBudget: number;

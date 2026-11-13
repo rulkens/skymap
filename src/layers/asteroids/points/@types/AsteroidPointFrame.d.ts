@@ -20,7 +20,6 @@ export type AsteroidPointFrame = {
   readonly selectedCamRelAu: Readonly<Vec3>;
   /** The tuned dot shape (`ASTEROID_POINT_STYLE`, `ASTEROID_PHOTOMETRY.dotKnee`) and class tints. */
   readonly dotRadiusPx: number;
-  readonly selectedRadiusPx: number;
   readonly dotKnee: number;
   readonly classColors: AsteroidClassColors;
   /** The main belt's tint per Kirkwood band, inner to outer (`asteroidBeltColors`). */

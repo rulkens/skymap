@@ -75,7 +75,6 @@ export function asteroidsPass(runtime: AsteroidsRuntime): ContentPass<'asteroids
               selectedHelio[2] + sunFromCamAu[2],
             ],
       dotRadiusPx: tuning.dotRadiusPx,
-      selectedRadiusPx: tuning.selectedRadiusPx,
       dotKnee: tuning.dotKnee,
       classColors: tuning.colors,
       beltColors: asteroidBeltColors(tuning),

@@ -67,15 +67,6 @@ export const ASTEROID_TUNING_SLIDER_FIELDS: readonly SliderField<AsteroidTuningS
     title: "Ceiling of a dot's peak: lower makes a patch read by dot count",
   },
   {
-    key: 'selectedRadiusPx',
-    label: 'Selected dot',
-    min: 1,
-    max: 20,
-    step: 0.5,
-    format: (v) => `${v.toFixed(1)} px`,
-    title: 'Half-width of the selected or followed dot',
-  },
-  {
     key: 'maxPhaseDimMag',
     label: 'Phase dim cap',
     min: 0,

@@ -40,12 +40,11 @@ export const ASTEROID_UNIFORM_OFFSETS = {
   selectedRow: 172,
   pickBase: 176,
   sizePx: 180,
-  selectedRadiusPx: 184,
-  dotKnee: 188,
-  thinGain: 192,
-  sizeKneeHCenti: 196,
-  sizeFullHCenti: 200,
-  sizeMaxScale: 204,
+  dotKnee: 184,
+  thinGain: 188,
+  sizeKneeHCenti: 192,
+  sizeFullHCenti: 196,
+  sizeMaxScale: 200,
   beltColor: 208,
 } as const;
 export const ASTEROID_UNIFORM_BYTES = 256;
@@ -188,7 +187,6 @@ export function createAsteroidPointRenderer({
     uniformWords[o.selectedRow / 4] = frame.selectedRow;
     u[o.windowFade / 4] = frame.windowFade;
     u[o.sizePx / 4] = sizePx;
-    u[o.selectedRadiusPx / 4] = frame.selectedRadiusPx;
     u[o.dotKnee / 4] = frame.dotKnee;
     u[o.thinGain / 4] = frame.thinGain;
     u[o.sizeKneeHCenti / 4] = asteroidHCenti(frame.sizeKneeH);

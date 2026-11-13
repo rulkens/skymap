@@ -17,7 +17,6 @@ export const initialState: AsteroidTuning = {
   sizeKneeH: S.sizeKneeH,
   sizeMaxScale: S.sizeMaxScale,
   dotKnee: P.dotKnee,
-  selectedRadiusPx: S.selectedRadiusPx,
   maxPhaseDimMag: P.maxPhaseDimMag,
   limitingMag: P.limitingMag,
   ...ASTEROID_THINNING,
