@@ -5,9 +5,9 @@
  * not ordered against `submit` within a frame, so a buffer shared by two draws
  * feeds both the last write. Hence one buffer per downsample level, a SEPARATE
  * per-level set for upsample (both touch levels 1..3 with different texel
- * sizes), one per fold kind, per streak iteration and per veil axis.
- * Only upsample and the folds blend additively (they accumulate onto a level or
- * onto hdr); every other stage is its target's sole producer and overwrites it.
+ * sizes), one per fold kind, per streak iteration, per veil axis and per band draw.
+ * Upsample and the folds blend additively, band's coarse draw subtracts; every
+ * other stage is its target's sole producer and overwrites it.
  */
 
 import vertexCode from '../shaders/bloom/vertex.wesl?static';
@@ -28,6 +28,13 @@ import { BLOOM_LEVELS, FOLD_KINDS, VEIL_SIGMA_TEXELS } from '../../../data/bloom
 
 /** Written to the bright uniform's `u.y`; the shader derives its knee from the threshold and ignores this lane. */
 const BRIGHT_KNEE = 0.5;
+
+// dst − src: band's coarse draw takes the blurred level off the fine one. One
+// call site, so it stays here rather than in `blendStates.ts` (see its header).
+const REVERSE_SUBTRACT_BLEND: GPUBlendState = {
+  color: { srcFactor: 'one', dstFactor: 'one', operation: 'reverse-subtract' },
+  alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'reverse-subtract' },
+};
 
 export function createBloomPyramid(device: GPUDevice, hdrFormat: GPUTextureFormat): BloomPyramid {
   // Linear filtering lands the kernels' sub-texel taps; the default
@@ -53,19 +60,24 @@ export function createBloomPyramid(device: GPUDevice, hdrFormat: GPUTextureForma
     bindGroupLayouts: [bindGroupLayout],
   });
 
-  const vertexModule = createShaderModuleWithDevLog(device, vertexCode, 'bloom.vertex');
+  const moduleOf = (name: string, code: string): GPUShaderModule =>
+    createShaderModuleWithDevLog(device, code, `bloom.${name}`);
+  const vertexModule = moduleOf('vertex', vertexCode);
+  const fragments = {
+    bright: moduleOf('brightFragment', brightFragmentCode),
+    downsample: moduleOf('downsampleFragment', downsampleFragmentCode),
+    upsample: moduleOf('upsampleFragment', upsampleFragmentCode),
+    fold: moduleOf('foldFragment', foldFragmentCode),
+    streak: moduleOf('streakFragment', streakFragmentCode),
+    veil: moduleOf('veilFragment', veilFragmentCode),
+  };
   const pipelineFor = (
     stage: string,
-    fragmentCode: string,
-    additive: boolean,
+    fragmentModule: GPUShaderModule,
+    blend: GPUBlendState | undefined,
   ): GPURenderPipeline => {
-    const fragmentModule = createShaderModuleWithDevLog(
-      device,
-      fragmentCode,
-      `bloom.${stage}Fragment`,
-    );
-    const target: GPUColorTargetState = additive
-      ? { format: hdrFormat, blend: ADDITIVE_BLEND }
+    const target: GPUColorTargetState = blend
+      ? { format: hdrFormat, blend }
       : { format: hdrFormat };
     return device.createRenderPipeline({
       label: `bloomPyramid-${stage}-pipeline`,
@@ -75,12 +87,13 @@ export function createBloomPyramid(device: GPUDevice, hdrFormat: GPUTextureForma
       primitive: { topology: 'triangle-list' },
     });
   };
-  const brightPipeline = pipelineFor('bright', brightFragmentCode, false);
-  const downsamplePipeline = pipelineFor('downsample', downsampleFragmentCode, false);
-  const upsamplePipeline = pipelineFor('upsample', upsampleFragmentCode, true);
-  const foldPipeline = pipelineFor('fold', foldFragmentCode, true);
-  const streakPipeline = pipelineFor('streak', streakFragmentCode, false);
-  const veilPipeline = pipelineFor('veil', veilFragmentCode, false);
+  const brightPipeline = pipelineFor('bright', fragments.bright, undefined);
+  const downsamplePipeline = pipelineFor('downsample', fragments.downsample, undefined);
+  const upsamplePipeline = pipelineFor('upsample', fragments.upsample, ADDITIVE_BLEND);
+  const foldPipeline = pipelineFor('fold', fragments.fold, ADDITIVE_BLEND);
+  const bandPipeline = pipelineFor('band', fragments.upsample, REVERSE_SUBTRACT_BLEND);
+  const streakPipeline = pipelineFor('streak', fragments.streak, undefined);
+  const veilPipeline = pipelineFor('veil', fragments.veil, undefined);
 
   const uniformBuffer = (label: string, size: number): GPUBuffer =>
     device.createBuffer({
@@ -100,6 +113,7 @@ export function createBloomPyramid(device: GPUDevice, hdrFormat: GPUTextureForma
   ) as Record<FoldKind, GPUBuffer>;
   const streakBufs = [0, 1, 2].map((iteration) => uniformBuffer(`streak${iteration}`, 32));
   const veilBufs = { x: uniformBuffer('veil-x', 16), y: uniformBuffer('veil-y', 16) };
+  const bandBufs = { copy: uniformBuffer('band-copy', 16), texel: uniformBuffer('band-texel', 16) };
 
   // The bind group is rebuilt per draw: the source view is a `renderTargets`
   // row recreated on resize, so a cached one would bind a destroyed view.
@@ -144,6 +158,11 @@ export function createBloomPyramid(device: GPUDevice, hdrFormat: GPUTextureForma
     fold(pass, srcView, kind: FoldKind, strength): void {
       draw(pass, foldPipeline, srcView, foldBufs[kind], [strength, 0, 0, 0]);
     },
+    band(pass, fineView, coarseView, coarseTexelSize: Vec2): void {
+      draw(pass, foldPipeline, fineView, bandBufs.copy, [1, 0, 0, 0]);
+      const data = [coarseTexelSize[0], coarseTexelSize[1], 0, 0];
+      draw(pass, bandPipeline, coarseView, bandBufs.texel, data);
+    },
     streak(pass, srcView, iteration, taps: StreakTaps): void {
       const { texel, stride, threshold, falloff, tint } = taps;
       const data = [texel, stride, threshold, falloff, tint, 0, 0, 0];
@@ -163,6 +182,8 @@ export function createBloomPyramid(device: GPUDevice, hdrFormat: GPUTextureForma
         ...streakBufs,
         veilBufs.x,
         veilBufs.y,
+        bandBufs.copy,
+        bandBufs.texel,
       ];
       for (const buf of buffers) buf.destroy();
     },

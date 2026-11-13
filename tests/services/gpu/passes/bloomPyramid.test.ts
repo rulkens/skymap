@@ -7,9 +7,9 @@
  *     per-level uniform buffer, and the two stages use SEPARATE buffers even at
  *     the same level. Collapsing to a shared buffer (the classic mistake) would
  *     make one draw read another's texel size — invisible to tsc, caught here.
- *   - upsample and fold blend additively; bright, downsample, streak and veil
- *     overwrite. Flipping either side would sum successive frames into garbage
- *     or drop the pyramid's accumulation.
+ *   - upsample and fold blend additively, band subtracts; bright, downsample,
+ *     streak and veil overwrite. Flipping either side would sum successive
+ *     frames into garbage or drop the pyramid's accumulation.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { createBloomPyramid } from '../../../../src/services/gpu/passes/bloomPyramid';
@@ -48,26 +48,27 @@ function mockPass() {
 }
 
 /**
- * Run a single draw and return the uniform buffer it WROTE and the buffer it
- * BOUND at binding 2. The anti-race property is that these are the same object
+ * Run a method and return the uniform buffer its `nth` draw WROTE and the buffer
+ * it BOUND at binding 2. The anti-race property is that these are the same object
  * for a draw, and different objects across draws that must not share.
  */
 function drawAndCapture(
   ctx: ReturnType<typeof mockDevice>,
   record: () => void,
+  nth = 0,
 ): { written: unknown; bound: unknown } {
   const beforeWrites = ctx.writes.length;
   const beforeBinds = ctx.bindGroupDescs.length;
   record();
-  const written = ctx.writes[beforeWrites]!.buffer;
-  const desc = ctx.bindGroupDescs[beforeBinds]!;
+  const written = ctx.writes[beforeWrites + nth]!.buffer;
+  const desc = ctx.bindGroupDescs[beforeBinds + nth]!;
   const entries = Array.from(desc.entries) as GPUBindGroupEntry[];
   const bound = (entries.find((e) => e.binding === 2)!.resource as GPUBufferBinding).buffer;
   return { written, bound };
 }
 
 describe('createBloomPyramid', () => {
-  it('upsample and fold blend additively; bright, downsample, streak and veil overwrite', () => {
+  it('upsample and fold blend additively, band reverse-subtracts; bright, downsample, streak and veil overwrite', () => {
     const ctx = mockDevice();
     createBloomPyramid(ctx.device, 'rgba16float');
     const blendOf = (stage: string) =>
@@ -84,6 +85,10 @@ describe('createBloomPyramid', () => {
         alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
       });
     }
+    expect(blendOf('band')).toEqual({
+      color: { srcFactor: 'one', dstFactor: 'one', operation: 'reverse-subtract' },
+      alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'reverse-subtract' },
+    });
   });
 
   it('each draw writes and binds its own per-level uniform buffer', () => {
@@ -106,7 +111,11 @@ describe('createBloomPyramid', () => {
     const veils = (['x', 'y'] as const).map((axis) =>
       drawAndCapture(ctx, () => bloom.veil(pass, view, axis, [0.1, 0.1])),
     );
-    const all = [d1, d2, u3, d3, ...folds, ...streaks, ...veils];
+    // band's copy draw runs the fold pipeline, so it must not reuse a fold's buffer.
+    const bands = [0, 1].map((nth) =>
+      drawAndCapture(ctx, () => bloom.band(pass, view, view, [0.1, 0.1]), nth),
+    );
+    const all = [d1, d2, u3, d3, ...folds, ...streaks, ...veils, ...bands];
 
     // Each draw binds exactly the buffer it wrote — no read of a sibling's write.
     for (const d of all) expect(d.bound).toBe(d.written);

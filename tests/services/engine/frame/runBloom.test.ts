@@ -37,6 +37,7 @@ type PyramidCall = {
   kind?: string;
   iteration?: number;
   axis?: string;
+  coarseId?: string;
 };
 
 function makePyramid() {
@@ -64,6 +65,11 @@ function makePyramid() {
     fold: vi.fn((_pass: GPURenderPassEncoder, srcView: GPUTextureView, kind: string) => {
       calls.push({ method: 'fold', srcId: idOf(srcView), kind });
     }),
+    band: vi.fn(
+      (_pass: GPURenderPassEncoder, fineView: GPUTextureView, coarseView: GPUTextureView) => {
+        calls.push({ method: 'band', srcId: idOf(fineView), coarseId: idOf(coarseView) });
+      },
+    ),
     streak: vi.fn((_pass: GPURenderPassEncoder, srcView: GPUTextureView, iteration: number) => {
       calls.push({ method: 'streak', srcId: idOf(srcView), iteration });
     }),
@@ -164,6 +170,8 @@ const FILM_ON: FilmSettings = {
 
 // bloom0 is 1920/2 px wide in the mock ctx: the level-1 downsample's unsqueezed texel x.
 const BLOOM0_TEXEL_X = 1 / 960;
+// bloom2 is 1920/8 px wide: the band's coarse upsample texel x before the squeeze.
+const BLOOM2_TEXEL_X = 1 / 240;
 
 /** What `bright` and the level-1 downsample received: the cap and the squeeze land here. */
 function brightAndDownsampleArgs(pyramid: BloomPyramid) {
@@ -235,22 +243,27 @@ describe('runBloom', () => {
     expect(texel[0]).toBeCloseTo(BLOOM0_TEXEL_X);
   });
 
-  it('with the look on, streak reads bloom1 after the downsample chain, veil reads bloom4, both folds precede the bloom fold, and the end timestamp rides the last pass', () => {
+  it('with the look on, the streak seeds from the bloom1 − bloom2 band after the downsample chain, veil reads bloom4, both folds precede the bloom fold, and the end timestamp rides the last pass', () => {
     const { pyramid, calls } = makePyramid();
     const { encoder, passDescs } = makeEncoder();
     runBloom(encoder, makeCtx(), makeState(pyramid, FILM_ON), BLOOM_TIMING);
 
     expect(
-      calls.map((c) => [c.method, c.srcId, c.kind ?? c.iteration ?? c.axis ?? c.level]),
+      calls.map((c) => [
+        c.method,
+        c.srcId,
+        c.kind ?? c.iteration ?? c.axis ?? c.level ?? c.coarseId,
+      ]),
     ).toEqual([
       ['bright', 'hdr', undefined],
       ['downsample', 'bloom0', 1],
       ['downsample', 'bloom1', 2],
       ['downsample', 'bloom2', 3],
       ['downsample', 'bloom3', 4],
-      ['streak', 'bloom1', 0],
-      ['streak', 'streak0', 1],
-      ['streak', 'streak1', 2],
+      ['band', 'bloom1', 'bloom2'],
+      ['streak', 'streak0', 0],
+      ['streak', 'streak1', 1],
+      ['streak', 'streak0', 2],
       ['upsample', 'bloom4', 3],
       ['upsample', 'bloom3', 2],
       ['upsample', 'bloom2', 1],
@@ -258,16 +271,19 @@ describe('runBloom', () => {
       ['veil', 'bloom4', 'x'],
       ['veil', 'veil0', 'y'],
       ['fold', 'veil1', 'veil'],
-      ['fold', 'streak0', 'streak'],
+      ['fold', 'streak1', 'streak'],
       ['fold', 'bloom0', 'bloom'],
     ]);
-    // Each pass writes the target the next one reads: streak0 → streak1 → streak0, veil0 → veil1.
-    expect(passDescs.slice(5, 8).map((d) => attachmentOf(d).view.id)).toEqual([
+    // Each pass writes the target the next one reads: band → streak0 → streak1 → streak0 → streak1, veil0 → veil1.
+    expect(passDescs.slice(5, 9).map((d) => attachmentOf(d).view.id)).toEqual([
       'streak0',
       'streak1',
       'streak0',
+      'streak1',
     ]);
-    expect(passDescs.slice(12, 14).map((d) => attachmentOf(d).view.id)).toEqual(['veil0', 'veil1']);
+    expect(passDescs.slice(13, 15).map((d) => attachmentOf(d).view.id)).toEqual(['veil0', 'veil1']);
+    // The band's coarse upsample stretches with the squeeze like the pyramid's own.
+    expect(vi.mocked(pyramid.band).mock.calls[0]![3][0]).toBeCloseTo(BLOOM2_TEXEL_X * 1.5);
     type Tw = { timestampWrites?: GPURenderPassTimestampWrites };
     expect((passDescs.at(-1) as Tw).timestampWrites?.endOfPassWriteIndex).toBe(11);
     for (const desc of passDescs.slice(1, -1)) expect((desc as Tw).timestampWrites).toBeUndefined();
@@ -285,7 +301,9 @@ describe('runBloom', () => {
     const film = { ...FILM_ON, glow: { ...FILM_ON.glow, streakStrength: 0 } };
     runBloom(encoder, makeCtx(), makeState(pyramid, film), NO_TIMING);
 
-    expect(calls.some((c) => c.srcId.startsWith('streak') || c.method === 'streak')).toBe(false);
+    expect(
+      calls.some((c) => c.srcId.startsWith('streak') || ['streak', 'band'].includes(c.method)),
+    ).toBe(false);
   });
 
   it('opens each pass against the level it writes, clearing producers and loading folds', () => {

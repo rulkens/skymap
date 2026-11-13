@@ -5,6 +5,7 @@
 // and green) keeps the core white and disperses the tails toward blue. Taps
 // past the edge read zero, so an edge source does not smear its clamped texel.
 // 'u.threshold' > 0 (iteration 0 only) applies the streak's own soft threshold.
+// The band-pass seed goes negative where the blur outshines the fine level, so taps clamp at 0.
 
 import package::bloom::io::FullscreenOut;
 
@@ -27,6 +28,7 @@ struct StreakUniforms {
 fn tap(uv: vec2<f32>) -> vec3<f32> {
   let inside = all(uv >= vec2<f32>(0.0)) && all(uv <= vec2<f32>(1.0));
   var c = select(vec3<f32>(0.0), textureSampleLevel(tex, samp, uv, 0.0).rgb, inside);
+  c = max(c, vec3<f32>(0.0));
   if (u.threshold > 0.0) {
     let l = max(c.r, max(c.g, c.b));
     c = c * (max(0.0, l - u.threshold) / max(l, 0.0001));

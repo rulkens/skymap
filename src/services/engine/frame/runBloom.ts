@@ -89,14 +89,18 @@ export function runBloom(
     pass.end();
   }
 
-  // Streak reads bloom1 before the upsample folds land on it: the Karis
-  // downsample alone, quarter-res like the streak targets (spec D9). It then
-  // ping-pongs bloom1 → streak0 → streak1 → streak0.
+  // The streak seeds from bloom1 − upsample(bloom2) before the upsample folds
+  // land on either: quarter-res like the streak targets (spec D9), and a
+  // band-pass so a uniform disc cancels and only detail smears (D10). It then
+  // ping-pongs streak0 → streak1 → streak0 → streak1.
   const streakOn = filmStreakOn(film);
   if (streakOn) {
+    const seed = openBloomPass(encoder, ctx, state, 'streak0', 'clear');
+    pyramid.band(seed, viewOf('bloom1'), viewOf('bloom2'), squeezedTexel('bloom2'));
+    seed.end();
     for (const iteration of [0, 1, 2] as const) {
-      const src = iteration === 0 ? 'bloom1' : `streak${iteration - 1}`;
-      const pass = openBloomPass(encoder, ctx, state, `streak${iteration % 2}`, 'clear');
+      const src = `streak${iteration % 2}`;
+      const pass = openBloomPass(encoder, ctx, state, `streak${(iteration + 1) % 2}`, 'clear');
       pyramid.streak(pass, viewOf(src), iteration, {
         texel: bloomSrcTexelSize(ctx, src)[0],
         stride: STREAK_STRIDES[iteration],
@@ -129,7 +133,7 @@ export function runBloom(
 
   if (streakOn) {
     const streakFold = openBloomPass(encoder, ctx, state, 'hdr', 'load');
-    pyramid.fold(streakFold, viewOf('streak0'), 'streak', glow.streakStrength);
+    pyramid.fold(streakFold, viewOf('streak1'), 'streak', glow.streakStrength);
     streakFold.end();
   }
 

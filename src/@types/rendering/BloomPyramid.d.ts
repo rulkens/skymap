@@ -32,10 +32,17 @@ export type BloomPyramid = {
     srcTexelSize: Vec2,
   ): void;
   /**
-   * Adds `kind`'s glow source (bloom0, streak0 or veil1) into the bound hdr
+   * Adds `kind`'s glow source (bloom0, streak1 or veil1) into the bound hdr
    * target, scaled by that kind's `strength` (0 = no glow).
    */
   fold(pass: GPURenderPassEncoder, srcView: GPUTextureView, kind: FoldKind, strength: number): void;
+  /** Band-pass seed for the streak: the fine level minus the upsampled coarse level. */
+  band(
+    pass: GPURenderPassEncoder,
+    fineView: GPUTextureView,
+    coarseView: GPUTextureView,
+    coarseTexelSize: Vec2,
+  ): void;
   /** One anamorphic streak iteration: a horizontal smear, overwriting the target. */
   streak(
     pass: GPURenderPassEncoder,
