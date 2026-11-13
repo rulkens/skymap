@@ -160,13 +160,13 @@ describe('DisplaySection', () => {
       expect(onBloomEnabledChange).toHaveBeenCalledWith(false);
     });
 
-    it('toggles filmEnabled on via the Film look header toggle', () => {
+    it('toggles filmEnabled on via the Film look switch', () => {
       const onFilmEnabledChange = vi.fn<(next: boolean) => void>();
       const { getByRole, getByLabelText } = render(
         createElement(DisplaySection, baseProps({ filmEnabled: false, onFilmEnabledChange })),
       );
       fireEvent.click(getByRole('button', { name: /display/i }));
-      fireEvent.click(getByLabelText(/toggle film look/i));
+      fireEvent.click(getByLabelText(/^film look$/i));
       expect(onFilmEnabledChange).toHaveBeenCalledOnce();
       expect(onFilmEnabledChange).toHaveBeenCalledWith(true);
     });
