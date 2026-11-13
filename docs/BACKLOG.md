@@ -112,6 +112,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Rendering
 
+- [ ] **Cloud bake: date-line join against the swaths** `needs-design` — the 24 h join is cut between the two mosaics only; a swath beside it ghosts (6 Nov) and mid-latitude paths stay straight. → [details](backlog/2026-11-13-cloud-dateline-join.md)
 - [ ] **Cloud bake: fixed transfer curve** `needs-design` — the per-day quantile match forces the same total cloud amount every day. → [details](backlog/2026-11-10-cloud-fixed-transfer-curve.md)
 - [ ] **Earth's ground draws grey-white at night up close** `needs-design` — diagnosed: the surface tiles' Black Marble emissive, painted flat at street level from ~8.6° of Sun altitude down. → [details](backlog/2026-11-06-earth-night-ground-haze.md)
 - [ ] **The swap chain gets linear values with no sRGB encode** `needs-design` — `bgra8unorm` plus no OETF crushes mid-tones ~3×; every look is tuned to it, so fixing it needs its own spec and a re-tune. → [details](backlog/2026-11-06-swap-chain-no-srgb-encode.md)
