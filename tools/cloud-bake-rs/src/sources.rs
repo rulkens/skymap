@@ -19,6 +19,8 @@ const N21_BIAS: f32 = 0.02;
 const N21_BAND: usize = 40;
 const HYBRID_RAMP: f32 = 120.0;
 const SPECK_MAX: usize = 400;
+const DATELINE_BAND: usize = 800; // px (35 deg) west of 180 deg where yesterday's mosaic may take over
+const DATELINE_STRIP: usize = 24; // px (1 deg) west of 180 deg that yesterday's mosaic must take
 
 /// What geofill needs of a source to time-stamp its cells: which VIIRS satellite imaged it (0 = NOAA-20,
 /// 1 = NOAA-21, see `orbit::N21_AFTER_N20`) and, for an orbit, the UTC minutes its swath was imaged within.
@@ -224,6 +226,15 @@ pub fn load_orbits(slots: &SlotPieces, lut: &[f32]) -> Vec<Source> {
         .collect()
 }
 
+/// GIBS renders column 0 (lon -180) of a global mosaic 12-17 grey levels dark, a hairline at the date
+/// line once its two sides match: column 1 stands in for it.
+fn patch_first_column(op: &mut [f32], valid: &mut [bool]) {
+    for r in 0..op.len() / W {
+        op[r * W] = op[r * W + 1];
+        valid[r * W] = valid[r * W + 1];
+    }
+}
+
 /// The GIBS daily mosaics (JPEG), N20 then N21 as its own source; each speck-filled (p2). A mosaic that
 /// did not download is left out; the required N20 one is checked by `fetch::mosaics`, so it leads.
 pub fn load_mosaics(mosaics: &Path, lut: &[f32]) -> Vec<Source> {
@@ -268,6 +279,7 @@ pub fn load_mosaics(mosaics: &Path, lut: &[f32]) -> Vec<Source> {
                     }
                 })
                 .collect();
+            patch_first_column(&mut op, &mut valid);
             let n = fill_specks(&mut op, &mut valid, H);
             eprintln!("    {name}: filled {n} speck px");
             Source {
@@ -282,6 +294,68 @@ pub fn load_mosaics(mosaics: &Path, lut: &[f32]) -> Vec<Source> {
                 gain,
                 clip_lo: None,
             }
+        })
+        .collect()
+}
+
+/// A GIBS daily mosaic is a local-day composite, so west of 180 deg mosaic D shows UTC D+1 ~01:30 beside
+/// UTC D ~01:30 east of it: a straight 24 h join. Yesterday's mosaic there is the same pass as today's
+/// east side, so it is cut in over DATELINE_BAND like a swath join and the 24 h join moves onto a
+/// low-difference path inside the band. Bias and gain are off for that cut: only the seam cost places it.
+pub fn join_dateline(today: Source, yesterday: Source, display: &Interp) -> Source {
+    let keep_cols = |mut s: Source, keep: fn(usize) -> bool| {
+        s.valid
+            .iter_mut()
+            .enumerate()
+            .for_each(|(i, v)| *v &= keep(i % W));
+        Source {
+            bias: 0.0,
+            band: Some(DATELINE_BAND / F),
+            gain: false,
+            clip_lo: None,
+            ..s
+        }
+    };
+    let (name, swath, bias, band, gain) = (
+        today.name.clone(),
+        today.swath,
+        today.bias,
+        today.band,
+        today.gain,
+    );
+    let (mut op, valid, _, _) = crate::composite::join_all(
+        vec![
+            keep_cols(yesterday, |x| x < DATELINE_BAND),
+            keep_cols(today, |x| x >= DATELINE_STRIP),
+        ],
+        display,
+    );
+    op.par_iter_mut().for_each(|x| *x = x.clamp(0.0, 1.0));
+    Source {
+        name,
+        swath,
+        y0: 0,
+        h: H,
+        op,
+        valid,
+        bias,
+        band,
+        gain,
+        clip_lo: None,
+    }
+}
+
+/// Each of today's mosaics joined at the date line with yesterday's of the same name, when there is one.
+pub fn with_yesterday(
+    today: Vec<Source>,
+    mut yesterday: Vec<Source>,
+    display: &Interp,
+) -> Vec<Source> {
+    today
+        .into_iter()
+        .map(|t| match yesterday.iter().position(|y| y.name == t.name) {
+            Some(i) => join_dateline(t, yesterday.swap_remove(i), display),
+            None => t,
         })
         .collect()
 }
@@ -361,6 +435,46 @@ pub fn hybridise(orbits: &mut [Source], mos: &Source) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn mosaic(name: &str, v: f32) -> Source {
+        Source {
+            name: name.into(),
+            swath: Swath {
+                sat: 0,
+                window: None,
+            },
+            y0: 0,
+            h: H,
+            op: vec![v; W * H],
+            valid: vec![true; W * H],
+            bias: MOSAIC_BIAS,
+            band: Some(MOSAIC_BAND),
+            gain: false,
+            clip_lo: None,
+        }
+    }
+
+    #[test]
+    fn yesterday_takes_the_date_line_west_of_180_and_today_keeps_the_rest() {
+        let d = qmatch(&[0.0, 1.0], &[0.0, 1.0], &[true, true]);
+        let j = &with_yesterday(vec![mosaic("m", 0.0)], vec![mosaic("m", 1.0)], &d)[0];
+        let col = |x: usize| (0..H).map(|r| j.op[r * W + x]).sum::<f32>() / H as f32;
+        assert!(col(0) > 0.5, "lon -180 is yesterday's: {}", col(0));
+        assert!(col(W - 1) < 0.5, "lon +180 is today's: {}", col(W - 1));
+        assert!(col(DATELINE_BAND + 1000) < 0.01 && col(W / 2) < 0.01);
+        assert_eq!((j.bias, j.band), (MOSAIC_BIAS, Some(MOSAIC_BAND)));
+    }
+
+    #[test]
+    fn the_dark_first_mosaic_column_takes_its_neighbours_values() {
+        let mut op: Vec<f32> = (0..2 * W).map(|i| (i % W) as f32).collect();
+        let mut valid: Vec<bool> = (0..2 * W).map(|i| i % W != 1).collect();
+        patch_first_column(&mut op, &mut valid);
+        for r in 0..2 {
+            assert_eq!((op[r * W], valid[r * W]), (1.0, false));
+            assert_eq!((op[r * W + 2], valid[r * W + 2]), (2.0, true));
+        }
+    }
 
     #[test]
     fn a_granule_slot_with_every_piece_missing_is_dropped_without_panicking() {
