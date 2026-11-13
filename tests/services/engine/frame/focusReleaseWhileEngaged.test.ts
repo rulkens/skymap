@@ -100,7 +100,7 @@ describe('focus release while engaged (round 10)', () => {
     // Release frame: the fold flipped the regime through its own conversion +
     // commit site — target at the RELEASED body's centre, eye preserved,
     // everything finite at h/R ≈ 0.1.
-    const base = h.store.getState().camera.base;
+    const base = h.store.getState().camera.intent.base;
     expect(base.frame).toBe('absolute');
     expect(base.frame === 'absolute' && base.pose).toBeTruthy();
     const released = base.pose as CameraPose;
@@ -182,7 +182,7 @@ describe('focus release while engaged (round 10)', () => {
     );
 
     h.frame(40); // 640 ms: the 500 ms leg has ended and handed the camera back
-    expect(h.store.getState().camera.clip).toBeNull();
+    expect(h.store.getState().camera.intent.clip).toBeNull();
     h.frame(60);
 
     const framed = h.state.cameraRuntime.register.pose;
@@ -192,10 +192,10 @@ describe('focus release while engaged (round 10)', () => {
 
 /** The distinct regimes `camera.base` passed through, in order. */
 function regimeTrace(h: ReturnType<typeof makeCameraSimHarness>, frames: number): string[] {
-  const seq: string[] = [frameKey(h.store.getState().camera.base.frame)];
+  const seq: string[] = [frameKey(h.store.getState().camera.intent.base.frame)];
   for (let i = 0; i < frames; i += 1) {
     h.frame();
-    const key = frameKey(h.store.getState().camera.base.frame);
+    const key = frameKey(h.store.getState().camera.intent.base.frame);
     if (seq[seq.length - 1] !== key) seq.push(key);
   }
   return seq;
@@ -266,7 +266,7 @@ describe('focus switch between two rovers on one planet (adverse 5)', () => {
     );
     h.focus('opportunity');
     h.frame(40);
-    expect(frameKey(h.store.getState().camera.base.frame)).toBe('site:opportunity');
+    expect(frameKey(h.store.getState().camera.intent.base.frame)).toBe('site:opportunity');
 
     h.focus('curiosity');
     const trace = regimeTrace(h, 900);
@@ -298,7 +298,7 @@ describe('focus switch between two rovers on one planet (adverse 5)', () => {
     h.focus('mars');
     h.frame(60);
     diveUntilEngaged(h, { body: 'mars' });
-    expect(frameKey(h.store.getState().camera.base.frame)).toBe('body:mars');
+    expect(frameKey(h.store.getState().camera.intent.base.frame)).toBe('body:mars');
 
     h.focus('curiosity');
     const trace = regimeTrace(h, 900);
@@ -329,14 +329,14 @@ describe('focus switch between two rovers on one planet (adverse 5)', () => {
     );
     h.focus('curiosity');
     h.frame(40);
-    expect(frameKey(h.store.getState().camera.base.frame)).toBe('site:curiosity');
+    expect(frameKey(h.store.getState().camera.intent.base.frame)).toBe('site:curiosity');
 
     // Zoom out past `siteDisengageR` and stop: the Mars arm takes it and KEEPS
     // it — the rover is still under the eye.
     for (let i = 0; i < 40; i += 1) h.wheel(240);
-    expect(frameKey(h.store.getState().camera.base.frame)).toBe('body:mars');
+    expect(frameKey(h.store.getState().camera.intent.base.frame)).toBe('body:mars');
     h.frame(120);
-    expect(frameKey(h.store.getState().camera.base.frame)).toBe('body:mars');
+    expect(frameKey(h.store.getState().camera.intent.base.frame)).toBe('body:mars');
   });
 });
 
@@ -366,7 +366,7 @@ describe('focusing the host from a rover site (adverse 10)', () => {
     seedAtCuriosity(h, 60);
     h.focus('curiosity');
     h.frame(40);
-    expect(frameKey(h.store.getState().camera.base.frame)).toBe('site:curiosity');
+    expect(frameKey(h.store.getState().camera.intent.base.frame)).toBe('site:curiosity');
     return h;
   }
 
@@ -403,7 +403,7 @@ describe('focusing the host from a rover site (adverse 10)', () => {
     h.focus('curiosity');
     h.frame(2); // the approach owns the frame and has captured its target
     expect(h.state.cameraRuntime.register.winner).toBe('followApproach');
-    expect(frameKey(h.store.getState().camera.base.frame)).toBe('body:mars');
+    expect(frameKey(h.store.getState().camera.intent.base.frame)).toBe('body:mars');
 
     h.notch(240, [70, 30]);
     h.frame(60); // past the Eased duration — the approach saturates at its target
@@ -446,7 +446,7 @@ describe('focusing the host from a rover site (adverse 10)', () => {
       worstOffAxisRad = Math.max(worstOffAxisRad, Math.acos(Math.max(-1, Math.min(1, dot))));
       worstRangeErr = Math.max(worstRangeErr, Math.abs(metresBetween(eye, rover) - 10.73));
     }
-    expect(frameKey(h.store.getState().camera.base.frame)).toBe('site:curiosity');
+    expect(frameKey(h.store.getState().camera.intent.base.frame)).toBe('site:curiosity');
     // Half a degree of the 60° lens: the rover stays on the crosshair.
     expect(worstOffAxisRad).toBeLessThan(0.009);
     expect(worstRangeErr).toBeLessThan(0.2);

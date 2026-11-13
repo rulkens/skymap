@@ -1,7 +1,7 @@
 /**
  * CameraStateSectionContainer — engine-handle boundary for the "Camera" debug
  * readout. `cameraDebug` is engine-only data (the store read for
- * `camera.base.frame` happens inside the getter), so nothing is selected off Redux.
+ * `camera.intent.base.frame` happens inside the getter), so nothing is selected off Redux.
  */
 
 import { memo, type ReactElement } from 'react';

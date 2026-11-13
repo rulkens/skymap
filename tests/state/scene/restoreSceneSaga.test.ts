@@ -122,7 +122,7 @@ describe('restoreSceneSaga', () => {
     sagaMiddleware.run(restoreSceneSaga, makeSnapshot());
     await flush();
 
-    expect(store.getState().camera.fovYRad).toBe(CAPTURED_FOV_Y_RAD);
+    expect(store.getState().camera.intent.fovYRad).toBe(CAPTURED_FOV_Y_RAD);
   });
 
   it('reverts selection.focus onto the store', async () => {

@@ -15,7 +15,7 @@
  *      watcher's one job, the same as for every other settings write.
  *      `orientation` lives on `SceneSnapshot` (not inside `settings`), so it
  *      cannot ride this dispatch even by accident — see `SceneSnapshot`'s
- *      header. A raw write to `orientation` would leave `camera.base`
+ *      header. A raw write to `orientation` would leave `camera.intent.base`
  *      expressed in the OLD basis while the pole flips under it — the same
  *      "eye jumps" landmine the LOOP re-expresses `base` to avoid on every
  *      orientation switch (`stepCameraRuntime`).
@@ -23,7 +23,7 @@
  *   2. `put(requestOrientationChange(orientation))` — the captured pre-tour
  *      frame restores through the SAME request path an interactive switch
  *      uses: `watchOrientationChangeSaga` rolls the up-basis, and the LOOP
- *      re-expresses `camera.base` into the frame the same way it does for
+ *      re-expresses `camera.intent.base` into the frame the same way it does for
  *      any other orientation switch, rather than snapping only the setting.
  *
  *   3. `put(setFovYRad(fovYRad))` — the viewer's lens: camera state, so not a cluster.

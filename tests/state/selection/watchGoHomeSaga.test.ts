@@ -102,7 +102,7 @@ describe('watchGoHomeSaga', () => {
     expect(selection.select).toEqual(EARTH_REF);
     expect(selection.focus).toEqual(EARTH_REF);
 
-    const tween = store.getState()[cameraRoute].tween;
+    const tween = store.getState()[cameraRoute].intent.tween;
     expect(tween).not.toBeNull();
     expect(tween!.from).toEqual(FROM);
 
@@ -125,7 +125,7 @@ describe('watchGoHomeSaga', () => {
     store.dispatch(goHome());
     await flush();
 
-    expect(store.getState()[cameraRoute].tween).toBeNull();
+    expect(store.getState()[cameraRoute].intent.tween).toBeNull();
     expect(store.getState()[selectionRoute].select).toBeNull();
     expect(store.getState()[selectionRoute].focus).toBeNull();
   });
@@ -136,7 +136,7 @@ describe('watchGoHomeSaga', () => {
     store.dispatch(goHome());
     await flush();
 
-    expect(store.getState()[cameraRoute].tween!.motion).toEqual({
+    expect(store.getState()[cameraRoute].intent.tween!.motion).toEqual({
       style: 'eased',
       durationMs: 1234,
       ease: 'easeOutCubic',

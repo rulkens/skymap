@@ -17,6 +17,6 @@ export type CameraEpochs = {
   readonly autoRotate: Epoch<FramedCameraPose>;
   readonly follow: Epoch<SelectionRowBase>;
   readonly clip: Epoch<NonNullable<CameraIntentState['clip']>>;
-  /** Ref: the `camera.aim` token, which every re-aim replaces. */
+  /** Ref: the `camera.intent.aim` token, which every re-aim replaces. */
   readonly aim: Epoch<CameraAim>;
 };

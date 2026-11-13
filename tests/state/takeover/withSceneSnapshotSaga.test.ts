@@ -46,11 +46,11 @@ describe('withSceneSnapshotSaga', () => {
       yield* withSceneSnapshotSaga(waitingBody);
     });
     await flush();
-    expect(store.getState().camera.fovYRad).toBe(DEFAULT_FOV_Y_RAD);
+    expect(store.getState().camera.intent.fovYRad).toBe(DEFAULT_FOV_Y_RAD);
 
     store.dispatch(exitTakeover());
     await flush();
-    expect(store.getState().camera.fovYRad).toBe(narrowed);
+    expect(store.getState().camera.intent.fovYRad).toBe(narrowed);
   });
 
   it("restores the body's settings changes on exit", async () => {

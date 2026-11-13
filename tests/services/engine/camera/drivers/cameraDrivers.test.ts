@@ -101,9 +101,9 @@ const REGISTER_POSE = absoluteArm({ target: [5, 5, 5], yaw: 0.7, pitch: -0.1, di
 /** The row `winnerEpoch` names started at `nowMs`, as the step's advance leaves it. */
 function epochsAt(s: RootState, winnerEpoch: EpochRow, nowMs: number) {
   return advanceEpochs(UNSTARTED_EPOCHS, {
-    intent: s.camera,
+    intent: s.camera.intent,
     focus: s.selectionRows.focus,
-    clip: advanceEpoch(UNSTARTED_EPOCHS.clip, s.camera.clip, nowMs),
+    clip: advanceEpoch(UNSTARTED_EPOCHS.clip, s.camera.intent.clip, nowMs),
     winnerEpoch,
     nowMs,
   });
@@ -454,7 +454,10 @@ describe("the winner's elapsed", () => {
 
     // Force resting to win by ensuring default state has autoRotate inactive.
     // (DEFAULT_AUTO_ROTATE is false, so resting wins by default.)
-    const poseSpy = vi.fn<CameraDriver['pose']>(() => ({ pose: s.camera.base, memory: null }));
+    const poseSpy = vi.fn<CameraDriver['pose']>(() => ({
+      pose: s.camera.intent.base,
+      memory: null,
+    }));
     const patchedDrivers = drivers.map((d) => (d.id === 'resting' ? { ...d, pose: poseSpy } : d));
 
     runAtWinner(patchedDrivers, s, UNSTARTED_EPOCHS, 9999);
@@ -802,7 +805,7 @@ describe('CAMERA_DRIVERS — the follow rows', () => {
     expect(memory!.distanceTarget).toBe(NOTCH_TARGET);
     expect(worldArmOf(pose).distance).toBeCloseTo(NOTCH_TARGET, 9);
     // The base is untouched — the notch never went near it.
-    expect(worldArmOf(store.getState().camera.base).distance).toBe(BASE_DISTANCE);
+    expect(worldArmOf(store.getState().camera.intent.base).distance).toBe(BASE_DISTANCE);
   });
 });
 

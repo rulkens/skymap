@@ -225,8 +225,9 @@ and 16 `CameraState` type references.
 
 ## 7. Ground preparation
 
-**P1, one prep commit: nest the camera route.** The missing joint is that the route has a single
-reducer, so a second half could only arrive as a wake exception. P1 changes no behaviour:
+**P1, one prep commit: nest the camera route.** _Done in #TBD (`refactor/camera-intent-slice`)._
+The missing joint is that the route has a single reducer, so a second half could only arrive as
+a wake exception. P1 changes no behaviour:
 1. `npm run move-files -- src/state/camera/cameraSlice.ts src/state/camera/cameraIntentSlice.ts`
    (it drags `tests/state/camera/cameraSlice.test.ts`).
 2. `npm run move-files -- src/@types/camera/orbitCamera/CameraState.d.ts src/@types/camera/orbitCamera/CameraIntentState.d.ts`,

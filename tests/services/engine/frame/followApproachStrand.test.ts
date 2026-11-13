@@ -37,7 +37,7 @@ const SATURN = deriveBodyStates(CONST_J2000).get(asSceneBodyId('saturn'))! as Bo
 
 /** Turn the spin pill on at the store's own rate (the UI's only lever). */
 function spinOn(h: CameraSimHarness): void {
-  const { rate } = h.store.getState().camera.autoRotate;
+  const { rate } = h.store.getState().camera.intent.autoRotate;
   h.store.dispatch(setAutoRotate({ active: true, rate }));
 }
 

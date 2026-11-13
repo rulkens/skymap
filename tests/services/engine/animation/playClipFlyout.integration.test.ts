@@ -165,7 +165,7 @@ describe('playClip — flyout seam', () => {
     // --- ASSERTION 3: camera.base is committed to the saturated final pose ---
     // The commit-on-edge bake must write the saturated distance (≈ 29 500),
     // not a one-frame-stale pre-saturation pose.
-    const base = worldArmOf(store.getState().camera.base);
+    const base = worldArmOf(store.getState().camera.intent.base);
     // The log-dolly lands at exactly dollyTo's `to` value at t=durationSec.
     // Use a loose precision (toBeCloseTo with 0 decimal places) — floating-point
     // log-interpolation is very close but not necessarily a round integer.

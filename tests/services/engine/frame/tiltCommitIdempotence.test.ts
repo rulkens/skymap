@@ -139,7 +139,7 @@ describe('commit → re-derive idempotence (R12-1)', () => {
     h.frame();
 
     // The committed base is centre-looking — the projection stayed render-side.
-    const base = h.store.getState().camera.base;
+    const base = h.store.getState().camera.intent.base;
     expect(base.frame).toBe('absolute');
     if (base.frame !== 'absolute') return;
     const baseEye = eyeMpcOf(base.pose, B);

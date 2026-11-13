@@ -51,7 +51,7 @@ function exitMission(home: 'earth' | null, successor: DriverId) {
   expect(h.state.cameraRuntime.register.winner).toBe(successor);
   const edgeEye = displayedEye(h.state);
   const step = Math.hypot(...edgeEye.map((v, i) => v - lastEye[i]!));
-  return { step: step / shown.pose.distance, base: h.store.getState().camera.base, shown };
+  return { step: step / shown.pose.distance, base: h.store.getState().camera.intent.base, shown };
 }
 
 describe('exiting a mission', () => {

@@ -57,9 +57,9 @@ export function missionPose(
 ): DriverOutput<MissionCameraMemory> {
   // The exhibit's snapshot always sets the craft before this row can win.
   const craftId = ctx.state.settings.missions.craft;
-  if (craftId === null) return { pose: ctx.state.camera.base, memory: mem };
+  if (craftId === null) return { pose: ctx.state.camera.intent.base, memory: mem };
   const mission: MissionCourse = { craftId, stops: stopsOf(data, craftId), cruise: data.cruise };
-  const token = ctx.state.camera.aim;
+  const token = ctx.state.camera.intent.aim;
   const now = ctx.elapsedMs;
   const { fovYRad, aspect } = ctx.projection;
   const positionOf = (id: string) =>
@@ -77,7 +77,7 @@ export function missionPose(
     ctx.poseBasis,
     prev?.cruise ?? null,
   );
-  if (frame === null) return { pose: ctx.state.camera.base, memory: mem };
+  if (frame === null) return { pose: ctx.state.camera.intent.base, memory: mem };
 
   // A new view (another framed stop, or flyby to cruise and back) starts on its auto view; the
   // ease into it below departs from what the visitor saw, so the reset does not snap.

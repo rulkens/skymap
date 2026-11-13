@@ -56,7 +56,7 @@ export function createClipPlayer(deps: ClipPlayerDeps): ClipPlayer {
   let compileCache: CompileCache | null = null;
 
   // The `playClip` Promise resolver. Not cleared by `resetState`: it must fire
-  // AFTER `clipEnded()` lands so the awaiter sees `camera.clip === null`.
+  // AFTER `clipEnded()` lands so the awaiter sees `camera.intent.clip === null`.
   let endResolver: (() => void) | null = null;
 
   function getCompiled(data: ClipData): CompiledClip {
@@ -103,10 +103,10 @@ export function createClipPlayer(deps: ClipPlayerDeps): ClipPlayer {
       fireEndResolver();
       // Advanced against the POST-dispatch clip: the resolver may start the
       // next clip synchronously, and the driver reads this epoch this frame.
-      return { clipEpoch: advanceEpoch(clipEpoch, store.getState().camera.clip, nowMs) };
+      return { clipEpoch: advanceEpoch(clipEpoch, store.getState().camera.intent.clip, nowMs) };
     }
 
-    const clip = store.getState().camera.clip;
+    const clip = store.getState().camera.intent.clip;
     const advanced = advanceEpoch(clipEpoch, clip, nowMs);
     if (clip === null) return { clipEpoch: advanced };
 

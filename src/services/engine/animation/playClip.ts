@@ -30,7 +30,7 @@ export function createPlayClip(
 
   return function playClip(clip: ClipData, frame: OrientationFrameId): Promise<void> {
     // Fresh object every call, even when `start` was already concrete: the clip
-    // epoch resets on `camera.clip` reference identity.
+    // epoch resets on `camera.intent.clip` reference identity.
     const resolvedClip = resolveClipStart(clip, getLivePose());
 
     // Resolver registered before clipStarted dispatches, so a zero-duration clip

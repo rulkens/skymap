@@ -30,7 +30,7 @@ describe('watchZoomLimitSaga', () => {
   it("an out push plays its lift under the store's orientation", () => {
     const store = build();
     store.dispatch(zoomLimitPushed({ edge: 'out', lift: LIFT }));
-    expect(store.getState().camera.clip).toEqual({ data: LIFT, frame: 'galactic' });
+    expect(store.getState().camera.intent.clip).toEqual({ data: LIFT, frame: 'galactic' });
   });
 
   it('a floor push starts nothing', () => {
@@ -42,6 +42,6 @@ describe('watchZoomLimitSaga', () => {
         pointLocalM: [6_371_000, 0, 0],
       }),
     );
-    expect(store.getState().camera.clip).toBeNull();
+    expect(store.getState().camera.intent.clip).toBeNull();
   });
 });

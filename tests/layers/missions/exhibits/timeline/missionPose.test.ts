@@ -75,7 +75,7 @@ function storeOf(mission: Mission) {
 
 /** The row's slot holding the mission's offsets on the store's aim token, no view yet. */
 function ownOf(store: ReturnType<typeof storeOf>, mission: Mission): MissionCameraMemory {
-  return { aim: store.getState().camera.aim, offsets: mission.offsets, view: null };
+  return { aim: store.getState().camera.intent.aim, offsets: mission.offsets, view: null };
 }
 
 /** A ctx carrying the row's first-frame slot along, so a spread copy keeps it. */

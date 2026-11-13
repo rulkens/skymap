@@ -67,7 +67,7 @@ try {
         await openSiteShot(page, base!, shot);
         const start = await page.evaluate(() => {
           const state = (window as unknown as SkymapWindow).__skymap!.getState();
-          return { camera: state.camera.base, simDays: state.time.anchor.simDays };
+          return { camera: state.camera.intent.base, simDays: state.time.anchor.simDays };
         });
         // Frame 0 is the still; the frame after the last would be frame 0 again, which is the seam.
         // A live film is recorded a seam longer and blended afterwards, as nothing brings its scene back.

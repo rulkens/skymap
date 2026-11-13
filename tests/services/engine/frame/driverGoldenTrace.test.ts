@@ -178,7 +178,7 @@ function runScript(): Trace {
   expect(readFollowMemory(state).distanceTarget).not.toBe(targetBeforeNotch);
   steps(24, 'follow settle');
 
-  const { rate } = store.getState().camera.autoRotate;
+  const { rate } = store.getState().camera.intent.autoRotate;
   store.dispatch(setAutoRotate({ active: true, rate }));
   // The approach outranks the pill until it saturates (R14-3), which lands inside
   // this leg; the pill authors from the next frame on. Same frame clock as before.
@@ -202,7 +202,7 @@ function runScript(): Trace {
   steps(TWEEN_MS / HARNESS_FRAME_MS + 4, 'tween');
   const tweenSteps = trace.slice(tweenLeg);
   expect(tweenSteps.some((s) => s.winner === 'tween')).toBe(true);
-  expect(tweenSteps.some((s) => s.actions.includes('camera/cancelCameraTween'))).toBe(true);
+  expect(tweenSteps.some((s) => s.actions.includes('camera/intent/cancelCameraTween'))).toBe(true);
 
   store.dispatch(
     clipStarted({

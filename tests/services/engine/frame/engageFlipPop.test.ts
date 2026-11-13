@@ -86,7 +86,7 @@ describe('engage-flip pop (round 8)', () => {
 
       const samples: FrameSample[] = [];
       driveWheelEvents(h, events, endT, {
-        onFrame: () => samples.push(sampleOf(h.state, h.store.getState().camera.tuning)),
+        onFrame: () => samples.push(sampleOf(h.state, h.store.getState().camera.intent.tuning)),
       });
 
       const flipIdx = samples.findIndex(

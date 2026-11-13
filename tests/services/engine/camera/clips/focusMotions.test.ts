@@ -118,7 +118,7 @@ describe('focusMotions', () => {
     const h = makeCameraSimHarness({ focusBody: null });
     h.focus('mars');
     const row = h.store.getState().selectionRows.focus!;
-    const from = h.store.getState().camera.base.pose as CameraPose;
+    const from = h.store.getState().camera.intent.base.pose as CameraPose;
     const to = framingPose(row, FOV, from);
     h.store.dispatch(startCameraTween(geodesicMove(from, to)));
     // Mars drifts under the flight, so the hand-off frame must catch up to it.

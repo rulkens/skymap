@@ -216,7 +216,7 @@ describe('webShowcase dive invariants', () => {
     // Activate a clip so camera.clip !== null.
     const beat2Clip = webShowcase.beats[1]!.enterClip!;
     store.dispatch(clipStarted({ data: beat2Clip, frame: DEFAULT_ORIENTATION }));
-    expect(store.getState().camera.clip).not.toBeNull(); // guard: clip is active
+    expect(store.getState().camera.intent.clip).not.toBeNull(); // guard: clip is active
 
     // Dispatch a focus update — this is what an in-clip focus() cue would
     // trigger when applySceneEffect processes it during playback.
@@ -226,6 +226,6 @@ describe('webShowcase dive invariants', () => {
     await flush();
 
     // tween must remain null — suspendDuringClip short-circuited the worker.
-    expect(store.getState().camera.tween).toBeNull();
+    expect(store.getState().camera.intent.tween).toBeNull();
   });
 });

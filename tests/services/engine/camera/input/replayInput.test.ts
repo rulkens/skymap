@@ -80,7 +80,7 @@ function ctxOf(
       viewportPx: [1000, 1000] as const,
       frustum: symmetricFrustum(Math.PI / 3, 1),
       fovYRad: Math.PI / 3,
-      tuning: store.getState().camera.tuning,
+      tuning: store.getState().camera.intent.tuning,
     },
     nowMs: overrides.nowMs ?? 0,
     rootState: store.getState(),
@@ -164,7 +164,7 @@ describe('replayInput', () => {
       commitCameraPose(absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 })),
     );
     const prev = {
-      register: store.getState().camera.base,
+      register: store.getState().camera.intent.base,
       gesture: EMPTY_SURFACE_GESTURE_MEMORY,
       tilt: EMPTY_TILT_MEMORY,
       follow: null,
@@ -184,7 +184,7 @@ describe('replayInput', () => {
     const commits = next.actions.map((a) => worldArmOf(a.payload as FramedCameraPose).distance);
     expect(commits).toEqual([150, 225]);
     // The store never saw either commit — the fold is local.
-    expect(worldArmOf(store.getState().camera.base).distance).toBe(100);
+    expect(worldArmOf(store.getState().camera.intent.base).distance).toBe(100);
     const register = worldArmOf(next.register);
     expect(register.distance).toBe(225);
     expect(register.yaw).toBeCloseTo(-50 * 0.005, 6);
@@ -212,8 +212,8 @@ describe('replayInput', () => {
       ctxOf(store),
     );
     expect(body.actions.map((a) => a.type)).toEqual([
-      'camera/commitCameraPose',
-      'camera/commitCameraPose',
+      'camera/intent/commitCameraPose',
+      'camera/intent/commitCameraPose',
     ]);
     expect(body.actions[0]!.payload).not.toBe(arm);
     expect(body.actions[1]!.payload).toBe(body.register);
@@ -249,7 +249,7 @@ describe('replayInput', () => {
       [atRestZoom(Math.exp(0.1))],
       ctxOf(followStore, { winnerLastFrame: 'followHold' }),
     );
-    expect(ride.actions.map((a) => a.type)).toEqual(['camera/commitCameraPose']);
+    expect(ride.actions.map((a) => a.type)).toEqual(['camera/intent/commitCameraPose']);
     const committed = worldArmOf(ride.actions[0]!.payload as FramedCameraPose);
     expect(committed.distance).toBe(2.5 * EARTH_RADIUS_MPC);
     // Stepped toward the pole, never past the 0.1 cap.
@@ -302,7 +302,7 @@ describe('replayInput', () => {
     store.dispatch(setFovYRad(degToRad(LENS_MAX_DEG)));
     const next = replayInput(
       {
-        register: store.getState().camera.base,
+        register: store.getState().camera.intent.base,
         gesture: null,
         tilt: EMPTY_TILT_MEMORY,
         follow: null,
@@ -328,7 +328,7 @@ describe('replayInput', () => {
       pose: { azimuthRad: 1, altitudeRad: 0.3 },
     };
     store.dispatch(commitCameraPose(sky));
-    const lens = store.getState().camera.fovYRad;
+    const lens = store.getState().camera.intent.fovYRad;
 
     const next = replayInput(
       {
@@ -480,7 +480,7 @@ describe('replayInput', () => {
     // by a spin nobody renders.
     const store = makeStore();
     store.dispatch(setAutoRotate({ active: false, rate: 0.01 }));
-    const base = store.getState().camera.base;
+    const base = store.getState().camera.intent.base;
     const yawBefore = worldArmOf(base).yaw;
 
     const next = replayInput(
@@ -601,7 +601,7 @@ describe('replayInput', () => {
     // the focus-edge drop): the notch takes the plain base-commit path rather
     // than resolving against a target the driver never captured.
     const store = makeStore();
-    const base = store.getState().camera.base;
+    const base = store.getState().camera.intent.base;
 
     const next = replayInput(
       {
@@ -683,7 +683,7 @@ describe('replayInput', () => {
     const startHR = DEFAULT_CAMERA_TUNING.engageHR * 0.5;
     const startDist = EARTH_RADIUS_MPC * (1 + startHR);
     store.dispatch(commitCameraPose(poseAt(startDist, -0.26)));
-    const rollOfBase = (): number => worldArmOf(store.getState().camera.base).roll ?? 0;
+    const rollOfBase = (): number => worldArmOf(store.getState().camera.intent.base).roll ?? 0;
 
     let target = startDist;
     let register = poseAt(startDist, -0.26);

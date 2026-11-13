@@ -11,9 +11,9 @@ describe('cameraIntentSlice answers input', () => {
   it('inputGestureStarted clears the tween', () => {
     const store = configureStore({ reducer: rootReducer });
     store.dispatch(startCameraTween({} as CameraTweenDescriptor));
-    expect(store.getState()[cameraRoute].tween).not.toBeNull();
+    expect(store.getState()[cameraRoute].intent.tween).not.toBeNull();
 
     store.dispatch(inputGestureStarted({ source: 'canvas', intent: 'orbit' }));
-    expect(store.getState()[cameraRoute].tween).toBeNull();
+    expect(store.getState()[cameraRoute].intent.tween).toBeNull();
   });
 });

@@ -5,7 +5,8 @@
  * IS the regime, so nothing stores a separate flag. The per-frame pose is DERIVED
  * from `base` by the CameraDriver table (`pickWinner`) — never written
  * directly by renderers. The `tween`, `clip` and `frameTween` descriptors are
- * wall-clock-free, so they stay valid across serialisation and replay.
+ * wall-clock-free, so they stay valid across serialisation and replay. Mounted at
+ * `camera.intent`, so its action types read `camera/intent/<name>`: the type names the path.
  */
 
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
@@ -46,7 +47,7 @@ const initialState: CameraIntentState = {
 };
 
 const cameraIntentSlice = createSlice({
-  name: 'camera',
+  name: 'camera/intent',
   initialState,
   reducers: {
     // INVARIANT (R12b-3): every committed ABSOLUTE pose's orbit terms are

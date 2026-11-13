@@ -12,7 +12,7 @@ import type { CameraIntentState } from '../../@types/camera/orbitCamera/CameraIn
 import type { CameraTuning } from '../../@types/camera/orbitCamera/CameraTuning';
 import type { FramedCameraPose } from '../../@types/camera/pose/FramedCameraPose';
 
-const selectCameraIntent = (state: RootState): CameraIntentState => state[cameraRoute];
+const selectCameraIntent = (state: RootState): CameraIntentState => state[cameraRoute].intent;
 
 export const selectCameraTuning = (state: RootState): CameraTuning =>
   selectCameraIntent(state).tuning;

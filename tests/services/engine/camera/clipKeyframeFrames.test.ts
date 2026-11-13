@@ -353,7 +353,7 @@ describe('frame-tagged keyframes', () => {
     expect(pose.frame).toEqual(EARTH);
     // The same LookAt decode the evaluator's channels imply — body-fixed metres,
     // with no orientation re-encode applied to them on the way out.
-    const channels = evaluateFramedClip(data, 2, opts(state.camera.clip!)).channels;
+    const channels = evaluateFramedClip(data, 2, opts(state.camera.intent.clip!)).channels;
     expect(pose.pose).toEqual(decodeBodyFixedChannels(channels, asSceneBodyId('earth')));
   });
 });
