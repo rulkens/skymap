@@ -112,7 +112,7 @@ describe('bodyRowSlabs', () => {
     const slabs = bodyRowSlabs(ctx);
     expect(slabs.lens).toEqual([]);
 
-    const tone: ToneMap = { exposure: 1.5, curve: 4, hdrKnee: 0, hdrHeadroom: 0 };
+    const tone: ToneMap = { exposure: 1.5, curve: 4, hdrKnee: 0, hdrHeadroom: 0, film: null };
     // The starCatalog and body Layers' rows join core's in the real program
     // (`createLayers`) — folded in here too, or the `foreground:0` step this
     // test locates via its name comes back empty and drops.

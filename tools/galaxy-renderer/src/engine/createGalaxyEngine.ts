@@ -359,7 +359,7 @@ export async function createGalaxyEngine(
       // Both HDR fields zero: the tool configures an SDR swap chain, where
       // spilled over-white energy would just clamp back to 1.0. The app's own
       // SDR path passes the same zeros — see ToneMap's field docs.
-      { exposure: render.exposure, curve: render.tonemap, hdrKnee: 0, hdrHeadroom: 0 },
+      { exposure: render.exposure, curve: render.tonemap, hdrKnee: 0, hdrHeadroom: 0, film: null },
       format,
     );
     tonePass.end();

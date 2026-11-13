@@ -20,7 +20,7 @@ import type { ContentPass } from '../../../../../src/@types/engine/frame/Content
 import type { ToneMap } from '../../../../../src/@types/rendering/ToneMap';
 import type { BlackHolesRuntime } from '../../../../../src/layers/blackHoles/@types/BlackHolesRuntime';
 
-const TONE: ToneMap = { exposure: 1.5, curve: 4, hdrKnee: 0, hdrHeadroom: 0 };
+const TONE: ToneMap = { exposure: 1.5, curve: 4, hdrKnee: 0, hdrHeadroom: 0, film: null };
 
 // The Layers' passes join core's registry, as `createLayers` does; expansion
 // matches by `name` and never reaches `draw`, so no runtime is read.

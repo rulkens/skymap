@@ -42,6 +42,8 @@ export type EngineState = {
   tier: Tier;
   /** Which `ViewRig` (`VIEW_RIGS`) `renderFrame` walks this frame. Seeded `'mono'`. */
   viewRig: ViewRigKey;
+  /** Frames rendered; `renderFrame` adds 1 first thing. Seeds the film grain. */
+  frameIndex: number;
   /** A getter onto `store.getState().selection`; the pick path dispatches the writes. */
   selection: SelectionState;
   /** A getter onto `store.getState().selectionRows` — the saga-reconciled display rows. */

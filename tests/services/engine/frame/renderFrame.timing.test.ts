@@ -319,6 +319,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     views: [ctx],
     state: {
       viewRig: 'mono',
+      frameIndex: 0,
       gpu: {
         labelRendererCosmo: null,
         label3DRenderer: null,
@@ -347,6 +348,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         tonemap: { exposure: settings.exposure, curve: settings.toneMapCurve },
         // Bloom off: this fixture times the base (non-bloom) program shape.
         bloom: { enabled: false, strength: 1, threshold: 1 },
+        film: INITIAL_SETTINGS.film,
         bias: { mode: settings.biasMode, absMagLimit: settings.absMagLimit },
         thumbnails: { enabled: settings.galaxyTexturesEnabled },
         milkyWay: { enabled: settings.milkyWayEnabled, renderer: 'v1' },

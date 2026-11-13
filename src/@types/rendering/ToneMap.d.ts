@@ -8,6 +8,7 @@
  */
 
 import type { ToneMapCurve } from '../data/ToneMapCurve';
+import type { FilmLook } from './FilmLook';
 
 export type ToneMap = {
   /** Exposure (linear multiplier) applied before the tone curve. */
@@ -44,4 +45,7 @@ export type ToneMap = {
    * surface — see `hdrActiveOf`.
    */
   readonly hdrHeadroom: number;
+
+  /** The film grade, or null = off: the compositor then draws its plain pipeline. */
+  readonly film: FilmLook | null;
 };

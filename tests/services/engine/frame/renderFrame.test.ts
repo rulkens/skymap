@@ -389,6 +389,7 @@ function makeInput(
     filamentIntensity: 1,
     cosmicWebDensityEnabled: false,
     bloomEnabled: false,
+    filmEnabled: false,
     ...(overrides.settings ?? {}),
   };
 
@@ -477,6 +478,7 @@ function makeInput(
       views: [ctx],
       state: {
         viewRig: 'mono',
+        frameIndex: 0,
         gpu: {
           labelRendererCosmo: null,
           label3DRenderer: null,
@@ -519,6 +521,7 @@ function makeInput(
           // Bloom off by default in these fixtures: the bloom render steps only
           // shape the program when enabled, and no fixture asserts on them.
           bloom: { enabled: settings.bloomEnabled, strength: 1, threshold: 1 },
+          film: { ...INITIAL_SETTINGS.film, enabled: settings.filmEnabled },
           bias: { mode: settings.biasMode, absMagLimit: settings.absMagLimit },
           thumbnails: { enabled: settings.galaxyTexturesEnabled },
           milkyWay: { enabled: settings.milkyWayEnabled, renderer: 'v1' },
@@ -682,6 +685,7 @@ describe('renderFrame', () => {
       curve: fx.settings.toneMapCurve,
       hdrKnee: 0,
       hdrHeadroom: 0,
+      film: null,
     });
   });
 
@@ -718,6 +722,19 @@ describe('renderFrame', () => {
     const tone = draw.mock.calls[0]![3];
     expect(tone.hdrKnee).toBe(0);
     expect(tone.hdrHeadroom).toBe(0);
+  });
+
+  it("the tone-map's film is null while the look is off and carries the grade and the frame index when on", () => {
+    renderFrame(fx.input);
+    expect((fx.compositor.draw as ReturnType<typeof vi.fn>).mock.calls[0]![3].film).toBeNull();
+
+    const on = makeInput({ settings: { filmEnabled: true } });
+    renderFrame(on.input);
+    renderFrame(on.input);
+    const calls = (on.compositor.draw as ReturnType<typeof vi.fn>).mock.calls;
+    const [first, second] = [calls[0]![3].film, calls[1]![3].film];
+    expect(first.grade).toBe(INITIAL_SETTINGS.film.grade);
+    expect(second.seed - first.seed).toBe(1);
   });
 
   it('records the full frame in canonical order: createEncoder → hdr COSMO pass (points) → mw-aggregate pass (cloud stars) → hdr NEAR0 pass (cloud dust) → composite pass → compositor.draw → finish → submit', () => {
@@ -832,7 +849,7 @@ describe('renderFrame', () => {
     // one flat list or as four sections concatenated — and VIEW_RIGS.mono IS
     // those four sections, against the main ctx alone.
     const options = {
-      tone: { exposure: 1, curve: ToneMapCurve.Reinhard, hdrKnee: 0, hdrHeadroom: 0 },
+      tone: { exposure: 1, curve: ToneMapCurve.Reinhard, hdrKnee: 0, hdrHeadroom: 0, film: null },
       bloomEnabled: false,
       foregroundChain: foregroundChainOrder(fx.input.canvas.slabs),
       captureFaces: new Map(),
