@@ -23,7 +23,7 @@ import { selectFocusRow, selectPendingFocusId } from '../selection/selectors';
 import { setSelectionRow } from '../selectionRows/selectionRowsSlice';
 import { engineLoadProgressChanged } from '../engine/engineSlice';
 import { selectEngineStatus, selectLoadProgress } from '../engine/selectors';
-import { clipStarted, commitCameraPose } from '../camera/cameraSlice';
+import { clipStarted, commitCameraPose } from '../camera/cameraIntentSlice';
 import { startClip } from '../camera/clipActions';
 import { exitTakeover, takeoverEnded } from '../takeover/takeoverActions';
 import { selectTakeoverSource } from '../takeover/selectors';

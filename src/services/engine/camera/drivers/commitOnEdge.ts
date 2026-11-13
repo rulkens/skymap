@@ -14,7 +14,7 @@ import type { UnknownAction } from '@reduxjs/toolkit';
 import type { CameraDriver } from '../../../../@types/engine/camera/CameraDriver';
 import type { DriverId } from '../../../../@types/engine/camera/DriverId';
 import type { FramedCameraPose } from '../../../../@types/camera/pose/FramedCameraPose';
-import { commitCameraPose } from '../../../../state/camera/cameraSlice';
+import { commitCameraPose } from '../../../../state/camera/cameraIntentSlice';
 
 const NO_ACTIONS: readonly UnknownAction[] = [];
 

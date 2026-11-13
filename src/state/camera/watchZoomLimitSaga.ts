@@ -5,7 +5,7 @@
 import { takeEvery, select, put } from 'typed-redux-saga';
 
 import { zoomLimitPushed } from './zoomLimitPushed';
-import { clipStarted } from './cameraSlice';
+import { clipStarted } from './cameraIntentSlice';
 import { selectOrientation } from '../settings/selectors';
 
 export function* watchZoomLimitSaga() {

@@ -16,7 +16,7 @@ import { rootReducer } from '../../../src/store/rootReducer';
 import { watchGoHomeSaga } from '../../../src/state/selection/watchGoHomeSaga';
 import { watchFocusTweenSaga } from '../../../src/state/selection/watchFocusTweenSaga';
 import { goHome } from '../../../src/state/selection/goHome';
-import { startCameraTween } from '../../../src/state/camera/cameraSlice';
+import { startCameraTween } from '../../../src/state/camera/cameraIntentSlice';
 import { bodySelectionRow } from '../../../src/layers/body/selection/bodySelectionRow';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
 import { NO_KINDS_OFF } from '../../support/noKindsOff';
@@ -102,7 +102,7 @@ describe('watchGoHomeSaga', () => {
     expect(selection.select).toEqual(EARTH_REF);
     expect(selection.focus).toEqual(EARTH_REF);
 
-    const tween = store.getState()[cameraRoute].tween;
+    const tween = store.getState()[cameraRoute].intent.tween;
     expect(tween).not.toBeNull();
     expect(tween!.from).toEqual(FROM);
 
@@ -125,7 +125,7 @@ describe('watchGoHomeSaga', () => {
     store.dispatch(goHome());
     await flush();
 
-    expect(store.getState()[cameraRoute].tween).toBeNull();
+    expect(store.getState()[cameraRoute].intent.tween).toBeNull();
     expect(store.getState()[selectionRoute].select).toBeNull();
     expect(store.getState()[selectionRoute].focus).toBeNull();
   });
@@ -136,7 +136,7 @@ describe('watchGoHomeSaga', () => {
     store.dispatch(goHome());
     await flush();
 
-    expect(store.getState()[cameraRoute].tween!.motion).toEqual({
+    expect(store.getState()[cameraRoute].intent.tween!.motion).toEqual({
       style: 'eased',
       durationMs: 1234,
       ease: 'easeOutCubic',

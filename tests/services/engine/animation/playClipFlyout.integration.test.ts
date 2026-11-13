@@ -8,7 +8,7 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { commitCameraPose } from '../../../../src/state/camera/cameraSlice';
+import { commitCameraPose } from '../../../../src/state/camera/cameraIntentSlice';
 import { createClipPlayer } from '../../../../src/services/engine/subsystems/clipPlayer';
 import { createPlayClip } from '../../../../src/services/engine/animation/playClip';
 import { flyout } from '../../../../src/data/animation/clips/flyout';
@@ -165,7 +165,7 @@ describe('playClip — flyout seam', () => {
     // --- ASSERTION 3: camera.base is committed to the saturated final pose ---
     // The commit-on-edge bake must write the saturated distance (≈ 29 500),
     // not a one-frame-stale pre-saturation pose.
-    const base = worldArmOf(store.getState().camera.base);
+    const base = worldArmOf(store.getState().camera.intent.base);
     // The log-dolly lands at exactly dollyTo's `to` value at t=durationSec.
     // Use a loose precision (toBeCloseTo with 0 decimal places) — floating-point
     // log-interpolation is very close but not necessarily a round integer.

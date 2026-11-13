@@ -15,7 +15,7 @@ import {
   setAutoRotate,
   clipStarted,
   clipEnded,
-} from '../../../../../src/state/camera/cameraSlice';
+} from '../../../../../src/state/camera/cameraIntentSlice';
 import {
   inputConsumed,
   inputGestureEnded,
@@ -52,7 +52,7 @@ function simulateFrame(
   return simulateCameraFrame(
     harness,
     nowMs,
-    advanceEpoch(clip, harness.store.getState().camera.clip, nowMs),
+    advanceEpoch(clip, harness.store.getState().camera.intent.clip, nowMs),
   );
 }
 
@@ -116,7 +116,7 @@ describe('commitOnEdge — tween settles', () => {
         (a): a is ReturnType<typeof cancelCameraTween> =>
           typeof a === 'object' &&
           a !== null &&
-          (a as { type: string }).type === 'camera/cancelCameraTween',
+          (a as { type: string }).type === 'camera/intent/cancelCameraTween',
       );
     expect(cancelActions).toHaveLength(1);
   });
@@ -172,7 +172,7 @@ describe('commitOnEdge — tween settles', () => {
     simulateFrame(harness, 200); // cancel frame: elapsed 200 >= durationMs, register.pose := saturated TO
     simulateFrame(harness, 220); // commit frame: base := register.pose == TO
 
-    const base = worldArmOf(store.getState().camera.base);
+    const base = worldArmOf(store.getState().camera.intent.base);
     expect(base.yaw).toBeCloseTo(TO.yaw, 6);
     expect(base.pitch).toBeCloseTo(TO.pitch, 6);
     expect(base.distance).toBeCloseTo(TO.distance, 6);
@@ -275,7 +275,7 @@ describe('commitOnEdge — no-jump-on-grab', () => {
     // `register.pose` must NOT equal the stale `base` (which is still
     // the pre-tween committed pose).
     const lastPose = worldArmOf(state.cameraRuntime.register.pose);
-    const base = worldArmOf(store.getState().camera.base);
+    const base = worldArmOf(store.getState().camera.intent.base);
     // After 500ms of a 1000ms tween the yaw is somewhere between 0 and 1.
     expect(lastPose.yaw).not.toBe(base.yaw);
   });

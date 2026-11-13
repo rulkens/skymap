@@ -11,7 +11,7 @@ import type { ReactNode } from 'react';
 
 import type { CameraTuning } from '../../@types/camera/orbitCamera/CameraTuning';
 import { CAMERA_TUNING_LIMITS } from '../../data/camera/cameraTuning';
-import { setCameraTuning } from '../../state/camera/cameraSlice';
+import { setCameraTuning } from '../../state/camera/cameraIntentSlice';
 import { useAppDispatch } from '../../store/hooks';
 import CameraBandBar from './CameraBandBar';
 import DebugSlider from './DebugSlider';

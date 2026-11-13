@@ -13,7 +13,7 @@ import { isPerfMode } from '../../utils/url/isPerfMode';
 import { jsHeapBytes } from '../../utils/perf/jsHeapBytes';
 import { cpuSpans } from '../../utils/perf/cpuSpans';
 import { whenStablyReady } from '../lifecycle/whenStablyReady';
-import { cancelCameraTween, commitCameraPose, setAutoRotate } from '../camera/cameraSlice';
+import { cancelCameraTween, commitCameraPose, setAutoRotate } from '../camera/cameraIntentSlice';
 import { clearSelection } from '../selection/selectionSlice';
 import { setRenderStrategy } from '../settings/core/debugSlice';
 import { requestTier } from '../tier/requestTier';

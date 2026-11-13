@@ -16,7 +16,7 @@ import { homePose } from '../camera/framing/homePose';
 import { seedCameraRuntime } from '../camera/seedCameraRuntime';
 import { deriveSimDays } from '../../../utils/time/deriveSimDays';
 import { selectTimeState } from '../../../state/time/selectors';
-import { commitCameraPose } from '../../../state/camera/cameraSlice';
+import { commitCameraPose } from '../../../state/camera/cameraIntentSlice';
 import { selectOrientation } from '../../../state/settings/selectors';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 

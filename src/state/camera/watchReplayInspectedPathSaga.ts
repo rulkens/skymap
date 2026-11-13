@@ -25,7 +25,7 @@
  * bearings under. Nothing gates `settings.orientation` between Calculate and
  * Play, so re-selecting it here would decode Calculate-baked bearings as
  * though they were authored under whatever frame is live now — the exact
- * defect `camera.clip.frame` exists to prevent, relocated to between clicks.
+ * defect `camera.intent.clip.frame` exists to prevent, relocated to between clicks.
  *
  * ### Why race against exitTakeover
  *

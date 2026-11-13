@@ -115,13 +115,13 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   if (orientDeltasWatched()) {
     recordOrientDeltas(
       cameraDofAnglesOf({
-        storedFrame: rootState.camera.base.frame,
+        storedFrame: rootState.camera.intent.base.frame,
         worldPose,
         poseBasis,
         upBasis,
         bodyStates,
         rememberedTiltRad: next.tilt.rememberedTiltRad,
-        tuning: rootState.camera.tuning,
+        tuning: rootState.camera.intent.tuning,
       }),
     );
   }

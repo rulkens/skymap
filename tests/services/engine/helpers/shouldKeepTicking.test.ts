@@ -35,14 +35,16 @@ function rootWithCamera(
 ): RootState {
   return {
     camera: {
-      tween: over.tween ?? null,
-      autoRotate: { active: over.autoRotateActive ?? false },
-      clip: null,
-      clipId: null,
-      frameTween: null,
-      // The auto-rotate term is arm-gated (see `selectCameraActive`), so the
-      // fixture carries the at-rest arm every real store boots with.
-      base: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 }),
+      intent: {
+        tween: over.tween ?? null,
+        autoRotate: { active: over.autoRotateActive ?? false },
+        clip: null,
+        clipId: null,
+        frameTween: null,
+        // The auto-rotate term is arm-gated (see `selectCameraActive`), so the
+        // fixture carries the at-rest arm every real store boots with.
+        base: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 }),
+      },
     },
     input: { owner: over.gestureHeld ? 'canvas' : null },
     time: {

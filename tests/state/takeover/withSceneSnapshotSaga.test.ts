@@ -13,7 +13,7 @@ import { rootReducer } from '../../../src/store/rootReducer';
 import { withSceneSnapshotSaga } from '../../../src/state/takeover/withSceneSnapshotSaga';
 import { exitTakeover } from '../../../src/state/takeover/takeoverActions';
 import { setCosmicWebDensityEnabled } from '../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/slice';
-import { setFovYRad } from '../../../src/state/camera/cameraSlice';
+import { setFovYRad } from '../../../src/state/camera/cameraIntentSlice';
 import { setSimDays, pause } from '../../../src/state/time/timeSlice';
 import { unixMsToJulianDays } from '../../../src/utils/time/unixMsToJulianDays';
 import { DEFAULT_FOV_Y_RAD } from '../../../src/services/engine/camera/framing/cameraFraming';
@@ -46,11 +46,11 @@ describe('withSceneSnapshotSaga', () => {
       yield* withSceneSnapshotSaga(waitingBody);
     });
     await flush();
-    expect(store.getState().camera.fovYRad).toBe(DEFAULT_FOV_Y_RAD);
+    expect(store.getState().camera.intent.fovYRad).toBe(DEFAULT_FOV_Y_RAD);
 
     store.dispatch(exitTakeover());
     await flush();
-    expect(store.getState().camera.fovYRad).toBe(narrowed);
+    expect(store.getState().camera.intent.fovYRad).toBe(narrowed);
   });
 
   it("restores the body's settings changes on exit", async () => {

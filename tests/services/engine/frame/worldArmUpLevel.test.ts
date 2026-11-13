@@ -19,7 +19,7 @@ import { frameKey } from '../../../../src/services/engine/camera/arms/frameKey';
 import { liveWorldPose } from '../../../../src/services/engine/helpers/liveWorldPose';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
-import { setCameraTuning } from '../../../../src/state/camera/cameraSlice';
+import { setCameraTuning } from '../../../../src/state/camera/cameraIntentSlice';
 import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
 import { eyeMpcOf } from '../../../../src/utils/camera/orbitPose/eyeMpcOf';
 import { frameUp } from '../../../../src/utils/camera/orbitPose/frameUp';
@@ -70,16 +70,20 @@ function standOnOpportunity(): ReturnType<typeof makeCameraSimHarness> {
   h.seedPose(absoluteArm(foldToWorld(OPPORTUNITY, ARM_CTX)));
   h.focus('opportunity');
   h.frame(40);
-  expect(frameKey(h.store.getState().camera.base.frame)).toBe('site:opportunity');
+  expect(frameKey(h.store.getState().camera.intent.base.frame)).toBe('site:opportunity');
   return h;
 }
 
 /** Run until the arm hands back to the world — the frame the release commits. */
 function runToRelease(h: ReturnType<typeof makeCameraSimHarness>): void {
-  for (let i = 0; i < 60 && frameKey(h.store.getState().camera.base.frame) !== 'absolute'; i += 1) {
+  for (
+    let i = 0;
+    i < 60 && frameKey(h.store.getState().camera.intent.base.frame) !== 'absolute';
+    i += 1
+  ) {
     h.frame();
   }
-  expect(frameKey(h.store.getState().camera.base.frame)).toBe('absolute');
+  expect(frameKey(h.store.getState().camera.intent.base.frame)).toBe('absolute');
 }
 
 describe('world-arm up after leaving a site (adverse 9)', () => {
@@ -90,7 +94,7 @@ describe('world-arm up after leaving a site (adverse 9)', () => {
     // Release + the follow approach (600 ms) and a settle margin beyond it.
     h.frame(240);
 
-    expect(frameKey(h.store.getState().camera.base.frame)).toBe('absolute');
+    expect(frameKey(h.store.getState().camera.intent.base.frame)).toBe('absolute');
     expect(h.state.cameraRuntime.register.winner).toBe('followHold');
     expect(upTiltDeg(liveWorldPose(h.state))).toBeLessThan(0.5);
   });

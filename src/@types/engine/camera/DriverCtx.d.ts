@@ -22,7 +22,7 @@ export type DriverCtx = {
   /** World arm of `register`; the follow capture reads its eye. */
   readonly authoredWorld: CameraPose;
   /**
-   * World arm of `camera.base` — BY REFERENCE while the base already is the
+   * World arm of `camera.intent.base` — BY REFERENCE while the base already is the
    * world arm, so a world-arm reader is unchanged bit for bit. The follow rows
    * ease toward it: below the world arm `base.pose` speaks the arm's own
    * channels, and the approach's job is stated in world terms.

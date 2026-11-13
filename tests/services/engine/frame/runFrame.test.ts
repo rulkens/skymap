@@ -62,7 +62,7 @@ import {
   setAutoRotate,
   commitCameraPose,
   startFrameTween,
-} from '../../../../src/state/camera/cameraSlice';
+} from '../../../../src/state/camera/cameraIntentSlice';
 import { setOrientation } from '../../../../src/state/settings/core/orientationSlice';
 import {
   ORIENTATION_FRAMES,
@@ -471,7 +471,7 @@ describe('runFrame — orientation-frame roll', () => {
     }
     expect(norm(sub(samples[samples.length - 1]!.position, first.position))).toBeGreaterThan(1);
 
-    expect(store.getState().camera.frameTween).toBeNull();
+    expect(store.getState().camera.intent.frameTween).toBeNull();
   });
 
   it('during a frame roll the assembled camera position is unchanged while its up rotates', () => {
@@ -1104,7 +1104,7 @@ describe('runFrame — effective intent', () => {
     h.notch(100, [500, 500]);
     h.frame();
 
-    const committed = worldArmOf(h.store.getState().camera.base).distance;
+    const committed = worldArmOf(h.store.getState().camera.intent.base).distance;
     expect(committed).toBeGreaterThan(100);
     expect(worldArmOf(h.state.cameraRuntime.register.pose).distance).toBe(committed);
   });
@@ -1167,6 +1167,6 @@ describe('runFrame — effective intent', () => {
 
     h.frame();
 
-    expect(worldArmOf(h.store.getState().camera.base).yaw).toBeCloseTo(-50 * 0.005, 6);
+    expect(worldArmOf(h.store.getState().camera.intent.base).yaw).toBeCloseTo(-50 * 0.005, 6);
   });
 });

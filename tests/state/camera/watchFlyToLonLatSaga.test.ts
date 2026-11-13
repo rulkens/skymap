@@ -12,7 +12,7 @@ import { rootReducer } from '../../../src/store/rootReducer';
 import { watchFlyToLonLatSaga } from '../../../src/state/camera/watchFlyToLonLatSaga';
 import { flyToLonLat } from '../../../src/state/camera/flyToLonLatActions';
 import type { FlyToLonLatPayload } from '../../../src/state/camera/flyToLonLatActions';
-import { startCameraTween } from '../../../src/state/camera/cameraSlice';
+import { startCameraTween } from '../../../src/state/camera/cameraIntentSlice';
 import { updateSelectionFocus } from '../../../src/state/selection/selectionSlice';
 import { setSimDays, pause } from '../../../src/state/time/timeSlice';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';

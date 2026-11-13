@@ -83,7 +83,7 @@ describe('mission hold loop', () => {
     expect(s.time.paused).toBe(true);
     expect(simDays()).toBeCloseTo(eventDays('voyager1-launch'), 9);
     expect(s.settings.missions.craft).toBe('voyager1');
-    expect(s.camera.aim).toEqual({ ease: false });
+    expect(s.camera.intent.aim).toEqual({ ease: false });
   });
 
   it('flies in to the mission camera’s launch pose on a fly entry', async () => {
@@ -186,7 +186,7 @@ describe('mission hold loop', () => {
     const { store } = await hold('fly', never());
     store.dispatch(setMissionCraft('voyager2'));
     await tick();
-    expect(store.getState().camera.aim).toEqual({ ease: true });
+    expect(store.getState().camera.intent.aim).toEqual({ ease: true });
   });
 
   it('run, speed and a flyby step during the fly-in take effect', async () => {
@@ -283,16 +283,16 @@ describe('mission hold loop', () => {
 
   it('a step and a tab switch re-aim the camera with an ease', async () => {
     const { store, step } = await hold();
-    const entry = store.getState().camera.aim;
+    const entry = store.getState().camera.intent.aim;
     expect(entry).toEqual({ ease: false });
     step('voyager1-pale-blue-dot');
     await tick();
-    const afterStep = store.getState().camera.aim;
+    const afterStep = store.getState().camera.intent.aim;
     expect(afterStep).toEqual({ ease: true });
     expect(afterStep).not.toBe(entry);
     store.dispatch(setMissionCraft('voyager2'));
     await tick();
-    const afterTab = store.getState().camera.aim;
+    const afterTab = store.getState().camera.intent.aim;
     expect(afterTab).toEqual({ ease: true });
     expect(afterTab).not.toBe(afterStep);
   });
