@@ -1,5 +1,3 @@
-import type { FoldKind } from '../@types/rendering/FoldKind';
-
 /**
  * Bloom pyramid depth — the single home for how many mip levels the
  * screen-space bloom pass owns (`bloom0..bloom4`). Three subsystems derive
@@ -19,5 +17,8 @@ export const BLOOM_LEVELS = 5;
  */
 export const bloomScale = (level: number): number => 2 ** (level + 1);
 
-/** Every fold kind; `bloomPyramid` allocates one fold uniform buffer per entry. */
-export const FOLD_KINDS: readonly FoldKind[] = ['bloom'];
+/**
+ * Every fold kind, and the source of the `FoldKind` union; `bloomPyramid`
+ * allocates one fold uniform buffer per entry.
+ */
+export const FOLD_KINDS = ['bloom'] as const;
