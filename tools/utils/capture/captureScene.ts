@@ -14,7 +14,7 @@ import { shotPose } from './shotPose';
 import { writeThumbnail } from './writeThumbnail';
 import { VIEWPORT } from './shotDefaults';
 import { mergeSnapshot } from '../../../src/state/settings/mergeSnapshotAction';
-import { setAutoRotate } from '../../../src/state/camera/cameraSlice';
+import { setAutoRotate } from '../../../src/state/camera/cameraIntentSlice';
 import type { SkymapWindow } from '../../../src/@types/automation/SkymapWindow';
 import type { SceneShot } from '../../@types/capture/SceneShot';
 import type { CaptureOutcome } from '../../@types/capture/CaptureOutcome';

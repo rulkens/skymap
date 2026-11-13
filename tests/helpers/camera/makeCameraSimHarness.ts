@@ -24,7 +24,7 @@ import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyS
 import { runFrame } from '../../../src/services/engine/frame/runFrame';
 import { liveWorldPose } from '../../../src/services/engine/helpers/liveWorldPose';
 import { liveUpBasisQuat } from '../../../src/services/engine/camera/orientation/liveUpBasisQuat';
-import { commitCameraPose, setFovYRad } from '../../../src/state/camera/cameraSlice';
+import { commitCameraPose, setFovYRad } from '../../../src/state/camera/cameraIntentSlice';
 import { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsSlice';
 import { setSimDays, pause } from '../../../src/state/time/timeSlice';
 import {

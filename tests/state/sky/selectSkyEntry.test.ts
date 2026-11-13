@@ -9,7 +9,7 @@ import { rootReducer } from '../../../src/store/rootReducer';
 import { selectSkyEntry } from '../../../src/state/sky/selectSkyEntry';
 import { skyEntryReported, skyViewReported } from '../../../src/state/sky/skySlice';
 import { takeoverStarted } from '../../../src/state/takeover/takeoverActions';
-import { clipStarted } from '../../../src/state/camera/cameraSlice';
+import { clipStarted } from '../../../src/state/camera/cameraIntentSlice';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 import type { RootState } from '../../../src/store/types';
 import type { SkySpot } from '../../../src/@types/camera/pose/SkySpot';

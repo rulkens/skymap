@@ -26,7 +26,7 @@ import { hrOfPose } from '../../../helpers/camera/hrOfPose';
 import { tiltOfPose } from '../../../helpers/camera/tiltOfPose';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { liveWorldPose } from '../../../../src/services/engine/helpers/liveWorldPose';
-import { setAutoRotate } from '../../../../src/state/camera/cameraSlice';
+import { setAutoRotate } from '../../../../src/state/camera/cameraIntentSlice';
 import { eyeMpcOf } from '../../../../src/utils/camera/orbitPose/eyeMpcOf';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_CAMERA_TUNING as TUNING } from '../../../../src/data/camera/cameraTuning';
@@ -139,7 +139,7 @@ describe('commit → re-derive idempotence (R12-1)', () => {
     h.frame();
 
     // The committed base is centre-looking — the projection stayed render-side.
-    const base = h.store.getState().camera.base;
+    const base = h.store.getState().camera.intent.base;
     expect(base.frame).toBe('absolute');
     if (base.frame !== 'absolute') return;
     const baseEye = eyeMpcOf(base.pose, B);

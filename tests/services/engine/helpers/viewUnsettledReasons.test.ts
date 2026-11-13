@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { viewUnsettledReasons } from '../../../../src/services/engine/helpers/viewUnsettledReasons';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
-import type { CameraState } from '../../../../src/@types/camera/orbitCamera/CameraState';
+import type { CameraIntentState } from '../../../../src/@types/camera/orbitCamera/CameraIntentState';
 
 const loadingSlot = {
   state: () => ({ kind: 'loading', req: null, loaded: 0, total: 1, attempt: 0 }),
@@ -22,8 +22,8 @@ describe('viewUnsettledReasons', () => {
   });
 
   it('names a focus flight and a frame turn', () => {
-    const tween = {} as CameraState['tween'];
-    const frameTween = {} as CameraState['frameTween'];
+    const tween = {} as CameraIntentState['tween'];
+    const frameTween = {} as CameraIntentState['frameTween'];
     expect(viewUnsettledReasons(scene, { tween, frameTween })).toEqual([
       'camera flight',
       'frame turn',

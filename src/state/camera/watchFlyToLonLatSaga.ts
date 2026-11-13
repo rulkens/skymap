@@ -6,7 +6,7 @@
 import { takeLatest, select, put, getContext } from 'typed-redux-saga';
 
 import { flyToLonLat } from './flyToLonLatActions';
-import { startCameraTween } from './cameraSlice';
+import { startCameraTween } from './cameraIntentSlice';
 import { updateSelectionFocus } from '../selection/selectionSlice';
 import { selectFocusRef } from '../selection/selectors';
 import { selectOrientation } from '../settings/selectors';

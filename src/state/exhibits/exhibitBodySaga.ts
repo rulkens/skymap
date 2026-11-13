@@ -12,7 +12,7 @@ import { flyToPoseClip } from '../../data/animation/clips/makers/flyToPoseClip';
 import { clearSelection } from '../selection/selectionSlice';
 import { mergeSnapshot } from '../settings/mergeSnapshotAction';
 import { applyLayerSwitchesSaga } from '../navigation/applyLayerSwitchesSaga';
-import { commitCameraPose, setAutoRotate } from '../camera/cameraSlice';
+import { commitCameraPose, setAutoRotate } from '../camera/cameraIntentSlice';
 import { exitTakeover } from '../takeover/takeoverActions';
 import { selectOrientation } from '../settings/selectors';
 import { sphereFitDistance } from '../../utils/camera/orbitCamera/sphereFitDistance';
@@ -91,14 +91,14 @@ export function* exhibitBodySaga(
     if (exit) return;
   }
 
-  // The drift is `camera.autoRotate`, not a looping clip: it spins from the
+  // The drift is `camera.intent.autoRotate`, not a looping clip: it spins from the
   // frozen `base` the fly or the cut committed, so it needs no duration guessed in
   // advance and cannot drift out of step with a hold of unknown length.
   // `camera` is NOT in `withSceneSnapshotSaga`'s scene snapshot (that covers settings,
   // orientation and focus), so the restore is this body's own — in a `finally`,
   // which a generator runs on cancellation too, so a supersede winds it back
   // as surely as an exit does.
-  const priorSpin = yield* select((s: RootState) => s.camera.autoRotate);
+  const priorSpin = yield* select((s: RootState) => s.camera.intent.autoRotate);
   yield* put(setAutoRotate({ active: true, rate: EXHIBIT_SPIN_RATE }));
   try {
     yield* take(exitTakeover);

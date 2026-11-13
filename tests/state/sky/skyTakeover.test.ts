@@ -23,7 +23,11 @@ import { enterSky } from '../../../src/state/sky/enterSky';
 import { exitTakeover } from '../../../src/state/takeover/takeoverActions';
 import { zoomLimitPushed } from '../../../src/state/camera/zoomLimitPushed';
 import { startTour } from '../../../src/state/tour/tourActions';
-import { clipEnded, clipStarted, commitCameraPose } from '../../../src/state/camera/cameraSlice';
+import {
+  clipEnded,
+  clipStarted,
+  commitCameraPose,
+} from '../../../src/state/camera/cameraIntentSlice';
 import { skyEntryReported } from '../../../src/state/sky/skySlice';
 import { skySpotAt } from '../../../src/utils/geo/skySpotAt';
 import { skySpotRadial } from '../../../src/utils/geo/skySpotRadial';
@@ -143,7 +147,7 @@ describe('the sky takeover', () => {
       restore: { base: ENTRY, fovYRad: DEFAULT_FOV_Y_RAD, focus: MARS_REF },
     });
     expect(s.selection.focus).toEqual({ type: 'body', id: EARTH });
-    expect(lastLeg(s.camera.clip!.data)).toContain('"sky"');
+    expect(lastLeg(s.camera.intent.clip!.data)).toContain('"sky"');
   });
 
   it('Leave restores the entry camera and focus', () => {
@@ -151,10 +155,10 @@ describe('the sky takeover', () => {
     enterAndStand(store);
     store.dispatch(exitTakeover({ restore: true }));
     expect(state(store).selection.focus).toEqual(MARS_REF);
-    expect(state(store).camera.clip).not.toBeNull();
+    expect(state(store).camera.intent.clip).not.toBeNull();
     expect(selectTakeoverSource(state(store))?.kind).toBe('sky');
 
-    expectLandsOnEntry(state(store).camera.clip!.data);
+    expectLandsOnEntry(state(store).camera.intent.clip!.data);
     store.dispatch(clipEnded());
     expect(selectTakeoverSource(state(store))).toBeNull();
   });
@@ -164,7 +168,7 @@ describe('the sky takeover', () => {
     enterAndStand(store);
     store.dispatch(commitCameraPose(LIFTED));
     expect(selectTakeoverSource(state(store))).toBeNull();
-    expect(state(store).camera.base).toEqual(LIFTED);
+    expect(state(store).camera.intent.base).toEqual(LIFTED);
     expect(state(store).selection.focus).toEqual({ type: 'body', id: EARTH });
   });
 
@@ -174,7 +178,7 @@ describe('the sky takeover', () => {
     store.dispatch(startTour('demo'));
     await flush();
     expect(selectTakeoverSource(state(store))?.kind).toBe('tour');
-    expect(state(store).camera.base).toEqual(standingAt(COPENHAGEN));
+    expect(state(store).camera.intent.base).toEqual(standingAt(COPENHAGEN));
     expect(state(store).selection.focus).not.toEqual(MARS_REF);
   });
 
@@ -183,8 +187,8 @@ describe('the sky takeover', () => {
     enterAndStand(store);
     store.dispatch(exitTakeover());
     expect(selectTakeoverSource(state(store))).toBeNull();
-    expect(state(store).camera.base).toEqual(standingAt(COPENHAGEN));
-    expect(state(store).camera.clip).toBeNull();
+    expect(state(store).camera.intent.base).toEqual(standingAt(COPENHAGEN));
+    expect(state(store).camera.intent.clip).toBeNull();
   });
 
   it('re-entry keeps the first restore', async () => {
@@ -201,7 +205,7 @@ describe('the sky takeover', () => {
     });
 
     store.dispatch(exitTakeover({ restore: true }));
-    expectLandsOnEntry(state(store).camera.clip!.data);
+    expectLandsOnEntry(state(store).camera.intent.clip!.data);
   });
 
   it('Esc with a card open closes the card and keeps the focus and the takeover', () => {
@@ -226,7 +230,7 @@ describe('the sky takeover', () => {
     const spot = skySpotAt(EARTH, POINT);
     expect(selectTakeoverSource(state(store))).toMatchObject({ kind: 'sky', spot });
     // The glide ends standing on the anchor, not on the datum point under the spot.
-    expect(offPoint(glideTarget(state(store).camera.clip!.data), POINT)).toBeLessThan(4);
+    expect(offPoint(glideTarget(state(store).camera.intent.clip!.data), POINT)).toBeLessThan(4);
   });
 
   it('an arrival another clip replaces ends it without restoring', () => {
@@ -243,7 +247,7 @@ describe('the sky takeover', () => {
     store.dispatch(clipEnded());
     store.dispatch(commitCameraPose(LIFTED));
     expect(selectTakeoverSource(state(store))).toBeNull();
-    expect(state(store).camera.base).toEqual(LIFTED);
+    expect(state(store).camera.intent.base).toEqual(LIFTED);
   });
 
   describe('a far entry', () => {
@@ -261,12 +265,12 @@ describe('the sky takeover', () => {
     it('glides to the ground the centre readout names under the spot', () => {
       const store = build();
       store.dispatch(enterSky({ spot: COPENHAGEN, pointLocalM: null }));
-      const approach = state(store).camera.clip!.data;
+      const approach = state(store).camera.intent.clip!.data;
       // A readout far off the spot is not the ground under it.
       store.dispatch(readout(POINT));
       store.dispatch(readout(GROUND));
       store.dispatch(clipEnded());
-      const glide = state(store).camera.clip!.data;
+      const glide = state(store).camera.intent.clip!.data;
       expect(glide).not.toBe(approach);
       expect(offPoint(glideTarget(glide), GROUND)).toBeLessThan(4);
     });
@@ -277,9 +281,9 @@ describe('the sky takeover', () => {
       store.dispatch(enterSky({ spot: COPENHAGEN, pointLocalM: null }));
       store.dispatch(clipEnded());
       await vi.advanceTimersByTimeAsync(ARRIVAL_GROUND_WAIT_MS - 1);
-      expect(state(store).camera.clip).toBeNull();
+      expect(state(store).camera.intent.clip).toBeNull();
       await vi.advanceTimersByTimeAsync(1);
-      const target = glideTarget(state(store).camera.clip!.data);
+      const target = glideTarget(state(store).camera.intent.clip!.data);
       const outer = outerBoundRadiusM(SCENE_CELESTIAL_BODIES.find((b) => b.id === EARTH)!.surface);
       expect(Math.abs(Math.hypot(...target) - outer)).toBeLessThan(4);
     });

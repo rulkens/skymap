@@ -11,7 +11,7 @@ import { call, getContext, put, select, takeLatest } from 'typed-redux-saga';
 import { requestView } from './requestView';
 import { requestFocus } from './requestFocus';
 import { resolveFocusRefDeferringSaga } from './resolveFocusRefDeferringSaga';
-import { clipEnded, clipStarted } from '../camera/cameraSlice';
+import { clipEnded, clipStarted } from '../camera/cameraIntentSlice';
 import { selectSkyView } from '../sky/selectSkyView';
 import { selectTakeoverSource } from '../takeover/selectors';
 import { selectOrientation } from '../settings/selectors';
@@ -36,7 +36,7 @@ export function* watchRequestViewSaga() {
   // since `suspendDuringClip` would otherwise swallow the focus tween.
   let looking: ClipData | null = null;
   function* fly(id: string) {
-    const clip = yield* select((state: RootState) => state.camera.clip);
+    const clip = yield* select((state: RootState) => state.camera.intent.clip);
     if (looking !== null && clip?.data === looking) yield* put(clipEnded());
     looking = null;
     yield* put(requestFocus({ id, transition: 'fly' }));

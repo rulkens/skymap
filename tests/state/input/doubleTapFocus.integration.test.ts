@@ -17,7 +17,7 @@ import { watchFocusTweenSaga } from '../../../src/state/selection/watchFocusTwee
 import { watchRequestViewSaga } from '../../../src/state/selection/watchRequestViewSaga';
 import { watchRequestFocusSaga } from '../../../src/state/selection/watchRequestFocusSaga';
 import { requestFocus } from '../../../src/state/selection/requestFocus';
-import { clipStarted } from '../../../src/state/camera/cameraSlice';
+import { clipStarted } from '../../../src/state/camera/cameraIntentSlice';
 import {
   updateSelectionFocus,
   updateSelectionSelect,
@@ -113,7 +113,7 @@ describe('double-tap focus', () => {
     store.dispatch(updateSelectionSelect({ type: 'milkyWay' }));
     await doubleTap();
 
-    expect(store.getState()[cameraRoute].tween).not.toBeNull();
+    expect(store.getState()[cameraRoute].intent.tween).not.toBeNull();
   });
 
   const stand = (store: ReturnType<typeof build>['store']) => {
@@ -139,7 +139,7 @@ describe('double-tap focus', () => {
     expect(seen.some(clipStarted.match)).toBe(true);
     expect(seen.some(requestFocus.match)).toBe(false);
     expect(store.getState()[selectionRoute].focus).toEqual({ type: 'body', id: EARTH });
-    expect(store.getState()[cameraRoute].tween).toBeNull();
+    expect(store.getState()[cameraRoute].intent.tween).toBeNull();
   });
 
   // The ground underfoot is also what a double-click too quick for its own pick reads.
@@ -156,6 +156,6 @@ describe('double-tap focus', () => {
     expect(seen.some(clipStarted.match)).toBe(false);
     expect(store.getState()[selectionRoute].focus).toEqual({ type: 'body', id: EARTH });
     expect(store.getState()[selectionRoute].select).toEqual(ref);
-    expect(store.getState()[cameraRoute].tween).toBeNull();
+    expect(store.getState()[cameraRoute].intent.tween).toBeNull();
   });
 });

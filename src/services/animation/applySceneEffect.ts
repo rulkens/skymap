@@ -12,7 +12,7 @@ import type { EngineState } from '../../@types/engine/state/EngineState';
 import type { AppDispatch } from '../../store/types';
 import { updateSelectionFocus } from '../../state/selection/selectionSlice';
 import { setOrientation } from '../../state/settings/core/orientationSlice';
-import { startFrameTween } from '../../state/camera/cameraSlice';
+import { startFrameTween } from '../../state/camera/cameraIntentSlice';
 import { liveUpBasisQuat } from '../engine/camera/orientation/liveUpBasisQuat';
 import { setVisibilityActionsFor } from '../../utils/visibility/setVisibilityActionsFor';
 

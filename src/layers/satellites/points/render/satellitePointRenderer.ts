@@ -1,10 +1,11 @@
 /**
  * satellitePointRenderer — the satellites as screen-sized additive dots in the depthless HDR
  * accumulation, under the trails' occlusion (lib/trailOcclusion.wesl owns group 0 bindings 0-1;
- * ours is binding 2). One instance = one satellite: its TEME state at the last sweep, packed
- * densely from the valid objects, so a decayed object costs no vertex work. `drawPick` stamps the
- * same instances into the overlay pick target (r32uint), wider than the dot so it can be clicked;
- * it has its own uniform and bind group, so a pick never rewrites what the frame drew with.
+ * ours are 2, the uniforms, and 3, the profile table). One instance = one satellite: its TEME
+ * state at the last sweep, packed densely from the valid objects, so a decayed object costs no
+ * vertex work. `drawPick` stamps the same instances into the overlay pick target (r32uint), wider
+ * than the dot so it can be clicked; it has its own uniform and bind group, so a pick never
+ * rewrites what the frame drew with.
  * @module
  */
 
@@ -17,7 +18,9 @@ import fsCode from '../../../../services/gpu/shaders/satellites/points/fragment.
 import pickCode from '../../../../services/gpu/shaders/satellites/points/pick.wesl?static';
 import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../../../../services/gpu/lib/blendStates';
-import { SATELLITE_POINT_STYLE } from '../data/satellitePointStyle';
+import { SATELLITE_PICK_RADIUS_PX } from '../data/satellitePickRadiusPx';
+import { SATELLITE_PROFILE_BYTES } from './packSatelliteProfiles';
+import { SATELLITE_PROFILE_CAPACITY } from '../data/satelliteProfileCapacity';
 import { NEAR0, SLAB_REVERSED_Z } from '../../../../services/engine/frame/slabs';
 import { pickDepthFormat } from '../../../../services/engine/frame/pickProgram';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
@@ -27,13 +30,14 @@ import {
   createTrailOcclusionUniforms,
 } from '../../../../services/gpu/renderers/bodies/trailOcclusionUniforms';
 
-/** One instance record: posKm (3 floats), velKmS (3 floats), catalog index (u32), class (u32). */
-export const SATELLITE_INSTANCE_STRIDE = 32;
+/** One instance record: posKm and velKmS (3 floats each), then catalog index, class, profile (u32). */
+export const SATELLITE_INSTANCE_STRIDE = 36;
 export const SATELLITE_INSTANCE_ATTRIBUTES: readonly GPUVertexAttribute[] = [
   { shaderLocation: 0, offset: 0, format: 'float32x3' },
   { shaderLocation: 1, offset: 12, format: 'float32x3' },
   { shaderLocation: 2, offset: 24, format: 'uint32' },
   { shaderLocation: 3, offset: 28, format: 'uint32' },
+  { shaderLocation: 4, offset: 32, format: 'uint32' },
 ];
 
 /** Byte offsets inside `SatelliteUniforms` (`satellites/points/io.wesl`). */
@@ -48,7 +52,8 @@ export const SATELLITE_UNIFORM_OFFSETS = {
   temeToWorld1: 112,
   sizePx: 124,
   temeToWorld2: 128,
-  color: 144,
+  sunDir: 144,
+  ambient: 156,
   classOpacity: 160,
   pickBase: 172,
 } as const;
@@ -72,11 +77,8 @@ export function createSatellitePointRenderer({
     entries: [
       { binding: 0, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
       { binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'depth' } },
-      {
-        binding: 2,
-        visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-        buffer: { type: 'uniform' },
-      },
+      { binding: 2, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' } },
+      { binding: 3, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' } },
     ],
   });
   const layout = device.createPipelineLayout({
@@ -113,8 +115,17 @@ export function createSatellitePointRenderer({
     },
   });
 
-  const drawBinding = createBinding('satellite-points', SATELLITE_POINT_STYLE.radiusPx);
-  const pickBinding = createBinding('satellite-points-pick', SATELLITE_POINT_STYLE.pickRadiusPx);
+  const profileBuffer = device.createBuffer({
+    label: 'satellite-points-profiles',
+    size: SATELLITE_PROFILE_CAPACITY * SATELLITE_PROFILE_BYTES,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+
+  const drawBinding = createBinding('satellite-points', (frame) => frame.dotRadiusPx);
+  // Never narrower than the dot, so a dot tuned large stays clickable to its edge.
+  const pickBinding = createBinding('satellite-points-pick', (frame) =>
+    Math.max(SATELLITE_PICK_RADIUS_PX, frame.dotRadiusPx),
+  );
 
   let instanceBuffer: GPUBuffer | null = null;
   let instanceCount = 0;
@@ -126,7 +137,7 @@ export function createSatellitePointRenderer({
   );
 
   /** One uniform + occluder buffer pair and its bind group, rebuilt when the depth view changes. */
-  function createBinding(label: string, sizePx: number) {
+  function createBinding(label: string, sizePxOf: (frame: SatellitePointFrame) => number) {
     const occluderBuffer = device.createBuffer({
       label: `${label}-occluder-uniform`,
       size: OCCLUDER_UNIFORM_BYTES,
@@ -143,7 +154,7 @@ export function createSatellitePointRenderer({
       bind(frame: SatellitePointFrame): GPUBindGroup {
         occluderUniforms.write(frame.occluders, frame.depth.frame, frame.viewportPx);
         device.queue.writeBuffer(occluderBuffer, 0, occluderUniforms.scratch);
-        writeUniforms(uniformBuffer, frame, sizePx);
+        writeUniforms(uniformBuffer, frame, sizePxOf(frame));
         if (cached === null || cached.depthView !== frame.depth.view) {
           cached = {
             depthView: frame.depth.view,
@@ -154,6 +165,7 @@ export function createSatellitePointRenderer({
                 { binding: 0, resource: { buffer: occluderBuffer } },
                 { binding: 1, resource: frame.depth.view },
                 { binding: 2, resource: { buffer: uniformBuffer } },
+                { binding: 3, resource: { buffer: profileBuffer } },
               ],
             }),
           };
@@ -182,11 +194,16 @@ export function createSatellitePointRenderer({
     u[o.opacity / 4] = frame.opacity;
     u.set(frame.classOpacity, o.classOpacity / 4);
     u[o.sizePx / 4] = sizePx;
-    u.set(SATELLITE_POINT_STYLE.color, o.color / 4);
+    u.set(frame.sunDir, o.sunDir / 4);
+    u[o.ambient / 4] = frame.ambient;
     device.queue.writeBuffer(buffer, 0, u);
   }
 
-  function upload(next: SatelliteSweep, classCode: Uint8Array): void {
+  function writeProfiles(table: Float32Array): void {
+    device.queue.writeBuffer(profileBuffer, 0, table);
+  }
+
+  function upload(next: SatelliteSweep, classCode: Uint8Array, profileCode: Uint8Array): void {
     const n = next.valid.length;
     let live = 0;
     for (let k = 0; k < n; k++) live += next.valid[k]!;
@@ -199,6 +216,7 @@ export function createSatellitePointRenderer({
       floats.set(next.velKmS.subarray(3 * k, 3 * k + 3), at + 3);
       words[at + 6] = k;
       words[at + 7] = classCode[k]!;
+      words[at + 8] = profileCode[k]!;
       at += SATELLITE_INSTANCE_STRIDE / 4;
     }
     if (instanceBuffer === null || instanceBuffer.size < floats.byteLength) {
@@ -238,11 +256,13 @@ export function createSatellitePointRenderer({
     clear();
     drawBinding.destroy();
     pickBinding.destroy();
+    profileBuffer.destroy();
   }
 
   const renderer: SatellitePointRenderer = {
     label: 'satellitePointRenderer',
     upload,
+    writeProfiles,
     uploaded: () => sweep,
     clear,
     draw: (pass, frame) => record(pass, frame, drawBinding, pipeline),

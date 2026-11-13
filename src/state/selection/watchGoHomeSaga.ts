@@ -15,7 +15,7 @@ import { take, getContext, put, select } from 'typed-redux-saga';
 import { goHome } from './goHome';
 import { EARTH_REF } from '../../data/selection/earthRef';
 import { updateSelectionSelect, updateSelectionFocus } from './selectionSlice';
-import { startCameraTween } from '../camera/cameraSlice';
+import { startCameraTween } from '../camera/cameraIntentSlice';
 import { bodyHomePose } from '../../services/engine/camera/framing/bodyHomePose';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { selectFocusMoves, selectOrientation } from '../settings/selectors';

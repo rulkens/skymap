@@ -22,7 +22,7 @@ import { watchSelectionRowsSaga } from '../../../src/state/selectionRows/watchSe
 import { enterSky } from '../../../src/state/sky/enterSky';
 import { focusSelected } from '../../../src/state/selection/focusSelected';
 import { updateSelectionSelect } from '../../../src/state/selection/selectionSlice';
-import { commitCameraPose, setFovYRad } from '../../../src/state/camera/cameraSlice';
+import { commitCameraPose, setFovYRad } from '../../../src/state/camera/cameraIntentSlice';
 import { selectTakeoverSource } from '../../../src/state/takeover/selectors';
 import { DEFAULT_FOV_Y_RAD } from '../../../src/services/engine/camera/framing/cameraFraming';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
@@ -70,9 +70,9 @@ function harness() {
     h.store.dispatch(updateSelectionSelect({ type: 'milkyWay' }));
     h.store.dispatch(focusSelected());
     h.frame(1);
-    expect(state().camera.tween).not.toBeNull();
+    expect(state().camera.intent.tween).not.toBeNull();
     const drawn: number[] = [];
-    for (let i = 0; i < 1000 && state().camera.tween !== null; i++) {
+    for (let i = 0; i < 1000 && state().camera.intent.tween !== null; i++) {
       h.frame(1);
       drawn.push(h.state.cameraRuntime.outputs.projection.fovYRad);
     }
@@ -90,7 +90,7 @@ describe('a focus fly out of the sky', () => {
     );
     h.frame(2);
     h.store.dispatch(enterSky({ spot: SPOT, pointLocalM: null }));
-    for (let i = 0; i < 1000 && state().camera.clip !== null; i++) h.frame(1);
+    for (let i = 0; i < 1000 && state().camera.intent.clip !== null; i++) h.frame(1);
     h.frame(2);
     expect(selectTakeoverSource(state())).toMatchObject({ kind: 'sky' });
     h.store.dispatch(setFovYRad(NARROW));
@@ -99,9 +99,9 @@ describe('a focus fly out of the sky', () => {
     const drawn = flyToMilkyWay();
 
     expect(drawn.some((fov) => fov > NARROW * 2 && fov < DEFAULT_FOV_Y_RAD / 2)).toBe(true);
-    expect(cameraArmKindOf(state().camera.base.frame)).not.toBe('sky');
+    expect(cameraArmKindOf(state().camera.intent.base.frame)).not.toBe('sky');
     expect(selectTakeoverSource(state())).toBeNull();
-    expect(state().camera.fovYRad).toBeCloseTo(DEFAULT_FOV_Y_RAD, 9);
+    expect(state().camera.intent.fovYRad).toBeCloseTo(DEFAULT_FOV_Y_RAD, 9);
   });
 
   it('keeps the lens of a fly that starts off the ground', () => {
@@ -111,6 +111,6 @@ describe('a focus fly out of the sky', () => {
 
     flyToMilkyWay();
 
-    expect(state().camera.fovYRad).toBe(NARROW);
+    expect(state().camera.intent.fovYRad).toBe(NARROW);
   });
 });

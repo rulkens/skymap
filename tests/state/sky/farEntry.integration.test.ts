@@ -15,7 +15,7 @@ vi.mock('../../../src/services/gpu/device', () => ({
 
 import { watchTakeoverSaga } from '../../../src/state/takeover/watchTakeoverSaga';
 import { enterSky } from '../../../src/state/sky/enterSky';
-import { commitCameraPose } from '../../../src/state/camera/cameraSlice';
+import { commitCameraPose } from '../../../src/state/camera/cameraIntentSlice';
 import { selectTakeoverSource } from '../../../src/state/takeover/selectors';
 import { offSpotM } from '../../../src/utils/sky/offSpotM';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
@@ -48,7 +48,7 @@ function enterFarAndLand(standAt: SkySpot | null) {
   h.store.dispatch(enterSky({ spot: PARIS, pointLocalM: null }));
   // A readout in time starts the glide in the approach's own end tick, so the camera never
   // rests between the two; the 1.5 s fallback would leave it clipless here.
-  for (let i = 0; i < 1000 && h.store.getState().camera.clip !== null; i++) h.frame(1);
+  for (let i = 0; i < 1000 && h.store.getState().camera.intent.clip !== null; i++) h.frame(1);
   h.frame(2);
   return { state: h.store.getState() as unknown as RootState, grounds };
 }
@@ -61,9 +61,9 @@ describe('a far sky entry', () => {
     const { state, grounds } = enterFarAndLand(standAt);
 
     expect(grounds.some((p) => offSpotM(p, PARIS) < 1000)).toBe(true);
-    expect(state.camera.clip).toBeNull();
+    expect(state.camera.intent.clip).toBeNull();
     // Within the readout's match distance of the spot: 1 km is ~1.6e-4 rad of Earth.
-    expect(state.camera.base.frame).toEqual({
+    expect(state.camera.intent.base.frame).toEqual({
       sky: {
         body: EARTH,
         lonRad: expect.closeTo(PARIS.lonRad, 3),

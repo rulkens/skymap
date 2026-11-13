@@ -43,17 +43,17 @@ describe('OrientationTuning', () => {
   it('each control writes through to the one home', () => {
     const { store, getByLabelText } = renderLive();
     fireEvent.change(getByLabelText('engage h/R'), { target: { value: '2.5' } });
-    expect(store.getState().camera.tuning.engageHR).toBe(2.5);
+    expect(store.getState().camera.intent.tuning.engageHR).toBe(2.5);
     fireEvent.change(getByLabelText('disengage h/R'), { target: { value: '5' } });
-    expect(store.getState().camera.tuning.disengageHR).toBe(5);
+    expect(store.getState().camera.intent.tuning.disengageHR).toBe(5);
     fireEvent.change(getByLabelText('tilt-blend full h/R'), { target: { value: '1.5' } });
-    expect(store.getState().camera.tuning.tiltFullHR).toBe(1.5);
+    expect(store.getState().camera.intent.tuning.tiltFullHR).toBe(1.5);
     fireEvent.change(getByLabelText('tilt-blend zero h/R'), { target: { value: '3' } });
-    expect(store.getState().camera.tuning.tiltZeroHR).toBe(3);
+    expect(store.getState().camera.intent.tuning.tiltZeroHR).toBe(3);
     fireEvent.click(getByLabelText('log(h/R) blend-space'));
-    expect(store.getState().camera.tuning.blendSpace).toBe('lin');
+    expect(store.getState().camera.intent.tuning.blendSpace).toBe('lin');
     fireEvent.click(getByLabelText('north-up framing'));
-    expect(store.getState().camera.tuning.northUp).toBe(false);
+    expect(store.getState().camera.intent.tuning.northUp).toBe(false);
   });
 
   it('a clamp that moves the other knob is re-read into the UI', () => {
@@ -65,7 +65,7 @@ describe('OrientationTuning', () => {
     // 0.21 clears disengageMin (0.2), so the range clamp does not fire first
     // and the hysteresis floor is what drags engage down.
     fireEvent.change(getByLabelText('disengage h/R'), { target: { value: '0.21' } });
-    expect(store.getState().camera.tuning.engageHR).toBeCloseTo(0.21 / 1.1, 12);
+    expect(store.getState().camera.intent.tuning.engageHR).toBeCloseTo(0.21 / 1.1, 12);
     const engage = getByLabelText('engage h/R') as HTMLInputElement;
     expect(Number(engage.value)).toBeCloseTo(0.21 / 1.1, 12);
     expect(container.textContent).toContain('AT FLOOR');

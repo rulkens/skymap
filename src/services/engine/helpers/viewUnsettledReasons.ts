@@ -5,11 +5,11 @@
  * asked for once the camera nears it.
  */
 import { sceneUnsettledReasons } from './sceneUnsettledReasons';
-import type { CameraState } from '../../../@types/camera/orbitCamera/CameraState';
+import type { CameraIntentState } from '../../../@types/camera/orbitCamera/CameraIntentState';
 
 export function viewUnsettledReasons(
   state: Parameters<typeof sceneUnsettledReasons>[0],
-  camera: Pick<CameraState, 'tween' | 'frameTween'>,
+  camera: Pick<CameraIntentState, 'tween' | 'frameTween'>,
 ): string[] {
   return [
     ...(camera.tween === null ? [] : ['camera flight']),

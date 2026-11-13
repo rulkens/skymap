@@ -9,7 +9,7 @@ import { call, put, select } from 'typed-redux-saga';
 
 import { captureScene } from '../scene/captureScene';
 import { restoreSceneSaga } from '../scene/restoreSceneSaga';
-import { setFovYRad } from '../camera/cameraSlice';
+import { setFovYRad } from '../camera/cameraIntentSlice';
 import { DEFAULT_FOV_Y_RAD } from '../../services/engine/camera/framing/cameraFraming';
 
 export function* withSceneSnapshotSaga(

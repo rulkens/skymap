@@ -8,7 +8,7 @@
 import { takeEvery, select, put } from 'typed-redux-saga';
 
 import { zoomLimitPushed } from './zoomLimitPushed';
-import { clipStarted } from './cameraSlice';
+import { clipStarted } from './cameraIntentSlice';
 import { selectClipActive } from './selectors';
 import { selectOrientation } from '../settings/selectors';
 import { selectSkyView } from '../sky/selectSkyView';

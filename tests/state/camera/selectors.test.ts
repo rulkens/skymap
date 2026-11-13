@@ -26,7 +26,7 @@ import {
   clipStarted,
   clipEnded,
   startFrameTween,
-} from '../../../src/state/camera/cameraSlice';
+} from '../../../src/state/camera/cameraIntentSlice';
 import { inputGestureStarted } from '../../../src/state/input/inputSlice';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import type { CameraPose } from '../../../src/@types/camera/pose/CameraPose';

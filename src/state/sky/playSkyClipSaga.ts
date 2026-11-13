@@ -6,7 +6,7 @@
  */
 import { cancelled, put, race, select, take } from 'typed-redux-saga';
 
-import { clipEnded, clipStarted } from '../camera/cameraSlice';
+import { clipEnded, clipStarted } from '../camera/cameraIntentSlice';
 import type { ClipData } from '../../@types/animation/ClipData';
 import type { OrientationFrameId } from '../../@types/camera/orientation/OrientationFrameId';
 import type { RootState } from '../../store/types';
@@ -18,7 +18,7 @@ export function* playSkyClipSaga(data: ClipData, frame: OrientationFrameId) {
     return ended !== undefined;
   } finally {
     if (yield* cancelled()) {
-      const clip = yield* select((state: RootState) => state.camera.clip);
+      const clip = yield* select((state: RootState) => state.camera.intent.clip);
       if (clip?.data === data) yield* put(clipEnded());
     }
   }

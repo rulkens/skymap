@@ -10,7 +10,7 @@
 import { actionChannel, call, delay, put, race, select, take } from 'typed-redux-saga';
 import type { Action } from '@reduxjs/toolkit';
 
-import { commitCameraPose } from '../camera/cameraSlice';
+import { commitCameraPose } from '../camera/cameraIntentSlice';
 import { skyEntryReported } from './skySlice';
 import { selectCameraBase } from '../camera/selectors';
 import { selectOrientation } from '../settings/selectors';

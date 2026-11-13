@@ -17,7 +17,7 @@ import {
   selectionResolverOver,
   type StructureRowFixture,
 } from '../../../support/selectionResolverOver';
-import { resolveClipStart } from '../../../../src/state/camera/cameraSlice';
+import { resolveClipStart } from '../../../../src/state/camera/cameraIntentSlice';
 import { compileClip } from '../../../../src/services/engine/animation/compileClip';
 import { evaluateClip } from '../../../../src/services/engine/camera/clips/evaluateClip';
 import { arrivalFraming } from '../../../../src/services/engine/camera/framing/arrivalFraming';

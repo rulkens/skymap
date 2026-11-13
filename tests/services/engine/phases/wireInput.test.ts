@@ -222,7 +222,7 @@ describe('wireInput', () => {
     // by reference — true here because the seed ran before the commit below
     // it, off the still-placeholder store, so the boot pose lands settled
     // rather than through an eased follow approach.
-    expect(state.cameraRuntime.base).not.toBe(deps.cb.store.getState().camera.base);
+    expect(state.cameraRuntime.base).not.toBe(deps.cb.store.getState().camera.intent.base);
   });
 
   it('seeds no selection: the first view is the arrival’s', async () => {

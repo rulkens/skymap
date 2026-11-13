@@ -16,7 +16,7 @@ vi.mock('../../../src/services/gpu/device', () => ({
 import { watchTakeoverSaga } from '../../../src/state/takeover/watchTakeoverSaga';
 import { enterSky } from '../../../src/state/sky/enterSky';
 import { exitTakeover } from '../../../src/state/takeover/takeoverActions';
-import { commitCameraPose, setFovYRad } from '../../../src/state/camera/cameraSlice';
+import { commitCameraPose, setFovYRad } from '../../../src/state/camera/cameraIntentSlice';
 import { selectTakeoverSource } from '../../../src/state/takeover/selectors';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 import { degToRad } from '../../../src/utils/math/degToRad';
@@ -41,7 +41,7 @@ async function leaveAfter(entry: FramedCameraPose | null, spots: readonly SkySpo
   const h = makeCameraSimHarness({ realClipPlayer: true, sagas: [watchTakeoverSaga] });
   const state = () => h.store.getState() as unknown as RootState;
   const settle = () => {
-    for (let i = 0; i < 2000 && state().camera.clip !== null; i++) h.frame(1);
+    for (let i = 0; i < 2000 && state().camera.intent.clip !== null; i++) h.frame(1);
     h.frame(2);
   };
   h.frame(2);
@@ -60,7 +60,7 @@ async function leaveAfter(entry: FramedCameraPose | null, spots: readonly SkySpo
 
   h.store.dispatch(exitTakeover({ restore: true }));
   const drawn: number[] = [];
-  for (let i = 0; i < 2000 && state().camera.clip !== null; i++) {
+  for (let i = 0; i < 2000 && state().camera.intent.clip !== null; i++) {
     h.frame(1);
     drawn.push(h.state.cameraRuntime.outputs.projection.fovYRad);
   }
@@ -77,13 +77,13 @@ describe('Leave from sky mode', () => {
 
     expect(drawn.some((fov) => fov > NARROW * 2 && fov < BEFORE * 0.75)).toBe(true);
     expect(selectTakeoverSource(state)).toBeNull();
-    expect(state.camera.fovYRad).toBeCloseTo(BEFORE, 9);
+    expect(state.camera.intent.fovYRad).toBeCloseTo(BEFORE, 9);
   });
 
   it('after a chained entry lands on the lens from before the first', async () => {
     const { state } = await leaveAfter(null, [PARIS, COPENHAGEN]);
 
     expect(selectTakeoverSource(state)).toBeNull();
-    expect(state.camera.fovYRad).toBeCloseTo(BEFORE, 9);
+    expect(state.camera.intent.fovYRad).toBeCloseTo(BEFORE, 9);
   });
 });

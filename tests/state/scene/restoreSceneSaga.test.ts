@@ -78,6 +78,7 @@ function makeSnapshot(
       missions: { ...f.missions },
       missionTrails: { ...f.missionTrails, enabled: !f.missionTrails.enabled },
       satellites: { ...f.satellites, enabled: !f.satellites.enabled },
+      satelliteTuning: { ...f.satelliteTuning },
       stellarStreams: { ...f.stellarStreams, enabled: !f.stellarStreams.enabled },
       sStarTrails: { ...f.sStarTrails, enabled: !f.sStarTrails.enabled },
       starCatalogs: { ...f.starCatalogs, enabled: !f.starCatalogs.enabled },
@@ -121,7 +122,7 @@ describe('restoreSceneSaga', () => {
     sagaMiddleware.run(restoreSceneSaga, makeSnapshot());
     await flush();
 
-    expect(store.getState().camera.fovYRad).toBe(CAPTURED_FOV_Y_RAD);
+    expect(store.getState().camera.intent.fovYRad).toBe(CAPTURED_FOV_Y_RAD);
   });
 
   it('reverts selection.focus onto the store', async () => {

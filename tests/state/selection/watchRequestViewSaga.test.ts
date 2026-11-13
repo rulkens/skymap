@@ -13,7 +13,7 @@ import { watchRequestSelectSaga } from '../../../src/state/selection/watchReques
 import { requestView } from '../../../src/state/selection/requestView';
 import { requestFocus } from '../../../src/state/selection/requestFocus';
 import { updateSelectionFocus } from '../../../src/state/selection/selectionSlice';
-import { clipEnded, clipStarted } from '../../../src/state/camera/cameraSlice';
+import { clipEnded, clipStarted } from '../../../src/state/camera/cameraIntentSlice';
 import { skyViewReported } from '../../../src/state/sky/skySlice';
 import { pause, setSimDays } from '../../../src/state/time/timeSlice';
 import { selectSkyBelowHorizon } from '../../../src/state/sky/selectSkyBelowHorizon';
@@ -203,7 +203,7 @@ describe('watchRequestViewSaga', () => {
     stand(store);
     store.dispatch(requestView({ id: 'above' }));
     await flush();
-    expect(store.getState().camera.clip).not.toBeNull();
+    expect(store.getState().camera.intent.clip).not.toBeNull();
 
     store.dispatch(requestView({ id: 'body-earth' }));
     await flush();
@@ -211,6 +211,6 @@ describe('watchRequestViewSaga', () => {
     const fly = seen.findIndex(requestFocus.match);
     expect(ended).toBeGreaterThanOrEqual(0);
     expect(ended).toBeLessThan(fly);
-    expect(store.getState().camera.clip).toBeNull();
+    expect(store.getState().camera.intent.clip).toBeNull();
   });
 });

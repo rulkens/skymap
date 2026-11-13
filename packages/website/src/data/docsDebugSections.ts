@@ -81,6 +81,12 @@ export const DOCS_DEBUG_SECTIONS: readonly DocsDebugSection[] = [
     file: 'src/layers/blackHoles/lensing/ui/BlackHoleLensingTuningSection.tsx',
   },
   {
+    heading: 'Satellite tuning',
+    shows:
+      'An ambient light every satellite gets, the size of a dot on screen, and one colour for each satellite group, by constellation or orbit. A button puts them back to their defaults and another copies the changed colours.',
+    file: 'src/layers/satellites/controls/ui/SatelliteTuningSection.tsx',
+  },
+  {
     heading: 'Milky Way tuning',
     shows:
       'A switch for which Milky Way is drawn (the point sprites, the smooth analytic field, or both added together). For the points: size, exposure, softness and number. For the field: its exposure, a dust switch and how coarse each of its render targets is.',

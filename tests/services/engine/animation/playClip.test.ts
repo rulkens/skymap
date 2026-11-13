@@ -22,7 +22,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import { CANCEL } from 'redux-saga';
 
 import { rootReducer } from '../../../../src/store/rootReducer';
-import { clipStarted, clipEnded } from '../../../../src/state/camera/cameraSlice';
+import { clipStarted, clipEnded } from '../../../../src/state/camera/cameraIntentSlice';
 import { createPlayClip } from '../../../../src/services/engine/animation/playClip';
 import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';

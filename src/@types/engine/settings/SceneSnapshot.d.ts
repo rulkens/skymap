@@ -26,7 +26,7 @@
  * would keep resetting itself the moment the next beat starts. Restore
  * therefore reads `orientation` off this type directly and sends it through
  * `requestOrientationChange` (see `restoreSceneSaga`), the same request path
- * an interactive switch uses, so `camera.base` gets re-expressed into the
+ * an interactive switch uses, so `camera.intent.base` gets re-expressed into the
  * restored frame instead of stranding it.
  *
  * ### Why `focus` is a reference, not a deep clone

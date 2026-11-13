@@ -5,3 +5,10 @@
 .root {
   composes: infoCardFull structure from '../../../../../components/InfoCard/cardChrome.module.css';
 }
+
+/* Flags a fit old enough that the shown position may be far off (SATELLITE_FIT_WARN_DAYS). */
+.ageBadge {
+  composes: sourceBadge from '../../../../../components/InfoCard/cardChrome.module.css';
+  margin-left: var(--space-3);
+  text-transform: none;
+}

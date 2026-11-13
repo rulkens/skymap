@@ -12,7 +12,7 @@
 import type { UnknownAction } from '@reduxjs/toolkit';
 
 import type { CameraPose } from '../../../@types/camera/pose/CameraPose';
-import type { CameraState } from '../../../@types/camera/orbitCamera/CameraState';
+import type { CameraIntentState } from '../../../@types/camera/orbitCamera/CameraIntentState';
 import type { FollowMemory } from '../../../@types/engine/camera/FollowMemory';
 import type { FramedCameraPose } from '../../../@types/camera/pose/FramedCameraPose';
 import type { CameraArmCtx } from '../../../@types/camera/arms/CameraArmCtx';
@@ -39,7 +39,7 @@ import { notedTiltMemory } from '../../../utils/camera/arms/notedTiltMemory';
 import { releasedWorldRoll } from '../../../utils/camera/arms/releasedWorldRoll';
 import { eyeMpcOf } from '../../../utils/camera/orbitPose/eyeMpcOf';
 import { addVec3 } from '../../../utils/math/addVec3';
-import { commitCameraPose } from '../../../state/camera/cameraSlice';
+import { commitCameraPose } from '../../../state/camera/cameraIntentSlice';
 import type { SelectionRowBase } from '../../../@types/engine/selection/SelectionRowBase';
 
 /** The pin's strafe while no follow memory exists. */
@@ -53,7 +53,7 @@ export function projectFramePose(args: {
   readonly follow: FollowMemory | null;
   readonly tilt: TiltMemory;
   /** The frame's effective camera intent: `base.frame` IS the regime. */
-  readonly intent: CameraState;
+  readonly intent: CameraIntentState;
   /** A held gesture skips the fold. */
   readonly gestureHeld: boolean;
   readonly ctx: CameraArmCtx;

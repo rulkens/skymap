@@ -15,7 +15,7 @@ vi.mock('../../../src/services/gpu/device', () => ({
 }));
 
 import { watchZoomLimitSaga } from '../../../src/state/camera/watchZoomLimitSaga';
-import { commitCameraPose, setFovYRad } from '../../../src/state/camera/cameraSlice';
+import { commitCameraPose, setFovYRad } from '../../../src/state/camera/cameraIntentSlice';
 import { cameraArmKindOf } from '../../../src/services/engine/camera/arms/cameraArmKindOf';
 import { LENS_MAX_DEG } from '../../../src/data/camera/lensMaxDeg';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
@@ -40,17 +40,17 @@ describe('a steady scroll-out while standing', () => {
     h.frame(2);
 
     let lifts = 0;
-    let clip = state().camera.clip;
+    let clip = state().camera.intent.clip;
     // A notch every frame, so one always lands on the frame the lift's clip hands back.
     for (let f = 0; f < 300; f++) {
       h.notch(100);
       h.frame(1);
-      if (state().camera.clip !== clip && state().camera.clip !== null) lifts++;
-      clip = state().camera.clip;
+      if (state().camera.intent.clip !== clip && state().camera.intent.clip !== null) lifts++;
+      clip = state().camera.intent.clip;
     }
 
     expect(lifts).toBe(1);
     expect(clip).toBeNull();
-    expect(cameraArmKindOf(state().camera.base.frame)).toBe('body');
+    expect(cameraArmKindOf(state().camera.intent.base.frame)).toBe('body');
   });
 });

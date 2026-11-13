@@ -16,11 +16,11 @@ Audit read-only at main f9a85995c. Paths are relative to `src/` unless they star
 | 2 | Takeover lifecycle: `state/takeover/watchTakeoverSaga.ts:26`, `state/takeover/takeoverSlice.ts` | saga | `idle`, `starting` (request queued, predecessor cancelling), `running`, `ending` (restore in flight) | Recorder `seenActive` latch (`state/recorder/installRecorderHook.ts:71-110`); two `all([take(takeoverEnded), put(exitTakeover())])` handshakes; `settled` Promise outside the store | **convert** | 11 / 4 (`selectTakeoverSource`), 8 / 5 (`takeoverEnded`); `exitTakeover` (25 / 12) stays a signal |
 | 3 | Tour beat: `state/tour/tourBodySaga.ts:71`, `visitBeatSaga.ts:76`, `pausableDwellSaga.ts:73`, `tourSlice.ts` | saga + flags | `waitingFoci`, `flying`, `settling`, `dwelling(running)`, `dwelling(paused)`, then outcome | `tourSlice` header: pause routed through the saga so `paused` never drifts from the saga's state; `remainingMs` only in the saga | **convert** | 4 (sagas, slice) + 9 (`dwellNonce` readers) / 7 |
 | 4 | `PlannerResult` votes: `@types/engine/frame/PlannerResult.d.ts:12` | flags | Only `idle`, `awake`, `loading`, `settling` are meaningful (a total order); 4 of 8 boolean combinations are illegal | `e42e2a00a` "Surface tiles in flight no longer re-bake the sky cubemap every frame"; the fold enforces `settling => loading => awake` by convention | **convert** | 12 / 17 |
-| 5 | Engine runtime phase: `cameraRuntime()` null (`services/engine/engine.ts:329`), `state/navigation/liveCameraRuntimeSaga.ts:11`, `watchFocusTweenSaga.ts`, `watchOrientationChangeSaga.ts`, `watchGoHomeSaga.ts`, `watchFlyToLonLatSaga.ts` | saga | null means both pre-bootstrap and post-destroy | `take('*')` wakes on every action; comment "nothing else announces it"; `watchHashReadSaga` header LANDMINE about empty context | **convert** | 3 / 0 (`liveCameraRuntimeSaga`), 10 / 4 (`cameraRuntime()`) |
+| 5 | Engine runtime phase: covered by the camera-rendered spec (2026-11-13) | saga | n/a | see section 5 | **covered** | n/a |
 | 6 | `ArrivalState`: `@types/state/arrival/ArrivalState.d.ts:6`, `state/arrival/arrivalSaga.ts:27` | flags (type) + saga | `{status, reason?}`: `reason` only legal with `failed`; saga phases `navigating` and `fallback-home` invisible | `whenStablyReady` rebuilds "settled" from three facts | **convert** (type), maybe (saga) | 5 / 3 |
 | 7 | `createSatellitePropagator`: `layers/satellites/sweep/subsystems/createSatellitePropagator.ts:13` | closure flags | `worker`, `ready`, `inFlight`, `abortStart`, `catalog`, `latest` encode `idle`, `starting`, `ready`, `sweeping` | Comment on `abortStart`: "every later commit queues behind it forever" | **convert** | 2 / 1 |
 | 8 | `TimeState`: `@types/time/TimeState.d.ts` | flags | `mode`, `paused`, `profile` give `live-run`, `live-paused`, `manual-run`, `manual-paused`, `profile` | `state/time/timeSlice.ts:159-165` matcher "so a new reducer cannot forget to"; `exitsLive` hand-built clock in `withSceneSnapshotSaga.ts:20`; 3-way restore in `clipBodySaga` | **maybe** | 32 / 15 |
-| 9 | Camera `clip` / `tween` / `frameTween` / `aim` nullables: `state/camera/cameraSlice.ts:79-90` | nullable flags | `clip != null && tween != null` is dangerous, not impossible | `state/selection/suspendDuringClip.ts:38`; `clipEnded` clears `tween` too | **maybe** | 16 / 9 (clip), 6 / 2 (tween) |
+| 9 | Camera `clip` / `tween` / `frameTween` / `aim` nullables: `state/camera/cameraIntentSlice.ts:79-90` | nullable flags | `clip != null && tween != null` is dangerous, not impossible | `state/selection/suspendDuringClip.ts:38`; `clipEnded` clears `tween` too | **maybe** | 16 / 9 (clip), 6 / 2 (tween) |
 | 10 | `watchFocusTweenSaga`: `state/selection/watchFocusTweenSaga.ts:36` | saga (takeLatest, multi-wait) | `no-runtime`, `waiting-bulk`, `resolved`, `tweening` | `5cb9eac98` "a #pose= link is the boot pose; focus tween stands down" | **maybe** | 1 / 2 |
 | 11 | Hash navigation: `state/url/watchHashReadSaga.ts:88`, `state/url/watchHashWriteSaga.ts:101` | saga + closure flag | `applying` vs `settled`; `replaceNext` latch | Long headers on history damage; `b9a5b1be8`; `tests/state/url/hashHistoryIntegrity` | **maybe** | 4 / 3 |
 | 12 | Remote pairing: `state/remote/remoteSlice.ts:9`, `state/remote/remoteReceiverSaga.ts:57` | saga Maps + flags | Per remote `unknown`, `attached`, `silent`, `closed` live in three Maps; store keeps one `phase` | `phase` stays `paired` after the last remote goes silent (unverified whether intended) | **maybe** | 3 / 0 |
@@ -105,23 +105,12 @@ type PlannerResult<T> = { value: T; activity: PlannerActivity };
 ```
 `EngineState.layersLoading` becomes `activity >= 'loading'`; the cubemap scheduler reads `=== 'settling'`. Cost: 12 src files declare `settling:`; 17 test files. Mechanical. This is the one case where the flags form a lattice rather than a phase, so a string union beats a `kind` object.
 
-### 5. Engine runtime phase (convert)
-`SagaContext.cameraRuntime()` (`engine.ts:329`) returns `null` while `!state.booted`. Sagas then poll or pulse-wait:
-
-- `liveCameraRuntimeSaga.ts:11` loops `take('*')`.
-- `watchFocusTweenSaga` loops `take(engineStatusChanged)`.
-- `waitUntilSaga` polls `cameraRuntime() !== null` in three places.
-- `watchGoHomeSaga` and `watchFlyToLonLatSaga` skip the command when null, so the command is lost.
-- `watchOrientationChangeSaga` skips the roll when null.
-
-`null` is also returned after `destroy()` (`engine.ts:399`), so one value means "not yet" and "never again". `EngineStatus.ready` is not that fact: `wireInput` sets `booted` after status events.
-
-Sketch:
-```ts
-type EngineRuntimePhase = { kind: 'booting' } | { kind: 'live' } | { kind: 'destroyed' };
-// dispatched by wireInput (live) and destroy() (destroyed); sagas select it, or take once while booting
-```
-A store fact is not a `SagaContext` change; `cameraRuntime()` stays as the value getter. Cost: 3 src files for the `take('*')` loop, 10 src readers of `cameraRuntime()` that could drop their null branch over time.
+### 5. Engine runtime phase (covered)
+Covered by [`specs/2026-11-13-camera-rendered-design.md`](../superpowers/specs/2026-11-13-camera-rendered-design.md):
+`camera.rendered` (null = no live engine frame, pre-boot or post-destroy) replaces
+`SagaContext.cameraRuntime()`, the `take('*')` loop, the `engineStatusChanged` loop in
+`watchFocusTweenSaga` and the `cameraRuntime() !== null` polls. The owner ruled (2026-11-13) that
+the five sagas that skip without a camera keep skipping. Delete this section when the spec lands.
 
 ### 6. ArrivalState (convert type, maybe for saga)
 `ArrivalState = {status: 'pending'|'arrived'|'failed'; reason?}`. `reason` is only legal on `failed`, and the header says `engine-error` means "no view at all".
@@ -153,8 +142,8 @@ Sketch: `type Clock = { kind: 'live'; paused: boolean } | { kind: 'manual'; paus
 Only maybe: 32 src files mention `TimeState`, 15 test files, and `anchor` re-anchoring is subtle. The guard works and is tested. A `selectClockPhase` selector would capture most of the readability gain at near zero cost.
 
 ### 9. Camera clip/tween nullables (maybe)
-The driver table (`pickWinner`) is a legitimate level-triggered precedence resolver, so most combinations are intended (clip@95 over tween@60). The dangerous one is a tween planted during a clip: `suspendDuringClip.ts:38` guards `watchFocusTweenSaga` and `watchSelectionRevealSaga` per dispatch, and `clipEnded` (`cameraSlice.ts:85`) clears `tween` too. Both exist only for that combination.
-Sketch: ignore `startCameraTween` in the reducer while `clip !== null`, which deletes the saga HOF. That is a small diff, not a union. Cost: the 4 `suspendDuringClip` src files plus `cameraSlice`.
+The driver table (`pickWinner`) is a legitimate level-triggered precedence resolver, so most combinations are intended (clip@95 over tween@60). The dangerous one is a tween planted during a clip: `suspendDuringClip.ts:38` guards `watchFocusTweenSaga` and `watchSelectionRevealSaga` per dispatch, and `clipEnded` (`cameraIntentSlice.ts:85`) clears `tween` too. Both exist only for that combination.
+Sketch: ignore `startCameraTween` in the reducer while `clip !== null`, which deletes the saga HOF. That is a small diff, not a union. Cost: the 4 `suspendDuringClip` src files plus `cameraIntentSlice`.
 
 ### 10. watchFocusTweenSaga (maybe)
 `takeLatest(updateSelectionFocus)` with two inner waits: `while cameraRuntime()===null take(engineStatusChanged)` and, for structure refs, `while row===null && bulk==='loading' take(factsReported)`. "Focus requested, tween owed" is generator position only. `5cb9eac98` fixed a boot-pose race where the tween fired over a `#pose=` link. A level-triggered form needs `pendingFocusFly` in the store (set by a `fly` focus, cleared by tween start or `cut`) plus findings 1 and 5; redundant before them.

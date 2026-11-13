@@ -29,7 +29,7 @@ import { watchSelectionRowsSaga } from '../../../src/state/selectionRows/watchSe
 import { watchSelectionRevealSaga } from '../../../src/state/selection/watchSelectionRevealSaga';
 import { setVisibility } from '../../../src/state/settings/setVisibilityAction';
 import { selectSettings } from '../../../src/state/settings/selectSettings';
-import { commitCameraPose, startCameraTween } from '../../../src/state/camera/cameraSlice';
+import { commitCameraPose, startCameraTween } from '../../../src/state/camera/cameraIntentSlice';
 import { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsSlice';
 import { selectFocusRef, selectSelectedRef } from '../../../src/state/selection/selectors';
 import {
@@ -218,7 +218,7 @@ describe('arrivalSaga', () => {
         upBasis: B,
         terrainHeightAt: datumOnlyTerrainHeight,
       });
-    const landed = worldArmOf(h.store.getState().camera.base);
+    const landed = worldArmOf(h.store.getState().camera.intent.base);
     sim.frame(1);
     const first = shown();
     sim.frame(60);
@@ -245,7 +245,7 @@ describe('arrivalSaga', () => {
     await flush();
 
     expect(h.arrivalCommits()).toBe(1);
-    expect(worldArmOf(h.store.getState().camera.base).distance).toBe(
+    expect(worldArmOf(h.store.getState().camera.intent.base).distance).toBe(
       framingPose(MILKY_WAY_ROW, LIVE.fovYRad, LIVE.from).distance,
     );
     expect(h.status()).toEqual({ status: 'arrived' });
@@ -303,7 +303,7 @@ describe('arrivalSaga', () => {
     await flush();
 
     const marsAtT = deriveBodyStates(unixMsToJulianDays(t)).get(asSceneBodyId('mars'))!.positionMpc;
-    const target = worldArmOf(h.store.getState().camera.base).target;
+    const target = worldArmOf(h.store.getState().camera.intent.base).target;
     for (const axis of [0, 1, 2]) expect(target[axis]).toBeCloseTo(marsAtT[axis]!, 12);
     expect(h.status()).toEqual({ status: 'arrived' });
   });
@@ -334,7 +334,7 @@ describe('arrivalSaga', () => {
     const now = unixMsToJulianDays(Date.now());
     const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
     const expected = worldArmOf(homePose(EARTH_HOME, LIVE.fovYRad, now, B));
-    const landed = worldArmOf(root.camera.base);
+    const landed = worldArmOf(root.camera.intent.base);
     expect(landed.yaw).toBeCloseTo(expected.yaw, 3);
     expect(landed.pitch).toBeCloseTo(expected.pitch, 3);
   });
@@ -355,7 +355,7 @@ describe('arrivalSaga', () => {
     const expected = worldArmOf(
       homePose(EARTH_HOME, LIVE.fovYRad, simDays, ORIENTATION_FRAMES.galactic),
     );
-    const landed = worldArmOf(root.camera.base);
+    const landed = worldArmOf(root.camera.intent.base);
     expect(landed.yaw).toBeCloseTo(expected.yaw, 3);
     expect(landed.pitch).toBeCloseTo(expected.pitch, 3);
   });
