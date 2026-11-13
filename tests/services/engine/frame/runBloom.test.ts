@@ -21,6 +21,7 @@ import type { GpuTimingService } from '../../../../src/@types/gpu/timing/GpuTimi
 import type { BloomPyramid } from '../../../../src/@types/rendering/BloomPyramid';
 import type { FilmSettings } from '../../../../src/@types/settings/FilmSettings';
 import { DEFAULT_FILM } from '../../../../src/data/film/filmDefaults';
+import { DEFAULT_BLOOM_CAP } from '../../../../src/data/defaults';
 
 // ── Mock pyramid ─────────────────────────────────────────────────────────────
 //
@@ -157,8 +158,19 @@ function makeCtx(): FrameView {
 const FILM_ON: FilmSettings = {
   ...DEFAULT_FILM,
   enabled: true,
-  glow: { ...DEFAULT_FILM.glow, streakStrength: 1, veil: 0.3 },
+  grade: { ...DEFAULT_FILM.grade, squeeze: 1.5 },
+  glow: { ...DEFAULT_FILM.glow, cap: 12, streakStrength: 1, veil: 0.3 },
 };
+
+// bloom0 is 1920/2 px wide in the mock ctx: the level-1 downsample's unsqueezed texel x.
+const BLOOM0_TEXEL_X = 1 / 960;
+
+/** What `bright` and the level-1 downsample received: the cap and the squeeze land here. */
+function brightAndDownsampleArgs(pyramid: BloomPyramid) {
+  const params = vi.mocked(pyramid.bright).mock.calls[0]![2];
+  const texel = vi.mocked(pyramid.downsample).mock.calls[0]![3];
+  return { params, texel };
+}
 
 function makeState(pyramid: BloomPyramid | null, film: FilmSettings = DEFAULT_FILM): EngineState {
   return {
@@ -216,6 +228,11 @@ describe('runBloom', () => {
       { method: 'upsample', level: 0, srcId: 'bloom1' },
       { method: 'fold', srcId: 'bloom0', kind: 'bloom' },
     ]);
+    // The film glow's cap and squeeze must not leak while the look is off.
+    const { params, texel } = brightAndDownsampleArgs(pyramid);
+    expect(params.cap).toBe(DEFAULT_BLOOM_CAP);
+    expect(params.capFloor).toBe(DEFAULT_BLOOM_CAP);
+    expect(texel[0]).toBeCloseTo(BLOOM0_TEXEL_X);
   });
 
   it('with the look on, streak reads bloom1 after the downsample chain, veil reads bloom4, both folds precede the bloom fold, and the end timestamp rides the last pass', () => {
@@ -254,6 +271,10 @@ describe('runBloom', () => {
     type Tw = { timestampWrites?: GPURenderPassTimestampWrites };
     expect((passDescs.at(-1) as Tw).timestampWrites?.endOfPassWriteIndex).toBe(11);
     for (const desc of passDescs.slice(1, -1)) expect((desc as Tw).timestampWrites).toBeUndefined();
+    const { params, texel } = brightAndDownsampleArgs(pyramid);
+    expect(params.cap).toBe(12);
+    expect(params.capFloor).toBe(DEFAULT_BLOOM_CAP);
+    expect(texel[0]).toBeCloseTo(BLOOM0_TEXEL_X * 1.5);
   });
 
   it('with the look on and streakStrength 0, no streak pass is encoded', () => {

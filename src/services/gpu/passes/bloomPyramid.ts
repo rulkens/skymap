@@ -25,7 +25,7 @@ import type { StreakTaps } from '../../../@types/rendering/StreakTaps';
 import type { Vec2 } from '../../../@types/math/Vec2';
 import { BLOOM_LEVELS, FOLD_KINDS, VEIL_SIGMA_TEXELS } from '../../../data/bloomConstants';
 
-/** Soft-threshold knee in the bright uniform's `u.y`; the shader does not read it yet. */
+/** Written to the bright uniform's `u.y`; the shader derives its knee from the threshold and ignores this lane. */
 const BRIGHT_KNEE = 0.5;
 
 export function createBloomPyramid(device: GPUDevice, hdrFormat: GPUTextureFormat): BloomPyramid {

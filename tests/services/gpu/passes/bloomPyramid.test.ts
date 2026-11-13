@@ -7,9 +7,9 @@
  *     per-level uniform buffer, and the two stages use SEPARATE buffers even at
  *     the same level. Collapsing to a shared buffer (the classic mistake) would
  *     make one draw read another's texel size — invisible to tsc, caught here.
- *   - only the upsample pipeline blends additively; bright, downsample, streak
- *     and veil overwrite. Flipping either would sum successive mips into garbage or drop
- *     the pyramid's accumulation.
+ *   - upsample and fold blend additively; bright, downsample, streak and veil
+ *     overwrite. Flipping either side would sum successive frames into garbage
+ *     or drop the pyramid's accumulation.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { createBloomPyramid } from '../../../../src/services/gpu/passes/bloomPyramid';
@@ -67,7 +67,7 @@ function drawAndCapture(
 }
 
 describe('createBloomPyramid', () => {
-  it('only the upsample pipeline blends additively', () => {
+  it('upsample and fold blend additively; bright, downsample, streak and veil overwrite', () => {
     const ctx = mockDevice();
     createBloomPyramid(ctx.device, 'rgba16float');
     const blendOf = (stage: string) =>
@@ -78,10 +78,12 @@ describe('createBloomPyramid', () => {
     for (const stage of ['bright', 'downsample', 'streak', 'veil']) {
       expect(blendOf(stage)).toBeUndefined();
     }
-    expect(blendOf('upsample')).toEqual({
-      color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-      alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-    });
+    for (const stage of ['upsample', 'fold']) {
+      expect(blendOf(stage)).toEqual({
+        color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
+        alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
+      });
+    }
   });
 
   it('each draw writes and binds its own per-level uniform buffer', () => {
