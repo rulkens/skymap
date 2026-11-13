@@ -31,11 +31,9 @@ describe('bodyTextureFilename', () => {
     expect(bodyTextureFilename('earth', 'material', 'medium')).toBe('earth-material-4096.webp');
   });
 
-  it('uses lossless WebP for an alpha kind on a sphere', () => {
-    // Clouds are sRGB COLOUR (not linear-packed) yet must ship as WebP: the shell
-    // carries a transparency channel a JPEG cannot hold. This routes through the
-    // alpha axis, orthogonal to the linear one. If the extension ignored alpha this
-    // would be `.jpg` and the fetcher would 404 the cloud map.
-    expect(bodyTextureFilename('earth', 'clouds', 'large')).toBe('earth-clouds-8192.webp');
+  it('names a grey kind with a -grey segment and WebP', () => {
+    // The segment keeps old app code (RGBA clouds) and new grey files apart; a
+    // `.jpg` or an unsegmented name would 404 the cloud map.
+    expect(bodyTextureFilename('earth', 'clouds', 'large')).toBe('earth-clouds-grey-8192.webp');
   });
 });
