@@ -11,8 +11,6 @@ import type { ScaleInfo } from '../engine/ScaleInfo';
 import type { SourceId } from '../data/SourceId';
 import type { LoadProgressState } from '../loading/LoadProgressState';
 import type { LayerSearchEntry } from '../engine/layer/LayerSearchEntry';
-import type { SkyEntryFacts } from '../engine/SkyEntryFacts';
-import type { SkyView } from '../engine/SkyView';
 
 export type CoreEngineSliceState = {
   status: EngineStatus;
@@ -25,10 +23,6 @@ export type CoreEngineSliceState = {
    * subscriber.
    */
   focusedBodyDistanceMpc: number | null;
-  /** The centre spot sky entry would use; republished only on a metre of travel or an altitude-gate flip. */
-  skyEntry: SkyEntryFacts;
-  /** Non-null exactly while the camera frame is `sky`: the one fact that says the viewer stands (D9). */
-  skyView: SkyView;
   /**
    * True when the ACTIVE display currently reports more than SDR range (the
    * CSS Media Queries Level 5 `dynamic-range` feature). Written by

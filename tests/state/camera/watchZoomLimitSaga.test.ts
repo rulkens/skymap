@@ -14,7 +14,7 @@ import { setOrientation } from '../../../src/state/settings/core/orientationSlic
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 import { enterSky } from '../../../src/state/sky/enterSky';
 import { exitTakeover, takeoverStarted } from '../../../src/state/takeover/takeoverActions';
-import { engineSkyViewReported } from '../../../src/state/engine/engineSlice';
+import { skyViewReported } from '../../../src/state/sky/skySlice';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 import type { Action, Middleware } from '@reduxjs/toolkit';
 
@@ -64,7 +64,7 @@ describe('watchZoomLimitSaga', () => {
 
   it('Leave while standing with no takeover lifts off', () => {
     const store = build();
-    store.dispatch(engineSkyViewReported({ spot: SPOT, azimuthRad: 0 }));
+    store.dispatch(skyViewReported({ spot: SPOT, azimuthRad: 0 }));
     store.dispatch(exitTakeover({ restore: true }));
     expect(store.getState().input.pending).toEqual([{ kind: 'liftOff' }]);
   });
@@ -72,7 +72,7 @@ describe('watchZoomLimitSaga', () => {
   it('a plain exit, or Leave while not standing, queues nothing', () => {
     const store = build();
     store.dispatch(exitTakeover({ restore: true }));
-    store.dispatch(engineSkyViewReported({ spot: SPOT, azimuthRad: 0 }));
+    store.dispatch(skyViewReported({ spot: SPOT, azimuthRad: 0 }));
     store.dispatch(exitTakeover());
     expect(store.getState().input.pending).toEqual([]);
   });

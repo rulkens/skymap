@@ -9,7 +9,7 @@ import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
 import SkyHudContainer from '../../../src/components/containers/SkyHudContainer';
 import { rootReducer } from '../../../src/store/rootReducer';
-import { engineSkyViewReported } from '../../../src/state/engine/engineSlice';
+import { skyViewReported } from '../../../src/state/sky/skySlice';
 import { exitTakeover, takeoverStarted } from '../../../src/state/takeover/takeoverActions';
 import { skyBelowHorizonSet } from '../../../src/state/sky/skySlice';
 import { skyClockTo } from '../../../src/state/sky/skyClockTo';
@@ -27,7 +27,7 @@ const NOON = unixMsToJulianDays(Date.UTC(2026, 10, 7, 12));
 function mount(spot = SPOT, simDays = NOON) {
   const store = configureStore({ reducer: rootReducer });
   store.dispatch(goLive({ simDays, nowMs: performance.now() }));
-  store.dispatch(engineSkyViewReported({ spot, azimuthRad: Math.PI }));
+  store.dispatch(skyViewReported({ spot, azimuthRad: Math.PI }));
   const dispatch = vi.spyOn(store, 'dispatch');
   render(
     <Provider store={store}>

@@ -52,5 +52,5 @@ export const inputRoute = 'input' as const;
 // `viewCoverRoute` holds how far each resting panel reaches over the canvas,
 // which the camera runtime turns into the off-centre view.
 export const viewCoverRoute = 'viewCover' as const;
-// `skyRoute` holds what a search while standing found below the horizon, for the sky HUD.
+// `skyRoute` holds the sky view's readouts (entry spot, standing view) and the below-horizon fact.
 export const skyRoute = 'sky' as const;

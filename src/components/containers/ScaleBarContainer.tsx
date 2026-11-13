@@ -10,7 +10,8 @@
 import { memo } from 'react';
 import { ScaleBar } from '../ScaleBar/ScaleBar';
 import { useAppSelector } from '../../store/hooks';
-import { selectScale, selectSkyView } from '../../state/engine/selectors';
+import { selectScale } from '../../state/engine/selectors';
+import { selectSkyView } from '../../state/sky/selectSkyView';
 
 function ScaleBarContainer(): React.ReactElement | null {
   const scale = useAppSelector(selectScale);

@@ -11,7 +11,7 @@ import { zoomLimitPushed } from './zoomLimitPushed';
 import { clipStarted } from './cameraSlice';
 import { selectClipActive } from './selectors';
 import { selectOrientation } from '../settings/selectors';
-import { selectSkyView } from '../engine/selectors';
+import { selectSkyView } from '../sky/selectSkyView';
 import { selectTakeoverSource } from '../takeover/selectors';
 import { exitTakeover } from '../takeover/takeoverActions';
 import { enterSky } from '../sky/enterSky';

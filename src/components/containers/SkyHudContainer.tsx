@@ -10,7 +10,7 @@ import { memo, useCallback, useMemo, type ReactNode } from 'react';
 import SkyHud from '../SkyHud/SkyHud';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { useSimInstant } from '../../hooks/useSimInstant';
-import { selectSkyView } from '../../state/engine/selectors';
+import { selectSkyView } from '../../state/sky/selectSkyView';
 import { selectTakeoverSource } from '../../state/takeover/selectors';
 import { selectSkyBelowHorizon } from '../../state/sky/selectSkyBelowHorizon';
 import { selectTimeState } from '../../state/time/selectors';

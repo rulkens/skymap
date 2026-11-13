@@ -7,9 +7,10 @@
 import type { RootState } from '../../store/types';
 import type { SkyEntryFacts } from '../../@types/engine/SkyEntryFacts';
 import { SKY_ENTRY_MAX_ALT_M } from '../../data/sky/skyEntryMaxAltM';
-import { selectSkyEntryFacts, selectSkyView } from '../engine/selectors';
+import { selectSkyView } from './selectSkyView';
 import { selectTakeoverSource } from '../takeover/selectors';
 import { selectClipActive } from '../camera/selectors';
+import { selectSkyEntryFacts } from './selectSkyEntryFacts';
 
 export const selectSkyEntry = (state: RootState): SkyEntryFacts['spot'] => {
   const { spot, altitudeM } = selectSkyEntryFacts(state);

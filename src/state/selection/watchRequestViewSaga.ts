@@ -12,7 +12,7 @@ import { requestView } from './requestView';
 import { requestFocus } from './requestFocus';
 import { resolveFocusRefDeferringSaga } from './resolveFocusRefDeferringSaga';
 import { clipEnded, clipStarted } from '../camera/cameraSlice';
-import { selectSkyView } from '../engine/selectors';
+import { selectSkyView } from '../sky/selectSkyView';
 import { selectTakeoverSource } from '../takeover/selectors';
 import { selectOrientation } from '../settings/selectors';
 import { selectTimeState } from '../time/selectors';

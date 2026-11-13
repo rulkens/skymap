@@ -24,7 +24,7 @@ import { exitTakeover } from '../../../src/state/takeover/takeoverActions';
 import { zoomLimitPushed } from '../../../src/state/camera/zoomLimitPushed';
 import { startTour } from '../../../src/state/tour/tourActions';
 import { clipEnded, clipStarted, commitCameraPose } from '../../../src/state/camera/cameraSlice';
-import { engineSkyEntryReported } from '../../../src/state/engine/engineSlice';
+import { skyEntryReported } from '../../../src/state/sky/skySlice';
 import { skySpotAt } from '../../../src/utils/geo/skySpotAt';
 import { skySpotRadial } from '../../../src/utils/geo/skySpotRadial';
 import { outerBoundRadiusM } from '../../../src/utils/occlusion/outerBoundRadiusM';
@@ -250,7 +250,7 @@ describe('the sky takeover', () => {
     const up = skySpotRadial(COPENHAGEN);
     const GROUND: Vec3 = [up[0] * 6_371_120, up[1] * 6_371_120, up[2] * 6_371_120];
     const readout = (pointLocalM: Vec3) =>
-      engineSkyEntryReported({
+      skyEntryReported({
         spot: skySpotAt(EARTH, pointLocalM),
         pointLocalM,
         altitudeM: 12_000,

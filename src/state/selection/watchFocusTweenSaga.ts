@@ -25,7 +25,7 @@ import { selectionKindOf } from '../../services/engine/selection/selectionKindOf
 import { bodyMovesThisFrame } from '../../utils/scene/bodyMovesThisFrame';
 import { suspendDuringClip } from './suspendDuringClip';
 import { engineStatusChanged, factsReported } from '../engine/engineSlice';
-import { selectSkyView, selectStructureBulk } from '../engine/selectors';
+import { selectStructureBulk } from '../engine/selectors';
 import { DEFAULT_FOV_Y_RAD } from '../../services/engine/camera/framing/cameraFraming';
 import { selectFocusMoves, selectOrientation } from '../settings/selectors';
 import { selectTimeState } from '../time/selectors';
@@ -33,6 +33,7 @@ import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { resolveFocusMotion } from '../../utils/camera/focusMotion/resolveFocusMotion';
 import { focusMotionRowOf } from '../../services/engine/camera/clips/focusMotionRowOf';
 import type { SagaContext } from '../../store/types';
+import { selectSkyView } from '../sky/selectSkyView';
 
 export function* watchFocusTweenSaga() {
   yield* takeLatest(

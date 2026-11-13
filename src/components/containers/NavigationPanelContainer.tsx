@@ -3,7 +3,7 @@
 import { memo, type ReactNode } from 'react';
 import NavigationPanel from '../NavigationPanel/NavigationPanel';
 import { useAppSelector } from '../../store/hooks';
-import { selectSkyView } from '../../state/engine/selectors';
+import { selectSkyView } from '../../state/sky/selectSkyView';
 
 function NavigationPanelContainer(): ReactNode {
   const standing = useAppSelector(selectSkyView) !== null;

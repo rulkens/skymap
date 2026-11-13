@@ -45,10 +45,7 @@ import { stepMissionSpeed } from '../../../src/layers/missions/state/missions/sl
 import { setRate } from '../../../src/state/time/timeSlice';
 import { updateSelectionFocus } from '../../../src/state/selection/selectionSlice';
 import { selectFocusRef } from '../../../src/state/selection/selectors';
-import {
-  engineSkyEntryReported,
-  engineSkyViewReported,
-} from '../../../src/state/engine/engineSlice';
+import { skyEntryReported, skyViewReported } from '../../../src/state/sky/skySlice';
 import { enterSkyHere } from '../../../src/state/sky/enterSkyHere';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
@@ -142,7 +139,7 @@ describe('watchKeyboardEventsSaga', () => {
     const { store, recorded } = buildHarness();
     await flush();
     store.dispatch(updateSelectionFocus({ type: 'body', id: EARTH }, 'cut'));
-    store.dispatch(engineSkyViewReported({ spot: SPOT, azimuthRad: 0 }));
+    store.dispatch(skyViewReported({ spot: SPOT, azimuthRad: 0 }));
     const before = recorded.length;
 
     h.emit!('escape');
@@ -156,7 +153,7 @@ describe('watchKeyboardEventsSaga', () => {
     const { store, recorded } = buildHarness();
     await flush();
     const entry = (altitudeM: number) =>
-      store.dispatch(engineSkyEntryReported({ spot: SPOT, pointLocalM: [1, 2, 3], altitudeM }));
+      store.dispatch(skyEntryReported({ spot: SPOT, pointLocalM: [1, 2, 3], altitudeM }));
 
     entry(30_000);
     h.emit!('s');

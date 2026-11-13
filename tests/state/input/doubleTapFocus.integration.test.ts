@@ -23,7 +23,7 @@ import {
   updateSelectionSelect,
 } from '../../../src/state/selection/selectionSlice';
 import { requestView } from '../../../src/state/selection/requestView';
-import { engineSkyViewReported } from '../../../src/state/engine/engineSlice';
+import { skyViewReported } from '../../../src/state/sky/skySlice';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 import { bodySelectionRow } from '../../../src/layers/body/selection/bodySelectionRow';
 import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/selection/milkyWaySelectionRow';
@@ -119,7 +119,7 @@ describe('double-tap focus', () => {
   const stand = (store: ReturnType<typeof build>['store']) => {
     store.dispatch(updateSelectionFocus({ type: 'body', id: EARTH }, 'cut'));
     store.dispatch(
-      engineSkyViewReported({
+      skyViewReported({
         spot: { body: EARTH, lonRad: 0.2186, latRad: 0.9716 },
         azimuthRad: 0,
       }),

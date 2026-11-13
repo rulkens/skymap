@@ -14,7 +14,7 @@ import { requestView } from '../../../src/state/selection/requestView';
 import { requestFocus } from '../../../src/state/selection/requestFocus';
 import { updateSelectionFocus } from '../../../src/state/selection/selectionSlice';
 import { clipEnded, clipStarted } from '../../../src/state/camera/cameraSlice';
-import { engineSkyViewReported } from '../../../src/state/engine/engineSlice';
+import { skyViewReported } from '../../../src/state/sky/skySlice';
 import { pause, setSimDays } from '../../../src/state/time/timeSlice';
 import { selectSkyBelowHorizon } from '../../../src/state/sky/selectSkyBelowHorizon';
 import { actionsForPaletteAction } from '../../../src/utils/palette/actionsForPaletteAction';
@@ -119,7 +119,7 @@ function build() {
 function stand(store: ReturnType<typeof build>['store']) {
   store.dispatch(updateSelectionFocus({ type: 'body', id: EARTH }, 'cut'));
   store.dispatch(
-    engineSkyViewReported({
+    skyViewReported({
       spot: COPENHAGEN,
       azimuthRad: START_AZ,
     }),
@@ -184,7 +184,7 @@ describe('watchRequestViewSaga', () => {
     expect(fovLeg(clip)).toEqual([]);
     const state = () => store.getState() as unknown as RootState;
     expect(selectSkyBelowHorizon(state())).not.toBeNull();
-    store.dispatch(engineSkyViewReported(null));
+    store.dispatch(skyViewReported(null));
     expect(selectSkyBelowHorizon(state())).toBeNull();
   });
 

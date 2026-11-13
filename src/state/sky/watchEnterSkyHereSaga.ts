@@ -4,7 +4,7 @@ import { put, select, takeEvery } from 'typed-redux-saga';
 import { enterSkyHere } from './enterSkyHere';
 import { enterSky } from './enterSky';
 import { selectSkyEntry } from './selectSkyEntry';
-import { selectSkyEntryFacts } from '../engine/selectors';
+import { selectSkyEntryFacts } from './selectSkyEntryFacts';
 
 export function* watchEnterSkyHereSaga() {
   yield* takeEvery(enterSkyHere, function* () {

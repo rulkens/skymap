@@ -11,7 +11,7 @@ import { actionChannel, call, delay, put, race, select, take } from 'typed-redux
 import type { Action } from '@reduxjs/toolkit';
 
 import { commitCameraPose } from '../camera/cameraSlice';
-import { engineSkyEntryReported } from '../engine/engineSlice';
+import { skyEntryReported } from './skySlice';
 import { selectCameraBase } from '../camera/selectors';
 import { selectOrientation } from '../settings/selectors';
 import { liveCameraRuntimeSaga } from '../navigation/liveCameraRuntimeSaga';
@@ -55,8 +55,8 @@ export function* arriveSaga(spot: SkySpot, pointLocalM: Vec3 | null) {
     const approach = approachClip(runtime.from, spot, headingRad, fovYRad, ctx);
     // Opened before the flight: the readout can land in the clip's held last frame.
     const readouts = yield* actionChannel(
-      (a: Action): a is ReturnType<typeof engineSkyEntryReported> =>
-        engineSkyEntryReported.match(a) &&
+      (a: Action): a is ReturnType<typeof skyEntryReported> =>
+        skyEntryReported.match(a) &&
         a.payload.spot?.body === spot.body &&
         a.payload.pointLocalM !== null &&
         offSpotM(a.payload.pointLocalM, spot) < ARRIVAL_GROUND_MATCH_M,

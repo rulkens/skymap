@@ -38,8 +38,6 @@ import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMet
 import type { StructureSearchEntry } from '../../@types/engine/StructureSearchEntry';
 import type { AliasIndexEntry } from '../../@types/engine/AliasIndexEntry';
 import type { LayerSearchEntry } from '../../@types/engine/layer/LayerSearchEntry';
-import type { SkyEntryFacts } from '../../@types/engine/SkyEntryFacts';
-import type { SkyView } from '../../@types/engine/SkyView';
 
 const selectEngine = (state: RootState): CoreEngineSliceState => state[engineRoute];
 
@@ -144,12 +142,6 @@ export const selectStarChunkSlotsError = (state: RootState): string | null =>
  */
 export const selectFocusedBodyDistanceMpc = (state: RootState): number | null =>
   selectEngine(state).focusedBodyDistanceMpc;
-
-export const selectSkyEntryFacts = (state: RootState): SkyEntryFacts =>
-  selectEngine(state).skyEntry;
-
-/** Non-null exactly while the viewer stands (D9): the HUD, search and the entry gate all read it. */
-export const selectSkyView = (state: RootState): SkyView => selectEngine(state).skyView;
 
 /**
  * Live display capability — true when the ACTIVE display currently reports

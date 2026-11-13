@@ -9,7 +9,7 @@ import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
 import SkyEntryButtonContainer from '../../../src/components/containers/SkyEntryButtonContainer';
 import { rootReducer } from '../../../src/store/rootReducer';
-import { engineSkyEntryReported } from '../../../src/state/engine/engineSlice';
+import { skyEntryReported } from '../../../src/state/sky/skySlice';
 import { enterSkyHere } from '../../../src/state/sky/enterSkyHere';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 import type { SkySpot } from '../../../src/@types/camera/pose/SkySpot';
@@ -19,7 +19,7 @@ const SPOT: SkySpot = { body: asSceneBodyId('earth'), lonRad: 0.2186, latRad: 0.
 
 function mount(altitudeM: number, phone = false) {
   const store = configureStore({ reducer: rootReducer });
-  store.dispatch(engineSkyEntryReported({ spot: SPOT, pointLocalM: [1, 2, 3], altitudeM }));
+  store.dispatch(skyEntryReported({ spot: SPOT, pointLocalM: [1, 2, 3], altitudeM }));
   const dispatch = vi.spyOn(store, 'dispatch');
   render(
     <Provider store={store}>
@@ -37,9 +37,7 @@ describe('SkyEntryButtonContainer', () => {
     expect(button().hasAttribute('inert')).toBe(false);
 
     act(() => {
-      store.dispatch(
-        engineSkyEntryReported({ spot: SPOT, pointLocalM: [1, 2, 3], altitudeM: 30_000 }),
-      );
+      store.dispatch(skyEntryReported({ spot: SPOT, pointLocalM: [1, 2, 3], altitudeM: 30_000 }));
     });
     expect(button().hasAttribute('inert')).toBe(true);
   });

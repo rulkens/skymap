@@ -42,7 +42,7 @@ function enterFarAndLand(standAt: SkySpot | null) {
   }
   const grounds: Vec3[] = [];
   h.store.subscribe(() => {
-    const point = (h.store.getState() as unknown as RootState).engine.skyEntry.pointLocalM;
+    const point = (h.store.getState() as unknown as RootState).sky.entry.pointLocalM;
     if (point !== null && grounds.at(-1) !== point) grounds.push(point);
   });
   h.store.dispatch(enterSky({ spot: PARIS, pointLocalM: null }));

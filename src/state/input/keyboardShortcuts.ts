@@ -34,7 +34,7 @@ import { selectSelectedRef } from '../selection/selectors';
 import { selectTourActive } from '../tour/selectors';
 import { advanceTour, prevBeat, togglePause } from '../tour/tourActions';
 import { exitTakeover } from '../takeover/takeoverActions';
-import { selectSkyView } from '../engine/selectors';
+import { selectSkyView } from '../sky/selectSkyView';
 import { selectSkyEntry } from '../sky/selectSkyEntry';
 import { enterSkyHere } from '../sky/enterSkyHere';
 import { selectPaletteOpen } from '../ui/selectors';

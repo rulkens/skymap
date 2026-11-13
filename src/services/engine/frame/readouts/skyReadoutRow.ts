@@ -1,9 +1,6 @@
 import type { FrameReadoutRow } from '../../../../@types/engine/frame/FrameReadoutRow';
-import {
-  engineSkyEntryReported,
-  engineSkyViewReported,
-} from '../../../../state/engine/engineSlice';
-import { selectSkyEntryFacts, selectSkyView } from '../../../../state/engine/selectors';
+import { skyEntryReported, skyViewReported } from '../../../../state/sky/skySlice';
+import { selectSkyView } from '../../../../state/sky/selectSkyView';
 import { isBodyArm } from '../../camera/arms/body/isBodyArm';
 import { isSkyArm } from '../../camera/arms/sky/isSkyArm';
 import { skyEntryFactsAt } from '../../../../utils/sky/skyEntryFactsAt';
@@ -13,6 +10,7 @@ import { SKY_VIEW_STEP_RAD } from '../../../../data/sky/skyViewStepRad';
 import { roundToMultiple } from '../../../../utils/math/roundToMultiple';
 import { wrapRadPositive } from '../../../../utils/math/wrapRadPositive';
 import { skyViewChanged } from '../../../../utils/sky/skyViewChanged';
+import { selectSkyEntryFacts } from '../../../../state/sky/selectSkyEntryFacts';
 
 /**
  * The two sky facts, each dispatched only when it differs from the stored one: where
@@ -34,7 +32,7 @@ export const skyReadoutRow: FrameReadoutRow = {
           )
         : NO_SKY_ENTRY;
     if (skyEntryChanged(selectSkyEntryFacts(frame.stored), entry)) {
-      dispatch(engineSkyEntryReported(entry));
+      dispatch(skyEntryReported(entry));
     }
     const view = isSkyArm(framed)
       ? {
@@ -42,6 +40,6 @@ export const skyReadoutRow: FrameReadoutRow = {
           azimuthRad: wrapRadPositive(roundToMultiple(framed.pose.azimuthRad, SKY_VIEW_STEP_RAD)),
         }
       : null;
-    if (skyViewChanged(selectSkyView(frame.stored), view)) dispatch(engineSkyViewReported(view));
+    if (skyViewChanged(selectSkyView(frame.stored), view)) dispatch(skyViewReported(view));
   },
 };

@@ -7,10 +7,7 @@ import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../src/store/rootReducer';
 import { selectSkyEntry } from '../../../src/state/sky/selectSkyEntry';
-import {
-  engineSkyEntryReported,
-  engineSkyViewReported,
-} from '../../../src/state/engine/engineSlice';
+import { skyEntryReported, skyViewReported } from '../../../src/state/sky/skySlice';
 import { takeoverStarted } from '../../../src/state/takeover/takeoverActions';
 import { clipStarted } from '../../../src/state/camera/cameraSlice';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
@@ -22,7 +19,7 @@ const SPOT: SkySpot = { body: asSceneBodyId('earth'), lonRad: 0.2, latRad: 0.9 }
 function storeAt(altitudeM: number, spot: SkySpot | null = SPOT) {
   const store = configureStore({ reducer: rootReducer });
   store.dispatch(
-    engineSkyEntryReported({ spot, pointLocalM: spot === null ? null : [1, 2, 3], altitudeM }),
+    skyEntryReported({ spot, pointLocalM: spot === null ? null : [1, 2, 3], altitudeM }),
   );
   return store;
 }
@@ -45,7 +42,7 @@ describe('selectSkyEntry', () => {
 
   it('is null while standing', () => {
     const store = storeAt(5_000);
-    store.dispatch(engineSkyViewReported({ spot: SPOT, azimuthRad: 0 }));
+    store.dispatch(skyViewReported({ spot: SPOT, azimuthRad: 0 }));
     expect(entry(store)).toBeNull();
   });
 

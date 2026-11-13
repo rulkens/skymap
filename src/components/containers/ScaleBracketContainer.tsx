@@ -7,8 +7,9 @@
 import { memo } from 'react';
 import ScaleBracket from '../ScaleBracket/ScaleBracket';
 import { useAppSelector } from '../../store/hooks';
-import { selectScale, selectSkyView } from '../../state/engine/selectors';
+import { selectScale } from '../../state/engine/selectors';
 import { useRecentlyChanged } from '../../hooks/useRecentlyChanged';
+import { selectSkyView } from '../../state/sky/selectSkyView';
 
 const SCALE_VISIBLE_MS = 2000;
 

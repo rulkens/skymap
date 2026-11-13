@@ -6,7 +6,7 @@ import { rootReducer } from '../../../src/store/rootReducer';
 import { watchEnterSkyHereSaga } from '../../../src/state/sky/watchEnterSkyHereSaga';
 import { enterSkyHere } from '../../../src/state/sky/enterSkyHere';
 import { enterSky } from '../../../src/state/sky/enterSky';
-import { engineSkyEntryReported } from '../../../src/state/engine/engineSlice';
+import { skyEntryReported } from '../../../src/state/sky/skySlice';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 import type { SkySpot } from '../../../src/@types/camera/pose/SkySpot';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
@@ -32,7 +32,7 @@ function build() {
 describe('watchEnterSkyHereSaga', () => {
   it('enters at the centre ground, with its point, while entry is on offer', () => {
     const { store, seen } = build();
-    store.dispatch(engineSkyEntryReported({ spot: SPOT, pointLocalM: POINT, altitudeM: 5_000 }));
+    store.dispatch(skyEntryReported({ spot: SPOT, pointLocalM: POINT, altitudeM: 5_000 }));
     store.dispatch(enterSkyHere());
     expect(seen.filter(enterSky.match).map((a) => a.payload)).toEqual([
       { spot: SPOT, pointLocalM: POINT },
@@ -41,7 +41,7 @@ describe('watchEnterSkyHereSaga', () => {
 
   it('does nothing once entry is off (here: above 20 km)', () => {
     const { store, seen } = build();
-    store.dispatch(engineSkyEntryReported({ spot: SPOT, pointLocalM: POINT, altitudeM: 25_000 }));
+    store.dispatch(skyEntryReported({ spot: SPOT, pointLocalM: POINT, altitudeM: 25_000 }));
     store.dispatch(enterSkyHere());
     expect(seen.some(enterSky.match)).toBe(false);
   });
