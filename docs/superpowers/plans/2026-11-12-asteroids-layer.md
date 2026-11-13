@@ -108,7 +108,7 @@ prep PR against `main`. Then report the flow with `prep: true`. The feature PR i
 **Interfaces — Produces:**
 
 ```ts
-export const ASTEROID_CLASSES = ['nearEarth', 'mainBelt', 'hilda', 'jupiterTrojan', 'distant'] as const;
+export const ASTEROID_CLASSES = ['nearEarth', 'mainBelt', 'hilda', 'jupiterTrojan'] as const;
 export type AsteroidClass = (typeof ASTEROID_CLASSES)[number];   // class code = index in the tuple
 export const ASTEROID_CATALOG_PATHS = { catalog: 'asteroids/asteroids.astb', names: 'asteroids/asteroid-names.bin' } as const;
 ```
@@ -173,7 +173,7 @@ blob. Only named rows go in, meaning the readable designation is `(n) Name` and 
 
 **Class mapping** from the orbit type, the low 6 bits of the flags column (mask 0x3F): 1 Atira, 2 Aten,
 3 Apollo, 4 Amor → `nearEarth`; 8 Hilda → `hilda`; 9 Jupiter Trojan → `jupiterTrojan`; 10 Distant object →
-`distant`; everything else (0, 5 q < 1.665 AU, 6 Hungaria, 7 and undefined values) → `mainBelt`. No
+`null` (written as an ABSENT row, owner 2026-11-13); everything else (0, 5 q < 1.665 AU, 6 Hungaria, 7 and undefined values) → `mainBelt`. No
 element-space fallback: the field is always present.
 
 Rows at another epoch are propagated to the dominant epoch by advancing M by n·Δt (two-body; n from a
@@ -341,7 +341,7 @@ Copy satellites' patterns: visibility at `src/layers/satellites/visibility.ts`, 
 priority = next free rung after 85, with a comment naming the rung below). The names slot is a second
 asset row that demands only `alsoWhen: ['searching']`. Bands: fully in within 200 AU of the Sun, gone
 beyond 2,000 AU (`SCALE_UNITS`). The Settings section follows `SatellitesSection.tsx`: the master toggle
-plus five class toggles, labels from `asteroidClassLabels`, and a brightness slider. Copy the stars'
+plus four class toggles, labels from `asteroidClassLabels`, and a brightness slider. Copy the stars'
 brightness slider control (find it in `src/layers/starCatalog/controls/ui/`) for the range, the
 log/linear scale and the component. Load the `create-component` skill and read
 `docs/superpowers/conventions/ui-ux.md` before writing it. The slot decodes off the main thread

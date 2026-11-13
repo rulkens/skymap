@@ -18,13 +18,13 @@ user can find an asteroid in the palette, pick it, follow it, read its card and 
 
 **Goals**
 
-- Every numbered minor planet (about 900k, MPC numbers 1…N) drawn as an additive point, positioned by
+- Every numbered minor planet out to the Jupiter trojans (about 900k, MPC numbers 1…N) drawn as an additive point, positioned by
   two-body Kepler from its osculating elements at the simulated time.
 - Brightness is the apparent magnitude from the camera: H-G phase law, distance to the Sun, distance to the
   camera, phase angle, then lifted for display (§5 ruling 6): the dots are brighter than their true V so
   the belt shows, and are not photometrically comparable to stars.
-- Five classes that toggle independently in Settings, coloured by class: near-Earth, main belt, Hilda,
-  Jupiter trojan, distant (trans-Neptunian and beyond).
+- Four classes that toggle independently in Settings, coloured by class: near-Earth, main belt, Hilda,
+  Jupiter trojan.
 - Pick, palette search by number and name, an InfoCard, camera follow, and the selected asteroid's orbit
   ring.
 - Off at boot, like satellites (owner ruling). Nothing is downloaded until the Layer is on and the camera
@@ -33,6 +33,7 @@ user can find an asteroid in the palette, pick it, follow it, read its card and 
 **Non-goals**
 
 - Unnumbered objects (about 600k more). The owner chose numbered only.
+- Centaurs and objects beyond Neptune (MPC orbit type 10). A Kuiper belt Layer of their own (§5 ruling 9).
 - Comets. Different elements (q, T instead of a, M), a different brightness law, tails. A later Layer.
 - Perturbations. Two-body only; the website's simplifications page says so (§7).
 - Labels on the field. Only the selected asteroid is named, on its card.
@@ -61,7 +62,7 @@ src/layers/asteroids/
   orbits/passes/                      the selected asteroid's ring, one call to drawOrbitConics
   selection/                          kinds.ts, asteroidsSelectionRow.ts (pick, focus id, deep link, follow)
   focus/{present,ui}/                 search, detail and compact cards
-  controls/ui/                        the Settings section (master + five class toggles)
+  controls/ui/                        the Settings section (master + four class toggles)
 src/data/asteroids/                   class enum + R2 path, shared with tools/ (the satellites pattern)
 src/services/gpu/shaders/asteroids/   kepler compute + points vertex/fragment/pick
 src/services/gpu/shaders/lib/kepler.wesl   the GPU Kepler solver
@@ -74,16 +75,19 @@ tools/fetch/fetchMpcorb.ts, tools/asteroids/buildAsteroids.ts
 
 **Source.** MPCORB.DAT.gz from the MPC, the numbered rows only, read by the packed designation column.
 One raw-data registry row plus the MPC format ReadMe beside the file (`tools/utils/io/rawDataRegistry.ts`,
-per docs/DATA.md). The orbit-type field in MPCORB's flags column gives the class; the build derives the
-class from a, e and q only where the field is blank. The mapping (my call, to be checked against the MPC
+per docs/DATA.md). The orbit-type field in MPCORB's flags column gives the class; a blank field (type 0)
+counts as main belt. The mapping (my call, to be checked against the MPC
 format doc): Atira, Aten, Apollo and Amor → near-Earth; Hilda → Hilda; Jupiter trojan → Jupiter trojan;
-distant object → distant; everything else (Hungarias, Mars-crossers, the belt proper) → main belt.
+everything else (Hungarias, Mars-crossers, the belt proper) → main belt. Distant objects (centaurs and
+beyond Neptune, 1,248 rows on the 2026-11-11 file) are not in this Layer: the bake writes them as ABSENT
+rows, so row k stays number k + 1, and leaves their names out.
 
 **File** `asteroids.astb` (its own extension, like `.satg`), little-endian, columnar:
 
 - Header: magic `ASTB`, u16 version, u32 count, u32 firstNumber (= 1), f64 epoch JD (TT, shared), column
   directory, each column 4-byte aligned. number = firstNumber + row, and no number column is stored. A
-  missing number (the 2026-11-11 file has no holes in 1…895,910, so none today) gets an ABSENT placeholder row.
+  missing number (the 2026-11-11 file has no holes in 1…895,910, so none today) gets an ABSENT placeholder row,
+  as does a distant object (§4.1, mapping).
 - MPC's terms (the MPCORB header) allow redistribution with the header shipped beside the data and the
   MPC credited, so the bake writes `mpcorb-header.txt` next to the file.
 - Per row, 23 bytes:
@@ -114,8 +118,8 @@ redistribution, the effort stops there (§8).
 One asset row, demand-gated like satellites': it demands while the Layer is on, at least one class is on
 and the camera is within a load radius of the Sun (outside the radius where the Layer fades in, so data is
 resident before the first dot shows), and releases past a larger evict radius. The Layer is full within
-60 AU of the Sun and gone by 200 AU (the distant class reaches ~50–100 AU; zoomed out further, the whole
-catalog is a few pixels and would read as a blob), so the row loads at 300 AU and releases past 500 AU. It also demands while the
+60 AU of the Sun and gone by 200 AU (zoomed out further, the whole catalog is a few pixels and would read
+as a blob), so the row loads at 300 AU and releases past 500 AU. It also demands while the
 palette is open or an asteroid is selected, so a search or a deep link works from anywhere (the satellites
 rule). Decode happens off the main thread (a worker or `DecompressionStream` + one pass; the builder's
 call). The decoded catalog expands the angles into the equatorial basis the GPU uses (§4.3); the
@@ -259,7 +263,7 @@ its `OrbitTrailRenderer` instance, as satellites do. Fade = class fade × window
 
 ### 4.9 Settings
 
-One Settings section: the Layer toggle, the five class toggles (every class on by default), and the
+One Settings section: the Layer toggle, the four class toggles (every class on by default), and the
 Layer's own brightness slider (owner ruling; default 1, a multiplier on the flux, independent of the
 stars' slider). No size knob in Settings.
 
@@ -285,9 +289,11 @@ changed values" emits the moved rows under their table names, ready to paste.
 7. **Look modes as DebugPanel dropdowns**: size by H (default) or uniform; colour by class (default) or
    by semi-major axis for the main belt; dot radius 1.4 px (owner, 2026-11-12). Banded, not smooth, and
    the peak kept at the base dot's are my calls (§4.5).
-8. My calls, open to challenge: the MPCORB source; a hand refresh, not a cron; the five classes and their
+8. My calls, open to challenge: the MPCORB source; a hand refresh, not a cron; the four classes and their
    mapping; comets out; the 1900–2100 window; the quantized 23-byte row; the MPC number as identity;
    a names file of its own; the compute pass; the photometry reuse; `picking.off` in the three exhibits.
+9. **Kuiper belt objects move to a future Layer of their own** (owner, 2026-11-13): MPC orbit type 10 is
+   not in this one; see `docs/backlog/2026-11-13-kuiper-belt-layer.md`.
 
 ## 6. Ground preparation
 
