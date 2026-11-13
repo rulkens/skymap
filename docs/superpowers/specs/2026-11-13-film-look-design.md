@@ -237,13 +237,13 @@ exponential falloff with tint dispersion; separable Gaussian, 24 taps each side)
   `write: enabled ? '1' : null`, `read: value === '1' ? { film: true } : {}`,
   `readAbsent: [setFilmEnabled(false)]`. `LinkIntent.film?: boolean`;
   `applyLinkSettingsSaga` puts `setFilmEnabled(intent.film)` when present.
-- Display section: `CollapsibleSection title="Film look"` with a header toggle (aria "Toggle Film look"),
-  body one `panelRow` of hint copy: "Grain, glow and a softer lens, like a filmed shot." Container wires
+- Display section: one plain switch row, `label "Film look"` + `input.toggle`, the shape of the friction
+  and label switches (owner ruling 2026-11-13: no fold, no hint copy). Container wires
   `selectFilmEnabled` → `setFilmEnabled`. Person and job: as a viewer I want the scene to feel filmed so a
   shot or a show reads as cinema, not a diagram. Place: after Bloom, before HDR. States: on/off only.
-- DebugPanel: `FilmGradeTuningSectionContainer` ("Film grade": the grade sliders + the Letterbox and
-  Film look toggles via `DebugOverlayToggles`) and `FilmGlowTuningSectionContainer` ("Film glow"), both
-  after `FocusMovesTuningSectionContainer`.
+- DebugPanel: one board, `FilmTuningSectionContainer` ("Film look"), after
+  `FocusMovesTuningSectionContainer`: the Film look and Letterbox toggles via `DebugOverlayToggles`, then
+  two nested `DebugTuningSection`s, "Grade" and "Glow" (owner ruling 2026-11-13: one section per feature).
 
 ## 8. Performance gate (R6)
 
