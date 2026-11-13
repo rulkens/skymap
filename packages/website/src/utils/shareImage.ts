@@ -1,30 +1,28 @@
-import { getImage } from 'astro:assets';
-
 import type { ShareImage } from '../@types/ShareImage';
+import { SHARE_CARD_SIZE } from '../data/shareCardSize';
+import { SHARE_CARDS } from '../data/shareCards';
 import { siteShot } from '../data/siteShot';
-// The site's own card (npm run site:shots); the app keeps its own at /og-image.jpg.
-import cardUrl from '../assets/og-card.jpg?url';
-import { shotSources } from './shotSources';
+// The site's card (npm run site:shots); the app has its own copy at /og-image.jpg.
+import siteCardUrl from '../assets/og-card.jpg?url';
+import { pageLabel } from './pageLabel';
+import { shareCardFile } from './shareCardFile';
+import { sitePath } from './sitePath';
 
-const WIDTH = 1200;
+const PAGE_CARDS = import.meta.glob<string>('../assets/cards/*.jpg', {
+  eager: true,
+  query: '?url',
+  import: 'default',
+});
 
-/** The link-preview picture of a page: the site card, or a shot of data/siteShots.ts cut to 1200 px wide as a JPEG, which previews read and a WebP they may not. */
-export async function shareImage(id: string | undefined): Promise<ShareImage> {
-  if (id === undefined) {
-    return { src: cardUrl, width: WIDTH, height: 630, alt: siteShot('og-card').alt };
-  }
-  const { full, width, height } = shotSources(id);
-  // The shot's widest file, a public file and no import: Astro reads it from the build, which holds public/
-  // by then, and sizes the cut from the aspect of width and height alone.
-  const image = await getImage({
-    src: { src: full, width, height, format: 'webp' },
-    format: 'jpg',
-    width: WIDTH,
-  });
+/** The link-preview card of the page at `pathname` (Astro.url's, under the base): a landing page's own, else the site's. */
+export function shareImage(pathname: string): ShareImage {
+  const card = SHARE_CARDS.find((entry) => sitePath(entry.path) === pathname);
+  if (!card) return { src: siteCardUrl, ...SHARE_CARD_SIZE, alt: siteShot('og-card').alt };
+  const src = PAGE_CARDS[`../assets/cards/${shareCardFile(card.path)}`];
+  if (!src) throw new Error(`No share card for ${card.path}: run npm run site:shots`);
   return {
-    src: image.src,
-    width: Number(image.attributes.width),
-    height: Number(image.attributes.height),
-    alt: siteShot(id).alt,
+    src,
+    ...SHARE_CARD_SIZE,
+    alt: `${siteShot(card.shot).alt} Over it, the Skymap logo and the words ${pageLabel(card.path)}.`,
   };
 }
