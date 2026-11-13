@@ -76,6 +76,8 @@ import { HDR_TARGET_FORMAT, FOREGROUND_DEPTH_FORMAT } from '../../data/renderTar
 import { reducedTargetSize } from '../../utils/gpu/reducedTargetSize';
 import { captureRowAllocateWhen } from '../../utils/gpu/captureRowAllocateWhen';
 import { depthClearValueFor } from '../../utils/gpu/depthClearValueFor';
+import { filmStreakOn } from '../../utils/film/filmStreakOn';
+import { filmVeilOn } from '../../utils/film/filmVeilOn';
 
 const OPAQUE_BLACK: GPUColor = { r: 0, g: 0, b: 0, a: 1 };
 // Below `DEFAULT_BLOOM_THRESHOLD` (2.0 raw HDR), so the matte's background never blooms.
@@ -152,6 +154,29 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
         depth: null,
         scale: bloomScale(n),
         clearValue: { r: 0, g: 0, b: 0, a: 0 },
+      }),
+    ),
+    // The film look's streak (quarter-res, beside bloom1, its source) and veil
+    // (1/32-res, beside bloom4) ping-pongs. `runBloom` gates its passes on the
+    // SAME predicates, so no pass reads a released row.
+    ...(['streak0', 'streak1'] as const).map(
+      (id): RenderTargetSpec => ({
+        id,
+        format: HDR_TARGET_FORMAT,
+        depth: null,
+        scale: bloomScale(1),
+        clearValue: { r: 0, g: 0, b: 0, a: 0 },
+        allocateWhen: (s) => filmStreakOn(s.settings.film),
+      }),
+    ),
+    ...(['veil0', 'veil1'] as const).map(
+      (id): RenderTargetSpec => ({
+        id,
+        format: HDR_TARGET_FORMAT,
+        depth: null,
+        scale: bloomScale(4),
+        clearValue: { r: 0, g: 0, b: 0, a: 0 },
+        allocateWhen: (s) => filmVeilOn(s.settings.film),
       }),
     ),
     // The sky a reflection probe is captured over, on the same lazy terms as

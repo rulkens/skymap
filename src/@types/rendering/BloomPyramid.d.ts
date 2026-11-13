@@ -1,40 +1,17 @@
 /**
- * BloomPyramid — the handle for the dual-filter bloom mip pyramid: a bright
- * prefilter plus the descending (downsample) and ascending (upsample) halves
- * of a Marius Bjorge / 'Next Generation Post Processing in Call of Duty'
- * pyramid blur.
- *
- * The factory owns the three pipelines (bright, downsample, upsample), the
- * linear sampler, and the per-level texel-size uniform buffers. It owns NO
- * textures: the bloom mip textures are `renderTargets` rows (`bloom0..bloom4`),
- * recreated on resize, and every method takes the source view as a parameter
- * so a resize needs no bookkeeping here (bind groups are rebuilt per draw).
- *
- * ### The three stages and how a frame drives them
- *
- * A caller opens one render pass per bloom target and records exactly one of
- * these draws into it:
- *
- *   - `bright`  reads the HDR scene, writes `bloom0` — the prefilter that keeps
- *              only above-threshold light so dim structure stays crisp.
- *   - `downsample` at level L (1..4) reads `bloom[L-1]`, writes `bloom[L]` —
- *              halving resolution while blurring, four times, building the mip
- *              chain. `karis` is true only for level 1 (the firefly-suppressing
- *              Karis average belongs on the level-0 read where raw fireflies
- *              live; deeper levels are already smooth).
- *   - `upsample` at level L (3..0) reads the coarser `bloom[L+1]`, ADDITIVELY
- *              folds its wider blur onto `bloom[L]`. The accumulation of every
- *              level's progressively-wider tent is what gives bloom its soft
- *              multi-scale falloff.
- *
- * `srcTexelSize` is `1 / source-pixel-size` (a `Vec2`), so the shaders' tap
- * offsets are measured in the SOURCE level's texels — the filter kernel widens
- * naturally as the pyramid shrinks.
+ * BloomPyramid — the dual-filter bloom mip pyramid (bright prefilter, Karis
+ * downsample, additive tent upsample, strength-scaled fold) plus the film
+ * look's streak and veil passes. It owns pipelines, sampler and uniforms but
+ * NO textures: those are `renderTargets` rows recreated on resize, so every
+ * method takes its source view and records one draw into a pass the caller
+ * opened against the target. `srcTexelSize` is `1 / source-pixel-size`, so tap
+ * offsets are in the SOURCE level's texels. `runBloom` holds the pass order.
  */
 
 import type { Vec2 } from '../math/Vec2';
 import type { BrightParams } from './BrightParams';
 import type { FoldKind } from './FoldKind';
+import type { StreakTaps } from './StreakTaps';
 
 export type BloomPyramid = {
   readonly label: string;
@@ -94,6 +71,27 @@ export type BloomPyramid = {
    * @param strength Linear multiplier on the folded glow (0 = no glow).
    */
   fold(pass: GPURenderPassEncoder, srcView: GPUTextureView, kind: FoldKind, strength: number): void;
+  /**
+   * One anamorphic streak iteration: a horizontal smear of `srcView` that
+   * OVERWRITES the bound target. `iteration` selects its own 32-byte uniform,
+   * so the three iterations drawn in one frame never share one.
+   */
+  streak(
+    pass: GPURenderPassEncoder,
+    srcView: GPUTextureView,
+    iteration: 0 | 1 | 2,
+    taps: StreakTaps,
+  ): void;
+  /**
+   * One axis of the veiling-glare Gaussian over `srcView`, OVERWRITING the
+   * bound target; each axis has its own uniform. `srcTexelSize` as above.
+   */
+  veil(
+    pass: GPURenderPassEncoder,
+    srcView: GPUTextureView,
+    axis: 'x' | 'y',
+    srcTexelSize: Vec2,
+  ): void;
   /**
    * No-op — sampler, bind-group-layout, pipelines, and the small uniform
    * buffers are GC'd when their last reference drops. Present for teardown

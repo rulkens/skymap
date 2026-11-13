@@ -101,12 +101,7 @@ export const DEFAULT_BLOOM_STRENGTH = 0.8;
  */
 export const DEFAULT_BLOOM_THRESHOLD = 2.0;
 
-/**
- * Default bloom cap — the per-pixel firefly clamp on what the bright prefilter
- * injects into the pyramid (max channel, HDR units). 2.0 keeps a flickering
- * sprite's bloom swing small and bounded, while large stable features still
- * bloom because their light accumulates over many pixels.
- */
+/** Per-pixel firefly clamp on what the bloom prefilter injects (max channel, HDR units). */
 export const DEFAULT_BLOOM_CAP = 2.0;
 
 // ── Scalar-volume overlay ────────────────────────────────────────────────────
