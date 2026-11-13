@@ -8,10 +8,12 @@
   height: var(--thumbnail-size);
   border-radius: var(--radius-lg);
   /* A notch above --border-default: mid-tone galaxy backgrounds would swallow a fainter rim. */
-  border: 1px solid rgba(160, 200, 255, 0.2);
+  border: 1px solid color-mix(in srgb, var(--border-control) 80%, transparent);
   flex-shrink: 0;
   object-fit: cover;
   display: block;
+  filter: var(--thumbnail-filter);
+  mix-blend-mode: var(--thumbnail-blend);
   transition: filter 0.15s ease-out;
 }
 
@@ -23,7 +25,7 @@
 }
 
 .link:hover .root {
-  filter: brightness(1.15);
+  filter: var(--thumbnail-filter-hover);
 }
 
 .placeholder {
@@ -36,8 +38,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Fainter than --color-fg-ghost, so it stays quiet beside the card text. */
-  color: rgba(160, 180, 230, 0.35);
+  color: var(--color-fg-placeholder);
   font-size: var(--font-size-sm);
   text-align: center;
 }

@@ -33,6 +33,7 @@ export function near0LabelProjection(ctx: FrameView): Label2DProjection {
     vpF32: near0OverlayVpF32(vp, clipScale),
     viewportPx: [ctx.canvasSize.width, ctx.canvasSize.height],
     pxPerRad: ctx.drawPxPerRad,
+    devicePixelRatio: ctx.snapshot.devicePixelRatio,
     clipScale,
   };
   cache.set(ctx, projection);

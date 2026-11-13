@@ -42,6 +42,7 @@ describe('labelScreenRect', () => {
       screenPx: [100, 200],
       clipW: 1,
       pxPerRad: PX_PER_RAD,
+      devicePixelRatio: 1,
     });
     expect(rect).toEqual({ x0: 90, y0: 180, x1: 130, y1: 205 });
   });
@@ -55,6 +56,7 @@ describe('labelScreenRect', () => {
       screenPx: [100, 200],
       clipW: 1,
       pxPerRad: PX_PER_RAD,
+      devicePixelRatio: 1,
     });
     expect(rect).toEqual({ x0: 95, y0: 190, x1: 115, y1: 202.5 });
   });
@@ -66,6 +68,7 @@ describe('labelScreenRect', () => {
       screenPx: [100, 200],
       clipW: 1,
       pxPerRad: PX_PER_RAD,
+      devicePixelRatio: 1,
       padPx: 8,
     });
     expect(rect).toEqual({ x0: 82, y0: 172, x1: 138, y1: 213 });
@@ -80,6 +83,7 @@ describe('labelScreenRect', () => {
       screenPx: [100, 200],
       clipW: 1,
       pxPerRad: PX_PER_RAD,
+      devicePixelRatio: 1,
     });
     expect(rect).toEqual({ x0: 90, y0: 180, x1: 130, y1: 205 });
   });
@@ -94,6 +98,7 @@ describe('labelScreenRect', () => {
       screenPx: [100, 200],
       clipW: 1,
       pxPerRad: PX_PER_RAD,
+      devicePixelRatio: 1,
       includeOutline: true,
     });
     const fringe = 0.16 * 84;
@@ -103,5 +108,27 @@ describe('labelScreenRect', () => {
       x1: 130 + fringe,
       y1: 205 + fringe,
     });
+  });
+
+  // Label sizes and pads are CSS px; the screen is device px. At dpr 2 the same
+  // view has twice the device px per radian, and the label must cover the same
+  // CSS box: twice the device box, on the clamp, off it, and in the pad.
+  it.each([
+    ['held at its size clamp', { worldEmMpc: 0.001, minPixelSize: 21, maxPixelSize: 21 }],
+    ['sized by its world em', { worldEmMpc: 1, minPixelSize: 1, maxPixelSize: 1000 }],
+  ])('covers the same CSS box at dpr 1 and dpr 2 when %s', (_, sizing) => {
+    const rectAt = (dpr: number) =>
+      labelScreenRect({
+        label: label(sizing),
+        bbox: BBOX,
+        screenPx: [100 * dpr, 200 * dpr],
+        clipW: 1,
+        pxPerRad: PX_PER_RAD * dpr,
+        devicePixelRatio: dpr,
+        padPx: 8,
+      });
+    const one = rectAt(1);
+    const two = rectAt(2);
+    expect(two).toEqual({ x0: one.x0 * 2, y0: one.y0 * 2, x1: one.x1 * 2, y1: one.y1 * 2 });
   });
 });

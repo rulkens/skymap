@@ -49,6 +49,7 @@ import type { LayerScreenLabel } from '../../../../@types/engine/layer/LayerScre
 import type { Label2DProducerOutput } from '../../../../@types/engine/subsystems/Label2DProducerOutput';
 import type { GalaxyCatalogRuntime } from '../../@types/GalaxyCatalogRuntime';
 import type { FamousGalaxyName } from '../@types/FamousGalaxyName';
+import type { FamousDisc } from '../@types/FamousDisc';
 import type { GalaxyCatalog } from '../../../../@types/data/galaxyCatalog/GalaxyCatalog';
 import { famousGalaxyNamesFor } from '../utils/famousGalaxyNamesFor';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
@@ -60,6 +61,8 @@ import { liftedLabelPlacement } from '../../../../services/engine/presentation/l
 import { textLayoutOf } from '../../../../services/gpu/labelLayout/textLayoutOf';
 import { smoothstep } from '../../../../utils/math/smoothstep';
 import { isPickableUnderFocus } from '../../../../utils/structure/isPickableUnderFocus';
+import { antiqueLookOn } from '../../../../utils/render/antiqueLookOn';
+import { angleBetween3 } from '../../../../utils/math/angleBetween3';
 
 const FAMOUS_MIN_APPARENT_PX = 6;
 
@@ -123,6 +126,7 @@ type FamousLabelInput = {
 function deriveFamousLabelInputs(
   names: readonly FamousGalaxyName[],
   catalog: Pick<GalaxyCatalog, 'count' | 'positions' | 'diameterKpc'>,
+  devicePixelRatio: number,
 ): FamousLabelInput[] {
   const out: FamousLabelInput[] = [];
   for (const [i, e] of names.entries()) {
@@ -135,11 +139,28 @@ function deriveFamousLabelInputs(
       name: famousDisplayName(e),
       worldPos: [x, y, z],
       apparentDiameterKpc: diameterKpc,
-      minApparentSizePx: FAMOUS_MIN_APPARENT_PX,
+      // The gate is authored in CSS px; apparent sizes here are device px.
+      minApparentSizePx: FAMOUS_MIN_APPARENT_PX * devicePixelRatio,
       labelWorldEmMpc: famousLabelWorldEmMpc(diameterKpc),
     });
   }
   return out;
+}
+
+/** The famous galaxies the frame resolves, as discs on the sky seen from `cam`. */
+function famousDiscs(
+  inputs: readonly FamousLabelInput[],
+  cam: Readonly<Vec3>,
+  pxPerRad: number,
+): FamousDisc[] {
+  return inputs.flatMap((p) => {
+    const dir: Vec3 = [p.worldPos[0] - cam[0], p.worldPos[1] - cam[1], p.worldPos[2] - cam[2]];
+    const distanceMpc = Math.hypot(...dir);
+    const sizePx = apparentSizePx({ diameterKpc: p.apparentDiameterKpc, distanceMpc, pxPerRad });
+    return sizePx < p.minApparentSizePx
+      ? []
+      : [{ dir, distanceMpc, radiusRad: sizePx / 2 / pxPerRad }];
+  });
 }
 
 export function produceFamousGalaxyLabels(
@@ -160,7 +181,11 @@ export function produceFamousGalaxyLabels(
       : null;
     if (state.settings.labels.focusedOnly && focusedIdx === null) return empty;
 
-    const inputs = deriveFamousLabelInputs(famousGalaxyNamesFor(catalog.count) ?? [], catalog);
+    const inputs = deriveFamousLabelInputs(
+      famousGalaxyNamesFor(catalog.count) ?? [],
+      catalog,
+      ctx.snapshot.devicePixelRatio,
+    );
     if (inputs.length === 0) return empty;
 
     const labels: Label2D[] = [];
@@ -179,6 +204,10 @@ export function produceFamousGalaxyLabels(
     // Identical for every famous label (no per-member focus exemption here), so
     // read once; folded into each label + anchor-line fadeAlpha below.
     const layerAlpha = fade.famousGalaxy;
+    const antique = antiqueLookOn(state);
+    // The plate prints a galaxy as ink, so one standing behind a nearer galaxy's disc is
+    // lost in its stipple (M31 seen from M51); the plain look's galaxies add light.
+    const discs = antique ? famousDiscs(inputs, ctx.drawCamPos, ctx.drawPxPerRad) : [];
 
     for (let i = 0; i < inputs.length; i += 1) {
       const p = inputs[i]!;
@@ -199,6 +228,12 @@ export function produceFamousGalaxyLabels(
         pxPerRad: ctx.drawPxPerRad,
       });
       if (sizePx < p.minApparentSizePx) continue;
+      if (
+        discs.some(
+          (d) => d.distanceMpc < distanceMpc && angleBetween3(d.dir, [dx, dy, dz]) < d.radiusRad,
+        )
+      )
+        continue;
       const declutterPriority = sizePx;
       // Distance-scaled ceiling — see `famousLabelMaxPx`'s docblock for why the
       // category's flat 150 px cap can't stand for permanently-near companions
@@ -206,7 +241,7 @@ export function produceFamousGalaxyLabels(
       // the placement call below.
       const maxPixelSize = famousLabelMaxPx(distanceMpc);
       let fadeAlpha = 1;
-      const t = Math.min(1, (sizePx - p.minApparentSizePx) / style.fadeBandPx);
+      const t = Math.min(1, (sizePx - p.minApparentSizePx) / (style.fadeBandPx * ctx.snapshot.devicePixelRatio));
       fadeAlpha = t * t * (3 - 2 * t); // smoothstep
       // No `awake` signal: fadeAlpha is a pure function of camera distance, and
       // camera motion already wakes the loop. Pinning awake mid-band would keep
@@ -247,6 +282,13 @@ export function produceFamousGalaxyLabels(
         declutterPriority,
       };
 
+      // The antique look sets its own type (`antiqueLabel`), which only the director
+      // measures, so its lift stage sets the name off the disc's rim.
+      if (antique) {
+        labels.push({ ...label, lift: { subjectSizePx: sizePx } });
+        continue;
+      }
+
       // Single derivation chain (see `liftedLabelPlacement`): the lift is
       // screen-space (world +Y offsets foreshorten or fall over the text), the
       // line top derives from the measured text bottom minus the shared
@@ -264,6 +306,7 @@ export function produceFamousGalaxyLabels(
         worldEmMpc: p.labelWorldEmMpc,
         minPixelSize: style.minPixelSize,
         maxPixelSize,
+        devicePixelRatio: ctx.snapshot.devicePixelRatio,
       });
       // Behind the camera the projection is undefined — nothing visible to label.
       if (placement === null) continue;

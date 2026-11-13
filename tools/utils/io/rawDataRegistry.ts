@@ -1403,6 +1403,82 @@ export const RAW_DATA = {
       'Provenance for ETOPO 2022 — upstream URL, registration convention, NoData, licence, fetch date.',
   },
 
+  // ─── Natural Earth (public domain) — the antique Earth map's rivers ─────
+
+  'naturalearth.rivers-lake-centerlines': {
+    path: 'data/raw/naturalearth/ne_10m_rivers_lake_centerlines.geojson',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Natural Earth 1:10m rivers and lake centrelines (v5.1.2), GeoJSON LineStrings with scalerank, min_zoom, featurecla, rivernum, name. The antique Earth map draws its rivers from these.',
+    upstream:
+      'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/f1890d9f152c896d250a77557a5751a93d494776/geojson/ne_10m_rivers_lake_centerlines.geojson',
+    fetcher: 'tools/fetch/fetchNaturalEarth.ts',
+    readme: 'naturalearth.readme',
+  },
+  'naturalearth.rivers-europe': {
+    path: 'data/raw/naturalearth/ne_10m_rivers_europe.geojson',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Natural Earth 1:10m supplementary European rivers (v5.1.2, scalerank 10-12), same schema as the world layer: the antique map’s finest European river detail.',
+    upstream:
+      'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/f1890d9f152c896d250a77557a5751a93d494776/geojson/ne_10m_rivers_europe.geojson',
+    fetcher: 'tools/fetch/fetchNaturalEarth.ts',
+    readme: 'naturalearth.readme',
+  },
+  'naturalearth.admin-1': {
+    path: 'data/raw/naturalearth/ne_10m_admin_1_states_provinces.geojson',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Natural Earth 1:10m admin-1 states and provinces (v5.1.2), GeoJSON polygons with iso_3166_2, adm0_a3, geonunit, name. The antique Earth map dissolves them into its 1690 realms.',
+    upstream:
+      'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/f1890d9f152c896d250a77557a5751a93d494776/geojson/ne_10m_admin_1_states_provinces.geojson',
+    fetcher: 'tools/fetch/fetchNaturalEarth.ts',
+    readme: 'naturalearth.readme',
+  },
+  'naturalearth.sha256': {
+    path: 'data/raw/naturalearth/naturalearth.sha256',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'SHA-256 sidecar for the Natural Earth layers (one `<hex>  <filename>` line each); the fetcher refuses a download that differs.',
+    fetcher: 'tools/fetch/fetchNaturalEarth.ts',
+  },
+  'naturalearth.readme': {
+    path: 'data/raw/naturalearth/README.md',
+    kind: 'file',
+    source: 'committed',
+    description: 'Provenance for the Natural Earth layers — pinned commit, URLs, licence, fetch date.',
+  },
+
+  // ─── OpenHistoricalMap (CC0) — the antique Earth map's 1690 border lines ─
+
+  'ohm.relations-1690': {
+    path: 'data/raw/ohm/ohm-relations-1690.json',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'OpenHistoricalMap relations alive in 1690 (OHM_RELATIONS_1690, pinned ids and versions) with their member ways, an Overpass attic extract: the Rhineland, Lorraine and Low Countries lines the 1690 realms cut along.',
+    upstream: 'https://overpass-api.openhistoricalmap.org/api/interpreter',
+    fetcher: 'tools/fetch/fetchOhm1690.ts',
+    readme: 'ohm.readme',
+  },
+  'ohm.sha256': {
+    path: 'data/raw/ohm/ohm.sha256',
+    kind: 'file',
+    source: 'committed',
+    description: 'SHA-256 of the OHM extract; the fetcher refuses one that differs.',
+    fetcher: 'tools/fetch/fetchOhm1690.ts',
+  },
+  'ohm.readme': {
+    path: 'data/raw/ohm/README.md',
+    kind: 'file',
+    source: 'committed',
+    description: 'Provenance for the OHM extract — relations, versions, snapshot, query, licence.',
+  },
+
   // ─── Mars surface sources — fetched by hand, no fetchers ───────────────
   // Strip-layout upstream files are read through tiled COG copies (README
   // records the gdal_translate line); worktrees reach them via leaf symlinks.
@@ -2191,6 +2267,24 @@ export const RAW_DATA = {
     source: 'committed',
     description:
       'Provenance for the CelesTrak groups: the query, the groups and the download policy.',
+  },
+
+  // ─── IAU Gazetteer of Planetary Nomenclature (USGS, public domain) ─────
+
+  'iau.moon-nomenclature': {
+    path: 'data/raw/iau/MOON_nomenclature_center_pts.dbf',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      "The Moon's named features as centre points (name, type, centre lat/lon east, diameter km), the dBASE table from the gazetteer's shapefile zip (unzip beside this path). The antique Moon's crater table is baked from it (`tools/antique/moon/bakeMoonCraters.ts`).",
+    upstream: 'https://planetarynames.wr.usgs.gov/shapefiles/MOON_nomenclature_center_pts.zip',
+    readme: 'iau.readme',
+  },
+  'iau.readme': {
+    path: 'data/raw/iau/README.md',
+    kind: 'file',
+    source: 'committed',
+    description: 'Provenance for the IAU gazetteer download: URL, fetch date, checksum, fields used.',
   },
 
   // ─── JPL Horizons planet and moon vectors (ephemeris-correction fit input)

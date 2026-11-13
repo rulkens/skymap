@@ -1,5 +1,5 @@
 /**
- * PRELUDE / SCENE / POST / OVERLAYS — `FRAME_ORDER` split into the scopes
+ * PRELUDE / SCENE / POST / OVERLAYS / STYLIZE — `FRAME_ORDER` split into the scopes
  * `renderFrame` walks (`ViewRig.program`): `once` runs against the frame's main
  * context, `perView` once per rig view. The per-line ordering rationale below
  * is this file's value, so it runs over the comment budget; see `frameOrder.ts`.
@@ -107,7 +107,13 @@ export const SCENE: FrameSection = {
     { kind: 'compute', name: 'mw-field' },
     // Reduced-res density raymarch, merged into HDR by `cosmic-web-density-upsample`
     // inside the hdr COSMO step below, so this render must precede that step.
-    { kind: 'render', target: 'cosmic-web-density', slab: COSMO, passes: ['cosmic-web-density'] },
+    // The look swaps in `-print`, its jitter still (`ANTIQUE_ONLY_PASSES`).
+    {
+      kind: 'render',
+      target: 'cosmic-web-density',
+      slab: COSMO,
+      passes: ['cosmic-web-density', 'cosmic-web-density-print'],
+    },
     // Twin of the density render, into a 1/5-res offscreen merged by
     // `zone-of-avoidance-upsample`.
     { kind: 'render', target: 'zoa', slab: COSMO, passes: ['zone-of-avoidance'] },
@@ -122,6 +128,7 @@ export const SCENE: FrameSection = {
         'procedural-disks',
         'textured-disks',
         'cosmic-web-filaments',
+        'cosmic-web-filaments-print',
         'flow',
         'cosmic-web-density-upsample',
         'zone-of-avoidance-upsample',
@@ -265,6 +272,55 @@ export const SCENE: FrameSection = {
       passes: ['aerial-perspective'],
       slot: 'AERIAL',
     },
+    // The antique look's land row: Earth's ocean mask and Mars's albedo, each
+    // on its own body row. Draws only with the look on
+    // (`ANTIQUE_ONLY_PASSES`); the look reads it in `stylize`.
+    {
+      kind: 'render',
+      target: 'antique-land',
+      slab: 'surfaceMask',
+      passes: ['earth-ocean-mask', 'body-albedo-mask'],
+    },
+    // Earth's c.1690 geography for the look: realm colours, borders, rivers, signs.
+    {
+      kind: 'render',
+      target: 'antique-geography',
+      slab: 'surfaceMask',
+      passes: ['earth-antique-map'],
+    },
+    // The Moon's own engraving inputs (maria, rims), which the look copies into a layer
+    // of its own; then its ground's relief, in the row Mars's relief fills in `stylize`:
+    // never both in one frame, as no plate shows both close up.
+    {
+      kind: 'render',
+      target: 'antique-moon',
+      slab: 'surfaceMask',
+      passes: ['moon-print'],
+    },
+    {
+      kind: 'render',
+      target: 'antique-relief',
+      slab: 'surfaceMask',
+      passes: ['moon-relief'],
+    },
+    // The look's glyphs come from the catalogues: every galaxy point, then every naked-eye
+    // star, as one point each, the brightest per cell kept by depth; a star's clear
+    // restarts depth, so a star overwrites any galaxy in its cell. Look-only, like the
+    // land row above.
+    {
+      kind: 'render',
+      target: 'antique-print-points',
+      slab: COSMO,
+      depth: 'clear',
+      passes: ['galaxy-points-print'],
+    },
+    {
+      kind: 'render',
+      target: 'antique-print-points',
+      slab: NEAR0,
+      depth: 'clear',
+      passes: ['star-points-print', 'star-catalog-print'],
+    },
     // Bodies join HDR in LINEAR space before the tone-map, so one tone curve covers
     // stars, galaxies and bodies (no seam at the Sun's limb); hence a composite, not a
     // second tone-mapped pass.
@@ -344,5 +400,15 @@ export const OVERLAYS: FrameSection = {
       depth: { sample: 'foreground:0' },
       passes: ['near0-selection-ring', 'labels-near', 'clip-path-debug'],
     },
+  ],
+};
+
+// Every rig's program ends here, so the look has one site in either rig.
+export const STYLIZE: FrameSection = {
+  scope: 'once',
+  steps: [
+    // The antique look inks the scene and the captions onto the swap chain. Emits
+    // nothing with the look off, when the swap lines write `swap` directly.
+    { kind: 'stylize', source: 'print', overlay: 'overlay' },
   ],
 };

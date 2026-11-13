@@ -126,6 +126,7 @@ describe('bodyRowSlabs', () => {
     const program = expandFrameOrder(FRAME_ORDER, passes, {
       tone,
       bloomEnabled: true,
+      antique: false,
       foregroundChain: [NEAR0],
       captureFaces: new Map([['sgrAStar', []]]),
       bodyRowSlabs: slabs,

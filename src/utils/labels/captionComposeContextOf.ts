@@ -13,6 +13,7 @@ export function captionComposeContextOf(state: EngineState, ctx: FrameView): Cap
     camPos: ctx.drawCamPos,
     viewportShortSidePx: Math.min(ctx.canvasSize.width, ctx.canvasSize.height),
     drawPxPerRad: ctx.drawPxPerRad,
+    devicePixelRatio: ctx.snapshot.devicePixelRatio,
     focus: ctx.snapshot.focus,
     // The overlay shaders attenuate per PIXEL, which cannot tell a subject in
     // FRONT of a body from one behind it — deciding that per caption is what

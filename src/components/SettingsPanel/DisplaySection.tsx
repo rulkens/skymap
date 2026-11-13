@@ -2,7 +2,7 @@
  * DisplaySection — presentational component for the Display settings section
  * inside the SettingsPanel.
  *
- * Owns the Display thematic group UI: the orientation and tone-mapping curve
+ * Owns the Display thematic group UI: the antique-atlas switch, the orientation and tone-mapping curve
  * dropdowns, the exposure slider, the field-of-view slider, and two nested
  * CollapsibleSections — "Bloom"
  * and "HDR" (both use the same master-enable header-toggle idiom `FlowSection`
@@ -112,6 +112,9 @@ export type DisplaySectionProps = {
   bloomThreshold: number;
   /** Called with the new threshold as the slider drags. */
   onBloomThresholdChange: (next: number) => void;
+  /** Whether the canvas and chrome render as an engraved antique star atlas. */
+  antiqueEnabled: boolean;
+  onAntiqueEnabledChange: (next: boolean) => void;
 };
 
 // ── DisplaySection ─────────────────────────────────────────────────────────────
@@ -143,9 +146,22 @@ function DisplaySection({
   onBloomStrengthChange,
   bloomThreshold,
   onBloomThresholdChange,
+  antiqueEnabled,
+  onAntiqueEnabledChange,
 }: DisplaySectionProps) {
   return (
     <CollapsibleSection title="Display">
+      <div className={styles.panelRow}>
+        <label htmlFor="antique-atlas">Antique atlas</label>
+        <input
+          id="antique-atlas"
+          type="checkbox"
+          className={styles.toggle}
+          checked={antiqueEnabled}
+          onChange={(e) => onAntiqueEnabledChange(e.target.checked)}
+        />
+      </div>
+
       <div className={styles.panelRow}>
         <label htmlFor="orientation-frame">Orientation</label>
         <select

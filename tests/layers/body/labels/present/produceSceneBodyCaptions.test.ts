@@ -27,6 +27,7 @@ import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
 import { SCENE_MESH_BODIES } from '../../../../../src/data/bodies/sceneMeshBodies';
 import { SGR_A_STAR_ENTRY } from '../../../../../src/layers/blackHoles/sources/sgrAStar';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
+import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 
 import type { FocusUniformsValue } from '../../../../../src/@types/rendering/FocusUniformsValue';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
@@ -137,6 +138,18 @@ function sgrAStarAlpha(state: EngineState, ctx: FrameView): number | undefined {
 }
 
 describe('produceSceneBodyCaptions', () => {
+  it("hands Saturn's caption its ring, in the body's equatorial plane, so the antique cull keeps names off it", () => {
+    // Ankaa and Achernar printed across Saturn's rings: the cull knew only the globe.
+    const saturn = J2000_STATES.get(asSceneBodyId('saturn'))!;
+    const p = saturn.positionMpc;
+    const ctx = makeCtx([p[0] + 1e-11, p[1], p[2]]);
+    const label = captionsAt(ctx).find((l) => l.id === 'sceneBody-saturn')!;
+    const m = saturn.orientation;
+    expect(label.lift?.ring?.pole).toEqual([m[6], m[7], m[8]]);
+    expect(label.lift?.ring?.outerRadiusMpc).toBeCloseTo(140_220 * SCALE_UNITS.KM_TO_MPC, 20);
+    expect(captionsAt(ctx).find((l) => l.id === 'sceneBody-jupiter')!.lift?.ring).toBeUndefined();
+  });
+
   it('mutes only the planet captions when the planet row’s label is off', () => {
     const camPos = worldPosOf(EARTH_LABEL_ID);
     const out = produceSceneBodyCaptions(

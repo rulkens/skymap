@@ -1,0 +1,28 @@
+/**
+ * moonReliefPass: the Moon's ground in the antique look's shared `antique-relief` row
+ * (`fsMoonRelief`: the fall line, ground noise and hachure weight from the normal map, on
+ * the rings `moon-print` picked this frame), on the Moon's `surfaceMask` line, so the plate
+ * engraves it as it engraves Mars's. Listed in `ANTIQUE_ONLY_PASSES`, so it never draws
+ * with the look off.
+ */
+
+import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
+import type { BodyRuntime } from '../../@types/BodyRuntime';
+import { ANTIQUE_MOON_HOST } from '../data/antiqueMoonPrint';
+import { texturedBodyUniforms } from '../present/texturedBodyUniforms';
+
+export function moonReliefPass(runtime: BodyRuntime): ContentPass {
+  return {
+    name: 'moon-relief',
+
+    enabled(_state, _ctx, view) {
+      return view.slab.frame.kind === 'body-m' && view.slab.frame.hostId === ANTIQUE_MOON_HOST;
+    },
+
+    draw(pass, view, ctx, state) {
+      const uniforms = texturedBodyUniforms(state, ctx, view, runtime);
+      if (uniforms === null) return;
+      runtime.texturedBodyRenderer.drawMoonRelief(pass, uniforms.bodyId, uniforms.uniforms);
+    },
+  };
+}

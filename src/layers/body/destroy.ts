@@ -14,6 +14,7 @@ export function destroy(runtime: BodyRuntime): void {
   runtime.surfaceTiles.stream.destroy();
   runtime.atlasSlot.cancel();
   for (const slot of runtime.textureSlots.values()) slot.cancel();
+  runtime.antiqueMapRenderer.destroy();
   runtime.bodyGlintRenderer.destroy();
   runtime.atmosphereShellRenderer.destroy();
   runtime.cloudShellRenderer.destroy();

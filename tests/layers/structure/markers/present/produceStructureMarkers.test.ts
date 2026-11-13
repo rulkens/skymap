@@ -32,9 +32,11 @@ const ONE = makeStructureFade();
 function makeState(
   selectedStructureId: string | null = null,
   focusedStructureId: string | null = selectedStructureId,
+  antique = false,
 ): TestState {
   return {
     store: createStructureStore(),
+    settings: { antique: { enabled: antique } },
     selection: {
       select: selectedStructureId !== null ? { type: 'structure', id: selectedStructureId } : null,
       focus: focusedStructureId !== null ? { type: 'structure', id: focusedStructureId } : null,
@@ -50,9 +52,10 @@ function makeCtx(
   focusBlend = 0,
   camDistMpc = FULL_BAND_CAM_Z,
   focusPickId: number | null = null,
+  devicePixelRatio = 1,
 ): FrameView {
   return {
-    snapshot: { focusBlend, focusPickId, nowMs: 0, focus: ZERO_FOCUS },
+    snapshot: { devicePixelRatio, focusBlend, focusPickId, nowMs: 0, focus: ZERO_FOCUS },
     drawCamPos: [0, 0, camDistMpc],
     canvasSize: { width: 1920, height: 1080 },
     drawPxPerRad: 1080 / (2 * Math.tan((60 * Math.PI) / 180 / 2)),
@@ -76,6 +79,31 @@ const rec = (
   }) as StructureInfo;
 
 describe('produceStructureMarkers', () => {
+  it('antique tints each cosmic kind\'s halo to its own pigment, keeping alpha; plain keeps the style', () => {
+    const kinds = ['galaxy-cluster', 'supercluster', 'void'] as const;
+    const halo = (antique: boolean) => {
+      const state = makeState(null, null, antique);
+      state.store.setGroup(
+        'bulk',
+        kinds.map((c) => rec(c, c)),
+      );
+      return produceStructureMarkers(
+        { store: state.store, pickCodes: PICK_CODES },
+        state,
+        makeCtx(),
+        ONE,
+      ).map((m) => m.haloColor);
+    };
+    const plain = halo(false);
+    const inked = halo(true);
+    kinds.forEach((c, i) => {
+      expect(plain[i]!.slice(0, 3)).toEqual([...STRUCTURE_MARKER_STYLES[c].haloColor.slice(0, 3)]);
+      expect(inked[i]!.slice(0, 3)).not.toEqual(plain[i]!.slice(0, 3));
+      expect(inked[i]![3]).toBe(plain[i]![3]);
+    });
+    expect(new Set(inked.map((h) => h.slice(0, 3).join())).size).toBe(3);
+  });
+
   it('emits one descriptor per marker-bearing structure in all() order (anchors → bulk)', () => {
     const state = makeState();
     state.store.setGroup('bulk', [rec('b1'), rec('b2')]);
@@ -353,5 +381,28 @@ describe('produceStructureMarkers', () => {
 
     const both = build(hoverOn(makeState('a', 'a'), 'a')).find((m) => m.id === 'a')!;
     expect(both.ringColor[0]).toBeCloseTo(plain.ringColor[0] * SELECTED_RING_BRIGHTEN, 6);
+  });
+
+  // A cluster ring's 5 CSS px floor and 4 px band are authored for dpr 1: a ring that
+  // spans 7 CSS px sits mid-band (neither 0 nor 1) however dense the canvas.
+  it('fades a small ring by its size in CSS px, the same at dpr 1 and dpr 2', () => {
+    const state = makeState();
+    state.store.setGroup('anchors', [rec('a')]);
+    const dist = Math.hypot(10, FULL_BAND_CAM_Z);
+    const alphaAt = (dpr: number): number => {
+      const ctx = {
+        ...makeCtx(0, FULL_BAND_CAM_Z, null, dpr),
+        drawPxPerRad: (dpr * 7 * dist) / 5,
+      } as FrameView;
+      return produceStructureMarkers(
+        { store: state.store, pickCodes: PICK_CODES },
+        state,
+        ctx,
+        ONE,
+      )[0]!.ringColor[3];
+    };
+    expect(alphaAt(1)).toBeGreaterThan(0);
+    expect(alphaAt(1)).toBeLessThan(1);
+    expect(alphaAt(2)).toBeCloseTo(alphaAt(1), 6);
   });
 });

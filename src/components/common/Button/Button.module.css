@@ -13,7 +13,7 @@
   padding: var(--space-3) var(--space-5);
   border: 1px solid var(--border-control);
   border-radius: var(--radius-md);
-  background: var(--surface-control);
+  background: var(--framed-control-ground, var(--surface-control));
   color: var(--color-fg);
   cursor: pointer;
   transition:
@@ -24,18 +24,23 @@
 
 @media (hover: hover) {
   .root:hover:not(:disabled) {
-    background: var(--surface-control-hover);
+    background: var(--framed-control-ground, var(--surface-control-hover));
     border-color: var(--border-hover);
   }
 }
 
 .root:active:not(:disabled) {
-  background: var(--surface-control-active);
+  background: var(--framed-control-ground, var(--surface-control-active));
 }
 
 .root:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+/* The secondary button is drawn as a tablet where a look sets one; primary keeps its accent fill. */
+.tablet {
+  composes: tablet from '../tablet.module.css';
 }
 
 .root:focus-visible {
@@ -47,7 +52,7 @@
 .primary {
   background: var(--color-accent);
   border-color: var(--color-accent);
-  color: #05070d;
+  color: var(--color-on-accent);
 }
 
 .primary:hover:not(:disabled),

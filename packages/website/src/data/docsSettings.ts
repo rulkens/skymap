@@ -683,6 +683,15 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
     file: DISPLAY,
     rows: [
       {
+        name: 'Antique atlas',
+        control: 'switch',
+        does: 'Draws the map as an engraved, hand-coloured star atlas of about 1690, on laid paper, with sea beasts in the empty sky.',
+        values: SWITCH,
+        first: OFF,
+        state: 'antique.enabled',
+        firstValue: false,
+      },
+      {
         name: 'Orientation',
         control: 'list',
         does: 'Chooses which plane the camera keeps level, and so which way is up: the plane of the solar system, Earth’s equator, the plane of the Milky Way or the plane of the local superclusters.',

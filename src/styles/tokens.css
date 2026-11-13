@@ -4,8 +4,8 @@
  * Raw rgba/hex values appear here once; CSS modules reference the semantic name
  * (`--surface-panel`) or the scalar rung (`--space-4`). A deviation (the scale bar's
  * softer surface) stays inline in its component so it is visible where it is used.
- * Not here: component layout (thumbnail sizes, palette dimensions), shader colours,
- * and the pinned-badge gold `#ffd97a` — one use, and a token would imply a reusable accent.
+ * Not here: component layout (thumbnail sizes, palette dimensions) and shader colours.
+ * The app's antique look (antique.css) re-points these tokens; the website never sets it.
  */
 
 /* Self-hosted (no Google Fonts request): subset to Latin + general
@@ -54,6 +54,21 @@
   --color-fg-ghost: rgba(160, 180, 230, 0.4);
 
   --color-fg-label: rgba(160, 180, 230, 0.55);
+
+  /* Navigation cheat-sheet keys: a touch brighter and bluer than --color-fg-label. */
+  --color-fg-key: rgba(180, 200, 240, 0.55);
+
+  /* The PINNED badge: the one warm accent against the blue palette. Not for reuse. */
+  --color-pinned: #ffd97a;
+
+  /* Text on an --color-accent fill (the primary button). */
+  --color-on-accent: #05070d;
+
+  /* The thumbnail's broken-image text: fainter than --color-fg-ghost, quiet beside the card. */
+  --color-fg-placeholder: rgba(160, 180, 230, 0.35);
+
+  /* A value that is absent ("Not catalogued") fades to this opacity. */
+  --opacity-absent: 0.45;
 
   /* ── Accent (interactive highlights) ─────────────────────────────────── */
 
@@ -109,6 +124,17 @@
 
   --shadow-card-inset: rgba(160, 200, 255, 0.06);
 
+  /* The left-stack panels and scale bar carry no shadow; a look may give them a frame. */
+  --shadow-panel: none;
+
+  /* A switch's thumb when on: the off colour, so only the track changes. */
+  --toggle-thumb-on: var(--color-fg-muted);
+
+  /* The info card's photo: shown as is, brightened on hover. A look may tone it to its palette. */
+  --thumbnail-filter: none;
+  --thumbnail-filter-hover: brightness(1.15);
+  --thumbnail-blend: normal;
+
   /* ── Decorative gradient: the "starlight" line on the top edge of glass surfaces ── */
   --color-accent-gradient-mid: rgba(180, 220, 255, 0.7);
   --color-accent-gradient-edge: rgba(120, 180, 255, 0.45);
@@ -123,8 +149,18 @@
   );
 
   /* ── Typography ─────────────────────────────────────────────────────── */
-  /* System mono (no webfont round-trip): `ui-monospace` is SF Mono / Cascadia Mono / the Linux Mono. */
-  --font-family-mono: ui-monospace, 'SF Mono', Menlo, monospace;
+  /* System mono (no webfont round-trip): `ui-monospace` is SF Mono / Cascadia Mono / the Linux Mono.
+   * `--font-family-mono` is the panels' text face; `--font-family-figures` is for readouts
+   * that update in place (clock, scale). Their boxes are sized in `ch`, so a look may give
+   * them proportional digits without the box reflowing as the value changes. */
+  --font-family-figures: ui-monospace, 'SF Mono', Menlo, monospace;
+  --font-family-mono: var(--font-family-figures);
+
+  /* Panel headings, eyebrows and badges. */
+  --font-family-label: var(--font-family-mono);
+  --label-case: uppercase;
+  /* A floor under every label's size: a face with small x-height (small caps) raises it. */
+  --font-size-label-min: 0px;
 
   /* Display serif: the face baked into the MSDF label atlas (src/data/fonts.ts), for marquee text echoing the in-scene labels. */
   --font-family-display: 'Cormorant Garamond', ui-serif, Georgia, serif;
@@ -172,6 +208,7 @@
   --radius-lg: 6px; /* thumbnails */
   --radius-xl: 8px; /* panels */
   --radius-2xl: 10px; /* info cards */
+  --radius-pill: 999px; /* search pill, round buttons, clock pill */
 
   /* ── Layout primitives ──────────────────────────────────────────────── */
 
@@ -188,6 +225,8 @@
    * off the corner by this height so they stack directly above the toolbar.
    */
   --time-toolbar-height: 2.5rem;
+  /** The clock readout's floor width: a look with proportional figures sets one. */
+  --time-readout-min-width: auto;
 
   /** Phone selection-card header: two name lines plus the type line; fits the thumbnail. */
   --sheet-header-height: 56px;
@@ -241,4 +280,45 @@
   /* ── Composite shadows ──────────────────────────────────────────────── */
   /* Soft outer drop plus a 1 px inset rim-light along the glass top. */
   --shadow-card: 0 8px 32px var(--shadow-card-outer), 0 0 0 1px var(--shadow-card-inset) inset;
+
+  /* ── Exhibit overlay ────────────────────────────────────────────────── */
+  /* Text straight over the live field, so it carries its own scrims and shadows; a look
+   * that sets it on paper drops them. Display sizes sit above the panel scale. */
+  --font-family-exhibit-body: 'Sora', system-ui, sans-serif;
+  --font-weight-exhibit-body: 100;
+  --font-weight-exhibit-display: 600;
+  --font-weight-exhibit-lede: 500;
+  --exhibit-title-size: 48px;
+  --exhibit-title-size-phone: 32px;
+  --exhibit-lede-size: 22px;
+  --exhibit-lede-size-phone: 18px;
+  --exhibit-heading-size: 24px;
+  --exhibit-fact-size: 18px;
+  --exhibit-body-size: 13.5px;
+  --exhibit-heading-color: #ffffff;
+  --exhibit-switch-on: rgba(168, 208, 255, 0.45);
+  --exhibit-rule: linear-gradient(90deg, rgba(160, 200, 255, 0.28), rgba(160, 200, 255, 0));
+  --exhibit-text-shadow-caption: 0 2px 16px rgba(0, 0, 0, 0.85);
+  --exhibit-text-shadow-notes: 0 1px 12px rgba(0, 0, 0, 0.9);
+  --exhibit-text-shadow-control: 0 2px 10px rgba(0, 0, 0, 0.8);
+  --exhibit-icon-shadow: drop-shadow(0 1px 6px rgba(0, 0, 0, 0.85));
+  --exhibit-control-ground-phone: rgba(0, 0, 0, 0.7);
+  /* Radial scrims need an EXPLICIT ellipse size and a transparent stop inside the box: an
+   * unsized one falls back to farthest-corner and reads as a global dim. */
+  --exhibit-scrim-caption: radial-gradient(
+    ellipse 58% 52% at 16% 88%,
+    rgba(0, 0, 0, 0.82) 0%,
+    rgba(0, 0, 0, 0.5) 30%,
+    rgba(0, 0, 0, 0.14) 60%,
+    transparent 82%
+  );
+  --exhibit-scrim-notes: radial-gradient(
+    ellipse 46% 85% at 90% 45%,
+    rgba(0, 0, 0, 0.88) 0%,
+    rgba(0, 0, 0, 0.66) 45%,
+    rgba(0, 0, 0, 0.2) 75%,
+    transparent 92%
+  );
+  --exhibit-scrim-caption-phone: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, transparent 70%);
+  --exhibit-scrim-notes-phone: linear-gradient(to bottom, transparent 0, rgba(0, 0, 0, 0.8) 48px);
 }

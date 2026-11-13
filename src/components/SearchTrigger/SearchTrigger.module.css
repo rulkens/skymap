@@ -12,13 +12,17 @@
   align-items: center;
   gap: var(--space-5);
 
-  background: var(--surface-card-soft);
+  background: var(--framed-control-ground, var(--surface-card-soft));
   -webkit-backdrop-filter: blur(var(--blur-card));
   backdrop-filter: blur(var(--blur-card));
 
-  border: 1px solid var(--border-card);
-  border-radius: 999px;
-  box-shadow: var(--shadow-card);
+  /* The antique look sets it in the title cartouche (common/framedTitle.module.css hooks). */
+  min-height: var(--title-cartouche-height, auto);
+  border: solid var(--border-card);
+  border-width: var(--title-cartouche-border, 1px);
+  border-image: var(--title-cartouche-image, none);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--framed-shadow, var(--shadow-card));
 
   /* The icon's colour; the text spans set their own. */
   color: var(--color-fg-dim);
@@ -37,7 +41,7 @@
 
 .trigger:hover,
 .trigger:focus-visible {
-  background: var(--surface-card-strong);
+  background: var(--framed-control-ground, var(--surface-card-strong));
   border-color: var(--border-hover);
   color: var(--color-accent);
   outline: none;
@@ -64,8 +68,16 @@
   flex-shrink: 0;
   padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-sm);
-  background: var(--surface-badge);
-  color: var(--color-fg-dim);
+  background: var(--key-chip-ground, var(--surface-badge));
+  border: var(--key-chip-border, 0);
+  color: var(--key-chip-color, var(--color-fg-dim));
+  font-family: var(--key-chip-font, inherit);
   font-size: var(--font-size-xs);
   letter-spacing: var(--letter-spacing-wide);
+}
+
+@media (forced-colors: active) {
+  .trigger {
+    border-image: none;
+  }
 }

@@ -2,10 +2,10 @@
  * The milkyWay Layer: the v1 sprite Milky Way — the generated point cloud,
  * its two-pass renderer, the `mw-aggregate` target and its upsample, the
  * star-count reconcile, the three draw/pick passes, its show and label entries, the
- * "You are here" COSMO label, the selection row, the source entry, the
- * DebugPanel tuning section, the InfoCard detail cards and the tier re-seed —
- * and, behind the `renderer` switch, the v2 field's targets, its `mw-field`
- * compute and its `milky-way-field` composite.
+ * "You are here" COSMO label, the antique plate's arm names, the selection row,
+ * the source entry, the DebugPanel tuning section, the InfoCard detail cards and
+ * the tier re-seed — and, behind the `renderer` switch, the v2 field's targets,
+ * its `mw-field` compute and its `milky-way-field` composite.
  */
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';
@@ -24,6 +24,7 @@ import { milkyWayAggregatePass } from './cloud/passes/milkyWayAggregatePass';
 import { milkyWayUpsamplePass } from './cloud/passes/milkyWayUpsamplePass';
 import { milkyWayPass } from './cloud/passes/milkyWayPass';
 import { produceMilkyWayLabel } from './card/present/produceMilkyWayLabel';
+import { produceAntiqueMilkyWayNames } from './card/present/produceAntiqueMilkyWayNames';
 import { milkyWaySelectionRow } from './selection/milkyWaySelectionRow';
 import { milkyWaySelectionKinds } from './selection/kinds';
 import { milkyWaySearch } from './card/present/milkyWaySearch';
@@ -57,6 +58,12 @@ export const milkyWayLayer = defineLayer({
         id: 'milkyWayLabel',
         label: 'milkyWay',
         produceLabels: produceMilkyWayLabel(runtime.pickCode),
+      },
+      {
+        slab: COSMO,
+        id: 'antiqueMilkyWayNames',
+        label: 'milkyWay',
+        produceLabels: produceAntiqueMilkyWayNames(runtime.pickCode),
       },
     ],
   }),

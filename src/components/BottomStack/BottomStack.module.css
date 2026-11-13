@@ -27,12 +27,13 @@
 }
 
 /* The resting cover: the dock plus a resting sheet's peek. The time row and a
-   pulled-open sheet are transient, so they never change it. */
+   pulled-open sheet are transient, so they never change it. Full width: the
+   antique plate keeps its cartouche and names off the whole dock, not its edge. */
 .coverProbe {
   position: fixed;
   left: 0;
+  right: 0;
   bottom: 0;
-  width: 0;
   height: var(--dock-height);
   pointer-events: none;
 }

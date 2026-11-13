@@ -66,14 +66,15 @@ export type Label2D = {
    */
   readonly outlineEmFrac?: number;
   /**
-   * Floor clamp on the projected em height in screen pixels (default 8).
+   * Floor clamp on the projected em height in CSS px (default 8); drawn at this times
+   * the device pixel ratio, so a name reads the same size on any screen.
    * When the perspective projection of `worldEmMpc` falls below this
    * value (label is very far away), the label renders at exactly this
    * pixel height instead of shrinking further.
    */
   readonly minPixelSize?: number;
   /**
-   * Ceiling clamp on the projected em height in screen pixels (default 64).
+   * Ceiling clamp on the projected em height in CSS px (default 64).
    * Prevents labels from becoming enormous when the camera is very close
    * to the anchor.
    */
@@ -119,6 +120,8 @@ export type Label2D = {
    * the shader falls back to `worldPos`, where the two already coincide.
    */
   readonly occludeSubjectPos?: Vec3;
+  /** Extra space after each glyph, in em; default 0. The antique look letter-spaces its capitals. */
+  readonly trackingEm?: number;
   /**
    * Horizontal alignment of the text relative to `worldPos`.
    * Default 'left' (text extends rightward from the anchor).
@@ -174,4 +177,10 @@ export type Label2D = {
    * focus sphere makes unclickable still keeps full emphasis.
    */
   readonly subjectId?: number;
+  /**
+   * The same name set on the other side of its sign, which the antique look's bbox
+   * declutter tries when this placement collides (an atlas sets a crowded town's
+   * name to the left). Keeps the label's id, so the envelope sees one name.
+   */
+  readonly fallback?: Label2D;
 };

@@ -37,6 +37,7 @@ function near0Ctx(): FrameView {
     slabs: [{ near, far, vp }],
     drawCamPos: eye,
     canvasSize: { width: 1600, height: 900 },
+    snapshot: { devicePixelRatio: 1 },
   } as unknown as FrameView;
 }
 

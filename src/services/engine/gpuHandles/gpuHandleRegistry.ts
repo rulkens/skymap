@@ -11,6 +11,7 @@ import { composeRenderTargetRows } from '../layer/composeRenderTargetRows';
 import { createBloomPyramid } from '../../gpu/passes/bloomPyramid';
 import { createMeshBodyRenderer } from '../../gpu/renderers/bodies/meshBodyRenderer';
 import { createCubeFaceBlitRenderer } from '../../gpu/renderers/cubeFaceBlit/cubeFaceBlitRenderer';
+import { createAntiqueLook } from '../../gpu/passes/antiqueLook/antiqueLook';
 import { createDomeResampleRenderer } from '../../gpu/renderers/domeResample/domeResampleRenderer';
 import { createBodyPickRenderer } from '../../gpu/renderers/bodies/bodyPickRenderer';
 import { createOrbitTrailRenderer } from '../../gpu/renderers/bodies/orbitTrailRenderer';
@@ -146,6 +147,12 @@ export const GPU_HANDLE_ROWS = [
     key: 'cubeFaceBlitRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createCubeFaceBlitRenderer({ device: deps.ctx.device, targetFormat: HDR_TARGET_FORMAT }),
+  },
+  {
+    key: 'antiqueLook',
+    rebuildOnSwapFormat: true,
+    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
+      createAntiqueLook({ device: deps.ctx.device, targetFormat: deps.ctx.format }),
   },
   {
     key: 'domeResampleRenderer',

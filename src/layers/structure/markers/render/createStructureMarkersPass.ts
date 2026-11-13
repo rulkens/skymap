@@ -37,13 +37,20 @@ export function createStructureMarkersPass(
       return live(fade);
     },
 
-    draw(pass, view, ctx, _state, fade) {
+    draw(pass, view, ctx, state, fade) {
       // Upload THIS view's planned markers: one instance buffer is correct only because a
       // `perView` section is its own submit (`renderFrame`'s view-identity batching).
       renderer.setMarkers(ctx.snapshot.plans.get(planner, ctx), view.camPos);
       // The renderer rebases this on the eye it packed; pick reuses those instances through
       // the same rebase, so draw and pick cannot diverge.
-      renderer.draw(pass, view.slab.vp, view.viewportPx, ctx.drawPxPerRad);
+      renderer.draw(
+        pass,
+        view.slab.vp,
+        view.viewportPx,
+        ctx.drawPxPerRad,
+        ctx.snapshot.devicePixelRatio,
+        state.settings.antique.enabled,
+      );
     },
 
     // One ring-pick draw per category; the renderer ORs each category's `sourceCode` into

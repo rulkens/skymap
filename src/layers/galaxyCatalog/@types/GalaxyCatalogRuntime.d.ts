@@ -24,6 +24,7 @@ import type { TexturedDiskSubsystem } from '../disks/textured/@types/TexturedDis
 import type { DiskPlannerWalk } from '../lod/@types/DiskPlannerWalk';
 import type { GalaxyPointRenderer } from '../pointSprites/@types/GalaxyPointRenderer';
 import type { GalaxyPickRenderer } from '../pointSprites/@types/GalaxyPickRenderer';
+import type { GalaxyPointPrintRenderer } from '../pointSprites/@types/GalaxyPointPrintRenderer';
 import type { TexturedDiskRenderer } from '../disks/textured/@types/TexturedDiskRenderer';
 import type { ProceduralDiskRenderer } from '../disks/procedural/@types/ProceduralDiskRenderer';
 
@@ -53,6 +54,7 @@ export type GalaxyCatalogRuntime = {
 
   readonly pointRenderer: GalaxyPointRenderer;
   readonly pickRenderer: GalaxyPickRenderer;
+  readonly pointPrintRenderer: GalaxyPointPrintRenderer;
   readonly texturedDiskRenderer: TexturedDiskRenderer;
   readonly proceduralDiskRenderer: ProceduralDiskRenderer;
 

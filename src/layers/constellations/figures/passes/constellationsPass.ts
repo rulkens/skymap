@@ -43,7 +43,8 @@ export function constellationsPass(runtime: ConstellationsRuntime): ContentPass<
         rebasedVp,
         view.viewportPx,
         ctx.drawPxPerRad,
-        CONSTELLATION_LINE_HALFWIDTH_PX,
+        // Authored for dpr 1 (CSS px); the renderer takes device px.
+        CONSTELLATION_LINE_HALFWIDTH_PX * ctx.snapshot.devicePixelRatio,
         state.settings.constellations.intensity,
         layerOpacity,
         camPos,

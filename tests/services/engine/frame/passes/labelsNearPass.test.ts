@@ -131,6 +131,7 @@ describe('labelsNearPass.enabled', () => {
       subsystems: {},
       selection: { hover: null, select: null },
       selectionKindRows: [],
+      settings: { antique: { enabled: false } },
     } as unknown as EngineState;
     const layerState = makeState(labelRenderer, lineRenderer, dir);
 
@@ -206,6 +207,7 @@ describe('labelsNearPass.draw', () => {
       projection.vpF32,
       projection.viewportPx,
       projection.pxPerRad,
+      projection.devicePixelRatio,
       SCENE_STUB,
     ]);
     expect(order).toEqual(['line', 'label']);

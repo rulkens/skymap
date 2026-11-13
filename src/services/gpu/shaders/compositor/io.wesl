@@ -67,6 +67,11 @@ struct CompositorUniforms {
   // in SDR, where the output is exactly the tone curve's clamped result.
   hdrKnee: f32,
   hdrHeadroom: f32,
+  // Bytes 32, 36: the print shoulder's knee and the curve's saturation it bends
+  // toward, post-exposure; knee 0 = off (every draw but the antique print).
+  shoulderKnee: f32,
+  shoulderTop: f32,
+  _pad: vec2<f32>,
 }
 
 // ── vertex-to-fragment interface ────────────────────────────────────

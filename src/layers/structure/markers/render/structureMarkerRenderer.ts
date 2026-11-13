@@ -92,6 +92,8 @@ import { pickDepthFormat } from '../../../../services/engine/frame/pickProgram';
  * halo's RGB across both pipelines would save stride but can't
  * express that void colour split.
  */
+// Camera prefix + devicePixelRatio, padded to 16 (see ring.wesl's RingUniforms).
+const RING_UNIFORM_BYTES = CAMERA_UNIFORM_BYTES + 16;
 const MARKER_INSTANCE_FLOATS = 13;
 const MARKER_PICKABLE_FLOAT = 12;
 const MARKER_PICKABLE_BYTE_OFFSET = MARKER_PICKABLE_FLOAT * 4;
@@ -358,7 +360,7 @@ export function createStructureMarkerRenderer(
 
     pickCameraBuffer = device.createBuffer({
       label: 'structure-marker-pick-camera',
-      size: CAMERA_UNIFORM_BYTES,
+      size: RING_UNIFORM_BYTES,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
     pickCameraBindGroup = device.createBindGroup({
@@ -369,7 +371,7 @@ export function createStructureMarkerRenderer(
 
     uniformBuffer = device.createBuffer({
       label: 'structure-marker-uniforms',
-      size: CAMERA_UNIFORM_BYTES,
+      size: RING_UNIFORM_BYTES,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
@@ -498,6 +500,8 @@ export function createStructureMarkerRenderer(
     viewProj: Float64Array,
     viewportSize: Vec2,
     pxPerRad: number,
+    devicePixelRatio: number,
+    voidHalo = false,
   ): void {
     if (
       !device ||
@@ -513,8 +517,9 @@ export function createStructureMarkerRenderer(
 
     // The 80-byte CameraUniforms prefix, rebased on the eye the eye-relative
     // instances were packed against.
-    const uni = new Float32Array(CAMERA_UNIFORM_BYTES / 4);
+    const uni = new Float32Array(RING_UNIFORM_BYTES / 4);
     writeCameraPrefix(uni, narrowMat4(rebaseViewProj(viewProj, packedEye)), viewportSize, pxPerRad);
+    uni[CAMERA_UNIFORM_BYTES / 4] = devicePixelRatio;
     device.queue.writeBuffer(uniformBuffer, 0, uni);
 
     pass.setBindGroup(0, cameraBindGroup);
@@ -540,7 +545,7 @@ export function createStructureMarkerRenderer(
     // visual output); load-bearing for the pick path.
     pass.setPipeline(haloPipeline);
     for (const cat of categories) {
-      if (cat === 'void') continue; // explicit skip per spec
+      if (cat === 'void' && !voidHalo) continue; // explicit skip per spec
       if (bucketCounts[cat] === 0) continue;
       const bg = sourceBindGroups[cat];
       if (!bg) continue;
@@ -592,7 +597,9 @@ export function createStructureMarkerRenderer(
     if (!pickCameraBuffer || !pickCameraBindGroup) return;
     if (currentMarkerCount === 0) return;
     // Same prefix write as `draw`, into the pick buffer.
-    const uni = new Float32Array(CAMERA_UNIFORM_BYTES / 4);
+    // The pick fragment ignores the tail (ring width), so it stays 0 here; the buffer is
+    // still the full ring-uniform size because the shared vertex stage binds the struct.
+    const uni = new Float32Array(RING_UNIFORM_BYTES / 4);
     writeCameraPrefix(uni, narrowMat4(rebaseViewProj(viewProj, packedEye)), viewportPx, pxPerRad);
     device.queue.writeBuffer(pickCameraBuffer, 0, uni);
     passEncoder.setPipeline(ringPickPipeline);

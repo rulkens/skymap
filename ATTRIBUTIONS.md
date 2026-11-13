@@ -1741,9 +1741,33 @@ countries.
 - **Attribution:** "Please give credit for this item to: NASA's Scientific
   Visualization Studio".
 - **Upstream:** <https://svs.gsfc.nasa.gov/4720>
-- **Enters skymap:** `npm run fetch-textures` → `bakeNormalMap.ts`.
-- **Modified:** Yes. Turned into a normal map.
+- **Enters skymap:** `npm run fetch-textures` → `bakeNormalMap.ts`, and
+  `tools/antique/moon/bakeMoonCraters.ts` (crater rim radii and depths).
+- **Modified:** Yes. Turned into a normal map; sampled for the crater table.
 - **Checked:** 2026-10-07: <https://svs.gsfc.nasa.gov/4720>
+
+### IAU / USGS: Gazetteer of Planetary Nomenclature (Moon)
+
+<!-- attribution: id=iau-gazetteer-moon; keys=iau.moon-nomenclature,iau.readme -->
+
+- **What:** The Moon's named features as centre points with diameters; the
+  antique look's crater table is baked from its craters.
+- **By:** International Astronomical Union (IAU) Working Group for Planetary
+  System Nomenclature and the USGS Astrogeology Science Center.
+- **Licence:** The download's metadata: use constraints "Public domain.", data
+  credit "International Astronomical Union (IAU) and United States Geologic
+  Survey (USGS)".
+- **Use:** Free, no credit asked
+- **Attribution:** None asked. Ours: "IAU / USGS Gazetteer of Planetary
+  Nomenclature".
+- **Upstream:** <https://planetarynames.wr.usgs.gov/GIS_Downloads>
+- **Enters skymap:** downloaded by hand →
+  `tools/antique/moon/bakeMoonCraters.ts` →
+  `src/data/rendering/antiqueMoonCraters.generated.ts`.
+- **Modified:** Yes. Craters of 12 km or more, radii snapped to the LOLA rim
+  crest, a print weight from their depth.
+- **Checked:** 2026-11-07: <https://planetarynames.wr.usgs.gov/GIS_Downloads>,
+  the zip's `metadata_nomenclature_points_MOON.xml`
 
 ## Earth imagery and terrain
 
@@ -1890,11 +1914,57 @@ The surface tile manifests under `public/data/images/earth-tiles/` and
 - **Upstream:** <https://www.ncei.noaa.gov/products/etopo-global-relief-model>;
   the tiles are on `www.ngdc.noaa.gov`.
 - **Enters skymap:** `npm run fetch-height` → `data/raw/etopo/` →
-  `build-surface-tiles` → `earth-tiles/…/height/`.
+  `build-surface-tiles` → `earth-tiles/…/height/`; and `build-antique-earth` →
+  the molehills of `public/antique/earth-1690.bin`.
 - **Modified:** Yes. Re-gridded, quantised to 0.1 m; water flattened to its
   shore level.
 - **Checked:** 2026-10-07: <https://www.ncei.noaa.gov/access/metadata/landing-page/bin/iso?id=gov.noaa.ngdc.mgg.dem:etopo_2022>,
   <https://www.ncei.noaa.gov/products/etopo-global-relief-model>
+
+### Natural Earth (rivers and provinces of the antique map)
+
+<!-- attribution: id=natural-earth; keys=naturalearth.* -->
+
+- **What:** The 1:10m rivers and lake centrelines, world and European
+  supplement (`ne_10m_rivers_lake_centerlines`, `ne_10m_rivers_europe`), and
+  the 1:10m admin-1 states and provinces (`ne_10m_admin_1_states_provinces`).
+- **By:** Natural Earth; primary authors Tom Patterson and Nathaniel Vaughn
+  Kelso.
+- **Licence:** Public domain. The terms of use: "All versions of Natural
+  Earth raster + vector map data found on this website are in the public
+  domain."
+- **Use:** Free, no credit asked
+- **Attribution:** None required. The terms suggest "Made with Natural
+  Earth."
+- **Upstream:** <https://www.naturalearthdata.com/>; the GeoJSON comes from
+  `raw.githubusercontent.com` (nvkelso/natural-earth-vector, tag v5.1.2).
+- **Enters skymap:** `npm run fetch-natural-earth` → `data/raw/naturalearth/` →
+  `build-antique-earth` → `public/antique/earth-1690.bin`.
+- **Modified:** Yes. Canals and intermittent rivers dropped, pieces chained
+  and simplified, widths and reveal levels derived. Provinces dissolved into
+  the realms of 1690, cut along historical lines, simplified, coloured.
+- **Checked:** 2026-11-07: <https://www.naturalearthdata.com/about/terms-of-use/>
+
+### OpenHistoricalMap (1690 borders of the antique map)
+
+<!-- attribution: id=openhistoricalmap; keys=ohm.* -->
+
+- **What:** Twenty boundary relations alive in 1690 (Rhineland and Low
+  Countries principalities, Lorraine, Bar, the Three Bishoprics) with their
+  member ways, pinned by id and version, read as of 2026-11-07T14:38:11Z.
+- **By:** OpenHistoricalMap contributors.
+- **Licence:** CC0 1.0. The Overpass API states "The data is made available
+  under CC0"; the fetcher refuses any element tagged with another licence.
+- **Use:** Free, no credit asked
+- **Attribution:** None required by CC0; credited here as "OpenHistoricalMap
+  contributors".
+- **Upstream:** <https://www.openhistoricalmap.org/>; the extract comes from
+  <https://overpass-api.openhistoricalmap.org/api/interpreter>.
+- **Enters skymap:** `npm run fetch-ohm-1690` → `data/raw/ohm/` →
+  `build-antique-earth` → `public/antique/earth-1690.bin`.
+- **Modified:** Yes. Ways assembled into polygons, enclaves under 40 km²
+  dropped, used to cut the Natural Earth provinces.
+- **Checked:** 2026-11-07: <https://overpass-api.openhistoricalmap.org/api/interpreter>
 
 ### Terrain Tiles "skadi" (1 arc-second heights)
 
@@ -2469,6 +2539,34 @@ rewritten only by `npm run build-meshes`, which re-bakes the models.
   into a normal atlas; the mosaic's polar gaps filled with its median,
   downsampled, and rescaled to the seed albedo.
 - **Checked:** 2026-10-30: <https://naif.jpl.nasa.gov/pub/naif/pds/pds4/orex/orex_spice/spice_kernels/dsk/>
+
+## Antique plate engravings
+
+### Engraved ornaments of the antique look (Ortelius, Goos, de Wit, Hevelius)
+
+<!-- attribution: id=antique-ornaments -->
+
+- **What:** The antique look's engraved ornaments: three title cartouches,
+  Hevelius' constellation figures, and the sea beasts and ship of the Zone of
+  Avoidance.
+- **By:** Abraham Ortelius (1527–1598), Pieter Goos (1616–1675), Frederik de Wit
+  (1629/30–1706) and Johannes Hevelius (1611–1687); scans by the Bibliothèque
+  nationale de France (Gallica), the David Rumsey Map Collection (via the
+  Internet Archive), e-rara and Polona.
+- **Licence:** Public domain. Every author died more than 100 years ago and
+  every scan is a faithful 2D reproduction; Wikimedia Commons marks each file
+  "Public domain" (PD-old-100-expired, PD France or PD-US expired).
+- **Use:** Free, no credit asked
+- **Attribution:** None required. `data/antique/PROVENANCE.md` credits each
+  plate and scan.
+- **Upstream:** <https://commons.wikimedia.org/wiki/File:Pascaart_van_de_Noort_Zee._(IA_dr_pascaart-van-de-noort-zee-12179010).jpg>
+  and the other Commons pages listed in `data/antique/PROVENANCE.md`.
+- **Enters skymap:** `data/antique/sprites/*.png` → `npm run pack-ornaments` →
+  `public/antique/ornaments.png`.
+- **Modified:** Yes. Cropped, the map's ruled lines and lettering removed, the
+  cartouches' fields erased for runtime titles, the ink pushed to two levels and
+  repacked with fill, wash and accent planes.
+- **Checked:** 2026-11-08: <https://commons.wikimedia.org/wiki/File:Pascaart_van_de_Noort_Zee._(IA_dr_pascaart-van-de-noort-zee-12179010).jpg>
 
 ## Fonts
 

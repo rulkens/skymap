@@ -17,6 +17,8 @@ import { ALL_CUBE_FACES } from '../../../../data/rendering/cubemapCaptures';
 export const MAX_FRAME_INPUTS: FrameInputs = {
   tone: { exposure: 1, curve: 0, hdrKnee: 0, hdrHeadroom: 0 },
   bloomEnabled: true,
+  // Off: the look reroutes swap lines to `print`, which would rename their slots.
+  antique: false,
   // NEAR0 plus every capacity body row — sized off the registry, never by hand.
   foregroundChain: [NEAR0, ...Array.from({ length: SLAB_ROW_CEILING }, (_, k) => k + 2)],
   // Every row's 6 faces, so the capture slots exist even when no band is on —
@@ -35,8 +37,9 @@ export const MAX_FRAME_INPUTS: FrameInputs = {
     ]),
   ),
   bodyRowSlabs: {
-    // Every capacity index, for both: the two rows move with the live bodies.
+    // Every capacity index, for each: the rows move with the live bodies.
     lens: Array.from({ length: SLAB_ROW_CEILING }, (_, k) => k + 2),
     insideAtmosphere: Array.from({ length: SLAB_ROW_CEILING }, (_, k) => k + 2),
+    surfaceMask: Array.from({ length: SLAB_ROW_CEILING }, (_, k) => k + 2),
   },
 };

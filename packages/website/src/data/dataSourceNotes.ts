@@ -462,6 +462,33 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
       'The height of Earth’s land everywhere: the relief you see when you come down to the ground.',
     scene: 'earth-and-its-surface',
   },
+  'natural-earth': {
+    description:
+      'Public-domain map data at a scale of 1 to 10 million: the world’s rivers, more of Europe’s, and its states and provinces.',
+    shows:
+      'The rivers engraved on Earth in the antique atlas look, and the provinces its realms of 1690 are pieced from.',
+    scene: 'earth-and-its-surface',
+  },
+  openhistoricalmap: {
+    description:
+      'Borders as they stood in 1690, from a map of the past anyone can edit, for the Rhineland, Lorraine and the Low Countries.',
+    shows:
+      'The old borders the antique atlas look’s realms of 1690 follow where no modern line does.',
+    scene: 'earth-and-its-surface',
+  },
+  'iau-gazetteer-moon': {
+    description:
+      'The Moon’s named features as points with diameters, from the International Astronomical Union and the USGS.',
+    shows: 'The craters ringed and named on the Moon in the antique atlas look.',
+    scene: 'the-moon',
+  },
+  'antique-ornaments': {
+    description:
+      'Cartouches, constellation figures and sea beasts cut from 16th- and 17th-century atlas plates, for the antique atlas look.',
+    shows:
+      'The title cartouche, the constellation figures and the sea beasts of the antique atlas look.',
+    scene: 'earth-and-its-surface',
+  },
   skadi: {
     description: 'Heights at 1 arc-second under the regions where Earth has sharper imagery.',
     shows: 'The height of the ground under the regions that have sharper imagery.',

@@ -59,13 +59,18 @@ function makeState(
     focusedOnly?: boolean;
     focus?: object | null;
     bbox?: LabelBBox;
+    antique?: boolean;
   } = {},
 ): EngineState {
   layout.bbox = opts.bbox ?? MEASURED_BBOX;
   return {
     gpu: { fontAtlases: { metricsByFont: {} } },
     selection: { focus: opts.focus ?? null, select: null, hover: null },
-    settings: { labels: { focusedOnly: opts.focusedOnly ?? false } },
+    settings: {
+      labels: { focusedOnly: opts.focusedOnly ?? false },
+      antique: { enabled: opts.antique ?? false },
+    },
+    viewRig: 'mono',
   } as unknown as EngineState;
 }
 
@@ -83,13 +88,20 @@ function screenOf(p: readonly number[]): [number, number] {
   return [(clipX / clipW / 2 + 0.5) * 1920, (1 - (clipY / clipW / 2 + 0.5)) * 1080];
 }
 
-function makeCtx(over: { focusBlend?: number } = {}): FrameView {
+function makeCtx(over: { focusBlend?: number; dpr?: number } = {}): FrameView {
+  const dpr = over.dpr ?? 1;
   return {
-    snapshot: { focusBlend: over.focusBlend ?? 0, nowMs: 0, focus: ZERO_FOCUS },
+    snapshot: {
+      devicePixelRatio: dpr,
+      focusBlend: over.focusBlend ?? 0,
+      nowMs: 0,
+      focus: ZERO_FOCUS,
+    },
     drawCamPos: [0, 0, 0],
     vp: VP,
     canvasSize: { width: 1920, height: 1080 },
-    drawPxPerRad: 1080 / (2 * Math.tan((60 * Math.PI) / 180 / 2)),
+    // Device px per rad grows with dpr: the same sky on a denser canvas.
+    drawPxPerRad: (dpr * 1080) / (2 * Math.tan((60 * Math.PI) / 180 / 2)),
   } as unknown as FrameView;
 }
 
@@ -159,6 +171,38 @@ describe('produceFamousGalaxyLabels', () => {
     expect(tip[1] - anchor[1]).toBeCloseTo(TEXT_BOTTOM_BELOW_ANCHOR_PX + LEADER_LINE_PADDING_PX, 2);
   });
 
+  it('under the antique look leaves the name at the galaxy for the director to set off its disc', () => {
+    // The look sets its type after the producer (font, size, a glossed second line), so
+    // only the director, which measures that text, can place it clear of the disc.
+    const runtime = seed([{ id: 'm51', names: ['M51'] }], [5, 0, 0], [120]);
+    const label = produceFamousGalaxyLabels(runtime)(makeState({ antique: true }), makeCtx(), ONE)
+      .labels[0]!;
+    expect(label.worldPos).toEqual([5, 0, 0]);
+    expect(label.lift?.subjectSizePx).toBeCloseTo(sizePxAt(120, 5), 3);
+    expect(label.leader).toBeUndefined();
+  });
+
+  it("under the antique look drops a galaxy's name when it stands behind a nearer galaxy's disc", () => {
+    // M31's period name printed across M51: seen from M51 the Local Group lies behind it,
+    // a speck the plate prints into M51's own stipple.
+    const runtime = seed(
+      [
+        { id: 'm51', names: ['M51'] },
+        { id: 'm31', names: ['M31'] },
+        { id: 'm81', names: ['M81'] },
+      ],
+      [5, 0, 0, 20, 0.2, 0, 20, 6, 0],
+      [120, 200, 200],
+    );
+    const ids = (antique: boolean) =>
+      produceFamousGalaxyLabels(runtime)(makeState({ antique }), makeCtx(), ONE).labels.map(
+        (l) => l.id,
+      );
+    expect(ids(true)).toEqual(['famous-m51', 'famous-m81']);
+    // The plain look's galaxies add light, so the far one shows through and keeps its name.
+    expect(ids(false)).toEqual(['famous-m51', 'famous-m31', 'famous-m81']);
+  });
+
   it('keeps the line top exactly the padding below the label bottom at any lift', () => {
     // The line top DERIVES from the measured text bottom minus the padding, so the gap is
     // identical at different lifts (~33.7 px and ~42.1 px, both proportional-regime).
@@ -224,6 +268,18 @@ describe('produceFamousGalaxyLabels', () => {
     const runtime = seed([{ id: 'far', names: ['Far'] }], [100000, 0, 0], [40]);
     const out = produceFamousGalaxyLabels(runtime)(state, makeCtx(), ONE);
     expect(out.labels).toEqual([]);
+  });
+
+  // The 6 px gate is CSS px: the same sky on a dpr-2 canvas is twice as many device px.
+  it('gates on apparent size in CSS px, the same at dpr 1 and dpr 2', () => {
+    const kept = (cssPx: number, dpr: number): number =>
+      produceFamousGalaxyLabels(
+        seed([{ id: 'g', names: ['G'] }], [10, 0, 0], [(cssPx * 10 * 1000) / PX_PER_RAD]),
+      )(makeState(), makeCtx({ dpr }), ONE).labels.length;
+    for (const dpr of [1, 2]) {
+      expect(kept(5, dpr)).toBe(0);
+      expect(kept(8, dpr)).toBeGreaterThan(0);
+    }
   });
 
   it('emits at the handed value, so a falling value draws the fade-out tail', () => {

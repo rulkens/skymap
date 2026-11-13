@@ -389,6 +389,7 @@ function makeInput(
     filamentIntensity: 1,
     cosmicWebDensityEnabled: false,
     bloomEnabled: false,
+    antique: false,
     ...(overrides.settings ?? {}),
   };
 
@@ -418,6 +419,7 @@ function makeInput(
     sceneBodies: [] as never[],
     plans: createFramePlannerResultStore(),
     nowMs: 0,
+    devicePixelRatio: 1,
     simDays: 0,
     altitudeMpc: 0,
     focusBlend: 0,
@@ -519,6 +521,7 @@ function makeInput(
           // Bloom off by default in these fixtures: the bloom render steps only
           // shape the program when enabled, and no fixture asserts on them.
           bloom: { enabled: settings.bloomEnabled, strength: 1, threshold: 1 },
+          antique: { enabled: false },
           bias: { mode: settings.biasMode, absMagLimit: settings.absMagLimit },
           thumbnails: { enabled: settings.galaxyTexturesEnabled },
           milkyWay: { enabled: settings.milkyWayEnabled, renderer: 'v1' },
@@ -834,6 +837,7 @@ describe('renderFrame', () => {
     const options = {
       tone: { exposure: 1, curve: ToneMapCurve.Reinhard, hdrKnee: 0, hdrHeadroom: 0 },
       bloomEnabled: false,
+      antique: false,
       foregroundChain: foregroundChainOrder(fx.input.canvas.slabs),
       captureFaces: new Map(),
       bodyRowSlabs: bodyRowSlabs(fx.input.canvas),

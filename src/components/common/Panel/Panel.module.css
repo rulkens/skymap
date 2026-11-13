@@ -1,148 +1,101 @@
 /*
- * Panel.module.css — shared glassmorphic card chrome.
- *
- * Every visual atom referenced here lives in `src/styles/global.css` as a
- * CSS custom property; this stylesheet only composes them.  The HUD's
- * left-stack overlays (Navigation, Settings, Stats) all wear this chrome,
- * so a tweak to the glass look (border opacity, blur strength, header
- * spacing) lands here and propagates everywhere.
- *
- * What lives here vs. in the consuming panel:
- *   - Outer card (background, blur, border, font, width)              ← here
- *   - Title row (button reset, chevron, uppercase header text)        ← here
- *   - Body padding container                                          ← here
- *   - Per-row label/value/key/action cells                            ← consumer
- *   - Sliders, dropdowns, checkboxes, dividers, sub-section headings  ← consumer
+ * Panel.module.css — the shared card chrome of the left-stack panels (Navigation, Settings).
+ * Every value is a token. The `--sheet-ground`, `--frame-*`, `--framed-*` and `--panel-title-*`
+ * hooks are unset in the plain look (each falls back to today's value); the antique look fills
+ * them (styles/antique.css, utils/antiqueChrome/antiqueChromeCss) to draw laid paper in an
+ * engraved frame with the title astride its top rule (framedTitle.module.css).
  */
 
 .panel {
-  background: var(--surface-panel);
-  /* Vendor-prefixed declaration first, then the standard.  esbuild's
-   * CSS minifier dedupes adjacent declarations and keeps the LAST one;
-   * keeping the unprefixed form last means modern browsers (which
-   * support both) get the standard property and Firefox 103+
-   * (unprefixed-only) renders the blur correctly.  The earlier order
-   * silently broke the production build on Firefox + recent Chrome
-   * after `-webkit-` aliasing started being deprecated. */
+  background: var(--sheet-ground, var(--surface-panel));
+  /* Prefixed first: esbuild keeps the last of two adjacent duplicates, and Firefox reads only the standard one. */
   -webkit-backdrop-filter: blur(var(--blur-panel));
   backdrop-filter: blur(var(--blur-panel));
-  border: 1px solid var(--border-default);
+  border: var(--frame-border, 1px) solid var(--border-default);
+  border-image: var(--frame-image, none);
   border-radius: var(--radius-xl);
+  box-shadow: var(--framed-shadow, var(--shadow-panel));
+  min-height: var(--framed-min-height, auto);
 
   color: var(--color-fg-base);
   font: var(--font-size-md) / var(--line-height-base) var(--font-family-mono);
   user-select: none;
-  /* Uniform width across the left-stack panels so they read as a single
-   * visual column.  Bump the token if a future control row outgrows it. */
   width: var(--panel-width);
 }
 
-/*
- * Title strip — a flex row carrying the collapse-affordance button and,
- * optionally, an extra inline slot (used by SettingsPanel for the Tier
- * chip).  The bottom border that used to live on `.titleButton` moved
- * up here so it spans the full width regardless of whether an extra
- * slot is rendered.
- */
 .titleRow {
+  composes: row from '../framedTitle.module.css';
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  border-bottom: 1px solid var(--border-default);
-  /* Match the panel's rounded top corners so the header doesn't square
-   * off the top edge of the glassmorphic container. */
+  margin: var(--panel-title-row-margin, 0);
+  border-bottom: var(--panel-title-rule, 1px solid var(--border-default));
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
 }
 
 /*
- * Title row — the <button> that wraps the chevron + uppercase title.
- * We strip every default <button> chrome rule so the row reads as a plain
- * heading; only the cursor and focus ring announce its interactivity.
- *
- * Why a real <button> rather than a styled <div>: keyboard focus +
- * Enter/Space activation + `aria-expanded` come for free, no custom
- * onKeyDown handler.
- *
- * `flex: 1` lets the button absorb whatever horizontal space the
- * `.headerExtra` slot leaves on the right (or all of it when no extra
- * is rendered).
+ * Antique: the body folds away and the frame closes under the title row. The bottom corner
+ * slices draw at a fraction of their height (`--framed-closed-foot`), so the closed panel is
+ * the top strip plus a foot instead of two full corner slices. Unset in the plain look.
  */
+.collapsed {
+  border-bottom-width: var(--framed-closed-foot, var(--frame-border, 1px));
+  border-image-width: var(--framed-closed-image-width, auto);
+  min-height: 0;
+}
+
+/* The chip would stand on its own line and double the closed panel's height. */
+.collapsed .headerExtra {
+  display: var(--framed-closed-extra-display, flex);
+}
+
+/* A real <button>: focus, Enter/Space and `aria-expanded` come free. */
 .titleButton {
+  composes: cartouche from '../framedTitle.module.css';
   display: flex;
-  align-items: baseline;
-  flex: 1;
+  align-items: var(--panel-title-align, baseline);
+  flex: var(--panel-title-flex, 1);
   min-width: 0;
-  padding: var(--space-5) var(--space-7);
+  padding: var(--panel-title-padding, var(--space-5) var(--space-7));
   background: transparent;
-  border: 0;
   font: inherit;
   text-align: left;
   cursor: pointer;
   user-select: none;
 }
 
-/*
- * Inline slot rendered to the right of the title.  Currently used by
- * SettingsPanel for the Tier chip — a compact dropdown that's the
- * most consequential always-visible control on the panel but doesn't
- * deserve a full body row of its own (UX-audit Q13 / converged
- * structure).  Padding mirrors the title button's right edge so the
- * chip sits visually inside the same header strip rather than tacked
- * on.
- */
+/* The chip shrinks before the title does. Framed, it drops to its own line under the cartouche. */
 .headerExtra {
   display: flex;
   align-items: center;
-  padding-right: var(--space-7);
-  /* Don't let a long chip label crowd the title text — the chip
-   * shrinks before the title does. */
+  justify-content: flex-end;
   flex-shrink: 0;
+  flex-basis: var(--panel-extra-basis, auto);
+  order: var(--panel-extra-order, 0);
+  margin-right: var(--panel-extra-margin, 0);
+  padding-right: var(--space-7);
 }
 
 .titleButton:focus-visible {
-  outline: 1px solid var(--focus-ring);
+  outline: var(--focus-ring-width, 1px) solid var(--focus-ring);
   outline-offset: 2px;
   border-radius: var(--radius-md);
 }
 
-/*
- * When the panel is collapsed, drop the title strip's bottom border so
- * the card reads as a single rounded chip rather than a header with an
- * empty rule underneath it.  Pre-animation we used `:only-child` (the
- * body was unmounted on collapse), but the body now stays mounted with
- * `grid-template-rows: 0fr` so we detect "collapsed" via a `:has()`
- * sibling check for the absence of the `.bodyWrapperOpen` modifier
- * class (toggled from Panel.tsx via `cx`).  Baseline 2023, supported
- * across every browser the project targets.
- *
- * Selector applies to `.titleRow` (the flex container holding the
- * button + optional extra slot) so the rounded corners cover the full
- * header strip rather than just the button's edge.
- */
+/* Collapsed: no rule under an empty header. The body stays mounted at 0fr, hence `:has()`. */
 .titleRow:has(+ .bodyWrapper:not(.bodyWrapperOpen)) {
   border-bottom: 0;
   border-radius: var(--radius-xl);
 }
 
-/*
- * Chevron sits LEFT of the heading like a tree-twirl / list-marker — a
- * punctuation glyph attached to the heading, not a right-side dropdown
- * indicator.  Dim and small so it doesn't compete with the heading text.
- */
+/* One glyph rotated ▸ → ▾ (a text swap can't animate), as in CollapsibleSection. */
 .chevron {
   display: inline-block;
   font-size: var(--font-size-xxs);
   color: var(--color-fg-ghost);
   margin-right: var(--space-3);
-  /* Nudge up slightly for visual balance with the uppercase heading. */
   position: relative;
   top: -1px;
-  /*
-   * Animated rotation between ▸ (closed) and ▾ (open) — one glyph
-   * rotated 90° via CSS transform rather than swapping characters.
-   * CSS transitions can animate `transform` smoothly; they can't
-   * animate text-content swaps.  Mirrors CollapsibleSection's
-   * chevron so the affordance reads identically at every level.
-   */
   transition: var(--transition-chevron);
   transform: rotate(0deg);
 }
@@ -151,39 +104,15 @@
   transform: rotate(90deg);
 }
 
-/*
- * Heading text.  Uppercase + letter-spaced + dim — visually a section
- * header, not a clickable label.  Interactivity affordance comes from
- * the cursor + focus-visible outline on the parent <button>.
- */
 .title {
-  font-size: var(--font-size-sm);
+  font-family: var(--font-family-label);
+  font-size: var(--panel-title-size, max(var(--font-size-sm), var(--font-size-label-min)));
   letter-spacing: var(--letter-spacing-widest);
-  text-transform: uppercase;
-  color: var(--color-fg-dim);
+  text-transform: var(--label-case);
+  color: var(--panel-title-color, var(--color-fg-dim));
 }
 
-/*
- * Body wrapper + body — animates open/close via the same modern grid-
- * template-rows technique that CollapsibleSection uses for its sub-
- * sections.  Keeps the visual rhythm consistent across every nesting
- * level of the HUD (outer Panel → CollapsibleSection → controls).
- *
- * The wrapper is a single-row CSS Grid: `0fr` when closed (collapses
- * to zero height), `1fr` when open (grows to fit the body's intrinsic
- * height).  The body child has `min-height: 0` (without it, grid
- * items default to a min-height of `auto`, defeating the trick) and
- * `overflow: hidden` (so content visibly clips during the
- * transition).  Browsers interpolate `grid-template-rows` between the
- * two values smoothly; CSS still can't animate `height: auto`.
- *
- * Opacity tracks in parallel for a subtle fade-in — visible content
- * shouldn't pop into existence at full opacity from a zero-height
- * container; the eye reads that as a flicker.
- *
- * `prefers-reduced-motion` skips the transitions entirely.  WCAG 2.1
- * SC 2.3.3 best practice.
- */
+/* Folds via `grid-template-rows: 0fr → 1fr` (CSS can't animate `height: auto`); `.body` clips. */
 .bodyWrapper {
   display: grid;
   grid-template-rows: 0fr;
@@ -194,13 +123,8 @@
   grid-template-rows: 1fr;
 }
 
+/* No padding here: it would leave a stub at 0fr, so `.bodyContent` pads inside the clip. */
 .body {
-  /*
-   * Pure collapse mechanism — no padding, no margin.  The grid item
-   * shrinks fully to 0px on close; padding goes on the inner wrapper
-   * so it's painted inside the body's clipped overflow region rather
-   * than adding to the body's outer height.
-   */
   min-height: 0;
   overflow: hidden;
   opacity: 0;
@@ -209,6 +133,7 @@
 
 .bodyContent {
   padding: var(--space-6) var(--space-7);
+  padding-bottom: var(--framed-body-padding-bottom, var(--space-6));
 }
 
 .bodyWrapperOpen .body {
@@ -220,5 +145,11 @@
   .bodyWrapper,
   .body {
     transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .panel {
+    border-image: none;
   }
 }

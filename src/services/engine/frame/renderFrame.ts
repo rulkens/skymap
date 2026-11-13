@@ -19,6 +19,7 @@ import { resolveStrategy } from './resolveStrategy';
 import { foregroundChainOrder } from './slabs';
 import { hdrActiveOf } from '../../../utils/gpu/hdrActiveOf';
 import { bodyRowSlabs } from './bodyRowSlabs';
+import { antiqueLookOn } from '../../../utils/render/antiqueLookOn';
 import { runPlanSteps } from './runPlanSteps';
 import { scheduleCubemapCaptures } from './scheduleCubemapCaptures';
 import { VIEW_RIGS } from '../../../data/rendering/viewRigs';
@@ -55,6 +56,7 @@ export function renderFrame(input: RenderFrameInput): void {
   // The master bloom toggle is the ONLY bloom value that shapes the step
   // list; strength/threshold are read live by the bloom passes each draw.
   const bloomEnabled = state.settings.bloom.enabled;
+  const antique = antiqueLookOn(state);
 
   // Once-scope plan rows run ahead of the capture scheduler (it reads the settling
   // vote) and before any encoder exists; perView rows run inside the section loop.
@@ -93,6 +95,7 @@ export function renderFrame(input: RenderFrameInput): void {
     expandFrameOrder(steps, state.passes, {
       tone,
       bloomEnabled,
+      antique,
       foregroundChain: foregroundChainOrder(viewCtx.slabs),
       captureFaces,
       bodyRowSlabs: bodyRowSlabs(viewCtx),

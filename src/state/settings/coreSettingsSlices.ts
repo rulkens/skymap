@@ -1,5 +1,6 @@
 /** The settings clusters core owns. Shrinks as clusters move out to Layers. */
 
+import { antiqueSlice } from './core/antiqueSlice';
 import { bloomSlice } from './core/bloomSlice';
 import { cameraControlsSlice } from './core/cameraControlsSlice';
 import { debugSlice } from './core/debugSlice';
@@ -17,6 +18,7 @@ export const CORE_SETTINGS_SLICES = [
   tonemapSlice,
   hdrSlice,
   bloomSlice,
+  antiqueSlice,
   labelsSlice,
   pickingSlice,
   debugSlice,

@@ -22,7 +22,7 @@ import { makeCubemapCaptureRuntimes } from '../../helpers/engine/makeCubemapCapt
 import { clearValueOf } from '../../../src/utils/gpu/clearValueOf';
 
 const DEFAULT_DEBUG_STATE = {
-  settings: { debug: { matteWhite: false } },
+  settings: { debug: { matteWhite: false }, antique: { enabled: false } },
 } as unknown as EngineState;
 
 function mockDevice(): GPUDevice {
@@ -71,6 +71,7 @@ function stateWithDivisor(
 ): EngineState {
   return {
     settings: {
+      antique: { enabled: false },
       milkyWay: { renderer: 'v1', cloud: { aggregateDivisor } },
       blackHoleLensingTuning: { cubemapResolutionPx },
     },
@@ -197,6 +198,35 @@ describe('createRenderTargets', () => {
     // 'hdr' has no fixedSizePx (a single layer), so it gets no cube view.
     expect(() => targets.cubeViewOf('hdr')).toThrow();
     expect(() => targets.cubeViewOf('nope')).toThrow();
+  });
+
+  // The antique-full array grew to 6 layers, and a cube view of a canvas-sized
+  // (non-square) texture is a WebGPU validation error on every allocation.
+  it('a canvas-scaled 6-layer row gets an explicit 2d-array view and no cube view', () => {
+    const device = mockDevice();
+    const create = device.createTexture as ReturnType<typeof vi.fn>;
+    const sixLayers: RenderTargetSpec = {
+      id: 'six-canvas',
+      format: 'rgba8unorm',
+      depth: null,
+      scale: 1,
+      layers: 6,
+      clearValue: { r: 0, g: 0, b: 0, a: 0 },
+    };
+    const targets = createRenderTargets(
+      device,
+      [...CORE_AND_LENS_ROWS, sixLayers],
+      { width: 1280, height: 720 },
+      stateWithDivisor(MW_DIVISOR),
+    );
+    const index = create.mock.calls.findIndex((c) => c[0].label === 'render-target-six-canvas');
+    const texture = create.mock.results[index]!.value as { createView: ReturnType<typeof vi.fn> };
+    const dims = texture.createView.mock.calls.map(
+      (c) => (c[0] as GPUTextureViewDescriptor)?.dimension,
+    );
+    expect(dims).not.toContain('cube');
+    expect(dims).toContain('2d-array');
+    expect(() => targets.cubeViewOf('six-canvas')).toThrow();
   });
 
   // `layers` is independent of `fixedSizePx` — a canvas-scaled row (the
@@ -583,7 +613,9 @@ describe('createRenderTargets', () => {
   it('hdr clears opaque black unless the debug matte asks for white', () => {
     const hdr = renderTargetRows(SWAP_FORMAT).find((spec) => spec.id === 'hdr')!;
     expect(clearValueOf(hdr, DEFAULT_DEBUG_STATE)).toEqual({ r: 0, g: 0, b: 0, a: 1 });
-    const matte = { settings: { debug: { matteWhite: true } } } as unknown as EngineState;
+    const matte = {
+      settings: { debug: { matteWhite: true }, antique: { enabled: false } },
+    } as unknown as EngineState;
     expect(clearValueOf(hdr, matte)).toEqual({ r: 1, g: 1, b: 1, a: 1 });
   });
 

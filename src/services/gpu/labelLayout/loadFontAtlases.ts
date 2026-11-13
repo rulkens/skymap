@@ -1,8 +1,9 @@
 /**
- * loadFontAtlases — fetches and decodes every registered MSDF atlas in
- * parallel.  Returns a LoadedFontAtlases with one FontMetrics keyed by
- * FontId plus an array of decoded ImageBitmaps ordered to match FONT_IDS
- * (so `bitmaps[i]` uploads to GPU layer `i`).
+ * loadFontAtlases — fetches and decodes MSDF atlases in parallel (the boot
+ * fonts by default, an `onDemand` set when a look asks). Returns a
+ * LoadedFontAtlases with one FontMetrics keyed by FontId plus an array of
+ * decoded ImageBitmaps ordered to match FONT_IDS (so `bitmaps[i]` uploads to
+ * GPU layer `i`).
  *
  * ## What this does
  *
@@ -49,7 +50,7 @@ import { parseFontMetrics } from './fontMetrics';
 import type { RawBMFont } from '../../../@types/rendering/RawBMFont';
 import type { LoadedFontAtlases } from '../../../@types/rendering/LoadedFontAtlases';
 import type { FontMetrics } from '../../../@types/rendering/FontMetrics';
-import { FONT_IDS } from '../../../data/fonts';
+import { BOOT_FONT_IDS, FONT_IDS } from '../../../data/fonts';
 import type { FontId } from '../../../@types/data/FontId';
 
 /**
@@ -83,27 +84,23 @@ async function loadOneFont(id: FontId): Promise<readonly [FontMetrics, ImageBitm
 }
 
 /**
- * Load every registered MSDF atlas in parallel.  Throws if any fetch
- * rejects or any decode fails — `initGpu` lets that rejection bubble
- * to the bootstrap catch block, which dispatches `engineStatusChanged({ kind: 'error' })`.
+ * Load `ids` in parallel and merge them into `onto` (the atlases loaded so far),
+ * returning a new record: boot loads `BOOT_FONT_IDS` onto nothing, a look adds its
+ * `onDemand` fonts later. Throws if any fetch rejects or any decode fails —
+ * `initGpu` lets that rejection bubble to the bootstrap catch block, which
+ * dispatches `engineStatusChanged({ kind: 'error' })`.
  */
-export async function loadFontAtlases(): Promise<LoadedFontAtlases> {
-  const loaded = await Promise.all(FONT_IDS.map((id) => loadOneFont(id)));
-
-  // Build the keyed metrics record by zipping FONT_IDS with the
-  // resolved tuples.  Object.fromEntries would lose the FontId-narrow
-  // key typing, so we build the record imperatively with an explicit
-  // assertion at the end.
-  const metricsByFont: Partial<Record<FontId, FontMetrics>> = {};
-  const bitmaps: ImageBitmap[] = [];
-  for (let i = 0; i < FONT_IDS.length; i++) {
-    const id = FONT_IDS[i]!;
+export async function loadFontAtlases(
+  ids: readonly FontId[] = BOOT_FONT_IDS,
+  onto?: LoadedFontAtlases,
+): Promise<LoadedFontAtlases> {
+  const loaded = await Promise.all(ids.map((id) => loadOneFont(id)));
+  const metricsByFont: Partial<Record<FontId, FontMetrics>> = { ...onto?.metricsByFont };
+  const bitmaps: (ImageBitmap | undefined)[] = FONT_IDS.map((_, i) => onto?.bitmaps[i]);
+  ids.forEach((id, i) => {
     const [metrics, bitmap] = loaded[i]!;
     metricsByFont[id] = metrics;
-    bitmaps.push(bitmap);
-  }
-  return {
-    metricsByFont: metricsByFont as Readonly<Record<FontId, FontMetrics>>,
-    bitmaps,
-  };
+    bitmaps[FONT_IDS.indexOf(id)] = bitmap;
+  });
+  return { metricsByFont, bitmaps };
 }

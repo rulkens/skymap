@@ -362,10 +362,28 @@ export function executeFrame(args: ExecuteFrameArgs): void {
       }
       case 'composite': {
         const { source, dest, blend, tone } = step.step;
-        // Skip unless the source target was actually drawn into this frame:
-        // compositing an untouched (uncleared, undefined) source is a no-op at
-        // best and reads garbage at worst.
-        if (!touched.has(source)) break;
+        // An untouched source was never cleared, so it is never read. Blended in,
+        // it would add nothing; replacing, it stands for an empty frame, so the
+        // dest is cleared: the tone-map of a frame with nothing in hdr is still a
+        // print, which the look inks as bare paper.
+        if (!touched.has(source)) {
+          if (blend === 'replace') {
+            encoder
+              .beginRenderPass({
+                label: `composite-clear-${dest}`,
+                colorAttachments: [
+                  colorAttachment(
+                    viewFor(dest, ctx, swapView),
+                    clearValueOf(ctx.snapshot.renderTargets.specOf(dest), state),
+                    false,
+                  ),
+                ],
+              })
+              .end();
+            touched.add(dest);
+          }
+          break;
+        }
 
         const pass = encoder.beginRenderPass({
           label: `composite-${source}->${dest}`,
@@ -434,6 +452,28 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         const outputFormat = ctx.snapshot.renderTargets.specOf(step.source).format;
         compositor.draw(pass, viewFor(step.source, ctx, swapView), 'replace', null, outputFormat);
         pass.end();
+        break;
+      }
+      case 'stylize': {
+        // Like `bloom`, the look opens its own ordered passes; it writes the swap
+        // chain whole, so no first-touch bookkeeping applies to its intermediates.
+        if (!touched.has(step.source)) break;
+        const look = state.gpu.antiqueLook;
+        if (!look) throw new Error('executeFrame: antiqueLook missing for stylize step');
+        look.encode(
+          encoder,
+          ctx,
+          state,
+          {
+            print: viewFor(step.source, ctx, swapView),
+            // An untouched overlay row holds last frame's captions.
+            overlay: touched.has(step.overlay) ? viewFor(step.overlay, ctx, swapView) : null,
+            swap: viewFor('swap', ctx, swapView),
+            bodyDepth: sampledDepthFor('foreground:0', lastDepthClear, ctx.snapshot.renderTargets),
+          },
+          timing,
+        );
+        touched.add('swap');
         break;
       }
       case 'bloom': {

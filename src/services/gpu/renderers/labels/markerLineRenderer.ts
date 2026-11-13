@@ -32,6 +32,8 @@ import { PREMULTIPLIED_OVER_BLEND } from '../../lib/blendStates';
 import { MARKER_LINE_INSTANCE_LAYOUT } from '../../lib/markerLineInstanceLayout';
 
 // See `lib/markerLineInstanceLayout.ts` for the byte map.
+// Camera prefix + devicePixelRatio, padded to 16 (see markerLines/io.wesl).
+const UNIFORM_BYTES = CAMERA_UNIFORM_BYTES + 16;
 const LINE_INSTANCE_BYTES = MARKER_LINE_INSTANCE_LAYOUT.arrayStride;
 
 const CORNER_BYTES = UNIT_QUAD_STRIP_CORNERS.byteLength; // 32 bytes (4 × 2 × 4)
@@ -155,7 +157,7 @@ export function createMarkerLineRenderer(
 
     uniformBuffer = device.createBuffer({
       label: 'marker-line-uniforms',
-      size: CAMERA_UNIFORM_BYTES,
+      size: UNIFORM_BYTES,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
@@ -222,6 +224,7 @@ export function createMarkerLineRenderer(
     viewProj: Float32Array,
     viewportSize: Vec2,
     pxPerRad: number,
+    devicePixelRatio: number,
     scene?: OverlaySceneOcclusion,
   ): void {
     if (
@@ -237,8 +240,9 @@ export function createMarkerLineRenderer(
     if (currentLineCount === 0) return;
 
     // The pad float 19 stays zero: the shared writer leaves it untouched.
-    const uni = new Float32Array(CAMERA_UNIFORM_BYTES / 4);
+    const uni = new Float32Array(UNIFORM_BYTES / 4);
     writeCameraPrefix(uni, viewProj, viewportSize, pxPerRad);
+    uni[CAMERA_UNIFORM_BYTES / 4] = devicePixelRatio;
     device.queue.writeBuffer(uniformBuffer, 0, uni);
 
     if (occlusionCoverageBGL && occludePipeline && occlusionDepthFrameBuffer && scene) {

@@ -10,8 +10,10 @@ import type { StarCatalogReq } from '../survey/@types/StarCatalogReq';
 import type { FamousStarsPayload } from '../card/@types/FamousStarsPayload';
 import type { StarCatalogRenderer } from '../survey/@types/StarCatalogRenderer';
 import type { StarCatalogPickRenderer } from '../survey/@types/StarCatalogPickRenderer';
+import type { StarCatalogPrintRenderer } from '../survey/@types/StarCatalogPrintRenderer';
 import type { StarRenderer } from '../resolvedStars/@types/StarRenderer';
 import type { StarPointRenderer } from '../seededStars/@types/StarPointRenderer';
+import type { StarPointPrintRenderer } from '../seededStars/@types/StarPointPrintRenderer';
 import type { StarAggregateUpsample } from '../survey/@types/StarAggregateUpsample';
 import type { StarCatalogFacts } from './StarCatalogFacts';
 import type { OctreeChunkStream } from '../../../@types/octree/OctreeChunkStream';
@@ -29,6 +31,9 @@ export type StarCatalogRuntime = {
   readonly pickCodes: CatalogPickCodes<StarCatalogId>;
   readonly renderer: StarCatalogRenderer;
   readonly pickRenderer: StarCatalogPickRenderer;
+  /** The antique look's print twins (`starCatalogPrintPass`, `starPointsPrintPass`). */
+  readonly starCatalogPrintRenderer: StarCatalogPrintRenderer;
+  readonly starPointPrintRenderer: StarPointPrintRenderer;
   readonly starRenderer: StarRenderer; // spheres (starSpheresPass, fieldStarSpherePass)
   readonly starPointRenderer: StarPointRenderer; // starPointsPass
   readonly aggregateUpsample: StarAggregateUpsample;

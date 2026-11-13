@@ -114,6 +114,13 @@ const ASCII_PRINTABLE = Array.from({ length: 95 }, (_, i) => String.fromCodePoin
  */
 const UNIT_SYMBOLS = '°±µ';
 
+/** What a name needs and nothing more: letters, space, apostrophe, hyphen, full stop,
+ * and brackets round a town's modern gloss. */
+const NAME_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz '-.()";
+
+/** Alpha to omega, with the final sigma: the Bayer letters. */
+const GREEK_LOWERCASE = 'αβγδεζηθικλμνξοπρςστυφχψω';
+
 /**
  * The registry.  Adding a font is a three-step config change:
  *   1. Drop the TTF under `data/raw/fonts/`.
@@ -128,6 +135,23 @@ export const FONTS = {
     ttf: 'CormorantGaramond-SemiBold.ttf',
     charset: ASCII_PRINTABLE + UNIT_SYMBOLS,
   },
+  // The antique look's lettering: an engraver cut no bold, so roman capitals
+  // for places and bodies, italic for stars.
+  // Name glyphs only, digits kept for a focused catalog name and Ö for BOÖTES.
+  // Fetched when the look first switches on: a session without it pays nothing.
+  imFell: {
+    ttf: 'IMFellEnglish-Regular.ttf',
+    charset: NAME_LETTERS + '0123456789Ö',
+    onDemand: true,
+  },
+  // Letters only: the italic's wide swashes overflow one page with all of ASCII.
+  // Greek lowercase for Bayer letters (τ Ceti): IM Fell has none, so the TTF is the Fell italic
+  // with Gentium Plus Italic's Greek cut in (`tools/fonts/mergeGreekIntoItalic.py`).
+  imFellItalic: {
+    ttf: 'SkymapItalicGreek.ttf',
+    charset: NAME_LETTERS + GREEK_LOWERCASE,
+    onDemand: true,
+  },
 } as const satisfies Readonly<Record<string, FontConfig>>;
 
 /**
@@ -136,3 +160,6 @@ export const FONTS = {
  * Order matches declaration order of `FONTS` keys.
  */
 export const FONT_IDS: readonly FontId[] = Object.keys(FONTS) as readonly FontId[];
+
+/** The fonts `initGpu` loads; the rest wait for whoever needs them. */
+export const BOOT_FONT_IDS: readonly FontId[] = FONT_IDS.filter((id) => !('onDemand' in FONTS[id]));

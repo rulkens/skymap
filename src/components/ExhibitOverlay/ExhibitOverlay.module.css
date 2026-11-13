@@ -1,9 +1,9 @@
 /* src/components/ExhibitOverlay/ExhibitOverlay.module.css */
 /*
- * Spec §4.2: full-screen takeover, no card — text over the live field, held
- * legible by two scrims. Both are radial gradients with an EXPLICIT ellipse
- * size and a transparent stop inside the box; an unsized one falls back to
- * farthest-corner and reads as a global dim (see TourOverlay's vignette).
+ * Spec §4.2: full-screen takeover, no card — text over the live field, held legible by two
+ * scrims (`--exhibit-scrim-*`). Outer boxes place, `.slip` is the chrome: bare in the plain
+ * look; the antique look (styles/antique.css) fills the `--frame-*`, `--inset-frame-*` and
+ * `--exhibit-*` hooks to cut it as an engraved compartment with a cartouche on its top rule.
  */
 
 .root {
@@ -59,66 +59,116 @@
     opacity: 1;
   }
 }
+/* A compartment prints downward from its top rule; the cartouche above the rule is there
+ * from the first frame. Inert unless a look sets both clips. */
+@keyframes exhibitPrint {
+  from {
+    clip-path: var(--exhibit-print-from, none);
+  }
+  to {
+    clip-path: var(--exhibit-print-to, none);
+  }
+}
 
 .vignetteCaption {
   position: absolute;
   inset: 0;
   animation: exhibitEnterFade 1.8s ease-out var(--exhibit-enter-delay) both;
-  background: radial-gradient(
-    ellipse 58% 52% at 16% 88%,
-    rgba(0, 0, 0, 0.82) 0%,
-    rgba(0, 0, 0, 0.5) 30%,
-    rgba(0, 0, 0, 0.14) 60%,
-    transparent 82%
-  );
+  background: var(--exhibit-scrim-caption);
 }
 
 .vignetteNotes {
   position: absolute;
   inset: 0;
   animation: exhibitEnterFade 1.8s ease-out var(--exhibit-enter-delay) both;
-  background: radial-gradient(
-    ellipse 46% 85% at 90% 45%,
-    rgba(0, 0, 0, 0.88) 0%,
-    rgba(0, 0, 0, 0.66) 45%,
-    rgba(0, 0, 0, 0.2) 75%,
-    transparent 92%
-  );
+  background: var(--exhibit-scrim-notes);
+}
+
+/* ── The slip: a compartment's chrome ───────────────────────────────── */
+.slip {
+  box-sizing: border-box;
+  min-height: var(--framed-min-height, auto);
+  background: var(--exhibit-slip-ground, none);
+  border: var(--frame-border, 0) solid transparent;
+  border-image: var(--frame-image, none);
+  animation: exhibitPrint 0.3s ease-out var(--exhibit-enter-delay) both;
+}
+
+/* The running head's and the caption's cartouche row: a framed Panel's title row. */
+.titleRow {
+  composes: row from '../common/framedTitle.module.css';
+  display: flex;
+  align-items: center;
+  margin: var(--panel-title-row-margin, 0);
+}
+
+.cartouche {
+  composes: cartouche from '../common/framedTitle.module.css';
+  display: flex;
+  align-items: center;
+  font-family: var(--font-family-label);
+  text-transform: var(--label-case);
 }
 
 /* ── Caption (bottom-left) ──────────────────────────────────────────── */
 .caption {
   position: absolute;
-  left: 44px;
-  bottom: 74px;
+  left: var(--exhibit-caption-left, 44px);
+  bottom: var(--exhibit-caption-bottom, 74px);
   max-width: 520px;
+  text-shadow: var(--exhibit-text-shadow-caption);
+}
+
+.captionSlip {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.85);
+  text-align: var(--exhibit-caption-align, start);
 }
 
-/* Title, then lede, arrive in reading order, a beat apart. */
-.caption > * {
+/* Kicker, title, lede arrive in reading order, a beat apart. */
+.captionSlip > * {
   animation: exhibitEnterRise 0.9s ease-out both;
 }
-.caption > *:nth-child(1) {
+/* The kicker is a look's own line; `--exhibit-caption-beat` pushes title and lede back a
+   step behind it, and is 0 where there is none. */
+.kicker {
+  display: var(--exhibit-kicker-display, none);
   animation-delay: calc(var(--exhibit-enter-delay) + 0.1s);
 }
-.caption > *:nth-child(2) {
-  animation-delay: calc(var(--exhibit-enter-delay) + 0.24s);
+.captionSlip > .title {
+  animation-delay: calc(var(--exhibit-enter-delay) + 0.1s + var(--exhibit-caption-beat, 0s));
+}
+.captionSlip > .lede {
+  animation-delay: calc(var(--exhibit-enter-delay) + 0.24s + var(--exhibit-caption-beat, 0s));
+}
+
+.kickerLabel {
+  gap: 13px;
+  padding: var(--panel-title-padding, 0);
+  font-size: var(--panel-title-size, var(--font-size-sm));
+  line-height: 1;
+  letter-spacing: 0.18em;
+  color: var(--color-fg-label);
+}
+.kickerLabel::before {
+  content: '';
+  display: var(--exhibit-accent-rule-display, block);
+  width: 28px;
+  height: 1px;
+  background: var(--color-accent);
 }
 
 .title {
   position: relative;
   margin: 0;
-  padding-bottom: 8px;
+  padding: 0 var(--exhibit-slip-gutter, 0) 8px;
   font-family: var(--font-family-display);
-  font-weight: 600;
-  font-size: 48px;
+  font-weight: var(--font-weight-exhibit-display);
+  font-size: var(--exhibit-title-size);
   line-height: 1.04;
   letter-spacing: 0.005em;
-  color: #ffffff;
+  color: var(--exhibit-heading-color);
   /* `balance` over `pretty` on the headings: it evens the lines rather than
      only fixing the last one, which is what a two-line display title needs.
      Browsers cap it at a few lines, so body copy below stays on `pretty`. */
@@ -128,6 +178,7 @@
  * gap, so it tracks the title's baseline at any font size. */
 .title::after {
   content: '';
+  display: var(--exhibit-accent-rule-display, block);
   position: absolute;
   left: 0;
   bottom: 0;
@@ -138,36 +189,64 @@
 
 .lede {
   margin: 0;
+  padding: 0 var(--exhibit-slip-gutter, 0) var(--exhibit-slip-foot, 0);
   font-family: var(--font-family-display);
   font-style: italic;
-  font-weight: 500;
-  font-size: 22px;
+  font-weight: var(--font-weight-exhibit-lede);
+  font-size: var(--exhibit-lede-size);
   line-height: 1.3;
   color: var(--color-fg);
   text-wrap: balance;
 }
 
 /* ── Notes (top-right) ──────────────────────────────────────────────── */
+/* It opts back into pointer events so the wheel scrolls it; the trade is that the column no
+   longer orbits the camera. */
 .notes {
   position: absolute;
-  top: 40px;
-  right: 44px;
-  width: 360px;
+  top: var(--exhibit-notes-top, 40px);
+  right: var(--exhibit-notes-right, 44px);
+  width: var(--exhibit-notes-width, 360px);
+  max-height: var(--exhibit-notes-max-height, calc(100vh - 140px));
+  display: flex;
+  flex-direction: column;
+  pointer-events: auto;
+  text-shadow: var(--exhibit-text-shadow-notes);
+}
+
+.notesSlip {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  animation-delay: calc(var(--exhibit-enter-delay) + 0.1s);
+}
+
+.runningHead {
+  display: var(--exhibit-running-head-display, none);
+  flex-shrink: 0;
+}
+
+.runningHeadLabel {
+  padding: var(--panel-title-padding, 0);
+  font-size: var(--panel-title-size, var(--font-size-sm));
+  letter-spacing: var(--letter-spacing-widest);
+  white-space: nowrap;
+}
+
+/* A long column scrolls instead of running off the viewport; the mask fades the cut edge.
+   Jumps from the section scale glide, from `scrollIntoView` with no behaviour of its own. */
+.notesScroller {
+  min-height: 0;
+  overflow-y: auto;
   overscroll-behavior: contain;
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
   scrollbar-color: var(--color-fg-ghost) transparent;
   display: flex;
   flex-direction: column;
-  /* Space does the grouping: a clear break between sections, tight inside one. */
-  gap: var(--space-12);
-  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.9);
-  /* A long column scrolls instead of running off the viewport. It opts back into
-     pointer events so the wheel scrolls it; the text column no longer orbits the
-     camera, which is the trade. The mask fades the cut edge. */
-  max-height: calc(100vh - 140px);
-  overflow-y: auto;
-  pointer-events: auto;
-  scrollbar-width: thin;
-  padding-bottom: 28px;
+  gap: var(--exhibit-section-gap, var(--space-12));
+  padding: var(--exhibit-scroller-padding, 0 0 28px);
+  counter-reset: exhibit-section;
   mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
 }
 
@@ -177,8 +256,19 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-8);
+  counter-increment: exhibit-section;
+  scroll-margin-top: var(--space-6);
   animation: exhibitEnterRise 0.9s ease-out
     calc(var(--exhibit-enter-delay) + 0.55s + var(--i) * 0.13s) both;
+}
+
+/* An engraved double rule between sections, where a look draws one. */
+.sectionGroup + .sectionGroup::before {
+  content: '';
+  display: var(--exhibit-section-rule-display, none);
+  height: 3px;
+  border-top: 1px solid var(--border-divider);
+  border-bottom: 0.5px solid var(--border-divider);
 }
 
 .section {
@@ -190,11 +280,25 @@
 .sectionHeading {
   margin: 0;
   font-family: var(--font-family-display);
-  font-weight: 600;
-  font-size: 24px;
+  font-weight: var(--font-weight-exhibit-display);
+  font-size: var(--exhibit-heading-size);
   line-height: 1.1;
-  color: #ffffff;
+  color: var(--exhibit-heading-color);
   text-wrap: balance;
+}
+
+/* The section's number in the margin, as the scale names it; `/ ''` keeps it out of the
+   accessible name. Lower-roman so a small-capitals face sets it as small capitals. */
+.sectionHeading::before,
+.facts::before {
+  content: counter(exhibit-section, lower-roman) / '';
+  display: var(--exhibit-numeral-display, none);
+  min-width: 1.6em;
+  font-family: var(--font-family-label);
+  font-size: max(var(--font-size-md), var(--font-size-label-min));
+  font-weight: normal;
+  letter-spacing: var(--letter-spacing-wider);
+  color: var(--color-accent);
 }
 
 /* Key and Sources are reference, not story: a mono label in the fact labels' voice,
@@ -218,21 +322,28 @@
  * PR, so this weight/family pair is not tokenized. */
 .sectionBody {
   margin: 0;
-  font-family: 'Sora', system-ui, sans-serif;
-  font-weight: 100;
-  font-size: 13.5px;
+  font-family: var(--font-family-exhibit-body);
+  font-weight: var(--font-weight-exhibit-body);
+  font-size: var(--exhibit-body-size);
   line-height: 1.6;
   color: var(--color-fg-base);
   text-wrap: pretty;
+}
+
+/* The notes open on a rubricated drop capital, three lines deep, where a look floats one. */
+.sectionGroup:first-child .sectionBody::first-letter {
+  float: var(--exhibit-drop-cap-float, none);
+  margin: var(--exhibit-drop-cap-margin, 0);
+  font-family: var(--exhibit-drop-cap-font, inherit);
+  font-size: var(--exhibit-drop-cap-size, inherit);
+  line-height: var(--exhibit-drop-cap-leading, inherit);
+  color: var(--exhibit-drop-cap-color, inherit);
 }
 
 /* An inline link in body copy. Underlined at rest, unlike the source rows,
    which are whole clickable blocks — here the link is a few words inside a
    sentence and needs to read as one without a hover. */
 .inlineLink {
-  /* The root is click-through so the field stays orbitable; every interactive
-     element inside it has to opt back in, links included. */
-  pointer-events: auto;
   color: inherit;
   text-decoration: underline;
   text-decoration-color: var(--color-accent);
@@ -248,8 +359,19 @@
 
 /* A hairline fading out to the right: the one break between the story and its sources. */
 .rule {
+  display: var(--exhibit-rule-display, block);
   height: 1px;
-  background: linear-gradient(90deg, rgba(160, 200, 255, 0.28), rgba(160, 200, 255, 0));
+  background: var(--exhibit-rule);
+}
+
+/* An inset (key, facts) inside the compartment: its own plain-corner neatline, framed only
+   where a look draws one. The shorthand comes first, or it would reset `border-image`. */
+.key,
+.facts {
+  position: relative;
+  padding: var(--exhibit-inset-padding, 0);
+  border: var(--inset-frame-border, 0) solid transparent;
+  border-image: var(--inset-frame-image, none);
 }
 
 /* ── Key ────────────────────────────────────────────────────────────── */
@@ -259,17 +381,21 @@
   gap: var(--space-3);
 }
 
-/* The gradient itself comes from the section's `ramp` stops, inline. */
+/* The gradient itself comes from the section's `ramp` stops, inline. A look on paper lays
+   it as a colourist's wash under a ruled edge. */
 .ramp {
-  height: 5px;
-  border-radius: 3px;
+  height: var(--exhibit-ramp-height, 5px);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--exhibit-ramp-rule, none);
+  mix-blend-mode: var(--exhibit-ramp-blend, normal);
+  opacity: var(--exhibit-ramp-opacity, 1);
 }
 
 .rampEnds {
   display: flex;
   justify-content: space-between;
-  font-family: var(--font-family-mono);
-  font-size: 10px;
+  font-family: var(--font-family-label);
+  font-size: max(var(--font-size-sm), var(--font-size-label-min));
   line-height: 1;
   color: var(--color-fg-tertiary);
 }
@@ -280,6 +406,17 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-8);
 }
+/* Facts have no heading: their number sits on the inset's top rule, knocked out of it. */
+.facts::before {
+  position: absolute;
+  top: calc(-0.5 * var(--inset-frame-border, 0px));
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 0 var(--space-3);
+  /* Only the paper's grain: the full sheet ground would tone this little box's edges. */
+  background: var(--sheet-paper, none), var(--surface-panel);
+  text-align: center;
+}
 
 .fact {
   display: flex;
@@ -288,18 +425,18 @@
 }
 
 .factLabel {
-  font-family: var(--font-family-mono);
-  font-size: var(--font-size-sm);
+  font-family: var(--font-family-label);
+  font-size: max(var(--font-size-sm), var(--font-size-label-min));
   line-height: 1;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wider);
+  text-transform: var(--label-case);
   color: var(--color-fg-tertiary);
 }
 
 .factValue {
   font-family: var(--font-family-display);
-  font-weight: 600;
-  font-size: 18px;
+  font-weight: var(--font-weight-exhibit-display);
+  font-size: var(--exhibit-fact-size);
   line-height: 1.1;
   color: var(--color-fg);
 }
@@ -324,11 +461,11 @@
 }
 
 .sourceRole {
-  font-family: var(--font-family-mono);
-  font-size: var(--font-size-sm);
+  font-family: var(--font-family-label);
+  font-size: max(var(--font-size-sm), var(--font-size-label-min));
   line-height: 1.6;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wider);
+  text-transform: var(--label-case);
   color: var(--color-fg-tertiary);
 }
 
@@ -343,7 +480,7 @@
   align-items: center;
   gap: 6px;
   font-family: var(--font-family-mono);
-  font-size: var(--font-size-sm);
+  font-size: max(var(--font-size-sm), var(--font-size-label-min));
   line-height: 1.4;
   color: var(--color-accent);
 }
@@ -353,7 +490,7 @@
 
 .sourceCitation {
   font-family: var(--font-family-mono);
-  font-size: 10px;
+  font-size: var(--font-size-sm);
   line-height: 1.4;
   color: var(--color-fg-tertiary);
 }
@@ -455,6 +592,7 @@
   animation: exhibitEnterFade 0.9s ease-out calc(var(--exhibit-enter-delay) + 0.9s) both;
 }
 .hideToggle {
+  composes: tablet from '../common/tablet.module.css';
   width: 32px;
   height: 32px;
   padding: 0;
@@ -463,11 +601,11 @@
   align-items: center;
   justify-content: center;
   background: none;
-  border: none;
+  border: var(--exhibit-hide-rule, none);
   border-radius: 50%;
   cursor: pointer;
   color: var(--color-fg-tertiary);
-  filter: drop-shadow(0 1px 6px rgba(0, 0, 0, 0.85));
+  filter: var(--exhibit-icon-shadow);
 }
 /* Dimmer at rest while everything else is gone, still readable. */
 .hidden .hideToggle {
@@ -480,21 +618,15 @@
 }
 .hideToggle:focus-visible {
   color: var(--color-fg);
-  outline: 2px solid var(--color-accent);
+  outline: var(--focus-ring-width, 2px) solid var(--color-accent);
   outline-offset: 2px;
 }
 
-/* ── Reduced motion ─────────────────────────────────────────────────── */
-/* The slide goes, the wait does not: the copy is still about where the camera
- * ends up, so it still arrives with the landing — just by fading. */
-@media (prefers-reduced-motion: reduce) {
-  .content,
-  .hidden .content {
-    transition: none;
-  }
-  .caption > *,
-  .sectionGroup {
-    animation-name: exhibitEnterFade;
+@media (forced-colors: active) {
+  .slip,
+  .key,
+  .facts {
+    border-image: none;
   }
 }
 
@@ -506,10 +638,11 @@
     overflow-x: hidden;
     pointer-events: auto;
     overscroll-behavior: contain;
+    scroll-behavior: smooth;
   }
   .vignetteCaption {
     position: fixed;
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, transparent 70%);
+    background: var(--exhibit-scrim-caption-phone);
   }
   .vignetteNotes {
     display: none;
@@ -520,26 +653,37 @@
     bottom: auto;
     box-sizing: border-box;
     min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
     justify-content: flex-end;
     padding: var(--space-12) var(--space-12) calc(74px + env(safe-area-inset-bottom, 0px));
     max-width: none;
   }
   .title {
-    font-size: 32px;
+    font-size: var(--exhibit-title-size-phone);
   }
   .lede {
-    font-size: 18px;
+    font-size: var(--exhibit-lede-size-phone);
   }
+  /* The page scrolls here, not the notes; the mask moves out to fade the scrim's foot. */
   .notes {
     position: relative;
     top: auto;
     right: auto;
     width: auto;
     max-height: none;
-    overflow: visible;
     padding: var(--space-12) var(--space-12) calc(88px + env(safe-area-inset-bottom, 0px));
-    background: linear-gradient(to bottom, transparent 0, rgba(0, 0, 0, 0.8) 48px);
+    background: var(--exhibit-scrim-notes-phone);
     animation: exhibitEnterFade 1.8s ease-out var(--exhibit-enter-delay) both;
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
+  }
+  .notesScroller {
+    overflow: visible;
+    padding: var(--exhibit-scroller-padding-phone, 0);
+    mask-image: none;
+  }
+  .sectionGroup {
+    scroll-margin-top: calc(48px + env(safe-area-inset-top, 0px));
   }
   .dock {
     position: fixed;
@@ -557,5 +701,26 @@
   .hideToggleSpot {
     position: fixed;
     top: calc(8px + env(safe-area-inset-top, 0px));
+  }
+}
+
+/* ── Reduced motion ─────────────────────────────────────────────────── */
+/* The slide goes, the wait does not: the copy is still about where the camera
+ * ends up, so it still arrives with the landing — just by fading. */
+@media (prefers-reduced-motion: reduce) {
+  .content,
+  .hidden .content {
+    transition: none;
+  }
+  .captionSlip > *,
+  .sectionGroup {
+    animation-name: exhibitEnterFade;
+  }
+  .slip {
+    animation: none;
+  }
+  .root,
+  .notesScroller {
+    scroll-behavior: auto;
   }
 }

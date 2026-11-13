@@ -40,9 +40,10 @@ function program(over: Partial<FrameInputs> = {}): readonly FrameStep[] {
   return expandFrameOrder(FRAME_ORDER, PASSES, {
     tone: TONE,
     bloomEnabled: false,
+    antique: false,
     foregroundChain: [NEAR0],
     captureFaces: new Map(),
-    bodyRowSlabs: { lens: [], insideAtmosphere: [] },
+    bodyRowSlabs: { lens: [], insideAtmosphere: [], surfaceMask: [] },
     ...over,
   });
 }
@@ -51,7 +52,7 @@ describe('timedSlotsOf', () => {
   it('reaches blackHoleLensingPass once a body slab is passed', () => {
     // A body-slab index (4, arbitrary) must surface the lens row right after the (hdr, NEAR0) group's
     // own slot: with no `FRAME_ORDER` line the pass would register but be structurally unreachable.
-    const slots = timedSlotsOf(program({ bodyRowSlabs: { lens: [4], insideAtmosphere: [] } }));
+    const slots = timedSlotsOf(program({ bodyRowSlabs: { lens: [4], insideAtmosphere: [], surfaceMask: [] } }));
     const rosterIdx = slots.indexOf('hdr·NEAR0');
     expect(rosterIdx).toBeGreaterThanOrEqual(0);
     expect(slots[rosterIdx + 1]).toBe('black-hole-lensing·BODY[2]');
@@ -61,7 +62,7 @@ describe('timedSlotsOf', () => {
   it('bills orbit-trails and body-glints AFTER the lens step', () => {
     // Both once shared the pre-lens roster step and drew UNDER the lens's OVER blend; they have their
     // own lines past the lens, checked against the REAL registry so moving either back fails this.
-    const slots = timedSlotsOf(program({ bodyRowSlabs: { lens: [4], insideAtmosphere: [] } }));
+    const slots = timedSlotsOf(program({ bodyRowSlabs: { lens: [4], insideAtmosphere: [], surfaceMask: [] } }));
     const lensIdx = slots.indexOf('black-hole-lensing·BODY[2]');
     expect(lensIdx).toBeGreaterThanOrEqual(0);
     expect(slots.indexOf('orbit-trails')).toBeGreaterThan(lensIdx);

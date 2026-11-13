@@ -353,6 +353,7 @@ describe('renderFrame visual baseline', () => {
     const ctx = {
       snapshot: {
         isReady: true as const,
+        devicePixelRatio: 1,
         plans: createFramePlannerResultStore(),
         nowMs: 0,
         // The handed value's recession factor lerps on this, and the sphere dim
@@ -430,6 +431,7 @@ describe('renderFrame visual baseline', () => {
           tonemap: { exposure: settings.exposure, curve: settings.toneMapCurve },
           // Bloom off: the split baseline captures the non-bloom program.
           bloom: { enabled: false, strength: 1, threshold: 1 },
+          antique: { enabled: false },
           bias: { mode: settings.biasMode, absMagLimit: settings.absMagLimit },
           thumbnails: { enabled: settings.galaxyTexturesEnabled },
           milkyWay: { enabled: settings.milkyWayEnabled, renderer: 'v1' },
@@ -501,7 +503,7 @@ describe('renderFrame visual baseline', () => {
     expect(drawSequence).toMatchInlineSnapshot(`
       [
         {
-          "argShape": "pass,Float32Array[16],Array[2],number,Array[3],function,function",
+          "argShape": "pass,Float32Array[16],Array[2],number,Array[3],function,function,undefined",
           "renderer": "cosmic-web-density",
         },
         {
@@ -517,7 +519,7 @@ describe('renderFrame visual baseline', () => {
           "renderer": "textured-disks",
         },
         {
-          "argShape": "pass,Float32Array[16],Array[2],number,number,number,number,Array[3],Array[3]",
+          "argShape": "pass,Float32Array[16],Array[2],number,number,number,number,Array[3],Array[3],boolean",
           "renderer": "filaments",
         },
         {
@@ -541,7 +543,7 @@ describe('renderFrame visual baseline', () => {
           "renderer": "compositor",
         },
         {
-          "argShape": "pass,Float32Array[16],Array[2],number,undefined",
+          "argShape": "pass,Float32Array[16],Array[2],number,number,undefined",
           "renderer": "marker-lines",
         },
         {

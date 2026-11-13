@@ -1,0 +1,34 @@
+/**
+ * AntiqueReliefInput — one frame's values for the relief pass's record
+ * (`shaders/antiqueLook/passes/reliefFragment.wesl` holds the byte map). Everything is in the
+ * engraved body's fixed axes, metres, about the eye: the frame of the body row
+ * whose depth the pass reads.
+ */
+
+import type { Vec3 } from '../math/Vec3';
+import type { AntiqueReliefBody } from './AntiqueReliefBody';
+import type { Size } from './Size';
+
+export type AntiqueReliefInput = {
+  /** The body row's proj·view (`Slab.vp`), f64, built about the eye. */
+  readonly vp: Float64Array;
+  /** Eye − body centre, f64. */
+  readonly eyeRelBodyM: Readonly<Vec3>;
+  readonly datumRadiusM: number;
+  /** How this body's ground is engraved (`ANTIQUE_RELIEF_BODIES`). */
+  readonly body: AntiqueReliefBody;
+  /** Its print convention's code (`ANTIQUE_BODY_PRINT_CODES`): the plate dispatches the
+   * engraved ground on it, since inside the relief shell the globe has no plate record. */
+  readonly print: number;
+  /** 0..1, how far the hachures have faded in (`AntiqueReliefBody.revealDetail`). */
+  readonly reveal: number;
+  /** Unit vector toward the Sun. */
+  readonly sun: Readonly<Vec3>;
+  readonly size: Size;
+  /** Device px per print unit. */
+  readonly unitPx: number;
+  /** Radians per device px at the view centre. */
+  readonly radPerPx: number;
+  /** The plate light's elevation from orbit (`ANTIQUE_PLATE_LIGHT_ELEVATION_DEG` by default). */
+  readonly lightElevationDeg: number;
+};

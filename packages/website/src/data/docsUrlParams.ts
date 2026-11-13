@@ -100,6 +100,15 @@ export const DOCS_URL_PARAMS: readonly DocsUrlParam[] = [
     skipsWelcome: true,
   },
   {
+    name: 'antique',
+    part: 'query',
+    value: 'None',
+    example: '?antique',
+    does: 'Opens the app with the antique atlas look switched on, as if Antique atlas were on in the Display settings.',
+    unknown: 'There is none.',
+    skipsWelcome: false,
+  },
+  {
     name: 'cinema',
     part: 'query',
     value: 'None',

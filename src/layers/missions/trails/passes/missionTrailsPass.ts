@@ -21,6 +21,7 @@ import { sceneOccluderSpheres } from '../../../../services/engine/frame/sceneOcc
 import { near0OverlayClipScale } from '../../../../services/engine/frame/near0OverlayClipScale';
 import { near0OverlayVpF32 } from '../../../../services/engine/frame/near0OverlayVpF32';
 import { emphasisDim } from '../utils/emphasisDim';
+import { MISSION_TRAIL_WIDTH_PX } from '../data/missionTrailStyle';
 
 export function missionTrailsPass(runtime: MissionsRuntime): ContentPass<'missionTrails'> {
   return {
@@ -47,6 +48,7 @@ export function missionTrailsPass(runtime: MissionsRuntime): ContentPass<'missio
         camPosMpc: view.camPos,
         viewportPx: view.viewportPx,
         pxPerRad: ctx.drawPxPerRad,
+        widthPx: MISSION_TRAIL_WIDTH_PX * ctx.snapshot.devicePixelRatio,
         occluders: sceneOccluderSpheres(state, ctx),
         depth: sampledDepthBinding(view.sampledDepth, ctx.bodyPose, ctx.snapshot.renderTargets),
       });

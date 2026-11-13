@@ -39,6 +39,7 @@ import package::lib::tonemap::applyReinhard;
 import package::lib::tonemap::applyAsinh;
 import package::lib::tonemap::applyGamma2;
 import package::lib::tonemap::applyAces;
+import package::lib::tonemap::printShoulder;
 
 @group(0) @binding(0) var srcTex: texture_2d<f32>;
 @group(0) @binding(1) var srcSamp: sampler;
@@ -60,7 +61,12 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     return sample;
   }
 
-  let scaled = sample.rgb * u.exposure;
+  let exposed = sample.rgb * u.exposure;
+  // The antique print's shoulder scales the pixel along its own colour ratio.
+  let peakIn = max(exposed.r, max(exposed.g, exposed.b));
+  let shoulder = select(1.0, printShoulder(peakIn, u.shoulderKnee, u.shoulderTop) / max(peakIn, 1e-4),
+                        u.shoulderKnee > 0.0);
+  let scaled = exposed * shoulder;
   // Dynamic-uniform branch — 'curve' is identical across all fragments
   // in a frame, so the GPU's branch predictor handles this efficiently.
   // A chain of 'if's rather than a 'switch' because WGSL's 'switch'

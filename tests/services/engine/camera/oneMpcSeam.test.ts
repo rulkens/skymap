@@ -55,7 +55,7 @@ const WESL_FILES: readonly string[] = walkFiles('src/services/gpu/shaders/bodies
 // names its category so a NEW use needs its own line.
 const SCALE_UNITS_ALLOW_LIST: ReadonlyMap<string, string> = new Map([
   [
-    'src/layers/body/earth/passes/earthPass.ts',
+    'src/layers/body/earth/present/earthSurfaceUniforms.ts',
     'cull/fade precedent — bridges radiusM to Mpc to call the shared apparentSizePx sub-pixel cull and cloudDeckFade (both outside the body-slab path, both Mpc-shaped APIs)',
   ],
   [
@@ -65,6 +65,22 @@ const SCALE_UNITS_ALLOW_LIST: ReadonlyMap<string, string> = new Map([
   [
     'src/layers/body/clouds/passes/cloudShellPass.ts',
     'cull/fade precedent — bridges radiusM to Mpc for the same apparentSizePx cull and for cloudDeckFade (outside the body-slab path)',
+  ],
+  [
+    'src/layers/body/labels/present/produceAntiqueEarthPlaces.ts',
+    'label-anchor precedent — lifts a lat/lon on the datum sphere to the Mpc world point the 2D label director projects (a screen anchor, not a slab MVP)',
+  ],
+  [
+    'src/layers/body/labels/present/produceAntiqueEarthTowns.ts',
+    'label-anchor precedent — the datum radius in Mpc for the town anchors and worldEmMpc, as produceAntiqueEarthPlaces does (a screen anchor, not a slab MVP)',
+  ],
+  [
+    'src/layers/body/labels/present/antiqueBodyView.ts',
+    "label-anchor precedent — the Moon names' view of their body: the eye-to-centre vector in body radii, and the Mpc label anchor on a px ray (a screen anchor, not a slab MVP)",
+  ],
+  [
+    'src/layers/body/labels/present/produceAntiqueMoonPlaces.ts',
+    "label-anchor precedent — the Moon's radius in Mpc as its names' worldEmMpc, as produceAntiqueEarthPlaces does (a screen anchor, not a slab MVP)",
   ],
   [
     'src/layers/body/rings/passes/ringsPass.ts',

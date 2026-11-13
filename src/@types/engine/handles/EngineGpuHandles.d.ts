@@ -20,6 +20,7 @@ import type { PickDebugOverlay } from '../../rendering/PickDebugOverlay';
 import type { Label3DRenderer } from '../../rendering/Label3DRenderer';
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 import type { MeshBodyRenderer } from '../../rendering/MeshBodyRenderer';
+import type { AntiqueLook } from '../../rendering/AntiqueLook';
 import type { CubeFaceBlitRenderer } from '../../rendering/CubeFaceBlitRenderer';
 import type { DomeResampleRenderer } from '../../rendering/DomeResampleRenderer';
 import type { BodyPickRenderer } from '../../rendering/bodyPickRenderer/BodyPickRenderer';
@@ -176,6 +177,8 @@ export type EngineGpuHandles = {
    * capture with; draws into a probe's own cube, whose format is `HDR_TARGET_FORMAT`.
    */
   cubeFaceBlitRenderer: CubeFaceBlitRenderer | null;
+  /** The antique-atlas look's `stylize` pass: `print` + `overlay` inked onto the swap chain. */
+  antiqueLook: AntiqueLook | null;
   /**
    * The fisheye resample `domeResamplePass` draws with: the five `dome-cube` faces into
    * one image, once per frame.

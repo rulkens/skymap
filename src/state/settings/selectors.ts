@@ -17,6 +17,7 @@ import type { OrientationFrameId } from '../../@types/camera/orientation/Orienta
 import type { DebugOverlayKey } from '../../@types/data/debug/DebugOverlayKey';
 import type { CameraControlsSettings } from '../../@types/settings/CameraControlsSettings';
 import type { FocusMoveSettings } from '../../@types/settings/FocusMoveSettings';
+import type { AntiqueTuning } from '../../@types/settings/AntiqueTuning';
 import type { FocusMoveStyle } from '../../@types/camera/focusMotion/FocusMoveStyle';
 
 // --- orientation (bare scalar) ------------------------------------------------
@@ -67,6 +68,14 @@ export const selectBloomStrength = (state: RootState): number =>
 
 export const selectBloomThreshold = (state: RootState): number =>
   selectSettings(state).bloom.threshold;
+
+// --- antique cluster ----------------------------------------------------------
+
+export const selectAntiqueEnabled = (state: RootState): boolean =>
+  selectSettings(state).antique.enabled;
+
+export const selectAntiqueTuning = (state: RootState): AntiqueTuning =>
+  selectSettings(state).antique.tuning;
 
 // --- debug cluster ------------------------------------------------------------
 

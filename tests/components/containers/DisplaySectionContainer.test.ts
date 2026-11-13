@@ -29,7 +29,7 @@ import { createElement, type ReactNode } from 'react';
 import { Provider } from 'react-redux';
 import DisplaySectionContainer from '../../../src/components/containers/DisplaySectionContainer';
 import { createTestStore as createAppStore } from '../../support/createTestStore';
-import { selectToneMapCurve } from '../../../src/state/settings/selectors';
+import { selectAntiqueEnabled, selectToneMapCurve } from '../../../src/state/settings/selectors';
 import { setToneMapCurve } from '../../../src/state/settings/core/tonemapSlice';
 import { ToneMapCurve } from '../../../src/data/toneMapCurve';
 import type { AppStore } from '../../../src/store/types';
@@ -74,5 +74,19 @@ describe('DisplaySectionContainer', () => {
 
       expect(selectToneMapCurve(store.getState())).toBe(ToneMapCurve.Aces);
     });
+  });
+
+  it('the antique atlas switch turns the look on and back off in the store', () => {
+    const { store } = createAppStore();
+    const { getByRole, getByLabelText } = render(createElement(DisplaySectionContainer, null), {
+      wrapper: makeWrapper(store),
+    });
+    fireEvent.click(getByRole('button', { name: /display/i }));
+    const toggle = getByLabelText(/antique atlas/i);
+
+    fireEvent.click(toggle);
+    expect(selectAntiqueEnabled(store.getState())).toBe(true);
+    fireEvent.click(toggle);
+    expect(selectAntiqueEnabled(store.getState())).toBe(false);
   });
 });

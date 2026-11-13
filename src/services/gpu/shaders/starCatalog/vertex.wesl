@@ -2,23 +2,8 @@
 // bin) stars. Derivation-heavy file: the header carries the photometry.
 //
 // One instance = one octree record (a row's own star, or a row's flux-mip blob,
-// the 'aggregate'). cut.wesl leaves a draw list per stream; an instance finds its node
-// from its place in that list with no search, rebuilds the node's
-// camera-relative box from the static node table, and pulls its record from the
-// per-source blob. Bindings: @group(0) u (rebased view-projection + viewport),
-// @group(1) cut* (cutIo.wesl structs and this stream's list), @group(2) records.
-//
-// ## Record unpack (the inverse of packStarGpuRecords)
-//
-// Two u32 per record, offsets a 16-bit fraction of the owning node's box:
-//   w0 = x (bits 0..15) | y (16..31)
-//   w1 = z (bits 0..15) | absMagIdx (16..22) | colorIdx (23..28)
-//
-// ## World reconstruction
-//
-// cutIo.wesl's camera split makes node-minus-camera integer-exact, so the origin
-// arrives small and the f32 math is well-conditioned:
-//   worldRelCam = originRelCamMpc + (offset / 65536) * cellScaleMpc
+// the 'aggregate'), decoded by leafRecord.wesl. Bindings: @group(0) u (rebased
+// view-projection + viewport), @group(1) and @group(2) as leafRecord.wesl.
 //
 // ## Flux-integrated glow
 //
@@ -82,15 +67,8 @@
 
 import package::starCatalog::io::VSOut;
 import package::starCatalog::io::StarUniforms;
-import package::octree::cutIo::CutNode;
-import package::octree::cutIo::CutUniforms;
-import package::octree::cutIo::CutStream;
-import package::octree::cutIo::nodeEdgeCells;
-import package::octree::cutIo::nodeOwnCount;
-import package::octree::cutIo::OPACITY_CHANNELS;
-import package::octree::cutIo::nodeMinCells;
-import package::octree::cutIo::leafEntryNode;
-import package::octree::cutIo::leafEntryBlock;
+import package::starCatalog::leafRecord::leafRecord;
+import package::starCatalog::leafRecord::cutRefineThresholdSq;
 import package::lib::starTint::starTint;
 import package::lib::camera::worldToClip;
 import package::lib::billboard::triCorner;
@@ -109,33 +87,6 @@ import package::lib::focusUniforms::focusAlphaMultiplier;
 import package::lib::focusUniforms::FOCUS_PICK_EXCLUDE_BELOW;
 
 @group(0) @binding(0) var<uniform> u: StarUniforms;
-@group(1) @binding(0) var<uniform> cut: CutUniforms;
-@group(1) @binding(1) var<storage, read> cutNodes: array<CutNode>;
-@group(1) @binding(2) var<storage, read> cutOpacity: array<f32>;
-@group(1) @binding(3) var<storage, read> cutList: array<u32>;
-@group(1) @binding(4) var<uniform> cutStream: CutStream;
-@group(2) @binding(0) var<storage, read> records: array<u32>;
-
-// Dequant constants, mirroring the frozen windows in
-// src/data/starCatalog/starCatalogFormat.ts (never diverge):
-//   lutIndexToAbsMag(i) = STAR_ABSMAG_MIN + (i + 0.5) * STAR_ABSMAG_STEP
-//   colorIdxToBpRp(i)   = STAR_COLORIDX_MIN + (i + 0.5) * STAR_COLORIDX_STEP
-const STAR_ABSMAG_MIN: f32 = -6.0;
-const STAR_ABSMAG_STEP: f32 = 0.19;
-const STAR_COLORIDX_MIN: f32 = -0.6;
-// (4.4 - (-0.6)) / 64
-const STAR_COLORIDX_STEP: f32 = 0.078125;
-
-// Reciprocal of 65536 (OFFSET_FRACTION_LEVELS): offset 0..65535 spans one box.
-const OFFSET_SCALE: f32 = 0.0000152587890625;
-// packStarGpuRecords' word layout.
-const OFFSET_MASK: u32 = 0xffffu;
-const GPU_Y_SHIFT: u32 = 16u;
-const GPU_ABSMAG_SHIFT: u32 = 16u;
-const GPU_ABSMAG_MASK: u32 = 0x7fu;
-const GPU_COLOR_SHIFT: u32 = 23u;
-const GPU_COLOR_MASK: u32 = 0x3fu;
-
 // Pick pass only: floors the billboard radius so a sub-pixel star still covers a
 // clickable pixel at its true screen position. Geometry only; the pick fragment
 // ignores intensity.
@@ -169,44 +120,19 @@ const AGGREGATE_BOX_RADIUS_FACTOR: f32 = 0.5 * 0.57735;
 // sprite is long gone by framing distance.
 const STAR_SPRITE_FADE_END_RATIO: f32 = 4.0;
 
-// 'cutStream.blockShift' is 3 for the leaf list (blocks of 8 own records per
-// entry) and 0 for the aggregate list (one blob per entry, local 0).
 @vertex
 fn vs(
   @builtin(vertex_index) vi: u32,
   @builtin(instance_index) ii: u32,
 ) -> VSOut {
-  let shift = cutStream.blockShift;
-  let entry = cutList[ii >> shift];
-  let nodeIdx = leafEntryNode(entry);
-  let bits = cutNodes[nodeIdx].bits;
-  let local = (leafEntryBlock(entry) << shift) | (ii & ((1u << shift) - 1u));
-  let isAgg = cutStream.isBlob == 1u;
-  let ownCount = nodeOwnCount(bits);
-  if (!isAgg && local >= ownCount) {
-    // A spare instance of the node's last block: outside the clip volume.
+  let rec = leafRecord(ii);
+  if (!rec.live) {
     var skip: VSOut;
     skip.clip = vec4<f32>(2.0, 2.0, 2.0, 1.0);
     return skip;
   }
-  let originRelCamMpc = nodeMinCells(cutNodes[nodeIdx].grid, cut.camCell, cut.camFrac) * cut.cellEdgeMpc;
-  let cellScaleMpc = nodeEdgeCells(bits) * cut.cellEdgeMpc;
-  // firstRecord is pool-absolute, so 'base' is too: the pick reads it as is.
-  let base = cutNodes[nodeIdx].firstRecord + select(local, ownCount, isAgg);
-  let nodeOpacity = cutOpacity[nodeIdx * OPACITY_CHANNELS + cutStream.isBlob] * cut.opacity;
-  let subtreeStarCount = select(1.0, f32(cutNodes[nodeIdx].blobCount), isAgg);
-
-  let w0 = records[base * 2u + 0u];
-  let w1 = records[base * 2u + 1u];
-
-  let ox = f32(w0 & OFFSET_MASK);
-  let oy = f32(w0 >> GPU_Y_SHIFT);
-  let oz = f32(w1 & OFFSET_MASK);
-  let absMagIdx = (w1 >> GPU_ABSMAG_SHIFT) & GPU_ABSMAG_MASK;
-  let colorIdx = (w1 >> GPU_COLOR_SHIFT) & GPU_COLOR_MASK;
-
-  let offset = vec3<f32>(ox, oy, oz) * OFFSET_SCALE;
-  let worldRelCam = originRelCamMpc + offset * cellScaleMpc;
+  let isAgg = rec.isAgg;
+  let worldRelCam = rec.worldRelCam;
 
   let d2 = dot(worldRelCam, worldRelCam);
   let atten = (D_REF_MPC * D_REF_MPC) / max(d2, MIN_D2_MPC2);
@@ -214,12 +140,11 @@ fn vs(
   let center = worldToClip(u.cam, worldRelCam);
   let corner = triCorner(vi);
 
-  let absMag = STAR_ABSMAG_MIN + (f32(absMagIdx) + 0.5) * STAR_ABSMAG_STEP;
-  let flux = pow(10.0, -0.4 * absMag) * subtreeStarCount;
+  let flux = pow(10.0, -0.4 * rec.absMag) * rec.subtreeStarCount;
   let fluxApp = flux * atten;
 
   let sizeScale = u.sizePx / STAR_SIZE_REF_PX;
-  let extentMpc = select(0.0, cellScaleMpc, isAgg);
+  let extentMpc = select(0.0, rec.cellScaleMpc, isAgg);
   let boxRadiusPx = worldLenToPx(u.cam, extentMpc, center.w) * AGGREGATE_BOX_RADIUS_FACTOR;
   let overlap = select(1.0, u.glowOverlap, isAgg);
   // Floor first, then the size/overlap spread: 'rPxRaw' is the radius the
@@ -230,7 +155,7 @@ fn vs(
   // chunk not resident, or the budget spent): it draws at the footprint it had
   // at the threshold, the largest a refining blob ever shows. Like the absolute
   // ceiling it under-deposits, so it never out-shines the stars that replace it.
-  let refineCapPx = sqrt(cut.refineThresholdSq) * u.cam.pxPerRad
+  let refineCapPx = sqrt(cutRefineThresholdSq()) * u.cam.pxPerRad
     * AGGREGATE_BOX_RADIUS_FACTOR * sizeScale * overlap;
   let rPx = min(select(STAR_GLOW_MAX_PX, min(STAR_GLOW_MAX_PX, refineCapPx), isAgg), rPxRaw);
 
@@ -318,10 +243,9 @@ fn vs(
 
   out.uv = corner;
 
-  let bpRp = STAR_COLORIDX_MIN + (f32(colorIdx) + 0.5) * STAR_COLORIDX_STEP;
-  out.color = starTint(bpRp);
-  out.opacity = nodeOpacity;
+  out.color = starTint(rec.bpRp);
+  out.opacity = rec.opacity;
   out.intensity = intensity * focusMult;
-  out.recordIdx = base;
+  out.recordIdx = rec.base;
   return out;
 }

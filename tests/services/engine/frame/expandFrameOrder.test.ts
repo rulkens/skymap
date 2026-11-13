@@ -20,6 +20,12 @@ import type { FrameInputs } from '../../../../src/services/engine/frame/expandFr
 import type { ToneMap } from '../../../../src/@types/rendering/ToneMap';
 import type { OrbitCamera } from '../../../../src/@types/camera/orbitCamera/OrbitCamera';
 import { symmetricFrustum } from '../../../../src/utils/camera/frustum/symmetricFrustum';
+import {
+  ANTIQUE_HIDDEN_PASSES,
+  ANTIQUE_ONLY_PASSES,
+  ANTIQUE_PRINT_SHOULDER,
+  ANTIQUE_TARGETS,
+} from '../../../../src/data/rendering/antiqueLook';
 
 const TONE: ToneMap = { exposure: 1.5, curve: 4, hdrKnee: 0, hdrHeadroom: 0 };
 
@@ -55,9 +61,10 @@ function program(over: Partial<FrameInputs> = {}): readonly FrameStep[] {
   return expandFrameOrder(FRAME_ORDER, COMPOSED_PASSES, {
     tone: TONE,
     bloomEnabled: false,
+    antique: false,
     foregroundChain: [NEAR0],
     captureFaces: new Map(),
-    bodyRowSlabs: { lens: [], insideAtmosphere: [] },
+    bodyRowSlabs: { lens: [], insideAtmosphere: [], surfaceMask: [] },
     ...over,
   });
 }
@@ -81,9 +88,10 @@ describe('expandFrameOrder', () => {
     const program = expandFrameOrder(FRAME_ORDER, COMPOSED_PASSES, {
       tone: TONE,
       bloomEnabled: true,
+      antique: false,
       foregroundChain: [NEAR0],
       captureFaces: new Map(),
-      bodyRowSlabs: { lens: [], insideAtmosphere: [] },
+      bodyRowSlabs: { lens: [], insideAtmosphere: [], surfaceMask: [] },
     });
 
     const foregroundAt = program.findIndex(
@@ -127,9 +135,10 @@ describe('expandFrameOrder', () => {
     const program = expandFrameOrder(FRAME_ORDER, COMPOSED_PASSES, {
       tone: TONE,
       bloomEnabled: true,
+      antique: false,
       foregroundChain: [NEAR0],
       captureFaces: new Map(),
-      bodyRowSlabs: { lens: [2], insideAtmosphere: [] },
+      bodyRowSlabs: { lens: [2], insideAtmosphere: [], surfaceMask: [] },
     });
 
     const slots = program
@@ -143,9 +152,10 @@ describe('expandFrameOrder', () => {
     const program = expandFrameOrder(FRAME_ORDER, withoutZoa, {
       tone: TONE,
       bloomEnabled: true,
+      antique: false,
       foregroundChain: [NEAR0],
       captureFaces: new Map(),
-      bodyRowSlabs: { lens: [], insideAtmosphere: [] },
+      bodyRowSlabs: { lens: [], insideAtmosphere: [], surfaceMask: [] },
     });
 
     expect(program.some((step) => step.kind === 'render' && step.target === 'zoa')).toBe(false);
@@ -166,9 +176,10 @@ describe('expandFrameOrder', () => {
       {
         tone: TONE,
         bloomEnabled: false,
+        antique: false,
         foregroundChain: [],
         captureFaces: new Map(),
-        bodyRowSlabs: { lens: [], insideAtmosphere: [] },
+        bodyRowSlabs: { lens: [], insideAtmosphere: [], surfaceMask: [] },
       },
     );
 
@@ -237,9 +248,10 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     const steps = expandFrameOrder(order, [fakePass('sky'), fakePass('stars'), fakePass('mesh')], {
       tone: TONE,
       bloomEnabled: false,
+      antique: false,
       foregroundChain: [],
       captureFaces: new Map([['probe', [{ face: 4, bodySlabs: [3, 2] }]]]),
-      bodyRowSlabs: { lens: [], insideAtmosphere: [] },
+      bodyRowSlabs: { lens: [], insideAtmosphere: [], surfaceMask: [] },
     });
     expect(
       steps.map((step) =>
@@ -266,9 +278,10 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     const steps = expandFrameOrder(order, [fakePass('sky'), fakePass('stars'), fakePass('mesh')], {
       tone: TONE,
       bloomEnabled: false,
+      antique: false,
       foregroundChain: [],
       captureFaces: new Map([['sgrAStar', [skyFace(0)]]]),
-      bodyRowSlabs: { lens: [], insideAtmosphere: [] },
+      bodyRowSlabs: { lens: [], insideAtmosphere: [], surfaceMask: [] },
     });
     expect(steps.map((step) => (step.kind === 'render' ? step.slab : null))).toEqual([
       COSMO,
@@ -289,6 +302,13 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
       ]),
     });
     expect(empty.some((step) => step.kind === 'render' && step.capture !== undefined)).toBe(false);
+  });
+
+  it('antique draws the cosmic structure markers onto the structures row, the one the Milky Way discs take', () => {
+    // There the plate outlines them as dotted contours; on the print the reduce averages a ring away.
+    const home = (name: string) =>
+      program({ antique: true }).find((step) => step.kind === 'render' && namesOf(step).includes(name));
+    expect(home('structure-markers-cosmo')).toMatchObject({ target: ANTIQUE_TARGETS.structures });
   });
 
   it('expands the foreground chain in painter order', () => {
@@ -331,9 +351,10 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     return expandFrameOrder(order, ['stars', 'a', 'b', 'd'].map(fakePass), {
       tone: TONE,
       bloomEnabled: false,
+      antique: false,
       foregroundChain: chain,
       captureFaces: new Map(),
-      bodyRowSlabs: { lens: [], insideAtmosphere: [] },
+      bodyRowSlabs: { lens: [], insideAtmosphere: [], surfaceMask: [] },
     });
   }
 
@@ -395,7 +416,7 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
   });
 
   it('emits an (hdr, slab) lens step per entry, after (hdr, NEAR0) and before the foreground chain', () => {
-    const steps = program({ bodyRowSlabs: { lens: [4], insideAtmosphere: [] } });
+    const steps = program({ bodyRowSlabs: { lens: [4], insideAtmosphere: [], surfaceMask: [] } });
     const rosterIdx = steps.findIndex(
       (step) => step.kind === 'render' && step.target === 'hdr' && step.slab === NEAR0,
     );
@@ -412,7 +433,9 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
   });
 
   it('a render line with a BodyRowSource slab expands once per resolved row', () => {
-    const steps = program({ bodyRowSlabs: { lens: [3, 2], insideAtmosphere: [] } });
+    const steps = program({
+      bodyRowSlabs: { lens: [3, 2], insideAtmosphere: [], surfaceMask: [] },
+    });
     expect(
       steps
         .filter((step) => step.kind === 'render' && step.slab >= 2)
@@ -447,6 +470,143 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     expect(on.filter((step) => step.kind === 'bloom')).toEqual([{ kind: 'bloom' }]);
     expect(off.some((step) => step.kind === 'bloom')).toBe(false);
     expect(on.filter((step) => step.kind !== 'bloom')).toEqual(off);
+  });
+
+  it('the antique look moves every swap write to its own rows and inks them last', () => {
+    // A swap line left unrouted would draw straight over the plate, or under it
+    // and be wiped; the stylize step must be the frame's only swap writer.
+    const on = program({ antique: true });
+    const swapWriters = on.filter(
+      (step) =>
+        (step.kind === 'render' && step.target === 'swap') ||
+        (step.kind === 'composite' && step.step.dest === 'swap'),
+    );
+    expect(swapWriters).toEqual([]);
+    expect(on.find((step) => step.kind === 'composite' && step.step.tone !== null)).toMatchObject({
+      step: { source: 'hdr', dest: 'print', tone: { printShoulder: ANTIQUE_PRINT_SHOULDER } },
+    });
+    // The shoulder is the print's alone: the plain frame's swap clips as it always did.
+    const plain = program({ antique: false }).find(
+      (step) => step.kind === 'composite' && step.step.tone !== null,
+    );
+    expect(plain).toEqual({
+      kind: 'composite',
+      step: { source: 'hdr', dest: 'swap', blend: 'replace', tone: TONE },
+    });
+    expect(on.some((step) => step.kind === 'render' && step.target === 'overlay')).toBe(true);
+    expect(on.at(-1)).toEqual({ kind: 'stylize', source: 'print', overlay: 'overlay' });
+  });
+
+  it('the antique look drops its hidden passes from every render step, and only it', () => {
+    const drawn = (steps: readonly FrameStep[]) => new Set(steps.flatMap((step) => namesOf(step)));
+    const hidden = ANTIQUE_HIDDEN_PASSES.filter((name) =>
+      COMPOSED_PASSES.some((pass) => pass.name === name),
+    );
+    expect(hidden.length).toBeGreaterThan(0);
+    // A body slab in the chain, so the body roster (cloud shells) expands too.
+    const on = drawn(program({ antique: true, foregroundChain: [NEAR0, 2] }));
+    const off = drawn(program({ foregroundChain: [NEAR0, 2] }));
+    for (const name of hidden) {
+      expect(on.has(name), name).toBe(false);
+      expect(off.has(name), name).toBe(true);
+    }
+  });
+
+  it('the antique look draws resolved stars only as glyphs, while the star aggregate keeps its hdr line', () => {
+    const hdrNames = (steps: readonly FrameStep[]) =>
+      steps.flatMap((step) =>
+        step.kind === 'render' && step.target === 'hdr' ? namesOf(step) : [],
+      );
+    const on = hdrNames(program({ antique: true }));
+    const off = hdrNames(program());
+    for (const resolved of ['star-points', 'star-catalog']) {
+      expect(off, resolved).toContain(resolved);
+      expect(on, resolved).not.toContain(resolved);
+    }
+    expect(on).toContain('star-upsample');
+  });
+
+  it('the antique look prints point galaxies only as dots: their sprites and the cosmic structure discs leave hdr', () => {
+    const hdrNames = (steps: readonly FrameStep[]) =>
+      steps.flatMap((step) =>
+        step.kind === 'render' && step.target === 'hdr' ? namesOf(step) : [],
+      );
+    const on = hdrNames(program({ antique: true }));
+    const off = hdrNames(program());
+    for (const name of ['point-sprites', 'structure-markers-cosmo']) {
+      expect(off, name).toContain(name);
+      expect(on, name).not.toContain(name);
+    }
+    expect(on).toContain('procedural-disks');
+  });
+
+  it("draws the look's own passes only with the look on: the steady density raymarch, the print's filaments, land map, geography, the Moon's print and relief on the body row, galaxy then star points into the print points", () => {
+    const lookSteps = (steps: readonly FrameStep[]) =>
+      steps.filter((step) => namesOf(step).some((name) => ANTIQUE_ONLY_PASSES.includes(name)));
+    const rows = { lens: [], insideAtmosphere: [], surfaceMask: [3] };
+    expect(lookSteps(program({ bodyRowSlabs: rows }))).toEqual([]);
+    expect(lookSteps(program({ antique: true, bodyRowSlabs: rows }))).toMatchObject([
+      { kind: 'render', target: 'cosmic-web-density', slab: COSMO },
+      { kind: 'render', target: ANTIQUE_TARGETS.lines, slab: COSMO },
+      { kind: 'render', target: ANTIQUE_TARGETS.land, slab: 3 },
+      { kind: 'render', target: ANTIQUE_TARGETS.geography, slab: 3 },
+      { kind: 'render', target: ANTIQUE_TARGETS.moon, slab: 3 },
+      { kind: 'render', target: ANTIQUE_TARGETS.relief, slab: 3 },
+      { kind: 'render', target: ANTIQUE_TARGETS.printPoints, slab: COSMO, depth: 'clear' },
+      { kind: 'render', target: ANTIQUE_TARGETS.printPoints, slab: NEAR0, depth: 'clear' },
+    ]);
+  });
+
+  it("moves the constellations off the hdr roster onto the look's lines row only with the look on", () => {
+    const stepsDrawing = (steps: readonly FrameStep[]) =>
+      steps
+        .filter((step) => namesOf(step).includes('constellations'))
+        .map((step) => (step.kind === 'render' ? [step.target, step.slab, namesOf(step)] : null));
+    expect(stepsDrawing(program())).toEqual([
+      ['hdr', NEAR0, expect.arrayContaining(['star-catalog', 'constellations'])],
+    ]);
+    expect(stepsDrawing(program({ antique: true }))).toEqual([
+      [ANTIQUE_TARGETS.lines, NEAR0, ['constellations']],
+    ]);
+    // The roster it left still merges with the post-lensing line, as without the look.
+    const hdrNear0 = (steps: readonly FrameStep[]) =>
+      steps.filter((s) => s.kind === 'render' && s.target === 'hdr' && s.slab === NEAR0).length;
+    expect(hdrNear0(program({ antique: true }))).toBe(hdrNear0(program()));
+  });
+
+  it("moves the orbit trails onto the look's lines row with the depth they hide behind", () => {
+    const trailSteps = (steps: readonly FrameStep[]) =>
+      steps.filter((step) => namesOf(step).includes('orbit-trails'));
+    const [off] = trailSteps(program());
+    const [on] = trailSteps(program({ antique: true }));
+    expect(off).toMatchObject({ target: 'hdr' });
+    expect(on).toMatchObject({ target: ANTIQUE_TARGETS.lines, depth: { sample: 'foreground:0' } });
+  });
+
+  it("draws the cosmic-web filaments' print twin on the look's lines row, where the print's reduce can't thin them away", () => {
+    const stepsOf = (name: string, steps: readonly FrameStep[]) =>
+      steps.filter((step) => namesOf(step).includes(name));
+    expect(stepsOf('cosmic-web-filaments', program())).toMatchObject([
+      { target: 'hdr', slab: COSMO },
+    ]);
+    expect(stepsOf('cosmic-web-filaments-print', program())).toEqual([]);
+    const on = program({ antique: true });
+    expect(stepsOf('cosmic-web-filaments', on)).toEqual([]);
+    expect(stepsOf('cosmic-web-filaments-print', on)).toMatchObject([
+      { target: ANTIQUE_TARGETS.lines, slab: COSMO },
+    ]);
+  });
+
+  it('with the look off nothing is rerouted and no stylize step runs', () => {
+    const off = program();
+    expect(off.some((step) => step.kind === 'stylize')).toBe(false);
+    expect(
+      off.some(
+        (step) =>
+          (step.kind === 'render' && (step.target === 'print' || step.target === 'overlay')) ||
+          (step.kind === 'composite' && step.step.dest === 'print'),
+      ),
+    ).toBe(false);
   });
 
   it('every render step references only slabs present in deriveSlabs’ table', () => {

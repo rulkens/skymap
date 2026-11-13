@@ -35,7 +35,8 @@ npm run -s perf -- --json > perf.json               # machine-readable (note npm
 ```
 
 Flags: `--scenario <name>` (repeatable filter), `--frames N`, `--dpr 1|2`, `--url <base>`,
-`--tier small|medium|large`, `--compare-tiers`, `--sweep`, `--json`. `--compare-tiers` conflicts
+`--gate <name>` (repeatable; adds `&<name>` to the boot URL, e.g. `--gate antique` to price the
+antique look), `--tier small|medium|large`, `--compare-tiers`, `--sweep`, `--json`. `--compare-tiers` conflicts
 with `--tier` and `--sweep`.
 
 **`--json` needs `npm run -s`** — without `-s`, npm's `> skymap@… perf` banner pollutes stdout.

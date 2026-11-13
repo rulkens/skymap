@@ -91,6 +91,16 @@ fn dirToEquirectUv(dir: vec3<f32>) -> vec2<f32> {
   return vec2<f32>(u_uv, v_uv);
 }
 
+// The antique look's land map (`earth-ocean-mask` pass, 'rg8unorm'): r land
+// share from the material map's ocean mask, g 1 where the globe covers. The
+// look reads this instead of guessing land from the lit colour, which clouds,
+// sunglint and limb haze all fool.
+@fragment
+fn fsOceanMask(in: VSOut) -> @location(0) vec4<f32> {
+  let ocean = textureSample(materialTexture, earthSampler, in.uv).g;
+  return vec4<f32>(1.0 - ocean, 1.0, 0.0, 1.0);
+}
+
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // Mesh uv sampled directly -- no flip needed (see the header). Albedo is

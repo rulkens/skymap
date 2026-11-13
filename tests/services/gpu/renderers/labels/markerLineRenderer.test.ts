@@ -106,4 +106,40 @@ describe('MarkerLineRenderer (CPU state)', () => {
     r.setLines(lines);
     expect(r.lineCount()).toBe(200);
   });
+
+  // Widths are CSS px; the shader multiplies by this one uniform (float 20, after the
+  // 80-byte camera prefix), so dpr 2 draws the line twice as many device px wide.
+  it('uploads the devicePixelRatio right after the camera prefix', () => {
+    const writes: Float32Array[] = [];
+    const device = {
+      createBindGroupLayout: () => ({}),
+      createShaderModule: () => ({ getCompilationInfo: () => Promise.resolve({ messages: [] }) }),
+      createPipelineLayout: () => ({}),
+      createRenderPipeline: () => ({}),
+      createBuffer: () => ({ destroy: vi.fn() }),
+      createBindGroup: () => ({}),
+      queue: { writeBuffer: (_b: unknown, _o: number, d: Float32Array) => writes.push(d) },
+    } as unknown as GPUDevice;
+    const ctx = {
+      device,
+      context: null as unknown as GPUCanvasContext,
+      format: 'rgba16float' as GPUTextureFormat,
+      canvas: null as unknown as HTMLCanvasElement,
+      hdrCapable: false,
+    };
+    const r = createMarkerLineRenderer(ctx, ctx.format);
+    r.setLines([
+      { id: 'a', fromWorld: [0, 0, 0], toWorld: [0, 1, 0], pixelWidth: 3, color: [1, 1, 1, 1] },
+    ]);
+    const pass = {
+      setPipeline: vi.fn(),
+      setBindGroup: vi.fn(),
+      setVertexBuffer: vi.fn(),
+      draw: vi.fn(),
+    } as unknown as GPURenderPassEncoder;
+    writes.length = 0;
+    r.draw(pass, new Float32Array(16), [800, 600], 500, 2);
+    const uniform = writes.find((w) => w.length === 24);
+    expect(uniform?.[20]).toBe(2);
+  });
 });

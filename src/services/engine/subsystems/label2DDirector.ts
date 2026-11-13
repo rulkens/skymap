@@ -113,6 +113,12 @@ import type { Label2DDirectorConfig } from '../../../@types/engine/subsystems/La
 import type { Label2DProjection } from '../../../@types/rendering/Label2DProjection';
 import type { Label2DProjected } from '../../../@types/rendering/Label2DProjected';
 import type { ScreenRectPx } from '../../../@types/rendering/ScreenRectPx';
+import type { ScreenBodyDisc } from '../../../@types/rendering/ScreenBodyDisc';
+import type { Vec2 } from '../../../@types/math/Vec2';
+import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Label2DLift } from '../../../@types/rendering/Label2DLift';
+import type { LabelName } from '../../../@types/animation/LabelName';
+import type { FontId } from '../../../@types/data/FontId';
 import { projectLabels } from '../../../utils/labels/projectLabels';
 import { smoothstep } from '../../../utils/math/smoothstep';
 import {
@@ -128,7 +134,32 @@ import { proposedLiftPx } from '../../../utils/labels/proposedLiftPx';
 import { whitenColor } from '../../../utils/labels/whitenColor';
 import { encodeSelectionPick } from '../../../utils/selection/encodeSelectionPick';
 import { visibilityEntryOf } from '../../../utils/visibility/visibilityEntryOf';
+import { antiqueLookOn } from '../../../utils/render/antiqueLookOn';
+import {
+  ANTIQUE_REFERENCE_HEIGHT_CSS,
+  ANTIQUE_REGIME_MPC,
+} from '../../../data/rendering/antiqueLook';
+import { antiqueLabel } from '../../../utils/labels/antiqueLabel';
+import { ANTIQUE_LABEL_RULES } from '../../../data/labels/antiqueLabelRules';
+import { antiqueInkGapPx } from '../../../utils/labels/antiqueInkGapPx';
+import { ANTIQUE_TITLE_CLEAR_UNITS } from '../../../data/labels/antiqueTitleClearUnits';
+import { rectMeetsCircle } from '../../../utils/math/rectMeetsCircle';
+import { rectMeetsPolygon } from '../../../utils/math/rectMeetsPolygon';
+import { cross3 } from '../../../utils/math/cross3';
+import { normalize3 } from '../../../utils/math/normalize3';
+import { SCALE_UNITS } from '../../../data/scaleUnits';
+import { ANTIQUE_AREA_LETTERING } from '../../../data/labels/antiqueAreaLettering';
+import { ANTIQUE_PLACE_LETTERING } from '../../../data/labels/antiquePlaceLettering';
+import { isKeyOf } from '../../../utils/object/isKeyOf';
+import { antiquePlateKeepOut } from '../../../utils/labels/antiquePlateKeepOut';
+import { antiquePlateCartouche } from '../../gpu/passes/antiqueLook/antiquePlateCartouche';
+import { antiqueTitleGlobe } from '../../gpu/passes/antiqueLook/antiqueTitleGlobe';
+import { viewBasis } from '../../../utils/camera/projection/viewBasis';
+import { viewCoverRectsPx } from '../../../utils/layout/viewCoverRectsPx';
 import { emphasisOf } from '../presentation/emphasisOf';
+import { createTitleGrowth } from '../presentation/createTitleGrowth';
+import { alignXFraction } from '../../../utils/labels/alignXFraction';
+import { ANTIQUE_LABEL_STYLE } from '../../../data/labels/antiqueLabelStyle';
 import {
   HOVERED_LABEL_WHITEN,
   SELECTED_LABEL_WHITEN,
@@ -207,7 +238,11 @@ function sortByDeclutterPriorityDesc(labels: readonly Label2D[]): number[] {
  * place that keeps a planet's floated name from culling a rover standing at
  * the planet's own anchor.  A culled label's leader is culled with it BY CONSTRUCTION — the
  * leader lives on the label object, so there is no separate line-side filter
- * to run.  Returns a fresh array in original input order (deterministic,
+ * to run.  Under the antique look (`antique`) a lifted name is judged just off
+ * its glyph's rim, where `applyLift` engraves it, a name that collides tries its
+ * `fallback` placement, and a name never prints across the disc or ring of a body
+ * nearer than its own subject (a star over a planet's limb;
+ * `farIds` are the captions that name no depth yet stand beyond every globe).  Returns a fresh array in original input order (deterministic,
  * sort-independent).
  */
 function declutterByBboxOverlap(
@@ -216,52 +251,145 @@ function declutterByBboxOverlap(
   projected: readonly Label2DProjected[],
   projection: Label2DProjection,
   padPx: number,
+  antique: boolean,
+  farIds: ReadonlySet<string>,
 ): Label2D[] {
-  const { pxPerRad } = projection;
+  const { pxPerRad, devicePixelRatio } = projection;
+  // CSS px, like every label size and pad; the rects below are device px.
+  const pad = padPx * devicePixelRatio;
   // `labelScreenRect` is the shared CPU twin of the vertex shader's em clamp —
   // the pick path derives its hit boxes from the same function, so a label
   // cannot be decluttered against one rect and clicked on another.
-  const rects: (ScreenRectPx | null)[] = labels.map((label, i) => {
-    const p = projected[i]!;
+  const rectOf = (label: Label2D, p: Label2DProjected): ScreenRectPx | null => {
+    // A zero-fadeAlpha label shows nothing, so it must not claim a slot and
+    // cull a visible label behind it.
     if (!p.screenPx || (label.fadeAlpha ?? 1) === 0) return null;
     const bbox = measure(label);
     if (!bbox) return null;
-    const liftPx = label.lift === undefined ? 0 : proposedLiftPx(label.lift.subjectSizePx);
-    return labelScreenRect({
-      label,
-      bbox,
-      screenPx: [p.screenPx[0], p.screenPx[1] - liftPx],
-      clipW: p.clipW,
-      pxPerRad,
-    });
-  });
+    // The lift stage runs later, over survivors, so a lifted label is judged
+    // here at its proposed lift: a planet's floated name must not cull a
+    // rover standing at the planet's own anchor.
+    if (antique && label.lift !== undefined) {
+      const r = labelScreenRect({
+        label,
+        bbox,
+        screenPx: p.screenPx,
+        clipW: p.clipW,
+        pxPerRad,
+        devicePixelRatio,
+      });
+      const dy = p.screenPx[1] - antiqueInkGapPx(label.lift, devicePixelRatio) - r.y1;
+      return { x0: r.x0, y0: r.y0 + dy, x1: r.x1, y1: r.y1 + dy };
+    }
+    const screenPx: Vec2 =
+      label.lift === undefined
+        ? p.screenPx
+        : [
+            p.screenPx[0],
+            p.screenPx[1] - proposedLiftPx(label.lift.subjectSizePx, devicePixelRatio),
+          ];
+    return labelScreenRect({ label, bbox, screenPx, clipW: p.clipW, pxPerRad, devicePixelRatio });
+  };
+  const rects = labels.map((label, i) => rectOf(label, projected[i]!));
+  const discs = antique ? bodyDiscs(labels, projected, projection) : [];
+
+  const accepted: number[] = [];
+  // Whether a name set at `rect` stays clear of the bodies in front of it and the names placed.
+  const fits = (i: number, rect: ScreenRectPx): boolean => {
+    const nearKm = labels[i]!.occludeNearKm ?? (farIds.has(labels[i]!.id) ? Infinity : -Infinity);
+    const behindDisc = discs.some(
+      (d) =>
+        d.index !== i &&
+        nearKm > d.centreKm &&
+        (rectMeetsCircle(rect, d.centre, d.radius) ||
+          (d.ring !== undefined && rectMeetsPolygon(rect, d.ring))),
+    );
+    if (behindDisc) return false;
+    for (const a of accepted) {
+      const aRect = rects[a]!;
+      if (!projected[a]!.onScreen || !aRect) continue;
+      if (
+        rect.x0 - pad < aRect.x1 &&
+        rect.x1 + pad > aRect.x0 &&
+        rect.y0 - pad < aRect.y1 &&
+        rect.y1 + pad > aRect.y0
+      )
+        return false;
+    }
+    return true;
+  };
 
   const order = sortByDeclutterPriorityDesc(labels);
-  const accepted: number[] = [];
+  const placed = [...labels];
   for (const i of order) {
     const rect = rects[i];
-    if (projected[i]!.onScreen && rect) {
-      let collides = false;
-      for (const a of accepted) {
-        const aRect = rects[a]!;
-        if (!projected[a]!.onScreen || !aRect) continue;
-        if (
-          rect.x0 - padPx < aRect.x1 &&
-          rect.x1 + padPx > aRect.x0 &&
-          rect.y0 - padPx < aRect.y1 &&
-          rect.y1 + padPx > aRect.y0
-        ) {
-          collides = true;
-          break;
-        }
-      }
-      if (collides) continue;
+    if (projected[i]!.onScreen && rect && !fits(i, rect)) {
+      const fallback = antique ? labels[i]!.fallback : undefined;
+      const alt = fallback && rectOf(fallback, projected[i]!);
+      if (!fallback || !alt || !fits(i, alt)) continue;
+      placed[i] = fallback;
+      rects[i] = alt;
     }
     accepted.push(i);
   }
 
   const acceptedIndices = new Set(accepted);
-  return labels.filter((_, i) => acceptedIndices.has(i));
+  return placed.filter((_, i) => acceptedIndices.has(i));
+}
+
+/**
+ * The on-screen discs of the lifted subjects (a body's caption carries its apparent
+ * size): a name whose subject stands farther than a disc's centre is behind the body.
+ */
+function bodyDiscs(
+  labels: readonly Label2D[],
+  projected: readonly Label2DProjected[],
+  projection: Label2DProjection,
+): ScreenBodyDisc[] {
+  const { pxPerRad } = projection;
+  const discs: ScreenBodyDisc[] = [];
+  labels.forEach((label, index) => {
+    const centre = projected[index]!.screenPx;
+    const { lift, occludeNearKm, worldEmMpc } = label;
+    if (!centre || !lift || occludeNearKm === undefined || worldEmMpc === undefined) return;
+    if (lift.subjectSizePx < 1) return;
+    const centreKm = occludeNearKm + worldEmMpc * SCALE_UNITS.MPC_TO_M * SCALE_UNITS.M_TO_KM;
+    // `subjectSizePx` is the small-angle size (f·r/d); a near sphere's limb on the
+    // image plane lies at f·tan(asin(r/d)), up to ~9% wider at 22° (Pleiades clipped on the Moon).
+    const sinHalf = Math.min(lift.subjectSizePx / 2 / pxPerRad, 0.99);
+    const radius = lift.subjectSizePx / 2 / Math.sqrt(1 - sinHalf * sinHalf);
+    const ring = lift.ring && ringOutline(label.worldPos, lift.ring, projection);
+    discs.push({ index, centre, radius, centreKm, ...(ring && { ring }) });
+  });
+  return discs;
+}
+
+/** Points round a ring's outline: enough that a polygon of them stays within a pixel or two. */
+const RING_OUTLINE_POINTS = 48;
+
+/**
+ * A ring's outline on screen, projected point by point: the eye can stand within a few
+ * ring radii, where the near half swells well past a centred ellipse. Null when part of
+ * it falls behind the eye.
+ */
+function ringOutline(
+  anchor: Readonly<Vec3>,
+  ring: NonNullable<Label2DLift['ring']>,
+  projection: Label2DProjection,
+): Vec2[] | null {
+  const seed: Vec3 = Math.abs(ring.pole[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0];
+  const u = normalize3(cross3(ring.pole, seed));
+  const v = cross3(ring.pole, u);
+  const r = ring.outerRadiusMpc;
+  const points = Array.from({ length: RING_OUTLINE_POINTS }, (_, k) => {
+    const c = Math.cos((k / RING_OUTLINE_POINTS) * 2 * Math.PI) * r;
+    const s = Math.sin((k / RING_OUTLINE_POINTS) * 2 * Math.PI) * r;
+    return {
+      worldPos: [0, 1, 2].map((a) => anchor[a]! + u[a]! * c + v[a]! * s),
+    } as unknown as Label2D;
+  });
+  const screen = projectLabels(points, projection).map((p) => p.screenPx);
+  return screen.every((p) => p !== null) ? (screen as Vec2[]) : null;
 }
 
 export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDirector {
@@ -284,6 +412,7 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
   // fading (smoothstep) or drop immediately (exponential).
   const smoothstepEnvelopes = new Map<string, SmoothstepEnvelopeEntry>();
   const exponentialEnvelopes = new Map<string, ExponentialEnvelopeEntry>();
+  const titleGrowth = createTitleGrowth(ANTIQUE_LABEL_STYLE.titleGrowMs);
 
   function attachRenderers(
     label: LabelRenderer,
@@ -304,7 +433,7 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
   }
 
   function signatureOf(labels: readonly Label2D[]): string {
-    // Cheap stable signature: per-label `id:fadeAlpha:worldPos[:leaderToWorld][:color][:pickId]`,
+    // Cheap stable signature: per-label `id:fadeAlpha:worldPos[:leaderToWorld][:color][:pickId]:set`,
     // joined. A label's synthesized leader line (see `synthesizeLines`) carries
     // no state of its own beyond what's keyed here, so one term covers both.
     //
@@ -347,10 +476,9 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     // visible frame.  Endpoints only move while the camera does, so the
     // skip still fires on every static frame — exactly when it pays.
     //
-    // Edge case: a producer mutating a label's `text` while keeping
-    // the same `id` will NOT trigger re-upload.  No current producer
-    // does this — the Milky Way label has constant text; structures derive text
-    // from the structure name which is part of the id space.
+    // The set-type terms (text, alignment, size clamp) are keyed too: the antique
+    // look resets a selected subject's name as a title at its own id and place,
+    // and grows it frame by frame; unkeyed, the GPU kept the old setting.
     const lIds = labels
       .map((l) => {
         const leaderKey = l.leader
@@ -358,7 +486,8 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
           : '';
         const colorKey = l.color ? `:${l.color.join(',')}` : '';
         const pickKey = l.pickId !== undefined ? `:${l.pickId}` : '';
-        return `${l.id}:${l.fadeAlpha ?? 1}:${l.worldPos[0]},${l.worldPos[1]},${l.worldPos[2]}${leaderKey}${colorKey}${pickKey}`;
+        const setKey = `:${l.text}:${l.alignX}:${l.minPixelSize},${l.maxPixelSize}`;
+        return `${l.id}:${l.fadeAlpha ?? 1}:${l.worldPos[0]},${l.worldPos[1]},${l.worldPos[2]}${leaderKey}${colorKey}${pickKey}${setKey}`;
       })
       .join('|');
     return `L:${labels.length}:${lIds}`;
@@ -397,7 +526,8 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
    * Cross-producer declutter over the merged label set: resolves this
    * frame's projection (memoised per `ctx` by `config.project`), projects
    * every label's anchor ONCE (`projectLabels`), then hands the shared
-   * per-label records to `declutterByBboxOverlap`. Runs in the director (not per producer) so it de-collides
+   * per-label records to `declutterByBboxOverlap` (the antique look adds its own
+   * rules there). Runs in the director (not per producer) so it de-collides
    * labels ACROSS producers — a structure label vs a famous-galaxy label
    * vs the Milky Way "you are here" marker — which a per-producer pass
    * could never see.
@@ -409,7 +539,12 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
    * survivors, so a culled-but-still-emitted label eases toward 0 instead of
    * popping — see `applyExponentialEnvelope`).
    */
-  function declutter(labels: readonly Label2D[], ctx: FrameView): DeclutterResult {
+  function declutter(
+    labels: readonly Label2D[],
+    ctx: FrameView,
+    antique: boolean,
+    farIds: ReadonlySet<string>,
+  ): DeclutterResult {
     const projection = config.project(ctx);
     const projected = projectLabels(labels, projection);
     const survivors = declutterByBboxOverlap(
@@ -418,6 +553,8 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
       projected,
       projection,
       config.declutterPadPx,
+      antique,
+      farIds,
     );
     return { survivors, survivorIds: new Set(survivors.map((l) => l.id)) };
   }
@@ -607,8 +744,12 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     switch (policy.mode) {
       case 'smoothstepRamp':
         return applySmoothstepEnvelope(declutterResult.survivors, nowMs, policy);
-      case 'exponentialApproach':
-        return applyExponentialEnvelope(mergedLabels, declutterResult.survivorIds, nowMs, policy);
+      case 'exponentialApproach': {
+        // A survivor may stand at its fallback placement; a culled name fades where it was.
+        const placed = new Map(declutterResult.survivors.map((l) => [l.id, l]));
+        const labels = mergedLabels.map((l) => placed.get(l.id) ?? l);
+        return applyExponentialEnvelope(labels, declutterResult.survivorIds, nowMs, policy);
+      }
     }
   }
 
@@ -619,9 +760,14 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
    * constellation captions (which anchor in empty space and have no subject
    * to float above) simply never carry one.
    */
-  function applyLift(labels: readonly Label2D[], ctx: FrameView): readonly Label2D[] {
+  function applyLift(
+    labels: readonly Label2D[],
+    ctx: FrameView,
+    antique: boolean,
+  ): readonly Label2D[] {
     const policy = config.lift;
-    if (!policy) return labels;
+    // COSMO's names carry a lift only under the antique look.
+    if (!policy || !labels.some((l) => l.lift)) return labels;
     const slab = ctx.slabs[policy.slab];
     if (!slab) throw new Error(`label2DDirector: no slab at index ${policy.slab}`);
     const projection = config.project(ctx); // memoised per ctx — free here
@@ -672,7 +818,10 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
         worldEmMpc: liftEmMpc,
         minPixelSize: label.minPixelSize ?? LABEL_MIN_PX_DEFAULT,
         maxPixelSize: label.maxPixelSize ?? LABEL_MAX_PX_DEFAULT,
+        devicePixelRatio: projection.devicePixelRatio,
         lineBottomLiftPx: lift.lineBottomLiftPx ?? 0,
+        // An engraved name sits just off its glyph's rim, not a diameter and a half above.
+        inkGapPx: antique ? antiqueInkGapPx(lift, projection.devicePixelRatio) : undefined,
       });
 
       if (placement === null) {
@@ -725,6 +874,116 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     });
   }
 
+  /**
+   * The antique look's names (`antiqueLabel`); the focused or selected subject keeps one,
+   * set as a title that grows from its cut's size and shrinks back when let go, sliding
+   * from its resting alignment beside its anchor to centred over it on the same ramp,
+   * and rising on it to `titleClearPx` (device px) above its subject, so neither its ink
+   * nor the halo the plate clears round it reaches a star glyph's rays.
+   */
+  function toAntique(
+    labels: readonly Label2D[],
+    labelName: LabelName | undefined,
+    isTitle: (label: Label2D) => boolean,
+    hasFont: (font: FontId) => boolean,
+    cosmos: boolean,
+    nowMs: number,
+    titleClearPx: number,
+    devicePixelRatio: number,
+  ): Label2D[] {
+    const rule = labelName === undefined ? undefined : ANTIQUE_LABEL_RULES[labelName];
+    const out: Label2D[] = [];
+    for (const l of labels) {
+      const title = isTitle(l);
+      const t = title || titleGrowth.tracks(l.id) ? titleGrowth.blend(l.id, title, nowMs) : 0;
+      const kept = title || t > 0;
+      if (!cosmos && rule?.cosmosOnly?.includes(l.id) && !kept) continue;
+      const named = antiqueLabel(l, rule, kept, hasFont);
+      if (named === null) continue;
+      const fallback = !kept && l.fallback && antiqueLabel(l.fallback, rule, false, hasFont);
+      const shown = fallback ? { ...named, fallback } : named;
+      const rest = kept && t < 1 ? antiqueLabel(l, rule, false, hasFont) : null;
+      const lift = (px: number) => {
+        if (!kept || !shown.lift) return shown.lift;
+        const restGap = antiqueInkGapPx(shown.lift, devicePixelRatio);
+        // The outline is inked, so the halo grows from its edge.
+        const clear = titleClearPx + (shown.outlineEmFrac ?? 0) * px * devicePixelRatio;
+        return { ...shown.lift, inkGapPx: restGap + Math.max(0, clear - restGap) * t };
+      };
+      if (rest === null) {
+        out.push(kept ? { ...shown, lift: lift(shown.maxPixelSize!) } : shown);
+        continue;
+      }
+      const px = rest.maxPixelSize! + (shown.maxPixelSize! - rest.maxPixelSize!) * t;
+      const from = alignXFraction(rest.alignX ?? 'left');
+      const steps = ANTIQUE_LABEL_STYLE.titleSlideSteps;
+      const alignX =
+        Math.round((from + (alignXFraction(shown.alignX!) - from) * t) * steps) / steps;
+      out.push({ ...shown, minPixelSize: px, maxPixelSize: px, alignX, lift: lift(px) });
+    }
+    return out;
+  }
+
+  /**
+   * Under the antique look, drop a name that runs within an em of the neatline,
+   * onto the cartouche or under an open panel (`antiquePlateKeepOut`); the subject's name stays,
+   * shrunk to fit inside the neatline. Runs
+   * on the final, lifted set, so it judges where the ink is drawn.
+   */
+  function clearOfPlate(
+    labels: readonly Label2D[],
+    ctx: FrameView,
+    isTitle: (label: Label2D) => boolean,
+    chromeHidden: boolean,
+    covered: EngineState['viewCover'],
+  ): readonly Label2D[] {
+    const projection = config.project(ctx);
+    const projected = projectLabels(labels, projection);
+    const covers = viewCoverRectsPx(
+      covered,
+      projection.viewportPx,
+      globalThis.innerWidth || projection.viewportPx[0],
+    );
+    const unitPx = ctx.canvasSize.height / ANTIQUE_REFERENCE_HEIGHT_CSS;
+    const globe = antiqueTitleGlobe(ctx, viewBasis(ctx.cam), unitPx);
+    const { rectPx } = antiquePlateCartouche(ctx, globe, covers);
+    const { inner, keepOut } = antiquePlateKeepOut(
+      projection.viewportPx,
+      chromeHidden,
+      covers,
+      rectPx,
+    );
+    return labels.flatMap((label, i) => {
+      const { screenPx, clipW } = projected[i]!;
+      const bbox = screenPx ? measureText!(label) : null;
+      if (!screenPx || !bbox) return [label];
+      const r = labelScreenRect({
+        label,
+        bbox,
+        screenPx,
+        clipW,
+        pxPerRad: projection.pxPerRad,
+        devicePixelRatio: projection.devicePixelRatio,
+      });
+      // A line's ink height stands in for the em.
+      const em = (r.y1 - r.y0) / label.text.split('\n').length;
+      if (isTitle(label)) {
+        // A title wider than a narrow plate shrinks to sit an em inside the neatline.
+        const fit = (inner.x1 - inner.x0) / (r.x1 - r.x0 + 2 * em);
+        if (fit >= 1 || label.maxPixelSize === undefined) return [label];
+        const px = label.maxPixelSize * fit;
+        return [{ ...label, minPixelSize: px, maxPixelSize: px }];
+      }
+      const inField =
+        r.x0 >= inner.x0 + em &&
+        r.y0 >= inner.y0 + em &&
+        r.x1 <= inner.x1 - em &&
+        r.y1 <= inner.y1 - em;
+      const clear = !keepOut.some((k) => r.x0 < k.x1 && r.x1 > k.x0 && r.y0 < k.y1 && r.y1 > k.y0);
+      return inField && clear ? [label] : [];
+    });
+  }
+
   function runFrame(state: EngineState, ctx: FrameView): boolean {
     if (!labelRenderer || !lineRenderer) return false;
 
@@ -736,24 +995,61 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     let anyAwake = false;
     // At blend 0 every emphasis is exactly 1, so the resting frame skips the lookups.
     const atRest = ctx.snapshot.focusBlend === 0;
+    const antique = antiqueLookOn(state);
+    const keptPicks = antique
+      ? [
+          encodeSelectionPick(state.selectionKindRows, state.selection.focus),
+          encodeSelectionPick(state.selectionKindRows, state.selection.select),
+        ]
+      : [];
+    // The focused or selected subject's own name; a place name set over it is no title.
+    const isTitle = (l: Label2D) =>
+      l.subjectId !== undefined &&
+      keptPicks.includes(l.subjectId) &&
+      !isKeyOf(ANTIQUE_AREA_LETTERING, l.id) &&
+      !isKeyOf(ANTIQUE_PLACE_LETTERING, l.id);
+    const hasFont = (font: FontId) => state.gpu.fontAtlases?.metricsByFont[font] !== undefined;
+    // Star and cluster captions name no depth, yet stand beyond every globe: the
+    // antique cull keeps them off a globe's disc (a name with no depth never would).
+    const farIds = new Set<string>();
+    const cosmos = Math.hypot(...ctx.drawCamPos) > ANTIQUE_REGIME_MPC[1];
+    const titleClearPx =
+      (ANTIQUE_TITLE_CLEAR_UNITS * ctx.canvasSize.height) / ANTIQUE_REFERENCE_HEIGHT_CSS;
     for (const p of producers) {
       const out = p.produceLabels(state, ctx);
       if (out.awake) anyAwake = true;
+      const produced = antique
+        ? toAntique(
+            out.labels,
+            p.label,
+            isTitle,
+            hasFont,
+            cosmos,
+            ctx.snapshot.nowMs,
+            titleClearPx,
+            ctx.snapshot.devicePixelRatio,
+          )
+        : out.labels;
+      if (antique && (p.label === 'starCatalog' || p.label === 'structure')) {
+        for (const l of produced) if (l.occludeNearKm === undefined) farIds.add(l.id);
+      }
       if (p.label === undefined || atRest) {
-        for (const l of out.labels) mergedLabels.push(l);
+        for (const l of produced) mergedLabels.push(l);
         continue;
       }
       const entry = visibilityEntryOf(state.visibilityEntries, `label:${p.label}`);
-      for (const l of out.labels) {
+      for (const l of produced) {
         const emphasis = emphasisOf(entry, ctx.snapshot, l.subjectId);
         mergedLabels.push(emphasis === 1 ? l : { ...l, fadeAlpha: (l.fadeAlpha ?? 1) * emphasis });
       }
     }
 
+    const titleGrowing = titleGrowth.endFrame(ctx.snapshot.nowMs);
+
     // Cross-producer declutter — producers emit every candidate (no internal
     // declutter); the director de-collides them together here. A culled
     // label's leader is culled with it by construction.
-    const declutterResult = declutter(mergedLabels, ctx);
+    const declutterResult = declutter(mergedLabels, ctx, antique, farIds);
 
     // Appear/disappear envelope — animated alphas feed `signatureOf` below,
     // so mid-ramp frames re-upload and settled frames skip, with no extra
@@ -772,13 +1068,19 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     // Lift stage (NEAR0 only — a no-op array pass-through when
     // `config.lift` is null): runs over survivors only, after the envelope
     // has resolved the final alpha for each.
-    const labels = applyLift(highlighted, ctx);
+    const lifted = applyLift(highlighted, ctx, antique);
+    const labels = antique
+      ? clearOfPlate(lifted, ctx, isTitle, state.ui.uiHidden, state.viewCover)
+      : lifted;
 
     // Flush contract: one MarkerLine per surviving leader-carrying label,
     // derived from the FINAL (post-declutter, post-envelope, post-lift) set.
-    const lines = synthesizeLines(labels);
+    // An engraved name has no leader. The NEAR0 leaders draw inside `labels-near`,
+    // so hiding the marker-lines pass alone would leave them standing.
+    const lines = antique ? [] : synthesizeLines(labels);
 
-    const sig = signatureOf(labels);
+    // A period name keeps its label's id, so the look toggle alone must re-flush.
+    const sig = (antique ? 'antique:' : '') + signatureOf(labels);
     if (sig !== prevSignature) {
       labelRenderer.setLabels(labels);
       flushedLabels = labels;
@@ -786,7 +1088,7 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
       prevSignature = sig;
     }
 
-    return anyAwake || anyRamping;
+    return anyAwake || anyRamping || titleGrowing;
   }
 
   // Built as a `const` (rather than returned inline) so we can attach

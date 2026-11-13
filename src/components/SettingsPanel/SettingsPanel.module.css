@@ -65,7 +65,7 @@
 
 .modeSelect:focus {
   outline: none;
-  border-color: rgba(180, 220, 255, 0.6);
+  border-color: color-mix(in srgb, var(--color-accent-control) 70.59%, transparent);
 }
 
 /*
@@ -186,8 +186,9 @@
   margin: var(--space-7) 0 var(--space-2);
   padding-bottom: var(--space-2);
   border-bottom: 1px solid var(--border-control);
-  font-size: var(--font-size-sm);
+  font-family: var(--font-family-label);
+  font-size: max(var(--font-size-sm), var(--font-size-label-min));
   letter-spacing: var(--letter-spacing-mid);
-  text-transform: uppercase;
+  text-transform: var(--label-case);
   color: var(--color-fg-dim);
 }

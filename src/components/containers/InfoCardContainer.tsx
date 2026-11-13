@@ -6,9 +6,12 @@
  * nothing from `store/` or `state/`.
  */
 
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useRef } from 'react';
 import InfoCard from '../InfoCard/InfoCard';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import { useIsMobile } from '../../hooks/useIsMobile';
+import { useViewCoverRow } from '../../hooks/useViewCoverRow';
+import { selectUiStackHidden } from '../../state/ui/selectors';
 import { selectHoveredFocusable, selectSelectedFocusable } from '../../state/selection/selectors';
 import { updateSelectionFocus, clearSelection } from '../../state/selection/selectionSlice';
 import type { FocusableTargetBase } from '../../@types/engine/selection/FocusableTargetBase';
@@ -17,6 +20,11 @@ function InfoCardContainer(): React.ReactElement {
   const dispatch = useAppDispatch();
   const hovered = useAppSelector(selectHoveredFocusable);
   const selected = useAppSelector(selectSelectedFocusable);
+  const uiStackHidden = useAppSelector(selectUiStackHidden);
+  const isMobile = useIsMobile();
+  // The pinned card only: a hover preview comes and goes with the cursor.
+  const rootRef = useRef<HTMLDivElement>(null);
+  useViewCoverRow(rootRef, 'infoCard', 'right', !isMobile && !uiStackHidden && selected !== null);
 
   const onFocus = useCallback(
     (target: FocusableTargetBase) => dispatch(updateSelectionFocus(target.ref)),
@@ -24,7 +32,15 @@ function InfoCardContainer(): React.ReactElement {
   );
   const onClose = useCallback(() => dispatch(clearSelection()), [dispatch]);
 
-  return <InfoCard hovered={hovered} selected={selected} onFocus={onFocus} onClose={onClose} />;
+  return (
+    <InfoCard
+      ref={rootRef}
+      hovered={hovered}
+      selected={selected}
+      onFocus={onFocus}
+      onClose={onClose}
+    />
+  );
 }
 
 export default memo(InfoCardContainer);

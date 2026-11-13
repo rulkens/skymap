@@ -38,7 +38,7 @@
   pointer-events: auto;
   transform: translateY(max(0px, calc(var(--rest) + var(--drag, 0px))));
   transition: transform var(--duration-base) var(--ease-standard);
-  background: var(--surface-card-strong);
+  background: var(--sheet-ground, var(--surface-card-strong));
   -webkit-backdrop-filter: blur(var(--blur-card));
   backdrop-filter: blur(var(--blur-card));
   border-top: 1px solid var(--border-card);

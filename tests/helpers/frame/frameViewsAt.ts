@@ -24,7 +24,7 @@ import { datumOnlyTerrainHeight } from '../../../src/utils/camera/terrain/datumO
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 
 const FOV_Y_RAD = 1;
-const SIZE_PX = { width: 1920, height: 1080 };
+const DEFAULT_SIZE_PX = { width: 1920, height: 1080 };
 const IDENTITY: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 
 export function frameViewsAt(input: {
@@ -33,12 +33,16 @@ export function frameViewsAt(input: {
   readonly distanceMpc: number;
   readonly rotations?: readonly Mat3[];
   readonly simDays?: number;
+  /** Screen-up hint; world z (x when looking along z) by default. */
+  readonly up?: Readonly<Vec3>;
+  readonly sizePx?: { readonly width: number; readonly height: number };
 }): FrameView[] {
   const { eyeMpc, distanceMpc, rotations = [IDENTITY], simDays = CONST_J2000 } = input;
+  const SIZE_PX = input.sizePx ?? DEFAULT_SIZE_PX;
   const forward = normalize3([...input.forward] as Vec3);
   // yaw = pitch = 0 decodes forward as −(third column) and puts the eye at
   // target + distance·(third column), so the target sits `distanceMpc` ahead.
-  const ref: Vec3 = Math.abs(forward[2]) < 0.9 ? [0, 0, 1] : [1, 0, 0];
+  const ref: Vec3 = input.up ? [...input.up] : Math.abs(forward[2]) < 0.9 ? [0, 0, 1] : [1, 0, 0];
   const right = normalize3(cross3(forward, ref));
   const up = cross3(right, forward);
   const basis = mat3FromColumns(right, up, [-forward[0], -forward[1], -forward[2]]);
