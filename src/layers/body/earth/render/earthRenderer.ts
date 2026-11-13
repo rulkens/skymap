@@ -17,7 +17,7 @@ import type { AtlasTileRect } from '../../../../@types/data/AtlasTileRect';
 import type { TextureKind } from '../../../../@types/data/TextureKind';
 import { cubeSphereMesh } from '../../../../utils/math/cubeSphereMesh';
 import { generateMipChain, mipLevelCount } from '../../../../services/gpu/lib/generateMipChain';
-import { isLinearTextureKind } from '../../../../utils/bodyTextures/isLinearTextureKind';
+import { bodyTextureFormat } from '../../../../utils/bodyTextures/bodyTextureFormat';
 import { EARTH_SURFACE_UNIFORM_FLOATS } from './packEarthSurfaceUniforms';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import vsCode from '../../../../services/gpu/shaders/bodies/earth/vertex.wesl?static';
@@ -31,9 +31,10 @@ const CUBESPHERE_FACE_RESOLUTION = 48;
 const UNIFORM_BUFFER_SIZE = EARTH_SURFACE_UNIFORM_FLOATS * 4;
 
 /**
- * Per-kind binding and 1x1 placeholder texel; the layout, placeholders and bind
- * group all iterate it. Format is not a row: `isLinearTextureKind` picks it, so a
- * placeholder cannot contradict the real map. Total over `TextureKind`.
+ * Per-kind binding and 1x1 placeholder texel (one byte per channel of the kind's
+ * format); the layout, placeholders and bind group all iterate it. Format is not a
+ * row: `bodyTextureFormat` picks it, so a placeholder cannot contradict the real
+ * map. Total over `TextureKind`.
  */
 const KIND_CFG = {
   // Mid-blue, opaque.
@@ -44,12 +45,9 @@ const KIND_CFG = {
   night: { binding: 4, placeholder: [0, 0, 0, 255] },
   // Flat tangent-space normal: RG=128 gives nxy=(0,0), nz=1.
   normal: { binding: 5, placeholder: [128, 128, 255, 255] },
-  // Transparent: cloud alpha 0 keeps the fragment's cloud shadow and night occlusion inert.
-  clouds: { binding: 6, placeholder: [0, 0, 0, 0] },
-} as const satisfies Record<
-  TextureKind,
-  { binding: number; placeholder: readonly [number, number, number, number] }
->;
+  // No cloud: coverage 0 keeps the fragment's cloud shadow and night occlusion inert.
+  clouds: { binding: 6, placeholder: [0] },
+} as const satisfies Record<TextureKind, { binding: number; placeholder: readonly number[] }>;
 
 /** Every `TextureKind`, in `KIND_CFG` order. */
 const MAP_KINDS = Object.keys(KIND_CFG) as TextureKind[];
@@ -165,13 +163,14 @@ export function createEarthRenderer(
     const placeholder = device.createTexture({
       label: `earth-placeholder-${kind}`,
       size: [1, 1, 1],
-      format: isLinearTextureKind(kind) ? 'rgba8unorm' : 'rgba8unorm-srgb',
+      format: bodyTextureFormat(kind),
       usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
     });
+    const texel = KIND_CFG[kind].placeholder;
     device.queue.writeTexture(
       { texture: placeholder },
-      new Uint8Array(KIND_CFG[kind].placeholder),
-      { bytesPerRow: 4, rowsPerImage: 1 },
+      new Uint8Array(texel),
+      { bytesPerRow: texel.length, rowsPerImage: 1 },
       [1, 1, 1],
     );
     placeholders.set(kind, placeholder);
@@ -265,13 +264,11 @@ export function createEarthRenderer(
   const mirroredPipeline = createPipeline('front');
 
   function setMap(kind: TextureKind, bitmap: ImageBitmap): void {
-    // `isLinearTextureKind` is shared with the fetcher's decode path and the filename helper.
-    const format: GPUTextureFormat = isLinearTextureKind(kind) ? 'rgba8unorm' : 'rgba8unorm-srgb';
     const levels = mipLevelCount(bitmap.width, bitmap.height);
     const fresh = device.createTexture({
       label: `earth-${kind}`,
       size: [bitmap.width, bitmap.height, 1],
-      format,
+      format: bodyTextureFormat(kind),
       mipLevelCount: levels,
       // RENDER_ATTACHMENT: generateMipChain renders each level below 0.
       usage:
@@ -303,12 +300,11 @@ export function createEarthRenderer(
 
   /** `setMap`'s twin: the texture lands in `placeholders`, and only `rect` of the bitmap is copied. */
   function setPlaceholderMap(kind: TextureKind, atlas: ImageBitmap, rect: AtlasTileRect): void {
-    const format: GPUTextureFormat = isLinearTextureKind(kind) ? 'rgba8unorm' : 'rgba8unorm-srgb';
     const levels = mipLevelCount(rect.w, rect.h);
     const fresh = device.createTexture({
       label: `earth-placeholder-${kind}`,
       size: [rect.w, rect.h, 1],
-      format,
+      format: bodyTextureFormat(kind),
       mipLevelCount: levels,
       usage:
         GPUTextureUsage.TEXTURE_BINDING |

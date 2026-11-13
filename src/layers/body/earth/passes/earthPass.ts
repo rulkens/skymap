@@ -50,7 +50,7 @@ export function earthPass(runtime: BodyRuntime): ContentPass {
       const sun = sunDirLocal(earthState.positionMpc, RENDER_ORIGIN_MPC, earthState.orientation);
       // The deck and the shadow it casts must dissolve together. Known gap: the fade
       // does not reach the night-side city-lights dimming (nightLights reads
-      // cloudAlphaHere with no strength scalar).
+      // cloudCoverageHere with no strength scalar).
       const cloudFade = cloudDeckFade(
         bodyCameraDistanceMpc(earthState.positionMpc, ctx.drawCamPos),
         radiusMpc,
