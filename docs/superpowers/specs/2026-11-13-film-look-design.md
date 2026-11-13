@@ -261,7 +261,7 @@ Only what can fail on a real bug the compiler misses:
 - `bloomPyramid.test.ts`: extend the anti-race test: the three fold kinds, the three streak iterations and the
   two veil axes each bind the buffer they wrote and never share; extend the blend test: streak and veil
   pipelines have no blend.
-- `runBloom.test.ts`: *look off encodes exactly today's pass sequence*; *look on: streak reads bloom0 after
+- `runBloom.test.ts`: *look off encodes exactly today's pass sequence*; *look on: streak reads bloom1 after
   bright, veil reads bloom4 after the last downsample, the folds precede the bloom fold, and the end
   timestamp still rides the last pass*.
 - `hashParamSources.test.ts`: *film writes `1` only when on, reads `1` as on, absent turns it off*.

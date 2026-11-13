@@ -1,6 +1,6 @@
 /**
- * runBloom — the bloom sub-pipeline as ONE strictly ordered pass sequence (spec
- * §6 of docs/superpowers/specs/2026-11-13-film-look-design.md). The pyramid
+ * runBloom — the bloom sub-pipeline as ONE strictly ordered pass sequence (§6 of
+ * the 2026-11-13 film-look spec). The pyramid
  * REUSES targets (`bloom0`..`bloom3` each host a producer and an additive fold),
  * which the generic frame executor cannot express: it would fire an upsample at
  * its target's downsample step and read a coarser level before this frame's

@@ -1,7 +1,6 @@
 /**
  * filmDefaults — the film look's calibration, settled by eye on the spike; the
- * slider ranges are in spec §4,
- * docs/superpowers/specs/2026-11-13-film-look-design.md
+ * slider ranges are in §4 of the 2026-11-13 film-look spec.
  */
 
 import type { FilmSettings } from '../../@types/settings/FilmSettings';

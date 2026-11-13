@@ -1,14 +1,20 @@
 /* LetterboxBars.module.css — z-index 1: above the canvas (auto), below the first HUD layer (TopBar, 9). */
 
 /* Height of a 2.39:1 frame's bar; the max() clamps to 0 on a viewport wider than 2.39:1 would need. */
-.bar {
+.root {
   position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.bar {
+  position: absolute;
   left: 0;
   right: 0;
-  z-index: 1;
   height: max(0px, calc((100vh - 100vw / 2.39) / 2));
+  height: max(0px, calc((100dvh - 100vw / 2.39) / 2));
   background: #000;
-  pointer-events: none;
 }
 
 .top {

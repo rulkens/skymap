@@ -2,11 +2,9 @@
  * BloomPyramid — the dual-filter bloom mip pyramid (bright prefilter, Karis
  * downsample, additive tent upsample, strength-scaled fold) plus the film
  * look's streak and veil passes. It owns pipelines, sampler and uniforms but
- * NO textures: those are `renderTargets` rows recreated on resize, so every
- * method takes its source view and records one draw into a pass the caller
- * opened against the target. `srcTexelSize` is `1 / source-pixel-size`, so tap
- * offsets are in the SOURCE level's texels. `runBloom` holds the pass order;
- * why each draw has its own uniform buffer is in `bloomPyramid.ts`'s header.
+ * NO textures (`renderTargets` rows, recreated on resize): each method records
+ * one draw into a pass the caller opened. `srcTexelSize` is `1 / source-pixel-size`,
+ * so tap offsets are in the SOURCE level's texels. `runBloom` holds the pass order.
  */
 
 import type { Vec2 } from '../math/Vec2';
@@ -16,7 +14,7 @@ import type { StreakTaps } from './StreakTaps';
 
 export type BloomPyramid = {
   readonly label: string;
-  /** hdr → bloom0: soft threshold plus the firefly cap. */
+  /** hdr → bloom0: soft threshold plus firefly cap. */
   bright(pass: GPURenderPassEncoder, srcView: GPUTextureView, params: BrightParams): void;
   /** `bloom[level-1]` → `bloom[level]` (1..4), overwriting; `karis` on level 1 only. */
   downsample(
@@ -52,6 +50,5 @@ export type BloomPyramid = {
     axis: 'x' | 'y',
     srcTexelSize: Vec2,
   ): void;
-  /** Releases the uniform buffers; the rest is GC'd. */
   destroy(): void;
 };

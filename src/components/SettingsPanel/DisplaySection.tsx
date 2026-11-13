@@ -249,7 +249,7 @@ function DisplaySection({
         onHeaderToggleChange={onFilmEnabledChange}
       >
         <div className={styles.panelRow}>
-          <label>Grain, glow and a softer lens, like a filmed shot.</label>
+          <p>Grain, glow and a softer lens, like a filmed shot.</p>
         </div>
       </CollapsibleSection>
 

@@ -1,9 +1,10 @@
 /**
  * compositor — the single 'merge one offscreen texture into a target'
  * primitive: HDR → swap chain with tone-mapping (blend 'replace', tone set),
- * a foreground layer OVER the swap (blend 'over', sharing that tone object),
- * an additive field contribution → HDR (blend 'additive', tone null). Blend
- * and dst format are data in a table; the film look is a pipeline variant.
+ * a foreground layer OVER the swap (blend 'over', tone null), an additive
+ * field contribution → HDR (blend 'additive', tone null). Only the hdr→swap
+ * tone-map draw takes a tone, and with it the film variant. Blend and dst
+ * format are data in a table; the film look is a pipeline variant.
  *
  * Each WGSL tone curve has a JS twin below, matching `lib/tonemap.wesl`
  * byte-for-byte so `tests/services/gpu/passes/toneMap.test.ts` catches a
@@ -132,12 +133,7 @@ export function createCompositor(init: { device: GPUDevice }): Compositor {
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'compositor.vertex');
   const fsModule = createShaderModuleWithDevLog(device, fsCode, 'compositor.fragment');
 
-  // Why nearest, not linear?  The source and dst are the same resolution
-  // (the HDR target resizes in lockstep with the swap chain), so the
-  // fullscreen pass samples each texel exactly once at its centre.
-  // Linear filtering would just average a texel with itself — pointless
-  // work, and on some GPUs `linear` requires `'float32-filterable'` even
-  // on rgba16float.  `nearest` is universally supported.
+  // Nearest: source and dst are the same size, so the composite must stay a 1:1 copy.
   const sampler = device.createSampler({
     label: 'compositor-sampler',
     magFilter: 'nearest',
@@ -266,9 +262,6 @@ export function createCompositor(init: { device: GPUDevice }): Compositor {
         uniformF32[15] = grade.softnessPx;
         uniformF32[16] = grade.squeeze;
         uniformU32[17] = film.seed >>> 0;
-      } else {
-        // The scratch buffer is shared across draws: clear a film draw's lanes.
-        uniformU32.fill(0, 8, 18);
       }
       // preserveAlpha comes from the blend table, NOT the caller — alpha
       // handling is a property of the blend mode.

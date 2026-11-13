@@ -6,13 +6,14 @@
 
 import styles from './LetterboxBars.module.css';
 import cx from 'classnames';
+import type { ReactNode } from 'react';
 
-function LetterboxBars() {
+function LetterboxBars(): ReactNode {
   return (
-    <>
+    <div className={styles.root}>
       <div className={cx(styles.bar, styles.top)} />
       <div className={cx(styles.bar, styles.bottom)} />
-    </>
+    </div>
   );
 }
 

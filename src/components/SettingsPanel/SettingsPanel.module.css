@@ -26,9 +26,11 @@
   }
 }
 
-/* Label inside a panelRow */
-.panelRow label {
+/* Label (or hint paragraph) inside a panelRow */
+.panelRow label,
+.panelRow p {
   flex: 1;
+  margin: 0;
   color: var(--color-fg-muted);
 }
 
