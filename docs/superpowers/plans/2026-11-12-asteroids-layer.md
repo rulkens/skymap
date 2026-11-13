@@ -152,7 +152,7 @@ export const ASTEROID_CATALOG_PATHS = { catalog: 'asteroids/asteroids.astb', nam
 | 2–5 | i, Ω, ω, M₀ | u24 | round(turns·2²⁴) mod 2²⁴, ecliptic J2000 |
 | 6 | H | u16 | round((H+5)·100); 0xFFFF = none |
 | 7 | G | u8 | round((G+0.5)·100); MPC blank → 0.15 |
-| 8 | flags | u8 | bits 0–2 class code, bit 3 NEO (MPC bit 11), bit 4 PHA (MPC bit 15), bit 5 ABSENT; bits 6–7 zero |
+| 8 | flags | u8 | bits 0–2 class code, bit 5 ABSENT; bits 3–4 and 6–7 zero |
 
 **MPCORB facts** (format doc https://minorplanetcenter.net/iau/info/MPOrbitFormat.html, checked
 2026-11-12; 1-based columns): packed designation 1–7, H 9–13, G 15–19, packed epoch 21–25, M 27–35,

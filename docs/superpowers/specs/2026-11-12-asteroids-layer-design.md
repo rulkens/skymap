@@ -99,7 +99,7 @@ rows, so row k stays number k + 1, and leaves their names out.
 | i, Ω, ω, M₀ | u24 × 4 | turns·2²⁴, ecliptic J2000 | step 0.077″; M₀'s error does not grow with time |
 | H | u16 | (H+5)·100, 0xFFFF = none | keeps MPC's 0.01 mag |
 | G | u8 | (G+0.5)·100 | most rows carry the default 0.15 |
-| flags | u8 | class (3 bits), NEO, PHA | |
+| flags | u8 | class (3 bits), ABSENT (bit 5) | bits 3–4 stay zero |
 
   About 20.6 MB raw, ~17 MB brotli. Quantization is the only real size lever, and the precision above is
   far below the two-body model's own error (arcminutes to degrees over decades).

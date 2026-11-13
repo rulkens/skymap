@@ -14,10 +14,10 @@ import package::asteroids::lib::visibleTag::visibleTag;
 import package::lib::math::LOG10;
 
 // 'sunFromCamAu' is the Sun minus the frame's eye, composed in f64 on the CPU; 'exposure' the display
-// lift times the Layer's brightness; 'classFade' one lane per class, [cls >> 2][cls & 3].
-// 'hLimitCenti' the faintest stored H each class keeps under the brightness budget, laid out as
-// classFade. 'selectedRow' (0xFFFFFFFF = none) is exempt from it and from the flux floor 'minFlux', so
-// a followed dot always draws. 'maxPhaseDimMag' caps the phase dimming, for the dot only (the card keeps the physical V).
+// lift times the Layer's brightness; 'classFade' one lane per class. 'hLimitCenti' the faintest
+// stored H each class keeps under the brightness budget, one lane per class. 'selectedRow'
+// (0xFFFFFFFF = none) is exempt from it and from the flux floor 'minFlux', so a followed dot always
+// draws. 'maxPhaseDimMag' caps the phase dimming, for the dot only (the card keeps the physical V).
 struct KeplerUniforms {
   dtWholeDays: f32,
   dtFracDays: f32,
@@ -25,8 +25,8 @@ struct KeplerUniforms {
   selectedRow: u32,
   sunFromCamAu: vec3<f32>,
   exposure: f32,
-  classFade: array<vec4<f32>, 2>,
-  hLimitCenti: array<vec4<f32>, 2>,
+  classFade: vec4<f32>,
+  hLimitCenti: vec4<f32>,
   minFlux: f32,
   maxPhaseDimMag: f32,
 };
@@ -65,12 +65,12 @@ var<workgroup> groupBase: u32;
 fn shownRow(row: u32) -> vec4<f32> {
   let packed = extra[row].y;
   let cls = min(packed & CLASS_MASK, LAST_CLASS);
-  if ((packed & HIDDEN_FLAG) != 0u || kepler.classFade[cls >> 2u][cls & 3u] <= 0.0) {
+  if ((packed & HIDDEN_FLAG) != 0u || kepler.classFade[cls] <= 0.0) {
     return vec4<f32>(0.0);
   }
   let hCenti = packed >> 16u;
   // Ahead of the solve, so a row the budget drops costs no Kepler iterations.
-  if (f32(hCenti) > kepler.hLimitCenti[cls >> 2u][cls & 3u] && row != kepler.selectedRow) {
+  if (f32(hCenti) > kepler.hLimitCenti[cls] && row != kepler.selectedRow) {
     return vec4<f32>(0.0);
   }
   let a = elementsA[row];

@@ -50,10 +50,7 @@ export function parseAsteroidCatalog(buf: ArrayBuffer): AsteroidCatalog {
     return bytes[at]! | (bytes[at + 1]! << 8) | (bytes[at + 2]! << 16);
   };
   const a = new Float32Array(buf.slice(offsets[COLUMN.a]!, offsets[COLUMN.a]! + 4 * count));
-  const e = new Float32Array(count);
   const i = new Float32Array(count);
-  const node = new Float32Array(count);
-  const peri = new Float32Array(count);
   const m0 = new Float32Array(count);
   const hCenti = new Uint16Array(buf.slice(offsets[COLUMN.h]!, offsets[COLUMN.h]! + 2 * count));
   const g = bytes.slice(offsets[COLUMN.g]!, offsets[COLUMN.g]! + count);
@@ -69,18 +66,15 @@ export function parseAsteroidCatalog(buf: ArrayBuffer): AsteroidCatalog {
   }
   for (let k = 0; k < count; k++) {
     if (flags[k]! & F.flagAbsent) flags[k]! |= ASTEROID_HIDDEN_FLAG;
-    e[k] = u24(COLUMN.e, k) / F.u24Steps;
     i[k] = (u24(COLUMN.i, k) / F.u24Steps) * TAU;
-    node[k] = (u24(COLUMN.node, k) / F.u24Steps) * TAU;
-    peri[k] = (u24(COLUMN.peri, k) / F.u24Steps) * TAU;
     m0[k] = (u24(COLUMN.m0, k) / F.u24Steps) * TAU;
 
     const ak = a[k]!;
-    const ek = e[k]!;
+    const ek = Math.fround(u24(COLUMN.e, k) / F.u24Steps);
     const { pWorld, qWorld } = perifocalAxesWorld({
       inclinationRad: i[k]!,
-      ascendingNodeRad: node[k]!,
-      argPeriapsisRad: peri[k]!,
+      ascendingNodeRad: Math.fround((u24(COLUMN.node, k) / F.u24Steps) * TAU),
+      argPeriapsisRad: Math.fround((u24(COLUMN.peri, k) / F.u24Steps) * TAU),
     });
     const b = ak * Math.sqrt(1 - ek * ek);
     elementsA.set([ak * pWorld[0], ak * pWorld[1], ak * pWorld[2], ek], 4 * k);
@@ -95,10 +89,7 @@ export function parseAsteroidCatalog(buf: ArrayBuffer): AsteroidCatalog {
     epochJd,
     count,
     a,
-    e,
     i,
-    node,
-    peri,
     m0,
     elementsA,
     elementsB,

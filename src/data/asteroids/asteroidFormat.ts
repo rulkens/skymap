@@ -36,8 +36,6 @@ export const ASTEROID_FORMAT = {
   gDefault: 0.15,
   /** Flags bits 0–2 hold the index in ASTEROID_CLASSES. */
   flagClassMask: 0b111,
-  flagNeo: 1 << 3,
-  flagPha: 1 << 4,
   /** A placeholder row for a number missing upstream: never drawn, picked or searched. */
   flagAbsent: 1 << 5,
 } as const;

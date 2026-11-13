@@ -12,14 +12,11 @@ export type AsteroidCatalog = {
   readonly count: number;
   /** AU. */
   readonly a: Float32Array;
-  readonly e: Float32Array;
-  /** Radians, ecliptic J2000, as are node, peri and m0. */
+  /** Radians, ecliptic J2000, as is m0. */
   readonly i: Float32Array;
-  readonly node: Float32Array;
-  readonly peri: Float32Array;
   /** Mean anomaly at `epochJd`. */
   readonly m0: Float32Array;
-  /** 4 per row: A = a·P̂ (AU), then e. */
+  /** 4 per row: A = a·P̂ (AU), then e (the only e column). */
   readonly elementsA: Float32Array;
   /** 4 per row: B = a·√(1−e²)·Q̂ (AU), then n (rad/day). */
   readonly elementsB: Float32Array;

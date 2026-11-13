@@ -24,11 +24,11 @@ export const KEPLER_UNIFORM_OFFSETS = {
   sunFromCamAu: 16,
   exposure: 28,
   classFade: 32,
-  hLimitCenti: 64,
-  minFlux: 96,
-  maxPhaseDimMag: 100,
+  hLimitCenti: 48,
+  minFlux: 64,
+  maxPhaseDimMag: 68,
 } as const;
-export const KEPLER_UNIFORM_BYTES = 112;
+export const KEPLER_UNIFORM_BYTES = 80;
 export const KEPLER_WORKGROUP_SIZE = 64;
 /** triCorner: one triangle circumscribing the unit disc, half the vertex work of a quad. */
 const VERTICES_PER_DOT = 3;

@@ -9,6 +9,7 @@ import { MESH_ASTEROID_NUMBERS } from '../../../../src/layers/asteroids/catalog/
 import { keplerianPositionMpc } from '../../../../src/utils/orbit/keplerianPositionMpc';
 import { eccentricAnomalyFromMean } from '../../../../src/utils/orbit/eccentricAnomalyFromMean';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import { degToRad } from '../../../../src/utils/math/degToRad';
 
 const EPOCH = 2461200.5;
 const row = (number: number, over: Partial<MpcorbRow> = {}): MpcorbRow => ({
@@ -22,10 +23,7 @@ const row = (number: number, over: Partial<MpcorbRow> = {}): MpcorbRow => ({
   inclDeg: 22.8,
   e: 0.37,
   aAu: 2.44,
-  orbitType: 0,
   asteroidClass: 'mainBelt',
-  neo: false,
-  pha: false,
   name: null,
   ...over,
 });
@@ -34,18 +32,19 @@ const toBuffer = (bytes: Uint8Array): ArrayBuffer =>
 
 describe('parseAsteroidCatalog', () => {
   it("decoded basis gives keplerianPositionMpc's position at the epoch", () => {
-    const cat = parseAsteroidCatalog(toBuffer(writeAsteroidCatalog([row(1)], EPOCH).bytes));
-    // Same decoded f32 elements, through the scene's own path (ecliptic plane by default); a in AU
+    const input = row(1);
+    const cat = parseAsteroidCatalog(toBuffer(writeAsteroidCatalog([input], EPOCH).bytes));
+    // The row's own elements, through the scene's own path (ecliptic plane by default); a in AU
     // stands in for Mpc since the map is linear.
     const elements: OrbitalElements = {
       id: asSceneBodyId('asteroid'),
       focusId: asSceneBodyId('sun'),
-      semiMajorMpc: cat.a[0]!,
-      eccentricity: cat.e[0]!,
-      inclinationRad: cat.i[0]!,
-      ascendingNodeRad: cat.node[0]!,
-      argPeriapsisRad: cat.peri[0]!,
-      meanAnomalyRad: cat.m0[0]!,
+      semiMajorMpc: input.aAu,
+      eccentricity: input.e,
+      inclinationRad: degToRad(input.inclDeg),
+      ascendingNodeRad: degToRad(input.nodeDeg),
+      argPeriapsisRad: degToRad(input.argPeriDeg),
+      meanAnomalyRad: degToRad(input.meanAnomalyDeg),
       color: [0, 0, 0],
     };
     const expected = keplerianPositionMpc(elements);

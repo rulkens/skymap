@@ -102,10 +102,7 @@ export function writeAsteroidCatalog(
     const gFits = row.g !== null && row.g >= -F.gOffset && row.g <= 0xff / F.gScale - F.gOffset;
     if (row.g !== null && !gFits) defaultedG.push(row.number);
     bytes[at(COLUMN.g, k)] = Math.round(((gFits ? row.g! : F.gDefault) + F.gOffset) * F.gScale);
-    bytes[at(COLUMN.flags, k)] =
-      ASTEROID_CLASSES.indexOf(row.asteroidClass) |
-      (row.neo ? F.flagNeo : 0) |
-      (row.pha ? F.flagPha : 0);
+    bytes[at(COLUMN.flags, k)] = ASTEROID_CLASSES.indexOf(row.asteroidClass);
   }
   return { bytes, gaps, defaultedG };
 }

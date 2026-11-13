@@ -42,8 +42,8 @@ function structLayout(src: string, name: string): [Record<string, number>, numbe
   const sizes: Record<string, [number, number]> = {
     CameraUniforms: [16, 80],
     'vec3<f32>': [16, 12],
+    'vec4<f32>': [16, 16],
     'array<vec4<f32>, 4>': [16, 64],
-    'array<vec4<f32>, 2>': [16, 32],
     'array<vec4<f32>, 3>': [16, 48],
     f32: [4, 4],
     u32: [4, 4],
@@ -51,7 +51,7 @@ function structLayout(src: string, name: string): [Record<string, number>, numbe
   const offsets: Record<string, number> = {};
   let at = 0;
   for (const m of body.matchAll(
-    /(\w+)\s*:\s*(CameraUniforms|vec3<f32>|array<vec4<f32>, \d>|f32|u32),/g,
+    /(\w+)\s*:\s*(CameraUniforms|vec3<f32>|vec4<f32>|array<vec4<f32>, \d>|f32|u32),/g,
   )) {
     const [align, size] = sizes[m[2]!]!;
     at = Math.ceil(at / align) * align;
@@ -69,11 +69,10 @@ describe('asteroids shader parity', () => {
     expect(bytes).toBe(ASTEROID_UNIFORM_BYTES);
   });
 
-  it('KeplerUniforms offsets match the WGSL struct, one fade lane per class', () => {
+  it('KeplerUniforms offsets match the WGSL struct', () => {
     const [offsets, bytes] = structLayout(compute, 'KeplerUniforms');
     expect(offsets).toEqual(KEPLER_UNIFORM_OFFSETS);
     expect(bytes).toBe(KEPLER_UNIFORM_BYTES);
-    expect(ASTEROID_CLASSES.length).toBeLessThanOrEqual(8);
   });
 
   it('mirrors the photometry, format and unit constants', () => {

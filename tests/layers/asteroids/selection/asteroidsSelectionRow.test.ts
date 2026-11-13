@@ -74,7 +74,7 @@ describe('asteroidsSelectionRow', () => {
 
   it('card fields: H unknown for a row with no H, and no now values outside the window', () => {
     const unnamed = row.extractRow({ type: 'asteroid', number: 3 }, FIXTURE_EPOCH_JD)!;
-    expect(unnamed).toMatchObject({ label: '(3)', name: null, absoluteMagnitude: null });
+    expect(unnamed).toMatchObject({ label: '(3)', absoluteMagnitude: null });
     expect((unnamed as AsteroidSelectionRow).now!.magnitude).toBeNull();
     const inside = row.extractRow(ASTRAEA, FIXTURE_EPOCH_JD) as AsteroidSelectionRow;
     expect(Number.isFinite(inside.now!.magnitude)).toBe(true);

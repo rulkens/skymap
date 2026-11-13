@@ -9,8 +9,6 @@ import { decodePackedEpoch } from './decodePackedEpoch';
 import { decodePackedNumber } from './decodePackedNumber';
 
 const ORBIT_TYPE_MASK = 0x3f;
-const MPC_NEO_BIT = 1 << 11;
-const MPC_PHA_BIT = 1 << 15;
 const UNNAMED = /^\d{4} (?:[A-Z]{2}\d*|P-L|T-[123])$/;
 
 const field = (line: string, first: number, last: number): string =>
@@ -54,10 +52,7 @@ export function parseMpcorbLine(line: string): MpcorbRow {
     inclDeg: numberAt(line, 60, 68, 'incl'),
     e: numberAt(line, 71, 79, 'e'),
     aAu: numberAt(line, 93, 103, 'a'),
-    orbitType: flags & ORBIT_TYPE_MASK,
     asteroidClass: asteroidClassFromOrbitType(flags & ORBIT_TYPE_MASK),
-    neo: (flags & MPC_NEO_BIT) !== 0,
-    pha: (flags & MPC_PHA_BIT) !== 0,
     name: UNNAMED.test(readable[2]!) ? null : readable[2]!,
   };
 }

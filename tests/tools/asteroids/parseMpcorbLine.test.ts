@@ -27,24 +27,17 @@ describe('parseMpcorbLine', () => {
       inclDeg: 10.58803,
       e: 0.0796923,
       asteroidClass: 'mainBelt',
-      neo: false,
-      pha: false,
       name: 'Ceres',
     });
     expect(Math.abs(row.aAu - 2.7655526)).toBeLessThan(1e-7);
   });
 
-  it('reads the orbit type and the NEO and PHA bits from the flags', () => {
-    expect(parseMpcorbLine(APOPHIS)).toMatchObject({
-      asteroidClass: 'nearEarth',
-      neo: true,
-      pha: true,
-      name: 'Apophis',
-    });
+  it('reads the orbit type from the flags', () => {
+    expect(parseMpcorbLine(APOPHIS)).toMatchObject({ asteroidClass: 'nearEarth', name: 'Apophis' });
   });
 
   it('leaves a provisional or survey designation unnamed', () => {
-    expect(parseMpcorbLine(PROVISIONAL)).toMatchObject({ number: 620000, neo: true, name: null });
+    expect(parseMpcorbLine(PROVISIONAL)).toMatchObject({ number: 620000, name: null });
     expect(parseMpcorbLine(SURVEY).name).toBeNull();
   });
 

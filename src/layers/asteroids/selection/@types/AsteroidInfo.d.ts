@@ -9,8 +9,6 @@ import type { AsteroidNow } from './AsteroidNow';
 export type AsteroidInfo = {
   readonly type: 'asteroid';
   readonly number: number;
-  /** MPC's name; null for the unnamed majority. */
-  readonly name: string | null;
   /** `(433) Eros`, or `(123456)` when unnamed. */
   readonly label: string;
   readonly asteroidClass: AsteroidClass;

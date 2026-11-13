@@ -73,16 +73,14 @@ export function asteroidsSelectionRow(runtime: AsteroidsRuntime): SelectionKindR
         (earthMpc[1] - RENDER_ORIGIN_MPC[1]) / au,
         (earthMpc[2] - RENDER_ORIGIN_MPC[2]) / au,
       ];
-      const name = asteroidNameOf(names, ref.number);
       return {
         type: 'asteroid',
         number: ref.number,
-        name,
-        label: asteroidLabel(ref.number, name),
+        label: asteroidLabel(ref.number, asteroidNameOf(names, ref.number)),
         asteroidClass: asteroidClassOf(catalog, k),
         positionMpc,
         semiMajorAu: catalog.a[k]!,
-        eccentricity: catalog.e[k]!,
+        eccentricity: catalog.elementsA[4 * k + 3]!,
         inclinationDeg: catalog.i[k]! * RAD_TO_DEG,
         periodYears: (2 * Math.PI) / catalog.elementsB[4 * k + 3]! / DAYS_PER_YEAR,
         absoluteMagnitude: asteroidAbsoluteMagnitude(catalog, k),

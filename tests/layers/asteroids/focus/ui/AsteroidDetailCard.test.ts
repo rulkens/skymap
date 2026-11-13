@@ -10,7 +10,6 @@ import type { AsteroidInfo } from '../../../../../src/layers/asteroids/selection
 const INFO: AsteroidInfo = {
   type: 'asteroid',
   number: 3,
-  name: null,
   label: '(3)',
   asteroidClass: 'mainBelt',
   positionMpc: [0, 0, 0],

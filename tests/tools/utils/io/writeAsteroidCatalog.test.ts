@@ -17,10 +17,7 @@ const row = (number: number, over: Partial<MpcorbRow> = {}): MpcorbRow => ({
   inclDeg: 10.58803,
   e: 0.0796923,
   aAu: 2.7655526,
-  orbitType: 0,
   asteroidClass: 'jupiterTrojan',
-  neo: false,
-  pha: true,
   name: null,
   ...over,
 });
@@ -64,7 +61,7 @@ describe('writeAsteroidCatalog', () => {
     });
     expect(read.h(0) / F.hScale - F.hOffset).toBeCloseTo(input.h!, 6);
     expect(read.g(0) / F.gScale - F.gOffset).toBeCloseTo(input.g!, 6);
-    expect(read.flags(0)).toBe(ASTEROID_CLASSES.indexOf('jupiterTrojan') | F.flagPha);
+    expect(read.flags(0)).toBe(ASTEROID_CLASSES.indexOf('jupiterTrojan'));
   });
 
   it('a gap in numbering writes an ABSENT row and keeps row k = number k + 1', () => {

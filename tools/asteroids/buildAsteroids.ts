@@ -85,9 +85,6 @@ async function main(): Promise<void> {
   console.log(`buildAsteroids: ${rows.length} numbered rows read; epochs ${epochs}`);
   console.log(`buildAsteroids: ${gaps.length} gaps${gaps.length ? ` (${gaps.join(', ')})` : ''}`);
   console.log(
-    `buildAsteroids: ${rows.filter((r) => r.orbitType === 0).length} rows with orbit type 0, counted main belt`,
-  );
-  console.log(
     `buildAsteroids: ${rows.filter((r) => r.asteroidClass === null).length} rows with orbit type 10 written ABSENT`,
   );
   if (defaultedG.length)
