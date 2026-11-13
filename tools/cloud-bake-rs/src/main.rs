@@ -68,6 +68,11 @@ fn main() {
         fit.orbit.tn, fit.orbit.lon_n, fit.ltan, fit.median_dt_min
     );
     fetch::mosaics(&mosaics_dir, a.date, !a.offline).unwrap_or_else(|e| fail(&run, 3, &e));
+    let prev = a.date.plus_days(-1);
+    let prev_mosaics = fetch::day_dir(&a.cache, prev).join("mosaics");
+    if let Err(e) = fetch::mosaics(&prev_mosaics, prev, !a.offline) {
+        eprintln!("warning: {prev}: {e}; its date-line join stays straight");
+    }
 
     let ice = imageio::ice_sheets(&a.blue_marble);
     let base: Vec<f32> = imageio::baseline(&a.baseline)
@@ -81,6 +86,11 @@ fn main() {
         &subsample(&mosaics[0].op, H, W, 4),
         &subsample(&base, H, W, 4),
         &subsample(&mosaics[0].valid, H, W, 4),
+    );
+    let mosaics = sources::with_yesterday(
+        mosaics,
+        sources::load_mosaics(&prev_mosaics, &lut),
+        &display,
     );
     sources::hybridise(&mut orbits, &mosaics[0]);
 

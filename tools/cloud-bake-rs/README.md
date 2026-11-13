@@ -81,9 +81,21 @@ then the node time from when.
 `<cache>/<YYYY-MM-DD>/{granules,mosaics,geo,probe}/`: one directory per day, so evicting a day is
 deleting its directory. Files are written to `.part` and renamed, so a killed run leaves no
 valid-looking file. A cold day downloads about 90 MB (6 GIBS and 4 EUMETView connections), roughly
-2 minutes. `--offline` on a filled day reproduces the output byte for byte.
+2 minutes, plus 14 MB for the previous day's two mosaics if that day is not cached. `--offline` on a
+filled day (and its previous day's `mosaics/`) reproduces the output byte for byte.
 Registry row `clouds.cache`; upstreams and licences in
 [`data/raw/clouds/README.md`](../../data/raw/clouds/README.md).
+
+## Date line
+
+The GIBS daily mosaics are local-day composites, so mosaic D shows UTC D ~01:30 just east of 180° and
+UTC D+1 ~01:30 just west of it: a 24 h join on a straight line. The previous day's mosaic is continuous
+with today's across 180°, so `sources::join_dateline` seam-cuts it in over 35° west of the line (it must
+own the first degree, today's mosaic everything past 35°). The 24 h join then follows a low-difference
+path in that band, usually 2-8° west of 180°, instead of the meridian. Both mosaics of D-1 are fetched
+into its own day directory; without them (offline, or a failed download) the join stays straight. Known
+limits are in the backlog: in the mid-latitudes the path can still run straight for ~10°, and a D-local
+swath bordering the D-1 piece ghosts its large-scale cloud across it (2026-11-06).
 
 ## Assets
 
