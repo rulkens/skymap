@@ -1,0 +1,114 @@
+name: Live dataset (one)
+
+# Builds one live dataset and publishes it as dated, never-overwritten files plus a pointer
+# (live/v1/<id>.json). Called by live-datasets.yml.
+#
+# Secrets: R2_ACCESS_KEY_ID + R2_SECRET_ACCESS_KEY (an R2 token, Object Read & Write on skymap-data
+# only) and CLOUDFLARE_ACCOUNT_ID. Uploads go over R2's S3 API because wrangler's REST API has no
+# bucket-scoped permission: its token would reach every bucket in the account.
+
+on:
+  workflow_call:
+    inputs:
+      id:
+        type: string
+        required: true
+      build:
+        type: string
+        required: true
+      timeout-min:
+        type: number
+        required: true
+      # JSON array of { paths: string[], key: string }; at most two entries are honoured.
+      caches:
+        type: string
+        default: '[]'
+
+permissions:
+  contents: read
+
+# Two jobs so the R2 key never shares a runner with npm: an install script in `build` could tamper
+# with the runner (PATH, binaries) and catch the key in a later step. `upload` has no checkout and
+# no npm; it only receives the built files and publish.json.
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ inputs.timeout-min }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - run: npm ci
+
+      # A workflow cannot loop a step, so two optional cache slots; a third cache means a third step.
+      - name: Cache 1
+        if: fromJson(inputs.caches)[0] != null
+        uses: actions/cache@v4
+        with:
+          path: ${{ join(fromJson(inputs.caches)[0].paths, '\n') }}
+          key: ${{ fromJson(inputs.caches)[0].key }}
+
+      - name: Cache 2
+        if: fromJson(inputs.caches)[1] != null
+        uses: actions/cache@v4
+        with:
+          path: ${{ join(fromJson(inputs.caches)[1].paths, '\n') }}
+          key: ${{ fromJson(inputs.caches)[1].key }}
+
+      # The build script exits non-zero on bad data, so an upstream outage never reaches R2.
+      - name: Build
+        run: npm run "${{ inputs.build }}"
+
+      - name: List the uploads
+        run: npm run -s live-publish-list -- "${{ inputs.id }}"
+
+      - name: Hand the files to the upload job
+        uses: actions/upload-artifact@v6
+        with:
+          name: live-${{ inputs.id }}
+          path: |
+            public/data/live/
+            publish.json
+          if-no-files-found: error
+          retention-days: 1
+
+  upload:
+    name: upload
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: live-${{ inputs.id }}
+          path: built
+
+      # publish.json lists dated files first and the pointer last, so a visitor who reads the new
+      # pointer finds its files already there. Gzipped files go up with Content-Encoding gzip like
+      # the R2 sync's gzipOnWire families; browsers inflate them transparently.
+      - name: Upload to R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          jq -c '.[]' built/publish.json | while read -r entry; do
+            src="built/public/data/$(jq -r .path <<<"$entry")"
+            args=(--content-type "$(jq -r .contentType <<<"$entry")" --cache-control "$(jq -r .cacheControl <<<"$entry")")
+            if [ "$(jq -r .gzip <<<"$entry")" = true ]; then
+              gzip -9 -n -c "$src" > "$RUNNER_TEMP/upload.gz"
+              src="$RUNNER_TEMP/upload.gz"
+              args+=(--content-encoding gzip)
+            fi
+            aws s3 cp "$src" "s3://skymap-data/$(jq -r .key <<<"$entry")" \
+              --endpoint-url "https://$CLOUDFLARE_ACCOUNT_ID.r2.cloudflarestorage.com" "${args[@]}"
+          done
