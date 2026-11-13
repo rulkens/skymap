@@ -112,6 +112,10 @@ export type DisplaySectionProps = {
   bloomThreshold: number;
   /** Called with the new threshold as the slider drags. */
   onBloomThresholdChange: (next: number) => void;
+  /** Whether the film look (grain, glow, softer lens) is on. */
+  filmEnabled: boolean;
+  /** Called with the toggled flag when the Film look header toggle is clicked. */
+  onFilmEnabledChange: (next: boolean) => void;
 };
 
 // ── DisplaySection ─────────────────────────────────────────────────────────────
@@ -143,6 +147,8 @@ function DisplaySection({
   onBloomStrengthChange,
   bloomThreshold,
   onBloomThresholdChange,
+  filmEnabled,
+  onFilmEnabledChange,
 }: DisplaySectionProps) {
   return (
     <CollapsibleSection title="Display">
@@ -234,6 +240,16 @@ function DisplaySection({
             onChange={onBloomThresholdChange}
             format={(v) => v.toFixed(1)}
           />
+        </div>
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        title="Film look"
+        headerToggle={filmEnabled}
+        onHeaderToggleChange={onFilmEnabledChange}
+      >
+        <div className={styles.panelRow}>
+          <label>Grain, glow and a softer lens, like a filmed shot.</label>
         </div>
       </CollapsibleSection>
 
