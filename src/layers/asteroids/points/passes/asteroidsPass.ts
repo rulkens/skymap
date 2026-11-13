@@ -22,7 +22,6 @@ import { SELECTION_NONE_SENTINEL } from '../../../../data/selectionEncoding';
 import { asteroidWindowFade } from '../../kepler/utils/asteroidWindowFade';
 import { asteroidsDrawn } from '../../kepler/utils/asteroidsDrawn';
 import { asteroidHelioAu } from '../../kepler/utils/asteroidHelioAu';
-import { asteroidClassFade } from '../../kepler/utils/asteroidClassFade';
 import { asteroidSunFromCamAu } from '../../kepler/utils/asteroidSunFromCamAu';
 import { selectedAsteroidRows } from '../../selection/utils/selectedAsteroidRows';
 import { asteroidBeltColors } from '../utils/asteroidBeltColors';
@@ -34,11 +33,10 @@ export function asteroidsPass(runtime: AsteroidsRuntime): ContentPass<'asteroids
     view: SlabView,
     ctx: FrameView,
     state: PassState,
-    layerFade: Readonly<Record<AsteroidClass, number>>,
+    fade: Readonly<Record<AsteroidClass, number>>,
     depth: SampledDepthBinding,
   ): AsteroidPointFrame => {
     const eye = view.camPos;
-    const fade = asteroidClassFade(layerFade, eye);
     const sunFromCamAu = asteroidSunFromCamAu(eye);
     // The followed dot is placed in f64 here: the shader's f32 helio + sunFromCamAu would jitter
     // it against the camera that is following the f64 CPU mirror.

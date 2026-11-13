@@ -8,7 +8,6 @@ import type { ContentCompute } from '../../../../@types/engine/frame/ContentComp
 import type { AsteroidsRuntime } from '../../@types/AsteroidsRuntime';
 import { SELECTION_NONE_SENTINEL } from '../../../../data/selectionEncoding';
 import { asteroidsDrawn } from '../utils/asteroidsDrawn';
-import { asteroidClassFade } from '../utils/asteroidClassFade';
 import { asteroidSunFromCamAu } from '../utils/asteroidSunFromCamAu';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { ASTEROID_CLASSES } from '../../../../data/asteroids/asteroidClasses';
@@ -24,10 +23,9 @@ export function asteroidKeplerCompute(runtime: AsteroidsRuntime): ContentCompute
     name: 'asteroid-kepler',
     scope: 'once',
     fade: 'asteroids',
-    encode(encoder, ctx, state, claimTimestampWrites, layerFade) {
+    encode(encoder, ctx, state, claimTimestampWrites, fade) {
       const { simDays } = ctx.snapshot;
-      if (!asteroidsDrawn(layerFade, simDays)) return;
-      const fade = asteroidClassFade(layerFade, ctx.drawCamPos);
+      if (!asteroidsDrawn(fade, simDays)) return;
       const sunFromCamAu = asteroidSunFromCamAu(ctx.drawCamPos);
       const catalog = runtime.slot.current()?.catalog;
       const selectedRow = catalog ? selectedAsteroidRows(state.selection, catalog)[0] : undefined;
