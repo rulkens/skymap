@@ -52,11 +52,10 @@ vi.mock('../../../../src/services/engine/frame/deriveBodyStates', async (importO
 import { runFrame } from '../../../../src/services/engine/frame/runFrame';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/drivers/cameraDrivers';
-import { NAV_AT_REST } from '../../../../src/data/camera/openSpaceNavigation';
 import { composeControlSchemes } from '../../../../src/services/engine/camera/composeControlSchemes';
+import { seedCameraRuntime } from '../../../../src/services/engine/camera/seedCameraRuntime';
 import { reevaluateDemand } from '../../../../src/services/engine/wiring/reevaluateDemand';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
-import { UNSTARTED_EPOCHS } from '../../../../src/services/engine/camera/drivers/cameraEpochs';
 import {
   startCameraTween,
   setAutoRotate,
@@ -85,7 +84,6 @@ import type { DriverId } from '../../../../src/@types/engine/camera/DriverId';
 import type { ClipPlayer } from '../../../../src/@types/engine/subsystems/ClipPlayer';
 import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/FrameContentPlanner';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
-import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/layers/galaxyCatalog/state/defaults';
 import { createRecedingFocusSubsystem } from '../../../../src/services/engine/subsystems/recedingFocusSubsystem';
 import {
   inputSourceAttached,
@@ -93,8 +91,6 @@ import {
   inputMoved,
   inputConsumed,
 } from '../../../../src/state/input/inputSlice';
-import { EMPTY_SURFACE_GESTURE_MEMORY } from '../../../../src/services/engine/camera/arms/body/gesture/surfaceStep';
-import { EMPTY_TILT_MEMORY } from '../../../../src/services/engine/camera/data/emptyTiltMemory';
 import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
 import { worldArmOf } from '../../../fixtures/worldArmOf';
 import { earthArm } from '../../../fixtures/earthArm';
@@ -117,91 +113,28 @@ function makeStore() {
 /** `earthArm` measures in Earth radii; the scale-bar case reads back in km. */
 const EARTH_RADIUS_KM = 6371;
 
-/** Minimal `EngineState`-shaped fixture; casting through `unknown` makes a read of any unstubbed
+/** Where every fixture's camera starts; the stream band case measures against it. */
+const BOOT_POSE = absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 });
+
+/** Only what a not-ready frame reads; casting through `unknown` makes a read of any unstubbed
  *  field surface as a runtime undefined rather than a silently-passing stub. */
 function makeState(): EngineState {
   return {
-    settings: {
-      galaxyCatalogs: {
-        enabled: true,
-        sizePx: 2,
-        brightness: 0.5,
-        depthFade: false,
-        provenance: DEFAULT_GALAXY_PROVENANCE,
-      },
-      tonemap: { exposure: 1, curve: 'linear' },
-      bias: { mode: 'off', absMagLimit: -19 },
-      thumbnails: { enabled: false },
-      // aggregateDivisor is what the `mw-aggregate` row's `scale` function
-      // resolves on every reconcile, so the fixture carries its boot value
-      // rather than leaving that reader to resolve undefined.
-      milkyWay: { enabled: false, cloud: { aggregateDivisor: 2 } },
-      cosmicWebFilaments: { enabled: false, intensity: 1 },
-      cosmicWebDensity: { enabled: false },
-    },
-    picking: {
-      pickInFlight: false,
-    },
-    gpu: {
-      galaxyPointRenderer: null,
-      galaxyPickRenderer: null,
-      renderTargets: null,
-    },
+    gpu: { renderTargets: null },
     subsystems: {
       scheduler: { requestRender: vi.fn() },
-      fades: { opacityOf: () => 0 },
-      selection: {
-        hovered: () => null,
-        selected: () => null,
-        focused: () => null,
-        setHovered: vi.fn(),
-        setSelected: vi.fn(),
-        setFocused: vi.fn(),
-        destroy: vi.fn(),
-      },
-      clipPlayer: {
-        tick: vi.fn<ClipPlayer['tick']>((clipEpoch) => ({ clipEpoch })),
-        stop: vi.fn<() => void>(),
-        clipOpacityOf: vi.fn<(layer: string, nowMs: number) => number>(() => 1),
-        destroy: vi.fn<() => void>(),
-      },
-      galaxyAtlas: null,
-      proceduralDisks: null,
-      texturedDisks: null,
-      pickDriver: null,
-      resizeWake: null,
-      loadProgress: null,
+      clipPlayer: { tick: vi.fn<ClipPlayer['tick']>((clipEpoch) => ({ clipEpoch })) },
     },
     booted: false,
     viewRig: 'mono',
     terrainHeightAt: datumOnlyTerrainHeight,
-    cameraRuntime: {
-      register: {
-        pose: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }),
-        winner: 'resting',
-      },
-      base: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }),
-      // Must match the store's orientation, or frame one reads a phantom switch.
-      orientation: DEFAULT_ORIENTATION,
-      epochs: UNSTARTED_EPOCHS,
-      follow: null,
-      gesture: EMPTY_SURFACE_GESTURE_MEMORY,
-      tilt: EMPTY_TILT_MEMORY,
-      navigator: NAV_AT_REST,
-      scheme: 'skymap',
-      own: {},
-      pivotBody: null,
-      shiftNdc: [0, 0],
-      outputs: {
-        displayed: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }),
-        simDays: 0,
-        upBasis: [...ORIENTATION_FRAMES.ecliptic],
-        projection: { fovYRad: 0.8, aspect: 1, near: 0.01, far: 1000 },
-      },
-    },
+    // The real seeder over a default store holding the boot pose, so the orientation
+    // and scheme match every test's fresh store and no runtime field is hand-kept.
+    cameraRuntime: seedCameraRuntime({
+      state: rootReducer(undefined, commitCameraPose(BOOT_POSE)),
+      projection: { fovYRad: 0.8, aspect: 1, near: 0.01, far: 1000 },
+    }),
     label3DProducers: [],
-    // Read unconditionally by `runFrame`'s NEAR0 altitude line, before the
-    // ready gate.
     selectionRows: { focus: null },
     selection: { hover: null, select: null, focus: null },
   } as unknown as EngineState;
@@ -244,6 +177,34 @@ function makeCamDeps(state: EngineState, store = makeStore()): RunFrameDeps {
     } as unknown as HTMLCanvasElement,
     controlSchemes: composeControlSchemes([]),
   };
+}
+
+/** A READY fixture: both `isEngineReady` handles are non-null, so the body runs past the label
+ *  directors and the keep-ticking fold. `renderFrame`/`drawPickDebugOverlay` are mocked at module
+ *  scope; `subsystems` overrides what a case drives. */
+function makeReadyState(subsystems: Record<string, unknown> = {}): EngineState {
+  const base = makeCamState();
+  return {
+    ...base,
+    slabRows: [],
+    visibilityEntries: [],
+    cubemapCaptures: makeCubemapCaptureRuntimes(),
+    gpu: {
+      renderTargets: { reconcile: vi.fn() },
+      compositor: {},
+      label3DRenderer: { setLabels: vi.fn() },
+    },
+    subsystems: {
+      ...base.subsystems,
+      scheduler: { requestRender: vi.fn(), requestIdleFrame: vi.fn() },
+      clipPlayer: { ...base.subsystems.clipPlayer, clipOpacityOf: () => 1 },
+      recedingFocus: createRecedingFocusSubsystem({ requestRender: vi.fn() }),
+      fades: { tick: vi.fn(), opacityOf: () => 0, isAnyAnimating: () => false },
+      cosmoLabelDirector: { runFrame: vi.fn(() => false) },
+      foregroundLabelDirector: { runFrame: vi.fn(() => false) },
+      ...subsystems,
+    },
+  } as unknown as EngineState;
 }
 
 describe('runFrame — the input drain runs before the produce step', () => {
@@ -795,60 +756,14 @@ describe('runFrame — engineScaleChanged dispatch', () => {
 });
 
 describe('runFrame — the label-director wake fold', () => {
-  /** A fully READY fixture (every `isEngineReady` field non-null) so the body runs past the two label
-   *  directors. Per-frame planners between the ready gate and the directors are left null so their
-   *  blocks skip; `renderFrame`/`drawPickDebugOverlay` are mocked at module scope. */
-  function makeReadyState(
-    cosmoRunFrame: () => boolean,
-    foregroundRunFrame: () => boolean,
-  ): EngineState {
-    const base = makeCamState();
-    return {
-      ...base,
-      settings: {
-        ...base.settings,
-        flow: { enabled: false },
-        bodies: { items: { sun: { enabled: false }, 's-star': { enabled: false } } },
-      },
-      slabRows: [],
-      visibilityEntries: [],
-      selectionRows: { focus: null },
-      // Empty over the empty composition: runFrame's Layer-hook loop iterates this every ready frame.
-      layers: [],
-      cubemapCaptures: makeCubemapCaptureRuntimes(),
-      gpu: {
-        ...base.gpu,
-        galaxyPointRenderer: {},
-        galaxyPickRenderer: {},
-        renderTargets: { reconcile: vi.fn() },
-        compositor: {},
-        starCatalogRenderer: null,
-        label3DRenderer: { setLabels: vi.fn() },
-      },
-      subsystems: {
-        ...base.subsystems,
-        texturedDisks: { hasInFlightWork: () => false },
-        proceduralDisks: null,
-        diskPlannerWalk: null,
-        hiResFamous: null,
-        recedingFocus: createRecedingFocusSubsystem({ requestRender: vi.fn() }),
-        fades: { tick: vi.fn(), opacityOf: () => 0, isAnyAnimating: () => false },
-        cosmoLabelDirector: { runFrame: vi.fn(cosmoRunFrame) },
-        foregroundLabelDirector: { runFrame: vi.fn(foregroundRunFrame) },
-      },
-    } as unknown as EngineState;
-  }
-
   it("a director voting true does not prevent its siblings' flush", () => {
     // spec §12's short-circuit trap: `a() || b() || c()` would never call
     // `b()`/`c()` once `a()` returns true, silently dropping a later
     // statement's GPU flush the moment an earlier one votes to keep
     // animating. `runLabel3DProducers` is the newest of the three and the
     // one most likely to get folded into the `||` chain later — pin it too.
-    const state = makeReadyState(
-      () => true, // COSMO votes true — must NOT short-circuit the calls below
-      () => false,
-    );
+    // COSMO votes true — must NOT short-circuit the calls below.
+    const state = makeReadyState({ cosmoLabelDirector: { runFrame: vi.fn(() => true) } });
     const deps = makeCamDeps(state);
 
     runFrame(state, deps, 0);
@@ -856,14 +771,13 @@ describe('runFrame — the label-director wake fold', () => {
     expect(state.subsystems.cosmoLabelDirector.runFrame).toHaveBeenCalledTimes(1);
     expect(state.subsystems.foregroundLabelDirector.runFrame).toHaveBeenCalledTimes(1);
     expect(state.gpu.label3DRenderer!.setLabels).toHaveBeenCalledTimes(1);
+    // One vote is enough to keep the loop awake: the three fold with OR.
+    expect(state.subsystems.scheduler.requestRender).toHaveBeenCalled();
   });
 
   it('the outgoing focused structure keeps full emphasis through the fade-out', () => {
     const VIRGO_WORD = 42;
-    const base = makeReadyState(
-      () => false,
-      () => false,
-    );
+    const base = makeReadyState();
     const recedingFocus = createRecedingFocusSubsystem({ requestRender: vi.fn() }, 0);
     const state = {
       ...base,
@@ -907,10 +821,7 @@ describe('runFrame — the label-director wake fold', () => {
 
   it('a focused stream ramps the blend under its own pick word, its subjectOnly region as the recede-all sphere', () => {
     const STREAM_WORD = 7;
-    const base = makeReadyState(
-      () => false,
-      () => false,
-    );
+    const base = makeReadyState();
     const stream = { type: 'stellarStream', slug: 'cetus-palca' };
     const state = {
       ...base,
@@ -936,10 +847,7 @@ describe('runFrame — the label-director wake fold', () => {
 
   describe("a focused stream recedes the scene only while the streams' show entry is visible", () => {
     function focusedStreamFrame(visibilityEntries: readonly VisibilityEntry[], fade: number) {
-      const base = makeReadyState(
-        () => false,
-        () => false,
-      );
+      const base = makeReadyState();
       const recedingFocus = createRecedingFocusSubsystem({ requestRender: vi.fn() }, 0);
       const state = {
         ...base,
@@ -991,57 +899,8 @@ describe('runFrame — the label-director wake fold', () => {
 });
 
 describe('runFrame — the planner keep-ticking fold', () => {
-  /** A fully READY fixture. `renderFrame` is mocked at module scope; a test needing a planner vote
-   *  mutates `input.canvas.snapshot.plans` from inside that mock, as the real `renderFrame` would via
-   *  `runPlanSteps`; `runFrame` only folds the result (`snapshot.plans.awake`). */
-  function makeReadyState(): EngineState {
-    const base = makeCamState();
-    return {
-      ...base,
-      settings: {
-        ...base.settings,
-        flow: { enabled: false },
-        bodies: { items: { sun: { enabled: false }, 's-star': { enabled: false } } },
-      },
-      slabRows: [],
-      visibilityEntries: [],
-      selectionRows: { focus: null },
-      layers: [],
-      cubemapCaptures: makeCubemapCaptureRuntimes(),
-      gpu: {
-        ...base.gpu,
-        galaxyPointRenderer: {},
-        galaxyPickRenderer: {},
-        renderTargets: { reconcile: vi.fn() },
-        compositor: {},
-        starCatalogRenderer: null,
-        label3DRenderer: { setLabels: vi.fn() },
-      },
-      subsystems: {
-        ...base.subsystems,
-        // At rest, keepTicking is false and the still-live sim clock falls
-        // through to the idle-tick arm.
-        scheduler: { requestRender: vi.fn(), requestIdleFrame: vi.fn() },
-        texturedDisks: { hasInFlightWork: () => false },
-        proceduralDisks: null,
-        diskPlannerWalk: null,
-        hiResFamous: null,
-        recedingFocus: {
-          update: vi.fn(),
-          produceFocus: vi.fn(() => ({
-            uniforms: { center: [1, 2, 3], apparentRadiusMpc: 1, physicalRadiusMpc: 1, blend: 0.5 },
-            blend: 0.5,
-            ref: null,
-          })),
-          isAwake: () => false,
-        },
-        fades: { tick: vi.fn(), opacityOf: () => 0, isAnyAnimating: () => false },
-        cosmoLabelDirector: { runFrame: () => false },
-        foregroundLabelDirector: { runFrame: () => false },
-      },
-    } as unknown as EngineState;
-  }
-
+  // A case needing a planner vote mutates `input.canvas.snapshot.plans` from inside the mocked
+  // `renderFrame`, as the real one would via `runPlanSteps`; `runFrame` only folds the result.
   it('a frame otherwise at rest, with no planner voting awake, does not keep the loop ticking', () => {
     const state = makeReadyState();
     runFrame(state, makeCamDeps(state), 0);
