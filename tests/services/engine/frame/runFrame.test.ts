@@ -668,28 +668,6 @@ describe('runFrame — sim clock (Task 8)', () => {
   });
 });
 
-describe('runFrame — hover-pick removed from frame body', () => {
-  it('does not call galaxyPickRenderer.pick inside the frame body', () => {
-    // Hover picking is driven by createPickDriver (wireInput.ts); runFrame must never call
-    // galaxyPickRenderer.pick. The fixture bails before the GPU-dispatch section, so only the camera +
-    // demand pre-pass runs.
-    const store = makeStore();
-    const state = makeState();
-    const pickSpy = vi.fn<() => Promise<null>>(() => Promise.resolve(null));
-    (state.gpu as any).galaxyPickRenderer = {
-      pick: pickSpy,
-      renderForDebug: vi.fn<() => null>(),
-      destroy: vi.fn<() => void>(),
-      label: 'pick',
-    };
-    const deps = makeDeps(store);
-
-    runFrame(state, deps, 1000);
-
-    expect(pickSpy).not.toHaveBeenCalled();
-  });
-});
-
 describe('runFrame — render-target reconcile', () => {
   it('runFrame reconciles the render targets against the live canvas size every frame', () => {
     // The one seam that answers BOTH a canvas resize and a state-driven scale

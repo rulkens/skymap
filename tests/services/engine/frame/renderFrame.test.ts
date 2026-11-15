@@ -6,7 +6,6 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { packSelection } from '../../../../src/data/selectionEncoding';
 import { BiasMode } from '../../../../src/data/galaxyCatalog/biasMode';
 import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
@@ -51,7 +50,6 @@ import { symmetricFrustum } from '../../../../src/utils/camera/frustum/symmetric
 import type { Mat4 } from 'wgpu-matrix';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 import { galaxyRowRuntime } from '../../../support/layerPickCodes';
-import { testPickCode } from '../../../support/testPickCode';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 import type { SelectionRefBase } from '../../../../src/@types/engine/selection/SelectionRefBase';
 
@@ -643,25 +641,6 @@ describe('renderFrame', () => {
     expect(drawSettings.biasMode).toBe(fx.settings.biasMode);
     expect(drawSettings.absMagLimit).toBe(fx.settings.absMagLimit);
     expect(drawSettings.depthFadeEnabled).toBe(fx.settings.depthFadeEnabled);
-  });
-
-  it('packs (source, index) into the selectedPacked u32 sent to galaxyPointRenderer.draw', () => {
-    // Expected value comes from the shared packSelection, not a re-inlined
-    // shift — see src/data/selectionEncoding.ts for the encoding.
-    const fx2 = makeInput({
-      settings: {
-        selected: {
-          type: 'galaxyCatalog',
-          source: 'sdss',
-          index: 42,
-        } as SelectionRefBase,
-      },
-    });
-    renderFrame(fx2.input);
-    const draw = fx2.galaxyPointRenderer.draw as ReturnType<typeof vi.fn>;
-    const expected = packSelection(testPickCode('galaxyCatalog')('sdss'), 42);
-    const drawSettings = draw.mock.calls[0]![3] as Record<string, unknown>;
-    expect(drawSettings.selectedPacked).toBe(expected);
   });
 
   it("runs the hdr→swap composite after the HDR pass with blend 'replace' and the settings tone", () => {

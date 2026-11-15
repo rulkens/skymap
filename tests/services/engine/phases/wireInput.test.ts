@@ -31,21 +31,6 @@ vi.mock('../../../../src/services/engine/camera/framing/homePose', () => ({
   homePose: (...args: unknown[]) => homePoseSpy(...(args as Parameters<typeof homePoseSpy>)),
 }));
 
-vi.mock('../../../../src/layers/galaxyCatalog/records/present/buildGalaxyInfo', () => ({
-  buildGalaxyInfo: vi.fn(),
-}));
-
-vi.mock('../../../../src/layers/galaxyCatalog/pointSprites/render/galaxyPickRenderer', () => ({
-  createGalaxyPickRenderer: vi.fn(() => ({ destroy: vi.fn() })),
-}));
-
-// The content-layer registry pulls in every layer module (heavy GPU deps);
-// wireInput only needs the array to hand to createPickProgram, so an empty
-// stub is enough and keeps the phase test free of the full renderer graph.
-vi.mock('../../../../src/services/engine/frame/passes', () => ({
-  CONTENT_PASSES: [],
-}));
-
 vi.mock('../../../../src/services/engine/frame/pickProgram', () => ({
   createPickProgram: vi.fn(() => ({
     label: 'pickProgram',

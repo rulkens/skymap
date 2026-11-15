@@ -32,22 +32,8 @@ import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { SourceId } from '../../../../src/@types/data/SourceId';
 
 // Every fetcher is a no-op resolved Promise: slots whose `.load()` fires inside wireSlots
-// (famousGalaxiesMeta, filaments, the density cubes) just need to reach `ready`. The per-source point
+// (the structure catalog, the density cubes) just need to reach `ready`. The per-source point
 // slots, the only ones with a commit step, are injected as fakes.
-
-vi.mock('../../../../src/layers/cosmicWebFilaments/filaments/load/filamentFetcher', () => ({
-  filamentFetcher: vi.fn(async () => ({
-    stripCount: 0,
-    vertexCount: 0,
-    strips: [] as unknown[],
-  })),
-}));
-
-// famousStarsMeta demands unconditionally at boot, so its fetcher fires inside
-// every wireSlots run; mock it so the test doesn't network.
-vi.mock('../../../../src/services/loading/fetchers/famousStarsMetaFetcher', () => ({
-  famousStarsMetaFetcher: vi.fn(async () => ({ meta: [] })),
-}));
 
 // The structure-catalog slot fires `.load({})` at boot; mock its fetcher so
 // the test doesn't network.  An empty catalog is enough: only whether it
@@ -114,7 +100,6 @@ import { createCosmicWebDensitySlot } from '../../../../src/layers/cosmicWebDens
 import { cosmicWebDensityAssetRows } from '../../../../src/layers/cosmicWebDensity/densityCubes/load/cosmicWebDensityAssetRows';
 import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../../../../src/layers/cosmicWebDensity/sources/cosmicWebDensitySourceRows';
 import type { CosmicWebDensityRuntime } from '../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
-import { filamentFetcher } from '../../../../src/layers/cosmicWebFilaments/filaments/load/filamentFetcher';
 import { loadDataManifest } from '../../../../src/services/loading/dataManifest';
 import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
@@ -180,13 +165,6 @@ const readyValue = (count: number): LoadState<unknown> => ({
   req: {},
   value: { count },
   loadedAtMs: 0,
-});
-
-const errorValue = (msg: string): LoadState<unknown> => ({
-  kind: 'error',
-  req: {},
-  error: new Error(msg),
-  finalAttempt: 1,
 });
 
 /** Minimal post-`initGpu` `EngineState`: GPU renderers present (commit subscribers don't NPE),
@@ -482,7 +460,6 @@ describe('wireSlots', () => {
     // fetcher, cleared first because module-scoped mocks persist across tests. (mcpm-boots /
     // polyphorm-2mrs-idle coverage lives in demandTable.test and cosmicWebDensityAssetRows.test.)
     vi.mocked(structureCatalogFetcher).mockClear();
-    vi.mocked(filamentFetcher).mockClear();
 
     const state = makeState({ points: bootPointSlots() });
     const deps = makeDeps();
@@ -493,7 +470,6 @@ describe('wireSlots', () => {
     // Default-on / structures-visible => fetched; the famous-meta sidecar is the Layer's slot, observed on the stub.
     expect(structureCatalogFetcher).toHaveBeenCalled();
     expect(state.slotsByKey.get('famousGalaxiesMeta')!.load).toHaveBeenCalled();
-    expect(filamentFetcher).not.toHaveBeenCalled();
     expect(state.slotsByKey.get('pgcAlias')!.load).not.toHaveBeenCalled();
   });
 
