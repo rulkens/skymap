@@ -210,7 +210,7 @@ describe('CAMERA_DRIVERS — clip pins the frame it started under', () => {
   it('a clip playing across an orientation switch keeps its world aim', () => {
     const store = makeStore();
     store.dispatch(setOrientation('ecliptic'));
-    store.dispatch(clipStarted({ data: CLIP_WITH_AIM, frame: 'ecliptic' }));
+    store.dispatch(clipStarted({ data: CLIP_WITH_AIM, frame: 'ecliptic', by: 'player' }));
     const elapsed = 2;
 
     // Sample #1: settings.orientation still matches the pinned frame.
@@ -333,7 +333,7 @@ describe('pickWinner', () => {
     // clip@95 outranks orbitDrag@80.
     const store = makeStore();
     store.dispatch(inputGestureStarted({ source: 'canvas', intent: 'orbit' }));
-    store.dispatch(clipStarted({ data: CLIP_DATA, frame: DEFAULT_ORIENTATION }));
+    store.dispatch(clipStarted({ data: CLIP_DATA, frame: DEFAULT_ORIENTATION, by: 'player' }));
     const s = store.getState() as unknown as RootState;
     const drivers = CAMERA_DRIVERS;
     expect(pickWinner(drivers, s, APPROACHING).id).toBe('clip');
@@ -476,7 +476,7 @@ describe("the winner's elapsed", () => {
       timeline: [{ kind: 'set', ch: 'yaw', to: 2, over: 3, ease: 'linear', space: 'lin' }],
     };
     const store = makeStore();
-    store.dispatch(clipStarted({ data: clipData, frame: DEFAULT_ORIENTATION }));
+    store.dispatch(clipStarted({ data: clipData, frame: DEFAULT_ORIENTATION, by: 'player' }));
     const s = store.getState() as unknown as RootState;
     const drivers = CAMERA_DRIVERS;
     const installMs = 1000;

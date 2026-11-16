@@ -14,6 +14,7 @@ import type { FramedCameraPose } from '../../camera/pose/FramedCameraPose';
 import type { OrientationFrameId } from '../../camera/orientation/OrientationFrameId';
 import type { CameraArmMemory } from '../../camera/arms/CameraArmMemory';
 import type { TiltMemory } from '../../camera/orientation/TiltMemory';
+import type { ZoomLimitPress } from '../../camera/input/ZoomLimitPress';
 import type { FrameOutputs } from './FrameOutputs';
 import type { SceneBodyId } from '../../scene/SceneBodyId';
 import type { Vec2 } from '../../math/Vec2';
@@ -42,12 +43,18 @@ export type CameraRuntime = {
   readonly scheme: ControlSchemeId;
   /** Each row's private memory, as its `pose` last returned it; core never reads or drops it. */
   readonly own: Readonly<Partial<Record<DriverId, unknown>>>;
-  /** The last winner's `pivotBody`: the wheel's pivot over the focus while it frames a body. */
-  readonly pivotBody: SceneBodyId | null;
-  /** Last frame's driver-drawn lens (a clip's `fov`) and the `camera.intent.fovYRad` it drew over: the
-   * hand-off commits `drawn` only while the store still holds `over`, so an outside write wins. */
-  readonly drivenFovYRad: { readonly drawn: number; readonly over: number } | null;
-  /** The lens shift drawn last frame, in NDC: eased toward the covers' target, so it is memory. */
-  readonly shiftNdc: Readonly<Vec2>;
+  readonly lens: {
+    /** Last frame's driver-drawn lens (a clip's `fov`) and the `camera.intent.fovYRad` it drew over:
+     * the hand-off commits `drawn` only while the store still holds `over`, so an outside write wins. */
+    readonly driven: { readonly drawn: number; readonly over: number } | null;
+    /** The shift drawn last frame, in NDC: eased toward the covers' target, so it is memory. */
+    readonly shiftNdc: Readonly<Vec2>;
+  };
+  readonly wheel: {
+    /** The last winner's `pivotBody`: the wheel's pivot over the focus while it frames a body. */
+    readonly pivotBody: SceneBodyId | null;
+    /** Zoom spent against a limit by the notches since the last fresh one (`zoomLimitPressStep`). */
+    readonly limitPress: ZoomLimitPress | null;
+  };
   readonly outputs: FrameOutputs;
 };

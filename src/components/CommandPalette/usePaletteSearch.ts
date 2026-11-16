@@ -19,6 +19,7 @@ import type { AliasIndexEntry } from '../../@types/engine/AliasIndexEntry';
 import type { StructureSearchEntry } from '../../@types/engine/StructureSearchEntry';
 import type { LayerSearchEntry } from '../../@types/engine/layer/LayerSearchEntry';
 import type { PaletteAction } from '../../@types/palette/PaletteAction';
+import type { PaletteSkyContext } from '../../@types/palette/PaletteSkyContext';
 import type { PaletteCard } from '../../@types/palette/PaletteCard';
 
 const GRID_KEYS: readonly string[] = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
@@ -28,6 +29,7 @@ type UsePaletteSearchInput = {
   aliasIndex?: readonly AliasIndexEntry[];
   structures?: readonly StructureSearchEntry[];
   layerRows: readonly LayerSearchEntry[];
+  sky: PaletteSkyContext;
   /** The shown tab's cards — drives the grid navigator and its Enter target. */
   cards: readonly PaletteCard[];
   /** ⌥←/⌥→ in the grid navigator; the parent maps it to the next/previous shown tab. */
@@ -59,6 +61,7 @@ export function usePaletteSearch({
   aliasIndex,
   structures,
   layerRows,
+  sky,
   cards,
   onTabStep,
   open,
@@ -72,8 +75,8 @@ export function usePaletteSearch({
   const gridRef = useRef<HTMLUListElement | null>(null);
 
   const matches = useMemo(
-    () => rankPaletteMatches(entries, aliasIndex, structures, layerRows, query),
-    [entries, aliasIndex, structures, layerRows, query],
+    () => rankPaletteMatches(entries, aliasIndex, structures, layerRows, query, sky),
+    [entries, aliasIndex, structures, layerRows, query, sky],
   );
 
   // Reset highlight when the query changes — otherwise we'd point past the

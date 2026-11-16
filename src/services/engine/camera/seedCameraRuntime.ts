@@ -45,9 +45,8 @@ export function seedCameraRuntime(args: {
     navigator: NAV_AT_REST,
     scheme: settings.cameraControls.scheme,
     own: {},
-    pivotBody: null,
-    drivenFovYRad: null,
-    shiftNdc: [0, 0],
+    lens: { driven: null, shiftNdc: [0, 0] },
+    wheel: { pivotBody: null, limitPress: null },
     outputs: {
       displayed: pose,
       simDays: CONST_J2000,

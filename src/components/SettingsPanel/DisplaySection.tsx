@@ -41,6 +41,7 @@ import { exposureToEv } from '../../utils/tonemap/exposureToEv';
 import { evToExposure } from '../../utils/tonemap/evToExposure';
 import { LENS_MIN_DEG } from '../../data/camera/lensMinDeg';
 import { LENS_MAX_DEG } from '../../data/camera/lensMaxDeg';
+import { formatLensDeg } from '../../utils/format/formatLensDeg';
 import CollapsibleSection from './CollapsibleSection';
 import Slider from '../common/Slider/Slider';
 import styles from './SettingsPanel.module.css';
@@ -66,6 +67,15 @@ const ORIENTATION_FRAME_IDS: readonly OrientationFrameId[] = [
 function formatEv(ev: number): string {
   return `${ev > 0 ? '+' : ''}${ev.toFixed(1)} EV`;
 }
+
+/**
+ * The lens slider runs in doublings above the floor (`LENS_MIN_DEG · 2^s`): a linear 1′–120°
+ * track would squeeze everything under a degree into its first pixel. 256 steps put the
+ * grid on both ends and make one nudge a ~3.5% zoom.
+ */
+const LENS_STOPS = Math.log2(LENS_MAX_DEG / LENS_MIN_DEG);
+const LENS_STOP_STEP = LENS_STOPS / 256;
+const lensDegAt = (stops: number): number => LENS_MIN_DEG * 2 ** stops;
 
 // ── Props ──────────────────────────────────────────────────────────────────────
 
@@ -196,12 +206,12 @@ function DisplaySection({
       <div className={styles.panelRow}>
         <Slider
           label="Field of view"
-          value={fovDeg}
-          min={LENS_MIN_DEG}
-          max={LENS_MAX_DEG}
-          step={0.5}
-          onChange={onFovDegChange}
-          format={(v) => `${v % 1 === 0 ? v : v.toFixed(1)}°`}
+          value={Math.log2(fovDeg / LENS_MIN_DEG)}
+          min={0}
+          max={LENS_STOPS}
+          step={LENS_STOP_STEP}
+          onChange={(stops) => onFovDegChange(lensDegAt(stops))}
+          format={(stops) => formatLensDeg(lensDegAt(stops))}
         />
       </div>
 

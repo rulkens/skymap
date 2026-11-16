@@ -1,0 +1,80 @@
+/*
+ * SkyHud.module.css — a column at the bottom centre over the bare sky, so text carries a dark
+ * halo instead of a panel. Only the pills take the pointer: a drag that starts on the title or
+ * the ribbon still turns the view. The desktop width leaves the left stack its column.
+ */
+
+.root {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--corner-offset) + var(--time-toolbar-height) + var(--space-3));
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  width: clamp(240px, calc(100vw - 2 * (var(--panel-width) + 2 * var(--corner-offset))), 560px);
+  margin: 0;
+  color: var(--color-fg-muted);
+  text-shadow:
+    0 0 var(--space-3) var(--shadow-card-outer),
+    0 1px var(--space-1) var(--shadow-card-outer);
+  font: var(--font-size-md) / var(--line-height-tight) var(--font-family-mono);
+  user-select: none;
+  pointer-events: none;
+  transform: translateX(-50%);
+  animation: fadeIn var(--duration-base) var(--ease-standard);
+}
+
+/* Too narrow to centre clear of the left stack: centre on the band between it and the scale bar. */
+@media (min-width: 769px) and (max-width: 903px) {
+  .root {
+    left: calc((100vw + var(--panel-width) - var(--scale-bar-width)) / 2);
+    width: calc(100vw - var(--panel-width) - var(--scale-bar-width) - 4 * var(--corner-offset));
+  }
+}
+
+.phone {
+  bottom: calc(var(--bottom-stack-height) + var(--sheet-lift) + var(--scale-clearance));
+  z-index: var(--z-bottom-stack);
+  width: min(560px, calc(100vw - 2 * var(--corner-offset)));
+}
+
+.title {
+  max-width: 100%;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-fg);
+  font-family: var(--font-family-display);
+  font-size: 1.375rem;
+  font-weight: normal;
+  line-height: var(--line-height-tight);
+}
+
+.note {
+  margin: 0;
+  color: var(--color-fg-tertiary);
+  font-size: var(--font-size-md);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-4);
+  margin-top: var(--space-2);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root {
+    animation: none;
+  }
+}

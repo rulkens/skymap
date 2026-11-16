@@ -10,6 +10,7 @@ import type { AliasIndexEntry } from '../../../src/@types/engine/AliasIndexEntry
 import type { StructureSearchEntry } from '../../../src/@types/engine/StructureSearchEntry';
 import type { PaletteTab } from '../../../src/@types/palette/PaletteTab';
 import type { PaletteAction } from '../../../src/@types/palette/PaletteAction';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 const M31: FamousGalaxyMetaEntry = {
   id: 'm31',
@@ -78,6 +79,7 @@ const FIXTURE_TABS: readonly PaletteTab[] = [
 const DEFAULTS: CommandPaletteProps = {
   entries: [],
   layerRows: [],
+  sky: { hereOpen: false, host: asSceneBodyId('earth') },
   tabs: FIXTURE_TABS,
   tab: 'highlights',
   onTabChange: () => {},
