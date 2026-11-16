@@ -6,7 +6,7 @@
 import { encodeAsteroidFocusId } from './encodeAsteroidFocusId';
 import { asteroidLabel } from '../../selection/present/asteroidLabel';
 import { asteroidNameAt } from '../../catalog/utils/asteroidNameAt';
-import { MESH_ASTEROID_NUMBERS } from '../../catalog/data/meshAsteroidNumbers';
+import { MESH_ASTEROID_BODIES } from '../../../../data/asteroids/meshAsteroidBodies';
 import { awaitSlotValue } from '../../../../utils/loading/awaitSlotValue';
 import type { LayerSearchEntry } from '../../../../@types/engine/layer/LayerSearchEntry';
 import type { AsteroidsRuntime } from '../../@types/AsteroidsRuntime';
@@ -19,7 +19,7 @@ export async function* asteroidsSearch(
   const { names } = catalog;
   const rows: LayerSearchEntry[] = [];
   names.numbers.forEach((number, j) => {
-    if (MESH_ASTEROID_NUMBERS.includes(number)) return;
+    if (MESH_ASTEROID_BODIES.has(number)) return;
     const name = asteroidNameAt(names, j);
     rows.push({
       id: encodeAsteroidFocusId(number),

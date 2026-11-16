@@ -31,7 +31,7 @@ describe('asteroidsSelectionRow', () => {
     expect(unpackPick(eros.encodePick({ type: 'asteroid', number: 433 })!)).toEqual(pick);
   });
 
-  it('focus id asteroid-433 decodes to number 433; asteroid-4 is not claimed', () => {
+  it('focus id asteroid-433 decodes to number 433; asteroid-4 is the body row’s claim', () => {
     expect(row.focusId!.decode('asteroid-433')).toEqual({ type: 'asteroid', number: 433 });
     expect(row.focusId!.encode({ type: 'asteroid', number: 433 })).toBe('asteroid-433');
     for (const meshed of [1, 4, 101955, 134340]) {

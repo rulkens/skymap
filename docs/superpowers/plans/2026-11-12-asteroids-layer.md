@@ -204,7 +204,7 @@ https://www.minorplanetcenter.net/iau/MPCORB/MPCORB.DAT. Add it to the same `DAT
 **Files:**
 - Create: `src/layers/asteroids/catalog/load/parseAsteroidCatalog.ts`,
   `src/layers/asteroids/catalog/@types/AsteroidCatalog.d.ts`,
-  `src/layers/asteroids/catalog/data/meshAsteroidNumbers.ts`
+  `src/data/asteroids/meshAsteroidBodies.ts` (was a number list; now number → body id)
 - Test: `tests/layers/asteroids/catalog/parseAsteroidCatalog.test.ts`
 
 **Interfaces — Produces:**
@@ -219,9 +219,9 @@ export type AsteroidCatalog = {
   readonly extra: Uint32Array;       // 2 per row: bitcast f32 M₀, packed = Hcenti:16 | G:8 | flags:8
   readonly hCenti: Uint16Array; readonly g: Uint8Array; readonly flags: Uint8Array;
 };
-export const MESH_ASTEROID_NUMBERS: readonly number[] = [1, 4, 101955, 134340]; // drawn as bodies
+export const MESH_ASTEROID_BODIES: ReadonlyMap<number, SceneBodyId>; // 1, 4, 101955, 134340 → ceres, vesta, bennu, pluto
 export const ASTEROID_ABSENT_FLAG = 1 << 5; // written by the bake for a missing number
-export const ASTEROID_HIDDEN_FLAG = 1 << 7; // set at decode on MESH_ASTEROID_NUMBERS rows and on ABSENT rows
+export const ASTEROID_HIDDEN_FLAG = 1 << 7; // set at decode on MESH_ASTEROID_BODIES rows and on ABSENT rows
 export function parseAsteroidCatalog(buffer: ArrayBuffer): AsteroidCatalog;
 ```
 
@@ -447,8 +447,8 @@ export const ASTEROID_FOCUS_PREFIX = 'asteroid-';   // `asteroid-433` is Eros
 Mirror `src/layers/satellites/selection/satellitesSelectionRow.ts`: `resolvePick` (row → number = row + 1),
 `encodePick`, `extractRow` (the world position = Sun's snapshot position + `asteroidHelioAu`·AU in
 Mpc, f64, with `driver.placedEachFrame` and `followsSimClock`), and `focusId.{claims,decode,encode}`.
-`claims` accepts `asteroid-<digits>` only, and never a number in `MESH_ASTEROID_NUMBERS` (spec §4.6:
-not claimed, no redirect). Search yields the named rows only, from the names slot, each
+`claims` accepts `asteroid-<digits>` only, and never a number in `MESH_ASTEROID_BODIES` (spec §4.6:
+the body row claims those and opens the body). Search yields the named rows only, from the names slot, each
 entry labelled `(433) Eros`, mirroring `satellitesSearch.ts`. The detail card shows number and name,
 class, a, e, i (deg), period (years), H (or "H unknown"), distance from the Sun and from Earth now, V now,
 and the data epoch. Outside the window it shows the elements but no "now" values. The compact card shows

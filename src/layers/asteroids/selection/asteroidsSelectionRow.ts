@@ -2,8 +2,8 @@
  * asteroidsSelectionRow — the `asteroid` selection kind. The ref is the MPC number and the pick index
  * is the row, number − 1. Extracting is a pure read of the CPU Kepler mirror at `simDays`, and
  * `placedEachFrame` has core re-extract a selected or focused one every frame and place it under
- * `driver.poseId`, which the camera follows. The meshed numbers are never claimed (their bodies own
- * them), and with no catalog loaded there is no row.
+ * `driver.poseId`, which the camera follows. The meshed numbers are the body row's claim (it opens
+ * their bodies), and with no catalog loaded there is no row.
  */
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
 import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
@@ -11,7 +11,7 @@ import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 import { ASTEROID_FOCUS_GEOMETRY } from './data/asteroidFocusGeometry';
 import { ASTEROID_HIDDEN_FLAG } from '../catalog/data/asteroidHiddenFlag';
-import { MESH_ASTEROID_NUMBERS } from '../catalog/data/meshAsteroidNumbers';
+import { MESH_ASTEROID_BODIES } from '../../../data/asteroids/meshAsteroidBodies';
 import { footprintRadiusMpc } from '../../../utils/selection/footprintRadiusMpc';
 import { deriveBodyStates } from '../../../services/engine/frame/deriveBodyStates';
 import { asteroidHelioAu } from '../kepler/utils/asteroidHelioAu';
@@ -38,9 +38,7 @@ export function asteroidsSelectionRow(runtime: AsteroidsRuntime): SelectionKindR
   const decode = (id: string): AsteroidRef | null => {
     const match = FOCUS_ID.exec(id);
     const number = match ? Number(match[1]) : 0;
-    return number >= 1 && !MESH_ASTEROID_NUMBERS.includes(number)
-      ? { type: 'asteroid', number }
-      : null;
+    return number >= 1 && !MESH_ASTEROID_BODIES.has(number) ? { type: 'asteroid', number } : null;
   };
   /** The ref's row in the loaded catalog, or -1 (also for a hidden row: ABSENT or drawn as a mesh). */
   const rowOf = (number: number): number => {

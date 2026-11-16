@@ -15,7 +15,7 @@ import { createGunzip } from 'node:zlib';
 import type { MpcorbRow } from '../@types/asteroids/MpcorbRow';
 import type { SbdbQueryAnswer } from '../@types/asteroids/SbdbQueryAnswer';
 import { ASTEROID_CATALOG_PATHS } from '../../src/data/asteroids/asteroidCatalogPaths';
-import { MESH_ASTEROID_NUMBERS } from '../../src/layers/asteroids/catalog/data/meshAsteroidNumbers';
+import { MESH_ASTEROID_BODIES } from '../../src/data/asteroids/meshAsteroidBodies';
 import { PROJECT_ROOT } from '../utils/io/projectRoot';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 import { writeAsteroidCatalog } from '../utils/io/writeAsteroidCatalog';
@@ -75,7 +75,7 @@ async function main(): Promise<void> {
   const names = writeAsteroidNames(named);
   const selectable = new Set(
     rows.flatMap(({ number, asteroidClass }) =>
-      asteroidClass === null || MESH_ASTEROID_NUMBERS.includes(number) ? [] : [number],
+      asteroidClass === null || MESH_ASTEROID_BODIES.has(number) ? [] : [number],
     ),
   );
   const answer = JSON.parse(readFileSync(rawDataPath('sbdb.diameters'), 'utf8')) as SbdbQueryAnswer;

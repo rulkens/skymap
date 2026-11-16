@@ -228,10 +228,10 @@ branches: by class all three bands are the belt's tint, and uniform size is a ma
 
 ### 4.6 Skipping the bodies that already draw
 
-`src/layers/asteroids/catalog/data/meshAsteroidNumbers.ts` holds `[1, 4, 101955, 134340]` (owner ruling: a
-constant, like satellites' `HUBBLE_NORAD_ID`). Those rows are never drawn, picked or found by search,
-and the focus-id row does not claim their numbers. Nothing in the app makes such a link, and redirecting
-one to the body would grow the selection-row contract.
+`src/data/asteroids/meshAsteroidBodies.ts` maps `1, 4, 101955, 134340` to Ceres, Vesta, Bennu and Pluto
+(owner ruling: a constant, like satellites' `HUBBLE_NORAD_ID`). Those rows are never drawn, picked or found
+by search; a link to their number opens the body instead, because the body row claims `asteroid-<n>` for
+those numbers and rewrites it to `body-<id>` on arrival.
 
 ### 4.7 Selection, follow, search, card
 

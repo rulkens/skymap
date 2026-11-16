@@ -5,7 +5,7 @@ import type { OrbitalElements } from '../../../../src/@types/scene/OrbitalElemen
 import { writeAsteroidCatalog } from '../../../../tools/utils/io/writeAsteroidCatalog';
 import { parseAsteroidCatalog } from '../../../../src/layers/asteroids/catalog/load/parseAsteroidCatalog';
 import { ASTEROID_HIDDEN_FLAG } from '../../../../src/layers/asteroids/catalog/data/asteroidHiddenFlag';
-import { MESH_ASTEROID_NUMBERS } from '../../../../src/layers/asteroids/catalog/data/meshAsteroidNumbers';
+import { MESH_ASTEROID_BODIES } from '../../../../src/data/asteroids/meshAsteroidBodies';
 import { keplerianPositionMpc } from '../../../../src/utils/orbit/keplerianPositionMpc';
 import { eccentricAnomalyFromMean } from '../../../../src/utils/orbit/eccentricAnomalyFromMean';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
@@ -63,14 +63,14 @@ describe('parseAsteroidCatalog', () => {
 
   it('hides the four mesh numbers and ABSENT rows, and no other row', () => {
     const gap = 2000;
-    const last = Math.max(...MESH_ASTEROID_NUMBERS);
+    const last = Math.max(...MESH_ASTEROID_BODIES.keys());
     const rows = Array.from({ length: last }, (_, k) => row(k + 1)).filter((r) => r.number !== gap);
     const cat = parseAsteroidCatalog(toBuffer(writeAsteroidCatalog(rows, EPOCH).bytes));
     const hidden: number[] = [];
     cat.flags.forEach((f, k) => {
       if (f & ASTEROID_HIDDEN_FLAG) hidden.push(k + 1);
     });
-    expect(hidden).toEqual([...MESH_ASTEROID_NUMBERS, gap].sort((x, y) => x - y));
+    expect(hidden).toEqual([...MESH_ASTEROID_BODIES.keys(), gap].sort((x, y) => x - y));
     expect(cat.extra[2 * (gap - 1) + 1]! & 0xff).toBe(cat.flags[gap - 1]);
     expect(cat.elementsB[4 * (gap - 1) + 3]).toBe(0);
   });

@@ -26,4 +26,4 @@ indirect dot draw in `src/layers/asteroids/kepler/` and `points/`), "but designe
   brought the ring back. The Kuiper belt wants to be full to ~400 AU and gone by ~1,500 AU.
 - **Dwarf planets that are already meshes.** Pluto (134340) is a body; check Eris, Makemake, Haumea,
   Sedna and others against the body list, and keep a skip list as the asteroids do
-  (`src/layers/asteroids/catalog/data/meshAsteroidNumbers.ts`).
+  (`src/data/asteroids/meshAsteroidBodies.ts`).

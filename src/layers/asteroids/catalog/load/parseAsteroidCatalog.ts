@@ -9,7 +9,7 @@ import { GAUSS_K_RAD_PER_DAY } from '../../../../data/asteroids/gaussKRadPerDay'
 import { FormatVersionError } from '../../../../data/formatVersionError';
 import { perifocalAxesWorld } from '../../../../utils/orbit/perifocalAxesWorld';
 import { ASTEROID_HIDDEN_FLAG } from '../data/asteroidHiddenFlag';
-import { MESH_ASTEROID_NUMBERS } from '../data/meshAsteroidNumbers';
+import { MESH_ASTEROID_BODIES } from '../../../../data/asteroids/meshAsteroidBodies';
 import { sortedHCentiByClass } from '../utils/sortedHCentiByClass';
 
 const TAU = 2 * Math.PI;
@@ -60,7 +60,7 @@ export function parseAsteroidCatalog(buf: ArrayBuffer): AsteroidCatalog {
   const extra = new Uint32Array(2 * count);
   const extraF32 = new Float32Array(extra.buffer);
 
-  for (const number of MESH_ASTEROID_NUMBERS) {
+  for (const number of MESH_ASTEROID_BODIES.keys()) {
     const k = number - F.firstNumber;
     if (k < count) flags[k]! |= ASTEROID_HIDDEN_FLAG;
   }
