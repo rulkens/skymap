@@ -27,7 +27,7 @@ full design and the spike's findings.
   (`--serve`)](#serving-a-production-build---serve) below. With the default,
   run `npm run dev` (default `http://localhost:5173`) first. Either way the
   recorder loads `<url>/?cinema`, a mode that skips the splash and mounts
-  only the canvas + tour captions.
+  only the canvas + tour captions (and the debug panel while `d` has it open).
 - **A GPU, and the Playwright `chromium` channel installed.** The recorder
   launches Playwright's `channel: 'chromium'` (the full Chromium build, not
   the default headless _shell_ — the shell exposes `navigator.gpu` but yields

@@ -5,7 +5,8 @@
  * the engine handle doesn't re-render every consumer at startup. No
  * `React.StrictMode`: the engine's GPU resources and render loop can't survive
  * the synthetic double-mount. Cinema mode (`?cinema`, the recorder's surface)
- * renders only canvas + tour overlay; the rest is absent from the DOM.
+ * renders only canvas + tour overlay, plus the debug panel while `d` has it
+ * open; the rest is absent from the DOM.
  */
 
 import { Suspense } from 'react';
@@ -69,6 +70,14 @@ export function App(): React.ReactElement {
   // A sibling of the HUD stack, not inside it: the tour's own `uiStackHidden` fade must not fade it.
   const tourOverlay = tourActive && <TourOverlayContainer />;
   const exhibitOverlay = exhibitId && <ExhibitOverlayContainer id={exhibitId} />;
+  // Outside the HUD stack, which a tour or exhibit hides: `d` summons it explicitly, in
+  // cinema mode too (the film knobs are tuned on the frame the recorder captures).
+  // `handleRef.current` set means the engine finished constructing: no subscribe race.
+  const debugPanel = debugPanelOpen && handleRef.current && (
+    <Suspense>
+      <LazyDebugPanelContainer engineHandleRef={handleRef} />
+    </Suspense>
+  );
 
   // The HUD must not exist in the DOM here: CSS-hiding could bleed into captures.
   // Every hook above still runs (`useEngine` makes the page playable); only the JSX diverges.
@@ -77,6 +86,7 @@ export function App(): React.ReactElement {
       <>
         {canvas}
         {tourOverlay}
+        {debugPanel}
       </>
     );
   }
@@ -114,13 +124,7 @@ export function App(): React.ReactElement {
       </div>
       {tourOverlay}
       {exhibitOverlay}
-      {/* Outside the HUD stack, which a tour or exhibit hides: `d` summons it explicitly.
-          `handleRef.current` set means the engine finished constructing: no subscribe race. */}
-      {debugPanelOpen && handleRef.current && (
-        <Suspense>
-          <LazyDebugPanelContainer engineHandleRef={handleRef} />
-        </Suspense>
-      )}
+      {debugPanel}
       {/* Progress chrome: interactive session only, never the cinema frames. */}
       {tourActive && <TourBeatRailContainer />}
       <SplashContainer />
