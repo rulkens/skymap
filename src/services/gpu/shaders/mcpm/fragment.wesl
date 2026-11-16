@@ -37,18 +37,18 @@ struct TraceView {
 const SATURATION: f32 = 0.99;
 
 // ps_volume_trace.wgsl:132 with its only caller's slope of 1.0.
-fn remap(v: f32) -> f32 {
-  return 1.0 - exp(-v);
+fn remap(value: f32) -> f32 {
+  return 1.0 - exp(-value);
 }
 
 // Ray against the grid box in voxel space. '.x' is the entry t clamped to 0 so a camera
 // inside the grid marches from its own position; '.y' is the exit. Miss when .y <= .x.
-fn intersectGrid(o: vec3<f32>, d: vec3<f32>) -> vec2<f32> {
-  let invD = 1.0 / d;
-  let t0 = -o * invD;
-  let t1 = (vec3<f32>(gridDims()) - o) * invD;
-  let lo = min(t0, t1);
-  let hi = max(t0, t1);
+fn intersectGrid(rayOrigin: vec3<f32>, rayDir: vec3<f32>) -> vec2<f32> {
+  let invD = 1.0 / rayDir;
+  let tMinCorner = -rayOrigin * invD;
+  let tMaxCorner = (vec3<f32>(gridDims()) - rayOrigin) * invD;
+  let lo = min(tMinCorner, tMaxCorner);
+  let hi = max(tMinCorner, tMaxCorner);
   let entry = max(max(max(lo.x, lo.y), lo.z), 0.0);
   return vec2<f32>(entry, min(min(hi.x, hi.y), hi.z));
 }
@@ -70,32 +70,32 @@ fn fs(input: McpmVsOut) -> @location(0) vec4<f32> {
   var accum = vec4<f32>(0.0);
   // Half a step in, so the first sample sits at the centre of the first voxel of path
   // rather than on the box face where the trilinear is half outside the grid.
-  var t = span.x + stepLength * 0.5;
-  for (var i = 0u; i < view.maxSteps; i = i + 1u) {
-    if (t >= span.y) {
+  var rayDistance = span.x + stepLength * 0.5;
+  for (var stepIndex = 0u; stepIndex < view.maxSteps; stepIndex = stepIndex + 1u) {
+    if (rayDistance >= span.y) {
       break;
     }
-    let density = sampleTrace(view.camVoxel + dir * t);
+    let density = sampleTrace(view.camVoxel + dir * rayDistance);
     if (density > view.trimDensity) {
       // ps_volume_trace.wgsl:163-191, verbatim: the palette carries colour only, alpha
-      // is opticalThickness x r (the LUT's own baked alpha ramp is deliberately unused).
-      let r = remap((density - view.trimDensity) * view.sampleWeight);
-      let rgb = textureSampleLevel(palette, paletteSampler, vec2<f32>(r, 0.5), 0.0).rgb;
-      let a = view.opticalThickness * r;
+      // is opticalThickness x remappedDensity (the LUT's own baked alpha ramp is deliberately unused).
+      let remappedDensity = remap((density - view.trimDensity) * view.sampleWeight);
+      let rgb = textureSampleLevel(palette, paletteSampler, vec2<f32>(remappedDensity, 0.5), 0.0).rgb;
+      let alpha = view.opticalThickness * remappedDensity;
       if (view.additive != 0u) {
         // Emission only, alpha left at 0 so nothing occludes. The stepLength factor
         // (in voxels) is what holds brightness fixed across the stepVoxels slider.
-        accum = accum + vec4<f32>(rgb * a * stepLength, 0.0);
+        accum = accum + vec4<f32>(rgb * alpha * stepLength, 0.0);
       } else {
         // Front-to-back 'over', premultiplied — the same operator as the fork's
         // back-to-front ALPHA blend state over its slab stack, walked the other way.
-        accum = accum + (1.0 - accum.a) * vec4<f32>(rgb * a, a);
+        accum = accum + (1.0 - accum.a) * vec4<f32>(rgb * alpha, alpha);
         if (accum.a > SATURATION) {
           break;
         }
       }
     }
-    t = t + stepLength;
+    rayDistance = rayDistance + stepLength;
   }
   return accum;
 }

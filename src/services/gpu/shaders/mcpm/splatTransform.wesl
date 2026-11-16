@@ -55,8 +55,8 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
     (ndc.x * 0.5 + 0.5) * cam.screenWidth,
     (0.5 - ndc.y * 0.5) * cam.screenHeight);
   let out = vec2<i32>(px);
-  let w = i32(cam.screenWidth);
-  let h = i32(cam.screenHeight);
+  let widthPx = i32(cam.screenWidth);
+  let heightPx = i32(cam.screenHeight);
 
   // S12: splat a side x side block instead of the single centre pixel. Per-pixel bounds
   // checks replace the single-pixel early-return above: a multi-pixel footprint can hang
@@ -65,10 +65,10 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   let half = side / 2;
   for (var dy = -half; dy < side - half; dy++) {
     for (var dx = -half; dx < side - half; dx++) {
-      let x = out.x + dx;
-      let y = out.y + dy;
-      if (x < 0 || y < 0 || x >= w || y >= h) { continue; }
-      atomicAdd(&splat[u32(y) * u32(w) + u32(x)], AGENT_WEIGHT);
+      let pixelX = out.x + dx;
+      let pixelY = out.y + dy;
+      if (pixelX < 0 || pixelY < 0 || pixelX >= widthPx || pixelY >= heightPx) { continue; }
+      atomicAdd(&splat[u32(pixelY) * u32(widthPx) + u32(pixelX)], AGENT_WEIGHT);
     }
   }
 }

@@ -64,9 +64,9 @@ fn cs(
 
   if (idx >= u32(sim.nDataPoints)) { return; }
 
-  var x = agentX[idx];
-  var y = agentY[idx];
-  var z = agentZ[idx];
+  var sampleX = agentX[idx];
+  var sampleY = agentY[idx];
+  var sampleZ = agentZ[idx];
   // QUIRK(dead_mass_read), ported verbatim from cs_density_histo.wgsl's own comment: the
   // fork reads particles_weights[idx] and never uses it (there, dropping the access drops
   // the binding from Dawn's auto-derived layout). This port's layouts are explicit, never
@@ -75,10 +75,10 @@ fn cs(
 
   if (flags.sampleRandomly != 0) {
     var rng: Rng;
-    rngSetSeed(&rng, wangHash(73u * idx), wangHash(u32(x * y * z)));
-    x = rngNextFloat(&rng) * f32(sim.worldWidth);
-    y = rngNextFloat(&rng) * f32(sim.worldHeight);
-    z = rngNextFloat(&rng) * f32(sim.worldDepth);
+    rngSetSeed(&rng, wangHash(73u * idx), wangHash(u32(sampleX * sampleY * sampleZ)));
+    sampleX = rngNextFloat(&rng) * f32(sim.worldWidth);
+    sampleY = rngNextFloat(&rng) * f32(sim.worldHeight);
+    sampleZ = rngNextFloat(&rng) * f32(sim.worldDepth);
   }
 
   // floor() BEFORE the i32 cast, and the cast BEFORE the bounds check — two separate fixes
@@ -92,7 +92,7 @@ fn cs(
   // dataPointHistogram.ts's Math.floor sends the SAME point to -1 — out-of-grid. floor()
   // first makes this cast agree with Math.floor exactly, so 'inGrid' below genuinely
   // catches the low side like the high side, not just points >= 1 voxel outside.
-  let voxel = vec3<i32>(floor(vec3<f32>(x, y, z)));
+  let voxel = vec3<i32>(floor(vec3<f32>(sampleX, sampleY, sampleZ)));
   if (!inGrid(voxel)) {
     // Out-of-grid catalog points are excluded from both the bin vector and
     // meanLogTraceAtPoints, matching dataPointHistogram.ts's CLI statistic exactly

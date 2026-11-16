@@ -76,8 +76,8 @@ fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32) -> Point
 @fragment
 fn fs(input: PointVsOut) -> @location(0) vec4<f32> {
   // Round and soft-edged: a hard square this small reads as noise over the trace.
-  let r2 = dot(input.offset, input.offset);
-  let a = input.intensity * clamp(1.0 - r2, 0.0, 1.0);
+  let radiusSq = dot(input.offset, input.offset);
+  let alpha = input.intensity * clamp(1.0 - radiusSq, 0.0, 1.0);
   // Premultiplied — the pass blends one/one, so the alpha lane is carried but never read.
-  return vec4<f32>(POINT_COLOR * a, a);
+  return vec4<f32>(POINT_COLOR * alpha, alpha);
 }

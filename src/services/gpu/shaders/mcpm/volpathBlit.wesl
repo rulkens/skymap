@@ -20,8 +20,8 @@ struct VolpathBlit {
 // one reads, and the two access modes are layout-identical.
 @group(0) @binding(1) var<storage, read> accum: array<vec4<f32>>;
 
-fn tonemap(L: vec3<f32>, exposure: f32) -> vec3<f32> {
-  return vec3<f32>(1.0) - exp(-exposure * L);
+fn tonemap(radiance: vec3<f32>, exposure: f32) -> vec3<f32> {
+  return vec3<f32>(1.0) - exp(-exposure * radiance);
 }
 
 @fragment
@@ -33,8 +33,8 @@ fn fs(input: McpmVsOut) -> @location(0) vec4<f32> {
     return vec4<f32>(0.0);
   }
 
-  let L = acc.rgb / acc.a;
-  let rgb = select(tonemap(L, blit.exposure), L, blit.compressive == 1u);
+  let meanRadiance = acc.rgb / acc.a;
+  let rgb = select(tonemap(meanRadiance, blit.exposure), meanRadiance, blit.compressive == 1u);
   // Emission only, alpha 0 so the layers beneath are never occluded — fragment.wesl's
   // additive branch does the same.
   return vec4<f32>(rgb, 0.0);

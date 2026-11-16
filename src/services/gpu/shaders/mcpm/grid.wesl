@@ -19,82 +19,82 @@ fn gridDims() -> vec3<i32> {
   return vec3<i32>(sim.worldWidth, sim.worldHeight, sim.worldDepth);
 }
 
-fn inGrid(v: vec3<i32>) -> bool {
-  return all(v >= vec3<i32>(0)) && all(v < gridDims());
+fn inGrid(voxel: vec3<i32>) -> bool {
+  return all(voxel >= vec3<i32>(0)) && all(voxel < gridDims());
 }
 
 // Callers must have passed 'inGrid' first — see the header on why an unguarded index is
 // a wrong voxel rather than a clamp.
-fn voxelIndex(v: vec3<i32>) -> u32 {
-  let d = gridDims();
-  return u32(v.z) * u32(d.x * d.y) + u32(v.y) * u32(d.x) + u32(v.x);
+fn voxelIndex(voxel: vec3<i32>) -> u32 {
+  let dims = gridDims();
+  return u32(voxel.z) * u32(dims.x * dims.y) + u32(voxel.y) * u32(dims.x) + u32(voxel.x);
 }
 
-fn loadDeposit(v: vec3<i32>) -> f32 {
-  if (!inGrid(v)) { return 0.0; }
-  return f32(deposit[voxelIndex(v)]);
+fn loadDeposit(voxel: vec3<i32>) -> f32 {
+  if (!inGrid(voxel)) { return 0.0; }
+  return f32(deposit[voxelIndex(voxel)]);
 }
 
 // Non-atomic on purpose: neither D3D11 nor WebGPU has float atomics, and the updates
 // this loses launder into MCPM's Monte Carlo noise. It stays racy forever, including
 // past the quirk strip.
-fn addDeposit(v: vec3<i32>, amount: f32) {
-  if (!inGrid(v)) { return; }
-  let i = voxelIndex(v);
-  deposit[i] = GridElem(f32(deposit[i]) + amount);
+fn addDeposit(voxel: vec3<i32>, amount: f32) {
+  if (!inGrid(voxel)) { return; }
+  let flatIndex = voxelIndex(voxel);
+  deposit[flatIndex] = GridElem(f32(deposit[flatIndex]) + amount);
 }
 
-fn storeDepositOut(v: vec3<i32>, value: f32) {
-  if (!inGrid(v)) { return; }
-  depositOut[voxelIndex(v)] = GridElem(value);
+fn storeDepositOut(voxel: vec3<i32>, value: f32) {
+  if (!inGrid(voxel)) { return; }
+  depositOut[voxelIndex(voxel)] = GridElem(value);
 }
 
-fn loadTrace(v: vec3<i32>) -> f32 {
-  if (!inGrid(v)) { return 0.0; }
-  return f32(trace[voxelIndex(v)]);
+fn loadTrace(voxel: vec3<i32>) -> f32 {
+  if (!inGrid(voxel)) { return 0.0; }
+  return f32(trace[voxelIndex(voxel)]);
 }
 
 // Racy in the same way and for the same reason as addDeposit.
-fn addTrace(v: vec3<i32>, amount: f32) {
-  if (!inGrid(v)) { return; }
-  let i = voxelIndex(v);
-  trace[i] = GridElem(f32(trace[i]) + amount);
+fn addTrace(voxel: vec3<i32>, amount: f32) {
+  if (!inGrid(voxel)) { return; }
+  let flatIndex = voxelIndex(voxel);
+  trace[flatIndex] = GridElem(f32(trace[flatIndex]) + amount);
 }
 
 // Race-free: the decay pass gives one invocation to each voxel and nothing else in that
 // dispatch touches it.
-fn scaleTrace(v: vec3<i32>, factor: f32) {
-  if (!inGrid(v)) { return; }
-  let i = voxelIndex(v);
-  trace[i] = GridElem(f32(trace[i]) * factor);
+fn scaleTrace(voxel: vec3<i32>, factor: f32) {
+  if (!inGrid(voxel)) { return; }
+  let flatIndex = voxelIndex(voxel);
+  trace[flatIndex] = GridElem(f32(trace[flatIndex]) * factor);
 }
 
-// Trilinear sample of the trace field at 'p', in the same voxel space agent positions
+// Trilinear sample of the trace field at 'pos', in the same voxel space agent positions
 // live in: voxel i covers [i, i+1) and so is centred at i + 0.5, which is why the
-// interpolation base is floor(p - 0.5) and not floor(p). DIVERGENCE: the fork's trace
+// interpolation base is floor(pos - 0.5) and not floor(pos). DIVERGENCE: the fork's trace
 // sampler clamps to edge (main.cpp:578, cpplib/graphics.cpp:450-451), smearing the
 // boundary voxel outward; here corners outside the grid read 0 via loadTrace instead.
-fn sampleTrace(p: vec3<f32>) -> f32 {
-  let g = p - vec3<f32>(0.5);
-  let b = floor(g);
-  let f = g - b;
-  let i = vec3<i32>(b);
+fn sampleTrace(pos: vec3<f32>) -> f32 {
+  let centredPos = pos - vec3<f32>(0.5);
+  let baseCorner = floor(centredPos);
+  let blend = centredPos - baseCorner;
+  let baseVoxel = vec3<i32>(baseCorner);
 
-  let c000 = loadTrace(i + vec3<i32>(0, 0, 0));
-  let c100 = loadTrace(i + vec3<i32>(1, 0, 0));
-  let c010 = loadTrace(i + vec3<i32>(0, 1, 0));
-  let c110 = loadTrace(i + vec3<i32>(1, 1, 0));
-  let c001 = loadTrace(i + vec3<i32>(0, 0, 1));
-  let c101 = loadTrace(i + vec3<i32>(1, 0, 1));
-  let c011 = loadTrace(i + vec3<i32>(0, 1, 1));
-  let c111 = loadTrace(i + vec3<i32>(1, 1, 1));
+  let c000 = loadTrace(baseVoxel + vec3<i32>(0, 0, 0));
+  let c100 = loadTrace(baseVoxel + vec3<i32>(1, 0, 0));
+  let c010 = loadTrace(baseVoxel + vec3<i32>(0, 1, 0));
+  let c110 = loadTrace(baseVoxel + vec3<i32>(1, 1, 0));
+  let c001 = loadTrace(baseVoxel + vec3<i32>(0, 0, 1));
+  let c101 = loadTrace(baseVoxel + vec3<i32>(1, 0, 1));
+  let c011 = loadTrace(baseVoxel + vec3<i32>(0, 1, 1));
+  let c111 = loadTrace(baseVoxel + vec3<i32>(1, 1, 1));
 
   // x-lerped planes below; the two digits are (y, z), not (x, y) — contrast the corners'
   // 3-digit (x, y, z) names above.
-  let x00 = mix(c000, c100, f.x);
-  let x10 = mix(c010, c110, f.x);
-  let x01 = mix(c001, c101, f.x);
-  let x11 = mix(c011, c111, f.x);
+  let x00 = mix(c000, c100, blend.x);
+  let x10 = mix(c010, c110, blend.x);
+  let x01 = mix(c001, c101, blend.x);
+  let x11 = mix(c011, c111, blend.x);
 
-  return mix(mix(x00, x10, f.y), mix(x01, x11, f.y), f.z);
+  return mix(mix(x00, x10, blend.y), mix(x01, x11, blend.y), blend.z);
 }
