@@ -99,6 +99,6 @@ describe('asteroids shader parity', () => {
     );
     expect(constOf(kepler, 'KEPLER_STEPS')).toBe(KEPLER_FIXED.steps);
     expect(constOf(kepler, 'KEPLER_MAX_STEP')).toBe(KEPLER_FIXED.maxStep);
-    expect(kepler).toContain(`E = m + ${KEPLER_FIXED.danbyStart} * e * sign(m)`);
+    expect(kepler).toContain(`eccAnomaly = meanReduced + ${KEPLER_FIXED.danbyStart} * ecc * sign(meanReduced)`);
   });
 });

@@ -21,7 +21,7 @@ import package::lib::starPhotometry::toRefPx;
 import package::lib::trailOcclusion::pointClearance;
 
 // Group 0 bindings 0-1 are lib/trailOcclusion's.
-@group(0) @binding(2) var<uniform> u: AsteroidUniforms;
+@group(0) @binding(2) var<uniform> params: AsteroidUniforms;
 // Heliocentric xyz (AU) and lifted flux per kept dot, and its visibleTag.
 @group(0) @binding(3) var<storage, read> visible: array<vec4<f32>>;
 @group(0) @binding(4) var<storage, read> visibleTags: array<u32>;
@@ -52,67 +52,67 @@ fn asteroidDot(slot: u32) -> AsteroidDot {
   let entry = visible[slot];
   let tag = visibleTags[slot];
   let row = visibleTagRow(tag);
-  var camRelAu = entry.xyz + u.sunFromCamAu;
-  if (row == u.selectedRow) {
-    camRelAu = u.selectedCamRelAu;
+  var camRelAu = entry.xyz + params.sunFromCamAu;
+  if (row == params.selectedRow) {
+    camRelAu = params.selectedCamRelAu;
   }
   return AsteroidDot(camRelAu * AU_KM, entry.w, visibleTagClass(tag), row);
 }
 
-fn dotTint(d: AsteroidDot) -> vec3<f32> {
-  if (d.cls != MAIN_BELT) {
-    return u.classColor[d.cls].rgb;
+fn dotTint(asteroid: AsteroidDot) -> vec3<f32> {
+  if (asteroid.cls != MAIN_BELT) {
+    return params.classColor[asteroid.cls].rgb;
   }
-  let aAu = length(elementsA[d.row].xyz);
-  return u.beltColor[u32(aAu >= MIDDLE_BELT_AU) + u32(aAu >= OUTER_BELT_AU)].rgb;
+  let aAu = length(elementsA[asteroid.row].xyz);
+  return params.beltColor[u32(aAu >= MIDDLE_BELT_AU) + u32(aAu >= OUTER_BELT_AU)].rgb;
 }
 
 // A row with no H stores 65535, far fainter than any knee, so it keeps scale 1.
-fn dotScale(d: AsteroidDot) -> f32 {
-  let hCenti = f32(extra[d.row].y >> 16u);
-  let knee = u.sizeKneeHCenti[d.cls];
-  let t = saturate((knee - hCenti) / (knee - u.sizeFullHCenti));
-  return 1.0 + (u.sizeMaxScale[d.cls] - 1.0) * t * t;
+fn dotScale(asteroid: AsteroidDot) -> f32 {
+  let hCenti = f32(extra[asteroid.row].y >> 16u);
+  let knee = params.sizeKneeHCenti[asteroid.cls];
+  let growth = saturate((knee - hCenti) / (knee - params.sizeFullHCenti));
+  return 1.0 + (params.sizeMaxScale[asteroid.cls] - 1.0) * growth * growth;
 }
 
 @vertex
 fn vs(@builtin(vertex_index) vid: u32, @builtin(instance_index) slot: u32) -> VSOut {
   var out: VSOut; // zero-initialised: an early return is a degenerate, clipped vertex
-  let d = asteroidDot(slot);
-  let centre = worldToClip(u.cam, d.relKm / MPC_TO_KM);
+  let asteroid = asteroidDot(slot);
+  let centre = worldToClip(params.cam, asteroid.relKm / MPC_TO_KM);
   if (centre.w < W_EPS) {
     return out;
   }
   // Once per dot, not per fragment: a dot behind a body is dropped before it rasterises.
-  let clear = pointClearance(d.relKm, centre);
+  let clear = pointClearance(asteroid.relKm, centre);
   if (clear <= 0.0) {
     return out;
   }
   let corner = triCorner(vid);
-  let sizePx = u.sizePx[d.cls];
-  let offset = expandBillboardScreen(u.cam, centre, sizePx * dotScale(d), corner);
-  let fade = u.classColor[d.cls].w * u.windowFade * clear;
+  let sizePx = params.sizePx[asteroid.cls];
+  let offset = expandBillboardScreen(params.cam, centre, sizePx * dotScale(asteroid), corner);
+  let fade = params.classColor[asteroid.cls].w * params.windowFade * clear;
   // The peak keeps the unscaled dot's, so a dot sized by H grows its light with its area: spread
   // over it at the same light, a landmark only blurred into the field.
-  let peak = starPeakIntensity(1.0, d.flux * fade, toRefPx(sizePx, u.cam.pxPerRad));
+  let peak = starPeakIntensity(1.0, asteroid.flux * fade, toRefPx(sizePx, params.cam.pxPerRad));
   out.clip = vec4<f32>(centre.xy + offset, MID_DEPTH * centre.w, centre.w);
-  out.cornerKnee = vec3<f32>(corner, u.dotKnee[d.cls]);
-  out.tint = vec4<f32>(dotTint(d) * u.thinGain, peak);
+  out.cornerKnee = vec3<f32>(corner, params.dotKnee[asteroid.cls]);
+  out.tint = vec4<f32>(dotTint(asteroid) * params.thinGain, peak);
   return out;
 }
 
 @vertex
 fn vsPick(@builtin(vertex_index) vid: u32, @builtin(instance_index) slot: u32) -> PickOut {
   var out: PickOut;
-  let d = asteroidDot(slot);
-  let centre = worldToClip(u.cam, d.relKm / MPC_TO_KM);
-  if (centre.w < W_EPS || pointClearance(d.relKm, centre) < 0.5) {
+  let asteroid = asteroidDot(slot);
+  let centre = worldToClip(params.cam, asteroid.relKm / MPC_TO_KM);
+  if (centre.w < W_EPS || pointClearance(asteroid.relKm, centre) < 0.5) {
     return out;
   }
   let corner = triCorner(vid);
-  let offset = expandBillboardScreen(u.cam, centre, u.sizePx[d.cls], corner);
+  let offset = expandBillboardScreen(params.cam, centre, params.sizePx[asteroid.cls], corner);
   out.clip = vec4<f32>(centre.xy + offset, MID_DEPTH * centre.w, centre.w);
   out.corner = corner;
-  out.word = u.pickBase + d.row;
+  out.word = params.pickBase + asteroid.row;
   return out;
 }

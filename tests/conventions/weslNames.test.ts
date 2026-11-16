@@ -110,7 +110,6 @@ const ALLOWED: Readonly<Record<string, number>> = {
   'src/services/gpu/shaders/lib/starKnee.wesl': 1,
   'src/services/gpu/shaders/lib/starPhotometry.wesl': 1,
   'src/services/gpu/shaders/lib/tonemap.wesl': 13,
-  'src/services/gpu/shaders/lib/trailOcclusion.wesl': 4,
   'src/services/gpu/shaders/lib/util.wesl': 26,
   'src/services/gpu/shaders/lib/volumeRaymarch.wesl': 2,
   'src/services/gpu/shaders/lightTime/fragment.wesl': 4,

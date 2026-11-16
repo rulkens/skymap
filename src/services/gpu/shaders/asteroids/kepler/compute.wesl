@@ -73,28 +73,29 @@ fn shownRow(row: u32) -> vec4<f32> {
   if (f32(hCenti) > kepler.hLimitCenti[cls] && row != kepler.selectedRow) {
     return vec4<f32>(0.0);
   }
-  let a = elementsA[row];
-  let b = elementsB[row];
-  let m = bitcast<f32>(extra[row].x) + b.w * kepler.dtWholeDays + b.w * kepler.dtFracDays;
-  let E = solveKeplerFixed(m, a.w);
-  let p = a.xyz * (cos(E) - a.w) + b.xyz * sin(E);
-  var v = NO_H_MAGNITUDE;
+  let rowA = elementsA[row];
+  let rowB = elementsB[row];
+  let meanAnomaly =
+    bitcast<f32>(extra[row].x) + rowB.w * kepler.dtWholeDays + rowB.w * kepler.dtFracDays;
+  let eccAnomaly = solveKeplerFixed(meanAnomaly, rowA.w);
+  let helioAu = rowA.xyz * (cos(eccAnomaly) - rowA.w) + rowB.xyz * sin(eccAnomaly);
+  var vMag = NO_H_MAGNITUDE;
   if (hCenti != H_NONE) {
-    let rAu = length(p);
-    let camRelAu = p + kepler.sunFromCamAu;
+    let rAu = length(helioAu);
+    let camRelAu = helioAu + kepler.sunFromCamAu;
     let deltaAu = max(length(camRelAu), MIN_DELTA_AU);
     let hMag = f32(hCenti) / H_SCALE - H_OFFSET;
-    let g = f32((packed >> 8u) & 255u) / G_SCALE - G_OFFSET;
-    let cosPhase = dot(p, camRelAu) / max(rAu * deltaAu, 1e-30);
-    v = asteroidApparentMagnitude(hMag, g, rAu, deltaAu, cosPhase);
-    v = min(v, hMag + 5.0 * log(rAu * deltaAu) / LOG10 + kepler.maxPhaseDimMag);
+    let slopeG = f32((packed >> 8u) & 255u) / G_SCALE - G_OFFSET;
+    let cosPhase = dot(helioAu, camRelAu) / max(rAu * deltaAu, 1e-30);
+    vMag = asteroidApparentMagnitude(hMag, slopeG, rAu, deltaAu, cosPhase);
+    vMag = min(vMag, hMag + 5.0 * log(rAu * deltaAu) / LOG10 + kepler.maxPhaseDimMag);
   }
-  let flux = pow(10.0, -0.4 * v) * kepler.exposure[cls];
+  let flux = pow(10.0, -0.4 * vMag) * kepler.exposure[cls];
   if (flux < kepler.minFlux[cls] && row != kepler.selectedRow) {
     return vec4<f32>(0.0);
   }
   // A selected row under the floor keeps a positive flux, so the shown test below holds for it.
-  return vec4<f32>(p, max(flux, 1e-30));
+  return vec4<f32>(helioAu, max(flux, 1e-30));
 }
 
 @compute @workgroup_size(WORKGROUP_SIZE)

@@ -11,16 +11,16 @@ const KEPLER_STEPS: u32 = 5u;
 const KEPLER_MAX_STEP: f32 = 1.0;
 
 // E on the branch of M reduced to [-pi, pi].
-fn solveKeplerFixed(meanAnomaly: f32, e: f32) -> f32 {
-  let m = meanAnomaly - TAU * floor(meanAnomaly / TAU + 0.5);
-  var E = m + 0.85 * e * sign(m);
-  for (var k = 0u; k < KEPLER_STEPS; k++) {
-    let s = e * sin(E);
-    let c = e * cos(E);
-    let f = E - s - m;
-    let df = 1.0 - c;
-    let step = f / (df - f * s / (2.0 * df));
-    E = E - clamp(step, -KEPLER_MAX_STEP, KEPLER_MAX_STEP);
+fn solveKeplerFixed(meanAnomaly: f32, ecc: f32) -> f32 {
+  let meanReduced = meanAnomaly - TAU * floor(meanAnomaly / TAU + 0.5);
+  var eccAnomaly = meanReduced + 0.85 * ecc * sign(meanReduced);
+  for (var iter = 0u; iter < KEPLER_STEPS; iter++) {
+    let eSinE = ecc * sin(eccAnomaly);
+    let eCosE = ecc * cos(eccAnomaly);
+    let residual = eccAnomaly - eSinE - meanReduced;
+    let df = 1.0 - eCosE;
+    let step = residual / (df - residual * eSinE / (2.0 * df));
+    eccAnomaly = eccAnomaly - clamp(step, -KEPLER_MAX_STEP, KEPLER_MAX_STEP);
   }
-  return E;
+  return eccAnomaly;
 }

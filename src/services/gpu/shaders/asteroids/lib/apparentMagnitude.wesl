@@ -18,11 +18,11 @@ const HG_HALF_TAN_FLOOR: f32 = 1e-12;
 const HG_PHASE_SUM_FLOOR: f32 = 1e-30;
 
 // r and delta in AU; cosPhase = dot(sun->ast, cam->ast) / (r * delta).
-fn asteroidApparentMagnitude(h: f32, g: f32, rAu: f32, deltaAu: f32, cosPhase: f32) -> f32 {
-  let c = clamp(cosPhase, HG_COS_PHASE_MIN, 1.0);
-  let halfTan = max(HG_HALF_TAN_FLOOR, sqrt((1.0 - c) / (1.0 + c)));
+fn asteroidApparentMagnitude(hMag: f32, slopeG: f32, rAu: f32, deltaAu: f32, cosPhase: f32) -> f32 {
+  let cosClamped = clamp(cosPhase, HG_COS_PHASE_MIN, 1.0);
+  let halfTan = max(HG_HALF_TAN_FLOOR, sqrt((1.0 - cosClamped) / (1.0 + cosClamped)));
   let phi1 = exp(-HG_A1 * pow(halfTan, HG_B1));
   let phi2 = exp(-HG_A2 * pow(halfTan, HG_B2));
-  let phase = max(HG_PHASE_SUM_FLOOR, (1.0 - g) * phi1 + g * phi2);
-  return h + (5.0 * log(rAu * deltaAu) - 2.5 * log(phase)) / LOG10;
+  let phase = max(HG_PHASE_SUM_FLOOR, (1.0 - slopeG) * phi1 + slopeG * phi2);
+  return hMag + (5.0 * log(rAu * deltaAu) - 2.5 * log(phase)) / LOG10;
 }
