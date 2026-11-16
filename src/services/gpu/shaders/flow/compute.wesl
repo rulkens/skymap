@@ -78,11 +78,11 @@ fn seed(@builtin(global_invocation_id) gid: vec3<u32>) {
   let particleIndex = gid.x;
   if (particleIndex >= params.n) { return; }
   let base = particleIndex * TRAIL;
-  let sb = randomStream(particleIndex, params.frame);
-  let spawn = pickSpawn(velTex, velSamp, DENS_SCALE, sb, params.bias);
+  let spawnStream = randomStream(particleIndex, params.frame);
+  let spawn = pickSpawn(velTex, velSamp, DENS_SCALE, spawnStream, params.bias);
   let spawnVel = textureSampleLevel(velTex, velSamp, spawn, 0.0);
   for (var trailIndex: u32 = 0u; trailIndex < TRAIL; trailIndex = trailIndex + 1u) { trail[base + trailIndex] = vec4<f32>(spawn, length(spawnVel.xyz)); }
-  parts[particleIndex] = vec4<f32>(spawn, rand01(sb + AGE_SALT) * LIFE);
+  parts[particleIndex] = vec4<f32>(spawn, rand01(spawnStream + AGE_SALT) * LIFE);
   acc[particleIndex] = 0.0;
 }
 
@@ -97,13 +97,13 @@ fn advect(@builtin(global_invocation_id) gid: vec3<u32>) {
   let age = parts[particleIndex].w + params.dt;
   var carried = acc[particleIndex];
   var toGo = min(params.headStep, params.trailStep * f32(TRAIL));
-  var rs = randomStream(particleIndex, params.frame) + WANDER_SALT;
+  var wanderStream = randomStream(particleIndex, params.frame) + WANDER_SALT;
 
   loop {
     let step = min(toGo, params.trailStep - carried);
     let vel = textureSampleLevel(velTex, velSamp, head, 0.0);
-    let jitter = vec3<f32>(rand01(rs) - 0.5, rand01(rs + 1u) - 0.5, rand01(rs + 2u) - 0.5);
-    rs = rs + 3u;
+    let jitter = vec3<f32>(rand01(wanderStream) - 0.5, rand01(wanderStream + 1u) - 0.5, rand01(wanderStream + 2u) - 0.5);
+    wanderStream = wanderStream + 3u;
     let dir = normalize(normalize(vel.xyz + DIR_EPS) + jitter * params.wander);
     head = head + dir * step;
     carried = carried + step;

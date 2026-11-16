@@ -33,7 +33,7 @@ fn fs(input: HiiSplatOut) -> @location(0) vec4<f32> {
     emission = emission * mix(1.0, term, weight);
   }
 
-  let fade = hiiNearFade(shading.po, shading.boundRadius);
+  let fade = hiiNearFade(shading.originFromCenter, shading.boundRadius);
   let feather = quadCapFeather(input.corner);
   return vec4<f32>(hiiExposureMultiply(emission * fade * feather), 0.0);
 }

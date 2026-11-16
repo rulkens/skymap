@@ -173,14 +173,14 @@ const STAR_SPRITE_FADE_END_RATIO: f32 = 4.0;
 // entry) and 0 for the aggregate list (one blob per entry, local 0).
 @vertex
 fn vs(
-  @builtin(vertex_index) vi: u32,
-  @builtin(instance_index) ii: u32,
+  @builtin(vertex_index) vertexIndex: u32,
+  @builtin(instance_index) instanceIndex: u32,
 ) -> VSOut {
   let shift = cutStream.blockShift;
-  let entry = cutList[ii >> shift];
+  let entry = cutList[instanceIndex >> shift];
   let nodeIdx = leafEntryNode(entry);
   let bits = cutNodes[nodeIdx].bits;
-  let local = (leafEntryBlock(entry) << shift) | (ii & ((1u << shift) - 1u));
+  let local = (leafEntryBlock(entry) << shift) | (instanceIndex & ((1u << shift) - 1u));
   let isAgg = cutStream.isBlob == 1u;
   let ownCount = nodeOwnCount(bits);
   if (!isAgg && local >= ownCount) {
@@ -199,20 +199,20 @@ fn vs(
   let xyWord = records[base * 2u + 0u];
   let zMagColourWord = records[base * 2u + 1u];
 
-  let ox = f32(xyWord & OFFSET_MASK);
-  let oy = f32(xyWord >> GPU_Y_SHIFT);
-  let oz = f32(zMagColourWord & OFFSET_MASK);
+  let offsetX = f32(xyWord & OFFSET_MASK);
+  let offsetY = f32(xyWord >> GPU_Y_SHIFT);
+  let offsetZ = f32(zMagColourWord & OFFSET_MASK);
   let absMagIdx = (zMagColourWord >> GPU_ABSMAG_SHIFT) & GPU_ABSMAG_MASK;
   let colorIdx = (zMagColourWord >> GPU_COLOR_SHIFT) & GPU_COLOR_MASK;
 
-  let offset = vec3<f32>(ox, oy, oz) * OFFSET_SCALE;
+  let offset = vec3<f32>(offsetX, offsetY, offsetZ) * OFFSET_SCALE;
   let worldRelCam = originRelCamMpc + offset * cellScaleMpc;
 
   let distSqMpc2 = dot(worldRelCam, worldRelCam);
   let atten = (D_REF_MPC * D_REF_MPC) / max(distSqMpc2, MIN_D2_MPC2);
 
   let center = worldToClip(uniforms.cam, worldRelCam);
-  let corner = triCorner(vi);
+  let corner = triCorner(vertexIndex);
 
   let absMag = STAR_ABSMAG_MIN + (f32(absMagIdx) + 0.5) * STAR_ABSMAG_STEP;
   let flux = pow(10.0, -0.4 * absMag) * subtreeStarCount;

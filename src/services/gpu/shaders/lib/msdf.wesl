@@ -51,17 +51,17 @@ fn shadeMsdf(
   // Floored: where the atlas saturates (quad corners) fwidth(sdf) is exactly 0,
   // and smoothstep with edge0 == edge1 is undefined in WGSL — SwiftShader
   // returns 1 there, filling every glyph quad solid (trailOcclusion precedent).
-  let aa = max(fwidth(sdf), 1e-4);
+  let antialiasWidth = max(fwidth(sdf), 1e-4);
 
   // Fill mask (1 inside the glyph, 0 outside, smoothed at the edge).
-  let fillMask = smoothstep(-aa, aa, sdf);
+  let fillMask = smoothstep(-antialiasWidth, antialiasWidth, sdf);
 
   // Outline mask covers sdf in [-outlineSdf, 0] but is masked OUT inside the
   // glyph.  When outlineSdf == 0 the smoothstep collapses to a single-point
   // step at sdf=0 — the mask is then identically zero outside the glyph (no
   // contribution) and cancelled by (1 - fillMask) inside.  So a zero outline
   // width contributes nothing.
-  let outlineBand = smoothstep(-aa - outlineSdf, -aa, sdf);
+  let outlineBand = smoothstep(-antialiasWidth - outlineSdf, -antialiasWidth, sdf);
   let outlineMask = outlineBand * (1.0 - fillMask);
 
   let fillPM    = color        * fillMask;

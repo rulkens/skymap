@@ -31,7 +31,7 @@ struct HiiComponentShading {
   emissionColorTextureWeight: vec4<f32>,
   centerStarsWeight: vec4<f32>,
   boundRadius: f32,
-  po: vec3<f32>,
+  originFromCenter: vec3<f32>,
   rayOrigin: vec3<f32>,
   rayDir: vec3<f32>,
   cut: bool,
@@ -45,9 +45,9 @@ fn baseHiiShading(input: HiiSplatOut) -> HiiComponentShading {
   let rayOrigin = uniforms.eye.xyz;
 
   let rec = comps[input.inst];
-  let po = rayOrigin - rec.center;
+  let originFromCenter = rayOrigin - rec.center;
 
-  let coeffs = gaussianRayCoeffs(po, rayDir, rec.invCovDiagonal, rec.invCovOffDiagonal);
+  let coeffs = gaussianRayCoeffs(originFromCenter, rayDir, rec.invCovDiagonal, rec.invCovOffDiagonal);
 
   var result: HiiComponentShading;
   result.coeffs = coeffs;
@@ -57,7 +57,7 @@ fn baseHiiShading(input: HiiSplatOut) -> HiiComponentShading {
   result.emissionColorTextureWeight = vec4<f32>(rec.color, rec.textureWeight);
   result.centerStarsWeight = vec4<f32>(rec.center, rec.starsWeight);
   result.boundRadius = rec.boundRadius;
-  result.po = po;
+  result.originFromCenter = originFromCenter;
   result.rayOrigin = rayOrigin;
   result.rayDir = rayDir;
   result.cut = coeffs.z > SPLAT_CUT * SPLAT_CUT;
@@ -87,15 +87,15 @@ fn hiiNearFadeActive(fadeStart: f32, fadeEnd: f32) -> bool {
   return fadeStart > fadeEnd && fadeStart > 0.0;
 }
 
-// hiiNearFade — recomputes the vs's own fade gate from 'po'/'boundRadius'
+// hiiNearFade — recomputes the vs's own fade gate from 'originFromCenter'/'boundRadius'
 // rather than carrying it down as a varying: both are already in scope for
 // the ray math above, and the vs's own gate already collapsed the fade <= 0
 // case to zero fragments, so only the 0..1 band ever reaches this.
-fn hiiNearFade(po: vec3<f32>, boundRadius: f32) -> f32 {
+fn hiiNearFade(originFromCenter: vec3<f32>, boundRadius: f32) -> f32 {
   let fadeStart = uniforms.youngStars.z;
   let fadeEnd = uniforms.youngStars.w;
   if (hiiNearFadeActive(fadeStart, fadeEnd)) {
-    return smoothstep(fadeEnd * boundRadius, fadeStart * boundRadius, length(po));
+    return smoothstep(fadeEnd * boundRadius, fadeStart * boundRadius, length(originFromCenter));
   }
   return 1.0;
 }

@@ -29,7 +29,7 @@
 // skymap's camera views Earth from SPACE, so the ray origin's radius is far
 // outside the atmosphere top. Marching t in [0, tMax] (tMax = the far exit) would
 // spend nearly every one of the ~30 fixed steps in the tens of thousands of km of
-// VACUUM between the camera and the planet, with dt hundreds-to-thousands of km
+// VACUUM between the camera and the planet, with stepLength hundreds-to-thousands of km
 // wide; the ~1,400 km of dense atmosphere near the ray's tangent point would catch
 // zero or one sample and the LUT would bake to near-zero noise (the shell then
 // renders almost nothing). Instead we clamp to the ray's atmosphere-top ENTRY:
@@ -114,7 +114,7 @@ fn raymarchInScatter(rayStart: vec3<f32>, dir: vec3<f32>, sunDir: vec3<f32>) -> 
   if (ground.x > 0.0 && ground.x > tNear) {
     tFar = min(tFar, ground.x);
   }
-  let dt = (tFar - tNear) / SKY_VIEW_STEPS;
+  let stepLength = (tFar - tNear) / SKY_VIEW_STEPS;
   // From space, 'rayStart + dir * tNear' cancels ~1e7 km to the top radius; the entry
   // rebuilt from the ray's closest-approach point carries no such difference.
   let closestAlongRay = dot(rayStart, dir);
@@ -130,10 +130,10 @@ fn raymarchInScatter(rayStart: vec3<f32>, dir: vec3<f32>, sunDir: vec3<f32>) -> 
   var stepIndex: u32 = 0u;
   loop {
     if (f32(stepIndex) >= SKY_VIEW_STEPS) { break; }
-    let pos = entry + dir * ((f32(stepIndex) + 0.5) * dt);
+    let pos = entry + dir * ((f32(stepIndex) + 0.5) * stepLength);
     let stepContribution = scatterStep(
       params, transmittanceLut, multiScatterLut, lutSamp,
-      pos, sunDir, cosTheta, dt,
+      pos, sunDir, cosTheta, stepLength,
       view.twilightSoftness, view.twilightIntensity,
     );
     radiance = radiance + throughput * stepContribution.inScatter;

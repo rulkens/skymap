@@ -22,10 +22,10 @@ fn csRingMeans(
   @builtin(local_invocation_index) localIndex: u32,
 ) {
   let ring = wgid.x;
-  let az = textureDimensions(ismMapTex).x;
+  let azCount = textureDimensions(ismMapTex).x;
 
   var sum: f32 = 0.0;
-  for (var col = localIndex; col < az; col += RING_REDUCE_WORKGROUP_SIZE) {
+  for (var col = localIndex; col < azCount; col += RING_REDUCE_WORKGROUP_SIZE) {
     sum += textureLoad(ismMapTex, vec2<i32>(i32(col), i32(ring)), 0).w;
   }
   partialSums[localIndex] = sum;
@@ -41,7 +41,7 @@ fn csRingMeans(
   }
 
   if (localIndex == 0u) {
-    ringMeansBuf[ring] = partialSums[0] / f32(az);
+    ringMeansBuf[ring] = partialSums[0] / f32(azCount);
   }
 }
 

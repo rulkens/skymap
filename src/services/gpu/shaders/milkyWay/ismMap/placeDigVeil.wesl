@@ -104,14 +104,14 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   let cdfLen = params.cdfRings * params.cdfAz;
   let total = prefixBuf[cdfLen - 1u];
   let cdfTarget = genRand(params.seed, DIG_VEIL_POP_COMPLEX, complexIndex, 0u) * total;
-  var lo = 0u;
-  var hi = cdfLen - 1u;
+  var low = 0u;
+  var high = cdfLen - 1u;
   loop {
-    if (lo >= hi) { break; }
-    let mid = (lo + hi) / 2u;
-    if (prefixBuf[mid] > cdfTarget) { hi = mid; } else { lo = mid + 1u; }
+    if (low >= high) { break; }
+    let mid = (low + high) / 2u;
+    if (prefixBuf[mid] > cdfTarget) { high = mid; } else { low = mid + 1u; }
   }
-  let index = lo;
+  let index = low;
   let ring = index / params.cdfAz;
   let azIdx = index % params.cdfAz;
   let dTheta = 2.0 * DIG_PI / f32(params.cdfAz);

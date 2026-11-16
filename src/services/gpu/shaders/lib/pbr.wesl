@@ -170,9 +170,9 @@ fn distributionGGX(NoH: f32, roughness: f32) -> f32 {
 fn geometrySmithGGX(NoV: f32, NoL: f32, roughness: f32) -> f32 {
   let shiftedRoughness = roughness + 1.0;
   let roughnessRemap = (shiftedRoughness * shiftedRoughness) / 8.0;
-  let gv = NoV / (NoV * (1.0 - roughnessRemap) + roughnessRemap);
-  let gl = NoL / (NoL * (1.0 - roughnessRemap) + roughnessRemap);
-  return gv * gl;
+  let viewMasking = NoV / (NoV * (1.0 - roughnessRemap) + roughnessRemap);
+  let lightShadowing = NoL / (NoL * (1.0 - roughnessRemap) + roughnessRemap);
+  return viewMasking * lightShadowing;
 }
 
 // ── fresnelSchlick (F) — Schlick's Fresnel approximation ─────────────
@@ -322,11 +322,11 @@ fn pbrDirectSphere(
   let reflected = reflect(-viewDir, normal);
   let centreToRay = reflected * dot(lightDir, reflected) - lightDir;
   let reach = clamp(sinAngularRadius / max(length(centreToRay), 1e-6), 0.0, 1.0);
-  let ls = normalize(lightDir + centreToRay * reach);
+  let representativeDir = normalize(lightDir + centreToRay * reach);
 
-  let halfVector = normalize(viewDir + ls);
+  let halfVector = normalize(viewDir + representativeDir);
   let NoL = max(dot(normal, lightDir), 0.0);
-  let NoLs = max(dot(normal, ls), 0.0);
+  let NoRepresentative = max(dot(normal, representativeDir), 0.0);
   let NoV = max(dot(normal, viewDir), 0.0);
   let NoH = max(dot(normal, halfVector), 0.0);
   let VoH = max(dot(viewDir, halfVector), 0.0);
@@ -337,13 +337,13 @@ fn pbrDirectSphere(
   let ratio = alpha / alphaPrime;
 
   let distribution = distributionGGX(NoH, roughness) * ratio * ratio;
-  let geometryTerm = geometrySmithGGX(NoV, NoLs, roughness);
+  let geometryTerm = geometrySmithGGX(NoV, NoRepresentative, roughness);
   let fresnel = fresnelSchlick(VoH, baseReflectance);
-  let specular = (distribution * geometryTerm) * fresnel / max(4.0 * NoV * NoLs, 1e-4);
+  let specular = (distribution * geometryTerm) * fresnel / max(4.0 * NoV * NoRepresentative, 1e-4);
 
   let diffuse = orenNayarDiffuse(normal, viewDir, lightDir, roughness) * albedo;
 
-  return diffuse * NoL + specular * NoLs;
+  return diffuse * NoL + specular * NoRepresentative;
 }
 
 // ── envSplitSum — the probe as environment light ─────────────────────
@@ -373,9 +373,9 @@ fn envSplitSum(
   let topMip = f32(textureNumLevels(probe) - 1u);
   let prefiltered = textureSampleLevel(probe, probeSampler, reflected, roughness * topMip).rgb;
   let irradiance = textureSampleLevel(probe, probeSampler, normal, topMip).rgb;
-  let ab = textureSampleLevel(lut, lutSampler, vec2<f32>(NoV, roughness), 0.0).rg;
+  let scaleBias = textureSampleLevel(lut, lutSampler, vec2<f32>(NoV, roughness), 0.0).rg;
 
-  let specularAlbedo = baseReflectance * ab.x + ab.y;
+  let specularAlbedo = baseReflectance * scaleBias.x + scaleBias.y;
   let specularOcclusion = saturate(pow(NoV + ao, exp2(-16.0 * roughness - 1.0)) - 1.0 + ao);
   let specular = prefiltered * specularAlbedo * specularOcclusion;
   let diffuse = (vec3<f32>(1.0) - specularAlbedo) * diffuseAlbedo * irradiance * ao;

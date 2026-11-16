@@ -25,8 +25,8 @@ import package::lib::util::raySphere;
 // does not preserve an imported entry point's NAME for the pipeline's lookup
 // ('lib/fullscreenTri.wesl').
 @vertex
-fn vs(@builtin(vertex_index) vi: u32) -> FullscreenOut {
-  return fullscreenVertex(vi);
+fn vs(@builtin(vertex_index) vertexIndex: u32) -> FullscreenOut {
+  return fullscreenVertex(vertexIndex);
 }
 
 @group(0) @binding(5) var<uniform> params: ScatteringParams;

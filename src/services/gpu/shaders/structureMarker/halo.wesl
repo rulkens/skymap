@@ -25,7 +25,7 @@ import package::lib::billboard::expandBillboardWorld;
 
 @vertex
 fn vs(
-  @builtin(vertex_index) vi: u32,
+  @builtin(vertex_index) vertexIndex: u32,
   input: VsIn,
 ) -> VsOut {
   let worldPos = input.positionAndRadius.xyz;
@@ -33,7 +33,7 @@ fn vs(
 
   // Eye-facing world disc — see lib/billboard.wesl's expandBillboardWorld.
   let half = radiusMpc * MARKER_RADIUS_RETUNE;
-  let corner = quadCorner(vi);
+  let corner = quadCorner(vertexIndex);
   let offset = expandBillboardWorld(vec3<f32>(0.0), worldPos, corner, half);
 
   var out: VsOut;

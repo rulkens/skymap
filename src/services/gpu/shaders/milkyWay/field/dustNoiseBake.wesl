@@ -35,10 +35,10 @@ fn quinticFade(fraction: vec3<f32>) -> vec3<f32> {
 // remapped [0,1) -> [-1,1]. Left unnormalized — GRAD_BOUND already accounts
 // for the unnormalized magnitude, so skipping the inverse-sqrt is free.
 fn latticeGradient(idx: vec3<i32>) -> vec3<f32> {
-  let gx = 2.0 * integerHash3(idx + vec3<i32>(1013, 0, 0)) - 1.0;
-  let gy = 2.0 * integerHash3(idx + vec3<i32>(0, 1741, 0)) - 1.0;
-  let gz = 2.0 * integerHash3(idx + vec3<i32>(0, 0, 2749)) - 1.0;
-  return vec3<f32>(gx, gy, gz);
+  let gradientX = 2.0 * integerHash3(idx + vec3<i32>(1013, 0, 0)) - 1.0;
+  let gradientY = 2.0 * integerHash3(idx + vec3<i32>(0, 1741, 0)) - 1.0;
+  let gradientZ = 2.0 * integerHash3(idx + vec3<i32>(0, 0, 2749)) - 1.0;
+  return vec3<f32>(gradientX, gradientY, gradientZ);
 }
 
 // gradientNoise3D — tileable Perlin-style gradient noise: each corner's

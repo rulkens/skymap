@@ -252,11 +252,11 @@ fn nLerp(low: f32, high: f32, weight: f32) -> f32 {
 // precision loss). The integer lattice coords arrive as i32 (they can be
 // negative) and are bitcast to u32 so the wrap-multiply matches
 // two's-complement 32-bit truncation semantics.
-fn nHash(xi: i32, yi: i32, zi: i32, seed: u32) -> f32 {
-  let xu = bitcast<u32>(xi);
-  let yu = bitcast<u32>(yi);
-  let zu = bitcast<u32>(zi);
-  let mixed = xu * 374761393u + yu * 668265263u + zu * 2147483647u + seed * 974711u;
+fn nHash(cellX: i32, cellY: i32, cellZ: i32, seed: u32) -> f32 {
+  let cellBitsX = bitcast<u32>(cellX);
+  let cellBitsY = bitcast<u32>(cellY);
+  let cellBitsZ = bitcast<u32>(cellZ);
+  let mixed = cellBitsX * 374761393u + cellBitsY * 668265263u + cellBitsZ * 2147483647u + seed * 974711u;
   return f32(hashAvalanche(mixed)) * INV_2POW32;
 }
 
@@ -264,18 +264,18 @@ fn nHash(xi: i32, yi: i32, zi: i32, seed: u32) -> f32 {
 // negative coords floor (not truncate toward zero), matching Math.floor. The
 // trilinear blend order is x edges, then y, then z.
 fn valueNoise3(position: vec3<f32>, seed: u32) -> f32 {
-  let xi = i32(floor(position.x));
-  let yi = i32(floor(position.y));
-  let zi = i32(floor(position.z));
-  let xf = nSmooth(position.x - floor(position.x));
-  let yf = nSmooth(position.y - floor(position.y));
-  let zf = nSmooth(position.z - floor(position.z));
+  let cellX = i32(floor(position.x));
+  let cellY = i32(floor(position.y));
+  let cellZ = i32(floor(position.z));
+  let fadeX = nSmooth(position.x - floor(position.x));
+  let fadeY = nSmooth(position.y - floor(position.y));
+  let fadeZ = nSmooth(position.z - floor(position.z));
 
-  let x00 = nLerp(nHash(xi, yi, zi, seed), nHash(xi + 1, yi, zi, seed), xf);
-  let x10 = nLerp(nHash(xi, yi + 1, zi, seed), nHash(xi + 1, yi + 1, zi, seed), xf);
-  let x01 = nLerp(nHash(xi, yi, zi + 1, seed), nHash(xi + 1, yi, zi + 1, seed), xf);
-  let x11 = nLerp(nHash(xi, yi + 1, zi + 1, seed), nHash(xi + 1, yi + 1, zi + 1, seed), xf);
-  return nLerp(nLerp(x00, x10, yf), nLerp(x01, x11, yf), zf);
+  let x00 = nLerp(nHash(cellX, cellY, cellZ, seed), nHash(cellX + 1, cellY, cellZ, seed), fadeX);
+  let x10 = nLerp(nHash(cellX, cellY + 1, cellZ, seed), nHash(cellX + 1, cellY + 1, cellZ, seed), fadeX);
+  let x01 = nLerp(nHash(cellX, cellY, cellZ + 1, seed), nHash(cellX + 1, cellY, cellZ + 1, seed), fadeX);
+  let x11 = nLerp(nHash(cellX, cellY + 1, cellZ + 1, seed), nHash(cellX + 1, cellY + 1, cellZ + 1, seed), fadeX);
+  return nLerp(nLerp(x00, x10, fadeY), nLerp(x01, x11, fadeY), fadeZ);
 }
 
 // dustNoiseAt — two-octave dust sample. Base octave runs y at half frequency;
@@ -317,13 +317,13 @@ fn tempColorRamp(temperature: f32) -> vec3<f32> {
 }
 
 // hiiCorePerturbed — the HII-region core colour: the palette core
-// (gen.hiiCore) with its green and blue channels nudged up by 'cv' and
+// (gen.hiiCore) with its green and blue channels nudged up by 'coreColorNudge' and
 // clamped to 1. Red is untouched.
-fn hiiCorePerturbed(cv: f32) -> vec3<f32> {
+fn hiiCorePerturbed(coreColorNudge: f32) -> vec3<f32> {
   return vec3<f32>(
     gen.hiiCore.x,
-    min(1.0, gen.hiiCore.y + cv),
-    min(1.0, gen.hiiCore.z + cv)
+    min(1.0, gen.hiiCore.y + coreColorNudge),
+    min(1.0, gen.hiiCore.z + coreColorNudge)
   );
 }
 
@@ -335,11 +335,11 @@ fn warpOffset(diskX: f32, diskZ: f32) -> f32 {
   if (gen.warpStrength <= 0.0) {
     return 0.0;
   }
-  let rr = length(vec2<f32>(diskX, diskZ));
-  if (rr <= gen.warpStartRadius) {
+  let diskRadius = length(vec2<f32>(diskX, diskZ));
+  if (diskRadius <= gen.warpStartRadius) {
     return 0.0;
   }
-  let rel = (rr - gen.warpStartRadius) / max(1e-4, gen.outerRadius - gen.warpStartRadius);
+  let rel = (diskRadius - gen.warpStartRadius) / max(1e-4, gen.outerRadius - gen.warpStartRadius);
   let node = gen.warpTwist * rel;  // line of nodes precesses with radius
   return gen.warpStrength * gen.outerRadius * 0.4 * rel * rel * sin(atan2(diskZ, diskX) - node);
 }
@@ -366,17 +366,17 @@ fn diskFalloff(radius: f32, softness: f32) -> f32 {
 // disk, producing a visibly different galaxy.
 fn applyExtraTransform(position: vec3<f32>) -> vec3<f32> {
   let scale = gen.extraScale;
-  let cy = gen.extraRot.x;
-  let sy = gen.extraRot.y;
-  let cx = gen.extraRot.z;
-  let sx = gen.extraRot.w;
+  let cosRotY = gen.extraRot.x;
+  let sinRotY = gen.extraRot.y;
+  let cosTiltX = gen.extraRot.z;
+  let sinTiltX = gen.extraRot.w;
   let scaledX = position.x * scale;
   let scaledY = position.y * scale;
   let scaledZ = position.z * scale;
-  let spunX = scaledX * cy - scaledZ * sy; // Y spin (disk axis)
-  let spunZ = scaledX * sy + scaledZ * cy;
-  let tiltedY = scaledY * cx - spunZ * sx; // X tilt (inclination), on the already-spun scaledY/spunZ
-  let tiltedZ = scaledY * sx + spunZ * cx;
+  let spunX = scaledX * cosRotY - scaledZ * sinRotY; // Y spin (disk axis)
+  let spunZ = scaledX * sinRotY + scaledZ * cosRotY;
+  let tiltedY = scaledY * cosTiltX - spunZ * sinTiltX; // X tilt (inclination), on the already-spun scaledY/spunZ
+  let tiltedZ = scaledY * sinTiltX + spunZ * cosTiltX;
   return vec3<f32>(spunX + gen.extraPos.x, tiltedY + gen.extraPos.y, tiltedZ + gen.extraPos.z);
 }
 
@@ -743,7 +743,7 @@ fn armStarSample(iteration: u32) -> ArmStarSample {
   let giant = pow(genRand(seed, pop, iteration, 26u), 2.5); // slot 26
   let coreSize = gen.outerRadius * (0.006 + 0.022 * giant);
   let coreBright = (1.4 + 1.2 * genRand(seed, pop, iteration, 27u)) * (0.7 + 2.0 * giant) * gen.hiiIntensity * armFade; // slot 27
-  let cv = 0.1 * genRand(seed, pop, iteration, 28u); // slot 28
+  let coreColorNudge = 0.1 * genRand(seed, pop, iteration, 28u); // slot 28
   let newbornCount = 1u + u32(genRand(seed, pop, iteration, 29u) * 3.0); // slot 29
 
   // slot 30: clump-gap gate (non-HII only). The HII branch
@@ -766,7 +766,7 @@ fn armStarSample(iteration: u32) -> ArmStarSample {
   armSample.brightMul = brightMul;
   armSample.coreSize = coreSize;
   armSample.coreBright = coreBright;
-  armSample.cv = cv;
+  armSample.cv = coreColorNudge;
   armSample.newbornCount = newbornCount;
   armSample.isHii = isHii;
   armSample.isSubArm = isSubArm;
@@ -818,13 +818,13 @@ fn buildArmSlot(iteration: u32, sub: u32) -> StarRec {
     // slot nbase+0: young-star colour
     let color = tempColorRamp(0.86 + 0.12 * genRand(seed, pop, iteration, nbase + 0u));
     // slots nbase+1..2 / +3..4 / +5..6: x / y / z offset
-    let nx = armSample.pos.x + genNormal(seed, pop, iteration, nbase + 1u) * armSample.coreSize * 0.9;
-    let ny = armSample.pos.y + genNormal(seed, pop, iteration, nbase + 3u) * 0.05;
-    let nz = armSample.pos.z + genNormal(seed, pop, iteration, nbase + 5u) * armSample.coreSize * 0.9;
+    let newbornX = armSample.pos.x + genNormal(seed, pop, iteration, nbase + 1u) * armSample.coreSize * 0.9;
+    let newbornY = armSample.pos.y + genNormal(seed, pop, iteration, nbase + 3u) * 0.05;
+    let newbornZ = armSample.pos.z + genNormal(seed, pop, iteration, nbase + 5u) * armSample.coreSize * 0.9;
     // slot nbase+7: brightness
     let brightness = (1.1 + 0.7 * genRand(seed, pop, iteration, nbase + 7u)) * armSample.armFade;
     var rec: StarRec;
-    rec.pos = vec3<f32>(nx, ny + warpOffset(nx, nz), nz);
+    rec.pos = vec3<f32>(newbornX, newbornY + warpOffset(newbornX, newbornZ), newbornZ);
     rec.color = color;
     rec.size = gen.starSize * 0.55;
     rec.brightness = brightness;
@@ -882,7 +882,7 @@ fn irregularSample(iteration: u32) -> IrregularSample {
   let giant = pow(genRand(seed, pop, iteration, 7u), 2.5); // slot 7
   let coreSize = gen.outerRadius * (0.006 + 0.024 * giant); // 0.024, not the arm's 0.022
   let coreBright = (1.6 + 1.4 * genRand(seed, pop, iteration, 8u)) * (0.8 + 1.6 * giant); // slot 8
-  let cv = 0.1 * genRand(seed, pop, iteration, 9u); // slot 9
+  let coreColorNudge = 0.1 * genRand(seed, pop, iteration, 9u); // slot 9
   // slot 15: dust-seed gate
   let seedAccepted = genRand(seed, pop, iteration, 15u) < 0.25;
 
@@ -890,7 +890,7 @@ fn irregularSample(iteration: u32) -> IrregularSample {
   clumpSample.pos = vec3<f32>(posX, posY, posZ);
   clumpSample.coreSize = coreSize;
   clumpSample.coreBright = coreBright;
-  clumpSample.cv = cv;
+  clumpSample.cv = coreColorNudge;
   clumpSample.isHii = isHii;
   clumpSample.seedAccepted = seedAccepted;
   return clumpSample;
@@ -1018,19 +1018,19 @@ fn buildGlobularStar(iteration: u32) -> StarRec {
   let mpop = 7u;
   let midx = iteration;
   let memberDistance = clusterRadius * pow(genRand(seed, mpop, midx, 0u), 0.7); // slot 0 (concentrated core)
-  let cl = 2.0 * genRand(seed, mpop, midx, 1u) - 1.0; // slot 1
-  let sl = sqrt(1.0 - cl * cl);
-  let ln = 2.0 * PI * genRand(seed, mpop, midx, 2u); // slot 2
+  let memberCosLat = 2.0 * genRand(seed, mpop, midx, 1u) - 1.0; // slot 1
+  let memberSinLat = sqrt(1.0 - memberCosLat * memberCosLat);
+  let memberLon = 2.0 * PI * genRand(seed, mpop, midx, 2u); // slot 2
   // slot 3: hue jitter
   let color = tempColorRamp(clusterHue + (genRand(seed, mpop, midx, 3u) - 0.5) * 0.16);
   let size = gen.starSize * (0.5 + 0.22 * genRand(seed, mpop, midx, 4u)); // slot 4
   let brightness = (0.18 + 0.32 * genRand(seed, mpop, midx, 5u)) * gen.globularBright * richness; // slot 5
 
-  let px = centerX + memberDistance * sl * cos(ln);
-  let py = centerY + memberDistance * cl;
-  let pz = centerZ + memberDistance * sl * sin(ln);
+  let memberX = centerX + memberDistance * memberSinLat * cos(memberLon);
+  let memberY = centerY + memberDistance * memberCosLat;
+  let memberZ = centerZ + memberDistance * memberSinLat * sin(memberLon);
   var rec: StarRec;
-  rec.pos = vec3<f32>(px, py + warpOffset(px, pz), pz); // warp folded into y
+  rec.pos = vec3<f32>(memberX, memberY + warpOffset(memberX, memberZ), memberZ); // warp folded into y
   rec.color = color;
   rec.size = size;
   rec.brightness = brightness;
@@ -1184,16 +1184,16 @@ fn writeDustParticle(
 ) -> DustRec {
   let warpedY = posY + warpOffset(posX, posZ);
   let darkness = 0.02 + 0.022 * genRand(seed, pop, idx, 56u);      // slot 56
-  let dr = darkness * (1.05 + 0.55 * genRand(seed, pop, idx, 57u)); // slot 57
-  let dg = darkness * (0.6 + 0.22 * genRand(seed, pop, idx, 58u));  // slot 58
-  let db = darkness * (0.32 + 0.26 * genRand(seed, pop, idx, 59u)); // slot 59
+  let dustRed = darkness * (1.05 + 0.55 * genRand(seed, pop, idx, 57u)); // slot 57
+  let dustGreen = darkness * (0.6 + 0.22 * genRand(seed, pop, idx, 58u));  // slot 58
+  let dustBlue = darkness * (0.32 + 0.26 * genRand(seed, pop, idx, 59u)); // slot 59
   // Position + size baked through the rigid extra transform (identity for a
   // standalone galaxy, where extraScale == 1 and the rotation is zero). Size
   // scales by extraScale separately, the same split writeStar uses.
   var rec: DustRec;
   rec.pos = applyExtraTransform(vec3<f32>(posX, warpedY, posZ));
   rec.size = size * gen.extraScale;
-  rec.color = vec3<f32>(dr, dg, db);
+  rec.color = vec3<f32>(dustRed, dustGreen, dustBlue);
   rec.opacity = opacity;
   rec.alive = true;
   return rec;
@@ -1324,10 +1324,10 @@ fn buildLenticularRingDust(iteration: u32) -> DustRec {
   let seed = gen.seed;
   let pop = 11u;
 
-  let th = 2.0 * PI * genRand(seed, pop, iteration, 0u); // slot 0
+  let ringAngle = 2.0 * PI * genRand(seed, pop, iteration, 0u); // slot 0
   let radius = gen.ringRadius + genNormal(seed, pop, iteration, 1u) * gen.ringWidth; // slots 1-2
-  let posX = radius * cos(th);
-  let posZ = radius * sin(th);
+  let posX = radius * cos(ringAngle);
+  let posZ = radius * sin(ringAngle);
   let posY = genNormal(seed, pop, iteration, 3u) * gen.diskHeight * 0.3; // slots 3-4
   let modulation = dustMod(vec3<f32>(posX, posY, posZ), seed, pop, iteration, 5u); // slot 5 keep gate
   if (!modulation.keep) { return dead; }

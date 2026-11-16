@@ -17,14 +17,14 @@ fn halfWidthPx(rel: vec3<f32>, halfWidthMpc: f32) -> f32 {
 
 @vertex
 fn vs(
-  @builtin(vertex_index) vi: u32,
+  @builtin(vertex_index) vertexIndex: u32,
   @location(0) aWorld: vec3<f32>,
   @location(1) bWorld: vec3<f32>,
   @location(2) halfWidthMpc: f32,
   @location(3) stream: u32,
 ) -> PickOut {
   var out: PickOut;
-  let corner = vec2<f32>(f32(vi & 1u), f32(vi >> 1u));
+  let corner = vec2<f32>(f32(vertexIndex & 1u), f32(vertexIndex >> 1u));
   let aRel = aWorld - uniforms.eye;
   let bRel = bWorld - uniforms.eye;
   let isB = corner.x > 0.5;

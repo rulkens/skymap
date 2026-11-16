@@ -20,8 +20,8 @@ import package::lib::math::TAU;
 // The padded vec4 stores clip.w in its THIRD slot - (x, y, w, 0) - so the
 // swizzle is .xyz, never .xyw: the .w lane is the zero pad, and reading it
 // makes p.z zero, which silently collapses every vertex to (0,0,0,0).
-fn ribbonClip(inst: OrbitInstance, si: u32) -> vec3<f32> {
-  let eccentricAnomaly = inst.arc.x + inst.arc.y * f32(si) / f32(SEGMENTS);
+fn ribbonClip(inst: OrbitInstance, sampleIndex: u32) -> vec3<f32> {
+  let eccentricAnomaly = inst.arc.x + inst.arc.y * f32(sampleIndex) / f32(SEGMENTS);
   return inst.cc.xyz + cos(eccentricAnomaly) * inst.ac.xyz + sin(eccentricAnomaly) * inst.bc.xyz; // clip (x, y, w)
 }
 
@@ -62,12 +62,12 @@ fn vsRibbon(@builtin(vertex_index) vid: u32, inst: OrbitInstance) -> VSOut {
   // (sample SEGMENTS is then BIT-IDENTICAL to sample 0, keeping the seam
   // exact); open arcs clamp, degenerating the end tangents to the one-sided
   // chord along the arc itself.
-  let siRaw = segment + offset;
-  let si = select(siRaw, siRaw % SEGMENTS, closed);
-  let prevIdx = select(max(si, 1u) - 1u, (si + SEGMENTS - 1u) % SEGMENTS, closed);
-  let nextIdx = select(min(si + 1u, SEGMENTS), (si + 1u) % SEGMENTS, closed);
+  let rawSampleIndex = segment + offset;
+  let sampleIndex = select(rawSampleIndex, rawSampleIndex % SEGMENTS, closed);
+  let prevIdx = select(max(sampleIndex, 1u) - 1u, (sampleIndex + SEGMENTS - 1u) % SEGMENTS, closed);
+  let nextIdx = select(min(sampleIndex + 1u, SEGMENTS), (sampleIndex + 1u) % SEGMENTS, closed);
 
-  let ownRaw = ribbonClip(inst, si);
+  let ownRaw = ribbonClip(inst, sampleIndex);
   let ownPx = clipToPixel(ownRaw, viewportPx);
   var prevPx = clipToPixel(ribbonClip(inst, prevIdx), viewportPx);
   var nextPx = clipToPixel(ribbonClip(inst, nextIdx), viewportPx);

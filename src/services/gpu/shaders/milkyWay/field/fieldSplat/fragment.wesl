@@ -32,9 +32,9 @@ fn fs(input: FieldSplatOut) -> @location(0) vec4<f32> {
   let rayOrigin = uniforms.eye.xyz;
 
   let rec = comps[input.inst];
-  let po = rayOrigin - rec.center;
+  let originFromCenter = rayOrigin - rec.center;
 
-  let coeffs = gaussianRayCoeffs(po, rayDir, rec.invCovDiagonal, rec.invCovOffDiagonal);
+  let coeffs = gaussianRayCoeffs(originFromCenter, rayDir, rec.invCovDiagonal, rec.invCovOffDiagonal);
 
   // q (coeffs.z) is the ray's own closest-approach squared Mahalanobis
   // distance. Exceeding SPLAT_CUT^2 means this fragment sits on a

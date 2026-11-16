@@ -93,8 +93,8 @@ fn rot2(point: vec2<f32>, angle: f32) -> vec2<f32> {
 
 fn sabs(value: f32, knee: f32) -> f32 {
   let parabola = (0.5 / knee) * value * value + knee * 0.5;
-  let ax = abs(value);
-  return select(parabola, ax, ax >= knee);
+  let absValue = abs(value);
+  return select(parabola, absValue, absValue >= knee);
 }
 
 // ── toPolar / toRect ─────────────────────────────────────────────────

@@ -42,10 +42,10 @@
 //
 // Single quotes in comments; no backticks (WESL parse rule).
 
-fn perturbNormal(Ng: vec3<f32>, tangent: vec3<f32>, encRG: vec2<f32>) -> vec3<f32> {
-  let nxy = encRG * 2.0 - 1.0; // [0,1] -> [-1,1]
-  let nz = sqrt(max(1.0 - dot(nxy, nxy), 0.0)); // reconstruct +z
-  let Tn = normalize(tangent - Ng * dot(Ng, tangent)); // Gram-Schmidt tangent against Ng
-  let Bt = cross(Ng, Tn); // +v = north (the bake's G axis)
-  return normalize(Tn * nxy.x + Bt * nxy.y + Ng * nz);
+fn perturbNormal(geometricNormal: vec3<f32>, tangent: vec3<f32>, encRG: vec2<f32>) -> vec3<f32> {
+  let normalXy = encRG * 2.0 - 1.0; // [0,1] -> [-1,1]
+  let normalZ = sqrt(max(1.0 - dot(normalXy, normalXy), 0.0)); // reconstruct +z
+  let orthonormalTangent = normalize(tangent - geometricNormal * dot(geometricNormal, tangent)); // Gram-Schmidt tangent against geometricNormal
+  let bitangent = cross(geometricNormal, orthonormalTangent); // +v = north (the bake's G axis)
+  return normalize(orthonormalTangent * normalXy.x + bitangent * normalXy.y + geometricNormal * normalZ);
 }

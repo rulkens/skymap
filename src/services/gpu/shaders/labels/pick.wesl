@@ -51,35 +51,35 @@ struct VSOut {
   @location(0) @interpolate(flat) packedId: u32,
 };
 
-// Corner 'vi' of the pixel rect, in NDC. 'quadUv' gives [0,1]^2 in the same
+// Corner 'vertexIndex' of the pixel rect, in NDC. 'quadUv' gives [0,1]^2 in the same
 // corner order the six-vertex triangle list uses; +Y down in px becomes +Y up
 // in NDC via the 1 - t flip.
-fn rectCornerNdc(vi: u32, rectPx: vec4<f32>) -> vec2<f32> {
-  let px = mix(rectPx.xy, rectPx.zw, quadUv(vi));
-  return vec2<f32>(px.x / uniforms.viewportPx.x * 2.0 - 1.0, 1.0 - px.y / uniforms.viewportPx.y * 2.0);
+fn rectCornerNdc(vertexIndex: u32, rectPx: vec4<f32>) -> vec2<f32> {
+  let cornerPx = mix(rectPx.xy, rectPx.zw, quadUv(vertexIndex));
+  return vec2<f32>(cornerPx.x / uniforms.viewportPx.x * 2.0 - 1.0, 1.0 - cornerPx.y / uniforms.viewportPx.y * 2.0);
 }
 
 @vertex
 fn vs(
-  @builtin(vertex_index) vi: u32,
+  @builtin(vertex_index) vertexIndex: u32,
   @location(0) rectPx: vec4<f32>,
   @location(1) packedId: u32,
 ) -> VSOut {
   var out: VSOut;
   // w = 1, so z IS z/w: the band value lands in NDC depth unchanged.
-  out.clip = vec4<f32>(rectCornerNdc(vi, rectPx), LABEL_PICK_BAND_EPS, 1.0);
+  out.clip = vec4<f32>(rectCornerNdc(vertexIndex, rectPx), LABEL_PICK_BAND_EPS, 1.0);
   out.packedId = packedId;
   return out;
 }
 
 @vertex
 fn vsReversed(
-  @builtin(vertex_index) vi: u32,
+  @builtin(vertex_index) vertexIndex: u32,
   @location(0) rectPx: vec4<f32>,
   @location(1) packedId: u32,
 ) -> VSOut {
   var out: VSOut;
-  out.clip = vec4<f32>(rectCornerNdc(vi, rectPx), 1.0 - LABEL_PICK_BAND_EPS, 1.0);
+  out.clip = vec4<f32>(rectCornerNdc(vertexIndex, rectPx), 1.0 - LABEL_PICK_BAND_EPS, 1.0);
   out.packedId = packedId;
   return out;
 }

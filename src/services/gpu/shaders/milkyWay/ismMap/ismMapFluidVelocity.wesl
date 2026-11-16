@@ -165,8 +165,8 @@ fn curlVelocity(gridPos: vec2<f32>, azCount: u32, curlScale: f32, genStep: f32) 
   return vec2<f32>(dPsiDy, -dPsiDx);
 }
 
-fn armForcingAt(az: i32, ring: i32, azCount: i32, ringCount: i32) -> f32 {
-  let wrappedAz = i32(wrapIndex(az, u32(azCount)));
+fn armForcingAt(azIndex: i32, ring: i32, azCount: i32, ringCount: i32) -> f32 {
+  let wrappedAz = i32(wrapIndex(azIndex, u32(azCount)));
   let clampedRing = clamp(ring, 0, ringCount - 1);
   return textureLoad(armForcingTex, vec2<i32>(wrappedAz, clampedRing), 0).x;
 }
@@ -174,11 +174,11 @@ fn armForcingAt(az: i32, ring: i32, azCount: i32, ringCount: i32) -> f32 {
 // Steepest-ascent direction of the arm-forcing field, in (az, ring) units —
 // dFdRing is scaled by azToRingMetric so both components are comparable
 // before curlVelocity/composedVelocity blend them with the az-axis gradient.
-fn forcingGradient(az: i32, ring: i32, azCount: i32, ringCount: i32, azToRingMetric: f32) -> vec2<f32> {
-  let fAzPlus = armForcingAt(az + 1, ring, azCount, ringCount);
-  let fAzMinus = armForcingAt(az - 1, ring, azCount, ringCount);
-  let fRingPlus = armForcingAt(az, ring + 1, azCount, ringCount);
-  let fRingMinus = armForcingAt(az, ring - 1, azCount, ringCount);
+fn forcingGradient(azIndex: i32, ring: i32, azCount: i32, ringCount: i32, azToRingMetric: f32) -> vec2<f32> {
+  let fAzPlus = armForcingAt(azIndex + 1, ring, azCount, ringCount);
+  let fAzMinus = armForcingAt(azIndex - 1, ring, azCount, ringCount);
+  let fRingPlus = armForcingAt(azIndex, ring + 1, azCount, ringCount);
+  let fRingMinus = armForcingAt(azIndex, ring - 1, azCount, ringCount);
   let dFdAz = (fAzPlus - fAzMinus) * 0.5;
   let dFdRing = (fRingPlus - fRingMinus) * 0.5;
   return vec2<f32>(dFdAz, dFdRing * azToRingMetric);
@@ -200,7 +200,7 @@ struct VelocitySample {
 // workgroup storage, readable from any function in this shader stage) —
 // 'cullCount' bounds how many of that array's slots are live.
 fn composedVelocity(
-  az: i32,
+  azIndex: i32,
   ring: i32,
   azCount: u32,
   ringCount: u32,
@@ -210,11 +210,11 @@ fn composedVelocity(
 ) -> VelocitySample {
   let azCountI = i32(azCount);
   let ringCountI = i32(ringCount);
-  let localDust = textureLoad(prevTex, vec2<i32>(az, ring), 0).w;
+  let localDust = textureLoad(prevTex, vec2<i32>(azIndex, ring), 0).w;
 
   let shearVelAz = ismMapShearTexels(u32(ring), ringCount, azCount, fluidConstants.rMin, fluidConstants.rMax, fluidConstants.corotationRadius, fluidConstants.shearStrength);
-  let curl = curlVelocity(vec2<f32>(f32(az), f32(ring) / azToRingMetric), azCount, fluidConstants.curlScale, f32(genStep));
-  let grad = forcingGradient(az, ring, azCountI, ringCountI, azToRingMetric);
+  let curl = curlVelocity(vec2<f32>(f32(azIndex), f32(ring) / azToRingMetric), azCount, fluidConstants.curlScale, f32(genStep));
+  let grad = forcingGradient(azIndex, ring, azCountI, ringCountI, azToRingMetric);
 
   // Stars' own field: shearVelAz UNDRAGGED (armDrag below is a gas-only
   // stall) plus the full curl vector (both axes — curl is a single
@@ -232,7 +232,7 @@ fn composedVelocity(
   // shift collapses to 0 regardless of gatherOffset: no drift, no flank to
   // prefer. Only this sample moves — forcingSelf below (armDrag) and grad
   // above (the laneBias direction test) keep reading the unshifted texel.
-  let gatherAz = i32(wrapIndex(az + i32(round(sign(shearVelAz) * fluidConstants.gatherOffset)), azCount));
+  let gatherAz = i32(wrapIndex(azIndex + i32(round(sign(shearVelAz) * fluidConstants.gatherOffset)), azCount));
   let gatherGrad = forcingGradient(gatherAz, ring, azCountI, ringCountI, azToRingMetric);
   // Counterweight so 120 steps of convergent gathering can't run the local
   // dust pile past its own overshoot ceiling unchecked — see ARM_GATHER_SAT.
@@ -241,7 +241,7 @@ fn composedVelocity(
   // Drift-stall shock caricature: drag the shear (only) by this texel's own
   // forcing, so drift stalls inside the arm and Pass B's divV convergence
   // term piles density at the upstream edge — see the param's own doc.
-  let forcingSelf = armForcingAt(az, ring, azCountI, ringCountI);
+  let forcingSelf = armForcingAt(azIndex, ring, azCountI, ringCountI);
   let stalledShear = shearVelAz * max(0.0, 1.0 - fluidConstants.armDrag * forcingSelf);
 
   // Directional gate: gate on shearVelAz (the UNDRAGGED shear), not
@@ -269,7 +269,7 @@ fn composedVelocity(
       continue;
     }
 
-    var dAz = f32(az) - evAz;
+    var dAz = f32(azIndex) - evAz;
     dAz = dAz - azCountF * floor(dAz / azCountF + 0.5); // shortest-path wrap
     let dRing = f32(ring) - evRing;
     let dAzRingUnits = dAz * azToRingMetric;

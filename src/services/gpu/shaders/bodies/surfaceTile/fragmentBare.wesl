@@ -18,7 +18,7 @@ import package::lib::pbr::MIN_ROUGHNESS;
 
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
-  let Ng = normalize(in.normalLocal); // interpolation shortens it -- renormalize
+  let geometricNormal = normalize(in.normalLocal); // interpolation shortens it -- renormalize
   let baseAlbedo = tileAlbedo(
     surfaceTexture,
     atlasSampler,
@@ -29,7 +29,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     in.fallbackUvScale,
     in.fadeWeight,
   );
-  let shadingNormal = tileShadingNormal(heightAtlas, in.uv, in.heightLattice, in.patchSpanRad, Ng, in.tangent, uniforms.radiusM);
+  let shadingNormal = tileShadingNormal(heightAtlas, in.uv, in.heightLattice, in.patchSpanRad, geometricNormal, in.tangent, uniforms.radiusM);
   // Cancellation-free view vector -- see vertex.wesl's 'viewDirLocal'.
   let viewDir = normalize(in.viewDirLocal);
   let sunDir = uniforms.sunDirLocal;

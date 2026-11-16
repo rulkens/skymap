@@ -24,12 +24,12 @@ fn postHeightM(tex: texture_2d<f32>, coord: vec2<u32>) -> f32 {
 // the south neighbour. 'stride' 2 walks every second post, which IS a
 // one-level-coarser neighbour's own lattice (R1's strict decimation).
 fn latticeCellM(tex: texture_2d<f32>, origin: vec2<u32>, cell: vec2<u32>, stride: u32) -> vec4<f32> {
-  let nw = origin + cell;
+  let northWestPost = origin + cell;
   return vec4<f32>(
-    postHeightM(tex, nw),
-    postHeightM(tex, nw + vec2<u32>(stride, 0u)),
-    postHeightM(tex, nw + vec2<u32>(0u, stride)),
-    postHeightM(tex, nw + vec2<u32>(stride, stride)),
+    postHeightM(tex, northWestPost),
+    postHeightM(tex, northWestPost + vec2<u32>(stride, 0u)),
+    postHeightM(tex, northWestPost + vec2<u32>(0u, stride)),
+    postHeightM(tex, northWestPost + vec2<u32>(stride, stride)),
   );
 }
 
@@ -44,11 +44,11 @@ fn latticePostGradient(tex: texture_2d<f32>, origin: vec2<u32>, post: vec2<u32>,
   let east = min(post.x + 1u, cells);
   let north = max(post.y, 1u) - 1u;
   let south = min(post.y + 1u, cells);
-  let hW = postHeightM(tex, origin + vec2<u32>(west, post.y));
-  let hE = postHeightM(tex, origin + vec2<u32>(east, post.y));
-  let hN = postHeightM(tex, origin + vec2<u32>(post.x, north));
-  let hS = postHeightM(tex, origin + vec2<u32>(post.x, south));
-  return vec2<f32>((hE - hW) / f32(east - west), (hN - hS) / f32(south - north));
+  let westHeightM = postHeightM(tex, origin + vec2<u32>(west, post.y));
+  let eastHeightM = postHeightM(tex, origin + vec2<u32>(east, post.y));
+  let northHeightM = postHeightM(tex, origin + vec2<u32>(post.x, north));
+  let southHeightM = postHeightM(tex, origin + vec2<u32>(post.x, south));
+  return vec2<f32>((eastHeightM - westHeightM) / f32(east - west), (northHeightM - southHeightM) / f32(south - north));
 }
 
 // Bilinear height at lattice position 'latticePos' (posts from 'origin', fractional

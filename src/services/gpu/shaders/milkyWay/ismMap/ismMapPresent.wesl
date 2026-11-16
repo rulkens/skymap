@@ -45,8 +45,8 @@ const DUST_SURVIVAL_FLOOR_FRAC: f32 = 0.01;
 @group(0) @binding(4) var<storage, read> ringMeans: array<f32>;
 
 @vertex
-fn vs(@builtin(vertex_index) vi: u32) -> FullscreenOut {
-  return fullscreenVertex(vi);
+fn vs(@builtin(vertex_index) vertexIndex: u32) -> FullscreenOut {
+  return fullscreenVertex(vertexIndex);
 }
 
 @fragment

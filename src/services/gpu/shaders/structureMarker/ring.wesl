@@ -42,14 +42,14 @@ const RING_QUAD_MARGIN: f32 = 1.1;
 
 @vertex
 fn vs(
-  @builtin(vertex_index) vi: u32,
-  // ii (instance_index) is forwarded into VsOut.structureIndex so the
+  @builtin(vertex_index) vertexIndex: u32,
+  // instanceIndex is forwarded into VsOut.structureIndex so the
   // companion ringPick.wesl pick fragment can pack it into the pick
   // texture identity.  The visual ring fragment ignores the field;
   // it costs one flat-interpolated u32 per vertex output and lets
   // both pipelines share one VsOut struct (see io.wesl's docstring
   // on the structureIndex slot).
-  @builtin(instance_index) ii: u32,
+  @builtin(instance_index) instanceIndex: u32,
   input: VsIn,
 ) -> VsOut {
   let worldPos = input.positionAndRadius.xyz;
@@ -64,7 +64,7 @@ fn vs(
   // the eye correctly in homogeneous space, which is what makes two
   // dome faces rasterise the same world curve at their shared seam.
   let half = radiusMpc * MARKER_RADIUS_RETUNE * RING_QUAD_MARGIN;
-  let corner = quadCorner(vi);
+  let corner = quadCorner(vertexIndex);
   let offset = expandBillboardWorld(vec3<f32>(0.0), worldPos, corner, half);
 
   var out: VsOut;
@@ -81,7 +81,7 @@ fn vs(
   // Per-instance structure index forwarded for the ringPick fragment.  The
   // visual fragment doesn't read it; the cost is one flat-interpolated
   // u32 per vertex output.
-  out.structureIndex = ii;
+  out.structureIndex = instanceIndex;
   out.pickable = input.pickable;
   return out;
 }

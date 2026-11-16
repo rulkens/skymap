@@ -11,8 +11,8 @@ import package::milkyWay::field::io::uniforms;
 import package::milkyWay::field::io::comps;
 
 @vertex
-fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) inst: u32) -> DustMapOut {
-  let corner = quadCorner(vi);
+fn vs(@builtin(vertex_index) vertexIndex: u32, @builtin(instance_index) inst: u32) -> DustMapOut {
+  let corner = quadCorner(vertexIndex);
   // counts.y is dustOffset (== the emission count, since dust is appended
   // last — see io.wesl's layout comment): this draw's own instance index is
   // relative to the dust slice, not 'comps' as a whole.
@@ -26,15 +26,15 @@ fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) inst: u32) -> Dus
   let camUp = uniforms.camUp.xyz;
   let camFwd = uniforms.camFwd.xyz;
 
-  // View-space offset of the centre: zv along the gaze, xv/yv across it.
+  // View-space offset of the centre: viewDepth along the gaze, viewX/viewY across it.
   let rel = center - eye;
-  let zv = dot(rel, camFwd);
-  let xv = dot(rel, camRight);
-  let yv = dot(rel, camUp);
+  let viewDepth = dot(rel, camFwd);
+  let viewX = dot(rel, camRight);
+  let viewY = dot(rel, camUp);
 
   var out: DustMapOut;
   out.inst = inst;
-  let ndc = splatNdc(corner, xv, yv, zv, boundRadius, uniforms.frustum, uniforms.perf.x);
+  let ndc = splatNdc(corner, viewX, viewY, viewDepth, boundRadius, uniforms.frustum, uniforms.perf.x);
   out.pos = vec4<f32>(ndc, 0.0, 1.0);
   out.ndc = ndc;
   return out;

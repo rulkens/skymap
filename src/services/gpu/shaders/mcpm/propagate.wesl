@@ -73,12 +73,12 @@ fn cs(
   var rng: Rng;
   rngSetSeed(&rng, wangHash(73u * idx), wangHash(u32(posX * posY * posZ)));
 
-  var th = agentTheta[idx];
-  var ph = agentPhi[idx];
+  var theta = agentTheta[idx];
+  var phi = agentPhi[idx];
   var weight = agentWeight[idx];
 
   // Indices [0, nDataPoints) are the catalog points: sentinel theta = -5.0, deposit only.
-  if (th < -1.0) {
+  if (theta < -1.0) {
     if (!IGNORE_DATA) {
       // Raw, unwrapped position. The fork's load/store pair here is unguarded because an
       // out-of-range store is discarded, which makes the paired load dead; addDeposit
@@ -88,25 +88,25 @@ fn cs(
     return;
   }
 
-  let centerAxis = vec3<f32>(sin(th) * cos(ph), cos(th), sin(th) * sin(ph));
+  let centerAxis = vec3<f32>(sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi));
 
   // Draw 1. This 0.95..1.05 jitter is shared by the sensing cone here and the turn
   // magnitude below — one random, not two.
   let xiDirectional = 0.95 + 0.1 * rngNextFloat(&rng);
-  let senseTheta = th - sim.senseSpread * xiDirectional;
+  let senseTheta = theta - sim.senseSpread * xiDirectional;
   let offCenterBaseDir =
-    vec3<f32>(sin(senseTheta) * cos(ph), cos(senseTheta), sin(senseTheta) * sin(ph));
+    vec3<f32>(sin(senseTheta) * cos(phi), cos(senseTheta), sin(senseTheta) * sin(phi));
 
   var senseDistanceProb = sim.senseDistance;
-  var xi: f32;
+  var xiDistance: f32;
   if (FIXED_AGENT_DISTANCE_SAMPLING) {
     // Consumes no draw, exactly as the #ifdef arm does not.
-    xi = clamp(modFloor(0.01 * f32(idx), 1.0), 0.001, 0.999);
+    xiDistance = clamp(modFloor(0.01 * f32(idx), 1.0), 0.001, 0.999);
   } else {
-    xi = clamp(rngNextFloat(&rng), 0.001, 0.999);  // draw 2
+    xiDistance = clamp(rngNextFloat(&rng), 0.001, 0.999);  // draw 2
   }
   // Maxwell-Boltzmann inverse-CDF fit; the log argument stays positive across the clamp.
-  let distanceScalingFactor = -0.3033 * log((pow(xi + 0.005, -0.4) - 0.9974) / 7.326);
+  let distanceScalingFactor = -0.3033 * log((pow(xiDistance + 0.005, -0.4) - 0.9974) / 7.326);
   senseDistanceProb = senseDistanceProb * distanceScalingFactor;
 
   let agentVoxel = vec3<i32>(vec3<f32>(posX, posY, posZ));
@@ -155,14 +155,14 @@ fn cs(
       takeTurn = pTurn > pStraight;
     }
     if (takeTurn) {
-      let thetaTurn = th - sim.turnAngle * xiDirectional;
+      let thetaTurn = theta - sim.turnAngle * xiDirectional;
       let offCenterBaseDirTurn =
-        vec3<f32>(sin(thetaTurn) * cos(ph), cos(thetaTurn), sin(thetaTurn) * sin(ph));
+        vec3<f32>(sin(thetaTurn) * cos(phi), cos(thetaTurn), sin(thetaTurn) * sin(phi));
       // The sensing ray's randomAngle again: the agent turns toward what it sensed.
       let newDirection = rotate(offCenterBaseDirTurn, centerAxis, randomAngle);
-      ph = atan2(newDirection.z, newDirection.x);
+      phi = atan2(newDirection.z, newDirection.x);
       // acos can see |arg| marginally over 1 from f32 rounding. Unclamped in the fork.
-      th = acos(newDirection.y / length(newDirection));
+      theta = acos(newDirection.y / length(newDirection));
     }
   }
 
@@ -176,40 +176,40 @@ fn cs(
       f32(sim.worldDepth) / 2.0 - posZ);
     let dCenter = length(toCenter);
     let dcTurn = clamp((dCenter - 50.0) / 150.0, 0.0, 1.0) * sim.centerAttraction;
-    var dir = vec3<f32>(sin(th) * cos(ph), cos(th), sin(th) * sin(ph));
+    var dir = vec3<f32>(sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi));
     let centerDir = normalize(toCenter);
     // HLSL:205 broadcasts a scalar acos into a float3; all three lanes are equal.
     let centerAngle = vec3<f32>(acos(dot(dir, centerDir)));
-    let st = 0.1 * dcTurn;
+    let slerpFraction = 0.1 * dcTurn;
     // sin(centerAngle) is 0 once the agent points at the centre. Unguarded in the fork.
-    dir = sin((1.0 - st) * centerAngle) / sin(centerAngle) * dir
-        + sin(st * centerAngle) / sin(centerAngle) * centerDir;
+    dir = sin((1.0 - slerpFraction) * centerAngle) / sin(centerAngle) * dir
+        + sin(slerpFraction * centerAngle) / sin(centerAngle) * centerDir;
     if (length(dir) > 0.0 && (dir.z != 0.0 || dir.x != 0.0)) {
-      th = acos(dir.y / length(dir));
-      ph = atan2(dir.z, dir.x);
+      theta = acos(dir.y / length(dir));
+      phi = atan2(dir.z, dir.x);
     }
   }
 
   // The step length reuses the sensing draw, correlating an agent's move and sense
   // distances within a step — load-bearing MCPM behaviour a tidy rewrite would decouple.
-  let dp = vec3<f32>(sin(th) * cos(ph), cos(th), sin(th) * sin(ph))
+  let displacement = vec3<f32>(sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi))
          * sim.moveDistance * (0.1 + 0.9 * distanceScalingFactor);
-  posX = posX + dp.x;
-  posY = posY + dp.y;
-  posZ = posZ + dp.z;
+  posX = posX + displacement.x;
+  posY = posY + displacement.y;
+  posZ = posZ + displacement.z;
 
   posX = modFloor(posX, f32(sim.worldWidth));
   posY = modFloor(posY, f32(sim.worldHeight));
   posZ = modFloor(posZ, f32(sim.worldDepth));
 
-  const wF: f32 = 0.9;
+  const weightRetention: f32 = 0.9;
   let nAgentsM = f32(sim.nAgents) / 1.0e6;
   let thrF = 0.05 * nAgentsM * sim.depositValue + 0.1e-3 * nAgentsM;
 
   // Read at the POST-MOVE position — the two accumulations at the end of the kernel
   // write at the post-reroute one instead.
   let currentDeposit = loadDeposit(vec3<i32>(vec3<f32>(posX, posY, posZ)));
-  weight = wF * weight + (1.0 - wF) * currentDeposit;
+  weight = weightRetention * weight + (1.0 - weightRetention) * currentDeposit;
 
   if (AGENT_REROUTING) {
     if (weight < thrF) {
@@ -225,16 +225,16 @@ fn cs(
   agentX[idx] = posX;
   agentY[idx] = posY;
   agentZ[idx] = posZ;
-  agentTheta[idx] = th;
-  agentPhi[idx] = ph;
+  agentTheta[idx] = theta;
+  agentPhi[idx] = phi;
   agentWeight[idx] = weight;
 
   // POST-REROUTE position: a rerouted agent deposits at its new random location, not
   // where it moved to. Both accumulations race by design (grid.wesl's addDeposit/addTrace
   // header) and the deposit one re-reads a texel this invocation already read stale.
-  let wc = vec3<i32>(vec3<f32>(posX, posY, posZ));
-  addDeposit(wc, sim.depositValue);
+  let finalVoxel = vec3<i32>(vec3<f32>(posX, posY, posZ));
+  addDeposit(finalVoxel, sim.depositValue);
   // An agent that sensed far leaves proportionally more trace; normalizationFactor is
   // pinned to 1.0 upstream, so this reduces to a bare distance weighting.
-  addTrace(wc, (1.0 / sim.normalizationFactor) * distanceScalingFactor);
+  addTrace(finalVoxel, (1.0 / sim.normalizationFactor) * distanceScalingFactor);
 }

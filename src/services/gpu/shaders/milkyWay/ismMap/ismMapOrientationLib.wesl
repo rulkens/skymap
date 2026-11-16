@@ -24,8 +24,8 @@ fn clampIndex(index: i32, count: u32) -> u32 {
 
 // Unnormalised; callers sum their own taps and divide by that sum.
 fn gaussianTap(tapOffset: i32, sigma: f32) -> f32 {
-  let kf = f32(tapOffset);
-  return exp(-(kf * kf) / (2.0 * sigma * sigma));
+  let tapOffsetF = f32(tapOffset);
+  return exp(-(tapOffsetF * tapOffsetF) / (2.0 * sigma * sigma));
 }
 
 fn kernelRadius(sigma: f32) -> i32 {

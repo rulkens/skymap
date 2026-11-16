@@ -77,14 +77,14 @@ fn tileAlbedo(
 // post's own slope, interpolated across the cell, so the normal stays
 // continuous over a post line (one gradient per cell drew every cell as a
 // facet). Twin: src/layers/body/surfaceTiles/patch/subsystems/surfaceNormalFromHeightCell.ts. 'uv.y' runs 0
-// at the patch's NORTH edge, the lattice's own row order; 'Ng' is the
+// at the patch's NORTH edge, the lattice's own row order; 'geometricNormal' is the
 // normalized datum normal; 'heightLattice' is (origin.xy, cells) of the leaf.
 fn tileShadingNormal(
   heightAtlas: texture_2d<f32>,
   uv: vec2<f32>,
   heightLattice: vec3<u32>,
   patchSpanRad: vec2<f32>,
-  Ng: vec3<f32>,
+  geometricNormal: vec3<f32>,
   tangent: vec3<f32>,
   radiusM: f32,
 ) -> vec3<f32> {
@@ -104,16 +104,16 @@ fn tileShadingNormal(
   let postSlope = mix(mix(gNW, gNE, cellU), mix(gSW, gSE, cellU), cellV);
 
   // The 'max' is the polar guard: cos(lat) reaches 0 on the pole row.
-  let lat = asin(clamp(Ng.z, -1.0, 1.0));
+  let lat = asin(clamp(geometricNormal.z, -1.0, 1.0));
   let postSpacingNM = radiusM * patchSpanRad.y / cells;
   let postSpacingEM = max(radiusM * cos(lat) * patchSpanRad.x / cells, 1e-3);
   let dhdE = postSlope.x / postSpacingEM;
   let dhdN = postSlope.y / postSpacingNM;
-  // The interpolated tangent is neither unit nor orthogonal to Ng any more,
+  // The interpolated tangent is neither unit nor orthogonal to geometricNormal any more,
   // so re-orthogonalize and re-normalize, as perturbNormal does.
-  let eHat = normalize(tangent - Ng * dot(Ng, tangent));
-  let nHat = normalize(cross(Ng, eHat));
-  return normalize(Ng - dhdE * eHat - dhdN * nHat);
+  let eHat = normalize(tangent - geometricNormal * dot(geometricNormal, tangent));
+  let nHat = normalize(cross(geometricNormal, eHat));
+  return normalize(geometricNormal - dhdE * eHat - dhdN * nHat);
 }
 
 // A runtime lens ('lodOverlay' > 0.5), not a compile-time one, so it stays

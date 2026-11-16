@@ -43,8 +43,8 @@ struct OrientationGrid {
 @group(0) @binding(3) var<uniform> grid: OrientationGrid;
 
 @vertex
-fn vs(@builtin(vertex_index) vi: u32) -> FullscreenOut {
-  return fullscreenVertex(vi);
+fn vs(@builtin(vertex_index) vertexIndex: u32) -> FullscreenOut {
+  return fullscreenVertex(vertexIndex);
 }
 
 @fragment

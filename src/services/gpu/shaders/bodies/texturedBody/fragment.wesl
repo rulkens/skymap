@@ -94,18 +94,18 @@ fn ringSunVisibility(surfacePoint: vec3<f32>, sunDir: vec3<f32>, innerRatio: f32
 @fragment
 fn fs(in: TexturedBodyVSOut) -> FSOut {
   // ── The ray ───────────────────────────────────────────────────────────────
-  let ro = uniforms.camPosLocal;
+  let rayOrigin = uniforms.camPosLocal;
   // Renormalize AFTER interpolation: 'in.localPos' rides the 'PROXY_SCALE'-scaled
   // proxy, so neither it nor its interpolant is unit length.
-  let rd = normalize(in.localPos - ro);
+  let rayDir = normalize(in.localPos - rayOrigin);
 
   // 'uniforms.camAltitudeSq' is f64-derived -- see 'lib/analyticSphere.wesl's depth section.
-  let surface = hitUnitSphere(ro, rd, uniforms.camAltitudeSq);
+  let surface = hitUnitSphere(rayOrigin, rayDir, uniforms.camAltitudeSq);
   // Unit length in both branches, so it is the exact geometric normal.
-  let ng = surface.point;
+  let surfaceNormal = surface.point;
 
   // ── Analytic equirectangular uv + wrap-corrected gradients ────────────────
-  let uv = equirectUvFromDir(ng);
+  let uv = equirectUvFromDir(surfaceNormal);
   let grad = equirectUvGradients(uv);
 
   // Every derivative is now taken; from here the missed lanes contribute
@@ -115,14 +115,14 @@ fn fs(in: TexturedBodyVSOut) -> FSOut {
   }
 
   // ── Shading ───────────────────────────────────────────────────────────────
-  let eastTangent = normalize(cross(vec3<f32>(0.0, 0.0, 1.0), ng));
-  let shadingNormal = perturbNormal(ng, eastTangent, textureSampleGrad(normalTexture, bodySampler, uv, grad.ddx, grad.ddy).rg);
+  let eastTangent = normalize(cross(vec3<f32>(0.0, 0.0, 1.0), surfaceNormal));
+  let shadingNormal = perturbNormal(surfaceNormal, eastTangent, textureSampleGrad(normalTexture, bodySampler, uv, grad.ddx, grad.ddy).rg);
   let albedo = textureSampleGrad(bodyTexture, bodySampler, uv, grad.ddx, grad.ddy).rgb;
-  let sunVis = ringSunVisibility(ng, uniforms.sunDirLocal, uniforms.ringInnerRatio, uniforms.ringOuterRatio);
+  let sunVis = ringSunVisibility(surfaceNormal, uniforms.sunDirLocal, uniforms.ringInnerRatio, uniforms.ringOuterRatio);
   let shade = litShade(shadingNormal, uniforms.sunDirLocal * sunVis);
   let noL = max(dot(shadingNormal, uniforms.sunDirLocal), 0.0);
-  // 'ng - ro = rd * t' exactly, so 'viewDir = -rd' -- no re-subtract, no renormalize.
-  let viewDir = -rd;
+  // 'surfaceNormal - rayOrigin = rayDir * t' exactly, so 'viewDir = -rayDir' -- no re-subtract, no renormalize.
+  let viewDir = -rayDir;
   let noV = max(dot(shadingNormal, viewDir), 0.0);
   let limb = limbDarkening(noL, noV, uniforms.limbStrength, uniforms.limbExponent);
   let colour = albedo * shade * limb;
@@ -132,6 +132,6 @@ fn fs(in: TexturedBodyVSOut) -> FSOut {
   // Eye-relative frame: the hit relative to the eye, through the
   // translation-free 'uniforms.vpCamRelLocal' -- see 'lib/analyticSphere.wesl's depth
   // section.
-  out.depth = fragDepthFromClip(uniforms.vpCamRelLocal, rd * surface.t);
+  out.depth = fragDepthFromClip(uniforms.vpCamRelLocal, rayDir * surface.t);
   return out;
 }

@@ -50,20 +50,20 @@ const TRANSMITTANCE_STEPS: f32 = 40.0;
 // marches 'TRANSMITTANCE_STEPS' equal segments to the top boundary, sampling the
 // medium at each segment MIDPOINT (midpoint rule — second-order accurate, and it
 // never samples exactly at the boundary where density can underflow).
-fn opticalDepthToTop(radius: f32, mu: f32) -> vec3<f32> {
-  let dist = distanceToTop(radius, mu, params.atmosphereTopKm);
-  let dt = dist / TRANSMITTANCE_STEPS;
+fn opticalDepthToTop(radius: f32, viewZenithCos: f32) -> vec3<f32> {
+  let dist = distanceToTop(radius, viewZenithCos, params.atmosphereTopKm);
+  let stepLength = dist / TRANSMITTANCE_STEPS;
   let rayStart = vec3<f32>(0.0, 0.0, radius);
-  let dir = vec3<f32>(sqrt(max(0.0, 1.0 - mu * mu)), 0.0, mu);
+  let dir = vec3<f32>(sqrt(max(0.0, 1.0 - viewZenithCos * viewZenithCos)), 0.0, viewZenithCos);
 
   var opticalDepth = vec3<f32>(0.0);
   var stepIndex: u32 = 0u;
   loop {
     if (f32(stepIndex) >= TRANSMITTANCE_STEPS) { break; }
-    let sampleDistance = (f32(stepIndex) + 0.5) * dt;
+    let sampleDistance = (f32(stepIndex) + 0.5) * stepLength;
     let pos = rayStart + dir * sampleDistance;
     let medium = sampleMediumIsotropic(params, pos);
-    opticalDepth = opticalDepth + medium.extinction * dt;
+    opticalDepth = opticalDepth + medium.extinction * stepLength;
     stepIndex = stepIndex + 1u;
   }
   return opticalDepth;

@@ -19,7 +19,7 @@
 // make the fragment stage run over every pixel the true sphere can touch. So the
 // one thing the fragment needs from the vertex stage is a point on the view ray:
 // the interpolated proxy position in body-local space. The fragment forms
-// 'rd = normalize(localPos - camPosLocal)' and intersects the unit sphere
+// 'rayDir = normalize(localPos - camPosLocal)' and intersects the unit sphere
 // analytically; the surface normal, the uv and the depth are all derived from
 // that hit, per pixel, at full precision.
 //

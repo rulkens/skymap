@@ -97,7 +97,7 @@ struct ShellSample {
   hit: bool,
 };
 
-// Shared core: march bound, LUT lookups and ring occlusion. 'ro' is always
+// Shared core: march bound, LUT lookups and ring occlusion. 'rayOrigin' is always
 // 'uniforms.camPosLocal'; callers pass 'dir' normalized and 'tDepth' in LOCAL units
 // ('hasDepth' false leaves it unread).
 fn sampleShellSegment(dir: vec3<f32>, tDepth: f32, hasDepth: bool) -> ShellSample {
@@ -109,9 +109,9 @@ fn sampleShellSegment(dir: vec3<f32>, tDepth: f32, hasDepth: bool) -> ShellSampl
   out.coverage = 0.0;
   out.hit = false;
 
-  let ro = uniforms.camPosLocal;
+  let rayOrigin = uniforms.camPosLocal;
 
-  let top = raySphere(ro, dir, PLANET_CENTER, TOP_RADIUS);
+  let top = raySphere(rayOrigin, dir, PLANET_CENTER, TOP_RADIUS);
   if (top.y < 0.0) {
     return out;
   }
@@ -125,7 +125,7 @@ fn sampleShellSegment(dir: vec3<f32>, tDepth: f32, hasDepth: bool) -> ShellSampl
 
   // The ground crossing caps the visible atmosphere; the pixel's own scene distance
   // caps it again where terrain stands above the floor sphere.
-  let ground = raySphere(ro, dir, PLANET_CENTER, uniforms.bottomRadius);
+  let ground = raySphere(rayOrigin, dir, PLANET_CENTER, uniforms.bottomRadius);
   let floorHit = ground.x > 0.0;
   if (floorHit && ground.x > tNear) {
     tFar = min(tFar, ground.x);
@@ -160,12 +160,12 @@ fn sampleShellSegment(dir: vec3<f32>, tDepth: f32, hasDepth: bool) -> ShellSampl
   let skyUv = skyViewLutParamsToUv(uniforms.bottomRadius, viewHeight, viewZenithAngle, lightViewCos, intersectsGround);
   let inScatter = textureSampleLevel(skyViewLut, lutSamp, skyUv, 0.0).rgb;
 
-  let nearPos = ro + dir * tNear;
-  let rNear = length(nearPos);
-  let muNear = dot(dir, nearPos / rNear);
-  let farPos = ro + dir * tFar;
-  let rFar = length(farPos);
-  let muFar = dot(dir, farPos / rFar);
+  let nearPos = rayOrigin + dir * tNear;
+  let nearRadius = length(nearPos);
+  let nearViewZenithCos = dot(dir, nearPos / nearRadius);
+  let farPos = rayOrigin + dir * tFar;
+  let farRadius = length(farPos);
+  let farViewZenithCos = dot(dir, farPos / farRadius);
 
   // Read the segment in whichever direction points AWAY from the ground so both
   // endpoints stay in the LUT's covered domain (its d-range ends at the
@@ -173,12 +173,12 @@ fn sampleShellSegment(dir: vec3<f32>, tDepth: f32, hasDepth: bool) -> ShellSampl
   // Ground rays point down: NEGATE mu at each endpoint and INVERT the ratio.
   var segTransmittance: vec3<f32>;
   if (intersectsGround) {
-    let tUpFar = sampleTransmittanceToTop(transmittanceLut, lutSamp, uniforms.bottomRadius, TOP_RADIUS, rFar, -muFar);
-    let tUpNear = sampleTransmittanceToTop(transmittanceLut, lutSamp, uniforms.bottomRadius, TOP_RADIUS, rNear, -muNear);
+    let tUpFar = sampleTransmittanceToTop(transmittanceLut, lutSamp, uniforms.bottomRadius, TOP_RADIUS, farRadius, -farViewZenithCos);
+    let tUpNear = sampleTransmittanceToTop(transmittanceLut, lutSamp, uniforms.bottomRadius, TOP_RADIUS, nearRadius, -nearViewZenithCos);
     segTransmittance = clamp(tUpFar / max(tUpNear, vec3<f32>(1e-6)), vec3<f32>(0.0), vec3<f32>(1.0));
   } else {
-    let tToTopNear = sampleTransmittanceToTop(transmittanceLut, lutSamp, uniforms.bottomRadius, TOP_RADIUS, rNear, muNear);
-    let tToTopFar = sampleTransmittanceToTop(transmittanceLut, lutSamp, uniforms.bottomRadius, TOP_RADIUS, rFar, muFar);
+    let tToTopNear = sampleTransmittanceToTop(transmittanceLut, lutSamp, uniforms.bottomRadius, TOP_RADIUS, nearRadius, nearViewZenithCos);
+    let tToTopFar = sampleTransmittanceToTop(transmittanceLut, lutSamp, uniforms.bottomRadius, TOP_RADIUS, farRadius, farViewZenithCos);
     segTransmittance = clamp(tToTopNear / max(tToTopFar, vec3<f32>(1e-6)), vec3<f32>(0.0), vec3<f32>(1.0));
   }
 
@@ -191,9 +191,9 @@ fn sampleShellSegment(dir: vec3<f32>, tDepth: f32, hasDepth: bool) -> ShellSampl
   // opaque ring, the inverse of masking the shell off).
   var ringBlock = 0.0;
   if (uniforms.ringOuterRatio > 0.0 && abs(dir.z) > 1e-6) {
-    let tRing = -ro.z / dir.z;
+    let tRing = -rayOrigin.z / dir.z;
     if (tRing > 0.0 && tRing < tNear) {
-      let rHit = length((ro + dir * tRing).xy);
+      let rHit = length((rayOrigin + dir * tRing).xy);
       if (rHit >= uniforms.ringInnerRatio && rHit <= uniforms.ringOuterRatio) {
         let uCoord = (rHit - uniforms.ringInnerRatio) / (uniforms.ringOuterRatio - uniforms.ringInnerRatio);
         // 'textureSampleLevel': non-uniform control flow, mip-less strip.

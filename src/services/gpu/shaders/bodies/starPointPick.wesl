@@ -104,12 +104,12 @@ struct VSOut {
 
 @vertex
 fn vs(
-  @builtin(vertex_index) vi: u32,
+  @builtin(vertex_index) vertexIndex: u32,
   @location(0) posRelCamMpc: vec3<f32>,
   @location(1) packedId: u32,
 ) -> VSOut {
   let center = worldToClip(camera, posRelCamMpc);
-  let corner = quadCorner(vi);
+  let corner = quadCorner(vertexIndex);
   let offset = expandBillboardScreen(camera, center, FAMOUS_STAR_PICK_RADIUS_PX, corner);
 
   var out: VSOut;
@@ -137,7 +137,7 @@ fn vs(
 
 @vertex
 fn vsGlint(
-  @builtin(vertex_index) vi: u32,
+  @builtin(vertex_index) vertexIndex: u32,
   @location(0) posRelCamMpc: vec3<f32>,
   @location(1) packedId: u32,
   @location(2) bandClass: u32,
@@ -145,7 +145,7 @@ fn vsGlint(
   // Same billboard expansion as 'vs' (identical footprint at the true screen
   // position); ONLY the depth handling differs.
   let center = worldToClip(camera, posRelCamMpc);
-  let corner = quadCorner(vi);
+  let corner = quadCorner(vertexIndex);
   let offset = expandBillboardScreen(camera, center, FAMOUS_STAR_PICK_RADIUS_PX, corner);
 
   var out: VSOut;

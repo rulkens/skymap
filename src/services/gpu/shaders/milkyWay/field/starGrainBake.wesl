@@ -79,10 +79,10 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   let ownCell = vec3<i32>(floor(latticePos));
 
   var value = 0.0;
-  for (var dz = -1; dz <= 1; dz++) {
-    for (var dy = -1; dy <= 1; dy++) {
-      for (var dx = -1; dx <= 1; dx++) {
-        let offset = vec3<i32>(dx, dy, dz);
+  for (var neighbourZ = -1; neighbourZ <= 1; neighbourZ++) {
+    for (var neighbourY = -1; neighbourY <= 1; neighbourY++) {
+      for (var neighbourX = -1; neighbourX <= 1; neighbourX++) {
+        let offset = vec3<i32>(neighbourX, neighbourY, neighbourZ);
         // Hash key wraps for tiling; the point's own local position stays
         // unwrapped (ownCell + offset), so distance below is correct across
         // a tile seam — see this file's own header.

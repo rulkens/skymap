@@ -41,8 +41,8 @@ fn dirToEquirectUv(dir: vec3<f32>) -> vec2<f32> {
 
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
-  let Ng = normalize(in.normalLocal); // interpolation shortens it -- renormalize
-  let equirectUv = dirToEquirectUv(Ng);
+  let geometricNormal = normalize(in.normalLocal); // interpolation shortens it -- renormalize
+  let equirectUv = dirToEquirectUv(geometricNormal);
 
   let baseAlbedo = tileAlbedo(
     surfaceTexture,
@@ -56,7 +56,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   );
   let mat = textureSample(materialTexture, baseSampler, equirectUv).rg;
 
-  let shadingNormal = tileShadingNormal(heightAtlas, in.uv, in.heightLattice, in.patchSpanRad, Ng, in.tangent, uniforms.radiusM);
+  let shadingNormal = tileShadingNormal(heightAtlas, in.uv, in.heightLattice, in.patchSpanRad, geometricNormal, in.tangent, uniforms.radiusM);
   // Cancellation-free view vector -- see vertex.wesl's 'viewDirLocal'.
   let viewDir = normalize(in.viewDirLocal);
   let sunDir = uniforms.sunDirLocal;
@@ -66,8 +66,8 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
 
   // Ground shadow: cast from the GEOMETRIC surface position toward the sun
   // through the cloud shell, exactly as 'earth/fragment.wesl' does.
-  let roots = raySphere(Ng, sunDir, vec3<f32>(0.0), uniforms.cloudShellRadius);
-  let crossing = Ng + roots.y * sunDir;
+  let roots = raySphere(geometricNormal, sunDir, vec3<f32>(0.0), uniforms.cloudShellRadius);
+  let crossing = geometricNormal + roots.y * sunDir;
   let shadowUv = dirToEquirectUv(normalize(crossing));
   let shadowCoverage = textureSample(cloudTexture, baseSampler, shadowUv).r;
   let direct = directBase * (1.0 - shadowCoverage * uniforms.cloudShadowStrength);
@@ -82,7 +82,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // Whether the sun is up is the DATUM's cosine, not the terrain's: keyed on
   // 'shadingNormal', every slope facing away from the sun at noon read as night and lit up
   // with the city's Black Marble glow (Søndermarken's banks turned cream).
-  let sunUp = max(dot(Ng, sunDir), 0.0);
+  let sunUp = max(dot(geometricNormal, sunDir), 0.0);
   let cloudCoverageHere = textureSample(cloudTexture, baseSampler, equirectUv).r;
   let emissive = nightLights(nightColour, sunUp, cloudCoverageHere);
 

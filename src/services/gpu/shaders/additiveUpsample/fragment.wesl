@@ -51,23 +51,23 @@
 
 import package::additiveUpsample::io::VSOut;
 
-@group(0) @binding(0) var halfTex: texture_2d<f32>;
-@group(0) @binding(1) var halfSamp: sampler;
+@group(0) @binding(0) var offscreenTex: texture_2d<f32>;
+@group(0) @binding(1) var offscreenSampler: sampler;
 
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // 1 / textureDimensions == size of one texel in [0,1] uv space.
   // textureDimensions returns the LOD-0 size for a non-mipmapped 2D
   // texture, matching what the linear sampler sees.
-  let dims = vec2<f32>(textureDimensions(halfTex));
+  let dims = vec2<f32>(textureDimensions(offscreenTex));
   let texel = vec2<f32>(1.0) / dims;
   // Rotated-grid offsets at ±0.5 texel.  Each lands at a texel corner,
   // so the linear sampler reads a 2×2 block of texels per tap; four
   // such taps overlap into a ~3×3 effective box filter.
   let tapOffset = 0.5 * texel;
-  let tapBottomRight = textureSample(halfTex, halfSamp, in.uv + vec2<f32>( tapOffset.x,  tapOffset.y));
-  let tapTopRight = textureSample(halfTex, halfSamp, in.uv + vec2<f32>( tapOffset.x, -tapOffset.y));
-  let tapBottomLeft = textureSample(halfTex, halfSamp, in.uv + vec2<f32>(-tapOffset.x,  tapOffset.y));
-  let tapTopLeft = textureSample(halfTex, halfSamp, in.uv + vec2<f32>(-tapOffset.x, -tapOffset.y));
+  let tapBottomRight = textureSample(offscreenTex, offscreenSampler, in.uv + vec2<f32>( tapOffset.x,  tapOffset.y));
+  let tapTopRight = textureSample(offscreenTex, offscreenSampler, in.uv + vec2<f32>( tapOffset.x, -tapOffset.y));
+  let tapBottomLeft = textureSample(offscreenTex, offscreenSampler, in.uv + vec2<f32>(-tapOffset.x,  tapOffset.y));
+  let tapTopLeft = textureSample(offscreenTex, offscreenSampler, in.uv + vec2<f32>(-tapOffset.x, -tapOffset.y));
   return 0.25 * (tapBottomRight + tapTopRight + tapBottomLeft + tapTopLeft);
 }

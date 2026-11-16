@@ -31,34 +31,34 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   var blurredDeposit: f32 = 0.0;
   var weightSum: f32 = 0.0;
 
-  for (var dx: i32 = -1; dx <= 1; dx = dx + 1) {
-    for (var dy: i32 = -1; dy <= 1; dy = dy + 1) {
-      for (var dz: i32 = -1; dz <= 1; dz = dz + 1) {
+  for (var offsetX: i32 = -1; offsetX <= 1; offsetX = offsetX + 1) {
+    for (var offsetY: i32 = -1; offsetY <= 1; offsetY = offsetY + 1) {
+      for (var offsetZ: i32 = -1; offsetZ <= 1; offsetZ = offsetZ + 1) {
         // HLSL:69's all(int3) means 'every component non-zero' and its '== 0' inverts
         // that, so 19 taps (centre + faces + EDGES) take the flat arm and only the 8
         // corners fall off. The falloff stays unhoisted: at the centre tap it would be
         // 1.0/sqrt(0.0), and both arms reach 1.0 without evaluating it, which is why the
         // buggy kernel never produced NaNs.
         var weight: f32;
-        let hlslAllNonzero = all(vec3<bool>(dx != 0, dy != 0, dz != 0));
+        let hlslAllNonzero = all(vec3<bool>(offsetX != 0, offsetY != 0, offsetZ != 0));
         if (QUIRK_DECAY_WEIGHT_ALL_INT3) {
           if (!hlslAllNonzero) {
             weight = 1.0;
           } else {
-            weight = 1.0 / sqrt(f32(abs(dx) + abs(dy) + abs(dz)));
+            weight = 1.0 / sqrt(f32(abs(offsetX) + abs(offsetY) + abs(offsetZ)));
           }
         } else {
-          if (dx == 0 && dy == 0 && dz == 0) {
+          if (offsetX == 0 && offsetY == 0 && offsetZ == 0) {
             weight = 1.0;
           } else {
-            weight = 1.0 / sqrt(f32(abs(dx) + abs(dy) + abs(dz)));
+            weight = 1.0 / sqrt(f32(abs(offsetX) + abs(offsetY) + abs(offsetZ)));
           }
         }
 
-        // Sign-of-dividend '%': at voxel == 0 a dx == -1 tap stays -1 instead of wrapping to
+        // Sign-of-dividend '%': at voxel == 0 an offsetX == -1 tap stays -1 instead of wrapping to
         // the far face, and loadDeposit reads it as 0. Mass leaks out of the x/y/z = 0
         // faces, and weightSum still sums the full 23.6188021, so those faces darken on top.
-        var tap = voxel + vec3<i32>(dx, dy, dz);
+        var tap = voxel + vec3<i32>(offsetX, offsetY, offsetZ);
         tap.x = tap.x % sim.worldWidth;
         tap.y = tap.y % sim.worldHeight;
         tap.z = tap.z % sim.worldDepth;

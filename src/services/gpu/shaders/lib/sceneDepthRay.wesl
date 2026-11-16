@@ -12,8 +12,8 @@ const FAR_DEPTH: f32 = 0.0;
 // describe two different rays. The xy mapping inverts fullscreenVertex's own
 // ('uv = ((xy+1)*0.5, (1-xy)*0.5)').
 fn sceneRayUnproject(uv: vec2<f32>, clipZ: f32, invMvp: mat4x4<f32>, camPos: vec3<f32>) -> vec4<f32> {
-  let xy = vec2<f32>(uv.x * 2.0 - 1.0, 1.0 - uv.y * 2.0);
-  let framePoint = invMvp * vec4<f32>(xy, clipZ, 1.0);
+  let ndc = vec2<f32>(uv.x * 2.0 - 1.0, 1.0 - uv.y * 2.0);
+  let framePoint = invMvp * vec4<f32>(ndc, clipZ, 1.0);
   return vec4<f32>(framePoint.xyz - camPos * framePoint.w, framePoint.w);
 }
 

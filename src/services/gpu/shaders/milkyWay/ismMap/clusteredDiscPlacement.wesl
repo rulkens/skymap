@@ -66,8 +66,8 @@ struct CloudFrame {
 // SAME type, so a direct pass to rotateFrameToOrientation below fails to
 // compile ("expected CloudFrame, got WarpSurfaceFrame") despite the shapes
 // matching exactly.
-fn cloudFrameFromWarpSurface(ws: WarpSurfaceFrame) -> CloudFrame {
-  return CloudFrame(ws.along, ws.across, ws.pole);
+fn cloudFrameFromWarpSurface(surfaceFrame: WarpSurfaceFrame) -> CloudFrame {
+  return CloudFrame(surfaceFrame.along, surfaceFrame.across, surfaceFrame.pole);
 }
 
 // cdpRingIndexForSample/cdpAzIndexForAngle — the nearest-texel FLOOR bucket
@@ -76,21 +76,21 @@ fn cloudFrameFromWarpSurface(ws: WarpSurfaceFrame) -> CloudFrame {
 // term, this backs a placement SAMPLE — different functions on purpose).
 fn cdpRingIndexForSample(radius: f32, rings: u32, rMin: f32, rMax: f32) -> u32 {
   let clamped = clamp(radius, rMin, rMax);
-  var lo = 0u;
-  var hi = rings - 1u;
+  var low = 0u;
+  var high = rings - 1u;
   loop {
-    if (hi - lo <= 1u) { break; }
-    let mid = (lo + hi) / 2u;
+    if (high - low <= 1u) { break; }
+    let mid = (low + high) / 2u;
     let midRadius = rMin * pow(rMax / rMin, f32(mid) / f32(rings - 1u));
-    if (midRadius <= clamped) { lo = mid; } else { hi = mid; }
+    if (midRadius <= clamped) { low = mid; } else { high = mid; }
   }
-  return lo;
+  return low;
 }
 
-fn cdpAzIndexForAngle(angle: f32, az: u32) -> u32 {
+fn cdpAzIndexForAngle(angle: f32, azCount: u32) -> u32 {
   let twoPi = 2.0 * CDP_PI;
   let wrapped = ((angle % twoPi) + twoPi) % twoPi;
-  return min(az - 1u, u32(floor((wrapped / twoPi) * f32(az))));
+  return min(azCount - 1u, u32(floor((wrapped / twoPi) * f32(azCount))));
 }
 
 // cdpRingIndexForRadius — ismMapRingIndexForRadius.ts ported verbatim:
@@ -114,10 +114,10 @@ fn cdpRingIndexForRadius(radius: f32, rings: u32, rMin: f32, rMax: f32) -> u32 {
 fn sampleOrientationNearest(
   orientationTex: texture_2d<f32>,
   radius: f32, angle: f32,
-  rings: u32, az: u32, rMin: f32, rMax: f32,
+  rings: u32, azCount: u32, rMin: f32, rMax: f32,
 ) -> vec2<f32> {
   let ring = cdpRingIndexForSample(radius, rings, rMin, rMax);
-  let azIdx = cdpAzIndexForAngle(angle, az);
+  let azIdx = cdpAzIndexForAngle(angle, azCount);
   let texel = textureLoad(orientationTex, vec2<i32>(i32(azIdx), i32(ring)), 0);
   let cos2 = texel.x;
   let sin2 = texel.y;
@@ -130,10 +130,10 @@ fn sampleOrientationNearest(
 fn rotateFrameToOrientation(
   frame: CloudFrame, radius: f32, angle: f32, geom: ArmRidgeGeometry,
   hasOrientation: bool, orientationTex: texture_2d<f32>,
-  rings: u32, az: u32, rMin: f32, rMax: f32,
+  rings: u32, azCount: u32, rMin: f32, rMax: f32,
 ) -> CloudFrame {
   if (!hasOrientation) { return frame; }
-  let sample = sampleOrientationNearest(orientationTex, radius, angle, rings, az, rMin, rMax);
+  let sample = sampleOrientationNearest(orientationTex, radius, angle, rings, azCount, rMin, rMax);
   let coherence = sample.y;
   if (coherence <= 0.0) { return frame; }
 
@@ -164,18 +164,18 @@ struct InvCov {
 }
 
 fn inverseCovarianceFromFrame(frame: CloudFrame, sigAlong: f32, sigAcross: f32, sigPole: f32) -> InvCov {
-  let kA = 1.0 / (sigAlong * sigAlong);
-  let kC = 1.0 / (sigAcross * sigAcross);
-  let kP = 1.0 / (sigPole * sigPole);
+  let precisionAlong = 1.0 / (sigAlong * sigAlong);
+  let precisionAcross = 1.0 / (sigAcross * sigAcross);
+  let precisionPole = 1.0 / (sigPole * sigPole);
   let axisAlong = frame.along;
   let axisAcross = frame.across;
   let axisPole = frame.pole;
-  let m00 = kA * axisAlong.x * axisAlong.x + kC * axisAcross.x * axisAcross.x + kP * axisPole.x * axisPole.x;
-  let m11 = kA * axisAlong.y * axisAlong.y + kC * axisAcross.y * axisAcross.y + kP * axisPole.y * axisPole.y;
-  let m22 = kA * axisAlong.z * axisAlong.z + kC * axisAcross.z * axisAcross.z + kP * axisPole.z * axisPole.z;
-  let m01 = kA * axisAlong.x * axisAlong.y + kC * axisAcross.x * axisAcross.y + kP * axisPole.x * axisPole.y;
-  let m02 = kA * axisAlong.x * axisAlong.z + kC * axisAcross.x * axisAcross.z + kP * axisPole.x * axisPole.z;
-  let m12 = kA * axisAlong.y * axisAlong.z + kC * axisAcross.y * axisAcross.z + kP * axisPole.y * axisPole.z;
+  let m00 = precisionAlong * axisAlong.x * axisAlong.x + precisionAcross * axisAcross.x * axisAcross.x + precisionPole * axisPole.x * axisPole.x;
+  let m11 = precisionAlong * axisAlong.y * axisAlong.y + precisionAcross * axisAcross.y * axisAcross.y + precisionPole * axisPole.y * axisPole.y;
+  let m22 = precisionAlong * axisAlong.z * axisAlong.z + precisionAcross * axisAcross.z * axisAcross.z + precisionPole * axisPole.z * axisPole.z;
+  let m01 = precisionAlong * axisAlong.x * axisAlong.y + precisionAcross * axisAcross.x * axisAcross.y + precisionPole * axisPole.x * axisPole.y;
+  let m02 = precisionAlong * axisAlong.x * axisAlong.z + precisionAcross * axisAcross.x * axisAcross.z + precisionPole * axisPole.x * axisPole.z;
+  let m12 = precisionAlong * axisAlong.y * axisAlong.z + precisionAcross * axisAcross.y * axisAcross.z + precisionPole * axisPole.y * axisPole.z;
   return InvCov(vec3<f32>(m00, m11, m22), vec3<f32>(m01, m02, m12));
 }
 
@@ -298,14 +298,14 @@ fn buildClusteredDiscPlacementChild(
     // (upperBound binary search, 3 draws), then the complex's y offset
     // (genNormal, 2 draws) — 5 slots total, SAME order as the CPU.
     let cdfTarget = genRand(seed, popComplex, complexIndex, 0u) * cdfTotal;
-    var lo = 0u;
-    var hi = cdfRings * cdfAz - 1u;
+    var low = 0u;
+    var high = cdfRings * cdfAz - 1u;
     loop {
-      if (lo >= hi) { break; }
-      let mid = (lo + hi) / 2u;
-      if ((*prefixBuf)[mid] > cdfTarget) { hi = mid; } else { lo = mid + 1u; }
+      if (low >= high) { break; }
+      let mid = (low + high) / 2u;
+      if ((*prefixBuf)[mid] > cdfTarget) { high = mid; } else { low = mid + 1u; }
     }
-    let index = lo;
+    let index = low;
     let ring = index / cdfAz;
     let azIdx = index % cdfAz;
     let dTheta = 2.0 * CDP_PI / f32(cdfAz);

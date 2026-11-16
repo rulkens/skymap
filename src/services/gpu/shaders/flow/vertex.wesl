@@ -39,16 +39,16 @@ const TANGENT_EPS = vec2<f32>(1e-6, 0.0);
 @group(0) @binding(2) var<storage, read> parts: array<vec4<f32>>;
 
 @vertex
-fn vsTrail(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32) -> VsOut {
-  let pIdx = vi / 2u;
-  let side = f32(vi % 2u) * 2.0 - 1.0;
-  let point = trail[ii*TRAIL + pIdx];
+fn vsTrail(@builtin(vertex_index) vertexIndex: u32, @builtin(instance_index) instanceIndex: u32) -> VsOut {
+  let pIdx = vertexIndex / 2u;
+  let side = f32(vertexIndex % 2u) * 2.0 - 1.0;
+  let point = trail[instanceIndex*TRAIL + pIdx];
   let clip = cam.mvp * vec4<f32>(gridToWorld(cam.model, point.xyz), 1.0);
 
   let prevIdx = select(pIdx - 1u, 0u, pIdx == 0u);
   let nextIdx = select(pIdx + 1u, TRAIL - 1u, pIdx + 1u >= TRAIL);
-  let clipPrev = gridToClip(cam.mvp, cam.model, trail[ii*TRAIL + prevIdx].xyz);
-  let clipNext = gridToClip(cam.mvp, cam.model, trail[ii*TRAIL + nextIdx].xyz);
+  let clipPrev = gridToClip(cam.mvp, cam.model, trail[instanceIndex*TRAIL + prevIdx].xyz);
+  let clipNext = gridToClip(cam.mvp, cam.model, trail[instanceIndex*TRAIL + nextIdx].xyz);
   var ndcPrev = clipPrev.xy / clipPrev.w;
   var ndcNext = clipNext.xy / clipNext.w;
   ndcPrev.x *= cam.aspect; ndcNext.x *= cam.aspect;
@@ -64,11 +64,11 @@ fn vsTrail(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32) -> 
   let along = f32(pIdx) / f32(TRAIL - 1u);
   var alpha: f32;
   if (cam.mode == 0u) {
-    let age = parts[ii].w;
+    let age = parts[instanceIndex].w;
     let life = clamp(age / FADE, 0.0, 1.0) * clamp((LIFE - age) / FADE, 0.0, 1.0);
     alpha = along * life;
   } else {
-    let pulse = pow(fract(along - cam.phase + rand01(ii)), PULSE_SHARPNESS);
+    let pulse = pow(fract(along - cam.phase + rand01(instanceIndex)), PULSE_SHARPNESS);
     alpha = (PULSE_FLOOR + pulse) * smoothstep(0.0, PULSE_FLOOR, along);
   }
 

@@ -138,18 +138,18 @@ struct UvGradients {
   ddy: vec2<f32>,
 };
 
-// hitUnitSphere — cast 'rd' from 'ro' at the unit sphere centred on the local
-// origin. 'rd' must be unit length; on a proxy-shell fragment that means
+// hitUnitSphere — cast 'rayDir' from 'rayOrigin' at the unit sphere centred on the local
+// origin. 'rayDir' must be unit length; on a proxy-shell fragment that means
 // normalizing the DIFFERENCE after interpolation, since the interpolated proxy
 // position is not itself unit length.
 //
-// 'originAltitudeSq' is 'dot(ro, ro) - 1', a parameter because near the surface
+// 'originAltitudeSq' is 'dot(rayOrigin, rayOrigin) - 1', a parameter because near the surface
 // it is a cancellation f32 cannot do (header): the textured path supplies f64.
-fn hitUnitSphere(ro: vec3<f32>, rd: vec3<f32>, originAltitudeSq: f32) -> SphereHit {
-  let originAlongRay = dot(ro, rd);
+fn hitUnitSphere(rayOrigin: vec3<f32>, rayDir: vec3<f32>, originAltitudeSq: f32) -> SphereHit {
+  let originAlongRay = dot(rayOrigin, rayDir);
   // Near the surface 'originAlongRay * originAlongRay - originAltitudeSq' wins (f64 altitude, small originAlongRay at the
-  // horizon); far out originAlongRay*originAlongRay ~ |ro|^2 swamps f32 and the closest-approach form wins.
-  let closestOffset = ro - originAlongRay * rd;
+  // horizon); far out originAlongRay*originAlongRay ~ |rayOrigin|^2 swamps f32 and the closest-approach form wins.
+  let closestOffset = rayOrigin - originAlongRay * rayDir;
   let discr = select(1.0 - dot(closestOffset, closestOffset), originAlongRay * originAlongRay - originAltitudeSq, originAltitudeSq < 1.0);
   let sqrtDiscr = sqrt(max(discr, 0.0));
   // The far root plainly; the near root as 'c / (-originAlongRay + sqrtDiscr)', which is the same
@@ -172,7 +172,7 @@ fn hitUnitSphere(ro: vec3<f32>, rd: vec3<f32>, originAltitudeSq: f32) -> SphereH
   out.t = hitDistance;
   // 'normalize' does double duty: it is the exact geometric normal for a real
   // hit, and it projects the grazing fallback onto the sphere for a miss.
-  out.point = normalize(ro + rd * hitDistance);
+  out.point = normalize(rayOrigin + rayDir * hitDistance);
   return out;
 }
 

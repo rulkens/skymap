@@ -101,17 +101,17 @@ fn gasProfile(radius: f32) -> f32 {
 // reads as zero rather than extrapolating off the grid). Ring partial is
 // rescaled by azToRingMetric before summing, same az-equivalent-units
 // convention ismMapFluidVelocity.wesl's forcingGradient uses.
-fn divVelocity(az: i32, ring: i32, azCount: u32, ringCount: u32, azToRingMetric: f32) -> f32 {
+fn divVelocity(azIndex: i32, ring: i32, azCount: u32, ringCount: u32, azToRingMetric: f32) -> f32 {
   let ringCountI = i32(ringCount);
-  let azPlus = i32(wrapIndex(az + 1, azCount));
-  let azMinus = i32(wrapIndex(az - 1, azCount));
+  let azPlus = i32(wrapIndex(azIndex + 1, azCount));
+  let azMinus = i32(wrapIndex(azIndex - 1, azCount));
   let ringPlus = clamp(ring + 1, 0, ringCountI - 1);
   let ringMinus = clamp(ring - 1, 0, ringCountI - 1);
 
   let vPlusAz = textureLoad(velocityTex, vec2<i32>(azPlus, ring), 0).x;
   let vMinusAz = textureLoad(velocityTex, vec2<i32>(azMinus, ring), 0).x;
-  let vPlusRing = textureLoad(velocityTex, vec2<i32>(az, ringPlus), 0).y;
-  let vMinusRing = textureLoad(velocityTex, vec2<i32>(az, ringMinus), 0).y;
+  let vPlusRing = textureLoad(velocityTex, vec2<i32>(azIndex, ringPlus), 0).y;
+  let vMinusRing = textureLoad(velocityTex, vec2<i32>(azIndex, ringMinus), 0).y;
 
   let dVelAzDAz = (vPlusAz - vMinusAz) * 0.5;
   let dVelRingDRing = (vPlusRing - vMinusRing) * 0.5;
@@ -125,17 +125,17 @@ fn divVelocity(az: i32, ring: i32, azCount: u32, ringCount: u32, azToRingMetric:
 // space is the space that treats it. Same edge semantics as divVelocity: az
 // wraps, ring clamps (a clamped ring neighbour equals self, i.e. zero-flux
 // boundary).
-fn diffusionLaplacian(az: i32, ring: i32, azCount: u32, ringCount: u32, selfGasDust: vec2<f32>) -> vec2<f32> {
+fn diffusionLaplacian(azIndex: i32, ring: i32, azCount: u32, ringCount: u32, selfGasDust: vec2<f32>) -> vec2<f32> {
   let ringCountI = i32(ringCount);
-  let azPlus = i32(wrapIndex(az + 1, azCount));
-  let azMinus = i32(wrapIndex(az - 1, azCount));
+  let azPlus = i32(wrapIndex(azIndex + 1, azCount));
+  let azMinus = i32(wrapIndex(azIndex - 1, azCount));
   let ringPlus = clamp(ring + 1, 0, ringCountI - 1);
   let ringMinus = clamp(ring - 1, 0, ringCountI - 1);
 
   let nAzPlus = textureLoad(prevTex, vec2<i32>(azPlus, ring), 0);
   let nAzMinus = textureLoad(prevTex, vec2<i32>(azMinus, ring), 0);
-  let nRingPlus = textureLoad(prevTex, vec2<i32>(az, ringPlus), 0);
-  let nRingMinus = textureLoad(prevTex, vec2<i32>(az, ringMinus), 0);
+  let nRingPlus = textureLoad(prevTex, vec2<i32>(azIndex, ringPlus), 0);
+  let nRingMinus = textureLoad(prevTex, vec2<i32>(azIndex, ringMinus), 0);
 
   let neighbourSum = vec2<f32>(
     nAzPlus.x + nAzMinus.x + nRingPlus.x + nRingMinus.x,
@@ -146,17 +146,17 @@ fn diffusionLaplacian(az: i32, ring: i32, azCount: u32, ringCount: u32, selfGasD
 
 // Bilinear sample of prevTex — wraps in az, clamps in ring.
 fn sampleBilinear(azF: f32, ringF: f32, azCount: u32, ringCount: u32) -> vec4<f32> {
-  let a0f = floor(azF);
-  let fracAz = azF - a0f;
-  var azLow = i32(a0f) % i32(azCount);
+  let azFloor = floor(azF);
+  let fracAz = azF - azFloor;
+  var azLow = i32(azFloor) % i32(azCount);
   if (azLow < 0) {
     azLow += i32(azCount);
   }
   let azHigh = (azLow + 1) % i32(azCount);
 
-  let r0f = floor(ringF);
-  let fracRing = clamp(ringF - r0f, 0.0, 1.0);
-  let ringLow = clamp(i32(r0f), 0, i32(ringCount) - 1);
+  let ringFloor = floor(ringF);
+  let fracRing = clamp(ringF - ringFloor, 0.0, 1.0);
+  let ringLow = clamp(i32(ringFloor), 0, i32(ringCount) - 1);
   let ringHigh = clamp(ringLow + 1, 0, i32(ringCount) - 1);
 
   let c00 = textureLoad(prevTex, vec2<i32>(azLow, ringLow), 0);
@@ -176,7 +176,7 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   }
   let azCount = dims.x;
   let ringCount = dims.y;
-  let az = gid.x;
+  let azIndex = gid.x;
   let ring = gid.y;
   let genStep = u32(stepIdx.step);
   let radius = ismMapRingRadius(ring, ringCount, fluidConstants.rMin, fluidConstants.rMax);
@@ -192,7 +192,7 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
     // y seeds at 0: stars is a MATERIAL tracer that accumulates from nothing
     // via deposit, so an empty disc starts with none, not a decayed trace of
     // an event that never happened.
-    textureStore(nextTex, vec2<i32>(i32(az), i32(ring)), vec4<f32>(seedGas, 0.0, 0.0, ISM_MAP_AMBIENT_DUST * seedGas));
+    textureStore(nextTex, vec2<i32>(i32(azIndex), i32(ring)), vec4<f32>(seedGas, 0.0, 0.0, ISM_MAP_AMBIENT_DUST * seedGas));
     return;
   }
 
@@ -204,22 +204,22 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   let dThetaPerAz = 2.0 * PI / f32(azCount);
   let azToRingMetric = dThetaPerAz / dLnRPerRing;
 
-  let selfState = textureLoad(prevTex, vec2<i32>(i32(az), i32(ring)), 0);
+  let selfState = textureLoad(prevTex, vec2<i32>(i32(azIndex), i32(ring)), 0);
 
   // Pass A already composed this texel's velocity + event stamp, so a
   // single load suffices here instead of re-evaluating composedVelocity().
-  let velSample = textureLoad(velocityTex, vec2<i32>(i32(az), i32(ring)), 0);
+  let velSample = textureLoad(velocityTex, vec2<i32>(i32(azIndex), i32(ring)), 0);
   let velAz = velSample.x;
   let velRing = velSample.y;
   let eventStamp = velSample.z;
-  let divV = divVelocity(i32(az), i32(ring), azCount, ringCount, azToRingMetric);
+  let divV = divVelocity(i32(azIndex), i32(ring), azCount, ringCount, azToRingMetric);
 
   let azCountF = f32(azCount);
 
   // Semi-Lagrangian back-trace, dt = 1 step: gas/dust/stars sample where THIS
   // texel's material came FROM, not where it self-reads (contrast activity's
   // Eulerian read below).
-  var prevAzF = (f32(az) - velAz) % azCountF;
+  var prevAzF = (f32(azIndex) - velAz) % azCountF;
   if (prevAzF < 0.0) {
     prevAzF += azCountF;
   }
@@ -229,8 +229,8 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   // Stars' own back-trace, independent of where gas/dust advect above —
   // shear+curl-only starsVelocityTex, so the stars channel never gathers
   // into gas's arm lines.
-  let starsVelSample = textureLoad(starsVelocityTex, vec2<i32>(i32(az), i32(ring)), 0);
-  var starsPrevAzF = (f32(az) - starsVelSample.x) % azCountF;
+  let starsVelSample = textureLoad(starsVelocityTex, vec2<i32>(i32(azIndex), i32(ring)), 0);
+  var starsPrevAzF = (f32(azIndex) - starsVelSample.x) % azCountF;
   if (starsPrevAzF < 0.0) {
     starsPrevAzF += azCountF;
   }
@@ -248,7 +248,7 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   // Operator-split diffusion, applied to the PREVIOUS state (not the
   // advected one) and added on top of it — see diffusionLaplacian above.
   // Clamped >= 0 so a strong coefficient can't push a thin texel negative.
-  let lap = diffusionLaplacian(i32(az), i32(ring), azCount, ringCount, vec2<f32>(selfState.x, selfState.w));
+  let lap = diffusionLaplacian(i32(azIndex), i32(ring), azCount, ringCount, vec2<f32>(selfState.x, selfState.w));
   let diffusedGas = max(0.0, advectedGas + fluidConstants.diffusion * lap.x);
   let diffusedDust = max(0.0, advectedDust + fluidConstants.diffusion * lap.y);
 
@@ -269,5 +269,5 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   let dust = min(diffusedDust, DUST_OVERSHOOT_CEILING);
   let activity = mix(selfActivity, eventStamp, fluidConstants.emaRate);
 
-  textureStore(nextTex, vec2<i32>(i32(az), i32(ring)), vec4<f32>(gas, stars, activity, dust));
+  textureStore(nextTex, vec2<i32>(i32(azIndex), i32(ring)), vec4<f32>(gas, stars, activity, dust));
 }

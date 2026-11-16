@@ -15,22 +15,22 @@ struct VsOut {
 };
 
 @vertex
-fn vs(@builtin(vertex_index) vi: u32) -> VsOut {
+fn vs(@builtin(vertex_index) vertexIndex: u32) -> VsOut {
   // A triangle overshooting the [-1,1] clip square, covering every pixel.
   var ndc = vec2<f32>(-1.0, -1.0);
-  if (vi == 1u) {
+  if (vertexIndex == 1u) {
     ndc = vec2<f32>(3.0, -1.0);
-  } else if (vi == 2u) {
+  } else if (vertexIndex == 2u) {
     ndc = vec2<f32>(-1.0, 3.0);
   }
 
   // A constant-depth plane interpolates affinely, so this ray is exact at
   // every pixel, not just the three corners.
-  let tx = mix(uniforms.frustumTan.x, uniforms.frustumTan.y, (ndc.x + 1.0) * 0.5);
-  let ty = mix(uniforms.frustumTan.z, uniforms.frustumTan.w, (ndc.y + 1.0) * 0.5);
+  let tanX = mix(uniforms.frustumTan.x, uniforms.frustumTan.y, (ndc.x + 1.0) * 0.5);
+  let tanY = mix(uniforms.frustumTan.z, uniforms.frustumTan.w, (ndc.y + 1.0) * 0.5);
   // Scaled by the anchor distance to stay metres-order; the fragment
   // renormalizes it, so any positive scale is exact.
-  let posRelCamM = (uniforms.viewBasis * vec3<f32>(tx, ty, 1.0)) * length(uniforms.anchorPosRelCamM);
+  let posRelCamM = (uniforms.viewBasis * vec3<f32>(tanX, tanY, 1.0)) * length(uniforms.anchorPosRelCamM);
 
   var out: VsOut;
   out.clip = vec4<f32>(ndc, 0.5, 1.0);

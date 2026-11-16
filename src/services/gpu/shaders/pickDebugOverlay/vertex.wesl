@@ -11,9 +11,9 @@
 import package::pickDebugOverlay::io::VSOut;
 
 @vertex
-fn vs(@builtin(vertex_index) vi: u32) -> VSOut {
-  let cornerU = f32(((vi << 1u) & 2u));
-  let cornerV = f32(vi & 2u);
+fn vs(@builtin(vertex_index) vertexIndex: u32) -> VSOut {
+  let cornerU = f32(((vertexIndex << 1u) & 2u));
+  let cornerV = f32(vertexIndex & 2u);
   var out: VSOut;
   out.clip = vec4<f32>(cornerU * 2.0 - 1.0, 1.0 - cornerV * 2.0, 0.0, 1.0);
   out.uv = vec2<f32>(cornerU, cornerV);

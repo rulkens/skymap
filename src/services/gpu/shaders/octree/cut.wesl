@@ -102,8 +102,8 @@ fn isPadding(row: u32) -> bool {
 
 fn proxyOf(row: u32) -> f32 {
   let edge = nodeEdgeCells(nodes[row].bits);
-  let lo = nodeMinCells(nodes[row].grid, uniforms.camCell, uniforms.camFrac);
-  let toBox = max(max(lo, -(lo + vec3<f32>(edge))), vec3<f32>(0.0));
+  let minCorner = nodeMinCells(nodes[row].grid, uniforms.camCell, uniforms.camFrac);
+  let toBox = max(max(minCorner, -(minCorner + vec3<f32>(edge))), vec3<f32>(0.0));
   return edge * edge / max(dot(toBox, toBox), MIN_DIST_SQ);
 }
 

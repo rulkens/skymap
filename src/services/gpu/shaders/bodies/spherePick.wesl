@@ -120,11 +120,11 @@ fn vs(@location(0) position: vec3<f32>) -> SpherePickVSOut {
 
 @fragment
 fn fsPick(in: SpherePickVSOut) -> PickFSOut {
-  let ro = uniforms.camPosLocal;
+  let rayOrigin = uniforms.camPosLocal;
   // Renormalize AFTER interpolation: 'in.localPos' rides the scaled-up proxy, so
   // neither it nor its interpolant is unit length.
-  let rd = normalize(in.localPos - ro);
-  let surface = hitUnitSphere(ro, rd, dot(ro, ro) - 1.0);
+  let rayDir = normalize(in.localPos - rayOrigin);
+  let surface = hitUnitSphere(rayOrigin, rayDir, dot(rayOrigin, rayOrigin) - 1.0);
   // The missed lanes can go IMMEDIATELY here. The visual path has to carry them
   // as far as its 'dpdx'/'dpdy' calls, which demand uniform control flow; this
   // stage samples no texture, so it takes no derivatives and owes them nothing.

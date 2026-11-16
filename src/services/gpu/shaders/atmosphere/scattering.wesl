@@ -183,26 +183,26 @@ fn sampleMediumIsotropic(params: ScatteringParams, posKm: vec3<f32>) -> MediumSa
 
 
 // distanceToTop — the distance from a point at radius 'radius' (planet centre at the
-// origin) with view-zenith cosine 'mu' to the top-of-atmosphere sphere, along
+// origin) with view-zenith cosine 'viewZenithCos' to the top-of-atmosphere sphere, along
 // the view ray. Reuses the shared 'raySphere' quadratic; the point is inside
 // the top sphere (radius < top), so the two roots straddle 0 and the FAR (positive)
-// root is the exit distance. 'mu = dot(dir, up)' where up is the outward
+// root is the exit distance. 'viewZenithCos = dot(dir, up)' where up is the outward
 // radial. The ray is placed on the +z axis (azimuth is irrelevant for a
 // distance, by spherical symmetry).
-fn distanceToTop(radius: f32, mu: f32, topRadius: f32) -> f32 {
+fn distanceToTop(radius: f32, viewZenithCos: f32, topRadius: f32) -> f32 {
   let position = vec3<f32>(0.0, 0.0, radius);
-  let dir = vec3<f32>(sqrt(max(0.0, 1.0 - mu * mu)), 0.0, mu);
+  let dir = vec3<f32>(sqrt(max(0.0, 1.0 - viewZenithCos * viewZenithCos)), 0.0, viewZenithCos);
   let roots = raySphere(position, dir, ORIGIN, topRadius);
   return max(0.0, roots.y);
 }
 
-// rayHitsGround — does the view ray from radius 'radius' with zenith cosine 'mu'
+// rayHitsGround — does the view ray from radius 'radius' with zenith cosine 'viewZenithCos'
 // strike the ground sphere ahead of the origin? True only for down-looking rays
 // whose near ground root is positive. Drives the march-boundary choice (a ray
 // that hits the ground stops there; the surface occludes the far atmosphere).
-fn rayHitsGround(radius: f32, mu: f32, bottomRadius: f32) -> bool {
+fn rayHitsGround(radius: f32, viewZenithCos: f32, bottomRadius: f32) -> bool {
   let position = vec3<f32>(0.0, 0.0, radius);
-  let dir = vec3<f32>(sqrt(max(0.0, 1.0 - mu * mu)), 0.0, mu);
+  let dir = vec3<f32>(sqrt(max(0.0, 1.0 - viewZenithCos * viewZenithCos)), 0.0, viewZenithCos);
   let roots = raySphere(position, dir, ORIGIN, bottomRadius);
   return roots.x > 0.0;
 }
@@ -234,17 +234,17 @@ fn marchDistance(rayStart: vec3<f32>, dir: vec3<f32>, bottomRadius: f32, topRadi
 
 // transmittanceLutParamsToUv — (r, mu) -> uv. The consumer side (bake integrand
 // endpoints, multi-scatter/sky-view sun lookups, the fragment's segment ratio).
-fn transmittanceLutParamsToUv(bottomRadius: f32, topRadius: f32, radius: f32, mu: f32) -> vec2<f32> {
+fn transmittanceLutParamsToUv(bottomRadius: f32, topRadius: f32, radius: f32, viewZenithCos: f32) -> vec2<f32> {
   let horizonChord = sqrt(max(0.0, topRadius * topRadius - bottomRadius * bottomRadius));
   let rho = sqrt(max(0.0, radius * radius - bottomRadius * bottomRadius));
   // Distance to the top boundary along (r, mu): far root of the top sphere.
-  let discriminant = radius * radius * (mu * mu - 1.0) + topRadius * topRadius;
-  let topDistance = max(0.0, -radius * mu + sqrt(max(0.0, discriminant)));
+  let discriminant = radius * radius * (viewZenithCos * viewZenithCos - 1.0) + topRadius * topRadius;
+  let topDistance = max(0.0, -radius * viewZenithCos + sqrt(max(0.0, discriminant)));
   let dMin = topRadius - radius;
   let dMax = rho + horizonChord;
-  let xMu = (topDistance - dMin) / max(1e-6, dMax - dMin);
-  let xR = rho / max(1e-6, horizonChord);
-  return vec2<f32>(xMu, xR);
+  let viewZenithCoord = (topDistance - dMin) / max(1e-6, dMax - dMin);
+  let radiusCoord = rho / max(1e-6, horizonChord);
+  return vec2<f32>(viewZenithCoord, radiusCoord);
 }
 
 // transmittanceLutUvToParams — uv -> (r, mu). The bake side: given a texel's uv,
@@ -257,11 +257,11 @@ fn transmittanceLutUvToParams(bottomRadius: f32, topRadius: f32, uv: vec2<f32>) 
   let dMin = topRadius - radius;
   let dMax = rho + horizonChord;
   let topDistance = dMin + uv.x * (dMax - dMin);
-  var mu = 1.0;
+  var viewZenithCos = 1.0;
   if (topDistance > 0.0) {
-    mu = (horizonChord * horizonChord - rho * rho - topDistance * topDistance) / (2.0 * radius * topDistance);
+    viewZenithCos = (horizonChord * horizonChord - rho * rho - topDistance * topDistance) / (2.0 * radius * topDistance);
   }
-  return vec2<f32>(radius, clamp(mu, -1.0, 1.0));
+  return vec2<f32>(radius, clamp(viewZenithCos, -1.0, 1.0));
 }
 
 // sampleTransmittanceToTop — the rgb transmittance from (r, mu) to the top of
@@ -274,9 +274,9 @@ fn sampleTransmittanceToTop(
   bottomRadius: f32,
   topRadius: f32,
   radius: f32,
-  mu: f32,
+  viewZenithCos: f32,
 ) -> vec3<f32> {
-  let uv = transmittanceLutParamsToUv(bottomRadius, topRadius, radius, mu);
+  let uv = transmittanceLutParamsToUv(bottomRadius, topRadius, radius, viewZenithCos);
   return textureSampleLevel(lut, samp, uv, 0.0).rgb;
 }
 
@@ -313,7 +313,7 @@ struct ScatterStep {
   // The step's source integral '(S - S*T)/extinction', BEFORE the running
   // throughput is applied. The caller accumulates 'L += throughput * inScatter'.
   inScatter: vec3<f32>,
-  // This step's own transmittance 'exp(-extinction * dt)'. The caller
+  // This step's own transmittance 'exp(-extinction * stepLength)'. The caller
   // accumulates 'throughput *= transmittance'.
   transmittance: vec3<f32>,
 };
@@ -326,7 +326,7 @@ fn scatterStep(
   pos: vec3<f32>,          // sample position, km, planet centre at the origin
   sunDir: vec3<f32>,       // unit, same frame as 'pos'
   cosTheta: f32,           // dot(viewDir, sunDir) — the phase argument
-  dt: f32,                 // step length, km
+  stepLength: f32,         // step length, km
   twilightSoftness: f32,
   twilightIntensity: f32,
 ) -> ScatterStep {
@@ -338,7 +338,7 @@ fn scatterStep(
   let sunCosZenith = dot(up, sunDir);
 
   let medium = sampleMedium(params, pos, cosTheta);
-  let sampleTransmittance = exp(-medium.extinction * dt);
+  let sampleTransmittance = exp(-medium.extinction * stepLength);
   let sunTransmittance = sampleTransmittanceToTop(transmittanceLut, lutSamp, bottom, topRadius, radius, sunCosZenith);
   let psiMultiScatter = sampleMultiScatter(multiScatterLut, lutSamp, bottom, topRadius, radius, sunCosZenith);
 

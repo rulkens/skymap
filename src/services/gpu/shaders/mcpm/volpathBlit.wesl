@@ -26,8 +26,8 @@ fn tonemap(radiance: vec3<f32>, exposure: f32) -> vec3<f32> {
 
 @fragment
 fn fs(input: McpmVsOut) -> @location(0) vec4<f32> {
-  let px = vec2<u32>(input.pos.xy);
-  let acc = accum[px.y * blit.screenWidth + px.x];
+  let pixel = vec2<u32>(input.pos.xy);
+  let acc = accum[pixel.y * blit.screenWidth + pixel.x];
   // A cleared accumulator carries no samples; the mean is undefined, not black-with-noise.
   if (acc.a < 1.0) {
     return vec4<f32>(0.0);

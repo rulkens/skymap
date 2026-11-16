@@ -44,9 +44,9 @@ fn fs(input: VsOut) -> @location(0) vec4<f32> {
     // Ray misses the shell — transparent (carves the crisp silhouette).
     discard;
   }
-  let sq = sqrt(disc);
-  let tNear = centerAlongRay - sq;
-  let tFar = centerAlongRay + sq;
+  let sqrtDisc = sqrt(disc);
+  let tNear = centerAlongRay - sqrtDisc;
+  let tFar = centerAlongRay + sqrtDisc;
   // Camera outside the shell → near hit is the visible surface; inside
   // → near hit is behind us, take the far wall.
   let hitDistance = select(tFar, tNear, tNear > 0.0);

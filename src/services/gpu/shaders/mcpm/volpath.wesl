@@ -42,7 +42,7 @@ struct VolpathParams {
 // bound READ-ONLY in this pass's own layout rather than through io.wesl's read_write
 // group(1) contract: the kernel only reads it, and needs none of io's other slots.
 @group(0) @binding(0) var<uniform> cam: McpmCamera;
-@group(0) @binding(1) var<uniform> pt: VolpathParams;
+@group(0) @binding(1) var<uniform> params: VolpathParams;
 @group(0) @binding(2) var<storage, read_write> accum: array<vec4<f32>>;
 @group(1) @binding(0) var<storage, read> traceGrid: array<GridElem>;
 @group(1) @binding(1) var palette: texture_2d<f32>;
@@ -61,7 +61,7 @@ const MAX_TRACK_STEPS: u32 = 512u;
 const VOLPATH_WG: u32 = 8u;
 
 fn gridDims() -> vec3<i32> {
-  return vec3<i32>(pt.gridWidth, pt.gridHeight, pt.gridDepth);
+  return vec3<i32>(params.gridWidth, params.gridHeight, params.gridDepth);
 }
 
 // grid.wesl's loadTrace/sampleTrace against this pass's own read-only binding — that file
@@ -101,7 +101,7 @@ fn sampleTraceAt(pos: vec3<f32>) -> f32 {
 // cs_volpath.hlsl:174. Density, not raw trace: the trim subtracts, the ambient floors,
 // and sampleWeight scales — the same transfer the raymarch layer feeds its palette.
 fn traceToRho(traceValue: f32) -> f32 {
-  return pt.sampleWeight * (max(traceValue - pt.trimDensity, 0.0) + pt.ambientTrace);
+  return params.sampleWeight * (max(traceValue - params.trimDensity, 0.0) + params.ambientTrace);
 }
 
 fn getRho(pos: vec3<f32>) -> f32 {
@@ -128,26 +128,26 @@ fn intersectGrid(rayOrigin: vec3<f32>, rayDir: vec3<f32>) -> vec2<f32> {
   let invD = 1.0 / rayDir;
   let tMinCorner = -rayOrigin * invD;
   let tMaxCorner = (vec3<f32>(gridDims()) - rayOrigin) * invD;
-  let lo = min(tMinCorner, tMaxCorner);
-  let hi = max(tMinCorner, tMaxCorner);
-  let entry = max(max(max(lo.x, lo.y), lo.z), 0.0);
-  return vec2<f32>(entry, min(min(hi.x, hi.y), hi.z));
+  let slabEntry = min(tMinCorner, tMaxCorner);
+  let slabExit = max(tMinCorner, tMaxCorner);
+  let entry = max(max(max(slabEntry.x, slabEntry.y), slabEntry.z), 0.0);
+  return vec2<f32>(entry, min(min(slabExit.x, slabExit.y), slabExit.z));
 }
 
-fn deltaStep(sigmaMaxInv: f32, xi: f32) -> f32 {
-  return -log(max(xi, 0.001)) * sigmaMaxInv;
+fn deltaStep(sigmaMaxInv: f32, uniformDraw: f32) -> f32 {
+  return -log(max(uniformDraw, 0.001)) * sigmaMaxInv;
 }
 
 // Free-flight distance by Woodcock tracking (cs_volpath.hlsl:215-225): step by the
 // majorant, accept the collision with probability rho/rhoMax. A return >= tMax means the
 // ray left the box without colliding, which is also how the step cap reports itself.
-fn deltaTracking(rp: vec3<f32>, rd: vec3<f32>, tMax: f32, rhoMaxInv: f32, rng: ptr<function, Rng>) -> f32 {
-  let sigmaMaxInv = rhoMaxInv / pt.sigmaT;
+fn deltaTracking(rayOrigin: vec3<f32>, rayDir: vec3<f32>, tMax: f32, rhoMaxInv: f32, rng: ptr<function, Rng>) -> f32 {
+  let sigmaMaxInv = rhoMaxInv / params.sigmaT;
   var flightDistance = 0.0;
   for (var stepIndex = 0u; stepIndex < MAX_TRACK_STEPS; stepIndex = stepIndex + 1u) {
     flightDistance = flightDistance + deltaStep(sigmaMaxInv, rngNextFloat(rng));
     if (flightDistance > tMax) { return flightDistance; }
-    let eventRho = getRho(rp + flightDistance * rd);
+    let eventRho = getRho(rayOrigin + flightDistance * rayDir);
     if (rngNextFloat(rng) <= eventRho * rhoMaxInv) { return flightDistance; }
   }
   return tMax + 1.0;
@@ -169,18 +169,18 @@ fn generateBasis(dir: vec3<f32>, tangent: ptr<function, vec3<f32>>, bitangent: p
 
 // cs_volpath.hlsl:250-268. Henyey-Greenstein importance sample around 'forward'.
 fn sampleHG(forward: vec3<f32>, anisotropy: f32, rng: ptr<function, Rng>) -> vec3<f32> {
-  let xi = rngNextFloat(rng);
+  let uniformDraw = rngNextFloat(rng);
   var cosTheta: f32;
   if (abs(anisotropy) > 1e-3) {
-    let sqrTerm = (1.0 - anisotropy * anisotropy) / (1.0 - anisotropy + 2.0 * anisotropy * xi);
+    let sqrTerm = (1.0 - anisotropy * anisotropy) / (1.0 - anisotropy + 2.0 * anisotropy * uniformDraw);
     // FORK QUIRK, kept (HLSL:256): the textbook denominator is 2 * anisotropy, and this
-    // abs() folds a negative anisotropy onto its positive twin (substitute xi -> 1-xi and
-    // the two samplers are the same), so the mean cosine is |anisotropy| and back-scattering
-    // is unreachable. The host clamps the knob to [0, 0.99] rather than expose a sign that
+    // abs() folds a negative anisotropy onto its positive twin (substitute uniformDraw ->
+    // 1-uniformDraw and the two samplers are the same), so the mean cosine is |anisotropy| and
+    // back-scattering is unreachable. The host clamps the knob to [0, 0.99] rather than expose a sign that
     // does nothing; restoring it is a constants.wesl quirk-registry lever, not an edit here.
     cosTheta = (1.0 + anisotropy * anisotropy - sqrTerm * sqrTerm) / (2.0 * abs(anisotropy));
   } else {
-    cosTheta = 1.0 - 2.0 * xi;
+    cosTheta = 1.0 - 2.0 * uniformDraw;
   }
 
   let sinTheta = sqrt(max(0.0, 1.0 - cosTheta * cosTheta));
@@ -194,29 +194,29 @@ fn sampleHG(forward: vec3<f32>, anisotropy: f32, rng: ptr<function, Rng>) -> vec
 // cs_volpath.hlsl:275-345, emission-only light transport: every collision emits through
 // the palette and the walk continues, so there is no light source to sample. A ray that
 // leaves the box returns what it has — the fork's sky term is 0 in its shipping build.
-fn pathTrace(rpIn: vec3<f32>, rdIn: vec3<f32>, rng: ptr<function, Rng>) -> vec3<f32> {
-  var rp = rpIn;
-  var rd = rdIn;
+fn pathTrace(rayOriginIn: vec3<f32>, rayDirIn: vec3<f32>, rng: ptr<function, Rng>) -> vec3<f32> {
+  var rayOrigin = rayOriginIn;
+  var rayDir = rayDirIn;
   var radiance = vec3<f32>(0.0);
   var throughput = 1.0;
-  let rhoMaxInv = 1.0 / traceToRho(pt.traceMax);
+  let rhoMaxInv = 1.0 / traceToRho(params.traceMax);
 
-  for (var bounce = 0u; bounce < pt.bounces; bounce = bounce + 1u) {
-    let span = intersectGrid(rp, rd);
-    let tEvent = deltaTracking(rp, rd, span.y, rhoMaxInv, rng);
+  for (var bounce = 0u; bounce < params.bounces; bounce = bounce + 1u) {
+    let span = intersectGrid(rayOrigin, rayDir);
+    let tEvent = deltaTracking(rayOrigin, rayDir, span.y, rhoMaxInv, rng);
     if (tEvent >= span.y) { return radiance; }
 
-    rp = rp + tEvent * rd;
-    let rhoEvent = getRho(rp);
-    radiance = radiance + throughput * rhoEvent * pt.sigmaE * emittedL(rhoEvent);
+    rayOrigin = rayOrigin + tEvent * rayDir;
+    let rhoEvent = getRho(rayOrigin);
+    radiance = radiance + throughput * rhoEvent * params.sigmaE * emittedL(rhoEvent);
 
     // FORK QUIRK, kept (HLSL:319-323): a path that SURVIVES Russian roulette is scaled by
     // the albedo anyway, where the survival probability has already paid for it. It biases
     // deep bounces dark; unpicking it would change the published Polyphorm look.
-    if (bounce >= RR_START_BOUNCE && rngNextFloat(rng) > pt.albedo) { return radiance; }
-    throughput = throughput * pt.albedo;
+    if (bounce >= RR_START_BOUNCE && rngNextFloat(rng) > params.albedo) { return radiance; }
+    throughput = throughput * params.albedo;
 
-    rd = sampleHG(rd, pt.anisotropy, rng);
+    rayDir = sampleHG(rayDir, params.anisotropy, rng);
   }
   return radiance;
 }
@@ -255,13 +255,13 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   var pathL = vec3<f32>(0.0);
   let span = intersectGrid(cam.camVoxel, dir);
   if (span.y > span.x) {
-    let rp = cam.camVoxel + dir * (span.x + RAY_EPSILON);
+    let rayOrigin = cam.camVoxel + dir * (span.x + RAY_EPSILON);
     // HLSL:437's PI2, the phase-function normalisation the fork folds in at the end.
-    pathL = pathTrace(rp, dir, &rng) * PI2;
+    pathL = pathTrace(rayOrigin, dir, &rng) * PI2;
   }
 
-  if (pt.compressive == 1u) {
-    pathL = tonemap(pathL, pt.exposure);
+  if (params.compressive == 1u) {
+    pathL = tonemap(pathL, params.exposure);
   }
   accum[pixIdx] = prior + vec4<f32>(pathL, 1.0);
 }

@@ -38,8 +38,8 @@
 // output. The '21' suffix encodes the type signature (vec2→f32) in
 // the GLSL noise-library tradition where you'll also see 'hash22',
 // 'hash33', etc.
-fn hash21(co: vec2<f32>) -> f32 {
-  return fract(sin(dot(co, vec2<f32>(12.9898, 78.233))) * 43758.5453);
+fn hash21(coord: vec2<f32>) -> f32 {
+  return fract(sin(dot(coord, vec2<f32>(12.9898, 78.233))) * 43758.5453);
 }
 
 // hash21Hq — higher-quality 2D-to-1D hash in [0, 1).
@@ -72,9 +72,9 @@ fn hash21Hq(coord: vec2<f32>) -> f32 {
 // so only this shared tail is factored out — extracting more would change
 // what one of the two callers returns.
 fn hashAvalanche(word: u32) -> u32 {
-  var hh = word;
-  hh = (hh ^ (hh >> 13u)) * 1274126177u;
-  return hh ^ (hh >> 16u);
+  var scrambled = word;
+  scrambled = (scrambled ^ (scrambled >> 13u)) * 1274126177u;
+  return scrambled ^ (scrambled >> 16u);
 }
 
 // integerHash3 — Bob Jenkins/Squirrel-family 3-int avalanche: three large
@@ -96,7 +96,7 @@ fn integerHash3(cell: vec3<i32>) -> f32 {
 // no per-cell hashed value being interpolated. Instead it's a
 // 4-cosine product that visually behaves like value noise: smooth,
 // band-limited, with controllable scale via the input frequency. The
-// 'tm' parameter animates two of the four cosines so the noise
+// 'time' parameter animates two of the four cosines so the noise
 // evolves over time without retiling.
 //
 // The 'p * tanh(0.1 * length(p))' prefix gives radial attenuation:
@@ -107,12 +107,12 @@ fn integerHash3(cell: vec3<i32>) -> f32 {
 // Named valueNoise2, not a numbered slot: the name describes the shape
 // (value-noise-like) rather than an arbitrary sequence position. The '2'
 // suffix is the input dimensionality, matching 'hash21'.
-fn valueNoise2(p_in: vec2<f32>, tm: f32) -> f32 {
-  let attenuated = p_in * tanh(0.1 * length(p_in));
+fn valueNoise2(point: vec2<f32>, time: f32) -> f32 {
+  let attenuated = point * tanh(0.1 * length(point));
   let cosX = cos(attenuated.x);
   let cosY = cos(attenuated.y);
-  let cosXAnimated = cos(attenuated.x * sqrt(3.5) + tm);
-  let cosYAnimated = cos(attenuated.y * sqrt(1.5) + tm);
+  let cosXAnimated = cos(attenuated.x * sqrt(3.5) + time);
+  let cosYAnimated = cos(attenuated.y * sqrt(1.5) + time);
   return cosX * cosY * cosXAnimated * cosYAnimated;
 }
 
@@ -141,17 +141,17 @@ fn hueToRgb(hue: f32) -> vec3<f32> {
 // raySphere — analytic ray vs sphere intersection.
 //
 // Returns the two roots (entry, exit) of the quadratic
-// '|ro + t*rd - center|² = radius²' as a vec2. If the ray misses, or
+// '|rayOrigin + t*rayDir - center|² = radius²' as a vec2. If the ray misses, or
 // the sphere is entirely behind the ray origin (both 'originAltitudeSq > 0' meaning
 // origin outside, and 'originAlongRay > 0' meaning sphere centre is behind), we
 // return 'vec2(-1, -1)' as a sentinel — caller is expected to test
 // 'hits.y > 0.0' before using.
 //
-// Standard formulation: with 'originOffset = ro - center', the quadratic
+// Standard formulation: with 'originOffset = rayOrigin - center', the quadratic
 // coefficients reduce to
 //
-//   a = dot(rd, rd) = 1   (since rd is assumed unit-length)
-//   originAlongRay = dot(originOffset, rd)
+//   a = dot(rayDir, rayDir) = 1   (since rayDir is assumed unit-length)
+//   originAlongRay = dot(originOffset, rayDir)
 //   originAltitudeSq = dot(originOffset, originOffset) - r²
 //
 // and the roots are the stable pair below. The early-exit checks save
@@ -160,14 +160,14 @@ fn hueToRgb(hue: f32) -> vec3<f32> {
 // CPU twin: 'utils/math/raySphereRoots.ts'. It omits the behind-origin
 // 'originAltitudeSq > 0 && originAlongRay > 0' sentinel — callers there inspect the returned root
 // signs themselves rather than relying on the vec2(-1, -1) miss marker.
-fn raySphere(ro: vec3<f32>, rd: vec3<f32>, center: vec3<f32>, radius: f32) -> vec2<f32> {
-  let originOffset = ro - center;
-  let originAlongRay = dot(originOffset, rd);
+fn raySphere(rayOrigin: vec3<f32>, rayDir: vec3<f32>, center: vec3<f32>, radius: f32) -> vec2<f32> {
+  let originOffset = rayOrigin - center;
+  let originAlongRay = dot(originOffset, rayDir);
   let originAltitudeSq = dot(originOffset, originOffset) - radius * radius;
   if (originAltitudeSq > 0.0 && originAlongRay > 0.0) { return vec2<f32>(-1.0, -1.0); }
   // 'originAlongRay * originAlongRay - originAltitudeSq' subtracts two ~|originOffset|^2 numbers: past ~1e3 radii that is f32 noise
   // across the whole disc. The closest-approach offset 'closestOffset' keeps it at ~|originOffset| ulps.
-  let closestOffset = originOffset - originAlongRay * rd;
+  let closestOffset = originOffset - originAlongRay * rayDir;
   let discr = radius * radius - dot(closestOffset, closestOffset);
   if (discr < 0.0) { return vec2<f32>(-1.0, -1.0); }
   let sqrtDiscr = sqrt(discr);
@@ -181,13 +181,13 @@ fn raySphere(ro: vec3<f32>, rd: vec3<f32>, center: vec3<f32>, radius: f32) -> ve
 
 // rayPlaneY0 — ray intersection with the horizontal plane y=0 (a disc's own
 // plane in the frame milkyWay/ismMap's Present shaders share). Returns the
-// hit parameter hitParam such that 'ro + hitParam*rd' lies in the plane, or -1.0 — same
+// hit parameter hitParam such that 'rayOrigin + hitParam*rayDir' lies in the plane, or -1.0 — same
 // miss-sentinel idiom as raySphere above — when the ray is (near-)parallel
 // to the plane (the 1e-6 guard keeps a near-parallel ray from dividing into
 // a wild, spuriously-positive hitParam) or the intersection sits behind the origin.
-fn rayPlaneY0(ro: vec3<f32>, rd: vec3<f32>) -> f32 {
-  if (abs(rd.y) < 1e-6) { return -1.0; }
-  let hitParam = -ro.y / rd.y;
+fn rayPlaneY0(rayOrigin: vec3<f32>, rayDir: vec3<f32>) -> f32 {
+  if (abs(rayDir.y) < 1e-6) { return -1.0; }
+  let hitParam = -rayOrigin.y / rayDir.y;
   return select(hitParam, -1.0, hitParam <= 0.0);
 }
 

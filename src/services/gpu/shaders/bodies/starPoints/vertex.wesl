@@ -73,13 +73,13 @@ import package::lib::starPhotometry::toRefPx;
 
 @vertex
 fn vs(
-  @builtin(vertex_index) vi: u32,
+  @builtin(vertex_index) vertexIndex: u32,
   @location(0) position: vec3<f32>,
   @location(1) color: vec3<f32>,
   @location(2) absMag: f32,
 ) -> VSOut {
   let center = worldToClip(uniforms.cam, position);
-  let corner = quadCorner(vi);
+  let corner = quadCorner(vertexIndex);
 
   // Radius: a fixed slider-scaled legibility floor (point source, no box to
   // fill); the px ceiling bounds only the DRAWN radius. 'sizeScale' makes the

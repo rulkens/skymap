@@ -43,15 +43,15 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // ellipse test in the original frame), then apply the existing radial
   // cutoff.
   //
-  // The cs/sn pair is pre-computed in the vertex stage and flat-
+  // The cosAngle/sinAngle pair is pre-computed in the vertex stage and flat-
   // interpolated, saving millions of trig calls per frame. safeAB
   // (the validated ellipse minor-axis ratio) rides alongside them in
   // 'in.ellipse.z', so the fragment does zero per-pixel axis-ratio work.
-  let cs = in.ellipse.x;
-  let sn = in.ellipse.y;
+  let cosAngle = in.ellipse.x;
+  let sinAngle = in.ellipse.y;
   let rotated = vec2<f32>(
-    cs * in.uv.x - sn * in.uv.y,
-    sn * in.uv.x + cs * in.uv.y,
+    cosAngle * in.uv.x - sinAngle * in.uv.y,
+    sinAngle * in.uv.x + cosAngle * in.uv.y,
   );
   let elliptic = vec2<f32>(rotated.x, rotated.y / in.ellipse.z);
   let radiusSq = dot(elliptic, elliptic);
@@ -98,8 +98,8 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // no-op multiply by white and the debug overlay stays flat rather than
   // gradient-modulated. Note WGSL's argument order — 'select(falseVal,
   // trueVal, cond)' — so the ramp lookup is the FIRST argument here.
-  let ci = in.instanceTint.w;
-  let rampRgb = select(rampRadial(ci, sqrt(radiusSq)), vec3<f32>(1.0), ci < 0.0);
+  let colourIndex = in.instanceTint.w;
+  let rampRgb = select(rampRadial(colourIndex, sqrt(radiusSq)), vec3<f32>(1.0), colourIndex < 0.0);
   let rgb = in.instanceTint.rgb * rampRgb;
 
   // ── Source fade-in ─────────────────────────────────────────────────────────

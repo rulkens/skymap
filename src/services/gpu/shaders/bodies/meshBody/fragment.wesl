@@ -36,13 +36,13 @@ const SUN_IRRADIANCE: f32 = 3.0;
 fn fs(in: MeshBodyVSOut, @builtin(front_facing) frontFacing: bool) -> @location(0) vec4<f32> {
   // Barycentric blending shortens both and skews the tangent off the normal:
   // renormalize and Gram-Schmidt, so the bitangent 'cross' comes out unit-length.
-  // No cull: negating 'ng' holds 'tangent' and inverts 'bitangent' -- the frame a back face is seen through.
-  let ng = normalize(in.worldNormal) * select(-1.0, 1.0, frontFacing);
-  let tangent = normalize(in.worldTangent.xyz - ng * dot(ng, in.worldTangent.xyz));
-  let bitangent = cross(ng, tangent) * in.worldTangent.w;
+  // No cull: negating 'geometricNormal' holds 'tangent' and inverts 'bitangent' -- the frame a back face is seen through.
+  let geometricNormal = normalize(in.worldNormal) * select(-1.0, 1.0, frontFacing);
+  let tangent = normalize(in.worldTangent.xyz - geometricNormal * dot(geometricNormal, in.worldTangent.xyz));
+  let bitangent = cross(geometricNormal, tangent) * in.worldTangent.w;
 
   let tilt = textureSample(normalTexture, meshSampler, in.uv).xyz * 2.0 - 1.0;
-  let shadingNormal = normalize(tangent * tilt.x + bitangent * tilt.y + ng * tilt.z);
+  let shadingNormal = normalize(tangent * tilt.x + bitangent * tilt.y + geometricNormal * tilt.z);
 
   let albedo = textureSample(albedoTexture, meshSampler, in.uv).rgb * uniforms.baseColorFactor;
   // glTF ORM packing: R baked occlusion (255 when the mesh has none), G roughness,

@@ -31,9 +31,9 @@ import package::lib::focusUniforms::FocusUniforms;
 
 @vertex
 fn vs(
-  @builtin(vertex_index) vi: u32,
-  @builtin(instance_index) ii: u32,
+  @builtin(vertex_index) vertexIndex: u32,
+  @builtin(instance_index) instanceIndex: u32,
   galaxy: PerVertex,
 ) -> VSOut {
-  return galaxyPointVertex(vi, ii, galaxy, uniforms, source, focus);
+  return galaxyPointVertex(vertexIndex, instanceIndex, galaxy, uniforms, source, focus);
 }

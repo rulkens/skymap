@@ -27,16 +27,16 @@ const STREAK_HALF_DIM_RADII: f32 = 1.25;
 
 @vertex
 fn vs(
-  @builtin(vertex_index) vi: u32,
-  @builtin(instance_index) ii: u32,
+  @builtin(vertex_index) vertexIndex: u32,
+  @builtin(instance_index) instanceIndex: u32,
   @location(0) pos: vec3<f32>,
   @location(1) tangent: vec3<f32>,
   @location(2) attr: vec4<f32>,
 ) -> VSOut {
   var out: VSOut;
-  let corner = vec2<f32>(f32(vi & 1u) * 2.0 - 1.0, f32(vi >> 1u) * 2.0 - 1.0);
+  let corner = vec2<f32>(f32(vertexIndex & 1u) * 2.0 - 1.0, f32(vertexIndex >> 1u) * 2.0 - 1.0);
   let size = attr.x * uniforms.sizeScale;
-  let phase = fract(uniforms.timeSec * DRIFT_LOOPS_PER_SEC + rand01(ii));
+  let phase = fract(uniforms.timeSec * DRIFT_LOOPS_PER_SEC + rand01(instanceIndex));
   let rel = pos + tangent * (uniforms.flow * MPC_PER_KPC) * (phase - 0.5) - uniforms.eye;
   let centreClip = worldToClip(uniforms.cam, rel);
   if (centreClip.w <= 0.0) {

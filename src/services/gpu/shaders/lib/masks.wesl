@@ -63,8 +63,8 @@ fn circularMask(radius: f32, inner: f32, outer: f32) -> f32 {
 // opaque. See the longer note in 'quads.wesl' for the
 // project_thumbnail_quality.md context.
 
-fn lumAlpha(lum: f32, lo: f32, hi: f32) -> f32 {
-  return smoothstep(lo, hi, lum);
+fn lumAlpha(lum: f32, lowEdge: f32, highEdge: f32) -> f32 {
+  return smoothstep(lowEdge, highEdge, lum);
 }
 
 // ── edgeBandMask ─────────────────────────────────────────────────────

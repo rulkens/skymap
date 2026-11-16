@@ -159,8 +159,8 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // view ray runs camera -> fragment, both already in planet-radius units.
   let toFrag = ringPoint - uniforms.camPosLocal;
   let viewDir = toFrag / length(toFrag);
-  let mu0 = max(abs(uniforms.sunDirLocal.z), MU_EPS);
-  let mu = max(abs(viewDir.z), MU_EPS);
+  let sunCosine = max(abs(uniforms.sunDirLocal.z), MU_EPS);
+  let viewCosine = max(abs(viewDir.z), MU_EPS);
 
   // Henyey-Greenstein phase. cosTheta is between the photon's incoming
   // propagation (-sunDir) and its outgoing propagation toward the camera
@@ -175,18 +175,18 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let sameSide = uniforms.camPosLocal.z * uniforms.sunDirLocal.z >= 0.0;
   var geom: f32;
   if (sameSide) {
-    geom = (mu0 / (mu0 + mu)) * (1.0 - exp(-tau * (1.0 / mu0 + 1.0 / mu)));
-  } else if (abs(mu0 - mu) < 1e-3) {
+    geom = (sunCosine / (sunCosine + viewCosine)) * (1.0 - exp(-tau * (1.0 / sunCosine + 1.0 / viewCosine)));
+  } else if (abs(sunCosine - viewCosine) < 1e-3) {
     // mu -> mu0 limit of the transmission bracket (L'Hopital): (tau/mu) e^(-tau/mu).
-    geom = (tau / mu) * exp(-tau / mu);
+    geom = (tau / viewCosine) * exp(-tau / viewCosine);
   } else {
-    geom = (mu0 / (mu0 - mu)) * (exp(-tau / mu0) - exp(-tau / mu));
+    geom = (sunCosine / (sunCosine - viewCosine)) * (exp(-tau / sunCosine) - exp(-tau / viewCosine));
   }
 
   // Scattered radiance: the direct single-scatter term (killed in the planet's
   // shadow) plus the small planet-shine ambient, scaled by the slab's view
   // coverage so empty gaps stay dark.
-  let coverage = 1.0 - exp(-tau / mu);
+  let coverage = 1.0 - exp(-tau / viewCosine);
   let scattered = singleScatterAlbedo * (sunVis * (phase / 4.0) * geom + AMBIENT * coverage);
 
   // Volumetric premultiplied OVER: emit the slab's own radiance; the background

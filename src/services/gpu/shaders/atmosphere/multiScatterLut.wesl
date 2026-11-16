@@ -74,7 +74,7 @@ fn integrateRay(rayStart: vec3<f32>, dir: vec3<f32>, sunDir: vec3<f32>) -> RayCo
   let bottom = params.planetRadiusKm;
   let top = params.atmosphereTopKm;
   let tMax = marchDistance(rayStart, dir, bottom, top);
-  let dt = tMax / MULTI_SCATTER_STEPS;
+  let stepLength = tMax / MULTI_SCATTER_STEPS;
 
   var lum = vec3<f32>(0.0);
   var fms = vec3<f32>(0.0);
@@ -83,14 +83,14 @@ fn integrateRay(rayStart: vec3<f32>, dir: vec3<f32>, sunDir: vec3<f32>) -> RayCo
   var stepIndex: u32 = 0u;
   loop {
     if (f32(stepIndex) >= MULTI_SCATTER_STEPS) { break; }
-    let sampleDistance = (f32(stepIndex) + 0.5) * dt;
+    let sampleDistance = (f32(stepIndex) + 0.5) * stepLength;
     let pos = rayStart + dir * sampleDistance;
     let radius = length(pos);
     let up = pos / radius;
     let sunCosZenith = dot(up, sunDir);
 
     let medium = sampleMediumIsotropic(params, pos);
-    let sampleTransmittance = exp(-medium.extinction * dt);
+    let sampleTransmittance = exp(-medium.extinction * stepLength);
     let sunTransmittance = sampleTransmittanceToTop(transmittanceLut, lutSamp, bottom, top, radius, sunCosZenith);
 
     // Total scattering coefficient at this point, summed over constituents.

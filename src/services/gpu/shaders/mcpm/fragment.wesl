@@ -47,10 +47,10 @@ fn intersectGrid(rayOrigin: vec3<f32>, rayDir: vec3<f32>) -> vec2<f32> {
   let invD = 1.0 / rayDir;
   let tMinCorner = -rayOrigin * invD;
   let tMaxCorner = (vec3<f32>(gridDims()) - rayOrigin) * invD;
-  let lo = min(tMinCorner, tMaxCorner);
-  let hi = max(tMinCorner, tMaxCorner);
-  let entry = max(max(max(lo.x, lo.y), lo.z), 0.0);
-  return vec2<f32>(entry, min(min(hi.x, hi.y), hi.z));
+  let slabEntry = min(tMinCorner, tMaxCorner);
+  let slabExit = max(tMinCorner, tMaxCorner);
+  let entry = max(max(max(slabEntry.x, slabEntry.y), slabEntry.z), 0.0);
+  return vec2<f32>(entry, min(min(slabExit.x, slabExit.y), slabExit.z));
 }
 
 @fragment

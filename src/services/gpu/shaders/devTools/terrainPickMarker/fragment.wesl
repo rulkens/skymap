@@ -54,10 +54,10 @@ struct MarkerFSOut {
 fn shadeMarker(rayM: vec3<f32>, tint: vec3<f32>, irradiance: f32) -> MarkerFSOut {
   // Eye-relative frame: the eye IS the origin, so the textbook 'ro - centre'
   // is just '-centre' and no large magnitude is ever subtracted in f32.
-  let rd = normalize(rayM);
-  let oc = -uniforms.centreRelEyeM;
-  let originAlongRay = dot(oc, rd);
-  let distSqMinusRadiusSq = dot(oc, oc) - uniforms.radiusM * uniforms.radiusM;
+  let rayDir = normalize(rayM);
+  let eyeRelCentreM = -uniforms.centreRelEyeM;
+  let originAlongRay = dot(eyeRelCentreM, rayDir);
+  let distSqMinusRadiusSq = dot(eyeRelCentreM, eyeRelCentreM) - uniforms.radiusM * uniforms.radiusM;
   let discr = originAlongRay * originAlongRay - distSqMinusRadiusSq;
   let sqrtDiscr = sqrt(max(discr, 0.0));
   let tNear = -originAlongRay - sqrtDiscr;
@@ -68,9 +68,9 @@ fn shadeMarker(rayM: vec3<f32>, tint: vec3<f32>, irradiance: f32) -> MarkerFSOut
     discard;
   }
 
-  let hitRelEyeM = rd * hitDistance;
+  let hitRelEyeM = rayDir * hitDistance;
   let normal = normalize(hitRelEyeM - uniforms.centreRelEyeM);
-  let key = clamp(dot(normal, -rd), 0.0, 1.0);
+  let key = clamp(dot(normal, -rayDir), 0.0, 1.0);
 
   var out: MarkerFSOut;
   out.colour = vec4<f32>(

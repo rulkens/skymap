@@ -46,15 +46,15 @@ fn patchVertexOffset(
   let havLon = 2.0 * sinHalfLon * sinHalfLon;
   let havLat = 2.0 * sinHalfLat * sinHalfLat;
   let cosLat = cos(lat);
-  let cE = cosLat * sin(dlon);
-  let cN = sin(dlat) + cosLat * sin(lat0Rad) * havLon;
-  let cU = -havLat - cosLat * cos(lat0Rad) * havLon;
+  let unitEast = cosLat * sin(dlon);
+  let unitNorth = sin(dlat) + cosLat * sin(lat0Rad) * havLon;
+  let unitUp = -havLat - cosLat * cos(lat0Rad) * havLon;
 
   // 'heightM' DISTRIBUTED, never summed into radiusM: the f32 sum quantizes to
   // 0.5 m at Earth's radius and terraces every patch (spec section 7.1).
-  let xE = radiusM * cE + heightM * cE;
-  let xN = radiusM * cN + heightM * cN;
-  let xU = radiusM * cU + heightM * cU + heightM;
+  let eastM = radiusM * unitEast + heightM * unitEast;
+  let northM = radiusM * unitNorth + heightM * unitNorth;
+  let upM = radiusM * unitUp + heightM * unitUp + heightM;
 
   // The ENU frame at (lon0, lat0) in the body's fixed axes -- +Z the pole,
   // longitude 0 on +X, the convention 'equirectUvToDirection' fixes.
@@ -63,9 +63,9 @@ fn patchVertexOffset(
   let sinLat0 = sin(lat0Rad);
   let cosLat0 = cos(lat0Rad);
   return vec3<f32>(
-    xE * -sinLon0 + xN * -(sinLat0 * cosLon0) + xU * (cosLat0 * cosLon0),
-    xE * cosLon0 + xN * -(sinLat0 * sinLon0) + xU * (cosLat0 * sinLon0),
-    xN * cosLat0 + xU * sinLat0,
+    eastM * -sinLon0 + northM * -(sinLat0 * cosLon0) + upM * (cosLat0 * cosLon0),
+    eastM * cosLon0 + northM * -(sinLat0 * sinLon0) + upM * (cosLat0 * sinLon0),
+    northM * cosLat0 + upM * sinLat0,
   );
 }
 
@@ -170,7 +170,7 @@ fn vs(
   out.patchSpanRad = vec2<f32>(inst.dLonRad, inst.dLatRad);
   // Camera minus vertex, inverted through the same rotation and scaled into
   // body-radius units. Cancellation-free at metre scale, unlike the
-  // 'camPosLocal - Ng' this replaced (two near-unit f32 vectors).
+  // 'camPosLocal - geometricNormal' this replaced (two near-unit f32 vectors).
   out.viewDirLocal = (1.0 / uniforms.radiusM) * vec3<f32>(
     -dot(uniforms.rotCol0, worldPosRelCam),
     -dot(uniforms.rotCol1, worldPosRelCam),

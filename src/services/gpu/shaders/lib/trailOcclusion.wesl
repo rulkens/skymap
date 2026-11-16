@@ -44,8 +44,8 @@ fn sphereClearance(trailPoint: vec3<f32>, sphere: vec4<f32>) -> f32 {
   let centre = sphere.xyz;
   let along = clamp(dot(centre, trailPoint) / max(dot(trailPoint, trailPoint), 1e-30), 0.0, 1.0);
   let gap = length(along * trailPoint - centre) - sphere.w;
-  let aa = max(fwidth(gap), 1e-6);
-  return smoothstep(-aa, aa, gap);
+  let antialiasWidth = max(fwidth(gap), 1e-6);
+  return smoothstep(-antialiasWidth, antialiasWidth, gap);
 }
 
 // Visibility in [0,1] of the eye-relative trail point 'trailPoint' (km) under fragment

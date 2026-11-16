@@ -27,8 +27,8 @@ struct SplatBlit {
 
 @fragment
 fn fs(input: McpmVsOut) -> @location(0) vec4<f32> {
-  let px = vec2<u32>(input.pos.xy);
-  let raw = f32(splat[px.y * blit.screenWidth + px.x]);
+  let pixel = vec2<u32>(input.pos.xy);
+  let raw = f32(splat[pixel.y * blit.screenWidth + pixel.x]);
 
   // cs_particles_blit.hlsl:35-39 then ps_particles_color.hlsl:11-17, agent branch only.
   let brightness = raw * blit.sampleWeight * blit.intensity / 3.0;

@@ -41,17 +41,17 @@ struct PointVsOut {
 };
 
 @vertex
-fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32) -> PointVsOut {
+fn vs(@builtin(vertex_index) vertexIndex: u32, @builtin(instance_index) pointIndex: u32) -> PointVsOut {
   var corners = array<vec2<f32>, 6>(
     vec2<f32>(-1.0, -1.0), vec2<f32>(1.0, -1.0), vec2<f32>(-1.0, 1.0),
     vec2<f32>(-1.0, 1.0), vec2<f32>(1.0, -1.0), vec2<f32>(1.0, 1.0)
   );
-  let corner = corners[vi];
-  let ndc = voxelToNdc(cam, vec3<f32>(pointX[ii], pointY[ii], pointZ[ii]));
+  let corner = corners[vertexIndex];
+  let ndc = voxelToNdc(cam, vec3<f32>(pointX[pointIndex], pointY[pointIndex], pointZ[pointIndex]));
 
   var out: PointVsOut;
   out.offset = corner;
-  let wNorm = max(pointWeight[ii] * overlay.weightScale, 0.0);
+  let wNorm = max(pointWeight[pointIndex] * overlay.weightScale, 0.0);
   // The user knob folds in HERE, not in the fragment: OverlayParams is bound
   // VERTEX-visible only (the lanes beside it cannot be read by a fragment stage).
   out.intensity =

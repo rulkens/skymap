@@ -49,16 +49,16 @@ fn stretchNoiseCoord(worldPos: vec3<f32>, stretch: f32) -> vec3<f32> {
     return worldPos;
   }
   let inPlane = vec2<f32>(worldPos.x, worldPos.z);
-  let rl = length(inPlane);
-  if (rl < 1e-6) {
+  let radialDistance = length(inPlane);
+  if (radialDistance < 1e-6) {
     return worldPos;
   }
-  let radial = inPlane / rl;
+  let radial = inPlane / radialDistance;
   let tangent = vec2<f32>(-radial.y, radial.x);
   let alongRadial = dot(inPlane, radial);
   let alongTangent = dot(inPlane, tangent) / stretch;
-  let xz = alongRadial * radial + alongTangent * tangent;
-  return vec3<f32>(xz.x, worldPos.y, xz.y);
+  let stretchedInPlane = alongRadial * radial + alongTangent * tangent;
+  return vec3<f32>(stretchedInPlane.x, worldPos.y, stretchedInPlane.y);
 }
 
 // dustNoiseWeighted — the shared, band-limited ridged-fbm sample BOTH S5's
@@ -134,8 +134,8 @@ fn dustNoiseMultiplier(noiseSample: f32) -> f32 {
 // is noise BITING inward from nothing: nothing hardens at low carve, and
 // nothing bulges past RHO0 at high carve.
 //
-// rho = sqrt(dc.z) is the Mahalanobis DISTANCE in sigma at the ray's closest
-// approach (dc.z = gaussianRayCoeffs' q(tPeak), already the SQUARED
+// rho = sqrt(coeffs.z) is the Mahalanobis DISTANCE in sigma at the ray's closest
+// approach (coeffs.z = gaussianRayCoeffs' q(tPeak), already the SQUARED
 // Mahalanobis distance per gaussianIntegral.wesl's own derivation). 'noiseSample' is
 // the SAME shared, band-limited sample dustNoiseMultiplier reads (mean
 // ~0.5); rhoB = RHO0*(1 - carve*noiseSample) pulls the boundary inward only (noiseSample in
@@ -169,20 +169,20 @@ fn fs(input: DustMapOut) -> @location(0) vec4<f32> {
 
   let dustOffset = u32(uniforms.counts.y);
   let rec = comps[dustOffset + input.inst];
-  let po = rayOrigin - rec.center;
+  let originFromCenter = rayOrigin - rec.center;
 
-  let dc = gaussianRayCoeffs(po, rayDir, rec.invCovDiagonal, rec.invCovOffDiagonal);
-  let quadraticCoeff = dc.x;
+  let coeffs = gaussianRayCoeffs(originFromCenter, rayDir, rec.invCovDiagonal, rec.invCovOffDiagonal);
+  let quadraticCoeff = coeffs.x;
 
-  // dc.z (the ray's closest-approach squared Mahalanobis distance) past
+  // coeffs.z (the ray's closest-approach squared Mahalanobis distance) past
   // SPLAT_CUT^2 means this fragment sits on a fullscreen-fallback quad
   // (splatSilhouette.wesl) the ray never actually grazes this component's
   // support — same cut fieldSplat/fragment.wesl's fs applies to its own hoisted coeffs,
   // for the same reason: the slice contribution below is already under the
-  // vertex-side quad's own truncation. quadraticCoeff < 1e-12 leaves dc.z at
+  // vertex-side quad's own truncation. quadraticCoeff < 1e-12 leaves coeffs.z at
   // gaussianRayCoeffs' null-space 0.0, which never trips this, so it falls
   // through to the null-space guard right below unchanged.
-  if (dc.z > SPLAT_CUT * SPLAT_CUT) {
+  if (coeffs.z > SPLAT_CUT * SPLAT_CUT) {
     return vec4<f32>(0.0);
   }
 
@@ -199,7 +199,7 @@ fn fs(input: DustMapOut) -> @location(0) vec4<f32> {
   // math below (S5): the carve test right after needs it for the shared
   // noise sample, and is meant to skip that math on a miss — the actual
   // perf win, not just a colour clamp.
-  let tPeak = max(-dc.y / quadraticCoeff, 0.0);
+  let tPeak = max(-coeffs.y / quadraticCoeff, 0.0);
   let closestPoint = rayOrigin + rayDir * tPeak;
 
   // Erosion and S5 carving both apply to every dust component — input.inst
@@ -225,7 +225,7 @@ fn fs(input: DustMapOut) -> @location(0) vec4<f32> {
   // would still reshape the silhouette (io.wesl's dustCarve doc).
   var carveMask = 1.0;
   if (carveActive) {
-    let rho = sqrt(dc.z);
+    let rho = sqrt(coeffs.z);
     carveMask = dustCarveMask(rho, noiseSample, uniforms.dustCarve.x, uniforms.dustCarve.y);
     // The early-out: a carved-away fragment skips the four expHalfErfc
     // evaluations below entirely, the perf win this feature buys back for
@@ -249,12 +249,12 @@ fn fs(input: DustMapOut) -> @location(0) vec4<f32> {
   // it into the record, so every OTHER reader of comps (a future per-extra
   // dust loop) still sees the un-renormalized value.
   let coeff = rec.amplitude * dustRenorm[0] * sqrt(GAUSS_PI / (2.0 * quadraticCoeff));
-  let erfcArgAtNear = dc.y / sqrtHalfA;
+  let erfcArgAtNear = coeffs.y / sqrtHalfA;
   let aOverSqrtHalfA = quadraticCoeff / sqrtHalfA;
-  let tail0 = coeff * expHalfErfc(dc.z, erfcArgAtNear);
-  let tail1 = coeff * expHalfErfc(dc.z, erfcArgAtNear + aOverSqrtHalfA * uniforms.dustSlices.x);
-  let tail2 = coeff * expHalfErfc(dc.z, erfcArgAtNear + aOverSqrtHalfA * uniforms.dustSlices.y);
-  let tail3 = coeff * expHalfErfc(dc.z, erfcArgAtNear + aOverSqrtHalfA * uniforms.dustSlices.z);
+  let tail0 = coeff * expHalfErfc(coeffs.z, erfcArgAtNear);
+  let tail1 = coeff * expHalfErfc(coeffs.z, erfcArgAtNear + aOverSqrtHalfA * uniforms.dustSlices.x);
+  let tail2 = coeff * expHalfErfc(coeffs.z, erfcArgAtNear + aOverSqrtHalfA * uniforms.dustSlices.y);
+  let tail3 = coeff * expHalfErfc(coeffs.z, erfcArgAtNear + aOverSqrtHalfA * uniforms.dustSlices.z);
   // Slice k's own column is the tail mass BETWEEN its two edges (tail(t4 =
   // infinity) is 0, folded in directly rather than a fourth expHalfErfc
   // call). Each difference of two close tail values loses precision as the

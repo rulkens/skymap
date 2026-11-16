@@ -69,8 +69,9 @@ const GLYPH_HOVER_MIX: f32 = 0.5; // base color, mixed this far toward white
 const GLYPH_ACTIVE_COLOR: vec3<f32> = vec3<f32>(0.95, 0.95, 0.95);
 const GLYPH_INTENSITY: f32 = 0.9;
 
-// vi/6 = segment index, vi%6 = corner. Two triangles split the quad along its A+/B- diagonal:
-// (A-,A+,B-) then (A+,B+,B-) — endpoint picks posA/posB, side picks which perpendicular edge.
+// vertexIndex/6 = segment index, vertexIndex%6 = corner. Two triangles split the quad along
+// its A+/B- diagonal: (A-,A+,B-) then (A+,B+,B-) — endpoint picks posA/posB, side picks
+// which perpendicular edge.
 const QUAD_ENDPOINT: array<u32, 6> = array<u32, 6>(0u, 0u, 1u, 0u, 1u, 1u);
 const QUAD_SIDE: array<f32, 6> = array<f32, 6>(-1.0, 1.0, -1.0, 1.0, 1.0, -1.0);
 
@@ -84,10 +85,10 @@ const EDGE_CORNERS: array<u32, 24> = array<u32, 24>(
 // Oriented-box corner: center offset by ±halfExtents along each of the box's OWN basis
 // directions (three FMAs, not a matrix — spec §4) rather than an axis-aligned min/max.
 fn cornerPos(corner: u32) -> vec3<f32> {
-  let sx = select(-box.halfExtents.x, box.halfExtents.x, (corner & 1u) != 0u);
-  let sy = select(-box.halfExtents.y, box.halfExtents.y, (corner & 2u) != 0u);
-  let sz = select(-box.halfExtents.z, box.halfExtents.z, (corner & 4u) != 0u);
-  return box.center + sx * box.basisX + sy * box.basisY + sz * box.basisZ;
+  let offsetX = select(-box.halfExtents.x, box.halfExtents.x, (corner & 1u) != 0u);
+  let offsetY = select(-box.halfExtents.y, box.halfExtents.y, (corner & 2u) != 0u);
+  let offsetZ = select(-box.halfExtents.z, box.halfExtents.z, (corner & 4u) != 0u);
+  return box.center + offsetX * box.basisX + offsetY * box.basisY + offsetZ * box.basisZ;
 }
 
 struct LineVsOut {
@@ -95,8 +96,8 @@ struct LineVsOut {
 };
 
 @vertex
-fn vs(@builtin(vertex_index) vi: u32) -> LineVsOut {
-  let ndc = voxelToNdc(cam, cornerPos(EDGE_CORNERS[vi]));
+fn vs(@builtin(vertex_index) vertexIndex: u32) -> LineVsOut {
+  let ndc = voxelToNdc(cam, cornerPos(EDGE_CORNERS[vertexIndex]));
   var out: LineVsOut;
   // A corner behind the eye plane has sign-flipped ndc lanes (see camera.wesl); push it
   // off-screen rather than draw a line toward whatever garbage direction that folds into.
@@ -121,9 +122,9 @@ struct GlyphVsOut {
 };
 
 @vertex
-fn vsGlyph(@builtin(vertex_index) vi: u32) -> GlyphVsOut {
-  let seg = glyphSegs[vi / 6u];
-  let corner = vi % 6u;
+fn vsGlyph(@builtin(vertex_index) vertexIndex: u32) -> GlyphVsOut {
+  let seg = glyphSegs[vertexIndex / 6u];
+  let corner = vertexIndex % 6u;
   var out: GlyphVsOut;
   out.handleId = seg.handleId;
 

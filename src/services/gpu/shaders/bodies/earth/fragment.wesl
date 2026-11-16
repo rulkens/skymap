@@ -32,8 +32,8 @@
 // 'normalLocal' arrives interpolated, which shortens it -- normalize before the
 // Lambert dot or the terminator bands. The geometric normal is then perturbed by
 // the tangent-space normal map (binding 5) via 'lib/normalMap.wesl' 'perturbNormal';
-// its bitangent 'cross(Ng, Tn)' points +v=north, matching 'bakeNormalMap.ts's
-// row/sign convention.
+// its bitangent 'cross(geometricNormal, orthonormalTangent)' points +v=north,
+// matching 'bakeNormalMap.ts's row/sign convention.
 //
 // ## uv orientation
 //
@@ -102,10 +102,10 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
 
   // Normal map: baked nx(R)=+u=east, ny(G)=+v=north; 'perturbNormal'
   // reconstructs nz and rotates into local space (see the header). Placeholder
-  // encodes (0,0,1) -> shadingNormal == Ng before the map lands.
+  // encodes (0,0,1) -> shadingNormal == geometricNormal before the map lands.
   let nEnc = textureSample(normalTexture, earthSampler, in.uv).rg; // LINEAR RG
-  let Ng = normalize(in.normalLocal); // renormalized -- interpolation shortens it
-  let shadingNormal = perturbNormal(Ng, in.tangent, nEnc);
+  let geometricNormal = normalize(in.normalLocal); // renormalized -- interpolation shortens it
+  let shadingNormal = perturbNormal(geometricNormal, in.tangent, nEnc);
   // View vector: 'normalLocal' doubles as the unit-sphere surface position here;
   // 'uniforms.camPosLocal' is the camera in the same local frame.
   let viewDir = normalize(uniforms.camPosLocal - in.normalLocal);

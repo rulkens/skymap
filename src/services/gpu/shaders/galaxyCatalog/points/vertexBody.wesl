@@ -20,7 +20,7 @@ import package::lib::focusUniforms::focusAlphaMultiplier;
 import package::lib::focusUniforms::FOCUS_PICK_EXCLUDE_BELOW;
 
 fn galaxyPointVertex(
-  vi: u32,
+  vertexIndex: u32,
   pickIndex: u32,
   galaxy: PerVertex,
   uniforms: Uniforms,
@@ -28,7 +28,7 @@ fn galaxyPointVertex(
   focus: FocusUniforms,
 ) -> VSOut {
   let center = worldToClip(uniforms.cam, galaxy.position);
-  let corner = triCorner(vi);
+  let corner = triCorner(vertexIndex);
   let myPacked = packSelection(source.sourceCode, pickIndex);
 
   // The estimated-not-measured bit rides each attribute's sign. A row with the

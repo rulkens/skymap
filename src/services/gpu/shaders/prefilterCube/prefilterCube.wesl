@@ -22,8 +22,8 @@ struct PrefilterParams {
 @group(0) @binding(2) var<uniform> params: PrefilterParams;
 
 @vertex
-fn vs(@builtin(vertex_index) vi: u32) -> FullscreenOut {
-  return fullscreenVertex(vi);
+fn vs(@builtin(vertex_index) vertexIndex: u32) -> FullscreenOut {
+  return fullscreenVertex(vertexIndex);
 }
 
 // The direction a face texel at (s, t) stands for under 'texture_cube'
@@ -31,9 +31,9 @@ fn vs(@builtin(vertex_index) vi: u32) -> FullscreenOut {
 // row, where this pass's clip top lands: 'fullscreenVertex' flips uv.y for it.
 // Writing texels by the same table the sampler reads them with is what makes
 // mip k consistent with mip 0, whatever way the capture oriented the faces.
-fn faceDirection(face: u32, st: vec2<f32>) -> vec3<f32> {
-  let faceX = st.x * 2.0 - 1.0;
-  let faceY = st.y * 2.0 - 1.0;
+fn faceDirection(face: u32, faceUv: vec2<f32>) -> vec3<f32> {
+  let faceX = faceUv.x * 2.0 - 1.0;
+  let faceY = faceUv.y * 2.0 - 1.0;
   switch face {
     case 0u: { return vec3<f32>(1.0, -faceY, -faceX); }
     case 1u: { return vec3<f32>(-1.0, -faceY, faceX); }
@@ -51,9 +51,9 @@ fn hammersley(sampleIndex: u32, sampleCount: u32) -> vec2<f32> {
 }
 
 // A GGX half-vector in tangent space for linear roughness 'alpha'.
-fn ggxHalfVector(xi: vec2<f32>, alpha: f32) -> vec3<f32> {
-  let phi = TAU * xi.x;
-  let cosTheta = sqrt((1.0 - xi.y) / (1.0 + (alpha * alpha - 1.0) * xi.y));
+fn ggxHalfVector(samplePoint: vec2<f32>, alpha: f32) -> vec3<f32> {
+  let phi = TAU * samplePoint.x;
+  let cosTheta = sqrt((1.0 - samplePoint.y) / (1.0 + (alpha * alpha - 1.0) * samplePoint.y));
   let sinTheta = sqrt(1.0 - cosTheta * cosTheta);
   return vec3<f32>(sinTheta * cos(phi), sinTheta * sin(phi), cosTheta);
 }
@@ -72,8 +72,8 @@ fn fs(in: FullscreenOut) -> @location(0) vec4<f32> {
   var sum = vec3<f32>(0.0);
   var weight = 0.0;
   for (var sampleIndex = 0u; sampleIndex < params.sampleCount; sampleIndex = sampleIndex + 1u) {
-    let ht = ggxHalfVector(hammersley(sampleIndex, params.sampleCount), alpha);
-    let halfVector = tangent * ht.x + bitangent * ht.y + normal * ht.z;
+    let halfVectorTangent = ggxHalfVector(hammersley(sampleIndex, params.sampleCount), alpha);
+    let halfVector = tangent * halfVectorTangent.x + bitangent * halfVectorTangent.y + normal * halfVectorTangent.z;
     let lightDir = 2.0 * dot(viewDir, halfVector) * halfVector - viewDir;
     let NoL = dot(normal, lightDir);
     if (NoL > 0.0) {
