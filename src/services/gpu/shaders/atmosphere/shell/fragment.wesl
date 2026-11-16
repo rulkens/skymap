@@ -20,7 +20,7 @@
 //
 // March bound: the GPU twin of 'utils/math/atmosphereShellBound.ts' (the unit-tested
 // source of truth), over the shared 'lib/util.wesl::raySphere'. Local frame: top is
-// the UNIT sphere, ground is 'u.bottomRadius'. All LUT parametrisations are
+// the UNIT sphere, ground is 'uniforms.bottomRadius'. All LUT parametrisations are
 // unit-agnostic (radii ratios), so LOCAL radii index the km-baked LUTs identically.
 //
 // Transmittance of the segment is the ratio of two transmittance-to-top lookups
@@ -47,7 +47,7 @@ struct ShellDepthFrame {
   kmToLocal: f32,
 };
 
-@group(0) @binding(0) var<uniform> u: AtmosphereUniforms;
+@group(0) @binding(0) var<uniform> uniforms: AtmosphereUniforms;
 @group(0) @binding(1) var lutSamp: sampler;
 @group(0) @binding(2) var skyViewLut: texture_2d<f32>;
 @group(0) @binding(3) var transmittanceLut: texture_2d<f32>;
@@ -71,7 +71,7 @@ const PLANET_CENTER = vec3<f32>(0.0, 0.0, 0.0);
 const LUMINANCE: vec3<f32> = vec3<f32>(0.2126, 0.7152, 0.0722);
 // Sky luminance suppression of the background, in 1/luminance, at full daylight. A
 // look constant: at noon from 6.5 km the darkest sky (~0.006) hides a star.
-// Scaled by 'u.daylight' ('daylightWeight'): a sunlit limb from orbit and a noon
+// Scaled by 'uniforms.daylight' ('daylightWeight'): a sunlit limb from orbit and a noon
 // zenith from the ground have the same per-pixel luminance; only the viewer's
 // surroundings differ (adapted, or not).
 const SKY_ADAPTATION_GAIN: f32 = 5000.0;
@@ -97,8 +97,8 @@ struct ShellSample {
   hit: bool,
 };
 
-// Shared core: march bound, LUT lookups and ring occlusion. 'ro' is always
-// 'u.camPosLocal'; callers pass 'dir' normalized and 'tDepth' in LOCAL units
+// Shared core: march bound, LUT lookups and ring occlusion. 'rayOrigin' is always
+// 'uniforms.camPosLocal'; callers pass 'dir' normalized and 'tDepth' in LOCAL units
 // ('hasDepth' false leaves it unread).
 fn sampleShellSegment(dir: vec3<f32>, tDepth: f32, hasDepth: bool) -> ShellSample {
   // Off-shell default: each value is its blend's IDENTITY (multiply by 1, add 0), so
@@ -109,9 +109,9 @@ fn sampleShellSegment(dir: vec3<f32>, tDepth: f32, hasDepth: bool) -> ShellSampl
   out.coverage = 0.0;
   out.hit = false;
 
-  let ro = u.camPosLocal;
+  let rayOrigin = uniforms.camPosLocal;
 
-  let top = raySphere(ro, dir, PLANET_CENTER, TOP_RADIUS);
+  let top = raySphere(rayOrigin, dir, PLANET_CENTER, TOP_RADIUS);
   if (top.y < 0.0) {
     return out;
   }
@@ -125,7 +125,7 @@ fn sampleShellSegment(dir: vec3<f32>, tDepth: f32, hasDepth: bool) -> ShellSampl
 
   // The ground crossing caps the visible atmosphere; the pixel's own scene distance
   // caps it again where terrain stands above the floor sphere.
-  let ground = raySphere(ro, dir, PLANET_CENTER, u.bottomRadius);
+  let ground = raySphere(rayOrigin, dir, PLANET_CENTER, uniforms.bottomRadius);
   let floorHit = ground.x > 0.0;
   if (floorHit && ground.x > tNear) {
     tFar = min(tFar, ground.x);
@@ -136,8 +136,8 @@ fn sampleShellSegment(dir: vec3<f32>, tDepth: f32, hasDepth: bool) -> ShellSampl
   // Picks the sky-view LUT's half and the transmittance direction below.
   let intersectsGround = floorHit || (hasDepth && tDepth < top.y);
 
-  let viewHeight = length(u.camPosLocal);
-  let up = u.camPosLocal / viewHeight;
+  let viewHeight = length(uniforms.camPosLocal);
+  let up = uniforms.camPosLocal / viewHeight;
   let viewZenithCos = dot(dir, up);
   // An angle, not a cosine (scattering.wesl's sky-view note): atan2 stays exact
   // round the nadir, where the far-out disc lives.
@@ -145,8 +145,8 @@ fn sampleShellSegment(dir: vec3<f32>, tDepth: f32, hasDepth: bool) -> ShellSampl
 
   // Azimuth relative to the sun, encoded as the sky-view bake reconstructs the ray.
   let viewPerp = dir - up * viewZenithCos;
-  let sunUp = dot(u.sunDirLocal, up);
-  let sunPerp = u.sunDirLocal - up * sunUp;
+  let sunUp = dot(uniforms.sunDirLocal, up);
+  let sunPerp = uniforms.sunDirLocal - up * sunUp;
   let viewPerpLen = length(viewPerp);
   let sunPerpLen = length(sunPerp);
   var lightViewCos = 1.0;
@@ -157,15 +157,15 @@ fn sampleShellSegment(dir: vec3<f32>, tDepth: f32, hasDepth: bool) -> ShellSampl
   // A ray ending on TERRAIN short of the floor sphere (the limb band) looks just
   // above the horizon, past where the ground half stops, so this uv and the reversed
   // endpoints below clamp to that horizon row; right to within its texel.
-  let skyUv = skyViewLutParamsToUv(u.bottomRadius, viewHeight, viewZenithAngle, lightViewCos, intersectsGround);
+  let skyUv = skyViewLutParamsToUv(uniforms.bottomRadius, viewHeight, viewZenithAngle, lightViewCos, intersectsGround);
   let inScatter = textureSampleLevel(skyViewLut, lutSamp, skyUv, 0.0).rgb;
 
-  let nearPos = ro + dir * tNear;
-  let rNear = length(nearPos);
-  let muNear = dot(dir, nearPos / rNear);
-  let farPos = ro + dir * tFar;
-  let rFar = length(farPos);
-  let muFar = dot(dir, farPos / rFar);
+  let nearPos = rayOrigin + dir * tNear;
+  let nearRadius = length(nearPos);
+  let nearViewZenithCos = dot(dir, nearPos / nearRadius);
+  let farPos = rayOrigin + dir * tFar;
+  let farRadius = length(farPos);
+  let farViewZenithCos = dot(dir, farPos / farRadius);
 
   // Read the segment in whichever direction points AWAY from the ground so both
   // endpoints stay in the LUT's covered domain (its d-range ends at the
@@ -173,12 +173,12 @@ fn sampleShellSegment(dir: vec3<f32>, tDepth: f32, hasDepth: bool) -> ShellSampl
   // Ground rays point down: NEGATE mu at each endpoint and INVERT the ratio.
   var segTransmittance: vec3<f32>;
   if (intersectsGround) {
-    let tUpFar = sampleTransmittanceToTop(transmittanceLut, lutSamp, u.bottomRadius, TOP_RADIUS, rFar, -muFar);
-    let tUpNear = sampleTransmittanceToTop(transmittanceLut, lutSamp, u.bottomRadius, TOP_RADIUS, rNear, -muNear);
+    let tUpFar = sampleTransmittanceToTop(transmittanceLut, lutSamp, uniforms.bottomRadius, TOP_RADIUS, farRadius, -farViewZenithCos);
+    let tUpNear = sampleTransmittanceToTop(transmittanceLut, lutSamp, uniforms.bottomRadius, TOP_RADIUS, nearRadius, -nearViewZenithCos);
     segTransmittance = clamp(tUpFar / max(tUpNear, vec3<f32>(1e-6)), vec3<f32>(0.0), vec3<f32>(1.0));
   } else {
-    let tToTopNear = sampleTransmittanceToTop(transmittanceLut, lutSamp, u.bottomRadius, TOP_RADIUS, rNear, muNear);
-    let tToTopFar = sampleTransmittanceToTop(transmittanceLut, lutSamp, u.bottomRadius, TOP_RADIUS, rFar, muFar);
+    let tToTopNear = sampleTransmittanceToTop(transmittanceLut, lutSamp, uniforms.bottomRadius, TOP_RADIUS, nearRadius, nearViewZenithCos);
+    let tToTopFar = sampleTransmittanceToTop(transmittanceLut, lutSamp, uniforms.bottomRadius, TOP_RADIUS, farRadius, farViewZenithCos);
     segTransmittance = clamp(tToTopNear / max(tToTopFar, vec3<f32>(1e-6)), vec3<f32>(0.0), vec3<f32>(1.0));
   }
 
@@ -190,12 +190,12 @@ fn sampleShellSegment(dir: vec3<f32>, tDepth: f32, hasDepth: bool) -> ShellSampl
   // (multiplying by 'ringVis' would drive the multiply pass to black under an
   // opaque ring, the inverse of masking the shell off).
   var ringBlock = 0.0;
-  if (u.ringOuterRatio > 0.0 && abs(dir.z) > 1e-6) {
-    let tRing = -ro.z / dir.z;
+  if (uniforms.ringOuterRatio > 0.0 && abs(dir.z) > 1e-6) {
+    let tRing = -rayOrigin.z / dir.z;
     if (tRing > 0.0 && tRing < tNear) {
-      let rHit = length((ro + dir * tRing).xy);
-      if (rHit >= u.ringInnerRatio && rHit <= u.ringOuterRatio) {
-        let uCoord = (rHit - u.ringInnerRatio) / (u.ringOuterRatio - u.ringInnerRatio);
+      let rHit = length((rayOrigin + dir * tRing).xy);
+      if (rHit >= uniforms.ringInnerRatio && rHit <= uniforms.ringOuterRatio) {
+        let uCoord = (rHit - uniforms.ringInnerRatio) / (uniforms.ringOuterRatio - uniforms.ringInnerRatio);
         // 'textureSampleLevel': non-uniform control flow, mip-less strip.
         ringBlock = textureSampleLevel(ringTexture, lutSamp, vec2<f32>(uCoord, 0.5), 0.0).a;
       }
@@ -204,12 +204,12 @@ fn sampleShellSegment(dir: vec3<f32>, tDepth: f32, hasDepth: bool) -> ShellSampl
   let ringVis = 1.0 - ringBlock;
 
   out.transmit = mix(vec3<f32>(1.0), segTransmittance, ringVis);
-  out.emission = inScatter * u.exposure * ringVis;
+  out.emission = inScatter * uniforms.exposure * ringVis;
   // Extinction alone passes ~90% of a star through a noon zenith: stars vanish by
   // day because the eye adapts to the sky's radiance. The exposed in-scatter stands
   // in for that level, weighted by the sky around the camera, so a dark sky and a
   // view from space reduce to pure extinction.
-  let gain = SKY_ADAPTATION_GAIN * u.daylight;
+  let gain = SKY_ADAPTATION_GAIN * uniforms.daylight;
   let adaptation = 1.0 + gain * dot(out.emission, LUMINANCE);
   out.coverage = 1.0 - dot(out.transmit, LUMINANCE) / adaptation;
   out.hit = true;
@@ -221,7 +221,7 @@ fn sampleShellSegment(dir: vec3<f32>, tDepth: f32, hasDepth: bool) -> ShellSampl
 fn sampleShell(in: FsIn) -> ShellSample {
   // Renormalize: the proxy is a scaled sphere, and an un-normalized dir breaks every
   // dot product in 'sampleShellSegment'.
-  let dir = normalize(in.localPos - u.camPosLocal);
+  let dir = normalize(in.localPos - uniforms.camPosLocal);
 
   // The depth texture need not match the viewport (the placeholder is 1x1): rescale
   // the texel, keep the fragment's uv. Reconstruction runs in the SAMPLED row's km
@@ -254,20 +254,20 @@ fn sampleShell(in: FsIn) -> ShellSample {
 // Pass 1: blend 'zero'/'src' on both components, dst *= src; 'dst.a *= 1 - coverage'.
 @fragment
 fn fsMultiply(in: FsIn) -> @location(0) vec4<f32> {
-  let s = sampleShell(in);
-  if (!s.hit) {
+  let shell = sampleShell(in);
+  if (!shell.hit) {
     discard;
   }
-  return vec4<f32>(s.transmit, 1.0 - s.coverage);
+  return vec4<f32>(shell.transmit, 1.0 - shell.coverage);
 }
 
 // Pass 2: blend 'one'/'one', dst += src. With pass 1 the alpha lands on
 // 'coverage + dst.a * (1 - coverage)', the compositor's single background weight.
 @fragment
 fn fsAdd(in: FsIn) -> @location(0) vec4<f32> {
-  let s = sampleShell(in);
-  if (!s.hit) {
+  let shell = sampleShell(in);
+  if (!shell.hit) {
     discard;
   }
-  return vec4<f32>(s.emission, s.coverage);
+  return vec4<f32>(shell.emission, shell.coverage);
 }

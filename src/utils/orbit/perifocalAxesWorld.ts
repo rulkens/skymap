@@ -28,7 +28,12 @@ function frameToWorld(frame: OrbitPlaneFrame, vx: number, vy: number, vz: number
   ];
 }
 
-export function perifocalAxesWorld(elements: OrbitalElements): {
+export function perifocalAxesWorld(
+  elements: Pick<
+    OrbitalElements,
+    'inclinationRad' | 'ascendingNodeRad' | 'argPeriapsisRad' | 'plane'
+  >,
+): {
   readonly pWorld: Vec3;
   readonly qWorld: Vec3;
 } {

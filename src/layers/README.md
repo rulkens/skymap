@@ -114,7 +114,8 @@ exhibit's id is also listed by hand in `src/@types/exhibits/ExhibitId.d.ts`.
 
 `galaxyCatalog`, `starCatalog`, `cosmicWebFilaments`, `cosmicWebDensity`,
 `flow`, `zoneOfAvoidance`, `localBubble`, `constellations`, `blackHoles`,
-`milkyWay`, `lightTime`, `cosmicHorizon`, `structure`, `missions` and `body` are formed.
+`milkyWay`, `lightTime`, `cosmicHorizon`, `structure`, `stellarStreams`, `satellites`, `asteroids`,
+`probeSpheres`, `missions` and `body` are formed.
 `cosmicHorizon` draws the particle-horizon shell and carries the Observable Universe exhibit. `body` draws
 Earth, the planets, moons and rings: its own renderers, texture slots, passes and
 atmosphere computes, with its Earth and planet slab rows declared in `layer.ts`; its

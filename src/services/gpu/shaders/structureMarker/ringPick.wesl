@@ -77,15 +77,15 @@ fn ringPickId(in: VsOut) -> vec4<u32> {
   // ring.wesl's vertex stage (the MARGIN constant lives there).  At
   // |uv| == 1 we're exactly at the world-space ring radius; the padded
   // quad extends slightly past that.  We accept any fragment inside
-  // the padded quad's inscribed disk (r2 <= MARGIN^2) so the user can
+  // the padded quad's inscribed disk (radiusSq <= MARGIN^2) so the user can
   // click anywhere on the ring's circular silhouette — including the
   // padded apron — without needing to land on the thin visible band.
   //
   // The cutoff is MARGIN^2 == 1.21 (see RING_QUAD_MARGIN in ring.wesl),
   // not 1.0: a 1.0 cutoff would discard the padded apron and shrink the
   // hit target to the bare visible ring, defeating the padding.
-  let r2 = dot(in.uv, in.uv);
-  if (r2 > 1.21) { discard; }
+  let radiusSq = dot(in.uv, in.uv);
+  if (radiusSq > 1.21) { discard; }
 
   // Faded / invisible rings must not be pickable.  'in.alpha' carries
   // ringAlpha (the vertex stage in ring.wesl selects ringColorAndAlpha.w

@@ -34,10 +34,10 @@ fn fs(in: FullscreenOut) -> @location(0) vec4<f32> {
     // One bloom0 texel is two hdr texels.
     let bloomTexel = 2.0 / vec2<f32>(textureDimensions(srcTex));
     var eroded = luma;
-    for (var dy = -1; dy <= 1; dy++) {
-      for (var dx = -1; dx <= 1; dx++) {
-        if (dx == 0 && dy == 0) { continue; }
-        let neighbourUv = in.uv + vec2<f32>(f32(dx), f32(dy)) * bloomTexel;
+    for (var stepY = -1; stepY <= 1; stepY++) {
+      for (var stepX = -1; stepX <= 1; stepX++) {
+        if (stepX == 0 && stepY == 0) { continue; }
+        let neighbourUv = in.uv + vec2<f32>(f32(stepX), f32(stepY)) * bloomTexel;
         let neighbour = textureSampleLevel(srcTex, srcSamp, neighbourUv, 0.0).rgb;
         eroded = min(eroded, max(neighbour.r, max(neighbour.g, neighbour.b)));
       }

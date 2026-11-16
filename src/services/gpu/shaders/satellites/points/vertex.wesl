@@ -13,7 +13,7 @@ import package::satellites::points::illumination::sunlightTint;
 import package::lib::billboard::quadCorner;
 import package::lib::billboard::expandBillboardScreen;
 
-@group(0) @binding(2) var<uniform> u: SatelliteUniforms;
+@group(0) @binding(2) var<uniform> uniforms: SatelliteUniforms;
 @group(0) @binding(3) var<uniform> profiles: array<SatelliteProfile, 16>;
 
 // Clip w is in near-plane units (near0OverlayClipScale: the near plane sits at w = 1), so
@@ -36,39 +36,39 @@ const MIN_RANGE_KM: f32 = 0.001;
 @vertex
 fn vs(@builtin(vertex_index) vid: u32, sat: SatelliteInstance) -> VSOut {
   var out: VSOut; // zero-initialised: an early return is a degenerate, clipped vertex
-  let p = projectSatellite(u, sat);
-  if (p.centre.w < W_EPS) {
+  let projected = projectSatellite(uniforms, sat);
+  if (projected.centre.w < W_EPS) {
     return out;
   }
   let color = profiles[sat.profileCode].color;
   let areaM2 = profiles[sat.profileCode].areaM2;
   let glintGain = profiles[sat.profileCode].glintGain;
 
-  let rangeKm = max(length(p.relKm), MIN_RANGE_KM);
-  let viewDir = -p.relKm / rangeKm;
-  let cosPhase = dot(u.sunDir, viewDir);
-  let lit = earthShadowLit(p.earthRelKm, u.sunDir);
-  let sunlight = lit * sunlightTint(p.earthRelKm, u.sunDir);
-  let lobe = panelGlint(p.orbitNormal, u.sunDir, viewDir);
-  let plate = plateGlint(p.earthRelKm, u.sunDir, viewDir);
+  let rangeKm = max(length(projected.relKm), MIN_RANGE_KM);
+  let viewDir = -projected.relKm / rangeKm;
+  let cosPhase = dot(uniforms.sunDir, viewDir);
+  let lit = earthShadowLit(projected.earthRelKm, uniforms.sunDir);
+  let sunlight = lit * sunlightTint(projected.earthRelKm, uniforms.sunDir);
+  let lobe = panelGlint(projected.orbitNormal, uniforms.sunDir, viewDir);
+  let plate = plateGlint(projected.earthRelKm, uniforms.sunDir, viewDir);
 
   let areaWeight = pow(areaM2 / AREA_REF_M2, AREA_EXP);
   let rangeWeight = min(pow(RANGE_REF_KM / rangeKm, RANGE_EXP), RANGE_WEIGHT_MAX);
   let phase = pow(lambertPhase(cosPhase), PHASE_EXP);
-  let diffuse = color * areaWeight * rangeWeight * (u.ambient + phase * sunlight);
+  let diffuse = color * areaWeight * rangeWeight * (uniforms.ambient + phase * sunlight);
   // glintGain also gates the plate: a group with no panels is treated as having no flat body
   // either. The plate has no published area, so it takes one strength for every group.
   let flash = glintGain * (areaWeight * lobe * GLINT_PEAK + plate * PLATE_PEAK);
   let glint = GLINT_WHITE * sunlight * flash;
   let growth = min((lobe + plate) * glintGain * lit, 1.0);
-  let sizePx = u.sizePx * (1.0 + growth * (GLINT_SIZE_MAX - 1.0));
+  let sizePx = uniforms.sizePx * (1.0 + growth * (GLINT_SIZE_MAX - 1.0));
 
   let corner = quadCorner(vid);
-  let offset = expandBillboardScreen(u.cam, p.centre, sizePx, corner);
+  let offset = expandBillboardScreen(uniforms.cam, projected.centre, sizePx, corner);
   // Depthless HDR target: pin z mid-range so no near/far plane clips the dot.
-  out.clip = vec4<f32>(p.centre.xy + offset, 0.5 * p.centre.w, p.centre.w);
-  out.relKm = p.relKm;
+  out.clip = vec4<f32>(projected.centre.xy + offset, 0.5 * projected.centre.w, projected.centre.w);
+  out.relKm = projected.relKm;
   out.corner = corner;
-  out.radiance = (diffuse + glint) * u.opacity * u.classOpacity[min(sat.classCode, 2u)];
+  out.radiance = (diffuse + glint) * uniforms.opacity * uniforms.classOpacity[min(sat.classCode, 2u)];
   return out;
 }

@@ -23,8 +23,8 @@ fn cellNoise(cell: vec2<i32>, seed: u32) -> vec3<f32> {
 }
 
 // Smooth value noise over a lattice of 'cellPx' px: soft clumps, not pixel salt.
-fn grainLayer(px: vec2<f32>, cellPx: f32, seed: u32) -> vec3<f32> {
-  let lattice = px / cellPx;
+fn grainLayer(pixel: vec2<f32>, cellPx: f32, seed: u32) -> vec3<f32> {
+  let lattice = pixel / cellPx;
   let cell = vec2<i32>(floor(lattice));
   let inCell = fract(lattice);
   let fade = inCell * inCell * (3.0 - 2.0 * inCell);
@@ -38,10 +38,10 @@ fn grainLayer(px: vec2<f32>, cellPx: f32, seed: u32) -> vec3<f32> {
 // A grain-sized lattice plus a half-size one sum to a near-Gaussian zero-mean
 // field (std ~0.22 per channel). Each frame slides the lattice by a random
 // sub-cell offset so the grid itself never registers.
-fn filmGrain(px: vec2<f32>, grainPx: f32, seed: u32) -> vec3<f32> {
+fn filmGrain(pixel: vec2<f32>, grainPx: f32, seed: u32) -> vec3<f32> {
   let slide = cellNoise(vec2<i32>(7, 13), seed).xy * grainPx;
-  let coarse = grainLayer(px + slide, grainPx, seed) - vec3<f32>(0.5);
-  let fine = grainLayer(px - slide.yx, grainPx * 0.5, seed + 0x9E3779B9u) - vec3<f32>(0.5);
+  let coarse = grainLayer(pixel + slide, grainPx, seed) - vec3<f32>(0.5);
+  let fine = grainLayer(pixel - slide.yx, grainPx * 0.5, seed + 0x9E3779B9u) - vec3<f32>(0.5);
   return coarse + 0.5 * fine;
 }
 

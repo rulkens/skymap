@@ -306,7 +306,7 @@ const takeoverSource = (key: Exclude<TakeoverSource['kind'], 'sky'>): HashParamS
 
 /**
  * `layers` — layer and caption switches, read-only like `pose`: `flow` on,
- * `-starCatalog` off, applied left to right through the tour cues' writes
+ * `-starCatalog` off, `-label` / `label` switch every caption, applied left to right through the tour cues' writes
  * (`parseLayerSwitches`). A writing row would need every Layer's setter in its
  * `writesOn`, or a `settings/*` prefix, which fires on every frame of a slider
  * drag; and a push per checkbox click would make Back undo clicks. So the

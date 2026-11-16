@@ -10,16 +10,16 @@ import package::lib::math::saturate;
 
 fn starTint(bpRp: f32) -> vec3<f32> {
   // Spectral-class anchors, linear RGB.
-  let ob = vec3<f32>(0.6, 0.7, 1.0);   // O/B blue-white
-  let af = vec3<f32>(1.0, 1.0, 0.98);  // A/F white
-  let gc = vec3<f32>(1.0, 0.97, 0.85); // G yellow-white
-  let kc = vec3<f32>(1.0, 0.85, 0.65); // K orange
-  let mc = vec3<f32>(1.0, 0.6, 0.4);   // M red
+  let classOB = vec3<f32>(0.6, 0.7, 1.0);   // O/B blue-white
+  let classAF = vec3<f32>(1.0, 1.0, 0.98);  // A/F white
+  let classG = vec3<f32>(1.0, 0.97, 0.85);  // G yellow-white
+  let classK = vec3<f32>(1.0, 0.85, 0.65);  // K orange
+  let classM = vec3<f32>(1.0, 0.6, 0.4);    // M red
 
-  var tint = ob;
-  tint = mix(tint, af, saturate((bpRp - (-0.30)) / (0.30 - (-0.30))));
-  tint = mix(tint, gc, saturate((bpRp -   0.30 ) / (0.85 -   0.30 )));
-  tint = mix(tint, kc, saturate((bpRp -   0.85 ) / (1.25 -   0.85 )));
-  tint = mix(tint, mc, saturate((bpRp -   1.25 ) / (2.20 -   1.25 )));
+  var tint = classOB;
+  tint = mix(tint, classAF, saturate((bpRp - (-0.30)) / (0.30 - (-0.30))));
+  tint = mix(tint, classG,  saturate((bpRp -   0.30 ) / (0.85 -   0.30 )));
+  tint = mix(tint, classK,  saturate((bpRp -   0.85 ) / (1.25 -   0.85 )));
+  tint = mix(tint, classM,  saturate((bpRp -   1.25 ) / (2.20 -   1.25 )));
   return tint;
 }

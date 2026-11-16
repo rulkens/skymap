@@ -33,7 +33,9 @@ const weslText = readFileSync(
 
 describe('histogram.wesl density-sample arithmetic parity', () => {
   it('floors the continuous voxel coordinate before the i32 cast', () => {
-    expect(weslText).toMatch(/vec3<i32>\(\s*floor\(\s*vec3<f32>\(x,\s*y,\s*z\)\s*\)\s*\)/);
+    expect(weslText).toMatch(
+      /vec3<i32>\(\s*floor\(\s*vec3<f32>\(sampleX,\s*sampleY,\s*sampleZ\)\s*\)\s*\)/,
+    );
   });
 
   it('out-of-grid sentinel is negative and meanLogTraceAtPoints treats it as skip', () => {

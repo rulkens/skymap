@@ -22,7 +22,7 @@ import package::milkyWay::pick::io::VsOut;
 
 @fragment
 fn fsPick(in: VsOut) -> @location(0) vec4<u32> {
-  let r2 = dot(in.uv, in.uv);
-  if (r2 > 1.0) { discard; }
+  let uvRadiusSq = dot(in.uv, in.uv);
+  if (uvRadiusSq > 1.0) { discard; }
   return vec4<u32>(in.packedPick, 0u, 0u, 0u);
 }

@@ -11,14 +11,14 @@ import package::bodies::surfaceTile::surfaceLighting::tileLodOverlay;
 import package::lib::pbr::pbrDirect;
 import package::lib::pbr::MIN_ROUGHNESS;
 
-@group(0) @binding(0) var<uniform> u: SurfaceTileUniforms;
+@group(0) @binding(0) var<uniform> uniforms: SurfaceTileUniforms;
 @group(0) @binding(2) var heightAtlas: texture_2d<f32>;
 @group(0) @binding(4) var atlasSampler: sampler;
 @group(0) @binding(5) var surfaceTexture: texture_2d<f32>;
 
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
-  let Ng = normalize(in.normalLocal); // interpolation shortens it -- renormalize
+  let geometricNormal = normalize(in.normalLocal); // interpolation shortens it -- renormalize
   let baseAlbedo = tileAlbedo(
     surfaceTexture,
     atlasSampler,
@@ -29,14 +29,14 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     in.fallbackUvScale,
     in.fadeWeight,
   );
-  let n = tileShadingNormal(heightAtlas, in.uv, in.heightLattice, in.patchSpanRad, Ng, in.tangent, u.radiusM);
+  let shadingNormal = tileShadingNormal(heightAtlas, in.uv, in.heightLattice, in.patchSpanRad, geometricNormal, in.tangent, uniforms.radiusM);
   // Cancellation-free view vector -- see vertex.wesl's 'viewDirLocal'.
-  let v = normalize(in.viewDirLocal);
-  let l = u.sunDirLocal;
+  let viewDir = normalize(in.viewDirLocal);
+  let sunDir = uniforms.sunDirLocal;
 
-  let roughness = clamp(u.roughnessBase, MIN_ROUGHNESS, 1.0);
-  let direct = pbrDirect(n, v, l, baseAlbedo, roughness, vec3<f32>(u.f0));
-  let colour = direct * u.sunIrradiance + u.ambientLight * baseAlbedo;
+  let roughness = clamp(uniforms.roughnessBase, MIN_ROUGHNESS, 1.0);
+  let direct = pbrDirect(shadingNormal, viewDir, sunDir, baseAlbedo, roughness, vec3<f32>(uniforms.f0));
+  let colour = direct * uniforms.sunIrradiance + uniforms.ambientLight * baseAlbedo;
 
-  return vec4<f32>(tileLodOverlay(colour, in.atlasUvScale.x, u.debugLodOverlay), 1.0);
+  return vec4<f32>(tileLodOverlay(colour, in.atlasUvScale.x, uniforms.debugLodOverlay), 1.0);
 }
