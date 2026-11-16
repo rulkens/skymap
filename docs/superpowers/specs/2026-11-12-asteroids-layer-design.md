@@ -173,16 +173,10 @@ The flux is `pow(10, −0.4·V)`, which is the stars' `fluxApp` convention (thei
 
 **Display lift** (owner ruling, the stars' approach). At true V, the belt seen from 5–10 AU is V ≈ 19–22,
 about 1e-4 of the calibrated flux, so the structures this Layer exists for would not show. As with
-`starExposureRamp`, a monitor can't dark-adapt, so the flux is multiplied by
-`asteroidExposureRamp(zoom)`, where zoom is the camera's distance to its orbit target (`cam.distance`): how
-far out the view frames, not where the eye sits. A first cut keyed the lift on the eye's distance from the
-Sun, exactly 1 near Earth; zoomed onto the Sun or framing Earth that left the field at true V, invisible.
-The lift is `K·zoom²` (a dot near what you frame sits ~zoom away, so its apparent brightness holds as you
-zoom) with zoom clamped to [9, 12] AU and K = 6e3, so 4.9e5 to 8.6e5. The floor is the lift framing Earth
-or the inner system, where the belt shows as a field of dots among the stars. At the cap, top-down on the
-whole belt, the dots start to overlap: past it a lift still growing with zoom² piled them into a blob, and
-a flat one holds the field's surface brightness. Eye-tuned at dpr 2 on shots near Earth, on the Sun at 3
-and 12 AU and at 50 AU; floor and cap landed close, so the zoom term spans under 2×. The result is
+`starExposureRamp`, a monitor can't dark-adapt, so the flux is multiplied by one constant lift, 6.48e5
+(~14.5 mag; owner ruling 2026-11-16). It began as `K·zoom²` with zoom (`cam.distance`) clamped to
+[9, 12] AU and K = 6e3, eye-tuned at dpr 2 near Earth, on the Sun at 3 and 12 AU and at 50 AU; floor and
+cap landed so close that the ramp spanned 0.6 mag, so it became its geometric middle. The result is
 multiplied by the Layer's own brightness setting and by its class's brightness gain (§4.9). A dot sized by H (§4.5) keeps the base dot's
 peak. Dots under the flux floor (V 16 on the
 lifted flux, where a dot deposits well under 1/255) are discarded to save fill, and the floor applies
@@ -274,8 +268,8 @@ look live, in two blocks (owner request 2026-11-16). **Per class**, for the clas
 picks: its colour, a brightness gain on its lifted flux, the flux floor as a limiting V, the dot
 radius, the dot knee, the size knee and max scale (`ASTEROID_CLASS_LOOK`, one row per class). These
 say what a dot of that class looks like, so each reaches the compute or the dots as one uniform lane
-per class. **Global**, the same for every class because zoom and the camera drive them: the "Size by"
-and "Colour by" dropdowns (§4.5); lift K, floor and cap; the phase-dimming cap; the thinning budget,
+per class. **Global**, the same for every class: the "Size by"
+and "Colour by" dropdowns (§4.5); the lift; the phase-dimming cap; the thinning budget,
 its start and full zooms and its gain; one colour row per belt-ramp end (`ASTEROID_BELT_RAMP`). The
 thinning stays global: its budget counts dots, which a class's floor or gain does not change. The
 `points/data/` tables are the defaults its slice starts from, and each reaches the compute or the
@@ -291,8 +285,8 @@ its `ASTEROID_CLASS_LOOK` row, then the global ones under their table names, rea
 4. **Orbit ring through a shared `drawOrbitConics` helper**: each Layer keeps its own pass and renderer, and
    the Layer contract does not grow (owner). The helper takes values, not the frame plumbing (owner).
 5. **Mesh skip is a constant in the Layer**, not a body-row field (owner).
-6. **Faint field: true V plus an exposure lift keyed on zoom (camera to target distance), not distance from the Sun**, the stars' approach
-   (owner). **Own brightness slider**, not the stars' (owner).
+6. **Faint field: true V plus a constant exposure lift**, the stars' approach (owner; first keyed on zoom,
+   a ramp of 0.6 mag made one constant 2026-11-16). **Own brightness slider**, not the stars' (owner).
 7. **Look modes as DebugPanel dropdowns**: size by H (default) or uniform; colour by class (default) or
    by semi-major axis for the main belt; dot radius 1.4 px (owner, 2026-11-12). Banded, not smooth, and
    the peak kept at the base dot's are my calls (§4.5).

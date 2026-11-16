@@ -4,31 +4,13 @@ import type { AsteroidTuningSliderKey } from '../../@types/AsteroidTuningSliderK
 /** The asteroid tuning section's global slider rows, the same for every class. */
 export const ASTEROID_TUNING_SLIDER_FIELDS: readonly SliderField<AsteroidTuningSliderKey>[] = [
   {
-    key: 'liftPerAu2',
-    label: 'Lift K',
+    key: 'lift',
+    label: 'Lift',
     min: 0,
-    max: 3e4,
-    step: 100,
-    format: (v) => v.toExponential(1),
-    title: 'Display lift = K · zoom², zoom clamped to the floor and cap',
-  },
-  {
-    key: 'liftFloorZoomAu',
-    label: 'Lift floor',
-    min: 0.5,
-    max: 30,
-    step: 0.5,
-    format: (v) => `${v.toFixed(1)} AU`,
-    title: 'Zoom under which the lift stops falling (framing Earth or the inner system)',
-  },
-  {
-    key: 'liftCapZoomAu',
-    label: 'Lift cap',
-    min: 0.5,
-    max: 60,
-    step: 0.5,
-    format: (v) => `${v.toFixed(1)} AU`,
-    title: 'Zoom past which the lift stops rising (the belt dots start to overlap)',
+    max: 3e6,
+    step: 1e4,
+    format: (v) => v.toExponential(2),
+    title: "Display lift on every dot's flux; each class's brightness gain multiplies it",
   },
   {
     key: 'maxPhaseDimMag',

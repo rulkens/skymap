@@ -17,7 +17,7 @@ describe('formatAsteroidTuningDefaults', () => {
         hilda: { ...hilda, limitingMag: 17.300000000000001, color: [0.1, 0.2, 0.30000004] },
         mainBelt: { ...mainBelt, brightness: 1.5 },
       },
-      liftPerAu2: 8000,
+      lift: 8e5,
       thinBudget: 200_000,
       colorBy: 'semiMajorAxis',
       beltRamp: { ...initialState.beltRamp, outer: [0.5, 0.6, 0.7] },
@@ -25,7 +25,7 @@ describe('formatAsteroidTuningDefaults', () => {
     expect(text).toBe(
       '// ASTEROID_CLASS_LOOK.mainBelt\nbrightness: 1.5,\n' +
         '// ASTEROID_CLASS_LOOK.hilda\nlimitingMag: 17.3,\ncolor: [0.1, 0.2, 0.3],\n' +
-        '// ASTEROID_PHOTOMETRY\nliftPerAu2: 8000,\n' +
+        '// ASTEROID_PHOTOMETRY\nlift: 800000,\n' +
         '// ASTEROID_THINNING\nthinBudget: 200000,\n' +
         '// ASTEROID_BELT_RAMP\nouter: [0.5, 0.6, 0.7],',
     );

@@ -1,6 +1,6 @@
 /**
  * AsteroidTuningSection: dev-only. First each class's look (`AsteroidClassTuningSection`), then what
- * is the same for every class: how zoom lifts and thins the field, the size and colour modes, and the
+ * is the same for every class: the lift, how zoom thins the field, the size and colour modes, and the
  * belt ramp's ends. The ramp rows keep their luminance on a pick, as the class tints do.
  */
 

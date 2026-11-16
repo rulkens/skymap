@@ -14,9 +14,7 @@ export type AsteroidTuning = {
   readonly colorBy: AsteroidColorBy;
   readonly sizeBy: AsteroidSizeBy;
   readonly beltRamp: AsteroidBeltRamp;
-  readonly liftPerAu2: number;
-  readonly liftFloorZoomAu: number;
-  readonly liftCapZoomAu: number;
+  readonly lift: number;
   readonly maxPhaseDimMag: number;
   readonly thinBudget: number;
   readonly thinStartZoomAu: number;

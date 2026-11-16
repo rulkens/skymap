@@ -9,9 +9,7 @@ export const initialState: AsteroidTuning = {
   colorBy: 'class',
   sizeBy: 'absoluteMagnitude',
   beltRamp: ASTEROID_BELT_RAMP,
-  liftPerAu2: P.liftPerAu2,
-  liftFloorZoomAu: P.liftFloorZoomAu,
-  liftCapZoomAu: P.liftCapZoomAu,
+  lift: P.lift,
   maxPhaseDimMag: P.maxPhaseDimMag,
   ...ASTEROID_THINNING,
 };
