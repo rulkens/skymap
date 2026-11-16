@@ -14,7 +14,7 @@ follow, card and ring. Part A is a prep refactor that lands as its own PR first.
 
 **Tech Stack:** TypeScript, WebGPU/WESL, Vite, RTK, Vitest; the existing Layer contract.
 
-**Spec:** `docs/superpowers/specs/2026-11-12-asteroids-layer-design.md`
+**Spec:** `docs/superpowers/specs/completed/2026-11-12-asteroids-layer-design.md`
 
 ## Global Constraints
 

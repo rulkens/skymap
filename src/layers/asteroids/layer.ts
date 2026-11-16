@@ -1,6 +1,6 @@
 /**
  * The asteroids Layer: every numbered minor planet as an apparent-magnitude point, positioned by
- * two-body Kepler, and the selected one's orbit ring (docs/superpowers/specs/2026-11-12-asteroids-layer-design.md).
+ * two-body Kepler, and the selected one's orbit ring (docs/superpowers/specs/completed/2026-11-12-asteroids-layer-design.md).
  */
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';

@@ -3,7 +3,7 @@
  * Header: magic, u16 version, u16 column count, u32 row count, u32 firstNumber, f64 epoch JD (TT), then
  * one {u16 id, u16 pad, u32 byte offset} entry per column; each column starts 4-byte aligned.
  * Row k is minor planet number firstNumber + k. Angles are ecliptic J2000 in turns.
- * Precision per column: docs/superpowers/specs/2026-11-12-asteroids-layer-design.md §4.1.
+ * Precision per column: docs/superpowers/specs/completed/2026-11-12-asteroids-layer-design.md §4.1.
  */
 export const ASTEROID_FORMAT = {
   /** 'ASTB' read as a little-endian u32. */
