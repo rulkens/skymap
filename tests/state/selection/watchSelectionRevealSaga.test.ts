@@ -10,7 +10,7 @@ import {
   updateSelectionSelect,
 } from '../../../src/state/selection/selectionSlice';
 import { setVisibility } from '../../../src/state/settings/setVisibilityAction';
-import { clipStarted } from '../../../src/state/camera/cameraSlice';
+import { clipStarted } from '../../../src/state/camera/cameraIntentSlice';
 import { takeoverStarted } from '../../../src/state/takeover/takeoverActions';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { settingsRoute } from '../../../src/store/constants';
@@ -86,7 +86,11 @@ describe('watchSelectionRevealSaga', () => {
   it('does nothing during a clip', () => {
     const h = build();
     h.store.dispatch(
-      clipStarted({ data: { start: 'live', timeline: [] }, frame: DEFAULT_ORIENTATION }),
+      clipStarted({
+        data: { start: 'live', timeline: [] },
+        frame: DEFAULT_ORIENTATION,
+        by: 'player',
+      }),
     );
     h.store.dispatch(updateSelectionFocus(ISS));
     expect(h.writes).toEqual([]);

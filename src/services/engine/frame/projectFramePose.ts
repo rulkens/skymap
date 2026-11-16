@@ -12,7 +12,7 @@
 import type { UnknownAction } from '@reduxjs/toolkit';
 
 import type { CameraPose } from '../../../@types/camera/pose/CameraPose';
-import type { CameraState } from '../../../@types/camera/orbitCamera/CameraState';
+import type { CameraIntentState } from '../../../@types/camera/orbitCamera/CameraIntentState';
 import type { FollowMemory } from '../../../@types/engine/camera/FollowMemory';
 import type { FramedCameraPose } from '../../../@types/camera/pose/FramedCameraPose';
 import type { CameraArmCtx } from '../../../@types/camera/arms/CameraArmCtx';
@@ -33,12 +33,13 @@ import { sameFrame } from '../camera/arms/sameFrame';
 import { stepCameraArm } from '../camera/arms/stepCameraArm';
 import { centreLookingArm } from '../../../utils/camera/arms/centreLookingArm';
 import { focusInSubtree } from '../../../utils/camera/arms/focusInSubtree';
+import { focusBodyIdOf } from '../../../utils/camera/arms/focusBodyIdOf';
 import { surfaceFixedChain } from '../../../utils/camera/arms/surfaceFixedChain';
 import { notedTiltMemory } from '../../../utils/camera/arms/notedTiltMemory';
 import { releasedWorldRoll } from '../../../utils/camera/arms/releasedWorldRoll';
 import { eyeMpcOf } from '../../../utils/camera/orbitPose/eyeMpcOf';
 import { addVec3 } from '../../../utils/math/addVec3';
-import { commitCameraPose } from '../../../state/camera/cameraSlice';
+import { commitCameraPose } from '../../../state/camera/cameraIntentSlice';
 import type { SelectionRowBase } from '../../../@types/engine/selection/SelectionRowBase';
 
 /** The pin's strafe while no follow memory exists. */
@@ -52,7 +53,7 @@ export function projectFramePose(args: {
   readonly follow: FollowMemory | null;
   readonly tilt: TiltMemory;
   /** The frame's effective camera intent: `base.frame` IS the regime. */
-  readonly intent: CameraState;
+  readonly intent: CameraIntentState;
   /** A held gesture skips the fold. */
   readonly gestureHeld: boolean;
   readonly ctx: CameraArmCtx;
@@ -96,7 +97,8 @@ export function projectFramePose(args: {
   // focus stands on. Keying a rover's own id would wipe its planet's tilt one
   // frame before `siteCameraArm.host` — whose stated job is to keep it — can run.
   const regime = intent.base.frame;
-  const tiltHostId = hostOf(regime, ctx)?.id ?? surfaceFixedChain(ctx.focusBodyId).at(-1) ?? null;
+  const tiltHostId =
+    hostOf(regime, ctx)?.id ?? surfaceFixedChain(focusBodyIdOf(ctx.focus)).at(-1) ?? null;
   const noted = notedTiltMemory(tilt, tiltHostId);
   displayed = approachTiltedPose(
     displayed,
@@ -135,7 +137,7 @@ export function projectFramePose(args: {
         // `panOffset` rides along for the same reason — the pin re-reads it
         // too, so a commit without it is a |pan| teleport on the quiet frame.
         const host = hostOrThrow(regime, ctx);
-        const focused = focusInSubtree(ctx.focusBodyId, host.id)
+        const focused = focusInSubtree(focusBodyIdOf(ctx.focus), host.id)
           ? liveBodyPosition(focus, bodies)
           : null;
         const centreMpc = addVec3(focused ?? host.state.positionMpc, follow?.panOffset ?? NO_PAN);

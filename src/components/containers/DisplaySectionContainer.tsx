@@ -31,7 +31,7 @@ import {
 } from '../../state/settings/selectors';
 import { selectHdrCapable } from '../../state/engine/selectors';
 import { setToneMapCurve, setExposure } from '../../state/settings/core/tonemapSlice';
-import { setFovYRad } from '../../state/camera/cameraSlice';
+import { setFovYRad } from '../../state/camera/cameraIntentSlice';
 import { selectFovYRad } from '../../state/camera/selectors';
 import { degToRad } from '../../utils/math/degToRad';
 import { setHdrEnabled, setHdrKnee, setHdrHeadroom } from '../../state/settings/core/hdrSlice';

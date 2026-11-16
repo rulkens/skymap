@@ -282,13 +282,13 @@ const poseSource: HashParamSource = {
 const isTakeoverChange = (action: Action): boolean =>
   takeoverStarted.match(action) || takeoverEnded.match(action);
 
-const takeoverSource = (key: TakeoverSource['kind']): HashParamSource => ({
+const takeoverSource = (key: Exclude<TakeoverSource['kind'], 'sky'>): HashParamSource => ({
   key,
   deepLink: true,
   writesOn: [isTakeoverChange],
   write: (state) => {
     const source = selectTakeoverSource(state);
-    return source?.kind === key ? source.id : null;
+    return source !== null && source.kind === key ? source.id : null;
   },
   read: (value) => ({ view: { kind: key, id: value } }),
   readAbsent: () => [],

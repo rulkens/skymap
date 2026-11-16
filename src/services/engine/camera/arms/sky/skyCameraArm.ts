@@ -1,14 +1,15 @@
 /**
- * The sky arm's row (spec §4): a person standing SKY_EYE_HEIGHT_M above the
+ * The sky arm's row (look-around spec §4): a person standing SKY_EYE_HEIGHT_M above the
  * live ground at the tag's spot, looking by azimuth and altitude. Only a tag
  * enters it (`engage` is null). Every drag looks and the wheel changes the
- * lens, which the arm hands back as `fovYRad` beside an unmoved pose; a fresh
- * wheel-out at the widest lens reports a push carrying the exit lift.
+ * lens, which the arm hands back as `fovYRad` beside an unmoved pose; a wheel-out at the
+ * widest lens, or a `liftOff` step, reports a push carrying the exit lift.
  */
 
 import type { ClimbRow } from '../@types/ClimbRow';
 import type { Vec2 } from '../../../../../@types/math/Vec2';
 import { focusInSubtree } from '../../../../../utils/camera/arms/focusInSubtree';
+import { focusBodyIdOf } from '../../../../../utils/camera/arms/focusBodyIdOf';
 import { skyPoseFromBodyArm } from './utils/skyPoseFromBodyArm';
 import { skyPoseToBodyArm } from './utils/skyPoseToBodyArm';
 import { skySpotRadial } from '../../../../../utils/geo/skySpotRadial';
@@ -56,16 +57,22 @@ export const skyCameraArm: ClimbRow<'sky'> = {
       const pose = skyLookedPose(framed.pose, dragPx, ctx.fovYRad, ctx.viewportPx[1]);
       return { pose, memory, tilt };
     }
-    if (input.kind !== 'zoom') return { pose: framed.pose, memory, tilt };
-    const fovYRad = skyZoomedLens(ctx.fovYRad, input.factor);
-    // The pose stays by reference, so `replayInput` commits no pose for a lens notch.
-    if (fovYRad !== ctx.fovYRad) return { pose: framed.pose, memory, tilt, fovYRad };
-    // A wheel-out the widest lens ate whole pushes the limit, but only from a fresh
-    // scroll: a trackpad's momentum tail reaching the stop stays. The lift rides the push
-    // as a value; once played, its end commit (a body-arm pose) leaves the sky.
-    return input.factor > 1 && input.fresh
-      ? { pose: framed.pose, memory, tilt, pushed: { edge: 'out', lift: skyExitLift(framed, ctx) } }
-      : { pose: framed.pose, memory, tilt };
+    if (input.kind === 'zoom') {
+      const fovYRad = skyZoomedLens(ctx.fovYRad, input.factor);
+      // The pose stays by reference, so `replayInput` commits no pose for a lens notch.
+      if (fovYRad !== ctx.fovYRad) return { pose: framed.pose, memory, tilt, fovYRad };
+    }
+    // A wheel-out the widest lens ate whole presses the limit; the drain decides whether it
+    // pushes. The lift rides the push as a value; once played, its end commit (a body-arm
+    // pose) leaves the sky.
+    const lifts = input.kind === 'liftOff' || (input.kind === 'zoom' && input.factor > 1);
+    if (!lifts) return { pose: framed.pose, memory, tilt };
+    return {
+      pose: framed.pose,
+      memory,
+      tilt,
+      pressed: { edge: 'out', lift: skyExitLift(framed, ctx) },
+    };
   },
 
   nudge(tilt, framed, { look, zoom }, ctx) {
@@ -96,5 +103,9 @@ export const skyCameraArm: ClimbRow<'sky'> = {
 
   engage: () => null,
 
-  release: (framed, ctx) => !focusInSubtree(ctx.focusBodyId, framed.frame.sky.body),
+  // A tag carries no eye, so focus is the only way out: a bodiless one leaves too, or a fly to
+  // a galaxy would refold into this frame every frame and its end commit would land on the ground.
+  release: (framed, ctx) =>
+    ctx.focus.kind === 'bodiless' ||
+    !focusInSubtree(focusBodyIdOf(ctx.focus), framed.frame.sky.body),
 };

@@ -23,7 +23,7 @@ const CTX: CameraArmCtx = {
   poseBasis: B,
   upBasis: B,
   terrainHeightAt: datumOnlyTerrainHeight,
-  focusBodyId: null,
+  focus: { kind: 'none' },
   pivot: { radiusMpc: null, floorMpc: 0 },
   viewportPx: [1920, 1080],
   frustum: symmetricFrustum(1, 1920 / 1080),
@@ -50,7 +50,7 @@ describe('absoluteCameraArm', () => {
       null,
       EMPTY_TILT_MEMORY,
       FRAMED,
-      { kind: 'zoom', factor: Math.exp(z), duringGesture: false, cursorPx: null, fresh: false },
+      { kind: 'zoom', factor: Math.exp(z), duringGesture: false, cursorPx: null },
       CTX,
     ).pose;
     const nudged = absoluteCameraArm.nudge(EMPTY_TILT_MEMORY, FRAMED, { zoom: z }, CTX).pose;

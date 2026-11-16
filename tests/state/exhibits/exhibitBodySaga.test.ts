@@ -121,7 +121,7 @@ describe('exhibitBodySaga', () => {
     // here leaves the viewer's camera turning for the rest of the session.
     const playClip = vi.fn<(clip: ClipData) => Promise<void>>().mockResolvedValue(undefined);
     const { store, sagaMiddleware } = buildStore(playClip);
-    const before = store.getState().camera.autoRotate;
+    const before = store.getState().camera.intent.autoRotate;
     expect(before.active).toBe(false);
 
     sagaMiddleware.run(function* () {
@@ -129,7 +129,7 @@ describe('exhibitBodySaga', () => {
     });
     await new Promise((r) => setTimeout(r, 0));
 
-    const held = store.getState().camera.autoRotate;
+    const held = store.getState().camera.intent.autoRotate;
     expect(held.active).toBe(true);
     // Slower than the slice default, or it is a spin the viewer asked for
     // rather than the exhibit's own ambient drift. Magnitude, not sign: the
@@ -141,7 +141,7 @@ describe('exhibitBodySaga', () => {
     store.dispatch(exitTakeover());
     await new Promise((r) => setTimeout(r, 0));
 
-    expect(store.getState().camera.autoRotate).toEqual(before);
+    expect(store.getState().camera.intent.autoRotate).toEqual(before);
   });
 
   it('hands the spin back when the takeover is superseded mid-hold', async () => {
@@ -149,18 +149,18 @@ describe('exhibitBodySaga', () => {
     // exitTakeover — the restore rides a `finally` so both paths wind back.
     const playClip = vi.fn<(clip: ClipData) => Promise<void>>().mockResolvedValue(undefined);
     const { store, sagaMiddleware } = buildStore(playClip);
-    const before = store.getState().camera.autoRotate;
+    const before = store.getState().camera.intent.autoRotate;
 
     const task = sagaMiddleware.run(function* () {
       yield* exhibitBodySaga(EXHIBIT, 'fly');
     });
     await new Promise((r) => setTimeout(r, 0));
-    expect(store.getState().camera.autoRotate.active).toBe(true);
+    expect(store.getState().camera.intent.autoRotate.active).toBe(true);
 
     task.cancel();
     await new Promise((r) => setTimeout(r, 0));
 
-    expect(store.getState().camera.autoRotate).toEqual(before);
+    expect(store.getState().camera.intent.autoRotate).toEqual(before);
   });
 
   it('re-derives pose.distance from fitRadiusMpc against the live runtime', async () => {
@@ -233,11 +233,11 @@ describe('exhibitBodySaga', () => {
 
     expect(playClip).toHaveBeenCalledTimes(2);
     expect(playClip.mock.calls[1]![0].timeline).toBe(arrival);
-    expect(store.getState().camera.autoRotate.active).toBe(false);
+    expect(store.getState().camera.intent.autoRotate.active).toBe(false);
 
     finishArrival();
     await new Promise((r) => setTimeout(r, 0));
-    expect(store.getState().camera.autoRotate.active).toBe(true);
+    expect(store.getState().camera.intent.autoRotate.active).toBe(true);
   });
 
   it('starts the arrival from the exhibit pose on a cut, not from the live camera', async () => {

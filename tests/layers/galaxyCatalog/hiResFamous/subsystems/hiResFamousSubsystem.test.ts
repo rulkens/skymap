@@ -124,7 +124,8 @@ function makeInput(
   visibleCatalogs: ReadonlySet<GalaxyCatalogId> = ALL_CATALOGS,
 ) {
   famousTable.splice(0, famousTable.length, ...famousNames);
-  return { cam: makeCam(camDist), catalogs, visibleCatalogs, pxPerRad: PX_PER_RAD };
+  const viewPlanes = new Float32Array(0); // no views: no cull
+  return { cam: makeCam(camDist), catalogs, visibleCatalogs, pxPerRad: PX_PER_RAD, viewPlanes };
 }
 
 function makeFamousNames(count: number, idPrefix = 'fg-'): FamousGalaxyName[] {
@@ -304,6 +305,53 @@ describe('createHiResFamousSubsystem', () => {
     for (let i = 1; i <= 7; i++) {
       expect(texture.layerForKey(String(i))).toBeDefined();
     }
+    sys.destroy();
+  });
+
+  // A narrow lens makes every famous galaxy in the sky clear the px gate; without the view cull
+  // the eight biggest anywhere took every layer and the one in view drew its 128 px tile.
+  it('a galaxy outside the view takes no layer, however large', () => {
+    const texture = createHiResFamousTexture({
+      device: makeFakeDevice(),
+      layerSide: LAYER_SIDE,
+      layerCount: LAYER_COUNT,
+    });
+    texture.initTexture();
+    const fetcher = vi.fn(async () => makeFakeBitmap());
+    const sys = createHiResFamousSubsystem({ texture, requestRender: () => {}, fetcher });
+    // Camera at x = -40 looking +x: rows 0-7 (300 kpc) sit 50 Mpc behind it, row 8 (220 kpc) 50 Mpc ahead.
+    const count = 9;
+    const positions = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      positions[i * 3 + 0] = i < 8 ? -90 : 10;
+      positions[i * 3 + 1] = 0.001 * i;
+    }
+    const cloud = makeGalaxyCatalog(count, {
+      objIDs: new BigUint64Array(count),
+      positions,
+      magU: new Float32Array(count).fill(20),
+      magG: new Float32Array(count).fill(20),
+      magR: new Float32Array(count).fill(20),
+      magI: new Float32Array(count).fill(20),
+      magZ: new Float32Array(count).fill(20),
+      axisRatio: new Float32Array(count).fill(0.7),
+      positionAngleDeg: new Float32Array(count).fill(45),
+      diameterKpc: new Float32Array(count).fill(300).fill(220, 8),
+    });
+    // One view whose only binding plane is "ahead of the eye" (x_rel >= 0).
+    const viewPlanes = new Float32Array(24);
+    viewPlanes.set([1, 0, 0, 0]);
+    for (let p = 4; p < 24; p += 4) viewPlanes[p + 3] = 1;
+    const input = makeInput(
+      new Map([['famousGalaxy' as const, cloud]]),
+      50,
+      makeFamousNames(count),
+    );
+    const out = sys.runFrame({ ...input, pxPerRad: 1e6, viewPlanes });
+
+    expect(out.byFamousIdx.has(8)).toBe(true);
+    expect(texture.layerForKey('8')).toBeDefined();
+    for (let i = 0; i < 8; i++) expect(texture.layerForKey(String(i))).toBeUndefined();
     sys.destroy();
   });
 

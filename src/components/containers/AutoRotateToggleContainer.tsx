@@ -15,7 +15,7 @@ import { memo, useCallback } from 'react';
 import AutoRotateToggle from '../AutoRotateToggle/AutoRotateToggle';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectAutoRotate, selectAutoRotateRate } from '../../state/camera/selectors';
-import { setAutoRotate } from '../../state/camera/cameraSlice';
+import { setAutoRotate } from '../../state/camera/cameraIntentSlice';
 
 function AutoRotateToggleContainer({ hidden }: { hidden: boolean }): React.ReactElement {
   const autoRotate = useAppSelector(selectAutoRotate);

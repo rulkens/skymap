@@ -89,7 +89,7 @@ function ctxFor(
     poseBasis: IDENTITY,
     upBasis: IDENTITY,
     terrainHeightAt: datumOnlyTerrainHeight,
-    focusBodyId,
+    focus: focusBodyId === null ? { kind: 'none' } : { kind: 'body', id: focusBodyId },
     pivot: { radiusMpc: null, floorMpc: 0 },
     viewportPx: [1920, 1080],
     frustum: symmetricFrustum(1, 1920 / 1080),

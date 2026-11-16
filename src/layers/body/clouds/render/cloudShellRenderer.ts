@@ -1,7 +1,7 @@
 /**
  * cloudShellRenderer: the body-agnostic translucent cloud shell above a planet's
- * opaque surface. One closed `uvSphereMesh`, an equirectangular cloud map (RGB +
- * `.a` coverage), the shared sun-relative Lambert term, straight-alpha OVER. It
+ * opaque surface. One closed `uvSphereMesh`, an equirectangular grey coverage map
+ * (`r8unorm`, sampled raw), the shared sun-relative Lambert term, straight-alpha OVER. It
  * holds no body facts: the caller scales the unit sphere via `composeBodyMvp` and
  * packs `CloudShellUniforms`. One non-dynamic uniform buffer, so at most one `draw`
  * per frame (else `queue.writeBuffer` races the pending `queue.submit`).
@@ -17,6 +17,7 @@ import { CLOUD_SHELL_UNIFORM_FLOATS } from './packCloudShellUniforms';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import { generateMipChain, mipLevelCount } from '../../../../services/gpu/lib/generateMipChain';
 import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
+import { bodyTextureFormat } from '../../../../utils/bodyTextures/bodyTextureFormat';
 import vsCode from '../../../../services/gpu/shaders/bodies/cloudShell/vertex.wesl?static';
 import fsCode from '../../../../services/gpu/shaders/bodies/cloudShell/fragment.wesl?static';
 
@@ -82,18 +83,19 @@ export function createCloudShellRenderer(
     addressModeV: 'clamp-to-edge',
   });
 
-  // Transparent until the map lands, so the shell draws nothing rather than a solid
-  // ball. Same `rgba8unorm-srgb` format as the real map.
+  const format = bodyTextureFormat('clouds');
+
+  // Zero coverage until the map lands, so the shell draws nothing rather than a solid ball.
   const placeholder = device.createTexture({
     label: 'cloudShell-placeholder-map',
     size: [1, 1, 1],
-    format: 'rgba8unorm-srgb',
+    format,
     usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
   });
   device.queue.writeTexture(
     { texture: placeholder },
-    new Uint8Array([0, 0, 0, 0]),
-    { bytesPerRow: 4, rowsPerImage: 1 },
+    new Uint8Array([0]),
+    { bytesPerRow: 1, rowsPerImage: 1 },
     [1, 1, 1],
   );
 
@@ -193,7 +195,7 @@ export function createCloudShellRenderer(
     const texture = device.createTexture({
       label: 'cloudShell-map-texture',
       size: [bitmap.width, bitmap.height, 1],
-      format: 'rgba8unorm-srgb',
+      format,
       mipLevelCount: levels,
       // RENDER_ATTACHMENT: generateMipChain renders each level below 0.
       usage:
