@@ -77,10 +77,10 @@ describe('steppedSitePose', () => {
     const sequence: readonly InputStep[] = [
       drag(220, -140),
       drag(-90, -600),
-      { kind: 'zoom', factor: 0.3, duringGesture: false, cursorPx: null, fresh: false },
+      { kind: 'zoom', factor: 0.3, duringGesture: false, cursorPx: null },
       drag(-410, 305),
       drag(770, 48),
-      { kind: 'zoom', factor: 5, duringGesture: true, cursorPx: [10, 10], fresh: false },
+      { kind: 'zoom', factor: 5, duringGesture: true, cursorPx: [10, 10] },
       drag(33, -720),
     ];
 
@@ -100,7 +100,6 @@ describe('steppedSitePose', () => {
         factor: 0.01,
         duringGesture: false,
         cursorPx: null,
-        fresh: false,
       });
     }
     expect(pose.rangeM).toBeCloseTo(ROVER.standoffRadii * ROVER.boundingRadiusM, 12);
@@ -117,7 +116,6 @@ describe('steppedSitePose', () => {
         factor: 0.01,
         duringGesture: false,
         cursorPx: null,
-        fresh: false,
       });
     }
     expect(
@@ -126,7 +124,6 @@ describe('steppedSitePose', () => {
         factor: 0.5,
         duringGesture: false,
         cursorPx: null,
-        fresh: false,
       }),
     ).toBe(pinned);
   });

@@ -1,6 +1,6 @@
 /**
- * zoomLimitPushed — an arm's report that a fresh notch pressed its zoom limit, emitted by
- * `replayInput`. Reducer-less: `watchZoomLimitSaga` decides what, if anything, it starts.
+ * zoomLimitPushed — a notch that pushed an arm's zoom limit, as `replayInput` decided it from the
+ * arm's report. Reducer-less: `watchZoomLimitSaga` decides what, if anything, it starts.
  */
 import { createAction } from '@reduxjs/toolkit';
 

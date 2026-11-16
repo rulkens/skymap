@@ -45,7 +45,7 @@ export function createPlayClip(
 
     // `frame` is pinned at dispatch time so a later orientation switch re-expresses
     // the clip's pose instead of reinterpreting it (clip row in cameraDrivers.ts).
-    store.dispatch(clipStarted({ data: resolvedClip, frame }));
+    store.dispatch(clipStarted({ data: resolvedClip, frame, by: 'player' }));
 
     return p;
   };

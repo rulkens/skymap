@@ -52,7 +52,7 @@ const structureRow = (over: Partial<StructureInfo> = {}) =>
 
 describe('focusTweenDescriptor', () => {
   it('carries the live from-pose, the caller-given motion, and the caller-stamped frame', () => {
-    const d = focusTweenDescriptor(galaxyRow(), FROM, FOVY, MOTION, FRAME);
+    const d = focusTweenDescriptor(galaxyRow(), FROM, FOVY, FOVY, MOTION, FRAME);
     expect(d.from).toBe(FROM);
     expect(d.motion).toBe(MOTION);
     expect(d.frame).toBe(FRAME);
@@ -62,6 +62,7 @@ describe('focusTweenDescriptor', () => {
     const d = focusTweenDescriptor(
       galaxyRow({ x: 1, y: 2, z: 3, diameterKpc: 40 }),
       FROM,
+      FOVY,
       FOVY,
       MOTION,
       FRAME,
@@ -77,6 +78,7 @@ describe('focusTweenDescriptor', () => {
       structureRow({ apparentRadiusMpc: 5 }),
       FROM,
       FOVY,
+      FOVY,
       MOTION,
       FRAME,
     );
@@ -89,6 +91,7 @@ describe('focusTweenDescriptor', () => {
       structureRow({ apparentRadiusMpc: undefined, physicalRadiusMpc: 2 }),
       FROM,
       FOVY,
+      FOVY,
       MOTION,
       FRAME,
     );
@@ -96,7 +99,7 @@ describe('focusTweenDescriptor', () => {
   });
 
   it('the Milky Way arm targets the galactic centre, framing its disc', () => {
-    const d = focusTweenDescriptor(MILKY_WAY_ROW, FROM, FOVY, MOTION, FRAME);
+    const d = focusTweenDescriptor(MILKY_WAY_ROW, FROM, FOVY, FOVY, MOTION, FRAME);
     expect(d.to.target).toEqual([
       MILKY_WAY_CENTER_WORLD[0],
       MILKY_WAY_CENTER_WORLD[1],
@@ -106,9 +109,16 @@ describe('focusTweenDescriptor', () => {
     expect(d.to.yaw).toBe(FROM.yaw);
   });
 
+  it('a lens change frames through the landing lens and carries both ends as fov', () => {
+    const d = focusTweenDescriptor(structureRow(), FROM, 0.1, FOVY, MOTION, FRAME);
+    expect(d.to.distance).toBe(arrivalAt('structure', 5));
+    expect(d.from).toEqual({ ...FROM, fov: 0.1 });
+    expect(d.to.fov).toBe(FOVY);
+  });
+
   it('copies the target into a fresh array — never aliases the source Vec3', () => {
     const struct = structureRow({ worldPos: [10, -20, 30] });
-    const d = focusTweenDescriptor(struct, FROM, FOVY, MOTION, FRAME);
+    const d = focusTweenDescriptor(struct, FROM, FOVY, FOVY, MOTION, FRAME);
     expect(d.to.target).not.toBe(struct.worldPos);
   });
 });

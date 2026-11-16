@@ -56,7 +56,6 @@ function zoomOut(): InputStep {
     factor: Math.exp(0.1),
     duringGesture: false,
     cursorPx: null,
-    fresh: false,
   };
 }
 
