@@ -121,7 +121,7 @@ Slice `settings/film` (`reducerPath: 'film'`), reducers: `setFilmEnabled(boolean
 
 | key | default | slider range |
 | --- | --- | --- |
-| enabled / letterbox | false / false | toggles |
+| enabled / letterbox | false / true | toggles |
 | contrast | 1.1 | 0.8–1.6 |
 | lift | 0.02 | 0–0.1 |
 | splitTone | 0.5 | 0–1 |
