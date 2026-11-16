@@ -6,11 +6,11 @@
 import package::bloom::io::FullscreenOut;
 
 @vertex
-fn vs(@builtin(vertex_index) vi: u32) -> FullscreenOut {
-  let x = f32(((vi << 1u) & 2u));
-  let y = f32(vi & 2u);
+fn vs(@builtin(vertex_index) vertexIndex: u32) -> FullscreenOut {
+  let cornerX = f32(((vertexIndex << 1u) & 2u));
+  let cornerY = f32(vertexIndex & 2u);
   var out: FullscreenOut;
-  out.pos = vec4<f32>(x * 2.0 - 1.0, 1.0 - y * 2.0, 0.0, 1.0);
-  out.uv = vec2<f32>(x, y);
+  out.pos = vec4<f32>(cornerX * 2.0 - 1.0, 1.0 - cornerY * 2.0, 0.0, 1.0);
+  out.uv = vec2<f32>(cornerX, cornerY);
   return out;
 }
