@@ -120,8 +120,8 @@ fn main(
   }
   let base = workgroupUniformLoad(&groupBase);
   if (shown) {
-    let at = base + local;
-    visible[at] = entry;
-    visibleTags[at] = visibleTag(row, min(extra[row].y & CLASS_MASK, LAST_CLASS));
+    let slot = base + local;
+    visible[slot] = entry;
+    visibleTags[slot] = visibleTag(row, min(extra[row].y & CLASS_MASK, LAST_CLASS));
   }
 }

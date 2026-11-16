@@ -15,13 +15,13 @@ struct McpmVsOut {
 };
 
 @vertex
-fn vs(@builtin(vertex_index) vi: u32) -> McpmVsOut {
+fn vs(@builtin(vertex_index) vertexIndex: u32) -> McpmVsOut {
   var corners = array<vec2<f32>, 3>(
     vec2<f32>(-1.0, -1.0), vec2<f32>(3.0, -1.0), vec2<f32>(-1.0, 3.0)
   );
-  let xy = corners[vi];
+  let corner = corners[vertexIndex];
   var out: McpmVsOut;
-  out.pos = vec4<f32>(xy, 0.0, 1.0);
-  out.uv = vec2<f32>((xy.x + 1.0) * 0.5, (1.0 - xy.y) * 0.5);
+  out.pos = vec4<f32>(corner, 0.0, 1.0);
+  out.uv = vec2<f32>((corner.x + 1.0) * 0.5, (1.0 - corner.y) * 0.5);
   return out;
 }

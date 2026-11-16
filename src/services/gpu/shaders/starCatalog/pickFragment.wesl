@@ -47,7 +47,7 @@ import package::starCatalog::io::StarUniforms;
 import package::lib::selectionEncoding::packSelection;
 import package::lib::selectionEncoding::PICK_SENTINEL_OFFSET;
 
-@group(0) @binding(0) var<uniform> u: StarUniforms;
+@group(0) @binding(0) var<uniform> uniforms: StarUniforms;
 
 @fragment
 fn fsPick(in: VSOut) -> @location(0) vec4<u32> {
@@ -60,6 +60,6 @@ fn fsPick(in: VSOut) -> @location(0) vec4<u32> {
   // it and the selection row maps the pool index to a catalog ordinal. The g/b/a
   // channels are unused -- only the r channel is read back on the JS side -- so
   // they are filled with 0 to keep the output well-defined.
-  let packed = packSelection(u.pickCode, in.recordIdx + PICK_SENTINEL_OFFSET);
+  let packed = packSelection(uniforms.pickCode, in.recordIdx + PICK_SENTINEL_OFFSET);
   return vec4<u32>(packed, 0u, 0u, 0u);
 }

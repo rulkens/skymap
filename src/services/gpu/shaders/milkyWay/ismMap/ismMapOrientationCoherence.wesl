@@ -19,10 +19,10 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   if (any(gid.xy >= dims)) {
     return;
   }
-  let j = textureLoad(srcTex, vec2<i32>(gid.xy), 0).xyz;
-  let jxx = j.x;
-  let jxy = j.y;
-  let jyy = j.z;
+  let tensor = textureLoad(srcTex, vec2<i32>(gid.xy), 0).xyz;
+  let jxx = tensor.x;
+  let jxy = tensor.y;
+  let jyy = tensor.z;
   let denom = jxx + jyy;
   if (denom < EPS) {
     textureStore(dst, vec2<i32>(gid.xy), vec4<f32>(0.0, 0.0, 0.0, 0.0));

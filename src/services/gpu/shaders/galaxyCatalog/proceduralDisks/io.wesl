@@ -31,7 +31,7 @@
 // WESL has no global state — bindings are module-local declarations
 // that cannot be exported. The vertex stage redeclares the uniform
 // binding (it reads cam.viewProj for the world-to-clip projection).
-// The fragment stage doesn't read 'u' today, so it doesn't declare
+// The fragment stage doesn't read 'uniforms' today, so it doesn't declare
 // the binding — but the WebGPU bind-group layout in
 // 'proceduralDiskRenderer.ts' still tags binding 0 with VERTEX |
 // FRAGMENT visibility for ABI continuity with sibling renderers

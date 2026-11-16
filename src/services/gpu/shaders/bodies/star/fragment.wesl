@@ -30,7 +30,7 @@
 
 import package::lib::sphere::TintedSphereUniforms;
 
-@group(0) @binding(0) var<uniform> u: TintedSphereUniforms;
+@group(0) @binding(0) var<uniform> uniforms: TintedSphereUniforms;
 
 // MIRRORS 'STAR_EMISSIVE' in 'src/data/starRenderConstants.ts' (the
 // authoritative TS home, which also names the bloom-seeding ordering
@@ -40,5 +40,5 @@ const EMISSIVE: f32 = 12.0;
 
 @fragment
 fn fs() -> @location(0) vec4<f32> {
-  return vec4<f32>(u.tint * EMISSIVE, u.opacity);
+  return vec4<f32>(uniforms.tint * EMISSIVE, uniforms.opacity);
 }

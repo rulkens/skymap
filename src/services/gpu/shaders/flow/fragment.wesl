@@ -7,6 +7,6 @@
 import package::flow::io::VsOut;
 
 @fragment
-fn fsTrail(i: VsOut) -> @location(0) vec4<f32> {
-  return vec4<f32>(i.col * i.alpha, i.alpha);
+fn fsTrail(in: VsOut) -> @location(0) vec4<f32> {
+  return vec4<f32>(in.col * in.alpha, in.alpha);
 }

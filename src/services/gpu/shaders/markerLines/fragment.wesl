@@ -27,8 +27,8 @@ fn shadeLine(input: VsOut) -> vec4<f32> {
   let edgeDist = abs(input.uv.y - 0.5) * 2.0;
   // Anti-aliased edge falloff.  The smoothstep band is one pixel
   // wide (via fwidth) so the line stays crisp at any line width.
-  let aa = fwidth(edgeDist);
-  let edgeAlpha = 1.0 - smoothstep(1.0 - aa, 1.0, edgeDist);
+  let antialiasWidth = fwidth(edgeDist);
+  let edgeAlpha = 1.0 - smoothstep(1.0 - antialiasWidth, 1.0, edgeDist);
 
   // The vertex stage already pre-multiplied fadeAlpha into the colour,
   // so all that's left is to multiply by the edge falloff.  Output is

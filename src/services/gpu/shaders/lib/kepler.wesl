@@ -18,8 +18,8 @@ fn solveKeplerFixed(meanAnomaly: f32, ecc: f32) -> f32 {
     let eSinE = ecc * sin(eccAnomaly);
     let eCosE = ecc * cos(eccAnomaly);
     let residual = eccAnomaly - eSinE - meanReduced;
-    let df = 1.0 - eCosE;
-    let step = residual / (df - residual * eSinE / (2.0 * df));
+    let slope = 1.0 - eCosE;
+    let step = residual / (slope - residual * eSinE / (2.0 * slope));
     eccAnomaly = eccAnomaly - clamp(step, -KEPLER_MAX_STEP, KEPLER_MAX_STEP);
   }
   return eccAnomaly;

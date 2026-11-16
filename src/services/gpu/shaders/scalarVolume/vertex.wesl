@@ -23,7 +23,7 @@ struct VolumeUniforms {
   // 12 bytes of trailing padding (struct rounded up to mat4 alignment, 16)
 };
 
-@group(0) @binding(0) var<uniform> u: VolumeUniforms;
+@group(0) @binding(0) var<uniform> uniforms: VolumeUniforms;
 
 struct VsOut {
   @builtin(position) clip: vec4<f32>,
@@ -33,9 +33,9 @@ struct VsOut {
 
 @vertex
 fn vs_main(@location(0) cornerLocal: vec3<f32>) -> VsOut {
-  let worldPos4 = u.modelMatrix * vec4<f32>(cornerLocal, 1.0);
+  let worldPos4 = uniforms.modelMatrix * vec4<f32>(cornerLocal, 1.0);
   var out: VsOut;
-  out.clip = u.cam.viewProj * worldPos4;
+  out.clip = uniforms.cam.viewProj * worldPos4;
   out.localPos = cornerLocal;
   out.worldPos = worldPos4.xyz;
   return out;

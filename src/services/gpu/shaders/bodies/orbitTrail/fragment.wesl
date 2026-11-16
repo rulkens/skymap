@@ -21,24 +21,24 @@ const REFINE_TOL: f32 = 0.25;
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let ginv = mat3x3<f32>(in.ginv0, in.ginv1, in.ginv2);
   // '@builtin(position)': top-left origin, y-down — composeOrbitConic's viewport convention.
-  let q = ginv * vec3<f32>(in.clip.xy, 1.0);
+  let planePoint = ginv * vec3<f32>(in.clip.xy, 1.0);
 
-  // q.z = 1/clip-w; the conic's projective image includes the behind-camera arc (w < 0).
-  if (q.z <= 0.0) {
+  // planePoint.z = 1/clip-w; the conic's projective image includes the behind-camera arc (w < 0).
+  if (planePoint.z <= 0.0) {
     discard;
   }
 
-  // atan2 is scale-invariant, so 'ecc' needs no divide; only 'r' below does (doc: f32 safety).
-  let u = q.xy;
-  let z = q.z;
-  let uLen = length(u);
-  let ecc = atan2(u.y, u.x); // eccentric anomaly E
+  // atan2 is scale-invariant, so 'ecc' needs no divide; only 'conicRadius' below does (doc: f32 safety).
+  let planeXy = planePoint.xy;
+  let projectiveWeight = planePoint.z;
+  let planeXyLength = length(planeXy);
+  let ecc = atan2(planeXy.y, planeXy.x); // eccentric anomaly E
 
   // Gradient measured with dpdx/dpdy, not derived analytically (doc: why the gradient...).
   // Do NOT reintroduce Dekker/TwoSum here: this toolchain's fast-math breaks it, hardware-verified.
-  let r = uLen / z;
-  let gradPx = vec2<f32>(dpdx(r), dpdy(r));
-  let dist = abs(r - 1.0) / max(length(gradPx), 1e-30);
+  let conicRadius = planeXyLength / projectiveWeight;
+  let gradPx = vec2<f32>(dpdx(conicRadius), dpdy(conicRadius));
+  let dist = abs(conicRadius - 1.0) / max(length(gradPx), 1e-30);
 
   // NaN fails closed: '!(dist < STROKE_PX)' is also true for NaN, so a degenerate Ginv discards.
   if (!(dist < STROKE_PX)) {
@@ -46,12 +46,12 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   }
 
   // Horizon rejection: 'dist' is first-order and collapses near the horizon; verify by stepping.
-  let n = gradPx / max(length(gradPx), 1e-30);
-  let pStep = in.clip.xy - sign(r - 1.0) * dist * n;
-  let qStep = ginv * vec3<f32>(pStep, 1.0);
-  let rStep = length(qStep.xy / qStep.z);
-  // Keep-form: a NaN comparison is always false, so requiring KEEP true (not reject-form) routes a non-finite rStep into this discard too.
-  if (!(qStep.z > 0.0 && abs(rStep - 1.0) < REFINE_TOL)) {
+  let gradDir = gradPx / max(length(gradPx), 1e-30);
+  let steppedPx = in.clip.xy - sign(conicRadius - 1.0) * dist * gradDir;
+  let steppedPlanePoint = ginv * vec3<f32>(steppedPx, 1.0);
+  let steppedConicRadius = length(steppedPlanePoint.xy / steppedPlanePoint.z);
+  // Keep-form: a NaN comparison is always false, so requiring KEEP true (not reject-form) routes a non-finite steppedConicRadius into this discard too.
+  if (!(steppedPlanePoint.z > 0.0 && abs(steppedConicRadius - 1.0) < REFINE_TOL)) {
     discard;
   }
 
@@ -59,16 +59,16 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
 
   // The orbit point behind this fragment, eye-relative: hidden where a resolved
   // body sits on the segment back to the eye, so a body's own trail stops at its limb.
-  let x = in.occCentre + (u.x / z) * in.occMajor + (u.y / z) * in.occMinor;
-  let clear = trailClearance(x, in.clip.xy);
+  let orbitPointRelEye = in.occCentre + (planeXy.x / projectiveWeight) * in.occMajor + (planeXy.y / projectiveWeight) * in.occMinor;
+  let clear = trailClearance(orbitPointRelEye, in.clip.xy);
 
   if (clear <= 0.0) {
     discard;
   }
 
   // Forward Kepler M = E - e*sin(E): closed-form, no GPU root-find (doc: why forward Kepler).
-  let m = ecc - in.eccentricity * sin(ecc);
-  let raw = in.meanAnomaly - m;
+  let fragMeanAnomaly = ecc - in.eccentricity * sin(ecc);
+  let raw = in.meanAnomaly - fragMeanAnomaly;
   let delta = raw - TAU * floor(raw / TAU);
   let brightness = TRAIL_FLOOR + (1.0 - TRAIL_FLOOR) * exp(-TRAIL_DECAY * delta);
 

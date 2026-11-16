@@ -7,7 +7,7 @@
 // facing (a bubble has no orientation to be plane-aligned to).
 
 import package::milkyWay::field::bubblePresent::io::VsOut;
-import package::milkyWay::field::io::u;
+import package::milkyWay::field::io::uniforms;
 
 // Warm amber for a relic bubble (old, swept-out), cool cyan for an actively-
 // blown HII cavity — geometrically identical quads, so hue is the only cue
@@ -25,12 +25,12 @@ fn fs(input: VsOut) -> @location(0) vec4<f32> {
   let distFromRing = abs(length(input.uv) - 1.0);
   let shell = 1.0 - smoothstep(SHELL_INNER, SHELL_OUTER, distFromRing);
   let color = select(RELIC_COLOR, CAVITY_COLOR, input.kind > 0.5);
-  // u.bubbleView.x is this view's own crossfade weight (io.wesl's bubbleView
+  // uniforms.bubbleView.x is this view's own crossfade weight (io.wesl's bubbleView
   // doc) — 0 makes every fragment fully transparent, matching the other
   // debug presents' own intensity multiply.
-  let a = shell * u.bubbleView.x;
+  let intensity = shell * uniforms.bubbleView.x;
   // Alpha 0: additive blend (ADDITIVE_BLEND) sums colour directly; the
   // alpha channel feeds nothing downstream, same convention fieldSplat/fragment.wesl's
   // fs documents for its own return.
-  return vec4<f32>(color * a, 0.0);
+  return vec4<f32>(color * intensity, 0.0);
 }

@@ -31,9 +31,9 @@ const SEED_TRIES: u32 = 16u;
 // pcgHash — u32 -> u32 avalanche. The de-facto GPU integer hash; far better
 // distributed across u32 seeds than a sin-based float hash.
 fn pcgHash(vin: u32) -> u32 {
-  var s = vin * 747796405u + 2891336453u;
-  let w = ((s >> ((s >> 28u) + 4u)) ^ s) * 277803737u;
-  return (w >> 22u) ^ w;
+  var state = vin * 747796405u + 2891336453u;
+  let word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
+  return (word >> 22u) ^ word;
 }
 
 // rand01 — deterministic pseudo-random in [0, 1) from a u32 seed.
@@ -41,15 +41,15 @@ fn rand01(seed: u32) -> f32 {
   return f32(pcgHash(seed)) / 4294967295.0;
 }
 
-// randomStream — per-particle RNG stream offset, decorrelating particle 'i'
+// randomStream — per-particle RNG stream offset, decorrelating particle 'particleIndex'
 // across 'frame'.
-fn randomStream(i: u32, frame: u32) -> u32 {
-  return i * PARTICLE_SALT + frame * FRAME_SALT;
+fn randomStream(particleIndex: u32, frame: u32) -> u32 {
+  return particleIndex * PARTICLE_SALT + frame * FRAME_SALT;
 }
 
 // insideBox — unit-cube [0,1]^3 containment test for a grid-space position.
-fn insideBox(p: vec3<f32>) -> bool {
-  return all(p >= vec3<f32>(0.0)) && all(p <= vec3<f32>(1.0));
+fn insideBox(gridPos: vec3<f32>) -> bool {
+  return all(gridPos >= vec3<f32>(0.0)) && all(gridPos <= vec3<f32>(1.0));
 }
 
 // gridToWorld — grid [0,1]^3 -> world via the cube's model matrix.
@@ -66,8 +66,8 @@ fn gridToClip(mvp: mat4x4<f32>, model: mat4x4<f32>, voxel: vec3<f32>) -> vec4<f3
 // overdensity — overdensity delta at a grid point: the velocity texture's alpha
 // channel scaled by 'densScale' and clamped to [0,1]. Biases spawn placement
 // toward structure.
-fn overdensity(velTex: texture_3d<f32>, velSamp: sampler, densScale: f32, p: vec3<f32>) -> f32 {
-  return clamp(textureSampleLevel(velTex, velSamp, p, 0.0).w * densScale, 0.0, 1.0);
+fn overdensity(velTex: texture_3d<f32>, velSamp: sampler, densScale: f32, gridPos: vec3<f32>) -> f32 {
+  return clamp(textureSampleLevel(velTex, velSamp, gridPos, 0.0).w * densScale, 0.0, 1.0);
 }
 
 // pickSpawn — density-weighted spawn point: rejection-samples up to SEED_TRIES

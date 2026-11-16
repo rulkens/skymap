@@ -80,7 +80,7 @@ struct PatchInstance {
 // 'viewDirLocal' is NOT flat: it is 'worldPosRelCam' (small, f64-composed
 // then narrowed once) rotated into the local frame per vertex, forwarded
 // raw for the fragment to normalize -- the cancellation-free replacement
-// for 'camPosLocal - Ng', which subtracts two near-unit f32 vectors and
+// for 'camPosLocal - geometricNormal', which subtracts two near-unit f32 vectors and
 // degenerates at metre-scale altitude (see vertex.wesl).
 struct VSOut {
   @builtin(position) clip: vec4<f32>,

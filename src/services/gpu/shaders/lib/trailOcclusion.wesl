@@ -49,8 +49,8 @@ fn sphereGap(pointKm: vec3<f32>, sphere: vec4<f32>) -> f32 {
 // Visibility of the segment past one sphere: 0 inside it, 1 clear of it, one-pixel limb ramp.
 fn sphereClearance(pointKm: vec3<f32>, sphere: vec4<f32>) -> f32 {
   let gap = sphereGap(pointKm, sphere);
-  let aa = max(fwidth(gap), 1e-6);
-  return smoothstep(-aa, aa, gap);
+  let rampKm = max(fwidth(gap), 1e-6);
+  return smoothstep(-rampKm, rampKm, gap);
 }
 
 // The spheres cover the sphere bodies; this covers ONE row's terrain and meshes, at screen 'uv'. The
