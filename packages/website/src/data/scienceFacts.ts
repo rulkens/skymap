@@ -180,7 +180,7 @@ export const SCIENCE_FACTS: readonly Fact[] = [
   },
   {
     id: 'sci-earth-clouds',
-    text: 'Earth’s clouds are one fixed NASA composite. The surface under them is the Blue Marble mosaic of August 2004, with newer satellite and aerial imagery set into some regions.',
+    text: 'Earth’s clouds are baked each night from weather-satellite images. The surface under them is the Blue Marble mosaic of August 2004, with newer satellite and aerial imagery set into some regions.',
     source: `${REPO_BLOB}/ATTRIBUTIONS.md`,
     sourceLabel: `the attributions file, ${IN_REPO}`,
     checked: CHECKED,

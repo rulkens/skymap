@@ -203,8 +203,8 @@ export const ROADMAP: readonly RoadmapGroup[] = [
       },
       {
         id: 'clouds',
-        title: 'Clouds with thickness, and today’s weather',
-        text: 'Earth’s clouds lit as a layer with depth, and perhaps the real cloud cover of the day in place of one fixed picture.',
+        title: 'Clouds with thickness',
+        text: 'Earth’s clouds lit as a layer with depth.',
         state: 'idea',
         backlog: 'Cloud deck PBR',
       },
