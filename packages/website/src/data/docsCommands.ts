@@ -125,7 +125,7 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
       },
       {
         scripts: ['build-asteroids'],
-        does: 'Write the file of asteroid orbits, every numbered minor planet the Minor Planet Center lists, from the file fetch-mpcorb downloaded, with the names and the Center’s terms beside it.',
+        does: 'Write the file of asteroid orbits, every numbered minor planet the Minor Planet Center lists, from the file fetch-mpcorb downloaded, with the names, the Center’s terms and the diameters fetch-sbdb-diameters downloaded beside it.',
         manual: 'data/raw/mpcorb/README.md',
       },
       {

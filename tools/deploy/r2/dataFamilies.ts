@@ -80,12 +80,12 @@ export const DATA_FAMILIES: readonly DataFamily[] = [
     gzipOnWire: true,
   },
   {
-    // MPCORB bake (tools/asteroids/buildAsteroids.ts); the header text carries MPC's terms.
+    // MPCORB + SBDB bake (tools/asteroids/buildAsteroids.ts); the header text carries MPC's terms.
     label: 'asteroids',
     dir: null,
-    fileName: /^(?:asteroids\.astb|asteroid-names\.bin|mpcorb-header\.txt)$/,
+    fileName: /^(?:asteroids\.astb|asteroid-(?:names|diameters)\.bin|mpcorb-header\.txt)$/,
     transport: 'wrangler',
-    // Measured (gzip -6, 2026-11-12): astb 20.6 → 17.4 MB, names 444 → 212 KB.
+    // Measured (gzip -6): astb 20.6 → 17.4 MB, names 444 → 212 KB (2026-11-12); diameters 1.6 MB → 754 KB (2026-11-16).
     gzipOnWire: true,
   },
   {

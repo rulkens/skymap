@@ -1,6 +1,7 @@
 /**
- * asteroidsSlot — the catalog's asset slot. It fetches the names file beside the catalog (a few
- * percent of its size), so a linked asteroid's card is named with no palette open. The committed
+ * asteroidsSlot — the catalog's asset slot. It fetches the names and diameters files beside the
+ * catalog (a few percent of its size each), so a linked asteroid's card is named and sized with no
+ * palette open; both are read as views on the main thread, no decode to speak of. The committed
  * catalog is the decoded one, so the GPU upload and the CPU mirror read the same columns; commit
  * uploads the solver's rows and release destroys them.
  */
@@ -12,6 +13,7 @@ import { createAssetSlot } from '../../../../services/loading/AssetSlot';
 import { dataUrl, fetchWithProgress } from '../../../../services/loading/fetchWithProgress';
 import { runDisposableWorker } from '../../../../utils/worker/runDisposableWorker';
 import { ASTEROID_CATALOG_PATHS } from '../../../../data/asteroids/asteroidCatalogPaths';
+import { parseAsteroidDiameters } from './parseAsteroidDiameters';
 import { parseAsteroidNames } from './parseAsteroidNames';
 
 export function createAsteroidsSlot(
@@ -34,14 +36,17 @@ export function createAsteroidsSlot(
           'asteroid-catalog',
         );
       };
-      const [catalog, names] = await Promise.all([
+      const [catalog, names, diameters] = await Promise.all([
         decodeCatalog(),
-        // The catalog alone drives the progress bar: two streams would fight over one meter.
+        // The catalog alone drives the progress bar: three streams would fight over one meter.
         fetchWithProgress(dataUrl(ASTEROID_CATALOG_PATHS.names), signal, () => {}).then(
           parseAsteroidNames,
         ),
+        fetchWithProgress(dataUrl(ASTEROID_CATALOG_PATHS.diameters), signal, () => {}).then(
+          parseAsteroidDiameters,
+        ),
       ]);
-      return { catalog, names };
+      return { catalog, names, diameters };
     },
     commit: async ({ catalog }) => {
       solver.upload(catalog);

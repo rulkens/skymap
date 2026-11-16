@@ -1,12 +1,15 @@
 /**
- * A five-row catalog with names, through the real writers and parsers: (1) is meshed, (3) has no
- * H and no name, (5) is Astraea. Shared by the selection, search and card tests.
+ * A five-row catalog with names and diameters, through the real writers and parsers: (1) is meshed,
+ * (3) has no H and no name, (5) is Astraea, the one with a measured size. Shared by the selection,
+ * search and card tests.
  */
 import type { MpcorbRow } from '../../../../tools/@types/asteroids/MpcorbRow';
 import { writeAsteroidCatalog } from '../../../../tools/utils/io/writeAsteroidCatalog';
 import { writeAsteroidNames } from '../../../../tools/utils/io/writeAsteroidNames';
+import { writeAsteroidDiameters } from '../../../../tools/utils/io/writeAsteroidDiameters';
 import { parseAsteroidCatalog } from '../../../../src/layers/asteroids/catalog/load/parseAsteroidCatalog';
 import { parseAsteroidNames } from '../../../../src/layers/asteroids/catalog/load/parseAsteroidNames';
+import { parseAsteroidDiameters } from '../../../../src/layers/asteroids/catalog/load/parseAsteroidDiameters';
 import type { LoadedAsteroids } from '../../../../src/layers/asteroids/catalog/@types/LoadedAsteroids';
 
 export const FIXTURE_EPOCH_JD = 2461200.5;
@@ -39,5 +42,11 @@ export function loadedAsteroids(): LoadedAsteroids {
     writeAsteroidCatalog(ROWS, FIXTURE_EPOCH_JD).bytes.slice().buffer,
   );
   const named = ROWS.flatMap((r) => (r.name === null ? [] : [{ number: r.number, name: r.name }]));
-  return { catalog, names: parseAsteroidNames(writeAsteroidNames(named).slice().buffer) };
+  return {
+    catalog,
+    names: parseAsteroidNames(writeAsteroidNames(named).slice().buffer),
+    diameters: parseAsteroidDiameters(
+      writeAsteroidDiameters([{ number: 5, diameterKm: 106.699, albedo: 0.274 }]).slice().buffer,
+    ),
+  };
 }

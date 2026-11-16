@@ -5,19 +5,24 @@
  * redistribution only with the file's header and where to get updates, so the header ships beside the
  * data. The `.gz` is read as a stream (321 MB unpacked). Rows off the dominant epoch are moved onto it.
  * Rows with no class (orbit type 10, beyond this Layer) ship as ABSENT rows, and without their names.
+ * JPL SBDB diameters join by number into `asteroid-diameters.bin`, for the rows the Layer can select.
  */
-import { createReadStream, mkdirSync, writeFileSync } from 'node:fs';
+import { createReadStream, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { createGunzip } from 'node:zlib';
 
 import type { MpcorbRow } from '../@types/asteroids/MpcorbRow';
+import type { SbdbQueryAnswer } from '../@types/asteroids/SbdbQueryAnswer';
 import { ASTEROID_CATALOG_PATHS } from '../../src/data/asteroids/asteroidCatalogPaths';
+import { MESH_ASTEROID_NUMBERS } from '../../src/layers/asteroids/catalog/data/meshAsteroidNumbers';
 import { PROJECT_ROOT } from '../utils/io/projectRoot';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 import { writeAsteroidCatalog } from '../utils/io/writeAsteroidCatalog';
+import { writeAsteroidDiameters } from '../utils/io/writeAsteroidDiameters';
 import { writeAsteroidNames } from '../utils/io/writeAsteroidNames';
 import { parseMpcorbLine } from './parseMpcorbLine';
+import { parseSbdbDiameters } from './parseSbdbDiameters';
 import { propagateToEpoch } from './propagateToEpoch';
 
 const UPDATES_URL = 'https://www.minorplanetcenter.net/iau/MPCORB/MPCORB.DAT';
@@ -68,8 +73,19 @@ async function main(): Promise<void> {
     name === null || asteroidClass === null ? [] : [{ number, name }],
   );
   const names = writeAsteroidNames(named);
+  const selectable = new Set(
+    rows.flatMap(({ number, asteroidClass }) =>
+      asteroidClass === null || MESH_ASTEROID_NUMBERS.includes(number) ? [] : [number],
+    ),
+  );
+  const answer = JSON.parse(readFileSync(rawDataPath('sbdb.diameters'), 'utf8')) as SbdbQueryAnswer;
+  const measured = parseSbdbDiameters(answer)
+    .filter(({ number }) => selectable.has(number))
+    .sort((p, q) => p.number - q.number);
+  const diameters = writeAsteroidDiameters(measured);
   const catalogOut = write(ASTEROID_CATALOG_PATHS.catalog, bytes);
   const namesOut = write(ASTEROID_CATALOG_PATHS.names, names);
+  const diametersOut = write(ASTEROID_CATALOG_PATHS.diameters, diameters);
   write(
     ASTEROID_CATALOG_PATHS.header,
     [
@@ -93,6 +109,9 @@ async function main(): Promise<void> {
     `buildAsteroids: ${bytes.length / 1e6} MB, ${rows.length + gaps.length} rows → ${catalogOut}`,
   );
   console.log(`buildAsteroids: ${names.length / 1e6} MB, ${named.length} names → ${namesOut}`);
+  console.log(
+    `buildAsteroids: ${diameters.length / 1e6} MB, ${measured.length} of ${answer.count} SBDB diameters → ${diametersOut}`,
+  );
 }
 
 await main();
