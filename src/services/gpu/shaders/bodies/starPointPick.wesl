@@ -87,7 +87,7 @@ import package::lib::pickDepthBands::PICK_BAND_MOON_EPS;
 import package::lib::pickDepthBands::GLINT_CLASS_EARTH;
 import package::lib::pickDepthBands::GLINT_CLASS_PLANET;
 
-@group(0) @binding(0) var<uniform> u: CameraUniforms;
+@group(0) @binding(0) var<uniform> camera: CameraUniforms;
 
 // 18 px clickable footprint (9 px radius) — the WHOLE footprint for these <=25
 // labelled scene stars, sized generously so a label's click invitation lands
@@ -108,9 +108,9 @@ fn vs(
   @location(0) posRelCamMpc: vec3<f32>,
   @location(1) packedId: u32,
 ) -> VSOut {
-  let center = worldToClip(u, posRelCamMpc);
+  let center = worldToClip(camera, posRelCamMpc);
   let corner = quadCorner(vi);
-  let offset = expandBillboardScreen(u, center, FAMOUS_STAR_PICK_RADIUS_PX, corner);
+  let offset = expandBillboardScreen(camera, center, FAMOUS_STAR_PICK_RADIUS_PX, corner);
 
   var out: VSOut;
   out.clip = center + vec4<f32>(offset, 0.0, 0.0);
@@ -144,9 +144,9 @@ fn vsGlint(
 ) -> VSOut {
   // Same billboard expansion as 'vs' (identical footprint at the true screen
   // position); ONLY the depth handling differs.
-  let center = worldToClip(u, posRelCamMpc);
+  let center = worldToClip(camera, posRelCamMpc);
   let corner = quadCorner(vi);
-  let offset = expandBillboardScreen(u, center, FAMOUS_STAR_PICK_RADIUS_PX, corner);
+  let offset = expandBillboardScreen(camera, center, FAMOUS_STAR_PICK_RADIUS_PX, corner);
 
   var out: VSOut;
   out.clip = center + vec4<f32>(offset, 0.0, 0.0);

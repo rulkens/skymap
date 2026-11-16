@@ -50,13 +50,13 @@ fn fs(in: VSOut) -> FSOut {
 
   // Unit length by construction, so it is the exact geometric normal -- no
   // barycentric blend, and co-framed with 'sunDirLocal'.
-  let n = surface.point;
-  let shade = litShade(n, in.sunDirLocal);
+  let surfaceNormal = surface.point;
+  let shade = litShade(surfaceNormal, in.sunDirLocal);
 
   var out: FSOut;
   out.colour = vec4<f32>(in.albedo * shade, 1.0);
   // Absolute local frame: the SAME mvp the vertex stage used, applied to the
   // real surface point.
-  out.depth = fragDepthFromClip(mat4x4<f32>(in.mvp0, in.mvp1, in.mvp2, in.mvp3), n);
+  out.depth = fragDepthFromClip(mat4x4<f32>(in.mvp0, in.mvp1, in.mvp2, in.mvp3), surfaceNormal);
   return out;
 }

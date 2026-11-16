@@ -14,8 +14,8 @@ const TEXEL_BYTE_MAX: f32 = 255.0;
 // so both tiles on a shared edge decode a post to the same f32. May differ
 // from the CPU's codeHeightM by about one f32 ulp.
 fn postHeightM(tex: texture_2d<f32>, coord: vec2<u32>) -> f32 {
-  let b = vec3<u32>(round(textureLoad(tex, coord, 0).rgb * TEXEL_BYTE_MAX));
-  let code = (b.r << 16u) | (b.g << 8u) | b.b;
+  let texelBytes = vec3<u32>(round(textureLoad(tex, coord, 0).rgb * TEXEL_BYTE_MAX));
+  let code = (texelBytes.r << 16u) | (texelBytes.g << 8u) | texelBytes.b;
   return HEIGHT_CODE_OFFSET_M + f32(code) * HEIGHT_CODE_STEP_M;
 }
 
@@ -51,16 +51,16 @@ fn latticePostGradient(tex: texture_2d<f32>, origin: vec2<u32>, post: vec2<u32>,
   return vec2<f32>((hE - hW) / f32(east - west), (hN - hS) / f32(south - north));
 }
 
-// Bilinear height at lattice position 'p' (posts from 'origin', fractional
+// Bilinear height at lattice position 'latticePos' (posts from 'origin', fractional
 // once the leaf inherits a coarser ancestor's lattice). At a multiple of the
 // stride both weights are 0 and the result is that post, bit-for-bit. The
 // clamp is because a leaf seven levels up has ONE cell, where a doubled
 // stride would read past the sub-rect into another leaf's ground (R15).
-fn latticeHeightM(tex: texture_2d<f32>, origin: vec2<u32>, p: vec2<f32>, stride: f32, cells: f32) -> f32 {
-  let s = min(stride, cells);
-  let g = p / s;
-  let q = floor(g);
-  let f = g - q;
-  let h = latticeCellM(tex, origin, vec2<u32>(q * s), u32(s));
-  return mix(mix(h.x, h.y, f.x), mix(h.z, h.w, f.x), f.y);
+fn latticeHeightM(tex: texture_2d<f32>, origin: vec2<u32>, latticePos: vec2<f32>, stride: f32, cells: f32) -> f32 {
+  let clampedStride = min(stride, cells);
+  let strideCoord = latticePos / clampedStride;
+  let strideCell = floor(strideCoord);
+  let cellFraction = strideCoord - strideCell;
+  let cornerHeightsM = latticeCellM(tex, origin, vec2<u32>(strideCell * clampedStride), u32(clampedStride));
+  return mix(mix(cornerHeightsM.x, cornerHeightsM.y, cellFraction.x), mix(cornerHeightsM.z, cornerHeightsM.w, cellFraction.x), cellFraction.y);
 }

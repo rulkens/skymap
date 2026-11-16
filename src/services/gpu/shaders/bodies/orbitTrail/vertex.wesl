@@ -21,8 +21,8 @@ import package::lib::math::TAU;
 // swizzle is .xyz, never .xyw: the .w lane is the zero pad, and reading it
 // makes p.z zero, which silently collapses every vertex to (0,0,0,0).
 fn ribbonClip(inst: OrbitInstance, si: u32) -> vec3<f32> {
-  let e = inst.arc.x + inst.arc.y * f32(si) / f32(SEGMENTS);
-  return inst.cc.xyz + cos(e) * inst.ac.xyz + sin(e) * inst.bc.xyz; // clip (x, y, w)
+  let eccentricAnomaly = inst.arc.x + inst.arc.y * f32(si) / f32(SEGMENTS);
+  return inst.cc.xyz + cos(eccentricAnomaly) * inst.ac.xyz + sin(eccentricAnomaly) * inst.bc.xyz; // clip (x, y, w)
 }
 
 // Perspective divide; valid everywhere here — the CPU arc clip guarantees
@@ -35,9 +35,9 @@ fn clipToPixel(clip: vec3<f32>, viewportPx: vec2<f32>) -> vec2<f32> {
 
 // Bounded neighbour reach — only bites at an open arc's end, far off-screen.
 fn clampReach(neighbourPx: vec2<f32>, ownPx: vec2<f32>, maxPx: f32) -> vec2<f32> {
-  let d = neighbourPx - ownPx;
-  let len = length(d);
-  return select(neighbourPx, ownPx + d * (maxPx / len), len > maxPx);
+  let toNeighbour = neighbourPx - ownPx;
+  let len = length(toNeighbour);
+  return select(neighbourPx, ownPx + toNeighbour * (maxPx / len), len > maxPx);
 }
 
 // Rasterizes each orbit arc as a screen-space ribbon. Two triangles per quad,

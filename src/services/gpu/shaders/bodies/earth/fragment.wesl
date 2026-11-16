@@ -9,7 +9,7 @@
 // 'earthRenderer.ts' header). Design background:
 // docs/superpowers/plans/completed/2026-07-29-earth-surface-virtual-texture-a-to-d.md.
 //
-//   roughness = mix(clamp(mat.r * roughnessBase, MIN_ROUGHNESS, 1), u.oceanRoughness, mat.g)
+//   roughness = mix(clamp(mat.r * roughnessBase, MIN_ROUGHNESS, 1), uniforms.oceanRoughness, mat.g)
 //   direct    = pbrDirect(n, v, l, albedo, roughness, f0)
 //               * (1 - cloudShadow.r * cloudShadowStrength)
 //   colour    = direct * sunIrradiance + ambientLight * albedo
@@ -23,7 +23,7 @@
 // own cloud coverage dims 'nightLights' city-lights under overcast. The 1x1 placeholder reports coverage
 // 0 before the bitmap lands, so both couplings are inert.
 //
-// Earth reads a per-draw 'u.ambientLight' uniform rather than the shared
+// Earth reads a per-draw 'uniforms.ambientLight' uniform rather than the shared
 // 'AMBIENT' const other lit bodies use, so earthshine/moonlight stays
 // user-tunable; it seeds from the same 0.08 the const holds.
 //
@@ -71,7 +71,7 @@ import package::lib::util::raySphere;
 import package::lib::math::PI;
 import package::lib::math::TAU;
 
-@group(0) @binding(0) var<uniform> u: EarthSurfaceUniforms;
+@group(0) @binding(0) var<uniform> uniforms: EarthSurfaceUniforms;
 @group(0) @binding(1) var earthSampler: sampler;
 @group(0) @binding(2) var earthTexture: texture_2d<f32>;
 @group(0) @binding(3) var materialTexture: texture_2d<f32>;
@@ -102,44 +102,44 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
 
   // Normal map: baked nx(R)=+u=east, ny(G)=+v=north; 'perturbNormal'
   // reconstructs nz and rotates into local space (see the header). Placeholder
-  // encodes (0,0,1) -> n == Ng before the map lands.
+  // encodes (0,0,1) -> shadingNormal == Ng before the map lands.
   let nEnc = textureSample(normalTexture, earthSampler, in.uv).rg; // LINEAR RG
   let Ng = normalize(in.normalLocal); // renormalized -- interpolation shortens it
-  let n = perturbNormal(Ng, in.tangent, nEnc);
+  let shadingNormal = perturbNormal(Ng, in.tangent, nEnc);
   // View vector: 'normalLocal' doubles as the unit-sphere surface position here;
-  // 'u.camPosLocal' is the camera in the same local frame.
-  let v = normalize(u.camPosLocal - in.normalLocal);
-  let l = u.sunDirLocal;
+  // 'uniforms.camPosLocal' is the camera in the same local frame.
+  let viewDir = normalize(uniforms.camPosLocal - in.normalLocal);
+  let sunDir = uniforms.sunDirLocal;
 
-  // Ocean mask selects 'u.oceanRoughness' (Earth-scoped override of pbr.wesl's
+  // Ocean mask selects 'uniforms.oceanRoughness' (Earth-scoped override of pbr.wesl's
   // OCEAN_ROUGHNESS) over land roughness; MIN_ROUGHNESS floors land away from the
   // GGX singularity.
-  let roughness = mix(clamp(mat.r * u.roughnessBase, MIN_ROUGHNESS, 1.0), u.oceanRoughness, mat.g);
+  let roughness = mix(clamp(mat.r * uniforms.roughnessBase, MIN_ROUGHNESS, 1.0), uniforms.oceanRoughness, mat.g);
 
-  let directBase = pbrDirect(n, v, l, albedo, roughness, vec3<f32>(u.f0));
+  let directBase = pbrDirect(shadingNormal, viewDir, sunDir, albedo, roughness, vec3<f32>(uniforms.f0));
 
-  // Ground shadow (cloud deck above blocks sunlight): cast a ray from 'P', the
-  // GEOMETRIC surface position (not the perturbed shading normal 'n' -- the
+  // Ground shadow (cloud deck above blocks sunlight): cast a ray from 'surfacePos', the
+  // GEOMETRIC surface position (not the perturbed shading normal 'shadingNormal' -- the
   // shadow follows where the point sits, not how relief tilts it), toward the
-  // sun. 'P' sits inside the shell (radius ~1.002) and 'l' is already unit in the
+  // sun. 'surfacePos' sits inside the shell (radius ~1.002) and 'sunDir' is already unit in the
   // local frame, so raySphere's unit-rd precondition holds and its miss sentinel
   // is provably unreachable from inside the sphere -- no miss branch needed.
   // Dimming 'direct' BEFORE the sunIrradiance scale self-limits at the
   // terminator, where direct already tends to zero.
-  let P = normalize(in.normalLocal);
-  let roots = raySphere(P, l, vec3<f32>(0.0), u.cloudShellRadius);
-  let crossing = P + roots.y * l;
+  let surfacePos = normalize(in.normalLocal);
+  let roots = raySphere(surfacePos, sunDir, vec3<f32>(0.0), uniforms.cloudShellRadius);
+  let crossing = surfacePos + roots.y * sunDir;
   let shadowUv = dirToEquirectUv(normalize(crossing));
   let shadowCoverage = textureSample(cloudTexture, earthSampler, shadowUv).r;
-  let direct = directBase * (1.0 - shadowCoverage * u.cloudShadowStrength);
+  let direct = directBase * (1.0 - shadowCoverage * uniforms.cloudShadowStrength);
 
-  let colour = direct * u.sunIrradiance + u.ambientLight * albedo;
+  let colour = direct * uniforms.sunIrradiance + uniforms.ambientLight * albedo;
 
   // City lights are EMISSIVE -- added to the lit colour, never multiplied through
   // Lambert (see 'lib/nightLights.wesl'). 'NoL' is the RAW clamped term;
   // 'nightLights' owns the terminator fade, so it must not be pre-shaped here.
   let nightColour = textureSample(nightTexture, earthSampler, in.uv).rgb;
-  let NoL = max(dot(n, l), 0.0);
+  let NoL = max(dot(shadingNormal, sunDir), 0.0);
   // Cloud coverage at this fragment's own uv dims city lights (overcast hides
   // them from orbit); coverage 0 before the map lands makes this a no-op.
   let cloudCoverageHere = textureSample(cloudTexture, earthSampler, in.uv).r;

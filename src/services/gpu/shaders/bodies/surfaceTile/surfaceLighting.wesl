@@ -92,23 +92,23 @@ fn tileShadingNormal(
   let cells = f32(cellsU);
   let col = uv.x * cells;
   let rowF = uv.y * cells;
-  let i0 = clamp(floor(col), 0.0, cells - 1.0);
-  let j0 = clamp(floor(rowF), 0.0, cells - 1.0);
-  let cellU = col - i0;
-  let cellV = rowF - j0;
-  let nwPost = vec2<u32>(u32(i0), u32(j0));
+  let nwCol = clamp(floor(col), 0.0, cells - 1.0);
+  let nwRow = clamp(floor(rowF), 0.0, cells - 1.0);
+  let cellU = col - nwCol;
+  let cellV = rowF - nwRow;
+  let nwPost = vec2<u32>(u32(nwCol), u32(nwRow));
   let gNW = latticePostGradient(heightAtlas, heightLattice.xy, nwPost, cellsU);
   let gNE = latticePostGradient(heightAtlas, heightLattice.xy, nwPost + vec2<u32>(1u, 0u), cellsU);
   let gSW = latticePostGradient(heightAtlas, heightLattice.xy, nwPost + vec2<u32>(0u, 1u), cellsU);
   let gSE = latticePostGradient(heightAtlas, heightLattice.xy, nwPost + vec2<u32>(1u, 1u), cellsU);
-  let g = mix(mix(gNW, gNE, cellU), mix(gSW, gSE, cellU), cellV);
+  let postSlope = mix(mix(gNW, gNE, cellU), mix(gSW, gSE, cellU), cellV);
 
   // The 'max' is the polar guard: cos(lat) reaches 0 on the pole row.
   let lat = asin(clamp(Ng.z, -1.0, 1.0));
   let postSpacingNM = radiusM * patchSpanRad.y / cells;
   let postSpacingEM = max(radiusM * cos(lat) * patchSpanRad.x / cells, 1e-3);
-  let dhdE = g.x / postSpacingEM;
-  let dhdN = g.y / postSpacingNM;
+  let dhdE = postSlope.x / postSpacingEM;
+  let dhdN = postSlope.y / postSpacingNM;
   // The interpolated tangent is neither unit nor orthogonal to Ng any more,
   // so re-orthogonalize and re-normalize, as perturbNormal does.
   let eHat = normalize(tangent - Ng * dot(Ng, tangent));
