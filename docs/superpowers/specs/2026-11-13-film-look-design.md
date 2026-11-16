@@ -25,6 +25,7 @@ code, same VRAM.
 | R5 | One PR, prep commit first. The `URL_GATES` backlog item stays in the backlog. [kQDv Q4, Q5] |
 | R6 | Film off must not change performance; measured, not assumed (chat, 2026-11-13). |
 | R7 | Debug knobs stay in the DebugPanel; the grain must not repeat; chromatic aberration must be able to go strong; the raised cap must be area-aware (spike turns). |
+| R8 | The letterbox must survive a GPU-only capture (one that reads the swap texture, not the page): bars are frame code, not DOM. Letterbox on by default. The recorder gets a `--film` flag. (2026-11-16) |
 
 ### Decisions made in this spec (challenge freely)
 
@@ -32,13 +33,14 @@ code, same VRAM.
   and the film block sits under `if (FILM)`. The compositor keys its pipeline cache on
   `${blend}:${dstFormat}:${film}`, passing `constants: { FILM: 1 }` only for the film variant. Off, the
   compiled pipeline is today's code; the only residue is a larger uniform buffer (80 bytes, was 32).
-- **D2. The letterbox is two DOM bars, no frame code.** A `LetterboxBars` component beside the canvas,
-  below the HUD in stacking order and above the canvas, `pointer-events: none`, each bar
-  `height: max(0px, calc((100vh - 100vw / 2.39) / 2))`, shown while `film.enabled && film.letterbox`. It
-  covers the canvas and its GPU overlays (labels, rings) and leaves the HUD panels on top; the recorder and
-  the shot tool capture the composited page (`Page.captureScreenshot`, which already carries the tour's
-  DOM captions), so bars reach recordings. The builder check overturned the in-canvas version: the
-  executor gains no special case, the shader no lane, and the band's formula has one home, the CSS.
+- **D2. The letterbox is frame code: a `letterbox` content pass, last on `swap`.** (Rewritten 2026-11-16
+  under R8; the first ruling put the bars in the DOM.) `OVERLAYS` ends with its own render step
+  `{ target: 'swap', slab: COSMO, passes: ['letterbox'] }`, enabled by `filmLetterboxOn(film)` =
+  `enabled && letterbox`, drawn by `letterboxRenderer`: a bind-group-free covering triangle returning opaque
+  black, drawn twice under a scissor rect (top and bottom bars of `floor((h − w / 2.39) / 2)` target pixels,
+  `LETTERBOX_ASPECT` in `src/data/film/`), nothing when the frame is already wider. Drawn after every
+  overlay, so labels and rings fall under the bars; the dome rig has no `OVERLAYS`, so it never gets bars.
+  Off, the step encodes nothing (the look-off frame is today's frame, R6). The HUD stays DOM, above.
 - **D3. Streak has no switch**: `streakStrength === 0` is off (no passes, no fold), the same rule `veil` uses.
 - **D4. The grain seed is a value** from `EngineState.frameIndex`, incremented by `renderFrame` once per
   frame; the compositor holds no counter.
@@ -237,8 +239,9 @@ exponential falloff with tint dispersion; separable Gaussian, 24 taps each side)
   `write: enabled ? '1' : null`, `read: value === '1' ? { film: true } : {}`,
   `readAbsent: [setFilmEnabled(false)]`. `LinkIntent.film?: boolean`;
   `applyLinkSettingsSaga` puts `setFilmEnabled(intent.film)` when present.
-- Display section: one plain switch row, `label "Film look"` + `input.toggle`, the shape of the friction
-  and label switches (owner ruling 2026-11-13: no fold, no hint copy). Container wires
+- Display section: a header-shaped switch row between Bloom and HDR — toggle on the LEFT, then the uppercase
+  title, a blank where the chevron would be so the toggles line up (owner rulings 2026-11-13/16: no fold, no
+  hint copy, toggle left like the section headers). Container wires
   `selectFilmEnabled` → `setFilmEnabled`. Person and job: as a viewer I want the scene to feel filmed so a
   shot or a show reads as cinema, not a diagram. Place: after Bloom, before HDR. States: on/off only.
 - DebugPanel: one board, `FilmTuningSectionContainer` ("Film look"), after

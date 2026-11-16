@@ -165,6 +165,27 @@
   margin: 0;
 }
 
+/* A header-shaped switch row with no fold (Film look): the section header's pieces, chevron blank. */
+.switchHeader {
+  display: flex;
+  align-items: baseline;
+  padding: var(--space-3) 0 var(--space-2);
+}
+
+.switchHeaderChevron {
+  composes: chevron from './CollapsibleSection.module.css';
+  visibility: hidden;
+}
+
+.switchHeaderToggle {
+  composes: headerToggle from './CollapsibleSection.module.css';
+}
+
+.switchHeaderTitle {
+  composes: title from './CollapsibleSection.module.css';
+  cursor: pointer;
+}
+
 /*
  * LOD mode indicator — a tiny status line under the Auto-LOD checkbox that
  * tells the user whether the engine is in "auto (by zoom)" or "manual

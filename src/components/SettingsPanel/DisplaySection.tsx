@@ -253,15 +253,23 @@ function DisplaySection({
         </div>
       </CollapsibleSection>
 
-      <div className={styles.panelRow}>
-        <label htmlFor="film-look">Film look</label>
+      {/* A switch with nothing to unfold: the Bloom/HDR header shape (toggle, then
+          the uppercase title) minus the chevron, which stays as a blank so the
+          toggles line up down the column. */}
+      <div className={styles.switchHeader}>
+        <span className={styles.switchHeaderChevron} aria-hidden>
+          ▸
+        </span>
         <input
           id="film-look"
           type="checkbox"
-          className={styles.toggle}
+          className={styles.switchHeaderToggle}
           checked={filmEnabled}
           onChange={(e) => onFilmEnabledChange(e.target.checked)}
         />
+        <label htmlFor="film-look" className={styles.switchHeaderTitle}>
+          Film look
+        </label>
       </div>
 
       {/* Master toggle drives settings.hdr.enabled, which the swap-chain saga
