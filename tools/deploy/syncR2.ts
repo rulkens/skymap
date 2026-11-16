@@ -21,6 +21,7 @@ import { OCTREE_CATALOGS } from './r2/octreeCatalogs';
 import { collectExtraFiles, missingExtraFiles } from './r2/collectExtraFiles';
 import { collectHiResImages } from './r2/collectHiResImages';
 import { collectMeshSources } from './r2/collectMeshSources';
+import { collectCloudInputs } from './r2/collectCloudInputs';
 import { collectTextureImages } from './r2/collectTextureImages';
 import { DATA_FAMILIES } from './r2/dataFamilies';
 import { groupByDataFamily } from './r2/groupByDataFamily';
@@ -112,6 +113,22 @@ function buildGroups(): R2SyncGroup[] {
         refuseOverwrite: false,
       },
       cacheControl: NO_CACHE,
+      purge: false,
+      gzipOnWire: false,
+      offline: false,
+    },
+    // The nightly clouds leg fetches these from here, not NASA (fetch-cloud-inputs). Immutable
+    // because textures.sha256 pins every byte: a changed file would fail that check anyway.
+    {
+      label: 'Cloud bake inputs',
+      files: collectCloudInputs('.'),
+      transport: {
+        kind: 'bulk',
+        localRoot: RAW_DATA['textures.dir'].path,
+        keyRoot: RAW_DATA['textures.dir'].path,
+        refuseOverwrite: false,
+      },
+      cacheControl: IMMUTABLE,
       purge: false,
       gzipOnWire: false,
       offline: false,
