@@ -7,28 +7,14 @@ import { encodeAsteroidFocusId } from './encodeAsteroidFocusId';
 import { asteroidLabel } from '../../selection/present/asteroidLabel';
 import { asteroidNameAt } from '../../catalog/utils/asteroidNameAt';
 import { MESH_ASTEROID_NUMBERS } from '../../catalog/data/meshAsteroidNumbers';
+import { awaitSlotValue } from '../../../../utils/loading/awaitSlotValue';
 import type { LayerSearchEntry } from '../../../../@types/engine/layer/LayerSearchEntry';
-import type { LoadedAsteroids } from '../../catalog/@types/LoadedAsteroids';
-import type { LoadState } from '../../../../@types/loading/LoadState';
 import type { AsteroidsRuntime } from '../../@types/AsteroidsRuntime';
-
-/** The committed catalog, or null if the slot errors or is released before one lands. */
-const loaded = (runtime: AsteroidsRuntime): Promise<LoadedAsteroids | null> =>
-  new Promise((resolve) => {
-    const now = runtime.slot.current();
-    if (now !== null) return resolve(now);
-    const unsubscribe = runtime.slot.subscribe((state: LoadState<LoadedAsteroids>) => {
-      const value = runtime.slot.current();
-      if (value === null && state.kind !== 'error' && state.kind !== 'idle') return;
-      unsubscribe();
-      resolve(value);
-    });
-  });
 
 export async function* asteroidsSearch(
   runtime: AsteroidsRuntime,
 ): AsyncIterable<readonly LayerSearchEntry[]> {
-  const catalog = await loaded(runtime);
+  const catalog = await awaitSlotValue(runtime.slot);
   if (catalog === null) return;
   const { names } = catalog;
   const rows: LayerSearchEntry[] = [];
