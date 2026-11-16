@@ -7,7 +7,7 @@
 import package::zoneOfAvoidance::io::Uniforms;
 import package::zoneOfAvoidance::io::VsOut;
 
-@group(0) @binding(0) var<uniform> u: Uniforms;
+@group(0) @binding(0) var<uniform> uniforms: Uniforms;
 
 // Fullscreen quad corners in NDC, triangle-list order.
 const CORNERS = array<vec2<f32>, 6>(
@@ -21,13 +21,13 @@ const CORNERS = array<vec2<f32>, 6>(
 
 @vertex
 fn vs(@builtin(vertex_index) vid: u32) -> VsOut {
-  let c = CORNERS[vid];
+  let corner = CORNERS[vid];
   var out: VsOut;
   // Depth 0 (near plane in ZO); the HDR pass has no depth test, so this only
   // has to sit inside the clip volume so the quad isn't culled.
-  out.clipPos = vec4<f32>(c, 0.0, 1.0);
+  out.clipPos = vec4<f32>(corner, 0.0, 1.0);
   // The quad always fills its target; the window rect maps each target
   // corner to the canvas point it stands for.
-  out.ndc = u.windowNdcCentre + c * u.windowNdcHalf;
+  out.ndc = uniforms.windowNdcCentre + corner * uniforms.windowNdcHalf;
   return out;
 }

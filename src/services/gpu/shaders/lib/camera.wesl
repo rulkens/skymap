@@ -108,10 +108,10 @@ struct CameraUniforms {
 // site and to future refactors that put the camera UBO at a
 // different group/binding.
 //
-// Equivalent inline form: 'u.cam.viewProj * vec4<f32>(p, 1.0)'.
+// Equivalent inline form: 'u.cam.viewProj * vec4<f32>(worldPos, 1.0)'.
 
-fn worldToClip(cam: CameraUniforms, p: vec3<f32>) -> vec4<f32> {
-  return cam.viewProj * vec4<f32>(p, 1.0);
+fn worldToClip(cam: CameraUniforms, worldPos: vec3<f32>) -> vec4<f32> {
+  return cam.viewProj * vec4<f32>(worldPos, 1.0);
 }
 
 // ── worldEyeDepth ───────────────────────────────────────────────────
@@ -129,14 +129,14 @@ fn worldToClip(cam: CameraUniforms, p: vec3<f32>) -> vec4<f32> {
 // caller passes its renderer-specific 'u.camPosWorld' (or whatever
 // it spelled the field) as 'eyeWS' here.
 //
-// Edge case: if the camera is exactly at p, the returned distance is
+// Edge case: if the camera is exactly at worldPos, the returned distance is
 // 0. The two known consumers (apparent-size + thumbnail gating)
 // already 'max(d, 0.001)' before dividing, so we don't clamp here —
 // callers that need it know better than this generic helper how
 // small a floor they want.
 
-fn worldEyeDepth(eyeWS: vec3<f32>, p: vec3<f32>) -> f32 {
-  return length(eyeWS - p);
+fn worldEyeDepth(eyeWS: vec3<f32>, worldPos: vec3<f32>) -> f32 {
+  return length(eyeWS - worldPos);
 }
 
 // ── Frustum-tangent rays ────────────────────────────────────────────
@@ -156,15 +156,15 @@ fn cameraRayFromNdc(
 ) -> vec3<f32> {
   let mid = 0.5 * (frustum.xz + frustum.yw);
   let half = 0.5 * (frustum.yw - frustum.xz);
-  let t = mid + ndc * half;
-  return normalize(camRight * t.x + camUp * t.y + camFwd);
+  let tangent = mid + ndc * half;
+  return normalize(camRight * tangent.x + camUp * tangent.y + camFwd);
 }
 
 // The inverse: the NDC a view-space tangent (x/z, y/z) lands on.
-fn ndcFromTangent(t: vec2<f32>, frustum: vec4<f32>) -> vec2<f32> {
+fn ndcFromTangent(tangent: vec2<f32>, frustum: vec4<f32>) -> vec2<f32> {
   let mid = 0.5 * (frustum.xz + frustum.yw);
   let half = 0.5 * (frustum.yw - frustum.xz);
-  return (t - mid) / half;
+  return (tangent - mid) / half;
 }
 
 // cameraRayFromNdc from a fullscreen pass's uv ('FullscreenOut.uv' in [0,1],

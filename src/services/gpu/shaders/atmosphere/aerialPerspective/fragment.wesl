@@ -7,13 +7,13 @@
 // Bindings 0-4 are the SHELL's, hoisted by importing 'sampleShellSegment';
 // redeclaring any of them is a duplicate-binding error, and naming one hoisted
 // without being imported ('skyViewLut') fails 'unresolved identifier' — hence
-// the by-name imports of 'u' and 'lutSamp'.
+// the by-name imports of 'uniforms' and 'lutSamp'.
 import package::atmosphere::aerialPerspective::froxelSlices::froxelCoord;
 import package::atmosphere::aerialPerspective::froxelSlices::froxelSliceStartKm;
 import package::atmosphere::scattering::ScatteringParams;
 import package::atmosphere::shell::fragment::lutSamp;
 import package::atmosphere::shell::fragment::sampleShellSegment;
-import package::atmosphere::shell::fragment::u;
+import package::atmosphere::shell::fragment::uniforms;
 import package::lib::fullscreenTri::FullscreenOut;
 import package::lib::fullscreenTri::fullscreenVertex;
 import package::lib::sceneDepthRay::FAR_DEPTH;
@@ -25,8 +25,8 @@ import package::lib::util::raySphere;
 // does not preserve an imported entry point's NAME for the pipeline's lookup
 // ('lib/fullscreenTri.wesl').
 @vertex
-fn vs(@builtin(vertex_index) vi: u32) -> FullscreenOut {
-  return fullscreenVertex(vi);
+fn vs(@builtin(vertex_index) vertexIndex: u32) -> FullscreenOut {
+  return fullscreenVertex(vertexIndex);
 }
 
 @group(0) @binding(5) var<uniform> params: ScatteringParams;
@@ -60,31 +60,31 @@ struct AerialSample {
 fn aerialSample(in: FullscreenOut) -> AerialSample {
   var out: AerialSample;
   let depth = textureLoad(sceneDepth, vec2<i32>(in.pos.xy), 0);
-  let dir = sceneRayDir(in.uv, u.invMvp, u.camPosLocal);
+  let dir = sceneRayDir(in.uv, uniforms.invMvp, uniforms.camPosLocal);
 
   if (depth == FAR_DEPTH) {
     // SKY — today's shell answer, with its alpha semantics untouched: the star
     // and deep-space washout the compositor derives from 'foreground:0's alpha
     // is exactly what the multiply/add pair wrote before this pass existed.
-    let s = sampleShellSegment(dir, 0.0, false);
-    out.transmit = vec4<f32>(s.transmit, 1.0 - s.coverage);
-    out.emission = vec4<f32>(s.emission, s.coverage);
-    out.hit = s.hit;
+    let shell = sampleShellSegment(dir, 0.0, false);
+    out.transmit = vec4<f32>(shell.transmit, 1.0 - shell.coverage);
+    out.emission = vec4<f32>(shell.emission, shell.coverage);
+    out.hit = shell.hit;
     return out;
   }
 
-  let tEnd = sceneRayDistance(in.uv, depth, u.invMvp, u.camPosLocal);
-  let top = raySphere(u.camPosLocal, dir, PLANET_CENTER, 1.0);
+  let tEnd = sceneRayDistance(in.uv, depth, uniforms.invMvp, uniforms.camPosLocal);
+  let top = raySphere(uniforms.camPosLocal, dir, PLANET_CENTER, 1.0);
   let tEndKm = tEnd * params.atmosphereTopKm;
-  let boundKm = froxelSliceStartKm(textureDimensions(froxelInScatter).z, u.froxelSliceKm);
+  let boundKm = froxelSliceStartKm(textureDimensions(froxelInScatter).z, uniforms.froxelSliceKm);
 
   // Same altitude every pixel this frame sees, but nothing in the bound
   // uniforms carries it as its own field: it is cheaper to re-derive from
-  // 'u.camPosLocal'/'u.bottomRadius' per fragment than to grow the record for
+  // 'uniforms.camPosLocal'/'uniforms.bottomRadius' per fragment than to grow the record for
   // one per-frame scalar. Below 'HANDOFF_HORIZON_START' the horizon is still
   // short of the froxel bound, so no ray can see the seam.
-  let viewHeight = length(u.camPosLocal);
-  let horizonKm = sqrt(max(viewHeight * viewHeight - u.bottomRadius * u.bottomRadius, 0.0)) *
+  let viewHeight = length(uniforms.camPosLocal);
+  let horizonKm = sqrt(max(viewHeight * viewHeight - uniforms.bottomRadius * uniforms.bottomRadius, 0.0)) *
     params.atmosphereTopKm;
   let shellWeight =
     smoothstep(HANDOFF_HORIZON_START, HANDOFF_HORIZON_END, horizonKm / boundKm);
@@ -98,29 +98,29 @@ fn aerialSample(in: FullscreenOut) -> AerialSample {
   // so the froxel reads are skipped outright either way. 'tNear' is 0 inside
   // the shell, so the segment's front-body discard never fires on this path.
   if (tEndKm >= boundKm || tEnd >= top.y || shellWeight >= 1.0) {
-    let s = sampleShellSegment(dir, tEnd, true);
-    out.transmit = vec4<f32>(s.transmit, 1.0);
-    out.emission = vec4<f32>(s.emission, 0.0);
-    out.hit = s.hit;
+    let shell = sampleShellSegment(dir, tEnd, true);
+    out.transmit = vec4<f32>(shell.transmit, 1.0);
+    out.emission = vec4<f32>(shell.emission, 0.0);
+    out.hit = shell.hit;
     return out;
   }
 
   // The shell frame puts the atmosphere TOP at radius 1 and the volume is
   // indexed in km, so 'atmosphereTopKm' is the one scale between them. Below
   // one slice no texel exists, and 'identityMix' fades back to no medium.
-  let c = froxelCoord(tEndKm, u.froxelSliceKm, textureDimensions(froxelInScatter).z);
-  let p = vec3<f32>(in.uv, c.w);
+  let froxel = froxelCoord(tEndKm, uniforms.froxelSliceKm, textureDimensions(froxelInScatter).z);
+  let volumeCoord = vec3<f32>(in.uv, froxel.w);
   let inScatter =
-    mix(textureSampleLevel(froxelInScatter, lutSamp, p, 0.0).rgb, vec3<f32>(0.0), c.identityMix);
+    mix(textureSampleLevel(froxelInScatter, lutSamp, volumeCoord, 0.0).rgb, vec3<f32>(0.0), froxel.identityMix);
   let transmittance =
-    mix(textureSampleLevel(froxelTransmittance, lutSamp, p, 0.0).rgb, vec3<f32>(1.0), c.identityMix);
+    mix(textureSampleLevel(froxelTransmittance, lutSamp, volumeCoord, 0.0).rgb, vec3<f32>(1.0), froxel.identityMix);
 
   var transmit = transmittance;
-  var emission = inScatter * u.exposure;
+  var emission = inScatter * uniforms.exposure;
   if (shellWeight > 0.0) {
-    let s = sampleShellSegment(dir, tEnd, true);
-    transmit = mix(transmit, s.transmit, shellWeight);
-    emission = mix(emission, s.emission, shellWeight);
+    let shell = sampleShellSegment(dir, tEnd, true);
+    transmit = mix(transmit, shell.transmit, shellWeight);
+    emission = mix(emission, shell.emission, shellWeight);
   }
 
   // Alpha passes through untouched (multiply by 1, add 0): opaque ground must
@@ -133,11 +133,11 @@ fn aerialSample(in: FullscreenOut) -> AerialSample {
 
 @fragment
 fn fsAerialMultiply(in: FullscreenOut) -> @location(0) vec4<f32> {
-  let s = aerialSample(in);
-  if (!s.hit) {
+  let aerial = aerialSample(in);
+  if (!aerial.hit) {
     discard;
   }
-  return s.transmit;
+  return aerial.transmit;
 }
 
 // A probe face has no compositor: its stars sit in the same target, so the sky's
@@ -145,18 +145,18 @@ fn fsAerialMultiply(in: FullscreenOut) -> @location(0) vec4<f32> {
 // scale them here. Plain 'transmit' would leave ~90% of a star in a noon sky.
 @fragment
 fn fsProbeSkyMultiply(in: FullscreenOut) -> @location(0) vec4<f32> {
-  let s = aerialSample(in);
-  if (!s.hit) {
+  let aerial = aerialSample(in);
+  if (!aerial.hit) {
     discard;
   }
-  return vec4<f32>(s.transmit.a);
+  return vec4<f32>(aerial.transmit.a);
 }
 
 @fragment
 fn fsAerialAdd(in: FullscreenOut) -> @location(0) vec4<f32> {
-  let s = aerialSample(in);
-  if (!s.hit) {
+  let aerial = aerialSample(in);
+  if (!aerial.hit) {
     discard;
   }
-  return s.emission;
+  return aerial.emission;
 }

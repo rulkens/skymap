@@ -4,10 +4,10 @@
 //
 // FRAME CONTRACT: 'camPosLocal' (metres, relative to this body's centre) and
 // 'sunDirLocal' are both in the HOST body's fixed axes -- the axes the vertex
-// stage's 'localPos = u.model * position' lands in, NOT the body's own frame
-// that 'utils/camera/bodyCompose/sunDirLocal.ts' returns. 'u.model' is the body's tumble
+// stage's 'localPos = uniforms.model * position' lands in, NOT the body's own frame
+// that 'utils/camera/bodyCompose/sunDirLocal.ts' returns. 'uniforms.model' is the body's tumble
 // rotation only (for rotating normal/tangent); the view rotation lives in
-// 'u.mvp' alone.
+// 'uniforms.mvp' alone.
 // The reflection probe is CAPTURED in these host axes too ('scheduleProbeCapture'
 // hands the host orientation to the face cameras), so 'n'/'r' index it as-is.
 //
@@ -53,7 +53,7 @@ struct MeshBodyUniforms {
 
 struct MeshBodyVSOut {
   @builtin(position) clip: vec4<f32>,
-  // Normal and tangent rotated by 'u.model' alone -- host axes, NOT view space.
+  // Normal and tangent rotated by 'uniforms.model' alone -- host axes, NOT view space.
   @location(0) worldNormal: vec3<f32>,
   // 'w' is the bake's handedness (+/-1); it rides through untouched, and the
   // fragment's bitangent is 'cross(n, t.xyz) * t.w'.

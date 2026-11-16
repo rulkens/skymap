@@ -98,7 +98,7 @@ struct VolumeUniforms {
   frame: f32,
 };
 
-@group(0) @binding(0) var<uniform> u: VolumeUniforms;
+@group(0) @binding(0) var<uniform> uniforms: VolumeUniforms;
 @group(0) @binding(1) var volume: texture_3d<f32>;
 @group(0) @binding(2) var volumeSampler: sampler;
 // The palette LUT is stored as an N x 1 2D texture, NOT a texture_1d.
@@ -188,7 +188,7 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
   // Ray setup (world→local reconstruction, AABB intersection) is the
   // shared skeleton in lib::volumeRaymarch — see its docblocks for the
   // normalize-after-invModel landmine.
-  let ray = localRayFromWorld(u.invModelMatrix, u.cameraPosWorld, in.worldPos);
+  let ray = localRayFromWorld(uniforms.invModelMatrix, uniforms.cameraPosWorld, in.worldPos);
   let rayOriginLocal = ray.origin;
   let rayDirLocal = ray.dir;
 
@@ -226,14 +226,14 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
   // failure mode the user reported.  The constants 7.13 / 13.71 are
   // arbitrary irrationals that don't share factors with anything in
   // the hash mixer.
-  let jitterSeed = fragCoord.xy + vec2<f32>(u.frame * 7.13, u.frame * 13.71);
+  let jitterSeed = fragCoord.xy + vec2<f32>(uniforms.frame * 7.13, uniforms.frame * 13.71);
   let jitter = hash21Hq(jitterSeed) * stepLength;
   var accum = vec4<f32>(0.0);
-  var t = tMin + jitter;
-  for (var i = 0; i < STEP_COUNT; i = i + 1) {
-    let p = rayOriginLocal + rayDirLocal * t;
+  var rayDistance = tMin + jitter;
+  for (var stepIndex = 0; stepIndex < STEP_COUNT; stepIndex = stepIndex + 1) {
+    let samplePos = rayOriginLocal + rayDirLocal * rayDistance;
     // Sample the 3D texture in [0,1]^3 -- same coordinate system as the
-    // local AABB, so 'p' is directly the texture coordinate.
+    // local AABB, so 'samplePos' is directly the texture coordinate.
     //
     // Why textureSampleLevel with explicit LOD 0 instead of textureSample:
     // textureSample requires UNIFORM control flow (it computes implicit
@@ -243,7 +243,7 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
     // takes an explicit LOD instead of computing one, so it works in
     // non-uniform control flow.  Our 3D texture has only one mip level
     // anyway, so explicit LOD 0 is exactly what we want.
-    let sampleValue = textureSampleLevel(volume, volumeSampler, p, 0.0).r;
+    let sampleValue = textureSampleLevel(volume, volumeSampler, samplePos, 0.0).r;
     // Window the sample around the 0.5 midpoint: high contrast widens
     // the deadband (suppressing near-mean noise) AND stretches the
     // surviving range across the full palette.  Returns (signedT,
@@ -252,7 +252,7 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
     // contrast=1 (identity) — branching would break the uniform-
     // control-flow contract that lets us call textureSampleLevel
     // below.
-    let window = applyContrastWindow(sampleValue, u.contrast, u.contrastCenter, u.trim);
+    let window = applyContrastWindow(sampleValue, uniforms.contrast, uniforms.contrastCenter, uniforms.trim);
     let signedT = window.x;
     let visibility = window.y;
     // Look up colour through the palette LUT (an N x 1 2D texture; see
@@ -301,11 +301,11 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
     //     "the cube silhouette is visible").  Cubes that don't want
     //     this set both envelope edges past √3 and the multiplier is
     //     pinned to 1.0 — same shader path, no branching.
-    let envelope = sphericalEnvelope(p, u.envelopeInner, u.envelopeOuter);
-    let alpha = lut.a * u.intensity * u.densityScale * stepLength
+    let envelope = sphericalEnvelope(samplePos, uniforms.envelopeInner, uniforms.envelopeOuter);
+    let alpha = lut.a * uniforms.intensity * uniforms.densityScale * stepLength
               * visibility * envelope;
     // Bright-end-weighted exposure boost.  An earlier draft scaled
-    // every voxel uniformly by exposure (rgb * alpha * u.exposure),
+    // every voxel uniformly by exposure (rgb * alpha * uniforms.exposure),
     // which brightened the mid-tone "warm" band just as much as the
     // peaks — so the peaks never visually stood out as HDR blow-out
     // even though their accumulated rgb did exceed 1.0.  The
@@ -323,15 +323,15 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
     // stays LDR-bounded; only peaks push past the LUT's brightest
     // entry into the "blow out to white" regime that the rgba16float
     // target + tonemap pass produce.
-    let halfRange = max(u.contrastCenter, 1.0 - u.contrastCenter);
-    let dev = abs(signedT - u.contrastCenter) / max(halfRange, 1e-3);
+    let halfRange = max(uniforms.contrastCenter, 1.0 - uniforms.contrastCenter);
+    let dev = abs(signedT - uniforms.contrastCenter) / max(halfRange, 1e-3);
     let blowout = smoothstep(0.5, 1.0, dev);
-    let highlightGain = 1.0 + blowout * max(u.exposure - 1.0, 0.0);
+    let highlightGain = 1.0 + blowout * max(uniforms.exposure - 1.0, 0.0);
     let contrib = vec4<f32>(lut.rgb * alpha * highlightGain, alpha);
     // Front-to-back over-compositing within this field.
     accum = accum + (1.0 - accum.a) * contrib;
     if (accum.a > SATURATION_THRESHOLD) { break; }
-    t = t + stepLength;
+    rayDistance = rayDistance + stepLength;
   }
   // Apply the per-field fade opacity. Multiplying the entire vec4
   // (rgb * a, a) by a scalar preserves the premultiplied-alpha

@@ -5,14 +5,14 @@
 
 import package::markerLines::io::VsIn;
 import package::markerLines::io::VsOut;
-// 'u' is imported, not redeclared: a second '@group(0) @binding(0)' here
+// 'uniforms' is imported, not redeclared: a second '@group(0) @binding(0)' here
 // would conflict with vertex.wesl's existing declaration.
-import package::markerLines::vertex::u;
+import package::markerLines::vertex::uniforms;
 import package::markerLines::vertex::expandMarkerLineQuad;
 import package::lib::sceneDepth::subjectDepthVerdict;
 
 @vertex
 fn vsOcclude(input: VsIn) -> VsOut {
-  let verdict = subjectDepthVerdict(u.cam, input.fromAndWidth.xyz, input.occludeNearKm);
+  let verdict = subjectDepthVerdict(uniforms.cam, input.fromAndWidth.xyz, input.occludeNearKm);
   return expandMarkerLineQuad(input, max(input.occludeWeight, verdict));
 }

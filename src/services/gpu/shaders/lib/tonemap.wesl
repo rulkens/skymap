@@ -50,8 +50,8 @@
 // genuinely clipping the HDR target, which tells you whether the
 // 'looks blown out' problem is upstream (raw radiance too bright) or
 // downstream (tone-map curve choice).
-fn applyLinear(c: vec3<f32>) -> vec3<f32> {
-  return clamp(c, vec3<f32>(0.0), vec3<f32>(1.0));
+fn applyLinear(color: vec3<f32>) -> vec3<f32> {
+  return clamp(color, vec3<f32>(0.0), vec3<f32>(1.0));
 }
 
 // Reinhard-extended per channel: c * (1 + c/W²) / (1 + c).
@@ -61,29 +61,29 @@ fn applyLinear(c: vec3<f32>) -> vec3<f32> {
 // peaks beyond the configured whitepoint).  The 'extended' variant
 // (vs the textbook 'c / (1+c)') gives the artist explicit control over
 // where white sits, instead of asymptoting to 1.0 only at infinity.
-fn applyReinhard(c: vec3<f32>, wsq: f32) -> vec3<f32> {
-  let y = c * (vec3<f32>(1.0) + c / vec3<f32>(wsq)) / (vec3<f32>(1.0) + c);
-  return clamp(y, vec3<f32>(0.0), vec3<f32>(1.0));
+fn applyReinhard(color: vec3<f32>, wsq: f32) -> vec3<f32> {
+  let mapped = color * (vec3<f32>(1.0) + color / vec3<f32>(wsq)) / (vec3<f32>(1.0) + color);
+  return clamp(mapped, vec3<f32>(0.0), vec3<f32>(1.0));
 }
 
 // Asinh stretch (Lupton-style): asinh(k·c) / asinh(k).
 // Reaches exactly 1.0 at c=1; for c>1 grows logarithmically and
 // (eventually) past 1.  We clamp at the end so an outlier peak never
 // pushes a swap-chain pixel >1 — same safety contract as every other
-// curve in this file.  The 'k' (softness) parameter controls the
+// curve in this file.  The 'softness' parameter controls the
 // transition between near-linear behaviour at small c and logarithmic
-// behaviour at large c — larger k means more aggressive lift of the
+// behaviour at large c — larger softness means more aggressive lift of the
 // dim end.  The natural fit for astronomical brightness because
 // stellar magnitudes are themselves a log scale.
-fn applyAsinh(c: vec3<f32>, k: f32) -> vec3<f32> {
+fn applyAsinh(color: vec3<f32>, softness: f32) -> vec3<f32> {
   // WGSL has no vector asinh — hand-vectorise.
-  let denom = asinh(k);
-  let y = vec3<f32>(
-    asinh(k * c.x) / denom,
-    asinh(k * c.y) / denom,
-    asinh(k * c.z) / denom,
+  let denom = asinh(softness);
+  let mapped = vec3<f32>(
+    asinh(softness * color.x) / denom,
+    asinh(softness * color.y) / denom,
+    asinh(softness * color.z) / denom,
   );
-  return clamp(y, vec3<f32>(0.0), vec3<f32>(1.0));
+  return clamp(mapped, vec3<f32>(0.0), vec3<f32>(1.0));
 }
 
 // Gamma 2.0 = sqrt of clamped input.  WGSL 'pow(c, 0.5)' works but
@@ -92,8 +92,8 @@ fn applyAsinh(c: vec3<f32>, k: f32) -> vec3<f32> {
 // shoulder, no toe, and no shape parameter — but the sqrt curve does
 // lift midtones cheaply, which is sometimes what you want for an A/B
 // against the heavier curves above.
-fn applyGamma2(c: vec3<f32>) -> vec3<f32> {
-  return sqrt(clamp(c, vec3<f32>(0.0), vec3<f32>(1.0)));
+fn applyGamma2(color: vec3<f32>) -> vec3<f32> {
+  return sqrt(clamp(color, vec3<f32>(0.0), vec3<f32>(1.0)));
 }
 
 // ACES filmic (Narkowicz 2015 closed-form approximation).  Lifts toe,
@@ -103,14 +103,14 @@ fn applyGamma2(c: vec3<f32>) -> vec3<f32> {
 // reference transform; do NOT 're-derive' or 'tidy' them — small
 // tweaks visibly change the curve and break the 'this looks like
 // cinema' property the curve is chosen for.
-fn applyAces(c: vec3<f32>) -> vec3<f32> {
-  let a = 2.51;
-  let b = 0.03;
-  let d = 2.43;
-  let e = 0.59;
-  let f = 0.14;
+fn applyAces(color: vec3<f32>) -> vec3<f32> {
+  let numeratorQuadratic = 2.51;
+  let numeratorLinear = 0.03;
+  let denominatorQuadratic = 2.43;
+  let denominatorLinear = 0.59;
+  let denominatorConstant = 0.14;
   return clamp(
-    (c * (a * c + vec3<f32>(b))) / (c * (d * c + vec3<f32>(e)) + vec3<f32>(f)),
+    (color * (numeratorQuadratic * color + vec3<f32>(numeratorLinear))) / (color * (denominatorQuadratic * color + vec3<f32>(denominatorLinear)) + vec3<f32>(denominatorConstant)),
     vec3<f32>(0.0),
     vec3<f32>(1.0),
   );

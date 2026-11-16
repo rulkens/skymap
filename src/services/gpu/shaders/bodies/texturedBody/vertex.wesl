@@ -31,8 +31,8 @@
 // ## Bindings
 //
 // '@group(0) @binding(0)' holds 'TexturedBodyUniforms' (176 bytes), visible in
-// both stages; this one reads only 'u.mvp'. The declaration is module-local
-// (WESL has no global state), so 'u' is redeclared here and 'u.mvp' passed into
+// both stages; this one reads only 'uniforms.mvp'. The declaration is module-local
+// (WESL has no global state), so 'uniforms' is redeclared here and 'uniforms.mvp' passed into
 // 'clip_from_local' -- the 'pass cam, don't capture' idiom.
 
 import package::bodies::texturedBody::io::TexturedBodyVSOut;
@@ -40,7 +40,7 @@ import package::lib::analyticSphere::PROXY_SCALE;
 import package::lib::sphere::TexturedBodyUniforms;
 import package::lib::sphere::clip_from_local;
 
-@group(0) @binding(0) var<uniform> u: TexturedBodyUniforms;
+@group(0) @binding(0) var<uniform> uniforms: TexturedBodyUniforms;
 
 @vertex
 fn vs(@location(0) position: vec3<f32>, @location(1) uv: vec2<f32>) -> TexturedBodyVSOut {
@@ -48,7 +48,7 @@ fn vs(@location(0) position: vec3<f32>, @location(1) uv: vec2<f32>) -> TexturedB
   // The mesh uv is bound (one vertex-buffer layout serves every consumer of this
   // mesh) but unread: the uv is derived per fragment from the analytic hit.
   let proxy = position * PROXY_SCALE;
-  out.clip = clip_from_local(u.mvp, proxy);
+  out.clip = clip_from_local(uniforms.mvp, proxy);
   out.localPos = proxy;
   return out;
 }

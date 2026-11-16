@@ -41,24 +41,24 @@ import package::lib::camera::worldToClip;
 import package::lib::billboard::quadCorner;
 import package::lib::billboard::expandBillboardScreen;
 
-@group(0) @binding(0) var<uniform> u: CameraUniforms;
+@group(0) @binding(0) var<uniform> camera: CameraUniforms;
 
 @vertex
 fn vs(
-  @builtin(vertex_index) vi: u32,
+  @builtin(vertex_index) vertexIndex: u32,
   @location(0) position: vec3<f32>,
   @location(1) color: vec3<f32>,
   @location(2) brightness: f32,
 ) -> VSOut {
-  let center = worldToClip(u, position);
-  let corner = quadCorner(vi);
+  let center = worldToClip(camera, position);
+  let corner = quadCorner(vertexIndex);
 
   // Brighter glint -> bigger dot. Base 2 px so even the dimmest glint stays
   // legible; up to 8 px for a full-brightness body. Placeholder legibility
   // ramp, tuned at the visual gate.
   let sizePx = clamp(2.0 + 6.0 * brightness, 2.0, 8.0);
 
-  let offset = expandBillboardScreen(u, center, sizePx, corner);
+  let offset = expandBillboardScreen(camera, center, sizePx, corner);
 
   var out: VSOut;
   out.clip = center + vec4<f32>(offset, 0.0, 0.0);

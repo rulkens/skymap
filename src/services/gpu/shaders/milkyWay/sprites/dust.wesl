@@ -25,7 +25,7 @@
 // onto milkyWay/sprites/ (see the tool's wesl.toml) — one shader, two
 // consumers.
 
-import package::milkyWay::sprites::io::u;
+import package::milkyWay::sprites::io::uniforms;
 import package::milkyWay::sprites::io::spriteBillboardOffset;
 import package::lib::camera::worldToClip;
 import package::lib::cloudSprite::dustTransmittance;
@@ -47,43 +47,43 @@ fn vs(@location(0) corner: vec2<f32>,
       @location(2) inSize: f32,
       @location(3) inColor: vec3<f32>,
       @location(4) inOp: f32) -> VSOut {
-  var o: VSOut;
+  var vertexOut: VSOut;
 
-  let modelScale = u.params0.z;
+  let modelScale = uniforms.params0.z;
   let worldHalfExtent = inSize * modelScale;
 
   // Place the particle center through the model transform, then push the
   // billboard corner out along this instance's own eye-facing basis.
-  let center = (u.model * vec4<f32>(inPos, 1.0)).xyz;
-  let offsetWorld = spriteBillboardOffset(u.model, u.camPosModel.xyz, inPos, corner) * worldHalfExtent;
+  let center = (uniforms.model * vec4<f32>(inPos, 1.0)).xyz;
+  let offsetWorld = spriteBillboardOffset(uniforms.model, uniforms.camPosModel.xyz, inPos, corner) * worldHalfExtent;
 
   // Apparent size is ANGULAR — see stars.wesl's vertex stage for the full
   // rationale (a per-face projected size kinks a sprite straddling a dome
   // seam). distWorld: model-space distance through the model's uniform
   // scale (params0.z).
-  let distWorld = length(inPos - u.camPosModel.xyz) * modelScale;
+  let distWorld = length(inPos - uniforms.camPosModel.xyz) * modelScale;
   let halfRad = worldHalfExtent / max(distWorld, 1e-30);
-  let lPx = halfRad * u.cam.pxPerRad;
-  let apparent = lPx * 2.0 * length(vec2<f32>(1.0 / u.cam.viewportPx.x, 1.0 / u.cam.viewportPx.y));
-  let k = min(1.0, DUST_NDC_CAP / max(apparent, 1e-30));
+  let lPx = halfRad * uniforms.cam.pxPerRad;
+  let apparent = lPx * 2.0 * length(vec2<f32>(1.0 / uniforms.cam.viewportPx.x, 1.0 / uniforms.cam.viewportPx.y));
+  let sizeCapScale = min(1.0, DUST_NDC_CAP / max(apparent, 1e-30));
   // Every corner projected exactly and handed to the rasteriser untouched:
   // no clip-z clamp, for the reason stars.wesl gives at the same line.
-  o.pos = worldToClip(u.cam, center + offsetWorld * k);
-  o.uv = corner;
-  o.color = inColor;
-  o.op = inOp;
-  return o;
+  vertexOut.pos = worldToClip(uniforms.cam, center + offsetWorld * sizeCapScale);
+  vertexOut.uv = corner;
+  vertexOut.color = inColor;
+  vertexOut.op = inOp;
+  return vertexOut;
 }
 
 @fragment
-fn fs(i: VSOut) -> @location(0) vec4<f32> {
-  let r2 = dot(i.uv, i.uv);
-  if (r2 > 1.0) { discard; }
+fn fs(fragIn: VSOut) -> @location(0) vec4<f32> {
+  let radiusSq = dot(fragIn.uv, fragIn.uv);
+  if (radiusSq > 1.0) { discard; }
   // Extinction math (edge falloff + per-channel transmittance) lives in
   // lib/cloudSprite.wesl.
-  let T = dustTransmittance(r2, i.op);
-  // fadeAlpha mixes T toward vec3(1) (the multiplicative identity): at
-  // fadeAlpha 0 the dust stops darkening the scene entirely.
-  let fadeAlpha = u.params0.x;
-  return vec4<f32>(mix(vec3<f32>(1.0), T, fadeAlpha), 1.0);
+  let transmittance = dustTransmittance(radiusSq, fragIn.op);
+  // fadeAlpha mixes transmittance toward vec3(1) (the multiplicative
+  // identity): at fadeAlpha 0 the dust stops darkening the scene entirely.
+  let fadeAlpha = uniforms.params0.x;
+  return vec4<f32>(mix(vec3<f32>(1.0), transmittance, fadeAlpha), 1.0);
 }
