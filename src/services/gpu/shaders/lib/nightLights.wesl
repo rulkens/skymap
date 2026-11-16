@@ -30,15 +30,12 @@
 // raw clamped Lambert term 'NoL' (1 at the sub-solar point, 0 on the dark side)
 // straight in — it must not pre-shape it, or the band would be applied twice.
 //
-// ## The cloud seam — cloudAlpha
+// ## The cloud seam — cloudCoverage
 //
-// 'cloudAlpha' is the plan-D coupling seam, wired to its final shape NOW so plan
-// D changes no code here. In THIS plan (B) no cloud texture is bound, so the
-// caller passes '0.0' and '(1 - cloudAlpha)' is a no-op. When plan D binds the
-// cloud map it will sample coverage at the fragment's own uv and pass it here;
-// '(1 - cloudAlpha)' then dims city lights under overcast, the way clouds occlude
-// them from orbit. The multiply lives here (not in the fragment) so the emissive
-// term stays a single self-contained primitive.
+// Callers pass the cloud map's coverage at the fragment's own uv;
+// '(1 - cloudCoverage)' dims city lights under overcast, the way clouds occlude
+// them from orbit (0 before the map lands, a no-op). The multiply lives here
+// (not in the fragment) so the emissive term stays one self-contained primitive.
 //
 // ## Not unit-testable
 //
@@ -91,12 +88,11 @@ fn dayFactor(NoL: f32) -> f32 {
 //   NoL         : the caller's clamped 'max(dot(n, l), 0)' — 1 at the sub-solar
 //                 point, 0 on the dark side. Passed RAW; this function owns the
 //                 terminator shaping.
-//   cloudAlpha  : cloud coverage at the fragment's own uv — 0.0 in plan B, the
-//                 real sample in plan D (see the header's cloud-seam note).
+//   cloudCoverage : cloud coverage at the fragment's own uv (the header's cloud seam).
 //
-//   return nightColour * (1 - dayFactor(NoL)) * (1 - cloudAlpha) * NIGHT_BRIGHTNESS
+//   return nightColour * (1 - dayFactor(NoL)) * (1 - cloudCoverage) * NIGHT_BRIGHTNESS
 
-fn nightLights(nightColour: vec3<f32>, NoL: f32, cloudAlpha: f32) -> vec3<f32> {
+fn nightLights(nightColour: vec3<f32>, NoL: f32, cloudCoverage: f32) -> vec3<f32> {
   let nightWeight = 1.0 - dayFactor(NoL);
-  return nightColour * nightWeight * (1.0 - cloudAlpha) * NIGHT_BRIGHTNESS;
+  return nightColour * nightWeight * (1.0 - cloudCoverage) * NIGHT_BRIGHTNESS;
 }
