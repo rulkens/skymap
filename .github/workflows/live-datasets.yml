@@ -45,8 +45,6 @@ jobs:
       build: ${{ matrix.dataset.build }}
       timeout-min: ${{ matrix.dataset.timeoutMin }}
       setup-rust: ${{ matrix.dataset.setupRust }}
-      cache1-paths: ${{ matrix.dataset.cache1Paths }}
-      cache1-key: ${{ matrix.dataset.cache1Key }}
-      cache2-paths: ${{ matrix.dataset.cache2Paths }}
-      cache2-key: ${{ matrix.dataset.cache2Key }}
+      cache-paths: ${{ matrix.dataset.cachePaths }}
+      cache-key: ${{ matrix.dataset.cacheKey }}
     secrets: inherit

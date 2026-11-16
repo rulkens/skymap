@@ -10,9 +10,9 @@ export type LiveDataset = {
   build: string;
   files: readonly LiveFile[];
   timeoutMin: number;
-  /** CI caches for the build job; `key` is a repo file whose hash keys the cache. At most two. */
-  caches?: readonly { paths: readonly string[]; key: string }[];
-  /** The build job installs stable Rust first. */
+  /** A CI cache for the build job's inputs; `key` is a repo file whose hash keys the cache. */
+  cache?: { paths: readonly string[]; key: string };
+  /** The build job installs stable Rust and caches cargo's build (Swatinem/rust-cache). */
   setupRust?: boolean;
   /** The body-texture slot this dataset feeds; its files are named by `bodyTextureFilename`. */
   bodyTexture?: { bodyId: BodyTextureId; kind: TextureKind };

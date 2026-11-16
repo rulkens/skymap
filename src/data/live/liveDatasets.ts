@@ -20,13 +20,7 @@ export const LIVE_DATASETS: readonly LiveDataset[] = [
       gzip: false,
     })),
     timeoutMin: 45,
-    caches: [
-      {
-        paths: ['tools/cloud-bake-rs/target', '~/.cargo/registry'],
-        key: 'tools/cloud-bake-rs/Cargo.lock',
-      },
-      { paths: ['data/raw/textures'], key: 'data/raw/textures/textures.sha256' },
-    ],
+    cache: { paths: ['data/raw/textures'], key: 'data/raw/textures/textures.sha256' },
     setupRust: true,
     bodyTexture: { bodyId: 'earth', kind: 'clouds' },
   },

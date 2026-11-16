@@ -1813,15 +1813,19 @@ The surface tile manifests under `public/data/images/earth-tiles/` and
   state or imply endorsement by or affiliation with NOAA or JMA. If you modify
   these data, you may not state or imply that it is original, unaltered data."
   Commercial use of the Himawari part is pending JMA's answer; the maintainer
-  asked JMA on 2026-11-16. The web app ships with the credit below meanwhile.
+  asked JMA on 2026-11-16. Meanwhile the web app uses it, with the credit
+  lines below; the desktop kiosk waits on the answer (it mirrors no live
+  files, so it shows the built-in cloud map).
 - **Use:** Per item
-- **Attribution:**
-  - "Contains modified EUMETSAT Meteosat data 2026" (the year of the data).
-  - "Contains modified Himawari-9 data, Japan Meteorological Agency, via NOAA
-    and NASA GIBS; not original or endorsed by JMA".
-  - "We acknowledge the use of imagery provided by services from NASA's Global
-    Imagery Browse Services (GIBS), part of NASA's Earth Science Data and
-    Information System (ESDIS)."
+- **Attribution:** For EUMETSAT, required verbatim with the year of the data:
+  "Contains modified EUMETSAT Meteosat data 2026". For Himawari: "Contains
+  modified Himawari-9 data, Japan Meteorological Agency, via NOAA and NASA GIBS; not
+  original or endorsed by JMA". For GIBS: "We acknowledge the use of imagery
+  provided by services from NASA's Global Imagery Browse Services (GIBS), part
+  of NASA's Earth Science Data and Information System (ESDIS)." These lines are
+  shown on the website's data page for this source and on its credits page;
+  the app's splash and the desktop About name NASA GIBS, EUMETSAT and JMA
+  Himawari.
 - **Upstream:** <https://gibs.earthdata.nasa.gov/> and
   <https://view.eumetsat.int/>; details in `data/raw/clouds/README.md`.
 - **Enters skymap:** `npm run build-live-clouds`, run nightly by the Live

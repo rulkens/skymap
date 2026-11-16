@@ -179,10 +179,8 @@ export function fetchLiveFile(
   3. Check each tier with `checkCloudTier`.
   4. Call `writeLivePointer`.
 - `checkCloudTier(path: string, tierPx: number): Promise<void>` throws unless the file is `tierPx × tierPx/2` and grey.
-- The clouds row: three `files` (`image/webp`, `gzip: false`), `timeoutMin: 45`, and `bodyTexture: { bodyId: 'earth', kind: 'clouds', fileByTierPx: { 2048: …, 4096: …, 8192: … } }`.
-- Its `caches`:
-  - `tools/cloud-bake-rs/target` + `~/.cargo/registry`, keyed on `tools/cloud-bake-rs/Cargo.lock`;
-  - `data/raw/textures`, keyed on `data/raw/textures/textures.sha256`.
+- The clouds row: three `files` (`image/webp`, `gzip: false`) named by `bodyTextureFilename`, `timeoutMin: 45`, and `bodyTexture: { bodyId: 'earth', kind: 'clouds' }`.
+- Its CI: `setupRust` (stable Rust plus `Swatinem/rust-cache`, as ci.yml), and `cache` = `data/raw/textures`, keyed on `data/raw/textures/textures.sha256`.
 - Before the bake, `buildLiveClouds` runs `fetch-cloud-inputs -- --confirm` (a no-op when the cache hit).
 - Tests:
   - `it('rejects a tier with the wrong dimensions')`
@@ -231,7 +229,7 @@ export function bodyTextureUrls(req: BodyTextureReq): readonly (() => Promise<st
 - Rename the local pointer away, reload: the built-in map loads, with no grey ball.
 - Restore the pointer and make the dated file a non-image: the built-in map loads.
 - Shoot each case and send it to the owner as dash checks.
-- **Go-live gate:** PR C merges only after the owner confirms the Himawari terms, or the bake replaces that region with NOAA GMGSI.
+- **Himawari terms (owner ruling, 2026-11-16):** PR C ships the web app with the credit lines while the owner asks JMA; the kiosk waits on the answer (it mirrors no live keys, so it already shows the built-in map). No merge gate.
 
 ## Definition of Done
 
@@ -240,6 +238,6 @@ export function bodyTextureUrls(req: BodyTextureReq): readonly (() => Promise<st
 - [ ] Phase B: satellites publish through `live-datasets.yml`, a pointer and a dated file. `satellites.yml` is gone. The app reads satellites through the pointer.
 - [ ] Phase B: the lifecycle rule is applied, and one manual run is confirmed live.
 - [ ] Phase C: the clouds leg publishes yesterday's three tiers. The app shows them and falls back to the built-in map on a missing pointer, a 404 or a non-image (owner checks).
-- [ ] Phase C: the credits and attributions name GIBS and EUMETSAT. The Himawari terms are confirmed or replaced.
+- [ ] Phase C: the credits and attributions name GIBS, EUMETSAT and JMA Himawari, with the credit lines. JMA has been asked about the Himawari terms.
 - [ ] `npm test`, `npm run typecheck` and CI are green on each PR.
 - [ ] Backlog: the two adjacent findings from the spec are filed (cloud shell sharing the globe's texture; `textures.sha256` missing three Blue Marble months).

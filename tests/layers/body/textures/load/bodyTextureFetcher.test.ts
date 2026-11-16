@@ -100,6 +100,29 @@ describe('bodyTextureFetcher', () => {
       expect(urls()).toHaveLength(3);
       expect(urls()[2]).toMatch(/images\/textures\/earth-clouds-grey-2048\.webp$/);
     });
+
+    it('falls back when the daily file fails to decode', async () => {
+      fetch.mock.mockImplementation(async (url: string) =>
+        url.endsWith('live/v1/clouds.json') ? pointer() : image(),
+      );
+      vi.mocked(globalThis.createImageBitmap).mockRejectedValueOnce(new Error('bad webp'));
+      await bodyTextureFetcher(clouds, new AbortController().signal, () => {});
+      expect(urls()).toHaveLength(3);
+      expect(urls()[2]).toMatch(/images\/textures\/earth-clouds-grey-2048\.webp$/);
+    });
+
+    // A dropped slot must not go on to download the built-in map.
+    it('rethrows an abort instead of falling back', async () => {
+      const controller = new AbortController();
+      fetch.mock.mockImplementation(async () => {
+        controller.abort();
+        throw new DOMException('aborted', 'AbortError');
+      });
+      await expect(bodyTextureFetcher(clouds, controller.signal, () => {})).rejects.toThrow(
+        'aborted',
+      );
+      expect(urls()).toHaveLength(1);
+    });
   });
 
   it('uses only the built-in map for slots no dataset feeds', async () => {

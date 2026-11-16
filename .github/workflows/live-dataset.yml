@@ -22,18 +22,12 @@ on:
       setup-rust:
         type: boolean
         default: false
-      # Up to two caches, from the registry row's `caches`: newline-separated paths and the repo
-      # file whose hash keys the cache; empty when the row has fewer (tools/live/printLiveMatrix.ts).
-      cache1-paths:
+      # The registry row's `cache`: newline-separated paths and the repo file whose hash keys it;
+      # empty when the row has none (tools/live/printLiveMatrix.ts).
+      cache-paths:
         type: string
         default: ''
-      cache1-key:
-        type: string
-        default: ''
-      cache2-paths:
-        type: string
-        default: ''
-      cache2-key:
+      cache-key:
         type: string
         default: ''
 
@@ -63,19 +57,19 @@ jobs:
         if: inputs.setup-rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Cache 1
-        if: inputs.cache1-key != ''
-        uses: actions/cache@v6
+      # Keyed on the toolchain as well as Cargo.lock, so a new stable never restores a dead target/.
+      - name: Cache cargo
+        if: inputs.setup-rust
+        uses: Swatinem/rust-cache@v2
         with:
-          path: ${{ inputs.cache1-paths }}
-          key: live-${{ inputs.id }}-1-${{ hashFiles(inputs.cache1-key) }}
+          workspaces: tools/cloud-bake-rs
 
-      - name: Cache 2
-        if: inputs.cache2-key != ''
+      - name: Cache inputs
+        if: inputs.cache-key != ''
         uses: actions/cache@v6
         with:
-          path: ${{ inputs.cache2-paths }}
-          key: live-${{ inputs.id }}-2-${{ hashFiles(inputs.cache2-key) }}
+          path: ${{ inputs.cache-paths }}
+          key: live-${{ inputs.id }}-${{ hashFiles(inputs.cache-key) }}
 
       # The build script exits non-zero on bad data, so an upstream outage never reaches R2.
       - name: Build

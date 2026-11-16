@@ -95,11 +95,11 @@ The old key `data/satellite-catalog/v1/satellites.satg` is no longer written. Ta
 ## 3. Daily clouds (PR 3)
 
 - **Row.** `clouds`: build script `build-live-clouds` runs `bake-clouds` for yesterday UTC, then `writeCloudTier` for 8192, 4096 and 2048, then checks each output's dimensions and that it decodes as grey. Any failure exits non-zero, and nothing is uploaded.
-- **CI inputs.** `Swatinem/rust-cache` for the tool. The fixed inputs (baseline TIFF, 12 Blue Marble months, ~400 MB) come from `npm run fetch-cloud-inputs -- --confirm` behind `actions/cache` keyed on `textures.sha256`. The day's sources are fetched cold (~104 MB, ~2 min). Peak memory ~3 GB on Linux fits the standard runner; timeout 30 min.
+- **CI inputs.** `Swatinem/rust-cache` for the tool. The fixed inputs (baseline TIFF, 12 Blue Marble months, ~400 MB) come from `npm run fetch-cloud-inputs -- --confirm` behind `actions/cache` keyed on `textures.sha256`. The day's sources are fetched cold (~104 MB, ~2 min). Peak memory ~3 GB on Linux fits the standard runner; timeout 45 min.
 - **App.** `bodyTextureFetcher` tries `bodyTextureUrls(req)` in order: for a slot a live row names, the daily file through the pointer first, then the built-in tier. A failure of the first (404, network, a non-image) moves on to the next; only when all fail does the slot error as today.
 - **Kiosk.** The live keys are in no sync group, so the kiosk's local server 404s them and the mirrored built-in map loads. No change.
 - **Credits.** `creditGroups` (Earth) gains NASA GIBS and EUMETSAT ("Contains modified EUMETSAT Meteosat data <year>"); `ATTRIBUTIONS.md` "Live cloud bake inputs" drops "nothing is shipped yet".
-- **Go-live gate.** The Himawari terms (via GIBS) are unverified. The owner confirms them, or the bake replaces that region with NOAA GMGSI, before PR 3 merges. The gate is the merge, not a flag on the row.
+- **Himawari terms (owner ruling, 2026-11-16).** NOAA's open terms cover modified Himawari data with credit; commercial use is unconfirmed. The owner emails JMA. The web app ships with the credit lines meanwhile (`ATTRIBUTIONS.md`, `cloud-bake`). The kiosk waits on JMA's answer, and needs no change for that: it mirrors no live keys, so it already shows the built-in map. If JMA refuses, the bake replaces that region with NOAA GMGSI.
 
 ## Failure modes
 
