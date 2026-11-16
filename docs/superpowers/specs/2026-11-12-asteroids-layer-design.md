@@ -183,7 +183,7 @@ or the inner system, where the belt shows as a field of dots among the stars. At
 whole belt, the dots start to overlap: past it a lift still growing with zoom² piled them into a blob, and
 a flat one holds the field's surface brightness. Eye-tuned at dpr 2 on shots near Earth, on the Sun at 3
 and 12 AU and at 50 AU; floor and cap landed close, so the zoom term spans under 2×. The result is
-multiplied by the Layer's own brightness setting (§4.9). A dot sized by H (§4.5) keeps the base dot's
+multiplied by the Layer's own brightness setting and by its class's brightness gain (§4.9). A dot sized by H (§4.5) keeps the base dot's
 peak. Dots under the flux floor (V 16 on the
 lifted flux, where a dot deposits well under 1/255) are discarded to save fill, and the floor applies
 after the lift. Every constant in this section is a DebugPanel tuning default (§4.9).
@@ -270,13 +270,18 @@ Layer's own brightness slider (owner ruling; default 1, a multiplier on the flux
 stars' slider). No size knob in Settings.
 
 A dev-only "Asteroid tuning" section in the DebugPanel (owner ruling, the satellites' pattern) moves the
-look live: the "Size by" and "Colour by" dropdowns (§4.5); lift K, floor and cap; dot radius, the
-size knee and max scale, the dot knee; the phase-dimming cap; the flux floor as
-a limiting V; the thinning budget, its start and full zooms and its gain; one colour row per class and
-one per belt-ramp end (`ASTEROID_BELT_RAMP`). The `points/data/` tables are the defaults its
-slice starts from, and each reaches the compute or the dots by uniform, so no WGSL constant mirrors
-them. A colour row edits the hue and keeps the row's luminance. Reset restores the tables; "Copy
-changed values" emits the moved rows under their table names, ready to paste.
+look live, in two blocks (owner request 2026-11-16). **Per class**, for the class a "Class" dropdown
+picks: its colour, a brightness gain on its lifted flux, the flux floor as a limiting V, the dot
+radius, the dot knee, the size knee and max scale (`ASTEROID_CLASS_LOOK`, one row per class). These
+say what a dot of that class looks like, so each reaches the compute or the dots as one uniform lane
+per class. **Global**, the same for every class because zoom and the camera drive them: the "Size by"
+and "Colour by" dropdowns (§4.5); lift K, floor and cap; the phase-dimming cap; the thinning budget,
+its start and full zooms and its gain; one colour row per belt-ramp end (`ASTEROID_BELT_RAMP`). The
+thinning stays global: its budget counts dots, which a class's floor or gain does not change. The
+`points/data/` tables are the defaults its slice starts from, and each reaches the compute or the
+dots by uniform, so no WGSL constant mirrors them. A colour row edits the hue and keeps the row's
+luminance. Reset restores the tables; "Copy changed values" emits the moved rows, each class's under
+its `ASTEROID_CLASS_LOOK` row, then the global ones under their table names, ready to paste.
 
 ## 5. Rulings
 

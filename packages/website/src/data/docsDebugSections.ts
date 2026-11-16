@@ -89,7 +89,7 @@ export const DOCS_DEBUG_SECTIONS: readonly DocsDebugSection[] = [
   {
     heading: 'Asteroid tuning',
     shows:
-      'How much the asteroid dots are lifted in brightness as you zoom, the size and peak of a dot, the cap on the dimming of an asteroid lit from behind, the faintest magnitude drawn, and one colour for each asteroid class. A button puts them back to their defaults and another copies the changed values.',
+      'Two groups of controls. The first sets the look of one asteroid class at a time, chosen from a list: its colour, how bright it is, the faintest magnitude drawn, and the size and peak of a dot. The second holds what is the same for every class: how much the dots are lifted in brightness as you zoom, the cap on the dimming of an asteroid lit from behind, and how the field is thinned out as you zoom away. A button puts them back to their defaults and another copies the changed values.',
     file: 'src/layers/asteroids/controls/ui/AsteroidTuningSection.tsx',
   },
   {
