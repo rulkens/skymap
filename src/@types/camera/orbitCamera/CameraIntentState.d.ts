@@ -1,5 +1,5 @@
 /**
- * CameraState — Redux slice shape for the camera's full Intent state.
+ * CameraIntentState — Redux slice shape for the camera's full Intent state.
  *
  * `clip` and `frameTween` hold serializable descriptors only: the pose during
  * a clip and the up-basis during a frame slerp are DERIVED per frame (driver
@@ -17,7 +17,7 @@ import type { ClipData } from '../../animation/ClipData';
 import type { FrameTween } from '../focusMotion/FrameTween';
 import type { OrientationFrameId } from '../orientation/OrientationFrameId';
 
-export type CameraState = {
+export type CameraIntentState = {
   /** The committed pose AND the frame it lives in — the regime itself (spec §4). */
   base: FramedCameraPose;
   tween: CameraTweenDescriptor | null;

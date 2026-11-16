@@ -29,7 +29,7 @@ import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTi
 import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 import { makeDriverCtx } from '../../../helpers/camera/makeDriverCtx';
 import { rootReducer } from '../../../../src/store/rootReducer';
-import { clipStarted } from '../../../../src/state/camera/cameraSlice';
+import { clipStarted } from '../../../../src/state/camera/cameraIntentSlice';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
@@ -353,7 +353,7 @@ describe('frame-tagged keyframes', () => {
     expect(pose.frame).toEqual(EARTH);
     // The same LookAt decode the evaluator's channels imply — body-fixed metres,
     // with no orientation re-encode applied to them on the way out.
-    const channels = evaluateFramedClip(data, 2, opts(state.camera.clip!)).channels;
+    const channels = evaluateFramedClip(data, 2, opts(state.camera.intent.clip!)).channels;
     expect(pose.pose).toEqual(decodeBodyFixedChannels(channels, asSceneBodyId('earth')));
   });
 });

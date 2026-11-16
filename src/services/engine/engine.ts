@@ -406,7 +406,7 @@ export function createEngine(
 
   const unsettled = (): string[] => [
     ...(frameStats.threw ? ['last frame threw'] : []),
-    ...viewUnsettledReasons(state, store.getState().camera),
+    ...viewUnsettledReasons(state, store.getState().camera.intent),
   ];
 
   // The engine's only public surface: imperative operations only — store writes go
@@ -461,7 +461,7 @@ export function createEngine(
         const { register, gesture, tilt, outputs } = state.cameraRuntime;
         const bodyStates = deriveBodyStates(outputs.simDays);
         return cameraDebugSnapshotOf({
-          storedFrame: rootState.camera.base.frame,
+          storedFrame: rootState.camera.intent.base.frame,
           renderedPose: outputs.displayed,
           worldPose: liveWorldPose(state),
           poseBasis: ORIENTATION_FRAMES[state.settings.orientation],
@@ -476,7 +476,7 @@ export function createEngine(
           gesture:
             gesture.value !== null && 'gesture' in gesture.value ? gesture.value.gesture : null,
           rememberedTiltRad: tilt.rememberedTiltRad,
-          tuning: rootState.camera.tuning,
+          tuning: rootState.camera.intent.tuning,
           deltas: readOrientDeltas(),
           terrainHeightAt: state.terrainHeightAt,
         });

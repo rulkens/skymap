@@ -4,7 +4,7 @@
 //! Every cache file is written as `<path>.part` and renamed, so a killed run leaves nothing cached.
 use crate::date::Date;
 use crate::grid::{H, W};
-use crate::imageio::{is_all_black, rgba, Rgba};
+use crate::imageio::{is_blank, rgba, Rgba};
 use crate::orbit::{Footprint, Footprints, FOOT_H, FOOT_W};
 use crate::sources_table::{by_id, Host, Kind, Source};
 use std::path::{Path, PathBuf};
@@ -285,12 +285,40 @@ pub fn frame(frames: &Path, r: &FrameReq) -> Option<Rgba> {
                 .copy_from_slice(&im.px[y * pw * 4..(y + 1) * pw * 4]);
         }
     }
-    if is_all_black(&px) {
+    if is_blank(&px) {
         let name = format!("{} {} {}..{}", r.sat, r.tmin, r.x0, r.x1);
-        skip(Path::new(&name), Failure::Broken("all-black frame".into()));
+        skip(Path::new(&name), Failure::Broken("blank frame".into()));
         return None;
     }
     Some(Rgba { w: ow, h: oh, px })
+}
+
+/// Minutes from the planned time tried, in order, when a frame is missing, blank or unusable. Geo IR
+/// products are 10-minute: Himawari's 02:40Z slot is a housekeeping gap, GOES-East has blank afternoons.
+const RETRY_MINUTES: [i32; 7] = [0, -10, 10, -20, 20, -30, 30];
+
+/// `usable` of the first frame set of `reqs`, all shifted together through RETRY_MINUTES, that is
+/// complete and accepted. The planned time must already be prefetched; neighbours are fetched on demand.
+pub fn first_usable<T>(
+    frames: &Path,
+    reqs: &[FrameReq],
+    allow: bool,
+    usable: impl Fn(Vec<Rgba>) -> Option<T>,
+) -> Option<T> {
+    RETRY_MINUTES.iter().find_map(|&dt| {
+        let rs: Vec<FrameReq> = reqs
+            .iter()
+            .map(|r| FrameReq {
+                tmin: r.tmin + dt,
+                ..r.clone()
+            })
+            .collect();
+        if dt != 0 {
+            prefetch(frames, &rs, allow);
+        }
+        let fs: Option<Vec<Rgba>> = rs.iter().map(|r| frame(frames, r)).collect();
+        fs.and_then(&usable)
+    })
 }
 
 // ---------- NOAA-20 granules (fetch_granules.py) and the daily mosaics ----------
@@ -440,6 +468,41 @@ mod tests {
 
     fn d(s: &str) -> Date {
         Date::parse(s).unwrap()
+    }
+
+    /// Caches `r`'s frame as one uniform piece of RGBA `c`.
+    fn cache_frame(dir: &Path, r: &FrameReq, c: [u8; 4]) {
+        let (w, h) = (
+            ((r.x1 - r.x0) / r.scale) as u32,
+            ((r.y1 - r.y0) / r.scale) as u32,
+        );
+        let (_, _, path, _) = &pieces(dir, r)[0];
+        std::fs::create_dir_all(dir).unwrap();
+        image::RgbaImage::from_pixel(w, h, image::Rgba(c))
+            .save(path)
+            .unwrap();
+    }
+
+    #[test]
+    fn a_blank_frame_is_retried_at_the_nearest_time_with_an_image() {
+        let dir = std::env::temp_dir().join(format!("cloud-bake-near-{}", std::process::id()));
+        let at = |tmin| FrameReq {
+            sat: "goes_e",
+            date: d("2026-10-28"),
+            tmin,
+            x0: 2400,
+            x1: 2416,
+            y0: 1000,
+            y1: 1008,
+            scale: 4,
+        };
+        cache_frame(&dir, &at(720), [0, 0, 0, 0]);
+        cache_frame(&dir, &at(710), [0, 0, 0, 255]);
+        cache_frame(&dir, &at(730), [90, 90, 90, 255]);
+        cache_frame(&dir, &at(700), [200, 200, 200, 255]);
+        let got = first_usable(&dir, &[at(720)], false, |f| Some(f[0].px[0]));
+        std::fs::remove_dir_all(&dir).unwrap();
+        assert_eq!(got, Some(90));
     }
 
     #[test]

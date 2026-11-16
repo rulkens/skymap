@@ -67,6 +67,6 @@ describe('double-tap focus', () => {
     }
     await settle();
 
-    expect(store.getState()[cameraRoute].tween).not.toBeNull();
+    expect(store.getState()[cameraRoute].intent.tween).not.toBeNull();
   });
 });

@@ -39,7 +39,7 @@ export function makeDriverCtx(
     // Defaults to the store's own base, folded where the fixture seeded a body arm.
     committedWorld:
       args.committedWorld ??
-      foldToWorld(args.state.camera.base, {
+      foldToWorld(args.state.camera.intent.base, {
         bodies: args.bodies ?? deriveBodyStates(simDays),
         poseBasis: args.poseBasis ?? ORIENTATION_FRAMES[args.state.settings.orientation],
         upBasis: args.poseBasis ?? ORIENTATION_FRAMES[args.state.settings.orientation],

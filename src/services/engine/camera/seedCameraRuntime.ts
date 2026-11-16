@@ -27,7 +27,8 @@ export function seedCameraRuntime(args: {
   readonly state: Pick<RootState, 'camera' | 'settings'>;
   readonly projection: CameraProjection;
 }): CameraRuntime {
-  const { camera, settings } = args.state;
+  const { settings } = args.state;
+  const camera = args.state.camera.intent;
   // Copied: the boot seed is the camera slice's `base`, and the register must
   // never alias the store's object.
   const pose: FramedCameraPose = { ...camera.base };

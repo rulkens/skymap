@@ -15,7 +15,7 @@
  * data-resolution preset lifted out of the settings slice into its own root
  * slice so a settings/tour restore can't sweep it; `uiRoute` is the app-level
  * UI slice (palette / hide-UI / debug + splash); `cameraRoute` is the camera
- * Intent slice (base pose, tween descriptor, auto-rotate);
+ * route, whose `intent` half holds the base pose, tween descriptor and auto-rotate;
  * `selectionRoute` / `selectionRowsRoute` hold the selection Intent (focus +
  * select refs) and its reconciled rows.
  */

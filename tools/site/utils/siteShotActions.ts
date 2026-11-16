@@ -3,7 +3,7 @@ import type { UnknownAction } from '@reduxjs/toolkit';
 import type { SiteShot } from '../../../packages/website/src/@types/SiteShot';
 import { BiasMode } from '../../../src/data/galaxyCatalog/biasMode';
 import { setBiasMode } from '../../../src/layers/galaxyCatalog/state/bias/slice';
-import { setAutoRotate, setFovYRad } from '../../../src/state/camera/cameraSlice';
+import { setAutoRotate, setFovYRad } from '../../../src/state/camera/cameraIntentSlice';
 import { degToRad } from '../../../src/utils/math/degToRad';
 import { setExposure } from '../../../src/state/settings/core/tonemapSlice';
 import { setMeshAmbient, setPassDisabled } from '../../../src/state/settings/core/debugSlice';

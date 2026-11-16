@@ -45,7 +45,7 @@ import {
   aimCamera,
   commitCameraPose,
   startFrameTween,
-} from '../../../../src/state/camera/cameraSlice';
+} from '../../../../src/state/camera/cameraIntentSlice';
 import { setMissionCraft } from '../../../../src/layers/missions/state/missions/slice';
 import { takeoverStarted } from '../../../../src/state/takeover/takeoverActions';
 import { setOrientation } from '../../../../src/state/settings/core/orientationSlice';
@@ -92,7 +92,7 @@ import {
   resolveClipStart,
   setFovYRad,
   startCameraTween,
-} from '../../../../src/state/camera/cameraSlice';
+} from '../../../../src/state/camera/cameraIntentSlice';
 import { inputGestureEnded, inputGestureStarted } from '../../../../src/state/input/inputSlice';
 import {
   setControlScheme,
@@ -212,7 +212,7 @@ describe('stepCameraRuntime', () => {
     // the projection ran before the conversion (ruling 13): a fold above it
     // converts the untilted image and the arm comes out looking at nadir.
     const h = makeCameraSimHarness({ focusBody: null, bootHR: null });
-    const intent = h.store.getState().camera;
+    const intent = h.store.getState().camera.intent;
     const rMpc = SCENE_EARTH.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC;
     const render = absoluteArm({ target: [0, 0, 0], yaw: 0.3, pitch: 0.2, distance: 1.1 * rMpc });
     const project = (rememberedTiltRad: number) =>
@@ -267,7 +267,7 @@ describe('stepCameraRuntime', () => {
     const stored = h.store.getState();
     const rootState = {
       ...stored,
-      camera: { ...stored.camera, fovYRad: Math.PI / 2 },
+      camera: { ...stored.camera, intent: { ...stored.camera.intent, fovYRad: Math.PI / 2 } },
     };
 
     const { next } = stepCameraRuntime(prev, inputsFor(h, 16, { rootState, aspect: 2 }));
@@ -286,12 +286,12 @@ describe('stepCameraRuntime', () => {
     const h = makeCameraSimHarness();
     h.frame(60);
     expect(h.state.cameraRuntime.register.winner).toBe('followHold');
-    const before = h.store.getState().camera.base;
+    const before = h.store.getState().camera.intent.base;
 
     h.store.dispatch(setFovYRad(Math.PI / 4));
     h.frame(1);
 
-    expect(h.store.getState().camera.base).toBe(before);
+    expect(h.store.getState().camera.intent.base).toBe(before);
     expect(h.state.cameraRuntime.register.winner).toBe('followHold');
     expect(h.state.cameraRuntime.outputs.projection.fovYRad).toBe(Math.PI / 4);
   });
@@ -302,7 +302,7 @@ describe('a commit from outside the loop is authoritative', () => {
     // A real body arm, reached the way the app reaches one (engage on close approach).
     const engaged = makeCameraSimHarness({ bootHR: 0.1 });
     engaged.frame(2);
-    const bodyArm = engaged.store.getState().camera.base;
+    const bodyArm = engaged.store.getState().camera.intent.base;
     expect(bodyArm.frame).toEqual({ body: 'earth' });
 
     const h = makeCameraSimHarness();
@@ -315,19 +315,19 @@ describe('a commit from outside the loop is authoritative', () => {
     // Nothing baked over the commit: `followHold` is arm-gated out by the body
     // arm and `resting` (not `followHold`) reads as last frame's author, so
     // `commitOnEdge` sees no departure to bake.
-    expect(h.store.getState().camera.base).toBe(bodyArm);
+    expect(h.store.getState().camera.intent.base).toBe(bodyArm);
     expect(h.state.cameraRuntime.outputs.displayed).toEqual(bodyArm);
     expect(h.state.cameraRuntime.register.winner).toBe('resting');
 
     h.frame(1);
-    expect(h.store.getState().camera.base).toBe(bodyArm);
+    expect(h.store.getState().camera.intent.base).toBe(bodyArm);
   });
 
   it('a world-arm commit under a followed focus is adopted, distance included', () => {
     const h = makeCameraSimHarness();
     h.frame(60);
     expect(h.state.cameraRuntime.register.winner).toBe('followHold');
-    const before = h.store.getState().camera.base;
+    const before = h.store.getState().camera.intent.base;
     if (!isWorldArm(before)) throw new Error('expected a world arm base');
 
     h.store.dispatch(
@@ -398,7 +398,7 @@ describe('a re-switch mid-roll re-expresses from the PREVIOUS committed frame', 
     const LIVE_QUAT: Vec4 = [raw[0] / n, raw[1] / n, raw[2] / n, raw[3] / n];
 
     const h = makeCameraSimHarness({ focusBody: null, bootHR: null });
-    const baseA = h.store.getState().camera.base;
+    const baseA = h.store.getState().camera.intent.base;
     if (!isWorldArm(baseA)) throw new Error('expected a world arm base');
     const eyeInvariant = eyeMpcOf(baseA.pose, ORIENTATION_FRAMES[DEFAULT_ORIENTATION]);
 
@@ -423,7 +423,7 @@ describe('a re-switch mid-roll re-expresses from the PREVIOUS committed frame', 
     h.store.dispatch(setOrientation('supergalactic'));
     h.frame(1);
 
-    const baseC = h.store.getState().camera.base;
+    const baseC = h.store.getState().camera.intent.base;
     if (!isWorldArm(baseC)) throw new Error('expected a world arm base');
     const eyeC = eyeMpcOf(baseC.pose, ORIENTATION_FRAMES.supergalactic);
     // Correct: re-encoded from the COMMITTED galactic frame, eye unmoved (up
@@ -443,7 +443,7 @@ describe('a commit mid-approach', () => {
   it('lands: the loop stops flying and adopts it', () => {
     const engaged = makeCameraSimHarness({ bootHR: 0.1 });
     engaged.frame(2);
-    const bodyArm = engaged.store.getState().camera.base;
+    const bodyArm = engaged.store.getState().camera.intent.base;
     expect(bodyArm.frame).toEqual({ body: 'earth' });
 
     const h = makeCameraSimHarness();
@@ -453,7 +453,7 @@ describe('a commit mid-approach', () => {
     h.store.dispatch(commitCameraPose(bodyArm));
     h.frame(1);
 
-    expect(h.store.getState().camera.base).toBe(bodyArm);
+    expect(h.store.getState().camera.intent.base).toBe(bodyArm);
     expect(h.state.cameraRuntime.outputs.displayed).toEqual(bodyArm);
     expect(h.state.cameraRuntime.register.winner).not.toBe('followApproach');
   });
@@ -579,7 +579,7 @@ describe('stepCameraRuntime — the openspace scheme', () => {
     const { h } = coasting();
     for (let i = 0; i < 15; i += 1) stepWith(h, []);
     const live = h.state.cameraRuntime.register.pose;
-    const stale = h.store.getState().camera.base;
+    const stale = h.store.getState().camera.intent.base;
     if (!isWorldArm(live) || !isWorldArm(stale)) throw new Error('expected the world arm');
     expect(Math.abs(live.pose.yaw - stale.pose.yaw)).toBeGreaterThan(1e-3);
     stepWith(h, [
@@ -683,12 +683,12 @@ describe('stepCameraRuntime — the openspace scheme', () => {
     h.store.dispatch(setControlScheme('openspace'));
     h.store.dispatch(setFrictionOn({ group: 'zoom', on: false }));
     h.frame(2);
-    const sky: StepInputs['rootState']['camera']['base'] = {
+    const sky: StepInputs['rootState']['camera']['intent']['base'] = {
       frame: { sky: { body: asSceneBodyId('earth'), lonRad: 0.2, latRad: 0.9 } },
       pose: { azimuthRad: 1, altitudeRad: 0.3 },
     };
     h.store.dispatch(commitCameraPose(sky));
-    const lens = h.store.getState().camera.fovYRad;
+    const lens = h.store.getState().camera.intent.fovYRad;
     const dtS = 0.016;
     const navZoom = Math.log(1.1);
     h.state.cameraRuntime = {
@@ -713,7 +713,7 @@ describe('stepCameraRuntime — the openspace scheme', () => {
     expect(lenses[1]).toBeCloseTo(lens * 1.25 * 1.1, 9);
   });
 
-  const worldOf = (pose: StepInputs['rootState']['camera']['base']) => {
+  const worldOf = (pose: StepInputs['rootState']['camera']['intent']['base']) => {
     if (!isWorldArm(pose)) throw new Error('expected the world arm');
     return pose.pose;
   };
@@ -736,7 +736,7 @@ describe('stepCameraRuntime — the openspace scheme', () => {
     h.release();
     h.frame(2);
     expect(yawOf(h)).toBeCloseTo(further, 9);
-    expect(worldOf(h.store.getState().camera.base).yaw).toBeCloseTo(further, 9);
+    expect(worldOf(h.store.getState().camera.intent.base).yaw).toBeCloseTo(further, 9);
   });
 
   it('an openspace pinch with no drag before it zooms, and its release commits once', () => {
@@ -761,7 +761,7 @@ describe('stepCameraRuntime — the openspace scheme', () => {
     expect(pinched / start).not.toBeCloseTo(1, 6);
     const commits = commitsIn(stepWith(h, release)) + commitsIn(stepWith(h, []));
     expect(commits).toBe(1);
-    expect(worldOf(h.store.getState().camera.base).distance / pinched).toBeCloseTo(1, 9);
+    expect(worldOf(h.store.getState().camera.intent.base).distance / pinched).toBeCloseTo(1, 9);
   });
 
   it('a motionless press brings a frictionless coast to rest, committing once at the grab', () => {
@@ -827,7 +827,7 @@ describe('a two-finger tilt drag', () => {
     }
     h.release();
     h.frame(1);
-    return h.store.getState().camera.base;
+    return h.store.getState().camera.intent.base;
   };
 
   it('tilts and turns a body arm exactly as a right-drag does', () => {
@@ -896,7 +896,7 @@ describe('a clip fov channel drives the drawn lens', () => {
       symmetricFrustum(projection.fovYRad, projection.aspect).tanUp,
       12,
     );
-    expect(h.store.getState().camera.fovYRad).toBe(DEFAULT_FOV_Y_RAD);
+    expect(h.store.getState().camera.intent.fovYRad).toBe(DEFAULT_FOV_Y_RAD);
   });
 
   it('commits the driven lens when the clip hands off, with no frame snapping back', () => {
@@ -910,8 +910,8 @@ describe('a clip fov channel drives the drawn lens', () => {
       drawn.push(h.state.cameraRuntime.outputs.projection.fovYRad);
     }
 
-    expect(h.store.getState().camera.clip).toBeNull();
-    expect(h.store.getState().camera.fovYRad).toBeCloseTo(0.25, 12);
+    expect(h.store.getState().camera.intent.clip).toBeNull();
+    expect(h.store.getState().camera.intent.fovYRad).toBeCloseTo(0.25, 12);
     // The hand-off frame draws the driven lens, never the committed default.
     expect(drawn.every((fov, i) => i === 0 || fov <= drawn[i - 1]!)).toBe(true);
     expect(drawn.at(-1)).toBeCloseTo(0.25, 12);
@@ -923,7 +923,7 @@ describe('a clip fov channel drives the drawn lens', () => {
     h.store.dispatch(setFovYRad(0.5));
     h.frame(1);
 
-    expect(h.store.getState().camera.clip).not.toBeNull();
+    expect(h.store.getState().camera.intent.clip).not.toBeNull();
     expect(h.state.cameraRuntime.outputs.projection.fovYRad).toBe(0.5);
   });
 
@@ -965,7 +965,7 @@ describe('a clip fov channel drives the drawn lens', () => {
     h.store.dispatch(setFovYRad(0.7));
     h.frame(1);
 
-    expect(h.store.getState().camera.fovYRad).toBe(0.7);
+    expect(h.store.getState().camera.intent.fovYRad).toBe(0.7);
     expect(h.state.cameraRuntime.outputs.projection.fovYRad).toBe(0.7);
   });
 
@@ -976,7 +976,7 @@ describe('a clip fov channel drives the drawn lens', () => {
     h.store.dispatch(setFovYRad(0.7));
     h.frame(1);
 
-    expect(h.store.getState().camera.fovYRad).toBe(0.7);
+    expect(h.store.getState().camera.intent.fovYRad).toBe(0.7);
   });
 });
 
@@ -1009,14 +1009,14 @@ describe('the sky exit lift', () => {
     h.store.dispatch(setFovYRad(degToRad(LENS_MAX_DEG)));
     h.frame(2);
     h.wheel(300);
-    const clip = h.store.getState().camera.clip;
+    const clip = h.store.getState().camera.intent.clip;
     const shown: FramedCameraPose[] = [];
-    for (let i = 0; i < 400 && h.store.getState().camera.clip !== null; i++) {
+    for (let i = 0; i < 400 && h.store.getState().camera.intent.clip !== null; i++) {
       // Notches mid-lift must not restart it from the ground.
       if (i === 5) h.notch(300);
       h.frame(1);
-      if (h.store.getState().camera.clip !== null)
-        expect(h.store.getState().camera.clip).toBe(clip);
+      if (h.store.getState().camera.intent.clip !== null)
+        expect(h.store.getState().camera.intent.clip).toBe(clip);
       shown.push(h.state.cameraRuntime.outputs.displayed);
     }
     return { h, clip, shown };
@@ -1062,16 +1062,16 @@ describe('the sky exit lift', () => {
       h.notch(300);
       h.frame(1);
     }
-    expect(h.store.getState().camera.fovYRad).toBe(degToRad(LENS_MAX_DEG));
-    expect(h.store.getState().camera.clip).toBeNull();
+    expect(h.store.getState().camera.intent.fovYRad).toBe(degToRad(LENS_MAX_DEG));
+    expect(h.store.getState().camera.intent.clip).toBeNull();
     h.frame(Math.ceil(FRESH_WHEEL_PAUSE_MS / 16));
     h.wheel(300);
-    expect(h.store.getState().camera.clip).not.toBeNull();
+    expect(h.store.getState().camera.intent.clip).not.toBeNull();
   });
 
   it('hands off 100 m above the spot looking straight down at the default lens', () => {
     const { h } = lift();
-    const camera = h.store.getState().camera;
+    const camera = h.store.getState().camera.intent;
 
     expect(camera.clip).toBeNull();
     expect(camera.base.frame).toEqual({ body: SKY.body });

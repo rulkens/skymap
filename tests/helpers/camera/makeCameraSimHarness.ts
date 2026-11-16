@@ -22,7 +22,7 @@ import { seedCameraRuntime } from '../../../src/services/engine/camera/seedCamer
 import { createClipPlayer } from '../../../src/services/engine/subsystems/clipPlayer';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { runFrame } from '../../../src/services/engine/frame/runFrame';
-import { commitCameraPose, setFovYRad } from '../../../src/state/camera/cameraSlice';
+import { commitCameraPose, setFovYRad } from '../../../src/state/camera/cameraIntentSlice';
 import { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsSlice';
 import { setSimDays, pause } from '../../../src/state/time/timeSlice';
 import {

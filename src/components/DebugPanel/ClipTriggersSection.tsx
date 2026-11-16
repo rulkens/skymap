@@ -14,7 +14,7 @@
  *
  * ### Why the readout reads `clipActive`, not a Promise
  *
- * `camera.clip` holds only the resolved `ClipData`, not which button is live, so
+ * `camera.intent.clip` holds only the resolved `ClipData`, not which button is live, so
  * this section stamps the last-played clip label locally and shows it only while
  * the store reports a clip is playing (`clipActive`). When playback ends —
  * natural completion or stop — `clipActive` flips false and the readout falls

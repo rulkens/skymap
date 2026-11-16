@@ -9,7 +9,7 @@
  * across every call site. A flat single reducer would have forced a migration
  * the moment `tier` lifted out of the settings slice into its own root slice.
  *
- * `camera` holds the camera Intent (base pose, tween descriptor, auto-rotate).
+ * `camera.intent` holds the camera Intent (base pose, tween descriptor, auto-rotate).
  * The selection fold adds two sibling routes: `selection` holds
  * the raw identity-Intent refs (hover/select/focus); `selectionRows` is the
  * saga-owned derived display cache that InfoCard reads. `engine` holds the
@@ -46,7 +46,7 @@ import {
 import settingsReducer from '../state/settings/settingsReducer';
 import uiReducer from '../state/ui/uiSlice';
 import tierReducer from '../state/tier/tierSlice';
-import cameraReducer from '../state/camera/cameraSlice';
+import cameraIntentReducer from '../state/camera/cameraIntentSlice';
 import selectionReducer from '../state/selection/selectionSlice';
 import selectionRowsReducer from '../state/selectionRows/selectionRowsSlice';
 import tourReducer from '../state/tour/tourSlice';
@@ -62,7 +62,7 @@ export const rootReducer = combineReducers({
   [settingsRoute]: settingsReducer,
   [uiRoute]: uiReducer,
   [tierRoute]: tierReducer,
-  [cameraRoute]: cameraReducer,
+  [cameraRoute]: combineReducers({ intent: cameraIntentReducer }),
   [selectionRoute]: selectionReducer,
   [selectionRowsRoute]: selectionRowsReducer,
   [tourRoute]: tourReducer,
