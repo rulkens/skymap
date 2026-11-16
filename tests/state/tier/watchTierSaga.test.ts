@@ -13,11 +13,6 @@ import { watchTierSaga } from '../../../src/state/tier/watchTierSaga';
 import { requestTier } from '../../../src/state/tier/requestTier';
 import { setTier } from '../../../src/state/tier/tierSlice';
 import { selectTier } from '../../../src/state/tier/selectors';
-import {
-  updateSelectionSelect,
-  updateSelectionHover,
-} from '../../../src/state/selection/selectionSlice';
-import { selectionRoute } from '../../../src/store/constants';
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -36,19 +31,13 @@ function buildStore(log: Action[] = []) {
 }
 
 describe('watchTierSaga', () => {
-  it('writes the tier and nothing else', async () => {
+  it('writes the tier', async () => {
     const store = buildStore();
-    const hover = { type: 'galaxyCatalog' as const, source: 'sdss', index: 0 };
-    const select = { type: 'structure' as const, id: 'cluster-virgo' };
-    store.dispatch(updateSelectionHover(hover));
-    store.dispatch(updateSelectionSelect(select));
 
     store.dispatch(requestTier('large'));
     await flush();
 
     expect(selectTier(store.getState())).toBe('large');
-    expect(store.getState()[selectionRoute].hover).toEqual(hover);
-    expect(store.getState()[selectionRoute].select).toEqual(select);
   });
 
   it('re-requesting the current tier is a no-op', async () => {

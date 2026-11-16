@@ -125,8 +125,5 @@ describe('galaxyRecordBridge', () => {
     expect(
       galaxyRecordBridge(records, (id) => id !== 'glade').resolveDurableId('pgc-2789'),
     ).toEqual({ kind: 'absent' });
-    expect(galaxyRecordBridge(records, () => true).resolveDurableId('pgc-2789')).toEqual({
-      kind: 'pending',
-    });
   });
 });

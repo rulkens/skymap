@@ -173,7 +173,7 @@ A 7-way `race` loop with `task`, `fly`, `speed`, `mission` locals. `task !== nul
 ## 4. Cross-cutting observations
 
 - Two missing store facts explain most saga findings: engine runtime phase (5) and takeover phase (2). Each is currently a pulse (`engineStatusChanged`, `engineSourceCountReported`, `factsReported`, `take('*')`) or a poll (`waitUntilSaga`, `sceneSettled`). A fact fixes the lost-update and wait-forever risks together.
-- `engineStatusChanged` is a catch-all wake: `resolveFocusRefDeferringSaga`, `watchSelectionRowsSaga` and `watchFocusTweenSaga` wait on it because `wireSlots` fires `loading` once Layer rows exist. That is "Layer rows installed" smuggled through a status pulse.
+- `engineStatusChanged` is a catch-all wake: `watchSelectionRowsSaga` and `watchFocusTweenSaga` wait on it because `wireSlots` fires `loading` once Layer rows exist. That is "Layer rows installed" smuggled through a status pulse.
 - "Settled" is defined three times: `isSceneSettled`, `whenStablyReady`, and arrival's `nextFrame` wait. Pick one store-derived selector and make the others read it.
 - State held in saga closures (tour `remainingMs`, takeover `running` Task, `replaceNext`, mission `task`) cannot be inspected by the dash, tests or the recorder. Prefer values in the store with the saga as the effect runner.
 - The cheapest conversions (4, 6, 7) are local type changes with no saga redesign. The camera driver table and `watchSelectionRowsSaga` are the best existing reconcilers; the demand loop was not audited in depth.
