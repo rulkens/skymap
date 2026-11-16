@@ -1,9 +1,10 @@
 /**
- * letterboxRenderer — the film look's 2.39:1 bars as frame code, so a capture
- * of the swap texture carries them. One covering triangle drawn twice, each
- * time under a scissor rect cut to one bar; no bindings, no blend, opaque black.
- * Bar height is in TARGET pixels, floored so the picture never loses a row to
- * rounding.
+ * letterboxRenderer — the film look's 2.39:1 mask as frame code, so a capture
+ * of the swap texture carries it. One covering triangle drawn twice, each time
+ * under a scissor rect cut to one bar; no bindings, no blend, opaque black.
+ * A frame taller than 2.39:1 gets top and bottom bars, a wider one left and
+ * right bars, so the picture keeps the ratio either way. Bar size is in TARGET
+ * pixels, floored so the picture never loses a row to rounding.
  */
 
 import type { LetterboxRenderer } from '../../../../@types/rendering/LetterboxRenderer';
@@ -39,13 +40,21 @@ export function createLetterboxRenderer(init: {
   });
 
   function draw(pass: GPURenderPassEncoder, { width, height }: Size): void {
-    const barPx = Math.max(0, Math.floor((height - width / LETTERBOX_ASPECT) / 2));
-    if (barPx === 0) return;
+    const rowPx = Math.floor((height - width / LETTERBOX_ASPECT) / 2);
+    const columnPx = Math.floor((width - height * LETTERBOX_ASPECT) / 2);
+    if (rowPx <= 0 && columnPx <= 0) return;
     pass.setPipeline(pipeline);
-    pass.setScissorRect(0, 0, width, barPx);
-    pass.draw(3);
-    pass.setScissorRect(0, height - barPx, width, barPx);
-    pass.draw(3);
+    if (rowPx > 0) {
+      pass.setScissorRect(0, 0, width, rowPx);
+      pass.draw(3);
+      pass.setScissorRect(0, height - rowPx, width, rowPx);
+      pass.draw(3);
+    } else {
+      pass.setScissorRect(0, 0, columnPx, height);
+      pass.draw(3);
+      pass.setScissorRect(width - columnPx, 0, columnPx, height);
+      pass.draw(3);
+    }
     pass.setScissorRect(0, 0, width, height);
   }
 

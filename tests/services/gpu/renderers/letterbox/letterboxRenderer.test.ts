@@ -43,9 +43,23 @@ describe('createLetterboxRenderer', () => {
     ]);
   });
 
-  it('draws nothing on a frame already wider than 2.39:1', () => {
+  it('draws a left and a right bar on a frame wider than 2.39:1', () => {
+    // floor((2400 − 900 × 2.39) / 2) = 124
     const { pass, calls } = recordingPass();
     renderer.draw(pass, { width: 2400, height: 900 });
+    expect(calls).toEqual([
+      'pipeline',
+      'scissor 0 0 124 900',
+      'draw 3',
+      'scissor 2276 0 124 900',
+      'draw 3',
+      'scissor 0 0 2400 900',
+    ]);
+  });
+
+  it('draws nothing on a frame that is 2.39:1 already', () => {
+    const { pass, calls } = recordingPass();
+    renderer.draw(pass, { width: 2390, height: 1000 });
     expect(calls).toEqual([]);
   });
 });
