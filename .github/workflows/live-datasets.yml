@@ -1,6 +1,6 @@
 name: Live datasets
 
-# Nightly refresh of every dataset in src/data/live/liveDatasets.ts (spec: docs/superpowers/specs/2026-11-13-live-datasets-design.md).
+# Nightly refresh of every dataset in src/data/live/liveDatasets.ts (spec: docs/superpowers/specs/completed/2026-11-13-live-datasets-design.md).
 # `plan` turns the registry into a matrix; each row runs the reusable live-dataset.yml. A dataset
 # that fails uploads nothing and leaves its pointer alone, and the others still run.
 
