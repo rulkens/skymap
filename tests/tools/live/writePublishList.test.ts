@@ -14,12 +14,9 @@ function build(withFile: boolean): string {
     mkdirSync(dirname(file), { recursive: true });
     writeFileSync(file, 'x');
   }
-  writeLivePointer(
-    root,
-    'satellites',
-    new Date('2026-11-13T04:23:00Z'),
-    ['satellites.satg'],
-  );
+  writeLivePointer(root, 'satellites', '2026-11-13', new Date('2026-11-13T04:23:00Z'), [
+    'satellites.satg',
+  ]);
   return root;
 }
 
@@ -44,7 +41,7 @@ describe('writePublishList', () => {
 
   it('fails when a registered file is missing from the pointer', () => {
     const root = build(true);
-    writeLivePointer(root, 'satellites', new Date('2026-11-13T04:23:00Z'), []);
+    writeLivePointer(root, 'satellites', '2026-11-13', new Date('2026-11-13T04:23:00Z'), []);
     expect(() => writePublishList('satellites', root)).toThrow(/pointer lacks/);
   });
 });

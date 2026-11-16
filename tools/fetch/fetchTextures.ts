@@ -49,8 +49,8 @@ export const FULL_FETCH_APPROX_MB =
 /** MB: the 2k SSS variants + the 5400x2700 BMNG sibling. */
 export const DEV_FETCH_APPROX_MB = 7;
 
-/** MB, all twelve 21600x10800 BMNG equirects (~30 MB each) — the cloud bake's ice-mask months. */
-const BMNG_MONTHS_APPROX_MB = 360;
+/** MB: the twelve 21600x10800 BMNG equirects (~30 MB each, the ice-mask months) + the 36 MB baseline TIFF. */
+const CLOUD_INPUTS_APPROX_MB = 396;
 
 export type TextureSource = {
   readonly url: string;
@@ -148,12 +148,16 @@ export function textureSourcesFor(dev: boolean): readonly TextureSource[] {
   return [...downloadable.map(fullSource), ...QUADRANT_SOURCES, ...CHROMA_SOURCES];
 }
 
-/** The twelve BMNG equirects (`--bmng-months`); the full pull fetches only the `BMNG_VINTAGE` one. */
-function bmngMonthSources(): readonly TextureSource[] {
-  return BMNG_MONTHS.map(({ month }) => {
-    const key = bmngMonthKey(month);
-    return { url: RAW_DATA[key].upstream, destPath: rawDataPath(key) };
-  });
+/**
+ * The cloud bake's fixed inputs (`--cloud-inputs`): the baseline map it matches to and the twelve
+ * BMNG months (the full pull fetches only the `BMNG_VINTAGE` one).
+ */
+function cloudInputSources(): readonly TextureSource[] {
+  const keys = [
+    'textures.earthClouds',
+    ...BMNG_MONTHS.map(({ month }) => bmngMonthKey(month)),
+  ] as const;
+  return keys.map((key) => ({ url: RAW_DATA[key].upstream, destPath: rawDataPath(key) }));
 }
 
 /**
@@ -216,13 +220,13 @@ async function main(): Promise<void> {
   const dev = args.includes('--dev');
   const confirm = args.includes('--confirm');
 
-  const bmngMonths = args.includes('--bmng-months');
+  const cloudInputs = args.includes('--cloud-inputs');
 
-  const sources = bmngMonths ? bmngMonthSources() : textureSourcesFor(dev);
+  const sources = cloudInputs ? cloudInputSources() : textureSourcesFor(dev);
 
-  if (bmngMonths ? !confirm : requiresConfirm(dev, confirm)) {
+  if (cloudInputs ? !confirm : requiresConfirm(dev, confirm)) {
     process.stderr.write(
-      `fetchTextures: the ${bmngMonths ? 'twelve-month Blue Marble' : 'full raw texture'} pull is ~${bmngMonths ? BMNG_MONTHS_APPROX_MB : FULL_FETCH_APPROX_MB} MB across ` +
+      `fetchTextures: the ${cloudInputs ? 'cloud bake input' : 'full raw texture'} pull is ~${cloudInputs ? CLOUD_INPUTS_APPROX_MB : FULL_FETCH_APPROX_MB} MB across ` +
         `${sources.length} sources.\n` +
         `  Re-run with --confirm to proceed, or --dev for the ~${DEV_FETCH_APPROX_MB} MB ` +
         `dev subset (2k SSS variants + the 5400x2700 BMNG Earth).\n`,

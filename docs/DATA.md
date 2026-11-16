@@ -208,7 +208,7 @@ Earth's whole-globe base texture and its surface tile pyramid are two publicatio
 
 ### Live clouds
 
-`tools/cloud-bake-rs` (Rust) bakes a global cloud-opacity map for any UTC day from NASA GIBS VIIRS swaths and mosaics and from geostationary infrared (GIBS, EUMETView), gap-filled and matched to the static `cloud_combined_8192.tif`. `npm run fetch-cloud-inputs -- --confirm` pulls the twelve Blue Marble 2004 months (~360 MB, `data/raw/textures/`; the ice mask uses the month of the bake date), then `npm run bake-clouds -- --out <file.webp>` writes an 8192×4096 grey lossy WebP and prints one JSON summary line; the exit code says whether to retry (3) or page a human (2, 4). Downloads cache per day in `data/raw/clouds/cache/`. Nothing publishes the output yet. CLI, exit codes and cache layout: [`tools/cloud-bake-rs/README.md`](../tools/cloud-bake-rs/README.md); upstreams and licences: [`data/raw/clouds/README.md`](../data/raw/clouds/README.md).
+`tools/cloud-bake-rs` (Rust) bakes a global cloud-opacity map for any UTC day from NASA GIBS VIIRS swaths and mosaics and from geostationary infrared (GIBS, EUMETView), gap-filled and matched to the static `cloud_combined_8192.tif`. `npm run fetch-cloud-inputs -- --confirm` pulls the baseline TIFF and the twelve Blue Marble 2004 months (~400 MB, `data/raw/textures/`; the ice mask uses the month of the bake date), then `npm run bake-clouds -- --out <file.webp>` writes an 8192×4096 grey lossy WebP and prints one JSON summary line; the exit code says whether to retry (3) or page a human (2, 4). Downloads cache per day in `data/raw/clouds/cache/`. `npm run build-live-clouds` bakes yesterday, writes the three tiers under a dated `live/v1/` folder and moves the pointer; the nightly Live datasets workflow runs it, and the app tries that map before the built-in one. CLI, exit codes and cache layout: [`tools/cloud-bake-rs/README.md`](../tools/cloud-bake-rs/README.md); upstreams and licences: [`data/raw/clouds/README.md`](../data/raw/clouds/README.md).
 
 ### Planet and moon positions (JPL Horizons)
 
@@ -284,7 +284,7 @@ Every refresh shares one shape: fetch, build, then `npm run sync-r2-secure` from
 | Planet + moon positions | `fetch-horizons`                                | `build-ephemeris-corrections` (commits a generated `.ts`, no R2 sync) |
 | Voyager 1/2 tracks     | `fetch-horizons -- voyager1 voyager2` + `fetch-voyager-windows` | `build-spacecraft-tracks` (`spacecraftTracks.bin` + generated `missionEvents.generated.ts`) |
 | Earth surface tiles    | `fetch-textures` + `fetch-eox` + `fetch-height` | `build-surface-tiles` (`--dev` for a quick z5 pass, albedo only) |
-| Live clouds            | `fetch-cloud-inputs` (once)                     | `bake-clouds` (a WebP per day; no R2 sync yet)                   |
+| Live clouds            | `fetch-cloud-inputs` (once; `build-live-clouds` runs it) | `build-live-clouds` (`live/v1/` pointer + yesterday's three dated `earth-clouds-grey-*.webp` tiers; the Action uploads them, no `sync-r2`) |
 | Stars                  | `fetch-gaia`                                    | `build-stars` (`star-catalog/v2/` index + chunks)                 |
 | Satellites             | `fetch-celestrak` (daily, by the Action)        | `build-satellites` (`live/v1/` pointer + dated `satellites.satg`; the Action uploads them, no `sync-r2`) |
 | Stellar streams        | `fetch-vasiliev2021` + `fetch-galstreams`       | `build-stellar-streams` (`stellar-streams/v1/`)                  |

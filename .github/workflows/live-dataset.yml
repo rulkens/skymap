@@ -19,6 +19,23 @@ on:
       timeout-min:
         type: number
         required: true
+      setup-rust:
+        type: boolean
+        default: false
+      # Up to two caches, from the registry row's `caches`: newline-separated paths and the repo
+      # file whose hash keys the cache; empty when the row has fewer (tools/live/printLiveMatrix.ts).
+      cache1-paths:
+        type: string
+        default: ''
+      cache1-key:
+        type: string
+        default: ''
+      cache2-paths:
+        type: string
+        default: ''
+      cache2-key:
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -41,6 +58,24 @@ jobs:
           cache: 'npm'
 
       - run: npm ci
+
+      - name: Set up Rust
+        if: inputs.setup-rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache 1
+        if: inputs.cache1-key != ''
+        uses: actions/cache@v6
+        with:
+          path: ${{ inputs.cache1-paths }}
+          key: live-${{ inputs.id }}-1-${{ hashFiles(inputs.cache1-key) }}
+
+      - name: Cache 2
+        if: inputs.cache2-key != ''
+        uses: actions/cache@v6
+        with:
+          path: ${{ inputs.cache2-paths }}
+          key: live-${{ inputs.id }}-2-${{ hashFiles(inputs.cache2-key) }}
 
       # The build script exits non-zero on bad data, so an upstream outage never reaches R2.
       - name: Build
