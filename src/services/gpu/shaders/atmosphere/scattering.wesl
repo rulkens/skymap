@@ -84,19 +84,19 @@ fn rayleighPhase(cosTheta: f32) -> f32 {
 }
 
 // miePhase — the aerosol scattering phase, Henyey-Greenstein with asymmetry
-// 'g' (Earth ~ 0.8, strongly forward). HG is the classic cheap single-lobe
+// 'phaseG' (Earth ~ 0.8, strongly forward). HG is the classic cheap single-lobe
 // approximation:
 //
 //   p(cos) = (1 - g^2) / (4*PI * (1 + g^2 - 2*g*cos)^1.5)
 //
 // The strong forward peak (large g) is what produces the bright white glare
-// ringing the sun and the silver lining on haze. 'cosTheta' as above; 'g' in
+// ringing the sun and the silver lining on haze. 'cosTheta' as above; 'phaseG' in
 // (-1, 1). The denominator base '1 + g^2 - 2*g*cos' stays positive for any g in
 // that range, so no guard is needed.
-fn miePhase(cosTheta: f32, g: f32) -> f32 {
-  let g2 = g * g;
-  let denom = 1.0 + g2 - 2.0 * g * cosTheta;
-  return (1.0 - g2) / (4.0 * PI * pow(max(denom, 0.0), 1.5));
+fn miePhase(cosTheta: f32, phaseG: f32) -> f32 {
+  let phaseGSq = phaseG * phaseG;
+  let denom = 1.0 + phaseGSq - 2.0 * phaseG * cosTheta;
+  return (1.0 - phaseGSq) / (4.0 * PI * pow(max(denom, 0.0), 1.5));
 }
 
 
@@ -122,16 +122,16 @@ fn densityTent(altitudeKm: f32, centerKm: f32, widthKm: f32) -> f32 {
   return max(0.0, 1.0 - abs(altitudeKm - centerKm) / widthKm);
 }
 
-fn constituentDensity(c: Constituent, altitudeKm: f32) -> f32 {
-  if (c.profileKind == PROFILE_TENT) {
-    return densityTent(altitudeKm, c.centerKm, c.widthKm);
+fn constituentDensity(constituent: Constituent, altitudeKm: f32) -> f32 {
+  if (constituent.profileKind == PROFILE_TENT) {
+    return densityTent(altitudeKm, constituent.centerKm, constituent.widthKm);
   }
-  return densityExponential(altitudeKm, c.scaleHeightKm);
+  return densityExponential(altitudeKm, constituent.scaleHeightKm);
 }
 
-fn constituentPhase(c: Constituent, cosTheta: f32) -> f32 {
-  if (c.phaseKind == PHASE_HENYEY_GREENSTEIN) {
-    return miePhase(cosTheta, c.phaseG);
+fn constituentPhase(constituent: Constituent, cosTheta: f32) -> f32 {
+  if (constituent.phaseKind == PHASE_HENYEY_GREENSTEIN) {
+    return miePhase(cosTheta, constituent.phaseG);
   }
   return rayleighPhase(cosTheta);
 }
@@ -147,25 +147,25 @@ fn accumulateMedium(
 ) -> MediumSample {
   let altitude = max(0.0, length(posKm) - params.planetRadiusKm);
 
-  var m: MediumSample;
-  m.scatterPhased = vec3<f32>(0.0);
-  m.scatterTotal = vec3<f32>(0.0);
-  m.extinction = vec3<f32>(0.0);
+  var medium: MediumSample;
+  medium.scatterPhased = vec3<f32>(0.0);
+  medium.scatterTotal = vec3<f32>(0.0);
+  medium.extinction = vec3<f32>(0.0);
 
-  var i: u32 = 0u;
+  var constituentIndex: u32 = 0u;
   loop {
-    if (i >= params.constituentCount) { break; }
-    let c = params.constituents[i];
-    let d = constituentDensity(c, altitude);
-    let s = c.scatter * d;
-    m.scatterTotal = m.scatterTotal + s;
-    m.extinction = m.extinction + (c.scatter + c.absorb) * d;
+    if (constituentIndex >= params.constituentCount) { break; }
+    let constituent = params.constituents[constituentIndex];
+    let density = constituentDensity(constituent, altitude);
+    let scattering = constituent.scatter * density;
+    medium.scatterTotal = medium.scatterTotal + scattering;
+    medium.extinction = medium.extinction + (constituent.scatter + constituent.absorb) * density;
     if (phased) {
-      m.scatterPhased = m.scatterPhased + s * constituentPhase(c, cosTheta);
+      medium.scatterPhased = medium.scatterPhased + scattering * constituentPhase(constituent, cosTheta);
     }
-    i = i + 1u;
+    constituentIndex = constituentIndex + 1u;
   }
-  return m;
+  return medium;
 }
 
 // sampleMedium — with the phase-weighted single-scatter source. 'cosTheta' is
@@ -182,40 +182,40 @@ fn sampleMediumIsotropic(params: ScatteringParams, posKm: vec3<f32>) -> MediumSa
 }
 
 
-// distanceToTop — the distance from a point at radius 'r' (planet centre at the
+// distanceToTop — the distance from a point at radius 'radius' (planet centre at the
 // origin) with view-zenith cosine 'mu' to the top-of-atmosphere sphere, along
 // the view ray. Reuses the shared 'raySphere' quadratic; the point is inside
-// the top sphere (r < top), so the two roots straddle 0 and the FAR (positive)
+// the top sphere (radius < top), so the two roots straddle 0 and the FAR (positive)
 // root is the exit distance. 'mu = dot(dir, up)' where up is the outward
 // radial. The ray is placed on the +z axis (azimuth is irrelevant for a
 // distance, by spherical symmetry).
-fn distanceToTop(r: f32, mu: f32, topRadius: f32) -> f32 {
-  let p = vec3<f32>(0.0, 0.0, r);
+fn distanceToTop(radius: f32, mu: f32, topRadius: f32) -> f32 {
+  let position = vec3<f32>(0.0, 0.0, radius);
   let dir = vec3<f32>(sqrt(max(0.0, 1.0 - mu * mu)), 0.0, mu);
-  let roots = raySphere(p, dir, ORIGIN, topRadius);
+  let roots = raySphere(position, dir, ORIGIN, topRadius);
   return max(0.0, roots.y);
 }
 
-// rayHitsGround — does the view ray from radius 'r' with zenith cosine 'mu'
+// rayHitsGround — does the view ray from radius 'radius' with zenith cosine 'mu'
 // strike the ground sphere ahead of the origin? True only for down-looking rays
 // whose near ground root is positive. Drives the march-boundary choice (a ray
 // that hits the ground stops there; the surface occludes the far atmosphere).
-fn rayHitsGround(r: f32, mu: f32, bottomRadius: f32) -> bool {
-  let p = vec3<f32>(0.0, 0.0, r);
+fn rayHitsGround(radius: f32, mu: f32, bottomRadius: f32) -> bool {
+  let position = vec3<f32>(0.0, 0.0, radius);
   let dir = vec3<f32>(sqrt(max(0.0, 1.0 - mu * mu)), 0.0, mu);
-  let roots = raySphere(p, dir, ORIGIN, bottomRadius);
+  let roots = raySphere(position, dir, ORIGIN, bottomRadius);
   return roots.x > 0.0;
 }
 
-// marchDistance — the length of the march from 'p0' along unit 'dir': to the
+// marchDistance — the length of the march from 'rayStart' along unit 'dir': to the
 // first ground hit if the ray strikes the ground ahead, otherwise to the
 // top-of-atmosphere exit. General (arbitrary azimuth), for the multi-scatter
 // and sky-view bakes whose rays are not axis-aligned. The same clamp shape as
 // the CPU 'atmosphereShellBound' (top far root; ground-hit far clamp).
-fn marchDistance(p0: vec3<f32>, dir: vec3<f32>, bottomRadius: f32, topRadius: f32) -> f32 {
-  let top = raySphere(p0, dir, ORIGIN, topRadius);
+fn marchDistance(rayStart: vec3<f32>, dir: vec3<f32>, bottomRadius: f32, topRadius: f32) -> f32 {
+  let top = raySphere(rayStart, dir, ORIGIN, topRadius);
   var tMax = max(0.0, top.y);
-  let ground = raySphere(p0, dir, ORIGIN, bottomRadius);
+  let ground = raySphere(rayStart, dir, ORIGIN, bottomRadius);
   if (ground.x > 0.0) {
     tMax = min(tMax, ground.x);
   }
@@ -234,16 +234,16 @@ fn marchDistance(p0: vec3<f32>, dir: vec3<f32>, bottomRadius: f32, topRadius: f3
 
 // transmittanceLutParamsToUv — (r, mu) -> uv. The consumer side (bake integrand
 // endpoints, multi-scatter/sky-view sun lookups, the fragment's segment ratio).
-fn transmittanceLutParamsToUv(bottomRadius: f32, topRadius: f32, r: f32, mu: f32) -> vec2<f32> {
-  let H = sqrt(max(0.0, topRadius * topRadius - bottomRadius * bottomRadius));
-  let rho = sqrt(max(0.0, r * r - bottomRadius * bottomRadius));
+fn transmittanceLutParamsToUv(bottomRadius: f32, topRadius: f32, radius: f32, mu: f32) -> vec2<f32> {
+  let horizonChord = sqrt(max(0.0, topRadius * topRadius - bottomRadius * bottomRadius));
+  let rho = sqrt(max(0.0, radius * radius - bottomRadius * bottomRadius));
   // Distance to the top boundary along (r, mu): far root of the top sphere.
-  let discriminant = r * r * (mu * mu - 1.0) + topRadius * topRadius;
-  let d = max(0.0, -r * mu + sqrt(max(0.0, discriminant)));
-  let dMin = topRadius - r;
-  let dMax = rho + H;
-  let xMu = (d - dMin) / max(1e-6, dMax - dMin);
-  let xR = rho / max(1e-6, H);
+  let discriminant = radius * radius * (mu * mu - 1.0) + topRadius * topRadius;
+  let topDistance = max(0.0, -radius * mu + sqrt(max(0.0, discriminant)));
+  let dMin = topRadius - radius;
+  let dMax = rho + horizonChord;
+  let xMu = (topDistance - dMin) / max(1e-6, dMax - dMin);
+  let xR = rho / max(1e-6, horizonChord);
   return vec2<f32>(xMu, xR);
 }
 
@@ -251,17 +251,17 @@ fn transmittanceLutParamsToUv(bottomRadius: f32, topRadius: f32, r: f32, mu: f32
 // recover the (r, mu) whose transmittance this texel stores. Returns
 // vec2(r, mu).
 fn transmittanceLutUvToParams(bottomRadius: f32, topRadius: f32, uv: vec2<f32>) -> vec2<f32> {
-  let H = sqrt(max(0.0, topRadius * topRadius - bottomRadius * bottomRadius));
-  let rho = H * uv.y;
-  let r = sqrt(max(0.0, rho * rho + bottomRadius * bottomRadius));
-  let dMin = topRadius - r;
-  let dMax = rho + H;
-  let d = dMin + uv.x * (dMax - dMin);
+  let horizonChord = sqrt(max(0.0, topRadius * topRadius - bottomRadius * bottomRadius));
+  let rho = horizonChord * uv.y;
+  let radius = sqrt(max(0.0, rho * rho + bottomRadius * bottomRadius));
+  let dMin = topRadius - radius;
+  let dMax = rho + horizonChord;
+  let topDistance = dMin + uv.x * (dMax - dMin);
   var mu = 1.0;
-  if (d > 0.0) {
-    mu = (H * H - rho * rho - d * d) / (2.0 * r * d);
+  if (topDistance > 0.0) {
+    mu = (horizonChord * horizonChord - rho * rho - topDistance * topDistance) / (2.0 * radius * topDistance);
   }
-  return vec2<f32>(r, clamp(mu, -1.0, 1.0));
+  return vec2<f32>(radius, clamp(mu, -1.0, 1.0));
 }
 
 // sampleTransmittanceToTop — the rgb transmittance from (r, mu) to the top of
@@ -273,10 +273,10 @@ fn sampleTransmittanceToTop(
   samp: sampler,
   bottomRadius: f32,
   topRadius: f32,
-  r: f32,
+  radius: f32,
   mu: f32,
 ) -> vec3<f32> {
-  let uv = transmittanceLutParamsToUv(bottomRadius, topRadius, r, mu);
+  let uv = transmittanceLutParamsToUv(bottomRadius, topRadius, radius, mu);
   return textureSampleLevel(lut, samp, uv, 0.0).rgb;
 }
 
@@ -284,10 +284,10 @@ fn sampleTransmittanceToTop(
 // (sun-zenith cosine, altitude), linear uv (low-frequency, no horizon warp).
 
 // multiScatterLutParamsToUv — (sunCosZenith, r) -> uv.
-fn multiScatterLutParamsToUv(bottomRadius: f32, topRadius: f32, r: f32, sunCosZenith: f32) -> vec2<f32> {
-  let x = sunCosZenith * 0.5 + 0.5;
-  let y = (r - bottomRadius) / max(1e-6, topRadius - bottomRadius);
-  return clamp(vec2<f32>(x, y), vec2<f32>(0.0), vec2<f32>(1.0));
+fn multiScatterLutParamsToUv(bottomRadius: f32, topRadius: f32, radius: f32, sunCosZenith: f32) -> vec2<f32> {
+  let sunZenithCoord = sunCosZenith * 0.5 + 0.5;
+  let altitudeCoord = (radius - bottomRadius) / max(1e-6, topRadius - bottomRadius);
+  return clamp(vec2<f32>(sunZenithCoord, altitudeCoord), vec2<f32>(0.0), vec2<f32>(1.0));
 }
 
 // sampleMultiScatter — the isotropic multiple-scattering estimate at (r,
@@ -299,10 +299,10 @@ fn sampleMultiScatter(
   samp: sampler,
   bottomRadius: f32,
   topRadius: f32,
-  r: f32,
+  radius: f32,
   sunCosZenith: f32,
 ) -> vec3<f32> {
-  let uv = multiScatterLutParamsToUv(bottomRadius, topRadius, r, sunCosZenith);
+  let uv = multiScatterLutParamsToUv(bottomRadius, topRadius, radius, sunCosZenith);
   return textureSampleLevel(lut, samp, uv, 0.0).rgb;
 }
 
@@ -333,18 +333,18 @@ fn scatterStep(
   let bottom = params.planetRadiusKm;
   let topRadius = params.atmosphereTopKm;
 
-  let r = length(pos);
-  let up = pos / r;
+  let radius = length(pos);
+  let up = pos / radius;
   let sunCosZenith = dot(up, sunDir);
 
-  let m = sampleMedium(params, pos, cosTheta);
-  let sampleTransmittance = exp(-m.extinction * dt);
-  let sunTransmittance = sampleTransmittanceToTop(transmittanceLut, lutSamp, bottom, topRadius, r, sunCosZenith);
-  let psiMultiScatter = sampleMultiScatter(multiScatterLut, lutSamp, bottom, topRadius, r, sunCosZenith);
+  let medium = sampleMedium(params, pos, cosTheta);
+  let sampleTransmittance = exp(-medium.extinction * dt);
+  let sunTransmittance = sampleTransmittanceToTop(transmittanceLut, lutSamp, bottom, topRadius, radius, sunCosZenith);
+  let psiMultiScatter = sampleMultiScatter(multiScatterLut, lutSamp, bottom, topRadius, radius, sunCosZenith);
 
   // Phase-weighted single-scatter source + isotropic multi-scatter source.
-  let scatterPhased = m.scatterPhased;
-  let scatterTotal = m.scatterTotal;
+  let scatterPhased = medium.scatterPhased;
+  let scatterTotal = medium.scatterTotal;
   // twilightSoftness: fade the WHOLE in-scatter source (single + multi) across the
   // terminator so deep planet shadow goes black instead of clamping to the LUTs'
   // grazing-edge rows. 'muHorizon' is the sun-zenith cosine at which the sun grazes
@@ -352,7 +352,7 @@ fn scatterStep(
   // LUT shares the same below-horizon edge clamp, and at the night limb that ambient
   // floor dominates the grazing-attenuated single scatter by orders of magnitude —
   // gating single scatter alone leaves the knob modulating a sub-percent component.
-  let muHorizon = -sqrt(max(0.0, r * r - bottom * bottom)) / r;
+  let muHorizon = -sqrt(max(0.0, radius * radius - bottom * bottom)) / radius;
   // Clamp the fade width to a tiny epsilon: a zero width collides smoothstep's two edges
   // (its internal divide-by-(edge1-edge0) goes 0/0), so the hard-shadow limit is a near-step.
   let fadeWidth = max(twilightSoftness, 1e-4);
@@ -363,9 +363,9 @@ fn scatterStep(
   // the physical result; > 1 amplifies only the twilight band. Deep night stays
   // black at any intensity because sunVis -> 0 dominates the product.
   let twilightGain = mix(1.0, twilightIntensity, 1.0 - sunVis);
-  let s = sunVis * twilightGain * (sunTransmittance * scatterPhased + psiMultiScatter * scatterTotal);
+  let source = sunVis * twilightGain * (sunTransmittance * scatterPhased + psiMultiScatter * scatterTotal);
 
-  let sInt = (s - s * sampleTransmittance) / max(m.extinction, vec3<f32>(EXTINCTION_EPS));
+  let sInt = (source - source * sampleTransmittance) / max(medium.extinction, vec3<f32>(EXTINCTION_EPS));
 
   return ScatterStep(sInt, sampleTransmittance);
 }

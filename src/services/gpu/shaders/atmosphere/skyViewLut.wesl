@@ -88,7 +88,7 @@ struct SkyViewParams {
 @group(0) @binding(5) var outTex: texture_storage_2d<rgba16float, write>;
 
 // raymarchInScatter — the single-plus-multi-scatter integral along one view ray
-// from 'p0' (at the camera radius) toward 'dir', with the sun at 'sunDir'. The
+// from 'rayStart' (at the camera radius) toward 'dir', with the sun at 'sunDir'. The
 // per-step integrand is 'scatterStep' (scattering.wesl); this function owns
 // only the march bound and the accumulators.
 //
@@ -99,48 +99,48 @@ struct SkyViewParams {
 // module-header 'From-space entry clamp'); for a camera inside the atmosphere
 // top.x < 0 -> tNear = 0, recovering the plain 'origin-to-boundary' march. A ray
 // that never meets the top sphere (top.y < 0) is empty space -> return zero.
-fn raymarchInScatter(p0: vec3<f32>, dir: vec3<f32>, sunDir: vec3<f32>) -> vec3<f32> {
+fn raymarchInScatter(rayStart: vec3<f32>, dir: vec3<f32>, sunDir: vec3<f32>) -> vec3<f32> {
   let bottom = params.planetRadiusKm;
   let topRadius = params.atmosphereTopKm;
 
   // Confine the march to the atmosphere-top sphere's [entry, exit] interval, the
   // same bound shape the shell fragment + CPU 'atmosphereShellBound' already use.
-  let top = raySphere(p0, dir, vec3<f32>(0.0), topRadius);
+  let top = raySphere(rayStart, dir, vec3<f32>(0.0), topRadius);
   if (top.y < 0.0) { return vec3<f32>(0.0); }
   let tNear = max(0.0, top.x);
   var tFar = top.y;
   // Ground clamp: a down-looking ray stops at the opaque surface ahead of tNear.
-  let ground = raySphere(p0, dir, vec3<f32>(0.0), bottom);
+  let ground = raySphere(rayStart, dir, vec3<f32>(0.0), bottom);
   if (ground.x > 0.0 && ground.x > tNear) {
     tFar = min(tFar, ground.x);
   }
   let dt = (tFar - tNear) / SKY_VIEW_STEPS;
-  // From space, 'p0 + dir * tNear' cancels ~1e7 km to the top radius; the entry
+  // From space, 'rayStart + dir * tNear' cancels ~1e7 km to the top radius; the entry
   // rebuilt from the ray's closest-approach point carries no such difference.
-  let b = dot(p0, dir);
-  let closest = p0 - b * dir;
+  let closestAlongRay = dot(rayStart, dir);
+  let closest = rayStart - closestAlongRay * dir;
   let sTop = sqrt(max(topRadius * topRadius - dot(closest, closest), 0.0));
-  let entry = select(p0, closest - sTop * dir, top.x > 0.0);
+  let entry = select(rayStart, closest - sTop * dir, top.x > 0.0);
 
   let cosTheta = dot(dir, sunDir);
 
-  var L = vec3<f32>(0.0);
+  var radiance = vec3<f32>(0.0);
   var throughput = vec3<f32>(1.0);
 
-  var i: u32 = 0u;
+  var stepIndex: u32 = 0u;
   loop {
-    if (f32(i) >= SKY_VIEW_STEPS) { break; }
-    let pos = entry + dir * ((f32(i) + 0.5) * dt);
-    let s = scatterStep(
+    if (f32(stepIndex) >= SKY_VIEW_STEPS) { break; }
+    let pos = entry + dir * ((f32(stepIndex) + 0.5) * dt);
+    let stepContribution = scatterStep(
       params, transmittanceLut, multiScatterLut, lutSamp,
       pos, sunDir, cosTheta, dt,
       view.twilightSoftness, view.twilightIntensity,
     );
-    L = L + throughput * s.inScatter;
-    throughput = throughput * s.transmittance;
-    i = i + 1u;
+    radiance = radiance + throughput * stepContribution.inScatter;
+    throughput = throughput * stepContribution.transmittance;
+    stepIndex = stepIndex + 1u;
   }
-  return L;
+  return radiance;
 }
 
 @compute @workgroup_size(8, 8)
@@ -151,8 +151,8 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   }
   let uv = (vec2<f32>(f32(gid.x), f32(gid.y)) + vec2<f32>(0.5)) / vec2<f32>(dims);
 
-  let r = view.viewHeightKm;
-  let angles = skyViewLutUvToParams(params.planetRadiusKm, r, uv);
+  let radius = view.viewHeightKm;
+  let angles = skyViewLutUvToParams(params.planetRadiusKm, radius, uv);
   let viewZenithAngle = angles.x;
   let lightViewCos = angles.y;
 
@@ -171,7 +171,7 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   let sunZenithSin = sqrt(max(0.0, 1.0 - view.sunZenithCos * view.sunZenithCos));
   let sunDir = vec3<f32>(sunZenithSin, 0.0, view.sunZenithCos);
 
-  let p0 = vec3<f32>(0.0, 0.0, r);
-  let inScatter = raymarchInScatter(p0, dir, sunDir);
+  let rayStart = vec3<f32>(0.0, 0.0, radius);
+  let inScatter = raymarchInScatter(rayStart, dir, sunDir);
   textureStore(outTex, vec2<u32>(gid.x, gid.y), vec4<f32>(inScatter, 1.0));
 }

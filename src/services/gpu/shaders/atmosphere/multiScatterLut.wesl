@@ -66,58 +66,58 @@ struct RayContribution {
   fms: vec3<f32>,
 };
 
-// integrateRay — march one direction from 'p0' (at radius r) toward the sphere
+// integrateRay — march one direction from 'rayStart' (at radius 'radius') toward the sphere
 // boundary, accumulating the second-order in-scatter (isotropic phase) and the
 // transfer factor, plus a Lambertian ground bounce if the ray lands on the
 // surface. 'sunDir' is the sun in this local frame.
-fn integrateRay(p0: vec3<f32>, dir: vec3<f32>, sunDir: vec3<f32>) -> RayContribution {
+fn integrateRay(rayStart: vec3<f32>, dir: vec3<f32>, sunDir: vec3<f32>) -> RayContribution {
   let bottom = params.planetRadiusKm;
   let top = params.atmosphereTopKm;
-  let tMax = marchDistance(p0, dir, bottom, top);
+  let tMax = marchDistance(rayStart, dir, bottom, top);
   let dt = tMax / MULTI_SCATTER_STEPS;
 
   var lum = vec3<f32>(0.0);
   var fms = vec3<f32>(0.0);
   var throughput = vec3<f32>(1.0);
 
-  var i: u32 = 0u;
+  var stepIndex: u32 = 0u;
   loop {
-    if (f32(i) >= MULTI_SCATTER_STEPS) { break; }
-    let t = (f32(i) + 0.5) * dt;
-    let pos = p0 + dir * t;
-    let r = length(pos);
-    let up = pos / r;
+    if (f32(stepIndex) >= MULTI_SCATTER_STEPS) { break; }
+    let sampleDistance = (f32(stepIndex) + 0.5) * dt;
+    let pos = rayStart + dir * sampleDistance;
+    let radius = length(pos);
+    let up = pos / radius;
     let sunCosZenith = dot(up, sunDir);
 
-    let m = sampleMediumIsotropic(params, pos);
-    let sampleTransmittance = exp(-m.extinction * dt);
-    let sunTransmittance = sampleTransmittanceToTop(transmittanceLut, lutSamp, bottom, top, r, sunCosZenith);
+    let medium = sampleMediumIsotropic(params, pos);
+    let sampleTransmittance = exp(-medium.extinction * dt);
+    let sunTransmittance = sampleTransmittanceToTop(transmittanceLut, lutSamp, bottom, top, radius, sunCosZenith);
 
     // Total scattering coefficient at this point, summed over constituents.
     // Higher orders are treated as isotropic, so no phase weighting.
-    let scattering = m.scatterTotal;
+    let scattering = medium.scatterTotal;
 
     // Second-order source: sun light reaching this point, scattered with the
     // isotropic phase. Integrated analytically across the step via the standard
     // '(S - S*T) / extinction' closed form (exact for constant coefficients over
     // the short step).
-    let s = sunTransmittance * scattering * UNIFORM_PHASE;
-    let sInt = (s - s * sampleTransmittance) / max(m.extinction, vec3<f32>(EXTINCTION_EPS));
+    let source = sunTransmittance * scattering * UNIFORM_PHASE;
+    let sInt = (source - source * sampleTransmittance) / max(medium.extinction, vec3<f32>(EXTINCTION_EPS));
     lum = lum + throughput * sInt;
 
     // Transfer factor: same analytic integral of the scattering coefficient
     // alone (the fraction of a unit of uniform radiance re-scattered).
-    let msInt = (scattering - scattering * sampleTransmittance) / max(m.extinction, vec3<f32>(EXTINCTION_EPS));
+    let msInt = (scattering - scattering * sampleTransmittance) / max(medium.extinction, vec3<f32>(EXTINCTION_EPS));
     fms = fms + throughput * msInt;
 
     throughput = throughput * sampleTransmittance;
-    i = i + 1u;
+    stepIndex = stepIndex + 1u;
   }
 
   // Ground bounce: if the ray reached the surface, add the Lambertian reflection
   // of the sunlight that arrives there (isotropic albedo / PI, weighted by the
   // sun incidence and the throughput surviving to the ground).
-  let hitPos = p0 + dir * tMax;
+  let hitPos = rayStart + dir * tMax;
   let rGround = length(hitPos);
   if (rGround <= bottom + 1e-3) {
     let up = hitPos / rGround;
@@ -145,8 +145,8 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   // Invert the linear (sunCosZenith, altitude) mapping to recover this texel's
   // sample point + sun direction.
   let sunCosZenith = uv.x * 2.0 - 1.0;
-  let r = mix(params.planetRadiusKm, params.atmosphereTopKm, uv.y);
-  let p0 = vec3<f32>(0.0, 0.0, r);
+  let radius = mix(params.planetRadiusKm, params.atmosphereTopKm, uv.y);
+  let rayStart = vec3<f32>(0.0, 0.0, radius);
   let sunDir = vec3<f32>(sqrt(max(0.0, 1.0 - sunCosZenith * sunCosZenith)), 0.0, sunCosZenith);
 
   var lumTotal = vec3<f32>(0.0);
@@ -157,25 +157,25 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   // spread over the sphere. The 4*PI solid angle and the 1/(4*PI) isotropic
   // phase cancel, so averaging the per-ray contributions is the correct sphere
   // integral.
-  var i: u32 = 0u;
+  var azimuthIndex: u32 = 0u;
   loop {
-    if (i >= MULTI_SCATTER_SQRT_SAMPLES) { break; }
-    var j: u32 = 0u;
+    if (azimuthIndex >= MULTI_SCATTER_SQRT_SAMPLES) { break; }
+    var polarIndex: u32 = 0u;
     loop {
-      if (j >= MULTI_SCATTER_SQRT_SAMPLES) { break; }
-      let randA = (f32(i) + 0.5) / f32(MULTI_SCATTER_SQRT_SAMPLES);
-      let randB = (f32(j) + 0.5) / f32(MULTI_SCATTER_SQRT_SAMPLES);
+      if (polarIndex >= MULTI_SCATTER_SQRT_SAMPLES) { break; }
+      let randA = (f32(azimuthIndex) + 0.5) / f32(MULTI_SCATTER_SQRT_SAMPLES);
+      let randB = (f32(polarIndex) + 0.5) / f32(MULTI_SCATTER_SQRT_SAMPLES);
       let theta = 2.0 * PI * randA;
       let cosPhi = 1.0 - 2.0 * randB;
       let sinPhi = sqrt(max(0.0, 1.0 - cosPhi * cosPhi));
       let dir = vec3<f32>(cos(theta) * sinPhi, sin(theta) * sinPhi, cosPhi);
 
-      let c = integrateRay(p0, dir, sunDir);
-      lumTotal = lumTotal + c.lum;
-      fmsTotal = fmsTotal + c.fms;
-      j = j + 1u;
+      let contribution = integrateRay(rayStart, dir, sunDir);
+      lumTotal = lumTotal + contribution.lum;
+      fmsTotal = fmsTotal + contribution.fms;
+      polarIndex = polarIndex + 1u;
     }
-    i = i + 1u;
+    azimuthIndex = azimuthIndex + 1u;
   }
 
   let invCount = 1.0 / f32(MULTI_SCATTER_SQRT_SAMPLES * MULTI_SCATTER_SQRT_SAMPLES);

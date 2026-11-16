@@ -32,22 +32,22 @@ fn vs(@builtin(vertex_index) vi: u32) -> FullscreenOut {
 // Writing texels by the same table the sampler reads them with is what makes
 // mip k consistent with mip 0, whatever way the capture oriented the faces.
 fn faceDirection(face: u32, st: vec2<f32>) -> vec3<f32> {
-  let x = st.x * 2.0 - 1.0;
-  let y = st.y * 2.0 - 1.0;
+  let faceX = st.x * 2.0 - 1.0;
+  let faceY = st.y * 2.0 - 1.0;
   switch face {
-    case 0u: { return vec3<f32>(1.0, -y, -x); }
-    case 1u: { return vec3<f32>(-1.0, -y, x); }
-    case 2u: { return vec3<f32>(x, 1.0, y); }
-    case 3u: { return vec3<f32>(x, -1.0, -y); }
-    case 4u: { return vec3<f32>(x, -y, 1.0); }
-    default: { return vec3<f32>(-x, -y, -1.0); }
+    case 0u: { return vec3<f32>(1.0, -faceY, -faceX); }
+    case 1u: { return vec3<f32>(-1.0, -faceY, faceX); }
+    case 2u: { return vec3<f32>(faceX, 1.0, faceY); }
+    case 3u: { return vec3<f32>(faceX, -1.0, -faceY); }
+    case 4u: { return vec3<f32>(faceX, -faceY, 1.0); }
+    default: { return vec3<f32>(-faceX, -faceY, -1.0); }
   }
 }
 
-// Hammersley point i of n: (i / n, radical inverse base 2), the 2^-32 scale
-// mapping the reversed bits into [0, 1).
-fn hammersley(i: u32, n: u32) -> vec2<f32> {
-  return vec2<f32>(f32(i) / f32(n), f32(reverseBits(i)) * 2.3283064365386963e-10);
+// Hammersley point 'sampleIndex' of 'sampleCount': (sampleIndex / sampleCount,
+// radical inverse base 2), the 2^-32 scale mapping the reversed bits into [0, 1).
+fn hammersley(sampleIndex: u32, sampleCount: u32) -> vec2<f32> {
+  return vec2<f32>(f32(sampleIndex) / f32(sampleCount), f32(reverseBits(sampleIndex)) * 2.3283064365386963e-10);
 }
 
 // A GGX half-vector in tangent space for linear roughness 'alpha'.
@@ -60,24 +60,24 @@ fn ggxHalfVector(xi: vec2<f32>, alpha: f32) -> vec3<f32> {
 
 @fragment
 fn fs(in: FullscreenOut) -> @location(0) vec4<f32> {
-  let n = normalize(faceDirection(params.face, in.uv));
-  let v = n;
+  let normal = normalize(faceDirection(params.face, in.uv));
+  let viewDir = normal;
   let alpha = params.roughness * params.roughness;
-  // Tangent frame around n, hoisted out of the tap loop; the fallback axis
-  // keeps the cross product off zero when n runs along +-Z.
-  let up = select(vec3<f32>(1.0, 0.0, 0.0), vec3<f32>(0.0, 0.0, 1.0), abs(n.z) < 0.999);
-  let tangent = normalize(cross(up, n));
-  let bitangent = cross(n, tangent);
+  // Tangent frame around 'normal', hoisted out of the tap loop; the fallback axis
+  // keeps the cross product off zero when 'normal' runs along +-Z.
+  let up = select(vec3<f32>(1.0, 0.0, 0.0), vec3<f32>(0.0, 0.0, 1.0), abs(normal.z) < 0.999);
+  let tangent = normalize(cross(up, normal));
+  let bitangent = cross(normal, tangent);
 
   var sum = vec3<f32>(0.0);
   var weight = 0.0;
-  for (var i = 0u; i < params.sampleCount; i = i + 1u) {
-    let ht = ggxHalfVector(hammersley(i, params.sampleCount), alpha);
-    let h = tangent * ht.x + bitangent * ht.y + n * ht.z;
-    let l = 2.0 * dot(v, h) * h - v;
-    let NoL = dot(n, l);
+  for (var sampleIndex = 0u; sampleIndex < params.sampleCount; sampleIndex = sampleIndex + 1u) {
+    let ht = ggxHalfVector(hammersley(sampleIndex, params.sampleCount), alpha);
+    let halfVector = tangent * ht.x + bitangent * ht.y + normal * ht.z;
+    let lightDir = 2.0 * dot(viewDir, halfVector) * halfVector - viewDir;
+    let NoL = dot(normal, lightDir);
     if (NoL > 0.0) {
-      sum = sum + textureSampleLevel(srcCube, srcSampler, l, 0.0).rgb * NoL;
+      sum = sum + textureSampleLevel(srcCube, srcSampler, lightDir, 0.0).rgb * NoL;
       weight = weight + NoL;
     }
   }
