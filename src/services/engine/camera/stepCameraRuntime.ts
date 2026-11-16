@@ -126,8 +126,8 @@ export function stepCameraRuntime(
   const focus = stored.selectionRows.focus;
   // A row framing a body no focus names (the mission's craft) stands it in as the pivot: the
   // wheel floors at the hull's standoff, not the surfaceless floor hundreds of km out.
-  const stand = prev.pivotBody === null ? undefined : bodies.get(prev.pivotBody);
-  const pivotRow = stand ? bodyRowAt(prev.pivotBody!, stand.positionMpc) : focus;
+  const stand = prev.wheel.pivotBody === null ? undefined : bodies.get(prev.wheel.pivotBody);
+  const pivotRow = stand ? bodyRowAt(prev.wheel.pivotBody!, stand.positionMpc) : focus;
   const lastWinnerRidesWheel = ridesWheelTarget(prevDrivers, winnerLastFrame);
   // Re-derived every frame: the FOV slider can change with no resize event.
   const projection: CameraProjection = {
@@ -141,7 +141,9 @@ export function stepCameraRuntime(
   const lastNowMs = prev.navigator.lastNowMs;
   const shiftTarget = coverShiftNdc(coverPx, canvasPx);
   const shiftNdc =
-    lastNowMs === null ? shiftTarget : easedShiftNdc(prev.shiftNdc, shiftTarget, nowMs - lastNowMs);
+    lastNowMs === null
+      ? shiftTarget
+      : easedShiftNdc(prev.lens.shiftNdc, shiftTarget, nowMs - lastNowMs);
   const shiftSettled = shiftNdc[0] === shiftTarget[0] && shiftNdc[1] === shiftTarget[1];
   const frustum = shiftedFrustum(projection.fovYRad, aspect, shiftNdc);
   // `poseBasis` is the COMMITTED frame — the saga writes the destination into
@@ -180,7 +182,7 @@ export function stepCameraRuntime(
       gesture: prev.gesture.value,
       tilt: prev.tilt,
       follow: prev.follow,
-      zoomLimitPress: prev.zoomLimitPress,
+      zoomLimitPress: prev.wheel.limitPress,
     },
     steps,
     {
@@ -356,8 +358,8 @@ export function stepCameraRuntime(
   // A lens written since the drive last saw it (a takeover's restore, a tour
   // re-pin, the slider) wins, as an outside `base` does (`external` above).
   const handOff =
-    drivenFovYRad === undefined && prev.drivenFovYRad?.over === rootState.camera.intent.fovYRad
-      ? prev.drivenFovYRad.drawn
+    drivenFovYRad === undefined && prev.lens.driven?.over === rootState.camera.intent.fovYRad
+      ? prev.lens.driven.drawn
       : undefined;
   if (handOff !== undefined) actions.push(setFovYRad(handOff));
   const drawnFovYRad = drivenFovYRad ?? handOff ?? projection.fovYRad;
@@ -406,7 +408,6 @@ export function stepCameraRuntime(
       follow: memory,
       gesture,
       tilt: projected.tilt,
-      zoomLimitPress: drained.zoomLimitPress,
       // Velocity survives only while a navigator row authors the camera, or an exhibit
       // owns the drag and the navigator keeps nudging the register it reads.
       navigator:
@@ -415,12 +416,14 @@ export function stepCameraRuntime(
           : { ...NAV_AT_REST, lastNowMs: nowMs },
       scheme: controls.scheme,
       own: own === undefined ? prev.own : { ...prev.own, [winnerId]: own },
-      pivotBody: pivotBody ?? null,
-      drivenFovYRad:
-        drivenFovYRad === undefined
-          ? null
-          : { drawn: drivenFovYRad, over: rootState.camera.intent.fovYRad },
-      shiftNdc,
+      lens: {
+        driven:
+          drivenFovYRad === undefined
+            ? null
+            : { drawn: drivenFovYRad, over: rootState.camera.intent.fovYRad },
+        shiftNdc,
+      },
+      wheel: { pivotBody: pivotBody ?? null, limitPress: drained.zoomLimitPress },
       outputs: {
         displayed: projected.displayed,
         simDays,

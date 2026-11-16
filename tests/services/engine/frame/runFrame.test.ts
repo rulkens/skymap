@@ -190,8 +190,8 @@ function makeState(): EngineState {
       navigator: NAV_AT_REST,
       scheme: 'skymap',
       own: {},
-      pivotBody: null,
-      shiftNdc: [0, 0],
+      lens: { driven: null, shiftNdc: [0, 0] },
+      wheel: { pivotBody: null, limitPress: null },
       outputs: {
         displayed: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }),
         simDays: 0,

@@ -860,12 +860,12 @@ describe('the lens shift', () => {
 
     const first = step();
     expect(first.requestRender).toBe(true);
-    expect(first.next.shiftNdc[1]).toBeGreaterThan(0);
-    expect(first.next.shiftNdc[1]).toBeLessThan(0.2);
+    expect(first.next.lens.shiftNdc[1]).toBeGreaterThan(0);
+    expect(first.next.lens.shiftNdc[1]).toBeLessThan(0.2);
 
     let frames = 1;
     while (frames < 200 && step().requestRender) frames += 1;
-    expect(h.state.cameraRuntime.shiftNdc).toEqual([0, 0.2]);
+    expect(h.state.cameraRuntime.lens.shiftNdc).toEqual([0, 0.2]);
     // τ = 80 ms at 16 ms frames lands inside 1e-4 of 0.2 in about 38 frames.
     expect(frames).toBeGreaterThan(20);
     expect(frames).toBeLessThan(80);
@@ -954,7 +954,7 @@ describe('a clip fov channel drives the drawn lens', () => {
       timeline: [tween('fov', { to: 0.25, over: 5, ease: 'linear' })],
     });
     h.frame(5);
-    expect(h.state.cameraRuntime.drivenFovYRad).not.toBeNull();
+    expect(h.state.cameraRuntime.lens.driven).not.toBeNull();
     return h;
   };
 
