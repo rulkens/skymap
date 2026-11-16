@@ -12,24 +12,14 @@ import { resolveFocusRefDeferringSaga } from './resolveFocusRefDeferringSaga';
 import { clipEnded } from '../camera/cameraIntentSlice';
 import { selectSkyView } from '../sky/selectSkyView';
 import { selectTakeoverSource } from '../takeover/selectors';
+import { selectClipOwner } from '../camera/selectors';
 import { selectTimeState } from '../time/selectors';
 import { lookSaga } from '../sky/lookSaga';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { isSkyLookable } from '../../utils/sky/isSkyLookable';
-import type { ClipData } from '../../@types/animation/ClipData';
-import type { RootState, SagaContext } from '../../store/types';
+import type { SagaContext } from '../../store/types';
 
 export function* watchRequestViewSaga() {
-  // The head turn this saga last started: a fly asked for while it still plays ends it first,
-  // since `suspendDuringClip` would otherwise swallow the focus tween.
-  let looking: ClipData | null = null;
-  function* fly(id: string) {
-    const clip = yield* select((state: RootState) => state.camera.intent.clip);
-    if (looking !== null && clip?.data === looking) yield* put(clipEnded());
-    looking = null;
-    yield* put(requestFocus({ id, transition: 'fly' }));
-  }
-
   yield* takeLatest(requestView, function* (action) {
     const { id } = action.payload;
     const selection = yield* getContext<SagaContext['selection']>('selection');
@@ -47,6 +37,13 @@ export function* watchRequestViewSaga() {
       yield* call(fly, id);
       return;
     }
-    looking = yield* call(lookSaga, row, view.spot, simDays);
+    yield* call(lookSaga, row, view.spot, simDays);
   });
+}
+
+// A fly asked for while a head turn still plays ends it first, since `suspendDuringClip` would
+// otherwise swallow the focus tween.
+function* fly(id: string) {
+  if ((yield* select(selectClipOwner)) === 'skyLook') yield* put(clipEnded());
+  yield* put(requestFocus({ id, transition: 'fly' }));
 }

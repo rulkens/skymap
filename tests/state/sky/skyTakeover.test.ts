@@ -236,7 +236,9 @@ describe('the sky takeover', () => {
   it('an arrival another clip replaces ends it without restoring', () => {
     const store = build();
     store.dispatch(enterSky({ spot: COPENHAGEN, pointLocalM: POINT }));
-    store.dispatch(clipStarted({ data: { start: 'live', timeline: [] }, frame: 'ecliptic' }));
+    store.dispatch(
+      clipStarted({ data: { start: 'live', timeline: [] }, frame: 'ecliptic', by: 'player' }),
+    );
     expect(selectTakeoverSource(state(store))).toBeNull();
     expect(state(store).selection.focus).toEqual({ type: 'body', id: EARTH });
   });

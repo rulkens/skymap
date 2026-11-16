@@ -86,7 +86,7 @@ describe('cameraIntentSlice — clip lifecycle', () => {
     // driver deactivates, an un-cleared @60 tween would outrank resting@0.
     const withBoth = reducer(
       reducer(base(), startCameraTween(tween)),
-      clipStarted({ data: clipData, frame: clipFrame }),
+      clipStarted({ data: clipData, frame: clipFrame, by: 'player' }),
     );
     const cleared = reducer(withBoth, clipEnded());
     expect(cleared.clip).toBeNull();

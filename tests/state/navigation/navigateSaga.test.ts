@@ -74,6 +74,7 @@ const PLAYS = [
 const CLIP_STARTED: Parameters<typeof clipStarted>[0] = {
   data: { timeline: [] },
   frame: 'equatorial',
+  by: 'player',
 };
 
 function build() {

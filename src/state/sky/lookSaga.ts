@@ -1,7 +1,7 @@
 /**
  * lookSaga — turns a standing person's head to a lookable row: publishes whether it is below
  * the horizon (the HUD's rise offer) and starts the turn as a camera clip in the sky frame,
- * never `startClip`, which would preempt the sky takeover. Returns the clip it started.
+ * never `startClip`, which would preempt the sky takeover.
  */
 import { call, put, select } from 'typed-redux-saga';
 
@@ -24,6 +24,5 @@ export function* lookSaga(row: PlacedRow, spot: SkySpot, simDays: number) {
     ),
   );
   const clip = lookClip(runtime.from, runtime.fovYRad, look, spot, yield* call(skyArmCtxSaga, 0));
-  yield* put(clipStarted({ data: clip, frame: yield* select(selectOrientation) }));
-  return clip;
+  yield* put(clipStarted({ data: clip, frame: yield* select(selectOrientation), by: 'skyLook' }));
 }

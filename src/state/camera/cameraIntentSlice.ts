@@ -17,6 +17,7 @@ import { DEFAULT_FOV_Y_RAD } from '../../services/engine/camera/framing/cameraFr
 import { absoluteArm } from '../../utils/camera/arms/absoluteArm';
 import { clampCameraTuning } from '../../utils/camera/orbitCamera/clampCameraTuning';
 import { inputGestureStarted } from '../input/inputSlice';
+import type { ClipOwner } from '../../@types/animation/ClipOwner';
 import type { CameraIntentState } from '../../@types/camera/orbitCamera/CameraIntentState';
 import type { CameraAim } from '../../@types/camera/pose/CameraAim';
 import type { CameraTuning } from '../../@types/camera/orbitCamera/CameraTuning';
@@ -77,7 +78,10 @@ const cameraIntentSlice = createSlice({
     // already be resolved (no `start: 'live'` sentinel) — `resolveClipStart` runs
     // at the dispatch site. `frame` is the orientation frame live at dispatch time;
     // the driver holds the clip against THIS frame for its whole run.
-    clipStarted: (camera, action: PayloadAction<{ data: ClipData; frame: OrientationFrameId }>) => {
+    clipStarted: (
+      camera,
+      action: PayloadAction<{ data: ClipData; frame: OrientationFrameId; by: ClipOwner }>,
+    ) => {
       camera.clip = action.payload;
     },
     // Clears BOTH `clip` and `tween`: a tween planted before or during the clip is

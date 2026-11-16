@@ -12,7 +12,7 @@ import type { OrientationFrameId } from '../../@types/camera/orientation/Orienta
 import type { RootState } from '../../store/types';
 
 export function* playSkyClipSaga(data: ClipData, frame: OrientationFrameId) {
-  yield* put(clipStarted({ data, frame }));
+  yield* put(clipStarted({ data, frame, by: 'skyFlight' }));
   try {
     const { ended } = yield* race({ ended: take(clipEnded), replaced: take(clipStarted) });
     return ended !== undefined;
