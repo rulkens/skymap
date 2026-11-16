@@ -7,11 +7,10 @@
  */
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { SatellitesRuntime } from '../../@types/SatellitesRuntime';
-import { INSTANCE_FLOATS } from '../../../../services/gpu/renderers/bodies/orbitTrailRenderer';
-import { sampledDepthBinding } from '../../../../services/engine/frame/sampledDepthBinding';
+import type { OrbitTrail } from '../../../../@types/rendering/orbitTrailRenderer/OrbitTrail';
+import { drawOrbitConics } from '../../../../services/engine/frame/drawOrbitConics';
+import { orbitTrailView } from '../../../../services/engine/frame/orbitTrailView';
 import { sceneBodyStates } from '../../../../services/engine/frame/sceneBodyStates';
-import { sceneOccluderSpheres } from '../../../../services/engine/frame/sceneOccluderSpheres';
-import { writeOrbitTrailRecord } from '../../../../utils/orbit/writeOrbitTrailRecord';
 import { SCENE_EARTH } from '../../../../data/bodies/sceneEarth';
 import { SATELLITE_CLASSES } from '../../../../data/satellites/satelliteClasses';
 import { SATELLITE_PROFILES } from '../../points/data/satelliteProfiles';
@@ -22,8 +21,6 @@ import { selectedSatelliteIndices } from '../subsystems/selectedSatelliteIndices
 import { satrecOf } from '../../sweep/load/satrecOf';
 
 export function satelliteOrbitsPass(runtime: SatellitesRuntime): ContentPass<'satellites'> {
-  let staging = new Float32Array(0);
-
   return {
     name: 'satellite-orbits',
     fade: 'satellites',
@@ -37,16 +34,12 @@ export function satelliteOrbitsPass(runtime: SatellitesRuntime): ContentPass<'sa
     draw(pass, view, ctx, state, fade) {
       const earth = sceneBodyStates(state, ctx).get(SCENE_EARTH.id)!;
       const { simDays } = ctx.snapshot;
-      const eye = ctx.drawCamPos;
       const catalog = runtime.propagator.catalog()!;
       const opacity = satelliteLayerOpacity(catalog, simDays);
       const ks = selectedSatelliteIndices(state.selection, catalog);
-      if (staging.length < ks.length * INSTANCE_FLOATS) {
-        staging = new Float32Array(ks.length * INSTANCE_FLOATS);
-      }
       const temeToWorld = composeTemeToWorld(earth.orientation, simDays);
 
-      let count = 0;
+      const trails: OrbitTrail[] = [];
       for (const k of ks) {
         const classFade = fade[SATELLITE_CLASSES[catalog.classCode[k]!]!];
         if (classFade === 0) continue;
@@ -58,32 +51,14 @@ export function satelliteOrbitsPass(runtime: SatellitesRuntime): ContentPass<'sa
           earth.positionMpc,
         );
         if (orbit === null) continue;
-        const wrote = writeOrbitTrailRecord(
-          {
-            slabVp: view.slab.vp,
-            viewportPx: view.viewportPx,
-            eyeMpc: eye,
-            pxPerRad: ctx.drawPxPerRad,
-            ...orbit,
-            color:
-              state.settings.satelliteTuning.colors[
-                SATELLITE_PROFILES[catalog.profileCodes[k]!]!.id
-              ],
-            fade: classFade * opacity,
-          },
-          staging,
-          count * INSTANCE_FLOATS,
-        );
-        if (wrote) count++;
+        trails.push({
+          ...orbit,
+          color:
+            state.settings.satelliteTuning.colors[SATELLITE_PROFILES[catalog.profileCodes[k]!]!.id],
+          fade: classFade * opacity,
+        });
       }
-      if (count === 0) return;
-      runtime.orbitRenderer.draw(pass, {
-        instances: staging,
-        count,
-        occluders: sceneOccluderSpheres(state, ctx),
-        depth: sampledDepthBinding(view.sampledDepth, ctx.bodyPose, ctx.snapshot.renderTargets),
-        showImpostor: state.settings.debug.overlays['orbit-trail-impostor'],
-      });
+      drawOrbitConics(pass, runtime.orbitRenderer, trails, orbitTrailView(view, ctx, state));
     },
   };
 }

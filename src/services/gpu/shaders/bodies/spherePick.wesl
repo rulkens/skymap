@@ -89,7 +89,7 @@ struct SpherePickUniforms {
 
 // Visible to BOTH stages: the vertex stage reads 'mvp', the fragment reads all
 // three. Bound with 'hasDynamicOffset: true' so each draw selects its slot.
-@group(0) @binding(0) var<uniform> u: SpherePickUniforms;
+@group(0) @binding(0) var<uniform> uniforms: SpherePickUniforms;
 
 // The one and ONLY '@builtin(position)'-bearing struct in this module. A second
 // one linked alongside it passes both the build and the WESL linker and is
@@ -113,18 +113,18 @@ struct PickFSOut {
 fn vs(@location(0) position: vec3<f32>) -> SpherePickVSOut {
   var out: SpherePickVSOut;
   let proxy = position * PROXY_SCALE;
-  out.clip = clip_from_local(u.mvp, proxy);
+  out.clip = clip_from_local(uniforms.mvp, proxy);
   out.localPos = proxy;
   return out;
 }
 
 @fragment
 fn fsPick(in: SpherePickVSOut) -> PickFSOut {
-  let ro = u.camPosLocal;
+  let rayOrigin = uniforms.camPosLocal;
   // Renormalize AFTER interpolation: 'in.localPos' rides the scaled-up proxy, so
   // neither it nor its interpolant is unit length.
-  let rd = normalize(in.localPos - ro);
-  let surface = hitUnitSphere(ro, rd, dot(ro, ro) - 1.0);
+  let rayDir = normalize(in.localPos - rayOrigin);
+  let surface = hitUnitSphere(rayOrigin, rayDir, dot(rayOrigin, rayOrigin) - 1.0);
   // The missed lanes can go IMMEDIATELY here. The visual path has to carry them
   // as far as its 'dpdx'/'dpdy' calls, which demand uniform control flow; this
   // stage samples no texture, so it takes no derivatives and owes them nothing.
@@ -135,9 +135,9 @@ fn fsPick(in: SpherePickVSOut) -> PickFSOut {
   var out: PickFSOut;
   // r-channel carries the identity; g/b/a stay 0 so the output is well-defined
   // (only the r channel is read back on the JS side).
-  out.id = vec4<u32>(u.packedId, 0u, 0u, 0u);
+  out.id = vec4<u32>(uniforms.packedId, 0u, 0u, 0u);
   // Absolute local frame: the SAME mvp the vertex stage used, applied to the
   // real surface point.
-  out.depth = fragDepthFromClip(u.mvp, surface.point);
+  out.depth = fragDepthFromClip(uniforms.mvp, surface.point);
   return out;
 }

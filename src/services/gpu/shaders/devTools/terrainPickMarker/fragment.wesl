@@ -10,7 +10,7 @@
 // queue-ordered ahead of the whole command buffer, so a per-draw uniform edit
 // between two 'pass.draw' calls would leave both draws reading the last write.
 //
-// Depth is 'clip.z / clip.w' through the same 'u.vp' the surface tiles project
+// Depth is 'clip.z / clip.w' through the same 'uniforms.vp' the surface tiles project
 // through, with no reversed-Z flip: see 'lib/analyticSphere.wesl's depth
 // section, which owns that argument. Writing '@builtin(frag_depth)' is
 // mandatory here -- the rasterised depth belongs to the flat proxy quad, which
@@ -23,7 +23,7 @@ import package::devTools::terrainPickMarker::io::MarkerVSOut;
 import package::devTools::terrainPickMarker::io::TerrainPickMarkerUniforms;
 import package::lib::analyticSphere::fragDepthFromClip;
 
-@group(0) @binding(0) var<uniform> u: TerrainPickMarkerUniforms;
+@group(0) @binding(0) var<uniform> uniforms: TerrainPickMarkerUniforms;
 
 const MARKER_COLOUR: vec3<f32> = vec3<f32>(1.0, 0.24, 0.05);
 // Linear HDR, pre-tone-map: the same order as the lit terrain's own direct term
@@ -54,30 +54,30 @@ struct MarkerFSOut {
 fn shadeMarker(rayM: vec3<f32>, tint: vec3<f32>, irradiance: f32) -> MarkerFSOut {
   // Eye-relative frame: the eye IS the origin, so the textbook 'ro - centre'
   // is just '-centre' and no large magnitude is ever subtracted in f32.
-  let rd = normalize(rayM);
-  let oc = -u.centreRelEyeM;
-  let b = dot(oc, rd);
-  let c = dot(oc, oc) - u.radiusM * u.radiusM;
-  let discr = b * b - c;
-  let s = sqrt(max(discr, 0.0));
-  let tNear = -b - s;
-  let tFar = -b + s;
+  let rayDir = normalize(rayM);
+  let eyeRelCentreM = -uniforms.centreRelEyeM;
+  let originAlongRay = dot(eyeRelCentreM, rayDir);
+  let distSqMinusRadiusSq = dot(eyeRelCentreM, eyeRelCentreM) - uniforms.radiusM * uniforms.radiusM;
+  let discr = originAlongRay * originAlongRay - distSqMinusRadiusSq;
+  let sqrtDiscr = sqrt(max(discr, 0.0));
+  let tNear = -originAlongRay - sqrtDiscr;
+  let tFar = -originAlongRay + sqrtDiscr;
   // The near root in front of the eye; the exit root when the eye is inside.
-  let t = select(tFar, tNear, tNear > 0.0);
-  if (discr < 0.0 || t <= 0.0) {
+  let hitDistance = select(tFar, tNear, tNear > 0.0);
+  if (discr < 0.0 || hitDistance <= 0.0) {
     discard;
   }
 
-  let hitRelEyeM = rd * t;
-  let n = normalize(hitRelEyeM - u.centreRelEyeM);
-  let key = clamp(dot(n, -rd), 0.0, 1.0);
+  let hitRelEyeM = rayDir * hitDistance;
+  let normal = normalize(hitRelEyeM - uniforms.centreRelEyeM);
+  let key = clamp(dot(normal, -rayDir), 0.0, 1.0);
 
   var out: MarkerFSOut;
   out.colour = vec4<f32>(
     tint * irradiance * (MARKER_AMBIENT + (1.0 - MARKER_AMBIENT) * key),
     1.0,
   );
-  out.depth = fragDepthFromClip(u.vp, hitRelEyeM);
+  out.depth = fragDepthFromClip(uniforms.vp, hitRelEyeM);
   return out;
 }
 

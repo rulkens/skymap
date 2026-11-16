@@ -324,6 +324,7 @@ fn accumulate(
     jobs: &[FrameReq],
     dec: &Decoder,
     frames: &Path,
+    allow: bool,
     a: &mut Acc,
     weights: Option<&[(i32, Sparse)]>,
     mut on_slot: impl FnMut(i32, &mut Acc, &[FrameReq]),
@@ -348,7 +349,11 @@ fn accumulate(
     for chunk in jobs.chunks(batch) {
         let layers: Vec<_> = chunk
             .par_iter()
-            .map(|jb| fetch::frame(frames, jb).map(|f| dec.layer(jb, f)))
+            .map(|jb| {
+                fetch::first_usable(frames, std::slice::from_ref(jb), allow, |mut f| {
+                    Some(dec.layer(jb, f.remove(0)))
+                })
+            })
             .collect();
         for (jb, layer) in chunk.iter().zip(layers) {
             // a missing or broken frame contributes nothing, as if its slot were out of geo reach
@@ -453,7 +458,7 @@ fn pick_by_correlation(
     let mut a = Acc::new(hq, wq);
     let mut windows: std::collections::HashMap<(usize, i32), Vec<f64>> =
         std::collections::HashMap::new();
-    accumulate(&jobs, dec, frames, &mut a, None, |slot, a, sj| {
+    accumulate(&jobs, dec, frames, allow, &mut a, None, |slot, a, sj| {
         for &cell in &amb {
             if !cells[cell]
                 .as_ref()
@@ -667,7 +672,15 @@ pub fn build_fill(
     fetch::prefetch(frames, &jobs, allow);
 
     let mut a = Acc::new(H, W);
-    accumulate(&jobs, dec, frames, &mut a, Some(&weights), |_, _, _| {});
+    accumulate(
+        &jobs,
+        dec,
+        frames,
+        allow,
+        &mut a,
+        Some(&weights),
+        |_, _, _| {},
+    );
     let blend: Vec<u8> = a
         .acc
         .par_iter()

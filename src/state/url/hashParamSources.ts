@@ -282,13 +282,13 @@ const poseSource: HashParamSource = {
 const isTakeoverChange = (action: Action): boolean =>
   takeoverStarted.match(action) || takeoverEnded.match(action);
 
-const takeoverSource = (key: TakeoverSource['kind']): HashParamSource => ({
+const takeoverSource = (key: Exclude<TakeoverSource['kind'], 'sky'>): HashParamSource => ({
   key,
   deepLink: true,
   writesOn: [isTakeoverChange],
   write: (state) => {
     const source = selectTakeoverSource(state);
-    return source?.kind === key ? source.id : null;
+    return source !== null && source.kind === key ? source.id : null;
   },
   read: (value) => ({ view: { kind: key, id: value } }),
   readAbsent: () => [],
@@ -296,7 +296,7 @@ const takeoverSource = (key: TakeoverSource['kind']): HashParamSource => ({
 
 /**
  * `layers` — layer and caption switches, read-only like `pose`: `flow` on,
- * `-starCatalog` off, applied left to right through the tour cues' writes
+ * `-starCatalog` off, `-label` / `label` switch every caption, applied left to right through the tour cues' writes
  * (`parseLayerSwitches`). A writing row would need every Layer's setter in its
  * `writesOn`, or a `settings/*` prefix, which fires on every frame of a slider
  * drag; and a push per checkbox click would make Back undo clicks. So the

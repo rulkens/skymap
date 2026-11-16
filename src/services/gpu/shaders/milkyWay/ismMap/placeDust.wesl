@@ -91,8 +91,8 @@ struct PlaceDustParams {
 
 @compute @workgroup_size(256)
 fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
-  let i = gid.x;
-  if (i >= params.count) {
+  let childIndex = gid.x;
+  if (childIndex >= params.count) {
     return;
   }
 
@@ -103,8 +103,8 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   let cdfLen = params.gridRings * params.gridAz;
   let total = prefixBuf[cdfLen - 1u];
   var globalMean = 0.0;
-  for (var r = 0u; r < params.gridRings; r++) {
-    globalMean += ringMeansBuf[r];
+  for (var ringIndex = 0u; ringIndex < params.gridRings; ringIndex++) {
+    globalMean += ringMeansBuf[ringIndex];
   }
   globalMean = globalMean / f32(params.gridRings);
   let usesMapDensity = params.generatorIsFluid != 0u && globalMean >= GLOBAL_MEAN_EPS && total > 0.0;
@@ -127,7 +127,7 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   // so a zeroed ArmRec + degenerate armLogMax<=armLogMin (0.0, 0.0) is
   // harmless filler, not a real placement.
   let placed = buildClusteredDiscPlacementChild(
-    params.seed, i, params.childrenPerComplex, mode,
+    params.seed, childIndex, params.childrenPerComplex, mode,
     CDP_POP_COMPLEX, CDP_POP_CHILD,
     &prefixBuf, total, params.gridRings, params.gridAz, params.rMin, params.rMax,
     params.discSigmaR, params.discWeightSum,
@@ -141,11 +141,11 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   // drawPayload — the CPU's former per-child radius draw (1 slot) plus S3's
   // deterministic (no-draw) aspect/survival lookup at the CHILD's own
   // scattered position, exactly mirroring the CPU's post-scatter timing.
-  let u = genRand(params.seed, CDP_POP_CHILD, i, 6u);
+  let sizeQuantile = genRand(params.seed, CDP_POP_CHILD, childIndex, 6u);
   let sizeExp = 1.0 - GMC_SIZE_POWER;
   let sizeMinPow = pow(params.sizeMin, sizeExp);
   let sizeMaxPow = pow(params.sizeMax, sizeExp);
-  let radius = pow(u * (sizeMaxPow - sizeMinPow) + sizeMinPow, 1.0 / sizeExp);
+  let radius = pow(sizeQuantile * (sizeMaxPow - sizeMinPow) + sizeMinPow, 1.0 / sizeExp);
 
   var aspect = params.elongation;
   var alive = true;
@@ -191,7 +191,7 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   // (amplitude-as-liveness).
   let mass = radius * radius;
   let amplitude = select(0.0, mass / (TAU_ROOT3 * sigAlong * sigAcross * sigPole), alive);
-  massOut[i] = select(0.0, mass, alive);
+  massOut[childIndex] = select(0.0, mass, alive);
 
   let invCov = inverseCovarianceFromFrame(placed.frame, sigAlong, sigAcross, sigPole);
 
@@ -205,5 +205,5 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   rec.center = placed.center;
   rec.starsWeight = 0.0;
 
-  comps[params.dustOffset + i] = rec;
+  comps[params.dustOffset + childIndex] = rec;
 }

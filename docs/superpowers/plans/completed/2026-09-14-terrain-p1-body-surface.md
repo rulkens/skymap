@@ -1,6 +1,6 @@
 # P1 — the `BodySurface` split
 
-**Spec:** [`docs/superpowers/specs/2026-09-13-per-planet-terrain-design.md`](../../specs/2026-09-13-per-planet-terrain-design.md)
+**Spec:** [`docs/superpowers/specs/completed/2026-09-13-per-planet-terrain-design.md`](../../specs/completed/2026-09-13-per-planet-terrain-design.md)
 — §3.1 (ideal shape), §3.3 joints 8 + 9, §3.4a (why the name dies), §3.5 P1, §3.7
 (the promoted adjacent finding), §8.3 (the per-purpose routing table, which is this
 plan's map).

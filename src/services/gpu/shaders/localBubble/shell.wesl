@@ -22,7 +22,7 @@ struct VSOut {
   @location(1) worldNormal: vec3<f32>,
 };
 
-@group(0) @binding(0) var<uniform> u: Uniforms;
+@group(0) @binding(0) var<uniform> uniforms: Uniforms;
 
 const RIM_POWER: f32 = 3.0;
 
@@ -32,17 +32,17 @@ fn vs(
   @location(1) normal: vec4<f32>,
 ) -> VSOut {
   var out: VSOut;
-  out.worldPos = (u.model * vec4<f32>(position.xyz, 1.0)).xyz;
-  out.worldNormal = (u.model * vec4<f32>(normal.xyz, 0.0)).xyz;
-  out.clipPos = worldToClip(u.cam, out.worldPos);
+  out.worldPos = (uniforms.model * vec4<f32>(position.xyz, 1.0)).xyz;
+  out.worldNormal = (uniforms.model * vec4<f32>(normal.xyz, 0.0)).xyz;
+  out.clipPos = worldToClip(uniforms.cam, out.worldPos);
   return out;
 }
 
 @fragment
 fn fs(input: VSOut) -> @location(0) vec4<f32> {
-  let n = normalize(input.worldNormal);
-  let v = normalize(u.eye - input.worldPos);
-  let rim = fresnelRim(n, v, RIM_POWER);
-  let value = rim * u.opacity;
-  return vec4<f32>(u.tint * value, value);
+  let normal = normalize(input.worldNormal);
+  let viewDir = normalize(uniforms.eye - input.worldPos);
+  let rim = fresnelRim(normal, viewDir, RIM_POWER);
+  let value = rim * uniforms.opacity;
+  return vec4<f32>(uniforms.tint * value, value);
 }

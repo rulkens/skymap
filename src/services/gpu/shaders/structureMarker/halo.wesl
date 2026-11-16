@@ -19,13 +19,13 @@ import package::structureMarker::io::MARKER_RADIUS_RETUNE;
 import package::lib::billboard::quadCorner;
 import package::lib::billboard::expandBillboardWorld;
 
-@group(0) @binding(0) var<uniform> u: CameraUniforms;
+@group(0) @binding(0) var<uniform> camera: CameraUniforms;
 // No @group(1): visibility rides each instance's alpha. The renderer's pipeline
 // layout still lists the shared fade slot so it matches the other HDR passes.
 
 @vertex
 fn vs(
-  @builtin(vertex_index) vi: u32,
+  @builtin(vertex_index) vertexIndex: u32,
   input: VsIn,
 ) -> VsOut {
   let worldPos = input.positionAndRadius.xyz;
@@ -33,11 +33,11 @@ fn vs(
 
   // Eye-facing world disc — see lib/billboard.wesl's expandBillboardWorld.
   let half = radiusMpc * MARKER_RADIUS_RETUNE;
-  let corner = quadCorner(vi);
+  let corner = quadCorner(vertexIndex);
   let offset = expandBillboardWorld(vec3<f32>(0.0), worldPos, corner, half);
 
   var out: VsOut;
-  out.pos = worldToClip(u, worldPos + offset);
+  out.pos = worldToClip(camera, worldPos + offset);
   out.uv = corner;
   out.color = input.haloColorAndAlpha.xyz;
   out.alpha = input.haloColorAndAlpha.w;
@@ -65,14 +65,14 @@ fn fs(input: VsOut) -> @location(0) vec4<f32> {
   // length(input.uv) is 0 at centre, ~1.414 at corner; we clamp to 1.0
   // so the diagonal corner of the quad still gets faded to zero
   // smoothly.
-  let r = length(input.uv);
-  let g = 1.0 - smoothstep(0.0, 1.0, r);
+  let radius = length(input.uv);
+  let falloff = 1.0 - smoothstep(0.0, 1.0, radius);
   // Premultiplied alpha output for additive blend.  The pipeline's
   // blend state is (one, one) so we don't need the destination factor
-  // to read alpha; emitting color * (g * input.alpha) and alpha = 0 (or
-  // 1, doesn't matter for additive) both work.  We emit alpha = g *
+  // to read alpha; emitting color * (falloff * input.alpha) and alpha = 0 (or
+  // 1, doesn't matter for additive) both work.  We emit alpha = falloff *
   // input.alpha so a future blend-state change (e.g. additive-with-
   // alpha-cap) sees a coherent vec4.
-  let a = g * input.alpha;
-  return vec4<f32>(input.color * a, a);
+  let alpha = falloff * input.alpha;
+  return vec4<f32>(input.color * alpha, alpha);
 }

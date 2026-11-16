@@ -35,7 +35,7 @@ function makeState(focus: SelectionRefBase | null = FOCUS_REF) {
   return {
     settings: { ...makeSettingsFixture(), orientation: 'galactic' },
     selection: { hover: null, select: null, focus },
-    camera: { fovYRad: CAPTURED_FOV_Y_RAD },
+    camera: { intent: { fovYRad: CAPTURED_FOV_Y_RAD } },
     time: {
       mode: 'manual',
       anchor: { simDays: 2460000, realMs: 1000 },

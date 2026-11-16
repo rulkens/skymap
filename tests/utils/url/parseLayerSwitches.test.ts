@@ -27,4 +27,14 @@ describe('parseLayerSwitches', () => {
       unknown: ['nope', 'survey:nope', '-label:nope', 'survey:desiWedge:x'],
     });
   });
+
+  it('parseLayerSwitches expands a bare label into every caption entry, left to right', () => {
+    const { switches, unknown } = parseLayerSwitches('-label,label:body');
+    const captions = switches.slice(0, -1);
+    expect(captions.length).toBeGreaterThan(1);
+    expect(captions.every((s) => s.address.startsWith('label:') && !s.on)).toBe(true);
+    expect(switches.at(-1)).toEqual({ address: 'label:body', on: true });
+    expect(unknown).toEqual([]);
+    expect(parseLayerSwitches('label:').unknown).toEqual(['label:']);
+  });
 });

@@ -377,7 +377,7 @@ struct FieldUniforms {
   perf: vec4<f32>,
 };
 
-@group(0) @binding(0) var<uniform> u: FieldUniforms;
+@group(0) @binding(0) var<uniform> uniforms: FieldUniforms;
 @group(0) @binding(1) var<storage, read> comps: array<FieldComponentRec>;
 @group(0) @binding(2) var dustMapTex: texture_2d<f32>;
 // Bindings 4/5: the baked ridged-noise volume (dustNoiseBake.wesl) —

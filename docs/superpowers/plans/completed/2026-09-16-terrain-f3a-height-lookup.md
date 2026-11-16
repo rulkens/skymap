@@ -1,6 +1,6 @@
 # Terrain F3a — the height lookup
 
-Spec: [`2026-09-13-per-planet-terrain-design.md`](../specs/2026-09-13-per-planet-terrain-design.md)
+Spec: [`2026-09-13-per-planet-terrain-design.md`](../specs/completed/2026-09-13-per-planet-terrain-design.md)
 §5.3, §8 (amended 2026-09-16 and 2026-09-17), §11, §12.
 
 Earth draws displaced terrain (F1+F2) that the engine does not know about: the camera

@@ -16,7 +16,7 @@ import package::horizonShell::io::Uniforms;
 import package::horizonShell::io::VsOut;
 import package::lib::fresnel::fresnelRim;
 
-@group(0) @binding(0) var<uniform> u: Uniforms;
+@group(0) @binding(0) var<uniform> uniforms: Uniforms;
 
 // ── Tuning constants ───────────────────────────────────────────────
 const RIM_POWER: f32 = 3.0;
@@ -27,40 +27,40 @@ const INTENSITY: f32 = 0.25;
 fn fs(input: VsOut) -> @location(0) vec4<f32> {
   // World-space view ray for this pixel, from the camera basis + frustum.
   let rayDir = normalize(
-    u.rayAxis
-    + input.ndc.x * u.tanHalfX * u.camRight
-    + input.ndc.y * u.tanHalfY * u.camUp,
+    uniforms.rayAxis
+    + input.ndc.x * uniforms.tanHalfX * uniforms.camRight
+    + input.ndc.y * uniforms.tanHalfY * uniforms.camUp,
   );
 
   // Sphere centre relative to the camera (= ray origin at 0), in Gpc.
-  let center = -u.cameraPosGpc;
+  let center = -uniforms.cameraPosGpc;
 
   // Ray-sphere intersection.  With origin at 0 and |rayDir| = 1:
   //   t² - 2·(rayDir·center)·t + (|center|² - r²) = 0
-  //   t = (rayDir·center) ± sqrt(disc),  disc = k² - |center|² + r²
-  let k = dot(rayDir, center);
-  let disc = k * k - dot(center, center) + u.radiusGpc * u.radiusGpc;
+  //   t = (rayDir·center) ± sqrt(disc),  disc = centerAlongRay² - |center|² + r²
+  let centerAlongRay = dot(rayDir, center);
+  let disc = centerAlongRay * centerAlongRay - dot(center, center) + uniforms.radiusGpc * uniforms.radiusGpc;
   if (disc < 0.0) {
     // Ray misses the shell — transparent (carves the crisp silhouette).
     discard;
   }
-  let sq = sqrt(disc);
-  let tNear = k - sq;
-  let tFar = k + sq;
+  let sqrtDisc = sqrt(disc);
+  let tNear = centerAlongRay - sqrtDisc;
+  let tFar = centerAlongRay + sqrtDisc;
   // Camera outside the shell → near hit is the visible surface; inside
   // → near hit is behind us, take the far wall.
-  let t = select(tFar, tNear, tNear > 0.0);
-  if (t < 0.0) {
+  let hitDistance = select(tFar, tNear, tNear > 0.0);
+  if (hitDistance < 0.0) {
     discard;
   }
 
-  let hit = rayDir * t;                 // camera-relative hit point (Gpc)
+  let hit = rayDir * hitDistance;                 // camera-relative hit point (Gpc)
   let normal = normalize(hit - center); // outward sphere normal
   let viewDir = -rayDir;                // points back toward the camera
 
   let rim = fresnelRim(normal, viewDir, RIM_POWER);
   // Distance fade (CPU-side smoothstep) scales the whole additive
   // contribution, so the shell ramps in as the camera pulls back.
-  let value = rim * INTENSITY * u.fadeAlpha;
+  let value = rim * INTENSITY * uniforms.fadeAlpha;
   return vec4<f32>(SHELL_COLOR * value, value);
 }

@@ -33,10 +33,10 @@
  *
  * ### Why no camera tween during the dive
  *
- * The `focus()` cue in beat 2's clip fires while `camera.clip !== null`.
+ * The `focus()` cue in beat 2's clip fires while `camera.intent.clip !== null`.
  * `suspendDuringClip` parks `watchFocusTweenSaga` for the duration of any
  * active clip, so the cue updates `selection.focus` without planting a
- * `camera.tween`. The tween that would normally chase a focus change is skipped
+ * `camera.intent.tween`. The tween that would normally chase a focus change is skipped
  * entirely — the clip@95 driver already owns the camera and will arrive at the
  * correct framing on its own timeline.
  */
