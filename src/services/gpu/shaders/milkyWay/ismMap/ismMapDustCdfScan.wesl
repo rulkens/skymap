@@ -117,15 +117,15 @@ fn evalWeight(texel: vec4<f32>, ring: u32, radius: f32, angle: f32, globalMean: 
   }
   let armCount = u32(params.armCount);
   var acc = 0.0;
-  for (var a = 0u; a < armCount; a++) {
-    let e = armEnvelopeBuf[ring * armCount + a];
-    if (e.weight <= 0.0 || e.invSigma <= 0.0) {
+  for (var armIndex = 0u; armIndex < armCount; armIndex++) {
+    let envelopeEntry = armEnvelopeBuf[ring * armCount + armIndex];
+    if (envelopeEntry.weight <= 0.0 || envelopeEntry.invSigma <= 0.0) {
       continue;
     }
-    let raw = angle - e.ridgeAngle;
+    let raw = angle - envelopeEntry.ridgeAngle;
     let wrapped = raw - ISM_MAP_CDF_TWO_PI * round(raw / ISM_MAP_CDF_TWO_PI);
-    let z = radius * wrapped * e.invSigma;
-    acc += e.weight * exp(-0.5 * z * z);
+    let sigmaDistance = radius * wrapped * envelopeEntry.invSigma;
+    acc += envelopeEntry.weight * exp(-0.5 * sigmaDistance * sigmaDistance);
   }
   let envelope = min(1.0, acc);
   return base * (1.0 + params.armBias * (envelope - 1.0));

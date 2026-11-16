@@ -86,8 +86,8 @@ struct PlaceDigVeilParams {
 
 @compute @workgroup_size(256)
 fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
-  let i = gid.x;
-  if (i >= params.count) {
+  let childIndex = gid.x;
+  if (childIndex >= params.count) {
     return;
   }
 
@@ -96,20 +96,20 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
     params.warpStrength, params.warpTwist, params.warpStartRadius, params.outerRadius,
   );
 
-  let complexIndex = i / params.childrenPerComplex;
+  let complexIndex = childIndex / params.childrenPerComplex;
 
   // placeDigMapComplex — sampleIsmMapDustCdf.ts ported verbatim: upperBound
   // binary search over the packed (arm-biased) prefix sum, then jittered
   // uniform-in-angle / area-uniform-in-radius inside the picked texel.
   let cdfLen = params.cdfRings * params.cdfAz;
   let total = prefixBuf[cdfLen - 1u];
-  let u = genRand(params.seed, DIG_VEIL_POP_COMPLEX, complexIndex, 0u) * total;
+  let cdfTarget = genRand(params.seed, DIG_VEIL_POP_COMPLEX, complexIndex, 0u) * total;
   var lo = 0u;
   var hi = cdfLen - 1u;
   loop {
     if (lo >= hi) { break; }
     let mid = (lo + hi) / 2u;
-    if (prefixBuf[mid] > u) { hi = mid; } else { lo = mid + 1u; }
+    if (prefixBuf[mid] > cdfTarget) { hi = mid; } else { lo = mid + 1u; }
   }
   let index = lo;
   let ring = index / params.cdfAz;
@@ -142,21 +142,21 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   // clusteredDiscPlacement.wesl's shared child-scatter tail, which applies
   // elongation straight to 'along' alone; ported as its own algorithm, not
   // reconciled with that file's convention.
-  let offAlong = genNormal(params.seed, DIG_VEIL_POP_CHILD, i, 0u) * params.complexSpread * sqrt(params.elongation);
-  let offAcross = genNormal(params.seed, DIG_VEIL_POP_CHILD, i, 2u) * params.complexSpread / sqrt(params.elongation);
-  let offPole = genNormal(params.seed, DIG_VEIL_POP_CHILD, i, 4u) * params.complexSpread * DIG_CHILD_POLE_RATIO;
+  let offAlong = genNormal(params.seed, DIG_VEIL_POP_CHILD, childIndex, 0u) * params.complexSpread * sqrt(params.elongation);
+  let offAcross = genNormal(params.seed, DIG_VEIL_POP_CHILD, childIndex, 2u) * params.complexSpread / sqrt(params.elongation);
+  let offPole = genNormal(params.seed, DIG_VEIL_POP_CHILD, childIndex, 4u) * params.complexSpread * DIG_CHILD_POLE_RATIO;
 
-  let x = point.x + axisAlong.x * offAlong + axisAcross.x * offAcross + surf.pole.x * offPole;
-  let z = point.z + axisAlong.z * offAlong + axisAcross.z * offAcross + surf.pole.z * offPole;
+  let centerX = point.x + axisAlong.x * offAlong + axisAcross.x * offAcross + surf.pole.x * offPole;
+  let centerZ = point.z + axisAlong.z * offAlong + axisAcross.z * offAcross + surf.pole.z * offPole;
   let yFlat = point.y + axisAlong.y * offAlong + axisAcross.y * offAcross + surf.pole.y * offPole;
   // Warp lift at THIS CHILD's own (x, z) — 'point' sits flat, never lifted.
-  let y = yFlat + warpHeight(length(vec2<f32>(x, z)), atan2(z, x), geom);
+  let surfaceY = yFlat + warpHeight(length(vec2<f32>(centerX, centerZ)), atan2(centerZ, centerX), geom);
 
   // Extraplanar scatter on top of the in-plane placement above — DIG stands
   // thicker off the disc than a single HII shell.
-  let height = y + genNormal(params.seed, DIG_VEIL_POP_CHILD, i, 6u) * params.scaleHeight;
+  let height = surfaceY + genNormal(params.seed, DIG_VEIL_POP_CHILD, childIndex, 6u) * params.scaleHeight;
   let sigma = params.sigmaMin
-    + (params.sigmaMax - params.sigmaMin) * genRand(params.seed, DIG_VEIL_POP_CHILD, i, 8u);
+    + (params.sigmaMax - params.sigmaMin) * genRand(params.seed, DIG_VEIL_POP_CHILD, childIndex, 8u);
 
   // usesMap — the whole-dispatch liveness gate: 'generatorIsFluid' guards
   // against a STALE prefixBuf surviving a generator flip to 'none' (not
@@ -179,8 +179,8 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   rec.boundRadius = sigma;
   rec.color = params.color;
   rec.textureWeight = params.textureWeight;
-  rec.center = vec3<f32>(x, height, z);
+  rec.center = vec3<f32>(centerX, height, centerZ);
   rec.starsWeight = 0.0;
 
-  comps[params.reservationOffset + i] = rec;
+  comps[params.reservationOffset + childIndex] = rec;
 }

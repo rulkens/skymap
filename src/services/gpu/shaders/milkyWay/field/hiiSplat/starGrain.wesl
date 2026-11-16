@@ -4,7 +4,7 @@
 // unresolved stars rather than the shared ridged ISM texture hiiNoise.wesl
 // gives shells/DIG.
 
-import package::milkyWay::field::io::u;
+import package::milkyWay::field::io::uniforms;
 import package::milkyWay::field::io::warpNoiseTex;
 import package::milkyWay::field::io::warpNoiseSmp;
 import package::milkyWay::field::io::starGrainTex;
@@ -35,7 +35,7 @@ const STAR_GRAIN_OCTAVE2_DIV: f32 = 16.0;
 // tile phases equidistribute and never cycle — merely "non-integer" is not
 // enough, commensurate ratios with small denominators still lock.
 const STAR_GRAIN_WARP_SCALE: f32 = 0.64 * 3.6180339887;
-// Warp displacement amplitude — u.perf.y (render.starGrainWarpAmp, world
+// Warp displacement amplitude — uniforms.perf.y (render.starGrainWarpAmp, world
 // units, io.wesl's own doc): large enough to break the repeat, small enough
 // to stay under one tile (shredding starts ~1x). Live, not const, since an
 // A/B against warp-off (which brought the tile repeat straight back) showed
@@ -44,7 +44,7 @@ const STAR_GRAIN_WARP_SCALE: f32 = 0.64 * 3.6180339887;
 // The firefly-fix gate below tracks the baked POINT's visible extent, not
 // the tile: starGrainBake.wesl's points sit at sigma POINT_SIGMA_CELLS=0.28
 // cell-widths (CELLS=32), an order of magnitude under the tile. The gate's
-// feature size is a multiple of that sigma — u.dustDetail.w
+// feature size is a multiple of that sigma — uniforms.dustDetail.w
 // (render.starGrainFeatureScale), the user's own live calibration.
 const STAR_GRAIN_POINT_SIGMA_FRAC: f32 = 0.28 / 32.0;
 
@@ -52,9 +52,9 @@ const STAR_GRAIN_POINT_SIGMA_FRAC: f32 = 0.28 / 32.0;
 // dustMap.wesl's S4 breakup precedent) so a finer octave doesn't just
 // resample its coarser sibling enlarged. 'contrast' sharpens the baked
 // field's spike/background contrast via pow(); GAIN restores mean ~1.
-fn starGrainOctave(p: vec3<f32>, tileUnits: f32, contrast: f32, offset: vec3<f32>) -> f32 {
-  let n = textureSampleLevel(starGrainTex, starGrainSmp, p / tileUnits + offset, 0.0).x;
-  return pow(n, max(contrast, 1e-4)) * STAR_GRAIN_GAIN;
+fn starGrainOctave(worldPos: vec3<f32>, tileUnits: f32, contrast: f32, offset: vec3<f32>) -> f32 {
+  let grainSample = textureSampleLevel(starGrainTex, starGrainSmp, worldPos / tileUnits + offset, 0.0).x;
+  return pow(grainSample, max(contrast, 1e-4)) * STAR_GRAIN_GAIN;
 }
 
 // starGrainTerm — hiiNoise.wesl's counterpart for the YOUNG STARS branch:
@@ -77,11 +77,11 @@ fn starGrainOctave(p: vec3<f32>, tileUnits: f32, contrast: f32, offset: vec3<f32
 // to 0.70 (a folded field's mode sits near its ceiling, not its midpoint),
 // which made this a net directional shift, not symmetric jitter, before
 // warpNoiseBake.wesl's own centerFold fixed it at the source. Built from
-// the UNSCALED p so the Texture-scale slider zooms the grain without
+// the UNSCALED worldPos so the Texture-scale slider zooms the grain without
 // re-randomizing the shift.
-fn starGrainTerm(p: vec3<f32>, depth: f32, scale: f32, contrast: f32) -> f32 {
-  let pxWorld = depth * (u.frustum.w - u.frustum.z) / u.counts2.w;
-  let featureFrac = max(u.dustDetail.w, 0.0) * STAR_GRAIN_POINT_SIGMA_FRAC;
+fn starGrainTerm(worldPos: vec3<f32>, depth: f32, scale: f32, contrast: f32) -> f32 {
+  let pxWorld = depth * (uniforms.frustum.w - uniforms.frustum.z) / uniforms.counts2.w;
+  let featureFrac = max(uniforms.dustDetail.w, 0.0) * STAR_GRAIN_POINT_SIGMA_FRAC;
 
   let tileUnits0 = STAR_GRAIN_TILE_UNITS / max(scale, 1e-4);
   let tileUnits1 = tileUnits0 / STAR_GRAIN_OCTAVE1_DIV;
@@ -103,8 +103,8 @@ fn starGrainTerm(p: vec3<f32>, depth: f32, scale: f32, contrast: f32) -> f32 {
     return term;
   }
 
-  let warpN = textureSampleLevel(warpNoiseTex, warpNoiseSmp, p / STAR_GRAIN_WARP_SCALE, 0.0).xyz;
-  let pWarped = p + u.perf.y * (warpN - vec3<f32>(0.5));
+  let warpN = textureSampleLevel(warpNoiseTex, warpNoiseSmp, worldPos / STAR_GRAIN_WARP_SCALE, 0.0).xyz;
+  let pWarped = worldPos + uniforms.perf.y * (warpN - vec3<f32>(0.5));
 
   if (octave0Weight > 0.0) {
     term = term * mix(1.0, starGrainOctave(pWarped, tileUnits0, contrast, vec3<f32>(0.0)), octave0Weight);

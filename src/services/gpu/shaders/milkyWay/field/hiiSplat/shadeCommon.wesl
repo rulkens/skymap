@@ -11,12 +11,12 @@ import package::milkyWay::field::hiiSplat::io::HiiSplatOut;
 import package::lib::splatSilhouette::SPLAT_CUT;
 import package::lib::camera::cameraRayFromNdc;
 import package::lib::gaussianIntegral::gaussianRayCoeffs;
-import package::milkyWay::field::io::u;
+import package::milkyWay::field::io::uniforms;
 import package::milkyWay::field::io::comps;
 import package::milkyWay::field::dustAttenuation::componentEmission;
 
 // Feather start, in quad-corner units ([-1,1] per axis) — where the
-// capped-quad edge fade begins. Only bites when u.perf.x (the HII quad-cap
+// capped-quad edge fade begins. Only bites when uniforms.perf.x (the HII quad-cap
 // lever) is live and actually truncated a component's gaussian mid-gradient.
 const QUAD_FEATHER_START: f32 = 0.7;
 
@@ -41,13 +41,13 @@ struct HiiComponentShading {
 // dust-attenuated emission every HII fragment starts from. Callers must
 // return vec4(0) without evaluating anything else when '.cut' is true.
 fn baseHiiShading(input: HiiSplatOut) -> HiiComponentShading {
-  let d = cameraRayFromNdc(input.ndc, u.camRight.xyz, u.camUp.xyz, u.camFwd.xyz, u.frustum);
-  let o = u.eye.xyz;
+  let rayDir = cameraRayFromNdc(input.ndc, uniforms.camRight.xyz, uniforms.camUp.xyz, uniforms.camFwd.xyz, uniforms.frustum);
+  let rayOrigin = uniforms.eye.xyz;
 
   let rec = comps[input.inst];
-  let po = o - rec.center;
+  let po = rayOrigin - rec.center;
 
-  let coeffs = gaussianRayCoeffs(po, d, rec.invCovDiagonal, rec.invCovOffDiagonal);
+  let coeffs = gaussianRayCoeffs(po, rayDir, rec.invCovDiagonal, rec.invCovOffDiagonal);
 
   var result: HiiComponentShading;
   result.coeffs = coeffs;
@@ -58,15 +58,15 @@ fn baseHiiShading(input: HiiSplatOut) -> HiiComponentShading {
   result.centerStarsWeight = vec4<f32>(rec.center, rec.starsWeight);
   result.boundRadius = rec.boundRadius;
   result.po = po;
-  result.rayOrigin = o;
-  result.rayDir = d;
+  result.rayOrigin = rayOrigin;
+  result.rayDir = rayDir;
   result.cut = coeffs.z > SPLAT_CUT * SPLAT_CUT;
   if (result.cut) {
     result.emission = vec3<f32>(0.0);
     return result;
   }
 
-  let primaryCount = u32(u.counts.w);
+  let primaryCount = u32(uniforms.counts.w);
   result.emission = componentEmission(
     input.pos.xy,
     input.inst,
@@ -92,8 +92,8 @@ fn hiiNearFadeActive(fadeStart: f32, fadeEnd: f32) -> bool {
 // the ray math above, and the vs's own gate already collapsed the fade <= 0
 // case to zero fragments, so only the 0..1 band ever reaches this.
 fn hiiNearFade(po: vec3<f32>, boundRadius: f32) -> f32 {
-  let fadeStart = u.youngStars.z;
-  let fadeEnd = u.youngStars.w;
+  let fadeStart = uniforms.youngStars.z;
+  let fadeEnd = uniforms.youngStars.w;
   if (hiiNearFadeActive(fadeStart, fadeEnd)) {
     return smoothstep(fadeEnd * boundRadius, fadeStart * boundRadius, length(po));
   }
@@ -101,11 +101,11 @@ fn hiiNearFade(po: vec3<f32>, boundRadius: f32) -> f32 {
 }
 
 // quadCapFeather — the capped-quad edge fade (the quad-cap lever). For a quad the cap did
-// NOT shrink (u.perf.x == 0), the edge sits at SPLAT_CUT sigma where the
+// NOT shrink (uniforms.perf.x == 0), the edge sits at SPLAT_CUT sigma where the
 // gaussian is already ~4e-5, so this feather is invisible there — it only
 // bites where the cap truncated the gradient mid-slope.
 fn quadCapFeather(corner: vec2<f32>) -> f32 {
-  if (u.perf.x > 0.0) {
+  if (uniforms.perf.x > 0.0) {
     return 1.0 - smoothstep(QUAD_FEATHER_START, 1.0, max(abs(corner.x), abs(corner.y)));
   }
   return 1.0;
@@ -116,5 +116,5 @@ fn quadCapFeather(corner: vec2<f32>) -> f32 {
 // which is physical) times the combined debug-view dimming weight
 // (io.wesl's debugView.w doc).
 fn hiiExposureMultiply(emission: vec3<f32>) -> vec3<f32> {
-  return emission * u.eye.w * u.debugView.w;
+  return emission * uniforms.eye.w * uniforms.debugView.w;
 }

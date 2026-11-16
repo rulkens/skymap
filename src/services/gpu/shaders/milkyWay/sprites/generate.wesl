@@ -162,20 +162,20 @@ struct GenUniforms {
 // matching the paper's reference GLSL exactly. Only downstream f32 casts of
 // the result lose precision.
 fn pcg4d(vIn: vec4<u32>) -> vec4<u32> {
-  var v = vIn * 1664525u + 1013904223u;
+  var hashState = vIn * 1664525u + 1013904223u;
   // cross-feed adds — each lane stirred by two others
-  v.x = v.x + v.y * v.w;
-  v.y = v.y + v.z * v.x;
-  v.z = v.z + v.x * v.y;
-  v.w = v.w + v.y * v.z;
+  hashState.x = hashState.x + hashState.y * hashState.w;
+  hashState.y = hashState.y + hashState.z * hashState.x;
+  hashState.z = hashState.z + hashState.x * hashState.y;
+  hashState.w = hashState.w + hashState.y * hashState.z;
   // avalanche: fold the high bits down
-  v = v ^ (v >> vec4<u32>(16u));
+  hashState = hashState ^ (hashState >> vec4<u32>(16u));
   // cross-feed adds again
-  v.x = v.x + v.y * v.w;
-  v.y = v.y + v.z * v.x;
-  v.z = v.z + v.x * v.y;
-  v.w = v.w + v.y * v.z;
-  return v;
+  hashState.x = hashState.x + hashState.y * hashState.w;
+  hashState.y = hashState.y + hashState.z * hashState.x;
+  hashState.z = hashState.z + hashState.x * hashState.y;
+  hashState.w = hashState.w + hashState.y * hashState.z;
+  return hashState;
 }
 
 // genRand — one uniform draw in [0, 1) for a given slot. The f32(u32) cast
@@ -186,28 +186,28 @@ fn genRand(seed: u32, pop: u32, idx: u32, slot: u32) -> f32 {
 }
 
 // genNormal — one Box-Muller normal (mean 0, stddev 1) from slots {slot,
-// slot+1}. u1 is clamped to 1e-38 (f32's smallest positive normal) before the
-// log, guarding against log(0).
+// slot+1}. radialDraw is clamped to 1e-38 (f32's smallest positive normal)
+// before the log, guarding against log(0).
 fn genNormal(seed: u32, pop: u32, idx: u32, slot: u32) -> f32 {
-  let u1 = max(genRand(seed, pop, idx, slot), 1e-38);
-  let u2 = genRand(seed, pop, idx, slot + 1u);
-  return sqrt(-2.0 * log(u1)) * cos(2.0 * PI * u2);
+  let radialDraw = max(genRand(seed, pop, idx, slot), 1e-38);
+  let angleDraw = genRand(seed, pop, idx, slot + 1u);
+  return sqrt(-2.0 * log(radialDraw)) * cos(2.0 * PI * angleDraw);
 }
 
-// randomLuminosity — steep-tailed stellar luminosity. Reserves 3 slots: u
-// (slot), the flare gate (slot+1), and the flare magnitude (slot+2). Slot+2
-// is ALWAYS drawn regardless of the gate, so the next consumer's slot budget
-// stays fixed — the flare value simply goes unused (contributes 0) when the
-// gate fails.
+// randomLuminosity — steep-tailed stellar luminosity. Reserves 3 slots:
+// luminosityDraw (slot), the flare gate (slot+1), and the flare magnitude
+// (slot+2). Slot+2 is ALWAYS drawn regardless of the gate, so the next
+// consumer's slot budget stays fixed — the flare value simply goes unused
+// (contributes 0) when the gate fails.
 fn randomLuminosity(seed: u32, pop: u32, idx: u32, slot: u32) -> f32 {
-  let u = genRand(seed, pop, idx, slot);
+  let luminosityDraw = genRand(seed, pop, idx, slot);
   let gate = genRand(seed, pop, idx, slot + 1u);
   let flareRand = genRand(seed, pop, idx, slot + 2u);
   var flare = 0.0;
   if (gate < 0.012) {
     flare = 3.2 * flareRand;
   }
-  return 0.12 + 0.4 * u * u * u + flare;
+  return 0.12 + 0.4 * luminosityDraw * luminosityDraw * luminosityDraw + flare;
 }
 
 // sampleDiskRadius — rejection-sampled exponential disk radius. Reserves 12
@@ -220,10 +220,10 @@ fn sampleDiskRadius(seed: u32, pop: u32, idx: u32, slot: u32) -> f32 {
   let limit = gen.outerRadius * 1.5;
   var radius = limit;
   for (var attempt = 0u; attempt < 6u; attempt = attempt + 1u) {
-    let s = slot + attempt * 2u;
-    let a = genRand(seed, pop, idx, s);
-    let b = genRand(seed, pop, idx, s + 1u);
-    radius = -gen.diskScaleLen * (log(a) + log(b));
+    let attemptSlot = slot + attempt * 2u;
+    let firstDraw = genRand(seed, pop, idx, attemptSlot);
+    let secondDraw = genRand(seed, pop, idx, attemptSlot + 1u);
+    radius = -gen.diskScaleLen * (log(firstDraw) + log(secondDraw));
     if (radius <= limit) {
       break;
     }
@@ -237,12 +237,12 @@ fn sampleDiskRadius(seed: u32, pop: u32, idx: u32, slot: u32) -> f32 {
 
 // Cubic smoothstep 3t^2 - 2t^3: zero slope at t=0 and t=1 so trilinear-blended
 // cells join seamlessly.
-fn nSmooth(t: f32) -> f32 {
-  return t * t * (3.0 - 2.0 * t);
+fn nSmooth(fraction: f32) -> f32 {
+  return fraction * fraction * (3.0 - 2.0 * fraction);
 }
 
-fn nLerp(a: f32, b: f32, t: f32) -> f32 {
-  return a + (b - a) * t;
+fn nLerp(low: f32, high: f32, weight: f32) -> f32 {
+  return low + (high - low) * weight;
 }
 
 // nHash — u32 lattice hash: three large-prime multiplies plus an
@@ -252,24 +252,24 @@ fn nLerp(a: f32, b: f32, t: f32) -> f32 {
 // precision loss). The integer lattice coords arrive as i32 (they can be
 // negative) and are bitcast to u32 so the wrap-multiply matches
 // two's-complement 32-bit truncation semantics.
-fn nHash(xi: i32, yi: i32, zi: i32, s: u32) -> f32 {
+fn nHash(xi: i32, yi: i32, zi: i32, seed: u32) -> f32 {
   let xu = bitcast<u32>(xi);
   let yu = bitcast<u32>(yi);
   let zu = bitcast<u32>(zi);
-  let h = xu * 374761393u + yu * 668265263u + zu * 2147483647u + s * 974711u;
-  return f32(hashAvalanche(h)) * INV_2POW32;
+  let mixed = xu * 374761393u + yu * 668265263u + zu * 2147483647u + seed * 974711u;
+  return f32(hashAvalanche(mixed)) * INV_2POW32;
 }
 
 // valueNoise3 — seeded 3D value noise, [0, 1). floor() BEFORE the i32 cast so
 // negative coords floor (not truncate toward zero), matching Math.floor. The
 // trilinear blend order is x edges, then y, then z.
-fn valueNoise3(p: vec3<f32>, seed: u32) -> f32 {
-  let xi = i32(floor(p.x));
-  let yi = i32(floor(p.y));
-  let zi = i32(floor(p.z));
-  let xf = nSmooth(p.x - floor(p.x));
-  let yf = nSmooth(p.y - floor(p.y));
-  let zf = nSmooth(p.z - floor(p.z));
+fn valueNoise3(position: vec3<f32>, seed: u32) -> f32 {
+  let xi = i32(floor(position.x));
+  let yi = i32(floor(position.y));
+  let zi = i32(floor(position.z));
+  let xf = nSmooth(position.x - floor(position.x));
+  let yf = nSmooth(position.y - floor(position.y));
+  let zf = nSmooth(position.z - floor(position.z));
 
   let x00 = nLerp(nHash(xi, yi, zi, seed), nHash(xi + 1, yi, zi, seed), xf);
   let x10 = nLerp(nHash(xi, yi + 1, zi, seed), nHash(xi + 1, yi + 1, zi, seed), xf);
@@ -283,10 +283,10 @@ fn valueNoise3(p: vec3<f32>, seed: u32) -> f32 {
 // by 1.5 (1 + 0.5) to stay roughly in [0, 1). Both octaves read
 // gen.noiseSeed (the dust field's decorrelated seed) and gen.noiseFreq
 // ('nfreq' = 2.4 * dustNoiseScale / outerRadius, per 'packGenerationUniforms').
-fn dustNoiseAt(p: vec3<f32>) -> f32 {
-  let f = gen.noiseFreq;
-  let base = valueNoise3(vec3<f32>(p.x * f, p.y * f * 0.5, p.z * f), gen.noiseSeed);
-  let detail = valueNoise3(vec3<f32>(p.x * f * 2.3, p.y * f, p.z * f * 2.3), gen.noiseSeed);
+fn dustNoiseAt(position: vec3<f32>) -> f32 {
+  let frequency = gen.noiseFreq;
+  let base = valueNoise3(vec3<f32>(position.x * frequency, position.y * frequency * 0.5, position.z * frequency), gen.noiseSeed);
+  let detail = valueNoise3(vec3<f32>(position.x * frequency * 2.3, position.y * frequency, position.z * frequency * 2.3), gen.noiseSeed);
   return (base + 0.5 * detail) / 1.5;
 }
 
@@ -295,11 +295,11 @@ fn dustNoiseAt(p: vec3<f32>) -> f32 {
 // ---------------------------------------------------------------------------
 
 // tempColorRamp — stellar colour ramp. Six hand-picked stops, cool (red) to
-// hot (blue). t is clamped to [0, 0.999] before scaling by (6 stops - 1) = 5
-// so the index never runs past the final stop. A local var array is used
-// (not a module const) so the runtime index is portable across every WGSL
-// backend.
-fn tempColorRamp(t: f32) -> vec3<f32> {
+// hot (blue). temperature is clamped to [0, 0.999] before scaling by
+// (6 stops - 1) = 5 so the index never runs past the final stop. A local var
+// array is used (not a module const) so the runtime index is portable across
+// every WGSL backend.
+fn tempColorRamp(temperature: f32) -> vec3<f32> {
   var stops = array<vec3<f32>, 6>(
     vec3<f32>(1.0, 0.36, 0.16),
     vec3<f32>(1.0, 0.58, 0.28),
@@ -308,12 +308,12 @@ fn tempColorRamp(t: f32) -> vec3<f32> {
     vec3<f32>(0.79, 0.86, 1.0),
     vec3<f32>(0.6, 0.72, 1.0)
   );
-  let scaled = clamp(t, 0.0, 0.999) * 5.0;  // (stop count - 1)
-  let i = i32(scaled);                       // scaled | 0 (scaled >= 0, so trunc == floor)
-  let f = scaled - f32(i);
-  let a = stops[i];
-  let b = stops[i + 1];
-  return a + (b - a) * f;
+  let scaled = clamp(temperature, 0.0, 0.999) * 5.0;  // (stop count - 1)
+  let stopIndex = i32(scaled);                       // scaled | 0 (scaled >= 0, so trunc == floor)
+  let blend = scaled - f32(stopIndex);
+  let lowStop = stops[stopIndex];
+  let highStop = stops[stopIndex + 1];
+  return lowStop + (highStop - lowStop) * blend;
 }
 
 // hiiCorePerturbed — the HII-region core colour: the palette core
@@ -330,18 +330,18 @@ fn hiiCorePerturbed(cv: f32) -> vec3<f32> {
 // warpOffset — the galactic-warp vertical offset. Zero inside
 // warpStartRadius (the flat inner disk); beyond it the disk bends
 // out of plane as rel^2, with the line of nodes precessing by warpTwist * rel.
-// Math.hypot(x, z) maps to length(vec2(x, z)).
-fn warpOffset(x: f32, z: f32) -> f32 {
+// Math.hypot(diskX, diskZ) maps to length(vec2(diskX, diskZ)).
+fn warpOffset(diskX: f32, diskZ: f32) -> f32 {
   if (gen.warpStrength <= 0.0) {
     return 0.0;
   }
-  let rr = length(vec2<f32>(x, z));
+  let rr = length(vec2<f32>(diskX, diskZ));
   if (rr <= gen.warpStartRadius) {
     return 0.0;
   }
   let rel = (rr - gen.warpStartRadius) / max(1e-4, gen.outerRadius - gen.warpStartRadius);
   let node = gen.warpTwist * rel;  // line of nodes precesses with radius
-  return gen.warpStrength * gen.outerRadius * 0.4 * rel * rel * sin(atan2(z, x) - node);
+  return gen.warpStrength * gen.outerRadius * 0.4 * rel * rel * sin(atan2(diskZ, diskX) - node);
 }
 
 // applyLopsided — large-scale one-sided radius modulation.
@@ -364,20 +364,20 @@ fn diskFalloff(radius: f32, softness: f32) -> f32 {
 // The step ORDER (Y spin before X tilt) is not a general rotation a reader can
 // reorder: swapping them changes the tilt axis relative to the already-spun
 // disk, producing a visibly different galaxy.
-fn applyExtraTransform(p: vec3<f32>) -> vec3<f32> {
-  let s = gen.extraScale;
+fn applyExtraTransform(position: vec3<f32>) -> vec3<f32> {
+  let scale = gen.extraScale;
   let cy = gen.extraRot.x;
   let sy = gen.extraRot.y;
   let cx = gen.extraRot.z;
   let sx = gen.extraRot.w;
-  let x = p.x * s;
-  let y = p.y * s;
-  let z = p.z * s;
-  let x1 = x * cy - z * sy;   // Y spin (disk axis)
-  let z1 = x * sy + z * cy;
-  let y2 = y * cx - z1 * sx;  // X tilt (inclination), on the already-spun y/z1
-  let z2 = y * sx + z1 * cx;
-  return vec3<f32>(x1 + gen.extraPos.x, y2 + gen.extraPos.y, z2 + gen.extraPos.z);
+  let scaledX = position.x * scale;
+  let scaledY = position.y * scale;
+  let scaledZ = position.z * scale;
+  let spunX = scaledX * cy - scaledZ * sy; // Y spin (disk axis)
+  let spunZ = scaledX * sy + scaledZ * cy;
+  let tiltedY = scaledY * cx - spunZ * sx; // X tilt (inclination), on the already-spun scaledY/spunZ
+  let tiltedZ = scaledY * sx + spunZ * cx;
+  return vec3<f32>(spunX + gen.extraPos.x, tiltedY + gen.extraPos.y, tiltedZ + gen.extraPos.z);
 }
 
 // ---------------------------------------------------------------------------
@@ -481,20 +481,20 @@ fn buildBulge(iteration: u32) -> StarRec {
   let seed = gen.seed;
   let pop = 0u;
 
-  for (var k = 0u; k < 8u; k = k + 1u) {
-    let base = 64u * k;
+  for (var attempt = 0u; attempt < 8u; attempt = attempt + 1u) {
+    let base = 64u * attempt;
     // slot 0: radial draw (shared by both radial branches)
-    let u = genRand(seed, pop, iteration, base + 0u);
+    let radialDraw = genRand(seed, pop, iteration, base + 0u);
     var dist: f32;
     var brightnessFalloff: f32;
     if (gen.category == 0u) {
       // elliptical: heavy-tailed profile + soft brightness falloff
-      dist = gen.outerRadius * 0.16 * pow(-log(1.0 - u * 0.997), 1.3);
+      dist = gen.outerRadius * 0.16 * pow(-log(1.0 - radialDraw * 0.997), 1.3);
       if (dist > gen.outerRadius * 1.6) { continue; } // out of range — resample
       brightnessFalloff = exp(-dist / (gen.outerRadius * (0.62 - 0.4 * gen.bulgeConcentration)));
     } else {
       // disk-galaxy bulge: smaller, blends into disk
-      dist = gen.bulgeRadius * 0.55 * pow(-log(1.0 - u * 0.997), 1.25);
+      dist = gen.bulgeRadius * 0.55 * pow(-log(1.0 - radialDraw * 0.997), 1.25);
       if (dist > gen.bulgeRadius * 2.8) { continue; } // out of range — resample
       brightnessFalloff = exp(-dist / (gen.bulgeRadius * (1.5 - 1.0 * gen.bulgeConcentration)));
     }
@@ -506,9 +506,9 @@ fn buildBulge(iteration: u32) -> StarRec {
     let localX = dist * sinLat * cos(lon) * bulgeAxisX;
     let localY = dist * cosLat * gen.flattening;                      // bulgeAxisY = flattening
     let localZ = dist * sinLat * sin(lon) * gen.bulgeAxisZ;
-    let x = localX * gen.cosBulge - localZ * gen.sinBulge;
-    let z = localX * gen.sinBulge + localZ * gen.cosBulge;
-    let y = localY;
+    let posX = localX * gen.cosBulge - localZ * gen.sinBulge;
+    let posZ = localX * gen.sinBulge + localZ * gen.cosBulge;
+    let posY = localY;
     // slot 3: warm/old population colour jitter
     let color = tempColorRamp(0.27 + 0.15 * genRand(seed, pop, iteration, base + 3u));
     // slot 4: size jitter
@@ -517,7 +517,7 @@ fn buildBulge(iteration: u32) -> StarRec {
     let brightness = randomLuminosity(seed, pop, iteration, base + 5u) * 0.85 * brightnessFalloff;
 
     var rec: StarRec;
-    rec.pos = vec3<f32>(x, y + warpOffset(x, z), z); // warp folded into y
+    rec.pos = vec3<f32>(posX, posY + warpOffset(posX, posZ), posZ); // warp folded into y
     rec.color = color;
     rec.size = size;
     rec.brightness = brightness;
@@ -537,8 +537,8 @@ fn buildBar(iteration: u32) -> StarRec {
   let seed = gen.seed;
   let pop = 1u;
 
-  for (var k = 0u; k < 8u; k = k + 1u) {
-    let base = 64u * k;
+  for (var attempt = 0u; attempt < 8u; attempt = attempt + 1u) {
+    let base = 64u * attempt;
     // slots 0-1: position along the bar, a clamped gaussian
     let alongBar = genNormal(seed, pop, iteration, base + 0u) * 0.44;
     if (abs(alongBar) > 1.25) { continue; } // out of range — resample
@@ -547,10 +547,10 @@ fn buildBar(iteration: u32) -> StarRec {
     let barHalfWidth = gen.barLength * (0.14 + 0.09 * genRand(seed, pop, iteration, base + 2u)) * (1.0 - 0.4 * abs(alongBar));
     // slots 3-4: transverse scatter
     let localZ = genNormal(seed, pop, iteration, base + 3u) * barHalfWidth;
-    let x = localX * gen.cosBar - localZ * gen.sinBar;
-    let z = localX * gen.sinBar + localZ * gen.cosBar;
+    let posX = localX * gen.cosBar - localZ * gen.sinBar;
+    let posZ = localX * gen.sinBar + localZ * gen.cosBar;
     // slots 5-6: vertical scatter
-    let y = genNormal(seed, pop, iteration, base + 5u) * gen.diskHeight * 1.4;
+    let posY = genNormal(seed, pop, iteration, base + 5u) * gen.diskHeight * 1.4;
     // slot 7: colour jitter
     let color = tempColorRamp(0.29 + 0.17 * genRand(seed, pop, iteration, base + 7u));
     let endFade = exp(-alongBar * alongBar * 1.3);
@@ -560,7 +560,7 @@ fn buildBar(iteration: u32) -> StarRec {
     let brightness = randomLuminosity(seed, pop, iteration, base + 9u) * 0.9 * endFade;
 
     var rec: StarRec;
-    rec.pos = vec3<f32>(x, y + warpOffset(x, z), z); // warp folded into y
+    rec.pos = vec3<f32>(posX, posY + warpOffset(posX, posZ), posZ); // warp folded into y
     rec.color = color;
     rec.size = size;
     rec.brightness = brightness;
@@ -587,18 +587,18 @@ fn buildDisk(iteration: u32) -> StarRec {
   var radius = sampleDiskRadius(seed, pop, iteration, 0u);
   // slot 12: barred centre-fade gate — SKIP on reject
   if (gen.category == 3u) {
-    let t = radius / (gen.barLength * 1.15);
-    if (genRand(seed, pop, iteration, 12u) > t * t) {
+    let barRadiusFraction = radius / (gen.barLength * 1.15);
+    if (genRand(seed, pop, iteration, 12u) > barRadiusFraction * barRadiusFraction) {
       return dead; // skip, not resample: shrinks the count on purpose, per the docblock above
     }
   }
   // slot 13: azimuth
   let angle = 2.0 * PI * genRand(seed, pop, iteration, 13u);
   radius = applyLopsided(radius, angle); // post-lopsided radius used below
-  let x = radius * cos(angle);
-  let z = radius * sin(angle);
+  let posX = radius * cos(angle);
+  let posZ = radius * sin(angle);
   // slots 14-15: vertical scatter, puffier near the bulge
-  let y = genNormal(seed, pop, iteration, 14u) * gen.diskHeight * (0.6 + gen.bulgeRadius / (radius + gen.bulgeRadius));
+  let posY = genNormal(seed, pop, iteration, 14u) * gen.diskHeight * (0.6 + gen.bulgeRadius / (radius + gen.bulgeRadius));
   // slot 16: colour — outskirts a little bluer/younger
   let color = tempColorRamp(0.34 + 0.3 * gen.youngFraction * (radius / gen.outerRadius) + 0.12 * genRand(seed, pop, iteration, 16u));
   // slot 17: size jitter
@@ -607,7 +607,7 @@ fn buildDisk(iteration: u32) -> StarRec {
   let brightness = randomLuminosity(seed, pop, iteration, 18u) * 1.35 * diskFalloff(radius, 1.7);
 
   var rec: StarRec;
-  rec.pos = vec3<f32>(x, y + warpOffset(x, z), z); // warp folded into y
+  rec.pos = vec3<f32>(posX, posY + warpOffset(posX, posZ), posZ); // warp folded into y
   rec.color = color;
   rec.size = size;
   rec.brightness = brightness;
@@ -624,8 +624,9 @@ fn buildDisk(iteration: u32) -> StarRec {
 // halo/core/newborns) AND dust, so the slots drawn once per loop iteration
 // (0-29, plus the gap gate 30 and dust gate 36) are computed ONCE here and
 // consumed by every sibling. The stride-5 record means five threads run
-// buildArmSlot for the same 'i'; each recomputes armStarSample(i) identically
-// (the hash is stateless) and then does only its own sub-slot work.
+// buildArmSlot for the same 'iteration'; each recomputes
+// armStarSample(iteration) identically (the hash is stateless) and then does
+// only its own sub-slot work.
 //
 // ## The dust seam
 //
@@ -658,21 +659,21 @@ struct ArmStarSample {
 // comes from gen.armTable, packed as 4 vec4 per arm: [phase, pitch, weight,
 // fadeRadius][meanderAmp, meanderFreq, meanderPhase, _][clumpF1, clumpP1,
 // clumpF2, clumpP2][waveF1, waveP1, waveF2, waveP2].
-fn armStarSample(i: u32) -> ArmStarSample {
+fn armStarSample(iteration: u32) -> ArmStarSample {
   let seed = gen.seed;
   let pop = 3u;
 
   // slots 0-11: smooth-start radius
-  var radius = gen.armStartRadius * 0.5 + sampleDiskRadius(seed, pop, i, 0u);
+  var radius = gen.armStartRadius * 0.5 + sampleDiskRadius(seed, pop, iteration, 0u);
 
   // slot 12: weighted arm pick — scan armTable weights vs gen.weightSum
-  var pick = genRand(seed, pop, i, 12u) * gen.weightSum;
+  var pick = genRand(seed, pop, iteration, 12u) * gen.weightSum;
   var arm = 0u;
   loop {
     if (arm >= gen.numArms - 1u) { break; }
-    let w = gen.armTable[arm * 4u + 0u].z; // weight lane
-    if (pick <= w) { break; }
-    pick = pick - w;
+    let armWeight = gen.armTable[arm * 4u + 0u].z; // weight lane
+    if (pick <= armWeight) { break; }
+    pick = pick - armWeight;
     arm = arm + 1u;
   }
   let rec0 = gen.armTable[arm * 4u + 0u]; // (phase, pitch, weight, fadeRadius)
@@ -683,15 +684,15 @@ fn armStarSample(i: u32) -> ArmStarSample {
   let logRadius = log(radius / gen.armStartRadius);
   // slot 13: sub-arm gate; slots 14-16: sub-arm side/phase/
   // pitch jitter — reserved regardless of the branch.
-  let isSubArm = gen.subArmAmount > 0.0 && genRand(seed, pop, i, 13u) < gen.subArmAmount * 0.6;
+  let isSubArm = gen.subArmAmount > 0.0 && genRand(seed, pop, iteration, 13u) < gen.subArmAmount * 0.6;
   var phase = rec0.x;
   var pitch = rec0.y;
   var widthMul = 1.0;
   var brightMul = 1.0;
   if (isSubArm) {
-    let side = select(-1.0, 1.0, genRand(seed, pop, i, 14u) < 0.5);
-    phase = rec0.x + side * (PI / f32(gen.numArms)) * (0.45 + 0.5 * genRand(seed, pop, i, 15u));
-    pitch = rec0.y * (0.82 + 0.42 * genRand(seed, pop, i, 16u));
+    let side = select(-1.0, 1.0, genRand(seed, pop, iteration, 14u) < 0.5);
+    phase = rec0.x + side * (PI / f32(gen.numArms)) * (0.45 + 0.5 * genRand(seed, pop, iteration, 15u));
+    pitch = rec0.y * (0.82 + 0.42 * genRand(seed, pop, iteration, 16u));
     widthMul = 1.8;
     brightMul = 0.62;
   }
@@ -706,17 +707,17 @@ fn armStarSample(i: u32) -> ArmStarSample {
   }
   // slots 17-18: spur feather (sub-arm only)
   if (isSubArm) {
-    angle = angle + genNormal(seed, pop, i, 17u) * 0.14;
+    angle = angle + genNormal(seed, pop, iteration, 17u) * 0.14;
   }
   // slots 19-20: angle feather
-  angle = angle + genNormal(seed, pop, i, 19u) * gen.armWidthFactor * widthMul * (1.0 + gen.armStartRadius / radius);
+  angle = angle + genNormal(seed, pop, iteration, 19u) * gen.armWidthFactor * widthMul * (1.0 + gen.armStartRadius / radius);
   // slots 21-22: perpendicular offset
-  let perpOffset = genNormal(seed, pop, i, 21u) * gen.armWidthFactor * widthMul * radius * 0.5;
+  let perpOffset = genNormal(seed, pop, iteration, 21u) * gen.armWidthFactor * widthMul * radius * 0.5;
   radius = applyLopsided(radius, angle); // post-lopsided from here on
-  let x = radius * cos(angle) - perpOffset * sin(angle);
-  let z = radius * sin(angle) + perpOffset * cos(angle);
+  let posX = radius * cos(angle) - perpOffset * sin(angle);
+  let posZ = radius * sin(angle) + perpOffset * cos(angle);
   // slots 23-24: vertical scatter
-  let y = genNormal(seed, pop, i, 23u) * gen.diskHeight * 0.8;
+  let posY = genNormal(seed, pop, iteration, 23u) * gen.diskHeight * 0.8;
 
   // Brightness envelope: fade in near arm start, fade out at this arm's own
   // edge radius (fadeRadius = rec0.w) — both smoothstep.
@@ -735,68 +736,68 @@ fn armStarSample(i: u32) -> ArmStarSample {
 
   // slot 25: HII gate
   let subFactor = select(1.0, 0.4, isSubArm);
-  let isHii = genRand(seed, pop, i, 25u) < 0.011 * gen.hiiIntensity * subFactor;
+  let isHii = genRand(seed, pop, iteration, 25u) < 0.011 * gen.hiiIntensity * subFactor;
 
   // slots 26-29: HII knot geometry. Reserved regardless
   // of the branch so the sub-record composition + newborn block line up.
-  let giant = pow(genRand(seed, pop, i, 26u), 2.5); // slot 26
+  let giant = pow(genRand(seed, pop, iteration, 26u), 2.5); // slot 26
   let coreSize = gen.outerRadius * (0.006 + 0.022 * giant);
-  let coreBright = (1.4 + 1.2 * genRand(seed, pop, i, 27u)) * (0.7 + 2.0 * giant) * gen.hiiIntensity * armFade; // slot 27
-  let cv = 0.1 * genRand(seed, pop, i, 28u); // slot 28
-  let newbornCount = 1u + u32(genRand(seed, pop, i, 29u) * 3.0); // slot 29
+  let coreBright = (1.4 + 1.2 * genRand(seed, pop, iteration, 27u)) * (0.7 + 2.0 * giant) * gen.hiiIntensity * armFade; // slot 27
+  let cv = 0.1 * genRand(seed, pop, iteration, 28u); // slot 28
+  let newbornCount = 1u + u32(genRand(seed, pop, iteration, 29u) * 3.0); // slot 29
 
   // slot 30: clump-gap gate (non-HII only). The HII branch
   // never gaps (the 'continue' lives in the else arm).
   var gapSkipped = false;
   if (!isHii) {
-    gapSkipped = gen.clumpAmount > 0.0 && genRand(seed, pop, i, 30u) > 0.4 + 0.6 * clumpMod;
+    gapSkipped = gen.clumpAmount > 0.0 && genRand(seed, pop, iteration, 30u) > 0.4 + 0.6 * clumpMod;
   }
 
   // slot 36: dust-seed gate. A gapped non-HII star always fails this gate
   // ('(isHii || !gapSkipped)' is false), so it seeds no dust.
-  let seedAccepted = (isHii || !gapSkipped) && genRand(seed, pop, i, 36u) < 0.55 * armFade;
+  let seedAccepted = (isHii || !gapSkipped) && genRand(seed, pop, iteration, 36u) < 0.55 * armFade;
 
-  var s: ArmStarSample;
-  s.pos = vec3<f32>(x, y, z);
-  s.radius = radius;
-  s.angle = angle;
-  s.armFade = armFade;
-  s.clumpMod = clumpMod;
-  s.brightMul = brightMul;
-  s.coreSize = coreSize;
-  s.coreBright = coreBright;
-  s.cv = cv;
-  s.newbornCount = newbornCount;
-  s.isHii = isHii;
-  s.isSubArm = isSubArm;
-  s.gapSkipped = gapSkipped;
-  s.seedAccepted = seedAccepted;
-  return s;
+  var armSample: ArmStarSample;
+  armSample.pos = vec3<f32>(posX, posY, posZ);
+  armSample.radius = radius;
+  armSample.angle = angle;
+  armSample.armFade = armFade;
+  armSample.clumpMod = clumpMod;
+  armSample.brightMul = brightMul;
+  armSample.coreSize = coreSize;
+  armSample.coreBright = coreBright;
+  armSample.cv = cv;
+  armSample.newbornCount = newbornCount;
+  armSample.isHii = isHii;
+  armSample.isSubArm = isSubArm;
+  armSample.gapSkipped = gapSkipped;
+  armSample.seedAccepted = seedAccepted;
+  return armSample;
 }
 
-// buildArmSlot — compose the star record for spiralArms output slot (i, sub),
-// stride 5. Sub-slot mapping:
+// buildArmSlot — compose the star record for spiralArms output slot
+// (iteration, sub), stride 5. Sub-slot mapping:
 //   sub 0 : HII halo glow (isHii) OR regular arm star (dead on clump-gap skip)
 //   sub 1 : HII core (isHii) OR dead
-//   sub 2-4 : newborn b = sub - 2 (isHii && b < newbornCount) OR dead
+//   sub 2-4 : newbornIndex = sub - 2 (isHii && newbornIndex < newbornCount) OR dead
 // Every record composes the galactic warp onto y with
 // 'y + warpOffset(x, z)'.
-fn buildArmSlot(i: u32, sub: u32) -> StarRec {
+fn buildArmSlot(iteration: u32, sub: u32) -> StarRec {
   var dead: StarRec;
   dead.alive = false;
   let seed = gen.seed;
   let pop = 3u;
-  let s = armStarSample(i);
-  let warped = vec3<f32>(s.pos.x, s.pos.y + warpOffset(s.pos.x, s.pos.z), s.pos.z);
+  let armSample = armStarSample(iteration);
+  let warped = vec3<f32>(armSample.pos.x, armSample.pos.y + warpOffset(armSample.pos.x, armSample.pos.z), armSample.pos.z);
 
-  if (s.isHii) {
+  if (armSample.isHii) {
     if (sub == 0u) {
       // HII halo glow
       var rec: StarRec;
       rec.pos = warped;
       rec.color = gen.hiiHalo.xyz;
-      rec.size = s.coreSize * 1.9;
-      rec.brightness = s.coreBright * 0.22;
+      rec.size = armSample.coreSize * 1.9;
+      rec.brightness = armSample.coreBright * 0.22;
       rec.alive = true;
       return rec;
     }
@@ -804,24 +805,24 @@ fn buildArmSlot(i: u32, sub: u32) -> StarRec {
       // HII core
       var rec: StarRec;
       rec.pos = warped;
-      rec.color = hiiCorePerturbed(s.cv);
-      rec.size = s.coreSize;
-      rec.brightness = s.coreBright;
+      rec.color = hiiCorePerturbed(armSample.cv);
+      rec.size = armSample.coreSize;
+      rec.brightness = armSample.coreBright;
       rec.alive = true;
       return rec;
     }
-    // newborn b = sub - 2
-    let b = sub - 2u;
-    if (b >= s.newbornCount) { return dead; }
-    let nbase = 40u + 8u * b;
+    // newbornIndex = sub - 2
+    let newbornIndex = sub - 2u;
+    if (newbornIndex >= armSample.newbornCount) { return dead; }
+    let nbase = 40u + 8u * newbornIndex;
     // slot nbase+0: young-star colour
-    let color = tempColorRamp(0.86 + 0.12 * genRand(seed, pop, i, nbase + 0u));
+    let color = tempColorRamp(0.86 + 0.12 * genRand(seed, pop, iteration, nbase + 0u));
     // slots nbase+1..2 / +3..4 / +5..6: x / y / z offset
-    let nx = s.pos.x + genNormal(seed, pop, i, nbase + 1u) * s.coreSize * 0.9;
-    let ny = s.pos.y + genNormal(seed, pop, i, nbase + 3u) * 0.05;
-    let nz = s.pos.z + genNormal(seed, pop, i, nbase + 5u) * s.coreSize * 0.9;
+    let nx = armSample.pos.x + genNormal(seed, pop, iteration, nbase + 1u) * armSample.coreSize * 0.9;
+    let ny = armSample.pos.y + genNormal(seed, pop, iteration, nbase + 3u) * 0.05;
+    let nz = armSample.pos.z + genNormal(seed, pop, iteration, nbase + 5u) * armSample.coreSize * 0.9;
     // slot nbase+7: brightness
-    let brightness = (1.1 + 0.7 * genRand(seed, pop, i, nbase + 7u)) * s.armFade;
+    let brightness = (1.1 + 0.7 * genRand(seed, pop, iteration, nbase + 7u)) * armSample.armFade;
     var rec: StarRec;
     rec.pos = vec3<f32>(nx, ny + warpOffset(nx, nz), nz);
     rec.color = color;
@@ -832,13 +833,13 @@ fn buildArmSlot(i: u32, sub: u32) -> StarRec {
   }
 
   // non-HII: only sub 0 is a real star; the clump-gap skip kills it entirely.
-  if (sub != 0u || s.gapSkipped) { return dead; }
+  if (sub != 0u || armSample.gapSkipped) { return dead; }
   // slot 31: hot blue-white arm colour
-  let color = tempColorRamp(0.6 + 0.36 * gen.youngFraction + 0.1 * genRand(seed, pop, i, 31u));
+  let color = tempColorRamp(0.6 + 0.36 * gen.youngFraction + 0.1 * genRand(seed, pop, iteration, 31u));
   // slot 32: size jitter
-  let size = gen.starSize * (0.85 + 0.6 * genRand(seed, pop, i, 32u));
+  let size = gen.starSize * (0.85 + 0.6 * genRand(seed, pop, iteration, 32u));
   // slots 33-35: randomLuminosity
-  let brightness = randomLuminosity(seed, pop, i, 33u) * 1.9 * s.armFade * s.brightMul * s.clumpMod;
+  let brightness = randomLuminosity(seed, pop, iteration, 33u) * 1.9 * armSample.armFade * armSample.brightMul * armSample.clumpMod;
   var rec: StarRec;
   rec.pos = warped;
   rec.color = color;
@@ -866,64 +867,64 @@ struct IrregularSample {
   seedAccepted: bool, // dust-seed gate
 }
 
-fn irregularSample(i: u32) -> IrregularSample {
+fn irregularSample(iteration: u32) -> IrregularSample {
   let seed = gen.seed;
   let pop = 4u;
-  let center = gen.clumpCenters[i % 7u]; // NUM_CLUMPS = 7
+  let center = gen.clumpCenters[iteration % 7u]; // NUM_CLUMPS = 7
   let spread = gen.outerRadius * 0.16;
   // slots 0-1 / 2-3 / 4-5: x / y / z scatter
-  let x = center.x + genNormal(seed, pop, i, 0u) * spread + gen.irrBarOffset;
-  let y = center.y + genNormal(seed, pop, i, 2u) * gen.diskHeight * 2.0;
-  let z = center.z + genNormal(seed, pop, i, 4u) * spread;
+  let posX = center.x + genNormal(seed, pop, iteration, 0u) * spread + gen.irrBarOffset;
+  let posY = center.y + genNormal(seed, pop, iteration, 2u) * gen.diskHeight * 2.0;
+  let posZ = center.z + genNormal(seed, pop, iteration, 4u) * spread;
   // slot 6: HII gate
-  let isHii = genRand(seed, pop, i, 6u) < 0.02 * gen.hiiIntensity;
+  let isHii = genRand(seed, pop, iteration, 6u) < 0.02 * gen.hiiIntensity;
   // slots 7-9: HII knot geometry, reserved regardless.
-  let giant = pow(genRand(seed, pop, i, 7u), 2.5); // slot 7
+  let giant = pow(genRand(seed, pop, iteration, 7u), 2.5); // slot 7
   let coreSize = gen.outerRadius * (0.006 + 0.024 * giant); // 0.024, not the arm's 0.022
-  let coreBright = (1.6 + 1.4 * genRand(seed, pop, i, 8u)) * (0.8 + 1.6 * giant); // slot 8
-  let cv = 0.1 * genRand(seed, pop, i, 9u); // slot 9
+  let coreBright = (1.6 + 1.4 * genRand(seed, pop, iteration, 8u)) * (0.8 + 1.6 * giant); // slot 8
+  let cv = 0.1 * genRand(seed, pop, iteration, 9u); // slot 9
   // slot 15: dust-seed gate
-  let seedAccepted = genRand(seed, pop, i, 15u) < 0.25;
+  let seedAccepted = genRand(seed, pop, iteration, 15u) < 0.25;
 
-  var s: IrregularSample;
-  s.pos = vec3<f32>(x, y, z);
-  s.coreSize = coreSize;
-  s.coreBright = coreBright;
-  s.cv = cv;
-  s.isHii = isHii;
-  s.seedAccepted = seedAccepted;
-  return s;
+  var clumpSample: IrregularSample;
+  clumpSample.pos = vec3<f32>(posX, posY, posZ);
+  clumpSample.coreSize = coreSize;
+  clumpSample.coreBright = coreBright;
+  clumpSample.cv = cv;
+  clumpSample.isHii = isHii;
+  clumpSample.seedAccepted = seedAccepted;
+  return clumpSample;
 }
 
 // buildIrregularSlot — compose the star record for irregularClumps slot
-// (i, sub), stride 2. There is no density-gap 'continue' for this
+// (iteration, sub), stride 2. There is no density-gap 'continue' for this
 // population: every iteration writes at least one star, so a non-HII sub 0
 // is never dead.
-fn buildIrregularSlot(i: u32, sub: u32) -> StarRec {
+fn buildIrregularSlot(iteration: u32, sub: u32) -> StarRec {
   var dead: StarRec;
   dead.alive = false;
   let seed = gen.seed;
   let pop = 4u;
-  let s = irregularSample(i);
-  let warped = vec3<f32>(s.pos.x, s.pos.y + warpOffset(s.pos.x, s.pos.z), s.pos.z);
+  let clumpSample = irregularSample(iteration);
+  let warped = vec3<f32>(clumpSample.pos.x, clumpSample.pos.y + warpOffset(clumpSample.pos.x, clumpSample.pos.z), clumpSample.pos.z);
 
-  if (s.isHii) {
+  if (clumpSample.isHii) {
     if (sub == 0u) {
       // HII halo glow
       var rec: StarRec;
       rec.pos = warped;
       rec.color = gen.hiiHalo.xyz;
-      rec.size = s.coreSize * 1.9;
-      rec.brightness = s.coreBright * 0.22;
+      rec.size = clumpSample.coreSize * 1.9;
+      rec.brightness = clumpSample.coreBright * 0.22;
       rec.alive = true;
       return rec;
     }
     // sub 1: HII core
     var rec: StarRec;
     rec.pos = warped;
-    rec.color = hiiCorePerturbed(s.cv);
-    rec.size = s.coreSize;
-    rec.brightness = s.coreBright;
+    rec.color = hiiCorePerturbed(clumpSample.cv);
+    rec.size = clumpSample.coreSize;
+    rec.brightness = clumpSample.coreBright;
     rec.alive = true;
     return rec;
   }
@@ -931,11 +932,11 @@ fn buildIrregularSlot(i: u32, sub: u32) -> StarRec {
   // non-HII: sub 0 is a real star, sub 1 is dead.
   if (sub != 0u) { return dead; }
   // slot 10: colour
-  let color = tempColorRamp(0.66 + 0.3 * genRand(seed, pop, i, 10u));
+  let color = tempColorRamp(0.66 + 0.3 * genRand(seed, pop, iteration, 10u));
   // slot 11: size jitter
-  let size = gen.starSize * (0.9 + 0.7 * genRand(seed, pop, i, 11u));
+  let size = gen.starSize * (0.9 + 0.7 * genRand(seed, pop, iteration, 11u));
   // slots 12-14: randomLuminosity
-  let brightness = randomLuminosity(seed, pop, i, 12u);
+  let brightness = randomLuminosity(seed, pop, iteration, 12u);
   var rec: StarRec;
   rec.pos = warped;
   rec.color = color;
@@ -955,20 +956,20 @@ fn buildHalo(iteration: u32) -> StarRec {
   let seed = gen.seed;
   let pop = 5u;
 
-  for (var k = 0u; k < 8u; k = k + 1u) {
-    let base = 64u * k;
+  for (var attempt = 0u; attempt < 8u; attempt = attempt + 1u) {
+    let base = 64u * attempt;
     // slot 0: heavy-tailed radial draw
-    let u = genRand(seed, pop, iteration, base + 0u);
-    let dist = gen.outerRadius * 0.3 * pow(-log(1.0 - u * 0.998), 1.35);
+    let radialDraw = genRand(seed, pop, iteration, base + 0u);
+    let dist = gen.outerRadius * 0.3 * pow(-log(1.0 - radialDraw * 0.998), 1.35);
     if (dist > gen.outerRadius * 2.4) { continue; } // out of range — resample
     // slot 1: cosLat
     let cosLat = 2.0 * genRand(seed, pop, iteration, base + 1u) - 1.0;
     let sinLat = sqrt(1.0 - cosLat * cosLat);
     // slot 2: lon
     let lon = 2.0 * PI * genRand(seed, pop, iteration, base + 2u);
-    let x = dist * sinLat * cos(lon);
-    let z = dist * sinLat * sin(lon);
-    let y = dist * cosLat * gen.flattening;
+    let posX = dist * sinLat * cos(lon);
+    let posZ = dist * sinLat * sin(lon);
+    let posY = dist * cosLat * gen.flattening;
     let haloFalloff = exp(-dist / (gen.outerRadius * (0.85 - 0.45 * gen.bulgeConcentration)));
     // slot 3: colour jitter
     let color = tempColorRamp(0.3 + 0.12 * genRand(seed, pop, iteration, base + 3u));
@@ -976,7 +977,7 @@ fn buildHalo(iteration: u32) -> StarRec {
     let brightness = randomLuminosity(seed, pop, iteration, base + 4u) * 0.5 * haloFalloff;
 
     var rec: StarRec;
-    rec.pos = vec3<f32>(x, y + warpOffset(x, z), z); // warp folded into y
+    rec.pos = vec3<f32>(posX, posY + warpOffset(posX, posZ), posZ); // warp folded into y
     rec.color = color;
     rec.size = gen.starSize * 0.7; // FIXED
     rec.brightness = brightness;
@@ -989,33 +990,34 @@ fn buildHalo(iteration: u32) -> StarRec {
 // buildGlobularStar — one star of one globular cluster.
 // Two disjoint hash ID spaces keep cluster-level and member-level draws from
 // colliding: the cluster's centre/richness/radius/hue are drawn in pop 6 keyed
-// on the cluster index 'c' (pop 6 owns no output slots),
+// on the cluster index 'clusterIndex' (pop 6 owns no output slots),
 // and the member's own position/colour/size/brightness in pop 7 keyed on the
 // flat member index. Every member thread of a cluster recomputes that cluster's
-// pop-6 draws identically. iteration = c*90 + j (STARS_PER_CLUSTER = 90).
+// pop-6 draws identically. iteration = clusterIndex*90 + j
+// (STARS_PER_CLUSTER = 90).
 fn buildGlobularStar(iteration: u32) -> StarRec {
   let seed = gen.seed;
-  let c = iteration / 90u;
+  let clusterIndex = iteration / 90u;
 
-  // --- Cluster-level, pop 6, idx = c ---
+  // --- Cluster-level, pop 6, idx = clusterIndex ---
   let cpop = 6u;
-  let dist = gen.outerRadius * (0.35 + 1.0 * pow(genRand(seed, cpop, c, 0u), 0.5)); // slot 0
-  let cosLat = 2.0 * genRand(seed, cpop, c, 1u) - 1.0; // slot 1
+  let dist = gen.outerRadius * (0.35 + 1.0 * pow(genRand(seed, cpop, clusterIndex, 0u), 0.5)); // slot 0
+  let cosLat = 2.0 * genRand(seed, cpop, clusterIndex, 1u) - 1.0; // slot 1
   let sinLat = sqrt(1.0 - cosLat * cosLat);
-  let lon = 2.0 * PI * genRand(seed, cpop, c, 2u); // slot 2
+  let lon = 2.0 * PI * genRand(seed, cpop, clusterIndex, 2u); // slot 2
   let centerX = dist * sinLat * cos(lon);
   let centerZ = dist * sinLat * sin(lon);
   let centerY = dist * cosLat * 0.85;
   // slots 3-4: richness = 0.3 + 0.9 * rand() * rand() (two draws)
-  let richness = 0.3 + 0.9 * genRand(seed, cpop, c, 3u) * genRand(seed, cpop, c, 4u);
+  let richness = 0.3 + 0.9 * genRand(seed, cpop, clusterIndex, 3u) * genRand(seed, cpop, clusterIndex, 4u);
   // slot 5: cluster radius
-  let clusterRadius = gen.outerRadius * (0.003 + 0.01 * pow(genRand(seed, cpop, c, 5u), 1.8)) * gen.globularSize * (0.7 + 0.6 * richness);
-  let clusterHue = 0.26 + 0.2 * genRand(seed, cpop, c, 6u); // slot 6
+  let clusterRadius = gen.outerRadius * (0.003 + 0.01 * pow(genRand(seed, cpop, clusterIndex, 5u), 1.8)) * gen.globularSize * (0.7 + 0.6 * richness);
+  let clusterHue = 0.26 + 0.2 * genRand(seed, cpop, clusterIndex, 6u); // slot 6
 
-  // --- Member-level, pop 7, idx = c*90 + j == iteration ---
+  // --- Member-level, pop 7, idx = clusterIndex*90 + j == iteration ---
   let mpop = 7u;
   let midx = iteration;
-  let d = clusterRadius * pow(genRand(seed, mpop, midx, 0u), 0.7); // slot 0 (concentrated core)
+  let memberDistance = clusterRadius * pow(genRand(seed, mpop, midx, 0u), 0.7); // slot 0 (concentrated core)
   let cl = 2.0 * genRand(seed, mpop, midx, 1u) - 1.0; // slot 1
   let sl = sqrt(1.0 - cl * cl);
   let ln = 2.0 * PI * genRand(seed, mpop, midx, 2u); // slot 2
@@ -1024,9 +1026,9 @@ fn buildGlobularStar(iteration: u32) -> StarRec {
   let size = gen.starSize * (0.5 + 0.22 * genRand(seed, mpop, midx, 4u)); // slot 4
   let brightness = (0.18 + 0.32 * genRand(seed, mpop, midx, 5u)) * gen.globularBright * richness; // slot 5
 
-  let px = centerX + d * sl * cos(ln);
-  let py = centerY + d * cl;
-  let pz = centerZ + d * sl * sin(ln);
+  let px = centerX + memberDistance * sl * cos(ln);
+  let py = centerY + memberDistance * cl;
+  let pz = centerZ + memberDistance * sl * sin(ln);
   var rec: StarRec;
   rec.pos = vec3<f32>(px, py + warpOffset(px, pz), pz); // warp folded into y
   rec.color = color;
@@ -1124,15 +1126,15 @@ struct DustMod {
   sz: f32,
 }
 
-fn dustMod(p: vec3<f32>, seed: u32, pop: u32, idx: u32, slot: u32) -> DustMod {
-  let f = dustNoiseAt(p);
-  let a = gen.dustNoiseAmt;
-  var m: DustMod;
+fn dustMod(position: vec3<f32>, seed: u32, pop: u32, idx: u32, slot: u32) -> DustMod {
+  let noise = dustNoiseAt(position);
+  let noiseMix = gen.dustNoiseAmt;
+  var modulation: DustMod;
   // The single keep-gate rand — the ONLY draw dustMod makes.
-  m.keep = genRand(seed, pop, idx, slot) < 1.0 - a + a * (0.15 + 1.5 * f * f);
-  m.op = 1.0 - a + a * (0.25 + 1.9 * f);
-  m.sz = 1.0 - a + a * (0.5 + 1.3 * f);
-  return m;
+  modulation.keep = genRand(seed, pop, idx, slot) < 1.0 - noiseMix + noiseMix * (0.15 + 1.5 * noise * noise);
+  modulation.op = 1.0 - noiseMix + noiseMix * (0.25 + 1.9 * noise);
+  modulation.sz = 1.0 - noiseMix + noiseMix * (0.5 + 1.3 * noise);
+  return modulation;
 }
 
 // Resample tuning for the budget-exact dust builders (armDust, irregularDust —
@@ -1156,9 +1158,9 @@ const PICK_SLOT: u32 = 10u;
 // Returns 0 when the population is absent (e.g. an arm-less spiral), which the
 // callers read as 'no candidates -> dead point'.
 fn starRangeIterations(popId: u32) -> u32 {
-  for (var i = 0u; i < gen.starRangeCount; i = i + 1u) {
-    if (gen.starRanges[i].w == popId) {
-      return gen.starRanges[i].y; // iterations lane (start, iterations, stride, popId)
+  for (var rangeIndex = 0u; rangeIndex < gen.starRangeCount; rangeIndex = rangeIndex + 1u) {
+    if (gen.starRanges[rangeIndex].w == popId) {
+      return gen.starRanges[rangeIndex].y; // iterations lane (start, iterations, stride, popId)
     }
   }
   return 0u;
@@ -1167,20 +1169,20 @@ fn starRangeIterations(popId: u32) -> u32 {
 // writeDustParticle — the shared dust write path: compose the galactic warp
 // onto y, draw the four reddening factors at the fixed slots 56-59, then bake
 // the rigid extra-galaxy transform in at write time (applyExtraTransform, the
-// dust twin of writeStar's finalize). x/y/z arrive PRE-warp. Reddened dust
-// reads warm because interstellar dust absorbs blue more than red: four rand
-// draws — darkness, then the r/g/b factors, in that order.
+// dust twin of writeStar's finalize). posX/posY/posZ arrive PRE-warp.
+// Reddened dust reads warm because interstellar dust absorbs blue more than
+// red: four rand draws — darkness, then the r/g/b factors, in that order.
 fn writeDustParticle(
   seed: u32,
   pop: u32,
   idx: u32,
-  x: f32,
-  y: f32,
-  z: f32,
+  posX: f32,
+  posY: f32,
+  posZ: f32,
   size: f32,
   opacity: f32,
 ) -> DustRec {
-  let warpedY = y + warpOffset(x, z);
+  let warpedY = posY + warpOffset(posX, posZ);
   let darkness = 0.02 + 0.022 * genRand(seed, pop, idx, 56u);      // slot 56
   let dr = darkness * (1.05 + 0.55 * genRand(seed, pop, idx, 57u)); // slot 57
   let dg = darkness * (0.6 + 0.22 * genRand(seed, pop, idx, 58u));  // slot 58
@@ -1189,7 +1191,7 @@ fn writeDustParticle(
   // standalone galaxy, where extraScale == 1 and the rotation is zero). Size
   // scales by extraScale separately, the same split writeStar uses.
   var rec: DustRec;
-  rec.pos = applyExtraTransform(vec3<f32>(x, warpedY, z));
+  rec.pos = applyExtraTransform(vec3<f32>(posX, warpedY, posZ));
   rec.size = size * gen.extraScale;
   rec.color = vec3<f32>(dr, dg, db);
   rec.opacity = opacity;
@@ -1208,7 +1210,7 @@ fn writeDustParticle(
 // ORDER is opacity-before-size. The pipeline draws key on the OUTPUT index j
 // (not the candidate c), so two threads that pick the same seed still jitter
 // to distinct positions — the accepted candidate-duplication artifact.
-fn buildArmDust(j: u32) -> DustRec {
+fn buildArmDust(outputIndex: u32) -> DustRec {
   var dead: DustRec;
   dead.alive = false;
   let seed = gen.seed;
@@ -1217,32 +1219,32 @@ fn buildArmDust(j: u32) -> DustRec {
   let candidateCount = starRangeIterations(3u); // spiralArms iteration space
   if (candidateCount == 0u) { return dead; }    // no arm seeds -> no dust
 
-  for (var k = 0u; k < DUST_ATTEMPTS; k = k + 1u) {
-    let base = k * ATTEMPT_STRIDE;
-    let pick = genRand(seed, pop, j, base + PICK_SLOT);
-    let c = min(u32(pick * f32(candidateCount)), candidateCount - 1u);
-    let s = armStarSample(c);          // recompute the arm seed — pop 3, bit-identical
-    if (!s.seedAccepted) { continue; } // gapped/un-seeded candidate — try another
+  for (var attempt = 0u; attempt < DUST_ATTEMPTS; attempt = attempt + 1u) {
+    let base = attempt * ATTEMPT_STRIDE;
+    let pick = genRand(seed, pop, outputIndex, base + PICK_SLOT);
+    let candidateIndex = min(u32(pick * f32(candidateCount)), candidateCount - 1u);
+    let armSample = armStarSample(candidateIndex); // recompute the arm seed — pop 3, bit-identical
+    if (!armSample.seedAccepted) { continue; }     // gapped/un-seeded candidate — try another
 
-    let inX = -cos(s.angle) * gen.outerRadius * 0.018;
-    let inZ = -sin(s.angle) * gen.outerRadius * 0.018;
-    let dense = genRand(seed, pop, j, base + 0u) < 0.28;      // slot 0
-    let x = s.pos.x + inX + genNormal(seed, pop, j, base + 1u) * gen.outerRadius * 0.022; // slots 1-2
-    let y = s.pos.y * 0.4 + genNormal(seed, pop, j, base + 3u) * gen.diskHeight * 0.28;   // slots 3-4
-    let z = s.pos.z + inZ + genNormal(seed, pop, j, base + 5u) * gen.outerRadius * 0.022; // slots 5-6
-    let m = dustMod(vec3<f32>(x, y, z), seed, pop, j, base + 7u); // slot 7 keep gate
-    if (!m.keep) { continue; }                                   // reject, try another
+    let inX = -cos(armSample.angle) * gen.outerRadius * 0.018;
+    let inZ = -sin(armSample.angle) * gen.outerRadius * 0.018;
+    let dense = genRand(seed, pop, outputIndex, base + 0u) < 0.28;      // slot 0
+    let posX = armSample.pos.x + inX + genNormal(seed, pop, outputIndex, base + 1u) * gen.outerRadius * 0.022; // slots 1-2
+    let posY = armSample.pos.y * 0.4 + genNormal(seed, pop, outputIndex, base + 3u) * gen.diskHeight * 0.28;   // slots 3-4
+    let posZ = armSample.pos.z + inZ + genNormal(seed, pop, outputIndex, base + 5u) * gen.outerRadius * 0.022; // slots 5-6
+    let modulation = dustMod(vec3<f32>(posX, posY, posZ), seed, pop, outputIndex, base + 7u); // slot 7 keep gate
+    if (!modulation.keep) { continue; }                                                       // reject, try another
 
     // slot 8: opacity jitter. Only ONE rand is drawn regardless of the dense
-    // branch (the select() picks one side), so 'r8' is reused in both select
-    // arms rather than drawing twice.
-    let r8 = genRand(seed, pop, j, base + 8u);
-    let opJitter = select(0.05 + 0.11 * r8, 0.22 + 0.3 * r8, dense);
-    let opacity = opJitter * gen.dustAmount * s.armFade * (0.4 + 1.4 * diskFalloff(s.radius, 1.5)) * m.op;
+    // branch (the select() picks one side), so 'opacityDraw' is reused in both
+    // select arms rather than drawing twice.
+    let opacityDraw = genRand(seed, pop, outputIndex, base + 8u);
+    let opJitter = select(0.05 + 0.11 * opacityDraw, 0.22 + 0.3 * opacityDraw, dense);
+    let opacity = opJitter * gen.dustAmount * armSample.armFade * (0.4 + 1.4 * diskFalloff(armSample.radius, 1.5)) * modulation.op;
     // slot 9: size jitter. Dense knots are 1.25x, wisps 0.8x.
-    let sizeJitter = 0.007 + 0.015 * genRand(seed, pop, j, base + 9u);
-    let size = gen.outerRadius * sizeJitter * gen.grainScale * select(0.8, 1.25, dense) * m.sz;
-    return writeDustParticle(seed, pop, j, x, y, z, size, opacity);
+    let sizeJitter = 0.007 + 0.015 * genRand(seed, pop, outputIndex, base + 9u);
+    let size = gen.outerRadius * sizeJitter * gen.grainScale * select(0.8, 1.25, dense) * modulation.sz;
+    return writeDustParticle(seed, pop, outputIndex, posX, posY, posZ, size, opacity);
   }
   return dead; // all attempts missed — the <0.3% shortfall
 }
@@ -1265,50 +1267,50 @@ const BAR_LANE_BOW: f32 = 0.18;
 // BEFORE-OPACITY draw order (slot 8 size, slot 9 opacity): size is drawn
 // before opacity, the opposite of armDust — the slot tables are per-builder
 // and NOT normalised.
-fn buildBarDust(i: u32) -> DustRec {
+fn buildBarDust(iteration: u32) -> DustRec {
   var dead: DustRec;
   dead.alive = false;
   let seed = gen.seed;
   let pop = 9u;
 
-  let t = genRand(seed, pop, i, 0u) * 2.0 - 1.0; // slot 0 — position along bar
-  let lane = select(-1.0, 1.0, genRand(seed, pop, i, 1u) < 0.5); // slot 1 — which of the two lanes
-  let offAmp = gen.barLength * (0.06 + 0.05 * genRand(seed, pop, i, 2u)); // slot 2 — lane offset amplitude
-  let sCurve = tanh(t * BAR_LANE_S_STEEP); // lanes swap sides through the nucleus
-  let bow = BAR_LANE_BOW * gen.barLength * t * t * t; // antisymmetric cubic: ends peel outward toward the arm roots
-  let localX = t * gen.barLength * 0.92;
-  let localZ = lane * offAmp * sCurve + bow + genNormal(seed, pop, i, 3u) * gen.barLength * 0.045; // slots 3-4
-  let x = localX * gen.cosBar - localZ * gen.sinBar;
-  let z = localX * gen.sinBar + localZ * gen.cosBar;
-  let y = genNormal(seed, pop, i, 5u) * gen.diskHeight * 0.4; // slots 5-6
-  let m = dustMod(vec3<f32>(x, y, z), seed, pop, i, 7u); // slot 7 keep gate
-  if (!m.keep) { return dead; }
+  let alongBar = genRand(seed, pop, iteration, 0u) * 2.0 - 1.0; // slot 0 — position along bar
+  let lane = select(-1.0, 1.0, genRand(seed, pop, iteration, 1u) < 0.5); // slot 1 — which of the two lanes
+  let offAmp = gen.barLength * (0.06 + 0.05 * genRand(seed, pop, iteration, 2u)); // slot 2 — lane offset amplitude
+  let sCurve = tanh(alongBar * BAR_LANE_S_STEEP); // lanes swap sides through the nucleus
+  let bow = BAR_LANE_BOW * gen.barLength * alongBar * alongBar * alongBar; // antisymmetric cubic: ends peel outward toward the arm roots
+  let localX = alongBar * gen.barLength * 0.92;
+  let localZ = lane * offAmp * sCurve + bow + genNormal(seed, pop, iteration, 3u) * gen.barLength * 0.045; // slots 3-4
+  let posX = localX * gen.cosBar - localZ * gen.sinBar;
+  let posZ = localX * gen.sinBar + localZ * gen.cosBar;
+  let posY = genNormal(seed, pop, iteration, 5u) * gen.diskHeight * 0.4; // slots 5-6
+  let modulation = dustMod(vec3<f32>(posX, posY, posZ), seed, pop, iteration, 7u); // slot 7 keep gate
+  if (!modulation.keep) { return dead; }
 
-  let size = gen.outerRadius * (0.008 + 0.013 * genRand(seed, pop, i, 8u)) * gen.grainScale * m.sz; // slot 8
-  let opacity = (0.06 + 0.1 * genRand(seed, pop, i, 9u)) * gen.dustAmount * exp(-t * t * 1.2) * m.op; // slot 9 — end-fade
-  return writeDustParticle(seed, pop, i, x, y, z, size, opacity);
+  let size = gen.outerRadius * (0.008 + 0.013 * genRand(seed, pop, iteration, 8u)) * gen.grainScale * modulation.sz; // slot 8
+  let opacity = (0.06 + 0.1 * genRand(seed, pop, iteration, 9u)) * gen.dustAmount * exp(-alongBar * alongBar * 1.2) * modulation.op; // slot 9 — end-fade
+  return writeDustParticle(seed, pop, iteration, posX, posY, posZ, size, opacity);
 }
 
 // buildLenticularNucDust — S0's dust-poor nuclear disk: cloudy scatter around
 // 34 cloud centres. The cloud centres come from gen.cloudCenters (packed as
 // (cos*rr, sin*rr, rr, 0) — the .z lane is the cloud's own radius, fed to
 // diskFalloff). No seed reuse.
-fn buildLenticularNucDust(i: u32) -> DustRec {
+fn buildLenticularNucDust(iteration: u32) -> DustRec {
   var dead: DustRec;
   dead.alive = false;
   let seed = gen.seed;
   let pop = 10u;
 
-  let center = gen.cloudCenters[i % 34u]; // CLOUD_COUNT = 34
+  let center = gen.cloudCenters[iteration % 34u]; // CLOUD_COUNT = 34
   let spread = gen.bulgeRadius * 0.22;
-  let x = center.x + genNormal(seed, pop, i, 0u) * spread; // slots 0-1
-  let z = center.y + genNormal(seed, pop, i, 2u) * spread; // slots 2-3
-  let y = genNormal(seed, pop, i, 4u) * gen.diskHeight * 0.5; // slots 4-5
-  let m = dustMod(vec3<f32>(x, y, z), seed, pop, i, 6u); // slot 6 keep gate
-  if (!m.keep) { return dead; }
-  let size = gen.outerRadius * (0.007 + 0.012 * genRand(seed, pop, i, 7u)) * gen.grainScale * m.sz; // slot 7
-  let opacity = (0.05 + 0.15 * genRand(seed, pop, i, 8u)) * gen.dustAmount * (0.3 + diskFalloff(center.z, 1.5)) * m.op; // slot 8
-  return writeDustParticle(seed, pop, i, x, y, z, size, opacity);
+  let posX = center.x + genNormal(seed, pop, iteration, 0u) * spread; // slots 0-1
+  let posZ = center.y + genNormal(seed, pop, iteration, 2u) * spread; // slots 2-3
+  let posY = genNormal(seed, pop, iteration, 4u) * gen.diskHeight * 0.5; // slots 4-5
+  let modulation = dustMod(vec3<f32>(posX, posY, posZ), seed, pop, iteration, 6u); // slot 6 keep gate
+  if (!modulation.keep) { return dead; }
+  let size = gen.outerRadius * (0.007 + 0.012 * genRand(seed, pop, iteration, 7u)) * gen.grainScale * modulation.sz; // slot 7
+  let opacity = (0.05 + 0.15 * genRand(seed, pop, iteration, 8u)) * gen.dustAmount * (0.3 + diskFalloff(center.z, 1.5)) * modulation.op; // slot 8
+  return writeDustParticle(seed, pop, iteration, posX, posY, posZ, size, opacity);
 }
 
 // buildLenticularRingDust — the Sombrero 'hat-brim': a thin patchy in-plane
@@ -1316,22 +1318,22 @@ fn buildLenticularNucDust(i: u32) -> DustRec {
 // ride gen.ringStrength alone, independent of dustAmount. gen.ringRadius /
 // gen.ringWidth already carry the outerRadius factor, so they are used
 // directly.
-fn buildLenticularRingDust(i: u32) -> DustRec {
+fn buildLenticularRingDust(iteration: u32) -> DustRec {
   var dead: DustRec;
   dead.alive = false;
   let seed = gen.seed;
   let pop = 11u;
 
-  let th = 2.0 * PI * genRand(seed, pop, i, 0u); // slot 0
-  let r = gen.ringRadius + genNormal(seed, pop, i, 1u) * gen.ringWidth; // slots 1-2
-  let x = r * cos(th);
-  let z = r * sin(th);
-  let y = genNormal(seed, pop, i, 3u) * gen.diskHeight * 0.3; // slots 3-4
-  let m = dustMod(vec3<f32>(x, y, z), seed, pop, i, 5u); // slot 5 keep gate
-  if (!m.keep) { return dead; }
-  let size = gen.outerRadius * (0.008 + 0.014 * genRand(seed, pop, i, 6u)) * gen.grainScale * m.sz; // slot 6
-  let opacity = (0.2 + 0.3 * genRand(seed, pop, i, 7u)) * gen.ringStrength * m.op; // slot 7 (ringAmt, not dustAmount)
-  return writeDustParticle(seed, pop, i, x, y, z, size, opacity);
+  let th = 2.0 * PI * genRand(seed, pop, iteration, 0u); // slot 0
+  let radius = gen.ringRadius + genNormal(seed, pop, iteration, 1u) * gen.ringWidth; // slots 1-2
+  let posX = radius * cos(th);
+  let posZ = radius * sin(th);
+  let posY = genNormal(seed, pop, iteration, 3u) * gen.diskHeight * 0.3; // slots 3-4
+  let modulation = dustMod(vec3<f32>(posX, posY, posZ), seed, pop, iteration, 5u); // slot 5 keep gate
+  if (!modulation.keep) { return dead; }
+  let size = gen.outerRadius * (0.008 + 0.014 * genRand(seed, pop, iteration, 6u)) * gen.grainScale * modulation.sz; // slot 6
+  let opacity = (0.2 + 0.3 * genRand(seed, pop, iteration, 7u)) * gen.ringStrength * modulation.op; // slot 7 (ringAmt, not dustAmount)
+  return writeDustParticle(seed, pop, iteration, posX, posY, posZ, size, opacity);
 }
 
 // buildIrregularDust — dust patches on the star-forming clump seeds, same
@@ -1346,7 +1348,7 @@ fn buildLenticularRingDust(i: u32) -> DustRec {
 // barDust (slot 8 size, slot 9 opacity). Pipeline draws key on the OUTPUT
 // index j, so same-seed threads still jitter apart (the candidate-
 // duplication artifact).
-fn buildIrregularDust(j: u32) -> DustRec {
+fn buildIrregularDust(outputIndex: u32) -> DustRec {
   var dead: DustRec;
   dead.alive = false;
   let seed = gen.seed;
@@ -1355,27 +1357,27 @@ fn buildIrregularDust(j: u32) -> DustRec {
   let candidateCount = starRangeIterations(4u); // irregularClumps iteration space
   if (candidateCount == 0u) { return dead; }     // no clump seeds -> no dust
 
-  for (var k = 0u; k < DUST_ATTEMPTS; k = k + 1u) {
-    let base = k * ATTEMPT_STRIDE;
-    let pick = genRand(seed, pop, j, base + PICK_SLOT);
-    let c = min(u32(pick * f32(candidateCount)), candidateCount - 1u);
-    let s = irregularSample(c);        // recompute the clump seed — pop 4, bit-identical
-    if (!s.seedAccepted) { continue; } // slot-15 seed gate failed — try another
+  for (var attempt = 0u; attempt < DUST_ATTEMPTS; attempt = attempt + 1u) {
+    let base = attempt * ATTEMPT_STRIDE;
+    let pick = genRand(seed, pop, outputIndex, base + PICK_SLOT);
+    let candidateIndex = min(u32(pick * f32(candidateCount)), candidateCount - 1u);
+    let clumpSample = irregularSample(candidateIndex); // recompute the clump seed — pop 4, bit-identical
+    if (!clumpSample.seedAccepted) { continue; }       // slot-15 seed gate failed — try another
 
-    let dense = genRand(seed, pop, j, base + 0u) < 0.3; // slot 0
-    let x = s.pos.x + genNormal(seed, pop, j, base + 1u) * gen.outerRadius * 0.03; // slots 1-2
-    let y = s.pos.y + genNormal(seed, pop, j, base + 3u) * gen.diskHeight * 0.6;   // slots 3-4
-    let z = s.pos.z + genNormal(seed, pop, j, base + 5u) * gen.outerRadius * 0.03; // slots 5-6
-    let m = dustMod(vec3<f32>(x, y, z), seed, pop, j, base + 7u); // slot 7 keep gate
-    if (!m.keep) { continue; } // reject, try another
+    let dense = genRand(seed, pop, outputIndex, base + 0u) < 0.3; // slot 0
+    let posX = clumpSample.pos.x + genNormal(seed, pop, outputIndex, base + 1u) * gen.outerRadius * 0.03; // slots 1-2
+    let posY = clumpSample.pos.y + genNormal(seed, pop, outputIndex, base + 3u) * gen.diskHeight * 0.6;   // slots 3-4
+    let posZ = clumpSample.pos.z + genNormal(seed, pop, outputIndex, base + 5u) * gen.outerRadius * 0.03; // slots 5-6
+    let modulation = dustMod(vec3<f32>(posX, posY, posZ), seed, pop, outputIndex, base + 7u); // slot 7 keep gate
+    if (!modulation.keep) { continue; } // reject, try another
 
     // slot 8: size jitter (dense knots 1.2x, wisps 0.8x).
-    let size = gen.outerRadius * (0.008 + 0.016 * genRand(seed, pop, j, base + 8u)) * gen.grainScale * select(0.8, 1.2, dense) * m.sz;
+    let size = gen.outerRadius * (0.008 + 0.016 * genRand(seed, pop, outputIndex, base + 8u)) * gen.grainScale * select(0.8, 1.2, dense) * modulation.sz;
     // slot 9: opacity jitter — one rand reused across the dense branch.
-    let r9 = genRand(seed, pop, j, base + 9u);
-    let opJitter = select(0.05 + 0.11 * r9, 0.16 + 0.22 * r9, dense);
-    let opacity = opJitter * gen.dustAmount * m.op;
-    return writeDustParticle(seed, pop, j, x, y, z, size, opacity);
+    let opacityDraw = genRand(seed, pop, outputIndex, base + 9u);
+    let opJitter = select(0.05 + 0.11 * opacityDraw, 0.16 + 0.22 * opacityDraw, dense);
+    let opacity = opJitter * gen.dustAmount * modulation.op;
+    return writeDustParticle(seed, pop, outputIndex, posX, posY, posZ, size, opacity);
   }
   return dead; // all attempts missed — the <0.3% shortfall
 }

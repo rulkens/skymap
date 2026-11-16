@@ -14,12 +14,12 @@ const PI: f32 = 3.14159265358979;
 // a zero vec3 with .z=0 when the hit falls outside it. WGSL has no tuple
 // return, so validity rides a third component rather than an out-param.
 fn logPolarUv(hit: vec3<f32>, rMin: f32, rMax: f32) -> vec3<f32> {
-  let r = length(hit.xz);
-  if (r < rMin || r > rMax) {
+  let radius = length(hit.xz);
+  if (radius < rMin || radius > rMax) {
     return vec3<f32>(0.0, 0.0, 0.0);
   }
   let theta = atan2(hit.z, hit.x);
-  let ringT = log(r / rMin) / log(rMax / rMin);
+  let ringT = log(radius / rMin) / log(rMax / rMin);
   let azT = theta / (2.0 * PI) + select(0.0, 1.0, theta < 0.0);
   return vec3<f32>(azT, ringT, 1.0);
 }

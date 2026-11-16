@@ -1,6 +1,6 @@
 // fieldSplat/vertex.wesl — silhouette-quad vertex stage for the primary
 // field emission pass. Passes capHalfNdc = 0.0 as a LITERAL rather than
-// reading u.perf.x: the quad cap (the quad-cap lever) is an HII-only knob (io.wesl's
+// reading uniforms.perf.x: the quad cap (the quad-cap lever) is an HII-only knob (io.wesl's
 // perf.x doc) and this pass's own header always packs it 0, so the literal
 // makes that dead weight visible at the call site instead of only in a
 // header comment. No near-fade either (contrast hiiSplat/vertex.wesl): the
@@ -10,7 +10,7 @@
 import package::milkyWay::field::fieldSplat::io::FieldSplatOut;
 import package::lib::billboard::quadCorner;
 import package::lib::splatSilhouette::splatNdc;
-import package::milkyWay::field::io::u;
+import package::milkyWay::field::io::uniforms;
 import package::milkyWay::field::io::comps;
 
 @vertex
@@ -19,10 +19,10 @@ fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) inst: u32) -> Fie
   let center = comps[inst].center;
   let boundRadius = comps[inst].boundRadius;
 
-  let eye = u.eye.xyz;
-  let camRight = u.camRight.xyz;
-  let camUp = u.camUp.xyz;
-  let camFwd = u.camFwd.xyz;
+  let eye = uniforms.eye.xyz;
+  let camRight = uniforms.camRight.xyz;
+  let camUp = uniforms.camUp.xyz;
+  let camFwd = uniforms.camFwd.xyz;
 
   // View-space offset of the centre: zv along the gaze, xv/yv across it.
   let rel = center - eye;
@@ -33,7 +33,7 @@ fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) inst: u32) -> Fie
   var out: FieldSplatOut;
   out.inst = inst;
 
-  let ndc = splatNdc(corner, xv, yv, zv, boundRadius, u.frustum, 0.0);
+  let ndc = splatNdc(corner, xv, yv, zv, boundRadius, uniforms.frustum, 0.0);
   out.pos = vec4<f32>(ndc, 0.0, 1.0);
   out.ndc = ndc;
   return out;

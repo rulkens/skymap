@@ -23,23 +23,23 @@ import package::lib::selectionEncoding::PICK_SENTINEL_OFFSET;
 import package::lib::pickDepthBands::PICK_BAND_BACKDROP_EPS;
 
 // 96-byte camera image packed by pickMilkyWay; byte layout in io.wesl.
-@group(0) @binding(0) var<uniform> u: Uniforms;
+@group(0) @binding(0) var<uniform> view: Uniforms;
 
 // Fully static, written once at construction.
 @group(2) @binding(0) var<uniform> mw: MilkyWayPickUniforms;
 
 @vertex
 fn vs(@builtin(vertex_index) vi: u32) -> VsOut {
-  let centerClip = worldToClip(u.cam, mw.centerWorld);
+  let centerClip = worldToClip(view.cam, mw.centerWorld);
   let corner = quadCorner(vi);
 
   // 0.001 distance floor, as in points/vertexBody.wesl.
-  let toCenter = mw.centerWorld - u.camPosWorld;
+  let toCenter = mw.centerWorld - view.camPosWorld;
   let safeDist = max(length(toCenter), 0.001);
-  let apparentPxRadius = (mw.radiusMpc / safeDist) * u.pxPerRad;
+  let apparentPxRadius = (mw.radiusMpc / safeDist) * view.pxPerRad;
   let halfExtentPx = max(mw.minSizePx, apparentPxRadius);
 
-  let offset = expandBillboardScreen(u.cam, centerClip, halfExtentPx, corner);
+  let offset = expandBillboardScreen(view.cam, centerClip, halfExtentPx, corner);
 
   var out: VsOut;
   // The impostor is the ultimate pick fallback ('lib/pickDepthBands'): true

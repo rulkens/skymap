@@ -7,7 +7,7 @@
 import package::milkyWay::field::dustMap::io::DustMapOut;
 import package::lib::billboard::quadCorner;
 import package::lib::splatSilhouette::splatNdc;
-import package::milkyWay::field::io::u;
+import package::milkyWay::field::io::uniforms;
 import package::milkyWay::field::io::comps;
 
 @vertex
@@ -16,15 +16,15 @@ fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) inst: u32) -> Dus
   // counts.y is dustOffset (== the emission count, since dust is appended
   // last — see io.wesl's layout comment): this draw's own instance index is
   // relative to the dust slice, not 'comps' as a whole.
-  let dustOffset = u32(u.counts.y);
+  let dustOffset = u32(uniforms.counts.y);
   let compIndex = dustOffset + inst;
   let center = comps[compIndex].center;
-  let r = comps[compIndex].boundRadius;
+  let boundRadius = comps[compIndex].boundRadius;
 
-  let eye = u.eye.xyz;
-  let camRight = u.camRight.xyz;
-  let camUp = u.camUp.xyz;
-  let camFwd = u.camFwd.xyz;
+  let eye = uniforms.eye.xyz;
+  let camRight = uniforms.camRight.xyz;
+  let camUp = uniforms.camUp.xyz;
+  let camFwd = uniforms.camFwd.xyz;
 
   // View-space offset of the centre: zv along the gaze, xv/yv across it.
   let rel = center - eye;
@@ -34,7 +34,7 @@ fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) inst: u32) -> Dus
 
   var out: DustMapOut;
   out.inst = inst;
-  let ndc = splatNdc(corner, xv, yv, zv, r, u.frustum, u.perf.x);
+  let ndc = splatNdc(corner, xv, yv, zv, boundRadius, uniforms.frustum, uniforms.perf.x);
   out.pos = vec4<f32>(ndc, 0.0, 1.0);
   out.ndc = ndc;
   return out;

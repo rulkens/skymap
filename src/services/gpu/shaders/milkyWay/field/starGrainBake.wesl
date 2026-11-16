@@ -32,13 +32,13 @@ import package::lib::util::integerHash3;
 // importing package::lib::math::TAU/saturate resolves fine in the MAIN app's
 // build but fails to link ('module not found') in the tool's. WGSL has no
 // built-in 'saturate' (see lib/math.wesl's own header); this is
-// 'clamp(x, 0.0, 1.0)' under a name that reads as intent, same as that
+// 'clamp(value, 0.0, 1.0)' under a name that reads as intent, same as that
 // module's version. integerHash3 above has no such constraint — lib/util.wesl
 // IS symlinked leaf-by-leaf (see wesl.toml) — so it imports from there.
 const TAU: f32 = 6.28318530717958;
 
-fn saturate(x: f32) -> f32 {
-  return clamp(x, 0.0, 1.0);
+fn saturate(value: f32) -> f32 {
+  return clamp(value, 0.0, 1.0);
 }
 
 @group(0) @binding(0) var dst: texture_storage_3d<rgba8unorm, write>;
@@ -51,7 +51,7 @@ const POINT_SIGMA_CELLS: f32 = 0.28;
 const LOGNORMAL_MU: f32 = -1.4;
 const LOGNORMAL_SIGMA: f32 = 0.9;
 
-/** One hash draw for 'cell', salted so a cell's position (x/y/z) and amplitude (u1/u2) never share a lattice offset. */
+/** One hash draw for 'cell', salted so a cell's position (x/y/z) and amplitude (uniformDraw1/uniformDraw2) never share a lattice offset. */
 fn cellHash(cell: vec3<i32>, salt: i32) -> f32 {
   return integerHash3(cell + vec3<i32>(salt, salt * 7, salt * 13));
 }
@@ -61,10 +61,10 @@ fn cellHash(cell: vec3<i32>, salt: i32) -> f32 {
 // one brightness, never a second competing draw a per-texel evaluation
 // could reintroduce.
 fn cellAmplitude(cell: vec3<i32>) -> f32 {
-  let u1 = max(cellHash(cell, 404), 1e-6);
-  let u2 = cellHash(cell, 505);
-  let z = sqrt(-2.0 * log(u1)) * cos(TAU * u2);
-  return exp(LOGNORMAL_MU + LOGNORMAL_SIGMA * z);
+  let uniformDraw1 = max(cellHash(cell, 404), 1e-6);
+  let uniformDraw2 = cellHash(cell, 505);
+  let normalDraw = sqrt(-2.0 * log(uniformDraw1)) * cos(TAU * uniformDraw2);
+  return exp(LOGNORMAL_MU + LOGNORMAL_SIGMA * normalDraw);
 }
 
 @compute @workgroup_size(4, 4, 4)
@@ -74,9 +74,9 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
     return;
   }
   let uv = (vec3<f32>(gid) + 0.5) / vec3<f32>(dims);
-  let p = uv * f32(CELLS);
+  let latticePos = uv * f32(CELLS);
   let cellsI = i32(CELLS);
-  let ownCell = vec3<i32>(floor(p));
+  let ownCell = vec3<i32>(floor(latticePos));
 
   var value = 0.0;
   for (var dz = -1; dz <= 1; dz++) {
@@ -89,9 +89,9 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
         let wrapped = (ownCell + offset + vec3<i32>(cellsI)) % vec3<i32>(cellsI);
         let jitter = vec3<f32>(cellHash(wrapped, 101), cellHash(wrapped, 202), cellHash(wrapped, 303));
         let pointPos = vec3<f32>(ownCell + offset) + jitter;
-        let d = p - pointPos;
-        let g = exp(-0.5 * dot(d, d) / (POINT_SIGMA_CELLS * POINT_SIGMA_CELLS));
-        value = max(value, cellAmplitude(wrapped) * g);
+        let toPoint = latticePos - pointPos;
+        let falloff = exp(-0.5 * dot(toPoint, toPoint) / (POINT_SIGMA_CELLS * POINT_SIGMA_CELLS));
+        value = max(value, cellAmplitude(wrapped) * falloff);
       }
     }
   }

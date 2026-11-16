@@ -8,7 +8,7 @@
 import package::milkyWay::field::hiiSplat::io::HiiSplatOut;
 import package::lib::billboard::quadCorner;
 import package::lib::splatSilhouette::splatNdc;
-import package::milkyWay::field::io::u;
+import package::milkyWay::field::io::uniforms;
 import package::milkyWay::field::io::comps;
 import package::milkyWay::field::hiiSplat::shadeCommon::hiiNearFadeActive;
 
@@ -18,10 +18,10 @@ fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) inst: u32) -> Hii
   let center = comps[inst].center;
   let boundRadius = comps[inst].boundRadius;
 
-  let eye = u.eye.xyz;
-  let camRight = u.camRight.xyz;
-  let camUp = u.camUp.xyz;
-  let camFwd = u.camFwd.xyz;
+  let eye = uniforms.eye.xyz;
+  let camRight = uniforms.camRight.xyz;
+  let camUp = uniforms.camUp.xyz;
+  let camFwd = uniforms.camFwd.xyz;
 
   // View-space offset of the centre: zv along the gaze, xv/yv across it.
   let rel = center - eye;
@@ -36,8 +36,8 @@ fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) inst: u32) -> Hii
   // A component the eye has flown inside fades to nothing rather than
   // shading its fullscreen-fallback quad (splatSilhouette.wesl's SPLAT_CUT)
   // at full cost. GUARD: start <= end or start <= 0 disables the fade.
-  let fadeStart = u.youngStars.z;
-  let fadeEnd = u.youngStars.w;
+  let fadeStart = uniforms.youngStars.z;
+  let fadeEnd = uniforms.youngStars.w;
   if (hiiNearFadeActive(fadeStart, fadeEnd)) {
     let fade = smoothstep(fadeEnd * boundRadius, fadeStart * boundRadius, length(rel));
     if (fade <= 0.0) {
@@ -49,7 +49,7 @@ fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) inst: u32) -> Hii
     }
   }
 
-  let ndc = splatNdc(corner, xv, yv, zv, boundRadius, u.frustum, u.perf.x);
+  let ndc = splatNdc(corner, xv, yv, zv, boundRadius, uniforms.frustum, uniforms.perf.x);
   out.pos = vec4<f32>(ndc, 0.0, 1.0);
   out.ndc = ndc;
   return out;

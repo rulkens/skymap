@@ -7,7 +7,7 @@
 import package::milkyWay::field::bubblePresent::io::VsOut;
 import package::lib::billboard::quadCorner;
 import package::lib::camera::ndcFromTangent;
-import package::milkyWay::field::io::u;
+import package::milkyWay::field::io::uniforms;
 
 @vertex
 fn vs(
@@ -17,12 +17,12 @@ fn vs(
 ) -> VsOut {
   let corner = quadCorner(vi);
   let center = centerAndRadius.xyz;
-  let r = centerAndRadius.w;
+  let radius = centerAndRadius.w;
 
-  let eye = u.eye.xyz;
-  let camRight = u.camRight.xyz;
-  let camUp = u.camUp.xyz;
-  let camFwd = u.camFwd.xyz;
+  let eye = uniforms.eye.xyz;
+  let camRight = uniforms.camRight.xyz;
+  let camUp = uniforms.camUp.xyz;
+  let camFwd = uniforms.camFwd.xyz;
 
   var out: VsOut;
   out.kind = kind;
@@ -35,8 +35,8 @@ fn vs(
   // touching zv per-corner.
   let rel = center - eye;
   let zv = dot(rel, camFwd);
-  let xv = dot(rel, camRight) + corner.x * r;
-  let yv = dot(rel, camUp) + corner.y * r;
+  let xv = dot(rel, camRight) + corner.x * radius;
+  let yv = dot(rel, camUp) + corner.y * radius;
 
   // Behind the camera: collapse the quad rather than let the divide below
   // scatter a degenerate corner across the screen — same guard
@@ -45,6 +45,6 @@ fn vs(
     out.pos = vec4<f32>(2.0, 2.0, 0.0, 1.0);
     return out;
   }
-  out.pos = vec4<f32>(ndcFromTangent(vec2<f32>(xv, yv) / zv, u.frustum), 0.0, 1.0);
+  out.pos = vec4<f32>(ndcFromTangent(vec2<f32>(xv, yv) / zv, uniforms.frustum), 0.0, 1.0);
   return out;
 }

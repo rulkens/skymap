@@ -24,11 +24,11 @@ fn csBlurAzimuth(@builtin(global_invocation_id) gid: vec3<u32>) {
   let radius = kernelRadius(sigma.sigmaInteg);
   var sum = vec3<f32>(0.0);
   var wsum = 0.0;
-  for (var k = -radius; k <= radius; k++) {
-    let a = wrapIndex(i32(gid.x) + k, dims.x);
-    let w = gaussianTap(k, sigma.sigmaInteg);
-    sum += textureLoad(srcTex, vec2<i32>(i32(a), i32(gid.y)), 0).xyz * w;
-    wsum += w;
+  for (var tapOffset = -radius; tapOffset <= radius; tapOffset++) {
+    let azIndex = wrapIndex(i32(gid.x) + tapOffset, dims.x);
+    let tapWeight = gaussianTap(tapOffset, sigma.sigmaInteg);
+    sum += textureLoad(srcTex, vec2<i32>(i32(azIndex), i32(gid.y)), 0).xyz * tapWeight;
+    wsum += tapWeight;
   }
   textureStore(dst, vec2<i32>(gid.xy), vec4<f32>(sum / wsum, 0.0));
 }
@@ -42,11 +42,11 @@ fn csBlurRing(@builtin(global_invocation_id) gid: vec3<u32>) {
   let radius = kernelRadius(sigma.sigmaInteg);
   var sum = vec3<f32>(0.0);
   var wsum = 0.0;
-  for (var k = -radius; k <= radius; k++) {
-    let r = clampIndex(i32(gid.y) + k, dims.y);
-    let w = gaussianTap(k, sigma.sigmaInteg);
-    sum += textureLoad(srcTex, vec2<i32>(i32(gid.x), i32(r)), 0).xyz * w;
-    wsum += w;
+  for (var tapOffset = -radius; tapOffset <= radius; tapOffset++) {
+    let ringIndex = clampIndex(i32(gid.y) + tapOffset, dims.y);
+    let tapWeight = gaussianTap(tapOffset, sigma.sigmaInteg);
+    sum += textureLoad(srcTex, vec2<i32>(i32(gid.x), i32(ringIndex)), 0).xyz * tapWeight;
+    wsum += tapWeight;
   }
   textureStore(dst, vec2<i32>(gid.xy), vec4<f32>(sum / wsum, 0.0));
 }
