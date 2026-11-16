@@ -1,5 +1,6 @@
 import type { AsteroidClass } from '../../../../@types/asteroids/AsteroidClass';
 import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { AsteroidMeasuredSize } from '../../catalog/@types/AsteroidMeasuredSize';
 import type { AsteroidNow } from './AsteroidNow';
 
 /**
@@ -20,6 +21,8 @@ export type AsteroidInfo = {
   readonly periodYears: number;
   /** Null when MPC gives no H. */
   readonly absoluteMagnitude: number | null;
+  /** JPL SBDB's diameter and albedo; null when unmeasured, and the card estimates from H. */
+  readonly measuredSize: AsteroidMeasuredSize | null;
   /** The elements' epoch, JD (TT). */
   readonly epochJd: number;
   /** Null outside the drawn window, where a two-body position would look precise and be wrong. */

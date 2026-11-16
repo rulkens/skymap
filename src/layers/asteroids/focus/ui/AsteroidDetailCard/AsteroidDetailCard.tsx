@@ -1,7 +1,8 @@
 /**
- * AsteroidDetailCard — rich panel for a selected asteroid: its orbit as MPC publishes it, then where
- * it is and how bright it looks from Earth at selection. Outside 1900–2100 the "now" section is gone
- * rather than stale: two-body elements from one epoch are not trusted that far out.
+ * AsteroidDetailCard — rich panel for a selected asteroid: its orbit as MPC publishes it and its size
+ * (JPL's measurement, or a range from H), then where it is and how bright it looks from Earth at
+ * selection. Outside 1900–2100 the "now" section is gone rather than stale: two-body elements from one
+ * epoch are not trusted that far out.
  */
 
 import type { ReactNode } from 'react';
@@ -10,6 +11,7 @@ import type { AsteroidInfo } from '../../../selection/@types/AsteroidInfo';
 import type { CardLayout } from '../../../../../@types/components/infoCard/CardLayout';
 import { ASTEROID_CLASS_EYEBROWS } from '../../data/asteroidClassEyebrows';
 import { formatAu } from '../../utils/formatAu';
+import { asteroidSizeRows } from '../../utils/asteroidSizeRows';
 import { julianDaysToUnixMs } from '../../../../../utils/time/julianDaysToUnixMs';
 import CardHeader from '../../../../../components/InfoCard/CardHeader/CardHeader';
 import CardRow from '../../../../../components/InfoCard/CardRow/CardRow';
@@ -58,6 +60,9 @@ function AsteroidDetailCard({
           label="Absolute magnitude"
           value={h === null ? 'H unknown' : `H ${h.toFixed(2)}`}
         />
+        {asteroidSizeRows(target).map(([label, value]) => (
+          <CardRow key={label} label={label} value={value} />
+        ))}
       </div>
       {now !== null && (
         <div className={styles.cardSection}>
@@ -73,7 +78,10 @@ function AsteroidDetailCard({
           label="Orbit epoch"
           value={new Date(julianDaysToUnixMs(target.epochJd)).toISOString().slice(0, 10)}
         />
-        <CardRow label="Source" value="Minor Planet Center" />
+        <CardRow
+          label="Source"
+          value={target.measuredSize === null ? 'Minor Planet Center' : 'Minor Planet Center, JPL'}
+        />
       </div>
     </div>
   );

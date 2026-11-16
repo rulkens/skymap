@@ -18,6 +18,7 @@ import { asteroidHelioAu } from '../kepler/utils/asteroidHelioAu';
 import { asteroidWindowFade } from '../kepler/utils/asteroidWindowFade';
 import { asteroidAbsoluteMagnitude } from '../catalog/utils/asteroidAbsoluteMagnitude';
 import { asteroidNameOf } from '../catalog/utils/asteroidNameOf';
+import { asteroidMeasuredSizeOf } from '../catalog/utils/asteroidMeasuredSizeOf';
 import { asteroidClassOf } from '../catalog/utils/asteroidClassOf';
 import { asteroidNowAt } from './utils/asteroidNowAt';
 import { asteroidTransientId } from './present/asteroidTransientId';
@@ -59,7 +60,7 @@ export function asteroidsSelectionRow(runtime: AsteroidsRuntime): SelectionKindR
       const loaded = runtime.slot.current();
       const k = rowOf(ref.number);
       if (loaded === null || k < 0) return null;
-      const { catalog, names } = loaded;
+      const { catalog, names, diameters } = loaded;
       const helio = asteroidHelioAu(catalog, k, simDays);
       const au = SCALE_UNITS.AU_TO_MPC;
       const positionMpc: Vec3 = [
@@ -84,6 +85,7 @@ export function asteroidsSelectionRow(runtime: AsteroidsRuntime): SelectionKindR
         inclinationDeg: catalog.i[k]! * RAD_TO_DEG,
         periodYears: (2 * Math.PI) / catalog.elementsB[4 * k + 3]! / DAYS_PER_YEAR,
         absoluteMagnitude: asteroidAbsoluteMagnitude(catalog, k),
+        measuredSize: asteroidMeasuredSizeOf(diameters, ref.number),
         epochJd: catalog.epochJd,
         now:
           asteroidWindowFade(simDays) > 0 ? asteroidNowAt(catalog, k, helio, earthHelioAu) : null,

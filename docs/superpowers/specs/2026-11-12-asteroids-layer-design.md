@@ -107,6 +107,12 @@ rows, so row k stays number k + 1, and leaves their names out.
   same two-body model the app runs, so nothing is lost against what the runtime would compute.
 - **Names** go in `asteroid-names.bin` (sorted u32 numbers, u32 offsets, a UTF-8 blob; ~150 KB brotli),
   fetched beside the catalog on its slot (a few percent of its size), so a linked asteroid's card is named with no palette open.
+- **Diameters** (owner, 2026-11-16: MPCORB has only H and G). The JPL Small-Body Database Query API gives
+  a measured diameter and albedo for about 135,000 numbered asteroids, most from NEOWISE
+  (`npm run fetch-sbdb-diameters` → `data/raw/sbdb/`). `build-asteroids` joins them by number, keeps the
+  rows the Layer can select (no ABSENT, no meshed number), and writes `asteroid-diameters.bin`: u32 count,
+  sorted u32 numbers, f32 km, f32 albedo or NaN (1.6 MB raw, ~0.75 MB gzip). It rides the catalog slot
+  like the names, and the `.astb` format does not change.
 
 Both files are a `DATA_FAMILIES` row (`tools/deploy/r2/dataFamilies.ts`), content-hashed through the
 manifest like stellar streams. Refreshing: `npm run fetch-mpcorb && npm run build-asteroids`, then
@@ -245,7 +251,10 @@ one to the body would grow the selection-row contract.
 - **Reveal.** `selects: ['asteroid']` in `visibility.ts`, so a deep link with the Layer off switches it on
   and arrives (the generic reveal).
 - **Card** (`detailCard` ui row, `type: 'asteroid'`): number and name, class, a, e, i, period, H, distance
-  from the Sun and from Earth now, apparent magnitude now, and the data epoch.
+  from the Sun and from Earth now, apparent magnitude now, and the data epoch. Size: the measured
+  diameter (three figures, metres below 1 km) and albedo, with the source row adding JPL; unmeasured, a
+  "Diameter (estimate)" range from D = 1329 km / √p · 10^(−H/5) over albedo 0.25 to 0.05 (two figures),
+  and no size row for a row with no H.
 - **Exhibits.** `picking.off` gains `'asteroid'` in the three exhibits that already list `'satellite'`
   (solarSystem, voyagerMissions, zoneOfAvoidance), so a dot never steals a click meant for a planet.
 

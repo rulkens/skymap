@@ -78,6 +78,9 @@ describe('asteroidsSelectionRow', () => {
     expect((unnamed as AsteroidSelectionRow).now!.magnitude).toBeNull();
     const inside = row.extractRow(ASTRAEA, FIXTURE_EPOCH_JD) as AsteroidSelectionRow;
     expect(Number.isFinite(inside.now!.magnitude)).toBe(true);
+    expect(inside.measuredSize!.diameterKm).toBeCloseTo(106.699, 3);
+    const pallas = row.extractRow({ type: 'asteroid', number: 2 }, FIXTURE_EPOCH_JD);
+    expect((pallas as AsteroidSelectionRow).measuredSize).toBeNull();
     const after = row.extractRow(ASTRAEA, ASTEROID_WINDOW.endJd + 1) as AsteroidSelectionRow;
     expect(after.now).toBeNull();
     expect(after.semiMajorAu).toBeCloseTo(3, 5);

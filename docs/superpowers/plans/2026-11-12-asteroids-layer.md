@@ -503,6 +503,11 @@ Copy rules: `docs/superpowers/conventions/ui-ux.md` and the `copy` skill's voice
 - [x] `npm run build -w packages/website` (or the site's check script) passes.
 - [x] Commit `Asteroids: docs, website facts and attribution`.
 
+### Added after the plan: measured diameters (owner, 2026-11-16)
+
+- [x] JPL SBDB diameters fetched (`fetch-sbdb-diameters`), baked into `asteroid-diameters.bin` on the
+  catalog slot, and shown on the card with an estimate from H where unmeasured (spec §4.1, §4.7).
+
 ---
 
 ## Verify (controller)
