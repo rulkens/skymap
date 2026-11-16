@@ -5,15 +5,15 @@
  */
 import { delay, put, select, takeLatest } from 'typed-redux-saga';
 
-import { skyClockTo } from './skyClockTo';
-import { SKY_CLOCK_SKIP_MS } from '../../data/sky/skyClockSkipMs';
-import { selectTimeState } from '../time/selectors';
-import { startClockProfile } from '../time/timeSlice';
-import { manualPausedAtActions } from '../time/enterManualPausedAt';
-import { deriveSimDays } from '../../utils/time/deriveSimDays';
-import { easedClockProfile } from '../../utils/time/easedClockProfile';
-import { julianDaysToUnixMs } from '../../utils/time/julianDaysToUnixMs';
-import type { RootState } from '../../store/types';
+import { skyClockTo } from '../skyClockTo';
+import { SKY_CLOCK_SKIP_MS } from '../../../data/sky/skyClockSkipMs';
+import { selectTimeState } from '../../time/selectors';
+import { startClockProfile } from '../../time/timeSlice';
+import { manualPausedAtActions } from '../../time/enterManualPausedAt';
+import { deriveSimDays } from '../../../utils/time/deriveSimDays';
+import { easedClockProfile } from '../../../utils/time/easedClockProfile';
+import { julianDaysToUnixMs } from '../../../utils/time/julianDaysToUnixMs';
+import type { RootState } from '../../../store/types';
 
 export function* watchSkyClockToSaga() {
   yield* takeLatest(skyClockTo, function* ({ payload }) {

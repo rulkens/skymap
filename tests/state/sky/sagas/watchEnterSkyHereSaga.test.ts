@@ -2,14 +2,14 @@ import { describe, expect, it } from 'vitest';
 import createSagaMiddleware from 'redux-saga';
 import { configureStore, type Middleware, type UnknownAction } from '@reduxjs/toolkit';
 
-import { rootReducer } from '../../../src/store/rootReducer';
-import { watchEnterSkyHereSaga } from '../../../src/state/sky/watchEnterSkyHereSaga';
-import { enterSkyHere } from '../../../src/state/sky/enterSkyHere';
-import { enterSky } from '../../../src/state/sky/enterSky';
-import { skyEntryReported } from '../../../src/state/sky/skySlice';
-import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
-import type { SkySpot } from '../../../src/@types/camera/pose/SkySpot';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import { rootReducer } from '../../../../src/store/rootReducer';
+import { watchEnterSkyHereSaga } from '../../../../src/state/sky/sagas/watchEnterSkyHereSaga';
+import { enterSkyHere } from '../../../../src/state/sky/enterSkyHere';
+import { enterSky } from '../../../../src/state/sky/enterSky';
+import { skyEntryReported } from '../../../../src/state/sky/skySlice';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import type { SkySpot } from '../../../../src/@types/camera/pose/SkySpot';
+import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 const SPOT: SkySpot = { body: asSceneBodyId('earth'), lonRad: 0.2186, latRad: 0.9716 };
 const POINT: Vec3 = [3_500_000, 780_000, 5_260_000];

@@ -2,12 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import createSagaMiddleware from 'redux-saga';
 import { configureStore } from '@reduxjs/toolkit';
 
-import { rootReducer } from '../../../src/store/rootReducer';
-import { watchSkyClockToSaga } from '../../../src/state/sky/watchSkyClockToSaga';
-import { skyClockTo } from '../../../src/state/sky/skyClockTo';
-import { SKY_CLOCK_SKIP_MS } from '../../../src/data/sky/skyClockSkipMs';
-import { goLive, setSimDays } from '../../../src/state/time/timeSlice';
-import { selectTimeState } from '../../../src/state/time/selectors';
+import { rootReducer } from '../../../../src/store/rootReducer';
+import { watchSkyClockToSaga } from '../../../../src/state/sky/sagas/watchSkyClockToSaga';
+import { skyClockTo } from '../../../../src/state/sky/skyClockTo';
+import { SKY_CLOCK_SKIP_MS } from '../../../../src/data/sky/skyClockSkipMs';
+import { goLive, setSimDays } from '../../../../src/state/time/timeSlice';
+import { selectTimeState } from '../../../../src/state/time/selectors';
 
 const FROM = 2_461_000.5;
 const TO = FROM + 0.4;

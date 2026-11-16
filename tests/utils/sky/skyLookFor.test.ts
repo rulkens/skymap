@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { skyLookFor } from '../../../src/state/sky/skyLookFor';
+import { skyLookFor } from '../../../src/utils/sky/skyLookFor';
 import { altAzFromSpot } from '../../../src/utils/sky/altAzFromSpot';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { rotateVec3ByTightMat3 } from '../../../src/utils/math/rotateVec3ByTightMat3';

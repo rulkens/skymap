@@ -5,15 +5,15 @@
  */
 import { call, put, select } from 'typed-redux-saga';
 
-import { clipStarted } from '../camera/cameraIntentSlice';
-import { selectOrientation } from '../settings/selectors';
-import { liveCameraRuntimeSaga } from '../navigation/liveCameraRuntimeSaga';
-import { skyBelowHorizonSet } from './skySlice';
+import { clipStarted } from '../../camera/cameraIntentSlice';
+import { selectOrientation } from '../../settings/selectors';
+import { liveCameraRuntimeSaga } from '../../navigation/liveCameraRuntimeSaga';
+import { skyBelowHorizonSet } from '../skySlice';
 import { skyArmCtxSaga } from './skyArmCtxSaga';
-import { skyLookFor } from './skyLookFor';
-import { lookClip } from './lookClip';
-import type { PlacedRow } from '../../@types/engine/selection/PlacedRow';
-import type { SkySpot } from '../../@types/camera/pose/SkySpot';
+import { skyLookFor } from '../../../utils/sky/skyLookFor';
+import { lookClip } from '../../../utils/sky/clips/lookClip';
+import type { PlacedRow } from '../../../@types/engine/selection/PlacedRow';
+import type { SkySpot } from '../../../@types/camera/pose/SkySpot';
 
 export function* lookSaga(row: PlacedRow, spot: SkySpot, simDays: number) {
   const runtime = yield* call(liveCameraRuntimeSaga);

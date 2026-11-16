@@ -18,7 +18,7 @@ import { exhibitBodySaga } from '../exhibits/exhibitBodySaga';
 import { openExhibit } from '../exhibits/exhibitActions';
 import { clipBodySaga } from '../camera/clipBodySaga';
 import { startClip } from '../camera/clipActions';
-import { skyBodySaga } from '../sky/skyBodySaga';
+import { skyBodySaga } from '../sky/sagas/skyBodySaga';
 import { enterSky } from '../sky/enterSky';
 import { selectTakeoverSource } from './selectors';
 import { selectCameraBase, selectFovYRad } from '../camera/selectors';

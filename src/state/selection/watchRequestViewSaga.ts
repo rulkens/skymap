@@ -14,7 +14,7 @@ import { selectSkyView } from '../sky/selectSkyView';
 import { selectTakeoverSource } from '../takeover/selectors';
 import { selectClipOwner } from '../camera/selectors';
 import { selectTimeState } from '../time/selectors';
-import { lookSaga } from '../sky/lookSaga';
+import { lookSaga } from '../sky/sagas/lookSaga';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { isSkyLookable } from '../../utils/sky/isSkyLookable';
 import type { SagaContext } from '../../store/types';

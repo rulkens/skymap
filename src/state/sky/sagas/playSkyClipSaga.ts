@@ -6,10 +6,10 @@
  */
 import { cancelled, put, race, select, take } from 'typed-redux-saga';
 
-import { clipEnded, clipStarted } from '../camera/cameraIntentSlice';
-import type { ClipData } from '../../@types/animation/ClipData';
-import type { OrientationFrameId } from '../../@types/camera/orientation/OrientationFrameId';
-import type { RootState } from '../../store/types';
+import { clipEnded, clipStarted } from '../../camera/cameraIntentSlice';
+import type { ClipData } from '../../../@types/animation/ClipData';
+import type { OrientationFrameId } from '../../../@types/camera/orientation/OrientationFrameId';
+import type { RootState } from '../../../store/types';
 
 export function* playSkyClipSaga(data: ClipData, frame: OrientationFrameId) {
   yield* put(clipStarted({ data, frame, by: 'skyFlight' }));

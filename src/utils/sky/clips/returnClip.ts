@@ -8,19 +8,19 @@
  * A body pose's end is encoded in its own axes: crossing it through heliocentric world
  * coordinates and back costs up to ~6e-10 of basis that varies with the clock.
  */
-import type { CameraArmBasisCtx } from '../../@types/camera/arms/CameraArmBasisCtx';
-import type { CameraPose } from '../../@types/camera/pose/CameraPose';
-import type { ClipData } from '../../@types/animation/ClipData';
-import type { Effect } from '../../@types/animation/Effect';
-import type { FramedCameraPose } from '../../@types/camera/pose/FramedCameraPose';
-import { all, moveTarget, tween } from '../../services/engine/animation/effectHelpers';
-import { foldToWorld } from '../../services/engine/camera/arms/foldToWorld';
-import { isWorldArm } from '../../services/engine/camera/arms/world/isWorldArm';
-import { isBodyArm } from '../../services/engine/camera/arms/body/isBodyArm';
-import { encodeBodyFixedChannels } from '../../services/engine/camera/arms/body/utils/encodeBodyFixedChannels';
-import { rowFor } from '../../services/engine/camera/arms/rowFor';
-import { FLY_TO_POSE_SEC, flyToPoseClip } from '../../data/animation/clips/makers/flyToPoseClip';
-import { SKY_RETURN_SEC } from '../../data/sky/skyReturnSec';
+import type { CameraArmBasisCtx } from '../../../@types/camera/arms/CameraArmBasisCtx';
+import type { CameraPose } from '../../../@types/camera/pose/CameraPose';
+import type { ClipData } from '../../../@types/animation/ClipData';
+import type { Effect } from '../../../@types/animation/Effect';
+import type { FramedCameraPose } from '../../../@types/camera/pose/FramedCameraPose';
+import { all, moveTarget, tween } from '../../../services/engine/animation/effectHelpers';
+import { foldToWorld } from '../../../services/engine/camera/arms/foldToWorld';
+import { isWorldArm } from '../../../services/engine/camera/arms/world/isWorldArm';
+import { isBodyArm } from '../../../services/engine/camera/arms/body/isBodyArm';
+import { encodeBodyFixedChannels } from '../../../services/engine/camera/arms/body/utils/encodeBodyFixedChannels';
+import { rowFor } from '../../../services/engine/camera/arms/rowFor';
+import { FLY_TO_POSE_SEC, flyToPoseClip } from '../../../data/animation/clips/makers/flyToPoseClip';
+import { SKY_RETURN_SEC } from '../../../data/sky/skyReturnSec';
 
 export function returnClip(
   start: CameraPose,

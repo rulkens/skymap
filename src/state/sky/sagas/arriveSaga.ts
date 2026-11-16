@@ -10,28 +10,28 @@
 import { actionChannel, call, delay, put, race, select, take } from 'typed-redux-saga';
 import type { Action } from '@reduxjs/toolkit';
 
-import { commitCameraPose } from '../camera/cameraIntentSlice';
-import { skyEntryReported } from './skySlice';
-import { selectCameraBase } from '../camera/selectors';
-import { selectOrientation } from '../settings/selectors';
-import { liveCameraRuntimeSaga } from '../navigation/liveCameraRuntimeSaga';
-import { approachClip } from './approachClip';
-import { arrivalClip } from './arrivalClip';
+import { commitCameraPose } from '../../camera/cameraIntentSlice';
+import { skyEntryReported } from '../skySlice';
+import { selectCameraBase } from '../../camera/selectors';
+import { selectOrientation } from '../../settings/selectors';
+import { liveCameraRuntimeSaga } from '../../navigation/liveCameraRuntimeSaga';
+import { approachClip } from '../../../utils/sky/clips/approachClip';
+import { arrivalClip } from '../../../utils/sky/clips/arrivalClip';
 import { playSkyClipSaga } from './playSkyClipSaga';
 import { skyArmCtxSaga } from './skyArmCtxSaga';
-import { offSpotM } from '../../utils/sky/offSpotM';
-import { radToDeg } from '../../utils/math/radToDeg';
-import { surfacePointBodyFixed } from '../../utils/geo/surfacePointBodyFixed';
-import { toBodyArm } from '../../services/engine/camera/arms/body/poseFrameConversion';
-import { skyPoseFromBodyArm } from '../../services/engine/camera/arms/sky/utils/skyPoseFromBodyArm';
-import { isSkyArm } from '../../services/engine/camera/arms/sky/isSkyArm';
-import { refoldTo } from '../../services/engine/camera/arms/refoldTo';
-import { hostOrThrow } from '../../services/engine/camera/arms/hostOrThrow';
-import { ARRIVAL_APPROACH_SEC } from '../../data/sky/arrivalApproachSec';
-import { ARRIVAL_GROUND_MATCH_M } from '../../data/sky/arrivalGroundMatchM';
-import { ARRIVAL_GROUND_WAIT_MS } from '../../data/sky/arrivalGroundWaitMs';
-import type { SkySpot } from '../../@types/camera/pose/SkySpot';
-import type { Vec3 } from '../../@types/math/Vec3';
+import { offSpotM } from '../../../utils/sky/offSpotM';
+import { radToDeg } from '../../../utils/math/radToDeg';
+import { surfacePointBodyFixed } from '../../../utils/geo/surfacePointBodyFixed';
+import { toBodyArm } from '../../../services/engine/camera/arms/body/poseFrameConversion';
+import { skyPoseFromBodyArm } from '../../../services/engine/camera/arms/sky/utils/skyPoseFromBodyArm';
+import { isSkyArm } from '../../../services/engine/camera/arms/sky/isSkyArm';
+import { refoldTo } from '../../../services/engine/camera/arms/refoldTo';
+import { hostOrThrow } from '../../../services/engine/camera/arms/hostOrThrow';
+import { ARRIVAL_APPROACH_SEC } from '../../../data/sky/arrivalApproachSec';
+import { ARRIVAL_GROUND_MATCH_M } from '../../../data/sky/arrivalGroundMatchM';
+import { ARRIVAL_GROUND_WAIT_MS } from '../../../data/sky/arrivalGroundWaitMs';
+import type { SkySpot } from '../../../@types/camera/pose/SkySpot';
+import type { Vec3 } from '../../../@types/math/Vec3';
 
 export function* arriveSaga(spot: SkySpot, pointLocalM: Vec3 | null) {
   const frame = yield* select(selectOrientation);

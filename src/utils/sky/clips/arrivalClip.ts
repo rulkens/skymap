@@ -6,19 +6,19 @@
  * the two is only that ground's correction from `‖pointLocalM‖`. The glide's angles take the
  * short way round from where the clip's start reads in the same body axes.
  */
-import type { CameraArmBasisCtx } from '../../@types/camera/arms/CameraArmBasisCtx';
-import type { CameraPose } from '../../@types/camera/pose/CameraPose';
-import type { ClipData } from '../../@types/animation/ClipData';
-import type { SkySpot } from '../../@types/camera/pose/SkySpot';
-import type { Vec3 } from '../../@types/math/Vec3';
-import { all, moveTarget, tween } from '../../services/engine/animation/effectHelpers';
-import { toBodyFixedChannels } from '../../services/engine/camera/arms/body/toBodyFixedChannels';
-import { encodeBodyFixedChannels } from '../../services/engine/camera/arms/body/utils/encodeBodyFixedChannels';
-import { skyPoseToBodyArm } from '../../services/engine/camera/arms/sky/utils/skyPoseToBodyArm';
-import { SKY_EYE_HEIGHT_M } from '../../services/engine/camera/arms/sky/data/skyEyeHeightM';
-import { lerpAngleShortest } from '../../utils/math/lerpAngleShortest';
-import { ARRIVAL_GLIDE_SEC } from '../../data/sky/arrivalGlideSec';
-import { ARRIVAL_LOOK_UP_RAD } from '../../data/sky/arrivalLookUpRad';
+import type { CameraArmBasisCtx } from '../../../@types/camera/arms/CameraArmBasisCtx';
+import type { CameraPose } from '../../../@types/camera/pose/CameraPose';
+import type { ClipData } from '../../../@types/animation/ClipData';
+import type { SkySpot } from '../../../@types/camera/pose/SkySpot';
+import type { Vec3 } from '../../../@types/math/Vec3';
+import { all, moveTarget, tween } from '../../../services/engine/animation/effectHelpers';
+import { toBodyFixedChannels } from '../../../services/engine/camera/arms/body/toBodyFixedChannels';
+import { encodeBodyFixedChannels } from '../../../services/engine/camera/arms/body/utils/encodeBodyFixedChannels';
+import { skyPoseToBodyArm } from '../../../services/engine/camera/arms/sky/utils/skyPoseToBodyArm';
+import { SKY_EYE_HEIGHT_M } from '../../../services/engine/camera/arms/sky/data/skyEyeHeightM';
+import { lerpAngleShortest } from '../../math/lerpAngleShortest';
+import { ARRIVAL_GLIDE_SEC } from '../../../data/sky/arrivalGlideSec';
+import { ARRIVAL_LOOK_UP_RAD } from '../../../data/sky/arrivalLookUpRad';
 
 /** `ctx` places the bodies at play time: the glide's start is read in its body's axes once. */
 export function arrivalClip(
