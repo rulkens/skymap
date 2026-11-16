@@ -55,7 +55,7 @@ spec's "Out of scope".
 
 ## See also
 
-- `docs/superpowers/specs/2026-09-13-per-planet-terrain-design.md` §8.4 (the stride
+- `docs/superpowers/specs/completed/2026-09-13-per-planet-terrain-design.md` §8.4 (the stride
   ruling and its rejected alternatives), §11 (post addressing).
 - `docs/superpowers/plans/completed/2026-09-16-terrain-f3a-height-lookup.md`.
 - `docs/backlog/2026-09-17-terrain-aware-zoom-anchor.md` — separate, and the two are

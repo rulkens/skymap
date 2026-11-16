@@ -172,7 +172,7 @@ walks `terrainHeightAt` — a resident-ancestor lookup and a bilinear per step.
 
 ## See also
 
-- Spec `docs/superpowers/specs/2026-09-13-per-planet-terrain-design.md` §8.1 (the
+- Spec `docs/superpowers/specs/completed/2026-09-13-per-planet-terrain-design.md` §8.1 (the
   `raycast` sketch), §8.3 (the routing table), §2 (the depth-aware external
   dependency), §12 (the `F3b` row this replaces).
 - `docs/backlog/2026-09-17-terrain-aware-zoom-anchor.md` — the sixth anchor site,

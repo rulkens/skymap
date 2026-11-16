@@ -2,11 +2,13 @@
 
 > **STATUS 2026-08-17: REFERENCE, NOT EXECUTABLE.** Execution was restructured
 > into the surface-by-surface ladder (decisions.md #9, evidence in
-> [`current-contracts-map.md`](../../research/engine/current-contracts-map.md)):
+> [`current-contracts-map.md`](../../../research/engine/current-contracts-map.md)):
 > seven per-family rungs, each its own behaviour-neutral PR; the umbrella
 > `SubsystemBundle` type is deferred and reassessed after the rungs land. This
 > spec remains the north-star target shape each rung is checked against — do
 > not execute it as written.
+>
+> **Archived 2026-11-16:** superseded by the Layer composition design (2026-09-09); its Track C goal landed as the Milky Way Layer (#1117).
 >
 > **Status.** Ground preparation for Track C (analytic Milky Way field landing).
 > **Date.** 2026-08-17.
@@ -14,10 +16,10 @@
 > (migrate 5 provers), P4 (`MilkyWaySettings` split). Track B (field renderer
 > extraction) and Track C (MW field landing) are separate specs, sequenced
 > after this one merges. Decisions this spec implements are recorded in
-> [`docs/research/engine/decisions.md`](../../research/engine/decisions.md);
+> [`docs/research/engine/decisions.md`](../../../research/engine/decisions.md);
 > evidence is in
-> [`engine-composition-map.md`](../../research/engine/engine-composition-map.md)
-> and [`subsystem-sweep.md`](../../research/engine/subsystem-sweep.md) — cited,
+> [`engine-composition-map.md`](../../../research/engine/engine-composition-map.md)
+> and [`subsystem-sweep.md`](../../../research/engine/subsystem-sweep.md) — cited,
 > not re-derived.
 
 ## 1. Motivation
