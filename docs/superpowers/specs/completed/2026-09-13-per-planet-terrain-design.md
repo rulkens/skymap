@@ -1,20 +1,18 @@
 # Per-planet 3D terrain — Earth and Mars — design
 
-**Status:** F1 and F2 landed (`main` 343fd14c0, 2026-09-15 — plans archived at
-[`plans/completed/2026-09-15-terrain-f1-height-products.md`](../plans/completed/2026-09-15-terrain-f1-height-products.md)
-and [`plans/completed/2026-09-15-terrain-f2-displacement.md`](../plans/completed/2026-09-15-terrain-f2-displacement.md)).
-F3 (ground truth) and F4 (Mars) are unstarted — this spec stays open for them. Written
-against `main` at `be13f9dc7`; amended 2026-09-15 from the F1 plan's rulings R1, R3,
-R11, R12, R14, F2's F2-R1–R7 and R15, and the data rulings in §4.2 — each amendment is
-marked in place.
+**Status:** shipped. F1+F2 (#719, 343fd14c0); F3a (#741 prep, #744); F3c (#751 prep, #753);
+F4 Mars (#738 and #749 prep, #743). Their plans are in `plans/completed/`. F3b's remainder
+lives in the backlog: [`2026-09-17-terrain-f3b-remaining-routing.md`](../../../backlog/2026-09-17-terrain-f3b-remaining-routing.md),
+BACKLOG line "Cloud deck as an altitude". Written against `main` at `be13f9dc7`;
+amendments are marked in place.
 
-**As built:** [`specs/completed/2026-07-28-earth-surface-virtual-texture.md`](completed/2026-07-28-earth-surface-virtual-texture.md)
+**As built:** [`specs/completed/2026-07-28-earth-surface-virtual-texture.md`](2026-07-28-earth-surface-virtual-texture.md)
 — the quadtree, the atlas, the band manifest and the residency walk this spec
 extends. That spec's §§ "Q1 normal map" and "non-goals" explicitly deferred
 elevation displacement as "the named possible escalation, later, if the flat-limb
 silhouette becomes the thing that breaks the illusion." This is that escalation.
-Also [`specs/completed/2026-08-20-earth-rtc-surface-camera-design.md`](completed/2026-08-20-earth-rtc-surface-camera-design.md)
-and [`specs/completed/2026-09-01-camera-pivot.md`](completed/2026-09-01-camera-pivot.md)
+Also [`specs/completed/2026-08-20-earth-rtc-surface-camera-design.md`](2026-08-20-earth-rtc-surface-camera-design.md)
+and [`specs/completed/2026-09-01-camera-pivot.md`](2026-09-01-camera-pivot.md)
 (§ "Terrain-height collision … nothing is built") for the camera lane this spec
 gives real ground to.
 
