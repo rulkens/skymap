@@ -13,8 +13,6 @@ import { describe, expect, it } from 'vitest';
 const REPO_DIR = fileURLToPath(new URL('../../', import.meta.url));
 const SHADERS = 'src/services/gpu/shaders';
 
-// The bloom/* and compositor/fragment.wesl rows go when the film look (#1131) lands: it renames
-// or cleans those files, and this test then names each row to delete.
 const ALLOWED: Readonly<Record<string, number>> = {
   'src/services/gpu/shaders/additiveUpsample/fragment.wesl': 5,
   'src/services/gpu/shaders/additiveUpsample/vertex.wesl': 2,
@@ -27,11 +25,6 @@ const ALLOWED: Readonly<Record<string, number>> = {
   'src/services/gpu/shaders/atmosphere/shell/vertex.wesl': 1,
   'src/services/gpu/shaders/atmosphere/skyViewLut.wesl': 7,
   'src/services/gpu/shaders/atmosphere/transmittanceLut.wesl': 5,
-  'src/services/gpu/shaders/bloom/bright.wesl': 6,
-  'src/services/gpu/shaders/bloom/downsample.wesl': 15,
-  'src/services/gpu/shaders/bloom/fold.wesl': 3,
-  'src/services/gpu/shaders/bloom/io.wesl': 2,
-  'src/services/gpu/shaders/bloom/upsample.wesl': 4,
   'src/services/gpu/shaders/bodies/blackHoleLensing/fragment.wesl': 13,
   'src/services/gpu/shaders/bodies/blackHoleLensing/vertex.wesl': 1,
   'src/services/gpu/shaders/bodies/bodyGlint/fragment.wesl': 1,
@@ -64,7 +57,6 @@ const ALLOWED: Readonly<Record<string, number>> = {
   'src/services/gpu/shaders/bodies/surfaceTile/vertex.wesl': 14,
   'src/services/gpu/shaders/bodies/texturedBody/fragment.wesl': 7,
   'src/services/gpu/shaders/bodies/texturedBody/vertex.wesl': 1,
-  'src/services/gpu/shaders/compositor/fragment.wesl': 1,
   'src/services/gpu/shaders/compositor/vertex.wesl': 2,
   'src/services/gpu/shaders/constellations/fragment.wesl': 1,
   'src/services/gpu/shaders/constellations/vertex.wesl': 2,
