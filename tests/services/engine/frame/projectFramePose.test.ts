@@ -21,7 +21,7 @@ import { isWorldArm } from '../../../../src/services/engine/camera/arms/world/is
 import { EMPTY_TILT_MEMORY } from '../../../../src/services/engine/camera/data/emptyTiltMemory';
 import { pivotFraming } from '../../../../src/services/engine/camera/framing/pivotRadiusMpc';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
-import { commitCameraPose } from '../../../../src/state/camera/cameraSlice';
+import { commitCameraPose } from '../../../../src/state/camera/cameraIntentSlice';
 import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
 import { eyeMpcOf } from '../../../../src/utils/camera/orbitPose/eyeMpcOf';
 import { symmetricFrustum } from '../../../../src/utils/camera/frustum/symmetricFrustum';
@@ -48,22 +48,23 @@ const AT_FEET: FramedCameraPose = {
 describe('projectFramePose over a sky regime', () => {
   const h = makeCameraSimHarness({ focusBody: null, bootHR: null });
   h.store.dispatch(commitCameraPose(AT_FEET));
-  const intent = h.store.getState().camera;
+  const intent = h.store.getState().camera.intent;
   // No focus: the sky arm's focus rule alone never releases it.
   const ctx: CameraArmCtx = {
     bodies: deriveBodyStates(CONST_J2000),
     poseBasis: B,
     upBasis: B,
     terrainHeightAt: datumOnlyTerrainHeight,
-    focusBodyId: null,
+    focus: { kind: 'none' },
     pivot: pivotFraming(null),
     viewportPx: [1000, 1000],
     frustum: symmetricFrustum(Math.PI / 3, 1),
     fovYRad: Math.PI / 3,
     tuning: intent.tuning,
   };
-  const project = (render: FramedCameraPose) =>
+  const project = (render: FramedCameraPose, clipAuthored = true) =>
     projectFramePose({
+      clipAuthored,
       render,
       authoredOverride: null,
       pivotsOnFocusedBody: false,
@@ -97,6 +98,24 @@ describe('projectFramePose over a sky regime', () => {
     const out = project(AT_FEET);
 
     expect(out.displayed).toBe(AT_FEET);
+    expect(out.actions).toEqual([]);
+  });
+
+  it('a standing pose drawn through the world arm keeps the arm', () => {
+    const out = project(refoldTo(AT_FEET, 'absolute', ctx), false);
+
+    expect(out.actions).toEqual([]);
+  });
+
+  it("a gesture's world pose off the spot keeps the arm: the sky wheel moves the lens", () => {
+    const atSpot = refoldTo(AT_FEET, 'absolute', ctx);
+    if (!isWorldArm(atSpot)) throw new Error('refoldTo did not land the world arm');
+    const out = project(
+      absoluteArm({ ...atSpot.pose, distance: atSpot.pose.distance + 2e6 * SCALE_UNITS.M_TO_MPC }),
+      false,
+    );
+
+    expect(out.displayed.frame).toEqual(SKY);
     expect(out.actions).toEqual([]);
   });
 });

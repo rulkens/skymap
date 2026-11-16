@@ -225,12 +225,12 @@ https://eoimages.gsfc.nasa.gov/images/imagerecords/73000/73934/gebco_08_rev_elev
 
 ## Earth clouds map — NASA Visible Earth Blue Marble cloud composite
 
-Earth's `clouds` map (cloud shell, sRGB colour + luminance-derived alpha → PNG)
-is NASA's **Blue Marble** cloud composite — a white-cloud-on-black equirect with
-**no alpha channel**. `build-textures` derives opacity from luminance (white
-cloud → opaque, black sky → clear) and keeps the RGB as the cloud colour (see
-`writeCloudTier.ts`); it ships segmented as `earth-clouds-<px>.png` at the
-`large` (8k) tier (spec §9.1). sharp reads TIFF natively (the USGS moon sources
+Earth's `clouds` map (cloud shell, one grey channel → lossy WebP) is NASA's
+**Blue Marble** cloud composite — a white-cloud-on-black equirect with **no
+alpha channel**. Its grey is the coverage: `build-textures` writes it as one
+grey channel at quality 80, the daily cloud bake's format (see
+`writeCloudTier.ts`), and ships it as `earth-clouds-grey-<px>.webp` up to the
+`large` (8k) tier. sharp reads TIFF natively (the USGS moon sources
 are already `.tif`). Full-pull only — no dev variant.
 
 The 2048px JPG variant is too small for the 8k ceiling, and the two 21600px

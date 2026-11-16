@@ -22,7 +22,7 @@ import { readRegister } from '../../../helpers/camera/readRegister';
 import { bodyArrivalDistanceMpc } from '../../../support/bodyArrivalDistanceMpc';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { liveWorldPose } from '../../../../src/services/engine/helpers/liveWorldPose';
-import { setAutoRotate } from '../../../../src/state/camera/cameraSlice';
+import { setAutoRotate } from '../../../../src/state/camera/cameraIntentSlice';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import type { CameraSimHarness } from '../../../helpers/camera/CameraSimHarness';
@@ -37,7 +37,7 @@ const SATURN = deriveBodyStates(CONST_J2000).get(asSceneBodyId('saturn'))! as Bo
 
 /** Turn the spin pill on at the store's own rate (the UI's only lever). */
 function spinOn(h: CameraSimHarness): void {
-  const { rate } = h.store.getState().camera.autoRotate;
+  const { rate } = h.store.getState().camera.intent.autoRotate;
   h.store.dispatch(setAutoRotate({ active: true, rate }));
 }
 

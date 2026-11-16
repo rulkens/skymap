@@ -91,4 +91,19 @@ const MARS_PRESETS: readonly FlyToPreset[] = [
   roverPreset('opportunity', 'Meridiani', "Opportunity's site — the low-relief case"),
 ];
 
-export const FLY_TO_PRESETS: readonly FlyToPreset[] = [...EARTH_PRESETS, ...MARS_PRESETS];
+const MOON_PRESETS = [
+  {
+    label: 'Copernicus',
+    body: 'moon',
+    lonDeg: -20.08,
+    latDeg: 9.62,
+    altKm: 200,
+    title: 'Crater, ~93 km — terraced walls and central peaks, ~3.8 km deep',
+  },
+] as const satisfies readonly FlyToPreset[];
+
+export const FLY_TO_PRESETS: readonly FlyToPreset[] = [
+  ...EARTH_PRESETS,
+  ...MARS_PRESETS,
+  ...MOON_PRESETS,
+];

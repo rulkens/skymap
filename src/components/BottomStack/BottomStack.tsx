@@ -3,8 +3,8 @@
  * above it when open, a sheet above both.
  *
  * `.root` sets `--bottom-stack-height` (dock plus time row) and `--sheet-lift`
- * (the peek, while a sheet shows); the fixed sheet and scale bracket offset
- * themselves by those. `.root` takes no transform or filter: either would
+ * (the peek, while a sheet shows); the fixed sheet, scale bracket and sky
+ * controls offset themselves by those. `.root` takes no transform or filter: either would
  * become the containing block for its fixed children.
  */
 
@@ -24,6 +24,8 @@ export type BottomStackProps = {
   /** Null when no sheet is showing. */
   readonly sheet: ReactNode;
   readonly scale: ReactNode;
+  /** The bottom-centre sky controls (entry button, HUD); they stack above `--scale-clearance`. */
+  readonly sky: ReactNode;
   readonly timeRow: ReactNode;
   readonly dock: ReactNode;
 };
@@ -35,6 +37,7 @@ function BottomStack({
   onCover,
   sheet,
   scale,
+  sky,
   timeRow,
   dock,
 }: BottomStackProps): ReactNode {
@@ -49,6 +52,7 @@ function BottomStack({
     >
       {/* Before the sheet so an expanded sheet paints over the bracket. */}
       {scale}
+      {sky}
       {sheet}
       <div className={styles.column}>
         {timeOpen && timeRow}

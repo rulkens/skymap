@@ -16,7 +16,7 @@ import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriv
 import { resolveClipFoci } from '../../../../../src/services/engine/animation/resolveClipFoci';
 import { compileClip } from '../../../../../src/services/engine/animation/compileClip';
 import { evaluateFramedClip } from '../../../../../src/services/engine/camera/clips/evaluateClip';
-import { resolveClipStart } from '../../../../../src/state/camera/cameraSlice';
+import { resolveClipStart } from '../../../../../src/state/camera/cameraIntentSlice';
 import { yawPitchToDir } from '../../../../../src/utils/camera/orbitPose/yawPitchToDir';
 import { skySpotRadial } from '../../../../../src/utils/geo/skySpotRadial';
 import { dot3 } from '../../../../../src/utils/math/dot3';

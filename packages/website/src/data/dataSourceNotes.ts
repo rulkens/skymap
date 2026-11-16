@@ -446,6 +446,13 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     view: { to: 'focus=body-spirit&t=2026-10-07T08:00:00Z', label: 'Open Mars at Spirit’s site' },
     figure: 'data-spirit',
   },
+  'lroc-wac': {
+    description:
+      'The Lunar Reconnaissance Orbiter’s wide-angle mosaic of the whole Moon, 100 metres per pixel.',
+    shows: 'The ground of the Moon as you come down to it, with the Sun’s shading taken out.',
+    scene: 'planets-and-their-moons',
+    view: { to: 'focus=body-moon&t=2026-10-07T12:00:00Z', label: 'Open the Moon' },
+  },
 
   // Terrain
   etopo: {
@@ -475,6 +482,13 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     shows: 'The height of the ground of Mars.',
     scene: 'planets-and-their-moons',
     view: { to: 'focus=body-spirit&t=2026-10-07T08:00:00Z', label: 'Open Mars at Spirit’s site' },
+  },
+  'lola-ldem': {
+    description:
+      'The height of the ground of the Moon, measured by the LOLA laser altimeter, 118 metres per pixel.',
+    shows: 'The height of the ground of the Moon.',
+    scene: 'planets-and-their-moons',
+    view: { to: 'focus=body-moon&t=2026-10-07T12:00:00Z', label: 'Open the Moon' },
   },
   'hirise-gale': {
     description:

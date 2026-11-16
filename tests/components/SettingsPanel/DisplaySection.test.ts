@@ -28,13 +28,15 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { render, fireEvent } from '@testing-library/react';
+import { render, fireEvent, within } from '@testing-library/react';
 import { createElement } from 'react';
 import DisplaySection from '../../../src/components/SettingsPanel/DisplaySection';
 import type { DisplaySectionProps } from '../../../src/components/SettingsPanel/DisplaySection';
 import type { ToneMapCurve as ToneMapCurveT } from '../../../src/@types/data/ToneMapCurve';
 import type { OrientationFrameId } from '../../../src/@types/camera/orientation/OrientationFrameId';
 import { ToneMapCurve } from '../../../src/data/toneMapCurve';
+import { LENS_MIN_DEG } from '../../../src/data/camera/lensMinDeg';
+import { LENS_MAX_DEG } from '../../../src/data/camera/lensMaxDeg';
 
 // ── Fixtures ───────────────────────────────────────────────────────────────────
 
@@ -126,18 +128,40 @@ describe('DisplaySection', () => {
   });
 
   describe('field of view control', () => {
-    it('calls onFovDegChange with the stepped value on a keyboard nudge', () => {
-      const onFovDegChange = vi.fn<(next: number) => void>();
-      const { getByRole, container } = render(
-        createElement(DisplaySection, baseProps({ fovDeg: 60, onFovDegChange })),
+    function fovSlider(fovDeg: number, onFovDegChange = vi.fn<(next: number) => void>()) {
+      const { container } = render(
+        createElement(DisplaySection, baseProps({ fovDeg, onFovDegChange })),
       );
-      fireEvent.click(getByRole('button', { name: /display/i }));
+      fireEvent.click(within(container).getByRole('button', { name: /display/i }));
       const sliders = Array.from(container.querySelectorAll<HTMLElement>('[role="slider"]'));
-      const fov = sliders.find((el) => el.getAttribute('aria-label') === 'Field of view')!;
-      expect(fov).not.toBeUndefined();
-      fireEvent.keyDown(fov, { key: 'ArrowRight' });
-      expect(onFovDegChange).toHaveBeenCalledOnce();
-      expect(onFovDegChange).toHaveBeenCalledWith(60.5);
+      return sliders.find((el) => el.getAttribute('aria-label') === 'Field of view')!;
+    }
+
+    // Log scale: a linear 1′–120° track would give the whole arcminute range under one pixel.
+    it('a keyboard nudge zooms by a ratio, the same few percent at both ends', () => {
+      const ratios = [60, 1 / 30].map((fovDeg) => {
+        const onFovDegChange = vi.fn<(next: number) => void>();
+        fireEvent.keyDown(fovSlider(fovDeg, onFovDegChange), { key: 'ArrowRight' });
+        return onFovDegChange.mock.calls[0]![0] / fovDeg;
+      });
+      for (const ratio of ratios) {
+        expect(ratio).toBeGreaterThan(1);
+        expect(ratio).toBeLessThan(1.1);
+      }
+    });
+
+    it('Home and End land on the lens range ends exactly', () => {
+      const onFovDegChange = vi.fn<(next: number) => void>();
+      const slider = fovSlider(60, onFovDegChange);
+      fireEvent.keyDown(slider, { key: 'Home' });
+      fireEvent.keyDown(slider, { key: 'End' });
+      expect(onFovDegChange.mock.calls[0]![0]).toBeCloseTo(LENS_MIN_DEG, 12);
+      expect(onFovDegChange.mock.calls[1]![0]).toBeCloseTo(LENS_MAX_DEG, 9);
+    });
+
+    it('reads arcminutes under a degree', () => {
+      expect(fovSlider(1 / 60).getAttribute('aria-valuetext')).toBe('1′');
+      expect(fovSlider(60).getAttribute('aria-valuetext')).toBe('60°');
     });
   });
 

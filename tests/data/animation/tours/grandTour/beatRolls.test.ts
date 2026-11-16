@@ -15,7 +15,7 @@ import { ORIENTATION_FRAMES } from '../../../../../src/data/orientation/orientat
 import { resolveClipFoci } from '../../../../../src/services/engine/animation/resolveClipFoci';
 import { compileClip } from '../../../../../src/services/engine/animation/compileClip';
 import { evaluateClip } from '../../../../../src/services/engine/camera/clips/evaluateClip';
-import { resolveClipStart } from '../../../../../src/state/camera/cameraSlice';
+import { resolveClipStart } from '../../../../../src/state/camera/cameraIntentSlice';
 import { selectionResolverOver } from '../../../../support/selectionResolverOver';
 import type { CameraPose } from '../../../../../src/@types/camera/pose/CameraPose';
 import { installAppSelectionKinds } from '../../../../support/installAppSelectionKinds';

@@ -2,6 +2,8 @@
  * easedClockProfile — a `ClockProfile` that moves the clock `fromDays` → `toDays` over `overMs`
  * along a camera-tween `Ease`, sampled once per 60 Hz frame (linear needs one segment). The last
  * sample is `toDays` itself, not `fromDays + 1·span`, so a run lands on its instant bit-exact.
+ * Forward only: `deriveSimDays` needs the sim column to ascend, so a target at or before `from`
+ * is the caller's to jump to instead.
  */
 import type { Ease } from '../../@types/animation/Ease';
 import type { ClockProfile } from '../../@types/time/ClockProfile';

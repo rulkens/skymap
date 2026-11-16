@@ -18,7 +18,7 @@ import { missionStops } from '../../missionCamera/utils/missionStops';
 import { deriveSimDays } from '../../../../utils/time/deriveSimDays';
 import { unixMsToJulianDays } from '../../../../utils/time/unixMsToJulianDays';
 import { timelineEndMs } from '../utils/timelineEndMs';
-import { aimCamera } from '../../../../state/camera/cameraSlice';
+import { aimCamera } from '../../../../state/camera/cameraIntentSlice';
 import { selectOrientation } from '../../../../state/settings/selectors';
 import { selectMissionCraft, selectMissionSpeed } from '../../state/missions/selectors';
 import { setMissionCraft, stepMissionSpeed } from '../../state/missions/slice';

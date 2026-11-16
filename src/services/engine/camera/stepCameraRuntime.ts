@@ -16,6 +16,7 @@ import type { CameraProjection } from '../../../@types/camera/projection/CameraP
 import type { CameraRuntime } from '../../../@types/engine/state/CameraRuntime';
 import type { DriverId } from '../../../@types/engine/camera/DriverId';
 import type { CameraArmCtx } from '../../../@types/camera/arms/CameraArmCtx';
+import type { ArmFocus } from '../../../@types/camera/arms/ArmFocus';
 import type { StepInputs } from '../../../@types/engine/camera/StepInputs';
 import type { RootState } from '../../../store/types';
 
@@ -46,12 +47,12 @@ import { selectionDriver } from '../../../utils/selection/selectionDriver';
 import { bodyRowAt } from '../../../utils/scene/bodyRowAt';
 import { focusMoveDurationMs } from './clips/focusMoveDurationMs';
 import { selectGestureHeld } from '../../../state/input/selectors';
-import cameraReducer, {
+import cameraIntentReducer, {
   cancelCameraTween,
   clearFrameTween,
   commitCameraPose,
   setFovYRad,
-} from '../../../state/camera/cameraSlice';
+} from '../../../state/camera/cameraIntentSlice';
 
 export function stepCameraRuntime(
   prev: CameraRuntime,
@@ -90,7 +91,7 @@ export function stepCameraRuntime(
   // departing row bakes nothing over it and the follow rows adopt it. Read off
   // the RAW snapshot: our own re-encode below is about to change `base`'s
   // identity too, and that must never itself read as an outside commit.
-  const external = rawStored.camera.base !== prev.base;
+  const external = rawStored.camera.intent.base !== prev.base;
   const winnerLastFrame: DriverId = external ? 'resting' : prev.register.winner;
 
   // The loop, not the orientation saga, re-encodes: the outgoing basis is what
@@ -100,28 +101,37 @@ export function stepCameraRuntime(
   // as this frame's own commit (never as an outside one — see `external` above).
   const orientationActions: UnknownAction[] = [];
   let stored = rawStored;
-  if (rawStored.settings.orientation !== prev.orientation && isWorldArm(rawStored.camera.base)) {
+  if (
+    rawStored.settings.orientation !== prev.orientation &&
+    isWorldArm(rawStored.camera.intent.base)
+  ) {
     const reencodeAction = commitCameraPose(
       absoluteArm(
         reencodePose(
-          rawStored.camera.base.pose,
+          rawStored.camera.intent.base.pose,
           ORIENTATION_FRAMES[prev.orientation],
           ORIENTATION_FRAMES[rawStored.settings.orientation],
         ),
       ),
     );
     orientationActions.push(reencodeAction);
-    stored = { ...rawStored, camera: cameraReducer(rawStored.camera, reencodeAction) };
+    stored = {
+      ...rawStored,
+      camera: {
+        ...rawStored.camera,
+        intent: cameraIntentReducer(rawStored.camera.intent, reencodeAction),
+      },
+    };
   }
   const focus = stored.selectionRows.focus;
   // A row framing a body no focus names (the mission's craft) stands it in as the pivot: the
   // wheel floors at the hull's standoff, not the surfaceless floor hundreds of km out.
-  const stand = prev.pivotBody === null ? undefined : bodies.get(prev.pivotBody);
-  const pivotRow = stand ? bodyRowAt(prev.pivotBody!, stand.positionMpc) : focus;
+  const stand = prev.wheel.pivotBody === null ? undefined : bodies.get(prev.wheel.pivotBody);
+  const pivotRow = stand ? bodyRowAt(prev.wheel.pivotBody!, stand.positionMpc) : focus;
   const lastWinnerRidesWheel = ridesWheelTarget(prevDrivers, winnerLastFrame);
   // Re-derived every frame: the FOV slider can change with no resize event.
   const projection: CameraProjection = {
-    fovYRad: stored.camera.fovYRad,
+    fovYRad: stored.camera.intent.fovYRad,
     aspect,
     near: NEAR_CLIP_MPC,
     far: FAR_CLIP_MPC,
@@ -131,7 +141,9 @@ export function stepCameraRuntime(
   const lastNowMs = prev.navigator.lastNowMs;
   const shiftTarget = coverShiftNdc(coverPx, canvasPx);
   const shiftNdc =
-    lastNowMs === null ? shiftTarget : easedShiftNdc(prev.shiftNdc, shiftTarget, nowMs - lastNowMs);
+    lastNowMs === null
+      ? shiftTarget
+      : easedShiftNdc(prev.lens.shiftNdc, shiftTarget, nowMs - lastNowMs);
   const shiftSettled = shiftNdc[0] === shiftTarget[0] && shiftNdc[1] === shiftTarget[1];
   const frustum = shiftedFrustum(projection.fovYRad, aspect, shiftNdc);
   // `poseBasis` is the COMMITTED frame — the saga writes the destination into
@@ -140,14 +152,21 @@ export function stepCameraRuntime(
   const poseBasis = ORIENTATION_FRAMES[stored.settings.orientation];
   // `stored`, not the post-replay snapshot: the replay runs before that exists,
   // and no action it emits writes `tuning`, so the two readings are identical.
-  const tuning = stored.camera.tuning;
+  const tuning = stored.camera.intent.tuning;
   // Every arm field but the up-basis. The replay and the produce run BEFORE
   // this frame's basis resolves, so they read the previous frame's; the fold
   // reads this frame's. One shared value would move the settle trace.
+  const focusBodyId = selectionDriver(focus)?.poseId ?? null;
+  const armFocus: ArmFocus =
+    focusBodyId !== null
+      ? { kind: 'body', id: focusBodyId }
+      : focus !== null
+        ? { kind: 'bodiless' }
+        : { kind: 'none' };
   const armFields = {
     bodies,
     poseBasis,
-    focusBodyId: selectionDriver(focus)?.poseId ?? null,
+    focus: armFocus,
     pivot: pivotFraming(pivotRow),
     viewportPx: canvasPx,
     frustum,
@@ -163,6 +182,7 @@ export function stepCameraRuntime(
       gesture: prev.gesture.value,
       tilt: prev.tilt,
       follow: prev.follow,
+      zoomLimitPress: prev.wheel.limitPress,
     },
     steps,
     {
@@ -181,7 +201,13 @@ export function stepCameraRuntime(
   const rootState =
     drained.actions.length === 0
       ? stored
-      : { ...stored, camera: drained.actions.reduce(cameraReducer, stored.camera) };
+      : {
+          ...stored,
+          camera: {
+            ...stored.camera,
+            intent: drained.actions.reduce(cameraIntentReducer, stored.camera.intent),
+          },
+        };
   // A table without navigator rows drops navigator input, so a stray `navDrag` cannot
   // nudge a skymap drag. `canvasPx` is CSS pixels, so the rate is the drag's own.
   const navigates = drivers.some((d) => isNavigatorDriverId(d.id));
@@ -206,11 +232,11 @@ export function stepCameraRuntime(
     ? { pose: drained.register, tilt: drained.tilt, fovYRad: undefined }
     : nudgeCameraArm(drained.register, drained.tilt, nav.delta, {
         ...replayCtx,
-        fovYRad: rootState.camera.fovYRad,
+        fovYRad: rootState.camera.intent.fovYRad,
       });
   const actions: UnknownAction[] = [...orientationActions, ...drained.actions];
   // Where `next.base`'s fold picks up below — everything before this index is
-  // already folded into `rootState.camera`.
+  // already folded into `rootState.camera.intent`.
   const tailStart = actions.length;
   if (nudgedFovYRad !== undefined) actions.push(setFovYRad(nudgedFovYRad));
 
@@ -233,7 +259,7 @@ export function stepCameraRuntime(
   const winner = pickWinner(drivers, rootState, activity);
   const winnerId = winner.id;
   const epochs = advanceEpochs(prev.epochs, {
-    intent: rootState.camera,
+    intent: rootState.camera.intent,
     focus,
     clip: clipEpoch,
     winnerEpoch: winner.epoch,
@@ -256,7 +282,13 @@ export function stepCameraRuntime(
   const produced =
     edge.committed === null
       ? rootState
-      : { ...rootState, camera: { ...rootState.camera, base: edge.committed } };
+      : {
+          ...rootState,
+          camera: {
+            ...rootState.camera,
+            intent: { ...rootState.camera.intent, base: edge.committed },
+          },
+        };
   const {
     pose,
     memory,
@@ -276,7 +308,7 @@ export function stepCameraRuntime(
       authoredWorld: releasedWorldArm(register, replayCtx, tuning),
       // Post-edge: a follow row taking over from a tween adopts where the tween
       // LANDED, not the pose the tween departed from (still `base` this frame).
-      committedWorld: releasedWorldArm(produced.camera.base, replayCtx, tuning),
+      committedWorld: releasedWorldArm(produced.camera.intent.base, replayCtx, tuning),
       winnerLastFrame,
       lastWinnerRidesWheel,
       poseBasis,
@@ -297,14 +329,14 @@ export function stepCameraRuntime(
   const rollElapsed = elapsedMs(epochs.frameTween, nowMs);
   const upBasis = resolveFrameBasis(
     rootState.settings.orientation,
-    rootState.camera.frameTween,
+    rootState.camera.intent.frameTween,
     rollElapsed,
   );
   // `EASE` clamps, so this frame's basis is already the destination; the clear
   // only affects the next frame's snapshot.
   if (
-    rootState.camera.frameTween !== null &&
-    rollElapsed >= rootState.camera.frameTween.durationMs
+    rootState.camera.intent.frameTween !== null &&
+    rollElapsed >= rootState.camera.intent.frameTween.durationMs
   ) {
     actions.push(clearFrameTween());
   }
@@ -313,8 +345,8 @@ export function stepCameraRuntime(
   // the edge commits the register — exactly one commit, exactly at `to`.
   if (
     winnerId === 'tween' &&
-    rootState.camera.tween !== null &&
-    elapsedMs(epochs.tween, nowMs) >= focusMoveDurationMs(rootState.camera.tween)
+    rootState.camera.intent.tween !== null &&
+    elapsedMs(epochs.tween, nowMs) >= focusMoveDurationMs(rootState.camera.intent.tween)
   ) {
     actions.push(cancelCameraTween());
   }
@@ -326,8 +358,8 @@ export function stepCameraRuntime(
   // A lens written since the drive last saw it (a takeover's restore, a tour
   // re-pin, the slider) wins, as an outside `base` does (`external` above).
   const handOff =
-    drivenFovYRad === undefined && prev.drivenFovYRad?.over === rootState.camera.fovYRad
-      ? prev.drivenFovYRad.drawn
+    drivenFovYRad === undefined && prev.lens.driven?.over === rootState.camera.intent.fovYRad
+      ? prev.lens.driven.drawn
       : undefined;
   if (handOff !== undefined) actions.push(setFovYRad(handOff));
   const drawnFovYRad = drivenFovYRad ?? handOff ?? projection.fovYRad;
@@ -342,8 +374,9 @@ export function stepCameraRuntime(
     focus,
     follow: memory,
     tilt,
-    intent: rootState.camera,
+    intent: rootState.camera.intent,
     gestureHeld,
+    clipAuthored: winnerId === 'clip',
     ctx: foldCtx,
   });
   actions.push(...projected.actions);
@@ -367,8 +400,8 @@ export function stepCameraRuntime(
     next: {
       register: { pose: projected.register, winner: winnerId },
       // Reduce only the tail past `tailStart` — the rest is already folded
-      // into `rootState.camera`; identity on an idle frame (empty tail).
-      base: actions.slice(tailStart).reduce(cameraReducer, rootState.camera).base,
+      // into `rootState.camera.intent`; identity on an idle frame (empty tail).
+      base: actions.slice(tailStart).reduce(cameraIntentReducer, rootState.camera.intent).base,
       // Tracks the frame `base` is now valid in, whatever this frame did with
       // it — a body arm sees no re-encode above but the switch still lands.
       orientation: stored.settings.orientation,
@@ -384,12 +417,14 @@ export function stepCameraRuntime(
           : { ...NAV_AT_REST, lastNowMs: nowMs },
       scheme: controls.scheme,
       own: own === undefined ? prev.own : { ...prev.own, [winnerId]: own },
-      pivotBody: pivotBody ?? null,
-      drivenFovYRad:
-        drivenFovYRad === undefined
-          ? null
-          : { drawn: drivenFovYRad, over: rootState.camera.fovYRad },
-      shiftNdc,
+      lens: {
+        driven:
+          drivenFovYRad === undefined
+            ? null
+            : { drawn: drivenFovYRad, over: rootState.camera.intent.fovYRad },
+        shiftNdc,
+      },
+      wheel: { pivotBody: pivotBody ?? null, limitPress: drained.zoomLimitPress },
       outputs: {
         displayed: projected.displayed,
         simDays,

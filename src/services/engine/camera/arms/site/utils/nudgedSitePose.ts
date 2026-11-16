@@ -21,7 +21,7 @@ export function nudgedSitePose(
   if (zoom !== undefined) {
     next = steppedSitePose(
       next,
-      { kind: 'zoom', factor: Math.exp(zoom), duringGesture: false, cursorPx: null, fresh: false },
+      { kind: 'zoom', factor: Math.exp(zoom), duringGesture: false, cursorPx: null },
       body,
       viewportPx,
       fovYRad,

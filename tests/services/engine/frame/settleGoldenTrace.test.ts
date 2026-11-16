@@ -25,7 +25,7 @@ import { flatFramedPose } from '../../../helpers/camera/flatFramedPose';
 import { goldenSig } from '../../../helpers/camera/goldenSig';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { liveWorldPose } from '../../../../src/services/engine/helpers/liveWorldPose';
-import { setCameraTuning } from '../../../../src/state/camera/cameraSlice';
+import { setCameraTuning } from '../../../../src/state/camera/cameraIntentSlice';
 import { eyeMpcOf } from '../../../../src/utils/camera/orbitPose/eyeMpcOf';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
