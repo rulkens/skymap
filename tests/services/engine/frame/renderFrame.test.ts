@@ -183,7 +183,11 @@ describe('renderFrame', () => {
       const last = calls.at(-1)![0];
       expect(last.label).toBe('render-swap');
       expect(Array.from(last.colorAttachments)[0]!.view).toEqual({ __id: 'swap-view' });
-      expect(letterboxRenderer.draw).toHaveBeenCalledWith(fx2.pass, fx2.canvasSize);
+      expect(letterboxRenderer.draw).toHaveBeenCalledWith(
+        fx2.pass,
+        fx2.canvasSize,
+        INITIAL_SETTINGS.film.letterboxAspect,
+      );
     });
 
     it('opens no pass while the letterbox or the look is off', () => {

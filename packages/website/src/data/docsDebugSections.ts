@@ -137,7 +137,7 @@ export const DOCS_DEBUG_SECTIONS: readonly DocsDebugSection[] = [
   {
     heading: 'Film look',
     shows:
-      'The film look’s switch and its letterbox, then two groups. Grade: contrast, black lift, split tone, grain and grain size, vignette, chromatic aberration, edge softness and the anamorphic squeeze. Glow: the firefly cap the Sun may bloom up to, the streak’s threshold, strength, length and blue tint, and the veiling glare.',
+      'The film look’s switch, its letterbox and the letterbox’s ratio (2.39:1 scope by default, down to 9:16 portrait), then two groups. Grade: contrast, black lift, split tone, grain and grain size, vignette, chromatic aberration, edge softness and the anamorphic squeeze. Glow: the firefly cap the Sun may bloom up to, the streak’s threshold, strength, length and blue tint, and the veiling glare.',
     file: `${PANEL}/FilmTuningSection/FilmTuningSection.tsx`,
   },
   {

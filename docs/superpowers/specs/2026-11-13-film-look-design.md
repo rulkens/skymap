@@ -39,7 +39,7 @@ code, same VRAM.
   `enabled && letterbox`, drawn by `letterboxRenderer`: a bind-group-free covering triangle returning opaque
   black, drawn twice under a scissor rect: top and bottom bars of `floor((h − w / 2.39) / 2)` target pixels on a
   frame taller than 2.39:1, left and right bars of `floor((w − h × 2.39) / 2)` on a wider one (owner 2026-11-16:
-  the ratio holds both ways; `LETTERBOX_ASPECT` in `src/data/film/`), nothing at 2.39:1 exactly. Drawn after every
+  the ratio holds both ways; the ratio is `film.letterboxAspect`, chosen on the Film look debug board (`letterboxAspects.ts`)), nothing at 2.39:1 exactly. Drawn after every
   overlay, so labels and rings fall under the bars; the dome rig has no `OVERLAYS`, so it never gets bars.
   Off, the step encodes nothing (the look-off frame is today's frame, R6). The HUD stays DOM, above.
 - **D3. Streak has no switch**: `streakStrength === 0` is off (no passes, no fold), the same rule `veil` uses.
@@ -125,6 +125,7 @@ Slice `settings/film` (`reducerPath: 'film'`), reducers: `setFilmEnabled(boolean
 | key | default | slider range |
 | --- | --- | --- |
 | enabled / letterbox | false / true | toggles |
+| letterboxAspect | 2.39 | dropdown |
 | contrast | 1.1 | 0.8–1.6 |
 | lift | 0.02 | 0–0.1 |
 | splitTone | 0.5 | 0–1 |

@@ -8,6 +8,7 @@ import { selectFilm } from '../../state/settings/selectors';
 import {
   setFilmEnabled,
   setFilmLetterbox,
+  setFilmLetterboxAspect,
   tuneFilmGlow,
   tuneFilmGrade,
 } from '../../state/settings/core/filmSlice';
@@ -16,11 +17,15 @@ import type { FilmGlow } from '../../@types/settings/FilmGlow';
 
 function FilmTuningSectionContainer(): ReactNode {
   const dispatch = useAppDispatch();
-  const { enabled, letterbox, grade, glow } = useAppSelector(selectFilm);
+  const { enabled, letterbox, letterboxAspect, grade, glow } = useAppSelector(selectFilm);
 
   const onEnabledChange = useCallback((on: boolean) => dispatch(setFilmEnabled(on)), [dispatch]);
   const onLetterboxChange = useCallback(
     (on: boolean) => dispatch(setFilmLetterbox(on)),
+    [dispatch],
+  );
+  const onLetterboxAspectChange = useCallback(
+    (aspect: number) => dispatch(setFilmLetterboxAspect(aspect)),
     [dispatch],
   );
   const onGradeChange = useCallback(
@@ -36,10 +41,12 @@ function FilmTuningSectionContainer(): ReactNode {
     <FilmTuningSection
       enabled={enabled}
       letterbox={letterbox}
+      letterboxAspect={letterboxAspect}
       grade={grade}
       glow={glow}
       onEnabledChange={onEnabledChange}
       onLetterboxChange={onLetterboxChange}
+      onLetterboxAspectChange={onLetterboxAspectChange}
       onGradeChange={onGradeChange}
       onGlowChange={onGlowChange}
     />

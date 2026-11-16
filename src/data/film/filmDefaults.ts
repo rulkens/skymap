@@ -8,6 +8,7 @@ import type { FilmSettings } from '../../@types/settings/FilmSettings';
 export const DEFAULT_FILM: FilmSettings = {
   enabled: false,
   letterbox: true,
+  letterboxAspect: 2.39,
   grade: {
     contrast: 1.1,
     lift: 0.02,

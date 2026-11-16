@@ -1,16 +1,15 @@
 /**
- * letterboxRenderer — the film look's 2.39:1 mask as frame code, so a capture
- * of the swap texture carries it. One covering triangle drawn twice, each time
- * under a scissor rect cut to one bar; no bindings, no blend, opaque black.
- * A frame taller than 2.39:1 gets top and bottom bars, a wider one left and
- * right bars, so the picture keeps the ratio either way. Bar size is in TARGET
+ * letterboxRenderer — the film look's mask as frame code, so a capture of the
+ * swap texture carries it. One covering triangle drawn twice, each time under
+ * a scissor rect cut to one bar; no bindings, no blend, opaque black. A frame
+ * taller than the aspect gets top and bottom bars, a wider one left and right
+ * bars, so the picture keeps the ratio either way. Bar size is in TARGET
  * pixels, floored so the picture never loses a row to rounding.
  */
 
 import type { LetterboxRenderer } from '../../../../@types/rendering/LetterboxRenderer';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { Size } from '../../../../@types/rendering/Size';
-import { LETTERBOX_ASPECT } from '../../../../data/film/letterboxAspect';
 import vsCode from '../../shaders/letterbox/vertex.wesl?static';
 import fsCode from '../../shaders/letterbox/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
@@ -39,9 +38,9 @@ export function createLetterboxRenderer(init: {
     primitive: { topology: 'triangle-list' },
   });
 
-  function draw(pass: GPURenderPassEncoder, { width, height }: Size): void {
-    const rowPx = Math.floor((height - width / LETTERBOX_ASPECT) / 2);
-    const columnPx = Math.floor((width - height * LETTERBOX_ASPECT) / 2);
+  function draw(pass: GPURenderPassEncoder, { width, height }: Size, aspect: number): void {
+    const rowPx = Math.floor((height - width / aspect) / 2);
+    const columnPx = Math.floor((width - height * aspect) / 2);
     if (rowPx <= 0 && columnPx <= 0) return;
     pass.setPipeline(pipeline);
     if (rowPx > 0) {

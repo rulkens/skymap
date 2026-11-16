@@ -7,6 +7,6 @@ import type { Renderer } from './Renderer';
 import type { Size } from './Size';
 
 export type LetterboxRenderer = Renderer & {
-  /** `target`: the swap target's size in pixels. A frame already wider than the aspect draws nothing. */
-  draw(pass: GPURenderPassEncoder, target: Size): void;
+  /** `target`: the swap target's size in pixels; `aspect`: width over height of the picture left between the bars. */
+  draw(pass: GPURenderPassEncoder, target: Size, aspect: number): void;
 };

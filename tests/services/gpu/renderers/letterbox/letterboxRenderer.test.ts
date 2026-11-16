@@ -32,7 +32,7 @@ describe('createLetterboxRenderer', () => {
   it('draws a top and a bottom bar under scissor rects, then resets the scissor', () => {
     // floor((900 − 1600 / 2.39) / 2) = 115
     const { pass, calls } = recordingPass();
-    renderer.draw(pass, { width: 1600, height: 900 });
+    renderer.draw(pass, { width: 1600, height: 900 }, 2.39);
     expect(calls).toEqual([
       'pipeline',
       'scissor 0 0 1600 115',
@@ -46,7 +46,7 @@ describe('createLetterboxRenderer', () => {
   it('draws a left and a right bar on a frame wider than 2.39:1', () => {
     // floor((2400 − 900 × 2.39) / 2) = 124
     const { pass, calls } = recordingPass();
-    renderer.draw(pass, { width: 2400, height: 900 });
+    renderer.draw(pass, { width: 2400, height: 900 }, 2.39);
     expect(calls).toEqual([
       'pipeline',
       'scissor 0 0 124 900',
@@ -57,9 +57,23 @@ describe('createLetterboxRenderer', () => {
     ]);
   });
 
+  it('draws left and right bars on a landscape frame at a portrait ratio', () => {
+    // floor((1600 − 900 × 9 / 16) / 2) = 546
+    const { pass, calls } = recordingPass();
+    renderer.draw(pass, { width: 1600, height: 900 }, 9 / 16);
+    expect(calls).toEqual([
+      'pipeline',
+      'scissor 0 0 546 900',
+      'draw 3',
+      'scissor 1054 0 546 900',
+      'draw 3',
+      'scissor 0 0 1600 900',
+    ]);
+  });
+
   it('draws nothing on a frame that is 2.39:1 already', () => {
     const { pass, calls } = recordingPass();
-    renderer.draw(pass, { width: 2390, height: 1000 });
+    renderer.draw(pass, { width: 2390, height: 1000 }, 2.39);
     expect(calls).toEqual([]);
   });
 });

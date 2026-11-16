@@ -23,6 +23,9 @@ export const filmSlice = createSlice({
     setFilmLetterbox: (film, action: PayloadAction<boolean>) => {
       film.letterbox = action.payload;
     },
+    setFilmLetterboxAspect: (film, action: PayloadAction<number>) => {
+      film.letterboxAspect = action.payload;
+    },
     tuneFilmGrade: (film, action: PayloadAction<Partial<FilmGrade>>) => {
       Object.assign(film.grade, action.payload);
     },
@@ -32,4 +35,10 @@ export const filmSlice = createSlice({
   },
 });
 
-export const { setFilmEnabled, setFilmLetterbox, tuneFilmGrade, tuneFilmGlow } = filmSlice.actions;
+export const {
+  setFilmEnabled,
+  setFilmLetterbox,
+  setFilmLetterboxAspect,
+  tuneFilmGrade,
+  tuneFilmGlow,
+} = filmSlice.actions;

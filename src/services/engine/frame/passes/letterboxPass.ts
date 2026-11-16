@@ -1,5 +1,5 @@
 /**
- * letterboxPass — the film look's 2.39:1 bars, the LAST draw on the swap
+ * letterboxPass — the film look's letterbox bars, the LAST draw on the swap
  * target so they cover every overlay the way a real mask would. Gated off,
  * its step opens no pass at all, so the look off costs nothing.
  */
@@ -15,6 +15,6 @@ export const letterboxPass: ContentPass = {
   },
 
   draw(pass, _view, ctx, state) {
-    state.gpu.letterboxRenderer!.draw(pass, ctx.canvasSize);
+    state.gpu.letterboxRenderer!.draw(pass, ctx.canvasSize, state.settings.film.letterboxAspect);
   },
 };
