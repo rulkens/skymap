@@ -307,6 +307,13 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     shows:
       'The asteroids layer: every numbered asteroid out to Jupiter’s trojans as a point, placed from its orbit for the date on the clock.',
   },
+  'sbdb-diameters': {
+    title: 'Asteroid diameters',
+    description:
+      'JPL’s measured diameters and albedos of about 135,000 numbered asteroids, most from the NEOWISE telescope.',
+    shows:
+      'The diameter and albedo on an asteroid’s card. An asteroid without one shows a range estimated from its brightness.',
+  },
   'seed-planet-facts': {
     title: 'Fact sheets of the Solar System bodies',
     description:

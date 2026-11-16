@@ -67,6 +67,7 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
           'fetch-local-bubble',
           'fetch-milliquas',
           'fetch-mpcorb',
+          'fetch-sbdb-diameters',
           'fetch-skraafoto',
           'fetch-structures',
           'fetch-textures',

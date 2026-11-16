@@ -678,6 +678,32 @@ unclear, and no entry here reads them as a licence.
   <https://www.minorplanetcenter.net/iau/info/MPOrbitFormat.html>,
   <https://www.minorplanetcenter.net/iau/WWWPolicy.html>
 
+### JPL Small-Body Database (asteroid diameters)
+
+<!-- attribution: id=sbdb-diameters; keys=sbdb.* -->
+
+- **What:** Diameters and geometric albedos of the numbered asteroids that
+  have one (135,476 on 2026-11-16), most from NEOWISE.
+- **By:** The JPL Solar System Dynamics group (the Small-Body Database), from
+  the published measurement each row cites.
+- **Licence:** Not stated on the pages read. The API fair-use policy limits
+  how the service is called ("You agree to submit only one API request at a
+  time (no simultaneous requests)", "You may not embed these APIs in your
+  website (per NASA CORS policy)") and says nothing on republishing.
+- **Use:** No licence stated
+- **Attribution:** "For referencing the data downloaded from the SSD website,
+  please use the following citation: “NASA/JPL Solar System Dynamics. Data
+  retrieved on (Downloaded Year, Month, Date). (Title of the Page).
+  https://ssd.jpl.nasa.gov”".
+- **Upstream:** <https://ssd-api.jpl.nasa.gov/sbdb_query.api>
+- **Enters skymap:** `npm run fetch-sbdb-diameters` → `data/raw/sbdb/` →
+  `npm run build-asteroids` → `asteroids/v1/asteroid-diameters.bin` on R2.
+- **Modified:** Yes. Only the asteroids the asteroids Layer draws, with
+  diameter and albedo as 32-bit floats; the uncertainties are left out.
+- **Checked:** 2026-11-16: <https://ssd-api.jpl.nasa.gov/>,
+  <https://ssd-api.jpl.nasa.gov/doc/sbdb_query.html>,
+  <https://ssd.jpl.nasa.gov/about/>
+
 ### MCXC, the Meta-Catalogue of X-ray detected Clusters
 
 <!-- attribution: id=mcxc; keys=mcxc.* -->

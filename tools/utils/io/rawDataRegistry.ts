@@ -2213,6 +2213,26 @@ export const RAW_DATA = {
       "MPC's export-format column table, the packed number and date rules, the orbit-type values and the header's terms, each with its source URL.",
   },
 
+  // ─── JPL Small-Body Database (asteroid diameters for the card)
+
+  'sbdb.diameters': {
+    path: 'data/raw/sbdb/diameters.json',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'The SBDB Query API answer, verbatim: every numbered asteroid with a diameter, fields `pdes` (the number), `diameter` (km), `albedo` and `diameter_sigma`, as strings or null. `build-asteroids` joins it to MPCORB by number.',
+    upstream: 'https://ssd-api.jpl.nasa.gov/sbdb_query.api',
+    fetcher: 'tools/fetch/fetchSbdbDiameters.ts',
+    readme: 'sbdb.readme',
+  },
+  'sbdb.readme': {
+    path: 'data/raw/sbdb/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      "The query, the response layout, JPL's fair-use policy and citation request, and the copy behind the bake.",
+  },
+
   // ─── JPL Horizons planet and moon vectors (ephemeris-correction fit input)
 
   horizons: {
