@@ -417,11 +417,11 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
   },
   'nasa-blue-marble': {
     description:
-      'Earth from far away: NASA’s Blue Marble for August 2004, with its night lights, clouds and water.',
+      'Earth from far away: NASA’s Blue Marble for August 2004, with its night lights and water.',
     about:
-      'Earth seen whole is NASA’s Blue Marble: one month of satellite imagery, August 2004. The night lights, the clouds and the water are separate NASA maps. The same month is also the coarse levels of the tiles the app fetches as you come down, so the globe and its coarse tiles show the same season.',
+      'Earth seen whole is NASA’s Blue Marble: one month of satellite imagery, August 2004. The night lights and the water are separate NASA maps. The same month is also the coarse levels of the tiles the app fetches as you come down, so the globe and its coarse tiles show the same season.',
     facts: ['sci-earth-clouds', 'sci-surfaces'],
-    shows: 'Earth’s surface from far away and down to tile level 7, its night side and its clouds.',
+    shows: 'Earth’s surface from far away and down to tile level 7, and its night side.',
     scene: 'earth-and-its-surface',
     figure: 'earth-terminator',
   },
@@ -429,8 +429,8 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     description:
       'Daily NASA GIBS and EUMETSAT weather-satellite imagery that tools/cloud-bake-rs turns into a cloud-opacity map.',
     about:
-      'A separate tool, not yet shipped in the app, turns a day of weather-satellite frames into one global cloud-opacity map: VIIRS on NOAA-20 and NOAA-21, GOES-East and GOES-West and Himawari through NASA GIBS, and Meteosat MTG and IODC through EUMETSAT’s EUMETView.',
-    shows: 'Nothing yet. The clouds on Earth are still the Blue Marble ones.',
+      'Polar satellites see each place about once a day; geostationary ones watch one half of the globe all day. Each night a tool joins a day of frames from both into one global map of cloud: VIIRS on NOAA-20 and NOAA-21, GOES-East, GOES-West and Himawari through NASA GIBS, and Meteosat through EUMETSAT.',
+    shows: 'Earth’s clouds, in the web app.',
     scene: 'earth-and-its-surface',
   },
   eox: {
