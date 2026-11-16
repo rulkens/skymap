@@ -41,7 +41,7 @@ export function asteroidOrbitsPass(runtime: AsteroidsRuntime): ContentPass<'aste
             k,
             simDays,
             RENDER_ORIGIN_MPC,
-            state.settings.asteroidTuning.colors[cls],
+            state.settings.asteroidTuning.perClass[cls].color,
             classFade * windowFade,
           ),
         );

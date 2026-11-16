@@ -17,23 +17,26 @@ struct AsteroidUniforms {
   selectedRow: u32,
   // Pick only: the packed pick word of row 0 (pick code and sentinel offset folded in on the CPU).
   pickBase: u32,
-  sizePx: f32,
-  // A dot's peak ceiling, which the fragment's knee reads.
-  dotKnee: f32,
   // The brightness budget's lift on the dots it keeps, so the thinned field keeps its light.
   thinGain: f32,
-  // Size by H, in stored H units: scale 1 from the knee down, t² up to 'sizeMaxScale' at the full H.
-  // A max scale of 1 is the uniform mode.
-  sizeKneeHCenti: f32,
+  // Size by H, in stored H units: scale 1 from a class's knee down, t² up to its max scale here.
   sizeFullHCenti: f32,
-  sizeMaxScale: f32,
+  // The vec4s hold one lane per class. 'sizePx' the dot's half-width (the pick's, wider, in a pick).
+  sizePx: vec4<f32>,
+  // A dot's peak ceiling, handed to the fragment's knee.
+  dotKnee: vec4<f32>,
+  // The H under which a dot grows, and its scale at the full H; a max scale of 1 is the uniform mode.
+  sizeKneeHCenti: vec4<f32>,
+  sizeMaxScale: vec4<f32>,
   // The main belt's tint per Kirkwood band, inner to outer; all three its class tint in class mode.
   beltColor: array<vec4<f32>, 3>,
 };
 
 struct VSOut {
   @builtin(position) clip: vec4<f32>,
-  @location(0) corner: vec2<f32>,
+  // xy the triangle corner; z the class's dot knee, the same at every vertex, so it rides this slot
+  // rather than costing a varying of its own.
+  @location(0) cornerKnee: vec3<f32>,
   // rgb the class tint, a the peak intensity (starPeakIntensity, occlusion folded in) the knee
   // compresses.
   @location(1) @interpolate(flat) tint: vec4<f32>,

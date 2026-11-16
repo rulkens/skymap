@@ -1,7 +1,7 @@
 /**
  * asteroidPointRenderer — the asteroids as screen-sized additive dots in the depthless HDR
  * accumulation, under the trails' occlusion (lib/trailOcclusion.wesl owns group 0 bindings 0-1; ours
- * are 2, the uniforms, which the fragment's knee reads too, 3-4, the solver's kept list and its tags,
+ * are 2, the uniforms, 3-4, the solver's kept list and its tags,
  * and 5-6, its element rows, for the belt band and the size by H). Both draws are indirect over that
  * list, so the pick culls exactly as the dots do. `drawPick` stamps the same instances wider into
  * the overlay pick target with its own uniform and bind group, so a pick never rewrites the frame's.
@@ -12,6 +12,7 @@ import type { AsteroidPointRenderer } from '../@types/AsteroidPointRenderer';
 import type { AsteroidPointFrame } from '../@types/AsteroidPointFrame';
 import type { AsteroidKeplerSolver } from '../../kepler/@types/AsteroidKeplerSolver';
 import type { AsteroidKeplerRows } from '../../kepler/@types/AsteroidKeplerRows';
+import type { AsteroidClass } from '../../../../@types/asteroids/AsteroidClass';
 import vsCode from '../../../../services/gpu/shaders/asteroids/points/vertex.wesl?static';
 import fsCode from '../../../../services/gpu/shaders/asteroids/points/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
@@ -39,15 +40,15 @@ export const ASTEROID_UNIFORM_OFFSETS = {
   selectedCamRelAu: 160,
   selectedRow: 172,
   pickBase: 176,
-  sizePx: 180,
-  dotKnee: 184,
-  thinGain: 188,
-  sizeKneeHCenti: 192,
-  sizeFullHCenti: 196,
-  sizeMaxScale: 200,
-  beltColor: 208,
+  thinGain: 180,
+  sizeFullHCenti: 184,
+  sizePx: 192,
+  dotKnee: 208,
+  sizeKneeHCenti: 224,
+  sizeMaxScale: 240,
+  beltColor: 256,
 } as const;
-export const ASTEROID_UNIFORM_BYTES = 256;
+export const ASTEROID_UNIFORM_BYTES = 304;
 
 export function createAsteroidPointRenderer({
   device,
@@ -68,11 +69,7 @@ export function createAsteroidPointRenderer({
     entries: [
       { binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' } },
       { binding: 1, visibility: GPUShaderStage.VERTEX, texture: { sampleType: 'depth' } },
-      {
-        binding: 2,
-        visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-        buffer: { type: 'uniform' },
-      },
+      { binding: 2, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' } },
       { binding: 3, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
       { binding: 4, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
       { binding: 5, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
@@ -108,7 +105,10 @@ export function createAsteroidPointRenderer({
     },
   });
 
-  const drawBinding = createBinding('asteroid-points', (frame) => frame.dotRadiusPx);
+  const drawBinding = createBinding(
+    'asteroid-points',
+    (frame, cls) => frame.classLook[cls].dotRadiusPx,
+  );
   const pickBinding = createBinding(
     'asteroid-points-pick',
     () => ASTEROID_POINT_STYLE.pickRadiusPx,
@@ -122,7 +122,10 @@ export function createAsteroidPointRenderer({
   );
 
   /** One uniform + occluder buffer pair and its bind group, rebuilt when the depth view or rows change. */
-  function createBinding(label: string, sizePx: (frame: AsteroidPointFrame) => number) {
+  function createBinding(
+    label: string,
+    sizePx: (frame: AsteroidPointFrame, cls: AsteroidClass) => number,
+  ) {
     const occluderBuffer = device.createBuffer({
       label: `${label}-occluder-uniform`,
       size: OCCLUDER_UNIFORM_BYTES,
@@ -143,7 +146,7 @@ export function createAsteroidPointRenderer({
       bind(frame: AsteroidPointFrame, rows: AsteroidKeplerRows): GPUBindGroup {
         occluderUniforms.write(frame.occluders, frame.depth.frame, frame.viewportPx);
         device.queue.writeBuffer(occluderBuffer, 0, occluderUniforms.scratch);
-        writeUniforms(uniformBuffer, frame, sizePx(frame));
+        writeUniforms(uniformBuffer, frame, sizePx);
         if (cached === null || cached.depthView !== frame.depth.view || cached.rows !== rows) {
           cached = {
             depthView: frame.depth.view,
@@ -172,7 +175,11 @@ export function createAsteroidPointRenderer({
     };
   }
 
-  function writeUniforms(buffer: GPUBuffer, frame: AsteroidPointFrame, sizePx: number): void {
+  function writeUniforms(
+    buffer: GPUBuffer,
+    frame: AsteroidPointFrame,
+    sizePx: (frame: AsteroidPointFrame, cls: AsteroidClass) => number,
+  ): void {
     const o = ASTEROID_UNIFORM_OFFSETS;
     const u = uniformScratch;
     u.set(frame.vp, o.viewProj / 4);
@@ -180,18 +187,19 @@ export function createAsteroidPointRenderer({
     u[o.pxPerRad / 4] = frame.pxPerRad;
     u.set(frame.sunFromCamAu, o.sunFromCamAu / 4);
     ASTEROID_CLASSES.forEach((cls, k) => {
-      u.set(frame.classColors[cls], o.classColor / 4 + 4 * k);
+      const look = frame.classLook[cls];
+      u.set(look.color, o.classColor / 4 + 4 * k);
       u[o.classColor / 4 + 4 * k + 3] = frame.classFade[cls];
+      u[o.sizePx / 4 + k] = sizePx(frame, cls);
+      u[o.dotKnee / 4 + k] = look.dotKnee;
+      u[o.sizeKneeHCenti / 4 + k] = asteroidHCenti(look.sizeKneeH);
+      u[o.sizeMaxScale / 4 + k] = frame.sizeByH ? look.sizeMaxScale : 1;
     });
     u.set(frame.selectedCamRelAu, o.selectedCamRelAu / 4);
     uniformWords[o.selectedRow / 4] = frame.selectedRow;
     u[o.windowFade / 4] = frame.windowFade;
-    u[o.sizePx / 4] = sizePx;
-    u[o.dotKnee / 4] = frame.dotKnee;
     u[o.thinGain / 4] = frame.thinGain;
-    u[o.sizeKneeHCenti / 4] = asteroidHCenti(frame.sizeKneeH);
     u[o.sizeFullHCenti / 4] = asteroidHCenti(ASTEROID_POINT_STYLE.sizeFullH);
-    u[o.sizeMaxScale / 4] = frame.sizeMaxScale;
     frame.beltColors.forEach((color, k) => u.set(color, o.beltColor / 4 + 4 * k));
     device.queue.writeBuffer(buffer, 0, u);
   }

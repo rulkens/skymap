@@ -9,15 +9,15 @@ export type AsteroidKeplerFrame = {
   /** JD (TT). */
   readonly simJd: number;
   readonly sunFromCamAu: Readonly<Vec3>;
-  /** `asteroidExposureRamp` × the Layer's brightness. */
-  readonly exposure: number;
+  /** `asteroidExposureRamp` × the Layer's brightness × the class's brightness. */
+  readonly exposure: Readonly<Record<AsteroidClass, number>>;
   readonly classFade: Readonly<Record<AsteroidClass, number>>;
   /** The faintest stored H each class keeps under the brightness budget (`asteroidHLimitCenti`). */
   readonly hLimitCenti: Readonly<Record<AsteroidClass, number>>;
   /** Catalog row exempt from the flux floor; `SELECTION_NONE_SENTINEL` for none. */
   readonly selectedRow: number;
-  /** The discard floor on the lifted flux. */
-  readonly minFlux: number;
+  /** Each class's discard floor on the lifted flux. */
+  readonly minFlux: Readonly<Record<AsteroidClass, number>>;
   /** Most the phase law may dim a dot, in mag. */
   readonly maxPhaseDimMag: number;
 };

@@ -5,7 +5,7 @@ import { rec709Luminance } from '../../../../../src/utils/color/rec709Luminance'
 
 describe('asteroidBeltColors', () => {
   it('by class, every band is the main belt class tint, so the bands do not show', () => {
-    const tint = initialState.colors.mainBelt;
+    const tint = initialState.perClass.mainBelt.color;
     expect(asteroidBeltColors({ ...initialState, colorBy: 'class' })).toEqual([tint, tint, tint]);
   });
 

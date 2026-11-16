@@ -5,7 +5,7 @@
  */
 import type { AsteroidClass } from '../../../../@types/asteroids/AsteroidClass';
 import type { Vec3 } from '../../../../@types/math/Vec3';
-import type { AsteroidClassColors } from '../../@types/AsteroidClassColors';
+import type { AsteroidClassLook } from '../../@types/AsteroidClassLook';
 import type { SampledDepthBinding } from '../../../../@types/rendering/SampledDepthBinding';
 
 export type AsteroidPointFrame = {
@@ -18,15 +18,17 @@ export type AsteroidPointFrame = {
   /** Catalog row drawn at `selectedCamRelAu`; `SELECTION_NONE_SENTINEL` for none. */
   readonly selectedRow: number;
   readonly selectedCamRelAu: Readonly<Vec3>;
-  /** The tuned dot shape (`ASTEROID_POINT_STYLE`, `ASTEROID_PHOTOMETRY.dotKnee`) and class tints. */
-  readonly dotRadiusPx: number;
-  readonly dotKnee: number;
-  readonly classColors: AsteroidClassColors;
+  /** Each class's tint and dot shape (`ASTEROID_CLASS_LOOK`, as tuned). */
+  readonly classLook: Readonly<
+    Record<
+      AsteroidClass,
+      Pick<AsteroidClassLook, 'color' | 'dotRadiusPx' | 'dotKnee' | 'sizeKneeH' | 'sizeMaxScale'>
+    >
+  >;
+  /** False draws every dot at its class's `dotRadiusPx` (size by H off). */
+  readonly sizeByH: boolean;
   /** The main belt's tint per Kirkwood band, inner to outer (`asteroidBeltColors`). */
   readonly beltColors: readonly [Vec3, Vec3, Vec3];
-  /** Size by H (`ASTEROID_POINT_STYLE`); a max scale of 1 draws every dot at `dotRadiusPx`. */
-  readonly sizeKneeH: number;
-  readonly sizeMaxScale: number;
   /** Tint lift on the dots the brightness budget keeps (`ASTEROID_THINNING.thinGainExponent`). */
   readonly thinGain: number;
   readonly occluders: { readonly count: number; readonly spheresKm: Float32Array };

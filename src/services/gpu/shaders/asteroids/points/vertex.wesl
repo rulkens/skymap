@@ -68,10 +68,11 @@ fn dotTint(d: AsteroidDot) -> vec3<f32> {
 }
 
 // A row with no H stores 65535, far fainter than any knee, so it keeps scale 1.
-fn dotScale(row: u32) -> f32 {
-  let hCenti = f32(extra[row].y >> 16u);
-  let t = saturate((u.sizeKneeHCenti - hCenti) / (u.sizeKneeHCenti - u.sizeFullHCenti));
-  return 1.0 + (u.sizeMaxScale - 1.0) * t * t;
+fn dotScale(d: AsteroidDot) -> f32 {
+  let hCenti = f32(extra[d.row].y >> 16u);
+  let knee = u.sizeKneeHCenti[d.cls];
+  let t = saturate((knee - hCenti) / (knee - u.sizeFullHCenti));
+  return 1.0 + (u.sizeMaxScale[d.cls] - 1.0) * t * t;
 }
 
 @vertex
@@ -88,13 +89,14 @@ fn vs(@builtin(vertex_index) vid: u32, @builtin(instance_index) slot: u32) -> VS
     return out;
   }
   let corner = triCorner(vid);
-  let offset = expandBillboardScreen(u.cam, centre, u.sizePx * dotScale(d.row), corner);
+  let sizePx = u.sizePx[d.cls];
+  let offset = expandBillboardScreen(u.cam, centre, sizePx * dotScale(d), corner);
   let fade = u.classColor[d.cls].w * u.windowFade * clear;
   // The peak keeps the unscaled dot's, so a dot sized by H grows its light with its area: spread
   // over it at the same light, a landmark only blurred into the field.
-  let peak = starPeakIntensity(1.0, d.flux * fade, toRefPx(u.sizePx, u.cam.pxPerRad));
+  let peak = starPeakIntensity(1.0, d.flux * fade, toRefPx(sizePx, u.cam.pxPerRad));
   out.clip = vec4<f32>(centre.xy + offset, MID_DEPTH * centre.w, centre.w);
-  out.corner = corner;
+  out.cornerKnee = vec3<f32>(corner, u.dotKnee[d.cls]);
   out.tint = vec4<f32>(dotTint(d) * u.thinGain, peak);
   return out;
 }
@@ -108,7 +110,7 @@ fn vsPick(@builtin(vertex_index) vid: u32, @builtin(instance_index) slot: u32) -
     return out;
   }
   let corner = triCorner(vid);
-  let offset = expandBillboardScreen(u.cam, centre, u.sizePx, corner);
+  let offset = expandBillboardScreen(u.cam, centre, u.sizePx[d.cls], corner);
   out.clip = vec4<f32>(centre.xy + offset, MID_DEPTH * centre.w, centre.w);
   out.corner = corner;
   out.word = u.pickBase + d.row;

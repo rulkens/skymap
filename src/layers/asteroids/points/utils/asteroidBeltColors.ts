@@ -9,10 +9,10 @@ import { scaleToLuminance } from '../../../../utils/color/scaleToLuminance';
  * ends' mix at their mean luminance, so it reads neither brighter nor darker than its neighbours.
  */
 export function asteroidBeltColors(
-  tuning: Pick<AsteroidTuning, 'colorBy' | 'colors' | 'beltRamp'>,
+  tuning: Pick<AsteroidTuning, 'colorBy' | 'perClass' | 'beltRamp'>,
 ): readonly [Vec3, Vec3, Vec3] {
   if (tuning.colorBy === 'class') {
-    const tint = tuning.colors.mainBelt;
+    const tint = tuning.perClass.mainBelt.color;
     return [tint, tint, tint];
   }
   const { inner, outer } = tuning.beltRamp;

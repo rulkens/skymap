@@ -7,6 +7,7 @@ import { selectAsteroidTuning } from '../../state/asteroidTuning/selectors';
 import {
   resetAsteroidTuning,
   setAsteroidBeltColor,
+  setAsteroidClassSlider,
   setAsteroidColor,
   setAsteroidColorBy,
   setAsteroidSizeBy,
@@ -15,6 +16,7 @@ import {
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { AsteroidClass } from '../../../../@types/asteroids/AsteroidClass';
 import type { AsteroidTuningSliderKey } from '../../@types/AsteroidTuningSliderKey';
+import type { AsteroidClassSliderKey } from '../../@types/AsteroidClassSliderKey';
 import type { AsteroidBeltRamp } from '../../@types/AsteroidBeltRamp';
 import type { AsteroidColorBy } from '../../@types/AsteroidColorBy';
 import type { AsteroidSizeBy } from '../../@types/AsteroidSizeBy';
@@ -38,6 +40,11 @@ function AsteroidTuningSectionContainer(): React.ReactElement {
     (cls: AsteroidClass, color: Vec3) => dispatch(setAsteroidColor({ cls, color })),
     [dispatch],
   );
+  const onClassSliderChange = useCallback(
+    (cls: AsteroidClass, key: AsteroidClassSliderKey, value: number) =>
+      dispatch(setAsteroidClassSlider({ cls, key, value })),
+    [dispatch],
+  );
   const onSliderChange = useCallback(
     (key: AsteroidTuningSliderKey, value: number) => dispatch(setAsteroidSlider({ key, value })),
     [dispatch],
@@ -50,6 +57,7 @@ function AsteroidTuningSectionContainer(): React.ReactElement {
       onColorByChange={onColorByChange}
       onSizeByChange={onSizeByChange}
       onColorChange={onColorChange}
+      onClassSliderChange={onClassSliderChange}
       onBeltColorChange={onBeltColorChange}
       onSliderChange={onSliderChange}
       onReset={onReset}

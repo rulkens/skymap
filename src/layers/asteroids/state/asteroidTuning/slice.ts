@@ -1,4 +1,4 @@
-/** asteroidTuning: the asteroids Layer's DebugPanel look modes, tints, brightness and dot shape. */
+/** asteroidTuning: the asteroids Layer's DebugPanel per-class looks, then the global modes, lift and thinning. */
 
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
@@ -9,6 +9,7 @@ import type { AsteroidBeltRamp } from '../../@types/AsteroidBeltRamp';
 import type { AsteroidColorBy } from '../../@types/AsteroidColorBy';
 import type { AsteroidSizeBy } from '../../@types/AsteroidSizeBy';
 import type { AsteroidTuningSliderKey } from '../../@types/AsteroidTuningSliderKey';
+import type { AsteroidClassSliderKey } from '../../@types/AsteroidClassSliderKey';
 
 export const asteroidTuningSlice = createSlice({
   name: 'settings/asteroidTuning',
@@ -22,7 +23,7 @@ export const asteroidTuningSlice = createSlice({
       tuning.sizeBy = action.payload;
     },
     setAsteroidColor: (tuning, action: PayloadAction<{ cls: AsteroidClass; color: Vec3 }>) => {
-      tuning.colors[action.payload.cls] = action.payload.color;
+      tuning.perClass[action.payload.cls].color = action.payload.color;
     },
     setAsteroidBeltColor: (
       tuning,
@@ -36,6 +37,12 @@ export const asteroidTuningSlice = createSlice({
     ) => {
       tuning[action.payload.key] = action.payload.value;
     },
+    setAsteroidClassSlider: (
+      tuning,
+      action: PayloadAction<{ cls: AsteroidClass; key: AsteroidClassSliderKey; value: number }>,
+    ) => {
+      tuning.perClass[action.payload.cls][action.payload.key] = action.payload.value;
+    },
     resetAsteroidTuning: () => initialState,
   },
 });
@@ -46,5 +53,6 @@ export const {
   setAsteroidColor,
   setAsteroidBeltColor,
   setAsteroidSlider,
+  setAsteroidClassSlider,
   resetAsteroidTuning,
 } = asteroidTuningSlice.actions;

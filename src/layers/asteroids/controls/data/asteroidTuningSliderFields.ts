@@ -1,7 +1,7 @@
 import type { SliderField } from '../../../../@types/data/SliderField';
 import type { AsteroidTuningSliderKey } from '../../@types/AsteroidTuningSliderKey';
 
-/** The asteroid tuning section's slider rows; the colours are picker rows, not sliders. */
+/** The asteroid tuning section's global slider rows, the same for every class. */
 export const ASTEROID_TUNING_SLIDER_FIELDS: readonly SliderField<AsteroidTuningSliderKey>[] = [
   {
     key: 'liftPerAu2',
@@ -31,42 +31,6 @@ export const ASTEROID_TUNING_SLIDER_FIELDS: readonly SliderField<AsteroidTuningS
     title: 'Zoom past which the lift stops rising (the belt dots start to overlap)',
   },
   {
-    key: 'dotRadiusPx',
-    label: 'Dot size',
-    min: 0.5,
-    max: 6,
-    step: 0.05,
-    format: (v) => `${v.toFixed(2)} px`,
-    title: 'Half-width of an asteroid dot on screen',
-  },
-  {
-    key: 'sizeKneeH',
-    label: 'Size knee',
-    min: 6,
-    max: 16,
-    step: 0.1,
-    format: (v) => `H ${v.toFixed(1)}`,
-    title: 'Sized by H: dots fainter than this H keep the dot size; brighter ones grow',
-  },
-  {
-    key: 'sizeMaxScale',
-    label: 'Size max',
-    min: 1,
-    max: 5,
-    step: 0.05,
-    format: (v) => `${v.toFixed(2)}×`,
-    title: 'Sized by H: the largest dot (Pallas) as a multiple of the dot size',
-  },
-  {
-    key: 'dotKnee',
-    label: 'Dot knee',
-    min: 0.02,
-    max: 2,
-    step: 0.01,
-    format: (v) => v.toFixed(2),
-    title: "Ceiling of a dot's peak: lower makes a patch read by dot count",
-  },
-  {
     key: 'maxPhaseDimMag',
     label: 'Phase dim cap',
     min: 0,
@@ -74,15 +38,6 @@ export const ASTEROID_TUNING_SLIDER_FIELDS: readonly SliderField<AsteroidTuningS
     step: 0.05,
     format: (v) => `${v.toFixed(2)} mag`,
     title: 'Most the phase law may dim a dot; the card keeps the physical V',
-  },
-  {
-    key: 'limitingMag',
-    label: 'Flux floor',
-    min: 8,
-    max: 24,
-    step: 0.1,
-    format: (v) => `V ${v.toFixed(1)}`,
-    title: 'Dots whose lifted flux is fainter than this V are not drawn',
   },
   {
     key: 'thinBudget',

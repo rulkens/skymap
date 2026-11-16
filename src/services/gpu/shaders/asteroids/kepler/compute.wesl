@@ -13,22 +13,22 @@ import package::asteroids::lib::apparentMagnitude::asteroidApparentMagnitude;
 import package::asteroids::lib::visibleTag::visibleTag;
 import package::lib::math::LOG10;
 
-// 'sunFromCamAu' is the Sun minus the frame's eye, composed in f64 on the CPU; 'exposure' the display
-// lift times the Layer's brightness; 'classFade' one lane per class. 'hLimitCenti' the faintest
-// stored H each class keeps under the brightness budget, one lane per class. 'selectedRow'
-// (0xFFFFFFFF = none) is exempt from it and from the flux floor 'minFlux', so a followed dot always
-// draws. 'maxPhaseDimMag' caps the phase dimming, for the dot only (the card keeps the physical V).
+// 'sunFromCamAu' is the Sun minus the frame's eye, composed in f64 on the CPU. 'maxPhaseDimMag' caps
+// the phase dimming, for the dot only (the card keeps the physical V). The vec4s hold one lane per
+// class: 'classFade'; 'hLimitCenti' the faintest stored H the brightness budget keeps; 'exposure' the
+// display lift times the Layer's and the class's brightness; 'minFlux' the flux floor. 'selectedRow'
+// (0xFFFFFFFF = none) is exempt from the budget and the floor, so a followed dot always draws.
 struct KeplerUniforms {
   dtWholeDays: f32,
   dtFracDays: f32,
   count: u32,
   selectedRow: u32,
   sunFromCamAu: vec3<f32>,
-  exposure: f32,
+  maxPhaseDimMag: f32,
   classFade: vec4<f32>,
   hLimitCenti: vec4<f32>,
-  minFlux: f32,
-  maxPhaseDimMag: f32,
+  exposure: vec4<f32>,
+  minFlux: vec4<f32>,
 };
 
 const WORKGROUP_SIZE: u32 = 64u;
@@ -89,8 +89,8 @@ fn shownRow(row: u32) -> vec4<f32> {
     v = asteroidApparentMagnitude(hMag, g, rAu, deltaAu, cosPhase);
     v = min(v, hMag + 5.0 * log(rAu * deltaAu) / LOG10 + kepler.maxPhaseDimMag);
   }
-  let flux = pow(10.0, -0.4 * v) * kepler.exposure;
-  if (flux < kepler.minFlux && row != kepler.selectedRow) {
+  let flux = pow(10.0, -0.4 * v) * kepler.exposure[cls];
+  if (flux < kepler.minFlux[cls] && row != kepler.selectedRow) {
     return vec4<f32>(0.0);
   }
   // A selected row under the floor keeps a positive flux, so the shown test below holds for it.
