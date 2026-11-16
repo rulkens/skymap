@@ -50,10 +50,7 @@ export function earthPass(runtime: BodyRuntime): ContentPass {
       pickRenderer.drawSphere(pass, {
         mvp,
         camPosLocal,
-        packedId: packSelection(
-          runtime.pickCodes.pickCodeOf('earth'),
-          0 + PICK_SENTINEL_OFFSET,
-        ),
+        packedId: packSelection(runtime.pickCodes.pickCodeOf('earth'), 0 + PICK_SENTINEL_OFFSET),
       });
     },
   };
