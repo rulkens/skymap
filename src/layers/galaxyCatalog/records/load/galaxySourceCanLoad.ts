@@ -11,7 +11,7 @@ import { tierTarget } from '../data/tierTargets';
 import { galaxyCatalogVisibility } from '../../visibility';
 import { visibilitySwitchOf } from '../../../../utils/visibility/visibilitySwitchOf';
 
-const [surveyEntry] = galaxyCatalogVisibility;
+const surveyEntry = galaxyCatalogVisibility.find((e) => 'key' in e && e.key === 'survey')!;
 
 export function galaxySourceCanLoad(
   id: GalaxyCatalogId,
