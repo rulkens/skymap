@@ -22,7 +22,7 @@ export type CameraRuntime = {
   /** The AUTHORED pose (pre-projection — a projected one walks ~8,500 km/frame,
    * R12b-1) and the driver id that wrote it. */
   readonly register: { readonly pose: FramedCameraPose; readonly winner: DriverId };
-  /** The store's `camera.base` this loop last reconciled against (post-actions),
+  /** The store's `camera.intent.base` this loop last reconciled against (post-actions),
    * by IDENTITY — a store `base` that differs next frame was committed from
    * outside the loop. */
   readonly base: FramedCameraPose;
@@ -44,7 +44,7 @@ export type CameraRuntime = {
   readonly own: Readonly<Partial<Record<DriverId, unknown>>>;
   /** The last winner's `pivotBody`: the wheel's pivot over the focus while it frames a body. */
   readonly pivotBody: SceneBodyId | null;
-  /** Last frame's driver-drawn lens (a clip's `fov`) and the `camera.fovYRad` it drew over: the
+  /** Last frame's driver-drawn lens (a clip's `fov`) and the `camera.intent.fovYRad` it drew over: the
    * hand-off commits `drawn` only while the store still holds `over`, so an outside write wins. */
   readonly drivenFovYRad: { readonly drawn: number; readonly over: number } | null;
   /** The lens shift drawn last frame, in NDC: eased toward the covers' target, so it is memory. */

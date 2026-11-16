@@ -24,7 +24,10 @@ import { zoomedDistance } from './utils/zoomedDistance';
 import { absoluteArm } from '../../../../utils/camera/arms/absoluteArm';
 import { bodyMovesThisFrame } from '../../../../utils/scene/bodyMovesThisFrame';
 import { selectFocusRow } from '../../../../state/selection/selectors';
-import cameraReducer, { commitCameraPose, setFovYRad } from '../../../../state/camera/cameraSlice';
+import cameraIntentReducer, {
+  commitCameraPose,
+  setFovYRad,
+} from '../../../../state/camera/cameraIntentSlice';
 import { zoomLimitPushed } from '../../../../state/camera/zoomLimitPushed';
 
 import type { ClimbableKind } from '../@types/ClimbableKind';
@@ -88,13 +91,13 @@ export function replayInput(
   // Advanced locally for this frame's elapsed read and DISCARDED: handing it to
   // `advanceEpochs` would keep a fold-time reset when another driver wins.
   let autoRotateEpoch = args.autoRotateEpoch;
-  let camera = rootState.camera;
+  let camera = rootState.camera.intent;
   const actions: UnknownAction[] = [];
   const navSteps: NavStep[] = [];
   let navAuthors = args.navOwns;
   const emit = (action: UnknownAction): void => {
     actions.push(action);
-    camera = cameraReducer(camera, action);
+    camera = cameraIntentReducer(camera, action);
   };
 
   /**

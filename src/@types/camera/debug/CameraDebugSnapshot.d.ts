@@ -7,7 +7,7 @@ import type { Vec3 } from '../../math/Vec3';
 
 /** The DebugPanel's "Camera" section readout (spec 2026-09-01-camera-pivot §4/§6). */
 export type CameraDebugSnapshot = {
-  /** `camera.base.frame` — the regime itself. */
+  /** `camera.intent.base.frame` — the regime itself. */
   readonly storedFrame: PoseFrame;
   /** The exact pose drawn last frame — the share-URL / `commitCameraPose` restore payload;
    *  `framed.frame` is `cameraRuntime.register.pose.frame`, the arm actually drawn. */

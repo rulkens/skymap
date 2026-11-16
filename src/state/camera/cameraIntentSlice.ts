@@ -1,0 +1,151 @@
+/**
+ * cameraIntentSlice — the camera's Intent state as one RTK slice.
+ *
+ * `base` carries the committed resting pose AND the arm it lives in: the arm tag
+ * IS the regime, so nothing stores a separate flag. The per-frame pose is DERIVED
+ * from `base` by the CameraDriver table (`pickWinner`) — never written
+ * directly by renderers. The `tween`, `clip` and `frameTween` descriptors are
+ * wall-clock-free, so they stay valid across serialisation and replay. Mounted at
+ * `camera.intent`, so its action types read `camera/intent/<name>`: the type names the path.
+ */
+
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+
+import { DEFAULT_AUTO_ROTATE } from '../../data/defaults';
+import { DEFAULT_CAMERA_TUNING } from '../../data/camera/cameraTuning';
+import { DEFAULT_FOV_Y_RAD } from '../../services/engine/camera/framing/cameraFraming';
+import { absoluteArm } from '../../utils/camera/arms/absoluteArm';
+import { clampCameraTuning } from '../../utils/camera/orbitCamera/clampCameraTuning';
+import { inputGestureStarted } from '../input/inputSlice';
+import type { CameraIntentState } from '../../@types/camera/orbitCamera/CameraIntentState';
+import type { CameraAim } from '../../@types/camera/pose/CameraAim';
+import type { CameraTuning } from '../../@types/camera/orbitCamera/CameraTuning';
+import type { CameraPose } from '../../@types/camera/pose/CameraPose';
+import type { FramedCameraPose } from '../../@types/camera/pose/FramedCameraPose';
+import type { CameraTweenDescriptor } from '../../@types/camera/focusMotion/CameraTweenDescriptor';
+import type { ClipData } from '../../@types/animation/ClipData';
+import type { FrameTween } from '../../@types/camera/focusMotion/FrameTween';
+import type { OrientationFrameId } from '../../@types/camera/orientation/OrientationFrameId';
+
+// `base` is a placeholder bootstrap overwrites via `commitCameraPose`; 0.43 Mpc
+// mirrors `cameraFraming.INITIAL_DISTANCE_MPC` so a pre-bootstrap frame is in the
+// right ballpark.
+const initialState: CameraIntentState = {
+  base: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 0.43 }),
+  tween: null,
+  autoRotate: {
+    active: DEFAULT_AUTO_ROTATE,
+    // Per-frame yaw advance in radians at an assumed 60 fps (~0.05°/frame), the
+    // unit `spinAutoRotate` expects.
+    rate: 0.000873,
+  },
+  clip: null,
+  frameTween: null,
+  aim: null,
+  fovYRad: DEFAULT_FOV_Y_RAD,
+  tuning: DEFAULT_CAMERA_TUNING,
+};
+
+const cameraIntentSlice = createSlice({
+  name: 'camera/intent',
+  initialState,
+  reducers: {
+    // INVARIANT (R12b-3): every committed ABSOLUTE pose's orbit terms are
+    // centre-looking; `lookOffset` turns only the view. The
+    // pivot pin re-reads an absolute `target` as the pivot and re-derives the eye
+    // from yaw/pitch/distance one frame later, so a pose aimed anywhere else
+    // teleports the eye by d·2sin(τ/2) (R12-1, up to ~24,000 km). Held by
+    // CONSTRUCTION at three sites — the pin's stamp (projectFramePose), the gesture
+    // folds (replayInput), and the fold's disengage retarget — never by a bake
+    // here. Break any of them and the teleport re-enters through this reducer.
+    // `stepCameraRuntime` treats `base` reference inequality as an outside
+    // commit and relies on `cameraIntentReducer` being the store's reducer; a
+    // defensive `{ ...action.payload }` here would misread every loop commit.
+    commitCameraPose: (camera, action: PayloadAction<FramedCameraPose>) => {
+      camera.base = action.payload;
+    },
+
+    startCameraTween: (camera, action: PayloadAction<CameraTweenDescriptor>) => {
+      camera.tween = action.payload;
+    },
+    cancelCameraTween: (camera) => {
+      camera.tween = null;
+    },
+
+    // A FRESH `{ data, frame }` wrapper each time: the clip clock detects a new
+    // clip by reference inequality, not deep descriptor equality. `data` must
+    // already be resolved (no `start: 'live'` sentinel) — `resolveClipStart` runs
+    // at the dispatch site. `frame` is the orientation frame live at dispatch time;
+    // the driver holds the clip against THIS frame for its whole run.
+    clipStarted: (camera, action: PayloadAction<{ data: ClipData; frame: OrientationFrameId }>) => {
+      camera.clip = action.payload;
+    },
+    // Clears BOTH `clip` and `tween`: a tween planted before or during the clip is
+    // dormant while the clip@95 driver wins, but once the clip deactivates an
+    // un-cleared @60 tween outranks `resting`@0 and snaps to a stale target.
+    clipEnded: (camera) => {
+      camera.clip = null;
+      camera.tween = null;
+    },
+
+    // Orthogonal to `setOrientation`: that snaps the committed target frame, this
+    // starts the up-basis slerp toward it — so a URL boot or a tour cue can set the
+    // frame without an animation.
+    startFrameTween: (camera, action: PayloadAction<FrameTween>) => {
+      camera.frameTween = action.payload;
+    },
+    clearFrameTween: (camera) => {
+      camera.frameTween = null;
+    },
+
+    setAutoRotate: (camera, action: PayloadAction<{ active: boolean; rate: number }>) => {
+      camera.autoRotate = action.payload;
+    },
+
+    // A fresh object every time: the token's identity is the re-aim.
+    aimCamera: (camera, action: PayloadAction<CameraAim>) => {
+      camera.aim = { ...action.payload };
+    },
+
+    setFovYRad: (camera, action: PayloadAction<number>) => {
+      camera.fovYRad = action.payload;
+    },
+
+    // A WHOLE new record, never a leaf write: the panel's sliders read it back
+    // through a selector, and an in-place edit leaves that render stale.
+    setCameraTuning: (camera, action: PayloadAction<Partial<CameraTuning>>) => {
+      camera.tuning = clampCameraTuning(action.payload, camera.tuning);
+    },
+  },
+  extraReducers: (builder) => {
+    // A press cancels a focus fly. One atomic action, so a double-tap's fly
+    // (dispatched after its second press starts) is never cancelled by that press.
+    builder.addCase(inputGestureStarted, (camera) => {
+      camera.tween = null;
+    });
+  },
+});
+
+export const {
+  commitCameraPose,
+  startCameraTween,
+  cancelCameraTween,
+  setAutoRotate,
+  setCameraTuning,
+  setFovYRad,
+  clipStarted,
+  clipEnded,
+  startFrameTween,
+  clearFrameTween,
+  aimCamera,
+} = cameraIntentSlice.actions;
+
+// Resolution happens at the dispatch site, not in the reducer, which is pure and
+// has no access to the live pose — so the store only ever receives concrete,
+// serialisable values.
+export function resolveClipStart(data: ClipData, live: CameraPose): ClipData {
+  const start = data.start === 'live' || data.start === undefined ? live : data.start;
+  return { ...data, start };
+}
+
+export default cameraIntentSlice.reducer;

@@ -6,8 +6,10 @@
  */
 import type { FrameContentPlanner } from '../../@types/engine/frame/FrameContentPlanner';
 import type { SatellitesRuntime } from './@types/SatellitesRuntime';
+import type { SatelliteColors } from './@types/SatelliteColors';
 import type { SatelliteSweep } from './sweep/@types/SatelliteSweep';
 import { julianDaysToUnixMs } from '../../utils/time/julianDaysToUnixMs';
+import { packSatelliteProfiles } from './points/render/packSatelliteProfiles';
 import { satelliteLayerOpacity } from './points/subsystems/satelliteLayerOpacity';
 import { sweepDue } from './sweep/subsystems/sweepDue';
 import { SATELLITE_CLASSES } from '../../data/satellites/satelliteClasses';
@@ -18,12 +20,13 @@ export function satellitesPlanner(
   runtime: SatellitesRuntime,
 ): Extract<FrameContentPlanner<void, 'satellites'>, { scope: 'once' }> {
   let drawn: { sweep: SatelliteSweep; simMs: number; atMs: number } | null = null;
+  let writtenColors: SatelliteColors | null = null;
   return {
     name: 'satellites',
     scope: 'once',
     fade: 'satellites',
     hasDistanceBand: true,
-    plan(snapshot, _views, _state, fade) {
+    plan(snapshot, _views, state, fade) {
       const { propagator, renderer } = runtime;
       const simMs = julianDaysToUnixMs(snapshot.simDays);
       runtime.simRate.observe(simMs, snapshot.nowMs);
@@ -32,9 +35,14 @@ export function satellitesPlanner(
       if (!SATELLITE_CLASSES.some((cls) => fade[cls] > 0)) return IDLE;
       if (satelliteLayerOpacity(catalog, snapshot.simDays) <= 0) return IDLE;
 
+      if (state.settings.satelliteTuning.colors !== writtenColors) {
+        writtenColors = state.settings.satelliteTuning.colors;
+        renderer.writeProfiles(packSatelliteProfiles(writtenColors));
+      }
+
       const latest = propagator.latest();
       if (latest !== null && latest !== drawn?.sweep) {
-        renderer.upload(latest, catalog.classCode);
+        renderer.upload(latest, catalog.classCode, catalog.profileCodes);
         drawn = { sweep: latest, simMs: latest.simMs, atMs: snapshot.nowMs };
         runtime.scheduleWake();
       }

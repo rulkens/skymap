@@ -9,6 +9,7 @@ import cx from 'classnames';
 import type { SatelliteInfo } from '../../../selection/@types/SatelliteInfo';
 import type { CardLayout } from '../../../../../@types/components/infoCard/CardLayout';
 import { SATELLITE_CLASS_EYEBROWS } from '../../data/satelliteClassEyebrows';
+import { SATELLITE_FIT_WARN_DAYS } from '../../data/satelliteFitWarnDays';
 import { formatSimClock } from '../../../../../utils/time/formatSimClock';
 import CardHeader from '../../../../../components/InfoCard/CardHeader/CardHeader';
 import CardRow from '../../../../../components/InfoCard/CardRow/CardRow';
@@ -55,8 +56,19 @@ function SatelliteDetailCard({
         <CardRow label="Inclination" value={`${target.inclinationDeg.toFixed(1)}°`} />
       </div>
       <div className={styles.cardSection}>
-        <CardRow label="Orbit fitted" value={formatSimClock(new Date(target.epochMs))} />
+        <CardRow
+          label="Orbit fitted"
+          value={
+            <>
+              {formatSimClock(new Date(target.epochMs))}
+              {target.fitAgeDays > SATELLITE_FIT_WARN_DAYS && (
+                <span className={local.ageBadge}>{Math.floor(target.fitAgeDays)} days old</span>
+              )}
+            </>
+          }
+        />
         <CardRow label="Source" value="CelesTrak" />
+        <CardRow label="Brightness" value="Modelled" />
       </div>
     </div>
   );

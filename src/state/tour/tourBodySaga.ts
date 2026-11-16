@@ -44,7 +44,7 @@ import { clearSelection } from '../selection/selectionSlice';
 import { mergeSnapshot } from '../settings/mergeSnapshotAction';
 import { mergeSettingsSnapshot } from '../settings/mergeSettingsSnapshot';
 import { captureSettings } from '../scene/captureSettings';
-import { setFovYRad } from '../camera/cameraSlice';
+import { setFovYRad } from '../camera/cameraIntentSlice';
 import { DEFAULT_FOV_Y_RAD } from '../../services/engine/camera/framing/cameraFraming';
 import type { RootState } from '../../store/types';
 import type { Tour } from '../../@types/animation/tour/Tour';

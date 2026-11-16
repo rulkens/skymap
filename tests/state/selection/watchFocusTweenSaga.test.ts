@@ -11,7 +11,7 @@ import {
   updateSelectionFocus,
   updateSelectionSelect,
 } from '../../../src/state/selection/selectionSlice';
-import { clipStarted } from '../../../src/state/camera/cameraSlice';
+import { clipStarted } from '../../../src/state/camera/cameraIntentSlice';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
 import {
   setFocusMoveStyle,
@@ -126,7 +126,7 @@ describe('watchFocusTweenSaga', () => {
     store.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
     await flush();
 
-    const tween = store.getState()[cameraRoute].tween;
+    const tween = store.getState()[cameraRoute].intent.tween;
     expect(tween).not.toBeNull();
     expect(tween!.from).toEqual(FROM);
     expect(tween!.to.distance).toBe(framingPose(MILKY_WAY_ROW, 0.8, FROM).distance);
@@ -137,20 +137,20 @@ describe('watchFocusTweenSaga', () => {
     store.dispatch(requestFocus({ id: MILKY_WAY_FOCUS_ID, transition: 'cut' }));
     await flush();
     expect(store.getState()[selectionRoute].focus).toEqual({ type: 'milkyWay' });
-    expect(store.getState()[cameraRoute].tween).toBeNull();
+    expect(store.getState()[cameraRoute].intent.tween).toBeNull();
   });
 
   it('a select (non-focus) write does NOT start a tween', async () => {
     store.dispatch(updateSelectionSelect({ type: 'milkyWay' }));
     await flush();
-    expect(store.getState()[cameraRoute].tween).toBeNull();
+    expect(store.getState()[cameraRoute].intent.tween).toBeNull();
   });
 
   it('no-ops when the camera is not ready (cameraRuntime returns null)', async () => {
     cameraRuntime = () => null;
     store.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
     await flush();
-    expect(store.getState()[cameraRoute].tween).toBeNull();
+    expect(store.getState()[cameraRoute].intent.tween).toBeNull();
   });
 
   // Regression: the body / milkyWay / star deep-link bug. A statically-
@@ -164,7 +164,7 @@ describe('watchFocusTweenSaga', () => {
     cameraRuntime = () => null;
     store.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
     await flush();
-    expect(store.getState()[cameraRoute].tween).toBeNull();
+    expect(store.getState()[cameraRoute].intent.tween).toBeNull();
 
     // The camera comes online during wireInput; the engine then emits a status
     // pulse as the first catalog arrives (or the synthetic fallback fires).
@@ -172,7 +172,7 @@ describe('watchFocusTweenSaga', () => {
     store.dispatch(engineStatusChanged({ kind: 'ready', count: 1 }));
     await flush();
 
-    const tween = store.getState()[cameraRoute].tween;
+    const tween = store.getState()[cameraRoute].intent.tween;
     expect(tween).not.toBeNull();
     expect(tween!.from).toEqual(FROM);
     expect(tween!.to.distance).toBe(framingPose(MILKY_WAY_ROW, 0.8, FROM).distance);
@@ -183,7 +183,7 @@ describe('watchFocusTweenSaga', () => {
   it('a survey-star focus with no bin loaded → no row, no tween', async () => {
     store.dispatch(updateSelectionFocus({ type: 'starCatalog', source: 'gaiaStars', index: 1 }));
     await flush();
-    expect(store.getState()[cameraRoute].tween).toBeNull();
+    expect(store.getState()[cameraRoute].intent.tween).toBeNull();
     expect(sagaErrors).toEqual([]);
   });
 
@@ -199,14 +199,14 @@ describe('watchFocusTweenSaga', () => {
     store.dispatch(updateSelectionFocus({ type: 'structure', id: 'cluster-virgo-m87' }));
     await flush();
     // No structure store yet → row null → tween must not fire (and not be dropped).
-    expect(store.getState()[cameraRoute].tween).toBeNull();
+    expect(store.getState()[cameraRoute].intent.tween).toBeNull();
 
     // The bulk group lands: the store is fed and the record resolves.
     structureById['cluster-virgo-m87'] = structureRecord('cluster-virgo-m87');
     store.dispatch(factsReported({ layer: 'structure', patch: { bulk: 'ready' } }));
     await flush();
 
-    const tween = store.getState()[cameraRoute].tween;
+    const tween = store.getState()[cameraRoute].intent.tween;
     expect(tween).not.toBeNull();
     expect(tween!.from).toEqual(FROM);
     expect(tween!.to.target).toEqual([4, 5, 6]);
@@ -225,13 +225,13 @@ describe('watchFocusTweenSaga', () => {
     store.dispatch(factsReported({ layer: 'structure', patch: { bulk: 'ready' } }));
     store.dispatch(updateSelectionFocus({ type: 'structure', id: 'cluster-does-not-exist' }));
     await flush();
-    expect(store.getState()[cameraRoute].tween).toBeNull();
+    expect(store.getState()[cameraRoute].intent.tween).toBeNull();
 
     // A saga still parked on the pulse would re-extract here and plant a tween.
     structureById['cluster-does-not-exist'] = structureRecord('cluster-does-not-exist');
     store.dispatch(factsReported({ layer: 'structure', patch: { bulk: 'ready' } }));
     await flush();
-    expect(store.getState()[cameraRoute].tween).toBeNull();
+    expect(store.getState()[cameraRoute].intent.tween).toBeNull();
   });
 
   // With no bulk category on, the slot is never demanded and sits 'idle';
@@ -242,12 +242,12 @@ describe('watchFocusTweenSaga', () => {
     );
     store.dispatch(updateSelectionFocus({ type: 'structure', id: 'cluster-virgo-m87' }));
     await flush();
-    expect(store.getState()[cameraRoute].tween).toBeNull();
+    expect(store.getState()[cameraRoute].intent.tween).toBeNull();
 
     structureById['cluster-virgo-m87'] = structureRecord('cluster-virgo-m87');
     store.dispatch(factsReported({ layer: 'structure', patch: { bulk: 'ready' } }));
     await flush();
-    expect(store.getState()[cameraRoute].tween).toBeNull();
+    expect(store.getState()[cameraRoute].intent.tween).toBeNull();
   });
 
   // `factsReported` pulses for every Layer (galaxyCatalog republishes its
@@ -270,30 +270,30 @@ describe('watchFocusTweenSaga', () => {
       factsReported({ layer: 'galaxyCatalog', patch: { structureMemberCount: null } }),
     );
     await flush();
-    expect(store.getState()[cameraRoute].tween).toBeNull();
+    expect(store.getState()[cameraRoute].intent.tween).toBeNull();
 
     structureById['cluster-virgo-m87'] = structureRecord('cluster-virgo-m87');
     store.dispatch(factsReported({ layer: 'structure', patch: { bulk: 'ready' } }));
     await flush();
-    expect(store.getState()[cameraRoute].tween!.to.target).toEqual([4, 5, 6]);
+    expect(store.getState()[cameraRoute].intent.tween!.to.target).toEqual([4, 5, 6]);
   });
 
   it('a null focus ref (release) resolves to no row → no tween', async () => {
     store.dispatch(updateSelectionFocus(null));
     await flush();
-    expect(store.getState()[cameraRoute].tween).toBeNull();
+    expect(store.getState()[cameraRoute].intent.tween).toBeNull();
   });
 
   it('a geodesic focus on a moving body dispatches a tween; an eased one does not', async () => {
     // 'earth' resolves statically off SCENE_BODIES (no catalog needed).
     store.dispatch(updateSelectionFocus({ type: 'body', id: asSceneBodyId('earth') }));
     await flush();
-    expect(store.getState()[cameraRoute].tween).toBeNull();
+    expect(store.getState()[cameraRoute].intent.tween).toBeNull();
 
     store.dispatch(setFocusMoveStyle('geodesic'));
     store.dispatch(updateSelectionFocus({ type: 'body', id: asSceneBodyId('mars') }));
     await flush();
-    expect(store.getState()[cameraRoute].tween).not.toBeNull();
+    expect(store.getState()[cameraRoute].intent.tween).not.toBeNull();
   });
 
   // Regression: a famous star carries a driver id (its position comes from the
@@ -306,7 +306,7 @@ describe('watchFocusTweenSaga', () => {
     // is framed on the star's fixed world position (stars don't move).
     store.dispatch(updateSelectionFocus(SIRIUS_REF));
     await flush();
-    expect(store.getState()[cameraRoute].tween).not.toBeNull();
+    expect(store.getState()[cameraRoute].intent.tween).not.toBeNull();
   });
 
   // Regression: the zone-of-avoidance band has no x/y/z (a line-of-sight
@@ -322,7 +322,7 @@ describe('watchFocusTweenSaga', () => {
     // null if the worker crashed before reaching `put`. sagaErrors pins the
     // actual no-throw guarantee.
     expect(sagaErrors).toEqual([]);
-    expect(store.getState()[cameraRoute].tween).toBeNull();
+    expect(store.getState()[cameraRoute].intent.tween).toBeNull();
   });
 
   // A minimal clip payload: no camera motion, just timeline structure. The
@@ -334,7 +334,7 @@ describe('watchFocusTweenSaga', () => {
     store.dispatch(clipStarted({ data: MINIMAL_CLIP, frame: DEFAULT_ORIENTATION }));
     store.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
     await flush();
-    expect(store.getState()[cameraRoute].tween).toBeNull();
+    expect(store.getState()[cameraRoute].intent.tween).toBeNull();
   });
 
   it('watchFocusTweenSaga plants a tween normally with no clip active', async () => {
@@ -342,7 +342,7 @@ describe('watchFocusTweenSaga', () => {
     store.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
     await flush();
 
-    const tween = store.getState()[cameraRoute].tween;
+    const tween = store.getState()[cameraRoute].intent.tween;
     expect(tween).not.toBeNull();
     expect(tween!.from).toEqual(FROM);
     expect(tween!.to.distance).toBe(framingPose(MILKY_WAY_ROW, 0.8, FROM).distance);
@@ -357,7 +357,7 @@ describe('watchFocusTweenSaga', () => {
     store.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
     await flush();
 
-    const tween = store.getState()[cameraRoute].tween;
+    const tween = store.getState()[cameraRoute].intent.tween;
     expect(tween!.frame).toBe('galactic');
   });
 
@@ -367,7 +367,7 @@ describe('watchFocusTweenSaga', () => {
     store.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
     await flush();
 
-    const tween = store.getState()[cameraRoute].tween;
+    const tween = store.getState()[cameraRoute].intent.tween;
     expect(tween!.motion).toMatchObject({ style: 'geodesic', fovYRad: 0.8, tuning: { rho: 0.4 } });
   });
 });

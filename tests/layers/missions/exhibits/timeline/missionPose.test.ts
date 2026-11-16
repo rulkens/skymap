@@ -17,7 +17,7 @@ import { MISSION_EVENTS } from '../../../../../src/layers/missions/events/data/m
 import { ORIENTATION_FRAMES } from '../../../../../src/data/orientation/orientationFrames';
 import { missionPose } from '../../../../../src/layers/missions/exhibits/timeline/missionPose';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
-import { aimCamera } from '../../../../../src/state/camera/cameraSlice';
+import { aimCamera } from '../../../../../src/state/camera/cameraIntentSlice';
 import { inputGestureEnded, inputGestureStarted } from '../../../../../src/state/input/inputSlice';
 import { setMissionCraft } from '../../../../../src/layers/missions/state/missions/slice';
 import { absoluteArm } from '../../../../../src/utils/camera/arms/absoluteArm';
@@ -75,7 +75,7 @@ function storeOf(mission: Mission) {
 
 /** The row's slot holding the mission's offsets on the store's aim token, no view yet. */
 function ownOf(store: ReturnType<typeof storeOf>, mission: Mission): MissionCameraMemory {
-  return { aim: store.getState().camera.aim, offsets: mission.offsets, view: null };
+  return { aim: store.getState().camera.intent.aim, offsets: mission.offsets, view: null };
 }
 
 /** A ctx carrying the row's first-frame slot along, so a spread copy keeps it. */

@@ -121,4 +121,15 @@ describe('filamentsPass draw', () => {
     };
     expect(halfwidthAt(2) / 2).toBeCloseTo(halfwidthAt(1));
   });
+
+  it('stays enabled whatever its switch says: the fade gate alone decides', () => {
+    // The pass must keep drawing through a fade-out tail, after the switch went
+    // off; `gatePassByFade` skips it once the handed value reaches 0.
+    const state = {
+      settings: { cosmicWebFilaments: { enabled: false, intensity: 1 } },
+    } as unknown as EngineState;
+    const ctx = makeCtx(0);
+    const pass = filamentsPass(makeRuntime(vi.fn()));
+    expect(pass.enabled(state, ctx, slabViewOf(ctx, COSMO), 0.4)).toBe(true);
+  });
 });

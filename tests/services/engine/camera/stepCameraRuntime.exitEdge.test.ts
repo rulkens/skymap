@@ -14,7 +14,7 @@ vi.mock('../../../../src/services/gpu/device', () => ({
 }));
 
 import { isWorldArm } from '../../../../src/services/engine/camera/arms/world/isWorldArm';
-import { aimCamera } from '../../../../src/state/camera/cameraSlice';
+import { aimCamera } from '../../../../src/state/camera/cameraIntentSlice';
 import { setMissionCraft } from '../../../../src/layers/missions/state/missions/slice';
 import { takeoverEnded, takeoverStarted } from '../../../../src/state/takeover/takeoverActions';
 import { setSimDays } from '../../../../src/state/time/timeSlice';
@@ -51,7 +51,7 @@ function exitMission(home: 'earth' | null, successor: DriverId) {
   expect(h.state.cameraRuntime.register.winner).toBe(successor);
   const edgeEye = displayedEye(h.state);
   const step = Math.hypot(...edgeEye.map((v, i) => v - lastEye[i]!));
-  return { step: step / shown.pose.distance, base: h.store.getState().camera.base, shown };
+  return { step: step / shown.pose.distance, base: h.store.getState().camera.intent.base, shown };
 }
 
 describe('exiting a mission', () => {

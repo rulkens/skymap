@@ -32,7 +32,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../../src/store/rootReducer';
-import { clipStarted, clipEnded, resolveClipStart } from '../../../../src/state/camera/cameraSlice';
+import {
+  clipStarted,
+  clipEnded,
+  resolveClipStart,
+} from '../../../../src/state/camera/cameraIntentSlice';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import {
   UNSTARTED_EPOCHS,
@@ -188,7 +192,7 @@ describe('clipPlayer', () => {
     const types2 = dispatchSpy.mock.calls.map((c) => (c[0] as { type?: string }).type);
     expect(types2).not.toContain(endClipType);
     // Clip is still active — produce step runs evaluateClip at saturation.
-    expect(store.getState().camera.clip).not.toBeNull();
+    expect(store.getState().camera.intent.clip).not.toBeNull();
 
     // Tick 3 (any nowMs): pendingEnd was true → dispatches clipEnded NOW.
     dispatchSpy.mockClear();
@@ -196,7 +200,7 @@ describe('clipPlayer', () => {
     const types3 = dispatchSpy.mock.calls.map((c) => (c[0] as { type?: string }).type);
     expect(types3).toContain(endClipType);
     // Clip is now null in the store.
-    expect(store.getState().camera.clip).toBeNull();
+    expect(store.getState().camera.intent.clip).toBeNull();
   });
 
   it('fade cue drives clipOpacity; clipOpacityOf reflects it; resets to 1 on clipEnded', () => {
@@ -242,7 +246,7 @@ describe('clipPlayer', () => {
     // clipOpacity reset → factor back to 1.
     expect(player.clipOpacityOf('survey', 0)).toBe(1);
     // Clip cleared from the store.
-    expect(store.getState().camera.clip).toBeNull();
+    expect(store.getState().camera.intent.clip).toBeNull();
   });
 
   it('loop: true rewinds the epoch + cue cursor instead of ending; a top-of-timeline cue re-fires each lap; stop still terminates it', () => {
@@ -269,7 +273,7 @@ describe('clipPlayer', () => {
     tick(2000);
     const typesAtWrap = dispatchSpy.mock.calls.map((c) => (c[0] as { type?: string }).type);
     expect(typesAtWrap).not.toContain(endClipType);
-    expect(store.getState().camera.clip).not.toBeNull();
+    expect(store.getState().camera.intent.clip).not.toBeNull();
 
     // Lap 2, t=2100 (100ms into the rebased epoch ⇒ wrapped elapsed ≈ 0.1s):
     // the atSec=0 cue is back in (prevElapsed, elapsed] and fires again —
@@ -283,14 +287,14 @@ describe('clipPlayer', () => {
     tick(4100);
     const typesAfterMoreLaps = dispatchSpy.mock.calls.map((c) => (c[0] as { type?: string }).type);
     expect(typesAfterMoreLaps).not.toContain(endClipType);
-    expect(store.getState().camera.clip).not.toBeNull();
+    expect(store.getState().camera.intent.clip).not.toBeNull();
 
     // Only stop() ends a looping clip.
     dispatchSpy.mockClear();
     player.stop();
     const typesAfterStop = dispatchSpy.mock.calls.map((c) => (c[0] as { type?: string }).type);
     expect(typesAfterStop).toContain(endClipType);
-    expect(store.getState().camera.clip).toBeNull();
+    expect(store.getState().camera.intent.clip).toBeNull();
   });
 
   it("a looping clip's rewind returns a rebased epoch, not a mutated one", () => {
@@ -319,7 +323,7 @@ describe('clipPlayer', () => {
 
     const { clipEpoch } = player.tick(UNSTARTED_EPOCHS.clip, 5000);
 
-    expect(clipEpoch.ref).toBe(store.getState().camera.clip);
+    expect(clipEpoch.ref).toBe(store.getState().camera.intent.clip);
     expect(elapsedMs(clipEpoch, 5000)).toBe(0);
   });
 
@@ -337,10 +341,16 @@ describe('clipPlayer', () => {
       getEngineState: () => engineState,
     });
     installClip(store, { timeline: [hold(5)] });
-    const handed: CameraEpochs['clip'] = { ref: store.getState().camera.clip, startMs: 1000 };
+    const handed: CameraEpochs['clip'] = {
+      ref: store.getState().camera.intent.clip,
+      startMs: 1000,
+    };
 
     engineState.cameraRuntime = {
-      epochs: { ...UNSTARTED_EPOCHS, clip: { ref: store.getState().camera.clip, startMs: 0 } },
+      epochs: {
+        ...UNSTARTED_EPOCHS,
+        clip: { ref: store.getState().camera.intent.clip, startMs: 0 },
+      },
     } as unknown as EngineState['cameraRuntime'];
     const { clipEpoch } = player.tick(handed, 1500);
 

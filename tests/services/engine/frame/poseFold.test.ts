@@ -93,9 +93,9 @@ import { SITE_CAMERA_ARM } from '../../../../src/services/engine/camera/arms/sit
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
 import { diveUntilEngaged } from '../../../helpers/camera/diveUntilEngaged';
 import { poseAtHR } from '../../../helpers/camera/poseAtHR';
-import { commitCameraPose, startCameraTween } from '../../../../src/state/camera/cameraSlice';
+import { commitCameraPose, startCameraTween } from '../../../../src/state/camera/cameraIntentSlice';
 import { inputGestureEnded, inputGestureStarted } from '../../../../src/state/input/inputSlice';
-import { clipStarted, resolveClipStart } from '../../../../src/state/camera/cameraSlice';
+import { clipStarted, resolveClipStart } from '../../../../src/state/camera/cameraIntentSlice';
 import { all, tween } from '../../../../src/services/engine/animation/effectHelpers';
 import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
 import { eyeMpcOf } from '../../../../src/utils/camera/orbitPose/eyeMpcOf';
@@ -260,13 +260,13 @@ describe('runFrame — the regime fold', () => {
 
     runFrame(state, deps, 0);
 
-    expect(store.getState().camera.base.frame).toEqual(EARTH_ARM);
+    expect(store.getState().camera.intent.base.frame).toEqual(EARTH_ARM);
     expect(commitCalls(spy)).toHaveLength(1);
 
     spy.mockClear();
     runFrame(state, deps, 16);
 
-    expect(store.getState().camera.base.frame).toEqual(EARTH_ARM);
+    expect(store.getState().camera.intent.base.frame).toEqual(EARTH_ARM);
     expect(commitCalls(spy)).toHaveLength(0);
   });
 
@@ -296,7 +296,7 @@ describe('runFrame — the regime fold', () => {
     for (const nowMs of [0, 16, 32, 48]) runFrame(state, deps, nowMs);
 
     expect(commitCalls(spy)).toHaveLength(1);
-    expect(store.getState().camera.base.frame).toEqual(EARTH_ARM);
+    expect(store.getState().camera.intent.base.frame).toEqual(EARTH_ARM);
   });
 
   it('hands back to the absolute arm above the disengage threshold', () => {
@@ -317,7 +317,7 @@ describe('runFrame — the regime fold', () => {
 
     runFrame(state, deps, 0);
 
-    expect(store.getState().camera.base.frame).toBe('absolute');
+    expect(store.getState().camera.intent.base.frame).toBe('absolute');
     expect(state.cameraRuntime.register.pose.frame).toBe('absolute');
   });
 
@@ -395,7 +395,7 @@ describe('runFrame — the regime fold', () => {
     for (let i = 0; i < 80 && crossing < 0; i++) {
       h.notch(240, WHEEL_PX);
       h.frame(1);
-      if (h.store.getState().camera.base.frame === 'absolute') {
+      if (h.store.getState().camera.intent.base.frame === 'absolute') {
         crossing = probe.drawnPoses.length - 1;
       }
     }
@@ -441,16 +441,16 @@ describe('runFrame — the regime fold', () => {
 
     // In past the engage edge, then back out through `disengageHR`. Two frames
     // per notch so each one is fully folded before the next arrives.
-    for (let i = 0; i < 60 && h.store.getState().camera.base.frame === 'absolute'; i++) {
+    for (let i = 0; i < 60 && h.store.getState().camera.intent.base.frame === 'absolute'; i++) {
       h.notch(-240, WHEEL_PX);
       h.frame(2);
     }
-    expect(h.store.getState().camera.base.frame).toEqual(EARTH_ARM);
+    expect(h.store.getState().camera.intent.base.frame).toEqual(EARTH_ARM);
     let crossing = -1;
     for (let i = 0; i < 80 && crossing < 0; i++) {
       h.notch(240, WHEEL_PX);
       h.frame(1);
-      if (h.store.getState().camera.base.frame === 'absolute') {
+      if (h.store.getState().camera.intent.base.frame === 'absolute') {
         crossing = probe.drawnPoses.length - 1;
       }
     }
@@ -514,7 +514,7 @@ describe('runFrame — the regime fold', () => {
           }
         }
       }
-      crossed = h.store.getState().camera.base.frame === 'absolute';
+      crossed = h.store.getState().camera.intent.base.frame === 'absolute';
     }
     expect(crossed).toBe(true);
 
@@ -760,7 +760,7 @@ describe('runFrame — the regime fold', () => {
     const regimes: string[] = [];
     for (let i = 0; i < 8; i++) {
       h.frame(1);
-      regimes.push(frameKey(h.store.getState().camera.base.frame));
+      regimes.push(frameKey(h.store.getState().camera.intent.base.frame));
     }
 
     // The clip owns the arm while it plays, so the regime holds where it was.
@@ -786,7 +786,7 @@ describe('runFrame — the regime fold', () => {
 
     expect(probe.order).not.toContain('fold');
     expect(state.cameraRuntime.register.pose.frame).toBe('absolute');
-    expect(store.getState().camera.base.frame).toBe('absolute');
+    expect(store.getState().camera.intent.base.frame).toBe('absolute');
 
     store.dispatch(inputGestureEnded({ source: 'canvas' }));
     runFrame(state, deps, 16);
@@ -876,7 +876,7 @@ describe('runFrame — the regime fold', () => {
       DEFAULT_FOCUS_MOVES.eased.durationMs + 32,
     ].map((nowMs) => {
       h.tick(nowMs);
-      return frameKey(h.store.getState().camera.base.frame);
+      return frameKey(h.store.getState().camera.intent.base.frame);
     });
 
     expect(frames).toEqual(['body:mars', 'site:curiosity', 'site:curiosity', 'site:curiosity']);
@@ -918,6 +918,6 @@ describe('runFrame — the regime fold', () => {
     expect(commits).toHaveLength(1);
     expect(commits[0]!.payload.frame).toEqual(EARTH_ARM);
     // deltaY > 0 zooms out, in metres off the body centre.
-    expect(rangeOf(store.getState().camera.base)).toBeGreaterThan(rangeOf(engaged));
+    expect(rangeOf(store.getState().camera.intent.base)).toBeGreaterThan(rangeOf(engaged));
   });
 });

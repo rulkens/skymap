@@ -68,7 +68,7 @@ export const DATA_FAMILIES: readonly DataFamily[] = [
     about: 'The photographs and mosaics on galaxies, planets, moons and Earth.',
     pages: 'each',
     sections: ['Galaxy imagery', 'Solar-system textures', 'Earth imagery and terrain'],
-    ids: ['viking'],
+    ids: ['viking', 'lroc-wac'],
     step: 'imagery-and-terrain',
   },
   {
@@ -77,7 +77,7 @@ export const DATA_FAMILIES: readonly DataFamily[] = [
     about:
       'Height data for Earth, Mars and the moons: what lifts the ground and shades the relief.',
     pages: 'each',
-    sections: ['Mars surface'],
+    sections: ['Mars surface', 'Moon surface'],
     ids: [
       'etopo',
       'skadi',

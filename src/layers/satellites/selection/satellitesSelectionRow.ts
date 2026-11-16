@@ -13,6 +13,8 @@ import { SATELLITE_FOCUS_GEOMETRY } from './data/satelliteFocusGeometry';
 import { footprintRadiusMpc } from '../../../utils/selection/footprintRadiusMpc';
 import { deriveBodyStates } from '../../../services/engine/frame/deriveBodyStates';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
+import { julianDaysToUnixMs } from '../../../utils/time/julianDaysToUnixMs';
+import { DAY_MS } from '../../../data/time/dayMs';
 import { catalogIndexOf } from '../catalog/subsystems/catalogIndexOf';
 import { satellitePositionMpc } from '../sweep/subsystems/satellitePositionMpc';
 import { satelliteTransientId } from './present/satelliteTransientId';
@@ -62,6 +64,7 @@ export function satellitesSelectionRow(runtime: SatellitesRuntime): SelectionKin
         periodMin: 1440 / catalog.meanMotion[k]!,
         inclinationDeg: catalog.inclinationDeg[k]!,
         epochMs: catalog.epochMs[k]!,
+        fitAgeDays: (julianDaysToUnixMs(simDays) - catalog.epochMs[k]!) / DAY_MS,
         radiusMpc: footprintRadiusMpc(SATELLITE_FOCUS_GEOMETRY),
         driver: {
           poseId: id,

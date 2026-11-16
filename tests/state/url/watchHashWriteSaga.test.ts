@@ -30,7 +30,7 @@ import { clearSelection } from '../../../src/state/selection/selectionSlice';
 import { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsSlice';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
 import { manualPausedAtActions } from '../../../src/state/time/enterManualPausedAt';
-import { commitCameraPose } from '../../../src/state/camera/cameraSlice';
+import { commitCameraPose } from '../../../src/state/camera/cameraIntentSlice';
 import { absoluteArm } from '../../../src/utils/camera/arms/absoluteArm';
 import { timeRoute } from '../../../src/store/constants';
 import { placedStructureRow } from '../../../src/layers/structure/selection/utils/placedStructureRow';

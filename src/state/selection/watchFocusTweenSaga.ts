@@ -19,7 +19,7 @@
 import { takeLatest, take, getContext, put, select } from 'typed-redux-saga';
 
 import { updateSelectionFocus } from './selectionSlice';
-import { startCameraTween } from '../camera/cameraSlice';
+import { startCameraTween } from '../camera/cameraIntentSlice';
 import { focusTweenDescriptor } from '../camera/focusTweenDescriptor';
 import { selectionKindOf } from '../../services/engine/selection/selectionKindOf';
 import { bodyMovesThisFrame } from '../../utils/scene/bodyMovesThisFrame';

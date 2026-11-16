@@ -69,6 +69,7 @@ import { SURFACE_FIXED_SITES } from '../../src/data/bodies/surfaceFixedSites';
 import { buildSiteGroundHeights } from './buildSiteGroundHeights';
 import { earthSurfaceBake } from './surfaceBodies/earthSurfaceBake';
 import { marsSurfaceBake } from './surfaceBodies/marsSurfaceBake';
+import { moonSurfaceBake } from './surfaceBodies/moonSurfaceBake';
 import type { SurfaceBakeBand } from './@types/SurfaceBakeBand';
 import type { SurfaceBodyBake } from './@types/SurfaceBodyBake';
 import type { SurfaceImagerySource } from './@types/SurfaceImagerySource';
@@ -632,6 +633,7 @@ export async function bakeAll(
 const SURFACE_BODY_BAKES: Record<SurfaceTileBodyId, SurfaceBodyBake> = {
   earth: earthSurfaceBake,
   mars: marsSurfaceBake,
+  moon: moonSurfaceBake,
 };
 
 /** `--product albedo|height|night`: `parseFlags` stays bool-only by design (see its
