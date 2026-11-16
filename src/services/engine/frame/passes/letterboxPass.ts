@@ -5,13 +5,13 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import { filmLetterboxOn } from '../../../../utils/film/filmLetterboxOn';
 
 export const letterboxPass: ContentPass = {
   name: 'letterbox',
 
   enabled(state) {
-    return state.gpu.letterboxRenderer !== null && filmLetterboxOn(state.settings.film);
+    const { enabled, letterbox } = state.settings.film;
+    return state.gpu.letterboxRenderer !== null && enabled && letterbox;
   },
 
   draw(pass, _view, ctx, state) {

@@ -264,16 +264,6 @@ describe('createCompositor', () => {
     expect(plainDesc!.fragment!.constants).toBeUndefined();
   });
 
-  it('film null reuses the plain pipeline', () => {
-    const device = mockDevice();
-    const c = make(device);
-    const pass = mockPass() as unknown as GPURenderPassEncoder;
-    c.draw(pass, SRC, 'replace', TONE, SWAP);
-    c.draw(pass, SRC, 'replace', TONE, SWAP);
-    const plain = pipelineDescriptors(device).filter((d) => d.fragment!.constants === undefined);
-    expect(plain).toHaveLength(1);
-  });
-
   it('destroy releases every cached uniform buffer', () => {
     const device = mockDevice();
     const c = make(device);

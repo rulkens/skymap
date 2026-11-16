@@ -35,8 +35,8 @@ code, same VRAM.
   compiled pipeline is today's code; the only residue is a larger uniform buffer (80 bytes, was 32).
 - **D2. The letterbox is frame code: a `letterbox` content pass, last on `swap`.** (Rewritten 2026-11-16
   under R8; the first ruling put the bars in the DOM.) `OVERLAYS` ends with its own render step
-  `{ target: 'swap', slab: COSMO, passes: ['letterbox'] }`, enabled by `filmLetterboxOn(film)` =
-  `enabled && letterbox`, drawn by `letterboxRenderer`: a bind-group-free covering triangle returning opaque
+  `{ target: 'swap', slab: COSMO, passes: ['letterbox'] }`, enabled by
+  `film.enabled && film.letterbox`, drawn by `letterboxRenderer`: a bind-group-free covering triangle returning opaque
   black, drawn twice under a scissor rect: top and bottom bars of `floor((h − w / aspect) / 2)` target pixels on a
   frame taller than the aspect, left and right bars of `floor((w − h × aspect) / 2)` on a wider one (owner 2026-11-16:
   the ratio holds both ways; the ratio is `film.letterboxAspect`, chosen on the Film look debug board (`letterboxAspects.ts`)), nothing at 2.39:1 exactly. Drawn after every
@@ -72,7 +72,7 @@ code, same VRAM.
 - Frame → bloom: `runBloom` reads `state.settings.film` beside `state.settings.bloom` (R4).
 - Pyramid: `fold` addressed by `FoldKind`, `bright` takes a params object; `streak` and `veil` are new methods.
 - Targets: four `allocateWhen` rows. Link: a `HashParamSource` row + `LinkIntent.film?`.
-- UI: a header toggle in Display; two DebugPanel boards; the letterbox bars component.
+- UI: a switch row in Display; one DebugPanel board; the letterbox pass.
 
 ### 3.2 Verdicts
 
@@ -276,8 +276,8 @@ Only what can fail on a real bug the compiler misses:
   timestamp still rides the last pass*.
 - `hashParamSources.test.ts`: *film writes `1` only when on, reads `1` as on, absent turns it off*.
 - `DisplaySection.test.ts`: *toggles filmEnabled via the header toggle* (the bloom pattern).
-- No tests for the slice, the defaults, the selectors, the saga line (one `put`), the shaders, or the
-  letterbox bars (presentational, no interaction).
+- No tests for the slice, the defaults, the selectors, the saga line (one `put`) or the shaders; the
+  letterbox renderer's bar geometry is tested against a recording pass (D2 as rewritten).
 
 ## 10. Eye checks (DoD smoke, this worktree's port)
 
@@ -291,14 +291,14 @@ Only what can fail on a real bug the compiler misses:
 ## 11. Docs and backlog
 
 - `docs/RENDERER.md` quick map: one bullet for the film look (where it lives, the FILM override, the
-  letterbox bars component, the shared predicates).
+  letterbox pass, the shared predicates).
 - Backlog: `docs/backlog/2026-11-13-film-barrel-distortion.md` (anamorphic barrel distortion needs the
   overlays under the film pass; dropped by R3) with its index line.
 
 ## 12. Left to the builder
 
 - Exact `CollapsibleSection` markup for a body with no sliders; the hint's styling.
-- Where `LetterboxBars` mounts (beside the canvas, under the HUD) and its stacking value.
+- (Settled 2026-11-16: the letterbox is frame code, D2/R8; nothing mounts in the DOM.)
 - Whether `DebugOverlayToggles` takes the two booleans from a derived `{ enabled, letterbox }` view or the
   board renders two `DebugCheckbox` rows.
 - Test fixture plumbing for `frameIndex` in `renderFrame` tests.
