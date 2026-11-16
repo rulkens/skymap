@@ -1,8 +1,8 @@
 /**
  * Every name a shader under `src/services/gpu/shaders/` declares (a `let`/`var`/`const`, a function
- * parameter, a `for (var …)` index) is longer than one letter, digit suffix or not: `s0`, `w2` and
- * `k` hide what a tap or weight holds, which the film-look review (2026-11-16) kept tripping over.
- * Struct members, swizzles, uses and comments don't count. `ALLOWED` is today's debt, keyed by file
+ * parameter, a `for (var …)` index) is longer than two characters: `s0`, `w2`, `mu` and `k` hide
+ * what a tap or weight holds, which the film-look review (2026-11-16) kept tripping over. `SHORT_WORDS`
+ * are the exceptions every reader knows. Struct members, swizzles, uses and comments don't count. `ALLOWED` is today's debt, keyed by file
  * with its offender count; counts only ever go DOWN, and a row whose file is clean (or gone) fails
  * until it is lowered or deleted.
  */
@@ -16,15 +16,16 @@ const SHADERS = 'src/services/gpu/shaders';
 // The bloom/* and compositor/fragment.wesl rows go when the film look (#1131) lands: it renames
 // or cleans those files, and this test then names each row to delete.
 const ALLOWED: Readonly<Record<string, number>> = {
-  'src/services/gpu/shaders/bloom/bright.wesl': 6,
-  'src/services/gpu/shaders/bloom/downsample.wesl': 15,
-  'src/services/gpu/shaders/bloom/fold.wesl': 3,
-  'src/services/gpu/shaders/bloom/io.wesl': 2,
-  'src/services/gpu/shaders/bloom/upsample.wesl': 4,
+  'src/services/gpu/shaders/bloom/bright.wesl': 8,
+  'src/services/gpu/shaders/bloom/downsample.wesl': 16,
+  'src/services/gpu/shaders/bloom/fold.wesl': 4,
+  'src/services/gpu/shaders/bloom/io.wesl': 3,
+  'src/services/gpu/shaders/bloom/upsample.wesl': 5,
   'src/services/gpu/shaders/compositor/fragment.wesl': 1,
 };
 
-const ONE_LETTER = /^[A-Za-z][0-9]?$/;
+const TOO_SHORT = /^[A-Za-z][A-Za-z0-9]?$/;
+const SHORT_WORDS: ReadonlySet<string> = new Set(['uv', 'in', 'up', 'ao', 'PI']);
 
 // Blank comments out but keep their newlines, so offender line numbers still match the file.
 const stripComments = (src: string): string =>
@@ -58,7 +59,7 @@ function offendersIn(src: string): Offender[] {
     );
   });
   return [...declared, ...params]
-    .filter(({ name }) => ONE_LETTER.test(name))
+    .filter(({ name }) => TOO_SHORT.test(name) && !SHORT_WORDS.has(name))
     .map(({ index, name }) => ({ line: lineAt(index), name }));
 }
 
@@ -80,12 +81,12 @@ const offendersByFile = new Map(
   ),
 );
 
-it('every ALLOWED row names a .wesl file that still has one-letter names', () => {
+it('every ALLOWED row names a .wesl file that still has too-short names', () => {
   const stale = Object.keys(ALLOWED).filter((path) => !offendersByFile.get(path)?.length);
   expect(stale, 'ALLOWED rows whose file is clean or gone: remove the row').toEqual([]);
 });
 
-describe('.wesl declarations have names longer than one letter', () => {
+describe('.wesl declarations have names longer than two characters', () => {
   expect(offendersByFile.size).toBeGreaterThan(0);
 
   it.each([...offendersByFile])('%s', (path, offenders) => {
@@ -98,7 +99,7 @@ describe('.wesl declarations have names longer than one letter', () => {
     }
     expect(
       listed.length,
-      `${path} declares one-letter names (rename them; see the wesl-shaders skill, "File layout"):\n` +
+      `${path} declares too-short names (rename them; see the wesl-shaders skill, "File layout"):\n` +
         listed.join('\n'),
     ).toBeLessThanOrEqual(allowed);
   });
