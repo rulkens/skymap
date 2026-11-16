@@ -27,7 +27,7 @@ full design and the spike's findings.
   (`--serve`)](#serving-a-production-build---serve) below. With the default,
   run `npm run dev` (default `http://localhost:5173`) first. Either way the
   recorder loads `<url>/?cinema`, a mode that skips the splash and mounts
-  only the canvas + tour captions.
+  only the canvas + tour captions (and the debug panel while `d` has it open).
 - **A GPU, and the Playwright `chromium` channel installed.** The recorder
   launches Playwright's `channel: 'chromium'` (the full Chromium build, not
   the default headless _shell_ — the shell exposes `navigator.gpu` but yields
@@ -64,6 +64,7 @@ positional tour id and with `--beats` — see [Clip takes](#clip-takes) below:
 | `--serve`    | off                                                 | self-host a production build instead of `--url` — see [Serving a production build (`--serve`)](#serving-a-production-build---serve); rejected alongside `--url`                                          |
 | `--rebuild`  | off                                                 | with `--serve`, force a fresh build even if `tools/record/.build/` already has one                                                                                                                       |
 | `--dome`     | off                                                 | fulldome fisheye take — see [Fulldome (Wisdome)](#fulldome-wisdome); implies `--size 4096x4096 --dpr 1 --fps 30` (`--fps 60` also accepted), encodes with `libx264` at level 6.1 instead of VideoToolbox |
+| `--film`     | off                                                 | play the take with the film look on (grade, grain, anamorphic glow, 2.39:1 letterbox): appends `&film=1` to the boot hash, the same row the Display switch writes                                        |
 | `--frames`   | none — plays to the take's natural end              | stop after this many CAPTURED frames (positive integer); the take ends at min(natural end, a looping clip's cycle, `--frames`) — never a way to run a loop twice                                         |
 | positional   | `grandTour`                                         | tour id, must exist in `APP_TOUR_REGISTRY`; rejected alongside `--clip`                                                                                                                                  |
 
