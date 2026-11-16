@@ -58,7 +58,7 @@ export function galaxyRowRuntime(
   const records = galaxyRecordsOver(galaxies.catalogs);
   return {
     records,
-    recordBridge: galaxyRecordBridge(records),
+    recordBridge: galaxyRecordBridge(records, () => true),
     pickCodes: catalogPickCodes(GALAXY_CATALOG_SOURCE_ROWS, pickCode),
   };
 }

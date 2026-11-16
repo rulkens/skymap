@@ -50,7 +50,7 @@ describe('galaxyRecordBridge', () => {
     const records = new Map([
       ['glade' as const, fakeSource('glade', { loadRow: () => pending.promise })],
     ]);
-    const bridge = galaxyRecordBridge(records);
+    const bridge = galaxyRecordBridge(records, () => true);
     const settled = vi.fn();
     bridge.onSettle(settled);
 
@@ -68,7 +68,7 @@ describe('galaxyRecordBridge', () => {
     const records = new Map([
       ['glade' as const, fakeSource('glade', { loadRow: () => pending.promise })],
     ]);
-    const bridge = galaxyRecordBridge(records);
+    const bridge = galaxyRecordBridge(records, () => true);
     const settled = vi.fn();
     bridge.onSettle(settled);
     expect(bridge.row('glade', 4)).toBeNull();
@@ -89,7 +89,9 @@ describe('galaxyRecordBridge', () => {
       ['2mrs', fakeSource('2mrs', { resolveDurableId: () => 7 })],
       ['glade', fakeSource('glade', { resolveDurableId: () => 3 })],
     ]);
-    expect(galaxyRecordBridge(records).resolveDurableId('pgc-2789')).toEqual(hit('glade', 3));
+    expect(galaxyRecordBridge(records, () => true).resolveDurableId('pgc-2789')).toEqual(
+      hit('glade', 3),
+    );
   });
 
   it('resolveDurableId answers pending while a better-ranked source is still looking', async () => {
@@ -98,7 +100,7 @@ describe('galaxyRecordBridge', () => {
       ['2mrs', fakeSource('2mrs', { resolveDurableId: () => 7 })],
       ['glade', fakeSource('glade', { resolveDurableId: () => gladeLookup.promise })],
     ]);
-    const bridge = galaxyRecordBridge(records);
+    const bridge = galaxyRecordBridge(records, () => true);
     expect(bridge.resolveDurableId('pgc-2789')).toEqual({ kind: 'pending' });
     gladeLookup.resolve(null);
     await flush();
@@ -109,10 +111,22 @@ describe('galaxyRecordBridge', () => {
     const records = new Map<GalaxyCatalogId, GalaxyRecordSource>([
       ['2mrs', fakeSource('2mrs', {})],
     ]);
-    const bridge = galaxyRecordBridge(records);
+    const bridge = galaxyRecordBridge(records, () => true);
     // GLADE claims pgc ids too and has not committed: it may still hold this one.
     expect(bridge.resolveDurableId('pgc-2789')).toEqual({ kind: 'pending' });
     records.set('glade', fakeSource('glade', {}));
     expect(bridge.resolveDurableId('pgc-2789')).toEqual({ kind: 'absent' });
+  });
+
+  it('a claimant that cannot load never holds a miss pending', () => {
+    const records = new Map<GalaxyCatalogId, GalaxyRecordSource>([
+      ['2mrs', fakeSource('2mrs', {})],
+    ]);
+    expect(
+      galaxyRecordBridge(records, (id) => id !== 'glade').resolveDurableId('pgc-2789'),
+    ).toEqual({ kind: 'absent' });
+    expect(galaxyRecordBridge(records, () => true).resolveDurableId('pgc-2789')).toEqual({
+      kind: 'pending',
+    });
   });
 });

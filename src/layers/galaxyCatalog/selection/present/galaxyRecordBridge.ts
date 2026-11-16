@@ -25,6 +25,7 @@ const EVERY_SOURCE = GALAXY_CATALOG_SOURCES.map((source) => ({ source }));
 
 export function galaxyRecordBridge(
   records: ReadonlyMap<GalaxyCatalogId, GalaxyRecordSource>,
+  canLoad: (source: GalaxyCatalogId) => boolean,
 ): GalaxyRecordBridge {
   // Keyed by the source object: a tier swap's fresh source starts empty, and a
   // released source's late settle lands in a memo nothing reads again.
@@ -59,12 +60,15 @@ export function galaxyRecordBridge(
     return undefined;
   }
 
-  // A source with no record may still bring the id (queued, out of range or
-  // out of tier; nothing here tells which), so a miss is only final over all of them.
+  // A source with no record may still bring the id while it can load (queued or
+  // in flight), so a miss is final once every source that can load is resident.
+  // One that never will (no file at this tier, switched off) must not hold a pick pending.
   const miss = (
     sources: readonly { source: GalaxyCatalogId }[],
   ): FocusResolution<GalaxyCatalogRef> =>
-    sources.every(({ source }) => records.has(source)) ? { kind: 'absent' } : { kind: 'pending' };
+    sources.every(({ source }) => !canLoad(source) || records.has(source))
+      ? { kind: 'absent' }
+      : { kind: 'pending' };
   const hit = (source: GalaxyCatalogId, index: number): FocusResolution<GalaxyCatalogRef> => ({
     kind: 'hit',
     ref: { type: 'galaxyCatalog', source, index },
