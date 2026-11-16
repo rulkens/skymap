@@ -3,6 +3,6 @@
 // (read as-is) and a grey sRGB colour (decoded here). Matches what an '-srgb'
 // texture format does in hardware.
 
-fn srgbToLinear(v: f32) -> f32 {
-  return select(pow((v + 0.055) / 1.055, 2.4), v / 12.92, v <= 0.04045);
+fn srgbToLinear(encoded: f32) -> f32 {
+  return select(pow((encoded + 0.055) / 1.055, 2.4), encoded / 12.92, encoded <= 0.04045);
 }

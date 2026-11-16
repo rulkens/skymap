@@ -57,49 +57,49 @@ fn expandSegmentQuad(
   }
   // Work at unit scale: H multiplies two clip coordinates, which underflows f32
   // on a slab whose clip is in Mpc, metres from the eye. Clip is homogeneous
-  // and k is shared by all six vertices, so neither the image nor any
+  // and clipScale is shared by all six vertices, so neither the image nor any
   // interpolation changes; the result is scaled back.
-  let k = max(abs(aRaw.w), abs(bRaw.w));
-  let aClip = aRaw / k;
-  let bClip = bRaw / k;
+  let clipScale = max(abs(aRaw.w), abs(bRaw.w));
+  let aClip = aRaw / clipScale;
+  let bClip = bRaw / clipScale;
 
   // H, the screen tangent from a toward b for any signs of the two w:
   // d(x/w)/dt at an endpoint is (xb*wa - xa*wb) over a positive square, so it
   // needs no divide; with both in front it is parallel to bNdc - aNdc.
-  let h = bClip.xy * aClip.w - aClip.xy * bClip.w;
-  let hLen = length(h);
+  let rawTangent = bClip.xy * aClip.w - aClip.xy * bClip.w;
+  let hLen = length(rawTangent);
   if (!(hLen > 0.0)) {
     return SegmentCorner(vec4<f32>(0.0), 0.0, vec2<f32>(0.0));
   }
-  let tangent = h / hLen;
+  let tangent = rawTangent / hLen;
   let perp = vec2<f32>(-tangent.y, tangent.x);
 
   let isB = corner.x > 0.5;
   var clip = select(aClip, bClip, isB);
-  var t = select(0.0, 1.0, isB);
+  var segmentParam = select(0.0, 1.0, isB);
   if (!select(aFront, bFront, isB)) {
-    // Walk s from the front end toward this one until the projection is d NDC
+    // Walk walkParam from the front end toward this one until the projection is ndcReach NDC
     // out, past the [-1, 1] square from any start. Solving
-    // s|H| = d·wF·w(s) gives the forms below: all terms positive, so neither
-    // s nor w(s) cancels even when the point lies metres from an eye whose
+    // walkParam|H| = ndcReach·wF·w(walkParam) gives the forms below: all terms positive, so neither
+    // walkParam nor w(walkParam) cancels even when the point lies metres from an eye whose
     // front end is 10⁹ m away.
     let front = select(bClip, aClip, isB);
     let frontNdc = front.xy / front.w;
-    let d = length(frontNdc) + 4.0;
-    let denom = hLen + d * front.w * (front.w - clip.w);
-    let s = d * front.w * front.w / denom;
-    let w = front.w * hLen / denom;
-    // From b, t = 1 - s, written so its terms stay positive (clip.w < 0 here).
-    t = select((hLen - d * front.w * clip.w) / denom, s, aFront);
-    let ndc = frontNdc + select(-tangent, tangent, aFront) * d;
+    let ndcReach = length(frontNdc) + 4.0;
+    let denom = hLen + ndcReach * front.w * (front.w - clip.w);
+    let walkParam = ndcReach * front.w * front.w / denom;
+    let walkedW = front.w * hLen / denom;
+    // From b, segmentParam = 1 - walkParam, written so its terms stay positive (clip.w < 0 here).
+    segmentParam = select((hLen - ndcReach * front.w * clip.w) / denom, walkParam, aFront);
+    let ndc = frontNdc + select(-tangent, tangent, aFront) * ndcReach;
     // Depth keeps the front end's z/w: the real point's z would cancel in f32
     // on a standard-Z slab. A caller that depth-tests gets that depth on the
     // walked corner (stellarStreams/ribbonPick/vertex.wesl accepts it).
-    clip = vec4<f32>(ndc * w, front.z / front.w * w, w);
+    clip = vec4<f32>(ndc * walkedW, front.z / front.w * walkedW, walkedW);
   }
 
   // Half-width in pixels -> NDC: one NDC unit is half the viewport in pixels.
   // corner.y in [0,1] maps to the +/- side; re-multiplying by w returns to clip.
   let offsetNdc = perp * (halfWidthPx / (cam.viewportPx * 0.5)) * (corner.y * 2.0 - 1.0);
-  return SegmentCorner(vec4<f32>(clip.xy + offsetNdc * clip.w, clip.z, clip.w) * k, t, tangent);
+  return SegmentCorner(vec4<f32>(clip.xy + offsetNdc * clip.w, clip.z, clip.w) * clipScale, segmentParam, tangent);
 }

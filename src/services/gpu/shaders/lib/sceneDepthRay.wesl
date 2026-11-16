@@ -13,8 +13,8 @@ const FAR_DEPTH: f32 = 0.0;
 // ('uv = ((xy+1)*0.5, (1-xy)*0.5)').
 fn sceneRayUnproject(uv: vec2<f32>, clipZ: f32, invMvp: mat4x4<f32>, camPos: vec3<f32>) -> vec4<f32> {
   let xy = vec2<f32>(uv.x * 2.0 - 1.0, 1.0 - uv.y * 2.0);
-  let p = invMvp * vec4<f32>(xy, clipZ, 1.0);
-  return vec4<f32>(p.xyz - camPos * p.w, p.w);
+  let framePoint = invMvp * vec4<f32>(xy, clipZ, 1.0);
+  return vec4<f32>(framePoint.xyz - camPos * framePoint.w, framePoint.w);
 }
 
 // The view ray for 'uv'. Reversed-Z puts the far plane at z = 0, so w's sign is
@@ -22,12 +22,12 @@ fn sceneRayUnproject(uv: vec2<f32>, clipZ: f32, invMvp: mat4x4<f32>, camPos: vec
 // gracefully to the ray's own point at infinity, where a divide blows up into
 // the uniform grey veil (docs/RENDERER.md).
 fn sceneRayDir(uv: vec2<f32>, invMvp: mat4x4<f32>, camPos: vec3<f32>) -> vec3<f32> {
-  let p = sceneRayUnproject(uv, 0.0, invMvp, camPos);
-  var v = p.xyz;
-  if (p.w < 0.0) {
-    v = -v;
+  let camRelative = sceneRayUnproject(uv, 0.0, invMvp, camPos);
+  var rayDir = camRelative.xyz;
+  if (camRelative.w < 0.0) {
+    rayDir = -rayDir;
   }
-  return normalize(v);
+  return normalize(rayDir);
 }
 
 // Distance from the camera to the depth sample at 'uv', in the caller's frame.
@@ -36,6 +36,6 @@ fn sceneRayDir(uv: vec2<f32>, invMvp: mat4x4<f32>, camPos: vec3<f32>) -> vec3<f3
 // camera (one f32 ulp is ~0.6 m at Earth's top) — a metre-scale ABSOLUTE floor,
 // cheaper than divide-then-subtract's blow-up.
 fn sceneRayDistance(uv: vec2<f32>, depth: f32, invMvp: mat4x4<f32>, camPos: vec3<f32>) -> f32 {
-  let p = sceneRayUnproject(uv, depth, invMvp, camPos);
-  return length(p.xyz) / abs(p.w);
+  let camRelative = sceneRayUnproject(uv, depth, invMvp, camPos);
+  return length(camRelative.xyz) / abs(camRelative.w);
 }

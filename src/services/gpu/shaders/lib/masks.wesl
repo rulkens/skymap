@@ -35,22 +35,22 @@
 
 // ── circularMask ─────────────────────────────────────────────────────
 //
-// Soft disk-edge mask. Returns 1.0 where r <= inner, 0.0 where
-// r >= outer, and a smoothstep ramp between. The '1.0 - smoothstep'
+// Soft disk-edge mask. Returns 1.0 where radius <= inner, 0.0 where
+// radius >= outer, and a smoothstep ramp between. The '1.0 - smoothstep'
 // inversion is folded in: callers pass the inner / outer radii in
 // natural order ('inner < outer') and don't have to remember to flip
 // the smoothstep edges to get the high-inside-low-outside shape.
 //
-// The equivalent 'smoothstep(outer, inner, r)' (with edges swapped)
-// produces identical output for r outside [inner, outer] but is
+// The equivalent 'smoothstep(outer, inner, radius)' (with edges swapped)
+// produces identical output for radius outside [inner, outer] but is
 // strictly equivalent only because smoothstep is symmetric under
 // edge inversion when the input is between the edges; using the
-// '1.0 - smoothstep(inner, outer, r)' form keeps the algebraic
+// '1.0 - smoothstep(inner, outer, radius)' form keeps the algebraic
 // intent explicit and matches the form most call sites used before
 // extraction.
 
-fn circularMask(r: f32, inner: f32, outer: f32) -> f32 {
-  return 1.0 - smoothstep(inner, outer, r);
+fn circularMask(radius: f32, inner: f32, outer: f32) -> f32 {
+  return 1.0 - smoothstep(inner, outer, radius);
 }
 
 // ── lumAlpha ─────────────────────────────────────────────────────────

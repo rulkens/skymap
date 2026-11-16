@@ -16,7 +16,7 @@ const SPLAT_CUT: f32 = 4.5;
 //   corner      — the unit-quad corner from quadCorner(vi), in [-1,1]^2
 //   xv, yv, zv  — the component centre's VIEW-space offset from the eye
 //                 (across camRight, across camUp, along camFwd)
-//   r           — the component's boundRadius (world-space max sigma)
+//   boundRadius — the component's bounding radius (world-space max sigma)
 //   frustum     — (tanLeft, tanRight, tanDown, tanUp), io.wesl's frustum,
 //                 used to map view-space tangent slopes to NDC
 //   capHalfNdc  — screen-space quad cap (the quad-cap lever), io.wesl's perf.x; 0 disables
@@ -37,8 +37,8 @@ const SPLAT_CUT: f32 = 4.5;
 // A silhouette cone only exists once the eye clears the blob's bounding
 // sphere by a margin (cut sigma); inside that margin — including "behind"
 // — every ray through the pixel can still graze the ellipsoid, so the
-// correct footprint is the whole screen. zv < 1.3*r is the cheap,
-// conceptually-named version of that same test; the cut*r check right
+// correct footprint is the whole screen. zv < 1.3*boundRadius is the cheap,
+// conceptually-named version of that same test; the cut*boundRadius check right
 // below is what actually has to hold for the sqrt below to be real, and
 // subsumes it (cut > 1.3).
 // 4.5, not 3: the quad edge clips the Gaussian at the cut, and for the
@@ -51,11 +51,11 @@ fn splatNdc(
   xv: f32,
   yv: f32,
   zv: f32,
-  r: f32,
+  boundRadius: f32,
   frustum: vec4<f32>,
   capHalfNdc: f32,
 ) -> vec2<f32> {
-  let bound = SPLAT_CUT * r;
+  let bound = SPLAT_CUT * boundRadius;
   // Fully behind the camera: the forward ray never gets within cut sigma of
   // the blob, so its contribution is below the truncation the cut already
   // accepts. Collapse the quad to nothing rather than falling through to the
@@ -71,7 +71,7 @@ fn splatNdc(
   let discY = yv * yv + zv * zv - bound * bound;
   let denom = zv * zv - bound * bound;
 
-  // Angular cull: zv < 1.3*r below only catches a component the eye is NEAR in
+  // Angular cull: zv < 1.3*boundRadius below only catches a component the eye is NEAR in
   // depth. A component far off-axis at any zv (everything the camera just flew
   // past, at a disc-plane pose) slips past that test and falls all the way to
   // 'return corner' — a fullscreen quad for something no frustum ray comes
@@ -111,7 +111,7 @@ fn splatNdc(
     }
   }
 
-  if (zv < 1.3 * r || denom <= 1e-6 || discX <= 0.0 || discY <= 0.0) {
+  if (zv < 1.3 * boundRadius || denom <= 1e-6 || discX <= 0.0 || discY <= 0.0) {
     if (capHalfNdc > 0.0 && zv > 1e-4) {
       let ndcC = ndcFromTangent(vec2<f32>(xv, yv) / zv, frustum);
       return ndcC + corner * capHalfNdc;
@@ -122,7 +122,7 @@ fn splatNdc(
   // Exact per-axis silhouette of the bounding sphere: the two tangent lines
   // from the eye to the circle of radius bound centred (xv, zv) in the
   // x-z plane have slopes (xv*zv +- bound*sqrt(discX)) / denom, and same in
-  // y-z. This replaces the on-axis approximation r/(zv*tan), which
+  // y-z. This replaces the on-axis approximation boundRadius/(zv*tan), which
   // under-covers off-axis blobs by up to 1/cos^2(theta) and read as the
   // field darkening toward the screen edges.
   let sX = bound * sqrt(discX);

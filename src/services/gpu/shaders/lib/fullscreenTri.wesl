@@ -26,11 +26,11 @@ struct FullscreenOut {
 }
 
 fn fullscreenVertex(vi: u32) -> FullscreenOut {
-  var p = array<vec2<f32>, 3>(vec2(-1.0, -1.0), vec2(3.0, -1.0), vec2(-1.0, 3.0));
-  var o: FullscreenOut;
-  let xy = p[vi];
-  o.pos = vec4<f32>(xy, 0.0, 1.0);
+  var corners = array<vec2<f32>, 3>(vec2(-1.0, -1.0), vec2(3.0, -1.0), vec2(-1.0, 3.0));
+  var out: FullscreenOut;
+  let xy = corners[vi];
+  out.pos = vec4<f32>(xy, 0.0, 1.0);
   // Flip Y for UV space: clip-space +y is up, texture-space +v is down.
-  o.uv = vec2<f32>((xy.x + 1.0) * 0.5, (1.0 - xy.y) * 0.5);
-  return o;
+  out.uv = vec2<f32>((xy.x + 1.0) * 0.5, (1.0 - xy.y) * 0.5);
+  return out;
 }

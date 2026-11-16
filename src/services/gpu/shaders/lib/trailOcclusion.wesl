@@ -37,23 +37,23 @@ struct OcclusionUniforms {
 // every texel holds FAR_DEPTH until some row clears it.
 @group(0) @binding(1) var sceneDepth: texture_depth_2d;
 
-// Visibility of the eye->x SEGMENT (eye at the origin) past one sphere
+// Visibility of the eye->trailPoint SEGMENT (eye at the origin) past one sphere
 // (centre.xyz, radius.w, km): 0 inside it, 1 clear of it, one-pixel limb ramp.
 // The [0,1] clamp is what keeps a near arc visible (doc: why occlusion is a segment test).
-fn sphereClearance(x: vec3<f32>, sphere: vec4<f32>) -> f32 {
-  let c = sphere.xyz;
-  let along = clamp(dot(c, x) / max(dot(x, x), 1e-30), 0.0, 1.0);
-  let gap = length(along * x - c) - sphere.w;
+fn sphereClearance(trailPoint: vec3<f32>, sphere: vec4<f32>) -> f32 {
+  let centre = sphere.xyz;
+  let along = clamp(dot(centre, trailPoint) / max(dot(trailPoint, trailPoint), 1e-30), 0.0, 1.0);
+  let gap = length(along * trailPoint - centre) - sphere.w;
   let aa = max(fwidth(gap), 1e-6);
   return smoothstep(-aa, aa, gap);
 }
 
-// Visibility in [0,1] of the eye-relative trail point 'x' (km) under fragment
+// Visibility in [0,1] of the eye-relative trail point 'trailPoint' (km) under fragment
 // pixel 'fragPx': 1 when nothing stands between it and the eye.
-fn trailClearance(x: vec3<f32>, fragPx: vec2<f32>) -> f32 {
+fn trailClearance(trailPoint: vec3<f32>, fragPx: vec2<f32>) -> f32 {
   var clear = 1.0;
-  for (var i = 0u; i < occ.count; i++) {
-    clear *= sphereClearance(x, occ.spheres[i]);
+  for (var sphereIndex = 0u; sphereIndex < occ.count; sphereIndex++) {
+    clear *= sphereClearance(trailPoint, occ.spheres[sphereIndex]);
   }
 
   // The spheres cover the sphere bodies; this covers ONE row's terrain and
@@ -64,7 +64,7 @@ fn trailClearance(x: vec3<f32>, fragPx: vec2<f32>) -> f32 {
   let depth = textureLoad(sceneDepth, texel, 0);
   if (depth != FAR_DEPTH) {
     let sceneKm = sceneRayDistance(fragPx / occ.viewportPx, depth, occ.invMvp, occ.camPosKm);
-    let trailKm = length(x);
+    let trailKm = length(trailPoint);
     // Symmetric, so a grazing trail fades instead of stippling along the depth staircase.
     let tol = DEPTH_CLEARANCE_REL * trailKm;
     clear *= smoothstep(-tol, tol, sceneKm - trailKm);

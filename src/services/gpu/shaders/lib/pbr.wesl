@@ -14,7 +14,7 @@
 //     degrades gracefully to ideal Lambert. Tinted by the surface 'albedo'.
 //   - SPECULAR — light that reflects off the microscopic facets of the surface
 //     without entering it. Modelled with the Cook-Torrance microfacet BRDF
-//     'D * G * F / (4 * NoV * NoL)'. Tinted by the caller's 'f0', never by
+//     'D * G * F / (4 * NoV * NoL)'. Tinted by the caller's 'baseReflectance', never by
 //     'albedo'.
 //
 // Both terms are true BRDF values (units of 1/steradian): the diffuse carries
@@ -33,7 +33,7 @@
 //     here means the one ambient constant stays the single source of truth (the
 //     same discipline 'bodyLighting.wesl' documents), and the night hemisphere's
 //     lift is decided in one place for every body.
-//   - No multi-scatter energy compensation and no metal/dielectric blend: 'f0'
+//   - No multi-scatter energy compensation and no metal/dielectric blend: 'baseReflectance'
 //     arrives already blended from the caller. Image-based lighting is the
 //     separate 'envSplitSum' below, fed a caller-owned probe and LUT.
 //   - No energy-conserving diffuse/specular coupling in the DIRECT terms
@@ -124,14 +124,14 @@ const OCEAN_ROUGHNESS: f32 = 0.3;
 // 'NoH' is the caller's already-clamped 'max(dot(n, h), 0)'.
 
 fn distributionGGX(NoH: f32, roughness: f32) -> f32 {
-  let a = max(roughness, MIN_ROUGHNESS);
-  let alpha = a * a;
+  let clampedRoughness = max(roughness, MIN_ROUGHNESS);
+  let alpha = clampedRoughness * clampedRoughness;
   let alpha2 = alpha * alpha;
-  // With alpha in (0, 1], (alpha2 - 1) <= 0, so d = 1 - NoH^2 * (1 - alpha2) is
+  // With alpha in (0, 1], (alpha2 - 1) <= 0, so denomBase = 1 - NoH^2 * (1 - alpha2) is
   // bounded below by alpha2 > 0 (its minimum, reached at NoH = 1). The floor on
-  // 'a' is what keeps that lower bound off zero.
-  let d = NoH * NoH * (alpha2 - 1.0) + 1.0;
-  return alpha2 / (PI * d * d);
+  // 'clampedRoughness' is what keeps that lower bound off zero.
+  let denomBase = NoH * NoH * (alpha2 - 1.0) + 1.0;
+  return alpha2 / (PI * denomBase * denomBase);
 }
 
 // ── geometrySmithGGX (G) — Smith masking-shadowing ───────────────────
@@ -168,10 +168,10 @@ fn distributionGGX(NoH: f32, roughness: f32) -> f32 {
 // 'NoV' and 'NoL' are the caller's already-clamped cosines.
 
 fn geometrySmithGGX(NoV: f32, NoL: f32, roughness: f32) -> f32 {
-  let r = roughness + 1.0;
-  let k = (r * r) / 8.0;
-  let gv = NoV / (NoV * (1.0 - k) + k);
-  let gl = NoL / (NoL * (1.0 - k) + k);
+  let shiftedRoughness = roughness + 1.0;
+  let roughnessRemap = (shiftedRoughness * shiftedRoughness) / 8.0;
+  let gv = NoV / (NoV * (1.0 - roughnessRemap) + roughnessRemap);
+  let gl = NoL / (NoL * (1.0 - roughnessRemap) + roughnessRemap);
   return gv * gl;
 }
 
@@ -179,26 +179,26 @@ fn geometrySmithGGX(NoV: f32, NoL: f32, roughness: f32) -> f32 {
 //
 // The fraction of light reflected (rather than refracted) as a function of the
 // angle between the incident ray and the microfacet normal. Reflectance rises
-// from 'f0' at normal incidence to 1.0 at the grazing limit — the reason every
+// from 'baseReflectance' at normal incidence to 1.0 at the grazing limit — the reason every
 // surface, even matte, turns mirror-like when viewed edge-on.
 //
-//   F(cosTheta) = f0 + (1 - f0) * (1 - cosTheta)^5
+//   F(cosTheta) = baseReflectance + (1 - baseReflectance) * (1 - cosTheta)^5
 //
 // Schlick's polynomial approximates the full Fresnel equations to within a
 // percent or so across the whole angular range while costing five multiplies
-// instead of a pair of transcendental refraction terms. 'f0' is the
+// instead of a pair of transcendental refraction terms. 'baseReflectance' is the
 // normal-incidence reflectance (~0.02-0.04 for a dielectric).
 //
 // 'cosTheta' is expected to be 'VoH' (view dotted with the half-vector), the
 // angle at the microfacet — 'pbrDirect' supplies it. The '(1 - cosTheta)' is
 // clamped to [0, 1] so a slightly-negative cosine from interpolation can never
 // feed a negative base into the odd power. '(1-cosTheta)^5' is expanded as
-// 'm*m * m*m * m' to avoid a 'pow' call.
+// 'oneMinusCos*oneMinusCos * oneMinusCos*oneMinusCos * oneMinusCos' to avoid a 'pow' call.
 
-fn fresnelSchlick(cosTheta: f32, f0: vec3<f32>) -> vec3<f32> {
-  let m = clamp(1.0 - cosTheta, 0.0, 1.0);
-  let m2 = m * m;
-  return f0 + (1.0 - f0) * (m2 * m2 * m);
+fn fresnelSchlick(cosTheta: f32, baseReflectance: vec3<f32>) -> vec3<f32> {
+  let oneMinusCos = clamp(1.0 - cosTheta, 0.0, 1.0);
+  let oneMinusCosSq = oneMinusCos * oneMinusCos;
+  return baseReflectance + (1.0 - baseReflectance) * (oneMinusCosSq * oneMinusCosSq * oneMinusCos);
 }
 
 // ── orenNayarDiffuse — rough-surface diffuse ─────────────────────────
@@ -226,29 +226,29 @@ fn fresnelSchlick(cosTheta: f32, f0: vec3<f32>) -> vec3<f32> {
 // collapse the geometric term to dot products:
 //
 //   - cos(dPhi) * sin(thetaI) * sin(thetaR) = dot(l - n*NoL, v - n*NoV)
-//                                           = dot(l, v) - NoL*NoV  ('s' below).
-//     The 'max(0, .)' on cos(dPhi) becomes 'max(0, s)'.
+//                                           = dot(l, v) - NoL*NoV  ('projectedCos' below).
+//     The 'max(0, .)' on cos(dPhi) becomes 'max(0, projectedCos)'.
 //   - sin(alpha) * tan(beta) = sin(thetaI) * sin(thetaR) / cos(beta)
 //                            = sin(thetaI) * sin(thetaR) / max(NoL, NoV),
 //     since {alpha, beta} = {thetaI, thetaR} as a set (so the sine product is
 //     symmetric) and cos(beta) = cos(min angle) = max(NoL, NoV).
 //
-// Dividing the first by the sine product leaves 'max(0, s) / max(NoL, NoV)'. The
+// Dividing the first by the sine product leaves 'max(0, projectedCos) / max(NoL, NoV)'. The
 // denominator is floored: it vanishes only when both cosines do (the unlit
 // grazing silhouette), where the outer 'NoL' weight in 'pbrDirect' zeroes the
 // contribution regardless.
 
-fn orenNayarDiffuse(n: vec3<f32>, v: vec3<f32>, l: vec3<f32>, roughness: f32) -> f32 {
-  let NoL = max(dot(n, l), 0.0);
-  let NoV = max(dot(n, v), 0.0);
-  let s2 = roughness * roughness;
-  let A = 1.0 - 0.5 * s2 / (s2 + 0.33);
-  let B = 0.45 * s2 / (s2 + 0.09);
-  // s = cos(dPhi) * sin(thetaI) * sin(thetaR); negative means the projected view
+fn orenNayarDiffuse(normal: vec3<f32>, viewDir: vec3<f32>, lightDir: vec3<f32>, roughness: f32) -> f32 {
+  let NoL = max(dot(normal, lightDir), 0.0);
+  let NoV = max(dot(normal, viewDir), 0.0);
+  let slopeVariance = roughness * roughness;
+  let orenNayarA = 1.0 - 0.5 * slopeVariance / (slopeVariance + 0.33);
+  let orenNayarB = 0.45 * slopeVariance / (slopeVariance + 0.09);
+  // projectedCos = cos(dPhi) * sin(thetaI) * sin(thetaR); negative means the projected view
   // and light diverge past 90 deg in azimuth, where Oren-Nayar's retro term is 0.
-  let s = dot(l, v) - NoL * NoV;
-  let azimuth = B * max(s, 0.0) / max(max(NoL, NoV), 1e-4);
-  return (A + azimuth) / PI;
+  let projectedCos = dot(lightDir, viewDir) - NoL * NoV;
+  let azimuth = orenNayarB * max(projectedCos, 0.0) / max(max(NoL, NoV), 1e-4);
+  return (orenNayarA + azimuth) / PI;
 }
 
 // ── pbrDirect — the composed direct-lighting term ────────────────────
@@ -260,11 +260,11 @@ fn orenNayarDiffuse(n: vec3<f32>, v: vec3<f32>, l: vec3<f32>, roughness: f32) ->
 //
 // All vectors are UNIT and in the SAME frame (the body's local frame, matching
 // 'litShade' in 'lib/bodyLighting.wesl'):
-//   n — surface normal.  v — surface -> camera.  l — surface -> sun.
+//   normal — surface normal.  viewDir — surface -> camera.  lightDir — surface -> sun.
 // 'albedo' is the linear-RGB surface colour, 'roughness' the perceptual
-// roughness in [0, 1], 'f0' the per-channel normal-incidence reflectance.
+// roughness in [0, 1], 'baseReflectance' the per-channel normal-incidence reflectance.
 //
-//   half   = normalize(v + l)               (the mirror bisector)
+//   half   = normalize(viewDir + lightDir)               (the mirror bisector)
 //   spec   = D(NoH) * G(NoV,NoL) * F(VoH) / (4 * NoV * NoL)
 //   diff   = orenNayarDiffuse(...) * albedo
 //   return (diff + spec) * NoL
@@ -278,25 +278,25 @@ fn orenNayarDiffuse(n: vec3<f32>, v: vec3<f32>, l: vec3<f32>, roughness: f32) ->
 // Lambert diffuse alongside a floored-tight specular — the airless-body case.
 
 fn pbrDirect(
-  n: vec3<f32>,
-  v: vec3<f32>,
-  l: vec3<f32>,
+  normal: vec3<f32>,
+  viewDir: vec3<f32>,
+  lightDir: vec3<f32>,
   albedo: vec3<f32>,
   roughness: f32,
-  f0: vec3<f32>,
+  baseReflectance: vec3<f32>,
 ) -> vec3<f32> {
-  let h = normalize(v + l);
-  let NoL = max(dot(n, l), 0.0);
-  let NoV = max(dot(n, v), 0.0);
-  let NoH = max(dot(n, h), 0.0);
-  let VoH = max(dot(v, h), 0.0);
+  let halfVector = normalize(viewDir + lightDir);
+  let NoL = max(dot(normal, lightDir), 0.0);
+  let NoV = max(dot(normal, viewDir), 0.0);
+  let NoH = max(dot(normal, halfVector), 0.0);
+  let VoH = max(dot(viewDir, halfVector), 0.0);
 
-  let D = distributionGGX(NoH, roughness);
-  let G = geometrySmithGGX(NoV, NoL, roughness);
-  let F = fresnelSchlick(VoH, f0);
-  let specular = (D * G) * F / max(4.0 * NoV * NoL, 1e-4);
+  let distribution = distributionGGX(NoH, roughness);
+  let geometryTerm = geometrySmithGGX(NoV, NoL, roughness);
+  let fresnel = fresnelSchlick(VoH, baseReflectance);
+  let specular = (distribution * geometryTerm) * fresnel / max(4.0 * NoV * NoL, 1e-4);
 
-  let diffuse = orenNayarDiffuse(n, v, l, roughness) * albedo;
+  let diffuse = orenNayarDiffuse(normal, viewDir, lightDir, roughness) * albedo;
 
   return (diffuse + specular) * NoL;
 }
@@ -306,42 +306,42 @@ fn pbrDirect(
 // Karis 2013 'representative point': the specular lobe is evaluated against the
 // point of the Sun's disc closest to the reflection ray, and D is renormalised
 // by (alpha / alpha')^2 with alpha' = saturate(alpha + 0.5 * sinAngularRadius)
-// so the widened light gains no energy. Diffuse sees the true 'l'.
+// so the widened light gains no energy. Diffuse sees the true 'lightDir'.
 // 'sinAngularRadius' = R_sun / d; alpha comes from the floored roughness,
 // which is what keeps alpha' (and the ratio) off zero.
 
 fn pbrDirectSphere(
-  n: vec3<f32>,
-  v: vec3<f32>,
-  l: vec3<f32>,
+  normal: vec3<f32>,
+  viewDir: vec3<f32>,
+  lightDir: vec3<f32>,
   albedo: vec3<f32>,
   roughness: f32,
-  f0: vec3<f32>,
+  baseReflectance: vec3<f32>,
   sinAngularRadius: f32,
 ) -> vec3<f32> {
-  let r = reflect(-v, n);
-  let centreToRay = r * dot(l, r) - l;
+  let reflected = reflect(-viewDir, normal);
+  let centreToRay = reflected * dot(lightDir, reflected) - lightDir;
   let reach = clamp(sinAngularRadius / max(length(centreToRay), 1e-6), 0.0, 1.0);
-  let ls = normalize(l + centreToRay * reach);
+  let ls = normalize(lightDir + centreToRay * reach);
 
-  let h = normalize(v + ls);
-  let NoL = max(dot(n, l), 0.0);
-  let NoLs = max(dot(n, ls), 0.0);
-  let NoV = max(dot(n, v), 0.0);
-  let NoH = max(dot(n, h), 0.0);
-  let VoH = max(dot(v, h), 0.0);
+  let halfVector = normalize(viewDir + ls);
+  let NoL = max(dot(normal, lightDir), 0.0);
+  let NoLs = max(dot(normal, ls), 0.0);
+  let NoV = max(dot(normal, viewDir), 0.0);
+  let NoH = max(dot(normal, halfVector), 0.0);
+  let VoH = max(dot(viewDir, halfVector), 0.0);
 
-  let a = max(roughness, MIN_ROUGHNESS);
-  let alpha = a * a;
+  let clampedRoughness = max(roughness, MIN_ROUGHNESS);
+  let alpha = clampedRoughness * clampedRoughness;
   let alphaPrime = clamp(alpha + 0.5 * sinAngularRadius, alpha, 1.0);
   let ratio = alpha / alphaPrime;
 
-  let D = distributionGGX(NoH, roughness) * ratio * ratio;
-  let G = geometrySmithGGX(NoV, NoLs, roughness);
-  let F = fresnelSchlick(VoH, f0);
-  let specular = (D * G) * F / max(4.0 * NoV * NoLs, 1e-4);
+  let distribution = distributionGGX(NoH, roughness) * ratio * ratio;
+  let geometryTerm = geometrySmithGGX(NoV, NoLs, roughness);
+  let fresnel = fresnelSchlick(VoH, baseReflectance);
+  let specular = (distribution * geometryTerm) * fresnel / max(4.0 * NoV * NoLs, 1e-4);
 
-  let diffuse = orenNayarDiffuse(n, v, l, roughness) * albedo;
+  let diffuse = orenNayarDiffuse(normal, viewDir, lightDir, roughness) * albedo;
 
   return diffuse * NoL + specular * NoLs;
 }
@@ -350,32 +350,32 @@ fn pbrDirectSphere(
 //
 // Karis 2013 split-sum: the specular integral factors into the prefiltered
 // radiance along R at the roughness mip (roughness = mip / (levels - 1)) times
-// the LUT's 'f0 * scale + bias' at (NoV, roughness). That product is also the
+// the LUT's 'baseReflectance * scale + bias' at (NoV, roughness). That product is also the
 // directional albedo the specular took, so the diffuse -- the coarsest mip, the
 // roughness-1 lobe standing in for the cosine hemisphere -- gets the remainder.
 // 'ao' (baked, 1 = open) dims this environment only, never the sun; specular
 // takes Lagarde 2014's occlusion, which lets grazing and glossy lobes escape.
 
 fn envSplitSum(
-  n: vec3<f32>,
-  v: vec3<f32>,
+  normal: vec3<f32>,
+  viewDir: vec3<f32>,
   diffuseAlbedo: vec3<f32>,
   roughness: f32,
-  f0: vec3<f32>,
+  baseReflectance: vec3<f32>,
   probe: texture_cube<f32>,
   probeSampler: sampler,
   lut: texture_2d<f32>,
   lutSampler: sampler,
   ao: f32,
 ) -> vec3<f32> {
-  let NoV = max(dot(n, v), 0.0);
-  let r = reflect(-v, n);
+  let NoV = max(dot(normal, viewDir), 0.0);
+  let reflected = reflect(-viewDir, normal);
   let topMip = f32(textureNumLevels(probe) - 1u);
-  let prefiltered = textureSampleLevel(probe, probeSampler, r, roughness * topMip).rgb;
-  let irradiance = textureSampleLevel(probe, probeSampler, n, topMip).rgb;
+  let prefiltered = textureSampleLevel(probe, probeSampler, reflected, roughness * topMip).rgb;
+  let irradiance = textureSampleLevel(probe, probeSampler, normal, topMip).rgb;
   let ab = textureSampleLevel(lut, lutSampler, vec2<f32>(NoV, roughness), 0.0).rg;
 
-  let specularAlbedo = f0 * ab.x + ab.y;
+  let specularAlbedo = baseReflectance * ab.x + ab.y;
   let specularOcclusion = saturate(pow(NoV + ao, exp2(-16.0 * roughness - 1.0)) - 1.0 + ao);
   let specular = prefiltered * specularAlbedo * specularOcclusion;
   let diffuse = (vec3<f32>(1.0) - specularAlbedo) * diffuseAlbedo * irradiance * ao;

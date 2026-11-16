@@ -47,8 +47,8 @@ const LOG10: f32 = 2.30258509299404;  // ln(10), for converting log/ln
 //      visible alpha range") whereas 'clamp(x, 0, 1)' encodes only
 //      mechanism.
 
-fn saturate(x: f32) -> f32 {
-  return clamp(x, 0.0, 1.0);
+fn saturate(value: f32) -> f32 {
+  return clamp(value, 0.0, 1.0);
 }
 
 // ── rot2 ─────────────────────────────────────────────────────────────
@@ -64,25 +64,25 @@ fn saturate(x: f32) -> f32 {
 // 'sabs', 'toPolar' and 'toRect' below and used 'inout vec2 p') so it composes
 // cleanly inside expressions: 'sabs(rot2(p, t).x, 0.1)' just works.
 
-fn rot2(p: vec2<f32>, a: f32) -> vec2<f32> {
-  let c = cos(a);
-  let s = sin(a);
-  return vec2<f32>(c * p.x + s * p.y, -s * p.x + c * p.y);
+fn rot2(point: vec2<f32>, angle: f32) -> vec2<f32> {
+  let cosAngle = cos(angle);
+  let sinAngle = sin(angle);
+  return vec2<f32>(cosAngle * point.x + sinAngle * point.y, -sinAngle * point.x + cosAngle * point.y);
 }
 
 // ── sabs (smooth absolute value) ─────────────────────────────────────
 //
-// 'sabs(x, k)' approximates 'abs(x)' but is C¹-continuous at x = 0.
+// 'sabs(value, knee)' approximates 'abs(value)' but is C¹-continuous at value = 0.
 // The classic 'abs' has a kink at the origin; any analytic process
 // that takes derivatives across that kink (height-field normals,
 // implicit-surface gradients, anti-aliased silhouettes) ends up with
 // a discontinuous result that visually shows as a sharp seam.
 // 'sabs' replaces the kink with a smooth parabolic blend whose
-// "knee" width is controlled by 'k'.
+// "knee" width is controlled by 'knee'.
 //
-// Form: linear (= 'abs(x)') when '|x| >= k', parabolic with the same
-// value + slope at the join when '|x| < k'. Larger 'k' → wider soft
-// region → smoother but more rounded. k → 0 recovers exact 'abs(x)'.
+// Form: linear (= 'abs(value)') when '|value| >= knee', parabolic with the same
+// value + slope at the join when '|value| < knee'. Larger 'knee' → wider soft
+// region → smoother but more rounded. knee → 0 recovers exact 'abs(value)'.
 //
 // Implementation note: this is the GLSL macro
 //   LESS((.5/k)*x*x + k*.5,  abs(x),  abs(x) - k)
@@ -91,10 +91,10 @@ fn rot2(p: vec2<f32>, a: f32) -> vec2<f32> {
 // order: 'select(a, b, cond) = cond ? b : a', which matches GLSL
 // 'LESS' exactly.
 
-fn sabs(x: f32, k: f32) -> f32 {
-  let a = (0.5 / k) * x * x + k * 0.5;
-  let ax = abs(x);
-  return select(a, ax, ax >= k);
+fn sabs(value: f32, knee: f32) -> f32 {
+  let parabola = (0.5 / knee) * value * value + knee * 0.5;
+  let ax = abs(value);
+  return select(parabola, ax, ax >= knee);
 }
 
 // ── toPolar / toRect ─────────────────────────────────────────────────
@@ -106,25 +106,25 @@ fn sabs(x: f32, k: f32) -> f32 {
 //
 // Convention for both: vec2(r, theta) with theta in radians, range
 // (-PI, PI] (the WGSL 'atan2' contract). 'toPolar' and 'toRect' are
-// inverses for any finite vec2 input where length(p) > 0.
+// inverses for any finite vec2 input where length(point) > 0.
 //
 // Edge case: 'atan2(0, 0)' is implementation-defined in WGSL — most
 // hardware returns 0 but a few return NaN. Callers that pass a
 // possibly-zero point should guard upstream; we don't guard here
 // because the per-call branch cost is wasted in the common case
-// where the caller already knows p is non-zero.
+// where the caller already knows point is non-zero.
 
-fn toPolar(p: vec2<f32>) -> vec2<f32> {
-  return vec2<f32>(length(p), atan2(p.y, p.x));
+fn toPolar(point: vec2<f32>) -> vec2<f32> {
+  return vec2<f32>(length(point), atan2(point.y, point.x));
 }
 
-fn toRect(p: vec2<f32>) -> vec2<f32> {
-  return p.x * vec2<f32>(cos(p.y), sin(p.y));
+fn toRect(polar: vec2<f32>) -> vec2<f32> {
+  return polar.x * vec2<f32>(cos(polar.y), sin(polar.y));
 }
 
 // ── rotateAroundAxis ─────────────────────────────────────────────────
 //
-// Rodrigues' rotation formula: rotate 'v' by 'angleRad' about 'axis'
+// Rodrigues' rotation formula: rotate 'vector' by 'angleRad' about 'axis'
 // (right-hand rule). First consumer: the black-hole lens fragment
 // (bodies/blackHoleLensing/fragment.wesl), which has no camera-basis
 // uniform to build a billboard/deflection frame from and derives both
@@ -135,8 +135,8 @@ fn toRect(p: vec2<f32>) -> vec2<f32> {
 // scaled/skewed result for a non-unit axis rather than erroring, so
 // every call site normalizes its own axis before calling this.
 
-fn rotateAroundAxis(v: vec3<f32>, axis: vec3<f32>, angleRad: f32) -> vec3<f32> {
-  let c = cos(angleRad);
-  let s = sin(angleRad);
-  return v * c + cross(axis, v) * s + axis * dot(axis, v) * (1.0 - c);
+fn rotateAroundAxis(vector: vec3<f32>, axis: vec3<f32>, angleRad: f32) -> vec3<f32> {
+  let cosAngle = cos(angleRad);
+  let sinAngle = sin(angleRad);
+  return vector * cosAngle + cross(axis, vector) * sinAngle + axis * dot(axis, vector) * (1.0 - cosAngle);
 }

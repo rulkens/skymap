@@ -17,9 +17,9 @@
 //   2. Reconstruct: only nx, ny are stored; nz is always positive, recovered as
 //      'sqrt(1 - nx^2 - ny^2)' (floored at 0 so a slightly-over-unit encoded
 //      pair can't take the sqrt negative).
-//   3. Gram-Schmidt: the interpolated tangent 'T' skews off-perpendicular across
+//   3. Gram-Schmidt: the interpolated 'tangent' skews off-perpendicular across
 //      a face, so it is re-orthonormalized against the geometric normal 'Ng'
-//      before use ('Tn = normalize(T - Ng * dot(Ng, T))').
+//      before use ('Tn = normalize(tangent - Ng * dot(Ng, tangent))').
 //   4. Rotate: 'Bt = cross(Ng, Tn)' is the bitangent, and the tangent-space
 //      vector is rotated into local space as 'Tn*nx + Bt*ny + Ng*nz'.
 //
@@ -42,10 +42,10 @@
 //
 // Single quotes in comments; no backticks (WESL parse rule).
 
-fn perturbNormal(Ng: vec3<f32>, T: vec3<f32>, encRG: vec2<f32>) -> vec3<f32> {
+fn perturbNormal(Ng: vec3<f32>, tangent: vec3<f32>, encRG: vec2<f32>) -> vec3<f32> {
   let nxy = encRG * 2.0 - 1.0; // [0,1] -> [-1,1]
   let nz = sqrt(max(1.0 - dot(nxy, nxy), 0.0)); // reconstruct +z
-  let Tn = normalize(T - Ng * dot(Ng, T)); // Gram-Schmidt T against Ng
+  let Tn = normalize(tangent - Ng * dot(Ng, tangent)); // Gram-Schmidt tangent against Ng
   let Bt = cross(Ng, Tn); // +v = north (the bake's G axis)
   return normalize(Tn * nxy.x + Bt * nxy.y + Ng * nz);
 }
