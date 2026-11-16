@@ -8,8 +8,8 @@ import { memo, useCallback, useState, type ReactNode } from 'react';
 import SkyEntryButton from '../SkyEntryButton/SkyEntryButton';
 import SkyEntryPreview from '../SkyEntryPreview/SkyEntryPreview';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { selectSkyEntry } from '../../state/sky/selectSkyEntry';
-import { enterSkyHere } from '../../state/sky/enterSkyHere';
+import { selectSkyEntry } from '../../state/sky/selectors/selectSkyEntry';
+import { enterSkyHere } from '../../state/sky/actions/enterSkyHere';
 import { placeLabel } from '../../utils/places/placeLabel';
 import { spotLatLonLabel } from '../../utils/places/spotLatLonLabel';
 

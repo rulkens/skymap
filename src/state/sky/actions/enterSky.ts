@@ -5,7 +5,7 @@
  */
 import { createAction } from '@reduxjs/toolkit';
 
-import type { SkySpot } from '../../@types/camera/pose/SkySpot';
-import type { Vec3 } from '../../@types/math/Vec3';
+import type { SkySpot } from '../../../@types/camera/pose/SkySpot';
+import type { Vec3 } from '../../../@types/math/Vec3';
 
 export const enterSky = createAction<{ spot: SkySpot; pointLocalM: Vec3 | null }>('sky/enter');

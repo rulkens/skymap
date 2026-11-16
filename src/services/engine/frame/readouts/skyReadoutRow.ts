@@ -1,6 +1,6 @@
 import type { FrameReadoutRow } from '../../../../@types/engine/frame/FrameReadoutRow';
 import { skyEntryReported, skyViewReported } from '../../../../state/sky/skySlice';
-import { selectSkyView } from '../../../../state/sky/selectSkyView';
+import { selectSkyView } from '../../../../state/sky/selectors/selectSkyView';
 import { isBodyArm } from '../../camera/arms/body/isBodyArm';
 import { isSkyArm } from '../../camera/arms/sky/isSkyArm';
 import { skyEntryFactsAt } from '../../../../utils/sky/skyEntryFactsAt';
@@ -10,7 +10,7 @@ import { SKY_VIEW_STEP_RAD } from '../../../../data/sky/skyViewStepRad';
 import { roundToMultiple } from '../../../../utils/math/roundToMultiple';
 import { wrapRadPositive } from '../../../../utils/math/wrapRadPositive';
 import { skyViewChanged } from '../../../../utils/sky/skyViewChanged';
-import { selectSkyEntryFacts } from '../../../../state/sky/selectSkyEntryFacts';
+import { selectSkyEntryFacts } from '../../../../state/sky/selectors/selectSkyEntryFacts';
 
 /**
  * The two sky facts, each dispatched only when it differs from the stored one: where

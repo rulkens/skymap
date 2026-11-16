@@ -12,7 +12,7 @@ import { rootReducer } from '../../../src/store/rootReducer';
 import { skyViewReported } from '../../../src/state/sky/skySlice';
 import { exitTakeover, takeoverStarted } from '../../../src/state/takeover/takeoverActions';
 import { skyBelowHorizonSet } from '../../../src/state/sky/skySlice';
-import { skyClockTo } from '../../../src/state/sky/skyClockTo';
+import { skyClockTo } from '../../../src/state/sky/actions/skyClockTo';
 import { goLive } from '../../../src/state/time/timeSlice';
 import { selectTimeState } from '../../../src/state/time/selectors';
 import { sunAltitudeAt } from '../../../src/utils/sky/sunAltitudeAt';

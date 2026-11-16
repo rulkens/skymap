@@ -5,7 +5,7 @@
  */
 import { delay, put, select, takeLatest } from 'typed-redux-saga';
 
-import { skyClockTo } from '../skyClockTo';
+import { skyClockTo } from '../actions/skyClockTo';
 import { SKY_CLOCK_SKIP_MS } from '../../../data/sky/skyClockSkipMs';
 import { selectTimeState } from '../../time/selectors';
 import { startClockProfile } from '../../time/timeSlice';

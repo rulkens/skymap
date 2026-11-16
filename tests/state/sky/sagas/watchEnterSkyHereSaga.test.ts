@@ -4,8 +4,8 @@ import { configureStore, type Middleware, type UnknownAction } from '@reduxjs/to
 
 import { rootReducer } from '../../../../src/store/rootReducer';
 import { watchEnterSkyHereSaga } from '../../../../src/state/sky/sagas/watchEnterSkyHereSaga';
-import { enterSkyHere } from '../../../../src/state/sky/enterSkyHere';
-import { enterSky } from '../../../../src/state/sky/enterSky';
+import { enterSkyHere } from '../../../../src/state/sky/actions/enterSkyHere';
+import { enterSky } from '../../../../src/state/sky/actions/enterSky';
 import { skyEntryReported } from '../../../../src/state/sky/skySlice';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import type { SkySpot } from '../../../../src/@types/camera/pose/SkySpot';

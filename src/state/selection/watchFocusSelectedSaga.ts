@@ -13,7 +13,7 @@ import { viewSelected } from './viewSelected';
 import { requestView } from './requestView';
 import { selectSelectedRef } from './selectors';
 import { updateSelectionFocus } from './selectionSlice';
-import { selectSkyView } from '../sky/selectSkyView';
+import { selectSkyView } from '../sky/selectors/selectSkyView';
 import { selectTimeState } from '../time/selectors';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { isSkyLookable } from '../../utils/sky/isSkyLookable';

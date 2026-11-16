@@ -33,7 +33,7 @@ import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { resolveFocusMotion } from '../../utils/camera/focusMotion/resolveFocusMotion';
 import { focusMotionRowOf } from '../../services/engine/camera/clips/focusMotionRowOf';
 import type { SagaContext } from '../../store/types';
-import { selectSkyView } from '../sky/selectSkyView';
+import { selectSkyView } from '../sky/selectors/selectSkyView';
 
 export function* watchFocusTweenSaga() {
   yield* takeLatest(

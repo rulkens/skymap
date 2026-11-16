@@ -1,10 +1,10 @@
 /** watchEnterSkyHereSaga — `enterSkyHere` as an `enterSky` at the centre ground, with its point so the arrival glides. */
 import { put, select, takeEvery } from 'typed-redux-saga';
 
-import { enterSkyHere } from '../enterSkyHere';
-import { enterSky } from '../enterSky';
-import { selectSkyEntry } from '../selectSkyEntry';
-import { selectSkyEntryFacts } from '../selectSkyEntryFacts';
+import { enterSkyHere } from '../actions/enterSkyHere';
+import { enterSky } from '../actions/enterSky';
+import { selectSkyEntry } from '../selectors/selectSkyEntry';
+import { selectSkyEntryFacts } from '../selectors/selectSkyEntryFacts';
 
 export function* watchEnterSkyHereSaga() {
   yield* takeEvery(enterSkyHere, function* () {

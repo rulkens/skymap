@@ -10,7 +10,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import SkyEntryButtonContainer from '../../../src/components/containers/SkyEntryButtonContainer';
 import { rootReducer } from '../../../src/store/rootReducer';
 import { skyEntryReported } from '../../../src/state/sky/skySlice';
-import { enterSkyHere } from '../../../src/state/sky/enterSkyHere';
+import { enterSkyHere } from '../../../src/state/sky/actions/enterSkyHere';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 import type { SkySpot } from '../../../src/@types/camera/pose/SkySpot';
 

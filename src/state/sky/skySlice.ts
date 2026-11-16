@@ -8,7 +8,7 @@
  */
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
-import { enterSky } from './enterSky';
+import { enterSky } from './actions/enterSky';
 import { NO_SKY_ENTRY } from '../../data/sky/noSkyEntry';
 import type { SkyBelowHorizon } from '../../@types/sky/SkyBelowHorizon';
 import type { SkyEntryFacts } from '../../@types/engine/SkyEntryFacts';

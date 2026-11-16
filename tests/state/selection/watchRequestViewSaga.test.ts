@@ -16,7 +16,7 @@ import { updateSelectionFocus } from '../../../src/state/selection/selectionSlic
 import { clipEnded, clipStarted } from '../../../src/state/camera/cameraIntentSlice';
 import { skyViewReported } from '../../../src/state/sky/skySlice';
 import { pause, setSimDays } from '../../../src/state/time/timeSlice';
-import { selectSkyBelowHorizon } from '../../../src/state/sky/selectSkyBelowHorizon';
+import { selectSkyBelowHorizon } from '../../../src/state/sky/selectors/selectSkyBelowHorizon';
 import { actionsForPaletteAction } from '../../../src/utils/palette/actionsForPaletteAction';
 import { evaluateFramedClip } from '../../../src/services/engine/camera/clips/evaluateClip';
 import { foldToWorld } from '../../../src/services/engine/camera/arms/foldToWorld';

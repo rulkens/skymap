@@ -17,8 +17,8 @@ import { selectPaletteOpen, selectPaletteTab } from '../../state/ui/selectors';
 import { setPaletteOpen, setPaletteTab } from '../../state/ui/uiSlice';
 import { FEATURED_TABS } from '../../data/palette/featuredTabs';
 import { actionsForPaletteAction } from '../../utils/palette/actionsForPaletteAction';
-import { selectSkyEntry } from '../../state/sky/selectSkyEntry';
-import { selectSkyHost } from '../../state/sky/selectSkyHost';
+import { selectSkyEntry } from '../../state/sky/selectors/selectSkyEntry';
+import { selectSkyHost } from '../../state/sky/selectors/selectSkyHost';
 
 function CommandPaletteContainer(): React.ReactElement {
   const dispatch = useAppDispatch();

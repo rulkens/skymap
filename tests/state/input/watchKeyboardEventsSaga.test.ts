@@ -46,7 +46,7 @@ import { setRate } from '../../../src/state/time/timeSlice';
 import { updateSelectionFocus } from '../../../src/state/selection/selectionSlice';
 import { selectFocusRef } from '../../../src/state/selection/selectors';
 import { skyEntryReported, skyViewReported } from '../../../src/state/sky/skySlice';
-import { enterSkyHere } from '../../../src/state/sky/enterSkyHere';
+import { enterSkyHere } from '../../../src/state/sky/actions/enterSkyHere';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 const EARTH = asSceneBodyId('earth');

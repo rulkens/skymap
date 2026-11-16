@@ -10,7 +10,7 @@ import { requestView } from './requestView';
 import { requestFocus } from './requestFocus';
 import { resolveFocusRefDeferringSaga } from './resolveFocusRefDeferringSaga';
 import { clipEnded } from '../camera/cameraIntentSlice';
-import { selectSkyView } from '../sky/selectSkyView';
+import { selectSkyView } from '../sky/selectors/selectSkyView';
 import { selectTakeoverSource } from '../takeover/selectors';
 import { selectClipOwner } from '../camera/selectors';
 import { selectTimeState } from '../time/selectors';

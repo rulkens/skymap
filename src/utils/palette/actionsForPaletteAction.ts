@@ -10,8 +10,8 @@ import { requestSelect } from '../../state/selection/requestSelect';
 import { openExhibit } from '../../state/exhibits/exhibitActions';
 import { startTour } from '../../state/tour/tourActions';
 import { flyToLonLat } from '../../state/camera/flyToLonLatActions';
-import { enterSky } from '../../state/sky/enterSky';
-import { enterSkyHere } from '../../state/sky/enterSkyHere';
+import { enterSky } from '../../state/sky/actions/enterSky';
+import { enterSkyHere } from '../../state/sky/actions/enterSkyHere';
 import type { PaletteAction } from '../../@types/palette/PaletteAction';
 
 export function actionsForPaletteAction(action: PaletteAction): UnknownAction[] {

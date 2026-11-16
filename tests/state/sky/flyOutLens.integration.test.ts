@@ -19,7 +19,7 @@ import { watchTakeoverSaga } from '../../../src/state/takeover/watchTakeoverSaga
 import { watchFocusSelectedSaga } from '../../../src/state/selection/watchFocusSelectedSaga';
 import { watchFocusTweenSaga } from '../../../src/state/selection/watchFocusTweenSaga';
 import { watchSelectionRowsSaga } from '../../../src/state/selectionRows/watchSelectionRowsSaga';
-import { enterSky } from '../../../src/state/sky/enterSky';
+import { enterSky } from '../../../src/state/sky/actions/enterSky';
 import { focusSelected } from '../../../src/state/selection/focusSelected';
 import { updateSelectionSelect } from '../../../src/state/selection/selectionSlice';
 import { commitCameraPose, setFovYRad } from '../../../src/state/camera/cameraIntentSlice';

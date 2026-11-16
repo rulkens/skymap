@@ -5,14 +5,14 @@
 import { describe, it, expect } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
 
-import { rootReducer } from '../../../src/store/rootReducer';
-import { selectSkyEntry } from '../../../src/state/sky/selectSkyEntry';
-import { skyEntryReported, skyViewReported } from '../../../src/state/sky/skySlice';
-import { takeoverStarted } from '../../../src/state/takeover/takeoverActions';
-import { clipStarted } from '../../../src/state/camera/cameraIntentSlice';
-import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
-import type { RootState } from '../../../src/store/types';
-import type { SkySpot } from '../../../src/@types/camera/pose/SkySpot';
+import { rootReducer } from '../../../../src/store/rootReducer';
+import { selectSkyEntry } from '../../../../src/state/sky/selectors/selectSkyEntry';
+import { skyEntryReported, skyViewReported } from '../../../../src/state/sky/skySlice';
+import { takeoverStarted } from '../../../../src/state/takeover/takeoverActions';
+import { clipStarted } from '../../../../src/state/camera/cameraIntentSlice';
+import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import type { RootState } from '../../../../src/store/types';
+import type { SkySpot } from '../../../../src/@types/camera/pose/SkySpot';
 
 const SPOT: SkySpot = { body: asSceneBodyId('earth'), lonRad: 0.2, latRad: 0.9 };
 

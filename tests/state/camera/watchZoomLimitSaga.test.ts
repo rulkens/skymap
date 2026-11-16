@@ -12,7 +12,7 @@ import { watchZoomLimitSaga } from '../../../src/state/camera/watchZoomLimitSaga
 import { zoomLimitPushed } from '../../../src/state/camera/zoomLimitPushed';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
-import { enterSky } from '../../../src/state/sky/enterSky';
+import { enterSky } from '../../../src/state/sky/actions/enterSky';
 import { exitTakeover, takeoverStarted } from '../../../src/state/takeover/takeoverActions';
 import { skyViewReported } from '../../../src/state/sky/skySlice';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
@@ -42,7 +42,11 @@ describe('watchZoomLimitSaga', () => {
   it("an out push plays its lift under the store's orientation", () => {
     const store = build();
     store.dispatch(zoomLimitPushed({ edge: 'out', lift: LIFT }));
-    expect(store.getState().camera.intent.clip).toEqual({ data: LIFT, frame: 'galactic', by: 'skyLift' });
+    expect(store.getState().camera.intent.clip).toEqual({
+      data: LIFT,
+      frame: 'galactic',
+      by: 'skyLift',
+    });
   });
 
   it('a floor push enters sky mode at its anchor', () => {

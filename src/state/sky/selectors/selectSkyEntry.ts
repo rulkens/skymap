@@ -4,12 +4,12 @@
  * centre, already standing (D9), or while any takeover or camera clip owns the camera (a sky
  * takeover is only ever arriving, standing or restoring, so "any" loses nothing).
  */
-import type { RootState } from '../../store/types';
-import type { SkyEntryFacts } from '../../@types/engine/SkyEntryFacts';
-import { SKY_ENTRY_MAX_ALT_M } from '../../data/sky/skyEntryMaxAltM';
+import type { RootState } from '../../../store/types';
+import type { SkyEntryFacts } from '../../../@types/engine/SkyEntryFacts';
+import { SKY_ENTRY_MAX_ALT_M } from '../../../data/sky/skyEntryMaxAltM';
 import { selectSkyView } from './selectSkyView';
-import { selectTakeoverSource } from '../takeover/selectors';
-import { selectClipActive } from '../camera/selectors';
+import { selectTakeoverSource } from '../../takeover/selectors';
+import { selectClipActive } from '../../camera/selectors';
 import { selectSkyEntryFacts } from './selectSkyEntryFacts';
 
 export const selectSkyEntry = (state: RootState): SkyEntryFacts['spot'] => {

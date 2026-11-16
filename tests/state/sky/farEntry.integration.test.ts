@@ -14,7 +14,7 @@ vi.mock('../../../src/services/gpu/device', () => ({
 }));
 
 import { watchTakeoverSaga } from '../../../src/state/takeover/watchTakeoverSaga';
-import { enterSky } from '../../../src/state/sky/enterSky';
+import { enterSky } from '../../../src/state/sky/actions/enterSky';
 import { commitCameraPose } from '../../../src/state/camera/cameraIntentSlice';
 import { selectTakeoverSource } from '../../../src/state/takeover/selectors';
 import { offSpotM } from '../../../src/utils/sky/offSpotM';

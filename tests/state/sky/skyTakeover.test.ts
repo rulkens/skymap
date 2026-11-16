@@ -19,7 +19,7 @@ vi.mock('../../../src/compositions/appTours', async () => {
 import { rootReducer } from '../../../src/store/rootReducer';
 import { watchTakeoverSaga } from '../../../src/state/takeover/watchTakeoverSaga';
 import { watchZoomLimitSaga } from '../../../src/state/camera/watchZoomLimitSaga';
-import { enterSky } from '../../../src/state/sky/enterSky';
+import { enterSky } from '../../../src/state/sky/actions/enterSky';
 import { exitTakeover } from '../../../src/state/takeover/takeoverActions';
 import { zoomLimitPushed } from '../../../src/state/camera/zoomLimitPushed';
 import { startTour } from '../../../src/state/tour/tourActions';
