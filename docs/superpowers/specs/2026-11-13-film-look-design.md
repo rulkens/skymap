@@ -37,8 +37,8 @@ code, same VRAM.
   under R8; the first ruling put the bars in the DOM.) `OVERLAYS` ends with its own render step
   `{ target: 'swap', slab: COSMO, passes: ['letterbox'] }`, enabled by `filmLetterboxOn(film)` =
   `enabled && letterbox`, drawn by `letterboxRenderer`: a bind-group-free covering triangle returning opaque
-  black, drawn twice under a scissor rect: top and bottom bars of `floor((h − w / 2.39) / 2)` target pixels on a
-  frame taller than 2.39:1, left and right bars of `floor((w − h × 2.39) / 2)` on a wider one (owner 2026-11-16:
+  black, drawn twice under a scissor rect: top and bottom bars of `floor((h − w / aspect) / 2)` target pixels on a
+  frame taller than the aspect, left and right bars of `floor((w − h × aspect) / 2)` on a wider one (owner 2026-11-16:
   the ratio holds both ways; the ratio is `film.letterboxAspect`, chosen on the Film look debug board (`letterboxAspects.ts`)), nothing at 2.39:1 exactly. Drawn after every
   overlay, so labels and rings fall under the bars; the dome rig has no `OVERLAYS`, so it never gets bars.
   Off, the step encodes nothing (the look-off frame is today's frame, R6). The HUD stays DOM, above.
