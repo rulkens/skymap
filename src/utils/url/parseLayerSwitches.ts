@@ -19,6 +19,13 @@ export function parseLayerSwitches(value: string): LayerSwitchParse {
     if (token === '') continue;
     const on = !token.startsWith('-');
     const name = on ? token : token.slice(1);
+    if (name === 'label') {
+      for (const e of ENTRIES) {
+        const address = visibilityAddressOf(e);
+        if (address.startsWith('label:')) switches.push({ address, on });
+      }
+      continue;
+    }
     const { bare, item } = splitVisibilityAddress(name);
     const entry = ENTRIES.find((e) => visibilityAddressOf(e) === bare);
     const known = entry !== undefined && (item === undefined || entry.items?.includes(item));

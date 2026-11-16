@@ -8,7 +8,7 @@
 
 **Tech Stack:** TS, WebGPU, WESL (`?static` build-time linking — no conditional compilation in this repo), Vitest, sharp, tsx tools.
 
-**Spec:** `docs/superpowers/specs/2026-09-13-per-planet-terrain-design.md` §3.8 (this plan's ground preparation), §9 (F4).
+**Spec:** `docs/superpowers/specs/completed/2026-09-13-per-planet-terrain-design.md` §3.8 (this plan's ground preparation), §9 (F4).
 
 ## Global Constraints
 

@@ -8,7 +8,7 @@
 //
 // ## Why no @group/@binding declarations here
 //
-// WESL has no global state — '@group(N) @binding(M) var<uniform> u'
+// WESL has no global state — '@group(N) @binding(M) var<uniform> camera'
 // is module-local and cannot be exported across modules.  The
 // consuming files (halo.wesl, ring.wesl) each redeclare the bindings
 // using the structs imported from this file.  WGSL accepts the same
@@ -29,7 +29,7 @@
 // quadCorner from lib/billboard.wesl maps @builtin(vertex_index) 0..5
 // directly to the four corners (with two diagonal repeats).  We don't
 // need a per-vertex attribute at all — the vertex stage calls
-// quadCorner(vi) inline.  The VsIn struct below carries per-instance
+// quadCorner(vertexIndex) inline.  The VsIn struct below carries per-instance
 // data only; the vertex stage sources its corner offset from the
 // built-in vertex index, not from a vertex buffer attribute.
 

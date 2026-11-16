@@ -16,7 +16,7 @@ import package::lib::billboard::expandBillboardScreen;
 @group(0) @binding(1) var<uniform> sel: SelectionRingUniforms;
 
 @vertex
-fn vs(@builtin(vertex_index) vi: u32) -> VsOut {
+fn vs(@builtin(vertex_index) vertexIndex: u32) -> VsOut {
   // Project the selected galaxy's world position to clip space.  The
   // shared helper makes the camera path identical to every other
   // billboard renderer in the project.
@@ -24,7 +24,7 @@ fn vs(@builtin(vertex_index) vi: u32) -> VsOut {
 
   // Look up this vertex's unit-quad corner in [-1, +1]² via the shared
   // billboard helper.  Six vertices per quad (non-indexed triangle-list).
-  let corner = quadCorner(vi);
+  let corner = quadCorner(vertexIndex);
 
   // Expand the centre by 'ringRadiusPx' pixels.  The CPU already baked
   // the 8× halo factor into 'ringRadiusPx', so the helper returns the

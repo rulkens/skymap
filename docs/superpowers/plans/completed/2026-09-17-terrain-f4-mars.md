@@ -8,7 +8,7 @@
 
 **Tech Stack:** TS, sharp/libvips (windowed GeoTIFF reads), tsx tools, WebGPU/WESL, Vitest.
 
-**Spec:** `docs/superpowers/specs/2026-09-13-per-planet-terrain-design.md` §3.8, §4.1–4.3, §9, §10. Prep: `docs/superpowers/plans/completed/2026-09-16-terrain-f4-prep.md` (its deferral list is this plan's scope).
+**Spec:** `docs/superpowers/specs/completed/2026-09-13-per-planet-terrain-design.md` §3.8, §4.1–4.3, §9, §10. Prep: `docs/superpowers/plans/completed/2026-09-16-terrain-f4-prep.md` (its deferral list is this plan's scope).
 
 ## Global Constraints
 
@@ -215,7 +215,7 @@ F3a routes surface-fixed site placement (`deriveBodyStates.ts:84` and `sitePoint
 
 ### Task 8: Docs
 
-**Files:** `docs/superpowers/specs/2026-09-13-per-planet-terrain-design.md` (§9, §10 amendments: sources as built, site set, tile counts), `docs/DATA.md`, `docs/DEPLOY.md` if the R2 step needs a Mars line, `docs/BACKLOG.md` (remove nothing unless an item is consumed; add rulings the user declines).
+**Files:** `docs/superpowers/specs/completed/2026-09-13-per-planet-terrain-design.md` (§9, §10 amendments: sources as built, site set, tile counts), `docs/DATA.md`, `docs/DEPLOY.md` if the R2 step needs a Mars line, `docs/BACKLOG.md` (remove nothing unless an item is consumed; add rulings the user declines).
 
 - [x] Amend in place, marked with the ruling date. Commit.
 

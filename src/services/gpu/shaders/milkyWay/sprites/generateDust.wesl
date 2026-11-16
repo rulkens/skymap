@@ -57,8 +57,8 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   var dead: DustRec;
   dead.alive = false;
 
-  for (var i = 0u; i < gen.dustRangeCount; i = i + 1u) {
-    let range = gen.dustRanges[i];
+  for (var rangeIndex = 0u; rangeIndex < gen.dustRangeCount; rangeIndex = rangeIndex + 1u) {
+    let range = gen.dustRanges[rangeIndex];
     let start = range.x;
     let iterations = range.y;
     let stride = range.z;

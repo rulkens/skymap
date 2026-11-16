@@ -20,14 +20,14 @@ const INNER_RIM_FRACTION: f32 = 0.05;
 // 'intensity' knob. 0.0 means no obscuring material along this ray — either
 // it never touches the shell, or it crosses the shell entirely outside the
 // latitude wedge (e.g. toward the poles).
-fn bandDensityMask(u: Uniforms, ndc: vec2<f32>, fragCoordXY: vec2<f32>) -> f32 {
+fn bandDensityMask(uniforms: Uniforms, ndc: vec2<f32>, fragCoordXY: vec2<f32>) -> f32 {
   let rayDir = normalize(
-    u.rayAxis
-    + ndc.x * u.tanHalfX * u.camRight
-    + ndc.y * u.tanHalfY * u.camUp,
+    uniforms.rayAxis
+    + ndc.x * uniforms.tanHalfX * uniforms.camRight
+    + ndc.y * uniforms.tanHalfY * uniforms.camUp,
   );
 
-  let outerHits = raySphere(u.cameraPosMpc, rayDir, vec3<f32>(0.0), u.outerRadiusMpc);
+  let outerHits = raySphere(uniforms.cameraPosMpc, rayDir, vec3<f32>(0.0), uniforms.outerRadiusMpc);
   if (outerHits.y < 0.0) {
     return 0.0; // ray never touches the outer sphere at all
   }
@@ -43,36 +43,36 @@ fn bandDensityMask(u: Uniforms, ndc: vec2<f32>, fragCoordXY: vec2<f32>) -> f32 {
   let jitter = fract(sin(dot(fragCoordXY, vec2<f32>(12.9898, 78.233))) * 43758.5453);
 
   var accum = 0.0;
-  for (var i: u32 = 0u; i < STEPS; i++) {
-    let t = tStart + (f32(i) + jitter) * stepLen;
-    let p = u.cameraPosMpc + rayDir * t;
-    let r = length(p);
+  for (var stepIndex: u32 = 0u; stepIndex < STEPS; stepIndex++) {
+    let rayDistance = tStart + (f32(stepIndex) + jitter) * stepLen;
+    let samplePos = uniforms.cameraPosMpc + rayDir * rayDistance;
+    let radiusMpc = length(samplePos);
 
     // Radial profile: soft inner rim x exponential decay ('radialFalloffMpc'
     // e-folds it) x a hard outer rim — exp() alone never reaches zero.
     let innerRim = smoothstep(
-      u.innerRadiusMpc,
-      u.innerRadiusMpc + INNER_RIM_FRACTION * (u.outerRadiusMpc - u.innerRadiusMpc),
-      r,
+      uniforms.innerRadiusMpc,
+      uniforms.innerRadiusMpc + INNER_RIM_FRACTION * (uniforms.outerRadiusMpc - uniforms.innerRadiusMpc),
+      radiusMpc,
     );
     // Slider floor: the DebugPanel lets 'radialFalloffMpc' reach 0, which
     // would divide by zero below.
-    let falloffMpc = max(u.radialFalloffMpc, 1e-3);
-    let distanceFade = exp(-max(r - u.innerRadiusMpc, 0.0) / falloffMpc);
-    let outerRim = 1.0 - smoothstep(0.9 * u.outerRadiusMpc, u.outerRadiusMpc, r);
+    let falloffMpc = max(uniforms.radialFalloffMpc, 1e-3);
+    let distanceFade = exp(-max(radiusMpc - uniforms.innerRadiusMpc, 0.0) / falloffMpc);
+    let outerRim = 1.0 - smoothstep(0.9 * uniforms.outerRadiusMpc, uniforms.outerRadiusMpc, radiusMpc);
     let radialMask = innerRim * distanceFade * outerRim;
     if (radialMask <= 0.0) {
-      continue; // skip the trig below; also guards asin(z / r) since r > 0 here
+      continue; // skip the trig below; also guards asin(z / radiusMpc) since radiusMpc > 0 here
     }
 
     // Dust extinction is worst toward the bulge and thinnest toward the
     // anticenter, so the wedge's half-width is a cosine bump over longitude.
-    let galactic = worldToGalactic(p);
+    let galactic = worldToGalactic(samplePos);
     let lon = atan2(galactic.y, galactic.x);
-    // z and r round independently, so near the pole their ratio can land just
+    // z and radiusMpc round independently, so near the pole their ratio can land just
     // past ±1 — asin is undefined there and the NaN survives both tails' discards.
-    let lat = asin(clamp(galactic.z / r, -1.0, 1.0));
-    let bLimitDeg = u.anticenterDeg + (u.bulgeDeg - u.anticenterDeg) * (0.5 + 0.5 * cos(lon));
+    let lat = asin(clamp(galactic.z / radiusMpc, -1.0, 1.0));
+    let bLimitDeg = uniforms.anticenterDeg + (uniforms.bulgeDeg - uniforms.anticenterDeg) * (0.5 + 0.5 * cos(lon));
     let latDeg = degrees(lat);
 
     // 'edgeBandMask' is two-tailed; latitude maps onto an axis centred on the
@@ -81,11 +81,11 @@ fn bandDensityMask(u: Uniforms, ndc: vec2<f32>, fragCoordXY: vec2<f32>) -> f32 {
     let bAxis = clamp(0.5 + 0.5 * (latDeg / bLimitDeg), 0.0, 1.0);
     // Slider floor: 'edgeSharpness' reaches 0, and a zero-width edgeBandMask
     // smoothstep is 0/0 = NaN exactly where bAxis lands on its 0/1 end stops.
-    let edgeFadeAxis = clamp(u.edgeSharpness / (2.0 * bLimitDeg), 1e-3, 0.5);
+    let edgeFadeAxis = clamp(uniforms.edgeSharpness / (2.0 * bLimitDeg), 1e-3, 0.5);
     let latMask = edgeBandMask(bAxis, edgeFadeAxis);
 
     accum += radialMask * latMask;
   }
 
-  return accum * stepLen / u.outerRadiusMpc;
+  return accum * stepLen / uniforms.outerRadiusMpc;
 }

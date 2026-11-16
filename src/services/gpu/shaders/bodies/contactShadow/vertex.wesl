@@ -5,7 +5,7 @@
 
 import package::bodies::contactShadow::io::ContactShadowUniforms;
 
-@group(0) @binding(0) var<uniform> u: ContactShadowUniforms;
+@group(0) @binding(0) var<uniform> uniforms: ContactShadowUniforms;
 
 // Corner i sits at (bit0, bit1, bit2) of i, mapped 0 -> -1 and 1 -> +1.
 const CUBE_CORNERS: array<u32, 36> = array<u32, 36>(
@@ -21,7 +21,7 @@ const CUBE_CORNERS: array<u32, 36> = array<u32, 36>(
 fn vs(@builtin(vertex_index) vertexIndex: u32) -> @builtin(position) vec4<f32> {
   // A function-scope copy: naga rejects a runtime index into a module const.
   var corners = CUBE_CORNERS;
-  let c = corners[vertexIndex];
-  let corner = vec3<f32>(f32(c & 1u), f32((c >> 1u) & 1u), f32((c >> 2u) & 1u)) * 2.0 - 1.0;
-  return u.boxToClip * vec4<f32>(corner, 1.0);
+  let cornerIndex = corners[vertexIndex];
+  let corner = vec3<f32>(f32(cornerIndex & 1u), f32((cornerIndex >> 1u) & 1u), f32((cornerIndex >> 2u) & 1u)) * 2.0 - 1.0;
+  return uniforms.boxToClip * vec4<f32>(corner, 1.0);
 }

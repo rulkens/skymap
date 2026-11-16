@@ -15,7 +15,7 @@
 // is not supported'. That guidance is stale for this plugin version: the
 // generation compute passes already import a module-scope 'var<uniform>'
 // across files ('import package::milkyWay::sprites::generate::gen' in
-// generateStars.wesl), and it links. We lean on that: 'u' is declared once
+// generateStars.wesl), and it links. We lean on that: 'uniforms' is declared once
 // here and imported by stars.wesl / dust.wesl, so the binding number and
 // the struct type have exactly ONE definition and cannot drift between the
 // two passes.
@@ -108,8 +108,8 @@ struct Uniforms {
 // The single '@group(0) @binding(0)' binding, imported by both pass modules
 // (see the module header for why a binding var is shared rather than
 // re-declared). Its type 'Uniforms' travels with it through the linker, so
-// consumers import only 'u'.
-@group(0) @binding(0) var<uniform> u: Uniforms;
+// consumers import only 'uniforms'.
+@group(0) @binding(0) var<uniform> uniforms: Uniforms;
 
 // spriteBillboardOffset — the unit-scale world offset of one billboard
 // corner for one sprite, on a basis facing THE EYE rather than the view

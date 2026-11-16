@@ -42,11 +42,12 @@ fn sunlightTint(earthRelKm: vec3<f32>, sunDir: vec3<f32>) -> vec3<f32> {
   return exp(-GRAZING_DEPTH * exp(-grazeHeightKm / GRAZING_SCALE_KM));
 }
 
-// Lambert sphere: ((PI - a) cos a + sin a) / PI. Floored at 0 because rounding near a = PI can
-// dip below it, and the caller raises this to a fractional power.
+// Lambert sphere: ((PI - phaseAngle) cos phaseAngle + sin phaseAngle) / PI. Floored at 0
+// because rounding near phaseAngle = PI can dip below it, and the caller raises this to a
+// fractional power.
 fn lambertPhase(cosPhase: f32) -> f32 {
-  let a = acos(clamp(cosPhase, -1.0, 1.0));
-  return max(((PI - a) * cos(a) + sin(a)) / PI, 0.0);
+  let phaseAngle = acos(clamp(cosPhase, -1.0, 1.0));
+  return max(((PI - phaseAngle) * cos(phaseAngle) + sin(phaseAngle)) / PI, 0.0);
 }
 
 // A panel turns about the orbit normal to face the Sun as nearly as it can, so its normal is the
@@ -56,17 +57,17 @@ fn panelGlint(orbitNormal: vec3<f32>, sunDir: vec3<f32>, viewDir: vec3<f32>) -> 
   if (normalLen2 < MIN_ORBIT_NORMAL_LEN2) {
     return 0.0;
   }
-  let h = orbitNormal / sqrt(normalLen2);
-  let inPlane = sunDir - h * dot(sunDir, h);
+  let orbitAxis = orbitNormal / sqrt(normalLen2);
+  let inPlane = sunDir - orbitAxis * dot(sunDir, orbitAxis);
   let inPlaneLen2 = dot(inPlane, inPlane);
   let halfwaySum = sunDir + viewDir;
   let halfwayLen2 = dot(halfwaySum, halfwaySum);
   if (inPlaneLen2 < MIN_UNIT_LEN2 || halfwayLen2 < MIN_UNIT_LEN2) {
     return 0.0;
   }
-  let n = inPlane / sqrt(inPlaneLen2);
+  let panelNormal = inPlane / sqrt(inPlaneLen2);
   let halfway = halfwaySum / sqrt(halfwayLen2);
-  return pow(max(dot(n, halfway), 0.0), GLINT_LOBE_EXP);
+  return pow(max(dot(panelNormal, halfway), 0.0), GLINT_LOBE_EXP);
 }
 
 // A flat body face pointing at Earth's centre. It is lit only once the Sun is below the
@@ -80,7 +81,7 @@ fn plateGlint(earthRelKm: vec3<f32>, sunDir: vec3<f32>, viewDir: vec3<f32>) -> f
   if (rangeLen2 < MIN_ORBIT_NORMAL_LEN2 || halfwayLen2 < MIN_UNIT_LEN2) {
     return 0.0;
   }
-  let n = -earthRelKm / sqrt(rangeLen2);
+  let plateNormal = -earthRelKm / sqrt(rangeLen2);
   let halfway = halfwaySum / sqrt(halfwayLen2);
-  return pow(max(dot(n, halfway), 0.0), GLINT_LOBE_EXP);
+  return pow(max(dot(plateNormal, halfway), 0.0), GLINT_LOBE_EXP);
 }

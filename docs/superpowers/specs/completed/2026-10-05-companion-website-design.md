@@ -1,6 +1,6 @@
 # Companion website — design and build order
 
-**Status:** approved to build on the owner's delegation (2026-10-05: "make your own judgement calls"). Calls made under that delegation are marked **[call]** so they are easy to overturn.
+**Status:** shipped (pass 3 #1027; `layers=` link parameter #1060). Approved to build on the owner's delegation (2026-10-05: "make your own judgement calls"). Calls made under that delegation are marked **[call]** so they are easy to overturn.
 
 **Research this rests on:** `docs/research/2026-09-17-companion-website/` — 01–05 repo sweeps, 06 exemplar sites, 07 awe and UX evidence, 08 copy guide, 09 feature inventory, 10 planned features, and `prototype/home-prototype.html` (the accepted Home prototype; it references local files, so read it as a design reference, not a page to ship).
 

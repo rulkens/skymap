@@ -8,26 +8,26 @@
 import package::milkyWay::field::hiiSplat::io::HiiSplatOut;
 import package::lib::billboard::quadCorner;
 import package::lib::splatSilhouette::splatNdc;
-import package::milkyWay::field::io::u;
+import package::milkyWay::field::io::uniforms;
 import package::milkyWay::field::io::comps;
 import package::milkyWay::field::hiiSplat::shadeCommon::hiiNearFadeActive;
 
 @vertex
-fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) inst: u32) -> HiiSplatOut {
-  let corner = quadCorner(vi);
+fn vs(@builtin(vertex_index) vertexIndex: u32, @builtin(instance_index) inst: u32) -> HiiSplatOut {
+  let corner = quadCorner(vertexIndex);
   let center = comps[inst].center;
   let boundRadius = comps[inst].boundRadius;
 
-  let eye = u.eye.xyz;
-  let camRight = u.camRight.xyz;
-  let camUp = u.camUp.xyz;
-  let camFwd = u.camFwd.xyz;
+  let eye = uniforms.eye.xyz;
+  let camRight = uniforms.camRight.xyz;
+  let camUp = uniforms.camUp.xyz;
+  let camFwd = uniforms.camFwd.xyz;
 
-  // View-space offset of the centre: zv along the gaze, xv/yv across it.
+  // View-space offset of the centre: viewDepth along the gaze, viewX/viewY across it.
   let rel = center - eye;
-  let zv = dot(rel, camFwd);
-  let xv = dot(rel, camRight);
-  let yv = dot(rel, camUp);
+  let viewDepth = dot(rel, camFwd);
+  let viewX = dot(rel, camRight);
+  let viewY = dot(rel, camUp);
 
   var out: HiiSplatOut;
   out.inst = inst;
@@ -36,8 +36,8 @@ fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) inst: u32) -> Hii
   // A component the eye has flown inside fades to nothing rather than
   // shading its fullscreen-fallback quad (splatSilhouette.wesl's SPLAT_CUT)
   // at full cost. GUARD: start <= end or start <= 0 disables the fade.
-  let fadeStart = u.youngStars.z;
-  let fadeEnd = u.youngStars.w;
+  let fadeStart = uniforms.youngStars.z;
+  let fadeEnd = uniforms.youngStars.w;
   if (hiiNearFadeActive(fadeStart, fadeEnd)) {
     let fade = smoothstep(fadeEnd * boundRadius, fadeStart * boundRadius, length(rel));
     if (fade <= 0.0) {
@@ -49,7 +49,7 @@ fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) inst: u32) -> Hii
     }
   }
 
-  let ndc = splatNdc(corner, xv, yv, zv, boundRadius, u.frustum, u.perf.x);
+  let ndc = splatNdc(corner, viewX, viewY, viewDepth, boundRadius, uniforms.frustum, uniforms.perf.x);
   out.pos = vec4<f32>(ndc, 0.0, 1.0);
   out.ndc = ndc;
   return out;

@@ -21,20 +21,20 @@
 // channel, each shifted by a sub-pixel; taking the median of the three
 // recovers the glyph contour even where one channel disagrees (sharp
 // corners, near-zero strokes).  It's the 'M' in MSDF.
-fn median3(r: f32, g: f32, b: f32) -> f32 {
-  return max(min(r, g), min(max(r, g), b));
+fn median3(red: f32, green: f32, blue: f32) -> f32 {
+  return max(min(red, green), min(max(red, green), blue));
 }
 
 // The MSDF two-band shading body: outline (hard outside stroke) over fill
 // (glyph body), both in premultiplied space.
 //
-//   fill   : smoothstep(-aa, +aa, d)
+//   fill   : smoothstep(-aa, +aa, sdf)
 //             — one-pixel AA band straddling the contour.
-//   outline: smoothstep(-aa - outlineSdf, -aa, d) * (1 - fill)
-//             — covers d in [-outlineSdf, 0]; the (1 - fill) factor masks the
+//   outline: smoothstep(-aa - outlineSdf, -aa, sdf) * (1 - fill)
+//             — covers sdf in [-outlineSdf, 0]; the (1 - fill) factor masks the
 //               inside half so the outline doesn't bleed into the glyph body.
 //
-// 'outlineSdf' is in SDF units (the same units 'd' lives in); the vertex
+// 'outlineSdf' is in SDF units (the same units 'sdf' lives in); the vertex
 // stage converts from em-fraction via
 //   widthInSdfUnits = (outlineEmFrac * ATLAS_EM_PX) / DISTANCE_RANGE_PX
 //
@@ -46,22 +46,22 @@ fn shadeMsdf(
   outlineColor: vec4<f32>,
   outlineSdf: f32,
 ) -> vec4<f32> {
-  let s = textureSample(atlas, atlasSampler, uv, i32(fontIndex)).rgb;
-  let d = median3(s.r, s.g, s.b) - 0.5;
-  // Floored: where the atlas saturates (quad corners) fwidth(d) is exactly 0,
+  let sdfChannels = textureSample(atlas, atlasSampler, uv, i32(fontIndex)).rgb;
+  let sdf = median3(sdfChannels.r, sdfChannels.g, sdfChannels.b) - 0.5;
+  // Floored: where the atlas saturates (quad corners) fwidth(sdf) is exactly 0,
   // and smoothstep with edge0 == edge1 is undefined in WGSL — SwiftShader
   // returns 1 there, filling every glyph quad solid (trailOcclusion precedent).
-  let aa = max(fwidth(d), 1e-4);
+  let antialiasWidth = max(fwidth(sdf), 1e-4);
 
   // Fill mask (1 inside the glyph, 0 outside, smoothed at the edge).
-  let fillMask = smoothstep(-aa, aa, d);
+  let fillMask = smoothstep(-antialiasWidth, antialiasWidth, sdf);
 
-  // Outline mask covers d in [-outlineSdf, 0] but is masked OUT inside the
+  // Outline mask covers sdf in [-outlineSdf, 0] but is masked OUT inside the
   // glyph.  When outlineSdf == 0 the smoothstep collapses to a single-point
-  // step at d=0 — the mask is then identically zero outside the glyph (no
+  // step at sdf=0 — the mask is then identically zero outside the glyph (no
   // contribution) and cancelled by (1 - fillMask) inside.  So a zero outline
   // width contributes nothing.
-  let outlineBand = smoothstep(-aa - outlineSdf, -aa, d);
+  let outlineBand = smoothstep(-antialiasWidth - outlineSdf, -antialiasWidth, sdf);
   let outlineMask = outlineBand * (1.0 - fillMask);
 
   let fillPM    = color        * fillMask;

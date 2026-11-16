@@ -94,34 +94,34 @@ import package::lib::starPhotometry::starGlowProfile;
 // 'opacity'. Opacity multiplies HERE, before any compression: it is a fade -- a
 // fraction of the glow's light -- so a half-faded bright glow is a dimmed bright
 // glow (compressed as such), NOT a compressed glow then re-dimmed. The returned
-// 'I' is the HDR amplitude and may be far above 1. 'r2' is the squared
+// 'scalar' is the HDR amplitude and may be far above 1. 'radiusSq' is the squared
 // distance-from-centre the caller already computed for the unit-disc discard, so
 // this helper contains NO discard (each entry point keeps its own, matching the
 // original single-entry shader exactly).
-fn glowScalar(r2: f32, intensity: f32, opacity: f32) -> f32 {
+fn glowScalar(radiusSq: f32, intensity: f32, opacity: f32) -> f32 {
   // Rim-zeroed Gaussian profile (starGlowProfile, lib/starPhotometry.wesl):
-  // reaches exactly 0 at the rim (r2 = 1) so saturated peaks show no hard edge,
-  // while g(0) = 1. K_GAUSS there integrates THIS profile, flux conserved.
-  let g = starGlowProfile(r2);
-  return intensity * g * opacity;
+  // reaches exactly 0 at the rim (radiusSq = 1) so saturated peaks show no hard edge,
+  // while profile(0) = 1. K_GAUSS there integrates THIS profile, flux conserved.
+  let profile = starGlowProfile(radiusSq);
+  return intensity * profile * opacity;
 }
 
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
-  let r2 = dot(in.uv, in.uv);
+  let radiusSq = dot(in.uv, in.uv);
   // Discard outside the inscribed unit disc so the dot is round.
-  if (r2 > 1.0) { discard; }
-  let I = glowScalar(r2, in.intensity, in.opacity);
+  if (radiusSq > 1.0) { discard; }
+  let scalar = glowScalar(radiusSq, in.intensity, in.opacity);
   // Hue-preserving soft-knee compression on the SCALAR, tint applied AFTER, so
   // the tint's channel ratios (the colour) survive any exposure instead of
   // clipping toward yellow-white in the shared per-channel tonemap. The curve
   // lives in lib/starKnee.wesl, shared with the aggregate-upsample composite.
-  let a = starKnee(I);
-  return vec4<f32>(in.color * a, a);
+  let kneedScalar = starKnee(scalar);
+  return vec4<f32>(in.color * kneedScalar, kneedScalar);
 }
 
 // The AGGREGATE stream's LINEAR variant: same glow, NO knee. rgb is the
-// premultiplied tinted light 'tint * I'; alpha is the RAW pre-knee scalar 'I'.
+// premultiplied tinted light 'tint * scalar'; alpha is the RAW pre-knee 'scalar'.
 // The low-res 'star-aggregates' offscreen additive-sums both channels, so its
 // alpha ends the frame holding the SUMMED scalar and its rgb the summed tinted
 // light. The 'star-upsample' composite reads that back and applies 'starKnee'
@@ -132,8 +132,8 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
 // wrong.
 @fragment
 fn fsLinear(in: VSOut) -> @location(0) vec4<f32> {
-  let r2 = dot(in.uv, in.uv);
-  if (r2 > 1.0) { discard; }
-  let I = glowScalar(r2, in.intensity, in.opacity);
-  return vec4<f32>(in.color * I, I);
+  let radiusSq = dot(in.uv, in.uv);
+  if (radiusSq > 1.0) { discard; }
+  let scalar = glowScalar(radiusSq, in.intensity, in.opacity);
+  return vec4<f32>(in.color * scalar, scalar);
 }
