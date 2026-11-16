@@ -32,10 +32,6 @@ const compute = readFileSync(join(SHADERS, 'kepler/compute.wesl'), 'utf-8');
 const constOf = (src: string, name: string): number =>
   Number(src.match(new RegExp(`const ${name}: (?:f32|u32) = ([-0-9.e]+)u?;`))![1]);
 
-/** The body of `fn name(...)` up to its closing brace at column 0. */
-const fnBody = (src: string, name: string): string =>
-  src.match(new RegExp(`fn ${name}\\([\\s\\S]*?\\n\\}`))![0];
-
 /** WGSL offsets of `struct name`'s members, and its size rounded to its 16-byte alignment. */
 function structLayout(src: string, name: string): [Record<string, number>, number] {
   const body = src.match(new RegExp(`struct ${name} \\{([\\s\\S]*?)\\n\\};`))![1]!;
