@@ -146,7 +146,8 @@ describe('renderFrame', () => {
 
   it("the tone-map's film is null while the look is off and carries the grade and the frame index when on", () => {
     type Tone = { film: { grade: unknown; seed: number } | null };
-    const toneOf = (draw: typeof fx.compositor.draw, call: number) => draw.mock.calls[call]![3] as Tone;
+    const toneOf = (draw: typeof fx.compositor.draw, call: number) =>
+      draw.mock.calls[call]![3] as Tone;
     renderFrame(fx.input);
     expect(toneOf(fx.compositor.draw, 0).film).toBeNull();
 
@@ -155,7 +156,10 @@ describe('renderFrame', () => {
     });
     renderFrame(on.input);
     renderFrame(on.input);
-    const [first, second] = [toneOf(on.compositor.draw, 0).film!, toneOf(on.compositor.draw, 1).film!];
+    const [first, second] = [
+      toneOf(on.compositor.draw, 0).film!,
+      toneOf(on.compositor.draw, 1).film!,
+    ];
     expect(first.grade).toBe(INITIAL_SETTINGS.film.grade);
     expect(second.seed - first.seed).toBe(1);
   });
