@@ -39,7 +39,9 @@ export const voyagerMissions: Exhibit = {
     galaxyCatalogs: GALAXY_CATALOGS_OFF,
     structures: STRUCTURES_OFF,
     starCatalogs: STARS_DIMMED_UNLABELLED,
-    picking: { off: ['galaxyCatalog', 'structure', 'milkyWay', 'zoneOfAvoidance', 'satellite'] },
+    picking: {
+      off: ['galaxyCatalog', 'structure', 'milkyWay', 'zoneOfAvoidance', 'satellite', 'asteroid'],
+    },
   },
   lede: LEDE,
   body: [

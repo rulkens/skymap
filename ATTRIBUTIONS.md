@@ -592,8 +592,9 @@ unclear, and no entry here reads them as a licence.
   permission", with the credit line "Courtesy NASA/JPL-Caltech".
 - **Use:** No licence stated
 - **Attribution:** "For referencing the data downloaded from the SSD website,
-  please use the following citation: “Solar System Dynamics. (Downloaded Year,
-  Month, Date). (Title of the Page). https://ssd.jpl.nasa.gov”".
+  please use the following citation: “NASA/JPL Solar System Dynamics. Data
+  retrieved on (Downloaded Year, Month, Date). (Title of the Page).
+  https://ssd.jpl.nasa.gov”".
 - **Upstream:** <https://ssd.jpl.nasa.gov/planets/approx_pos.html>,
   <https://ssd.jpl.nasa.gov/sats/elem/>
 - **Enters skymap:** typed by hand into `src/data/bodies/orbitalElements.ts`.
@@ -612,8 +613,9 @@ unclear, and no entry here reads them as a licence.
 - **Licence:** Not stated for the service's output on the pages read.
 - **Use:** No licence stated
 - **Attribution:** "For referencing the data downloaded from the SSD website,
-  please use the following citation: “Solar System Dynamics. (Downloaded Year,
-  Month, Date). (Title of the Page). https://ssd.jpl.nasa.gov”".
+  please use the following citation: “NASA/JPL Solar System Dynamics. Data
+  retrieved on (Downloaded Year, Month, Date). (Title of the Page).
+  https://ssd.jpl.nasa.gov”".
 - **Upstream:** <https://ssd.jpl.nasa.gov/api/horizons.api>
 - **Enters skymap:** `npm run fetch-horizons` → `data/raw/horizons/` →
   `npm run build-ephemeris-corrections` →
@@ -646,6 +648,63 @@ unclear, and no entry here reads them as a licence.
 - **Checked:** 2026-10-28: <https://celestrak.org/usage-policy.php>,
   <https://celestrak.org/NORAD/documentation/gp-data-formats.php>,
   <https://celestrak.org/NORAD/elements/>
+
+### MPC Orbit Database (MPCORB)
+
+<!-- attribution: id=mpcorb; keys=mpcorb,mpcorb.readme -->
+
+- **What:** Osculating orbital elements, absolute magnitudes and orbit types
+  of every numbered minor planet (about 896,000 on 2026-11-12).
+- **By:** The IAU Minor Planet Center, hosted by the Center for Astrophysics,
+  Harvard & Smithsonian; each orbit by the computer its record names.
+- **Licence:** The file's header: "Software programs may include this
+  datafile amongst their datasets, as long as this header is included (it is
+  acceptable if it is contained in a file separate from the actual data) and
+  that proper attribution to the Minor Planet Center is given. [...]
+  Information on how to obtain updated copies of the datafile must also be
+  included." The website use policy: "Data files are copyrighted entities and
+  may be redistributed as long as the source for the data is clearly
+  specified."
+- **Use:** Conditions apply
+- **Attribution:** The Minor Planet Center, with the MPCORB header shipped
+  beside the data and the address of updated copies
+  (<https://www.minorplanetcenter.net/iau/MPCORB/MPCORB.DAT>).
+- **Upstream:** <https://www.minorplanetcenter.net/iau/MPCORB/MPCORB.DAT.gz>
+- **Enters skymap:** `npm run fetch-mpcorb` → `data/raw/mpcorb/` →
+  `npm run build-asteroids` → `asteroids/v1/asteroids.astb`,
+  `asteroid-names.bin` and `mpcorb-header.txt` on R2.
+- **Modified:** Yes. Numbered rows only, without the centaurs and the objects
+  beyond Neptune (orbit type 10), quantized to a columnar file, and the few rows
+  at another epoch propagated to the shared one by two-body motion.
+- **Checked:** 2026-11-12: <https://www.minorplanetcenter.net/iau/MPCORB.html>,
+  <https://www.minorplanetcenter.net/iau/info/MPOrbitFormat.html>,
+  <https://www.minorplanetcenter.net/iau/WWWPolicy.html>
+
+### JPL Small-Body Database (asteroid diameters)
+
+<!-- attribution: id=sbdb-diameters; keys=sbdb.* -->
+
+- **What:** Diameters and geometric albedos of the numbered asteroids that
+  have one (135,476 on 2026-11-16), most from NEOWISE.
+- **By:** The JPL Solar System Dynamics group (the Small-Body Database), from
+  the published measurement each row cites.
+- **Licence:** Not stated on the pages read. The API fair-use policy limits
+  how the service is called ("You agree to submit only one API request at a
+  time (no simultaneous requests)", "You may not embed these APIs in your
+  website (per NASA CORS policy)") and says nothing on republishing.
+- **Use:** No licence stated
+- **Attribution:** "For referencing the data downloaded from the SSD website,
+  please use the following citation: “NASA/JPL Solar System Dynamics. Data
+  retrieved on (Downloaded Year, Month, Date). (Title of the Page).
+  https://ssd.jpl.nasa.gov”".
+- **Upstream:** <https://ssd-api.jpl.nasa.gov/sbdb_query.api>
+- **Enters skymap:** `npm run fetch-sbdb-diameters` → `data/raw/sbdb/` →
+  `npm run build-asteroids` → `asteroids/v1/asteroid-diameters.bin` on R2.
+- **Modified:** Yes. Only the asteroids the asteroids Layer draws, with
+  diameter and albedo as 32-bit floats; the uncertainties are left out.
+- **Checked:** 2026-11-16: <https://ssd-api.jpl.nasa.gov/>,
+  <https://ssd-api.jpl.nasa.gov/doc/sbdb_query.html>,
+  <https://ssd.jpl.nasa.gov/about/>
 
 ### MCXC, the Meta-Catalogue of X-ray detected Clusters
 

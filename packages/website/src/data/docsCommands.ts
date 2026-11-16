@@ -66,6 +66,8 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
           'fetch-hyperleda',
           'fetch-local-bubble',
           'fetch-milliquas',
+          'fetch-mpcorb',
+          'fetch-sbdb-diameters',
           'fetch-skraafoto',
           'fetch-structures',
           'fetch-textures',
@@ -120,6 +122,11 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         scripts: ['build-satellites', 'live-satellites'],
         does: 'Write the file of satellite orbits from the CelesTrak groups that fetch-celestrak downloaded. live-satellites runs both; the Live datasets workflow runs it every day and uploads the file.',
         manual: DATA,
+      },
+      {
+        scripts: ['build-asteroids'],
+        does: 'Write the file of asteroid orbits, every numbered minor planet the Minor Planet Center lists, from the file fetch-mpcorb downloaded, with the names, the Center’s terms and the diameters fetch-sbdb-diameters downloaded beside it.',
+        manual: 'data/raw/mpcorb/README.md',
       },
       {
         scripts: ['build-textures', 'build-surface-tiles', 'build-site-ground-heights'],
