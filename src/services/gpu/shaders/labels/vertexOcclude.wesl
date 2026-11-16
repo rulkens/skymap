@@ -6,9 +6,9 @@
 
 import package::labels::io::VsIn;
 import package::labels::io::VsOut;
-// 'u' and 'labels' are imported, not redeclared: a second '@group(0)
+// 'uniforms' and 'labels' are imported, not redeclared: a second '@group(0)
 // @binding(0)' here would conflict with vertex.wesl's existing declaration.
-import package::labels::vertex::u;
+import package::labels::vertex::uniforms;
 import package::labels::vertex::labels;
 import package::labels::vertex::expandLabelQuad;
 import package::lib::sceneDepth::subjectDepthVerdict;
@@ -16,6 +16,6 @@ import package::lib::sceneDepth::subjectDepthVerdict;
 @vertex
 fn vsOcclude(input: VsIn) -> VsOut {
   let label = labels[input.labelIndex];
-  let verdict = subjectDepthVerdict(u.cam, label.subjectPos.xyz, label.occludeNearKm);
+  let verdict = subjectDepthVerdict(uniforms.cam, label.subjectPos.xyz, label.occludeNearKm);
   return expandLabelQuad(input, label, max(label.occludeWeight, verdict));
 }

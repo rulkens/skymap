@@ -78,9 +78,9 @@ fn vsTrail(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32) -> 
   // sphere. Box-boundary points have a coord at 0 or 1 (radius >= 0.5) so their
   // alpha is 0 there, also masking the respawn pop at the wall. 'min(inner,
   // 0.5 - eps)' keeps the smoothstep edges distinct at width 0 (a hard clip).
-  let r = length(point.xyz - vec3<f32>(0.5));
+  let sphereRadius = length(point.xyz - vec3<f32>(0.5));
   let inner = min(0.5 - cam.boundaryFadeWidth, 0.5 - 1e-4);
-  alpha = alpha * (1.0 - smoothstep(inner, 0.5, r));
+  alpha = alpha * (1.0 - smoothstep(inner, 0.5, sphereRadius));
 
   out.alpha = alpha;
   return out;

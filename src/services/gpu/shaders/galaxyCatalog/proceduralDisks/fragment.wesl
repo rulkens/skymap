@@ -26,20 +26,20 @@ const DISK_WEIGHT = 0.15;
 
 @fragment
 fn fs(in: VsOut) -> @location(0) vec4<f32> {
-  let r = length(in.uv);
-  if (r > 1.0) { discard; }
+  let radius = length(in.uv);
+  if (radius > 1.0) { discard; }
 
-  let bulge = exp(-(r * r) / (2.0 * BULGE_SIGMA * BULGE_SIGMA));
-  let disk  = exp(-r / DISK_SCALE);
+  let bulge = exp(-(radius * radius) / (2.0 * BULGE_SIGMA * BULGE_SIGMA));
+  let disk  = exp(-radius / DISK_SCALE);
   let intensity = (bulge * BULGE_WEIGHT + disk * DISK_WEIGHT) * in.sbAmp;
 
-  let tinted = rampRadial(in.colourIndex, r);
+  let tinted = rampRadial(in.colourIndex, radius);
 
-  // Linear HDR output: the disk's exp(-2) = 0.135 residual at r = 1 gamma-
+  // Linear HDR output: the disk's exp(-2) = 0.135 residual at radius = 1 gamma-
   // brightens to ~42% display, a hard edge before the discard. The smoothstep
   // fade is squared because display brightness ~ x^0.45, so (1-r')^2 reads as
   // a roughly linear fade. Alpha carries it: blending is premultiplied additive.
-  let edgeFade = circularMask(r, 0.6, 1.0);
+  let edgeFade = circularMask(radius, 0.6, 1.0);
   let edgeFadeLinear = edgeFade * edgeFade;
   // procFadeOut is 1.0 except for Famous galaxies with a loaded WebP.
   let alpha = intensity * in.crossfadeAlpha * edgeFadeLinear * in.procFadeOut * in.focusDim;

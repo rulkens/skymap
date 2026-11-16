@@ -8,7 +8,7 @@
 //
 // ## Why no @group/@binding declarations here
 //
-// WESL has no global state — '@group(N) @binding(M) var<uniform> u'
+// WESL has no global state — '@group(N) @binding(M) var<uniform> camera'
 // is module-local and cannot be exported across modules.  The
 // consuming files (halo.wesl, ring.wesl) each redeclare the bindings
 // using the structs imported from this file.  WGSL accepts the same

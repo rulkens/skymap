@@ -64,10 +64,10 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // Rotated-grid offsets at ±0.5 texel.  Each lands at a texel corner,
   // so the linear sampler reads a 2×2 block of texels per tap; four
   // such taps overlap into a ~3×3 effective box filter.
-  let o = 0.5 * texel;
-  let s0 = textureSample(halfTex, halfSamp, in.uv + vec2<f32>( o.x,  o.y));
-  let s1 = textureSample(halfTex, halfSamp, in.uv + vec2<f32>( o.x, -o.y));
-  let s2 = textureSample(halfTex, halfSamp, in.uv + vec2<f32>(-o.x,  o.y));
-  let s3 = textureSample(halfTex, halfSamp, in.uv + vec2<f32>(-o.x, -o.y));
-  return 0.25 * (s0 + s1 + s2 + s3);
+  let tapOffset = 0.5 * texel;
+  let tapBottomRight = textureSample(halfTex, halfSamp, in.uv + vec2<f32>( tapOffset.x,  tapOffset.y));
+  let tapTopRight = textureSample(halfTex, halfSamp, in.uv + vec2<f32>( tapOffset.x, -tapOffset.y));
+  let tapBottomLeft = textureSample(halfTex, halfSamp, in.uv + vec2<f32>(-tapOffset.x,  tapOffset.y));
+  let tapTopLeft = textureSample(halfTex, halfSamp, in.uv + vec2<f32>(-tapOffset.x, -tapOffset.y));
+  return 0.25 * (tapBottomRight + tapTopRight + tapBottomLeft + tapTopLeft);
 }

@@ -21,7 +21,7 @@
 //
 // ## Why no per-instance attributes
 //
-// One instance per frame at most.  The vertex stage reads 'u.sel.worldPos'
+// One instance per frame at most.  The vertex stage reads 'sel.worldPos'
 // from the uniform and uses '@builtin(vertex_index)' to pick its corner
 // via 'quadCorner(vi)'.  No vertex buffer needed beyond the implicit
 // 6-vertex non-indexed draw.

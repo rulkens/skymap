@@ -38,7 +38,7 @@ struct LabelPickUniforms {
   _pad1: f32,
 };
 
-@group(0) @binding(0) var<uniform> u: LabelPickUniforms;
+@group(0) @binding(0) var<uniform> uniforms: LabelPickUniforms;
 
 // Distance from the winning end of the depth range — see the header. Far
 // coarser than depth32float/depth24plus resolve at either extreme, so the band
@@ -56,7 +56,7 @@ struct VSOut {
 // in NDC via the 1 - t flip.
 fn rectCornerNdc(vi: u32, rectPx: vec4<f32>) -> vec2<f32> {
   let px = mix(rectPx.xy, rectPx.zw, quadUv(vi));
-  return vec2<f32>(px.x / u.viewportPx.x * 2.0 - 1.0, 1.0 - px.y / u.viewportPx.y * 2.0);
+  return vec2<f32>(px.x / uniforms.viewportPx.x * 2.0 - 1.0, 1.0 - px.y / uniforms.viewportPx.y * 2.0);
 }
 
 @vertex

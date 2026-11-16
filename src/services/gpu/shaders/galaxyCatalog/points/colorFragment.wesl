@@ -54,11 +54,11 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     sn * in.uv.x + cs * in.uv.y,
   );
   let elliptic = vec2<f32>(rotated.x, rotated.y / in.ellipse.z);
-  let r2 = dot(elliptic, elliptic);
+  let radiusSq = dot(elliptic, elliptic);
   // ────────────────────────────────────────────────────────────────────────
 
   // Discard fragments outside the oriented ellipse.
-  if (r2 > 1.0) { discard; }
+  if (radiusSq > 1.0) { discard; }
 
   // Gaussian-like falloff: bright at centre (r²=0 → e⁰=1), fading to
   // e⁻⁴ ≈ 0.018 at the edge (r²=1). All per-instance modulators
@@ -67,10 +67,10 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // 'in.instanceTint.rgb' by the vertex stage — see vertex.wesl. Galaxies
   // culled by a provenance filter ('orientationFilter' / 'sizeFilter') are
   // dropped at the vertex stage too, so this fragment never sees them.
-  var alpha = exp(-r2 * 4.0);
-  // Warm-core / cool-rim gradient. 'r2' is the ELLIPTIC squared radius
+  var alpha = exp(-radiusSq * 4.0);
+  // Warm-core / cool-rim gradient. 'radiusSq' is the ELLIPTIC squared radius
   // from the transform above — already axis-ratio corrected — so
-  // 'sqrt(r2)' is the normalised galactocentric radius in the galaxy's
+  // 'sqrt(radiusSq)' is the normalised galactocentric radius in the galaxy's
   // own plane, the same quantity the procedural-disk pass reads as
   // 'length(in.uv)'. 'rampRadial' takes that radius alongside the
   // galaxy's colour index (forwarded unchanged in 'in.instanceTint.w')
@@ -99,7 +99,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // gradient-modulated. Note WGSL's argument order — 'select(falseVal,
   // trueVal, cond)' — so the ramp lookup is the FIRST argument here.
   let ci = in.instanceTint.w;
-  let rampRgb = select(rampRadial(ci, sqrt(r2)), vec3<f32>(1.0), ci < 0.0);
+  let rampRgb = select(rampRadial(ci, sqrt(radiusSq)), vec3<f32>(1.0), ci < 0.0);
   let rgb = in.instanceTint.rgb * rampRgb;
 
   // ── Source fade-in ─────────────────────────────────────────────────────────
