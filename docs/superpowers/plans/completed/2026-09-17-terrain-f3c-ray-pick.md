@@ -1,6 +1,6 @@
 # Terrain F3c — the terrain raycast and the gesture anchors
 
-Spec: [`2026-09-13-per-planet-terrain-design.md`](../specs/2026-09-13-per-planet-terrain-design.md)
+Spec: [`2026-09-13-per-planet-terrain-design.md`](../specs/completed/2026-09-13-per-planet-terrain-design.md)
 §8.1 (the marcher and its four rulings), §8.3 (the pick row), §12 (the F3c row and its
 ground-preparation record).
 

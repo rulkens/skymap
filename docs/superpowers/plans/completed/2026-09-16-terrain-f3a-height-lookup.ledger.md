@@ -1,7 +1,7 @@
 # F3a height lookup — ledger
 
 Plan: `docs/superpowers/plans/2026-09-16-terrain-f3a-height-lookup.md`
-Spec: `docs/superpowers/specs/2026-09-13-per-planet-terrain-design.md` §5.3, §8, §11, §12
+Spec: `docs/superpowers/specs/completed/2026-09-13-per-planet-terrain-design.md` §5.3, §8, §11, §12
 Worktree: `.claude/worktrees/terrain-height-lookup`, branch `worktree-terrain-height-lookup`
 PR: #741 (draft) — docs + PR 1 prep ride together.
 
@@ -234,7 +234,7 @@ no F3a backlog item to sweep.
 **Housekeeping when it completes — one deviation from the skill's default:** move
 `docs/superpowers/plans/2026-09-16-terrain-f3a-height-lookup.md` to `plans/completed/`
 and copy this ledger to `plans/completed/2026-09-16-terrain-f3a-height-lookup.ledger.md`.
-**Do NOT move the spec.** `specs/2026-09-13-per-planet-terrain-design.md` covers
+**Do NOT move the spec.** `specs/completed/2026-09-13-per-planet-terrain-design.md` covers
 F1–F4; F4 is in flight (#743) and F3b is unstarted. The two new `docs/backlog/`
 files are follow-on work filed today and STAY. Then commit, push to #744, and stop —
 the eye-check and the squash-merge are the user's.
