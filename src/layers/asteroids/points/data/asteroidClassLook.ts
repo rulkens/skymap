@@ -32,7 +32,16 @@ const GROUP = {
  */
 export const ASTEROID_CLASS_LOOK: Readonly<Record<AsteroidClass, AsteroidClassLook>> = {
   nearEarth: { ...GROUP, color: [1.35, 0.6, 0.45] },
-  mainBelt: { ...SHARED, color: [1.05, 1.0, 0.92] },
+  // Dimmer and cut at V 13.3, so the groups stand out against it (owner-tuned, 2026-11-16).
+  mainBelt: {
+    ...SHARED,
+    brightness: 0.5,
+    limitingMag: 13.3,
+    dotKnee: 0.64,
+    sizeKneeH: 11.9,
+    sizeMaxScale: 2.15,
+    color: [1.05, 1.0, 0.92],
+  },
   hilda: { ...GROUP, color: [1.3, 0.78, 1.7] },
   jupiterTrojan: { ...GROUP, color: [1.45, 0.88, 0.42] },
 };
