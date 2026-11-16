@@ -172,6 +172,7 @@ export function createEngine(
       labelPickRendererCosmo: null,
       labelPickRendererNear: null,
       debugLineRenderer: null,
+      letterboxRenderer: null,
       selectionRingRenderer: null,
       label3DRenderer: null,
       // Every bloom content layer's enable gate is exactly `bloomPyramid !== null`,

@@ -344,5 +344,9 @@ export const OVERLAYS: FrameSection = {
       depth: { sample: 'foreground:0' },
       passes: ['near0-selection-ring', 'labels-near', 'clip-path-debug'],
     },
+    // The film look's bars, after every overlay so they mask captions the way a real
+    // matte would. Its own line: it binds no depth, and the line above must fill the
+    // shared group(1) joint. `slot` parts it from the first line's `swap·cosmo` total.
+    { kind: 'render', target: 'swap', slab: COSMO, passes: ['letterbox'], slot: 'LETTERBOX' },
   ],
 };

@@ -164,6 +164,41 @@ describe('renderFrame', () => {
     expect(second.seed - first.seed).toBe(1);
   });
 
+  describe('letterbox', () => {
+    // A fake renderer stands in for the swap-format pipeline the fixture leaves null.
+    function filmFixture(film: Partial<typeof INITIAL_SETTINGS.film>) {
+      const fx2 = makeRenderFrameFixture({
+        settings: { film: { ...INITIAL_SETTINGS.film, ...film } },
+      });
+      const letterboxRenderer = { draw: vi.fn(), destroy: vi.fn(), label: 'letterboxRenderer' };
+      (fx2.input.state.gpu as { letterboxRenderer: unknown }).letterboxRenderer = letterboxRenderer;
+      return { fx2, letterboxRenderer };
+    }
+
+    it("draws the bars as the frame's last pass, on swap, at the target size", () => {
+      const { fx2, letterboxRenderer } = filmFixture({ enabled: true, letterbox: true });
+      renderFrame(fx2.input);
+      const calls = fx2.beginRenderPass.mock.calls;
+      expect(calls).toHaveLength(5);
+      const last = calls.at(-1)![0];
+      expect(last.label).toBe('render-swap');
+      expect(Array.from(last.colorAttachments)[0]!.view).toEqual({ __id: 'swap-view' });
+      expect(letterboxRenderer.draw).toHaveBeenCalledWith(fx2.pass, fx2.canvasSize);
+    });
+
+    it('opens no pass while the letterbox or the look is off', () => {
+      for (const film of [
+        { enabled: true, letterbox: false },
+        { enabled: false, letterbox: true },
+      ]) {
+        const { fx2, letterboxRenderer } = filmFixture(film);
+        renderFrame(fx2.input);
+        expect(fx2.beginRenderPass.mock.calls).toHaveLength(4);
+        expect(letterboxRenderer.draw).not.toHaveBeenCalled();
+      }
+    });
+  });
+
   it('records the full frame in canonical order: createEncoder → hdr COSMO pass (points) → mw-aggregate pass (cloud stars) → hdr NEAR0 pass (cloud dust) → composite pass → compositor.draw → finish → submit', () => {
     // No-timing 'merged' path: the four passes of the first test (the cloud's dust draws in the
     // cloud's own slab since the fixed COSMO near plane clipped its disc mid-descent), then finish + submit.
