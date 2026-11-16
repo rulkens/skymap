@@ -592,8 +592,9 @@ unclear, and no entry here reads them as a licence.
   permission", with the credit line "Courtesy NASA/JPL-Caltech".
 - **Use:** No licence stated
 - **Attribution:** "For referencing the data downloaded from the SSD website,
-  please use the following citation: “Solar System Dynamics. (Downloaded Year,
-  Month, Date). (Title of the Page). https://ssd.jpl.nasa.gov”".
+  please use the following citation: “NASA/JPL Solar System Dynamics. Data
+  retrieved on (Downloaded Year, Month, Date). (Title of the Page).
+  https://ssd.jpl.nasa.gov”".
 - **Upstream:** <https://ssd.jpl.nasa.gov/planets/approx_pos.html>,
   <https://ssd.jpl.nasa.gov/sats/elem/>
 - **Enters skymap:** typed by hand into `src/data/bodies/orbitalElements.ts`.
@@ -612,8 +613,9 @@ unclear, and no entry here reads them as a licence.
 - **Licence:** Not stated for the service's output on the pages read.
 - **Use:** No licence stated
 - **Attribution:** "For referencing the data downloaded from the SSD website,
-  please use the following citation: “Solar System Dynamics. (Downloaded Year,
-  Month, Date). (Title of the Page). https://ssd.jpl.nasa.gov”".
+  please use the following citation: “NASA/JPL Solar System Dynamics. Data
+  retrieved on (Downloaded Year, Month, Date). (Title of the Page).
+  https://ssd.jpl.nasa.gov”".
 - **Upstream:** <https://ssd.jpl.nasa.gov/api/horizons.api>
 - **Enters skymap:** `npm run fetch-horizons` → `data/raw/horizons/` →
   `npm run build-ephemeris-corrections` →
