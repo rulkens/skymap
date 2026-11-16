@@ -16,22 +16,23 @@ const SHARED = {
   sizeMaxScale: 2.5,
 } as const;
 
+/** The small groups beside the belt read larger and brighter than it (owner-tuned, 2026-11-16). */
+const GROUP = {
+  ...SHARED,
+  brightness: 1.4,
+  dotRadiusPx: 2.1,
+  dotKnee: 0.99,
+  sizeKneeH: 11.4,
+} as const;
+
 /**
  * Each class's look. The tints sit near unit luminance so a colour never changes how bright a dot
  * reads. The belt stays a neutral warm white; the groups it is drawn to show apart get the hues. The
  * Jupiter trojans take Jupiter's tan (the body palette's), nudged red; the Hildas go violet to stay apart.
  */
 export const ASTEROID_CLASS_LOOK: Readonly<Record<AsteroidClass, AsteroidClassLook>> = {
-  // Owner-tuned 2026-11-16: the few near-Earth objects read larger and brighter than the belt.
-  nearEarth: {
-    ...SHARED,
-    brightness: 1.4,
-    dotRadiusPx: 2.1,
-    dotKnee: 0.99,
-    sizeKneeH: 11.4,
-    color: [1.35, 0.6, 0.45],
-  },
+  nearEarth: { ...GROUP, color: [1.35, 0.6, 0.45] },
   mainBelt: { ...SHARED, color: [1.05, 1.0, 0.92] },
-  hilda: { ...SHARED, color: [1.3, 0.78, 1.7] },
-  jupiterTrojan: { ...SHARED, color: [1.45, 0.88, 0.42] },
+  hilda: { ...GROUP, color: [1.3, 0.78, 1.7] },
+  jupiterTrojan: { ...GROUP, color: [1.45, 0.88, 0.42] },
 };
