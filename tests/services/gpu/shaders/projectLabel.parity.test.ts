@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import type { OutputProjection } from '../../../../src/@types/rendering/OutputProjection';
 import type { ProjectedLabel } from '../../../../src/@types/rendering/ProjectedLabel';
+import { LABEL_LIFT_MAX_GAP_PX } from '../../../../src/data/labels/labelLiftMaxGapPx';
 import { PARALLEL_TANGENT_EPS } from '../../../../src/data/labels/parallelTangentEps';
 import {
   OUTPUT_PROJECTION_BYTES,
@@ -76,5 +77,7 @@ describe('lib/projectLabel.wesl parity', () => {
     expect(names('ProjectedLabel')).toEqual(Object.keys(projected).sort());
     const eps = /const\s+PARALLEL_TANGENT_EPS\s*:\s*f32\s*=\s*([0-9.e-]+)\s*;/.exec(source);
     expect(Number(eps![1])).toBe(PARALLEL_TANGENT_EPS);
+    const cap = /const\s+LABEL_LIFT_MAX_GAP_PX\s*:\s*f32\s*=\s*([0-9.e-]+)\s*;/.exec(source);
+    expect(Number(cap![1])).toBe(LABEL_LIFT_MAX_GAP_PX);
   });
 });
