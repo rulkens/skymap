@@ -285,7 +285,7 @@ export const DOCS_SCIENCE_FACTS: readonly Fact[] = [
     id: 'depart-labels',
     about: 'app',
     text: 'Names are thinned: where two would overlap on screen, the object that looks larger keeps its name and the other goes unnamed until the view changes.',
-    source: `${REPO_BLOB}/src/services/engine/subsystems/label2DDirector.ts`,
+    source: `${REPO_BLOB}/src/services/engine/labels/declutterRecords.ts`,
     sourceLabel: `the label thinning, ${IN_REPO}`,
     checked: CHECKED,
   },

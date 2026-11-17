@@ -7,8 +7,6 @@
  * `CameraPose` lands in `state.cameraRuntime.register.pose`, which the fixtures read.
  */
 
-import { LABEL_DIRECTORS } from '../../../../src/data/labels/labelDirectors';
-import { createLabelDirectorState } from '../../../../src/services/engine/labels/createLabelDirectorState';
 import { describe, it, expect, vi } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
 import { RECEDE_ALL_FOCUS_SPHERE } from '../../../../src/data/selection/recedeAllFocusSphere';
@@ -26,6 +24,10 @@ vi.mock('../../../../src/services/engine/frame/renderFrame', () => ({
 }));
 vi.mock('../../../../src/services/engine/frame/drawPickDebugOverlay', () => ({
   drawPickDebugOverlay: vi.fn(),
+}));
+// Mocked so a case can make one director vote to keep animating, and read the frame view it saw.
+vi.mock('../../../../src/services/engine/frame/runLabelDirector', () => ({
+  runLabelDirector: vi.fn(() => false),
 }));
 
 // resizeCanvasToDisplay reads window.devicePixelRatio (undefined in node); stubbed to a no-op false
@@ -53,6 +55,8 @@ vi.mock('../../../../src/services/engine/frame/deriveBodyStates', async (importO
 
 import { runFrame } from '../../../../src/services/engine/frame/runFrame';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
+import { runLabelDirector } from '../../../../src/services/engine/frame/runLabelDirector';
+import { COSMO, NEAR0 } from '../../../../src/services/engine/frame/slabs';
 import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/drivers/cameraDrivers';
 import { composeControlSchemes } from '../../../../src/services/engine/camera/composeControlSchemes';
 import { seedCameraRuntime } from '../../../../src/services/engine/camera/seedCameraRuntime';
@@ -202,9 +206,6 @@ function makeReadyState(subsystems: Record<string, unknown> = {}): EngineState {
       clipPlayer: { ...base.subsystems.clipPlayer, clipOpacityOf: () => 1 },
       recedingFocus: createRecedingFocusSubsystem({ requestRender: vi.fn() }),
       fades: { tick: vi.fn(), opacityOf: () => 0, isAnyAnimating: () => false },
-      cosmoLabelDirector: { runFrame: vi.fn(() => false) },
-      foregroundLabelDirector: { runFrame: vi.fn(() => false) },
-      labelDirectors: LABEL_DIRECTORS.map(createLabelDirectorState),
       ...subsystems,
     },
   } as unknown as EngineState;
@@ -766,13 +767,13 @@ describe('runFrame — the label-director wake fold', () => {
     // animating. `runLabel3DProducers` is the newest of the three and the
     // one most likely to get folded into the `||` chain later — pin it too.
     // COSMO votes true — must NOT short-circuit the calls below.
-    const state = makeReadyState({ cosmoLabelDirector: { runFrame: vi.fn(() => true) } });
+    const state = makeReadyState();
     const deps = makeCamDeps(state);
+    vi.mocked(runLabelDirector).mockClear().mockReturnValueOnce(true);
 
     runFrame(state, deps, 0);
 
-    expect(state.subsystems.cosmoLabelDirector.runFrame).toHaveBeenCalledTimes(1);
-    expect(state.subsystems.foregroundLabelDirector.runFrame).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(runLabelDirector).mock.calls.map((call) => call[2])).toEqual([COSMO, NEAR0]);
     expect(state.gpu.label3DRenderer!.setLabels).toHaveBeenCalledTimes(1);
     // One vote is enough to keep the loop awake: the three fold with OR.
     expect(state.subsystems.scheduler.requestRender).toHaveBeenCalled();
@@ -810,7 +811,7 @@ describe('runFrame — the label-director wake fold', () => {
     const deps = makeCamDeps(state);
     const snapshotAt = (nowMs: number) => {
       runFrame(state, deps, nowMs);
-      return vi.mocked(state.subsystems.cosmoLabelDirector.runFrame).mock.lastCall![1].snapshot;
+      return vi.mocked(runLabelDirector).mock.lastCall![1].snapshot;
     };
 
     snapshotAt(600);
@@ -841,8 +842,7 @@ describe('runFrame — the label-director wake fold', () => {
     runFrame(state, deps, 0);
     runFrame(state, deps, 500);
 
-    const snapshot = vi.mocked(state.subsystems.cosmoLabelDirector.runFrame).mock.lastCall![1]
-      .snapshot;
+    const snapshot = vi.mocked(runLabelDirector).mock.lastCall![1].snapshot;
     expect(snapshot.focusBlend).toBe(1);
     expect(snapshot.focusPickId).toBe(STREAM_WORD);
     expect(snapshot.focus).toEqual({ ...RECEDE_ALL_FOCUS_SPHERE, blend: 1 });
@@ -869,8 +869,7 @@ describe('runFrame — the label-director wake fold', () => {
       runFrame(state, deps, 0);
       runFrame(state, deps, 500);
       return {
-        snapshot: vi.mocked(state.subsystems.cosmoLabelDirector.runFrame).mock.lastCall![1]
-          .snapshot,
+        snapshot: vi.mocked(runLabelDirector).mock.lastCall![1].snapshot,
         drawn: recedingFocus.lastFocus(),
       };
     }

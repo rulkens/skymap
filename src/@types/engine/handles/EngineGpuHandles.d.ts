@@ -108,11 +108,8 @@ export type EngineGpuHandles = {
    */
   labelRendererCosmo: LabelRenderer | null;
   /**
-   * Second MSDF label renderer for the true-scale foreground bodies. Separate from
-   * `labelRendererCosmo` because scene-body captions project through the NEAR0 slab view
-   * (near plane scales with `cam.distance`) and one renderer draws with one view-
-   * projection. Shared by every NEAR0 caption;
-   * `labelsNearPass` re-uploads both, merged and camera-relative, each frame.
+   * Second MSDF label renderer, for the NEAR0 director's records: one renderer holds one
+   * director's upload (`runLabelDirector` hands each its slab's records every frame).
    */
   labelRendererNear: LabelRenderer | null;
   /**
@@ -127,8 +124,8 @@ export type EngineGpuHandles = {
    */
   labelPickRendererNear: LabelPickRenderer | null;
   /**
-   * Debug-draw thick-line renderer for the clip-path inspector overlay, decoupled from
-   * the label director; `clipPathDebugPass` feeds it a fresh `DebugLine[]` each frame.
+   * Debug-draw thick-line renderer for the clip-path inspector overlay;
+   * `clipPathDebugPass` feeds it a fresh `DebugLine[]` each frame.
    */
   debugLineRenderer: DebugLineRenderer | null;
   /**

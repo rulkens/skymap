@@ -1,51 +1,13 @@
 /**
- * labelsCosmoPass — MSDF text label draw call.
- *
- * A swap-target layer, NOT an hdr-target one — see `passes/index.ts`
- * module header for why labels moved out of the HDR
- * sequence.  The swap render step opens one `beginRenderPass` on the
- * swap-chain texture and iterates the swap-target layers inside that
- * single pass, so this layer's `draw` writes directly to the
- * tone-mapped swap chain without further compression.
- *
- * ### What it draws
- *
- * World-anchored text labels rendered via the MSDF (multi-channel
- * signed distance field) technique.  Each glyph is an instanced
- * quad whose per-fragment alpha is derived from the font atlas's
- * distance channels, giving crisp anti-aliased edges at any zoom
- * level without requiring mipmaps.  Blend mode is premultiplied-
- * alpha OVER (not additive) — labels are UI overlay, not emissive
- * content.
- *
- * ### When it draws
- *
- * Two conditions must both hold:
- *
- *   1. `state.gpu.labelRendererCosmo` must be non-null.  It's null until
- *      the atlas fetch + `createLabelRenderer` construction complete
- *      in `initGpu.ts`.
- *
- *   2. `cosmoLabelDirector.labels()` is non-empty — the director must
- *      have flushed at least one label this frame (e.g. from
- *      `produceMilkyWayLabel`).  When the camera is far from the origin the
- *      producer emits an empty label set, making this layer a cheap
- *      early-return.
- *
- * ### Position among the swap-target layers
- *
- * Placed AFTER `selectionRingPass` so the label text composites over
- * the ring where they overlap, preserving readability.
- *
- * Each aspect also serves the COSMO label records (`shownLabelRecords`), drawn after the old
- * director's set until that one goes.
+ * labelsCosmoPass — draws the COSMO label director's records (`shownLabelRecords`), which
+ * `runLabelDirector` uploads earlier in `runFrame`, so `enabled` reads this frame's demand.
+ * A swap-target layer, not an hdr one (`passes/index.ts` says why): the text writes straight
+ * into the tone-mapped swap chain, premultiplied OVER, as UI overlay rather than emissive
+ * content. Placed after `selectionRingPass` so text composites over the ring.
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { overlaySceneOcclusion } from '../overlaySceneOcclusion';
-import { hasPickableLabel } from '../../../../utils/labels/hasPickableLabel';
-import { labelPickQuads } from '../../../../utils/labels/labelPickQuads';
-import { textLayoutOf } from '../../../gpu/labelLayout/textLayoutOf';
 import { shownLabelRecords } from '../../labels/shownLabelRecords';
 import { recordPickQuads } from '../../../../utils/labels/recordPickQuads';
 import { COSMO } from '../slabs';
@@ -54,62 +16,31 @@ export const labelsCosmoPass: ContentPass = {
   name: 'labels-cosmo',
 
   enabled(state, _ctx, _view) {
-    if (state.gpu.labelRendererCosmo === null) return false;
-    return (
-      state.subsystems.cosmoLabelDirector.labels().length > 0 ||
-      shownLabelRecords(state, COSMO) !== null
-    );
+    return state.gpu.labelRendererCosmo !== null && shownLabelRecords(state, COSMO) !== null;
   },
 
-  // Pick gate — NARROWER than `enabled`: a drawn label only invites a click
-  // when it names a selectable subject, and a frame of pure decoration (the
-  // constellation captions carry no `pickId`) must not pull an r32uint pick
-  // target into existence for a draw that would stamp nothing.
+  // Pick gate — NARROWER than `enabled`: a frame of pure decoration (no record carries a
+  // pick word) must not pull an r32uint pick target into existence for a draw that stamps nothing.
   pickEnabled(state, _ctx) {
     if (state.gpu.labelRendererCosmo === null) return false;
     const shown = shownLabelRecords(state, COSMO);
-    return (
-      hasPickableLabel(state.subsystems.cosmoLabelDirector.labels()) ||
-      (shown !== null && recordPickQuads(shown.records, shown.frame).length > 0)
-    );
+    return shown !== null && recordPickQuads(shown.records, shown.frame).length > 0;
   },
 
   draw(pass, view, ctx, state) {
-    // Every COSMO label carries occludeWeight 1, so only the coverage half of
-    // the joint decides anything here — the depth half is bound because the
-    // pipeline layout demands it, and reads as a no-op against the labels'
-    // zero cutoff.
-    const renderer = state.gpu.labelRendererCosmo!;
-    const scene = overlaySceneOcclusion(ctx, view);
-    if (state.subsystems.cosmoLabelDirector.labels().length > 0) {
-      renderer.draw(pass, state.subsystems.cosmoLabelDirector.project(ctx), scene);
-    }
+    const renderer = state.gpu.labelRendererCosmo;
     const shown = shownLabelRecords(state, COSMO);
-    if (shown !== null) renderer.drawRecords(pass, shown.view, scene);
+    if (renderer === null || shown === null) return;
+    renderer.draw(pass, shown.view, overlaySceneOcclusion(ctx, view));
   },
 
-  // Pick aspect — grace-padded ink boxes for the drawn labels, stamped with
-  // each subject's own packed id (see `labelPickQuads`), from the SAME
-  // projection the director declutters through, resolved fresh per pick call
-  // so the boxes track where the glyphs are now.
-  //
-  // Scene occlusion is deliberately NOT reproduced: the visual pass fades
-  // caption pixels behind a nearer body (`fragmentOcclude`), which the flat
-  // pick quad can't see — so an occluded label stays clickable. Pick wider
-  // than draw is the safe direction for a click affordance.
-  drawPick(pass, view, ctx, state) {
+  // Grace-padded ink boxes stamped with each subject's packed id (`recordPickQuads`). Scene
+  // occlusion is deliberately NOT reproduced: an occluded label stays clickable, the safe
+  // direction for a click affordance.
+  drawPick(pass, view, _ctx, state) {
     const pickRenderer = state.gpu.labelPickRendererCosmo;
-    const fontAtlases = state.gpu.fontAtlases;
-    if (pickRenderer === null || fontAtlases === null) return;
-
-    const projection = state.subsystems.cosmoLabelDirector.project(ctx);
-    const quads = labelPickQuads({
-      labels: state.subsystems.cosmoLabelDirector.labels(),
-      projection,
-      measure: (label) => textLayoutOf(fontAtlases.metricsByFont, label).bbox,
-    });
     const shown = shownLabelRecords(state, COSMO);
-    if (shown !== null) quads.push(...recordPickQuads(shown.records, shown.frame));
-    pickRenderer.draw(pass, quads, view.window);
+    if (pickRenderer === null || shown === null) return;
+    pickRenderer.draw(pass, recordPickQuads(shown.records, shown.frame), view.window);
   },
 };

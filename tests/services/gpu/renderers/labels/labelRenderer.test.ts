@@ -1,13 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
-import { LABEL_DATA_BYTES } from '../../../../../src/data/labels/labelBufferStrides';
 import { createLabelRenderer } from '../../../../../src/services/gpu/renderers/labels/labelRenderer';
 import { parseFontMetrics } from '../../../../../src/services/gpu/labelLayout/fontMetrics';
 import type { LoadedFontAtlases } from '../../../../../src/@types/rendering/LoadedFontAtlases';
-import type { Label2D } from '../../../../../src/@types/rendering/Label2D';
 
-// Minimal BMFont fixture: just the uppercase A (codepoint 65) so we can
-// test that the renderer counts known glyphs and silently drops
-// unknown ones.
+// Minimal BMFont fixture: just the uppercase A (codepoint 65), enough for the
+// factory to size its atlas.
 const FIXTURE_METRICS = parseFontMetrics({
   pages: ['x.png'],
   common: { lineHeight: 50, base: 38, scaleW: 512, scaleH: 512 },
@@ -91,15 +88,10 @@ describe('LabelRenderer occlusion variant', () => {
     // two-pipeline / two-layout shape structurally here.
     const { bindGroupLayouts, pipelineLayouts } = buildOccluding();
 
-    // Three BGLs: the label BGL, the record path's BGL (each shared by its
-    // plain and occlusion pipelines) + the coverage BGL.
-    expect(bindGroupLayouts).toHaveLength(3);
-    // Per path, a plain single-BGL layout and a two-BGL occlusion layout — the
-    // occlusion instance builds both and picks per-draw.
+    // Two BGLs: the label BGL (shared by the plain and occlusion pipelines) + the coverage BGL.
+    expect(bindGroupLayouts).toHaveLength(2);
     expect(pipelineLayouts.map((layout) => Array.from(layout.bindGroupLayouts).length)).toEqual([
       1, // plain
-      1, // records, plain
-      2, // records, occlusion
       2, // occlusion
     ]);
   });
@@ -130,131 +122,5 @@ describe('LabelRenderer occlusion variant', () => {
     const target = Array.from(occlude!.fragment!.targets!)[0]!;
     expect(target!.blend?.color.srcFactor).toBe('one');
     expect(target!.blend?.color.dstFactor).toBe('one-minus-src-alpha');
-  });
-});
-
-function makeLabel(id: string): Label2D {
-  return { id, worldPos: [0, 0, 0], text: 'A', pixelSize: 0, font: 'cormorant' };
-}
-
-describe('LabelRenderer capacity growth', () => {
-  // Tracks descriptors by their `label` field so an assertion can tell the
-  // construction-time buffer/bind-group apart from a growth-time one without
-  // hardcoding byte sizes derived from private constants.
-  // Each createBuffer call returns a DISTINCT object (never a shared stub) so
-  // growth assertions can tell the pre- and post-reallocation buffer apart by
-  // identity — the thing the bind group must reference correctly.
-  type TrackedBuffer = { desc: GPUBufferDescriptor; buffer: { destroy: ReturnType<typeof vi.fn> } };
-
-  function buildTrackingDevice() {
-    const createdBuffers: TrackedBuffer[] = [];
-    const createBindGroupCalls: GPUBindGroupDescriptor[] = [];
-    const device = {
-      createBindGroupLayout: vi.fn(() => ({})),
-      createShaderModule: vi.fn(() => ({
-        getCompilationInfo: () => Promise.resolve({ messages: [] }),
-      })),
-      createPipelineLayout: vi.fn(() => ({})),
-      createRenderPipeline: vi.fn(() => ({})),
-      createBuffer: vi.fn((desc: GPUBufferDescriptor) => {
-        const buffer = { destroy: vi.fn() };
-        createdBuffers.push({ desc, buffer });
-        return buffer;
-      }),
-      createTexture: vi.fn(() => ({ createView: vi.fn(() => ({})), destroy: vi.fn() })),
-      createSampler: vi.fn(() => ({})),
-      createBindGroup: vi.fn((desc: GPUBindGroupDescriptor) => {
-        createBindGroupCalls.push(desc);
-        return {};
-      }),
-      queue: { writeBuffer: vi.fn(), copyExternalImageToTexture: vi.fn() },
-    } as unknown as GPUDevice;
-
-    const ctx = {
-      device,
-      context: null as unknown as GPUCanvasContext,
-      format: 'rgba16float' as GPUTextureFormat,
-      canvas: null as unknown as HTMLCanvasElement,
-      hdrCapable: false,
-    };
-    return { ctx, createdBuffers, createBindGroupCalls };
-  }
-
-  it('writes viewFromSlab and the near cut after the output projection', () => {
-    const { ctx, createdBuffers } = buildTrackingDevice();
-    const r = createLabelRenderer(ctx, {
-      targetFormat: ctx.format,
-      atlases: FIXTURE_ATLASES,
-    });
-    r.setLabels([makeLabel('a')]);
-    const pass = {
-      setPipeline: vi.fn(),
-      setBindGroup: vi.fn(),
-      setVertexBuffer: vi.fn(),
-      draw: vi.fn(),
-    } as unknown as GPURenderPassEncoder;
-    const uniformBuffer = createdBuffers.find((b) => b.desc.label === 'label-uniforms')!;
-    const writeBuffer = ctx.device.queue.writeBuffer as ReturnType<typeof vi.fn>;
-    const lastUniformWrite = () =>
-      writeBuffer.mock.calls
-        .filter((c) => c[0] === uniformBuffer.buffer)
-        .at(-1)![2] as Float32Array;
-
-    const viewFromSlab = Float64Array.from({ length: 16 }, (_, i) => i + 1);
-    r.draw(pass, {
-      output: {
-        kind: 'pinhole',
-        viewFromWorld: [1, 0, 0, 0, 1, 0, 0, 0, 1],
-        camHi: [0, 0, 0],
-        camLo: [0, 0, 0],
-        up3: [0, 1, 0],
-        sizePx: [1280, 720],
-        centrePx: [640, 360],
-        focalPx: 1000,
-        pxScale: 1,
-      },
-      viewFromSlab,
-      nearClipMpc: 0.01,
-    });
-    const uni = lastUniformWrite();
-    expect(Array.from(uni.subarray(28, 44))).toEqual(Array.from(viewFromSlab));
-    expect(uni[44]).toBe(Math.fround(0.01));
-  });
-
-  it('reallocates the GPU storage/instance buffers and rebinds when the roster outgrows capacity', () => {
-    const { ctx, createdBuffers, createBindGroupCalls } = buildTrackingDevice();
-    const r = createLabelRenderer(ctx, {
-      targetFormat: ctx.format,
-      atlases: FIXTURE_ATLASES,
-    });
-    const bindGroupCallsAtConstruction = createBindGroupCalls.length;
-
-    // 65 crosses INITIAL_LABEL_CAPACITY (64); the next power of two is 128,
-    // so both buffers must exactly double.
-    const labels = Array.from({ length: 65 }, (_, i) => makeLabel(`l${i}`));
-    r.setLabels(labels);
-
-    expect(createBindGroupCalls.length).toBeGreaterThan(bindGroupCallsAtConstruction);
-    const storageBuffers = createdBuffers.filter((b) => b.desc.label === 'label-storage');
-    expect(storageBuffers).toHaveLength(2);
-    expect(storageBuffers[1]!.desc.size).toBe(storageBuffers[0]!.desc.size * 2);
-    const instanceBuffers = createdBuffers.filter((b) => b.desc.label === 'label-instances');
-    expect(instanceBuffers).toHaveLength(2);
-    expect(instanceBuffers[1]!.desc.size).toBe(instanceBuffers[0]!.desc.size * 2);
-
-    // The landmine this test exists for: binding 1 must point at the NEW
-    // storage buffer, not a bind group rebuilt against the destroyed one.
-    const lastBindGroup = createBindGroupCalls[createBindGroupCalls.length - 1]!;
-    const entries = Array.from(lastBindGroup.entries) as GPUBindGroupEntry[];
-    const binding1 = entries.find((e) => e.binding === 1)!;
-    expect((binding1.resource as GPUBufferBinding).buffer).toBe(storageBuffers[1]!.buffer);
-
-    // No truncation: the upload after growth covers all 65 labels' f32s.
-    const writeBuffer = ctx.device.queue.writeBuffer as ReturnType<typeof vi.fn>;
-    const storageWrite = writeBuffer.mock.calls.find((c) => c[0] === storageBuffers[1]!.buffer)!;
-    expect(storageWrite[4]).toBe((65 * LABEL_DATA_BYTES) / 4);
-
-    expect(storageBuffers[0]!.buffer.destroy).toHaveBeenCalled();
-    expect(instanceBuffers[0]!.buffer.destroy).toHaveBeenCalled();
   });
 });

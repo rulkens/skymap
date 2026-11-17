@@ -24,7 +24,6 @@ import { createSourceUniformsBgl } from '../../gpu/bindGroupLayouts/sourceUnifor
 import { createFocusUniformsBgl } from '../../gpu/bindGroupLayouts/focusUniforms';
 import { constructGpuHandles } from '../gpuHandles/constructGpuHandles';
 import { GPU_HANDLE_ROWS } from '../gpuHandles/gpuHandleRegistry';
-import { attachLabelDirectors } from '../wiring/attachLabelDirectors';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
@@ -88,7 +87,4 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
     state,
     handleDeps,
   );
-
-  // `attachLabelDirectors` is shared with the later swap-format rebuild.
-  attachLabelDirectors(state);
 }

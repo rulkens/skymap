@@ -54,11 +54,9 @@ const DESKTOP_MODULE_DIRS = readdirSync(DESKTOP_MAIN_DIR, { withFileTypes: true 
 // count, owned by that helper alone, so it has nowhere else to live.
 const ALLOWED: Readonly<Record<string, number>> = {
   'frame/checkFrameOrder': 2,
-  'frame/cosmoLabelProjection': 1,
   'frame/deriveBodyStates': 2,
   'frame/executeFrame': 5,
   'frame/expandFrameOrder': 5,
-  'frame/near0LabelProjection': 1,
   'frame/pickProgram': 5,
   'frame/projectFramePose': 1,
   'frame/runBloom': 1,

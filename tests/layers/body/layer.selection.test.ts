@@ -36,8 +36,6 @@ function makeState(): EngineState {
     subsystems: {
       fades: {},
       scheduler: { requestRender: vi.fn() },
-      cosmoLabelDirector: { registerProducer: vi.fn() },
-      foregroundLabelDirector: { registerProducer: vi.fn() },
       labelDirectors: LABEL_DIRECTORS.map(createLabelDirectorState),
     },
     layers: [],

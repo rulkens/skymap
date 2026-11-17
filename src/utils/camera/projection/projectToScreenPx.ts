@@ -5,9 +5,8 @@
  * declutter's separation metric (pure pixel distance, orientation-agnostic).
  *
  * Its one caller is `starPointsPass`'s pick. The forward-projection
- * arithmetic itself lives in `forwardProjectPoint`, shared with
- * `label2DDirector` — this wrapper just adapts that
- * primitive's mutable-out shape to the `Vec2 | null` callers here expect.
+ * arithmetic itself lives in `forwardProjectPoint` — this wrapper just adapts
+ * that primitive's mutable-out shape to the `Vec2 | null` callers here expect.
  */
 
 import type { Vec2 } from '../../../@types/math/Vec2';

@@ -16,9 +16,9 @@ import { labelsCosmoPass } from '../../../../../src/services/engine/frame/passes
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
-import type { Label2DProjection } from '../../../../../src/@types/rendering/Label2DProjection';
-import type { Label2D } from '../../../../../src/@types/rendering/Label2D';
+import type { LabelRecordView } from '../../../../../src/@types/rendering/LabelRecordView';
 import type { LabelRenderer } from '../../../../../src/@types/rendering/LabelRenderer';
+import { COSMO } from '../../../../../src/services/engine/frame/slabs';
 
 const PASS_STUB = { draw: vi.fn() } as unknown as GPURenderPassEncoder;
 // A null row leaves the depth frame unresolved, so the joint must carry the
@@ -34,23 +34,26 @@ const VIEW_STUB = {
 function makeRenderer(): LabelRenderer {
   return {
     label: 'labelRenderer',
-    setLabels: vi.fn(),
+    set: vi.fn(),
     draw: vi.fn(),
     destroy: vi.fn(),
   } as unknown as LabelRenderer;
 }
 
-// What the director's `project` hands the pass; the draw passes it on.
-const PROJECTION_STUB = { output: { sizePx: [1280, 720] } } as unknown as Label2DProjection;
+// What the director remembers of its last frame; the draw passes it on.
+const VIEW_RECORDS = { projection: { sizePx: [1280, 720] } } as unknown as LabelRecordView;
 
-function makeState(renderer: LabelRenderer | null, flushedLabelCount = 0): EngineState {
-  const labels = Array.from({ length: flushedLabelCount }) as Label2D[];
+function makeState(renderer: LabelRenderer | null, recordCount = 0): EngineState {
+  const director = {
+    row: { slab: COSMO },
+    idle: false,
+    records: { count: recordCount },
+    frame: {},
+    view: VIEW_RECORDS,
+  };
   return {
     gpu: { labelRendererCosmo: renderer },
-    subsystems: {
-      cosmoLabelDirector: { labels: () => labels, project: () => PROJECTION_STUB },
-      labelDirectors: [],
-    },
+    subsystems: { labelDirectors: [director] },
   } as unknown as EngineState;
 }
 
@@ -72,7 +75,7 @@ function makeCtx(
 }
 
 describe('labelsCosmoPass.enabled', () => {
-  it('is false when the director flushed no labels, true otherwise', () => {
+  it('is false while the director holds no records, true otherwise', () => {
     const ctx = makeCtx(new Set(), vi.fn(), vi.fn());
     expect(labelsCosmoPass.enabled(makeState(makeRenderer(), 0), ctx, VIEW_STUB)).toBe(false);
     expect(labelsCosmoPass.enabled(makeState(makeRenderer(), 3), ctx, VIEW_STUB)).toBe(true);
@@ -93,7 +96,7 @@ describe('labelsCosmoPass.draw', () => {
     expect(viewOf).toHaveBeenCalledWith('foreground:0');
     expect(depthViewOf).not.toHaveBeenCalled();
     const drawSpy = renderer.draw as unknown as ReturnType<typeof vi.fn>;
-    expect(drawSpy).toHaveBeenCalledWith(PASS_STUB, PROJECTION_STUB, {
+    expect(drawSpy).toHaveBeenCalledWith(PASS_STUB, VIEW_RECORDS, {
       colorView: sentinelColorView,
       depthView: FAR_DEPTH_VIEW,
       frame: null,

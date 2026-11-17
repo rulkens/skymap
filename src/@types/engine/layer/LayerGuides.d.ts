@@ -1,16 +1,13 @@
-import type { LayerScreenLabel } from './LayerScreenLabel';
 import type { LabelSource } from './LabelSource';
 import type { LayerWorldLabel } from './LayerWorldLabel';
 import type { OrbitTrailGroup } from './OrbitTrailGroup';
 
-/** A `screenLabels` producer registers on the director of the slab it names —
- * COSMO's near plane is fixed at 0.01 Mpc, so anchors at parsec distances must
- * name NEAR0 or they are GPU-clipped and never draw. `worldLabels` is
+/** A `screenLabels` source registers on the director of the slab it names —
+ * COSMO hides labels nearer than 10 kpc (`LABEL_DIRECTORS`' `nearHideMpc`), so anchors at
+ * parsec distances must name NEAR0 or they never draw. `worldLabels` is
  * `state.label3DProducers`. Every half may be absent. */
 export type LayerGuides = {
-  /** Transitional (labels-as-data slice 10a–c): a row is a `LabelSource` (it has `describe`) for
-   *  a migrated Layer, else an old producer; `LayerScreenLabel` goes when the last Layer moves. */
-  readonly screenLabels?: readonly (LayerScreenLabel | LabelSource<unknown>)[];
+  readonly screenLabels?: readonly LabelSource<unknown>[];
   readonly worldLabels?: readonly LayerWorldLabel[];
   /** Static conics the orbit-trails pass propagates per frame, faded by the group's `show`
    * entry. Both `id` and `focusId` must resolve in the body-state snapshot, so a row here

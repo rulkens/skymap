@@ -3,7 +3,7 @@
  * `projectRecords` made this frame (no re-projection), nearest subject first: the quads share
  * one depth band and the first drawn owns a contested pixel. A record is clickable while
  * `targetAlpha` says so, it is still drawn (a fading label stays clickable while readable) and it
- * has ink. Each box grows by the grace padding and the painted outline, as `labelPickQuads` does.
+ * has ink. Each box grows by the grace padding and the painted outline.
  */
 
 import type { LabelFrame } from '../../@types/rendering/LabelFrame';

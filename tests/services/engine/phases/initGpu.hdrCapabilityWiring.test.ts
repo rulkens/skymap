@@ -206,16 +206,6 @@ function makeState(): EngineState {
     // `composeRenderTargetRows`; no Layer targets in this fixture.
     layerTargets: [],
     subsystems: {
-      cosmoLabelDirector: {
-        attachRenderers: vi.fn(),
-        registerProducer: vi.fn(),
-        runFrame: vi.fn(),
-      },
-      foregroundLabelDirector: {
-        attachRenderers: vi.fn(),
-        registerProducer: vi.fn(),
-        runFrame: vi.fn(),
-      },
       scheduler: {
         requestRender: vi.fn(),
       },

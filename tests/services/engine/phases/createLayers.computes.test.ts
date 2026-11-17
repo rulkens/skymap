@@ -26,8 +26,6 @@ function makeState(): EngineState {
       fades: { opacityOf: () => 0.5 },
       clipPlayer: { clipOpacityOf: () => 1 },
       scheduler: { requestRender: vi.fn() },
-      cosmoLabelDirector: { registerProducer: vi.fn() },
-      foregroundLabelDirector: { registerProducer: vi.fn() },
     },
     layers: [],
     selectionKindRows: [],

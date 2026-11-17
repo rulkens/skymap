@@ -25,11 +25,8 @@ import { APP_CUBEMAP_CAPTURE_REGISTRY } from '../../compositions/appCubemapCaptu
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createFadeRegistry } from '../animation/fadeRegistry';
-import { createLabel2DDirector } from './subsystems/label2DDirector';
 import { createLabelDirectorState } from './labels/createLabelDirectorState';
 import { LABEL_DIRECTORS } from '../../data/labels/labelDirectors';
-import { COSMO_LABEL_DIRECTOR } from '../../data/labels/cosmoLabelDirectorConfig';
-import { FOREGROUND_LABEL_DIRECTOR } from '../../data/labels/foregroundLabelDirectorConfig';
 import { createRecedingFocusSubsystem } from './subsystems/recedingFocusSubsystem';
 import { createClipPlayer } from './subsystems/clipPlayer';
 import { createClipPathInspector } from './subsystems/clipPathInspector';
@@ -66,7 +63,6 @@ import { createPlayClip } from './animation/playClip';
 import { createClipPathInspectSeam } from './animation/computeClipPath';
 import { composeSelectionRows } from './selection/composeSelectionRows';
 import { hasUrlGate } from '../../utils/url/hasUrlGate';
-import { VIEW_RIGS } from '../../data/rendering/viewRigs';
 
 /**
  * Start the WebGPU engine on `canvas`. Returns a handle synchronously; async setup
@@ -193,8 +189,6 @@ export function createEngine(
       timingService: createDisabledGpuTimingService(),
     },
     subsystems: {
-      cosmoLabelDirector: createLabel2DDirector(COSMO_LABEL_DIRECTOR, VIEW_RIGS[viewRig]),
-      foregroundLabelDirector: createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR, VIEW_RIGS[viewRig]),
       labelDirectors: LABEL_DIRECTORS.map(createLabelDirectorState),
 
       recedingFocus: createRecedingFocusSubsystem({
@@ -381,8 +375,6 @@ export function createEngine(
     for (const instance of state.layers.slice().reverse()) instance.destroy();
     state.layers = [];
 
-    state.subsystems.cosmoLabelDirector.destroy();
-    state.subsystems.foregroundLabelDirector.destroy();
     state.subsystems.recedingFocus.destroy();
     state.subsystems.pickDriver?.destroy();
     state.subsystems.pickDriver = null;

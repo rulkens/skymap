@@ -1,7 +1,6 @@
 /**
  * shownLabelRecords — the slab's label director as its pass reads it, or null while it draws
- * nothing (no records yet, none encoded, or idle with every alpha at 0). Transitional: the label
- * passes read it beside the old director until that one goes (plan Task 10, slice 10c).
+ * nothing (no records yet, none encoded, or idle with every alpha at 0).
  */
 
 import type { PassState } from '../../../@types/engine/frame/PassState';

@@ -1,9 +1,8 @@
 /**
  * forwardProjectPoint — the column-major mat4·vec4 world→clip→screen step
- * shared by the label declutter loop (`label2DDirector`) and the star pick
- * projection (`projectToScreenPx`): two sites that must agree on this arithmetic. Mutates the
+ * behind the star pick projection (`projectToScreenPx`). Mutates the
  * caller-owned `out` scratch rather than returning a fresh object, so a
- * per-label hot loop (`label2DDirector`'s `projectLabels`) allocates nothing.
+ * per-point hot loop allocates nothing.
  */
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { ForwardProjectedPoint } from '../../../@types/camera/projection/ForwardProjectedPoint';

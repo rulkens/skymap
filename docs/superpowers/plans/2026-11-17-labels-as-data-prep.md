@@ -247,8 +247,8 @@ Per Layer, the source and what it maps to (spec §10). Anchored positions use th
 | famous galaxies | `famousGalaxy` | `changes`: the catalog object |
 | light-time | `lightTime` | `anchorId: 'earth'`, radius = sphere radius |
 
-- [ ] One test per Layer, `<layer> describes its labels`, replacing its producer test.
-- [ ] Renamed files move with `npm run move-files -- <from> <to>`, never `git mv`.
+- [x] One test per Layer, `<layer> describes its labels`, replacing its producer test.
+- [x] Renamed files move with `npm run move-files -- <from> <to>`, never `git mv`.
 
 ### Task 11: tune from shots, owner checks
 

@@ -1,13 +1,15 @@
 /**
  * textLayoutOf — memoised glyph layout + ink bbox per label text.
  *
- * Layout depends only on (font, alignment, text), but packing and declutter ask
- * for it every frame, so the answer is cached. The cache hangs off the metrics
+ * Layout depends only on (font, alignment, text), but the encoder asks for it on
+ * every re-encode, so the answer is cached. The cache hangs off the metrics
  * record: it dies with the atlases, and the same inputs always give the same
  * output, so callers need no handle.
  */
 import type { LoadedFontAtlases } from '../../../@types/rendering/LoadedFontAtlases';
-import type { Label2D } from '../../../@types/rendering/Label2D';
+import type { FontId } from '../../../@types/data/FontId';
+import type { LabelAlignX } from '../../../@types/rendering/LabelAlignX';
+import type { LabelAlignY } from '../../../@types/rendering/LabelAlignY';
 import type { LaidOutText } from '../../../@types/rendering/LaidOutText';
 import { layoutLabel } from './labelLayout';
 import { measureLabel } from './measureLabel';
@@ -17,7 +19,12 @@ const memoByMetrics = new WeakMap<LoadedFontAtlases['metricsByFont'], Map<string
 
 export function textLayoutOf(
   metricsByFont: LoadedFontAtlases['metricsByFont'],
-  label: Pick<Label2D, 'text' | 'font' | 'alignX' | 'alignY'>,
+  label: {
+    readonly text: string;
+    readonly font: FontId;
+    readonly alignX?: LabelAlignX;
+    readonly alignY?: LabelAlignY;
+  },
 ): LaidOutText {
   let memo = memoByMetrics.get(metricsByFont);
   if (memo === undefined) {

@@ -57,8 +57,6 @@ export const INLINE_TYPE_FILES: ReadonlySet<string> = new Set([
   'src/services/engine/gpuHandles/gpuHandleRegistry.ts',
   'src/services/engine/helpers/famousDisplayName.ts',
   'src/services/engine/subsystems/clipPlayer.ts',
-  'src/services/engine/subsystems/label2DDirector.ts',
-  'src/services/engine/wiring/attachLabelDirectors.ts',
   'src/services/gpu/device.ts',
   'src/layers/milkyWay/field/header/render/buildFieldHeaderInputs.ts',
   'src/layers/milkyWay/field/render/bakeVolumeTexture.ts',

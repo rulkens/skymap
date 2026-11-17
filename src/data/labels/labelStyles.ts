@@ -1,9 +1,7 @@
 /**
  * LABEL_STYLES — every label style, one row each; a record carries its row's index in
- * `LABEL_STYLE_IDS` and the shader reads the same table. Values are copied from the producers'
- * constants at the switch (`structureMarkerStyles`, `famousLabelStyle`, `milkyWayLabelStyle`,
- * `stellarStreamLabelStyle.constants`, `bodyCaption`, `constellationLabelStyle`, the light-time
- * captions). Structure `appear` thresholds are those ring radii doubled (rows read diameters).
+ * `LABEL_STYLE_IDS` and the shader reads the same table. Structure `appear` thresholds are the
+ * marker ring radii doubled (rows read diameters).
  * Priorities are bands: rank = priority × CAPTION_PRIORITY_SCALE + apparent diameter.
  */
 

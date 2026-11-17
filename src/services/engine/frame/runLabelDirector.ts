@@ -79,7 +79,7 @@ export function runLabelDirector(state: EngineState, ctx: FrameView, slab: numbe
   for (const stage of LABEL_STAGES) stage(records, frame, inputs);
 
   const renderer = slab === COSMO ? state.gpu.labelRendererCosmo : state.gpu.labelRendererNear;
-  renderer?.setRecords(records);
+  renderer?.set(records);
   // A renderer built later uploads everything, so the range is spent either way.
   records.dirtyFrom = records.dirtyTo;
   director.view = { projection, hoveredPick, selectedPick };

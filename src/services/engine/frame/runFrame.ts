@@ -212,24 +212,17 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   snapshot.focusBlend = focus.blend;
   snapshot.focusPickId = encodeSelectionPick(state.selectionKindRows, focus.ref);
 
-  // Before the GPU dispatch (they upload the label buffers). Three statements,
-  // not `a() || b() || c()`: each call FLUSHES as a side effect and `||`
+  // Before the GPU dispatch (they upload the label buffers). Separate statements,
+  // not `a() || b() || c()`: each call uploads as a side effect and `||`
   // short-circuits.
   const cosmoStartMs = cpuSpans.on ? performance.now() : 0;
-  const cosmoLabelsAnimating = state.subsystems.cosmoLabelDirector.runFrame(state, canvas);
-  const cosmoRecordsAnimating = runLabelDirector(state, canvas, COSMO);
+  const cosmoLabelsAnimating = runLabelDirector(state, canvas, COSMO);
   if (cpuSpans.on) cpuSpans.add('labels:cosmo', cosmoStartMs);
   const nearStartMs = cpuSpans.on ? performance.now() : 0;
-  const nearLabelsAnimating = state.subsystems.foregroundLabelDirector.runFrame(state, canvas);
-  const nearRecordsAnimating = runLabelDirector(state, canvas, NEAR0);
+  const nearLabelsAnimating = runLabelDirector(state, canvas, NEAR0);
   if (cpuSpans.on) cpuSpans.add('labels:near0', nearStartMs);
   const label3DAnimating = runLabel3DProducers(state, canvas);
-  const labelsAnimating =
-    cosmoLabelsAnimating ||
-    cosmoRecordsAnimating ||
-    nearLabelsAnimating ||
-    nearRecordsAnimating ||
-    label3DAnimating;
+  const labelsAnimating = cosmoLabelsAnimating || nearLabelsAnimating || label3DAnimating;
 
   renderFrame({
     canvas,

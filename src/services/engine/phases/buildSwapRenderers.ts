@@ -9,7 +9,6 @@
  */
 
 import { GPU_HANDLE_ROWS } from '../gpuHandles/gpuHandleRegistry';
-import { attachLabelDirectors } from '../wiring/attachLabelDirectors';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { GpuHandleKey } from '../../../@types/engine/handles/GpuHandleKey';
@@ -51,10 +50,4 @@ export function buildSwapRenderers(state: EngineState, format: GPUTextureFormat)
     (state.gpu as Record<GpuHandleKey, Disposable | null>)[row.key]?.destroy();
     (state.gpu as Record<GpuHandleKey, unknown>)[row.key] = row.construct(state, deps);
   }
-
-  // Re-wire every label director onto its just-rebuilt renderer pair — both
-  // renderer keys above are `rebuildOnSwapFormat` rows, so skipping this
-  // would leave a director drawing into destroyed buffers (see
-  // `attachLabelDirectors`'s header for why).
-  attachLabelDirectors(state);
 }

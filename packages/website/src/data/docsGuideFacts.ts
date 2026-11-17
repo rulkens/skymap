@@ -223,7 +223,7 @@ export const DOCS_GUIDE_FACTS: readonly Fact[] = [
     id: 'label-click',
     about: 'app',
     text: 'A click on a name in the scene selects the object it names, for as long as the name can be read.',
-    source: `${REPO_BLOB}/src/utils/labels/isPickableLabel.ts`,
+    source: `${REPO_BLOB}/src/utils/labels/recordPickQuads.ts`,
     sourceLabel: `which names take a click, ${IN_REPO}`,
     checked: CHECKED,
   },
