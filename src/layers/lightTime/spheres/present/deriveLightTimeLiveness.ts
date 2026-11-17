@@ -7,13 +7,13 @@
 
 import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { LightTimeLiveness } from '../@types/LightTimeLiveness';
-import { LIGHT_TIME_APPROACH_BAND, LIGHT_TIME_RECEDE_BAND } from '../data/lightTimeFadeBands';
-import { fadeWindow } from '../../../../utils/math/fadeWindow';
+import { LABEL_STYLES } from '../../../../data/labels/labelStyles';
+import { subjectSizeFade } from '../../../../utils/labels/subjectSizeFade';
 import { EARTH_REF } from '../../../../data/selection/earthRef';
 import { LIGHT_TIME_SPHERES } from '../data/lightTimeSpheres';
 
 export function deriveLightTimeLiveness(
-  ctx: Pick<FrameView, 'snapshot' | 'drawCamPos'>,
+  ctx: Pick<FrameView, 'snapshot' | 'drawCamPos' | 'drawPxPerRad' | 'canvasSize'>,
   layerOpacity: number,
 ): LightTimeLiveness | null {
   if (!(layerOpacity > 0)) return null;
@@ -27,10 +27,17 @@ export function deriveLightTimeLiveness(
     ctx.drawCamPos[1] - centre[1],
     ctx.drawCamPos[2] - centre[2],
   );
+  // The caption's own rule over the sphere's apparent diameter in pixels (the style's appear
+  // band, and gone as the sphere fills the view), so a sphere and its caption dim together.
+  const shortSidePx = Math.min(ctx.canvasSize.width, ctx.canvasSize.height);
   const opacities = LIGHT_TIME_SPHERES.map(
     (sphere) =>
       layerOpacity *
-      fadeWindow([LIGHT_TIME_APPROACH_BAND, LIGHT_TIME_RECEDE_BAND], camDistMpc / sphere.radiusMpc),
+      subjectSizeFade(
+        LABEL_STYLES.lightTime,
+        ((2 * sphere.radiusMpc) / camDistMpc) * ctx.drawPxPerRad,
+        shortSidePx,
+      ),
   );
   return opacities.some((opacity) => opacity > 0) ? { centre, opacities } : null;
 }

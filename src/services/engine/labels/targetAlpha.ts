@@ -5,7 +5,7 @@
  *  - "focused only": 0 unless it names the focused, hovered or selected subject
  *  - the toggle's handed value (per item by `fadeKey`) × the record's reveal band by distance
  *  - the style's `appear` band over apparent diameter, unless the subject is hovered or selected
- *  - fades out as its subject fills the view (`overflowFade`), unless the style `keepsWhenFillingView`
+ *  - fades out as its subject fills the view (`subjectSizeFade`), unless the style `keepsWhenFillingView`
  *  - the toggle's focus recession, unless it names the focused, hovered or selected subject
  *  - 0 while a body stands between the eye and the subject
  * A label is clickable while it shows and its subject is the focus or inside the focus sphere.
@@ -21,8 +21,7 @@ import {
 } from '../../../data/labels/labelRecordLayout';
 import { LABEL_STYLES, LABEL_STYLE_IDS } from '../../../data/labels/labelStyles';
 import { fadeBand } from '../../../utils/math/fadeBand';
-import { smoothstep } from '../../../utils/math/smoothstep';
-import { overflowFade } from '../../../utils/scene/overflowFade';
+import { subjectSizeFade } from '../../../utils/labels/subjectSizeFade';
 import { subjectOccludedByBodies } from '../../../utils/occlusion/subjectOccludedByBodies';
 import { isPickableUnderFocus } from '../../../utils/structure/isPickableUnderFocus';
 
@@ -64,13 +63,7 @@ export const targetAlpha: LabelStage = (records, frame, inputs) => {
     const diameterPx = frame.diameterPx[i]!;
     const style =
       LABEL_STYLES[LABEL_STYLE_IDS[u32[base + W.style]! & LABEL_RECORD_FLAGS.styleMask]!];
-    if ('appear' in style && !named) {
-      const { fromPx, bandPx } = style.appear;
-      alpha *= smoothstep(fromPx, fromPx + bandPx, diameterPx);
-    }
-    if (f32[base + W.radiusMpc]! > 0 && !('keepsWhenFillingView' in style)) {
-      alpha *= overflowFade(diameterPx, shortSidePx);
-    }
+    alpha *= subjectSizeFade(style, diameterPx, shortSidePx, !named);
     if (!focused && !named) alpha *= inputs.recessions[source]!;
     if (!(alpha > 0)) continue;
 

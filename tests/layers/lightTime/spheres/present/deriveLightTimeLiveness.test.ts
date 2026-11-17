@@ -11,7 +11,10 @@ const indexOf = (id: string) => LIGHT_TIME_SPHERES.findIndex((s) => s.id === id)
 // Far enough from the origin that measuring from the origin would miss every small sphere.
 const EARTH: Vec3 = [5e-6, -2e-6, 1e-6];
 
-function makeCtx(drawCamPos: Vec3): FrameView {
+// The default 60° lens on an 1800 px tall canvas.
+const DEFAULT_FOCAL_PX = 1800 / (2 * Math.tan(Math.PI / 6));
+
+function makeCtx(drawCamPos: Vec3, focalPx = DEFAULT_FOCAL_PX): FrameView {
   return {
     snapshot: {
       nowMs: 0,
@@ -19,6 +22,8 @@ function makeCtx(drawCamPos: Vec3): FrameView {
       bodyStates: new Map([['earth', { positionMpc: EARTH }]]),
     },
     drawCamPos,
+    drawPxPerRad: focalPx,
+    canvasSize: { width: 3200, height: 1800 },
   } as unknown as FrameView;
 }
 
@@ -34,5 +39,26 @@ describe('deriveLightTimeLiveness', () => {
     expect(liveness.centre).toEqual(EARTH);
     expect(liveness.opacities[indexOf('light-time:hour')]).toBe(1);
     expect(liveness.opacities[indexOf('light-time:day')]).toBe(0);
+  });
+
+  it('fades by apparent pixels: a long lens shrinks the window in distance, not the rule', () => {
+    const hour = indexOf('light-time:hour');
+    const at = (radii: number): Vec3 => [
+      EARTH[0] + radii * radiusOf('light-time:hour'),
+      EARTH[1],
+      EARTH[2],
+    ];
+    // 60 radii out: 52 px across at the default lens (gone), 520 px at 10× (fully in).
+    expect(deriveLightTimeLiveness(makeCtx(at(60)), 1)?.opacities[hour] ?? 0).toBe(0);
+    expect(
+      deriveLightTimeLiveness(makeCtx(at(60), DEFAULT_FOCAL_PX * 10), 1)!.opacities[hour],
+    ).toBe(1);
+  });
+
+  it('fades out as the sphere fills the view, as its caption does', () => {
+    const hour = indexOf('light-time:hour');
+    // 1.2 radii out: 2.6 k px across on a 1800 px short side, past the fills-the-view band.
+    const near: Vec3 = [EARTH[0] + 1.2 * radiusOf('light-time:hour'), EARTH[1], EARTH[2]];
+    expect(deriveLightTimeLiveness(makeCtx(near), 1)?.opacities[hour] ?? 0).toBe(0);
   });
 });
