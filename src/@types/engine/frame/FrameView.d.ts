@@ -37,7 +37,7 @@ export type FrameView = {
   canvasSize: Size;
   /** Device pixels per CSS pixel: the canvas's backing/CSS ratio (2 on a Retina display),
    *  1 for a capture face. Authored px constants (label sizes, gaps) are CSS px times this. */
-  pxPerCssPx: number;
+  dpr: number;
   /** This view's eye: the camera's, plus the spec's rotated eye offset. */
   drawCamPos: Readonly<Vec3>;
   /** This view's projection as tangents of the half-angles from the view axis

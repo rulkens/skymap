@@ -21,8 +21,8 @@ export type ViewSpec = {
   readonly eyeOffsetMpc: Vec3;
   readonly frustum: ViewFrustum;
   readonly sizePx: Size;
-  /** Device pixels per CSS pixel of the display this view lands on (`FrameView.pxPerCssPx`). */
-  readonly pxPerCssPx: number;
+  /** Device pixels per CSS pixel of the display this view lands on (`FrameView.dpr`). */
+  readonly dpr: number;
   /** View-slot uniform ring index — see `FrameView.viewSlot`. */
   readonly slot: number;
   /** What the view renders — a capture face says so here rather than being

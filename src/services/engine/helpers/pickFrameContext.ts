@@ -13,7 +13,7 @@ import { encodeSelectionPick } from '../../../utils/selection/encodeSelectionPic
 import { frameContextInputOf } from '../frame/frameContextInputOf';
 import { frameBodyStates } from '../frame/frameBodyStates';
 import { mainViewSpec } from '../../../utils/camera/viewRig/mainViewSpec';
-import { canvasPxPerCssPx } from '../../../utils/browser/canvasPxPerCssPx';
+import { canvasDpr } from '../../../utils/browser/canvasDpr';
 import { liveWorldPose } from './liveWorldPose';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { VIEW_RIGS } from '../../../data/rendering/viewRigs';
@@ -53,7 +53,7 @@ export function pickFrameContext(state: EngineState, canvas: HTMLCanvasElement):
     mainViewSpec(
       { width: canvas.width, height: canvas.height },
       state.cameraRuntime.outputs.frustum,
-      canvasPxPerCssPx(canvas),
+      canvasDpr(canvas),
     ),
   );
 }

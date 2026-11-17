@@ -37,7 +37,7 @@ export function frameViewsAt(input: {
   /** The views' frustum; the 1-rad symmetric lens when omitted. */
   readonly frustum?: ViewFrustum;
   /** Device px per CSS px; 1 when omitted. */
-  readonly pxPerCssPx?: number;
+  readonly dpr?: number;
 }): FrameView[] {
   const { eyeMpc, distanceMpc, rotations = [IDENTITY], simDays = CONST_J2000 } = input;
   const forward = normalize3([...input.forward] as Vec3);
@@ -91,7 +91,7 @@ export function frameViewsAt(input: {
       eyeOffsetMpc: [0, 0, 0],
       frustum: input.frustum ?? symmetricFrustum(FOV_Y_RAD, SIZE_PX.width / SIZE_PX.height),
       sizePx: SIZE_PX,
-      pxPerCssPx: input.pxPerCssPx ?? 1,
+      dpr: input.dpr ?? 1,
       slot,
       kind: 'frame',
     }),

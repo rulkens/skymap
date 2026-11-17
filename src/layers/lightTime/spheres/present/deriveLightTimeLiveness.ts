@@ -13,7 +13,7 @@ import { EARTH_REF } from '../../../../data/selection/earthRef';
 import { LIGHT_TIME_SPHERES } from '../data/lightTimeSpheres';
 
 export function deriveLightTimeLiveness(
-  ctx: Pick<FrameView, 'snapshot' | 'drawCamPos' | 'drawPxPerRad' | 'canvasSize' | 'pxPerCssPx'>,
+  ctx: Pick<FrameView, 'snapshot' | 'drawCamPos' | 'drawPxPerRad' | 'canvasSize' | 'dpr'>,
   layerOpacity: number,
 ): LightTimeLiveness | null {
   if (!(layerOpacity > 0)) return null;
@@ -37,7 +37,7 @@ export function deriveLightTimeLiveness(
         LABEL_STYLES.lightTime,
         ((2 * sphere.radiusMpc) / camDistMpc) * ctx.drawPxPerRad,
         shortSidePx,
-        ctx.pxPerCssPx,
+        ctx.dpr,
       ),
   );
   return opacities.some((opacity) => opacity > 0) ? { centre, opacities } : null;

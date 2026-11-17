@@ -24,7 +24,7 @@ export function faceViewSpec(
     eyeOffsetMpc: [0, 0, 0],
     frustum: symmetricFrustum(Math.PI / 2, 1),
     sizePx: { width: faceSizePx, height: faceSizePx },
-    pxPerCssPx: 1,
+    dpr: 1,
     slot: viewSlotBase + face,
     kind: 'capture',
     clipYFlip: true,

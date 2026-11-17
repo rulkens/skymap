@@ -24,7 +24,7 @@ function makeCtx(drawCamPos: Vec3, focalPx = DEFAULT_FOCAL_PX): FrameView {
     drawCamPos,
     drawPxPerRad: focalPx,
     canvasSize: { width: 3200, height: 1800 },
-    pxPerCssPx: 2,
+    dpr: 2,
   } as unknown as FrameView;
 }
 

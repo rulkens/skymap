@@ -66,7 +66,7 @@ describe('outputProjectionOf', () => {
   it("scales authored px by the canvas's device pixel ratio", () => {
     const at = { eyeMpc: [0, 0, 0] as Vec3, forward: [0, 0, -1] as Vec3, distanceMpc: 1 };
     expect(outputProjectionOf(frameViewsAt(at)[0]!, VIEW_RIGS.mono).pxScale).toBe(1);
-    const [dense] = frameViewsAt({ ...at, pxPerCssPx: 2 });
+    const [dense] = frameViewsAt({ ...at, dpr: 2 });
     expect(outputProjectionOf(dense!, VIEW_RIGS.mono).pxScale).toBe(2);
   });
 });

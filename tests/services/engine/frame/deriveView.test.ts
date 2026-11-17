@@ -103,7 +103,7 @@ function spec(overrides: Partial<ViewSpec> = {}): ViewSpec {
     eyeOffsetMpc: [0, 0, 0],
     frustum: symmetricFrustum(PROJECTION.fovYRad, PROJECTION.aspect),
     sizePx: CANVAS,
-    pxPerCssPx: 1,
+    dpr: 1,
     slot: 0,
     kind: 'frame',
     ...overrides,

@@ -48,6 +48,6 @@ export function outputProjectionOf(view: FrameView, rig: ViewRig): OutputProject
     sizePx: [canvasSize.width, canvasSize.height],
     centrePx: [(-frustum.tanLeft * canvasSize.width) / width, frustum.tanUp * view.drawPxPerRad],
     focalPx: view.drawPxPerRad,
-    pxScale: view.pxPerCssPx,
+    pxScale: view.dpr,
   };
 }
