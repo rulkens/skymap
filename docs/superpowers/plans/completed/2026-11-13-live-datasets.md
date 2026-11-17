@@ -1,6 +1,6 @@
 # Live datasets: implementation plan
 
-Spec: [`docs/superpowers/specs/2026-11-13-live-datasets-design.md`](../specs/2026-11-13-live-datasets-design.md)
+Spec: [`docs/superpowers/specs/completed/2026-11-13-live-datasets-design.md`](../../specs/completed/2026-11-13-live-datasets-design.md)
 
 Three PRs, each its own branch off `main`:
 
@@ -179,10 +179,8 @@ export function fetchLiveFile(
   3. Check each tier with `checkCloudTier`.
   4. Call `writeLivePointer`.
 - `checkCloudTier(path: string, tierPx: number): Promise<void>` throws unless the file is `tierPx × tierPx/2` and grey.
-- The clouds row: three `files` (`image/webp`, `gzip: false`), `timeoutMin: 45`, and `bodyTexture: { bodyId: 'earth', kind: 'clouds', fileByTierPx: { 2048: …, 4096: …, 8192: … } }`.
-- Its `caches`:
-  - `tools/cloud-bake-rs/target` + `~/.cargo/registry`, keyed on `tools/cloud-bake-rs/Cargo.lock`;
-  - `data/raw/textures`, keyed on `data/raw/textures/textures.sha256`.
+- The clouds row: three `files` (`image/webp`, `gzip: false`) named by `bodyTextureFilename`, `timeoutMin: 45`, and `bodyTexture: { bodyId: 'earth', kind: 'clouds' }`.
+- Its CI: `setupRust` (stable Rust plus `Swatinem/rust-cache`, as ci.yml), and `cache` = `data/raw/textures`, keyed on `data/raw/textures/textures.sha256`.
 - Before the bake, `buildLiveClouds` runs `fetch-cloud-inputs -- --confirm` (a no-op when the cache hit).
 - Tests:
   - `it('rejects a tier with the wrong dimensions')`
@@ -231,15 +229,15 @@ export function bodyTextureUrls(req: BodyTextureReq): readonly (() => Promise<st
 - Rename the local pointer away, reload: the built-in map loads, with no grey ball.
 - Restore the pointer and make the dated file a non-image: the built-in map loads.
 - Shoot each case and send it to the owner as dash checks.
-- **Go-live gate:** PR C merges only after the owner confirms the Himawari terms, or the bake replaces that region with NOAA GMGSI.
+- **Himawari terms (owner ruling, 2026-11-16):** PR C ships the web app with the credit lines while the owner asks JMA; the kiosk waits on the answer (it mirrors no live keys, so it already shows the built-in map). No merge gate.
 
 ## Definition of Done
 
-- [ ] Phase A: built-in cloud tiers are one grey channel (`earth-clouds-grey-*.webp`, 8192 ≈ 6 MB), uploaded as `r8unorm`, and the deck, shadows and night lights look the same (owner check). Perf is measured before and after.
-- [ ] Phase A: the owner synced the new tiers to R2 before the merge.
-- [ ] Phase B: satellites publish through `live-datasets.yml`, a pointer and a dated file. `satellites.yml` is gone. The app reads satellites through the pointer.
-- [ ] Phase B: the lifecycle rule is applied, and one manual run is confirmed live.
-- [ ] Phase C: the clouds leg publishes yesterday's three tiers. The app shows them and falls back to the built-in map on a missing pointer, a 404 or a non-image (owner checks).
-- [ ] Phase C: the credits and attributions name GIBS and EUMETSAT. The Himawari terms are confirmed or replaced.
-- [ ] `npm test`, `npm run typecheck` and CI are green on each PR.
-- [ ] Backlog: the two adjacent findings from the spec are filed (cloud shell sharing the globe's texture; `textures.sha256` missing three Blue Marble months).
+- [x] Phase A: built-in cloud tiers are one grey channel (`earth-clouds-grey-*.webp`, 8192 ≈ 6 MB), uploaded as `r8unorm`, and the deck, shadows and night lights look the same (owner check). Perf is measured before and after.
+- [x] Phase A: the owner synced the new tiers to R2 before the merge.
+- [x] Phase B: satellites publish through `live-datasets.yml`, a pointer and a dated file. `satellites.yml` is gone. The app reads satellites through the pointer.
+- [x] Phase B: the lifecycle rule is applied, and one manual run is confirmed live.
+- [x] Phase C: the clouds leg publishes yesterday's three tiers. The app shows them and falls back to the built-in map on a missing pointer, a 404 or a non-image (owner checks).
+- [x] Phase C: the credits and attributions name GIBS, EUMETSAT and JMA Himawari, with the credit lines. JMA has been asked about the Himawari terms (email drafted 2026-11-16; the owner sends it; commercial use waits on the answer).
+- [x] `npm test`, `npm run typecheck` and CI are green on each PR.
+- [x] Backlog: the two adjacent findings from the spec are filed (cloud shell sharing the globe's texture; `textures.sha256` pins: fixed in this PR instead of filed, all 12 months pinned).

@@ -26,6 +26,9 @@ export const CREDIT_GROUPS = [
     sources: [
       { name: 'Blue Marble', url: 'https://visibleearth.nasa.gov/collection/1484/blue-marble' },
       { name: 'EOX Sentinel-2', url: 'https://cloudless.eox.at' },
+      { name: 'NASA GIBS', url: 'https://www.earthdata.nasa.gov/gibs' },
+      { name: 'EUMETSAT', url: 'https://www.eumetsat.int' },
+      { name: 'JMA Himawari', url: 'https://www.jma.go.jp/jma/indexe.html' },
     ],
   },
   {

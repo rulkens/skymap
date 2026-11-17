@@ -28,6 +28,7 @@ import {
   selectBloomEnabled,
   selectBloomStrength,
   selectBloomThreshold,
+  selectFilmEnabled,
 } from '../../state/settings/selectors';
 import { selectHdrCapable } from '../../state/engine/selectors';
 import { setToneMapCurve, setExposure } from '../../state/settings/core/tonemapSlice';
@@ -40,6 +41,7 @@ import {
   setBloomStrength,
   setBloomThreshold,
 } from '../../state/settings/core/bloomSlice';
+import { setFilmEnabled } from '../../state/settings/core/filmSlice';
 import { requestOrientationChange } from '../../state/camera/orientationActions';
 import type { ToneMapCurve } from '../../@types/data/ToneMapCurve';
 import type { OrientationFrameId } from '../../@types/camera/orientation/OrientationFrameId';
@@ -59,6 +61,7 @@ function DisplaySectionContainer(): React.ReactElement {
   const bloomEnabled = useAppSelector(selectBloomEnabled);
   const bloomStrength = useAppSelector(selectBloomStrength);
   const bloomThreshold = useAppSelector(selectBloomThreshold);
+  const filmEnabled = useAppSelector(selectFilmEnabled);
 
   // Dispatch the single intent and nothing else: the orientation saga captures
   // the live up-basis and fires setOrientation + startFrameTween. The container
@@ -98,6 +101,11 @@ function DisplaySectionContainer(): React.ReactElement {
     [dispatch],
   );
 
+  const onFilmEnabledChange = useCallback(
+    (next: boolean) => dispatch(setFilmEnabled(next)),
+    [dispatch],
+  );
+
   return (
     <DisplaySection
       orientation={orientation}
@@ -121,6 +129,8 @@ function DisplaySectionContainer(): React.ReactElement {
       onBloomStrengthChange={onBloomStrengthChange}
       bloomThreshold={bloomThreshold}
       onBloomThresholdChange={onBloomThresholdChange}
+      filmEnabled={filmEnabled}
+      onFilmEnabledChange={onFilmEnabledChange}
     />
   );
 }

@@ -13,15 +13,7 @@ import { describe, expect, it } from 'vitest';
 const REPO_DIR = fileURLToPath(new URL('../../', import.meta.url));
 const SHADERS = 'src/services/gpu/shaders';
 
-// The bloom/* and compositor/fragment.wesl rows go when the film look (#1131) lands: it renames
-// or cleans those files, and this test then names each row to delete.
 const ALLOWED: Readonly<Record<string, number>> = {
-  'src/services/gpu/shaders/bloom/bright.wesl': 8,
-  'src/services/gpu/shaders/bloom/downsample.wesl': 16,
-  'src/services/gpu/shaders/bloom/fold.wesl': 4,
-  'src/services/gpu/shaders/bloom/io.wesl': 3,
-  'src/services/gpu/shaders/bloom/upsample.wesl': 5,
-  'src/services/gpu/shaders/compositor/fragment.wesl': 1,
 };
 
 const TOO_SHORT = /^[A-Za-z][A-Za-z0-9]?$/;

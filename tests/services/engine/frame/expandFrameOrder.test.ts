@@ -21,7 +21,7 @@ import type { ToneMap } from '../../../../src/@types/rendering/ToneMap';
 import type { OrbitCamera } from '../../../../src/@types/camera/orbitCamera/OrbitCamera';
 import { symmetricFrustum } from '../../../../src/utils/camera/frustum/symmetricFrustum';
 
-const TONE: ToneMap = { exposure: 1.5, curve: 4, hdrKnee: 0, hdrHeadroom: 0 };
+const TONE: ToneMap = { exposure: 1.5, curve: 4, hdrKnee: 0, hdrHeadroom: 0, film: null };
 
 function namesOf(step: FrameStep | undefined): readonly string[] {
   return step !== undefined && step.kind === 'render' ? step.passes.map((p) => p.name) : [];
