@@ -40,12 +40,6 @@ describe('targetAlpha', () => {
     expect(frame.target[1]).toBe(0);
   });
 
-  it('a style that keeps its label when the subject fills the view does not fade', () => {
-    const filling = at(0, 0.55); // 857 px of a 900 px short side
-    expect(targets([filling], {}, 'galaxyCluster').target[0]).toBe(0);
-    expect(targets([filling], {}, 'stellarStream').target[0]).toBe(1);
-  });
-
   it('a near-scene label behind a body is hidden', () => {
     const body = (x: number) => ({
       positionMpc: [x, 0, -0.5] as [number, number, number],

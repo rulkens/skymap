@@ -1,7 +1,6 @@
 /**
  * subjectSizeFade — the fade a label's style gives its subject's apparent size: in over the
- * style's `appear` band, out as the subject fills the view (unless the style keeps its label
- * then). The caption (`targetAlpha`) and the light-time sphere it names both call this, so they
+ * style's `appear` band, out as the subject fills the view. The caption (`targetAlpha`) and the light-time sphere it names both call this, so they
  * dim together at any lens. `appears: false` skips the in-band (a hovered or selected subject).
  */
 
@@ -20,6 +19,5 @@ export function subjectSizeFade(
     const { fromPx, bandPx } = style.appear;
     alpha *= smoothstep(fromPx, fromPx + bandPx, diameterPx);
   }
-  if (style.keepsWhenFillingView === undefined) alpha *= overflowFade(diameterPx, shortSidePx);
-  return alpha;
+  return alpha * overflowFade(diameterPx, shortSidePx);
 }

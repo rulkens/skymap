@@ -5,7 +5,7 @@
  *  - "focused only": 0 unless it names the focused, hovered or selected subject
  *  - the toggle's handed value (per item by `fadeKey`) × the record's reveal band by distance
  *  - the style's `appear` band over apparent diameter, unless the subject is hovered or selected
- *  - fades out as its subject fills the view (`subjectSizeFade`), unless the style `keepsWhenFillingView`
+ *  - fades out as its subject fills the view (both through `subjectSizeFade`)
  *  - the toggle's focus recession, unless it names the focused, hovered or selected subject
  *  - 0 while a body stands between the eye and the subject
  * A label is clickable while it shows and its subject is the focus or inside the focus sphere.
