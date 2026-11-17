@@ -1,4 +1,5 @@
 import type { FrameView } from '../frame/FrameView';
+import type { ViewRig } from '../frame/ViewRig';
 import type { Label2DProjection } from '../../rendering/Label2DProjection';
 import type { Label2DEnvelopePolicy } from './Label2DEnvelopePolicy';
 import type { Label2DLiftPolicy } from './Label2DLiftPolicy';
@@ -11,8 +12,8 @@ import type { Label2DLiftPolicy } from './Label2DLiftPolicy';
  * which factory function got called.
  */
 export type Label2DDirectorConfig = {
-  /** Resolves this frame's projection for the director's slab. Memoised per ctx. */
-  readonly project: (ctx: FrameView) => Label2DProjection;
+  /** Resolves this frame's projection for the director's slab, through the rig's output. Memoised per ctx. */
+  readonly project: (ctx: FrameView, rig: ViewRig) => Label2DProjection;
   /** Screen px of gap two kept captions' measured text rects must clear. */
   readonly declutterPadPx: number;
   readonly envelope: Label2DEnvelopePolicy;

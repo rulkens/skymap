@@ -73,13 +73,8 @@ fn sceneDepthOccludes(fragXY: vec2f, nearKm: f32) -> f32 {
 }
 
 /**
- * Shared 'vsOcclude' body for labels and marker-line leaders: projects
- * 'worldPos', flips NDC into 'depthFrame's framebuffer space (y points
- * DOWN, ndc.y points UP), then calls 'sceneDepthOccludes'. Guarded
- * explicitly rather than leaning on textureLoad's out-of-bounds return:
- * FAR_DEPTH is 0 and so is an out-of-bounds load on the backends this
- * targets, a coincidence nothing should lean on — WGSL does not pin
- * what an out-of-bounds load returns.
+ * The marker-line leaders' 'vsOcclude' body: projects 'worldPos' and flips NDC
+ * into a uv (y DOWN, ndc.y points UP) for 'subjectDepthVerdictAtUv'.
  */
 fn subjectDepthVerdict(cam: CameraUniforms, worldPos: vec3<f32>, nearKm: f32) -> f32 {
   let clip = worldToClip(cam, worldPos);
@@ -87,7 +82,19 @@ fn subjectDepthVerdict(cam: CameraUniforms, worldPos: vec3<f32>, nearKm: f32) ->
     return 0.0;
   }
   let ndc = clip.xy / clip.w;
-  let anchorXY = vec2<f32>(ndc.x * 0.5 + 0.5, 0.5 - ndc.y * 0.5) * depthFrame.viewportPx;
+  return subjectDepthVerdictAtUv(vec2<f32>(ndc.x * 0.5 + 0.5, 0.5 - ndc.y * 0.5), nearKm);
+}
+
+/**
+ * 'sceneDepthOccludes' at a subject's window uv (y down; the labels'
+ * 'vsOcclude' passes its projected px over the output size). Guarded
+ * explicitly rather than leaning on textureLoad's out-of-bounds return:
+ * FAR_DEPTH is 0 and so is an out-of-bounds load on the backends this
+ * targets, a coincidence nothing should lean on — WGSL does not pin
+ * what an out-of-bounds load returns.
+ */
+fn subjectDepthVerdictAtUv(uv: vec2<f32>, nearKm: f32) -> f32 {
+  let anchorXY = uv * depthFrame.viewportPx;
   if (
     anchorXY.x < 0.0 || anchorXY.x >= depthFrame.viewportPx.x ||
     anchorXY.y < 0.0 || anchorXY.y >= depthFrame.viewportPx.y

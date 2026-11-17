@@ -82,7 +82,7 @@ Same two functions and struct, field for field. Follow an existing TS↔WESL par
   shader; the quad is built from `up` and its perpendicular, written as NDC at w = 1.
 - `near0OverlayClipScale` / `near0OverlayVpF32` lose their label callers; delete them if nothing
   else calls them.
-- [ ] `npm run shot` at earth-surface, solar-system, star-field and local-group before and after;
+- [x] `npm run shot` at earth-surface, solar-system, star-field and local-group before and after;
       the label pixels must match. Attach the pairs to the reply.
 
 **Gate A:** `npm run perf -- --url http://localhost:5176 --frames 60` and `perf:cpu --frames 240`

@@ -1,6 +1,6 @@
 /**
- * near0OverlayClipScale — the uniform clip scale the NEAR0 overlays (captions,
- * leader lines, selection ring, mission trails) multiply their eye-relative-Mpc
+ * near0OverlayClipScale — the uniform clip scale the NEAR0 overlays (leader
+ * lines, selection ring, mission trails) multiply their eye-relative-Mpc
  * vp by. NDC is invariant under it; what it sets is the MAGNITUDE of clip `w`,
  * which rasterizers only interpolate faithfully inside a band (SwiftShader:
  * ~1e-12 … 1e11; hardware is wider but not unbounded). 1/near pins the nearest

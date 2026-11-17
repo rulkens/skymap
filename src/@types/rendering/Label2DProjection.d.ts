@@ -1,23 +1,21 @@
-import type { Vec2 } from '../math/Vec2';
+import type { OutputProjection } from './OutputProjection';
 
 /**
  * One director instance's per-frame placement basis — a `Label2DDirectorConfig.project`
- * result. `vp` carries whatever precision the owning slab uses (NEAR0 resolves
- * f64); `vpF32` is the same matrix narrowed for the renderer's GPU upload, which is
- * always f32.
+ * result. Labels land through `output`; `viewFromSlab` carries this slab's label
+ * anchors (absolute on COSMO, camera-relative on NEAR0) into its view space until
+ * labels carry absolute hi/lo positions of their own.
  */
 export type Label2DProjection = {
-  /** Placement matrix, in Mpc clip units — f64 where the slab has one (NEAR0). */
+  /** proj·view for the lift stage's un-projection (`liftedLabelPlacement`), f64 where the slab has one. */
   readonly vp: Float32Array | Float64Array;
+  readonly output: OutputProjection;
+  /** Slab anchor → view space (+z ahead), column-major 4×4, f64 and unscaled. */
+  readonly viewFromSlab: Float64Array;
   /**
-   * The same matrix narrowed for the renderer upload. NEAR0's is additionally
-   * rescaled by `clipScale` (`near0OverlayVpF32`) — NDC-identical to `vp`, but
-   * NOT interchangeable with it for anything divided by `clip.w`.
+   * View depth under which the slab's clip-space path near-clipped an anchor:
+   * COSMO's near plane, 0 on NEAR0 (whose clip-z clamp never near-clipped).
+   * The label shader keeps that cut so the projection swap changes no pixel.
    */
-  readonly vpF32: Float32Array;
-  readonly viewportPx: Vec2;
-  /** The drawn view's pixels per radian — the label shader's `cam.pxPerRad`. */
-  readonly pxPerRad: number;
-  /** The uniform clip scale `vpF32` carries (`near0OverlayClipScale`); 1 on COSMO. */
-  readonly clipScale: number;
+  readonly nearClipMpc: number;
 };

@@ -3,6 +3,7 @@ import type { Label2D } from '../../rendering/Label2D';
 import type { MarkerLineRenderer } from '../../rendering/MarkerLineRenderer';
 import type { LabelBBox } from '../../rendering/LabelBBox';
 import type { FrameView } from '../frame/FrameView';
+import type { Label2DProjection } from '../../rendering/Label2DProjection';
 import type { EngineState } from '../state/EngineState';
 import type { Label2DProducer } from './Label2DProducer';
 
@@ -22,6 +23,8 @@ export type Label2DDirector = {
    * never wakes the loop itself.
    */
   runFrame(state: EngineState, ctx: FrameView): boolean;
+  /** This view's label projection, through the rig the director was made for. Memoised per ctx. */
+  project(ctx: FrameView): Label2DProjection;
   /** The label set last flushed to the renderer; empty before the first flush. */
   labels(): readonly Label2D[];
   /**

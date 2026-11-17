@@ -34,7 +34,7 @@ export function labelPickQuads(args: {
   readonly measure: (label: Label2D) => LabelBBox | null;
 }): LabelPickQuad[] {
   const { labels, projection, measure } = args;
-  const { pxPerRad } = projection;
+  const pxPerRad = projection.output.focalPx;
   // Shared with the declutter arms (`label2DDirector`) — a label cannot be
   // decluttered against one screen position and clicked at another.
   const projected = projectLabels(labels, projection);

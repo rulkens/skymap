@@ -23,6 +23,8 @@ import { bodyRelativePose } from '../../../../../src/services/engine/camera/body
 import { bodyStateInHostFrame } from '../../../../../src/utils/scene/bodyStateInHostFrame';
 import { bodyLayerSlabRow } from '../../../../../src/layers/body/slabs/present/bodyLayerSlabRow';
 import { near0LabelProjection } from '../../../../../src/services/engine/frame/near0LabelProjection';
+import { projectLabels } from '../../../../../src/utils/labels/projectLabels';
+import { VIEW_RIGS } from '../../../../../src/data/rendering/viewRigs';
 import { meshBodyCaption } from '../../../../../src/layers/missions/craft/utils/meshBodyCaption';
 import { SCENE_MESH_BODIES } from '../../../../../src/data/bodies/sceneMeshBodies';
 import { SCENE_BODIES } from '../../../../../src/data/bodies/sceneBodies';
@@ -121,6 +123,8 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
     },
     slabs,
     bodyPose,
+    cam,
+    frustum: symmetricFrustum(cam.fovYRad, cam.aspect),
     canvasSize: { width: VIEWPORT[0], height: VIEWPORT[1] },
     drawCamPos: [cam.position[0], cam.position[1], cam.position[2]] as Vec3,
     drawPxPerRad: VIEWPORT[1] / (2 * Math.tan(cam.fovYRad / 2)),
@@ -160,8 +164,7 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
   // The caption's own seam: `meshBodyCaption`'s world position made
   // camera-relative (`produceMissionCaptions`'s compose, which needs the
   // settings/fade graph this harness has no use for) projected through
-  // `near0LabelProjection`'s rebased vp — the pair `labelsNearPass`, the
-  // leader line and `labelPickQuads` all consume.
+  // `near0LabelProjection` — what `labelsNearPass` and `labelPickQuads` consume.
   const caption = meshBodyCaption(body, bodyState.positionMpc, 0);
   const camRelAnchor: Vec3 = [
     caption.worldPos[0] - ctx.drawCamPos[0],
@@ -178,8 +181,18 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
       unknown,
       { worldPos: Vec3; alpha: number },
     ],
-    captionClip: clipOf(near0LabelProjection(ctx).vpF32, camRelAnchor),
+    captionClip: captionClipOf(
+      projectLabels(
+        [{ ...caption, worldPos: camRelAnchor }],
+        near0LabelProjection(ctx, VIEW_RIGS.mono),
+      )[0]!.screenPx!,
+    ),
   };
+}
+
+/** A projected px as the w = 1 clip point `offsetPx` compares. */
+function captionClipOf(px: readonly number[]): number[] {
+  return [(px[0]! / VIEWPORT[0]) * 2 - 1, 1 - (px[1]! / VIEWPORT[1]) * 2, 0, 1];
 }
 
 function offsetPx(a: readonly number[], b: readonly number[]): number {

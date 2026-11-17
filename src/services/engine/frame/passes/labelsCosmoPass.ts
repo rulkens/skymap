@@ -40,7 +40,6 @@
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { overlaySceneOcclusion } from '../overlaySceneOcclusion';
-import { cosmoLabelProjection } from '../cosmoLabelProjection';
 import { hasPickableLabel } from '../../../../utils/labels/hasPickableLabel';
 import { labelPickQuads } from '../../../../utils/labels/labelPickQuads';
 import { textLayoutOf } from '../../../gpu/labelLayout/textLayoutOf';
@@ -67,9 +66,11 @@ export const labelsCosmoPass: ContentPass = {
     // the joint decides anything here — the depth half is bound because the
     // pipeline layout demands it, and reads as a no-op against the labels'
     // zero cutoff.
-    state.gpu.labelRendererCosmo!.draw(pass, view.vp, view.viewportPx, ctx.drawPxPerRad, {
-      scene: overlaySceneOcclusion(ctx, view),
-    });
+    state.gpu.labelRendererCosmo!.draw(
+      pass,
+      state.subsystems.cosmoLabelDirector.project(ctx),
+      overlaySceneOcclusion(ctx, view),
+    );
   },
 
   // Pick aspect — grace-padded ink boxes for the drawn labels, stamped with
@@ -86,7 +87,7 @@ export const labelsCosmoPass: ContentPass = {
     const fontAtlases = state.gpu.fontAtlases;
     if (pickRenderer === null || fontAtlases === null) return;
 
-    const projection = cosmoLabelProjection(ctx);
+    const projection = state.subsystems.cosmoLabelDirector.project(ctx);
     const quads = labelPickQuads({
       labels: state.subsystems.cosmoLabelDirector.labels(),
       projection,

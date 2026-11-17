@@ -1,39 +1,35 @@
 /**
  * near0LabelProjection — the NEAR0 label director's `Label2DDirectorConfig.project`.
  *
- * Rebases the slab's f64 `vp` about the camera in f64 (`rebaseViewProj`) — the
- * same precision fix `labelsNearPass.ts` applies today, load-bearing at
- * solar-system zoom where the raw vp's view translation and a near anchor's
- * coordinate agree to only ~4 f32 digits (see `rebaseViewProj`'s module
- * header). `vp` stays f64 in Mpc for the lift stage's inverse-projection math;
- * `vpF32` is rescaled to clip metres and narrowed once for the renderer upload
- * (`near0OverlayVpF32` — the rasterizer's `w` floor). Memoised per `ctx`, like
- * its COSMO sibling.
+ * NEAR0 anchors are camera-relative Mpc, so `viewFromSlab` is the rotation
+ * alone. `vp` is the slab's f64 vp rebased about the camera (`rebaseViewProj`)
+ * for the lift stage's inverse-projection math, load-bearing at solar-system
+ * zoom (see `rebaseViewProj`'s header). Memoised per `ctx`, like its COSMO sibling.
  */
 
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
+import type { ViewRig } from '../../../@types/engine/frame/ViewRig';
 import type { Label2DProjection } from '../../../@types/rendering/Label2DProjection';
 import { rebaseViewProj } from '../../../utils/camera/projection/rebaseViewProj';
-import { near0OverlayClipScale } from './near0OverlayClipScale';
-import { near0OverlayVpF32 } from './near0OverlayVpF32';
+import { outputProjectionOf } from '../../../utils/labels/outputProjectionOf';
+import { viewFromSlabOf } from '../../../utils/labels/viewFromSlabOf';
 import { NEAR0 } from './slabs';
 
 const cache = new WeakMap<FrameView, Label2DProjection>();
 
-export function near0LabelProjection(ctx: FrameView): Label2DProjection {
+export function near0LabelProjection(ctx: FrameView, rig: ViewRig): Label2DProjection {
   const cached = cache.get(ctx);
   if (cached) return cached;
 
   const slab = ctx.slabs[NEAR0];
   if (!slab) throw new Error(`near0LabelProjection: no slab at index ${NEAR0}`);
-  const vp = rebaseViewProj(slab.vp, ctx.drawCamPos);
-  const clipScale = near0OverlayClipScale(slab.near);
+  const output = outputProjectionOf(ctx, rig);
   const projection: Label2DProjection = {
-    vp,
-    vpF32: near0OverlayVpF32(vp, clipScale),
-    viewportPx: [ctx.canvasSize.width, ctx.canvasSize.height],
-    pxPerRad: ctx.drawPxPerRad,
-    clipScale,
+    vp: rebaseViewProj(slab.vp, ctx.drawCamPos),
+    output,
+    viewFromSlab: viewFromSlabOf(output.viewFromWorld, [0, 0, 0]),
+    // NEAR0's reversed-Z clip-z clamp kept every anchor ahead of the eye.
+    nearClipMpc: 0,
   };
   cache.set(ctx, projection);
   return projection;

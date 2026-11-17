@@ -13,6 +13,10 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { createLabel2DDirector } from '../../../../src/services/engine/subsystems/label2DDirector';
+import { VIEW_RIGS } from '../../../../src/data/rendering/viewRigs';
+import { cross3 } from '../../../../src/utils/math/cross3';
+import { normalize3 } from '../../../../src/utils/math/normalize3';
+import { mat3FromColumns } from '../../../../src/utils/math/mat3FromColumns';
 import { FOREGROUND_LABEL_DIRECTOR } from '../../../../src/data/labels/foregroundLabelDirectorConfig';
 import { produceStarCaptions } from '../../../../src/layers/starCatalog/captions/present/produceStarCaptions';
 import { NEAR0 } from '../../../../src/services/engine/frame/slabs';
@@ -137,7 +141,16 @@ const SCENE_BODIES = positionedBodiesOf(
   deriveBodyStates(CONST_J2000),
 );
 
-function makeCtx(eye: Vec3, slab: Slab): FrameView {
+// The camera `makeRealNear0Slab` looks through, as the basis the output projection reads.
+function aimedBasis(eye: Vec3, target: Vec3) {
+  const forward = normalize3([target[0] - eye[0], target[1] - eye[1], target[2] - eye[2]]);
+  const right = normalize3(cross3(forward, [0, 1, 0]));
+  const up = cross3(right, forward);
+  return mat3FromColumns(right, up, [-forward[0], -forward[1], -forward[2]]);
+}
+
+function makeCtx(eye: Vec3, slab: Slab, target: Vec3): FrameView {
+  const basis = aimedBasis(eye, target);
   return {
     snapshot: {
       bodyStates: deriveBodyStates(CONST_J2000),
@@ -151,7 +164,8 @@ function makeCtx(eye: Vec3, slab: Slab): FrameView {
     slabs: [slab],
     drawCamPos: eye,
     canvasSize: { width: 1280, height: 720 },
-    cam: { distance: 1e-13 },
+    cam: { distance: 1e-13, yaw: 0, pitch: 0, poseBasis: basis, upBasis: basis },
+    frustum: FIXTURE_FRUSTUM,
     drawPxPerRad: FIXTURE_PX_PER_RAD,
   } as unknown as FrameView;
 }
@@ -200,7 +214,7 @@ describe('label2DDirector — far-star caption/leader stability at Earth zoom', 
 
     const labelStub = makeLabelStub();
     const lineStub = makeLineStub();
-    const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
+    const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR, VIEW_RIGS.mono);
     dir.attachRenderers(labelStub, lineStub, () => null);
     dir.registerProducer({
       id: 'starCaptions',
@@ -208,13 +222,13 @@ describe('label2DDirector — far-star caption/leader stability at Earth zoom', 
     });
     const state = makeState();
 
-    dir.runFrame(state, makeCtx(eyeA, makeRealNear0Slab(eyeA, star.worldPos)));
+    dir.runFrame(state, makeCtx(eyeA, makeRealNear0Slab(eyeA, star.worldPos), star.worldPos));
     const capA = emittedCaption(labelStub, star.id);
     const lineA = emittedLine(lineStub, star.id);
     expect(capA, `far star ${star.id} (${star.distPc.toFixed(0)} pc) should emit`).toBeDefined();
     expect(lineA).toBeDefined();
 
-    dir.runFrame(state, makeCtx(eyeB, makeRealNear0Slab(eyeB, star.worldPos)));
+    dir.runFrame(state, makeCtx(eyeB, makeRealNear0Slab(eyeB, star.worldPos), star.worldPos));
     const capB = emittedCaption(labelStub, star.id);
     const lineB = emittedLine(lineStub, star.id);
     expect(capB).toBeDefined();
@@ -243,13 +257,13 @@ describe('label2DDirector — far-star caption/leader stability at Earth zoom', 
 
     const labelStub = makeLabelStub();
     const lineStub = makeLineStub();
-    const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
+    const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR, VIEW_RIGS.mono);
     dir.attachRenderers(labelStub, lineStub, () => null);
     dir.registerProducer({
       id: 'starCaptions',
       produceLabels: (state, ctx) => produceStarCaptions(STAR_PICK_CODES)(state, ctx, STAR_FADE),
     });
-    dir.runFrame(makeState(), makeCtx(eye, slab));
+    dir.runFrame(makeState(), makeCtx(eye, slab, star.worldPos));
 
     const cap = emittedCaption(labelStub, star.id);
     const line = emittedLine(lineStub, star.id);
@@ -286,13 +300,13 @@ describe('label2DDirector — far-star caption/leader stability at Earth zoom', 
 
     const labelStub = makeLabelStub();
     const lineStub = makeLineStub();
-    const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
+    const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR, VIEW_RIGS.mono);
     dir.attachRenderers(labelStub, lineStub, () => null);
     dir.registerProducer({
       id: 'starCaptions',
       produceLabels: (state, ctx) => produceStarCaptions(STAR_PICK_CODES)(state, ctx, STAR_FADE),
     });
-    dir.runFrame(makeState(), makeCtx(eye, slab));
+    dir.runFrame(makeState(), makeCtx(eye, slab, star.worldPos));
     const cap = emittedCaption(labelStub, star.id)!;
     expect(cap).toBeDefined();
 

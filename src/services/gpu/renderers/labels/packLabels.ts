@@ -7,6 +7,7 @@
 
 import type { PackLabelsArgs } from '../../../../@types/rendering/PackLabelsArgs';
 import {
+  LABEL_EM_PX_RETUNE,
   LABEL_MAX_PX_DEFAULT,
   LABEL_MIN_PX_DEFAULT,
   LABEL_WORLD_EM_MPC_DEFAULT,
@@ -35,7 +36,8 @@ export function packLabels(args: PackLabelsArgs): number {
     labelF32[labelBase + 0] = label.worldPos[0];
     labelF32[labelBase + 1] = label.worldPos[1];
     labelF32[labelBase + 2] = label.worldPos[2];
-    labelF32[labelBase + 3] = label.worldEmMpc ?? LABEL_WORLD_EM_MPC_DEFAULT;
+    // The retune rides the em here so the shader holds no copy of it.
+    labelF32[labelBase + 3] = (label.worldEmMpc ?? LABEL_WORLD_EM_MPC_DEFAULT) * LABEL_EM_PX_RETUNE;
 
     // Public colour API is STRAIGHT RGBA — producers write the natural
     // form (`[1, 0, 0, 0.5]` is "half-transparent red"); the fragment

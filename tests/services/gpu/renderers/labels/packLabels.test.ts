@@ -6,6 +6,7 @@ import {
   LABEL_DATA_BYTES,
 } from '../../../../../src/data/labels/labelBufferStrides';
 import type { Label2D } from '../../../../../src/@types/rendering/Label2D';
+import { LABEL_EM_PX_RETUNE } from '../../../../../src/data/labels/labelSizingDefaults';
 
 // Minimal BMFont fixture: just the uppercase A (codepoint 65), so unknown
 // characters exercise the silent-drop path.
@@ -81,9 +82,9 @@ describe('packLabels storage record', () => {
     expect([buf[24], buf[25], buf[26]]).toEqual([7, 8, 9]);
   });
 
-  it('packs the unscaled worldEmMpc in slot 3', () => {
+  it('packs worldEmMpc times the em retune in slot 3, which the shader no longer applies', () => {
     const { buf } = pack([label({ id: 'a', worldEmMpc: 0.25 })]);
-    expect(buf[3]).toBe(0.25);
+    expect(buf[3]).toBe(Math.fround(0.25 * LABEL_EM_PX_RETUNE));
   });
 
   it('premultiplies straight RGBA on write', () => {

@@ -8,7 +8,9 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import { near0LabelProjection } from '../near0LabelProjection';
+import { near0OverlayClipScale } from '../near0OverlayClipScale';
+import { near0OverlayVpF32 } from '../near0OverlayVpF32';
+import { rebaseViewProj } from '../../../../utils/camera/projection/rebaseViewProj';
 import { overlaySceneOcclusion } from '../overlaySceneOcclusion';
 import { hasPickableLabel } from '../../../../utils/labels/hasPickableLabel';
 import { labelPickQuads } from '../../../../utils/labels/labelPickQuads';
@@ -39,7 +41,7 @@ export const labelsNearPass: ContentPass = {
     if (renderer === null) return;
     const lineRenderer = state.gpu.markerLineRendererNear;
 
-    const { vpF32, viewportPx, clipScale } = near0LabelProjection(ctx);
+    const projection = state.subsystems.foregroundLabelDirector.project(ctx);
 
     // The joint both renderers bind: the coverage alpha AND the sampled depth
     // these captions clip their glyphs against, since their `occludeNearKm`
@@ -48,20 +50,21 @@ export const labelsNearPass: ContentPass = {
 
     // Lines before captions, so the glyphs composite OVER the connector where
     // they meet. A null line renderer (bootstrap gap) just skips them.
+    // The leaders still draw in clip space, through the camera-rebased vp.
     if (lineRenderer !== null) {
-      lineRenderer.draw(pass, vpF32, viewportPx, ctx.drawPxPerRad, scene);
+      const vpF32 = near0OverlayVpF32(
+        rebaseViewProj(view.slab.vp, ctx.drawCamPos),
+        near0OverlayClipScale(view.slab.near),
+      );
+      lineRenderer.draw(pass, vpF32, projection.output.sizePx, ctx.drawPxPerRad, scene);
     }
-    // The captions' em rides the rescaled NEAR0 matrix, so it scales with it.
-    renderer.draw(pass, vpF32, viewportPx, ctx.drawPxPerRad, {
-      scene,
-      clipScale,
-    });
+    renderer.draw(pass, projection, scene);
   },
 
   // Pick aspect — grace-padded ink boxes for the drawn captions, stamped with
   // the SAME packed id the body's own sphere/glint pick writes, so a caption
   // click and a body click resolve to one selection. Uses
-  // `near0LabelProjection` (the f64-rebased vp the captions are drawn
+  // `near0LabelProjection` (the projection the captions are drawn
   // through), not `view.vp` — the caption anchors are camera-relative.
   // `bodyGlintsPass.drawPick` widens its own pick to this caption range for
   // the same affordance.
@@ -70,7 +73,7 @@ export const labelsNearPass: ContentPass = {
     const fontAtlases = state.gpu.fontAtlases;
     if (pickRenderer === null || fontAtlases === null) return;
 
-    const projection = near0LabelProjection(ctx);
+    const projection = state.subsystems.foregroundLabelDirector.project(ctx);
     const quads = labelPickQuads({
       labels: state.subsystems.foregroundLabelDirector.labels(),
       projection,

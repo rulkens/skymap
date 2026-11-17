@@ -1,11 +1,10 @@
 // labels/vertex.wesl — MSDF labels vertex stage.
 //
-// Expands the unit-corner attribute into a glyph quad in clip space,
-// applying perspective-driven sizing.  'worldEmMpc' (label.worldPos.w)
-// is the em height expressed in Mpc of world space; the vertex stage
-// projects it through the camera's clip.w to obtain a screen-pixel
-// height, clamps to [minPx, maxPx] for legibility, and scales the
-// atlas-baked glyph quad to match.
+// Projects the anchor through 'lib/projectLabel.wesl' and expands the
+// unit-corner attribute into a glyph quad in output px, along the projected
+// image-up and its perpendicular, written as NDC at w = 1.  'worldEmMpc'
+// (label.worldPos.w) is the em height in Mpc of world space; it becomes an
+// angle at the anchor's distance, then px, clamped to [minPx, maxPx].
 //
 // ## Quad expansion for the outline fringe
 //
@@ -20,9 +19,9 @@ import package::labels::io::Uniforms;
 import package::labels::io::LabelData;
 import package::labels::io::VsIn;
 import package::labels::io::VsOut;
-import package::lib::camera::worldToClip;
-import package::lib::billboard::worldLenToPx;
-import package::lib::billboard::pxToClipOffset;
+import package::lib::projectLabel::ProjectedLabel;
+import package::lib::projectLabel::projectLabel;
+import package::lib::projectLabel::scaledLength;
 
 // Atlas em pixel size — must match 'ATLAS_FONT_SIZE' in src/data/fonts.ts.
 const ATLAS_EM_PX: f32 = 84.0;
@@ -30,17 +29,15 @@ const ATLAS_EM_PX: f32 = 84.0;
 // src/data/fonts.ts.  Sets the SDF's encoded headroom past the glyph
 // contour; tighter ranges clamp the tail and produce banded edges.
 const DISTANCE_RANGE_PX: f32 = 32.0;
-// Depth epsilon: pull the clamped clip-z this far inside the far plane (in
-// ndc-z terms) so an anchor sitting exactly ON it still passes the clip test.
-const CLIP_Z_EPS: f32 = 1e-4;
-// tan(30 degrees), preserving the pre-pxPerRad label size at the app's 60
-// degree fov: every producer's 'worldEmMpc' was tuned by eye when
-// 'worldLenToPx' still reconstructed the focal term from the viewport.
-// Must equal 'LABEL_EM_PX_RETUNE' in src/data/labels/labelSizingDefaults.ts.
-const EM_PX_RETUNE: f32 = 0.57735;
+// Behind the near plane on every corner: a hidden label rasterises nothing.
+const HIDDEN_POS: vec4<f32> = vec4<f32>(0.0, 0.0, -1.0, 1.0);
 
 @group(0) @binding(0) var<uniform> uniforms: Uniforms;
 @group(0) @binding(1) var<storage, read> labels: array<LabelData>;
+
+fn viewOfSlabPoint(slabPos: vec3<f32>) -> vec3<f32> {
+  return (uniforms.viewFromSlab * vec4<f32>(slabPos, 1.0)).xyz;
+}
 
 // expandLabelQuad — the quad-expansion body shared by 'vs' (this file) and
 // 'vsOcclude' (vertexOcclude.wesl). Takes the RESOLVED occlude weight as a
@@ -49,20 +46,20 @@ const EM_PX_RETUNE: f32 = 0.57735;
 // group(1) bindings this module must stay clear of (see vertexOcclude.wesl's
 // header for why). One definition of the corner math either way.
 fn expandLabelQuad(input: VsIn, label: LabelData, occludeWeight: f32) -> VsOut {
-  let worldPos       = label.worldPos.xyz;
   let worldEmMpc     = label.worldPos.w;
   let outlineEmFrac  = label.sizing.x;
   let minPx          = label.sizing.y;
   let maxPx          = label.sizing.z;
   let fadeAlpha      = label.sizing.w;
 
-  // Project anchor to clip space.
-  let clip = worldToClip(uniforms.cam, worldPos);
+  let viewVec = viewOfSlabPoint(label.worldPos.xyz);
+  var anchor: ProjectedLabel = projectLabel(viewVec, uniforms.out);
+  anchor.visible = anchor.visible && viewVec.z >= uniforms.nearClipMpc;
 
-  // Perspective-driven size.  EM_PX_RETUNE preserves the pre-pxPerRad label
-  // size at the app's 60 degree fov (see its declaration); the CPU twins
-  // 'labelScreenRect' and 'liftedLabelPlacement' apply the same factor.
-  let pxPerEm = worldLenToPx(uniforms.cam, worldEmMpc * uniforms.emClipScale, clip.w) * EM_PX_RETUNE;
+  // The em as an angle at the anchor, then px; packLabels already folded the
+  // em retune in, as the CPU twins 'labelScreenRect' and
+  // 'liftedLabelPlacement' apply it.
+  let pxPerEm = worldEmMpc / scaledLength(viewVec) * anchor.pxPerRad;
   let displayEmPx = clamp(pxPerEm, minPx, maxPx);
   let pxScale = displayEmPx / ATLAS_EM_PX;
 
@@ -77,22 +74,17 @@ fn expandLabelQuad(input: VsIn, label: LabelData, occludeWeight: f32) -> VsOut {
   // to get an outward direction, then add 'corner*localSize' for the
   // glyph rect, and 'direction*fringeAtlasPx' for the fringe extension.
   let outward = input.corner * 2.0 - vec2<f32>(1.0, 1.0);
+  // Atlas +y runs down the glyph, the opposite of image-up.
   let cornerAtlasPx = vec2<f32>(
     input.localOffset.x + input.corner.x * input.localSize.x + outward.x * fringeAtlasPx,
-    -(input.localOffset.y + input.corner.y * input.localSize.y + outward.y * fringeAtlasPx),
+    input.localOffset.y + input.corner.y * input.localSize.y + outward.y * fringeAtlasPx,
   );
-
-  let ndcOffset = pxToClipOffset(uniforms.cam, cornerAtlasPx * pxScale, clip.w);
-
-  // Survive any far plane. The NEAR0 foreground captions keep anchors far
-  // beyond the adaptive far plane ('foregroundFrustum' collapses it to
-  // camDist * 100 on a deep descent) and would frustum-clip without this,
-  // mirroring the star-point backdrop's clamp in 'starPoints/vertex.wesl'.
-  // Inert for depth on every path this shader serves (the COSMO director
-  // labels included): the label pass is a depthless OVER composite — no depth
-  // test or write — so a clamped z perturbs no depth comparison.
-  let clampedClipZ = min(clip.z, clip.w * (1.0 - CLIP_Z_EPS));
-  let outPos = vec4<f32>(clip.x + ndcOffset.x, clip.y + ndcOffset.y, clampedClipZ, clip.w);
+  let across = vec2<f32>(-anchor.up.y, anchor.up.x);
+  let cornerPx = anchor.px + (across * cornerAtlasPx.x - anchor.up * cornerAtlasPx.y) * pxScale;
+  let sizePx = uniforms.out.sizePx;
+  let ndc = vec2<f32>(cornerPx.x / sizePx.x * 2.0 - 1.0, 1.0 - cornerPx.y / sizePx.y * 2.0);
+  // Mid-depth: the label pass is a depthless OVER composite, so no plane clips it.
+  let outPos = select(HIDDEN_POS, vec4<f32>(ndc, 0.5, 1.0), anchor.visible);
 
   // UV expansion to match the corner expansion.  The UV rect coordinates
   // are already normalised; the fringe in atlas px maps to UV space via

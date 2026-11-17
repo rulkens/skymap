@@ -1,7 +1,7 @@
 /**
  * Per-label storage buffer stride, matching `struct LabelData` in io.wesl:
  *
- *   bytes  0..15  worldPos      vec4<f32>  — xyz = world Mpc, w = worldEmMpc
+ *   bytes  0..15  worldPos      vec4<f32>  — xyz = world Mpc, w = worldEmMpc × LABEL_EM_PX_RETUNE
  *   bytes 16..31  color         vec4<f32>  — premultiplied rgba (fill)
  *   bytes 32..47  sizing        vec4<f32>  — outlineEmFrac, minPx, maxPx, fadeAlpha
  *   bytes 48..63  outlineColor  vec4<f32>  — premultiplied rgba (outline stroke)

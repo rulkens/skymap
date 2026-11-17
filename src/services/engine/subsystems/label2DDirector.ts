@@ -1,7 +1,7 @@
 /**
  * label2DDirector — owns the labelRenderer + markerLineRenderer
  * setLabels/setLines calls, polling registered Label2DProducers each frame
- * and flushing the merged result once. `createLabel2DDirector(config)` mints
+ * and flushing the merged result once. `createLabel2DDirector(config, rig)` mints
  * one instance per slab (COSMO and NEAR0) — `Label2DDirectorConfig` supplies
  * the projection, declutter policy, envelope policy, and lift policy, so a
  * second instance is data, not a second code path.
@@ -106,6 +106,7 @@ import type { LabelBBox } from '../../../@types/rendering/LabelBBox';
 import type { MarkerLine } from '../../../@types/rendering/MarkerLine';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
+import type { ViewRig } from '../../../@types/engine/frame/ViewRig';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { Label2DProducer } from '../../../@types/engine/subsystems/Label2DProducer';
 import type { Label2DDirector } from '../../../@types/engine/subsystems/Label2DDirector';
@@ -217,7 +218,7 @@ function declutterByBboxOverlap(
   projection: Label2DProjection,
   padPx: number,
 ): Label2D[] {
-  const { pxPerRad } = projection;
+  const pxPerRad = projection.output.focalPx;
   // `labelScreenRect` is the shared CPU twin of the vertex shader's em clamp —
   // the pick path derives its hit boxes from the same function, so a label
   // cannot be decluttered against one rect and clicked on another.
@@ -264,7 +265,10 @@ function declutterByBboxOverlap(
   return labels.filter((_, i) => acceptedIndices.has(i));
 }
 
-export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDirector {
+export function createLabel2DDirector(
+  config: Label2DDirectorConfig,
+  rig: ViewRig,
+): Label2DDirector {
   let labelRenderer: LabelRenderer | null = null;
   let lineRenderer: MarkerLineRenderer | null = null;
   let measureText: ((label: Label2D) => LabelBBox | null) | null = null;
@@ -409,8 +413,13 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
    * survivors, so a culled-but-still-emitted label eases toward 0 instead of
    * popping — see `applyExponentialEnvelope`).
    */
+  /** This frame's projection through the director's slab and its rig's output. */
+  function project(ctx: FrameView): Label2DProjection {
+    return config.project(ctx, rig);
+  }
+
   function declutter(labels: readonly Label2D[], ctx: FrameView): DeclutterResult {
-    const projection = config.project(ctx);
+    const projection = project(ctx);
     const projected = projectLabels(labels, projection);
     const survivors = declutterByBboxOverlap(
       measureText!,
@@ -624,7 +633,7 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     if (!policy) return labels;
     const slab = ctx.slabs[policy.slab];
     if (!slab) throw new Error(`label2DDirector: no slab at index ${policy.slab}`);
-    const projection = config.project(ctx); // memoised per ctx — free here
+    const projection = project(ctx); // memoised per ctx — free here
     const measure = measureText!;
 
     const out: Label2D[] = [];
@@ -665,8 +674,8 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
       const placement = liftedLabelPlacement({
         anchorWorldPos: liftAnchor,
         vp: projection.vp,
-        viewportPx: projection.viewportPx,
-        pxPerRad: projection.pxPerRad,
+        viewportPx: projection.output.sizePx,
+        pxPerRad: projection.output.focalPx,
         subjectSizePx: lift.subjectSizePx,
         textBbox: measure(label),
         worldEmMpc: liftEmMpc,
@@ -797,6 +806,7 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     attachRenderers,
     registerProducer,
     runFrame,
+    project,
     labels: () => flushedLabels,
     destroy(): void {
       // Intentionally empty — see the type-level docstring for why.

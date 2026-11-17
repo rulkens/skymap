@@ -11,10 +11,14 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { labelsNearPass } from '../../../../../src/services/engine/frame/passes/labelsNearPass';
-import { near0LabelProjection } from '../../../../../src/services/engine/frame/near0LabelProjection';
+import { near0OverlayClipScale } from '../../../../../src/services/engine/frame/near0OverlayClipScale';
+import { near0OverlayVpF32 } from '../../../../../src/services/engine/frame/near0OverlayVpF32';
+import { rebaseViewProj } from '../../../../../src/utils/camera/projection/rebaseViewProj';
 import { createLabel2DDirector } from '../../../../../src/services/engine/subsystems/label2DDirector';
+import { VIEW_RIGS } from '../../../../../src/data/rendering/viewRigs';
 import { FOREGROUND_LABEL_DIRECTOR } from '../../../../../src/data/labels/foregroundLabelDirectorConfig';
 import { makeSlab } from '../../../../fixtures/makeSlab';
+import { identityLabelProjection } from '../../../../helpers/labels/identityLabelProjection';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
@@ -23,18 +27,25 @@ import type { Label2DDirector } from '../../../../../src/@types/engine/subsystem
 import type { LabelRenderer } from '../../../../../src/@types/rendering/LabelRenderer';
 import type { MarkerLineRenderer } from '../../../../../src/@types/rendering/MarkerLineRenderer';
 import type { Label2D } from '../../../../../src/@types/rendering/Label2D';
+import type { Label2DProjection } from '../../../../../src/@types/rendering/Label2DProjection';
 import type { Label2DProducer } from '../../../../../src/@types/engine/subsystems/Label2DProducer';
 
 const PASS_STUB = { draw: vi.fn() } as unknown as GPURenderPassEncoder;
 
-// `draw` reads its `view` argument for ONE thing — the sampled depth the
-// occlusion joint binds. The projection comes from `near0LabelProjection(ctx)`
-// instead (the shared lookup the director itself uses), so the stub carries
-// nothing else. A null row leaves the frame unresolved, which is what pins the
-// far-placeholder pairing below.
+// A real NEAR0 slab (not mocked): the leader lines rebase its vp about the eye.
+const SLAB: Slab = makeSlab();
+
+// `draw` reads its `view` for the sampled depth the occlusion joint binds and
+// the slab the leader lines draw through. The captions' projection comes from
+// the director instead. A null row leaves the frame unresolved, which is what
+// pins the far-placeholder pairing below.
 const VIEW_STUB = {
+  slab: SLAB,
   sampledDepth: { view: {} as GPUTextureView, row: null },
 } as unknown as SlabView;
+
+// What the director's `project` hands the pass; the caption draw passes it on.
+const PROJECTION_STUB = { output: { sizePx: [1280, 720] } } as unknown as Label2DProjection;
 
 // `ctx.renderTargets`' two views, distinct objects so the pairing is provable.
 const COLOR_VIEW = {} as GPUTextureView;
@@ -65,7 +76,10 @@ function makeLineRenderer(): MarkerLineRenderer {
 function makeState(
   renderer: LabelRenderer | null,
   lineRenderer: MarkerLineRenderer | null = makeLineRenderer(),
-  director: Pick<Label2DDirector, 'labels'> = { labels: () => [] },
+  director: Pick<Label2DDirector, 'labels' | 'project'> = {
+    labels: () => [],
+    project: () => PROJECTION_STUB,
+  },
 ): EngineState {
   return {
     gpu: { labelRendererNear: renderer, markerLineRendererNear: lineRenderer },
@@ -73,23 +87,20 @@ function makeState(
   } as unknown as EngineState;
 }
 
-// A real NEAR0 slab (not mocked) — `near0LabelProjection` runs the genuine
-// `rebaseViewProj` + `narrowMat4` chain against it, matching what the director
-// resolves for the same `ctx` this frame. `nowMs` defaults to 0 for the draw
-// tests (which don't animate); the gate test below steps it explicitly, and
-// builds a FRESH ctx object per frame — `near0LabelProjection` memoises per
-// ctx identity, matching how `runFrame` mints a new ctx every frame for real.
+// `nowMs` defaults to 0 for the draw tests (which don't animate); the gate test
+// below steps it explicitly, and builds a FRESH ctx object per frame, matching
+// how `runFrame` mints a new ctx every frame for real.
 function makeCtx(nowMs = 0): FrameView {
-  const slab: Slab = makeSlab();
   return {
     snapshot: {
       nowMs,
       renderTargets: { viewOf: () => COLOR_VIEW, farDepthView: () => FAR_DEPTH_VIEW },
       renderedTargets: new Set(['foreground:0']),
     },
-    slabs: [slab],
+    slabs: [SLAB],
     drawCamPos: [2, 3, 5],
     canvasSize: { width: 1280, height: 720 },
+    drawPxPerRad: 900,
   } as unknown as FrameView;
 }
 
@@ -100,7 +111,11 @@ describe('labelsNearPass.enabled', () => {
     // program walks, and `enabled` reads the director's `labels()` — so this
     // test fails if the gate ever stops following the director's last flush.
     // `enabled` itself never calls `draw`.
-    const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
+    // The gate is the subject, not the projection: an identity one keeps the ctx small.
+    const dir = createLabel2DDirector(
+      { ...FOREGROUND_LABEL_DIRECTOR, project: identityLabelProjection },
+      VIEW_RIGS.mono,
+    );
     const labelRenderer = makeRenderer();
     const lineRenderer = makeLineRenderer();
     dir.attachRenderers(labelRenderer, lineRenderer, () => null);
@@ -161,29 +176,19 @@ describe('labelsNearPass.enabled', () => {
 });
 
 describe('labelsNearPass.draw', () => {
-  it('resolves the shared NEAR0 projection (near0LabelProjection(ctx)) and draws the labels through it', () => {
+  it("draws the labels through the director's projection, the one it decluttered with", () => {
     const renderer = makeRenderer();
     const state = makeState(renderer, null);
-    const ctx = makeCtx();
 
-    labelsNearPass.draw(PASS_STUB, VIEW_STUB, ctx, state);
+    labelsNearPass.draw(PASS_STUB, VIEW_STUB, makeCtx(), state);
 
-    // Memoised per ctx — calling it again here returns the SAME object the
-    // layer consumed, so identity proves the layer used the shared lookup
-    // rather than re-deriving its own vp.
-    const projection = near0LabelProjection(ctx);
     const drawSpy = renderer.draw as unknown as ReturnType<typeof vi.fn>;
     expect(drawSpy).toHaveBeenCalledTimes(1);
-    expect(drawSpy.mock.calls[0]).toEqual([
-      PASS_STUB,
-      projection.vpF32,
-      projection.viewportPx,
-      projection.pxPerRad,
-      { scene: SCENE_STUB, clipScale: projection.clipScale },
-    ]);
+    expect(drawSpy.mock.calls[0]![1]).toBe(PROJECTION_STUB);
+    expect(drawSpy.mock.calls[0]).toEqual([PASS_STUB, PROJECTION_STUB, SCENE_STUB]);
   });
 
-  it('draws the leader-line renderer through the same shared projection, before the labels', () => {
+  it('draws the leader lines through the camera-rebased NEAR0 vp, before the labels', () => {
     const renderer = makeRenderer();
     const lineRenderer = makeLineRenderer();
     const state = makeState(renderer, lineRenderer);
@@ -198,16 +203,13 @@ describe('labelsNearPass.draw', () => {
 
     labelsNearPass.draw(PASS_STUB, VIEW_STUB, ctx, state);
 
-    const projection = near0LabelProjection(ctx);
+    const vpF32 = near0OverlayVpF32(
+      rebaseViewProj(SLAB.vp, ctx.drawCamPos),
+      near0OverlayClipScale(SLAB.near),
+    );
     const lineDrawSpy = lineRenderer.draw as unknown as ReturnType<typeof vi.fn>;
     expect(lineDrawSpy).toHaveBeenCalledTimes(1);
-    expect(lineDrawSpy.mock.calls[0]).toEqual([
-      PASS_STUB,
-      projection.vpF32,
-      projection.viewportPx,
-      projection.pxPerRad,
-      SCENE_STUB,
-    ]);
+    expect(lineDrawSpy.mock.calls[0]).toEqual([PASS_STUB, vpF32, [1280, 720], 900, SCENE_STUB]);
     expect(order).toEqual(['line', 'label']);
   });
 

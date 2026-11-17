@@ -11,11 +11,17 @@ import package::labels::io::VsOut;
 import package::labels::vertex::uniforms;
 import package::labels::vertex::labels;
 import package::labels::vertex::expandLabelQuad;
-import package::lib::sceneDepth::subjectDepthVerdict;
+import package::labels::vertex::viewOfSlabPoint;
+import package::lib::projectLabel::projectLabel;
+import package::lib::sceneDepth::subjectDepthVerdictAtUv;
 
 @vertex
 fn vsOcclude(input: VsIn) -> VsOut {
   let label = labels[input.labelIndex];
-  let verdict = subjectDepthVerdict(uniforms.cam, label.subjectPos.xyz, label.occludeNearKm);
+  let subject = projectLabel(viewOfSlabPoint(label.subjectPos.xyz), uniforms.out);
+  var verdict = 0.0;
+  if (subject.visible) {
+    verdict = subjectDepthVerdictAtUv(subject.px / uniforms.out.sizePx, label.occludeNearKm);
+  }
   return expandLabelQuad(input, label, max(label.occludeWeight, verdict));
 }

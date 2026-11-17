@@ -16,6 +16,7 @@ import { labelsCosmoPass } from '../../../../../src/services/engine/frame/passes
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
+import type { Label2DProjection } from '../../../../../src/@types/rendering/Label2DProjection';
 import type { Label2D } from '../../../../../src/@types/rendering/Label2D';
 import type { LabelRenderer } from '../../../../../src/@types/rendering/LabelRenderer';
 
@@ -39,11 +40,14 @@ function makeRenderer(): LabelRenderer {
   } as unknown as LabelRenderer;
 }
 
+// What the director's `project` hands the pass; the draw passes it on.
+const PROJECTION_STUB = { output: { sizePx: [1280, 720] } } as unknown as Label2DProjection;
+
 function makeState(renderer: LabelRenderer | null, flushedLabelCount = 0): EngineState {
   const labels = Array.from({ length: flushedLabelCount }) as Label2D[];
   return {
     gpu: { labelRendererCosmo: renderer },
-    subsystems: { cosmoLabelDirector: { labels: () => labels } },
+    subsystems: { cosmoLabelDirector: { labels: () => labels, project: () => PROJECTION_STUB } },
   } as unknown as EngineState;
 }
 
@@ -86,19 +90,11 @@ describe('labelsCosmoPass.draw', () => {
     expect(viewOf).toHaveBeenCalledWith('foreground:0');
     expect(depthViewOf).not.toHaveBeenCalled();
     const drawSpy = renderer.draw as unknown as ReturnType<typeof vi.fn>;
-    expect(drawSpy).toHaveBeenCalledWith(
-      PASS_STUB,
-      VIEW_STUB.vp,
-      VIEW_STUB.viewportPx,
-      ctx.drawPxPerRad,
-      {
-        scene: {
-          colorView: sentinelColorView,
-          depthView: FAR_DEPTH_VIEW,
-          frame: null,
-        },
-      },
-    );
+    expect(drawSpy).toHaveBeenCalledWith(PASS_STUB, PROJECTION_STUB, {
+      colorView: sentinelColorView,
+      depthView: FAR_DEPTH_VIEW,
+      frame: null,
+    });
   });
 
   it('passes undefined when the body pass did NOT run this frame (stale/uninitialised colour)', () => {
@@ -110,6 +106,6 @@ describe('labelsCosmoPass.draw', () => {
 
     expect(viewOf).not.toHaveBeenCalled();
     const drawSpy = renderer.draw as unknown as ReturnType<typeof vi.fn>;
-    expect(drawSpy.mock.calls[0]![4]).toEqual({ scene: undefined });
+    expect(drawSpy.mock.calls[0]![2]).toBeUndefined();
   });
 });

@@ -176,7 +176,7 @@ describe('LabelRenderer capacity growth', () => {
     return { ctx, createdBuffers, createBindGroupCalls };
   }
 
-  it('writes clipScale into the uniform tail after the 80-byte camera prefix', () => {
+  it('writes viewFromSlab and the near cut after the output projection', () => {
     const { ctx, createdBuffers } = buildTrackingDevice();
     const r = createLabelRenderer(ctx, {
       targetFormat: ctx.format,
@@ -196,10 +196,26 @@ describe('LabelRenderer capacity growth', () => {
         .filter((c) => c[0] === uniformBuffer.buffer)
         .at(-1)![2] as Float32Array;
 
-    r.draw(pass, new Float32Array(16), [1280, 720], 1000);
-    expect(lastUniformWrite()[20]).toBe(1);
-    r.draw(pass, new Float32Array(16), [1280, 720], 1000, { clipScale: 3 });
-    expect(lastUniformWrite()[20]).toBe(3);
+    const viewFromSlab = Float64Array.from({ length: 16 }, (_, i) => i + 1);
+    r.draw(pass, {
+      vp: new Float32Array(16),
+      output: {
+        kind: 'pinhole',
+        viewFromWorld: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+        camHi: [0, 0, 0],
+        camLo: [0, 0, 0],
+        up3: [0, 1, 0],
+        sizePx: [1280, 720],
+        centrePx: [640, 360],
+        focalPx: 1000,
+        pxScale: 1,
+      },
+      viewFromSlab,
+      nearClipMpc: 0.01,
+    });
+    const uni = lastUniformWrite();
+    expect(Array.from(uni.subarray(28, 44))).toEqual(Array.from(viewFromSlab));
+    expect(uni[44]).toBe(Math.fround(0.01));
   });
 
   it('reallocates the GPU storage/instance buffers and rebinds when the roster outgrows capacity', () => {

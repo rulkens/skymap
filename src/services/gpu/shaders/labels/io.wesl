@@ -13,11 +13,11 @@
 //
 // ## Why labels look the way they do — worldEm perspective sizing
 //
-// Each label sets 'worldEmMpc' (label.worldPos.w): the em height
-// expressed in Mpc of world space.  The vertex stage projects this
-// through the anchor's clip.w to recover a screen-pixel height:
+// Each label sets 'worldEmMpc' (label.worldPos.w, packed already times
+// LABEL_EM_PX_RETUNE): the em height in Mpc of world space.  The vertex
+// stage turns it into an angle at the anchor's distance and then pixels:
 //
-//   pxPerEm = (worldEmMpc / clip.w) * (viewportPx.y * 0.5)
+//   pxPerEm = (worldEm / |v|) * pxPerRad      (= worldEm * focalPx / v.z, pinhole)
 //
 // That value is clamped to [minPixelSize, maxPixelSize], keeping labels
 // legible at extreme distances (floor) and very close approach (ceiling).
@@ -39,26 +39,23 @@
 // keeping them per-pass (rather than promoting to a shared @group(1))
 // avoids accidentally bloating other pipelines' layouts.
 
-import package::lib::camera::CameraUniforms;
+import package::lib::projectLabel::OutputProjection;
 
+// Byte offsets in labelRenderer's LABEL_UNIFORM_OFFSETS.
 struct Uniforms {
-  // 80-byte universal camera prefix. Bytes 64..71 (viewportPx) carry the
-  // screen pixel dimensions used by the hybrid sizing math; 72..75 the
-  // 'pxPerRad' focal term the em projection reads; 76..79 stay reserved —
-  // the CPU writer must zero them so future fields don't surprise existing
-  // label buffers.
-  cam: CameraUniforms,
-  // Clip units of the matrix in 'cam' relative to Mpc (1 for the COSMO matrix;
-  // the NEAR0 overlays rescale theirs). The vertex stage multiplies the em by
-  // it so 'worldEmMpc / clip.w' stays a ratio of like units. Bytes 80..83;
-  // WGSL rounds the struct up to 96.
-  emClipScale: f32,
+  out: OutputProjection,
+  // Interim, until labels carry absolute hi/lo positions: this slab's anchors
+  // (absolute on COSMO, camera-relative on NEAR0) into view space, unscaled Mpc.
+  viewFromSlab: mat4x4<f32>,
+  // View depth under which the old clip-space path near-clipped an anchor
+  // (COSMO's near plane; 0 on NEAR0), kept so the swap changes no pixel.
+  nearClipMpc: f32,
 };
 
 struct LabelData {
-  // worldPos.xyz = anchor in Mpc; worldPos.w = worldEmMpc (PRIMARY size
-  // driver — em height in world-space Mpc, projected to pixels by the
-  // vertex stage).
+  // worldPos.xyz = anchor in Mpc; worldPos.w = worldEmMpc × the em retune
+  // (PRIMARY size driver — em height in world-space Mpc, projected to pixels
+  // by the vertex stage).
   worldPos: vec4<f32>,
   // Fill colour — premultiplied rgba.  The renderer pack loop multiplies
   // r/g/b by a before upload, so the shader can treat (rgb, a) as the

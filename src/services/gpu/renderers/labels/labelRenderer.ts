@@ -5,8 +5,8 @@
  * distance field (MSDF) atlas.  Each character ("glyph") in a label becomes
  * one instanced quad.  The vertex stage reads per-label data (position, color,
  * sizing) from a GPU storage buffer indexed by a per-glyph `labelIndex`
- * attribute, then offsets each corner by `localOffset + corner * localSize`
- * (in atlas pixels) before projecting the anchor to clip space.  The fragment
+ * attribute, projects the anchor through `lib/projectLabel.wesl`, then offsets
+ * each corner by `localOffset + corner * localSize` (in atlas pixels) in px.  The fragment
  * stage samples the MSDF atlas, takes the R/G/B median, and uses `fwidth` for
  * one-pixel-wide anti-aliasing — crisp at any zoom without mipmaps.
  *
@@ -59,7 +59,7 @@ import type { FontMetrics } from '../../../../@types/rendering/FontMetrics';
 import type { LoadedFontAtlases } from '../../../../@types/rendering/LoadedFontAtlases';
 import { FONT_IDS } from '../../../../data/fonts';
 import type { FontId } from '../../../../@types/data/FontId';
-import type { Vec2 } from '../../../../@types/math/Vec2';
+import type { Label2DProjection } from '../../../../@types/rendering/Label2DProjection';
 import vsCode from '../../shaders/labels/vertex.wesl?static';
 import vsOccludeCode from '../../shaders/labels/vertexOcclude.wesl?static';
 import fsCode from '../../shaders/labels/fragment.wesl?static';
@@ -73,7 +73,7 @@ import {
   createOcclusionDepthFrameBuffer,
   writeOcclusionDepthFrame,
 } from './occlusionCoverageGroup';
-import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../../lib/cameraUniforms';
+import { OUTPUT_PROJECTION_BYTES, writeOutputProjection } from '../../lib/outputProjectionUniform';
 import { UNIT_QUAD_STRIP_CORNERS, UNIT_QUAD_VERTEX_LAYOUT } from '../../lib/unitQuad';
 import { PREMULTIPLIED_OVER_BLEND } from '../../lib/blendStates';
 import { GLYPH_INSTANCE_BYTES, LABEL_DATA_BYTES } from '../../../../data/labels/labelBufferStrides';
@@ -81,12 +81,13 @@ import { packLabels } from './packLabels';
 
 // ─── uniform constants ────────────────────────────────────────────────────
 
-// `struct Uniforms` in io.wesl: the 80-byte camera prefix (viewProj 0..63,
-// viewportPx 64..71, pxPerRad 72..75, one zero pad f32 76..79), then
-// emClipScale at 80..83, padded to 16 -> 96.
-const UNIFORM_BYTES = 96;
-// f32 index of `emClipScale` (byte 80).
-const EM_CLIP_SCALE_F32_INDEX = CAMERA_UNIFORM_BYTES / 4;
+// `struct Uniforms` in io.wesl, byte offsets; `labelUniforms.parity` holds them.
+export const LABEL_UNIFORM_OFFSETS = {
+  output: 0,
+  viewFromSlab: OUTPUT_PROJECTION_BYTES,
+  nearClipMpc: OUTPUT_PROJECTION_BYTES + 64,
+} as const;
+export const LABEL_UNIFORM_BYTES = 192;
 
 // ─── capacity constants ───────────────────────────────────────────────────
 
@@ -239,7 +240,7 @@ export function createLabelRenderer(
   // ── Bind group layout ────────────────────────────────────────────────
   //
   // Four bindings matching the labels shaders (io.wesl + lib/msdf.wesl):
-  //   0 → uniform buffer  (CameraUniforms, vertex-visible)
+  //   0 → uniform buffer  (Uniforms: OutputProjection + viewFromSlab, vertex-visible)
   //   1 → read-only storage buffer (LabelData[], vertex-visible)
   //   2 → atlas texture   (fragment-visible)
   //   3 → atlas sampler   (fragment-visible)
@@ -365,7 +366,7 @@ export function createLabelRenderer(
   // ── Buffers ──────────────────────────────────────────────────────────
   const uniformBuffer = device.createBuffer({
     label: 'label-uniforms',
-    size: UNIFORM_BYTES,
+    size: LABEL_UNIFORM_BYTES,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
 
@@ -474,19 +475,16 @@ export function createLabelRenderer(
 
   function draw(
     pass: GPURenderPassEncoder,
-    viewProj: Float32Array,
-    viewportSize: Vec2,
-    pxPerRad: number,
-    extras?: { scene?: OverlaySceneOcclusion; clipScale?: number },
+    projection: Label2DProjection,
+    scene?: OverlaySceneOcclusion,
   ): void {
-    const scene = extras?.scene;
     if (!bindGroup || !instanceBuffer || currentGlyphCount === 0) return;
 
-    // The pad float 19 stays zero via Float32Array zero-init — the shared
-    // writer leaves it untouched by design.
-    const uni = new Float32Array(UNIFORM_BYTES / 4);
-    writeCameraPrefix(uni, viewProj, viewportSize, pxPerRad);
-    uni[EM_CLIP_SCALE_F32_INDEX] = extras?.clipScale ?? 1;
+    const uni = new Float32Array(LABEL_UNIFORM_BYTES / 4);
+    writeOutputProjection(uni, LABEL_UNIFORM_OFFSETS.output / 4, projection.output);
+    // Narrowed to f32 by the typed-array copy.
+    uni.set(projection.viewFromSlab, LABEL_UNIFORM_OFFSETS.viewFromSlab / 4);
+    uni[LABEL_UNIFORM_OFFSETS.nearClipMpc / 4] = projection.nearClipMpc;
     device.queue.writeBuffer(uniformBuffer, 0, uni);
 
     // Pipeline selection: an occlusion instance draws through its occlusion
@@ -499,7 +497,12 @@ export function createLabelRenderer(
     if (occlusionCoverageBGL && occludePipeline && occlusionDepthFrameBuffer && scene) {
       pass.setPipeline(occludePipeline);
       pass.setBindGroup(0, bindGroup);
-      writeOcclusionDepthFrame(device, occlusionDepthFrameBuffer, scene.frame, viewportSize);
+      writeOcclusionDepthFrame(
+        device,
+        occlusionDepthFrameBuffer,
+        scene.frame,
+        projection.output.sizePx,
+      );
       const coverageBindGroup = createOcclusionCoverageBindGroup(
         device,
         occlusionCoverageBGL,

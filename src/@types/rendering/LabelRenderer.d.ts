@@ -5,7 +5,7 @@
  */
 
 import type { Label2D } from './Label2D';
-import type { Vec2 } from '../math/Vec2';
+import type { Label2DProjection } from './Label2DProjection';
 import type { OverlaySceneOcclusion } from './OverlaySceneOcclusion';
 
 export type LabelRenderer = {
@@ -32,16 +32,13 @@ export type LabelRenderer = {
    * scene depth stands in front of the subject — see lib/sceneDepth.wesl.
    * A plain instance ignores it.
    *
-   * `clipScale` is the clip units of `viewProj` relative to Mpc (default 1):
-   * the NEAR0 overlays rescale their matrix, and the vertex stage must scale
-   * the em into the same units before dividing by `clip.w`.
+   * `projection` places the anchors (`output`, `viewFromSlab`, `nearClipMpc`);
+   * its `vp` is not read.
    */
   draw(
     pass: GPURenderPassEncoder,
-    viewProj: Float32Array,
-    viewportSize: Vec2,
-    pxPerRad: number,
-    extras?: { scene?: OverlaySceneOcclusion; clipScale?: number },
+    projection: Label2DProjection,
+    scene?: OverlaySceneOcclusion,
   ): void;
   /** Release all GPU resources. */
   destroy(): void;
