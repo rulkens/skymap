@@ -112,6 +112,7 @@ export const LABEL_STYLES = {
     textHeight: { mpc: 5e-4 },
     // Diameter here is the stream's length; today's hard 150 px cut gains a band.
     appear: { fromPx: 150, bandPx: 50 },
+    keepsWhenFillingView: true,
     placement: 'centre',
     priority: 0,
   },

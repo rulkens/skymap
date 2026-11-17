@@ -12,6 +12,8 @@ export type LabelStyleRow = {
   readonly textHeight: { readonly mpc: number } | { readonly timesRadius: number };
   /** Fades in over the subject's apparent diameter, px, unless the subject is hovered or selected. */
   readonly appear?: { readonly fromPx: number; readonly bandPx: number };
+  /** Skips the fade-out as the subject fills the view: a stream's name belongs to a span far wider than the screen. */
+  readonly keepsWhenFillingView?: true;
   readonly placement: 'centre' | 'above';
   /** For 'above': the text sits `radii` subject angular radii above the subject's centre, and at
    *  least `minPx` up. Today's rule is 1.5 diameters and 28 px, so captions use { radii: 3, minPx: 28 }. */

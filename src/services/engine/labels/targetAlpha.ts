@@ -5,7 +5,7 @@
  *  - "focused only": 0 unless it names the focused, hovered or selected subject
  *  - the toggle's handed value (per item by `fadeKey`) × the record's reveal band by distance
  *  - the style's `appear` band over apparent diameter, unless the subject is hovered or selected
- *  - fades out as its subject fills the view (`overflowFade`)
+ *  - fades out as its subject fills the view (`overflowFade`), unless the style `keepsWhenFillingView`
  *  - the toggle's focus recession, unless it names the focused, hovered or selected subject
  *  - on the near slab, 0 while a body stands between the eye and the subject
  * A label is clickable while it shows and its subject is the focus or inside the focus sphere.
@@ -70,7 +70,9 @@ export const targetAlpha: LabelStage = (records, frame, inputs) => {
       const { fromPx, bandPx } = style.appear;
       alpha *= smoothstep(fromPx, fromPx + bandPx, diameterPx);
     }
-    if (f32[base + W.radiusMpc]! > 0) alpha *= overflowFade(diameterPx, shortSidePx);
+    if (f32[base + W.radiusMpc]! > 0 && !('keepsWhenFillingView' in style)) {
+      alpha *= overflowFade(diameterPx, shortSidePx);
+    }
     if (!focused && !named) alpha *= inputs.recessions[source]!;
     if (!(alpha > 0)) continue;
 
