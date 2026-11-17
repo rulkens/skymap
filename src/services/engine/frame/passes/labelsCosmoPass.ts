@@ -42,6 +42,10 @@ export const labelsCosmoPass: ContentPass = {
     const pickRenderer = state.gpu.labelPickRendererCosmo;
     const shown = shownLabelRecords(state, COSMO);
     if (pickRenderer === null || shown === null) return;
-    pickRenderer.draw(pass, recordPickQuads(shown.records, shown.frame), view.window);
+    pickRenderer.draw(
+      pass,
+      recordPickQuads(shown.records, shown.frame, shown.view.projection.pxScale),
+      view.window,
+    );
   },
 };

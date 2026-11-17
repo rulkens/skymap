@@ -19,6 +19,7 @@ import { cameraDofAnglesOf } from '../camera/debug/cameraDofAnglesOf';
 import { mainViewSpec } from '../../../utils/camera/viewRig/mainViewSpec';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { resizeCanvasToDisplay } from '../../gpu/device';
+import { canvasPxPerCssPx } from '../../../utils/browser/canvasPxPerCssPx';
 import { shouldKeepTicking } from '../helpers/shouldKeepTicking';
 import { runLabel3DProducers } from './runLabel3DProducers';
 import { runLabelDirector } from './runLabelDirector';
@@ -183,6 +184,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     mainViewSpec(
       { width: deps.canvas.width, height: deps.canvas.height },
       state.cameraRuntime.outputs.frustum,
+      canvasPxPerCssPx(deps.canvas),
     ),
   );
   // The rig hands back specs; deriving views HERE, off the one shared `snapshot`,

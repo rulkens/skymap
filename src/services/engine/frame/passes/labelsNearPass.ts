@@ -43,6 +43,10 @@ export const labelsNearPass: ContentPass = {
     const pickRenderer = state.gpu.labelPickRendererNear;
     const shown = shownLabelRecords(state, NEAR0);
     if (pickRenderer === null || shown === null) return;
-    pickRenderer.draw(pass, recordPickQuads(shown.records, shown.frame), view.window);
+    pickRenderer.draw(
+      pass,
+      recordPickQuads(shown.records, shown.frame, shown.view.projection.pxScale),
+      view.window,
+    );
   },
 };

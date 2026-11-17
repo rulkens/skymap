@@ -1,7 +1,7 @@
 /**
  * LABEL_STYLES — every label style, one row each; a record carries its row's index in
  * `LABEL_STYLE_IDS` and the shader reads the same table. Structure `appear` thresholds are the
- * marker ring radii doubled (rows read diameters).
+ * marker ring radii doubled (rows read diameters). Every px is a CSS px (times `pxScale`).
  * Priorities are bands: rank = priority × CAPTION_PRIORITY_SCALE + apparent diameter.
  */
 
@@ -12,12 +12,12 @@ import { hexToGl } from '../../utils/color/hexToGl';
 
 const OUTLINE = { color: [0, 0, 0, 0.1] as Vec4, emFrac: 0.16 };
 const TEXT = { font: 'cormorant', outline: OUTLINE } as const;
-const CLUSTER_APPEAR = { fromPx: 10, bandPx: 8 };
-const VOLUME_APPEAR = { fromPx: 56, bandPx: 40 };
+const CLUSTER_APPEAR = { fromPx: 5, bandPx: 4 };
+const VOLUME_APPEAR = { fromPx: 28, bandPx: 20 };
 // A Milky Way structure's label sits on its ring's drawn top (ring radius × MARKER_RADIUS_RETUNE),
-// at least 8 px up.
-const ABOVE_RING = { placement: 'above', lift: { radii: 0.57735, minPx: 8 } } as const;
-const CAPTION_LIFT = { radii: 3, minPx: 28 };
+// at least 4 px up.
+const ABOVE_RING = { placement: 'above', lift: { radii: 0.57735, minPx: 4 } } as const;
+const CAPTION_LIFT = { radii: 3, minPx: 14 };
 
 export const LABEL_STYLES = {
   galaxyCluster: {
@@ -48,7 +48,7 @@ export const LABEL_STYLES = {
     ...TEXT,
     color: hexToGl('#C2B488C8'),
     textHeight: { mpc: 0.3 },
-    appear: { fromPx: 88, bandPx: 48 },
+    appear: { fromPx: 44, bandPx: 24 },
     placement: 'centre',
     priority: 0,
   },
@@ -89,10 +89,10 @@ export const LABEL_STYLES = {
     color: hexToGl('#FFF2CC'),
     // M31's em (0.0125 Mpc) over its 20 kpc radius; the producer's log-diameter rule goes.
     textHeight: { timesRadius: 0.625 },
-    appear: { fromPx: 6, bandPx: 4 },
+    appear: { fromPx: 3, bandPx: 2 },
     placement: 'above',
     lift: CAPTION_LIFT,
-    leader: { from: 'centre', gapPx: 0, widthPx: 2.5, color: hexToGl('#E6D9B3') },
+    leader: { from: 'centre', gapPx: 0, widthPx: 1.25, color: hexToGl('#E6D9B3') },
     priority: 0,
   },
   milkyWay: {
@@ -101,7 +101,7 @@ export const LABEL_STYLES = {
     textHeight: { mpc: 0.0125 },
     placement: 'above',
     lift: CAPTION_LIFT,
-    leader: { from: 'centre', gapPx: 0, widthPx: 3, color: [1, 1, 1, 1] },
+    leader: { from: 'centre', gapPx: 0, widthPx: 1.5, color: [1, 1, 1, 1] },
     // Above every other band: the orientation anchor always wins.
     priority: 1000,
   },
@@ -110,8 +110,8 @@ export const LABEL_STYLES = {
     // Each stream passes its own tint at alpha 0.85.
     color: [1, 1, 1, 0.85],
     textHeight: { mpc: 5e-4 },
-    // Diameter here is the stream's length; today's hard 150 px cut gains a band.
-    appear: { fromPx: 150, bandPx: 50 },
+    // Diameter here is the stream's length; the old hard cut gains a band.
+    appear: { fromPx: 75, bandPx: 25 },
     placement: 'centre',
     priority: 0,
   },
@@ -121,7 +121,7 @@ export const LABEL_STYLES = {
     textHeight: { timesRadius: 1 },
     placement: 'above',
     lift: CAPTION_LIFT,
-    leader: { from: 'rim', gapPx: 4, widthPx: 2.5 },
+    leader: { from: 'rim', gapPx: 2, widthPx: 1.25 },
     priority: 10,
   },
   constellation: {
@@ -138,8 +138,8 @@ export const LABEL_STYLES = {
     // No em of its own: always the minimum size.
     textHeight: { mpc: 0 },
     // Today's recede window (camera distance 12 → 40 sphere radii) as apparent diameter at the
-    // default 60° lens on an 1800 px tall canvas: 2 × 1559 px / 40 = 78, / 12 = 260.
-    appear: { fromPx: 78, bandPx: 182 },
+    // default 60° lens on a 900 CSS px tall canvas: 2 × 779 px / 40 = 39, / 12 = 130.
+    appear: { fromPx: 39, bandPx: 91 },
     placement: 'above',
     lift: { radii: 1, minPx: 0 },
     priority: 12,

@@ -11,7 +11,8 @@ import { targetAlpha } from '../../../../src/services/engine/labels/targetAlpha'
 import { LABEL_DIRECTORS } from '../../../../src/data/labels/labelDirectors';
 import { COSMO } from '../../../../src/services/engine/frame/slabs';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import { stageInputs, stageRecords } from '../../../helpers/labels/labelStageFixture';
+import { STAGE_CAMERA, stageInputs, stageRecords } from '../../../helpers/labels/labelStageFixture';
+import { LABEL_STYLES } from '../../../../src/data/labels/labelStyles';
 
 function targets(
   descriptions: readonly LabelDescription[],
@@ -138,5 +139,16 @@ describe('targetAlpha', () => {
     const far: LabelDescription = { text: 'A', position: [0, 0, -0.02] };
     const frame = targets([near, far], { director }, 'constellation');
     expect(Array.from(frame.target.subarray(0, 2))).toEqual([0, 1]);
+  });
+
+  it('the appear band is CSS px, so it doubles on a dense display; the fills-view fade does not', () => {
+    const { fromPx, bandPx } = LABEL_STYLES.galaxyCluster.appear;
+    const radius = (1.2 * (fromPx + bandPx)) / (2 * STAGE_CAMERA.output.focalPx);
+    const dense = { projection: { ...STAGE_CAMERA.output, pxScale: 2 } };
+    expect(targets([at(0, radius)]).target[0]).toBe(1);
+    const half = targets([at(0, radius)], dense).target[0]!;
+    expect(half).toBeGreaterThan(0);
+    expect(half).toBeLessThan(1);
+    expect(targets([at(0, 0.55)], dense).target[0]).toBe(0);
   });
 });

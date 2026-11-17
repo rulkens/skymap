@@ -21,5 +21,5 @@ export function canvasViewOf(
   const snapshot = deriveFrameContext(state, input);
   if (!snapshot.isReady) return null;
   const frustum = symmetricFrustum(input.cam.fovYRad, input.cam.aspect);
-  return deriveView(snapshot, input.cam, mainViewSpec(sizePx, frustum));
+  return deriveView(snapshot, input.cam, mainViewSpec(sizePx, frustum, 1));
 }

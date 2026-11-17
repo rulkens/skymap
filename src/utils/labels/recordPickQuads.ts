@@ -2,7 +2,7 @@
  * recordPickQuads — the clickable label records as pick rectangles, from the ink boxes
  * `projectRecords` made this frame (no re-projection), nearest subject first: the quads share
  * one depth band and the first drawn owns a contested pixel (`isRecordClickable` says which).
- * Each box grows by the grace padding and the painted outline.
+ * Each box grows by the grace padding (CSS px, × `pxScale`) and the painted outline.
  */
 
 import type { LabelFrame } from '../../@types/rendering/LabelFrame';
@@ -17,7 +17,11 @@ import { LABEL_STYLES, LABEL_STYLE_IDS } from '../../data/labels/labelStyles';
 import { LABEL_PICK_GRACE_PADDING_PX } from '../../data/labels/labelPickGracePaddingPx';
 import { isRecordClickable } from './isRecordClickable';
 
-export function recordPickQuads(records: LabelRecords, frame: LabelFrame): LabelPickQuad[] {
+export function recordPickQuads(
+  records: LabelRecords,
+  frame: LabelFrame,
+  pxScale: number,
+): LabelPickQuad[] {
   const { f32, u32 } = records;
   const picked: number[] = [];
   for (let i = 0; i < records.count; i++) if (isRecordClickable(records, frame, i)) picked.push(i);
@@ -26,7 +30,7 @@ export function recordPickQuads(records: LabelRecords, frame: LabelFrame): Label
     const base = i * LABEL_RECORD_WORDS;
     const styleIndex = u32[base + W.style]! & LABEL_RECORD_FLAGS.styleMask;
     const pad =
-      LABEL_PICK_GRACE_PADDING_PX +
+      LABEL_PICK_GRACE_PADDING_PX * pxScale +
       LABEL_STYLES[LABEL_STYLE_IDS[styleIndex]!].outline.emFrac * frame.textPx[i]!;
     return {
       rect: {

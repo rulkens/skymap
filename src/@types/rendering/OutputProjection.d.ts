@@ -24,6 +24,7 @@ export type OutputProjection = {
   readonly centrePx: Vec2;
   /** Pixels per radian on the view axis. */
   readonly focalPx: number;
-  /** Multiplier for authored pixel constants (gaps); 1 in mono. */
+  /** Multiplier for authored pixel constants (text sizes, gaps, bands): the device pixel ratio
+   *  in mono, so they read as CSS px. */
   readonly pxScale: number;
 };

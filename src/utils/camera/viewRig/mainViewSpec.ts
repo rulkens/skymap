@@ -11,13 +11,14 @@ import type { ViewSpec } from '../../../@types/engine/frame/ViewSpec';
 import type { ViewFrustum } from '../../../@types/camera/projection/ViewFrustum';
 import { IDENTITY_MAT3 } from '../../math/identityMat3';
 
-export function mainViewSpec(sizePx: Size, frustum: ViewFrustum): ViewSpec {
+export function mainViewSpec(sizePx: Size, frustum: ViewFrustum, pxPerCssPx: number): ViewSpec {
   return {
     id: 'canvas',
     rotation: IDENTITY_MAT3,
     eyeOffsetMpc: [0, 0, 0],
     frustum,
     sizePx,
+    pxPerCssPx,
     slot: 0,
     kind: 'frame',
   };

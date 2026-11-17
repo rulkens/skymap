@@ -28,7 +28,7 @@ import package::lib::projectLabel::scaledLength;
 // (labelRecord.parity).
 const ATLAS_EM_PX: f32 = 84.0;
 const DISTANCE_RANGE_PX: f32 = 32.0;
-const LEADER_LINE_PADDING_PX: f32 = 6.0;
+const LEADER_LINE_PADDING_PX: f32 = 3.0;
 // Behind the near plane on every corner: a hidden label rasterises nothing.
 const HIDDEN_POS: vec4<f32> = vec4<f32>(0.0, 0.0, -1.0, 1.0);
 

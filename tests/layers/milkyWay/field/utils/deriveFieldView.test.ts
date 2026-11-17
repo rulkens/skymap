@@ -86,6 +86,7 @@ describe('deriveFieldView', () => {
       eyeOffsetMpc: [0, 0, 0],
       frustum: symmetricFrustum(Math.PI / 2, 1),
       sizePx: { width: 512, height: 512 },
+      pxPerCssPx: 1,
       slot: DOME_PARAMS.viewSlotBase + 1,
       kind: 'frame',
     });

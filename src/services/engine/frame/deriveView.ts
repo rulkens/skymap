@@ -136,6 +136,7 @@ export function deriveView(
     slabs,
     bodyPose,
     canvasSize: sizePx,
+    pxPerCssPx: spec.pxPerCssPx,
     drawCamPos,
     frustum,
     drawPxPerRad: pxPerRad,

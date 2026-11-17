@@ -2,7 +2,8 @@
  * outputProjectionOf — the `OutputProjection` a rig's labels land through for
  * one frame view. Pinhole: the view camera's lookAt rotation (built exactly as
  * `computeViewProj` builds it, so it agrees with `view.vp`), the eye split into
- * an f32 hi/lo pair, and the frustum's principal point and focal length.
+ * an f32 hi/lo pair, and the frustum's principal point and focal length. Authored
+ * px are CSS px, so `pxScale` is the view's device pixel ratio.
  */
 
 import { mat4d } from 'wgpu-matrix';
@@ -47,6 +48,6 @@ export function outputProjectionOf(view: FrameView, rig: ViewRig): OutputProject
     sizePx: [canvasSize.width, canvasSize.height],
     centrePx: [(-frustum.tanLeft * canvasSize.width) / width, frustum.tanUp * view.drawPxPerRad],
     focalPx: view.drawPxPerRad,
-    pxScale: 1,
+    pxScale: view.pxPerCssPx,
   };
 }

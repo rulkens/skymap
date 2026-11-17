@@ -11,7 +11,7 @@ const indexOf = (id: string) => LIGHT_TIME_SPHERES.findIndex((s) => s.id === id)
 // Far enough from the origin that measuring from the origin would miss every small sphere.
 const EARTH: Vec3 = [5e-6, -2e-6, 1e-6];
 
-// The default 60° lens on an 1800 px tall canvas.
+// The default 60° lens on a 900 CSS px tall canvas at device pixel ratio 2 (1800 px).
 const DEFAULT_FOCAL_PX = 1800 / (2 * Math.tan(Math.PI / 6));
 
 function makeCtx(drawCamPos: Vec3, focalPx = DEFAULT_FOCAL_PX): FrameView {
@@ -24,6 +24,7 @@ function makeCtx(drawCamPos: Vec3, focalPx = DEFAULT_FOCAL_PX): FrameView {
     drawCamPos,
     drawPxPerRad: focalPx,
     canvasSize: { width: 3200, height: 1800 },
+    pxPerCssPx: 2,
   } as unknown as FrameView;
 }
 
