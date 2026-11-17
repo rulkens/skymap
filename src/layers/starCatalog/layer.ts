@@ -7,7 +7,6 @@
  */
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';
-import { NEAR0 } from '../../services/engine/frame/slabs';
 import { starCatalogLayerSettings } from './state/slices';
 import { starCatalogVisibility } from './visibility';
 import { STAR_CATALOG_SOURCE_ROWS } from './sources/starCatalogSourceRows';
@@ -26,7 +25,7 @@ import { fieldStarSpherePass } from './resolvedStars/passes/fieldStarSpherePass'
 import { starCatalogSelectionRow } from './selection/starCatalogSelectionRow';
 import { starCatalogSelectionKinds } from './selection/kinds';
 import { starSearch } from './selection/present/starSearch';
-import { produceStarCaptions } from './captions/present/produceStarCaptions';
+import { starLabelSource } from './captions/present/starLabelSource';
 import { STAR_AGGREGATES_TARGET } from './survey/render/starAggregatesTarget';
 import { S_STAR_ORBITAL_ELEMENTS } from '../../data/bodies/sStarOrbitalElements';
 import StarsSectionContainer from './controls/ui/StarsSectionContainer';
@@ -56,14 +55,7 @@ export const starCatalogLayer = defineLayer({
   assets: starCatalogAssetRows,
   sourceCounts: starCatalogSourceCounts,
   guides: (runtime) => ({
-    screenLabels: [
-      {
-        slab: NEAR0,
-        id: 'starCaptions',
-        label: 'starCatalog',
-        produceLabels: produceStarCaptions(runtime),
-      },
-    ],
+    screenLabels: [starLabelSource(runtime)],
     orbitTrails: { show: 'sStarTrails', rows: S_STAR_ORBITAL_ELEMENTS },
   }),
   selection: {

@@ -1,28 +1,15 @@
 /**
  * bodyCaption — the shared `ForegroundCaption` builder for a seeded scene
  * subject: position, size, tint, priority and pick id are the caller's own; font,
- * outline, size clamps and alignment are authored once here. `sceneBodyLabels`,
- * and `produceStarCaptions` call this rather
- * than growing their own copy, so a caption reads the same regardless of producer.
+ * outline, size clamps and alignment are authored once here. Only the missions' craft
+ * captions still use it; the record path's `caption` style replaces it (slice 10c).
  */
 
-import type { Label2D } from '../../@types/rendering/Label2D';
 import type { Vec3 } from '../../@types/math/Vec3';
 import type { ForegroundCaption } from '../../services/engine/presentation/foregroundCaption';
 import { RENDER_ORIGIN_MPC } from '../../data/renderOrigin';
 import { SCALE_UNITS } from '../../data/scaleUnits';
 import { FAMOUS_LABEL_STYLE } from '../../services/engine/presentation/famousLabelStyle';
-
-/**
- * Vertical stagger so captions of bodies sharing a sub-pixel screen spot
- * don't overlap (Sun+Earth are 1 AU apart, Earth+Moon 384,400 km — both
- * collapse to a dot at most zooms). Everything else defaults to baseline.
- */
-const BODY_ALIGN_Y: Readonly<Record<string, Label2D['alignY']>> = {
-  sun: 'top',
-  earth: 'bottom',
-  moon: 'top',
-};
 
 /**
  * `position`/`tint` are parameters because no `SceneBody` arm carries either
@@ -63,6 +50,6 @@ export function bodyCaption(
     minPixelSize: FAMOUS_LABEL_STYLE.minPixelSize,
     maxPixelSize: FAMOUS_LABEL_STYLE.maxPixelSize,
     alignX: 'center',
-    alignY: BODY_ALIGN_Y[body.id] ?? 'baseline',
+    alignY: 'baseline',
   };
 }
