@@ -60,6 +60,7 @@ export function runLabelDirector(state: EngineState, ctx: FrameView, slab: numbe
     director: director.row,
     projection,
     bodyStates: sceneBodyStates(state, ctx),
+    meshBodies: ctx.snapshot.meshBodies,
     nowMs: ctx.snapshot.nowMs,
     toggleFades,
     recessions: records.sources.map((source) =>

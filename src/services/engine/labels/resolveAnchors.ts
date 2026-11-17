@@ -1,7 +1,8 @@
 /**
  * resolveAnchors — places each anchored record at its body's position this frame, from the
  * frame's body states (the map every per-frame consumer reads, `sceneBodyStates`). A body
- * absent this frame (a craft before launch) leaves its label unlocated, so it draws nothing.
+ * absent this frame leaves its label unlocated, so it draws nothing: the map is total (a craft
+ * before launch is parked on Earth), so a mesh body counts only while the frame admits it.
  * Words are rewritten, and marked for upload, only when the position moved.
  */
 
@@ -9,10 +10,12 @@ import type { LabelStage } from '../../../@types/rendering/LabelStage';
 import { LABEL_RECORD as W, LABEL_RECORD_WORDS } from '../../../data/labels/labelRecordLayout';
 import { writeHiLoVertex } from '../../../utils/math/writeHiLoVertex';
 import { markRecordsDirty } from '../../../utils/labels/markRecordsDirty';
+import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
 
 const hiLo = new Float32Array(6);
+const MESH_BODY_IDS: ReadonlySet<string> = new Set(SCENE_MESH_BODIES.map((body) => body.id));
 
-export const resolveAnchors: LabelStage = (records, frame, { bodyStates }) => {
+export const resolveAnchors: LabelStage = (records, frame, { bodyStates, meshBodies }) => {
   const { f32 } = records;
   for (let i = 0; i < records.count; i++) {
     const id = records.anchorIds[i] ?? null;
@@ -20,7 +23,8 @@ export const resolveAnchors: LabelStage = (records, frame, { bodyStates }) => {
       frame.located[i] = 1;
       continue;
     }
-    const position = bodyStates.get(id)?.positionMpc;
+    const absent = MESH_BODY_IDS.has(id) && !meshBodies.some((body) => body.id === id);
+    const position = absent ? undefined : bodyStates.get(id)?.positionMpc;
     frame.located[i] = position === undefined ? 0 : 1;
     if (position === undefined) continue;
     writeHiLoVertex(position, 0, hiLo, 0);

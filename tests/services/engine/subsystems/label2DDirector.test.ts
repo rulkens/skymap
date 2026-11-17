@@ -128,7 +128,7 @@ const SAMPLE_LABEL: Label2D = {
   font: 'cormorant',
   pixelSize: 10,
 };
-// A scene-body caption's leader (`composeForegroundCaption`).
+// A scene-body caption's leader.
 const RIM_LEADER = { widthPx: 2.5, base: 'rim', gapPx: 4 } as const;
 
 describe('label2DDirector', () => {

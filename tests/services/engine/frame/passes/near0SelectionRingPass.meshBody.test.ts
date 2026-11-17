@@ -22,10 +22,10 @@ import { mat3FromColumns } from '../../../../../src/utils/math/mat3FromColumns';
 import { bodyRelativePose } from '../../../../../src/services/engine/camera/bodyFrame/bodyRelativePose';
 import { bodyStateInHostFrame } from '../../../../../src/utils/scene/bodyStateInHostFrame';
 import { bodyLayerSlabRow } from '../../../../../src/layers/body/slabs/present/bodyLayerSlabRow';
-import { near0LabelProjection } from '../../../../../src/services/engine/frame/near0LabelProjection';
-import { projectLabels } from '../../../../../src/utils/labels/projectLabels';
+import { outputProjectionOf } from '../../../../../src/utils/labels/outputProjectionOf';
+import { projectLabel } from '../../../../../src/utils/labels/projectLabel';
+import type { ProjectedLabel } from '../../../../../src/@types/rendering/ProjectedLabel';
 import { VIEW_RIGS } from '../../../../../src/data/rendering/viewRigs';
-import { meshBodyCaption } from '../../../../../src/layers/missions/craft/utils/meshBodyCaption';
 import { SCENE_MESH_BODIES } from '../../../../../src/data/bodies/sceneMeshBodies';
 import { SCENE_BODIES } from '../../../../../src/data/bodies/sceneBodies';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
@@ -161,16 +161,14 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
   const meshCall = meshDraw.mock.calls.find((c) => c[1] === bodyId)!;
   const ringCall = ringDraw.mock.calls[0];
 
-  // The caption's own seam: `meshBodyCaption`'s world position made
-  // camera-relative (`produceMissionCaptions`'s compose, which needs the
-  // settings/fade graph this harness has no use for) projected through
-  // `near0LabelProjection` — what `labelsNearPass` and `labelPickQuads` consume.
-  const caption = meshBodyCaption(body, bodyState.positionMpc, 0);
-  const camRelAnchor: Vec3 = [
-    caption.worldPos[0] - ctx.drawCamPos[0],
-    caption.worldPos[1] - ctx.drawCamPos[1],
-    caption.worldPos[2] - ctx.drawCamPos[2],
-  ];
+  // The caption's own seam: the craft's anchor (its body state) through the label projection
+  // `projectRecords` and the label shader read.
+  const projection = outputProjectionOf(ctx, VIEW_RIGS.mono);
+  const m = projection.viewFromWorld;
+  const d = [0, 1, 2].map((k) => bodyState.positionMpc[k]! - ctx.drawCamPos[k]!);
+  const v = [0, 1, 2].map((r) => m[r]! * d[0]! + m[3 + r]! * d[1]! + m[6 + r]! * d[2]!) as Vec3;
+  const projected: ProjectedLabel = { px: [0, 0], up: [0, 0], pxPerRad: 0, visible: false };
+  projectLabel(v, projection, projected);
 
   return {
     meshClip: clipOf((meshCall[2] as Float32Array).subarray(0, 16), [0, 0, 0]),
@@ -181,13 +179,7 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
       unknown,
       { worldPos: Vec3; alpha: number },
     ],
-    captionClip: captionClipOf(
-      projectLabels(
-        [{ ...caption, worldPos: camRelAnchor }],
-        near0LabelProjection(ctx, VIEW_RIGS.mono),
-        () => null,
-      )[0]!.screenPx!,
-    ),
+    captionClip: captionClipOf(projected.px),
   };
 }
 
