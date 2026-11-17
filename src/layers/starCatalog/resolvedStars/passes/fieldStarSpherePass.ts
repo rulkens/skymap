@@ -15,7 +15,7 @@ import type { StarCatalogRuntime } from '../../@types/StarCatalogRuntime';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { SOLAR_RADIUS_KM } from '../../../../data/bodies/solarRadiusKm';
-import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
+import { packPickWord } from '../../../../data/selectionEncoding';
 import { composeBodyMvp } from '../../../../utils/camera/bodyCompose/composeBodyMvp';
 import { IDENTITY_MAT3 } from '../../../../utils/math/identityMat3';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
@@ -174,10 +174,7 @@ export function fieldStarSpherePass(runtime: StarCatalogRuntime): ContentPass<'s
         camPosMpc: view.camPos,
         drawPxPerRad: ctx.drawPxPerRad,
         orientation: IDENTITY_MAT3,
-        packedId: packSelection(
-          runtime.pickCodes.pickCodeOf(loaded.source),
-          poolIndex + PICK_SENTINEL_OFFSET,
-        ),
+        packedId: packPickWord(runtime.pickCodes.pickCodeOf(loaded.source), poolIndex),
       });
     },
   };

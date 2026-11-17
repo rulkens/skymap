@@ -3,13 +3,13 @@
  * index, and a wrong pair resolves to a plausible, silently wrong body.
  */
 
+import { packPickWord } from '../../../../../src/data/selectionEncoding';
 import { describe, expect, it } from 'vitest';
 
 import { bodyLabelSource } from '../../../../../src/layers/body/labels/present/bodyLabelSource';
 import { bodySelectionRow } from '../../../../../src/layers/body/selection/bodySelectionRow';
 import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
-import { packPickWord } from '../../../../../src/utils/labels/packPickWord';
 import { compressBrightness } from '../../../../../src/utils/color/compressBrightness';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';

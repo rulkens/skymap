@@ -1,3 +1,4 @@
+import { packPickWord } from '../../../../src/data/selectionEncoding';
 import { describe, expect, it } from 'vitest';
 import type { LabelDescription } from '../../../../src/@types/rendering/LabelDescription';
 import { createLabelFrame } from '../../../../src/services/engine/labels/createLabelFrame';
@@ -5,7 +6,6 @@ import { resolveAnchors } from '../../../../src/services/engine/labels/resolveAn
 import { projectRecords } from '../../../../src/services/engine/labels/projectRecords';
 import { targetAlpha } from '../../../../src/services/engine/labels/targetAlpha';
 import { declutterRecords } from '../../../../src/services/engine/labels/declutterRecords';
-import { packPickWord } from '../../../../src/utils/labels/packPickWord';
 import { stageInputs, stageRecords } from '../../../helpers/labels/labelStageFixture';
 
 describe('declutterRecords', () => {

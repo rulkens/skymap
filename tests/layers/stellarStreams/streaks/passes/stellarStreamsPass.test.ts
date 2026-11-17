@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { stellarStreamsPass } from '../../../../../src/layers/stellarStreams/streaks/passes/stellarStreamsPass';
 import { initialState } from '../../../../../src/layers/stellarStreams/state/stellarStreams/initialState';
-import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../../src/data/selectionEncoding';
+import { packPickWord } from '../../../../../src/data/selectionEncoding';
 import type { StellarStreamsRuntime } from '../../../../../src/layers/stellarStreams/@types/StellarStreamsRuntime';
 import type { PassState } from '../../../../../src/@types/engine/frame/PassState';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
@@ -41,10 +41,10 @@ function pickedStream(focusPickId: number | null): number | undefined {
 describe('stellarStreamsPass picking', () => {
   it('stamps every ribbon at rest, and only the focused stream’s under its focus', () => {
     expect(pickedStream(null)).toBe(-1);
-    expect(pickedStream(packSelection(PICK_CODE, 4 + PICK_SENTINEL_OFFSET))).toBe(4);
+    expect(pickedStream(packPickWord(PICK_CODE, 4))).toBe(4);
   });
 
   it('stamps none while another kind’s focus recedes the streams', () => {
-    expect(pickedStream(packSelection(PICK_CODE + 1, 4 + PICK_SENTINEL_OFFSET))).toBeUndefined();
+    expect(pickedStream(packPickWord(PICK_CODE + 1, 4))).toBeUndefined();
   });
 });

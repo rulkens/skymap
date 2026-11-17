@@ -3,12 +3,12 @@
  * visitor emphasises the other one: the dim rides the caption's alpha, so a wrong craft dims.
  */
 
+import { packPickWord } from '../../../../../src/data/selectionEncoding';
 import { describe, expect, it } from 'vitest';
 
 import { missionLabelSource } from '../../../../../src/layers/missions/craft/present/missionLabelSource';
 import { craftPickId } from '../../../../../src/layers/missions/craft/present/craftPickId';
 import { MISSION_EMPHASIS_DIM } from '../../../../../src/layers/missions/trails/data/missionTrailStyle';
-import { packPickWord } from '../../../../../src/utils/labels/packPickWord';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import { missionsPickCode } from '../../../../support/layerPickCodes';

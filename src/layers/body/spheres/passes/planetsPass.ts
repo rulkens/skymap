@@ -13,7 +13,7 @@ import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { BodyRuntime } from '../../@types/BodyRuntime';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCENE_PLANETS } from '../../../../data/bodies/scenePlanets';
-import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
+import { packPickWord } from '../../../../data/selectionEncoding';
 import { composeBodySlabMvp } from '../../../../utils/camera/bodyCompose/composeBodySlabMvp';
 import { bodySlabCamLocal } from '../../../../utils/camera/bodyCompose/bodySlabCamLocal';
 import { sunDirLocal } from '../../../../utils/camera/bodyCompose/sunDirLocal';
@@ -101,10 +101,7 @@ export function planetsPass(runtime: BodyRuntime): ContentPass {
       pickRenderer.drawSphere(pass, {
         mvp,
         camPosLocal,
-        packedId: packSelection(
-          runtime.pickCodes.pickCodeOf('planet'),
-          seedIndex + PICK_SENTINEL_OFFSET,
-        ),
+        packedId: packPickWord(runtime.pickCodes.pickCodeOf('planet'), seedIndex),
       });
     },
   };

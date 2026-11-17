@@ -9,7 +9,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { blackHoleMarkerPass } from '../../../../../src/layers/blackHoles/markers/passes/blackHoleMarkerPass';
 import { BLACK_HOLES } from '../../../../../src/layers/blackHoles/markers/data/blackHoles';
 import { GALACTIC_CENTRE_ANCHOR } from '../../../../../src/data/places/galacticCentre';
-import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../../src/data/selectionEncoding';
+import { packPickWord } from '../../../../../src/data/selectionEncoding';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import { RECEDE_ALL_FOCUS_SPHERE } from '../../../../../src/data/selection/recedeAllFocusSphere';
@@ -42,7 +42,7 @@ vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', () => ({
 const ANCHOR = GALACTIC_CENTRE_ANCHOR.positionMpc as Vec3;
 // Not a catalog value: the stamp must pack the code the runtime holds.
 const PICK_CODE = 37;
-const HOLE_ID = packSelection(PICK_CODE, 0 + PICK_SENTINEL_OFFSET);
+const HOLE_ID = packPickWord(PICK_CODE, 0);
 // From Earth: R₀ from the anchor, far outside the lens band.
 const FROM_EARTH: Vec3 = [0, 0, 0];
 // 50 AU out: inside the band's full edge (100 AU), where the lens has taken over.

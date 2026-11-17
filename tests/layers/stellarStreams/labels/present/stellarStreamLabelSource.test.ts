@@ -1,3 +1,4 @@
+import { packPickWord } from '../../../../../src/data/selectionEncoding';
 import { describe, expect, it } from 'vitest';
 
 import { stellarStreamLabelSource } from '../../../../../src/layers/stellarStreams/labels/present/stellarStreamLabelSource';
@@ -5,7 +6,6 @@ import { stellarStreamsSelectionRow } from '../../../../../src/layers/stellarStr
 import type { StellarStreamMeta } from '../../../../../src/layers/stellarStreams/catalog/@types/StellarStreamMeta';
 import type { StellarStreamsRuntime } from '../../../../../src/layers/stellarStreams/@types/StellarStreamsRuntime';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
-import { packPickWord } from '../../../../../src/utils/labels/packPickWord';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { GD_1, SAGITTARIUS, STREAM_META } from '../../fixtures/streamMeta';
 

@@ -84,7 +84,7 @@ import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { seededStarsHandedZero } from '../present/seededStarsHandedZero';
 import { starExposureRamp } from '../../photometry/utils/starExposureRamp';
 import { GALACTIC_CENTRE_ANCHOR } from '../../../../data/places/galacticCentre';
-import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
+import { packPickWord } from '../../../../data/selectionEncoding';
 import { FAMOUS_STAR_PICK_RADIUS_PX } from '../data/famousStarPickRadiusPx';
 import { regionOfBody } from '../../../../utils/regions/regionOfBody';
 import { projectToScreenPx } from '../../../../utils/camera/projection/projectToScreenPx';
@@ -239,10 +239,7 @@ export function starPointsPass(runtime: StarCatalogRuntime): ContentPass<'starCa
       for (const star of points) {
         // A star dimmed out by the focus is not aimable, as for the survey.
         if (!isPickableUnderFocus(star.positionMpc, ctx.snapshot.focus)) continue;
-        const packedId = packSelection(
-          runtime.pickCodes.pickCodeOf(star.source),
-          star.seedIndex + PICK_SENTINEL_OFFSET,
-        );
+        const packedId = packPickWord(runtime.pickCodes.pickCodeOf(star.source), star.seedIndex);
         const posRelCamMpc = relToCam(star.positionMpc);
         // A satellite inside its anchor's click target is not separately
         // aimable, so this Layer does not stamp it. Zoomed out, all 39 S-star

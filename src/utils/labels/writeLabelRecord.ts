@@ -4,6 +4,7 @@
  * alpha starts at 0 and only the envelope raises it.
  */
 
+import { packPickWord } from '../../data/selectionEncoding';
 import type { LabelDescription } from '../../@types/rendering/LabelDescription';
 import type { LabelRecords } from '../../@types/rendering/LabelRecords';
 import type { LabelStyleId } from '../../@types/rendering/LabelStyleId';
@@ -12,7 +13,6 @@ import { LABEL_STYLES, LABEL_STYLE_IDS } from '../../data/labels/labelStyles';
 import { CAPTION_PRIORITY_SCALE } from '../../data/labels/captionPriorityScale';
 import { packRgba8Unorm } from '../color/packRgba8Unorm';
 import { writeHiLoVertex } from '../math/writeHiLoVertex';
-import { packPickWord } from './packPickWord';
 
 // writeHiLoVertex packs [hi3, lo3]; the record splits them around radiusMpc.
 const hiLo = new Float32Array(6);

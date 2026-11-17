@@ -31,7 +31,7 @@ import { positionedSeededStars } from '../../../../../src/layers/starCatalog/see
 import { distanceMpc } from '../../../../../src/utils/math/distanceMpc';
 import { projectToScreenPx } from '../../../../../src/utils/camera/projection/projectToScreenPx';
 import { FAMOUS_STAR_PICK_RADIUS_PX } from '../../../../../src/layers/starCatalog/seededStars/data/famousStarPickRadiusPx';
-import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../../src/data/selectionEncoding';
+import { packPickWord } from '../../../../../src/data/selectionEncoding';
 import { makeBodyItems } from '../../../../fixtures/makeBodyItems';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
@@ -82,7 +82,7 @@ const ALL_STARS = positionedSeededStars(sceneBodiesOf(EVERY_SEEDED));
 const positioned = (id: string): PositionedStar => ALL_STARS.find((s) => s.id === id)!;
 
 const packedIdOf = (star: PositionedStar): number =>
-  packSelection(PICK_CODES.pickCodeOf(star.source), star.seedIndex + PICK_SENTINEL_OFFSET);
+  packPickWord(PICK_CODES.pickCodeOf(star.source), star.seedIndex);
 
 const SUN = positioned('sun');
 const PROXIMA = positioned('proxima-centauri');
@@ -483,9 +483,7 @@ describe('the Galactic Centre footprint exclusion', () => {
 
   const sStarIdsIn = (stamped: readonly number[]): string[] =>
     SCENE_S_STARS.filter((star, seedIndex) =>
-      stamped.includes(
-        packSelection(PICK_CODES.pickCodeOf('sStar'), seedIndex + PICK_SENTINEL_OFFSET),
-      ),
+      stamped.includes(packPickWord(PICK_CODES.pickCodeOf('sStar'), seedIndex)),
     ).map((star) => star.id);
 
   it('an S-star inside the galactic-centre footprint is not stamped', () => {

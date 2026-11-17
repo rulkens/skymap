@@ -3,7 +3,7 @@
  * (same codes and seed tables). `null` means SKIP: an index packed from −1 would alias body 0.
  */
 
-import { packPickWord } from '../labels/packPickWord';
+import { packPickWord } from '../../data/selectionEncoding';
 import { sceneBodyPick } from './sceneBodyPick';
 import type { BodySourceEntry } from '../../@types/data/body/BodySourceEntry';
 

@@ -4,12 +4,12 @@
  * counted over the merged list would select a plausible, silently wrong structure.
  */
 
+import { packPickWord } from '../../../../../src/data/selectionEncoding';
 import { describe, expect, it } from 'vitest';
 
 import { structureLabelSource } from '../../../../../src/layers/structure/markers/present/structureLabelSource';
 import { structureSelectionRow } from '../../../../../src/layers/structure/selection/structureSelectionRow';
 import { createStructureStore } from '../../../../../src/layers/structure/catalog/load/createStructureStore';
-import { packPickWord } from '../../../../../src/utils/labels/packPickWord';
 import { COSMO, NEAR0 } from '../../../../../src/services/engine/frame/slabs';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { StructureInfo } from '../../../../../src/@types/data/structure/StructureInfo';

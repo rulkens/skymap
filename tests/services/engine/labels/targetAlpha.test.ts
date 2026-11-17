@@ -1,3 +1,4 @@
+import { packPickWord } from '../../../../src/data/selectionEncoding';
 import { describe, expect, it } from 'vitest';
 import type { LabelDescription } from '../../../../src/@types/rendering/LabelDescription';
 import type { LabelFrameInputs } from '../../../../src/@types/rendering/LabelFrameInputs';
@@ -7,7 +8,6 @@ import { createLabelFrame } from '../../../../src/services/engine/labels/createL
 import { resolveAnchors } from '../../../../src/services/engine/labels/resolveAnchors';
 import { projectRecords } from '../../../../src/services/engine/labels/projectRecords';
 import { targetAlpha } from '../../../../src/services/engine/labels/targetAlpha';
-import { packPickWord } from '../../../../src/utils/labels/packPickWord';
 import { LABEL_DIRECTORS } from '../../../../src/data/labels/labelDirectors';
 import { COSMO } from '../../../../src/services/engine/frame/slabs';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';

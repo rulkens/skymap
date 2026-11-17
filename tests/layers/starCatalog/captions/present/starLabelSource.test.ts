@@ -10,8 +10,7 @@ import { starLabelSource } from '../../../../../src/layers/starCatalog/captions/
 import { STAR_MAP_CAPTION_BAND } from '../../../../../src/layers/starCatalog/captions/data/starMapCaptionBand';
 import { SCENE_STARS } from '../../../../../src/data/bodies/sceneStars';
 import { SCENE_SUN } from '../../../../../src/data/bodies/sceneSun';
-import { unpackPick } from '../../../../../src/data/selectionEncoding';
-import { packPickWord } from '../../../../../src/utils/labels/packPickWord';
+import { packPickWord, unpackPick } from '../../../../../src/data/selectionEncoding';
 import { selectionResolverOver } from '../../../../support/selectionResolverOver';
 import { starRowRuntime } from '../../../../support/layerPickCodes';
 import type { StarRowFixture } from '../../../../support/selectionResolverOver';

@@ -3,13 +3,13 @@
  * so a pick the Layer's own selection row does not resolve fails silently.
  */
 
+import { packPickWord } from '../../../../../src/data/selectionEncoding';
 import { describe, expect, it } from 'vitest';
 
 import { blackHoleLabelSource } from '../../../../../src/layers/blackHoles/markers/present/blackHoleLabelSource';
 import { blackHoleSelectionRow } from '../../../../../src/layers/blackHoles/selection/blackHoleSelectionRow';
 import { SGR_A_STAR_ENTRY } from '../../../../../src/layers/blackHoles/sources/sgrAStar';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
-import { packPickWord } from '../../../../../src/utils/labels/packPickWord';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import type { PositionedId } from '../../../../../src/@types/scene/PositionedId';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';

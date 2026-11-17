@@ -1,3 +1,4 @@
+import { packPickWord } from '../../../../src/data/selectionEncoding';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
@@ -11,7 +12,6 @@ import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/recedingF
 import { LABEL_DIRECTORS } from '../../../../src/data/labels/labelDirectors';
 import { APP_VISIBILITY_REGISTRY } from '../../../../src/compositions/appVisibility';
 import { labelSource } from '../../../../src/utils/labels/labelSource';
-import { packPickWord } from '../../../../src/utils/labels/packPickWord';
 import { LETTER_A_METRICS } from '../../../helpers/labels/letterAMetrics';
 
 // The toggle fade, the camera and the scene's bodies come from the frame; the director's own

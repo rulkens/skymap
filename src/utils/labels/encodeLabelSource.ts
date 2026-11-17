@@ -7,6 +7,7 @@
  * so is a label whose glyphs do not all fit: whole, never cut off mid-word.
  */
 
+import { packPickWord } from '../../data/selectionEncoding';
 import type { EngineState } from '../../@types/engine/state/EngineState';
 import type { LabelSource } from '../../@types/engine/layer/LabelSource';
 import type { LabelRecords } from '../../@types/rendering/LabelRecords';
@@ -16,7 +17,6 @@ import { FONT_IDS } from '../../data/fonts';
 import { textLayoutOf } from '../../services/gpu/labelLayout/textLayoutOf';
 import { writeGlyphInstances } from '../../services/gpu/labelLayout/writeGlyphInstances';
 import { markRecordsDirty } from './markRecordsDirty';
-import { packPickWord } from './packPickWord';
 import { writeLabelRecord } from './writeLabelRecord';
 
 export function encodeLabelSource<Item>(

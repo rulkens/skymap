@@ -1,10 +1,10 @@
 /** "You are here" picks what a click on the disc impostor does, so a click selects the Milky Way. */
 
+import { packPickWord } from '../../../../../src/data/selectionEncoding';
 import { describe, expect, it } from 'vitest';
 
 import { milkyWayLabelSource } from '../../../../../src/layers/milkyWay/card/present/milkyWayLabelSource';
 import { milkyWaySelectionRow } from '../../../../../src/layers/milkyWay/selection/milkyWaySelectionRow';
-import { packPickWord } from '../../../../../src/utils/labels/packPickWord';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import { milkyWayPickCode } from '../../../../support/layerPickCodes';
 
