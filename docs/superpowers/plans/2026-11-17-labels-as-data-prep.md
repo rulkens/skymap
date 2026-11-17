@@ -42,11 +42,11 @@ Pinhole: `px = centre + focalPx · (v.x, −v.y) / v.z`, `pxPerRad = focalPx · 
 `asin(clamp(radiusMpc / |v|, 0, 1))`, project, add `gapPx · pxScale` along `up`. Both write into
 `out` and allocate nothing.
 
-- [ ] Test `projectLabel matches the view-projection matrix path` — a spread of points against
+- [x] Test `projectLabel matches the view-projection matrix path` — a spread of points against
       `forwardProjectPoint` (`src/utils/labels/projectLabels.ts`), within 1e-3 px.
-- [ ] Test `liftedAnchor matches liftedLabelPlacement at small angles` — subject under 2° across.
-- [ ] Test `liftedAnchor caps the lift at 90 degrees when the eye is inside the sphere`.
-- [ ] Test `tangentToward falls back to image-up when the direction is parallel to up3`.
+- [x] Test `liftedAnchor matches liftedLabelPlacement at small angles` — subject under 2° across.
+- [x] Test `liftedAnchor caps the lift at 90 degrees when the eye is inside the sphere`.
+- [x] Test `tangentToward falls back to image-up when the direction is parallel to up3`.
 
 ### Task 2: the WGSL twin — **review: yes**
 
