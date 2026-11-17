@@ -13,7 +13,7 @@ import type { CatalogPickCodes } from '../../../@types/engine/selection/CatalogP
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { FamousGalaxiesPayload } from '../famousGalaxies/@types/FamousGalaxiesPayload';
 import type { FamousGalaxyMetaEntry } from '../../../@types/loading/FamousGalaxyMetaEntry';
-import type { GalaxyCatalogReq } from '../../../@types/loading/GalaxyCatalogReq';
+import type { GalaxyCatalogReq } from './GalaxyCatalogReq';
 import type { HiResFamousReq } from '../hiResFamous/@types/HiResFamousReq';
 import type { HiResFamousPair } from '../hiResFamous/@types/HiResFamousPair';
 import type { PgcAliasMap } from '../aliases/@types/PgcAliasMap';

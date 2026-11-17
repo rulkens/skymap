@@ -1,70 +1,20 @@
 /**
- * clipFociReady — is every id-bearing focus effect in a clip resolvable right now?
- *
- * The tour saga must not call `resolveClipFoci` (which throws on a null resolution)
- * before the underlying catalog data is loaded. This predicate answers "can the
- * saga safely call resolveClipFoci on this clip right now?".
- *
- * ### Logic
- *
- * Walks the clip's effect tree with the same structural recursion as
- * `resolveClipFoci` — `seq`/`all` recurse into `children`, `fork` recurses into
- * `child`, everything else is a leaf. At id-bearing leaves:
- *
- *   - `moveTargetId(id)` and `dollyToId(id)`: call `resolve.resolveFocusId(id)`;
- *     return false if null.
- *   - `focusId(null)`: a focus-clear cue — always ready (no data needed).
- *   - `focusId(id)`: call `resolve.resolveFocusId(id)`; return false if null.
- *
- * ### Why a short-circuit walk instead of `collectFocusIds` + a batch check?
- *
- * Extracting a `collectFocusIds` helper would let both `clipFociReady` and
- * `resolveClipFoci` share the id-gathering walk. But `resolveClipFoci` doesn't
- * just collect ids — it rewrites each node to a concrete replacement, which
- * requires knowing the original node shape. And `clipFociReady` can short-circuit
- * as soon as it finds one unresolvable id, whereas a collect-then-check approach
- * always traverses the whole tree. The two walks are distinct enough that a shared
- * helper would have to return a richer type to serve both callers, adding
- * complexity for marginal reuse. Mirroring the walk locally keeps each function
- * focused and independently testable.
- *
- * ### Structure and milkyWay ids are always ready
- *
- * The composed resolver's `resolveFocusId` returns a non-null ref for structure-prefixed ids
- * (e.g. `galaxy-cluster-virgo-m87`) and for `milkyWay` without consulting the catalog
- * map — the resolution is by id format alone. So structure and milkyWay ids in
- * a clip never block the readiness gate.
+ * clipFociReady — does every id in a clip resolve to a hit right now? The tour
+ * saga polls it before calling `resolveClipFoci`, which throws on a miss. It
+ * mirrors that walk rather than sharing a collector: the rewrite needs each
+ * node's shape, and this check short-circuits on the first miss.
  */
 
 import type { ClipData } from '../../@types/animation/ClipData';
 import type { Effect } from '../../@types/animation/Effect';
 import type { SelectionResolver } from '../../@types/engine/selection/SelectionResolver';
 
-/**
- * Returns true when every id-bearing focus effect in `data` resolves against
- * the current engine state in `deps`. Returns false as soon as any non-null
- * focus id cannot be resolved — the saga should poll until this returns true
- * before calling `resolveClipFoci`.
- *
- * A clip with no id-bearing effects is trivially ready.
- */
 export function clipFociReady(data: ClipData, resolve: SelectionResolver): boolean {
   return data.timeline.every((e) => walkEffect(e, resolve));
 }
 
-// ─── Walk ────────────────────────────────────────────────────────────────────
-
-/**
- * Recursively check one `Effect` node. Returns false as soon as any id-bearing
- * leaf fails to resolve, short-circuiting the rest of the tree.
- *
- * Structural nodes (`seq`, `all`, `fork`) recurse into their children.
- * Id-bearing leaves are checked via `resolve.resolveFocusId`. All other leaves pass
- * through unchanged — they carry no focus ids and are always ready.
- */
 function walkEffect(effect: Effect, resolve: SelectionResolver): boolean {
   switch (effect.kind) {
-    // ── Structural nodes — recurse ──────────────────────────────────────────
     case 'seq':
       return effect.children.every((c) => walkEffect(c, resolve));
     case 'all':
@@ -72,24 +22,22 @@ function walkEffect(effect: Effect, resolve: SelectionResolver): boolean {
     case 'fork':
       return walkEffect(effect.child, resolve);
 
-    // ── Id-bearing leaves — check resolvability ─────────────────────────────
     case 'moveTargetId':
     case 'dollyToId':
     case 'lookAtId':
     case 'strafeId':
     case 'spinToId':
-      return resolve.resolveFocusId(effect.id) !== null;
+      return resolve.resolveFocusId(effect.id).kind === 'hit';
     case 'focusId':
-      // null is a focus-clear cue: always ready, no data needed.
+      // A null id is a focus-clear cue and needs no data.
       if (effect.id === null) return true;
-      return resolve.resolveFocusId(effect.id) !== null;
+      return resolve.resolveFocusId(effect.id).kind === 'hit';
 
-    // A flyPath carries id-bearing waypoints; each `atFocus` (id-form) must
-    // resolve. Concrete `atPoint` waypoints need no data.
     case 'flyPath':
-      return effect.waypoints.every((w) => !('id' in w) || resolve.resolveFocusId(w.id) !== null);
+      return effect.waypoints.every(
+        (w) => !('id' in w) || resolve.resolveFocusId(w.id).kind === 'hit',
+      );
 
-    // ── Pass-through — camera actions, scene effects, hold/wait ────────────
     default:
       return true;
   }

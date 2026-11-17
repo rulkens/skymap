@@ -32,7 +32,10 @@ describe('asteroidsSelectionRow', () => {
   });
 
   it('focus id asteroid-433 decodes to number 433; asteroid-4 is the body row’s claim', () => {
-    expect(row.focusId!.decode('asteroid-433')).toEqual({ type: 'asteroid', number: 433 });
+    expect(row.focusId!.decode('asteroid-433')).toEqual({
+      kind: 'hit',
+      ref: { type: 'asteroid', number: 433 },
+    });
     expect(row.focusId!.encode({ type: 'asteroid', number: 433 })).toBe('asteroid-433');
     for (const meshed of [1, 4, 101955, 134340]) {
       expect(row.focusId!.claims(`asteroid-${meshed}`)).toBe(false);

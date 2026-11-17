@@ -73,7 +73,7 @@ describe('installLoadProgress → engineLoadProgressChanged', () => {
       selection: {
         resolvePick: () => null,
         extractRow: () => null,
-        resolveFocusId: () => null,
+        resolveFocusId: () => ({ kind: 'absent' }),
         claimedKind: () => null,
         focusIdOf: () => null,
       },

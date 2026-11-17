@@ -1073,7 +1073,9 @@ describe('a focus fly that starts while standing', () => {
     );
     h.frame(2);
     const row = { type: 'milkyWay', positionMpc: [0, 0, 0], radiusMpc: 0.015 };
-    h.store.dispatch(setSelectionRow({ slot: 'focus', row, focusId: 'milkyWay' }));
+    h.store.dispatch(
+      setSelectionRow({ slot: 'focus', row, id: { id: 'milkyWay', ref: { type: 'milkyWay' } } }),
+    );
     const to: CameraPose = { target: [0, 0, 0], yaw: 0.3, pitch: 0.2, distance: 0.05 };
     h.store.dispatch(
       startCameraTween({

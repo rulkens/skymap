@@ -16,6 +16,7 @@ import { requestFocus } from '../selection/requestFocus';
 import { requestSelect } from '../selection/requestSelect';
 import {
   clearSelection,
+  requestRetired,
   updateSelectionFocus,
   updateSelectionSelect,
 } from '../selection/selectionSlice';
@@ -62,17 +63,24 @@ function* commitSaga(pose: FramedCameraPose) {
 
 const isLoadIdle = (action: Action): boolean =>
   engineLoadProgressChanged.match(action) && action.payload === null;
+const isFocusRetired = (action: Action): boolean =>
+  requestRetired.match(action) && action.payload.slot === 'focus';
 
 // Commits in the same tick the focus row lands, so the frame that first
 // follows a moving body already reads the commit as its framing and owes no
-// approach. An id still unresolved once every load has gone quiet names
-// nothing the loaded catalogs hold.
+// approach. A retired request (an absent id), or an id still unresolved once
+// every load has gone quiet, names nothing the loaded catalogs hold.
 function* frameFocusSaga(runtime: LiveCameraRuntime): SagaGenerator<NavigateOutcome> {
   while (
     (yield* select(selectPendingFocusId)) !== null ||
     (yield* select(selectFocusRow)) === null
   ) {
-    const { idle } = yield* race({ row: take(setSelectionRow), idle: take(isLoadIdle) });
+    const { idle, retired } = yield* race({
+      row: take(setSelectionRow),
+      idle: take(isLoadIdle),
+      retired: take(isFocusRetired),
+    });
+    if (retired !== undefined) return UNKNOWN_ID;
     if (idle === undefined) continue;
     // A catalog's count report, which resolves its ids, trails the idle
     // report it lands with by an async hop; a load that started in that hop

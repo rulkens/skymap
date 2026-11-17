@@ -1,5 +1,5 @@
-import type { SourceId } from '../data/SourceId';
-import type { Tier } from '../data/Tier';
+import type { SourceId } from '../../../@types/data/SourceId';
+import type { Tier } from '../../../@types/data/Tier';
 
 /**
  * The request shape `galaxyCatalogFetcher` accepts.  Carrying tier and source

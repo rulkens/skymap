@@ -20,6 +20,7 @@ import { asteroidAbsoluteMagnitude } from '../catalog/utils/asteroidAbsoluteMagn
 import { asteroidNameOf } from '../catalog/utils/asteroidNameOf';
 import { asteroidMeasuredSizeOf } from '../catalog/utils/asteroidMeasuredSizeOf';
 import { asteroidClassOf } from '../catalog/utils/asteroidClassOf';
+import { hitOrAbsent } from '../../../utils/selection/hitOrAbsent';
 import { asteroidNowAt } from './utils/asteroidNowAt';
 import { asteroidTransientId } from './present/asteroidTransientId';
 import { asteroidLabel } from './present/asteroidLabel';
@@ -99,7 +100,7 @@ export function asteroidsSelectionRow(runtime: AsteroidsRuntime): SelectionKindR
     },
     focusId: {
       claims: (id) => decode(id) !== null,
-      decode,
+      decode: (id) => hitOrAbsent(decode(id)),
       encode: (ref) => encodeAsteroidFocusId(ref.number),
     },
   };

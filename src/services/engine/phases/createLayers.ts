@@ -103,6 +103,7 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
       focusUniform,
       settings: () => deps.cb.store.getState().settings,
       debugPanelOpen: () => deps.cb.store.getState().ui.debugPanelOpen,
+      tier: () => deps.cb.store.getState().tier,
       requestRender,
       pickCode: (pickSourceId: string) => pickCodes.codeOf(layer.name, pickSourceId),
     };

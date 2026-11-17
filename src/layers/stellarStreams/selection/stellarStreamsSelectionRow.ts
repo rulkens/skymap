@@ -42,9 +42,12 @@ export function stellarStreamsSelectionRow(
     },
     focusId: {
       claims: (id) => FOCUS_ID.test(id),
+      // The meta lands with no count pulse to wake a pending request, so before
+      // it lands the slug answers by format.
       decode: (id) => {
-        const match = FOCUS_ID.exec(id);
-        return match ? { type: 'stellarStream', slug: match[1]! } : null;
+        const slug = FOCUS_ID.exec(id)![1]!;
+        const known = runtime.meta() === null || indexOf(slug) >= 0;
+        return known ? { kind: 'hit', ref: { type: 'stellarStream', slug } } : { kind: 'absent' };
       },
       encode: (ref) => encodeStellarStreamFocusId(ref.slug),
     },

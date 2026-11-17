@@ -7,12 +7,12 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { galaxyCatalogRequest } from '../../../../src/services/engine/wiring/galaxyCatalogRequest';
-import { sameRequest } from '../../../../src/utils/loading/sameRequest';
-import { tierFilenameForSource } from '../../../../src/layers/galaxyCatalog/records/data/tierTargets';
-import { GALAXY_CATALOG_SOURCE_ROWS } from '../../../../src/layers/galaxyCatalog/sources/galaxyCatalogSourceRows';
-import { TIER_LADDER } from '../../../../src/data/tierLadder';
-import type { GalaxyCatalogId } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
+import { galaxyCatalogRequest } from '../../../../../src/layers/galaxyCatalog/records/load/galaxyCatalogRequest';
+import { sameRequest } from '../../../../../src/utils/loading/sameRequest';
+import { tierFilenameForSource } from '../../../../../src/layers/galaxyCatalog/records/data/tierTargets';
+import { GALAXY_CATALOG_SOURCE_ROWS } from '../../../../../src/layers/galaxyCatalog/sources/galaxyCatalogSourceRows';
+import { TIER_LADDER } from '../../../../../src/data/tierLadder';
+import type { GalaxyCatalogId } from '../../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 
 /** Every galaxy catalog that actually ships a `.bin` — the only ones with a filename. */
 const FILE_BACKED: readonly GalaxyCatalogId[] = GALAXY_CATALOG_SOURCE_ROWS.filter(
