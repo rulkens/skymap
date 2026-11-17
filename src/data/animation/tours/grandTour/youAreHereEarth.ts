@@ -17,7 +17,7 @@ import {
   dollyTo,
   focus,
   frameTo,
-  moveTargetId,
+  moveTarget,
   scene,
   seq,
   show,
@@ -27,6 +27,7 @@ import { BODY_FOCUS_PREFIX } from '../../../../services/url/bodyFocusId';
 import { clockTo } from '../../../../state/tour/clockTo';
 import { dwellDrift } from '../../../../state/tour/dwellDrift';
 import { focusId } from '../../../../utils/animation/focusId';
+import { bodyPositionMpcAt } from '../../../../utils/exhibits/mission/bodyPositionMpcAt';
 import { orbitAnglesLookingAlong } from '../../../../utils/camera/orbitPose/orbitAnglesLookingAlong';
 import { skySpotRadial } from '../../../../utils/geo/skySpotRadial';
 import { EARTH_DATUM_RADIUS_M } from '../../../bodies/earthDatumRadiusM';
@@ -41,6 +42,8 @@ import { WHOLE_EARTH_HEIGHT_M } from './wholeEarthHeightM';
 const SKY: PoseFrame = { sky: SONDERMARKEN_SPOT };
 const HOST: PoseFrame = { body: SONDERMARKEN_SPOT.body };
 const EARTH = focusId(`${BODY_FOCUS_PREFIX}${SONDERMARKEN_SPOT.body}`);
+// The clock holds at the tour night through this beat, so Earth's centre is fixed.
+const EARTH_MPC = bodyPositionMpcAt(SONDERMARKEN_SPOT.body, TOUR_NIGHT_SIM_DAYS);
 
 // Due north, below the celestial pole (55.7° up here): a body leg has no roll
 // channel and levels screen-up on the pole, which matches the sky arm's level
@@ -137,19 +140,18 @@ export const youAreHereEarth: ClipData = {
       // Beat 00 hid these over the park; its labels stay hidden for later beats.
       show(OPENING_HIDDEN_LAYERS, REVEAL_SEC),
     ]),
+    // Re-pivot on Earth's centre down the eye's own sightline, so the eye stays put
+    // and the dwell circles the planet, not Copenhagen. Before the clip ends: the
+    // focus-follow pin owns any frame between clips, and it puts the target on
+    // Earth's centre at the old distance, an Earth radius closer.
+    all([
+      moveTarget(EARTH_MPC, 0),
+      dollyTo((EARTH_DATUM_RADIUS_M + WHOLE_EARTH_HEIGHT_M) * SCALE_UNITS.M_TO_MPC, 0),
+    ]),
   ],
 };
 
 export const youAreHereEarthDwell: ClipData = {
   start: 'live',
-  timeline: [
-    // Re-pivot on Earth's centre down the eye's own sightline, so the eye stays
-    // put and the drift circles the planet, not Copenhagen. Here, not in the
-    // enter clip: that one resolves ids before its clock snap moves Earth.
-    all([
-      moveTargetId(EARTH, 0),
-      dollyTo((EARTH_DATUM_RADIUS_M + WHOLE_EARTH_HEIGHT_M) * SCALE_UNITS.M_TO_MPC, 0),
-    ]),
-    ...dwellDrift(DWELL_SEC).timeline,
-  ],
+  timeline: dwellDrift(DWELL_SEC).timeline,
 };
