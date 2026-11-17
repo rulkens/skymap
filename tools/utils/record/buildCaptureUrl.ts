@@ -15,15 +15,21 @@
  * clear error here.
  *
  * `dome` adds `&dome` — the same URL gate `hasUrlGate('dome')` reads in
- * `engine.ts` to seed `state.viewRig`.
+ * `engine.ts` to seed `state.viewRig`. `film` adds `&film=1` to the hash, the
+ * `film` row of `hashParamSources.ts`, so the take plays with the film look on.
  */
-export function buildCaptureUrl(opts: { base: string; simTime: Date; dome: boolean }): string {
-  const { base: rawBase, simTime, dome } = opts;
+export function buildCaptureUrl(opts: {
+  base: string;
+  simTime: Date;
+  dome: boolean;
+  film: boolean;
+}): string {
+  const { base: rawBase, simTime, dome, film } = opts;
   const base = rawBase.replace(/\/+$/, '');
   if (base.includes('?') || base.includes('#')) {
     throw new Error(
       `--url must not carry its own query or hash (got '${rawBase}'); the harness appends '?cinema#t=<ISO>' itself.`,
     );
   }
-  return `${base}/?cinema${dome ? '&dome' : ''}#t=${simTime.toISOString()}`;
+  return `${base}/?cinema${dome ? '&dome' : ''}#t=${simTime.toISOString()}${film ? '&film=1' : ''}`;
 }

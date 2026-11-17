@@ -39,7 +39,7 @@ const CLIP_Z_EPS: f32 = 1e-4;
 // Must equal 'LABEL_EM_PX_RETUNE' in src/data/labels/labelSizingDefaults.ts.
 const EM_PX_RETUNE: f32 = 0.57735;
 
-@group(0) @binding(0) var<uniform> u: Uniforms;
+@group(0) @binding(0) var<uniform> uniforms: Uniforms;
 @group(0) @binding(1) var<storage, read> labels: array<LabelData>;
 
 // expandLabelQuad — the quad-expansion body shared by 'vs' (this file) and
@@ -57,15 +57,15 @@ fn expandLabelQuad(input: VsIn, label: LabelData, occludeWeight: f32) -> VsOut {
   let fadeAlpha      = label.sizing.w;
 
   // Project anchor to clip space.
-  let clip = worldToClip(u.cam, worldPos);
+  let clip = worldToClip(uniforms.cam, worldPos);
 
   // Perspective-driven size.  EM_PX_RETUNE preserves the pre-pxPerRad label
   // size at the app's 60 degree fov (see its declaration); the CPU twins
   // 'labelScreenRect' and 'liftedLabelPlacement' apply the same factor.
-  let pxPerEm = worldLenToPx(u.cam, worldEmMpc * u.emClipScale, clip.w) * EM_PX_RETUNE;
+  let pxPerEm = worldLenToPx(uniforms.cam, worldEmMpc * uniforms.emClipScale, clip.w) * EM_PX_RETUNE;
   // The clamp is CSS px, the projected em device px (as 'cam.pxPerRad' is);
   // 'labelDisplayEmPx' is the CPU twin.
-  let displayEmPx = clamp(pxPerEm, minPx * u.devicePixelRatio, maxPx * u.devicePixelRatio);
+  let displayEmPx = clamp(pxPerEm, minPx * uniforms.devicePixelRatio, maxPx * uniforms.devicePixelRatio);
   let pxScale = displayEmPx / ATLAS_EM_PX;
 
   // Outline fringe in atlas px.  The on-screen fringe is
@@ -84,7 +84,7 @@ fn expandLabelQuad(input: VsIn, label: LabelData, occludeWeight: f32) -> VsOut {
     -(input.localOffset.y + input.corner.y * input.localSize.y + outward.y * fringeAtlasPx),
   );
 
-  let ndcOffset = pxToClipOffset(u.cam, cornerAtlasPx * pxScale, clip.w);
+  let ndcOffset = pxToClipOffset(uniforms.cam, cornerAtlasPx * pxScale, clip.w);
 
   // Survive any far plane. The NEAR0 foreground captions keep anchors far
   // beyond the adaptive far plane ('foregroundFrustum' collapses it to

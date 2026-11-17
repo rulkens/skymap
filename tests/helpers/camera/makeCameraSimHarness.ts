@@ -22,6 +22,8 @@ import { seedCameraRuntime } from '../../../src/services/engine/camera/seedCamer
 import { createClipPlayer } from '../../../src/services/engine/subsystems/clipPlayer';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { runFrame } from '../../../src/services/engine/frame/runFrame';
+import { liveWorldPose } from '../../../src/services/engine/helpers/liveWorldPose';
+import { liveUpBasisQuat } from '../../../src/services/engine/camera/orientation/liveUpBasisQuat';
 import { commitCameraPose, setFovYRad } from '../../../src/state/camera/cameraIntentSlice';
 import { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsSlice';
 import { setSimDays, pause } from '../../../src/state/time/timeSlice';
@@ -113,6 +115,15 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
       return store.getState().selectionRows;
     },
   } as unknown as EngineState;
+  // As `engine.ts` registers it, so a saga reading the live camera sees this harness's.
+  sagaMiddleware.setContext({
+    cameraRuntime: () => ({
+      from: liveWorldPose(state),
+      fovYRad: state.cameraRuntime.outputs.projection.fovYRad,
+      aspect: state.cameraRuntime.outputs.projection.aspect,
+      upBasisQuat: liveUpBasisQuat(state.cameraRuntime),
+    }),
+  });
   if (realClipPlayer) {
     state.subsystems.clipPlayer = createClipPlayer({
       store,

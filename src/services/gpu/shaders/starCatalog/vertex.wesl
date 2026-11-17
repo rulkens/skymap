@@ -2,7 +2,7 @@
 // bin) stars. Derivation-heavy file: the header carries the photometry.
 //
 // One instance = one octree record (a row's own star, or a row's flux-mip blob,
-// the 'aggregate'), decoded by leafRecord.wesl. Bindings: @group(0) u (rebased
+// the 'aggregate'), decoded by leafRecord.wesl. Bindings: @group(0) uniforms (rebased
 // view-projection + viewport), @group(1) and @group(2) as leafRecord.wesl.
 //
 // ## Flux-integrated glow
@@ -31,15 +31,15 @@
 // ## Apparent flux: inverse-square dimming
 //
 // LUT flux is intrinsic; depositing it undimmed blows the far field white.
-//   fluxApp = flux * D_REF_MPC^2 / max(d2, MIN_D2_MPC2)
-// where d2 is the record's squared camera distance (Mpc^2), taken from
+//   fluxApp = flux * D_REF_MPC^2 / max(distSqMpc2, MIN_D2_MPC2)
+// where distSqMpc2 is the record's squared camera distance (Mpc^2), taken from
 // worldRelCam before corner expansion.
 //   D_REF_MPC = 1e-5 Mpc = 10 pc, where absolute magnitude is defined: the factor
 //     is 1 at 10 pc.
-//   MIN_D2_MPC2 = (1e-7)^2 = (0.1 pc)^2 floors d2 against the fly-through pole,
+//   MIN_D2_MPC2 = (1e-7)^2 = (0.1 pc)^2 floors distSqMpc2 against the fly-through pole,
 //     which would flash the frame white; no real view gets that close.
 // f32 range: the brightest aggregate flux ~2.5e9 times D_REF^2 = 1e-10 is ~0.25
-// before the /d2, which only shrinks it; a faint far leaf underflows harmlessly,
+// before the /distSqMpc2, which only shrinks it; a faint far leaf underflows harmlessly,
 // its light is in an ancestor aggregate.
 //
 // ## Radius
@@ -60,8 +60,8 @@
 // ## Brightness and glow overlap
 //
 // Deposited luminance is STAR_FLUX_EXPOSURE (the eye-tuned baseline) *
-// u.brightness * fluxApp, so brightness changes the total, unlike sizePx.
-// u.glowOverlap multiplies the AGGREGATE radius so glows spill past their box
+// uniforms.brightness * fluxApp, so brightness changes the total, unlike sizePx.
+// uniforms.glowOverlap multiplies the AGGREGATE radius so glows spill past their box
 // and melt the box lattice; folded into the radius, it divides the peak by
 // glowOverlap^2 and luminance is conserved. Leaves select 1.0.
 
@@ -86,7 +86,7 @@ import package::lib::focusUniforms::FocusUniforms;
 import package::lib::focusUniforms::focusAlphaMultiplier;
 import package::lib::focusUniforms::FOCUS_PICK_EXCLUDE_BELOW;
 
-@group(0) @binding(0) var<uniform> u: StarUniforms;
+@group(0) @binding(0) var<uniform> uniforms: StarUniforms;
 // Pick pass only: floors the billboard radius so a sub-pixel star still covers a
 // clickable pixel at its true screen position. Geometry only; the pick fragment
 // ignores intensity.
@@ -122,10 +122,10 @@ const STAR_SPRITE_FADE_END_RATIO: f32 = 4.0;
 
 @vertex
 fn vs(
-  @builtin(vertex_index) vi: u32,
-  @builtin(instance_index) ii: u32,
+  @builtin(vertex_index) vertexIndex: u32,
+  @builtin(instance_index) instanceIndex: u32,
 ) -> VSOut {
-  let rec = leafRecord(ii);
+  let rec = leafRecord(instanceIndex);
   if (!rec.live) {
     var skip: VSOut;
     skip.clip = vec4<f32>(2.0, 2.0, 2.0, 1.0);
@@ -134,19 +134,19 @@ fn vs(
   let isAgg = rec.isAgg;
   let worldRelCam = rec.worldRelCam;
 
-  let d2 = dot(worldRelCam, worldRelCam);
-  let atten = (D_REF_MPC * D_REF_MPC) / max(d2, MIN_D2_MPC2);
+  let distSqMpc2 = dot(worldRelCam, worldRelCam);
+  let atten = (D_REF_MPC * D_REF_MPC) / max(distSqMpc2, MIN_D2_MPC2);
 
-  let center = worldToClip(u.cam, worldRelCam);
-  let corner = triCorner(vi);
+  let center = worldToClip(uniforms.cam, worldRelCam);
+  let corner = triCorner(vertexIndex);
 
   let flux = pow(10.0, -0.4 * rec.absMag) * rec.subtreeStarCount;
   let fluxApp = flux * atten;
 
-  let sizeScale = u.sizePx / STAR_SIZE_REF_PX;
+  let sizeScale = uniforms.sizePx / STAR_SIZE_REF_PX;
   let extentMpc = select(0.0, rec.cellScaleMpc, isAgg);
-  let boxRadiusPx = worldLenToPx(u.cam, extentMpc, center.w) * AGGREGATE_BOX_RADIUS_FACTOR;
-  let overlap = select(1.0, u.glowOverlap, isAgg);
+  let boxRadiusPx = worldLenToPx(uniforms.cam, extentMpc, center.w) * AGGREGATE_BOX_RADIUS_FACTOR;
+  let overlap = select(1.0, uniforms.glowOverlap, isAgg);
   // Floor first, then the size/overlap spread: 'rPxRaw' is the radius the
   // luminance-conserving photometry wants. The absolute ceiling applies last and
   // bounds only the DRAWN radius.
@@ -155,14 +155,14 @@ fn vs(
   // chunk not resident, or the budget spent): it draws at the footprint it had
   // at the threshold, the largest a refining blob ever shows. Like the absolute
   // ceiling it under-deposits, so it never out-shines the stars that replace it.
-  let refineCapPx = sqrt(cutRefineThresholdSq()) * u.cam.pxPerRad
+  let refineCapPx = sqrt(cutRefineThresholdSq()) * uniforms.cam.pxPerRad
     * AGGREGATE_BOX_RADIUS_FACTOR * sizeScale * overlap;
   let rPx = min(select(STAR_GLOW_MAX_PX, min(STAR_GLOW_MAX_PX, refineCapPx), isAgg), rPxRaw);
 
   // Peak from the UNCAPPED radius in reference px (toRefPx), so light is
   // conserved per unit solid angle across canvas sizes: I_peak * K_GAUSS *
   // rRefPx^2 == EXPOSURE * fluxApp (header, 'Radius' exception).
-  let intensityRaw = starPeakIntensity(u.brightness, fluxApp, toRefPx(rPxRaw, u.pxPerRad));
+  let intensityRaw = starPeakIntensity(uniforms.brightness, fluxApp, toRefPx(rPxRaw, uniforms.pxPerRad));
 
   // Aggregate surface-brightness cap, the user's 'Fog cap': a near
   // sub-threshold aggregate deposits its honest summed light as a box-filling
@@ -172,7 +172,7 @@ fn vs(
   // makes the fog.
   let intensity = select(
     intensityRaw,
-    min(intensityRaw, u.aggregateIntensityCap),
+    min(intensityRaw, uniforms.aggregateIntensityCap),
     isAgg
   );
 
@@ -180,9 +180,9 @@ fn vs(
   // survey galaxies use, at this record's own position (an aggregate dims by its
   // box record, so the low-res glow dims too). Exactly 1.0 at rest.
   let focus = FocusUniforms(
-    vec4<f32>(u.focusCenterRelCam, u.focusApparentRadiusMpc),
-    u.focusBlend,
-    u.focusPhysicalRadiusMpc,
+    vec4<f32>(uniforms.focusCenterRelCam, uniforms.focusApparentRadiusMpc),
+    uniforms.focusBlend,
+    uniforms.focusPhysicalRadiusMpc,
     0.0,
     0.0,
   );
@@ -202,21 +202,21 @@ fn vs(
   // peak's radius would conserve luminance into a brighter dot that pops out at
   // zero. Outside the band spriteFade is exactly 1.0. The pick pass selects 1.0,
   // so a near star stays clickable.
-  let sphereDiamPx = worldLenToPx(u.cam, 2.0 * SOLAR_RADIUS_MPC, center.w);
+  let sphereDiamPx = worldLenToPx(uniforms.cam, 2.0 * SOLAR_RADIUS_MPC, center.w);
   let fadeIn = smoothstep(
     STAR_SPHERE_FADE_START_PX,
     STAR_SPHERE_FADE_START_PX * STAR_SPRITE_FADE_END_RATIO,
     sphereDiamPx
   );
-  let spriteFade = select(1.0 - fadeIn, 1.0, u.pickPass == 1u);
+  let spriteFade = select(1.0 - fadeIn, 1.0, uniforms.pickPass == 1u);
   let rPxVisual = rPx * spriteFade;
 
   // Pick pass only: the floor rides a select that is 0.0 in the visual pass, and
   // max(rPxVisual, 0.0) == rPxVisual, so visual geometry is byte-identical.
-  let pickFloorPx = select(0.0, STAR_PICK_MIN_RADIUS_PX, u.pickPass == 1u);
+  let pickFloorPx = select(0.0, STAR_PICK_MIN_RADIUS_PX, uniforms.pickPass == 1u);
   let rPxDraw = max(rPxVisual, pickFloorPx);
 
-  let screenOffset = expandBillboardScreen(u.cam, center, rPxDraw, corner);
+  let screenOffset = expandBillboardScreen(uniforms.cam, center, rPxDraw, corner);
 
   var out: VSOut;
   out.clip = center + vec4<f32>(screenOffset, 0.0, 0.0);
@@ -234,10 +234,10 @@ fn vs(
   // about -100..+21, so (log2 + 100) / 128 stays inside [0, 1].
   let pickRank = 0.9 * clamp((log2(max(fluxApp, 1e-30)) + 100.0) / 128.0, 0.0, 1.0);
   let pickZ = out.clip.w * PICK_BAND_SURVEY_STAR_EPS * (1.0 + pickRank);
-  out.clip.z = select(out.clip.z, pickZ, u.pickPass == 1u);
+  out.clip.z = select(out.clip.z, pickZ, uniforms.pickPass == 1u);
 
   // A star the focus dims is not hit-testable, as for the survey galaxies.
-  if (u.pickPass == 1u && focusMult < FOCUS_PICK_EXCLUDE_BELOW) {
+  if (uniforms.pickPass == 1u && focusMult < FOCUS_PICK_EXCLUDE_BELOW) {
     out.clip = vec4<f32>(2.0, 2.0, 2.0, 1.0);
   }
 

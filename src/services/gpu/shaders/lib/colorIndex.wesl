@@ -157,35 +157,35 @@
 
 import package::lib::math::saturate;
 
-fn ramp(t: f32) -> vec3<f32> {
+fn ramp(colorIndex: f32) -> vec3<f32> {
   // Blue-to-white: hot blue (quasars, O/B stars) fading to a warm white,
-  // over its own t in [0, 1].
-  let blueWhite = mix(vec3<f32>(0.4, 0.6, 1.0), vec3<f32>(1.0, 0.95, 0.8), saturate(t));
+  // over colorIndex in [0, 1].
+  let blueWhite = mix(vec3<f32>(0.4, 0.6, 1.0), vec3<f32>(1.0, 0.95, 0.8), saturate(colorIndex));
 
   // White-to-red: warm white fading to cool red (M-type stars, red galaxies),
-  // over its own t in [1, 2].
-  let whiteRed  = mix(vec3<f32>(1.0, 0.95, 0.8), vec3<f32>(1.0, 0.5, 0.3), saturate(t - 1.0));
+  // over colorIndex in [1, 2].
+  let whiteRed  = mix(vec3<f32>(1.0, 0.95, 0.8), vec3<f32>(1.0, 0.5, 0.3), saturate(colorIndex - 1.0));
 
-  // Pick the right half of the ramp: blue-white for t ≤ 1, white-red for t > 1.
+  // Pick the right half of the ramp: blue-white for colorIndex ≤ 1, white-red for colorIndex > 1.
   // Remember: select(falseVal, trueVal, condition).
-  return select(blueWhite, whiteRed, t > 1.0);
+  return select(blueWhite, whiteRed, colorIndex > 1.0);
 }
 
 // Total core-to-rim spread in colour-index units — see the header
 // section above ('warm-core / cool-rim gradient') for why 0.2 and why
-// the shift below is symmetric around 't' rather than one-sided.
+// the shift below is symmetric around 'colorIndex' rather than one-sided.
 const DISK_TINT_SPREAD = 0.2;
 
 // Warm-core / cool-rim galaxy tint, collapsed to one ramp lookup.
-// 't' is the galaxy's catalogued (rest-frame, K-corrected) colour
-// index; 'r' is the normalised galactocentric radius in the galaxy's
-// own plane, 0 at the core and 1 at the rim. At r=0 the argument is
-// 't + DISK_TINT_SPREAD * 0.5' (redder, matching the old-star bulge);
-// at r=1 it's 't - DISK_TINT_SPREAD * 0.5' (bluer, matching the
+// 'colorIndex' is the galaxy's catalogued (rest-frame, K-corrected) colour
+// index; 'diskRadius' is the normalised galactocentric radius in the galaxy's
+// own plane, 0 at the core and 1 at the rim. At diskRadius=0 the argument is
+// 'colorIndex + DISK_TINT_SPREAD * 0.5' (redder, matching the old-star bulge);
+// at diskRadius=1 it's 'colorIndex - DISK_TINT_SPREAD * 0.5' (bluer, matching the
 // young-star spiral arms); values in between move linearly along the
 // ramp's own argument rather than blending two separately-looked-up
 // colours. See the header section above for the algebraic identity
 // this rests on and the one place it's inexact.
-fn rampRadial(t: f32, r: f32) -> vec3<f32> {
-  return ramp(t + DISK_TINT_SPREAD * (0.5 - r));
+fn rampRadial(colorIndex: f32, diskRadius: f32) -> vec3<f32> {
+  return ramp(colorIndex + DISK_TINT_SPREAD * (0.5 - diskRadius));
 }

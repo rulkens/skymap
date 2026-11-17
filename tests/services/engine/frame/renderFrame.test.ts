@@ -110,6 +110,7 @@ describe('renderFrame', () => {
       curve: tonemap.curve,
       hdrKnee: 0,
       hdrHeadroom: 0,
+      film: null,
     });
   });
 
@@ -141,6 +142,65 @@ describe('renderFrame', () => {
     const tone = fx2.compositor.draw.mock.calls[0]![3] as { hdrKnee: number; hdrHeadroom: number };
     expect(tone.hdrKnee).toBe(0);
     expect(tone.hdrHeadroom).toBe(0);
+  });
+
+  it("the tone-map's film is null while the look is off and carries the grade and the frame index when on", () => {
+    type Tone = { film: { grade: unknown; seed: number } | null };
+    const toneOf = (draw: typeof fx.compositor.draw, call: number) =>
+      draw.mock.calls[call]![3] as Tone;
+    renderFrame(fx.input);
+    expect(toneOf(fx.compositor.draw, 0).film).toBeNull();
+
+    const on = makeRenderFrameFixture({
+      settings: { film: { ...INITIAL_SETTINGS.film, enabled: true } },
+    });
+    renderFrame(on.input);
+    renderFrame(on.input);
+    const [first, second] = [
+      toneOf(on.compositor.draw, 0).film!,
+      toneOf(on.compositor.draw, 1).film!,
+    ];
+    expect(first.grade).toBe(INITIAL_SETTINGS.film.grade);
+    expect(second.seed - first.seed).toBe(1);
+  });
+
+  describe('letterbox', () => {
+    // A fake renderer stands in for the swap-format pipeline the fixture leaves null.
+    function filmFixture(film: Partial<typeof INITIAL_SETTINGS.film>) {
+      const fx2 = makeRenderFrameFixture({
+        settings: { film: { ...INITIAL_SETTINGS.film, ...film } },
+      });
+      const letterboxRenderer = { draw: vi.fn(), destroy: vi.fn(), label: 'letterboxRenderer' };
+      (fx2.input.state.gpu as { letterboxRenderer: unknown }).letterboxRenderer = letterboxRenderer;
+      return { fx2, letterboxRenderer };
+    }
+
+    it("draws the bars as the frame's last pass, on swap, at the target size", () => {
+      const { fx2, letterboxRenderer } = filmFixture({ enabled: true, letterbox: true });
+      renderFrame(fx2.input);
+      const calls = fx2.beginRenderPass.mock.calls;
+      expect(calls).toHaveLength(5);
+      const last = calls.at(-1)![0];
+      expect(last.label).toBe('render-swap');
+      expect(Array.from(last.colorAttachments)[0]!.view).toEqual({ __id: 'swap-view' });
+      expect(letterboxRenderer.draw).toHaveBeenCalledWith(
+        fx2.pass,
+        fx2.canvasSize,
+        INITIAL_SETTINGS.film.letterboxAspect,
+      );
+    });
+
+    it('opens no pass while the letterbox or the look is off', () => {
+      for (const film of [
+        { enabled: true, letterbox: false },
+        { enabled: false, letterbox: true },
+      ]) {
+        const { fx2, letterboxRenderer } = filmFixture(film);
+        renderFrame(fx2.input);
+        expect(fx2.beginRenderPass.mock.calls).toHaveLength(4);
+        expect(letterboxRenderer.draw).not.toHaveBeenCalled();
+      }
+    });
   });
 
   it('records the full frame in canonical order: createEncoder → hdr COSMO pass (points) → mw-aggregate pass (cloud stars) → hdr NEAR0 pass (cloud dust) → composite pass → compositor.draw → finish → submit', () => {
@@ -242,7 +302,7 @@ describe('renderFrame', () => {
     // one flat list or as four sections concatenated — and VIEW_RIGS.mono IS
     // those four sections, against the main ctx alone.
     const options = {
-      tone: { exposure: 1, curve: ToneMapCurve.Reinhard, hdrKnee: 0, hdrHeadroom: 0 },
+      tone: { exposure: 1, curve: ToneMapCurve.Reinhard, hdrKnee: 0, hdrHeadroom: 0, film: null },
       bloomEnabled: false,
       antique: false,
       foregroundChain: foregroundChainOrder(fx.input.canvas.slabs),

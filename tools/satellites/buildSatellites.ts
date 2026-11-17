@@ -46,7 +46,9 @@ function main(): void {
   mkdirSync(dirname(out), { recursive: true });
   const bytes = writeSatelliteCatalog(catalog);
   writeFileSync(out, bytes);
-  writeLivePointer(dataRoot, 'satellites', builtAt, [FILE_NAME]);
+  writeLivePointer(dataRoot, 'satellites', builtAt.toISOString().slice(0, 10), builtAt, [
+    FILE_NAME,
+  ]);
   const perClass = SATELLITE_CLASSES.map(
     (cls, code) => `${cls} ${catalog.classCode.filter((c) => c === code).length}`,
   ).join(', ');

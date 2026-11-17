@@ -15,12 +15,12 @@
 // ## Bindings
 //
 // '@group(0) @binding(0)' holds 'RingUniforms' (96 bytes), visible in BOTH
-// stages: the vertex reads 'u.mvp', the fragment reads 'u.sunDirLocal' and the
+// stages: the vertex reads 'uniforms.mvp', the fragment reads 'uniforms.sunDirLocal' and the
 // two ring-shape scalars. The sampler + strip texture live at bindings 1..2 for
 // the fragment stage (declared in the fragment module).
 //
 // As with the sphere bodies, the '@group/@binding' declaration is module-local
-// (WESL has no global state), so 'u' is declared here and 'u.mvp' is passed into
+// (WESL has no global state), so 'uniforms' is declared here and 'uniforms.mvp' is passed into
 // the imported 'clip_from_local' helper -- the 'pass cam, don't capture' idiom.
 //
 // ## Attribute layout
@@ -32,12 +32,12 @@ import package::bodies::ring::io::VSOut;
 import package::lib::sphere::RingUniforms;
 import package::lib::sphere::clip_from_local;
 
-@group(0) @binding(0) var<uniform> u: RingUniforms;
+@group(0) @binding(0) var<uniform> uniforms: RingUniforms;
 
 @vertex
 fn vs(@location(0) position: vec3<f32>) -> VSOut {
   var out: VSOut;
-  out.clip = clip_from_local(u.mvp, position);
+  out.clip = clip_from_local(uniforms.mvp, position);
   // Forward the annulus point in the body's local frame; the fragment derives
   // the strip radius and the sun-shadow ray from it.
   out.localPos = position;

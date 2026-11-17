@@ -61,7 +61,6 @@ export const absoluteCameraArm: CameraArmRow<'absolute'> = {
               factor: Math.exp(zoom),
               duringGesture: false,
               cursorPx: null,
-              fresh: false,
             },
             ctx,
           ).pose;

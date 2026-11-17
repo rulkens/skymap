@@ -12,7 +12,7 @@ the **re-open condition** for a generated-artifact row table. Under decision #10
 (row-divergence rule) and #12 (rows are identified in their own domain). There
 is **no separate spec** — decisions.md is this rung's authority, exactly as for
 rungs 2 and 3. The Track A design doc
-([`specs/2026-08-17-subsystem-bundles-design.md`](../specs/2026-08-17-subsystem-bundles-design.md))
+([`specs/archive/2026-08-17-subsystem-bundles-design.md`](../../specs/archive/2026-08-17-subsystem-bundles-design.md))
 is reference-not-executable per #9, but its 2026-08-17 investigation of the
 imperative door is evidence this rung re-checks rather than re-runs. Every claim
 below is cited `file:line` against this checkout.

@@ -592,8 +592,9 @@ unclear, and no entry here reads them as a licence.
   permission", with the credit line "Courtesy NASA/JPL-Caltech".
 - **Use:** No licence stated
 - **Attribution:** "For referencing the data downloaded from the SSD website,
-  please use the following citation: “Solar System Dynamics. (Downloaded Year,
-  Month, Date). (Title of the Page). https://ssd.jpl.nasa.gov”".
+  please use the following citation: “NASA/JPL Solar System Dynamics. Data
+  retrieved on (Downloaded Year, Month, Date). (Title of the Page).
+  https://ssd.jpl.nasa.gov”".
 - **Upstream:** <https://ssd.jpl.nasa.gov/planets/approx_pos.html>,
   <https://ssd.jpl.nasa.gov/sats/elem/>
 - **Enters skymap:** typed by hand into `src/data/bodies/orbitalElements.ts`.
@@ -612,8 +613,9 @@ unclear, and no entry here reads them as a licence.
 - **Licence:** Not stated for the service's output on the pages read.
 - **Use:** No licence stated
 - **Attribution:** "For referencing the data downloaded from the SSD website,
-  please use the following citation: “Solar System Dynamics. (Downloaded Year,
-  Month, Date). (Title of the Page). https://ssd.jpl.nasa.gov”".
+  please use the following citation: “NASA/JPL Solar System Dynamics. Data
+  retrieved on (Downloaded Year, Month, Date). (Title of the Page).
+  https://ssd.jpl.nasa.gov”".
 - **Upstream:** <https://ssd.jpl.nasa.gov/api/horizons.api>
 - **Enters skymap:** `npm run fetch-horizons` → `data/raw/horizons/` →
   `npm run build-ephemeris-corrections` →
@@ -646,6 +648,63 @@ unclear, and no entry here reads them as a licence.
 - **Checked:** 2026-10-28: <https://celestrak.org/usage-policy.php>,
   <https://celestrak.org/NORAD/documentation/gp-data-formats.php>,
   <https://celestrak.org/NORAD/elements/>
+
+### MPC Orbit Database (MPCORB)
+
+<!-- attribution: id=mpcorb; keys=mpcorb,mpcorb.readme -->
+
+- **What:** Osculating orbital elements, absolute magnitudes and orbit types
+  of every numbered minor planet (about 896,000 on 2026-11-12).
+- **By:** The IAU Minor Planet Center, hosted by the Center for Astrophysics,
+  Harvard & Smithsonian; each orbit by the computer its record names.
+- **Licence:** The file's header: "Software programs may include this
+  datafile amongst their datasets, as long as this header is included (it is
+  acceptable if it is contained in a file separate from the actual data) and
+  that proper attribution to the Minor Planet Center is given. [...]
+  Information on how to obtain updated copies of the datafile must also be
+  included." The website use policy: "Data files are copyrighted entities and
+  may be redistributed as long as the source for the data is clearly
+  specified."
+- **Use:** Conditions apply
+- **Attribution:** The Minor Planet Center, with the MPCORB header shipped
+  beside the data and the address of updated copies
+  (<https://www.minorplanetcenter.net/iau/MPCORB/MPCORB.DAT>).
+- **Upstream:** <https://www.minorplanetcenter.net/iau/MPCORB/MPCORB.DAT.gz>
+- **Enters skymap:** `npm run fetch-mpcorb` → `data/raw/mpcorb/` →
+  `npm run build-asteroids` → `asteroids/v1/asteroids.astb`,
+  `asteroid-names.bin` and `mpcorb-header.txt` on R2.
+- **Modified:** Yes. Numbered rows only, without the centaurs and the objects
+  beyond Neptune (orbit type 10), quantized to a columnar file, and the few rows
+  at another epoch propagated to the shared one by two-body motion.
+- **Checked:** 2026-11-12: <https://www.minorplanetcenter.net/iau/MPCORB.html>,
+  <https://www.minorplanetcenter.net/iau/info/MPOrbitFormat.html>,
+  <https://www.minorplanetcenter.net/iau/WWWPolicy.html>
+
+### JPL Small-Body Database (asteroid diameters)
+
+<!-- attribution: id=sbdb-diameters; keys=sbdb.* -->
+
+- **What:** Diameters and geometric albedos of the numbered asteroids that
+  have one (135,476 on 2026-11-16), most from NEOWISE.
+- **By:** The JPL Solar System Dynamics group (the Small-Body Database), from
+  the published measurement each row cites.
+- **Licence:** Not stated on the pages read. The API fair-use policy limits
+  how the service is called ("You agree to submit only one API request at a
+  time (no simultaneous requests)", "You may not embed these APIs in your
+  website (per NASA CORS policy)") and says nothing on republishing.
+- **Use:** No licence stated
+- **Attribution:** "For referencing the data downloaded from the SSD website,
+  please use the following citation: “NASA/JPL Solar System Dynamics. Data
+  retrieved on (Downloaded Year, Month, Date). (Title of the Page).
+  https://ssd.jpl.nasa.gov”".
+- **Upstream:** <https://ssd-api.jpl.nasa.gov/sbdb_query.api>
+- **Enters skymap:** `npm run fetch-sbdb-diameters` → `data/raw/sbdb/` →
+  `npm run build-asteroids` → `asteroids/v1/asteroid-diameters.bin` on R2.
+- **Modified:** Yes. Only the asteroids the asteroids Layer draws, with
+  diameter and albedo as 32-bit floats; the uncertainties are left out.
+- **Checked:** 2026-11-16: <https://ssd-api.jpl.nasa.gov/>,
+  <https://ssd-api.jpl.nasa.gov/doc/sbdb_query.html>,
+  <https://ssd.jpl.nasa.gov/about/>
 
 ### MCXC, the Meta-Catalogue of X-ray detected Clusters
 
@@ -1817,9 +1876,9 @@ The surface tile manifests under `public/data/images/earth-tiles/` and
   Black Marble, the water mask and the cloud composite (the pages need a
   script to show them).
 
-### Live cloud bake inputs (NASA GIBS and EUMETSAT)
+### Live cloud bake inputs (NASA GIBS, EUMETSAT and JMA Himawari)
 
-<!-- attribution: id=cloud-bake; keys=clouds.* -->
+<!-- attribution: id=cloud-bake; keys=clouds.*; hosts=www.earthdata.nasa.gov,www.eumetsat.int,www.jma.go.jp -->
 
 - **What:** The daily satellite imagery `tools/cloud-bake-rs` turns into a
   global cloud-opacity map: VIIRS (NOAA-20, NOAA-21) swaths and mosaics and
@@ -1829,21 +1888,42 @@ The surface tile manifests under `public/data/images/earth-tiles/` and
   Meteorological Agency (Himawari).
 - **Licence:** GIBS imagery from VIIRS and GOES: free to use, commercial use
   included, with credit to NASA/GIBS. EUMETView WMS visualisations: CC BY 4.0.
-  Himawari frames come through GIBS and are subject to JMA's terms, which have
-  not been checked; treated as a medium risk until they are.
+  Himawari frames reach GIBS through NOAA, whose terms on the AWS open-data
+  registry (<https://registry.opendata.aws/noaa-himawari/>) read: "Himawari
+  data is produced and managed by JMA. NOAA has rights to distribute this data
+  freely and openly to the public … NOAA and JMA request attribution for the
+  use or dissemination of unaltered data. However, it is not permissible to
+  state or imply endorsement by or affiliation with NOAA or JMA. If you modify
+  these data, you may not state or imply that it is original, unaltered data."
+  Commercial use of the Himawari part is pending JMA's answer; the maintainer
+  asked JMA on 2026-11-16. Meanwhile the web app uses it, with the credit
+  lines below; the desktop kiosk waits on the answer (it mirrors no live
+  files, so it shows the built-in cloud map).
 - **Use:** Per item
-- **Attribution:** EUMETSAT: "Contains modified EUMETSAT Meteosat data 2026"
-  (the year of the data). NASA: credit NASA GIBS.
+- **Attribution:** For EUMETSAT, required verbatim with the year of the data:
+  "Contains modified EUMETSAT Meteosat data 2026". For Himawari: "Contains
+  modified Himawari-9 data, Japan Meteorological Agency, via NOAA and NASA GIBS; not
+  original or endorsed by JMA". For GIBS: "We acknowledge the use of imagery
+  provided by services from NASA's Global Imagery Browse Services (GIBS), part
+  of NASA's Earth Science Data and Information System (ESDIS)." These lines are
+  shown on the website's data page for this source and on its credits page;
+  the app's splash and the desktop About name NASA GIBS, EUMETSAT and JMA
+  Himawari.
 - **Upstream:** <https://gibs.earthdata.nasa.gov/> and
   <https://view.eumetsat.int/>; details in `data/raw/clouds/README.md`.
-- **Enters skymap:** `npm run bake-clouds` → one cloud map per day. Nothing is
-  shipped yet; the output has no publish path.
+- **Enters skymap:** `npm run build-live-clouds`, run nightly by the Live
+  datasets workflow, bakes yesterday's map and uploads three grey tiers under
+  a dated `data/live/v1/files/clouds/` folder on R2, behind the
+  `live/v1/clouds.json` pointer. The web app's Earth cloud shell loads the
+  newest of them, falling back to the built-in Blue Marble cloud map. The
+  desktop kiosk mirrors no live keys, so it always shows the built-in map.
 - **Modified:** Yes. Mosaicked, seam-blended, gap-filled and matched to the
   static cloud map.
-- **Checked:** 2026-11-10, from the maintainer's notes of the terms; the
-  pages were not re-opened for this entry.
-- **Not verified:** JMA's terms for Himawari; the exact credit wording NASA
-  asks of GIBS users.
+- **Checked:** 2026-11-16, the NOAA Himawari page on the AWS open-data
+  registry; the GIBS and EUMETView terms on 2026-11-10, from the maintainer's
+  notes, not re-opened for this entry.
+- **Not verified:** JMA's terms for commercial use of Himawari; the exact
+  credit wording NASA asks of GIBS users beyond the acknowledgement above.
 
 ### EOxCloudless (Sentinel-2), layer s2cloudless-2025
 

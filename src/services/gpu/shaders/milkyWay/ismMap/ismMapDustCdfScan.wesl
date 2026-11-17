@@ -117,15 +117,15 @@ fn evalWeight(texel: vec4<f32>, ring: u32, radius: f32, angle: f32, globalMean: 
   }
   let armCount = u32(params.armCount);
   var acc = 0.0;
-  for (var a = 0u; a < armCount; a++) {
-    let e = armEnvelopeBuf[ring * armCount + a];
-    if (e.weight <= 0.0 || e.invSigma <= 0.0) {
+  for (var armIndex = 0u; armIndex < armCount; armIndex++) {
+    let envelopeEntry = armEnvelopeBuf[ring * armCount + armIndex];
+    if (envelopeEntry.weight <= 0.0 || envelopeEntry.invSigma <= 0.0) {
       continue;
     }
-    let raw = angle - e.ridgeAngle;
+    let raw = angle - envelopeEntry.ridgeAngle;
     let wrapped = raw - ISM_MAP_CDF_TWO_PI * round(raw / ISM_MAP_CDF_TWO_PI);
-    let z = radius * wrapped * e.invSigma;
-    acc += e.weight * exp(-0.5 * z * z);
+    let sigmaDistance = radius * wrapped * envelopeEntry.invSigma;
+    acc += envelopeEntry.weight * exp(-0.5 * sigmaDistance * sigmaDistance);
   }
   let envelope = min(1.0, acc);
   return base * (1.0 + params.armBias * (envelope - 1.0));
@@ -151,12 +151,12 @@ fn csRingScan(
   @builtin(local_invocation_index) localIndex: u32,
 ) {
   let rings = u32(params.rings);
-  let az = u32(params.az);
+  let azCount = u32(params.az);
   let ring = wgid.y;
   if (ring >= rings) {
     return;
   }
-  let dTheta = ISM_MAP_CDF_TWO_PI / f32(az);
+  let dTheta = ISM_MAP_CDF_TWO_PI / f32(azCount);
   let edges = ismMapDustRingEdges(ring, rings, params.rMin, params.rMax);
   let texelArea = 0.5 * dTheta * (edges.y * edges.y - edges.x * edges.x);
   let radius = ismMapRingRadius(ring, rings, params.rMin, params.rMax);
@@ -164,26 +164,26 @@ fn csRingScan(
   if (localIndex == 0u) {
     ringCarry = 0.0;
     var gmSum = 0.0;
-    for (var rr = 0u; rr < rings; rr++) {
-      gmSum += ringMeansBuf[rr];
+    for (var meanIndex = 0u; meanIndex < rings; meanIndex++) {
+      gmSum += ringMeansBuf[meanIndex];
     }
     globalMeanCache = gmSum / f32(rings);
   }
   workgroupBarrier();
 
-  // Uniform control flow: az/rings are uniform-buffer values and tileStart
+  // Uniform control flow: azCount/rings are uniform-buffer values and tileStart
   // advances by the same compile-time constant for every invocation, so
   // this loop (and the barriers inside it) run the same number of times
   // regardless of localIndex — same discipline ringReduce.wesl's own
   // stride-halving loop documents.
   var tileStart = 0u;
   loop {
-    if (tileStart >= az) {
+    if (tileStart >= azCount) {
       break;
     }
     let col = tileStart + localIndex;
     var value = 0.0;
-    if (col < az) {
+    if (col < azCount) {
       let angle = (f32(col) + 0.5) * dTheta;
       let texel = textureLoad(ismMapTex, vec2<i32>(i32(col), i32(ring)), 0);
       value = evalWeight(texel, ring, radius, angle, globalMeanCache) * texelArea;
@@ -211,8 +211,8 @@ fn csRingScan(
       offset = offset * 2u;
     }
 
-    if (col < az) {
-      prefixBuf[ring * az + col] = ringCarry + scanBuf[localIndex];
+    if (col < azCount) {
+      prefixBuf[ring * azCount + col] = ringCarry + scanBuf[localIndex];
     }
     workgroupBarrier();
     if (localIndex == ISM_MAP_CDF_SCAN_WORKGROUP_SIZE - 1u) {
@@ -254,10 +254,10 @@ fn csFoldRingOffsets(@builtin(global_invocation_id) gid: vec3<u32>) {
 // Dispatch numWorkgroups = (ceil(az/16), ceil(rings/16), 1).
 @compute @workgroup_size(16, 16)
 fn csApplyRingOffsets(@builtin(global_invocation_id) gid: vec3<u32>) {
-  let az = u32(params.az);
+  let azCount = u32(params.az);
   let rings = u32(params.rings);
-  if (gid.x >= az || gid.y >= rings) {
+  if (gid.x >= azCount || gid.y >= rings) {
     return;
   }
-  prefixBuf[gid.y * az + gid.x] += ringTotalsBuf[gid.y];
+  prefixBuf[gid.y * azCount + gid.x] += ringTotalsBuf[gid.y];
 }

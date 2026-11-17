@@ -27,7 +27,7 @@ import {
   ANTIQUE_TARGETS,
 } from '../../../../src/data/rendering/antiqueLook';
 
-const TONE: ToneMap = { exposure: 1.5, curve: 4, hdrKnee: 0, hdrHeadroom: 0 };
+const TONE: ToneMap = { exposure: 1.5, curve: 4, hdrKnee: 0, hdrHeadroom: 0, film: null };
 
 function namesOf(step: FrameStep | undefined): readonly string[] {
   return step !== undefined && step.kind === 'render' ? step.passes.map((p) => p.name) : [];
@@ -228,8 +228,9 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     expect(steps[0]).toEqual({ kind: 'compute', name: 'flow' });
     expect(steps[1]).toEqual({ kind: 'compute', name: 'sky-view' });
     expect(steps[2]).toEqual({ kind: 'compute', name: 'star-cut' });
-    expect(steps[3]).toBe(capture[0]);
-    expect(steps[capture.length + 3]).toEqual({ kind: 'compute', name: 'aerial-perspective' });
+    expect(steps[3]).toEqual({ kind: 'compute', name: 'asteroid-kepler' });
+    expect(steps[4]).toBe(capture[0]);
+    expect(steps[capture.length + 4]).toEqual({ kind: 'compute', name: 'aerial-perspective' });
   });
 
   it("expands a face's body slabs into depth-clearing capture steps after its COSMO/NEAR0 pair", () => {

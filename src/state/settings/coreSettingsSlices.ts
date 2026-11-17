@@ -4,6 +4,7 @@ import { antiqueSlice } from './core/antiqueSlice';
 import { bloomSlice } from './core/bloomSlice';
 import { cameraControlsSlice } from './core/cameraControlsSlice';
 import { debugSlice } from './core/debugSlice';
+import { filmSlice } from './core/filmSlice';
 import { focusMovesSlice } from './core/focusMovesSlice';
 import { hdrSlice } from './core/hdrSlice';
 import { labelsSlice } from './core/labelsSlice';
@@ -19,6 +20,7 @@ export const CORE_SETTINGS_SLICES = [
   hdrSlice,
   bloomSlice,
   antiqueSlice,
+  filmSlice,
   labelsSlice,
   pickingSlice,
   debugSlice,

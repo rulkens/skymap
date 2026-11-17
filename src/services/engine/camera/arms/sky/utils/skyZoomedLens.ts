@@ -1,5 +1,5 @@
 /**
- * The sky arm's wheel (spec §4.2): a notch scales the lens by the zoom factor the
+ * The sky arm's wheel (look-around spec §4.2): a notch scales the lens by the zoom factor the
  * body arm would spend (`f > 1` widens), inside [LENS_MIN_DEG, LENS_MAX_DEG].
  * A clamped notch returns the clamp bound, so a lens already at the bound comes
  * back unchanged and the caller reads "declined" off equality.

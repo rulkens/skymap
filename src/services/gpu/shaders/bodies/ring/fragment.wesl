@@ -114,7 +114,7 @@ const MU_EPS: f32 = 1e-4;
 // clamping at 0.995 caps tau ~ 5.3, already opaque for every practical mu.
 const ALPHA_MAX: f32 = 0.995;
 
-@group(0) @binding(0) var<uniform> u: RingUniforms;
+@group(0) @binding(0) var<uniform> uniforms: RingUniforms;
 @group(0) @binding(1) var ringSampler: sampler;
 // The radial alpha strip -- an N x 1 'texture_2d' (never 'texture_1d': WebKit
 // rejects the 1D sampler and silently drops the whole shared-encoder frame). A
@@ -123,12 +123,12 @@ const ALPHA_MAX: f32 = 0.995;
 
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
-  // Normalized radius across the annulus. The disc geometry reaches r = 0, so
+  // Normalized radius across the annulus. The disc geometry reaches ringRadius = 0, so
   // the uniform inner ratio remaps the visible band to [0, 1] and discards the
-  // hole (r below the inner edge -- over the planet) and any r past the outer
+  // hole (ringRadius below the inner edge -- over the planet) and any ringRadius past the outer
   // edge (seam-interpolation guard).
-  let r = length(in.localPos.xy);
-  let radialU = (r - u.innerRatio) / (1.0 - u.innerRatio);
+  let ringRadius = length(in.localPos.xy);
+  let radialU = (ringRadius - uniforms.innerRatio) / (1.0 - uniforms.innerRatio);
   if (radialU < 0.0 || radialU > 1.0) {
     discard;
   }
@@ -143,51 +143,51 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // Normal optical depth from the strip's face-on opacity, per-channel single-
   // scattering albedo from its colour (see the module header).
   let tau = -log(1.0 - min(strip.a, ALPHA_MAX));
-  let w0 = strip.rgb * W0_SCALE;
+  let singleScatterAlbedo = strip.rgb * W0_SCALE;
 
   // Planet-on-ring shadow: rescale the ring point into body-radius units (planet
   // = unit sphere) and test the sun ray against it. See the module header for the
   // ray-sphere derivation and why the occlusion predicate needs no explicit t.
-  let p = vec3<f32>(in.localPos.xy / u.planetRadiusRatio, 0.0);
-  let h = dot(p, u.sunDirLocal);
-  let disc = h * h - (dot(p, p) - 1.0);
-  let occluded = disc >= 0.0 && h < 0.0;
+  let ringPoint = vec3<f32>(in.localPos.xy / uniforms.planetRadiusRatio, 0.0);
+  let ringPointDotSun = dot(ringPoint, uniforms.sunDirLocal);
+  let disc = ringPointDotSun * ringPointDotSun - (dot(ringPoint, ringPoint) - 1.0);
+  let occluded = disc >= 0.0 && ringPointDotSun < 0.0;
   let sunVis = select(1.0, 0.0, occluded);
 
   // Slab geometry: elevation cosines of the sun and the viewer off the ring
   // plane (the local z axis), floored at MU_EPS for the edge-on degenerate. The
   // view ray runs camera -> fragment, both already in planet-radius units.
-  let toFrag = p - u.camPosLocal;
+  let toFrag = ringPoint - uniforms.camPosLocal;
   let viewDir = toFrag / length(toFrag);
-  let mu0 = max(abs(u.sunDirLocal.z), MU_EPS);
-  let mu = max(abs(viewDir.z), MU_EPS);
+  let sunCosine = max(abs(uniforms.sunDirLocal.z), MU_EPS);
+  let viewCosine = max(abs(viewDir.z), MU_EPS);
 
   // Henyey-Greenstein phase. cosTheta is between the photon's incoming
   // propagation (-sunDir) and its outgoing propagation toward the camera
   // (-viewDir) -- their dot is dot(sunDir, viewDir). Backscatter (g < 0) peaks
   // at cosTheta = -1: looking down-sun at a lit ring, the opposition geometry.
-  let cosTheta = dot(u.sunDirLocal, viewDir);
-  let g2 = PHASE_G * PHASE_G;
-  let phase = (1.0 - g2) / pow(max(1.0 + g2 - 2.0 * PHASE_G * cosTheta, 1e-4), 1.5);
+  let cosTheta = dot(uniforms.sunDirLocal, viewDir);
+  let phaseGSq = PHASE_G * PHASE_G;
+  let phase = (1.0 - phaseGSq) / pow(max(1.0 + phaseGSq - 2.0 * PHASE_G * cosTheta, 1e-4), 1.5);
 
   // Reflection vs transmission: same side of the ring plane -> the lit face
   // (reflection); opposite sides -> the unlit face (diffuse transmission).
-  let sameSide = u.camPosLocal.z * u.sunDirLocal.z >= 0.0;
+  let sameSide = uniforms.camPosLocal.z * uniforms.sunDirLocal.z >= 0.0;
   var geom: f32;
   if (sameSide) {
-    geom = (mu0 / (mu0 + mu)) * (1.0 - exp(-tau * (1.0 / mu0 + 1.0 / mu)));
-  } else if (abs(mu0 - mu) < 1e-3) {
+    geom = (sunCosine / (sunCosine + viewCosine)) * (1.0 - exp(-tau * (1.0 / sunCosine + 1.0 / viewCosine)));
+  } else if (abs(sunCosine - viewCosine) < 1e-3) {
     // mu -> mu0 limit of the transmission bracket (L'Hopital): (tau/mu) e^(-tau/mu).
-    geom = (tau / mu) * exp(-tau / mu);
+    geom = (tau / viewCosine) * exp(-tau / viewCosine);
   } else {
-    geom = (mu0 / (mu0 - mu)) * (exp(-tau / mu0) - exp(-tau / mu));
+    geom = (sunCosine / (sunCosine - viewCosine)) * (exp(-tau / sunCosine) - exp(-tau / viewCosine));
   }
 
   // Scattered radiance: the direct single-scatter term (killed in the planet's
   // shadow) plus the small planet-shine ambient, scaled by the slab's view
   // coverage so empty gaps stay dark.
-  let coverage = 1.0 - exp(-tau / mu);
-  let scattered = w0 * (sunVis * (phase / 4.0) * geom + AMBIENT * coverage);
+  let coverage = 1.0 - exp(-tau / viewCosine);
+  let scattered = singleScatterAlbedo * (sunVis * (phase / 4.0) * geom + AMBIENT * coverage);
 
   // Volumetric premultiplied OVER: emit the slab's own radiance; the background
   // adds through the view transmittance (see the module header).

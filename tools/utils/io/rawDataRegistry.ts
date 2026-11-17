@@ -2287,6 +2287,46 @@ export const RAW_DATA = {
     description: 'Provenance for the IAU gazetteer download: URL, fetch date, checksum, fields used.',
   },
 
+  // ─── MPCORB — the Minor Planet Center orbit database (asteroids) ──────
+
+  mpcorb: {
+    path: 'data/raw/mpcorb/MPCORB.DAT.gz',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'MPCORB.DAT, gzipped: one 202-character line of osculating elements per minor planet, numbered objects first. Rewritten daily upstream; `build-asteroids` streams it through gunzip (no unpacked copy on disk).',
+    upstream: 'https://www.minorplanetcenter.net/iau/MPCORB/MPCORB.DAT.gz',
+    fetcher: 'tools/fetch/fetchMpcorb.ts',
+    readme: 'mpcorb.readme',
+  },
+  'mpcorb.readme': {
+    path: 'data/raw/mpcorb/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      "MPC's export-format column table, the packed number and date rules, the orbit-type values and the header's terms, each with its source URL.",
+  },
+
+  // ─── JPL Small-Body Database (asteroid diameters for the card)
+
+  'sbdb.diameters': {
+    path: 'data/raw/sbdb/diameters.json',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'The SBDB Query API answer, verbatim: every numbered asteroid with a diameter, fields `pdes` (the number), `diameter` (km), `albedo` and `diameter_sigma`, as strings or null. `build-asteroids` joins it to MPCORB by number.',
+    upstream: 'https://ssd-api.jpl.nasa.gov/sbdb_query.api',
+    fetcher: 'tools/fetch/fetchSbdbDiameters.ts',
+    readme: 'sbdb.readme',
+  },
+  'sbdb.readme': {
+    path: 'data/raw/sbdb/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      "The query, the response layout, JPL's fair-use policy and citation request, and the copy behind the bake.",
+  },
+
   // ─── JPL Horizons planet and moon vectors (ephemeris-correction fit input)
 
   horizons: {

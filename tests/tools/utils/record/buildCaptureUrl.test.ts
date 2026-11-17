@@ -5,37 +5,44 @@ import { buildCaptureUrl } from '../../../../tools/utils/record/buildCaptureUrl'
 describe('buildCaptureUrl', () => {
   it('composes the cinema gate and the pinned instant', () => {
     const simTime = new Date(Date.UTC(2026, 6, 31, 12, 0, 0));
-    expect(buildCaptureUrl({ base: 'http://localhost:5173', simTime, dome: false })).toBe(
-      'http://localhost:5173/?cinema#t=2026-07-31T12:00:00.000Z',
-    );
+    expect(
+      buildCaptureUrl({ base: 'http://localhost:5173', simTime, dome: false, film: false }),
+    ).toBe('http://localhost:5173/?cinema#t=2026-07-31T12:00:00.000Z');
   });
 
   it('rejects a base carrying its own query or hash', () => {
     const simTime = new Date(Date.UTC(2026, 6, 31, 12, 0, 0));
     expect(() =>
-      buildCaptureUrl({ base: 'http://localhost:5173/?cinema', simTime, dome: false }),
+      buildCaptureUrl({ base: 'http://localhost:5173/?cinema', simTime, dome: false, film: false }),
     ).toThrow(/--url/);
     expect(() =>
-      buildCaptureUrl({ base: 'http://localhost:5173#t=x', simTime, dome: false }),
+      buildCaptureUrl({ base: 'http://localhost:5173#t=x', simTime, dome: false, film: false }),
     ).toThrow(/--url/);
   });
 
   it('strips trailing slashes from base before composing', () => {
     const simTime = new Date(Date.UTC(2026, 6, 31, 12, 0, 0));
-    expect(buildCaptureUrl({ base: 'http://localhost:5173/', simTime, dome: false })).toBe(
-      'http://localhost:5173/?cinema#t=2026-07-31T12:00:00.000Z',
-    );
+    expect(
+      buildCaptureUrl({ base: 'http://localhost:5173/', simTime, dome: false, film: false }),
+    ).toBe('http://localhost:5173/?cinema#t=2026-07-31T12:00:00.000Z');
     // `record.ts`'s `--url` parsing only strips a single trailing slash, so a
     // doubled one can still reach here — the helper must not compose `//?cinema`.
-    expect(buildCaptureUrl({ base: 'http://localhost:5173//', simTime, dome: false })).toBe(
-      'http://localhost:5173/?cinema#t=2026-07-31T12:00:00.000Z',
-    );
+    expect(
+      buildCaptureUrl({ base: 'http://localhost:5173//', simTime, dome: false, film: false }),
+    ).toBe('http://localhost:5173/?cinema#t=2026-07-31T12:00:00.000Z');
+  });
+
+  it('film take appends the film row after the pinned instant', () => {
+    const simTime = new Date(Date.UTC(2026, 6, 31, 12, 0, 0));
+    expect(
+      buildCaptureUrl({ base: 'http://localhost:5173', simTime, dome: false, film: true }),
+    ).toBe('http://localhost:5173/?cinema#t=2026-07-31T12:00:00.000Z&film=1');
   });
 
   it('dome capture URL carries both gates', () => {
     const simTime = new Date(Date.UTC(2026, 6, 31, 12, 0, 0));
-    expect(buildCaptureUrl({ base: 'http://localhost:5173', simTime, dome: true })).toBe(
-      'http://localhost:5173/?cinema&dome#t=2026-07-31T12:00:00.000Z',
-    );
+    expect(
+      buildCaptureUrl({ base: 'http://localhost:5173', simTime, dome: true, film: false }),
+    ).toBe('http://localhost:5173/?cinema&dome#t=2026-07-31T12:00:00.000Z');
   });
 });

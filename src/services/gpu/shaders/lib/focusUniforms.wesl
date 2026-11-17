@@ -65,8 +65,8 @@ const FOCUS_PICK_EXCLUDE_BELOW: f32 = 1.0;
 fn focusAlphaMultiplier(worldPos: vec3<f32>, focus: FocusUniforms) -> f32 {
   let apparent = focus.centerApparent.w;
   let inner = min(focus.physicalRadiusMpc, apparent * FOCUS_CORE_FRACTION);
-  let d = distance(worldPos, focus.centerApparent.xyz);
-  let t = smoothstep(inner, apparent, d);
-  let baseAlpha = mix(1.0, FOCUS_DIM_FLOOR, t);
+  let focusDistance = distance(worldPos, focus.centerApparent.xyz);
+  let dimRamp = smoothstep(inner, apparent, focusDistance);
+  let baseAlpha = mix(1.0, FOCUS_DIM_FLOOR, dimRamp);
   return mix(1.0, baseAlpha, focus.blend);
 }

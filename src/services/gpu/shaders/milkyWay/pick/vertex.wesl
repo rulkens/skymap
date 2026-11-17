@@ -2,10 +2,10 @@
 // for the Milky-Way pick path. One instance, six vertices.
 //
 // Sized in-shader from the shared camera uniforms with the SAME derivation as
-// points/vertexBody.wesl: halfExtentPx = max(mw.minSizePx, radiusMpc / dist *
+// points/vertexBody.wesl: halfExtentPx = max(milkyWay.minSizePx, radiusMpc / dist *
 // pxPerRad), using the rendered cloud's radius (not the larger selection ring).
 // Computing it here keeps the hit target agreeing with the rendered frame; the
-// CPU keeps only the visibility gate. 'mw.minSizePx' is a static scene constant,
+// CPU keeps only the visibility gate. 'milkyWay.minSizePx' is a static scene constant,
 // so the hit target does not follow the galaxy size slider.
 //
 // The packed pick identity is composed here and forwarded flat to the fragment.
@@ -23,23 +23,23 @@ import package::lib::selectionEncoding::PICK_SENTINEL_OFFSET;
 import package::lib::pickDepthBands::PICK_BAND_BACKDROP_EPS;
 
 // 96-byte camera image packed by pickMilkyWay; byte layout in io.wesl.
-@group(0) @binding(0) var<uniform> u: Uniforms;
+@group(0) @binding(0) var<uniform> view: Uniforms;
 
 // Fully static, written once at construction.
-@group(2) @binding(0) var<uniform> mw: MilkyWayPickUniforms;
+@group(2) @binding(0) var<uniform> milkyWay: MilkyWayPickUniforms;
 
 @vertex
-fn vs(@builtin(vertex_index) vi: u32) -> VsOut {
-  let centerClip = worldToClip(u.cam, mw.centerWorld);
-  let corner = quadCorner(vi);
+fn vs(@builtin(vertex_index) vertexIndex: u32) -> VsOut {
+  let centerClip = worldToClip(view.cam, milkyWay.centerWorld);
+  let corner = quadCorner(vertexIndex);
 
   // 0.001 distance floor, as in points/vertexBody.wesl.
-  let toCenter = mw.centerWorld - u.camPosWorld;
+  let toCenter = milkyWay.centerWorld - view.camPosWorld;
   let safeDist = max(length(toCenter), 0.001);
-  let apparentPxRadius = (mw.radiusMpc / safeDist) * u.pxPerRad;
-  let halfExtentPx = max(mw.minSizePx, apparentPxRadius);
+  let apparentPxRadius = (milkyWay.radiusMpc / safeDist) * view.pxPerRad;
+  let halfExtentPx = max(milkyWay.minSizePx, apparentPxRadius);
 
-  let offset = expandBillboardScreen(u.cam, centerClip, halfExtentPx, corner);
+  let offset = expandBillboardScreen(view.cam, centerClip, halfExtentPx, corner);
 
   var out: VsOut;
   // The impostor is the ultimate pick fallback ('lib/pickDepthBands'): true
@@ -50,6 +50,6 @@ fn vs(@builtin(vertex_index) vi: u32) -> VsOut {
   let bandZ = centerClip.w * PICK_BAND_BACKDROP_EPS;
   out.pos = vec4<f32>(centerClip.xy + offset, bandZ, centerClip.w);
   out.uv = corner;
-  out.packedPick = packSelection(mw.sourceCode, 0u) + PICK_SENTINEL_OFFSET;
+  out.packedPick = packSelection(milkyWay.sourceCode, 0u) + PICK_SENTINEL_OFFSET;
   return out;
 }

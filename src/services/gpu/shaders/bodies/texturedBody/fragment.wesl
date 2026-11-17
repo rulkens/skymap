@@ -16,7 +16,7 @@
 //
 // ## The ray, and why the direction is normalized AFTER interpolation
 //
-// 'u.camPosLocal' is the camera in the body's local frame in body radii (the
+// 'uniforms.camPosLocal' is the camera in the body's local frame in body radii (the
 // same vector the Minnaert term already needs), so it is the ray origin with no
 // extra uniform. 'in.localPos' is the interpolated point on the PROXY shell --
 // scaled up by 'PROXY_SCALE', so it is NOT a unit vector and its interpolant is
@@ -55,7 +55,7 @@ import package::lib::util::hash21Hq;
 import package::antiqueLook::bodies::moonRow::encodeMoonRow;
 import package::antiqueLook::shared::groundNoise::groundNoiseAt;
 
-@group(0) @binding(0) var<uniform> u: TexturedBodyUniforms;
+@group(0) @binding(0) var<uniform> uniforms: TexturedBodyUniforms;
 @group(0) @binding(1) var bodySampler: sampler;
 @group(0) @binding(2) var bodyTexture: texture_2d<f32>;
 @group(0) @binding(3) var ringTexture: texture_2d<f32>;
@@ -121,23 +121,23 @@ struct FSOut {
 // this body still sees through Saturn's rings. Its twin -- the planet's shadow
 // cast onto the ring -- lives in 'ring/fragment.wesl'. Local rather than in a
 // lib because it is the only copy and the ring pair's two halves share no maths.
-fn ringSunVisibility(p: vec3<f32>, sunDir: vec3<f32>, innerRatio: f32, outerRatio: f32) -> f32 {
+fn ringSunVisibility(surfacePoint: vec3<f32>, sunDir: vec3<f32>, innerRatio: f32, outerRatio: f32) -> f32 {
   if (outerRatio <= 0.0) {
     return 1.0;
   }
   if (sunDir.z == 0.0) {
     return 1.0;
   }
-  let t = -p.z / sunDir.z;
-  if (t <= 0.0) {
+  let distanceToRingPlane = -surfacePoint.z / sunDir.z;
+  if (distanceToRingPlane <= 0.0) {
     return 1.0;
   }
-  let hit = p + t * sunDir;
-  let r = length(hit.xy);
-  if (r < innerRatio || r > outerRatio) {
+  let hit = surfacePoint + distanceToRingPlane * sunDir;
+  let ringRadius = length(hit.xy);
+  if (ringRadius < innerRatio || ringRadius > outerRatio) {
     return 1.0;
   }
-  let uCoord = (r - innerRatio) / (outerRatio - innerRatio);
+  let uCoord = (ringRadius - innerRatio) / (outerRatio - innerRatio);
   let ringAlpha = textureSampleLevel(ringTexture, bodySampler, vec2<f32>(uCoord, 0.5), 0.0).a;
   return 1.0 - ringAlpha;
 }
@@ -147,36 +147,36 @@ fn ringSunVisibility(p: vec3<f32>, sunDir: vec3<f32>, innerRatio: f32, outerRati
 const ALBEDO_BAND: f32 = 0.06;
 
 // The antique look's albedo map (`body-albedo-mask` pass, 'rg8unorm'), the twin of
-// Earth's `fsOceanMask`: r lightness, 0 well below `u.albedoMid`, 1 well above;
+// Earth's `fsOceanMask`: r lightness, 0 well below `uniforms.albedoMid`, 1 well above;
 // g 1 wherever the proxy covers. A ray past the sphere reads its horizon point, so
 // terrain standing above that horizon up close keeps a lightness (the look's reduce
 // counts only body pixels, so the sky's share is never read).
 @fragment
 fn fsAlbedoMask(in: TexturedBodyVSOut) -> @location(0) vec4<f32> {
-  let rd = normalize(in.localPos - u.camPosLocal);
-  let surface = hitUnitSphere(u.camPosLocal, rd, u.camAltitudeSq);
+  let rd = normalize(in.localPos - uniforms.camPosLocal);
+  let surface = hitUnitSphere(uniforms.camPosLocal, rd, uniforms.camAltitudeSq);
   let uv = equirectUvFromDir(surface.point);
   let grad = equirectUvGradients(uv);
   let albedo = textureSampleGrad(bodyTexture, bodySampler, uv, grad.ddx, grad.ddy).rgb;
   let luma = dot(albedo, vec3<f32>(0.2126, 0.7152, 0.0722));
-  return vec4<f32>(smoothstep(u.albedoMid - ALBEDO_BAND, u.albedoMid + ALBEDO_BAND, luma), 1.0, 0.0, 1.0);
+  return vec4<f32>(smoothstep(uniforms.albedoMid - ALBEDO_BAND, uniforms.albedoMid + ALBEDO_BAND, luma), 1.0, 0.0, 1.0);
 }
 
 @fragment
 fn fs(in: TexturedBodyVSOut) -> FSOut {
   // ── The ray ───────────────────────────────────────────────────────────────
-  let ro = u.camPosLocal;
+  let rayOrigin = uniforms.camPosLocal;
   // Renormalize AFTER interpolation: 'in.localPos' rides the 'PROXY_SCALE'-scaled
   // proxy, so neither it nor its interpolant is unit length.
-  let rd = normalize(in.localPos - ro);
+  let rayDir = normalize(in.localPos - rayOrigin);
 
-  // 'u.camAltitudeSq' is f64-derived -- see 'lib/analyticSphere.wesl's depth section.
-  let surface = hitUnitSphere(ro, rd, u.camAltitudeSq);
+  // 'uniforms.camAltitudeSq' is f64-derived -- see 'lib/analyticSphere.wesl's depth section.
+  let surface = hitUnitSphere(rayOrigin, rayDir, uniforms.camAltitudeSq);
   // Unit length in both branches, so it is the exact geometric normal.
-  let ng = surface.point;
+  let surfaceNormal = surface.point;
 
   // ── Analytic equirectangular uv + wrap-corrected gradients ────────────────
-  let uv = equirectUvFromDir(ng);
+  let uv = equirectUvFromDir(surfaceNormal);
   let grad = equirectUvGradients(uv);
 
   // Every derivative is now taken; from here the missed lanes contribute
@@ -186,24 +186,24 @@ fn fs(in: TexturedBodyVSOut) -> FSOut {
   }
 
   // ── Shading ───────────────────────────────────────────────────────────────
-  let T = normalize(cross(vec3<f32>(0.0, 0.0, 1.0), ng));
-  let n = perturbNormal(ng, T, textureSampleGrad(normalTexture, bodySampler, uv, grad.ddx, grad.ddy).rg);
+  let eastTangent = normalize(cross(vec3<f32>(0.0, 0.0, 1.0), surfaceNormal));
+  let shadingNormal = perturbNormal(surfaceNormal, eastTangent, textureSampleGrad(normalTexture, bodySampler, uv, grad.ddx, grad.ddy).rg);
   let albedo = textureSampleGrad(bodyTexture, bodySampler, uv, grad.ddx, grad.ddy).rgb;
-  let sunVis = ringSunVisibility(ng, u.sunDirLocal, u.ringInnerRatio, u.ringOuterRatio);
-  let shade = litShade(n, u.sunDirLocal * sunVis);
-  let noL = max(dot(n, u.sunDirLocal), 0.0);
-  // 'ng - ro = rd * t' exactly, so 'v = -rd' -- no re-subtract, no renormalize.
-  let v = -rd;
-  let noV = max(dot(n, v), 0.0);
-  let limb = limbDarkening(noL, noV, u.limbStrength, u.limbExponent);
+  let sunVis = ringSunVisibility(surfaceNormal, uniforms.sunDirLocal, uniforms.ringInnerRatio, uniforms.ringOuterRatio);
+  let shade = litShade(shadingNormal, uniforms.sunDirLocal * sunVis);
+  let noL = max(dot(shadingNormal, uniforms.sunDirLocal), 0.0);
+  // 'surfaceNormal - rayOrigin = rayDir * t' exactly, so 'viewDir = -rayDir' -- no re-subtract, no renormalize.
+  let viewDir = -rayDir;
+  let noV = max(dot(shadingNormal, viewDir), 0.0);
+  let limb = limbDarkening(noL, noV, uniforms.limbStrength, uniforms.limbExponent);
   let colour = albedo * shade * limb;
 
   var out: FSOut;
   out.colour = vec4<f32>(colour, 1.0);
   // Eye-relative frame: the hit relative to the eye, through the
-  // translation-free 'u.vpCamRelLocal' -- see 'lib/analyticSphere.wesl's depth
+  // translation-free 'uniforms.vpCamRelLocal' -- see 'lib/analyticSphere.wesl's depth
   // section.
-  out.depth = fragDepthFromClip(u.vpCamRelLocal, rd * surface.t);
+  out.depth = fragDepthFromClip(uniforms.vpCamRelLocal, rayDir * surface.t);
   return out;
 }
 
@@ -433,8 +433,8 @@ fn craterRims(n: vec3<f32>, dNdx: vec3<f32>, dNdy: vec3<f32>, sun: vec3<f32>, rd
 
 @fragment
 fn fsMoonPrint(in: TexturedBodyVSOut) -> @location(0) vec4<f32> {
-  let rd = normalize(in.localPos - u.camPosLocal);
-  let surface = hitUnitSphere(u.camPosLocal, rd, u.camAltitudeSq);
+  let rd = normalize(in.localPos - uniforms.camPosLocal);
+  let surface = hitUnitSphere(uniforms.camPosLocal, rd, uniforms.camAltitudeSq);
   let ng = surface.point;
   let uv = equirectUvFromDir(ng);
   let grad = equirectUvGradients(uv);
@@ -443,7 +443,7 @@ fn fsMoonPrint(in: TexturedBodyVSOut) -> @location(0) vec4<f32> {
   if (!surface.hit) {
     discard;
   }
-  let sun = u.sunDirLocal;
+  let sun = uniforms.sunDirLocal;
   let pxUnits = 1.0 / moon.unit;
   let unitsPerRad = moon.focalPx / surface.t * pxUnits;
   let T = normalize(cross(vec3<f32>(0.0, 0.0, 1.0), ng));
@@ -503,8 +503,8 @@ fn ringZone(n: vec3<f32>, frag: vec2<f32>) -> vec2<bool> {
 
 @fragment
 fn fsMoonRelief(in: TexturedBodyVSOut) -> @location(0) vec4<f32> {
-  let rd = normalize(in.localPos - u.camPosLocal);
-  let surface = hitUnitSphere(u.camPosLocal, rd, u.camAltitudeSq);
+  let rd = normalize(in.localPos - uniforms.camPosLocal);
+  let surface = hitUnitSphere(uniforms.camPosLocal, rd, uniforms.camAltitudeSq);
   let ng = surface.point;
   let uv = equirectUvFromDir(ng);
   let grad = equirectUvGradients(uv);
@@ -533,8 +533,8 @@ fn fsMoonRelief(in: TexturedBodyVSOut) -> @location(0) vec4<f32> {
   let onScreen = vec2<f32>(gyy * rhs.x - gxy * rhs.y, gxx * rhs.y - gxy * rhs.x);
   let fall = select(vec2<f32>(0.0), onScreen / max(length(onScreen), 1e-12), length(downhill) > 1e-4);
   let noise = groundNoiseAt(ng * moon.radiusM, vec3<i32>(0), metresPerUnit);
-  let flat = dot(ng, u.sunDirLocal);
-  let day = smoothstep(-0.02, 0.06, flat + SLOPE_GAIN * (dot(n, u.sunDirLocal) - flat));
+  let flat = dot(ng, uniforms.sunDirLocal);
+  let day = smoothstep(-0.02, 0.06, flat + SLOPE_GAIN * (dot(n, uniforms.sunDirLocal) - flat));
   let zone = ringZone(ng, in.clip.xy);
   let onRing = zone.x || (zone.y && slope > RELIEF_STEEP);
   let stroke = select(-RELIEF_FLAT, slope, slope > RELIEF_STROKE && onRing) * resolved * day;

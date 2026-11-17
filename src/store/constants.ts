@@ -52,3 +52,5 @@ export const inputRoute = 'input' as const;
 // `viewCoverRoute` holds each resting panel's rect over the canvas; the camera
 // runtime turns the lens covers among them into the off-centre view.
 export const viewCoverRoute = 'viewCover' as const;
+// `skyRoute` holds the sky view's readouts (entry spot, standing view) and the below-horizon fact.
+export const skyRoute = 'sky' as const;

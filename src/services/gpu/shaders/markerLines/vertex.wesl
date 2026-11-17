@@ -14,7 +14,7 @@
 //
 // ## Why bindings live here, not in io.wesl
 //
-// WESL has no global state — '@group(0) @binding(0) var<uniform> u'
+// WESL has no global state — '@group(0) @binding(0) var<uniform> uniforms'
 // is module-local, not exportable.  Each consuming file (vertex /
 // fragment) redeclares its bindings using the structs imported from
 // io.wesl so layout numbers cannot drift between stages.
@@ -24,7 +24,7 @@ import package::markerLines::io::VsIn;
 import package::markerLines::io::VsOut;
 import package::lib::segmentQuad::expandSegmentQuad;
 
-@group(0) @binding(0) var<uniform> u: Uniforms;
+@group(0) @binding(0) var<uniform> uniforms: Uniforms;
 
 // Depth epsilon: pull the clamped clip-z this far inside the far plane (in
 // ndc-z terms) so an endpoint sitting exactly ON it still passes the clip test.
@@ -39,14 +39,14 @@ const CLIP_Z_EPS: f32 = 1e-4;
 fn expandMarkerLineQuad(input: VsIn, occludeWeight: f32) -> VsOut {
   // Unpack the packed instance attributes.
   let fromWorld = input.fromAndWidth.xyz;
-  let pixelWidth = input.fromAndWidth.w * u.devicePixelRatio;
+  let pixelWidth = input.fromAndWidth.w * uniforms.devicePixelRatio;
   let toWorld = input.toAndAlpha.xyz;
   let fadeAlpha = input.toAndAlpha.w;
 
   // Expand this corner into a clip-space vertex via the shared
   // segment-quad helper. 'pixelWidth' is a FULL width (the helper takes a
   // half-width), so we pass 'pixelWidth * 0.5'.
-  let p = expandSegmentQuad(u.cam, fromWorld, toWorld, input.uv, pixelWidth * 0.5).clip;
+  let clipPos = expandSegmentQuad(uniforms.cam, fromWorld, toWorld, input.uv, pixelWidth * 0.5).clip;
 
   // Clamp z to survive any far plane. The NEAR0 foreground connectors keep
   // endpoints far beyond the adaptive far plane ('foregroundFrustum'
@@ -58,7 +58,7 @@ fn expandMarkerLineQuad(input: VsIn, occludeWeight: f32) -> VsOut {
   // perturbs no depth comparison. We clamp the helper's returned z/w and
   // leave x/y/w untouched.
   var out: VsOut;
-  out.pos = vec4<f32>(p.xy, min(p.z, p.w * (1.0 - CLIP_Z_EPS)), p.w);
+  out.pos = vec4<f32>(clipPos.xy, min(clipPos.z, clipPos.w * (1.0 - CLIP_Z_EPS)), clipPos.w);
   out.uv = input.uv;
   // Pre-multiply fadeAlpha into both rgb and a so the fragment stage
   // outputs a single premultiplied color * (edge-falloff) without an

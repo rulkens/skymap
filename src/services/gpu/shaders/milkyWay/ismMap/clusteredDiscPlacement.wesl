@@ -28,17 +28,17 @@ const CDP_PI: f32 = 3.14159265358979323846;
 const CDP_INV_2POW32: f32 = 1.0 / 4294967296.0;
 
 fn cdpPcg4d(vIn: vec4<u32>) -> vec4<u32> {
-  var v = vIn * 1664525u + 1013904223u;
-  v.x = v.x + v.y * v.w;
-  v.y = v.y + v.z * v.x;
-  v.z = v.z + v.x * v.y;
-  v.w = v.w + v.y * v.z;
-  v = v ^ (v >> vec4<u32>(16u));
-  v.x = v.x + v.y * v.w;
-  v.y = v.y + v.z * v.x;
-  v.z = v.z + v.x * v.y;
-  v.w = v.w + v.y * v.z;
-  return v;
+  var state = vIn * 1664525u + 1013904223u;
+  state.x = state.x + state.y * state.w;
+  state.y = state.y + state.z * state.x;
+  state.z = state.z + state.x * state.y;
+  state.w = state.w + state.y * state.z;
+  state = state ^ (state >> vec4<u32>(16u));
+  state.x = state.x + state.y * state.w;
+  state.y = state.y + state.z * state.x;
+  state.z = state.z + state.x * state.y;
+  state.w = state.w + state.y * state.z;
+  return state;
 }
 
 fn genRand(seed: u32, pop: u32, idx: u32, slot: u32) -> f32 {
@@ -46,9 +46,9 @@ fn genRand(seed: u32, pop: u32, idx: u32, slot: u32) -> f32 {
 }
 
 fn genNormal(seed: u32, pop: u32, idx: u32, slot: u32) -> f32 {
-  let u1 = max(genRand(seed, pop, idx, slot), 1e-38);
-  let u2 = genRand(seed, pop, idx, slot + 1u);
-  return sqrt(-2.0 * log(u1)) * cos(2.0 * CDP_PI * u2);
+  let radialUniform = max(genRand(seed, pop, idx, slot), 1e-38);
+  let angularUniform = genRand(seed, pop, idx, slot + 1u);
+  return sqrt(-2.0 * log(radialUniform)) * cos(2.0 * CDP_PI * angularUniform);
 }
 
 // ---------------------------------------------------------------------------
@@ -66,8 +66,8 @@ struct CloudFrame {
 // SAME type, so a direct pass to rotateFrameToOrientation below fails to
 // compile ("expected CloudFrame, got WarpSurfaceFrame") despite the shapes
 // matching exactly.
-fn cloudFrameFromWarpSurface(ws: WarpSurfaceFrame) -> CloudFrame {
-  return CloudFrame(ws.along, ws.across, ws.pole);
+fn cloudFrameFromWarpSurface(surfaceFrame: WarpSurfaceFrame) -> CloudFrame {
+  return CloudFrame(surfaceFrame.along, surfaceFrame.across, surfaceFrame.pole);
 }
 
 // cdpRingIndexForSample/cdpAzIndexForAngle — the nearest-texel FLOOR bucket
@@ -76,21 +76,21 @@ fn cloudFrameFromWarpSurface(ws: WarpSurfaceFrame) -> CloudFrame {
 // term, this backs a placement SAMPLE — different functions on purpose).
 fn cdpRingIndexForSample(radius: f32, rings: u32, rMin: f32, rMax: f32) -> u32 {
   let clamped = clamp(radius, rMin, rMax);
-  var lo = 0u;
-  var hi = rings - 1u;
+  var low = 0u;
+  var high = rings - 1u;
   loop {
-    if (hi - lo <= 1u) { break; }
-    let mid = (lo + hi) / 2u;
+    if (high - low <= 1u) { break; }
+    let mid = (low + high) / 2u;
     let midRadius = rMin * pow(rMax / rMin, f32(mid) / f32(rings - 1u));
-    if (midRadius <= clamped) { lo = mid; } else { hi = mid; }
+    if (midRadius <= clamped) { low = mid; } else { high = mid; }
   }
-  return lo;
+  return low;
 }
 
-fn cdpAzIndexForAngle(angle: f32, az: u32) -> u32 {
+fn cdpAzIndexForAngle(angle: f32, azCount: u32) -> u32 {
   let twoPi = 2.0 * CDP_PI;
   let wrapped = ((angle % twoPi) + twoPi) % twoPi;
-  return min(az - 1u, u32(floor((wrapped / twoPi) * f32(az))));
+  return min(azCount - 1u, u32(floor((wrapped / twoPi) * f32(azCount))));
 }
 
 // cdpRingIndexForRadius — ismMapRingIndexForRadius.ts ported verbatim:
@@ -102,8 +102,8 @@ fn cdpAzIndexForAngle(angle: f32, az: u32) -> u32 {
 // continuously-scattered placement radius.
 fn cdpRingIndexForRadius(radius: f32, rings: u32, rMin: f32, rMax: f32) -> u32 {
   if (rings <= 1u) { return 0u; }
-  let t = log(radius / rMin) / log(rMax / rMin);
-  let ring = i32(round(t * f32(rings - 1u)));
+  let ringT = log(radius / rMin) / log(rMax / rMin);
+  let ring = i32(round(ringT * f32(rings - 1u)));
   return u32(clamp(ring, 0, i32(rings - 1u)));
 }
 
@@ -114,10 +114,10 @@ fn cdpRingIndexForRadius(radius: f32, rings: u32, rMin: f32, rMax: f32) -> u32 {
 fn sampleOrientationNearest(
   orientationTex: texture_2d<f32>,
   radius: f32, angle: f32,
-  rings: u32, az: u32, rMin: f32, rMax: f32,
+  rings: u32, azCount: u32, rMin: f32, rMax: f32,
 ) -> vec2<f32> {
   let ring = cdpRingIndexForSample(radius, rings, rMin, rMax);
-  let azIdx = cdpAzIndexForAngle(angle, az);
+  let azIdx = cdpAzIndexForAngle(angle, azCount);
   let texel = textureLoad(orientationTex, vec2<i32>(i32(azIdx), i32(ring)), 0);
   let cos2 = texel.x;
   let sin2 = texel.y;
@@ -130,10 +130,10 @@ fn sampleOrientationNearest(
 fn rotateFrameToOrientation(
   frame: CloudFrame, radius: f32, angle: f32, geom: ArmRidgeGeometry,
   hasOrientation: bool, orientationTex: texture_2d<f32>,
-  rings: u32, az: u32, rMin: f32, rMax: f32,
+  rings: u32, azCount: u32, rMin: f32, rMax: f32,
 ) -> CloudFrame {
   if (!hasOrientation) { return frame; }
-  let sample = sampleOrientationNearest(orientationTex, radius, angle, rings, az, rMin, rMax);
+  let sample = sampleOrientationNearest(orientationTex, radius, angle, rings, azCount, rMin, rMax);
   let coherence = sample.y;
   if (coherence <= 0.0) { return frame; }
 
@@ -146,9 +146,9 @@ fn rotateFrameToOrientation(
   let delta = coherence * (rawDelta - CDP_PI * round(rawDelta / CDP_PI));
 
   let rot90 = cross(frame.pole, frame.along);
-  let s = select(-1.0, 1.0, dot(frame.across, rot90) >= 0.0);
+  let handedness = select(-1.0, 1.0, dot(frame.across, rot90) >= 0.0);
   let cosd = cos(delta);
-  let sind = sin(delta) * s;
+  let sind = sin(delta) * handedness;
   let along = frame.along * cosd + frame.across * sind;
   let across = frame.across * cosd - frame.along * sind;
   return CloudFrame(along, across, frame.pole);
@@ -164,18 +164,18 @@ struct InvCov {
 }
 
 fn inverseCovarianceFromFrame(frame: CloudFrame, sigAlong: f32, sigAcross: f32, sigPole: f32) -> InvCov {
-  let kA = 1.0 / (sigAlong * sigAlong);
-  let kC = 1.0 / (sigAcross * sigAcross);
-  let kP = 1.0 / (sigPole * sigPole);
-  let u0 = frame.along;
-  let u1 = frame.across;
-  let u2 = frame.pole;
-  let m00 = kA * u0.x * u0.x + kC * u1.x * u1.x + kP * u2.x * u2.x;
-  let m11 = kA * u0.y * u0.y + kC * u1.y * u1.y + kP * u2.y * u2.y;
-  let m22 = kA * u0.z * u0.z + kC * u1.z * u1.z + kP * u2.z * u2.z;
-  let m01 = kA * u0.x * u0.y + kC * u1.x * u1.y + kP * u2.x * u2.y;
-  let m02 = kA * u0.x * u0.z + kC * u1.x * u1.z + kP * u2.x * u2.z;
-  let m12 = kA * u0.y * u0.z + kC * u1.y * u1.z + kP * u2.y * u2.z;
+  let precisionAlong = 1.0 / (sigAlong * sigAlong);
+  let precisionAcross = 1.0 / (sigAcross * sigAcross);
+  let precisionPole = 1.0 / (sigPole * sigPole);
+  let axisAlong = frame.along;
+  let axisAcross = frame.across;
+  let axisPole = frame.pole;
+  let m00 = precisionAlong * axisAlong.x * axisAlong.x + precisionAcross * axisAcross.x * axisAcross.x + precisionPole * axisPole.x * axisPole.x;
+  let m11 = precisionAlong * axisAlong.y * axisAlong.y + precisionAcross * axisAcross.y * axisAcross.y + precisionPole * axisPole.y * axisPole.y;
+  let m22 = precisionAlong * axisAlong.z * axisAlong.z + precisionAcross * axisAcross.z * axisAcross.z + precisionPole * axisPole.z * axisPole.z;
+  let m01 = precisionAlong * axisAlong.x * axisAlong.y + precisionAcross * axisAcross.x * axisAcross.y + precisionPole * axisPole.x * axisPole.y;
+  let m02 = precisionAlong * axisAlong.x * axisAlong.z + precisionAcross * axisAcross.x * axisAcross.z + precisionPole * axisPole.x * axisPole.z;
+  let m12 = precisionAlong * axisAlong.y * axisAlong.z + precisionAcross * axisAcross.y * axisAcross.z + precisionPole * axisPole.y * axisPole.z;
   return InvCov(vec3<f32>(m00, m11, m22), vec3<f32>(m01, m02, m12));
 }
 
@@ -232,27 +232,27 @@ fn cdpPlaceSmoothDiscSeed(
   discSigmaR: vec4<f32>, discWeightSum: f32, sigmaZComplex: f32,
 ) -> SmoothDiscSeed {
   let pick = genRand(seed, popComplex, complexIndex, slotBase) * discWeightSum;
-  var k = 3u;
+  var pickedComponent = 3u;
   var acc = 0.0;
-  for (var j = 0u; j < 4u; j++) {
-    acc += CDP_DISC_SURFACE_WEIGHTS[j];
-    if (pick <= acc) { k = j; break; }
+  for (var candidateComponent = 0u; candidateComponent < 4u; candidateComponent++) {
+    acc += CDP_DISC_SURFACE_WEIGHTS[candidateComponent];
+    if (pick <= acc) { pickedComponent = candidateComponent; break; }
   }
-  let sigmaR = discSigmaR[k];
-  let x = genNormal(seed, popComplex, complexIndex, slotBase + 1u) * sigmaR;
-  let z = genNormal(seed, popComplex, complexIndex, slotBase + 3u) * sigmaR;
-  let y = genNormal(seed, popComplex, complexIndex, slotBase + 5u) * sigmaZComplex;
+  let sigmaR = discSigmaR[pickedComponent];
+  let centerX = genNormal(seed, popComplex, complexIndex, slotBase + 1u) * sigmaR;
+  let centerZ = genNormal(seed, popComplex, complexIndex, slotBase + 3u) * sigmaR;
+  let centerY = genNormal(seed, popComplex, complexIndex, slotBase + 5u) * sigmaZComplex;
   var out: SmoothDiscSeed;
-  out.center = vec3<f32>(x, y, z);
-  out.radius = length(vec2<f32>(x, z));
-  out.angle = atan2(z, x);
+  out.center = vec3<f32>(centerX, centerY, centerZ);
+  out.radius = length(vec2<f32>(centerX, centerZ));
+  out.angle = atan2(centerZ, centerX);
   return out;
 }
 
 // buildClusteredDiscPlacementChild — clusteredDiscPlacement.ts's
 // buildClusteredDiscPlacement, restructured for one-invocation-per-child
-// parallel dispatch: 'i' is this child's own SLOT index (0..count), not a
-// loop counter. complexIndex = i / childrenPerComplex reproduces the CPU's
+// parallel dispatch: 'childIndex' is this child's own SLOT index (0..count), not a
+// loop counter. complexIndex = childIndex / childrenPerComplex reproduces the CPU's
 // own complex grouping exactly — only the LAST complex is ever short (the
 // CPU's own 'childCount = min(childrenPerComplex, count - placed)'), so
 // floor division alone recovers the same grouping with no extra clamp.
@@ -261,7 +261,7 @@ fn cdpPlaceSmoothDiscSeed(
 // no-map fallback), 2u = 'analytic' (the arm cloud's arm-lane/smooth-disc
 // roll).
 fn buildClusteredDiscPlacementChild(
-  seed: u32, i: u32, childrenPerComplex: u32, mode: u32,
+  seed: u32, childIndex: u32, childrenPerComplex: u32, mode: u32,
   // Caller-owned hash populations (this file's own RNG_SLOT_CONTRACT) — NOT
   // hardcoded here, so two callers sharing 'seed' never draw correlated
   // values: dust's own call site passes CDP_POP_COMPLEX/CDP_POP_CHILD
@@ -287,7 +287,7 @@ fn buildClusteredDiscPlacementChild(
   armPicked: ArmRec, armLogMin: f32, armLogMax: f32,
   armWidthScale: f32, armTiltRefRadius: f32, armRadialBias: f32,
 ) -> PlacedChild {
-  let complexIndex = i / childrenPerComplex;
+  let complexIndex = childIndex / childrenPerComplex;
 
   var center: vec3<f32>;
   var frame: CloudFrame;
@@ -297,15 +297,15 @@ fn buildClusteredDiscPlacementChild(
     // placeMapDensityComplex — sampleIsmMapDustCdf.ts:20-46 ported verbatim
     // (upperBound binary search, 3 draws), then the complex's y offset
     // (genNormal, 2 draws) — 5 slots total, SAME order as the CPU.
-    let u = genRand(seed, popComplex, complexIndex, 0u) * cdfTotal;
-    var lo = 0u;
-    var hi = cdfRings * cdfAz - 1u;
+    let cdfTarget = genRand(seed, popComplex, complexIndex, 0u) * cdfTotal;
+    var low = 0u;
+    var high = cdfRings * cdfAz - 1u;
     loop {
-      if (lo >= hi) { break; }
-      let mid = (lo + hi) / 2u;
-      if ((*prefixBuf)[mid] > u) { hi = mid; } else { lo = mid + 1u; }
+      if (low >= high) { break; }
+      let mid = (low + high) / 2u;
+      if ((*prefixBuf)[mid] > cdfTarget) { high = mid; } else { low = mid + 1u; }
     }
-    let index = lo;
+    let index = low;
     let ring = index / cdfAz;
     let azIdx = index % cdfAz;
     let dTheta = 2.0 * CDP_PI / f32(cdfAz);
@@ -315,8 +315,8 @@ fn buildClusteredDiscPlacementChild(
       edges.x * edges.x
         + genRand(seed, popComplex, complexIndex, 2u) * (edges.y * edges.y - edges.x * edges.x),
     );
-    let y = genNormal(seed, popComplex, complexIndex, 3u) * sigmaZComplex;
-    center = vec3<f32>(cos(angle) * radius, y, sin(angle) * radius);
+    let centerY = genNormal(seed, popComplex, complexIndex, 3u) * sigmaZComplex;
+    center = vec3<f32>(cos(angle) * radius, centerY, sin(angle) * radius);
     frame = rotateFrameToOrientation(
       cloudFrameFromWarpSurface(warpSurfaceFrame(radius, angle, geom)), radius, angle, geom,
       hasOrientation, orientationTex, orientRings, orientAz, orientRMin, orientRMax,
@@ -378,19 +378,19 @@ fn buildClusteredDiscPlacementChild(
   // (moot for a slot-hash RNG's own determinism, kept for structural parity
   // with the CPU original this is a port of).
   let childSpread = select(0.0, complexSpread, childrenPerComplex > 1u);
-  let along = genNormal(seed, popChild, i, 0u) * childSpread * elongation;
-  let across = genNormal(seed, popChild, i, 2u) * childSpread;
-  let pole = genNormal(seed, popChild, i, 4u) * childSpread * childPoleRatio;
-  let x = center.x + frame.along.x * along + frame.across.x * across + frame.pole.x * pole;
-  let z = center.z + frame.along.z * along + frame.across.z * across + frame.pole.z * pole;
+  let along = genNormal(seed, popChild, childIndex, 0u) * childSpread * elongation;
+  let across = genNormal(seed, popChild, childIndex, 2u) * childSpread;
+  let pole = genNormal(seed, popChild, childIndex, 4u) * childSpread * childPoleRatio;
+  let childX = center.x + frame.along.x * along + frame.across.x * across + frame.pole.x * pole;
+  let childZ = center.z + frame.along.z * along + frame.across.z * across + frame.pole.z * pole;
   let yFlat = center.y + frame.along.y * along + frame.across.y * across + frame.pole.y * pole;
   // Both modes 0u/1u seed unwarped ('placement.warped' is false for
   // smoothDisc/mapDensity on the CPU side too) — the child's OWN (x, z) then
   // bends with the disc, matching the CPU's cross-tier warp contract.
-  let y = select(yFlat + warpHeight(length(vec2<f32>(x, z)), atan2(z, x), geom), yFlat, warped);
+  let childY = select(yFlat + warpHeight(length(vec2<f32>(childX, childZ)), atan2(childZ, childX), geom), yFlat, warped);
 
   var out: PlacedChild;
-  out.center = vec3<f32>(x, y, z);
+  out.center = vec3<f32>(childX, childY, childZ);
   out.frame = frame;
   return out;
 }

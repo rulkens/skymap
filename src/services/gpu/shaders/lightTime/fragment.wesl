@@ -7,7 +7,7 @@
 import package::lightTime::io::Uniforms;
 import package::lightTime::io::VsOut;
 
-@group(0) @binding(0) var<uniform> u: Uniforms;
+@group(0) @binding(0) var<uniform> uniforms: Uniforms;
 
 const RIM_POWER: f32 = 3.0;
 const TINT: vec3<f32> = vec3<f32>(0.55, 0.75, 1.0);
@@ -17,28 +17,28 @@ const VISIBLE_FLOOR: f32 = 0.0005;
 
 @fragment
 fn fs(input: VsOut) -> @location(0) vec4<f32> {
-  let rd = normalize(
-    u.rayAxis
-    + input.ndc.x * u.tanHalfX * u.camRight
-    + input.ndc.y * u.tanHalfY * u.camUp,
+  let rayDir = normalize(
+    uniforms.rayAxis
+    + input.ndc.x * uniforms.tanHalfX * uniforms.camRight
+    + input.ndc.y * uniforms.tanHalfY * uniforms.camUp,
   );
 
   var sum = vec3<f32>(0.0);
-  for (var i = 0u; i < u32(u.count); i = i + 1u) {
-    let s = u.spheres[i];
-    let b = dot(s.roOpacity.xyz, rd);
-    let disc = b * b - s.c.x;
+  for (var sphereIndex = 0u; sphereIndex < u32(uniforms.count); sphereIndex = sphereIndex + 1u) {
+    let sphere = uniforms.spheres[sphereIndex];
+    let originAlongRay = dot(sphere.roOpacity.xyz, rayDir);
+    let disc = originAlongRay * originAlongRay - sphere.c.x;
     if (disc < 0.0) {
       continue;
     }
-    let sq = sqrt(disc);
+    let sqrtDisc = sqrt(disc);
     // Rejects spheres behind the eye (the eye is never inside one).
-    if (-b + sq <= 0.0) {
+    if (-originAlongRay + sqrtDisc <= 0.0) {
       continue;
     }
-    // sq rounds a hair above 1 at the disc centre, and pow of a negative base is NaN.
-    let rim = pow(max(1.0 - sq, 0.0), RIM_POWER);
-    sum = sum + TINT * rim * INTENSITY * s.roOpacity.w;
+    // sqrtDisc rounds a hair above 1 at the disc centre, and pow of a negative base is NaN.
+    let rim = pow(max(1.0 - sqrtDisc, 0.0), RIM_POWER);
+    sum = sum + TINT * rim * INTENSITY * sphere.roOpacity.w;
   }
 
   let peak = max(sum.x, max(sum.y, sum.z));

@@ -80,8 +80,9 @@ import { requestFocus } from '../selection/requestFocus';
 import { clearSelection } from '../selection/selectionSlice';
 import { selectFocusId, selectFocusRow, selectPendingFocusId } from '../selection/selectors';
 import { setSelectionRow } from '../selectionRows/selectionRowsSlice';
-import { selectOrientation } from '../settings/selectors';
+import { selectFilmEnabled, selectOrientation } from '../settings/selectors';
 import { setOrientation } from '../settings/core/orientationSlice';
+import { setFilmEnabled } from '../settings/core/filmSlice';
 import { goLiveNowAction } from '../time/goLiveNowAction';
 import { selectTimeState } from '../time/selectors';
 import { selectTakeoverSource } from '../takeover/selectors';
@@ -247,6 +248,15 @@ const orientationSource: HashParamSource = {
   readAbsent: () => [setOrientation(DEFAULT_ORIENTATION)],
 };
 
+const filmSource: HashParamSource = {
+  key: 'film',
+  deepLink: false,
+  writesOn: [setFilmEnabled.match],
+  write: (state) => (selectFilmEnabled(state) ? '1' : null),
+  read: (value) => (value === '1' ? { film: true } : {}),
+  readAbsent: () => [setFilmEnabled(false)],
+};
+
 /**
  * `pose` — the `l`-key share URL's exact camera, read-only. It writes nothing
  * (`hashBodyFor` never composes a `pose` param): the rendered pose lands a
@@ -282,13 +292,13 @@ const poseSource: HashParamSource = {
 const isTakeoverChange = (action: Action): boolean =>
   takeoverStarted.match(action) || takeoverEnded.match(action);
 
-const takeoverSource = (key: TakeoverSource['kind']): HashParamSource => ({
+const takeoverSource = (key: Exclude<TakeoverSource['kind'], 'sky'>): HashParamSource => ({
   key,
   deepLink: true,
   writesOn: [isTakeoverChange],
   write: (state) => {
     const source = selectTakeoverSource(state);
-    return source?.kind === key ? source.id : null;
+    return source !== null && source.kind === key ? source.id : null;
   },
   read: (value) => ({ view: { kind: key, id: value } }),
   readAbsent: () => [],
@@ -296,7 +306,7 @@ const takeoverSource = (key: TakeoverSource['kind']): HashParamSource => ({
 
 /**
  * `layers` — layer and caption switches, read-only like `pose`: `flow` on,
- * `-starCatalog` off, applied left to right through the tour cues' writes
+ * `-starCatalog` off, `-label` / `label` switch every caption, applied left to right through the tour cues' writes
  * (`parseLayerSwitches`). A writing row would need every Layer's setter in its
  * `writesOn`, or a `settings/*` prefix, which fires on every frame of a slider
  * drag; and a push per checkbox click would make Back undo clicks. So the
@@ -325,6 +335,7 @@ export const HASH_PARAM_SOURCES: readonly HashParamSource[] = [
   focusSource,
   timeSource,
   orientationSource,
+  filmSource,
   takeoverSource('exhibit'),
   takeoverSource('tour'),
   takeoverSource('clip'),

@@ -1,0 +1,7 @@
+/* The grade and glow groups sit one step in from the board's own switches. */
+.group {
+  padding-left: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}

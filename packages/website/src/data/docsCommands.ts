@@ -66,8 +66,10 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
           'fetch-hyperleda',
           'fetch-local-bubble',
           'fetch-milliquas',
+          'fetch-mpcorb',
           'fetch-natural-earth',
           'fetch-ohm-1690',
+          'fetch-sbdb-diameters',
           'fetch-skraafoto',
           'fetch-structures',
           'fetch-textures',
@@ -124,19 +126,29 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         manual: DATA,
       },
       {
+        scripts: ['build-asteroids'],
+        does: 'Write the file of asteroid orbits, every numbered minor planet the Minor Planet Center lists, from the file fetch-mpcorb downloaded, with the names, the Center’s terms and the diameters fetch-sbdb-diameters downloaded beside it.',
+        manual: 'data/raw/mpcorb/README.md',
+      },
+      {
         scripts: ['build-textures', 'build-surface-tiles', 'build-site-ground-heights'],
         does: 'Resize the maps of planets and moons to the three data sizes, cut Earth and Mars into tiles, and read the height of the ground under each rover and under Søndermarken.',
         manual: DATA,
       },
       {
         scripts: ['fetch-cloud-inputs'],
-        does: 'Downloads the twelve Blue Marble months of 2004, about 360 MB, which the cloud bake matches its map to. It runs fetch-textures with --bmng-months and needs -- --confirm.',
+        does: 'Downloads the cloud bake’s fixed inputs, about 400 MB: the static cloud map it matches its map to and the twelve Blue Marble months of 2004 it cuts the ice mask from. It runs fetch-textures with --cloud-inputs and needs -- --confirm.',
         manual: 'data/raw/clouds/README.md',
       },
       {
         scripts: ['bake-clouds'],
         does: 'Bakes one day’s global cloud map from weather-satellite imagery with tools/cloud-bake-rs. Options: --date, --out and --offline.',
         manual: 'tools/cloud-bake-rs/README.md',
+      },
+      {
+        scripts: ['build-live-clouds'],
+        does: 'Bakes yesterday’s cloud map, writes it at the three data sizes under a dated folder and points the clouds pointer at it. The Live datasets workflow runs it every day and uploads the files.',
+        manual: DATA,
       },
       {
         scripts: ['import-mesh', 'prebake-mesh', 'build-meshes'],

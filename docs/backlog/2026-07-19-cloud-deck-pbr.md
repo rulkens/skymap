@@ -1,4 +1,4 @@
-# Cloud deck: thickness channel, live coverage, multiple-scattering shading
+# Cloud deck: thickness channel, multiple-scattering shading
 
 The Earth cloud shell is the last ad-hoc layer in an otherwise physically-based
 stack: the surface is Cook-Torrance + Oren-Nayar, the atmosphere is
@@ -10,49 +10,32 @@ angles, thick clouds self-shadow, and edges glow (forward-scatter silver lining)
 
 This note supersedes item 6 of `2026-07-19-photoreal-earth-followups.md`.
 
-## Two separable features, currently bundled
-
-"PBR clouds" is really two independent efforts that got mentally merged. They do
-not depend on each other and either can ship alone:
-
-- **Live weather data** — the *what*: swap the static composite for today's
-  clouds.
-- **Multiple-scattering shading** — the *how it's lit*: a phase term (+ optional
-  thickness channel).
+Live coverage, once bundled with this item, shipped separately: the web app loads the
+previous day's map from the nightly cloud bake (`tools/cloud-bake-rs`,
+`build-live-clouds`), falling back to the static composite.
 
 ## Current pipeline — one channel of information
 
-- **Source:** NASA Blue Marble composite `cloud_combined_8192.tif` (8192×4096
-  equirect, white-cloud-on-black, NO alpha, public domain).
-  `rawDataRegistry.ts` key `textures.earthClouds`. Static — a fixed composite,
-  not live.
-- **Build:** `writeCloudTier` derives `alpha = Rec.709 luminance of RGB` (white
-  cloud → opaque, black sky → clear).
-- **Runtime:** samples `rgba8unorm-srgb` → RGB is colour, A is coverage→opacity
-  (× `CLOUD_SHELL_PARAMS.opacity`).
+- **Source:** the daily cloud bake, or the static NASA Blue Marble composite
+  `cloud_combined_8192.tif` (`textures.earthClouds`) as the fallback; both are
+  grey, white cloud on black.
+- **Build and runtime:** one grey channel (`writeCloudTier`, uploaded `r8unorm`);
+  the shader derives both opacity and colour from that one byte.
 
-Because alpha is literally the luminance of RGB, RGB and A carry the SAME signal
-— effectively **one degree of freedom per texel** ("how bright/white the cloud
-is"). There is **no independent optical-thickness channel**, and no independent
-information in the current source to build one from. A real thickness channel
-means decoupling A from RGB: stop deriving A from luminance, supply it from a
-separate raster.
+So there is **one degree of freedom per texel** ("how bright/white the cloud
+is"): **no independent optical-thickness channel**, and no independent
+information in either source to build one from. A real thickness channel means
+a second channel from a separate raster.
 
-## Fetchability — three tiers
+## Fetchability — two tiers
 
-1. **Live coverage (cheap, ~no pipeline change).** NASA GIBS serves near-real-time
-   global cloud imagery from MODIS/VIIRS (corrected reflectance / cloud fraction),
-   updated daily, as equirect/WMTS — the same white-on-dark shape we already
-   consume. "Today's clouds" is a **source swap + fetch cadence**, dropping
-   straight into `writeCloudTier`'s luminance→alpha path. Still gives coverage,
-   NOT optical depth.
-2. **Real optical thickness (the actual thickness channel).** MODIS MOD06/MYD06
+1. **Real optical thickness (the actual thickness channel).** MODIS MOD06/MYD06
    Cloud Optical Thickness (retrieved τ) + VIIRS equivalents, via NASA
    LAADS/Worldview/GIBS. A genuine measured quantity for a second packed channel.
    Cost is not the shader — it's the data layer: reprojection to equirect, polar
    gaps, swath-edge seams, and night-side retrieval holes (visible-band retrieval
    fails in darkness). This is the load-bearing work.
-3. **Thickness proxy (no new data).** The existing luminance-alpha already
+2. **Thickness proxy (no new data).** The existing grey coverage already
    correlates loosely with thickness; feed it into a powder/HG phase term as a
    crude stand-in with ZERO pipeline change. Not physically calibrated τ, but buys
    most of the visual payoff (silver-lining glow, stays-bright-at-high-sun-angle).
@@ -79,10 +62,8 @@ full volumetric behaviour would need a different representation entirely.
 
 ## Suggested order
 
-Start with tier 3 (proxy phase term — free, isolated to `fragment.wesl`) and see
-if it looks wrong before investing in a real τ channel (tier 2) or live coverage
-(tier 1). Live coverage is independently valuable and pipeline-cheap, so it's a
-reasonable standalone pickup regardless.
+Start with tier 2 (proxy phase term — free, isolated to `fragment.wesl`) and see
+if it looks wrong before investing in a real τ channel (tier 1).
 
 ## Night-side visibility (user-observed 2026-07-19)
 

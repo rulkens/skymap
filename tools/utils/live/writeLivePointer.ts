@@ -9,17 +9,19 @@ import { writeFileAtomic } from '../io/writeFileAtomic';
 
 /**
  * The one pointer writer. Call it only after every named file is in place, so a bad build never
- * moves the pointer; `builtAt` must be the Date the files' folder was stamped with.
+ * moves the pointer; `builtAt` must be the Date the files' folder was stamped with. `date` is
+ * the day the data describes (YYYY-MM-DD), which lags the build for a bake of yesterday.
  */
 export function writeLivePointer(
   root: string,
   id: string,
+  date: string,
   builtAt: Date,
   names: readonly string[],
 ): void {
   const stamp = liveFolderStamp(builtAt);
   const pointer: LivePointer = {
-    date: builtAt.toISOString().slice(0, 10),
+    date,
     builtAt: builtAt.toISOString(),
     files: Object.fromEntries(names.map((name) => [name, liveFilePath(id, stamp, name)])),
   };

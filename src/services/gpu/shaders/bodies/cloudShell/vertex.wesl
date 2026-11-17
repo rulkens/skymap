@@ -13,13 +13,13 @@
 //
 // '@group(0) @binding(0)' holds 'CloudShellUniforms' (80 bytes: the mat4x4<f32>
 // MVP, the body-local sun direction, and the cloud opacity), visible in BOTH
-// stages: the vertex reads only 'u.mvp', the fragment reads the sun direction and
+// stages: the vertex reads only 'uniforms.mvp', the fragment reads the sun direction and
 // opacity. The fragment stage also binds the sampler at binding 1 and the cloud
 // texture at binding 2 (declared in the fragment module).
 //
 // As with the other sphere bodies, the '@group/@binding' declaration is
-// module-local (WESL has no global state), so we declare 'u' here and pass
-// 'u.mvp' into the imported 'clip_from_local' helper -- the 'pass cam, don't
+// module-local (WESL has no global state), so we declare 'uniforms' here and pass
+// 'uniforms.mvp' into the imported 'clip_from_local' helper -- the 'pass cam, don't
 // capture' idiom.
 //
 // ## Attribute layout
@@ -35,7 +35,7 @@ import package::bodies::cloudShell::io::VSOut;
 import package::lib::sphere::CloudShellUniforms;
 import package::lib::sphere::clip_from_local;
 
-@group(0) @binding(0) var<uniform> u: CloudShellUniforms;
+@group(0) @binding(0) var<uniform> uniforms: CloudShellUniforms;
 
 @vertex
 fn vs(
@@ -43,7 +43,7 @@ fn vs(
   @location(1) uv: vec2<f32>,
 ) -> VSOut {
   var out: VSOut;
-  out.clip = clip_from_local(u.mvp, position);
+  out.clip = clip_from_local(uniforms.mvp, position);
   out.uv = uv;
   // Unit-sphere local position IS the outward normal; the fragment renormalizes.
   out.normalLocal = position;

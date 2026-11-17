@@ -24,62 +24,62 @@ import package::mcpm::rng::rngNextFloat;
 
 @compute @workgroup_size(DECAY_WG_X, DECAY_WG_Y, DECAY_WG_Z)
 fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
-  let p = vec3<i32>(gid);
+  let voxel = vec3<i32>(gid);
 
   // The fork accumulates a vec2 whose second lane is structurally dead: the bound D3D11
   // format was single-channel R16_FLOAT, so it never carried anything but 0.
-  var v: f32 = 0.0;
-  var w: f32 = 0.0;
+  var blurredDeposit: f32 = 0.0;
+  var weightSum: f32 = 0.0;
 
-  for (var dx: i32 = -1; dx <= 1; dx = dx + 1) {
-    for (var dy: i32 = -1; dy <= 1; dy = dy + 1) {
-      for (var dz: i32 = -1; dz <= 1; dz = dz + 1) {
+  for (var offsetX: i32 = -1; offsetX <= 1; offsetX = offsetX + 1) {
+    for (var offsetY: i32 = -1; offsetY <= 1; offsetY = offsetY + 1) {
+      for (var offsetZ: i32 = -1; offsetZ <= 1; offsetZ = offsetZ + 1) {
         // HLSL:69's all(int3) means 'every component non-zero' and its '== 0' inverts
         // that, so 19 taps (centre + faces + EDGES) take the flat arm and only the 8
         // corners fall off. The falloff stays unhoisted: at the centre tap it would be
         // 1.0/sqrt(0.0), and both arms reach 1.0 without evaluating it, which is why the
         // buggy kernel never produced NaNs.
         var weight: f32;
-        let hlslAllNonzero = all(vec3<bool>(dx != 0, dy != 0, dz != 0));
+        let hlslAllNonzero = all(vec3<bool>(offsetX != 0, offsetY != 0, offsetZ != 0));
         if (QUIRK_DECAY_WEIGHT_ALL_INT3) {
           if (!hlslAllNonzero) {
             weight = 1.0;
           } else {
-            weight = 1.0 / sqrt(f32(abs(dx) + abs(dy) + abs(dz)));
+            weight = 1.0 / sqrt(f32(abs(offsetX) + abs(offsetY) + abs(offsetZ)));
           }
         } else {
-          if (dx == 0 && dy == 0 && dz == 0) {
+          if (offsetX == 0 && offsetY == 0 && offsetZ == 0) {
             weight = 1.0;
           } else {
-            weight = 1.0 / sqrt(f32(abs(dx) + abs(dy) + abs(dz)));
+            weight = 1.0 / sqrt(f32(abs(offsetX) + abs(offsetY) + abs(offsetZ)));
           }
         }
 
-        // Sign-of-dividend '%': at p == 0 a dx == -1 tap stays -1 instead of wrapping to
+        // Sign-of-dividend '%': at voxel == 0 an offsetX == -1 tap stays -1 instead of wrapping to
         // the far face, and loadDeposit reads it as 0. Mass leaks out of the x/y/z = 0
-        // faces, and w still sums the full 23.6188021, so those faces darken on top.
-        var tap = p + vec3<i32>(dx, dy, dz);
+        // faces, and weightSum still sums the full 23.6188021, so those faces darken on top.
+        var tap = voxel + vec3<i32>(offsetX, offsetY, offsetZ);
         tap.x = tap.x % sim.worldWidth;
         tap.y = tap.y % sim.worldHeight;
         tap.z = tap.z % sim.worldDepth;
 
-        v = v + weight * loadDeposit(tap);
-        w = w + weight;
+        blurredDeposit = blurredDeposit + weight * loadDeposit(tap);
+        weightSum = weightSum + weight;
       }
     }
   }
-  v = v / w;
+  blurredDeposit = blurredDeposit / weightSum;
 
-  v = v * sim.decayFactor;
-  storeDepositOut(p, v);
+  blurredDeposit = blurredDeposit * sim.decayFactor;
+  storeDepositOut(voxel, blurredDeposit);
 
-  // Both seeds are deliberately terrible and stay that way: 113.0 * v truncates to 0
+  // Both seeds are deliberately terrible and stay that way: 113.0 * blurredDeposit truncates to 0
   // across all of empty space, and the coordinate product is 0 on the whole x/y/z = 0
   // planes and aliases badly elsewhere, so the dither is banded by deposit magnitude
   // rather than white — the published cube was fitted with that noise. The product stays
   // in u32 for the fork's wraparound.
   var rng: Rng;
-  rngSetSeed(&rng, wangHash(u32(113.0 * v)), wangHash(gid.x * gid.y * gid.z));
+  rngSetSeed(&rng, wangHash(u32(113.0 * blurredDeposit)), wangHash(gid.x * gid.y * gid.z));
 
   var traceDecay: f32;
   if (QUIRK_DITHERED_TRACE_DECAY) {
@@ -88,5 +88,5 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
     // The fork's own commented-out constant (HLSL:87), which is the dither's mean, not 1.0.
     traceDecay = 0.99;
   }
-  scaleTrace(p, traceDecay);
+  scaleTrace(voxel, traceDecay);
 }

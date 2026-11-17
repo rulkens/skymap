@@ -10,14 +10,14 @@ import package::zoneOfAvoidance::io::VsOut;
 import package::zoneOfAvoidance::band::bandDensityMask;
 import package::lib::fadeUniforms::applyFade;
 
-@group(0) @binding(0) var<uniform> u: Uniforms;
+@group(0) @binding(0) var<uniform> uniforms: Uniforms;
 
 @fragment
 fn fs(input: VsOut) -> @location(0) vec4<f32> {
-  let densityMask = bandDensityMask(u, input.ndc, input.clipPos.xy);
-  let alpha = applyFade(u.intensity * densityMask, u.fadeAlpha);
+  let densityMask = bandDensityMask(uniforms, input.ndc, input.clipPos.xy);
+  let alpha = applyFade(uniforms.intensity * densityMask, uniforms.fadeAlpha);
   if (alpha <= 0.0) {
     discard; // pure additive target — saves the blend
   }
-  return vec4<f32>(u.color * alpha, alpha);
+  return vec4<f32>(uniforms.color * alpha, alpha);
 }

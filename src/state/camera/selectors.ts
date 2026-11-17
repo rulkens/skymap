@@ -7,6 +7,7 @@
 import { cameraRoute } from '../../store/constants';
 import { isWorldArm } from '../../services/engine/camera/arms/world/isWorldArm';
 import { selectGestureHeld } from '../input/selectors';
+import type { ClipOwner } from '../../@types/animation/ClipOwner';
 import type { RootState } from '../../store/types';
 import type { CameraIntentState } from '../../@types/camera/orbitCamera/CameraIntentState';
 import type { CameraTuning } from '../../@types/camera/orbitCamera/CameraTuning';
@@ -49,3 +50,7 @@ export const selectCameraActive = (state: RootState): boolean => {
 
 export const selectClipActive = (state: RootState): boolean =>
   selectCameraIntent(state).clip !== null;
+
+/** Who started the playing clip; null with none. */
+export const selectClipOwner = (state: RootState): ClipOwner | null =>
+  selectCameraIntent(state).clip?.by ?? null;
