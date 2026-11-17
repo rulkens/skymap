@@ -127,7 +127,7 @@ export const LABEL_STYLES = {
   constellation: {
     ...TEXT,
     color: [0.7, 0.8, 0.92, 0.84],
-    textHeight: { mpc: 3e-5 },
+    textHeight: { mpc: 2e-6 },
     placement: 'centre',
     priority: 5,
   },
