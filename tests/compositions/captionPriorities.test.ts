@@ -9,7 +9,6 @@ import { describe, expect, it } from 'vitest';
 import { BLACK_HOLE_CAPTION_PRIORITY } from '../../src/layers/blackHoles/markers/data/blackHoleCaptionPriority';
 import { BODY_CAPTION_ROWS } from '../../src/layers/body/labels/data/bodyCaptionRows';
 import { LABEL_STYLES } from '../../src/data/labels/labelStyles';
-import { LIGHT_TIME_CAPTION_PRIORITY } from '../../src/layers/lightTime/spheres/data/lightTimeCaptionPriority';
 import { MESH_BODY_CAPTION_PRIORITY } from '../../src/layers/missions/craft/data/meshBodyCaptionPriority';
 import { STAR_CAPTION_STYLES } from '../../src/layers/starCatalog/captions/present/starCaptionStyles';
 
@@ -30,6 +29,6 @@ describe('caption priorities across Layers', () => {
   });
 
   it('ranks the light-time captions with the craft captions', () => {
-    expect(LIGHT_TIME_CAPTION_PRIORITY).toBe(MESH_BODY_CAPTION_PRIORITY);
+    expect(LABEL_STYLES.lightTime.priority).toBe(MESH_BODY_CAPTION_PRIORITY);
   });
 });
