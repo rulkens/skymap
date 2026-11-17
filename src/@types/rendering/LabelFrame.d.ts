@@ -31,6 +31,8 @@ export type LabelFrame = {
   readonly target: Float32Array;
   /** 1 = the label takes clicks this frame. */
   readonly clickable: Uint8Array;
+  /** 1 = its subject is hovered or selected, so it keeps its label (spec D6.4). */
+  readonly named: Uint8Array;
   // declutterRecords
   readonly rank: Float64Array;
   /** Record indices by rank, kept from the last frame so the sort starts nearly sorted. */

@@ -1,7 +1,8 @@
 /**
  * declutterRecords — greedy declutter in rank order: a label survives unless its padded ink
  * rect intersects one already kept. Rank is the record's priority band plus its subject's
- * apparent diameter, clamped below the band scale, so size only orders labels within a band.
+ * apparent diameter, clamped below the band scale, so size only orders labels within a band;
+ * a hovered or selected label outranks every band (spec D6.4).
  * A label that shows nothing (target 0, no ink) or whose anchor is off the image survives and
  * never blocks. The order is kept between frames, so the insertion sort runs over a nearly sorted
  * list; ties keep record order.
@@ -20,9 +21,10 @@ export const declutterRecords: LabelStage = (records, frame, { director, project
     frame.orderCount = n;
   }
   for (let i = 0; i < n; i++) {
-    rank[i] =
-      f32[i * LABEL_RECORD_WORDS + W.rank]! +
-      Math.min(frame.diameterPx[i]!, CAPTION_PRIORITY_SCALE - 1);
+    rank[i] = frame.named[i]
+      ? Infinity
+      : f32[i * LABEL_RECORD_WORDS + W.rank]! +
+        Math.min(frame.diameterPx[i]!, CAPTION_PRIORITY_SCALE - 1);
   }
   for (let j = 1; j < n; j++) {
     const i = order[j]!;

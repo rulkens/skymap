@@ -66,6 +66,36 @@ describe('targetAlpha', () => {
     expect(Array.from(frame.target.subarray(0, 3))).toEqual([1, 1, 0]);
   });
 
+  it('a hovered or selected subject keeps its label under another focus', () => {
+    // Subject 2 is focused; 0 is hovered and 1 selected, under focused-only and a full recession.
+    const labels = [at(0, 0.1, 0), at(0.2, 0.1, 1), at(-0.2, 0.1, 2), at(0.4, 0.1, 3)];
+    const named = {
+      hoveredPick: packPickWord(1, 0),
+      selectedPick: packPickWord(1, 1),
+      focusPickId: packPickWord(1, 2),
+    };
+    const onlyFocused = targets(labels, { ...named, focusedOnly: true });
+    expect(Array.from(onlyFocused.target.subarray(0, 4))).toEqual([1, 1, 1, 0]);
+    const receded = targets(labels, { ...named, recessions: [0] });
+    expect(Array.from(receded.target.subarray(0, 4))).toEqual([1, 1, 1, 0]);
+  });
+
+  it('a hovered subject behind a body is still hidden', () => {
+    const body = {
+      positionMpc: [0, 0, -0.5] as [number, number, number],
+      radiusM: 0.05 / SCALE_UNITS.M_TO_MPC,
+      outerRadiusM: 0.05 / SCALE_UNITS.M_TO_MPC,
+    };
+    const frame = targets([at(0, 0.1, 0)], { occluders: [body], hoveredPick: packPickWord(1, 0) });
+    expect(frame.target[0]).toBe(0);
+  });
+
+  it('an above label whose subject is behind the eye is not visible', () => {
+    // 1 Mpc behind the eye with a 0.9 Mpc radius: the 3-radii lift turns the anchor forward.
+    const behind: LabelDescription = { text: 'A', position: [0, 0.2, 1], subjectRadiusMpc: 0.9 };
+    expect(targets([behind], {}, 'famousGalaxy').visible[0]).toBe(0);
+  });
+
   it("the focused subject's label stays clickable; a dimmed subject's does not", () => {
     // Both subjects lie far outside the focus sphere, so the focus dims them.
     const frame = targets([at(0, 0.1, 0), at(0.2, 0.1, 1)], {

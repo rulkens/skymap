@@ -2,11 +2,11 @@
  * targetAlpha — the alpha each label heads for, from the rules every label obeys (spec D6),
  * written once here instead of per Layer. Focus, hover and select match by packed pick word.
  *  - no position, behind the eye, or nearer than the director's `nearHideMpc`: 0
- *  - "focused only": 0 unless it names the focused subject
+ *  - "focused only": 0 unless it names the focused, hovered or selected subject
  *  - the toggle's handed value (per item by `fadeKey`) × the record's reveal band by distance
  *  - the style's `appear` band over apparent diameter, unless the subject is hovered or selected
  *  - fades out as its subject fills the view (`overflowFade`)
- *  - the toggle's focus recession, unless it names the focused subject
+ *  - the toggle's focus recession, unless it names the focused, hovered or selected subject
  *  - on the near slab, 0 while a body stands between the eye and the subject
  * A label is clickable while it shows and its subject is the focus or inside the focus sphere.
  */
@@ -49,11 +49,13 @@ export const targetAlpha: LabelStage = (records, frame, inputs) => {
   for (let i = 0; i < records.count; i++) {
     frame.target[i] = 0;
     frame.clickable[i] = 0;
-    if (!frame.visible[i] || frame.depthMpc[i]! < nearHideMpc) continue;
     const base = i * LABEL_RECORD_WORDS;
     const pick = u32[base + W.pick]!;
+    const named = pick !== 0 && (pick === hoveredPick || pick === selectedPick);
+    frame.named[i] = named ? 1 : 0;
+    if (!frame.visible[i] || frame.depthMpc[i]! < nearHideMpc) continue;
     const focused = pick !== 0 && pick === focusPickId;
-    if (inputs.focusedOnly && !focused) continue;
+    if (inputs.focusedOnly && !focused && !named) continue;
 
     const source = records.source[i]!;
     const fade = inputs.toggleFades[source]!;
@@ -64,13 +66,12 @@ export const targetAlpha: LabelStage = (records, frame, inputs) => {
     const diameterPx = frame.diameterPx[i]!;
     const style =
       LABEL_STYLES[LABEL_STYLE_IDS[u32[base + W.style]! & LABEL_RECORD_FLAGS.styleMask]!];
-    const named = pick !== 0 && (pick === hoveredPick || pick === selectedPick);
     if ('appear' in style && !named) {
       const { fromPx, bandPx } = style.appear;
       alpha *= smoothstep(fromPx, fromPx + bandPx, diameterPx);
     }
     if (f32[base + W.radiusMpc]! > 0) alpha *= overflowFade(diameterPx, shortSidePx);
-    if (!focused) alpha *= inputs.recessions[source]!;
+    if (!focused && !named) alpha *= inputs.recessions[source]!;
     if (!(alpha > 0)) continue;
 
     for (let k = 0; k < 3; k++) subject[k] = f32[base + W.atHi + k]! + f32[base + W.atLo + k]!;

@@ -45,9 +45,11 @@ export const projectRecords: LabelStage = (records, frame, { projection: p }) =>
     const radius = f32[base + W.radiusMpc]!;
     const style =
       LABEL_STYLES[LABEL_STYLE_IDS[u32[base + W.style]! & LABEL_RECORD_FLAGS.styleMask]!];
-    if (style.placement === 'above' && 'lift' in style)
+    // An 'above' label draws only while its subject is in front too, as the shader requires.
+    if (style.placement === 'above' && 'lift' in style) {
       liftedAnchor(view, radius, style.lift, p, out);
-    else projectLabel(view, p, out);
+      out.visible &&= view[2] > 0;
+    } else projectLabel(view, p, out);
     frame.distanceMpc[i] = distance;
     frame.depthMpc[i] = view[2];
     frame.diameterPx[i] = distance > 0 ? ((2 * radius) / distance) * p.focalPx : 0;

@@ -20,6 +20,7 @@ export type LabelFrameInputs = {
   readonly toggleFades: readonly (number | Readonly<Record<string, number>>)[];
   /** The focus recession of the toggle's entry at this blend (1 = none); the focused subject is exempt. */
   readonly recessions: readonly number[];
+  /** `selection.focus`'s pick word, whatever its kind (a body focus does not recede the scene). */
   readonly focusPickId: number | null;
   readonly hoveredPick: number | null;
   readonly selectedPick: number | null;

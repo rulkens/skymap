@@ -5,6 +5,7 @@ import { resolveAnchors } from '../../../../src/services/engine/labels/resolveAn
 import { projectRecords } from '../../../../src/services/engine/labels/projectRecords';
 import { targetAlpha } from '../../../../src/services/engine/labels/targetAlpha';
 import { declutterRecords } from '../../../../src/services/engine/labels/declutterRecords';
+import { packPickWord } from '../../../../src/utils/labels/packPickWord';
 import { stageInputs, stageRecords } from '../../../helpers/labels/labelStageFixture';
 
 describe('declutterRecords', () => {
@@ -23,5 +24,21 @@ describe('declutterRecords', () => {
       stage(records, frame, inputs);
     }
     expect(Array.from(frame.survivor.subarray(0, 3))).toEqual([0, 0, 1]);
+  });
+
+  it('a hovered or selected label wins over a higher band', () => {
+    const label = (priority: number, index: number): LabelDescription => ({
+      text: 'AAA',
+      position: [0, 0, -1],
+      priority,
+      pick: { code: 1, index },
+    });
+    const records = stageRecords([label(1, 0), label(0, 1)], 'constellation');
+    const frame = createLabelFrame(records.capacity);
+    const inputs = stageInputs({ hoveredPick: packPickWord(1, 1) });
+    for (const stage of [resolveAnchors, projectRecords, targetAlpha, declutterRecords]) {
+      stage(records, frame, inputs);
+    }
+    expect(Array.from(frame.survivor.subarray(0, 2))).toEqual([0, 1]);
   });
 });

@@ -54,6 +54,8 @@ export function runLabelDirector(state: EngineState, ctx: FrameView, slab: numbe
   if (off && director.idle) return false;
 
   const projection = outputProjectionOf(ctx, VIEW_RIGS[state.viewRig]);
+  // The focused selection itself: the receding-focus snapshot word is null for a body focus.
+  const focusPickId = encodeSelectionPick(state.selectionKindRows, state.selection.focus);
   const hoveredPick = encodeSelectionPick(state.selectionKindRows, state.selection.hover);
   const selectedPick = encodeSelectionPick(state.selectionKindRows, state.selection.select);
   const inputs = {
@@ -69,7 +71,7 @@ export function runLabelDirector(state: EngineState, ctx: FrameView, slab: numbe
         ctx.snapshot,
       ),
     ),
-    focusPickId: ctx.snapshot.focusPickId,
+    focusPickId,
     hoveredPick,
     selectedPick,
     focusedOnly: state.settings.labels.focusedOnly,

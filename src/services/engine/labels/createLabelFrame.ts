@@ -18,6 +18,7 @@ export function createLabelFrame(capacity: number): LabelFrame {
     rect: new Float32Array(capacity * 4),
     target: new Float32Array(capacity),
     clickable: new Uint8Array(capacity),
+    named: new Uint8Array(capacity),
     rank: new Float64Array(capacity),
     order: new Uint32Array(capacity),
     orderCount: 0,
