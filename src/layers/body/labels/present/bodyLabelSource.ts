@@ -9,7 +9,7 @@ import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { BodyRuntime } from '../../@types/BodyRuntime';
 import { labelSource } from '../../../../utils/labels/labelSource';
 import { NEAR0 } from '../../../../services/engine/frame/slabs';
-import { SCALE_UNITS } from '../../../../data/scaleUnits';
+import { footprintRadiusMpc } from '../../../../utils/selection/footprintRadiusMpc';
 import { SCENE_EARTH } from '../../../../data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../../data/bodies/scenePlanets';
 import { compressBrightness } from '../../../../utils/color/compressBrightness';
@@ -47,7 +47,7 @@ export function bodyLabelSource(runtime: Pick<BodyRuntime, 'pickCodes'>) {
     describe: ({ body, tint, row }) => ({
       text: body.label,
       position: { anchorId: body.id },
-      subjectRadiusMpc: bodyFootprintRadiusM(body) * SCALE_UNITS.M_TO_MPC,
+      subjectRadiusMpc: footprintRadiusMpc({ footprintRadiusM: bodyFootprintRadiusM(body) }),
       color: [tint[0], tint[1], tint[2], 1],
       priority: row.priority,
       pick: sceneBodyPick(body.id, codeOf) ?? undefined,

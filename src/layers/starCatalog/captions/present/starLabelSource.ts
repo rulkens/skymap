@@ -8,7 +8,7 @@ import type { CaptionSourceRow } from '../@types/CaptionSourceRow';
 import type { StarCatalogRuntime } from '../../@types/StarCatalogRuntime';
 import { labelSource } from '../../../../utils/labels/labelSource';
 import { NEAR0 } from '../../../../services/engine/frame/slabs';
-import { SCALE_UNITS } from '../../../../data/scaleUnits';
+import { footprintRadiusMpc } from '../../../../utils/selection/footprintRadiusMpc';
 import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../seededStars/data/seededStarCatalogsBySource';
 import { bodyFootprintRadiusM } from '../../../../utils/scene/bodyFootprintRadiusM';
 import { isKeyOf } from '../../../../utils/object/isKeyOf';
@@ -35,7 +35,7 @@ export function starLabelSource(runtime: Pick<StarCatalogRuntime, 'pickCodes'>) 
     describe: ({ row, star, seedIndex }) => ({
       text: star.label,
       position: { anchorId: star.id },
-      subjectRadiusMpc: bodyFootprintRadiusM(star) * SCALE_UNITS.M_TO_MPC,
+      subjectRadiusMpc: footprintRadiusMpc({ footprintRadiusM: bodyFootprintRadiusM(star) }),
       color: [star.color[0], star.color[1], star.color[2], 1],
       priority: row.priority,
       pick: { code: runtime.pickCodes.pickCodeOf(row.source), index: seedIndex },

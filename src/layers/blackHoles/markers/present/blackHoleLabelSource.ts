@@ -7,7 +7,7 @@ import type { BlackHolesRuntime } from '../../@types/BlackHolesRuntime';
 import type { Vec4 } from '../../../../@types/math/Vec4';
 import { labelSource } from '../../../../utils/labels/labelSource';
 import { NEAR0 } from '../../../../services/engine/frame/slabs';
-import { SCALE_UNITS } from '../../../../data/scaleUnits';
+import { footprintRadiusMpc } from '../../../../utils/selection/footprintRadiusMpc';
 import { schwarzschildRadiusM } from '../../../../utils/physics/schwarzschildRadiusM';
 import { findByIdOrThrow } from '../../../../utils/object/findByIdOrThrow';
 import { BLACK_HOLES } from '../data/blackHoles';
@@ -30,7 +30,9 @@ export function blackHoleLabelSource(runtime: Pick<BlackHolesRuntime, 'pickCode'
     describe: (row, i) => ({
       text: findByIdOrThrow(BLACK_HOLE_SOURCE_ROWS, row.id, 'blackHoleLabelSource').label,
       position: { anchorId: blackHoleAnchorId(row) },
-      subjectRadiusMpc: schwarzschildRadiusM(row.massSolar) * SCALE_UNITS.M_TO_MPC,
+      subjectRadiusMpc: footprintRadiusMpc({
+        footprintRadiusM: schwarzschildRadiusM(row.massSolar),
+      }),
       color: [...BLACK_HOLE_CAPTION_TINT],
       priority: BLACK_HOLE_CAPTION_PRIORITY,
       pick: { code: runtime.pickCode, index: i },
