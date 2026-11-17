@@ -26,7 +26,6 @@ export const INLINE_TYPE_FILES: ReadonlySet<string> = new Set([
   'src/layers/galaxyCatalog/disks/procedural/render/proceduralDiskRenderer.ts',
   'src/layers/galaxyCatalog/disks/textured/render/texturedDiskRenderer.ts',
   'src/layers/galaxyCatalog/disks/procedural/subsystems/proceduralDiskSubsystem.ts',
-  'src/layers/milkyWay/card/present/milkyWayLabelStyle.ts',
   'src/layers/milkyWay/cloud/render/milkyWayCloudRenderer.ts',
   'src/layers/starCatalog/card/utils/deriveStarProperties.ts',
   'src/layers/starCatalog/resolvedStars/passes/fieldStarSpherePass.ts',

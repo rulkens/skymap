@@ -9,7 +9,6 @@
  */
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';
-import { COSMO } from '../../services/engine/frame/slabs';
 import { milkyWayLayerSettings } from './state/slices';
 import { milkyWayVisibility } from './visibility';
 import { MILKY_WAY_SOURCE_ROWS } from './sources/milkyWaySourceRows';
@@ -23,7 +22,7 @@ import { milkyWayFieldPass } from './field/passes/milkyWayFieldPass';
 import { milkyWayAggregatePass } from './cloud/passes/milkyWayAggregatePass';
 import { milkyWayUpsamplePass } from './cloud/passes/milkyWayUpsamplePass';
 import { milkyWayPass } from './cloud/passes/milkyWayPass';
-import { produceMilkyWayLabel } from './card/present/produceMilkyWayLabel';
+import { milkyWayLabelSource } from './card/present/milkyWayLabelSource';
 import { milkyWaySelectionRow } from './selection/milkyWaySelectionRow';
 import { milkyWaySelectionKinds } from './selection/kinds';
 import { milkyWaySearch } from './card/present/milkyWaySearch';
@@ -51,14 +50,7 @@ export const milkyWayLayer = defineLayer({
     milkyWayPass(runtime),
   ],
   guides: (runtime) => ({
-    screenLabels: [
-      {
-        slab: COSMO,
-        id: 'milkyWayLabel',
-        label: 'milkyWay',
-        produceLabels: produceMilkyWayLabel(runtime.pickCode),
-      },
-    ],
+    screenLabels: [milkyWayLabelSource(runtime.pickCode)],
   }),
   selection: {
     kinds: milkyWaySelectionKinds,
