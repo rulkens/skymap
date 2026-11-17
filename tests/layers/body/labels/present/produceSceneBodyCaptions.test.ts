@@ -11,12 +11,7 @@ import { describe, it, expect } from 'vitest';
 
 import { produceSceneBodyCaptions as produceSceneBodyCaptionsFor } from '../../../../../src/layers/body/labels/present/produceSceneBodyCaptions';
 import { bodyCodeOf } from '../../../../../src/layers/body/selection/present/bodyCodeOf';
-import {
-  blackHolePickCode,
-  bodyPickCodes,
-  missionsPickCode,
-} from '../../../../support/layerPickCodes';
-import { produceBlackHoleCaptions } from '../../../../../src/layers/blackHoles/markers/present/produceBlackHoleCaptions';
+import { bodyPickCodes, missionsPickCode } from '../../../../support/layerPickCodes';
 import { sceneBodyLabels } from '../../../../../src/layers/body/labels/present/sceneBodyLabels';
 import { produceMissionCaptions as produceMissionCaptionsFor } from '../../../../../src/layers/missions/craft/present/produceMissionCaptions';
 import { meshBodyCaption } from '../../../../../src/layers/missions/craft/utils/meshBodyCaption';
@@ -24,7 +19,6 @@ import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
 import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
 import { SCENE_MESH_BODIES } from '../../../../../src/data/bodies/sceneMeshBodies';
-import { SGR_A_STAR_ENTRY } from '../../../../../src/layers/blackHoles/sources/sgrAStar';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 
 import type { FocusUniformsValue } from '../../../../../src/@types/rendering/FocusUniformsValue';
@@ -51,7 +45,6 @@ const PLANET_LABEL_IDS: ReadonlySet<string> = new Set(
 );
 const SMALL_BODY_LABEL_IDS = ['sceneBody-vesta', 'sceneBody-ceres', 'sceneBody-bennu'];
 const MARS_LABEL_ID = 'sceneBody-mars';
-const SGR_A_STAR_LABEL_ID = `sceneBody-${SGR_A_STAR_ENTRY.id}`;
 const PETUNIAS_LABEL_ID = 'sceneBody-petunias';
 
 function worldPosOf(id: string): Vec3 {
@@ -127,13 +120,6 @@ function captionsAt(ctx: FrameView): readonly Label2D[] {
   ];
 }
 
-function sgrAStarAlpha(state: EngineState, ctx: FrameView): number | undefined {
-  return fadeAlphaOf(
-    produceBlackHoleCaptions(blackHolePickCode())(state, ctx, { [SGR_A_STAR_ENTRY.id]: 1 }).labels,
-    SGR_A_STAR_LABEL_ID,
-  );
-}
-
 describe('produceSceneBodyCaptions', () => {
   it('mutes only the planet captions when the planet row’s label is off', () => {
     const camPos = worldPosOf(EARTH_LABEL_ID);
@@ -204,9 +190,7 @@ describe('produceSceneBodyCaptions', () => {
     expect(fadeAlphaOf(captionsAt(makeCtx(camAt(100))), PETUNIAS_LABEL_ID)).toBe(1);
   });
 
-  it('holds a seeded reveal caption dark until the approach, leaving an unbanded one lit', () => {
-    // Sgr A* is the control from the SAME poses, so only the reveal band explains a difference.
-    // Earth is the wrong control: this close to the pot it overflows Earth's own caption.
+  it('holds a seeded reveal caption dark until the approach', () => {
     const pot = BASE.find((l) => l.id === PETUNIAS_LABEL_ID)!;
     const revealMpc =
       SCENE_MESH_BODIES.find((b) => b.id === 'petunias')!.captionRevealM! * SCALE_UNITS.M_TO_MPC;
@@ -216,8 +200,6 @@ describe('produceSceneBodyCaptions', () => {
 
     expect(fadeAlphaOf(labelsAt(3 * revealMpc), PETUNIAS_LABEL_ID)).toBe(0);
     expect(fadeAlphaOf(labelsAt(revealMpc), PETUNIAS_LABEL_ID)).toBe(1);
-    expect(sgrAStarAlpha(makeState(), ctxAt(3 * revealMpc))).toBe(1);
-    expect(sgrAStarAlpha(makeState(), ctxAt(revealMpc))).toBe(1);
   });
 
   it('emits a zero-target caption rather than omitting it', () => {

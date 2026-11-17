@@ -2,7 +2,7 @@
  * bodyCaption — the shared `ForegroundCaption` builder for a seeded scene
  * subject: position, size, tint, priority and pick id are the caller's own; font,
  * outline, size clamps and alignment are authored once here. `sceneBodyLabels`,
- * `produceStarCaptions` and `produceBlackHoleCaptions` call this rather
+ * and `produceStarCaptions` call this rather
  * than growing their own copy, so a caption reads the same regardless of producer.
  */
 

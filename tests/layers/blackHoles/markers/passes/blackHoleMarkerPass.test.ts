@@ -1,7 +1,7 @@
 /**
  * blackHoleMarkerPass — the far-field marker's brightness across the lens band,
  * and the pick stamp that follows the marker alone: inside the band the caption's
- * own ink box takes the click (`produceBlackHoleCaptions.test.ts` pins its id).
+ * own ink box takes the click (`blackHoleLabelSource.test.ts` pins its pick).
  */
 
 import { describe, it, expect, vi } from 'vitest';
