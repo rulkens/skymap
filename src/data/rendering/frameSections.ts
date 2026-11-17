@@ -1,5 +1,5 @@
 /**
- * PRELUDE / SCENE / POST / SELECTION_OVERLAYS / LABELS — `FRAME_ORDER` split into the scopes
+ * PRELUDE / SCENE / POST / OVERLAYS — `FRAME_ORDER` split into the scopes
  * `renderFrame` walks (`ViewRig.program`): `once` runs against the frame's main
  * context, `perView` once per rig view. The per-line ordering rationale below
  * is this file's value, so it runs over the comment budget; see `frameOrder.ts`.
@@ -312,61 +312,48 @@ export const DOME_RESAMPLE: FrameSection = {
   steps: [{ kind: 'render', target: 'hdr', slab: COSMO, passes: ['dome-resample'] }],
 };
 
-// Premultiplied-OVER overlays run after the tone-map: LDR-sane label colours would be
-// greyed by the tone curve, and on tile-based GPUs an OVER blend reads `dst.color`,
-// which goes incoherent across the per-layer timing pass boundaries (additive rows
-// never read it). The Sun/Earth still occlude cosmological labels, via the COVERAGE
-// test against `foreground:0` depth, not draw order.
-//
-// `depth` is SAMPLED (swap is depthless): a caption clips along the last body row's
-// silhouette. Declared on every swap line because the overlays share one group(1)
-// joint, so every pipeline binding it must fill its depth entries.
-//
-// Two sections so a rig can list labels without the selection rings (the dome's
-// output-space labels). Rings lead, so leaders and labels composite over their stroke.
-export const SELECTION_OVERLAYS: FrameSection = {
-  scope: 'once',
-  steps: [
-    {
-      kind: 'render',
-      target: 'swap',
-      slab: COSMO,
-      depth: { sample: 'foreground:0' },
-      passes: ['selection-ring'],
-    },
-    // `near0-selection-ring` is the NEAR0 sibling of the COSMO ring (COSMO's near plane
-    // would clip a picked survey star); each ring lands only in the slab whose frustum
-    // holds its anchor, so identical gates never double-draw.
-    {
-      kind: 'render',
-      target: 'swap',
-      slab: NEAR0,
-      depth: { sample: 'foreground:0' },
-      passes: ['near0-selection-ring', 'clip-path-debug'],
-    },
-  ],
-};
+// The overlays, with the selection rings and the clip-path inspector or without them
+// (a rig with no single cursor, the dome); one builder so both keep one pass per slab
+// and one draw order. Private until a second rig lists it.
+function overlays({ selectionRings }: { readonly selectionRings: boolean }): FrameSection {
+  return {
+    scope: 'once',
+    steps: [
+      // Premultiplied-OVER overlays after the tone-map: LDR-sane label colours would be
+      // greyed by the tone curve, and on tile-based GPUs an OVER blend reads `dst.color`,
+      // which goes incoherent across the per-layer timing pass boundaries (additive rows
+      // never read it). The Sun/Earth still occlude cosmological labels, via the
+      // COVERAGE test against `foreground:0` depth, not draw order. `selection-ring`
+      // leads so lines and labels composite over its stroke.
+      //
+      // `depth` is SAMPLED (swap is depthless): a caption clips along the last body row's
+      // silhouette. Declared on BOTH swap lines because the overlays share one group(1)
+      // joint, so every pipeline binding it must fill its depth entries.
+      {
+        kind: 'render',
+        target: 'swap',
+        slab: COSMO,
+        depth: { sample: 'foreground:0' },
+        passes: selectionRings
+          ? ['selection-ring', 'marker-lines', 'labels-cosmo']
+          : ['marker-lines', 'labels-cosmo'],
+      },
+      // Near-field overlays, last, so scene-body captions land on top of the bodies.
+      // `near0-selection-ring` is the NEAR0 sibling of the COSMO ring (COSMO's near plane
+      // would clip a picked survey star); each ring lands only in the slab whose frustum
+      // holds its anchor, so identical gates never double-draw. `clip-path-debug` is
+      // painted last by intent.
+      {
+        kind: 'render',
+        target: 'swap',
+        slab: NEAR0,
+        depth: { sample: 'foreground:0' },
+        passes: selectionRings
+          ? ['near0-selection-ring', 'labels-near', 'clip-path-debug']
+          : ['labels-near'],
+      },
+    ],
+  };
+}
 
-export const LABELS: FrameSection = {
-  scope: 'once',
-  steps: [
-    // `marker-lines` are the COSMO labels' leaders, drawn under their text.
-    {
-      kind: 'render',
-      target: 'swap',
-      slab: COSMO,
-      depth: { sample: 'foreground:0' },
-      passes: ['marker-lines', 'labels-cosmo'],
-      slot: 'LABELS',
-    },
-    // Near-field captions last, so scene-body captions land on top of the bodies.
-    {
-      kind: 'render',
-      target: 'swap',
-      slab: NEAR0,
-      depth: { sample: 'foreground:0' },
-      passes: ['labels-near'],
-      slot: 'LABELS',
-    },
-  ],
-};
+export const OVERLAYS: FrameSection = overlays({ selectionRings: true });

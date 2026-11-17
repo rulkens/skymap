@@ -48,11 +48,11 @@ describe('checkFrameOrder — boot', () => {
   // Dropping the declaration costs the overlays nothing loud: `sampledDepth`
   // goes undefined, every pipeline binds the far placeholder, and the captions
   // simply stop hiding behind terrain. Pinned here rather than eye-checked.
-  it('every swap-overlay line samples foreground:0’s depth', () => {
+  it('both swap-overlay lines sample foreground:0’s depth', () => {
     const swapLines = FRAME_ORDER.filter(
       (step): step is RenderStepSpec => step.kind === 'render' && step.target === 'swap',
     );
-    expect(swapLines).toHaveLength(4);
+    expect(swapLines).toHaveLength(2);
     for (const line of swapLines) {
       expect(line.depth).toEqual({ sample: 'foreground:0' });
     }

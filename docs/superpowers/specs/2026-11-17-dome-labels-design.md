@@ -223,12 +223,12 @@ row of 5–15 lines.
 
 ## 7. The dome PR
 
-1. `dome` rig: `program: [PRELUDE, SCENE_TO_DOME_CUBE, DOME_RESAMPLE, POST, LABELS]` and an
+1. `dome` rig: `program: [PRELUDE, SCENE_TO_DOME_CUBE, DOME_RESAMPLE, POST, overlays({ selectionRings: false })]` and an
    `outputProjection` of kind `equidistant` (image centre = zenith, bottom = front,
    `r = θ / (π/2)`), with `pxScale = (N/π) / REFERENCE_PX_PER_RAD`. Mono's rig names its pinhole
    projection the same way, so the directors read the rig's projection and never ask which rig runs.
-2. `LABELS` is the section the prep PR split out of `OVERLAYS` (§8.1), so the dome lists a section
-   mono already runs; it adds none of its own.
+2. `overlays(...)` is the section builder the prep PR made of `OVERLAYS` (§8.1), so the dome lists
+   mono's section without the rings; it adds none of its own.
 3. The `equidistant` branch of `projectLabel` in both languages, under the parity test.
 4. `DOME_RESAMPLE` gains a second target at output size holding coverage and radial distance; the
    dome's label occlusion samples it in place of `foreground:0` depth. **Open for the dome PR's
@@ -249,8 +249,8 @@ a rig, lift tied to a matrix inverse, leaders in a separate renderer).
 
 1. **One projection.** `OutputProjection`, `projectLabel`/`liftedAnchor` in TS and WGSL with the
    parity test; the label shader and `projectLabels` use them; the rig carries its projection.
-   `OVERLAYS` splits into `SELECTION_OVERLAYS` (selection rings, clip-path debug) and `LABELS`;
-   mono lists both. No visible change.
+   `OVERLAYS` comes from one builder, `overlays({ selectionRings })`, the rings a parameter (no
+   split: it would cost a pass). No visible change.
 2. **Lift and leaders in the label shader.** The label row carries the subject position, its
    radius, a px gap and the leader's length and width (in the slot `subjectPos` frees); the shader
    lifts with `liftedAnchor`, and `labelRenderer` draws leaders as a second instanced draw. The

@@ -58,17 +58,17 @@ Same two functions and struct, field for field. Follow an existing TS↔WESL par
 - [x] Test `OutputProjection uniform layout matches the TS writer` (offset table in the test).
 - [x] Test `projectLabel.wesl names the same fields as projectLabel.ts`.
 
-### Task 3: the rig names its projection; `OVERLAYS` splits
+### Task 3: the rig names its projection; overlays take a rings parameter
 
 **Files:** `src/data/rendering/viewRigs.ts`, `src/data/rendering/frameSections.ts`, the view-rig type,
 `src/utils/labels/outputProjectionOf.ts` (+ test), `src/services/engine/frame/runFrame.ts`.
 
-- `OVERLAYS` (`frameSections.ts:315-347`) becomes `SELECTION_OVERLAYS` (selection rings, marker
-  lines for now, clip-path debug) and `LABELS` (`labels-cosmo`, `labels-near`). Mono's program
-  lists both, in today's draw order.
+- `OVERLAYS` comes from one section builder, `overlays({ selectionRings })`: the same two swap
+  steps either way, with or without the rings and clip-path debug. No split (Gate A: a split costs
+  a pass and moves the rings in the draw order). Mono's `OVERLAYS` is `overlays({ selectionRings: true })`.
 - The mono rig gains `outputProjection: pinholeOutput`; `outputProjectionOf(view, rig)` builds the
   `OutputProjection` for a frame (f64 camera position split with the `writeHiLoVertex` rule).
-- [x] Test `mono program draws the same steps in the same order as before the split`.
+- [x] Test `mono program draws the same steps in the same order as before the overlays builder`.
 - [x] No other test: this is routing.
 
 ### Task 4: the label shader and `projectLabels` use `projectLabel` — **review: yes**
