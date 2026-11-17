@@ -143,6 +143,9 @@ export function createEngine(
     get ui() {
       return store.getState().ui;
     },
+    get viewCover() {
+      return store.getState().viewCover;
+    },
     picking: {
       // Pick-throttle state only; hover/select live on the Redux `selection` slice.
       pickInFlight: false,
@@ -183,6 +186,7 @@ export function createEngine(
       // the mesh slot family's commit/onRelease call its setMesh/clearMesh.
       meshBodyRenderer: null,
       cubeFaceBlitRenderer: null,
+      antiqueLook: null,
       domeResampleRenderer: null,
       bodyPickRenderer: null,
       orbitTrailRenderer: null,

@@ -3,8 +3,9 @@
  * (`shaders/lib/sphere.wesl` holds the layout table). Reuses `packLitBodyUniforms`
  * for the 80-byte prefix so the layouts cannot drift; writes only the ring ratios
  * (`ringOuterRatio == 0` means no ring), the Minnaert params (`limbStrength == 0`
- * is the identity), `camPosLocal`, and the contact-range depth pair
- * (`camAltitudeSq`, `vpCamRelLocal`; see `lib/analyticSphere.wesl`).
+ * is the identity), `camPosLocal`, the contact-range depth pair
+ * (`camAltitudeSq`, `vpCamRelLocal`; see `lib/analyticSphere.wesl`), and in the
+ * lit prefix's tail the antique albedo mask's mid luma (0 for the lit draw).
  */
 
 import type { Vec3 } from '../../../../@types/math/Vec3';
@@ -23,9 +24,11 @@ export function packTexturedBodyUniforms(
   camPosLocal: Readonly<Vec3>,
   camAltitudeSq: number,
   vpCamRelLocal: Float32Array,
+  albedoMid = 0,
 ): Float32Array {
   const out = new Float32Array(TEXTURED_BODY_UNIFORM_FLOATS);
   out.set(packLitBodyUniforms(mvp, sunDirLocal), 0); // bytes 0..79
+  out[19] = albedoMid; // byte 76
   out[20] = ringInnerRatio; // byte 80
   out[21] = ringOuterRatio; // byte 84
   out[22] = limbStrength; // byte 88

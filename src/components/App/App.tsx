@@ -9,10 +9,11 @@
  * open; the rest is absent from the DOM.
  */
 
-import { Suspense } from 'react';
+import { Suspense, useLayoutEffect, useRef } from 'react';
 import cx from 'classnames';
 import { useEngine } from '../../hooks/useEngine';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { useViewCoverRow } from '../../hooks/useViewCoverRow';
 import LoadingBarContainer from '../containers/LoadingBarContainer';
 import StatusBarContainer from '../containers/StatusBarContainer';
 import ScaleBarContainer from '../containers/ScaleBarContainer';
@@ -35,8 +36,11 @@ import TourOverlayContainer from '../containers/TourOverlayContainer';
 import TourBeatRailContainer from '../containers/TourBeatRailContainer';
 import ExhibitOverlayContainer from '../containers/ExhibitOverlayContainer';
 import { isCinemaMode } from '../../utils/url/isCinemaMode';
+import { antiqueChromeCss } from '../../utils/antiqueChrome/antiqueChromeCss';
+import EngravingFilter from '../EngravingFilter/EngravingFilter';
 import { selectTourActive } from '../../state/tour/selectors';
 import { selectTakeoverSource } from '../../state/takeover/selectors';
+import { selectAntiqueEnabled } from '../../state/settings/selectors';
 import {
   selectPaletteOpen,
   selectUiStackHidden,
@@ -53,6 +57,8 @@ export function App(): React.ReactElement {
   const paletteOpen = useAppSelector(selectPaletteOpen);
   const uiStackHidden = useAppSelector(selectUiStackHidden);
   const debugPanelOpen = useAppSelector(selectDebugPanelOpen);
+  const leftStackRef = useRef<HTMLDivElement>(null);
+  useViewCoverRow(leftStackRef, 'leftStack', 'left', !isMobile && !uiStackHidden);
 
   // A running tour or exhibit hides the HUD stack (derived, not a `setUiHidden`
   // write). A registry clip keeps the HUD: the debug panel's Stop must stay in reach.
@@ -63,6 +69,22 @@ export function App(): React.ReactElement {
 
   // Only "is it up" lives here; the rest of the splash state stays in SplashContainer.
   const splashVisible = useAppSelector(selectSplashVisible);
+
+  // The chrome follows the canvas into the antique look: `styles/antique.css` keys its
+  // tokens off this attribute, and the engraved frames' generated image tokens ride in
+  // beside it. A layout effect, so no frame paints the dark chrome.
+  const antique = useAppSelector(selectAntiqueEnabled);
+  useLayoutEffect(() => {
+    if (!antique) return;
+    document.documentElement.dataset.look = 'antique';
+    const chrome = document.createElement('style');
+    chrome.textContent = antiqueChromeCss();
+    document.head.append(chrome);
+    return () => {
+      delete document.documentElement.dataset.look;
+      chrome.remove();
+    };
+  }, [antique]);
 
   // Shared by both return branches. The engine owns this canvas's GPU context;
   // `id="c"` matches the fullscreen CSS rule in index.html.
@@ -109,7 +131,7 @@ export function App(): React.ReactElement {
             <SkyEntryButtonContainer phone={false} />
             <SkyHudContainer phone={false} />
             <TimeBarContainer hidden={paletteOpen || splashVisible} />
-            <div className={appStyles.leftStack}>
+            <div ref={leftStackRef} className={appStyles.leftStack}>
               <NavigationPanelContainer />
               <Suspense>
                 <LazySettingsPanelContainer />
@@ -127,6 +149,7 @@ export function App(): React.ReactElement {
       {debugPanel}
       {/* Progress chrome: interactive session only, never the cinema frames. */}
       {tourActive && <TourBeatRailContainer />}
+      {antique && <EngravingFilter />}
       <SplashContainer />
       <ArrivalVeilContainer />
       <PairingOverlayContainer />

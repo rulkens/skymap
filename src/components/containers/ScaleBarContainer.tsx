@@ -7,16 +7,21 @@
  * re-rendering the rest of the HUD stack.
  */
 
-import { memo } from 'react';
+import { memo, useRef } from 'react';
 import { ScaleBar } from '../ScaleBar/ScaleBar';
 import { useAppSelector } from '../../store/hooks';
 import { selectScale } from '../../state/engine/selectors';
+import { selectUiStackHidden } from '../../state/ui/selectors';
+import { useViewCoverRow } from '../../hooks/useViewCoverRow';
 import { selectSkyView } from '../../state/sky/selectors/selectSkyView';
 
 function ScaleBarContainer(): React.ReactElement | null {
   const scale = useAppSelector(selectScale);
+  const uiStackHidden = useAppSelector(selectUiStackHidden);
   const standing = useAppSelector(selectSkyView) !== null;
-  return standing ? null : <ScaleBar scale={scale} />;
+  const ref = useRef<HTMLDivElement>(null);
+  useViewCoverRow(ref, 'scaleBar', 'bottom', !uiStackHidden && !standing);
+  return standing ? null : <ScaleBar ref={ref} scale={scale} />;
 }
 
 export default memo(ScaleBarContainer);

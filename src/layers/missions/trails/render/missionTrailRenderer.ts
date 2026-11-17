@@ -18,7 +18,6 @@ import fsCode from '../../../../services/gpu/shaders/bodies/missionTrail/fragmen
 import { createShaderModuleWithDevLog } from '../../../../services/gpu/shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../../../../services/gpu/lib/blendStates';
 import { buildMissionTrails } from './buildMissionTrails';
-import { MISSION_TRAIL_WIDTH_PX } from '../data/missionTrailStyle';
 import { writeHiLoVertex } from '../../../../utils/math/writeHiLoVertex';
 import {
   OCCLUDER_UNIFORM_BYTES,
@@ -164,7 +163,7 @@ export function createMissionTrailRenderer(
   }
 
   function beginFrame(pass: GPURenderPassEncoder, frame: MissionTrailFrame): void {
-    const { vp, camPosMpc, viewportPx, pxPerRad, occluders, depth } = frame;
+    const { vp, camPosMpc, viewportPx, pxPerRad, widthPx, occluders, depth } = frame;
     slot = 0;
     occluderUniforms.write(occluders, depth.frame, viewportPx);
     device.queue.writeBuffer(occluderBuffer, 0, occluderUniforms.scratch);
@@ -190,7 +189,7 @@ export function createMissionTrailRenderer(
     uniformScratch[o.viewportPx / 4] = viewportPx[0];
     uniformScratch[o.viewportPx / 4 + 1] = viewportPx[1];
     uniformScratch[o.pxPerRad / 4] = pxPerRad;
-    uniformScratch[o.widthPx / 4] = MISSION_TRAIL_WIDTH_PX;
+    uniformScratch[o.widthPx / 4] = widthPx;
     for (let k = 0; k < 3; k++) {
       uniformScratch[o.camHi / 4 + k] = eyeScratch[k]!;
       uniformScratch[o.camLo / 4 + k] = eyeScratch[3 + k]!;

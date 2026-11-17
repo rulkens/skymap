@@ -9,6 +9,7 @@ import {
 } from '../../../../../src/services/engine/presentation/leaderLineStyle';
 import { ATLAS_FONT_SIZE } from '../../../../../src/data/fonts';
 import { MILKY_WAY_CENTER_WORLD } from '../../../../../src/data/milkyWay/galacticCenter';
+import { GAL_Z_EQ } from '../../../../../src/data/orientation/orientationFrames';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
@@ -41,13 +42,20 @@ const TEXT_BOTTOM_BELOW_ANCHOR_PX =
 // for the solo gate) and the text layout bbox for the caption's ink bbox (which
 // places the stem top); its fade arrives as the handed value.
 function makeState(
-  opts: { focusedOnly?: boolean; focus?: { type: string } | null; bbox?: LabelBBox } = {},
+  opts: {
+    focusedOnly?: boolean;
+    focus?: { type: string } | null;
+    bbox?: LabelBBox;
+    antique?: boolean;
+  } = {},
 ): EngineState {
   layout.bbox = opts.bbox ?? MEASURED_BBOX;
   return {
     settings: {
       labels: { focusedOnly: opts.focusedOnly ?? false },
+      antique: { enabled: opts.antique ?? false },
     },
+    viewRig: 'mono',
     selection: { focus: opts.focus ?? null, select: null, hover: null },
     gpu: { fontAtlases: { metricsByFont: {} } },
   } as unknown as EngineState;
@@ -70,7 +78,7 @@ function makeCtx(
     mat4.lookAt([camDistMpc, 0, 0], [0, 0, 0], opts.up ?? [0, 1, 0]),
   );
   return {
-    snapshot: { nowMs: 0, focusBlend: 0, focus: ZERO_FOCUS },
+    snapshot: { devicePixelRatio: 1, nowMs: 0, focusBlend: 0, focus: ZERO_FOCUS },
     drawCamPos: [camDistMpc, 0, 0],
     vp,
     canvasSize: { width, height },
@@ -116,6 +124,23 @@ describe('produceMilkyWayLabel', () => {
     expect(pickOf(ctx)).toBeDefined();
     expect(pickOf(at([0, 0, 0]))).toBeDefined();
     expect(pickOf(at([5, 0, 0]))).toBeUndefined();
+  });
+
+  it('gives way to the antique plate\'s "Sol hic" while the plate letters the disc', () => {
+    const eye = [0, 1, 2].map((i) => MILKY_WAY_CENTER_WORLD[i]! + 0.032 * GAL_Z_EQ[i]!) as Vec3;
+    const ctx = { ...makeCtx(0.5), drawCamPos: eye };
+    const produce = produceMilkyWayLabelFor(PICK_CODE);
+    expect(produce(makeState({ antique: true }), ctx, 1).labels).toEqual([]);
+    expect(produce(makeState(), ctx, 1).labels).toHaveLength(1);
+  });
+
+  it('under the antique look leaves the name on the Sun for the director to set off the disc', () => {
+    // From 0.5 Mpc the plate does not letter the disc, so the plate's name stands.
+    const label = produceMilkyWayLabelFor(PICK_CODE)(makeState({ antique: true }), makeCtx(0.5), 1)
+      .labels[0]!;
+    expect(label.worldPos).toEqual([0, 0, 0]);
+    expect(label.lift?.subjectSizePx).toBeGreaterThan(0);
+    expect(label.leader).toBeUndefined();
   });
 
   it('gates its pick at the galactic centre, as the disc does, not at the Sun', () => {

@@ -18,6 +18,8 @@ export type Label2DProjection = {
   readonly viewportPx: Vec2;
   /** The drawn view's pixels per radian — the label shader's `cam.pxPerRad`. */
   readonly pxPerRad: number;
+  /** Device px per CSS px (`ReadyFrameContext.devicePixelRatio`): label sizes and pads are CSS px. */
+  readonly devicePixelRatio: number;
   /** The uniform clip scale `vpF32` carries (`near0OverlayClipScale`); 1 on COSMO. */
   readonly clipScale: number;
 };

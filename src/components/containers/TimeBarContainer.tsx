@@ -7,7 +7,7 @@
  * the engine's throttled pubs carry no sim clock and would freeze it.
  */
 
-import { memo, useCallback, useState } from 'react';
+import { memo, useCallback, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import TimeBar from '../TimeBar/TimeBar';
 import DateEntryPopover from '../TimeBar/DateEntryPopover/DateEntryPopover';
@@ -20,6 +20,8 @@ import { goLiveNowAction } from '../../state/time/goLiveNowAction';
 import { RATE_LADDER } from '../../data/time/rateLadder';
 import { formatSimClock } from '../../utils/time/formatSimClock';
 import { useSimInstant } from '../../hooks/useSimInstant';
+import { useViewCoverRow } from '../../hooks/useViewCoverRow';
+import { selectUiStackHidden } from '../../state/ui/selectors';
 
 export type TimeBarContainerProps = {
   // App-layout gate, mirroring the sibling HUD pills (paletteOpen || splashVisible).
@@ -55,6 +57,10 @@ function TimeBarContainer({ hidden, row }: TimeBarContainerProps): ReactNode {
   const rateStep = useAppSelector(selectRateStep);
   const instant = useSimInstant(time);
   const readout = formatSimClock(instant);
+  const uiStackHidden = useAppSelector(selectUiStackHidden);
+  // The phone row sits inside BottomStack, whose probe already covers it.
+  const rootRef = useRef<HTMLDivElement>(null);
+  useViewCoverRow(rootRef, 'timeBar', 'bottom', !row && !hidden && !uiStackHidden);
 
   const { mode, paused, rateIndex } = time;
 
@@ -126,6 +132,7 @@ function TimeBarContainer({ hidden, row }: TimeBarContainerProps): ReactNode {
   return (
     <>
       <TimeBar
+        ref={rootRef}
         readout={readout}
         rateLabel={rateStep?.label ?? ''}
         mode={mode}

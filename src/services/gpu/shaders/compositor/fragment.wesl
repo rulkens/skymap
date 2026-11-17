@@ -12,6 +12,7 @@ import package::lib::tonemap::applyReinhard;
 import package::lib::tonemap::applyAsinh;
 import package::lib::tonemap::applyGamma2;
 import package::lib::tonemap::applyAces;
+import package::lib::tonemap::printShoulder;
 import package::lib::film::filmGrain;
 import package::lib::film::caSpectrum;
 import package::lib::film::cellNoise;
@@ -92,7 +93,12 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     return sample;
   }
 
-  let scaled = sample.rgb * uniforms.exposure;
+  let exposed = sample.rgb * uniforms.exposure;
+  // The antique print's shoulder scales the pixel along its own colour ratio.
+  let peakIn = max(exposed.r, max(exposed.g, exposed.b));
+  let shoulder = select(1.0, printShoulder(peakIn, uniforms.shoulderKnee, uniforms.shoulderTop) / max(peakIn, 1e-4),
+                        uniforms.shoulderKnee > 0.0);
+  let scaled = exposed * shoulder;
   var mapped: vec3<f32>;
   if (uniforms.curve == 0u) {
     mapped = applyLinear(scaled);

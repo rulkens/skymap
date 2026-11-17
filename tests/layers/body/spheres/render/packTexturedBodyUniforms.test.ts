@@ -5,7 +5,7 @@
  * asserted directly (NOT mirrored from the packer); the 80-byte lit prefix is compared slot-for-slot
  * with `packLitBodyUniforms`.
  *
- *   0..15 mvp  16..18 sunDirLocal  19 lit pad  20 ringInnerRatio
+ *   0..15 mvp  16..18 sunDirLocal  19 albedoMid  20 ringInnerRatio
  *   21 ringOuterRatio  22 limbStrength  23 limbExponent
  *   24..26 camPosLocal  27 camAltitudeSq  28..43 vpCamRelLocal
  */
@@ -50,10 +50,10 @@ describe('TexturedBodyUniforms byte offsets', () => {
     expect(out.length).toBe(44); // 176 bytes
     expect(out.byteLength).toBe(176);
 
-    // The 80-byte lit prefix is identical to packLitBodyUniforms, including the zeroed pad at 19.
+    // The 80-byte lit prefix is identical to packLitBodyUniforms; the lit draw leaves albedoMid 0.
     const lit = packLitBodyUniforms(MVP, SUN_DIR);
     for (let i = 0; i < 20; i++) expect(out[i]).toBe(lit[i]);
-    expect(out[19]).toBe(0); // lit pad — belt-and-braces
+    expect(out[19]).toBe(0); // albedoMid, defaulted
 
     expect(out[20]).toBe(RING_INNER); // byte 80
     expect(out[21]).toBe(RING_OUTER); // byte 84
@@ -64,6 +64,11 @@ describe('TexturedBodyUniforms byte offsets', () => {
     // camAltitudeSq at byte 108; the eye-relative vp occupies bytes 112..175.
     expect(out[27]).toBe(CAM_ALTITUDE_SQ);
     for (let i = 0; i < 16; i++) expect(out[28 + i]).toBe(CAM_REL_VP[i]);
+  });
+
+  it('packs the antique sea mask cut into the lit prefix tail, byte 76', () => {
+    const out = packTexturedBodyUniforms(MVP, SUN_DIR, 0, 0, 0, 1, CAM_LOCAL, 0, CAM_REL_VP, 0.3125);
+    expect(out[19]).toBe(0.3125);
   });
 
   it('defaults to plain Lambert — limbStrength 0 is the identity the absent-row data-gate relies on', () => {

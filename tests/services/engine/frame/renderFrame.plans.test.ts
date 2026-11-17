@@ -116,6 +116,7 @@ describe('renderFrame — plan rows', () => {
         tonemap: { exposure: 1, curve: 0 },
         hdr: { enabled: false, knee: 0, headroom: 0 },
         bloom: { enabled: false },
+        antique: { enabled: false },
         film: { enabled: false },
       },
       passes: [stubPass],

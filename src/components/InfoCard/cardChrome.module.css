@@ -19,7 +19,8 @@
   /* When standalone, fix directly to the corner */
   display: block;
   position: fixed;
-  top: var(--corner-offset);
+  /* A framed card's title cartouche rides above its top edge: keep it on screen. */
+  top: calc(var(--corner-offset) + var(--framed-overhang, 0px));
   right: var(--corner-offset);
   z-index: 10;
 
@@ -36,17 +37,27 @@
   overflow-wrap: break-word;
 
   /* Glassmorphism — strong variant for the "loud" card */
-  background: var(--surface-card-strong);
+  background: var(--sheet-ground, var(--surface-card-strong));
   /* Vendor-prefixed first, standard last — see Panel.module.css for why. */
   -webkit-backdrop-filter: blur(var(--blur-card));
   backdrop-filter: blur(var(--blur-card));
 
-  border: 1px solid var(--border-card);
+  /* The antique look's engraved frame hooks: see common/Panel/Panel.module.css. */
+  border: var(--frame-border, 1px) solid var(--border-card);
+  border-image: var(--frame-image, none);
   border-radius: var(--radius-2xl);
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--framed-shadow, var(--shadow-card));
+  min-height: var(--framed-min-height, auto);
+  padding-bottom: var(--framed-body-padding-bottom, var(--space-7));
 
   color: var(--color-fg-base);
   font: var(--font-size-lg) / var(--line-height-relaxed) var(--font-family-mono);
+}
+
+@media (forced-colors: active) {
+  .infoCardFull {
+    border-image: none;
+  }
 }
 
 /*
@@ -89,9 +100,12 @@
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
   border: none;
+  border-image: none;
   border-radius: 0;
   box-shadow: none;
   min-width: 0;
+  min-height: auto;
+  padding-bottom: var(--space-7);
   max-width: none;
   /* The sheet's handle already sits above; the header's name row starts right under it. */
   padding-top: 0;
@@ -124,25 +138,21 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: var(--space-5);
-  font-size: var(--font-size-sm);
+  font-family: var(--font-family-label);
+  font-size: max(var(--font-size-sm), var(--font-size-label-min));
   letter-spacing: var(--letter-spacing-widest);
   color: var(--color-fg-faint);
-  text-transform: uppercase;
+  text-transform: var(--label-case);
 }
 
 /* PINNED badge — hidden by default; shown via .pinned modifier on root */
 .pinnedBadge {
   display: none;
-  /*
-   * Warm gold — the only non-blue accent in the entire UI, used here
-   * to signal "this is the user's selected pin" against the cosmic-blue
-   * palette.  Promoting to a token would mislead future readers into
-   * treating it as reusable; kept inline.
-   */
-  color: #ffd97a;
-  font-size: var(--font-size-sm);
+  color: var(--color-pinned);
+  font-family: var(--font-family-label);
+  font-size: max(var(--font-size-sm), var(--font-size-label-min));
   letter-spacing: var(--letter-spacing-max);
-  text-transform: uppercase;
+  text-transform: var(--label-case);
 }
 
 /* Show the badge when the root element carries the .pinned modifier */
@@ -166,9 +176,10 @@
   background: var(--surface-badge);
   border: 1px solid var(--border-control);
   color: var(--color-accent-bright);
-  font-size: var(--font-size-xs);
+  font-family: var(--font-family-label);
+  font-size: max(var(--font-size-xs), var(--font-size-label-min));
   letter-spacing: var(--letter-spacing-wider);
-  text-transform: uppercase;
+  text-transform: var(--label-case);
 }
 
 /* ── SDSS designation headline ────────────────────────────────────────────── */
@@ -385,7 +396,7 @@ details:not([open]) > .detailsSummary::before {
 
 /* Muted placeholder when a row has no resolvable catalogue page at all. */
 .catalogueNone {
-  opacity: 0.45;
+  opacity: var(--opacity-absent);
   font-style: italic;
 }
 
@@ -397,28 +408,30 @@ details:not([open]) > .detailsSummary::before {
  * dominate the already tight overlay.
  */
 .focusButton {
+  composes: tablet from '../common/tablet.module.css';
   margin-left: var(--space-4);
   padding: var(--space-1) var(--space-4);
   border: 1px solid var(--border-control);
   border-radius: var(--radius-md);
-  background: var(--surface-control);
+  background: var(--framed-control-ground, var(--surface-control));
   color: var(--color-fg);
   font: inherit;
-  font-size: var(--font-size-sm);
+  font-family: var(--font-family-label);
+  font-size: max(var(--font-size-sm), var(--font-size-label-min));
   letter-spacing: var(--letter-spacing-mid);
   cursor: pointer;
-  text-transform: uppercase;
+  text-transform: var(--label-case);
 }
 
 @media (hover: hover) {
   .focusButton:hover {
-    background: var(--surface-control-hover);
+    background: var(--framed-control-ground, var(--surface-control-hover));
     border-color: var(--border-hover);
   }
 }
 
 .focusButton:active {
-  background: var(--surface-control-active);
+  background: var(--framed-control-ground, var(--surface-control-active));
 }
 
 /* ── Close button (only visible when the card is pinned) ──────────────────── */
@@ -435,6 +448,7 @@ details:not([open]) > .detailsSummary::before {
  * button, distinguishing it from the rectangular Focus pill.
  */
 .closeButton {
+  composes: tablet from '../common/tablet.module.css';
   margin-left: var(--space-2);
   width: 1.6em;
   height: 1.6em;
@@ -456,12 +470,12 @@ details:not([open]) > .detailsSummary::before {
 
 @media (hover: hover) {
   .closeButton:hover {
-    background: var(--surface-control);
+    background: var(--framed-control-ground, var(--surface-control));
     border-color: var(--border-control);
     color: var(--color-fg);
   }
 }
 
 .closeButton:active {
-  background: var(--surface-control-active);
+  background: var(--framed-control-ground, var(--surface-control-active));
 }

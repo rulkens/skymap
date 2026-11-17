@@ -21,6 +21,7 @@ import FilmTuningSectionContainer from '../containers/FilmTuningSectionContainer
 import CameraStateSectionContainer from '../containers/CameraStateSectionContainer';
 import RenderTogglesSectionContainer from '../containers/RenderTogglesSectionContainer';
 import DebugOverlaysSectionContainer from '../containers/DebugOverlaysSectionContainer';
+import AntiqueTuningSectionContainer from '../containers/AntiqueTuningSectionContainer';
 import ClipTriggersSectionContainer from '../containers/ClipTriggersSectionContainer';
 import ClipPathInspectorSectionContainer from '../containers/ClipPathInspectorSectionContainer';
 import styles from './DebugPanel.module.css';
@@ -58,6 +59,7 @@ function DebugPanel({
       {layerUiContents(APP_COMPOSITION.layers, 'debug').map((Section, index) => (
         <Section key={index} />
       ))}
+      <AntiqueTuningSectionContainer />
       <DebugOverlaysSectionContainer />
       <FocusMovesTuningSectionContainer />
       <FilmTuningSectionContainer />

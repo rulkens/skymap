@@ -8,12 +8,9 @@
  * coordinate that flows into a pick read goes through this conversion
  * first.
  *
- * The DPR cap at 2 mirrors `resizeCanvasToDisplay` in
- * `services/gpu/device.ts`: above 2× the GPU memory cost (4× per
- * doubling) outweighs the perceptual gain.  Both sites must agree —
- * if the canvas is sized at min(DPR, 2) and the pick read used raw
- * DPR, picks on a 3× display would overshoot the texture and silently
- * miss.
+ * The ratio is `displayPixelRatio` — the same capped value the canvas
+ * is sized by (`resizeCanvasToDisplay`); with raw DPR, picks on a 3×
+ * display would overshoot the texture and silently miss.
  *
  * Pure function rather than a closure-returning factory: nothing is
  * captured per-engine.  The DPR is read at call time (not cached at
@@ -24,7 +21,8 @@
  * the lift is purely about keeping `engine.ts` focused on
  * orchestration.
  */
+import { displayPixelRatio } from '../../../utils/gpu/displayPixelRatio';
+
 export function cssToTexPx(cssPx: number): number {
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  return cssPx * dpr;
+  return cssPx * displayPixelRatio();
 }

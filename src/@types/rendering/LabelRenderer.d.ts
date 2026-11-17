@@ -41,7 +41,7 @@ export type LabelRenderer = {
     viewProj: Float32Array,
     viewportSize: Vec2,
     pxPerRad: number,
-    extras?: { scene?: OverlaySceneOcclusion; clipScale?: number },
+    extras: { devicePixelRatio: number; scene?: OverlaySceneOcclusion; clipScale?: number },
   ): void;
   /** Release all GPU resources. */
   destroy(): void;

@@ -11,13 +11,15 @@ import type { Label2D } from '../../../@types/rendering/Label2D';
 import type { LaidOutText } from '../../../@types/rendering/LaidOutText';
 import { layoutLabel } from './labelLayout';
 import { measureLabel } from './measureLabel';
+import { ATLAS_FONT_SIZE } from '../../../data/fonts';
 
-// Unbounded by design: the key space is the label catalog (~hundreds), not user input.
+// Unbounded by design: the key space is the label catalog (~hundreds), not user input; a
+// sliding antique title adds at most `titleSlideSteps` alignments per selected name.
 const memoByMetrics = new WeakMap<LoadedFontAtlases['metricsByFont'], Map<string, LaidOutText>>();
 
 export function textLayoutOf(
   metricsByFont: LoadedFontAtlases['metricsByFont'],
-  label: Pick<Label2D, 'text' | 'font' | 'alignX' | 'alignY'>,
+  label: Pick<Label2D, 'text' | 'font' | 'alignX' | 'alignY' | 'trackingEm'>,
 ): LaidOutText {
   let memo = memoByMetrics.get(metricsByFont);
   if (memo === undefined) {
@@ -26,10 +28,15 @@ export function textLayoutOf(
   }
   const alignX = label.alignX ?? 'left';
   const alignY = label.alignY ?? 'baseline';
-  const key = `${label.font}|${alignX}|${alignY}|${label.text}`;
+  const trackingEm = label.trackingEm ?? 0;
+  const key = `${label.font}|${alignX}|${alignY}|${trackingEm}|${label.text}`;
   let laidOut = memo.get(key);
   if (laidOut === undefined) {
-    const quads = layoutLabel(label.text, metricsByFont[label.font], alignX, alignY);
+    // A font not loaded yet lays out to no ink: drawn and measured as nothing.
+    const metrics = metricsByFont[label.font];
+    const quads = metrics
+      ? layoutLabel(label.text, metrics, alignX, alignY, trackingEm * ATLAS_FONT_SIZE)
+      : [];
     laidOut = { quads, bbox: measureLabel(quads) };
     memo.set(key, laidOut);
   }

@@ -79,10 +79,10 @@ describe('parseFontMetrics', () => {
 // `createImageBitmap` so the test runs offline.
 
 import { loadFontAtlases } from '../../../../src/services/gpu/labelLayout/loadFontAtlases';
-import { FONT_IDS } from '../../../../src/data/fonts';
+import { BOOT_FONT_IDS, FONT_IDS } from '../../../../src/data/fonts';
 
 describe('loadFontAtlases', () => {
-  it('returns one FontMetrics per FontId, bitmaps ordered by FONT_IDS', async () => {
+  it('loads the boot fonts at boot and the on-demand ones onto them later', async () => {
     // Build a stub BMFont JSON per font.  The atlas.width returned by
     // parseFontMetrics encodes which font it came from so the test can
     // assert the keyed record holds the right font's data.
@@ -116,6 +116,7 @@ describe('loadFontAtlases', () => {
 
     const originalFetch = globalThis.fetch;
     const originalCreateImageBitmap = globalThis.createImageBitmap;
+    const fetched: string[] = [];
 
     globalThis.fetch = (async (input: RequestInfo | URL): Promise<Response> => {
       const url = String(input);
@@ -123,35 +124,31 @@ describe('loadFontAtlases', () => {
       const match = url.match(/\/fonts\/([^.]+)\.(json|webp)$/);
       if (!match) throw new Error(`unexpected fetch url ${url}`);
       const id = match[1]!;
-      const ext = match[2]!;
-      if (ext === 'json') {
+      fetched.push(id);
+      if (match[2] === 'json') {
         return new Response(JSON.stringify(stubJson(id.charCodeAt(0))), { status: 200 });
       }
-      // For the WebP we return a non-empty body; createImageBitmap is
-      // stubbed below to look up by id.
-      return new Response(new Uint8Array([0]), { status: 200, headers: { 'x-stub-id': id } });
+      // The WebP body carries its font id, so the bitmap stub can find its placeholder.
+      return new Response(id, { status: 200 });
     }) as typeof fetch;
-
-    // createImageBitmap is called on the blob from the WebP fetch.  We
-    // can't easily thread the font id through the blob, so we rely on
-    // the FONT_IDS iteration order in the loader matching the order we
-    // populate fakeBitmaps — which the loader guarantees by mapping
-    // over FONT_IDS in order.
-    let bitmapCallCount = 0;
-    globalThis.createImageBitmap = (async () => {
-      const id = FONT_IDS[bitmapCallCount]!;
-      bitmapCallCount++;
-      return fakeBitmaps.get(id)!;
-    }) as typeof createImageBitmap;
+    globalThis.createImageBitmap = (async (blob: Blob) =>
+      fakeBitmaps.get(await blob.text())!) as unknown as typeof createImageBitmap;
 
     try {
-      const loaded = await loadFontAtlases();
+      // Boot fetches only the boot fonts: a session that never asks for an
+      // on-demand font pays nothing for it.
+      const boot = await loadFontAtlases();
+      expect(new Set(fetched)).toEqual(new Set(BOOT_FONT_IDS));
+      expect(BOOT_FONT_IDS.length).toBeLessThan(FONT_IDS.length);
+
+      const onDemand = FONT_IDS.filter((id) => !BOOT_FONT_IDS.includes(id));
+      const loaded = await loadFontAtlases(onDemand, boot);
       expect(Object.keys(loaded.metricsByFont).sort()).toEqual([...FONT_IDS].sort());
       for (const id of FONT_IDS) {
         // Each font's metrics carries the fontIdHash we baked into scaleW.
-        expect(loaded.metricsByFont[id].atlas.width).toBe(id.charCodeAt(0));
+        expect(loaded.metricsByFont[id]!.atlas.width).toBe(id.charCodeAt(0));
       }
-      // Bitmaps array length matches FONT_IDS; order matches.
+      // Every bitmap lands on its own FONT_IDS layer, whichever load brought it.
       expect(loaded.bitmaps).toHaveLength(FONT_IDS.length);
       for (let i = 0; i < FONT_IDS.length; i++) {
         expect(loaded.bitmaps[i]).toBe(fakeBitmaps.get(FONT_IDS[i]!));

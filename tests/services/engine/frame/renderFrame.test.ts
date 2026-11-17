@@ -304,6 +304,7 @@ describe('renderFrame', () => {
     const options = {
       tone: { exposure: 1, curve: ToneMapCurve.Reinhard, hdrKnee: 0, hdrHeadroom: 0, film: null },
       bloomEnabled: false,
+      antique: false,
       foregroundChain: foregroundChainOrder(fx.input.canvas.slabs),
       captureFaces: new Map(),
       bodyRowSlabs: bodyRowSlabs(fx.input.canvas),

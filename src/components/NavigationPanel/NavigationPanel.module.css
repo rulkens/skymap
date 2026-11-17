@@ -24,7 +24,7 @@
  * reads the action as the primary content; the key is supporting metadata.
  */
 .key {
-  color: rgba(180, 200, 240, 0.55);
+  color: var(--color-fg-key);
   flex-shrink: 0;
 }
 

@@ -13,11 +13,16 @@ import type { Label2D } from '../../../../src/@types/rendering/Label2D';
 import type { Label2DLeader } from '../../../../src/@types/rendering/Label2DLeader';
 import type { Label2DDirectorConfig } from '../../../../src/@types/engine/subsystems/Label2DDirectorConfig';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
+import { createOrbitCamera } from '../../../../src/utils/camera/orbitCamera/createOrbitCamera';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import { LABEL_EM_PX_RETUNE } from '../../../../src/data/labels/labelSizingDefaults';
 import { APP_VISIBILITY_REGISTRY } from '../../../../src/compositions/appVisibility';
 import { MILD_RECESSION } from '../../../../src/data/mildRecession';
+import { ANTIQUE_LABEL_STYLE } from '../../../../src/data/labels/antiqueLabelStyle';
+import { ANTIQUE_REFERENCE_HEIGHT_CSS } from '../../../../src/data/rendering/antiqueLook';
+import { labelScreenRect } from '../../../../src/utils/labels/labelScreenRect';
+import { alignXFraction } from '../../../../src/utils/labels/alignXFraction';
 
 function makeState(): EngineState {
   // The director fires no layer load-in (each producer owns its own), but
@@ -26,7 +31,12 @@ function makeState(): EngineState {
   return {
     subsystems: { fades: { fadeTo: vi.fn() } },
     selection: { hover: null, select: null },
+    ui: { uiHidden: false },
+    viewCover: {},
     selectionKindRows: [],
+    settings: { antique: { enabled: false } },
+    viewRig: 'mono',
+    gpu: { fontAtlases: null },
   } as unknown as EngineState;
 }
 
@@ -56,9 +66,26 @@ function makeHighlightState(hover: string | null, select: string | null): Engine
 // pure function of it, so tests step time by passing explicit stamps.  The
 // envelope ramp is 300 ms of smoothstep, so 0 / 150 / 300 hit alpha
 // 0 / 0.5 / 1 exactly.
+// The antique look places its title cartouche from the camera and the globes in view.
+const NO_BODIES = new Map();
+const VIEW = {
+  cam: createOrbitCamera({
+    target: [0, 0, 0],
+    distance: 1,
+    yaw: 0,
+    pitch: 0,
+    fovYRad: Math.PI / 2,
+    aspect: 1,
+    near: 0.1,
+    far: 100,
+  }),
+  frustum: { tanLeft: -1, tanRight: 1, tanDown: -1, tanUp: 1 },
+};
+
 function makeCtx(nowMs = 0): FrameView {
   return {
-    snapshot: { nowMs },
+    ...VIEW,
+    snapshot: { devicePixelRatio: 1, bodyStates: NO_BODIES, nowMs },
     drawCamPos: [0, 0, 0],
     vp: mat4.identity(),
     canvasSize: { width: 1000, height: 1000 },
@@ -85,7 +112,8 @@ const NEAR0_SLAB: Slab = {
 
 function makeNear0Ctx(nowMs = 0): FrameView {
   return {
-    snapshot: { nowMs },
+    ...VIEW,
+    snapshot: { devicePixelRatio: 1, bodyStates: NO_BODIES, nowMs },
     drawCamPos: [0, 0, 0],
     slabs: [NEAR0_SLAB],
     canvasSize: { width: 1000, height: 1000 },
@@ -186,7 +214,13 @@ describe('label2DDirector', () => {
     const ctxAt = (nowMs: number) =>
       ({
         ...makeCtx(nowMs),
-        snapshot: { nowMs, focusBlend: 1, focusPickId: FOCUS },
+        snapshot: {
+          devicePixelRatio: 1,
+          bodyStates: NO_BODIES,
+          nowMs,
+          focusBlend: 1,
+          focusPickId: FOCUS,
+        },
       }) as unknown as FrameView;
 
     dir.runFrame(state, ctxAt(0));
@@ -287,6 +321,27 @@ describe('label2DDirector', () => {
     color = [0.8, 0.84, 0.88, 1];
     dir.runFrame(makeState(), makeCtx(500));
     expect(labelStub.setLabels).toHaveBeenCalledTimes(settled + 1);
+  });
+
+  it('re-uploads when a label is reset at fixed id and place (an antique title: size, cut, alignment)', () => {
+    const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
+    const labelStub = makeLabelStub();
+    dir.attachRenderers(labelStub as never, makeLineStub() as never, defaultMeasure);
+    let label: Label2D = { ...SAMPLE_LABEL, text: 'Rigel', minPixelSize: 21, maxPixelSize: 21 };
+    dir.registerProducer({ id: 'p', produceLabels: () => ({ labels: [label], awake: false }) });
+    dir.runFrame(makeState(), makeCtx(0));
+    dir.runFrame(makeState(), makeCtx(300)); // envelope settled
+    const settled = labelStub.setLabels.mock.calls.length;
+
+    for (const [i, change] of [
+      { minPixelSize: 30, maxPixelSize: 30 },
+      { alignX: 'center' },
+      { text: 'RIGEL' },
+    ].entries()) {
+      label = { ...label, ...change } as Label2D;
+      dir.runFrame(makeState(), makeCtx(400 + i));
+      expect(labelStub.setLabels).toHaveBeenCalledTimes(settled + i + 1);
+    }
   });
 
   describe('highlight', () => {
@@ -982,7 +1037,7 @@ describe('label2DDirector', () => {
       // it always survives declutter — but the PRODUCER's own `fadeAlpha`
       // falls to 0 (e.g. a caption's distance-band fade closing), moved from
       // `labelsNearPass.ts`'s demand-drop tail
-      // (`declutterByScreenSeparationArm`'s target read is `label.fadeAlpha`
+      // (`applyExponentialEnvelope`'s target read is `label.fadeAlpha`
       // when a label survives, so this exercises that branch rather than the
       // `survivorIds`-driven one the cull test above pins). Must ease, not
       // pop, and the render-loop wake vote must go quiet once settled.
@@ -1052,6 +1107,142 @@ describe('label2DDirector', () => {
       expect(flushedIds).not.toContain('orion');
     });
 
+    it('under the antique look, culls the lower-priority name when long names overlap though their anchors stand apart', () => {
+      // The antique Earth bug: town names left-aligned beside their signs,
+      // anchors 100 px apart (clear of the 48 px separation), printed one
+      // over the other.
+      const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
+      const labelStub = makeLabelStub();
+      // A long left-aligned name: ~140 px wide at the look's 20 px capitals.
+      const measure = () => ({ minX: 0, minY: -100, maxX: 600, maxY: 0 });
+      dir.attachRenderers(labelStub as never, makeLineStub() as never, measure);
+      const town: Label2D = { ...SAMPLE_LABEL, text: 'Town', fadeAlpha: 1 };
+      const big: Label2D = { ...town, id: 'amsterdam', declutterPriority: 100 };
+      const small: Label2D = {
+        ...town,
+        id: 'haarlem',
+        worldPos: [-0.2, 0, 0],
+        declutterPriority: 10,
+      };
+      dir.registerProducer(makeProducer('p', [big, small]));
+      const antique = { ...makeState(), settings: { antique: { enabled: true } } } as EngineState;
+
+      dir.runFrame(antique, makeNear0Ctx(0));
+      expect(dir.labels().map((l) => l.id)).toEqual(['amsterdam']);
+
+      // A far-side place name emits at fadeAlpha 0: it must not cut a visible one.
+      dir.registerProducer(
+        makeProducer('far', [{ ...town, id: 'far-side', declutterPriority: 1000, fadeAlpha: 0 }]),
+      );
+      dir.runFrame(antique, makeNear0Ctx(16));
+      expect(dir.labels().map((l) => l.id)).toEqual(['amsterdam']);
+    });
+
+    it('under the antique look, a selected name grows to the title size and back, waking the loop meanwhile', () => {
+      const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
+      dir.attachRenderers(makeLabelStub() as never, makeLineStub() as never, defaultMeasure);
+      const star: Label2D = {
+        ...SAMPLE_LABEL,
+        text: 'Rigel',
+        fadeAlpha: 1,
+        pickId: 7,
+        subjectId: 7,
+      };
+      dir.registerProducer(makeProducer('p', [star]));
+      const look = (select: string | null) => {
+        const state = makeHighlightState(null, select);
+        return {
+          ...state,
+          selection: { ...state.selection, focus: null },
+          settings: { antique: { enabled: true } },
+        } as unknown as EngineState;
+      };
+      const px = () => dir.labels()[0]!.maxPixelSize!;
+      const ramp = ANTIQUE_LABEL_STYLE.titleGrowMs;
+
+      dir.runFrame(look(null), makeNear0Ctx(0));
+      const cut = px();
+      expect(dir.runFrame(look('earth'), makeNear0Ctx(100))).toBe(true);
+      expect(px()).toBe(cut);
+      dir.runFrame(look('earth'), makeNear0Ctx(100 + ramp / 2));
+      expect(px()).toBeCloseTo((cut + ANTIQUE_LABEL_STYLE.subjectPx) / 2);
+      // It slides from beside its anchor (left, 0) to centred over it (0.5) on the same ramp.
+      expect(dir.labels()[0]!.alignX).toBeCloseTo(0.25, 1);
+      expect(dir.runFrame(look('earth'), makeNear0Ctx(100 + ramp))).toBe(false);
+      expect(px()).toBe(ANTIQUE_LABEL_STYLE.subjectPx);
+
+      // Let go, it shrinks and slides back over the same ramp.
+      expect(dir.runFrame(look(null), makeNear0Ctx(200 + ramp))).toBe(true);
+      expect(px()).toBe(ANTIQUE_LABEL_STYLE.subjectPx);
+      expect(dir.labels()[0]!.alignX).toBe('center');
+      dir.runFrame(look(null), makeNear0Ctx(200 + 1.5 * ramp));
+      expect(dir.labels()[0]!.alignX).toBeCloseTo(0.25, 1);
+      dir.runFrame(look(null), makeNear0Ctx(200 + 2 * ramp));
+      expect(px()).toBe(cut);
+      expect(dir.labels()[0]!.alignX).toBe('left');
+    });
+
+    // Rigel's title slid onto its own rays and the caption halo erased them (owner, 2026-11-08):
+    // settled, the title's ink, outline and halo stand clear of the largest glyph's rays.
+    it.each([1, 2])(
+      'under the antique look, a selected star settles centred above its glyph, clear of the halo, at dpr %i',
+      (dpr) => {
+        const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
+        dir.attachRenderers(makeLabelStub() as never, makeLineStub() as never, defaultMeasure);
+        const star: Label2D = {
+          ...SAMPLE_LABEL,
+          text: 'Rigel',
+          worldPos: [0.1, -0.2, 0],
+          outlineEmFrac: 0.16,
+          fadeAlpha: 1,
+          pickId: 7,
+          subjectId: 7,
+          lift: { subjectSizePx: 0.5 },
+        };
+        dir.registerProducer(makeProducer('p', [star]));
+        const state = makeHighlightState(null, 'earth');
+        const look = {
+          ...state,
+          selection: { ...state.selection, focus: null },
+          settings: { antique: { enabled: true } },
+        } as unknown as EngineState;
+        const side = 1000 * dpr;
+        const ctxAt = (nowMs: number) =>
+          ({
+            ...makeNear0Ctx(nowMs),
+            snapshot: { devicePixelRatio: dpr, bodyStates: NO_BODIES, nowMs },
+            canvasSize: { width: side, height: side },
+            drawPxPerRad: side / 2 / LABEL_EM_PX_RETUNE,
+          }) as unknown as FrameView;
+        dir.runFrame(look, ctxAt(0));
+        dir.runFrame(look, ctxAt(ANTIQUE_LABEL_STYLE.titleGrowMs));
+
+        const title = dir.labels()[0]!;
+        const toScreen = (p: readonly number[]): [number, number] => [
+          (p[0]! * 0.5 + 0.5) * side,
+          (0.5 - p[1]! * 0.5) * side,
+        ];
+        const glyph = toScreen(star.worldPos);
+        // `defaultMeasure` lays out left-aligned; the atlas shifts a centred line by half.
+        const box = defaultMeasure(title);
+        const shift = (box.maxX - box.minX) * alignXFraction(title.alignX ?? 'left');
+        const ink = labelScreenRect({
+          label: title,
+          bbox: { ...box, minX: box.minX - shift, maxX: box.maxX - shift },
+          screenPx: toScreen(title.worldPos),
+          clipW: 1,
+          pxPerRad: side / 2 / LABEL_EM_PX_RETUNE,
+          devicePixelRatio: dpr,
+          includeOutline: true,
+        });
+        const unitPx = side / ANTIQUE_REFERENCE_HEIGHT_CSS;
+        // Sirius's 8-unit rays swelled by the glyph's 8% hand jitter, then the halo's 3 units.
+        const clearPx = (8 * 1.08 + 3) * unitPx;
+        expect(glyph[1] - ink.y1).toBeGreaterThanOrEqual(clearPx);
+        expect((ink.x0 + ink.x1) / 2).toBeCloseTo(glyph[0], 6);
+      },
+    );
+
     it('a caption standing under a lifted planet caption survives: the cull reads where the text is drawn', () => {
       // The Curiosity case: a rover at the sub-camera point projects within a
       // pixel of its host planet's anchor, but the planet's text is lifted
@@ -1083,6 +1274,114 @@ describe('label2DDirector', () => {
       const flushedIds = (labelStub.setLabels.mock.calls.at(-1)![0] as Label2D[]).map((l) => l.id);
       expect(flushedIds).toContain('mars');
       expect(flushedIds).toContain('curiosity');
+    });
+
+    describe('under the antique look', () => {
+      const antique = () =>
+        ({ ...makeState(), settings: { antique: { enabled: true } } }) as EngineState;
+      // ~140 x 24 px at the look's 20 px capitals, rising from its anchor.
+      const wide = () => ({ minX: 0, minY: -100, maxX: 600, maxY: 0 });
+      const KM = SCALE_UNITS.MPC_TO_M * SCALE_UNITS.M_TO_KM;
+      const planet: Label2D = {
+        ...SAMPLE_LABEL,
+        id: 'mars',
+        text: 'Mars',
+        declutterPriority: 20 * CAPTION_PRIORITY_SCALE,
+        fadeAlpha: 1,
+        worldEmMpc: 1e-10,
+        occludeNearKm: 1e-8 * KM,
+        // A 400 px disc centred on screen.
+        lift: { subjectSizePx: 400, lineBottomLiftPx: 204 },
+      };
+
+      it("judges a lifted name where the look draws it, just off its glyph's rim", () => {
+        // Praesepe printed over MARS: the cull judged the planet's name a diameter
+        // and a half up the screen, where the plain look floats it.
+        const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
+        const labelStub = makeLabelStub();
+        dir.attachRenderers(labelStub as never, makeLineStub() as never, wide);
+        // Screen (520, 230): its name rises across the band MARS sits in, above the rim.
+        const cluster: Label2D = {
+          ...SAMPLE_LABEL,
+          id: 'praesepe',
+          worldPos: [0.04, 0.54, 0],
+          declutterPriority: 44,
+          fadeAlpha: 1,
+          lift: { subjectSizePx: 0, lineBottomLiftPx: 4 },
+        };
+        dir.registerProducer(makeProducer('p', [planet, cluster]));
+        dir.runFrame(antique(), makeNear0Ctx(0));
+        expect(dir.labels().map((l) => l.id)).toEqual(['mars']);
+      });
+
+      it("keeps a farther subject's name off a nearer body's disc, never its own places", () => {
+        // Denebola on Jupiter's limb: a star behind the planet named across its disc.
+        const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
+        const labelStub = makeLabelStub();
+        dir.attachRenderers(labelStub as never, makeLineStub() as never, wide);
+        const onDisc = { fadeAlpha: 1, declutterPriority: 10 * CAPTION_PRIORITY_SCALE };
+        // Screen (450, 650) and (650, 450): both rects lie inside the disc, clear of MARS.
+        const star: Label2D = {
+          ...SAMPLE_LABEL,
+          ...onDisc,
+          id: 'denebola',
+          worldPos: [-0.1, -0.3, 0],
+          occludeNearKm: 1e5 * KM,
+        };
+        const place: Label2D = {
+          ...SAMPLE_LABEL,
+          ...onDisc,
+          id: 'olympus',
+          worldPos: [0.3, 0.1, 0],
+          occludeNearKm: 1.00000000001e-8 * KM,
+        };
+        dir.registerProducer(makeProducer('p', [planet, star, place]));
+        dir.runFrame(antique(), makeNear0Ctx(0));
+        expect(dir.labels().map((l) => l.id)).toEqual(['mars', 'olympus']);
+
+        dir.runFrame(makeState(), makeNear0Ctx(16));
+        expect(dir.labels().map((l) => l.id)).toContain('denebola');
+      });
+      it("keeps a star or cluster caption off a nearer globe's disc though it names no depth", () => {
+        // "Pleiades" clipped on the Moon's limb: cluster captions carry no `occludeNearKm`,
+        // so the cull took them for nearer than every globe. A place name (no depth either) stays.
+        const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
+        dir.attachRenderers(makeLabelStub() as never, makeLineStub() as never, () => ({
+          minX: 0,
+          minY: -100,
+          maxX: 600,
+          maxY: 0,
+        }));
+        const rest = (nowMs: number) =>
+          ({
+            ...makeNear0Ctx(nowMs),
+            snapshot: { devicePixelRatio: 1, bodyStates: NO_BODIES, nowMs, focusBlend: 0 },
+          }) as unknown as FrameView;
+        const onDisc = { fadeAlpha: 1, declutterPriority: 10 * CAPTION_PRIORITY_SCALE };
+        const cluster: Label2D = {
+          ...SAMPLE_LABEL,
+          ...onDisc,
+          id: 'open-cluster-pleiades',
+          worldPos: [-0.1, -0.3, 0],
+        };
+        const place: Label2D = {
+          ...SAMPLE_LABEL,
+          ...onDisc,
+          id: 'olympus',
+          worldPos: [0.3, 0.1, 0],
+        };
+        const far = (label: Label2D) => ({
+          ...makeProducer('f', [label]),
+          label: 'structure' as const,
+        });
+        dir.registerProducer(makeProducer('p', [planet, place]));
+        dir.registerProducer(far(cluster));
+        dir.runFrame(antique(), rest(0));
+        expect(dir.labels().map((l) => l.id)).toEqual(['mars', 'olympus']);
+
+        dir.runFrame(makeState(), rest(16));
+        expect(dir.labels().map((l) => l.id)).toContain('open-cluster-pleiades');
+      });
     });
 
     it('two long names whose anchors are far apart but whose texts overlap keep only one', () => {
@@ -1204,5 +1503,148 @@ describe('label2DDirector', () => {
       expect(measure).toHaveBeenCalledTimes(1);
       expect(labelStub.setLabels).toHaveBeenLastCalledWith([constellationLike]);
     });
+  });
+
+  it('the antique look renames, drops leaders, and re-flushes on the toggle alone', () => {
+    const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
+    const labelStub = makeLabelStub();
+    const lineStub = makeLineStub();
+    dir.attachRenderers(labelStub as never, lineStub as never, defaultMeasure);
+    const sun: Label2D = {
+      ...SAMPLE_LABEL,
+      id: 'sceneBody-sun',
+      text: 'Sun',
+      leader: SAMPLE_LEADER,
+    };
+    dir.registerProducer({
+      id: 'stars',
+      label: 'starCatalog',
+      produceLabels: () => ({ labels: [sun], awake: false }),
+    });
+    const antiqueState = (enabled: boolean) =>
+      ({ ...makeState(), settings: { antique: { enabled } } }) as unknown as EngineState;
+
+    const ctx = {
+      ...makeCtx(0),
+      snapshot: { devicePixelRatio: 1, bodyStates: NO_BODIES, nowMs: 0, focusBlend: 0 },
+    } as unknown as FrameView;
+
+    dir.runFrame(antiqueState(false), ctx);
+    dir.runFrame(antiqueState(true), ctx);
+
+    expect(flushedLabels(labelStub).map((f) => f.map((l) => l.text))).toEqual([['Sun'], ['Sol']]);
+    expect(lineStub.setLines.mock.calls.map((c) => (c[0] as unknown[]).length)).toEqual([1, 0]);
+  });
+
+  it('the antique look names a void only past the star-chart regime', () => {
+    const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
+    const labelStub = makeLabelStub();
+    dir.attachRenderers(labelStub as never, makeLineStub() as never, defaultMeasure);
+    const voidLabel: Label2D = { ...SAMPLE_LABEL, id: 'void-local-void', text: 'Local Void' };
+    dir.registerProducer({
+      id: 'structures',
+      label: 'structure',
+      produceLabels: () => ({ labels: [voidLabel], awake: false }),
+    });
+    const state = {
+      ...makeState(),
+      settings: { antique: { enabled: true } },
+    } as unknown as EngineState;
+    const ctxAt = (drawCamPos: readonly number[]) =>
+      ({
+        ...makeCtx(0),
+        drawCamPos,
+        snapshot: { devicePixelRatio: 1, bodyStates: NO_BODIES, nowMs: 0, focusBlend: 0 },
+      }) as unknown as FrameView;
+
+    dir.runFrame(state, ctxAt([0, 0, 0.01]));
+    dir.runFrame(state, ctxAt([0, 0, 0.1]));
+
+    expect(flushedLabels(labelStub).map((f) => f.map((l) => l.text))).toEqual([
+      [],
+      ['VACVVM LOCALE'],
+    ]);
+  });
+
+  it("a place name on the focused Earth keeps Earth's emphasis and never takes its title", () => {
+    const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
+    const labelStub = makeLabelStub();
+    dir.attachRenderers(labelStub as never, makeLineStub() as never, defaultMeasure);
+    const EARTH = 7; // HIGHLIGHT_ROWS' pick id for earth
+    const terra: Label2D = {
+      ...SAMPLE_LABEL,
+      id: 'sceneBody-earth',
+      text: 'Earth',
+      subjectId: EARTH,
+    };
+    const africa: Label2D = {
+      ...SAMPLE_LABEL,
+      id: 'earthPlace-africa',
+      text: 'Africa',
+      worldPos: [0.3, 0, 0],
+      subjectId: EARTH,
+    };
+    dir.registerProducer({
+      id: 'bodies',
+      label: 'body',
+      produceLabels: () => ({ labels: [terra, africa], awake: false }),
+    });
+    const state = {
+      ...makeHighlightState(null, 'earth'),
+      selection: { hover: null, select: { type: 'body', id: 'earth' }, focus: null },
+      settings: { antique: { enabled: true } },
+      visibilityEntries: APP_VISIBILITY_REGISTRY,
+    } as unknown as EngineState;
+    const ctxAt = (nowMs: number) =>
+      ({
+        ...makeCtx(nowMs),
+        snapshot: {
+          devicePixelRatio: 1,
+          bodyStates: NO_BODIES,
+          nowMs,
+          focusBlend: 1,
+          focusPickId: EARTH,
+        },
+      }) as unknown as FrameView;
+
+    dir.runFrame(state, ctxAt(0));
+    dir.runFrame(state, ctxAt(300));
+    const shown = (id: string) => dir.labels().find((l) => l.id === id)!;
+    expect(shown('earthPlace-africa').fadeAlpha ?? 1).toBe(1);
+    expect(shown('earthPlace-africa').text).toBe('AFRICA');
+    expect(shown('earthPlace-africa').maxPixelSize).toBeLessThan(
+      shown('sceneBody-earth').minPixelSize!,
+    );
+  });
+
+  it("a town on the selected Earth keeps its own type, never the Earth's title", () => {
+    const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
+    const labelStub = makeLabelStub();
+    dir.attachRenderers(labelStub as never, makeLineStub() as never, defaultMeasure);
+    const town: Label2D = {
+      ...SAMPLE_LABEL,
+      id: 'earthTown-amsteldam',
+      text: 'Amsteldam',
+      subjectId: 7, // HIGHLIGHT_ROWS' pick id for earth
+    };
+    dir.registerProducer({
+      id: 'bodies',
+      label: 'body',
+      produceLabels: () => ({ labels: [town], awake: false }),
+    });
+    const state = {
+      ...makeHighlightState(null, 'earth'),
+      selection: { hover: null, select: { type: 'body', id: 'earth' }, focus: null },
+      settings: { antique: { enabled: true } },
+    } as unknown as EngineState;
+    const ctx = {
+      ...makeCtx(0),
+      snapshot: { devicePixelRatio: 1, bodyStates: NO_BODIES, nowMs: 0, focusBlend: 0 },
+    } as unknown as FrameView;
+
+    dir.runFrame(state, ctx);
+    const shown = dir.labels().find((l) => l.id === town.id)!;
+    expect(shown.text).toBe('Amsteldam');
+    expect(shown.alignX).toBe('left');
   });
 });

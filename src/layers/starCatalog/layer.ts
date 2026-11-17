@@ -1,6 +1,6 @@
 /**
  * The starCatalog Layer: the survey Gaia bin plus the three seeded catalogs
- * (Sun, S-stars, famous stars), their four renderers, the octree cut, the
+ * (Sun, S-stars, famous stars), their renderers, the octree cut, the
  * Stars settings section, and every contribution they make to a frame. Pass
  * order matches `FRAME_ORDER` (`frameSections.ts`), not this array's own
  * ordering rules.
@@ -21,6 +21,8 @@ import { starAggregatesPass } from './survey/passes/starAggregatesPass';
 import { starPointsPass } from './seededStars/passes/starPointsPass';
 import { starCatalogPass } from './survey/passes/starCatalogPass';
 import { starAggregateUpsamplePass } from './survey/passes/starAggregateUpsamplePass';
+import { starPointsPrintPass } from './seededStars/passes/starPointsPrintPass';
+import { starCatalogPrintPass } from './survey/passes/starCatalogPrintPass';
 import { starSpheresPass } from './resolvedStars/passes/starSpheresPass';
 import { fieldStarSpherePass } from './resolvedStars/passes/fieldStarSpherePass';
 import { starCatalogSelectionRow } from './selection/starCatalogSelectionRow';
@@ -51,6 +53,8 @@ export const starCatalogLayer = defineLayer({
     starAggregateUpsamplePass(runtime),
     starSpheresPass(runtime),
     fieldStarSpherePass(runtime),
+    starPointsPrintPass(runtime),
+    starCatalogPrintPass(runtime),
   ],
   computes: (runtime) => [starCutCompute(runtime)],
   assets: starCatalogAssetRows,

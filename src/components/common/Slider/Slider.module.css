@@ -25,11 +25,13 @@
   gap: var(--space-5);
   width: 100%;
   box-sizing: border-box;
-  padding: var(--space-2) var(--space-5);
+  padding: var(--slider-padding, var(--space-2) var(--space-5));
   overflow: hidden;
   border: 1px solid var(--border-control);
+  /* The antique look runs the pill on a scale of miles along its bottom edge. */
+  border-image: var(--scale-track-image, none);
   border-radius: var(--radius-lg);
-  background: var(--surface-control);
+  background: var(--slider-ground, var(--surface-control));
   cursor: pointer;
   user-select: none;
   touch-action: none;
@@ -43,14 +45,16 @@
 }
 
 .root:focus-visible {
-  outline: 1px solid var(--focus-ring);
+  outline: var(--focus-ring-width, 1px) solid var(--focus-ring);
   outline-offset: 2px;
 }
 
 .fill {
   position: absolute;
-  inset: 0;
-  background: var(--surface-control-hover);
+  inset: var(--slider-fill-inset, 0);
+  height: var(--slider-fill-height, auto);
+  background: var(--slider-fill, var(--surface-control-hover));
+  mix-blend-mode: var(--slider-fill-blend, normal);
   pointer-events: none;
   transition:
     width var(--duration-base) var(--ease-standard),
@@ -59,7 +63,19 @@
 
 .root:hover .fill,
 .root:focus-visible .fill {
-  background: var(--surface-control-active);
+  background: var(--slider-fill, var(--surface-control-active));
+}
+
+/* The pointer at the value, where a look draws one. */
+.fill::after {
+  content: '';
+  display: var(--slider-pointer-display, none);
+  position: absolute;
+  right: calc(var(--slider-pointer-size) / -2);
+  bottom: var(--slider-pointer-bottom);
+  width: var(--slider-pointer-size);
+  height: var(--slider-pointer-size);
+  background: var(--slider-pointer);
 }
 
 /*

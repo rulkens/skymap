@@ -353,7 +353,16 @@ export function createVolumeFieldRenderer<Id extends string>(
       }
       return false;
     },
-    draw(pass, viewProj, viewportPx, pxPerRad, cameraPosWorld, settingsOf, fadeOpacityOf) {
+    draw(
+      pass,
+      viewProj,
+      viewportPx,
+      pxPerRad,
+      cameraPosWorld,
+      settingsOf,
+      fadeOpacityOf,
+      steadyJitter = false,
+    ) {
       pass.setPipeline(pipeline);
       pass.setVertexBuffer(0, cornerBuffer);
       pass.setIndexBuffer(indexBuffer, 'uint16');
@@ -428,7 +437,7 @@ export function createVolumeFieldRenderer<Id extends string>(
         scratch[60] = e.envelopeOuter;
         scratch[61] = s.exposure;
         scratch[62] = s.trim;
-        scratch[63] = frame;
+        scratch[63] = steadyJitter ? 0 : frame;
         device.queue.writeBuffer(e.uniformBuffer, 0, scratch);
         // Per-field fade.opacity write: the resolved opacity from the skip
         // gate above, written into the 16-byte fadeBuffer.

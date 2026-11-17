@@ -42,6 +42,7 @@ function ctxAt(camDistanceMpc: number): { ctx: FrameView; near: number; far: num
     slabs: [slab],
     drawCamPos: EYE,
     canvasSize: { width: 1280, height: 720 },
+    snapshot: { devicePixelRatio: 1 },
     drawPxPerRad: 900,
   } as unknown as FrameView;
   return { ctx, near, far };

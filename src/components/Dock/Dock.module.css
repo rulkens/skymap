@@ -11,7 +11,7 @@
   box-sizing: border-box;
   height: var(--dock-height);
   padding-bottom: max(var(--space-4), env(safe-area-inset-bottom, 0px));
-  background: var(--surface-card-strong);
+  background: var(--sheet-ground, var(--surface-card-strong));
   -webkit-backdrop-filter: blur(var(--blur-card));
   backdrop-filter: blur(var(--blur-card));
   border-top: 1px solid var(--border-card);

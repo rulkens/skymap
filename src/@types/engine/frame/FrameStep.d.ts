@@ -49,4 +49,6 @@ export type FrameStep =
   | { kind: 'composite'; step: CompositeStep }
   | { kind: 'bloom' }
   /** The expanded form of `CopyStepSpec`. */
-  | { kind: 'copy'; source: string };
+  | { kind: 'copy'; source: string }
+  /** The expanded form of `StylizeStepSpec`; emitted only while a look is on. */
+  | { kind: 'stylize'; source: string; overlay: string };

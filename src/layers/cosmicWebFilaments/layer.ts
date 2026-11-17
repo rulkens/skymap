@@ -1,6 +1,6 @@
 /**
  * The cosmicWebFilaments Layer: the DisPerSE cosmic-web skeleton — one
- * renderer, one pass, one asset slot, one show entry, one source and its own
+ * renderer, its pass and the look's print twin, one asset slot, one show entry, one source and its own
  * SettingsPanel section (a sibling of `cosmicWebDensity`'s, not a shared
  * one — the Style-picker shortcut that once batched both masters is gone).
  */
@@ -22,7 +22,7 @@ export const cosmicWebFilamentsLayer = defineLayer({
   sources: FILAMENTS_SOURCE_ROWS,
   create,
   destroy,
-  passes: (runtime) => [filamentsPass(runtime)],
+  passes: (runtime) => [filamentsPass(runtime), filamentsPass(runtime, true)],
   assets: filamentsAssetRows,
   ui: [
     {

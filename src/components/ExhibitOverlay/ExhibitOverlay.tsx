@@ -1,8 +1,9 @@
 /**
  * ExhibitOverlay — "notes on the scene": a full-screen takeover for a curated
  * exhibit (spec §4.2), sibling to TourOverlay under the same `runTakeoverSaga`
- * bracket. No card, no chrome besides an Exit pill — the caption and notes
- * sit directly over the live field behind their own scrims. Each section draws
+ * bracket. In the plain look the caption and notes sit straight over the live
+ * field behind their own scrims; a look may cut each as a framed slip, with a
+ * running head and a section scale that stay hidden otherwise. Each section draws
  * itself through its kind's Component; a container resolves the exhibit.
  */
 
@@ -16,6 +17,8 @@ import StopIcon from '../icons/StopIcon/StopIcon';
 import EyeIcon from '../icons/EyeIcon/EyeIcon';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { useViewCover } from '../../hooks/useViewCover';
+import { useActiveSection } from '../../hooks/useActiveSection';
+import SectionScale from './SectionScale/SectionScale';
 import type { ExhibitSection } from '../../@types/exhibits/ExhibitSection';
 import type { CameraGesture } from '../../@types/ui/CameraGesture';
 import type { ViewCover } from '../../@types/layout/ViewCover';
@@ -59,6 +62,8 @@ function ExhibitOverlay({
   const titleRef = useRef<HTMLHeadingElement>(null);
   useViewCover(notesRef, 'right', !hidden && !isMobile && body.length > 0, onNotesCover);
   useViewCover(titleRef, 'bottom', !hidden && isMobile, onCaptionCover);
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const [activeSection, jumpToSection] = useActiveSection(scrollerRef);
 
   return (
     <div className={cx(styles.root, hidden && styles.hidden)} style={clock}>
@@ -67,21 +72,39 @@ function ExhibitOverlay({
         <div className={styles.vignetteNotes} aria-hidden="true" />
 
         <div className={styles.caption}>
-          <h1 ref={titleRef} className={styles.title}>
-            {label}
-          </h1>
-          <p className={styles.lede}>{lede}</p>
+          <div className={cx(styles.slip, styles.captionSlip)}>
+            <div className={cx(styles.titleRow, styles.kicker)}>
+              <span className={cx(styles.cartouche, styles.kickerLabel)}>Exhibit</span>
+            </div>
+            <h1 ref={titleRef} className={styles.title}>
+              {label}
+            </h1>
+            <p className={styles.lede}>{lede}</p>
+          </div>
         </div>
 
         {body.length > 0 ? (
           <div ref={notesRef} className={styles.notes}>
-            {body.map(({ kind, data }, i) => (
-              // The group is what enters — a section and the hairline above it
-              // are one beat, and `--i` is its place in the stagger.
-              <div key={i} className={styles.sectionGroup} style={{ '--i': i } as CSSProperties}>
-                <kind.Component data={data} />
+            <div className={cx(styles.slip, styles.notesSlip)}>
+              {/* The h1 already names the exhibit; this is its running head. */}
+              <div className={cx(styles.titleRow, styles.runningHead)} aria-hidden="true">
+                <span className={cx(styles.cartouche, styles.runningHeadLabel)}>{label}</span>
               </div>
-            ))}
+              <div ref={scrollerRef} className={styles.notesScroller}>
+                {body.map(({ kind, data }, i) => (
+                  // The group is what enters — a section and the hairline above it
+                  // are one beat, and `--i` is its place in the stagger.
+                  <div
+                    key={i}
+                    className={styles.sectionGroup}
+                    style={{ '--i': i } as CSSProperties}
+                  >
+                    <kind.Component data={data} />
+                  </div>
+                ))}
+              </div>
+              <SectionScale count={body.length} active={activeSection} onJump={jumpToSection} />
+            </div>
           </div>
         ) : null}
 

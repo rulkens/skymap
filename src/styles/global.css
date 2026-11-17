@@ -4,6 +4,7 @@
  * them without inheriting `overflow: hidden` on the body.
  */
 @import './tokens.css';
+@import './antique.css';
 
 /* ─────────────────────────────────────────────────────────────────────────
  * Page reset.  Migrated from index.html's inline <style> block.  The reset

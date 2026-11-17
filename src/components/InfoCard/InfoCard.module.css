@@ -16,7 +16,8 @@
  */
 .root {
   position: fixed;
-  top: var(--corner-offset);
+  /* A framed card's title cartouche rides above its top edge: keep it on screen. */
+  top: calc(var(--corner-offset) + var(--framed-overhang, 0px));
   right: var(--corner-offset);
   z-index: 10;
   display: flex;

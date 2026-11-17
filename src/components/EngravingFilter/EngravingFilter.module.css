@@ -1,0 +1,7 @@
+/* EngravingFilter.module.css — out of flow: the <svg> only holds a filter definition. */
+.root {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}

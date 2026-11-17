@@ -243,7 +243,7 @@ describe('StructureMarkerRenderer pick camera', () => {
     const drawTimeBuffer = buffersByLabel.get('structure-marker-uniforms');
     expect(pickCameraBuffer).toBeDefined();
     expect(drawTimeBuffer).toBeDefined();
-    expect(bufferSizesByLabel.get('structure-marker-pick-camera')).toBe(CAMERA_UNIFORM_BYTES);
+    expect(bufferSizesByLabel.get('structure-marker-pick-camera')).toBe(CAMERA_UNIFORM_BYTES + 16);
 
     // The pick-time pose lands on pickRing's OWN buffer as the prefix —
     // never on the draw-time `structure-marker-uniforms` buffer, which still
@@ -254,7 +254,7 @@ describe('StructureMarkerRenderer pick camera', () => {
     ).mock.calls.at(-1) as [GPUBuffer, number, Float32Array];
     expect(target).toBe(pickCameraBuffer);
     expect(offset).toBe(0);
-    expect(payload.byteLength).toBe(CAMERA_UNIFORM_BYTES);
+    expect(payload.byteLength).toBe(CAMERA_UNIFORM_BYTES + 16);
     expect(Array.from(payload.subarray(0, 16))).toEqual(
       Array.from(narrowMat4(rebaseViewProj(viewProj, [0, 0, 0]))),
     );
@@ -358,5 +358,30 @@ describe('StructureMarkerRenderer instance eye', () => {
     expect(Array.from(writes.at(-1)!.subarray(0, 16))).toEqual(
       Array.from(narrowMat4(rebaseViewProj(vp, eyeA))),
     );
+  });
+});
+
+describe('StructureMarkerRenderer ring width', () => {
+  // ring.wesl's band is CSS px scaled by this tail float (index 20, after the 80-byte prefix).
+  it('draw uploads the devicePixelRatio right after the camera prefix', () => {
+    const device = fakeDevice();
+    const renderer = createStructureMarkerRenderer(
+      ctxOf(device),
+      'rgba16float',
+      {} as unknown as FadeUniformsBgl,
+      COSMO,
+      STRUCTURE_IDS,
+      CODE_OF,
+    );
+    renderer.setMarkers([cluster(1)], [0, 0, 0]);
+    const pass = {
+      setPipeline: vi.fn(),
+      setBindGroup: vi.fn(),
+      setVertexBuffer: vi.fn(),
+      draw: vi.fn(),
+    } as unknown as GPURenderPassEncoder;
+    renderer.draw(pass, new Float64Array(16), [800, 600], 500, 2);
+    const writes = (device.queue.writeBuffer as ReturnType<typeof vi.fn>).mock.calls;
+    expect((writes.at(-1)![2] as Float32Array)[20]).toBe(2);
   });
 });

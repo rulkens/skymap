@@ -1,5 +1,5 @@
 /**
- * The record words cross from TS into `vertex.wesl` with no compiler between them.
+ * The record words cross from TS into `leafRecord.wesl` with no compiler between them.
  * The shader's decode is reproduced here from the shader's own constants (read
  * from its text), so a drift in either the packer or the WESL masks and shifts
  * fails as a field that does not survive the round trip.
@@ -22,18 +22,18 @@ import {
 } from '../../../../../src/data/starCatalog/starCatalogFormat';
 import { OFFSET_FRACTION_LEVELS } from '../../../../../src/data/octree/octreeFormat';
 
-const vertex = readFileSync(
-  join(process.cwd(), 'src/services/gpu/shaders/starCatalog/vertex.wesl'),
+const decode = readFileSync(
+  join(process.cwd(), 'src/services/gpu/shaders/starCatalog/leafRecord.wesl'),
   'utf-8',
 );
 
 function weslU32(name: string): number {
-  const m = new RegExp(`const\\s+${name}\\s*:\\s*u32\\s*=\\s*(0x[0-9a-f]+|\\d+)u;`).exec(vertex);
-  if (!m) throw new Error(`vertex.wesl lacks const ${name}`);
+  const m = new RegExp(`const\\s+${name}\\s*:\\s*u32\\s*=\\s*(0x[0-9a-f]+|\\d+)u;`).exec(decode);
+  if (!m) throw new Error(`leafRecord.wesl lacks const ${name}`);
   return Number(m[1]);
 }
 
-/** `vertex.wesl`'s record decode. */
+/** `leafRecord.wesl`'s record decode. */
 function shaderUnpack(w0: number, w1: number) {
   const mask = weslU32('OFFSET_MASK');
   return {
@@ -62,7 +62,7 @@ describe('packStarGpuRecords', () => {
       colourIndex: Float32Array.from(records.map((r) => colorIdxToBpRp(r.colorIdx))),
     });
 
-    const offsetScale = /const\s+OFFSET_SCALE\s*:\s*f32\s*=\s*([0-9.e-]+);/.exec(vertex)?.[1];
+    const offsetScale = /const\s+OFFSET_SCALE\s*:\s*f32\s*=\s*([0-9.e-]+);/.exec(decode)?.[1];
     expect(Number(offsetScale)).toBe(1 / OFFSET_FRACTION_LEVELS);
     expect(weslU32('GPU_ABSMAG_SHIFT')).toBe(GPU_ABSMAG_SHIFT);
     expect(weslU32('GPU_COLOR_SHIFT')).toBe(GPU_COLOR_SHIFT);

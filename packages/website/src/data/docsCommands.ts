@@ -67,6 +67,8 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
           'fetch-local-bubble',
           'fetch-milliquas',
           'fetch-mpcorb',
+          'fetch-natural-earth',
+          'fetch-ohm-1690',
           'fetch-sbdb-diameters',
           'fetch-skraafoto',
           'fetch-structures',
@@ -209,6 +211,31 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         scripts: ['capture-structures'],
         does: 'Cuts the small pictures of star clusters, nebulae and the Galactic Centre out of a sky survey, one for each that has none.',
         manual: 'tools/capture/README.md',
+      },
+      {
+        scripts: ['pack-ornaments'],
+        does: 'Packs the engraved ornaments of the antique atlas look, title and all, into the one picture the app loads.',
+        manual: 'tools/antique/packOrnaments.ts',
+      },
+      {
+        scripts: ['build-antique-earth'],
+        does: 'Writes the antique atlas look’s Earth map, its realms of 1690, rivers and molehills, from the Natural Earth provinces and rivers, OpenHistoricalMap’s old borders and the ETOPO heights. It also writes the realm name table the app labels them from.',
+        manual: 'tools/antique/earth/buildAntiqueEarth.ts',
+      },
+      {
+        scripts: ['bake-range-relief'],
+        does: 'Writes the antique atlas look’s map of mountain ranges, the relief of each 80 km stretch of Earth from the ETOPO heights, so the close-up hachures are drawn in ranges and not on hill country.',
+        manual: 'tools/antique/earth/bakeRangeRelief.ts',
+      },
+      {
+        scripts: ['bake-moon-craters'],
+        does: 'Writes the antique atlas look’s Moon crater table, every named crater 12 km across or more, its rim measured on the Moon’s height map and its print weight from its depth, from the IAU gazetteer and NASA’s laser altimeter heights.',
+        manual: 'tools/antique/moon/bakeMoonCraters.ts',
+      },
+      {
+        scripts: ['bake-moon-far-side-places'],
+        does: 'Writes the antique atlas look’s names for the Moon’s far side, its four maria and the craters of 180 km or more, from the IAU gazetteer.',
+        manual: 'tools/antique/moon/bakeMoonFarSidePlaces.ts',
       },
       {
         scripts: ['record-tour', 'record-clip'],

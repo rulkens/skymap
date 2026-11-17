@@ -28,7 +28,7 @@
   backdrop-filter: blur(var(--blur-card));
   border: 1px solid var(--border-card);
   border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--framed-shadow, var(--shadow-card));
   padding: var(--space-2) var(--space-4);
 
   /* Own font-family, no inheritance: the tip span sits OUTSIDE the wrapped

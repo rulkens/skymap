@@ -11,6 +11,7 @@ const ctxWith = (focus: FocusUniformsValue): CaptionComposeContext => ({
   camPos: [0, 0, 0],
   viewportShortSidePx: 1000,
   drawPxPerRad: 1000,
+  devicePixelRatio: 1,
   focus,
   occluders: [],
 });

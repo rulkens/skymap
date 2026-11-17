@@ -39,6 +39,7 @@ import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
 import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
 import { isPlanetBody } from '../../../utils/scene/isPlanetBody';
 import { isMeshBody } from '../../../utils/meshBodies/isMeshBody';
+import { displayPixelRatio } from '../../../utils/gpu/displayPixelRatio';
 
 export function deriveFrameContext(
   state: EngineState,
@@ -137,6 +138,7 @@ export function deriveFrameContext(
     meshBodies,
     sceneBodies,
     nowMs,
+    devicePixelRatio: displayPixelRatio(),
     simDays,
     altitudeMpc,
     renderTargets: state.gpu.renderTargets,

@@ -16,6 +16,8 @@ import { MILKY_WAY_LABEL_STYLE } from './milkyWayLabelStyle';
 import { liftedLabelPlacement } from '../../../../services/engine/presentation/liftedLabelPlacement';
 import { textLayoutOf } from '../../../../services/gpu/labelLayout/textLayoutOf';
 import { isPickableUnderFocus } from '../../../../utils/structure/isPickableUnderFocus';
+import { antiqueMilkyWayNameAlpha } from '../utils/antiqueMilkyWayNameAlpha';
+import { antiqueLookOn } from '../../../../utils/render/antiqueLookOn';
 import { MILKY_WAY_CENTER_WORLD } from '../../../../data/milkyWay/galacticCenter';
 
 // The MW stellar disk, in kpc: the origin dot has no catalog row to read a
@@ -29,6 +31,8 @@ export const produceMilkyWayLabel =
   (state, ctx, fade) => {
     if (state.settings.labels.focusedOnly && state.selection.focus?.type !== 'milkyWay')
       return { labels: [], awake: false };
+    // On an antique plate that letters the disc, "Sol hic" marks where we are.
+    if (antiqueMilkyWayNameAlpha(state, ctx) > 0) return { labels: [], awake: false };
 
     const camDist = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
     const style = MILKY_WAY_LABEL_STYLE;
@@ -68,6 +72,10 @@ export const produceMilkyWayLabel =
       distanceMpc: camDist,
       pxPerRad: ctx.drawPxPerRad,
     });
+    // The antique look sets its own type, which only the director measures, so its
+    // lift stage sets the name off the disc's rim.
+    if (antiqueLookOn(state))
+      return { labels: [{ ...label, lift: { subjectSizePx: sizePx } }], awake: false };
     const viewportPx: Vec2 = [ctx.canvasSize.width, ctx.canvasSize.height];
     const fontAtlases = state.gpu.fontAtlases;
     const placement = liftedLabelPlacement({
@@ -80,6 +88,7 @@ export const produceMilkyWayLabel =
       worldEmMpc: style.worldEmMpc,
       minPixelSize: style.minPixelSize,
       maxPixelSize: style.maxPixelSize,
+      devicePixelRatio: ctx.snapshot.devicePixelRatio,
     });
     // Origin behind the camera: the projection is undefined — emit nothing.
     if (placement === null) return { labels: [], awake: false };

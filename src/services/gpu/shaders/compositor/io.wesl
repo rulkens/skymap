@@ -10,8 +10,9 @@
 // pass-through for LDR / additive sources) and preserveAlpha decides whether
 // the output carries the source's coverage or a forced opaque 1.0: two u32s
 // because they answer independent questions. hdrKnee / hdrHeadroom are 0 in
-// every SDR draw. Lanes 8–17 are the film grade, written only for a film draw
-// and read only by the FILM pipeline variant (fragment.wesl's 'override FILM').
+// every SDR draw. Lanes 8–17 are the film grade, written only for a film draw and read only
+// by the FILM pipeline variant (fragment.wesl's 'override FILM'); lanes 18–19
+// are the antique print's shoulder.
 //
 // | offset | field         | type | | offset | field       | type |
 // | ------ | ------------- | ---- | | ------ | ----------- | ---- |
@@ -23,8 +24,8 @@
 // | 20     | preserveAlpha | u32  | | 60     | softnessPx  | f32  |
 // | 24     | hdrKnee       | f32  | | 64     | squeeze     | f32  |
 // | 28     | hdrHeadroom   | f32  | | 68     | seed        | u32  |
-// | 32     | contrast      | f32  | | 72, 76 | pad         |      |
-// | 36     | lift          | f32  | |        |             |      |
+// | 32     | contrast      | f32  | | 72     | shoulderKnee| f32  |
+// | 36     | lift          | f32  | | 76     | shoulderTop | f32  |
 
 struct CompositorUniforms {
   exposure: f32,
@@ -58,8 +59,10 @@ struct CompositorUniforms {
   squeeze: f32,
   // Per-frame grain seed, 'EngineState.frameIndex'.
   seed: u32,
-  pad0: f32,
-  pad1: f32,
+  // Bytes 72, 76: the print shoulder's knee and the curve's saturation it bends
+  // toward, post-exposure; knee 0 = off (every draw but the antique print).
+  shoulderKnee: f32,
+  shoulderTop: f32,
 }
 
 // ── vertex-to-fragment interface ────────────────────────────────────

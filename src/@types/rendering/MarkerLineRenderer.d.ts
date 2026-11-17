@@ -44,6 +44,8 @@ export type MarkerLineRenderer = {
     viewProj: Float32Array,
     viewportSize: Vec2,
     pxPerRad: number,
+    /** Device px per CSS px: `MarkerLine.pixelWidth` is CSS px. */
+    devicePixelRatio: number,
     scene?: OverlaySceneOcclusion,
   ): void;
   /** Number of lines last passed to setLines. Used by tests + debug HUD. */

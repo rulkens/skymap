@@ -111,6 +111,7 @@ describe('Settings page', () => {
     /^cosmicWebDensity\.items\.[\w-]+\.(contrast|densityScale|paletteId|trim|exposure|bands|intensity)$/,
     /^zoneOfAvoidance\.(intensity|radialFalloff|edgeSharpness|color|labelColor)$/,
     /^probeSpheres\./,
+    /^antique\.tuning\./,
     /^film\.(letterbox|letterboxAspect|grade\.\w+|glow\.\w+)$/,
   ];
 

@@ -1,0 +1,34 @@
+/*
+ * tablet.module.css — a button drawn as an engraved tablet, for looks that set the hooks
+ * (styles/antique.css, utils/antiqueChrome/antiqueChromeCss). The tablet's own fill is the
+ * button's ground, so the states swap the image to one with a wash baked in; the label
+ * stays full ink on every wash. Inert in the plain look: every source falls back to none.
+ */
+
+/* Doubled: outranks a composing rule's `border` shorthand, which resets border-image. */
+.tablet.tablet {
+  border-image: var(--tablet-image, none);
+}
+
+@media (hover: hover) {
+  .tablet:hover:not(:disabled) {
+    border-image-source: var(--tablet-source-hover, none);
+  }
+}
+
+.tablet[aria-pressed='true'] {
+  border-image-source: var(--tablet-source-selected, none);
+}
+
+.tablet:active:not(:disabled) {
+  border-image-source: var(--tablet-source-pressed, none);
+}
+
+@media (forced-colors: active) {
+  .tablet.tablet,
+  .tablet.tablet:hover,
+  .tablet.tablet:active,
+  .tablet.tablet[aria-pressed='true'] {
+    border-image: none;
+  }
+}

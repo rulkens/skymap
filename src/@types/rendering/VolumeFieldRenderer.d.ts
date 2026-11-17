@@ -43,7 +43,9 @@ export type VolumeFieldRenderer<Id extends string = string> = {
    * per-field tunables are read each frame from `settingsOf`.
    * `fadeOpacityOf` supplies the fade-out opacity per id.  The palette
    * is re-uploaded in place when `settingsOf(id).paletteId` diverges
-   * from what's resident.
+   * from what's resident. `steadyJitter` holds the per-fragment step
+   * jitter still across frames, for a reader that thresholds the row:
+   * per-frame jitter averages out to the eye but flips a threshold.
    */
   draw(
     pass: GPURenderPassEncoder,
@@ -53,6 +55,7 @@ export type VolumeFieldRenderer<Id extends string = string> = {
     cameraPosWorld: Readonly<Vec3>,
     settingsOf: (id: Id) => VolumeFieldSettings,
     fadeOpacityOf: (id: Id) => number,
+    steadyJitter?: boolean,
   ): void;
   destroy(): void;
 };

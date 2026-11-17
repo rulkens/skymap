@@ -24,7 +24,13 @@ import package::structureMarker::io::MARKER_RADIUS_RETUNE;
 import package::lib::billboard::quadCorner;
 import package::lib::billboard::expandBillboardWorld;
 
-@group(0) @binding(0) var<uniform> camera: CameraUniforms;
+// The camera prefix plus one tail f32 (bytes 80..83, padded to 96): the band widths
+// below are CSS px, and the fragment scales them by this.
+struct RingUniforms {
+  cam: CameraUniforms,
+  devicePixelRatio: f32,
+};
+@group(0) @binding(0) var<uniform> uniforms: RingUniforms;
 // No @group(1) — see halo.wesl.
 
 // Ring width in CSS pixels (full visible band, halved for the AA
@@ -58,7 +64,7 @@ fn vs(
   // Eye-facing world disc, widened by RING_QUAD_MARGIN so the AA band at
   // |uv| == 1 doesn't clip at the cardinal points (see constant above).
   // The 'uv' varying scales to match (corner * MARGIN), so the ring's
-  // d == 1 line still lands on the marker's radius — the MARGIN scale on
+  // uvRadius == 1 line still lands on the marker's radius — the MARGIN scale on
   // both the geometry and the varying cancels.  Each corner is projected
   // individually with 'worldToClip': the hardware clips a corner behind
   // the eye correctly in homogeneous space, which is what makes two
@@ -68,8 +74,8 @@ fn vs(
   let offset = expandBillboardWorld(vec3<f32>(0.0), worldPos, corner, half);
 
   var out: VsOut;
-  out.pos = worldToClip(camera, worldPos + offset);
-  // d == 1 is still the marker radius: RING_QUAD_MARGIN scales the
+  out.pos = worldToClip(uniforms.cam, worldPos + offset);
+  // uvRadius == 1 is still the marker radius: RING_QUAD_MARGIN scales the
   // geometry (above) and the uv (here) together, so they cancel.
   out.uv = corner * RING_QUAD_MARGIN;
   // Ring uses its own dedicated colour slot (separate from the halo)
@@ -103,8 +109,8 @@ fn fs(input: VsOut) -> @location(0) vec4<f32> {
   // wide in whichever view draws it. Capped at 1: a sub-pixel ring fills
   // its quad instead of aliasing to one fragment.
   let uvPerPx = min(length(vec2<f32>(dpdx(uvRadius), dpdy(uvRadius))), 1.0);
-  let bandHalfUv = RING_PX_WIDTH * 0.5 * uvPerPx;
-  let aaUv = RING_AA_WIDTH * uvPerPx;
+  let bandHalfUv = RING_PX_WIDTH * uniforms.devicePixelRatio * 0.5 * uvPerPx;
+  let aaUv = RING_AA_WIDTH * uniforms.devicePixelRatio * uvPerPx;
 
   // Distance from the |uv| == 1 ring centre line.
   let distFromRing = abs(uvRadius - 1.0);

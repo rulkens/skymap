@@ -46,6 +46,13 @@ export type ToneMap = {
    */
   readonly hdrHeadroom: number;
 
+  /**
+   * Share of the curve's saturation point above which highlights bend toward it
+   * instead of clipping (`lib/tonemap.wesl` `printShoulder`); absent = off. Only the
+   * antique look's `print` sets it: the plate stipples a galaxy's bar from that range.
+   */
+  readonly printShoulder?: number;
+
   /** The film grade, or null = off: the compositor then draws its plain pipeline. */
   readonly film: FilmLook | null;
 };

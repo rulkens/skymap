@@ -58,6 +58,9 @@ export function timedSlotRowsOf(program: readonly FrameStep[]): readonly TimedSl
       rows.push({ name: 'bloom', groupKey: 'bloom' });
     }
   }
+  // The antique look's stylize step: never in the look-off bound program this is
+  // derived from, so it gets its slot unconditionally, as pick does.
+  rows.push({ name: 'stylize', groupKey: 'stylize' });
   // Pick is a parallel program over the whole registry (both slabs).
   rows.push({ name: 'pick', groupKey: 'pick' });
   return rows;

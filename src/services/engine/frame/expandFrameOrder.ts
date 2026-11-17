@@ -18,10 +18,24 @@ import { bodyRowSteps } from './bodyRowSteps';
 import { resolvePassNames } from './resolvePassNames';
 import { COSMO, NEAR0, isBodySlabIndex } from './slabs';
 import { depthKeyOf } from '../../../utils/render/depthKeyOf';
+import { lookTarget } from '../../../utils/render/lookTarget';
+import {
+  ANTIQUE_HIDDEN_PASSES,
+  ANTIQUE_MOVED_PASSES,
+  ANTIQUE_ONLY_PASSES,
+  ANTIQUE_PRINT_SHOULDER,
+} from '../../../data/rendering/antiqueLook';
 
 export type FrameInputs = {
   readonly tone: ToneMap;
   readonly bloomEnabled: boolean;
+  /**
+   * The antique look is on: the tone-map lands in `print` and the overlay
+   * lines in `overlay` instead of `swap`, the `ANTIQUE_MOVED_PASSES` leave
+   * their line for rows of their own, and the `stylize` line inks it all onto
+   * the swap chain.
+   */
+  readonly antique: boolean;
   readonly foregroundChain: readonly number[];
   /**
    * Faces each capture re-bakes this frame — empty or absent for a capture
@@ -86,14 +100,35 @@ const EXPAND_STEP: { [K in FrameStepSpec['kind']]: ExpandStep<K> } = {
       ]),
     ),
   render: (spec, passes, frame) =>
-    (typeof spec.slab === 'number' ? [spec.slab] : frame.bodyRowSlabs[spec.slab]).map((slab) => ({
-      kind: 'render',
-      target: spec.target,
-      slab,
-      passes: resolvePassNames(spec.passes, passes),
-      ...(spec.depth === undefined ? {} : { depth: spec.depth }),
-      ...(spec.slot === undefined ? {} : { slot: spec.slot }),
-    })),
+    (typeof spec.slab === 'number' ? [spec.slab] : frame.bodyRowSlabs[spec.slab]).flatMap(
+      (slab) => {
+        const roster = resolvePassNames(spec.passes, passes);
+        const moved = frame.antique
+          ? roster.filter((pass) => ANTIQUE_MOVED_PASSES[pass.name] !== undefined)
+          : [];
+        // Moved passes go FIRST, so the line after this one can still merge back. They
+        // keep the line's depth: a trail still hides behind the bodies it passes.
+        return [
+          ...moved.map(
+            (pass): FrameStep => ({
+              kind: 'render',
+              target: ANTIQUE_MOVED_PASSES[pass.name]!,
+              slab,
+              passes: [pass],
+              ...(spec.depth === undefined ? {} : { depth: spec.depth }),
+            }),
+          ),
+          {
+            kind: 'render',
+            target: lookTarget(spec.target, 'overlay', frame.antique),
+            slab,
+            passes: roster.filter((pass) => !moved.includes(pass)),
+            ...(spec.depth === undefined ? {} : { depth: spec.depth }),
+            ...(spec.slot === undefined ? {} : { slot: spec.slot }),
+          },
+        ];
+      },
+    ),
   foreground: (spec, passes, frame) =>
     frame.foregroundChain.flatMap((slab): readonly FrameStep[] =>
       isBodySlabIndex(slab)
@@ -110,8 +145,17 @@ const EXPAND_STEP: { [K in FrameStepSpec['kind']]: ExpandStep<K> } = {
     ),
   composite: (spec) => [merge(spec.source, spec.dest, 'over', null)],
   bloom: (_spec, _passes, frame) => (frame.bloomEnabled ? [{ kind: 'bloom' }] : []),
-  tonemap: (spec, _passes, frame) => [merge(spec.source, spec.dest, 'replace', frame.tone)],
+  tonemap: (spec, _passes, frame) => [
+    merge(
+      spec.source,
+      lookTarget(spec.dest, 'print', frame.antique),
+      'replace',
+      frame.antique ? { ...frame.tone, printShoulder: ANTIQUE_PRINT_SHOULDER } : frame.tone,
+    ),
+  ],
   copy: (spec) => [{ kind: 'copy', source: spec.source }],
+  stylize: (spec, _passes, frame) =>
+    frame.antique ? [{ kind: 'stylize', source: spec.source, overlay: spec.overlay }] : [],
 };
 
 /** A render step with nothing left to draw never opens a pass. */
@@ -173,11 +217,18 @@ export function expandFrameOrder(
   passes: readonly ContentPass[],
   frame: FrameInputs,
 ): readonly FrameStep[] {
+  // A look draws without the passes it has no period equivalent for, and only
+  // the look draws its own.
+  const drawn = passes.filter((pass) =>
+    frame.antique
+      ? !ANTIQUE_HIDDEN_PASSES.includes(pass.name)
+      : !ANTIQUE_ONLY_PASSES.includes(pass.name),
+  );
   const steps: FrameStep[] = [];
   for (const spec of order) {
     // The table's rows self-narrow; the lookup itself cannot, so it is cast once.
     const expand = EXPAND_STEP[spec.kind] as ExpandStep<FrameStepSpec['kind']>;
-    steps.push(...expand(spec, passes, frame));
+    steps.push(...expand(spec, drawn, frame));
   }
   return mergeAdjacent(steps.filter(draws));
 }

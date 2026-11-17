@@ -68,6 +68,7 @@ export const labelsCosmoPass: ContentPass = {
     // pipeline layout demands it, and reads as a no-op against the labels'
     // zero cutoff.
     state.gpu.labelRendererCosmo!.draw(pass, view.vp, view.viewportPx, ctx.drawPxPerRad, {
+      devicePixelRatio: ctx.snapshot.devicePixelRatio,
       scene: overlaySceneOcclusion(ctx, view),
     });
   },

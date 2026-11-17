@@ -52,13 +52,18 @@ export type RenderTargets = {
    */
   viewOf(id: string): GPUTextureView;
   /**
-   * A `dimension: 'cube'` view over a row whose spec declares
-   * `fixedSizePx.layers === 6` (today, only `'sky-cubemap'`) — `viewOf`'s
+   * The texture behind `viewOf`, for a copy into or out of a row whose spec asks
+   * COPY_SRC / COPY_DST (`RenderTargetSpec.usage`). Same lifetime and throws as `viewOf`.
+   */
+  textureOf(id: string): GPUTexture;
+  /**
+   * A `dimension: 'cube'` view over a row whose spec declares `fixedSizePx`
+   * and 6 `layers` (`'sky-cubemap'`, `'solar-system-sky'`) — `viewOf`'s
    * default view on a >1-layer texture is `2d-array`, which a
    * `texture_cube` binding rejects, so a cube-sampling consumer (the Sgr A*
    * lens fragment) needs this instead. Stable until the next `reconcile()`
-   * that changes this row's size, same guarantee as `viewOf`. Throws for a
-   * row with fewer than 6 layers, `swap`, and any unknown id.
+   * that changes this row's size, same guarantee as `viewOf`. Throws for any
+   * other row (a canvas-scaled 6-layer one included), `swap`, and any unknown id.
    */
   cubeViewOf(id: string): GPUTextureView;
   /**

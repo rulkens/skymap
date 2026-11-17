@@ -57,6 +57,7 @@ export const markerLinesPass: ContentPass = {
       view.vp,
       view.viewportPx,
       ctx.drawPxPerRad,
+      ctx.snapshot.devicePixelRatio,
       overlaySceneOcclusion(ctx, view),
     );
   },

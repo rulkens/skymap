@@ -11,6 +11,7 @@
  * wrapper, so the pill needs no positioning context of its own.
  */
 .root {
+  composes: tablet from '../tablet.module.css';
   width: 40px;
   height: 40px;
   flex-shrink: 0;
@@ -19,12 +20,12 @@
   justify-content: center;
   padding: 0;
 
-  background: var(--surface-card-soft);
+  background: var(--framed-control-ground, var(--surface-card-soft));
   -webkit-backdrop-filter: blur(var(--blur-card));
   backdrop-filter: blur(var(--blur-card));
   border: 1px solid var(--border-card);
-  border-radius: 999px;
-  box-shadow: var(--shadow-card);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--framed-shadow, var(--shadow-card));
 
   color: var(--color-fg-dim);
   cursor: pointer;
@@ -39,7 +40,7 @@
 
 .root:hover,
 .root:focus-visible {
-  background: var(--surface-card-strong);
+  background: var(--framed-control-ground, var(--surface-card-strong));
   border-color: var(--border-hover);
   color: var(--color-accent);
 }

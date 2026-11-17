@@ -1,0 +1,499 @@
+/**
+ * antiqueLook — the `stylize` step, its passes in order: paper (the sheet, baked
+ * only when its row was reallocated or the scan landed), mask (foreground:0 and
+ * the land row → the `mask` layer, the only body record later passes read), reduce (print →
+ * quarter-res `wash`), glow (`wash` → 1/16-res), nebula (`wash` → the galaxy
+ * engraving's quarter-res fields), web level (the density → 1/16-res), sky floor (glow and
+ * web level → two f32, compute), land blur (`wash.a` → `land-blur`, across then down, only
+ * under a land map), glyphs (from the star Layer's `print-points`) and decor (instanced scatters
+ * into `star-ink` and `decor`/`decor-hue`), plate (all of it inked onto the swap chain). One
+ * `stylize` timing slot spans them, as `runBloom`'s does. GPU objects are built on the look's
+ * first frame, not at boot: most sessions never open it.
+ */
+
+import { createAntiqueLookGpu } from './createAntiqueLookGpu';
+import { loadAntiqueSheetAssets } from './loadAntiqueSheetAssets';
+import {
+  ANTIQUE_FULL_LAYERS,
+  ANTIQUE_GLYPH_BYTES,
+  ANTIQUE_SIGN_BYTES,
+  ANTIQUE_LOW_LAYERS,
+  ANTIQUE_MASK_DEPTH_BYTES,
+  ANTIQUE_ORNAMENT_BYTES,
+  ANTIQUE_ORNAMENT_STRIP_VERTS,
+  ANTIQUE_QUARTER_LAYERS,
+  ANTIQUE_REFERENCE_HEIGHT_CSS,
+  ANTIQUE_REGIME_MPC,
+  ANTIQUE_TARGETS,
+  ANTIQUE_UNIFORM_BYTES,
+} from '../../../../data/rendering/antiqueLook';
+import {
+  ANTIQUE_BODY_PRINT_CODES,
+  ANTIQUE_PLATE_BODIES_BYTES,
+} from '../../../../data/rendering/antiquePlateBodies';
+import { ANTIQUE_ORNAMENTS } from '../../../../data/rendering/antiqueOrnaments';
+import { ANTIQUE_ORNAMENT_ATLAS } from '../../../../data/rendering/antiqueOrnamentAtlas';
+import { packAntiqueUniforms } from '../../../../utils/gpu/antiqueLook/packAntiqueUniforms';
+import { antiquePlateTune } from '../../../../utils/gpu/antiqueLook/antiquePlateTune';
+import { packAntiquePlateBodies } from '../../../../utils/gpu/antiqueLook/packAntiquePlateBodies';
+import { packAntiqueMaskDepth } from '../../../../utils/gpu/antiqueLook/packAntiqueMaskDepth';
+import { antiquePlateBodies } from './antiquePlateBodies';
+import { antiqueReliefInput } from './antiqueReliefInput';
+import { packAntiqueRelief } from '../../../../utils/gpu/antiqueLook/packAntiqueRelief';
+import { ANTIQUE_RELIEF_UNIFORM_BYTES } from '../../../../data/rendering/antiqueRelief';
+import { packAntiqueOrnaments } from '../../../../utils/gpu/antiqueLook/packAntiqueOrnaments';
+import { packAntiqueSigns } from '../../../../utils/gpu/antiqueLook/packAntiqueSigns';
+import { antiqueBodySigns } from './antiqueBodySigns';
+import { packAntiqueGlyphs } from '../../../../utils/gpu/antiqueLook/packAntiqueGlyphs';
+import { placeAntiqueOrnaments } from '../../../../utils/gpu/antiqueLook/placeAntiqueOrnaments';
+import { antiqueMoonSubject } from './antiqueMoonSubject';
+import { antiqueTitleGlobe } from './antiqueTitleGlobe';
+import { antiquePlateCartouche } from './antiquePlateCartouche';
+import { viewCoverRectsPx } from '../../../../utils/layout/viewCoverRectsPx';
+import { placeAntiqueNumerals } from '../../../../utils/gpu/antiqueLook/placeAntiqueNumerals';
+import { antiquePlateRulings } from './antiquePlateRulings';
+import { terminatorHatchAngle } from '../../../../utils/gpu/antiqueLook/terminatorHatchAngle';
+import { asSceneBodyId } from '../../../../utils/scene/asSceneBodyId';
+import { smoothstep } from '../../../../utils/math/smoothstep';
+import { bodyRowSlabs } from '../../../engine/frame/bodyRowSlabs';
+import { viewBasis } from '../../../../utils/camera/projection/viewBasis';
+import { viewCornerRays } from '../../../../utils/camera/projection/viewCornerRays';
+import { outputProjection } from '../../../../utils/camera/projection/viewProjection/outputProjection';
+import type { AntiqueLook } from '../../../../@types/rendering/AntiqueLook';
+import type { AntiqueLookGpu } from '../../../../@types/rendering/AntiqueLookGpu';
+import type { AntiqueSheetAssets } from '../../../../@types/rendering/AntiqueSheetAssets';
+import type { FrameView } from '../../../../@types/engine/frame/FrameView';
+import type { EngineState } from '../../../../@types/engine/state/EngineState';
+import type { GpuTimingService } from '../../../../@types/gpu/timing/GpuTimingService';
+import type { Renderer } from '../../../../@types/rendering/Renderer';
+
+/** The terminator is read off the Sun's pose relative to the eye. */
+const SUN = asSceneBodyId('sun');
+
+/** The cosmicWebDensity Layer's raymarch row, which `web.wesl` charts as isobaths. */
+const WEB_DENSITY = 'cosmic-web-density';
+
+/** A fixed seed keeps the sheet identical across reloads: a print does not change. */
+const PAPER_SEED = 17.0;
+
+export function createAntiqueLook(init: {
+  device: GPUDevice;
+  targetFormat: GPUTextureFormat;
+}): AntiqueLook {
+  const { device, targetFormat } = init;
+  let gpu: AntiqueLookGpu | null = null;
+  let assets: AntiqueSheetAssets | null = null;
+  // The sheet is screen-locked: re-baked only when its row is reallocated or new paper lands.
+  let bakedPaper: GPUTextureView | null = null;
+  const uniformBytes = new ArrayBuffer(ANTIQUE_UNIFORM_BYTES);
+  const ornamentBytes = new ArrayBuffer(ANTIQUE_ORNAMENT_BYTES);
+  const glyphBytes = new ArrayBuffer(ANTIQUE_GLYPH_BYTES);
+  const signBytes = new ArrayBuffer(ANTIQUE_SIGN_BYTES);
+  const plateBodyBytes = new ArrayBuffer(ANTIQUE_PLATE_BODIES_BYTES);
+  const maskDepthBytes = new ArrayBuffer(ANTIQUE_MASK_DEPTH_BYTES);
+  const reliefBytes = new ArrayBuffer(ANTIQUE_RELIEF_UNIFORM_BYTES);
+
+  function fullScreen(
+    encoder: GPUCommandEncoder,
+    label: string,
+    targets: readonly GPUTextureView[],
+    stage: { pipeline: GPURenderPipeline; layout: GPUBindGroupLayout },
+    resources: readonly GPUBindingResource[],
+    timestampWrites?: GPURenderPassTimestampWrites,
+  ): void {
+    const pass = encoder.beginRenderPass({
+      label: `antique-look-${label}`,
+      colorAttachments: targets.map((view) => ({ view, loadOp: 'clear', storeOp: 'store' })),
+      ...(timestampWrites ? { timestampWrites } : {}),
+    });
+    pass.setPipeline(stage.pipeline);
+    // Rebuilt per encode: every source view is recreated on resize.
+    pass.setBindGroup(
+      0,
+      device.createBindGroup({
+        label: `antique-look-${label}-bg`,
+        layout: stage.layout,
+        entries: resources.map((resource, binding) => ({ binding, resource })),
+      }),
+    );
+    pass.draw(3);
+    pass.end();
+  }
+
+  function encode(
+    encoder: GPUCommandEncoder,
+    ctx: FrameView,
+    state: EngineState,
+    io: Parameters<AntiqueLook['encode']>[3],
+    timing: GpuTimingService,
+  ): void {
+    gpu ??= createAntiqueLookGpu(device, targetFormat);
+    assets ??= loadAntiqueSheetAssets(device, (asset) => {
+      if (asset === 'paper') bakedPaper = null;
+      state.subsystems.scheduler.requestRender();
+    });
+    const g = gpu;
+    const tuning = state.settings.antique.tuning;
+    const targets = ctx.snapshot.renderTargets;
+    const size = ctx.canvasSize;
+    const unitPx = size.height / ANTIQUE_REFERENCE_HEIGHT_CSS;
+    const projection = outputProjection(ctx, state.viewRig);
+    const basis = viewBasis(ctx.cam);
+    const hasBodies = ctx.snapshot.renderedTargets.has('foreground:0');
+    // Inside an atmosphere the day sky fills foreground:0's alpha; its depth tells body from sky.
+    const depthCover = hasBodies && bodyRowSlabs(ctx).insideAtmosphere.length > 0;
+    const { paper: paperAssets, ornaments: atlas, glyphs, rangeRelief } = assets;
+    const rays = viewCornerRays(basis, ctx.frustum, size);
+    const rulings = antiquePlateRulings(state, ctx, { projection, basis, rays, unitPx }, hasBodies);
+    const [x, y, z] = ctx.drawCamPos;
+    const cosmos = smoothstep(ANTIQUE_REGIME_MPC[0], ANTIQUE_REGIME_MPC[1], Math.hypot(x, y, z));
+    // The density raymarch, when it drew this frame: charted in the cosmos only (`web.wesl`).
+    const webDensity = ctx.snapshot.renderedTargets.has(WEB_DENSITY) && cosmos > 0;
+
+    const relief = hasBodies ? antiqueReliefInput(state, ctx, io.bodyDepth, unitPx) : null;
+    // The Moon's passes drew its own row and its ground's relief (a frame section's rows).
+    const moonPrinted = ctx.snapshot.renderedTargets.has(ANTIQUE_TARGETS.moon);
+    const moonRelief = relief === null && ctx.snapshot.renderedTargets.has(ANTIQUE_TARGETS.relief);
+    const globe = antiqueTitleGlobe(ctx, basis, unitPx);
+    packAntiqueUniforms(
+      {
+        projection,
+        unitPx,
+        depthCover,
+        relief: relief?.print ?? (moonRelief ? ANTIQUE_BODY_PRINT_CODES.moon : null),
+        moon: moonPrinted,
+        captions: io.overlay !== null,
+        paper: paperAssets !== null,
+        seed: PAPER_SEED,
+        rulings,
+        hatchAngle:
+          terminatorHatchAngle(ctx.bodyPose(SUN)) + (tuning.hatchAngleDeg * Math.PI) / 180,
+        web: webDensity ? cosmos : 0,
+        eye: ctx.drawCamPos,
+        tune: antiquePlateTune(tuning),
+        subject: antiqueMoonSubject(globe),
+      },
+      uniformBytes,
+    );
+    device.queue.writeBuffer(g.uniforms, 0, uniformBytes);
+    const covers = viewCoverRectsPx(
+      state.viewCover,
+      [size.width, size.height],
+      globalThis.innerWidth || size.width,
+    );
+    // Tab's hidden UI takes the cartouche with it; the map's figures stay.
+    const card = state.ui.uiHidden ? null : antiquePlateCartouche(ctx, globe, covers);
+    const blocks = card && glyphs ? glyphs.sheet.titles[card.title.key] : undefined;
+    const block = blocks && (card!.title.compact ? blocks.compact : blocks.full);
+    const placed =
+      atlas === null
+        ? []
+        : placeAntiqueOrnaments({
+            ornaments: ANTIQUE_ORNAMENTS,
+            atlas: ANTIQUE_ORNAMENT_ATLAS,
+            projection,
+            unitPx,
+            camPosMpc: ctx.drawCamPos,
+            cartouche: card && {
+              row: card.cartouche,
+              anchor: card.anchor,
+              frame: card.frame,
+              title:
+                glyphs && block && card.title.weight > 0
+                  ? {
+                      rect: [
+                        block.x / glyphs.sheet.width,
+                        block.y / glyphs.sheet.height,
+                        (block.x + block.w) / glyphs.sheet.width,
+                        (block.y + block.h) / glyphs.sheet.height,
+                      ],
+                      weight: card.title.weight,
+                    }
+                  : null,
+            },
+          });
+    device.queue.writeBuffer(g.ornaments, 0, packAntiqueOrnaments(placed, ornamentBytes));
+    const digits =
+      glyphs === null
+        ? []
+        : placeAntiqueNumerals({
+            projection,
+            unitPx,
+            rulings,
+            sheet: glyphs.sheet,
+            cartouche: card?.rectPx ?? null,
+          });
+    device.queue.writeBuffer(g.digits, 0, packAntiqueGlyphs(digits, glyphBytes));
+    const signs = antiqueBodySigns(state, ctx, basis);
+    device.queue.writeBuffer(g.signs.buffer, 0, packAntiqueSigns(signs, signBytes));
+    const landMapped = ctx.snapshot.renderedTargets.has(ANTIQUE_TARGETS.land);
+    const plateBodies = hasBodies ? antiquePlateBodies(state, ctx, unitPx, landMapped, rays) : [];
+    device.queue.writeBuffer(g.plateBodies, 0, packAntiquePlateBodies(plateBodies, plateBodyBytes));
+    const radiiM = plateBodies.map((b) => b.radiusM);
+    const maskDepth = packAntiqueMaskDepth(io.bodyDepth.row, radiiM, basis.forward, maskDepthBytes);
+    device.queue.writeBuffer(g.maskDepth, 0, maskDepth);
+    if (relief !== null) {
+      device.queue.writeBuffer(g.reliefUniforms, 0, packAntiqueRelief(relief, reliefBytes));
+    }
+
+    const uniforms = { buffer: g.uniforms };
+    // Each pass writes or reads one layer; only the plate binds the whole arrays.
+    const full = (layer: keyof typeof ANTIQUE_FULL_LAYERS) =>
+      targets.layerViewOf(ANTIQUE_TARGETS.full, ANTIQUE_FULL_LAYERS[layer]);
+    const quarter = (layer: keyof typeof ANTIQUE_QUARTER_LAYERS) =>
+      targets.layerViewOf(ANTIQUE_TARGETS.quarter, ANTIQUE_QUARTER_LAYERS[layer]);
+    const low = (layer: keyof typeof ANTIQUE_LOW_LAYERS) =>
+      targets.layerViewOf(ANTIQUE_TARGETS.low, ANTIQUE_LOW_LAYERS[layer]);
+    const paper = full('paper');
+    const wash = quarter('wash');
+    const glow = low('glow');
+    const nebula = quarter('nebula');
+    // The structure markers, when one drew this frame: their own low band, else nothing.
+    const structured = ctx.snapshot.renderedTargets.has(ANTIQUE_TARGETS.structures);
+    const structureGlow = low('structureGlow');
+    const webLevel = low('webLevel');
+    const starInk = full('starInk');
+    const decor = full('decor');
+    const decorHue = full('decorHue');
+    const mask = full('mask');
+    const bodies = targets.viewOf('foreground:0');
+    // The land map, when a masked globe drew this frame (Earth, Mars).
+    const land = landMapped ? targets.viewOf(ANTIQUE_TARGETS.land) : g.empty;
+    const landBlurAcross = targets.viewOf(ANTIQUE_TARGETS.landBlurAcross);
+    const landBlur = quarter('landBlur');
+    // The catalogue's naked-eye stars, when a star pass printed this frame.
+    const printed = ctx.snapshot.renderedTargets.has(ANTIQUE_TARGETS.printPoints);
+    const points = printed ? targets.viewOf(ANTIQUE_TARGETS.printPoints) : g.empty;
+    const lines = ctx.snapshot.renderedTargets.has(ANTIQUE_TARGETS.lines)
+      ? targets.viewOf(ANTIQUE_TARGETS.lines)
+      : g.empty;
+    // The slot's begin rides whichever pass opens first (the paper bake is
+    // usually skipped), its end the plate; both write the one query pair.
+    const ts = timing.descriptorFor('stylize');
+    const begin = ts && {
+      querySet: ts.querySet,
+      beginningOfPassWriteIndex: ts.beginningOfPassWriteIndex,
+    };
+    const end = ts && { querySet: ts.querySet, endOfPassWriteIndex: ts.endOfPassWriteIndex };
+
+    const bakesPaper = paper !== bakedPaper;
+    if (bakesPaper) {
+      fullScreen(
+        encoder,
+        'paper',
+        [paper],
+        g.paper,
+        [uniforms, paperAssets?.tile ?? g.empty, paperAssets?.stains ?? g.empty, g.repeatSampler],
+        begin,
+      );
+      bakedPaper = paper;
+    }
+    const opens = bakesPaper ? undefined : begin;
+    // foreground:0 keeps last frame's bodies when nothing drew one this frame.
+    if (hasBodies) {
+      const plateBuffers = [{ buffer: g.plateBodies }, { buffer: g.maskDepth }];
+      const maskInputs = [bodies, io.bodyDepth.view, land, uniforms, ...plateBuffers];
+      fullScreen(encoder, 'mask', [mask], g.mask, maskInputs, opens);
+    } else {
+      // The layer outlives the frame that drew it: no body reads as no cover.
+      encoder
+        .beginRenderPass({
+          label: 'antique-look-mask-clear',
+          colorAttachments: [{ view: mask, loadOp: 'clear', storeOp: 'store' }],
+          ...(opens ? { timestampWrites: opens } : {}),
+        })
+        .end();
+    }
+    fullScreen(encoder, 'reduce', [wash], g.reduce, [io.print, mask]);
+    fullScreen(encoder, 'glow', [glow], g.glow, [wash]);
+    fullScreen(encoder, 'nebula', [nebula], g.nebula, [wash, g.clampSampler]);
+    if (structured) {
+      fullScreen(encoder, 'structure-glow', [structureGlow], g.structureGlow, [
+        targets.viewOf(ANTIQUE_TARGETS.structures),
+        g.clampSampler,
+      ]);
+    } else {
+      // The layer outlives the frame that drew it: no marker reads as no band.
+      encoder
+        .beginRenderPass({
+          label: 'antique-look-structure-glow-clear',
+          colorAttachments: [{ view: structureGlow, loadOp: 'clear', storeOp: 'store' }],
+        })
+        .end();
+    }
+    if (webDensity) {
+      fullScreen(encoder, 'web-level', [webLevel], g.webLevel, [
+        targets.viewOf(WEB_DENSITY),
+        g.clampSampler,
+        uniforms,
+      ]);
+    } else {
+      encoder
+        .beginRenderPass({
+          label: 'antique-look-web-level-clear',
+          colorAttachments: [{ view: webLevel, loadOp: 'clear', storeOp: 'store' }],
+        })
+        .end();
+    }
+    const floorPass = encoder.beginComputePass({ label: 'antique-look-sky-floor' });
+    floorPass.setPipeline(g.skyFloor.pipeline);
+    floorPass.setBindGroup(
+      0,
+      device.createBindGroup({
+        label: 'antique-look-sky-floor-bg',
+        layout: g.skyFloor.layout,
+        entries: [
+          { binding: 0, resource: glow },
+          { binding: 1, resource: { buffer: g.skyFloorBuffer } },
+          { binding: 2, resource: webLevel },
+        ],
+      }),
+    );
+    floorPass.dispatchWorkgroups(1);
+    floorPass.end();
+    // Only Earth's coasts read the blur, and only off a mapped record.
+    if (landMapped && plateBodies.some((b) => b.print === 'earth')) {
+      fullScreen(encoder, 'land-blur-across', [landBlurAcross], g.landBlurAcross, [wash, uniforms]);
+      fullScreen(encoder, 'land-blur-down', [landBlur], g.landBlurDown, [landBlurAcross, uniforms]);
+    }
+    // The relief pass below engraves Mars or Earth ground into the row, or the Moon's own pass drew into it.
+    const reliefWritten =
+      relief !== null || ctx.snapshot.renderedTargets.has(ANTIQUE_TARGETS.relief);
+    const reliefView = reliefWritten ? targets.viewOf(ANTIQUE_TARGETS.relief) : g.empty;
+    if (relief !== null) {
+      fullScreen(encoder, 'relief', [reliefView], g.relief, [
+        io.bodyDepth.view,
+        { buffer: g.reliefUniforms },
+        rangeRelief ?? g.empty,
+      ]);
+    }
+    // The plate's arrays are written only here, so the Moon's row is copied into its layer.
+    if (moonPrinted) {
+      const { width, height } = targets.sizeOf(ANTIQUE_TARGETS.moon);
+      encoder.copyTextureToTexture(
+        { texture: targets.textureOf(ANTIQUE_TARGETS.moon) },
+        {
+          texture: targets.textureOf(ANTIQUE_TARGETS.full),
+          origin: [0, 0, ANTIQUE_FULL_LAYERS.moon],
+        },
+        [width, height, 1],
+      );
+    }
+    // One instance per print-points texel; the shader drops those holding no star.
+    const cells = printed ? targets.sizeOf(ANTIQUE_TARGETS.printPoints) : { width: 1, height: 1 };
+    const glyphPass = encoder.beginRenderPass({
+      label: 'antique-look-glyphs',
+      colorAttachments: [{ view: starInk, loadOp: 'clear', storeOp: 'store' }],
+    });
+    glyphPass.setPipeline(g.glyphs.pipeline);
+    glyphPass.setBindGroup(
+      0,
+      device.createBindGroup({
+        label: 'antique-look-glyphs-bg',
+        layout: g.glyphs.layout,
+        entries: [
+          { binding: 0, resource: points },
+          { binding: 1, resource: uniforms },
+          { binding: 2, resource: mask },
+          { binding: 3, resource: targets.viewOf(ANTIQUE_TARGETS.low) },
+          { binding: 4, resource: { buffer: g.skyFloorBuffer } },
+        ],
+      }),
+    );
+    glyphPass.draw(4, cells.width * cells.height);
+    if (signs.length > 0) {
+      glyphPass.setPipeline(g.signs.pipeline);
+      glyphPass.setBindGroup(
+        0,
+        device.createBindGroup({
+          label: 'antique-look-signs-bg',
+          layout: g.signs.layout,
+          entries: [
+            { binding: 0, resource: uniforms },
+            { binding: 1, resource: { buffer: g.signs.buffer } },
+            { binding: 2, resource: mask },
+          ],
+        }),
+      );
+      glyphPass.draw(4, signs.length);
+    }
+    if (webDensity) {
+      glyphPass.setPipeline(g.web.pipeline);
+      glyphPass.setBindGroup(
+        0,
+        device.createBindGroup({
+          label: 'antique-look-web-bg',
+          layout: g.web.layout,
+          entries: [
+            { binding: 0, resource: targets.viewOf(WEB_DENSITY) },
+            { binding: 1, resource: g.clampSampler },
+            { binding: 2, resource: uniforms },
+          ],
+        }),
+      );
+      glyphPass.draw(3);
+    }
+    glyphPass.end();
+    const decorPass = encoder.beginRenderPass({
+      label: 'antique-look-decor',
+      colorAttachments: [decor, decorHue].map((view) => ({
+        view,
+        loadOp: 'clear',
+        storeOp: 'store',
+      })),
+    });
+    if (placed.length > 0 && atlas !== null) {
+      decorPass.setPipeline(g.decor.pipeline);
+      decorPass.setBindGroup(
+        0,
+        device.createBindGroup({
+          label: 'antique-look-decor-bg',
+          layout: g.decor.layout,
+          entries: [
+            { binding: 0, resource: uniforms },
+            { binding: 1, resource: { buffer: g.ornaments } },
+            { binding: 2, resource: atlas },
+            { binding: 3, resource: g.clampSampler },
+            { binding: 4, resource: glyphs?.view ?? g.empty },
+          ],
+        }),
+      );
+      decorPass.draw(ANTIQUE_ORNAMENT_STRIP_VERTS, placed.length);
+    }
+    decorPass.end();
+    fullScreen(
+      encoder,
+      'plate',
+      [io.swap],
+      g.plate,
+      [
+        io.print,
+        io.overlay ?? g.empty,
+        uniforms,
+        targets.viewOf(ANTIQUE_TARGETS.full),
+        targets.viewOf(ANTIQUE_TARGETS.quarter),
+        targets.viewOf(ANTIQUE_TARGETS.low),
+        g.clampSampler,
+        { buffer: g.digits },
+        glyphs?.view ?? g.empty,
+        lines,
+        { buffer: g.plateBodies },
+        { buffer: g.skyFloorBuffer },
+        ctx.snapshot.renderedTargets.has(ANTIQUE_TARGETS.geography)
+          ? targets.viewOf(ANTIQUE_TARGETS.geography)
+          : g.empty,
+        reliefView,
+      ],
+      end,
+    );
+  }
+
+  function destroy(): void {
+    gpu?.destroy();
+    assets?.destroy();
+  }
+
+  const look: AntiqueLook = { label: 'antiqueLook', encode, destroy };
+  look satisfies Renderer;
+  return look;
+}

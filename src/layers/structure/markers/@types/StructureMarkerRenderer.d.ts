@@ -21,6 +21,10 @@ export type StructureMarkerRenderer = {
     viewProj: Float64Array,
     viewportSize: Vec2,
     pxPerRad: number,
+    /** Device px per CSS px: the ring's band widths are CSS px. */
+    devicePixelRatio: number,
+    /** A void has no halo on the plain sky; the antique plate outlines a structure from its halo, so it takes one. */
+    voidHalo?: boolean,
   ): void;
   markerCount(): number;
   /**

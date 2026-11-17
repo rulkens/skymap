@@ -36,7 +36,9 @@ export function produceStructureLabels(
   return (state, ctx, fade) => {
     const labels: Label2D[] = [];
 
-    const pxPerRad = ctx.drawPxPerRad;
+    // CSS px per rad: ring-size gates and the label gap are authored in CSS px.
+    const dpr = ctx.snapshot.devicePixelRatio;
+    const pxPerRad = ctx.drawPxPerRad / dpr;
     const [cx, cy, cz] = ctx.drawCamPos;
 
     const focusedStructureId = structureIdOf(state.selection.focus);
@@ -89,7 +91,8 @@ export function produceStructureLabels(
       const markerRadiusMpc = p.apparentRadiusMpc ?? p.physicalRadiusMpc;
       if (distanceMpc > 0) {
         const apRadPx = (markerRadiusMpc / distanceMpc) * pxPerRad;
-        declutterPriority = apRadPx;
+        // Device px, as the famous producer's key is, so the two rank on one scale.
+        declutterPriority = apRadPx * dpr;
         fadeAlpha = structureApparentRadiusFade(style, apRadPx);
         if (fadeAlpha <= 0) continue;
       }

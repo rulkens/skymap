@@ -416,14 +416,40 @@ describe('executeFrame', () => {
     expect(off.draw).not.toHaveBeenCalled();
   });
 
-  it('skips a composite step whose source target was never touched', () => {
+  it('skips a blending composite whose source target was never touched', () => {
+    const env = makeEncoderEnv();
+    const draw = vi.fn();
+    const program: FrameStep[] = [
+      {
+        kind: 'composite',
+        step: { source: 'hdr', dest: 'foreground:0', blend: 'over', tone: null },
+      },
+    ];
+    const { args } = makeArgs({ program, env, state: makeState({ compositor: { draw } }) });
+    executeFrame(args);
+    expect(draw).not.toHaveBeenCalled();
+    expect(env.beginRenderPass).not.toHaveBeenCalled();
+  });
+
+  it('clears the dest of a replacing composite whose source was never touched', () => {
+    // A frame with nothing in hdr (deep space, every galaxy a print-only dot under the
+    // look) still tone-maps to an empty dest: skipping it left the look's print
+    // untouched, so the plate skipped too and the canvas went black.
+    const env = makeEncoderEnv();
     const draw = vi.fn();
     const program: FrameStep[] = [
       { kind: 'composite', step: { source: 'hdr', dest: 'swap', blend: 'replace', tone: null } },
     ];
-    const { args } = makeArgs({ program, state: makeState({ compositor: { draw } }) });
+    const { args } = makeArgs({ program, env, state: makeState({ compositor: { draw } }) });
     executeFrame(args);
     expect(draw).not.toHaveBeenCalled();
+    expect(env.passes).toHaveLength(1);
+    const att = Array.from(env.passes[0]!.desc.colorAttachments as Iterable<unknown>)[0] as {
+      view: GPUTextureView;
+      loadOp: string;
+    };
+    expect(att.view).toBe(SWAP_VIEW);
+    expect(att.loadOp).toBe('clear');
   });
 
   it('runs a composite step when the source render step drew', () => {

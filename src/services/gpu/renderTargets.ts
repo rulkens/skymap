@@ -76,6 +76,7 @@ import { HDR_TARGET_FORMAT, FOREGROUND_DEPTH_FORMAT } from '../../data/renderTar
 import { reducedTargetSize } from '../../utils/gpu/reducedTargetSize';
 import { captureRowAllocateWhen } from '../../utils/gpu/captureRowAllocateWhen';
 import { depthClearValueFor } from '../../utils/gpu/depthClearValueFor';
+import { antiqueLookTargetRows } from './passes/antiqueLook/antiqueLookTargetRows';
 import { filmStreakOn } from '../../utils/film/filmStreakOn';
 import { filmVeilOn } from '../../utils/film/filmVeilOn';
 
@@ -86,9 +87,9 @@ const MATTE_WHITE: GPUColor = { r: 1, g: 1, b: 1, a: 1 };
 /** `farDepthView`'s placeholder texture — 1 texel is enough, every read is the same far value. */
 const FAR_DEPTH_PLACEHOLDER_PX = 1;
 
-/** A row's divisor for this state — constant rows ignore the state entirely. */
-function resolveScale(spec: RenderTargetSpec, state: EngineState): number {
-  return typeof spec.scale === 'function' ? spec.scale(state) : spec.scale;
+/** A row's divisor for this state and canvas — constant rows ignore both. */
+function resolveScale(spec: RenderTargetSpec, state: EngineState, canvas: Size): number {
+  return typeof spec.scale === 'function' ? spec.scale(state, canvas) : spec.scale;
 }
 
 /**
@@ -207,6 +208,7 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
       clearValue: { r: 0, g: 0, b: 0, a: 1 },
       allocateWhen: (state) => state.viewRig === 'dome',
     },
+    ...antiqueLookTargetRows(swapFormat),
     {
       id: 'swap',
       format: swapFormat,
@@ -238,10 +240,11 @@ export function createRenderTargets(
   // depth attachment", which is exactly what `depthViewOf` throws on.
   const textures = new Map<string, GPUTexture>();
   const views = new Map<string, GPUTextureView>();
-  // A dimension:'cube' view alongside `views`' default (2d-array) one, for a
-  // row whose 6 layers are later sampled as a `texture_cube` (see
-  // `RenderTargets.cubeViewOf`'s doc). Keyed off `fixedSizePx.layers === 6`
-  // (data-driven, not a hardcoded id check) so every 6-layer row gets one.
+  // A dimension:'cube' view alongside `views`' 2d-array one, for a row whose
+  // 6 layers are later sampled as a `texture_cube` (see
+  // `RenderTargets.cubeViewOf`'s doc). Keyed off `fixedSizePx` + 6 layers: a
+  // cube view must be square, which only a fixed-size row guarantees (a
+  // canvas-scaled 6-layer row, antique-full, failed validation every alloc).
   const cubeViews = new Map<string, GPUTextureView>();
   // One single-array-layer `dimension: '2d'` view per layer, for a row whose
   // `views`' default (a whole-array `2d-array` view with no `baseArrayLayer`)
@@ -307,11 +310,14 @@ export function createRenderTargets(
       // caption occlusion pass reads (its alpha, via lib/sceneDepth.wesl).
       // Both usage flags are required on the same texture — WebGPU
       // descriptors don't support re-tagging after creation.
-      usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+      usage:
+        GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING | (spec.usage ?? 0),
     });
     textures.set(spec.id, texture);
-    views.set(spec.id, texture.createView());
-    if (spec.layers === 6) {
+    const layerCount = spec.layers ?? 1;
+    // Explicit, so the binding's dimension never rests on a default that keys off the layer count.
+    views.set(spec.id, texture.createView({ dimension: layerCount > 1 ? '2d-array' : '2d' }));
+    if (layerCount === 6 && spec.fixedSizePx !== undefined) {
       cubeViews.set(
         spec.id,
         texture.createView({
@@ -322,7 +328,6 @@ export function createRenderTargets(
         }),
       );
     }
-    const layerCount = spec.layers ?? 1;
     if (layerCount > 1) {
       layerViews.set(
         spec.id,
@@ -400,7 +405,7 @@ export function createRenderTargets(
       const fixed = spec.fixedSizePx ? resolveFixedSize(spec.fixedSizePx, s) : 0;
       const [width, height] = spec.fixedSizePx
         ? [fixed, fixed]
-        : reducedTargetSize(canvas.width, canvas.height, resolveScale(spec, s));
+        : reducedTargetSize(canvas.width, canvas.height, resolveScale(spec, s, canvas));
       const held = sizes.get(spec.id);
       if (held !== undefined && held.width === width && held.height === height) continue;
       allocate(spec, width, height);
@@ -442,10 +447,15 @@ export function createRenderTargets(
       }
       return view;
     },
+    textureOf(id: string): GPUTexture {
+      const texture = textures.get(id);
+      if (!texture) throw new Error(`renderTargets: no allocated texture for target '${id}'`);
+      return texture;
+    },
     cubeViewOf(id: string): GPUTextureView {
       const view = cubeViews.get(id);
       if (!view) {
-        // Covers a row with < 6 layers, 'swap', unknown ids, and
+        // Covers a non-cube row, 'swap', unknown ids, and
         // use-after-destroy — same loud-failure discipline as `viewOf`.
         throw new Error(`renderTargets: no cube view for target '${id}'`);
       }

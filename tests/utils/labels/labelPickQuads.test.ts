@@ -29,6 +29,7 @@ const PROJECTION: Label2DProjection = {
   vpF32: VP,
   viewportPx: [200, 2 * ATLAS_FONT_SIZE],
   pxPerRad: ATLAS_FONT_SIZE / 0.57735,
+  devicePixelRatio: 1,
   clipScale: 1,
 };
 

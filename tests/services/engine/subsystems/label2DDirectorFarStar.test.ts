@@ -81,7 +81,9 @@ function makeState(): EngineState {
     selectionKindRows: [],
     // The seed tables `sceneOccluderBodies` reads for the captions' depth gate.
     gpu: {},
+    viewRig: 'mono',
     settings: {
+      antique: { enabled: false },
       labels: { focusedOnly: false },
       bodies: { items: makeBodyItems() },
       starCatalogs: {
@@ -140,6 +142,7 @@ const SCENE_BODIES = positionedBodiesOf(
 function makeCtx(eye: Vec3, slab: Slab): FrameView {
   return {
     snapshot: {
+      devicePixelRatio: 1,
       bodyStates: deriveBodyStates(CONST_J2000),
       nowMs: 0,
       simDays: CONST_J2000,

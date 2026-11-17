@@ -120,7 +120,7 @@ const BOOT_POSE = absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1
  *  field surface as a runtime undefined rather than a silently-passing stub. */
 function makeState(): EngineState {
   return {
-    gpu: { renderTargets: null },
+    gpu: { renderTargets: null, fontAtlases: null },
     subsystems: {
       scheduler: { requestRender: vi.fn() },
       clipPlayer: { tick: vi.fn<ClipPlayer['tick']>((clipEpoch) => ({ clipEpoch })) },
@@ -192,6 +192,7 @@ function makeReadyState(subsystems: Record<string, unknown> = {}): EngineState {
     gpu: {
       renderTargets: { reconcile: vi.fn() },
       compositor: {},
+      fontAtlases: null,
       label3DRenderer: { setLabels: vi.fn() },
     },
     subsystems: {

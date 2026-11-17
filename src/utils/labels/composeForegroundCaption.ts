@@ -75,7 +75,7 @@ export function composeForegroundCaption(
     declutterPriority,
     lift: {
       subjectSizePx,
-      lineBottomLiftPx: subjectSizePx / 2 + LEADER_LINE_BOTTOM_GAP_PX,
+      lineBottomLiftPx: subjectSizePx / 2 + LEADER_LINE_BOTTOM_GAP_PX * ctx.devicePixelRatio,
     },
   };
 }

@@ -63,6 +63,8 @@ function baseProps(overrides?: Partial<DisplaySectionProps>): DisplaySectionProp
     onBloomStrengthChange: vi.fn<(next: number) => void>(),
     bloomThreshold: 7.0,
     onBloomThresholdChange: vi.fn<(next: number) => void>(),
+    antiqueEnabled: false,
+    onAntiqueEnabledChange: vi.fn<(next: boolean) => void>(),
     filmEnabled: false,
     onFilmEnabledChange: vi.fn<(next: boolean) => void>(),
     ...overrides,

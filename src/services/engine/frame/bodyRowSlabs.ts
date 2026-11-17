@@ -13,7 +13,7 @@ import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import { hostBandOpen } from '../../../utils/frame/hostBandOpen';
 
 export function bodyRowSlabs(ctx: FrameView): Record<BodyRowSource, readonly number[]> {
-  const lines: Record<BodyRowSource, number[]> = { lens: [], insideAtmosphere: [] };
+  const lines: Record<BodyRowSource, number[]> = { lens: [], insideAtmosphere: [], surfaceMask: [] };
   for (const slab of ctx.slabs) {
     if (slab.frame.kind !== 'body-m') continue;
     const hostId = slab.frame.hostId;

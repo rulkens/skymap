@@ -1,0 +1,33 @@
+/*
+ * framedTitle.module.css — a title set astride an engraved frame's top rule, shared by Panel
+ * and the InfoCard's CardHeader. `.row` spans the frame's top edge corner slice to corner
+ * slice; its pseudo-elements draw the rules either side of the `.cartouche`, so the gap is
+ * always the cartouche's width. The rule sits a fixed offset below the row's top, so a
+ * cartouche that wraps grows downward. Inert unless a look sets the hooks (styles/antique.css).
+ */
+
+.row::before,
+.row::after {
+  content: '';
+  display: var(--framed-flank-display, none);
+  flex: 1 1 0;
+  align-self: flex-start;
+  margin-top: var(--framed-flank-offset, 0);
+  height: var(--frame-border);
+  background: var(--frame-edge);
+}
+
+.cartouche {
+  min-height: var(--title-cartouche-height, auto);
+  /* Centres a single line in the cartouche; no effect on a box at its content height. */
+  align-content: center;
+  border: solid transparent;
+  border-width: var(--title-cartouche-border, 0);
+  border-image: var(--title-cartouche-image, none);
+}
+
+@media (forced-colors: active) {
+  .cartouche {
+    border-image: none;
+  }
+}

@@ -1,7 +1,7 @@
 /**
  * The cosmicWebDensity Layer: the Physarum density cubes (MCPM, Polyphorm
  * 2MRS, the MCPM workbench export) — one renderer holding every cube, its
- * additive upsample, both passes, the `cosmic-web-density` render target, one
+ * additive upsample, its passes, the `cosmic-web-density` render target, one
  * slot and asset row per source row, its one show entry, and
  * both its SettingsPanel and DebugPanel sections.
  */
@@ -14,6 +14,7 @@ import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from './sources/cosmicWebDensitySource
 import { create } from './create';
 import { destroy } from './destroy';
 import { cosmicWebDensityPass } from './densityCubes/passes/cosmicWebDensityPass';
+import { cosmicWebDensityPrintPass } from './densityCubes/passes/cosmicWebDensityPrintPass';
 import { cosmicWebDensityUpsamplePass } from './densityCubes/passes/cosmicWebDensityUpsamplePass';
 import { cosmicWebDensityAssetRows } from './densityCubes/load/cosmicWebDensityAssetRows';
 import CosmicWebDensitySectionContainer from './densityCubes/ui/CosmicWebDensitySectionContainer';
@@ -37,7 +38,11 @@ export const cosmicWebDensityLayer = defineLayer({
   ],
   create,
   destroy,
-  passes: (runtime) => [cosmicWebDensityPass(runtime), cosmicWebDensityUpsamplePass(runtime)],
+  passes: (runtime) => [
+    cosmicWebDensityPass(runtime),
+    cosmicWebDensityPrintPass(runtime),
+    cosmicWebDensityUpsamplePass(runtime),
+  ],
   assets: cosmicWebDensityAssetRows,
   ui: [
     {

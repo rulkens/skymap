@@ -76,7 +76,7 @@ export function createLabel3DRenderer(
   })();
 
   const firstFontId = FONT_IDS[0]!;
-  const firstMetrics: FontMetrics = metricsByFont[firstFontId];
+  const firstMetrics: FontMetrics = metricsByFont[firstFontId]!;
 
   // Shared ArrayBuffers so f32 fields and u32 fields (labelIndex,
   // repeatIndex, fontIndex, repeatCount) write into the same memory
@@ -226,7 +226,8 @@ export function createLabel3DRenderer(
     for (let li = 0; li < count; li++) {
       const label = labels[li]!;
       const p = label.placement;
-      const quads = layoutLabel(label.text, metricsByFont[label.font], 'center', 'center');
+      const metrics = metricsByFont[label.font];
+      const quads = metrics ? layoutLabel(label.text, metrics, 'center', 'center') : [];
 
       const base = li * (LABEL3D_DATA_BYTES / 4);
       labelF32[base + 0] = p.center[0];

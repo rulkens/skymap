@@ -4,7 +4,7 @@
  * pass's own scale is 0. Built over a stub runtime: neither gate touches the GPU.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 import { structureMarkersCosmoPass } from '../../../../../src/layers/structure/markers/passes/structureMarkersCosmoPass';
 import { structureMarkersPlanner } from '../../../../../src/layers/structure/frame';
@@ -87,5 +87,25 @@ describe('structureMarkersPass.pickEnabled', () => {
     expect(EMPTY_RENDERER_PASS.pickEnabled!(STATE_STUB, ctx, VIEW_STUB, COSMIC_LIVE)).toBe(false);
     expect(passOver(3).pickEnabled!(STATE_STUB, ctx, VIEW_STUB, COSMIC_LIVE)).toBe(true);
     expect(passOver(3).pickEnabled!(STATE_STUB, ctx, VIEW_STUB, NONE_LIVE)).toBe(false);
+  });
+});
+
+describe('structureMarkersPass.draw', () => {
+  // A void has no halo on the plain sky (absence, not matter); the antique plate outlines a
+  // structure only from its halo, so there a void takes one too.
+  it.each([
+    [false, false],
+    [true, true],
+  ])('antique=%s: the void halo draws=%s', (antique, voidHalo) => {
+    const draw = vi.fn();
+    const runtime = { cosmoRenderer: { setMarkers: vi.fn(), draw } };
+    const pass = structureMarkersCosmoPass(runtime as unknown as StructureRuntime);
+    const ctx = planMarkers(makeCtx(), 0);
+    const state = { settings: { antique: { enabled: antique } }, viewRig: 'mono' } as EngineState;
+    const view = { slab: { vp: new Float64Array(16) }, viewportPx: [1, 1], camPos: [0, 0, 0] };
+    (ctx as unknown as { drawPxPerRad: number }).drawPxPerRad = 1;
+    (ctx.snapshot as unknown as { devicePixelRatio: number }).devicePixelRatio = 1;
+    pass.draw({} as GPURenderPassEncoder, view as unknown as SlabView, ctx, state, COSMIC_LIVE);
+    expect(draw.mock.calls[0]![5]).toBe(voidHalo);
   });
 });

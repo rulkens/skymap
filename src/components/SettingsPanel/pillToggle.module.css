@@ -13,11 +13,11 @@
   appearance: none;
   -webkit-appearance: none;
   position: relative;
-  width: 28px;
-  height: 16px;
-  border: 1px solid var(--border-control);
-  border-radius: 999px;
-  background: var(--surface-control);
+  width: var(--toggle-width, 28px);
+  height: var(--toggle-height, 16px);
+  border: 1px solid var(--toggle-rule, var(--border-control));
+  border-radius: var(--toggle-radius, 999px);
+  background: var(--toggle-image, var(--surface-control));
   accent-color: var(--color-accent-control);
   cursor: pointer;
   flex-shrink: 0;
@@ -28,6 +28,7 @@
 
 .pillToggle::before {
   content: '';
+  display: var(--toggle-thumb-display, block);
   position: absolute;
   top: 1px;
   left: 1px;
@@ -50,19 +51,20 @@
   /* `--color-accent-link` (0.65 alpha) rather than the brighter
    * `--color-accent-control` (0.85) — the on-state pill sits on a dark panel
    * and the 0.85 accent reads as shouting next to the muted body text. */
-  background: var(--color-accent-link);
-  border-color: var(--color-accent-link);
+  background: var(--toggle-image-on, var(--color-accent-link));
+  border-color: var(--toggle-rule, var(--color-accent-link));
 }
 
 .pillToggle:checked::before {
-  /* Thumb keeps its off-state colour — only the track changes between on and
-   * off.  A black thumb on the accent-link track read as a hole cut out of
-   * the pill rather than a moving knob. */
+  /* By default the thumb keeps its off-state colour — only the track changes.
+   * A black thumb on the accent-link track read as a hole cut out of the pill
+   * rather than a moving knob. A look with a dark on-track sets a light thumb. */
   transform: translateX(12px);
+  background: var(--toggle-thumb-on);
 }
 
 .pillToggle:focus-visible {
-  outline: 1px solid var(--focus-ring);
+  outline: var(--focus-ring-width, 1px) solid var(--focus-ring);
   outline-offset: 2px;
 }
 

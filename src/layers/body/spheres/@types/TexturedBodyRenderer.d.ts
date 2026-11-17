@@ -59,4 +59,27 @@ export type TexturedBodyRenderer = Renderer & {
    * 44-float (176 B) `TexturedBodyUniforms` block from `packTexturedBodyUniforms`.
    */
   draw(pass: GPURenderPassEncoder, bodyId: BodyTextureId, uniforms: Float32Array): void;
+  /**
+   * Draw one body's albedo mask for the antique look (`fsAlbedoMask`: lightness
+   * ramped about the record's `albedoMid`) into an `ANTIQUE_LAND_FORMAT` target with no
+   * depth. Its own uniform slot per body, so it never races `draw`'s.
+   */
+  drawAlbedoMask(pass: GPURenderPassEncoder, bodyId: BodyTextureId, uniforms: Float32Array): void;
+  /**
+   * Draw the antique Moon print (`fsMoonPrint`) into an `ANTIQUE_MOON_FORMAT` target
+   * with no depth: `uniforms` as for `draw` (its own slot), `craters` the
+   * `packMoonPrint` record.
+   */
+  drawMoonPrint(
+    pass: GPURenderPassEncoder,
+    bodyId: BodyTextureId,
+    uniforms: Float32Array,
+    craters: ArrayBuffer,
+  ): void;
+  /**
+   * Draw the Moon's ground relief (`fsMoonRelief`) into an `ANTIQUE_RELIEF_FORMAT`
+   * target with no depth: `uniforms` as for `drawMoonPrint`, the rings the frame's
+   * `drawMoonPrint` wrote (its hachures stay on them).
+   */
+  drawMoonRelief(pass: GPURenderPassEncoder, bodyId: BodyTextureId, uniforms: Float32Array): void;
 };

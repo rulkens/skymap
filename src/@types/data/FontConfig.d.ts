@@ -6,4 +6,6 @@
 export type FontConfig = {
   readonly ttf: string;
   readonly charset: string;
+  /** Loaded only when a look first asks for it (`loadFontAtlases(ids)`), never at boot. */
+  readonly onDemand?: true;
 };

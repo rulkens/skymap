@@ -1,4 +1,5 @@
 import type { EarthRenderer } from '../earth/@types/EarthRenderer';
+import type { AntiqueMapRenderer } from '../earth/antiqueMap/@types/AntiqueMapRenderer';
 import type { SurfaceTileRenderer } from '../surfaceTiles/patch/@types/SurfaceTileRenderer';
 import type { TerrainPickCursor } from '../terrainPick/@types/TerrainPickCursor';
 import type { TerrainPickMarkerRenderer } from '../terrainPick/@types/TerrainPickMarkerRenderer';
@@ -31,6 +32,8 @@ export type BodyRuntime = {
   /** Owns the aerial-perspective renderer and the sky-view LUT. */
   readonly atmosphereShellRenderer: AtmosphereShellRenderer;
   readonly bodyGlintRenderer: BodyGlintRenderer;
+  /** The antique look's c.1690 geography on Earth; builds nothing until the look draws. */
+  readonly antiqueMapRenderer: AntiqueMapRenderer;
   /** One slot per `(bodyId, kind)` map; their commits write the renderers above. */
   readonly textureSlots: ReadonlyMap<BodyTextureSlotKey, AssetSlot<ImageBitmap, BodyTextureReq>>;
   /** The all-bodies placeholder atlas, seeding every textured body before its own map lands. */

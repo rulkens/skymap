@@ -2,7 +2,7 @@
  * DisplaySectionContainer — store boundary for the Display settings section.
  *
  * Owns all Redux reach for the Display group: the orientation frame, the tone-map
- * curve and exposure, the camera FOV, the HDR master toggle + its two headroom
+ * curve and exposure, the camera FOV, the antique-atlas look, the HDR master toggle + its two headroom
  * knobs, the live `hdrCapable` read off the engine slice, and the bloom trio —
  * each dispatch wrapped in `useCallback`. The presentational `DisplaySection`
  * imports nothing from `store/` or `state/`.
@@ -28,6 +28,7 @@ import {
   selectBloomEnabled,
   selectBloomStrength,
   selectBloomThreshold,
+  selectAntiqueEnabled,
   selectFilmEnabled,
 } from '../../state/settings/selectors';
 import { selectHdrCapable } from '../../state/engine/selectors';
@@ -41,6 +42,7 @@ import {
   setBloomStrength,
   setBloomThreshold,
 } from '../../state/settings/core/bloomSlice';
+import { setAntiqueEnabled } from '../../state/settings/core/antiqueSlice';
 import { setFilmEnabled } from '../../state/settings/core/filmSlice';
 import { requestOrientationChange } from '../../state/camera/orientationActions';
 import type { ToneMapCurve } from '../../@types/data/ToneMapCurve';
@@ -61,6 +63,7 @@ function DisplaySectionContainer(): React.ReactElement {
   const bloomEnabled = useAppSelector(selectBloomEnabled);
   const bloomStrength = useAppSelector(selectBloomStrength);
   const bloomThreshold = useAppSelector(selectBloomThreshold);
+  const antiqueEnabled = useAppSelector(selectAntiqueEnabled);
   const filmEnabled = useAppSelector(selectFilmEnabled);
 
   // Dispatch the single intent and nothing else: the orientation saga captures
@@ -100,6 +103,10 @@ function DisplaySectionContainer(): React.ReactElement {
     (next: number) => dispatch(setBloomThreshold(next)),
     [dispatch],
   );
+  const onAntiqueEnabledChange = useCallback(
+    (next: boolean) => dispatch(setAntiqueEnabled(next)),
+    [dispatch],
+  );
 
   const onFilmEnabledChange = useCallback(
     (next: boolean) => dispatch(setFilmEnabled(next)),
@@ -129,6 +136,8 @@ function DisplaySectionContainer(): React.ReactElement {
       onBloomStrengthChange={onBloomStrengthChange}
       bloomThreshold={bloomThreshold}
       onBloomThresholdChange={onBloomThresholdChange}
+      antiqueEnabled={antiqueEnabled}
+      onAntiqueEnabledChange={onAntiqueEnabledChange}
       filmEnabled={filmEnabled}
       onFilmEnabledChange={onFilmEnabledChange}
     />

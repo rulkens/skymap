@@ -15,6 +15,7 @@ import type { CopyStepSpec } from './CopyStepSpec';
 import type { ForegroundStepSpec } from './ForegroundStepSpec';
 import type { PlannerStepSpec } from './PlannerStepSpec';
 import type { RenderStepSpec } from './RenderStepSpec';
+import type { StylizeStepSpec } from './StylizeStepSpec';
 import type { TonemapStepSpec } from './TonemapStepSpec';
 
 export type FrameStepSpec =
@@ -26,4 +27,5 @@ export type FrameStepSpec =
   | CompositeStepSpec
   | BloomStepSpec
   | TonemapStepSpec
-  | CopyStepSpec;
+  | CopyStepSpec
+  | StylizeStepSpec;

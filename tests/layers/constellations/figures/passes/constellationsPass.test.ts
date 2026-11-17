@@ -13,7 +13,11 @@ import type { EngineState } from '../../../../../src/@types/engine/state/EngineS
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 
-function makeCtx(camPos: readonly [number, number, number], focusBlend = 0): FrameView {
+function makeCtx(
+  camPos: readonly [number, number, number],
+  focusBlend = 0,
+  devicePixelRatio = 1,
+): FrameView {
   const near0Slab: Slab = makeSlab();
   return {
     viewSlot: 0,
@@ -26,6 +30,7 @@ function makeCtx(camPos: readonly [number, number, number], focusBlend = 0): Fra
     fovYRad: (60 * Math.PI) / 180,
     snapshot: {
       nowMs: 0,
+      devicePixelRatio,
       simDays: 0,
       focusBlend,
       focusPickId: null,
@@ -94,5 +99,21 @@ describe('constellationsPass draw', () => {
     };
     expect(opacityAt(0)).toBeGreaterThan(0);
     expect(opacityAt(1)).toBeCloseTo(opacityAt(0) * STRONG_RECESSION);
+  });
+
+  it('draws the same CSS-px line width at dpr 1 and dpr 2', () => {
+    const halfwidthAt = (dpr: number): number => {
+      const drawSpy = vi.fn();
+      const ctx = makeCtx([0, 0, 0], 0, dpr);
+      constellationsPass(makeRuntime(true, drawSpy)).draw(
+        PASS_STUB,
+        slabViewOf(ctx, NEAR0),
+        ctx,
+        makeState(),
+        1,
+      );
+      return drawSpy.mock.calls[0]![4] as number;
+    };
+    expect(halfwidthAt(2) / 2).toBeCloseTo(halfwidthAt(1));
   });
 });

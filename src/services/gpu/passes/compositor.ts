@@ -22,7 +22,11 @@ import fsCode from '../shaders/compositor/fragment.wesl?static';
 import { clampExposure } from '../../../utils/tonemap/clampExposure';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../lib/blendStates';
-import { REINHARD_WHITEPOINT, ASINH_SOFTNESS } from '../../../data/toneMapCurve';
+import {
+  REINHARD_WHITEPOINT,
+  ASINH_SOFTNESS,
+  toneMapCurveSaturation,
+} from '../../../data/toneMapCurve';
 import type { Compositor } from '../../../@types/rendering/Compositor';
 import type { CompositeBlend } from '../../../@types/rendering/CompositeBlend';
 import type { ToneMap } from '../../../@types/rendering/ToneMap';
@@ -173,7 +177,7 @@ export function createCompositor(init: { device: GPUDevice }): Compositor {
   const cache = new Map<string, { pipeline: GPURenderPipeline; uniformBuffer: GPUBuffer }>();
 
   // Mixed f32/u32 lanes over one scratch buffer, laid out per
-  // `shaders/compositor/io.wesl`'s `CompositorUniforms` table: 20 lanes.
+  // `shaders/compositor/io.wesl`'s `CompositorUniforms` table: 20 lanes (lanes 18, 19: the print shoulder).
   const UNIFORM_BYTES = 80;
   const uniformBytes = new ArrayBuffer(UNIFORM_BYTES);
   const uniformF32 = new Float32Array(uniformBytes);
@@ -239,6 +243,9 @@ export function createCompositor(init: { device: GPUDevice }): Compositor {
         // sets these non-zero when `hdrActiveOf(ctx.renderTargets)` is true).
         uniformF32[6] = tone.hdrKnee;
         uniformF32[7] = tone.hdrHeadroom;
+        const top = toneMapCurveSaturation(tone.curve);
+        uniformF32[18] = (tone.printShoulder ?? 0) * top;
+        uniformF32[19] = top;
       } else {
         // No tone-map: exposure 1.0, curve params zeroed, toneEnabled 0.
         // The fragment takes the raw pass-through branch.
@@ -249,6 +256,8 @@ export function createCompositor(init: { device: GPUDevice }): Compositor {
         uniformU32[4] = 0;
         uniformF32[6] = 0;
         uniformF32[7] = 0;
+        uniformF32[18] = 0;
+        uniformF32[19] = 0;
       }
       if (film) {
         const { grade } = film;
