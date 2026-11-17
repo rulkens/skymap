@@ -28,7 +28,7 @@
  *
  *   3. `put(setFovYRad(fovYRad))` — the viewer's lens: camera state, so not a cluster.
  *
- *   4. `put(updateSelectionFocus(focus))` — focus reverts through the same
+ *   4. `put(updateSelectionFocus(focus))`, when it differs — focus reverts through the same
  *      production action a user interaction or a `focus()` beat uses. Routing
  *      through dispatch keeps the store coherent: the selection reconciler saga
  *      re-computes `selectionRows`, and the ring / isolation dim / camera tween
@@ -53,10 +53,12 @@
  * transient fade-to-black effects need no undo here.
  */
 
-import { put } from 'typed-redux-saga';
+import { put, select } from 'typed-redux-saga';
 
 import { mergeSnapshot } from '../settings/mergeSnapshotAction';
 import { updateSelectionFocus } from '../selection/selectionSlice';
+import { selectFocusRef } from '../selection/selectors';
+import { shallowEqualRef } from '../../utils/object/shallowEqualRef';
 import { requestOrientationChange } from '../camera/orientationActions';
 import { setFovYRad } from '../camera/cameraIntentSlice';
 import { restoreTime } from '../time/timeSlice';
@@ -67,7 +69,11 @@ export function* restoreSceneSaga(snapshot: SceneSnapshot): Generator {
   yield* put(mergeSnapshot(snapshot.settings));
   yield* put(requestOrientationChange(snapshot.orientation));
   yield* put(setFovYRad(snapshot.fovYRad));
-  yield* put(updateSelectionFocus(snapshot.focus));
+  // Only a changed focus: the reconciler re-extracts the row on any focus action, and
+  // a new row is a new focus to the follow rows, which fly to frame it.
+  if (!shallowEqualRef(yield* select(selectFocusRef), snapshot.focus)) {
+    yield* put(updateSelectionFocus(snapshot.focus));
+  }
   yield* put(restoreTime(resolveRestoredTime(snapshot)));
 }
 
