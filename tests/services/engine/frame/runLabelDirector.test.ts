@@ -5,6 +5,7 @@ import type { LabelDescription } from '../../../../src/@types/rendering/LabelDes
 import type { LabelDirectorState } from '../../../../src/@types/rendering/LabelDirectorState';
 import { runLabelDirector } from '../../../../src/services/engine/frame/runLabelDirector';
 import { createLabelDirectorState } from '../../../../src/services/engine/labels/createLabelDirectorState';
+import { shownLabelRecords } from '../../../../src/services/engine/labels/shownLabelRecords';
 import { NEAR0 } from '../../../../src/services/engine/frame/slabs';
 import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/recedingFocusSubsystem';
 import { LABEL_DIRECTORS } from '../../../../src/data/labels/labelDirectors';
@@ -12,7 +13,6 @@ import { APP_VISIBILITY_REGISTRY } from '../../../../src/compositions/appVisibil
 import { labelSource } from '../../../../src/utils/labels/labelSource';
 import { packPickWord } from '../../../../src/utils/labels/packPickWord';
 import { LETTER_A_METRICS } from '../../../helpers/labels/letterAMetrics';
-import { STAGE_CAMERA } from '../../../helpers/labels/labelStageFixture';
 
 // The toggle fade, the camera and the scene's bodies come from the frame; the director's own
 // work (encode, stages, idle) runs for real.
@@ -87,5 +87,20 @@ describe('runLabelDirector', () => {
     Object.assign(state.settings.labels, { focusedOnly: true });
     run();
     expect(Array.from(director.frame!.target.subarray(0, 2))).toEqual([1, 0]);
+  });
+
+  it('an idle director skips its stages and wakes when its toggle comes back', () => {
+    const { director, state, run } = harness([other]);
+    run();
+    expect(shownLabelRecords(state, NEAR0)).not.toBeNull();
+    toggle.fade = 0;
+    while (run());
+    run();
+    expect(director.idle).toBe(true);
+    expect(shownLabelRecords(state, NEAR0)).toBeNull();
+    toggle.fade = 1;
+    run();
+    expect(director.idle).toBe(false);
+    expect(director.frame!.target[0]).toBe(1);
   });
 });

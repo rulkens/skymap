@@ -15,10 +15,8 @@ export type LabelRenderer = {
   set(records: LabelRecords): void;
   /**
    * Draw the last `set` upload (leaders, then glyphs) inside a render pass whose target
-   * format matches `targetFormat`. `scene` is read only by an instance created with
-   * `occludeAgainstScene: true`, where it fills the group(1) coverage joint so fragments
-   * fade behind the foreground bodies (lib/sceneDepth.wesl); without it that instance
-   * draws plain.
+   * format matches `targetFormat`. `scene` fills the group(1) coverage joint so fragments
+   * fade behind the foreground bodies (lib/sceneDepth.wesl); without it the draw is plain.
    */
   draw(pass: GPURenderPassEncoder, view: LabelRecordView, scene?: OverlaySceneOcclusion): void;
   /** Release all GPU resources. */

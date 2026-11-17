@@ -11,8 +11,9 @@
 import type { LabelStage } from '../../../@types/rendering/LabelStage';
 import { LABEL_RECORD as W, LABEL_RECORD_WORDS } from '../../../data/labels/labelRecordLayout';
 import { CAPTION_PRIORITY_SCALE } from '../../../data/labels/captionPriorityScale';
+import { LABEL_DECLUTTER_PAD_PX } from '../../../data/labels/labelDeclutterPadPx';
 
-export const declutterRecords: LabelStage = (records, frame, { director, projection }) => {
+export const declutterRecords: LabelStage = (records, frame, { projection }) => {
   const { f32, u32 } = records;
   const n = records.count;
   const { order, rank, rect } = frame;
@@ -39,7 +40,7 @@ export const declutterRecords: LabelStage = (records, frame, { director, project
     order[k + 1] = i;
   }
 
-  const pad = director.declutterPadPx * projection.pxScale;
+  const pad = LABEL_DECLUTTER_PAD_PX * projection.pxScale;
   let kept = 0;
   for (let j = 0; j < n; j++) {
     const i = order[j]!;

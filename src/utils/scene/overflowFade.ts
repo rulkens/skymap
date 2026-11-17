@@ -4,7 +4,7 @@
  * grown too big on screen for pointing at it to mean anything.
  *
  * One band over the SUBJECT's apparent diameter serves both, since both are
- * sized at the same 1.5× of it (`near0RingRadiusPx`, `LEADER_LIFT_FACTOR`): a
+ * sized at the same 1.5× of it (`near0RingRadiusPx`, a caption's 3-radii lift): a
  * stray arc crossing a screen edge and a caption lifted past the top are one
  * event. It keys on the viewport's SHORT side — the first edge 1.5× reaches.
  */

@@ -3,7 +3,8 @@
  * `describe` per item, lays out each text (memoised by `textLayoutOf`) into the glyph buffer and
  * writes the record. Returns the record count. Skipped, with the remembered count, while the
  * source's `changes` value and both start offsets are what the last encode saw: a source after
- * one whose count changed moves, and is written again. Records past `capacity` are dropped.
+ * one whose count changed moves, and is written again. Records past `capacity` are dropped, and
+ * so is a label whose glyphs do not all fit: whole, never cut off mid-word.
  */
 
 import type { EngineState } from '../../@types/engine/state/EngineState';
@@ -40,7 +41,10 @@ export function encodeLabelSource<Item>(
   }
 
   let ordinal = into.sources.indexOf(anySource);
-  if (ordinal < 0) ordinal = into.sources.push(anySource) - 1;
+  if (ordinal < 0) {
+    ordinal = into.sources.push(anySource) - 1;
+    into.toggleAddresses.push(`label:${source.toggle}`);
+  }
   const items = source.items(state);
   let at = start;
   let glyph = glyphStart;
@@ -56,9 +60,9 @@ export function encodeLabelSource<Item>(
       // An 'above' label stands on its anchor, so the lift alone clears the subject.
       alignY: row.placement === 'above' ? 'bottom' : 'center',
     });
-    const fontIndex = FONT_IDS.indexOf(row.font);
-    const written = writeGlyphInstances(quads, at, fontIndex, into, glyph, into.glyphCapacity);
-    writeLabelRecord(into, at, description, style, glyph, written);
+    if (glyph + quads.length > into.glyphCapacity) continue;
+    writeGlyphInstances(quads, at, FONT_IDS.indexOf(row.font), into, glyph);
+    writeLabelRecord(into, at, description, style, glyph, quads.length);
 
     const { position, pick } = description;
     into.source[at] = ordinal;
@@ -71,7 +75,7 @@ export function encodeLabelSource<Item>(
     into.textBox[at * 4 + 1] = bbox?.minY ?? 0;
     into.textBox[at * 4 + 2] = bbox?.maxX ?? 0;
     into.textBox[at * 4 + 3] = bbox?.maxY ?? 0;
-    glyph += written;
+    glyph += quads.length;
     at++;
   }
 

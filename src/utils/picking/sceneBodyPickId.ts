@@ -3,7 +3,7 @@
  * (same codes and seed tables). `null` means SKIP: an index packed from −1 would alias body 0.
  */
 
-import { packSelection, PICK_SENTINEL_OFFSET } from '../../data/selectionEncoding';
+import { packPickWord } from '../labels/packPickWord';
 import { sceneBodyPick } from './sceneBodyPick';
 import type { BodySourceEntry } from '../../@types/data/body/BodySourceEntry';
 
@@ -12,5 +12,5 @@ export function sceneBodyPickId(
   codeOf: (entry: BodySourceEntry) => number,
 ): number | null {
   const pick = sceneBodyPick(id, codeOf);
-  return pick === null ? null : packSelection(pick.code, pick.index + PICK_SENTINEL_OFFSET);
+  return pick === null ? null : packPickWord(pick.code, pick.index);
 }

@@ -21,7 +21,7 @@ import package::labels::vertex::expandRecordGlyph;
 import package::labels::vertex::expandRecordLeader;
 import package::lib::sceneDepth::subjectDepthVerdictAtUv;
 
-// Must equal 'SCALE_UNITS.MPC_TO_M × M_TO_KM' (src/data/scaleUnits.ts).
+// Must equal 'SCALE_UNITS.MPC_TO_M × M_TO_KM' (src/data/scaleUnits.ts; labelRecord.parity).
 const MPC_TO_KM: f32 = 3.0856775814913673e19;
 
 fn depthVerdictAt(atPx: vec2<f32>, record: LabelRecord, placed: PlacedRecord) -> f32 {

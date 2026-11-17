@@ -31,7 +31,7 @@ export const markGroundedRecords: LabelStage = (records, frame, { occluders }) =
     const word = u32[base + W.style]!;
     const next = grounded
       ? word | LABEL_RECORD_FLAGS.grounded
-      : word & LABEL_RECORD_FLAGS.styleMask;
+      : word & ~LABEL_RECORD_FLAGS.grounded;
     if (next !== word) {
       u32[base + W.style] = next;
       markRecordsDirty(records, i, i + 1);

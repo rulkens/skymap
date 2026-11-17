@@ -1,7 +1,6 @@
 /**
  * writeGlyphInstances — one label's glyph quads as instance records (`GLYPH_INSTANCE_BYTES`,
- * `VsIn` attributes 1–5 in labels/io.wesl) from instance `start`. Returns how many were written;
- * glyphs past `maxGlyphs` are dropped.
+ * `VsIn` attributes 1–5 in labels/io.wesl) from instance `start`; the caller checks they fit.
  */
 
 import type { GlyphQuad } from '../../../@types/rendering/GlyphQuad';
@@ -13,11 +12,9 @@ export function writeGlyphInstances(
   fontIndex: number,
   out: { readonly glyphF32: Float32Array; readonly glyphU32: Uint32Array },
   start: number,
-  maxGlyphs: number,
-): number {
+): void {
   let at = start;
   for (const q of quads) {
-    if (at >= maxGlyphs) break;
     const base = at * (GLYPH_INSTANCE_BYTES / 4);
     out.glyphF32[base + 0] = q.localOffsetX;
     out.glyphF32[base + 1] = q.localOffsetY;
@@ -32,5 +29,4 @@ export function writeGlyphInstances(
     out.glyphU32[base + 9] = fontIndex;
     at++;
   }
-  return at - start;
 }

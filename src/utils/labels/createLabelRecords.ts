@@ -27,6 +27,7 @@ export function createLabelRecords(
     keys: new Array<string>(capacity).fill(''),
     textBox: new Float32Array(capacity * 4),
     sources: [],
+    toggleAddresses: [],
     encoded: new Map(),
     generation: 0,
     dirtyFrom: 0,

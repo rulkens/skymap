@@ -25,7 +25,7 @@ radian, 1.6× to 3× coarser than a face. So:
 
 Screen-aligned overlays are simply off: the dome rig's program omits
 `OVERLAYS` (`src/data/rendering/viewRigs.ts:25`), and the label director runs
-once against the canvas `FrameView` (`runFrame.ts`, `label2DDirector.ts`)
+once against the canvas `FrameView` (`runFrame.ts`, `runLabelDirector.ts`)
 with a rectilinear CPU projection (`src/utils/labels/projectLabels.ts:16-45`
 via `cosmoLabelProjection.ts`). No `FrameView` describes the fisheye image;
 `DOME_RESAMPLE` (`frameSections.ts:325-328`) is a once-scope texture remap

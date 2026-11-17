@@ -23,7 +23,9 @@ export const resolveAnchors: LabelStage = (records, frame, { bodyStates, meshBod
       frame.located[i] = 1;
       continue;
     }
-    const absent = MESH_BODY_IDS.has(id) && !meshBodies.some((body) => body.id === id);
+    // A loop, not `some`: no closure per anchored record per frame.
+    let absent = MESH_BODY_IDS.has(id);
+    for (let b = 0; absent && b < meshBodies.length; b++) absent = meshBodies[b]!.id !== id;
     const position = absent ? undefined : bodyStates.get(id)?.positionMpc;
     frame.located[i] = position === undefined ? 0 : 1;
     if (position === undefined) continue;

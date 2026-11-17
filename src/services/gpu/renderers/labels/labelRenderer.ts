@@ -5,7 +5,7 @@
  * second storage buffer uploaded once. The fragment takes the median of the atlas's R/G/B
  * distances with an `fwidth` edge: crisp at any scale, so the atlas has no mipmaps (mip
  * filtering would blur the distances). Blend is premultiplied OVER, not additive: labels are
- * UI overlay and must occlude the sky. `occludeAgainstScene` adds the group(1) coverage joint
+ * UI overlay and must occlude the sky. A second pipeline pair adds the group(1) coverage joint
  * and scene-attenuated shaders.
  */
 
@@ -57,7 +57,6 @@ export function createLabelRenderer(
   init: {
     targetFormat: GPUTextureFormat;
     atlases: LoadedFontAtlases;
-    occludeAgainstScene?: boolean;
   },
 ): LabelRenderer {
   const { targetFormat, atlases } = init;
@@ -86,12 +85,8 @@ export function createLabelRenderer(
 
   // The coverage BGL is retained so `draw` can rebuild its bind group per frame (the colour
   // view changes on every resize — see occlusionCoverageGroup.ts).
-  const occlusionCoverageBGL = init.occludeAgainstScene
-    ? device.createBindGroupLayout(OCCLUSION_COVERAGE_LAYOUT_DESC)
-    : null;
-  const occlusionDepthFrameBuffer = init.occludeAgainstScene
-    ? createOcclusionDepthFrameBuffer(device, 'label-depth-frame')
-    : null;
+  const occlusionCoverageBGL = device.createBindGroupLayout(OCCLUSION_COVERAGE_LAYOUT_DESC);
+  const occlusionDepthFrameBuffer = createOcclusionDepthFrameBuffer(device, 'label-depth-frame');
 
   const vertexBuffers: GPUVertexBufferLayout[] = [
     UNIT_QUAD_VERTEX_LAYOUT,
@@ -133,9 +128,9 @@ export function createLabelRenderer(
     };
   }
 
-  // An occlusion instance builds BOTH pairs and picks per draw: a frame in which no
-  // foreground body drew has no scene views, and still paints its labels through a valid
-  // plain draw rather than an occlusion draw with group(1) unbound.
+  // BOTH pairs, picked per draw: a frame in which no foreground body drew has no scene views,
+  // and still paints its labels through a valid plain draw rather than an occlusion draw with
+  // group(1) unbound.
   const plainPipelines = pipelinePair(
     'label-pipeline',
     device.createPipelineLayout({
@@ -153,26 +148,23 @@ export function createLabelRenderer(
       leaders: 'fsLeader',
     },
   );
-  const occludePipelines =
-    occlusionCoverageBGL === null
-      ? null
-      : pipelinePair(
-          'label-pipeline-occlude',
-          device.createPipelineLayout({
-            label: 'label-pipeline-occlude-layout',
-            bindGroupLayouts: [bindGroupLayout, occlusionCoverageBGL],
-          }),
-          {
-            module: createShaderModuleWithDevLog(device, vsOccludeCode, 'labels.vertexOcclude'),
-            glyphs: 'vsOcclude',
-            leaders: 'vsLeaderOcclude',
-          },
-          {
-            module: createShaderModuleWithDevLog(device, fsOccludeCode, 'labels.fragmentOcclude'),
-            glyphs: 'fs',
-            leaders: 'fsLeaderOcclude',
-          },
-        );
+  const occludePipelines = pipelinePair(
+    'label-pipeline-occlude',
+    device.createPipelineLayout({
+      label: 'label-pipeline-occlude-layout',
+      bindGroupLayouts: [bindGroupLayout, occlusionCoverageBGL],
+    }),
+    {
+      module: createShaderModuleWithDevLog(device, vsOccludeCode, 'labels.vertexOcclude'),
+      glyphs: 'vsOcclude',
+      leaders: 'vsLeaderOcclude',
+    },
+    {
+      module: createShaderModuleWithDevLog(device, fsOccludeCode, 'labels.fragmentOcclude'),
+      glyphs: 'fs',
+      leaders: 'fsLeaderOcclude',
+    },
+  );
 
   const cornerBuffer = device.createBuffer({
     label: 'label-corners',
@@ -299,7 +291,7 @@ export function createLabelRenderer(
     scene: OverlaySceneOcclusion | undefined,
     sizePx: readonly [number, number],
   ): boolean {
-    if (!occlusionCoverageBGL || !occlusionDepthFrameBuffer || !scene) return false;
+    if (!scene) return false;
     writeOcclusionDepthFrame(device, occlusionDepthFrameBuffer, scene.frame, sizePx);
     pass.setBindGroup(
       OCCLUSION_COVERAGE_GROUP_INDEX,
@@ -330,8 +322,7 @@ export function createLabelRenderer(
     uniformF32[RU.selectedWhiten / 4] = SELECTED_LABEL_WHITEN;
     device.queue.writeBuffer(uniformBuffer, 0, uniformF32);
 
-    const occluded = occludePipelines !== null && bindScene(pass, scene, projection.sizePx);
-    const pipelines = occluded ? occludePipelines : plainPipelines;
+    const pipelines = bindScene(pass, scene, projection.sizePx) ? occludePipelines : plainPipelines;
     // Leaders first, so the glyphs composite over the line where they meet; the shader
     // collapses the quad of a record without one.
     pass.setPipeline(pipelines.leaders);
@@ -347,7 +338,7 @@ export function createLabelRenderer(
   function destroy(): void {
     cornerBuffer.destroy();
     atlasTexture.destroy();
-    occlusionDepthFrameBuffer?.destroy();
+    occlusionDepthFrameBuffer.destroy();
     uniformBuffer.destroy();
     styleBuffer.destroy();
     recordBuffer?.destroy();

@@ -10,6 +10,7 @@ import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { overlaySceneOcclusion } from '../overlaySceneOcclusion';
 import { shownLabelRecords } from '../../labels/shownLabelRecords';
 import { recordPickQuads } from '../../../../utils/labels/recordPickQuads';
+import { hasClickableRecord } from '../../../../utils/labels/hasClickableRecord';
 import { COSMO } from '../slabs';
 
 export const labelsCosmoPass: ContentPass = {
@@ -24,7 +25,7 @@ export const labelsCosmoPass: ContentPass = {
   pickEnabled(state, _ctx) {
     if (state.gpu.labelRendererCosmo === null) return false;
     const shown = shownLabelRecords(state, COSMO);
-    return shown !== null && recordPickQuads(shown.records, shown.frame).length > 0;
+    return shown !== null && hasClickableRecord(shown.records, shown.frame);
   },
 
   draw(pass, view, ctx, state) {

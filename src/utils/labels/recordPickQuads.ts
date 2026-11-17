@@ -1,9 +1,8 @@
 /**
  * recordPickQuads — the clickable label records as pick rectangles, from the ink boxes
  * `projectRecords` made this frame (no re-projection), nearest subject first: the quads share
- * one depth band and the first drawn owns a contested pixel. A record is clickable while
- * `targetAlpha` says so, it is still drawn (a fading label stays clickable while readable) and it
- * has ink. Each box grows by the grace padding and the painted outline.
+ * one depth band and the first drawn owns a contested pixel (`isRecordClickable` says which).
+ * Each box grows by the grace padding and the painted outline.
  */
 
 import type { LabelFrame } from '../../@types/rendering/LabelFrame';
@@ -16,16 +15,12 @@ import {
 } from '../../data/labels/labelRecordLayout';
 import { LABEL_STYLES, LABEL_STYLE_IDS } from '../../data/labels/labelStyles';
 import { LABEL_PICK_GRACE_PADDING_PX } from '../../data/labels/labelPickGracePaddingPx';
+import { isRecordClickable } from './isRecordClickable';
 
 export function recordPickQuads(records: LabelRecords, frame: LabelFrame): LabelPickQuad[] {
   const { f32, u32 } = records;
   const picked: number[] = [];
-  for (let i = 0; i < records.count; i++) {
-    const base = i * LABEL_RECORD_WORDS;
-    if (frame.clickable[i] && f32[base + W.alpha]! > 0 && u32[base + W.glyphCount]! > 0) {
-      picked.push(i);
-    }
-  }
+  for (let i = 0; i < records.count; i++) if (isRecordClickable(records, frame, i)) picked.push(i);
   picked.sort((a, b) => frame.distanceMpc[a]! - frame.distanceMpc[b]!);
   return picked.map((i) => {
     const base = i * LABEL_RECORD_WORDS;

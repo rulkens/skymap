@@ -1,4 +1,5 @@
 import type { LabelSource } from '../engine/layer/LabelSource';
+import type { LabelAddress } from '../animation/LabelAddress';
 import type { LoadedFontAtlases } from './LoadedFontAtlases';
 
 /**
@@ -31,6 +32,8 @@ export type LabelRecords = {
   readonly textBox: Float32Array;
   /** Ordinal → source, assigned on first encode. */
   readonly sources: LabelSource<unknown>[];
+  /** Ordinal → its toggle's address, built once beside `sources` so a frame formats no strings. */
+  readonly toggleAddresses: LabelAddress[];
   /** Per source: what its last encode saw, so an unchanged source is not described again. */
   readonly encoded: Map<
     LabelSource<unknown>,

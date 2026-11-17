@@ -24,7 +24,8 @@ import package::lib::projectLabel::liftedAnchor;
 import package::lib::projectLabel::scaledLength;
 
 // Must match 'ATLAS_FONT_SIZE' and 'DISTANCE_RANGE_PX' in src/data/fonts.ts
-// (fontConstants.parity) and 'LEADER_LINE_PADDING_PX' in leaderLineStyle.ts.
+// (fontConstants.parity) and 'LEADER_LINE_PADDING_PX' in src/data/labels/leaderLinePaddingPx.ts
+// (labelRecord.parity).
 const ATLAS_EM_PX: f32 = 84.0;
 const DISTANCE_RANGE_PX: f32 = 32.0;
 const LEADER_LINE_PADDING_PX: f32 = 6.0;

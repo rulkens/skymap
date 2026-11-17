@@ -8,7 +8,7 @@ import { labelSource } from '../../../src/utils/labels/labelSource';
 import { writeHiLoVertex } from '../../../src/utils/math/writeHiLoVertex';
 import { packRgba8Unorm } from '../../../src/utils/color/packRgba8Unorm';
 import { packSelection } from '../../../src/data/selectionEncoding';
-import { LABEL_RECORD_WORDS } from '../../../src/data/labels/labelRecordLayout';
+import { LABEL_RECORD, LABEL_RECORD_WORDS } from '../../../src/data/labels/labelRecordLayout';
 import { LABEL_STYLE_IDS } from '../../../src/data/labels/labelStyles';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { LETTER_A_METRICS } from '../../helpers/labels/letterAMetrics';
@@ -91,6 +91,54 @@ describe('encodeLabelSource', () => {
     // Same value, but an earlier source grew: the records move, so they are written again.
     encodeLabelSource(source, state, into, 1);
     expect(calls).toBe(3);
+  });
+
+  it('a later source is written again when an earlier one changes its count or glyphs', () => {
+    const into = records();
+    let names = ['A'];
+    const first = labelSource({
+      slab: 0,
+      toggle: 'body',
+      style: 'caption',
+      changes: () => names,
+      items: () => names,
+      describe: (text: string) => ({ text, position: [0, 0, 0] }),
+    });
+    const second = labelSource({
+      slab: 0,
+      toggle: 'body',
+      style: 'caption',
+      items: () => ['A'],
+      describe: (text: string) => ({ text, position: [0, 0, 0] }),
+    });
+    const encode = () => {
+      const count = encodeLabelSource(first, state, into, 0);
+      return count + encodeLabelSource(second, state, into, count);
+    };
+    // The second source's record: its glyph start sits right after the first source's glyphs.
+    const secondGlyphStart = (at: number) =>
+      into.u32[at * LABEL_RECORD_WORDS + LABEL_RECORD.glyphs];
+    expect(encode()).toBe(2);
+    names = ['AAA'];
+    expect(encode()).toBe(2);
+    expect(secondGlyphStart(1)).toBe(3);
+    names = ['A', 'AA'];
+    expect(encode()).toBe(3);
+    expect(secondGlyphStart(2)).toBe(3);
+  });
+
+  it('a label whose glyphs do not all fit is dropped whole', () => {
+    const into = createLabelRecords(8, 5, LETTER_A_METRICS);
+    const source = labelSource({
+      slab: 0,
+      toggle: 'body',
+      style: 'caption',
+      items: () => ['AAA', 'AAA', 'AA'],
+      describe: (text: string) => ({ text, position: [0, 0, 0] }),
+    });
+    expect(encodeLabelSource(source, state, into, 0)).toBe(2);
+    const glyphCount = (at: number) => into.u32[at * LABEL_RECORD_WORDS + LABEL_RECORD.glyphCount];
+    expect([glyphCount(0), glyphCount(1)]).toEqual([3, 2]);
   });
 
   it('hi/lo position keeps millimetre precision 1 AU from the origin', () => {

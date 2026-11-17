@@ -45,8 +45,8 @@ export function runLabelDirector(state: EngineState, ctx: FrameView, slab: numbe
   for (const source of director.sources) at += encodeLabelSource(source, state, records, at);
   records.count = at;
 
-  const toggleFades = records.sources.map((source) =>
-    resolveViewFadeValue(state, ctx, `label:${source.toggle}`),
+  const toggleFades = records.toggleAddresses.map((address) =>
+    resolveViewFadeValue(state, ctx, address),
   );
   const off = toggleFades.every((fade) =>
     typeof fade === 'number' ? fade === 0 : Object.values(fade).every((v) => v === 0),
@@ -65,11 +65,8 @@ export function runLabelDirector(state: EngineState, ctx: FrameView, slab: numbe
     meshBodies: ctx.snapshot.meshBodies,
     nowMs: ctx.snapshot.nowMs,
     toggleFades,
-    recessions: records.sources.map((source) =>
-      emphasisOf(
-        visibilityEntryOf(state.visibilityEntries, `label:${source.toggle}`),
-        ctx.snapshot,
-      ),
+    recessions: records.toggleAddresses.map((address) =>
+      emphasisOf(visibilityEntryOf(state.visibilityEntries, address), ctx.snapshot),
     ),
     focusPickId,
     hoveredPick,

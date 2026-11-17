@@ -8,6 +8,7 @@ import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { overlaySceneOcclusion } from '../overlaySceneOcclusion';
 import { shownLabelRecords } from '../../labels/shownLabelRecords';
 import { recordPickQuads } from '../../../../utils/labels/recordPickQuads';
+import { hasClickableRecord } from '../../../../utils/labels/hasClickableRecord';
 import { NEAR0 } from '../slabs';
 
 export const labelsNearPass: ContentPass = {
@@ -24,7 +25,7 @@ export const labelsNearPass: ContentPass = {
   pickEnabled(state) {
     if (state.gpu.labelRendererNear === null) return false;
     const shown = shownLabelRecords(state, NEAR0);
-    return shown !== null && recordPickQuads(shown.records, shown.frame).length > 0;
+    return shown !== null && hasClickableRecord(shown.records, shown.frame);
   },
 
   draw(pass, view, ctx, state) {

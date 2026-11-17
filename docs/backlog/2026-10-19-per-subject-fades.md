@@ -6,7 +6,7 @@
 
 The star map's captions fade with each star's own distance from the camera, a different number per label. The starCatalog Layer stamps that band (`STAR_MAP_CAPTION_BAND`) on each caption's `ForegroundCaption.revealBand`, as the mesh bodies stamp theirs. The Sun and Sgr A\* name one subject at a region anchor, so they are ordinary entry bands (`from: 'solar-system'`, `from: 'galactic-centre'`).
 
-Direction: a `from: 'anchor'` value on label entries only, evaluated per label in the director loop (`label2DDirector.ts`, where emphasis is already applied per label), so a Layer declares the window in `visibility.ts` and core applies it.
+Direction: a `from: 'anchor'` value on label entries only, evaluated per label in the director's `targetAlpha` stage (where each record's `revealBand` and the focus recession already apply), so a Layer declares the window in `visibility.ts` and core applies it.
 
 ## Kind 3: apparent size in px
 
