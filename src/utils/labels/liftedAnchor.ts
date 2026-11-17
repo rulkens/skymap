@@ -1,13 +1,11 @@
 /**
  * liftedAnchor — where a label above a sphere of `radiusMpc` sits: the view direction turned
- * toward `p.up3` by the rim plus (`lift.radii` − 1) radii of gap, the gap capped at
- * `LABEL_LIFT_MAX_GAP_PX` on screen (at most 90° in all), projected, then pushed further
+ * toward `p.up3` by `lift.radii` angular radii (at most 90°), projected, then pushed further
  * along image-up until it stands at least `lift.minPx · pxScale` above the subject. Turning in
  * 3D rather than lifting on screen keeps the rule valid for a fisheye. The TS twin of
  * `lib/projectLabel.wesl::liftedAnchor`.
  */
 
-import { LABEL_LIFT_MAX_GAP_PX } from '../../data/labels/labelLiftMaxGapPx';
 import type { OutputProjection } from '../../@types/rendering/OutputProjection';
 import type { ProjectedLabel } from '../../@types/rendering/ProjectedLabel';
 import type { Vec3 } from '../../@types/math/Vec3';
@@ -30,14 +28,12 @@ export function liftedAnchor(
   dir[0] = v[0] / len;
   dir[1] = v[1] / len;
   dir[2] = v[2] / len;
-  const rim = Math.asin(Math.min(Math.max(radiusMpc / len, 0), 1));
+  const angle = Math.min(
+    lift.radii * Math.asin(Math.min(Math.max(radiusMpc / len, 0), 1)),
+    Math.PI / 2,
+  );
   const floorPx = lift.minPx * p.pxScale;
   projectLabel(dir, p, subject);
-  const gapCap =
-    subject.visible && subject.pxPerRad > 0
-      ? (LABEL_LIFT_MAX_GAP_PX * p.pxScale) / subject.pxPerRad
-      : Infinity;
-  const angle = Math.min(rim + Math.min((lift.radii - 1) * rim, gapCap), Math.PI / 2);
   let liftPx: number;
   if (tangentToward(dir, p.up3, tangent)) {
     const c = Math.cos(angle);

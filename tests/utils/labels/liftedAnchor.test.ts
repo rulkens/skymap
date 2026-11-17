@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import type { ProjectedLabel } from '../../../src/@types/rendering/ProjectedLabel';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 import { symmetricFrustum } from '../../../src/utils/camera/frustum/symmetricFrustum';
-import { LABEL_LIFT_MAX_GAP_PX } from '../../../src/data/labels/labelLiftMaxGapPx';
 import { liftedAnchor } from '../../../src/utils/labels/liftedAnchor';
 import { pinholeFixture } from '../../helpers/labels/pinholeFixture';
 
@@ -35,23 +34,9 @@ describe('liftedAnchor', () => {
     const small = fresh();
     const large = fresh();
     liftedAnchor([0, 0, 1], 1e-6, { radii: 3, minPx: 28 }, camera.output, small);
-    liftedAnchor([0, 0, 1], 0.02, { radii: 3, minPx: 28 }, camera.output, large);
+    liftedAnchor([0, 0, 1], 0.05, { radii: 3, minPx: 28 }, camera.output, large);
     expect(small.px[1]).toBeCloseTo(centrePx[1] - 28, 6);
     // 3 × asin(0.05) above the axis.
-    expect(large.px[1]).toBeCloseTo(centrePx[1] - focalPx * Math.tan(3 * Math.asin(0.02)), 6);
-  });
-
-  it('liftedAnchor caps the gap above a big subject at LABEL_LIFT_MAX_GAP_PX', () => {
-    const { centrePx, focalPx } = camera.output;
-    const big = fresh();
-    const modest = fresh();
-    // Radius 0.5 at distance 1: 3 radii would float the text hundreds of px up.
-    liftedAnchor([0, 0, 1], 0.5, { radii: 3, minPx: 0 }, camera.output, big);
-    // The cap is an angle: 60 px at the subject's centre scale, past the rim.
-    const angle = Math.asin(0.5) + LABEL_LIFT_MAX_GAP_PX / focalPx;
-    expect(big.px[1]).toBeCloseTo(centrePx[1] - focalPx * Math.tan(angle), 6);
-    // Radius 0.01: the (radii - 1) gap is far under 60 px, so the cap does not bite.
-    liftedAnchor([0, 0, 1], 0.01, { radii: 3, minPx: 0 }, camera.output, modest);
-    expect(modest.px[1]).toBeCloseTo(centrePx[1] - focalPx * Math.tan(3 * Math.asin(0.01)), 6);
+    expect(large.px[1]).toBeCloseTo(centrePx[1] - focalPx * Math.tan(3 * Math.asin(0.05)), 6);
   });
 });
