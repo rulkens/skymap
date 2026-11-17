@@ -124,6 +124,7 @@ export const parkOpening: ClipData = {
         'label:milkyWay', // named by the Milky Way beat
         'missionTrails', // Voyager and kin: back with the Milky Way beat
         'survey', // catalogs revealed one at a time on the way out
+        'zoneOfAvoidance', // hidden for the whole tour: too much to explain in passing
         ...OPENING_HIDDEN_LAYERS, // beat 01 shows them again
         ...OPENING_HIDDEN_LABELS, // named by later beats
       ],
