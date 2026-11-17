@@ -55,8 +55,8 @@ Pinhole: `px = centre + focalPx · (v.x, −v.y) / v.z`, `pxPerRad = focalPx · 
 Same two functions and struct, field for field. Follow an existing TS↔WESL parity test
 (`selectionEncoding.test.ts`) for how constants and struct layouts are held equal.
 
-- [ ] Test `OutputProjection uniform layout matches the TS writer` (offset table in the test).
-- [ ] Test `projectLabel.wesl names the same fields as projectLabel.ts`.
+- [x] Test `OutputProjection uniform layout matches the TS writer` (offset table in the test).
+- [x] Test `projectLabel.wesl names the same fields as projectLabel.ts`.
 
 ### Task 3: the rig names its projection; `OVERLAYS` splits
 

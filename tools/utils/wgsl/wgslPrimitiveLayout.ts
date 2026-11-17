@@ -13,6 +13,7 @@ const LAYOUT: Readonly<Record<string, WgslTypeLayout>> = {
   'vec2<f32>': { size: 8, align: 8 },
   'vec3<f32>': { size: 12, align: 16 },
   'vec4<f32>': { size: 16, align: 16 },
+  'mat3x3<f32>': { size: 48, align: 16 },
   'mat4x4<f32>': { size: 64, align: 16 },
 };
 
