@@ -31,7 +31,7 @@ describe('renderFrame', () => {
 
   it('creates exactly one command encoder on a frame with no capture faces', () => {
     // Mono's rig hands every section the same view (`ctx` itself), so
-    // PRELUDE/SCENE/POST/OVERLAYS all accumulate into the one running batch —
+    // PRELUDE/SCENE/POST and the overlay sections all accumulate into the one running batch —
     // one encoder for the whole frame.
     renderFrame(fx.input);
     expect(fx.createCommandEncoder).toHaveBeenCalledTimes(1);

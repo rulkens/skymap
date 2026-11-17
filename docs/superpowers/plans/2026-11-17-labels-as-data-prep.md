@@ -68,8 +68,8 @@ Same two functions and struct, field for field. Follow an existing TS↔WESL par
   lists both, in today's draw order.
 - The mono rig gains `outputProjection: pinholeOutput`; `outputProjectionOf(view, rig)` builds the
   `OutputProjection` for a frame (f64 camera position split with the `writeHiLoVertex` rule).
-- [ ] Test `mono program draws the same steps in the same order as before the split`.
-- [ ] No other test: this is routing.
+- [x] Test `mono program draws the same steps in the same order as before the split`.
+- [x] No other test: this is routing.
 
 ### Task 4: the label shader and `projectLabels` use `projectLabel` — **review: yes**
 
