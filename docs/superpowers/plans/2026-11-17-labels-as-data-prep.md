@@ -207,14 +207,14 @@ records; it runs only when `source.changes?.(state)` differs from the remembered
 Each stage is `(records, frame, inputs) => void`, writes only its own columns of `LabelFrame`, and
 allocates nothing. `targetAlpha` implements the rules, one test each:
 
-- [ ] `a label fades out as its subject fills the view`
-- [ ] `a near-scene label behind a body is hidden` (reuse `subjectOccludedByBodies`)
-- [ ] `focused-only hides every label but the focused subject's`
-- [ ] `a hovered or selected subject keeps its label below the appear threshold`
-- [ ] `the focused subject's label stays clickable; a dimmed subject's does not`
-- [ ] `ranking is priority band first, apparent diameter within a band`
-- [ ] `a label with no position this frame has zero alpha`
-- [ ] `fade state survives a re-encode that reorders records`
+- [x] `a label fades out as its subject fills the view`
+- [x] `a near-scene label behind a body is hidden` (reuse `subjectOccludedByBodies`)
+- [x] `focused-only hides every label but the focused subject's`
+- [x] `a hovered or selected subject keeps its label below the appear threshold`
+- [x] `the focused subject's label stays clickable; a dimmed subject's does not`
+- [x] `ranking is priority band first, apparent diameter within a band`
+- [x] `a label with no position this frame has zero alpha`
+- [x] `fade state survives a re-encode that reorders records`
 
 Both envelope policies stay selectable by the director row until Task 12. Declutter judges every
 label at its drawn position (Group B's transitional `declutterLift: 'proposed'` for NEAR0 goes in

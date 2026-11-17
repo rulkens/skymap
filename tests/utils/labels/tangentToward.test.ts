@@ -22,8 +22,8 @@ describe('tangentToward', () => {
       sizePx: [1600, 900],
     });
     const out: ProjectedLabel = { px: [0, 0], pxPerRad: 0, up: [0, 0], visible: false };
-    liftedAnchor([0, 0, 5], 0.05, 4, { ...output, up3: [0, 0, 1] }, out);
+    liftedAnchor([0, 0, 5], 0.05, { radii: 1, minPx: 0 }, { ...output, up3: [0, 0, 1] }, out);
     expect(out.px[0]).toBeCloseTo(output.centrePx[0], 9);
-    expect(out.px[1]).toBeCloseTo(output.centrePx[1] - 4 - Math.asin(0.01) * output.focalPx, 9);
+    expect(out.px[1]).toBeCloseTo(output.centrePx[1] - Math.asin(0.01) * output.focalPx, 9);
   });
 });

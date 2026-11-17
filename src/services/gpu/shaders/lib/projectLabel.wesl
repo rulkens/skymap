@@ -30,6 +30,8 @@ const PARALLEL_TANGENT_EPS: f32 = 0.000001;
 
 const IMAGE_UP: vec2<f32> = vec2<f32>(0.0, -1.0);
 
+const HALF_PI: f32 = 1.5707963;
+
 // |offset| without squaring offset itself: scaled by its largest component first.
 fn scaledLength(offset: vec3<f32>) -> f32 {
   let largest = max(abs(offset.x), max(abs(offset.y), abs(offset.z)));
@@ -62,19 +64,25 @@ fn tangentToward(dir: vec3<f32>, toward: vec3<f32>) -> vec3<f32> {
   return across / len;
 }
 
-fn liftedAnchor(viewVec: vec3<f32>, radiusMpc: f32, gapPx: f32, projection: OutputProjection) -> ProjectedLabel {
+// Turned 'liftRadii' angular radii toward up3 (at most 90 degrees), then
+// pushed along image-up until it stands 'minLiftPx' above the subject.
+fn liftedAnchor(viewVec: vec3<f32>, radiusMpc: f32, liftRadii: f32, minLiftPx: f32, projection: OutputProjection) -> ProjectedLabel {
   let len = scaledLength(viewVec);
   let dir = viewVec / len;
-  let angle = asin(clamp(radiusMpc / len, 0.0, 1.0));
+  let angle = min(liftRadii * asin(clamp(radiusMpc / len, 0.0, 1.0)), HALF_PI);
+  let floorPx = minLiftPx * projection.pxScale;
   let tangent = tangentToward(dir, projection.up3);
-  var liftPx = gapPx * projection.pxScale;
+  let subject = projectLabel(dir, projection);
+  var liftPx: f32;
   var projected: ProjectedLabel;
   if (all(tangent == vec3<f32>(0.0))) {
     // Looking along up3: no turn is defined, so the angular lift goes on screen.
-    projected = projectLabel(dir, projection);
-    liftPx += angle * projected.pxPerRad;
+    projected = subject;
+    liftPx = max(angle * projected.pxPerRad, floorPx);
   } else {
     projected = projectLabel(cos(angle) * dir + sin(angle) * tangent, projection);
+    let moved = select(0.0, distance(projected.px, subject.px), subject.visible);
+    liftPx = max(floorPx - moved, 0.0);
   }
   if (projected.visible) {
     projected.px += projected.up * liftPx;
