@@ -39,9 +39,8 @@ import { bodySelectionKinds } from './selection/kinds';
 import { bodySearch } from './selection/present/bodySearch';
 import { BODY_TRAIL_ELEMENTS } from './orbitTrails/data/bodyTrailElements';
 import { SMALL_BODY_TRAIL_IDS } from './orbitTrails/data/smallBodyTrailIds';
-import { produceSceneBodyCaptions } from './labels/present/produceSceneBodyCaptions';
+import { bodyLabelSource } from './labels/present/bodyLabelSource';
 import { bodyLayerExhibits } from './exhibits/exhibits';
-import { NEAR0 } from '../../services/engine/frame/slabs';
 import BodyDetailCardContainer from './card/ui/BodyDetailCardContainer';
 import CompactBodyCard from '../../components/InfoCard/CompactBodyCard/CompactBodyCard';
 import { surfaceTilePlanner } from './frame';
@@ -89,14 +88,7 @@ export const bodyLayer = defineLayer({
   sagas: [watchDebugPanelWakeSaga],
   heightAt,
   guides: (runtime) => ({
-    screenLabels: [
-      {
-        slab: NEAR0,
-        id: 'sceneBodyCaptions',
-        label: 'body',
-        produceLabels: produceSceneBodyCaptions(runtime.pickCodes),
-      },
-    ],
+    screenLabels: [bodyLabelSource(runtime)],
     orbitTrails: {
       show: 'orbitTrails',
       rows: BODY_TRAIL_ELEMENTS,

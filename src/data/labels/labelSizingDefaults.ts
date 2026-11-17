@@ -15,7 +15,7 @@ export const LABEL_MAX_PX_DEFAULT = 64;
  * it had before `worldLenToPx` gained the camera prefix's `pxPerRad` focal
  * term — every producer's `worldEmMpc` was tuned by eye against the old
  * fov-blind conversion, and `worldEmMpc` is a physical length elsewhere
- * (`produceSceneBodyCaptions` derives a diameter from it), so the factor
+ * (`composeForegroundCaption` derives a diameter from it), so the factor
  * belongs here rather than in the producers. `packLabels` folds it into the em
  * the shader reads, so the GPU holds no copy of it.
  */

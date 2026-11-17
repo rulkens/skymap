@@ -7,6 +7,8 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { createLayers } from '../../../../src/services/engine/phases/createLayers';
+import { createLabelDirectorState } from '../../../../src/services/engine/labels/createLabelDirectorState';
+import { LABEL_DIRECTORS } from '../../../../src/data/labels/labelDirectors';
 import { createAppStore } from '../../../../src/store/createAppStore';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
 import type { Layer } from '../../../../src/@types/engine/layer/Layer';
@@ -42,6 +44,7 @@ function makeState(
       scheduler: { requestRender: vi.fn() },
       cosmoLabelDirector: { registerProducer },
       foregroundLabelDirector: { registerProducer: foregroundRegisterProducer },
+      labelDirectors: LABEL_DIRECTORS.map(createLabelDirectorState),
     },
     layers: [],
     selectionKindRows: [],
@@ -170,16 +173,15 @@ describe('createLayers composition', () => {
 
   it('each planet is captioned once', async () => {
     const { store } = createAppStore();
-    const foregroundRegisterProducer = vi.fn();
-    const state = makeState(vi.fn(), foregroundRegisterProducer);
+    const state = makeState(vi.fn());
 
     const deps = makeDeps([bodyLayerWithoutGpu], store);
     // The body Layer publishes a `search` feed, which createLayers runs as a saga.
     (deps.cb as unknown as { runSaga: unknown }).runSaga = vi.fn();
     await createLayers(state, deps);
 
-    const ids = foregroundRegisterProducer.mock.calls.map(([producer]) => producer.id);
-    expect(ids.filter((id) => id === 'sceneBodyCaptions')).toHaveLength(1);
+    const near = state.subsystems.labelDirectors.find((d) => d.row.slab === NEAR0)!;
+    expect(near.sources.filter((source) => source.toggle === 'body')).toHaveLength(1);
   });
 
   it('lists body texture rows before core mesh rows, so equal ranks load textures first', async () => {

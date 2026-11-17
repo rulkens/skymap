@@ -2,15 +2,13 @@ import { describe, it, expect } from 'vitest';
 
 import { produceMissionCaptions as produceMissionCaptionsFor } from '../../../../../src/layers/missions/craft/present/produceMissionCaptions';
 import { MISSION_CRAFT_IDS } from '../../../../../src/layers/missions/craft/present/missionCraftIds';
-import { produceSceneBodyCaptions as produceSceneBodyCaptionsFor } from '../../../../../src/layers/body/labels/present/produceSceneBodyCaptions';
-import { bodyPickCodes, missionsPickCode } from '../../../../support/layerPickCodes';
+import { missionsPickCode } from '../../../../support/layerPickCodes';
 import { APP_VISIBILITY_REGISTRY } from '../../../../../src/compositions/appVisibility';
 import { SAMPLED_BODY_IDS } from '../../../../../src/data/bodies/sampledBodyIds';
 import { MISSION_EMPHASIS_DIM } from '../../../../../src/layers/missions/trails/data/missionTrailStyle';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
 import { trajectoryRegistry } from '../../../../../src/services/bodies/trajectoryRegistry';
 import { ZERO_FOCUS } from '../../../../../src/services/engine/subsystems/recedingFocusSubsystem';
-import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
 import { SCENE_MESH_BODIES } from '../../../../../src/data/bodies/sceneMeshBodies';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
@@ -26,7 +24,6 @@ import { positionedBodiesOf } from '../../../../helpers/frame/positionedBodiesOf
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 
 const produceMissionCaptions = produceMissionCaptionsFor(missionsPickCode());
-const produceSceneBodyCaptions = produceSceneBodyCaptionsFor(bodyPickCodes());
 
 // 720-px viewport, fovY 1 rad, tangent-exact.
 const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(1 / 2));
@@ -67,7 +64,6 @@ function makeState(): EngineState {
 
 const CRAFT_ON = { craft: 1 };
 const CRAFT_OFF = { craft: 0 };
-const BODY_FADE = { earth: 1, planet: 1, 'small-body': 1 };
 
 function fadeAlphaOf(labels: readonly Label2D[], id: string): number | undefined {
   return labels.find((l) => l.id === id)?.fadeAlpha;
@@ -104,8 +100,6 @@ describe('produceMissionCaptions', () => {
     const after = idsOf(produceMissionCaptions(makeState(), ctx, CRAFT_ON));
     expect(after).toEqual(presentCraftCaptions());
     for (const id of SAMPLED_BODY_IDS) expect(after).toContain(`sceneBody-${id}`);
-    const core = idsOf(produceSceneBodyCaptions(makeState(), ctx, BODY_FADE));
-    expect(core).toEqual(captionIds([SCENE_EARTH.id, ...SCENE_PLANETS.map((p) => p.id)]));
   });
 
   it("emphasising Voyager 1 dims Voyager 2's caption and leaves Hubble's at full alpha", () => {
@@ -139,15 +133,12 @@ describe('produceMissionCaptions', () => {
     expect(label.color).toEqual([...scaleToUnitMax(body.albedo), 1]);
   });
 
-  it('unchecking Spacecraft hides every craft caption and nothing else', () => {
+  it('unchecking Spacecraft hides every craft caption', () => {
     loadTracks();
     const ctx = makeCtx([0, 0, 0], 1e-9);
     const off = produceMissionCaptions(makeState(), ctx, CRAFT_OFF).labels;
     expect(off.map((l) => l.id)).toEqual(presentCraftCaptions());
     expect(off.map((l) => l.id)).toContain('sceneBody-hubble');
     expect(off.every((l) => l.fadeAlpha === 0)).toBe(true);
-
-    const core = produceSceneBodyCaptions(makeState(), ctx, BODY_FADE).labels;
-    expect(fadeAlphaOf(core, 'sceneBody-mars')).toBeGreaterThan(0);
   });
 });

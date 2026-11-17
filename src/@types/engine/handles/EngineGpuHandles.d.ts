@@ -111,7 +111,7 @@ export type EngineGpuHandles = {
    * Second MSDF label renderer for the true-scale foreground bodies. Separate from
    * `labelRendererCosmo` because scene-body captions project through the NEAR0 slab view
    * (near plane scales with `cam.distance`) and one renderer draws with one view-
-   * projection. Shared by core's `sceneBodyLabels` and the star Layer's producer;
+   * projection. Shared by every NEAR0 caption;
    * `labelsNearPass` re-uploads both, merged and camera-relative, each frame.
    */
   labelRendererNear: LabelRenderer | null;

@@ -7,6 +7,8 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import { createLayers } from '../../../src/services/engine/phases/createLayers';
+import { createLabelDirectorState } from '../../../src/services/engine/labels/createLabelDirectorState';
+import { LABEL_DIRECTORS } from '../../../src/data/labels/labelDirectors';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
 import { bodyLayerWithoutGpu } from '../../helpers/engine/bodyLayerWithoutGpu';
 import { EARTH_HOME } from '../../../src/data/selection/earthHome';
@@ -36,6 +38,7 @@ function makeState(): EngineState {
       scheduler: { requestRender: vi.fn() },
       cosmoLabelDirector: { registerProducer: vi.fn() },
       foregroundLabelDirector: { registerProducer: vi.fn() },
+      labelDirectors: LABEL_DIRECTORS.map(createLabelDirectorState),
     },
     layers: [],
     selectionKindRows: [],
