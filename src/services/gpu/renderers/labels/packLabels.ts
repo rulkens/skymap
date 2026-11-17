@@ -13,8 +13,8 @@ import {
   LABEL_WORLD_EM_MPC_DEFAULT,
 } from '../../../../data/labels/labelSizingDefaults';
 import { textLayoutOf } from '../../labelLayout/textLayoutOf';
+import { writeGlyphInstances } from '../../labelLayout/writeGlyphInstances';
 import {
-  GLYPH_INSTANCE_BYTES,
   LABEL_DATA_BYTES,
   LABEL_DATA_OFFSETS as AT,
 } from '../../../../data/labels/labelBufferStrides';
@@ -94,27 +94,14 @@ export function packLabels(args: PackLabelsArgs): number {
         : LABEL_LIFT.leaderFromCentre;
     labelF32[labelBase + AT.leaderWidthPx / 4] = leader?.widthPx ?? 0;
 
-    const fontIndex = layerIndexOf[label.font];
-
-    for (const q of quads) {
-      if (glyphCount >= maxGlyphs) break;
-      const f32Base = glyphCount * (GLYPH_INSTANCE_BYTES / 4);
-      glyphF32[f32Base + 0] = q.localOffsetX;
-      glyphF32[f32Base + 1] = q.localOffsetY;
-      glyphF32[f32Base + 2] = q.localSizeW;
-      glyphF32[f32Base + 3] = q.localSizeH;
-      glyphF32[f32Base + 4] = q.uvU0;
-      glyphF32[f32Base + 5] = q.uvV0;
-      glyphF32[f32Base + 6] = q.uvU1;
-      glyphF32[f32Base + 7] = q.uvV1;
-      // labelIndex + fontIndex are u32; write them through the
-      // Uint32Array view so the bit patterns are exact (the
-      // Float32Array view would reinterpret an int payload as
-      // garbage floating-point bits).
-      glyphU32[f32Base + 8] = li;
-      glyphU32[f32Base + 9] = fontIndex;
-      glyphCount++;
-    }
+    glyphCount += writeGlyphInstances(
+      quads,
+      li,
+      layerIndexOf[label.font],
+      { glyphF32, glyphU32 },
+      glyphCount,
+      maxGlyphs,
+    );
   }
 
   return glyphCount;

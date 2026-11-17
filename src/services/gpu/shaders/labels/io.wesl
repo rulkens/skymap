@@ -95,6 +95,29 @@ struct LabelData {
   leaderWidthPx: f32,
 };
 
+// One label as core encodes it; word offsets in 'LABEL_RECORD'
+// (src/data/labels/labelRecordLayout.ts). Not read by any entry point yet:
+// it replaces LabelData when the renderer switches to label sources.
+struct LabelRecord {
+  // The position in absolute Mpc as an f32 hi/lo pair; the shader subtracts
+  // the camera's own pair, which is exact near the camera.
+  atHi: vec3<f32>,
+  radiusMpc: f32,
+  atLo: vec3<f32>,
+  // The only word written per frame.
+  alpha: f32,
+  // Packed pick word; 0 = not clickable.
+  pick: u32,
+  style: u32,
+  // rgba8; 0 = the style's colour.
+  tint: u32,
+  glyphs: u32,
+  glyphCount: u32,
+  rank: f32,
+  revealNear: f32,
+  revealFar: f32,
+};
+
 struct VsIn {
   // (0,0) (1,0) (0,1) (1,1) — unit-corner attribute, expanded into a
   // glyph quad in the vertex stage.

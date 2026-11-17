@@ -194,10 +194,10 @@ appear thresholds are today's radii doubled. `LABEL_TEXT_PX = { min: 32, max: 72
 `encodeLabelSource(source, state, into, start) → count` calls `items` then `describe` and writes
 records; it runs only when `source.changes?.(state)` differs from the remembered value.
 
-- [ ] Test `record layout matches io.wesl LabelRecord`.
-- [ ] Test `encodeLabelSource writes the described label` (one fixture, compare words).
-- [ ] Test `a source is described again only when its change value differs`.
-- [ ] Test `hi/lo position keeps millimetre precision 1 AU from the origin`.
+- [x] Test `record layout matches io.wesl LabelRecord`.
+- [x] Test `encodeLabelSource writes the described label` (one fixture, compare words).
+- [x] Test `a source is described again only when its change value differs`.
+- [x] Test `hi/lo position keeps millimetre precision 1 AU from the origin`.
 
 ### Task 9: the per-frame stages
 
