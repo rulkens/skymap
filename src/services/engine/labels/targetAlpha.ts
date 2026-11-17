@@ -1,7 +1,7 @@
 /**
  * targetAlpha — the alpha each label heads for, from the rules every label obeys (spec D6),
  * written once here instead of per Layer. Focus, hover and select match by packed pick word.
- *  - no position, or behind the eye: 0
+ *  - no position, behind the eye, or nearer than the director's `nearHideMpc`: 0
  *  - "focused only": 0 unless it names the focused subject
  *  - the toggle's handed value (per item by `fadeKey`) × the record's reveal band by distance
  *  - the style's `appear` band over apparent diameter, unless the subject is hovered or selected
@@ -14,7 +14,11 @@
 import type { LabelStage } from '../../../@types/rendering/LabelStage';
 import type { OccluderBody } from '../../../@types/scene/OccluderBody';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import { LABEL_RECORD as W, LABEL_RECORD_WORDS } from '../../../data/labels/labelRecordLayout';
+import {
+  LABEL_RECORD as W,
+  LABEL_RECORD_FLAGS,
+  LABEL_RECORD_WORDS,
+} from '../../../data/labels/labelRecordLayout';
 import { LABEL_STYLES, LABEL_STYLE_IDS } from '../../../data/labels/labelStyles';
 import { NEAR0 } from '../frame/slabs';
 import { fadeBand } from '../../../utils/math/fadeBand';
@@ -38,13 +42,14 @@ export const targetAlpha: LabelStage = (records, frame, inputs) => {
   const { projection: p, focusPickId, hoveredPick, selectedPick } = inputs;
   const shortSidePx = Math.min(p.sizePx[0], p.sizePx[1]);
   const nearSlab = inputs.director.slab === NEAR0;
+  const nearHideMpc = inputs.director.nearHideMpc ?? 0;
   for (let k = 0; k < 3; k++) eye[k] = p.camHi[k]! + p.camLo[k]!;
   query.bodies = inputs.occluders;
 
   for (let i = 0; i < records.count; i++) {
     frame.target[i] = 0;
     frame.clickable[i] = 0;
-    if (!frame.visible[i]) continue;
+    if (!frame.visible[i] || frame.depthMpc[i]! < nearHideMpc) continue;
     const base = i * LABEL_RECORD_WORDS;
     const pick = u32[base + W.pick]!;
     const focused = pick !== 0 && pick === focusPickId;
@@ -57,7 +62,8 @@ export const targetAlpha: LabelStage = (records, frame, inputs) => {
     reveal.goneAt = f32[base + W.revealFar]!;
     alpha *= fadeBand(reveal, frame.distanceMpc[i]!);
     const diameterPx = frame.diameterPx[i]!;
-    const style = LABEL_STYLES[LABEL_STYLE_IDS[u32[base + W.style]!]!];
+    const style =
+      LABEL_STYLES[LABEL_STYLE_IDS[u32[base + W.style]! & LABEL_RECORD_FLAGS.styleMask]!];
     const named = pick !== 0 && (pick === hoveredPick || pick === selectedPick);
     if ('appear' in style && !named) {
       const { fromPx, bandPx } = style.appear;

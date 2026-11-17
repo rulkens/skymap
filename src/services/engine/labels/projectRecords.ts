@@ -9,7 +9,11 @@
 import type { LabelStage } from '../../../@types/rendering/LabelStage';
 import type { ProjectedLabel } from '../../../@types/rendering/ProjectedLabel';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import { LABEL_RECORD as W, LABEL_RECORD_WORDS } from '../../../data/labels/labelRecordLayout';
+import {
+  LABEL_RECORD as W,
+  LABEL_RECORD_FLAGS,
+  LABEL_RECORD_WORDS,
+} from '../../../data/labels/labelRecordLayout';
 import { LABEL_STYLES, LABEL_STYLE_IDS } from '../../../data/labels/labelStyles';
 import { LABEL_TEXT_PX } from '../../../data/labels/labelTextPx';
 import { LABEL_EM_PX_RETUNE } from '../../../data/labels/labelSizingDefaults';
@@ -39,11 +43,13 @@ export const projectRecords: LabelStage = (records, frame, { projection: p }) =>
       view[r] = m[r]! * world[0] + m[3 + r]! * world[1] + m[6 + r]! * world[2];
     const distance = Math.hypot(world[0], world[1], world[2]);
     const radius = f32[base + W.radiusMpc]!;
-    const style = LABEL_STYLES[LABEL_STYLE_IDS[u32[base + W.style]!]!];
+    const style =
+      LABEL_STYLES[LABEL_STYLE_IDS[u32[base + W.style]! & LABEL_RECORD_FLAGS.styleMask]!];
     if (style.placement === 'above' && 'lift' in style)
       liftedAnchor(view, radius, style.lift, p, out);
     else projectLabel(view, p, out);
     frame.distanceMpc[i] = distance;
+    frame.depthMpc[i] = view[2];
     frame.diameterPx[i] = distance > 0 ? ((2 * radius) / distance) * p.focalPx : 0;
     if (!out.visible) continue;
 

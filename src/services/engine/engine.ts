@@ -26,6 +26,8 @@ import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createFadeRegistry } from '../animation/fadeRegistry';
 import { createLabel2DDirector } from './subsystems/label2DDirector';
+import { createLabelDirectorState } from './labels/createLabelDirectorState';
+import { LABEL_DIRECTORS } from '../../data/labels/labelDirectors';
 import { COSMO_LABEL_DIRECTOR } from '../../data/labels/cosmoLabelDirectorConfig';
 import { FOREGROUND_LABEL_DIRECTOR } from '../../data/labels/foregroundLabelDirectorConfig';
 import { createRecedingFocusSubsystem } from './subsystems/recedingFocusSubsystem';
@@ -193,6 +195,7 @@ export function createEngine(
     subsystems: {
       cosmoLabelDirector: createLabel2DDirector(COSMO_LABEL_DIRECTOR, VIEW_RIGS[viewRig]),
       foregroundLabelDirector: createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR, VIEW_RIGS[viewRig]),
+      labelDirectors: LABEL_DIRECTORS.map(createLabelDirectorState),
 
       recedingFocus: createRecedingFocusSubsystem({
         requestRender: () => state.subsystems.scheduler.requestRender(),

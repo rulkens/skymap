@@ -91,13 +91,17 @@ describe('LabelRenderer occlusion variant', () => {
     // two-pipeline / two-layout shape structurally here.
     const { bindGroupLayouts, pipelineLayouts } = buildOccluding();
 
-    // Two BGLs: the label BGL (shared by both pipelines) + the coverage BGL.
-    expect(bindGroupLayouts).toHaveLength(2);
-    // Two pipeline layouts: the plain single-BGL layout and the two-BGL
-    // occlusion layout — the occlusion instance builds both and picks per-draw.
-    expect(pipelineLayouts).toHaveLength(2);
-    expect(Array.from(pipelineLayouts[0]!.bindGroupLayouts)).toHaveLength(1); // plain
-    expect(Array.from(pipelineLayouts[1]!.bindGroupLayouts)).toHaveLength(2); // occlusion
+    // Three BGLs: the label BGL, the record path's BGL (each shared by its
+    // plain and occlusion pipelines) + the coverage BGL.
+    expect(bindGroupLayouts).toHaveLength(3);
+    // Per path, a plain single-BGL layout and a two-BGL occlusion layout — the
+    // occlusion instance builds both and picks per-draw.
+    expect(pipelineLayouts.map((layout) => Array.from(layout.bindGroupLayouts).length)).toEqual([
+      1, // plain
+      1, // records, plain
+      2, // records, occlusion
+      2, // occlusion
+    ]);
   });
 
   it('draws the occlusion pipeline through vsOcclude, never vs — vs must stay clear of group(1)', () => {

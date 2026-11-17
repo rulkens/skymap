@@ -89,4 +89,12 @@ describe('targetAlpha', () => {
     expect(frame.target[0]).toBe(1);
     expect(frame.target[1]).toBe(0);
   });
+
+  it('a director with a near-hide depth hides labels nearer than it', () => {
+    const director = { ...stageInputs().director, nearHideMpc: 0.01 };
+    const near: LabelDescription = { text: 'A', position: [0, 0, -0.005] };
+    const far: LabelDescription = { text: 'A', position: [0, 0, -0.02] };
+    const frame = targets([near, far], { director }, 'constellation');
+    expect(Array.from(frame.target.subarray(0, 2))).toEqual([0, 1]);
+  });
 });

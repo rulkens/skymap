@@ -6,7 +6,7 @@
  *   3    radiusMpc       f32  the subject's radius (0 = none)
  *   7    alpha           f32  the only word written per frame
  *   8    pick            u32  packed pick word (`packPickWord`); 0 = not clickable
- *   9    style           u32  index into `LABEL_STYLE_IDS`
+ *   9    style           u32  low 16 bits: index into `LABEL_STYLE_IDS`; high: `LABEL_RECORD_FLAGS`
  *   10   tint            u32  rgba8 (`packRgba8Unorm`); 0 = the style's colour
  *   11   glyphs          u32  first glyph instance; 12 glyphCount
  *   13   rank            f32  priority × CAPTION_PRIORITY_SCALE; declutter adds apparent size
@@ -28,3 +28,7 @@ export const LABEL_RECORD = {
 } as const;
 
 export const LABEL_RECORD_WORDS = 16;
+
+/** The `style` word's halves: the style index, and flags core derives per frame. `grounded`: a
+ *  sub-pixel subject on a body's ground, whose sampled depth is noise, so the shader never reads it. */
+export const LABEL_RECORD_FLAGS = { styleMask: 0xffff, grounded: 0x10000 } as const;

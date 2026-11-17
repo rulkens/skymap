@@ -1,6 +1,7 @@
 import type { LabelStage } from '../../@types/rendering/LabelStage';
 import { resolveAnchors } from '../../services/engine/labels/resolveAnchors';
 import { projectRecords } from '../../services/engine/labels/projectRecords';
+import { markGroundedRecords } from '../../services/engine/labels/markGroundedRecords';
 import { targetAlpha } from '../../services/engine/labels/targetAlpha';
 import { declutterRecords } from '../../services/engine/labels/declutterRecords';
 import { labelEnvelope } from '../../services/engine/labels/labelEnvelope';
@@ -9,6 +10,7 @@ import { labelEnvelope } from '../../services/engine/labels/labelEnvelope';
 export const LABEL_STAGES: readonly LabelStage[] = [
   resolveAnchors,
   projectRecords,
+  markGroundedRecords,
   targetAlpha,
   declutterRecords,
   labelEnvelope,

@@ -14,6 +14,7 @@ import { describe, expect, it } from 'vitest';
 
 import { ATLAS_FONT_SIZE, DISTANCE_RANGE_PX } from '../../../../src/data/fonts';
 import vertexLinked from '../../../../src/services/gpu/shaders/labels/vertex.wesl?static';
+import vertexRecordsLinked from '../../../../src/services/gpu/shaders/labels/vertexRecords.wesl?static';
 import vertex3dLinked from '../../../../src/services/gpu/shaders/labels3d/vertex.wesl?static';
 
 const ATLAS_EM_PX_RE = /const\s+ATLAS_EM_PX\s*:\s*f32\s*=\s*([0-9]+(?:\.[0-9]+)?)/;
@@ -36,6 +37,12 @@ describe('labels vertex shaders ↔ ATLAS_FONT_SIZE parity', () => {
     expect(extractAtlasEmPx(vertexLinked, 'labels/vertex.wesl')).toBe(ATLAS_FONT_SIZE);
   });
 
+  it('labels/vertexRecords.wesl ATLAS_EM_PX matches ATLAS_FONT_SIZE', () => {
+    expect(extractAtlasEmPx(vertexRecordsLinked, 'labels/vertexRecords.wesl')).toBe(
+      ATLAS_FONT_SIZE,
+    );
+  });
+
   it('labels3d/vertex.wesl ATLAS_EM_PX matches ATLAS_FONT_SIZE', () => {
     expect(extractAtlasEmPx(vertex3dLinked, 'labels3d/vertex.wesl')).toBe(ATLAS_FONT_SIZE);
   });
@@ -44,5 +51,11 @@ describe('labels vertex shaders ↔ ATLAS_FONT_SIZE parity', () => {
 describe('labels/vertex.wesl ↔ DISTANCE_RANGE_PX parity', () => {
   it('labels/vertex.wesl DISTANCE_RANGE_PX matches DISTANCE_RANGE_PX', () => {
     expect(extractDistanceRangePx(vertexLinked, 'labels/vertex.wesl')).toBe(DISTANCE_RANGE_PX);
+  });
+
+  it('labels/vertexRecords.wesl DISTANCE_RANGE_PX matches DISTANCE_RANGE_PX', () => {
+    expect(extractDistanceRangePx(vertexRecordsLinked, 'labels/vertexRecords.wesl')).toBe(
+      DISTANCE_RANGE_PX,
+    );
   });
 });

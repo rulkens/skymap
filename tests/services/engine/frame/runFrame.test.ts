@@ -7,6 +7,8 @@
  * `CameraPose` lands in `state.cameraRuntime.register.pose`, which the fixtures read.
  */
 
+import { LABEL_DIRECTORS } from '../../../../src/data/labels/labelDirectors';
+import { createLabelDirectorState } from '../../../../src/services/engine/labels/createLabelDirectorState';
 import { describe, it, expect, vi } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
 import { RECEDE_ALL_FOCUS_SPHERE } from '../../../../src/data/selection/recedeAllFocusSphere';
@@ -202,6 +204,7 @@ function makeReadyState(subsystems: Record<string, unknown> = {}): EngineState {
       fades: { tick: vi.fn(), opacityOf: () => 0, isAnyAnimating: () => false },
       cosmoLabelDirector: { runFrame: vi.fn(() => false) },
       foregroundLabelDirector: { runFrame: vi.fn(() => false) },
+      labelDirectors: LABEL_DIRECTORS.map(createLabelDirectorState),
       ...subsystems,
     },
   } as unknown as EngineState;

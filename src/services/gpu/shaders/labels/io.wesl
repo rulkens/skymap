@@ -95,9 +95,52 @@ struct LabelData {
   leaderWidthPx: f32,
 };
 
+// Must equal 'LABEL_RECORD_FLAGS' (src/data/labels/labelRecordLayout.ts):
+// LabelRecord.style's low half is the style index, its high half flags.
+const STYLE_INDEX_MASK: u32 = 0xffffu;
+const RECORD_GROUNDED: u32 = 0x10000u;
+
+// Must equal 'LABEL_STYLE_FLAGS' (src/data/labels/labelStyleGpuLayout.ts).
+const STYLE_ABOVE: u32 = 1u;
+const STYLE_LEADER_FROM_RIM: u32 = 2u;
+const STYLE_LEADER_FROM_CENTRE: u32 = 4u;
+const STYLE_LEADER_COLOR: u32 = 8u;
+
+// The record path's uniforms ('vertexRecords.wesl'); byte offsets in
+// 'LABEL_RECORD_UNIFORM_OFFSETS' (src/data/labels/labelRecordUniformLayout.ts).
+struct RecordUniforms {
+  out: OutputProjection,
+  // Packed pick words of the hovered and selected subjects; 0 = none.
+  hoveredPick: u32,
+  selectedPick: u32,
+  // LABEL_TEXT_PX times pxScale.
+  minTextPx: f32,
+  maxTextPx: f32,
+  emRetune: f32,
+  hoveredWhiten: f32,
+  selectedWhiten: f32,
+};
+
+// One LABEL_STYLES row; word offsets in 'LABEL_STYLE_GPU'
+// (src/data/labels/labelStyleGpuLayout.ts). Colours are straight rgba.
+struct LabelStyle {
+  color: vec4<f32>,
+  outlineColor: vec4<f32>,
+  // Read only under STYLE_LEADER_COLOR; otherwise the leader takes the label's colour.
+  leaderColor: vec4<f32>,
+  outlineEmFrac: f32,
+  // The em height: emMpc, or emTimesRadius times the subject's radius.
+  emMpc: f32,
+  emTimesRadius: f32,
+  flags: u32,
+  liftRadii: f32,
+  liftMinPx: f32,
+  leaderGapPx: f32,
+  leaderWidthPx: f32,
+};
+
 // One label as core encodes it; word offsets in 'LABEL_RECORD'
-// (src/data/labels/labelRecordLayout.ts). Not read by any entry point yet:
-// it replaces LabelData when the renderer switches to label sources.
+// (src/data/labels/labelRecordLayout.ts), read by 'vertexRecords.wesl'.
 struct LabelRecord {
   // The position in absolute Mpc as an f32 hi/lo pair; the shader subtracts
   // the camera's own pair, which is exact near the camera.

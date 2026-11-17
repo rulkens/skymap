@@ -215,7 +215,16 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
   };
 
   for (const instance of instances) {
-    for (const { slab, ...producer } of instance.screenLabels) {
+    for (const row of instance.screenLabels) {
+      if ('describe' in row) {
+        const records = state.subsystems.labelDirectors.find((d) => d.row.slab === row.slab);
+        if (!records) {
+          throw new Error(`createLayers: no label director for slab ${slabName(row.slab)}`);
+        }
+        records.sources.push(row);
+        continue;
+      }
+      const { slab, ...producer } = row;
       const director = screenLabelDirectors[slab];
       if (!director) {
         throw new Error(`createLayers: no label director for slab ${slabName(slab)}`);

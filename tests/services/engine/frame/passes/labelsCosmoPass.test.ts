@@ -47,7 +47,10 @@ function makeState(renderer: LabelRenderer | null, flushedLabelCount = 0): Engin
   const labels = Array.from({ length: flushedLabelCount }) as Label2D[];
   return {
     gpu: { labelRendererCosmo: renderer },
-    subsystems: { cosmoLabelDirector: { labels: () => labels, project: () => PROJECTION_STUB } },
+    subsystems: {
+      cosmoLabelDirector: { labels: () => labels, project: () => PROJECTION_STUB },
+      labelDirectors: [],
+    },
   } as unknown as EngineState;
 }
 
@@ -85,7 +88,7 @@ describe('labelsCosmoPass.draw', () => {
     const depthViewOf = vi.fn<(id: string) => GPUTextureView>(() => ({}) as GPUTextureView);
     const ctx = makeCtx(new Set(['foreground:0']), viewOf, depthViewOf);
 
-    labelsCosmoPass.draw(PASS_STUB, VIEW_STUB, ctx, makeState(renderer));
+    labelsCosmoPass.draw(PASS_STUB, VIEW_STUB, ctx, makeState(renderer, 1));
 
     expect(viewOf).toHaveBeenCalledWith('foreground:0');
     expect(depthViewOf).not.toHaveBeenCalled();
@@ -102,7 +105,7 @@ describe('labelsCosmoPass.draw', () => {
     const viewOf = vi.fn<(id: string) => GPUTextureView>(() => ({}) as GPUTextureView);
     const ctx = makeCtx(new Set<string>(), viewOf, vi.fn());
 
-    labelsCosmoPass.draw(PASS_STUB, VIEW_STUB, ctx, makeState(renderer));
+    labelsCosmoPass.draw(PASS_STUB, VIEW_STUB, ctx, makeState(renderer, 1));
 
     expect(viewOf).not.toHaveBeenCalled();
     const drawSpy = renderer.draw as unknown as ReturnType<typeof vi.fn>;

@@ -36,6 +36,9 @@
  *
  * Placed AFTER `selectionRingPass` so the label text composites over
  * the ring where they overlap, preserving readability.
+ *
+ * Each aspect also serves the COSMO label records (`shownLabelRecords`), drawn after the old
+ * director's set until that one goes.
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
@@ -43,13 +46,19 @@ import { overlaySceneOcclusion } from '../overlaySceneOcclusion';
 import { hasPickableLabel } from '../../../../utils/labels/hasPickableLabel';
 import { labelPickQuads } from '../../../../utils/labels/labelPickQuads';
 import { textLayoutOf } from '../../../gpu/labelLayout/textLayoutOf';
+import { shownLabelRecords } from '../../labels/shownLabelRecords';
+import { recordPickQuads } from '../../../../utils/labels/recordPickQuads';
+import { COSMO } from '../slabs';
 
 export const labelsCosmoPass: ContentPass = {
   name: 'labels-cosmo',
 
   enabled(state, _ctx, _view) {
     if (state.gpu.labelRendererCosmo === null) return false;
-    return state.subsystems.cosmoLabelDirector.labels().length > 0;
+    return (
+      state.subsystems.cosmoLabelDirector.labels().length > 0 ||
+      shownLabelRecords(state, COSMO) !== null
+    );
   },
 
   // Pick gate — NARROWER than `enabled`: a drawn label only invites a click
@@ -58,7 +67,11 @@ export const labelsCosmoPass: ContentPass = {
   // target into existence for a draw that would stamp nothing.
   pickEnabled(state, _ctx) {
     if (state.gpu.labelRendererCosmo === null) return false;
-    return hasPickableLabel(state.subsystems.cosmoLabelDirector.labels());
+    const shown = shownLabelRecords(state, COSMO);
+    return (
+      hasPickableLabel(state.subsystems.cosmoLabelDirector.labels()) ||
+      (shown !== null && recordPickQuads(shown.records, shown.frame).length > 0)
+    );
   },
 
   draw(pass, view, ctx, state) {
@@ -66,11 +79,13 @@ export const labelsCosmoPass: ContentPass = {
     // the joint decides anything here — the depth half is bound because the
     // pipeline layout demands it, and reads as a no-op against the labels'
     // zero cutoff.
-    state.gpu.labelRendererCosmo!.draw(
-      pass,
-      state.subsystems.cosmoLabelDirector.project(ctx),
-      overlaySceneOcclusion(ctx, view),
-    );
+    const renderer = state.gpu.labelRendererCosmo!;
+    const scene = overlaySceneOcclusion(ctx, view);
+    if (state.subsystems.cosmoLabelDirector.labels().length > 0) {
+      renderer.draw(pass, state.subsystems.cosmoLabelDirector.project(ctx), scene);
+    }
+    const shown = shownLabelRecords(state, COSMO);
+    if (shown !== null) renderer.drawRecords(pass, shown.view, scene);
   },
 
   // Pick aspect — grace-padded ink boxes for the drawn labels, stamped with
@@ -93,6 +108,8 @@ export const labelsCosmoPass: ContentPass = {
       projection,
       measure: (label) => textLayoutOf(fontAtlases.metricsByFont, label).bbox,
     });
+    const shown = shownLabelRecords(state, COSMO);
+    if (shown !== null) quads.push(...recordPickQuads(shown.records, shown.frame));
     pickRenderer.draw(pass, quads, view.window);
   },
 };

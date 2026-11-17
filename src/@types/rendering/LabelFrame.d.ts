@@ -21,6 +21,8 @@ export type LabelFrame = {
   /** The subject's apparent diameter, px on the axis scale (0 without a radius). */
   readonly diameterPx: Float32Array;
   readonly distanceMpc: Float64Array;
+  /** The subject's view depth (along the view axis), Mpc. */
+  readonly depthMpc: Float64Array;
   /** The em height on screen, `LABEL_TEXT_PX` × pxScale clamped. */
   readonly textPx: Float32Array;
   /** The ink rect at the drawn anchor, px: x0, y0, x1, y1 per record. Declutter and pick read it. */

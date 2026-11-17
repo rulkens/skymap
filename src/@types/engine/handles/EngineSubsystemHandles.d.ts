@@ -18,6 +18,7 @@
  */
 
 import type { Label2DDirector } from '../subsystems/Label2DDirector';
+import type { LabelDirectorState } from '../../rendering/LabelDirectorState';
 import type { RecedingFocusSubsystem } from '../subsystems/RecedingFocusSubsystem';
 import type { ClipPlayer } from '../subsystems/ClipPlayer';
 import type { ClipPathInspector } from '../subsystems/ClipPathInspector';
@@ -78,6 +79,9 @@ export type EngineSubsystemHandles = {
    * attaches its own.
    */
   foregroundLabelDirector: Label2DDirector;
+  /** One per `LABEL_DIRECTORS` row, run by `runLabelDirector` beside the two above, which go once
+   *  every Layer declares `LabelSource` rows. */
+  labelDirectors: readonly LabelDirectorState[];
   /**
    * Focus-mode subsystem — drives the recession of the rest of the scene,
    * and a structure's "dim everything outside it" sphere. Selection-driven: `runFrame` calls

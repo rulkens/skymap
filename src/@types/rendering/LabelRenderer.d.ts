@@ -7,6 +7,8 @@
 import type { Label2D } from './Label2D';
 import type { Label2DProjection } from './Label2DProjection';
 import type { OverlaySceneOcclusion } from './OverlaySceneOcclusion';
+import type { LabelRecords } from './LabelRecords';
+import type { LabelRecordView } from './LabelRecordView';
 
 export type LabelRenderer = {
   /**
@@ -38,6 +40,15 @@ export type LabelRenderer = {
   draw(
     pass: GPURenderPassEncoder,
     projection: Label2DProjection,
+    scene?: OverlaySceneOcclusion,
+  ): void;
+  /** Upload a director's records: the dirty word range (all of it for records not seen
+   *  before), and the glyphs after a re-encode. The caller then clears the dirty range. */
+  setRecords(records: LabelRecords): void;
+  /** Draw the last `setRecords` upload (leaders, then glyphs) after the object path's draw. */
+  drawRecords(
+    pass: GPURenderPassEncoder,
+    view: LabelRecordView,
     scene?: OverlaySceneOcclusion,
   ): void;
   /** Release all GPU resources. */

@@ -6,4 +6,6 @@ export type LabelDirectorRow = {
   /** Px of gap two kept labels' ink rects must clear (times pxScale). */
   readonly declutterPadPx: number;
   readonly envelope: Label2DEnvelopePolicy;
+  /** A label nearer than this view depth, Mpc, has zero alpha (COSMO's old near plane). */
+  readonly nearHideMpc?: number;
 };

@@ -43,6 +43,13 @@
  * pixels in the label transparent rather than opaque, which reads as
  * invisible on a dark sky and as a bright halo on a bright sky.
  *
+ * ## Two paths, one atlas (transitional)
+ *
+ * `setLabels`/`draw` take `Label2D` objects from `label2DDirector`; `setRecords`/`drawRecords`
+ * take the `LabelRecords` core encodes from Layers' label sources (`vertexRecords.wesl`), with
+ * the style table as a storage buffer uploaded once. Both draw in the same pass, records after.
+ * The object path goes once every Layer describes its labels (plan Task 10, slice 10c).
+ *
  * ## Atlas texture
  *
  * One `rgba8unorm` texture built from the pre-baked `ImageBitmap`.  No
@@ -63,6 +70,8 @@ import type { FontId } from '../../../../@types/data/FontId';
 import type { Label2DProjection } from '../../../../@types/rendering/Label2DProjection';
 import vsCode from '../../shaders/labels/vertex.wesl?static';
 import vsOccludeCode from '../../shaders/labels/vertexOcclude.wesl?static';
+import vsRecordsCode from '../../shaders/labels/vertexRecords.wesl?static';
+import vsRecordsOccludeCode from '../../shaders/labels/vertexRecordsOcclude.wesl?static';
 import fsCode from '../../shaders/labels/fragment.wesl?static';
 import fsOccludeCode from '../../shaders/labels/fragmentOcclude.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
@@ -81,6 +90,20 @@ import { GLYPH_INSTANCE_BYTES, LABEL_DATA_BYTES } from '../../../../data/labels/
 import { LABEL_UNIFORM_BYTES } from '../../../../data/labels/labelUniformBytes';
 import { LABEL_UNIFORM_OFFSETS } from '../../../../data/labels/labelUniformOffsets';
 import { packLabels } from './packLabels';
+import type { LabelRecords } from '../../../../@types/rendering/LabelRecords';
+import type { LabelRecordView } from '../../../../@types/rendering/LabelRecordView';
+import { LABEL_RECORD, LABEL_RECORD_WORDS } from '../../../../data/labels/labelRecordLayout';
+import {
+  LABEL_RECORD_UNIFORM_BYTES,
+  LABEL_RECORD_UNIFORM_OFFSETS as RU,
+} from '../../../../data/labels/labelRecordUniformLayout';
+import { LABEL_TEXT_PX } from '../../../../data/labels/labelTextPx';
+import { LABEL_EM_PX_RETUNE } from '../../../../data/labels/labelSizingDefaults';
+import {
+  HOVERED_LABEL_WHITEN,
+  SELECTED_LABEL_WHITEN,
+} from '../../../../data/labels/labelHighlightWhiten';
+import { packLabelStyleTable } from '../../../../utils/labels/packLabelStyleTable';
 
 // ─── capacity constants ───────────────────────────────────────────────────
 
@@ -265,6 +288,23 @@ export function createLabelRenderer(
     ],
   });
 
+  // The record path's group 0: the same atlas bindings (2, 3, read by lib/msdf.wesl), its own
+  // uniforms and records, and the style table at 4.
+  const recordBindGroupLayout = device.createBindGroupLayout({
+    label: 'label-record-bgl',
+    entries: [
+      { binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' } },
+      { binding: 1, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
+      {
+        binding: 2,
+        visibility: GPUShaderStage.FRAGMENT,
+        texture: { sampleType: 'float', viewDimension: '2d-array' },
+      },
+      { binding: 3, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
+      { binding: 4, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
+    ],
+  });
+
   // ── Occlusion joint (opt-in) ─────────────────────────────────────────
   //
   // When this instance attenuates against scene coverage, the pipeline gains
@@ -351,11 +391,43 @@ export function createLabelRenderer(
     { module: fsPlainModule, glyphs: 'fs', leaders: 'fsLeader' },
   );
 
+  const recordPlainPipelines = pipelinePair(
+    'label-record-pipeline',
+    device.createPipelineLayout({
+      label: 'label-record-pipeline-layout',
+      bindGroupLayouts: [recordBindGroupLayout],
+    }),
+    {
+      module: createShaderModuleWithDevLog(device, vsRecordsCode, 'labels.vertexRecords'),
+      glyphs: 'vsRecords',
+      leaders: 'vsRecordLeaders',
+    },
+    { module: fsPlainModule, glyphs: 'fs', leaders: 'fsLeader' },
+  );
+  let recordOccludePipelines: LabelPipelines | null = null;
+
   if (occlusionCoverageBGL) {
     const fsOccludeModule = createShaderModuleWithDevLog(
       device,
       fsOccludeCode,
       'labels.fragmentOcclude',
+    );
+    recordOccludePipelines = pipelinePair(
+      'label-record-pipeline-occlude',
+      device.createPipelineLayout({
+        label: 'label-record-pipeline-occlude-layout',
+        bindGroupLayouts: [recordBindGroupLayout, occlusionCoverageBGL],
+      }),
+      {
+        module: createShaderModuleWithDevLog(
+          device,
+          vsRecordsOccludeCode,
+          'labels.vertexRecordsOcclude',
+        ),
+        glyphs: 'vsRecordsOcclude',
+        leaders: 'vsRecordLeadersOcclude',
+      },
+      { module: fsOccludeModule, glyphs: 'fs', leaders: 'fsLeaderOcclude' },
     );
     // A SEPARATE vertex module, not 'vsModule' + a different entry point:
     // vertexOcclude.wesl imports lib::sceneDepth, which statically pulls in
@@ -450,6 +522,58 @@ export function createLabelRenderer(
   // `setLabels` re-enters on growth.
   allocate(INITIAL_LABEL_CAPACITY);
 
+  // ── The record path's buffers ────────────────────────────────────────
+  const recordUniformBuffer = device.createBuffer({
+    label: 'label-record-uniforms',
+    size: LABEL_RECORD_UNIFORM_BYTES,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+  const recordUniformF32 = new Float32Array(LABEL_RECORD_UNIFORM_BYTES / 4);
+  const recordUniformU32 = new Uint32Array(recordUniformF32.buffer);
+  const styleTable = packLabelStyleTable();
+  const styleBuffer = device.createBuffer({
+    label: 'label-styles',
+    size: styleTable.byteLength,
+    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+  });
+  device.queue.writeBuffer(styleBuffer, 0, styleTable);
+  // Sized to the records' fixed capacity on first sight; a rebuilt renderer uploads them whole.
+  let uploadedRecords: LabelRecords | null = null;
+  let uploadedGeneration = -1;
+  let recordBuffer: GPUBuffer | null = null;
+  let recordGlyphBuffer: GPUBuffer | null = null;
+  let recordBindGroup: GPUBindGroup | null = null;
+  let recordCount = 0;
+  let recordGlyphCount = 0;
+
+  function allocateRecords(records: LabelRecords): void {
+    recordBuffer?.destroy();
+    recordGlyphBuffer?.destroy();
+    recordBuffer = device.createBuffer({
+      label: 'label-records',
+      size: records.f32.byteLength,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+    });
+    recordGlyphBuffer = device.createBuffer({
+      label: 'label-record-glyphs',
+      size: records.glyphF32.byteLength,
+      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+    });
+    recordBindGroup = device.createBindGroup({
+      label: 'label-record-bg',
+      layout: recordBindGroupLayout,
+      entries: [
+        { binding: 0, resource: { buffer: recordUniformBuffer } },
+        { binding: 1, resource: { buffer: recordBuffer } },
+        { binding: 2, resource: atlasTexture.createView({ dimension: '2d-array' }) },
+        { binding: 3, resource: sampler },
+        { binding: 4, resource: { buffer: styleBuffer } },
+      ],
+    });
+    uploadedRecords = records;
+    uploadedGeneration = -1;
+  }
+
   // ── public methods (closures over the locals above) ────────────────────
 
   function setLabels(labels: readonly Label2D[]): void {
@@ -491,6 +615,89 @@ export function createLabelRenderer(
     }
   }
 
+  /** Uploads the records' dirty word range, and every glyph after a re-encode; the caller clears the range. */
+  function setRecords(records: LabelRecords): void {
+    const fresh = records !== uploadedRecords;
+    if (fresh) allocateRecords(records);
+    recordCount = records.count;
+    const last = (records.count - 1) * LABEL_RECORD_WORDS;
+    recordGlyphCount =
+      records.count === 0
+        ? 0
+        : records.u32[last + LABEL_RECORD.glyphs]! + records.u32[last + LABEL_RECORD.glyphCount]!;
+    if (records.generation !== uploadedGeneration && recordGlyphCount > 0) {
+      device.queue.writeBuffer(
+        recordGlyphBuffer!,
+        0,
+        records.glyphF32,
+        0,
+        (recordGlyphCount * GLYPH_INSTANCE_BYTES) / 4,
+      );
+    }
+    uploadedGeneration = records.generation;
+    const from = fresh ? 0 : records.dirtyFrom;
+    const to = fresh ? records.count : Math.min(records.dirtyTo, records.count);
+    if (to > from) {
+      device.queue.writeBuffer(
+        recordBuffer!,
+        from * LABEL_RECORD_WORDS * 4,
+        records.f32,
+        from * LABEL_RECORD_WORDS,
+        (to - from) * LABEL_RECORD_WORDS,
+      );
+    }
+  }
+
+  /** Binds group(1) from this frame's scene views; false when there are none (plain draw). */
+  function bindScene(
+    pass: GPURenderPassEncoder,
+    scene: OverlaySceneOcclusion | undefined,
+    sizePx: readonly [number, number],
+  ): boolean {
+    if (!occlusionCoverageBGL || !occlusionDepthFrameBuffer || !scene) return false;
+    writeOcclusionDepthFrame(device, occlusionDepthFrameBuffer, scene.frame, sizePx);
+    pass.setBindGroup(
+      OCCLUSION_COVERAGE_GROUP_INDEX,
+      createOcclusionCoverageBindGroup(
+        device,
+        occlusionCoverageBGL,
+        scene,
+        occlusionDepthFrameBuffer,
+      ),
+    );
+    return true;
+  }
+
+  function drawRecords(
+    pass: GPURenderPassEncoder,
+    view: LabelRecordView,
+    scene?: OverlaySceneOcclusion,
+  ): void {
+    if (!recordBindGroup || !recordGlyphBuffer || recordCount === 0) return;
+    const { projection } = view;
+    writeOutputProjection(recordUniformF32, RU.output / 4, projection);
+    recordUniformU32[RU.hoveredPick / 4] = view.hoveredPick ?? 0;
+    recordUniformU32[RU.selectedPick / 4] = view.selectedPick ?? 0;
+    recordUniformF32[RU.minTextPx / 4] = LABEL_TEXT_PX.min * projection.pxScale;
+    recordUniformF32[RU.maxTextPx / 4] = LABEL_TEXT_PX.max * projection.pxScale;
+    recordUniformF32[RU.emRetune / 4] = LABEL_EM_PX_RETUNE;
+    recordUniformF32[RU.hoveredWhiten / 4] = HOVERED_LABEL_WHITEN;
+    recordUniformF32[RU.selectedWhiten / 4] = SELECTED_LABEL_WHITEN;
+    device.queue.writeBuffer(recordUniformBuffer, 0, recordUniformF32);
+
+    // Same selection rule as `draw`: the occlusion pipeline only with scene views bound.
+    const occluded = recordOccludePipelines !== null && bindScene(pass, scene, projection.sizePx);
+    const pipelines = occluded ? recordOccludePipelines! : recordPlainPipelines;
+    pass.setPipeline(pipelines.leaders);
+    pass.setBindGroup(0, recordBindGroup);
+    pass.setVertexBuffer(0, cornerBuffer);
+    pass.draw(4, recordCount, 0, 0);
+    if (recordGlyphCount === 0) return;
+    pass.setPipeline(pipelines.glyphs);
+    pass.setVertexBuffer(1, recordGlyphBuffer);
+    pass.draw(4, recordGlyphCount, 0, 0);
+  }
+
   function draw(
     pass: GPURenderPassEncoder,
     projection: Label2DProjection,
@@ -512,28 +719,10 @@ export function createLabelRenderer(
     // the captions un-occluded — a valid draw, NOT an occlusion draw with
     // group(1) left unbound. A non-occlusion instance (occludePipelines null)
     // always takes the plain path.
-    let pipelines = plainPipelines;
-    if (occlusionCoverageBGL && occludePipelines && occlusionDepthFrameBuffer && scene) {
-      pipelines = occludePipelines;
-      pass.setPipeline(pipelines.leaders);
-      pass.setBindGroup(0, bindGroup);
-      writeOcclusionDepthFrame(
-        device,
-        occlusionDepthFrameBuffer,
-        scene.frame,
-        projection.output.sizePx,
-      );
-      const coverageBindGroup = createOcclusionCoverageBindGroup(
-        device,
-        occlusionCoverageBGL,
-        scene,
-        occlusionDepthFrameBuffer,
-      );
-      pass.setBindGroup(OCCLUSION_COVERAGE_GROUP_INDEX, coverageBindGroup);
-    } else {
-      pass.setPipeline(pipelines.leaders);
-      pass.setBindGroup(0, bindGroup);
-    }
+    const occluded = occludePipelines !== null && bindScene(pass, scene, projection.output.sizePx);
+    const pipelines = occluded ? occludePipelines! : plainPipelines;
+    pass.setPipeline(pipelines.leaders);
+    pass.setBindGroup(0, bindGroup);
     // Buffer slot 0: static corner quad (4 vertices, broadcast across instances).
     pass.setVertexBuffer(0, cornerBuffer);
     // Leaders first, so the glyphs composite over the line where they meet: one
@@ -554,12 +743,18 @@ export function createLabelRenderer(
     cornerBuffer.destroy();
     atlasTexture.destroy();
     occlusionDepthFrameBuffer?.destroy();
+    recordUniformBuffer.destroy();
+    styleBuffer.destroy();
+    recordBuffer?.destroy();
+    recordGlyphBuffer?.destroy();
   }
 
   const renderer: LabelRenderer = {
     label: 'labelRenderer',
     setLabels,
     draw,
+    setRecords,
+    drawRecords,
     destroy,
   };
   // `satisfies Renderer` confirms the shared label+destroy contract at

@@ -66,7 +66,7 @@ function makeState(
 ): EngineState {
   return {
     gpu: { labelRendererNear: renderer },
-    subsystems: { foregroundLabelDirector: director },
+    subsystems: { foregroundLabelDirector: director, labelDirectors: [] },
   } as unknown as EngineState;
 }
 
@@ -160,7 +160,10 @@ describe('labelsNearPass.enabled', () => {
 describe('labelsNearPass.draw', () => {
   it("draws the labels through the director's projection, the one it decluttered with", () => {
     const renderer = makeRenderer();
-    const state = makeState(renderer);
+    const state = makeState(renderer, {
+      labels: () => [{} as Label2D],
+      project: () => PROJECTION_STUB,
+    });
 
     labelsNearPass.draw(PASS_STUB, VIEW_STUB, makeCtx(), state);
 

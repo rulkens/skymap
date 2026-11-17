@@ -4,7 +4,8 @@
  * (`enabled` therefore reads THIS frame's real demand, not a stale artifact of
  * its own draw). A second renderer, not the COSMO `labelsCosmoPass`'s, because
  * one renderer draws through one slab and these anchors sit AU-to-parsec away,
- * inside COSMO's fixed 10-kpc near plane.
+ * inside COSMO's fixed 10-kpc near plane. Each aspect also serves the NEAR0 label records
+ * (`shownLabelRecords`), drawn after the old director's set until that one goes.
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
@@ -12,6 +13,9 @@ import { overlaySceneOcclusion } from '../overlaySceneOcclusion';
 import { hasPickableLabel } from '../../../../utils/labels/hasPickableLabel';
 import { labelPickQuads } from '../../../../utils/labels/labelPickQuads';
 import { textLayoutOf } from '../../../gpu/labelLayout/textLayoutOf';
+import { shownLabelRecords } from '../../labels/shownLabelRecords';
+import { recordPickQuads } from '../../../../utils/labels/recordPickQuads';
+import { NEAR0 } from '../slabs';
 
 export const labelsNearPass: ContentPass = {
   name: 'labels-near',
@@ -21,7 +25,8 @@ export const labelsNearPass: ContentPass = {
   enabled(state, _ctx, _view) {
     return (
       state.gpu.labelRendererNear !== null &&
-      state.subsystems.foregroundLabelDirector.labels().length > 0
+      (state.subsystems.foregroundLabelDirector.labels().length > 0 ||
+        shownLabelRecords(state, NEAR0) !== null)
     );
   },
 
@@ -30,7 +35,11 @@ export const labelsNearPass: ContentPass = {
   // must not allocate the `pick:overlay` target for a draw that stamps nothing.
   pickEnabled(state) {
     if (state.gpu.labelRendererNear === null) return false;
-    return hasPickableLabel(state.subsystems.foregroundLabelDirector.labels());
+    const shown = shownLabelRecords(state, NEAR0);
+    return (
+      hasPickableLabel(state.subsystems.foregroundLabelDirector.labels()) ||
+      (shown !== null && recordPickQuads(shown.records, shown.frame).length > 0)
+    );
   },
 
   draw(pass, view, ctx, state) {
@@ -39,11 +48,12 @@ export const labelsNearPass: ContentPass = {
     // The joint the renderer binds: the coverage alpha AND the sampled depth
     // these captions clip their glyphs against, since their `occludeNearKm`
     // and the depth frame measure the same eye-relative km.
-    renderer.draw(
-      pass,
-      state.subsystems.foregroundLabelDirector.project(ctx),
-      overlaySceneOcclusion(ctx, view),
-    );
+    const scene = overlaySceneOcclusion(ctx, view);
+    if (state.subsystems.foregroundLabelDirector.labels().length > 0) {
+      renderer.draw(pass, state.subsystems.foregroundLabelDirector.project(ctx), scene);
+    }
+    const shown = shownLabelRecords(state, NEAR0);
+    if (shown !== null) renderer.drawRecords(pass, shown.view, scene);
   },
 
   // Pick aspect — grace-padded ink boxes for the drawn captions, stamped with
@@ -64,6 +74,8 @@ export const labelsNearPass: ContentPass = {
       projection,
       measure: (label) => textLayoutOf(fontAtlases.metricsByFont, label).bbox,
     });
+    const shown = shownLabelRecords(state, NEAR0);
+    if (shown !== null) quads.push(...recordPickQuads(shown.records, shown.frame));
     pickRenderer.draw(pass, quads, view.window);
   },
 };

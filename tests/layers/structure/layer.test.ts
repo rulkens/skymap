@@ -5,6 +5,7 @@
  * `FRAME_ORDER` line.
  */
 
+import type { LayerScreenLabel } from '../../../src/@types/engine/layer/LayerScreenLabel';
 import { describe, it, expect } from 'vitest';
 
 import { structureLayer } from '../../../src/layers/structure/layer';
@@ -64,7 +65,7 @@ describe('structureLayer', () => {
     const rows = structureLayer.guides!(runtime).screenLabels!;
     const idsOn = (slab: number) =>
       rows
-        .filter((row) => row.slab === slab)
+        .filter((row): row is LayerScreenLabel => 'produceLabels' in row && row.slab === slab)
         .flatMap((row) => row.produceLabels(STATE, CTX, FADE).labels.map((label) => label.id));
 
     // A cluster is cosmic: its label comes from the COSMO row, never NEAR0's.

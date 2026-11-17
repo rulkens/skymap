@@ -21,6 +21,8 @@ import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames'
 import { resizeCanvasToDisplay } from '../../gpu/device';
 import { shouldKeepTicking } from '../helpers/shouldKeepTicking';
 import { runLabel3DProducers } from './runLabel3DProducers';
+import { runLabelDirector } from './runLabelDirector';
+import { COSMO, NEAR0 } from './slabs';
 import { deriveFrameContext } from './frameContext';
 import { deriveView } from './deriveView';
 import { frameContextInputOf } from './frameContextInputOf';
@@ -215,12 +217,19 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // short-circuits.
   const cosmoStartMs = cpuSpans.on ? performance.now() : 0;
   const cosmoLabelsAnimating = state.subsystems.cosmoLabelDirector.runFrame(state, canvas);
+  const cosmoRecordsAnimating = runLabelDirector(state, canvas, COSMO);
   if (cpuSpans.on) cpuSpans.add('labels:cosmo', cosmoStartMs);
   const nearStartMs = cpuSpans.on ? performance.now() : 0;
   const nearLabelsAnimating = state.subsystems.foregroundLabelDirector.runFrame(state, canvas);
+  const nearRecordsAnimating = runLabelDirector(state, canvas, NEAR0);
   if (cpuSpans.on) cpuSpans.add('labels:near0', nearStartMs);
   const label3DAnimating = runLabel3DProducers(state, canvas);
-  const labelsAnimating = cosmoLabelsAnimating || nearLabelsAnimating || label3DAnimating;
+  const labelsAnimating =
+    cosmoLabelsAnimating ||
+    cosmoRecordsAnimating ||
+    nearLabelsAnimating ||
+    nearRecordsAnimating ||
+    label3DAnimating;
 
   renderFrame({
     canvas,
