@@ -21,6 +21,7 @@ import { zoneOfAvoidanceLayerSettings } from '../layers/zoneOfAvoidance/state/sl
 import { lightTimeLayerSettings } from '../layers/lightTime/state/slices';
 import { missionsLayerSettings } from '../layers/missions/state/slices';
 import { satellitesLayerSettings } from '../layers/satellites/state/slices';
+import { asteroidsLayerSettings } from '../layers/asteroids/state/slices';
 import { cosmicHorizonLayerSettings } from '../layers/cosmicHorizon/state/slices';
 import { probeSpheresLayerSettings } from '../layers/probeSpheres/state/slices';
 
@@ -41,6 +42,7 @@ export const APP_SETTINGS_SLICE_REGISTRY = [
   ...lightTimeLayerSettings,
   ...missionsLayerSettings,
   ...satellitesLayerSettings,
+  ...asteroidsLayerSettings,
   ...cosmicHorizonLayerSettings,
   ...probeSpheresLayerSettings,
 ] as const;

@@ -34,8 +34,10 @@ describe('createBodyTextureSlots', () => {
     globalThis.createImageBitmap = vi
       .fn()
       .mockResolvedValue(bitmap) as unknown as typeof globalThis.createImageBitmap;
-    fetch.mock.mockResolvedValue(
-      new Response(new Blob(['x']), { status: 200, headers: { 'content-type': 'image/jpeg' } }),
+    // A fresh Response per call: the clouds slot reads the live pointer first, and a body is read once.
+    fetch.mock.mockImplementation(
+      async () =>
+        new Response(new Blob(['x']), { status: 200, headers: { 'content-type': 'image/jpeg' } }),
     );
   });
 

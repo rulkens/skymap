@@ -19,6 +19,17 @@ on:
       timeout-min:
         type: number
         required: true
+      setup-rust:
+        type: boolean
+        default: false
+      # The registry row's `cache`: newline-separated paths and the repo file whose hash keys it;
+      # empty when the row has none (tools/live/printLiveMatrix.ts).
+      cache-paths:
+        type: string
+        default: ''
+      cache-key:
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -41,6 +52,24 @@ jobs:
           cache: 'npm'
 
       - run: npm ci
+
+      - name: Set up Rust
+        if: inputs.setup-rust
+        uses: dtolnay/rust-toolchain@stable
+
+      # Keyed on the toolchain as well as Cargo.lock, so a new stable never restores a dead target/.
+      - name: Cache cargo
+        if: inputs.setup-rust
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: tools/cloud-bake-rs
+
+      - name: Cache inputs
+        if: inputs.cache-key != ''
+        uses: actions/cache@v6
+        with:
+          path: ${{ inputs.cache-paths }}
+          key: live-${{ inputs.id }}-${{ hashFiles(inputs.cache-key) }}
 
       # The build script exits non-zero on bad data, so an upstream outage never reaches R2.
       - name: Build

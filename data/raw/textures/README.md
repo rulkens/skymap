@@ -92,8 +92,9 @@ URL and attribution string reads it from there.
 ### The other eleven months (cloud bake ice mask)
 
 `npm run fetch-cloud-inputs -- --confirm` also pulls the other eleven 21600×10800 equirects
-(`world.topo.bathy.2004MM.3x21600x10800.jpg`, about 30 MB each, 360 MB for all twelve). The
-cloud bake cuts its ice mask from the month matching the bake date. The app never reads them: it
+(`world.topo.bathy.2004MM.3x21600x10800.jpg`, about 30 MB each, 360 MB for all twelve). It pulls
+them and the clouds TIFF below from Skymap's R2 mirror (`data/raw/textures/<file>`, see
+`docs/DEPLOY.md`), not NASA, and refuses any file `textures.sha256` does not pin. The cloud bake cuts its ice mask from the month matching the bake date. The app never reads them: it
 uses only the vintage month above. One table (`tools/utils/io/BMNG_MONTHS.ts`) describes the
 twelve; same NASA media guidelines and credit.
 

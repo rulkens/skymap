@@ -104,7 +104,7 @@ export const GLOSSARY: readonly GlossaryTerm[] = [
   {
     id: 'blue-marble',
     term: 'Blue Marble',
-    text: 'NASA’s mosaic of Earth’s surface from satellite pictures. The app uses the one for August 2004, with one fixed layer of clouds.',
+    text: 'NASA’s mosaic of Earth’s surface from satellite pictures. The app uses the one for August 2004.',
     facts: ['sci-earth-clouds'],
     source: 'blue-marble',
   },

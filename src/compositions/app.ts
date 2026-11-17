@@ -7,6 +7,7 @@
  */
 
 import type { EngineComposition } from '../@types/engine/EngineComposition';
+import { asteroidsLayer } from '../layers/asteroids/layer';
 import { EARTH_HOME } from '../data/selection/earthHome';
 import { blackHolesLayer } from '../layers/blackHoles/layer';
 import { bodyLayer } from '../layers/body/layer';
@@ -37,6 +38,7 @@ export const APP_COMPOSITION = {
     flowLayer,
     missionsLayer,
     satellitesLayer,
+    asteroidsLayer,
     zoneOfAvoidanceLayer,
     localBubbleLayer,
     stellarStreamsLayer,
@@ -60,6 +62,7 @@ export const APP_COMPOSITION = {
     typeof flowLayer,
     typeof missionsLayer,
     typeof satellitesLayer,
+    typeof asteroidsLayer,
     typeof zoneOfAvoidanceLayer,
     typeof localBubbleLayer,
     typeof stellarStreamsLayer,

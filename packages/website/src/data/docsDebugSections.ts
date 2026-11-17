@@ -87,6 +87,12 @@ export const DOCS_DEBUG_SECTIONS: readonly DocsDebugSection[] = [
     file: 'src/layers/satellites/controls/ui/SatelliteTuningSection.tsx',
   },
   {
+    heading: 'Asteroid tuning',
+    shows:
+      'Two groups of controls. The first sets the look of one asteroid class at a time, chosen from a list: its colour, how bright it is, the faintest magnitude drawn, and the size and peak of a dot. The second holds what is the same for every class: how much the dots are lifted in brightness, the cap on the dimming of an asteroid lit from behind, and how the field is thinned out as you zoom away. A button puts them back to their defaults and another copies the changed values.',
+    file: 'src/layers/asteroids/controls/ui/AsteroidTuningSection.tsx',
+  },
+  {
     heading: 'Milky Way tuning',
     shows:
       'A switch for which Milky Way is drawn (the point sprites, the smooth analytic field, or both added together). For the points: size, exposure, softness and number. For the field: its exposure, a dust switch and how coarse each of its render targets is.',
@@ -133,6 +139,12 @@ export const DOCS_DEBUG_SECTIONS: readonly DocsDebugSection[] = [
     shows:
       'The duration of an Eased focus move, and the Geodesic move’s pan-against-zoom balance, speed, shortest and longest duration and arrival ease. A move already in flight keeps the values it started with.',
     file: `${PANEL}/FocusMovesTuningSection/FocusMovesTuningSection.tsx`,
+  },
+  {
+    heading: 'Film look',
+    shows:
+      'The film look’s switch, its letterbox and the letterbox’s ratio (2.39:1 scope by default, down to 9:16 portrait), then two groups. Grade: contrast, black lift, split tone, grain and grain size, vignette, chromatic aberration, edge softness and the anamorphic squeeze. Glow: the firefly cap the Sun may bloom up to, the streak’s threshold, strength, length and blue tint, and the veiling glare.',
+    file: `${PANEL}/FilmTuningSection/FilmTuningSection.tsx`,
   },
   {
     heading: 'Galaxy Provenance',

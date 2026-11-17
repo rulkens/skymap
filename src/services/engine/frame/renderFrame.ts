@@ -25,6 +25,7 @@ import { VIEW_RIGS } from '../../../data/rendering/viewRigs';
 
 export function renderFrame(input: RenderFrameInput): void {
   const { canvas, views, state, device, context, timingService, renderedTargets } = input;
+  state.frameIndex += 1;
 
   // The shared focus uniform, before any pass or the later pick submit
   // reads it; blend=0 at rest makes the per-vertex multiplier a no-op.
@@ -51,6 +52,9 @@ export function renderFrame(input: RenderFrameInput): void {
     curve: state.settings.tonemap.curve,
     hdrKnee: hdrOn ? state.settings.hdr.knee : 0,
     hdrHeadroom: hdrOn ? state.settings.hdr.headroom : 0,
+    film: state.settings.film.enabled
+      ? { grade: state.settings.film.grade, seed: state.frameIndex >>> 0 }
+      : null,
   };
   // The master bloom toggle is the ONLY bloom value that shapes the step
   // list; strength/threshold are read live by the bloom passes each draw.
