@@ -7,7 +7,6 @@
  */
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';
-import { COSMO } from '../../services/engine/frame/slabs';
 import { galaxyCatalogLayerSettings } from './state/slices';
 import { galaxyCatalogVisibility } from './visibility';
 import { GALAXY_CATALOG_SOURCE_ROWS } from './sources/galaxyCatalogSourceRows';
@@ -22,7 +21,7 @@ import { proceduralDisksPass } from './disks/procedural/passes/proceduralDisksPa
 import { texturedDisksPass } from './disks/textured/passes/texturedDisksPass';
 import { galaxyCatalogSelectionRow } from './selection/galaxyCatalogSelectionRow';
 import { galaxyCatalogSelectionKinds } from './selection/kinds';
-import { produceFamousGalaxyLabels } from './famousGalaxies/present/produceFamousGalaxyLabels';
+import { famousGalaxyLabelSource } from './famousGalaxies/present/famousGalaxyLabelSource';
 import { watchPaletteWakeSaga } from './aliases/sagas/watchPaletteWakeSaga';
 import GalaxiesSectionContainer from './controls/ui/GalaxiesSectionContainer';
 import GalaxyDetailCardContainer from './card/ui/GalaxyDetailCardContainer';
@@ -52,14 +51,7 @@ export const galaxyCatalogLayer = defineLayer({
   sagas: [watchPaletteWakeSaga],
   sourceCounts: galaxyCatalogSourceCounts,
   guides: (runtime) => ({
-    screenLabels: [
-      {
-        id: 'famousLabels',
-        slab: COSMO,
-        label: 'famousGalaxy',
-        produceLabels: produceFamousGalaxyLabels(runtime),
-      },
-    ],
+    screenLabels: [famousGalaxyLabelSource(runtime)],
   }),
   selection: {
     kinds: galaxyCatalogSelectionKinds,

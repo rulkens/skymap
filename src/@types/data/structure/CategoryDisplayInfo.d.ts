@@ -1,8 +1,8 @@
 /**
  * Per-category display metadata for label-bearing sources (galaxy-cluster,
  * supercluster, void, famousGalaxy, galaxy-group, …).  Human-readable copy only —
- * distinct from the rendering style tables (`structureMarkerStyles`,
- * `famousLabelStyle`), which own halo/ring colours and pixel sizes.
+ * distinct from the rendering style tables (`structureMarkerStyles`, `LABEL_STYLES`), which own
+ * ring, halo and label colours and sizes.
  */
 export type CategoryDisplayInfo = {
   /** Long form for detail surfaces ('Galaxy Cluster', 'Famous Galaxy'). */
