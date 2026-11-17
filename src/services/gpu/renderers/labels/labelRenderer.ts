@@ -78,17 +78,9 @@ import { OUTPUT_PROJECTION_BYTES, writeOutputProjection } from '../../lib/output
 import { UNIT_QUAD_STRIP_CORNERS, UNIT_QUAD_VERTEX_LAYOUT } from '../../lib/unitQuad';
 import { PREMULTIPLIED_OVER_BLEND } from '../../lib/blendStates';
 import { GLYPH_INSTANCE_BYTES, LABEL_DATA_BYTES } from '../../../../data/labels/labelBufferStrides';
+import { LABEL_UNIFORM_BYTES } from '../../../../data/labels/labelUniformBytes';
+import { LABEL_UNIFORM_OFFSETS } from '../../../../data/labels/labelUniformOffsets';
 import { packLabels } from './packLabels';
-
-// ─── uniform constants ────────────────────────────────────────────────────
-
-// `struct Uniforms` in io.wesl, byte offsets; `labelUniforms.parity` holds them.
-export const LABEL_UNIFORM_OFFSETS = {
-  output: 0,
-  viewFromSlab: OUTPUT_PROJECTION_BYTES,
-  nearClipMpc: OUTPUT_PROJECTION_BYTES + 64,
-} as const;
-export const LABEL_UNIFORM_BYTES = 192;
 
 // ─── capacity constants ───────────────────────────────────────────────────
 

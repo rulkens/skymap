@@ -18,29 +18,28 @@ import { wgslPrimitiveLayout } from '../../../../tools/utils/wgsl/wgslPrimitiveL
 
 const source = readShaderSource('src/services/gpu/shaders/lib/projectLabel.wesl');
 
-// Every field's first word carries its own sentinel; kind 'pinhole' is code 0.
+// Every component of every field carries its own sentinel (kind 'pinhole' is code 0),
+// so a swapped pair of components inside one field fails too.
 const projection: OutputProjection = {
   kind: 'pinhole',
-  viewFromWorld: [101, 0, 0, 0, 1, 0, 0, 0, 1],
-  camHi: [102, 0, 0],
-  camLo: [103, 0, 0],
-  up3: [104, 0, 0],
-  sizePx: [105, 0],
-  centrePx: [106, 0],
-  focalPx: 107,
-  pxScale: 108,
+  viewFromWorld: [101, 102, 103, 104, 105, 106, 107, 108, 109],
+  camHi: [110, 111, 112],
+  camLo: [113, 114, 115],
+  up3: [116, 117, 118],
+  sizePx: [119, 120],
+  centrePx: [121, 122],
+  focalPx: 123,
+  pxScale: 124,
 };
-const SENTINEL: Readonly<Record<keyof OutputProjection, number>> = {
-  kind: 0,
-  viewFromWorld: 101,
-  camHi: 102,
-  camLo: 103,
-  up3: 104,
-  sizePx: 105,
-  centrePx: 106,
-  focalPx: 107,
-  pxScale: 108,
-};
+/** The words each field occupies from its offset; a mat3's columns sit 4 words apart. */
+function expectedWords(name: keyof OutputProjection): readonly number[] {
+  const value = projection[name];
+  if (name === 'viewFromWorld') {
+    const m = value as readonly number[];
+    return [m[0]!, m[1]!, m[2]!, NaN, m[3]!, m[4]!, m[5]!, NaN, m[6]!, m[7]!, m[8]!];
+  }
+  return typeof value === 'number' ? [value] : (value as readonly number[]);
+}
 const projected: ProjectedLabel = { px: [0, 0], pxPerRad: 0, up: [0, 0], visible: false };
 
 describe('lib/projectLabel.wesl parity', () => {
@@ -56,9 +55,13 @@ describe('lib/projectLabel.wesl parity', () => {
     writeOutputProjection(buf, AT, projection);
     const u32 = new Uint32Array(buf.buffer);
     for (const [name, offset] of offsets) {
-      const word = AT + offset / 4;
-      const value = name === 'kind' ? u32[word] : buf[word];
-      expect(value, name).toBe(SENTINEL[name as keyof OutputProjection]);
+      if (name === 'kind') {
+        expect(u32[AT + offset / 4], name).toBe(0);
+        continue;
+      }
+      expectedWords(name as keyof OutputProjection).forEach((want, k) => {
+        if (!Number.isNaN(want)) expect(buf[AT + offset / 4 + k], `${name}[${k}]`).toBe(want);
+      });
     }
     // The mat3 columns' pad words are written, not left stale.
     expect([buf[AT + 3], buf[AT + 7], buf[AT + 11]]).toEqual([0, 0, 0]);

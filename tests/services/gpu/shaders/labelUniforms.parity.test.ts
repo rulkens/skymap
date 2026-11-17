@@ -3,10 +3,8 @@
  * garbage on the GPU, silently.
  */
 import { describe, expect, it } from 'vitest';
-import {
-  LABEL_UNIFORM_BYTES,
-  LABEL_UNIFORM_OFFSETS,
-} from '../../../../src/services/gpu/renderers/labels/labelRenderer';
+import { LABEL_UNIFORM_BYTES } from '../../../../src/data/labels/labelUniformBytes';
+import { LABEL_UNIFORM_OFFSETS } from '../../../../src/data/labels/labelUniformOffsets';
 import { OUTPUT_PROJECTION_BYTES } from '../../../../src/services/gpu/lib/outputProjectionUniform';
 import { layoutWgslStruct } from '../../../../tools/utils/wgsl/layoutWgslStruct';
 import { parseWgslStructFields } from '../../../../tools/utils/wgsl/parseWgslStructFields';

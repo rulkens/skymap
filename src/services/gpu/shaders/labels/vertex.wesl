@@ -124,11 +124,11 @@ fn expandLabelQuad(input: VsIn, label: LabelData, placed: PlacedLabel, occludeWe
 
   var anchor = placed.subject;
   anchor.px += anchor.up * placed.liftPx;
-  let pxScale = placed.displayEmPx / ATLAS_EM_PX;
+  let atlasToPx = placed.displayEmPx / ATLAS_EM_PX;
 
   // Outline fringe in atlas px.  The on-screen fringe is
   // 'outlineEmFrac * displayEmPx' screen pixels, which divides by
-  // pxScale to recover atlas-px (because the same pxScale is applied
+  // atlasToPx to recover atlas-px (because the same atlasToPx is applied
   // to the corner offset below).
   let fringeAtlasPx = outlineEmFrac * ATLAS_EM_PX;
 
@@ -143,7 +143,7 @@ fn expandLabelQuad(input: VsIn, label: LabelData, placed: PlacedLabel, occludeWe
     input.localOffset.y + input.corner.y * input.localSize.y + outward.y * fringeAtlasPx,
   );
   let across = vec2<f32>(-anchor.up.y, anchor.up.x);
-  let cornerPx = anchor.px + (across * cornerAtlasPx.x - anchor.up * cornerAtlasPx.y) * pxScale;
+  let cornerPx = anchor.px + (across * cornerAtlasPx.x - anchor.up * cornerAtlasPx.y) * atlasToPx;
   let sizePx = uniforms.out.sizePx;
   let ndc = vec2<f32>(cornerPx.x / sizePx.x * 2.0 - 1.0, 1.0 - cornerPx.y / sizePx.y * 2.0);
   // Mid-depth: the label pass is a depthless OVER composite, so no plane clips it.

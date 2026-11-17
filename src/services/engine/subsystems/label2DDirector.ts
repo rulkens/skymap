@@ -312,6 +312,11 @@ export function createLabel2DDirector(
     return `L:${labels.length}:${lIds}`;
   }
 
+  /** This frame's projection through the director's slab and its rig's output. */
+  function project(ctx: FrameView): Label2DProjection {
+    return config.project(ctx, rig);
+  }
+
   /**
    * Cross-producer declutter over the merged label set: resolves this
    * frame's projection (memoised per `ctx` by `config.project`), projects
@@ -328,11 +333,6 @@ export function createLabel2DDirector(
    * survivors, so a culled-but-still-emitted label eases toward 0 instead of
    * popping — see `applyExponentialEnvelope`).
    */
-  /** This frame's projection through the director's slab and its rig's output. */
-  function project(ctx: FrameView): Label2DProjection {
-    return config.project(ctx, rig);
-  }
-
   function declutter(labels: readonly Label2D[], ctx: FrameView): DeclutterResult {
     const projection = project(ctx);
     const drawn = config.declutterLift === 'drawn';

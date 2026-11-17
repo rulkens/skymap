@@ -46,7 +46,7 @@ const LIFT_NONE: u32 = 0u;
 const LIFT_LEADER_FROM_CENTRE: u32 = 1u;
 const LIFT_LEADER_FROM_RIM: u32 = 2u;
 
-// Byte offsets in labelRenderer's LABEL_UNIFORM_OFFSETS.
+// Byte offsets in LABEL_UNIFORM_OFFSETS (src/data/labels/labelUniformOffsets.ts).
 struct Uniforms {
   out: OutputProjection,
   // Interim, until labels carry absolute hi/lo positions: this slab's anchors
