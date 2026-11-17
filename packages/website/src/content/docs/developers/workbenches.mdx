@@ -1,6 +1,6 @@
 ---
 title: Developer workbenches
-description: Six browser tools sit beside Skymap in its repository. Three are published and you can open them now.
+description: Browser tools sit beside Skymap in its repository. Three are published and you can open them now.
 job: "Which developer tools sit beside the app, and how do I open each?"
 facts: [bench-public, bench-public-data, bench-local]
 ---
@@ -58,6 +58,12 @@ Views a place rebuilt from survey data, in each form the build makes of it: the 
 Prepares <Source id="famous-curated">the picture of a named galaxy</Source>: you choose a source image, frame it, have the foreground stars taken out, and set how its dark sky fades to transparent. The star removal is done by <Source id="starnet">StarNet2</Source>, a separate program that has to be installed. The curator writes the result into the repository, which is why it runs only from a copy of it.
 
 <WorkbenchFigure id="curator" />
+
+## Albedo bench
+
+Takes the sunlight out of the colour map of Mars. The map is a mosaic of photographs from the Viking orbiters, each taken under the Sun of its day, so crater walls carry shadows that the app’s own lighting would add a second time. The bench works out the direction of that light from the heights of the ground, removes it, and shows the result beside the photograph. Its settings are saved into the repository; the Mars in the app does not use them yet. It reads the maps from the same machine, so it is not published.
+
+<WorkbenchFigure id="albedo" />
 
 ## Structure audit
 

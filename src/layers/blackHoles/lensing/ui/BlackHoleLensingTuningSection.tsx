@@ -1,0 +1,64 @@
+/**
+ * Sgr A* lens pass tuning subsection (see `BlackHoleLensingTuning`); structure follows
+ * `ZoneOfAvoidanceTuningSection`. `cubemapResolutionPx` gets a `<select>` (four meaningful
+ * values) after the slider rows, not a slider.
+ *
+ * 2048 costs ~192 MiB (2048² x 6 faces x 8 bytes/px rgba16float); the row's tooltip states the
+ * formula rather than a per-option figure. Fine for a dev-only knob, worth knowing before raising.
+ */
+
+import type { ReactElement } from 'react';
+import type { BlackHoleLensingTuning } from '../../@types/BlackHoleLensingTuning';
+import {
+  BLACK_HOLE_LENSING_SLIDER_FIELDS,
+  blackHoleLensingSliderPatch,
+} from './blackHoleLensingSliderFields';
+import DebugColorRow from '../../../../components/DebugPanel/DebugColorRow';
+import DebugTuningSection from '../../../../components/DebugPanel/DebugTuningSection';
+import sliderStyles from '../../../../components/DebugPanel/DebugSlider.module.css';
+
+export type BlackHoleLensingTuningSectionProps = {
+  tuning: BlackHoleLensingTuning;
+  onChange: (patch: Partial<BlackHoleLensingTuning>) => void;
+};
+
+const CUBEMAP_RESOLUTIONS = [256, 512, 1024, 2048] as const;
+
+export function BlackHoleLensingTuningSection({
+  tuning,
+  onChange,
+}: BlackHoleLensingTuningSectionProps): ReactElement {
+  return (
+    <DebugTuningSection
+      title="Sgr A* lens tuning"
+      fields={BLACK_HOLE_LENSING_SLIDER_FIELDS}
+      values={tuning}
+      onSliderChange={(k, v) => onChange(blackHoleLensingSliderPatch(k, v))}
+    >
+      <div
+        className={sliderStyles.root}
+        title="Sky-cubemap capture render-target resolution per face (VRAM: size²×6×8 bytes rgba16float)."
+      >
+        <span className={sliderStyles.label}>cubemapResolutionPx</span>
+        <span className={sliderStyles.readout}>{tuning.cubemapResolutionPx}</span>
+        <select
+          aria-label="cubemapResolutionPx"
+          value={tuning.cubemapResolutionPx}
+          onChange={(e) => onChange({ cubemapResolutionPx: Number(e.target.value) })}
+        >
+          {CUBEMAP_RESOLUTIONS.map((size) => (
+            <option key={size} value={size}>
+              {size}
+            </option>
+          ))}
+        </select>
+      </div>
+      <DebugColorRow
+        label="emissionTint"
+        title="Overall tint multiplier on the annulus emission's summed output, linear RGB (picker speaks sRGB). [1,1,1] is a no-op."
+        value={tuning.emissionTint}
+        onChange={(emissionTint) => onChange({ emissionTint })}
+      />
+    </DebugTuningSection>
+  );
+}

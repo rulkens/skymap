@@ -1,9 +1,7 @@
 import type { StructureSourceEntry } from '../../../@types/data/structure/StructureSourceEntry';
-import { Source } from '../../../data/source';
 
 export const GALAXY_CLUSTER_ENTRY = {
   type: 'structure',
-  code: Source.GalaxyCluster,
   id: 'galaxy-cluster',
   label: 'Galaxy cluster',
   allSky: true,

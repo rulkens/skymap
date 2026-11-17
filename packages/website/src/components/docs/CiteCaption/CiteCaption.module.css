@@ -1,11 +1,11 @@
 /* What a reader would print, set apart from the page's own words as a quotation is. */
 .root {
   margin: 0 0 var(--stack);
-  padding-left: 1.5rem;
+  padding-left: var(--site-space-m);
   border-left: 1px solid var(--site-text-dim);
 
   & h3 {
-    margin: 1.25rem 0 0.25rem;
+    margin: var(--site-space-m) 0 var(--site-space-3xs);
     font: var(--weight-small) var(--text-small) / 1.45 var(--font-body);
     color: var(--site-text-dim);
   }
@@ -16,7 +16,7 @@
 
   & p {
     max-width: var(--doc-measure);
-    margin: 0 0 0.5rem;
+    margin: 0 0 var(--site-space-2xs);
     color: var(--color-fg);
     overflow-wrap: anywhere;
   }
@@ -25,7 +25,7 @@
 .row {
   display: flex;
   align-items: flex-start;
-  gap: 0.5rem;
+  gap: var(--site-space-2xs);
 
   & p {
     flex: 1;

@@ -76,7 +76,7 @@ describe('orientationForBody', () => {
     ['2000-01-01T12:00:00Z', CONST_J2000],
     ['2026-10-28T12:00:00Z', 2461342.0],
     ['2050-06-01T00:00:00Z', 2469958.5],
-  ])("puts Greenwich at the Earth Rotation Angle on %s", (_label, jd) => {
+  ])('puts Greenwich at the Earth Rotation Angle on %s', (_label, jd) => {
     const greenwich = apply(orientationForBody('earth', jd, NO_POSITIONS), [1, 0, 0]);
     const raDeg = (Math.atan2(greenwich[1], greenwich[0]) * 180) / Math.PI;
     // 0.001° is 110 m at the equator; the error this guards was 0.2–0.3° (23–35 km).

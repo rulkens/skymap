@@ -1,0 +1,27 @@
+/**
+ * CloudShellRenderer: the body-agnostic translucent cloud shell above a planet's
+ * opaque surface. One closed unit sphere textured by an equirectangular grey
+ * coverage map (`r8unorm`), riding the host's `composeBodyMvp` frame (scaled to
+ * the shell radius by the caller), so `draw` needs no body identity.
+ */
+
+import type { Renderer } from '../../../../@types/rendering/Renderer';
+
+export type CloudShellRenderer = Renderer & {
+  /** Swap in the grey cloud map (own copy; `.r` is the coverage). */
+  setTexture(bitmap: ImageBitmap): void;
+  /** Destroy the map (no-op if none); the zero-coverage placeholder binds again. */
+  clearTexture(): void;
+  /**
+   * Draw the shell for one `CloudShellUniforms` record (80 B). `inside` (camera
+   * below the shell radius) selects the front-cull pipeline: the outside
+   * pipeline's back-cull discards every triangle once the camera is inside.
+   * `mirrored` = `viewFlipsWinding`, which swaps the two.
+   */
+  draw(
+    pass: GPURenderPassEncoder,
+    uniforms: Float32Array,
+    inside: boolean,
+    mirrored: boolean,
+  ): void;
+};

@@ -6,7 +6,7 @@
  * false while its own camera still eases.
  */
 
-import type { CameraPose } from '../../camera/CameraPose';
+import type { CameraPose } from '../../camera/pose/CameraPose';
 import type { Vec3 } from '../../math/Vec3';
 
 export type FollowMemory = {

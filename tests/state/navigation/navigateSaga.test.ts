@@ -32,7 +32,7 @@ import {
   clipStarted,
   commitCameraPose,
   startCameraTween,
-} from '../../../src/state/camera/cameraSlice';
+} from '../../../src/state/camera/cameraIntentSlice';
 import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import { unixMsToJulianDays } from '../../../src/utils/time/unixMsToJulianDays';
 import { setSimDays } from '../../../src/state/time/timeSlice';
@@ -43,20 +43,24 @@ import {
 } from '../../../src/state/selection/selectors';
 import { selectArrival } from '../../../src/state/arrival/selectors';
 import { arrived } from '../../../src/state/arrival/arrivalSlice';
-import { bodySelectionRow } from '../../../src/layers/body/present/bodySelectionRow';
-import { structureSelectionRow } from '../../../src/layers/structure/present/structureSelectionRow';
+import { bodySelectionRow } from '../../../src/layers/body/selection/bodySelectionRow';
+import { structureSelectionRow } from '../../../src/layers/structure/selection/structureSelectionRow';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
-import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/present/milkyWaySelectionRow';
+import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/selection/milkyWaySelectionRow';
 import { MILKY_WAY_FOCUS_ID } from '../../../src/services/url/milkyWayFocusId';
-import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
-import { sphereFitDistance } from '../../../src/utils/camera/sphereFitDistance';
+import { absoluteArm } from '../../../src/utils/camera/arms/absoluteArm';
+import { sphereFitDistance } from '../../../src/utils/camera/orbitCamera/sphereFitDistance';
 import { linkIntentFrom } from '../../../src/utils/url/linkIntentFrom';
 import { APP_EXHIBIT_REGISTRY } from '../../../src/compositions/appExhibits';
-import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
+import { NO_KINDS_OFF } from '../../support/noKindsOff';
 import { worldArmOf } from '../../fixtures/worldArmOf';
 import type { StructureRowFixture } from '../../support/selectionResolverOver';
 import type { LinkIntent } from '../../../src/@types/url/LinkIntent';
 import type { Transition } from '../../../src/@types/navigation/Transition';
+import { bodyPickCodes, milkyWayPickCode, structureRowRuntime } from '../../support/layerPickCodes';
+import { installAppSelectionKinds } from '../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -70,6 +74,7 @@ const PLAYS = [
 const CLIP_STARTED: Parameters<typeof clipStarted>[0] = {
   data: { timeline: [] },
   frame: 'equatorial',
+  by: 'player',
 };
 
 function build() {
@@ -86,8 +91,12 @@ function build() {
   });
   mw.setContext({
     selection: composeSelectionRows(
-      () => [bodySelectionRow(), structureSelectionRow(EMPTY_STRUCTURES), milkyWaySelectionRow()],
-      () => ALL_KINDS_ENABLED,
+      () => [
+        bodySelectionRow({ pickCodes: bodyPickCodes() }),
+        structureSelectionRow(structureRowRuntime(EMPTY_STRUCTURES)),
+        milkyWaySelectionRow(milkyWayPickCode()),
+      ],
+      () => NO_KINDS_OFF,
     ),
     cameraRuntime: () => ({
       from: { target: [0, 0, 0], yaw: 0.5, pitch: -0.2, distance: 9 },
@@ -140,7 +149,7 @@ describe('navigateSaga', () => {
 
     expect(h.commits()).toBe(1);
     expect(h.tweens()).toBe(0);
-    expect(h.store.getState().camera.base).toEqual(POSE);
+    expect(h.store.getState().camera.intent.base).toEqual(POSE);
     expect(selectFocusRef(h.store.getState())).toEqual({ type: 'milkyWay' });
   });
 
@@ -152,6 +161,16 @@ describe('navigateSaga', () => {
     expect(h.commits()).toBe(1);
     expect(h.tweens()).toBe(0);
     expect(selectFocusRef(h.store.getState())).toBeNull();
+  });
+
+  it('a cold moon link frames the host-facing side, not the inherited view', async () => {
+    const h = build();
+    await h.navigate({ view: { kind: 'focus', id: 'body-moon' } }, 'cut');
+    await flush();
+
+    const pose = worldArmOf(h.store.getState().camera.intent.base);
+    // The runtime's carried-over view is yaw 0.5, pitch -0.2.
+    expect([pose.yaw, pose.pitch]).not.toEqual([0.5, -0.2]);
   });
 
   it('navigate applies t before framing', async () => {
@@ -192,7 +211,7 @@ describe('navigateSaga', () => {
     expect(h.playClip).not.toHaveBeenCalled();
     expect(h.commits()).toBe(1);
     const { fitRadiusMpc } = APP_EXHIBIT_REGISTRY.observableUniverse;
-    expect(worldArmOf(h.store.getState().camera.base).distance).toBe(
+    expect(worldArmOf(h.store.getState().camera.intent.base).distance).toBe(
       sphereFitDistance(fitRadiusMpc!, 0.8, 16 / 9),
     );
     expect(selectTakeoverSource(h.store.getState())).toEqual({

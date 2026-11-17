@@ -1,4 +1,4 @@
-import type { SkyGridSettings } from '../../../../@types/settings/SkyGridSettings';
+import type { SkyGridSettings } from '../../@types/SkyGridSettings';
 
 export const initialState: SkyGridSettings = {
   enabled: false,

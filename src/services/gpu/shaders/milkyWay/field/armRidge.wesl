@@ -1,4 +1,4 @@
-// milkyWay/field/armRidge.wesl — WGSL port of armRidgeGeometry.ts, the v2
+// milkyWay/field/armRidge.wesl — WGSL port of arms/utils/armRidge*.ts, the v2
 // analytic field's own ridge-angle/width/fade/colour vocabulary. Fresh port,
 // NOT generate.wesl's armStarSample (v1's inline copy reads a different
 // uniform table and its outer-fade envelope is a KNOWN-DIVERGED formula that
@@ -87,7 +87,7 @@ fn warpSurfaceFrame(radius: f32, azimuth: f32, geom: ArmRidgeGeometry) -> WarpSu
 }
 
 // armRidgeAngle — log-spiral phase + meander + (waveAmount-scaled) high-
-// frequency wave. armRidgeGeometry.ts skips generate.wesl's own 'waveAmount
+// frequency wave. arms/utils/armRidge*.ts skips generate.wesl's own 'waveAmount
 // == 0' branch deliberately (waveAmount is 0 for most presets there, so the
 // branch is a per-star perf guard, not a value the port needs to reproduce).
 fn armRidgeAngle(logR: f32, arm: ArmRec, geom: ArmRidgeGeometry) -> f32 {
@@ -108,7 +108,7 @@ fn armRidgeCurvePoint(logR: f32, arm: ArmRec, geom: ArmRidgeGeometry) -> vec3<f3
 }
 
 // armCurvePos — armRidgeCurvePoint indexed by radius, for armRidgeFrameAt's
-// own central-difference tangent below (armRidgeGeometry.ts's private helper).
+// own central-difference tangent below (armRidgeFrameAt.ts's private armCurvePos).
 fn armCurvePos(radius: f32, arm: ArmRec, geom: ArmRidgeGeometry) -> vec3<f32> {
   return armRidgeCurvePoint(log(radius / geom.armStartRadius), arm, geom);
 }
@@ -141,7 +141,7 @@ const ARM_TAPER_START_FRAC: f32 = 0.6;
 // armFadeEnvelope — the analytic arms' radial extent: an inner ramp off
 // armStartRadius, an outer taper to zero at this arm's own fadeRadius.
 // WGSL's smoothstep(0,1,t) already clamps t to [0,1] before the cubic, same
-// as armRidgeGeometry.ts's own smoothstep01.
+// as armFadeEnvelope.ts's own smoothstep01.
 fn armFadeEnvelope(radius: f32, arm: ArmRec, geom: ArmRidgeGeometry) -> f32 {
   let innerT = (radius - geom.armStartRadius) / geom.armInnerRampW;
   let taperStart = arm.fadeRadius * ARM_TAPER_START_FRAC;
@@ -180,7 +180,7 @@ const ARM_RADIAL_INNER: vec3<f32> = vec3<f32>(0.9, 0.85, 0.68);
 const ARM_RADIAL_OUTER: vec3<f32> = vec3<f32>(0.6, 0.75, 1.0);
 const ARM_RADIAL_STRENGTH: f32 = 0.4;
 
-// armColor — matches armRidgeGeometry.ts's armColor exactly so this arm's
+// armColor — matches armColor.ts's armColor exactly so this arm's
 // GPU-placed clouds share the ridge chain's own colour rather than
 // re-deriving it.
 fn armColor(youngFraction: f32, radialT: f32) -> vec3<f32> {

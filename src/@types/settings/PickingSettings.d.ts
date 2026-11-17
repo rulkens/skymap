@@ -1,11 +1,9 @@
-import type { SelectionKind } from '../engine/SelectionKind';
-
 /**
- * PickingSettings — the `picking` settings cluster: which selection kinds
- * accept a scene click or hover. `Record`, not `Partial` or an array, so a
- * seventh `SelectionKind` fails to compile here until every author names it.
+ * PickingSettings — the `picking` settings cluster: the selection kinds a view turns off for
+ * scene clicks and hovers. A list of what is off, so a new kind is pickable everywhere until a
+ * view names it, and no settings file lists every kind.
  */
 export type PickingSettings = {
-  /** Which selection kinds accept a scene click or hover. */
-  readonly kinds: Record<SelectionKind, boolean>;
+  /** Kind types (`SelectionKindRow.type`) a scene click or hover may not resolve. */
+  readonly off: readonly string[];
 };

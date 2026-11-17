@@ -4,13 +4,13 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createElement } from 'react';
 import CommandPalette from '../../../src/components/CommandPalette/CommandPalette';
-import { Source } from '../../../src/data/source';
 import type { CommandPaletteProps } from '../../../src/components/CommandPalette/CommandPalette';
 import type { FamousGalaxyMetaEntry } from '../../../src/@types/loading/FamousGalaxyMetaEntry';
 import type { AliasIndexEntry } from '../../../src/@types/engine/AliasIndexEntry';
 import type { StructureSearchEntry } from '../../../src/@types/engine/StructureSearchEntry';
 import type { PaletteTab } from '../../../src/@types/palette/PaletteTab';
 import type { PaletteAction } from '../../../src/@types/palette/PaletteAction';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
 const M31: FamousGalaxyMetaEntry = {
   id: 'm31',
@@ -22,7 +22,8 @@ const M31: FamousGalaxyMetaEntry = {
 const NGC4565: AliasIndexEntry = {
   pgc: 42038,
   names: ['NGC 4565', 'UGC 7772'],
-  source: Source.Glade,
+  sourceLabel: 'GLADE',
+  focusId: 'pgc-42038',
 };
 
 const COMA: StructureSearchEntry = {
@@ -78,6 +79,7 @@ const FIXTURE_TABS: readonly PaletteTab[] = [
 const DEFAULTS: CommandPaletteProps = {
   entries: [],
   layerRows: [],
+  sky: { hereOpen: false, host: asSceneBodyId('earth') },
   tabs: FIXTURE_TABS,
   tab: 'highlights',
   onTabChange: () => {},

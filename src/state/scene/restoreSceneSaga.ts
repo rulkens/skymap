@@ -1,7 +1,7 @@
 /**
  * restoreSceneSaga — put a captured `SceneSnapshot` back onto the live store:
- * settings, orientation, selection focus, then the sim clock. Pure Intent — four
- * dispatches, no engine context of its own.
+ * settings, orientation, the lens, selection focus, then the sim clock. Pure
+ * Intent — five dispatches, no engine context of its own.
  *
  * This is the close of a takeover's capture → play → restore round-trip
  * (`captureScene` is the open). `withSceneSnapshotSaga` runs it in its `finally`, so it
@@ -15,7 +15,7 @@
  *      watcher's one job, the same as for every other settings write.
  *      `orientation` lives on `SceneSnapshot` (not inside `settings`), so it
  *      cannot ride this dispatch even by accident — see `SceneSnapshot`'s
- *      header. A raw write to `orientation` would leave `camera.base`
+ *      header. A raw write to `orientation` would leave `camera.intent.base`
  *      expressed in the OLD basis while the pole flips under it — the same
  *      "eye jumps" landmine the LOOP re-expresses `base` to avoid on every
  *      orientation switch (`stepCameraRuntime`).
@@ -23,10 +23,12 @@
  *   2. `put(requestOrientationChange(orientation))` — the captured pre-tour
  *      frame restores through the SAME request path an interactive switch
  *      uses: `watchOrientationChangeSaga` rolls the up-basis, and the LOOP
- *      re-expresses `camera.base` into the frame the same way it does for
+ *      re-expresses `camera.intent.base` into the frame the same way it does for
  *      any other orientation switch, rather than snapping only the setting.
  *
- *   3. `put(updateSelectionFocus(focus))` — focus reverts through the same
+ *   3. `put(setFovYRad(fovYRad))` — the viewer's lens: camera state, so not a cluster.
+ *
+ *   4. `put(updateSelectionFocus(focus))` — focus reverts through the same
  *      production action a user interaction or a `focus()` beat uses. Routing
  *      through dispatch keeps the store coherent: the selection reconciler saga
  *      re-computes `selectionRows`, and the ring / isolation dim / camera tween
@@ -39,10 +41,10 @@
  * but that context lives in the watcher, not here — same split as the fade
  * pass, reached by `watchFadesSaga` rather than by this saga.
  *
- * 4. `put(restoreTime(...))` — the clock returns last (live to the real now,
+ * 5. `put(restoreTime(...))` — the clock returns last (live to the real now,
  *    manual to its captured instant, with the captured rate/direction/paused).
  *
- * All four `put`s block until their effect lands, true even inside a `finally`
+ * All five `put`s block until their effect lands, true even inside a `finally`
  * driven by a cancelling dispatch. `watchTakeoverSaga` waits for the cancelled
  * bracket to settle, so on a supersede this restore is complete before the
  * successor run's snapshot reads the store.
@@ -56,6 +58,7 @@ import { put } from 'typed-redux-saga';
 import { mergeSnapshot } from '../settings/mergeSnapshotAction';
 import { updateSelectionFocus } from '../selection/selectionSlice';
 import { requestOrientationChange } from '../camera/orientationActions';
+import { setFovYRad } from '../camera/cameraIntentSlice';
 import { restoreTime } from '../time/timeSlice';
 import { unixMsToJulianDays } from '../../utils/time/unixMsToJulianDays';
 import type { SceneSnapshot } from '../../@types/engine/settings/SceneSnapshot';
@@ -63,6 +66,7 @@ import type { SceneSnapshot } from '../../@types/engine/settings/SceneSnapshot';
 export function* restoreSceneSaga(snapshot: SceneSnapshot): Generator {
   yield* put(mergeSnapshot(snapshot.settings));
   yield* put(requestOrientationChange(snapshot.orientation));
+  yield* put(setFovYRad(snapshot.fovYRad));
   yield* put(updateSelectionFocus(snapshot.focus));
   yield* put(restoreTime(resolveRestoredTime(snapshot)));
 }

@@ -9,8 +9,7 @@ import { sitePath } from '../../../utils/sitePath.ts';
 import Icon from '../../shared/links/Icon/Icon.tsx';
 import ObjLink from '../../shared/links/ObjLink/ObjLink.tsx';
 import styles from './Nav.module.css';
-
-const LIST_ID = 'site-menu';
+import { LIST_ID } from './NavMenu.constants.ts';
 
 type NavMenuProps = { path: string };
 

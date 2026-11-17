@@ -15,7 +15,7 @@
  * data-resolution preset lifted out of the settings slice into its own root
  * slice so a settings/tour restore can't sweep it; `uiRoute` is the app-level
  * UI slice (palette / hide-UI / debug + splash); `cameraRoute` is the camera
- * Intent slice (base pose, tween descriptor, auto-rotate, dragging flag);
+ * route, whose `intent` half holds the base pose, tween descriptor and auto-rotate;
  * `selectionRoute` / `selectionRowsRoute` hold the selection Intent (focus +
  * select refs) and its reconciled rows.
  */
@@ -49,3 +49,8 @@ export const remoteRoute = 'remote' as const;
 // `inputRoute` holds every source's folded intents: the steps the next frame
 // drains and the pick requests the pick driver answers.
 export const inputRoute = 'input' as const;
+// `viewCoverRoute` holds how far each resting panel reaches over the canvas,
+// which the camera runtime turns into the off-centre view.
+export const viewCoverRoute = 'viewCover' as const;
+// `skyRoute` holds the sky view's readouts (entry spot, standing view) and the below-horizon fact.
+export const skyRoute = 'sky' as const;

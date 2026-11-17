@@ -10,7 +10,7 @@ import package::milkyWay::field::hiiSplat::shadeCommon::hiiNearFade;
 import package::milkyWay::field::hiiSplat::shadeCommon::quadCapFeather;
 import package::milkyWay::field::hiiSplat::shadeCommon::hiiExposureMultiply;
 import package::milkyWay::field::hiiSplat::hiiNoise::hiiNoiseTerm;
-import package::milkyWay::field::io::u;
+import package::milkyWay::field::io::uniforms;
 
 @fragment
 fn fs(input: HiiSplatOut) -> @location(0) vec4<f32> {
@@ -19,21 +19,21 @@ fn fs(input: HiiSplatOut) -> @location(0) vec4<f32> {
     return vec4<f32>(0.0);
   }
 
-  let a = shading.coeffs.x;
+  let quadraticCoeff = shading.coeffs.x;
   var emission = shading.emission;
 
   // dustDetail.y (hiiTextureScale) is a live per-frame value, not a
   // pipeline discriminant — it can be 0 on a frame the user dials texture
   // scale down, so this gate stays (io.wesl's dustDetail doc).
-  if (u.dustDetail.y > 0.0 && shading.emissionColorTextureWeight.w != 0.0 && a >= 1e-12) {
-    let tPeak = max(-shading.coeffs.y / a, 0.0);
-    let p = shading.rayOrigin + shading.rayDir * tPeak;
+  if (uniforms.dustDetail.y > 0.0 && shading.emissionColorTextureWeight.w != 0.0 && quadraticCoeff >= 1e-12) {
+    let tPeak = max(-shading.coeffs.y / quadraticCoeff, 0.0);
+    let closestPoint = shading.rayOrigin + shading.rayDir * tPeak;
     let weight = abs(shading.emissionColorTextureWeight.w);
-    let term = hiiNoiseTerm(p, u.dustDetail.y, u.dustDetail.z);
+    let term = hiiNoiseTerm(closestPoint, uniforms.dustDetail.y, uniforms.dustDetail.z);
     emission = emission * mix(1.0, term, weight);
   }
 
-  let fade = hiiNearFade(shading.po, shading.boundRadius);
+  let fade = hiiNearFade(shading.originFromCenter, shading.boundRadius);
   let feather = quadCapFeather(input.corner);
   return vec4<f32>(hiiExposureMultiply(emission * fade * feather), 0.0);
 }

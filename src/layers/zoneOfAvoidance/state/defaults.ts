@@ -4,7 +4,7 @@
  * DebugPanel's "paste defaults" affordance and its slider-field test.
  */
 
-import type { ZoneOfAvoidanceTuning } from '../../../@types/settings/ZoneOfAvoidanceTuning';
+import type { ZoneOfAvoidanceTuning } from '../@types/ZoneOfAvoidanceTuning';
 
 /**
  * Zone-of-Avoidance look-knob starting values, tuned live via the

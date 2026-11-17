@@ -1,5 +1,5 @@
 // milkyWay/ismMap/placeArmSpurCloud.wesl — GPU port of
-// armSpurParticleCloud.ts's buildArmSpurParticleCloud, one invocation per
+// deriveArmSpurCloudCount.ts's buildArmSpurParticleCloud, one invocation per
 // particle SLOT (SPUR_CLOUD_MAX_COUNT ceiling). The CPU still decides slot
 // COUNT and the per-spur weight table; this shader decides slot CONTENT —
 // the weighted spur pick, the rejection-sampled position along it, and the
@@ -25,7 +25,7 @@ import package::milkyWay::ismMap::clusteredDiscPlacement::inverseCovarianceFromF
 
 // SIZE_MIN_RATIO/SIZE_MAX_RATIO/SPUR_FADE_REJECTION_TRIES/
 // CROSS_OFFSET_RATIO/POLE_OFFSET_RATIO/SPRITE_POLE_RATIO mirror
-// armSpurParticleCloud.ts's own non-exported constants verbatim (same
+// deriveArmSpurCloudCount.ts's own non-exported constants verbatim (same
 // 'mirror, no parity test' treatment armRidge.wesl gives its own
 // non-scalar-const mirrors); this WGSL copy is now the only place they live.
 const SPUR_FADE_REJECTION_TRIES: u32 = 24u;
@@ -103,8 +103,8 @@ struct PlaceArmSpurCloudParams {
 
 @compute @workgroup_size(256)
 fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
-  let i = gid.x;
-  if (i >= params.count) {
+  let cloudIndex = gid.x;
+  if (cloudIndex >= params.count) {
     return;
   }
 
@@ -114,31 +114,31 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
     params.outerRadius,
   );
 
-  // pickWeighted — armSpurParticleCloud.ts's own weighted spur pick, ported
+  // pickWeighted — deriveArmSpurCloudCount.ts's own weighted spur pick, ported
   // verbatim, 1 draw. The CPU's own fallback ('return weights.length - 1'
   // when a float-rounding pick lands past the last partial sum) is
   // reproduced by seeding spurIndex at the last valid entry before the scan.
   var slot = 0u;
-  let pick = genRand(params.seed, PLACE_SPUR_CLOUD_POP, i, slot) * params.weightSum;
+  let pick = genRand(params.seed, PLACE_SPUR_CLOUD_POP, cloudIndex, slot) * params.weightSum;
   slot += 1u;
   var spurIndex = params.spurCount - 1u;
   var acc = 0.0;
-  for (var j = 0u; j < params.spurCount; j++) {
-    acc += spurRecords[j].weight;
+  for (var candidateSpur = 0u; candidateSpur < params.spurCount; candidateSpur++) {
+    acc += spurRecords[candidateSpur].weight;
     if (pick <= acc) {
-      spurIndex = j;
+      spurIndex = candidateSpur;
       break;
     }
   }
   let spur = spurRecords[spurIndex];
   // meanderAmp/meanderFreq/meanderPhase/waveF1/waveP1/waveF2/waveP2 all 0 —
-  // armSpurGeometry.ts's buildSpurRecord hardcodes them too (its own
+  // deriveArmSpurs.ts's buildSpurRecord hardcodes them too (its own
   // 'continuity at the root' doc): a spur's ridge curve is a pure log-spiral,
   // never meandered or waved.
   let arm = ArmRec(spur.phase, spur.pitch, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, spur.fadeRadius);
 
   // Rejection-sample a point along the spur's OWN span (spanStartLogR to its
-  // fadeRadius) — armSpurParticleCloud.ts:154-160. Each try spends TWO draws
+  // fadeRadius) — deriveArmSpurCloudCount.ts:154-160. Each try spends TWO draws
   // (logR, accept) whether or not it accepts: the running 'slot' counter,
   // not the CPU's own early-exit-skips-remaining-draws stream position, is
   // what keeps every later draw's slot deterministic per invocation (this
@@ -150,10 +150,10 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   var logR = logStart;
   var radius = params.armStartRadius * exp(logStart);
   for (var tries = 0u; tries < SPUR_FADE_REJECTION_TRIES; tries++) {
-    logR = logStart + genRand(params.seed, PLACE_SPUR_CLOUD_POP, i, slot) * (logEnd - logStart);
+    logR = logStart + genRand(params.seed, PLACE_SPUR_CLOUD_POP, cloudIndex, slot) * (logEnd - logStart);
     slot += 1u;
     radius = params.armStartRadius * exp(logR);
-    let accept = genRand(params.seed, PLACE_SPUR_CLOUD_POP, i, slot) < armFadeEnvelope(radius, arm, geom);
+    let accept = genRand(params.seed, PLACE_SPUR_CLOUD_POP, cloudIndex, slot) < armFadeEnvelope(radius, arm, geom);
     slot += 1u;
     if (accept) {
       break;
@@ -162,14 +162,14 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
 
   let frame = armRidgeFrameAt(logR, arm, geom);
   let crossSigma = armCrossSigma(radius, params.widthScale, geom);
-  let acrossOffset = genNormal(params.seed, PLACE_SPUR_CLOUD_POP, i, slot) * crossSigma * CROSS_OFFSET_RATIO;
+  let acrossOffset = genNormal(params.seed, PLACE_SPUR_CLOUD_POP, cloudIndex, slot) * crossSigma * CROSS_OFFSET_RATIO;
   slot += 2u;
-  let poleOffset = genNormal(params.seed, PLACE_SPUR_CLOUD_POP, i, slot) * params.diskHeight * POLE_OFFSET_RATIO;
+  let poleOffset = genNormal(params.seed, PLACE_SPUR_CLOUD_POP, cloudIndex, slot) * params.diskHeight * POLE_OFFSET_RATIO;
   slot += 2u;
   let center = frame.point + frame.across * acrossOffset + frame.pole * poleOffset;
 
   let sizeFrac = SIZE_MIN_RATIO
-    + genRand(params.seed, PLACE_SPUR_CLOUD_POP, i, slot) * (SIZE_MAX_RATIO - SIZE_MIN_RATIO);
+    + genRand(params.seed, PLACE_SPUR_CLOUD_POP, cloudIndex, slot) * (SIZE_MAX_RATIO - SIZE_MIN_RATIO);
   slot += 1u;
   let spriteRadius = crossSigma * sizeFrac * params.sizeScale;
 
@@ -181,7 +181,7 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   let particleRadius = length(vec2<f32>(center.x, center.z));
   let shape = armExcessSurfaceShape(particleRadius, params.hLight, params.excessScaleRatio, geom);
   let fluxWeight = spriteRadius * spriteRadius * shape;
-  fluxWeightOut[i] = fluxWeight;
+  fluxWeightOut[cloudIndex] = fluxWeight;
   let flux = params.spurFlux * fluxWeight;
 
   let sigAlong = spriteRadius * params.elongation;
@@ -194,7 +194,7 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   );
 
   // age (0=young) inverted into armColor's youngFraction (1=young) —
-  // armSpurParticleCloud.ts:206-210's own comment: spurs are drawn young, so
+  // deriveArmSpurCloudCount.ts:206-210's own comment: spurs are drawn young, so
   // this reads bluer than the parent arm regardless of the galaxy's own
   // youngFraction.
   let color = armColor(1.0 - spur.age, particleRadius / params.outerRadius);
@@ -209,5 +209,5 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   rec.center = center;
   rec.starsWeight = 0.0;
 
-  comps[params.reservationOffset + i] = rec;
+  comps[params.reservationOffset + cloudIndex] = rec;
 }

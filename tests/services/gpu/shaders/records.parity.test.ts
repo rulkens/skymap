@@ -12,8 +12,8 @@ import { describe, expect, it } from 'vitest';
 import {
   packFieldComponents,
   FIELD_COMPONENT_FLOATS,
-} from '../../../../src/services/gpu/renderers/galaxyField/field/packFieldUniforms';
-import type { GalaxyFieldComponent } from '../../../../src/@types/galaxy/GalaxyFieldComponent';
+} from '../../../../src/layers/milkyWay/field/header/render/packFieldUniforms';
+import type { GalaxyFieldComponent } from '../../../../src/layers/milkyWay/field/mixture/@types/GalaxyFieldComponent';
 import { layoutWgslStruct } from '../../../../tools/utils/wgsl/layoutWgslStruct';
 import { parseWgslStructFields } from '../../../../tools/utils/wgsl/parseWgslStructFields';
 import { readShaderSource } from '../../../../tools/utils/wgsl/readShaderSource';

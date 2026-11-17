@@ -1,0 +1,6 @@
+[
+  {
+    "from": "src/@types/settings/CosmicHorizonSettings.d.ts",
+    "to": "src/layers/cosmicHorizon/@types/CosmicHorizonSettings.d.ts"
+  }
+]

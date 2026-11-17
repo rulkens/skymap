@@ -33,10 +33,10 @@
  *
  * ### Why no camera tween during the dive
  *
- * The `focus()` cue in beat 2's clip fires while `camera.clip !== null`.
+ * The `focus()` cue in beat 2's clip fires while `camera.intent.clip !== null`.
  * `suspendDuringClip` parks `watchFocusTweenSaga` for the duration of any
  * active clip, so the cue updates `selection.focus` without planting a
- * `camera.tween`. The tween that would normally chase a focus change is skipped
+ * `camera.intent.tween`. The tween that would normally chase a focus change is skipped
  * entirely — the clip@95 driver already owns the camera and will arrive at the
  * correct framing on its own timeline.
  */
@@ -55,7 +55,10 @@ const establishTheWeb: ClipData = (() => {
   const fly = flyToClip(focusId('milkyWay'));
   return {
     ...fly,
-    timeline: [hide(['cosmicWebDensity', 'cosmicWebFilaments', 'label:famousGalaxy'], 0), ...fly.timeline],
+    timeline: [
+      hide(['cosmicWebDensity', 'cosmicWebFilaments', 'label:famousGalaxy'], 0),
+      ...fly.timeline,
+    ],
   };
 })();
 
@@ -66,8 +69,10 @@ export const webShowcase: Tour = {
     {
       caption: {
         title: 'The Milky Way',
-        body: "Home — a few hundred billion stars, and the one vantage point in this entire map you're looking out **from**.",
-        position: 'bottom-left',
+        lines: [
+          'Home — a few hundred billion stars,',
+          "and the one vantage point in this entire map you're looking out from.",
+        ],
       },
       dwellClip: dwellDrift(8),
       enterClip: establishTheWeb,
@@ -75,8 +80,10 @@ export const webShowcase: Tour = {
     {
       caption: {
         title: 'The Virgo Cluster',
-        body: 'Two thousand galaxies bound by gravity — the dense heart of the supercluster we call **home**, 54 million light-years away.',
-        position: 'bottom-left',
+        lines: [
+          'Two thousand galaxies bound by gravity',
+          '— the dense heart of the supercluster we call home, 54 million light-years away.',
+        ],
       },
       dwellClip: dwellDrift(10),
       enterClip: flyAndFocusOnClip(focusId('galaxy-cluster-virgo-m87')),
@@ -84,8 +91,10 @@ export const webShowcase: Tour = {
     {
       caption: {
         title: 'M87',
-        body: "The cluster's giant — a trillion stars around a black hole six billion times the Sun's mass, the **first ever photographed**.",
-        position: 'bottom-right',
+        lines: [
+          "The cluster's giant — a trillion stars",
+          "around a black hole six billion times the Sun's mass, the first ever photographed.",
+        ],
       },
       dwellClip: dwellDrift(10),
       enterClip: flyToClip(focusId('m87')),

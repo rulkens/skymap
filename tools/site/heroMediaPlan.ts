@@ -4,7 +4,8 @@ import type { HeroMediaPlan } from './@types/HeroMediaPlan';
  * Cut points were chosen by looking at sampled frames of the August 2026
  * Earth-to-universe recording: the flight ends when the observable-universe
  * sphere stops shrinking (about 66 s); the rest of that file is a static hold
- * and the loop back in.
+ * and the loop back in. The arrival (Flight/Arrive.module.css) draws on that
+ * sphere at measured places: a new cut point or recording means measuring again.
  *
  * Encode, measured on this footage: 1280x720 at 24 fps, CRF 33 and a one second
  * GOP come to 13.3 MB; CRF 32 was 16 MB and CRF 30 doubled it. 960x540 at CRF 30

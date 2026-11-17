@@ -1,0 +1,132 @@
+/* Fixed to the viewport's bottom on a phone. Its top stops at the pad's vertical midpoint, so the
+   pad's upper half stays live. */
+.root {
+  position: fixed;
+  inset: auto 0 0;
+  z-index: 3;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  width: min(100%, 40rem);
+  max-height: calc(100dvh - var(--touch-target) - var(--space-12) - var(--pad-height) / 2);
+  margin-inline: auto;
+  padding: var(--space-8) var(--space-8) max(var(--space-8), env(safe-area-inset-bottom, 0px));
+  background: var(--color-bg);
+  border-top: 1px solid var(--border-control);
+  border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
+  animation: rise var(--duration-base) ease-out;
+}
+
+.leaving {
+  /* Matches SHEET_LEAVE_MS, which unmounts the sheet once this has played. */
+  animation: sink var(--duration-color) ease-in forwards;
+}
+
+@keyframes rise {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes sink {
+  to {
+    transform: translateY(100%);
+  }
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  color: var(--color-fg-tertiary);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-input);
+  font-weight: 600;
+  color: var(--color-fg);
+}
+
+.title:focus {
+  outline: none;
+}
+
+.note {
+  font-size: var(--font-size-lg);
+  font-variant-numeric: tabular-nums;
+}
+
+.close {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-left: auto;
+}
+
+/* The padding gives a focus ring (2px outline + 2px offset) room inside the scroll box's clip. */
+.body {
+  min-height: 0;
+  margin: -4px;
+  padding: 4px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* The deck is the right column, on a laptop and on a phone held sideways: the sheet covers the
+   column, never the pad. The landscape query repeats RemotePage.module.css's: keep the two in step. */
+@media (min-width: 64rem), (orientation: landscape) and (max-height: 500px) {
+  .root {
+    position: absolute;
+    width: auto;
+    min-height: 100%;
+    border: 1px solid var(--border-control);
+    border-radius: var(--radius-2xl);
+  }
+}
+
+@media (min-width: 64rem) {
+  .root {
+    inset: 0 var(--space-8) auto;
+    max-height: calc(100dvh - var(--touch-target) - var(--space-12));
+  }
+}
+
+/* The deck is a screen tall at most, so the sheet fills it and its body scrolls. It comes in from
+   the right, where the column sits. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .root {
+    inset: 0;
+    max-height: none;
+    padding: var(--space-6);
+    animation-name: slideIn;
+  }
+
+  .leaving {
+    animation-name: slideOut;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes slideOut {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root,
+  .leaving {
+    animation: none;
+  }
+
+  .leaving {
+    visibility: hidden;
+  }
+}

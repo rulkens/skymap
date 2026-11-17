@@ -1,0 +1,26 @@
+[
+  {
+    "from": "src/components/InfoCard/GalaxyDetailCard/GalaxyDetailCard.tsx",
+    "to": "src/layers/galaxyCatalog/card/ui/GalaxyDetailCard/GalaxyDetailCard.tsx"
+  },
+  {
+    "from": "src/components/InfoCard/CompactCard/CompactCard.tsx",
+    "to": "src/layers/galaxyCatalog/card/ui/CompactCard/CompactCard.tsx"
+  },
+  {
+    "from": "src/components/DebugPanel/GalaxyProvenanceSection.tsx",
+    "to": "src/layers/galaxyCatalog/provenance/ui/GalaxyProvenanceSection.tsx"
+  },
+  {
+    "from": "src/components/containers/GalaxyProvenanceSectionContainer.tsx",
+    "to": "src/layers/galaxyCatalog/provenance/ui/GalaxyProvenanceSectionContainer.tsx"
+  },
+  {
+    "from": "src/utils/sumProvenanceCounts.ts",
+    "to": "src/layers/galaxyCatalog/provenance/utils/sumProvenanceCounts.ts"
+  },
+  {
+    "from": "src/data/provenanceFilter.ts",
+    "to": "src/layers/galaxyCatalog/provenance/data/provenanceFilter.ts"
+  }
+]

@@ -24,7 +24,7 @@ vi.mock('../../../../src/services/engine/frame/deriveView', () => ({
 import { scheduleProbeCapture } from '../../../../src/services/engine/frame/scheduleProbeCapture';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { PROBE_REFRESH_INTERVAL_MS } from '../../../../src/data/rendering/probeRefreshIntervalMs';
-import { ALL_CUBE_FACES, CUBEMAP_CAPTURES } from '../../../../src/data/rendering/cubemapCaptures';
+import { APP_CUBEMAP_CAPTURE_REGISTRY } from '../../../../src/compositions/appCubemapCaptures';
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapCaptureRuntimes';
 import { makeSlab } from '../../../fixtures/makeSlab';
@@ -33,6 +33,7 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { ViewSpec } from '../../../../src/@types/engine/frame/ViewSpec';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import { ALL_CUBE_FACES } from '../../../../src/data/rendering/cubemapCaptures';
 
 const SIM_DAYS = 0;
 const NOW_MS = 100_000;
@@ -55,6 +56,8 @@ function ctxAt(bodyId: string, nowMs = NOW_MS): FrameView {
     drawPxPerRad: FIXTURE_PX_PER_RAD,
   } as unknown as FrameView;
 }
+
+const ALL_ON = (): boolean => true;
 
 function makeState(resident: readonly string[]): EngineState {
   return {
@@ -79,7 +82,7 @@ function marsSlab(index: number) {
 /** `faceViewSpec` is real here — a mocked `deriveView` recovers the face it
  *  turned from the spec's slot, the probe row's only per-face distinguisher. */
 function faceOf(spec: ViewSpec): CubeFace {
-  return (spec.slot - CUBEMAP_CAPTURES.probe.viewSlotBase) as CubeFace;
+  return (spec.slot - APP_CUBEMAP_CAPTURE_REGISTRY.probe.viewSlotBase) as CubeFace;
 }
 
 describe('scheduleProbeCapture', () => {
@@ -99,16 +102,30 @@ describe('scheduleProbeCapture', () => {
 
     // At Curiosity only Curiosity is drawn: it is picked despite Voyager's
     // older refresh, because Voyager is not on this frame's drawn list.
-    expect(scheduleProbeCapture({ state, ctx: ctxAt('curiosity') })).not.toBeNull();
+    expect(
+      scheduleProbeCapture({ state, captureOn: ALL_ON, ctx: ctxAt('curiosity') }),
+    ).not.toBeNull();
     expect(state.cubemapCaptures.probe.subject).toBe('curiosity');
     expect(state.cubemapCaptures.probe.refreshedAtMs.get('curiosity')).toBe(NOW_MS);
 
     // A never-refreshed body is older than any refreshed one.
     state.cubemapCaptures.probe.refreshedAtMs.delete('voyager1');
     state.cubemapCaptures.probe.refreshedAtMs.set('curiosity', NOW_MS - 100_000);
-    expect(scheduleProbeCapture({ state, ctx: ctxAt('voyager1') })).not.toBeNull();
+    expect(
+      scheduleProbeCapture({ state, captureOn: ALL_ON, ctx: ctxAt('voyager1') }),
+    ).not.toBeNull();
     expect(state.cubemapCaptures.probe.subject).toBe('voyager1');
     expect(deriveViewMock).toHaveBeenCalledTimes(12);
+  });
+
+  it('captures nothing while the probe row is toggled off', () => {
+    const state = makeState(['curiosity']);
+
+    expect(
+      scheduleProbeCapture({ state, captureOn: () => false, ctx: ctxAt('curiosity') }),
+    ).toBeNull();
+    expect(state.cubemapCaptures.probe.subject).toBeNull();
+    expect(state.cubemapCaptures.probe.refreshedAtMs.has('curiosity')).toBe(false);
   });
 
   it('votes to keep ticking while a second body resolved in the same tick is still due', () => {
@@ -117,13 +134,38 @@ describe('scheduleProbeCapture', () => {
     const state = makeState(['whale', 'petunias']);
     const probe = state.cubemapCaptures.probe;
 
-    expect(scheduleProbeCapture({ state, ctx: ctxAt('whale') })).not.toBeNull();
+    expect(scheduleProbeCapture({ state, captureOn: ALL_ON, ctx: ctxAt('whale') })).not.toBeNull();
     const first = probe.subject;
     expect(probe.due).toBe(true);
 
-    expect(scheduleProbeCapture({ state, ctx: ctxAt('whale', NOW_MS + 16) })).not.toBeNull();
+    expect(
+      scheduleProbeCapture({ state, captureOn: ALL_ON, ctx: ctxAt('whale', NOW_MS + 16) }),
+    ).not.toBeNull();
     expect(probe.subject).not.toBe(first);
     expect(probe.due).toBe(false);
+  });
+
+  // The first capture lands before the textures do; the wake their arrival
+  // renders falls inside the interval, and a still scene renders nothing after.
+  it('owes a refresh after a frame that renders an older probe, none after capturing it', () => {
+    const state = makeState(['curiosity']);
+    const probe = state.cubemapCaptures.probe;
+
+    expect(
+      scheduleProbeCapture({ state, captureOn: ALL_ON, ctx: ctxAt('curiosity') }),
+    ).not.toBeNull();
+    expect(probe.refreshOwedInMs).toBeNull();
+
+    expect(
+      scheduleProbeCapture({ state, captureOn: ALL_ON, ctx: ctxAt('curiosity', NOW_MS + 500) }),
+    ).toBeNull();
+    expect(probe.refreshOwedInMs).toBe(PROBE_REFRESH_INTERVAL_MS - 500);
+
+    const due = NOW_MS + PROBE_REFRESH_INTERVAL_MS;
+    expect(
+      scheduleProbeCapture({ state, captureOn: ALL_ON, ctx: ctxAt('curiosity', due) }),
+    ).not.toBeNull();
+    expect(probe.refreshOwedInMs).toBeNull();
   });
 
   it('refreshes nothing while every candidate is inside PROBE_REFRESH_INTERVAL_MS', () => {
@@ -133,20 +175,22 @@ describe('scheduleProbeCapture', () => {
       NOW_MS - PROBE_REFRESH_INTERVAL_MS + 1,
     );
 
-    expect(scheduleProbeCapture({ state, ctx: ctxAt('curiosity') })).toBeNull();
+    expect(scheduleProbeCapture({ state, captureOn: ALL_ON, ctx: ctxAt('curiosity') })).toBeNull();
     expect(state.cubemapCaptures.probe.subject).toBeNull();
     expect(deriveViewMock).not.toHaveBeenCalled();
 
-    expect(scheduleProbeCapture({ state, ctx: ctxAt('curiosity', NOW_MS + 1) })).not.toBeNull();
+    expect(
+      scheduleProbeCapture({ state, captureOn: ALL_ON, ctx: ctxAt('curiosity', NOW_MS + 1) }),
+    ).not.toBeNull();
   });
 
   it("derives one frame at the body's position with the probe row's near plane, and each face at its slot base and face size — resolving the host's body-m slab in the FACE context", () => {
     const state = makeState(['curiosity']);
-    const faces = scheduleProbeCapture({ state, ctx: ctxAt('curiosity') });
+    const faces = scheduleProbeCapture({ state, captureOn: ALL_ON, ctx: ctxAt('curiosity') });
 
     expect(faces).not.toBeNull();
     expect([...faces!.keys()].sort()).toEqual([...ALL_CUBE_FACES]);
-    const row = CUBEMAP_CAPTURES.probe;
+    const row = APP_CUBEMAP_CAPTURE_REGISTRY.probe;
     const curiosityMpc = deriveBodyStates(SIM_DAYS).get(asSceneBodyId('curiosity'))!.positionMpc;
 
     expect(cubemapCaptureFrameMock).toHaveBeenCalledTimes(1);
@@ -174,7 +218,7 @@ describe('scheduleProbeCapture', () => {
 
   it('derives its frame once for six faces, not once per face', () => {
     const state = makeState(['curiosity']);
-    scheduleProbeCapture({ state, ctx: ctxAt('curiosity') });
+    scheduleProbeCapture({ state, captureOn: ALL_ON, ctx: ctxAt('curiosity') });
     expect(cubemapCaptureFrameMock).toHaveBeenCalledTimes(1);
     expect(deriveViewMock).toHaveBeenCalledTimes(ALL_CUBE_FACES.length);
   });
@@ -194,7 +238,7 @@ describe('scheduleProbeCapture', () => {
         }) as unknown as FrameView,
     );
     const state = makeState(['voyager1']);
-    const faces = scheduleProbeCapture({ state, ctx: ctxAt('voyager1') });
+    const faces = scheduleProbeCapture({ state, captureOn: ALL_ON, ctx: ctxAt('voyager1') });
 
     expect(faces).not.toBeNull();
     for (const face of ALL_CUBE_FACES) expect(faces!.get(face)!.bodySlabs).toEqual([]);
@@ -205,7 +249,7 @@ describe('scheduleProbeCapture', () => {
     cubemapCaptureFrameMock.mockReturnValue({ isReady: false } as unknown as FrameView);
     const state = makeState(['curiosity']);
 
-    expect(scheduleProbeCapture({ state, ctx: ctxAt('curiosity') })).toBeNull();
+    expect(scheduleProbeCapture({ state, captureOn: ALL_ON, ctx: ctxAt('curiosity') })).toBeNull();
     expect(state.cubemapCaptures.probe.subject).toBeNull();
     expect(state.cubemapCaptures.probe.refreshedAtMs.has('curiosity')).toBe(false);
     expect(deriveViewMock).not.toHaveBeenCalled();

@@ -14,8 +14,8 @@ import { EPHEMERIS_CORRECTIONS } from '../../../../src/data/bodies/ephemerisCorr
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { correctionSeriesAt } from '../../../../src/utils/orbit/correctionSeriesAt';
-import { siteGroundRadiusM } from '../../../../src/utils/camera/siteGroundRadiusM';
-import { sitePointBodyFixed } from '../../../../src/utils/camera/sitePointBodyFixed';
+import { siteGroundRadiusM } from '../../../../src/utils/camera/arms/siteGroundRadiusM';
+import { sitePointBodyFixed } from '../../../../src/utils/camera/arms/sitePointBodyFixed';
 import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTightMat3';
 import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
 import { SAMPLED_BODIES } from '../../../../src/data/bodies/sampledBodies';
@@ -182,8 +182,8 @@ describe('deriveBodyStates', () => {
       const snap = deriveBodyStates(t);
       const earth = snap.get(asSceneBodyId('earth'))!;
       const offsetM = rotateVec3ByTightMat3(
-        sitePointBodyFixed(site, siteGroundRadiusM(site, SCENE_EARTH.surface.datumRadiusM)),
         earth.orientation,
+        sitePointBodyFixed(site, siteGroundRadiusM(site, SCENE_EARTH.surface.datumRadiusM)),
       );
       const offsetMpc = offsetM.map((m) => m * SCALE_UNITS.M_TO_MPC);
       const actual = snap.get(site.id)!.positionMpc.map((v, i) => v - earth.positionMpc[i]!);

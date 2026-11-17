@@ -1,5 +1,5 @@
 /**
- * CaptureFaceRef — which `CUBEMAP_CAPTURES` row a render step re-draws the
+ * CaptureFaceRef — which `APP_CUBEMAP_CAPTURE_REGISTRY` row a render step re-draws the
  * sky into, and which of its six faces.
  */
 

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { poseSnippetOf } from '../../../src/components/DebugPanel/poseSnippetOf';
-import type { CameraPose } from '../../../src/@types/camera/CameraPose';
+import type { CameraPose } from '../../../src/@types/camera/pose/CameraPose';
 
 // Not exercised by CameraStateSection.test.ts (no "copy view pose" click there),
 // and a wrong field order here would paste a syntactically valid but silently

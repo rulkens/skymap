@@ -16,28 +16,33 @@ import type { Layer } from '../../@types/engine/layer/Layer';
 import type { EngineState } from '../../@types/engine/state/EngineState';
 
 import { seedCameraRuntime } from './camera/seedCameraRuntime';
-import { NEAR_CLIP_MPC, FAR_CLIP_MPC } from './camera/cameraFraming';
-import { liveUpBasisQuat } from './camera/liveUpBasisQuat';
+import { NEAR_CLIP_MPC, FAR_CLIP_MPC } from './camera/framing/cameraFraming';
+import { liveUpBasisQuat } from './camera/orientation/liveUpBasisQuat';
+import { isSceneSettled } from './helpers/isSceneSettled';
+import { viewUnsettledReasons } from './helpers/viewUnsettledReasons';
 import type { CubemapCaptureRuntimes } from '../../@types/engine/state/CubemapCaptureRuntimes';
-import { CUBEMAP_CAPTURES } from '../../data/rendering/cubemapCaptures';
+import { APP_CUBEMAP_CAPTURE_REGISTRY } from '../../compositions/appCubemapCaptures';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createFadeRegistry } from '../animation/fadeRegistry';
 import { createLabel2DDirector } from './subsystems/label2DDirector';
 import { COSMO_LABEL_DIRECTOR } from '../../data/labels/cosmoLabelDirectorConfig';
 import { FOREGROUND_LABEL_DIRECTOR } from '../../data/labels/foregroundLabelDirectorConfig';
-import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsystem';
+import { createRecedingFocusSubsystem } from './subsystems/recedingFocusSubsystem';
 import { createClipPlayer } from './subsystems/clipPlayer';
 import { createClipPathInspector } from './subsystems/clipPathInspector';
-import { datumOnlyTerrainHeight } from '../../utils/camera/datumOnlyTerrainHeight';
+import { datumOnlyTerrainHeight } from '../../utils/camera/terrain/datumOnlyTerrainHeight';
 import { FRAME_ORDER } from './frame/frameOrder';
 import { FRAME_ORDER_PASS_NAMES } from './frame/frameOrderPassNames';
 import { computeTimingSlotName } from './frame/timing/computeTimingSlotName';
+import { captureTimingSlotName } from './frame/timing/captureTimingSlotName';
+import type { CubemapCaptureKey } from '../../@types/rendering/CubemapCaptureKey';
 import { liveWorldPose } from './helpers/liveWorldPose';
+import { liveClipStartPose } from './helpers/liveClipStartPose';
 import { waitUntilSettled } from './helpers/waitUntilSettled';
 import { deriveBodyStates } from './frame/deriveBodyStates';
-import { cameraDebugSnapshotOf } from './camera/cameraDebugSnapshotOf';
-import { readOrientDeltas } from './camera/orientDeltas';
+import { cameraDebugSnapshotOf } from './camera/debug/cameraDebugSnapshotOf';
+import { readOrientDeltas } from './camera/orientation/orientDeltas';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { selectTimeState } from '../../state/time/selectors';
 import { engineStatusChanged } from '../../state/engine/engineSlice';
@@ -81,8 +86,9 @@ export function createEngine(
 
   // Unlike the GPU timing service this needs no `?gpuTimings` gate and no device,
   // so the DebugPanel always has an fps line. `lastStartMs === 0` doubles as the
-  // "no frame has run yet" sentinel that seeds the first interval to 0.
-  const frameStats = { fps: 0, cpuMs: 0, lastStartMs: 0 };
+  // "no frame has run yet" sentinel that seeds the first interval to 0. `threw`
+  // keeps `settled()` pending: a throwing frame draws nothing, so a shot would be blank.
+  const frameStats = { fps: 0, cpuMs: 0, lastStartMs: 0, threw: false };
 
   // Seeded with placeholders; wireInput re-seeds once the initial OrbitCamera
   // exists. The register seeds from the camera slice's initial `base` — the
@@ -97,7 +103,7 @@ export function createEngine(
   // 0: far outside every band pre-boot, so a row's hysteresis margin can't
   // mistake "never measured" for "just closed".
   const cubemapCaptures = Object.fromEntries(
-    Object.entries(CUBEMAP_CAPTURES).map(([key, row]) => [
+    Object.entries(APP_CUBEMAP_CAPTURE_REGISTRY).map(([key, row]) => [
       key,
       row.kind === 'sky'
         ? {
@@ -105,8 +111,14 @@ export function createEngine(
             lastAnchorDistanceMpc: Number.POSITIVE_INFINITY,
             bakedSettings: null,
             bakedContentVersion: null,
+            lastBakeAtMs: null,
           }
-        : { subject: null, refreshedAtMs: new Map<string, number>(), due: false },
+        : {
+            subject: null,
+            refreshedAtMs: new Map<string, number>(),
+            due: false,
+            refreshOwedInMs: null,
+          },
     ]),
   ) as CubemapCaptureRuntimes;
 
@@ -134,7 +146,6 @@ export function createEngine(
     picking: {
       // Pick-throttle state only; hover/select live on the Redux `selection` slice.
       pickInFlight: false,
-      cursorTexPx: null,
     },
     gpu: {
       // Null until the async bootstrap constructs each; released in `destroy()`. See
@@ -161,6 +172,7 @@ export function createEngine(
       labelPickRendererCosmo: null,
       labelPickRendererNear: null,
       debugLineRenderer: null,
+      letterboxRenderer: null,
       selectionRingRenderer: null,
       label3DRenderer: null,
       // Every bloom content layer's enable gate is exactly `bloomPyramid !== null`,
@@ -182,7 +194,7 @@ export function createEngine(
       cosmoLabelDirector: createLabel2DDirector(COSMO_LABEL_DIRECTOR),
       foregroundLabelDirector: createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR),
 
-      structureFocus: createStructureFocusSubsystem({
+      recedingFocus: createRecedingFocusSubsystem({
         requestRender: () => state.subsystems.scheduler.requestRender(),
       }),
 
@@ -202,7 +214,9 @@ export function createEngine(
           const start = performance.now();
           const intervalMs = frameStats.lastStartMs === 0 ? 0 : start - frameStats.lastStartMs;
           frameStats.lastStartMs = start;
+          frameStats.threw = true;
           frameRef.current();
+          frameStats.threw = false;
           const next = updateFrameStats(frameStats, {
             intervalMs,
             cpuMs: performance.now() - start,
@@ -226,17 +240,21 @@ export function createEngine(
     },
     booted: false,
     fadesAnimating: false,
+    layersLoading: false,
+    drawPxPerRad: 0,
     cameraRuntime,
     cubemapCaptures,
     contentVersion: 0,
     // `renderFrame`/`runFrame` look this up via VIEW_RIGS. The only URL read for
     // the rig — see the `canvas.dataset.viewRig` stamp below, its sole consumer.
     viewRig: hasUrlGate('dome') ? 'dome' : 'mono',
+    frameIndex: 0,
     // Both empty until `createLayers` runs. `selectionKindRows` is not `selectionRows`:
     // that getter, above, is the unrelated saga display cache.
     layers: [],
     layerSagaTasks: [],
     selectionKindRows: [],
+    pickCodes: null,
     // Static per Layer; the `renderTargets` row reads it and constructs BEFORE `createLayers`.
     layerTargets: composition.layers.map((layer) => layer.targets ?? []),
     // Empty until `createLayers` composes core's rows with every Layer's.
@@ -254,7 +272,8 @@ export function createEngine(
   };
 
   // React doesn't own this attribute, so it survives re-renders; `global.css`'s
-  // `#c[data-view-rig='dome']` rule reads it to square the canvas.
+  // `#c[data-view-rig='dome']` rule reads it to square the canvas, and the body
+  // Layer's `terrainPickCursor` reads it to skip a rig with no single cursor ray.
   canvas.dataset.viewRig = state.viewRig;
 
   // One instance feeds both the dev panel and the load-progress emitter, so the
@@ -278,7 +297,7 @@ export function createEngine(
   // (resolveFocusRefDeferringSaga, watchSelectionRowsSaga's gap-fill).
   const selection = composeSelectionRows(
     () => state.selectionKindRows,
-    () => state.settings.picking.kinds,
+    () => state.settings.picking.off,
   );
   const bootstrapDeps: BootstrapDeps = {
     canvas,
@@ -294,7 +313,7 @@ export function createEngine(
   const playClip = createPlayClip({
     store,
     clipPlayer: state.subsystems.clipPlayer,
-    getLivePose: () => liveWorldPose(state),
+    getLivePose: () => liveClipStartPose(state),
   });
 
   // `sampleCount` must cover the WAYPOINT-DENSEST clip: ~200 waypoints at 384 samples
@@ -308,7 +327,7 @@ export function createEngine(
 
   cb.setSagaContext({
     nextFrame: () => state.subsystems.scheduler.nextFrame(),
-    reconcile: makeReconcileEffects(state, canvas),
+    reconcile: makeReconcileEffects(state, canvas, selection),
     selection,
     // The up-basis quaternion is resolved THIS frame, so a mid-slerp re-switch
     // captures the live pole rather than snapping to the committed frame. Null
@@ -322,6 +341,7 @@ export function createEngine(
             upBasisQuat: liveUpBasisQuat(state.cameraRuntime),
           }
         : null,
+    sceneSettled: () => isSceneSettled(state),
     playClip,
     clipPathInspect,
     home: composition.home,
@@ -362,7 +382,7 @@ export function createEngine(
 
     state.subsystems.cosmoLabelDirector.destroy();
     state.subsystems.foregroundLabelDirector.destroy();
-    state.subsystems.structureFocus.destroy();
+    state.subsystems.recedingFocus.destroy();
     state.subsystems.pickDriver?.destroy();
     state.subsystems.pickDriver = null;
     state.subsystems.loadProgress?.destroy();
@@ -385,6 +405,11 @@ export function createEngine(
     state.booted = false;
   }
 
+  const unsettled = (): string[] => [
+    ...(frameStats.threw ? ['last frame threw'] : []),
+    ...viewUnsettledReasons(state, store.getState().camera.intent),
+  ];
+
   // The engine's only public surface: imperative operations only — store writes go
   // direct to the store.
   const handle: EngineHandle = {
@@ -392,7 +417,7 @@ export function createEngine(
     settled: () =>
       waitUntilSettled(
         () => state.subsystems.scheduler.nextFrame(),
-        () => state.fadesAnimating,
+        () => unsettled().length > 0,
       ),
     debug: {
       // The Map the bootstrap populates, so the dev panel sees slots as they appear.
@@ -403,6 +428,7 @@ export function createEngine(
         return state.gpu.timingService;
       },
       requestRender: () => state.subsystems.scheduler.requestRender(),
+      unsettled,
       // `idle` is derived, not stored, from the wall-clock gap since the last frame,
       // so a sleeping render-on-demand loop reads "idle" rather than a stale fps.
       frameStats: (): FrameStats => ({
@@ -411,11 +437,14 @@ export function createEngine(
         idle:
           frameStats.lastStartMs === 0 || performance.now() - frameStats.lastStartMs > IDLE_GAP_MS,
       }),
-      // Prelude compute steps first: GPU work no render toggle could reach.
+      // Prelude compute steps and captures first: GPU work no render toggle could reach.
       passOverrides: {
         allNames: [
           ...FRAME_ORDER.filter((step) => step.kind === 'compute').map((step) =>
             computeTimingSlotName(step.name, 'canvas'),
+          ),
+          ...(Object.keys(APP_CUBEMAP_CAPTURE_REGISTRY) as CubemapCaptureKey[]).map(
+            captureTimingSlotName,
           ),
           ...FRAME_ORDER_PASS_NAMES,
         ],
@@ -433,7 +462,7 @@ export function createEngine(
         const { register, gesture, tilt, outputs } = state.cameraRuntime;
         const bodyStates = deriveBodyStates(outputs.simDays);
         return cameraDebugSnapshotOf({
-          storedFrame: rootState.camera.base.frame,
+          storedFrame: rootState.camera.intent.base.frame,
           renderedPose: outputs.displayed,
           worldPose: liveWorldPose(state),
           poseBasis: ORIENTATION_FRAMES[state.settings.orientation],
@@ -444,9 +473,11 @@ export function createEngine(
           liveSimDays: deriveSimDays(time, performance.now()),
           time,
           activeDriverId: register.winner,
-          gesture: gesture.value?.gesture ?? null,
+          // Only the body arm's memory is a surface gesture.
+          gesture:
+            gesture.value !== null && 'gesture' in gesture.value ? gesture.value.gesture : null,
           rememberedTiltRad: tilt.rememberedTiltRad,
-          tuning: rootState.camera.tuning,
+          tuning: rootState.camera.intent.tuning,
           deltas: readOrientDeltas(),
           terrainHeightAt: state.terrainHeightAt,
         });

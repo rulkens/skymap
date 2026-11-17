@@ -1,11 +1,12 @@
 /**
- * buildDemandCtx — snapshots the read surfaces a demand predicate may consult
- * into a single `DemandCtx` (per-surface rationale: `@types/loading/DemandCtx.d.ts`).
+ * buildDemandCtx — snapshots what `evaluateAssetDemand` reads into one `DemandCtx`
+ * per pass (per-surface rationale: `@types/loading/DemandCtx.d.ts`).
  */
 
 import { assembleOrbitCamera } from '../camera/assembleOrbitCamera';
 import { liveWorldPose } from '../helpers/liveWorldPose';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
+import { claimingSelectionRow } from '../../../utils/selection/claimingSelectionRow';
 
 import type { DemandCtx } from '../../../@types/loading/DemandCtx';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -13,6 +14,13 @@ import type { AssetKey } from '../../../@types/loading/AssetKey';
 import type { LoadState } from '../../../@types/loading/LoadState';
 
 export function buildDemandCtx(state: EngineState): DemandCtx {
+  const { select, focus, pending } = state.selection;
+  // A pending id's kind counts before its data loads, or a deep link to a catalog that only
+  // loads when selected would wait on itself forever.
+  const claimedKinds = (id: string | null) => {
+    const row = id === null ? null : claimingSelectionRow(state.selectionKindRows, id);
+    return row === null ? [] : [row.type];
+  };
   return {
     settings: state.settings,
     ui: state.ui,
@@ -29,9 +37,12 @@ export function buildDemandCtx(state: EngineState): DemandCtx {
     // The instant the last frame derived its bodies at, so demand-time body
     // positions match the frame that drew them.
     simDays: state.cameraRuntime.outputs.simDays,
+    drawPxPerRad: state.drawPxPerRad,
     tier: state.tier,
-    selectedKinds: new Set(
-      [state.selection.select, state.selection.focus].flatMap((ref) => (ref ? [ref.type] : [])),
-    ),
+    selectedKinds: new Set([
+      ...[select, focus].flatMap((ref) => (ref ? [ref.type] : [])),
+      ...claimedKinds(pending.focus),
+      ...claimedKinds(pending.select),
+    ]),
   };
 }

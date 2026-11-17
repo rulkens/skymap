@@ -14,7 +14,7 @@
 
 import { BODY_SOURCE_IDS } from '../../src/data/bodies/bodySourceIds';
 
-import type { BodyItemSettings } from '../../src/@types/settings/BodyItemSettings';
+import type { BodyItemSettings } from '../../src/layers/body/@types/BodyItemSettings';
 
 export function makeBodyItems(
   of: (bodyId: string) => Partial<BodyItemSettings> = () => ({}),

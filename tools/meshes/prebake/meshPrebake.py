@@ -126,7 +126,10 @@ def atlas_path(cfg, name):
 SOURCES = {s["key"]: s for s in [source("voyager"), source("perseverance"), source("curiosity"),
                                  source("mer"), source("hubble"), source("petunias"),
                                  source("phobos", relief=True, triangles=150000),
-                                 source("deimos", relief=True)]}
+                                 source("deimos", relief=True),
+                                 source("vesta", relief=True, triangles=150000),
+                                 source("ceres", relief=True, triangles=150000),
+                                 source("bennu", relief=True, triangles=150000)]}
 
 # A natural body has no crevice-scale occlusion the runtime lacks, and an AO bake
 # from a selected-to-active source would darken by the CAGE, not the surface.

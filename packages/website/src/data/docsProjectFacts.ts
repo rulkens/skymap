@@ -55,7 +55,7 @@ export const DOCS_PROJECT_FACTS: readonly Fact[] = [
   {
     id: 'bench-local',
     about: 'app',
-    text: 'The scene workbench and the named-galaxy curator run only from a copy of the repository, each on a port of its own, and read and write files on that machine.',
+    text: 'The scene workbench, the named-galaxy curator and the albedo bench run only from a copy of the repository, each on a port of its own, and read and write files on that machine.',
     source: `${REPO_BLOB}/tools/utils/io/devPorts.ts`,
     sourceLabel: `the table of ports, ${IN_REPO}`,
     checked: CHECKED,

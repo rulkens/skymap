@@ -36,10 +36,10 @@ Target version, e.g. `0.4.0`. If omitted, propose the next minor from
 ### 2. Version bump — via PR, never a direct push
 ```bash
 git switch -c chore/bump-vX.Y.Z
-npm version X.Y.Z --no-git-tag-version   # rewrites package.json + package-lock.json together
+npm version X.Y.Z --no-git-tag-version --include-workspace-root -w packages/desktop   # root + desktop package.json and package-lock.json (the desktop installer ships under this version)
 ```
 Then edit `CITATION.cff`: set `version: X.Y.Z` and `date-released: 'YYYY-MM-DD'`
-(today — read it from session context). Stage the three files **by path**, commit
+(today — read it from session context). Stage the four files (both package.json files, the lock, CITATION.cff) **by path**, commit
 with the user's git identity (Co-Authored-By trailer only, never `--author`):
 ```bash
 git add package.json package-lock.json CITATION.cff

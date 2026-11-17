@@ -1,5 +1,5 @@
 import type { BodyRuntime } from './@types/BodyRuntime';
-import type { TerrainHeightAtLookup } from '../../@types/camera/TerrainHeightAtLookup';
+import type { TerrainHeightAtLookup } from '../../@types/camera/terrain/TerrainHeightAtLookup';
 
 /** The ground core's camera reads. Reads `plan` per call, never captured: the planner
  * replaces it every frame. */

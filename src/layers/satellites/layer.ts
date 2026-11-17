@@ -9,17 +9,19 @@ import { satellitesLayerSettings } from './state/slices';
 import { satellitesVisibility } from './visibility';
 import { create } from './create';
 import { destroy } from './destroy';
-import { satellitesAssetRows } from './load/satellitesAssetRows';
-import { satellitesSourceCounts } from './load/satellitesSourceCounts';
+import { satellitesAssetRows } from './catalog/load/satellitesAssetRows';
+import { satellitesSourceCounts } from './catalog/load/satellitesSourceCounts';
 import { satellitesPlanner } from './frame';
-import { satellitesPass } from './passes/satellitesPass';
-import { satelliteOrbitsPass } from './passes/satelliteOrbitsPass';
-import SatellitesSectionContainer from './ui/SatellitesSectionContainer';
-import SatelliteDetailCard from './ui/SatelliteDetailCard/SatelliteDetailCard';
-import CompactSatelliteCard from './ui/CompactSatelliteCard/CompactSatelliteCard';
+import { satellitesPass } from './points/passes/satellitesPass';
+import { satelliteOrbitsPass } from './orbits/passes/satelliteOrbitsPass';
+import SatelliteTuningSectionContainer from './controls/ui/SatelliteTuningSectionContainer';
+import SatellitesSectionContainer from './controls/ui/SatellitesSectionContainer';
+import SatelliteDetailCard from './focus/ui/SatelliteDetailCard/SatelliteDetailCard';
+import CompactSatelliteCard from './focus/ui/CompactSatelliteCard/CompactSatelliteCard';
 import { SATELLITES_SOURCE_ROWS } from './sources/satellitesSourceRows';
-import { satellitesSelectionRow } from './present/satellitesSelectionRow';
-import { satellitesSearch } from './present/satellitesSearch';
+import { satellitesSelectionRow } from './selection/satellitesSelectionRow';
+import { satellitesSelectionKinds } from './selection/kinds';
+import { satellitesSearch } from './focus/present/satellitesSearch';
 
 export const satellitesLayer = defineLayer({
   name: 'satellites',
@@ -32,10 +34,14 @@ export const satellitesLayer = defineLayer({
   passes: (runtime) => [satellitesPass(runtime), satelliteOrbitsPass(runtime)],
   assets: satellitesAssetRows,
   sourceCounts: satellitesSourceCounts,
-  selection: (runtime) => [satellitesSelectionRow(runtime)],
+  selection: {
+    kinds: satellitesSelectionKinds,
+    rows: (runtime) => [satellitesSelectionRow(runtime)],
+  },
   search: (runtime) => satellitesSearch(runtime),
   ui: [
-    { slot: 'main', content: SatellitesSectionContainer },
+    { slot: 'main', content: SatellitesSectionContainer, title: 'Satellites' },
+    { slot: 'debug', content: SatelliteTuningSectionContainer },
     {
       slot: 'detailCard',
       content: { type: 'satellite', Detail: SatelliteDetailCard, Compact: CompactSatelliteCard },

@@ -14,18 +14,19 @@ import { describe, it, expect } from 'vitest';
 import { pickFrameContext } from '../../../../src/services/engine/helpers/pickFrameContext';
 import { canvasViewOf } from '../../../helpers/frame/canvasViewOf';
 import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
-import { pivotSurfaceRangeMpc } from '../../../../src/services/engine/camera/pivotSurfaceRangeMpc';
+import { pivotSurfaceRangeMpc } from '../../../../src/services/engine/camera/framing/pivotSurfaceRangeMpc';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
-import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
+import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
-import type { CameraProjection } from '../../../../src/@types/camera/CameraProjection';
+import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
+import type { CameraProjection } from '../../../../src/@types/camera/projection/CameraProjection';
 import type { FocusUniformsValue } from '../../../../src/@types/rendering/FocusUniformsValue';
-import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
-import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
-import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
+import { ZERO_FOCUS } from '../../../../src/services/engine/subsystems/recedingFocusSubsystem';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
+import { symmetricFrustum } from '../../../../src/utils/camera/frustum/symmetricFrustum';
+import type { FocusFrame } from '../../../../src/@types/engine/subsystems/FocusFrame';
 
 const LAST_POSE: CameraPose = { target: [1, 2, 3], yaw: 0.5, pitch: 0.1, distance: 50 };
 const PROJECTION: CameraProjection = { fovYRad: 1.2, aspect: 16 / 9, near: 0.1, far: 10000 };
@@ -40,8 +41,7 @@ function makeState(
     galaxyPointRenderer?: unknown;
     renderTargets?: unknown;
     galaxyPickRenderer?: unknown;
-    lastFocus?: FocusUniformsValue;
-    lastFocusRef?: SelectionRef;
+    lastFocus?: FocusFrame;
     selectionKindRows?: unknown[];
     compositor?: unknown;
     texturedDisks?: unknown;
@@ -64,9 +64,8 @@ function makeState(
     gpu: { galaxyPointRenderer, renderTargets, galaxyPickRenderer, compositor },
     subsystems: {
       texturedDisks,
-      structureFocus: {
-        lastFocusUniforms: () => overrides.lastFocus ?? ZERO_FOCUS,
-        lastFocusRef: () => overrides.lastFocusRef ?? null,
+      recedingFocus: {
+        lastFocus: () => overrides.lastFocus ?? { uniforms: ZERO_FOCUS, blend: 0, ref: null },
       },
     },
     settings: {
@@ -84,11 +83,12 @@ function makeState(
       outputs: {
         displayed: absoluteArm(LAST_POSE),
         projection: PROJECTION,
+        frustum: symmetricFrustum(PROJECTION.fovYRad, PROJECTION.aspect),
         simDays: LAST_SIM_DAYS,
         upBasis: ORIENTATION_FRAMES.equatorial,
       },
     },
-    picking: { pickInFlight: false, cursorTexPx: null },
+    picking: { pickInFlight: false },
   } as unknown as EngineState;
 }
 
@@ -165,8 +165,7 @@ describe('pickFrameContext', () => {
     };
     const ctx = pickFrameContext(
       makeState({
-        lastFocus,
-        lastFocusRef: { type: 'structure', id: 'virgo' },
+        lastFocus: { uniforms: lastFocus, blend: 1, ref: { type: 'structure', id: 'virgo' } },
         selectionKindRows: [{ type: 'structure', encodePick: () => 42 }],
       }),
       makeCanvas(),
@@ -174,5 +173,18 @@ describe('pickFrameContext', () => {
     expect(ctx?.snapshot.focus).toBe(lastFocus);
     expect(ctx?.snapshot.focusBlend).toBe(1);
     expect(ctx?.snapshot.focusPickId).toBe(42);
+  });
+
+  it('carries the recession blend, not the sphere’s', () => {
+    const ctx = pickFrameContext(
+      makeState({
+        lastFocus: { uniforms: ZERO_FOCUS, blend: 1, ref: { type: 'stellarStream', slug: 'gd-1' } },
+        selectionKindRows: [{ type: 'stellarStream', encodePick: () => 7 }],
+      }),
+      makeCanvas(),
+    );
+    expect(ctx?.snapshot.focus.blend).toBe(0);
+    expect(ctx?.snapshot.focusBlend).toBe(1);
+    expect(ctx?.snapshot.focusPickId).toBe(7);
   });
 });

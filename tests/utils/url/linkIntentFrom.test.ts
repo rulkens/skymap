@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 
 import { linkIntentFrom } from '../../../src/utils/url/linkIntentFrom';
 import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
-import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
+import type { FramedCameraPose } from '../../../src/@types/camera/pose/FramedCameraPose';
 
 const POSE: FramedCameraPose = {
   frame: 'absolute',

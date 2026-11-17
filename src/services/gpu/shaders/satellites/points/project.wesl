@@ -14,13 +14,19 @@ const MPC_TO_KM: f32 = 3.0856775814913673e19;
 struct Projected {
   centre: vec4<f32>,
   relKm: vec3<f32>,
+  // From Earth's centre, not 'relKm - earthKm', which would cancel the eye distance in f32.
+  earthRelKm: vec3<f32>,
+  // Unnormalised; zero for a state with velocity along the radius.
+  orbitNormal: vec3<f32>,
 };
 
-fn projectSatellite(u: SatelliteUniforms, sat: SatelliteInstance) -> Projected {
-  let r = length(sat.posKm);
-  let pullKm = sat.posKm * (-0.5 * GM_KM3_S2 / (r * r * r) * u.dtSec * u.dtSec);
-  let tKm = sat.posKm + sat.velKmS * u.dtSec + pullKm;
-  let rot = mat3x3<f32>(u.temeToWorld0, u.temeToWorld1, u.temeToWorld2);
-  let relKm = u.earthKm + rot * tKm;
-  return Projected(worldToClip(u.cam, relKm / MPC_TO_KM), relKm);
+fn projectSatellite(uniforms: SatelliteUniforms, sat: SatelliteInstance) -> Projected {
+  let radiusKm = length(sat.posKm);
+  let pullKm = sat.posKm * (-0.5 * GM_KM3_S2 / (radiusKm * radiusKm * radiusKm) * uniforms.dtSec * uniforms.dtSec);
+  let tKm = sat.posKm + sat.velKmS * uniforms.dtSec + pullKm;
+  let rot = mat3x3<f32>(uniforms.temeToWorld0, uniforms.temeToWorld1, uniforms.temeToWorld2);
+  let earthRelKm = rot * tKm;
+  let relKm = uniforms.earthKm + earthRelKm;
+  let orbitNormal = rot * cross(tKm, sat.velKmS);
+  return Projected(worldToClip(uniforms.cam, relKm / MPC_TO_KM), relKm, earthRelKm, orbitNormal);
 }

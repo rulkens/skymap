@@ -12,4 +12,6 @@ export function rotationRowById(id: string): RotationElements | null {
   return ROTATION_ELEMENTS.find((el) => el.id === id) ?? null;
 }
 
-export const ROTATION_ELEMENTS: readonly RotationElements[] = APP_BODY_REGISTRY.flatMap((row) => row.rotation ?? []);
+export const ROTATION_ELEMENTS: readonly RotationElements[] = APP_BODY_REGISTRY.flatMap(
+  (row) => row.rotation ?? [],
+);

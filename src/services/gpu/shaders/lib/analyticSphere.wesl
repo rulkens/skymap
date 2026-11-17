@@ -138,21 +138,24 @@ struct UvGradients {
   ddy: vec2<f32>,
 };
 
-// hitUnitSphere — cast 'rd' from 'ro' at the unit sphere centred on the local
-// origin. 'rd' must be unit length; on a proxy-shell fragment that means
+// hitUnitSphere — cast 'rayDir' from 'rayOrigin' at the unit sphere centred on the local
+// origin. 'rayDir' must be unit length; on a proxy-shell fragment that means
 // normalizing the DIFFERENCE after interpolation, since the interpolated proxy
 // position is not itself unit length.
 //
-// 'originAltitudeSq' is 'dot(ro, ro) - 1', a parameter because near the surface
+// 'originAltitudeSq' is 'dot(rayOrigin, rayOrigin) - 1', a parameter because near the surface
 // it is a cancellation f32 cannot do (header): the textured path supplies f64.
-fn hitUnitSphere(ro: vec3<f32>, rd: vec3<f32>, originAltitudeSq: f32) -> SphereHit {
-  let b = dot(ro, rd);
-  let discr = b * b - originAltitudeSq;
-  let s = sqrt(max(discr, 0.0));
-  // The far root plainly; the near root as 'c / (-b + s)', which is the same
-  // number as '-b - s' without its cancellation -- and that cancellation is
-  // total exactly when the eye is near the surface (b -> -1, s -> 1).
-  let tFar = -b + s;
+fn hitUnitSphere(rayOrigin: vec3<f32>, rayDir: vec3<f32>, originAltitudeSq: f32) -> SphereHit {
+  let originAlongRay = dot(rayOrigin, rayDir);
+  // Near the surface 'originAlongRay * originAlongRay - originAltitudeSq' wins (f64 altitude, small originAlongRay at the
+  // horizon); far out originAlongRay*originAlongRay ~ |rayOrigin|^2 swamps f32 and the closest-approach form wins.
+  let closestOffset = rayOrigin - originAlongRay * rayDir;
+  let discr = select(1.0 - dot(closestOffset, closestOffset), originAlongRay * originAlongRay - originAltitudeSq, originAltitudeSq < 1.0);
+  let sqrtDiscr = sqrt(max(discr, 0.0));
+  // The far root plainly; the near root as 'c / (-originAlongRay + sqrtDiscr)', which is the same
+  // number as '-originAlongRay - sqrtDiscr' without its cancellation -- and that cancellation is
+  // total exactly when the eye is near the surface (originAlongRay -> -1, sqrtDiscr -> 1).
+  let tFar = -originAlongRay + sqrtDiscr;
   let tNear = originAltitudeSq / tFar;
   // A positive exit root is the hit test. Take the NEAR root when it is in front
   // of the eye, the exit root in the degenerate camera-inside case.
@@ -161,15 +164,15 @@ fn hitUnitSphere(ro: vec3<f32>, rd: vec3<f32>, originAltitudeSq: f32) -> SphereH
   // Grazing fallback for the missed lanes of a limb quad (see the header): the
   // closest-approach parameter, whose point normalizes onto the limb tangent.
   // C0-continuous across the silhouette, so derivatives there stay finite.
-  let tGraze = max(-b, 0.0);
-  let t = select(tGraze, tSurface, didHit);
+  let tGraze = max(-originAlongRay, 0.0);
+  let hitDistance = select(tGraze, tSurface, didHit);
 
   var out: SphereHit;
   out.hit = didHit;
-  out.t = t;
+  out.t = hitDistance;
   // 'normalize' does double duty: it is the exact geometric normal for a real
   // hit, and it projects the grazing fallback onto the sphere for a miss.
-  out.point = normalize(ro + rd * t);
+  out.point = normalize(rayOrigin + rayDir * hitDistance);
   return out;
 }
 
@@ -206,10 +209,10 @@ fn equirectUvGradients(uv: vec2<f32>) -> UvGradients {
 }
 
 // fragDepthFromClip — the '@builtin(frag_depth)' value for a point projected through
-// a clip matrix. No reversed-Z branch: see the header. 'm' and 'p' must share one
+// a clip matrix. No reversed-Z branch: see the header. 'clipMatrix' and 'localPoint' must share one
 // frame: either the body's absolute local frame with the vertex stage's own mvp, or
 // a hit taken RELATIVE TO THE EYE with the translation-free 'vpCamRelLocal'.
-fn fragDepthFromClip(m: mat4x4<f32>, p: vec3<f32>) -> f32 {
-  let clip = clip_from_local(m, p);
+fn fragDepthFromClip(clipMatrix: mat4x4<f32>, localPoint: vec3<f32>) -> f32 {
+  let clip = clip_from_local(clipMatrix, localPoint);
   return clip.z / clip.w;
 }

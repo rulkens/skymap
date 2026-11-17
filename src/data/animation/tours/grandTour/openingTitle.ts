@@ -29,7 +29,7 @@ import {
 } from '../../../../services/engine/animation/effectHelpers';
 import { focusId } from '../../../../utils/animation/focusId';
 import { setLabelsFocusedOnly } from '../../../../state/settings/core/labelsSlice';
-import { GALACTIC_DISC_FORWARD } from '../../../../services/engine/camera/cameraFraming';
+import { GALACTIC_DISC_FORWARD } from '../../../../services/engine/camera/framing/cameraFraming';
 import { FRAME_ROLL_SEC } from './frameRollSec';
 
 const MW = focusId('milkyWay');

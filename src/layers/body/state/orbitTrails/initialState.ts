@@ -3,7 +3,7 @@
  * the trails are a roster of conics composed at boot from each Layer's `guides.orbitTrails`.
  */
 
-import type { OrbitTrailsSettings } from '../../../../@types/settings/OrbitTrailsSettings';
+import type { OrbitTrailsSettings } from '../../@types/OrbitTrailsSettings';
 
 export const initialState: OrbitTrailsSettings = {
   enabled: true,

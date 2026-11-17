@@ -1,10 +1,10 @@
 /**
  * The camera band's shipped defaults and slider ranges — pure data, the only
  * file that names a number. Every consumer takes a `CameraTuning` VALUE (the
- * store's `camera.tuning`, seeded from here); nothing reads this record live.
+ * store's `camera.intent.tuning`, seeded from here); nothing reads this record live.
  */
 
-import type { CameraTuning } from '../../@types/camera/CameraTuning';
+import type { CameraTuning } from '../../@types/camera/orbitCamera/CameraTuning';
 
 /** Ruling 19, re-tuned 2026-09-10: 0.45 R ≈ 2,870 km over Earth. */
 export const DEFAULT_CAMERA_TUNING = {

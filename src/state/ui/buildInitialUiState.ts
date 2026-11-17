@@ -62,5 +62,6 @@ export function buildInitialUiState(): UiState {
       visible: splashVisible,
       dismissedVersion: seen,
     },
+    learnedGestures: { look: false, zoom: false },
   };
 }

@@ -8,7 +8,8 @@
 import type { SlotEvictHandler } from './SlotEvictHandler';
 
 export type SlotStore = {
-  allocate(key: string, frame: number): number | null;
+  /** `liveSince` (default `frame`): slots touched at or after it are never evicted. */
+  allocate(key: string, frame: number, liveSince?: number): number | null;
   touch(key: string, frame: number): number | null;
   slotOf(key: string): number | undefined;
   occupiedCount(): number;

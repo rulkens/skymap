@@ -6,9 +6,8 @@ export function initialRecognizerState(): RecognizerState {
     heightPx: 0,
     pointers: new Map(),
     held: null,
-    pinching: false,
-    pinchSpanPx: 0,
-    pinchBroken: false,
+    pair: null,
+    pairBroken: false,
     lastTap: null,
   };
 }

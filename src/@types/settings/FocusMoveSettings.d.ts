@@ -4,8 +4,8 @@
  * freezes it into a `FocusMotion` at dispatch.
  */
 
-import type { FocusMoveStyle } from '../camera/FocusMoveStyle';
-import type { GeodesicTuning } from '../camera/GeodesicTuning';
+import type { FocusMoveStyle } from '../camera/focusMotion/FocusMoveStyle';
+import type { GeodesicTuning } from '../camera/focusMotion/GeodesicTuning';
 
 export type FocusMoveSettings = {
   readonly style: FocusMoveStyle;

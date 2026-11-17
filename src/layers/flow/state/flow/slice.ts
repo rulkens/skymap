@@ -3,7 +3,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import { initialState } from './initialState';
-import type { FlowFieldDefaults } from '../../../../@types/data/flow/FlowFieldDefaults';
+import type { FlowFieldDefaults } from '../../@types/FlowFieldDefaults';
 
 export const flowSlice = createSlice({
   name: 'settings/flow',

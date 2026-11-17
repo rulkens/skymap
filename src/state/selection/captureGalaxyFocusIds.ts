@@ -12,12 +12,12 @@
 import { selectSelectedRef, selectFocusRef } from './selectors';
 import { galaxyCatalogRequest } from '../../services/engine/wiring/galaxyCatalogRequest';
 import { sameRequest } from '../../utils/loading/sameRequest';
-import { galaxyCatalogIdOf } from '../../utils/galaxyCatalogIdOf';
 import type { RootState } from '../../store/types';
 import type { SelectionResolver } from '../../@types/engine/selection/SelectionResolver';
 import type { SelectionSlot } from '../../@types/engine/SelectionSlot';
-import type { GalaxyCatalogSourceType } from '../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
+import type { GalaxyCatalogRef } from '../../layers/galaxyCatalog/selection/@types/GalaxyCatalogRef';
 import type { Tier } from '../../@types/data/Tier';
+import { isKind } from '../../utils/selection/isKind';
 
 /**
  * A captured galaxy ref that needs re-anchoring after the tier swap.
@@ -26,7 +26,7 @@ import type { Tier } from '../../@types/data/Tier';
  */
 type GalaxyReanchor = {
   readonly slot: SelectionSlot;
-  readonly source: GalaxyCatalogSourceType;
+  readonly source: GalaxyCatalogRef['source'];
   readonly focusId: string;
 };
 
@@ -42,7 +42,7 @@ export function captureGalaxyFocusIds(
   ];
   const out: GalaxyReanchor[] = [];
   for (const { slot, ref } of slots) {
-    if (!ref || ref.type !== 'galaxyCatalog') continue;
+    if (!isKind<GalaxyCatalogRef>(ref, 'galaxyCatalog')) continue;
     // Capture only when the demand loop will actually reload this source: its
     // request drifts across the swap, and the catalog is enabled (a disabled
     // source's slot is never demanded, so no count pulse fires for it).
@@ -50,8 +50,7 @@ export function captureGalaxyFocusIds(
       galaxyCatalogRequest(ref.source, prevTier),
       galaxyCatalogRequest(ref.source, nextTier),
     );
-    const enabled =
-      state.settings.galaxyCatalogs.items[galaxyCatalogIdOf(ref.source)]?.enabled === true;
+    const enabled = state.settings.galaxyCatalogs.items[ref.source]?.enabled === true;
     if (!drifts || !enabled) continue;
     // focusIdOf returns null when the cloud is absent or the ref has no durable
     // representation (Milky Way, already guarded above). Skip nulls so the

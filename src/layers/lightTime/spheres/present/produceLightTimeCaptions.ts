@@ -1,0 +1,66 @@
+/**
+ * produceLightTimeCaptions — one non-clickable NEAR0 caption per visible
+ * sphere, sitting on the top of its silhouette as the camera sees it. Reads
+ * the same `deriveLightTimeLiveness` the sphere pass reads, over the label value,
+ * whose `of` keeps a caption from outliving or preceding its sphere.
+ */
+
+import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { ImagePlaneBasis } from '../../../../@types/camera/pose/ImagePlaneBasis';
+import type { Label2D } from '../../../../@types/rendering/Label2D';
+import type { LayerScreenLabel } from '../../../../@types/engine/layer/LayerScreenLabel';
+import { LIGHT_TIME_SPHERES } from '../data/lightTimeSpheres';
+import { imagePlaneBasis } from '../../../../utils/camera/orbitPose/imagePlaneBasis';
+import { frameUp } from '../../../../utils/camera/orbitPose/frameUp';
+import { orbitForwardOf } from '../../../../utils/camera/orbitPose/orbitForwardOf';
+import { sphereSilhouetteTop } from '../../../../utils/math/sphereSilhouetteTop';
+import { CAPTION_PRIORITY_SCALE } from '../../../../data/labels/captionPriorityScale';
+import { LIGHT_TIME_CAPTION_PRIORITY } from '../data/lightTimeCaptionPriority';
+import { deriveLightTimeLiveness } from './deriveLightTimeLiveness';
+
+/** Both clamps, so every sphere's caption is the same size on screen. */
+const CAPTION_PX = 32;
+
+export const produceLightTimeCaptions: LayerScreenLabel<'lightTime'>['produceLabels'] = (
+  _state,
+  ctx,
+  fade,
+) => {
+  const liveness = deriveLightTimeLiveness(ctx, fade);
+  if (liveness === null) return { labels: [], awake: false };
+
+  const fwd = orbitForwardOf(ctx.cam);
+  const basis: ImagePlaneBasis = { rolledUp: [0, 0, 0], right: [0, 0, 0], up: [0, 0, 0] };
+  imagePlaneBasis(fwd, ctx.cam.roll ?? 0, frameUp(ctx.cam.upBasis), basis);
+  // NEAR0 labels anchor eye-relative.
+  const toCentre: Vec3 = [
+    liveness.centre[0] - ctx.drawCamPos[0],
+    liveness.centre[1] - ctx.drawCamPos[1],
+    liveness.centre[2] - ctx.drawCamPos[2],
+  ];
+
+  const labels: Label2D[] = [];
+  LIGHT_TIME_SPHERES.forEach((sphere, i) => {
+    const opacity = liveness.opacities[i] ?? 0;
+    if (!(opacity > 0)) return;
+    labels.push({
+      id: sphere.id,
+      text: sphere.text,
+      font: 'cormorant',
+      pixelSize: 0,
+      worldPos: sphereSilhouetteTop(toCentre, sphere.radiusMpc, basis.up, [0, 0, 0]),
+      color: [0.75, 0.86, 1, 1],
+      outlineColor: [0, 0, 0, 0.1],
+      outlineEmFrac: 0.16,
+      // The clamps fix the size; the radius just keeps the projection finite at every scale.
+      worldEmMpc: sphere.radiusMpc,
+      minPixelSize: CAPTION_PX,
+      maxPixelSize: CAPTION_PX,
+      alignX: 'center',
+      alignY: 'bottom',
+      fadeAlpha: opacity,
+      declutterPriority: LIGHT_TIME_CAPTION_PRIORITY * CAPTION_PRIORITY_SCALE,
+    });
+  });
+  return { labels, awake: false };
+};

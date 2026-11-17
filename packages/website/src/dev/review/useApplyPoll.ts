@@ -1,8 +1,7 @@
 import { useEffect } from 'react';
 
 import type { DocsReview } from '../../../../../tools/site/@types/DocsReview';
-
-const POLL_MS = 3000;
+import { POLL_MS } from './useApplyPoll.constants.ts';
 
 /**
  * While an apply is requested, asks the review file whether the agent that watches it has finished

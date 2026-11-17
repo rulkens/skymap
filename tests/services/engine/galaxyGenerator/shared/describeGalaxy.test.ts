@@ -13,11 +13,9 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { describeGalaxy } from '../../../../../src/services/engine/galaxyGenerator/shared/describeGalaxy';
-import {
-  ARM_SPAN_START_FRAC,
-  armRidgeCurvePoint,
-} from '../../../../../src/services/engine/galaxyGenerator/v2/armRidgeGeometry';
+import { armRidgeCurvePoint } from '../../../../../src/layers/milkyWay/field/arms/utils/armRidgeCurvePoint';
 import type { GalaxyParams } from '../../../../../src/@types/galaxy/GalaxyParams';
+import { ARM_SPAN_START_FRAC } from '../../../../../src/layers/milkyWay/field/arms/data/armSpanStartFrac';
 
 /**
  * Every drawn field, at full precision. Deliberately a hash over fixed presets
@@ -88,7 +86,7 @@ describe('describeGalaxy', () => {
   });
 
   // describeGalaxy.ts duplicates ARM_SPAN_START_FRAC rather than importing it
-  // (shared/ must gain no import edge onto v2/ — see that file's own comment)
+  // (shared/ must gain no import edge onto field/ — see that file's own comment)
   // — this is the guard that keeps the duplicate from drifting silently.
   it('an ordinary arm defaults spanStartLogR to log(v2 ARM_SPAN_START_FRAC)', () => {
     const geometry = describeGalaxy({ type: 'Sb', shared: {}, legacy: { starCount: 100000 } });

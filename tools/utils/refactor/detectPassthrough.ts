@@ -30,8 +30,8 @@
  * so each disqualifies it and the function returns `null`. The guard is
  * deliberately strict: a false positive here would let `inline` mangle real logic.
  *
- * `PassthroughTarget` is co-located with its detector (the `applyMoves.ts` ->
- * `MovePair` pattern): it only means anything as this function's output.
+ * `PassthroughTarget` is co-located with its detector: it only means anything
+ * as this function's output.
  */
 
 import { Node } from 'ts-morph';

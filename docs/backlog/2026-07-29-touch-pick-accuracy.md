@@ -71,8 +71,8 @@ Options 1 and 3 compose; 2 substitutes for 1.
 
 - `src/data/pickPaddingPx.ts` — the constant, and the doc comment that three
   shaders point back to.
-- `src/layers/galaxyCatalog/render/pickUniformBytesOf.ts:62`,
-  `src/layers/galaxyCatalog/render/packGalaxyPointUniforms.ts` — where the padding is applied.
+- `src/layers/galaxyCatalog/pointSprites/render/pickUniformBytesOf.ts:62`,
+  `src/layers/galaxyCatalog/pointSprites/render/packGalaxyPointUniforms.ts` — where the padding is applied.
 - `src/services/gpu/shaders/structureMarker/ringPick.wesl`,
   `src/services/gpu/shaders/milkyWay/pick/{vertex,io}.wesl` — bake the same
   padding into their own floors; any change here has to reach them too.

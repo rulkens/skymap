@@ -8,10 +8,9 @@
 import type { ComponentPropsWithoutRef } from 'react';
 
 import type { IconName } from '../../../../@types/IconName';
-import { cx } from '../../../../utils/cx.ts';
 import { linkIcon } from '../../../../utils/linkIcon.ts';
 import Icon from '../Icon/Icon.tsx';
-import styles from './ObjLink.module.css';
+import { objLinkClass } from './objLinkClass.ts';
 
 export type ObjLinkProps = ComponentPropsWithoutRef<'a'> & {
   href: string;
@@ -30,15 +29,7 @@ function ObjLink({
 }: ObjLinkProps) {
   const drawing = icon ?? linkIcon(rest.href, import.meta.env.BASE_URL);
   return (
-    <a
-      className={cx(
-        styles.root,
-        size !== 'default' && styles[size],
-        hang && styles.hang,
-        className,
-      )}
-      {...rest}
-    >
+    <a className={objLinkClass({ size, hang, className })} {...rest}>
       {drawing && <Icon name={drawing} />}
       {children}
     </a>

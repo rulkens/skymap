@@ -9,6 +9,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
+import { RECEDE_ALL_FOCUS_SPHERE } from '../../../../src/data/selection/recedeAllFocusSphere';
 
 // Mocked so the FPS-wiring fixtures don't drive the real demand table and the dedicated test can
 // assert the per-frame call (runFrame calls it every tick so any state change re-derives loads).
@@ -50,18 +51,17 @@ vi.mock('../../../../src/services/engine/frame/deriveBodyStates', async (importO
 
 import { runFrame } from '../../../../src/services/engine/frame/runFrame';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
-import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/cameraDrivers';
-import { NAV_AT_REST } from '../../../../src/data/camera/openSpaceNavigation';
+import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/drivers/cameraDrivers';
 import { composeControlSchemes } from '../../../../src/services/engine/camera/composeControlSchemes';
+import { seedCameraRuntime } from '../../../../src/services/engine/camera/seedCameraRuntime';
 import { reevaluateDemand } from '../../../../src/services/engine/wiring/reevaluateDemand';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
-import { UNSTARTED_EPOCHS } from '../../../../src/services/engine/camera/cameraEpochs';
 import {
   startCameraTween,
   setAutoRotate,
   commitCameraPose,
   startFrameTween,
-} from '../../../../src/state/camera/cameraSlice';
+} from '../../../../src/state/camera/cameraIntentSlice';
 import { setOrientation } from '../../../../src/state/settings/core/orientationSlice';
 import {
   ORIENTATION_FRAMES,
@@ -69,30 +69,29 @@ import {
 } from '../../../../src/data/orientation/orientationFrames';
 import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import { frameUp } from '../../../../src/utils/camera/frameUp';
-import { computeViewProj } from '../../../../src/utils/camera/computeViewProj';
+import { frameUp } from '../../../../src/utils/camera/orbitPose/frameUp';
+import { computeViewProj } from '../../../../src/utils/camera/projection/computeViewProj';
 import { engineScaleChanged } from '../../../../src/state/engine/engineSlice';
 import { setSimDays } from '../../../../src/state/time/timeSlice';
 import { rootReducer } from '../../../../src/store/rootReducer';
 import type { RunFrameDeps } from '../../../../src/@types/engine/frame/RunFrameDeps';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
+import type { VisibilityEntry } from '../../../../src/@types/engine/layer/VisibilityEntry';
+import { stellarStreamsVisibility } from '../../../../src/layers/stellarStreams/visibility';
+import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 import type { CameraDriver } from '../../../../src/@types/engine/camera/CameraDriver';
 import type { DriverId } from '../../../../src/@types/engine/camera/DriverId';
 import type { ClipPlayer } from '../../../../src/@types/engine/subsystems/ClipPlayer';
 import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/FrameContentPlanner';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
-import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/layers/galaxyCatalog/state/defaults';
-import { createStructureFocusSubsystem } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
+import { createRecedingFocusSubsystem } from '../../../../src/services/engine/subsystems/recedingFocusSubsystem';
 import {
   inputSourceAttached,
   inputGestureStarted,
   inputMoved,
   inputConsumed,
 } from '../../../../src/state/input/inputSlice';
-import { EMPTY_SURFACE_GESTURE_MEMORY } from '../../../../src/services/camera/surfaceStep';
-import { EMPTY_TILT_MEMORY } from '../../../../src/data/camera/emptyTiltMemory';
-import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
+import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
 import { worldArmOf } from '../../../fixtures/worldArmOf';
 import { earthArm } from '../../../fixtures/earthArm';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
@@ -100,9 +99,12 @@ import { readFollowMemory } from '../../../helpers/camera/readFollowMemory';
 import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapCaptureRuntimes';
 import GOLDEN from '../../../fixtures/camera/driverGoldenTrace.json';
 import type { RootState } from '../../../../src/store/types';
-import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
-import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
+import { symmetricFrustum } from '../../../../src/utils/camera/frustum/symmetricFrustum';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 import { angleBetween } from '../../../helpers/math/angleBetween';
+import { installAppSelectionKinds } from '../../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 function makeStore() {
   return configureStore({ reducer: rootReducer });
@@ -111,94 +113,30 @@ function makeStore() {
 /** `earthArm` measures in Earth radii; the scale-bar case reads back in km. */
 const EARTH_RADIUS_KM = 6371;
 
-/** Minimal `EngineState`-shaped fixture; casting through `unknown` makes a read of any unstubbed
+/** Where every fixture's camera starts; the stream band case measures against it. */
+const BOOT_POSE = absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 });
+
+/** Only what a not-ready frame reads; casting through `unknown` makes a read of any unstubbed
  *  field surface as a runtime undefined rather than a silently-passing stub. */
 function makeState(): EngineState {
   return {
-    settings: {
-      // Read unconditionally at the top of the resize block, before the
-      // renderer-null bail-out — see `runFrame`'s fovYRad write.
-      camera: { fovDeg: 60 },
-      galaxyCatalogs: {
-        enabled: true,
-        sizePx: 2,
-        brightness: 0.5,
-        depthFade: false,
-        provenance: DEFAULT_GALAXY_PROVENANCE,
-      },
-      tonemap: { exposure: 1, curve: 'linear' },
-      bias: { mode: 'off', absMagLimit: -19 },
-      thumbnails: { enabled: false },
-      // aggregateDivisor is what the `mw-aggregate` row's `scale` function
-      // resolves on every reconcile, so the fixture carries its boot value
-      // rather than leaving that reader to resolve undefined.
-      milkyWay: { enabled: false, aggregateDivisor: 2 },
-      cosmicWebFilaments: { enabled: false, intensity: 1 },
-      cosmicWebDensity: { enabled: false },
-    },
-    picking: {
-      pickInFlight: false,
-    },
-    gpu: {
-      galaxyPointRenderer: null,
-      galaxyPickRenderer: null,
-      renderTargets: null,
-    },
+    gpu: { renderTargets: null },
     subsystems: {
       scheduler: { requestRender: vi.fn() },
-      fades: { opacityOf: () => 0 },
-      selection: {
-        hovered: () => null,
-        selected: () => null,
-        focused: () => null,
-        setHovered: vi.fn(),
-        setSelected: vi.fn(),
-        setFocused: vi.fn(),
-        destroy: vi.fn(),
-      },
-      clipPlayer: {
-        tick: vi.fn<ClipPlayer['tick']>((clipEpoch) => ({ clipEpoch })),
-        stop: vi.fn<() => void>(),
-        clipOpacityOf: vi.fn<(layer: string, nowMs: number) => number>(() => 1),
-        destroy: vi.fn<() => void>(),
-      },
-      galaxyAtlas: null,
-      proceduralDisks: null,
-      texturedDisks: null,
-      pickDriver: null,
-      resizeWake: null,
-      loadProgress: null,
+      clipPlayer: { tick: vi.fn<ClipPlayer['tick']>((clipEpoch) => ({ clipEpoch })) },
     },
     booted: false,
     viewRig: 'mono',
     terrainHeightAt: datumOnlyTerrainHeight,
-    cameraRuntime: {
-      register: {
-        pose: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }),
-        winner: 'resting',
-      },
-      base: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }),
-      // Must match the store's orientation, or frame one reads a phantom switch.
-      orientation: DEFAULT_ORIENTATION,
-      epochs: UNSTARTED_EPOCHS,
-      follow: null,
-      gesture: EMPTY_SURFACE_GESTURE_MEMORY,
-      tilt: EMPTY_TILT_MEMORY,
-      navigator: NAV_AT_REST,
-      scheme: 'skymap',
-      own: {},
-      pivotBody: null,
-      outputs: {
-        displayed: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }),
-        simDays: 0,
-        upBasis: [...ORIENTATION_FRAMES.ecliptic],
-        projection: { fovYRad: 0.8, aspect: 1, near: 0.01, far: 1000 },
-      },
-    },
+    // The real seeder over a default store holding the boot pose, so the orientation
+    // and scheme match every test's fresh store and no runtime field is hand-kept.
+    cameraRuntime: seedCameraRuntime({
+      state: rootReducer(undefined, commitCameraPose(BOOT_POSE)),
+      projection: { fovYRad: 0.8, aspect: 1, near: 0.01, far: 1000 },
+    }),
     label3DProducers: [],
-    // Read unconditionally by `runFrame`'s NEAR0 altitude line, before the
-    // ready gate.
     selectionRows: { focus: null },
+    selection: { hover: null, select: null, focus: null },
   } as unknown as EngineState;
 }
 
@@ -241,6 +179,34 @@ function makeCamDeps(state: EngineState, store = makeStore()): RunFrameDeps {
   };
 }
 
+/** A READY fixture: both `isEngineReady` handles are non-null, so the body runs past the label
+ *  directors and the keep-ticking fold. `renderFrame`/`drawPickDebugOverlay` are mocked at module
+ *  scope; `subsystems` overrides what a case drives. */
+function makeReadyState(subsystems: Record<string, unknown> = {}): EngineState {
+  const base = makeCamState();
+  return {
+    ...base,
+    slabRows: [],
+    visibilityEntries: [],
+    cubemapCaptures: makeCubemapCaptureRuntimes(),
+    gpu: {
+      renderTargets: { reconcile: vi.fn() },
+      compositor: {},
+      label3DRenderer: { setLabels: vi.fn() },
+    },
+    subsystems: {
+      ...base.subsystems,
+      scheduler: { requestRender: vi.fn(), requestIdleFrame: vi.fn() },
+      clipPlayer: { ...base.subsystems.clipPlayer, clipOpacityOf: () => 1 },
+      recedingFocus: createRecedingFocusSubsystem({ requestRender: vi.fn() }),
+      fades: { tick: vi.fn(), opacityOf: () => 0, isAnyAnimating: () => false },
+      cosmoLabelDirector: { runFrame: vi.fn(() => false) },
+      foregroundLabelDirector: { runFrame: vi.fn(() => false) },
+      ...subsystems,
+    },
+  } as unknown as EngineState;
+}
+
 describe('runFrame — the input drain runs before the produce step', () => {
   it('applies this frame’s queued gesture to the pose this frame renders', () => {
     // The replay sits above the produce step. Move it below — a plausible
@@ -267,6 +233,7 @@ describe('runFrame — the input drain runs before the produce step', () => {
       ratio: 1,
       at: { x: 1.5, y: 1 },
       held: true,
+      eventMs: 0,
     } as const;
     store.dispatch(inputMoved({ source: 'canvas', motion: [motion] }));
 
@@ -465,7 +432,7 @@ describe('runFrame — orientation-frame roll', () => {
     }
     expect(norm(sub(samples[samples.length - 1]!.position, first.position))).toBeGreaterThan(1);
 
-    expect(store.getState().camera.frameTween).toBeNull();
+    expect(store.getState().camera.intent.frameTween).toBeNull();
   });
 
   it('during a frame roll the assembled camera position is unchanged while its up rotates', () => {
@@ -527,7 +494,7 @@ describe('runFrame — orientation-frame roll', () => {
     // pin that every produced pose and its view-projection are finite: at exactly
     // π/2 the lookAt would gimbal-lock to NaN, and the clamp is what keeps this
     // switch well-defined.
-    const PITCH_LIMIT = Math.PI / 2 - 0.01; // mirrors src/data/camera/pitchLimit.ts
+    const PITCH_LIMIT = Math.PI / 2 - 0.01; // mirrors src/services/engine/camera/arms/world/data/pitchLimit.ts
     const store = makeStore();
     const state = makeCamState();
     const deps = makeCamDeps(state, store);
@@ -662,28 +629,6 @@ describe('runFrame — sim clock (Task 8)', () => {
   });
 });
 
-describe('runFrame — hover-pick removed from frame body', () => {
-  it('does not call galaxyPickRenderer.pick inside the frame body', () => {
-    // Hover picking is driven by createPickDriver (wireInput.ts); runFrame must never call
-    // galaxyPickRenderer.pick. The fixture bails before the GPU-dispatch section, so only the camera +
-    // demand pre-pass runs.
-    const store = makeStore();
-    const state = makeState();
-    const pickSpy = vi.fn<() => Promise<null>>(() => Promise.resolve(null));
-    (state.gpu as any).galaxyPickRenderer = {
-      pick: pickSpy,
-      renderForDebug: vi.fn<() => null>(),
-      destroy: vi.fn<() => void>(),
-      label: 'pick',
-    };
-    const deps = makeDeps(store);
-
-    runFrame(state, deps, 1000);
-
-    expect(pickSpy).not.toHaveBeenCalled();
-  });
-});
-
 describe('runFrame — render-target reconcile', () => {
   it('runFrame reconciles the render targets against the live canvas size every frame', () => {
     // The one seam that answers BOTH a canvas resize and a state-driven scale
@@ -749,7 +694,7 @@ describe('runFrame — engineScaleChanged dispatch', () => {
     const ALTITUDE_KM = 100;
     const arm = earthArm(1 + ALTITUDE_KM / EARTH_RADIUS_KM);
     store.dispatch(commitCameraPose(arm));
-    // No focus row: nothing constrains a rung, so the arm holds at rest and
+    // No focus row: nothing constrains an arm, so the arm holds at rest and
     // the legend — this fixture's whole subject — is read off it. A focus here
     // would owe an approach that flies the range straight out of the km band.
     state.cameraRuntime = {
@@ -811,60 +756,14 @@ describe('runFrame — engineScaleChanged dispatch', () => {
 });
 
 describe('runFrame — the label-director wake fold', () => {
-  /** A fully READY fixture (every `isEngineReady` field non-null) so the body runs past the two label
-   *  directors. Per-frame planners between the ready gate and the directors are left null so their
-   *  blocks skip; `renderFrame`/`drawPickDebugOverlay` are mocked at module scope. */
-  function makeReadyState(
-    cosmoRunFrame: () => boolean,
-    foregroundRunFrame: () => boolean,
-  ): EngineState {
-    const base = makeCamState();
-    return {
-      ...base,
-      settings: {
-        ...base.settings,
-        flow: { enabled: false },
-        bodies: { items: { sun: { enabled: false }, 's-star': { enabled: false } } },
-      },
-      slabRows: [],
-      visibilityEntries: [],
-      selectionRows: { focus: null },
-      // Empty over the empty composition: runFrame's Layer-hook loop iterates this every ready frame.
-      layers: [],
-      cubemapCaptures: makeCubemapCaptureRuntimes(),
-      gpu: {
-        ...base.gpu,
-        galaxyPointRenderer: {},
-        galaxyPickRenderer: {},
-        renderTargets: { reconcile: vi.fn() },
-        compositor: {},
-        starCatalogRenderer: null,
-        label3DRenderer: { setLabels: vi.fn() },
-      },
-      subsystems: {
-        ...base.subsystems,
-        texturedDisks: { hasInFlightWork: () => false },
-        proceduralDisks: null,
-        diskPlannerWalk: null,
-        hiResFamous: null,
-        structureFocus: createStructureFocusSubsystem({ requestRender: vi.fn() }),
-        fades: { tick: vi.fn(), opacityOf: () => 0, isAnyAnimating: () => false },
-        cosmoLabelDirector: { runFrame: vi.fn(cosmoRunFrame) },
-        foregroundLabelDirector: { runFrame: vi.fn(foregroundRunFrame) },
-      },
-    } as unknown as EngineState;
-  }
-
   it("a director voting true does not prevent its siblings' flush", () => {
     // spec §12's short-circuit trap: `a() || b() || c()` would never call
     // `b()`/`c()` once `a()` returns true, silently dropping a later
     // statement's GPU flush the moment an earlier one votes to keep
     // animating. `runLabel3DProducers` is the newest of the three and the
     // one most likely to get folded into the `||` chain later — pin it too.
-    const state = makeReadyState(
-      () => true, // COSMO votes true — must NOT short-circuit the calls below
-      () => false,
-    );
+    // COSMO votes true — must NOT short-circuit the calls below.
+    const state = makeReadyState({ cosmoLabelDirector: { runFrame: vi.fn(() => true) } });
     const deps = makeCamDeps(state);
 
     runFrame(state, deps, 0);
@@ -872,15 +771,14 @@ describe('runFrame — the label-director wake fold', () => {
     expect(state.subsystems.cosmoLabelDirector.runFrame).toHaveBeenCalledTimes(1);
     expect(state.subsystems.foregroundLabelDirector.runFrame).toHaveBeenCalledTimes(1);
     expect(state.gpu.label3DRenderer!.setLabels).toHaveBeenCalledTimes(1);
+    // One vote is enough to keep the loop awake: the three fold with OR.
+    expect(state.subsystems.scheduler.requestRender).toHaveBeenCalled();
   });
 
   it('the outgoing focused structure keeps full emphasis through the fade-out', () => {
     const VIRGO_WORD = 42;
-    const base = makeReadyState(
-      () => false,
-      () => false,
-    );
-    const structureFocus = createStructureFocusSubsystem({ requestRender: vi.fn() }, 0);
+    const base = makeReadyState();
+    const recedingFocus = createRecedingFocusSubsystem({ requestRender: vi.fn() }, 0);
     const state = {
       ...base,
       selectionKindRows: [
@@ -892,13 +790,20 @@ describe('runFrame — the label-director wake fold', () => {
       subsystems: {
         ...base.subsystems,
         scheduler: { requestRender: vi.fn(), requestIdleFrame: vi.fn() },
-        structureFocus,
+        recedingFocus,
       },
     } as unknown as EngineState;
     // Virgo was focused and settled; the focus is already cleared (the fixture's
     // focus row is null), so the frames below tick its fade-out.
-    structureFocus.update({ id: 'virgo', worldPos: [1, 0, 0], physicalRadiusMpc: 2 } as never, 0);
-    structureFocus.produceFocusUniforms(500);
+    recedingFocus.update(
+      { type: 'structure', id: 'virgo' },
+      {
+        type: 'structure',
+        focusRegion: { center: [1, 0, 0], apparentRadiusMpc: 2, physicalRadiusMpc: 2 },
+      },
+      0,
+    );
+    recedingFocus.produceFocus(500, () => 1);
     const deps = makeCamDeps(state);
     const snapshotAt = (nowMs: number) => {
       runFrame(state, deps, nowMs);
@@ -913,62 +818,89 @@ describe('runFrame — the label-director wake fold', () => {
     expect(settled.focusBlend).toBe(0);
     expect(settled.focusPickId).toBeNull();
   });
+
+  it('a focused stream ramps the blend under its own pick word, its subjectOnly region as the recede-all sphere', () => {
+    const STREAM_WORD = 7;
+    const base = makeReadyState();
+    const stream = { type: 'stellarStream', slug: 'cetus-palca' };
+    const state = {
+      ...base,
+      selection: { hover: null, select: null, focus: stream },
+      selectionRows: { focus: { type: 'stellarStream', focusRegion: 'subjectOnly' } },
+      selectionKindRows: [{ type: 'stellarStream', encodePick: () => STREAM_WORD }],
+      subsystems: {
+        ...base.subsystems,
+        scheduler: { requestRender: vi.fn(), requestIdleFrame: vi.fn() },
+        recedingFocus: createRecedingFocusSubsystem({ requestRender: vi.fn() }, 0),
+      },
+    } as unknown as EngineState;
+    const deps = makeCamDeps(state);
+    runFrame(state, deps, 0);
+    runFrame(state, deps, 500);
+
+    const snapshot = vi.mocked(state.subsystems.cosmoLabelDirector.runFrame).mock.lastCall![1]
+      .snapshot;
+    expect(snapshot.focusBlend).toBe(1);
+    expect(snapshot.focusPickId).toBe(STREAM_WORD);
+    expect(snapshot.focus).toEqual({ ...RECEDE_ALL_FOCUS_SPHERE, blend: 1 });
+  });
+
+  describe("a focused stream recedes the scene only while the streams' show entry is visible", () => {
+    function focusedStreamFrame(visibilityEntries: readonly VisibilityEntry[], fade: number) {
+      const base = makeReadyState();
+      const recedingFocus = createRecedingFocusSubsystem({ requestRender: vi.fn() }, 0);
+      const state = {
+        ...base,
+        visibilityEntries,
+        selection: { hover: null, select: null, focus: { type: 'stellarStream', slug: 'gd-1' } },
+        selectionRows: { focus: { type: 'stellarStream', focusRegion: 'subjectOnly' } },
+        selectionKindRows: [{ type: 'stellarStream', encodePick: () => 7 }],
+        subsystems: {
+          ...base.subsystems,
+          scheduler: { requestRender: vi.fn(), requestIdleFrame: vi.fn() },
+          fades: { ...base.subsystems.fades, opacityOf: () => fade },
+          recedingFocus,
+        },
+      } as unknown as EngineState;
+      const deps = makeCamDeps(state);
+      runFrame(state, deps, 0);
+      runFrame(state, deps, 500);
+      return {
+        snapshot: vi.mocked(state.subsystems.cosmoLabelDirector.runFrame).mock.lastCall![1]
+          .snapshot,
+        drawn: recedingFocus.lastFocus(),
+      };
+    }
+    // No band, so only the switch speaks; the fixture camera sits 100 Mpc out.
+    const SWITCH_ONLY: readonly VisibilityEntry[] = [
+      { key: 'stellarStreams', selects: ['stellarStream'] },
+    ];
+
+    it('shown: recedes as before', () => {
+      const { snapshot } = focusedStreamFrame(SWITCH_ONLY, 1);
+      expect(snapshot.focusBlend).toBe(1);
+      expect(snapshot.focus.blend).toBe(1);
+    });
+
+    it('switched off: un-receded and pickable, in the frame and in what a pick reads back', () => {
+      const { snapshot, drawn } = focusedStreamFrame(SWITCH_ONLY, 0);
+      expect(snapshot.focusBlend).toBe(0);
+      expect(snapshot.focus.blend).toBe(0);
+      expect(drawn.blend).toBe(0);
+      expect(drawn.uniforms.blend).toBe(0);
+    });
+
+    it('out of its band: un-receded', () => {
+      const { snapshot } = focusedStreamFrame(stellarStreamsVisibility, 1);
+      expect(snapshot.focusBlend).toBe(0);
+      expect(snapshot.focus.blend).toBe(0);
+    });
+  });
 });
 
 describe('runFrame — the planner keep-ticking fold', () => {
-  /** A fully READY fixture. `renderFrame` is mocked at module scope; a test needing a planner vote
-   *  mutates `input.canvas.snapshot.plans` from inside that mock, as the real `renderFrame` would via
-   *  `runPlanSteps`; `runFrame` only folds the result (`snapshot.plans.awake`). */
-  function makeReadyState(): EngineState {
-    const base = makeCamState();
-    return {
-      ...base,
-      settings: {
-        ...base.settings,
-        flow: { enabled: false },
-        bodies: { items: { sun: { enabled: false }, 's-star': { enabled: false } } },
-      },
-      slabRows: [],
-      visibilityEntries: [],
-      selectionRows: { focus: null },
-      layers: [],
-      cubemapCaptures: makeCubemapCaptureRuntimes(),
-      gpu: {
-        ...base.gpu,
-        galaxyPointRenderer: {},
-        galaxyPickRenderer: {},
-        renderTargets: { reconcile: vi.fn() },
-        compositor: {},
-        starCatalogRenderer: null,
-        label3DRenderer: { setLabels: vi.fn() },
-      },
-      subsystems: {
-        ...base.subsystems,
-        // At rest, keepTicking is false and the still-live sim clock falls
-        // through to the idle-tick arm.
-        scheduler: { requestRender: vi.fn(), requestIdleFrame: vi.fn() },
-        texturedDisks: { hasInFlightWork: () => false },
-        proceduralDisks: null,
-        diskPlannerWalk: null,
-        hiResFamous: null,
-        structureFocus: {
-          update: vi.fn(),
-          produceFocusUniforms: vi.fn(() => ({
-            center: [1, 2, 3],
-            apparentRadiusMpc: 1,
-            physicalRadiusMpc: 1,
-            blend: 0.5,
-          })),
-          lastFocusRef: () => null,
-          isAwake: () => false,
-        },
-        fades: { tick: vi.fn(), opacityOf: () => 0, isAnyAnimating: () => false },
-        cosmoLabelDirector: { runFrame: () => false },
-        foregroundLabelDirector: { runFrame: () => false },
-      },
-    } as unknown as EngineState;
-  }
-
+  // A case needing a planner vote mutates `input.canvas.snapshot.plans` from inside the mocked
+  // `renderFrame`, as the real one would via `runPlanSteps`; `runFrame` only folds the result.
   it('a frame otherwise at rest, with no planner voting awake, does not keep the loop ticking', () => {
     const state = makeReadyState();
     runFrame(state, makeCamDeps(state), 0);
@@ -980,13 +912,14 @@ describe('runFrame — the planner keep-ticking fold', () => {
     const wakingPlanner: FrameContentPlanner<void> = {
       name: 'test-awake',
       scope: 'once',
-      plan: () => ({ value: undefined, awake: true, settling: false }),
+      plan: () => ({ value: undefined, awake: true, settling: false, loading: false }),
     };
     vi.mocked(renderFrame).mockImplementationOnce((input) => {
       input.canvas.snapshot.plans.put(wakingPlanner, undefined, {
         value: undefined,
         awake: true,
         settling: false,
+        loading: false,
       });
     });
 
@@ -1008,7 +941,7 @@ describe('runFrame — effective intent', () => {
     h.notch(100, [500, 500]);
     h.frame();
 
-    const committed = worldArmOf(h.store.getState().camera.base).distance;
+    const committed = worldArmOf(h.store.getState().camera.intent.base).distance;
     expect(committed).toBeGreaterThan(100);
     expect(worldArmOf(h.state.cameraRuntime.register.pose).distance).toBe(committed);
   });
@@ -1038,7 +971,7 @@ describe('runFrame — effective intent', () => {
 
   it('the frame’s actions reach the store in the same order as before', () => {
     // The `drag end` frame of the driver golden trace, reproduced: the
-    // replay's commit and `endDrag` dispatch first and in order, the scale
+    // replay's commit dispatches first, the scale
     // dispatch after them. Recorded the way the fixture records.
     const h = makeCameraSimHarness({ focusBody: null, bootHR: 5 });
     h.frame(4);
@@ -1056,14 +989,13 @@ describe('runFrame — effective intent', () => {
     h.frame();
 
     const want = GOLDEN.find((step) => step.label === 'drag end')!.actions;
-    expect(want).toContain('camera/endDrag');
     expect(recorded).toEqual(want);
   });
 
   it('commits the tail of a gesture that ended mid-frame', () => {
     // The commit fires on the frame after pointerup, so the moves that
     // preceded the release must land BEFORE it or the store bakes a pose one
-    // frame stale — and the drag flag clears in the same frame.
+    // frame stale.
     const h = makeCameraSimHarness({ focusBody: null, bootHR: null, canvasSize: 1000 });
     h.seedPose(absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }));
     h.press('orbit', [100, 100]);
@@ -1072,7 +1004,6 @@ describe('runFrame — effective intent', () => {
 
     h.frame();
 
-    expect(worldArmOf(h.store.getState().camera.base).yaw).toBeCloseTo(-50 * 0.005, 6);
-    expect(h.store.getState().camera.dragging).toBe(false);
+    expect(worldArmOf(h.store.getState().camera.intent.base).yaw).toBeCloseTo(-50 * 0.005, 6);
   });
 });

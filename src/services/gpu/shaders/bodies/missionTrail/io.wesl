@@ -26,5 +26,6 @@ struct TrailUniforms {
 struct VSOut {
   @builtin(position) clip: vec4<f32>,
   @location(0) relKm: vec3<f32>,
-  @location(1) side: f32,
+  // linear: an across-width coordinate (lib/segmentQuad.wesl's header).
+  @location(1) @interpolate(linear) side: f32,
 };

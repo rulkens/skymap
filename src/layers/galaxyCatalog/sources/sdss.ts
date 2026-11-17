@@ -1,9 +1,7 @@
 import type { GalaxyCatalogSourceEntry } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceEntry';
-import { Source } from '../../../data/source';
 
 export const SDSS_ENTRY = {
   type: 'galaxyCatalog',
-  code: Source.SDSS,
   id: 'sdss',
   label: 'SDSS',
   binBaseName: 'sdss',
@@ -15,6 +13,8 @@ export const SDSS_ENTRY = {
   maxDistMpc: 3000,
   bandLabels: { u: 'u', g: 'g', r: 'r', i: 'i', z: 'z' },
   colourSpec: { slotA: 'u', slotB: 'g', rangeMin: 0.5, rangeMax: 2.0, kPerZ: 3.0 },
+  // u−r: the canonical red-sequence/blue-cloud discriminator (Strateva et al. 2001).
+  typeColour: { slotA: 'u', slotB: 'r', thresholds: 'u-r' },
   // r-band spec completeness limit (SDSS DR1+).
   mLim: 17.77,
   // Blanton et al. 2003, r-band LF for the spec sample.

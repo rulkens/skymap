@@ -1,5 +1,5 @@
 /**
- * bodyBodyRows — the planet and moon rows, each carrying identity, orbit and rotation.
+ * bodyBodyRows — the planet, moon and small-body rows, each carrying identity, orbit and rotation.
  * Orbits: JPL SSD approx_pos.html Table 1 (planets), sats/elem (moons); JPL's `L`/`ϖ` columns
  * are converted inline (`ω = ϖ − Ω`, `M = L − ϖ`, likewise the rates) so every transcription
  * stays checkable against the source. Rotation (Archinal et al. 2018): Ẇ is live everywhere;
@@ -8,40 +8,43 @@
  */
 
 import type { LayerBody } from '../../../@types/engine/layer/LayerBody';
-import { EARTH } from './earth';
-import { MERCURY } from './mercury';
-import { VENUS } from './venus';
-import { MARS } from './mars';
-import { JUPITER } from './jupiter';
-import { SATURN } from './saturn';
-import { URANUS } from './uranus';
-import { NEPTUNE } from './neptune';
-import { MOON } from './moon';
-import { PHOBOS } from './phobos';
-import { DEIMOS } from './deimos';
-import { IO } from './io';
-import { EUROPA } from './europa';
-import { GANYMEDE } from './ganymede';
-import { CALLISTO } from './callisto';
-import { MIMAS } from './mimas';
-import { ENCELADUS } from './enceladus';
-import { TETHYS } from './tethys';
-import { DIONE } from './dione';
-import { RHEA } from './rhea';
-import { TITAN } from './titan';
-import { IAPETUS } from './iapetus';
-import { PLUTO } from './pluto';
-import { CHARON } from './charon';
-import { MIRANDA } from './miranda';
-import { ARIEL } from './ariel';
-import { UMBRIEL } from './umbriel';
-import { TITANIA } from './titania';
-import { OBERON } from './oberon';
-import { PUCK } from './puck';
-import { TRITON } from './triton';
-import { PROTEUS } from './proteus';
-import { NEREID } from './nereid';
-import { EXOPLANET_PLANETS } from './exoplanetPlanets';
+import { EARTH } from './planets/earth';
+import { MERCURY } from './planets/mercury';
+import { VENUS } from './planets/venus';
+import { MARS } from './planets/mars';
+import { JUPITER } from './planets/jupiter';
+import { SATURN } from './planets/saturn';
+import { URANUS } from './planets/uranus';
+import { NEPTUNE } from './planets/neptune';
+import { MOON } from './moons/earthMars/moon';
+import { PHOBOS } from './moons/earthMars/phobos';
+import { DEIMOS } from './moons/earthMars/deimos';
+import { IO } from './moons/jupiter/io';
+import { EUROPA } from './moons/jupiter/europa';
+import { GANYMEDE } from './moons/jupiter/ganymede';
+import { CALLISTO } from './moons/jupiter/callisto';
+import { MIMAS } from './moons/saturn/mimas';
+import { ENCELADUS } from './moons/saturn/enceladus';
+import { TETHYS } from './moons/saturn/tethys';
+import { DIONE } from './moons/saturn/dione';
+import { RHEA } from './moons/saturn/rhea';
+import { TITAN } from './moons/saturn/titan';
+import { IAPETUS } from './moons/saturn/iapetus';
+import { PLUTO } from './planets/pluto';
+import { CHARON } from './moons/neptunePluto/charon';
+import { MIRANDA } from './moons/uranus/miranda';
+import { ARIEL } from './moons/uranus/ariel';
+import { UMBRIEL } from './moons/uranus/umbriel';
+import { TITANIA } from './moons/uranus/titania';
+import { OBERON } from './moons/uranus/oberon';
+import { PUCK } from './moons/uranus/puck';
+import { TRITON } from './moons/neptunePluto/triton';
+import { PROTEUS } from './moons/neptunePluto/proteus';
+import { NEREID } from './moons/neptunePluto/nereid';
+import { VESTA } from './smallBodies/vesta';
+import { CERES } from './smallBodies/ceres';
+import { BENNU } from './smallBodies/bennu';
+import { EXOPLANET_PLANETS } from './exoplanets/exoplanetPlanets';
 
 export const BODY_BODY_ROWS: readonly LayerBody[] = [
   EARTH,
@@ -77,6 +80,9 @@ export const BODY_BODY_ROWS: readonly LayerBody[] = [
   TRITON,
   PROTEUS,
   NEREID,
+  VESTA,
+  CERES,
+  BENNU,
   // Planets of other stars: appended last, so every solar body keeps its pick index.
   ...EXOPLANET_PLANETS,
 ];

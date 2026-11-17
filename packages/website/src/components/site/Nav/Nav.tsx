@@ -15,6 +15,7 @@ import { cx } from '../../../utils/cx.ts';
 import { sitePath } from '../../../utils/sitePath.ts';
 import ObjLink from '../../shared/links/ObjLink/ObjLink.tsx';
 import OpenApp from '../../shared/links/OpenApp/OpenApp.tsx';
+import Wordmark from '../../shared/text/Wordmark/Wordmark.tsx';
 import styles from './Nav.module.css';
 
 type NavProps = { path: string; hero?: boolean; menu?: ReactNode };
@@ -25,7 +26,7 @@ function Nav({ path, hero = false, menu }: NavProps) {
       <div className={cx(styles.ground, hero && styles.hero)} aria-hidden="true" />
       <header className={cx(styles.root, hero && styles.hero)}>
         <a className={styles.mark} href={sitePath('/')}>
-          skymap
+          <Wordmark />
         </a>
 
         <nav aria-label="Main">

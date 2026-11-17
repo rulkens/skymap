@@ -25,7 +25,7 @@ import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { ORBITAL_ELEMENTS } from '../../../../../src/data/bodies/orbitalElements';
-import { BODY_TRAIL_ELEMENTS } from '../../../../../src/layers/body/present/bodyTrailElements';
+import { BODY_TRAIL_ELEMENTS } from '../../../../../src/layers/body/orbitTrails/data/bodyTrailElements';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
 import { eccentricAnomalyFromMean } from '../../../../../src/utils/orbit/eccentricAnomalyFromMean';
 import { propagateElements } from '../../../../../src/utils/orbit/propagateElements';
@@ -38,7 +38,7 @@ import type { EngineState } from '../../../../../src/@types/engine/state/EngineS
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import type { OrbitalElements } from '../../../../../src/@types/scene/OrbitalElements';
 import type { OrbitTrailDrawArgs } from '../../../../../src/@types/rendering/orbitTrailRenderer/OrbitTrailDrawArgs';
-import { composeBodySlabMvp } from '../../../../../src/utils/camera/composeBodySlabMvp';
+import { composeBodySlabMvp } from '../../../../../src/utils/camera/bodyCompose/composeBodySlabMvp';
 import { narrowMat4 } from '../../../../../src/utils/math/narrowMat4';
 import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
 import { SCENE_SUN } from '../../../../../src/data/bodies/sceneSun';
@@ -54,7 +54,7 @@ type ConicOut = {
   clipBasis: readonly [Float32Array, Float32Array, Float32Array];
   arc: readonly [number, number];
 };
-vi.mock('../../../../../src/utils/camera/composeOrbitConic', () => ({
+vi.mock('../../../../../src/utils/camera/bodyCompose/composeOrbitConic', () => ({
   composeOrbitConic: vi.fn<() => ConicOut>(() => ({
     ginv: new Float32Array(12),
     clipBasis: [
@@ -65,7 +65,7 @@ vi.mock('../../../../../src/utils/camera/composeOrbitConic', () => ({
     arc: [601, 602],
   })),
 }));
-import { composeOrbitConic } from '../../../../../src/utils/camera/composeOrbitConic';
+import { composeOrbitConic } from '../../../../../src/utils/camera/bodyCompose/composeOrbitConic';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 
 // Lets one test hand the pass a snapshot that differs from raw Kepler; unset, the
@@ -248,13 +248,18 @@ function makeRendererSpy() {
 }
 
 // The default roster is core's group at fade 1; `groups` swaps in groups with their own fades,
-// `impostorOn` drives the debug overlay.
+// `impostorOn` drives the debug overlay, `selection` the selected/focused refs.
 function makeState(
   orbitTrailRenderer: unknown,
-  opts: { impostorOn?: boolean; groups?: EngineState['orbitTrailGroups'] } = {},
+  opts: {
+    impostorOn?: boolean;
+    groups?: EngineState['orbitTrailGroups'];
+    selection?: Partial<EngineState['selection']>;
+  } = {},
 ): EngineState {
   return {
     gpu: { orbitTrailRenderer },
+    selection: { select: null, focus: null, ...opts.selection },
     settings: {
       debug: {
         overlays: { 'orbit-trail-impostor': opts.impostorOn ?? false },
@@ -513,6 +518,35 @@ describe('orbitTrailsPass.draw', () => {
     expect(staging[17]).toBeCloseTo(0.5);
     expect(staging[INSTANCE_FLOATS + 17]).toBeCloseTo(0.25);
   });
+
+  it.each([
+    ['nothing selected', {}, 1],
+    ['the row selected', { select: { type: 'body', id: 'venus' } }, 2],
+    ['the row focused', { focus: { type: 'body', id: 'venus' } }, 2],
+    ['another body selected', { select: { type: 'body', id: 'mercury' } }, 1],
+  ] as const)(
+    'draws a selectedOnly row only while it is selected or focused (%s)',
+    (_, selection, expected) => {
+      const mercury = BODY_TRAIL_ELEMENTS.find((e) => e.id === 'mercury')!;
+      const venus = BODY_TRAIL_ELEMENTS.find((e) => e.id === 'venus')!;
+      const groups = [
+        {
+          show: 'orbitTrails' as const,
+          rows: [mercury, venus],
+          selectedOnly: [venus.id],
+          fade: () => 1,
+        },
+      ];
+      const renderer = makeRendererSpy();
+      orbitTrailsPass.draw(
+        PASS_STUB,
+        makeNear0View(),
+        makeDrawCtx(),
+        makeState(renderer, { groups, selection: selection as Partial<EngineState['selection']> }),
+      );
+      expect(renderer.draw.mock.calls[0]![1].count).toBe(expected);
+    },
+  );
 
   it('rides a moon trail centre on its propagated parent, not the J2000 centre', () => {
     composeMock.mockClear();
@@ -804,7 +838,9 @@ describe('orbitTrailsPass.draw', () => {
         nowMs: 0,
         meshBodies: [],
         sceneBodies: sceneBodiesAt(CONST_J2000),
+        renderTargets: { farDepthView: () => FAR_DEPTH_VIEW_STUB },
       },
+      bodyPose: () => null,
       drawCamPos: [1, 0, 0],
       drawPxPerRad: FIXTURE_PX_PER_RAD,
       cam: { distance: 1 },

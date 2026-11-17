@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { SCENE_RINGS } from '../../../src/data/bodies/sceneRings';
-import { BODY_TEXTURE_REGISTRY } from '../../../src/data/bodies/bodyTextureRegistry';
+import { BODY_TEXTURE_REGISTRY } from '../../../src/layers/body/textures/data/bodyTextureRegistry';
 
 describe('SCENE_RINGS', () => {
   it('structural invariants', () => {

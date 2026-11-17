@@ -3,11 +3,10 @@
  * where `runPlanSteps` files each planner's result and where a pass reads
  * the data planned for its view. A `'once'` result is filed by planner name;
  * a `'perView'` result by planner name AND the `FrameView` it was planned
- * for (a `WeakMap` on view identity, the idiom `atmosphereDrawListCache`
- * and `earthPass` use), so no view can read another view's plan. `get`
+ * for (a `WeakMap` on view identity, the idiom `earthPass` uses), so no view can read another view's plan. `get`
  * on something never planned throws rather than hand back a canvas-shaped
- * default. `awake` and `settling` OR every result put this frame, and
- * settling implies awake here so a settling planner keeps the loop ticking.
+ * default. `awake`, `settling` and `loading` OR every result put this frame,
+ * with settling ⇒ loading ⇒ awake folded in here.
  */
 
 import type { FrameContentPlanner } from '../../../@types/engine/frame/FrameContentPlanner';
@@ -20,6 +19,7 @@ export function createFramePlannerResultStore(): FramePlannerResultStore {
   const perView = new Map<string, WeakMap<FrameView, PlannerResult<unknown>>>();
   let awake = false;
   let settling = false;
+  let loading = false;
 
   return {
     get<T>(planner: FrameContentPlanner<T>, view?: FrameView): T {
@@ -57,9 +57,10 @@ export function createFramePlannerResultStore(): FramePlannerResultStore {
         // throws on the WeakMap key rather than landing where no `get` looks.
         byView.set(view!, result);
       }
-      // A settling vote keeps the loop ticking too — `awake ⊇ settling` is
-      // PlannerResult's convention, and this fold is what owns the implication.
-      awake ||= result.awake || result.settling;
+      // `settling ⇒ loading ⇒ awake` is PlannerResult's convention, and this
+      // fold is what owns the implication.
+      awake ||= result.awake || result.loading || result.settling;
+      loading ||= result.loading || result.settling;
       settling ||= result.settling;
     },
     get awake() {
@@ -67,6 +68,9 @@ export function createFramePlannerResultStore(): FramePlannerResultStore {
     },
     get settling() {
       return settling;
+    },
+    get loading() {
+      return loading;
     },
   };
 }

@@ -1,9 +1,9 @@
 /**
  * Unit tests for `sdssName` — the standalone SDSS-prefixed IAU designation.
  *
- * `iauName(Source.SDSS, ra, dec)` produces the same output, so these tests
+ * `iauName('sdss', ra, dec)` produces the same output, so these tests
  * partially overlap, but `sdssName` is also imported directly by build-time
- * tooling that doesn't carry a Source enum, so it has its own surface and
+ * tooling that doesn't carry a source id, so it has its own surface and
  * deserves its own coverage.
  */
 

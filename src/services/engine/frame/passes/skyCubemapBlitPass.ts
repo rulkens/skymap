@@ -7,7 +7,7 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import { CUBEMAP_CAPTURES } from '../../../../data/rendering/cubemapCaptures';
+import { APP_CUBEMAP_CAPTURE_REGISTRY } from '../../../../compositions/appCubemapCaptures';
 import { skyCaptureBandAlpha } from '../skyCaptureBandAlpha';
 
 export const skyCubemapBlitPass: ContentPass = {
@@ -29,7 +29,7 @@ export const skyCubemapBlitPass: ContentPass = {
     renderer.draw(
       pass,
       basis,
-      ctx.snapshot.renderTargets.cubeViewOf(CUBEMAP_CAPTURES.solarSystem.target),
+      ctx.snapshot.renderTargets.cubeViewOf(APP_CUBEMAP_CAPTURE_REGISTRY.solarSystem.target),
     );
   },
 };

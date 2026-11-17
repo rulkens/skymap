@@ -1,0 +1,217 @@
+{
+  "Sagittarius Stream": {
+    "type": "standard",
+    "title": "Sagittarius Stream",
+    "displaytitle": "<span lang=\"en\" dir=\"ltr\"><span class=\"mw-page-title-main\">Sagittarius Stream</span></span>",
+    "namespace": {
+      "id": 0,
+      "text": ""
+    },
+    "wikibase_item": "Q7399307",
+    "titles": {
+      "canonical": "Sagittarius_Stream",
+      "normalized": "Sagittarius Stream",
+      "display": "<span lang=\"en\" dir=\"ltr\"><span class=\"mw-page-title-main\">Sagittarius Stream</span></span>"
+    },
+    "pageid": 36613701,
+    "lang": "en",
+    "dir": "ltr",
+    "revision": "1379620751",
+    "tid": "0805ae28-c50e-11f1-8ec4-a263e4cfad2b",
+    "timestamp": "2026-10-11T00:52:28Z",
+    "description": "Long and elongated structure of stars",
+    "description_source": "local",
+    "content_urls": {
+      "desktop": {
+        "page": "https://en.wikipedia.org/wiki/Sagittarius_Stream",
+        "revisions": "https://en.wikipedia.org/wiki/Sagittarius_Stream?action=history",
+        "edit": "https://en.wikipedia.org/wiki/Sagittarius_Stream?action=edit",
+        "talk": "https://en.wikipedia.org/wiki/Talk:Sagittarius_Stream"
+      },
+      "mobile": {
+        "page": "https://en.wikipedia.org/wiki/Sagittarius_Stream",
+        "revisions": "https://en.wikipedia.org/wiki/Special:History/Sagittarius_Stream",
+        "edit": "https://en.wikipedia.org/wiki/Sagittarius_Stream?action=edit",
+        "talk": "https://en.wikipedia.org/wiki/Talk:Sagittarius_Stream"
+      }
+    },
+    "extract": "In astronomy, the Sagittarius Stream is a long, complex structure made of stars that wrap around the Milky Way Galaxy in an orbit that nearly crosses the galactic poles. It consists of tidally stripped stars from the Sagittarius Dwarf Spheroidal Galaxy, resulting from the process of merging with the Milky Way over a period of billions of years.",
+    "extract_html": "<p>In astronomy, the <b>Sagittarius Stream</b> is a long, complex structure made of stars that wrap around the Milky Way Galaxy in an orbit that nearly crosses the galactic poles. It consists of tidally stripped stars from the Sagittarius Dwarf Spheroidal Galaxy, resulting from the process of merging with the Milky Way over a period of billions of years.</p>"
+  },
+  "GD-1": {
+    "type": "standard",
+    "title": "GD-1",
+    "displaytitle": "<span lang=\"en\" dir=\"ltr\"><span class=\"mw-page-title-main\">GD-1</span></span>",
+    "namespace": {
+      "id": 0,
+      "text": ""
+    },
+    "wikibase_item": "Q78444445",
+    "titles": {
+      "canonical": "GD-1",
+      "normalized": "GD-1",
+      "display": "<span lang=\"en\" dir=\"ltr\"><span class=\"mw-page-title-main\">GD-1</span></span>"
+    },
+    "pageid": 78472163,
+    "lang": "en",
+    "dir": "ltr",
+    "revision": "1373201087",
+    "tid": "a6e51e79-a871-11f1-bc1d-7f6a2b94b3a1",
+    "timestamp": "2026-09-04T15:02:31Z",
+    "description": "Stellar stream",
+    "description_source": "local",
+    "content_urls": {
+      "desktop": {
+        "page": "https://en.wikipedia.org/wiki/GD-1",
+        "revisions": "https://en.wikipedia.org/wiki/GD-1?action=history",
+        "edit": "https://en.wikipedia.org/wiki/GD-1?action=edit",
+        "talk": "https://en.wikipedia.org/wiki/Talk:GD-1"
+      },
+      "mobile": {
+        "page": "https://en.wikipedia.org/wiki/GD-1",
+        "revisions": "https://en.wikipedia.org/wiki/Special:History/GD-1",
+        "edit": "https://en.wikipedia.org/wiki/GD-1?action=edit",
+        "talk": "https://en.wikipedia.org/wiki/Talk:GD-1"
+      }
+    },
+    "extract": "GD-1 is a moving group of old, metal-poor stars located at 8.5 kpc above the galactic disk and spanning 80 degrees across the sky, first identified in 2006. The stream was formed after a globular cluster was disrupted by tidal forces, possibly from the gravitational field of the Milky Way. There are several gaps in the stream, as well as a 'spur' where part of the stream branches off from the main body. These features suggest that the stream was perturbed by another object. Clumps of dark matter have been theorised as responsible for these perturbations.",
+    "extract_html": "<p><b>GD-1</b> is a moving group of old, metal-poor stars located at 8.5 kpc above the galactic disk and spanning 80 degrees across the sky, first identified in 2006. The stream was formed after a globular cluster was disrupted by tidal forces, possibly from the gravitational field of the Milky Way. There are several gaps in the stream, as well as a 'spur' where part of the stream branches off from the main body. These features suggest that the stream was perturbed by another object. Clumps of dark matter have been theorised as responsible for these perturbations.</p>"
+  },
+  "Monoceros Ring": {
+    "type": "standard",
+    "title": "Monoceros Ring",
+    "displaytitle": "<span lang=\"en\" dir=\"ltr\"><span class=\"mw-page-title-main\">Monoceros Ring</span></span>",
+    "namespace": {
+      "id": 0,
+      "text": ""
+    },
+    "wikibase_item": "Q35778",
+    "titles": {
+      "canonical": "Monoceros_Ring",
+      "normalized": "Monoceros Ring",
+      "display": "<span lang=\"en\" dir=\"ltr\"><span class=\"mw-page-title-main\">Monoceros Ring</span></span>"
+    },
+    "pageid": 2454274,
+    "thumbnail": {
+      "source": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a7/Gaia%E2%80%99s_star-formation_map_%28slider%29_ESA512394_-_slider.jpg/330px-Gaia%E2%80%99s_star-formation_map_%28slider%29_ESA512394_-_slider.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+      "width": 330,
+      "height": 330
+    },
+    "originalimage": {
+      "source": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a7/Gaia%E2%80%99s_star-formation_map_%28slider%29_ESA512394_-_slider.jpg/3840px-Gaia%E2%80%99s_star-formation_map_%28slider%29_ESA512394_-_slider.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+      "width": 5000,
+      "height": 5000
+    },
+    "lang": "en",
+    "dir": "ltr",
+    "revision": "1377083442",
+    "tid": "767c52de-bab2-11f1-9d83-4962b0f2a875",
+    "timestamp": "2026-09-27T20:31:48Z",
+    "description": "Complex, ringlike filament of stars wrapped around the Milky Way",
+    "description_source": "local",
+    "content_urls": {
+      "desktop": {
+        "page": "https://en.wikipedia.org/wiki/Monoceros_Ring",
+        "revisions": "https://en.wikipedia.org/wiki/Monoceros_Ring?action=history",
+        "edit": "https://en.wikipedia.org/wiki/Monoceros_Ring?action=edit",
+        "talk": "https://en.wikipedia.org/wiki/Talk:Monoceros_Ring"
+      },
+      "mobile": {
+        "page": "https://en.wikipedia.org/wiki/Monoceros_Ring",
+        "revisions": "https://en.wikipedia.org/wiki/Special:History/Monoceros_Ring",
+        "edit": "https://en.wikipedia.org/wiki/Monoceros_Ring?action=edit",
+        "talk": "https://en.wikipedia.org/wiki/Talk:Monoceros_Ring"
+      }
+    },
+    "extract": "The Monoceros Ring is a long, complex ring of stars that wraps around the Milky Way three times. This is proposed to consist of a stellar stream torn from the Canis Major Dwarf Galaxy by tidal forces as part of the process of merging with the Milky Way over a period of billions of years, although this view has long been disputed. The ring contains 100 million solar masses and is 200,000 light years long.",
+    "extract_html": "<p>The <b>Monoceros Ring</b> is a long, complex ring of stars that wraps around the Milky Way three times. This is proposed to consist of a stellar stream torn from the Canis Major Dwarf Galaxy by tidal forces as part of the process of merging with the Milky Way over a period of billions of years, although this view has long been disputed. The ring contains 100 million solar masses and is 200,000 light years long.</p>"
+  },
+  "Aquarius Stream": {
+    "type": "standard",
+    "title": "Aquarius Stream",
+    "displaytitle": "<span lang=\"en\" dir=\"ltr\"><span class=\"mw-page-title-main\">Aquarius Stream</span></span>",
+    "namespace": {
+      "id": 0,
+      "text": ""
+    },
+    "wikibase_item": "Q4782779",
+    "titles": {
+      "canonical": "Aquarius_Stream",
+      "normalized": "Aquarius Stream",
+      "display": "<span lang=\"en\" dir=\"ltr\"><span class=\"mw-page-title-main\">Aquarius Stream</span></span>"
+    },
+    "pageid": 30914072,
+    "lang": "en",
+    "dir": "ltr",
+    "revision": "1381747491",
+    "tid": "139bb1ac-cfbb-11f1-b4a2-8a930e7c15a6",
+    "timestamp": "2026-10-24T14:56:22Z",
+    "description": "Stellar stream in the Milky Way Galaxy",
+    "description_source": "local",
+    "content_urls": {
+      "desktop": {
+        "page": "https://en.wikipedia.org/wiki/Aquarius_Stream",
+        "revisions": "https://en.wikipedia.org/wiki/Aquarius_Stream?action=history",
+        "edit": "https://en.wikipedia.org/wiki/Aquarius_Stream?action=edit",
+        "talk": "https://en.wikipedia.org/wiki/Talk:Aquarius_Stream"
+      },
+      "mobile": {
+        "page": "https://en.wikipedia.org/wiki/Aquarius_Stream",
+        "revisions": "https://en.wikipedia.org/wiki/Special:History/Aquarius_Stream",
+        "edit": "https://en.wikipedia.org/wiki/Aquarius_Stream?action=edit",
+        "talk": "https://en.wikipedia.org/wiki/Talk:Aquarius_Stream"
+      }
+    },
+    "extract": "The Aquarius Stream is a stellar stream located in the Milky Way Galaxy. Most of the stars in the stream lie in the direction of the constellation Aquarius. At its nearest point, it is about 2,000 light years from Earth; at its furthest, it is about 30,000 light years away. It is the closest stellar stream to Earth yet found, and the youngest, having formed about 700 million years ago. It enters the solar neighborhood, and passes through the galactic disc before extending into the stellar halo on the other side. The stream was discovered in late 2010 by a team of astronomers involved in the RAdial Velocity Experiment (RAVE) survey led by New Zealander Mary Williams.",
+    "extract_html": "<p>The <b>Aquarius Stream</b> is a stellar stream located in the Milky Way Galaxy. Most of the stars in the stream lie in the direction of the constellation Aquarius. At its nearest point, it is about 2,000 light years from Earth; at its furthest, it is about 30,000 light years away. It is the closest stellar stream to Earth yet found, and the youngest, having formed about 700 million years ago. It enters the solar neighborhood, and passes through the galactic disc before extending into the stellar halo on the other side. The stream was discovered in late 2010 by a team of astronomers involved in the RAdial Velocity Experiment (RAVE) survey led by New Zealander Mary Williams.</p>"
+  },
+  "Fimbulthul stream": {
+    "type": "standard",
+    "title": "Fimbulthul stream",
+    "displaytitle": "<span lang=\"en\" dir=\"ltr\"><span class=\"mw-page-title-main\">Fimbulthul stream</span></span>",
+    "namespace": {
+      "id": 0,
+      "text": ""
+    },
+    "wikibase_item": "Q63308173",
+    "titles": {
+      "canonical": "Fimbulthul_stream",
+      "normalized": "Fimbulthul stream",
+      "display": "<span lang=\"en\" dir=\"ltr\"><span class=\"mw-page-title-main\">Fimbulthul stream</span></span>"
+    },
+    "pageid": 60578702,
+    "thumbnail": {
+      "source": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/53/Fimbulthu_star_stream.png/330px-Fimbulthu_star_stream.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+      "width": 330,
+      "height": 272
+    },
+    "originalimage": {
+      "source": "https://upload.wikimedia.org/wikipedia/commons/5/53/Fimbulthu_star_stream.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail_unscaled",
+      "width": 3270,
+      "height": 2700
+    },
+    "lang": "en",
+    "dir": "ltr",
+    "revision": "1373201011",
+    "tid": "8f0d9a08-a871-11f1-ab68-eb65419b6e0c",
+    "timestamp": "2026-09-04T15:01:51Z",
+    "description": "Tidal stellar stream torn off from Omega Centauri",
+    "description_source": "local",
+    "content_urls": {
+      "desktop": {
+        "page": "https://en.wikipedia.org/wiki/Fimbulthul_stream",
+        "revisions": "https://en.wikipedia.org/wiki/Fimbulthul_stream?action=history",
+        "edit": "https://en.wikipedia.org/wiki/Fimbulthul_stream?action=edit",
+        "talk": "https://en.wikipedia.org/wiki/Talk:Fimbulthul_stream"
+      },
+      "mobile": {
+        "page": "https://en.wikipedia.org/wiki/Fimbulthul_stream",
+        "revisions": "https://en.wikipedia.org/wiki/Special:History/Fimbulthul_stream",
+        "edit": "https://en.wikipedia.org/wiki/Fimbulthul_stream?action=edit",
+        "talk": "https://en.wikipedia.org/wiki/Talk:Fimbulthul_stream"
+      }
+    },
+    "extract": "Fimbulthul is a tidal stellar stream torn off from Omega Centauri, the largest globular cluster of our Milky Way galaxy. The stream contains 309 known stars stretching over 18° in the constellations of Hydra and Centaurus, matching the same age as the globular cluster. Omega Centauri is thought to be the nucleus of a dwarf galaxy that merged with the Milky Way.",
+    "extract_html": "<p><b>Fimbulthul</b> is a tidal stellar stream torn off from Omega Centauri, the largest globular cluster of our Milky Way galaxy. The stream contains 309 known stars stretching over 18° in the constellations of Hydra and Centaurus, matching the same age as the globular cluster. Omega Centauri is thought to be the nucleus of a dwarf galaxy that merged with the Milky Way.</p>"
+  }
+}

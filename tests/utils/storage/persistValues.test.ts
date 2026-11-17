@@ -15,6 +15,7 @@ const dismissedUi: UiState = {
   debugPanelOpen: false,
   paletteTab: 'highlights',
   splash: { visible: false, dismissedVersion: 2 },
+  learnedGestures: { look: false, zoom: false },
 };
 
 beforeEach(() => {

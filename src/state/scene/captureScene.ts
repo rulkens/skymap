@@ -18,7 +18,7 @@
  *
  * The settings half is a `structuredClone` (see `captureSettings`).
  * `orientation` is a bare string union, so a plain read is already detached —
- * no clone needed. The focus half is a plain reference copy: `SelectionRef`
+ * no clone needed. The focus half is a plain reference copy: ref
  * values are immutable identity tokens — the slice replaces the slot on
  * write, never mutates in place — so holding the reference is sufficient to
  * restore back to the captured identity.
@@ -35,11 +35,13 @@ import type { RootState } from '../../store/types';
 import type { SceneSnapshot } from '../../@types/engine/settings/SceneSnapshot';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { captureSettings } from './captureSettings';
+import { selectFovYRad } from '../camera/selectors';
 
 export function captureScene(state: RootState, nowMs: number): SceneSnapshot {
   return {
     settings: captureSettings(state),
     orientation: state.settings.orientation,
+    fovYRad: selectFovYRad(state),
     focus: state.selection.focus,
     time: {
       ...state.time,

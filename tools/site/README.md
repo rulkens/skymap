@@ -2,15 +2,15 @@
 
 One-shot generators for the website's committed assets and its hero media. Each is run by hand when its input changes.
 
-| Script                 | Run                                                        | Writes                                                                             |
-| ---------------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| `makeOgImage.ts`       | `npx tsx tools/site/makeOgImage.ts`                        | `public/og-image.jpg` from `docs/screenshots/cosmic-web.jpg`                       |
-| `makeFavicon.ts`       | `npx tsx tools/site/makeFavicon.ts`                        | `public/apple-touch-icon.png` from `public/favicon.svg`                            |
-| `buildHeroMedia.ts`    | `npm run site:media -- [recording]`                        | the flight's stills (one pair per stop) and its scrub video, from the recording    |
-| `shootSiteShots.ts`    | `npm run site:shots -- --url <app server>`                 | every picture in the shot manifest, AVIF and WebP, and the link-preview card       |
-| `shootSiteLoops.ts`    | `npm run site:loops -- --url <app server>`                 | every film in the loop manifest, H.264 in MP4                                      |
-| `compareSite.ts`       | `npm run site:compare -- --baseline <dir> --current <dir>` | `report.txt` and base/cur/diff PNGs of every page that differs, in the temp folder |
-| `subsetDisplayFont.ts` | `npx tsx tools/site/subsetDisplayFont.ts`                  | the site's subset of Cormorant Garamond (needs `pyftsubset`)                       |
+| Script                 | Run                                                        | Writes                                                                                                      |
+| ---------------------- | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `makeFavicon.ts`       | `npx tsx tools/site/makeFavicon.ts`                        | `public/favicon.svg`, `apple-touch-icon.png` and the remote's `icon-192.png`, `icon-512.png`, from the mark |
+| `buildHeroMedia.ts`    | `npm run site:media -- [recording]`                        | the flight's stills (one pair per stop) and its scrub video, from the recording                             |
+| `shootSiteShots.ts`    | `npm run site:shots -- --url <app server>`                 | every picture in the shot manifest, AVIF and WebP, and the link-preview cards                               |
+| `shootSiteLoops.ts`    | `npm run site:loops -- --url <app server>`                 | every film in the loop manifest, H.264 in MP4                                                               |
+| `buildPressKit.ts`     | `npm run site:press-kit -- [--recording <file>]`           | the About page's press kit zip, and its size for the page                                                   |
+| `compareSite.ts`       | `npm run site:compare -- --baseline <dir> --current <dir>` | `report.txt` and base/cur/diff PNGs of every page that differs, in the temp folder                          |
+| `subsetDisplayFont.ts` | `npx tsx tools/site/subsetDisplayFont.ts`                  | the site's subset of Cormorant Garamond (needs `pyftsubset`)                                                |
 
 ## Hero media
 
@@ -23,17 +23,30 @@ One-shot generators for the website's committed assets and its hero media. Each 
 - **Upload** is the owner's step: see "Site media" in `docs/DEPLOY.md`.
 - After changing a cut point, re-check every stop's name against its still: each name must be something drawn or labelled in that frame.
 
+## Press kit
+
+`npm run site:press-kit` writes `public/data/site/skymap-press-kit.zip` (gitignored; upload it with `tools/deploy/uploadSiteMedia.sh`, see "Site media" in `docs/DEPLOY.md`) and `packages/website/src/data/pressKit.json`, the zip's name and size the About page prints, which is committed. What goes in is in `pressKitPlan.ts`:
+
+- `logo/`: the site's Wordmark as SVG, with the word turned to outlines (opentype.js, from `fonts/CormorantGaramond-SemiBold.ttf`) so it draws with no font installed, and as 2000 px PNGs, transparent and on a ground, in light ink for dark grounds and dark ink for light ones. `icon/`: the app icon as macOS draws it (`packages/website/src/utils/skymapIcon.ts`), as SVG and as PNGs at 512 and 1024.
+- `pictures/`: the rows of `packages/website/src/data/pressPictures.ts`, each from its shot master in `data/shots/site/` (the widest committed file if the master is missing), as JPEG on black. `credits.txt` gives each one's words from the shot manifest, the credit to print and its sources' terms from that file. A new picture is a row there.
+- `portrait/`: the maker's portrait. `film/`: a cut of the hero recording, through the same encoder as the hero video (`utils/scrubVideoArgs.ts`); the recording is in the main checkout only, so a worktree passes `--recording <absolute path>`.
+- `fact-sheet.md`: a 50-word and a 150-word description made of the fact registry's own sentences (`short` and `long` in the plan), the licence, the data sources, the addresses and the contact. `tests/tools/site/pressFactSheet.test.ts` fails when a fact row grows the descriptions past their lengths.
+- The fact registry imports `CITATION.cff` as Vite's `?raw`; the script runs with `rawTextImports.mjs`, a loader that gives Node the same.
+
 ## Shots
 
-`npm run site:shots -- --url http://localhost:<port>` takes every row of `packages/website/src/data/siteShots.ts` from a running app (this checkout's `npm run dev`, with catalogue data: see the `link-data` skill) and writes it to `packages/website/src/assets/shots/<id>-<width>.avif` and `.webp`, which are committed. Nothing is resized at build: the pages read those files by id.
+`npm run site:shots -- --url http://localhost:<port>` takes every row of `packages/website/src/data/siteShots.ts` from a running app (this checkout's `npm run dev`, with catalogue data: see the `link-data` skill) and writes it to `packages/website/public/shots/<id>-<width>.<hash>.avif` and `.webp` (`SITE_SHOTS_DIR.ts`), which are committed; a retake deletes the row's old files. The hash is the first 8 hex digits of the file's SHA-256 (`utils/shotFileName.ts`), so a retake is a new URL and `public/_headers` caches the folder for a year. Nothing is resized at build, and the bundler never opens the files: Astro copies the site's `public/` as it is, and the pages read one listing of the folder by id (`shotFiles.ts`, `virtual:shot-files`). Imported, all 918 were open at once and Cloudflare's build failed with "Too many open files".
 
-- A deep link carries no settings, so a row's `settings` lists what the runner changes after the link has loaded (labels off, a layer on, a lens). `tools/site/utils/siteShotActions.ts` turns them into store actions; `npm run shot` itself is untouched.
-- Two settings change what is photographed instead of the scene. `ui: true` loads the link without `?cinema` and takes the whole page, the app's interface included, where every other row is the canvas alone. `searchFor: 'Jupiter'` (with `ui`) opens the search with the `/` key and types that text before the shot. `crop` keeps one part of the frame, for a phone's cut of a wide interface shot; the master stays whole.
+- A deep link carries the layer and caption switches (`layers=`, written from a row's `settings` by `packages/website/src/utils/shotLayerSwitches.ts`); the rest of a row's `settings` is what the runner changes after the link has loaded (exposure, a lens, passes). `tools/site/utils/siteShotActions.ts` turns them into store actions; `npm run shot` itself is untouched.
+- Two settings change what is photographed instead of the scene. `ui: true` loads the link without `?cinema` and takes the whole page, the app's interface included, where every other row is the canvas alone. `searchFor: 'Jupiter'` (with `ui`) opens the search with the `/` key and types that text before the shot. `keys` (with `ui`) presses keys in order before the shot, in Playwright's names (`]`, `Shift+N`), to bring the app to the state a page describes: `first-flight-clock` presses `]` five times for a clock at 6 hr/s. `crop` keeps one part of the frame, for a phone's cut of a wide interface shot; the master stays whole. `element: '<selector>'` (with `ui`, not with `crop`) takes one element of the interface alone on a transparent ground, grown by 24 px for its shadow, so the site can lay it over a picture; the AVIF and WebP keep the alpha.
+- `exposure: 4.5` sets the tone map's exposure for that shot (the app's default is 3), to lift a dark side or calm a burnt highlight. It's the first thing to try when a judged picture reads too dark or too bright.
+- `matte` takes the subject alone, with real transparency, for a page to lay over its own picture. The runner leaves out every sky pass (`tools/site/matteHiddenPasses.ts`) except the row's `keepPasses`, and also the row's `hidePasses` (the planet behind a craft, the ground under a rover). `matte: 'occluding'` is for bodies and craft, which hide what is behind them: the frame is drawn on black, then on white (the app's `debug.matteWhite` turns the `hdr` clear white), and alpha = 1 − (white − black) / (the two grounds' gap) per pixel, the colour un-mixed from the black frame (`utils/differenceMatte.ts`). The gap is read off the frame, so neither tone curve nor exposure needs knowing; over magenta its edges land within 1–2 levels of the app's own render on that colour. `matte: 'emissive'` is for light that adds to what is behind it (points, flow ribbons, filaments, the density volume): a black/white pair reads such light as empty, so alpha is the black frame's brightest channel (`utils/emissiveMatte.ts`); OVER a dark ground that matches the app, and `mix-blend-mode: plus-lighter` is the exact sum. Fine emissive detail compresses badly: the flow cut-out is over a MB at 1920. `shadow: true` (occluding) adds a `<id>-shadow` multiply layer (white = no shadow): the scene with the craft left out, divided by the same without its contact shadow (`utils/shadowLayer.ts`), for the page to put under the cut-out with `mix-blend-mode: multiply`. A craft in space casts no shadow to catch; give its cut-out a CSS `drop-shadow` instead. `ambient: 0.15` lights mesh bodies with a uniform fill of that fraction of sunlight (`debug.meshAmbient`; the app has none), to open up a craft's shadow side.
 - Each row is shot at twice its `size` and kept as a PNG in `data/shots/site/` (gitignored). `--from-masters` re-encodes from those, for a change of widths or quality; `--only id,id` limits a run.
-- The last step sets the link-preview card (`packages/website/src/assets/og-card.jpg`) from the `og-card` row, in the browser so the wordmark is the repo's Cormorant.
+- The last step sets the link-preview cards in the browser, so the logo and line are the repo's Cormorant (`utils/makeShareCards.ts`): the `og-card` row becomes the app's `public/og-image.jpg` and the site's default card, and each landing page in `packages/website/src/data/shareCards.ts` gets its own from its row, with its footer name as the line.
 - Look at every picture after a run. Surface imagery streams in late (`settleMs`), and `tour-cosmic-web` is taken from a tour that keeps turning, so its framing differs a little each time.
 - Budget: at most about 400 KB for a row's largest file. The runner prints each file's size.
-- A row's `denseQuality` lowers the AVIF quality of every width above its narrowest. Use it only where the wider files are drawn at 2x or more (the upright cuts a phone gets), and look at the result at that density.
+- A row's `denseQuality` lowers the AVIF quality of every width above its narrowest, and those widths' WebP takes `denseWebp` from `shotEncoding.ts` (quality 30, alpha 70: a lossless alpha was most of a point cut-out's bytes). Use it only where the wider files are drawn at 2x or more (the upright cuts a phone gets), and look at the result at that density.
+- **Trying a framing.** `npm run site:shots -- --url <app> --try '<hash body>' [--settings '<json>'] [--size 1600x1000] [--query dome] [--name n] [--out dir]` takes one picture that is in no row, with the same settings a row takes (`exposure` and `matte` among them), and writes `<out>/<name>.png` (the temp folder's `site-shot-try/` by default), cropped as the row would be, with `<name>-shadow.png` beside it for a `shadow` setting. It touches neither the manifest nor the assets: try several framings, then write the one you keep as a row.
 
 ## Loops
 
@@ -47,7 +60,7 @@ One-shot generators for the website's committed assets and its hero media. Each 
 
 ## Workbench pictures
 
-`npx tsx tools/site/shootWorkbench.ts <id> <address>` takes the picture of one row of `packages/website/src/data/workbenches.ts` from wherever that workbench is served and writes it to `packages/website/src/assets/workbenches/<id>-<width>.avif` and `.webp`, which are committed. A workbench has no deep link and no settings, so it is not in the shot manifest: what the runner does on the page is given as flags (the file's header lists them), and the commands the six pictures were taken with are these.
+`npx tsx tools/site/shootWorkbench.ts <id> <address>` takes the picture of one row of `packages/website/src/data/workbenches.ts` from wherever that workbench is served and writes it to `packages/website/src/assets/workbenches/<id>-<width>.avif` and `.webp`, which are committed. A workbench has no deep link and no settings, so it is not in the shot manifest: what the runner does on the page is given as flags (the file's header lists them), and the commands each picture was taken with are these.
 
 | Picture   | Command, after `npx tsx tools/site/shootWorkbench.ts`                                       |
 | --------- | ------------------------------------------------------------------------------------------- |
@@ -56,6 +69,7 @@ One-shot generators for the website's committed assets and its hero media. Each 
 | `flow`    | `flow http://localhost:<port>/ --fill intensity=0.8 --wheel=-4000 --settle 25000`           |
 | `scene`   | `scene http://localhost:<port>/ --settle 25000`                                             |
 | `curator` | `curator --from-master`, after the steps under the table                                    |
+| `albedo`  | `albedo http://localhost:5700/ --settle 15000`                                              |
 | `audit`   | `audit file://<repo>/tools/structure-audit/out/structureAudit.html --dark --click Layering` |
 
 - The flow workbench as it opens is a faint ball in a black window: the picture raises the intensity and zooms in. The audit page is light by default and would be the one bright rectangle on a dark page, so it is asked for its dark colours.
@@ -72,6 +86,30 @@ One-shot generators for the website's committed assets and its hero media. Each 
 ## Structure check
 
 `npm run site:structure` (after `npm run site:build`) compares each landing page's `<page>.structure.yaml` (`packages/website/src/content/pages/<page>/`) with its built HTML: the YAML's sections are the page's h2s and their `parts` its h3s, inside `<main>`. A heading only one side has fails the check.
+
+## Section shots
+
+`npm run site:sections -- /features/ [--url http://localhost:5800] [--widths 1440,400] [--label before] [--out <dir>]` shoots one page of the RUNNING dev site at each width. It writes the full page, then one picture per h2 section (`<label>-<width>-<n>-<slug>.png`), after one scroll through the page so lazy pictures load, with the dev overlays and the fixed bar hidden. It is the screenshot half of the `site-restyle` skill's design round trip. The page's HMR socket is held open and silent, so another edit to the site does not reload the page under a run.
+
+## Picture report
+
+`npm run site:judge -- /features/ [--url http://localhost:5800] [--widths 1440,1024,400] [--dpr 2] [--label judge] [--out <dir>]` writes the section shots above, then judges every site shot (`<img>` from `shots/`) and every `<video>` in `<main>` at each width, on a screen of `--dpr` (2 by default, the density the browser chooses files for). The output folder (the temp folder's `site-judge/<page>/` by default) holds `report.md`, `report.json` and `contact-<width>.png`.
+
+- Per picture: its shot id and row link, its section, its laid-out box, the file width the browser chose against the device pixels the box needs, the share `object-fit: cover` cuts away, its brightness as displayed (mean, 5th and 95th percentile luma) and its alt text.
+- Flags: `UPSCALED` (the source is more than 5% narrower than needed; it says whether a wider file exists, a `sizes` fault, or the row needs a reshoot), `CROPPED` (cover cuts away over 30%), `STRETCHED`, `TOO DARK` (the brightest 5% stays under a fifth of white: ask for `exposure`), `BURNT` (5% at white), `NO ALT`, `NOT LOADED`. The thresholds are in `utils/judgePicture.ts` and `utils/brightnessFlags.ts`.
+- The contact sheet shows each picture cropped from the page as displayed, after it has been scrolled to the middle of the window and given time to arrive, labelled with its id and flags, in page order, so framing, angle and light compare across neighbours. A slide hidden under another at that moment is drawn from its own file instead and marked `hidden slide`.
+
+## Shot requests
+
+A page designer who wants a different picture and does not reshoot it alone files a request for whoever runs the shoot. Each is one JSON file (`@types/ShotRequest.d.ts`) in `.superpowers/site/shot-requests/` (gitignored; the root is `SITE_NOTES_ROOT.ts`), named `<UTC time>-<requester>-<subject>.json`, and checked on every write and listing.
+
+```
+npm run site:requests -- list [--open]
+npm run site:requests -- add --requester <who> --page /features/ --section '<h2>' --subject '<what>' --why '<why>' [--shot <id>|new] [--link '<hash body>'] [--settings '<json>'] [--size 1600x1000]
+npm run site:requests -- answer <file> --status done|declined [--ids a,b] --answer '<what was done>'
+```
+
+A link and settings tried with `site:shots --try` go in the request. A done request names the shot ids to use (they must be in the manifest) or says what was done; a declined one says why.
 
 ## External link check
 

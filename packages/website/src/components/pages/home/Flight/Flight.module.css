@@ -57,33 +57,52 @@
   opacity: 1;
 }
 
-/* A quiet footnote in the captions' bottom padding; tabular figures so the number does not jitter as it changes. */
+/*
+ * A quiet instrument in the captions' bottom padding: a scale bar's bracket, the distance, then
+ * "from Earth" a step dimmer. Tabular figures so the number does not jitter as it changes.
+ */
 :root[data-flight-live] .scale {
   display: block;
   position: absolute;
-  z-index: 3;
+  /* Over the captions' scrims, which reach the bottom edge. */
+  z-index: 4;
   left: var(--gutter);
   bottom: 1.25rem;
   max-width: none;
   margin: 0;
-  font-size: 0.8125rem;
+  font-size: var(--text-small);
   /* Under 20px Jost is 400. */
   font-weight: var(--weight-small);
   line-height: 1;
-  color: var(--site-text-dim);
+  white-space: nowrap;
+  color: var(--site-text-faint);
   font-variant-numeric: tabular-nums;
   text-shadow:
     0 0 0.5rem #000,
     0 0 0.25rem #000;
   opacity: 0;
   pointer-events: none;
+
+  &::before {
+    content: '';
+    display: inline-block;
+    width: 1.75rem;
+    height: 0.4375rem;
+    margin-right: var(--site-space-2xs);
+    border: 1px solid var(--color-accent);
+    border-top: 0;
+  }
+}
+
+.figure {
+  color: var(--site-text);
 }
 
 :root[data-flight-live] .hint {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.625rem;
+  gap: var(--site-space-xs);
   position: absolute;
   z-index: 4;
   left: 0;
@@ -100,6 +119,11 @@
     0 0 0.5rem #000,
     0 0 0.25rem #000;
   pointer-events: none;
+}
+
+.hint[data-onward] .opening,
+.hint:not([data-onward]) .onward {
+  display: none;
 }
 
 /* A mouse with its wheel rolling; the wheel is a background so one box draws both. */
@@ -129,8 +153,11 @@
   }
 }
 
-/* Upright screens: the readout has the left of the bottom line, so the hint takes the right. */
-@media (max-width: 760px) and (orientation: portrait) {
+/*
+ * Upright screens: the bottom line holds one thing at a time. The hint has it while the wordmark
+ * stands, then the readout; a thumb needs no reminder to keep scrolling.
+ */
+@media (--portrait) {
   :root[data-flight-live] .scale {
     bottom: 0.875rem;
   }
@@ -141,10 +168,14 @@
     bottom: 0.875rem;
     line-height: 1;
   }
+
+  .onward {
+    display: none;
+  }
 }
 
 /* Short screens (a phone on its side): no room for the hint. */
-@media (max-height: 520px) and (orientation: landscape) {
+@media (--landscape) {
   :root[data-flight-live] .hint {
     display: none;
   }

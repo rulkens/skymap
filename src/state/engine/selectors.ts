@@ -30,12 +30,11 @@ import type { CoreEngineSliceState } from '../../@types/store/CoreEngineSliceSta
 import type { EngineSliceState } from '../../@types/store/EngineSliceState';
 import type { EngineStatus } from '../../@types/engine/EngineStatus';
 import type { ScaleInfo } from '../../@types/engine/ScaleInfo';
-import type { SourceType } from '../../@types/data/SourceType';
+import type { SourceId } from '../../@types/data/SourceId';
 import type { StructureId } from '../../@types/data/structure/StructureId';
 import type { LoadProgressState } from '../../@types/loading/LoadProgressState';
 import type { ProvenanceCounts } from '../../@types/engine/ProvenanceCounts';
 import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMetaEntry';
-import type { FamousStarMetaEntry } from '../../@types/loading/FamousStarMetaEntry';
 import type { StructureSearchEntry } from '../../@types/engine/StructureSearchEntry';
 import type { AliasIndexEntry } from '../../@types/engine/AliasIndexEntry';
 import type { LayerSearchEntry } from '../../@types/engine/layer/LayerSearchEntry';
@@ -55,8 +54,7 @@ export const selectEngineFacts = (state: RootState): Partial<EngineSliceState> =
 
 /** Stable identities for the pre-seed window, so a subscriber sees no spurious change. */
 const NO_FAMOUS_META: readonly FamousGalaxyMetaEntry[] = [];
-const NO_FAMOUS_STARS_META: readonly FamousStarMetaEntry[] = [];
-const NO_PROVENANCE: Partial<Record<SourceType, ProvenanceCounts>> = {};
+const NO_PROVENANCE: Partial<Record<SourceId, ProvenanceCounts>> = {};
 const NO_ALIAS_INDEX: readonly AliasIndexEntry[] = [];
 const NO_STRUCTURE_COUNTS: Partial<Record<StructureId, number>> = {};
 const NO_STRUCTURE_SEARCH_LIST: readonly StructureSearchEntry[] = [];
@@ -65,7 +63,7 @@ export const selectEngineStatus = (state: RootState): EngineStatus => selectEngi
 
 export const selectScale = (state: RootState): ScaleInfo => selectEngine(state).scale;
 
-export const selectSourceCounts = (state: RootState): Partial<Record<SourceType, number>> =>
+export const selectSourceCounts = (state: RootState): Partial<Record<SourceId, number>> =>
   selectEngine(state).sourceCounts;
 
 /** The structure Layer's counts, on the pre-seed contract of `selectFamousGalaxiesMeta`. */
@@ -82,7 +80,7 @@ export const selectStructureBulk = (state: RootState) =>
 /** The galaxyCatalog Layer's published tally (Ruling 12), empty until its first catalog lands. */
 export const selectProvenanceCounts = (
   state: RootState,
-): Partial<Record<SourceType, ProvenanceCounts>> =>
+): Partial<Record<SourceId, ProvenanceCounts>> =>
   selectEngineFacts(state).galaxyCatalog?.provenanceCounts ?? NO_PROVENANCE;
 
 export const selectLoadProgress = (state: RootState): LoadProgressState | null =>
@@ -130,13 +128,6 @@ export const selectAliasIndex = (state: RootState): readonly AliasIndexEntry[] =
  */
 export const selectStructureMemberCount = (state: RootState): number | null =>
   selectEngineFacts(state).galaxyCatalog?.structureMemberCount ?? null;
-
-/**
- * Famous-star metadata sidecar, published as a starCatalog fact, on the same
- * pre-seed contract as `selectFamousGalaxiesMeta`.
- */
-export const selectFamousStarsMeta = (state: RootState): readonly FamousStarMetaEntry[] =>
-  selectEngineFacts(state).starCatalog?.famousStarsMeta ?? NO_FAMOUS_STARS_META;
 
 /** Why the Debug panel's last star chunk-pool resize failed, or null. */
 export const selectStarChunkSlotsError = (state: RootState): string | null =>

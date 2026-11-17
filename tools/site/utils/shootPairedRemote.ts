@@ -10,7 +10,11 @@ const CONNECT_TIMEOUT_MS = 20_000;
  * reads "Connected". It opens in the dome's own context at the row's size, so
  * the phone and the dome that pairs with it share a relay and a clock.
  */
-export async function shootPairedRemote(dome: Page, base: string, shot: SiteShot): Promise<Buffer> {
+export async function shootPairedRemote(
+  dome: Page,
+  base: string,
+  shot: Pick<SiteShot, 'size'>,
+): Promise<Buffer> {
   const code = await dome.evaluate(
     () => (window as unknown as SkymapWindow).__skymap!.getState().remote.code,
   );
@@ -22,14 +26,5 @@ export async function shootPairedRemote(dome: Page, base: string, shot: SiteShot
     .getByRole('status')
     .filter({ hasText: /^Connected$/ })
     .waitFor({ timeout: CONNECT_TIMEOUT_MS });
-  // The remote only learns the focused object's name from a search result, so a search names it in the header.
-  const name = shot.settings?.searchFor;
-  if (name) {
-    await phone.getByRole('searchbox', { name: 'Search the sky' }).fill(name);
-    await phone
-      .locator('header')
-      .getByText(name, { exact: true })
-      .waitFor({ timeout: CONNECT_TIMEOUT_MS });
-  }
   return phone.screenshot({ type: 'png' });
 }

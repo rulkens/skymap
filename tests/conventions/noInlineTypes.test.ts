@@ -20,7 +20,7 @@ function sourceFilesUnder(root: string): string[] {
     if (entry.isDirectory()) {
       if (SKIP_NAMES.has(entry.name) || SKIP_PATHS.has(path)) continue;
       out.push(...sourceFilesUnder(path));
-    } else if (/\.tsx?$/.test(entry.name) && !entry.name.endsWith('.d.ts')) {
+    } else if (/\.(tsx?|cts)$/.test(entry.name) && !entry.name.endsWith('.d.ts')) {
       if (entry.name.endsWith('.generated.ts')) continue;
       out.push(path);
     }
@@ -28,7 +28,14 @@ function sourceFilesUnder(root: string): string[] {
   return out;
 }
 
-const files = [...sourceFilesUnder('src'), ...sourceFilesUnder('tools')];
+const files = [
+  ...sourceFilesUnder('src'),
+  ...sourceFilesUnder('tools'),
+  ...sourceFilesUnder('packages/website/src'),
+  ...sourceFilesUnder('packages/desktop/src'),
+  ...sourceFilesUnder('packages/desktop/scripts'),
+  ...sourceFilesUnder('packages/move-files/src'),
+];
 expect(files.length).toBeGreaterThan(0);
 
 /** A top-level `type`/`interface` not exempted as a `.tsx` file's own `*Props`. */

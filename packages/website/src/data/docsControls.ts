@@ -32,6 +32,12 @@ export const DOCS_CONTROLS: readonly DocsControlGroup[] = [
         where: ANYWHERE,
       },
       {
+        input: ['S'],
+        shortcut: ['s'],
+        does: 'Stands you on the ground in the middle of the view, looking up at the sky, as the Look up from here button does. Far above the ground, or with no ground in the middle of the view, it does nothing.',
+        where: ANYWHERE,
+      },
+      {
         input: ['Esc'],
         shortcut: ['escape'],
         does: 'Unpins the card and lets go of the focus. The camera stays where it is.',
@@ -285,6 +291,11 @@ export const DOCS_CONTROLS: readonly DocsControlGroup[] = [
       {
         input: ['Bring two fingers together'],
         does: 'Moves the camera further from its focus.',
+        where: STEERING,
+      },
+      {
+        input: ['Slide two fingers the same way'],
+        does: 'Near a surface, tilts the view towards the horizon and turns it. Elsewhere it does nothing.',
         where: STEERING,
       },
       {

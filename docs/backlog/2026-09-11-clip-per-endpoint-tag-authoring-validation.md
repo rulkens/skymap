@@ -22,7 +22,7 @@ nothing rejects it loudly."
 
 ## Where
 
-`src/services/engine/camera/evaluateClip.ts`'s frame-leg derivation (the
+`src/services/engine/camera/clips/evaluateClip.ts`'s frame-leg derivation (the
 `legStartCache`/`legsCache` machinery documented in `task-20-report.md`'s "Where
 the once-per-leg conversion state lives" section) walks compiled base tracks
 and opens a new leg at any `set`/`setVec` endpoint whose `frame` tag differs

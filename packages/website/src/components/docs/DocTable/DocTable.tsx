@@ -8,18 +8,16 @@
  * headings. The roles say again what the elements are, because a row that is
  * a grid would otherwise stop being a table row to a screen reader.
  */
-import { Fragment } from 'react';
 import type { ReactNode } from 'react';
 
 import type { DocCell } from '../../../@types/DocCell';
+import type { DocTableCell } from '../../../@types/DocTableCell';
 import type { DocTableCols } from '../../../@types/DocTableCols';
 import { cx } from '../../../utils/cx.ts';
 import { slotHtml } from '../../../utils/slotHtml.ts';
 import { tableCells } from '../../../utils/tableCells.ts';
-import DocLink from '../DocLink/DocLink.tsx';
-import Keys from '../Keys/Keys.tsx';
-import UseTerms from '../UseTerms/UseTerms.tsx';
-import View from '../View/View.tsx';
+import CellContent from './CellContent.tsx';
+import { LAYOUT, SPACE } from './DocTable.constants.ts';
 import styles from './DocTable.module.css';
 
 type DocTableProps = {
@@ -29,70 +27,10 @@ type DocTableProps = {
   children?: ReactNode;
 };
 
-// A cell of a Markdown table arrives as the HTML inside it.
-type Cell = DocCell | { html: string };
-
-// Ends every cell: the search index joins the words of neighbouring cells where nothing stands between them.
-const SPACE = ' ';
-
-const LAYOUT: Record<DocTableCols, string> = {
-  '2 4': styles.twoFour!,
-  '3 3': styles.threeThree!,
-  '2 2 2': styles.twoTwoTwo!,
-  '4 2': styles.fourTwo!,
-  detail: styles.detail!,
-  stack: styles.stack!,
-  over: styles.over!,
-};
-
-function CellContent({ cell }: { cell: Exclude<DocCell, string> }) {
-  if ('keys' in cell)
-    return cell.keys.map((chord, k) => (
-      <Fragment key={k}>
-        {k > 0 && (k === cell.keys.length - 1 ? ' or ' : ', ')}
-        <Keys of={chord} />
-      </Fragment>
-    ));
-  if ('codes' in cell)
-    return cell.codes.map((code, k) => (
-      <Fragment key={k}>
-        {k > 0 && ', '}
-        <code className={styles.name}>{code}</code>
-      </Fragment>
-    ));
-  if ('use' in cell) return <UseTerms use={cell.use} />;
-  if ('href' in cell)
-    return (
-      <>
-        <span className={styles.links}>
-          <DocLink href={cell.href}>{cell.label}</DocLink>
-        </span>
-        {SPACE}
-        {cell.sub && <small>{cell.sub}</small>}
-      </>
-    );
-  if ('to' in cell)
-    return (
-      <View to={cell.to} query={cell.query}>
-        {cell.label}
-      </View>
-    );
-  if ('text' in cell)
-    return (
-      <>
-        {cell.text}
-        {SPACE}
-        {cell.sub && <small>{cell.sub}</small>}
-        {cell.code && <code className={styles.eg}>{cell.code}</code>}
-      </>
-    );
-  return <code>{cell.code}</code>;
-}
-
 function DocTable({ cols: named, head: given, rows: data, children }: DocTableProps) {
   const fromSlot = data ? undefined : tableCells(slotHtml(children));
-  const head: readonly Cell[] = given ?? fromSlot!.head.map((html) => ({ html }));
-  const rows: readonly (readonly Cell[])[] =
+  const head: readonly DocTableCell[] = given ?? fromSlot!.head.map((html) => ({ html }));
+  const rows: readonly (readonly DocTableCell[])[] =
     data ?? fromSlot!.rows.map((row) => row.map((html) => ({ html })));
   const labels = given ?? fromSlot!.head.map((html) => html.replace(/<[^>]+>/g, '').trim());
   // A name in code is never broken, so it can be wider than a name column: a table of such names sets each over its words.

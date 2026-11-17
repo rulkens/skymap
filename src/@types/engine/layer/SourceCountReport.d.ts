@@ -1,4 +1,4 @@
-import type { SourceType } from '../../data/SourceType';
+import type { SourceId } from '../../data/SourceId';
 
 /**
  * One "this source's catalog landed with N rows" report, yielded by
@@ -6,6 +6,6 @@ import type { SourceType } from '../../data/SourceType';
  * content-version bump); a Layer only says which source reached which count.
  */
 export type SourceCountReport = {
-  readonly source: SourceType;
+  readonly source: SourceId;
   readonly count: number;
 };

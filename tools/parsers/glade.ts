@@ -93,7 +93,6 @@
  * objID is always `0n` — see the cross-match note above.
  */
 
-import { Source } from '../../src/data/source';
 import { type ParsedRecord } from './common';
 import { galaxyDiameterKpc } from '../../src/utils/math/galaxyDiameterKpc';
 import { DEFAULT_GALAXY_DIAMETER_KPC } from '../../src/utils/math/defaultGalaxyDiameterKpc';
@@ -397,7 +396,7 @@ export function parseGladeLine(
   }
 
   return {
-    source: Source.Glade,
+    source: 'glade',
     // We repurpose the SDSS-shaped 64-bit `objID` slot to carry the
     // GLADE row's HyperLEDA PGC number when one is present.  PGCs are
     // 32-bit-bounded integers (max ≈ 6 M today), so they fit trivially

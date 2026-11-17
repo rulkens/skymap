@@ -2,8 +2,8 @@
 
 import { bloomSlice } from './core/bloomSlice';
 import { cameraControlsSlice } from './core/cameraControlsSlice';
-import { cameraSettingsSlice } from './core/cameraSettingsSlice';
 import { debugSlice } from './core/debugSlice';
+import { filmSlice } from './core/filmSlice';
 import { focusMovesSlice } from './core/focusMovesSlice';
 import { hdrSlice } from './core/hdrSlice';
 import { labelsSlice } from './core/labelsSlice';
@@ -13,12 +13,12 @@ import { tonemapSlice } from './core/tonemapSlice';
 
 export const CORE_SETTINGS_SLICES = [
   orientationSlice,
-  cameraSettingsSlice,
   cameraControlsSlice,
   focusMovesSlice,
   tonemapSlice,
   hdrSlice,
   bloomSlice,
+  filmSlice,
   labelsSlice,
   pickingSlice,
   debugSlice,

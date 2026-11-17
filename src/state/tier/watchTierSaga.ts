@@ -12,7 +12,7 @@
  * was loaded AT); the `prev === payload` guard makes re-selecting the current
  * tier a no-op.
  *
- * A galaxy `SelectionRef` is POSITIONAL (source + index), so when a tier swap
+ * A galaxy ref is POSITIONAL (source + index), so when a tier swap
  * replaces a source's cloud in place the same index points at a different
  * galaxy (or none). To preserve intent: capture each affected ref's durable
  * focus id BEFORE the write (old cloud still present), clear hover

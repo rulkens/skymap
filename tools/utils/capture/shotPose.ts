@@ -4,7 +4,7 @@
  */
 import { bodyPhasePose } from './bodyPhasePose';
 import { DEFAULT_FOV_DEG } from '../../../src/data/defaults';
-import type { CameraPose } from '../../../src/@types/camera/CameraPose';
+import type { CameraPose } from '../../../src/@types/camera/pose/CameraPose';
 import type { SceneShot } from '../../@types/capture/SceneShot';
 
 // A phase pose frames the body from its angular size, so it must assume the

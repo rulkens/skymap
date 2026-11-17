@@ -6,7 +6,7 @@
 
 import { ToneMapCurve, toneMapCurveSaturation } from './toneMapCurve';
 import type { ToneMapCurve as ToneMapCurveT } from '../@types/data/ToneMapCurve';
-import type { OrientationFrameId } from '../@types/camera/OrientationFrameId';
+import type { OrientationFrameId } from '../@types/camera/orientation/OrientationFrameId';
 
 // ── Camera drift ────────────────────────────────────────────────────────────
 
@@ -101,6 +101,9 @@ export const DEFAULT_BLOOM_STRENGTH = 0.8;
  */
 export const DEFAULT_BLOOM_THRESHOLD = 2.0;
 
+/** Per-pixel bloom clamp (max channel, HDR): bounds a flickering sprite's swing; large features still bloom over many pixels. */
+export const DEFAULT_BLOOM_CAP = 2.0;
+
 // ── Scalar-volume overlay ────────────────────────────────────────────────────
 
 /**
@@ -114,8 +117,8 @@ export const DEFAULT_VOLUME_FIELD_INTENSITY = 0.5;
 // ── Camera lens ───────────────────────────────────────────────────────────────
 
 /**
- * Default vertical field of view, in degrees — seeds `settings.camera.fovDeg`
- * and, via `cameraFraming.ts`'s `DEFAULT_FOV_Y_RAD`, the bootstrap lens.
+ * Default vertical field of view, in degrees — seeds `camera.intent.fovYRad` via
+ * `cameraFraming.ts`'s `DEFAULT_FOV_Y_RAD`.
  */
 export const DEFAULT_FOV_DEG = 60;
 

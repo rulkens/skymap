@@ -1,0 +1,40 @@
+/**
+ * hostOf / hostOrThrow — the arm tree's one host failure policy (spec §2.5):
+ * null or throw, never a fallback body, because a fallback teleports the camera.
+ */
+
+import { describe, it, expect } from 'vitest';
+
+import { hostOf } from '../../../../../src/services/engine/camera/arms/hostOf';
+import { hostOrThrow } from '../../../../../src/services/engine/camera/arms/hostOrThrow';
+import type { BodyState } from '../../../../../src/@types/scene/BodyState';
+import type { Mat3 } from '../../../../../src/@types/math/Mat3';
+import type { PoseFrame } from '../../../../../src/@types/camera/pose/PoseFrame';
+import type { CameraArmBasisCtx } from '../../../../../src/@types/camera/arms/CameraArmBasisCtx';
+import { datumOnlyTerrainHeight } from '../../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
+import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
+import type { PositionedId } from '../../../../../src/@types/scene/PositionedId';
+
+const IDENTITY: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
+const EARTH: PoseFrame = { body: asSceneBodyId('earth') };
+
+function ctxWith(bodies: ReadonlyMap<PositionedId, BodyState>): CameraArmBasisCtx {
+  return {
+    bodies,
+    poseBasis: IDENTITY,
+    upBasis: IDENTITY,
+    terrainHeightAt: datumOnlyTerrainHeight,
+  };
+}
+
+describe('hostOf', () => {
+  it('answers null for a body absent from the state map', () => {
+    expect(hostOf(EARTH, ctxWith(new Map()))).toBeNull();
+  });
+});
+
+describe('hostOrThrow', () => {
+  it('throws naming the unresolved body', () => {
+    expect(() => hostOrThrow(EARTH, ctxWith(new Map()))).toThrow(/earth/);
+  });
+});

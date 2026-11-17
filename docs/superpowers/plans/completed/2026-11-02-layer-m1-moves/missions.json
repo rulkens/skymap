@@ -1,0 +1,258 @@
+[
+  {
+    "from": "src/@types/camera/MissionCameraFrame.d.ts",
+    "to": "src/layers/missions/@types/MissionCameraFrame.d.ts"
+  },
+  {
+    "from": "src/@types/camera/MissionOffsets.d.ts",
+    "to": "src/layers/missions/@types/MissionOffsets.d.ts"
+  },
+  {
+    "from": "src/@types/data/mesh/ContactDecalMatrices.d.ts",
+    "to": "src/layers/missions/@types/ContactDecalMatrices.d.ts"
+  },
+  {
+    "from": "src/@types/exhibits/ExhibitTimelineClock.d.ts",
+    "to": "src/layers/missions/@types/ExhibitTimelineClock.d.ts"
+  },
+  {
+    "from": "src/@types/exhibits/MissionTimeline.d.ts",
+    "to": "src/layers/missions/@types/MissionTimeline.d.ts"
+  },
+  {
+    "from": "src/@types/exhibits/TimelineAxis.d.ts",
+    "to": "src/layers/missions/@types/TimelineAxis.d.ts"
+  },
+  {
+    "from": "src/@types/exhibits/TimelineAxisLabel.d.ts",
+    "to": "src/layers/missions/@types/TimelineAxisLabel.d.ts"
+  },
+  {
+    "from": "src/@types/exhibits/TimelineLane.d.ts",
+    "to": "src/layers/missions/@types/TimelineLane.d.ts"
+  },
+  {
+    "from": "src/@types/missions/MissionCourse.d.ts",
+    "to": "src/layers/missions/@types/MissionCourse.d.ts"
+  },
+  {
+    "from": "src/@types/missions/MissionFrame.d.ts",
+    "to": "src/layers/missions/@types/MissionFrame.d.ts"
+  },
+  {
+    "from": "src/@types/missions/MissionStop.d.ts",
+    "to": "src/layers/missions/@types/MissionStop.d.ts"
+  },
+  {
+    "from": "src/@types/settings/MissionCraftSettings.d.ts",
+    "to": "src/layers/missions/@types/MissionCraftSettings.d.ts"
+  },
+  {
+    "from": "src/@types/settings/MissionTrailsSettings.d.ts",
+    "to": "src/layers/missions/@types/MissionTrailsSettings.d.ts"
+  },
+  {
+    "from": "src/@types/settings/MissionsSettings.d.ts",
+    "to": "src/layers/missions/@types/MissionsSettings.d.ts"
+  },
+  {
+    "from": "src/data/bodies/contactShadowHalfHeightM.ts",
+    "to": "src/layers/missions/data/contactShadowHalfHeightM.ts"
+  },
+  {
+    "from": "src/data/bodies/makers/orbiter.ts",
+    "to": "src/layers/missions/data/orbiter.ts"
+  },
+  {
+    "from": "src/data/exhibits/mission/frameCrossingsPerS.ts",
+    "to": "src/layers/missions/data/frameCrossingsPerS.ts"
+  },
+  {
+    "from": "src/data/exhibits/mission/missionEaseMs.ts",
+    "to": "src/layers/missions/data/missionEaseMs.ts"
+  },
+  {
+    "from": "src/data/exhibits/mission/missionFlybyLeadDays.ts",
+    "to": "src/layers/missions/data/missionFlybyLeadDays.ts"
+  },
+  {
+    "from": "src/data/exhibits/mission/missionFrameMargin.ts",
+    "to": "src/layers/missions/data/missionFrameMargin.ts"
+  },
+  {
+    "from": "src/data/exhibits/mission/missionLegWallMs.ts",
+    "to": "src/layers/missions/data/missionLegWallMs.ts"
+  },
+  {
+    "from": "src/data/exhibits/mission/missionRampMs.ts",
+    "to": "src/layers/missions/data/missionRampMs.ts"
+  },
+  {
+    "from": "src/data/exhibits/mission/missionSpeeds.ts",
+    "to": "src/layers/missions/data/missionSpeeds.ts"
+  },
+  {
+    "from": "src/data/exhibits/mission/missionSurfaceStandoff.ts",
+    "to": "src/layers/missions/data/missionSurfaceStandoff.ts"
+  },
+  {
+    "from": "src/data/exhibits/mission/noMissionOffsets.ts",
+    "to": "src/layers/missions/data/noMissionOffsets.ts"
+  },
+  {
+    "from": "src/data/exhibits/sameInstantMs.ts",
+    "to": "src/layers/missions/data/sameInstantMs.ts"
+  },
+  {
+    "from": "src/data/missions/capeCanaveralLc41.ts",
+    "to": "src/layers/missions/data/capeCanaveralLc41.ts"
+  },
+  {
+    "from": "src/data/missions/hitchhikerOrbit.ts",
+    "to": "src/layers/missions/data/hitchhikerOrbit.ts"
+  },
+  {
+    "from": "src/data/missions/missionEvents.generated.ts",
+    "to": "src/layers/missions/data/missionEvents.generated.ts"
+  },
+  {
+    "from": "src/data/missions/missionTrailStyle.ts",
+    "to": "src/layers/missions/data/missionTrailStyle.ts"
+  },
+  {
+    "from": "src/utils/camera/composeContactDecalMatrices.ts",
+    "to": "src/layers/missions/utils/camera/composeContactDecalMatrices.ts"
+  },
+  {
+    "from": "src/utils/camera/missionCameraFrame.ts",
+    "to": "src/layers/missions/utils/camera/missionCameraFrame.ts"
+  },
+  {
+    "from": "src/utils/camera/missionOffsetsOfView.ts",
+    "to": "src/layers/missions/utils/camera/missionOffsetsOfView.ts"
+  },
+  {
+    "from": "src/utils/camera/missionViewDirection.ts",
+    "to": "src/layers/missions/utils/camera/missionViewDirection.ts"
+  },
+  {
+    "from": "src/utils/exhibits/mission/bodyRelativeState.ts",
+    "to": "src/layers/missions/utils/exhibits/mission/bodyRelativeState.ts"
+  },
+  {
+    "from": "src/utils/exhibits/mission/buildMissionProfile.ts",
+    "to": "src/layers/missions/utils/exhibits/mission/buildMissionProfile.ts"
+  },
+  {
+    "from": "src/utils/exhibits/mission/flybyOutsideBend.ts",
+    "to": "src/layers/missions/utils/exhibits/mission/flybyOutsideBend.ts"
+  },
+  {
+    "from": "src/utils/exhibits/mission/formatMissionSpeed.ts",
+    "to": "src/layers/missions/utils/exhibits/mission/formatMissionSpeed.ts"
+  },
+  {
+    "from": "src/utils/exhibits/mission/missionFrame.ts",
+    "to": "src/layers/missions/utils/exhibits/mission/missionFrame.ts"
+  },
+  {
+    "from": "src/utils/exhibits/mission/missionStops.ts",
+    "to": "src/layers/missions/utils/exhibits/mission/missionStops.ts"
+  },
+  {
+    "from": "src/utils/exhibits/timeline/adjacentEventId.ts",
+    "to": "src/layers/missions/utils/exhibits/timeline/adjacentEventId.ts"
+  },
+  {
+    "from": "src/utils/exhibits/timeline/currentMissionEvent.ts",
+    "to": "src/layers/missions/utils/exhibits/timeline/currentMissionEvent.ts"
+  },
+  {
+    "from": "src/utils/exhibits/timeline/describeTimelineInstant.ts",
+    "to": "src/layers/missions/utils/exhibits/timeline/describeTimelineInstant.ts"
+  },
+  {
+    "from": "src/utils/exhibits/timeline/formatClockDate.ts",
+    "to": "src/layers/missions/utils/exhibits/timeline/formatClockDate.ts"
+  },
+  {
+    "from": "src/utils/exhibits/timeline/formatClockTime.ts",
+    "to": "src/layers/missions/utils/exhibits/timeline/formatClockTime.ts"
+  },
+  {
+    "from": "src/utils/exhibits/timeline/formatEventDate.ts",
+    "to": "src/layers/missions/utils/exhibits/timeline/formatEventDate.ts"
+  },
+  {
+    "from": "src/utils/exhibits/timeline/laneColorCss.ts",
+    "to": "src/layers/missions/utils/exhibits/timeline/laneColorCss.ts"
+  },
+  {
+    "from": "src/utils/exhibits/timeline/missionEventMs.ts",
+    "to": "src/layers/missions/utils/exhibits/timeline/missionEventMs.ts"
+  },
+  {
+    "from": "src/utils/exhibits/timeline/missionEventStepMs.ts",
+    "to": "src/layers/missions/utils/exhibits/timeline/missionEventStepMs.ts"
+  },
+  {
+    "from": "src/utils/exhibits/timeline/timelineAxis.ts",
+    "to": "src/layers/missions/utils/exhibits/timeline/timelineAxis.ts"
+  },
+  {
+    "from": "src/utils/exhibits/timeline/timelineAxisLabels.ts",
+    "to": "src/layers/missions/utils/exhibits/timeline/timelineAxisLabels.ts"
+  },
+  {
+    "from": "src/utils/exhibits/timeline/timelineEndMs.ts",
+    "to": "src/layers/missions/utils/exhibits/timeline/timelineEndMs.ts"
+  },
+  {
+    "from": "src/utils/exhibits/timeline/timelineFraction.ts",
+    "to": "src/layers/missions/utils/exhibits/timeline/timelineFraction.ts"
+  },
+  {
+    "from": "src/utils/exhibits/timeline/timelineInstant.ts",
+    "to": "src/layers/missions/utils/exhibits/timeline/timelineInstant.ts"
+  },
+  {
+    "from": "src/utils/exhibits/timeline/timelineLanes.ts",
+    "to": "src/layers/missions/utils/exhibits/timeline/timelineLanes.ts"
+  },
+  {
+    "from": "src/utils/gpu/packContactShadowUniforms.ts",
+    "to": "src/layers/missions/utils/gpu/packContactShadowUniforms.ts"
+  },
+  {
+    "from": "src/utils/labels/meshBodyCaption.ts",
+    "to": "src/layers/missions/utils/labels/meshBodyCaption.ts"
+  },
+  {
+    "from": "src/utils/meshBodies/meshGroundOffsetM.ts",
+    "to": "src/layers/missions/utils/meshBodies/meshGroundOffsetM.ts"
+  },
+  {
+    "from": "src/utils/missions/launchIsoOf.ts",
+    "to": "src/layers/missions/utils/missions/launchIsoOf.ts"
+  },
+  {
+    "from": "src/utils/orbit/hermiteTrackVelAt.ts",
+    "to": "src/layers/missions/utils/orbit/hermiteTrackVelAt.ts"
+  },
+  {
+    "from": "src/utils/orbit/periodDaysFromSemiMajorKm.ts",
+    "to": "src/layers/missions/utils/orbit/periodDaysFromSemiMajorKm.ts"
+  },
+  {
+    "from": "src/utils/orbit/tessellateTrack.ts",
+    "to": "src/layers/missions/utils/orbit/tessellateTrack.ts"
+  },
+  {
+    "from": "src/utils/orbit/trackKmToWorldMpc.ts",
+    "to": "src/layers/missions/utils/orbit/trackKmToWorldMpc.ts"
+  },
+  {
+    "from": "src/utils/scene/emphasisDim.ts",
+    "to": "src/layers/missions/utils/scene/emphasisDim.ts"
+  }
+]

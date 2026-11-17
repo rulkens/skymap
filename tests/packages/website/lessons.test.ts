@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { LESSON_TOPICS } from '../../../packages/website/src/data/lessons';
+import { LESSON_TOPICS } from '../../../packages/website/src/content/pages/classroom/lessons';
 import { APP_EXHIBIT_REGISTRY } from '../../../src/compositions/appExhibits';
 import { FEATURED_TABS } from '../../../src/data/palette/featuredTabs';
 import { linkIntentFrom } from '../../../src/utils/url/linkIntentFrom';

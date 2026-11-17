@@ -5,15 +5,13 @@ import { bandValueOf } from '../../src/services/engine/presentation/bandValueOf'
 import { MILKY_WAY_RADIUS_MPC } from '../../src/data/milkyWay/milkyWayRadiusMpc';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../src/data/rendering/foregroundMaxDistance';
 import { SCALE_UNITS } from '../../src/data/scaleUnits';
-import { cosmicFlows } from '../../src/compositions/exhibits/cosmicFlows';
-import { observableUniverse } from '../../src/layers/cosmicHorizon/exhibits/observableUniverse';
+import { cosmicFlows } from '../../src/compositions/exhibits/cosmicFlows/cosmicFlows';
+import { observableUniverse } from '../../src/layers/cosmicHorizon/exhibits/observableUniverse/observableUniverse';
 import { THE_EDGE_MPC } from '../../src/data/animation/tours/grandTour/theEdge';
 import { deriveBodyStates } from '../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../src/data/time/constJ2000';
 import { GALACTIC_CENTRE_ANCHOR } from '../../src/data/places/galacticCentre';
-import { STAR_CATALOG_IDS } from '../../src/data/starCatalog/starCatalogIds';
-import { SEEDED_STAR_CATALOGS } from '../../src/data/bodies/seededStarCatalogs';
-import { STAR_BACKDROP_DISSOLVE } from '../../src/layers/starCatalog/data/starBackdropDissolve';
+import { STAR_BACKDROP_DISSOLVE } from '../../src/layers/starCatalog/seededStars/data/starBackdropDissolve';
 import { FAMOUS_STAR_ENTRY } from '../../src/layers/starCatalog/sources/famous-star';
 import { SUN_ENTRY } from '../../src/layers/starCatalog/sources/sun';
 import { S_STAR_ENTRY } from '../../src/layers/starCatalog/sources/s-star';
@@ -93,13 +91,6 @@ describe('seeded star sets dissolve from their own region', () => {
     expect(valueAtEye('starCatalog', along(gc, SCALE_UNITS.PC_TO_MPC), S_STAR_ENTRY.id)).toBe(1);
     expect(valueAtEye('starCatalog', along(gc, -goneAt), S_STAR_ENTRY.id)).toBe(0);
   });
-
-  it.each(STAR_CATALOG_IDS.filter((id) => !(id in SEEDED_STAR_CATALOGS)))(
-    'the survey star item (%s) is unbanded',
-    (item) => {
-      expect(valueAt('starCatalog', 10 * FOREGROUND_MAX_DISTANCE_MPC, item)).toBe(1);
-    },
-  );
 });
 
 // One astronomical unit from the Sun: the home view's distance from the render origin.

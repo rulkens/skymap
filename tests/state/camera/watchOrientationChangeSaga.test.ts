@@ -11,7 +11,7 @@ import { requestOrientationChange } from '../../../src/state/camera/orientationA
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
 import { ORIENTATION_FRAME_QUATERNIONS } from '../../../src/data/orientation/orientationFrames';
 import { cameraRoute, settingsRoute } from '../../../src/store/constants';
-import type { CameraPose } from '../../../src/@types/camera/CameraPose';
+import type { CameraPose } from '../../../src/@types/camera/pose/CameraPose';
 import type { Vec4 } from '../../../src/@types/math/Vec4';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 
@@ -53,7 +53,7 @@ describe('watchOrientationChangeSaga', () => {
     await flush();
 
     expect(store.getState()[settingsRoute].orientation).toBe('galactic');
-    const frameTween = store.getState()[cameraRoute].frameTween;
+    const frameTween = store.getState()[cameraRoute].intent.frameTween;
     expect(frameTween).not.toBeNull();
     expect(frameTween!.to).toBe('galactic');
     expect(frameTween!.durationMs).toBe(FRAME_TWEEN_MS);
@@ -70,7 +70,7 @@ describe('watchOrientationChangeSaga', () => {
     store.dispatch(requestOrientationChange('galactic'));
     await flush();
 
-    const frameTween = store.getState()[cameraRoute].frameTween;
+    const frameTween = store.getState()[cameraRoute].intent.frameTween;
     expect(frameTween!.fromQuat).toEqual(LIVE_QUAT);
     expect(frameTween!.fromQuat).not.toEqual(ORIENTATION_FRAME_QUATERNIONS.galactic);
   });
@@ -86,7 +86,7 @@ describe('watchOrientationChangeSaga', () => {
     await flush();
 
     expect(store.getState()[settingsRoute].orientation).toBe('galactic');
-    expect(store.getState()[cameraRoute].frameTween).toBeNull();
+    expect(store.getState()[cameraRoute].intent.frameTween).toBeNull();
   });
 
   it('a null cameraRuntime snaps via setOrientation with no frameTween', async () => {
@@ -95,6 +95,6 @@ describe('watchOrientationChangeSaga', () => {
     await flush();
 
     expect(store.getState()[settingsRoute].orientation).toBe('ecliptic');
-    expect(store.getState()[cameraRoute].frameTween).toBeNull();
+    expect(store.getState()[cameraRoute].intent.frameTween).toBeNull();
   });
 });

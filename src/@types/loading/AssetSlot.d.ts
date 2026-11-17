@@ -68,7 +68,7 @@ export type AssetSlot<T, Req> = {
    * Where `cancel()` rolls back to the committed value (a transient stop),
    * `release()` drops it, running `onRelease` exactly once so the consumer can
    * free what the commit allocated (a GPU texture is the canonical case). A
-   * released slot re-loads the moment its `demand` predicate turns true again.
+   * released slot re-loads the moment its row's demand holds again.
    */
   release(): void;
 };

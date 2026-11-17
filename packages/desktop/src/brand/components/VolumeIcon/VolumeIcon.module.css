@@ -1,0 +1,26 @@
+.root {
+  position: fixed;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* The top face is the app icon's tile; the front lip catches a little more light than its foot. */
+.ground {
+  stop-color: var(--color-bg);
+}
+
+.lip {
+  stop-color: var(--surface-control-active);
+}
+
+.edge {
+  fill: none;
+  stroke: var(--color-fg);
+  stroke-opacity: 0.22;
+}
+
+.light {
+  fill: var(--color-accent);
+}

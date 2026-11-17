@@ -12,6 +12,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { join, resolve } from 'node:path';
 import type { Plugin } from 'vite';
 
+import { SITE_NOTES_ROOT } from './SITE_NOTES_ROOT';
 import { docsReviewStem } from './utils/docsReviewStem';
 import { isDocsReview } from './utils/isDocsReview';
 import { pageSourceFile } from './utils/pageSourceFile';
@@ -19,7 +20,7 @@ import { setFrontMatterJob } from './utils/setFrontMatterJob';
 import { setStructureJob } from './utils/setStructureJob';
 
 const REPO_ROOT = resolve(import.meta.dirname, '../..');
-const REVIEW_DIR = join(REPO_ROOT, '.superpowers/sdd/2026-10-05-companion-website/review');
+const REVIEW_DIR = join(REPO_ROOT, SITE_NOTES_ROOT, 'review');
 const CONTENT_DIR = join(REPO_ROOT, 'packages/website/src/content');
 const MAX_BODY_BYTES = 1_000_000;
 

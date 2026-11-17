@@ -17,10 +17,10 @@ import { FrameStatsRow } from './FrameStatsRow';
 import { GpuTimingsSection } from './GpuTimingsSection';
 import MemorySectionContainer from '../containers/MemorySectionContainer';
 import FocusMovesTuningSectionContainer from '../containers/FocusMovesTuningSectionContainer';
+import FilmTuningSectionContainer from '../containers/FilmTuningSectionContainer';
 import CameraStateSectionContainer from '../containers/CameraStateSectionContainer';
 import RenderTogglesSectionContainer from '../containers/RenderTogglesSectionContainer';
 import DebugOverlaysSectionContainer from '../containers/DebugOverlaysSectionContainer';
-import GalaxyProvenanceSectionContainer from '../containers/GalaxyProvenanceSectionContainer';
 import ClipTriggersSectionContainer from '../containers/ClipTriggersSectionContainer';
 import ClipPathInspectorSectionContainer from '../containers/ClipPathInspectorSectionContainer';
 import styles from './DebugPanel.module.css';
@@ -60,7 +60,7 @@ function DebugPanel({
       ))}
       <DebugOverlaysSectionContainer />
       <FocusMovesTuningSectionContainer />
-      <GalaxyProvenanceSectionContainer />
+      <FilmTuningSectionContainer />
       <ClipTriggersSectionContainer />
       <ClipPathInspectorSectionContainer />
     </div>

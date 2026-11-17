@@ -1,6 +1,6 @@
 /**
- * exhibitBodySaga — an exhibit's takeover body: apply its settings, fly (or,
- * on a `'cut'` entry, cut) to its pose, then hold, turning slowly, until the
+ * exhibitBodySaga — an exhibit's takeover body: apply its settings and then a
+ * link's `layers` over them, fly (or, on a `'cut'` entry, cut) to its pose, play its arrival, then hold, turning slowly, until the
  * viewer exits. `runTakeoverSaga` and `withSceneSnapshotSaga` own the bracket;
  * this only decides when the body returns. `exitTakeover` is the only abort
  * arm — an exhibit has no beat loop, so orbiting mid-fly or mid-hold must not
@@ -11,15 +11,17 @@ import { call, getContext, put, race, select, take } from 'typed-redux-saga';
 import { flyToPoseClip } from '../../data/animation/clips/makers/flyToPoseClip';
 import { clearSelection } from '../selection/selectionSlice';
 import { mergeSnapshot } from '../settings/mergeSnapshotAction';
-import { commitCameraPose, setAutoRotate } from '../camera/cameraSlice';
+import { applyLayerSwitchesSaga } from '../navigation/applyLayerSwitchesSaga';
+import { commitCameraPose, setAutoRotate } from '../camera/cameraIntentSlice';
 import { exitTakeover } from '../takeover/takeoverActions';
 import { selectOrientation } from '../settings/selectors';
-import { sphereFitDistance } from '../../utils/camera/sphereFitDistance';
-import { absoluteArm } from '../../utils/camera/absoluteArm';
+import { sphereFitDistance } from '../../utils/camera/orbitCamera/sphereFitDistance';
+import { absoluteArm } from '../../utils/camera/arms/absoluteArm';
 import type { RootState } from '../../store/types';
 import type { Exhibit } from '../../@types/exhibits/Exhibit';
 import type { SagaContext } from '../../store/types';
 import type { Transition } from '../../@types/navigation/Transition';
+import type { LayerSwitch } from '../../@types/url/LayerSwitch';
 
 /**
  * The held exhibit's yaw drift, in radians per assumed-60-fps frame
@@ -36,6 +38,7 @@ export function* exhibitBodySaga(
   exhibit: Exhibit,
   entry: Transition,
   atLinkedTime = false,
+  layers: readonly LayerSwitch[] = [],
 ): Generator {
   // Clear the focus slot BEFORE the fly, exactly as `tourBodySaga` does. The boot
   // home seeds Earth into it (`EARTH_HOME`), and Earth is a body the sim clock
@@ -46,6 +49,8 @@ export function* exhibitBodySaga(
   // exit restore, and an exhibit authors no focus of its own.
   yield* put(clearSelection());
   yield* put(mergeSnapshot(exhibit.settings));
+  // The merge replaces whole clusters, so it would undo switches the link landed first.
+  yield* call(applyLayerSwitchesSaga, layers);
   const held = exhibit.body.find((s) => s.kind.hold !== undefined);
   if (held) {
     yield* call([held.kind, held.kind.hold!], held.data, entry, atLinkedTime);
@@ -73,24 +78,27 @@ export function* exhibitBodySaga(
         }
       : authored;
 
-  if (entry === 'cut') {
-    yield* put(commitCameraPose(absoluteArm(pose)));
-  } else {
+  const clips = entry === 'cut' ? [] : [flyToPoseClip(pose)];
+  if (entry === 'cut') yield* put(commitCameraPose(absoluteArm(pose)));
+  // Started from `pose` as a value: a `'live'` start reads the camera before a
+  // cut's commit has reached it, and would play from the pre-cut view.
+  if (exhibit.arrival) clips.push({ start: pose, timeline: exhibit.arrival });
+  for (const clip of clips) {
     const { exit } = yield* race({
-      landed: call(playClip, flyToPoseClip(pose), orientation),
+      played: call(playClip, clip, orientation),
       exit: take(exitTakeover),
     });
     if (exit) return;
   }
 
-  // The drift is `camera.autoRotate`, not a looping clip: it spins from the
+  // The drift is `camera.intent.autoRotate`, not a looping clip: it spins from the
   // frozen `base` the fly or the cut committed, so it needs no duration guessed in
   // advance and cannot drift out of step with a hold of unknown length.
   // `camera` is NOT in `withSceneSnapshotSaga`'s scene snapshot (that covers settings,
   // orientation and focus), so the restore is this body's own — in a `finally`,
   // which a generator runs on cancellation too, so a supersede winds it back
   // as surely as an exit does.
-  const priorSpin = yield* select((s: RootState) => s.camera.autoRotate);
+  const priorSpin = yield* select((s: RootState) => s.camera.intent.autoRotate);
   yield* put(setAutoRotate({ active: true, rate: EXHIBIT_SPIN_RATE }));
   try {
     yield* take(exitTakeover);

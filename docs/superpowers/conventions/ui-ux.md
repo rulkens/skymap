@@ -23,7 +23,8 @@ Do these in order and keep the answers; the report quotes them.
    then the shortest and the longest real content. Each gets a designed answer. The empty state says
    what this is and gives the next step. [UIStack, GettingReal, NN-empty, Vercel]
 4. **Sketch two or three layouts** in words (places, controls, what leads where), pick one, and write
-   the reason against the job. One candidate is not a choice. [ShapeUp, NN-parallel]
+   the reason against the job. One candidate is not a choice. To shoot them in the real UI, use the
+   `mockup` skill (`npm run mock`). [ShapeUp, NN-parallel]
 5. **Build**, the centre first: the one part the screen cannot live without, before the rest. [GettingReal]
 6. **Screenshot at 1728 and 400 wide**, every state, and look at each image.
 7. **Critique against step 1**, not against taste: one pass per section of this file. Rate each finding
@@ -93,7 +94,8 @@ Report: docs/superpowers/conventions/ui-ux.md self-check, two screenshots per st
   is under it; text is never pure white. [HIG-dark]
 - **No colour, size or space without a token.** App and site share `src/styles/tokens.css`; the site
   adds `--site-*` in `packages/website/src/styles/site.css`. A raw hex, rgba or px gap in a component
-  is a finding. Every gap comes from the `--space-*` scale. [GOVUK-spacing]
+  is a finding; a token at another alpha is `color-mix(in srgb, var(--token) N%, transparent)`. Every gap comes from a scale: the app's px `--space-*`, the site's rem `--site-space-*`
+  (3xs to 3xl); a length off the scale is geometry (a picture's size, an overlap, a tap area, an `em`). [GOVUK-spacing]
 - **Space shows grouping.** Related things are closer to each other than to anything else; a border or
   panel is added only when space cannot do it. Edges align to a shared line. [NN-proximity, NN-region, HIG-layout]
 - **Hierarchy by weight and colour before size.** At most three text sizes in one view; secondary text

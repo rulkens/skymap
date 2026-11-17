@@ -1,0 +1,133 @@
+.root {
+  display: grid;
+  row-gap: var(--site-space-2xs);
+  margin: 0 0 var(--site-space-xl);
+}
+
+/*
+ * `--split` is the one value the script moves: both layers' masks and the handle's place read it. Each side shows
+ * its own shot whole and the other at `--ghost`: the density field lies under the points, which screen over it.
+ */
+.frame {
+  --split: 50%;
+  --ghost: 0.3;
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  background: var(--color-bg);
+}
+
+.layer,
+.top {
+  position: relative;
+  grid-area: 1 / 1;
+}
+
+/* Wide, a square across the column would outgrow the screen: the frame is cut to 16:9 from the top, which is the
+   emptiest part of both shots; the lower left, where the density field ends, stays in. */
+@media (--wide) {
+  .frame {
+    grid-template-rows: minmax(0, 1fr);
+    min-height: 0;
+    aspect-ratio: 16 / 9;
+  }
+
+  .frame img {
+    height: 100%;
+    object-fit: cover;
+    object-position: 50% 100%;
+  }
+}
+
+.layer {
+  mask-image: linear-gradient(to right, rgb(0 0 0 / var(--ghost)) var(--split), #000 var(--split));
+}
+
+.top {
+  mix-blend-mode: screen;
+  mask-image: linear-gradient(to right, #000 var(--split), rgb(0 0 0 / var(--ghost)) var(--split));
+}
+
+.edgeStart,
+.edgeEnd {
+  position: absolute;
+  top: var(--site-space-xs);
+  margin: 0;
+  font: var(--weight-small) var(--text-small) / 1.2 var(--font-body);
+  color: var(--color-fg);
+  text-shadow: 0 0 0.5rem var(--color-bg);
+}
+
+.edgeStart {
+  left: var(--site-space-xs);
+}
+
+.edgeEnd {
+  right: var(--site-space-xs);
+}
+
+/* The handle is a tap wide and the frame tall; the line and the ring marker are drawn at its centre. */
+.handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--split);
+  width: var(--tap);
+  translate: -50% 0;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 50%;
+    width: 1px;
+    background: var(--site-line-strong);
+  }
+
+  &::after {
+    --mark: 1.625rem;
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: var(--mark);
+    height: var(--mark);
+    translate: -50% -50%;
+    border: 1px solid var(--color-accent);
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--color-bg) 60%, transparent);
+  }
+}
+
+/* Once the drag works: a vertical swipe on a phone still scrolls the page; a sideways one moves the divider. */
+.frame[data-compare-ready] {
+  cursor: ew-resize;
+  touch-action: pan-y;
+  user-select: none;
+}
+
+@media (hover: hover) {
+  .frame[data-compare-ready]:hover .handle::after {
+    background: var(--color-accent);
+  }
+}
+
+/* Focused, the marker is selected as a ring control is (ring.module.css); its halo is the focus ring. */
+.handle:focus-visible {
+  outline: none;
+
+  &::before {
+    background: var(--color-accent);
+  }
+
+  &::after {
+    background: var(--color-accent);
+    box-shadow:
+      0 0 0 0.3125rem var(--color-bg),
+      0 0 0 0.375rem var(--color-accent);
+  }
+}
+
+.captions {
+  composes: grid halves from '../../../../styles/layout.module.css';
+  row-gap: var(--site-space-s);
+}

@@ -5,14 +5,14 @@
 // the 'aggregate'). cut.wesl leaves a draw list per stream; an instance finds its node
 // from its place in that list with no search, rebuilds the node's
 // camera-relative box from the static node table, and pulls its record from the
-// per-source blob. Bindings: @group(0) u (rebased view-projection + viewport),
+// per-source blob. Bindings: @group(0) uniforms (rebased view-projection + viewport),
 // @group(1) cut* (cutIo.wesl structs and this stream's list), @group(2) records.
 //
 // ## Record unpack (the inverse of packStarGpuRecords)
 //
 // Two u32 per record, offsets a 16-bit fraction of the owning node's box:
-//   w0 = x (bits 0..15) | y (16..31)
-//   w1 = z (bits 0..15) | absMagIdx (16..22) | colorIdx (23..28)
+//   xyWord = x (bits 0..15) | y (16..31)
+//   zMagColourWord = z (bits 0..15) | absMagIdx (16..22) | colorIdx (23..28)
 //
 // ## World reconstruction
 //
@@ -46,15 +46,15 @@
 // ## Apparent flux: inverse-square dimming
 //
 // LUT flux is intrinsic; depositing it undimmed blows the far field white.
-//   fluxApp = flux * D_REF_MPC^2 / max(d2, MIN_D2_MPC2)
-// where d2 is the record's squared camera distance (Mpc^2), taken from
+//   fluxApp = flux * D_REF_MPC^2 / max(distSqMpc2, MIN_D2_MPC2)
+// where distSqMpc2 is the record's squared camera distance (Mpc^2), taken from
 // worldRelCam before corner expansion.
 //   D_REF_MPC = 1e-5 Mpc = 10 pc, where absolute magnitude is defined: the factor
 //     is 1 at 10 pc.
-//   MIN_D2_MPC2 = (1e-7)^2 = (0.1 pc)^2 floors d2 against the fly-through pole,
+//   MIN_D2_MPC2 = (1e-7)^2 = (0.1 pc)^2 floors distSqMpc2 against the fly-through pole,
 //     which would flash the frame white; no real view gets that close.
 // f32 range: the brightest aggregate flux ~2.5e9 times D_REF^2 = 1e-10 is ~0.25
-// before the /d2, which only shrinks it; a faint far leaf underflows harmlessly,
+// before the /distSqMpc2, which only shrinks it; a faint far leaf underflows harmlessly,
 // its light is in an ancestor aggregate.
 //
 // ## Radius
@@ -75,8 +75,8 @@
 // ## Brightness and glow overlap
 //
 // Deposited luminance is STAR_FLUX_EXPOSURE (the eye-tuned baseline) *
-// u.brightness * fluxApp, so brightness changes the total, unlike sizePx.
-// u.glowOverlap multiplies the AGGREGATE radius so glows spill past their box
+// uniforms.brightness * fluxApp, so brightness changes the total, unlike sizePx.
+// uniforms.glowOverlap multiplies the AGGREGATE radius so glows spill past their box
 // and melt the box lattice; folded into the radius, it divides the peak by
 // glowOverlap^2 and luminance is conserved. Leaves select 1.0.
 
@@ -91,7 +91,7 @@ import package::octree::cutIo::OPACITY_CHANNELS;
 import package::octree::cutIo::nodeMinCells;
 import package::octree::cutIo::leafEntryNode;
 import package::octree::cutIo::leafEntryBlock;
-import package::starCatalog::tint::starTint;
+import package::lib::starTint::starTint;
 import package::lib::camera::worldToClip;
 import package::lib::billboard::triCorner;
 import package::lib::billboard::expandBillboardScreen;
@@ -108,7 +108,7 @@ import package::lib::focusUniforms::FocusUniforms;
 import package::lib::focusUniforms::focusAlphaMultiplier;
 import package::lib::focusUniforms::FOCUS_PICK_EXCLUDE_BELOW;
 
-@group(0) @binding(0) var<uniform> u: StarUniforms;
+@group(0) @binding(0) var<uniform> uniforms: StarUniforms;
 @group(1) @binding(0) var<uniform> cut: CutUniforms;
 @group(1) @binding(1) var<storage, read> cutNodes: array<CutNode>;
 @group(1) @binding(2) var<storage, read> cutOpacity: array<f32>;
@@ -173,14 +173,14 @@ const STAR_SPRITE_FADE_END_RATIO: f32 = 4.0;
 // entry) and 0 for the aggregate list (one blob per entry, local 0).
 @vertex
 fn vs(
-  @builtin(vertex_index) vi: u32,
-  @builtin(instance_index) ii: u32,
+  @builtin(vertex_index) vertexIndex: u32,
+  @builtin(instance_index) instanceIndex: u32,
 ) -> VSOut {
   let shift = cutStream.blockShift;
-  let entry = cutList[ii >> shift];
+  let entry = cutList[instanceIndex >> shift];
   let nodeIdx = leafEntryNode(entry);
   let bits = cutNodes[nodeIdx].bits;
-  let local = (leafEntryBlock(entry) << shift) | (ii & ((1u << shift) - 1u));
+  let local = (leafEntryBlock(entry) << shift) | (instanceIndex & ((1u << shift) - 1u));
   let isAgg = cutStream.isBlob == 1u;
   let ownCount = nodeOwnCount(bits);
   if (!isAgg && local >= ownCount) {
@@ -196,32 +196,32 @@ fn vs(
   let nodeOpacity = cutOpacity[nodeIdx * OPACITY_CHANNELS + cutStream.isBlob] * cut.opacity;
   let subtreeStarCount = select(1.0, f32(cutNodes[nodeIdx].blobCount), isAgg);
 
-  let w0 = records[base * 2u + 0u];
-  let w1 = records[base * 2u + 1u];
+  let xyWord = records[base * 2u + 0u];
+  let zMagColourWord = records[base * 2u + 1u];
 
-  let ox = f32(w0 & OFFSET_MASK);
-  let oy = f32(w0 >> GPU_Y_SHIFT);
-  let oz = f32(w1 & OFFSET_MASK);
-  let absMagIdx = (w1 >> GPU_ABSMAG_SHIFT) & GPU_ABSMAG_MASK;
-  let colorIdx = (w1 >> GPU_COLOR_SHIFT) & GPU_COLOR_MASK;
+  let offsetX = f32(xyWord & OFFSET_MASK);
+  let offsetY = f32(xyWord >> GPU_Y_SHIFT);
+  let offsetZ = f32(zMagColourWord & OFFSET_MASK);
+  let absMagIdx = (zMagColourWord >> GPU_ABSMAG_SHIFT) & GPU_ABSMAG_MASK;
+  let colorIdx = (zMagColourWord >> GPU_COLOR_SHIFT) & GPU_COLOR_MASK;
 
-  let offset = vec3<f32>(ox, oy, oz) * OFFSET_SCALE;
+  let offset = vec3<f32>(offsetX, offsetY, offsetZ) * OFFSET_SCALE;
   let worldRelCam = originRelCamMpc + offset * cellScaleMpc;
 
-  let d2 = dot(worldRelCam, worldRelCam);
-  let atten = (D_REF_MPC * D_REF_MPC) / max(d2, MIN_D2_MPC2);
+  let distSqMpc2 = dot(worldRelCam, worldRelCam);
+  let atten = (D_REF_MPC * D_REF_MPC) / max(distSqMpc2, MIN_D2_MPC2);
 
-  let center = worldToClip(u.cam, worldRelCam);
-  let corner = triCorner(vi);
+  let center = worldToClip(uniforms.cam, worldRelCam);
+  let corner = triCorner(vertexIndex);
 
   let absMag = STAR_ABSMAG_MIN + (f32(absMagIdx) + 0.5) * STAR_ABSMAG_STEP;
   let flux = pow(10.0, -0.4 * absMag) * subtreeStarCount;
   let fluxApp = flux * atten;
 
-  let sizeScale = u.sizePx / STAR_SIZE_REF_PX;
+  let sizeScale = uniforms.sizePx / STAR_SIZE_REF_PX;
   let extentMpc = select(0.0, cellScaleMpc, isAgg);
-  let boxRadiusPx = worldLenToPx(u.cam, extentMpc, center.w) * AGGREGATE_BOX_RADIUS_FACTOR;
-  let overlap = select(1.0, u.glowOverlap, isAgg);
+  let boxRadiusPx = worldLenToPx(uniforms.cam, extentMpc, center.w) * AGGREGATE_BOX_RADIUS_FACTOR;
+  let overlap = select(1.0, uniforms.glowOverlap, isAgg);
   // Floor first, then the size/overlap spread: 'rPxRaw' is the radius the
   // luminance-conserving photometry wants. The absolute ceiling applies last and
   // bounds only the DRAWN radius.
@@ -230,14 +230,14 @@ fn vs(
   // chunk not resident, or the budget spent): it draws at the footprint it had
   // at the threshold, the largest a refining blob ever shows. Like the absolute
   // ceiling it under-deposits, so it never out-shines the stars that replace it.
-  let refineCapPx = sqrt(cut.refineThresholdSq) * u.cam.pxPerRad
+  let refineCapPx = sqrt(cut.refineThresholdSq) * uniforms.cam.pxPerRad
     * AGGREGATE_BOX_RADIUS_FACTOR * sizeScale * overlap;
   let rPx = min(select(STAR_GLOW_MAX_PX, min(STAR_GLOW_MAX_PX, refineCapPx), isAgg), rPxRaw);
 
   // Peak from the UNCAPPED radius in reference px (toRefPx), so light is
   // conserved per unit solid angle across canvas sizes: I_peak * K_GAUSS *
   // rRefPx^2 == EXPOSURE * fluxApp (header, 'Radius' exception).
-  let intensityRaw = starPeakIntensity(u.brightness, fluxApp, toRefPx(rPxRaw, u.pxPerRad));
+  let intensityRaw = starPeakIntensity(uniforms.brightness, fluxApp, toRefPx(rPxRaw, uniforms.pxPerRad));
 
   // Aggregate surface-brightness cap, the user's 'Fog cap': a near
   // sub-threshold aggregate deposits its honest summed light as a box-filling
@@ -247,7 +247,7 @@ fn vs(
   // makes the fog.
   let intensity = select(
     intensityRaw,
-    min(intensityRaw, u.aggregateIntensityCap),
+    min(intensityRaw, uniforms.aggregateIntensityCap),
     isAgg
   );
 
@@ -255,9 +255,9 @@ fn vs(
   // survey galaxies use, at this record's own position (an aggregate dims by its
   // box record, so the low-res glow dims too). Exactly 1.0 at rest.
   let focus = FocusUniforms(
-    vec4<f32>(u.focusCenterRelCam, u.focusApparentRadiusMpc),
-    u.focusBlend,
-    u.focusPhysicalRadiusMpc,
+    vec4<f32>(uniforms.focusCenterRelCam, uniforms.focusApparentRadiusMpc),
+    uniforms.focusBlend,
+    uniforms.focusPhysicalRadiusMpc,
     0.0,
     0.0,
   );
@@ -277,21 +277,21 @@ fn vs(
   // peak's radius would conserve luminance into a brighter dot that pops out at
   // zero. Outside the band spriteFade is exactly 1.0. The pick pass selects 1.0,
   // so a near star stays clickable.
-  let sphereDiamPx = worldLenToPx(u.cam, 2.0 * SOLAR_RADIUS_MPC, center.w);
+  let sphereDiamPx = worldLenToPx(uniforms.cam, 2.0 * SOLAR_RADIUS_MPC, center.w);
   let fadeIn = smoothstep(
     STAR_SPHERE_FADE_START_PX,
     STAR_SPHERE_FADE_START_PX * STAR_SPRITE_FADE_END_RATIO,
     sphereDiamPx
   );
-  let spriteFade = select(1.0 - fadeIn, 1.0, u.pickPass == 1u);
+  let spriteFade = select(1.0 - fadeIn, 1.0, uniforms.pickPass == 1u);
   let rPxVisual = rPx * spriteFade;
 
   // Pick pass only: the floor rides a select that is 0.0 in the visual pass, and
   // max(rPxVisual, 0.0) == rPxVisual, so visual geometry is byte-identical.
-  let pickFloorPx = select(0.0, STAR_PICK_MIN_RADIUS_PX, u.pickPass == 1u);
+  let pickFloorPx = select(0.0, STAR_PICK_MIN_RADIUS_PX, uniforms.pickPass == 1u);
   let rPxDraw = max(rPxVisual, pickFloorPx);
 
-  let screenOffset = expandBillboardScreen(u.cam, center, rPxDraw, corner);
+  let screenOffset = expandBillboardScreen(uniforms.cam, center, rPxDraw, corner);
 
   var out: VSOut;
   out.clip = center + vec4<f32>(screenOffset, 0.0, 0.0);
@@ -309,10 +309,10 @@ fn vs(
   // about -100..+21, so (log2 + 100) / 128 stays inside [0, 1].
   let pickRank = 0.9 * clamp((log2(max(fluxApp, 1e-30)) + 100.0) / 128.0, 0.0, 1.0);
   let pickZ = out.clip.w * PICK_BAND_SURVEY_STAR_EPS * (1.0 + pickRank);
-  out.clip.z = select(out.clip.z, pickZ, u.pickPass == 1u);
+  out.clip.z = select(out.clip.z, pickZ, uniforms.pickPass == 1u);
 
   // A star the focus dims is not hit-testable, as for the survey galaxies.
-  if (u.pickPass == 1u && focusMult < FOCUS_PICK_EXCLUDE_BELOW) {
+  if (uniforms.pickPass == 1u && focusMult < FOCUS_PICK_EXCLUDE_BELOW) {
     out.clip = vec4<f32>(2.0, 2.0, 2.0, 1.0);
   }
 

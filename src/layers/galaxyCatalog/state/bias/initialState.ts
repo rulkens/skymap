@@ -6,7 +6,7 @@
  */
 
 import { BiasMode } from '../../../../data/galaxyCatalog/biasMode';
-import type { BiasSettings } from '../../../../@types/settings/BiasSettings';
+import type { BiasSettings } from '../../@types/BiasSettings';
 
 export const initialState: BiasSettings = {
   mode: BiasMode.AngularReweight,

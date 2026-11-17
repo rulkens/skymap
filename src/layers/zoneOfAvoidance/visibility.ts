@@ -12,7 +12,13 @@ export const zoneOfAvoidanceVisibility = [
   {
     key: 'zoneOfAvoidance',
     selects: ['zoneOfAvoidance'],
+    recession: 'strong',
     bands: { veil: { in: [2 * R, 10 * R], out: [2, 6] } },
   },
-  { label: 'zoneOfAvoidance', cluster: 'zoneOfAvoidance', of: 'zoneOfAvoidance' },
+  {
+    label: 'zoneOfAvoidance',
+    cluster: 'zoneOfAvoidance',
+    of: 'zoneOfAvoidance',
+    recession: 'strong',
+  },
 ] as const satisfies readonly VisibilityEntry[];

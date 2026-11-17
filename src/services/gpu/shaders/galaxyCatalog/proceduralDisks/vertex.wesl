@@ -21,7 +21,7 @@
 // imported from io.wesl, the @group/@binding declaration lives in
 // the consuming file, and the layout matches what the renderer
 // builds. The fragment stage doesn't declare the binding because it
-// doesn't read 'u' — only the vertex stage consumes 'cam.viewProj'.
+// doesn't read 'uniforms' — only the vertex stage consumes 'cam.viewProj'.
 
 import package::galaxyCatalog::proceduralDisks::io::Uniforms;
 import package::galaxyCatalog::proceduralDisks::io::InstanceIn;
@@ -50,15 +50,15 @@ import package::lib::billboard::quadCorner;
 // camera-independence invariant + the pole-degeneracy discussion.
 import package::lib::orientation::DiskAxes;
 import package::lib::orientation::diskAxes;
-// Shared structure-focus dim — same lib the points pass uses, so disks fade
+// Shared focus dim — same lib the points pass uses, so disks fade
 // in lockstep with their companion point sprites. The membership test is
 // per-galaxy (constant across a quad's corners), so we evaluate it once
 // here in the vertex stage and forward the scalar via VsOut.focusDim.
 import package::lib::focusUniforms::FocusUniforms;
 import package::lib::focusUniforms::focusAlphaMultiplier;
 
-@group(0) @binding(0) var<uniform> u: Uniforms;
-// @group(1) structure-focus uniform — the impostor pipelines have no fade /
+@group(0) @binding(0) var<uniform> uniforms: Uniforms;
+// @group(1) focus uniform — the impostor pipelines have no fade /
 // source groups, so focus takes the first free slot (the points pipeline
 // parks it at @group(3)). Single shared binding: one structure focused at a time.
 @group(1) @binding(0) var<uniform> focus: FocusUniforms;
@@ -133,7 +133,7 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
   let worldPos = pos + worldOffset;
 
   var out: VsOut;
-  out.clipPos = worldToClip(u.cam, worldPos);
+  out.clipPos = worldToClip(uniforms.cam, worldPos);
   out.uv = corner;
   out.colourIndex = instance.extras.x;
   out.crossfadeAlpha = instance.extras.y;

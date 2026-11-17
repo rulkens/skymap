@@ -1,71 +1,166 @@
 /*
- * `:root[data-flight-live]` is the page the pre-paint script marked (prePaintScript.ts): the words
- * then stand on the stage, over the last stop, and the scroll fades them in.
+ * `:root[data-flight-live]` is the page the pre-paint script marked (prePaintScript.ts): the arrival then
+ * covers the stage and is drawn on its last picture. Without it the words follow the list of pictures.
  */
 .arrive {
-  padding: 1rem var(--gutter) 3rem;
+  padding: var(--site-space-s) var(--gutter) var(--site-space-2xl);
 
   & p {
-    margin: 0 0 1rem;
+    margin: 0 0 var(--site-space-s);
     color: var(--site-text);
   }
 }
 
+.here,
+.horizon {
+  display: none;
+}
+
+/*
+ * The picture's centre (`--cy`) and the radius of the observable universe's edge (`--r`), measured on
+ * the frames themselves: `--pic` is the height a picture has once it covers the stage. The still is cut
+ * at 65.5 s; the film ends at 66 s, its sphere a little smaller. Measure again after a re-cut (site:media).
+ */
 :root[data-flight-live] .arrive {
+  --pic: max(100cqh, 56.25cqw);
+  --r: calc(0.5106 * var(--pic));
+  --cy: calc(50cqh - 0.0027 * var(--pic));
   position: absolute;
   z-index: 3;
+  inset: 0;
+  /* The container units measure the content box: it must be the whole stage. */
+  padding: 0;
+  container-type: size;
+  opacity: 0;
+  pointer-events: none;
+}
+
+:root[data-flight-live] video[data-playing] ~ .arrive {
+  --r: calc(0.5021 * var(--pic));
+  --cy: calc(50cqh - 0.0028 * var(--pic));
+}
+
+/* The portrait still, cut from the same frame with black above and below it. */
+@media (orientation: portrait) {
+  :root[data-flight-live] .arrive {
+    --pic: max(100cqh, 177.78cqw);
+    --r: calc(0.2043 * var(--pic));
+    --cy: calc(50cqh - 0.0013 * var(--pic));
+  }
+}
+
+/*
+ * We are a point at the centre, so it is labelled as the app labels its own "You are here": a stem
+ * straight up from the point, the words centred over it 6px clear (milkyWayLabelStyle, leaderLineStyle).
+ * The stem runs past the galaxies, which reach 0.4 of the radius above us, so the words stand on black.
+ */
+:root[data-flight-live] .here {
+  display: block;
+  position: absolute;
+  left: 50cqw;
+  top: calc(var(--cy) - 0.43 * var(--r));
+  width: 1.5px;
+  height: calc(0.43 * var(--r));
+  translate: -50% 0;
+  background: var(--color-fg);
+
+  & > span {
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 6px);
+    translate: -50% 0;
+    font: var(--weight-display) var(--text-h3) / 1 var(--font-family-display);
+    white-space: nowrap;
+    color: var(--color-fg);
+    text-shadow:
+      0 0 0.5rem #000,
+      0 0 0.25rem #000;
+  }
+}
+
+/* The edge of the observable universe, ringed as the app rings what you select. */
+:root[data-flight-live] .horizon {
+  --standoff: 0.3125rem;
+  display: block;
+  position: absolute;
+  left: calc(50cqw - var(--r) - var(--standoff));
+  top: calc(var(--cy) - var(--r) - var(--standoff));
+  width: calc(2 * (var(--r) + var(--standoff)));
+  height: calc(2 * (var(--r) + var(--standoff)));
+  border: 1px solid var(--color-accent);
+  border-radius: 50%;
+  opacity: 0;
+  scale: 1.04;
+  transition:
+    opacity var(--duration-base) var(--ease-leave),
+    scale var(--duration-base) var(--ease-leave);
+}
+
+/* Selected with the button: the ring closes in on the edge as the button's own ring lights. */
+:root[data-flight-live] .arrive:has(a:focus-visible) .horizon {
+  opacity: 1;
+  scale: 1;
+  transition-duration: var(--duration-reveal);
+  transition-timing-function: var(--ease-enter);
+}
+
+@media (hover: hover) {
+  :root[data-flight-live] .arrive:has(a:hover) .horizon {
+    opacity: 1;
+    scale: 1;
+    transition-duration: var(--duration-reveal);
+    transition-timing-function: var(--ease-enter);
+  }
+}
+
+/* The words stand under us on the picture's axis, in the dark below the galaxies and inside the edge. */
+:root[data-flight-live] .words {
+  position: absolute;
   left: 0;
   right: 0;
-  bottom: 0;
+  top: calc(var(--cy) + 0.44 * var(--r));
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1rem;
-  padding: 0 var(--gutter) 3.5rem;
+  gap: var(--site-space-m);
+  padding: 0 var(--gutter);
   text-align: center;
-  opacity: 0;
-  pointer-events: none;
   text-shadow: 0 0 0.5rem rgb(0 0 0 / 0.9);
 
   & p {
-    max-width: 38ch;
+    max-width: none;
     margin: 0;
-  }
-
-  /* A local scrim: under the words only, so the rest of the frame keeps its light. */
-  &::before {
-    content: '';
-    position: absolute;
-    z-index: -1;
-    inset: -6rem 0 0;
-    background: radial-gradient(
-      ellipse 60% 100% at 50% 100%,
-      rgb(0 0 0 / 0.86) 0%,
-      rgb(0 0 0 / 0.6) 50%,
-      rgb(0 0 0 / 0) 100%
-    );
+    font: var(--weight-display) var(--text-h2) / 1.05 var(--font-family-display);
+    letter-spacing: -0.015em;
+    color: var(--color-fg);
   }
 }
 
-/* Upright screens: the words stand at the left, as the captions do. */
-@media (max-width: 760px) and (orientation: portrait) {
-  :root[data-flight-live] .arrive {
-    align-items: flex-start;
-    padding-bottom: 2.75rem;
-    text-align: left;
+/* Upright screens: the universe is a disc mid-screen, and the words stand just under its edge. */
+@media (orientation: portrait) {
+  :root[data-flight-live] .words {
+    /* On a short phone the words rise until they clear the readout on the bottom edge. */
+    top: min(var(--cy) + var(--r) + 2.25rem, 100cqh - 11rem);
+    gap: var(--site-space-m);
   }
 }
 
-/* Short screens (a phone on its side): everything smaller, nothing stacked. */
-@media (max-height: 520px) and (orientation: landscape) {
-  :root[data-flight-live] .arrive {
-    padding-bottom: 1rem;
-    gap: 0.25rem;
+/* Short screens (a phone on its side): the words and the button side by side. */
+@media (--landscape) {
+  :root[data-flight-live] .words {
+    flex-direction: row;
+    justify-content: center;
+    gap: var(--site-space-m);
 
     & p {
-      max-width: 60ch;
-      font-size: var(--text-small);
-      font-weight: var(--weight-small);
+      font-size: 2rem;
     }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-flight-live] .horizon {
+    scale: 1;
+    transition: none;
   }
 }

@@ -97,7 +97,8 @@ function readColumn(dv: DataView, at: number, n: number, c: ColumnSchema): Octre
     }
     default: {
       const out = new Float32Array(n);
-      for (let i = 0; i < n; i++) out[i] = c.q0 + readIntegerScalar(dv, at + i * stride, c.store) * c.q1;
+      for (let i = 0; i < n; i++)
+        out[i] = c.q0 + readIntegerScalar(dv, at + i * stride, c.store) * c.q1;
       return out;
     }
   }

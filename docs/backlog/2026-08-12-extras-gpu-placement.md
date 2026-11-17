@@ -7,7 +7,7 @@ Concerns section), never revisited.
 
 ## The cut
 
-`buildGalaxyFieldMixture` (`src/services/engine/galaxyGenerator/v2/galaxyFieldMixture.ts`)
+`buildGalaxyFieldMixture` (`src/layers/milkyWay/field/mixture/utils/galaxyFieldMixture.ts`)
 is called for both the central galaxy and every background "extra" added via
 the galaxy-renderer dev tool's `MultiGalaxySection` UI (`fieldMixtureOf`, used
 from `setExtras` in

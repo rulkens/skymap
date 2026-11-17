@@ -1,0 +1,14 @@
+[
+  { "from": "src/layers/localBubble/@types/LocalBubbleRenderer.d.ts", "to": "src/layers/localBubble/shell/@types/LocalBubbleRenderer.d.ts" },
+  { "from": "src/layers/localBubble/data/localBubbleSliderFields.ts", "to": "src/layers/localBubble/shell/data/localBubbleSliderFields.ts" },
+  { "from": "src/layers/localBubble/data/localBubbleTint.ts", "to": "src/layers/localBubble/shell/data/localBubbleTint.ts" },
+  { "from": "src/layers/localBubble/data/shellMeshFormat.ts", "to": "src/layers/localBubble/shell/data/shellMeshFormat.ts" },
+  { "from": "src/layers/localBubble/data/shellVertexFormats.ts", "to": "src/layers/localBubble/shell/data/shellVertexFormats.ts" },
+  { "from": "src/layers/localBubble/load/localBubbleAssetRows.ts", "to": "src/layers/localBubble/shell/load/localBubbleAssetRows.ts" },
+  { "from": "src/layers/localBubble/load/localBubbleFetcher.ts", "to": "src/layers/localBubble/shell/load/localBubbleFetcher.ts" },
+  { "from": "src/layers/localBubble/load/localBubbleSlot.ts", "to": "src/layers/localBubble/shell/load/localBubbleSlot.ts" },
+  { "from": "src/layers/localBubble/passes/localBubblePass.ts", "to": "src/layers/localBubble/shell/passes/localBubblePass.ts" },
+  { "from": "src/layers/localBubble/render/localBubbleRenderer.ts", "to": "src/layers/localBubble/shell/render/localBubbleRenderer.ts" },
+  { "from": "src/layers/localBubble/utils/clampLocalBubbleIntensity.ts", "to": "src/layers/localBubble/shell/utils/clampLocalBubbleIntensity.ts" },
+  { "from": "src/layers/localBubble/ui/LocalBubbleTuningSectionContainer.tsx", "to": "src/layers/localBubble/shell/ui/LocalBubbleTuningSectionContainer.tsx" }
+]

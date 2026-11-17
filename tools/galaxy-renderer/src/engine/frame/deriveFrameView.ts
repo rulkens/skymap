@@ -1,71 +1,33 @@
 /**
- * deriveFrameView — everything one frame's camera and settings determine
- * before any GPU work: the matrices, the visibility fade, the debug-view
- * weights, the dust slice edges and the analytic exposure. Pure, and
- * separated from `drawFrame` for that reason — the only part of the frame a
- * test can reach without a device. What stays in the engine is the pass
- * ENCODING, a straight-line sequence over every pipeline and bind group it
- * owns; routing that through a parameter bag would trade a real dependency
- * for a wide one.
+ * deriveFrameView — what one frame's camera and settings determine before any
+ * GPU work, on the tool's side: the matrices, the field camera, the
+ * visibility fade and the debug-view weights. The field's own header lanes
+ * come from `deriveFieldFrameLanes`. Pure, and separated from `drawFrame` for
+ * that reason — the only part of the frame a test can reach without a device.
  */
 import { mat4 } from 'wgpu-matrix';
 
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
+import type { FieldView } from '../../../../../src/layers/milkyWay/field/@types/FieldView';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
-import type { DebugViewWeights } from '../../../../../src/@types/galaxy/DebugViewWeights';
-import type { FieldDustSlices } from '../../../../../src/@types/galaxy/FieldDustSlices';
+import type { DebugViewWeights } from '../../../../../src/layers/milkyWay/field/header/@types/DebugViewWeights';
 import type { MilkyWayFadeReadout } from '../../../@types/engine/MilkyWayFadeReadout';
 import type { RenderSettings } from '../../../@types/engine/RenderSettings';
-import type { IsmMapChannelWeights } from '../../../../../src/@types/galaxy/IsmMapChannelWeights';
 
 import { debugGalaxyWeight } from './debugGalaxyWeight';
 import { debugViewWeights } from './debugViewWeights';
 import { deriveMilkyWayFade } from './deriveMilkyWayFade';
-import { dustSliceEdges } from '../../../../../src/services/gpu/renderers/galaxyField/field/dustSliceEdges';
-import { lerp } from '../../../../../src/utils/math/lerp';
-import { smoothstep } from '../../../../../src/utils/math/smoothstep';
+import { shiftedFrustum } from '../../../../../src/services/engine/camera/lens/utils/shiftedFrustum';
 
-/**
- * The gauge for the analytic field's arbitrary flux units: the scalar at which
- * `analyticExposure = 1.0` is the calibrated look. Hand-pinned by eye, so it
- * carries no derivation — only a landmine.
- *
- * It must not be reconstituted from the sprite pass's `starIntensity` and
- * `sizeScale`, which is what it was until the field's exposure drifted x2.4446
- * behind a retune of those two SPRITE knobs. That coupling cannot buy
- * sprite/field parity anyway: the sprite pass's light also carries its `count`,
- * so matching the other two terms tracks nothing. The field's exposure is
- * `analyticExposure` alone, as the slider's label promises.
- */
-const FIELD_EXPOSURE_GAUGE = 0.0539;
-
-/**
- * Anchors (disc radii) for the star-grain feature-scale blend: below
- * `NEAR_R` the camera is close enough that the near calibration alone
- * applies, beyond `FAR_R` the far one does. Eyeballed, not derived — tunable
- * alongside `starGrainFeatureScaleNear`/`Far` in `defaultRenderSettings.ts`.
- */
-const STAR_GRAIN_SCALE_NEAR_R = 1.0;
-const STAR_GRAIN_SCALE_FAR_R = 4.0;
-
-export type FieldFrameLanes = {
+export type ToolFrameView = {
   readonly view: Float32Array;
   readonly proj: Float32Array;
   readonly viewProj: Float32Array;
-  readonly aspect: number;
+  /** The field's camera; the tool's galaxy frame is its world frame, so no transform. */
+  readonly camera: FieldView;
   readonly fade: MilkyWayFadeReadout;
   readonly galaxyWeight: number;
   readonly debugViews: DebugViewWeights;
-  readonly ismMapChannels: IsmMapChannelWeights;
-  readonly dustSlices: FieldDustSlices;
-  /** `render.analyticExposure` against `FIELD_EXPOSURE_GAUGE`, scaled by the fade. Independent of the sprite pass's `starIntensity`/`sizeScale`. */
-  readonly analyticExposure: number;
-  /**
-   * `render.starGrainFeatureScaleNear`/`Far`, blended by log camera distance
-   * (disc radii) — the single scalar `FieldHeaderInput.starGrainFeatureScale`
-   * still carries. See `STAR_GRAIN_SCALE_NEAR_R`/`FAR_R` above.
-   */
-  readonly starGrainFeatureScale: number;
 };
 
 export function deriveFrameView(input: {
@@ -78,9 +40,7 @@ export function deriveFrameView(input: {
   readonly shiftX: number;
   readonly viewportPx: Vec2;
   readonly render: RenderSettings;
-  /** The dust's reach R, cached across frames by the dust rebuild — only the SLICE EDGES are view-dependent. */
-  readonly dustReachR: number;
-}): FieldFrameLanes {
+}): ToolFrameView {
   const { eye, fov, dist, viewportPx, render } = input;
   const view = mat4.lookAt(eye, input.target, [0, 1, 0]);
   // Near/far track orbit distance, the same adaptation the app's NEAR0 slab
@@ -93,6 +53,17 @@ export function deriveFrameView(input: {
   const aspect = viewportPx[0] / viewportPx[1];
   const proj = mat4.perspective(fov, aspect, near, far);
   proj[8] = input.shiftX; // lens shift to centre in the visible area
+  // A lookAt view's rotation ROWS are the camera's world axes; column-major,
+  // so each row is a stride-4 gather, and row 2 points away from the target.
+  // `proj[8] = shiftX` puts the window centre at shiftX half-widths, so the
+  // axis lands at −shiftX in `shiftedFrustum`'s terms.
+  const camera: FieldView = {
+    eye,
+    right: [view[0]!, view[4]!, view[8]!],
+    up: [view[1]!, view[5]!, view[9]!],
+    fwd: [-view[2]!, -view[6]!, -view[10]!],
+    frustum: shiftedFrustum(fov, aspect, [-input.shiftX, 0]),
+  };
 
   // `viewportPx[1]`, not the aggregate target's height, for the same reason the
   // app passes `ctx.canvasSize.height`: the fade band asks how big the disc
@@ -108,46 +79,17 @@ export function deriveFrameView(input: {
   // Read once here and shared by the uniform packs AND the per-pass gates, so
   // a pass can never run at a weight its own header says is 0.
   const debugViews = debugViewWeights(render);
-  // MAX, not SUM — see debugGalaxyWeight. Shared by the sprite fadeAlpha and
-  // every field header this frame, so the galaxy dims by exactly the same
-  // amount whichever representation is drawing it.
-  const galaxyWeight = debugGalaxyWeight(debugViews);
-
-  // Distance from the galaxy's centre (not the orbit target — see the
-  // `dustSlices` comment below), in disc radii, on a log axis: a linear
-  // blend would spend nearly its whole range in the far regime, since
-  // `dist` traverses orders of magnitude between close approach and a
-  // whole-galaxy framing.
-  const camDistFromOrigin = Math.hypot(eye[0], eye[1], eye[2]);
-  const grainT = smoothstep(
-    Math.log(STAR_GRAIN_SCALE_NEAR_R),
-    Math.log(STAR_GRAIN_SCALE_FAR_R),
-    Math.log(camDistFromOrigin / input.dustReachR),
-  );
-  const starGrainFeatureScale = lerp(
-    render.starGrainFeatureScaleNear,
-    render.starGrainFeatureScaleFar,
-    grainT,
-  );
 
   return {
     view,
     proj,
     viewProj: mat4.multiply(proj, view),
-    aspect,
+    camera,
     fade,
-    galaxyWeight,
+    // MAX, not SUM — see debugGalaxyWeight. Shared by the sprite fadeAlpha and
+    // every field header this frame, so the galaxy dims by exactly the same
+    // amount whichever representation is drawing it.
+    galaxyWeight: debugGalaxyWeight(debugViews),
     debugViews,
-    ismMapChannels: {
-      gasWeight: render.ismMapGasWeight,
-      starsWeight: render.ismMapStarsWeight,
-      activityWeight: render.ismMapActivityWeight,
-      dustWeight: render.ismMapDustWeight,
-    },
-    // D is the eye's distance to the primary galaxy's centre (the tool's
-    // origin, NOT the orbit target — the two differ once the camera pans).
-    dustSlices: dustSliceEdges(camDistFromOrigin, input.dustReachR),
-    analyticExposure: render.analyticExposure * FIELD_EXPOSURE_GAUGE * fade.alpha,
-    starGrainFeatureScale,
   };
 }

@@ -1,25 +1,26 @@
 /**
- * DebugOverlayToggles — the labelled checkbox rows for a slice of
- * `DEBUG_OVERLAY_ROWS`. Every `section` value routes its rows to a different
- * host section, so the markup and its `.checkRow` rule had been copied once
- * per host; this is the one statement of both. Emits bare `<label>`s, so each
- * host still owns its own wrapper and chrome.
+ * DebugOverlayToggles — the labelled checkbox rows of one debug section. Core's
+ * overlays and each Layer's own host these, so the markup and its `.checkRow`
+ * rule would otherwise be copied once per host; this is the one statement of
+ * both. Emits bare `<label>`s, so each host still owns its own wrapper and chrome.
  */
 
 import { Fragment, type ReactElement } from 'react';
-import type { DebugOverlayKey } from '../../@types/data/debug/DebugOverlayKey';
 import styles from './DebugOverlayToggles.module.css';
 
-export type DebugOverlayTogglesProps = {
-  /** A filtered slice of `DEBUG_OVERLAY_ROWS`, whose `as const` keeps `key`
-   *  literal — so a row this panel cannot toggle is a type error, not a
-   *  silently-undefined checkbox. */
-  readonly rows: readonly { readonly key: DebugOverlayKey; readonly label: string }[];
-  readonly overlays: Record<DebugOverlayKey, boolean>;
-  readonly onToggle: (key: DebugOverlayKey, enabled: boolean) => void;
+export type DebugOverlayTogglesProps<Key extends string> = {
+  /** Literal `key`s (`as const`), so a row this host cannot toggle is a type
+   *  error, not a silently-undefined checkbox. */
+  readonly rows: readonly { readonly key: Key; readonly label: string }[];
+  readonly overlays: Record<Key, boolean>;
+  readonly onToggle: (key: Key, enabled: boolean) => void;
 };
 
-function DebugOverlayToggles({ rows, overlays, onToggle }: DebugOverlayTogglesProps): ReactElement {
+function DebugOverlayToggles<Key extends string>({
+  rows,
+  overlays,
+  onToggle,
+}: DebugOverlayTogglesProps<Key>): ReactElement {
   return (
     <Fragment>
       {rows.map((row) => (

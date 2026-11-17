@@ -7,17 +7,18 @@
  * fixtures source it differently (a hand-advanced row vs. a real player).
  */
 
-import type { CameraState } from '../../../src/@types/camera/CameraState';
+import type { CameraIntentState } from '../../../src/@types/camera/orbitCamera/CameraIntentState';
 import type { Epoch } from '../../../src/@types/engine/camera/Epoch';
-import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
+import type { FramedCameraPose } from '../../../src/@types/camera/pose/FramedCameraPose';
 import type { CameraSimHarness } from './CameraSimHarness';
 
 import { stepCameraRuntime } from '../../../src/services/engine/camera/stepCameraRuntime';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
-import { commitCameraPose } from '../../../src/state/camera/cameraSlice';
+import { commitCameraPose } from '../../../src/state/camera/cameraIntentSlice';
 import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import { selectTimeState } from '../../../src/state/time/selectors';
 import { selectPendingInput } from '../../../src/state/input/selectors';
+import { selectViewCoverPx } from '../../../src/state/viewCover/selectors';
 import { inputConsumed } from '../../../src/state/input/inputSlice';
 import { pendingToInputSteps } from '../../../src/utils/input/pendingToInputSteps';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
@@ -25,7 +26,7 @@ import type { Vec2 } from '../../../src/@types/math/Vec2';
 export function simulateCameraFrame(
   harness: CameraSimHarness,
   nowMs: number,
-  clipEpoch: Epoch<NonNullable<CameraState['clip']>>,
+  clipEpoch: Epoch<NonNullable<CameraIntentState['clip']>>,
 ): { pose: FramedCameraPose; activeId: string; committed: boolean } {
   const { state, store, deps } = harness;
   const stored = store.getState();
@@ -38,6 +39,7 @@ export function simulateCameraFrame(
     simDays,
     rootState: stored,
     canvasPx,
+    coverPx: selectViewCoverPx(stored),
     aspect: deps.canvas.width / deps.canvas.height,
     steps: pendingToInputSteps(pending, canvasPx),
     bodies: deriveBodyStates(simDays),

@@ -13,7 +13,7 @@ the pivot replaces or re-routes.
 | per-move exact branch                           | orbitControls.ts:520-566; frame from wireInput.ts:425-451                                            |
 | exact drag solve                                | src/utils/camera/surfaceDragRotation.ts:56-203 (tol :37, bound :141-149, accept :163-173)            |
 | apply + latch-off                               | orbitControls.ts:552-557 / :564                                                                      |
-| flat-rate fallback                              | orbitControls.ts:584-599 → src/utils/camera/orbitRadPerPixel.ts:34 → groundTrackingRadPerPixel.ts:25 |
+| flat-rate fallback                              | orbitControls.ts:584-599 → src/services/engine/camera/input/utils/orbitRadPerPixel.ts:34 → groundTrackingRadPerPixel.ts:25 |
 | frame-side pin/fold (surface follow, FW-G)      | src/services/engine/frame/runFrame.ts:494-499, 601-606, 645-663                                      |
 | zoom (wheel/pinch, NOT drag)                    | wireInput.ts:475 → applyWheelZoom.ts → src/utils/camera/cursorZoomStep.ts                            |
 

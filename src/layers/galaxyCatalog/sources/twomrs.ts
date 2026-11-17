@@ -1,9 +1,7 @@
 import type { GalaxyCatalogSourceEntry } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceEntry';
-import { Source } from '../../../data/source';
 
 export const TWOMRS_ENTRY = {
   type: 'galaxyCatalog',
-  code: Source.TwoMRS,
   id: '2mrs',
   label: '2MRS',
   binBaseName: '2mrs',
@@ -17,6 +15,7 @@ export const TWOMRS_ENTRY = {
   // pair) for galaxy-type information. K-correction is negligible at
   // the galaxy catalog's effective z ≲ 0.06.
   colourSpec: { slotA: 'g', slotB: 'i', rangeMin: 0.7, rangeMax: 1.1, kPerZ: 0.0 },
+  typeColour: { slotA: 'g', slotB: 'i', thresholds: 'J-K' },
   // Huchra et al. 2012 — K_s ≤ 11.75.
   mLim: 11.75,
   // Kochanek et al. 2001, K-band Schechter from 2MASS.

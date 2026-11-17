@@ -1,5 +1,5 @@
 import { DEFAULT_STAR_SIZE_PX } from '../defaults';
-import type { StarCatalogSettings } from '../../../../@types/settings/StarCatalogSettings';
+import type { StarCatalogSettings } from '../../@types/StarCatalogSettings';
 
 export const initialState: StarCatalogSettings = {
   enabled: true,

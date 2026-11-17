@@ -1,5 +1,4 @@
 import type { SeededStarCatalogSourceEntry } from '../../../@types/data/starCatalog/SeededStarCatalogSourceEntry';
-import { Source } from '../../../data/source';
 
 /**
  * The curated, true-scale stellar neighbourhood — the hand-picked nearby-star
@@ -12,7 +11,6 @@ import { Source } from '../../../data/source';
  */
 export const FAMOUS_STAR_ENTRY = {
   type: 'starCatalog',
-  code: Source.FamousStar,
   id: 'famousStar',
   label: 'Famous Star',
   // A collection of bodies sitting at the observer's near field, not a sky

@@ -8,7 +8,7 @@ import { parseOmmEpochMs } from '../utils/time/parseOmmEpochMs';
 import { SATELLITE_CLASSES } from '../../src/data/satellites/satelliteClasses';
 import type { CelestrakGroup } from '../@types/satellites/CelestrakGroup';
 import type { CelestrakOmm } from '../@types/satellites/CelestrakOmm';
-import type { SatelliteCatalog } from '../../src/@types/satellites/SatelliteCatalog';
+import type { SatelliteCatalog } from '../../src/layers/satellites/catalog/@types/SatelliteCatalog';
 import type { SatelliteClass } from '../../src/@types/satellites/SatelliteClass';
 
 const ELEMENT_FIELDS = [

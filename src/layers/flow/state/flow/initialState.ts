@@ -4,6 +4,6 @@
  */
 
 import { DEFAULT_FLOW } from '../defaults';
-import type { FlowSettings } from '../../../../@types/settings/FlowSettings';
+import type { FlowSettings } from '../../@types/FlowSettings';
 
 export const initialState: FlowSettings = { ...DEFAULT_FLOW };

@@ -4,7 +4,7 @@ import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
 import type { CosmicHorizonRuntime } from './@types/CosmicHorizonRuntime';
 
 import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';
-import { createHorizonShellRenderer } from './render/horizonShellRenderer';
+import { createHorizonShellRenderer } from './horizon/render/horizonShellRenderer';
 
 export function create(deps: LayerCoreDeps): CosmicHorizonRuntime {
   return {

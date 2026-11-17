@@ -6,8 +6,8 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
-  padding: calc(var(--nav-height) + 2rem) var(--gutter) 2.5rem;
+  gap: var(--site-space-m);
+  padding: calc(var(--nav-height) + var(--site-space-l)) var(--gutter) var(--site-space-xl);
 }
 
 .intro .word {
@@ -31,8 +31,10 @@
   display: grid;
   grid-template-columns: 1fr auto;
   align-items: end;
-  gap: 1.5rem 3rem;
-  padding: 0 5.5rem 4.5rem var(--gutter);
+  gap: var(--site-space-m) var(--site-space-2xl);
+  padding: 0 var(--site-space-3xl) var(--site-space-3xl) var(--gutter);
+  /* The scroll draws the words back with Earth (useFlight), towards the corner they stand in. */
+  transform-origin: var(--gutter) 100%;
 }
 
 /* A local scrim: under the words only, so the rest of the frame keeps its light. */
@@ -54,11 +56,11 @@
 }
 
 /* Upright screens: the words take the bottom. */
-@media (max-width: 760px) and (orientation: portrait) {
+@media (--portrait) {
   :root[data-flight-live] .intro {
     grid-template-columns: 1fr;
-    gap: 1.25rem;
-    padding: 0 var(--gutter) 3.75rem;
+    gap: var(--site-space-m);
+    padding: 0 var(--gutter) var(--site-space-2xl);
   }
 
   :root[data-flight-live] .intro::before {
@@ -72,9 +74,9 @@
 }
 
 /* Short screens (a phone on its side): everything smaller, nothing stacked. */
-@media (max-height: 520px) and (orientation: landscape) {
+@media (--landscape) {
   :root[data-flight-live] .intro {
-    padding: 0 4rem 2.25rem var(--gutter);
+    padding: 0 var(--site-space-2xl) var(--site-space-xl) var(--gutter);
   }
 
   :root[data-flight-live] .intro .word {

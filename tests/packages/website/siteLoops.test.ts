@@ -8,7 +8,7 @@ import { existsSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { PLACES } from '../../../packages/website/src/data/places';
+import { PLACES } from '../../../packages/website/src/content/pages/home/places';
 import { SITE_LOOPS } from '../../../packages/website/src/data/siteLoops';
 import { siteShot } from '../../../packages/website/src/data/siteShot';
 import { SITE_LOOP_PLAN } from '../../../tools/site/siteLoopPlan';

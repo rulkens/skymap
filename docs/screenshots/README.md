@@ -12,8 +12,6 @@ stills (16:9, captured at 2× for retina), `.gif` for short loops.
 - `stars-milky-way.jpg` — the Gaia star field against the procedural Milky Way disk.
 - `local-volume.jpg` — famous galaxies with curated thumbnails, labels, filaments.
 - `cosmic-web.jpg` — point cloud, filament skeleton, and MCPM volume at supercluster scale.
-  Also feeds the social-share card via `tools/site/makeOgImage.ts`; re-run that
-  script after re-capturing it.
 
 ## old/
 

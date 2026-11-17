@@ -1,9 +1,7 @@
 import type { MilkyWaySourceEntry } from '../../../@types/data/milkyWay/MilkyWaySourceEntry';
-import { Source } from '../../../data/source';
 
 export const MILKY_WAY_ENTRY = {
   type: 'milkyWay',
-  code: Source.MilkyWay,
   id: 'milkyWay',
   label: 'Milky Way',
   // The galactic disk is centred on the observer; allSky:true matches the

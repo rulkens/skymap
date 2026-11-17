@@ -1,4 +1,4 @@
-import { buildStaticAnchorStructures } from '../../src/layers/structure/load/buildStaticAnchorStructures';
+import { buildStaticAnchorStructures } from '../../src/layers/structure/catalog/load/buildStaticAnchorStructures';
 import { structureShotSource } from './structureShotSource';
 import type { StructureShotSource } from './@types/StructureShotSource';
 import type { StructureInfo } from '../../src/@types/data/structure/StructureInfo';

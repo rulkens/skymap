@@ -9,14 +9,14 @@
 
 .caption {
   position: relative;
-  margin-top: 0.5rem;
+  margin-top: var(--site-space-2xs);
 
   /* On the label's last line, where "Open this view" stands, at the other end of it. One step more specific than the ring's own rules. */
   & a.enlarge {
     position: absolute;
     right: 0;
     /* Level with "Open this view", which hangs below the label by the same amount (ShotCaption). */
-    bottom: -0.625rem;
+    bottom: calc(-1 * var(--tap-reach));
     /* The label's own size. */
     font-size: 0.875rem;
     color: var(--site-text-dim);
@@ -24,7 +24,7 @@
 }
 
 /* Narrow, the picture runs to the screen's edges; its label keeps the text edge. */
-@media (max-width: 900px) {
+@media (--narrow) {
   .picture {
     margin-inline: calc(-1 * var(--gutter));
   }
@@ -35,7 +35,7 @@
  * contents' three and the text's own), so its right edge is the page's, and its label lies along its foot on
  * those nine columns.
  */
-@media (min-width: 901px) {
+@media (--wide) {
   .wide {
     --figure-out: calc(
       (var(--cols) - 9) *
@@ -53,7 +53,7 @@
  * of them: black from its top to its foot, fading in over the gap above it and out over the gap below, so the
  * list dims as the picture nears and nothing is switched.
  */
-@media (min-width: 1200px) {
+@media (--broad) {
   .wide {
     position: relative;
     z-index: 1;

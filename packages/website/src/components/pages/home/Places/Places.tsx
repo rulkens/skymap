@@ -4,28 +4,25 @@
  * and how far away it is. Scrolling draws the line and drifts the discs
  * (usePlaceDrift); pointed at, a disc plays its film (usePlaceFilms). Layout in
  * placeLayout.ts. It is an island: the films and the drift need the page.
+ * The title and the line under it (children) are the page's.
  */
 import { useRef } from 'react';
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 
-import { PLACES } from '../../../../data/places.ts';
+import { PLACES } from '../../../../content/pages/home/places.ts';
 import { cx } from '../../../../utils/cx.ts';
-import { loopUrl } from '../../../../utils/loopUrl.ts';
 import { smoothPath } from '../../../../utils/smoothPath.ts';
 import PlaceLink from './PlaceLink.tsx';
-import { DEPTHS, TALL, TALL_HEIGHT, WIDE, WIDE_HEIGHT } from './placeLayout.ts';
+import { DEPTHS, TALL, WIDE, WIDE_HEIGHT } from './placeLayout.ts';
 import styles from './Places.module.css';
 import { usePlaceDrift } from './usePlaceDrift.ts';
 import { usePlaceFilms } from './usePlaceFilms.ts';
-
-const FILMS = PLACES.map((place) => (place.loop ? loopUrl(place.loop) : undefined));
-const IDS = PLACES.map((place) => place.id);
-const tallHeight = TALL_HEIGHT.toFixed(2);
+import { FILMS, IDS, tallHeight } from './Places.constants.ts';
 
 /** `lines`: the words under each name, from placeLines() on the page. */
-type PlacesProps = { lines: readonly string[] };
+type PlacesProps = { title: string; lines: readonly string[]; children: ReactNode };
 
-function Places({ lines }: PlacesProps) {
+function Places({ title, lines, children }: PlacesProps) {
   const field = useRef<HTMLDivElement>(null);
   usePlaceDrift(field);
   const films = usePlaceFilms(IDS);
@@ -33,11 +30,8 @@ function Places({ lines }: PlacesProps) {
   return (
     <section className={styles.root} id="places">
       <div className={styles.head}>
-        <h2>Pick somewhere to start</h2>
-        <p>
-          Choose one and the app opens there. They run from nearest to farthest: light from the Moon
-          arrives in 1.3 seconds, from Andromeda in 2.5 million years.
-        </p>
+        <h2>{title}</h2>
+        {children}
       </div>
       <div
         ref={field}

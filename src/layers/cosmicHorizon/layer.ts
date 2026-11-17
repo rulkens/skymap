@@ -8,7 +8,7 @@ import { cosmicHorizonLayerSettings } from './state/slices';
 import { cosmicHorizonVisibility } from './visibility';
 import { create } from './create';
 import { destroy } from './destroy';
-import { horizonShellPass } from './passes/horizonShellPass';
+import { horizonShellPass } from './horizon/passes/horizonShellPass';
 import { cosmicHorizonLayerExhibits } from './exhibits/exhibits';
 
 export const cosmicHorizonLayer = defineLayer({

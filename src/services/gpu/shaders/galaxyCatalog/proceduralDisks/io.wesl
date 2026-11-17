@@ -31,7 +31,7 @@
 // WESL has no global state — bindings are module-local declarations
 // that cannot be exported. The vertex stage redeclares the uniform
 // binding (it reads cam.viewProj for the world-to-clip projection).
-// The fragment stage doesn't read 'u' today, so it doesn't declare
+// The fragment stage doesn't read 'uniforms' today, so it doesn't declare
 // the binding — but the WebGPU bind-group layout in
 // 'proceduralDiskRenderer.ts' still tags binding 0 with VERTEX |
 // FRAGMENT visibility for ABI continuity with sibling renderers
@@ -102,7 +102,7 @@ struct VsOut {
   // galaxies with a curated famous WebP loaded; 1.0 means no fade-out.
   // See 'ProceduralDiskInstance.d.ts' for the full semantic.
   @location(3) @interpolate(flat) procFadeOut: f32,
-  // Per-instance structure-focus dim in [0.08, 1.0]: 1.0 for members of the
+  // Per-instance focus dim in [0.08, 1.0]: 1.0 for members of the
   // focused structure (and for everything at rest), 0.08 for non-members, ramped
   // by the focus blend. Computed once per instance in the vertex stage.
   @location(4) @interpolate(flat) focusDim: f32,

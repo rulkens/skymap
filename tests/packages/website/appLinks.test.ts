@@ -1,8 +1,8 @@
 /**
- * Three kinds of link, each with one look: the bare app is OpenApp's button, a
- * view in the app is a ViewLink (the view mark), a page of the site is the
- * ring under that page's icon. Read from the source, so a new page cannot hand
- * an app address to a page's ring or grow a second launch control.
+ * Every link into the app is an AppLink, so every one opens in a new tab, and each kind has one look: the bare
+ * app is OpenApp's button, a view as a control is ViewLink's ring under the view mark. Read from the source, so a
+ * new page cannot build an app address into a plain anchor, grow a second launch control, or mark a site page's
+ * ring as a view.
  */
 import { readFileSync, readdirSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
@@ -11,21 +11,6 @@ import { describe, expect, it } from 'vitest';
 
 const SRC = resolve(import.meta.dirname, '../../../packages/website/src');
 
-// Feature hands its `href` to a ViewLink.
-const VIEW_LINK_TAGS = ['ViewLink', 'Feature'];
-
-/** View addresses that are not a control of their own: file, how many, and why. */
-const OTHER_USES: Record<string, number> = {
-  // The address shown as text and copied, beside a picture.
-  'components/shared/links/AddressStrip/AddressStrip.tsx': 1,
-  // The whole card is the link, its picture included; the launch drawing follows the name.
-  'components/pages/home/Places/PlaceLink.tsx': 1,
-  // Each slide is a link to its own view, the current one reachable; the caption under it carries the ViewLink.
-  'components/pages/features/FeatureGallery/FeatureGallery.tsx': 1,
-  // The card's picture repeats the card's ViewLink, hidden from the keyboard and from assistive technology.
-  'components/pages/classroom/LessonLinks/LessonLinks.tsx': 1,
-};
-
 const files = readdirSync(SRC, { recursive: true, encoding: 'utf8' })
   .filter((name) => /\.(astro|tsx|mdx)$/.test(name))
   .map((name) => ({
@@ -33,31 +18,34 @@ const files = readdirSync(SRC, { recursive: true, encoding: 'utf8' })
     text: readFileSync(join(SRC, name), 'utf8'),
   }));
 
-/** The tag a call sits in: the nearest `<Name` before it. */
-const tagAt = (text: string, index: number) =>
-  /<([A-Za-z][\w.]*)[^<]*$/.exec(text.slice(0, index))?.[1];
-
 describe('app links', () => {
-  it('only OpenApp launches the app with no view', () => {
-    const bare = files.filter((file) => /appLink\(\s*\)/.test(file.text)).map((file) => file.name);
+  // A copy control's text goes through appAddress (absolute); appLink is root-relative in a build.
+  it('only AppLink builds a link into the app', () => {
+    const builders = files.filter((file) => /appLink\(/.test(file.text)).map((file) => file.name);
+    expect(builders).toEqual(['components/shared/links/AppLink/AppLink.tsx']);
+  });
+
+  it('only OpenApp opens the app with no view', () => {
+    const bare = files
+      // An opening tag's attributes run to the first `>` that does not end an arrow.
+      .filter((file) =>
+        [...file.text.matchAll(/<AppLink\b((?:=>|[^>])*)>/g)].some(
+          (tag) => !/\bview=/.test(tag[1]!),
+        ),
+      )
+      .map((file) => file.name);
     expect(bare).toEqual(['components/shared/links/OpenApp/OpenApp.tsx']);
   });
 
-  it('an address of a view goes to a ViewLink and to nothing else', () => {
-    const other: Record<string, number> = {};
-    for (const file of files) {
-      for (const match of file.text.matchAll(/appLink\(\s*[^\s)]/g)) {
-        if (!VIEW_LINK_TAGS.includes(tagAt(file.text, match.index) ?? ''))
-          other[file.name] = (other[file.name] ?? 0) + 1;
-      }
-    }
-    expect(other).toEqual(OTHER_USES);
-  });
-
   it('only ViewLink puts the view mark on a ring', () => {
-    const marked = files
-      .filter((file) => /icon="(view|launch)"/.test(file.text))
+    const marked = files.filter((file) => /icon="(view|launch)"/.test(file.text));
+    expect(marked).toEqual([]);
+    const ringed = files
+      .filter((file) => /objLinkClass\(/.test(file.text))
       .map((file) => file.name);
-    expect(marked).toEqual(['components/shared/links/ViewLink/ViewLink.tsx']);
+    expect(ringed.sort()).toEqual([
+      'components/shared/links/ObjLink/ObjLink.tsx',
+      'components/shared/links/ViewLink/ViewLink.tsx',
+    ]);
   });
 });

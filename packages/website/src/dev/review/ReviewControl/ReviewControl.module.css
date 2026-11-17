@@ -31,7 +31,7 @@
 }
 
 /* A phone's target is a finger's. */
-@media (max-width: 900px) {
+@media (--narrow) {
   .button {
     min-height: var(--tap);
   }
@@ -70,7 +70,7 @@
   outline: none;
 }
 
-@media (max-width: 900px) {
+@media (--narrow) {
   .panel {
     top: auto;
     left: var(--space-8);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { ColourGrade } from '../../../../src/@types/scene/ColourGrade';
+import type { ColourGrade } from '../../../../src/layers/body/textures/@types/ColourGrade';
 import { gradeRgbaInPlace } from '../../../../tools/utils/image/gradeRgbaInPlace';
 
 const IDENTITY: ColourGrade = {

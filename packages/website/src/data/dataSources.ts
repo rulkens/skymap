@@ -12,8 +12,7 @@ const CITE_PAPER = 'No licence stated. Cite the paper.';
  * holds commented-out sentences on AAS and A&A tables, which are not shown
  * and are not restated here (ATTRIBUTIONS.md, "Catalogue data").
  */
-const CDS_COPY =
-  'No licence stated. Free for scientific use through CDS; cite the paper.';
+const CDS_COPY = 'No licence stated. Free for scientific use through CDS; cite the paper.';
 
 const GALAXIES = 'Galaxies and quasars';
 const STARS = 'Stars';
@@ -151,7 +150,8 @@ export const DATA_SOURCES: readonly DataSource[] = [
     href: 'https://www.cosmos.esa.int/web/gaia/dr3',
     evidence: GAIA_RECORD,
     ask: 'This work has made use of data from the European Space Agency (ESA) mission Gaia (https://www.cosmos.esa.int/gaia), processed by the Gaia Data Processing and Analysis Consortium (DPAC, https://www.cosmos.esa.int/web/gaia/dpac/consortium). Funding for the DPAC has been provided by national institutions, in particular the institutions participating in the Gaia Multilateral Agreement.',
-    askHref: 'https://gea.esac.esa.int/archive/documentation/GDR3/Miscellaneous/sec_credit_and_citation_instructions/',
+    askHref:
+      'https://gea.esac.esa.int/archive/documentation/GDR3/Miscellaneous/sec_credit_and_citation_instructions/',
   },
   {
     id: 'bailer-jones',
@@ -353,7 +353,14 @@ export const DATA_SOURCES: readonly DataSource[] = [
   },
   {
     id: 'usgs-nasa-moons',
-    entries: ['usgs-galilean', 'usgs-enceladus', 'photojournal-saturn-moons', 'usgs-pluto-charon', 'usgs-triton', 'schenk-uranian'],
+    entries: [
+      'usgs-galilean',
+      'usgs-enceladus',
+      'photojournal-saturn-moons',
+      'usgs-pluto-charon',
+      'usgs-triton',
+      'schenk-uranian',
+    ],
     group: IMAGERY,
     name: 'USGS and NASA moon mosaics',
     gives: 'Surface maps of Pluto, Charon and the moons of the outer planets',

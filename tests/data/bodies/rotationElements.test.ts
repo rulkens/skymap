@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { ROTATION_ELEMENTS, rotationRowById } from '../../../src/data/bodies/rotationElements';
 import { SATURN_EQUATORIAL_FRAME } from '../../../src/data/bodies/orbitPlaneFrames';
 import { elementsById } from '../../../src/data/bodies/orbitalElements';
-import { BODY_TEXTURE_REGISTRY } from '../../../src/data/bodies/bodyTextureRegistry';
+import { BODY_TEXTURE_REGISTRY } from '../../../src/layers/body/textures/data/bodyTextureRegistry';
 import { degToRad } from '../../../src/utils/math/degToRad';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 

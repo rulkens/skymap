@@ -1,4 +1,4 @@
-import type { SourceType } from '../../../src/@types/data/SourceType';
+import type { GalaxyCatalogId } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import type { Tier } from '../../../src/@types/data/Tier';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 import type { CatalogPoints } from './CatalogPoints';
@@ -14,7 +14,7 @@ import type { CatalogPoints } from './CatalogPoints';
  * panel's live readout.
  */
 export type CatalogSlice = {
-  readonly sources: readonly SourceType[];
+  readonly sources: readonly GalaxyCatalogId[];
   readonly tier: Tier;
   /** The last completed load's points — `watchCatalogSaga`'s own, not Viewport's
    * closure. Null until the first `catalogLoaded`; Viewport's build path

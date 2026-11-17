@@ -8,7 +8,7 @@
  * golden-angle spacing (`fract(sourceCode * 0.618034)`), so each pickable
  * source — galaxy catalog, structure ring, Gaia star, famous star, planet,
  * Earth — reads as its own stable, well-separated colour with no
- * hand-maintained palette to keep in step with `Source`. A hash of the
+ * hand-maintained palette to keep in step with the pick codes. A hash of the
  * 26-bit `localIdx` modulates brightness (HSV value) so adjacent instances
  * of the same source stay individually distinguishable. See
  * `shaders/pickDebugOverlay/fragment.wesl` for the full rationale.
@@ -54,7 +54,14 @@ export function createPickDebugOverlay(
         // built against the actual texture view.
         texture: { sampleType: 'uint' },
       },
+      { binding: 1, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
     ],
+  });
+  // One u32, the code `fragment.wesl` dims; 16 B is the smallest uniform block worth allocating.
+  const dimCodeBuffer = device.createBuffer({
+    label: 'pickDebugOverlay-dimCode',
+    size: 16,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
 
   const pipeline = device.createRenderPipeline({
@@ -84,7 +91,8 @@ export function createPickDebugOverlay(
   });
 
   return {
-    draw(pass: GPURenderPassEncoder, pickView: GPUTextureView): void {
+    draw(pass: GPURenderPassEncoder, pickView: GPUTextureView, dimCode: number): void {
+      device.queue.writeBuffer(dimCodeBuffer, 0, new Uint32Array([dimCode]));
       // Bind group rebuilt per draw — the pick texture view is recreated
       // whenever the canvas resizes (pickRenderer's ensureTextures()
       // tears down + reallocates), so caching across resize would bind
@@ -93,16 +101,17 @@ export function createPickDebugOverlay(
       const bindGroup = device.createBindGroup({
         label: 'pickDebugOverlay-bg',
         layout: bindGroupLayout,
-        entries: [{ binding: 0, resource: pickView }],
+        entries: [
+          { binding: 0, resource: pickView },
+          { binding: 1, resource: { buffer: dimCodeBuffer } },
+        ],
       });
       pass.setPipeline(pipeline);
       pass.setBindGroup(0, bindGroup);
       pass.draw(3, 1, 0, 0);
     },
     destroy(): void {
-      // No GPUTexture / GPUBuffer owned by this pass; pipeline + BGL
-      // are GC'd when their last reference drops.  Method present
-      // for lifecycle symmetry with the other pass factories.
+      dimCodeBuffer.destroy();
     },
   };
 }

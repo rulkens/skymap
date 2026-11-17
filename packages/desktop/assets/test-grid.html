@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; img-src file:; style-src 'unsafe-inline'; script-src 'unsafe-inline'"
+    />
+    <title>Skymap test grid</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: transparent;
+      }
+      /* In on load; out over the `fadeOut` addOverlay passes, once it sets opacity 0. */
+      html {
+        animation: appear 200ms ease-out;
+        transition: opacity var(--fadeOut) ease-in;
+      }
+      @keyframes appear {
+        from {
+          opacity: 0;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          animation: none;
+          transition: none;
+        }
+      }
+      /* Contain on the square image gives the renderer's own disc: centred, as wide as the short side. */
+      img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+      svg {
+        position: absolute;
+        inset: 0;
+      }
+      /* Below the centre cross (its arms reach 10vmin), not across it. */
+      p {
+        position: absolute;
+        inset: calc(50% + 12vmin) 0 auto;
+        margin: 0;
+        text-align: center;
+        font:
+          600 6vmin/1.3 system-ui,
+          sans-serif;
+        color: #fff;
+        text-shadow: 0 0 0.4em #000;
+      }
+      small {
+        display: block;
+        font-size: 0.5em;
+        font-weight: 400;
+      }
+    </style>
+  </head>
+  <body>
+    <script>
+      const params = new URLSearchParams(location.search);
+      document.documentElement.style.setProperty('--fadeOut', `${params.get('fadeOut') ?? 0}ms`);
+      if (params.get('mode') === 'dome') {
+        const grid = document.createElement('img');
+        grid.src = 'dome-grid.png';
+        grid.alt = 'Dome alignment grid, front at the bottom';
+        document.body.append(grid);
+      } else {
+        // In CSS pixels, redrawn on resize: a frame cut off at an edge means overscan, an oval
+        // circle a stretched picture. The size is the device pixels the sky renders at.
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        const label = document.createElement('p');
+        const size = document.createElement('small');
+        label.textContent = `Skymap · display ${params.get('display') ?? '?'}`;
+        label.append(size);
+        document.body.append(svg, label);
+        const line = (x1, y1, x2, y2, width, alpha) =>
+          `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="rgba(255,255,255,${alpha})" stroke-width="${width}"/>`;
+        const draw = () => {
+          const w = innerWidth;
+          const h = innerHeight;
+          const mark = Math.min(w, h) / 10;
+          let shapes = '';
+          for (let i = 1; i < 10; i++) {
+            shapes += line((w * i) / 10, 0, (w * i) / 10, h, 1, 0.35);
+            shapes += line(0, (h * i) / 10, w, (h * i) / 10, 1, 0.35);
+          }
+          shapes += line(w / 2 - mark, h / 2, w / 2 + mark, h / 2, 3, 1);
+          shapes += line(w / 2, h / 2 - mark, w / 2, h / 2 + mark, 3, 1);
+          for (const [x, y, dx, dy] of [
+            [0, 0, 1, 1],
+            [w, 0, -1, 1],
+            [0, h, 1, -1],
+            [w, h, -1, -1],
+          ]) {
+            shapes += line(x, y, x + dx * mark, y + dy * mark, 3, 1);
+          }
+          svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+          svg.setAttribute('width', w);
+          svg.setAttribute('height', h);
+          svg.innerHTML =
+            shapes +
+            `<rect x="2" y="2" width="${w - 4}" height="${h - 4}" fill="none" stroke="#fff" stroke-width="4"/>` +
+            `<circle cx="${w / 2}" cy="${h / 2}" r="${Math.min(w, h) * 0.45}" fill="none" stroke="#fff" stroke-width="2"/>`;
+          size.textContent = `${Math.round(w * devicePixelRatio)} × ${Math.round(h * devicePixelRatio)}`;
+        };
+        draw();
+        addEventListener('resize', draw);
+      }
+    </script>
+  </body>
+</html>

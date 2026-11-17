@@ -9,7 +9,7 @@ import { skyGridLayerSettings } from './state/slices';
 import { skyGridVisibility } from './visibility';
 import { create } from './create';
 import { destroy } from './destroy';
-import { skyGridPass } from './passes/skyGridPass';
+import { skyGridPass } from './grid/passes/skyGridPass';
 
 export const skyGridLayer = defineLayer({
   name: 'skyGrid',

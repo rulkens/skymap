@@ -26,12 +26,12 @@
  * would keep resetting itself the moment the next beat starts. Restore
  * therefore reads `orientation` off this type directly and sends it through
  * `requestOrientationChange` (see `restoreSceneSaga`), the same request path
- * an interactive switch uses, so `camera.base` gets re-expressed into the
+ * an interactive switch uses, so `camera.intent.base` gets re-expressed into the
  * restored frame instead of stranding it.
  *
  * ### Why `focus` is a reference, not a deep clone
  *
- * `SelectionRef` values are flat, serializable, and immutable by convention —
+ * Selection refs are flat, serializable, and immutable by convention —
  * the slice replaces the slot on every write (Immer's `setIfChanged`), it does
  * not mutate in place. Copying the reference captures the identity the tour
  * must return to; there is no nested object a later write could reach through
@@ -53,13 +53,15 @@
  */
 
 import type { SettingsSnapshot } from './SettingsSnapshot';
-import type { SelectionRef } from '../SelectionRef';
-import type { OrientationFrameId } from '../../camera/OrientationFrameId';
+import type { OrientationFrameId } from '../../camera/orientation/OrientationFrameId';
 import type { TimeState } from '../../time/TimeState';
+import type { SelectionRefBase } from '../selection/SelectionRefBase';
 
 export type SceneSnapshot = Readonly<{
   settings: SettingsSnapshot;
   orientation: OrientationFrameId;
-  focus: SelectionRef | null;
+  /** The viewer's lens: camera state, so not inside `settings`. */
+  fovYRad: number;
+  focus: SelectionRefBase | null;
   time: TimeState;
 }>;

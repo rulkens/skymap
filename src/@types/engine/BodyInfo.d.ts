@@ -6,8 +6,8 @@
  * Stars are not bodies here — they carry `StarInfo`.
  *
  * Membership rule: the fields the engine knows *synchronously* from the resolved
- * body. Richer properties needing a fetch live in an async sidecar and merge in
- * when that JSON lands, so a body is always immediately selectable.
+ * body. The card's physical facts are compiled in: it looks `id` up in
+ * `BODY_FACTS` (`data/bodies/bodyFacts.generated.ts`), so nothing waits on a fetch.
  *
  * `positionMpc` stays a `Vec3` (never a raw tuple) so it speaks the one absolute
  * heliocentric, f64-valued frame every other position site uses, letting the

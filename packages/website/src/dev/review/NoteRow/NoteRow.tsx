@@ -2,8 +2,7 @@
 import type { PageNote } from '../../overlay/@types/PageNote';
 import { truncate } from '../truncate';
 import styles from './NoteRow.module.css';
-
-const SELECTED_CHARS = 90;
+import { SELECTED_CHARS } from './NoteRow.constants.ts';
 
 type NoteRowProps = {
   note: PageNote;

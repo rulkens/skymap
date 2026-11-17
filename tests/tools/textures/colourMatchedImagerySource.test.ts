@@ -16,7 +16,7 @@ import { join } from 'node:path';
 import sharp from 'sharp';
 
 import type { SurfaceImagerySource } from '../../../tools/textures/@types/SurfaceImagerySource';
-import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
+import type { LonLatBounds } from '../../../src/layers/body/surfaceTiles/format/@types/LonLatBounds';
 import { colourMatchedImagerySource } from '../../../tools/textures/colourMatchedImagerySource';
 
 const PRIMARY_LEVEL = 13;

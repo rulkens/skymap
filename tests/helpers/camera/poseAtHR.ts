@@ -6,7 +6,7 @@
 
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import type { BodyState } from '../../../src/@types/scene/BodyState';
-import type { CameraPose } from '../../../src/@types/camera/CameraPose';
+import type { CameraPose } from '../../../src/@types/camera/pose/CameraPose';
 
 export function poseAtHR(body: BodyState, radiusM: number, hr: number, roll = 0): CameraPose {
   return {

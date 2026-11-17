@@ -24,7 +24,10 @@
  *    `prevBeat` mid-fly win the race, cancel the clip (the playClip promise's
  *    `[CANCEL]` hook stops the driver where it is), and steer the outer loop
  *    immediately, skipping this beat's dwell. The next beat's enter clip starts
- *    `'live'` from wherever the camera was cut, so a skip is seamless.
+ *    `'live'` from wherever the camera was cut, so a skip is seamless. On the
+ *    run's first beat (`awaitSettled`) the landing then waits, up to
+ *    `SCENE_SETTLE_TIMEOUT_MS`, for `sceneSettled()`: a cold load opens on a
+ *    built scene, not on its tiles arriving.
  *
  * 4. **Start the dwell** (`put(dwellStarted({ dwellSec }))`): the fly has landed.
  *    The dwell length is the RESOLVED dwell clip's compiled duration — computed
@@ -45,11 +48,12 @@
  * runs — same pattern as `watchFocusTweenSaga`.
  */
 
-import { call, put, race, take, getContext, select } from 'typed-redux-saga';
+import { call, delay, put, race, take, getContext, select } from 'typed-redux-saga';
 
 import { advanceTour, prevBeat } from './tourActions';
 import { pausableDwellSaga } from './pausableDwellSaga';
 import { waitUntilSaga } from './waitUntilSaga';
+import { SCENE_SETTLE_TIMEOUT_MS } from './sceneSettleTimeoutMs';
 import { clipFociReady } from './clipFociReady';
 import { beatChanged, dwellStarted } from './tourSlice';
 import { resolveClipFoci } from '../../services/engine/animation/resolveClipFoci';
@@ -69,7 +73,11 @@ export type { BeatOutcome };
  * then hand off to the pausable dwell. The outer `tourBodySaga` loop adjusts
  * its index from the returned outcome.
  */
-export function* visitBeatSaga(beat: BeatData, index: number): Generator<unknown, BeatOutcome> {
+export function* visitBeatSaga(
+  beat: BeatData,
+  index: number,
+  { awaitSettled = false }: { readonly awaitSettled?: boolean } = {},
+): Generator<unknown, BeatOutcome> {
   // Read context inside the worker — the engine sets it after root-saga forks.
   const selection = yield* getContext<SagaContext['selection']>('selection');
   const cameraRuntime = yield* getContext<SagaContext['cameraRuntime']>('cameraRuntime');
@@ -117,6 +125,20 @@ export function* visitBeatSaga(beat: BeatData, index: number): Generator<unknown
     });
     if (winner.next) return 'next';
     if (winner.prev) return 'prev';
+  }
+
+  if (awaitSettled) {
+    // After the establishing clip, not before: only once the camera stands at the
+    // beat's subject has anything asked for that subject's mesh and tiles.
+    const sceneSettled = yield* getContext<SagaContext['sceneSettled']>('sceneSettled');
+    const gate = yield* race({
+      settled: call(waitUntilSaga, () => sceneSettled()),
+      timeout: delay(SCENE_SETTLE_TIMEOUT_MS),
+      next: take(advanceTour),
+      prev: take(prevBeat),
+    });
+    if (gate.next) return 'next';
+    if (gate.prev) return 'prev';
   }
 
   // (4) The fly landed — start the dwell (fades caption in, starts the ring).

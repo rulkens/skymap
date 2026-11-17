@@ -45,8 +45,7 @@
  * entry in `refs` is therefore a genuine USE elsewhere in the graph.
  *
  * The `RefKind` / `RefEntry` / `RefReport` types are co-located with this
- * function (the `applyMoves.ts` -> `MovePair` pattern): they only mean anything as
- * this collector's output.
+ * function: they only mean anything as this collector's output.
  */
 
 import { Node, SyntaxKind } from 'ts-morph';

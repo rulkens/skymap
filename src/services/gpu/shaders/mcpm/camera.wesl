@@ -21,10 +21,10 @@ struct McpmCamera {
 // Returns (ndc.x, ndc.y, depth). 'depth' is the distance along camForward and is <= 0 for
 // a point at or behind the eye plane, where the two ndc lanes are meaningless: the divide
 // flips their sign and folds the point back into view, so every caller must test it.
-fn voxelToNdc(cam: McpmCamera, p: vec3<f32>) -> vec3<f32> {
-  let v = p - cam.camVoxel;
-  let depth = dot(v, cam.camForward);
-  let x = dot(v, cam.camRight) / (depth * cam.tanHalfFov * cam.aspect);
-  let y = dot(v, cam.camUp) / (depth * cam.tanHalfFov);
-  return vec3<f32>(x, y, depth);
+fn voxelToNdc(cam: McpmCamera, voxelPos: vec3<f32>) -> vec3<f32> {
+  let fromEye = voxelPos - cam.camVoxel;
+  let depth = dot(fromEye, cam.camForward);
+  let ndcX = dot(fromEye, cam.camRight) / (depth * cam.tanHalfFov * cam.aspect);
+  let ndcY = dot(fromEye, cam.camUp) / (depth * cam.tanHalfFov);
+  return vec3<f32>(ndcX, ndcY, depth);
 }

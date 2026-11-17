@@ -12,7 +12,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createMeshBodyRenderer } from '../../../../../src/services/gpu/renderers/bodies/meshBodyRenderer';
 import { MESH_TEXTURE_SLOTS } from '../../../../../src/data/mesh/meshTextureSlots';
-import { CUBEMAP_CAPTURES } from '../../../../../src/data/rendering/cubemapCaptures';
+import { APP_CUBEMAP_CAPTURE_REGISTRY } from '../../../../../src/compositions/appCubemapCaptures';
 import { mipLevelCount } from '../../../../../src/services/gpu/lib/generateMipChain';
 import type { MeshAsset } from '../../../../../src/@types/data/mesh/MeshAsset';
 
@@ -177,7 +177,7 @@ describe('createMeshBodyRenderer', () => {
     expect(probe).not.toBeNull();
     expect(renderer.probeOf('missing')).toBeNull();
 
-    const faceSizePx = CUBEMAP_CAPTURES.probe.faceSizePx;
+    const faceSizePx = APP_CUBEMAP_CAPTURE_REGISTRY.probe.faceSizePx;
     const expectedMipLevelCount = mipLevelCount(faceSizePx, faceSizePx);
 
     const cube = textures.find((t) => t.desc.format === 'rgba16float')!;

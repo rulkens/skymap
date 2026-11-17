@@ -55,15 +55,15 @@ import package::lib::billboard::quadUv;
 // fallback (|dot(north, los)| > 0.99, ~8° from pole).
 import package::lib::orientation::DiskAxes;
 import package::lib::orientation::diskAxes;
-// Shared structure-focus dim — same lib the points pass uses, so textured
+// Shared focus dim — same lib the points pass uses, so textured
 // disks fade in lockstep with their companion point sprites. Membership is
 // per-galaxy (constant across the quad's corners), so we evaluate it once
 // here and forward the scalar via VsOut.focusDim.
 import package::lib::focusUniforms::FocusUniforms;
 import package::lib::focusUniforms::focusAlphaMultiplier;
 
-@group(0) @binding(0) var<uniform> u: Uniforms;
-// @group(1) structure-focus uniform — the impostor pipelines have no fade /
+@group(0) @binding(0) var<uniform> uniforms: Uniforms;
+// @group(1) focus uniform — the impostor pipelines have no fade /
 // source groups, so focus takes the first free slot (the points pipeline
 // parks it at @group(3)). Single shared binding: one structure focused at a time.
 @group(1) @binding(0) var<uniform> focus: FocusUniforms;
@@ -108,7 +108,7 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
   let localCorner = corner - instance.hiRes.zw;
   let world = center + (major * localCorner.x + minor_3d * localCorner.y) * halfSize;
   var out: VsOut;
-  out.clipPos = worldToClip(u.cam, world);
+  out.clipPos = worldToClip(uniforms.cam, world);
 
   // 'quadUv' returns the unit-square corner remapped to [0, 1]² (same
   // vertex-index ordering as 'quadCorner'). Matches the atlas's

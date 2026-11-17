@@ -18,8 +18,8 @@
  * The saga-context types describe the engine capabilities that cross into
  * store-land: `ReconcileEffects` (see `./effects/ReconcileEffects`) is the bag of
  * render-wake / fade / reseed / bias closures the reconcile sagas invoke; `selection`
- * is the composed resolver the selection reconcilers use to turn a `SelectionRef`
- * into a `SelectionRow`; `cameraRuntime` is the
+ * is the composed resolver the selection reconcilers use to turn a ref
+ * into a row; `cameraRuntime` is the
  * live camera read `watchFocusTweenSaga` uses to build a focus tween — the visible
  * from-pose plus the lens FOV, or null when the camera is not ready; and
  * `playClip` is the engine's clip-player — the tour saga calls it with a
@@ -50,12 +50,12 @@ import type { rootReducer } from './rootReducer';
 import type { createAppStore } from './createAppStore';
 import type { ReconcileEffects } from './effects/ReconcileEffects';
 import type { SelectionResolver } from '../@types/engine/selection/SelectionResolver';
-import type { CameraPose } from '../@types/camera/CameraPose';
+import type { CameraPose } from '../@types/camera/pose/CameraPose';
 import type { Vec4 } from '../@types/math/Vec4';
 import type { ClipData } from '../@types/animation/ClipData';
 import type { ClipId } from '../@types/animation/ClipId';
 import type { Mat3 } from '../@types/math/Mat3';
-import type { OrientationFrameId } from '../@types/camera/OrientationFrameId';
+import type { OrientationFrameId } from '../@types/camera/orientation/OrientationFrameId';
 import type { Task } from 'redux-saga';
 import type { SagaFactory } from '../@types/engine/layer/SagaFactory';
 import type { EngineHomeConfig } from '../@types/engine/EngineHomeConfig';
@@ -161,11 +161,17 @@ export type SagaContext = {
    */
   cameraRuntime: () => LiveCameraRuntime | null;
   /**
+   * True once everything the current view asked for has arrived: no asset slot
+   * loading, no Layer still streaming, no fade running (`isSceneSettled`). The
+   * tour's cold-load gate polls it after the first beat's establishing clip.
+   */
+  sceneSettled: () => boolean;
+  /**
    * Plays a data clip and resolves when the clip completes or is cancelled.
    * The tour saga awaits this Promise for the establishing fly and races it
    * (as dwellDrift) against the dwell timer during the interactive dwell.
    * `frame` is the orientation frame the CALLER is under right now — pinned
-   * onto `camera.clip` so a later orientation switch re-expresses the clip's
+   * onto `camera.intent.clip` so a later orientation switch re-expresses the clip's
    * pose instead of reinterpreting it (see the clip row in cameraDrivers.ts).
    * The engine registers this at construction via `createPlayClip` +
    * `setSagaContext`; tests inject a stub via `sagaMiddleware.setContext`.

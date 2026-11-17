@@ -18,7 +18,7 @@ stated before it can be hit.
 ## Why it is the way it is
 
 Most planets, Mars included, carry `provenance: 'sss'` in
-`src/data/bodies/bodyTextureRegistry.ts` — Solar System Scope maps, which are
+`src/layers/body/textures/data/bodyTextureRegistry.ts` — Solar System Scope maps, which are
 deliberately enhanced for visual appeal rather than calibrated.
 
 The registry already has a per-body colour lever for a different purpose:

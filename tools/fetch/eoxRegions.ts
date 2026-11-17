@@ -26,7 +26,15 @@ export type EoxRegionName =
   | 'everest'
   | 'giza'
   | 'sjaelland'
-  | 'malmo';
+  | 'malmo'
+  | 'cape-canaveral'
+  | 'baikonur'
+  | 'kourou'
+  | 'vandenberg'
+  | 'starbase'
+  | 'wenchang'
+  | 'tanegashima'
+  | 'sriharikota';
 
 export const EOX_REGIONS: Readonly<Record<EoxRegionName, EoxBbox>> = {
   copenhagen: { west: 12.2, south: 54.93, east: 13.05, north: 56.14 },
@@ -52,4 +60,13 @@ export const EOX_REGIONS: Readonly<Record<EoxRegionName, EoxBbox>> = {
   // West edge abuts copenhagen's east edge the same way (col 8785 vs 8786):
   // eastern Malmö and Lund, which copenhagen's box stops short of.
   malmo: { west: 13.06, south: 55.45, east: 13.3, north: 55.75 },
+  // Launch sites. Cape spans SLC-17 to LC-39B: every craft in the missions Layer left from here.
+  'cape-canaveral': { west: -80.75, south: 28.4, east: -80.5, north: 28.7 },
+  baikonur: { west: 63.2, south: 45.85, east: 63.7, north: 46.1 },
+  kourou: { west: -52.9, south: 5.13, east: -52.7, north: 5.35 },
+  vandenberg: { west: -120.68, south: 34.55, east: -120.5, north: 34.8 },
+  starbase: { west: -97.35, south: 25.86, east: -97.05, north: 26.13 },
+  wenchang: { west: 110.76, south: 19.48, east: 111.05, north: 19.75 },
+  tanegashima: { west: 130.83, south: 30.3, east: 131.12, north: 30.57 },
+  sriharikota: { west: 80.1, south: 13.58, east: 80.38, north: 13.85 },
 };

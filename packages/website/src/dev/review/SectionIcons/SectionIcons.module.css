@@ -45,7 +45,7 @@
   outline-offset: 1px;
 }
 
-@media (max-width: 900px) {
+@media (--narrow) {
   .root {
     right: auto;
     left: 0;

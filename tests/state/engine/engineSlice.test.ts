@@ -22,7 +22,6 @@ import reducer, {
   layerFactsSeeded,
 } from '../../../src/state/engine/engineSlice';
 import type { CoreEngineSliceState } from '../../../src/@types/store/CoreEngineSliceState';
-import { Source } from '../../../src/data/source';
 
 /** A state widened with a stub Layer's facts key, standing in for a landed Layer. */
 type WithStubFacts = CoreEngineSliceState & { stub: { a: number; b: number; list?: number[] } };
@@ -41,10 +40,10 @@ const base = (): CoreEngineSliceState => ({
 
 describe('engineSlice — engineSourceCountReported', () => {
   it('engineSourceCountReported merges a second source without dropping the first', () => {
-    const after1 = reducer(base(), engineSourceCountReported({ source: Source.SDSS, count: 5 }));
-    const after2 = reducer(after1, engineSourceCountReported({ source: Source.TwoMRS, count: 42 }));
-    expect(after2.sourceCounts[Source.SDSS]).toBe(5);
-    expect(after2.sourceCounts[Source.TwoMRS]).toBe(42);
+    const after1 = reducer(base(), engineSourceCountReported({ source: 'sdss', count: 5 }));
+    const after2 = reducer(after1, engineSourceCountReported({ source: '2mrs', count: 42 }));
+    expect(after2.sourceCounts['sdss']).toBe(5);
+    expect(after2.sourceCounts['2mrs']).toBe(42);
   });
 });
 

@@ -75,81 +75,81 @@ struct IntegratorParams {
 // spawn, staggered age, trail-ring collapse onto the spawn point, acc reset.
 @compute @workgroup_size(64)
 fn seed(@builtin(global_invocation_id) gid: vec3<u32>) {
-  let i = gid.x;
-  if (i >= params.n) { return; }
-  let base = i * TRAIL;
-  let sb = randomStream(i, params.frame);
-  let spawn = pickSpawn(velTex, velSamp, DENS_SCALE, sb, params.bias);
+  let particleIndex = gid.x;
+  if (particleIndex >= params.n) { return; }
+  let base = particleIndex * TRAIL;
+  let spawnStream = randomStream(particleIndex, params.frame);
+  let spawn = pickSpawn(velTex, velSamp, DENS_SCALE, spawnStream, params.bias);
   let spawnVel = textureSampleLevel(velTex, velSamp, spawn, 0.0);
-  for (var k: u32 = 0u; k < TRAIL; k = k + 1u) { trail[base + k] = vec4<f32>(spawn, length(spawnVel.xyz)); }
-  parts[i] = vec4<f32>(spawn, rand01(sb + AGE_SALT) * LIFE);
-  acc[i] = 0.0;
+  for (var trailIndex: u32 = 0u; trailIndex < TRAIL; trailIndex = trailIndex + 1u) { trail[base + trailIndex] = vec4<f32>(spawn, length(spawnVel.xyz)); }
+  parts[particleIndex] = vec4<f32>(spawn, rand01(spawnStream + AGE_SALT) * LIFE);
+  acc[particleIndex] = 0.0;
 }
 
 // ── advect ─────────────────────────────────────────────────────────────
 @compute @workgroup_size(64)
 fn advect(@builtin(global_invocation_id) gid: vec3<u32>) {
-  let i = gid.x;
-  if (i >= params.n) { return; }
-  let base = i * TRAIL;
+  let particleIndex = gid.x;
+  if (particleIndex >= params.n) { return; }
+  let base = particleIndex * TRAIL;
 
-  var head = parts[i].xyz;
-  let age = parts[i].w + params.dt;
-  var carried = acc[i];
+  var head = parts[particleIndex].xyz;
+  let age = parts[particleIndex].w + params.dt;
+  var carried = acc[particleIndex];
   var toGo = min(params.headStep, params.trailStep * f32(TRAIL));
-  var rs = randomStream(i, params.frame) + WANDER_SALT;
+  var wanderStream = randomStream(particleIndex, params.frame) + WANDER_SALT;
 
   loop {
     let step = min(toGo, params.trailStep - carried);
     let vel = textureSampleLevel(velTex, velSamp, head, 0.0);
-    let jitter = vec3<f32>(rand01(rs) - 0.5, rand01(rs + 1u) - 0.5, rand01(rs + 2u) - 0.5);
-    rs = rs + 3u;
+    let jitter = vec3<f32>(rand01(wanderStream) - 0.5, rand01(wanderStream + 1u) - 0.5, rand01(wanderStream + 2u) - 0.5);
+    wanderStream = wanderStream + 3u;
     let dir = normalize(normalize(vel.xyz + DIR_EPS) + jitter * params.wander);
     head = head + dir * step;
     carried = carried + step;
     toGo = toGo - step;
     if (!insideBox(head) || age > LIFE) {
-      let spawn = pickSpawn(velTex, velSamp, DENS_SCALE, randomStream(i, params.frame), params.bias);
+      let spawn = pickSpawn(velTex, velSamp, DENS_SCALE, randomStream(particleIndex, params.frame), params.bias);
       let spawnVel = textureSampleLevel(velTex, velSamp, spawn, 0.0);
-      for (var k: u32 = 0u; k < TRAIL; k = k + 1u) { trail[base + k] = vec4<f32>(spawn, length(spawnVel.xyz)); }
-      parts[i] = vec4<f32>(spawn, 0.0);
-      acc[i] = 0.0;
+      for (var trailIndex: u32 = 0u; trailIndex < TRAIL; trailIndex = trailIndex + 1u) { trail[base + trailIndex] = vec4<f32>(spawn, length(spawnVel.xyz)); }
+      parts[particleIndex] = vec4<f32>(spawn, 0.0);
+      acc[particleIndex] = 0.0;
       return;
     }
     if (carried >= params.trailStep) {
       carried = carried - params.trailStep;
-      for (var k: u32 = 0u; k < TRAIL - 1u; k = k + 1u) { trail[base + k] = trail[base + k + 1u]; }
+      for (var trailIndex: u32 = 0u; trailIndex < TRAIL - 1u; trailIndex = trailIndex + 1u) { trail[base + trailIndex] = trail[base + trailIndex + 1u]; }
       trail[base + TRAIL - 1u] = vec4<f32>(head, length(vel.xyz));
     }
     if (toGo <= MIN_TRAVEL) { break; }
   }
   let headVel = textureSampleLevel(velTex, velSamp, head, 0.0);
   trail[base + TRAIL - 1u] = vec4<f32>(head, length(headVel.xyz));
-  parts[i] = vec4<f32>(head, age);
-  acc[i] = carried;
+  parts[particleIndex] = vec4<f32>(head, age);
+  acc[particleIndex] = carried;
 }
 
 // ── streamline ─────────────────────────────────────────────────────────
 @compute @workgroup_size(64)
 fn streamline(@builtin(global_invocation_id) gid: vec3<u32>) {
-  let i = gid.x;
-  if (i >= params.n) { return; }
-  let base = i * TRAIL;
-  let seedPos = parts[i].xyz;
+  let particleIndex = gid.x;
+  if (particleIndex >= params.n) { return; }
+  let base = particleIndex * TRAIL;
+  let seedPos = parts[particleIndex].xyz;
   let mid: i32 = i32(TRAIL) / 2;
   trail[base + u32(mid)] = vec4<f32>(seedPos, length(textureSampleLevel(velTex, velSamp, seedPos, 0.0).xyz));
   var walk = seedPos;
-  for (var k: i32 = mid - 1; k >= 0; k = k - 1) {
+  for (var trailIndex: i32 = mid - 1; trailIndex >= 0; trailIndex = trailIndex - 1) {
     let vel = textureSampleLevel(velTex, velSamp, walk, 0.0);
     let next = walk - normalize(vel.xyz + DIR_EPS) * params.trailStep;
     if (insideBox(next)) { walk = next; }
-    trail[base + u32(k)] = vec4<f32>(walk, length(textureSampleLevel(velTex, velSamp, walk, 0.0).xyz));
+    trail[base + u32(trailIndex)] = vec4<f32>(walk, length(textureSampleLevel(velTex, velSamp, walk, 0.0).xyz));
   }
   walk = seedPos;
-  for (var k: i32 = mid + 1; k < i32(TRAIL); k = k + 1) {
+  for (var trailIndex: i32 = mid + 1; trailIndex < i32(TRAIL); trailIndex = trailIndex + 1) {
     let vel = textureSampleLevel(velTex, velSamp, walk, 0.0);
     let next = walk + normalize(vel.xyz + DIR_EPS) * params.trailStep;
     if (insideBox(next)) { walk = next; }
-    trail[base + u32(k)] = vec4<f32>(walk, length(textureSampleLevel(velTex, velSamp, walk, 0.0).xyz));
+    trail[base + u32(trailIndex)] = vec4<f32>(walk, length(textureSampleLevel(velTex, velSamp, walk, 0.0).xyz));
   }
 }

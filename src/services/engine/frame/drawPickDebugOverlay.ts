@@ -63,7 +63,7 @@ export type DrawPickDebugOverlayDeps = {
  *
  * Returns immediately (no-op) when:
  *   - `overlays['pick-buffer']` is off
- *   - `pickProgram` or `pickDebugOverlay` is null
+ *   - `pickProgram`, `pickDebugOverlay` or `pickCodes` is null
  *   - `pickProgram.renderForDebug()` returns an empty array (engine not ready
  *     to pick, or no slab has an enabled pickable layer)
  *
@@ -75,7 +75,8 @@ export function drawPickDebugOverlay(state: EngineState, deps: DrawPickDebugOver
   if (
     !state.settings.debug.overlays['pick-buffer'] ||
     state.gpu.pickProgram === null ||
-    state.gpu.pickDebugOverlay === null
+    state.gpu.pickDebugOverlay === null ||
+    state.pickCodes === null
   ) {
     return;
   }
@@ -103,8 +104,10 @@ export function drawPickDebugOverlay(state: EngineState, deps: DrawPickDebugOver
   // overlay rebuilds its bind group per `draw`, so multiple draws into one pass
   // are safe; the premultiplied OVER blend lets nearer slabs composite over
   // farther ones (background texels pack to 0 → alpha 0 → no-op).
+  // 0 is never a real code, so a Gaia-less engine dims nothing.
+  const gaiaCode = state.pickCodes.codeIfAsked('starCatalog', 'gaiaStars') ?? 0;
   for (const pickTex of pickTextures) {
-    state.gpu.pickDebugOverlay.draw(overlayPass, pickTex.createView());
+    state.gpu.pickDebugOverlay.draw(overlayPass, pickTex.createView(), gaiaCode);
   }
   overlayPass.end();
   deps.device.queue.submit([overlayEncoder.finish()]);

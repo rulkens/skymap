@@ -15,6 +15,8 @@ import styles from './FeatureSection.module.css';
 
 type FeatureSectionProps = {
   title: string;
+  // An anchor another page links to.
+  id?: string;
   line: string;
   href: string;
   label: string;
@@ -27,6 +29,7 @@ type FeatureSectionProps = {
 
 function FeatureSection({
   title,
+  id,
   line,
   href,
   label,
@@ -38,6 +41,7 @@ function FeatureSection({
   const Heading = level === 2 ? 'h2' : 'h3';
   return (
     <section
+      id={id}
       className={cx(styles.root, level === 2 && styles.part, side === 'left' && styles.left)}
     >
       <div className={styles.words}>

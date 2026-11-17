@@ -17,13 +17,12 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { Source } from '../../src/data/source';
 import { subsampleByAbsMag } from '../../tools/catalog/subsampleByAbsMag';
 import type { ParsedRecord } from '../../tools/parsers/common';
 
 function rec(overrides: Partial<ParsedRecord>): ParsedRecord {
   return {
-    source: Source.SDSS,
+    source: 'sdss',
     objID: 0n,
     ra: 0,
     dec: 0,

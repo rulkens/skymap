@@ -7,7 +7,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import { initialState } from './initialState';
-import type { ZoneOfAvoidanceTuning } from '../../../../@types/settings/ZoneOfAvoidanceTuning';
+import type { ZoneOfAvoidanceTuning } from '../../@types/ZoneOfAvoidanceTuning';
 
 export const zoneOfAvoidanceSlice = createSlice({
   name: 'settings/zoneOfAvoidance',
@@ -18,7 +18,7 @@ export const zoneOfAvoidanceSlice = createSlice({
       zoneOfAvoidance.enabled = action.payload;
     },
     // Band look knobs, patched leaf-by-leaf — the same visibility/tuning split
-    // `setMilkyWayTuning` makes, so a knob patch can never flip `enabled`.
+    // `setMilkyWayCloudTuning` makes, so a knob patch can never flip `enabled`.
     setZoneOfAvoidanceTuning: (
       zoneOfAvoidance,
       action: PayloadAction<Partial<ZoneOfAvoidanceTuning>>,

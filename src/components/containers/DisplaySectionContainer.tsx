@@ -22,33 +22,38 @@ import {
   selectOrientation,
   selectToneMapCurve,
   selectExposure,
-  selectFovDeg,
   selectHdrEnabled,
   selectHdrKnee,
   selectHdrHeadroom,
   selectBloomEnabled,
   selectBloomStrength,
   selectBloomThreshold,
+  selectFilmEnabled,
 } from '../../state/settings/selectors';
 import { selectHdrCapable } from '../../state/engine/selectors';
 import { setToneMapCurve, setExposure } from '../../state/settings/core/tonemapSlice';
-import { setFovDeg } from '../../state/settings/core/cameraSettingsSlice';
+import { setFovYRad } from '../../state/camera/cameraIntentSlice';
+import { selectFovYRad } from '../../state/camera/selectors';
+import { degToRad } from '../../utils/math/degToRad';
 import { setHdrEnabled, setHdrKnee, setHdrHeadroom } from '../../state/settings/core/hdrSlice';
 import {
   setBloomEnabled,
   setBloomStrength,
   setBloomThreshold,
 } from '../../state/settings/core/bloomSlice';
+import { setFilmEnabled } from '../../state/settings/core/filmSlice';
 import { requestOrientationChange } from '../../state/camera/orientationActions';
 import type { ToneMapCurve } from '../../@types/data/ToneMapCurve';
-import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
+import type { OrientationFrameId } from '../../@types/camera/orientation/OrientationFrameId';
 
 function DisplaySectionContainer(): React.ReactElement {
   const dispatch = useAppDispatch();
   const orientation = useAppSelector(selectOrientation);
   const toneMapCurve = useAppSelector(selectToneMapCurve);
   const exposure = useAppSelector(selectExposure);
-  const fovDeg = useAppSelector(selectFovDeg);
+  // Rounded: radians → degrees leaves float noise (60° reads 59.999…), which the
+  // pill's whole-degree format and the slider's step stops would show.
+  const fovDeg = Math.round(useAppSelector(selectFovYRad) * (180 / Math.PI) * 1e6) / 1e6;
   const hdrEnabled = useAppSelector(selectHdrEnabled);
   const hdrCapable = useAppSelector(selectHdrCapable);
   const hdrKnee = useAppSelector(selectHdrKnee);
@@ -56,6 +61,7 @@ function DisplaySectionContainer(): React.ReactElement {
   const bloomEnabled = useAppSelector(selectBloomEnabled);
   const bloomStrength = useAppSelector(selectBloomStrength);
   const bloomThreshold = useAppSelector(selectBloomThreshold);
+  const filmEnabled = useAppSelector(selectFilmEnabled);
 
   // Dispatch the single intent and nothing else: the orientation saga captures
   // the live up-basis and fires setOrientation + startFrameTween. The container
@@ -69,7 +75,10 @@ function DisplaySectionContainer(): React.ReactElement {
     [dispatch],
   );
   const onExposureChange = useCallback((next: number) => dispatch(setExposure(next)), [dispatch]);
-  const onFovDegChange = useCallback((next: number) => dispatch(setFovDeg(next)), [dispatch]);
+  const onFovDegChange = useCallback(
+    (next: number) => dispatch(setFovYRad(degToRad(next))),
+    [dispatch],
+  );
   const onHdrEnabledChange = useCallback(
     (next: boolean) => dispatch(setHdrEnabled(next)),
     [dispatch],
@@ -89,6 +98,11 @@ function DisplaySectionContainer(): React.ReactElement {
   );
   const onBloomThresholdChange = useCallback(
     (next: number) => dispatch(setBloomThreshold(next)),
+    [dispatch],
+  );
+
+  const onFilmEnabledChange = useCallback(
+    (next: boolean) => dispatch(setFilmEnabled(next)),
     [dispatch],
   );
 
@@ -115,6 +129,8 @@ function DisplaySectionContainer(): React.ReactElement {
       onBloomStrengthChange={onBloomStrengthChange}
       bloomThreshold={bloomThreshold}
       onBloomThresholdChange={onBloomThresholdChange}
+      filmEnabled={filmEnabled}
+      onFilmEnabledChange={onFilmEnabledChange}
     />
   );
 }

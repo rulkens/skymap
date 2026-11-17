@@ -26,8 +26,8 @@ import type { ClipId } from '../../../@types/animation/ClipId';
 import type { ClipPathSnapshot } from '../../../@types/engine/debug/ClipPathSnapshot';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { Mat3 } from '../../../@types/math/Mat3';
-import { evaluateClip } from '../camera/evaluateClip';
-import { yawPitchToDir } from '../../../utils/camera/yawPitchToDir';
+import { evaluateClip } from '../camera/clips/evaluateClip';
+import { yawPitchToDir } from '../../../utils/camera/orbitPose/yawPitchToDir';
 import { rotateVec3ByTightMat3 } from '../../../utils/math/rotateVec3ByTightMat3';
 
 /** Reconstruct the eye position from a pose via the orbit convention. */
@@ -38,7 +38,7 @@ function eyeOf(
   pitch: number,
   frameBasis: Mat3 | undefined,
 ): Vec3 {
-  const dir = rotateVec3ByTightMat3(yawPitchToDir(yaw, pitch), frameBasis);
+  const dir = rotateVec3ByTightMat3(frameBasis, yawPitchToDir(yaw, pitch));
   return [
     target[0] + distance * dir[0],
     target[1] + distance * dir[1],

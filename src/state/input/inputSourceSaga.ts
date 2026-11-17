@@ -3,7 +3,7 @@
  * events → `recognize` → the press bound through `CONTROL_BINDINGS` → `input/*`
  * actions. Motion and hover buffer to one dispatch per animation frame; every
  * edge (start, end, tap, resize) flushes the buffer first so the slice sees
- * events in device order. A double-tap's `focusSelected` lands after its own
+ * events in device order. A double-tap's `viewSelected` lands after its own
  * second press's `inputGestureStarted`, so that press cannot cancel the fly.
  */
 
@@ -20,7 +20,7 @@ import {
   inputSourceResized,
   inputTapped,
 } from './inputSlice';
-import { focusSelected } from '../selection/focusSelected';
+import { viewSelected } from '../selection/viewSelected';
 import { CONTROL_BINDINGS } from '../../data/input/controlBindings';
 import { TAP_SELECTING_INTENTS } from '../../data/input/tapSelectingIntents';
 import { selectCameraControls } from '../settings/selectors';
@@ -32,10 +32,10 @@ import type { BindingTable } from '../../@types/input/BindingTable';
 import type { DeviceEvent } from '../../@types/input/DeviceEvent';
 import type { HeldIntent } from '../../@types/input/HeldIntent';
 import type { Motion } from '../../@types/input/Motion';
-import type { SourceId } from '../../@types/input/SourceId';
+import type { InputSourceId } from '../../@types/input/InputSourceId';
 import type { UnitPoint } from '../../@types/input/UnitPoint';
 
-export function* inputSourceSaga(source: SourceId, channel: EventChannel<DeviceEvent>) {
+export function* inputSourceSaga(source: InputSourceId, channel: EventChannel<DeviceEvent>) {
   // Latched at each press: a `shift+c` mid-gesture must not change the running gesture's intent,
   // nor the table its tap is judged by. The next press reads the new scheme.
   let bindings: BindingTable = CONTROL_BINDINGS.skymap;
@@ -90,6 +90,11 @@ export function* inputSourceSaga(source: SourceId, channel: EventChannel<DeviceE
             yield* flush();
             yield* put(inputGestureStarted({ source, intent: held }));
             break;
+          case 'tiltStart':
+            held = 'tilt';
+            yield* flush();
+            yield* put(inputGestureStarted({ source, intent: held }));
+            break;
           case 'heldEnd':
             yield* flush();
             yield* put(inputGestureEnded({ source }));
@@ -97,11 +102,27 @@ export function* inputSourceSaga(source: SourceId, channel: EventChannel<DeviceE
             break;
           case 'drag':
             if (held === null) break;
-            motion.push({ intent: held, dx: g.dx, dy: g.dy, ratio: 1, at: g.at, held: true });
+            motion.push({
+              intent: held,
+              dx: g.dx,
+              dy: g.dy,
+              ratio: 1,
+              at: g.at,
+              held: true,
+              eventMs: event.t,
+            });
             buffer();
             break;
           case 'pinch':
-            motion.push({ intent: 'zoom', dx: 0, dy: 0, ratio: g.ratio, at: null, held: true });
+            motion.push({
+              intent: 'zoom',
+              dx: 0,
+              dy: 0,
+              ratio: g.ratio,
+              at: null,
+              held: true,
+              eventMs: event.t,
+            });
             buffer();
             break;
           case 'wheel':
@@ -112,6 +133,7 @@ export function* inputSourceSaga(source: SourceId, channel: EventChannel<DeviceE
               ratio: g.ratio,
               at: g.at,
               held: held !== null,
+              eventMs: event.t,
             });
             buffer();
             break;
@@ -124,7 +146,7 @@ export function* inputSourceSaga(source: SourceId, channel: EventChannel<DeviceE
             // Only a press bound to the selecting drag picks or focuses.
             if (!TAP_SELECTING_INTENTS.has(bindPress(bindings, g.press))) break;
             yield* flush();
-            yield* put(g.kind === 'tap' ? inputTapped({ source, at: g.at }) : focusSelected());
+            yield* put(g.kind === 'tap' ? inputTapped({ source, at: g.at }) : viewSelected());
             break;
         }
       }

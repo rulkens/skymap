@@ -1,6 +1,6 @@
 /**
  * ArmCloudSection — the arm ridge's stochastic sprite twin
- * (`src/services/engine/galaxyGenerator/v2/armParticleCloud.ts`): thousands of small Gaussian
+ * (`src/layers/milkyWay/field/armClouds/utils/deriveArmCloudCount.ts`): thousands of small Gaussian
  * sprites scattered along the same log-spiral ridge `ArmFieldSection`'s
  * deterministic blobs sit on. Its own section, own header pill
  * (`fieldTuning.arms.cloud.enabled`), same idiom as `DustCloudSection` — the
@@ -8,7 +8,7 @@
  * the ridge's own section.
  */
 import type { ReactNode } from 'react';
-import type { GalaxyArmCloudTuning } from '../../../../../src/@types/galaxy/GalaxyArmCloudTuning';
+import type { GalaxyArmCloudTuning } from '../../../../../src/layers/milkyWay/field/arms/@types/GalaxyArmCloudTuning';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { fieldTuningPatched } from '../../state/slices/fieldTuningSlice';
 import { sectionToggled } from '../../state/slices/uiSlice';

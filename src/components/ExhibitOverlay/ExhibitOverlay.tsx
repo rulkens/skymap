@@ -6,11 +6,19 @@
  * itself through its kind's Component; a container resolves the exhibit.
  */
 
-import { useState, type CSSProperties, type ReactNode } from 'react';
+import { useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import cx from 'classnames';
 
-import StopIcon from '../TourOverlay/StopIcon';
-import EyeIcon from './EyeIcon';
+import ActionPill from '../common/ActionPill/ActionPill';
+import CompactInfoTip from '../common/CompactInfoTip/CompactInfoTip';
+import GestureHint from '../GestureHint/GestureHint';
+import StopIcon from '../icons/StopIcon/StopIcon';
+import EyeIcon from '../icons/EyeIcon/EyeIcon';
+import { useIsMobile } from '../../hooks/useIsMobile';
+import { useViewCover } from '../../hooks/useViewCover';
 import type { ExhibitSection } from '../../@types/exhibits/ExhibitSection';
+import type { CameraGesture } from '../../@types/ui/CameraGesture';
+import type { ViewCover } from '../../@types/layout/ViewCover';
 import styles from './ExhibitOverlay.module.css';
 
 export type ExhibitOverlayProps = {
@@ -19,7 +27,11 @@ export type ExhibitOverlayProps = {
   readonly body: readonly ExhibitSection[];
   /** Seconds to wait before the copy animates in — the fly-in's near-landing. */
   readonly enterDelaySec: number;
+  readonly learnedGestures: Readonly<Record<CameraGesture, boolean>>;
   readonly onExit: () => void;
+  /** Both must be stable; see `useViewCover`. */
+  readonly onNotesCover: (cover: ViewCover | null) => void;
+  readonly onCaptionCover: (cover: ViewCover | null) => void;
 };
 
 function ExhibitOverlay({
@@ -27,7 +39,10 @@ function ExhibitOverlay({
   lede,
   body,
   enterDelaySec,
+  learnedGestures,
   onExit,
+  onNotesCover,
+  onCaptionCover,
 }: ExhibitOverlayProps): ReactNode {
   // Local on purpose: the container keys this on the exhibit id, so it resets
   // per exhibit and on exit without touching the app-wide `uiHidden`.
@@ -36,20 +51,30 @@ function ExhibitOverlay({
   // whole overlay arrives on the camera's clock rather than the takeover's.
   const clock = { '--exhibit-enter-delay': `${enterDelaySec}s` } as CSSProperties;
 
+  // Desktop: the notes column covers the right. Phone: the caption text covers
+  // the bottom; the title is its top line, since the caption box itself fills
+  // the first screen there.
+  const isMobile = useIsMobile();
+  const notesRef = useRef<HTMLDivElement>(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  useViewCover(notesRef, 'right', !hidden && !isMobile && body.length > 0, onNotesCover);
+  useViewCover(titleRef, 'bottom', !hidden && isMobile, onCaptionCover);
+
   return (
-    <div className={hidden ? `${styles.root} ${styles.hidden}` : styles.root} style={clock}>
+    <div className={cx(styles.root, hidden && styles.hidden)} style={clock}>
       <div className={styles.content}>
         <div className={styles.vignetteCaption} aria-hidden="true" />
         <div className={styles.vignetteNotes} aria-hidden="true" />
 
         <div className={styles.caption}>
-          <div className={styles.kicker}>Exhibit</div>
-          <h1 className={styles.title}>{label}</h1>
+          <h1 ref={titleRef} className={styles.title}>
+            {label}
+          </h1>
           <p className={styles.lede}>{lede}</p>
         </div>
 
         {body.length > 0 ? (
-          <div className={styles.notes}>
+          <div ref={notesRef} className={styles.notes}>
             {body.map(({ kind, data }, i) => (
               // The group is what enters — a section and the hairline above it
               // are one beat, and `--i` is its place in the stagger.
@@ -60,24 +85,39 @@ function ExhibitOverlay({
           </div>
         ) : null}
 
-        <button type="button" className={styles.exitPill} onClick={onExit}>
-          <span className={styles.exitIcon}>
-            <StopIcon />
-          </span>
-          <span className={styles.exitLabel}>Exit view</span>
-          <span className={styles.exitKey}>Esc</span>
-        </button>
+        {/* The dock centres Exit; the hint places itself against it. */}
+        <div className={styles.dock}>
+          <ActionPill
+            className={styles.exit}
+            icon={<StopIcon size={13} />}
+            label="Exit view"
+            keyHint={isMobile ? undefined : 'Esc'}
+            aria-keyshortcuts={isMobile ? undefined : 'Escape'}
+            onClick={onExit}
+          />
+          {/* A phone-width overlay is a scrolling column that takes every touch, so no hint. */}
+          {isMobile ? null : (
+            <GestureHint
+              gestures={['look', 'zoom']}
+              learned={learnedGestures}
+              className={styles.gestureHint}
+            />
+          )}
+        </div>
       </div>
 
-      <button
-        type="button"
-        className={styles.hideToggle}
-        aria-label={hidden ? 'Show exhibit' : 'Hide exhibit'}
-        aria-pressed={hidden}
-        onClick={() => setHidden((h) => !h)}
-      >
-        <EyeIcon struck={hidden} />
-      </button>
+      <div className={styles.hideToggleSpot}>
+        <CompactInfoTip label={hidden ? 'Show text' : 'Hide text'} placement="bottom" align="end">
+          <button
+            type="button"
+            className={styles.hideToggle}
+            aria-label={hidden ? 'Show text' : 'Hide text'}
+            onClick={() => setHidden((h) => !h)}
+          >
+            <EyeIcon size={18} struck={hidden} />
+          </button>
+        </CompactInfoTip>
+      </div>
     </div>
   );
 }

@@ -8,8 +8,8 @@
 
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
-import type { GalaxyFieldTuning } from '../../../../../src/@types/galaxy/GalaxyFieldTuning';
-import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyFieldMixture';
+import type { GalaxyFieldTuning } from '../../../../../src/layers/milkyWay/field/mixture/@types/GalaxyFieldTuning';
+import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../../src/layers/milkyWay/field/mixture/utils/galaxyFieldMixture';
 
 const fieldTuningSlice = createSlice({
   name: 'fieldTuning',

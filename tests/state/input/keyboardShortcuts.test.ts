@@ -41,6 +41,7 @@ const ui = (paletteOpen: boolean): UiState => ({
   debugPanelOpen: false,
   paletteTab: 'highlights',
   splash: { visible: false, dismissedVersion: null },
+  learnedGestures: { look: false, zoom: false },
 });
 
 const time = (rateIndex: number, paused: boolean): TimeState => ({

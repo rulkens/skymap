@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
 import { parseTwoMrs, parseXscShapeCsv, type XscShapeMap } from '../../tools/parsers/twoMrs';
-import { Source } from '../../src/data/source';
 
 /**
  * Helper for the XSC-application tests below. Builds a 233-character 2MRS
@@ -81,9 +80,9 @@ describe('parseTwoMrs', () => {
 
     // Every record carries the 2MRS source tag — the merger needs this to
     // apply per-galaxy-catalog priority later, and it's the cheapest assertion to
-    // guard against a future copy-paste bug that left, say, Source.SDSS.
+    // guard against a future copy-paste bug that left, say, 'sdss'.
     for (const r of records) {
-      expect(r.source).toBe(Source.TwoMRS);
+      expect(r.source).toBe('2mrs');
       // 2MRS has no SDSS cross-ID; all rows must use the 0n sentinel so the
       // merger's dedup pass correctly classifies them as "unmatched".
       expect(r.objID).toBe(0n);

@@ -8,8 +8,8 @@ import { lightTimeLayerSettings } from './state/slices';
 import { lightTimeVisibility } from './visibility';
 import { create } from './create';
 import { destroy } from './destroy';
-import { lightTimeSpheresPass } from './passes/lightTimeSpheresPass';
-import { produceLightTimeCaptions } from './present/produceLightTimeCaptions';
+import { lightTimeSpheresPass } from './spheres/passes/lightTimeSpheresPass';
+import { produceLightTimeCaptions } from './spheres/present/produceLightTimeCaptions';
 
 export const lightTimeLayer = defineLayer({
   name: 'lightTime',

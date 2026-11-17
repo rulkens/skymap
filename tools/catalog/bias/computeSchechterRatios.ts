@@ -14,7 +14,7 @@ import type { ComputeSchechterRatiosInput } from '../../@types/catalog/ComputeSc
 import {
   galaxyCatalogFluxLimit,
   galaxyCatalogSchechter,
-} from '../../../src/data/galaxyCatalog/galaxyCatalogFluxLimits';
+} from '../../../src/layers/galaxyCatalog/records/data/galaxyCatalogFluxLimits';
 import { expectedNumberDensity } from '../../../src/utils/math/expectedNumberDensity';
 
 const RATIO_MIN = 0.3;

@@ -3,7 +3,7 @@
  * numeric-validation exception: it has no non-GPU path to check
  * its output against, so `probeGpuErrors.ts` runs armRidgeDebugSample.wesl's
  * `csSample` over its own hard-coded fixtures and diffs the result against
- * armRidgeGeometry.ts's CPU output at the SAME literal values (mirrored in
+ * the arms/utils CPU output at the SAME literal values (mirrored in
  * the probe step, not read back from the shader). No production caller —
  * same shape as `createIsmMapRingReduce.ts`'s ringMeans check, minus the
  * shared readback queue: this dispatch has no persistent source buffer

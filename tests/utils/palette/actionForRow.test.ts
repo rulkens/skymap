@@ -1,10 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { actionForRow } from '../../../src/utils/palette/actionForRow';
-import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
-import { Source } from '../../../src/data/source';
-import { MILKY_WAY_FOCUS_ID } from '../../../src/services/url/milkyWayFocusId';
 import { APP_EXHIBIT_REGISTRY } from '../../../src/compositions/appExhibits';
-import { tourRegistry } from '../../../src/data/animation/tours/tourRegistry';
+import { APP_TOUR_REGISTRY } from '../../../src/compositions/appTours';
 import type { FamousGalaxyMetaEntry } from '../../../src/@types/loading/FamousGalaxyMetaEntry';
 import type { AliasIndexEntry } from '../../../src/@types/engine/AliasIndexEntry';
 import type { StructureSearchEntry } from '../../../src/@types/engine/StructureSearchEntry';
@@ -20,7 +17,8 @@ const M31: FamousGalaxyMetaEntry = {
 const NGC4565: AliasIndexEntry = {
   pgc: 42038,
   names: ['NGC 4565'],
-  source: Source.Glade,
+  sourceLabel: 'GLADE',
+  focusId: 'pgc-42038',
 };
 
 const COMA: StructureSearchEntry = {
@@ -54,26 +52,6 @@ describe('actionForRow', () => {
     });
   });
 
-  it('the milkyWay row → the fixed singleton focus id', () => {
-    expect(actionForRow({ kind: 'milkyWay', score: 0 })).toEqual({
-      kind: 'focus',
-      focusId: MILKY_WAY_FOCUS_ID,
-    });
-  });
-
-  it('a star row → the seed id under the star focus prefix', () => {
-    const index = SCENE_STARS.findIndex((star) => star.id === 'sirius');
-    expect(
-      actionForRow({
-        kind: 'starCatalog',
-        source: Source.FamousStar,
-        index,
-        star: SCENE_STARS[index]!,
-        score: 0,
-      }),
-    ).toEqual({ kind: 'focus', focusId: 'star-sirius' });
-  });
-
   it('an exhibit row → an exhibit action carrying the registry id, not a focus', () => {
     const exhibit = APP_EXHIBIT_REGISTRY.cosmicWeb;
     expect(actionForRow({ kind: 'exhibit', exhibit, score: 0 })).toEqual({
@@ -83,7 +61,7 @@ describe('actionForRow', () => {
   });
 
   it('a tour row → a tour action carrying the registry id, not a focus', () => {
-    const tour = tourRegistry.grandTour;
+    const tour = APP_TOUR_REGISTRY.grandTour;
     expect(actionForRow({ kind: 'tour', tour, score: 0 })).toEqual({
       kind: 'tour',
       tourId: tour.id,

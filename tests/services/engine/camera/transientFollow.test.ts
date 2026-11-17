@@ -1,7 +1,7 @@
 /**
  * A transient object the user focused: core places it each frame (`placeLiveSelection`), and the
  * camera poses from it and follows it as the clock moves, through the same runFrame loop a body
- * takes. Before the seam, an id with no body-table row threw inside the rungs on the first frame.
+ * takes. Before the seam, an id with no body-table row threw inside the arms on the first frame.
  */
 import { describe, expect, it, vi } from 'vitest';
 
@@ -16,10 +16,10 @@ import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarne
 import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRowsSlice';
 import { updateSelectionFocus } from '../../../../src/state/selection/selectionSlice';
 import { setSimDays } from '../../../../src/state/time/timeSlice';
-import { foldToWorld } from '../../../../src/services/engine/camera/rungs/foldToWorld';
+import { foldToWorld } from '../../../../src/services/engine/camera/arms/foldToWorld';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { frameBodyStates } from '../../../../src/services/engine/frame/frameBodyStates';
-import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
@@ -27,9 +27,12 @@ import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import type { TransientBodyId } from '../../../../src/@types/scene/TransientBodyId';
 import type { SelectionKindRow } from '../../../../src/@types/engine/layer/SelectionKindRow';
-import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
-import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { installAppSelectionKinds } from '../../../support/installAppSelectionKinds';
+import type { SelectionRefBase } from '../../../../src/@types/engine/selection/SelectionRefBase';
+import type { StarCatalogSelectionRow } from '../../../../src/layers/starCatalog/selection/@types/StarCatalogSelectionRow';
+
+installAppSelectionKinds();
 
 const ID: TransientBodyId = 'transient:test-orbiter';
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
@@ -43,9 +46,9 @@ const orbiterAt = (simDays: number, earth: Readonly<Vec3>): Vec3 => {
   return [earth[0] + ORBIT_KM * KM * Math.cos(a), earth[1] + ORBIT_KM * KM * Math.sin(a), earth[2]];
 };
 
-const REF: SelectionRef = { type: 'starCatalog', source: 0 as never, index: 0 };
+const REF: SelectionRefBase = { type: 'starCatalog', source: 0 as never, index: 0 };
 
-const rowAt = (simDays: number): SelectionRow => ({
+const rowAt = (simDays: number): StarCatalogSelectionRow => ({
   type: 'starCatalog',
   source: 0 as never,
   index: 0,
@@ -56,6 +59,7 @@ const rowAt = (simDays: number): SelectionRow => ({
     deriveBodyStates(simDays).get(asSceneBodyId('earth'))!.positionMpc,
   ),
   radiusM: 50,
+  radiusMpc: 50_000 * SCALE_UNITS.M_TO_MPC,
   driver: {
     poseId: ID,
     boundingRadiusM: 50,
@@ -71,7 +75,10 @@ describe('following a transient object', () => {
   it('poses from it and keeps it as the target while the clock moves it', () => {
     const h = makeCameraSimHarness();
     h.state.selectionKindRows = [
-      { type: 'starCatalog', extractRow: (_ref, simDays) => rowAt(simDays) } as SelectionKindRow,
+      {
+        type: 'starCatalog',
+        extractRow: (_ref: unknown, simDays: number) => rowAt(simDays),
+      } as unknown as SelectionKindRow,
     ];
     h.store.dispatch(updateSelectionFocus(REF, 'cut'));
     h.store.dispatch(setSelectionRow({ slot: 'focus', row: rowAt(CONST_J2000), focusId: null }));

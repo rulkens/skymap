@@ -9,24 +9,26 @@
  * own comment for why).
  */
 
-import type { CameraProjection } from '../../../@types/camera/CameraProjection';
-import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
+import type { CameraProjection } from '../../../@types/camera/projection/CameraProjection';
+import type { FramedCameraPose } from '../../../@types/camera/pose/FramedCameraPose';
 import type { CameraRuntime } from '../../../@types/engine/state/CameraRuntime';
 import type { RootState } from '../../../store/types';
-import { UNSTARTED_EPOCHS } from './cameraEpochs';
-import { frameKey } from './rungs/frameKey';
-import { rowFor } from './rungs/rowFor';
-import { EMPTY_TILT_MEMORY } from '../../../data/camera/emptyTiltMemory';
+import { UNSTARTED_EPOCHS } from './drivers/cameraEpochs';
+import { frameKey } from './arms/frameKey';
+import { rowFor } from './arms/rowFor';
+import { EMPTY_TILT_MEMORY } from './data/emptyTiltMemory';
 import { NAV_AT_REST } from '../../../data/camera/openSpaceNavigation';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { CONST_J2000 } from '../../../data/time/constJ2000';
+import { symmetricFrustum } from '../../../utils/camera/frustum/symmetricFrustum';
 
 export function seedCameraRuntime(args: {
   /** Only the two slices the seed reads; call sites still hand over `store.getState()`. */
   readonly state: Pick<RootState, 'camera' | 'settings'>;
   readonly projection: CameraProjection;
 }): CameraRuntime {
-  const { camera, settings } = args.state;
+  const { settings } = args.state;
+  const camera = args.state.camera.intent;
   // Copied: the boot seed is the camera slice's `base`, and the register must
   // never alias the store's object.
   const pose: FramedCameraPose = { ...camera.base };
@@ -43,13 +45,15 @@ export function seedCameraRuntime(args: {
     navigator: NAV_AT_REST,
     scheme: settings.cameraControls.scheme,
     own: {},
-    pivotBody: null,
+    lens: { driven: null, shiftNdc: [0, 0] },
+    wheel: { pivotBody: null, limitPress: null },
     outputs: {
       displayed: pose,
       simDays: CONST_J2000,
       // Copied, so the seed never aliases the shared registry entry.
       upBasis: [...ORIENTATION_FRAMES[settings.orientation]],
       projection: args.projection,
+      frustum: symmetricFrustum(args.projection.fovYRad, args.projection.aspect),
     },
   };
 }

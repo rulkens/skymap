@@ -1,4 +1,4 @@
-import type { StarCatalogRegistryEntry } from './StarCatalogRegistryEntry';
+import type { StarCatalogRegistryEntry } from '../../../layers/starCatalog/@types/StarCatalogRegistryEntry';
 
 /**
  * The star catalogs built in code from seed tables rather than streamed from a

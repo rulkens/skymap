@@ -18,25 +18,26 @@ import {
   FADE,
   DENS_SCALE,
   SPEED_COLOR_MAX,
-} from '../../../../src/data/flow/flowFieldConstants';
-import { DUST_SURVIVAL_FLOOR_FRAC } from '../../../../src/services/engine/galaxyGenerator/v2/dustParticleCloud';
-import { ISM_MAP_WORKGROUP_SIZE } from '../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
-import { SPLAT_CUT_SIGMA } from '../../../../src/services/engine/galaxyGenerator/v2/youngStarChain';
-import { ISM_MAP_AMBIENT_DUST } from '../../../../src/utils/galaxy/ismMapAmbientDust';
-import { ISM_MAP_FLUID_EVENT_STRIDE } from '../../../../src/services/gpu/renderers/galaxyField/ismMap/packIsmMapFluidEvents';
+} from '../../../../src/layers/flow/streamlines/data/flowFieldConstants';
+import { DUST_SURVIVAL_FLOOR_FRAC } from '../../../../src/layers/milkyWay/field/dust/utils/dustParticleCloud';
+import { ISM_MAP_WORKGROUP_SIZE } from '../../../../src/layers/milkyWay/field/ismMap/data/ismMapWorkgroupSize';
+import { SPLAT_CUT_SIGMA } from '../../../../src/layers/milkyWay/field/starFormation/utils/youngStarChain';
+import { ISM_MAP_AMBIENT_DUST } from '../../../../src/layers/milkyWay/field/ismMap/data/ismMapAmbientDust';
+import { ISM_MAP_FLUID_EVENT_STRIDE } from '../../../../src/layers/milkyWay/field/ismMap/render/packIsmMapFluidEvents';
 import { BODY_AMBIENT_LIGHT } from '../../../../src/data/bodies/bodyAmbientLight';
-import { EARTH_SURFACE_PARAMS } from '../../../../src/data/bodies/earthSurfaceParams';
+import { EARTH_SURFACE_PARAMS } from '../../../../src/layers/body/surfaceTiles/format/data/earthSurfaceParams';
 import {
   SURFACE_TILE_MESH_RESOLUTION,
   SURFACE_TILE_ATLAS_SIDE,
+  NIGHT_TILE_ATLAS_SIDE,
   SURFACE_TILE_PX,
   SURFACE_TILE_SKIRT_DEPTH_FRACTION,
-} from '../../../../src/data/bodies/surfaceTileParams';
+} from '../../../../src/layers/body/surfaceTiles/format/data/surfaceTileParams';
 import {
   HEIGHT_CODE_OFFSET_M,
   HEIGHT_CODE_STEP_M,
   HEIGHT_POSTS_PER_TILE,
-} from '../../../../src/data/scene/heightTileFormat';
+} from '../../../../src/layers/body/surfaceTiles/format/data/heightTileFormat';
 import { PROXY_SCALE } from '../../../../src/utils/scene/proxyScale';
 import { LABEL_EM_PX_RETUNE } from '../../../../src/data/labels/labelSizingDefaults';
 
@@ -111,7 +112,7 @@ describe('labels/vertex.wesl EM_PX_RETUNE ↔ LABEL_EM_PX_RETUNE parity', () => 
  * `@workgroup_size(16, 16)` is different: WGSL requires it as a compile-time
  * literal, so it genuinely stays duplicated across every ismMap compute entry
  * point rather than a single named const. This guards THAT duplication
- * against `ISM_MAP_WORKGROUP_SIZE` (`galaxyIsmMapArmForcing.ts`, which the
+ * against `ISM_MAP_WORKGROUP_SIZE` (`buildGalaxyIsmMapArmForcing.ts`, which the
  * ISM-map orientation/fluid runners also use for dispatch-count math).
  */
 describe('ismMap @workgroup_size(N, N) ↔ ISM_MAP_WORKGROUP_SIZE parity', () => {
@@ -280,6 +281,20 @@ describe('SURFACE_TILE_ATLAS_SIDE parity (surfaceTileParams.ts ↔ surfaceTile/s
       weslValue,
       `${file}: WESL SURFACE_TILE_ATLAS_SIDE (${weslValue}) does not match TS SURFACE_TILE_ATLAS_SIDE (${SURFACE_TILE_ATLAS_SIDE})`,
     ).toBe(SURFACE_TILE_ATLAS_SIDE);
+  });
+});
+
+/**
+ * NIGHT_TILE_ATLAS_SIDE (surfaceTileParams.ts) is mirrored into
+ * surfaceTile/surfaceLighting.wesl for the night atlas's own half-texel
+ * inset; a drift lets a night tile's edge sample its neighbour slot.
+ */
+describe('NIGHT_TILE_ATLAS_SIDE parity (surfaceTileParams.ts ↔ surfaceTile/surfaceLighting.wesl)', () => {
+  it("surfaceLighting.wesl's NIGHT_TILE_ATLAS_SIDE equals the TS export", () => {
+    const file = 'src/services/gpu/shaders/bodies/surfaceTile/surfaceLighting.wesl';
+    const weslValue = readWeslConst(file, 'NIGHT_TILE_ATLAS_SIDE');
+    expect(weslValue, `NIGHT_TILE_ATLAS_SIDE is missing from ${file}`).toBeDefined();
+    expect(weslValue).toBe(NIGHT_TILE_ATLAS_SIDE);
   });
 });
 

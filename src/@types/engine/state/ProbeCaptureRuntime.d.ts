@@ -12,4 +12,8 @@ export type ProbeCaptureRuntime = {
   /** A second body was also due this frame: `shouldKeepTicking`'s vote, since
    *  nothing else wakes a paused, still scene for it. */
   due: boolean;
+  /** Ms until the soonest refresh owed by a body drawn this frame but not captured
+   *  in it (the scene may have changed since its probe); null when none is owed.
+   *  `runFrame` arms an idle wake for it, so a still scene converges. */
+  refreshOwedInMs: number | null;
 };

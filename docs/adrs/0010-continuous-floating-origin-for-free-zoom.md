@@ -63,7 +63,7 @@ machinery**:
   (`new Float32Array(m)`); every helper that produces a slab or per-body matrix
   returns a `Float64Array` and leaves narrowing to its caller. The CPU keeps the
   double-precision truth for as long as anything might still need it — for
-  example `src/utils/camera/rebaseViewProj.ts` returns `Float64Array` precisely
+  example `src/utils/camera/projection/rebaseViewProj.ts` returns `Float64Array` precisely
   so a CPU-side matrix _inversion_ (caption leader-line placement) can run before
   the narrow, rather than inverting an already-lossy `f32` matrix.
 - **Per-object MVP composed in `f64`, then narrowed.** Each foreground body
@@ -162,7 +162,7 @@ the origin is fixed (YAGNI); the seam is named, not pre-built.
   extension point.
 - `src/services/engine/frame/slabs.ts` — the `NEAR0` slab row
   (`originRelative: true`, `precision: 'f64'`) built against that origin.
-- `src/utils/math/narrowMat4.ts` and `src/utils/camera/rebaseViewProj.ts` — the
+- `src/utils/math/narrowMat4.ts` and `src/utils/camera/projection/rebaseViewProj.ts` — the
   `f64` truth / `f32`-at-upload boundary idiom (the latter returns `Float64Array`
   so a CPU-side inversion runs before the narrow).
 - `docs/backlog/2026-07-13-star-field-own-slab.md` — the anticipated follow-up

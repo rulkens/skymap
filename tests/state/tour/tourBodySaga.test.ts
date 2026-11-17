@@ -91,6 +91,7 @@ function buildStore(opts: { playClip?: PlayClipStub; cameraRuntime?: LiveCameraR
   sagaMiddleware.setContext({
     selection: selectionResolverOver(immediateStructures),
     cameraRuntime: () => cam,
+    sceneSettled: () => true,
     playClip: (clip: ClipData) => playClipFn(clip),
   });
 
@@ -146,7 +147,7 @@ describe('tourBodySaga', () => {
     // Very short dwell so the beat completes without a manual advanceTour.
     const beat: BeatData = {
       enterClip: NARRATION_CLIP,
-      caption: { title: 'B1' },
+      caption: { title: 'B1', lines: ['x'] },
       dwellClip: dwellDrift(0.001),
     };
 
@@ -177,7 +178,7 @@ describe('tourBodySaga', () => {
 
     const beat: BeatData = {
       enterClip: NARRATION_CLIP,
-      caption: { title: 'B1' },
+      caption: { title: 'B1', lines: ['x'] },
       dwellClip: dwellDrift(0.001),
     };
     const { store, sagaMiddleware } = buildStore({ playClip: makeAutoFlyStub() });
@@ -202,12 +203,12 @@ describe('tourBodySaga', () => {
 
     const beat1: BeatData = {
       enterClip: NARRATION_CLIP,
-      caption: { title: 'First' },
+      caption: { title: 'First', lines: ['x'] },
       dwellClip: dwellDrift(0.001),
     };
     const beat2: BeatData = {
       enterClip: NARRATION_CLIP,
-      caption: { title: 'Second' },
+      caption: { title: 'Second', lines: ['x'] },
       dwellClip: dwellDrift(0.001),
     };
 
@@ -235,12 +236,12 @@ describe('tourBodySaga', () => {
     // anyway when beat 1 is entered, and unwind it when Prev returns to beat 0.
     const cueBeat: BeatData = {
       enterClip: { start: 'live', timeline: [hide(['cosmicWebDensity'], 0)] },
-      caption: { title: 'B1' },
+      caption: { title: 'B1', lines: ['x'] },
       dwellClip: dwellDrift(9999),
     };
     const plainBeat: BeatData = {
       enterClip: NARRATION_CLIP,
-      caption: { title: 'B2' },
+      caption: { title: 'B2', lines: ['x'] },
       dwellClip: dwellDrift(9999),
     };
 
@@ -277,7 +278,7 @@ describe('tourBodySaga', () => {
     // Three short-dwell beats; the range selects only the middle one.
     const beats: BeatData[] = ['First', 'Second', 'Third'].map((title) => ({
       enterClip: NARRATION_CLIP,
-      caption: { title },
+      caption: { title, lines: ['x'] },
       dwellClip: dwellDrift(0.001),
     }));
 
@@ -306,7 +307,7 @@ describe('tourBodySaga', () => {
 
     const beats: BeatData[] = ['First', 'Second', 'Third'].map((title) => ({
       enterClip: NARRATION_CLIP,
-      caption: { title },
+      caption: { title, lines: ['x'] },
       dwellClip: dwellDrift(0.001),
     }));
 
@@ -332,12 +333,12 @@ describe('tourBodySaga', () => {
     // apply the skipped prefix's cue exactly as a full playthrough would.
     const cueBeat: BeatData = {
       enterClip: { start: 'live', timeline: [hide(['cosmicWebDensity'], 0)] },
-      caption: { title: 'B1' },
+      caption: { title: 'B1', lines: ['x'] },
       dwellClip: dwellDrift(9999),
     };
     const plainBeat: BeatData = {
       enterClip: NARRATION_CLIP,
-      caption: { title: 'B2' },
+      caption: { title: 'B2', lines: ['x'] },
       dwellClip: dwellDrift(9999),
     };
 
@@ -368,7 +369,7 @@ describe('tourBodySaga', () => {
 
     const beats: BeatData[] = ['First', 'Second'].map((title) => ({
       enterClip: NARRATION_CLIP,
-      caption: { title },
+      caption: { title, lines: ['x'] },
       dwellClip: dwellDrift(0.001),
     }));
 
@@ -397,7 +398,7 @@ describe('tourBodySaga', () => {
 
     const beats: BeatData[] = ['First', 'Second'].map((title) => ({
       enterClip: NARRATION_CLIP,
-      caption: { title },
+      caption: { title, lines: ['x'] },
       dwellClip: dwellDrift(0.001),
     }));
 
@@ -423,7 +424,7 @@ describe('tourBodySaga', () => {
 
     const beat: BeatData = {
       enterClip: NARRATION_CLIP,
-      caption: { title: 'B1' },
+      caption: { title: 'B1', lines: ['x'] },
       dwellClip: dwellDrift(0.001),
     };
 
@@ -455,7 +456,7 @@ describe('tourBodySaga', () => {
     // Long dwell — we will interrupt before it auto-advances.
     const beat: BeatData = {
       enterClip: NARRATION_CLIP,
-      caption: { title: 'B1' },
+      caption: { title: 'B1', lines: ['x'] },
       dwellClip: dwellDrift(9999),
     };
 
@@ -492,7 +493,7 @@ describe('tourBodySaga', () => {
     // Long dwell so the beat never auto-advances during this test.
     const beat: BeatData = {
       enterClip: NARRATION_CLIP,
-      caption: { title: 'B1' },
+      caption: { title: 'B1', lines: ['x'] },
       dwellClip: dwellDrift(9999),
     };
 
@@ -533,12 +534,12 @@ describe('tourBodySaga', () => {
     // `orientation` back to its pre-tour value every time a beat started.
     const beat1: BeatData = {
       enterClip: NARRATION_CLIP,
-      caption: { title: 'First' },
+      caption: { title: 'First', lines: ['x'] },
       dwellClip: dwellDrift(9999),
     };
     const beat2: BeatData = {
       enterClip: NARRATION_CLIP,
-      caption: { title: 'Second' },
+      caption: { title: 'Second', lines: ['x'] },
       dwellClip: dwellDrift(9999),
     };
 
@@ -556,6 +557,7 @@ describe('tourBodySaga', () => {
     sagaMiddleware.setContext({
       selection: selectionResolverOver(immediateStructures),
       cameraRuntime: () => CAMERA_RUNTIME,
+      sceneSettled: () => true,
       playClip: makeAutoFlyStub(),
     });
 

@@ -6,5 +6,5 @@
 
 .closing {
   max-width: 34rem;
-  margin: 2rem 0 0;
+  margin: var(--site-space-l) 0 0;
 }

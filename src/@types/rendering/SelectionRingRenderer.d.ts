@@ -5,7 +5,7 @@
  *
  * Stateless w.r.t. selection. The renderer holds no current selection;
  * the caller passes the per-frame value to `draw`, which the pass
- * already derives fresh every frame from the tagged `FocusableTarget`.
+ * already derives fresh every frame from the selected row.
  * A renderer-held mirror would be a second copy of a value the pass
  * recomputes anyway — so `draw(selection)` takes it as an argument and
  * `null` is the no-op.

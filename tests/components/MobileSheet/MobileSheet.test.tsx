@@ -55,6 +55,44 @@ describe('MobileSheet', () => {
     expect(sheet.className).toMatch(/peeking/);
   });
 
+  it('drags the expanded sheet down from any grip in its content, not only the handle', () => {
+    render(
+      createElement(MobileSheet, {
+        resetKey: 'galaxy:42',
+        children: createElement(
+          'div',
+          { 'data-sheet-grip': '' },
+          createElement('span', null, 'name'),
+        ),
+      }),
+    );
+    const name = screen.getByText('name');
+    const sheet = sheetOf(name);
+    swipe(name, sheet, -120);
+    expect(sheet.className).not.toMatch(/peeking/);
+
+    swipe(name, sheet, 120);
+    expect(sheet.className).toMatch(/peeking/);
+  });
+
+  // A scroll call flushes style: run while still `.dragging` with `--drag` cleared, it
+  // fixes the open position as the transition's start, so the sheet flashes open first.
+  it('resets the scroll only after the collapse has swapped the classes', () => {
+    const { container } = render(card());
+    const sheet = sheetOf(screen.getByText('card'));
+    swipe(screen.getByText('card'), sheet, -120);
+
+    const classesAtScroll: string[] = [];
+    HTMLElement.prototype.scrollTo = vi.fn(function (this: HTMLElement) {
+      classesAtScroll.push(this.className);
+    }) as unknown as typeof HTMLElement.prototype.scrollTo;
+    swipe(container.querySelector('[class*="handle"]') as HTMLElement, sheet, 120);
+
+    expect(sheet.className).toMatch(/peeking/);
+    expect(classesAtScroll.length).toBeGreaterThan(0);
+    for (const c of classesAtScroll) expect(c).not.toMatch(/dragging/);
+  });
+
   it('springs back on a short drag and lets a tap through as a click', () => {
     render(card());
     const button = screen.getByText('card');

@@ -1,5 +1,5 @@
 // lib/focusUniforms.wesl — shared 'which structure is focused' uniform, written
-// once per frame from structureFocusSubsystem state. blend=0 collapses the
+// once per frame from recedingFocusSubsystem state. blend=0 collapses the
 // per-vertex multiplier to 1.0 (no effect); when active, galaxies in the
 // focused structure's core (within physicalRadiusMpc) keep alpha 1.0, and
 // the rest ramp down to 0.08 across the band out to the apparent edge
@@ -65,8 +65,8 @@ const FOCUS_PICK_EXCLUDE_BELOW: f32 = 1.0;
 fn focusAlphaMultiplier(worldPos: vec3<f32>, focus: FocusUniforms) -> f32 {
   let apparent = focus.centerApparent.w;
   let inner = min(focus.physicalRadiusMpc, apparent * FOCUS_CORE_FRACTION);
-  let d = distance(worldPos, focus.centerApparent.xyz);
-  let t = smoothstep(inner, apparent, d);
-  let baseAlpha = mix(1.0, FOCUS_DIM_FLOOR, t);
+  let focusDistance = distance(worldPos, focus.centerApparent.xyz);
+  let dimRamp = smoothstep(inner, apparent, focusDistance);
+  let baseAlpha = mix(1.0, FOCUS_DIM_FLOOR, dimRamp);
   return mix(1.0, baseAlpha, focus.blend);
 }

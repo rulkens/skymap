@@ -7,10 +7,10 @@
 
 import { CANCEL } from 'redux-saga';
 
-import { resolveClipStart, clipStarted } from '../../../state/camera/cameraSlice';
+import { resolveClipStart, clipStarted } from '../../../state/camera/cameraIntentSlice';
 import type { ClipData } from '../../../@types/animation/ClipData';
-import type { CameraPose } from '../../../@types/camera/CameraPose';
-import type { OrientationFrameId } from '../../../@types/camera/OrientationFrameId';
+import type { CameraPose } from '../../../@types/camera/pose/CameraPose';
+import type { OrientationFrameId } from '../../../@types/camera/orientation/OrientationFrameId';
 import type { AppDispatch } from '../../../store/types';
 import type { ClipPlayer } from '../../../@types/engine/subsystems/ClipPlayer';
 
@@ -19,7 +19,7 @@ type PlayClipDeps = {
 
   clipPlayer: Pick<ClipPlayer, 'stop' | 'registerEndResolver'>;
 
-  /** Live produced camera pose, in world Mpc. */
+  /** Live produced camera pose, in world Mpc, with the drawn lens as `fov`. */
   getLivePose: () => CameraPose;
 };
 
@@ -30,7 +30,7 @@ export function createPlayClip(
 
   return function playClip(clip: ClipData, frame: OrientationFrameId): Promise<void> {
     // Fresh object every call, even when `start` was already concrete: the clip
-    // epoch resets on `camera.clip` reference identity.
+    // epoch resets on `camera.intent.clip` reference identity.
     const resolvedClip = resolveClipStart(clip, getLivePose());
 
     // Resolver registered before clipStarted dispatches, so a zero-duration clip
@@ -45,7 +45,7 @@ export function createPlayClip(
 
     // `frame` is pinned at dispatch time so a later orientation switch re-expresses
     // the clip's pose instead of reinterpreting it (clip row in cameraDrivers.ts).
-    store.dispatch(clipStarted({ data: resolvedClip, frame }));
+    store.dispatch(clipStarted({ data: resolvedClip, frame, by: 'player' }));
 
     return p;
   };

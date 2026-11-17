@@ -6,14 +6,15 @@
  * acknowledgements are put together from those rows, the shot's address and
  * the citation, so the example cannot fall behind any of them.
  */
-import { APP_BASE } from '../../../data/appLink.ts';
 import { CITATION } from '../../../data/citation.ts';
 import { CITE_REFS } from '../../../data/citeRefs.ts';
 import { dataEntry } from '../../../data/dataPages.ts';
 import { PRESS_PICTURES } from '../../../data/pressPictures.ts';
 import { siteShot } from '../../../data/siteShot.ts';
+import { appAddress } from '../../../utils/appAddress.ts';
 import { asksAcknowledgement } from '../../../utils/asksAcknowledgement.ts';
 import { citationText } from '../../../utils/citationText.ts';
+import { shotLink } from '../../../utils/shotLink.ts';
 import CopyButton from '../../shared/links/CopyButton/CopyButton.tsx';
 import DocLink from '../DocLink/DocLink.tsx';
 import RefLine from '../RefLine/RefLine.tsx';
@@ -30,12 +31,12 @@ function CiteCaption({ picture, cite }: CiteCaptionProps) {
   });
   // Two sources can ask for the same paper (the Gaia mission paper); it is listed once.
   const references = [...new Set(entries.flatMap((entry) => entry.references))];
-  // The address as the app itself writes it: the camera's exact position is read once and never written back.
-  const view = siteShot(picture)
-    .link.split('&')
-    .filter((part) => !part.startsWith('pose='))
+  // The address as the app itself writes it: the camera's exact position and the layer switches are read once and never written back.
+  const view = shotLink(picture)
+    .split('&')
+    .filter((part) => !part.startsWith('pose=') && !part.startsWith('layers='))
     .join('&');
-  const address = `${new URL(import.meta.env.SITE).host}${APP_BASE}#${view}`;
+  const address = appAddress(view);
   const cited = `${CITATION.authors[0]!.family} ${CITATION.released.slice(0, 4)}`;
   const asking = entries.filter((entry) =>
     asksAcknowledgement(entry.record.fields.Attribution ?? ''),

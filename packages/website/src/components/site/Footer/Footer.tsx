@@ -3,35 +3,23 @@
  * name, what Skymap is and the way in; every page under three headings; then
  * the small print. Its ground is the app's widest view, the sphere at the edge
  * of the observable universe, of which only the top rises into the page, so
- * each page ends at the edge of the map. The picture carries its label like
- * any other on the site. The page's last sentence, which counts the light's
+ * each page ends at the edge of the map. The picture is a ground, so it has no
+ * label. The page's last sentence, which counts the light's
  * distance, is passed in as `light` (LightLine, made live by its own small script).
  */
 import type { ReactNode } from 'react';
 
 import pkg from '../../../../../../package.json';
-import { FOOTER_GROUPS } from '../../../data/nav.ts';
-import { MAKER_NAME, REPO_BLOB, REPO_URL } from '../../../data/siteIdentity.ts';
+import { MAKER_NAME, REPO_BLOB } from '../../../data/siteIdentity.ts';
 import { sitePath } from '../../../utils/sitePath.ts';
 import ObjLink from '../../shared/links/ObjLink/ObjLink.tsx';
 import OpenApp from '../../shared/links/OpenApp/OpenApp.tsx';
 import Shot from '../../shared/media/Shot/Shot.tsx';
-import ShotCaption from '../../shared/media/ShotCaption/ShotCaption.tsx';
+import Wordmark from '../../shared/text/Wordmark/Wordmark.tsx';
+import { GROUND, groups } from './Footer.constants.ts';
 import styles from './Footer.module.css';
 
 type FooterProps = { path: string; light?: ReactNode };
-
-const GROUND = 'lesson-universe';
-const groups = FOOTER_GROUPS.map((group) => ({
-  heading: group.heading,
-  links: group.items.map((item) => ({
-    label: item.label,
-    icon: item.icon,
-    href: sitePath(item.path),
-  })),
-}));
-// The repository is the one link here that leaves the site, so it is not a row of the site's own pages.
-groups.at(-1)!.links.push({ label: 'GitHub', icon: 'code', href: REPO_URL });
 
 function Footer({ path, light }: FooterProps) {
   return (
@@ -44,7 +32,7 @@ function Footer({ path, light }: FooterProps) {
         <div className={styles.top}>
           <div className={styles.brand}>
             <a className={styles.mark} href={sitePath('/')}>
-              skymap
+              <Wordmark />
             </a>
             <p className={styles.say}>
               A free, open-source web app that draws the mapped universe in three dimensions at true
@@ -76,8 +64,6 @@ function Footer({ path, light }: FooterProps) {
             ))}
           </nav>
         </div>
-
-        <ShotCaption id={GROUND} showDrawn={false} />
 
         <div className={styles.end}>
           {light}

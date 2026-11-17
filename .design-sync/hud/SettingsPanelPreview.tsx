@@ -40,7 +40,7 @@ import type { StarCatalogId } from '../../src/@types/data/starCatalog/StarCatalo
 import type { StarCatalogItemSettings } from '../../src/@types/settings/StarCatalogItemSettings';
 import type { StructureId } from '../../src/@types/data/structure/StructureId';
 import type { LabelCategory } from '../../src/@types/engine/data/LabelCategory';
-import type { FlowSettings } from '../../src/@types/settings/FlowSettings';
+import type { FlowSettings } from '../../src/layers/flow/@types/FlowSettings';
 
 // ── Seed helpers ─────────────────────────────────────────────────────────────
 

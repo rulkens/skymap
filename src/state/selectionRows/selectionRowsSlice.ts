@@ -1,6 +1,6 @@
 /**
  * selectionRowsSlice — saga-owned derived display cache. The slice holds one
- * `SelectionRow | null` per slot (hover / select / focus). It is the READ
+ * row-or-null per slot (hover / select / focus). It is the READ
  * surface for InfoCard and any UI that needs the resolved, serializable
  * representation of a selected thing.
  *
@@ -23,12 +23,16 @@ import { createSlice, type Draft, type PayloadAction } from '@reduxjs/toolkit';
 import { selectionRowsRoute } from '../../store/constants';
 import type { SelectionRowsState } from '../../@types/store/SelectionRowsState';
 import type { SelectionSlot } from '../../@types/engine/SelectionSlot';
-import type { SelectionRow } from '../../@types/engine/SelectionRow';
+import type { SelectionRowBase } from '../../@types/engine/selection/SelectionRowBase';
 
 // Only the focus slot carries an id: the compiler refuses a focus write without one.
 type SetSelectionRowPayload =
-  | { readonly slot: 'focus'; readonly row: SelectionRow | null; readonly focusId: string | null }
-  | { readonly slot: Exclude<SelectionSlot, 'focus'>; readonly row: SelectionRow | null };
+  | {
+      readonly slot: 'focus';
+      readonly row: SelectionRowBase | null;
+      readonly focusId: string | null;
+    }
+  | { readonly slot: Exclude<SelectionSlot, 'focus'>; readonly row: SelectionRowBase | null };
 
 const selectionRowsSlice = createSlice({
   name: selectionRowsRoute,
@@ -40,7 +44,7 @@ const selectionRowsSlice = createSlice({
       // sound (no clone) and satisfies the WritableDraft slot type. RTK re-exports
       // the Draft type but not castDraft, hence the direct cast.
       const { payload } = action;
-      selectionRows[payload.slot] = payload.row as Draft<SelectionRow> | null;
+      selectionRows[payload.slot] = payload.row as Draft<SelectionRowBase> | null;
       if (payload.slot === 'focus') selectionRows.focusId = payload.focusId;
     },
   },

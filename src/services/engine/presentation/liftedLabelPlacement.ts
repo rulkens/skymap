@@ -59,7 +59,7 @@
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { LabelBBox } from '../../../@types/rendering/LabelBBox';
-import { labelLeaderLine } from '../../../utils/camera/labelLeaderLine';
+import { labelLeaderLine } from '../../../utils/camera/projection/labelLeaderLine';
 import { ATLAS_FONT_SIZE } from '../../../data/fonts';
 import { LABEL_EM_PX_RETUNE } from '../../../data/labels/labelSizingDefaults';
 import { LEADER_LINE_PADDING_PX, MIN_LABEL_CLEARANCE_PX } from './leaderLineStyle';

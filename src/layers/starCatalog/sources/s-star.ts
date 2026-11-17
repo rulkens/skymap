@@ -1,5 +1,4 @@
 import type { SeededStarCatalogSourceEntry } from '../../../@types/data/starCatalog/SeededStarCatalogSourceEntry';
-import { Source } from '../../../data/source';
 
 /**
  * The bound S-stars of the Galactic Centre — one registry row for all 39.
@@ -11,7 +10,6 @@ import { Source } from '../../../data/source';
  */
 export const S_STAR_ENTRY = {
   type: 'starCatalog',
-  code: Source.SStar,
   id: 'sStar',
   label: 'S-Star',
   // A tight cluster at one point on the sky, not a survey footprint —

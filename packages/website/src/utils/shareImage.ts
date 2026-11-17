@@ -1,29 +1,28 @@
-import type { ImageMetadata } from 'astro';
-import { getImage } from 'astro:assets';
-
 import type { ShareImage } from '../@types/ShareImage';
+import { SHARE_CARD_SIZE } from '../data/shareCardSize';
+import { SHARE_CARDS } from '../data/shareCards';
 import { siteShot } from '../data/siteShot';
-// The site's own card (npm run site:shots); the app keeps its own at /og-image.jpg.
-import cardUrl from '../assets/og-card.jpg?url';
+// The site's card (npm run site:shots); the app has its own copy at /og-image.jpg.
+import siteCardUrl from '../assets/og-card.jpg?url';
+import { pageLabel } from './pageLabel';
+import { shareCardFile } from './shareCardFile';
+import { sitePath } from './sitePath';
 
-// Lazy, so only the shot a page names is processed.
-const FILES = import.meta.glob<{ default: ImageMetadata }>('../assets/shots/*.webp');
-const WIDTH = 1200;
+const PAGE_CARDS = import.meta.glob<string>('../assets/cards/*.jpg', {
+  eager: true,
+  query: '?url',
+  import: 'default',
+});
 
-/** The link-preview picture of a page: the site card, or a shot of data/siteShots.ts cut to 1200 px wide as a JPEG, which previews read and a WebP they may not. */
-export async function shareImage(id: string | undefined): Promise<ShareImage> {
-  if (id === undefined) {
-    return { src: cardUrl, width: WIDTH, height: 630, alt: siteShot('og-card').alt };
-  }
-  const shot = siteShot(id);
-  const widest = `../assets/shots/${id}-${Math.max(...shot.widths)}.webp`;
-  const load = FILES[widest];
-  if (!load) throw new Error(`No file for shot "${id}": run npm run site:shots`);
-  const image = await getImage({ src: (await load()).default, format: 'jpg', width: WIDTH });
+/** The link-preview card of the page at `pathname` (Astro.url's, under the base): a landing page's own, else the site's. */
+export function shareImage(pathname: string): ShareImage {
+  const card = SHARE_CARDS.find((entry) => sitePath(entry.path) === pathname);
+  if (!card) return { src: siteCardUrl, ...SHARE_CARD_SIZE, alt: siteShot('og-card').alt };
+  const src = PAGE_CARDS[`../assets/cards/${shareCardFile(card.path)}`];
+  if (!src) throw new Error(`No share card for ${card.path}: run npm run site:shots`);
   return {
-    src: image.src,
-    width: Number(image.attributes.width),
-    height: Number(image.attributes.height),
-    alt: shot.alt,
+    src,
+    ...SHARE_CARD_SIZE,
+    alt: `${siteShot(card.shot).alt} Over it, the Skymap logo and the words ${pageLabel(card.path)}.`,
   };
 }

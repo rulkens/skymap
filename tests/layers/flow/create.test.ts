@@ -9,7 +9,7 @@
 import { describe, it, expect, vi } from 'vitest';
 
 const { mockFetch } = vi.hoisted(() => ({ mockFetch: vi.fn() }));
-vi.mock('../../../src/layers/flow/load/flowFieldFetcher', () => ({
+vi.mock('../../../src/layers/flow/streamlines/load/flowFieldFetcher', () => ({
   flowFieldFetcher: mockFetch,
 }));
 

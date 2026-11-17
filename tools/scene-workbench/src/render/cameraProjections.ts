@@ -7,9 +7,9 @@ import { mat4 } from 'wgpu-matrix';
 
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import { frameUp } from '../../../../src/utils/camera/frameUp';
-import { imagePlaneBasis } from '../../../../src/utils/camera/imagePlaneBasis';
-import { yawPitchToDir } from '../../../../src/utils/camera/yawPitchToDir';
+import { frameUp } from '../../../../src/utils/camera/orbitPose/frameUp';
+import { imagePlaneBasis } from '../../../../src/utils/camera/orbitPose/imagePlaneBasis';
+import { yawPitchToDir } from '../../../../src/utils/camera/orbitPose/yawPitchToDir';
 import { cross3 } from '../../../../src/utils/math/cross3';
 import { mat3FromColumns } from '../../../../src/utils/math/mat3FromColumns';
 import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTightMat3';
@@ -44,7 +44,7 @@ export const CAMERA_PROJECTIONS: {
     view(camera, viewportPx) {
       const { yaw, pitch, distanceM, targetM } = camera;
       const dirLocal = yawPitchToDir(yaw, pitch); // target → eye, Y-up frame-local
-      const dir = rotateVec3ByTightMat3(dirLocal, ENU_UP_BASIS); // → world (Z-up)
+      const dir = rotateVec3ByTightMat3(ENU_UP_BASIS, dirLocal); // → world (Z-up)
       const eyeM: Vec3 = [
         targetM[0] + distanceM * dir[0],
         targetM[1] + distanceM * dir[1],
@@ -63,7 +63,7 @@ export const CAMERA_PROJECTIONS: {
     // perspective view's at its target, so switching projection keeps the scale on screen.
     view(camera, viewportPx) {
       const { yaw, distanceM, targetM } = camera;
-      const level = rotateVec3ByTightMat3(yawPitchToDir(yaw, 0), ENU_UP_BASIS); // Z exactly 0
+      const level = rotateVec3ByTightMat3(ENU_UP_BASIS, yawPitchToDir(yaw, 0)); // Z exactly 0
       const upM: Vec3 = [-level[0], -level[1], 0];
       const eyeM: Vec3 = [targetM[0], targetM[1], targetM[2] + ORTHO_EYE_ABOVE_TARGET_M];
       return {

@@ -8,40 +8,41 @@ import sharp from 'sharp';
 import { writeCloudTier } from '../../../tools/textures/writeCloudTier';
 
 describe('writeCloudTier', () => {
-  // The cloud composite ships white-cloud-on-black with NO alpha channel, so the
-  // build must DERIVE alpha from luminance: a white cloud pixel becomes opaque,
-  // a black sky pixel becomes fully transparent, while the RGB colour is kept.
-  // Fails if the luminance->alpha derivation is dropped (uniform opaque) or
-  // inverted (clouds vanish, sky opaque) — a real property, spec §9.1.
-  it('derives alpha from luminance when the source has none', async () => {
+  // The runtime reads coverage from one raw channel; a coloured or inverted
+  // output would tint the deck or swap cloud and sky.
+  it('writes a single grey channel at the tier width', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'writeCloudTier-'));
     try {
       const srcPath = join(dir, 'src.png');
       const outPath = join(dir, 'out.webp');
+      const srcPx = 64;
+      const tierPx = 32;
 
-      // A 2x1 RGB source (no alpha): a white cell then a black cell.
-      const rgb = Buffer.from([255, 255, 255, 0, 0, 0]);
-      await sharp(rgb, { raw: { width: 2, height: 1, channels: 3 } })
+      // Left half white cloud, right half black sky, as RGB with no alpha.
+      const rgb = Buffer.alloc(srcPx * (srcPx / 2) * 3);
+      for (let y = 0; y < srcPx / 2; y++) {
+        for (let x = 0; x < srcPx / 2; x++)
+          rgb.fill(255, (y * srcPx + x) * 3, (y * srcPx + x) * 3 + 3);
+      }
+      await sharp(rgb, { raw: { width: srcPx, height: srcPx / 2, channels: 3 } })
         .png()
         .toFile(srcPath);
 
-      await writeCloudTier(srcPath, 2, outPath);
+      await writeCloudTier(srcPath, tierPx, outPath);
 
-      const out = await sharp(outPath).raw().toBuffer({ resolveWithObject: true });
-      expect(out.info.channels).toBe(4);
-      const d = out.data;
-
-      // White cell: opaque, RGB preserved.
-      expect(d[3]).toBeGreaterThan(250);
-      expect(d[0]).toBe(255);
-      expect(d[1]).toBe(255);
-      expect(d[2]).toBe(255);
-
-      // Black cell: transparent, RGB preserved.
-      expect(d[7]).toBeLessThan(5);
-      expect(d[4]).toBe(0);
-      expect(d[5]).toBe(0);
-      expect(d[6]).toBe(0);
+      const { data, info } = await sharp(outPath).raw().toBuffer({ resolveWithObject: true });
+      expect(info.width).toBe(tierPx);
+      expect(info.height).toBe(tierPx / 2);
+      const at = (x: number, y: number, c: number): number =>
+        data[(y * info.width + x) * info.channels + c]!;
+      for (let y = 0; y < info.height; y++) {
+        for (let x = 0; x < info.width; x++) {
+          expect(at(x, y, 1)).toBe(at(x, y, 0));
+          expect(at(x, y, 2)).toBe(at(x, y, 0));
+        }
+      }
+      expect(at(4, 4, 0)).toBeGreaterThanOrEqual(252);
+      expect(at(tierPx - 5, 4, 0)).toBeLessThanOrEqual(3);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

@@ -1,19 +1,10 @@
 import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
 
-import { recall } from '../overlay/recall';
 import { remember } from '../overlay/remember';
 import { usePageNotes } from '../overlay/usePageNotes';
 import type { FeedbackPin } from './@types/FeedbackPin';
-
-const pinsKey = (): string => `dev-feedback:${location.pathname}`;
-
-const loadPins = (): FeedbackPin[] => {
-  try {
-    return JSON.parse(recall(pinsKey()) ?? '[]') as FeedbackPin[];
-  } catch {
-    return [];
-  }
-};
+import { loadPins } from './loadPins';
+import { pinsKey } from './pinsKey';
 
 /**
  * The pins of the notes left on this page, kept for the tab so a reload does not lose them. A note

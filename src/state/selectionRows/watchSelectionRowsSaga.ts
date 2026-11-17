@@ -1,6 +1,6 @@
 /**
  * watchSelectionRowsSaga — the reconciler: the SINGLE owner of the selectionRows
- * derived cache. It keeps every row in sync with its SelectionRef.
+ * derived cache. It keeps every row in sync with its selection ref.
  *
  * On a ref change (updateSelection{Hover,Select,Focus}) it re-extracts that one
  * slot. On clearSelection it re-extracts select + focus (the slots that action

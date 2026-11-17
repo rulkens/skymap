@@ -1,0 +1,14 @@
+/* Large enough for a phone held at arm's length; it grows on a booth monitor. */
+.root {
+  display: block;
+  width: clamp(12rem, 22vw, 20rem);
+  max-width: 100%;
+  border-radius: var(--radius-md);
+  image-rendering: pixelated;
+}
+
+/* The controls' QR is read once per tablet from close by; it gives the panel's height to the steps. */
+.compact {
+  composes: root;
+  width: 10rem;
+}

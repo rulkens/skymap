@@ -9,9 +9,11 @@ import type { LayerBody } from '../@types/engine/layer/LayerBody';
 import { BODY_BODY_ROWS } from '../layers/body/bodies/bodyBodyRows';
 import { MISSIONS_BODY_ROWS } from '../layers/missions/bodies/missionsBodyRows';
 import { EARTH_SCENES_BODY_ROWS } from '../layers/earthScenes/bodies/earthScenesBodyRows';
+import { PROBE_SPHERES_BODY_ROWS } from '../layers/probeSpheres/bodies/probeSpheresBodyRows';
 
 export const APP_BODY_REGISTRY: readonly LayerBody[] = [
   ...BODY_BODY_ROWS,
   ...MISSIONS_BODY_ROWS,
   ...EARTH_SCENES_BODY_ROWS,
+  ...PROBE_SPHERES_BODY_ROWS,
 ];

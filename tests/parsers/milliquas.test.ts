@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { parseMilliquas } from '../../tools/parsers/milliquas';
-import { Source } from '../../src/data/source';
 
 describe('parseMilliquas', () => {
   const raw = readFileSync(resolve(__dirname, '../fixtures/milliquas/sample.txt'), 'utf8');
@@ -14,7 +13,7 @@ describe('parseMilliquas', () => {
     );
     expect(i).toBeGreaterThanOrEqual(0);
     const r = records[i]!;
-    expect(r.source).toBe(Source.Milliquas);
+    expect(r.source).toBe('milliquas');
     expect(r.z).toBeCloseTo(0.158, 3);
     expect(r.magR).toBeCloseTo(12.85, 2);
     expect(r.magG).toBeCloseTo(13.05, 2);

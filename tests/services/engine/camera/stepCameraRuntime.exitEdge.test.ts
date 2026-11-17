@@ -13,8 +13,8 @@ vi.mock('../../../../src/services/gpu/device', () => ({
   resizeCanvasToDisplay: () => false,
 }));
 
-import { isWorldArm } from '../../../../src/services/engine/camera/rungs/isWorldArm';
-import { aimCamera } from '../../../../src/state/camera/cameraSlice';
+import { isWorldArm } from '../../../../src/services/engine/camera/arms/world/isWorldArm';
+import { aimCamera } from '../../../../src/state/camera/cameraIntentSlice';
 import { setMissionCraft } from '../../../../src/layers/missions/state/missions/slice';
 import { takeoverEnded, takeoverStarted } from '../../../../src/state/takeover/takeoverActions';
 import { setSimDays } from '../../../../src/state/time/timeSlice';
@@ -23,6 +23,9 @@ import { displayedEye } from '../../../helpers/camera/displayedEye';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
 import { loadVoyagerStopWindows } from '../../../helpers/missions/loadVoyagerStopWindows';
 import type { DriverId } from '../../../../src/@types/engine/camera/DriverId';
+import { installAppSelectionKinds } from '../../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 /** Voyager 1's mission camera in 1990, then the exit with `home` back in focus. */
 function exitMission(home: 'earth' | null, successor: DriverId) {
@@ -48,7 +51,7 @@ function exitMission(home: 'earth' | null, successor: DriverId) {
   expect(h.state.cameraRuntime.register.winner).toBe(successor);
   const edgeEye = displayedEye(h.state);
   const step = Math.hypot(...edgeEye.map((v, i) => v - lastEye[i]!));
-  return { step: step / shown.pose.distance, base: h.store.getState().camera.base, shown };
+  return { step: step / shown.pose.distance, base: h.store.getState().camera.intent.base, shown };
 }
 
 describe('exiting a mission', () => {

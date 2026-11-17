@@ -5,7 +5,7 @@
  * kind-specific fields.
  */
 export type SourceEntryBase = {
-  /** Unique readable key — string twin of the numeric `Source` code (e.g. `'sdss'`, `'galaxy-cluster'`). */
+  /** Unique readable key (e.g. `'sdss'`, `'galaxy-cluster'`). */
   readonly id: string;
   /** Display name shown in the UI (e.g. `'SDSS'`, `'GLADE'`, `'Galaxy cluster'`). */
   readonly label: string;

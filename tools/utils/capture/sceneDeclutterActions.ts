@@ -12,7 +12,7 @@ import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
 import { setGalaxyCatalogVisible } from '../../../src/layers/galaxyCatalog/state/galaxyCatalogs/slice';
 import { setStructureItemEnabled } from '../../../src/layers/structure/state/structures/slice';
 import { setOrbitTrailsEnabled } from '../../../src/layers/body/state/orbitTrails/slice';
-import type { GalaxyCatalogId } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
+import type { GalaxyCatalogId } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 
 const FAMOUS_GALAXY_CATALOG: GalaxyCatalogId = 'famousGalaxy';
 

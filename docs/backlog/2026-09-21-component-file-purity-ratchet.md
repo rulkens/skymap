@@ -23,12 +23,12 @@ component, all six pass:
 | sweep | covers | why it misses a component's private helper |
 | --- | --- | --- |
 | `oneSymbolPerFile.test.ts` | `src/utils/` | counts only **exported** function-shaped declarations; these are module-private, and components are not a sweep root |
-| `frameFilePurity.test.ts` | `src/services/engine/frame/`, `timing/`, `passes/`, every Layer's `passes/` | exactly the right shape — it *does* catch private helpers — but `src/components/` is not a sweep root |
+| `serviceFilePurity.test.ts` | `src/services/engine/frame/`, `timing/`, `passes/`, every Layer's `passes/` | exactly the right shape — it *does* catch private helpers — but `src/components/` is not a sweep root |
 | `noInlineTypes.test.ts` | inline `type`/`interface` anywhere outside a types home | **types only** — this is the one that already covers components |
 | `typeFilesAreDeclarations` · `filenameMatchesExport` · `layerImportBoundary` | `@types/`, filenames, Layer imports | orthogonal |
 
-So the gap is precisely: **`frameFilePurity`'s rule, applied to
-`src/components/`**. `frameFilePurity.test.ts`'s own header states the rationale
+So the gap is precisely: **`serviceFilePurity`'s rule, applied to
+`src/components/`**. `serviceFilePurity.test.ts`'s own header states the rationale
 verbatim — helpers inlined beside a symbol "are invisible to the rest of the
 codebase and untestable alone, and agents keep re-adding them — hence a ratchet
 rather than a review note."
@@ -81,7 +81,7 @@ The machinery already exists — this is a new sweep root plus an allow-list, no
 new infrastructure. Reuse `tests/helpers/conventions/`: `parseOnlyProject`,
 `exportedDeclarations`, `isFunctionShaped`, `walkFiles`.
 
-Follow `frameFilePurity.test.ts`'s ratchet discipline exactly: `ALLOWED` keyed
+Follow `serviceFilePurity.test.ts`'s ratchet discipline exactly: `ALLOWED` keyed
 `<swept dir>/<file>`, seeded from the live tree rather than assumed, and rows
 only ever go DOWN.
 

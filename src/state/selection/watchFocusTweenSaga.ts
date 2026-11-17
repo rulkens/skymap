@@ -19,19 +19,21 @@
 import { takeLatest, take, getContext, put, select } from 'typed-redux-saga';
 
 import { updateSelectionFocus } from './selectionSlice';
-import { startCameraTween } from '../camera/cameraSlice';
+import { startCameraTween } from '../camera/cameraIntentSlice';
 import { focusTweenDescriptor } from '../camera/focusTweenDescriptor';
-import { ROW_FOCUSABLE } from '../../services/engine/helpers/rowFocusable';
+import { selectionKindOf } from '../../services/engine/selection/selectionKindOf';
 import { bodyMovesThisFrame } from '../../utils/scene/bodyMovesThisFrame';
 import { suspendDuringClip } from './suspendDuringClip';
 import { engineStatusChanged, factsReported } from '../engine/engineSlice';
 import { selectStructureBulk } from '../engine/selectors';
+import { DEFAULT_FOV_Y_RAD } from '../../services/engine/camera/framing/cameraFraming';
 import { selectFocusMoves, selectOrientation } from '../settings/selectors';
 import { selectTimeState } from '../time/selectors';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
-import { resolveFocusMotion } from '../../utils/camera/resolveFocusMotion';
-import { focusMotionRowOf } from '../../services/engine/camera/focusMotionRowOf';
+import { resolveFocusMotion } from '../../utils/camera/focusMotion/resolveFocusMotion';
+import { focusMotionRowOf } from '../../services/engine/camera/clips/focusMotionRowOf';
 import type { SagaContext } from '../../store/types';
+import { selectSkyView } from '../sky/selectors/selectSkyView';
 
 export function* watchFocusTweenSaga() {
   yield* takeLatest(
@@ -75,21 +77,21 @@ export function* watchFocusTweenSaga() {
       }
       if (row === null) return;
 
-      // Some rows (the zone-of-avoidance band today) have no focus target —
-      // ROW_FOCUSABLE is exhaustive over SelectionRow['type'], so a future
-      // non-focusable arm fails to compile there until declared, instead of
-      // silently reaching focusFraming's throw. This is the ONE place every
-      // `updateSelectionFocus` dispatch funnels through (InfoCard,
-      // double-click, keyboard shortcut, deep link, tour restore), so it's
-      // the enforcement site for that invariant: a no-op here, not a crash
+      // Some kinds (the zone-of-avoidance band today) declare no focus. This is
+      // the ONE place every `updateSelectionFocus` dispatch funnels through
+      // (InfoCard, double-click, keyboard shortcut, deep link, tour restore), so
+      // it's the enforcement site: a no-op here, not `framingPose`'s throw
       // inside the saga worker.
-      if (!ROW_FOCUSABLE[row.type]) return;
+      if (selectionKindOf(row.type).focus === null) return;
 
       // Known ready since the wait above; re-read rather than reuse, since a
       // long catalog defer can move `from`/`fovYRad` in the meantime.
       const runtime = cameraRuntime()!;
+      // The standing lens is the sky's own (wheel, head turn): a fly that starts there leaves
+      // it, so it frames for and eases to the default, as the scroll-out lift does.
+      const lens = (yield* select(selectSkyView)) === null ? runtime.fovYRad : DEFAULT_FOV_Y_RAD;
       // Frozen here, at dispatch: a style flip or slider drag mid-flight never bends this move.
-      const motion = resolveFocusMotion(yield* select(selectFocusMoves), runtime.fovYRad);
+      const motion = resolveFocusMotion(yield* select(selectFocusMoves), lens);
 
       // The motion row decides whether a moving body is tweened.
       // Gate on `bodyMovesThisFrame`, not `row.type === 'body'`: a focused
@@ -98,7 +100,9 @@ export function* watchFocusTweenSaga() {
 
       const frame = yield* select(selectOrientation);
       yield* put(
-        startCameraTween(focusTweenDescriptor(row, runtime.from, runtime.fovYRad, motion, frame)),
+        startCameraTween(
+          focusTweenDescriptor(row, runtime.from, runtime.fovYRad, lens, motion, frame),
+        ),
       );
     }),
   );

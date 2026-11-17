@@ -5,8 +5,8 @@
  * magnitude) changes which directions are over-sampled.
  */
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import type { SourceType } from '../../../src/@types/data/SourceType';
-import { galaxyCatalogFluxLimit } from '../../../src/data/galaxyCatalog/galaxyCatalogFluxLimits';
+import type { GalaxyCatalogId } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
+import { galaxyCatalogFluxLimit } from '../../../src/layers/galaxyCatalog/records/data/galaxyCatalogFluxLimits';
 import { absoluteFromApparent } from '../../../src/utils/math/absoluteFromApparent';
 import { vMaxWeight } from '../../../src/utils/math/vMaxWeight';
 import type { BiasWeightKind } from '../../@types/catalog/BiasWeightKind';
@@ -18,7 +18,7 @@ const D_REF_MPC = 750;
 
 // The byte-55 codec floors at 0.1, so vmax lands in [0.1, 1]: NaN-photometry
 // rows (vMaxWeight 0) draw at 0.1×, not hidden.
-function vMaxWeights(cloud: GalaxyCatalog, source: SourceType): Float32Array {
+function vMaxWeights(cloud: GalaxyCatalog, source: GalaxyCatalogId): Float32Array {
   const mLim = galaxyCatalogFluxLimit(source);
   const p = cloud.positions;
   const weights = new Float32Array(cloud.count);
@@ -33,7 +33,7 @@ function vMaxWeights(cloud: GalaxyCatalog, source: SourceType): Float32Array {
 
 export function bakeBiasWeights(
   cloud: GalaxyCatalog,
-  source: SourceType,
+  source: GalaxyCatalogId,
   kind: Exclude<BiasWeightKind, 'none'>,
 ): Float32Array {
   if (kind === 'angular') return computeAngularWeights({ cloud });

@@ -17,7 +17,7 @@ import {
   inputSourceResized,
   inputTapped,
 } from '../../../src/state/input/inputSlice';
-import { focusSelected } from '../../../src/state/selection/focusSelected';
+import { viewSelected } from '../../../src/state/selection/viewSelected';
 import type { DeviceEvent } from '../../../src/@types/input/DeviceEvent';
 import type { UnitPoint } from '../../../src/@types/input/UnitPoint';
 
@@ -160,7 +160,7 @@ describe('inputSourceSaga', () => {
     expect(types()).not.toContain(inputTapped.type);
   });
 
-  it('a doubleTap puts inputTapped then focusSelected', () => {
+  it('a doubleTap puts inputTapped then viewSelected', () => {
     emit(resize(200, 100));
     emit(pointer('down', A));
     emit(pointer('up', A));
@@ -169,8 +169,33 @@ describe('inputSourceSaga', () => {
     expect(types().slice(-3)).toEqual([
       inputGestureEnded.type,
       inputTapped.type,
-      focusSelected.type,
+      viewSelected.type,
     ]);
+  });
+
+  it('two fingers moving together restart the gesture as a tilt and drag it', async () => {
+    const touch = (kind: 'down' | 'move', pointer: number, x: number, y: number): DeviceEvent => ({
+      kind,
+      t: (t += 10),
+      pointer,
+      pointerType: 'touch',
+      button: 0,
+      at: { x, y },
+      mods: NO_MODS,
+    });
+    emit(resize(200, 100));
+    emit(touch('down', 1, 0.4, 0.5));
+    emit(touch('down', 2, 0.6, 0.5));
+    for (const y of [0.47, 0.44, 0.41]) {
+      emit(touch('move', 1, 0.4, y));
+      emit(touch('move', 2, 0.6, y));
+    }
+    resolveFrame();
+    await settle();
+    expect(intentsOf()).toEqual(['orbit', 'tilt']);
+    const moved = actions.filter((a) => a.type === inputMoved.type);
+    const motion = (moved.at(-1)!.payload as { motion: { intent: string }[] }).motion;
+    expect(motion.map((m) => m.intent)).toEqual(['tilt']);
   });
 
   it('cancelling the saga ends an open gesture before detaching', () => {
@@ -185,14 +210,14 @@ describe('inputSourceSaga', () => {
       scheme = 'openspace';
     });
 
-    it('a left tap selects and a double-tap focuses', () => {
+    it('a left tap selects and a double-tap views', () => {
       emit(resize(200, 100));
       emit(pointer('down', A));
       emit(pointer('up', A));
       expect(types()).toContain(inputTapped.type);
       emit(pointer('down', A));
       emit(pointer('up', A));
-      expect(types().slice(-1)).toEqual([focusSelected.type]);
+      expect(types().slice(-1)).toEqual([viewSelected.type]);
     });
 
     it('a right-button release does not pick', () => {
@@ -200,7 +225,7 @@ describe('inputSourceSaga', () => {
       emit(pointer('down', A, 2));
       emit(pointer('up', A, 2));
       expect(types()).not.toContain(inputTapped.type);
-      expect(types()).not.toContain(focusSelected.type);
+      expect(types()).not.toContain(viewSelected.type);
     });
 
     it("a scheme toggle mid-drag keeps the running gesture's intent and tap rule", () => {

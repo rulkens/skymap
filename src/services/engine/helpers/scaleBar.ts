@@ -66,7 +66,7 @@
 import { formatDistance } from '../../../utils/format/formatDistance';
 import { niceRound } from '../../../utils/math/niceRound';
 import type { ScaleInfo } from '../../../@types/engine/ScaleInfo';
-import type { ScaleBarCamera } from '../../../@types/camera/ScaleBarCamera';
+import type { ScaleBarCamera } from '../../../@types/camera/orbitCamera/ScaleBarCamera';
 
 /**
  * Compute the next ScaleInfo (label + rounded pixel width) for the

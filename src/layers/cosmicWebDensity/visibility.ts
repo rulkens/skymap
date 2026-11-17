@@ -9,7 +9,7 @@ import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from './sources/cosmicWebDensitySource
 export const cosmicWebDensityVisibility = [
   {
     key: 'cosmicWebDensity',
-    items: COSMIC_WEB_DENSITY_SOURCE_ROWS.map(([, entry]) => entry.id),
+    items: COSMIC_WEB_DENSITY_SOURCE_ROWS.map((entry) => entry.id),
     recession: 'strong',
     bands: { deepZoom: SURVEY_DEEP_ZOOM },
   },

@@ -2,28 +2,27 @@
  * composeSelectionRows — the one `SelectionResolver` the saga context and the
  * pick path both read (D5, Ruling 4). `rowsOf` is called per resolution, not
  * cached, so a Layer row `createLayers` appends after this resolver is built
- * is visible immediately. Focus ids resolve by claim-then-decode: the one
- * claiming row is authoritative even when its `decode` returns null; two or
- * more claims is a boot-shape bug and throws rather than picking a winner.
+ * is visible immediately. Focus ids resolve by claim-then-decode
+ * (see `claimingSelectionRow`).
  *
- * `kindsEnabled` gates `resolvePick` ONLY — a deep link, a command-palette
+ * `pickingOff` gates `resolvePick` ONLY — a deep link, a command-palette
  * row, or a restored URL selection must still resolve a kind a scene click
  * cannot reach, so `extractRow`/`resolveFocusId`/`focusIdOf` stay ungated. It
- * is required rather than defaulting to all-true: a caller that forgot it
- * would silently ignore every view's pick restriction, which no test or type
- * would catch. Tests that do not exercise the gate pass
- * `tests/support/allKindsEnabled`.
+ * is required rather than defaulting to none: a caller that forgot it would
+ * silently ignore every view's pick restriction, which no test or type would
+ * catch. Tests that do not exercise the gate pass `tests/support/noKindsOff`.
  */
 
-import { APP_SOURCE_REGISTRY } from '../../../compositions/appSources';
-import type { SelectionKind } from '../../../@types/engine/SelectionKind';
 import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKindRow';
 import type { SelectionResolver } from '../../../@types/engine/selection/SelectionResolver';
+import { claimingSelectionRow } from '../../../utils/selection/claimingSelectionRow';
 
 export function composeSelectionRows(
   rowsOf: () => readonly SelectionKindRow[],
-  kindsEnabled: () => Record<SelectionKind, boolean>,
+  pickingOff: () => readonly string[],
 ): SelectionResolver {
+  const claimingRow = (focusId: string): SelectionKindRow | null =>
+    claimingSelectionRow(rowsOf(), focusId);
   return {
     resolvePick(pick) {
       if (pick === null) return null;
@@ -32,8 +31,8 @@ export function composeSelectionRows(
         console.warn(`resolvePick: source code ${pick.sourceCode} is not a pickable surface`);
         return null;
       }
-      if (!kindsEnabled()[row.type]) return null;
-      return row.resolvePick(APP_SOURCE_REGISTRY[pick.sourceCode], pick);
+      if (pickingOff().includes(row.type)) return null;
+      return row.resolvePick(pick);
     },
 
     extractRow(ref, simDays) {
@@ -44,16 +43,11 @@ export function composeSelectionRows(
 
     resolveFocusId(focusId) {
       if (!focusId) return null;
-      const claiming = rowsOf().filter((r) => r.focusId?.claims(focusId));
-      if (claiming.length === 0) return null;
-      if (claiming.length > 1) {
-        throw new Error(
-          `composeSelectionRows: focus id "${focusId}" is claimed by more than one row (${claiming
-            .map((r) => r.type)
-            .join(', ')})`,
-        );
-      }
-      return claiming[0]!.focusId!.decode(focusId);
+      return claimingRow(focusId)?.focusId!.decode(focusId) ?? null;
+    },
+
+    claimedKind(focusId) {
+      return claimingRow(focusId)?.type ?? null;
     },
 
     focusIdOf(ref) {

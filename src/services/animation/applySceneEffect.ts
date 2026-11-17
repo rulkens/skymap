@@ -12,8 +12,8 @@ import type { EngineState } from '../../@types/engine/state/EngineState';
 import type { AppDispatch } from '../../store/types';
 import { updateSelectionFocus } from '../../state/selection/selectionSlice';
 import { setOrientation } from '../../state/settings/core/orientationSlice';
-import { startFrameTween } from '../../state/camera/cameraSlice';
-import { liveUpBasisQuat } from '../engine/camera/liveUpBasisQuat';
+import { startFrameTween } from '../../state/camera/cameraIntentSlice';
+import { liveUpBasisQuat } from '../engine/camera/orientation/liveUpBasisQuat';
 import { setVisibilityActionsFor } from '../../utils/visibility/setVisibilityActionsFor';
 
 export function applySceneEffect(
@@ -44,8 +44,7 @@ export function applySceneEffect(
     }
 
     case 'focus': {
-      // `null` clears focus, driving structureFocus recession to 0 and
-      // de-isolating every structure.
+      // `null` clears focus, driving the focus recession back to 0.
       store.dispatch(updateSelectionFocus(effect.ref));
       return;
     }

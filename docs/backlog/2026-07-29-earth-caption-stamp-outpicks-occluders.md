@@ -72,7 +72,7 @@ choosing.
 
 ## Files
 
-- `src/layers/body/passes/bodyGlintsPass.ts:46-48,121-135` — the stamp, its
+- `src/layers/body/glints/passes/bodyGlintsPass.ts:46-48,121-135` — the stamp, its
   gate, and the comment that dismisses the overlap.
 - `src/services/gpu/shaders/lib/pickDepthBands.wesl` — the bands and the
   `~orbitDistance/4` reasoning.

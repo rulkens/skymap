@@ -60,7 +60,7 @@
  * Over-pinned legs (pinned seconds ≥ total) throw here, loudly, at compile time.
  */
 
-import type { CameraPose } from '../../../@types/camera/CameraPose';
+import type { CameraPose } from '../../../@types/camera/pose/CameraPose';
 import type { CompositeTrack } from '../../../@types/animation/compiledClip/CompositeTrack';
 import type { Ease } from '../../../@types/animation/Ease';
 import type { Vec3 } from '../../../@types/math/Vec3';
@@ -71,10 +71,10 @@ import type { PassByDir } from '../../../@types/animation/PassByDir';
 import { catmullRomNonUniform } from '../../../utils/math/catmullRomNonUniform';
 import { causalHermiteNonUniform } from '../../../utils/math/causalHermiteNonUniform';
 import { monotoneCubic } from '../../../utils/math/monotoneCubic';
-import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
-import { yawPitchToDir } from '../../../utils/camera/yawPitchToDir';
-import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
-import { frameUp } from '../../../utils/camera/frameUp';
+import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitPose/orbitAnglesLookingAlong';
+import { yawPitchToDir } from '../../../utils/camera/orbitPose/yawPitchToDir';
+import { imagePlaneBasis } from '../../../utils/camera/orbitPose/imagePlaneBasis';
+import { frameUp } from '../../../utils/camera/orbitPose/frameUp';
 import { rotateVec3ByTightMat3 } from '../../../utils/math/rotateVec3ByTightMat3';
 import { lerp } from '../../../utils/math/lerp';
 import { trapezoidEase } from '../../../utils/math/trapezoidEase';
@@ -261,7 +261,7 @@ export function buildPathTrack(params: BuildParams): CompositeTrack {
   // the live camera with no positional pop. `dir` decodes frame-LOCAL; rotate
   // into world by `frameBasis` (tight column-major product, mirroring
   // `updatePosition.ts`) so this knot lands where the renderer's eye actually is.
-  const liveDir = rotateVec3ByTightMat3(yawPitchToDir(start.yaw, start.pitch), frameBasis);
+  const liveDir = rotateVec3ByTightMat3(frameBasis, yawPitchToDir(start.yaw, start.pitch));
   const liveEye: Vec3 = [
     start.target[0] + start.distance * liveDir[0],
     start.target[1] + start.distance * liveDir[1],
@@ -625,7 +625,7 @@ export function buildPathTrack(params: BuildParams): CompositeTrack {
     // into world by `frameBasis` — so to land the eye on (tx,ty,tz) we set
     // target = eye − distance · dir, through the same rotation.
     const dist = Math.exp(pose.ld);
-    const dir = rotateVec3ByTightMat3(yawPitchToDir(yawV, pitchV), frameBasis);
+    const dir = rotateVec3ByTightMat3(frameBasis, yawPitchToDir(yawV, pitchV));
     return {
       target: [pose.tx - dist * dir[0], pose.ty - dist * dir[1], pose.tz - dist * dir[2]],
       distance: dist,

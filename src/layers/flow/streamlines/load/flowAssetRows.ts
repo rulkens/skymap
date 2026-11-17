@@ -1,0 +1,20 @@
+/** The Layer's one asset row: demand only; the velocity cube is one tier-agnostic `.scfd`. */
+
+import type { AssetWiringRow } from '../../../../@types/loading/AssetWiringRow';
+import type { FlowAssetKey } from '../../@types/FlowAssetKey';
+import type { FlowRuntime } from '../../@types/FlowRuntime';
+
+export function flowAssetRows(
+  runtime: FlowRuntime,
+): readonly AssetWiringRow<unknown, unknown, FlowAssetKey>[] {
+  return [
+    {
+      key: 'flow',
+      slot: runtime.slot,
+      req: () => undefined,
+      demand: { near: { band: 'deepZoom', edge: 'in', lead: 10, release: 100 } },
+      priority: 81, // same rung as filaments, behind them by size
+      gates: 'flow',
+    },
+  ];
+}

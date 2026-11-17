@@ -14,15 +14,16 @@ import { STRUCTURE_SOURCE_ROWS } from './sources/structureSourceRows';
 import { create } from './create';
 import { destroy } from './destroy';
 import { structureMarkersPlanner } from './frame';
-import { structureAssetRows } from './load/structureAssetRows';
-import { structureMarkersCosmoPass } from './passes/structureMarkersCosmoPass';
-import { structureMarkersNearPass } from './passes/structureMarkersNearPass';
-import { exoplanetOrbitsPass } from './passes/exoplanetOrbitsPass';
-import { produceStructureLabels } from './present/produceStructureLabels';
-import { structureSelectionRow } from './present/structureSelectionRow';
-import StructuresSectionContainer from './ui/StructuresSectionContainer';
-import StructureDetailCardContainer from './ui/StructureDetailCardContainer';
-import CompactStructureCard from './ui/CompactStructureCard/CompactStructureCard';
+import { structureAssetRows } from './catalog/load/structureAssetRows';
+import { structureMarkersCosmoPass } from './markers/passes/structureMarkersCosmoPass';
+import { structureMarkersNearPass } from './markers/passes/structureMarkersNearPass';
+import { produceStructureLabels } from './markers/present/produceStructureLabels';
+import { structureSelectionRow } from './selection/structureSelectionRow';
+import { structureSelectionKinds } from './selection/kinds';
+import StructuresSectionContainer from './controls/ui/StructuresSectionContainer';
+import StructureDetailCardContainer from './cards/ui/StructureDetailCardContainer';
+import CompactStructureCard from './cards/ui/CompactStructureCard/CompactStructureCard';
+import { exoplanetOrbitsPass } from './markers/passes/exoplanetOrbitsPass';
 import type { StructureFacts } from './@types/StructureFacts';
 
 export const structureLayer = defineLayer({
@@ -48,19 +49,22 @@ export const structureLayer = defineLayer({
         id: 'structureLabelsCosmo',
         slab: COSMO,
         label: 'structure',
-        produceLabels: produceStructureLabels(runtime.store, 'cosmic'),
+        produceLabels: produceStructureLabels(runtime, 'cosmic'),
       },
       {
         id: 'structureLabelsNear',
         slab: NEAR0,
         label: 'structure',
-        produceLabels: produceStructureLabels(runtime.store, 'milkyWay'),
+        produceLabels: produceStructureLabels(runtime, 'milkyWay'),
       },
     ],
   }),
-  selection: (runtime) => [structureSelectionRow(runtime.store)],
+  selection: {
+    kinds: structureSelectionKinds,
+    rows: (runtime) => [structureSelectionRow(runtime)],
+  },
   ui: [
-    { slot: 'main', content: StructuresSectionContainer },
+    { slot: 'main', content: StructuresSectionContainer, title: 'Structures' },
     {
       slot: 'detailCard',
       content: {

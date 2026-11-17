@@ -1,0 +1,669 @@
+/**
+ * evaluateClip — pure per-clip camera evaluator: given a `ClipData` and an
+ * elapsed time in seconds, returns the camera pose at that instant.
+ *
+ * ### The three-layer composition model
+ *
+ * Camera motion is modelled as three additive layers per channel:
+ *
+ *   final[ch](t) = base[ch](t)  +  ∫₀ᵗ vel[ch]  +  osc[ch](t)
+ *
+ * **Base layer** (`baseTracks`): absolute tweens and delta spins. Only one
+ * writer per channel per window (enforced at compile time), two only where an
+ * overlapping `seq` crossfades them (the incoming one's `blendIn`). Between segments
+ * the channel holds its most recent value.
+ *
+ * **Velocity layer** (`velTracks`): closed-form integral of `rate` ramps. A
+ * ramp accelerates a channel's velocity FROM the velocity carried out of the
+ * previous ramp TO its own `to` over its window `[s, e)`, then HOLDS `to`
+ * until the next ramp starts (or forever, if it is the last). Multiple ramps
+ * on the same channel form an OVERRIDE chain: a later ramp takes over from
+ * the prior ramp's carried velocity at its own `startSec`. Each ramp is only
+ * active over its own interval — it does not keep accumulating after the next
+ * ramp starts. The total displacement is a pure function of `t` — NO
+ * per-frame accumulator.
+ *
+ * **Oscillation layer** (`oscTracks`): zero-mean sine bob,
+ * `amp · env(t) · sin(2π t / period)`. Additive with both base and velocity.
+ * A bob is active over `[startSec, endSec)` (a perpetual bob is the limiting
+ * `[-∞, +∞)` case, where `env ≡ 1` and it reduces to `amp · sin(2π t / period)`);
+ * `env` ramps the amplitude in/out over the window's `fade` seconds. Multiple
+ * tracks on the same channel are summed independently.
+ *
+ * ### Velocity-integral method
+ *
+ * For a channel's VelRamps r_0..r_{k-1} sorted ascending by startSec,
+ * let b_i = r_{i+1}.startSec (the "boundary" where the next ramp takes over),
+ * and b_{last} = +Infinity. Ramp i is active over [s_i, b_i).
+ *
+ * Carried velocity into r_0 is 0; into r_{i+1} is the velocity of r_i
+ * evaluated at b_i (= to_i if b_i ≥ e_i, otherwise the mid-ramp value).
+ *
+ * Velocity inside ramp i at u ∈ [s_i, e_i):
+ *   v(u) = carriedV_i + (to_i − carriedV_i) · EASE((u − s_i) / (e_i − s_i))
+ * For u ≥ e_i (held): v(u) = to_i.
+ *
+ * Displacement contributed by ramp i over [s_i, min(t, b_i)]:
+ *   ramp portion: carriedV_i·Δ + (to_i − carriedV_i)·dur_i·∫₀^q EASE(p) dp
+ *     where Δ = min(min(t,b_i), e_i) − s_i, q = Δ / dur_i
+ *   held portion: to_i · (min(t, b_i) − e_i)  if min(t, b_i) > e_i
+ *
+ * For `ease:'linear'`, ∫₀^q p dp = q²/2 (analytic). Non-linear eases use
+ * a 64-step Simpson quadrature over [0, q]. The quadrature is deterministic
+ * and frame-rate-independent — the same (ramp, t) pair always produces the
+ * same displacement.
+ *
+ * With a single ramp, carriedV=0 and b_0=∞, so the formula reduces exactly
+ * to the prior single-ramp behavior.
+ *
+ * ### Spin-loop continuation choice
+ *
+ * For a `spin` segment with `loop: true`, the spin delta continues beyond
+ * `endSec` as a LINEAR extrapolation of the final rate: for t ≥ startSec,
+ * the total delta is `by · (t − startSec) / (endSec − startSec)`.
+ * The tested clips do not exercise `loop`, but flyout/dwellDrift authors can
+ * rely on linear continuation.
+ *
+ * ### Memoised compile cache
+ *
+ * `evaluateClip` compiles `ClipData` to a `CompiledClip` on first call and
+ * caches the result on `data` reference identity via a module-level `WeakMap`.
+ * The cache also remembers the orientation `frameBasis` the clip was compiled
+ * under: a `flyPath`'s aim is encoded through the steady basis, so the same
+ * `ClipData` under a different frame recompiles (a reference compare against the
+ * stable `ORIENTATION_FRAMES[frame]` object). Steady frames — the common case —
+ * hit the cache and avoid re-flattening the effect tree every frame.
+ *
+ * ### Frames
+ *
+ * A `set`/`setVec` endpoint may name the frame its `to` is read in (spec §8);
+ * untagged ⇒ absolute. Interpolation runs in the endpoint's own frame, so clip
+ * time splits into "legs", one per frame, and a leg's start is converted ONCE,
+ * at leg start. `spin`/`rate`/`osc` are relative writers: they act in whatever
+ * arm is current, never open a leg, and are otherwise untouched. Body-framed
+ * channels are body-FIXED metres — a LookAt the driver decodes at its exit.
+ *
+ * ### Purity
+ *
+ * - `data` and the cached `CompiledClip` are never mutated.
+ * - The returned `CameraPose` allocates a fresh `target` triple each call.
+ * - Same `(data, elapsedSec, frameBasis)` triple ⇒ deep-equal output — EXCEPT
+ *   across a frame change, where the leg-start conversion is captured against
+ *   the bodies of the first call that reached the leg and held for the playback.
+ */
+
+import type { ClipData } from '../../../../@types/animation/ClipData';
+import type { ClipFrameOptions } from '../../../../@types/animation/ClipFrameOptions';
+import type { FramedClipPose } from '../../../../@types/animation/FramedClipPose';
+import type { CompiledClip } from '../../../../@types/animation/compiledClip/CompiledClip';
+import type { BodyState } from '../../../../@types/scene/BodyState';
+import type { CameraPose } from '../../../../@types/camera/pose/CameraPose';
+import type { PoseFrame } from '../../../../@types/camera/pose/PoseFrame';
+import type { Channel } from '../../../../@types/animation/Channel';
+import type { Ease } from '../../../../@types/animation/Ease';
+import type { Vec3 } from '../../../../@types/math/Vec3';
+import type { Mat3 } from '../../../../@types/math/Mat3';
+import type { TerrainHeightAtLookup } from '../../../../@types/camera/terrain/TerrainHeightAtLookup';
+import { compileClip } from '../../animation/compileClip';
+import { EASE } from '../../animation/ease';
+import { segmentValueAt } from '../../animation/segmentValueAt';
+import { lerpUnwrapped } from '../../animation/lerpUnwrapped';
+import { unwrappedEndOf } from '../../animation/unwrappedEndOf';
+import { smootherstep } from '../../../../utils/math/smootherstep';
+import { foldToWorld } from '../arms/foldToWorld';
+import { rowFor } from '../arms/rowFor';
+import { sameFrame } from '../arms/sameFrame';
+import { datumOnlyTerrainHeight } from '../../../../utils/camera/terrain/datumOnlyTerrainHeight';
+import { DEFAULT_FOV_Y_RAD } from '../framing/cameraFraming';
+import type { BaseSegment } from '../../../../@types/animation/compiledClip/BaseSegment';
+import type { VelRamp } from '../../../../@types/animation/compiledClip/VelRamp';
+import type { CompositeTrack } from '../../../../@types/animation/compiledClip/CompositeTrack';
+import type { CompositeSample } from '../../../../@types/animation/compiledClip/CompositeSample';
+import type { PositionedId } from '../../../../@types/scene/PositionedId';
+import type { FrameLeg } from '../../../../@types/animation/compiledClip/FrameLeg';
+import { buildFrameLegs } from '../../animation/buildFrameLegs';
+import { legIndexAt } from '../../animation/legIndexAt';
+
+// ---------------------------------------------------------------------------
+// Module-level compile cache — keyed on ClipData reference identity.
+// Plan B's playClip will reuse this same WeakMap.
+// ---------------------------------------------------------------------------
+
+// The cache stores the basis a clip was last compiled under alongside its
+// compiled form. A `flyPath`'s aim is encoded through the STEADY orientation
+// basis (see `buildPathTrack`), so the same `ClipData` under a different frame
+// must recompile. Registry basis objects (`ORIENTATION_FRAMES[frame]`) are
+// stable per frame, so a reference compare is exact and cheap: steady frames
+// hit the cache, an orientation switch (rare) recompiles once. A basis-free clip
+// (no `flyPath`) recompiles to a byte-identical result, so this never affects a
+// tween / static clip.
+type Cached = { readonly frameBasis: Mat3 | undefined; readonly compiled: CompiledClip };
+const compileCache = new WeakMap<ClipData, Cached>();
+
+function getCompiled(data: ClipData, frameBasis: Mat3 | undefined): CompiledClip {
+  const cached = compileCache.get(data);
+  if (cached !== undefined && cached.frameBasis === frameBasis) return cached.compiled;
+  const compiled = compileClip(data, frameBasis);
+  compileCache.set(data, { frameBasis, compiled });
+  return compiled;
+}
+
+// ---------------------------------------------------------------------------
+// Velocity integral helpers
+//
+// The ramp integral ∫_0^{q} carriedV + (to − carriedV)·E(x) dx in closed form
+// for linear ease, and 64-step Simpson quadrature for the other eases.
+// ---------------------------------------------------------------------------
+
+const SIMPSON_STEPS = 64; // must be even for Simpson's rule
+
+/**
+ * Integrate E(x) over [0, p] using 64-step Simpson's rule.
+ * `p` is the normalised progress in [0, 1]. Returns the integral value.
+ */
+function integrateEase(easeName: Ease, p: number): number {
+  if (p <= 0) return 0;
+  const clampedP = Math.min(1, p);
+  const easeFn = EASE[easeName];
+  const n = SIMPSON_STEPS; // even number of steps
+  const h = clampedP / n;
+  // Simpson's rule: h/3 * (f(x0) + 4f(x1) + 2f(x2) + ... + 4f(xn-1) + f(xn))
+  let sum = easeFn(0) + easeFn(clampedP);
+  for (let i = 1; i < n; i++) {
+    const x = i * h;
+    sum += (i % 2 === 0 ? 2 : 4) * easeFn(x);
+  }
+  return (h / 3) * sum;
+}
+
+/**
+ * rampVelocity — velocity produced by ONE VelRamp at time u, given its
+ * carried-in velocity `carriedV`.
+ *
+ * v(u) = carriedV + (to − carriedV)·E((u − s) / (e − s))  for u ∈ [s, e)
+ * v(u) = to                                                 for u ≥ e
+ * v(u) = carriedV                                           for u < s
+ */
+function rampVelocity(ramp: VelRamp, carriedV: number, u: number): number {
+  const { startSec: s, endSec: e, to, ease } = ramp;
+  if (u < s) return carriedV;
+  if (u >= e) return to;
+  const dur = e - s;
+  const progress = dur > 0 ? (u - s) / dur : 1;
+  return carriedV + (to - carriedV) * EASE[ease](progress);
+}
+
+/**
+ * rampContribution — displacement contributed by ONE VelRamp over its ACTIVE
+ * interval [s_i, min(t, b_i)], given its carried-in velocity `carriedV`.
+ *
+ * `boundary` is b_i = next ramp's startSec (or +Infinity for the last ramp).
+ * The ramp is only responsible for its own active interval — it does not keep
+ * accumulating past `boundary` even though it might hold a non-zero velocity.
+ *
+ * Decomposed into:
+ *   ramp portion: carriedV·Δ + (to − carriedV)·dur·∫_0^q E(x) dx
+ *     where Δ = min(w, e) − s, q = Δ / dur, w = min(t, boundary)
+ *   held portion: to · (w − e)  if w > e
+ */
+function rampContribution(ramp: VelRamp, carriedV: number, boundary: number, t: number): number {
+  const { startSec: s, endSec: e, to, ease } = ramp;
+  // The ramp is active over [s, boundary). Clamp our query window to that.
+  const w = Math.min(t, boundary);
+  if (w <= s) return 0;
+
+  const dur = e - s;
+  // The ramp portion: velocity linearly-or-eased from carriedV to to over [s, e).
+  const rampEnd = Math.min(w, e);
+  const delta = rampEnd - s; // time within the ramp portion being integrated
+  const q = dur > 0 ? delta / dur : 1;
+
+  let rampPart: number;
+  if (ease === 'linear') {
+    // Analytic closed form for linear ease (E(x) = x):
+    //   ∫_0^q [carriedV + (to − carriedV)·x] dx
+    //   = carriedV·q + (to − carriedV)·q²/2
+    // Multiply by dur to convert back from normalised units to seconds.
+    rampPart = dur * (carriedV * q + (to - carriedV) * (q * q) * 0.5);
+  } else {
+    // 64-step Simpson quadrature: ∫_0^q E(x) dx.
+    //   Total: dur·[carriedV·q + (to − carriedV)·∫_0^q E(x) dx]
+    rampPart = dur * (carriedV * q + (to - carriedV) * integrateEase(ease, q));
+  }
+
+  // The held portion: velocity is exactly `to` for all u ≥ e within [s, w].
+  const holdPart = w > e ? to * (w - e) : 0;
+  return rampPart + holdPart;
+}
+
+// ---------------------------------------------------------------------------
+// Velocity layer — override chain across all ramps on a channel.
+//
+// Ramps are processed in ascending startSec order. Each ramp is active only
+// over [s_i, b_i) where b_i = next ramp's startSec. Carried velocity passes
+// forward: carriedV_{i+1} = velocity of ramp i at b_i.
+//
+// With a single ramp, carriedV=0 and boundary=+Infinity, which reduces
+// exactly to the prior single-ramp behavior.
+// ---------------------------------------------------------------------------
+
+function velDisplacement(compiled: CompiledClip, ch: Channel, t: number): number {
+  // Collect and sort this channel's ramps by startSec ascending.
+  const ramps = compiled.velTracks.filter((r) => r.channel === ch);
+  if (ramps.length === 0) return 0;
+  ramps.sort((a, b) => a.startSec - b.startSec);
+
+  let total = 0;
+  let carriedV = 0;
+
+  for (let i = 0; i < ramps.length; i++) {
+    const ramp = ramps[i]!;
+    const nextRamp = ramps[i + 1];
+    const boundary = nextRamp !== undefined ? nextRamp.startSec : Infinity;
+
+    // Accumulate this ramp's contribution over its own active interval.
+    total += rampContribution(ramp, carriedV, boundary, t);
+
+    // If t is still before this ramp's active interval ends, we're done.
+    if (t < boundary) break;
+
+    // Carry forward the velocity this ramp holds at the boundary.
+    carriedV = rampVelocity(ramp, carriedV, boundary);
+  }
+
+  return total;
+}
+
+// ---------------------------------------------------------------------------
+// Oscillation layer — sum of all osc tracks on a channel.
+// ---------------------------------------------------------------------------
+
+/**
+ * oscEnvelope — the amplitude multiplier for a windowed bob at window-local time
+ * `local` (= t − startSec) given window length `dur` and ramp `fade`.
+ *
+ * Trapezoid: amplitude rises over the first `fade` seconds, holds at 1, falls
+ * over the last `fade` seconds. `Math.min(up, down)` is the linear trapezoid;
+ * `EASE[ease]` shapes the shoulders (and clamps to [0, 1], so the held middle —
+ * where both ratios exceed 1 — pins to 1). `fade <= 0` short-circuits to a flat
+ * 1, which is also what keeps the perpetual case (`dur = Infinity`) off the
+ * Infinity arithmetic.
+ */
+function oscEnvelope(local: number, dur: number, fade: number, ease: Ease): number {
+  if (fade <= 0) return 1;
+  const up = local / fade;
+  const down = (dur - local) / fade;
+  return EASE[ease](Math.min(up, down));
+}
+
+function oscOffset(compiled: CompiledClip, ch: Channel, t: number): number {
+  let total = 0;
+  for (const osc of compiled.oscTracks) {
+    if (osc.channel !== ch) continue;
+    if (t < osc.startSec || t >= osc.endSec) continue; // outside the window → silent
+    const env = oscEnvelope(t - osc.startSec, osc.endSec - osc.startSec, osc.fade, osc.ease);
+    // Windowed bobs read their phase WINDOW-LOCALLY, so the sine starts at 0
+    // where the window starts and a period fitted to the window (dwellDrift's
+    // integer-cycle fit) ends at 0 on the cut — the same dwell swings the same
+    // way wherever it sits in the timeline. Absolute-time phase would make the
+    // swing (and the fade's alignment against its zero crossings) depend on
+    // the window's timeline position. Perpetual bobs (startSec = −∞) keep
+    // absolute phase — window-local would be Infinity arithmetic, and with no
+    // window there is nothing to align to anyway.
+    const phaseT = osc.startSec === -Infinity ? t : t - osc.startSec;
+    total += osc.amp * env * Math.sin((2 * Math.PI * phaseT) / osc.period);
+  }
+  return total;
+}
+
+// ---------------------------------------------------------------------------
+// Base layer — fold prior (ended) segments then apply the active/last one.
+// ---------------------------------------------------------------------------
+
+/**
+ * The clip time a base walk answers for: `[fromSec, beforeSec)` on a segment's
+ * START. Earlier segments are already folded into the seed value, in this leg's
+ * frame. `beforeSec` tightens only when seeding the NEXT leg — a segment
+ * starting exactly where that leg opens states its `to` in the NEW leg's units,
+ * so folding it in leaks metres into an Mpc pose (or the reverse).
+ */
+type LegWindow = {
+  readonly fromSec: number;
+  readonly beforeSec: number;
+  readonly fromLeg: number;
+  readonly beforeLeg: number;
+};
+
+const WHOLE_CLIP: LegWindow = {
+  fromSec: -Infinity,
+  beforeSec: Infinity,
+  fromLeg: -Infinity,
+  beforeLeg: Infinity,
+};
+
+/** A zero-length tween's leg, from `frameLegsOf`'s order: at an instant where a
+ *  leg opens, a snap sorted before the opening endpoint still belongs to the
+ *  leg it snaps, not to the one that runs on. */
+const snapLeg = new WeakMap<BaseSegment, number>();
+
+function outsideLeg(seg: BaseSegment, window: LegWindow): boolean {
+  const leg = snapLeg.get(seg);
+  if (leg !== undefined) return leg < window.fromLeg || leg >= window.beforeLeg;
+  return seg.startSec < window.fromSec || seg.startSec >= window.beforeSec;
+}
+
+/**
+ * evaluateBaseTrack — the base layer for one channel at time t: walks the
+ * segments in order, folding each ended one into the running value, then
+ * applies the active segment. An ended loop spin folds at `t`, so it keeps
+ * turning. Holds a previous segment's `to` by reference: copy before handing out.
+ */
+function evaluateBaseTrack<V extends number | Vec3>(
+  segments: readonly BaseSegment[],
+  startVal: V,
+  t: number,
+  window: LegWindow,
+): V {
+  let runningVal = startVal;
+  for (let i = 0; i < segments.length; i++) {
+    const seg = segments[i]!;
+    if (outsideLeg(seg, window)) continue;
+    if (t < seg.startSec) return runningVal;
+    // An explicit `from` (a segment continuing a composite) overrides the base chain.
+    const from = (seg.from ?? runningVal) as V;
+    const value = segmentValueAt(seg, from, t);
+    if (t >= seg.endSec) {
+      runningVal = value;
+      continue;
+    }
+    const next = segments[i + 1];
+    if (next?.blendIn === undefined || t < next.startSec) return value;
+    // Crossfade: the incoming plan starts from this one's planned end (unwrapped,
+    // so both turn the same way); smootherstep keeps value and velocity continuous.
+    const { startSec, endSec } = next.blendIn;
+    const inFrom = (next.from ?? unwrappedEndOf(seg, from)) as V;
+    const w = smootherstep((t - startSec) / (endSec - startSec));
+    return lerpUnwrapped(seg.channel, value, segmentValueAt(next, inFrom, t), w);
+  }
+  return runningVal;
+}
+
+/** The `target` walk, copied out: the pose owns a fresh triple each call. */
+function evaluateBaseTarget(
+  segments: readonly BaseSegment[],
+  startVal: Vec3,
+  t: number,
+  window: LegWindow,
+): Vec3 {
+  const [x, y, z] = evaluateBaseTrack(segments, startVal, t, window);
+  return [x, y, z];
+}
+
+// ---------------------------------------------------------------------------
+// Composite layer — a composite supersedes the base layer for the channels it declares.
+// ---------------------------------------------------------------------------
+
+/**
+ * governingCompositeAt — the composite that writes `ch` at time `t`, or null.
+ *
+ * A composite governs from its `startSec` (holding its final value through a
+ * trailing `hold`) until the first base segment on `ch` starting at or after its
+ * `endSec`; compileClip gave that segment the composite's final value as `from`.
+ * Per channel, the most recently started composite that declares it wins.
+ */
+function governingCompositeAt(
+  tracks: readonly CompositeTrack[],
+  segments: readonly BaseSegment[],
+  ch: keyof CompositeSample,
+  t: number,
+): CompositeTrack | null {
+  let best: CompositeTrack | null = null;
+  for (const c of tracks) {
+    const later = best === null || c.startSec > best.startSec;
+    if (c.startSec <= t && later && c.channels.includes(ch)) best = c;
+  }
+  if (best === null) return null;
+  const endSec = best.endSec;
+  return segments.some((s) => s.startSec >= endSec && s.startSec <= t) ? null : best;
+}
+
+/** The pose a frame leg starts from, and the second it starts at. */
+type LegOrigin = { readonly atSec: number; readonly leg: number; readonly pose: CameraPose };
+
+const legsCache = new WeakMap<CompiledClip, readonly FrameLeg[]>();
+
+// Keyed on the PLAYBACK, not the compiled clip: replaying the same `ClipData`
+// must re-convert against the bodies where they are now.
+const legStartCache = new WeakMap<object, Map<BaseSegment, CameraPose>>();
+
+function frameLegsOf(compiled: CompiledClip): readonly FrameLeg[] {
+  const cached = legsCache.get(compiled);
+  if (cached !== undefined) return cached;
+  const { legs, snapLegs } = buildFrameLegs(compiled.baseTracks);
+  for (const [seg, leg] of snapLegs) snapLeg.set(seg, leg);
+  legsCache.set(compiled, legs);
+  return legs;
+}
+
+type FrameDeps = {
+  readonly bodies: ReadonlyMap<PositionedId, BodyState>;
+  /** The clip's own steady basis — its absolute angles were authored through it. */
+  readonly basis: Mat3;
+  /** Memo owner: the leg-start conversion is captured once per playback. */
+  readonly owner: object;
+  /** The live ground; a call that passes none (tests, golden traces) folds at datum. */
+  readonly terrainHeightAt: TerrainHeightAtLookup;
+};
+
+function frameDepsOf(opts: ClipFrameOptions): FrameDeps {
+  const { bodies, frameBasis, playback } = opts;
+  if (bodies === undefined || frameBasis === undefined || playback === undefined) {
+    throw new Error(
+      'evaluateFramedClip: a frame-tagged keyframe needs `bodies`, `frameBasis` and `playback`',
+    );
+  }
+  return {
+    bodies,
+    basis: frameBasis,
+    owner: playback,
+    terrainHeightAt: opts.terrainHeightAt ?? datumOnlyTerrainHeight,
+  };
+}
+
+function convertChannels(
+  channels: CameraPose,
+  from: PoseFrame,
+  to: PoseFrame,
+  deps: FrameDeps,
+): CameraPose {
+  if (sameFrame(from, to)) return channels;
+  // The clip's one steady basis serves as BOTH arm bases: its absolute angles
+  // were authored through it, and a leg start has no separate up to read.
+  const ctx = {
+    bodies: deps.bodies,
+    poseBasis: deps.basis,
+    upBasis: deps.basis,
+    terrainHeightAt: deps.terrainHeightAt,
+  };
+  const world = foldToWorld(rowFor(from).channels.decode(channels, from, ctx), ctx);
+  return rowFor(to).channels.encode(world, to, ctx);
+}
+
+function originOfLeg(
+  compiled: CompiledClip,
+  legs: readonly FrameLeg[],
+  index: number,
+  opts: ClipFrameOptions,
+): LegOrigin {
+  const leg = legs[index]!;
+  if (leg.anchor === null) return { atSec: -Infinity, leg: index, pose: compiled.start };
+
+  const deps = frameDepsOf(opts);
+  let byAnchor = legStartCache.get(deps.owner);
+  if (byAnchor === undefined) {
+    byAnchor = new Map();
+    legStartCache.set(deps.owner, byAnchor);
+  }
+  const hit = byAnchor.get(leg.anchor);
+  if (hit !== undefined) return { atSec: leg.startSec, leg: index, pose: hit };
+
+  const previous = originOfLeg(compiled, legs, index - 1, opts);
+  const converted = convertChannels(
+    evaluateBaseAt(compiled, leg.startSec, previous, leg.startSec, index),
+    legs[index - 1]!.frame,
+    leg.frame,
+    deps,
+  );
+  byAnchor.set(leg.anchor, converted);
+  return { atSec: leg.startSec, leg: index, pose: converted };
+}
+
+// ---------------------------------------------------------------------------
+// Layer composition
+// ---------------------------------------------------------------------------
+
+/**
+ * evaluateBaseAt — the base layer (or the composites that supersede it) at `t`,
+ * seeded from the current leg's origin. `origin.atSec` is `-Infinity` on the
+ * opening leg, so every segment counts and the walk is the pre-frames one.
+ * `beforeSec` is only passed when seeding the NEXT leg (see `LegWindow`).
+ * Clips author no `lookOffset`, so one starting from an offset pose snaps it to 0.
+ * `fov` is not a base-layer pose field here: it is frame-independent (`fovYRadAt`).
+ */
+function evaluateBaseAt(
+  compiled: CompiledClip,
+  t: number,
+  origin: LegOrigin,
+  beforeSec = Infinity,
+  beforeLeg = Infinity,
+): Required<Omit<CameraPose, 'lookOffset' | 'fov'>> {
+  const { baseTracks } = compiled;
+  const { atSec, leg, pose: start } = origin;
+  const window: LegWindow =
+    atSec === -Infinity && beforeSec === Infinity
+      ? WHOLE_CLIP
+      : { fromSec: atSec, beforeSec, fromLeg: leg, beforeLeg };
+  // Channels governed by the same composite share one sample (one spline eval per frame).
+  let sampledTrack: CompositeTrack | null = null;
+  let sampled: CompositeSample = {};
+  const fromComposite = <K extends keyof CompositeSample>(ch: K): CompositeSample[K] => {
+    const track = governingCompositeAt(compiled.compositeTracks, baseTracks[ch], ch, t);
+    if (track === null) return undefined;
+    if (track !== sampledTrack) {
+      // Clamp into the track's own window: after it ends, hold the final value.
+      const span = track.endSec - track.startSec;
+      sampledTrack = track;
+      sampled = track.sample(Math.min(Math.max(t - track.startSec, 0), span));
+    }
+    return sampled[ch];
+  };
+  return {
+    roll: evaluateBaseTrack(baseTracks['roll'], start.roll ?? 0, t, window),
+    target:
+      fromComposite('target') ?? evaluateBaseTarget(baseTracks['target'], start.target, t, window),
+    yaw: fromComposite('yaw') ?? evaluateBaseTrack(baseTracks['yaw'], start.yaw, t, window),
+    pitch: fromComposite('pitch') ?? evaluateBaseTrack(baseTracks['pitch'], start.pitch, t, window),
+    distance:
+      fromComposite('distance') ??
+      evaluateBaseTrack(baseTracks['distance'], start.distance, t, window),
+  };
+}
+
+/**
+ * fovYRadAt — the `fov` channel at `t`, or undefined when the clip never touches
+ * it, so a clip that does not animate the lens leaves the viewer's live. No leg
+ * converts it, so every segment counts against the clip's own start lens.
+ */
+function fovYRadAt(compiled: CompiledClip, t: number): number | undefined {
+  const animates =
+    compiled.baseTracks['fov'].length > 0 ||
+    compiled.velTracks.some((r) => r.channel === 'fov') ||
+    compiled.oscTracks.some((o) => o.channel === 'fov');
+  if (!animates) return undefined;
+  // Only a `'live'` start carries the viewer's lens (`liveClipStartPose`): a
+  // concrete start without `fov` is authored, so it opens at the default, not
+  // at whatever the viewer had dialled in.
+  const start = compiled.start.fov ?? DEFAULT_FOV_Y_RAD;
+  const base = evaluateBaseTrack(compiled.baseTracks['fov'], start, t, WHOLE_CLIP);
+  return base + velDisplacement(compiled, 'fov', t) + oscOffset(compiled, 'fov', t);
+}
+
+// ---------------------------------------------------------------------------
+// Public entry points
+// ---------------------------------------------------------------------------
+
+/**
+ * evaluateFramedClip — the clip at `elapsedSec`, and the frame its channels are
+ * expressed in (spec §8).
+ *
+ * Compiles `data` on first call (memoised on reference identity); subsequent
+ * calls with the same `data` reference reuse the cached `CompiledClip`.
+ *
+ * `channels` is always fresh, with a fresh `target` array — no aliasing with
+ * any internal structure.
+ */
+export function evaluateFramedClip(
+  data: ClipData,
+  elapsedSec: number,
+  opts: ClipFrameOptions = {},
+): FramedClipPose {
+  const compiled = getCompiled(data, opts.frameBasis);
+  const legs = frameLegsOf(compiled);
+  const index = legIndexAt(legs, elapsedSec);
+  const origin = originOfLeg(compiled, legs, index, opts);
+  const t = elapsedSec;
+
+  const base = evaluateBaseAt(compiled, t, origin);
+
+  // --- Velocity layer (displacement, additive) ---
+  const velDist = velDisplacement(compiled, 'distance', t);
+  const velYaw = velDisplacement(compiled, 'yaw', t);
+  const velPitch = velDisplacement(compiled, 'pitch', t);
+  // `rate` on 'target' is uncommon but structurally consistent — velDisplacement
+  // returns 0 when no VelRamp exists for a channel, so this is a no-op by default.
+  const velTarget = velDisplacement(compiled, 'target', t);
+
+  // --- Oscillation layer (additive) ---
+  const oscDist = oscOffset(compiled, 'distance', t);
+  const oscYaw = oscOffset(compiled, 'yaw', t);
+  const oscPitch = oscOffset(compiled, 'pitch', t);
+  // A `target` osc track applies the same scalar offset to all three components
+  // (the OscTrack model carries one amplitude, not per-axis amplitudes).
+  const oscTarget = oscOffset(compiled, 'target', t);
+  const fov = fovYRadAt(compiled, t);
+
+  return {
+    frame: legs[index]!.frame,
+    channels: {
+      // Fresh target triple — never alias any input.
+      target: [
+        base.target[0] + velTarget + oscTarget,
+        base.target[1] + velTarget + oscTarget,
+        base.target[2] + velTarget + oscTarget,
+      ],
+      yaw: base.yaw + velYaw + oscYaw,
+      pitch: base.pitch + velPitch + oscPitch,
+      distance: base.distance + velDist + oscDist,
+      roll: base.roll + velDisplacement(compiled, 'roll', t) + oscOffset(compiled, 'roll', t),
+      // Omitted, never `undefined`: a clip that leaves the lens alone keeps its old shape.
+      ...(fov === undefined ? {} : { fov }),
+    },
+  };
+}
+
+/**
+ * evaluateClip — the channel values at `elapsedSec`, WITHOUT their frame: Mpc
+ * and orientation-frame angles for every untagged clip, which is every clip in
+ * the registry. A caller that must survive a body-framed endpoint — where the
+ * same numbers are body-fixed metres — reads `evaluateFramedClip` instead.
+ *
+ * @param data        The authored clip description.
+ * @param elapsedSec  Seconds since the clip started (≥ 0).
+ * @param frameBasis  The STEADY orientation-frame basis a `flyPath` encodes its
+ *                    aim through (see `buildPathTrack`). Absent ⇒ identity
+ *                    (world-frame aim) — the pre-feature behaviour, so a clip
+ *                    with no `flyPath` is unaffected.
+ */
+export function evaluateClip(data: ClipData, elapsedSec: number, frameBasis?: Mat3): CameraPose {
+  return evaluateFramedClip(data, elapsedSec, { frameBasis }).channels;
+}

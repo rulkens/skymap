@@ -7,6 +7,4 @@ import type { SourceEntryBase } from '../SourceEntryBase';
  */
 export type BodySourceEntry = SourceEntryBase & {
   readonly type: 'body';
-  /** Stable numeric tag; not persisted, only used as the registry key. */
-  readonly code: number;
 };

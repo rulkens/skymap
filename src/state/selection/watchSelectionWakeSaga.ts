@@ -7,7 +7,7 @@
  * is forked.
  *
  * Hover wakes only when the previous or the new hover is of a kind that may
- * carry a label or ring (`mayHaveLabel`): the label whitens, the ring
+ * carry a label or ring (its kind's `mayHaveLabel`): the label whitens, the ring
  * brightens. Hover lands at pointer-pick rate, so sweeping survey stars and
  * galaxies (InfoCard text only) must not start frames. The previous hover is
  * tracked here because the reducer has already overwritten it.
@@ -30,9 +30,9 @@ import {
   clearSelection,
 } from './selectionSlice';
 import { shallowEqualRef } from '../../utils/object/shallowEqualRef';
-import { mayHaveLabel } from '../../utils/selection/mayHaveLabel';
+import { selectionKindOf } from '../../services/engine/selection/selectionKindOf';
 import type { ReconcileEffects } from '../../store/effects/ReconcileEffects';
-import type { SelectionRef } from '../../@types/engine/SelectionRef';
+import type { SelectionRefBase } from '../../@types/engine/selection/SelectionRefBase';
 
 export function* watchSelectionWakeSaga() {
   yield* takeEvery([updateSelectionSelect, updateSelectionFocus, clearSelection], function* () {
@@ -40,13 +40,19 @@ export function* watchSelectionWakeSaga() {
     fx.requestRender();
   });
 
-  let hovered: SelectionRef | null = null;
-  yield* takeEvery(updateSelectionHover, function* (action: PayloadAction<SelectionRef | null>) {
-    const previous = hovered;
-    hovered = action.payload;
-    if (shallowEqualRef(previous, hovered)) return;
-    if (!mayHaveLabel(previous) && !mayHaveLabel(hovered)) return;
-    const fx = yield* getContext<ReconcileEffects>('reconcile');
-    fx.requestRender();
-  });
+  let hovered: SelectionRefBase | null = null;
+  yield* takeEvery(
+    updateSelectionHover,
+    function* (action: PayloadAction<SelectionRefBase | null>) {
+      const previous = hovered;
+      hovered = action.payload;
+      if (shallowEqualRef(previous, hovered)) return;
+      const labelled = [previous, hovered].some(
+        (ref) => ref !== null && selectionKindOf(ref.type).mayHaveLabel(ref),
+      );
+      if (!labelled) return;
+      const fx = yield* getContext<ReconcileEffects>('reconcile');
+      fx.requestRender();
+    },
+  );
 }

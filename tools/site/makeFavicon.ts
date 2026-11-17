@@ -1,23 +1,31 @@
 /**
- * Generate `public/apple-touch-icon.png` (180×180) from `public/favicon.svg`.
- *
- * iOS doesn't render SVG home-screen icons, so we ship a PNG fallback at
- * the standard apple-touch-icon size.  The build is a one-shot — re-run
- * this script (`npx tsx tools/makeFavicon.ts`) only when `favicon.svg`
- * changes.  The output is committed to git so a fresh clone doesn't have
- * to install sharp on cold-start, and so deploys don't depend on the
- * script running in CI.
- *
- * Density 1024 oversamples the SVG before downscaling to 180 px so the
- * radial halo composites cleanly without aliasing.
+ * Write the web app's and the site's icons from the Skymap mark (packages/website utils/skymapIcon):
+ * `public/favicon.svg`, the small drawing on a rounded tile, which must read at 16 px in a light or a
+ * dark tab, and the PNGs, the large drawing on a square tile: 180 px for iOS home-screen shortcuts
+ * (iOS renders no SVG icon and rounds the corners itself), 192 and 512 px for the remote's web app
+ * manifest (`public/remote.webmanifest`). All are committed, so a deploy does not depend on this
+ * running; re-run it (`npx tsx tools/site/makeFavicon.ts`) when the mark changes.
  */
 import sharp from 'sharp';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { writeFileSync } from 'node:fs';
 
-const svg = readFileSync('public/favicon.svg');
-const buf = await sharp(svg, { density: 1024 })
-  .resize(180, 180)
-  .png({ compressionLevel: 9 })
-  .toBuffer();
-writeFileSync('public/apple-touch-icon.png', buf);
-console.log(`wrote ${buf.length} bytes to public/apple-touch-icon.png`);
+import { skymapIcon } from '../../packages/website/src/utils/skymapIcon';
+
+const PNGS = [
+  [180, 'public/apple-touch-icon.png'],
+  [192, 'public/icon-192.png'],
+  [512, 'public/icon-512.png'],
+] as const;
+
+writeFileSync('public/favicon.svg', skymapIcon('rounded', 'small'));
+for (const [size, path] of PNGS) {
+  // Drawn at four times the size and brought down, so the thin filaments stay smooth.
+  const png = await sharp(Buffer.from(skymapIcon('square', 'large')), {
+    density: (72 * 4 * size) / 100,
+  })
+    .resize(size, size)
+    .png({ compressionLevel: 9 })
+    .toBuffer();
+  writeFileSync(path, png);
+  console.log(`wrote ${png.length} bytes to ${path}`);
+}

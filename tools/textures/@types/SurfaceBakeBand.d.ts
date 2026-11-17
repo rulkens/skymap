@@ -11,4 +11,6 @@ export type SurfaceBakeBand = {
   readonly height?: HeightSource;
   readonly heightUnderfill?: HeightSource;
   readonly flattenWater?: boolean;
+  /** Night lights over the band's own boxes and levels; must reach the band's `maxLevel`. */
+  readonly night?: SurfaceImagerySource;
 };

@@ -1,0 +1,79 @@
+---
+/*
+ * AnnotatedShot — `<AnnotatedShot id="…" parts={[…]} />` on a docs page: an upright shot of the app's interface
+ * with a numbered mark on each part, and the parts' names and what they do as a numbered list, so every word is
+ * on the page without the script. On a broad page the list stands either side of the picture; narrower, under
+ * it, with a line under the picture (sticky to the screen's foot) that the script fills with the part last
+ * pointed at, tapped or focused. Each mark is a link to its line of the list, which is all it does unscripted.
+ * A part's number stands just outside the screen's rim beside it, the left rim or the right, whichever is nearer.
+ */
+import type { AnnotatedPart } from '../../../@types/AnnotatedPart';
+import { siteShot } from '../../../data/siteShot.ts';
+import Shot from '../../shared/media/Shot/Shot.tsx';
+import { SHOT_SIZES } from './AnnotatedShot.constants.ts';
+import styles from './AnnotatedShot.module.css';
+
+type Props = { id: string; parts: readonly AnnotatedPart[] };
+
+const { id, parts } = Astro.props;
+const { size } = siteShot(id);
+// Two lists, so a broad page can stand the first half left of the picture and the second right of it.
+const half = Math.ceil(parts.length / 2);
+---
+
+<figure class={styles.root} data-embed data-annotated>
+  <div class={styles.stage}>
+    <div class={styles.shot}>
+      <Shot id={id} sizes={SHOT_SIZES} />
+      {
+        parts.map(({ name, box: [left, top, width, height] }, i) => {
+          const right = left + width / 2 > size.width / 2;
+          return (
+            <a
+              class:list={[styles.spot, right && styles.right]}
+              href={`#${id}-${i + 1}`}
+              aria-describedby={`${id}-${i + 1}-does`}
+              data-spot
+              style={{
+                left: `${(left / size.width) * 100}%`,
+                top: `${(top / size.height) * 100}%`,
+                width: `${(width / size.width) * 100}%`,
+                height: `${(height / size.height) * 100}%`,
+                '--mark-x': `${((right ? size.width - left : -left) / width) * 100}%`,
+              }}
+            >
+              <span class={styles.mark} aria-hidden="true">
+                {i + 1}
+              </span>
+              <span class={styles.unseen}>{name}</span>
+            </a>
+          );
+        })
+      }
+    </div>
+    <p class={styles.readout} data-readout hidden aria-hidden="true">
+      <strong class={styles.name}></strong>
+      <span class={styles.does}>Tap a part of the picture to read what it does.</span>
+    </p>
+  </div>
+  <figcaption class={styles.notes}>
+    {
+      [0, half].map((start) => (
+        <ol class={styles.parts} start={start + 1}>
+          {parts.slice(start, start === 0 ? half : undefined).map(({ name, does }, j) => (
+            <li id={`${id}-${start + j + 1}`} class={styles.part} data-part data-n={start + j + 1}>
+              <strong class={styles.name}>{name}</strong>
+              <span id={`${id}-${start + j + 1}-does`} class={styles.does}>
+                {does}
+              </span>
+            </li>
+          ))}
+        </ol>
+      ))
+    }
+  </figcaption>
+</figure>
+
+<script>
+  import './annotatedShot.client.ts';
+</script>

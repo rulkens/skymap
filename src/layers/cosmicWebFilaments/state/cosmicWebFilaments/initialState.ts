@@ -4,7 +4,7 @@
  * the unit intensity baseline.
  */
 
-import type { CosmicWebFilamentsSettings } from '../../../../@types/settings/CosmicWebFilamentsSettings';
+import type { CosmicWebFilamentsSettings } from '../../@types/CosmicWebFilamentsSettings';
 
 export const initialState: CosmicWebFilamentsSettings = {
   enabled: false,

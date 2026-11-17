@@ -37,8 +37,8 @@ struct IsmMapOrientationPedestal {
 @group(0) @binding(3) var<uniform> pedestal: IsmMapOrientationPedestal;
 
 fn dustPedestal(ring: u32, ringCount: u32) -> f32 {
-  let r = ismMapRingRadius(ring, ringCount, pedestal.rMin, pedestal.rMax);
-  let profile = pedestal.gasFloor + (1.0 - pedestal.gasFloor) * exp(-r / pedestal.gasScaleLength);
+  let radius = ismMapRingRadius(ring, ringCount, pedestal.rMin, pedestal.rMax);
+  let profile = pedestal.gasFloor + (1.0 - pedestal.gasFloor) * exp(-radius / pedestal.gasScaleLength);
   return pedestal.ambient * profile;
 }
 
@@ -54,12 +54,12 @@ fn csBlurAzimuth(@builtin(global_invocation_id) gid: vec3<u32>) {
   let pedestalHere = dustPedestal(gid.y, dims.y);
   var sum = 0.0;
   var wsum = 0.0;
-  for (var k = -radius; k <= radius; k++) {
-    let a = wrapIndex(i32(gid.x) + k, dims.x);
-    let w = gaussianTap(k, sigma.sigmaDeriv);
-    let dust = textureLoad(srcTex, vec2<i32>(i32(a), i32(gid.y)), 0).w;
-    sum += max(dust - pedestalHere, 0.0) * w;
-    wsum += w;
+  for (var tapOffset = -radius; tapOffset <= radius; tapOffset++) {
+    let azIndex = wrapIndex(i32(gid.x) + tapOffset, dims.x);
+    let tapWeight = gaussianTap(tapOffset, sigma.sigmaDeriv);
+    let dust = textureLoad(srcTex, vec2<i32>(i32(azIndex), i32(gid.y)), 0).w;
+    sum += max(dust - pedestalHere, 0.0) * tapWeight;
+    wsum += tapWeight;
   }
   textureStore(dst, vec2<i32>(gid.xy), vec4<f32>(sum / wsum, 0.0, 0.0, 0.0));
 }
@@ -75,11 +75,11 @@ fn csBlurRing(@builtin(global_invocation_id) gid: vec3<u32>) {
   let radius = kernelRadius(sigma.sigmaDeriv);
   var sum = 0.0;
   var wsum = 0.0;
-  for (var k = -radius; k <= radius; k++) {
-    let r = clampIndex(i32(gid.y) + k, dims.y);
-    let w = gaussianTap(k, sigma.sigmaDeriv);
-    sum += textureLoad(srcTex, vec2<i32>(i32(gid.x), i32(r)), 0).x * w;
-    wsum += w;
+  for (var tapOffset = -radius; tapOffset <= radius; tapOffset++) {
+    let ringIndex = clampIndex(i32(gid.y) + tapOffset, dims.y);
+    let tapWeight = gaussianTap(tapOffset, sigma.sigmaDeriv);
+    sum += textureLoad(srcTex, vec2<i32>(i32(gid.x), i32(ringIndex)), 0).x * tapWeight;
+    wsum += tapWeight;
   }
   textureStore(dst, vec2<i32>(gid.xy), vec4<f32>(sum / wsum, 0.0, 0.0, 0.0));
 }

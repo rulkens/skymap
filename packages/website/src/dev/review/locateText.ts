@@ -1,6 +1,6 @@
 import { OVERLAY_UI } from '../overlay/overlayUi';
 import type { ReviewPortion } from './@types/ReviewPortion';
-import { foldText } from './foldText';
+import { foldWithOffsets } from './foldWithOffsets';
 import { reviewBlockOf } from './reviewBlockOf';
 
 /**
@@ -9,7 +9,7 @@ import { reviewBlockOf } from './reviewBlockOf';
  * wherever the block changes, so a range can run on from one paragraph to the next.
  */
 export function locateText(root: Element, needle: string): ReviewPortion[] | null {
-  const want = foldText(needle).text.trim();
+  const want = foldWithOffsets(needle).text.trim();
   if (!want) return null;
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
     acceptNode: (node) =>
@@ -29,7 +29,7 @@ export function locateText(root: Element, needle: string): ReviewPortion[] | nul
   }
   // Matched with the spaces left out: two elements in one block (a link and its line) touch in
   // the DOM, while the browser's selection text puts a break between them.
-  const { text, at } = foldText(raw);
+  const { text, at } = foldWithOffsets(raw);
   const kept: number[] = [];
   for (let i = 0; i < text.length; i++) if (text[i] !== ' ') kept.push(at[i]!);
   const bare = want.replaceAll(' ', '');

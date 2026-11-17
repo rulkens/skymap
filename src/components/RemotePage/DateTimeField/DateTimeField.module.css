@@ -1,0 +1,23 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-input);
+}
+
+.row {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+}

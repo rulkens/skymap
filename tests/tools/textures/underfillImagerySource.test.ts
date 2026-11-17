@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { underfillImagerySource } from '../../../tools/textures/underfillImagerySource';
 import type { SurfaceImagerySource } from '../../../tools/textures/@types/SurfaceImagerySource';
-import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
+import type { LonLatBounds } from '../../../src/layers/body/surfaceTiles/format/@types/LonLatBounds';
 
 const BOX: LonLatBounds = { west: 12, east: 13, south: 55, north: 56 };
 const WIDTH = 4;

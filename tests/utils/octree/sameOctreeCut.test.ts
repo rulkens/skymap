@@ -3,7 +3,6 @@ import { describe, it, expect } from 'vitest';
 import { sameOctreeCut } from '../../../src/utils/octree/sameOctreeCut';
 import type { OctreeCutSpec } from '../../../src/@types/octree/OctreeCutSpec';
 import { EYE_SLACK_MPC, PLANE_SLACK } from '../../../src/data/octree/octreeNodeFade';
-import { Source } from '../../../src/data/source';
 
 function cut(over: Partial<OctreeCutSpec> = {}): OctreeCutSpec {
   return {
@@ -12,7 +11,7 @@ function cut(over: Partial<OctreeCutSpec> = {}): OctreeCutSpec {
     refineThreshold: 0.05,
     worldSpread: 1,
     leafMarginRad: 0.001,
-    sources: [{ source: Source.GaiaStars, opacity: 1, drawBudget: 100 }],
+    sources: [{ source: 'gaiaStars' as const, opacity: 1, drawBudget: 100 }],
     ...over,
   };
 }
@@ -41,7 +40,7 @@ describe('sameOctreeCut', () => {
 
   it('differs on any other field, including a source fade multiplier', () => {
     expect(sameOctreeCut(cut(), cut({ refineThreshold: 0.06 }))).toBe(false);
-    const row = { source: Source.GaiaStars, opacity: 0.5, drawBudget: 100 };
+    const row = { source: 'gaiaStars' as const, opacity: 0.5, drawBudget: 100 };
     expect(sameOctreeCut(cut(), cut({ sources: [row] }))).toBe(false);
   });
 });

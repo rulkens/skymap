@@ -33,18 +33,19 @@ import package::filaments::io::PerVertex;
 import package::filaments::io::VSOut;
 import package::lib::segmentQuad::expandSegmentQuad;
 
-@group(0) @binding(0) var<uniform> u : Uniforms;
+@group(0) @binding(0) var<uniform> uniforms : Uniforms;
 
 @vertex
 fn vs(in : PerVertex) -> VSOut {
   // Expand this corner into a clip-space vertex via the shared
-  // segment-quad helper. 'u.halfWidthPx' is already a half-width, so it
+  // segment-quad helper. 'uniforms.halfWidthPx' is already a half-width, so it
   // passes straight through.
   var out : VSOut;
-  out.clip = expandSegmentQuad(u.cam, in.startPos, in.endPos, in.uv, u.halfWidthPx);
-  // Pass uv.y through for the fragment falloff; lerp density between
-  // start/end based on uv.x.
+  let quad = expandSegmentQuad(uniforms.cam, in.startPos, in.endPos, in.uv, uniforms.halfWidthPx);
+  out.clip = quad.clip;
+  // Pass uv.y through for the fragment falloff; density follows the corner's
+  // world parameter, which differs from uv.x for a corner behind the eye.
   out.uv = in.uv;
-  out.density = mix(in.startDensity, in.endDensity, in.uv.x);
+  out.density = mix(in.startDensity, in.endDensity, quad.t);
   return out;
 }

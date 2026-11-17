@@ -1,4 +1,4 @@
-import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
+import type { LonLatBounds } from '../../../src/layers/body/surfaceTiles/format/@types/LonLatBounds';
 import type { EnuBoundsM } from '../../@types/scene/EnuBoundsM';
 
 /** IUGG mean Earth radius, metres — the sphere PROJ's `+proj=topocentric`

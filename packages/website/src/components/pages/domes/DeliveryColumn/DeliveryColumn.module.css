@@ -1,0 +1,172 @@
+/* Every group in the column stands one `--stack` below the last; a name sits closer to its own words. */
+.root {
+  display: grid;
+  align-content: start;
+}
+
+.figure {
+  margin: 0 0 var(--stack);
+}
+
+/*
+ * The disc stands `--disc-ring` inside the front's share of the column, so its ring is inside it too; the
+ * frames behind fill the rest of the row, each peeking out a share past the one in front of it.
+ */
+.frames {
+  --front: 72%;
+  --disc: calc(var(--front) - 2 * var(--disc-ring));
+  position: relative;
+  max-width: 30rem;
+}
+
+.front {
+  position: relative;
+  width: var(--disc);
+  margin: var(--disc-ring);
+  border-radius: 50%;
+}
+
+.turning {
+  composes: front;
+  composes: turn from '../DiscBand/domeTurn.module.css';
+}
+
+/*
+ * An earlier frame: opaque, as a film frame is, dimmer and smaller with each step back, a hairline rim for
+ * its edge on the black. Its sky is turned a quarter so what it shows falls in the part left uncovered.
+ */
+.behind {
+  position: absolute;
+  top: 50%;
+  right: calc(100% - var(--front) - (100% - var(--front)) * var(--depth) / var(--count));
+  width: calc(var(--disc) * (1 - 0.2 * var(--depth)));
+  aspect-ratio: 1;
+  translate: 0 -50%;
+  overflow: hidden;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-fg) 30%, transparent);
+  filter: brightness(calc(1 - 0.15 * var(--depth)));
+
+  & img {
+    height: 100%;
+    rotate: -90deg;
+  }
+}
+
+/* The cue that the live disc turns: an arc with an arrowhead along the ring's black band, once the turn works. */
+.cue {
+  position: absolute;
+  inset: calc(var(--disc-ring) / -2);
+  overflow: visible;
+  pointer-events: none;
+  fill: none;
+  stroke: var(--column-accent);
+  stroke-width: 1.5px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0;
+
+  & path {
+    vector-effect: non-scaling-stroke;
+  }
+}
+
+[data-turn-ready] > .cue {
+  opacity: 1;
+}
+
+/* The column's figure as a readout: large numerals in its picture's colour, the measure beside them. */
+.readout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--site-space-3xs) var(--site-space-s);
+  max-width: none;
+  margin: 0 0 var(--stack);
+  color: var(--site-text-dim);
+  font-size: var(--text-small);
+  font-weight: var(--weight-small);
+}
+
+.number {
+  color: var(--column-accent);
+  font: var(--weight-display) var(--text-h2) / 1 var(--font-family-display);
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.root > h3 {
+  margin-bottom: var(--site-space-xs);
+}
+
+.words p {
+  margin-bottom: var(--stack);
+}
+
+/* A specification: each line a label and a phrase on one hairline, the label dim. */
+.spec {
+  composes: small from '../../../../styles/type.module.css';
+  --spec-label: clamp(6rem, 22vw, 8.5rem);
+  margin: 0 0 var(--stack);
+
+  & > div {
+    display: grid;
+    grid-template-columns: var(--spec-label) minmax(0, 1fr);
+    column-gap: var(--site-space-s);
+    padding-block: var(--site-space-xs);
+    border-top: 1px solid var(--border-divider);
+  }
+
+  & > div:first-child {
+    border-top-color: var(--column-accent);
+  }
+
+  & > div:last-child {
+    border-bottom: 1px solid var(--border-divider);
+  }
+
+  & dt {
+    color: var(--site-text-dim);
+  }
+
+  & dd {
+    margin: 0;
+    color: var(--site-text);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.link {
+  justify-self: start;
+}
+
+/*
+ * Wide, every part is a row of Delivery's grid: the figure's two (the picture, its title), the readout, the
+ * name, the words, the seven lines of the specification and the link. Thirteen rows, so both columns' parts
+ * sit level.
+ */
+@media (--wide) {
+  .root {
+    grid-row: span 13;
+    grid-template-rows: subgrid;
+  }
+
+  .figure {
+    display: grid;
+    grid-row: span 2;
+    grid-template-rows: subgrid;
+  }
+
+  /* The front's right edge is a line of the grid: four of the column's six grid columns. */
+  .frames {
+    --front: calc((100% - 5 * var(--col-gap)) / 6 * 4 + 3 * var(--col-gap));
+    max-width: none;
+  }
+
+  .spec {
+    display: contents;
+  }
+
+  .spec > div:last-child {
+    margin-bottom: var(--stack);
+  }
+}

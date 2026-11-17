@@ -2,7 +2,7 @@
  * The focus emphasis one record draws at: 1 for the focused subject, else its entry's
  * recession at the frame's blend (0 = no focus, 1 = full). Recession lives here and nowhere
  * else, so the handed value stays fade × clip; a record that can never be the focus passes
- * no `pickId`. The blend's home is `structureFocusSubsystem`, never a cached copy.
+ * no `pickId`. The blend's home is `recedingFocusSubsystem`, never a cached copy.
  */
 
 import type { VisibilityEntryCommon } from '../../../@types/engine/layer/VisibilityEntryCommon';

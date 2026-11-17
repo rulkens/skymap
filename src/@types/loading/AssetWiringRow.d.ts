@@ -3,16 +3,17 @@
  * composes core's rows with every Layer's into `state.assetRows`, and the demand
  * loop walks that list. A row that tracks a sibling's
  * demand/priority/request is a `CompanionAssetRow`, folded into one of these.
+ * `Key` narrows to the authoring Layer's own key type; core reads it as `AssetKey`.
  */
 
 import type { AssetKey } from './AssetKey';
 import type { AssetSlot } from './AssetSlot';
-import type { DemandCtx } from './DemandCtx';
+import type { AssetDemand } from './AssetDemand';
 import type { Tier } from '../data/Tier';
 import type { VisibilityAddress } from '../animation/VisibilityAddress';
 
-export type AssetWiringRow<T = unknown, R = unknown> = {
-  key: AssetKey;
+export type AssetWiringRow<T = unknown, R = unknown, Key extends AssetKey = AssetKey> = {
+  key: Key;
   /**
    * The slot this row drives, minted by whoever authors the row (a Layer's
    * `create`, or core's `meshAssetRows`) and never loaded by them:
@@ -21,7 +22,8 @@ export type AssetWiringRow<T = unknown, R = unknown> = {
   slot: AssetSlot<T, R>;
   /** Build the request from the current tier (void/empty for tier-agnostic). */
   req: (tier: Tier) => R;
-  demand: (ctx: DemandCtx) => boolean;
+  /** When the slot loads and releases, read by `evaluateAssetDemand`. */
+  demand: AssetDemand;
   /**
    * Fetch rank on the one bounded-concurrency queue; LOWER is fetched first,
    * ranked by relevance to the camera's scale rung with payload size folded
@@ -29,12 +31,6 @@ export type AssetWiringRow<T = unknown, R = unknown> = {
    * back to array order, which fetches the large file ahead of the small one.
    */
   priority: number;
-  /**
-   * The evict edge, checked while the slot is `ready`. Omitted ⇒ never evict.
-   * Separate from `!demand` so the two edges carry hysteresis: both are false
-   * in the band between load and evict radius, which `!demand` cannot encode.
-   */
-  release?: (ctx: DemandCtx) => boolean;
   /**
    * The visibility address (and item) this slot's data draws. Its target stays 0 until the
    * slot has a committed value, and every notification from the slot recomputes it, so a

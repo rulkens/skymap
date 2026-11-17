@@ -22,6 +22,7 @@ import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 import type { MeshBodyRenderer } from '../../rendering/MeshBodyRenderer';
 import type { CubeFaceBlitRenderer } from '../../rendering/CubeFaceBlitRenderer';
 import type { DomeResampleRenderer } from '../../rendering/DomeResampleRenderer';
+import type { LetterboxRenderer } from '../../rendering/LetterboxRenderer';
 import type { BodyPickRenderer } from '../../rendering/bodyPickRenderer/BodyPickRenderer';
 import type { OrbitTrailRenderer } from '../../rendering/orbitTrailRenderer/OrbitTrailRenderer';
 import type { FadeUniformsBgl } from '../../rendering/FadeUniformsBgl';
@@ -53,11 +54,11 @@ export type EngineGpuHandles = {
   sourceBgl: SourceUniformsBgl | null;
   /**
    * Canonical FocusUniforms bind-group layout, shared by every pipeline rendering the
-   * structure-focus dim (points @group(3), impostor disks @group(1), the pick pass).
+   * focus dim (points @group(3), impostor disks @group(1), the pick pass).
    */
   focusBgl: FocusUniformsBgl | null;
   /**
-   * The single shared structure-focus uniform (buffer + bind group + packer), written
+   * The single shared focus uniform (buffer + bind group + packer), written
    * once per frame in `renderFrame`. Its bind group is built against `focusBgl` and
    * bound at each pipeline's own group slot; the pick pass binds the same buffer so non-
    * members of a focused structure are not hit-testable.
@@ -142,6 +143,10 @@ export type EngineGpuHandles = {
    * the label director; `clipPathDebugPass` feeds it a fresh `DebugLine[]` each frame.
    */
   debugLineRenderer: DebugLineRenderer | null;
+  /**
+   * The film look's letterbox bars, drawn last on the swap target by `letterboxPass`.
+   */
+  letterboxRenderer: LetterboxRenderer | null;
   /**
    * Selection-ring overlay: a white annulus around the selected galaxy on the swap-chain
    * UI overlay.

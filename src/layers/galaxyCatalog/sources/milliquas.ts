@@ -1,9 +1,7 @@
 import type { GalaxyCatalogSourceEntry } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceEntry';
-import { Source } from '../../../data/source';
 
 export const MILLIQUAS_ENTRY = {
   type: 'galaxyCatalog',
-  code: Source.Milliquas,
   id: 'milliquas',
   label: 'Milliquas',
   binBaseName: 'milliquas',
@@ -27,6 +25,8 @@ export const MILLIQUAS_ENTRY = {
   // subtracts most of the range and clamps the whole catalog to the
   // blue floor. The correction stays off until the bake gets a quasar LF.
   colourSpec: { slotA: 'g', slotB: 'r', rangeMin: 0.0, rangeMax: 2.0, kPerZ: 0.0 },
+  // B−R on the B−J thresholds: only a rough fit for the quasar locus.
+  typeColour: { slotA: 'g', slotB: 'r', thresholds: 'B-J' },
   // Milliquas's quasar-completeness limit varies wildly by parent
   // galaxy catalog (SDSS DR16Q reaches r ~ 22, DESI EDR ~ 23, bright optical/
   // X-ray-selected subsamples cut at ~18). We use a permissive limit

@@ -19,22 +19,25 @@ import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarne
 import { diveUntilEngaged } from '../../../helpers/camera/diveUntilEngaged';
 import { hrOverBody } from '../../../helpers/camera/hrOverBody';
 import { readRegister } from '../../../helpers/camera/readRegister';
-import { bodyFocusDistance } from '../../../../src/services/engine/camera/bodyFocusDistance';
+import { bodyArrivalDistanceMpc } from '../../../support/bodyArrivalDistanceMpc';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { liveWorldPose } from '../../../../src/services/engine/helpers/liveWorldPose';
-import { setAutoRotate } from '../../../../src/state/camera/cameraSlice';
+import { setAutoRotate } from '../../../../src/state/camera/cameraIntentSlice';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import type { CameraSimHarness } from '../../../helpers/camera/CameraSimHarness';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
-import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
+import type { FramedCameraPose } from '../../../../src/@types/camera/pose/FramedCameraPose';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import { installAppSelectionKinds } from '../../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 const SATURN = deriveBodyStates(CONST_J2000).get(asSceneBodyId('saturn'))! as BodyState;
 
 /** Turn the spin pill on at the store's own rate (the UI's only lever). */
 function spinOn(h: CameraSimHarness): void {
-  const { rate } = h.store.getState().camera.autoRotate;
+  const { rate } = h.store.getState().camera.intent.autoRotate;
   h.store.dispatch(setAutoRotate({ active: true, rate }));
 }
 
@@ -48,7 +51,7 @@ function armNumbers(pose: FramedCameraPose): readonly number[] {
 describe('follow approach under autoRotate (R14-3)', () => {
   it('focusing a body with autoRotate on does not strand the camera inside it', () => {
     const h = makeCameraSimHarness();
-    const framingMpc = bodyFocusDistance(
+    const framingMpc = bodyArrivalDistanceMpc(
       h.radiusM('saturn') * SCALE_UNITS.M_TO_MPC,
       Math.PI / 3, // the harness FOV, stamped onto the projection every frame
     );

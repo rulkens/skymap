@@ -13,7 +13,7 @@
 //
 // Storing the raw pre-knee scalar in alpha (rather than reading it back off a
 // colour channel) is what lets the knee be applied to the true summed scalar
-// independent of tint: the O/B blue tint is NOT r = 1 (tint.wesl), so no single
+// independent of tint: the O/B blue tint is NOT r = 1 (lib/starTint.wesl), so no single
 // channel is a valid scalar proxy.
 //
 // ## The composite = the leaf formula, applied to the sum
@@ -35,7 +35,7 @@
 //
 // The pipeline blends one/one additive into HDR, so the composite ADDS its
 // result exactly as if the aggregate glows had been knee'd and drawn straight
-// into HDR. The linear sampler gives the 2x bilinear upscale of the low-frequency
+// into HDR. The linear sampler gives the 4x bilinear upscale of the low-frequency
 // glow haze for free (a single tap suffices -- unlike the volume upsample there
 // is no per-fragment raymarch jitter to low-pass). Where no aggregate landed
 // (a = 0) the region contributes nothing: the clear is (0,0,0,0) and the guard
@@ -44,15 +44,15 @@
 import package::starAggregateUpsample::io::VSOut;
 import package::lib::starKnee::starKnee;
 
-@group(0) @binding(0) var quarterTex: texture_2d<f32>;
-@group(0) @binding(1) var quarterSamp: sampler;
+@group(0) @binding(0) var aggregateTex: texture_2d<f32>;
+@group(0) @binding(1) var aggregateSampler: sampler;
 
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
-  let s = textureSample(quarterTex, quarterSamp, in.uv);
-  let scalar = s.a; // summed RAW pre-knee scalar (offscreen alpha)
+  let aggregateTexel = textureSample(aggregateTex, aggregateSampler, in.uv);
+  let scalar = aggregateTexel.a; // summed RAW pre-knee scalar (offscreen alpha)
   // Knee the summed scalar, then rescale the summed tinted rgb onto it, hue
   // preserved. select() guards the scalar == 0 no-coverage texel from a 0/0.
   let ratio = select(0.0, starKnee(scalar) / scalar, scalar > 0.0);
-  return vec4<f32>(s.rgb * ratio, 0.0);
+  return vec4<f32>(aggregateTexel.rgb * ratio, 0.0);
 }

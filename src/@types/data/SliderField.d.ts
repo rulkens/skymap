@@ -1,6 +1,6 @@
 /**
  * UI metadata for one tuning slider, iterated by a DebugPanel section.
- * `K` is the per-domain slider-key union (e.g. `MilkyWaySliderKey`); domains
+ * `K` is the per-domain slider-key union (e.g. `MilkyWayCloudSliderKey`); domains
  * that need a surface discriminator (flow) intersect it on rather than
  * carrying it here, since it is one registry's shape, not a shared one.
  */

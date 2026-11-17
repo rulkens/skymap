@@ -44,7 +44,7 @@
  */
 
 import type { Channel } from '../Channel';
-import type { CameraPose } from '../../camera/CameraPose';
+import type { CameraPose } from '../../camera/pose/CameraPose';
 import type { BaseSegment } from './BaseSegment';
 import type { VelRamp } from './VelRamp';
 import type { OscTrack } from './OscTrack';
@@ -74,7 +74,7 @@ export type CompiledClip = {
 
   /** Per-channel base segments, one entry per Channel (possibly empty array).
    *  Within each channel, segments are ordered by startSec ascending and
-   *  non-overlapping. */
+   *  overlap only as a blend pair (the later one carries `blendIn`). */
   readonly baseTracks: Record<Channel, BaseSegment[]>;
 
   /** Velocity ramps from `rate` actions, across all channels, in emission

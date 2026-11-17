@@ -8,19 +8,22 @@
  * store-free: no redux, no engine state, no AssetSlot lifecycle — this
  * tool owns its own abort-less fetches.
  */
-import type { SourceType } from '../../../../src/@types/data/SourceType';
+import type { GalaxyCatalogId } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import type { Tier } from '../../../../src/@types/data/Tier';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { CatalogPoints } from '../../@types/CatalogPoints';
 import { loadDataManifest } from '../../../../src/services/loading/dataManifest';
 import { dataUrl, fetchWithProgress } from '../../../../src/services/loading/fetchWithProgress';
-import { tierTarget, tierFilenameForSource } from '../../../../src/data/tierTargets';
+import {
+  tierTarget,
+  tierFilenameForSource,
+} from '../../../../src/layers/galaxyCatalog/records/data/tierTargets';
 import {
   decodeGalaxyCatalog,
   emptyGalaxyCatalog,
-} from '../../../../src/data/galaxyCatalog/galaxyCatalogFormat';
+} from '../../../../src/layers/galaxyCatalog/records/data/galaxyCatalogFormat';
 
-async function fetchSourceCatalog(source: SourceType, tier: Tier): Promise<GalaxyCatalog> {
+async function fetchSourceCatalog(source: GalaxyCatalogId, tier: Tier): Promise<GalaxyCatalog> {
   if (tierTarget(source, tier) === 0) return emptyGalaxyCatalog();
   const url = dataUrl(tierFilenameForSource(source, tier));
   const buf = await fetchWithProgress(url, new AbortController().signal, () => {});
@@ -28,7 +31,7 @@ async function fetchSourceCatalog(source: SourceType, tier: Tier): Promise<Galax
 }
 
 export async function loadCatalogPoints(
-  sources: readonly SourceType[],
+  sources: readonly GalaxyCatalogId[],
   tier: Tier,
 ): Promise<CatalogPoints> {
   await loadDataManifest();

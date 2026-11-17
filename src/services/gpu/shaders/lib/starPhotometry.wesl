@@ -30,7 +30,7 @@
 // discipline lib/starKnee.wesl states for the compression constant.
 
 // Reference star-dot size in px — the divisor for the user's 'sizePx' slider.
-// Its TS twin is STAR_SIZE_REF_PX in src/data/starCullSlack.ts (pinned by a
+// Its TS twin is STAR_SIZE_REF_PX in src/layers/starCatalog/photometry/data/starCullSlack.ts (pinned by a
 // parity test), NOT DEFAULT_STAR_SIZE_PX (src/data/defaults.ts) — that constant
 // only seeds the slider's starting value and is deliberately larger (4.7), so
 // the shipped default already draws at 1.88x this reference, the tuned look.
@@ -81,13 +81,13 @@ const K_GAUSS: f32 = 0.7268;
 
 // The rim-zeroed Gaussian glow profile both fragment stages paint, shared here
 // so its shape can never drift from the K_GAUSS that integrates it. The bare
-// 'exp(-r2 * 4.0)' still holds EDGE = e^-4 ~= 1.83% of its peak at the disc edge
-// (r2 = 1); on saturated peaks that residue reads as a hard-edged bright disc.
+// 'exp(-radiusSq * 4.0)' still holds EDGE = e^-4 ~= 1.83% of its peak at the disc edge
+// (radiusSq = 1); on saturated peaks that residue reads as a hard-edged bright disc.
 // Shifting down by EDGE and rescaling by 1/(1 - EDGE) lands the profile exactly
-// on 0 at the rim while keeping g(0) = 1. 'r2' is the squared distance-from-centre
+// on 0 at the rim while keeping g(0) = 1. 'radiusSq' is the squared distance-from-centre
 // the caller already computed for its own unit-disc discard.
-fn starGlowProfile(r2: f32) -> f32 {
-  return (exp(-r2 * 4.0) - EDGE) / (1.0 - EDGE);
+fn starGlowProfile(radiusSq: f32) -> f32 {
+  return (exp(-radiusSq * 4.0) - EDGE) / (1.0 - EDGE);
 }
 
 // Inverse-square apparent-flux reference distance (Mpc). 1e-5 Mpc = 10 parsecs,

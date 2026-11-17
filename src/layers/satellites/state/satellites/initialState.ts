@@ -1,7 +1,7 @@
 /**
  * Off by default; every class starts on, so switching the Layer on shows them all.
  */
-import type { SatellitesSettings } from '../../../../@types/settings/SatellitesSettings';
+import type { SatellitesSettings } from '../../@types/SatellitesSettings';
 
 export const initialState: SatellitesSettings = {
   enabled: false,

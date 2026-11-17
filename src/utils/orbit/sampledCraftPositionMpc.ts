@@ -54,8 +54,8 @@ export function sampledCraftPositionMpc(
   const groundKm = SCENE_EARTH.surface.datumRadiusM * 1e-3;
   const { latDeg, lonDeg } = body.launchPad;
   const padDir = rotateVec3ByTightMat3(
-    surfacePointBodyFixed(latDeg, lonDeg, 1),
     orientationForBody('earth', simDays, NO_POSITIONS),
+    surfacePointBodyFixed(latDeg, lonDeg, 1),
   );
   const joinR = Math.hypot(...joinKm);
   const joinDir = normalize3(joinKm);

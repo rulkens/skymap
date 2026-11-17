@@ -12,7 +12,7 @@ import type { ExhibitCameraDriver } from '../../../@types/engine/camera/ExhibitC
 import type { Exhibit } from '../../../@types/exhibits/Exhibit';
 import type { RootState } from '../../../store/types';
 import { selectTakeoverSource } from '../../../state/takeover/selectors';
-import { CAMERA_DRIVERS, OPENSPACE_DRIVERS } from './cameraDrivers';
+import { CAMERA_DRIVERS, OPENSPACE_DRIVERS } from './drivers/cameraDrivers';
 
 function liftExhibitDriver(
   driver: ExhibitCameraDriver<unknown>,

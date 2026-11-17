@@ -8,7 +8,7 @@
  * on its own encoder, queued ahead of the frame's.
  */
 
-import type { SourceType } from '../../../@types/data/SourceType';
+import type { SourceId } from '../../../@types/data/SourceId';
 import type { OctreeChunk } from '../../../@types/octree/OctreeChunk';
 import type { Octree } from '../../../@types/octree/Octree';
 import type { OctreeCutGpu } from '../../../@types/octree/OctreeCutGpu';
@@ -124,7 +124,7 @@ export function createOctreeCutGpu(device: GPUDevice): OctreeCutGpu {
     aggregate: streamUniform('aggregate', 0, true),
   };
 
-  const sources = new Map<SourceType, OctreeCutSource>();
+  const sources = new Map<SourceId, OctreeCutSource>();
   const uniformScratch = new ArrayBuffer(CUT_UNIFORM_BYTES);
   // writeBuffer copies at the call, so landings and evictions reuse these instead of allocating.
   const rootWordsScratch = new Uint32Array(2);
@@ -207,7 +207,7 @@ export function createOctreeCutGpu(device: GPUDevice): OctreeCutGpu {
     };
   }
 
-  function release(source: SourceType): void {
+  function release(source: SourceId): void {
     const entry = sources.get(source);
     if (entry === undefined) return;
     entry.nodes.destroy();
@@ -217,7 +217,11 @@ export function createOctreeCutGpu(device: GPUDevice): OctreeCutGpu {
     sources.delete(source);
   }
 
-  function upload(source: SourceType, octree: Octree<{ readonly count: number }>, slots: number): void {
+  function upload(
+    source: SourceId,
+    octree: Octree<{ readonly count: number }>,
+    slots: number,
+  ): void {
     if (octree.records.count > 0) checkOctreePoolCaps(octree, slots);
     const packed = octree.records.count === 0 ? null : packOctreeCutNodes(octree);
     release(source);
@@ -243,7 +247,7 @@ export function createOctreeCutGpu(device: GPUDevice): OctreeCutGpu {
     });
   }
 
-  function slotOf(source: SourceType, slot: number): OctreeCutSource {
+  function slotOf(source: SourceId, slot: number): OctreeCutSource {
     const entry = sources.get(source);
     if (entry === undefined || slot < 0 || slot >= entry.slots) {
       throw new Error(`octreeCut: no slot ${slot} for source ${source}`);
@@ -272,7 +276,7 @@ export function createOctreeCutGpu(device: GPUDevice): OctreeCutGpu {
   }
 
   function uploadChunk(
-    source: SourceType,
+    source: SourceId,
     slot: number,
     chunk: OctreeChunk<{ readonly count: number }>,
     host: OctreeChunkHost,
@@ -307,7 +311,7 @@ export function createOctreeCutGpu(device: GPUDevice): OctreeCutGpu {
   }
 
   function evictChunk(
-    source: SourceType,
+    source: SourceId,
     slot: number,
     chunk: OctreeChunk<{ readonly count: number }>,
     host: OctreeChunkHost,
@@ -418,7 +422,7 @@ export function createOctreeCutGpu(device: GPUDevice): OctreeCutGpu {
   }
 
   function drawOf(
-    source: SourceType,
+    source: SourceId,
     stream: OctreeDrawStream,
     capture: boolean,
   ): OctreeCutDraw | null {
@@ -441,6 +445,7 @@ export function createOctreeCutGpu(device: GPUDevice): OctreeCutGpu {
   const cutGpu: OctreeCutGpu = {
     drawBgl,
     upload,
+    release,
     uploadChunk,
     evictChunk,
     encode,

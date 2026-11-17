@@ -8,7 +8,7 @@
 }
 
 /* On a phone the bar is at the foot: the box rises above it, clear of the feedback button like the panel. */
-@media (max-width: 900px) {
+@media (--narrow) {
   .root {
     bottom: calc(100% + 4rem);
   }

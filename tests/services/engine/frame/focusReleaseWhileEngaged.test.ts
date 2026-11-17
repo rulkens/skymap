@@ -6,7 +6,7 @@
  * Also pins the low-altitude conversion (finite, eye-preserving, targeted at
  * the RELEASED body's centre), the no-flap property (the engage test may not
  * re-capture the eye while the differing focus holds), and the same rule one
- * rung down: a switch between two ROVERS on the same planet.
+ * arm down: a switch between two ROVERS on the same planet.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -18,27 +18,27 @@ vi.mock('../../../../src/services/gpu/device', () => ({
   resizeCanvasToDisplay: () => false,
 }));
 
-import { isBodyArm } from '../../../../src/services/engine/camera/rungs/isBodyArm';
-import { foldToWorld } from '../../../../src/services/engine/camera/rungs/foldToWorld';
-import { frameKey } from '../../../../src/services/engine/camera/rungs/frameKey';
+import { isBodyArm } from '../../../../src/services/engine/camera/arms/body/isBodyArm';
+import { foldToWorld } from '../../../../src/services/engine/camera/arms/foldToWorld';
+import { frameKey } from '../../../../src/services/engine/camera/arms/frameKey';
 import { poseAtHR } from '../../../helpers/camera/poseAtHR';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
 import { diveUntilEngaged } from '../../../helpers/camera/diveUntilEngaged';
 import { driveWheelEvents } from '../../../helpers/camera/driveWheelEvents';
 import { displayedEye } from '../../../helpers/camera/displayedEye';
-import { bodyFocusDistance } from '../../../../src/services/engine/camera/bodyFocusDistance';
+import { bodyArrivalDistanceMpc } from '../../../support/bodyArrivalDistanceMpc';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
-import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
+import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
 import { liveWorldPose } from '../../../../src/services/engine/helpers/liveWorldPose';
-import { siteGroundRadiusM } from '../../../../src/utils/camera/siteGroundRadiusM';
-import { sitePointBodyFixed } from '../../../../src/utils/camera/sitePointBodyFixed';
+import { siteGroundRadiusM } from '../../../../src/utils/camera/arms/siteGroundRadiusM';
+import { sitePointBodyFixed } from '../../../../src/utils/camera/arms/sitePointBodyFixed';
 import { positionDriverById } from '../../../../src/data/bodies/positionDrivers';
 import { bodyFootprintRadiusM } from '../../../../src/utils/scene/bodyFootprintRadiusM';
 import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
 import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTightMat3';
 import { normalize3 } from '../../../../src/utils/math/normalize3';
 import { resume } from '../../../../src/state/time/timeSlice';
-import { clipStarted, resolveClipStart } from '../../../../src/state/camera/cameraSlice';
+import { clipStarted, resolveClipStart } from '../../../../src/state/camera/cameraIntentSlice';
 import { tween } from '../../../../src/services/engine/animation/effectHelpers';
 import { SCENE_BODIES } from '../../../../src/data/bodies/sceneBodies';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
@@ -48,18 +48,21 @@ import { SCENE_CELESTIAL_BODIES } from '../../../../src/data/bodies/sceneCelesti
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { DEFAULT_CAMERA_TUNING as TUNING } from '../../../../src/data/camera/cameraTuning';
-import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
-import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
+import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import { asSurfaceSiteId } from '../../../../src/utils/scene/asSurfaceSiteId';
+import { installAppSelectionKinds } from '../../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 const SIM = CONST_J2000;
 const BODIES = deriveBodyStates(SIM);
 const EARTH = BODIES.get(asSceneBodyId('earth'))! as BodyState;
 const MARS = BODIES.get(asSceneBodyId('mars'))! as BodyState;
-// The outer bound, matching cameraDrivers'/focusFraming's own read of
+// The outer bound, matching cameraDrivers'/the body row's own read of
 // bodyFootprintRadiusM — not the datum, which F2's Earth relief now diverges
 // from by 0.14%.
 const R_MPC = bodyFootprintRadiusM(SCENE_EARTH) * SCALE_UNITS.M_TO_MPC;
@@ -97,7 +100,7 @@ describe('focus release while engaged (round 10)', () => {
     // Release frame: the fold flipped the regime through its own conversion +
     // commit site — target at the RELEASED body's centre, eye preserved,
     // everything finite at h/R ≈ 0.1.
-    const base = h.store.getState().camera.base;
+    const base = h.store.getState().camera.intent.base;
     expect(base.frame).toBe('absolute');
     expect(base.frame === 'absolute' && base.pose).toBeTruthy();
     const released = base.pose as CameraPose;
@@ -154,7 +157,7 @@ describe('focus release while engaged (round 10)', () => {
     const endDist = distTo(displayedEye(h.state), MARS);
     expect(endDist).toBeGreaterThan(startDist * 100); // gone — at Earth
     const dEarth = distTo(displayedEye(h.state), EARTH);
-    const earthFraming = bodyFocusDistance(R_MPC, Math.PI / 3);
+    const earthFraming = bodyArrivalDistanceMpc(R_MPC, Math.PI / 3);
     expect(Math.abs(dEarth - earthFraming) / earthFraming).toBeLessThan(1e-3);
   });
 
@@ -165,7 +168,7 @@ describe('focus release while engaged (round 10)', () => {
     // the approach owed on the exit frame would fly the eye straight back out
     // to h/R 3.3, which is why this runs well past the Eased duration.
     const h = makeCameraSimHarness({ focusBody: null, bootHR: null, realClipPlayer: true });
-    const start: CameraPose = { ...MARS_PARK, distance: bodyFocusDistance(MARS_R_MPC, FOV) };
+    const start: CameraPose = { ...MARS_PARK, distance: bodyArrivalDistanceMpc(MARS_R_MPC, FOV) };
     h.seedPose(absoluteArm(start));
     h.focus('mars');
     h.store.dispatch(
@@ -175,11 +178,12 @@ describe('focus release while engaged (round 10)', () => {
           start,
         ),
         frame: DEFAULT_ORIENTATION,
+        by: 'player',
       }),
     );
 
     h.frame(40); // 640 ms: the 500 ms leg has ended and handed the camera back
-    expect(h.store.getState().camera.clip).toBeNull();
+    expect(h.store.getState().camera.intent.clip).toBeNull();
     h.frame(60);
 
     const framed = h.state.cameraRuntime.register.pose;
@@ -189,10 +193,10 @@ describe('focus release while engaged (round 10)', () => {
 
 /** The distinct regimes `camera.base` passed through, in order. */
 function regimeTrace(h: ReturnType<typeof makeCameraSimHarness>, frames: number): string[] {
-  const seq: string[] = [frameKey(h.store.getState().camera.base.frame)];
+  const seq: string[] = [frameKey(h.store.getState().camera.intent.base.frame)];
   for (let i = 0; i < frames; i += 1) {
     h.frame();
-    const key = frameKey(h.store.getState().camera.base.frame);
+    const key = frameKey(h.store.getState().camera.intent.base.frame);
     if (seq[seq.length - 1] !== key) seq.push(key);
   }
   return seq;
@@ -203,7 +207,7 @@ const MARS_R = MARS_ROW.surface.datumRadiusM;
 // Framing reads the outer bound, like R_MPC above: Mars's relief moves it 27 km off the datum.
 const MARS_R_MPC = bodyFootprintRadiusM(MARS_ROW) * SCALE_UNITS.M_TO_MPC;
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
-const RUNG_CTX = {
+const ARM_CTX = {
   bodies: BODIES,
   poseBasis: B,
   upBasis: B,
@@ -222,7 +226,7 @@ function roverMpc(bodies: ReadonlyMap<string, BodyState>): Vec3 {
   if (driver.kind !== 'surfaceFixed') throw new Error('curiosity is not a site');
   const p = sitePointBodyFixed(driver, siteGroundRadiusM(driver, MARS_R));
   const mars = bodies.get('mars')!;
-  const local = rotateVec3ByTightMat3(p as Vec3, mars.orientation);
+  const local = rotateVec3ByTightMat3(mars.orientation, p as Vec3);
   return [
     local[0] * SCALE_UNITS.M_TO_MPC + mars.positionMpc[0]!,
     local[1] * SCALE_UNITS.M_TO_MPC + mars.positionMpc[1]!,
@@ -232,7 +236,7 @@ function roverMpc(bodies: ReadonlyMap<string, BodyState>): Vec3 {
 
 /** The framing distance the rover's own approach flies to, in metres. */
 const ROVER_FRAMING_M =
-  bodyFocusDistance(
+  bodyArrivalDistanceMpc(
     bodyFootprintRadiusM(findByIdOrThrow(SCENE_BODIES, 'curiosity', 'test')) * SCALE_UNITS.M_TO_MPC,
     FOV,
   ) / SCALE_UNITS.M_TO_MPC;
@@ -257,18 +261,18 @@ describe('focus switch between two rovers on one planet (adverse 5)', () => {
               rangeM: 60,
             },
           },
-          RUNG_CTX,
+          ARM_CTX,
         ),
       ),
     );
     h.focus('opportunity');
     h.frame(40);
-    expect(frameKey(h.store.getState().camera.base.frame)).toBe('site:opportunity');
+    expect(frameKey(h.store.getState().camera.intent.base.frame)).toBe('site:opportunity');
 
     h.focus('curiosity');
     const trace = regimeTrace(h, 900);
 
-    // Out to the world arm — the only rung the follow approach is live in —
+    // Out to the world arm — the only arm the follow approach is live in —
     // then back down Mars's band into the new rover's site arm. Asserted whole
     // because the LENGTH is half the property: the same release rule without
     // its mirror in `engage` re-enters Mars's band every frame of the crossing
@@ -283,7 +287,7 @@ describe('focus switch between two rovers on one planet (adverse 5)', () => {
   });
 
   it('from the Mars arm with Mars focused, focusing a rover flies there (main parity)', () => {
-    // The same knot without a site rung in it, and the regression this branch
+    // The same knot without a site arm in it, and the regression this branch
     // introduced: on main `release` fired on `focus !== host` and the approach
     // flew to the rover, so selecting a rover from Mars orbit did something.
     const h = makeCameraSimHarness({ focusBody: null, bootHR: null });
@@ -295,7 +299,7 @@ describe('focus switch between two rovers on one planet (adverse 5)', () => {
     h.focus('mars');
     h.frame(60);
     diveUntilEngaged(h, { body: 'mars' });
-    expect(frameKey(h.store.getState().camera.base.frame)).toBe('body:mars');
+    expect(frameKey(h.store.getState().camera.intent.base.frame)).toBe('body:mars');
 
     h.focus('curiosity');
     const trace = regimeTrace(h, 900);
@@ -320,20 +324,20 @@ describe('focus switch between two rovers on one planet (adverse 5)', () => {
               rangeM: 60,
             },
           },
-          RUNG_CTX,
+          ARM_CTX,
         ),
       ),
     );
     h.focus('curiosity');
     h.frame(40);
-    expect(frameKey(h.store.getState().camera.base.frame)).toBe('site:curiosity');
+    expect(frameKey(h.store.getState().camera.intent.base.frame)).toBe('site:curiosity');
 
     // Zoom out past `siteDisengageR` and stop: the Mars arm takes it and KEEPS
     // it — the rover is still under the eye.
     for (let i = 0; i < 40; i += 1) h.wheel(240);
-    expect(frameKey(h.store.getState().camera.base.frame)).toBe('body:mars');
+    expect(frameKey(h.store.getState().camera.intent.base.frame)).toBe('body:mars');
     h.frame(120);
-    expect(frameKey(h.store.getState().camera.base.frame)).toBe('body:mars');
+    expect(frameKey(h.store.getState().camera.intent.base.frame)).toBe('body:mars');
   });
 });
 
@@ -352,7 +356,7 @@ describe('focusing the host from a rover site (adverse 10)', () => {
               rangeM,
             },
           },
-          RUNG_CTX,
+          ARM_CTX,
         ),
       ),
     );
@@ -363,13 +367,13 @@ describe('focusing the host from a rover site (adverse 10)', () => {
     seedAtCuriosity(h, 60);
     h.focus('curiosity');
     h.frame(40);
-    expect(frameKey(h.store.getState().camera.base.frame)).toBe('site:curiosity');
+    expect(frameKey(h.store.getState().camera.intent.base.frame)).toBe('site:curiosity');
     return h;
   }
 
   it('flies out to the host framing, and back in to the rover on the next focus', () => {
     // The user's report: standing at Curiosity, double-clicking Mars did
-    // nothing — `bodyRung.release` holds an arm whose host IS the focus, and
+    // nothing — `bodyCameraArm.release` holds an arm whose host IS the focus, and
     // the approach that owes the framing was gated out of every arm below the
     // world's, so no driver could fly it.
     const h = standOnCuriosity();
@@ -379,7 +383,7 @@ describe('focusing the host from a rover site (adverse 10)', () => {
     // Whole, in order: the length is half the property — a release without the
     // approach behind it lands `body:mars` and stops there.
     expect(out).toEqual(['site:curiosity', 'body:mars', 'absolute']);
-    const marsFraming = bodyFocusDistance(MARS_R_MPC, FOV);
+    const marsFraming = bodyArrivalDistanceMpc(MARS_R_MPC, FOV);
     expect(distTo(displayedEye(h.state), MARS) / marsFraming).toBeCloseTo(1, 6);
 
     h.focus('curiosity');
@@ -392,7 +396,7 @@ describe('focusing the host from a rover site (adverse 10)', () => {
   it('a wheel notch during the owed approach moves where the approach arrives', () => {
     // The regression the arm split left behind: in the world arm a notch is
     // absorbed into `followDistanceTarget`, so the wheel and the approach never
-    // fight over the distance; below it the notch went to the rung's own
+    // fight over the distance; below it the notch went to the arm's own
     // channels and the approach overwrote them, so for the ~600 ms a debt is
     // owed the wheel did nothing at all (it arrived at the bare framing).
     const h = makeCameraSimHarness({ focusBody: null, bootHR: null });
@@ -400,7 +404,7 @@ describe('focusing the host from a rover site (adverse 10)', () => {
     h.focus('curiosity');
     h.frame(2); // the approach owns the frame and has captured its target
     expect(h.state.cameraRuntime.register.winner).toBe('followApproach');
-    expect(frameKey(h.store.getState().camera.base.frame)).toBe('body:mars');
+    expect(frameKey(h.store.getState().camera.intent.base.frame)).toBe('body:mars');
 
     h.notch(240, [70, 30]);
     h.frame(60); // past the Eased duration — the approach saturates at its target
@@ -443,7 +447,7 @@ describe('focusing the host from a rover site (adverse 10)', () => {
       worstOffAxisRad = Math.max(worstOffAxisRad, Math.acos(Math.max(-1, Math.min(1, dot))));
       worstRangeErr = Math.max(worstRangeErr, Math.abs(metresBetween(eye, rover) - 10.73));
     }
-    expect(frameKey(h.store.getState().camera.base.frame)).toBe('site:curiosity');
+    expect(frameKey(h.store.getState().camera.intent.base.frame)).toBe('site:curiosity');
     // Half a degree of the 60° lens: the rover stays on the crosshair.
     expect(worstOffAxisRad).toBeLessThan(0.009);
     expect(worstRangeErr).toBeLessThan(0.2);

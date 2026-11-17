@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { forwardDevtools } from './forwardDevtools';
+import { withDevtoolsForward } from './withDevtoolsForward';
 import { readLastTarget } from './readLastTarget';
 
 const TIMEOUT_MS = 10_000;
@@ -20,18 +20,20 @@ export async function devicesCommand(): Promise<void> {
   console.log(
     `DevTools sockets: ${[...new Set(sockets)].join(' ') || 'none (is a browser open?)'}`,
   );
-  const base = `http://localhost:${forwardDevtools()}`;
-  const json = async (path: string): Promise<unknown> =>
-    (await fetch(`${base}${path}`, { signal: AbortSignal.timeout(TIMEOUT_MS) })).json();
-  const version = (await json('/json/version')) as Record<string, string>;
-  console.log(`browser: ${version.Browser} (protocol ${version['Protocol-Version']})`);
-  console.log(`user agent: ${version['User-Agent']}`);
-  // Only the tool's own tab is named: the rest is the owner's browsing.
-  const tabs = ((await json('/json/list')) as { id: string; type: string; url: string }[]).filter(
-    (t) => t.type === 'page',
-  );
-  const last = tabs.find((t) => t.id === readLastTarget());
-  console.log(
-    `tabs: ${tabs.length}; last tool tab: ${last ? `${last.id} ${last.url}` : 'none open'}`,
-  );
+  await withDevtoolsForward(async (port) => {
+    const base = `http://localhost:${port}`;
+    const json = async (path: string): Promise<unknown> =>
+      (await fetch(`${base}${path}`, { signal: AbortSignal.timeout(TIMEOUT_MS) })).json();
+    const version = (await json('/json/version')) as Record<string, string>;
+    console.log(`browser: ${version.Browser} (protocol ${version['Protocol-Version']})`);
+    console.log(`user agent: ${version['User-Agent']}`);
+    // Only the tool's own tab is named: the rest is the owner's browsing.
+    const tabs = ((await json('/json/list')) as { id: string; type: string; url: string }[]).filter(
+      (t) => t.type === 'page',
+    );
+    const last = tabs.find((t) => t.id === readLastTarget());
+    console.log(
+      `tabs: ${tabs.length}; last tool tab: ${last ? `${last.id} ${last.url}` : 'none open'}`,
+    );
+  });
 }

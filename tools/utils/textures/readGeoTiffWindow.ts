@@ -15,7 +15,8 @@ const DEPTHS = {
  * native numeric depth. `toColourspace('b-w')` is load-bearing: sharp's
  * default sRGB output silently triples a single-band DEM into three
  * interleaved copies. An 8-bit depth THROWS rather than rescaling — a
- * byte-depth DEM is a wrong/pre-stretched file, and rescaling would fabricate metres.
+ * byte-depth DEM is a wrong/pre-stretched file, and rescaling would fabricate
+ * metres.
  */
 export async function readGeoTiffWindow(
   path: string,

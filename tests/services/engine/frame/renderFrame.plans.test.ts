@@ -75,7 +75,7 @@ describe('renderFrame — plan rows', () => {
       scope: 'once',
       plan: () => {
         order.push('once-plan');
-        return { value: 1, awake: false, settling: false };
+        return { value: 1, awake: false, settling: false, loading: false };
       },
     };
     const perViewPlanner: FrameContentPlanner<string> = {
@@ -85,7 +85,7 @@ describe('renderFrame — plan rows', () => {
         perViewRuns += 1;
         const value = `run-${perViewRuns}`;
         order.push(`perView-plan:${value}`);
-        return { value, awake: false, settling: false };
+        return { value, awake: false, settling: false, loading: false };
       },
     };
     const stubPass = { name: 'stub-pass', enabled: () => true, draw: vi.fn() };
@@ -109,12 +109,14 @@ describe('renderFrame — plan rows', () => {
 
     const state = {
       viewRig: VIEW_RIG_KEY,
+      frameIndex: 0,
       gpu: { focusUniform: null },
       settings: {
         debug: { renderStrategy: 'auto' },
         tonemap: { exposure: 1, curve: 0 },
         hdr: { enabled: false, knee: 0, headroom: 0 },
         bloom: { enabled: false },
+        film: { enabled: false },
       },
       passes: [stubPass],
       planners: [oncePlanner, perViewPlanner],

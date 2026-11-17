@@ -1,0 +1,38 @@
+/**
+ * aerialPerspectivePass — the inside-the-shell sibling of `atmosphere-shell`:
+ * exactly one of the two draws per body per frame, or the in-scatter doubles.
+ * Its `FRAME_ORDER` line samples `foreground:0`'s depth and it hands the
+ * renderer that texture (`view.sampledDepth`, the apply fragment's binding 8),
+ * so the fog keys on scene distance, not the analytic ground sphere alone.
+ */
+
+import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
+import type { BodyRuntime } from '../../@types/BodyRuntime';
+import { atmosphereEntry } from '../present/atmosphereEntry';
+import { drawsAtmosphere } from '../present/drawsAtmosphere';
+
+export function aerialPerspectivePass(runtime: BodyRuntime): ContentPass {
+  return {
+    name: 'aerial-perspective',
+
+    enabled(state, ctx, view) {
+      if (view.slab.frame.kind !== 'body-m') return false;
+      const bodyId = view.slab.frame.hostId;
+      return (
+        drawsAtmosphere(bodyId, ctx, state) && atmosphereEntry(bodyId, ctx, state)?.inside === true
+      );
+    },
+
+    draw(pass, view, ctx, state) {
+      if (view.slab.frame.kind !== 'body-m') return;
+      const bodyId = view.slab.frame.hostId;
+      const entry = atmosphereEntry(bodyId, ctx, state);
+      if (entry === null) return;
+      runtime.atmosphereShellRenderer.drawAerialPerspective(
+        pass,
+        entry.body.id,
+        view.sampledDepth!.view,
+      );
+    },
+  };
+}

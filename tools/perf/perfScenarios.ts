@@ -36,7 +36,7 @@
  * dropped.
  */
 
-import { absoluteArm } from '../../src/utils/camera/absoluteArm';
+import { absoluteArm } from '../../src/utils/camera/arms/absoluteArm';
 import { asSceneBodyId } from '../../src/utils/scene/asSceneBodyId';
 import type { PerfPose } from '../../src/@types/perf/PerfPose';
 import type { Vec3 } from '../../src/@types/math/Vec3';
@@ -64,6 +64,7 @@ const GALACTIC_CENTRE_TARGET: Vec3 = [-0.00043726202, -0.0069827522, -0.00387942
 const SGR_A_STAR_TARGET: Vec3 = [-0.0004469860712, -0.007138118108, -0.003965748015];
 
 const MARS = asSceneBodyId('mars');
+const EARTH = asSceneBodyId('earth');
 
 export const PERF_SCENARIOS: readonly PerfScenario[] = [
   {
@@ -77,12 +78,32 @@ export const PERF_SCENARIOS: readonly PerfScenario[] = [
       }),
     },
   },
+  // 500 km straight down over Copenhagen: `earth-surface` sits at ~21,000 km
+  // where no surface tile engages, so this is the scenario that prices the
+  // tile pass (z5–z7 leaves, where night tiles are their own).
+  {
+    name: 'earth-copenhagen-500km',
+    pose: {
+      framed: {
+        frame: { body: EARTH },
+        pose: {
+          bodyId: EARTH,
+          anchorLocalM: [3506348.5506401896, 781705.855923865, 5261567.90284396],
+          eyeRelAnchorM: [275180.3916685128, 61348.756547156256, 412931.0863949113],
+          basisLocal: [
+            -0.2175981526592818, 0.9760384438941265, 0, -0.8060732300008007, -0.17970608315024597,
+            0.5638720347338333, -0.5503607833370255, -0.12269751309431251, -0.8258621727898225,
+          ],
+        },
+      },
+    },
+  },
   // 146 km over Jezero, inside Mars's atmosphere shell — the one scenario on
   // the body arm, and the only one that measures a non-Earth atmosphere. A
   // body-arm pose is body-local, so it frames the same ground whatever the sim
   // clock reads; only the lighting moves. Decoded from a share link's `pose=`
   // value (see the README), not from a logState dump. `clearFocus` because the
-  // boot Earth focus sits outside Mars's subtree, and a body rung releases an
+  // boot Earth focus sits outside Mars's subtree, and a body arm releases an
   // arm its focus does not reach — the vantage would snap back to Earth on the
   // first frame.
   {

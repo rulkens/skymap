@@ -1,6 +1,7 @@
 /**
  * The galaxy-catalog Layer: nine point sources, their renderers, the thumbnail
- * LOD chain, the Galaxies settings section, `watchPaletteWakeSaga` (its own
+ * LOD chain, the Galaxies settings section, the galaxy InfoCard, the
+ * provenance debug section, `watchPaletteWakeSaga` (its own
  * demand trigger's wake) and every contribution they make to a frame. No
  * `targets`.
  */
@@ -13,15 +14,20 @@ import { GALAXY_CATALOG_SOURCE_ROWS } from './sources/galaxyCatalogSourceRows';
 import { create } from './create';
 import { destroy } from './destroy';
 import { galaxyCatalogPlanner } from './frame';
-import { galaxyCatalogAssetRows } from './load/galaxyCatalogAssetRows';
-import { galaxyCatalogSourceCounts } from './load/galaxyCatalogSourceCounts';
-import { galaxyPointSpritesPass } from './passes/galaxyPointSpritesPass';
-import { proceduralDisksPass } from './passes/proceduralDisksPass';
-import { texturedDisksPass } from './passes/texturedDisksPass';
-import { galaxyCatalogSelectionRow } from './present/galaxyCatalogSelectionRow';
-import { produceFamousGalaxyLabels } from './present/produceFamousGalaxyLabels';
-import { watchPaletteWakeSaga } from './sagas/watchPaletteWakeSaga';
-import GalaxiesSectionContainer from './ui/GalaxiesSectionContainer';
+import { galaxyDisksPlanner } from './disks/present/galaxyDisksPlanner';
+import { galaxyCatalogAssetRows } from './records/load/galaxyCatalogAssetRows';
+import { galaxyCatalogSourceCounts } from './records/load/galaxyCatalogSourceCounts';
+import { galaxyPointSpritesPass } from './pointSprites/passes/galaxyPointSpritesPass';
+import { proceduralDisksPass } from './disks/procedural/passes/proceduralDisksPass';
+import { texturedDisksPass } from './disks/textured/passes/texturedDisksPass';
+import { galaxyCatalogSelectionRow } from './selection/galaxyCatalogSelectionRow';
+import { galaxyCatalogSelectionKinds } from './selection/kinds';
+import { produceFamousGalaxyLabels } from './famousGalaxies/present/produceFamousGalaxyLabels';
+import { watchPaletteWakeSaga } from './aliases/sagas/watchPaletteWakeSaga';
+import GalaxiesSectionContainer from './controls/ui/GalaxiesSectionContainer';
+import GalaxyDetailCardContainer from './card/ui/GalaxyDetailCardContainer';
+import CompactCardContainer from './card/ui/CompactCardContainer';
+import GalaxyProvenanceSectionContainer from './provenance/ui/GalaxyProvenanceSectionContainer';
 import type { GalaxyCatalogFacts } from './@types/GalaxyCatalogFacts';
 
 export const galaxyCatalogLayer = defineLayer({
@@ -55,7 +61,21 @@ export const galaxyCatalogLayer = defineLayer({
       },
     ],
   }),
-  selection: (runtime) => [galaxyCatalogSelectionRow(runtime)],
-  planners: (runtime) => [galaxyCatalogPlanner(runtime)],
-  ui: [{ slot: 'main', content: GalaxiesSectionContainer }],
+  selection: {
+    kinds: galaxyCatalogSelectionKinds,
+    rows: (runtime) => [galaxyCatalogSelectionRow(runtime)],
+  },
+  planners: (runtime) => [galaxyCatalogPlanner(runtime), galaxyDisksPlanner(runtime)],
+  ui: [
+    { slot: 'main', content: GalaxiesSectionContainer, title: 'Galaxies' },
+    { slot: 'debug', content: GalaxyProvenanceSectionContainer },
+    {
+      slot: 'detailCard',
+      content: {
+        type: 'galaxyCatalog',
+        Detail: GalaxyDetailCardContainer,
+        Compact: CompactCardContainer,
+      },
+    },
+  ],
 });

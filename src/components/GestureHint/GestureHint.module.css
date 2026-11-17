@@ -1,0 +1,60 @@
+/* ActionPill's frosted glass without its border: a label, not a button. */
+.root {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+  height: 36px;
+  padding: 0 var(--space-7);
+  border-radius: 999px;
+  background: var(--surface-soft);
+  -webkit-backdrop-filter: blur(var(--blur-card));
+  backdrop-filter: blur(var(--blur-card));
+  color: var(--color-fg-tertiary);
+  font: var(--font-size-sm) / 1 var(--font-family-mono);
+  letter-spacing: var(--letter-spacing-widest);
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  transition: opacity var(--duration-base) ease-in;
+}
+
+/* The divider rides the later segment, topped up to the root's gap so it sits centred. */
+.item + .item::before {
+  content: '';
+  width: 1px;
+  height: 16px;
+  margin-right: var(--space-2);
+  background: var(--border-default);
+  transition: opacity var(--duration-base) ease-in;
+}
+
+.leaving,
+.leaving + .item::before {
+  opacity: 0;
+}
+
+.icon {
+  display: inline-flex;
+}
+
+.touch {
+  display: none;
+}
+
+/* A mouse picture would tell a touch screen the wrong thing; the words carry it alone. */
+@media (pointer: coarse) {
+  .touch {
+    display: inline;
+  }
+  .mouse,
+  .icon {
+    display: none;
+  }
+}

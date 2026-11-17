@@ -1,4 +1,4 @@
-import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
+import type { LonLatBounds } from '../../../src/layers/body/surfaceTiles/format/@types/LonLatBounds';
 
 /** Do two lon/lat boxes share any area? Inclusive on the edges, because a
  *  lattice box's edges are posts a source may be the only one holding. */

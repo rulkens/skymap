@@ -1,13 +1,13 @@
 .root {
   composes: tap-links from '../../../styles/links.module.css';
-  margin: 2rem 0 2.5rem;
+  margin: var(--site-space-l) 0 var(--site-space-xl);
   padding: 0;
   list-style: none;
 
   & li {
     position: relative;
     display: grid;
-    padding: 0 0 1.25rem 2.25rem;
+    padding: 0 0 var(--site-space-m) var(--site-space-xl);
   }
 
   & li:last-child {

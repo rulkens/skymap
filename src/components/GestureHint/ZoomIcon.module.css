@@ -1,0 +1,35 @@
+/* Sized in px, not em: the chip's 10px type would draw a mouse too small to read. */
+.root {
+  width: 14px;
+  height: 22px;
+  flex-shrink: 0;
+  overflow: visible;
+}
+
+.wheel {
+  fill: var(--color-accent);
+  animation: wheel 1.8s ease-in-out infinite;
+}
+
+/* Rolls down, holds, then fades out before the loop restarts, so the jump back is unseen. */
+@keyframes wheel {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  60% {
+    transform: translateY(7px);
+    opacity: 1;
+  }
+  80%,
+  100% {
+    transform: translateY(7px);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wheel {
+    animation: none;
+  }
+}

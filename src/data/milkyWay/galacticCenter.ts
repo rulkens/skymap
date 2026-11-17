@@ -42,24 +42,6 @@ import { GALACTIC_CENTRE_ANCHOR } from '../places/galacticCentre';
 export const MILKY_WAY_CENTER_WORLD: Vec3 = GALACTIC_CENTRE_ANCHOR.positionMpc as Vec3;
 
 /**
- * Camera distance (Mpc) used by the Milky Way focus tween to land the
- * camera at a viewpoint where the Milky Way point cloud is the dominant
- * on-screen subject.
- *
- * Picked at 0.15 Mpc (≈150 kpc) by visual calibration — at this distance
- * the spiral fills most of the FOV at the project default 60° vertical
- * FOV.  This is deep inside the disc's full-visibility regime
- * (`milkyWayFadeAlpha` returns 1.0 while the disc spans at least
- * `MILKY_WAY_FADE_FULL_PX` on screen — here it fills the view) and
- * several times the disc radius (`MILKY_WAY_DISC_RADIUS_KPC`), so the
- * whole spiral is framed from outside rather than seen edge-on from
- * within. Reached by focusing the Milky Way — the `#focus=milkyWay`
- * deep-link, or its Command Palette row. Not the Home pill or the `h`/`e`
- * keys: those dispatch `goHome`, which flies to the sunlit Earth pose.
- */
-export const MILKY_WAY_VIEW_DISTANCE_MPC = 0.15;
-
-/**
  * Physical radius (kpc) of the Milky Way's stellar disc — THE single home
  * of the number.  The rendered point cloud and the pick target size from
  * it via `MILKY_WAY_RADIUS_MPC` (`milkyWayRadiusMpc.ts`, a pure unit

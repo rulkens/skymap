@@ -12,6 +12,7 @@ import type { EngineSettingsState } from '../../@types/settings/EngineSettingsSt
 import { APP_VISIBILITY_REGISTRY } from '../../compositions/appVisibility';
 import { setVisibility } from '../../state/settings/setVisibilityAction';
 import { hasSectionSwitch } from './hasSectionSwitch';
+import { splitVisibilityAddress } from './splitVisibilityAddress';
 import { visibilityClusterOf } from './visibilityClusterOf';
 import { visibilityEntryOf } from './visibilityEntryOf';
 
@@ -21,12 +22,9 @@ export function setVisibilityActionsFor(
   on: boolean,
   overMs?: number,
 ): readonly ReturnType<typeof setVisibility>[] {
-  // No show key, label name or item id holds a ':', so the parts are unambiguous.
-  const parts = arg.split(':');
-  const isLabel = parts[0] === 'label';
-  const address = (isLabel ? `label:${parts[1]}` : parts[0]) as VisibilityAddress;
-  const scopedItem = isLabel ? parts[2] : parts[1];
-  const entry = visibilityEntryOf(APP_VISIBILITY_REGISTRY, address);
+  const { bare, item: scopedItem } = splitVisibilityAddress(arg);
+  const entry = visibilityEntryOf(APP_VISIBILITY_REGISTRY, bare as VisibilityAddress);
+  const isLabel = !('key' in entry);
   const cluster = visibilityClusterOf(entry);
   const field = isLabel ? 'labelEnabled' : 'enabled';
   const write = (item?: string) =>

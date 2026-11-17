@@ -4,11 +4,11 @@
  * its `initialState` from there, so this composition cannot drift from them.
  */
 
-import type { OrientationFrameId } from '../camera/OrientationFrameId';
-import type { CameraSettings } from './CameraSettings';
+import type { OrientationFrameId } from '../camera/orientation/OrientationFrameId';
 import type { TonemapSettings } from './TonemapSettings';
 import type { HdrSettings } from './HdrSettings';
 import type { BloomSettings } from './BloomSettings';
+import type { FilmSettings } from './FilmSettings';
 import type { LabelSettings } from './LabelSettings';
 import type { PickingSettings } from './PickingSettings';
 import type { DebugSettings } from './DebugSettings';
@@ -16,10 +16,10 @@ import type { DebugSettings } from './DebugSettings';
 export type CoreSettingsState = {
   /** Which pole the camera calls "up". World positions never move: J2000 always. */
   orientation: OrientationFrameId;
-  camera: CameraSettings;
   tonemap: TonemapSettings;
   hdr: HdrSettings;
   bloom: BloomSettings;
+  film: FilmSettings;
   /** Cross-cutting label knobs — they MULTIPLY on top of per-layer label gates. */
   labels: LabelSettings;
   /** Cross-cutting: which selection kinds a scene click or hover may resolve. */

@@ -52,7 +52,7 @@ import { put, take, race, delay, fork, cancel, getContext } from 'typed-redux-sa
 import { advanceTour, prevBeat, togglePause } from './tourActions';
 import { setPaused } from './tourSlice';
 import type { ClipData } from '../../@types/animation/ClipData';
-import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
+import type { OrientationFrameId } from '../../@types/camera/orientation/OrientationFrameId';
 import type { SagaContext } from '../../store/types';
 
 /** The steering signal the outer tour loop reads: advance forward or step back. */

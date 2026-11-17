@@ -5,7 +5,7 @@
  * two surfaces never meet in a step. A coarse tile never scans a whole 1 m DTM.
  */
 
-import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
+import type { LonLatBounds } from '../../src/layers/body/surfaceTiles/format/@types/LonLatBounds';
 import { featherWeight } from '../utils/textures/featherWeight';
 import { heightLatticeStepDeg } from '../utils/textures/heightLatticeStepDeg';
 import type { HeightSource } from './@types/HeightSource';

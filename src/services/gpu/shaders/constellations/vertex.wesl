@@ -6,7 +6,7 @@
 // two things:
 //
 //   1. Thickness — expands the corner into a screen-aligned quad of half-width
-//      'u.halfWidthPx' via the shared 'lib::segmentQuad::expandSegmentQuad'
+//      'uniforms.halfWidthPx' via the shared 'lib::segmentQuad::expandSegmentQuad'
 //      helper (the same expansion filaments + markerLines use). This owns the
 //      endpoint choice (corner.x >0.5 -> b) and the +/- perpendicular offset.
 //
@@ -43,11 +43,10 @@ import package::constellations::io::Uniforms;
 import package::constellations::io::PerVertex;
 import package::constellations::io::VSOut;
 import package::lib::segmentQuad::expandSegmentQuad;
-import package::lib::camera::worldToClip;
 import package::lib::starPhotometry::STAR_GLOW_MIN_PX;
 import package::lib::starPhotometry::STAR_GLOW_MAX_PX;
 
-@group(0) @binding(0) var<uniform> u : Uniforms;
+@group(0) @binding(0) var<uniform> uniforms : Uniforms;
 
 // Apparent magnitude at/above which an endpoint star barely glows, so the gap
 // is just the point-source floor. ~6 = the naked-eye limit; eye-tuning start.
@@ -68,22 +67,15 @@ fn endpointGapPx(appMag : f32) -> f32 {
 
 @vertex
 fn vs(in : PerVertex) -> VSOut {
-  // 1. Thickness/base clip via the shared helper. 'u.halfWidthPx' is already a
+  // 1. Thickness/base clip via the shared helper. 'uniforms.halfWidthPx' is already a
   //    half-width, so it passes straight through. 'base.w' is the SELECTED
-  //    endpoint's w (the helper returns the endpoint's z/w untouched), which the
-  //    gap step below re-uses to convert its NDC offset back to clip space.
-  let base = expandSegmentQuad(u.cam, in.aWorld, in.bWorld, in.uv, u.halfWidthPx);
+  //    endpoint's w (the off-screen point's for a corner behind the eye), which
+  //    the gap step below re-uses to convert its NDC offset back to clip space.
+  let quad = expandSegmentQuad(uniforms.cam, in.aWorld, in.bWorld, in.uv, uniforms.halfWidthPx);
+  let base = quad.clip;
 
-  // 2. Screen-space tangent, recomputed here (a few lines, NOT a second
-  //    expansion): project both endpoints, perspective-divide, take the NDC
-  //    direction from a to b. This is the same project->divide the helper does
-  //    internally, but the helper hides its tangent, so the gap step derives it
-  //    once more rather than re-copying the whole expansion.
-  let aClip = worldToClip(u.cam, in.aWorld);
-  let bClip = worldToClip(u.cam, in.bWorld);
-  let aNdc = aClip.xy / aClip.w;
-  let bNdc = bClip.xy / bClip.w;
-  let tangent = normalize(bNdc - aNdc);
+  // 2. The helper's screen tangent, valid with an endpoint behind the eye.
+  let tangent = quad.tangent;
 
   // This corner's endpoint, by the SAME public convention the helper documents
   // (corner.x >0.5 -> b). Pull it toward the OTHER end: endpoint a moves +tangent
@@ -97,7 +89,7 @@ fn vs(in : PerVertex) -> VSOut {
   // clip space by the chosen endpoint's w. Because the helper already offset
   // 'base.xy' by 'perp * w', adding 'gapNdc * base.w' composes the two offsets
   // on the one endpoint whose w they share.
-  let gapNdc = inwardDir * (endpointGapPx(appMag) / (u.cam.viewportPx * 0.5));
+  let gapNdc = inwardDir * (endpointGapPx(appMag) / (uniforms.cam.viewportPx * 0.5));
 
   var out : VSOut;
   let gapped = base.xy + gapNdc * base.w;

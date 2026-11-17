@@ -9,7 +9,6 @@
  */
 
 import type { Mat3 } from '../../math/Mat3';
-import type { Vec2 } from '../../math/Vec2';
 import type { BodyState } from '../../scene/BodyState';
 import type { MeshBody } from '../../scene/MeshBody';
 import type { PositionedSceneBody } from './PositionedSceneBody';
@@ -19,6 +18,7 @@ import type { BodyPoseProvider } from '../camera/BodyPoseProvider';
 import type { FramePlannerResultStore } from './FramePlannerResultStore';
 import type { SlabRow } from './SlabRow';
 import type { PositionedId } from '../../scene/PositionedId';
+import type { SkyCaptureKey } from '../../rendering/SkyCaptureKey';
 
 /** The ready case: every per-frame derived value is non-null. */
 export type ReadyFrameContext = {
@@ -88,12 +88,12 @@ export type ReadyFrameContext = {
    * (`ctx.snapshot.renderTargets.viewOf('cosmic-web-density')`) never reach back into `state`.
    */
   renderTargets: RenderTargets;
-  /** Full structure-focus uniform value (produceFocusUniforms, ticked once/frame). */
+  /** The focus sphere (recedingFocus.produceFocus, ticked once/frame); blend 0 if none. */
   focus: FocusUniformsValue;
-  /** Structure-focus recession blend 0→1, from structureFocus.produceFocusUniforms (ticked once/frame). */
+  /** Focus recession blend 0→1, for any receding subject, from the same tick. */
   focusBlend: number;
   /**
-   * The structure `focusBlend` is about (structureFocus's latched one, so it outlasts
+   * The subject `focusBlend` is about (recedingFocus's latched one, so it outlasts
    * `selection.focus` through the fade-out), encoded as the pick word its own geometry
    * and label stamp; null at blend 0. Set with the blend, from the same tick.
    * `emphasisOf` compares records against it.
@@ -106,13 +106,6 @@ export type ReadyFrameContext = {
    */
   plans: FramePlannerResultStore;
   /**
-   * Live pointer position in texture pixels — `state.picking.cursorTexPx`
-   * forwarded, so a pass never reaches back into the picking bag `PassState`
-   * deliberately refuses. `null` unless the `terrain-pick-marker` debug overlay
-   * is on (its sole reader): the listener only writes it then.
-   */
-  cursorTexPx: Readonly<Vec2> | null;
-  /**
    * Which render-target ids hold THIS FRAME's content — a target first-touched
    * in any view of this frame holds it, regardless of which view's program did
    * the touching. Minted once per frame by `runFrame`, which hands the SAME
@@ -124,4 +117,10 @@ export type ReadyFrameContext = {
    * header for both.
    */
   renderedTargets: ReadonlySet<string>;
+  /**
+   * Sky capture rows whose band is open at the frame camera (`skyCapturesInBand`):
+   * the rows `scheduleSkyCaptures` may bake, so a planner whose output a capture
+   * replays on every face knows to plan for every direction.
+   */
+  skyCapturesInBand: ReadonlySet<SkyCaptureKey>;
 };

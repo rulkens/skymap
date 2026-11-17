@@ -1,0 +1,12 @@
+/* Header above, the view below; a long view scrolls under a still header. */
+.root {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100%;
+}
+
+.content {
+  display: grid;
+  min-height: 0;
+  overflow-y: auto;
+}

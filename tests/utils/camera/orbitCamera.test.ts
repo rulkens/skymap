@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { vec4 } from 'wgpu-matrix';
 import type { Vec4 } from '../../../src/@types/math/Vec4';
-import { createOrbitCamera } from '../../../src/utils/camera/createOrbitCamera';
-import { computeViewProj } from '../../../src/utils/camera/computeViewProj';
-import { symmetricFrustum } from '../../../src/utils/camera/symmetricFrustum';
+import { createOrbitCamera } from '../../../src/utils/camera/orbitCamera/createOrbitCamera';
+import { computeViewProj } from '../../../src/utils/camera/projection/computeViewProj';
+import { symmetricFrustum } from '../../../src/utils/camera/frustum/symmetricFrustum';
 
 describe('orbit camera', () => {
   it('places the camera at +z when yaw=0 pitch=0', () => {

@@ -1,0 +1,58 @@
+[
+  {
+    "from": "src/@types/data/flow/FlowField.d.ts",
+    "to": "src/layers/flow/@types/FlowField.d.ts"
+  },
+  {
+    "from": "src/@types/data/flow/FlowFieldMeta.d.ts",
+    "to": "src/layers/flow/@types/FlowFieldMeta.d.ts"
+  },
+  {
+    "from": "src/@types/data/flow/FlowSliderField.d.ts",
+    "to": "src/layers/flow/@types/FlowSliderField.d.ts"
+  },
+  {
+    "from": "src/@types/data/flow/FlowSliderKey.d.ts",
+    "to": "src/layers/flow/@types/FlowSliderKey.d.ts"
+  },
+  {
+    "from": "src/@types/data/flow/FlowSliderSurface.d.ts",
+    "to": "src/layers/flow/@types/FlowSliderSurface.d.ts"
+  },
+  {
+    "from": "src/@types/rendering/FlowFieldRenderer.d.ts",
+    "to": "src/layers/flow/@types/FlowFieldRenderer.d.ts"
+  },
+  {
+    "from": "src/@types/rendering/ReseedLatch.d.ts",
+    "to": "src/layers/flow/@types/ReseedLatch.d.ts"
+  },
+  {
+    "from": "src/data/bands/flowDeepZoom.ts",
+    "to": "src/layers/flow/data/flowDeepZoom.ts"
+  },
+  {
+    "from": "src/data/flow/flowFieldConstants.ts",
+    "to": "src/layers/flow/data/flowFieldConstants.ts"
+  },
+  {
+    "from": "src/data/flow/flowFieldMetaFromCube.ts",
+    "to": "src/layers/flow/data/flowFieldMetaFromCube.ts"
+  },
+  {
+    "from": "src/data/flow/flowFields.ts",
+    "to": "src/layers/flow/data/flowFields.ts"
+  },
+  {
+    "from": "src/utils/clampFlowParams.ts",
+    "to": "src/layers/flow/utils/clampFlowParams.ts"
+  },
+  {
+    "from": "src/utils/createReseedLatch.ts",
+    "to": "src/layers/flow/utils/createReseedLatch.ts"
+  },
+  {
+    "from": "src/utils/flowFrameDeltaSec.ts",
+    "to": "src/layers/flow/utils/flowFrameDeltaSec.ts"
+  }
+]

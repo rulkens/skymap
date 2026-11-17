@@ -1,7 +1,7 @@
 import type { GroundSample } from '../../../textures/@types/GroundSample';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { SurfaceFixedSite } from '../../../../src/@types/scene/SurfaceFixedSite';
-import type { SurfaceTileManifest } from '../../../../src/@types/scene/SurfaceTileManifest';
+import type { SurfaceTileManifest } from '../../../../src/layers/body/surfaceTiles/format/@types/SurfaceTileManifest';
 import { SCENE_CELESTIAL_BODIES } from '../../../../src/data/bodies/sceneCelestialBodies';
 import { degToRad } from '../../../../src/utils/math/degToRad';
 import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';

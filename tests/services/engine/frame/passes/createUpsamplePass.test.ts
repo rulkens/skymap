@@ -71,7 +71,6 @@ function makeCtx(offscreenView: GPUTextureView = {} as GPUTextureView): FrameVie
         blend: 0,
       },
       renderTargets,
-      cursorTexPx: null,
       renderedTargets: new Set<string>(),
     },
     viewSlot: 0,

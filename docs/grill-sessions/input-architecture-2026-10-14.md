@@ -357,6 +357,11 @@ fingers together does nothing; lifting one ends the pinch but not the gesture, a
 cross-check's "centroid delta plus span ratio" pinch (pan with two fingers, zoom toward them) was briefly read as
 wanted and then **rejected: keep today's centre zoom**. A pinch motion carries only a ratio.
 
+**Amended 2026-11-03 (two-finger tilt):** two fingers that move together, rather than apart, now end the
+held gesture once and open a `tilt` gesture, which drives the body rung's secondary-drag tilt and heading
+and nothing elsewhere. The pair locks to tilt or pinch after `PAIR_LOCK_PX`, judged by midpoint travel
+against span change. Pinch keeps Option A and the centre zoom.
+
 ## GC4: Shape sign-off
 
 **Decision:** signed off — one prep commit (`focusSelected`); new `input` slice, actions, pure recognizer (held and

@@ -371,7 +371,7 @@ const PERF_SLIDERS: readonly RenderSliderSpec[] = [
     max: 16,
     step: 0.5,
     format: (v) => v.toFixed(1),
-    info: "Multiplier on the baked star-grain point's fixed sigma that sets the point's visible extent — the feature size hiiSplat/starGrain.wesl's per-octave band-limit fades against, not the bare sigma. Calibrated at close approach; deriveFrameView.ts blends this toward 'Grain feature far' as the camera pulls out.",
+    info: "Multiplier on the baked star-grain point's fixed sigma that sets the point's visible extent — the feature size hiiSplat/starGrain.wesl's per-octave band-limit fades against, not the bare sigma. Calibrated at close approach; the field blends this toward 'Grain feature far' as the camera pulls out.",
   },
   {
     key: 'starGrainFeatureScaleFar',
@@ -731,8 +731,8 @@ function ControlsPanel({ fade, orientationDiagnostics }: ControlsPanelProps): Re
             onChange={(v) => dispatch(renderPatched({ bloomThreshold: v }))}
             path="render.bloomThreshold"
           />
-          {/* The star-pass block. These are the app's `MilkyWayTuning` knobs,
-              over the app's own ranges (`src/data/milkyWay/milkyWaySliderFields.ts`),
+          {/* The star-pass block. These are the app's `MilkyWayCloudTuning` knobs,
+              over the app's own ranges (`src/layers/milkyWay/tuning/data/milkyWayCloudSliderFields.ts`),
               driving the app's own `milkyWay/sprites/` shaders — so a number read
               off this panel can be typed straight into the app's DebugPanel.
               `Star size` and `Star intensity` keep this tool's narrower spike

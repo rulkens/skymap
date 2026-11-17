@@ -1,5 +1,5 @@
 /**
- * MESH_PRESENTATIONS — every scene body drawn as a baked mesh, keyed by body id.
+ * MESH_PRESENTATIONS — every scene body drawn as a mesh (baked or generated), keyed by body id.
  * The mesh path (slots, demand, partition, pass, probe) reads this table; the
  * identity consumers (labels, trails, presence, captions, pick tables) keep
  * reading their own, so drawing a body as a mesh never changes what it IS.
@@ -11,7 +11,7 @@ import { SCENE_MESH_BODIES } from './sceneMeshBodies';
 import { asSceneBodyId } from '../../utils/scene/asSceneBodyId';
 
 /** Celestial bodies drawn from a mission shape model; the mesh key is the body id. */
-const SHAPE_MODEL_BODY_IDS = ['phobos', 'deimos'] as const;
+const SHAPE_MODEL_BODY_IDS = ['phobos', 'deimos', 'vesta', 'ceres', 'bennu'] as const;
 
 function shapeModel(id: string): MeshPresentation {
   const asset = MESH_ASSETS[id];
@@ -20,6 +20,11 @@ function shapeModel(id: string): MeshPresentation {
 }
 
 export const MESH_PRESENTATIONS: readonly MeshPresentation[] = [
-  ...SCENE_MESH_BODIES.map(({ id, meshKey, boundingRadiusM }) => ({ id, meshKey, boundingRadiusM })),
+  ...SCENE_MESH_BODIES.map(({ id, meshKey, boundingRadiusM, buildMesh }) => ({
+    id,
+    meshKey,
+    boundingRadiusM,
+    buildMesh,
+  })),
   ...SHAPE_MODEL_BODY_IDS.map(shapeModel),
 ];

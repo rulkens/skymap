@@ -1,46 +1,34 @@
-/**
- * ToggleSection — one switch per label layer, in the order the dome reports them. Folded shut by
- * default: it is the longest list on the page and the least used during a show.
- */
+/** ToggleSection — one switch per row the dome reports (its label toggles, or its Layers), in its order. */
 
+import cx from 'classnames';
 import type { DomeStatus } from '../../../@types/remote/DomeStatus';
-import type { RemoteCommand } from '../../../@types/remote/RemoteCommand';
 import controls from '../remoteControls.module.css';
 import styles from './ToggleSection.module.css';
 
 export type ToggleSectionProps = {
   toggles: DomeStatus['toggles'];
-  onCommand: (command: RemoteCommand) => void;
+  /** Shown when the dome lists no rows. */
+  empty: string;
+  onSet: (id: string, enabled: boolean) => void;
 };
 
-function ToggleSection({ toggles, onCommand }: ToggleSectionProps) {
-  if (toggles.length === 0) return null;
-  const on = toggles.filter((toggle) => toggle.enabled).length;
+function ToggleSection({ toggles, empty, onSet }: ToggleSectionProps) {
+  if (toggles.length === 0) return <p className={controls.quiet}>{empty}</p>;
   return (
-    <details className={controls.section}>
-      <summary className={styles.root}>
-        <h2 className={controls.heading}>Labels</h2>
-        <span className={styles.count}>
-          {on} of {toggles.length} on
-        </span>
-      </summary>
+    <div className={styles.list}>
       {toggles.map((toggle) => (
-        <label key={toggle.id} className={styles.row}>
+        <label key={toggle.id} className={cx(controls.row, styles.row)}>
+          <span className={controls.grow}>{toggle.label}</span>
           <input
             type="checkbox"
-            className={styles.box}
+            role="switch"
+            className={controls.switch}
             checked={toggle.enabled}
-            onChange={(e) =>
-              onCommand({
-                name: 'toggleSet',
-                payload: { id: toggle.id, enabled: e.target.checked },
-              })
-            }
+            onChange={(e) => onSet(toggle.id, e.target.checked)}
           />
-          {toggle.label}
         </label>
       ))}
-    </details>
+    </div>
   );
 }
 

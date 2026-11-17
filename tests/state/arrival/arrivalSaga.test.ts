@@ -29,7 +29,7 @@ import { watchSelectionRowsSaga } from '../../../src/state/selectionRows/watchSe
 import { watchSelectionRevealSaga } from '../../../src/state/selection/watchSelectionRevealSaga';
 import { setVisibility } from '../../../src/state/settings/setVisibilityAction';
 import { selectSettings } from '../../../src/state/settings/selectSettings';
-import { commitCameraPose, startCameraTween } from '../../../src/state/camera/cameraSlice';
+import { commitCameraPose, startCameraTween } from '../../../src/state/camera/cameraIntentSlice';
 import { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsSlice';
 import { selectFocusRef, selectSelectedRef } from '../../../src/state/selection/selectors';
 import {
@@ -37,30 +37,30 @@ import {
   engineSourceCountReported,
   engineStatusChanged,
 } from '../../../src/state/engine/engineSlice';
-import { bodySelectionRow } from '../../../src/layers/body/present/bodySelectionRow';
-import { structureSelectionRow } from '../../../src/layers/structure/present/structureSelectionRow';
+import { bodySelectionRow } from '../../../src/layers/body/selection/bodySelectionRow';
+import { structureSelectionRow } from '../../../src/layers/structure/selection/structureSelectionRow';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
-import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/present/milkyWaySelectionRow';
-import { satellitesSelectionRow } from '../../../src/layers/satellites/present/satellitesSelectionRow';
+import { milkyWaySelectionRow } from '../../../src/layers/milkyWay/selection/milkyWaySelectionRow';
+import { satellitesSelectionRow } from '../../../src/layers/satellites/selection/satellitesSelectionRow';
 import { buildSatelliteCatalog } from '../../../tools/satellites/buildSatelliteCatalog';
 import { ISS } from '../../layers/satellites/fixtures/celestrakRecords';
-import { Source } from '../../../src/data/source';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
-import { foldToWorld } from '../../../src/services/engine/camera/rungs/foldToWorld';
+import { foldToWorld } from '../../../src/services/engine/camera/arms/foldToWorld';
 import { ARRIVAL_TIMEOUT_MS } from '../../../src/data/arrival/arrivalTimeoutMs';
 import { EARTH_HOME } from '../../../src/data/selection/earthHome';
 import { EARTH_REF } from '../../../src/data/selection/earthRef';
 import { MILKY_WAY_FOCUS_ID } from '../../../src/services/url/milkyWayFocusId';
-import { MILKY_WAY_VIEW_DISTANCE_MPC } from '../../../src/data/milkyWay/galacticCenter';
+import { framingPose } from '../../../src/services/engine/camera/framing/framingPose';
+import { MILKY_WAY_ROW } from '../../fixtures/milkyWayRow';
 import { ORIENTATION_FRAMES } from '../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { unixMsToJulianDays } from '../../../src/utils/time/unixMsToJulianDays';
-import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
-import { datumOnlyTerrainHeight } from '../../../src/utils/camera/datumOnlyTerrainHeight';
-import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
+import { absoluteArm } from '../../../src/utils/camera/arms/absoluteArm';
+import { datumOnlyTerrainHeight } from '../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
+import { NO_KINDS_OFF } from '../../support/noKindsOff';
 import { worldArmOf } from '../../fixtures/worldArmOf';
-import { homePose } from '../../../src/services/engine/camera/homePose';
+import { homePose } from '../../../src/services/engine/camera/framing/homePose';
 import { makeCameraSimHarness } from '../../helpers/camera/makeCameraSimHarness';
 import { seedCameraRuntime } from '../../../src/services/engine/camera/seedCameraRuntime';
 import { selectOrientation } from '../../../src/state/settings/selectors';
@@ -70,6 +70,10 @@ import type { LinkIntent } from '../../../src/@types/url/LinkIntent';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 import type { SatellitesRuntime } from '../../../src/layers/satellites/@types/SatellitesRuntime';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+import { bodyPickCodes, milkyWayPickCode, structureRowRuntime } from '../../support/layerPickCodes';
+import { installAppSelectionKinds } from '../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -116,12 +120,12 @@ function build({
     nextFrame,
     selection: composeSelectionRows(
       () => [
-        bodySelectionRow(),
-        structureSelectionRow(EMPTY_STRUCTURES),
-        ...(layerRows.landed ? [milkyWaySelectionRow()] : []),
+        bodySelectionRow({ pickCodes: bodyPickCodes() }),
+        structureSelectionRow(structureRowRuntime(EMPTY_STRUCTURES)),
+        ...(layerRows.landed ? [milkyWaySelectionRow(milkyWayPickCode())] : []),
         satellitesSelectionRow(satellites),
       ],
-      () => ALL_KINDS_ENABLED,
+      () => NO_KINDS_OFF,
     ),
     cameraRuntime: () => (booted ? LIVE : null),
     home,
@@ -214,7 +218,7 @@ describe('arrivalSaga', () => {
         upBasis: B,
         terrainHeightAt: datumOnlyTerrainHeight,
       });
-    const landed = worldArmOf(h.store.getState().camera.base);
+    const landed = worldArmOf(h.store.getState().camera.intent.base);
     sim.frame(1);
     const first = shown();
     sim.frame(60);
@@ -241,7 +245,9 @@ describe('arrivalSaga', () => {
     await flush();
 
     expect(h.arrivalCommits()).toBe(1);
-    expect(worldArmOf(h.store.getState().camera.base).distance).toBe(MILKY_WAY_VIEW_DISTANCE_MPC);
+    expect(worldArmOf(h.store.getState().camera.intent.base).distance).toBe(
+      framingPose(MILKY_WAY_ROW, LIVE.fovYRad, LIVE.from).distance,
+    );
     expect(h.status()).toEqual({ status: 'arrived' });
   });
 
@@ -250,7 +256,7 @@ describe('arrivalSaga', () => {
     h.arrive({ view: { kind: 'focus', id: 'satellite-25544' }, t: Date.UTC(2026, 9, 28, 12) });
     h.boot();
     await flush();
-    h.store.dispatch(engineSourceCountReported({ source: Source.Satellite, count: 1 }));
+    h.store.dispatch(engineSourceCountReported({ source: 'satellites', count: 1 }));
     await flush();
 
     const reveal = h.recorded.findIndex(
@@ -297,7 +303,7 @@ describe('arrivalSaga', () => {
     await flush();
 
     const marsAtT = deriveBodyStates(unixMsToJulianDays(t)).get(asSceneBodyId('mars'))!.positionMpc;
-    const target = worldArmOf(h.store.getState().camera.base).target;
+    const target = worldArmOf(h.store.getState().camera.intent.base).target;
     for (const axis of [0, 1, 2]) expect(target[axis]).toBeCloseTo(marsAtT[axis]!, 12);
     expect(h.status()).toEqual({ status: 'arrived' });
   });
@@ -328,7 +334,7 @@ describe('arrivalSaga', () => {
     const now = unixMsToJulianDays(Date.now());
     const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
     const expected = worldArmOf(homePose(EARTH_HOME, LIVE.fovYRad, now, B));
-    const landed = worldArmOf(root.camera.base);
+    const landed = worldArmOf(root.camera.intent.base);
     expect(landed.yaw).toBeCloseTo(expected.yaw, 3);
     expect(landed.pitch).toBeCloseTo(expected.pitch, 3);
   });
@@ -349,7 +355,7 @@ describe('arrivalSaga', () => {
     const expected = worldArmOf(
       homePose(EARTH_HOME, LIVE.fovYRad, simDays, ORIENTATION_FRAMES.galactic),
     );
-    const landed = worldArmOf(root.camera.base);
+    const landed = worldArmOf(root.camera.intent.base);
     expect(landed.yaw).toBeCloseTo(expected.yaw, 3);
     expect(landed.pitch).toBeCloseTo(expected.pitch, 3);
   });

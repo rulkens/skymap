@@ -10,15 +10,15 @@ parallel instead of once.
 
 ## Verified current state
 
-- `src/layers/body/render/texturedBodyRenderer.ts` owns
+- `src/layers/body/spheres/render/texturedBodyRenderer.ts` owns
   `maps: Map<TextureKind, GPUTexture>` per body plus a
   per-kind 1×1 `placeholderMaps` map, resolved in
   `buildBindGroup` as `res.maps.get(kind) ?? placeholderMaps.get(kind)!`.
-- `src/layers/body/render/earthRenderer.ts` owns Earth's five
+- `src/layers/body/earth/render/earthRenderer.ts` owns Earth's five
   maps as five separate mutable `let` bindings (`texture`,
   `materialTexture`, `nightTexture`, `normalTexture`, `cloudTexture`),
   with its own placeholder factory `createPlaceholder` and its own `setMap`.
-- `src/layers/body/render/ringRenderer.ts` owns a single
+- `src/layers/body/rings/render/ringRenderer.ts` owns a single
   `let texture` swapped by `setTexture`.
   `cloudShellRenderer.ts` is a fourth instance of the same shape
   (`setTexture`).
@@ -45,10 +45,10 @@ substantially larger than that delta.
 
 Which renderer receives a body's texture is dispatched by a hand-written
 `bodyId === 'earth'` branch, now in two places: `commitBodyTexture`
-(`src/layers/body/load/bodyTextureSlots.ts`, three
+(`src/layers/body/textures/load/bodyTextureSlots.ts`, three
 arms — Earth, the shared textured bodies, ring ids) and the atlas
 commit's placeholder fan-out
-(`src/layers/body/load/bodyTextureAtlasSlot.ts`, two arms). A
+(`src/layers/body/textures/load/bodyTextureAtlasSlot.ts`, two arms). A
 second body earning its own renderer, or Earth gaining a placeholder
 consumer the way it gained `cloudShellRenderer`, means editing both.
 

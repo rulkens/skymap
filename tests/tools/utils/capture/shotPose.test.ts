@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { shotPose } from '../../../../tools/utils/capture/shotPose';
 import { bodyPhasePose } from '../../../../tools/utils/capture/bodyPhasePose';
 import { DEFAULT_FOV_DEG } from '../../../../src/data/defaults';
-import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
+import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 import type { SceneShot } from '../../../../tools/@types/capture/SceneShot';
 
 const T = '2026-09-18T12:00:00Z';

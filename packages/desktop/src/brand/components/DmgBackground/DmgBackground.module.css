@@ -1,0 +1,83 @@
+/*
+ * Drawn at 660 × 400, the window's size in points; the 2x shot doubles the pixels, not the layout.
+ * electron-builder sizes the window's frame, not its content, to the image, so Finder's title bar and
+ * toolbar hide the bottom ~55 points: nothing that must be read goes below y 340.
+ */
+.root {
+  position: fixed;
+  inset: 0;
+}
+
+.mark {
+  position: absolute;
+  top: 44px;
+  left: 50%;
+  margin: 0;
+  translate: -50%;
+  color: var(--color-fg);
+  font-size: 46px;
+  font-weight: inherit;
+}
+
+/*
+ * Finder draws the icon labels black in light mode and white in dark mode, and a dmg cannot choose, so
+ * the band under them sits at the one luminance (about 0.18) where both clear 4.5:1. Plateau 262–310,
+ * the label line under 112 px icons centred at y 214.
+ */
+.twilight {
+  --twilight: color-mix(in srgb, var(--color-accent) 57.4%, var(--color-bg));
+
+  position: absolute;
+  top: 120px;
+  left: 0;
+  width: 100%;
+  height: 220px;
+  background: linear-gradient(
+    transparent,
+    color-mix(in srgb, var(--color-accent) 25%, transparent) 40%,
+    var(--twilight) 64.5%,
+    var(--twilight) 86%,
+    transparent
+  );
+}
+
+/* Finder's icon and its label, centred on dmg.contents (170, 214) and (490, 214). */
+.slot {
+  position: absolute;
+  top: 144px;
+  width: 140px;
+  height: 150px;
+}
+
+.app {
+  composes: slot;
+  left: 100px;
+}
+
+.applications {
+  composes: slot;
+  left: 420px;
+}
+
+.arrow {
+  position: absolute;
+  top: 196px;
+  left: 250px;
+  width: 160px;
+  height: 24px;
+  fill: none;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.hint {
+  position: absolute;
+  top: 108px;
+  left: 0;
+  width: 100%;
+  margin: 0;
+  text-align: center;
+  color: var(--color-fg-tertiary);
+  font-size: var(--text-small);
+}

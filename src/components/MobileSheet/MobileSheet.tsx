@@ -1,8 +1,9 @@
 /**
  * MobileSheet — the phone's single bottom sheet: peek ⇄ expanded by drag
  * (`useSheetDrag`). The selection card (no `panel`) drags from anywhere while
- * peeking, from the handle once expanded (its content scrolls); a panel (Layers)
- * has no peek and rests open. The root sits above the dock via
+ * peeking; expanded, its content scrolls and only `[data-sheet-grip]` elements
+ * drag it (the handle, CardHeader's phone layout). A panel (Layers) has no peek
+ * and rests open. The root sits above the dock via
  * `--bottom-stack-height`, which BottomStack sets.
  */
 
@@ -21,7 +22,7 @@ export type MobileSheetProps = {
 };
 
 function MobileSheet({ resetKey, panel, children }: MobileSheetProps): ReactNode {
-  const { sheetRef, handleRef, expanded, dragging, handlers } = useSheetDrag(resetKey);
+  const { sheetRef, expanded, dragging, handlers } = useSheetDrag(resetKey);
 
   return (
     <div className={styles.root}>
@@ -34,7 +35,7 @@ function MobileSheet({ resetKey, panel, children }: MobileSheetProps): ReactNode
         )}
         {...(!panel && handlers)}
       >
-        <div ref={handleRef} className={styles.handle} aria-hidden />
+        <div className={styles.handle} data-sheet-grip aria-hidden />
         {panel ? (
           <>
             <div className={styles.header}>

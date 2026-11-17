@@ -1,0 +1,224 @@
+/* A wide figure, so on a broad page it has the room for its notes either side of the picture. */
+.root {
+  composes: wide from '../FigureFrame/FigureFrame.module.css';
+  /* The page's control border (DeviceFrame's rim): the screen reads as an outline, not an object. */
+  --rim: color-mix(in srgb, var(--color-fg) 28%, transparent);
+  --shot-width: 14rem;
+}
+
+.stage {
+  position: relative;
+  z-index: 1;
+}
+
+.shot {
+  position: relative;
+  width: var(--shot-width);
+  margin-inline: auto;
+
+  & img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 1rem;
+    box-shadow: 0 0 0 1px var(--rim);
+  }
+}
+
+/* A part's box: its whole area is the target, lit by a thin line and a tint of the accent. */
+.spot {
+  position: absolute;
+  border-radius: var(--radius-lg);
+  color: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* The lit box and the filled mark are the focus ring, in the ring's own style (styles/ring.module.css). */
+.spot:focus-visible {
+  outline: none;
+}
+
+.spot:is([data-lit], :focus-visible) {
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  box-shadow: inset 0 0 0 1px var(--color-accent);
+}
+
+/* Outside the screen's rim (`--mark-x`, set from the part's box), so it covers none of the part's own words. */
+.mark {
+  position: absolute;
+  top: 50%;
+  left: var(--mark-x);
+  display: grid;
+  place-items: center;
+  width: 1.625rem;
+  height: 1.625rem;
+  translate: calc(-100% - var(--site-space-3xs)) -50%;
+  border: 1px solid var(--color-accent);
+  border-radius: 50%;
+  background: var(--color-bg);
+  font: var(--weight-small) var(--text-small) / 1 var(--font-body);
+  color: var(--color-accent);
+}
+
+.right .mark {
+  translate: var(--site-space-3xs) -50%;
+}
+
+.spot:is([data-lit], :focus-visible) .mark {
+  background: var(--color-accent);
+  box-shadow:
+    0 0 0 0.1875rem var(--color-bg),
+    0 0 0 0.25rem var(--color-accent);
+  color: var(--color-bg);
+}
+
+/* Unscripted, a box still lights while pointed at. */
+@media (hover: hover) {
+  .spot:hover {
+    background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+    box-shadow: inset 0 0 0 1px var(--color-accent);
+  }
+}
+
+.unseen {
+  composes: unseen from '../../../styles/a11y.module.css';
+}
+
+/*
+ * Narrower than broad, the notes are under a tall picture, so the part lit sits in this line, held to the
+ * screen's foot while the picture passes. At rest it is the one line of its hint, to cover little of the
+ * picture; lit, it is as tall as the longest part, so moving between parts never moves the list under it.
+ */
+.stage > .readout {
+  position: sticky;
+  bottom: 0;
+  align-content: start;
+  margin: var(--site-space-s) 0 0;
+  padding-block: var(--site-space-xs);
+  border-top: 1px solid var(--border-divider);
+  background: var(--color-bg);
+}
+
+.notes {
+  margin-top: var(--site-space-l);
+}
+
+.parts {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The number in a ring, as the docs number a step (styles/ring.module.css), beside the name over what it does. */
+.part {
+  composes: numbered from '../../../styles/ring.module.css';
+  margin: 0 0 var(--site-space-s);
+}
+
+.readout {
+  composes: numbered from '../../../styles/ring.module.css';
+}
+
+.parts > .part,
+.stage > .readout {
+  display: grid;
+  grid-template-columns: 2rem 1fr;
+  align-items: baseline;
+  gap: 0 var(--site-space-xs);
+  font-size: var(--text-small);
+  line-height: 1.5;
+}
+
+/* Unscripted, the line has nothing to say. */
+.stage > .readout[hidden] {
+  display: none;
+}
+
+.parts > .part::before,
+.stage > .readout::before {
+  grid-row: span 2;
+  align-self: start;
+}
+
+.stage > .readout[data-lit] {
+  min-height: 7.5em;
+}
+
+/* At rest the line under the picture has only its hint, with no number. */
+.stage > .readout:not([data-lit]) {
+  &::before {
+    display: none;
+  }
+
+  & .does {
+    grid-column: 1 / -1;
+  }
+}
+
+.name {
+  grid-column: 2;
+  font-weight: 500;
+  color: var(--color-fg);
+}
+
+.does {
+  grid-column: 2;
+  color: var(--site-text-muted);
+}
+
+.parts > .part:is([data-lit], :target)::before,
+.stage > .readout::before {
+  background: var(--color-accent);
+  color: var(--color-bg);
+}
+
+/* Two lists, a half of the parts each: side by side where a row has room for two. */
+@media (--two-up) {
+  .notes {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: var(--site-space-l);
+  }
+}
+
+/*
+ * Broad: the first half of the parts left of the picture from its top, the second right of it down to its foot,
+ * near where those parts stand on the screen; the list itself is the line that lights.
+ */
+@media (--broad) {
+  .root {
+    display: grid;
+    grid-template-columns: 1fr var(--shot-width) 1fr;
+    column-gap: var(--site-space-l);
+    --shot-width: 16rem;
+  }
+
+  .stage {
+    grid-area: 1 / 2;
+  }
+
+  .stage > .readout {
+    display: none;
+  }
+
+  .notes {
+    grid-area: 1 / 1 / 2 / -1;
+    grid-template-columns: subgrid;
+    margin: 0;
+  }
+
+  .parts:last-child {
+    grid-column: 3;
+    align-self: end;
+  }
+
+  .part:last-child {
+    margin-bottom: 0;
+  }
+}
+
+@media print {
+  .stage > .readout {
+    display: none;
+  }
+}

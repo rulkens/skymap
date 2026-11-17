@@ -5,17 +5,18 @@
  * `stepCameraRuntime` (the camera as one pure step over the frame's ONE store
  * snapshot) → THE one `state.cameraRuntime` assignment → the step's actions,
  * in order → the frame context, the planners, the GPU dispatch and the
- * keep-ticking vote. Non-camera dispatches (scale bar, body distance) stay here.
+ * keep-ticking vote. Non-camera store facts go through `FRAME_READOUT_ROWS`.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
 import type { Vec2 } from '../../../@types/math/Vec2';
+import type { FrameReadoutCtx } from '../../../@types/engine/frame/FrameReadoutCtx';
 
-import { orientDeltasWatched, recordOrientDeltas } from '../camera/orientDeltas';
+import { orientDeltasWatched, recordOrientDeltas } from '../camera/orientation/orientDeltas';
 import { stepCameraRuntime } from '../camera/stepCameraRuntime';
-import { cameraDofAnglesOf } from '../camera/cameraDofAnglesOf';
-import { mainViewSpec } from '../../../utils/camera/mainViewSpec';
+import { cameraDofAnglesOf } from '../camera/debug/cameraDofAnglesOf';
+import { mainViewSpec } from '../../../utils/camera/viewRig/mainViewSpec';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { resizeCanvasToDisplay } from '../../gpu/device';
 import { shouldKeepTicking } from '../helpers/shouldKeepTicking';
@@ -24,35 +25,23 @@ import { deriveFrameContext } from './frameContext';
 import { deriveView } from './deriveView';
 import { frameContextInputOf } from './frameContextInputOf';
 import { frameBodyStates } from './frameBodyStates';
-import { sceneBodyStates } from './sceneBodyStates';
 import { renderFrame } from './renderFrame';
 import { VIEW_RIGS } from '../../../data/rendering/viewRigs';
 import { drawPickDebugOverlay } from './drawPickDebugOverlay';
+import { FRAME_READOUT_ROWS } from './readouts/frameReadoutRows';
 import { reevaluateDemand } from '../wiring/reevaluateDemand';
-import { computeScaleInfo } from '../helpers/scaleBar';
-import { engineScaleChanged, engineBodyDistanceReported } from '../../../state/engine/engineSlice';
 import { deriveSimDays } from '../../../utils/time/deriveSimDays';
 import { selectTimeState, selectIsLiveTicking } from '../../../state/time/selectors';
-import { throttleByTime } from '../../../utils/throttle/throttleByTime';
 import { cpuSpans } from '../../../utils/perf/cpuSpans';
-import { distanceMpc } from '../../../utils/math/distanceMpc';
-import { selectionDriver } from '../../../utils/selection/selectionDriver';
 import { encodeSelectionPick } from '../../../utils/selection/encodeSelectionPick';
 import { pendingToInputSteps } from '../../../utils/input/pendingToInputSteps';
 import { selectPendingInput } from '../../../state/input/selectors';
+import { selectViewCoverPx } from '../../../state/viewCover/selectors';
+import { NO_INSETS_PX } from '../../../data/layout/noInsetsPx';
 import { inputConsumed } from '../../../state/input/inputSlice';
-
-/**
- * Scale-bar width, CSS px. Must stay under the ScaleBar panel's ~145 px content
- * box (it hugs the TimeBar pill; see ScaleBar.module.css) or the legend clamps.
- */
-const SCALE_TARGET_PX = 120;
-
-/**
- * ~4 Hz gate for the InfoCard's live distance row. Module scope on purpose: a
- * per-frame `throttleByTime(250)` would reset its closure and defeat itself.
- */
-const publishBodyDistanceGate = throttleByTime(250);
+import { hostOf } from '../camera/arms/hostOf';
+import { selectionKindShown } from '../presentation/selectionKindShown';
+import { isRecedingFocusRow } from '../../../utils/selection/isRecedingFocusRow';
 
 /**
  * Idle-tick cadence for a LIVE sim clock, ms. At the 127 km tile standoff the
@@ -101,6 +90,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     simDays,
     rootState: stored,
     canvasPx,
+    // Only the mono rig's one view is the canvas the covers sit over.
+    coverPx: state.viewRig === 'mono' ? selectViewCoverPx(stored) : NO_INSETS_PX,
     aspect: deps.canvas.width / deps.canvas.height,
     steps,
     bodies: bodyStates,
@@ -125,13 +116,13 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   if (orientDeltasWatched()) {
     recordOrientDeltas(
       cameraDofAnglesOf({
-        storedFrame: rootState.camera.base.frame,
+        storedFrame: rootState.camera.intent.base.frame,
         worldPose,
         poseBasis,
         upBasis,
         bodyStates,
         rememberedTiltRad: next.tilt.rememberedTiltRad,
-        tuning: rootState.camera.tuning,
+        tuning: rootState.camera.intent.tuning,
       }),
     );
   }
@@ -148,24 +139,33 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     bodyStates,
   });
 
-  // `clientWidth`/`clientHeight` are CSS px; backing-store `width`/`height`
-  // silently breaks the bar on retina.
-  if (state.booted) {
-    const scaleInfo = computeScaleInfo({
-      cam: { distance: input.altitudeMpc, fovYRad: cam.fovYRad },
-      canvasSize: { width: deps.canvas.clientWidth, height: deps.canvas.clientHeight },
-      targetPx: SCALE_TARGET_PX,
-    });
-    if (scaleInfo !== null) {
-      deps.cb.store.dispatch(engineScaleChanged(scaleInfo));
-    }
-  }
-
   // Minted here so `renderFrame` gets the SAME mutable `Set`; passes see only the
   // `ReadonlySet` on `snapshot.renderedTargets`.
   const renderedTargets = new Set<string>();
   // The 'not ready' branch is the window before cam + GPU handles populate.
   const snapshot = deriveFrameContext(state, input, renderedTargets);
+  // Ahead of the ready return: each row gates on `booted`/`isReady` itself.
+  const frame: FrameReadoutCtx = {
+    nowMs,
+    booted: state.booted,
+    isReady: snapshot.isReady,
+    canvasCssPx: { width: deps.canvas.clientWidth, height: deps.canvas.clientHeight },
+    camPosMpc: cam.position,
+    fovYRad: cam.fovYRad,
+    frustum: next.outputs.frustum,
+    framed: next.register.pose,
+    host: hostOf(next.register.pose.frame, {
+      bodies: bodyStates,
+      poseBasis,
+      upBasis,
+      terrainHeightAt: state.terrainHeightAt,
+    }),
+    altitudeMpc: input.altitudeMpc,
+    focusRow: state.selectionRows.focus,
+    bodyStates,
+    stored,
+  };
+  for (const row of FRAME_READOUT_ROWS) row.publish(frame, deps.cb.store.dispatch);
   if (!snapshot.isReady) {
     // Bootstrap populates the handles without waking any channel: keep polling.
     state.subsystems.scheduler.requestRender();
@@ -178,7 +178,10 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   const canvas = deriveView(
     snapshot,
     cam,
-    mainViewSpec(cam, { width: deps.canvas.width, height: deps.canvas.height }),
+    mainViewSpec(
+      { width: deps.canvas.width, height: deps.canvas.height },
+      state.cameraRuntime.outputs.frustum,
+    ),
   );
   // The rig hands back specs; deriving views HERE, off the one shared `snapshot`,
   // makes the shared-snapshot invariant structural.
@@ -187,35 +190,25 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     viewSpecs === null || viewSpecs.length === 0
       ? [canvas]
       : viewSpecs.map((spec) => deriveView(snapshot, cam, spec));
+  // Next pass's size gates measure against this frame's views.
+  state.drawPxPerRad = views.reduce((max, view) => Math.max(max, view.drawPxPerRad), 0);
 
-  // `produceFocusUniforms(nowMs)` TICKS the focus fade, so it runs EXACTLY ONCE
+  // `produceFocus(nowMs)` TICKS the focus fade, so it runs EXACTLY ONCE
   // per frame, before every consumer of the blend (label director, markers,
   // render settings); all of them read the captured value, never a fresh call.
   const focusRow = state.selectionRows.focus;
-  const focusedStructure = focusRow !== null && focusRow.type === 'structure' ? focusRow : null;
-  state.subsystems.structureFocus.update(focusedStructure, nowMs);
-  const focusUniforms = state.subsystems.structureFocus.produceFocusUniforms(nowMs);
-  snapshot.focusBlend = focusUniforms.blend;
-  snapshot.focus = focusUniforms;
-  snapshot.focusPickId = encodeSelectionPick(
-    state.selectionKindRows,
-    state.subsystems.structureFocus.lastFocusRef(),
+  state.subsystems.recedingFocus.update(
+    state.selection.focus,
+    isRecedingFocusRow(focusRow) ? focusRow : null,
+    nowMs,
   );
-
-  // Camera→focused-body distance for the InfoCard (the store-boundary rule:
-  // React never reads the engine snapshot). Null unless an orbital body in this
-  // frame's snapshot is focused.
-  if (publishBodyDistanceGate(nowMs)) {
-    let focusedBodyDistanceMpc: number | null = null;
-    const focusId = selectionDriver(focusRow)?.poseId ?? null;
-    if (focusId !== null) {
-      const bodyState = sceneBodyStates(state, canvas).get(focusId);
-      if (bodyState !== undefined) {
-        focusedBodyDistanceMpc = distanceMpc(canvas.drawCamPos, bodyState.positionMpc);
-      }
-    }
-    deps.cb.store.dispatch(engineBodyDistanceReported(focusedBodyDistanceMpc));
-  }
+  // A focus recedes the scene only while its subject's kind is shown, measured at the frame camera.
+  const focus = state.subsystems.recedingFocus.produceFocus(nowMs, (ref) =>
+    selectionKindShown(state, canvas, ref.type),
+  );
+  snapshot.focus = focus.uniforms;
+  snapshot.focusBlend = focus.blend;
+  snapshot.focusPickId = encodeSelectionPick(state.selectionKindRows, focus.ref);
 
   // Before the GPU dispatch (they upload the label buffers). Three statements,
   // not `a() || b() || c()`: each call FLUSHES as a side effect and `||`
@@ -248,6 +241,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // without it awaited fade-outs (catalog visibility, tier swaps) hang forever.
   state.subsystems.fades.tick(nowMs);
   state.fadesAnimating = state.subsystems.fades.isAnyAnimating(nowMs) || labelsAnimating;
+  state.layersLoading = snapshot.plans.loading;
   const keepTicking = shouldKeepTicking(
     state,
     rootState,
@@ -261,11 +255,15 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     deps.controlSchemes[next.scheme].drivers,
   );
 
+  const probeOwedInMs = state.cubemapCaptures.probe.refreshOwedInMs;
   if (keepTicking) {
     state.subsystems.scheduler.requestRender();
   } else if (selectIsLiveTicking(rootState)) {
     // At rest with a live sim clock: a coarse heartbeat (see LIVE_IDLE_TICK_MS)
     // the scheduler ignores while a frame is already queued.
     state.subsystems.scheduler.requestIdleFrame(LIVE_IDLE_TICK_MS);
+  } else if (probeOwedInMs !== null) {
+    // At rest with a probe older than this frame: one wake when it falls due.
+    state.subsystems.scheduler.requestIdleFrame(probeOwedInMs);
   }
 }

@@ -9,7 +9,7 @@
  * interleaved with five non-view ones, so it cannot simply map this table.
  */
 
-import type { DebugViewKind } from '../../../../src/@types/galaxy/DebugViewKind';
+import type { DebugViewKind } from '../../../../src/layers/milkyWay/field/header/@types/DebugViewKind';
 import type { DebugViewSpec } from '../../@types/data/DebugViewSpec';
 
 export const DEBUG_VIEWS: Readonly<Record<DebugViewKind, DebugViewSpec>> = {

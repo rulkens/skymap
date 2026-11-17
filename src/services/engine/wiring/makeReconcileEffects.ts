@@ -5,16 +5,17 @@
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
+import type { SelectionResolver } from '../../../@types/engine/selection/SelectionResolver';
 import type { ReconcileEffects } from '../../../store/effects/ReconcileEffects';
 import { logCameraState } from '../helpers/logCameraState';
 import { liveRenderCamera } from '../helpers/liveRenderCamera';
-import { liveFocusRow } from '../helpers/liveFocusRow';
 import { syncVisibilityTargets } from './syncVisibilityTargets';
 import { applySwapFormat } from '../phases/applySwapFormat';
 
 export function makeReconcileEffects(
   state: EngineState,
   canvas: HTMLCanvasElement,
+  selection: Pick<SelectionResolver, 'extractRow'>,
 ): ReconcileEffects {
   return {
     requestRender: () => state.subsystems.scheduler.requestRender(),
@@ -22,13 +23,9 @@ export function makeReconcileEffects(
     logCameraState: () => {
       const simDays = state.cameraRuntime.outputs.simDays;
       const cam = liveRenderCamera(state);
-      logCameraState(
-        cam,
-        canvas,
-        liveFocusRow(state.selectionRows.focus, simDays),
-        simDays,
-        state.cameraRuntime.outputs.displayed,
-      );
+      // The stored row was extracted at its own instant; re-extract at the pose's clock.
+      const focusRow = selection.extractRow(state.selection.focus, simDays);
+      logCameraState(cam, canvas, focusRow, simDays, state.cameraRuntime.outputs.displayed);
       return cam === null ? null : { framed: state.cameraRuntime.outputs.displayed, simDays };
     },
     applySwapFormat: (desired) => applySwapFormat(state, desired),

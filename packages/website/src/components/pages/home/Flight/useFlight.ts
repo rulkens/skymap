@@ -8,8 +8,7 @@
  */
 import { useCallback, useEffect } from 'react';
 
-import type { FlightParts } from '../../../../@types/FlightParts';
-import type { FlightTimeline } from '../../../../@types/FlightTimeline';
+import type { FlightOptions } from '../../../../@types/FlightOptions';
 import { clamp } from '../../../../utils/clamp.ts';
 import { flightAt } from '../../../../utils/flightAt.ts';
 import { flightDistanceKm } from '../../../../utils/flightDistanceKm.ts';
@@ -17,32 +16,16 @@ import { flightStillWeights } from '../../../../utils/flightStillWeights.ts';
 import { followDamped } from '../../../../utils/followDamped.ts';
 import { formatScale } from '../../../../utils/formatScale.ts';
 import { useFlightFilm } from './useFlightFilm.ts';
-
-// How much larger a still starts than it ends, over the two legs it is on screen: scrolling pulls it back.
-const PULL_BACK = 0.12;
-// As shares of a leg: a stop's caption starts to leave here, and the next one's starts to
-// arrive once it has gone, so two captions never share the corner they are both set in.
-// The change is short, so wherever the page stops a caption is nearly always at full strength.
-const CAPTION_LEAVES = 0.44;
-const CAPTION_ARRIVES = 0.5;
-const CAPTION_FADE = 0.06;
-// Pixels of scroll before the pinned stage lets go, over which the top bar's ground comes back:
-// the closing words and the spine then scroll up under a bar that has its ground.
-const GROUND_RETURN_PX = 160;
-// Per second: the picture settles on a new scroll position in about a quarter of a second.
-const FOLLOW_RATE = 14;
-// The path is measured from Earth's centre; the readout says "from Earth", so it counts from the surface.
-const EARTH_RADIUS_KM = 6371;
-
-type FlightOptions = {
-  timeline: FlightTimeline;
-  videoUrl: string;
-  parts: FlightParts;
-  /** The stop being read changed. */
-  onShown: (stop: number) => void;
-  /** Stills from `from` to `to` are worth fetching now. */
-  onReach: (from: number, to: number) => void;
-};
+import {
+  PULL_BACK,
+  WORDS_PULL_BACK,
+  CAPTION_LEAVES,
+  CAPTION_ARRIVES,
+  CAPTION_FADE,
+  GROUND_RETURN_PX,
+  FOLLOW_RATE,
+  EARTH_RADIUS_KM,
+} from './useFlight.constants.ts';
 
 /** Brings the pose to the page and returns the click on a ring: scroll the flight to that stop. */
 export function useFlight({
@@ -62,6 +45,7 @@ export function useFlight({
     const intro = parts.intro.current!;
     const arrive = parts.arrive.current!;
     const scale = parts.scale.current!;
+    const figure = scale.firstElementChild!;
     const hint = parts.hint.current!;
     const fill = parts.fill.current!;
     // The intro is the first stop's caption and the arrival block the last one's, so one rule fades all of them.
@@ -108,6 +92,11 @@ export function useFlight({
       words.forEach((el, k) => {
         const opacity = k === pose.index ? 1 - leaving : k === pose.index + 1 ? arriving : 0;
         el.style.opacity = String(opacity);
+        // The arrival holds still: it carries the way into the app.
+        el.style.transform =
+          opacity === 0 || snap || el === arrive
+            ? ''
+            : `scale(${(1 + (WORDS_PULL_BACK * (k - at)) / 2).toFixed(4)})`;
         // An invisible control must not take focus or clicks.
         if (el === intro || el === arrive) {
           el.inert = opacity < 0.5;
@@ -120,11 +109,12 @@ export function useFlight({
       const opening = pose.index === 0 && leaving < 0.5;
       const dip = pose.index === 0 ? Math.abs(1 - 2 * leaving) : 1;
       hint.style.opacity = String(dip * (1 - Number(arrive.style.opacity)));
-      const nudge = opening ? 'Scroll to pull back' : 'Keep scrolling';
-      if (hint.textContent !== nudge) hint.textContent = nudge;
+      if (hint.hasAttribute('data-onward') === opening)
+        hint.toggleAttribute('data-onward', !opening);
 
-      const readout = `Camera: ${formatScale(flightDistanceKm(pose.sec) - EARTH_RADIUS_KM)} from Earth`;
-      if (scale.textContent !== readout) scale.textContent = readout;
+      // Only the figure changes; "from Earth" stays put beside it.
+      const readout = formatScale(flightDistanceKm(pose.sec) - EARTH_RADIUS_KM);
+      if (figure.textContent !== readout) figure.textContent = readout;
 
       // The rings are evenly spaced, so the line fills by stops passed and is full at the last ring.
       fill.style.height = `${(Math.min(at, count - 1) / (count - 1)) * 100}%`;

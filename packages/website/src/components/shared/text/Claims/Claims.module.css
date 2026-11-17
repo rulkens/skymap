@@ -5,8 +5,8 @@
   & > div {
     display: grid;
     grid-template-columns: repeat(var(--cols, 12), minmax(0, 1fr));
-    gap: 0.25rem var(--col-gap);
-    padding-block: 1rem;
+    gap: var(--site-space-3xs) var(--col-gap);
+    padding-block: var(--site-space-s);
     border-top: 1px solid var(--border-divider);
   }
 
@@ -27,8 +27,8 @@
   & a {
     display: block;
     width: fit-content;
-    padding-block: 0.625rem;
-    margin-bottom: -0.625rem;
+    padding-block: var(--tap-reach);
+    margin-bottom: calc(-1 * var(--tap-reach));
   }
 }
 
@@ -42,7 +42,7 @@
   }
 }
 
-@media (max-width: 900px) {
+@media (--narrow) {
   .root dt,
   .root dd {
     grid-column: 1 / -1;

@@ -16,13 +16,7 @@
  */
 
 import type { ClipData } from '../../../../@types/animation/ClipData';
-import {
-  all,
-  dollyTo,
-  seq,
-  show,
-  wait,
-} from '../../../../services/engine/animation/effectHelpers';
+import { all, dollyTo, seq, show, wait } from '../../../../services/engine/animation/effectHelpers';
 import { dwellDrift } from '../../../../state/tour/dwellDrift';
 
 // Far enough OUTSIDE the 14,300 Mpc shell that the whole sphere sits in

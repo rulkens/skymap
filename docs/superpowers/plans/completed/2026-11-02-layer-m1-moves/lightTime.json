@@ -1,0 +1,14 @@
+[
+  {
+    "from": "src/@types/settings/LightTimeSettings.d.ts",
+    "to": "src/layers/lightTime/@types/LightTimeSettings.d.ts"
+  },
+  {
+    "from": "src/data/lightTime/lightTimeFadeBands.ts",
+    "to": "src/layers/lightTime/data/lightTimeFadeBands.ts"
+  },
+  {
+    "from": "src/data/lightTime/lightTimeSpheres.ts",
+    "to": "src/layers/lightTime/data/lightTimeSpheres.ts"
+  }
+]

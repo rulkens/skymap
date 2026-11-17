@@ -1,15 +1,17 @@
 /**
  * The structure Layer's whole runtime: the record store, one marker renderer
  * per slab, and the bulk-catalog slot that feeds the store. Non-null
- * throughout — `create` builds all four before returning, which is what lets
+ * throughout — `create` builds all five before returning, which is what lets
  * the passes read them without a null check.
  */
 
-import type { StructureStore } from './StructureStore';
-import type { StructureMarkerRenderer } from './StructureMarkerRenderer';
+import type { StructureStore } from '../catalog/@types/StructureStore';
+import type { StructureMarkerRenderer } from '../markers/@types/StructureMarkerRenderer';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
-import type { StructureCatalogPayload } from '../../../@types/loading/structureCatalogPayload/StructureCatalogPayload';
-import type { StructureCatalogReq } from './StructureCatalogReq';
+import type { StructureCatalogPayload } from '../catalog/@types/StructureCatalogPayload';
+import type { CatalogPickCodes } from '../../../@types/engine/selection/CatalogPickCodes';
+import type { StructureId } from '../../../@types/data/structure/StructureId';
+import type { StructureCatalogReq } from '../catalog/@types/StructureCatalogReq';
 
 export type StructureRuntime = {
   readonly store: StructureStore;
@@ -17,5 +19,7 @@ export type StructureRuntime = {
   readonly nearRenderer: StructureMarkerRenderer;
   /** Draws the exoplanet orbit diagrams (`exoplanetOrbitsPass`); never picked. */
   readonly orbitRenderer: StructureMarkerRenderer;
+  /** Category ↔ pick code; the ring stamps, labels and selection row all read it. */
+  readonly pickCodes: CatalogPickCodes<StructureId>;
   readonly slot: AssetSlot<StructureCatalogPayload, StructureCatalogReq>;
 };

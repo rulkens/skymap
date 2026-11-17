@@ -11,8 +11,9 @@
 import { useEffect, useRef, useState } from 'react';
 import type { SubmitEvent } from 'react';
 
-import type { TurnstileApi } from '../../../../@types/TurnstileApi';
+import { turnstileApi } from '../../../../utils/turnstileApi.ts';
 import ContactField from './ContactField.tsx';
+import { FIELDS, TURNSTILE_SCRIPT } from './ContactForm.constants.ts';
 import styles from './ContactForm.module.css';
 
 type ContactFormProps = {
@@ -21,40 +22,6 @@ type ContactFormProps = {
   privacyHref: string;
   issuesHref: string;
 };
-
-const FIELDS = [
-  {
-    name: 'name',
-    label: 'Your name',
-    autoComplete: 'name',
-    missing: 'Enter your name.',
-  },
-  {
-    name: 'organisation',
-    label: 'Organisation',
-    autoComplete: 'organization',
-    missing: 'Enter the name of your dome, museum or organisation.',
-  },
-  {
-    name: 'email',
-    label: 'Email address',
-    type: 'email',
-    autoComplete: 'email',
-    hint: 'We use it only to answer you.',
-    missing: 'Enter an email address, like name@example.org.',
-  },
-  {
-    name: 'message',
-    label: 'What you have in mind',
-    multiline: true,
-    hint: 'The dome or room, the screen, the audience, and a date if there is one. A few lines are enough.',
-    missing: 'Tell us in a line or two what you have in mind.',
-  },
-] as const;
-
-const TURNSTILE_SCRIPT = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
-
-const turnstile = () => (window as unknown as { turnstile?: TurnstileApi }).turnstile;
 
 function ContactForm({ endpoint, siteKey, privacyHref, issuesHref }: ContactFormProps) {
   const form = useRef<HTMLFormElement>(null);
@@ -77,7 +44,7 @@ function ContactForm({ endpoint, siteKey, privacyHref, issuesHref }: ContactForm
       async: true,
       onerror: () => (state.blocked = true),
       onload: () => {
-        state.widgetId = turnstile()?.render(widget.current!, {
+        state.widgetId = turnstileApi()?.render(widget.current!, {
           sitekey: siteKey,
           theme: 'dark',
           callback: (value: string) => (state.token = value),
@@ -144,7 +111,7 @@ function ContactForm({ endpoint, siteKey, privacyHref, issuesHref }: ContactForm
       );
     } finally {
       state.token = '';
-      if (state.widgetId) turnstile()?.reset(state.widgetId);
+      if (state.widgetId) turnstileApi()?.reset(state.widgetId);
       setSending(false);
     }
   };

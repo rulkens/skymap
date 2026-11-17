@@ -22,14 +22,14 @@
  *   - Click outside the panel closes.
  *
  * A third, always-present row is the Milky Way — a first-class
- * FocusableTarget rather than a catalog object, so it carries no id or
+ * card target rather than a catalog object, so it carries no id or
  * alias tuple and renders a glyph instead of an atlas thumbnail.
  *
  * Selection: every row maps to a `PaletteAction` via `utils/palette/actionForRow`; a
  * featured-grid card already carries its own.  Either way it reaches the
  * single `onSelect(action)` callback, and the container dispatches on
- * `action.kind` — for `focus`, `requestFocus({ id, transition })`, the one command→ref
- * bridge — so the palette never resolves a ref itself.
+ * `action.kind` — for `focus`, `requestSelect` plus `requestView({ id })`, which a saga
+ * turns into the one command→ref bridge — so the palette never resolves a ref itself.
  *
  * This file is the shell only: layout + subcomponent wiring.  The transient
  * search state + keyboard nav live in `usePaletteSearch`; the ranking pipeline
@@ -54,6 +54,7 @@ import type { AliasIndexEntry } from '../../@types/engine/AliasIndexEntry';
 import type { StructureSearchEntry } from '../../@types/engine/StructureSearchEntry';
 import type { LayerSearchEntry } from '../../@types/engine/layer/LayerSearchEntry';
 import type { PaletteAction } from '../../@types/palette/PaletteAction';
+import type { PaletteSkyContext } from '../../@types/palette/PaletteSkyContext';
 import type { PaletteTab } from '../../@types/palette/PaletteTab';
 import type { PaletteTabId } from '../../@types/palette/PaletteTabId';
 import styles from './CommandPalette.module.css';
@@ -82,6 +83,8 @@ export type CommandPaletteProps = {
    * rows", and an omitted prop would hide a container that forgot to read it.
    */
   readonly layerRows: readonly LayerSearchEntry[];
+  /** What the sky rows read of the view (`rankPaletteMatches`). */
+  readonly sky: PaletteSkyContext;
   /** The browse tabs shown in the empty-query state — the container passes `FEATURED_TABS`. */
   readonly tabs: readonly PaletteTab[];
   /** The stored active tab id (`ui.paletteTab`); falls back to the first shown tab if absent. */
@@ -105,6 +108,7 @@ function CommandPalette({
   aliasIndex,
   structures,
   layerRows,
+  sky,
   tabs,
   tab,
   onTabChange,
@@ -141,6 +145,7 @@ function CommandPalette({
     aliasIndex,
     structures,
     layerRows,
+    sky,
     cards: activeTab?.cards ?? [],
     onTabStep,
     open,

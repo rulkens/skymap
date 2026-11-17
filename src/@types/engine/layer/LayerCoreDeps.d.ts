@@ -27,4 +27,6 @@ export type LayerCoreDeps<Facts = undefined> = {
   readonly debugPanelOpen: () => boolean;
   /** `state.subsystems.scheduler.requestRender` — core's render-wake. */
   readonly requestRender: () => void;
+  /** This app's pick code for one of the Layer's pick sources; stable for the session, never persisted. */
+  readonly pickCode: (pickSourceId: string) => number;
 } & ([Facts] extends [undefined] ? object : { readonly publish: (patch: Partial<Facts>) => void });

@@ -1,6 +1,6 @@
 /**
  * focusUniforms — canonical bind-group layout for the FocusUniforms
- * binding (structure focus mode).
+ * binding (focus mode).
  *
  * Canonical, not `layout: 'auto'`: auto layouts don't cross pipelines
  * (see CLAUDE.md). One layout built at bootstrap is threaded into every

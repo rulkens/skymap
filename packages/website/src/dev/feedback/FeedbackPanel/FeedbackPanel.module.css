@@ -5,8 +5,8 @@
   width: 20rem;
   max-width: calc(100vw - 1rem);
   display: grid;
-  gap: 0.5rem;
-  padding: 0.75rem;
+  gap: var(--space-4);
+  padding: var(--space-6);
   background: #05070d;
   border: 1px solid rgba(168, 208, 255, 0.5);
   color: var(--color-fg);
@@ -17,7 +17,7 @@
   width: 100%;
   min-height: 6rem;
   resize: vertical;
-  padding: 0.5rem;
+  padding: var(--space-4);
   border: 1px solid rgba(168, 208, 255, 0.5);
   background: #000;
   color: var(--color-fg);
@@ -33,13 +33,13 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.25rem 1rem;
+  gap: var(--space-2) var(--space-8);
 }
 
 .button {
   composes: ring ring-small from '../../../styles/ring.module.css';
   min-height: 2.25rem;
-  padding: 0.125rem 0;
+  padding: var(--space-1) 0;
 }
 
 .hint,

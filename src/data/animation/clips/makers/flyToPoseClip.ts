@@ -34,7 +34,7 @@
  * that reads as rushed — is materially gentler for the same duration.
  */
 
-import type { CameraPose } from '../../../../@types/camera/CameraPose';
+import type { CameraPose } from '../../../../@types/camera/pose/CameraPose';
 import type { ClipData } from '../../../../@types/animation/ClipData';
 import {
   aimAt,

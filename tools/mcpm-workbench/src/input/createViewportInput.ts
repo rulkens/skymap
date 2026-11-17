@@ -8,7 +8,7 @@
 import { createInputAggregator } from '../../../utils/input/createInputAggregator';
 import { attachOrbitControls } from '../../../utils/input/attachOrbitControls';
 import type { InputGestureEvent } from '../../../@types/input/InputGestureEvent';
-import type { InputStep } from '../../../../src/@types/camera/InputStep';
+import type { InputStep } from '../../../../src/@types/camera/input/InputStep';
 import type { GizmoDragState } from '../../@types/GizmoDragState';
 import type { GizmoHandleId } from '../../@types/GizmoHandleId';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';

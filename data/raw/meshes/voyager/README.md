@@ -33,8 +33,12 @@ pristine download at any time with `npm run import-mesh -- voyager` — this
 **overwrites any edits** made since the last import.
 
 `tools/meshes/prebake/importMesh.py` renames each part's single UV layer to
-the one shared name and saves; the download has no animation, modifiers or
-material defects.
+the one shared name, applies `SOURCES["voyager"]`'s material overrides and
+saves; the download has no animation or modifiers. The overrides give the dish
+a rough white dielectric and generate metallic and roughness maps for
+`tex_01`, the photo atlas that carries every other part, by classing its
+texels by colour (gold film, black blanket, everything else), plus a bump from
+its luminance. The classes and their physics live beside the rules there.
 
 To edit the model: open `voyager.blend` in Blender 5.2 LTS, change materials,
 save, update this file's line in `../meshes.sha256`, then
@@ -75,9 +79,9 @@ protected separately — see <https://www.nasa.gov/nasa-brand-center/images-and-
 glTF 2.0, Draco-compressed, 4 mesh nodes: three textured parts (20,378 tris,
 one material each, 1024² baseColor PNG, no normal/MR maps) plus a 1 m `_root`
 placeholder cube the exporter left on the scene graph. No rig, no animation.
-All three materials author metallic 0 and roughness 0.5, so the metallic atlas
-bakes black and the roughness atlas a flat 0.5 — the bake reads the model, not
-a spacecraft photograph.
+All three materials author metallic 0 and roughness 0.5; without the
+import's overrides the metallic atlas bakes black and the roughness atlas a
+flat 0.5.
 
 **Units: metres, +Z up (Blender frame).** The high-gain antenna reflector
 measures 3.81 m across the rim against the real 3.66 m dish — inside 5 %, so

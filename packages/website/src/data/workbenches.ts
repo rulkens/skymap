@@ -35,7 +35,8 @@ export const WORKBENCHES: readonly Workbench[] = [
     manual: 'tools/mcpm-workbench/README.md',
     picture: {
       title: 'The MCPM workbench a few hundred steps into a run',
-      caption: 'The grey points are the simulation’s agents; the pink web is the density they have traced so far.',
+      caption:
+        'The grey points are the simulation’s agents; the pink web is the density they have traced so far.',
       alt: 'A cube of pink and white filaments inside a cloud of grey points, with a table of counts at the upper left, a histogram at the lower left and a panel of sliders on the right.',
     },
   },
@@ -48,7 +49,8 @@ export const WORKBENCHES: readonly Workbench[] = [
     manual: 'tools/flow-workbench/README.md',
     picture: {
       title: 'The flow workbench with a run under way',
-      caption: 'Particles drifting along the CF4++ velocity field, with the panel of sliders at the upper right. The bright threads and knots are where the flow converges.',
+      caption:
+        'Particles drifting along the CF4++ velocity field, with the panel of sliders at the upper right. The bright threads and knots are where the flow converges.',
       alt: 'A ball of fine blue and orange streaks on black, with bright blue threads winding through its middle and a panel of seven sliders at the upper right.',
     },
   },
@@ -60,7 +62,8 @@ export const WORKBENCHES: readonly Workbench[] = [
     manual: 'tools/scene-workbench/README.md',
     picture: {
       title: 'The scene workbench with the Søndermarken group loaded',
-      caption: 'A laser scan of 1.6 million points and 2.5 million Gaussian splats trained on aerial photographs, drawn together.',
+      caption:
+        'A laser scan of 1.6 million points and 2.5 million Gaussian splats trained on aerial photographs, drawn together.',
       alt: 'A square of Copenhagen seen at a slant, with a wooded park in the middle among red roofs and streets, and a panel listing a point cloud, Gaussian splats and a mesh at the upper left.',
       credit: 'Klimadatastyrelsen (laser scan and aerial photographs), CC BY 4.0',
     },
@@ -73,9 +76,23 @@ export const WORKBENCHES: readonly Workbench[] = [
     manual: 'tools/famous-curator/README.md',
     picture: {
       title: 'The curator with a galaxy part-way through',
-      caption: 'The source picture of one named galaxy, framed in the middle, with the sliders for star removal and for the fade to transparent on the right. In the list on the left a tick marks a galaxy whose picture is done.',
+      caption:
+        'The source picture of one named galaxy, framed in the middle, with the sliders for star removal and for the fade to transparent on the right. In the list on the left a tick marks a galaxy whose picture is done.',
       alt: 'A list of Caldwell and NGC numbers on the left, most of them on green with a tick, a photograph of a spiral galaxy among many stars inside a square frame with handles in the middle, and on the right sliders above two small pictures of the same galaxy without its stars, the lower one on a chequered ground.',
       credit: 'Andreigusan (photograph of NGC 6946), CC0',
+    },
+  },
+  {
+    id: 'albedo',
+    name: 'Albedo bench',
+    script: 'albedo-bench',
+    port: 5700,
+    manual: 'tools/albedo-bench/README.md',
+    picture: {
+      title: 'The albedo bench at Gale crater',
+      caption:
+        'The left half has the sunlight taken out; the right half is the photograph as it is. The arrows show the direction of the light the bench found.',
+      alt: 'The same reddish ground of craters and ridges in two halves, the left one flat and the right one with dark shadows and bright slopes, under rows of blue arrows pointing down and to the left, with a tall panel of sliders on the right.',
     },
   },
   {
@@ -85,7 +102,8 @@ export const WORKBENCHES: readonly Workbench[] = [
     manual: 'tools/structure-audit/README.md',
     picture: {
       title: 'The structure audit, on its Layering tab',
-      caption: 'The shade of a cell is the number of imports from its row’s folder into its column’s. A red ring marks an import against the proposed order of the folders.',
+      caption:
+        'The shade of a cell is the number of imports from its row’s folder into its column’s. A red ring marks an import against the proposed order of the folders.',
       alt: 'A dark page with a grid of blue-shaded cells, folder names along its top and left side and many cells ringed in red, under a row of eleven tabs and six totals.',
     },
   },

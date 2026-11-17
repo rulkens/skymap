@@ -3,7 +3,7 @@ import type { CatalogPoints } from '../../@types/CatalogPoints';
 import type { GridBox } from '../../@types/GridBox';
 import type { McpmParams } from '../../@types/McpmParams';
 import type { Tier } from '../../../../src/@types/data/Tier';
-import { galaxyCatalogIdOf } from '../../../../src/utils/galaxyCatalogIdOf';
+import { APP_SOURCE_REGISTRY } from '../../../../src/compositions/appSources';
 import { boxHalfExtentMpc } from '../field/boxHalfExtentMpc';
 import { buildParamsPayload } from '../state/exportParams';
 
@@ -70,7 +70,7 @@ export function emitTraceSidecar(input: {
       producer: 'mcpm-workbench',
       produced_at: formatProducedAt(producedAt),
       catalog: {
-        sources: points.sources.map(galaxyCatalogIdOf),
+        sources: points.sources.map((s) => APP_SOURCE_REGISTRY[s].id),
         tier,
         n_points: points.count,
         nan_mass_filled: weights.nanCount,

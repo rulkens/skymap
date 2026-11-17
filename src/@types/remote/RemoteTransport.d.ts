@@ -1,12 +1,9 @@
+import type { DomeLink } from './DomeLink';
 import type { RemoteLink } from './RemoteLink';
 import type { RoomCode } from './RoomCode';
 
-/** How a page reaches a relay room; parsing and validation live above every transport. */
+/** How a page reaches a relay: a dome hosts and is issued its room, a remote opens one by code. */
 export type RemoteTransport = {
-  /** A fresh room for this dome session, in the transport's own format. */
-  newRoom: () => RoomCode;
+  host: () => DomeLink;
   open: (room: RoomCode) => RemoteLink;
-  /** Origins a remote can reach this dome on; the pairing QR encodes the first. A localhost page cannot learn its
-   *  LAN address by itself. */
-  pairingOrigins: () => Promise<readonly string[]>;
 };

@@ -1,5 +1,5 @@
 /**
- * focusTweenDescriptor — the pure `SelectionRow → CameraTweenDescriptor` table.
+ * focusTweenDescriptor — the pure row → `CameraTweenDescriptor` table.
  *
  * A focus gesture writes the focus ref; the camera flying to that target is the
  * EFFECT of that Intent, and `watchFocusTweenSaga` is where that effect lives. This
@@ -25,33 +25,40 @@
  * the caller's `motion`. The `to` target is always copied into a fresh array so
  * the descriptor never aliases the row's `worldPos` (or the shared
  * `MILKY_WAY_CENTER_WORLD` constant).
+ *
+ * A fly that changes the lens (out of the sky's own, to the default) frames
+ * for the lens it lands on and carries both ends as the poses' `fov`, so the
+ * tween eases the lens over the same flight.
  */
 
-import { framingPose } from '../../services/engine/camera/framingPose';
-import type { SelectionRow } from '../../@types/engine/SelectionRow';
-import type { CameraPose } from '../../@types/camera/CameraPose';
-import type { CameraTweenDescriptor } from '../../@types/camera/CameraTweenDescriptor';
-import type { FocusMotion } from '../../@types/camera/FocusMotion';
-import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
+import { framingPose } from '../../services/engine/camera/framing/framingPose';
+import type { CameraPose } from '../../@types/camera/pose/CameraPose';
+import type { CameraTweenDescriptor } from '../../@types/camera/focusMotion/CameraTweenDescriptor';
+import type { FocusMotion } from '../../@types/camera/focusMotion/FocusMotion';
+import type { OrientationFrameId } from '../../@types/camera/orientation/OrientationFrameId';
+import type { SelectionRowBase } from '../../@types/engine/selection/SelectionRowBase';
 
 /**
  * Build the focus tween's `from → to` descriptor.
  *
  * `from` is the live produced pose (the camera the user actually sees), so an
  * in-flight tween hands off smoothly when the user re-focuses mid-animation.
- * `fovYRad` is the projection FOV the structure and body arms need to frame
- * their subject to screen-fill; the galaxy and Milky Way arms ignore it.
+ * `fromFovYRad` is the live lens and `fovYRad` the one the fly lands on, which
+ * the structure and body arms frame their subject through to screen-fill.
  * `motion` is frozen onto the descriptor as given. `frame` is the orientation
  * live at the caller's dispatch time — stamped onto the descriptor so the tween
  * driver can re-express the pose if the setting changes mid-flight (same
  * contract as `clipStarted`'s `frame`).
  */
 export function focusTweenDescriptor(
-  row: SelectionRow,
+  row: SelectionRowBase,
   from: CameraPose,
+  fromFovYRad: number,
   fovYRad: number,
   motion: FocusMotion,
   frame: OrientationFrameId,
 ): CameraTweenDescriptor {
-  return { from, to: framingPose(row, fovYRad, from), motion, frame };
+  const to = framingPose(row, fovYRad, from);
+  if (fromFovYRad === fovYRad) return { from, to, motion, frame };
+  return { from: { ...from, fov: fromFovYRad }, to: { ...to, fov: fovYRad }, motion, frame };
 }

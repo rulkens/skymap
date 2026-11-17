@@ -3,12 +3,8 @@
  * row per black hole, collected by `compositions/appSources.ts` into `APP_SOURCE_REGISTRY`.
  */
 
-import type { SourceType } from '../../../@types/data/SourceType';
 import type { SourceEntry } from '../../../@types/data/SourceEntry';
 
-import { Source } from '../../../data/source';
 import { SGR_A_STAR_ENTRY } from './sgrAStar';
 
-export const BLACK_HOLE_SOURCE_ROWS = [
-  [Source.SgrAStar, SGR_A_STAR_ENTRY],
-] as const satisfies readonly (readonly [SourceType, SourceEntry])[];
+export const BLACK_HOLE_SOURCE_ROWS = [SGR_A_STAR_ENTRY] as const satisfies readonly SourceEntry[];

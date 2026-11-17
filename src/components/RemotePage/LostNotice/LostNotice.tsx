@@ -11,8 +11,8 @@ export type LostNoticeProps = {
 
 function LostNotice({ room, onChangeCode }: LostNoticeProps): ReactNode {
   return (
-    <div role="alert" className={styles.root}>
-      <p className={styles.text}>
+    <div role="alert" className={controls.notice}>
+      <p className={controls.noticeText}>
         No answer on room <span className={styles.code}>{room}</span>. Check the code the dome
         shows.
       </p>

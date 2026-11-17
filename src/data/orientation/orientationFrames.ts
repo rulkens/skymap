@@ -17,7 +17,7 @@
 import type { Mat3 } from '../../@types/math/Mat3';
 import type { Vec3 } from '../../@types/math/Vec3';
 import type { Vec4 } from '../../@types/math/Vec4';
-import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
+import type { OrientationFrameId } from '../../@types/camera/orientation/OrientationFrameId';
 import { ECLIPTIC_FRAME } from '../bodies/orbitPlaneFrames';
 import { SG_TO_EQ_MATRIX } from '../superGalacticTransform';
 import { mat3FromColumns } from '../../utils/math/mat3FromColumns';

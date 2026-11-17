@@ -15,7 +15,11 @@ const NARRATION_CLIP: ClipData = {
 describe('tourFrameCap', () => {
   it('sums enter+dwell over the beats and applies the margin formula', () => {
     const beats: readonly BeatData[] = [
-      { enterClip: NARRATION_CLIP, caption: { title: 'B1' }, dwellClip: dwellDrift(8) },
+      {
+        enterClip: NARRATION_CLIP,
+        caption: { title: 'B1', lines: ['x'] },
+        dwellClip: dwellDrift(8),
+      },
       { caption: null, dwellClip: dwellDrift(5) }, // no enterClip — dwell only
     ];
     const fps = 30;

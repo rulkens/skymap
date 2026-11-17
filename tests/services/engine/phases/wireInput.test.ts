@@ -10,10 +10,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
 import { rootReducer } from '../../../../src/store/rootReducer';
-import { UNSTARTED_EPOCHS } from '../../../../src/services/engine/camera/cameraEpochs';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
-import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/layers/galaxyCatalog/state/defaults';
-import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
 import { EARTH_HOME } from '../../../../src/data/selection/earthHome';
@@ -27,23 +24,8 @@ const homePoseSpy = vi.fn(() => ({
     pitch: 0.0609,
   },
 }));
-vi.mock('../../../../src/services/engine/camera/homePose', () => ({
+vi.mock('../../../../src/services/engine/camera/framing/homePose', () => ({
   homePose: (...args: unknown[]) => homePoseSpy(...(args as Parameters<typeof homePoseSpy>)),
-}));
-
-vi.mock('../../../../src/services/engine/helpers/buildGalaxyInfo', () => ({
-  buildGalaxyInfo: vi.fn(),
-}));
-
-vi.mock('../../../../src/layers/galaxyCatalog/render/galaxyPickRenderer', () => ({
-  createGalaxyPickRenderer: vi.fn(() => ({ destroy: vi.fn() })),
-}));
-
-// The content-layer registry pulls in every layer module (heavy GPU deps);
-// wireInput only needs the array to hand to createPickProgram, so an empty
-// stub is enough and keeps the phase test free of the full renderer graph.
-vi.mock('../../../../src/services/engine/frame/passes', () => ({
-  CONTENT_PASSES: [],
 }));
 
 vi.mock('../../../../src/services/engine/frame/pickProgram', () => ({
@@ -69,105 +51,27 @@ import { wireInput } from '../../../../src/services/engine/phases/wireInput';
 // could drift from GPU_HANDLE_ROWS.
 import { GPU_HANDLE_ROWS } from '../../../../src/services/engine/gpuHandles/gpuHandleRegistry';
 import { selectSelectedRef, selectFocusRef } from '../../../../src/state/selection/selectors';
+import { manualPausedAtActions } from '../../../../src/state/time/enterManualPausedAt';
+import { unixMsToJulianDays } from '../../../../src/utils/time/unixMsToJulianDays';
 
+/** Only what the phase reads; everything else it writes. A read of any other
+ *  field surfaces as a runtime undefined, not a silently-passing stub. */
 function makeState(): EngineState {
   return {
-    settings: {
-      galaxyCatalogs: {
-        enabled: true,
-        sizePx: 2.5,
-        brightness: 1.0,
-        depthFade: true,
-        provenance: DEFAULT_GALAXY_PROVENANCE,
-        items: {
-          famousGalaxy: { enabled: true, labelEnabled: true },
-        },
-      },
-      tonemap: { exposure: 1.0, curve: 'reinhard' },
-      bias: { mode: 'off', absMagLimit: -18 },
-      thumbnails: { enabled: true },
-      milkyWay: { enabled: true },
-      cosmicWebFilaments: { enabled: false, intensity: 1.0 },
-      cosmicWebDensity: { enabled: true },
-      structures: {
-        enabled: true,
-        items: {
-          cluster: { enabled: true, labelEnabled: true },
-          supercluster: { enabled: true, labelEnabled: true },
-          void: { enabled: true, labelEnabled: true },
-          group: { enabled: true, labelEnabled: true },
-        },
-      },
-      debug: {
-        overlays: { 'pick-buffer': false },
-        disabledPasses: {},
-        renderStrategy: 'auto',
-      },
-    },
-    bias: {} as never,
-    picking: { pickInFlight: false, cursorTexPx: null },
-    data: {
-      structures: { byCategory: () => [] },
-      galaxies: { get: () => undefined, famousMeta: [] },
-    } as never,
-    gpu: {
-      galaxyPointRenderer: {
-        totalCount: () => 0,
-        loadedSources: () => [],
-      } as never,
-      galaxyPickRenderer: null,
-      pickProgram: null,
-      focusUniform: { bindGroup: {} as GPUBindGroup },
-      renderTargets: null,
-      labelRendererCosmo: null,
-      markerLineRendererCosmo: null,
-      texturedQuadRenderer: null,
-      texturedDiskRenderer: null,
-      proceduralDiskRenderer: null,
-    },
-    subsystems: {
-      scheduler: { requestRender: vi.fn() },
-      selection: { setHovered: vi.fn(), setSelected: vi.fn() },
-      pickDriver: null,
-      resizeWake: null,
-    } as never,
+    gpu: {},
+    subsystems: { scheduler: { requestRender: vi.fn() } },
     booted: false,
-    cameraRuntime: {
-      register: { pose: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 }, winner: 'resting' },
-      epochs: UNSTARTED_EPOCHS,
-      follow: null,
-      outputs: {
-        displayed: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 },
-        projection: { fovYRad: 0, aspect: 1, near: 0.01, far: 50000 },
-      },
-    },
   } as unknown as EngineState;
 }
 
 function makeDeps(): BootstrapDeps {
-  const cb: EngineCallbacks = {
-    store: configureStore({ reducer: rootReducer }),
-  } as unknown as EngineCallbacks;
   return {
-    canvas: { width: 800, height: 600 } as HTMLCanvasElement,
-    cb,
+    canvas: { width: 800, height: 600 },
+    cb: { store: configureStore({ reducer: rootReducer }) },
     composition: { layers: [], home: EARTH_HOME },
-    frameRef: { current: () => {} },
-    handleRef: { current: null },
-    allSlots: new Map(),
-    selection: {
-      resolvePick: () => null,
-      extractRow: () => null,
-      resolveFocusId: () => null,
-      focusIdOf: () => null,
-    },
-    phaseLocals: {
-      device: {} as GPUDevice,
-      context: {} as GPUCanvasContext,
-      format: 'bgra8unorm' as GPUTextureFormat,
-      unwatchHdrCapability: () => {},
-    },
-  };
+    selection: { resolvePick: () => null },
+    phaseLocals: { device: {} },
+  } as unknown as BootstrapDeps;
 }
 
 describe('wireInput', () => {
@@ -190,6 +94,25 @@ describe('wireInput', () => {
     expect(state.booted).toBe(true);
   });
 
+  it("frames the boot camera at a linked `t=`'s instant, not the wall clock", async () => {
+    // A focus link with no pose keeps this base's yaw and pitch, so a wall-clock
+    // base made the same link frame differently on every load.
+    const state = makeState();
+    const deps = makeDeps();
+    const instant = new Date('2026-09-18T06:00:00Z');
+    for (const action of manualPausedAtActions(instant)) deps.cb.store.dispatch(action);
+    homePoseSpy.mockClear();
+
+    await wireInput(state, deps);
+
+    expect(homePoseSpy).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      unixMsToJulianDays(instant.getTime()),
+      expect.anything(),
+    );
+  });
+
   it('seeds the runtime off the PRE-commit store, so frame one reads the boot commit as outside', async () => {
     const state = makeState();
     const deps = makeDeps();
@@ -200,7 +123,7 @@ describe('wireInput', () => {
     // by reference — true here because the seed ran before the commit below
     // it, off the still-placeholder store, so the boot pose lands settled
     // rather than through an eased follow approach.
-    expect(state.cameraRuntime.base).not.toBe(deps.cb.store.getState().camera.base);
+    expect(state.cameraRuntime.base).not.toBe(deps.cb.store.getState().camera.intent.base);
   });
 
   it('seeds no selection: the first view is the arrival’s', async () => {

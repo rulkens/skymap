@@ -2,11 +2,12 @@
  * DriverOutput — what one driver's `pose` returns. A row that owns no memory hands `mem` back,
  * so the winner's adoption needs no branch. `own` replaces the row's private slot
  * (`CameraRuntime.own`; absent keeps it). `pivotBody` stands in as the wheel's pivot next frame
- * when the row frames a body no focus names.
+ * when the row frames a body no focus names. `fovYRad` is this frame's field of view when the row
+ * animates it (a clip's `fov` channel); absent draws `camera.intent.fovYRad`.
  */
 
 import type { FollowMemory } from './FollowMemory';
-import type { FramedCameraPose } from '../../camera/FramedCameraPose';
+import type { FramedCameraPose } from '../../camera/pose/FramedCameraPose';
 import type { SceneBodyId } from '../../scene/SceneBodyId';
 
 export type DriverOutput<Own = unknown> = {
@@ -14,4 +15,5 @@ export type DriverOutput<Own = unknown> = {
   readonly memory: FollowMemory | null;
   readonly own?: Own;
   readonly pivotBody?: SceneBodyId;
+  readonly fovYRad?: number;
 };

@@ -41,7 +41,7 @@
 }
 
 /* Named spans for children that come from a slot: equal columns by their count. */
-@media (min-width: 901px) {
+@media (--wide) {
   .grid.halves > * {
     grid-column: span 6;
     --cols: 6;
@@ -55,11 +55,5 @@
   .grid.quarters > * {
     grid-column: span 3;
     --cols: 3;
-  }
-
-  /* Over the statements of a Claims list, clear of its three columns of names. */
-  .grid > .statements {
-    grid-column: 4 / span 7;
-    --cols: 7;
   }
 }

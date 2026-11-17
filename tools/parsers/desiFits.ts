@@ -51,10 +51,10 @@
  */
 
 import type { ParsedRecord } from './common';
-import type { SourceType } from '../../src/@types/data/SourceType';
+import type { GalaxyCatalogId } from '../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import type { FitsBinTable } from './@types/FitsBinTable';
 import type { FitsColumn } from './@types/FitsColumn';
-import { DESI_TRACER_CLASS } from '../../src/data/galaxyCatalog/sourceClass';
+import { DESI_TRACER_CLASS } from '../../src/layers/galaxyCatalog/records/data/sourceClass';
 import { redshiftToDistanceMpc } from '../../src/utils/math/redshiftToDistanceMpc';
 import { DESI_TRACER_DISPLAY } from './desiTracerDisplay';
 import { parseFitsBinTable } from './parseFitsBinTable';
@@ -157,7 +157,7 @@ const NANOMAGGY_ZEROPOINT_MAG = 22.5;
 export function parseDesiClustering(
   buf: ArrayBuffer,
   tracer: DesiTracer,
-  source: SourceType,
+  source: GalaxyCatalogId,
   keep?: (raDeg: number, decDeg: number, z: number) => boolean,
 ): { records: ParsedRecord[]; skipped: number } {
   const table = parseFitsBinTable(buf);

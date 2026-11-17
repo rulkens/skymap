@@ -11,6 +11,7 @@
 import { fileURLToPath } from 'node:url';
 import { readEnvProductionValue } from '../utils/io/readEnvProductionValue';
 import type { R2SyncGroup } from './@types/R2SyncGroup';
+import { publishOfflineInventory } from './r2/publishOfflineInventory';
 import { collectDataFiles } from './r2/collectDataFiles';
 import { collectDataManifest } from './r2/collectDataManifest';
 import { collectSurfaceTileManifest } from './r2/collectSurfaceTileManifest';
@@ -20,6 +21,7 @@ import { OCTREE_CATALOGS } from './r2/octreeCatalogs';
 import { collectExtraFiles, missingExtraFiles } from './r2/collectExtraFiles';
 import { collectHiResImages } from './r2/collectHiResImages';
 import { collectMeshSources } from './r2/collectMeshSources';
+import { collectCloudInputs } from './r2/collectCloudInputs';
 import { collectTextureImages } from './r2/collectTextureImages';
 import { DATA_FAMILIES } from './r2/dataFamilies';
 import { groupByDataFamily } from './r2/groupByDataFamily';
@@ -28,7 +30,7 @@ import { purgeCloudflareCache } from './r2/purgeCloudflareCache';
 import { MISSING_CREDENTIALS_HELP, readRcloneCredentials } from './r2/rcloneEnv';
 import { syncGroup, type R2SyncContext } from './r2/syncGroup';
 import { RAW_DATA } from '../utils/io/rawDataRegistry';
-import { SURFACE_TILE_REGISTRY } from '../../src/data/bodies/surfaceTileRegistry';
+import { SURFACE_TILE_REGISTRY } from '../../src/layers/body/surfaceTiles/format/data/surfaceTileRegistry';
 import { OCTREE_FAMILIES } from '../../src/data/octree/octreeFamilies';
 
 const DATA_DIR = 'public/data';
@@ -67,6 +69,7 @@ function buildGroups(): R2SyncGroup[] {
           cacheControl: IMMUTABLE,
           purge: false,
           gzipOnWire: family.gzipOnWire,
+          offline: true,
         },
       ];
     }),
@@ -77,6 +80,7 @@ function buildGroups(): R2SyncGroup[] {
       cacheControl: DAY,
       purge: true,
       gzipOnWire: false,
+      offline: true,
     },
     {
       label: 'Planet-surface textures',
@@ -85,6 +89,7 @@ function buildGroups(): R2SyncGroup[] {
       cacheControl: DAY,
       purge: true,
       gzipOnWire: false,
+      offline: true,
     },
     {
       label: 'Extra files',
@@ -93,16 +98,40 @@ function buildGroups(): R2SyncGroup[] {
       cacheControl: DAY,
       purge: true,
       gzipOnWire: false,
+      offline: false,
     },
     // `no-cache`, not immutable: an edited `.blend` is re-saved under the same
-    // key, so an immutable header would hand a restore the pre-edit bytes.
+    // key, so an immutable header would hand a restore the pre-edit bytes. `bulk`
+    // because rclone uploads multipart: wrangler refuses files over 300 MiB (Vesta's mosaic).
     {
       label: 'Mesh sources',
       files: collectMeshSources(RAW_DATA['meshes.dir'].path),
-      transport: { kind: 'wrangler' },
+      transport: {
+        kind: 'bulk',
+        localRoot: RAW_DATA['meshes.dir'].path,
+        keyRoot: RAW_DATA['meshes.dir'].path,
+        refuseOverwrite: false,
+      },
       cacheControl: NO_CACHE,
       purge: false,
       gzipOnWire: false,
+      offline: false,
+    },
+    // The nightly clouds leg fetches these from here, not NASA (fetch-cloud-inputs). Immutable
+    // because textures.sha256 pins every byte: a changed file would fail that check anyway.
+    {
+      label: 'Cloud bake inputs',
+      files: collectCloudInputs('.'),
+      transport: {
+        kind: 'bulk',
+        localRoot: RAW_DATA['textures.dir'].path,
+        keyRoot: RAW_DATA['textures.dir'].path,
+        refuseOverwrite: false,
+      },
+      cacheControl: IMMUTABLE,
+      purge: false,
+      gzipOnWire: false,
+      offline: false,
     },
     // One tiles group per `SURFACE_TILE_REGISTRY` row, all before every manifest
     // group below; a row whose bake never ran contributes `[]` from both collectors.
@@ -110,10 +139,16 @@ function buildGroups(): R2SyncGroup[] {
       ({ manifestKey }): R2SyncGroup => ({
         label: `Surface tiles (${manifestKey})`,
         files: collectSurfaceTiles(IMAGES_DIR, manifestKey),
-        transport: { kind: 'bulk', localRoot: IMAGES_DIR, keyRoot: 'data/images' },
+        transport: {
+          kind: 'bulk',
+          localRoot: IMAGES_DIR,
+          keyRoot: 'data/images',
+          refuseOverwrite: true,
+        },
         cacheControl: IMMUTABLE,
         purge: false,
         gzipOnWire: false,
+        offline: true,
       }),
     ),
     // Content-hashed by the bake and named only by their index, which the data manifest
@@ -126,10 +161,12 @@ function buildGroups(): R2SyncGroup[] {
           kind: 'bulk',
           localRoot: `public/data/${OCTREE_FAMILIES[catalog.family].dataPrefix}`,
           keyRoot: `data/${OCTREE_FAMILIES[catalog.family].dataPrefix}`,
+          refuseOverwrite: false,
         },
         cacheControl: IMMUTABLE,
         purge: false,
         gzipOnWire: true,
+        offline: true,
       }),
     ),
     // Each row's manifest is the pointer the runtime reads to discover that
@@ -144,6 +181,7 @@ function buildGroups(): R2SyncGroup[] {
         cacheControl: DAY,
         purge: true,
         gzipOnWire: true,
+        offline: true,
       }),
     ),
     // Must stay last of all: it's the pointer the runtime reads to resolve
@@ -158,6 +196,7 @@ function buildGroups(): R2SyncGroup[] {
       purge: true,
       // Manifests are JSON, which gzip shrinks.
       gzipOnWire: true,
+      offline: true,
     },
   ];
 }
@@ -201,6 +240,7 @@ async function main(): Promise<void> {
     uploaded += result.uploaded;
     delegated += result.delegated;
   }
+  const inventoryError = publishOfflineInventory(groups, touchedKeys, BUCKET, NO_CACHE);
 
   const missing = missingExtraFiles();
   if (missing.length > 0) {
@@ -223,6 +263,11 @@ async function main(): Promise<void> {
     console.log('  nothing changed — edge cache already current.');
   } else {
     await purgeCloudflareCache(touchedKeys, R2_PUBLIC_URL);
+  }
+
+  if (inventoryError !== null) {
+    console.error(`\n✗ Offline inventory not published: ${inventoryError}`);
+    process.exit(1);
   }
 }
 

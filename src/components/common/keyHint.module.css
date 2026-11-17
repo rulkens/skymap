@@ -1,0 +1,14 @@
+/*
+ * keyHint.module.css — the dim key printed on a control (ui-ux Interaction 6), composed by each
+ * control that shows its shortcut. A vocabulary, not a component: no `.root`.
+ */
+
+.key {
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  color: var(--color-fg-dim);
+  font: inherit;
+  font-size: var(--font-size-xs);
+  letter-spacing: var(--letter-spacing-mid);
+}

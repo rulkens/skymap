@@ -90,6 +90,7 @@ struct PerVertex {
 
 struct VSOut {
   @builtin(position) clip : vec4<f32>,
-  @location(0) uv : vec2<f32>,
+  // linear: an across-width coordinate (lib/segmentQuad.wesl's header).
+  @location(0) @interpolate(linear) uv : vec2<f32>,
   @location(1) density : f32,
 };

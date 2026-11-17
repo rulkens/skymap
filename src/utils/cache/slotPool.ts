@@ -17,6 +17,8 @@ export class SlotPool implements SlotStore {
   private readonly slots: Array<SlotEntry | undefined>;
   private readonly keyToSlot = new Map<string, number>();
   private seq = 0;
+  // Every resident slot's lastSeenFrame is at least this; reset when a slot is freed.
+  private oldestSeenAtLeast = -Infinity;
   // One handler, not an array: a store has one owner.
   private onEvict: SlotEvictHandler | undefined;
 
@@ -37,23 +39,26 @@ export class SlotPool implements SlotStore {
 
   /**
    * A resident key always gets its slot back; a NEW key is refused (null) only
-   * when every slot carries `lastSeenFrame === frame`. Why refuse rather than
-   * evict: a consumer whose demand exceeds capacity (the Earth tile planner)
-   * claims every slot early in the frame and keeps asking. Evicting there
-   * recycles a slot claimed this same frame, and a stationary camera
-   * re-requests the same set every frame: evict, refetch, evict, forever.
+   * when every slot was touched at or after `liveSince` (default: this frame).
+   * Why refuse rather than evict: a consumer whose demand exceeds capacity (the
+   * Earth tile planner) claims every slot early in the frame and keeps asking.
+   * Evicting there recycles a live slot, and a stationary camera re-requests the
+   * same set every frame: evict, refetch, evict, forever. A consumer that revisits
+   * each key once per N frames (the decimated galaxy walk) passes `frame - N + 1`.
    * Planners order largest-on-screen-first, so serving what fits is bounded.
    */
-  allocate(key: string, frame: number): number | null {
+  allocate(key: string, frame: number, liveSince = frame): number | null {
     const touched = this.touch(key, frame);
     if (touched !== null) return touched;
-    for (let i = 0; i < this.capacity; i++) {
-      if (this.slots[i] === undefined) {
-        this.slots[i] = { key, lastSeenFrame: frame, seq: this.seq++ };
-        this.keyToSlot.set(key, i);
-        return i;
-      }
+    if (this.keyToSlot.size < this.capacity) {
+      const free = this.slots.indexOf(undefined);
+      this.slots[free] = { key, lastSeenFrame: frame, seq: this.seq++ };
+      this.keyToSlot.set(key, free);
+      return free;
     }
+    // A lower bound on every slot's stamp (touches only raise them), so a refusal
+    // costs O(1) instead of a full scan per over-budget key.
+    if (this.oldestSeenAtLeast >= liveSince) return null;
     let lruIdx = 0;
     let lruFrame = this.slots[0]!.lastSeenFrame;
     let lruSeq = this.slots[0]!.seq;
@@ -65,7 +70,10 @@ export class SlotPool implements SlotStore {
         lruSeq = seq;
       }
     }
-    if (lruFrame === frame) return null;
+    if (lruFrame >= liveSince) {
+      this.oldestSeenAtLeast = lruFrame;
+      return null;
+    }
 
     const evictedKey = this.slots[lruIdx]!.key;
     this.keyToSlot.delete(evictedKey);
@@ -86,6 +94,7 @@ export class SlotPool implements SlotStore {
     if (idx === undefined) return;
     this.keyToSlot.delete(key);
     this.slots[idx] = undefined;
+    this.oldestSeenAtLeast = -Infinity;
     this.notifyEvict(key);
   }
 

@@ -86,7 +86,7 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import type { Writable } from 'node:stream';
-import { tourRegistry } from '../../src/data/animation/tours/tourRegistry';
+import { APP_TOUR_REGISTRY } from '../../src/compositions/appTours';
 import { clipRegistry } from '../../src/data/animation/clips/clipRegistry';
 import { FOLD_SETTLE_MS } from '../../src/state/tour/foldSettleMs';
 import type { Tour } from '../../src/@types/animation/tour/Tour';
@@ -114,6 +114,9 @@ import { spawnViteServer } from '../utils/serve/spawnViteServer';
 
 // Progress cadence: one 'frame N / cap' line per this many frames.
 const PROGRESS_EVERY_FRAMES = 60;
+// Deadline for a fetch to any origin but the page's own (the thumbnail services); must stay well
+// under grantAndAwaitExpiry's BUDGET_EXPIRED_TIMEOUT_MS or a slow host still reads as a stall.
+const EXTERNAL_FETCH_DEADLINE_MS = 8_000;
 // ffmpeg is chatty on stderr; keep only the tail for the failure report.
 const FFMPEG_STDERR_TAIL_LINES = 40;
 
@@ -152,6 +155,8 @@ type RecordOptions = {
   rebuild: boolean;
   /** --dome: fulldome fisheye take — implies 4096x4096 @ dpr 1, a DOME_FPS rate and a libx264 encode. */
   dome: boolean;
+  /** --film: the take plays with the film look on (`#film=1`, the Display switch's hash row). */
+  film: boolean;
   /** --frames: stop after this many CAPTURED frames (third bound alongside frameCap/loopFrames). */
   frames: number | undefined;
 };
@@ -199,6 +204,7 @@ function parseArgs(argv: readonly string[]): RecordOptions {
     serve: false,
     rebuild: false,
     dome: false,
+    film: false,
     frames: undefined,
   };
   // Tracked separately from options.url: the default url must not trip the
@@ -224,6 +230,10 @@ function parseArgs(argv: readonly string[]): RecordOptions {
     }
     if (arg === '--dome') {
       options.dome = true;
+      continue;
+    }
+    if (arg === '--film') {
+      options.film = true;
       continue;
     }
     if (
@@ -288,7 +298,7 @@ function parseArgs(argv: readonly string[]): RecordOptions {
       throw new Error(
         `unknown flag '${arg}' ` +
           '(known: --clip, --beats, --sim-time, --fps, --size, --dpr, --out, --url, ' +
-          '--serve, --rebuild, --dome, --frames; positional: tour id)',
+          '--serve, --rebuild, --dome, --film, --frames; positional: tour id)',
       );
     } else if (!positionalSeen) {
       options.tourId = arg;
@@ -553,6 +563,23 @@ async function captureTake(
     });
   });
   const page = await context.newPage();
+  // Requests to any other origin are the galaxy-thumbnail services (SDSS ImgCutout, CDS hips2fits),
+  // which answer in 0.5-20 s or, measured 2026-11-06, not at all. Under `pauseIfNetworkFetchesPending`
+  // one such fetch outlasting BUDGET_EXPIRED_TIMEOUT_MS reads as a stalled pipeline and kills the
+  // take, so each is bounded here, well inside that watchdog; a timed-out one aborts, which the app
+  // counts toward retiring the host (`DEAD_HOST_STREAK`), and the galaxy keeps its catalog dot.
+  const ownOrigin = new URL(captureUrl).origin;
+  await page.route(
+    (url) => url.origin !== ownOrigin,
+    async (route) => {
+      try {
+        const response = await route.fetch({ timeout: EXTERNAL_FETCH_DEADLINE_MS });
+        await route.fulfill({ response });
+      } catch {
+        await route.abort('timedout');
+      }
+    },
+  );
   // Persistent mid-take diagnostics (round 2): every navigation or vite-client
   // console line gets a timestamped, frame-numbered log line, and the most
   // recent one lands inside the vanish error itself (see the status-poll
@@ -816,7 +843,12 @@ async function main(): Promise<void> {
     // The pin is the SIM clock, resolved once before anything spawns so the URL
     // and the banner name the same instant (module header: two clocks).
     const simTime = options.simTime ?? new Date();
-    const captureUrl = buildCaptureUrl({ base: options.url, simTime, dome: options.dome });
+    const captureUrl = buildCaptureUrl({
+      base: options.url,
+      simTime,
+      dome: options.dome,
+      film: options.film,
+    });
 
     // Resolve the subject up front so an id typo fails before any process spawns.
     let take: Take;
@@ -855,10 +887,10 @@ async function main(): Promise<void> {
       }
       take = { kind: 'clip', id: clip.id, loopFrames };
     } else {
-      const tour = (tourRegistry as Record<string, Tour>)[options.tourId];
+      const tour = (APP_TOUR_REGISTRY as Record<string, Tour>)[options.tourId];
       if (tour === undefined) {
         throw new Error(
-          `unknown tour '${options.tourId}' — known: ${Object.keys(tourRegistry).join(', ')}`,
+          `unknown tour '${options.tourId}' — known: ${Object.keys(APP_TOUR_REGISTRY).join(', ')}`,
         );
       }
       const beats: BeatRange = options.beats ?? { from: 0, to: tour.beats.length - 1 };

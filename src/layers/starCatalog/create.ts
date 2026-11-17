@@ -10,25 +10,26 @@ import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
 import type { StarCatalogFacts } from './@types/StarCatalogFacts';
 import type { StarCatalogRuntime } from './@types/StarCatalogRuntime';
 import type { OctreeChunkStream } from '../../@types/octree/OctreeChunkStream';
-import type { SourceType } from '../../@types/data/SourceType';
+import type { StarCatalogId } from './@types/StarCatalogId';
 
 import { HDR_TARGET_FORMAT, FOREGROUND_DEPTH_FORMAT } from '../../data/renderTargetFormats';
 import { SLAB_REVERSED_Z, NEAR0 } from '../../services/engine/frame/slabs';
 import { CONST_J2000 } from '../../data/time/constJ2000';
 import { deriveBodyStates } from '../../services/engine/frame/deriveBodyStates';
 import { SEEDED_STAR_CATALOGS } from '../../data/bodies/seededStarCatalogs';
-import { positionedSeededStars } from './present/positionedSeededStars';
+import { positionedSeededStars } from './seededStars/present/positionedSeededStars';
 
-import { createStarCatalogRenderer } from './render/starCatalogRenderer';
-import { createStarCatalogPickRenderer } from './render/starCatalogPickRenderer';
-import { createStarRenderer } from './render/starRenderer';
-import { createStarPointRenderer } from './render/starPointRenderer';
-import { createStarAggregateUpsample } from './render/starAggregateUpsample';
+import { createStarCatalogRenderer } from './survey/render/starCatalogRenderer';
+import { createStarCatalogPickRenderer } from './survey/render/starCatalogPickRenderer';
+import { createStarRenderer } from './resolvedStars/render/starRenderer';
+import { createStarPointRenderer } from './seededStars/render/starPointRenderer';
+import { createStarAggregateUpsample } from './survey/render/starAggregateUpsample';
 import type { OctreePoolHost } from '../../@types/octree/OctreePoolHost';
-import { createStarCatalogSlot } from './load/starCatalogSlot';
-import { createFamousStarsMetaSlot } from './load/famousStarsMetaSlot';
+import { createStarCatalogSlot } from './survey/load/starCatalogSlot';
+import { createFamousStarsMetaSlot } from './card/load/famousStarsMetaSlot';
 import { STAR_CATALOG_SOURCE_ROWS } from './sources/starCatalogSourceRows';
-import type { StarColumns } from '../../@types/data/starCatalog/StarColumns';
+import { catalogPickCodes } from '../../utils/picking/catalogPickCodes';
+import type { StarColumns } from './survey/@types/StarColumns';
 
 export function create(deps: LayerCoreDeps<StarCatalogFacts>): StarCatalogRuntime {
   // `star-<id>` splits seeded from survey on the all-digits test
@@ -45,6 +46,7 @@ export function create(deps: LayerCoreDeps<StarCatalogFacts>): StarCatalogRuntim
   }
 
   const device = deps.ctx.device;
+  const pickCodes = catalogPickCodes(STAR_CATALOG_SOURCE_ROWS, deps.pickCode);
 
   const renderer = createStarCatalogRenderer(device, HDR_TARGET_FORMAT);
   // Cross-handle read: borrows the visual renderer's exposed BGLs + records
@@ -53,6 +55,7 @@ export function create(deps: LayerCoreDeps<StarCatalogFacts>): StarCatalogRuntim
     device,
     renderer.pickResources(),
     SLAB_REVERSED_Z[NEAR0]!,
+    pickCodes.pickCodeOf('gaiaStars'),
   );
   const starRenderer = createStarRenderer(
     device,
@@ -78,19 +81,19 @@ export function create(deps: LayerCoreDeps<StarCatalogFacts>): StarCatalogRuntim
 
   const aggregateUpsample = createStarAggregateUpsample(device, HDR_TARGET_FORMAT);
 
-  const chunkStreams = new Map<SourceType, OctreeChunkStream<StarColumns>>();
+  const chunkStreams = new Map<StarCatalogId, OctreeChunkStream<StarColumns>>();
   const poolHost: OctreePoolHost<StarColumns> = {
     renderer,
     chunkStreams,
     requestRender: deps.requestRender,
   };
   const catalogs = new Map(
-    STAR_CATALOG_SOURCE_ROWS.filter(([, entry]) => entry.binBaseName !== null).map(
-      ([source]) =>
+    STAR_CATALOG_SOURCE_ROWS.filter((entry) => entry.binBaseName !== null).map(
+      (entry) =>
         [
-          source,
+          entry.id,
           createStarCatalogSlot(
-            source,
+            entry.id,
             poolHost,
             () => deps.settings().starCatalogs.chunkSlotsOverride,
           ),
@@ -104,6 +107,7 @@ export function create(deps: LayerCoreDeps<StarCatalogFacts>): StarCatalogRuntim
     catalogs,
     chunkStreams,
     famousStarsMeta,
+    pickCodes,
     renderer,
     pickRenderer,
     starRenderer,

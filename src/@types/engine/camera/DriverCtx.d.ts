@@ -4,13 +4,14 @@
  */
 
 import type { BodyState } from '../../scene/BodyState';
-import type { CameraPose } from '../../camera/CameraPose';
-import type { CameraProjection } from '../../camera/CameraProjection';
+import type { CameraPose } from '../../camera/pose/CameraPose';
+import type { CameraProjection } from '../../camera/projection/CameraProjection';
 import type { DriverId } from './DriverId';
-import type { FramedCameraPose } from '../../camera/FramedCameraPose';
+import type { FramedCameraPose } from '../../camera/pose/FramedCameraPose';
 import type { Mat3 } from '../../math/Mat3';
 import type { RootState } from '../../../store/types';
 import type { PositionedId } from '../../scene/PositionedId';
+import type { TerrainHeightAtLookup } from '../../camera/terrain/TerrainHeightAtLookup';
 
 export type DriverCtx = {
   readonly state: RootState;
@@ -21,7 +22,7 @@ export type DriverCtx = {
   /** World arm of `register`; the follow capture reads its eye. */
   readonly authoredWorld: CameraPose;
   /**
-   * World arm of `camera.base` — BY REFERENCE while the base already is the
+   * World arm of `camera.intent.base` — BY REFERENCE while the base already is the
    * world arm, so a world-arm reader is unchanged bit for bit. The follow rows
    * ease toward it: below the world arm `base.pose` speaks the arm's own
    * channels, and the approach's job is stated in world terms.
@@ -39,6 +40,8 @@ export type DriverCtx = {
   readonly projection: CameraProjection;
   /** This instant's body states — a frame-tagged keyframe converts through them. */
   readonly bodies: ReadonlyMap<PositionedId, BodyState>;
+  /** The live ground, for a clip leg's frame fold. */
+  readonly terrainHeightAt: TerrainHeightAtLookup;
   /** Mpc; null on a frame with no swallowed wheel notch. */
   readonly followDistanceTarget: number | null;
 };

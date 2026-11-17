@@ -3,9 +3,9 @@
  * follow OpenSpace v0.22.0's `DampenedVelocity`; the gains are seeds tuned by feel.
  */
 import type { CameraControlsSettings } from '../../@types/settings/CameraControlsSettings';
-import type { FrictionGroup } from '../../@types/camera/FrictionGroup';
-import type { NavAxis } from '../../@types/camera/NavAxis';
-import type { NavigatorState } from '../../@types/camera/NavigatorState';
+import type { FrictionGroup } from '../../@types/camera/input/FrictionGroup';
+import type { NavAxis } from '../../@types/camera/input/NavAxis';
+import type { NavigatorState } from '../../@types/camera/input/NavigatorState';
 
 // OpenSpace's `velocityScaleFromFriction` guard: friction 0 divides by this, not by 0.
 export const NAV_FRICTION_EPS = 1e-7;

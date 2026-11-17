@@ -1,6 +1,6 @@
 /**
  * selectionSlice — the identity-Intent refs. Three slots (hover/select/focus),
- * each a SelectionRef or null, with DEDUP-ON-WRITE: a write whose ref is
+ * each a SelectionRefBase or null, with DEDUP-ON-WRITE: a write whose ref is
  * structurally equal to the current slot is a no-op, so the slot keeps its
  * reference and downstream selectors/sagas don't re-fire. Because every pick
  * builds a fresh ref object, `===` would always miss; shallowEqualRef gives the
@@ -70,12 +70,12 @@ import { requestFocus } from './requestFocus';
 import { requestSelect } from './requestSelect';
 import { setSelectionRow } from '../selectionRows/selectionRowsSlice';
 import type { SelectionState } from '../../@types/store/SelectionState';
-import type { SelectionRef } from '../../@types/engine/SelectionRef';
 import type { Transition } from '../../@types/navigation/Transition';
+import type { SelectionRefBase } from '../../@types/engine/selection/SelectionRefBase';
 
 const setIfChanged =
   (slot: 'hover' | 'select' | 'focus') =>
-  (selection: Draft<SelectionState>, action: PayloadAction<SelectionRef | null>) => {
+  (selection: Draft<SelectionState>, action: PayloadAction<SelectionRefBase | null>) => {
     if (!shallowEqualRef(selection[slot], action.payload)) selection[slot] = action.payload;
   };
 
@@ -94,7 +94,7 @@ const selectionSlice = createSlice({
     // tween saga's decision does, and every direct dispatcher is a fly.
     updateSelectionFocus: {
       reducer: setIfChanged('focus'),
-      prepare: (ref: SelectionRef | null, transition: Transition = 'fly') => ({
+      prepare: (ref: SelectionRefBase | null, transition: Transition = 'fly') => ({
         payload: ref,
         meta: { transition },
       }),

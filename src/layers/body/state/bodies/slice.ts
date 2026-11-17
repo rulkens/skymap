@@ -15,7 +15,10 @@ export const bodiesSlice = createSlice({
     // themselves, and no product decision has been made to expose a "hide this
     // body" control. There is no cluster-level gate either, for the same reason
     // (see EngineSettingsState).
-    setBodyLabelEnabled: (bodies, action: PayloadAction<{ id: BodySourceId; enabled: boolean }>) => {
+    setBodyLabelEnabled: (
+      bodies,
+      action: PayloadAction<{ id: BodySourceId; enabled: boolean }>,
+    ) => {
       bodies.items[action.payload.id].labelEnabled = action.payload.enabled;
     },
   },

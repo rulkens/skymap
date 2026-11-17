@@ -16,11 +16,9 @@ import styles from './ObjectFinder.module.css';
 
 type ObjectFinderProps = { sections: readonly ObjectSectionCount[] };
 
-type Rows = { row: HTMLElement; text: string }[];
-
 function ObjectFinder({ sections }: ObjectFinderProps) {
   const input = useRef<HTMLInputElement>(null);
-  const rows = useRef<Rows>([]);
+  const rows = useRef<{ row: HTMLElement; text: string }[]>([]);
   const [ready, setReady] = useState(false);
   const [typed, setTyped] = useState('');
   const [shown, setShown] = useState(0);

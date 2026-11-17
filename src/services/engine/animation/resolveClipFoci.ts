@@ -10,16 +10,16 @@
  * responsibilities — understanding the timeline structure AND knowing how to
  * look up catalog data. Separating them keeps each function narrow and
  * independently testable. This mirrors the pattern set by `resolveClipStart`
- * in `cameraSlice.ts`, which rewrites `'live'` starts before any compilation
+ * in `cameraIntentSlice.ts`, which rewrites `'live'` starts before any compilation
  * happens.
  *
  * ### The id-bearing arms and their concrete replacements
  *
  *   - `moveTargetId(id, over, ease)` → `moveTarget(target, over, ease)`
- *     The target Vec3 comes from `focusFraming(row, fovYRad).target`.
+ *     The target Vec3 comes from `arrivalFor`'s target over the row's focus facts.
  *
  *   - `dollyToId(id, over, ease)`   → `dollyTo(distance, over, ease)`
- *     The distance in Mpc comes from `focusFraming(row, fovYRad).distance`.
+ *     The distance in Mpc comes from the same framing's distance.
  *
  *   - `lookAtId(id, over, ease)`    → `aimAt({ yaw, pitch }, over, ease)`
  *     The bearing aims the view from the LIVE orbit target (`from.target`,
@@ -44,7 +44,7 @@
  *
  *   - `focusId(id)` or `focusId(null)` → `{ kind: 'focus', ref }`
  *     `null` maps to `{ kind: 'focus', ref: null }`.  A non-null id resolves
- *     through `resolve.resolveFocusId` to a `SelectionRef`.  There is no `focus()`
+ *     through `resolve.resolveFocusId` to a ref.  There is no `focus()`
  *     helper that builds the resolved arm — `focus()` in `effectHelpers.ts`
  *     builds the UNRESOLVED `kind:'focusId'` arm.
  *
@@ -77,12 +77,13 @@ import type { SelectionResolver } from '../../../@types/engine/selection/Selecti
 import type { SceneEffect } from '../../../@types/animation/SceneEffect';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { Mat3 } from '../../../@types/math/Mat3';
-import type { CameraPose } from '../../../@types/camera/CameraPose';
+import type { CameraPose } from '../../../@types/camera/pose/CameraPose';
+import type { FocusFraming } from '../../../@types/camera/pose/FocusFraming';
 import { moveTarget, dollyTo, aimAt, spin } from './effectHelpers';
-import { focusFraming } from '../camera/focusFraming';
-import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
-import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
-import { frameUp } from '../../../utils/camera/frameUp';
+import { arrivalFor } from '../camera/framing/arrivalFor';
+import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitPose/orbitAnglesLookingAlong';
+import { imagePlaneBasis } from '../../../utils/camera/orbitPose/imagePlaneBasis';
+import { frameUp } from '../../../utils/camera/orbitPose/frameUp';
 import { lerpAngleShortest } from '../../../utils/math/lerpAngleShortest';
 
 /**
@@ -145,22 +146,16 @@ function walkEffect(
   switch (effect.kind) {
     // ── Structural nodes — recurse ──────────────────────────────────────────
     case 'seq':
-      return {
-        kind: 'seq',
-        children: effect.children.map((c) =>
-          walkEffect(c, resolve, fovYRad, from, simDays, frameBasis),
-        ),
-      };
     case 'all':
       return {
-        kind: 'all',
+        ...effect,
         children: effect.children.map((c) =>
           walkEffect(c, resolve, fovYRad, from, simDays, frameBasis),
         ),
       };
     case 'fork':
       return {
-        kind: 'fork',
+        ...effect,
         child: walkEffect(effect.child, resolve, fovYRad, from, simDays, frameBasis),
       };
 
@@ -312,7 +307,7 @@ function walkEffect(
 /**
  * Resolve a `FocusId` to a `{ target, distance }` framing pose.
  *
- * The chain is: `resolve.resolveFocusId` → `resolve.extractRow` → `focusFraming`.
+ * The chain is: `resolve.resolveFocusId` → `resolve.extractRow` → `arrivalFor`.
  * Each step can return null only if the id is unknown or the catalog isn't
  * loaded; the readiness gate guarantees neither happens at call time, so a
  * null here is a programming error — we throw with a descriptive message.
@@ -322,11 +317,11 @@ function resolveFraming(
   resolve: SelectionResolver,
   fovYRad: number,
   simDays: number,
-): ReturnType<typeof focusFraming> {
+): FocusFraming {
   const ref = resolve.resolveFocusId(id);
   if (ref === null) {
     throw new Error(
-      `resolveClipFoci: could not resolve id '${id}' to a SelectionRef. ` +
+      `resolveClipFoci: could not resolve id '${id}' to a selection ref. ` +
         `Ensure the readiness gate (clipFociReady) cleared before calling resolveClipFoci.`,
     );
   }
@@ -337,5 +332,5 @@ function resolveFraming(
         `The catalog row may have unloaded between the readiness check and resolution.`,
     );
   }
-  return focusFraming(row, fovYRad);
+  return arrivalFor(row, fovYRad);
 }

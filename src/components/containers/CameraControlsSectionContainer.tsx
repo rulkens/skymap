@@ -11,9 +11,9 @@ import {
   setNavFriction,
 } from '../../state/settings/core/cameraControlsSlice';
 import { setFocusMoveStyle } from '../../state/settings/core/focusMovesSlice';
-import type { FocusMoveStyle } from '../../@types/camera/FocusMoveStyle';
+import type { FocusMoveStyle } from '../../@types/camera/focusMotion/FocusMoveStyle';
 import type { ControlSchemeId } from '../../@types/engine/camera/ControlSchemeId';
-import type { FrictionGroup } from '../../@types/camera/FrictionGroup';
+import type { FrictionGroup } from '../../@types/camera/input/FrictionGroup';
 
 function CameraControlsSectionContainer(): ReactNode {
   const dispatch = useAppDispatch();

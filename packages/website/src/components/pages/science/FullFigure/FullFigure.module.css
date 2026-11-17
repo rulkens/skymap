@@ -7,9 +7,6 @@
   background: #000;
 
   & img {
-    display: block;
-    width: 100%;
-    height: auto;
     /* An interlude between sections, not a screen of its own: the next heading shows under it. */
     max-height: 68svh;
     object-fit: cover;
@@ -28,5 +25,5 @@
 
 .caption {
   composes: wrap from '../../../../styles/layout.module.css';
-  margin-top: 0.5rem;
+  margin-top: var(--site-space-2xs);
 }

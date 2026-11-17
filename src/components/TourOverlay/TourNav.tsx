@@ -23,11 +23,11 @@
 import type { ReactNode } from 'react';
 import cx from 'classnames';
 import NavButton from './NavButton';
-import PrevIcon from './PrevIcon';
-import NextIcon from './NextIcon';
-import PauseIcon from './PauseIcon';
-import PlayIcon from './PlayIcon';
-import StopIcon from './StopIcon';
+import PrevIcon from '../icons/PrevIcon/PrevIcon';
+import NextIcon from '../icons/NextIcon/NextIcon';
+import PauseIcon from '../icons/PauseIcon/PauseIcon';
+import PlayIcon from '../icons/PlayIcon/PlayIcon';
+import StopIcon from '../icons/StopIcon/StopIcon';
 import styles from './TourOverlay.module.css';
 
 export type TourNavProps = {
@@ -59,7 +59,7 @@ function TourNav({
         className={cx(!canPrev && styles.ghost)}
         ariaLabel="Previous beat"
       >
-        <PrevIcon />
+        <PrevIcon size={16} />
       </NavButton>
 
       <button
@@ -93,15 +93,15 @@ function TourNav({
             }}
           />
         </svg>
-        {paused ? <PlayIcon /> : <PauseIcon />}
+        {paused ? <PlayIcon size={13} /> : <PauseIcon size={13} />}
       </button>
 
       <button type="button" className={styles.stopWrap} onClick={onExit} aria-label="Exit tour">
-        <StopIcon />
+        <StopIcon size={13} />
       </button>
 
       <NavButton onClick={onNext} ariaLabel="Next beat">
-        <NextIcon />
+        <NextIcon size={16} />
       </NavButton>
     </div>
   );

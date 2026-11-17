@@ -44,6 +44,15 @@ export const DOCS_URL_PARAMS: readonly DocsUrlParam[] = [
     skipsWelcome: false,
   },
   {
+    name: 'film',
+    part: 'hash',
+    value: '1',
+    example: 'film=1',
+    does: 'Switches the film look on.',
+    unknown: 'Ignored: the look stays off. The parameter is taken out of the address.',
+    skipsWelcome: false,
+  },
+  {
     name: 'exhibit',
     part: 'hash',
     value: 'The name of one exhibit',
@@ -79,6 +88,16 @@ export const DOCS_URL_PARAMS: readonly DocsUrlParam[] = [
     unknown:
       'Ignored, with a warning in the browser’s console. A focus in the same link still opens, on its standard view.',
     skipsWelcome: true,
+  },
+  {
+    name: 'layers',
+    part: 'hash',
+    value: 'A list of layer names, with commas between them; a minus sign switches one off',
+    example: 'layers=cosmicWebFilaments,-starCatalog',
+    does: 'Switches layers and captions on or off as the view opens, in the order written. `-label` / `label` switch every caption.',
+    unknown:
+      'The name is ignored, with a warning in the browser’s console; the others still apply. The parameter is taken out of the address.',
+    skipsWelcome: false,
   },
   {
     name: 'dome',
@@ -274,7 +293,8 @@ export const DOCS_FOCUS_IDS: readonly DocsFocusId[] = [
     form: 'transient-<name>',
     prefix: 'transient-',
     example: 'transient-gw170817',
-    names: 'A transient: a gravitational-wave, neutrino, radio-burst, gamma-ray-burst or supernova event.',
+    names:
+      'A transient: a gravitational-wave, neutrino, radio-burst, gamma-ray-burst or supernova event.',
   },
   {
     form: 'blackhole-sgr-a-star',

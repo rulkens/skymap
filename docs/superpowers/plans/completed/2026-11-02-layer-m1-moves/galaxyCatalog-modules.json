@@ -1,0 +1,534 @@
+[
+  {
+    "from": "src/layers/galaxyCatalog/@types/AtlasConfig.d.ts",
+    "to": "src/layers/galaxyCatalog/disks/quad/@types/AtlasConfig.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/BlendMode.d.ts",
+    "to": "src/layers/galaxyCatalog/disks/quad/@types/BlendMode.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/BuildAliasIndexInput.d.ts",
+    "to": "src/layers/galaxyCatalog/aliases/@types/BuildAliasIndexInput.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/BuildPointInterleavedBufferInput.d.ts",
+    "to": "src/layers/galaxyCatalog/pointSprites/@types/BuildPointInterleavedBufferInput.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/BuildPointInterleavedBufferResult.d.ts",
+    "to": "src/layers/galaxyCatalog/pointSprites/@types/BuildPointInterleavedBufferResult.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/BuildRunner.d.ts",
+    "to": "src/layers/galaxyCatalog/pointSprites/@types/BuildRunner.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/CapacityStrategy.d.ts",
+    "to": "src/layers/galaxyCatalog/disks/quad/@types/CapacityStrategy.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/CatalogDrawEntry.d.ts",
+    "to": "src/layers/galaxyCatalog/pointSprites/@types/CatalogDrawEntry.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/CatalogStore.d.ts",
+    "to": "src/layers/galaxyCatalog/pointSprites/@types/CatalogStore.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/ClonedGalaxyCatalog.d.ts",
+    "to": "src/layers/galaxyCatalog/records/@types/ClonedGalaxyCatalog.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/CreateHiResFamousTextureArgs.d.ts",
+    "to": "src/layers/galaxyCatalog/hiResFamous/@types/CreateHiResFamousTextureArgs.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/DiskInstance.d.ts",
+    "to": "src/layers/galaxyCatalog/disks/textured/@types/DiskInstance.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/DiskPlacement.d.ts",
+    "to": "src/layers/galaxyCatalog/disks/textured/@types/DiskPlacement.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/DiskPlannerWalk.d.ts",
+    "to": "src/layers/galaxyCatalog/lod/@types/DiskPlannerWalk.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/DiskPlannerWalkDeps.d.ts",
+    "to": "src/layers/galaxyCatalog/lod/@types/DiskPlannerWalkDeps.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/DiskRowVisitor.d.ts",
+    "to": "src/layers/galaxyCatalog/lod/@types/DiskRowVisitor.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/DiskWalkInput.d.ts",
+    "to": "src/layers/galaxyCatalog/lod/@types/DiskWalkInput.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/FamousGalaxiesPayload.d.ts",
+    "to": "src/layers/galaxyCatalog/famousGalaxies/@types/FamousGalaxiesPayload.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/FetchGalaxyBitmapInput.d.ts",
+    "to": "src/layers/galaxyCatalog/thumbnailAtlas/@types/FetchGalaxyBitmapInput.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/GalaxyAtlasDeps.d.ts",
+    "to": "src/layers/galaxyCatalog/thumbnailAtlas/@types/GalaxyAtlasDeps.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/GalaxyColumnBlock.d.ts",
+    "to": "src/layers/galaxyCatalog/records/@types/GalaxyColumnBlock.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/GalaxyPickRenderer.d.ts",
+    "to": "src/layers/galaxyCatalog/pointSprites/@types/GalaxyPickRenderer.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/GalaxyPointDerived.d.ts",
+    "to": "src/layers/galaxyCatalog/pointSprites/@types/GalaxyPointDerived.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/GalaxyPointDrawSettings.d.ts",
+    "to": "src/layers/galaxyCatalog/pointSprites/@types/GalaxyPointDrawSettings.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/GalaxyPointFields.d.ts",
+    "to": "src/layers/galaxyCatalog/pointSprites/@types/GalaxyPointFields.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/GalaxyPointRenderer.d.ts",
+    "to": "src/layers/galaxyCatalog/pointSprites/@types/GalaxyPointRenderer.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/GalaxyPointStats.d.ts",
+    "to": "src/layers/galaxyCatalog/pointSprites/@types/GalaxyPointStats.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/GalaxyRecordBridge.d.ts",
+    "to": "src/layers/galaxyCatalog/selection/@types/GalaxyRecordBridge.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/GalaxyRecordSource.d.ts",
+    "to": "src/layers/galaxyCatalog/records/@types/GalaxyRecordSource.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/HiResFamousDeps.d.ts",
+    "to": "src/layers/galaxyCatalog/hiResFamous/@types/HiResFamousDeps.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/HiResFamousFrameInput.d.ts",
+    "to": "src/layers/galaxyCatalog/hiResFamous/@types/HiResFamousFrameInput.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/HiResFamousFrameOutput.d.ts",
+    "to": "src/layers/galaxyCatalog/hiResFamous/@types/HiResFamousFrameOutput.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/HiResFamousPair.d.ts",
+    "to": "src/layers/galaxyCatalog/hiResFamous/@types/HiResFamousPair.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/HiResFamousPerGalaxyState.d.ts",
+    "to": "src/layers/galaxyCatalog/hiResFamous/@types/HiResFamousPerGalaxyState.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/HiResFamousReq.d.ts",
+    "to": "src/layers/galaxyCatalog/hiResFamous/@types/HiResFamousReq.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/HiResFamousSubsystem.d.ts",
+    "to": "src/layers/galaxyCatalog/hiResFamous/@types/HiResFamousSubsystem.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/HiResFamousTexture.d.ts",
+    "to": "src/layers/galaxyCatalog/hiResFamous/@types/HiResFamousTexture.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/InstancedQuadConfig.d.ts",
+    "to": "src/layers/galaxyCatalog/disks/quad/@types/InstancedQuadConfig.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/InstancedQuadRenderer.d.ts",
+    "to": "src/layers/galaxyCatalog/disks/quad/@types/InstancedQuadRenderer.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/LoadedSource.d.ts",
+    "to": "src/layers/galaxyCatalog/pointSprites/@types/LoadedSource.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/PgcAliasJsonShape.d.ts",
+    "to": "src/layers/galaxyCatalog/aliases/@types/PgcAliasJsonShape.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/PgcAliasMap.d.ts",
+    "to": "src/layers/galaxyCatalog/aliases/@types/PgcAliasMap.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/PickSourceDraw.d.ts",
+    "to": "src/layers/galaxyCatalog/pointSprites/@types/PickSourceDraw.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/ProceduralDiskFrameInput.d.ts",
+    "to": "src/layers/galaxyCatalog/disks/procedural/@types/ProceduralDiskFrameInput.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/ProceduralDiskFrameOutput.d.ts",
+    "to": "src/layers/galaxyCatalog/disks/procedural/@types/ProceduralDiskFrameOutput.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/ProceduralDiskInstance.d.ts",
+    "to": "src/layers/galaxyCatalog/disks/procedural/@types/ProceduralDiskInstance.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/ProceduralDiskRenderer.d.ts",
+    "to": "src/layers/galaxyCatalog/disks/procedural/@types/ProceduralDiskRenderer.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/ProceduralDiskSubsystem.d.ts",
+    "to": "src/layers/galaxyCatalog/disks/procedural/@types/ProceduralDiskSubsystem.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/StructureMembershipResult.d.ts",
+    "to": "src/layers/galaxyCatalog/structureMembership/@types/StructureMembershipResult.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/TexturedDiskDeps.d.ts",
+    "to": "src/layers/galaxyCatalog/disks/textured/@types/TexturedDiskDeps.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/TexturedDiskFrameInput.d.ts",
+    "to": "src/layers/galaxyCatalog/disks/textured/@types/TexturedDiskFrameInput.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/TexturedDiskFrameOutput.d.ts",
+    "to": "src/layers/galaxyCatalog/disks/textured/@types/TexturedDiskFrameOutput.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/TexturedDiskRenderer.d.ts",
+    "to": "src/layers/galaxyCatalog/disks/textured/@types/TexturedDiskRenderer.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/TexturedDiskSubsystem.d.ts",
+    "to": "src/layers/galaxyCatalog/disks/textured/@types/TexturedDiskSubsystem.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/TexturedDiskSubsystemWithTestSeam.d.ts",
+    "to": "src/layers/galaxyCatalog/disks/textured/@types/TexturedDiskSubsystemWithTestSeam.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/@types/TexturedDiskTestState.d.ts",
+    "to": "src/layers/galaxyCatalog/disks/textured/@types/TexturedDiskTestState.d.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/data/colourIndex.ts",
+    "to": "src/layers/galaxyCatalog/appearance/data/colourIndex.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/data/galaxyAtlasSlotSide.ts",
+    "to": "src/layers/galaxyCatalog/thumbnailAtlas/data/galaxyAtlasSlotSide.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/data/galaxyCatalogFormat.ts",
+    "to": "src/layers/galaxyCatalog/records/data/galaxyCatalogFormat.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/data/galaxyCatalogTransfer.ts",
+    "to": "src/layers/galaxyCatalog/records/data/galaxyCatalogTransfer.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/data/galaxyLodBands.ts",
+    "to": "src/layers/galaxyCatalog/lod/data/galaxyLodBands.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/data/hiResLayerCount.ts",
+    "to": "src/layers/galaxyCatalog/hiResFamous/data/hiResLayerCount.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/data/hiResLayerSideByTier.ts",
+    "to": "src/layers/galaxyCatalog/hiResFamous/data/hiResLayerSideByTier.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/data/pickPaddingPx.ts",
+    "to": "src/layers/galaxyCatalog/pointSprites/data/pickPaddingPx.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/data/sdssTargetMeanMag.ts",
+    "to": "src/layers/galaxyCatalog/appearance/data/sdssTargetMeanMag.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/data/tierTargets.ts",
+    "to": "src/layers/galaxyCatalog/records/data/tierTargets.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/load/buildAliasIndex.ts",
+    "to": "src/layers/galaxyCatalog/aliases/load/buildAliasIndex.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/load/famousGalaxiesMetaFetcher.ts",
+    "to": "src/layers/galaxyCatalog/famousGalaxies/load/famousGalaxiesMetaFetcher.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/load/famousGalaxiesMetaSlot.ts",
+    "to": "src/layers/galaxyCatalog/famousGalaxies/load/famousGalaxiesMetaSlot.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/load/flatGalaxyRecordSource.ts",
+    "to": "src/layers/galaxyCatalog/records/load/flatGalaxyRecordSource.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/load/galaxyCatalogAssetRows.ts",
+    "to": "src/layers/galaxyCatalog/records/load/galaxyCatalogAssetRows.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/load/galaxyCatalogFetcher.ts",
+    "to": "src/layers/galaxyCatalog/records/load/galaxyCatalogFetcher.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/load/galaxyCatalogSourceCounts.ts",
+    "to": "src/layers/galaxyCatalog/records/load/galaxyCatalogSourceCounts.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/load/hiResFamousTexture.ts",
+    "to": "src/layers/galaxyCatalog/hiResFamous/load/hiResFamousTexture.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/load/pgcAliasFetcher.ts",
+    "to": "src/layers/galaxyCatalog/aliases/load/pgcAliasFetcher.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/load/pgcAliasSlot.ts",
+    "to": "src/layers/galaxyCatalog/aliases/load/pgcAliasSlot.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/load/wireGalaxyCatalogSourceSlot.ts",
+    "to": "src/layers/galaxyCatalog/records/load/wireGalaxyCatalogSourceSlot.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/load/wireHiResFamousSlot.ts",
+    "to": "src/layers/galaxyCatalog/disks/load/wireHiResFamousSlot.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/load/wireImpostorSubsystems.ts",
+    "to": "src/layers/galaxyCatalog/disks/load/wireImpostorSubsystems.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/passes/galaxyPointSpritesPass.ts",
+    "to": "src/layers/galaxyCatalog/pointSprites/passes/galaxyPointSpritesPass.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/passes/proceduralDisksPass.ts",
+    "to": "src/layers/galaxyCatalog/disks/procedural/passes/proceduralDisksPass.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/passes/texturedDisksPass.ts",
+    "to": "src/layers/galaxyCatalog/disks/textured/passes/texturedDisksPass.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/present/extractGalaxyRow.ts",
+    "to": "src/layers/galaxyCatalog/records/present/extractGalaxyRow.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/present/focusedFamousIndex.ts",
+    "to": "src/layers/galaxyCatalog/famousGalaxies/utils/focusedFamousIndex.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/present/galaxyCatalogSelectionRow.ts",
+    "to": "src/layers/galaxyCatalog/selection/present/galaxyCatalogSelectionRow.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/present/galaxyRecordBridge.ts",
+    "to": "src/layers/galaxyCatalog/selection/present/galaxyRecordBridge.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/present/produceFamousGalaxyLabels.ts",
+    "to": "src/layers/galaxyCatalog/famousGalaxies/present/produceFamousGalaxyLabels.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/present/sourceMaskOf.ts",
+    "to": "src/layers/galaxyCatalog/records/utils/sourceMaskOf.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/present/structureMemberCount.ts",
+    "to": "src/layers/galaxyCatalog/structureMembership/utils/structureMemberCount.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/present/structureMembership.ts",
+    "to": "src/layers/galaxyCatalog/structureMembership/utils/structureMembership.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/render/buildPointInterleavedBuffer.ts",
+    "to": "src/layers/galaxyCatalog/pointSprites/render/buildPointInterleavedBuffer.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/render/buildPointInterleavedBuffer.worker.ts",
+    "to": "src/layers/galaxyCatalog/pointSprites/render/buildPointInterleavedBuffer.worker.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/render/catalogStore.ts",
+    "to": "src/layers/galaxyCatalog/pointSprites/render/catalogStore.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/render/galaxyPickRenderer.ts",
+    "to": "src/layers/galaxyCatalog/pointSprites/render/galaxyPickRenderer.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/render/galaxyPointRenderer.ts",
+    "to": "src/layers/galaxyCatalog/pointSprites/render/galaxyPointRenderer.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/render/galaxyPointVertexLayout.ts",
+    "to": "src/layers/galaxyCatalog/pointSprites/render/galaxyPointVertexLayout.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/render/instancedQuadRenderer.ts",
+    "to": "src/layers/galaxyCatalog/disks/quad/render/instancedQuadRenderer.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/render/packGalaxyPointUniforms.ts",
+    "to": "src/layers/galaxyCatalog/pointSprites/render/packGalaxyPointUniforms.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/render/pickUniformBytesOf.ts",
+    "to": "src/layers/galaxyCatalog/pointSprites/render/pickUniformBytesOf.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/render/proceduralDiskRenderer.ts",
+    "to": "src/layers/galaxyCatalog/disks/procedural/render/proceduralDiskRenderer.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/render/texturedDiskRenderer.ts",
+    "to": "src/layers/galaxyCatalog/disks/textured/render/texturedDiskRenderer.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/sagas/watchPaletteWakeSaga.ts",
+    "to": "src/layers/galaxyCatalog/aliases/sagas/watchPaletteWakeSaga.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/subsystems/diskPlannerWalk.ts",
+    "to": "src/layers/galaxyCatalog/lod/subsystems/diskPlannerWalk.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/subsystems/galaxyAtlasSubsystem.ts",
+    "to": "src/layers/galaxyCatalog/thumbnailAtlas/subsystems/galaxyAtlasSubsystem.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/subsystems/hiResFamousSubsystem.ts",
+    "to": "src/layers/galaxyCatalog/hiResFamous/subsystems/hiResFamousSubsystem.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/subsystems/proceduralDiskSubsystem.ts",
+    "to": "src/layers/galaxyCatalog/disks/procedural/subsystems/proceduralDiskSubsystem.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/subsystems/texturedDiskSubsystem.ts",
+    "to": "src/layers/galaxyCatalog/disks/textured/subsystems/texturedDiskSubsystem.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/ui/GalaxiesSection.tsx",
+    "to": "src/layers/galaxyCatalog/controls/ui/GalaxiesSection.tsx"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/ui/GalaxiesSectionContainer.tsx",
+    "to": "src/layers/galaxyCatalog/controls/ui/GalaxiesSectionContainer.tsx"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/utils/countEstimatedProvenance.ts",
+    "to": "src/layers/galaxyCatalog/provenance/utils/countEstimatedProvenance.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/utils/galaxy/buildObjIdLookup.ts",
+    "to": "src/layers/galaxyCatalog/records/utils/buildObjIdLookup.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/utils/galaxy/decodeAngularWeight.ts",
+    "to": "src/layers/galaxyCatalog/pointSprites/utils/decodeAngularWeight.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/utils/galaxy/derivePointRecord.ts",
+    "to": "src/layers/galaxyCatalog/pointSprites/utils/derivePointRecord.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/utils/galaxy/durableIdClaimants.ts",
+    "to": "src/layers/galaxyCatalog/aliases/utils/durableIdClaimants.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/utils/galaxy/galaxyMagOffset.ts",
+    "to": "src/layers/galaxyCatalog/appearance/utils/galaxyMagOffset.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/utils/galaxy/galaxySbAmp.ts",
+    "to": "src/layers/galaxyCatalog/appearance/utils/galaxySbAmp.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/utils/galaxy/nearestRowByDirection.ts",
+    "to": "src/layers/galaxyCatalog/records/utils/nearestRowByDirection.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/utils/network/fetchGalaxyBitmap.ts",
+    "to": "src/layers/galaxyCatalog/thumbnailAtlas/utils/fetchGalaxyBitmap.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/utils/paddedRadiusMpc.ts",
+    "to": "src/layers/galaxyCatalog/appearance/utils/paddedRadiusMpc.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/utils/render/disk/apparentSizePxAtDistance.ts",
+    "to": "src/layers/galaxyCatalog/lod/utils/apparentSizePxAtDistance.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/utils/render/disk/byDistanceToCamera.ts",
+    "to": "src/layers/galaxyCatalog/lod/utils/byDistanceToCamera.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/utils/render/disk/calibratedDiskSizeWorld.ts",
+    "to": "src/layers/galaxyCatalog/disks/textured/utils/calibratedDiskSizeWorld.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/utils/render/disk/diskQuadExtentMpc.ts",
+    "to": "src/layers/galaxyCatalog/lod/utils/diskQuadExtentMpc.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/utils/render/disk/effectiveTilt.ts",
+    "to": "src/layers/galaxyCatalog/disks/textured/utils/effectiveTilt.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/utils/render/disk/galaxyCacheKey.ts",
+    "to": "src/layers/galaxyCatalog/lod/utils/galaxyCacheKey.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/utils/render/disk/hiResLayerFold.ts",
+    "to": "src/layers/galaxyCatalog/hiResFamous/utils/hiResLayerFold.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/utils/render/disk/loadFadeAlpha.ts",
+    "to": "src/layers/galaxyCatalog/disks/textured/utils/loadFadeAlpha.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/utils/render/disk/maxVisibleCamDistSq.ts",
+    "to": "src/layers/galaxyCatalog/lod/utils/maxVisibleCamDistSq.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/utils/render/disk/maybeEmitProceduralDisk.ts",
+    "to": "src/layers/galaxyCatalog/disks/procedural/utils/maybeEmitProceduralDisk.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/utils/render/disk/nucleusCorner.ts",
+    "to": "src/layers/galaxyCatalog/disks/textured/utils/nucleusCorner.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/utils/render/disk/purgeStrideWindow.ts",
+    "to": "src/layers/galaxyCatalog/lod/utils/purgeStrideWindow.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/utils/render/disk/resolveDiskPlacement.ts",
+    "to": "src/layers/galaxyCatalog/disks/textured/utils/resolveDiskPlacement.ts"
+  },
+  {
+    "from": "src/layers/galaxyCatalog/utils/render/disk/strideWindow.ts",
+    "to": "src/layers/galaxyCatalog/lod/utils/strideWindow.ts"
+  }
+]

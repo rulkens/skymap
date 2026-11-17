@@ -22,7 +22,7 @@ import { engineRoute } from '../../store/constants';
 import type { CoreEngineSliceState } from '../../@types/store/CoreEngineSliceState';
 import type { EngineStatus } from '../../@types/engine/EngineStatus';
 import type { ScaleInfo } from '../../@types/engine/ScaleInfo';
-import type { SourceType } from '../../@types/data/SourceType';
+import type { SourceId } from '../../@types/data/SourceId';
 import type { LoadProgressState } from '../../@types/loading/LoadProgressState';
 import type { LayerSearchEntry } from '../../@types/engine/layer/LayerSearchEntry';
 
@@ -56,7 +56,7 @@ const engineSlice = createSlice({
     // catalog finishes loading, not in a single batch.
     engineSourceCountReported: (
       state,
-      action: PayloadAction<{ source: SourceType; count: number }>,
+      action: PayloadAction<{ source: SourceId; count: number }>,
     ) => {
       state.sourceCounts[action.payload.source] = action.payload.count;
     },

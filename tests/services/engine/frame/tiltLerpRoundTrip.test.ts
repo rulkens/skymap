@@ -23,12 +23,15 @@ import { seedRememberedTilt } from '../../../helpers/camera/seedRememberedTilt';
 import { hrOverBody } from '../../../helpers/camera/hrOverBody';
 import { tiltOverBody } from '../../../helpers/camera/tiltOverBody';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
-import { mappedTiltRad } from '../../../../src/utils/camera/mappedTiltRad';
+import { mappedTiltRad } from '../../../../src/services/engine/camera/orientation/utils/mappedTiltRad';
 import { DEFAULT_CAMERA_TUNING as TUNING } from '../../../../src/data/camera/cameraTuning';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import { installAppSelectionKinds } from '../../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 const EARTH = deriveBodyStates(CONST_J2000).get(asSceneBodyId('earth'))! as BodyState;
 const EARTH_RADIUS_M = SCENE_EARTH.surface.datumRadiusM;

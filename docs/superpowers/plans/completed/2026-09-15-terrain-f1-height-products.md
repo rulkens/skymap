@@ -8,7 +8,7 @@
 
 **Tech Stack:** unchanged. TS + WebGPU (`queue.writeTexture` for the f32 atlas), Vitest, `sharp` for GeoTIFF windows (`raw({ depth })`), `tsx` tools.
 
-**Spec:** [`docs/superpowers/specs/2026-09-13-per-planet-terrain-design.md`](../specs/2026-09-13-per-planet-terrain-design.md) — §3.1 (ideal shape), §3.3 joints 1–7, §3.4 b/c/f, §3.5 P2–P5, §4 (data), §5 (products, format, edge agreement, atlas), §6 items 1–2 (two products, 2:1 balance), §10, §11 (the format, edge-agreement, request-set and balance tests), §12 row F1.
+**Spec:** [`docs/superpowers/specs/completed/2026-09-13-per-planet-terrain-design.md`](../specs/completed/2026-09-13-per-planet-terrain-design.md) — §3.1 (ideal shape), §3.3 joints 1–7, §3.4 b/c/f, §3.5 P2–P5, §4 (data), §5 (products, format, edge agreement, atlas), §6 items 1–2 (two products, 2:1 balance), §10, §11 (the format, edge-agreement, request-set and balance tests), §12 row F1.
 
 **Ground preparation:** spec §3, produced by `refactor-ground` 2026-09-13. P1 (#704) and P6 (#705) are landed. P2–P5 ride this PR as separate commits (§3.6). The spec's §3.6 "sequencing conflict" is resolved: `main` is on `earth-tiles/v7` and the on-disk bake matches; this plan bumps to **v8** (the albedo path segment changes and a product is added — one prefix, one coherent bake).
 

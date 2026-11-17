@@ -10,6 +10,7 @@ import {
   type FetchTransport,
   type TextureSource,
 } from '../../../tools/fetch/fetchTextures';
+import { BLACK_MARBLE_QUADRANT_KEYS } from '../../../tools/utils/io/blackMarbleQuadrantKeys';
 import { BMNG_QUADRANT_KEYS } from '../../../tools/utils/io/bmngQuadrantKeys';
 import { BMNG_VINTAGE } from '../../../tools/utils/io/bmngVintage';
 import { RAW_DATA, rawDataPath, type RawDataKey } from '../../../tools/utils/io/rawDataRegistry';
@@ -71,6 +72,7 @@ describe('textureSourcesFor', () => {
         'gebco_08_rev_elev_21600x10800.png',
         'ldem_16_uint.tif',
         'BlackMarble_2016_3km.jpg',
+        ...Object.keys(BLACK_MARBLE_QUADRANT_KEYS).map((q) => `BlackMarble_2016_${q}.jpg`),
         'cloud_combined_8192.tif',
         'Io_GalileoSSI-Voyager_Global_Mosaic_ClrMerge_1km.tif',
         'Europa_Voyager_GalileoSSI_global_mosaic_500m.tif',

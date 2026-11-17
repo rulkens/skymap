@@ -35,7 +35,9 @@ describe('webShowcase tour', () => {
     // The strip rides the first clip (no tour-level setup surface); the
     // runTakeoverSaga snapshot/restore pair winds it back at tour end.
     const first = webShowcase.beats[0]!.enterClip!.timeline[0];
-    expect(first).toEqual(hide(['cosmicWebDensity', 'cosmicWebFilaments', 'label:famousGalaxy'], 0));
+    expect(first).toEqual(
+      hide(['cosmicWebDensity', 'cosmicWebFilaments', 'label:famousGalaxy'], 0),
+    );
   });
 
   it('beat 2 clip carries a focusId cue (flyAndFocusOnClip)', () => {

@@ -5,7 +5,6 @@ import type { LayerSearchEntry } from '../../../src/@types/engine/layer/LayerSea
 import { ROW_VIEW } from '../../../src/components/CommandPalette/paletteRows';
 import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
 import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
-import { Source } from '../../../src/data/source';
 import type { StructureSearchEntry } from '../../../src/@types/engine/StructureSearchEntry';
 import type { ScoredRow } from '../../../src/@types/palette/ScoredRow';
 
@@ -36,15 +35,12 @@ describe('ROW_VIEW star rows', () => {
     // A star row's focus id is what the card is filed under, so the shot comes
     // straight from `cardShotUrl` — the same path bodies take. A row that fell
     // back to the body focus id would render a 404'ing img.
-    const index = SCENE_STARS.findIndex((star) => star.id === 'sirius');
     const row: ScoredRow = {
-      kind: 'starCatalog',
-      source: Source.FamousStar,
-      index,
-      star: SCENE_STARS[index]!,
+      kind: 'layer',
+      entry: { id: 'star-sirius', class: 'primary', names: ['Sirius'] },
       score: 0,
     };
-    const leading = ROW_VIEW.starCatalog(row).leading;
+    const leading = ROW_VIEW.layer(row).leading;
     expect(isValidElement(leading) && leading.type).toBe('img');
     expect(isValidElement(leading) && (leading.props as { src: string }).src).toBe(
       '/images/featured/star-sirius.webp',

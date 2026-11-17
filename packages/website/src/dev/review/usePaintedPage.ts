@@ -2,15 +2,13 @@ import { useLayoutEffect, useState } from 'react';
 
 import type { DocsReviewMark } from '../../../../../tools/site/@types/DocsReviewMark';
 import { usePageNotes } from '../overlay/usePageNotes';
-import type { ReviewSection } from './@types/ReviewSection';
 import { clearMarks } from './clearMarks';
 import { locateNotes } from './locateNotes';
 import { paintMark } from './paintMark';
 import { placeAfter } from './placeAfter';
 import reviewPage from './ReviewPage/ReviewPage.module.css';
 import { sectionsOf } from './sectionsOf';
-
-const NOTHING = { sections: [] as ReviewSection[], missing: [] as string[] };
+import { NOTHING } from './usePaintedPage.constants.ts';
 
 /**
  * Paints the live marks into the article's own text and reads back the sections they fall in, plus

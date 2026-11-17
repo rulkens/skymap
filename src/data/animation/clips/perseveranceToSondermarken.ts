@@ -23,12 +23,12 @@ import {
   wait,
 } from '../../../services/engine/animation/effectHelpers';
 import { deriveBodyStates } from '../../../services/engine/frame/deriveBodyStates';
-import { linkedPoseToWorld } from '../../../utils/camera/linkedPoseToWorld';
-import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
-import { frameUp } from '../../../utils/camera/frameUp';
-import { eyeMpcOf } from '../../../utils/camera/eyeMpcOf';
+import { linkedPoseToWorld } from '../../../services/engine/camera/arms/utils/linkedPoseToWorld';
+import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitPose/orbitAnglesLookingAlong';
+import { frameUp } from '../../../utils/camera/orbitPose/frameUp';
+import { eyeMpcOf } from '../../../utils/camera/orbitPose/eyeMpcOf';
 import { normalize3 } from '../../../utils/math/normalize3';
-import { northUpRoll } from '../../../utils/camera/northUpRoll';
+import { northUpRoll } from '../../../utils/camera/orbitPose/northUpRoll';
 import { ORIENTATION_FRAMES } from '../../orientation/orientationFrames';
 import { SCALE_UNITS } from '../../scaleUnits';
 import { SONDERMARKEN_POSE } from './sondermarkenFlyout';

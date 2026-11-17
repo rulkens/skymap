@@ -11,10 +11,10 @@ import {
   CLOUD_UNIFORM_FLOATS,
   packCloudUniforms,
 } from '../../../../../tools/galaxy-renderer/src/engine/sprites/packCloudUniforms';
-import type { MilkyWayTuning } from '../../../../../src/@types/settings/MilkyWayTuning';
+import type { MilkyWayCloudTuning } from '../../../../../src/@types/settings/MilkyWayCloudTuning';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
-const TUNING: MilkyWayTuning = {
+const TUNING: MilkyWayCloudTuning = {
   starSizeScale: 1.5,
   exposure: 2.25,
   starPxMin: 0.75,

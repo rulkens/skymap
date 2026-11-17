@@ -14,19 +14,19 @@
 import { describe, it, expect } from 'vitest';
 
 import { shouldKeepTicking } from '../../../../src/services/engine/helpers/shouldKeepTicking';
-import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/cameraDrivers';
-import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
+import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/drivers/cameraDrivers';
+import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { RootState } from '../../../../src/store/types';
 
 /**
- * A RootState carrying the two slices shouldKeepTicking reads: the camera slice
- * and the time slice. Both default to their AT-REST value — camera still, clock
+ * A RootState carrying the slices shouldKeepTicking reads: camera, input (the
+ * held gesture) and time. All default to their AT-REST value — camera still, clock
  * live (so `selectIsManualPlaying` is false); a case flips exactly one.
  */
 function rootWithCamera(
   over: {
-    dragging?: boolean;
+    gestureHeld?: boolean;
     tween?: unknown;
     autoRotateActive?: boolean;
     timeMode?: 'live' | 'manual';
@@ -35,16 +35,18 @@ function rootWithCamera(
 ): RootState {
   return {
     camera: {
-      dragging: over.dragging ?? false,
-      tween: over.tween ?? null,
-      autoRotate: { active: over.autoRotateActive ?? false },
-      clip: null,
-      clipId: null,
-      frameTween: null,
-      // The auto-rotate term is arm-gated (see `selectCameraActive`), so the
-      // fixture carries the at-rest arm every real store boots with.
-      base: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 }),
+      intent: {
+        tween: over.tween ?? null,
+        autoRotate: { active: over.autoRotateActive ?? false },
+        clip: null,
+        clipId: null,
+        frameTween: null,
+        // The auto-rotate term is arm-gated (see `selectCameraActive`), so the
+        // fixture carries the at-rest arm every real store boots with.
+        base: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 }),
+      },
     },
+    input: { owner: over.gestureHeld ? 'canvas' : null },
     time: {
       mode: over.timeMode ?? 'live',
       paused: over.paused ?? false,
@@ -92,7 +94,7 @@ function makeState(over: {
     subsystems: {
       texturedDisks: null,
       fades: { isAnyAnimating: () => over.fadesAnimating ?? false },
-      structureFocus: { isAwake: () => over.focusAwake ?? false },
+      recedingFocus: { isAwake: () => over.focusAwake ?? false },
     },
   } as unknown as EngineState;
 }
@@ -103,10 +105,16 @@ describe('shouldKeepTicking', () => {
     expect(shouldKeepTicking(state, restingRoot, 1000, NO_ANIM, CAMERA_DRIVERS)).toBe(false);
   });
 
-  it('a dragging camera → true (selectCameraActive)', () => {
+  it('a held gesture → true (selectCameraActive)', () => {
     const state = makeState({});
     expect(
-      shouldKeepTicking(state, rootWithCamera({ dragging: true }), 1000, NO_ANIM, CAMERA_DRIVERS),
+      shouldKeepTicking(
+        state,
+        rootWithCamera({ gestureHeld: true }),
+        1000,
+        NO_ANIM,
+        CAMERA_DRIVERS,
+      ),
     ).toBe(true);
   });
 
@@ -115,7 +123,7 @@ describe('shouldKeepTicking', () => {
     expect(shouldKeepTicking(state, restingRoot, 1000, NO_ANIM, CAMERA_DRIVERS)).toBe(true);
   });
 
-  it('structure-focus fade awake → true', () => {
+  it('focus fade awake → true', () => {
     const state = makeState({ focusAwake: true });
     expect(shouldKeepTicking(state, restingRoot, 1000, NO_ANIM, CAMERA_DRIVERS)).toBe(true);
   });

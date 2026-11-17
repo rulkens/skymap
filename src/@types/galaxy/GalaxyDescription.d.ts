@@ -27,7 +27,7 @@ export type GalaxyDescription = {
    * anchor there would tie brightness to N^(1/3), moving it a visible amount
    * per LOD tier switch). `light`'s lanes are light fractions summing to 1,
    * so this IS the galaxy's total emitted light. The HII tier's flux rides
-   * additively on top of it (`hiiRegions.ts`'s `HII_LUMINOSITY_SHARE`),
+   * additively on top of it (`buildHiiShellsAndYoungWithSegments.ts`'s `HII_LUMINOSITY_SHARE`),
    * since those regions are young-star light the smooth populations don't carry.
    */
   readonly luminosity: number;

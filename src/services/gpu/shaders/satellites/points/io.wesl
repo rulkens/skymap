@@ -5,17 +5,27 @@
 import package::lib::camera::CameraUniforms;
 
 // One satellite's TEME state at the last worker sweep, km and km/s from Earth's centre, its
-// catalog index (the pick id) and its class (an index into 'classOpacity').
+// catalog index (the pick id), its class (an index into 'classOpacity') and its profile (an index
+// into the profile table).
 struct SatelliteInstance {
   @location(0) posKm: vec3<f32>,
   @location(1) velKmS: vec3<f32>,
   @location(2) catalogIndex: u32,
   @location(3) classCode: u32,
+  @location(4) profileCode: u32,
+};
+
+// One row of the profile table, group 0 binding 3. TS twin: packSatelliteProfiles.ts.
+struct SatelliteProfile {
+  color: vec3<f32>,
+  areaM2: f32,
+  glintGain: f32,
 };
 
 // Group 0 bindings 0-1 belong to lib/trailOcclusion; this is binding 2. 'earthKm' is Earth's
 // centre minus the eye in world axes (composed in f64 on the CPU), 'temeToWorld*' the columns of
-// the TEME to world rotation, 'dtSec' the sim seconds since the sweep.
+// the TEME to world rotation, 'dtSec' the sim seconds since the sweep, 'sunDir' the world unit
+// vector from Earth to the Sun, 'ambient' the light every dot gets, sunlit or eclipsed.
 struct SatelliteUniforms {
   cam: CameraUniforms,
   earthKm: vec3<f32>,
@@ -25,7 +35,8 @@ struct SatelliteUniforms {
   temeToWorld1: vec3<f32>,
   sizePx: f32,
   temeToWorld2: vec3<f32>,
-  color: vec3<f32>,
+  sunDir: vec3<f32>,
+  ambient: f32,
   classOpacity: vec3<f32>,
   // Pick only: the packed pick word of catalog index 0 (source code and sentinel offset folded in
   // on the CPU).
@@ -43,5 +54,5 @@ struct VSOut {
   @builtin(position) clip: vec4<f32>,
   @location(0) relKm: vec3<f32>,
   @location(1) corner: vec2<f32>,
-  @location(2) @interpolate(flat) opacity: f32,
+  @location(2) @interpolate(flat) radiance: vec3<f32>,
 };

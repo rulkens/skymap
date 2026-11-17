@@ -62,9 +62,16 @@ const GENERATED_BANNER =
   '// of a non-dev Mars tile bake)\n' +
   "// Source of truth:  the host's own baked height tiles\n";
 
+// A site id is its body's id, which may be kebab-case.
+const objectKey = (id: string): string => (/^[A-Za-z_$][\w$]*$/.test(id) ? id : `'${id}'`);
+
 function serialize(heights: ReadonlyMap<string, number>, ups: ReadonlyMap<string, Vec3>): string {
-  const heightRows = [...heights.entries()].map(([id, m]) => `  ${id}: ${m},`).join('\n');
-  const upRows = [...ups.entries()].map(([id, up]) => `  ${id}: [${up.join(', ')}],`).join('\n');
+  const heightRows = [...heights.entries()]
+    .map(([id, m]) => `  ${objectKey(id)}: ${m},`)
+    .join('\n');
+  const upRows = [...ups.entries()]
+    .map(([id, up]) => `  ${objectKey(id)}: [${up.join(', ')}],`)
+    .join('\n');
   return (
     GENERATED_BANNER +
     '\n' +

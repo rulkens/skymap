@@ -11,9 +11,9 @@ import { vec4 } from 'wgpu-matrix';
 
 import { near0LabelProjection } from '../../../../src/services/engine/frame/near0LabelProjection';
 import { NEAR0 } from '../../../../src/services/engine/frame/slabs';
-import { foregroundFrustum } from '../../../../src/utils/camera/foregroundFrustum';
-import { computeForegroundViewProj } from '../../../../src/utils/camera/computeForegroundViewProj';
-import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
+import { foregroundFrustum } from '../../../../src/utils/camera/frustum/foregroundFrustum';
+import { computeForegroundViewProj } from '../../../../src/utils/camera/projection/computeForegroundViewProj';
+import { symmetricFrustum } from '../../../../src/utils/camera/frustum/symmetricFrustum';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 

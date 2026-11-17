@@ -6,15 +6,15 @@
  * `pivotSurfaceRangeMpc` recipe — `worldPose` stays each caller's own to obtain.
  */
 
-import type { CameraPose } from '../../../@types/camera/CameraPose';
+import type { CameraPose } from '../../../@types/camera/pose/CameraPose';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { FrameContextInput } from '../../../@types/engine/frame/FrameContextInput';
-import type { AssembledOrbitCamera } from '../../../@types/camera/AssembledOrbitCamera';
+import type { AssembledOrbitCamera } from '../../../@types/camera/orbitCamera/AssembledOrbitCamera';
 import type { Mat3 } from '../../../@types/math/Mat3';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { PositionedId } from '../../../@types/scene/PositionedId';
 import { assembleOrbitCamera } from '../camera/assembleOrbitCamera';
-import { pivotSurfaceRangeMpc } from '../camera/pivotSurfaceRangeMpc';
+import { pivotSurfaceRangeMpc } from '../camera/framing/pivotSurfaceRangeMpc';
 
 export function frameContextInputOf(
   state: EngineState,

@@ -1,5 +1,5 @@
 import { BASE } from '../../../data/site';
-import { MAKER_NAME } from '../../../data/siteIdentity';
+import { MAKER_NAME, MAKER_SITE } from '../../../data/siteIdentity';
 import { makerProfile, whatIs } from './about.data';
 
 /**
@@ -18,7 +18,7 @@ export function aboutJsonLd(site: URL, pageUrl: string): Record<string, unknown>
       ...maker,
       name: MAKER_NAME,
       url: pageUrl,
-      sameAs: [makerProfile],
+      sameAs: [makerProfile, MAKER_SITE],
     },
     {
       '@context': 'https://schema.org',

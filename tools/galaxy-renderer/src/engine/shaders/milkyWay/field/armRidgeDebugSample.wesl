@@ -3,7 +3,7 @@
 // to check its output against — same shape as ringReduce.wesl's ringMeans
 // check). One invocation per fixed (arm, logR) sample, each writing
 // FLOATS_PER_SAMPLE floats; probeGpuErrors.ts diffs this against
-// armRidgeGeometry.ts's own CPU output at the SAME literal geometry/arm/logR
+// the arms/utils CPU output at the SAME literal geometry/arm/logR
 // values (hand-mirrored there, not read back from here — a WGSL array has
 // no run-time path to a Node test). 'armRidgeFrameAt's output transitively
 // exercises 'armRidgeCurvePoint', 'warpHeight' and 'warpSurfaceFrame'

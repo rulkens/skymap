@@ -5,7 +5,7 @@
 **MEASURED.** `SCALE_FADE_BANDS.milkyWayApproachSun = { fullAt: 0.002, goneAt: 0.0002 }` — 2 kpc to
 200 pc (`scaleFadeBands.ts:77`) — is evaluated against
 `Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2])`
-(`milkyWayCloudLiveness.ts:72`), the camera's distance from the **heliocentric render origin**,
+(`deriveMilkyWayCloudAlpha.ts`), the camera's distance from the **heliocentric render origin**,
 i.e. from the **Sun**. Its own comment says what it was tuned for: the camera diving into the
 disc _toward the Sun_.
 

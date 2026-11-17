@@ -1,13 +1,10 @@
 /*
- * DocsSearch — the control that opens search, and the sheet it opens: a field
- * set in the display face, as the title of a page of results, over the pages
- * that match. The index is Pagefind's, cut from the built pages by the site's
- * build (astro.config.mjs) and fetched when the sheet first opens, never with
- * the page. The development server has no index, and the sheet says so. A
- * result opens its page, or the term, row or heading on it that names what was
- * asked for (utils/searchLanding.ts). Arrow keys walk from the field through
- * the results and back; Enter opens the first. `/` opens it from anywhere.
- * `big` is the control at a page's own size, for the docs index.
+ * DocsSearch — the control that opens search, and the sheet it opens: a field set in the display face, as the title
+ * of a page of results, over the pages that match. The index is Pagefind's, cut from the built pages by the site's
+ * build (astro.config.mjs) and fetched when the sheet first opens, never with the page. The development server has
+ * no index, and the sheet says so. A result opens its page, or the term, row or heading on it that names what was
+ * asked for (utils/searchLanding.ts). Arrow keys walk from the field through the results and back; Enter opens the
+ * first. `/` opens it from anywhere. `big` is the control at a page's own size, for the docs index.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -15,20 +12,12 @@ import type { PagefindApi } from '../../../@types/PagefindApi';
 import type { PagefindPage } from '../../../@types/PagefindPage';
 import { cx } from '../../../utils/cx.ts';
 import { searchLanding } from '../../../utils/searchLanding.ts';
-import { sitePath } from '../../../utils/sitePath.ts';
+import { loadSearchIndex } from '../../../utils/loadSearchIndex.ts';
 import Icon from '../../shared/links/Icon/Icon.tsx';
+import { NO_INDEX, SHOWN } from './DocsSearch.constants.ts';
 import styles from './DocsSearch.module.css';
 
 type DocsSearchProps = { big?: boolean; className?: string };
-
-const SHOWN = 8;
-const NO_INDEX = import.meta.env.DEV
-  ? 'Search reads an index that is cut when the site is built. This is the development server, which has none.'
-  : 'The search index did not load. Reload the page to try again.';
-const INDEX_URL = sitePath('/pagefind/pagefind.js');
-
-// The import is the browser's own, of an address only the build knows: Vite would rewrite one it bundled.
-const loadIndex = (): Promise<PagefindApi> => import(/* @vite-ignore */ INDEX_URL);
 
 function DocsSearch({ big = false, className }: DocsSearchProps) {
   const sheet = useRef<HTMLDialogElement>(null);
@@ -46,7 +35,7 @@ function DocsSearch({ big = false, className }: DocsSearchProps) {
     if (dialog.open) return;
     dialog.showModal();
     field.current!.select();
-    api.current ??= loadIndex().catch(() => null);
+    api.current ??= loadSearchIndex().catch(() => null);
     void api.current.then((module) => {
       if (!module) setStatus(NO_INDEX);
     });

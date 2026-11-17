@@ -1,13 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { Source } from '../../../../src/data/source';
 import { bakeBiasWeights } from '../../../../tools/catalog/bias/bakeBiasWeights';
 import { recordsToCloud } from '../../../../tools/catalog/buildAllBins';
 import type { ParsedRecord } from '../../../../tools/parsers/common';
 
 function rec(overrides: Partial<ParsedRecord>): ParsedRecord {
   return {
-    source: Source.Glade,
+    source: 'glade',
     objID: 0n,
     ra: 0,
     dec: 0,
@@ -42,7 +41,7 @@ describe('bakeBiasWeights', () => {
   it("'angular' weights a record in the denser of two HEALPix cells below 1 and the sparser above 1", () => {
     const { dense, mid, sparse } = clusters();
     const records = [...dense, ...mid, ...sparse];
-    const weights = bakeBiasWeights(recordsToCloud(records), Source.Glade, 'angular');
+    const weights = bakeBiasWeights(recordsToCloud(records), 'glade', 'angular');
     expect(weights[0]!).toBeLessThan(1);
     expect(weights[records.length - 1]!).toBeGreaterThan(1);
   });

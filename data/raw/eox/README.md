@@ -35,6 +35,14 @@ what has actually been harvested and when, one row per `npm run fetch-eox
 | Giza               | 2026-09-03 | 360       |
 | Sjælland           | 2026-09-03 | 3472      |
 | Malmö              | 2026-09-23 | 180       |
+| Cape Canaveral     | 2026-11-05 | 195       |
+| Baikonur           | 2026-11-05 | 312       |
+| Kourou             | 2026-11-05 | 110       |
+| Vandenberg         | 2026-11-05 | 108       |
+| Starbase           | 2026-11-05 | 210       |
+| Wenchang           | 2026-11-05 | 195       |
+| Tanegashima        | 2026-11-05 | 196       |
+| Sriharikota        | 2026-11-05 | 182       |
 
 ## Per-region layout
 

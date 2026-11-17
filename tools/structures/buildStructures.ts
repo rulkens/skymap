@@ -43,7 +43,7 @@ import { parseStructureSeed, type StructureSeedEntry } from '../parsers/parseStr
 import {
   encodeStructureCatalog,
   STRUCTURE_CATALOG_DATA_PREFIX,
-} from '../../src/data/structure/structureCatalogFormat';
+} from '../../src/layers/structure/catalog/data/structureCatalogFormat';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 import { writeMetaSidecar } from '../curation/writeMetaSidecar';
 import { dedupeByProximity } from '../curation/dedupeByProximity';
@@ -51,7 +51,7 @@ import { raDecDistToEqCart } from '../../src/utils/math/raDecDistToEqCart';
 import { lengthToMpc } from '../../src/utils/math/lengthToMpc';
 import { redshiftToDistanceMpc } from '../../src/utils/math/redshiftToDistanceMpc';
 import { H0_KM_S_MPC } from '../../src/utils/math/constants';
-import type { StructureCatalog } from '../../src/@types/data/structure/structureCatalog/StructureCatalog';
+import type { StructureCatalog } from '../../src/layers/structure/catalog/@types/StructureCatalog';
 import type { StructureCategoryByte } from '../../src/@types/data/structure/structureCatalog/StructureCategoryByte';
 import type { Vec3 } from '../../src/@types/math/Vec3';
 

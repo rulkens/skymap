@@ -22,9 +22,9 @@ import {
   wait,
 } from '../../../services/engine/animation/effectHelpers';
 import { deriveBodyStates } from '../../../services/engine/frame/deriveBodyStates';
-import { linkedPoseToWorld } from '../../../utils/camera/linkedPoseToWorld';
+import { linkedPoseToWorld } from '../../../services/engine/camera/arms/utils/linkedPoseToWorld';
 import { normalize3 } from '../../../utils/math/normalize3';
-import { northUpRoll } from '../../../utils/camera/northUpRoll';
+import { northUpRoll } from '../../../utils/camera/orbitPose/northUpRoll';
 import { ORIENTATION_FRAMES } from '../../orientation/orientationFrames';
 import { SCENE_EARTH } from '../../bodies/sceneEarth';
 

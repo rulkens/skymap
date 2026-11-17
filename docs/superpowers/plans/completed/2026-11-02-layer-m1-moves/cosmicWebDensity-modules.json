@@ -1,0 +1,78 @@
+[
+  {
+    "from": "src/layers/cosmicWebDensity/@types/CosmicWebDensityReq.d.ts",
+    "to": "src/layers/cosmicWebDensity/densityCubes/@types/CosmicWebDensityReq.d.ts"
+  },
+  {
+    "from": "src/layers/cosmicWebDensity/utils/clampVolumeContrast.ts",
+    "to": "src/layers/cosmicWebDensity/densityCubes/utils/clampVolumeContrast.ts"
+  },
+  {
+    "from": "src/layers/cosmicWebDensity/utils/clampVolumeDensityScale.ts",
+    "to": "src/layers/cosmicWebDensity/densityCubes/utils/clampVolumeDensityScale.ts"
+  },
+  {
+    "from": "src/layers/cosmicWebDensity/utils/clampVolumeExposure.ts",
+    "to": "src/layers/cosmicWebDensity/densityCubes/utils/clampVolumeExposure.ts"
+  },
+  {
+    "from": "src/layers/cosmicWebDensity/utils/clampVolumeIntensity.ts",
+    "to": "src/layers/cosmicWebDensity/densityCubes/utils/clampVolumeIntensity.ts"
+  },
+  {
+    "from": "src/layers/cosmicWebDensity/utils/clampVolumeTrim.ts",
+    "to": "src/layers/cosmicWebDensity/densityCubes/utils/clampVolumeTrim.ts"
+  },
+  {
+    "from": "src/layers/cosmicWebDensity/utils/volume/deriveVolumeLiveness.ts",
+    "to": "src/layers/cosmicWebDensity/densityCubes/utils/deriveVolumeLiveness.ts"
+  },
+  {
+    "from": "src/layers/cosmicWebDensity/present/deriveCosmicWebDensityLiveness.ts",
+    "to": "src/layers/cosmicWebDensity/densityCubes/present/deriveCosmicWebDensityLiveness.ts"
+  },
+  {
+    "from": "src/layers/cosmicWebDensity/load/createCosmicWebDensitySlot.ts",
+    "to": "src/layers/cosmicWebDensity/densityCubes/load/createCosmicWebDensitySlot.ts"
+  },
+  {
+    "from": "src/layers/cosmicWebDensity/load/cosmicWebDensityFetcher.ts",
+    "to": "src/layers/cosmicWebDensity/densityCubes/load/cosmicWebDensityFetcher.ts"
+  },
+  {
+    "from": "src/layers/cosmicWebDensity/load/cosmicWebDensityAssetRows.ts",
+    "to": "src/layers/cosmicWebDensity/densityCubes/load/cosmicWebDensityAssetRows.ts"
+  },
+  {
+    "from": "src/layers/cosmicWebDensity/passes/cosmicWebDensityUpsamplePass.ts",
+    "to": "src/layers/cosmicWebDensity/densityCubes/passes/cosmicWebDensityUpsamplePass.ts"
+  },
+  {
+    "from": "src/layers/cosmicWebDensity/passes/cosmicWebDensityPass.ts",
+    "to": "src/layers/cosmicWebDensity/densityCubes/passes/cosmicWebDensityPass.ts"
+  },
+  {
+    "from": "src/layers/cosmicWebDensity/ui/DensityFieldTuningRow.tsx",
+    "to": "src/layers/cosmicWebDensity/densityCubes/ui/DensityFieldTuningRow.tsx"
+  },
+  {
+    "from": "src/layers/cosmicWebDensity/ui/CosmicWebDensityTuningSectionContainer.tsx",
+    "to": "src/layers/cosmicWebDensity/densityCubes/ui/CosmicWebDensityTuningSectionContainer.tsx"
+  },
+  {
+    "from": "src/layers/cosmicWebDensity/ui/CosmicWebDensitySection.tsx",
+    "to": "src/layers/cosmicWebDensity/densityCubes/ui/CosmicWebDensitySection.tsx"
+  },
+  {
+    "from": "src/layers/cosmicWebDensity/ui/CosmicWebDensityTuningSection.tsx",
+    "to": "src/layers/cosmicWebDensity/densityCubes/ui/CosmicWebDensityTuningSection.tsx"
+  },
+  {
+    "from": "src/layers/cosmicWebDensity/ui/CosmicWebDensitySectionContainer.tsx",
+    "to": "src/layers/cosmicWebDensity/densityCubes/ui/CosmicWebDensitySectionContainer.tsx"
+  },
+  {
+    "from": "tests/layers/cosmicWebDensity/utils/clampVolume.test.ts",
+    "to": "tests/layers/cosmicWebDensity/densityCubes/utils/clampVolume.test.ts"
+  }
+]

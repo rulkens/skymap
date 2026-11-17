@@ -2,7 +2,7 @@ import type { DocsReviewApplied } from './DocsReviewApplied';
 import type { DocsReviewApply } from './DocsReviewApply';
 import type { DocsReviewMark } from './DocsReviewMark';
 
-/** A proposed cut of one docs page, one JSON file per page under `.superpowers/.../review/`. */
+/** A proposed cut of one docs page, one JSON file per page under `.superpowers/site/review/`. */
 export type DocsReview = {
   /** The page's path without the site base, e.g. `/docs/start/scene/`. */
   page: string;

@@ -1363,7 +1363,7 @@ type SubsystemBundle = {
   deletion **CLOSED by #16 (2026-08-20)** — the maps (`PASS_GROUP_TITLES`, the
   DebugPanel section list) stay hand-authored (D2).
 - **P3** Extract field/ISM orchestration from `tools/galaxy-renderer/src/engine/`
-  into `src/services/gpu/renderers/galaxyField/` (instantiable per galaxy); tool
+  into `src/layers/milkyWay/field/` (instantiable per galaxy); tool
   consumes it. Tool-neutral (probe gates it).
 - **P4** `MilkyWaySettings` identity/tuning split.
 
@@ -1382,16 +1382,19 @@ deletion — follow-up PRs, each mechanical.
 - **Track B** = P3 — own spec + plan ("galaxy field renderer extraction").
   Independent of the ladder; parallelizable in its own worktree/session.
 - **Track C** = F1–F3 — executes after Track B + rungs 1–3 merge (not all
-  seven).
+  seven). **Status: landed behind the debug switch** (`settings.milkyWay.renderer`,
+  default `'v1'`): the field draws inside the milkyWay Layer, reusing
+  `{kind:'milkyWay'}` and the `milkyWayDisk` fade as #7 required. See
+  `docs/research/engine/field-seam-map.md` §2.
 
 ## Spun off to backlog (not this effort)
 
 - Focusability/selectability consolidation: every focusable kind hand-adds rows to
   ~10 files (FocusableTarget, SelectionRow, selectionHaloTable, pick tables, URL
   hash…) — a surface as large as rendering; bundle contract deliberately excludes.
-  Detail file: [focusable-kind backlog](../../backlog/2026-10-28-selection-kind-facts-in-the-layer.md).
+  Detail file: [focusable-kind backlog](../../superpowers/specs/completed/2026-11-05-selection-kind-facts-design.md).
   A second, related backlog item landed with the merge:
-  [focusability is declared twice on the same discriminant](../../backlog/2026-08-17-focusability-double-encoded.md)
+  focusability is declared twice on the same discriminant (resolved by selection-kind-facts: `focus: null`)
   (`ROW_FOCUSABLE` vs `focusFraming`'s throw, both hand-encoding "does this row
   carry a position?"). Zone-of-avoidance (#555) is fresh, first-party evidence
   for the surface's cost: adding ONE new kind — including declaring it

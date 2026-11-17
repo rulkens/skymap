@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
-import { EXOPLANET_PLANETS } from '../../../../../src/layers/body/bodies/exoplanetPlanets';
+import { EXOPLANET_PLANETS } from '../../../../../src/layers/body/bodies/exoplanets/exoplanetPlanets';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { asSceneBodyId } from '../../../../../src/utils/scene/asSceneBodyId';
 import { planeFrameFromPole } from '../../../../../src/data/bodies/orbitPlaneFrames';

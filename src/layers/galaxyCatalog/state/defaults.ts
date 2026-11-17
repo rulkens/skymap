@@ -4,7 +4,7 @@
  * tests that need a no-op provenance fixture.
  */
 
-import type { GalaxyProvenanceSettings } from '../../../@types/settings/GalaxyProvenanceSettings';
+import type { GalaxyProvenanceSettings } from '../@types/GalaxyProvenanceSettings';
 
 /**
  * Default provenance-axis settings — one row per `PROVENANCE_AXES` entry.

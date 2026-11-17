@@ -179,7 +179,7 @@ actual wall, measured) falls as the divisor's square. Dust stays full-res —
 also the app's split — because it has to multiply the real accumulation and is
 not the fill-bound half.
 
-All eight of the app's `MILKY_WAY_TUNING_DEFAULTS` knobs therefore mean the
+All eight of the app's `MILKY_WAY_CLOUD_TUNING_DEFAULTS` knobs therefore mean the
 same thing here: `sizeScale` / `starIntensity` (spelled `starSizeScale` /
 `exposure` in the app), the `starPxMin` / `starPxMax` sprite clamp, `softness`,
 `lodApparent`, `starCount` (which rides `DEFAULT_GALAXY_PARAMS` here rather

@@ -17,7 +17,11 @@ const { layersRef } = vi.hoisted(() => ({
   layersRef: {
     current: [] as ReadonlyArray<{
       name: string;
-      ui?: ReadonlyArray<{ slot: string; content: () => React.ReactElement }>;
+      ui?: ReadonlyArray<{
+        slot: string;
+        content: (props: { title: string }) => React.ReactElement;
+        title?: string;
+      }>;
     }>,
   },
 }));
@@ -44,16 +48,23 @@ vi.mock('../../../src/components/containers/CameraControlsSectionContainer', () 
 import { SettingsPanel } from '../../../src/components/SettingsPanel/SettingsPanel';
 
 describe('SettingsPanel — composition order (D13)', () => {
-  it('renders a present Layer’s ui section before the core sections', () => {
+  it('renders a present Layer’s ui section, headed by its entry’s title, before the core sections', () => {
     layersRef.current = [
       {
         name: 'stub',
-        ui: [{ slot: 'main', content: () => <div data-testid="stub-layer-section" /> }],
+        ui: [
+          {
+            slot: 'main',
+            content: ({ title }) => <div data-testid="stub-layer-section">{title}</div>,
+            title: 'Stub',
+          },
+        ],
       },
     ];
     const { getByTestId, container } = render(<SettingsPanel />);
 
     const layerEl = getByTestId('stub-layer-section');
+    expect(layerEl.textContent).toBe('Stub');
     const coreEl = getByTestId('labels-section');
     // DOCUMENT_POSITION_FOLLOWING: layerEl comes before coreEl.
     expect(layerEl.compareDocumentPosition(coreEl) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(

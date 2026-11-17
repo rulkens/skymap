@@ -6,7 +6,7 @@
 
 `cutSurfaceTiles`'s refinement test is an isotropic screen-space error check: a
 patch refines whenever its projected on-screen extent implies a level deeper
-than the one it is at (`src/layers/body/subsystems/surfaceTiles/cutSurfaceTiles.ts:257-261`,
+than the one it is at (`src/layers/body/surfaceTiles/plan/subsystems/cutSurfaceTiles.ts:257-261`,
 sized by the geometric mean of the node's bbox). Nothing in that test accounts for tile
 aspect ratio. In a plate-carrée grid every longitude column converges at the
 poles, so a polar tile is a thin sliver whose bounding box can still read as
@@ -55,6 +55,6 @@ carry an equivalent defense for geographic (plate-carrée) tiling schemes.
 
 ## Related
 
-`src/layers/body/subsystems/surfaceTiles/cutSurfaceTiles.ts` — the one file this touches.
+`src/layers/body/surfaceTiles/plan/subsystems/cutSurfaceTiles.ts` — the one file this touches.
 `docs/superpowers/plans/2026-07-29-earth-surface-virtual-texture-a-to-d.md`
 ("What the research found", item 5) — the simulation and the citations.

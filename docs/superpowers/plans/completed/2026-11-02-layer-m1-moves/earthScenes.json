@@ -1,0 +1,6 @@
+[
+  {
+    "from": "src/data/bodies/earthSceneBodyIds.ts",
+    "to": "src/layers/earthScenes/data/earthSceneBodyIds.ts"
+  }
+]

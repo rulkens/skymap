@@ -9,6 +9,8 @@
  *   - `public/data/galaxy-catalog/v10/famous.bin` (GalaxyCatalog, normal renderer input)
  *   - `public/data/famous_galaxies_meta.json`   (per-localIdx → id + names + description;
  *     stays at the data root — loose JSON sidecars are unversioned, see docs/DATA.md)
+ *   - `famousGalaxyNames.generated.ts` (committed: id + names per localIdx, so the app
+ *     names a famous galaxy before the sidecar loads; see `writeFamousGalaxyNames`)
  *
  * Why two artefacts instead of one fat .bin?  The .bin has to stay in
  * the GalaxyCatalog format so the existing decoder + renderer code paths
@@ -28,8 +30,7 @@ import { parseFamousSeed, type FamousEntry } from '../parsers/famousSeed';
 import {
   encodeGalaxyCatalog,
   GALAXY_CATALOG_DATA_PREFIX,
-} from '../../src/data/galaxyCatalog/galaxyCatalogFormat';
-import { Source } from '../../src/data/source';
+} from '../../src/layers/galaxyCatalog/records/data/galaxyCatalogFormat';
 import { resolveFamousOrientation } from './resolveFamousOrientation';
 import type { GalaxyCatalog } from '../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { FamousGalaxyMetaEntry } from '../../src/@types/loading/FamousGalaxyMetaEntry';
@@ -41,6 +42,7 @@ import { willDeproject } from './deprojectDisk';
 import { squareDeprojectCrop } from './squareDeprojectCrop';
 import { writeMetaSidecar } from '../curation/writeMetaSidecar';
 import { estimateLog10StellarMass } from '../catalog/estimateLog10StellarMass';
+import { writeFamousGalaxyNames } from './writeFamousGalaxyNames';
 
 /**
  * Convert a curated entry's (RA, Dec, distanceMpc) to Cartesian (x, y, z).
@@ -219,7 +221,7 @@ async function main(): Promise<void> {
     // adopted distance from entryToXyz — after the photometry assignment
     // so the estimator sees the filled mags, not the NaN pre-fill.
     cloud.log10StellarMass[i] = estimateLog10StellarMass({
-      source: Source.FamousGalaxy,
+      source: 'famousGalaxy',
       magU: cloud.magU[i]!,
       magG: cloud.magG[i]!,
       magR: cloud.magR[i]!,
@@ -249,12 +251,8 @@ async function main(): Promise<void> {
   mkdirSync(dirname(metaPath), { recursive: true });
   writeMetaSidecar(metaByIdx, metaPath);
   process.stderr.write(`wrote famous_galaxies_meta.json\n`);
-
-  // Quick sanity reference: log the Source enum value baked into the
-  // renderer.  The renderer keys per-source pipelines on this number,
-  // so a mismatch would silently misroute Famous draws into the wrong
-  // pipeline — better to have it in the build log too.
-  process.stderr.write(`Source.FamousGalaxy = ${Source.FamousGalaxy}\n`);
+  await writeFamousGalaxyNames(entries);
+  process.stderr.write(`wrote famousGalaxyNames.generated.ts\n`);
 }
 
 // Allow the script to be both executed (CLI) and imported (tests).

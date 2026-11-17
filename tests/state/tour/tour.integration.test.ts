@@ -12,16 +12,15 @@ import { describe, it, expect, vi } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../src/store/rootReducer';
-import { clipStarted } from '../../../src/state/camera/cameraSlice';
+import { clipStarted } from '../../../src/state/camera/cameraIntentSlice';
 import { createClipPlayer } from '../../../src/services/engine/subsystems/clipPlayer';
-import { UNSTARTED_EPOCHS } from '../../../src/services/engine/camera/cameraEpochs';
+import { UNSTARTED_EPOCHS } from '../../../src/services/engine/camera/drivers/cameraEpochs';
 import { createFadeRegistry } from '../../../src/services/animation/fadeRegistry';
 import { cosmicFlows } from '../../../src/compositions/clips/cosmicFlows';
 import { INITIAL_SETTINGS } from '../../../src/state/settings/initialSettings';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
-import { galaxyPointSpritesPass } from '../../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
-import { deriveMilkyWayCloudAlpha } from '../../../src/layers/milkyWay/present/milkyWayCloudLiveness';
-import { Source } from '../../../src/data/source';
+import { galaxyPointSpritesPass } from '../../../src/layers/galaxyCatalog/pointSprites/passes/galaxyPointSpritesPass';
+import { deriveMilkyWayCloudAlpha } from '../../../src/layers/milkyWay/cloud/present/deriveMilkyWayCloudAlpha';
 import { APP_VISIBILITY_REGISTRY } from '../../../src/compositions/appVisibility';
 import { gatePassByFade } from '../../../src/services/engine/layer/gatePassByFade';
 import { resolveFadeValue } from '../../../src/services/engine/presentation/resolveFadeValue';
@@ -33,6 +32,9 @@ import type { EngineSettingsState } from '../../../src/@types/settings/EngineSet
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 import type { SlabView } from '../../../src/@types/engine/frame/SlabView';
 import { makeGalaxyCatalogItems } from '../../fixtures/makeGalaxyCatalogItems';
+import { galaxyRowRuntime } from '../../support/layerPickCodes';
+import { milkyWayPickCode } from '../../support/layerPickCodes';
+import { ZERO_FOCUS } from '../../../src/services/engine/subsystems/recedingFocusSubsystem';
 
 // `clipOpacityOf` answers `factor` for every call. Typed rather than bare
 // `vi.fn()`, which fails tsc.
@@ -71,7 +73,9 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
     });
 
     // The fresh wrapper object is what starts the clip epoch on tick 1.
-    store.dispatch(clipStarted({ data: cosmicFlows.data, frame: DEFAULT_ORIENTATION }));
+    store.dispatch(
+      clipStarted({ data: cosmicFlows.data, frame: DEFAULT_ORIENTATION, by: 'player' }),
+    );
 
     // Threads the epoch across ticks, as `runFrame` does through the runtime.
     let clipEpoch = UNSTARTED_EPOCHS.clip;
@@ -168,7 +172,7 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
   // `galaxyPointRenderer` rides `state.gpu` now (D13), not this ctx.
   function makeDrawCtx(nowMs: number, camPos: Readonly<[number, number, number]>): FrameView {
     return {
-      snapshot: { nowMs, focusBlend: 0 },
+      snapshot: { nowMs, focusBlend: 0, focus: ZERO_FOCUS },
       drawCamPos: camPos,
       fovYRad: FOV_Y_RAD,
       canvasSize: CANVAS,
@@ -200,7 +204,10 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
     const drawSpy = vi.fn<(...args: unknown[]) => void>();
     // The pass closes over its Layer's runtime, so the spy rides a stub runtime
     // rather than `state.gpu`.
-    const runtime = { pointRenderer: { draw: drawSpy } } as never;
+    const runtime = {
+      ...galaxyRowRuntime({ catalogs: new Map() }),
+      pointRenderer: { draw: drawSpy },
+    } as never;
     const ctx = makeDrawCtx(nowMs, SURVEY_CAM_POS);
     const view = {
       vp: new Float32Array(16),
@@ -214,8 +221,8 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
       ctx,
       state,
     );
-    const settings = drawSpy.mock.calls[0]![3] as { fadeOpacityOf: (source: number) => number };
-    return settings.fadeOpacityOf(Source.SDSS);
+    const settings = drawSpy.mock.calls[0]![3] as { fadeOpacityOf: (source: string) => number };
+    return settings.fadeOpacityOf('sdss');
   }
 
   it('a playing fade([survey], 0, …) cue reduces the drawn survey point opacity', () => {
@@ -252,7 +259,11 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
     const alphaWith = (clipFactor: number): number | null => {
       const state = makeDrawState(fades, makeClipStub(clipFactor));
       const ctx = makeDrawCtx(0, MW_CAM_POS);
-      return deriveMilkyWayCloudAlpha(ctx, resolveFadeValue(state, ctx.snapshot, 'milkyWayDisk'));
+      return deriveMilkyWayCloudAlpha(
+        ctx,
+        resolveFadeValue(state, ctx.snapshot, 'milkyWayDisk'),
+        milkyWayPickCode(),
+      );
     };
     const unmasked = alphaWith(1);
     expect(unmasked).toBe(1);

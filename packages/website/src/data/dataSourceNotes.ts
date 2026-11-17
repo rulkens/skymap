@@ -51,8 +51,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     setting: 'star-catalogs',
   },
   'd3-celestial': {
-    description:
-      'The stick figures of the 88 constellations, from Olaf Frohn’s d3-celestial.',
+    description: 'The stick figures of the 88 constellations, from Olaf Frohn’s d3-celestial.',
     shows: '“Constellations” switch under Labels & Guides. Off at first.',
     scene: 'stars',
     setting: 'labels--guides',
@@ -85,7 +84,8 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
   'gravity-r0': {
     description:
       'Two numbers from one paper: how far the centre of the Milky Way is, and the mass of the black hole there.',
-    shows: 'The mass and the distance given to the black hole at the centre of the Milky Way, and the scale of the star orbits around it.',
+    shows:
+      'The mass and the distance given to the black hole at the centre of the Milky Way, and the scale of the star orbits around it.',
     scene: 'the-milky-way',
     view: { to: 'focus=blackhole-sgr-a-star', label: 'Open the Galactic Centre' },
   },
@@ -136,7 +136,8 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
       'An all-sky list of 71.5 million galaxies with a distance for each, merged from twelve catalogues; parsed, not yet drawn.',
     about:
       'REGALADE merges twelve galaxy catalogues into one all-sky list with a recommended distance for every galaxy. Skymap reads it today but does not build a catalogue from it yet: at 71.5 million rows it waits for the streamed octree that lets the app hold only the galaxies near the camera.',
-    shows: 'Nothing yet. The parser is in place; no switch exists until a catalogue is built from it.',
+    shows:
+      'Nothing yet. The parser is in place; no switch exists until a catalogue is built from it.',
   },
   hyperleda: {
     description:
@@ -183,6 +184,8 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     title: 'Named galaxies, typed by hand',
     description:
       'The 81 galaxies Skymap knows by name, with the figures and the paragraph on each one’s card.',
+    about:
+      'This is a list we keep by hand of the galaxies Skymap knows by name, with what their cards show: names, position, distance, size, type and a paragraph. The names, positions, distances and sizes come from HyperLEDA. Most paragraphs come from Wikipedia, shortened; we wrote the rest.',
     shows: '“Famous” switch under Galaxy catalogs.',
     scene: 'nearby-galaxies',
     setting: 'galaxy-catalogs',
@@ -209,8 +212,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     setting: 'structures',
   },
   mscc: {
-    description:
-      '601 superclusters of Abell clusters: the supercluster markers.',
+    description: '601 superclusters of Abell clusters: the supercluster markers.',
     about:
       'MSCC is a catalogue of superclusters, each a group of the clusters of the Abell catalogue. We keep the richest and draw a marker for each, unless a supercluster we placed by hand stands at the same spot.',
     facts: ['sci-structures', 'sci-markers'],
@@ -228,6 +230,15 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     setting: 'structures',
     figure: 'void-bootes',
   },
+  'seed-milky-way-structures': {
+    description:
+      '71 star clusters and nebulae of the Milky Way placed by hand, each with the paper or catalogue its distance and size come from.',
+    title: 'Milky Way structures, placed by hand',
+    shows:
+      '“Open clusters”, “Globular clusters”, “Nebulae” and “Galactic Centre” switches under Structures.',
+    scene: 'the-milky-way',
+    setting: 'structures',
+  },
   'mcpm-vac': {
     description:
       'A density field computed from the positions of SDSS galaxies: the glow of the cosmic web.',
@@ -240,8 +251,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     figure: 'science-web-density',
   },
   polyphorm: {
-    description:
-      'The program and the method behind the two density fields of the cosmic web.',
+    description: 'The program and the method behind the two density fields of the cosmic web.',
     shows: '“Polyphorm (2MRS)” switch under Cosmic web density. Off at first.',
     scene: 'filaments-and-the-cosmic-web',
     setting: 'cosmic-web-density',
@@ -286,7 +296,23 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
       'CelesTrak’s orbits of the active satellites, the largest debris clouds and recent launches around Earth, refreshed daily.',
     about:
       'CelesTrak publishes the orbit of every tracked object the US Space Force releases, as the mean elements its SGP4 model needs. Once a day we download the active satellites, three debris clouds and the last month’s launches, drop the orbits SGP4 cannot run and store the rest in our own compact file.',
-    shows: 'Nothing yet. The data is fetched daily; the layer that draws the satellites is still being built.',
+    shows:
+      'Nothing yet. The data is fetched daily; the layer that draws the satellites is still being built.',
+  },
+  mpcorb: {
+    description:
+      'The Minor Planet Center’s orbits of every numbered asteroid, about 896,000 of them, rewritten daily.',
+    about:
+      'The Minor Planet Center collects the world’s observations of asteroids and comets and publishes an orbit for each object. We take the numbered asteroids out to Jupiter’s trojans, store their orbits in our own compact file and ship the file’s header with it, as the Center asks.',
+    shows:
+      'The asteroids layer: every numbered asteroid out to Jupiter’s trojans as a point, placed from its orbit for the date on the clock.',
+  },
+  'sbdb-diameters': {
+    title: 'Asteroid diameters',
+    description:
+      'JPL’s measured diameters and albedos of about 135,000 numbered asteroids, most from the NEOWISE telescope.',
+    shows:
+      'The diameter and albedo on an asteroid’s card. An asteroid without one shows a range estimated from its brightness.',
   },
   'seed-planet-facts': {
     title: 'Fact sheets of the Solar System bodies',
@@ -311,7 +337,8 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     description:
       'Three galaxy photographs fetched from Wikipedia, and the articles behind the descriptions of about 50 named galaxies.',
     title: 'Wikipedia photographs and descriptions',
-    shows: 'The photograph of three named galaxies, and text behind the descriptions of about 50 of the 81 named galaxies.',
+    shows:
+      'The photograph of three named galaxies, and text behind the descriptions of about 50 of the 81 named galaxies.',
     scene: 'nearby-galaxies',
   },
   'solar-system-scope': {
@@ -320,7 +347,8 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     about:
       'The maps of seven planets and the Moon, and of Saturn’s rings, are Solar System Scope’s. Its own page says where they depart from the spacecraft data.',
     facts: ['sci-planet-maps'],
-    shows: 'The maps of Mercury, Venus (its cloud tops), Mars, Jupiter, Saturn, Uranus, Neptune and the Moon, and Saturn’s rings.',
+    shows:
+      'The maps of Mercury, Venus (its cloud tops), Mars, Jupiter, Saturn, Uranus, Neptune and the Moon, and Saturn’s rings.',
     scene: 'planets-and-their-moons',
     figure: 'saturn',
   },
@@ -335,8 +363,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     figure: 'data-io',
   },
   'usgs-enceladus': {
-    description:
-      'A map of the whole of Enceladus from Cassini images, 110 metres per pixel.',
+    description: 'A map of the whole of Enceladus from Cassini images, 110 metres per pixel.',
     facts: ['sci-surfaces'],
     shows: 'The surface of Enceladus.',
     scene: 'planets-and-their-moons',
@@ -357,13 +384,16 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     description:
       'Voyager 2 maps of the five large moons of Uranus, and height maps of Miranda and Ariel, by Paul Schenk.',
     facts: ['sci-surfaces'],
-    shows: 'The surfaces of Miranda, Ariel, Umbriel, Titania and Oberon, and the relief of Miranda and Ariel.',
+    shows:
+      'The surfaces of Miranda, Ariel, Umbriel, Titania and Oberon, and the relief of Miranda and Ariel.',
     scene: 'planets-and-their-moons',
-    view: { to: 'focus=body-miranda&t=1986-01-24T14:00:00Z', label: 'Open Miranda on the day Voyager 2 passed' },
+    view: {
+      to: 'focus=body-miranda&t=1986-01-24T14:00:00Z',
+      label: 'Open Miranda on the day Voyager 2 passed',
+    },
   },
   'usgs-pluto-charon': {
-    description:
-      'Maps of Pluto and Charon from New Horizons images, 300 metres per pixel.',
+    description: 'Maps of Pluto and Charon from New Horizons images, 300 metres per pixel.',
     facts: ['sci-surfaces'],
     shows: 'The surfaces of Pluto and Charon.',
     scene: 'planets-and-their-moons',
@@ -371,16 +401,14 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     figure: 'data-pluto',
   },
   'nasa-pluto-colour': {
-    description:
-      'Two NASA colour maps of Pluto, used only to give the USGS mosaic its colour.',
+    description: 'Two NASA colour maps of Pluto, used only to give the USGS mosaic its colour.',
     title: 'NASA Pluto colour map',
     shows: 'The colour of Pluto. Its detail is the USGS mosaic’s.',
     scene: 'planets-and-their-moons',
     view: { to: 'focus=body-pluto&t=2026-10-07T12:00:00Z', label: 'Open Pluto' },
   },
   'usgs-triton': {
-    description:
-      'A colour map of Triton from Voyager 2 images, 600 metres per pixel.',
+    description: 'A colour map of Triton from Voyager 2 images, 600 metres per pixel.',
     facts: ['sci-surfaces'],
     shows: 'The surface of Triton.',
     scene: 'planets-and-their-moons',
@@ -389,13 +417,21 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
   },
   'nasa-blue-marble': {
     description:
-      'Earth from far away: NASA’s Blue Marble for August 2004, with its night lights, clouds and water.',
+      'Earth from far away: NASA’s Blue Marble for August 2004, with its night lights and water.',
     about:
-      'Earth seen whole is NASA’s Blue Marble: one month of satellite imagery, August 2004. The night lights, the clouds and the water are separate NASA maps. The same month is also the coarse levels of the tiles the app fetches as you come down, so the globe and its coarse tiles show the same season.',
+      'Earth seen whole is NASA’s Blue Marble: one month of satellite imagery, August 2004. The night lights and the water are separate NASA maps. The same month is also the coarse levels of the tiles the app fetches as you come down, so the globe and its coarse tiles show the same season.',
     facts: ['sci-earth-clouds', 'sci-surfaces'],
-    shows: 'Earth’s surface from far away and down to tile level 7, its night side and its clouds.',
+    shows: 'Earth’s surface from far away and down to tile level 7, and its night side.',
     scene: 'earth-and-its-surface',
     figure: 'earth-terminator',
+  },
+  'cloud-bake': {
+    description:
+      'Daily NASA GIBS and EUMETSAT weather-satellite imagery that tools/cloud-bake-rs turns into a cloud-opacity map.',
+    about:
+      'Polar satellites see each place about once a day; geostationary ones watch one half of the globe all day. Each night a tool joins a day of frames from both into one global map of cloud: VIIRS on NOAA-20 and NOAA-21, GOES-East, GOES-West and Himawari through NASA GIBS, and Meteosat through EUMETSAT.',
+    shows: 'Earth’s clouds, in the web app.',
+    scene: 'earth-and-its-surface',
   },
   eox: {
     description:
@@ -403,37 +439,46 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     title: 'EOxCloudless (Sentinel-2)',
     about:
       'Closer to the ground than Blue Marble reaches, in regions we chose, Earth is EOxCloudless: a cloud-free mosaic of Sentinel-2 satellite imagery. We re-tile it at levels 8 to 13 and match its colour to Blue Marble, separately for land and water, so the join between the two holds.',
-    shows: 'Earth’s surface in the chosen regions as you come down. Outside them the surface stays Blue Marble.',
+    shows:
+      'Earth’s surface in the chosen regions as you come down. Outside them the surface stays Blue Marble.',
     scene: 'earth-and-its-surface',
     figure: 'guide-surface',
   },
   geodanmark: {
     description:
       'Aerial photography of Søndermarken, a park in Frederiksberg, at 10 centimetres per pixel: the sharpest ground in Skymap.',
-    shows: 'The ground of Søndermarken, a park in Frederiksberg, Copenhagen, at tile levels 14 to 19: the sharpest imagery in the app.',
+    shows:
+      'The ground of Søndermarken, a park in Frederiksberg, Copenhagen, at tile levels 14 to 19: the sharpest imagery in the app.',
     scene: 'earth-and-its-surface',
     view: { to: 'focus=body-soendermarken&t=2026-06-21T11:00:00Z', label: 'Open Søndermarken' },
     figure: 'data-soendermarken',
   },
   viking: {
-    description:
-      'The Viking orbiters’ colour mosaic of Mars, 232 metres per pixel.',
-    shows: 'The colour of Mars as you come down to the ground, and the colour given to the close-ups at all four rover sites.',
+    description: 'The Viking orbiters’ colour mosaic of Mars, 232 metres per pixel.',
+    shows:
+      'The colour of Mars as you come down to the ground, and the colour given to the close-ups at all four rover sites.',
     scene: 'planets-and-their-moons',
     view: { to: 'focus=body-spirit&t=2026-10-07T08:00:00Z', label: 'Open Mars at Spirit’s site' },
     figure: 'data-spirit',
+  },
+  'lroc-wac': {
+    description:
+      'The Lunar Reconnaissance Orbiter’s wide-angle mosaic of the whole Moon, 100 metres per pixel.',
+    shows: 'The ground of the Moon as you come down to it, with the Sun’s shading taken out.',
+    scene: 'planets-and-their-moons',
+    view: { to: 'focus=body-moon&t=2026-10-07T12:00:00Z', label: 'Open the Moon' },
   },
 
   // Terrain
   etopo: {
     description:
       'The height of Earth’s land and sea floor everywhere, on a grid of 30 arc-seconds.',
-    shows: 'The height of Earth’s land everywhere: the relief you see when you come down to the ground.',
+    shows:
+      'The height of Earth’s land everywhere: the relief you see when you come down to the ground.',
     scene: 'earth-and-its-surface',
   },
   skadi: {
-    description:
-      'Heights at 1 arc-second under the regions where Earth has sharper imagery.',
+    description: 'Heights at 1 arc-second under the regions where Earth has sharper imagery.',
     shows: 'The height of the ground under the regions that have sharper imagery.',
     scene: 'earth-and-its-surface',
     figure: 'guide-surface',
@@ -441,7 +486,8 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
   dhm: {
     description:
       'Denmark’s height model: the ground under Søndermarken at 0.4 metres, and the laser scan of the park.',
-    shows: 'The height of the ground under Søndermarken, and the laser scan the park’s model was built on.',
+    shows:
+      'The height of the ground under Søndermarken, and the laser scan the park’s model was built on.',
     scene: 'earth-and-its-surface',
     view: { to: 'focus=body-soendermarken&t=2026-06-21T11:00:00Z', label: 'Open Søndermarken' },
   },
@@ -452,17 +498,26 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     scene: 'planets-and-their-moons',
     view: { to: 'focus=body-spirit&t=2026-10-07T08:00:00Z', label: 'Open Mars at Spirit’s site' },
   },
+  'lola-ldem': {
+    description:
+      'The height of the ground of the Moon, measured by the LOLA laser altimeter, 118 metres per pixel.',
+    shows: 'The height of the ground of the Moon.',
+    scene: 'planets-and-their-moons',
+    view: { to: 'focus=body-moon&t=2026-10-07T12:00:00Z', label: 'Open the Moon' },
+  },
   'hirise-gale': {
     description:
       'Curiosity’s site: the ground of Gale crater at 1 metre, and a colour photograph of it at 25 centimetres.',
-    shows: 'The ground at Curiosity’s site: its height, and a colour photograph with its hue matched to the Viking mosaic.',
+    shows:
+      'The ground at Curiosity’s site: its height, and a colour photograph with its hue matched to the Viking mosaic.',
     scene: 'spacecraft',
     view: { to: 'focus=body-curiosity&t=2026-10-07T16:00:00Z', label: 'Open Curiosity' },
   },
   'hirise-jezero': {
     description:
       'Perseverance’s site: the ground of Jezero crater at 1 metre, and a photograph of it at 25 centimetres.',
-    shows: 'The ground at Perseverance’s site: its height, and a grey photograph coloured from the Viking mosaic.',
+    shows:
+      'The ground at Perseverance’s site: its height, and a grey photograph coloured from the Viking mosaic.',
     scene: 'spacecraft',
     view: { to: 'focus=body-perseverance&t=2026-10-07T16:00:00Z', label: 'Open Perseverance' },
     figure: 'data-perseverance',
@@ -471,7 +526,8 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     title: 'Columbia Hills and Endeavour crater (HiRISE)',
     description:
       'Spirit’s and Opportunity’s sites: the ground at 1 metre and a grey photograph at 25 centimetres, from HiRISE.',
-    shows: 'The ground at Spirit’s and Opportunity’s sites, in height and in a grey photograph coloured from the Viking mosaic.',
+    shows:
+      'The ground at Spirit’s and Opportunity’s sites, in height and in a grey photograph coloured from the Viking mosaic.',
     scene: 'spacecraft',
     view: { to: 'focus=body-opportunity&t=2026-10-07T00:00:00Z', label: 'Open Opportunity' },
   },
@@ -479,25 +535,23 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     description:
       'Shape models of Mimas, Tethys and Dione, used to shade their relief. Nothing of them is shipped.',
     title: 'Gaskell shape models of three Saturn moons',
-    shows: 'The relief shading of Mimas, Tethys and Dione. No pixel of the models themselves is shipped.',
+    shows:
+      'The relief shading of Mimas, Tethys and Dione. No pixel of the models themselves is shipped.',
     scene: 'planets-and-their-moons',
   },
   'schenk-enceladus-dem': {
-    description:
-      'Heights of Enceladus, used to shade its relief.',
+    description: 'Heights of Enceladus, used to shade its relief.',
     shows: 'The relief shading of Enceladus.',
     scene: 'planets-and-their-moons',
     view: { to: 'focus=body-enceladus&t=2026-10-07T12:00:00Z', label: 'Open Enceladus' },
   },
   'schenk-triton-dem': {
-    description:
-      'Heights of part of Triton, used to shade its relief.',
+    description: 'Heights of part of Triton, used to shade its relief.',
     shows: 'The relief shading of part of Triton.',
     scene: 'planets-and-their-moons',
   },
   'svs-moon-kit': {
-    description:
-      'Heights of the Moon from the LOLA altimeter, used to shade its relief.',
+    description: 'Heights of the Moon from the LOLA altimeter, used to shade its relief.',
     shows: 'The relief shading of the Moon.',
     scene: 'the-moon',
     view: { to: 'focus=body-moon&t=2026-10-07T12:00:00Z', label: 'Open the Moon' },
@@ -522,24 +576,21 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
   },
   'mesh-voyager': {
     title: 'Voyager model (NASA)',
-    description:
-      'NASA’s model of the Voyager spacecraft, drawn for both Voyager 1 and Voyager 2.',
+    description: 'NASA’s model of the Voyager spacecraft, drawn for both Voyager 1 and Voyager 2.',
     shows: 'Voyager 1 and Voyager 2.',
     scene: 'spacecraft',
     figure: 'lesson-voyager',
   },
   'mesh-hubble': {
     title: 'Hubble Space Telescope model (NASA)',
-    description:
-      'NASA’s model of the Hubble Space Telescope.',
+    description: 'NASA’s model of the Hubble Space Telescope.',
     shows: 'The Hubble Space Telescope in its orbit around Earth.',
     scene: 'spacecraft',
     figure: 'hubble',
   },
   'mesh-perseverance': {
     title: 'Perseverance rover model (NASA)',
-    description:
-      'NASA’s model of the Perseverance rover.',
+    description: 'NASA’s model of the Perseverance rover.',
     shows: 'The Perseverance rover on Mars.',
     scene: 'spacecraft',
     view: { to: 'focus=body-perseverance&t=2026-10-07T16:00:00Z', label: 'Open Perseverance' },
@@ -547,16 +598,14 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
   },
   'mesh-curiosity': {
     title: 'Curiosity rover model (NASA)',
-    description:
-      'NASA’s model of the Curiosity rover.',
+    description: 'NASA’s model of the Curiosity rover.',
     shows: 'The Curiosity rover on Mars.',
     scene: 'spacecraft',
     view: { to: 'focus=body-curiosity&t=2026-10-07T16:00:00Z', label: 'Open Curiosity' },
   },
   'mesh-mer': {
     title: 'Spirit and Opportunity rover model (NASA)',
-    description:
-      'NASA’s model of a Mars Exploration Rover, drawn for both Spirit and Opportunity.',
+    description: 'NASA’s model of a Mars Exploration Rover, drawn for both Spirit and Opportunity.',
     shows: 'The rovers Spirit and Opportunity on Mars.',
     scene: 'spacecraft',
     view: { to: 'focus=body-spirit&t=2026-10-07T08:00:00Z', label: 'Open Spirit' },
@@ -577,6 +626,30 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
     scene: 'planets-and-their-moons',
     view: { to: 'focus=body-deimos&t=2026-10-07T12:00:00Z', label: 'Open Deimos' },
   },
+  'mesh-vesta': {
+    title: 'Vesta shape model and Dawn mosaic',
+    description:
+      'The shape of the asteroid Vesta from 3.1 million facets, with its colour from a Dawn mosaic.',
+    shows: 'Vesta up close, with the Rheasilvia basin around its south pole.',
+    scene: 'planets-and-their-moons',
+    view: { to: 'focus=body-vesta&t=2026-10-20T00:00:00Z', label: 'Open Vesta' },
+  },
+  'mesh-ceres': {
+    title: 'Ceres shape model and Dawn mosaic',
+    description:
+      'The shape of the dwarf planet Ceres from 786,000 facets, with its colour from a Dawn mosaic.',
+    shows: 'Ceres up close, with the bright spots of Occator crater.',
+    scene: 'planets-and-their-moons',
+    view: { to: 'focus=body-ceres&t=2026-10-20T00:00:00Z', label: 'Open Ceres' },
+  },
+  'mesh-bennu': {
+    title: 'Bennu shape model and albedo mosaic',
+    description:
+      'The shape of the asteroid Bennu from OSIRIS-REx’s laser altimeter, with its brightness from an OSIRIS-REx mosaic.',
+    shows: 'Bennu up close, with its equatorial ridge and boulders.',
+    scene: 'planets-and-their-moons',
+    view: { to: 'focus=body-bennu&t=2026-10-20T00:00:00Z', label: 'Open Bennu' },
+  },
   skraafoto: {
     description:
       'The aerial photographs and the laser scan from which we rebuilt Søndermarken as a 3D model.',
@@ -591,8 +664,7 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
       'The table of temperatures and radii of ordinary stars that we checked the Sagittarius A* stars against.',
   },
   edenhofer: {
-    description:
-      'A map of the dust within 1.25 kiloparsecs of the Sun, in three dimensions.',
+    description: 'A map of the dust within 1.25 kiloparsecs of the Sun, in three dimensions.',
   },
   'nasa-exoplanet-archive': {
     description:
@@ -606,6 +678,55 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
   'local-bubble': {
     description:
       'The shape of the Local Bubble, the cavity in the gas around the Sun, from O’Neill and colleagues, 2024.',
+  },
+  vasiliev2021: {
+    description:
+      'A computer model of the Sagittarius dwarf galaxy being torn apart by the Milky Way, from Vasiliev and colleagues, 2021.',
+  },
+  galstreams: {
+    description:
+      'The paths across the sky, with distances, of the streams of stars torn from star clusters and small galaxies around the Milky Way.',
+  },
+  'harris-gc': {
+    description:
+      'William Harris’s catalogue of the Milky Way’s globular clusters, which gives the metal content of the clusters that some streams came from.',
+  },
+  's5-li2022': {
+    description:
+      'The metal content of a dozen stellar streams, measured from the spectra of their giant stars by the S5 survey, Li and colleagues, 2022.',
+  },
+  hayes2020: {
+    description:
+      'How the metal content of the Sagittarius stream falls with the time since its stars were torn away, from Hayes and colleagues, 2020.',
+  },
+  shipp2018: {
+    description:
+      'The stellar masses of seven streams seen in the Dark Energy Survey, from Shipp and colleagues, 2018.',
+  },
+  koposov2010: {
+    description:
+      'The stellar mass of the GD-1 stream, counted from its stars by Koposov, Rix and Hogg, 2010.',
+  },
+  jethwa2018: {
+    description: 'The stellar mass of the Jet stream, from Jethwa and colleagues, 2018.',
+  },
+  jensen2021: {
+    description:
+      'The stellar mass of the stream torn from the globular cluster NGC 5466, from Jensen and colleagues, 2021.',
+  },
+  caldwell2020: {
+    description: 'The stellar mass of the Ophiuchus stream, from Caldwell and colleagues, 2020.',
+  },
+  thomas2022: {
+    description:
+      'The stellar mass of the Cetus-Palca stream, the remains of a small dwarf galaxy, from Thomas and Battaglia, 2022.',
+  },
+  koposov2023: {
+    description: 'The stellar mass of the Orphan-Chenab stream, from Koposov and colleagues, 2023.',
+  },
+  mist: {
+    description:
+      'Models of how stars age, which give the colours of a stream’s giants, turnoff stars and horizontal-branch stars at its metal content.',
   },
   vizier: {
     description:
@@ -632,12 +753,10 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
       'The NASA/IPAC Extragalactic Database, which a galaxy’s card links to. The app fetches nothing from it.',
   },
   counterscale: {
-    description:
-      'The script that counts visits, run on our own Cloudflare account.',
+    description: 'The script that counts visits, run on our own Cloudflare account.',
   },
   turnstile: {
-    description:
-      'The spam check of the website’s contact form, a Cloudflare service.',
+    description: 'The spam check of the website’s contact form, a Cloudflare service.',
   },
   'outbound-links': {
     description:
@@ -648,40 +767,34 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
       'The display face: labels in the app, and the headings of its panels and of this website.',
   },
   'font-sora': {
-    description:
-      'Sora Thin, the face of the exhibit titles in the app.',
+    description: 'Sora Thin, the face of the exhibit titles in the app.',
   },
   'font-jost': {
-    description:
-      'The text face of this website.',
+    description: 'The text face of this website.',
   },
   mrange: {
     description:
       'Seven small shader functions that came with a ShaderToy we once used to draw the Milky Way.',
   },
   'hoskins-hash': {
-    description:
-      'A hash function for shaders, used for jitter.',
+    description: 'A hash function for shaders, used for jitter.',
   },
   healpix: {
     description:
       'The function that turns a direction in the sky into a HEALPix pixel number, used to weigh survey coverage.',
   },
   helland: {
-    description:
-      'The fit that gives a star its colour from its temperature.',
+    description: 'The fit that gives a star its colour from its temperature.',
   },
   mulberry32: {
     description:
       'A small random number generator, used wherever the app needs the same numbers on every load.',
   },
   'narkowicz-aces': {
-    description:
-      'One of the tone-mapping curves the app offers, a fit of five constants.',
+    description: 'One of the tone-mapping curves the app offers, a fit of five constants.',
   },
   pcg4d: {
-    description:
-      'An integer hash that seeds the stars and clouds of the drawn Milky Way.',
+    description: 'An integer hash that seeds the stars and clouds of the drawn Milky Way.',
     figure: 'milky-way-drawn',
   },
   colormaps: {
@@ -689,20 +802,16 @@ export const DATA_SOURCE_NOTES: Readonly<Record<string, DataSourceNote>> = {
       'Colour ramps for the density fields: matplotlib’s viridis, magma and inferno, and one named coolwarm.',
   },
   'shader-hashes': {
-    description:
-      'Two shader hash functions whose origin our code does not record.',
+    description: 'Two shader hash functions whose origin our code does not record.',
   },
   dialkit: {
-    description:
-      'The slider of the app’s panels, a reimplementation of DialKit’s design.',
+    description: 'The slider of the app’s panels, a reimplementation of DialKit’s design.',
   },
   'atmosphere-methods': {
-    description:
-      'The two papers our atmosphere shaders follow. No code of theirs is reused.',
+    description: 'The two papers our atmosphere shaders follow. No code of theirs is reused.',
   },
   'black-hole-method': {
-    description:
-      'The paper our black-hole lens is compared with. No code of it is reused.',
+    description: 'The paper our black-hole lens is compared with. No code of it is reused.',
   },
   'npm-dependencies': {
     description:

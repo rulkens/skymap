@@ -5,3 +5,4 @@ export const REPO_URL = pkg.repository.url.replace(/\.git$/, '');
 /** Prefix for links to a file in the repository, for facts whose evidence is our own code or data record. */
 export const REPO_BLOB = `${REPO_URL}/blob/main`;
 export const MAKER_NAME = 'Alexander Rulkens';
+export const MAKER_SITE = 'https://rulkens.com';

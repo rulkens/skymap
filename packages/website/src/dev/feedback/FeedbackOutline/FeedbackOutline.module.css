@@ -18,7 +18,7 @@
   left: -2px;
   bottom: 100%;
   max-width: 24rem;
-  padding: 0.125rem 0.5rem;
+  padding: var(--space-1) var(--space-4);
   overflow: hidden;
   background: #000;
   color: var(--color-accent);

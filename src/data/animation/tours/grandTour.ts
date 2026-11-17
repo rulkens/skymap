@@ -38,8 +38,7 @@ export const grandTour: Tour = {
       enterClip: openingTitle,
       caption: {
         title: 'The Long Way Out',
-        body: 'From home to the edge of the observable universe, and back.',
-        position: 'bottom-left',
+        lines: ['From home to the edge of the observable universe, and back.'],
       },
       dwellClip: dwellDrift(8, { cruiseRate: (Math.PI * 2) / 120 }),
     },
@@ -47,8 +46,10 @@ export const grandTour: Tour = {
       enterClip: youAreHere,
       caption: {
         title: 'You are here',
-        body: 'The Milky Way, our home galaxy. A hundred billion stars, and the Sun is one of them.',
-        position: 'bottom-left',
+        lines: [
+          'The Milky Way, our home galaxy.',
+          'A hundred billion stars, and the Sun is one of them.',
+        ],
       },
       dwellClip: youAreHereDwell,
     },
@@ -56,8 +57,10 @@ export const grandTour: Tour = {
       enterClip: approachM31,
       caption: {
         title: 'Nearest neighbour',
-        body: 'This is Andromeda, the nearest large galaxy to ours. Its light has been travelling toward us for 2.5 million years.',
-        position: 'bottom-left',
+        lines: [
+          'This is Andromeda, the nearest large galaxy to ours.',
+          'Its light has been travelling toward us for 2.5 million years.',
+        ],
       },
       // Lands ~79° off the MW–M31 axis, so the next beat's pull-back
       // separates home and Andromeda instead of stacking them.
@@ -67,8 +70,10 @@ export const grandTour: Tour = {
       enterClip: localGroup,
       caption: {
         title: 'The Local Group',
-        body: 'The Milky Way and Andromeda travel together, dozens of dwarf galaxies in tow: a single family bound by gravity, the Local Group.',
-        position: 'bottom-left',
+        lines: [
+          'The Milky Way and Andromeda travel together, dozens of dwarf galaxies in tow:',
+          'a single family bound by gravity, the Local Group.',
+        ],
       },
       // The orbit of the family — its share of the revolution the next
       // beat's drift completes, landing on the flythrough's launch bearing.
@@ -79,8 +84,10 @@ export const grandTour: Tour = {
       // widening view, so it rides the motion (captions reveal on dwell start).
       caption: {
         title: 'Our neighbourhood',
-        body: 'The Local Group is one small family among many. Our galactic neighbourhood stretches tens of millions of light-years.',
-        position: 'bottom-left',
+        lines: [
+          'The Local Group is one small family among many.',
+          'Our galactic neighbourhood stretches tens of millions of light-years.',
+        ],
       },
       dwellClip: neighbourhoodReveal,
     },
@@ -89,8 +96,10 @@ export const grandTour: Tour = {
       // beat entry and rides the whole sweep (captions reveal on dwell start).
       caption: {
         title: 'Meeting the neighbours',
-        body: "Bode's Galaxy, the Pinwheel, the Whirlpool, the Sombrero, Centaurus A: the bright landmarks of our corner of the universe.",
-        position: 'bottom-left',
+        lines: [
+          "Bode's Galaxy, the Pinwheel, the Whirlpool, the Sombrero, Centaurus A:",
+          'the bright landmarks of our corner of the universe.',
+        ],
       },
       dwellClip: neighbourhoodFlythrough,
     },
@@ -98,8 +107,10 @@ export const grandTour: Tour = {
       enterClip: approachVirgo,
       caption: {
         title: 'The nearest cluster',
-        body: 'Virgo, the nearest big cluster. Over a thousand galaxies, pulled together by gravity, 50 million light-years away.',
-        position: 'bottom-left',
+        lines: [
+          'Virgo, the nearest big cluster.',
+          'Over a thousand galaxies, pulled together by gravity, 50 million light-years away.',
+        ],
       },
       dwellClip: dwellDrift(12),
     },
@@ -107,8 +118,10 @@ export const grandTour: Tour = {
       enterClip: laniakea,
       caption: {
         title: 'Laniakea',
-        body: 'Virgo is only the nearest of dozens of clusters, all streaming together as one structure: Laniakea, our home supercluster, half a billion light-years wide.',
-        position: 'bottom-left',
+        lines: [
+          'Virgo is only the nearest of dozens of clusters, all streaming together as one structure:',
+          'Laniakea, our home supercluster, half a billion light-years wide.',
+        ],
       },
       dwellClip: dwellDrift(12),
     },
@@ -116,8 +129,10 @@ export const grandTour: Tour = {
       enterClip: cosmicWeb,
       caption: {
         title: 'The cosmic web',
-        body: 'Far enough out, galaxies trace a web: bright threads and clumps where superclusters gather, ringed by dark voids.',
-        position: 'bottom-left',
+        lines: [
+          'Far enough out, galaxies trace a web:',
+          'bright threads and clumps where superclusters gather, ringed by dark voids.',
+        ],
       },
       dwellClip: cosmicWebDwell,
     },
@@ -125,8 +140,10 @@ export const grandTour: Tour = {
       enterClip: cosmicFlows,
       caption: {
         title: 'Everything is flowing',
-        body: "The web isn't still. Galaxies stream along the threads into the densest places, ours included, pulled toward the Great Attractor.",
-        position: 'bottom-left',
+        lines: [
+          "The web isn't still.",
+          'Galaxies stream along the threads into the densest places, ours included, pulled toward the Great Attractor.',
+        ],
       },
       // The two-step zoom out (local currents → giant streams), captioned.
       dwellClip: cosmicFlowsDwell,
@@ -135,8 +152,10 @@ export const grandTour: Tour = {
       enterClip: emptiness,
       caption: {
         title: 'The emptiness',
-        body: 'Most of the universe is the empty side of that web. Voids like this one stretch 300 million light-years across.',
-        position: 'bottom-left',
+        lines: [
+          'Most of the universe is the empty side of that web.',
+          'Voids like this one stretch 300 million light-years across.',
+        ],
       },
       dwellClip: dwellDrift(12),
     },
@@ -144,8 +163,10 @@ export const grandTour: Tour = {
       enterClip: deepField,
       caption: {
         title: 'The deep field',
-        body: 'Further out shine the quasars, the brilliant cores of distant galaxies, their light already billions of years old.',
-        position: 'bottom-left',
+        lines: [
+          'Further out shine the quasars, the brilliant cores of distant galaxies,',
+          'their light already billions of years old.',
+        ],
       },
       // The big log-dolly rides the captioned dwell — the pull IS the beat.
       dwellClip: deepFieldDwell,
@@ -154,8 +175,10 @@ export const grandTour: Tour = {
       // No enter clip: the final pull rides the captioned dwell.
       caption: {
         title: 'The edge',
-        body: 'This is the observable universe, everything light has had time to reach us from. 93 billion light-years, side to side.',
-        position: 'bottom-left',
+        lines: [
+          'This is the observable universe, everything light has had time to reach us from.',
+          '93 billion light-years, side to side.',
+        ],
       },
       dwellClip: theEdge,
     },
@@ -164,8 +187,7 @@ export const grandTour: Tour = {
       // tour ends on its settle (snapshot restore + UI chrome return).
       caption: {
         title: 'Home again',
-        body: 'Back to where we began. Everything you just saw is out there to explore.',
-        position: 'bottom-left',
+        lines: ['Back to where we began.', 'Everything you just saw is out there to explore.'],
       },
       dwellClip: homeAgain,
     },

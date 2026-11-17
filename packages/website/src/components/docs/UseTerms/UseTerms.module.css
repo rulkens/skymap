@@ -2,7 +2,7 @@
   composes: small from '../../../styles/type.module.css';
   position: relative;
   display: block;
-  padding-left: 1.125rem;
+  padding-left: var(--site-space-s);
   color: var(--site-text-muted);
 
   &::before {

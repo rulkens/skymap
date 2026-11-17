@@ -21,36 +21,36 @@ import { canvasViewOf } from '../../../helpers/frame/canvasViewOf';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { FrameContextInput } from '../../../../src/@types/engine/frame/FrameContextInput';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
-import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
-import type { CameraProjection } from '../../../../src/@types/camera/CameraProjection';
-import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
-import type { BodyFixedPose } from '../../../../src/@types/camera/BodyFixedPose';
+import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
+import type { CameraProjection } from '../../../../src/@types/camera/projection/CameraProjection';
+import type { FramedCameraPose } from '../../../../src/@types/camera/pose/FramedCameraPose';
+import type { BodyFixedPose } from '../../../../src/@types/camera/pose/BodyFixedPose';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import type { Size } from '../../../../src/@types/rendering/Size';
 import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
-import { computeViewProj } from '../../../../src/utils/camera/computeViewProj';
+import { computeViewProj } from '../../../../src/utils/camera/projection/computeViewProj';
 import { deriveSlabs, NEAR0, COSMO } from '../../../../src/services/engine/frame/slabs';
 import { frameBodyStates } from '../../../../src/services/engine/frame/frameBodyStates';
 import { frameContextInputOf } from '../../../../src/services/engine/frame/frameContextInputOf';
 import { sceneBodyStates } from '../../../../src/services/engine/frame/sceneBodyStates';
 import type { SelectionKindRow } from '../../../../src/@types/engine/layer/SelectionKindRow';
-import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
-import { toBodyArm } from '../../../../src/services/engine/camera/poseFrameConversion';
-import { bodyRelativePose } from '../../../../src/services/engine/camera/bodyRelativePose';
-import { cameraBasisWorld } from '../../../../src/utils/camera/cameraBasisWorld';
+import { toBodyArm } from '../../../../src/services/engine/camera/arms/body/poseFrameConversion';
+import { bodyRelativePose } from '../../../../src/services/engine/camera/bodyFrame/bodyRelativePose';
+import { cameraBasisWorld } from '../../../../src/utils/camera/orbitPose/cameraBasisWorld';
 import { normalize3 } from '../../../../src/utils/math/normalize3';
-import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
+import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
+import { symmetricFrustum } from '../../../../src/utils/camera/frustum/symmetricFrustum';
 import { APP_VISIBILITY_REGISTRY } from '../../../../src/compositions/appVisibility';
 import type { FadeIdentity } from '../../../../src/@types/animation/FadeIdentity';
-import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/data/rendering/foregroundMaxDistance';
 import { SEEDED_STAR_CATALOGS } from '../../../../src/data/bodies/seededStarCatalogs';
+import type { SelectionRowBase } from '../../../../src/@types/engine/selection/SelectionRowBase';
 
 const RESTING_POSE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 };
 const PROJECTION: CameraProjection = { fovYRad: 1, aspect: 16 / 9, near: 0.1, far: 10000 };
@@ -93,7 +93,7 @@ function makeState(
     settings: {
       bodies: { items: {} },
     },
-    picking: { pickInFlight: false, cursorTexPx: null },
+    picking: { pickInFlight: false },
   } as unknown as EngineState;
 }
 
@@ -229,7 +229,7 @@ describe('deriveFrameContext — the placed selection', () => {
         boundingRadiusM: 50,
         groundRadiusM: null,
       },
-    } as unknown as SelectionRow;
+    } as unknown as SelectionRowBase;
     const state = {
       ...makeState(),
       selectionRows: { hover: null, select: null, focus: row },
@@ -432,5 +432,10 @@ describe('deriveFrameContext — scene-body admission', () => {
     expect(admittedIds(1, 0)).not.toContain('sun');
     expect(admittedIds(0)).toContain('mars');
     expect(admittedIds(1, 0)).toContain('mars');
+  });
+
+  // A mesh body has its own admission loop; a second entry would sort, occlude and draw it twice.
+  it('a covered mesh body is admitted once', () => {
+    expect(admittedIds(1).filter((id) => id === 'probe-sphere-orbit')).toHaveLength(1);
   });
 });

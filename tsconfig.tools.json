@@ -1,5 +1,5 @@
 {
   "extends": "./tsconfig.json",
-  "include": ["tools", "src"],
+  "include": ["tools", "src", "packages/move-files/src", "packages/move-files/tests"],
   "exclude": ["tools/stars-rs/target"]
 }

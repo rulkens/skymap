@@ -8,8 +8,8 @@ import type { AssetSlot } from './AssetSlot';
  * `expandCompanionRows`, in `createLayers` over the composed list — a
  * companion's parent may sit in the other half.
  */
-export type CompanionAssetRow<T = unknown, R = unknown> = {
-  key: AssetKey;
+export type CompanionAssetRow<T = unknown, R = unknown, Key extends AssetKey = AssetKey> = {
+  key: Key;
   slot: AssetSlot<T, R>;
   companionOf: AssetKey;
 };

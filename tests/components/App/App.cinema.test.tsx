@@ -2,9 +2,9 @@
 /**
  * App cinema-mode branch (`?cinema`) — the recorder harness screenshots this
  * page, so cinema mode must render ONLY the canvas plus (while a tour runs)
- * the tour overlay. The HUD chrome must not exist in the DOM at all; the
- * CSS-hide route (`uiStackHidden`) would leave it findable and able to bleed
- * into captures.
+ * the tour overlay, and the debug panel only while `d` has summoned it. The HUD
+ * chrome must not exist in the DOM at all; the CSS-hide route (`uiStackHidden`)
+ * would leave it findable and able to bleed into captures.
  *
  * Mock surface — deliberately minimal, everything else is real:
  *
@@ -12,7 +12,10 @@
  *     flipping `mockReturnValue` is how one file covers both cinema and
  *     normal mode without `vi.resetModules` gymnastics.
  *   - `useEngine` is mocked because jsdom has no WebGPU. The ref pair it
- *     returns is App's whole contract with it, so the mock is two null refs.
+ *     returns is App's whole contract with it; `engineHandleRef` is shared so
+ *     one test can stand in a constructed engine.
+ *   - `LazyDebugPanelContainer` is a stub: the panel's own tree needs a live
+ *     engine; here only its mount gate is under test.
  *   - `window.matchMedia` is stubbed (jsdom omits it) for `useIsMobile` —
  *     same technique as InfoCard.mobile.test.tsx.
  *
@@ -23,12 +26,13 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render } from '@testing-library/react';
+import { act, render } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { App } from '../../../src/components/App/App';
 import { createAppStore } from '../../../src/store/createAppStore';
 import { tourStarted, dwellStarted } from '../../../src/state/tour/tourSlice';
 import { takeoverStarted } from '../../../src/state/takeover/takeoverActions';
+import { setDebugPanelOpen } from '../../../src/state/ui/uiSlice';
 import { isCinemaMode } from '../../../src/utils/url/isCinemaMode';
 import type { UseEngineReturn } from '../../../src/@types/engine/UseEngineReturn';
 
@@ -36,11 +40,16 @@ vi.mock('../../../src/utils/url/isCinemaMode', () => ({
   isCinemaMode: vi.fn<() => boolean>(() => false),
 }));
 
+const engineHandleRef: UseEngineReturn['handleRef'] = { current: null };
 vi.mock('../../../src/hooks/useEngine', () => ({
   useEngine: (): UseEngineReturn => ({
     canvasRef: { current: null },
-    handleRef: { current: null },
+    handleRef: engineHandleRef,
   }),
+}));
+
+vi.mock('../../../src/components/containers/LazyDebugPanelContainer', () => ({
+  default: () => <div data-testid="debug-panel" />,
 }));
 
 // jsdom omits matchMedia; useIsMobile calls it at mount. Desktop (false)
@@ -73,6 +82,7 @@ function makeStore(): Store {
       debugPanelOpen: false,
       paletteTab: 'highlights',
       splash: { visible: false, dismissedVersion: 1 },
+      learnedGestures: { look: false, zoom: false },
     },
   }).store;
 }
@@ -98,6 +108,7 @@ const HUD_SELECTORS: readonly string[] = [
 
 beforeEach(() => {
   stubMatchMedia();
+  engineHandleRef.current = null;
 });
 
 describe('App cinema mode', () => {
@@ -117,6 +128,19 @@ describe('App cinema mode', () => {
     expect(container.querySelectorAll('button')).toHaveLength(0);
   });
 
+  it('cinema mode mounts the debug panel only while it is open and the engine is up', () => {
+    vi.mocked(isCinemaMode).mockReturnValue(true);
+    const store = makeStore();
+    engineHandleRef.current = {} as NonNullable<UseEngineReturn['handleRef']['current']>;
+    const { queryByTestId } = renderApp(store);
+    expect(queryByTestId('debug-panel')).toBeNull();
+
+    act(() => {
+      store.dispatch(setDebugPanelOpen(true));
+    });
+    expect(queryByTestId('debug-panel')).not.toBeNull();
+  });
+
   it('cinema mode mounts TourOverlayContainer while a tour is active — captions only', () => {
     vi.mocked(isCinemaMode).mockReturnValue(true);
     const store = makeStore();
@@ -131,10 +155,8 @@ describe('App cinema mode', () => {
     store.dispatch(dwellStarted({ dwellSec: 8 }));
     const { container, getByText, queryByText } = renderApp(store);
 
-    // The caption proves the overlay mounted: beat-0 title + the series
-    // label (kicker), the film's only text.
+    // The caption proves the overlay mounted: beat-0 title (the label line).
     expect(getByText('The Milky Way')).toBeInTheDocument();
-    expect(getByText('Named Cosmic Web')).toBeInTheDocument();
     // Cinema is captions ONLY: no beat counter ("· 01 / 03") and no
     // transport buttons — they'd render straight into the recording.
     expect(queryByText(/\d{2} \/ \d{2}/)).toBeNull();

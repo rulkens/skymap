@@ -1,0 +1,282 @@
+/*
+ * The control window's shared vocabulary: titles, text tones, buttons, fields and the ring marker.
+ * The marker is the site's ring, the app's selection mark. A class one component uses lives in
+ * that component's module and composes from here.
+ */
+
+.title {
+  margin: 0;
+  color: var(--color-fg);
+  font: var(--weight-display) var(--text-title) / var(--leading-display) var(--font-family-display);
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+.heading {
+  composes: title;
+  font-size: var(--text-heading);
+}
+
+.text {
+  margin: 0;
+  max-width: var(--measure);
+}
+
+.dim {
+  composes: text;
+  color: var(--color-fg-tertiary);
+  font-size: var(--text-small);
+}
+
+.mono {
+  overflow-wrap: anywhere;
+  font-family: var(--font-family-mono);
+  font-size: 0.9em;
+  color: var(--color-fg);
+}
+
+.stack {
+  display: grid;
+  gap: var(--space-10);
+  align-content: start;
+  min-width: 0;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+/* A glass panel with the app's starlight line along its top edge, as the HUD's panels have. */
+.panel {
+  position: relative;
+  display: grid;
+  gap: var(--space-12);
+  align-content: start;
+  min-width: 0;
+  padding: var(--space-12);
+  background: var(--surface-panel);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-xl);
+  backdrop-filter: blur(var(--blur-panel));
+}
+
+.panel::before {
+  content: '';
+  position: absolute;
+  inset: -1px var(--space-12) auto;
+  height: 1px;
+  background: var(--gradient-accent-bar);
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────────── */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  min-height: var(--tap);
+  padding: 0 var(--space-10);
+  border: 1px solid var(--border-control);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-fg);
+  font: 500 var(--text-body) / 1 var(--font-body);
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    box-shadow var(--duration-base) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard);
+}
+
+.button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+@media (hover: hover) {
+  .button:hover:not(:disabled) {
+    border-color: var(--border-hover);
+    background: var(--surface-control);
+  }
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 24px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-accent);
+  font: inherit;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--color-accent) 40%, transparent);
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .link:hover {
+    text-decoration-color: currentColor;
+  }
+}
+
+/* ── Fields ──────────────────────────────────────────────────────────── */
+
+.field {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-3);
+  color: var(--color-fg-tertiary);
+  font-size: var(--text-small);
+}
+
+.control {
+  min-height: var(--tap);
+  max-width: 100%;
+  padding: 0 var(--space-6);
+  color: var(--color-fg);
+  background: var(--surface-card-strong);
+  border: 1px solid var(--border-control);
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-size: var(--text-body);
+}
+
+.control:disabled {
+  opacity: 0.45;
+}
+
+.choice {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-5);
+  min-height: var(--tap);
+  color: var(--color-fg-muted);
+  cursor: pointer;
+}
+
+.check {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
+.legend {
+  padding: 0;
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-body);
+  color: var(--color-fg);
+  font-weight: 500;
+}
+
+/* ── Choice cards: a radio drawn as a card; the input stays in the tab order, unseen ── */
+
+.cards {
+  display: grid;
+  gap: var(--space-8);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.card {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: var(--space-4);
+  padding: var(--space-10);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-xl);
+  background: var(--surface-soft);
+  color: var(--color-fg-muted);
+  cursor: pointer;
+  transition: border-color var(--duration-base) var(--ease-standard);
+}
+
+@media (hover: hover) {
+  .card:hover {
+    border-color: var(--border-hover);
+  }
+}
+
+.card:has(:checked) {
+  border-color: var(--color-accent);
+  background: var(--surface-card-strong);
+}
+
+.card:has(:focus-visible) {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  color: var(--color-fg);
+  font-weight: 500;
+}
+
+.unseen {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  opacity: 0;
+}
+
+/* ── The ring marker: hollow at rest, filled when chosen ── */
+
+.marker {
+  flex: none;
+  width: 0.9375rem;
+  height: 0.9375rem;
+  border: 1px solid var(--color-accent);
+  border-radius: 50%;
+  transition:
+    background-color var(--duration-base) var(--ease-standard),
+    box-shadow var(--duration-base) var(--ease-standard);
+}
+
+.markerOn {
+  composes: marker;
+  background: var(--color-accent);
+}
+
+/* ── Focus: one ring everywhere ──────────────────────────────────────── */
+
+.button:focus-visible,
+.link:focus-visible,
+.control:focus-visible,
+.check:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button,
+  .card,
+  .marker {
+    transition: none;
+  }
+
+  .button:active:not(:disabled) {
+    transform: none;
+  }
+}

@@ -48,7 +48,7 @@
 
 import { writeCameraPrefix } from '../../../../../src/services/gpu/lib/cameraUniforms';
 import { MILKY_WAY_CLOUD_UNIFORM_BUFFER_SIZE } from '../../../../../src/data/milkyWay/milkyWayCloudUniformBufferSize';
-import type { MilkyWayTuning } from '../../../../../src/@types/settings/MilkyWayTuning';
+import type { MilkyWayCloudTuning } from '../../../../../src/@types/settings/MilkyWayCloudTuning';
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
@@ -81,7 +81,7 @@ const IDENTITY_MODEL = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 
  *                   canvas (see the module header).
  * @param pxPerRad   The target's pixels per radian along y — the camera
  *                   prefix's focal term, `viewportPx[1] / (2·tan(fovY/2))`.
- * @param tuning     The live look knobs, the app's own `MilkyWayTuning`.
+ * @param tuning     The live look knobs, the app's own `MilkyWayCloudTuning`.
  * @param fadeAlpha  The composed visibility fade (`deriveMilkyWayFade`).
  *                   Defaults to 1 — no fade — for callers that don't track it.
  */
@@ -90,7 +90,7 @@ export function packCloudUniforms(
   camPosModel: Vec3,
   viewportPx: Vec2,
   pxPerRad: number,
-  tuning: MilkyWayTuning,
+  tuning: MilkyWayCloudTuning,
   fadeAlpha = 1,
   dst?: Float32Array,
 ): Float32Array {

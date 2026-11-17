@@ -22,7 +22,6 @@
  */
 import { describe, it, expect } from 'vitest';
 import { recordsToCloud, type LocalVolumeOverrides } from '../../tools/catalog/buildAllBins';
-import { Source } from '../../src/data/source';
 import type { ParsedRecord } from '../../tools/parsers/common';
 import type { Cf4Record } from '../../tools/parsers/cosmicflows4';
 
@@ -34,7 +33,7 @@ const M31_PGC = 2557;
 
 function rec(partial: Partial<ParsedRecord>): ParsedRecord {
   return {
-    source: Source.TwoMRS,
+    source: '2mrs',
     objID: 0n,
     ra: 0,
     dec: 0,

@@ -1,0 +1,38 @@
+[
+  {
+    "from": "src/@types/data/zoneOfAvoidance/ZoneOfAvoidanceSliderField.d.ts",
+    "to": "src/layers/zoneOfAvoidance/@types/ZoneOfAvoidanceSliderField.d.ts"
+  },
+  {
+    "from": "src/@types/data/zoneOfAvoidance/ZoneOfAvoidanceSliderKey.d.ts",
+    "to": "src/layers/zoneOfAvoidance/@types/ZoneOfAvoidanceSliderKey.d.ts"
+  },
+  {
+    "from": "src/@types/rendering/ZoneOfAvoidanceRenderer.d.ts",
+    "to": "src/layers/zoneOfAvoidance/@types/ZoneOfAvoidanceRenderer.d.ts"
+  },
+  {
+    "from": "src/@types/rendering/ZoneOfAvoidanceShell.d.ts",
+    "to": "src/layers/zoneOfAvoidance/@types/ZoneOfAvoidanceShell.d.ts"
+  },
+  {
+    "from": "src/@types/settings/ZoneOfAvoidanceSettings.d.ts",
+    "to": "src/layers/zoneOfAvoidance/@types/ZoneOfAvoidanceSettings.d.ts"
+  },
+  {
+    "from": "src/@types/settings/ZoneOfAvoidanceTuning.d.ts",
+    "to": "src/layers/zoneOfAvoidance/@types/ZoneOfAvoidanceTuning.d.ts"
+  },
+  {
+    "from": "src/data/zoneOfAvoidance/zoneOfAvoidanceLabelText.ts",
+    "to": "src/layers/zoneOfAvoidance/data/zoneOfAvoidanceLabelText.ts"
+  },
+  {
+    "from": "src/data/zoneOfAvoidance/zoneOfAvoidanceShell.ts",
+    "to": "src/layers/zoneOfAvoidance/data/zoneOfAvoidanceShell.ts"
+  },
+  {
+    "from": "src/data/zoneOfAvoidance/zoneOfAvoidanceSliderFields.ts",
+    "to": "src/layers/zoneOfAvoidance/data/zoneOfAvoidanceSliderFields.ts"
+  }
+]

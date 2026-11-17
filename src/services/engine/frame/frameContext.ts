@@ -16,18 +16,19 @@ import type { PositionedSceneBody } from '../../../@types/engine/frame/Positione
 import type { SlabRow } from '../../../@types/engine/frame/SlabRow';
 import { bodySlabRowOf } from '../../../utils/scene/bodySlabRowOf';
 import { slabRowActive } from '../../../utils/frame/slabRowActive';
-import { cameraBasisWorld } from '../../../utils/camera/cameraBasisWorld';
-import { orbitForwardOf } from '../../../utils/camera/orbitForwardOf';
+import { cameraBasisWorld } from '../../../utils/camera/orbitPose/cameraBasisWorld';
+import { orbitForwardOf } from '../../../utils/camera/orbitPose/orbitForwardOf';
 import { isEngineReady } from '../helpers/engineReady';
-import { bodyRelativePose } from '../camera/bodyRelativePose';
-import { hostOf } from '../camera/rungs/hostOf';
-import { isBodyArm } from '../camera/rungs/isBodyArm';
-import { isWorldArm } from '../camera/rungs/isWorldArm';
-import { refoldTo } from '../camera/rungs/refoldTo';
+import { bodyRelativePose } from '../camera/bodyFrame/bodyRelativePose';
+import { hostOf } from '../camera/arms/hostOf';
+import { isBodyArm } from '../camera/arms/body/isBodyArm';
+import { isWorldArm } from '../camera/arms/world/isWorldArm';
+import { refoldTo } from '../camera/arms/refoldTo';
 import { spacecraftPresent } from '../../../utils/scene/spacecraftPresent';
 import { HOSTLESS_MESH_BODIES } from '../../../data/bodies/hostlessMeshBodies';
-import { poseFromBodyArm } from '../../../utils/camera/poseFromBodyArm';
-import { ZERO_FOCUS } from '../subsystems/structureFocusSubsystem';
+import { poseFromBodyArm } from '../../../utils/camera/arms/poseFromBodyArm';
+import { ZERO_FOCUS } from '../subsystems/recedingFocusSubsystem';
+import { skyCapturesInBand } from './skyCapturesInBand';
 import { createFramePlannerResultStore } from './createFramePlannerResultStore';
 import { sceneBodyCoverageOf } from '../../../utils/visibility/sceneBodyCoverageOf';
 import { fadeIdentityKey } from '../../../utils/visibility/fadeIdentityKey';
@@ -36,6 +37,8 @@ import { viewBandOf } from '../presentation/viewBandOf';
 import type { PositionedId } from '../../../@types/scene/PositionedId';
 import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
 import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
+import { isPlanetBody } from '../../../utils/scene/isPlanetBody';
+import { isMeshBody } from '../../../utils/meshBodies/isMeshBody';
 
 export function deriveFrameContext(
   state: EngineState,
@@ -69,7 +72,7 @@ export function deriveFrameContext(
 
   // Provider B serves ONLY the engaged body, from its own stored pose (no Mpc round
   // trip); everything else, and the whole absolute arm, stays on provider A. Gated on
-  // the HOST, not the frame: a rung not its own host must still fall through.
+  // the HOST, not the frame: an arm not its own host must still fall through.
   const armBasisCtx = {
     bodies: bodyStates,
     poseBasis: cam.poseBasis,
@@ -80,7 +83,7 @@ export function deriveFrameContext(
   // UN-turned: `deriveView` turns the output through `viewBodyPose`.
   const bodyPose: BodyPoseProvider = (bodyId) => {
     if (!isWorldArm(arm) && armHost !== null && armHost.id === bodyId) {
-      // A rung BELOW its host (a site on its planet) folds up to the host's arm first.
+      // An arm BELOW its host (a site on its planet) folds up to the host's arm first.
       const onHost = refoldTo(arm, { body: armHost.id }, armBasisCtx);
       if (isBodyArm(onHost)) return poseFromBodyArm(onHost.pose);
     }
@@ -116,11 +119,14 @@ export function deriveFrameContext(
   };
   for (const body of SCENE_PLANETS) admit(body);
   for (const body of meshBodies) admit(body);
-  for (const { body } of coverage.values()) admit(body);
+  // A covered planet or mesh body was offered above; its coverage only gates it.
+  for (const { body } of coverage.values()) {
+    if (!isPlanetBody(body) && !isMeshBody(body)) admit(body);
+  }
 
   // `focus`, `focusBlend` and `focusPickId` are at-rest placeholders that `runFrame`
   // overwrites the moment the ready gate passes, before any consumer reads them:
-  // deriving them here would tick the structureFocus fade controller, a once-per-frame
+  // deriving them here would tick the recedingFocus fade controller, a once-per-frame
   // side effect this (speculatively callable) function must not have.
   return {
     isReady: true,
@@ -138,10 +144,9 @@ export function deriveFrameContext(
     focusBlend: 0,
     focusPickId: null,
     plans: createFramePlannerResultStore(),
-    // Forwarded by reference, not copied: the listener allocates a fresh pair
-    // per pointermove and only while the debug overlay that reads it is on.
-    cursorTexPx: state.picking.cursorTexPx,
     // Empty: `renderFrame` unions into it as every view's program opens a pass.
     renderedTargets,
+    // The frame camera, like the slab rows: eye separation is metres against a band in AU.
+    skyCapturesInBand: skyCapturesInBand(cam.position, bodyStates),
   };
 }

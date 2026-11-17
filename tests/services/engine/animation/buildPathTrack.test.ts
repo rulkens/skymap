@@ -23,7 +23,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { buildPathTrack } from '../../../../src/services/engine/animation/buildPathTrack';
-import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
+import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 import type { CompositeSample } from '../../../../src/@types/animation/compiledClip/CompositeSample';
 import type { CompositeTrack } from '../../../../src/@types/animation/compiledClip/CompositeTrack';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';

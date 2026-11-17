@@ -14,7 +14,7 @@ import package::lib::fullscreenTri::fullscreenVertex;
 import package::lib::fullscreenTri::FullscreenOut;
 import package::lib::camera::cameraRayFromUv;
 import package::lib::util::rayPlaneY0;
-import package::milkyWay::field::io::u;
+import package::milkyWay::field::io::uniforms;
 import package::milkyWay::ismMap::ismMapPresentLib::logPolarUv;
 import package::milkyWay::ismMap::ismMapPresentLib::ismMapEdgeFade;
 import package::milkyWay::ismMap::ismMapGrid::IsmMapGrid;
@@ -31,8 +31,8 @@ import package::milkyWay::ismMap::ismMapGrid::IsmMapGrid;
 const DUST_SURVIVAL_FLOOR_FRAC: f32 = 0.01;
 
 // grid: the log-radial bounds THIS galaxy's grid was built over
-// (galaxyIsmMapArmForcing.ts's ismMapGridRadius) — written once per ISM-map
-// rebuild, not every frame like io.wesl's 'u' above.
+// (buildGalaxyIsmMapArmForcing.ts's ismMapGridRadius) — written once per ISM-map
+// rebuild, not every frame like io.wesl's 'uniforms' above.
 @group(0) @binding(1) var ismMapTex: texture_2d<f32>;
 @group(0) @binding(2) var ismMapSmp: sampler;
 @group(0) @binding(3) var<uniform> grid: IsmMapGrid;
@@ -45,29 +45,26 @@ const DUST_SURVIVAL_FLOOR_FRAC: f32 = 0.01;
 @group(0) @binding(4) var<storage, read> ringMeans: array<f32>;
 
 @vertex
-fn vs(@builtin(vertex_index) vi: u32) -> FullscreenOut {
-  return fullscreenVertex(vi);
+fn vs(@builtin(vertex_index) vertexIndex: u32) -> FullscreenOut {
+  return fullscreenVertex(vertexIndex);
 }
 
 @fragment
 fn fs(input: FullscreenOut) -> @location(0) vec4<f32> {
-  let tanHalfFov = u.params.x;
-  let aspect = u.params.y;
-  let shift = u.params.z;
   // FullscreenOut carries 'uv' (its @builtin(position) is FRAMEBUFFER
   // pixels in the fragment stage, not NDC) — cameraRayFromUv undoes
   // fullscreenVertex's own uv transform to recover the NDC
   // fieldSplat/fragment.wesl's fs reconstructs its ray from.
-  let d = cameraRayFromUv(input.uv, u.camRight.xyz, u.camUp.xyz, u.camFwd.xyz, tanHalfFov, aspect, shift);
-  let o = u.eye.xyz;
+  let rayDir = cameraRayFromUv(input.uv, uniforms.camRight.xyz, uniforms.camUp.xyz, uniforms.camFwd.xyz, uniforms.frustum);
+  let rayOrigin = uniforms.eye.xyz;
 
   // Disc-plane (y=0) intersection; a ray parallel to or diverging from the
   // plane has nothing to show.
-  let t = rayPlaneY0(o, d);
-  if (t <= 0.0) {
+  let hitDistance = rayPlaneY0(rayOrigin, rayDir);
+  if (hitDistance <= 0.0) {
     return vec4<f32>(0.0);
   }
-  let hit = o + d * t;
+  let hit = rayOrigin + rayDir * hitDistance;
 
   let uvGrid = logPolarUv(hit, grid.rMin, grid.rMax);
   if (uvGrid.z < 0.5) {
@@ -98,15 +95,15 @@ fn fs(input: FullscreenOut) -> @location(0) vec4<f32> {
   // peak colours are still deliberately NOT equal-brightness — gas maxes at
   // 0.25, stars at 1.0, activity's red/blue channels at 1.3 (above the
   // Reinhard whitepoint's linear range, spending some of the HDR target's
-  // real headroom) — so u.ismMapChannels is the only way to see the gas
+  // real headroom) — so uniforms.ismMapChannels is the only way to see the gas
   // channel at all against the other three, and zeroing three weights
   // isolates the fourth. Dust is scaled by its weight the same raw way,
   // un-clamped, before the sum — the weight is how the slider pulls rim
   // overshoot back into a readable range, not a clip.
-  let gasColor = vec3<f32>(0.05, 0.08, 0.25) * gas * u.ismMapChannels.x;
-  let oldColor = vec3<f32>(1.3, 0.25, 1.15) * old * u.ismMapChannels.z;
-  let starsColor = vec3<f32>(1.0, 0.95, 0.85) * stars * u.ismMapChannels.y;
-  let dustColor = vec3<f32>(0.15, 1.0, 0.55) * dust * u.ismMapChannels.w;
+  let gasColor = vec3<f32>(0.05, 0.08, 0.25) * gas * uniforms.ismMapChannels.x;
+  let oldColor = vec3<f32>(1.3, 0.25, 1.15) * old * uniforms.ismMapChannels.z;
+  let starsColor = vec3<f32>(1.0, 0.95, 0.85) * stars * uniforms.ismMapChannels.y;
+  let dustColor = vec3<f32>(0.15, 1.0, 0.55) * dust * uniforms.ismMapChannels.w;
 
   // The fifth, composite term: NOT another raw-channel isolation like the
   // four above — this MIRRORS ismMapDustCdfScan.wesl's evalWeight (the GPU
@@ -124,8 +121,8 @@ fn fs(input: FullscreenOut) -> @location(0) vec4<f32> {
   // contrast fight against the inner disc. Shown BEFORE texel-area
   // weighting: the CDF multiplies by area, so outer texels weigh more in
   // placement than they glow here.
-  let globalMean = u.bubbleView.w;
-  let cap = u.bubbleView.z;
+  let globalMean = uniforms.bubbleView.w;
+  let cap = uniforms.bubbleView.z;
   let rings = arrayLength(&ringMeans);
   let ringIdx = u32(clamp(round(ringT * f32(rings - 1u)), 0.0, f32(rings - 1u)));
   let ringMean = ringMeans[ringIdx];
@@ -146,11 +143,11 @@ fn fs(input: FullscreenOut) -> @location(0) vec4<f32> {
   }
   // Warm-white, deliberately brighter/cooler than starsColor's near-white so
   // the composite reads as its own layer rather than blending into it.
-  let seedingColor = vec3<f32>(1.4, 1.3, 1.15) * seedingDensity * u.bubbleView.y;
+  let seedingColor = vec3<f32>(1.4, 1.3, 1.15) * seedingDensity * uniforms.bubbleView.y;
 
   let color = (gasColor + oldColor + starsColor + dustColor + seedingColor) * edgeFade;
 
   // debugView.y is this view's own crossfade weight (io.wesl's debugView
   // doc), same role as dustPresent.wesl's debugView.x multiply.
-  return vec4<f32>(color * u.debugView.y, 0.0);
+  return vec4<f32>(color * uniforms.debugView.y, 0.0);
 }

@@ -8,7 +8,7 @@
 import type { SampledDepth } from '../../../@types/engine/frame/SampledDepth';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { SampledDepthBinding } from '../../../@types/rendering/SampledDepthBinding';
-import { sampledDepthKmFrame } from '../../../utils/camera/sampledDepthKmFrame';
+import { sampledDepthKmFrame } from '../../../utils/camera/bodyCompose/sampledDepthKmFrame';
 
 export function sampledDepthBinding(
   sampledDepth: SampledDepth | undefined,

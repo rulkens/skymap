@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
-import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
-import type { CameraProjection } from '../../../../src/@types/camera/CameraProjection';
+import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
+import type { CameraProjection } from '../../../../src/@types/camera/projection/CameraProjection';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 
 // ─── Shared fixtures ──────────────────────────────────────────────────────────

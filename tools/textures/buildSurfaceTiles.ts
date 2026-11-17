@@ -27,13 +27,14 @@
  *
  * Lands on disk under the body's own `tileRoot`, e.g. `earth-tiles/v9/albedo/
  * <z>/<x>/<y>.webp` and, for a band declaring a height source, `earth-tiles/
- * v9/height/<z>/<x>/<y>.webp` (`surfaceTilePath`, shared with the runtime
- * fetcher's own URL builder — drift 404s quietly, degrading to the base
- * texture); `<tileRoot>/manifest.json` (tile edge, baked band list, source);
- * `<tileRoot>/index.txt` (one path per line, walked by the deploy collector
- * instead of the filesystem, so a half-finished bake can't upload a partial
- * pyramid as complete). `public/data/` is gitignored — nothing here is
- * committed.
+ * v9/height/<z>/<x>/<y>.webp` (`surfaceTilePath`, which the pack step
+ * parses back into archive keys); `<tileRoot>/manifest.json` (tile edge, baked band list, source);
+ * `<tileRoot>/index.txt` (one path per line: the loose tiles' manifest, and
+ * the pack step's input); `<prefix>/<product>/z<z>.idx` + `.p<k>.pack` per
+ * level, which are what the deploy collector uploads and the runtime
+ * range-reads (the loose tiles stay local). `--pack-only` re-packs the
+ * existing `index.txt` without opening any source. `public/data/` is
+ * gitignored — nothing here is committed.
  */
 
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
@@ -42,21 +43,25 @@ import { fileURLToPath } from 'node:url';
 
 import sharp, { type Sharp } from 'sharp';
 
-import type { SurfaceTileProduct } from '../../src/@types/data/SurfaceTileProduct';
-import type { SurfaceTileBodyId } from '../../src/@types/data/SurfaceTileBodyId';
-import type { SurfaceTileManifest } from '../../src/@types/scene/SurfaceTileManifest';
-import type { SurfaceTileManifestBand } from '../../src/@types/scene/SurfaceTileManifestBand';
-import type { SurfaceTileBand } from '../../src/@types/scene/SurfaceTileBand';
-import { SURFACE_TILE_PX } from '../../src/data/bodies/surfaceTileParams';
-import { HEIGHT_POSTS_PER_TILE } from '../../src/data/scene/heightTileFormat';
-import { surfaceTilePath } from '../../src/utils/surfaceTiles/surfaceTilePath';
-import { surfaceTileBandFromBounds } from '../../src/utils/surfaceTiles/surfaceTileBandFromBounds';
-import { surfaceTileColumns } from '../../src/utils/surfaceTiles/surfaceTileColumns';
-import { surfaceTileInBand } from '../../src/utils/surfaceTiles/surfaceTileInBand';
+import type { SurfaceTileProduct } from '../../src/layers/body/surfaceTiles/format/@types/SurfaceTileProduct';
+import type { SurfaceTileBodyId } from '../../src/layers/body/surfaceTiles/format/@types/SurfaceTileBodyId';
+import type { SurfaceTileManifest } from '../../src/layers/body/surfaceTiles/format/@types/SurfaceTileManifest';
+import type { SurfaceTileManifestBand } from '../../src/layers/body/surfaceTiles/format/@types/SurfaceTileManifestBand';
+import type { SurfaceTileBand } from '../../src/layers/body/surfaceTiles/format/@types/SurfaceTileBand';
+import { SURFACE_TILE_PRODUCTS } from '../../src/layers/body/surfaceTiles/format/data/surfaceTileProducts';
+import { SURFACE_TILE_PX } from '../../src/layers/body/surfaceTiles/format/data/surfaceTileParams';
+import { WHOLE_GLOBE_BOUNDS } from '../../src/layers/body/surfaceTiles/format/data/wholeGlobeBounds';
+import { HEIGHT_POSTS_PER_TILE } from '../../src/layers/body/surfaceTiles/format/data/heightTileFormat';
+import { surfaceTilePath } from '../../src/layers/body/surfaceTiles/format/utils/surfaceTilePath';
+import { surfaceTileBandFromBounds } from '../../src/layers/body/surfaceTiles/format/utils/surfaceTileBandFromBounds';
+import { surfaceTileColumns } from '../../src/layers/body/surfaceTiles/format/utils/surfaceTileColumns';
+import { surfaceTileInBand } from '../../src/layers/body/surfaceTiles/format/utils/surfaceTileInBand';
 import { parseFlags } from '../utils/cli/args';
 import { heightLatticeStepDeg } from '../utils/textures/heightLatticeStepDeg';
 import { mergeSurfaceTileManifest } from '../utils/textures/mergeSurfaceTileManifest';
 import { readHeightTileFile } from '../utils/textures/readHeightTileFile';
+import { packSurfaceTileLevels } from '../utils/textures/packSurfaceTileLevels';
+import { repackSurfaceTiles } from '../utils/textures/repackSurfaceTiles';
 import { surfaceTileBounds } from '../utils/scene/surfaceTileBounds';
 import { surfaceTileIndicesForBounds } from '../utils/scene/surfaceTileIndicesForBounds';
 import { bakeHeightLevel } from './bakeHeightLevel';
@@ -64,16 +69,17 @@ import { SURFACE_FIXED_SITES } from '../../src/data/bodies/surfaceFixedSites';
 import { buildSiteGroundHeights } from './buildSiteGroundHeights';
 import { earthSurfaceBake } from './surfaceBodies/earthSurfaceBake';
 import { marsSurfaceBake } from './surfaceBodies/marsSurfaceBake';
+import { moonSurfaceBake } from './surfaceBodies/moonSurfaceBake';
 import type { SurfaceBakeBand } from './@types/SurfaceBakeBand';
 import type { SurfaceBodyBake } from './@types/SurfaceBodyBake';
 import type { SurfaceImagerySource } from './@types/SurfaceImagerySource';
 import { underfillImagerySource } from './underfillImagerySource';
-import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
+import type { LonLatBounds } from '../../src/layers/body/surfaceTiles/format/@types/LonLatBounds';
 
 /** Default band for a caller that doesn't clamp — degenerates
  *  `candidateTileIndices` back to the whole grid at every level. */
 const WHOLE_GLOBE_BANDS: readonly SurfaceTileBand[] = [
-  surfaceTileBandFromBounds({ west: -180, east: 180, south: -90, north: 90 }, 0, Infinity),
+  surfaceTileBandFromBounds(WHOLE_GLOBE_BOUNDS, 0, Infinity),
 ];
 
 /**
@@ -117,10 +123,6 @@ function candidateTileIndices(
 /** Lossy WebP quality for surface tiles: JPEG can't carry the alpha channel
  *  that doubles as the land mask. */
 const WEBP_QUALITY = 82;
-
-/** The imagery product's own name — the height path is built from the literal
- *  `'height'` inside `bakeHeightLevel`, which owns that product end to end. */
-const PRODUCT: SurfaceTileProduct = 'albedo';
 
 /**
  * Encode a sharp pipeline to `outPath` atomically: write to `<outPath>.tmp`,
@@ -166,6 +168,7 @@ async function writeTile(rgba: Uint8Array, tilePx: number, outPath: string): Pro
  */
 async function bakeDeepestLevel(
   source: SurfaceImagerySource,
+  product: SurfaceTileProduct,
   bands: readonly SurfaceTileBand[],
   z: number,
   tilePx: number,
@@ -175,7 +178,7 @@ async function bakeDeepestLevel(
   const written: string[] = [];
 
   for (const { x, y } of candidateTileIndices(bands, z, tilePx)) {
-    const relPath = surfaceTilePath({ product: PRODUCT, z, x, y }, tilePrefix);
+    const relPath = surfaceTilePath({ product, z, x, y }, tilePrefix);
     const outPath = join(outDir, relPath);
     if (existsSync(outPath)) {
       written.push(relPath);
@@ -220,6 +223,7 @@ async function bakeDeepestLevel(
  */
 export async function bakeCoarserLevel(
   z: number,
+  product: SurfaceTileProduct,
   tilePx: number,
   outDir: string,
   tilePrefix: string,
@@ -231,7 +235,7 @@ export async function bakeCoarserLevel(
   const written: string[] = [];
 
   for (const { x, y } of candidateTileIndices(bands, z, tilePx)) {
-    const relPath = surfaceTilePath({ product: PRODUCT, z, x, y }, tilePrefix);
+    const relPath = surfaceTilePath({ product, z, x, y }, tilePrefix);
     const outPath = join(outDir, relPath);
     if (existsSync(outPath)) {
       written.push(relPath);
@@ -247,7 +251,7 @@ export async function bakeCoarserLevel(
       .map(({ i, j }) => ({
         input: join(
           outDir,
-          surfaceTilePath({ product: PRODUCT, z: z + 1, x: 2 * x + i, y: 2 * y + j }, tilePrefix),
+          surfaceTilePath({ product, z: z + 1, x: 2 * x + i, y: 2 * y + j }, tilePrefix),
         ),
         left: i * halfPx,
         top: j * halfPx,
@@ -293,6 +297,48 @@ export async function bakeCoarserLevel(
 
     await stageWrite(canvas.composite(quadrants).webp({ quality: WEBP_QUALITY }), outPath);
     written.push(relPath);
+  }
+  return written;
+}
+
+/**
+ * One imagery product's pyramid over a band: `source` read at `maxLevel`,
+ * then every coarser level down to `minLevel` as the 2x2 average of the one
+ * above. A parent's coverage box is the same as its children's (containment
+ * of bounds), so the band's own boxes clamp every coarser level too, and
+ * `source` is also the childless halo tile's own source.
+ */
+async function bakeImageryPyramid(
+  source: SurfaceImagerySource,
+  product: SurfaceTileProduct,
+  underfill: SurfaceImagerySource | undefined,
+  uvBands: readonly SurfaceTileBand[],
+  maxLevel: number,
+  minLevel: number,
+  tilePx: number,
+  outDir: string,
+  tilePrefix: string,
+): Promise<string[]> {
+  process.stderr.write(`  z${maxLevel}: baking ${product} from ${source.id}\n`);
+  const written = [
+    ...(await bakeDeepestLevel(source, product, uvBands, maxLevel, tilePx, outDir, tilePrefix)),
+  ];
+  process.stderr.write(`  z${maxLevel}: ${written.length} ${product} tiles\n`);
+  for (let z = maxLevel - 1; z >= minLevel; z--) {
+    const levelPaths = await bakeCoarserLevel(
+      z,
+      product,
+      tilePx,
+      outDir,
+      tilePrefix,
+      underfill,
+      uvBands,
+      source,
+    );
+    written.push(...levelPaths);
+    process.stderr.write(
+      `  z${z}: ${levelPaths.length} ${product} tiles (2x2 average of z${z + 1})\n`,
+    );
   }
   return written;
 }
@@ -417,7 +463,7 @@ export async function bakeAll(
   body: Pick<SurfaceBodyBake, 'tileRoot' | 'tilePrefix'>,
   bands: readonly SurfaceBakeBand[],
   outDir: string,
-  products: ReadonlySet<SurfaceTileProduct> = new Set<SurfaceTileProduct>(['albedo', 'height']),
+  products: ReadonlySet<SurfaceTileProduct> = new Set<SurfaceTileProduct>(SURFACE_TILE_PRODUCTS),
 ): Promise<void> {
   const { tileRoot, tilePrefix } = body;
   const tilePx = SURFACE_TILE_PX;
@@ -429,7 +475,15 @@ export async function bakeAll(
   // it — which only works if those are already on disk.
   const ordered = [...bands].sort((a, b) => b.source.maxLevel - a.source.maxLevel);
 
-  for (const { source, minLevel, underfill, height, heightUnderfill, flattenWater } of ordered) {
+  for (const {
+    source,
+    minLevel,
+    underfill,
+    height,
+    heightUnderfill,
+    flattenWater,
+    night,
+  } of ordered) {
     const maxLevel = source.maxLevel;
     // The band as the runtime sees it — one entry per coverage box, so the
     // bake's tile set and the walk's request gate are the same predicate.
@@ -447,36 +501,20 @@ export async function bakeAll(
     }
 
     if (products.has('albedo')) {
-      process.stderr.write(`  z${maxLevel}: baking from ${source.id}\n`);
       const effective = underfill ? underfillImagerySource(source, underfill) : source;
-      const deepest = await bakeDeepestLevel(
-        effective,
-        uvBands,
-        maxLevel,
-        tilePx,
-        outDir,
-        tilePrefix,
-      );
-      written.push(...deepest);
-      process.stderr.write(`  z${maxLevel}: ${deepest.length} tiles\n`);
-
-      for (let z = maxLevel - 1; z >= minLevel; z--) {
-        // A parent's coverage box is the same as its children's (containment
-        // of bounds), so the band's own boxes clamp every coarser level too.
-        // `effective` (source blended with underfill) is also the childless
-        // halo tile's own source — same object `bakeDeepestLevel` just used.
-        const levelPaths = await bakeCoarserLevel(
-          z,
+      written.push(
+        ...(await bakeImageryPyramid(
+          effective,
+          'albedo',
+          underfill,
+          uvBands,
+          maxLevel,
+          minLevel,
           tilePx,
           outDir,
           tilePrefix,
-          underfill,
-          uvBands,
-          effective,
-        );
-        written.push(...levelPaths);
-        process.stderr.write(`  z${z}: ${levelPaths.length} tiles (2x2 average of z${z + 1})\n`);
-      }
+        )),
+      );
     }
 
     if (height !== undefined && products.has('height')) {
@@ -504,11 +542,35 @@ export async function bakeAll(
       if (flattenWater === true) await printWaterDiagnostics(outDir, maxLevel, uvBands, tilePrefix);
     }
 
+    if (night !== undefined && products.has('night')) {
+      // Night rides the albedo band's boxes and levels like height does, but
+      // its source is read for pixels at every level, so it must reach the
+      // band's own ceiling: a shallower one would leave the deepest tiles unbaked.
+      if (night.maxLevel !== maxLevel) {
+        throw new Error(
+          `bakeAll: night source '${night.id}' reaches z${night.maxLevel}, not the band's z${maxLevel}`,
+        );
+      }
+      written.push(
+        ...(await bakeImageryPyramid(
+          night,
+          'night',
+          undefined,
+          uvBands,
+          maxLevel,
+          minLevel,
+          tilePx,
+          outDir,
+          tilePrefix,
+        )),
+      );
+    }
+
     // One entry per coverage box: a source spanning the antimeridian declares
     // two boxes rather than one that wraps (see `LonLatBounds`). `builtFrom`
     // is the source's OWN provenance — never a module-level assumption, or a
     // second band's manifest entry would carry the first band's identity.
-    // Keyed by `PRODUCT`, not a bare value: a later product baking the SAME
+    // Keyed by product, not a bare value: a later product baking the SAME
     // box (Task 9's height) adds its own `builtFrom` entry to this band
     // rather than a second band row.
     for (const bounds of source.coverage) {
@@ -520,10 +582,11 @@ export async function bakeAll(
           // Gated on `products.has('albedo')`: a `--product height` run
           // still carries an imagery source (for coverage/levels) but bakes
           // none of its tiles, and must not restamp its provenance.
-          ...(products.has('albedo') ? { [PRODUCT]: source.provenance } : {}),
+          ...(products.has('albedo') ? { albedo: source.provenance } : {}),
           // Also gated on `products.has('height')`: a `--product albedo` run
           // still configures a height source but bakes none of its tiles.
           ...(height === undefined || !products.has('height') ? {} : { height: height.provenance }),
+          ...(night === undefined || !products.has('night') ? {} : { night: night.provenance }),
         },
       });
     }
@@ -550,6 +613,9 @@ export async function bakeAll(
   // resumed sync diff one against the other.
   const sorted = [...finalPaths].sort();
   writeFileSync(join(outDir, `${tileRoot}/index.txt`), `${sorted.join('\n')}\n`);
+  process.stderr.write(
+    `  ${packSurfaceTileLevels(outDir, tilePrefix, sorted)} archive files packed\n`,
+  );
 
   // Written LAST, after the index it implies and after the completeness
   // check above: an interrupted or now-incomplete bake then leaves the
@@ -567,20 +633,23 @@ export async function bakeAll(
 const SURFACE_BODY_BAKES: Record<SurfaceTileBodyId, SurfaceBodyBake> = {
   earth: earthSurfaceBake,
   mars: marsSurfaceBake,
+  moon: moonSurfaceBake,
 };
 
-/** `--product albedo|height`: `parseFlags` stays bool-only by design (see its
+/** `--product albedo|height|night`: `parseFlags` stays bool-only by design (see its
  *  own docstring), so this is a bespoke scan beside the `parseFlags` call —
- *  same shape as `fetchFamousImages`'s `--source-preference`. Absent, both
- *  products bake. */
+ *  same shape as `fetchFamousImages`'s `--source-preference`. Absent, every
+ *  product bakes. */
 function productFlag(argv: readonly string[]): SurfaceTileProduct | undefined {
   const idx = argv.indexOf('--product');
   if (idx < 0) return undefined;
   const value = argv[idx + 1];
-  if (value !== 'albedo' && value !== 'height') {
-    throw new Error(`buildSurfaceTiles: --product must be 'albedo' or 'height', got '${value}'`);
+  if (!(SURFACE_TILE_PRODUCTS as readonly (string | undefined)[]).includes(value)) {
+    throw new Error(
+      `buildSurfaceTiles: --product must be one of ${SURFACE_TILE_PRODUCTS.map((p) => `'${p}'`).join(', ')}, got '${value}'`,
+    );
   }
-  return value;
+  return value as SurfaceTileProduct;
 }
 
 /** `--body <id>` (default `earth`): same bespoke-scan shape as `productFlag`. */
@@ -598,11 +667,18 @@ function bodyFlag(argv: readonly string[]): SurfaceTileBodyId {
 async function main(): Promise<void> {
   const outDir = resolve('public/data/images');
   const argv = process.argv.slice(2);
-  const { '--dev': dev } = parseFlags(argv, { '--dev': 'bool' });
+  const { '--dev': dev, '--pack-only': packOnly } = parseFlags(argv, {
+    '--dev': 'bool',
+    '--pack-only': 'bool',
+  });
   const product = productFlag(argv);
-  const products = new Set<SurfaceTileProduct>(product ? [product] : ['albedo', 'height']);
+  const products = new Set<SurfaceTileProduct>(product ? [product] : SURFACE_TILE_PRODUCTS);
   const bodyId = bodyFlag(argv);
   const body = SURFACE_BODY_BAKES[bodyId];
+  if (packOnly) {
+    process.stderr.write(`  ${repackSurfaceTiles(outDir, body.tileRoot)} archive files packed\n`);
+    return;
+  }
 
   process.stderr.write(`buildSurfaceTiles: -> ${join(outDir, body.tileRoot)}\n`);
   const bands = await body.bands({ dev });

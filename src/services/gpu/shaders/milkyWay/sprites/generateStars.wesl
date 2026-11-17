@@ -65,8 +65,8 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   var dead: StarRec;
   dead.alive = false;
 
-  for (var i = 0u; i < gen.starRangeCount; i = i + 1u) {
-    let range = gen.starRanges[i];
+  for (var rangeIndex = 0u; rangeIndex < gen.starRangeCount; rangeIndex = rangeIndex + 1u) {
+    let range = gen.starRanges[rangeIndex];
     let start = range.x;
     let iterations = range.y;
     let stride = range.z;

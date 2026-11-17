@@ -29,7 +29,7 @@ grandparent both follow it. No jargon without a gloss in the same breath.
 ## Length & timing
 
 - **Title ≤ ~4 words** — a label. "The cosmic web", "You are here".
-- **Narration ≤ 2 lines, ~20–30 words** — readable within the dwell. Too
+- **Each subtitle line one phrase, ≲ 12 words; a beat ≲ 3 lines** — readable within the dwell. Too
   long → cut words or raise dwell, never rush the reader.
 
 ## Don'ts

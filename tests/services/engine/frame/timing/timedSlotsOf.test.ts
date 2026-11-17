@@ -12,7 +12,7 @@ import { FRAME_ORDER } from '../../../../../src/services/engine/frame/frameOrder
 import { bodyLayer } from '../../../../../src/layers/body/layer';
 import type { BodyRuntime } from '../../../../../src/layers/body/@types/BodyRuntime';
 import { CONTENT_PASSES } from '../../../../../src/services/engine/frame/passes';
-import { blackHoleLensingPass } from '../../../../../src/layers/blackHoles/passes/blackHoleLensingPass';
+import { blackHoleLensingPass } from '../../../../../src/layers/blackHoles/lensing/passes/blackHoleLensingPass';
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
 import type { FrameInputs } from '../../../../../src/services/engine/frame/expandFrameOrder';
 import type { FrameStep } from '../../../../../src/@types/engine/frame/FrameStep';
@@ -20,7 +20,7 @@ import type { ContentPass } from '../../../../../src/@types/engine/frame/Content
 import type { ToneMap } from '../../../../../src/@types/rendering/ToneMap';
 import type { BlackHolesRuntime } from '../../../../../src/layers/blackHoles/@types/BlackHolesRuntime';
 
-const TONE: ToneMap = { exposure: 1.5, curve: 4, hdrKnee: 0, hdrHeadroom: 0 };
+const TONE: ToneMap = { exposure: 1.5, curve: 4, hdrKnee: 0, hdrHeadroom: 0, film: null };
 
 // The Layers' passes join core's registry, as `createLayers` does; expansion
 // matches by `name` and never reaches `draw`, so no runtime is read.

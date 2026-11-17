@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 
 import { SITE_SHOTS } from '../../../packages/website/src/data/siteShots';
 import { linkIntentFrom } from '../../../src/utils/url/linkIntentFrom';
+import { composeHashParams } from '../../../src/utils/url/composeHashParams';
 import { parseHashParams } from '../../../src/utils/url/parseHashParams';
 import { siteShotActions } from '../../../tools/site/utils/siteShotActions';
 import { siteShotUrl } from '../../../tools/site/utils/siteShotUrl';
@@ -60,10 +61,14 @@ describe.each(SITE_SHOTS)('shot $id', (shot) => {
     );
   });
 
-  it('its settings turn into actions and its address keeps the link, unless the runner starts a tour step itself', () => {
+  it('its settings turn into actions and its address opens the link and its layers, unless the runner starts a tour step itself', () => {
     expect(siteShotActions(shot).length).toBeGreaterThan(0);
     const url = siteShotUrl('http://localhost:1/', shot);
     expect(url.startsWith('http://localhost:1/?cinema')).toBe(shot.settings?.ui !== true);
-    expect(url.endsWith(`#${shot.link}`)).toBe(shot.settings?.tourStep === undefined);
+    const params = new Map(parseHashParams(url.slice(url.indexOf('#') + 1)));
+    params.delete('layers');
+    expect(url.includes('#') ? composeHashParams(params) : '').toBe(
+      shot.settings?.tourStep === undefined ? shot.link : '',
+    );
   });
 });

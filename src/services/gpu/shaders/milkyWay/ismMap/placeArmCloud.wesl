@@ -1,4 +1,4 @@
-// milkyWay/ismMap/placeArmCloud.wesl — GPU port of armParticleCloud.ts's
+// milkyWay/ismMap/placeArmCloud.wesl — GPU port of deriveArmCloudCount.ts's
 // buildArmParticleCloud, one invocation per particle SLOT
 // (ARM_CLOUD_MAX_COUNT ceiling). The CPU still decides slot COUNT
 // (deriveArmCloudCount, unchanged); this shader decides slot CONTENT,
@@ -22,7 +22,7 @@ import package::milkyWay::ismMap::clusteredDiscPlacement::buildClusteredDiscPlac
 import package::milkyWay::ismMap::clusteredDiscPlacement::cdpRadialTilt;
 
 // SIZE_MIN_RATIO/SIZE_MAX_RATIO/SPRITE_POLE_RATIO mirror
-// armParticleCloud.ts's own non-exported constants verbatim (same "mirror,
+// deriveArmCloudCount.ts's own non-exported constants verbatim (same "mirror,
 // no parity test" treatment armRidge.wesl gives its own non-scalar-const
 // mirrors); this WGSL copy is now the only place they live.
 const SIZE_MIN_RATIO: f32 = 0.35;
@@ -133,8 +133,8 @@ struct PlaceArmCloudParams {
 
 @compute @workgroup_size(256)
 fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
-  let i = gid.x;
-  if (i >= params.count) {
+  let childIndex = gid.x;
+  if (childIndex >= params.count) {
     return;
   }
 
@@ -144,7 +144,7 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
     params.outerRadius,
   );
 
-  let complexIndex = i / params.childrenPerComplex;
+  let complexIndex = childIndex / params.childrenPerComplex;
 
   // placeAnalyticComplex's own armRoll — dead value (armBias is hardcoded 1
   // for this tier's only caller), drawn anyway for structural parity with
@@ -157,10 +157,10 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   let pick = genRand(params.seed, ARM_CLOUD_POP_COMPLEX, complexIndex, 1u) * params.armWeightSum;
   var armIndex = params.armCount - 1u;
   var acc = 0.0;
-  for (var j = 0u; j < params.armCount; j++) {
-    acc += armRecords[j].weight;
+  for (var candidateArm = 0u; candidateArm < params.armCount; candidateArm++) {
+    acc += armRecords[candidateArm].weight;
     if (pick <= acc) {
-      armIndex = j;
+      armIndex = candidateArm;
       break;
     }
   }
@@ -175,7 +175,7 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   // discSigmaR/discWeightSum are REAL inputs here, not filler: mode 2u's own
   // degenerate-arm-span fallback reads them the same way mode 1u does.
   let placed = buildClusteredDiscPlacementChild(
-    params.seed, i, params.childrenPerComplex, 2u,
+    params.seed, childIndex, params.childrenPerComplex, 2u,
     ARM_CLOUD_POP_COMPLEX, ARM_CLOUD_POP_CHILD,
     &passThroughPrefixBuf, 0.0, 0u, 0u, 0.0, 0.0,
     params.discSigmaR, params.discWeightSum,
@@ -190,7 +190,7 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   // scattered position, mirroring placeDust.wesl's own post-scatter timing.
   let particleRadius = length(vec2<f32>(placed.center.x, placed.center.z));
   let sizeFrac = SIZE_MIN_RATIO
-    + genRand(params.seed, ARM_CLOUD_POP_CHILD, i, 6u) * (SIZE_MAX_RATIO - SIZE_MIN_RATIO);
+    + genRand(params.seed, ARM_CLOUD_POP_CHILD, childIndex, 6u) * (SIZE_MAX_RATIO - SIZE_MIN_RATIO);
   let radius = armCrossSigma(particleRadius, params.widthScale, geom) * sizeFrac * params.sizeScale;
 
   let sigAlong = radius * params.elongation;
@@ -204,7 +204,7 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   let shape = armExcessSurfaceShape(particleRadius, params.hLight, params.excessScaleRatio, geom);
   let tilt = cdpRadialTilt(particleRadius, params.tiltRefRadius, params.radialBias);
   let fluxWeight = (radius * radius * shape) / tilt;
-  fluxWeightOut[i] = fluxWeight;
+  fluxWeightOut[childIndex] = fluxWeight;
   let flux = params.cloudFlux * fluxWeight;
   let amplitude = flux / (TAU_ROOT3 * sigAlong * sigAcross * sigPole);
 
@@ -224,5 +224,5 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   rec.center = placed.center;
   rec.starsWeight = 0.0;
 
-  comps[params.reservationOffset + i] = rec;
+  comps[params.reservationOffset + childIndex] = rec;
 }

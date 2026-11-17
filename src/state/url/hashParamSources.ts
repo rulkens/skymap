@@ -10,7 +10,7 @@
  * so two identical states always produce byte-identical hashes. That binds
  * rows that WRITE: a new writing row is APPEND-ONLY, going at the end so links
  * already in the wild keep parsing to the same bytes they were shared as. A
- * read-only row (`write: () => null`: `pose`) composes nothing into the body,
+ * read-only row (`write: () => null`: `pose`, `layers`) composes nothing into the body,
  * so this rule says nothing about its position. Read order is not a table
  * fact at all: `linkIntentFrom` merges the rows' contributions.
  *
@@ -80,8 +80,9 @@ import { requestFocus } from '../selection/requestFocus';
 import { clearSelection } from '../selection/selectionSlice';
 import { selectFocusId, selectFocusRow, selectPendingFocusId } from '../selection/selectors';
 import { setSelectionRow } from '../selectionRows/selectionRowsSlice';
-import { selectOrientation } from '../settings/selectors';
+import { selectFilmEnabled, selectOrientation } from '../settings/selectors';
 import { setOrientation } from '../settings/core/orientationSlice';
+import { setFilmEnabled } from '../settings/core/filmSlice';
 import { goLiveNowAction } from '../time/goLiveNowAction';
 import { selectTimeState } from '../time/selectors';
 import { selectTakeoverSource } from '../takeover/selectors';
@@ -93,6 +94,9 @@ import { EARTH_REF } from '../../data/selection/earthRef';
 import { julianDaysToUnixMs } from '../../utils/time/julianDaysToUnixMs';
 import { isOrientationFrameId } from '../../utils/url/isOrientationFrameId';
 import { decodeFramedPose } from '../../utils/url/decodeFramedPose';
+import { isKind } from '../../utils/selection/isKind';
+import type { BodySelectionRow } from '../../@types/engine/selection/BodySelectionRow';
+import { parseLayerSwitches } from '../../utils/url/parseLayerSwitches';
 
 /**
  * The `focus` row's third trigger: the derived-cache write, narrowed to the ONE
@@ -151,10 +155,8 @@ const focusSource: HashParamSource = {
     // against EARTH_REF (the one home declaration) rather than a literal so the
     // omit rule cannot drift from the seed. The read is unaffected, so an
     // explicit `body-earth` from an old shared link still resolves on arrival.
-    // The `EARTH_REF.type === 'body'` clause is a discriminant narrow (always
-    // true) that lets TS reach `.id` on both tagged unions.
     const focusRow = selectFocusRow(state);
-    if (focusRow?.type === 'body' && EARTH_REF.type === 'body' && focusRow.id === EARTH_REF.id) {
+    if (isKind<BodySelectionRow>(focusRow, 'body') && focusRow.id === EARTH_REF.id) {
       return null;
     }
 
@@ -246,6 +248,15 @@ const orientationSource: HashParamSource = {
   readAbsent: () => [setOrientation(DEFAULT_ORIENTATION)],
 };
 
+const filmSource: HashParamSource = {
+  key: 'film',
+  deepLink: false,
+  writesOn: [setFilmEnabled.match],
+  write: (state) => (selectFilmEnabled(state) ? '1' : null),
+  read: (value) => (value === '1' ? { film: true } : {}),
+  readAbsent: () => [setFilmEnabled(false)],
+};
+
 /**
  * `pose` — the `l`-key share URL's exact camera, read-only. It writes nothing
  * (`hashBodyFor` never composes a `pose` param): the rendered pose lands a
@@ -281,24 +292,52 @@ const poseSource: HashParamSource = {
 const isTakeoverChange = (action: Action): boolean =>
   takeoverStarted.match(action) || takeoverEnded.match(action);
 
-const takeoverSource = (key: TakeoverSource['kind']): HashParamSource => ({
+const takeoverSource = (key: Exclude<TakeoverSource['kind'], 'sky'>): HashParamSource => ({
   key,
   deepLink: true,
   writesOn: [isTakeoverChange],
   write: (state) => {
     const source = selectTakeoverSource(state);
-    return source?.kind === key ? source.id : null;
+    return source !== null && source.kind === key ? source.id : null;
   },
   read: (value) => ({ view: { kind: key, id: value } }),
   readAbsent: () => [],
 });
+
+/**
+ * `layers` — layer and caption switches, read-only like `pose`: `flow` on,
+ * `-starCatalog` off, `-label` / `label` switch every caption, applied left to right through the tour cues' writes
+ * (`parseLayerSwitches`). A writing row would need every Layer's setter in its
+ * `writesOn`, or a `settings/*` prefix, which fires on every frame of a slider
+ * drag; and a push per checkbox click would make Back undo clicks. So the
+ * arrival's replace drops it, and the share URL (`shareUrlFor`) writes it.
+ *
+ * Absence leaves every switch alone, boot and navigation alike: an entry
+ * without `layers` is not a claim that the switches are at their defaults.
+ */
+const layersSource: HashParamSource = {
+  key: 'layers',
+  deepLink: false,
+  writesOn: [],
+  write: () => null,
+  read: (value) => {
+    const { switches, unknown } = parseLayerSwitches(value);
+    for (const token of unknown) {
+      console.warn(`hashParamSources: unknown layer, ignoring: ${token}`);
+    }
+    return { layers: switches };
+  },
+  readAbsent: () => [],
+};
 
 export const HASH_PARAM_SOURCES: readonly HashParamSource[] = [
   poseSource,
   focusSource,
   timeSource,
   orientationSource,
+  filmSource,
   takeoverSource('exhibit'),
   takeoverSource('tour'),
   takeoverSource('clip'),
+  layersSource,
 ];

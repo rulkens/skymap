@@ -220,8 +220,7 @@
       }
     },
     "actions": [
-      "camera/commitCameraPose",
-      "camera/endDrag",
+      "camera/intent/commitCameraPose",
       "engine/engineScaleChanged"
     ]
   },
@@ -950,7 +949,7 @@
       }
     },
     "actions": [
-      "camera/commitCameraPose",
+      "camera/intent/commitCameraPose",
       "engine/engineScaleChanged"
     ]
   },
@@ -1175,7 +1174,7 @@
       }
     },
     "actions": [
-      "camera/commitCameraPose",
+      "camera/intent/commitCameraPose",
       "engine/engineScaleChanged"
     ]
   },
@@ -1456,7 +1455,7 @@
       }
     },
     "actions": [
-      "camera/cancelCameraTween",
+      "camera/intent/cancelCameraTween",
       "engine/engineScaleChanged"
     ]
   },
@@ -1513,7 +1512,7 @@
       }
     },
     "actions": [
-      "camera/commitCameraPose",
+      "camera/intent/commitCameraPose",
       "engine/engineScaleChanged"
     ]
   },
@@ -1682,7 +1681,7 @@
       }
     },
     "actions": [
-      "camera/commitCameraPose",
+      "camera/intent/commitCameraPose",
       "engine/engineScaleChanged"
     ]
   },
@@ -2131,7 +2130,7 @@
       }
     },
     "actions": [
-      "camera/commitCameraPose",
+      "camera/intent/commitCameraPose",
       "engine/engineScaleChanged"
     ]
   },
@@ -2412,7 +2411,7 @@
       }
     },
     "actions": [
-      "camera/commitCameraPose",
+      "camera/intent/commitCameraPose",
       "engine/engineScaleChanged"
     ]
   },
@@ -2525,8 +2524,7 @@
       }
     },
     "actions": [
-      "camera/commitCameraPose",
-      "camera/endDrag",
+      "camera/intent/commitCameraPose",
       "engine/engineScaleChanged"
     ]
   },

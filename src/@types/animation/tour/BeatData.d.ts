@@ -12,8 +12,8 @@ import type { BeatCaption } from './BeatCaption';
  * changes (visibility, settings) are expressed as in-clip
  * `show()`/`hide()`/`scene()` cues.
  *
- * `caption` is the beat's placard — a title, optional markdown body, and an
- * anchor (`BeatCaption`); null for a silent beat. The overlay reveals it once
+ * `caption` is the beat's placard — a title and its subtitle `lines`
+ * (`BeatCaption`); null for a silent beat. The overlay reveals it once
  * the establishing fly lands and clears it when the next beat begins. The
  * runtime slice does not store the caption — it is derived from this field via
  * the takeover's tour id + `beatIndex`.

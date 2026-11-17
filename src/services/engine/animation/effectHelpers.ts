@@ -31,7 +31,7 @@
  *
  * ### `tween` rejects 'target' at the type level
  *
- * The `ch` parameter of `tween` is typed `'distance' | 'yaw' | 'pitch' | 'roll'`
+ * The `ch` parameter of `tween` is typed `'distance' | 'yaw' | 'pitch' | 'roll' | 'fov'`
  * (not the full `Channel` union). Passing `'target'` is a compile-time error.
  * Vec3 channels use the dedicated `moveTarget` helper, which emits a `setVec`
  * arm rather than a `set` arm.
@@ -40,15 +40,15 @@
 import type { CameraAction } from '../../../@types/animation/CameraAction';
 import type { FocusBoundEffect } from '../../../@types/animation/FocusBoundEffect';
 import type { FocusId } from '../../../@types/animation/FocusId';
-import type { OrientationFrameId } from '../../../@types/camera/OrientationFrameId';
+import type { OrientationFrameId } from '../../../@types/camera/orientation/OrientationFrameId';
 import type { SceneEffect } from '../../../@types/animation/SceneEffect';
 import type { Effect } from '../../../@types/animation/Effect';
 import type { Channel } from '../../../@types/animation/Channel';
 import type { Ease } from '../../../@types/animation/Ease';
 import type { Space } from '../../../@types/animation/Space';
-import type { PoseFrame } from '../../../@types/camera/PoseFrame';
+import type { PoseFrame } from '../../../@types/camera/pose/PoseFrame';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import type { GeodesicTuning } from '../../../@types/camera/GeodesicTuning';
+import type { GeodesicTuning } from '../../../@types/camera/focusMotion/GeodesicTuning';
 import type { VisibilityArg } from '../../../@types/animation/VisibilityArg';
 import type { ScopedVisibilityAddress } from '../../../@types/animation/ScopedVisibilityAddress';
 import { expandVisibilityLayers } from '../../../utils/animation/expandVisibilityLayers';
@@ -56,6 +56,7 @@ import type { SettingsAction } from '../../../compositions/@types/SettingsAction
 import type { PathWaypoint } from '../../../@types/animation/PathWaypoint';
 import type { SplineConfig } from '../../../@types/animation/SplineConfig';
 import type { PassByConfig } from '../../../@types/animation/PassByConfig';
+import type { SeqOverlap } from '../../../@types/animation/SeqOverlap';
 import { CHANNEL_SPACE } from './channelSpace';
 import {
   DEFAULT_ALIGN_SEC,
@@ -84,7 +85,7 @@ import {
  * `ease` defaults to `'easeInOutCubic'` (the natural choice for A→B camera moves).
  */
 export function tween(
-  ch: 'distance' | 'yaw' | 'pitch' | 'roll',
+  ch: 'distance' | 'yaw' | 'pitch' | 'roll' | 'fov',
   opts: { to: number; over: number; ease?: Ease; space?: Space; frame?: PoseFrame },
 ): CameraAction & { kind: 'set' } {
   return {
@@ -320,11 +321,17 @@ export function wait(sec: number): Effect & { kind: 'wait' } {
  * seq — play children in order; each starts when the previous ends.
  *
  * The primary sequencing node. The block's duration is the sum of all
- * children's durations. Perpetual children (looping spin, oscillate) inside a
+ * children's durations, less any `overlap` (each step then starts that many
+ * seconds before the previous ends). Perpetual children (looping spin, oscillate) inside a
  * `seq` will stall it; fork them instead.
  */
-export function seq(children: Effect[]): Effect & { kind: 'seq' } {
-  return { kind: 'seq', children };
+export function seq(
+  children: Effect[],
+  opts?: { readonly overlap?: SeqOverlap },
+): Effect & { kind: 'seq' } {
+  return opts?.overlap === undefined
+    ? { kind: 'seq', children }
+    : { kind: 'seq', children, overlap: opts.overlap };
 }
 
 /**
@@ -440,8 +447,8 @@ export function frameTo(
  * `null` to clear the selection focus.
  *
  * This is the UNRESOLVED form: it carries a `FocusId` string rather than a
- * concrete `SelectionRef`. `resolveClipFoci` rewrites it to the resolved
- * `kind:'focus'` arm (in `SceneEffect`) — which carries a `SelectionRef` — at
+ * concrete ref. `resolveClipFoci` rewrites it to the resolved
+ * `kind:'focus'` arm (in `SceneEffect`) — which carries a ref — at
  * play time, before `compileClip` runs. `compileClip` throws if it encounters a
  * `focusId` cue that was not resolved.
  *

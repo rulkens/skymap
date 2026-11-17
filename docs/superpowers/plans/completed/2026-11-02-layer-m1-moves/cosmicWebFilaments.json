@@ -1,0 +1,34 @@
+[
+  {
+    "from": "src/@types/loading/FilamentReq.d.ts",
+    "to": "src/layers/cosmicWebFilaments/@types/FilamentReq.d.ts"
+  },
+  {
+    "from": "src/@types/rendering/FilamentRenderer.d.ts",
+    "to": "src/layers/cosmicWebFilaments/@types/FilamentRenderer.d.ts"
+  },
+  {
+    "from": "src/@types/settings/CosmicWebFilamentsSettings.d.ts",
+    "to": "src/layers/cosmicWebFilaments/@types/CosmicWebFilamentsSettings.d.ts"
+  },
+  {
+    "from": "src/data/filament/filamentBaseTint.ts",
+    "to": "src/layers/cosmicWebFilaments/data/filamentBaseTint.ts"
+  },
+  {
+    "from": "src/data/filament/filamentBinaryFormat.ts",
+    "to": "src/layers/cosmicWebFilaments/data/filamentBinaryFormat.ts"
+  },
+  {
+    "from": "src/data/filament/filamentHotTint.ts",
+    "to": "src/layers/cosmicWebFilaments/data/filamentHotTint.ts"
+  },
+  {
+    "from": "src/data/filament/filamentLineHalfwidthPx.ts",
+    "to": "src/layers/cosmicWebFilaments/data/filamentLineHalfwidthPx.ts"
+  },
+  {
+    "from": "src/utils/clampFilamentIntensity.ts",
+    "to": "src/layers/cosmicWebFilaments/utils/clampFilamentIntensity.ts"
+  }
+]

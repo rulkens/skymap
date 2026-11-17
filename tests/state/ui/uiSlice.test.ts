@@ -19,6 +19,7 @@ const base = (): UiState => ({
     visible: false,
     dismissedVersion: null,
   },
+  learnedGestures: { look: false, zoom: false },
 });
 
 describe('uiSlice — ui visibility', () => {

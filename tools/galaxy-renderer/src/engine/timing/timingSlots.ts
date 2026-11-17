@@ -17,7 +17,7 @@ export const TIMING_SLOTS: readonly string[] = [
   'stars',
   // The dust-column splat — one quad per Gaussian dust component — into its
   // OWN reduced-resolution `dustMapTex`, at `dustDivisor` rather than the
-  // field's. See `drawFrame`'s three-disjunct gate for when it is encoded.
+  // field's. Encoded every frame the field encodes, so its row never drops.
   'dustMap',
   // The analytic Gaussian-mixture splat into `fieldTex` alone. The JWST
   // dustPresent pass runs ADDITIONALLY, into its own `dustViewTex`, and
@@ -25,17 +25,13 @@ export const TIMING_SLOTS: readonly string[] = [
   // in a frame, and a presentation pass nobody bills separately from the field
   // it runs alongside does not earn a slot of its own.
   'field',
-  // Every `HII_TIERS` row's own splat — the same `splatPipe`, its own bind
-  // group and its own target/divisor (`data/hiiTiers.ts`'s `HII_TIERS`,
-  // `createGalaxyRenderTargets.ts`'s `allocateTier`). DIG was the first tier
-  // to earn this split (small, bright shells collapsing under `fieldTex`'s
-  // shared coarser texel and blooming into fireflies); shells and young stars
-  // get the identical treatment now via the same table rather than a
-  // hand-duplicated third/fourth copy. Each slot is consumed whenever
-  // `drawFrame` finds that tier's span in `field.hiiSegments` nonempty,
-  // billed unconditionally on content rather than behind a HUD-gated
-  // toggle: every tier owns a private target, so billing it separately
-  // costs nothing extra on any frame.
+  // Every HII tier's own splat — its own bind group, target and divisor
+  // (`createGalaxyRenderTargets.ts`'s `allocateTier`), so small, bright
+  // shells don't collapse under the field's coarser texel into fireflies.
+  // Each slot is consumed whenever the host's plan encodes that tier (its
+  // span in `hiiSegments` is nonempty), billed on content rather than behind
+  // a HUD-gated toggle: every tier owns a private target, so billing it
+  // separately costs nothing extra on any frame.
   'hii:shells',
   'hii:young',
   'hii:dig',

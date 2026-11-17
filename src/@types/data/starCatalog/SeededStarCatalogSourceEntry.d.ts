@@ -17,8 +17,6 @@ import type { SourceEntryBase } from '../SourceEntryBase';
  */
 export type SeededStarCatalogSourceEntry = SourceEntryBase & {
   readonly type: 'starCatalog';
-  /** Stable numeric tag; registry key only — not persisted, not packed. */
-  readonly code: number;
   /** Always null: this catalog is seeded in code, not loaded from disk. */
   readonly binBaseName: null;
 };

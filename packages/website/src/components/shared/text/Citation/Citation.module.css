@@ -10,7 +10,7 @@
 .row {
   display: flex;
   align-items: flex-start;
-  gap: 0.5rem;
+  gap: var(--site-space-2xs);
   margin-bottom: var(--stack);
 }
 

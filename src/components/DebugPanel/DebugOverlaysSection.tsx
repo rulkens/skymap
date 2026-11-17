@@ -9,9 +9,6 @@ import type { DebugOverlayKey } from '../../@types/data/debug/DebugOverlayKey';
 import DebugOverlayToggles from './DebugOverlayToggles';
 import DebugSection from './DebugSection';
 
-/** Everything not claimed by a `section` — this list is the default home. */
-const UNSECTIONED_ROWS = DEBUG_OVERLAY_ROWS.filter((row) => !('section' in row));
-
 export type DebugOverlaysSectionProps = {
   readonly overlays: Record<DebugOverlayKey, boolean>;
   readonly onToggle: (key: DebugOverlayKey, enabled: boolean) => void;
@@ -20,7 +17,7 @@ export type DebugOverlaysSectionProps = {
 function DebugOverlaysSection({ overlays, onToggle }: DebugOverlaysSectionProps) {
   return (
     <DebugSection title="Debug Overlays">
-      <DebugOverlayToggles rows={UNSECTIONED_ROWS} overlays={overlays} onToggle={onToggle} />
+      <DebugOverlayToggles rows={DEBUG_OVERLAY_ROWS} overlays={overlays} onToggle={onToggle} />
     </DebugSection>
   );
 }

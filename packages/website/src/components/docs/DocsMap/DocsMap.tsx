@@ -9,7 +9,7 @@
  */
 import type { ReactNode } from 'react';
 
-import type { DocsGroup } from '../../../@types/DocsGroup.ts';
+import type { DocsGroup } from '../../../@types/DocsGroup';
 import { sitePath } from '../../../utils/sitePath.ts';
 import styles from './DocsMap.module.css';
 

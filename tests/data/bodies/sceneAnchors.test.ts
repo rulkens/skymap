@@ -26,7 +26,9 @@ describe('SCENE_ANCHORS', () => {
     const anchorIds = new Set(SCENE_ANCHORS.map((anchor) => anchor.id));
     const orbitIds = new Set(ORBITAL_ELEMENTS.map((el) => el.id));
     for (const star of SCENE_STARS) {
-      expect(anchorIds.has(star.id) !== orbitIds.has(star.id), `position for '${star.id}'`).toBe(true);
+      expect(anchorIds.has(star.id) !== orbitIds.has(star.id), `position for '${star.id}'`).toBe(
+        true,
+      );
     }
   });
 

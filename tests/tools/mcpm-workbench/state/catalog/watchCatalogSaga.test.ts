@@ -8,20 +8,19 @@
  */
 import { describe, expect, it } from 'vitest';
 import { resolveCatalogPointsPlan } from '../../../../../tools/mcpm-workbench/src/state/catalog/watchCatalogSaga';
-import { Source } from '../../../../../src/data/source';
 import type { CatalogPoints } from '../../../../../tools/mcpm-workbench/@types/CatalogPoints';
 
 const packedPoints: CatalogPoints = {
   positions: new Float32Array([1, 2, 3]),
   log10StellarMass: new Float32Array([4]),
   count: 1,
-  sources: [Source.SDSS],
+  sources: ['sdss'],
 };
 
 describe('resolveCatalogPointsPlan', () => {
   it('a packed override wins outright, even under the probe gate', () => {
     const plan = resolveCatalogPointsPlan(
-      { packedOverride: packedPoints, sources: [Source.SDSS], tier: 'medium' },
+      { packedOverride: packedPoints, sources: ['sdss'], tier: 'medium' },
       true,
     );
 
@@ -30,7 +29,7 @@ describe('resolveCatalogPointsPlan', () => {
 
   it('the probe gate wins over a network fetch when there is no override', () => {
     const plan = resolveCatalogPointsPlan(
-      { packedOverride: null, sources: [Source.SDSS], tier: 'medium' },
+      { packedOverride: null, sources: ['sdss'], tier: 'medium' },
       true,
     );
 
@@ -39,10 +38,10 @@ describe('resolveCatalogPointsPlan', () => {
 
   it('falls through to the network fetch with the live sources/tier', () => {
     const plan = resolveCatalogPointsPlan(
-      { packedOverride: null, sources: [Source.SDSS, Source.Glade], tier: 'large' },
+      { packedOverride: null, sources: ['sdss', 'glade'], tier: 'large' },
       false,
     );
 
-    expect(plan).toEqual({ kind: 'network', sources: [Source.SDSS, Source.Glade], tier: 'large' });
+    expect(plan).toEqual({ kind: 'network', sources: ['sdss', 'glade'], tier: 'large' });
   });
 });

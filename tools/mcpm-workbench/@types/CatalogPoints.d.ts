@@ -1,4 +1,4 @@
-import type { SourceType } from '../../../src/@types/data/SourceType';
+import type { GalaxyCatalogId } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 
 /**
  * CatalogPoints — flat positions + masses merged across one or more of
@@ -9,5 +9,5 @@ export type CatalogPoints = {
   readonly positions: Float32Array;
   readonly log10StellarMass: Float32Array; // NaN where absent
   readonly count: number;
-  readonly sources: readonly SourceType[];
+  readonly sources: readonly GalaxyCatalogId[];
 };

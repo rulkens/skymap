@@ -5,7 +5,7 @@
  * contrast about 0.5 -> saturation about Rec.709 luma -> clamp -> gamma.
  */
 
-import type { ColourGrade } from '../../../src/@types/scene/ColourGrade';
+import type { ColourGrade } from '../../../src/layers/body/textures/@types/ColourGrade';
 
 const LUMA_R = 0.2126;
 const LUMA_G = 0.7152;

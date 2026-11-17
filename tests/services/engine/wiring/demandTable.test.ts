@@ -12,30 +12,32 @@
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { reevaluateDemand } from '../../../../src/services/engine/wiring/reevaluateDemand';
-import { Source } from '../../../../src/data/source';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { PriorityQueue } from '../../../../src/utils/concurrency/priorityQueue';
 import { ASSET_QUEUE_CONCURRENCY } from '../../../../src/utils/concurrency/assetQueueConcurrency';
-import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
+import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
-import type { SourceType } from '../../../../src/@types/data/SourceType';
+import type { SourceId } from '../../../../src/@types/data/SourceId';
 import type { CosmicWebDensityRuntime } from '../../../../src/layers/cosmicWebDensity/@types/CosmicWebDensityRuntime';
-import { cosmicWebDensityAssetRows } from '../../../../src/layers/cosmicWebDensity/load/cosmicWebDensityAssetRows';
+import { cosmicWebDensityAssetRows } from '../../../../src/layers/cosmicWebDensity/densityCubes/load/cosmicWebDensityAssetRows';
 import { COSMIC_WEB_DENSITY_SOURCE_ROWS } from '../../../../src/layers/cosmicWebDensity/sources/cosmicWebDensitySourceRows';
-import type { GalaxyCatalogId } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
+import type { GalaxyCatalogId } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
 import { INITIAL_SETTINGS } from '../../../../src/state/settings/initialSettings';
 import { expandCompanionRows } from '../../../../src/utils/loading/expandCompanionRows';
 import { meshAssetRows } from '../../../../src/services/engine/wiring/meshAssetRows';
-import { galaxyCatalogAssetRows } from '../../../../src/layers/galaxyCatalog/load/galaxyCatalogAssetRows';
+import { galaxyCatalogAssetRows } from '../../../../src/layers/galaxyCatalog/records/load/galaxyCatalogAssetRows';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
-import { structureAssetRows } from '../../../../src/layers/structure/load/structureAssetRows';
+import { structureAssetRows } from '../../../../src/layers/structure/catalog/load/structureAssetRows';
 import type { StructureRuntime } from '../../../../src/layers/structure/@types/StructureRuntime';
-import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
+import { galaxyCatalogVisibility } from '../../../../src/layers/galaxyCatalog/visibility';
+import { cosmicWebDensityVisibility } from '../../../../src/layers/cosmicWebDensity/visibility';
+import { structureVisibility } from '../../../../src/layers/structure/visibility';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 
 type StubSlot = AssetSlot<unknown, unknown> & { load: ReturnType<typeof vi.fn> };
 
@@ -102,7 +104,7 @@ const BOOT_GALAXY_CATALOG_ITEMS: GalaxyCatalogItemLeaves = {
   desiSgw: { enabled: false },
 };
 
-type PointSlotOverrides = Partial<Record<SourceType, StubSlot>>;
+type PointSlotOverrides = Partial<Record<SourceId, StubSlot>>;
 type NamedSlotOverrides = Partial<{
   famousGalaxiesMeta: StubSlot;
   structureCatalog: StubSlot;
@@ -118,15 +120,15 @@ type MakeStateOptions = {
   namedSlots?: NamedSlotOverrides;
 };
 
-const ALL_POINT_SOURCES: readonly SourceType[] = [
-  Source.SDSS,
-  Source.TwoMRS,
-  Source.Glade,
-  Source.Milliquas,
-  Source.FamousGalaxy,
-  Source.DesiDeep,
-  Source.DesiWedge,
-  Source.DesiSgw,
+const ALL_POINT_SOURCES: readonly SourceId[] = [
+  'sdss',
+  '2mrs',
+  'glade',
+  'milliquas',
+  'famousGalaxy',
+  'desiDeep',
+  'desiWedge',
+  'desiSgw',
 ];
 
 function makeState(opts: MakeStateOptions = {}): EngineState {
@@ -139,7 +141,7 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
     namedSlots = {},
   } = opts;
 
-  const points = new Map<SourceType, AssetSlot<unknown, unknown>>(
+  const points = new Map<SourceId, AssetSlot<unknown, unknown>>(
     ALL_POINT_SOURCES.map((src) => [
       src,
       (pointSlots[src] ?? stubSlot()) as AssetSlot<unknown, unknown>,
@@ -155,7 +157,7 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
     hiResFamous: stubSlot(),
   } as unknown as GalaxyCatalogRuntime;
   const densitySlots: Record<string, AssetSlot<unknown, unknown>> = {};
-  for (const [, entry] of COSMIC_WEB_DENSITY_SOURCE_ROWS) {
+  for (const entry of COSMIC_WEB_DENSITY_SOURCE_ROWS) {
     densitySlots[entry.id] = stubSlot() as AssetSlot<unknown, unknown>;
   }
   const densityRuntime = { slots: densitySlots } as unknown as CosmicWebDensityRuntime;
@@ -187,7 +189,7 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
     // directly. Per state so no pending entry survives into the next case, and
     // at the production concurrency so `firedKeys` exercises the real bound.
     subsystems: { assetQueue: new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY) },
-    selection: { hover: null, select: null, focus: null },
+    selection: { hover: null, select: null, focus: null, pending: { select: null, focus: null } },
   } as unknown as EngineState;
   // The composed lists `createLayers` would have written: core's mesh rows plus
   // the Layers', folded once, with every row's slot indexed by its key. The mesh
@@ -199,6 +201,11 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
     ...structureAssetRows(structureRuntime),
   ]);
   state.slotsByKey = new Map(state.assetRows.map((row) => [row.key, row.slot]));
+  state.visibilityEntries = [
+    ...galaxyCatalogVisibility,
+    ...cosmicWebDensityVisibility,
+    ...structureVisibility,
+  ];
   return state;
 }
 
@@ -244,15 +251,15 @@ describe('reevaluateDemand demand-table regression', () => {
 
     expect(fired).toEqual(
       new Set<AssetKey>([
-        Source.SDSS,
-        Source.TwoMRS,
-        Source.Glade,
-        Source.FamousGalaxy,
-        Source.Milliquas,
+        'sdss',
+        '2mrs',
+        'glade',
+        'famousGalaxy',
+        'milliquas',
         'famousGalaxiesMeta',
         'hiResFamous',
         'structureCatalog',
-        Source.Mcpm,
+        'mcpm',
       ]),
     );
   });
@@ -277,21 +284,21 @@ describe('reevaluateDemand demand-table regression', () => {
     const fired = await firedKeys(state);
 
     expect(fired.has('structureCatalog')).toBe(false);
-    expect(fired.has(Source.SDSS)).toBe(true);
-    expect(fired.has(Source.TwoMRS)).toBe(true);
-    expect(fired.has(Source.Glade)).toBe(true);
-    expect(fired.has(Source.FamousGalaxy)).toBe(true);
+    expect(fired.has('sdss')).toBe(true);
+    expect(fired.has('2mrs')).toBe(true);
+    expect(fired.has('glade')).toBe(true);
+    expect(fired.has('famousGalaxy')).toBe(true);
   });
 
   /** An all-failed boot: errored rows are still demanded but NOT idle, so the idle-guard skips them (no
    *  retry storm on re-eval). famousGalaxiesMeta still demands (Famous !== 'idle'). */
   it('errored galaxy catalogs are not retried on re-evaluation', async () => {
     const pointSlots: PointSlotOverrides = {
-      [Source.SDSS]: stubSlot('error'),
-      [Source.TwoMRS]: stubSlot('error'),
-      [Source.Glade]: stubSlot('error'),
-      [Source.Milliquas]: stubSlot('error'),
-      [Source.FamousGalaxy]: stubSlot('error'),
+      ['sdss']: stubSlot('error'),
+      ['2mrs']: stubSlot('error'),
+      ['glade']: stubSlot('error'),
+      ['milliquas']: stubSlot('error'),
+      ['famousGalaxy']: stubSlot('error'),
     };
     const state = makeState({ pointSlots });
 
@@ -299,11 +306,11 @@ describe('reevaluateDemand demand-table regression', () => {
 
     expect(fired.has('famousGalaxiesMeta')).toBe(true);
     expect(fired.has('structureCatalog')).toBe(true);
-    expect(fired.has(Source.SDSS)).toBe(false);
-    expect(fired.has(Source.TwoMRS)).toBe(false);
-    expect(fired.has(Source.Glade)).toBe(false);
-    expect(fired.has(Source.Milliquas)).toBe(false);
-    expect(fired.has(Source.FamousGalaxy)).toBe(false);
+    expect(fired.has('sdss')).toBe(false);
+    expect(fired.has('2mrs')).toBe(false);
+    expect(fired.has('glade')).toBe(false);
+    expect(fired.has('milliquas')).toBe(false);
+    expect(fired.has('famousGalaxy')).toBe(false);
   });
 
   /** Companion join in one pass: with ONLY Famous enabled, one `reevaluateDemand` loads BOTH the Famous
@@ -335,8 +342,6 @@ describe('reevaluateDemand demand-table regression', () => {
 
     const fired = await firedKeys(state);
 
-    expect(fired).toEqual(
-      new Set<AssetKey>([Source.FamousGalaxy, 'famousGalaxiesMeta', 'hiResFamous']),
-    );
+    expect(fired).toEqual(new Set<AssetKey>(['famousGalaxy', 'famousGalaxiesMeta', 'hiResFamous']));
   });
 });

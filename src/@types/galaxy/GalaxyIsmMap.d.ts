@@ -5,7 +5,7 @@
  * packed output (`ismMapFluidPack.wesl`), decoded from rgba16float storage
  * to LINEAR floats. `data` is TIGHTLY packed (4 floats/texel, row-major, no
  * GPU `copyTextureToBuffer` row-alignment padding or f16 bit pattern) — see
- * the galaxy tool's `createIsmMapReadbacks` for where both get
+ * the field host's `createIsmMapReadbacks` for where both get
  * stripped/decoded. `rMin`/`rMax` are the log-radial bounds this readback's
  * grid was built over (`ismMapGridRadius`), needed to invert
  * `ismMapRingRadius` when sampling.

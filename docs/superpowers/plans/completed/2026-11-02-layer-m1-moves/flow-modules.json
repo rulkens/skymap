@@ -1,0 +1,110 @@
+[
+  {
+    "from": "src/layers/flow/@types/FlowField.d.ts",
+    "to": "src/layers/flow/streamlines/@types/FlowField.d.ts"
+  },
+  {
+    "from": "src/layers/flow/@types/FlowFieldMeta.d.ts",
+    "to": "src/layers/flow/streamlines/@types/FlowFieldMeta.d.ts"
+  },
+  {
+    "from": "src/layers/flow/@types/FlowFieldRenderer.d.ts",
+    "to": "src/layers/flow/streamlines/@types/FlowFieldRenderer.d.ts"
+  },
+  {
+    "from": "src/layers/flow/@types/FlowSliderField.d.ts",
+    "to": "src/layers/flow/streamlines/@types/FlowSliderField.d.ts"
+  },
+  {
+    "from": "src/layers/flow/@types/FlowSliderKey.d.ts",
+    "to": "src/layers/flow/streamlines/@types/FlowSliderKey.d.ts"
+  },
+  {
+    "from": "src/layers/flow/@types/FlowSliderSurface.d.ts",
+    "to": "src/layers/flow/streamlines/@types/FlowSliderSurface.d.ts"
+  },
+  {
+    "from": "src/layers/flow/@types/ReseedLatch.d.ts",
+    "to": "src/layers/flow/streamlines/@types/ReseedLatch.d.ts"
+  },
+  {
+    "from": "src/layers/flow/computes/flowCompute.ts",
+    "to": "src/layers/flow/streamlines/computes/flowCompute.ts"
+  },
+  {
+    "from": "src/layers/flow/data/flowDeepZoom.ts",
+    "to": "src/layers/flow/streamlines/data/flowDeepZoom.ts"
+  },
+  {
+    "from": "src/layers/flow/data/flowFieldConstants.ts",
+    "to": "src/layers/flow/streamlines/data/flowFieldConstants.ts"
+  },
+  {
+    "from": "src/layers/flow/data/flowFieldMetaFromCube.ts",
+    "to": "src/layers/flow/streamlines/data/flowFieldMetaFromCube.ts"
+  },
+  {
+    "from": "src/layers/flow/data/flowFields.ts",
+    "to": "src/layers/flow/streamlines/data/flowFields.ts"
+  },
+  {
+    "from": "src/layers/flow/load/flowAssetRows.ts",
+    "to": "src/layers/flow/streamlines/load/flowAssetRows.ts"
+  },
+  {
+    "from": "src/layers/flow/load/flowFieldFetcher.ts",
+    "to": "src/layers/flow/streamlines/load/flowFieldFetcher.ts"
+  },
+  {
+    "from": "src/layers/flow/load/flowFieldSlot.ts",
+    "to": "src/layers/flow/streamlines/load/flowFieldSlot.ts"
+  },
+  {
+    "from": "src/layers/flow/passes/flowFieldPass.ts",
+    "to": "src/layers/flow/streamlines/passes/flowFieldPass.ts"
+  },
+  {
+    "from": "src/layers/flow/render/flowFieldFromCube.ts",
+    "to": "src/layers/flow/streamlines/render/flowFieldFromCube.ts"
+  },
+  {
+    "from": "src/layers/flow/render/flowFieldRenderer.ts",
+    "to": "src/layers/flow/streamlines/render/flowFieldRenderer.ts"
+  },
+  {
+    "from": "src/layers/flow/ui/FlowRow.tsx",
+    "to": "src/layers/flow/streamlines/ui/FlowRow.tsx"
+  },
+  {
+    "from": "src/layers/flow/ui/FlowSection.tsx",
+    "to": "src/layers/flow/streamlines/ui/FlowSection.tsx"
+  },
+  {
+    "from": "src/layers/flow/ui/FlowSectionContainer.tsx",
+    "to": "src/layers/flow/streamlines/ui/FlowSectionContainer.tsx"
+  },
+  {
+    "from": "src/layers/flow/ui/FlowTuningSection.tsx",
+    "to": "src/layers/flow/streamlines/ui/FlowTuningSection.tsx"
+  },
+  {
+    "from": "src/layers/flow/ui/FlowTuningSectionContainer.tsx",
+    "to": "src/layers/flow/streamlines/ui/FlowTuningSectionContainer.tsx"
+  },
+  {
+    "from": "src/layers/flow/utils/clampFlowParams.ts",
+    "to": "src/layers/flow/streamlines/utils/clampFlowParams.ts"
+  },
+  {
+    "from": "src/layers/flow/utils/createReseedLatch.ts",
+    "to": "src/layers/flow/streamlines/utils/createReseedLatch.ts"
+  },
+  {
+    "from": "src/layers/flow/utils/flowFrameDeltaSec.ts",
+    "to": "src/layers/flow/streamlines/utils/flowFrameDeltaSec.ts"
+  },
+  {
+    "from": "src/layers/flow/streamlines/data/flowFieldMetaFromCube.ts",
+    "to": "src/layers/flow/streamlines/utils/flowFieldMetaFromCube.ts"
+  }
+]

@@ -1,39 +1,51 @@
 /**
  * selectDomeStatus — the snapshot a dome sends its remotes. The
- * caller passes the toggle rows in, with the dome's own `nowMs`.
- * `focus` is the URL's focus id with Earth included: the URL drops Earth as
- * home, but a remote must still see what is focused.
+ * caller passes the toggle and Layer rows in, with the dome's own `nowMs`.
+ * `focus` is named from the focus row, as its info card names it. The
+ * exhibit's `entry` stays home: the remote shows what runs, not how it arrived.
  */
 
 import { selectCameraControls } from '../settings/selectors';
-import { selectFocusId } from '../selection/selectors';
+import { selectFocusedFocusable } from '../selection/selectors';
 import { selectTakeoverSource } from '../takeover/selectors';
 import { selectTimeState } from '../time/selectors';
 import { selectTourBeatIndex, selectTourPaused, selectTourTotal } from '../tour/selectors';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
+import { selectionKindOf } from '../../services/engine/selection/selectionKindOf';
 import type { DomeStatus } from '../../@types/remote/DomeStatus';
+import type { RemoteTakeover } from '../../@types/remote/RemoteTakeover';
+import type { TakeoverSource } from '../../@types/takeover/TakeoverSource';
 import type { ToggleRow } from '../../@types/settings/ToggleRow';
 import type { RootState } from '../../store/types';
+
+/** The exhibit's `entry` stays home; the clip source already has the remote's shape, so a new kind fails to compile here.
+ *  Sky mode is no show: the remote lists none, so it sees none running. */
+function remoteTakeover(source: TakeoverSource, state: RootState): RemoteTakeover | null {
+  if (source.kind === 'tour') {
+    return {
+      kind: 'tour',
+      id: source.id,
+      beatIndex: selectTourBeatIndex(state),
+      beatCount: selectTourTotal(state),
+      paused: selectTourPaused(state),
+    };
+  }
+  if (source.kind === 'sky') return null;
+  return source.kind === 'exhibit' ? { kind: 'exhibit', id: source.id } : source;
+}
 
 export function selectDomeStatus(
   state: RootState,
   toggleRows: readonly ToggleRow[],
+  switchRows: readonly ToggleRow[],
   nowMs: number,
 ): DomeStatus {
-  const focusId = selectFocusId(state);
+  const focused = selectFocusedFocusable(state);
   const takeover = selectTakeoverSource(state);
   const time = selectTimeState(state);
   return {
-    focus: focusId ? { id: focusId } : null,
-    tour:
-      takeover?.kind === 'tour'
-        ? {
-            id: takeover.id,
-            beatIndex: selectTourBeatIndex(state),
-            beatCount: selectTourTotal(state),
-            paused: selectTourPaused(state),
-          }
-        : null,
+    focus: focused ? { name: selectionKindOf(focused.type).displayName(focused) } : null,
+    takeover: takeover ? remoteTakeover(takeover, state) : null,
     time: {
       simDays: deriveSimDays(time, nowMs),
       rateIndex: time.rateIndex,
@@ -43,5 +55,6 @@ export function selectDomeStatus(
     },
     controls: { scheme: selectCameraControls(state).scheme },
     toggles: toggleRows.map(({ id, label, enabled }) => ({ id, label, enabled })),
+    layers: switchRows.map(({ id, label, enabled }) => ({ id, label, enabled })),
   };
 }

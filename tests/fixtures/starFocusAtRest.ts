@@ -1,4 +1,4 @@
-import type { StarFocusSphere } from '../../src/layers/starCatalog/@types/StarFocusSphere';
+import type { StarFocusSphere } from '../../src/layers/starCatalog/octreeCut/@types/StarFocusSphere';
 
 /** A focus sphere with nothing focused: blend 0, non-degenerate radii. */
 export const STAR_FOCUS_AT_REST: StarFocusSphere = {

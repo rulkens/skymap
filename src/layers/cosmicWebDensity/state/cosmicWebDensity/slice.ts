@@ -6,7 +6,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import { initialState } from './initialState';
-import type { CosmicWebDensityFieldId } from '../../../../@types/data/volume/CosmicWebDensityFieldId';
+import type { CosmicWebDensityFieldId } from '../../@types/CosmicWebDensityFieldId';
 import type { VolumeFieldSettings } from '../../../../@types/settings/VolumeFieldSettings';
 
 export const cosmicWebDensitySlice = createSlice({

@@ -9,16 +9,22 @@
  */
 
 import { configureStore } from '@reduxjs/toolkit';
+import createSagaMiddleware from 'redux-saga';
 
 import { rootReducer } from '../../../src/store/rootReducer';
 import { composeControlSchemes } from '../../../src/services/engine/camera/composeControlSchemes';
 import { APP_EXHIBIT_REGISTRY } from '../../../src/compositions/appExhibits';
-import { NEAR_CLIP_MPC, FAR_CLIP_MPC } from '../../../src/services/engine/camera/cameraFraming';
+import {
+  NEAR_CLIP_MPC,
+  FAR_CLIP_MPC,
+} from '../../../src/services/engine/camera/framing/cameraFraming';
 import { seedCameraRuntime } from '../../../src/services/engine/camera/seedCameraRuntime';
 import { createClipPlayer } from '../../../src/services/engine/subsystems/clipPlayer';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { runFrame } from '../../../src/services/engine/frame/runFrame';
-import { commitCameraPose } from '../../../src/state/camera/cameraSlice';
+import { liveWorldPose } from '../../../src/services/engine/helpers/liveWorldPose';
+import { liveUpBasisQuat } from '../../../src/services/engine/camera/orientation/liveUpBasisQuat';
+import { commitCameraPose, setFovYRad } from '../../../src/state/camera/cameraIntentSlice';
 import { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsSlice';
 import { setSimDays, pause } from '../../../src/state/time/timeSlice';
 import {
@@ -28,7 +34,7 @@ import {
   inputGestureEnded,
 } from '../../../src/state/input/inputSlice';
 import { WHEEL_ZOOM_K } from '../../../src/data/input/wheelZoomK';
-import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
+import { absoluteArm } from '../../../src/utils/camera/arms/absoluteArm';
 import { bodyDriverGeometry } from '../../../src/utils/scene/bodyDriverGeometry';
 import { SCENE_CELESTIAL_BODIES } from '../../../src/data/bodies/sceneCelestialBodies';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
@@ -40,15 +46,16 @@ import type { SimBodyId } from './SimBodyId';
 import type { CameraSimHarnessOptions } from './CameraSimHarnessOptions';
 import type { BodyState } from '../../../src/@types/scene/BodyState';
 import type { CameraEpochs } from '../../../src/@types/engine/camera/CameraEpochs';
-import type { CameraPose } from '../../../src/@types/camera/CameraPose';
+import type { CameraPose } from '../../../src/@types/camera/pose/CameraPose';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
-import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
+import type { FramedCameraPose } from '../../../src/@types/camera/pose/FramedCameraPose';
 import type { HeldIntent } from '../../../src/@types/input/HeldIntent';
 import type { UnitPoint } from '../../../src/@types/input/UnitPoint';
 import type { RunFrameDeps } from '../../../src/@types/engine/frame/RunFrameDeps';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
-import { datumOnlyTerrainHeight } from '../../../src/utils/camera/datumOnlyTerrainHeight';
+import { datumOnlyTerrainHeight } from '../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+import { bodyRowAt } from '../../../src/utils/scene/bodyRowAt';
 
 export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
   const {
@@ -58,6 +65,7 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
     bootHR = 10,
     neutralDistance = 100,
     realClipPlayer = false,
+    sagas = [],
   } = options;
   const fovYRad = (fovDeg * Math.PI) / 180;
 
@@ -68,20 +76,26 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
     distance: neutralDistance,
   };
 
-  const store = configureStore({ reducer: rootReducer });
+  const sagaMiddleware = createSagaMiddleware();
+  const store = configureStore({
+    reducer: rootReducer,
+    middleware: (getDefault) => getDefault().concat(sagaMiddleware),
+  });
+  for (const saga of sagas) sagaMiddleware.run(saga);
   store.dispatch(setSimDays({ simDays: CONST_J2000, nowMs: 0 }));
   store.dispatch(pause({ nowMs: 0 }));
   // Dispatched before the seed below, matching production's boot order —
   // `seedCameraRuntime` copies `base`, so the runtime's first frame reads
   // this commit as an outside one (see its header).
   store.dispatch(commitCameraPose(absoluteArm(neutralPose)));
+  store.dispatch(setFovYRad(fovYRad));
 
   const bodies: ReadonlyMap<string, BodyState> = deriveBodyStates(CONST_J2000);
   const radiusM = (id: SimBodyId): number =>
     SCENE_CELESTIAL_BODIES.find((b) => b.id === id)!.surface.datumRadiusM;
 
   const state = {
-    settings: { camera: { fovDeg }, orientation: DEFAULT_ORIENTATION },
+    settings: { orientation: DEFAULT_ORIENTATION },
     gpu: { galaxyPointRenderer: null, renderTargets: null },
     subsystems: {
       scheduler: { requestRender: () => {}, requestIdleFrame: () => {} },
@@ -101,6 +115,15 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
       return store.getState().selectionRows;
     },
   } as unknown as EngineState;
+  // As `engine.ts` registers it, so a saga reading the live camera sees this harness's.
+  sagaMiddleware.setContext({
+    cameraRuntime: () => ({
+      from: liveWorldPose(state),
+      fovYRad: state.cameraRuntime.outputs.projection.fovYRad,
+      aspect: state.cameraRuntime.outputs.projection.aspect,
+      upBasisQuat: liveUpBasisQuat(state.cameraRuntime),
+    }),
+  });
   if (realClipPlayer) {
     state.subsystems.clipPlayer = createClipPlayer({
       store,
@@ -143,13 +166,7 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
     store.dispatch(
       setSelectionRow({
         slot: 'focus',
-        row: {
-          type: 'body',
-          id: asSceneBodyId(id),
-          label: id[0]!.toUpperCase() + id.slice(1),
-          positionMpc: [body.positionMpc[0]!, body.positionMpc[1]!, body.positionMpc[2]!],
-          driver: bodyDriverGeometry(id),
-        },
+        row: bodyRowAt(id, [body.positionMpc[0]!, body.positionMpc[1]!, body.positionMpc[2]!]),
         focusId: null,
       }),
     );
@@ -195,7 +212,15 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
     if (held === null) return;
     const dx = (px[0] - held.lastPx[0]) / canvasSize;
     const dy = (px[1] - held.lastPx[1]) / canvasSize;
-    const motion = { intent: held.intent, dx, dy, ratio: 1, at: unitOf(px), held: true };
+    const motion = {
+      intent: held.intent,
+      dx,
+      dy,
+      ratio: 1,
+      at: unitOf(px),
+      held: true,
+      eventMs: now,
+    };
     store.dispatch(inputMoved({ source: 'canvas', motion: [motion] }));
     held.lastPx = px;
   };
@@ -213,6 +238,7 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
       ratio,
       at: unitOf(cursorPx),
       held: held !== null,
+      eventMs: now,
     } as const;
     store.dispatch(inputMoved({ source: 'canvas', motion: [motion] }));
   };

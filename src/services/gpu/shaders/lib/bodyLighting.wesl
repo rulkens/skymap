@@ -27,7 +27,7 @@
 //
 // Both arguments are expected in the SAME frame (the body's local frame): the
 // surface normal comes from the interpolated unit-sphere local position, and
-// 'sunDirLocal' is the CPU-rotated sun direction ('utils/camera/sunDirLocal.ts')
+// 'sunDirLocal' is the CPU-rotated sun direction ('utils/camera/bodyCompose/sunDirLocal.ts')
 // already carried into that frame. Keeping them co-framed is what lets this stay
 // a plain dot product even when a body has an axial tilt.
 

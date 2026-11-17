@@ -8,8 +8,8 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import { DEFAULT_FOCUS_MOVES } from '../../../data/camera/focusMoveDefaults';
 import type { FocusMoveSettings } from '../../../@types/settings/FocusMoveSettings';
-import type { FocusMoveStyle } from '../../../@types/camera/FocusMoveStyle';
-import type { GeodesicTuning } from '../../../@types/camera/GeodesicTuning';
+import type { FocusMoveStyle } from '../../../@types/camera/focusMotion/FocusMoveStyle';
+import type { GeodesicTuning } from '../../../@types/camera/focusMotion/GeodesicTuning';
 
 const initialState: FocusMoveSettings = DEFAULT_FOCUS_MOVES;
 

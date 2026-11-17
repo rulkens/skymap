@@ -9,12 +9,13 @@ import { defineLayer } from '../../services/engine/layer/defineLayer';
 import { EARTH_SCENES_BODY_ROWS } from './bodies/earthScenesBodyRows';
 import { create } from './create';
 import { destroy } from './destroy';
-import { earthSceneMeshesPass } from './passes/earthSceneMeshesPass';
+import { earthSceneMeshesPass } from './scenes/passes/earthSceneMeshesPass';
 import { glintsPassOver } from '../../services/engine/frame/glintsPassOver';
-import { EARTH_SCENE_BODY_IDS } from '../../data/bodies/earthSceneBodyIds';
-import { earthSceneSelectionRow } from './present/earthSceneSelectionRow';
-import { earthSceneSearch } from './present/earthSceneSearch';
-import BodyDetailCardContainer from '../../components/containers/BodyDetailCardContainer';
+import { EARTH_SCENE_BODY_IDS } from './scenes/data/earthSceneBodyIds';
+import { earthSceneSelectionRow } from './selection/earthSceneSelectionRow';
+import { earthScenesSelectionKinds } from './selection/kinds';
+import { earthSceneSearch } from './scenes/present/earthSceneSearch';
+import BodyDetailCardContainer from '../body/card/ui/BodyDetailCardContainer';
 import CompactBodyCard from '../../components/InfoCard/CompactBodyCard/CompactBodyCard';
 
 export const earthScenesLayer = defineLayer({
@@ -26,7 +27,7 @@ export const earthScenesLayer = defineLayer({
     earthSceneMeshesPass,
     glintsPassOver('earth-scene-glints', EARTH_SCENE_BODY_IDS, runtime.glintRenderer),
   ],
-  selection: () => [earthSceneSelectionRow()],
+  selection: { kinds: earthScenesSelectionKinds, rows: () => [earthSceneSelectionRow()] },
   search: () => earthSceneSearch(),
   ui: [
     {

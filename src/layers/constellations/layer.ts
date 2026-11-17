@@ -11,9 +11,9 @@ import { constellationsVisibility } from './visibility';
 import { CONSTELLATIONS_SOURCE_ROWS } from './sources/constellationsSourceRows';
 import { create } from './create';
 import { destroy } from './destroy';
-import { constellationsAssetRows } from './load/constellationsAssetRows';
-import { constellationsPass } from './passes/constellationsPass';
-import { produceConstellationCaptions } from './present/produceConstellationCaptions';
+import { constellationsAssetRows } from './figures/load/constellationsAssetRows';
+import { constellationsPass } from './figures/passes/constellationsPass';
+import { produceConstellationCaptions } from './figures/present/produceConstellationCaptions';
 
 export const constellationsLayer = defineLayer({
   name: 'constellations',

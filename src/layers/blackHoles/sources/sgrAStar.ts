@@ -1,5 +1,4 @@
 import type { BlackHoleSourceEntry } from '../../../@types/data/blackHole/BlackHoleSourceEntry';
-import { Source } from '../../../data/source';
 
 /**
  * Sagittarius A\* — the Galactic Centre's supermassive black hole.
@@ -9,7 +8,6 @@ import { Source } from '../../../data/source';
  */
 export const SGR_A_STAR_ENTRY = {
   type: 'blackHole',
-  code: Source.SgrAStar,
   id: 'sgr-a-star',
   label: 'Galactic Centre',
   allSky: true,

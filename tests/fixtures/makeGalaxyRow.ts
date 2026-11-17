@@ -5,18 +5,19 @@
  * identical breakages.
  *
  * Defaults are neutral zeros / falses; each test passes the values it actually
- * asserts on via `overrides`. `famous` is optional, so it is omitted here and
- * an override supplies it when a test exercises the famous-galaxies-meta block.
+ * asserts on via `overrides`. The row comes back placed the way the Layer's
+ * `extractRow` places it, so it is a whole selection row.
  */
 
-import { Source } from '../../src/data/source';
 
-import type { GalaxyRow } from '../../src/@types/engine/GalaxyRow';
+import { placedGalaxyRow } from '../../src/layers/galaxyCatalog/selection/utils/placedGalaxyRow';
 
-export function makeGalaxyRow(overrides: Partial<GalaxyRow> = {}): GalaxyRow {
-  return {
+import type { GalaxyRow } from '../../src/layers/galaxyCatalog/records/@types/GalaxyRow';
+
+export function makeGalaxyRow(overrides: Partial<GalaxyRow> = {}) {
+  return placedGalaxyRow({
     type: 'galaxyCatalog',
-    source: Source.SDSS,
+    source: 'sdss',
     index: 0,
     objId: '1',
     x: 0,
@@ -36,5 +37,5 @@ export function makeGalaxyRow(overrides: Partial<GalaxyRow> = {}): GalaxyRow {
     classByte: 0,
     parentSurveyByte: 0,
     ...overrides,
-  };
+  });
 }

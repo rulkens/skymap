@@ -7,7 +7,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import { initialState } from './initialState';
-import type { BiasMode } from '../../../../@types/data/galaxyCatalog/BiasMode';
+import type { BiasMode } from '../../@types/BiasMode';
 
 export const biasSlice = createSlice({
   name: 'settings/bias',

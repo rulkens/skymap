@@ -1,4 +1,4 @@
-import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
+import type { OrientationFrameId } from '../../@types/camera/orientation/OrientationFrameId';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 
 // The accepted set is the registry's own keys, so a new frame added to

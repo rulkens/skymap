@@ -1,0 +1,6 @@
+[
+  { "from": "src/layers/earthScenes/data/earthSceneBodyIds.ts", "to": "src/layers/earthScenes/scenes/data/earthSceneBodyIds.ts" },
+  { "from": "src/layers/earthScenes/passes/earthSceneMeshesPass.ts", "to": "src/layers/earthScenes/scenes/passes/earthSceneMeshesPass.ts" },
+  { "from": "src/layers/earthScenes/present/earthSceneSearch.ts", "to": "src/layers/earthScenes/scenes/present/earthSceneSearch.ts" },
+  { "from": "src/layers/earthScenes/present/earthSceneSelectionRow.ts", "to": "src/layers/earthScenes/scenes/present/earthSceneSelectionRow.ts" }
+]

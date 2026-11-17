@@ -1,5 +1,5 @@
-import type { SurfaceTileManifest } from '../../../src/@types/scene/SurfaceTileManifest';
-import type { SurfaceTileManifestBand } from '../../../src/@types/scene/SurfaceTileManifestBand';
+import type { SurfaceTileManifest } from '../../../src/layers/body/surfaceTiles/format/@types/SurfaceTileManifest';
+import type { SurfaceTileManifestBand } from '../../../src/layers/body/surfaceTiles/format/@types/SurfaceTileManifestBand';
 
 function bandsMatch(a: SurfaceTileManifestBand, b: SurfaceTileManifestBand): boolean {
   return (

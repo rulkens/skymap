@@ -13,7 +13,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import type { ChromaCalibration } from '../../../../src/@types/scene/ChromaCalibration';
+import type { ChromaCalibration } from '../../../../src/layers/body/textures/@types/ChromaCalibration';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { panSharpenRgb } from '../../../../tools/utils/image/panSharpenRgb';
 

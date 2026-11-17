@@ -11,7 +11,7 @@ import type { Action } from '@reduxjs/toolkit';
 import type { SagaGenerator } from 'typed-redux-saga';
 
 import { liveCameraRuntimeSaga } from './liveCameraRuntimeSaga';
-import { applyLinkClockAndFrameSaga } from './applyLinkClockAndFrameSaga';
+import { applyLinkSettingsSaga } from './applyLinkSettingsSaga';
 import { requestFocus } from '../selection/requestFocus';
 import { requestSelect } from '../selection/requestSelect';
 import {
@@ -23,7 +23,7 @@ import { selectFocusRow, selectPendingFocusId } from '../selection/selectors';
 import { setSelectionRow } from '../selectionRows/selectionRowsSlice';
 import { engineLoadProgressChanged } from '../engine/engineSlice';
 import { selectEngineStatus, selectLoadProgress } from '../engine/selectors';
-import { clipStarted, commitCameraPose } from '../camera/cameraSlice';
+import { clipStarted, commitCameraPose } from '../camera/cameraIntentSlice';
 import { startClip } from '../camera/clipActions';
 import { exitTakeover, takeoverEnded } from '../takeover/takeoverActions';
 import { selectTakeoverSource } from '../takeover/selectors';
@@ -32,22 +32,24 @@ import { startTour } from '../tour/tourActions';
 import { selectCameraBase } from '../camera/selectors';
 import { selectTimeState } from '../time/selectors';
 import { selectOrientation } from '../settings/selectors';
-import { framingPose } from '../../services/engine/camera/framingPose';
-import { homePose } from '../../services/engine/camera/homePose';
-import { isWorldArm } from '../../services/engine/camera/rungs/isWorldArm';
-import { ROW_FOCUSABLE } from '../../services/engine/helpers/rowFocusable';
+import { framingPose } from '../../services/engine/camera/framing/framingPose';
+import { hostFacingPose } from '../../services/engine/camera/framing/hostFacingPose';
+import { homePose } from '../../services/engine/camera/framing/homePose';
+import { isWorldArm } from '../../services/engine/camera/arms/world/isWorldArm';
+import { selectionKindOf } from '../../services/engine/selection/selectionKindOf';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { APP_EXHIBIT_REGISTRY } from '../../compositions/appExhibits';
-import { tourRegistry } from '../../data/animation/tours/tourRegistry';
+import { APP_TOUR_REGISTRY } from '../../compositions/appTours';
 import { clipFactories } from '../../data/animation/clips/clipRegistry';
 import { isKeyOf } from '../../utils/object/isKeyOf';
-import { absoluteArm } from '../../utils/camera/absoluteArm';
+import { absoluteArm } from '../../utils/camera/arms/absoluteArm';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { isCinemaMode } from '../../utils/url/isCinemaMode';
+import type { BodySelectionRow } from '../../@types/engine/selection/BodySelectionRow';
 import type { LinkIntent } from '../../@types/url/LinkIntent';
 import type { Transition } from '../../@types/navigation/Transition';
 import type { NavigateOutcome } from '../../@types/navigation/NavigateOutcome';
-import type { FramedCameraPose } from '../../@types/camera/FramedCameraPose';
+import type { FramedCameraPose } from '../../@types/camera/pose/FramedCameraPose';
 import type { LiveCameraRuntime, SagaContext } from '../../store/types';
 
 const OK: NavigateOutcome = { ok: true };
@@ -81,12 +83,22 @@ function* frameFocusSaga(runtime: LiveCameraRuntime): SagaGenerator<NavigateOutc
     if (ready && stillIdle && (yield* select(selectPendingFocusId)) !== null) return UNKNOWN_ID;
   }
   const row = (yield* select(selectFocusRow))!;
-  if (!ROW_FOCUSABLE[row.type]) return OK;
+  if (selectionKindOf(row.type).focus === null) return OK;
   // The committed base, not the runtime's `from`: at boot the runtime still
   // reports its pre-commit placeholder for one frame.
   const base = yield* select(selectCameraBase);
   const from = isWorldArm(base) ? base.pose : runtime.from;
-  yield* put(commitCameraPose(absoluteArm(framingPose(row, runtime.fovYRad, from))));
+  // A moon is framed from its host: a link names the moon, not the view it inherits.
+  const hostFacing =
+    row.type === 'body'
+      ? hostFacingPose(
+          (row as BodySelectionRow).id,
+          deriveSimDays(yield* select(selectTimeState), performance.now()),
+          runtime.fovYRad,
+          ORIENTATION_FRAMES[yield* select(selectOrientation)],
+        )
+      : null;
+  yield* put(commitCameraPose(absoluteArm(hostFacing ?? framingPose(row, runtime.fovYRad, from))));
   return OK;
 }
 
@@ -125,14 +137,15 @@ export function* navigateSaga(
   transition: Transition,
 ): SagaGenerator<NavigateOutcome> {
   const { view } = intent;
-  // A superseded takeover restores the clock it captured, inside the supersede,
-  // which would overwrite a link's `t`. Ending it first lets the link clock land
-  // after that restore; orientation rides the same call and benefits equally.
+  // A superseded takeover restores the scene and clock it captured, inside the
+  // supersede, which would overwrite the link's settings; ending it first lands
+  // them after that restore. A hash change has already ended it
+  // (`applyNavigation`); this serves an arrival during which a remote started one.
   const startsTakeover = view.kind === 'exhibit' || view.kind === 'tour' || view.kind === 'clip';
   if (startsTakeover && (yield* select(selectTakeoverSource)) !== null) {
     yield* all([take(takeoverEnded), put(exitTakeover())]);
   }
-  yield* call(applyLinkClockAndFrameSaga, intent);
+  yield* call(applyLinkSettingsSaga, intent);
 
   switch (view.kind) {
     case 'home':
@@ -162,11 +175,12 @@ export function* navigateSaga(
           entry: transition,
           atLinkedTime: intent.t !== undefined,
           fromLink: true,
+          layers: intent.layers,
         }),
       );
       return OK;
     case 'tour':
-      if (!isKeyOf(tourRegistry, view.id)) return UNKNOWN_ID;
+      if (!isKeyOf(APP_TOUR_REGISTRY, view.id)) return UNKNOWN_ID;
       // A live start begins on the home framing, as from the splash.
       if (transition === 'cut') yield* call(homeSaga);
       return yield* call(firstClipSaga, startTour(view.id), transition);

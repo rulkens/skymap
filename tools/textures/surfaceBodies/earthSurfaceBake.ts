@@ -5,12 +5,14 @@
  */
 
 import { TIER_LADDER } from '../../../src/data/tierLadder';
-import { SURFACE_TILE_REGISTRY } from '../../../src/data/bodies/surfaceTileRegistry';
-import { baseLevelForTier } from '../../../src/utils/surfaceTiles/baseLevelForTier';
+import { SURFACE_TILE_REGISTRY } from '../../../src/layers/body/surfaceTiles/format/data/surfaceTileRegistry';
+import { baseLevelForTier } from '../../../src/layers/body/surfaceTiles/format/utils/baseLevelForTier';
+import { BLACK_MARBLE_QUADRANT_KEYS } from '../../utils/io/blackMarbleQuadrantKeys';
 import { BMNG_QUADRANT_KEYS } from '../../utils/io/bmngQuadrantKeys';
 import { BMNG_VINTAGE } from '../../utils/io/bmngVintage';
+import { bmngMonthKey } from '../../utils/io/bmngMonthKey';
 import { rawDataPath } from '../../utils/io/rawDataRegistry';
-import { bmngQuadrantSource, type BmngQuadrant } from '../bmngQuadrantSource';
+import { quadrantImagerySource } from '../quadrantImagerySource';
 import { colourMatchedImagerySource } from '../colourMatchedImagerySource';
 import { constantHeightSource } from '../constantHeightSource';
 import { dhmTerraenHeightSource } from '../dhmTerraenHeightSource';
@@ -23,6 +25,7 @@ import { skadiHeightSource } from '../skadiHeightSource';
 import type { SurfaceBakeBand } from '../@types/SurfaceBakeBand';
 import type { SurfaceBodyBake } from '../@types/SurfaceBodyBake';
 import { voidFilledHeightSource } from '../voidFilledHeightSource';
+import type { ImageryQuadrant } from '../@types/ImageryQuadrant';
 
 /** Stable location of the manifest and index — the pointer clients always
  *  fetch — so it reads `SURFACE_TILE_REGISTRY`'s own key rather than a
@@ -37,8 +40,9 @@ const TILE_ROOT = SURFACE_TILE_REGISTRY.earth.manifestKey;
  * then mixes old and new tiles. A new version is new keys, which cost nothing
  * extra and need no purge. v9: height tiles became Terrain-RGB WebP instead of
  * raw f32. v10: the `SHGT` chunk grew the v3 CPU post grid (`heightTileFormat.ts`).
+ * v11: launch-site EOX regions re-nested the z3–z7 height tiles above them.
  */
-const TILE_PREFIX = `${TILE_ROOT}/v10`;
+const TILE_PREFIX = `${TILE_ROOT}/v11`;
 
 /**
  * Shallowest level this bake emits: one finer than the COARSEST whole-globe
@@ -74,13 +78,29 @@ const BMNG_ATTRIBUTION = `NASA Blue Marble Next Generation, ${BMNG_VINTAGE.label
 
 /** The shipped source: BMNG's eight-file quadrant set, reaching z7. */
 async function deepSource() {
-  return bmngQuadrantSource({
+  return quadrantImagerySource({
     id: `nasa-bmng-${BMNG_VINTAGE.stamp}-quadrants`,
     attribution: BMNG_ATTRIBUTION,
     vintage: BMNG_VINTAGE.label,
     quadrantPaths: Object.fromEntries(
       Object.entries(BMNG_QUADRANT_KEYS).map(([quadrant, key]) => [quadrant, rawDataPath(key)]),
-    ) as Record<BmngQuadrant, string>,
+    ) as Record<ImageryQuadrant, string>,
+  });
+}
+
+/** Black Marble 2016 at 500 m, the global band's night source (also reaches z7). */
+async function blackMarbleSource() {
+  return quadrantImagerySource({
+    id: 'nasa-black-marble-2016-quadrants',
+    attribution:
+      'NASA Black Marble 2016 night lights (credit NASA Earth Observatory / NASA Goddard Space Flight Center, Suomi NPP VIIRS).',
+    vintage: '2016',
+    quadrantPaths: Object.fromEntries(
+      Object.entries(BLACK_MARBLE_QUADRANT_KEYS).map(([quadrant, key]) => [
+        quadrant,
+        rawDataPath(key),
+      ]),
+    ) as Record<ImageryQuadrant, string>,
   });
 }
 
@@ -93,7 +113,7 @@ async function deepSource() {
 async function devSource() {
   return equirectFileSource({
     id: `nasa-bmng-${BMNG_VINTAGE.stamp}-equirect`,
-    rawKey: 'textures.nasaBmng',
+    rawKey: bmngMonthKey(BMNG_VINTAGE.month),
     attribution: BMNG_ATTRIBUTION,
     vintage: BMNG_VINTAGE.label,
   });
@@ -145,6 +165,7 @@ async function bands({ dev }: { dev: boolean }): Promise<readonly SurfaceBakeBan
       source: bmng,
       minLevel: BAKE_MIN_LEVEL,
       height: etopo,
+      night: await blackMarbleSource(),
       // ETOPO's own NODATA maps to NaN (`etopoHeightSource`), so a rare
       // gap in a global 1.6 GB GeoTIFF would otherwise abort the bake.
       heightUnderfill: constantHeightSource(0),

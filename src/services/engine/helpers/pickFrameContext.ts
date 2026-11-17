@@ -12,7 +12,7 @@ import { deriveView } from '../frame/deriveView';
 import { encodeSelectionPick } from '../../../utils/selection/encodeSelectionPick';
 import { frameContextInputOf } from '../frame/frameContextInputOf';
 import { frameBodyStates } from '../frame/frameBodyStates';
-import { mainViewSpec } from '../../../utils/camera/mainViewSpec';
+import { mainViewSpec } from '../../../utils/camera/viewRig/mainViewSpec';
 import { liveWorldPose } from './liveWorldPose';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { VIEW_RIGS } from '../../../data/rendering/viewRigs';
@@ -42,15 +42,16 @@ export function pickFrameContext(state: EngineState, canvas: HTMLCanvasElement):
   if (!snapshot.isReady) return null;
   // The drawn frame's focus, not a fresh one: a pick must exclude exactly what
   // that frame dimmed, and producing a new value would tick the focus fade.
-  snapshot.focus = state.subsystems.structureFocus.lastFocusUniforms();
-  snapshot.focusBlend = snapshot.focus.blend;
-  snapshot.focusPickId = encodeSelectionPick(
-    state.selectionKindRows,
-    state.subsystems.structureFocus.lastFocusRef(),
-  );
+  const focus = state.subsystems.recedingFocus.lastFocus();
+  snapshot.focus = focus.uniforms;
+  snapshot.focusBlend = focus.blend;
+  snapshot.focusPickId = encodeSelectionPick(state.selectionKindRows, focus.ref);
   return deriveView(
     snapshot,
     cam,
-    mainViewSpec(cam, { width: canvas.width, height: canvas.height }),
+    mainViewSpec(
+      { width: canvas.width, height: canvas.height },
+      state.cameraRuntime.outputs.frustum,
+    ),
   );
 }

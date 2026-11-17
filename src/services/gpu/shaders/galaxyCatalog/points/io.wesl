@@ -36,14 +36,14 @@
 // ## Why bindings live in the consuming files, not here
 //
 // WESL has no global state — a binding declaration like
-// '@group(0) @binding(0) var<uniform> u: Uniforms' is a module-local
-// declaration, not an exportable symbol. Importing 'u' across modules
+// '@group(0) @binding(0) var<uniform> uniforms: Uniforms' is a module-local
+// declaration, not an exportable symbol. Importing 'uniforms' across modules
 // is not supported. The skymap project's lib/ files prove the same
 // point: 'lib/camera.wesl' exposes 'CameraUniforms' + 'worldToClip'
-// but the binding '@group(0) @binding(0) var<uniform> u' is declared
+// but the binding '@group(0) @binding(0) var<uniform> uniforms' is declared
 // fresh in every renderer that uses it. We follow that pattern here:
 // vertex.wesl, colorFragment.wesl each declare '@group(0) @binding(0)
-// var<uniform> u: Uniforms' with IDENTICAL layout numbers. WGSL is
+// var<uniform> uniforms: Uniforms' with IDENTICAL layout numbers. WGSL is
 // fine with multiple files declaring the same binding so long as the
 // layout matches — and 'Uniforms' is imported from this single
 // authoritative place, so the layout cannot drift between consumers.
@@ -64,7 +64,7 @@ import package::lib::camera::CameraUniforms;
 // Embedding it as a named member 'cam' rather than inlining viewProj
 // + viewport keeps the cross-renderer audit story explicit: every
 // renderer's first uniform field is now 'cam: CameraUniforms', and
-// every projection call goes through 'worldToClip(u.cam, p)'.
+// every projection call goes through 'worldToClip(uniforms.cam, p)'.
 //
 // ## Byte layout (canonical)
 //
@@ -87,7 +87,7 @@ import package::lib::camera::CameraUniforms;
 //   offset 184..191 : _padU0, _padU1 (two pad words)
 //   total: 192 bytes.
 //
-// 'src/layers/galaxyCatalog/render/packGalaxyPointUniforms.ts' is the CPU mirror of this table —
+// 'src/layers/galaxyCatalog/pointSprites/render/packGalaxyPointUniforms.ts' is the CPU mirror of this table —
 // it writes f32[43] / f32[44] / f32[45] at bytes 172 / 176 / 180 and sizes
 // the buffer at UNIFORM_BYTES = 192. Any edit here is an edit there.
 //
@@ -281,13 +281,13 @@ struct PerVertex {
   // Per-galaxy angular re-weight, codec range [0.1, 10]; the angular bake
   // clamps to [0.3, 1.2]. Baked by the tier build (bakeBiasWeights) into
   // SKMP byte 55 and decoded at upload; 1.0 when the cloud carries none.
-  // Read only when 'u.biasMode == 2u'.
+  // Read only when 'uniforms.biasMode == 2u'.
   @location(6) angularWeight: f32,
 
   // Absolute magnitude, baked at upload from the offset-normalised
   // apparent magnitude (the same slot-3 value 'magnitude' above carries)
   // and the galaxy's distance from origin.  The Malmquist mode-1 gate
-  // compares this against 'u.absMagLimit' directly — the value is
+  // compares this against 'uniforms.absMagLimit' directly — the value is
   // galaxy-static, so the old per-vertex 'distanceModulus(magnitude,
   // length(position))' spent a log10 + sqrt per invocation recomputing
   // a constant.

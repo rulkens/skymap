@@ -1,7 +1,7 @@
 import { createSelector } from '@reduxjs/toolkit';
 
 import { selectSettings } from '../../../../state/settings/selectSettings';
-import type { SatellitesSettings } from '../../../../@types/settings/SatellitesSettings';
+import type { SatellitesSettings } from '../../@types/SatellitesSettings';
 
 /** The one root hop for this slice, spelled `selectRoute` in every slice. */
 export const selectRoute = createSelector(

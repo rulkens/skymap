@@ -8,6 +8,11 @@
 import type { ReactNode, Ref } from 'react';
 import type { DockTimeLabel } from '../../@types/time/DockTimeLabel';
 import DockItem from './DockItem';
+import HomeIcon from '../icons/HomeIcon/HomeIcon';
+import InfoIcon from '../icons/InfoIcon/InfoIcon';
+import LayersIcon from '../icons/LayersIcon/LayersIcon';
+import SearchIcon from '../icons/SearchIcon/SearchIcon';
+import TimeIcon from '../icons/TimeIcon/TimeIcon';
 import styles from './Dock.module.css';
 
 export type DockProps = {
@@ -37,10 +42,10 @@ function Dock({
 }: DockProps): ReactNode {
   return (
     <nav className={styles.root} aria-label="Dock">
-      <DockItem icon="home" label="Home" onClick={onHome} />
-      <DockItem icon="search" label="Search" onClick={onSearch} buttonRef={searchRef} />
+      <DockItem icon={HomeIcon} label="Home" onClick={onHome} />
+      <DockItem icon={SearchIcon} label="Search" onClick={onSearch} buttonRef={searchRef} />
       <DockItem
-        icon="time"
+        icon={TimeIcon}
         label={timeLabel.text}
         glyph={timeLabel.glyph}
         name={timeLabel.name}
@@ -48,13 +53,13 @@ function Dock({
         onClick={onTime}
       />
       <DockItem
-        icon="layers"
+        icon={LayersIcon}
         label="Layers"
         open={layersOpen}
         onClick={onLayers}
         buttonRef={layersRef}
       />
-      <DockItem icon="about" label="About" name="About skymap" onClick={onAbout} />
+      <DockItem icon={InfoIcon} label="About" name="About skymap" onClick={onAbout} />
     </nav>
   );
 }

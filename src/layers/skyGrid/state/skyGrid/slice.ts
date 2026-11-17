@@ -1,7 +1,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import { initialState } from './initialState';
-import type { SkyGridFrame } from '../../../../@types/settings/SkyGridFrame';
+import type { SkyGridFrame } from '../../@types/SkyGridFrame';
 
 export const skyGridSlice = createSlice({
   name: 'settings/skyGrid',

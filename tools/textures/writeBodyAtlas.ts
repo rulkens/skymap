@@ -90,10 +90,10 @@ const BUDGET_BYTES = 1024 * 1024;
 const MISSING_TILE_FILL = { r: 128, g: 128, b: 128 };
 
 const GENERATED_BANNER =
-  '// src/data/bodies/bodyAtlas.generated.ts\n' +
+  '// src/layers/body/textures/data/bodyAtlas.generated.ts\n' +
   '// !!! GENERATED FILE — DO NOT EDIT BY HAND !!!\n' +
   '// Regenerate with:  npm run build-textures\n' +
-  '// Source of truth:  src/data/bodies/bodyTextureRegistry.ts\n';
+  '// Source of truth:  src/layers/body/textures/data/bodyTextureRegistry.ts\n';
 
 /**
  * Emit the generated layout module: the atlas filename, each body's tile index,
@@ -198,7 +198,7 @@ export async function writeBodyAtlas(
   // Repo-root-relative, like every other committed-codegen writer under tools/;
   // the npm script runs from the root.
   writeFileSync(
-    resolve('src/data/bodies/bodyAtlas.generated.ts'),
+    resolve('src/layers/body/textures/data/bodyAtlas.generated.ts'),
     serializeBodyAtlasLayout(bodyIds),
   );
   process.stderr.write(`  ok   bodyAtlas.generated.ts  (${bodyIds.length} bodies)\n`);

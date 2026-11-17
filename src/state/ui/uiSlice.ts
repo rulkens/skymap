@@ -32,6 +32,7 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import type { UiState } from '../../@types/ui/UiState';
 import type { PaletteTabId } from '../../@types/palette/PaletteTabId';
+import type { CameraGesture } from '../../@types/ui/CameraGesture';
 import { buildInitialUiState } from './buildInitialUiState';
 
 const initialState: UiState = buildInitialUiState();
@@ -76,6 +77,11 @@ const uiSlice = createSlice({
     reopenSplash: (state) => {
       state.splash.visible = true;
     },
+
+    // ── gesture hint ─────────────────────────────────────────────────────────
+    gestureLearned: (state, action: PayloadAction<CameraGesture>) => {
+      state.learnedGestures[action.payload] = true;
+    },
   },
 });
 
@@ -88,6 +94,7 @@ export const {
   toggleDebugPanelOpen,
   dismissSplash,
   reopenSplash,
+  gestureLearned,
 } = uiSlice.actions;
 
 export default uiSlice.reducer;

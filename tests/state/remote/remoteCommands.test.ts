@@ -16,6 +16,7 @@ import {
   setSimDays,
 } from '../../../src/state/time/timeSlice';
 import { actionsForPaletteAction } from '../../../src/utils/palette/actionsForPaletteAction';
+import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 import type { PaletteAction } from '../../../src/@types/palette/PaletteAction';
 import type { RemoteCommandEnv } from '../../../src/@types/remote/RemoteCommandEnv';
 
@@ -26,7 +27,15 @@ const ENV: RemoteCommandEnv = {
       id: 'toggle-orbit-trails',
       label: 'Orbit trails',
       enabled: false,
-      set: (enabled) => ({ type: 'test/setTrails', payload: enabled }),
+      set: (enabled) => [{ type: 'test/setTrails', payload: enabled }],
+    },
+  ],
+  switchRows: [
+    {
+      id: 'flow',
+      label: 'Flow',
+      enabled: true,
+      set: (enabled) => [{ type: 'test/setFlow', payload: enabled }],
     },
   ],
 };
@@ -43,6 +52,8 @@ describe('goTo', () => {
     { kind: 'exhibit', exhibitId: 'cosmicWeb' },
     { kind: 'tour', tourId: 'grandTour' },
     { kind: 'flyTo', lonDeg: -180, latDeg: 90, altKm: 1e6 },
+    { kind: 'sky', spot: 'here' },
+    { kind: 'sky', spot: { body: asSceneBodyId('mars'), lonRad: -Math.PI, latRad: Math.PI / 2 } },
   ];
 
   it('builds its actions', () => {
@@ -56,6 +67,11 @@ describe('goTo', () => {
     expect(run('goTo', { kind: 'flyTo', lonDeg: 0, latDeg: -91, altKm: 10 })).toBeNull();
     expect(run('goTo', { kind: 'flyTo', lonDeg: 0, latDeg: 0, altKm: -1 })).toBeNull();
     expect(run('goTo', { kind: 'warp' })).toBeNull();
+    const sky = (spot: unknown) => run('goTo', { kind: 'sky', spot });
+    expect(sky('there')).toBeNull();
+    expect(sky({ body: 'jupiter', lonRad: 0, latRad: 0 })).toBeNull();
+    expect(sky({ body: 'earth', lonRad: 4, latRad: 0 })).toBeNull();
+    expect(sky({ body: 'earth', lonRad: 0, latRad: 2 })).toBeNull();
   });
 
   it('rejects an unknown id', () => {
@@ -179,6 +195,15 @@ describe('toggleSet', () => {
 
   it('rejects an unknown id', () => {
     expect(run('toggleSet', { id: 'toggle-nope', enabled: true })).toEqual([]);
+  });
+});
+
+describe('layerSet', () => {
+  it('builds its actions from the Layers rows, never the label toggles', () => {
+    expect(run('layerSet', { id: 'flow', enabled: false })).toEqual([
+      { type: 'test/setFlow', payload: false },
+    ]);
+    expect(run('layerSet', { id: 'toggle-orbit-trails', enabled: true })).toEqual([]);
   });
 });
 

@@ -6,7 +6,7 @@ import { dirname, join } from 'node:path';
 import sharp from 'sharp';
 
 import { geodanmarkTileSource } from '../../../tools/textures/geodanmarkTileSource';
-import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
+import type { LonLatBounds } from '../../../src/layers/body/surfaceTiles/format/@types/LonLatBounds';
 
 const GEODANMARK_MAX_LEVEL = 19;
 const TILE_PX = 512;

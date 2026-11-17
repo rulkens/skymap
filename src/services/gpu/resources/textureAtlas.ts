@@ -48,8 +48,8 @@ export class TextureAtlas implements SlotStore {
     this.pool.setEvictHandler(handler);
   }
 
-  allocate(key: string, frame: number): number | null {
-    return this.pool.allocate(key, frame);
+  allocate(key: string, frame: number, liveSince?: number): number | null {
+    return this.pool.allocate(key, frame, liveSince);
   }
 
   touch(key: string, frame: number): number | null {

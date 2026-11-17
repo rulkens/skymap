@@ -10,9 +10,11 @@ import {
   updateSelectionHover,
   clearSelection,
 } from '../../../src/state/selection/selectionSlice';
-import { Source } from '../../../src/data/source';
 import type { ReconcileEffects } from '../../../src/store/effects/ReconcileEffects';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+import { installAppSelectionKinds } from '../../support/installAppSelectionKinds';
+
+installAppSelectionKinds();
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -46,8 +48,8 @@ describe('watchSelectionWakeSaga', () => {
     expect(requestRender).toHaveBeenCalledTimes(1);
   });
   it('a hover onto or off a labelled kind wakes; between two survey refs it does not', async () => {
-    const survey = { type: 'galaxyCatalog', source: Source.SDSS, index: 1 } as const;
-    const survey2 = { type: 'galaxyCatalog', source: Source.SDSS, index: 2 } as const;
+    const survey = { type: 'galaxyCatalog', source: 'sdss', index: 1 } as const;
+    const survey2 = { type: 'galaxyCatalog', source: 'sdss', index: 2 } as const;
     store.dispatch(updateSelectionHover(survey));
     store.dispatch(updateSelectionHover(survey2));
     await flush();

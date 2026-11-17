@@ -9,11 +9,7 @@
 
 import type { Vec3 } from '../../@types/math/Vec3';
 import type { HexString } from '../../@types/math/HexString';
-
-/** Undo the sRGB gamma transfer for one [0,1] channel → linear light. */
-function srgbToLinear(c: number): number {
-  return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
-}
+import { srgbToLinear } from './srgbToLinear';
 
 export function hexToLinearRgb(hex: HexString): Vec3 {
   if (hex.length !== 7) {

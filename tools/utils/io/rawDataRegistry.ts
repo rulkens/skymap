@@ -12,7 +12,23 @@
 
 import { resolve } from 'node:path';
 
+import { BMNG_MONTHS } from './BMNG_MONTHS.ts';
 import { BMNG_VINTAGE } from './bmngVintage.ts';
+
+/** One Blue Marble 2004 equirect row; the twelve registry keys below are literal so `RawDataKey` stays closed. */
+function bmngMonthRow(index: number) {
+  const { stamp, baseUrl, label } = BMNG_MONTHS[index]!;
+  const file = `world.topo.bathy.${stamp}.3x21600x10800.jpg`;
+  return {
+    path: `data/raw/textures/${file}`,
+    kind: 'file',
+    source: 'gitignored',
+    description: `NASA Blue Marble Next Generation, ${label} topo+bathymetry equirect, 21600x10800 JPG (NASA media guidelines, credit NASA Earth Observatory). The app's Earth base texture when it is the BMNG_VINTAGE month (also the --dev source for the tile bake); every month is the cloud bake's ice-mask source (npm run fetch-cloud-inputs).`,
+    upstream: `${baseUrl}${file}`,
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  } as const;
+}
 
 export type RawDataEntry = {
   readonly path: string;
@@ -349,6 +365,45 @@ export const RAW_DATA = {
     source: 'committed',
     description:
       'Provenance for the Local Bubble shell table — upstream DOI, licence, column layout and the frame its angles are in.',
+  },
+
+  // ─── Stellar streams: Sagittarius N-body (Vasiliev+ 2021), galstreams ─
+
+  'vasiliev2021.stars': {
+    path: 'data/raw/vasiliev2021/stars.txt',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Vasiliev, Belokurov & Erkal 2021 present-day Sagittarius snapshot (with LMC): 200,000 star particles, one whitespace row each — galactocentric position and velocity, sky position, distance, stripping time.',
+    upstream: 'https://zenodo.org/records/4300977',
+    fetcher: 'tools/fetch/fetchVasiliev2021.ts',
+    readme: 'vasiliev2021.readme',
+  },
+  'vasiliev2021.readme': {
+    path: 'data/raw/vasiliev2021/readme.txt',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      "The snapshot's own readme — column list, units and the galactocentric frame (Sun at x = −8 kpc). Extracted alongside stars.txt.",
+    upstream: 'https://zenodo.org/records/4300977',
+    fetcher: 'tools/fetch/fetchVasiliev2021.ts',
+  },
+  'streams.wikipedia-cache': {
+    path: 'data/raw/streams/wikipedia_streams_cache.json',
+    kind: 'file',
+    source: 'committed',
+    description:
+      "Wikipedia REST summaries of the stellar-stream articles listed in tools/streams/data/streamWikipedia.constants.ts, keyed by article title — the stream card's blurb and link. Committed so a rebuild needs no network.",
+    fetcher: 'tools/streams/buildStellarStreams.ts',
+  },
+  'galstreams.dir': {
+    path: 'data/raw/galstreams',
+    kind: 'directory',
+    source: 'gitignored',
+    description:
+      'galstreams (Mateu 2023) at a pinned commit — tracks/track.<kind>.<Name>.<ref>.ecsv (+ .summary.ecsv) per published stream track, and lib/master_log.txt naming each stream\'s preferred ("On") track and width.',
+    upstream: 'https://github.com/cmateu/galstreams',
+    fetcher: 'tools/fetch/fetchGalstreams.ts',
   },
 
   // ─── Polyphorm (MCPM rhizome sim exports) ─────────────────────────────
@@ -708,15 +763,18 @@ export const RAW_DATA = {
   // tile layer falls back to the base outside the baked window (see
   // `BMNG_VINTAGE` for why).
 
-  'textures.nasaBmng': {
-    path: `data/raw/textures/world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x10800.jpg`,
-    kind: 'file',
-    source: 'gitignored',
-    description: `NASA Blue Marble Next Generation, ${BMNG_VINTAGE.label} topo+bathymetry equirect, 21600x10800 JPG (NASA media guidelines, credit NASA Earth Observatory). Full-res Earth source; also the --dev source for the tile bake.`,
-    upstream: `${BMNG_VINTAGE.baseUrl}world.topo.bathy.${BMNG_VINTAGE.stamp}.3x21600x10800.jpg`,
-    fetcher: 'tools/fetch/fetchTextures.ts',
-    readme: 'textures.readme',
-  },
+  'textures.nasaBmngMonth01': bmngMonthRow(0),
+  'textures.nasaBmngMonth02': bmngMonthRow(1),
+  'textures.nasaBmngMonth03': bmngMonthRow(2),
+  'textures.nasaBmngMonth04': bmngMonthRow(3),
+  'textures.nasaBmngMonth05': bmngMonthRow(4),
+  'textures.nasaBmngMonth06': bmngMonthRow(5),
+  'textures.nasaBmngMonth07': bmngMonthRow(6),
+  'textures.nasaBmngMonth08': bmngMonthRow(7),
+  'textures.nasaBmngMonth09': bmngMonthRow(8),
+  'textures.nasaBmngMonth10': bmngMonthRow(9),
+  'textures.nasaBmngMonth11': bmngMonthRow(10),
+  'textures.nasaBmngMonth12': bmngMonthRow(11),
   'textures.nasaBmngDev': {
     path: `data/raw/textures/world.topo.bathy.${BMNG_VINTAGE.stamp}.3x5400x2700.jpg`,
     kind: 'file',
@@ -807,6 +865,99 @@ export const RAW_DATA = {
     readme: 'textures.readme',
   },
 
+  // Black Marble 2016 at 500 m: eight 21600x21600 night-lights quadrants, same
+  // A-D / 1-2 layout as the BMNG set. Only `build-surface-tiles` (night product)
+  // reads their pixels; `BLACK_MARBLE_QUADRANT_KEYS` is the one enumeration.
+
+  'textures.blackMarbleQuadrantA1': {
+    path: 'data/raw/textures/BlackMarble_2016_A1.jpg',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'NASA Black Marble 2016 night lights, quadrant A1 - lon -180..-90, lat 0..90, 21600x21600 JPG, 500 m (credit NASA Earth Observatory / NASA Goddard Space Flight Center, Suomi NPP VIIRS).',
+    upstream:
+      'https://assets.science.nasa.gov/content/dam/science/esd/eo/images/imagerecords/144000/144898/BlackMarble_2016_A1.jpg',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.blackMarbleQuadrantA2': {
+    path: 'data/raw/textures/BlackMarble_2016_A2.jpg',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'NASA Black Marble 2016 night lights, quadrant A2 - lon -180..-90, lat -90..0, 21600x21600 JPG, 500 m (credit NASA Earth Observatory / NASA Goddard Space Flight Center, Suomi NPP VIIRS).',
+    upstream:
+      'https://assets.science.nasa.gov/content/dam/science/esd/eo/images/imagerecords/144000/144898/BlackMarble_2016_A2.jpg',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.blackMarbleQuadrantB1': {
+    path: 'data/raw/textures/BlackMarble_2016_B1.jpg',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'NASA Black Marble 2016 night lights, quadrant B1 - lon -90..0, lat 0..90, 21600x21600 JPG, 500 m (credit NASA Earth Observatory / NASA Goddard Space Flight Center, Suomi NPP VIIRS).',
+    upstream:
+      'https://assets.science.nasa.gov/content/dam/science/esd/eo/images/imagerecords/144000/144898/BlackMarble_2016_B1.jpg',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.blackMarbleQuadrantB2': {
+    path: 'data/raw/textures/BlackMarble_2016_B2.jpg',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'NASA Black Marble 2016 night lights, quadrant B2 - lon -90..0, lat -90..0, 21600x21600 JPG, 500 m (credit NASA Earth Observatory / NASA Goddard Space Flight Center, Suomi NPP VIIRS).',
+    upstream:
+      'https://assets.science.nasa.gov/content/dam/science/esd/eo/images/imagerecords/144000/144898/BlackMarble_2016_B2.jpg',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.blackMarbleQuadrantC1': {
+    path: 'data/raw/textures/BlackMarble_2016_C1.jpg',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'NASA Black Marble 2016 night lights, quadrant C1 - lon 0..90, lat 0..90, 21600x21600 JPG, 500 m (credit NASA Earth Observatory / NASA Goddard Space Flight Center, Suomi NPP VIIRS).',
+    upstream:
+      'https://assets.science.nasa.gov/content/dam/science/esd/eo/images/imagerecords/144000/144898/BlackMarble_2016_C1.jpg',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.blackMarbleQuadrantC2': {
+    path: 'data/raw/textures/BlackMarble_2016_C2.jpg',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'NASA Black Marble 2016 night lights, quadrant C2 - lon 0..90, lat -90..0, 21600x21600 JPG, 500 m (credit NASA Earth Observatory / NASA Goddard Space Flight Center, Suomi NPP VIIRS).',
+    upstream:
+      'https://assets.science.nasa.gov/content/dam/science/esd/eo/images/imagerecords/144000/144898/BlackMarble_2016_C2.jpg',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.blackMarbleQuadrantD1': {
+    path: 'data/raw/textures/BlackMarble_2016_D1.jpg',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'NASA Black Marble 2016 night lights, quadrant D1 - lon 90..180, lat 0..90, 21600x21600 JPG, 500 m (credit NASA Earth Observatory / NASA Goddard Space Flight Center, Suomi NPP VIIRS).',
+    upstream:
+      'https://assets.science.nasa.gov/content/dam/science/esd/eo/images/imagerecords/144000/144898/BlackMarble_2016_D1.jpg',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+  'textures.blackMarbleQuadrantD2': {
+    path: 'data/raw/textures/BlackMarble_2016_D2.jpg',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'NASA Black Marble 2016 night lights, quadrant D2 - lon 90..180, lat -90..0, 21600x21600 JPG, 500 m (credit NASA Earth Observatory / NASA Goddard Space Flight Center, Suomi NPP VIIRS).',
+    upstream:
+      'https://assets.science.nasa.gov/content/dam/science/esd/eo/images/imagerecords/144000/144898/BlackMarble_2016_D2.jpg',
+    fetcher: 'tools/fetch/fetchTextures.ts',
+    readme: 'textures.readme',
+  },
+
   'textures.earthWaterMask': {
     path: 'data/raw/textures/world.watermask.21600x10800.png',
     kind: 'file',
@@ -825,7 +976,7 @@ export const RAW_DATA = {
     description:
       "NASA Black Marble 2016 night lights, 13500x6750 equirect JPG (NASA media guidelines, credit NASA Earth Observatory / NASA's Goddard Space Flight Center, Suomi NPP VIIRS). Earth night-lights source — full pull only, no dev variant. Verified live 2026-07-19 (8,106,233 bytes, image/jpeg).",
     upstream:
-      'https://eoimages.gsfc.nasa.gov/images/imagerecords/144000/144898/BlackMarble_2016_3km.jpg',
+      'https://assets.science.nasa.gov/content/dam/science/esd/eo/images/imagerecords/144000/144898/BlackMarble_2016_3km.jpg',
     fetcher: 'tools/fetch/fetchTextures.ts',
     readme: 'textures.readme',
   },
@@ -1307,6 +1458,42 @@ export const RAW_DATA = {
     source: 'committed',
     description: 'Provenance for the Viking MDIM 2.1 mosaic — upstream, grid, COG conversion.',
   },
+
+  // ─── Moon surface sources — fetched by hand, no fetchers ───────────────
+  // Same COG + leaf-symlink arrangement as Mars; the strip originals are deleted.
+
+  'lroc.wacGlobal100m': {
+    path: 'data/raw/lroc/Lunar_LRO_LROC-WAC_Mosaic_global_100m_June2013_cog.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'LROC WAC global morphologic mosaic, JPEG COG of the USGS 100 m mosaic: 109164x54582 grey Byte, NoData 0, equirectangular on the 1,737,400 m sphere, edge-registered, shot at 55-75 deg incidence, Sun from the east west of lon -90 and from the west elsewhere.',
+    upstream:
+      'https://planetarymaps.usgs.gov/mosaic/Lunar_LRO_LROC-WAC_Mosaic_global_100m_June2013.tif',
+    readme: 'lroc.readme',
+  },
+  'lroc.readme': {
+    path: 'data/raw/lroc/README.md',
+    kind: 'file',
+    source: 'committed',
+    description: 'Provenance for the LROC WAC mosaic — upstream, grid, lighting, COG conversion.',
+  },
+  'lola.ldem118m': {
+    path: 'data/raw/lola/Lunar_LRO_LOLA_Global_LDEM_118m_Mar2014_cog.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'LOLA 118 m global LDEM, Float32 tiled COG of the Int16 half-metre USGS mosaic (unscaled; sharp cannot read signed 16-bit): 92160x46080 metres above the 1,737,400 m sphere, NoData -32768, equirectangular, edge-registered.',
+    upstream: 'https://planetarymaps.usgs.gov/mosaic/Lunar_LRO_LOLA_Global_LDEM_118m_Mar2014.tif',
+    readme: 'lola.readme',
+  },
+  'lola.readme': {
+    path: 'data/raw/lola/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the LOLA DEM — upstream, grid, vertical reference, COG conversion.',
+  },
   'hirise.gale.dtm': {
     path: 'data/raw/hirise/gale/MSL_Gale_DEM_Mosaic_1m_v3_cog.tif',
     kind: 'file',
@@ -1678,6 +1865,145 @@ export const RAW_DATA = {
     description:
       'Provenance for the Deimos shape model — source, licence, fetch date, checksum, frame and units, and how to rebuild.',
   },
+  'meshes.vestaSource': {
+    path: 'data/raw/meshes/vesta/dawn_vesta_grv_icq0512_v1.obj',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Dawn gravity-team Vesta shape model icq0512 (3,145,728 plates, km, IAU_VESTA Claudia″ frame, origin at the centre of mass), converted one-off from the NAIF type-2 DSK `dawn_vesta_grv_icq0512_v1.bds` (README). `npm run import-mesh -- vesta` dresses it and the pre-bake bakes its relief onto a decimated copy.',
+    upstream: 'https://naif.jpl.nasa.gov/pub/naif/DAWN/kernels/dsk/dawn_vesta_grv_icq0512_v1.bds',
+    readme: 'meshes.vesta.readme',
+  },
+  'meshes.vestaAlbedo': {
+    path: 'data/raw/meshes/vesta/Vesta_Dawn_FC_HAMO_Mosaic_Global_74ppd.8192.png',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'USGS Vesta Dawn FC HAMO clear-filter mosaic, NoData and the unlit north filled with the median and box-downsampled from 26704 to 8192 px wide (README); planetocentric, east-positive, Claudia″, left edge -180. The import samples it at 0 deg offset.',
+    upstream: 'https://planetarymaps.usgs.gov/mosaic/Vesta_Dawn_FC_HAMO_Mosaic_Global_74ppd.tif',
+    readme: 'meshes.vesta.readme',
+  },
+  'meshes.vestaBlend': {
+    path: 'data/raw/meshes/vesta/vesta.blend',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'vesta.blend — the shape model in metres, smooth-shaded, wearing a rock material that samples the HAMO mosaic by longitude/latitude; written by `npm run import-mesh -- vesta` from the two files above.',
+    upstream: 'https://naif.jpl.nasa.gov/pub/naif/DAWN/kernels/dsk/dawn_vesta_grv_icq0512_v1.bds',
+    fetcher: 'tools/meshes/prebake/importMesh.py',
+    readme: 'meshes.vesta.readme',
+  },
+  'meshes.vesta': {
+    path: 'data/raw/meshes/vesta/vesta.prebaked.glb',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Vesta decimated to 150k triangles with albedo, normal, roughness and metallic 4096^2 atlases baked from the full 3.1M-plate surface — what MESH_SOURCES.vesta points at. Regenerate with `npm run prebake-mesh -- vesta` (Blender, not CI).',
+    upstream: 'https://naif.jpl.nasa.gov/pub/naif/DAWN/kernels/dsk/dawn_vesta_grv_icq0512_v1.bds',
+    fetcher: 'tools/meshes/prebake/meshPrebake.py',
+    readme: 'meshes.vesta.readme',
+  },
+  'meshes.vesta.readme': {
+    path: 'data/raw/meshes/vesta/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the Vesta shape model and HAMO mosaic — sources, licences, fetch date, checksums, the DSK conversion and map preparation, frame and units, and how to rebuild.',
+  },
+  'meshes.ceresSource': {
+    path: 'data/raw/meshes/ceres/dawn_ceres_grv_icq0256_v2.obj',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Dawn gravity-team Ceres shape model icq0256 (786,432 plates, km, IAU_CERES frame, origin at the centre of mass), converted one-off from the NAIF type-2 DSK `dawn_ceres_grv_icq0256_v2.bds` (README). `npm run import-mesh -- ceres` dresses it and the pre-bake bakes its relief onto a decimated copy.',
+    upstream: 'https://naif.jpl.nasa.gov/pub/naif/DAWN/kernels/dsk/dawn_ceres_grv_icq0256_v2.bds',
+    readme: 'meshes.ceres.readme',
+  },
+  'meshes.ceresAlbedo': {
+    path: 'data/raw/meshes/ceres/Ceres_Dawn_FC_DLR_global_20ppd_Oct2015.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'USGS Ceres Dawn FC clear-filter controlled mosaic, 20 ppd (7383x3691), used as downloaded; planetocentric, east-positive, left edge 0. The import samples it 180 deg east of each surface point, which absorbs the 0 left edge.',
+    upstream: 'https://planetarymaps.usgs.gov/mosaic/Ceres_Dawn_FC_DLR_global_20ppd_Oct2015.tif',
+    readme: 'meshes.ceres.readme',
+  },
+  'meshes.ceresBlend': {
+    path: 'data/raw/meshes/ceres/ceres.blend',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'ceres.blend — the shape model in metres, smooth-shaded, wearing a rock material that samples the Dawn mosaic by longitude/latitude; written by `npm run import-mesh -- ceres` from the two files above.',
+    upstream: 'https://naif.jpl.nasa.gov/pub/naif/DAWN/kernels/dsk/dawn_ceres_grv_icq0256_v2.bds',
+    fetcher: 'tools/meshes/prebake/importMesh.py',
+    readme: 'meshes.ceres.readme',
+  },
+  'meshes.ceres': {
+    path: 'data/raw/meshes/ceres/ceres.prebaked.glb',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Ceres decimated to 150k triangles with albedo, normal, roughness and metallic 4096^2 atlases baked from the full 786k-plate surface — what MESH_SOURCES.ceres points at. Regenerate with `npm run prebake-mesh -- ceres` (Blender, not CI).',
+    upstream: 'https://naif.jpl.nasa.gov/pub/naif/DAWN/kernels/dsk/dawn_ceres_grv_icq0256_v2.bds',
+    fetcher: 'tools/meshes/prebake/meshPrebake.py',
+    readme: 'meshes.ceres.readme',
+  },
+  'meshes.ceres.readme': {
+    path: 'data/raw/meshes/ceres/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the Ceres shape model and Dawn mosaic — sources, licences, fetch date, checksums, the DSK conversion, frame and units, and how to rebuild.',
+  },
+  'meshes.bennuSource': {
+    path: 'data/raw/meshes/bennu/bennu_g_00880mm_alt_obj_0000n00000_v020.obj',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'OSIRIS-REx AltWG Bennu shape model v020 from OLA (3,145,728 plates, km, IAU_BENNU frame, origin at the centre of mass), converted one-off from the NAIF type-2 DSK `bennu_g_00880mm_alt_obj_0000n00000_v020.bds` (README). `npm run import-mesh -- bennu` dresses it and the pre-bake bakes its relief onto a decimated copy.',
+    upstream:
+      'https://naif.jpl.nasa.gov/pub/naif/pds/pds4/orex/orex_spice/spice_kernels/dsk/bennu_g_00880mm_alt_obj_0000n00000_v020.bds',
+    readme: 'meshes.bennu.readme',
+  },
+  'meshes.bennuAlbedo': {
+    path: 'data/raw/meshes/bennu/Bennu_global_ShapeV20_GndControl_ROLOphase_ALBEDO_8bit_v6.8192.png',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'USGS Bennu ShapeV20 normal-albedo mosaic (±55 deg only), NoData filled with the median and box-downsampled from 25134 to 8192 px wide (README); planetocentric, east-positive, left edge 0. The import samples it 180 deg east of each surface point, which absorbs the 0 left edge.',
+    upstream:
+      'https://planetarymaps.usgs.gov/mosaic/Bennu/Bennu_global_ShapeV20_GndControl_ROLOphase_ALBEDO_8bit_v6.tif',
+    readme: 'meshes.bennu.readme',
+  },
+  'meshes.bennuBlend': {
+    path: 'data/raw/meshes/bennu/bennu.blend',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'bennu.blend — the shape model in metres, smooth-shaded, wearing a rock material that samples the albedo mosaic by longitude/latitude; written by `npm run import-mesh -- bennu` from the two files above.',
+    upstream:
+      'https://naif.jpl.nasa.gov/pub/naif/pds/pds4/orex/orex_spice/spice_kernels/dsk/bennu_g_00880mm_alt_obj_0000n00000_v020.bds',
+    fetcher: 'tools/meshes/prebake/importMesh.py',
+    readme: 'meshes.bennu.readme',
+  },
+  'meshes.bennu': {
+    path: 'data/raw/meshes/bennu/bennu.prebaked.glb',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Bennu decimated to 150k triangles with albedo, normal, roughness and metallic 4096^2 atlases baked from the full 3.1M-plate surface — what MESH_SOURCES.bennu points at. Regenerate with `npm run prebake-mesh -- bennu` (Blender, not CI).',
+    upstream:
+      'https://naif.jpl.nasa.gov/pub/naif/pds/pds4/orex/orex_spice/spice_kernels/dsk/bennu_g_00880mm_alt_obj_0000n00000_v020.bds',
+    fetcher: 'tools/meshes/prebake/meshPrebake.py',
+    readme: 'meshes.bennu.readme',
+  },
+  'meshes.bennu.readme': {
+    path: 'data/raw/meshes/bennu/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the Bennu shape model and albedo mosaic — sources, licences, fetch date, checksums, the DSK conversion and map preparation, frame and units, and how to rebuild.',
+  },
   'meshes.hubbleSource': {
     path: 'data/raw/meshes/hubble/Hubble Space Telescope (A).glb',
     kind: 'file',
@@ -1887,6 +2213,46 @@ export const RAW_DATA = {
       'Provenance for the CelesTrak groups: the query, the groups and the download policy.',
   },
 
+  // ─── MPCORB — the Minor Planet Center orbit database (asteroids) ──────
+
+  mpcorb: {
+    path: 'data/raw/mpcorb/MPCORB.DAT.gz',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'MPCORB.DAT, gzipped: one 202-character line of osculating elements per minor planet, numbered objects first. Rewritten daily upstream; `build-asteroids` streams it through gunzip (no unpacked copy on disk).',
+    upstream: 'https://www.minorplanetcenter.net/iau/MPCORB/MPCORB.DAT.gz',
+    fetcher: 'tools/fetch/fetchMpcorb.ts',
+    readme: 'mpcorb.readme',
+  },
+  'mpcorb.readme': {
+    path: 'data/raw/mpcorb/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      "MPC's export-format column table, the packed number and date rules, the orbit-type values and the header's terms, each with its source URL.",
+  },
+
+  // ─── JPL Small-Body Database (asteroid diameters for the card)
+
+  'sbdb.diameters': {
+    path: 'data/raw/sbdb/diameters.json',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'The SBDB Query API answer, verbatim: every numbered asteroid with a diameter, fields `pdes` (the number), `diameter` (km), `albedo` and `diameter_sigma`, as strings or null. `build-asteroids` joins it to MPCORB by number.',
+    upstream: 'https://ssd-api.jpl.nasa.gov/sbdb_query.api',
+    fetcher: 'tools/fetch/fetchSbdbDiameters.ts',
+    readme: 'sbdb.readme',
+  },
+  'sbdb.readme': {
+    path: 'data/raw/sbdb/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      "The query, the response layout, JPL's fair-use policy and citation request, and the copy behind the bake.",
+  },
+
   // ─── JPL Horizons planet and moon vectors (ephemeris-correction fit input)
 
   horizons: {
@@ -1894,7 +2260,7 @@ export const RAW_DATA = {
     kind: 'directory',
     source: 'gitignored',
     description:
-      'Holds `<centre>/<target>.csv` (`jd,x_km,y_km,z_km`): ICRF positions of every `HORIZONS_BODIES` row relative to its Horizons centre (`500@10/` = the planets, heliocentric, 1-day; `500@599/`, `500@699/`, `500@799/` and `500@899/` = the Jupiter, Saturn, Uranus and Neptune moons, parent-centred, ≤ P/16), 1900–2100, UT time tags. Input to `build-ephemeris-corrections`. `500@10/` also holds the Voyager state vectors and their `fetch-voyager-windows` files, read by `build-spacecraft-tracks`.',
+      'Holds `<centre>/<target>.csv` (`jd,x_km,y_km,z_km`): ICRF positions of every `HORIZONS_BODIES` row relative to its Horizons centre (`500@10/` = the planets, Vesta, Ceres and Bennu, heliocentric, 1-day; `500@599/`, `500@699/`, `500@799/` and `500@899/` = the Jupiter, Saturn, Uranus and Neptune moons, parent-centred, ≤ P/16), 1900–2100 (Bennu 2007–2054), UT time tags. Input to `build-ephemeris-corrections`. `500@10/` also holds the Voyager state vectors and their `fetch-voyager-windows` files, read by `build-spacecraft-tracks`.',
     upstream: 'https://ssd.jpl.nasa.gov/api/horizons.api',
     fetcher: 'tools/fetch/fetchHorizons.ts',
     readme: 'horizons.readme',
@@ -1904,6 +2270,25 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'committed',
     description: 'Provenance for the Horizons vectors — the exact query, body table and span.',
+  },
+
+  // ─── Live cloud bake (tools/cloud-bake-rs) ────────────────────────────
+
+  'clouds.cache': {
+    path: 'data/raw/clouds/cache',
+    kind: 'directory',
+    source: 'gitignored',
+    description:
+      'Cloud bake download cache: one `<YYYY-MM-DD>/` directory per baked day (granules, mosaics, geostationary frames, calibration probe). Eviction = deleting a day directory.',
+    upstream: 'https://gibs.earthdata.nasa.gov/ and https://view.eumetsat.int/',
+    fetcher: 'tools/cloud-bake-rs',
+    readme: 'clouds.readme',
+  },
+  'clouds.readme': {
+    path: 'data/raw/clouds/README.md',
+    kind: 'file',
+    source: 'committed',
+    description: 'Provenance and licences for the live cloud bake inputs.',
   },
 
   // ─── StarNet++ weights (famous-galaxy curator) ────────────────────────

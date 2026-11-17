@@ -22,6 +22,7 @@ import { requestFocus } from '../../../src/state/selection/requestFocus';
 import { clearSelection } from '../../../src/state/selection/selectionSlice';
 import { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsSlice';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
+import { setFilmEnabled } from '../../../src/state/settings/core/filmSlice';
 import { manualPausedAtActions } from '../../../src/state/time/enterManualPausedAt';
 import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
 import { takeoverEnded, takeoverStarted } from '../../../src/state/takeover/takeoverActions';
@@ -29,20 +30,23 @@ import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { bodyDriverGeometry } from '../../../src/utils/scene/bodyDriverGeometry';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
-import type { SelectionRow } from '../../../src/@types/engine/SelectionRow';
-import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
+import type { FramedCameraPose } from '../../../src/@types/camera/pose/FramedCameraPose';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
+import { bodyRowAt } from '../../../src/utils/scene/bodyRowAt';
+import { placedStructureRow } from '../../../src/layers/structure/selection/utils/placedStructureRow';
+import type { SelectionRowBase } from '../../../src/@types/engine/selection/SelectionRowBase';
 
 const focusSource = HASH_PARAM_SOURCES.find((source) => source.key === 'focus')!;
 const timeSource = HASH_PARAM_SOURCES.find((source) => source.key === 't')!;
 const orientationSource = HASH_PARAM_SOURCES.find((source) => source.key === 'orientation')!;
+const filmSource = HASH_PARAM_SOURCES.find((source) => source.key === 'film')!;
 const poseSource = HASH_PARAM_SOURCES.find((source) => source.key === 'pose')!;
 
 /** JD 2451545.0 — the J2000.0 epoch, and the instant it names. */
 const J2000_ISO = '2000-01-01T12:00:00.000Z';
 const J2000_UNIX_MS = Date.UTC(2000, 0, 1, 12, 0, 0);
 
-const virgoRow: StructureInfo = {
+const virgoRow = placedStructureRow({
   type: 'structure',
   id: 'cluster-virgo-m87',
   name: 'Virgo Cluster',
@@ -50,17 +54,11 @@ const virgoRow: StructureInfo = {
   worldPos: [0, 0, 0],
   featured: true,
   physicalRadiusMpc: 2,
-};
+});
 
-const earthRow: SelectionRow = {
-  type: 'body',
-  id: asSceneBodyId('earth'),
-  label: 'Earth',
-  positionMpc: [0, 0, 0],
-  driver: bodyDriverGeometry('earth'),
-};
+const earthRow: SelectionRowBase = bodyRowAt('earth', [0, 0, 0]);
 
-function focusedOn(row: SelectionRow, focusId: string): RootState {
+function focusedOn(row: SelectionRowBase, focusId: string): RootState {
   return stateAfter(setSelectionRow({ slot: 'focus', row, focusId }));
 }
 
@@ -149,6 +147,16 @@ describe('orientation row', () => {
     // Back/forward off an `#orientation=…` entry must return the pole to the
     // default, not leave the previous entry's frame in place.
     expect(orientationSource.readAbsent()).toEqual([setOrientation(DEFAULT_ORIENTATION)]);
+  });
+});
+
+describe('film row', () => {
+  it('film writes 1 only while on, reads 1 as on, and absent turns it off', () => {
+    expect(filmSource.write(stateAfter(setFilmEnabled(true)))).toBe('1');
+    expect(filmSource.write(stateAfter(setFilmEnabled(false)))).toBeNull();
+    expect(filmSource.read('1')).toEqual({ film: true });
+    expect(filmSource.read('0')).toEqual({});
+    expect(filmSource.readAbsent()).toEqual([setFilmEnabled(false)]);
   });
 });
 

@@ -1,0 +1,4 @@
+/* A value stands out by its colour where the field gives it one (AddressStrip), never by weight. */
+.value {
+  font-weight: inherit;
+}

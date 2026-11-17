@@ -1,23 +1,8 @@
 ---
 title: Screens, quality and domes
-description: What changes between a phone, a laptop and a projector, what to do when the picture stutters, and how dome mode draws a fisheye disc for a planetarium.
-job: "How do I show skymap on a projector or in a dome?"
-facts:
-  [
-    phone-data-size,
-    touch-gestures,
-    hide-interface,
-    dome-flag,
-    dome-rig,
-    dome-tilt,
-    share-dome,
-    screens-dome-disc,
-    screens-dome-front,
-    screens-dome-cost,
-    screens-dome-one-disc,
-    film-recorder,
-    film-silent,
-  ]
+description: What changes between a phone, a laptop, a projector and a dome, what to do when the picture stutters, and what dome mode draws for a planetarium.
+job: "How do I show Skymap on a phone, a laptop, a projector or a dome?"
+facts: [phone-data-size, touch-gestures, hide-interface, dome-rig, dome-tilt]
 ---
 
 ## Phones and tablets
@@ -85,69 +70,22 @@ Try them in order and stop when the picture moves smoothly.
 
 ## Dome mode
 
-<Table
-  cols="detail"
-  head={['', 'In dome mode']}
-  rows={[
-    [
-      'Start it',
-      {
-        text: 'Put ?dome before the #, in small letters and with no value.',
-        code: 'skymap.rulkens.com/?dome#focus=body-saturn',
-      },
-    ],
-    [
-      'What comes out',
-      'One equidistant fisheye disc of 180 degrees, as wide as the window’s shorter side, with black outside it. A full-screen window on a display of 3,840 by 2,160 pixels gives a disc 2,160 pixels across.',
-    ],
-    [
-      'Where things sit',
-      'The front of the dome is the bottom of the disc, and the top of the dome is its centre. The focus sits 30 degrees above the front edge. Neither can be changed.',
-    ],
-    [
-      'Clear the picture',
-      'Tab hides the interface. Full screen is the browser’s own: F11, or Ctrl + Cmd + F on a Mac.',
-    ],
-    [
-      'Choose an object',
-      'By name, with the / key. The pointer selects nothing: a click unpins the card, and a double-click lets go of the focus as well.',
-    ],
-    [
-      'What your dome system does',
-      'Slices the picture for several projectors, warps it to the screen and blends the edges, with the disc as its input.',
-    ],
-    [
-      'What it costs',
-      'The scene is drawn five times for each frame, so a frame is more work than a flat view in the same window.',
-    ],
-  ]}
-/>
+<Fact id="dome-flag" />
 
-<View to="focus=body-saturn&t=2017-10-15T12:00:00Z" query="dome">Open Saturn in dome mode</View>
+<Fact id="screens-dome-disc" />
 
-<Figure id="guide-dome-window" />
+A full-screen window on a display of 3,840 by 2,160 pixels gives a disc 2,160 pixels across.
+
+<Fact id="screens-dome-front" />
 
 With the camera on a planet, the planet stands in front of the audience, a little above eye level, and the sky fills the rest of the dome. A drag turns the whole sky about the planet.
 
-<Fact id="screens-dome-pointer" />
+<Figure id="dome-earth" />
 
-<Fact id="screens-dome-interface" />
+<Fact id="screens-dome-one-disc" />
 
 <Fact id="screens-dome-fixed" />
 
-<Figure id="dome-earth" />
+<Fact id="screens-dome-cost" />
 
-A link copied in dome mode opens in dome mode, and a tour or an exhibit opened by such a link plays with its captions or notes flat over the disc.
-
-<View to="exhibit=cosmicWeb" query="dome">Open the Cosmic Web exhibit in dome mode</View>
-
-If the picture stutters, the steps under [When it stutters](#when-it-stutters) apply, the data size first.
-
-### Live or as a film
-
-<Fact id="screens-no-capture" />
-
-- **Live.** Show the browser window, full screen and with the interface hidden, on the output your system takes a fisheye from. Someone flies the app while the audience watches.
-- **As a film.** The recorder writes a fisheye disc of 4,096 by 4,096 pixels at 30 or 60 frames a second, without sound.
-
-What we would build for a dome, and what is still missing for one, is on [Domes and museums](/domes/#deliver).
+[Setting up a dome](/docs/guide/dome-setup/) has the steps: opening dome mode on the dome’s computer, showing it live or as a film, and flying it from a phone.

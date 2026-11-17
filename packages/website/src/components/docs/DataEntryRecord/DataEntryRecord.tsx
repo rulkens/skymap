@@ -118,8 +118,8 @@ function DataEntryRecord({ entry, level }: DataEntryRecordProps) {
       {level === 2 && (
         <>
           <h2 id="about">What it is and who made it</h2>
-          {note?.figure && <DocFigure id={note.figure} />}
           {note?.about && <p>{note.about}</p>}
+          {note?.figure && <DocFigure id={note.figure} />}
           {note?.facts?.map((id) => (
             <FactText key={id} id={id} />
           ))}

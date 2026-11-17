@@ -1,0 +1,8 @@
+/* About four rows and a half, so the cut row says the list scrolls; positioned so the rows'
+   offsetTop is measured from the list. */
+.root {
+  position: relative;
+  max-height: 15rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}

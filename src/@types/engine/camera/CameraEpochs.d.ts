@@ -4,19 +4,19 @@
  * a deactivation and a base re-commit are both ref changes.
  */
 import type { Epoch } from './Epoch';
-import type { CameraTweenDescriptor } from '../../camera/CameraTweenDescriptor';
-import type { FrameTween } from '../../camera/FrameTween';
-import type { FramedCameraPose } from '../../camera/FramedCameraPose';
-import type { SelectionRow } from '../SelectionRow';
-import type { CameraAim } from '../../camera/CameraAim';
-import type { CameraState } from '../../camera/CameraState';
+import type { CameraTweenDescriptor } from '../../camera/focusMotion/CameraTweenDescriptor';
+import type { FrameTween } from '../../camera/focusMotion/FrameTween';
+import type { FramedCameraPose } from '../../camera/pose/FramedCameraPose';
+import type { CameraAim } from '../../camera/pose/CameraAim';
+import type { CameraIntentState } from '../../camera/orbitCamera/CameraIntentState';
+import type { SelectionRowBase } from '../selection/SelectionRowBase';
 
 export type CameraEpochs = {
   readonly tween: Epoch<CameraTweenDescriptor>;
   readonly frameTween: Epoch<FrameTween>;
   readonly autoRotate: Epoch<FramedCameraPose>;
-  readonly follow: Epoch<SelectionRow>;
-  readonly clip: Epoch<NonNullable<CameraState['clip']>>;
-  /** Ref: the `camera.aim` token, which every re-aim replaces. */
+  readonly follow: Epoch<SelectionRowBase>;
+  readonly clip: Epoch<NonNullable<CameraIntentState['clip']>>;
+  /** Ref: the `camera.intent.aim` token, which every re-aim replaces. */
   readonly aim: Epoch<CameraAim>;
 };

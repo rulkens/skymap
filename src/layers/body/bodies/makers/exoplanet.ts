@@ -15,7 +15,7 @@ import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { BODY_GLINT_MAX_PX } from '../../../../data/bodies/bodyGlintMaxPx';
 import { EXOPLANET_TRAIL } from '../../../../data/bodies/palette';
 import { FAMOUS_STARS_GENERATED } from '../../../../data/bodies/famousStars.generated';
-import { orbiter } from '../../../../data/bodies/makers/orbiter';
+import { orbiter } from '../../../missions/bodies/makers/orbiter';
 import { meanAnomalyFromTrue } from '../../../../utils/orbit/meanAnomalyFromTrue';
 import { asSceneBodyId } from '../../../../utils/scene/asSceneBodyId';
 import type { ExoplanetSeed } from '../../@types/ExoplanetSeed';
@@ -42,6 +42,7 @@ export function exoplanet(seed: ExoplanetSeed): LayerBody {
       },
       albedo: ROCKY_ALBEDO,
       resolvePx: BODY_GLINT_MAX_PX,
+      captionKind: 'planet',
     },
     position: {
       kind: 'orbit',

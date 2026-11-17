@@ -1,24 +1,25 @@
 import famousGalaxySeed from '../../../../data/seeds/famous_galaxies.seed.json';
 import structureSeed from '../../../../data/seeds/structure_anchors.seed.json';
-import { MILKY_WAY_NAMES } from '../../../../src/data/palette/milkyWayNames';
-import { tourRegistry } from '../../../../src/data/animation/tours/tourRegistry';
+import { MILKY_WAY_NAMES } from '../../../../src/layers/milkyWay/card/data/milkyWayNames';
+import { APP_TOUR_REGISTRY } from '../../../../src/compositions/appTours';
 import { BODY_SEARCH_NAMES } from '../../../../src/data/bodies/bodySearchNames';
 import { ORBITAL_ELEMENTS } from '../../../../src/data/bodies/orbitalElements';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
-import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../../../src/data/bodies/seededStarCatalogsBySource';
+import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../../../src/layers/starCatalog/seededStars/data/seededStarCatalogsBySource';
 import { SURFACE_FIXED_SITES } from '../../../../src/data/bodies/surfaceFixedSites';
 import { APP_EXHIBIT_REGISTRY } from '../../../../src/compositions/appExhibits';
 import { EARTH_PLACES } from '../../../../src/data/palette/earthPlaces';
 import { FEATURED_TABS } from '../../../../src/data/palette/featuredTabs';
 import { EARTH_REF } from '../../../../src/data/selection/earthRef';
-import { buildStaticAnchorStructures } from '../../../../src/layers/structure/load/buildStaticAnchorStructures';
-import { encodeBlackHoleFocusId } from '../../../../src/layers/blackHoles/present/encodeBlackHoleFocusId';
+import { buildStaticAnchorStructures } from '../../../../src/layers/structure/catalog/load/buildStaticAnchorStructures';
+import { encodeBlackHoleFocusId } from '../../../../src/layers/blackHoles/markers/present/encodeBlackHoleFocusId';
 import { BLACK_HOLE_SOURCE_ROWS } from '../../../../src/layers/blackHoles/sources/blackHoleSourceRows';
-import { CRAFT_SEARCH_NAMES } from '../../../../src/layers/missions/present/craftSearch';
+import { CRAFT_SEARCH_NAMES } from '../../../../src/layers/missions/craft/present/craftSearch';
+import { PROBE_SPHERE_ROSTER } from '../../../../src/layers/probeSpheres/spheres/data/probeSphereRoster';
 import { BODY_FOCUS_PREFIX } from '../../../../src/services/url/bodyFocusId';
-import { encodeStarFocusId } from '../../../../src/services/url/encodeStarFocusId';
+import { encodeStarFocusId } from '../../../../src/layers/starCatalog/selection/utils/encodeStarFocusId';
 import { MILKY_WAY_FOCUS_ID } from '../../../../src/services/url/milkyWayFocusId';
 import type { ObjectKind } from '../@types/ObjectKind';
 import type { ObjectRow } from '../@types/ObjectRow';
@@ -51,8 +52,21 @@ export const OBJECT_SECTIONS: readonly ObjectSection[] = [
     many: 'spacecraft',
   },
   { id: 'other-models', title: 'Other models', kinds: ['model'], one: 'model', many: 'models' },
-  { id: 'places-on-earth', title: 'Places on Earth', kinds: ['place'], one: 'place', many: 'places' },
-  { id: 'named-stars', title: 'Named stars', kinds: ['star'], one: 'star', many: 'stars', split: 'letter' },
+  {
+    id: 'places-on-earth',
+    title: 'Places on Earth',
+    kinds: ['place'],
+    one: 'place',
+    many: 'places',
+  },
+  {
+    id: 'named-stars',
+    title: 'Named stars',
+    kinds: ['star'],
+    one: 'star',
+    many: 'stars',
+    split: 'letter',
+  },
   {
     id: 'stars-at-the-centre-of-the-milky-way',
     title: 'Stars at the centre of the Milky Way',
@@ -134,7 +148,13 @@ export const OBJECT_SECTIONS: readonly ObjectSection[] = [
     many: 'superclusters',
   },
   { id: 'voids', title: 'Voids', kinds: ['void'], one: 'void', many: 'voids' },
-  { id: 'transients', title: 'Transients', kinds: ['transient'], one: 'transient', many: 'transients' },
+  {
+    id: 'transients',
+    title: 'Transients',
+    kinds: ['transient'],
+    one: 'transient',
+    many: 'transients',
+  },
   { id: 'exhibits', title: 'Exhibits', kinds: ['exhibit'], one: 'exhibit', many: 'exhibits' },
   { id: 'tours', title: 'Tours', kinds: ['tour'], one: 'tour', many: 'tours' },
 ];
@@ -153,9 +173,11 @@ const others = (name: string, names: readonly (string | undefined)[]) => {
 };
 
 const labels = new Map<string, string>(
-  [SCENE_EARTH, ...SCENE_PLANETS, ...[...SEEDED_STAR_CATALOGS_BY_SOURCE.values()].flatMap((row) => row.stars)].map(
-    (body) => [body.id, body.label],
-  ),
+  [
+    SCENE_EARTH,
+    ...SCENE_PLANETS,
+    ...[...SEEDED_STAR_CATALOGS_BY_SOURCE.values()].flatMap((row) => row.stars),
+  ].map((body) => [body.id, body.label]),
 );
 const orbitOf = new Map(ORBITAL_ELEMENTS.map((row) => [row.id, row.focusId]));
 const hostOf = new Map<string, string>(SURFACE_FIXED_SITES.map((site) => [site.id, site.hostId]));
@@ -165,7 +187,8 @@ const orbiting = ORBITAL_ELEMENTS.flatMap((orbit) => {
   const body = [SCENE_EARTH, ...SCENE_PLANETS].find((candidate) => candidate.id === orbit.id);
   return body ? [{ body, round: orbit.focusId }] : [];
 });
-const sunId = [...SEEDED_STAR_CATALOGS_BY_SOURCE.values()].find((row) => row.id === 'sun')!.stars[0]!.id;
+const sunId = [...SEEDED_STAR_CATALOGS_BY_SOURCE.values()].find((row) => row.id === 'sun')!
+  .stars[0]!.id;
 const starIds = new Set<string>(
   [...SEEDED_STAR_CATALOGS_BY_SOURCE.values()].flatMap((row) => row.stars.map((star) => star.id)),
 );
@@ -210,7 +233,8 @@ const missionIds = new Set(
     card.action.kind === 'focus' ? [card.action.focusId] : [],
   ),
 );
-const models = SCENE_MESH_BODIES.map((body) => {
+// The probe spheres are a debug aid the app's search does not list, so they are not here.
+const models = SCENE_MESH_BODIES.filter((body) => !PROBE_SPHERE_ROSTER.has(body.id)).map((body) => {
   const id = `${BODY_FOCUS_PREFIX}${body.id}`;
   const names = CRAFT_SEARCH_NAMES.get(body.id) ?? [];
   return focusRow({
@@ -218,7 +242,10 @@ const models = SCENE_MESH_BODIES.map((body) => {
     kind: missionIds.has(id) ? 'spacecraft' : 'model',
     id,
     parent: labels.get(hostOf.get(body.id) ?? orbitOf.get(body.id) ?? ''),
-    ...others(body.label, names.filter((name) => name.toLowerCase() !== body.label.toLowerCase())),
+    ...others(
+      body.label,
+      names.filter((name) => name.toLowerCase() !== body.label.toLowerCase()),
+    ),
   });
 });
 
@@ -245,7 +272,7 @@ const places = EARTH_PLACES.map(
 );
 
 const milkyWay = focusRow({ name: MILKY_WAY_NAMES[0], kind: 'milkyWay', id: MILKY_WAY_FOCUS_ID });
-const blackHoles = BLACK_HOLE_SOURCE_ROWS.map(([, entry]) =>
+const blackHoles = BLACK_HOLE_SOURCE_ROWS.map((entry) =>
   focusRow({
     name: entry.detailLabel,
     kind: 'blackHole',
@@ -284,7 +311,7 @@ const exhibits = Object.values(APP_EXHIBIT_REGISTRY).map(
 );
 
 // A tour marked `dev` is not in the app's search, so it is not here.
-const tours = Object.values(tourRegistry)
+const tours = Object.values(APP_TOUR_REGISTRY)
   .filter((tour) => tour.dev !== true)
   .map(
     (tour): ObjectRow => ({

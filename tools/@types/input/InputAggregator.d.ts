@@ -10,7 +10,7 @@
  */
 
 import type { InputGestureEvent } from './InputGestureEvent';
-import type { InputStep } from '../../../src/@types/camera/InputStep';
+import type { InputStep } from '../../../src/@types/camera/input/InputStep';
 
 export type InputAggregator = {
   push(event: InputGestureEvent): void;

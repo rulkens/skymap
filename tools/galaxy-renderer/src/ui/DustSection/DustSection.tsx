@@ -10,7 +10,7 @@
  * pill.
  */
 import type { ReactNode } from 'react';
-import type { GalaxyDustParams } from '../../../../../src/@types/galaxy/GalaxyDustParams';
+import type { GalaxyDustParams } from '../../../../../src/layers/milkyWay/field/dust/@types/GalaxyDustParams';
 import { useAppDispatch, useAppSelector } from '../../state/hooks';
 import { fieldTuningPatched } from '../../state/slices/fieldTuningSlice';
 import { sectionToggled } from '../../state/slices/uiSlice';

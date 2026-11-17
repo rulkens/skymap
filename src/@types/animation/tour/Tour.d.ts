@@ -2,7 +2,7 @@
  * Tour — a named, user-facing guided tour: an ordered beat sequence, and the
  * identity and label the registry and UI key off.
  *
- * `id` is the durable handle `startTour(id)` resolves against `tourRegistry`;
+ * `id` is the durable handle `startTour(id)` resolves against `APP_TOUR_REGISTRY`;
  * `label` is the human-readable name a launcher button shows. The `beats` are
  * the itinerary `tourBodySaga` plays in order. Scene preparation (the
  * establishing strip) is authored INSIDE the first beat's clip as `hide()` /
@@ -13,7 +13,7 @@
  * same shape as a `Clip`.
  *
  * Plain serializable data: no functions, no class instances. A beat's `focus`
- * is a durable `SelectionRef`, resolved to a world pose at playback time by
+ * is a durable ref, resolved to a world pose at playback time by
  * `visitBeatSaga`, so a tour authored against structure ids stays valid across
  * tier swaps and catalog rebuilds.
  */

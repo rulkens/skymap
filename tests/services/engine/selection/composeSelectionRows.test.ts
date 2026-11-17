@@ -16,27 +16,28 @@ import type {
   StructureRowFixture,
 } from '../../../support/selectionResolverOver';
 import { composeSelectionRows } from '../../../../src/services/engine/selection/composeSelectionRows';
-import { craftSelectionRow } from '../../../../src/layers/missions/present/craftSelectionRow';
-import { earthSceneSelectionRow } from '../../../../src/layers/earthScenes/present/earthSceneSelectionRow';
-import { zoneOfAvoidanceSelectionRow } from '../../../../src/layers/zoneOfAvoidance/present/zoneOfAvoidanceSelectionRow';
-import { blackHoleSelectionRow } from '../../../../src/layers/blackHoles/present/blackHoleSelectionRow';
-import { satellitesSelectionRow } from '../../../../src/layers/satellites/present/satellitesSelectionRow';
+import { craftSelectionRow } from '../../../../src/layers/missions/selection/craftSelectionRow';
+import { earthSceneSelectionRow } from '../../../../src/layers/earthScenes/selection/earthSceneSelectionRow';
+import { zoneOfAvoidanceSelectionRow } from '../../../../src/layers/zoneOfAvoidance/selection/zoneOfAvoidanceSelectionRow';
+import { blackHoleSelectionRow } from '../../../../src/layers/blackHoles/selection/blackHoleSelectionRow';
+import { satellitesSelectionRow } from '../../../../src/layers/satellites/selection/satellitesSelectionRow';
 import { buildSatelliteCatalog } from '../../../../tools/satellites/buildSatelliteCatalog';
 import { ISS } from '../../../layers/satellites/fixtures/celestrakRecords';
 import { unixMsToJulianDays } from '../../../../src/utils/time/unixMsToJulianDays';
 import type { SatellitesRuntime } from '../../../../src/layers/satellites/@types/SatellitesRuntime';
-import { ALL_KINDS_ENABLED } from '../../../support/allKindsEnabled';
-import { Source } from '../../../../src/data/source';
+import { NO_KINDS_OFF } from '../../../support/noKindsOff';
+import { testPickCode } from '../../../support/testPickCode';
+import { FAMOUS_GALAXY_NAMES } from '../../../../src/layers/galaxyCatalog/famousGalaxies/data/famousGalaxyNames.generated';
 import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
 import { SCENE_S_STARS } from '../../../../src/data/bodies/sceneSStars';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SOLAR_RADIUS_KM } from '../../../../src/data/bodies/solarRadiusKm';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import { SURFACE_STANDOFF_RADII } from '../../../../src/utils/camera/clampDistance';
+import { SURFACE_STANDOFF_RADII } from '../../../../src/utils/camera/orbitCamera/clampDistance';
 import { bodyDriverGeometry } from '../../../../src/utils/scene/bodyDriverGeometry';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
-import { resolveStarRecord } from '../../../../src/services/engine/helpers/resolveStarRecord';
+import { resolveStarRecord } from '../../../../src/layers/starCatalog/selection/utils/resolveStarRecord';
 import { buildStarOctree } from '../../../../tools/stars/buildStarOctree';
 import {
   encodeSkstCatalog,
@@ -46,14 +47,23 @@ import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 import type { Octree } from '../../../../src/@types/octree/Octree';
-import { starOctreeFromSkst } from '../../../../src/utils/star/starOctreeFromSkst';
-import type { SourceType } from '../../../../src/@types/data/SourceType';
+import { starOctreeFromSkst } from '../../../../src/layers/starCatalog/survey/utils/starOctreeFromSkst';
+import type { SourceId } from '../../../../src/@types/data/SourceId';
 import type { SelectionKindRow } from '../../../../src/@types/engine/layer/SelectionKindRow';
-import type { StarColumns } from '../../../../src/@types/data/starCatalog/StarColumns';
+import type { StarColumns } from '../../../../src/layers/starCatalog/survey/@types/StarColumns';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
+import {
+  blackHolePickCode,
+  missionsPickCode,
+  satellitesPickCode,
+  zoneOfAvoidancePickCode,
+} from '../../../support/layerPickCodes';
+import { placedStructureRow } from '../../../../src/layers/structure/selection/utils/placedStructureRow';
+import { MILKY_WAY_ROW } from '../../../fixtures/milkyWayRow';
+import { footprintRadiusMpc } from '../../../../src/utils/selection/footprintRadiusMpc';
+import type { SelectionRefBase } from '../../../../src/@types/engine/selection/SelectionRefBase';
 
 const SIM_DAYS = CONST_J2000;
 const EARTH_POS = deriveBodyStates(SIM_DAYS).get(asSceneBodyId('earth'))!.positionMpc;
@@ -68,36 +78,44 @@ const virgo: StructureInfo = {
   physicalRadiusMpc: 2,
 };
 
-function makeCloud(objId: bigint, pos: [number, number, number] = [1, 0, 0]): GalaxyCatalog {
-  return makeGalaxyCatalog(1, {
-    positions: new Float32Array(pos),
-    spectroscopicZ: new Float32Array([0.01]),
-    magU: new Float32Array([18]),
-    magG: new Float32Array([17]),
-    magR: new Float32Array([16]),
-    magI: new Float32Array([16]),
-    magZ: new Float32Array([16]),
-    objIDs: new BigUint64Array([objId]),
-    diameterKpc: new Float32Array([30]),
-    axisRatio: new Float32Array([1]),
+const VIRGO_ROW = placedStructureRow(virgo);
+
+/** `rows` copies of one galaxy; a famous cloud needs the compiled-in table's length. */
+function makeCloud(
+  objId: bigint,
+  pos: [number, number, number] = [1, 0, 0],
+  rows = 1,
+): GalaxyCatalog {
+  const filled = (value: number) => new Float32Array(rows).fill(value);
+  return makeGalaxyCatalog(rows, {
+    positions: Float32Array.from({ length: rows * 3 }, (_, i) => pos[i % 3]!),
+    spectroscopicZ: filled(0.01),
+    magU: filled(18),
+    magG: filled(17),
+    magR: filled(16),
+    magI: filled(16),
+    magZ: filled(16),
+    objIDs: new BigUint64Array(rows).fill(objId),
+    diameterKpc: filled(30),
+    axisRatio: filled(1),
   });
 }
 
 /** The galaxyCatalog Layer's slice of the composed resolver — its own two live reads. */
 const galaxies: GalaxyRowFixture = {
   catalogs: new Map([
-    [Source.SDSS, makeCloud(1237668393006604288n, [1, 0, 0])],
-    [Source.Glade, makeCloud(99n, [1, 0, 0])],
-    [Source.TwoMRS, makeCloud(2789n, [0, 1, 0])],
-    [Source.FamousGalaxy, makeCloud(0n, [1, 0, 0])],
+    ['sdss', makeCloud(1237668393006604288n, [1, 0, 0])],
+    ['glade', makeCloud(99n, [1, 0, 0])],
+    ['2mrs', makeCloud(2789n, [0, 1, 0])],
+    ['famousGalaxy', makeCloud(0n, [1, 0, 0], FAMOUS_GALAXY_NAMES.length)],
   ]),
-  famousMeta: [
-    { id: 'm31', names: ['M31', 'Andromeda'], description: 'The Andromeda Galaxy', type: 'Sb' },
-  ],
 } as GalaxyRowFixture;
 
+/** Famous catalog row 0's compiled-in id: the one-row famous cloud above is that row. */
+const FAMOUS_ID = FAMOUS_GALAXY_NAMES[0]!.id;
+
 /** The same fixture with only the named sources loaded. */
-function galaxiesWith(...sources: readonly SourceType[]): GalaxyRowFixture {
+function galaxiesWith(...sources: readonly SourceId[]): GalaxyRowFixture {
   return {
     ...galaxies,
     catalogs: new Map([...galaxies.catalogs].filter(([code]) => sources.includes(code))),
@@ -114,7 +132,7 @@ function starsFixture(catalog: Octree<StarColumns> | null): StarRowFixture {
   return {
     renderer: {
       loadedCatalogs: () =>
-        (catalog ? [{ source: Source.GaiaStars, octree: catalog }] : [])[Symbol.iterator](),
+        (catalog ? [{ source: 'gaiaStars', octree: catalog }] : [])[Symbol.iterator](),
       // No chunks: a pool index is its ordinal.
       recordOrdinal: (_source: unknown, poolIndex: number) => poolIndex,
       poolRecordIndex: (_source: unknown, ordinal: number) => ordinal,
@@ -124,6 +142,8 @@ function starsFixture(catalog: Octree<StarColumns> | null): StarRowFixture {
 }
 
 const resolver = selectionResolverOver(structures, galaxies, starsFixture(null));
+/** The pick code the resolver's rows were built under, as `createLayers` binds it. */
+const code = (layer: string, pickSourceId: string): number => testPickCode(layer)(pickSourceId);
 
 // ─── resolvePick dispatch (was resolvePick.test.ts / resolvePickTable.test.ts) ──
 
@@ -133,32 +153,42 @@ describe('resolvePick, composed', () => {
   });
 
   it('maps a galaxy pick to its record ref, or null when its source is not loaded', () => {
-    expect(resolver.resolvePick({ sourceCode: Source.Glade, localIdx: 0 })).toEqual({
+    expect(
+      resolver.resolvePick({ sourceCode: code('galaxyCatalog', 'glade'), localIdx: 0 }),
+    ).toEqual({
       type: 'galaxyCatalog',
-      source: Source.Glade,
+      source: 'glade',
       index: 0,
     });
-    expect(resolver.resolvePick({ sourceCode: Source.DesiDeep, localIdx: 3 })).toBeNull();
+    expect(
+      resolver.resolvePick({ sourceCode: code('galaxyCatalog', 'desiDeep'), localIdx: 3 }),
+    ).toBeNull();
   });
 
   it('maps a structure code to a durable-id ref, or null with no backing record', () => {
-    expect(resolver.resolvePick({ sourceCode: Source.GalaxyCluster, localIdx: 0 })).toEqual({
+    expect(
+      resolver.resolvePick({ sourceCode: code('structure', 'galaxy-cluster'), localIdx: 0 }),
+    ).toEqual({
       type: 'structure',
       id: 'virgo',
     });
-    expect(resolver.resolvePick({ sourceCode: Source.GalaxyCluster, localIdx: 99 })).toBeNull();
+    expect(
+      resolver.resolvePick({ sourceCode: code('structure', 'galaxy-cluster'), localIdx: 99 }),
+    ).toBeNull();
   });
 
   it('maps a milkyWay code to the singleton ref', () => {
-    expect(resolver.resolvePick({ sourceCode: Source.MilkyWay, localIdx: 0 })).toEqual({
-      type: 'milkyWay',
-    });
+    expect(resolver.resolvePick({ sourceCode: code('milkyWay', 'milkyWay'), localIdx: 0 })).toEqual(
+      {
+        type: 'milkyWay',
+      },
+    );
   });
 
   it('warns and returns null for a non-pickable code', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     try {
-      expect(resolver.resolvePick({ sourceCode: 30 as SourceType, localIdx: 0 })).toBeNull();
+      expect(resolver.resolvePick({ sourceCode: 62, localIdx: 0 })).toBeNull();
       expect(warn).toHaveBeenCalled();
     } finally {
       warn.mockRestore();
@@ -168,29 +198,33 @@ describe('resolvePick, composed', () => {
   it('maps every star code to the one positional star ref', () => {
     // The seeded codes used to resolve to a BODY ref (spec §7 reverses that):
     // identity follows the physics, so all four codes land on the star arm.
-    expect(resolver.resolvePick({ sourceCode: Source.GaiaStars, localIdx: 42 })).toEqual({
+    expect(
+      resolver.resolvePick({ sourceCode: code('starCatalog', 'gaiaStars'), localIdx: 42 }),
+    ).toEqual({
       type: 'starCatalog',
-      source: Source.GaiaStars,
+      source: 'gaiaStars',
       index: 42,
     });
     const idx = SCENE_STARS.length - 1;
-    expect(resolver.resolvePick({ sourceCode: Source.FamousStar, localIdx: idx })).toEqual({
+    expect(
+      resolver.resolvePick({ sourceCode: code('starCatalog', 'famousStar'), localIdx: idx }),
+    ).toEqual({
       type: 'starCatalog',
-      source: Source.FamousStar,
+      source: 'famousStar',
       index: idx,
     });
-    expect(resolver.resolvePick({ sourceCode: Source.Sun, localIdx: 0 })).toEqual({
+    expect(resolver.resolvePick({ sourceCode: code('starCatalog', 'sun'), localIdx: 0 })).toEqual({
       type: 'starCatalog',
-      source: Source.Sun,
+      source: 'sun',
       index: 0,
     });
   });
 
   it('an out-of-range body pick index resolves to null', () => {
     expect(
-      resolver.resolvePick({ sourceCode: Source.Planet, localIdx: SCENE_PLANETS.length }),
+      resolver.resolvePick({ sourceCode: code('body', 'planet'), localIdx: SCENE_PLANETS.length }),
     ).toBeNull();
-    expect(resolver.resolvePick({ sourceCode: Source.Earth, localIdx: 1 })).toBeNull();
+    expect(resolver.resolvePick({ sourceCode: code('body', 'earth'), localIdx: 1 })).toBeNull();
   });
 });
 
@@ -202,25 +236,24 @@ describe('extractRow, composed', () => {
   });
 
   it('galaxy ref → GalaxyRow', () => {
-    const row = resolver.extractRow(
-      { type: 'galaxyCatalog', source: Source.SDSS, index: 0 },
-      SIM_DAYS,
-    );
-    expect(row).toMatchObject({ type: 'galaxyCatalog', source: Source.SDSS, index: 0 });
+    const row = resolver.extractRow({ type: 'galaxyCatalog', source: 'sdss', index: 0 }, SIM_DAYS);
+    expect(row).toMatchObject({ type: 'galaxyCatalog', source: 'sdss', index: 0 });
   });
 
   it('galaxy ref to an unloaded cloud → null', () => {
     expect(
-      resolver.extractRow({ type: 'galaxyCatalog', source: Source.DesiDeep, index: 0 }, SIM_DAYS),
+      resolver.extractRow({ type: 'galaxyCatalog', source: 'desiDeep', index: 0 }, SIM_DAYS),
     ).toBeNull();
   });
 
   it('structure ref → the StructureInfo by id', () => {
-    expect(resolver.extractRow({ type: 'structure', id: 'virgo' }, SIM_DAYS)).toEqual(virgo);
+    expect(resolver.extractRow({ type: 'structure', id: 'virgo' }, SIM_DAYS)).toEqual(
+      placedStructureRow(virgo),
+    );
   });
 
   it('milkyWay ref → the singleton tag', () => {
-    expect(resolver.extractRow({ type: 'milkyWay' }, SIM_DAYS)).toEqual({ type: 'milkyWay' });
+    expect(resolver.extractRow({ type: 'milkyWay' }, SIM_DAYS)).toEqual(MILKY_WAY_ROW);
   });
 
   it('body ref → a self-contained row resolved at the passed simDays', () => {
@@ -230,6 +263,7 @@ describe('extractRow, composed', () => {
       id: SCENE_EARTH.id,
       label: SCENE_EARTH.label,
       positionMpc: EARTH_POS,
+      radiusMpc: footprintRadiusMpc(bodyDriverGeometry('earth')),
       driver: bodyDriverGeometry('earth'),
     });
 
@@ -244,6 +278,7 @@ describe('extractRow, composed', () => {
       id: SCENE_EARTH.id,
       label: SCENE_EARTH.label,
       positionMpc: [...expectedLater],
+      radiusMpc: footprintRadiusMpc(bodyDriverGeometry('earth')),
       driver: bodyDriverGeometry('earth'),
     });
   });
@@ -259,13 +294,10 @@ describe('extractRow, composed', () => {
     const starResolver = selectionResolverOver(structures, galaxies, starsFixture(catalog));
     const record = resolveStarRecord(catalog, residencyOf(), 1)!;
     expect(
-      starResolver.extractRow(
-        { type: 'starCatalog', source: Source.GaiaStars, index: 1 },
-        SIM_DAYS,
-      ),
+      starResolver.extractRow({ type: 'starCatalog', source: 'gaiaStars', index: 1 }, SIM_DAYS),
     ).toEqual({
       type: 'starCatalog',
-      source: Source.GaiaStars,
+      source: 'gaiaStars',
       index: 1,
       id: null,
       label: 'Field star',
@@ -273,6 +305,7 @@ describe('extractRow, composed', () => {
       radiusM: SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_M,
       absMag: record.absMag,
       bpRp: record.bpRp,
+      radiusMpc: SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_MPC,
       // A survey star poses from no table: `poseId` null is what keeps the
       // follow rows and the approach tilt off it, as `focusDriverId` once did.
       driver: {
@@ -287,7 +320,7 @@ describe('extractRow, composed', () => {
 
   it('survey star ref against no loaded catalog → null', () => {
     expect(
-      resolver.extractRow({ type: 'starCatalog', source: Source.GaiaStars, index: 0 }, SIM_DAYS),
+      resolver.extractRow({ type: 'starCatalog', source: 'gaiaStars', index: 0 }, SIM_DAYS),
     ).toBeNull();
   });
 
@@ -295,15 +328,16 @@ describe('extractRow, composed', () => {
     const idx = SCENE_STARS.findIndex((star) => star.id === 'sirius');
     const sirius = SCENE_STARS[idx]!;
     expect(
-      resolver.extractRow({ type: 'starCatalog', source: Source.FamousStar, index: idx }, SIM_DAYS),
+      resolver.extractRow({ type: 'starCatalog', source: 'famousStar', index: idx }, SIM_DAYS),
     ).toEqual({
       type: 'starCatalog',
-      source: Source.FamousStar,
+      source: 'famousStar',
       index: idx,
       id: 'sirius',
       label: sirius.label,
       positionMpc: [...deriveBodyStates(SIM_DAYS).get(asSceneBodyId('sirius'))!.positionMpc],
       radiusM: sirius.surface.datumRadiusM,
+      radiusMpc: sirius.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC,
       // A seeded star poses from its own seed id — the S-star / famous-star
       // half of the arm→poseId mapping.
       driver: {
@@ -319,7 +353,7 @@ describe('extractRow, composed', () => {
   it('an out-of-range seeded star index → null', () => {
     expect(
       resolver.extractRow(
-        { type: 'starCatalog', source: Source.FamousStar, index: SCENE_STARS.length },
+        { type: 'starCatalog', source: 'famousStar', index: SCENE_STARS.length },
         SIM_DAYS,
       ),
     ).toBeNull();
@@ -347,7 +381,7 @@ describe('resolveFocusId, composed', () => {
   it('sdss-<objId> → galaxy ref at the matching index; unloaded or unmatched → null', () => {
     expect(resolver.resolveFocusId('sdss-1237668393006604288')).toEqual({
       type: 'galaxyCatalog',
-      source: Source.SDSS,
+      source: 'sdss',
       index: 0,
     });
     expect(resolver.resolveFocusId('sdss-9999')).toBeNull();
@@ -358,34 +392,30 @@ describe('resolveFocusId, composed', () => {
   it('pgc-<objId> → GLADE first, then 2MRS', () => {
     expect(resolver.resolveFocusId('pgc-99')).toEqual({
       type: 'galaxyCatalog',
-      source: Source.Glade,
+      source: 'glade',
       index: 0,
     });
     expect(resolver.resolveFocusId('pgc-2789')).toEqual({
       type: 'galaxyCatalog',
-      source: Source.TwoMRS,
+      source: '2mrs',
       index: 0,
     });
   });
 
   it('famous id → galaxy ref; unknown famous id → null', () => {
-    expect(resolver.resolveFocusId('m31')).toEqual({
+    expect(resolver.resolveFocusId(FAMOUS_ID)).toEqual({
       type: 'galaxyCatalog',
-      source: Source.FamousGalaxy,
+      source: 'famousGalaxy',
       index: 0,
     });
     expect(resolver.resolveFocusId('ngc9999')).toBeNull();
   });
 
   it('an unloaded famous id is unclaimed by the cloud, decoding to null (claimed, not resolved)', () => {
-    // Meta present but the FamousGalaxy cloud absent: claimed (matches the
-    // permissive id class + meta scan) but decode returns null — D6'2's
-    // deferral, not an unclaimed miss.
-    const noCloud = selectionResolverOver(
-      structures,
-      galaxiesWith(Source.SDSS, Source.Glade, Source.TwoMRS),
-    );
-    expect(noCloud.resolveFocusId('m31')).toBeNull();
+    // A compiled-in id but the FamousGalaxy cloud absent: claimed but decode
+    // returns null — D6'2's deferral, not an unclaimed miss.
+    const noCloud = selectionResolverOver(structures, galaxiesWith('sdss', 'glade', '2mrs'));
+    expect(noCloud.resolveFocusId(FAMOUS_ID)).toBeNull();
   });
 
   it('galaxy-cluster-<seed> → structure ref with the durable id', () => {
@@ -416,14 +446,14 @@ describe('resolveFocusId, composed', () => {
 
   it('round-trips a seeded star id from every seeded table', async () => {
     const siriusIdx = SCENE_STARS.findIndex((star) => star.id === 'sirius');
-    const cases: readonly (readonly [string, SelectionRef])[] = [
-      ['star-sirius', { type: 'starCatalog', source: Source.FamousStar, index: siriusIdx }],
-      ['star-sun', { type: 'starCatalog', source: Source.Sun, index: 0 }],
+    const cases: readonly (readonly [string, SelectionRefBase])[] = [
+      ['star-sirius', { type: 'starCatalog', source: 'famousStar', index: siriusIdx }],
+      ['star-sun', { type: 'starCatalog', source: 'sun', index: 0 }],
       [
         'star-s2',
         {
           type: 'starCatalog',
-          source: Source.SStar,
+          source: 'sStar',
           index: SCENE_S_STARS.findIndex((star) => star.id === 's2'),
         },
       ],
@@ -446,12 +476,12 @@ describe('resolveFocusId, composed', () => {
       galaxies,
       starsFixture(await makeStarCatalog()),
     );
-    const ref: SelectionRef = { type: 'starCatalog', source: Source.GaiaStars, index: 42 };
+    const ref: SelectionRefBase = { type: 'starCatalog', source: 'gaiaStars', index: 42 };
     expect(loaded.resolveFocusId('star-42')).toEqual(ref);
     expect(loaded.focusIdOf(ref)).toBe('star-42');
     expect(loaded.resolveFocusId('star-0')).toEqual({
       type: 'starCatalog',
-      source: Source.GaiaStars,
+      source: 'gaiaStars',
       index: 0,
     });
     expect(loaded.resolveFocusId('star-abc')).toBeNull();
@@ -461,10 +491,10 @@ describe('resolveFocusId, composed', () => {
   });
 
   it('pos@ra,dec → nearest galaxy ref within 30 arcsec; beyond it and malformed → null', () => {
-    const posOnly = selectionResolverOver(structures, galaxiesWith(Source.SDSS));
+    const posOnly = selectionResolverOver(structures, galaxiesWith('sdss'));
     expect(posOnly.resolveFocusId('pos@0.0000,0.0000')).toEqual({
       type: 'galaxyCatalog',
-      source: Source.SDSS,
+      source: 'sdss',
       index: 0,
     });
     expect(resolver.resolveFocusId('pos@90.0000,89.0000')).toBeNull();
@@ -474,7 +504,7 @@ describe('resolveFocusId, composed', () => {
 
 describe('focusIdOf ∘ resolveFocusId round-trip', () => {
   it('SDSS ref (large objId) → sdss-<objId> → same ref', () => {
-    const ref: SelectionRef = { type: 'galaxyCatalog', source: Source.SDSS, index: 0 };
+    const ref: SelectionRefBase = { type: 'galaxyCatalog', source: 'sdss', index: 0 };
     const id = resolver.focusIdOf(ref);
     expect(id).toBe('sdss-1237668393006604288');
     expect(resolver.resolveFocusId(id!)).toEqual(ref);
@@ -485,9 +515,9 @@ describe('focusIdOf ∘ resolveFocusId round-trip', () => {
     // the positional form — only GLADE is loaded, and with that objId.
     const posDeps = selectionResolverOver(structures, {
       ...galaxies,
-      catalogs: new Map([[Source.Glade, makeCloud(0n, [1, 0, 0])]]),
+      catalogs: new Map([['glade', makeCloud(0n, [1, 0, 0])]]),
     } as GalaxyRowFixture);
-    const ref: SelectionRef = { type: 'galaxyCatalog', source: Source.Glade, index: 0 };
+    const ref: SelectionRefBase = { type: 'galaxyCatalog', source: 'glade', index: 0 };
     const id = posDeps.focusIdOf(ref);
     expect(id).toBe('pos@0.0000,0.0000,1.00');
     expect(posDeps.resolveFocusId(id!)).toEqual(ref);
@@ -497,14 +527,14 @@ describe('focusIdOf ∘ resolveFocusId round-trip', () => {
   });
 
   it('FamousGalaxy ref → famous seed id → same ref', () => {
-    const ref: SelectionRef = { type: 'galaxyCatalog', source: Source.FamousGalaxy, index: 0 };
+    const ref: SelectionRefBase = { type: 'galaxyCatalog', source: 'famousGalaxy', index: 0 };
     const id = resolver.focusIdOf(ref);
-    expect(id).toBe('m31');
+    expect(id).toBe(FAMOUS_ID);
     expect(resolver.resolveFocusId(id!)).toEqual(ref);
   });
 
   it('GLADE ref with a catalog id → pgc-<objId> → same ref', () => {
-    const ref: SelectionRef = { type: 'galaxyCatalog', source: Source.Glade, index: 0 };
+    const ref: SelectionRefBase = { type: 'galaxyCatalog', source: 'glade', index: 0 };
     const id = resolver.focusIdOf(ref);
     expect(id).toBe('pgc-99');
     expect(resolver.resolveFocusId(id!)).toEqual(ref);
@@ -512,7 +542,7 @@ describe('focusIdOf ∘ resolveFocusId round-trip', () => {
 
   it('structure ref → its durable id → same ref', () => {
     const virgoId = 'galaxy-cluster-virgo';
-    const ref: SelectionRef = { type: 'structure', id: virgoId };
+    const ref: SelectionRefBase = { type: 'structure', id: virgoId };
     expect(resolver.focusIdOf(ref)).toBe(virgoId);
     expect(resolver.resolveFocusId(virgoId)).toEqual(ref);
   });
@@ -527,18 +557,19 @@ describe('focusIdOf over the Layers the shared resolver omits', () => {
   );
   const full = composeSelectionRows(
     () => [
-      craftSelectionRow(),
+      craftSelectionRow(missionsPickCode()),
       earthSceneSelectionRow(),
-      zoneOfAvoidanceSelectionRow(),
-      blackHoleSelectionRow(),
+      zoneOfAvoidanceSelectionRow(zoneOfAvoidancePickCode()),
+      blackHoleSelectionRow(blackHolePickCode()),
       satellitesSelectionRow({
         propagator: { catalog: () => catalog },
+        pickCode: satellitesPickCode(),
       } as unknown as SatellitesRuntime),
     ],
-    () => ALL_KINDS_ENABLED,
+    () => NO_KINDS_OFF,
   );
   const AT = unixMsToJulianDays(Date.parse('2026-10-28T12:00:00Z'));
-  const IDS: [string, SelectionRef, string | null][] = [
+  const IDS: [string, SelectionRefBase, string | null][] = [
     ['craft', { type: 'craft', id: 'hubble' as never }, 'body-hubble'],
     ['earth scene', { type: 'earthScene', id: 'soendermarken' as never }, 'body-soendermarken'],
     ['zone of avoidance', { type: 'zoneOfAvoidance' }, null],
@@ -580,7 +611,7 @@ describe('composeSelectionRows — claim-then-decode contract', () => {
     const rows = [stubRow('x', 'x-', () => null), stubRow('y', 'y-', decodeY)];
     const composed = composeSelectionRows(
       () => rows,
-      () => ALL_KINDS_ENABLED,
+      () => NO_KINDS_OFF,
     );
     expect(composed.resolveFocusId('x-1')).toBeNull();
     expect(decodeY).not.toHaveBeenCalled();
@@ -591,19 +622,10 @@ describe('composeSelectionRows — claim-then-decode contract', () => {
     const rows = [stubRow('x', 'x-', decode)];
     const composed = composeSelectionRows(
       () => rows,
-      () => ALL_KINDS_ENABLED,
+      () => NO_KINDS_OFF,
     );
     expect(composed.resolveFocusId('z-1')).toBeNull();
     expect(decode).not.toHaveBeenCalled();
-  });
-
-  it('two rows claiming the same id throw, naming the id and both rows', () => {
-    const rows = [stubRow('x', 'x-', () => null), stubRow('y', 'x-', () => null)];
-    const composed = composeSelectionRows(
-      () => rows,
-      () => ALL_KINDS_ENABLED,
-    );
-    expect(() => composed.resolveFocusId('x-1')).toThrow(/x-1/);
   });
 
   it('rowsOf is read on every call', () => {
@@ -613,7 +635,7 @@ describe('composeSelectionRows — claim-then-decode contract', () => {
         calls++;
         return calls === 1 ? [] : [stubRow('x', 'x-', () => ({ type: 'x' }))];
       },
-      () => ALL_KINDS_ENABLED,
+      () => NO_KINDS_OFF,
     );
     expect(composed.resolveFocusId('x-1')).toBeNull();
     expect(composed.resolveFocusId('x-1')).toEqual({ type: 'x' });
@@ -621,15 +643,16 @@ describe('composeSelectionRows — claim-then-decode contract', () => {
   });
 });
 
-// ─── kindsEnabled gate (resolvePick only) ───────────────────────────────────
+// ─── picking off list (resolvePick only) ───────────────────────────────────
 
 describe('composeSelectionRows — picking gate', () => {
+  const STUB_CODE = 7;
   const structureRow: SelectionKindRow = {
     type: 'structure',
-    pickSources: [Source.GalaxyCluster],
+    pickSources: [STUB_CODE],
     resolvePick: () => ({ type: 'structure', id: 'virgo' }),
     encodePick: () => null,
-    extractRow: () => virgo,
+    extractRow: () => VIRGO_ROW,
     focusId: {
       claims: (id) => id.startsWith('galaxy-cluster-'),
       decode: () => ({ type: 'structure', id: 'virgo' }),
@@ -637,66 +660,24 @@ describe('composeSelectionRows — picking gate', () => {
     },
   };
 
-  it('resolvePick returns null for a disabled kind and the ref for an enabled one', () => {
-    const pick = { sourceCode: Source.GalaxyCluster, localIdx: 0 };
-    const allEnabled = composeSelectionRows(
+  it('a kind in the off list resolves no pick but still extracts its row and decodes its focus id', () => {
+    const pick = { sourceCode: STUB_CODE, localIdx: 0 };
+    const noneOff = composeSelectionRows(
       () => [structureRow],
-      () => ({
-        galaxyCatalog: true,
-        structure: true,
-        milkyWay: true,
-        zoneOfAvoidance: true,
-        body: true,
-        craft: true,
-        earthScene: true,
-        starCatalog: true,
-        blackHole: true,
-        satellite: true,
-      }),
+      () => [],
     );
-    expect(allEnabled.resolvePick(pick)).toEqual({ type: 'structure', id: 'virgo' });
+    expect(noneOff.resolvePick(pick)).toEqual({ type: 'structure', id: 'virgo' });
 
-    const structureDisabled = composeSelectionRows(
+    const structureOff = composeSelectionRows(
       () => [structureRow],
-      () => ({
-        galaxyCatalog: true,
-        structure: false,
-        milkyWay: true,
-        zoneOfAvoidance: true,
-        body: true,
-        craft: true,
-        earthScene: true,
-        starCatalog: true,
-        blackHole: true,
-        satellite: true,
-      }),
+      () => ['structure'],
     );
-    expect(structureDisabled.resolvePick(pick)).toBeNull();
-  });
-
-  it('extractRow and resolveFocusId ignore the gate — a disabled kind still resolves', () => {
-    const structureDisabled = composeSelectionRows(
-      () => [structureRow],
-      () => ({
-        galaxyCatalog: true,
-        structure: false,
-        milkyWay: true,
-        zoneOfAvoidance: true,
-        body: true,
-        craft: true,
-        earthScene: true,
-        starCatalog: true,
-        blackHole: true,
-        satellite: true,
-      }),
-    );
-    expect(structureDisabled.extractRow({ type: 'structure', id: 'virgo' }, SIM_DAYS)).toBe(virgo);
-    expect(structureDisabled.resolveFocusId('galaxy-cluster-virgo')).toEqual({
+    expect(structureOff.resolvePick(pick)).toBeNull();
+    expect(structureOff.extractRow({ type: 'structure', id: 'virgo' }, SIM_DAYS)).toBe(VIRGO_ROW);
+    expect(structureOff.resolveFocusId('galaxy-cluster-virgo')).toEqual({
       type: 'structure',
       id: 'virgo',
     });
-    expect(structureDisabled.focusIdOf({ type: 'structure', id: 'virgo' })).toBe(
-      'galaxy-cluster-virgo',
-    );
+    expect(structureOff.focusIdOf({ type: 'structure', id: 'virgo' })).toBe('galaxy-cluster-virgo');
   });
 });

@@ -1,0 +1,4 @@
+.root {
+  composes: field from '../../../controlChrome.module.css';
+  max-width: 28rem;
+}

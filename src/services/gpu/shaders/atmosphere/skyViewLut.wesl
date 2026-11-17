@@ -1,10 +1,10 @@
-// atmosphere/skyViewLut.wesl — the sky-view LUT bake (compute, PER FRAME).
+// atmosphere/skyViewLut.wesl — the sky-view LUT bake (compute, when its record moves).
 //
 // Writes the ~192x108 view-DEPENDENT table: each texel stores the in-scattered
 // sky radiance looking in a (view-zenith, azimuth-relative-to-sun) direction
 // from the camera's CURRENT altitude. Unlike the transmittance + multi-scatter
-// LUTs (baked once at startup), this one is regenerated every frame — the
-// camera altitude and the sun direction change, and folding them into a small
+// LUTs (baked once at startup), this one is regenerated whenever the camera
+// altitude or the sun direction moves, and folding them into a small
 // 2D table means the shell fragment does a single texture sample instead of a
 // per-pixel march (spec §11 performance). Dispatched by 'encodeSkyView' before
 // the foreground render pass (Task 5/6), modeled on the flow compute dispatch.
@@ -18,7 +18,7 @@
 // ## The per-texel work
 //
 // 'skyViewLutUvToParams' (scattering.wesl) inverts Hillaire's horizon-split
-// warp to recover (viewZenithCos, lightViewCos) for the texel. From those, plus
+// warp to recover (viewZenithAngle, lightViewCos) for the texel. From those, plus
 // the camera altitude + sun zenith carried in 'SkyViewParams', we rebuild the
 // view ray and the sun direction in a local frame whose up axis is +z, then
 // march the single-plus-multi-scatter integral across the IN-ATMOSPHERE segment
@@ -29,7 +29,7 @@
 // skymap's camera views Earth from SPACE, so the ray origin's radius is far
 // outside the atmosphere top. Marching t in [0, tMax] (tMax = the far exit) would
 // spend nearly every one of the ~30 fixed steps in the tens of thousands of km of
-// VACUUM between the camera and the planet, with dt hundreds-to-thousands of km
+// VACUUM between the camera and the planet, with stepLength hundreds-to-thousands of km
 // wide; the ~1,400 km of dense atmosphere near the ray's tangent point would catch
 // zero or one sample and the LUT would bake to near-zero noise (the shell then
 // renders almost nothing). Instead we clamp to the ray's atmosphere-top ENTRY:
@@ -88,7 +88,7 @@ struct SkyViewParams {
 @group(0) @binding(5) var outTex: texture_storage_2d<rgba16float, write>;
 
 // raymarchInScatter — the single-plus-multi-scatter integral along one view ray
-// from 'p0' (at the camera radius) toward 'dir', with the sun at 'sunDir'. The
+// from 'rayStart' (at the camera radius) toward 'dir', with the sun at 'sunDir'. The
 // per-step integrand is 'scatterStep' (scattering.wesl); this function owns
 // only the march bound and the accumulators.
 //
@@ -99,43 +99,48 @@ struct SkyViewParams {
 // module-header 'From-space entry clamp'); for a camera inside the atmosphere
 // top.x < 0 -> tNear = 0, recovering the plain 'origin-to-boundary' march. A ray
 // that never meets the top sphere (top.y < 0) is empty space -> return zero.
-fn raymarchInScatter(p0: vec3<f32>, dir: vec3<f32>, sunDir: vec3<f32>) -> vec3<f32> {
+fn raymarchInScatter(rayStart: vec3<f32>, dir: vec3<f32>, sunDir: vec3<f32>) -> vec3<f32> {
   let bottom = params.planetRadiusKm;
   let topRadius = params.atmosphereTopKm;
 
   // Confine the march to the atmosphere-top sphere's [entry, exit] interval, the
   // same bound shape the shell fragment + CPU 'atmosphereShellBound' already use.
-  let top = raySphere(p0, dir, vec3<f32>(0.0), topRadius);
+  let top = raySphere(rayStart, dir, vec3<f32>(0.0), topRadius);
   if (top.y < 0.0) { return vec3<f32>(0.0); }
   let tNear = max(0.0, top.x);
   var tFar = top.y;
   // Ground clamp: a down-looking ray stops at the opaque surface ahead of tNear.
-  let ground = raySphere(p0, dir, vec3<f32>(0.0), bottom);
+  let ground = raySphere(rayStart, dir, vec3<f32>(0.0), bottom);
   if (ground.x > 0.0 && ground.x > tNear) {
     tFar = min(tFar, ground.x);
   }
-  let dt = (tFar - tNear) / SKY_VIEW_STEPS;
+  let stepLength = (tFar - tNear) / SKY_VIEW_STEPS;
+  // From space, 'rayStart + dir * tNear' cancels ~1e7 km to the top radius; the entry
+  // rebuilt from the ray's closest-approach point carries no such difference.
+  let closestAlongRay = dot(rayStart, dir);
+  let closest = rayStart - closestAlongRay * dir;
+  let sTop = sqrt(max(topRadius * topRadius - dot(closest, closest), 0.0));
+  let entry = select(rayStart, closest - sTop * dir, top.x > 0.0);
 
   let cosTheta = dot(dir, sunDir);
 
-  var L = vec3<f32>(0.0);
+  var radiance = vec3<f32>(0.0);
   var throughput = vec3<f32>(1.0);
 
-  var i: u32 = 0u;
+  var stepIndex: u32 = 0u;
   loop {
-    if (f32(i) >= SKY_VIEW_STEPS) { break; }
-    let t = tNear + (f32(i) + 0.5) * dt;
-    let pos = p0 + dir * t;
-    let s = scatterStep(
+    if (f32(stepIndex) >= SKY_VIEW_STEPS) { break; }
+    let pos = entry + dir * ((f32(stepIndex) + 0.5) * stepLength);
+    let stepContribution = scatterStep(
       params, transmittanceLut, multiScatterLut, lutSamp,
-      pos, sunDir, cosTheta, dt,
+      pos, sunDir, cosTheta, stepLength,
       view.twilightSoftness, view.twilightIntensity,
     );
-    L = L + throughput * s.inScatter;
-    throughput = throughput * s.transmittance;
-    i = i + 1u;
+    radiance = radiance + throughput * stepContribution.inScatter;
+    throughput = throughput * stepContribution.transmittance;
+    stepIndex = stepIndex + 1u;
   }
-  return L;
+  return radiance;
 }
 
 @compute @workgroup_size(8, 8)
@@ -146,9 +151,9 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   }
   let uv = (vec2<f32>(f32(gid.x), f32(gid.y)) + vec2<f32>(0.5)) / vec2<f32>(dims);
 
-  let r = view.viewHeightKm;
-  let angles = skyViewLutUvToParams(params.planetRadiusKm, r, uv);
-  let viewZenithCos = angles.x;
+  let radius = view.viewHeightKm;
+  let angles = skyViewLutUvToParams(params.planetRadiusKm, radius, uv);
+  let viewZenithAngle = angles.x;
   let lightViewCos = angles.y;
 
   // Rebuild the view ray + sun in a local frame with up = +z. The sun sits at
@@ -156,7 +161,8 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   // azimuth relative to the sun), so the view direction's off-axis component
   // splits between the sun-aligned (x) and perpendicular (y) axes by
   // 'lightViewCos'.
-  let viewZenithSin = sqrt(max(0.0, 1.0 - viewZenithCos * viewZenithCos));
+  let viewZenithSin = sin(viewZenithAngle);
+  let viewZenithCos = cos(viewZenithAngle);
   let dir = vec3<f32>(
     viewZenithSin * lightViewCos,
     viewZenithSin * sqrt(max(0.0, 1.0 - lightViewCos * lightViewCos)),
@@ -165,7 +171,7 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   let sunZenithSin = sqrt(max(0.0, 1.0 - view.sunZenithCos * view.sunZenithCos));
   let sunDir = vec3<f32>(sunZenithSin, 0.0, view.sunZenithCos);
 
-  let p0 = vec3<f32>(0.0, 0.0, r);
-  let inScatter = raymarchInScatter(p0, dir, sunDir);
+  let rayStart = vec3<f32>(0.0, 0.0, radius);
+  let inScatter = raymarchInScatter(rayStart, dir, sunDir);
   textureStore(outTex, vec2<u32>(gid.x, gid.y), vec4<f32>(inScatter, 1.0));
 }

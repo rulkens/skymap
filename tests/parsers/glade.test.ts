@@ -6,7 +6,6 @@ import {
   parseGladeLine,
   parseGlade2masxPgcLine,
 } from '../../tools/parsers/glade';
-import { Source } from '../../src/data/source';
 
 /**
  * Real first three rows of `data/raw/glade2.3.dat`, copied verbatim and
@@ -60,7 +59,7 @@ describe('parseGlade', () => {
 
     // Every record carries the GLADE source tag.
     for (const r of records) {
-      expect(r.source).toBe(Source.Glade);
+      expect(r.source).toBe('glade');
     }
     // The SDSS-shaped 64-bit `objID` slot is repurposed for GLADE rows to
     // carry the HyperLEDA PGC number when one is present.  Rows whose

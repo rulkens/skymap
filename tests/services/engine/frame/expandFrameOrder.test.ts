@@ -18,10 +18,10 @@ import type { FrameStep } from '../../../../src/@types/engine/frame/FrameStep';
 import type { FrameStepSpec } from '../../../../src/@types/engine/frame/FrameStepSpec';
 import type { FrameInputs } from '../../../../src/services/engine/frame/expandFrameOrder';
 import type { ToneMap } from '../../../../src/@types/rendering/ToneMap';
-import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
-import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
+import type { OrbitCamera } from '../../../../src/@types/camera/orbitCamera/OrbitCamera';
+import { symmetricFrustum } from '../../../../src/utils/camera/frustum/symmetricFrustum';
 
-const TONE: ToneMap = { exposure: 1.5, curve: 4, hdrKnee: 0, hdrHeadroom: 0 };
+const TONE: ToneMap = { exposure: 1.5, curve: 4, hdrKnee: 0, hdrHeadroom: 0, film: null };
 
 function namesOf(step: FrameStep | undefined): readonly string[] {
   return step !== undefined && step.kind === 'render' ? step.passes.map((p) => p.name) : [];
@@ -97,8 +97,11 @@ describe('expandFrameOrder', () => {
     const merged = hdrNear0[0];
     expect(namesOf(merged)).toEqual([
       'milky-way-upsample',
+      'milky-way-field',
       'milky-way',
       'local-bubble',
+      'stellar-streams-haze-upsample',
+      'stellar-streams',
       'light-time-spheres',
       'star-points',
       'star-catalog',
@@ -109,6 +112,7 @@ describe('expandFrameOrder', () => {
       'body-glints',
       'mission-glints',
       'earth-scene-glints',
+      'probe-sphere-glints',
       'black-hole-marker',
     ]);
     // The merged step bills the bare group key, as today: the roster line
@@ -205,7 +209,7 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
       [NEAR0, 'sgrAStar', 0],
       [COSMO, 'sgrAStar', 2],
       [NEAR0, 'sgrAStar', 2],
-      [COSMO, 'solarSystem', 1],
+      // Stars-only roster: an empty COSMO list emits no COSMO step.
       [NEAR0, 'solarSystem', 1],
     ]);
     // The captures ride the PRELUDE computes, ahead of every other render
@@ -214,8 +218,9 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     expect(steps[0]).toEqual({ kind: 'compute', name: 'flow' });
     expect(steps[1]).toEqual({ kind: 'compute', name: 'sky-view' });
     expect(steps[2]).toEqual({ kind: 'compute', name: 'star-cut' });
-    expect(steps[3]).toBe(capture[0]);
-    expect(steps[capture.length + 3]).toEqual({ kind: 'compute', name: 'aerial-perspective' });
+    expect(steps[3]).toEqual({ kind: 'compute', name: 'asteroid-kepler' });
+    expect(steps[4]).toBe(capture[0]);
+    expect(steps[capture.length + 4]).toEqual({ kind: 'compute', name: 'aerial-perspective' });
   });
 
   it("expands a face's body slabs into depth-clearing capture steps after its COSMO/NEAR0 pair", () => {
@@ -361,6 +366,7 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
       'mission-meshes',
       'body-meshes',
       'earth-scene-meshes',
+      'probe-sphere-meshes',
     ]);
   });
 

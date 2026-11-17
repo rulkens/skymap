@@ -7,7 +7,7 @@ import { SCENE_PLANETS } from '../../../src/data/bodies/scenePlanets';
 import { SURFACE_FIXED_SITES } from '../../../src/data/bodies/surfaceFixedSites';
 import { rotationRowById } from '../../../src/data/bodies/rotationElements';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
-import { siteGroundRadiusM } from '../../../src/utils/camera/siteGroundRadiusM';
+import { siteGroundRadiusM } from '../../../src/utils/camera/arms/siteGroundRadiusM';
 import { findByIdOrThrow } from '../../../src/utils/object/findByIdOrThrow';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 
@@ -71,9 +71,11 @@ describe('the Mars rover landing sites', () => {
     // An invariant across two independently-edited files: the bake decides where
     // a mesh's origin sits, so a re-bake that moves it must move the site with
     // it. Eyeballing the altitude back would bury a rover or float it. An
-    // `anchored` site has no ground-fit, so its lift is hand-tuned instead.
+    // `anchored` site has no ground-fit, so its lift is hand-tuned instead; nor does a
+    // generated mesh have a bake, so its site states its own lift.
     for (const site of SURFACE_FIXED_SITES.filter((s) => s.seat === 'resting')) {
       const body = findByIdOrThrow(SCENE_MESH_BODIES, site.id, 'surfaceFixedSites.test');
+      if (body.buildMesh !== undefined) continue;
       expect(site.altitudeM, site.id).toBe(MESH_ASSETS[body.meshKey]!.groundOffsetM);
     }
   });

@@ -6,6 +6,7 @@
  */
 
 import type { FrameSection } from '../../@types/engine/frame/FrameSection';
+import { APP_SKY_CAPTURE_KEYS } from '../../compositions/appCubemapCaptures';
 import { COSMO, NEAR0 } from '../../services/engine/frame/slabs';
 
 export const PRELUDE: FrameSection = {
@@ -14,13 +15,17 @@ export const PRELUDE: FrameSection = {
     // Plan rows come first (`checkFrameOrder`'s boot rule), before any GPU step reads
     // what they publish (`runPlanSteps`).
     { kind: 'plan', name: 'galaxy-catalog' },
+    { kind: 'plan', name: 'galaxy-disks' },
     { kind: 'plan', name: 'flow' },
     { kind: 'plan', name: 'star-catalog' },
     { kind: 'plan', name: 'milky-way' },
+    { kind: 'plan', name: 'stellar-streams' },
     { kind: 'plan', name: 'satellites' },
     // Once for every view: a dome's faces share one atlas, so one cut spans them all.
     { kind: 'plan', name: 'surface-tiles' },
-    // `sky-view` re-bakes its LUT every frame (camera altitude + sun direction), unlike
+    // Every view's body slabs, so the once `sky-view` bake covers exactly what any view draws.
+    { kind: 'plan', name: 'atmosphere-roster' },
+    // `sky-view` re-bakes its LUT whenever camera altitude or sun direction moves, unlike
     // the once-baked transmittance/multi-scatter LUTs; both computes sit ahead of
     // `foreground:0` so the atmosphere shell samples this frame's table. Each bills
     // `<name>-compute` (`computeTimingSlotName`), keeping `flow` apart from the ribbon
@@ -29,12 +34,11 @@ export const PRELUDE: FrameSection = {
     { kind: 'compute', name: 'sky-view' },
     // Any line ahead of SCENE's star draws would do; inputs come from the `star-catalog` plan row.
     { kind: 'compute', name: 'star-cut' },
+    // Ahead of the POST_FOREGROUND `asteroids` dots, which read the positions it writes.
+    { kind: 'compute', name: 'asteroid-kepler' },
     // Sky captures run ahead of every other render step so a same-frame lensing draw
     // can sample a cubemap written this frame. Most frames the face list is empty and
     // this line emits nothing (the lens's zero-dispatch guarantee).
-    //
-    // `solarSystem` is the star field a reflection probe is captured over; parallax
-    // across the solar system is sub-texel on its 256² faces.
     //
     // TWO rosters because the content spans both slabs: galaxy billboards and
     // textured disks project through COSMO, survey stars through NEAR0. A render step
@@ -44,8 +48,19 @@ export const PRELUDE: FrameSection = {
     // alone: a capture step hands it a SYNTHETIC per-face ctx, never the real camera.
     {
       kind: 'capture',
-      captures: ['sgrAStar', 'solarSystem'],
+      captures: APP_SKY_CAPTURE_KEYS.filter((key) => key !== 'solarSystem'),
       cosmoPasses: ['point-sprites', 'textured-disks'],
+      near0Passes: ['star-aggregates', 'star-catalog'],
+      bodyPasses: [],
+    },
+    // `solarSystem` is the star field a reflection probe is captured over; parallax
+    // across the solar system is sub-texel on its 256² faces. Stars only: galaxies are
+    // invisible in a 128² probe, and drawing ~2.5M billboards six times cost up to
+    // 34 ms a bake.
+    {
+      kind: 'capture',
+      captures: ['solarSystem'],
+      cosmoPasses: [],
       near0Passes: ['star-aggregates', 'star-catalog'],
       bodyPasses: [],
     },
@@ -55,14 +70,26 @@ export const PRELUDE: FrameSection = {
     // own probe); `star-spheres` / `field-star-sphere` (the Sun stays analytic, a
     // sub-pixel Sun would smear into a false highlight); glints and `orbit-trails`
     // (not environment); `atmosphere-shell` (classifies rays by a sampled scene depth a
-    // capture face never resolves, and its pipeline has no depth state). NEAR0 is empty
-    // because the blit rides COSMO.
+    // capture face never resolves, and its pipeline has no depth state). In its place:
+    // inside an atmosphere `atmosphere-probe-sky` draws the sky FIRST, so the ground
+    // passes overdraw it; outside, `atmosphere-probe-shell` draws the shell LAST, as the
+    // live view does over globe and rings, with far depth: its rays end at the analytic
+    // globe. NEAR0 is empty because the blit rides COSMO.
     {
       kind: 'capture',
       captures: ['probe'],
       cosmoPasses: ['sky-cubemap-blit'],
       near0Passes: [],
-      bodyPasses: ['earth', 'surface-tiles', 'cloud-shell', 'planets', 'textured-bodies', 'rings'],
+      bodyPasses: [
+        'atmosphere-probe-sky',
+        'earth',
+        'surface-tiles',
+        'cloud-shell',
+        'planets',
+        'textured-bodies',
+        'rings',
+        'atmosphere-probe-shell',
+      ],
     },
   ],
 };
@@ -77,6 +104,9 @@ export const SCENE: FrameSection = {
     // its own submit, so the bake lands after the previous view's apply and before this
     // view's; no once-scope PRELUDE line could give that ordering.
     { kind: 'compute', name: 'aerial-perspective' },
+    // The v2 Milky Way field into its own `mw-field-*` targets, composited by
+    // `milky-way-field` on the hdr NEAR0 line. Per view for the same reason.
+    { kind: 'compute', name: 'mw-field' },
     // Reduced-res density raymarch, merged into HDR by `cosmic-web-density-upsample`
     // inside the hdr COSMO step below, so this render must precede that step.
     { kind: 'render', target: 'cosmic-web-density', slab: COSMO, passes: ['cosmic-web-density'] },
@@ -112,6 +142,14 @@ export const SCENE: FrameSection = {
     // so cost drops by the divisor squared). Precedes the hdr NEAR0 step, where its
     // consumer `milky-way-upsample` and the dust that extincts it live.
     { kind: 'render', target: 'mw-aggregate', slab: NEAR0, passes: ['milky-way-aggregate'] },
+    // The streams' wide haze at half res, same reasoning; composited by
+    // `stellar-streams-haze-upsample` on the hdr NEAR0 line below.
+    {
+      kind: 'render',
+      target: 'stellar-streams-haze',
+      slab: NEAR0,
+      passes: ['stellar-streams-haze'],
+    },
     // Near-field HDR roster. NEAR0 because COSMO's 0.01 Mpc near plane would clip these
     // kpc-to-parsec anchors; it accumulates into the SAME hdr target, ahead of the one
     // tone-map.
@@ -123,6 +161,9 @@ export const SCENE: FrameSection = {
     //
     // `milky-way-upsample` precedes `milky-way` so the cloud's own starlight is folded
     // in before the dust multiplies; swapping them leaves the cloud's stars un-extincted.
+    // `milky-way-field` (the v2 field's targets, written by `mw-field`) sits between
+    // them as placement only: v1 dust is off whenever the field draws, and the
+    // field's own dust is in-shader.
     //
     // `local-bubble` follows `milky-way` immediately, NOT a listing choice: anything
     // accumulated after the dust multiply escapes it, and the shell's additive Fresnel
@@ -138,8 +179,11 @@ export const SCENE: FrameSection = {
       slab: NEAR0,
       passes: [
         'milky-way-upsample',
+        'milky-way-field',
         'milky-way',
         'local-bubble',
+        'stellar-streams-haze-upsample',
+        'stellar-streams',
         'light-time-spheres',
         'star-points',
         'star-catalog',
@@ -161,7 +205,13 @@ export const SCENE: FrameSection = {
       kind: 'render',
       target: 'hdr',
       slab: NEAR0,
-      passes: ['body-glints', 'mission-glints', 'earth-scene-glints', 'black-hole-marker'],
+      passes: [
+        'body-glints',
+        'mission-glints',
+        'earth-scene-glints',
+        'probe-sphere-glints',
+        'black-hole-marker',
+      ],
       slot: 'POST_LENSING',
     },
     // Near-field foreground bodies into their own depth-bearing target, expanded over
@@ -201,6 +251,7 @@ export const SCENE: FrameSection = {
         'mission-meshes',
         'body-meshes',
         'earth-scene-meshes',
+        'probe-sphere-meshes',
       ],
     },
     // Aerial-perspective apply, on the enclosing body's painter row (the row that
@@ -232,7 +283,14 @@ export const SCENE: FrameSection = {
       target: 'hdr',
       slab: NEAR0,
       depth: { sample: 'foreground:0' },
-      passes: ['orbit-trails', 'mission-trails', 'satellite-orbits', 'satellites'],
+      passes: [
+        'orbit-trails',
+        'mission-trails',
+        'satellite-orbits',
+        'satellites',
+        'asteroid-orbits',
+        'asteroids',
+      ],
       slot: 'POST_FOREGROUND',
     },
   ],
@@ -297,5 +355,9 @@ export const OVERLAYS: FrameSection = {
       depth: { sample: 'foreground:0' },
       passes: ['near0-selection-ring', 'labels-near', 'clip-path-debug'],
     },
+    // The film look's bars, after every overlay so they mask captions the way a real
+    // matte would. Its own line: it binds no depth, and the line above must fill the
+    // shared group(1) joint. `slot` parts it from the first line's `swap·cosmo` total.
+    { kind: 'render', target: 'swap', slab: COSMO, passes: ['letterbox'], slot: 'LETTERBOX' },
   ],
 };

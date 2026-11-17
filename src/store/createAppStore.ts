@@ -32,10 +32,8 @@
  *
  * Registering the context also DISPATCHES `sagaContextRegistered`. `setContext`
  * alone is invisible from inside a saga — `getContext` yields `undefined` rather
- * than blocking — which is fine for every watcher woken by an action, and not
- * fine for the one saga that dispatches unprompted at construction (the hash
- * arrival read). The action is what `watchHashSaga` waits on before it forks
- * either half of the bridge.
+ * than blocking — fine for most watchers, not for the ones that can run before
+ * registration (named in `rootSaga`'s header). The action is what they wait on.
  *
  * That is why the setter takes a WHOLE `SagaContext` rather than a `Partial`: the
  * dispatch announces "the capabilities the sagas reach for are registered", and

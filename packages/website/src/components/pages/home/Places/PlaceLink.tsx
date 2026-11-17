@@ -6,9 +6,10 @@
  */
 import type { CSSProperties, Ref } from 'react';
 
-import { appLink } from '../../../../data/appLink.ts';
 import type { Place } from '../../../../@types/Place';
 import { cx } from '../../../../utils/cx.ts';
+import { narrowSizes } from '../../../../utils/narrowSizes.ts';
+import AppLink from '../../../shared/links/AppLink/AppLink.tsx';
 import DiscFilm from '../../../shared/media/DiscFilm/DiscFilm.tsx';
 import Icon from '../../../shared/links/Icon/Icon.tsx';
 import styles from './Places.module.css';
@@ -43,9 +44,9 @@ function PlaceLink({
   const head = words.slice(0, -1).join(' ');
   return (
     <li className={className} style={vars}>
-      <a
+      <AppLink
         className={cx(styles.thing, playing && styles.playing)}
-        href={appLink(place.hash)}
+        view={place.hash}
         onPointerEnter={onPlay}
         onPointerLeave={onStop}
         onFocus={(event) => event.currentTarget.matches(':focus-visible') && onPlay?.()}
@@ -54,7 +55,7 @@ function PlaceLink({
         <DiscFilm
           className={styles.disc}
           still={place.shot}
-          sizes="(min-width: 901px) 15vw, 45vw"
+          sizes={narrowSizes('45vw', '15vw')}
           film={film}
           playing={playing}
           screenRef={screenRef}
@@ -74,7 +75,7 @@ function PlaceLink({
           </b>
           <span className={styles.far}>{far}</span>
         </span>
-      </a>
+      </AppLink>
     </li>
   );
 }

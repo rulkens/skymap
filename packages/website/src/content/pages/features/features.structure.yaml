@@ -13,6 +13,10 @@ sections:
         job: "What does Skymap show of our own galaxy?"
       - heading: "The cosmic web and deep space"
         job: "How far out does Skymap go, and what is there?"
+  - heading: "Find your way around"
+    job: "How do I get to a thing by name, and back again?"
+    layout: "words left in five columns, the pieces in the page's right half with the panels' edges on its lines; stacked on a phone"
+    visual: "the app's top bar on true alpha with the search it opens laid under it, Orion typed and its list dissolving into the page; the keys / and H stand over the search box and the Home button, which wears the app's selection ring; the search drifts and leans nearer than the bar"
   - heading: "The universe in motion"
     job: "What moves in Skymap, and on what scales?"
     parts:

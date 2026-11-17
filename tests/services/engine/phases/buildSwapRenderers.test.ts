@@ -25,6 +25,9 @@ vi.mock('../../../../src/services/gpu/renderers/labels/markerLineRenderer', () =
 vi.mock('../../../../src/services/gpu/renderers/devTools/debugLineRenderer', () => ({
   createDebugLineRenderer: vi.fn(() => makeStub()),
 }));
+vi.mock('../../../../src/services/gpu/renderers/letterbox/letterboxRenderer', () => ({
+  createLetterboxRenderer: vi.fn(() => makeStub()),
+}));
 vi.mock('../../../../src/services/gpu/renderers/selectionRing/selectionRingRenderer', () => ({
   createSelectionRingRenderer: vi.fn(() => makeStub()),
 }));
@@ -54,6 +57,7 @@ function makeState(): EngineState {
       labelRendererCosmo: null,
       markerLineRendererCosmo: null,
       debugLineRenderer: null,
+      letterboxRenderer: null,
       selectionRingRenderer: null,
       pickDebugOverlay: null,
       labelRendererNear: null,
@@ -80,6 +84,7 @@ describe('buildSwapRenderers', () => {
       labelRendererCosmo: state.gpu.labelRendererCosmo,
       markerLineRendererCosmo: state.gpu.markerLineRendererCosmo,
       debugLineRenderer: state.gpu.debugLineRenderer,
+      letterboxRenderer: state.gpu.letterboxRenderer,
       selectionRingRenderer: state.gpu.selectionRingRenderer,
       pickDebugOverlay: state.gpu.pickDebugOverlay,
       labelRendererNear: state.gpu.labelRendererNear,

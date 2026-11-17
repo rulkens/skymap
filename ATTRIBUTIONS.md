@@ -624,8 +624,8 @@ unclear, and no entry here reads them as a licence.
   2026-10-28)
 - **Enters skymap:** typed from TAP query results into
   `data/seeds/structure_anchors.seed.json`,
-  `src/layers/structure/data/exoplanetOrbits.ts`,
-  `src/data/bodies/exoplanetPlanets.ts` and TRAPPIST-1's row of
+  `src/layers/structure/markers/data/exoplanetOrbits.ts`,
+  `src/layers/body/bodies/exoplanets/exoplanetPlanets.ts` and TRAPPIST-1's row of
   `data/seeds/famous_stars.seed.json`.
 - **Modified:** The habitable zone is derived from `st_lum`, and each planet's
   elements are converted to the sky-plane frame (spec
@@ -651,8 +651,9 @@ unclear, and no entry here reads them as a licence.
   permission", with the credit line "Courtesy NASA/JPL-Caltech".
 - **Use:** No licence stated
 - **Attribution:** "For referencing the data downloaded from the SSD website,
-  please use the following citation: “Solar System Dynamics. (Downloaded Year,
-  Month, Date). (Title of the Page). https://ssd.jpl.nasa.gov”".
+  please use the following citation: “NASA/JPL Solar System Dynamics. Data
+  retrieved on (Downloaded Year, Month, Date). (Title of the Page).
+  https://ssd.jpl.nasa.gov”".
 - **Upstream:** <https://ssd.jpl.nasa.gov/planets/approx_pos.html>,
   <https://ssd.jpl.nasa.gov/sats/elem/>
 - **Enters skymap:** typed by hand into `src/data/bodies/orbitalElements.ts`.
@@ -671,8 +672,9 @@ unclear, and no entry here reads them as a licence.
 - **Licence:** Not stated for the service's output on the pages read.
 - **Use:** No licence stated
 - **Attribution:** "For referencing the data downloaded from the SSD website,
-  please use the following citation: “Solar System Dynamics. (Downloaded Year,
-  Month, Date). (Title of the Page). https://ssd.jpl.nasa.gov”".
+  please use the following citation: “NASA/JPL Solar System Dynamics. Data
+  retrieved on (Downloaded Year, Month, Date). (Title of the Page).
+  https://ssd.jpl.nasa.gov”".
 - **Upstream:** <https://ssd.jpl.nasa.gov/api/horizons.api>
 - **Enters skymap:** `npm run fetch-horizons` → `data/raw/horizons/` →
   `npm run build-ephemeris-corrections` →
@@ -697,14 +699,71 @@ unclear, and no entry here reads them as a licence.
 - **Use:** No licence stated
 - **Attribution:** None asked on the pages read; skymap credits CelesTrak.
 - **Upstream:** <https://celestrak.org/NORAD/elements/gp.php>
-- **Enters skymap:** the daily `.github/workflows/satellites.yml` (or
+- **Enters skymap:** the daily `.github/workflows/live-datasets.yml` (or
   `npm run fetch-celestrak` locally) → `data/raw/celestrak/` →
-  `npm run build-satellites` → `satellite-catalog/v1/satellites.satg` on R2.
+  `npm run build-satellites` → a dated `satellites.satg` under `live/v1/` on R2.
 - **Modified:** Yes. De-duplicated across groups, records SGP4 cannot run
   dropped, and re-encoded; the element values are copied unchanged.
 - **Checked:** 2026-10-28: <https://celestrak.org/usage-policy.php>,
   <https://celestrak.org/NORAD/documentation/gp-data-formats.php>,
   <https://celestrak.org/NORAD/elements/>
+
+### MPC Orbit Database (MPCORB)
+
+<!-- attribution: id=mpcorb; keys=mpcorb,mpcorb.readme -->
+
+- **What:** Osculating orbital elements, absolute magnitudes and orbit types
+  of every numbered minor planet (about 896,000 on 2026-11-12).
+- **By:** The IAU Minor Planet Center, hosted by the Center for Astrophysics,
+  Harvard & Smithsonian; each orbit by the computer its record names.
+- **Licence:** The file's header: "Software programs may include this
+  datafile amongst their datasets, as long as this header is included (it is
+  acceptable if it is contained in a file separate from the actual data) and
+  that proper attribution to the Minor Planet Center is given. [...]
+  Information on how to obtain updated copies of the datafile must also be
+  included." The website use policy: "Data files are copyrighted entities and
+  may be redistributed as long as the source for the data is clearly
+  specified."
+- **Use:** Conditions apply
+- **Attribution:** The Minor Planet Center, with the MPCORB header shipped
+  beside the data and the address of updated copies
+  (<https://www.minorplanetcenter.net/iau/MPCORB/MPCORB.DAT>).
+- **Upstream:** <https://www.minorplanetcenter.net/iau/MPCORB/MPCORB.DAT.gz>
+- **Enters skymap:** `npm run fetch-mpcorb` → `data/raw/mpcorb/` →
+  `npm run build-asteroids` → `asteroids/v1/asteroids.astb`,
+  `asteroid-names.bin` and `mpcorb-header.txt` on R2.
+- **Modified:** Yes. Numbered rows only, without the centaurs and the objects
+  beyond Neptune (orbit type 10), quantized to a columnar file, and the few rows
+  at another epoch propagated to the shared one by two-body motion.
+- **Checked:** 2026-11-12: <https://www.minorplanetcenter.net/iau/MPCORB.html>,
+  <https://www.minorplanetcenter.net/iau/info/MPOrbitFormat.html>,
+  <https://www.minorplanetcenter.net/iau/WWWPolicy.html>
+
+### JPL Small-Body Database (asteroid diameters)
+
+<!-- attribution: id=sbdb-diameters; keys=sbdb.* -->
+
+- **What:** Diameters and geometric albedos of the numbered asteroids that
+  have one (135,476 on 2026-11-16), most from NEOWISE.
+- **By:** The JPL Solar System Dynamics group (the Small-Body Database), from
+  the published measurement each row cites.
+- **Licence:** Not stated on the pages read. The API fair-use policy limits
+  how the service is called ("You agree to submit only one API request at a
+  time (no simultaneous requests)", "You may not embed these APIs in your
+  website (per NASA CORS policy)") and says nothing on republishing.
+- **Use:** No licence stated
+- **Attribution:** "For referencing the data downloaded from the SSD website,
+  please use the following citation: “NASA/JPL Solar System Dynamics. Data
+  retrieved on (Downloaded Year, Month, Date). (Title of the Page).
+  https://ssd.jpl.nasa.gov”".
+- **Upstream:** <https://ssd-api.jpl.nasa.gov/sbdb_query.api>
+- **Enters skymap:** `npm run fetch-sbdb-diameters` → `data/raw/sbdb/` →
+  `npm run build-asteroids` → `asteroids/v1/asteroid-diameters.bin` on R2.
+- **Modified:** Yes. Only the asteroids the asteroids Layer draws, with
+  diameter and albedo as 32-bit floats; the uncertainties are left out.
+- **Checked:** 2026-11-16: <https://ssd-api.jpl.nasa.gov/>,
+  <https://ssd-api.jpl.nasa.gov/doc/sbdb_query.html>,
+  <https://ssd.jpl.nasa.gov/about/>
 
 ### MCXC, the Meta-Catalogue of X-ray detected Clusters
 
@@ -958,6 +1017,269 @@ unclear, and no entry here reads them as a licence.
 - **Modified:** Yes. Baked to a triangle mesh with normals.
 - **Checked:** 2026-10-07: <https://dataverse.harvard.edu/api/datasets/:persistentId/?persistentId=doi:10.7910/DVN/INB1RB>
 
+### The Sagittarius stream N-body model (Vasiliev et al. 2021)
+
+<!-- attribution: id=vasiliev2021; keys=vasiliev2021.* -->
+
+- **What:** The present-day snapshot of an N-body model of the disrupting
+  Sagittarius dwarf galaxy, 200,000 star particles (`Sgr_snapshot/stars.txt`
+  of `Sgr_stream_simulations.zip`).
+- **By:** Vasiliev, Belokurov & Erkal 2021, "Tango for three: Sagittarius,
+  LMC, and the Milky Way", MNRAS 501, 2279.
+- **Licence:** Creative Commons Attribution 4.0 International (the Zenodo
+  record).
+- **Use:** Free with credit
+- **Attribution:** Cite the paper and the dataset: Vasiliev, Belokurov &
+  Erkal 2021, Zenodo, doi:10.5281/zenodo.4300977.
+- **Upstream:** <https://zenodo.org/records/4300977>
+- **Enters skymap:** `npm run fetch-vasiliev2021` → `data/raw/vasiliev2021/` →
+  `npm run build-stellar-streams` →
+  `public/data/stellar-streams/v1/stellar-streams.bin`.
+- **Modified:** Yes. 60,000 of the particles picked at random, rotated into
+  the equatorial frame and given a size, brightness and colour of our own.
+- **Checked:** 2026-11-06: <https://zenodo.org/api/records/4300977>
+
+### Stellar stream tracks (galstreams)
+
+<!-- attribution: id=galstreams; keys=galstreams.* -->
+
+- **What:** The published sky tracks, with distances and proper motions, of
+  the Milky Way's stellar streams (`tracks/*.ecsv`, `lib/master_log.txt`).
+- **By:** Cecilia Mateu. Mateu 2023, "galstreams: a library of Milky Way
+  stellar stream footprints and tracks", MNRAS 520, 5225; each track is from
+  the discovery or mapping paper its master-log row names.
+- **Licence:** BSD 3-Clause. "Copyright (c) 2017, Cecilia Mateu".
+- **Use:** Free with credit
+- **Attribution:** Keep the licence notice; cite Mateu 2023 and, for a single
+  stream, the paper of its track.
+- **Upstream:** <https://github.com/cmateu/galstreams> (commit `6a304c0`)
+- **Enters skymap:** `npm run fetch-galstreams` → `data/raw/galstreams/` →
+  `npm run build-stellar-streams` →
+  `public/data/stellar-streams/v1/stellar-streams.bin` and
+  `stellar_streams_meta.json`.
+- **Modified:** Yes. One track per stream resampled into particles scattered
+  across the stream's width.
+- **Checked:** 2026-11-06: <https://github.com/cmateu/galstreams/blob/main/LICENSE>
+
+### Globular-cluster metallicities (Harris catalogue)
+
+<!-- attribution: id=harris-gc -->
+
+- **What:** The [Fe/H] of 19 globular clusters whose streams skymap draws
+  (`mwgc.dat` Part II, December 2010 revision).
+- **By:** William E. Harris. Harris 1996, AJ 112, 1487 (2010 edition).
+- **Licence:** The file's own notice: "THE DATA IN THIS CATALOG ARE SUPPLIED
+  FREE OF CHARGE TO ALL USERS. ANY THIRD PARTY WHO SUPPLIES THIS CATALOG IN
+  TURN TO OTHER USERS MUST REFER TO THE ORIGINAL SOURCE, WHICH IS THIS
+  WEBSITE, AND MUST DO SO WITHOUT CHARGE OF ANY FEE."
+- **Use:** Conditions apply
+- **Attribution:** "Please acknowledge the use of this catalog in any
+  published work you derive from it ... please use 'Harris 1996 (2010
+  edition)'".
+- **Upstream:** <https://physics.mcmaster.ca/~harris/mwgc.dat>
+- **Enters skymap:** typed into
+  `tools/streams/data/streamMetallicity.constants.ts` → the stream colours
+  and the stream card's Metallicity row.
+- **Modified:** No values changed.
+- **Checked:** 2026-11-07: <https://physics.mcmaster.ca/~harris/mwgc.dat>
+
+### Stream metallicities from S5 (Li et al. 2022)
+
+<!-- attribution: id=s5-li2022 -->
+
+- **What:** The mean CaT [Fe/H] of the streams in the S5 survey's Table 1.
+- **By:** Li et al. 2022, "S5: The Orbital and Chemical Properties of One
+  Dozen Stellar Streams", ApJ 928, 30.
+- **Licence:** A published paper; a few of its numbers used.
+- **Use:** Reference only
+- **Attribution:** Cite the paper.
+- **Upstream:** <https://arxiv.org/abs/2110.06950>
+- **Enters skymap:** typed into
+  `tools/streams/data/streamMetallicity.constants.ts` → the stream colours
+  and the stream card's Metallicity row.
+- **Modified:** Orphan and Chenab, measured apart, enter as one
+  giant-weighted mean (galstreams has one Orphan-Chenab stream).
+- **Checked:** 2026-11-07: <https://arxiv.org/e-print/2110.06950> (the
+  source's Table 1).
+- **Not verified:** the journal's terms.
+
+### The Sagittarius metallicity gradient (Hayes et al. 2020)
+
+<!-- attribution: id=hayes2020 -->
+
+- **What:** The median [Fe/H] of the Sagittarius core and of its leading
+  arm, which set the stream's colour against stripping time.
+- **By:** Hayes et al. 2020, "Metallicity and α-Element Abundance Gradients
+  along the Sagittarius Stream as Seen by APOGEE", ApJ 889, 63.
+- **Licence:** A published paper; two of its numbers used.
+- **Use:** Reference only
+- **Attribution:** Cite the paper.
+- **Upstream:** <https://arxiv.org/abs/1912.06707>
+- **Enters skymap:** `tools/streams/data/streamsBuild.constants.ts`
+  (`SGR_FEH_*`) → `stellar-streams.bin`.
+- **Modified:** The two medians are joined by a line in stripping time of
+  our own.
+- **Checked:** 2026-11-07: <https://arxiv.org/e-print/1912.06707>
+- **Not verified:** the journal's terms.
+
+### Stream stellar masses from DES (Shipp et al. 2018)
+
+<!-- attribution: id=shipp2018 -->
+
+- **What:** The stellar masses of seven streams, from the paper's table of
+  derived parameters.
+- **By:** Shipp et al. 2018, "Stellar Streams Discovered in the Dark Energy
+  Survey", ApJ 862, 114.
+- **Licence:** A published paper; seven of its numbers used.
+- **Use:** Reference only
+- **Attribution:** Cite the paper, doi:10.3847/1538-4357/aacdab.
+- **Upstream:** <https://arxiv.org/abs/1801.03097>
+- **Enters skymap:** typed into
+  `tools/streams/data/streamStellarMass.constants.ts` → the stream card's
+  Stellar mass row.
+- **Modified:** No values changed. Each is the mass inside the DES
+  footprint; the four streams that run past it show as lower bounds.
+- **Checked:** 2026-11-07: <https://arxiv.org/e-print/1801.03097> (the
+  source's table "Derived parameters of stellar streams").
+- **Not verified:** the journal's terms.
+
+### The stellar mass of GD-1 (Koposov et al. 2010)
+
+<!-- attribution: id=koposov2010 -->
+
+- **What:** The stellar mass of the GD-1 stream, from its star count.
+- **By:** Koposov, Rix & Hogg 2010, "Constraining the Milky Way potential
+  with a 6-D phase-space map of the GD-1 stellar stream", ApJ 712, 260.
+- **Licence:** A published paper; one of its numbers used.
+- **Use:** Reference only
+- **Attribution:** Cite the paper, doi:10.1088/0004-637X/712/1/260.
+- **Upstream:** <https://arxiv.org/abs/0907.1085>
+- **Enters skymap:** typed into
+  `tools/streams/data/streamStellarMass.constants.ts` → the stream card's
+  Stellar mass row.
+- **Modified:** No values changed.
+- **Checked:** 2026-11-07: <https://arxiv.org/e-print/0907.1085> (the source's
+  section "Stellar population of the stream").
+- **Not verified:** the journal's terms.
+
+### The stellar mass of the Jet stream (Jethwa et al. 2018)
+
+<!-- attribution: id=jethwa2018 -->
+
+- **What:** The stellar mass of the Jet stream, from its main-sequence turnoff.
+- **By:** Jethwa et al. 2018, "Discovery of a thin stellar stream in the SLAMS
+  survey", MNRAS 480, 5342.
+- **Licence:** A published paper; one of its numbers used.
+- **Use:** Reference only
+- **Attribution:** Cite the paper, doi:10.1093/mnras/sty2226.
+- **Upstream:** <https://arxiv.org/abs/1711.09103>
+- **Enters skymap:** typed into
+  `tools/streams/data/streamStellarMass.constants.ts` → the stream card's
+  Stellar mass row.
+- **Modified:** No values changed.
+- **Checked:** 2026-11-07: <https://arxiv.org/e-print/1711.09103> (the
+  source's section "The progenitor?").
+- **Not verified:** the journal's terms.
+
+### The stellar mass of the NGC 5466 stream (Jensen et al. 2021)
+
+<!-- attribution: id=jensen2021 -->
+
+- **What:** The stellar mass of the detected part of the NGC 5466 stream.
+- **By:** Jensen et al. 2021, "Uncovering fossils of the distant Milky Way with
+  UNIONS: NGC 5466 and its stellar stream", MNRAS 507, 1923.
+- **Licence:** A published paper; one of its numbers used.
+- **Use:** Reference only
+- **Attribution:** Cite the paper, doi:10.1093/mnras/stab2325.
+- **Upstream:** <https://arxiv.org/abs/2108.04340>
+- **Enters skymap:** typed into
+  `tools/streams/data/streamStellarMass.constants.ts` → the stream card's
+  Stellar mass row.
+- **Modified:** No values changed.
+- **Checked:** 2026-11-07: <https://arxiv.org/e-print/2108.04340> (the
+  source's subsection "Luminosity").
+- **Not verified:** the journal's terms.
+
+### The stellar mass of the Ophiuchus stream (Caldwell et al. 2020)
+
+<!-- attribution: id=caldwell2020 -->
+
+- **What:** The total mass of the stars of the Ophiuchus stream.
+- **By:** Caldwell et al. 2020, "A Larger Extent for the Ophiuchus Stream",
+  AJ 159, 287.
+- **Licence:** A published paper; one of its numbers used.
+- **Use:** Reference only
+- **Attribution:** Cite the paper, doi:10.3847/1538-3881/ab8cbf.
+- **Upstream:** <https://arxiv.org/abs/2004.14350>
+- **Enters skymap:** typed into
+  `tools/streams/data/streamStellarMass.constants.ts` → the stream card's
+  Stellar mass row.
+- **Modified:** No values changed.
+- **Checked:** 2026-11-07: <https://arxiv.org/e-print/2004.14350> (the
+  source's section "Discussion and conclusions").
+- **Not verified:** the journal's terms.
+
+### The stellar mass of the Cetus-Palca stream (Thomas & Battaglia 2022)
+
+<!-- attribution: id=thomas2022 -->
+
+- **What:** The stellar mass of the Cetus-Palca stream, from its luminosity
+  function.
+- **By:** Thomas & Battaglia 2022, "The Cetus-Palca stream: A disrupted
+  small dwarf galaxy", A&A 660, A29.
+- **Licence:** A published paper; one of its numbers used.
+- **Use:** Reference only
+- **Attribution:** Cite the paper, doi:10.1051/0004-6361/202142347.
+- **Upstream:** <https://arxiv.org/abs/2112.03973>
+- **Enters skymap:** typed into
+  `tools/streams/data/streamStellarMass.constants.ts` → the stream card's
+  Stellar mass row.
+- **Modified:** No values changed; the median of the paper's 100 realisations.
+- **Checked:** 2026-11-07: <https://arxiv.org/e-print/2112.03973> (the
+  source's section "Tracing the Cetus-Palca stream with different stellar
+  populations").
+- **Not verified:** the journal's terms.
+
+### The stellar mass of the Orphan-Chenab stream (Koposov et al. 2023)
+
+<!-- attribution: id=koposov2023 -->
+
+- **What:** The stellar mass of the visible part of the Orphan-Chenab stream.
+- **By:** Koposov et al. 2023, "S5: Probing the Milky Way and Magellanic Clouds
+  potentials with the 6-D map of the Orphan-Chenab stream", MNRAS 521, 4936.
+- **Licence:** A published paper; one of its numbers used.
+- **Use:** Reference only
+- **Attribution:** Cite the paper, doi:10.1093/mnras/stad551.
+- **Upstream:** <https://arxiv.org/abs/2211.04495>
+- **Enters skymap:** typed into
+  `tools/streams/data/streamStellarMass.constants.ts` → the stream card's
+  Stellar mass row.
+- **Modified:** No values changed.
+- **Checked:** 2026-11-07: <https://arxiv.org/e-print/2211.04495> (the
+  source's section "Stream density").
+- **Not verified:** the journal's terms.
+
+### Old-population colours (MIST isochrones)
+
+<!-- attribution: id=mist -->
+
+- **What:** The light shares and B−V colours of giants, turnoff stars and
+  the horizontal branch at two metallicities, read off 12.6 Gyr isochrones.
+- **By:** The MIST project. Dotter 2016, ApJS 222, 8; Choi et al. 2016, ApJ
+  823, 102 (MIST v1.2).
+- **Licence:** Not stated for the model grids. The references page asks:
+  "Please cite the following papers in a publication that makes use of the
+  MIST models".
+- **Use:** Reference only
+- **Attribution:** Cite Dotter 2016 and Choi et al. 2016.
+- **Upstream:** <https://waps.cfa.harvard.edu/MIST/model_grids.html>
+  (`MIST_v1.2_vvcrit0.4_UBVRIplus.txz`)
+- **Enters skymap:** `tools/streams/data/streamsBuild.constants.ts`
+  (`STREAM_POPULATION_*`) → `stellar-streams.bin`.
+- **Modified:** Yes. Integrated by us over a Kroupa initial mass function
+  into two rounded anchors; nothing of MIST's is shipped as a file.
+- **Checked:** 2026-11-07: <https://waps.cfa.harvard.edu/MIST/references.html>
+
 ### Filaments (DisPerSE)
 
 <!-- attribution: id=disperse; keys=filaments.cache-dir -->
@@ -1045,12 +1367,13 @@ paying a fee."
 
 ### Galaxy photographs fetched from Wikipedia (3 images) and galaxy descriptions
 
-<!-- attribution: id=wikipedia; keys=famous.wikipedia-cache; hosts=en.wikipedia.org -->
+<!-- attribution: id=wikipedia; keys=famous.wikipedia-cache,streams.wikipedia-cache; hosts=en.wikipedia.org -->
 
 - **What:** The lead image of the Wikipedia article for the three listed
   galaxies with no curated photograph (`c52`, `c53`, `c61`), and the
-  article's opening sentences as the description of about 50 galaxies. The
-  app's cards also link to Wikipedia articles.
+  article's opening sentences as the description of about 50 galaxies and of
+  the six stellar streams that have an article. The app's cards also link to
+  Wikipedia articles.
 - **By:** Wikipedia contributors; the images' authors on Wikimedia Commons.
 - **Licence:** Text: CC BY-SA 4.0 (and GFDL), per the Wikimedia Terms of Use.
   Images, as Commons states on 2026-10-07: `c52` NGC 4697, CC BY-SA 3.0 (author given
@@ -1065,7 +1388,9 @@ paying a fee."
 - **Enters skymap:** `tools/famous/fetchFamousImages.ts` →
   `data/raw/famous/wikipedia_famous_cache.json` → `public/images/famous/` and
   `famous_galaxies_meta.json`; descriptions also sit in
-  `data/seeds/famous_galaxies.seed.json`.
+  `data/seeds/famous_galaxies.seed.json`. Streams: `npm run
+  build-stellar-streams` → `data/raw/streams/wikipedia_streams_cache.json` →
+  `stellar_streams_meta.json`.
 - **Modified:** Images resized and faded at the edge; text taken as is.
 - **Checked:** 2026-10-07: <https://foundation.wikimedia.org/wiki/Policy:Terms_of_Use>,
   <https://commons.wikimedia.org/w/api.php> (the three files)
@@ -1546,7 +1871,7 @@ The surface tile manifests under `public/data/images/earth-tiles/` and
 
 ### NASA Blue Marble and Black Marble
 
-<!-- attribution: id=nasa-blue-marble; keys=textures.nasaBmng*,textures.earthWaterMask,textures.earthNight,textures.earthElevation,textures.earthClouds; hosts=visibleearth.nasa.gov -->
+<!-- attribution: id=nasa-blue-marble; keys=textures.nasaBmng*,textures.earthWaterMask,textures.earthNight,textures.blackMarbleQuadrant*,textures.earthElevation,textures.earthClouds; hosts=visibleearth.nasa.gov -->
 
 - **What:** Earth's surface (Blue Marble Next Generation, August 2004,
   topography and bathymetry: one whole-globe image and eight quadrants), night
@@ -1585,6 +1910,55 @@ The surface tile manifests under `public/data/images/earth-tiles/` and
 - **Not verified:** the credit lines on the pages of the Blue Marble month,
   Black Marble, the water mask and the cloud composite (the pages need a
   script to show them).
+
+### Live cloud bake inputs (NASA GIBS, EUMETSAT and JMA Himawari)
+
+<!-- attribution: id=cloud-bake; keys=clouds.*; hosts=www.earthdata.nasa.gov,www.eumetsat.int,www.jma.go.jp -->
+
+- **What:** The daily satellite imagery `tools/cloud-bake-rs` turns into a
+  global cloud-opacity map: VIIRS (NOAA-20, NOAA-21) swaths and mosaics and
+  GOES-East, GOES-West and Himawari infrared frames from NASA GIBS, and Meteosat
+  MTG and IODC infrared frames from EUMETSAT's EUMETView.
+- **By:** NASA GIBS (VIIRS, GOES); EUMETSAT (Meteosat); the Japan
+  Meteorological Agency (Himawari).
+- **Licence:** GIBS imagery from VIIRS and GOES: free to use, commercial use
+  included, with credit to NASA/GIBS. EUMETView WMS visualisations: CC BY 4.0.
+  Himawari frames reach GIBS through NOAA, whose terms on the AWS open-data
+  registry (<https://registry.opendata.aws/noaa-himawari/>) read: "Himawari
+  data is produced and managed by JMA. NOAA has rights to distribute this data
+  freely and openly to the public … NOAA and JMA request attribution for the
+  use or dissemination of unaltered data. However, it is not permissible to
+  state or imply endorsement by or affiliation with NOAA or JMA. If you modify
+  these data, you may not state or imply that it is original, unaltered data."
+  Commercial use of the Himawari part is pending JMA's answer; the maintainer
+  asked JMA on 2026-11-16. Meanwhile the web app uses it, with the credit
+  lines below; the desktop kiosk waits on the answer (it mirrors no live
+  files, so it shows the built-in cloud map).
+- **Use:** Per item
+- **Attribution:** For EUMETSAT, required verbatim with the year of the data:
+  "Contains modified EUMETSAT Meteosat data 2026". For Himawari: "Contains
+  modified Himawari-9 data, Japan Meteorological Agency, via NOAA and NASA GIBS; not
+  original or endorsed by JMA". For GIBS: "We acknowledge the use of imagery
+  provided by services from NASA's Global Imagery Browse Services (GIBS), part
+  of NASA's Earth Science Data and Information System (ESDIS)." These lines are
+  shown on the website's data page for this source and on its credits page;
+  the app's splash and the desktop About name NASA GIBS, EUMETSAT and JMA
+  Himawari.
+- **Upstream:** <https://gibs.earthdata.nasa.gov/> and
+  <https://view.eumetsat.int/>; details in `data/raw/clouds/README.md`.
+- **Enters skymap:** `npm run build-live-clouds`, run nightly by the Live
+  datasets workflow, bakes yesterday's map and uploads three grey tiers under
+  a dated `data/live/v1/files/clouds/` folder on R2, behind the
+  `live/v1/clouds.json` pointer. The web app's Earth cloud shell loads the
+  newest of them, falling back to the built-in Blue Marble cloud map. The
+  desktop kiosk mirrors no live keys, so it always shows the built-in map.
+- **Modified:** Yes. Mosaicked, seam-blended, gap-filled and matched to the
+  static cloud map.
+- **Checked:** 2026-11-16, the NOAA Himawari page on the AWS open-data
+  registry; the GIBS and EUMETView terms on 2026-11-10, from the maintainer's
+  notes, not re-opened for this entry.
+- **Not verified:** JMA's terms for commercial use of Himawari; the exact
+  credit wording NASA asks of GIBS users beyond the acknowledgement above.
 
 ### EOxCloudless (Sentinel-2), layer s2cloudless-2025
 
@@ -1859,6 +2233,52 @@ bake credits "HiRISE: NASA/JPL/University of Arizona".
   addresses tried answered 404).
 - **Not verified:** the CC0 statement as it stands on 2026-10-07.
 
+## Moon surface
+
+Baked by `npm run build-surface-tiles -- --body moon` into `moon-tiles/`.
+
+### LROC WAC global mosaic
+
+<!-- attribution: id=lroc-wac; keys=lroc.* -->
+
+- **What:** Lunar LRO LROC WAC Global Morphologic Mosaic, 100 m.
+- **By:** Speyerer et al., LROC team (NASA/GSFC/Arizona State University);
+  publisher USGS Astrogeology Science Center.
+- **Licence:** Public domain, as a NASA product hosted by USGS Astrogeology.
+- **Use:** Free, no credit asked
+- **Attribution:** None asked. Ours: "LROC WAC mosaic: NASA/GSFC/Arizona State
+  University, USGS Astrogeology (public domain)."
+- **Upstream:** <https://planetarymaps.usgs.gov/mosaic/Lunar_LRO_LROC-WAC_Mosaic_global_100m_June2013.tif>
+- **Enters skymap:** fetched by hand (`data/raw/lroc/README.md`) →
+  `tools/textures/surfaceBodies/moonSurfaceBake.ts`.
+- **Modified:** Yes. Re-tiled, de-lit against LOLA and tinted to the base
+  globe's colour.
+- **Checked:** 2026-11-11: the record page
+  (<https://astrogeology.usgs.gov/search/map/moon_lro_lroc_wac_global_morphologic_mosaic_100m>)
+  answers HTTP 403 to a script.
+- **Not verified:** the record's own access and use constraints.
+
+### LOLA global heights
+
+<!-- attribution: id=lola-ldem; keys=lola.* -->
+
+- **What:** Lunar LRO LOLA Global LDEM, 118 m.
+- **By:** Smith et al., NASA/GSFC LOLA team; publisher USGS Astrogeology
+  Science Center.
+- **Licence:** Public domain, as a NASA product hosted by USGS Astrogeology.
+- **Use:** Free, no credit asked
+- **Attribution:** None asked. Ours: "LOLA 118 m DEM: NASA/GSFC LOLA team, USGS
+  Astrogeology (public domain)."
+- **Upstream:** <https://planetarymaps.usgs.gov/mosaic/Lunar_LRO_LOLA_Global_LDEM_118m_Mar2014.tif>
+- **Enters skymap:** fetched by hand (`data/raw/lola/README.md`) →
+  `moonSurfaceBake.ts`.
+- **Modified:** Yes. Converted to Float32 metres, re-gridded, raised 400 m to
+  the scene's datum.
+- **Checked:** 2026-11-11: the record page
+  (<https://astrogeology.usgs.gov/search/map/moon_lro_lola_global_ldem_118m>)
+  answers HTTP 403 to a script.
+- **Not verified:** the record's own access and use constraints.
+
 ## 3D models
 
 Each model is shipped as a derivative under `public/data/meshes/<key>*`; the
@@ -2110,6 +2530,84 @@ rewritten only by `npm run build-meshes`, which re-bakes the models.
   `build-meshes`.
 - **Modified:** Yes. Painted the seed albedo; no colour map is used.
 - **Checked:** 2026-10-19: <https://naif.jpl.nasa.gov/pub/naif/ROSETTA/kernels/dsk/>
+
+### Vesta shape model (Dawn icq0512) and HAMO mosaic
+
+<!-- attribution: id=mesh-vesta; keys=meshes.vesta*; hosts=naif.jpl.nasa.gov -->
+
+- **What:** Vesta up close: the Dawn gravity team's 3.1-million-plate shape
+  model and the Dawn Framing Camera HAMO clear-filter global mosaic.
+- **By:** Shape: Dawn Gravity Team (R. Park, JPL), archived by NASA's Planetary
+  Data System and served by NAIF. Mosaic: Roatsch et al. (DLR), from Dawn
+  Framing Camera images (NASA/JPL-Caltech/UCLA/MPS/DLR/IDA), served by USGS
+  Astrogeology.
+- **Licence:** The shape model is openly archived in NASA's Planetary Data
+  System, which states no licence for it. The USGS Astropedia page for the
+  mosaic names no licence and asks users to cite its authors.
+- **Use:** Free with credit
+- **Attribution:** Ours: "Shape: Dawn Gravity Team (R. Park, JPL), Vesta shape
+  model icq0512, NASA PDS / NAIF. Colour: Dawn FC HAMO mosaic,
+  NASA/JPL-Caltech/UCLA/MPS/DLR/IDA, USGS Astrogeology".
+- **Upstream:** <https://naif.jpl.nasa.gov/pub/naif/DAWN/kernels/dsk/dawn_vesta_grv_icq0512_v1.bds>,
+  <https://planetarymaps.usgs.gov/mosaic/Vesta_Dawn_FC_HAMO_Mosaic_Global_74ppd.tif>
+- **Enters skymap:** downloaded by hand → DSK converted to OBJ once →
+  Blender import and relief pre-bake → `build-meshes`.
+- **Modified:** Yes. Decimated to 150k triangles with the full surface baked
+  into a normal atlas; the mosaic's gaps and unlit north filled with its
+  median, downsampled, and rescaled to the seed albedo.
+- **Checked:** 2026-10-30: <https://naif.jpl.nasa.gov/pub/naif/DAWN/kernels/dsk/>
+
+### Ceres shape model (Dawn icq0256) and Dawn mosaic
+
+<!-- attribution: id=mesh-ceres; keys=meshes.ceres*; hosts=naif.jpl.nasa.gov -->
+
+- **What:** Ceres up close: the Dawn gravity team's 786,432-plate shape model
+  and the DLR Dawn Framing Camera clear-filter global mosaic.
+- **By:** Shape: Dawn Gravity Team (JPL; R. Park), archived by NASA's
+  Planetary Data System and served by NAIF. Mosaic: Roatsch et al. (DLR), from
+  Dawn Framing Camera images (NASA/JPL-Caltech/UCLA/MPS/DLR/IDA), served by USGS
+  Astrogeology.
+- **Licence:** The shape model is openly archived in NASA's Planetary Data
+  System, which states no licence for it. The USGS Astropedia page for the
+  mosaic names no licence and asks users to cite its authors.
+- **Use:** Free with credit
+- **Attribution:** Ours: "Shape: Dawn Gravity Team (R. Park, JPL), Ceres shape
+  model icq0256, NASA PDS / NAIF. Colour: Dawn FC DLR mosaic,
+  NASA/JPL-Caltech/UCLA/MPS/DLR/IDA, USGS Astrogeology".
+- **Upstream:** <https://naif.jpl.nasa.gov/pub/naif/DAWN/kernels/dsk/dawn_ceres_grv_icq0256_v2.bds>,
+  <https://planetarymaps.usgs.gov/mosaic/Ceres_Dawn_FC_DLR_global_20ppd_Oct2015.tif>
+- **Enters skymap:** downloaded by hand → DSK converted to OBJ once →
+  Blender import and relief pre-bake → `build-meshes`.
+- **Modified:** Yes. Decimated to 150k triangles with the full surface baked
+  into a normal atlas; the mosaic resampled and rescaled to the seed albedo.
+- **Checked:** 2026-10-30: <https://naif.jpl.nasa.gov/pub/naif/DAWN/kernels/dsk/>
+
+### Bennu shape model (OSIRIS-REx v020) and albedo mosaic
+
+<!-- attribution: id=mesh-bennu; keys=meshes.bennu*; hosts=naif.jpl.nasa.gov -->
+
+- **What:** Bennu up close: the OSIRIS-REx laser-altimeter shape model
+  (3.1 million plates) and the ShapeV20 normal-albedo global mosaic.
+- **By:** Shape: OSIRIS-REx Altimetry Working Group (O. Barnouin, JHU/APL),
+  archived by NASA's Planetary Data System and served by NAIF. Mosaic: Golish
+  et al. 2021, from OSIRIS-REx images (NASA/University of Arizona), served by
+  USGS Astrogeology.
+- **Licence:** The shape model is openly archived in NASA's Planetary Data
+  System, which states no licence for it; the mosaic's USGS use constraints
+  say "public domain".
+- **Use:** Free with credit
+- **Attribution:** Ours: "Shape: OSIRIS-REx Altimetry Working Group (O.
+  Barnouin, JHU/APL), Bennu shape model v020 from OLA, NASA PDS / NAIF. Colour:
+  ShapeV20 normal-albedo mosaic (Golish et al. 2021), NASA/University of
+  Arizona, USGS Astrogeology".
+- **Upstream:** <https://naif.jpl.nasa.gov/pub/naif/pds/pds4/orex/orex_spice/spice_kernels/dsk/bennu_g_00880mm_alt_obj_0000n00000_v020.bds>,
+  <https://planetarymaps.usgs.gov/mosaic/Bennu/Bennu_global_ShapeV20_GndControl_ROLOphase_ALBEDO_8bit_v6.tif>
+- **Enters skymap:** downloaded by hand → DSK converted to OBJ once →
+  Blender import and relief pre-bake → `build-meshes`.
+- **Modified:** Yes. Decimated to 150k triangles with the full surface baked
+  into a normal atlas; the mosaic's polar gaps filled with its median,
+  downsampled, and rescaled to the seed albedo.
+- **Checked:** 2026-10-30: <https://naif.jpl.nasa.gov/pub/naif/pds/pds4/orex/orex_spice/spice_kernels/dsk/>
 
 ## Fonts
 
@@ -2549,7 +3047,9 @@ and where they come from".
 
 - **What:** 42 hand-placed structures (15 clusters, 16 groups, 8
   superclusters, 3 voids): a position, a distance, two radii and a paragraph
-  each. The voids and groups exist only here; no catalogue feeds them.
+  each. The voids and groups exist only here; no catalogue feeds them. The
+  same file's Milky Way rows have an entry of their own (see entry:
+  seed-milky-way-structures).
 - **By:** Typed by hand by the project; no source is recorded per row.
 - **Licence:** Ours (MIT).
 - **Use:** Ours (MIT)
@@ -2560,6 +3060,66 @@ and where they come from".
 - **Modified:** Not applicable.
 - **Checked:** 2026-10-07: the file itself; no outside page.
 - **Not verified:** every position, distance and radius in it.
+
+### Milky Way clusters, nebulae and the Galactic Centre
+
+<!-- attribution: id=seed-milky-way-structures -->
+
+- **What:** The 71 Milky Way rows of the structure seed (25 open clusters,
+  21 globular clusters, 22 nebulae and supernova remnants, 3 star clusters
+  at the Galactic Centre): a position, a distance, two radii and a paragraph
+  each. Each row's `source` field names where its numbers come from.
+- **By:** Typed by hand by the project from published measurements:
+  - Open clusters: Hunt & Reffert 2024, A&A 686, A42 (VizieR
+    J/A+A/686/A42, 24 rows); Westerlund 1 from Navarete et al. 2022, MNRAS
+    516, 1289, centred as in Clark et al. 2005.
+  - Globular clusters: the Galactic Globular Cluster Database of Baumgardt
+    et al. (version 4), distances from Baumgardt & Vasiliev 2021, MNRAS 505,
+    5957, tidal radii by Webb et al. 2013, eq. 8.
+  - Nebulae: distances from Zucker et al. 2020, A&A 633, A51; Kounkel et al.
+    2017, ApJ 834, 142 (Orion); Kuhn et al. 2019, ApJ 870, 32 (Carina, as a
+    comparison); Gaia EDR3 parallaxes of the central stars of five planetary
+    nebulae (Gaia Collaboration, VizieR I/350, through SIMBAD). Sizes from
+    the Sharpless 1959 catalogue (VizieR VII/20), the RCW catalogue of
+    Rodgers et al. 1960 (VizieR VII/216), SIMBAD's major axes, and, for the
+    Coalsack, Wikipedia and Astropixels.
+  - Supernova remnants: sizes from Green's Catalogue of Galactic Supernova
+    Remnants (2024 October version); distances from Lin et al. 2023, ApJ
+    (arXiv:2306.01617), Fesen et al. 2021, MNRAS 507, 244, Caraveo et al.
+    2001, ApJ 561, 930, Reed et al. 1995, ApJ 440, 706, Ruiz-Lapuente 2004,
+    ApJ 612, 357, Ruiz-Lapuente 2017, ApJ 842, 112 and Sankrit et al. 2016.
+  - Galactic Centre: Schödel et al. 2014, A&A 566, A47; Hosek et al. 2015
+    (arXiv:1509.04716); Rui et al. 2019, ApJ 877, 37; the position of
+    Sgr A\* from Reid & Brunthaler 2004; R₀ from the GRAVITY Collaboration
+    2019 (see entry: gravity-r0).
+- **Licence:** By part. The rows typed from VizieR tables and SIMBAD are
+  copies CDS serves, which state no licence; the CDS terms apply (see entry:
+  vizier). The Baumgardt database states "(C) Holger Baumgardt, Antonio
+  Sollima, Michael Hilker, Andrea Bellini, Eugene Vasiliev, Vincent
+  Henault-Brunet & Nolan Dickson, March 2023" and no licence. Green's
+  catalogue states "Copyright © D. A. Green 2024/2025." and no licence. The
+  five planetary-nebula distances are Gaia data, "distributed under the CC BY-NC
+  3.0 IGO license" (see entry: gaia). The papers supply a few numbers each.
+  Ours (MIT) for the paragraphs.
+- **Use:** No licence stated; Per item
+- **Attribution:** Cite the source each row names. Green asks to be cited
+  as "Green D. A., 2025, Journal of Astrophysics and Astronomy, 46, 14" and
+  "Green D. A., 2024, 'A Catalogue of Galactic Supernova Remnants (2024
+  October version)', Cavendish Laboratory, Cambridge, United Kingdom".
+- **Upstream:** <https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=J/A+A/686/A42>,
+  <https://people.smp.uq.edu.au/HolgerBaumgardt/globular/>,
+  <https://www.mrao.cam.ac.uk/surveys/snrs/>, <https://simbad.cds.unistra.fr/>
+- **Enters skymap:** `data/seeds/structure_anchors.seed.json` (the rows whose
+  category is a Milky Way one) → bundled by
+  `src/layers/structure/load/buildStaticAnchorStructures.ts`.
+- **Modified:** Yes. Units converted; an angular size becomes a radius at the
+  row's distance; the Carina Nebula takes the distance of Trumpler 14, and
+  Westerlund 1's outer extent is three half-light radii, as each row says.
+- **Checked:** 2026-11-03: <https://people.smp.uq.edu.au/HolgerBaumgardt/globular/>,
+  <https://www.mrao.cam.ac.uk/surveys/snrs/>
+- **Not verified:** the VizieR pages and ReadMes of J/A+A/686/A42, VII/20
+  and VII/216 (CDS did not answer on 2026-11-03); each row against its named
+  source; the journals' terms.
 
 ### Famous galaxies
 
@@ -2647,7 +3207,7 @@ and where they come from".
 
 - **What:** Every render of the app that is published: the website's stills
   (76 rows in `packages/website/src/data/siteShots.ts`, files under
-  `packages/website/src/assets/shots/`), its nine film loops
+  `packages/website/public/shots/`), its nine film loops
   (`assets/loops/place-*.mp4`), the stills of the home page's flight
   (`assets/flight/`), the two social cards (`assets/og-card.jpg`,
   `public/og-image.jpg`), the 47 card thumbnails the app ships
@@ -2753,17 +3313,18 @@ and where they come from".
 
 ### Links to papers, repositories and reference pages
 
-<!-- attribution: id=outbound-links; hosts=arxiv.org,doi.org,github.com,caniuse.com,opensource.org -->
+<!-- attribution: id=outbound-links; hosts=arxiv.org,doi.org,github.com,caniuse.com,opensource.org,www.youtube.com -->
 
 - **What:** Plain links in the app's exhibits, credits and page head: papers
-  on arXiv and by DOI, repositories on GitHub, the WebGPU support table, the
-  MIT licence text. Nothing is fetched from them.
+  on arXiv and by DOI, repositories on GitHub, a Nature video on YouTube, the
+  WebGPU support table, the MIT licence text. Nothing is fetched or embedded.
 - **By:** Their respective owners.
 - **Licence:** None applies to a link.
 - **Use:** Reference only
 - **Attribution:** None.
 - **Upstream:** the links themselves.
-- **Enters skymap:** `src/data/exhibits/*.ts`, `src/components/Splash/`,
+- **Enters skymap:** the exhibits' `*.copy.ts` (`src/compositions/exhibits/`,
+  `src/layers/*/exhibits/`), `src/components/Splash/`,
   `src/unsupportedPage.ts`, `index.html`.
 - **Modified:** Not applicable.
 - **Checked:** 2026-10-07: no page opened.

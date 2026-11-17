@@ -1,0 +1,53 @@
+appId: com.rulkens.skymap
+productName: Skymap
+directories:
+  output: release
+  # icon.icns, icon.ico, volume.icns, the dmg background and the installer bitmaps, from `npm run brand`.
+  buildResources: resources
+files:
+  - build/**
+  - assets/**
+  - package.json
+# The web build sits outside the asar so the app server can stream it; see distDir.ts.
+# dist/data is public/data copied by vite; the app serves /data/ from the synced mirror instead.
+extraResources:
+  - from: ../../dist
+    to: dist
+    filter:
+      - '**/*'
+      - '!data/**'
+  # The tablet guide's pictures, kept once in the website's assets; see tabletGuideDir.ts.
+  - from: ../website/src/assets/docs/tablet-guide
+    to: tablet-guide
+mac:
+  target: dmg
+dmg:
+  title: Skymap
+  # The mounted disk's own icon; unset, it would be the app icon.
+  icon: volume.icns
+  artifactName: ${productName}-${version}-mac.${ext}
+  iconSize: 112
+  # Centres match the empty slots in src/brand/components/DmgBackground (the 660 × 400 window).
+  contents:
+    - x: 170
+      y: 214
+    - x: 490
+      y: 214
+      type: link
+      path: /Applications
+win:
+  target:
+    - target: nsis
+      arch: x64
+nsis:
+  artifactName: ${productName}-${version}-win-setup.${ext}
+  # Assisted, not one-click: adding the firewall rule needs admin, so it installs per machine.
+  oneClick: false
+  perMachine: true
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  shortcutName: Skymap
+  uninstallDisplayName: Skymap
+  include: installer/installer.nsh
+publish: null

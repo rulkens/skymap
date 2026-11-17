@@ -22,7 +22,7 @@
   font: 400 0.8125rem / 1.2 var(--font-body);
 }
 
-@media (max-width: 900px) {
+@media (--narrow) {
   .root {
     top: auto;
     bottom: 0;
@@ -42,7 +42,7 @@
   min-width: 12rem;
 }
 
-@media (max-width: 900px) {
+@media (--narrow) {
   .root .job {
     flex: 1 1 100%;
   }

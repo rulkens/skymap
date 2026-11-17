@@ -9,6 +9,5 @@
  */
 export const HOME_LINKS = {
   tour: 'tour=grandTour',
-  parkFlight: 'clip=sondermarkenFlyout',
   classroom: 'focus=body-jupiter&t=2033-03-14T21:00:00Z',
 } as const;

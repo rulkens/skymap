@@ -13,9 +13,9 @@ const CORNERS = array<vec2<f32>, 6>(
 
 @vertex
 fn vs(@builtin(vertex_index) vid: u32) -> VsOut {
-  let c = CORNERS[vid];
+  let corner = CORNERS[vid];
   var out: VsOut;
-  out.clipPos = vec4<f32>(c, 0.0, 1.0);
-  out.ndc = c;
+  out.clipPos = vec4<f32>(corner, 0.0, 1.0);
+  out.ndc = corner;
   return out;
 }

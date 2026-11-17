@@ -6,7 +6,7 @@
 import package::skyGrid::io::Uniforms;
 import package::skyGrid::io::VsOut;
 
-@group(0) @binding(0) var<uniform> u: Uniforms;
+@group(0) @binding(0) var<uniform> uniforms: Uniforms;
 
 const SPACING_DEG: f32 = 15.0;
 const LINE_PX: f32 = 0.75;
@@ -25,22 +25,22 @@ fn offGrid(deg: f32) -> f32 {
 @fragment
 fn fs(input: VsOut) -> @location(0) vec4<f32> {
   let rayDir = normalize(
-    u.camForward
-    + input.ndc.x * u.tanHalfFovY * u.aspect * u.camRight
-    + input.ndc.y * u.tanHalfFovY * u.camUp,
+    uniforms.camForward
+    + input.ndc.x * uniforms.tanHalfFovY * uniforms.aspect * uniforms.camRight
+    + input.ndc.y * uniforms.tanHalfFovY * uniforms.camUp,
   );
 
   var rgb = vec3<f32>(0.0);
-  for (var i = 0u; i < 4u; i++) {
-    let f = u.frames[i];
+  for (var frameIndex = 0u; frameIndex < 4u; frameIndex++) {
+    let frame = uniforms.frames[frameIndex];
     // World -> frame is the transpose of the frame -> world rotation.
-    let d = transpose(f.toWorld) * rayDir;
-    let latDeg = degrees(asin(clamp(d.z, -1.0, 1.0)));
-    let lonDeg = degrees(atan2(d.y, d.x));
+    let dir = transpose(frame.toWorld) * rayDir;
+    let latDeg = degrees(asin(clamp(dir.z, -1.0, 1.0)));
+    let lonDeg = degrees(atan2(dir.y, dir.x));
     // atan2 jumps by 360 at the seam behind the frame's x axis; the same
     // angle measured from the opposite side has its seam elsewhere, so the
     // smaller derivative of the two is the true one.
-    let lonAlt = degrees(atan2(-d.y, -d.x));
+    let lonAlt = degrees(atan2(-dir.y, -dir.x));
     let pxLat = fwidth(latDeg);
     let pxLon = min(fwidth(lonDeg), fwidth(lonAlt));
 
@@ -50,8 +50,8 @@ fn fs(input: VsOut) -> @location(0) vec4<f32> {
     let meridian = lineCoverage(offGrid(lonDeg), pxLon)
       * (1.0 - smoothstep(75.0, 85.0, abs(latDeg)));
 
-    rgb += f.color.rgb * f.color.a * max(max(parallel, meridian), equator);
+    rgb += frame.color.rgb * frame.color.a * max(max(parallel, meridian), equator);
   }
-  let value = LINE_ALPHA * u.opacity;
+  let value = LINE_ALPHA * uniforms.opacity;
   return vec4<f32>(rgb * value, 0.0);
 }

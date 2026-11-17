@@ -30,9 +30,10 @@ export const ROADMAP: readonly RoadmapGroup[] = [
       {
         id: 'milky-way-model',
         title: 'A Milky Way drawn from a model',
-        text: 'A second way of drawing the Milky Way, from a model of its light and dust, beside the cloud of points the app draws today.',
-        state: 'planned',
-        backlog: 'Draw the v2 analytic Milky Way in the `milkyWay` Layer, beside v1',
+        text: 'A second way of drawing the Milky Way, from a model of its light and dust, beside the cloud of points the app draws today. The model and its renderer are written; the app does not draw it yet.',
+        state: 'in progress',
+        backlog: 'Milky Way v2 field at v1’s cost',
+        built: 'src/layers/milkyWay/field/render/createGalaxyFieldRenderer.ts',
       },
       {
         id: 'galaxy-impostors',
@@ -202,10 +203,10 @@ export const ROADMAP: readonly RoadmapGroup[] = [
       },
       {
         id: 'clouds',
-        title: 'Clouds with thickness, and today’s weather',
-        text: 'Earth’s clouds lit as a layer with depth, and perhaps the real cloud cover of the day in place of one fixed picture.',
+        title: 'Clouds with thickness',
+        text: 'Earth’s clouds lit as a layer with depth.',
         state: 'idea',
-        backlog: 'Cloud deck PBR + live coverage',
+        backlog: 'Cloud deck PBR',
       },
       {
         id: 'desi-shapes',
@@ -271,16 +272,10 @@ export const ROADMAP: readonly RoadmapGroup[] = [
       {
         id: 'desktop-app',
         title: 'A desktop app that runs offline',
-        text: 'Skymap as a program for macOS and Windows that downloads its data once and then needs no network. A design is written.',
-        state: 'planned',
-        spec: `${SPECS}/2026-09-19-desktop-offline-app-design.md`,
-      },
-      {
-        id: 'fetch-by-scale',
-        title: 'A lighter start',
-        text: 'A catalogue fetched only once the camera is far enough out to see it: about 68 MB of the 102 MB fetched at the start today, at the medium data size.',
-        state: 'planned',
-        backlog: 'Scale-gated asset demand',
+        text: 'Skymap as a program for macOS and Windows that downloads its data once and then needs no network, for a kiosk or a dome, flown from a phone or tablet. The app is built and in testing; a download follows.',
+        state: 'in progress',
+        backlog: 'Website docs page for the desktop app',
+        built: 'packages/desktop/src/main/main.ts',
       },
     ],
   },

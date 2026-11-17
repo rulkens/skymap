@@ -7,7 +7,7 @@ perf branch should carry.
 
 ## 1. One function, three separable jobs
 
-`src/utils/camera/composeOrbitConic.ts` does three things braided by a shared
+`src/utils/camera/bodyCompose/composeOrbitConic.ts` does three things braided by a shared
 intermediate (`clipXYW`):
 
 - projects the orbit's `(C, A, B)` basis into clip space — consumed by the

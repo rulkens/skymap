@@ -39,7 +39,7 @@
  */
 
 import { selectionRingRadiusPx } from './selectionRingRadiusPx';
-import { MIN_DISTANCE_MPC } from '../../../utils/camera/clampDistance';
+import { MIN_DISTANCE_MPC } from '../../../utils/camera/orbitCamera/clampDistance';
 
 // Multiplier from the target's TRUE apparent radius to the halo radius, once
 // the resolved sphere is large enough to clear the far floor. Pinned at 1.5×:

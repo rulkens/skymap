@@ -1,5 +1,5 @@
 /**
- * scheduleSkyCaptures — per sky `CUBEMAP_CAPTURES` row, which faces this frame
+ * scheduleSkyCaptures — per sky `APP_CUBEMAP_CAPTURE_REGISTRY` row, which faces this frame
  * re-bakes and the synthetic camera each one draws through. All six, or none.
  *
  * Two side effects: it is the SINGLE writer of each sky row's
@@ -13,21 +13,22 @@ import type { CubemapCaptureKey } from '../../../@types/rendering/CubemapCapture
 import type { CubeFace } from '../../../@types/rendering/CubeFace';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
+import type { SkyCapture } from '../../../@types/rendering/SkyCapture';
 import {
-  ALL_CUBE_FACES,
-  CUBEMAP_CAPTURES,
-  SKY_CAPTURE_KEYS,
-} from '../../../data/rendering/cubemapCaptures';
-import { faceViewSpec } from '../../../utils/camera/faceViewSpec';
+  APP_CUBEMAP_CAPTURE_REGISTRY,
+  APP_SKY_CAPTURE_KEYS,
+} from '../../../compositions/appCubemapCaptures';
+import { faceViewSpec } from '../../../utils/camera/viewRig/faceViewSpec';
 import { cubemapCaptureFrame } from './cubemapCaptureFrame';
 import { deriveView } from './deriveView';
-import { fadeBand } from '../../../utils/math/fadeBand';
 import { regionRelativeDistanceMpc } from '../../../utils/regions/regionRelativeDistanceMpc';
 import { sceneBodyStates } from './sceneBodyStates';
+import { ALL_CUBE_FACES } from '../../../data/rendering/cubemapCaptures';
 
 export function scheduleSkyCaptures(input: {
   readonly state: EngineState;
   readonly ctx: FrameView;
+  readonly captureOn: (key: CubemapCaptureKey) => boolean;
 }): CaptureFaceContexts {
   const { state, ctx } = input;
   const bodyStates = sceneBodyStates(state, ctx);
@@ -38,15 +39,15 @@ export function scheduleSkyCaptures(input: {
     state.subsystems.fades.isAnyAnimating(ctx.snapshot.nowMs) || ctx.snapshot.plans.settling;
 
   const scheduled = new Map<CubemapCaptureKey, ReadonlyMap<CubeFace, CaptureFace>>();
-  for (const key of SKY_CAPTURE_KEYS) {
-    const row = CUBEMAP_CAPTURES[key];
+  for (const key of APP_SKY_CAPTURE_KEYS) {
+    const row: SkyCapture = APP_CUBEMAP_CAPTURE_REGISTRY[key];
     const runtime = state.cubemapCaptures[key];
     // Unconditional, band or no band: the target's release-margin check needs
     // the distance on the very frame the band closes, not one frame later.
     const anchorDistanceMpc = regionRelativeDistanceMpc(ctx.drawCamPos, row.anchor, bodyStates);
     runtime.lastAnchorDistanceMpc = anchorDistanceMpc;
 
-    const bandActive = fadeBand(row.band, anchorDistanceMpc) > 0;
+    const bandActive = ctx.snapshot.skyCapturesInBand.has(key);
     // `runFrame`'s reconcile runs BEFORE this frame's pose exists and cannot
     // see the band open; the edge reconciles here so the row's texture exists
     // for the sweep. `bakedSettings` is null while shut, so entry always bakes.
@@ -56,9 +57,11 @@ export function scheduleSkyCaptures(input: {
       if (!bandActive) {
         runtime.bakedSettings = null;
         runtime.bakedContentVersion = null;
+        runtime.lastBakeAtMs = null;
       }
     }
-    if (!bandActive) continue;
+    // Before the stale check, so an unticked row keeps its bake record and bakes once re-ticked.
+    if (!bandActive || !input.captureOn(key)) continue;
     // A `rebakeOnSettings: false` row reads its bake as current whatever the
     // settings (or catalog content) do; only a band re-entry (which nulls the
     // record) re-bakes it — content bumps obey the same gate as settings writes.
@@ -68,6 +71,11 @@ export function scheduleSkyCaptures(input: {
         (runtime.bakedSettings !== state.settings ||
           runtime.bakedContentVersion !== state.contentVersion));
     if (!rosterSettling && !stale) continue;
+    const settlingCapped =
+      row.settlingRebakeMinMs !== undefined &&
+      runtime.lastBakeAtMs !== null &&
+      ctx.snapshot.nowMs - runtime.lastBakeAtMs < row.settlingRebakeMinMs;
+    if (settlingCapped) continue;
 
     // One bake covers the band: a 1024² face's texel is ~1.5 mrad, so content
     // at 8 kpc shifts by a texel only after ~12 pc of travel, against a 500 AU
@@ -106,6 +114,7 @@ export function scheduleSkyCaptures(input: {
     // next frame baking, and the first settled frame bakes once more.
     runtime.bakedSettings = rosterSettling ? null : state.settings;
     runtime.bakedContentVersion = rosterSettling ? null : state.contentVersion;
+    runtime.lastBakeAtMs = ctx.snapshot.nowMs;
   }
   return scheduled;
 }

@@ -15,9 +15,9 @@
  * unchanged (copied into `out` when given), so every caller that never sets
  * a frame stays byte-identical to the pre-frame-feature code.
  *
- * @param v            The frame-local vector to rotate.
  * @param frameBasis   Frame-local → world basis (tight column-major 3×3), or
  *                      undefined for the identity frame.
+ * @param v            The frame-local vector to rotate.
  * @param out          Optional destination written in place and returned; a
  *                      fresh `Vec3` is allocated when omitted — pass a
  *                      caller-owned scratch to keep a per-frame path
@@ -28,8 +28,8 @@ import type { Mat3 } from '../../@types/math/Mat3';
 import type { Vec3 } from '../../@types/math/Vec3';
 
 export function rotateVec3ByTightMat3(
-  v: Vec3,
   frameBasis: Readonly<Mat3> | undefined,
+  v: Vec3,
   out?: Vec3,
 ): Vec3 {
   const dst = out ?? ([0, 0, 0] as Vec3);

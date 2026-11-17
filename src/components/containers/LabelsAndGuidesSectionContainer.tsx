@@ -1,7 +1,7 @@
 /**
  * LabelsAndGuidesSectionContainer — store boundary for the Labels & Guides
  * settings section. `selectToggleRows` builds every row as data (value plus
- * the action that sets it); this container only binds each row's `set` to
+ * the actions that set it); this container only binds each row's `set` to
  * `dispatch`, so the presentational `LabelsAndGuidesSection` imports nothing
  * from `store/` or `state/` and has no notion of where any row's bit lives.
  *
@@ -34,7 +34,7 @@ function LabelsAndGuidesSectionContainer({
         id: row.id,
         label: row.label,
         enabled: row.enabled,
-        onChange: (enabled: boolean) => dispatch(row.set(enabled)),
+        onChange: (enabled: boolean) => row.set(enabled).forEach((action) => dispatch(action)),
       })),
     [toggleRows, dispatch],
   );

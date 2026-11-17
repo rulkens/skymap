@@ -5,7 +5,8 @@
  * the engine handle doesn't re-render every consumer at startup. No
  * `React.StrictMode`: the engine's GPU resources and render loop can't survive
  * the synthetic double-mount. Cinema mode (`?cinema`, the recorder's surface)
- * renders only canvas + tour overlay; the rest is absent from the DOM.
+ * renders only canvas + tour overlay, plus the debug panel while `d` has it
+ * open; the rest is absent from the DOM.
  */
 
 import { Suspense } from 'react';
@@ -15,7 +16,9 @@ import { useIsMobile } from '../../hooks/useIsMobile';
 import LoadingBarContainer from '../containers/LoadingBarContainer';
 import StatusBarContainer from '../containers/StatusBarContainer';
 import ScaleBarContainer from '../containers/ScaleBarContainer';
-import NavigationPanel from '../NavigationPanel/NavigationPanel';
+import SkyEntryButtonContainer from '../containers/SkyEntryButtonContainer';
+import SkyHudContainer from '../containers/SkyHudContainer';
+import NavigationPanelContainer from '../containers/NavigationPanelContainer';
 import TopBarContainer from '../containers/TopBarContainer';
 import TimeBarContainer from '../containers/TimeBarContainer';
 import PhoneHudContainer from '../containers/PhoneHudContainer';
@@ -36,7 +39,7 @@ import { selectTourActive } from '../../state/tour/selectors';
 import { selectTakeoverSource } from '../../state/takeover/selectors';
 import {
   selectPaletteOpen,
-  selectUiHidden,
+  selectUiStackHidden,
   selectDebugPanelOpen,
   selectSplashVisible,
 } from '../../state/ui/selectors';
@@ -48,7 +51,7 @@ export function App(): React.ReactElement {
   const isMobile = useIsMobile();
 
   const paletteOpen = useAppSelector(selectPaletteOpen);
-  const uiHidden = useAppSelector(selectUiHidden);
+  const uiStackHidden = useAppSelector(selectUiStackHidden);
   const debugPanelOpen = useAppSelector(selectDebugPanelOpen);
 
   // A running tour or exhibit hides the HUD stack (derived, not a `setUiHidden`
@@ -67,6 +70,14 @@ export function App(): React.ReactElement {
   // A sibling of the HUD stack, not inside it: the tour's own `uiStackHidden` fade must not fade it.
   const tourOverlay = tourActive && <TourOverlayContainer />;
   const exhibitOverlay = exhibitId && <ExhibitOverlayContainer id={exhibitId} />;
+  // Outside the HUD stack, which a tour or exhibit hides: `d` summons it explicitly, in
+  // cinema mode too (the film knobs are tuned on the frame the recorder captures).
+  // `handleRef.current` set means the engine finished constructing: no subscribe race.
+  const debugPanel = debugPanelOpen && handleRef.current && (
+    <Suspense>
+      <LazyDebugPanelContainer engineHandleRef={handleRef} />
+    </Suspense>
+  );
 
   // The HUD must not exist in the DOM here: CSS-hiding could bleed into captures.
   // Every hook above still runs (`useEngine` makes the page playable); only the JSX diverges.
@@ -75,6 +86,7 @@ export function App(): React.ReactElement {
       <>
         {canvas}
         {tourOverlay}
+        {debugPanel}
       </>
     );
   }
@@ -82,15 +94,8 @@ export function App(): React.ReactElement {
   return (
     <>
       {canvas}
-
       {/* One wrapper so `Tab` fades the whole stack with a single opacity transition. */}
-      <div
-        className={cx(
-          appStyles.uiStack,
-          (uiHidden || splashVisible || tourActive || exhibitId !== null) &&
-            appStyles.uiStackHidden,
-        )}
-      >
+      <div className={cx(appStyles.uiStack, uiStackHidden && appStyles.uiStackHidden)}>
         <LoadingBarContainer />
         <StatusBarContainer />
         {isMobile ? (
@@ -101,9 +106,11 @@ export function App(): React.ReactElement {
               <LazyInfoCardContainer />
             </Suspense>
             <ScaleBarContainer />
+            <SkyEntryButtonContainer phone={false} />
+            <SkyHudContainer phone={false} />
             <TimeBarContainer hidden={paletteOpen || splashVisible} />
             <div className={appStyles.leftStack}>
-              <NavigationPanel />
+              <NavigationPanelContainer />
               <Suspense>
                 <LazySettingsPanelContainer />
               </Suspense>
@@ -114,15 +121,10 @@ export function App(): React.ReactElement {
         <Suspense>
           <LazyCommandPaletteContainer />
         </Suspense>
-        {/* `handleRef.current` set means the engine finished constructing: no subscribe race. */}
-        {debugPanelOpen && handleRef.current && (
-          <Suspense>
-            <LazyDebugPanelContainer engineHandleRef={handleRef} />
-          </Suspense>
-        )}
       </div>
       {tourOverlay}
       {exhibitOverlay}
+      {debugPanel}
       {/* Progress chrome: interactive session only, never the cinema frames. */}
       {tourActive && <TourBeatRailContainer />}
       <SplashContainer />

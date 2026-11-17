@@ -1,0 +1,3 @@
+.root {
+  composes: panel from '../../../controlChrome.module.css';
+}

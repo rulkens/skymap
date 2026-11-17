@@ -4,7 +4,7 @@
  *
  * `requestOrientationChange(frame)` asks to make `frame` the camera's "up" pole.
  * A switch is THREE effects (`watchOrientationChangeSaga`): persist the target
- * frame (settings, `setOrientation`), re-express `camera.base` into it so the
+ * frame (settings, `setOrientation`), re-express `camera.intent.base` into it so the
  * eye holds still the instant the up-basis flips (`commitCameraPose` +
  * `reencodePose` — the load-bearing one: skip it and the pose stays expressed
  * in the OUTGOING basis while the pole rolls out from under it), AND animate
@@ -23,7 +23,7 @@
  */
 import { createAction } from '@reduxjs/toolkit';
 
-import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';
+import type { OrientationFrameId } from '../../@types/camera/orientation/OrientationFrameId';
 
 export const requestOrientationChange = createAction(
   'orientation/request',

@@ -50,62 +50,88 @@ export const DOCS_DEBUG_SECTIONS: readonly DocsDebugSection[] = [
     heading: 'Cosmic web density (tuning)',
     shows:
       'For each density field: intensity, contrast, trim, density, exposure and one of 21 colour palettes.',
-    file: 'src/layers/cosmicWebDensity/ui/CosmicWebDensityTuningSection.tsx',
+    file: 'src/layers/cosmicWebDensity/densityCubes/ui/CosmicWebDensityTuningSection.tsx',
   },
   {
     heading: 'Flow tuning',
-    shows: 'The flow ribbons: how many, the length of their trails, speed, and how they are spread.',
-    file: 'src/layers/flow/ui/FlowTuningSection.tsx',
+    shows:
+      'The flow ribbons: how many, the length of their trails, speed, and how they are spread.',
+    file: 'src/layers/flow/streamlines/ui/FlowTuningSection.tsx',
   },
   {
     heading: 'Zone of Avoidance tuning',
     shows: 'The strength, falloff, edge and two colours of the band.',
-    file: 'src/layers/zoneOfAvoidance/ui/ZoneOfAvoidanceTuningSection.tsx',
+    file: 'src/layers/zoneOfAvoidance/shell/ui/ZoneOfAvoidanceTuningSection.tsx',
   },
   {
     heading: 'Local Bubble tuning',
     shows: 'The intensity of the shell.',
-    file: 'src/layers/localBubble/ui/LocalBubbleTuningSectionContainer.tsx',
+    file: 'src/layers/localBubble/shell/ui/LocalBubbleTuningSectionContainer.tsx',
+  },
+  {
+    heading: 'Stellar streams tuning',
+    shows:
+      'Each stream is drawn twice, as sharp streaks and as a wide haze; for each, its brightness, size, stretch along the orbit, smallest size on screen and drift. A button puts both back to their defaults.',
+    file: 'src/layers/stellarStreams/streaks/ui/StellarStreamsTuningSectionContainer.tsx',
   },
   {
     heading: 'Sgr A* lens tuning',
     shows:
       'The drawn ring of gas round the black hole (its radii, tilt, flicker and colour) and the size of the sky picture that is bent round it.',
-    file: 'src/layers/blackHoles/ui/BlackHoleLensingTuningSection.tsx',
+    file: 'src/layers/blackHoles/lensing/ui/BlackHoleLensingTuningSection.tsx',
+  },
+  {
+    heading: 'Satellite tuning',
+    shows:
+      'An ambient light every satellite gets, the size of a dot on screen, and one colour for each satellite group, by constellation or orbit. A button puts them back to their defaults and another copies the changed colours.',
+    file: 'src/layers/satellites/controls/ui/SatelliteTuningSection.tsx',
+  },
+  {
+    heading: 'Asteroid tuning',
+    shows:
+      'Two groups of controls. The first sets the look of one asteroid class at a time, chosen from a list: its colour, how bright it is, the faintest magnitude drawn, and the size and peak of a dot. The second holds what is the same for every class: how much the dots are lifted in brightness, the cap on the dimming of an asteroid lit from behind, and how the field is thinned out as you zoom away. A button puts them back to their defaults and another copies the changed values.',
+    file: 'src/layers/asteroids/controls/ui/AsteroidTuningSection.tsx',
   },
   {
     heading: 'Milky Way tuning',
-    shows: 'The size, exposure, softness and number of the points the Milky Way is drawn with.',
-    file: 'src/layers/milkyWay/ui/MilkyWayTuningSection.tsx',
+    shows:
+      'A switch for which Milky Way is drawn (the point sprites, the smooth analytic field, or both added together). For the points: size, exposure, softness and number. For the field: its exposure, a dust switch and how coarse each of its render targets is.',
+    file: 'src/layers/milkyWay/tuning/ui/MilkyWayTuningSection.tsx',
   },
   {
     heading: 'Star catalog tuning',
     shows:
       'How far away stars are still drawn one by one (Detail), how wide the glow of a distant region spreads, the exposure at the near, middle and far camera distances, and a cap on how bright a glow may be. A picker sets the size of the pool of star chunks held in memory; a size the device cannot hold is refused and the reason is shown under it.',
-    file: 'src/layers/starCatalog/ui/StarCatalogTuningSection.tsx',
+    file: 'src/layers/starCatalog/controls/ui/StarCatalogTuningSection.tsx',
   },
   {
     heading: 'Surface Tiles',
     shows:
-      'Near Earth or Mars: how many ground tiles are held and at what depth. Ten buttons fly to test sites, from Søndermarken and Everest to the four Mars rover sites, and two switches flatten the terrain or drop the tiles’ skirts.',
-    file: 'src/layers/body/ui/SurfaceTileAtlasSection.tsx',
+      'Near Earth or Mars: how many ground tiles are held and at what depth. Ten buttons fly to test sites, from Søndermarken and Everest to the four Mars rover sites, and three switches tint each tile by its level of detail, flatten the terrain or drop the tiles’ skirts.',
+    file: 'src/layers/body/surfaceTiles/debug/ui/SurfaceTileAtlasSection.tsx',
   },
   {
     heading: 'Terrain pick marker',
     shows:
       'The size of the marker drawn where the pointer meets the ground, and the height of the terrain under it.',
-    file: 'src/layers/body/ui/TerrainPickMarkerTuningSection.tsx',
+    file: 'src/layers/body/terrainPick/ui/TerrainPickMarkerTuningSection.tsx',
   },
   {
     heading: 'Earth tuning',
     shows:
       'Three sliders for Earth: how bright its atmosphere is drawn, how much light the night side keeps, and how wide the Sun’s glint on the oceans is.',
-    file: 'src/layers/body/ui/EarthTuningSectionContainer.tsx',
+    file: 'src/layers/body/earth/ui/EarthTuningSectionContainer.tsx',
+  },
+  {
+    heading: 'Probe spheres',
+    shows:
+      'The colour, metalness and roughness of the three mirror spheres that show what a model’s reflection is lit by: one in orbit, one in Søndermarken, one in Jezero crater. The spheres are drawn only with layers=probeSpheres in the link.',
+    file: 'src/layers/probeSpheres/spheres/ui/ProbeSpheresTuningSectionContainer.tsx',
   },
   {
     heading: 'Debug Overlays',
     shows:
-      'Three pictures laid over the scene: the buffer a click is looked up in, the stand-in shapes of the orbit trails, and the level of detail of each ground tile.',
+      'Two pictures laid over the scene: the buffer a click is looked up in, and the stand-in shapes of the orbit trails.',
     file: `${PANEL}/DebugOverlaysSection.tsx`,
   },
   {
@@ -115,10 +141,16 @@ export const DOCS_DEBUG_SECTIONS: readonly DocsDebugSection[] = [
     file: `${PANEL}/FocusMovesTuningSection/FocusMovesTuningSection.tsx`,
   },
   {
+    heading: 'Film look',
+    shows:
+      'The film look’s switch, its letterbox and the letterbox’s ratio (2.39:1 scope by default, down to 9:16 portrait), then two groups. Grade: contrast, black lift, split tone, grain and grain size, vignette, chromatic aberration, edge softness and the anamorphic squeeze. Glow: the firefly cap the Sun may bloom up to, the streak’s threshold, strength, length and blue tint, and the veiling glare.',
+    file: `${PANEL}/FilmTuningSection/FilmTuningSection.tsx`,
+  },
+  {
     heading: 'Galaxy Provenance',
     shows:
       'How many loaded galaxies have no measured orientation and no measured size, with switches to colour them or to draw only the measured or only the unmeasured ones.',
-    file: `${PANEL}/GalaxyProvenanceSection.tsx`,
+    file: 'src/layers/galaxyCatalog/provenance/ui/GalaxyProvenanceSection.tsx',
   },
   {
     heading: 'Clips & Tours',

@@ -1,7 +1,7 @@
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { SlabRow } from '../../../@types/engine/frame/SlabRow';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import type { ViewFrustum } from '../../../@types/camera/ViewFrustum';
+import type { ViewFrustum } from '../../../@types/camera/projection/ViewFrustum';
 import { bodyApparentDiameterPx } from '../../../utils/scene/bodyApparentDiameterPx';
 import { PROXY_SCALE } from '../../../utils/scene/proxyScale';
 import { SCALE_UNITS } from '../../../data/scaleUnits';

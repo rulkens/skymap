@@ -1,9 +1,7 @@
 import type { CosmicWebDensitySourceEntry } from '../../../@types/data/volume/CosmicWebDensitySourceEntry';
-import { Source } from '../../../data/source';
 
 export const POLYPHORM_2MRS_ENTRY = {
   type: 'cosmicWebDensity',
-  code: Source.Polyphorm2MRS,
   id: 'polyphorm-2mrs',
   label: 'Polyphorm (2MRS)',
   allSky: true, // 2MRS footprint run, same all-sky framing as MCPM

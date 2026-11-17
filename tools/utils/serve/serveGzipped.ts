@@ -4,6 +4,7 @@ import { createSecureServer } from 'node:http2';
 import type { AddressInfo } from 'node:net';
 import { extname, join, normalize } from 'node:path';
 import { gzipSync } from 'node:zlib';
+import { byteRangeOf } from './byteRangeOf';
 import { dataFamilyOf } from '../../deploy/r2/dataFamilyOf';
 import type { CertPair } from '../../@types/serve/CertPair';
 import type { StaticServerHandle } from '../../@types/serve/StaticServerHandle';
@@ -28,8 +29,10 @@ const DATA_PREFIX = '/data/';
 /**
  * Serve `dir` on a free localhost port with production's wire sizes: the
  * shell's text assets gzipped as Cloudflare would, data files gzipped per the
- * R2 upload policy (`DATA_FAMILIES`). `vite preview` compresses nothing, so
- * a throttled load against it overstates every download by 2-3x. With `certs`
+ * R2 upload policy (`DATA_FAMILIES`). Raw files answer a single `Range` with
+ * 206, as R2 does; gzipped bodies never do. `vite preview` gzips text and JSON
+ * but not the binary data files, so a throttled load against it overstates
+ * those downloads by 2-3x. With `certs`
  * it speaks HTTP/2 over TLS as Cloudflare does (browsers only negotiate h2 over
  * TLS); without, HTTP/1.1, whose six-connection limit queues the chunks.
  * `port` 0 picks a free one.
@@ -65,8 +68,22 @@ export async function serveGzipped(
       res.end(body);
       return;
     }
-    res.writeHead(200, { 'Content-Length': size });
-    createReadStream(file).pipe(res);
+    res.setHeader('Accept-Ranges', 'bytes');
+    const range = byteRangeOf(req.headers.range, size);
+    if (range === 'unsatisfiable') {
+      res.writeHead(416, { 'Content-Range': `bytes */${size}` }).end();
+      return;
+    }
+    if (range === null) {
+      res.writeHead(200, { 'Content-Length': size });
+      createReadStream(file).pipe(res);
+      return;
+    }
+    res.writeHead(206, {
+      'Content-Range': `bytes ${range.start}-${range.end}/${size}`,
+      'Content-Length': range.end - range.start + 1,
+    });
+    createReadStream(file, range).pipe(res);
   };
   // The compat API hands an h2 stream the same request/response shape.
   const server =

@@ -8,12 +8,13 @@
 import { describe, it, expect } from 'vitest';
 
 import { structureLayer } from '../../../src/layers/structure/layer';
-import { createStructureStore } from '../../../src/layers/structure/load/createStructureStore';
+import { createStructureStore } from '../../../src/layers/structure/catalog/load/createStructureStore';
 import { CONTENT_PASSES } from '../../../src/services/engine/frame/passes';
 import { FRAME_ORDER_PASS_NAMES } from '../../../src/services/engine/frame/frameOrderPassNames';
 import { COSMO, NEAR0 } from '../../../src/services/engine/frame/slabs';
-import { ZERO_FOCUS } from '../../../src/services/engine/subsystems/structureFocusSubsystem';
+import { ZERO_FOCUS } from '../../../src/services/engine/subsystems/recedingFocusSubsystem';
 import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
+import { structurePickCodes } from '../../support/layerPickCodes';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 import type { StructureId } from '../../../src/@types/data/structure/StructureId';
@@ -23,6 +24,7 @@ import type { StructureRuntime } from '../../../src/layers/structure/@types/Stru
 function stubRuntime(): StructureRuntime {
   return {
     store: createStructureStore(),
+    pickCodes: structurePickCodes(),
     cosmoRenderer: {},
     nearRenderer: {},
     slot: {},

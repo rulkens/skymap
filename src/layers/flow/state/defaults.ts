@@ -4,8 +4,8 @@
  * carries the asset, not the look, so retune them here.
  */
 
-import { MAX_PARTICLES } from '../../../data/flow/flowFieldConstants';
-import type { FlowSettings } from '../../../@types/settings/FlowSettings';
+import { MAX_PARTICLES } from '../streamlines/data/flowFieldConstants';
+import type { FlowSettings } from '../@types/FlowSettings';
 
 /**
  * Default state of the CF4++ peculiar-velocity flow-field overlay — the

@@ -17,14 +17,18 @@ import MobileSheet from '../MobileSheet/MobileSheet';
 import DockContainer from './DockContainer';
 import TimeBarContainer from './TimeBarContainer';
 import ScaleBracketContainer from './ScaleBracketContainer';
+import SkyEntryButtonContainer from './SkyEntryButtonContainer';
+import SkyHudContainer from './SkyHudContainer';
 import LazyInfoCardContainer from './LazyInfoCardContainer';
 import LazyPhoneSettingsContainer from './LazyPhoneSettingsContainer';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectSelectedFocusable } from '../../state/selection/selectors';
-import { selectPaletteOpen } from '../../state/ui/selectors';
+import { selectPaletteOpen, selectUiStackHidden } from '../../state/ui/selectors';
 import { reopenSplash, setPaletteOpen } from '../../state/ui/uiSlice';
 import { goHome } from '../../state/selection/goHome';
-import { TARGET_IDENTITY_KEY } from '../../services/engine/helpers/targetIdentityKey';
+import { viewCoverSet } from '../../state/viewCover/viewCoverSlice';
+import { refKey } from '../../utils/selection/refKey';
+import type { ViewCover } from '../../@types/layout/ViewCover';
 
 export type PhoneHudContainerProps = {
   // Same App-layout gate the desktop TimeBar takes (palette open).
@@ -34,9 +38,10 @@ export type PhoneHudContainerProps = {
 function PhoneHudContainer({ hidden }: PhoneHudContainerProps): ReactNode {
   const dispatch = useAppDispatch();
   const selected = useAppSelector(selectSelectedFocusable);
-  const selectionKey = selected ? TARGET_IDENTITY_KEY[selected.type](selected) : null;
+  const selectionKey = selected ? refKey(selected.ref) : null;
 
   const paletteOpen = useAppSelector(selectPaletteOpen);
+  const uiStackHidden = useAppSelector(selectUiStackHidden);
 
   const [layersOpen, setLayersOpen] = useState(false);
   const [timeOpen, setTimeOpen] = useState(false);
@@ -73,6 +78,10 @@ function PhoneHudContainer({ hidden }: PhoneHudContainerProps): ReactNode {
   }, [dispatch]);
   const onAbout = useCallback(() => dispatch(reopenSplash()), [dispatch]);
   const onTime = useCallback(() => setTimeOpen((cur) => !cur), []);
+  const onCover = useCallback(
+    (cover: ViewCover | null) => dispatch(viewCoverSet({ id: 'phoneBottom', cover })),
+    [dispatch],
+  );
 
   let sheet: ReactNode = null;
   if (layersOpen) {
@@ -96,8 +105,17 @@ function PhoneHudContainer({ hidden }: PhoneHudContainerProps): ReactNode {
   return (
     <BottomStack
       timeOpen={timeOpen}
+      restingSheet={selectionKey !== null}
+      coverActive={!uiStackHidden}
+      onCover={onCover}
       sheet={sheet}
       scale={<ScaleBracketContainer />}
+      sky={
+        <>
+          <SkyEntryButtonContainer phone />
+          <SkyHudContainer phone />
+        </>
+      }
       timeRow={<TimeBarContainer hidden={hidden} row />}
       dock={
         <DockContainer

@@ -1,22 +1,26 @@
 // surfaceTile/surfaceLighting.wesl — what every tile fragment variant
-// shares: the crossfaded atlas albedo, the height-cell normal and the LOD
-// overlay. Bindings live in the entry files, so textures and uniform fields
+// shares: the crossfaded atlas albedo, the night tile, the height-cell normal
+// and the LOD overlay. Bindings live in the entry files, so textures and uniform fields
 // arrive as parameters (plain values, never a buffer struct by value).
 
 import package::bodies::surfaceTile::lattice::latticePostGradient;
 
 // Mirrored from 'SURFACE_TILE_ATLAS_SIDE' (surfaceTileParams.ts), parity-tested
 // in constants.parity.test.ts. Half an ATLAS texel in atlas uv: the inset
-// that keeps a bilinear tap at a resolved rect's edge out of a DIFFERENT
+// that keeps a bilinear tap at a slot's edge out of a NEIGHBOURING
 // slot's pixels (the sampler's clamp-to-edge only guards the atlas's own edge).
 const SURFACE_TILE_ATLAS_SIDE: f32 = 8192.0;
 const SURFACE_TILE_ATLAS_HALF_TEXEL: f32 = 0.5 / SURFACE_TILE_ATLAS_SIDE;
-
 // Mirrored from 'SURFACE_TILE_PX' (surfaceTileParams.ts), parity-tested. The
 // atlas-uv width of a tile drawn from ITS OWN slot; the LOD overlay divides a
 // resolved rect's width into it to recover how many levels the fallback walked.
 const SURFACE_TILE_PX: f32 = 512.0;
 const TILE_SLOT_SCALE: f32 = SURFACE_TILE_PX / SURFACE_TILE_ATLAS_SIDE;
+
+// Mirrored from 'NIGHT_TILE_ATLAS_SIDE' (surfaceTileParams.ts), parity-tested.
+const NIGHT_TILE_ATLAS_SIDE: f32 = 4096.0;
+const NIGHT_TILE_ATLAS_HALF_TEXEL: f32 = 0.5 / NIGHT_TILE_ATLAS_SIDE;
+const NIGHT_TILE_SLOT_SCALE: f32 = SURFACE_TILE_PX / NIGHT_TILE_ATLAS_SIDE;
 
 // The 'surface-lod-overlay' ladder: green = own leaf tile resident,
 // yellow/orange/red = 1/2/3+ levels coarser. Flat bands, not a ramp: the
@@ -32,13 +36,20 @@ fn tileLodOverlayColor(levelDelta: u32) -> vec3<f32> {
   return vec3<f32>(0.90, 0.10, 0.05); // red, 3+
 }
 
-// A deep ancestor fallback (levelDelta >= ~7) can flatten a rect to under one
-// atlas texel; the raw half-texel inset would then push min past max, which
-// clamp() leaves indeterminate -- so the inset is capped at half the rect.
-fn resolveTileAtlasUv(origin: vec2<f32>, scale: vec2<f32>, uv: vec2<f32>) -> vec2<f32> {
-  let raw = origin + uv * scale;
-  let inset = min(vec2<f32>(SURFACE_TILE_ATLAS_HALF_TEXEL), 0.5 * scale);
-  return clamp(raw, origin + inset, origin + scale - inset);
+// A leaf often draws an ancestor's tile through a sub-rect of that ancestor's
+// SLOT: clamped to the sub-rect, neighbouring leaves could not filter across
+// their shared edge (a texel step at every leaf border, and one flat tap under
+// a sub-texel rect). So the clamp is the slot, inset half an atlas texel, and
+// the slot is recovered from the rect's origin since slots tile the atlas on a
+// 'slotScale' grid from 0 (TextureAtlas.ts packs them with no gutter).
+fn slotClampedUv(origin: vec2<f32>, scale: vec2<f32>, uv: vec2<f32>, slotScale: f32, halfTexel: f32) -> vec2<f32> {
+  let slotOrigin = floor(origin / slotScale) * slotScale;
+  return clamp(origin + uv * scale, slotOrigin + halfTexel, slotOrigin + slotScale - halfTexel);
+}
+
+fn tileNight(atlas: texture_2d<f32>, atlasSampler: sampler, uv: vec2<f32>, rect: vec4<f32>) -> vec3<f32> {
+  let nightUv = slotClampedUv(rect.xy, rect.zw, uv, NIGHT_TILE_SLOT_SCALE, NIGHT_TILE_ATLAS_HALF_TEXEL);
+  return textureSampleLevel(atlas, atlasSampler, nightUv, 0.0).rgb;
 }
 
 // Crossfade the freshly-landed primary tile in over the coarser fallback. At
@@ -55,9 +66,9 @@ fn tileAlbedo(
   fallbackScale: vec2<f32>,
   fadeWeight: f32,
 ) -> vec3<f32> {
-  let primaryUv = resolveTileAtlasUv(primaryOrigin, primaryScale, uv);
+  let primaryUv = slotClampedUv(primaryOrigin, primaryScale, uv, TILE_SLOT_SCALE, SURFACE_TILE_ATLAS_HALF_TEXEL);
   let primaryAlbedo = textureSampleLevel(atlas, atlasSampler, primaryUv, 0.0).rgb;
-  let fallbackUv = resolveTileAtlasUv(fallbackOrigin, fallbackScale, uv);
+  let fallbackUv = slotClampedUv(fallbackOrigin, fallbackScale, uv, TILE_SLOT_SCALE, SURFACE_TILE_ATLAS_HALF_TEXEL);
   let fallbackAlbedo = textureSampleLevel(atlas, atlasSampler, fallbackUv, 0.0).rgb;
   return mix(fallbackAlbedo, primaryAlbedo, fadeWeight);
 }
@@ -65,15 +76,15 @@ fn tileAlbedo(
 // Shading normal from the four posts of the height cell 'uv' lies in: each
 // post's own slope, interpolated across the cell, so the normal stays
 // continuous over a post line (one gradient per cell drew every cell as a
-// facet). Twin: src/layers/body/subsystems/surfaceTiles/surfaceNormalFromHeightCell.ts. 'uv.y' runs 0
-// at the patch's NORTH edge, the lattice's own row order; 'Ng' is the
+// facet). Twin: src/layers/body/surfaceTiles/patch/subsystems/surfaceNormalFromHeightCell.ts. 'uv.y' runs 0
+// at the patch's NORTH edge, the lattice's own row order; 'geometricNormal' is the
 // normalized datum normal; 'heightLattice' is (origin.xy, cells) of the leaf.
 fn tileShadingNormal(
   heightAtlas: texture_2d<f32>,
   uv: vec2<f32>,
   heightLattice: vec3<u32>,
   patchSpanRad: vec2<f32>,
-  Ng: vec3<f32>,
+  geometricNormal: vec3<f32>,
   tangent: vec3<f32>,
   radiusM: f32,
 ) -> vec3<f32> {
@@ -81,28 +92,28 @@ fn tileShadingNormal(
   let cells = f32(cellsU);
   let col = uv.x * cells;
   let rowF = uv.y * cells;
-  let i0 = clamp(floor(col), 0.0, cells - 1.0);
-  let j0 = clamp(floor(rowF), 0.0, cells - 1.0);
-  let cellU = col - i0;
-  let cellV = rowF - j0;
-  let nwPost = vec2<u32>(u32(i0), u32(j0));
+  let nwCol = clamp(floor(col), 0.0, cells - 1.0);
+  let nwRow = clamp(floor(rowF), 0.0, cells - 1.0);
+  let cellU = col - nwCol;
+  let cellV = rowF - nwRow;
+  let nwPost = vec2<u32>(u32(nwCol), u32(nwRow));
   let gNW = latticePostGradient(heightAtlas, heightLattice.xy, nwPost, cellsU);
   let gNE = latticePostGradient(heightAtlas, heightLattice.xy, nwPost + vec2<u32>(1u, 0u), cellsU);
   let gSW = latticePostGradient(heightAtlas, heightLattice.xy, nwPost + vec2<u32>(0u, 1u), cellsU);
   let gSE = latticePostGradient(heightAtlas, heightLattice.xy, nwPost + vec2<u32>(1u, 1u), cellsU);
-  let g = mix(mix(gNW, gNE, cellU), mix(gSW, gSE, cellU), cellV);
+  let postSlope = mix(mix(gNW, gNE, cellU), mix(gSW, gSE, cellU), cellV);
 
   // The 'max' is the polar guard: cos(lat) reaches 0 on the pole row.
-  let lat = asin(clamp(Ng.z, -1.0, 1.0));
+  let lat = asin(clamp(geometricNormal.z, -1.0, 1.0));
   let postSpacingNM = radiusM * patchSpanRad.y / cells;
   let postSpacingEM = max(radiusM * cos(lat) * patchSpanRad.x / cells, 1e-3);
-  let dhdE = g.x / postSpacingEM;
-  let dhdN = g.y / postSpacingNM;
-  // The interpolated tangent is neither unit nor orthogonal to Ng any more,
+  let dhdE = postSlope.x / postSpacingEM;
+  let dhdN = postSlope.y / postSpacingNM;
+  // The interpolated tangent is neither unit nor orthogonal to geometricNormal any more,
   // so re-orthogonalize and re-normalize, as perturbNormal does.
-  let eHat = normalize(tangent - Ng * dot(Ng, tangent));
-  let nHat = normalize(cross(Ng, eHat));
-  return normalize(Ng - dhdE * eHat - dhdN * nHat);
+  let eHat = normalize(tangent - geometricNormal * dot(geometricNormal, tangent));
+  let nHat = normalize(cross(geometricNormal, eHat));
+  return normalize(geometricNormal - dhdE * eHat - dhdN * nHat);
 }
 
 // A runtime lens ('lodOverlay' > 0.5), not a compile-time one, so it stays

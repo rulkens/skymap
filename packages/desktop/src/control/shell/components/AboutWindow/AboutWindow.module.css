@@ -1,0 +1,6 @@
+.root {
+  display: grid;
+  align-content: center;
+  height: 100%;
+  -webkit-app-region: drag;
+}

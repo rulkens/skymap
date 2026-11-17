@@ -16,7 +16,7 @@
  * flow layer, so there are no layers to toggle and no density cube to tune.
  */
 import type { CameraSlice } from './slices/CameraSlice';
-import type { FlowSettings } from '../../../../src/@types/settings/FlowSettings';
+import type { FlowSettings } from '../../../../src/layers/flow/@types/FlowSettings';
 import type { LabelsSlice } from './slices/LabelsSlice';
 
 export type AppState = {

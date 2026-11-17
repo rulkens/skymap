@@ -7,13 +7,14 @@
  */
 
 import type { BodyState } from '../../scene/BodyState';
-import type { CameraState } from '../../camera/CameraState';
+import type { CameraIntentState } from '../../camera/orbitCamera/CameraIntentState';
 import type { ControlScheme } from './ControlScheme';
 import type { ControlSchemeId } from './ControlSchemeId';
 import type { Epoch } from './Epoch';
-import type { InputStep } from '../../camera/InputStep';
-import type { TerrainHeightAtLookup } from '../../camera/TerrainHeightAtLookup';
+import type { RawInputStep } from '../../camera/input/RawInputStep';
+import type { TerrainHeightAtLookup } from '../../camera/terrain/TerrainHeightAtLookup';
 import type { Vec2 } from '../../math/Vec2';
+import type { InsetsPx } from '../../layout/InsetsPx';
 import type { RootState } from '../../../store/types';
 import type { PositionedId } from '../../scene/PositionedId';
 
@@ -22,14 +23,16 @@ export type StepInputs = {
   readonly simDays: number;
   readonly rootState: RootState;
   readonly canvasPx: Readonly<Vec2>;
+  /** Resting UI's reach in from each canvas edge, CSS px like `canvasPx`. */
+  readonly coverPx: InsetsPx;
   /** `canvas.width / canvas.height` after `resizeCanvasToDisplay`. */
   readonly aspect: number;
-  readonly steps: readonly InputStep[];
+  readonly steps: readonly RawInputStep[];
   readonly bodies: ReadonlyMap<PositionedId, BodyState>;
   /** `SurfaceTileStream.heightAt` bound by `runFrame`, or a `() =>
    *  0` stub pre-boot — the ground-collision row's source (F3a, spec §8.3). */
   readonly terrainHeightAt: TerrainHeightAtLookup;
-  readonly clipEpoch: Epoch<NonNullable<CameraState['clip']>>;
+  readonly clipEpoch: Epoch<NonNullable<CameraIntentState['clip']>>;
   /** Every scheme, not just the active one: an edge commit looks the departing
    *  row up in the table LAST frame's winner came from. */
   readonly schemes: Readonly<Record<ControlSchemeId, ControlScheme>>;

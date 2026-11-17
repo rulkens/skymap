@@ -6,7 +6,7 @@
  */
 
 import { DEFAULT_ZONE_OF_AVOIDANCE_TUNING } from '../defaults';
-import type { ZoneOfAvoidanceSettings } from '../../../../@types/settings/ZoneOfAvoidanceSettings';
+import type { ZoneOfAvoidanceSettings } from '../../@types/ZoneOfAvoidanceSettings';
 
 export const initialState: ZoneOfAvoidanceSettings = {
   enabled: true,

@@ -1,0 +1,47 @@
+/*
+ * One band height for the row, so the three headings under it stay level. The cut-outs keep the transparent
+ * margin they were shot with, so each is sized by its body (Saturn's rings span 85% of its frame, the Moon's
+ * disc 27%) and hung from the band's middle.
+ */
+.root {
+  position: relative;
+  height: 9rem;
+  margin-bottom: var(--site-space-m);
+  overflow-x: clip;
+}
+
+.saturn,
+.moon,
+.chip {
+  position: absolute;
+  top: 50%;
+  translate: 0 -50%;
+}
+
+.saturn {
+  left: -1.2rem;
+  width: 16rem;
+  rotate: -8deg;
+}
+
+.phone {
+  --phone-width: 5.75rem;
+  --phone-yaw: -24deg;
+  --phone-pitch: 8deg;
+  position: absolute;
+  bottom: 0;
+  left: 0.25rem;
+}
+
+.moon {
+  left: -6.5rem;
+  width: 18rem;
+}
+
+/* The chip as a tag stuck on the Moon's lower edge, a little askew. */
+.chip {
+  top: 70%;
+  left: 2.75rem;
+  width: 9rem;
+  rotate: -6deg;
+}

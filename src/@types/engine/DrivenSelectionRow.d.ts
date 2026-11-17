@@ -1,8 +1,5 @@
 import type { DriverGeometry } from './camera/DriverGeometry';
-import type { SelectionRow } from './SelectionRow';
+import type { SelectionRowBase } from './selection/SelectionRowBase';
 
-/**
- * The sub-union of `SelectionRow` restricted to arms that host the camera —
- * `selectionDriver` is the one place that needs this filter spelled out.
- */
-export type DrivenSelectionRow = Extract<SelectionRow, { driver: DriverGeometry }>;
+/** A row whose kind hosts the camera; its Layer's `extractRow` fills `driver` (`selectionDriver`). */
+export type DrivenSelectionRow = SelectionRowBase & { readonly driver: DriverGeometry };

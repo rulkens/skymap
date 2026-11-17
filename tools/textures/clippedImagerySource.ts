@@ -6,7 +6,7 @@
  * childless halo tile at z10 would otherwise read it all at 25 cm.
  */
 
-import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
+import type { LonLatBounds } from '../../src/layers/body/surfaceTiles/format/@types/LonLatBounds';
 import { featherWeight } from '../utils/textures/featherWeight';
 import type { SurfaceImagerySource } from './@types/SurfaceImagerySource';
 

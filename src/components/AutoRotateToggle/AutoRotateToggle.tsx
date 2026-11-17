@@ -8,8 +8,8 @@
 
 import { memo, type ReactNode } from 'react';
 import PillButton from '../common/PillButton/PillButton';
-import PlayIcon from './PlayIcon';
-import PauseIcon from './PauseIcon';
+import PlayIcon from '../icons/PlayIcon/PlayIcon';
+import PauseIcon from '../icons/PauseIcon/PauseIcon';
 
 export type AutoRotateToggleProps = {
   readonly playing: boolean;
@@ -27,7 +27,7 @@ function AutoRotateToggle({ playing, onToggle, hidden = false }: AutoRotateToggl
       aria-pressed={playing}
       tooltip={playing ? 'Pause rotation' : 'Auto-rotate'}
     >
-      {playing ? <PauseIcon /> : <PlayIcon />}
+      {playing ? <PauseIcon size={14} /> : <PlayIcon size={14} />}
     </PillButton>
   );
 }

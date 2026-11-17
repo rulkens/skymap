@@ -15,7 +15,7 @@ import {
   updateSelectionSelect,
 } from '../../../src/state/selection/selectionSlice';
 import { selectionRoute } from '../../../src/store/constants';
-import type { SelectionRef } from '../../../src/@types/engine/SelectionRef';
+import type { SelectionRefBase } from '../../../src/@types/engine/selection/SelectionRefBase';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -29,7 +29,7 @@ function build() {
 describe('watchFocusSelectedSaga', () => {
   it('focusSelected focuses the selected ref', async () => {
     const store = build();
-    const ref: SelectionRef = { type: 'milkyWay' };
+    const ref: SelectionRefBase = { type: 'milkyWay' };
     store.dispatch(updateSelectionSelect(ref));
 
     store.dispatch(focusSelected());

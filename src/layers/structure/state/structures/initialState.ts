@@ -8,7 +8,7 @@
 import { STRUCTURE_IDS } from '../../../../data/structure/structureIds';
 import type { StructureId } from '../../../../@types/data/structure/StructureId';
 import type { StructureItemSettings } from '../../../../@types/settings/StructureItemSettings';
-import type { StructureSettings } from '../../../../@types/settings/StructureSettings';
+import type { StructureSettings } from '../../@types/StructureSettings';
 
 // Nebulae have no rendering of their own yet, so a ring would circle empty sky.
 const OFF_BY_DEFAULT: ReadonlySet<StructureId> = new Set(['nebula']);

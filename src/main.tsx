@@ -49,6 +49,7 @@ import { createRoot } from 'react-dom/client';
 import { Provider } from 'react-redux';
 import { App } from './components/App/App';
 import { APP_LABELS_AND_GUIDES_REGISTRY } from './compositions/appLabelsAndGuidesRows';
+import { APP_LAYER_SWITCH_ROWS } from './compositions/appLayerSwitchRows';
 import { createLocalTransport } from './services/remote/createLocalTransport';
 import { remoteReceiverSaga } from './state/remote/remoteReceiverSaga';
 import { hasUrlGate } from './utils/url/hasUrlGate';
@@ -102,7 +103,13 @@ if (typeof navigator === 'undefined' || typeof navigator.gpu === 'undefined') {
   });
   // `?remote` puts this page's pairing and command receiver on the local relay.
   if (hasUrlGate('remote')) {
-    runSaga(() => remoteReceiverSaga(createLocalTransport(), APP_LABELS_AND_GUIDES_REGISTRY));
+    runSaga(() =>
+      remoteReceiverSaga(
+        createLocalTransport(),
+        APP_LABELS_AND_GUIDES_REGISTRY,
+        APP_LAYER_SWITCH_ROWS,
+      ),
+    );
   }
   // Store lives for the page lifetime; unsubscribe is intentionally not held.
   persistValues(store, PERSISTED_VALUES);
@@ -123,6 +130,8 @@ if (typeof navigator === 'undefined' || typeof navigator.gpu === 'undefined') {
       </Provider>,
     ),
   );
+  // Behind the flag so the build folds the import away (src/dev/mocks/README.md).
+  if (import.meta.env.DEV) void import('./dev/mountMock').then((m) => m.mountMock(store));
   // The shell stays up until React has something to show in its place: the
   // splash at once, otherwise the first drawn frame, which is what `arrival`
   // reports. Dropping it at mount left a black canvas while the engine loaded.

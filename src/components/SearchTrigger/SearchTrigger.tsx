@@ -10,6 +10,7 @@
 
 import { memo, type ReactNode } from 'react';
 import cx from 'classnames';
+import SearchIcon from '../icons/SearchIcon/SearchIcon';
 import styles from './SearchTrigger.module.css';
 
 export type SearchTriggerProps = {
@@ -17,31 +18,6 @@ export type SearchTriggerProps = {
   /** Fades out and stops accepting clicks while the palette is open. */
   hidden?: boolean;
 };
-
-// `currentColor` so the icon follows the trigger's hover / focus colour.
-function SearchIcon(): ReactNode {
-  return (
-    <svg
-      className={styles.icon}
-      viewBox="0 0 16 16"
-      width="14"
-      height="14"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" strokeWidth="1.5" />
-      <line
-        x1="10.5"
-        y1="10.5"
-        x2="14"
-        y2="14"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
 
 function SearchTrigger({ onClick, hidden = false }: SearchTriggerProps): ReactNode {
   return (
@@ -53,7 +29,7 @@ function SearchTrigger({ onClick, hidden = false }: SearchTriggerProps): ReactNo
       aria-hidden={hidden || undefined}
       aria-keyshortcuts="Meta+K Control+K /"
     >
-      <SearchIcon />
+      <SearchIcon size={14} />
       <span className={styles.placeholder}>Search the universe…</span>
       <span className={styles.shortcut} aria-hidden="true">
         ⌘K

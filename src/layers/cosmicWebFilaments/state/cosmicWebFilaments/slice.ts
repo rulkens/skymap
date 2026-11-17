@@ -22,4 +22,5 @@ export const cosmicWebFilamentsSlice = createSlice({
   },
 });
 
-export const { setCosmicWebFilamentsEnabled, setCosmicWebFilamentsIntensity } = cosmicWebFilamentsSlice.actions;
+export const { setCosmicWebFilamentsEnabled, setCosmicWebFilamentsIntensity } =
+  cosmicWebFilamentsSlice.actions;

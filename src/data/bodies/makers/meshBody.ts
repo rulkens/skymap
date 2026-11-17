@@ -6,12 +6,15 @@
  * single source of truth for both. Throws at the call site on a miss, same
  * posture as `findByIdOrThrow`: a typo'd `meshKey`, or a seed added before
  * its asset landed, must fail loudly there rather than seed a body with
- * `undefined` geometry that only misbehaves at render time.
+ * `undefined` geometry that only misbehaves at render time. A `generated`
+ * seed has no row: it states both facts beside the builder that makes them true.
  */
 
 import { MESH_ASSETS } from '../meshAssets.generated';
 import { BODY_GLINT_MAX_PX } from '../bodyGlintMaxPx';
+import type { MeshAsset } from '../../../@types/data/mesh/MeshAsset';
 import type { MeshBody } from '../../../@types/scene/MeshBody';
+import type { Vec3 } from '../../../@types/math/Vec3';
 import { asSceneBodyId } from '../../../utils/scene/asSceneBodyId';
 
 /** Camera floor at two radii: the body fills the view. A ratio, not metres, so the 0.46 m pot and the 6.8 m whale both frame. */
@@ -27,17 +30,29 @@ export type MeshBodySeed = {
   readonly standoffRadii?: number;
   /** See `MeshBody.presentFromIso`. */
   readonly presentFromIso?: string;
+  /** A mesh built in the browser, in place of a `MESH_ASSETS` row. */
+  readonly generated?: {
+    readonly buildMesh: () => Promise<MeshAsset>;
+    readonly boundingRadiusM: number;
+    readonly albedo: Vec3;
+  };
 };
 
+function bakedFacts(meshKey: string): Pick<MeshBody, 'boundingRadiusM' | 'albedo'> {
+  const asset = MESH_ASSETS[meshKey];
+  if (!asset) throw new Error(`meshBody: no MESH_ASSETS entry for meshKey '${meshKey}'`);
+  return { boundingRadiusM: asset.boundingRadiusM, albedo: asset.meanAlbedo };
+}
+
 export function meshBody(seed: MeshBodySeed): MeshBody {
-  const asset = MESH_ASSETS[seed.meshKey];
-  if (!asset) throw new Error(`meshBody: no MESH_ASSETS entry for meshKey '${seed.meshKey}'`);
+  const { boundingRadiusM, albedo } = seed.generated ?? bakedFacts(seed.meshKey);
   return {
     id: asSceneBodyId(seed.id),
     label: seed.label,
     meshKey: seed.meshKey,
-    boundingRadiusM: asset.boundingRadiusM,
-    albedo: asset.meanAlbedo,
+    buildMesh: seed.generated?.buildMesh,
+    boundingRadiusM,
+    albedo,
     standoffRadii: seed.standoffRadii ?? MESH_BODY_STANDOFF_RADII,
     captionRevealM: seed.captionRevealM,
     presentFromIso: seed.presentFromIso,

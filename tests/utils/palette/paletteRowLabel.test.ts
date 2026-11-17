@@ -1,14 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import { paletteRowLabel } from '../../../src/utils/palette/paletteRowLabel';
-import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
-import { Source } from '../../../src/data/source';
 import { APP_EXHIBIT_REGISTRY } from '../../../src/compositions/appExhibits';
-import { tourRegistry } from '../../../src/data/animation/tours/tourRegistry';
-import { MILKY_WAY_NAMES } from '../../../src/data/palette/milkyWayNames';
+import { APP_TOUR_REGISTRY } from '../../../src/compositions/appTours';
 import type { ScoredRow } from '../../../src/@types/palette/ScoredRow';
-
-const siriusIndex = SCENE_STARS.findIndex((star) => star.id === 'sirius');
 
 describe('paletteRowLabel', () => {
   it('names every ScoredRow kind', () => {
@@ -22,11 +17,10 @@ describe('paletteRowLabel', () => {
         'M31',
         'Galaxy',
       ],
-      [{ kind: 'milkyWay', score: 0 }, MILKY_WAY_NAMES[0], 'Galaxy'],
       [
         {
           kind: 'alias',
-          entry: { pgc: 42038, names: ['NGC 4565'], source: Source.Glade },
+          entry: { pgc: 42038, names: ['NGC 4565'], sourceLabel: 'GLADE', focusId: 'pgc-42038' },
           score: 0,
         },
         'NGC 4565',
@@ -35,22 +29,11 @@ describe('paletteRowLabel', () => {
       [
         {
           kind: 'alias',
-          entry: { pgc: 1, names: [], source: Source.Glade },
+          entry: { pgc: 1, names: [], sourceLabel: 'GLADE', focusId: 'pgc-1' },
           score: 0,
         },
         '(unnamed)',
         'Galaxy',
-      ],
-      [
-        {
-          kind: 'starCatalog',
-          source: Source.FamousStar,
-          index: siriusIndex,
-          star: SCENE_STARS[siriusIndex]!,
-          score: 0,
-        },
-        SCENE_STARS[siriusIndex]!.label,
-        'Star',
       ],
       [
         {
@@ -74,8 +57,8 @@ describe('paletteRowLabel', () => {
         'Exhibit',
       ],
       [
-        { kind: 'tour', tour: tourRegistry.grandTour, score: 0 },
-        tourRegistry.grandTour.label,
+        { kind: 'tour', tour: APP_TOUR_REGISTRY.grandTour, score: 0 },
+        APP_TOUR_REGISTRY.grandTour.label,
         'Tour',
       ],
       [

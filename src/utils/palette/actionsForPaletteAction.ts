@@ -1,23 +1,23 @@
 /**
  * actionsForPaletteAction — the store actions a palette pick dispatches, in order. Returned rather than
  * dispatched so a caller outside React runs the same pick as the palette container. `focus` is two actions:
- * `requestSelect` pins the InfoCard, then `requestFocus` flies the camera, so a pick looks like a click plus a fly.
+ * `requestSelect` pins the InfoCard, then `requestView` asks for the view (`watchRequestViewSaga` decides how).
+ * A named spot arrives from wherever the camera is (no ground point); `'here'` is read when it lands.
  */
 import type { UnknownAction } from '@reduxjs/toolkit';
-import { requestFocus } from '../../state/selection/requestFocus';
+import { requestView } from '../../state/selection/requestView';
 import { requestSelect } from '../../state/selection/requestSelect';
 import { openExhibit } from '../../state/exhibits/exhibitActions';
 import { startTour } from '../../state/tour/tourActions';
 import { flyToLonLat } from '../../state/camera/flyToLonLatActions';
+import { enterSky } from '../../state/sky/actions/enterSky';
+import { enterSkyHere } from '../../state/sky/actions/enterSkyHere';
 import type { PaletteAction } from '../../@types/palette/PaletteAction';
 
 export function actionsForPaletteAction(action: PaletteAction): UnknownAction[] {
   switch (action.kind) {
     case 'focus':
-      return [
-        requestSelect(action.focusId),
-        requestFocus({ id: action.focusId, transition: 'fly' }),
-      ];
+      return [requestSelect(action.focusId), requestView({ id: action.focusId })];
     case 'exhibit':
       return [openExhibit({ id: action.exhibitId, entry: 'fly' })];
     case 'tour':
@@ -30,6 +30,12 @@ export function actionsForPaletteAction(action: PaletteAction): UnknownAction[] 
           body: 'earth',
           altKm: action.altKm,
         }),
+      ];
+    case 'sky':
+      return [
+        action.spot === 'here'
+          ? enterSkyHere()
+          : enterSky({ spot: action.spot, pointLocalM: null }),
       ];
   }
 }

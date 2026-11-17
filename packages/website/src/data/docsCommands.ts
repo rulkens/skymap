@@ -40,6 +40,11 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         does: 'Serves what the build wrote.',
         manual: DEPLOY,
       },
+      {
+        scripts: ['desktop'],
+        does: 'Builds the desktop app for kiosks and planetarium domes and opens it in a window, drawing the data in public/data/.',
+        manual: 'docs/DESKTOP.md',
+      },
     ],
   },
   {
@@ -55,14 +60,18 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
           'fetch-dhm',
           'fetch-eox',
           'fetch-gaia',
+          'fetch-galstreams',
           'fetch-height',
           'fetch-horizons',
           'fetch-hyperleda',
           'fetch-local-bubble',
           'fetch-milliquas',
+          'fetch-mpcorb',
+          'fetch-sbdb-diameters',
           'fetch-skraafoto',
           'fetch-structures',
           'fetch-textures',
+          'fetch-vasiliev2021',
           'fetch-voyager-windows',
         ],
         family: 'fetch-<source>',
@@ -95,6 +104,11 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         manual: DATA,
       },
       {
+        scripts: ['build-stellar-streams'],
+        does: 'Write the particles of the stellar streams around the Milky Way: Sagittarius from an N-body model, the others from the galstreams tracks that fetch-vasiliev2021 and fetch-galstreams downloaded.',
+        manual: 'tools/streams/README.md',
+      },
+      {
         scripts: ['build-ephemeris-corrections', 'build-planet-facts'],
         does: 'Fit the corrections to the planets’ and moons’ orbits against JPL Horizons, and compile the facts an info card shows. Both write source files that are committed.',
         manual: 'data/raw/horizons/README.md',
@@ -105,13 +119,33 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         manual: DATA,
       },
       {
-        scripts: ['build-satellites'],
-        does: 'Write the file of satellite orbits from the CelesTrak groups that fetch-celestrak downloaded. A scheduled GitHub workflow runs both every day and uploads the file.',
+        scripts: ['build-satellites', 'live-satellites'],
+        does: 'Write the file of satellite orbits from the CelesTrak groups that fetch-celestrak downloaded. live-satellites runs both; the Live datasets workflow runs it every day and uploads the file.',
         manual: DATA,
+      },
+      {
+        scripts: ['build-asteroids'],
+        does: 'Write the file of asteroid orbits, every numbered minor planet the Minor Planet Center lists, from the file fetch-mpcorb downloaded, with the names, the Center’s terms and the diameters fetch-sbdb-diameters downloaded beside it.',
+        manual: 'data/raw/mpcorb/README.md',
       },
       {
         scripts: ['build-textures', 'build-surface-tiles', 'build-site-ground-heights'],
         does: 'Resize the maps of planets and moons to the three data sizes, cut Earth and Mars into tiles, and read the height of the ground under each rover and under Søndermarken.',
+        manual: DATA,
+      },
+      {
+        scripts: ['fetch-cloud-inputs'],
+        does: 'Downloads the cloud bake’s fixed inputs, about 400 MB: the static cloud map it matches its map to and the twelve Blue Marble months of 2004 it cuts the ice mask from. It runs fetch-textures with --cloud-inputs and needs -- --confirm.',
+        manual: 'data/raw/clouds/README.md',
+      },
+      {
+        scripts: ['bake-clouds'],
+        does: 'Bakes one day’s global cloud map from weather-satellite imagery with tools/cloud-bake-rs. Options: --date, --out and --offline.',
+        manual: 'tools/cloud-bake-rs/README.md',
+      },
+      {
+        scripts: ['build-live-clouds'],
+        does: 'Bakes yesterday’s cloud map, writes it at the three data sizes under a dated folder and points the clouds pointer at it. The Live datasets workflow runs it every day and uploads the files.',
         manual: DATA,
       },
       {
@@ -162,6 +196,11 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
         manual: 'tools/shot/README.md',
       },
       {
+        scripts: ['mock'],
+        does: 'Shows a design mockup on top of the running app and takes a new picture of it each time you save it, in about a third of a second.',
+        manual: 'tools/mock/README.md',
+      },
+      {
         scripts: ['capture-featured'],
         does: 'Takes the small pictures on the cards of the search, one for each card that has none.',
         manual: 'tools/capture/README.md',
@@ -184,6 +223,11 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
       {
         scripts: ['site:shots', 'site:loops', 'site:media'],
         does: 'Take this site’s pictures and its short films from a running app, and cut the flight on the home page from a recording.',
+        manual: SITE_TOOLS,
+      },
+      {
+        scripts: ['site:press-kit'],
+        does: 'Builds the press kit the About page offers: the logo, the app icon, pictures, a portrait, a film and a fact sheet, in one zip.',
         manual: SITE_TOOLS,
       },
     ],
@@ -266,6 +310,7 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
           'flow-workbench',
           'scene-workbench',
           'curate-famous',
+          'albedo-bench',
         ],
         does: 'Each serves one workbench from the source, on a port of its own.',
         manual: 'tools/utils/io/devPorts.ts',
@@ -294,6 +339,16 @@ export const DOCS_COMMANDS: readonly DocsCommandGroup[] = [
       {
         scripts: ['site:structure'],
         does: 'Compares the headings of each landing page in the built site with its structure file and fails on one that only one of the two has.',
+        manual: SITE_TOOLS,
+      },
+      {
+        scripts: ['site:sections'],
+        does: 'Shoots one page of the running site at each width, as the full page and one picture per section, for a design review.',
+        manual: SITE_TOOLS,
+      },
+      {
+        scripts: ['site:judge', 'site:requests'],
+        does: 'Report on every picture of one page of the running site: the file chosen against the width it is drawn at, how much its frame cuts away, how bright it is, beside a sheet of all of them. The second files a request for a new picture and answers it.',
         manual: SITE_TOOLS,
       },
       {
@@ -332,6 +387,10 @@ export const DOCS_COMMANDS_UNLISTED: readonly { why: string; scripts: readonly s
   {
     why: 'build runs them',
     scripts: ['galaxy-renderer:build', 'mcpm-workbench:build', 'flow-workbench:build'],
+  },
+  {
+    why: 'the Live datasets workflow runs them',
+    scripts: ['live-matrix', 'live-publish-list'],
   },
   {
     why: 'they publish, and need the owner’s keys',

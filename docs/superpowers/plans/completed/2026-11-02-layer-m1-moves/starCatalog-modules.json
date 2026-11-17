@@ -1,0 +1,322 @@
+[
+  {
+    "from": "src/layers/starCatalog/load/starCatalogFetcher.ts",
+    "to": "src/layers/starCatalog/survey/load/starCatalogFetcher.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/load/starCatalogSlot.ts",
+    "to": "src/layers/starCatalog/survey/load/starCatalogSlot.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/load/installStarPool.ts",
+    "to": "src/layers/starCatalog/survey/load/installStarPool.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/load/resizeStarPools.ts",
+    "to": "src/layers/starCatalog/survey/load/resizeStarPools.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/load/starCatalogAssetRows.ts",
+    "to": "src/layers/starCatalog/survey/load/starCatalogAssetRows.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/load/starCatalogSourceCounts.ts",
+    "to": "src/layers/starCatalog/survey/load/starCatalogSourceCounts.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/passes/starCatalogPass.ts",
+    "to": "src/layers/starCatalog/survey/passes/starCatalogPass.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/passes/starAggregatesPass.ts",
+    "to": "src/layers/starCatalog/survey/passes/starAggregatesPass.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/passes/starAggregateUpsamplePass.ts",
+    "to": "src/layers/starCatalog/survey/passes/starAggregateUpsamplePass.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/render/starCatalogRenderer.ts",
+    "to": "src/layers/starCatalog/survey/render/starCatalogRenderer.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/render/starCatalogPickRenderer.ts",
+    "to": "src/layers/starCatalog/survey/render/starCatalogPickRenderer.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/render/starCatalogLayout.ts",
+    "to": "src/layers/starCatalog/survey/render/starCatalogLayout.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/render/starAggregateUpsample.ts",
+    "to": "src/layers/starCatalog/survey/render/starAggregateUpsample.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/render/starAggregatesTarget.ts",
+    "to": "src/layers/starCatalog/survey/render/starAggregatesTarget.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/@types/StarCatalogRenderer.d.ts",
+    "to": "src/layers/starCatalog/survey/@types/StarCatalogRenderer.d.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/@types/StarCatalogPickRenderer.d.ts",
+    "to": "src/layers/starCatalog/survey/@types/StarCatalogPickRenderer.d.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/@types/StarCatalogPickDrawArgs.d.ts",
+    "to": "src/layers/starCatalog/survey/@types/StarCatalogPickDrawArgs.d.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/@types/StarCatalogPickResources.d.ts",
+    "to": "src/layers/starCatalog/survey/@types/StarCatalogPickResources.d.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/@types/StarAggregateUpsample.d.ts",
+    "to": "src/layers/starCatalog/survey/@types/StarAggregateUpsample.d.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/@types/StarColumns.d.ts",
+    "to": "src/layers/starCatalog/survey/@types/StarColumns.d.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/@types/StarCatalogReq.d.ts",
+    "to": "src/layers/starCatalog/survey/@types/StarCatalogReq.d.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/utils/star/starOctreeFromSkst.ts",
+    "to": "src/layers/starCatalog/survey/utils/starOctreeFromSkst.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/utils/star/starColumnsOf.ts",
+    "to": "src/layers/starCatalog/survey/utils/starColumnsOf.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/utils/star/packStarGpuRecords.ts",
+    "to": "src/layers/starCatalog/survey/utils/packStarGpuRecords.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/render/cut/drawStarCut.ts",
+    "to": "src/layers/starCatalog/octreeCut/render/drawStarCut.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/render/cut/drawStarPick.ts",
+    "to": "src/layers/starCatalog/octreeCut/render/drawStarPick.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/render/cut/starCutInputs.ts",
+    "to": "src/layers/starCatalog/octreeCut/render/starCutInputs.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/render/cut/starSourcesInBand.ts",
+    "to": "src/layers/starCatalog/octreeCut/render/starSourcesInBand.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/render/cut/starCatalogVisible.ts",
+    "to": "src/layers/starCatalog/octreeCut/render/starCatalogVisible.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/render/cut/starFocusRelCam.ts",
+    "to": "src/layers/starCatalog/octreeCut/render/starFocusRelCam.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/computes/starCutCompute.ts",
+    "to": "src/layers/starCatalog/octreeCut/computes/starCutCompute.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/@types/StarCutInputs.d.ts",
+    "to": "src/layers/starCatalog/octreeCut/@types/StarCutInputs.d.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/@types/StarSourceInBand.d.ts",
+    "to": "src/layers/starCatalog/octreeCut/@types/StarSourceInBand.d.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/@types/StarFocusSphere.d.ts",
+    "to": "src/layers/starCatalog/octreeCut/@types/StarFocusSphere.d.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/@types/StarCatalogCutDrawArgs.d.ts",
+    "to": "src/layers/starCatalog/octreeCut/@types/StarCatalogCutDrawArgs.d.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/utils/star/starCrossfadeOpacity.ts",
+    "to": "src/layers/starCatalog/octreeCut/utils/starCrossfadeOpacity.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/utils/star/starSourceDrawOpacity.ts",
+    "to": "src/layers/starCatalog/octreeCut/utils/starSourceDrawOpacity.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/data/starPlanIntervalFrames.ts",
+    "to": "src/layers/starCatalog/octreeCut/data/starPlanIntervalFrames.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/passes/starPointsPass.ts",
+    "to": "src/layers/starCatalog/seededStars/passes/starPointsPass.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/render/starPointRenderer.ts",
+    "to": "src/layers/starCatalog/seededStars/render/starPointRenderer.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/present/positionedSeededStars.ts",
+    "to": "src/layers/starCatalog/seededStars/present/positionedSeededStars.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/present/seededStarRefs.ts",
+    "to": "src/layers/starCatalog/seededStars/present/seededStarRefs.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/present/seededStarsHandedZero.ts",
+    "to": "src/layers/starCatalog/seededStars/present/seededStarsHandedZero.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/@types/SeededStarRef.d.ts",
+    "to": "src/layers/starCatalog/seededStars/@types/SeededStarRef.d.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/@types/StarPointRenderer.d.ts",
+    "to": "src/layers/starCatalog/seededStars/@types/StarPointRenderer.d.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/@types/PositionedStar.d.ts",
+    "to": "src/layers/starCatalog/seededStars/@types/PositionedStar.d.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/data/famousStarPickRadiusPx.ts",
+    "to": "src/layers/starCatalog/seededStars/data/famousStarPickRadiusPx.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/data/starBackdropDissolve.ts",
+    "to": "src/layers/starCatalog/seededStars/data/starBackdropDissolve.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/passes/starSpheresPass.ts",
+    "to": "src/layers/starCatalog/resolvedStars/passes/starSpheresPass.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/passes/fieldStarSpherePass.ts",
+    "to": "src/layers/starCatalog/resolvedStars/passes/fieldStarSpherePass.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/render/starRenderer.ts",
+    "to": "src/layers/starCatalog/resolvedStars/render/starRenderer.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/render/drawFlooredSpherePick.ts",
+    "to": "src/layers/starCatalog/resolvedStars/render/drawFlooredSpherePick.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/render/nearestResolvableStar.ts",
+    "to": "src/layers/starCatalog/resolvedStars/utils/nearestResolvableStar.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/@types/StarRenderer.d.ts",
+    "to": "src/layers/starCatalog/resolvedStars/@types/StarRenderer.d.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/data/starExposureRamp.ts",
+    "to": "src/layers/starCatalog/photometry/data/starExposureRamp.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/data/starCullSlack.ts",
+    "to": "src/layers/starCatalog/photometry/data/starCullSlack.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/utils/star/starExposureRamp.ts",
+    "to": "src/layers/starCatalog/photometry/utils/starExposureRamp.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/present/produceStarCaptions.ts",
+    "to": "src/layers/starCatalog/captions/present/produceStarCaptions.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/present/starCaptionStyles.ts",
+    "to": "src/layers/starCatalog/captions/present/starCaptionStyles.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/data/starMapCaptionBand.ts",
+    "to": "src/layers/starCatalog/captions/data/starMapCaptionBand.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/@types/CaptionSourceRow.d.ts",
+    "to": "src/layers/starCatalog/captions/@types/CaptionSourceRow.d.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/@types/StarCaptionStyle.d.ts",
+    "to": "src/layers/starCatalog/captions/@types/StarCaptionStyle.d.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/present/starCatalogSelectionRow.ts",
+    "to": "src/layers/starCatalog/selection/present/starCatalogSelectionRow.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/present/resolveStarRecord.ts",
+    "to": "src/layers/starCatalog/selection/utils/resolveStarRecord.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/present/decodeStarFocusId.ts",
+    "to": "src/layers/starCatalog/selection/utils/decodeStarFocusId.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/load/famousStarsMetaFetcher.ts",
+    "to": "src/layers/starCatalog/card/load/famousStarsMetaFetcher.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/load/famousStarsMetaSlot.ts",
+    "to": "src/layers/starCatalog/card/load/famousStarsMetaSlot.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/@types/FamousStarsPayload.d.ts",
+    "to": "src/layers/starCatalog/card/@types/FamousStarsPayload.d.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/ui/StarsSection.tsx",
+    "to": "src/layers/starCatalog/controls/ui/StarsSection.tsx"
+  },
+  {
+    "from": "src/layers/starCatalog/ui/StarsSectionContainer.tsx",
+    "to": "src/layers/starCatalog/controls/ui/StarsSectionContainer.tsx"
+  },
+  {
+    "from": "src/layers/starCatalog/ui/StarCatalogTuningSection.tsx",
+    "to": "src/layers/starCatalog/controls/ui/StarCatalogTuningSection.tsx"
+  },
+  {
+    "from": "src/layers/starCatalog/ui/StarCatalogTuningSectionContainer.tsx",
+    "to": "src/layers/starCatalog/controls/ui/StarCatalogTuningSectionContainer.tsx"
+  },
+  {
+    "from": "src/layers/starCatalog/ui/starCatalogTuningFields.ts",
+    "to": "src/layers/starCatalog/controls/ui/starCatalogTuningFields.ts"
+  },
+  {
+    "from": "src/layers/starCatalog/@types/StarCatalogTuningKey.d.ts",
+    "to": "src/layers/starCatalog/controls/@types/StarCatalogTuningKey.d.ts"
+  },
+  {
+    "from": "tests/layers/starCatalog/render/starUniformsLayout.test.ts",
+    "to": "tests/layers/starCatalog/survey/render/starUniformsLayout.test.ts"
+  },
+  {
+    "from": "tests/layers/starCatalog/render/starCatalogRenderer.pool.test.ts",
+    "to": "tests/layers/starCatalog/survey/render/starCatalogRenderer.pool.test.ts"
+  },
+  {
+    "from": "tests/layers/starCatalog/render/starCatalogRenderer.viewSlot.test.ts",
+    "to": "tests/layers/starCatalog/survey/render/starCatalogRenderer.viewSlot.test.ts"
+  },
+  {
+    "from": "tests/layers/starCatalog/render/cut/referenceStarCut.test.ts",
+    "to": "tests/layers/starCatalog/octreeCut/render/referenceStarCut.test.ts"
+  },
+  {
+    "from": "tests/services/gpu/shaders/starCullSlack.parity.test.ts",
+    "to": "tests/layers/starCatalog/photometry/data/starCullSlack.parity.test.ts"
+  },
+  {
+    "from": "tests/services/gpu/shaders/famousStarPickRadius.parity.test.ts",
+    "to": "tests/layers/starCatalog/seededStars/data/famousStarPickRadius.parity.test.ts"
+  }
+]

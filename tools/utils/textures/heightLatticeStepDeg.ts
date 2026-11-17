@@ -1,4 +1,4 @@
-import { HEIGHT_POSTS_PER_TILE } from '../../../src/data/scene/heightTileFormat';
+import { HEIGHT_POSTS_PER_TILE } from '../../../src/layers/body/surfaceTiles/format/data/heightTileFormat';
 
 /** Angular spacing of the global height lattice at level `z`, in degrees,
  *  same in both axes: 129 posts per tile edge is 128 intervals, the 129th

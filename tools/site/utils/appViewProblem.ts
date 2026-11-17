@@ -1,18 +1,19 @@
 import { OBJECT_ROWS } from '../../../packages/website/src/data/objectCatalogue';
 import { clipFactories } from '../../../src/data/animation/clips/clipRegistry';
-import { tourRegistry } from '../../../src/data/animation/tours/tourRegistry';
+import { APP_TOUR_REGISTRY } from '../../../src/compositions/appTours';
 import { APP_EXHIBIT_REGISTRY } from '../../../src/compositions/appExhibits';
 import { HASH_PARAM_SOURCES } from '../../../src/state/url/hashParamSources';
 import { linkIntentFrom } from '../../../src/utils/url/linkIntentFrom';
 import { parseHashParams } from '../../../src/utils/url/parseHashParams';
+import { parseLayerSwitches } from '../../../src/utils/url/parseLayerSwitches';
 
 const KEYS = new Set(HASH_PARAM_SOURCES.map((source) => source.key));
 const NAMED = new Set(OBJECT_ROWS.map((row) => row.id));
-// Ids the app resolves against its data files, which no table here lists: a catalogue galaxy, a sky position, a star by row, a catalogue's cluster.
-const FROM_DATA = /^(?:pgc-\d+|sdss-\d+|pos@.+|star-\d+|[a-z]+-bulk-.+)$/;
+// Ids the app resolves against its data files, which no table here lists: a catalogue galaxy, a sky position, a star by row, a catalogue's cluster, an asteroid by MPC number.
+const FROM_DATA = /^(?:pgc-\d+|sdss-\d+|pos@.+|star-\d+|asteroid-\d+|[a-z]+-bulk-.+)$/;
 const TAKEOVERS = {
   exhibit: APP_EXHIBIT_REGISTRY,
-  tour: tourRegistry,
+  tour: APP_TOUR_REGISTRY,
   clip: clipFactories,
 };
 
@@ -25,6 +26,8 @@ export function appViewProblem(hash: string): string | null {
   const params = parseHashParams(hash);
   const unknown = [...params.keys()].find((key) => !KEYS.has(key));
   if (unknown !== undefined) return `the app reads no "${unknown}"`;
+  const unknownLayer = parseLayerSwitches(params.get('layers') ?? '').unknown[0];
+  if (unknownLayer !== undefined) return `the app reads no layer "${unknownLayer}"`;
   const { view } = linkIntentFrom(hash);
   // Each of these keys alone yields its own kind of view, so a value the parser refused shows as a kind that is missing.
   const unread = ['focus', 'pose', 'exhibit', 'tour', 'clip'].find(

@@ -8,8 +8,9 @@
 import type { UnknownAction } from '@reduxjs/toolkit';
 import { APP_EXHIBIT_REGISTRY } from '../../compositions/appExhibits';
 import { clipRegistry } from '../../data/animation/clips/clipRegistry';
-import { tourRegistry } from '../../data/animation/tours/tourRegistry';
+import { APP_TOUR_REGISTRY } from '../../compositions/appTours';
 import { RATE_LADDER } from '../../data/time/rateLadder';
+import { SKY_HOSTS } from '../../data/sky/skyHosts';
 import { setControlScheme } from '../settings/core/cameraControlsSlice';
 import { remotePairingToggled } from './remoteSlice';
 import { goHome } from '../selection/goHome';
@@ -25,6 +26,8 @@ import { isRecord } from '../../utils/object/isRecord';
 import type { PaletteAction } from '../../@types/palette/PaletteAction';
 import type { RemoteCommandPayloads } from '../../@types/remote/RemoteCommandPayloads';
 import type { RemoteCommandSpec } from '../../@types/remote/RemoteCommandSpec';
+import type { RemoteCommandEnv } from '../../@types/remote/RemoteCommandEnv';
+import type { ToggleRow } from '../../@types/settings/ToggleRow';
 
 const MAX_FOCUS_ID_CHARS = 256;
 const MAX_ALT_KM = 1e6;
@@ -50,7 +53,7 @@ function parsePaletteAction(raw: unknown): PaletteAction | undefined {
     }
     case 'tour': {
       const { tourId } = raw;
-      if (typeof tourId !== 'string' || !isKeyOf(tourRegistry, tourId)) return undefined;
+      if (typeof tourId !== 'string' || !isKeyOf(APP_TOUR_REGISTRY, tourId)) return undefined;
       return { kind: 'tour', tourId };
     }
     case 'flyTo': {
@@ -58,6 +61,17 @@ function parsePaletteAction(raw: unknown): PaletteAction | undefined {
       if (!isFiniteIn(lonDeg, -180, 180) || !isFiniteIn(latDeg, -90, 90)) return undefined;
       return isFiniteIn(altKm, 0, MAX_ALT_KM)
         ? { kind: 'flyTo', lonDeg, latDeg, altKm }
+        : undefined;
+    }
+    case 'sky': {
+      const { spot } = raw;
+      if (spot === 'here') return { kind: 'sky', spot };
+      if (!isRecord(spot) || typeof spot.body !== 'string') return undefined;
+      const body = [...SKY_HOSTS].find((id) => id === spot.body);
+      const { lonRad, latRad } = spot;
+      if (body === undefined || !isFiniteIn(lonRad, -Math.PI, Math.PI)) return undefined;
+      return isFiniteIn(latRad, -Math.PI / 2, Math.PI / 2)
+        ? { kind: 'sky', spot: { body, lonRad, latRad } }
         : undefined;
     }
     default:
@@ -68,6 +82,20 @@ function parsePaletteAction(raw: unknown): PaletteAction | undefined {
 const noPayloadRow = (action: () => UnknownAction): RemoteCommandSpec<null> => ({
   parse: noPayload,
   toActions: () => [action()],
+});
+
+/** Sets one row of the env's `rows` by id; an id the rows lack builds nothing. */
+const rowSetRow = (
+  rows: (env: RemoteCommandEnv) => readonly ToggleRow[],
+): RemoteCommandSpec<{ id: string; enabled: boolean }> => ({
+  parse: (raw) =>
+    isRecord(raw) && typeof raw.id === 'string' && typeof raw.enabled === 'boolean'
+      ? { id: raw.id, enabled: raw.enabled }
+      : undefined,
+  toActions: ({ id, enabled }, env) => {
+    const row = rows(env).find((r) => r.id === id);
+    return row ? [...row.set(enabled)] : [];
+  },
 });
 
 export const REMOTE_COMMANDS: {
@@ -121,14 +149,6 @@ export const REMOTE_COMMANDS: {
         : undefined,
     toActions: ({ scheme }) => [setControlScheme(scheme)],
   },
-  toggleSet: {
-    parse: (raw) =>
-      isRecord(raw) && typeof raw.id === 'string' && typeof raw.enabled === 'boolean'
-        ? { id: raw.id, enabled: raw.enabled }
-        : undefined,
-    toActions: ({ id, enabled }, { toggleRows }) => {
-      const row = toggleRows.find((r) => r.id === id);
-      return row ? [row.set(enabled)] : [];
-    },
-  },
+  toggleSet: rowSetRow((env) => env.toggleRows),
+  layerSet: rowSetRow((env) => env.switchRows),
 };

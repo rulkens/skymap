@@ -6,7 +6,7 @@
 
 Structure shots now live in `public/images/structures/` and resolve through
 `structureShotUrl(id)` (featured structures only; the structure card uses it).
-`focusShotUrl` (`src/utils/palette/focusShotUrl.ts`) still serves the black-hole
+`focusShotUrl` (`src/layers/blackHoles/markers/utils/focusShotUrl.ts`) still serves the black-hole
 card and goes through the featured cards, and three sites still build the path
 with `SHOT_CARD_IDS` + `cardShotUrl(focusId)`: the palette's result rows
 (`shotOrGlyph` in `paletteRows.tsx`), `BodyDetailCard` and `StarDetailCard`.

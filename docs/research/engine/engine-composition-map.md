@@ -393,9 +393,9 @@ youAreHere}.ts`, `demoTour.ts`, `webShowcase.ts`, `clips/cosmicFlows.ts`,
 
 ### v2 / tool-only (not runtime-wired today)
 
-`src/services/engine/galaxyGenerator/v2/{galaxyFieldMixture.ts,
-sfEventCatalog.ts,README.md}`, `src/@types/galaxy/{GalaxyDustParams,
-GalaxyFieldComponent,GalaxyLegacyParams,GalaxyLightDecomposition}.ts`, and
+`src/layers/milkyWay/field/{mixture/utils/galaxyFieldMixture.ts,
+starFormation/utils/sfEventCatalog.ts,README.md}`, `src/layers/milkyWay/field/*/@types/{GalaxyDustParams,
+GalaxyFieldComponent}.d.ts`, `src/@types/galaxy/{GalaxyLegacyParams,GalaxyLightDecomposition}.ts`, and
 the two large shader trees `src/services/gpu/shaders/milkyWay/field/*.wesl`
 (emission mixture: armRidge, bubblePresent, dustAttenuation, dustDetail,
 dustMap, dustNoiseBake, dustPresent, fieldSplat, hiiSplat, io,

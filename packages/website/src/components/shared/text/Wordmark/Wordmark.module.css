@@ -1,0 +1,19 @@
+/* The viewBox is 3.52 by 1.13 of the face's size, so in em the drawing sets like the word it replaces. */
+.root {
+  display: block;
+  width: 3.52em;
+  height: 1.13em;
+  overflow: visible;
+}
+
+.word {
+  font-family: var(--font-family-display);
+  font-weight: var(--weight-display);
+  fill: currentColor;
+}
+
+.trail {
+  fill: none;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}

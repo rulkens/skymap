@@ -5,6 +5,7 @@
  * `.computes` / `.assetRows` / `.slotsByKey` / `.visibilityEntries` / `.selectionKindRows`,
  * asserting the keyed sets stay disjoint (D5) — a bad composition throws at boot.
  * `.label3DProducers` and `.orbitTrailGroups` are unkeyed concatenations instead.
+ * Last, it installs the composition's selection kinds for `selectionKindOf`.
  */
 
 import { put } from 'typed-redux-saga';
@@ -13,9 +14,10 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
 import type { LayerCoreDeps } from '../../../@types/engine/layer/LayerCoreDeps';
 import type { SourceCountReport } from '../../../@types/engine/layer/SourceCountReport';
-import type { SourceType } from '../../../@types/data/SourceType';
+import type { SourceId } from '../../../@types/data/SourceId';
 import type { Label2DDirector } from '../../../@types/engine/subsystems/Label2DDirector';
 
+import { createPickCodeAllocator } from '../selection/createPickCodeAllocator';
 import { composeTerrainHeightAt } from '../layer/composeTerrainHeightAt';
 import { instantiateLayer } from '../layer/instantiateLayer';
 import { NEAR0, COSMO, slabName } from '../frame/slabs';
@@ -28,7 +30,11 @@ import {
   engineStatusChanged,
 } from '../../../state/engine/engineSlice';
 import { assertSelectionRowsDisjoint } from '../../../utils/selection/assertSelectionRowsDisjoint';
+import { assertSelectionKindsComplete } from '../../../utils/selection/assertSelectionKindsComplete';
+import { installSelectionKinds } from '../selection/selectionKindOf';
+import { layerSelectionKinds } from '../../../utils/layer/layerSelectionKinds';
 import { expandCompanionRows } from '../../../utils/loading/expandCompanionRows';
+import { assertAssetDemands } from '../wiring/assertAssetDemands';
 import { concatUniqueRows } from '../../../utils/object/concatUniqueRows';
 import { visibilityAddressOf } from '../../../utils/visibility/visibilityAddressOf';
 import { gateComputeByFade } from '../layer/gateComputeByFade';
@@ -60,12 +66,14 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
   const uiCtx = state.gpu.uiCtx;
   if (uiCtx === null) throw new Error('createLayers: state.gpu.uiCtx is null');
 
+  const pickCodes = createPickCodeAllocator();
+  state.pickCodes = pickCodes;
   const requestRender = (): void => state.subsystems.scheduler.requestRender();
   // Core's "a source's catalog landed" pulse. The running total equals
   // `galaxyPointRenderer.totalCount()` by construction (per-source last count, summed,
   // replaced on tier swap). The echo is per-arrival, so a catalog enabled mid-session
   // echoes too.
-  const countBySource = new Map<SourceType, number>();
+  const countBySource = new Map<SourceId, number>();
   function* consumeSourceCountSaga(report: SourceCountReport): SagaIterator {
     yield* put(engineSourceCountReported(report));
     // A catalog landing IS a content change for the sky capture keyed on it.
@@ -96,6 +104,7 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
       settings: () => deps.cb.store.getState().settings,
       debugPanelOpen: () => deps.cb.store.getState().ui.debugPanelOpen,
       requestRender,
+      pickCode: (pickSourceId: string) => pickCodes.codeOf(layer.name, pickSourceId),
     };
     // Facts is erased to `undefined` at this boundary (`Layer<string, unknown>`), so
     // `publish` cannot appear in `LayerCoreDeps<undefined>`; the cast below bridges it.
@@ -157,7 +166,7 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
   // only correct over a list holding both. Layer rows lead: the queue breaks equal
   // ranks by array order, so body textures load ahead of craft meshes.
   state.assetRows = expandCompanionRows(
-    concatUniqueRows('createLayers: asset keys', (row) => String(row.key), [
+    concatUniqueRows('createLayers: asset keys', (row) => row.key, [
       ...instances.map((instance) => instance.assets),
       meshAssetRows(state),
     ]),
@@ -184,6 +193,8 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
     visibilityAddressOf,
     deps.composition.layers.map((layer) => layer.visibility ?? []),
   );
+  // A declaration resolves against the composed entries, so it can only be checked once they exist.
+  assertAssetDemands(state.assetRows, state.visibilityEntries);
   state.label3DProducers = instances.flatMap((instance) =>
     instance.worldLabels.map(gateWorldLabelProducer),
   );
@@ -215,4 +226,10 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
 
   state.selectionKindRows = instances.flatMap((instance) => instance.selection);
   assertSelectionRowsDisjoint(state.selectionKindRows);
+  const kinds = layerSelectionKinds(deps.composition.layers);
+  assertSelectionKindsComplete(
+    kinds,
+    state.selectionKindRows.map((row) => row.type),
+  );
+  installSelectionKinds(kinds);
 }

@@ -33,7 +33,7 @@ struct IsmMapFluidConstants {
   // binds validly, and the prefix contract is what the parity test pins).
   diffusion: f32,
   // Shear drag by the arm-forcing field at this texel — see composedVelocity
-  // below. Forcing peaks at 1 (galaxyIsmMapArmForcing.ts's clamp), so full
+  // below. Forcing peaks at 1 (buildGalaxyIsmMapArmForcing.ts's clamp), so full
   // stall at a ridge crest needs armDrag >= 1.
   armDrag: f32,
   // Pass-B-consumed only (ismMapFluidStep.wesl's gasProfile) — kept for the
@@ -89,7 +89,7 @@ const TILE_CULL_MARGIN: f32 = 2.0;
 // resample" contract as ISM_MAP_FLUID_MAX_EVENTS.
 const TILE_EVENT_CAP: u32 = 128u;
 
-@group(0) @binding(0) var<uniform> u: IsmMapFluidConstants;
+@group(0) @binding(0) var<uniform> fluidConstants: IsmMapFluidConstants;
 @group(0) @binding(1) var prevTex: texture_2d<f32>;
 @group(0) @binding(2) var<uniform> stepIdx: IsmMapFluidStepIndex;
 @group(0) @binding(3) var<storage, read> events: array<f32>;
@@ -107,40 +107,40 @@ var<workgroup> sharedEventCount: atomic<u32>;
 // an INTEGER so the corner hashed at x=period-1+1=period is the same corner
 // hashed at x=0 (see valueNoiseRaw below); this is what makes the noise
 // seamless across the az wrap.
-fn wrapLatticeX(x: f32, period: f32) -> f32 {
-  return x - period * floor(x / period);
+fn wrapLatticeX(latticeX: f32, period: f32) -> f32 {
+  return latticeX - period * floor(latticeX / period);
 }
 
 // Wraps both lattice corners' x BEFORE hashing so x and x + xPeriod hash
 // identically — the wrap that makes the noise seamless across the az wrap.
 // y is left unwrapped — the ring axis never wraps.
-fn valueNoiseRaw(p: vec2<f32>, xPeriod: f32) -> f32 {
-  let i = floor(p);
-  let f = fract(p);
-  let x0 = wrapLatticeX(i.x, xPeriod);
-  let x1 = wrapLatticeX(i.x + 1.0, xPeriod);
-  let a = hash21(vec2<f32>(x0, i.y));
-  let b = hash21(vec2<f32>(x1, i.y));
-  let c = hash21(vec2<f32>(x0, i.y + 1.0));
-  let d = hash21(vec2<f32>(x1, i.y + 1.0));
-  let s = f * f * (3.0 - 2.0 * f);
-  return mix(mix(a, b, s.x), mix(c, d, s.x), s.y);
+fn valueNoiseRaw(samplePos: vec2<f32>, xPeriod: f32) -> f32 {
+  let cell = floor(samplePos);
+  let cellFrac = fract(samplePos);
+  let leftX = wrapLatticeX(cell.x, xPeriod);
+  let rightX = wrapLatticeX(cell.x + 1.0, xPeriod);
+  let hash00 = hash21(vec2<f32>(leftX, cell.y));
+  let hash10 = hash21(vec2<f32>(rightX, cell.y));
+  let hash01 = hash21(vec2<f32>(leftX, cell.y + 1.0));
+  let hash11 = hash21(vec2<f32>(rightX, cell.y + 1.0));
+  let fade = cellFrac * cellFrac * (3.0 - 2.0 * cellFrac);
+  return mix(mix(hash00, hash10, fade.x), mix(hash01, hash11, fade.x), fade.y);
 }
 
 // Doubling frequency per octave must double xPeriod alongside it — an
-// octave's lattice runs at freq*p, so its wrap period scales the same way.
-fn fbm2(p: vec2<f32>, xPeriod: f32) -> f32 {
-  var v = 0.0;
+// octave's lattice runs at freq*samplePos, so its wrap period scales the same way.
+fn fbm2(samplePos: vec2<f32>, xPeriod: f32) -> f32 {
+  var sum = 0.0;
   var amp = 0.5;
   var freq = 1.0;
   var period = xPeriod;
-  for (var i = 0; i < 3; i++) {
-    v += amp * valueNoiseRaw(p * freq, period);
+  for (var octave = 0; octave < 3; octave++) {
+    sum += amp * valueNoiseRaw(samplePos * freq, period);
     freq *= 2.0;
     period *= 2.0;
     amp *= 0.5;
   }
-  return v;
+  return sum;
 }
 
 // Divergence-free by construction: v = (dPsi/dy, -dPsi/dx) for a scalar
@@ -155,30 +155,30 @@ fn curlVelocity(gridPos: vec2<f32>, azCount: u32, curlScale: f32, genStep: f32) 
   let azCountF = f32(azCount);
   let azPeriod = max(1.0, round(azCountF * curlScale));
   let xScale = azPeriod / azCountF;
-  let p = vec2<f32>(gridPos.x * xScale, gridPos.y * curlScale) + vec2<f32>(genStep * CURL_PHASE_SPEED, 0.0);
-  let n1 = fbm2(p + vec2<f32>(0.0, CURL_FD_EPS), azPeriod);
-  let n2 = fbm2(p - vec2<f32>(0.0, CURL_FD_EPS), azPeriod);
-  let n3 = fbm2(p + vec2<f32>(CURL_FD_EPS, 0.0), azPeriod);
-  let n4 = fbm2(p - vec2<f32>(CURL_FD_EPS, 0.0), azPeriod);
-  let dPsiDy = (n1 - n2) / (2.0 * CURL_FD_EPS);
-  let dPsiDx = (n3 - n4) / (2.0 * CURL_FD_EPS);
+  let noisePos = vec2<f32>(gridPos.x * xScale, gridPos.y * curlScale) + vec2<f32>(genStep * CURL_PHASE_SPEED, 0.0);
+  let psiYPlus = fbm2(noisePos + vec2<f32>(0.0, CURL_FD_EPS), azPeriod);
+  let psiYMinus = fbm2(noisePos - vec2<f32>(0.0, CURL_FD_EPS), azPeriod);
+  let psiXPlus = fbm2(noisePos + vec2<f32>(CURL_FD_EPS, 0.0), azPeriod);
+  let psiXMinus = fbm2(noisePos - vec2<f32>(CURL_FD_EPS, 0.0), azPeriod);
+  let dPsiDy = (psiYPlus - psiYMinus) / (2.0 * CURL_FD_EPS);
+  let dPsiDx = (psiXPlus - psiXMinus) / (2.0 * CURL_FD_EPS);
   return vec2<f32>(dPsiDy, -dPsiDx);
 }
 
-fn armForcingAt(az: i32, ring: i32, azCount: i32, ringCount: i32) -> f32 {
-  let a = i32(wrapIndex(az, u32(azCount)));
-  let r = clamp(ring, 0, ringCount - 1);
-  return textureLoad(armForcingTex, vec2<i32>(a, r), 0).x;
+fn armForcingAt(azIndex: i32, ring: i32, azCount: i32, ringCount: i32) -> f32 {
+  let wrappedAz = i32(wrapIndex(azIndex, u32(azCount)));
+  let clampedRing = clamp(ring, 0, ringCount - 1);
+  return textureLoad(armForcingTex, vec2<i32>(wrappedAz, clampedRing), 0).x;
 }
 
 // Steepest-ascent direction of the arm-forcing field, in (az, ring) units —
 // dFdRing is scaled by azToRingMetric so both components are comparable
 // before curlVelocity/composedVelocity blend them with the az-axis gradient.
-fn forcingGradient(az: i32, ring: i32, azCount: i32, ringCount: i32, azToRingMetric: f32) -> vec2<f32> {
-  let fAzPlus = armForcingAt(az + 1, ring, azCount, ringCount);
-  let fAzMinus = armForcingAt(az - 1, ring, azCount, ringCount);
-  let fRingPlus = armForcingAt(az, ring + 1, azCount, ringCount);
-  let fRingMinus = armForcingAt(az, ring - 1, azCount, ringCount);
+fn forcingGradient(azIndex: i32, ring: i32, azCount: i32, ringCount: i32, azToRingMetric: f32) -> vec2<f32> {
+  let fAzPlus = armForcingAt(azIndex + 1, ring, azCount, ringCount);
+  let fAzMinus = armForcingAt(azIndex - 1, ring, azCount, ringCount);
+  let fRingPlus = armForcingAt(azIndex, ring + 1, azCount, ringCount);
+  let fRingMinus = armForcingAt(azIndex, ring - 1, azCount, ringCount);
   let dFdAz = (fAzPlus - fAzMinus) * 0.5;
   let dFdRing = (fRingPlus - fRingMinus) * 0.5;
   return vec2<f32>(dFdAz, dFdRing * azToRingMetric);
@@ -200,7 +200,7 @@ struct VelocitySample {
 // workgroup storage, readable from any function in this shader stage) —
 // 'cullCount' bounds how many of that array's slots are live.
 fn composedVelocity(
-  az: i32,
+  azIndex: i32,
   ring: i32,
   azCount: u32,
   ringCount: u32,
@@ -210,17 +210,17 @@ fn composedVelocity(
 ) -> VelocitySample {
   let azCountI = i32(azCount);
   let ringCountI = i32(ringCount);
-  let localDust = textureLoad(prevTex, vec2<i32>(az, ring), 0).w;
+  let localDust = textureLoad(prevTex, vec2<i32>(azIndex, ring), 0).w;
 
-  let shearVelAz = ismMapShearTexels(u32(ring), ringCount, azCount, u.rMin, u.rMax, u.corotationRadius, u.shearStrength);
-  let curl = curlVelocity(vec2<f32>(f32(az), f32(ring) / azToRingMetric), azCount, u.curlScale, f32(genStep));
-  let grad = forcingGradient(az, ring, azCountI, ringCountI, azToRingMetric);
+  let shearVelAz = ismMapShearTexels(u32(ring), ringCount, azCount, fluidConstants.rMin, fluidConstants.rMax, fluidConstants.corotationRadius, fluidConstants.shearStrength);
+  let curl = curlVelocity(vec2<f32>(f32(azIndex), f32(ring) / azToRingMetric), azCount, fluidConstants.curlScale, f32(genStep));
+  let grad = forcingGradient(azIndex, ring, azCountI, ringCountI, azToRingMetric);
 
   // Stars' own field: shearVelAz UNDRAGGED (armDrag below is a gas-only
   // stall) plus the full curl vector (both axes — curl is a single
   // divergence-free field, not something to keep in ring and drop in az).
   // No gatherGrad, no event loop: those are gas-only mass transport.
-  let starsVel = vec2<f32>(shearVelAz + u.curlStrength * curl.x, u.curlStrength * curl.y);
+  let starsVel = vec2<f32>(shearVelAz + fluidConstants.curlStrength * curl.x, fluidConstants.curlStrength * curl.y);
 
   // armGather's OWN forcing sample, offset from the crest by gatherOffset
   // texels: gas doesn't gather exactly on the ridge, it gathers where the
@@ -232,7 +232,7 @@ fn composedVelocity(
   // shift collapses to 0 regardless of gatherOffset: no drift, no flank to
   // prefer. Only this sample moves — forcingSelf below (armDrag) and grad
   // above (the laneBias direction test) keep reading the unshifted texel.
-  let gatherAz = i32(wrapIndex(az + i32(round(sign(shearVelAz) * u.gatherOffset)), azCount));
+  let gatherAz = i32(wrapIndex(azIndex + i32(round(sign(shearVelAz) * fluidConstants.gatherOffset)), azCount));
   let gatherGrad = forcingGradient(gatherAz, ring, azCountI, ringCountI, azToRingMetric);
   // Counterweight so 120 steps of convergent gathering can't run the local
   // dust pile past its own overshoot ceiling unchecked — see ARM_GATHER_SAT.
@@ -241,35 +241,35 @@ fn composedVelocity(
   // Drift-stall shock caricature: drag the shear (only) by this texel's own
   // forcing, so drift stalls inside the arm and Pass B's divV convergence
   // term piles density at the upstream edge — see the param's own doc.
-  let forcingSelf = armForcingAt(az, ring, azCountI, ringCountI);
-  let stalledShear = shearVelAz * max(0.0, 1.0 - u.armDrag * forcingSelf);
+  let forcingSelf = armForcingAt(azIndex, ring, azCountI, ringCountI);
+  let stalledShear = shearVelAz * max(0.0, 1.0 - fluidConstants.armDrag * forcingSelf);
 
   // Directional gate: gate on shearVelAz (the UNDRAGGED shear), not
   // stalledShear — armDrag's max(0, ...) clamps stalledShear to exactly 0
   // throughout the stall zone, which would make the sign test degenerate
   // right where the gate matters most. shearVelAz * grad.x > 0 means the
   // drift is carrying gas up-slope, toward the ridge (upstream flank).
-  let gatherWeight = select(1.0 - u.laneBias, 1.0, shearVelAz * grad.x > 0.0);
+  let gatherWeight = select(1.0 - fluidConstants.laneBias, 1.0, shearVelAz * grad.x > 0.0);
 
-  var velAz = stalledShear + u.curlStrength * curl.x + u.armGather * gatherSat * gatherWeight * gatherGrad.x;
-  var velRing = u.curlStrength * curl.y + u.armGather * gatherSat * gatherWeight * gatherGrad.y;
+  var velAz = stalledShear + fluidConstants.curlStrength * curl.x + fluidConstants.armGather * gatherSat * gatherWeight * gatherGrad.x;
+  var velRing = fluidConstants.curlStrength * curl.y + fluidConstants.armGather * gatherSat * gatherWeight * gatherGrad.y;
   var eventStamp = 0.0;
 
   let azCountF = f32(azCount);
-  for (var i = 0u; i < cullCount; i++) {
-    let e = sharedEventIdx[i];
-    let base = e * EVENT_STRIDE;
+  for (var cullSlot = 0u; cullSlot < cullCount; cullSlot++) {
+    let eventIndex = sharedEventIdx[cullSlot];
+    let base = eventIndex * EVENT_STRIDE;
     let evAz = events[base];
     let evRing = events[base + 1u];
     let birthStep = events[base + 2u];
     let strength = events[base + 3u];
     let radiusScale = events[base + 4u];
     let age = f32(genStep) - birthStep;
-    if (age < 0.0 || age >= u.impulseDuration) {
+    if (age < 0.0 || age >= fluidConstants.impulseDuration) {
       continue;
     }
 
-    var dAz = f32(az) - evAz;
+    var dAz = f32(azIndex) - evAz;
     dAz = dAz - azCountF * floor(dAz / azCountF + 0.5); // shortest-path wrap
     let dRing = f32(ring) - evRing;
     let dAzRingUnits = dAz * azToRingMetric;
@@ -279,7 +279,7 @@ fn composedVelocity(
     let kernelRadius = radiusScale * growth;
     let sigma = max(kernelRadius * 0.5, 0.25);
     let falloff = exp(-0.5 * (distRingUnits * distRingUnits) / (sigma * sigma));
-    let ageFrac = age / u.impulseDuration;
+    let ageFrac = age / fluidConstants.impulseDuration;
     let intensity = falloff * (1.0 - ageFrac);
 
     if (falloff > 1e-4) {
@@ -307,7 +307,7 @@ fn cs(
   let activeStart = u32(stepIdx.activeStart);
   let activeEnd = u32(stepIdx.activeEnd);
 
-  let lnSpan = log(u.rMax / u.rMin);
+  let lnSpan = log(fluidConstants.rMax / fluidConstants.rMin);
   let dLnRPerRing = lnSpan / f32(ringCount - 1u);
   let dThetaPerAz = 2.0 * PI / f32(azCount);
   let azToRingMetric = dThetaPerAz / dLnRPerRing;
@@ -329,14 +329,14 @@ fn cs(
   let tileRingMin = f32(wgid.y * 16u);
   let tileRingMax = tileRingMin + 15.0;
 
-  for (var e = activeStart + localIndex; e < activeEnd; e += 256u) {
-    let base = e * EVENT_STRIDE;
+  for (var eventIndex = activeStart + localIndex; eventIndex < activeEnd; eventIndex += 256u) {
+    let base = eventIndex * EVENT_STRIDE;
     let evAz = events[base];
     let evRing = events[base + 1u];
     let birthStep = events[base + 2u];
     let radiusScale = events[base + 4u];
     let age = f32(genStep) - birthStep;
-    if (age < 0.0 || age >= u.impulseDuration) {
+    if (age < 0.0 || age >= fluidConstants.impulseDuration) {
       continue;
     }
 
@@ -367,7 +367,7 @@ fn cs(
     if (distToTile <= cutoff) {
       let slot = atomicAdd(&sharedEventCount, 1u);
       if (slot < TILE_EVENT_CAP) {
-        sharedEventIdx[slot] = e;
+        sharedEventIdx[slot] = eventIndex;
       }
     }
   }

@@ -32,12 +32,13 @@ import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import { unixMsToJulianDays } from '../../../src/utils/time/unixMsToJulianDays';
 import type { TimeState } from '../../../src/@types/time/TimeState';
 import { makeSettingsFixture } from '../settings/makeSettingsFixture';
-import type { SelectionRef } from '../../../src/@types/engine/SelectionRef';
 import type { SceneSnapshot } from '../../../src/@types/engine/settings/SceneSnapshot';
+import { DEFAULT_FOV_Y_RAD } from '../../../src/services/engine/camera/framing/cameraFraming';
+import type { SelectionRefBase } from '../../../src/@types/engine/selection/SelectionRefBase';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
-const FOCUS_REF: SelectionRef = { type: 'structure', id: 'virgo-cluster' };
+const FOCUS_REF: SelectionRefBase = { type: 'structure', id: 'virgo-cluster' };
 
 /** A scene snapshot whose clusters differ from the store's initial settings. */
 const MANUAL_PAUSED: TimeState = {
@@ -49,8 +50,11 @@ const MANUAL_PAUSED: TimeState = {
   profile: null,
 };
 
+// Off the default, so a restore that skipped the lens would fail.
+const CAPTURED_FOV_Y_RAD = DEFAULT_FOV_Y_RAD / 2;
+
 function makeSnapshot(
-  focus: SelectionRef | null = FOCUS_REF,
+  focus: SelectionRefBase | null = FOCUS_REF,
   time: TimeState = MANUAL_PAUSED,
 ): SceneSnapshot {
   const f = makeSettingsFixture();
@@ -67,24 +71,31 @@ function makeSnapshot(
       cosmicHorizon: { ...f.cosmicHorizon, enabled: !f.cosmicHorizon.enabled },
       flow: { ...f.flow, flowSpeed: 7 },
       localBubble: { ...f.localBubble, enabled: !f.localBubble.enabled },
+      probeSpheres: { ...f.probeSpheres, enabled: !f.probeSpheres.enabled },
       constellations: { ...f.constellations, enabled: !f.constellations.enabled },
       orbitTrails: { ...f.orbitTrails, enabled: !f.orbitTrails.enabled },
+      surfaceTileDebug: f.surfaceTileDebug,
+      terrainPickMarker: f.terrainPickMarker,
       missions: { ...f.missions },
       missionTrails: { ...f.missionTrails, enabled: !f.missionTrails.enabled },
       satellites: { ...f.satellites, enabled: !f.satellites.enabled },
+      satelliteTuning: { ...f.satelliteTuning },
+      asteroids: { ...f.asteroids, enabled: !f.asteroids.enabled },
+      asteroidTuning: { ...f.asteroidTuning },
+      stellarStreams: { ...f.stellarStreams, enabled: !f.stellarStreams.enabled },
       sStarTrails: { ...f.sStarTrails, enabled: !f.sStarTrails.enabled },
       starCatalogs: { ...f.starCatalogs, enabled: !f.starCatalogs.enabled },
       bodies: { ...f.bodies },
       blackHoles: { items: { 'sgr-a-star': { labelEnabled: false } } },
       labels: { ...f.labels, focusedOnly: !f.labels.focusedOnly },
       picking: { ...f.picking },
-      camera: { ...f.camera, fovDeg: f.camera.fovDeg + 13 },
       earth: { ...f.earth },
       bias: { ...f.bias },
       thumbnails: { ...f.thumbnails },
       blackHoleLensingTuning: { ...f.blackHoleLensingTuning },
     },
     orientation: f.orientation,
+    fovYRad: CAPTURED_FOV_Y_RAD,
     focus,
     time,
   };
@@ -107,6 +118,14 @@ describe('restoreSceneSaga', () => {
 
     expect(store.getState().settings.flow.flowSpeed).toBe(7);
     expect(store.getState().settings.cosmicWebFilaments.intensity).toBe(0.42);
+  });
+
+  it('restores the captured lens', async () => {
+    const { store, sagaMiddleware } = buildHarness();
+    sagaMiddleware.run(restoreSceneSaga, makeSnapshot());
+    await flush();
+
+    expect(store.getState().camera.intent.fovYRad).toBe(CAPTURED_FOV_Y_RAD);
   });
 
   it('reverts selection.focus onto the store', async () => {

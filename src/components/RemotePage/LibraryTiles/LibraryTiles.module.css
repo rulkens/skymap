@@ -1,0 +1,32 @@
+/* Three columns: Search's two plus seven tiles fill three full rows. */
+.root {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+/* The glyph above its label; --tile-target (set by the page) is taller than the 44 px floor
+   because a thumb finds these in the dark. */
+.tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--tile-target);
+  padding: var(--space-2) 0;
+  color: var(--color-fg-base);
+  font-size: var(--font-size-lg);
+  text-align: center;
+}
+
+.tile svg {
+  color: var(--color-fg-tertiary);
+}
+
+.wide {
+  grid-column: span 2;
+  flex-direction: row;
+  gap: var(--space-4);
+  font-size: var(--font-size-input);
+}

@@ -1,0 +1,39 @@
+/* Sized in px, not em: the chip's 10px type would draw a mouse too small to read. */
+.root {
+  width: 28px;
+  height: 22px;
+  flex-shrink: 0;
+  overflow: visible;
+}
+
+.mouse {
+  animation: sway 2.4s ease-in-out infinite;
+}
+
+.button {
+  fill: var(--color-accent);
+  opacity: 0.8;
+}
+
+.chevron {
+  stroke: var(--color-fg-dim);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* In viewBox units: about 2px each way at the drawn size. */
+@keyframes sway {
+  0%,
+  100% {
+    transform: translateX(-2.5px);
+  }
+  50% {
+    transform: translateX(2.5px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mouse {
+    animation: none;
+  }
+}

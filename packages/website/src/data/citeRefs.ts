@@ -237,7 +237,8 @@ export const CITE_REFS: Readonly<Record<string, readonly CiteRef[]>> = {
     {
       authors: 'GRAVITY Collaboration, Abuter, R., Amorim, A., et al.',
       year: 2019,
-      title: 'A geometric distance measurement to the Galactic center black hole with 0.3% uncertainty',
+      title:
+        'A geometric distance measurement to the Galactic center black hole with 0.3% uncertainty',
       journal: `${AA} 625, L10`,
       doi: '10.1051/0004-6361/201935656',
       checked: CHECKED,
@@ -247,7 +248,8 @@ export const CITE_REFS: Readonly<Record<string, readonly CiteRef[]>> = {
     {
       authors: 'Pecaut, M. J., & Mamajek, E. E.',
       year: 2013,
-      title: 'Intrinsic Colors, Temperatures, and Bolometric Corrections of Pre-main-sequence Stars',
+      title:
+        'Intrinsic Colors, Temperatures, and Bolometric Corrections of Pre-main-sequence Stars',
       journal: `${APJS} 208, 9`,
       doi: '10.1088/0067-0049/208/1/9',
       checked: CHECKED,
@@ -267,7 +269,8 @@ export const CITE_REFS: Readonly<Record<string, readonly CiteRef[]>> = {
     {
       authors: 'Chow-Martínez, M., Andernach, H., Caretta, C. A., et al.',
       year: 2014,
-      title: 'Two new catalogues of superclusters of Abell/ACO galaxy clusters out to redshift 0.15',
+      title:
+        'Two new catalogues of superclusters of Abell/ACO galaxy clusters out to redshift 0.15',
       journal: `${MNRAS} 445, 4073`,
       doi: '10.1093/mnras/stu1961',
       checked: CHECKED,
@@ -295,7 +298,8 @@ export const CITE_REFS: Readonly<Record<string, readonly CiteRef[]>> = {
     {
       authors: 'Courtois, H. M., Mould, J., Hollinger, A. M., et al.',
       year: 2025,
-      title: 'In search of the Local Universe dynamical homogeneity scale with CF4++ peculiar velocities',
+      title:
+        'In search of the Local Universe dynamical homogeneity scale with CF4++ peculiar velocities',
       journal: `${AA} 701, A187`,
       doi: '10.1051/0004-6361/202553677',
       arxiv: '2502.01308',
@@ -357,7 +361,8 @@ export const CITE_REFS: Readonly<Record<string, readonly CiteRef[]>> = {
     {
       authors: 'Sousbie, T.',
       year: 2011,
-      title: 'The persistent cosmic web and its filamentary structure - I. Theory and implementation',
+      title:
+        'The persistent cosmic web and its filamentary structure - I. Theory and implementation',
       journal: `${MNRAS} 414, 350`,
       doi: '10.1111/j.1365-2966.2011.18394.x',
       checked: CHECKED,

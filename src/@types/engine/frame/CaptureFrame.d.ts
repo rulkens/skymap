@@ -1,4 +1,4 @@
-import type { OrbitCamera } from '../../camera/OrbitCamera';
+import type { OrbitCamera } from '../../camera/orbitCamera/OrbitCamera';
 import type { ReadyFrameContext } from './ReadyFrameContext';
 
 /** `cubemapCaptureFrame`'s ready result: the frame snapshot plus the pose-true

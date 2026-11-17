@@ -1,0 +1,7 @@
+[
+  { "from": "src/layers/cosmicHorizon/@types/HorizonShellRenderer.d.ts", "to": "src/layers/cosmicHorizon/horizon/@types/HorizonShellRenderer.d.ts" },
+  { "from": "src/layers/cosmicHorizon/data/horizonRadiusGpc.ts", "to": "src/layers/cosmicHorizon/horizon/data/horizonRadiusGpc.ts" },
+  { "from": "src/layers/cosmicHorizon/data/horizonRadiusMpc.ts", "to": "src/layers/cosmicHorizon/horizon/data/horizonRadiusMpc.ts" },
+  { "from": "src/layers/cosmicHorizon/passes/horizonShellPass.ts", "to": "src/layers/cosmicHorizon/horizon/passes/horizonShellPass.ts" },
+  { "from": "src/layers/cosmicHorizon/render/horizonShellRenderer.ts", "to": "src/layers/cosmicHorizon/horizon/render/horizonShellRenderer.ts" }
+]

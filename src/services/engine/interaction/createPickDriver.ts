@@ -5,8 +5,7 @@
  * a tap racing a hover pick would otherwise deselect. When a pick settles the
  * driver re-reads the store and fires the newest pending request, select first —
  * the readback latency is the throttle, and moves made meanwhile coalesce in the
- * slice into one trailing pick at the newest point. Hover never wakes the loop;
- * only the terrain-pick debug marker does.
+ * slice into one trailing pick at the newest point. Hover never wakes the loop.
  */
 
 import { cssToTexPx } from '../helpers/cssToTexPx';
@@ -17,7 +16,6 @@ import {
   updateSelectionHover,
   updateSelectionSelect,
 } from '../../../state/selection/selectionSlice';
-import { VIEW_RIGS } from '../../../data/rendering/viewRigs';
 import type { PickDriverDeps } from '../../../@types/engine/interaction/PickDriverDeps';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { UnitPoint } from '../../../@types/input/UnitPoint';
@@ -27,25 +25,12 @@ export function createPickDriver(deps: PickDriverDeps): Destroyable {
   const { store, state } = deps;
   // The last request seq taken per slot; seqs start at 1, so 0 means "none yet".
   const taken = { hover: 0, select: 0 };
-  let markedHoverSeq = 0;
   let live = true;
 
   const texPxOf = (at: UnitPoint): Vec2 => {
     const [x, y] = unitToViewPx(at, [deps.canvas.clientWidth, deps.canvas.clientHeight]);
     return [cssToTexPx(x), cssToTexPx(y)];
   };
-
-  // Follows the cursor even while a pick is in flight: the marker is drawn, not picked.
-  function moveTerrainMarker(): void {
-    const hover = selectPickRequests(store.getState()).hover;
-    if (!hover?.at || hover.seq === markedHoverSeq) return;
-    markedHoverSeq = hover.seq;
-    if (!state.settings.debug.overlays['terrain-pick-marker']) return;
-    // A dome frame has no single cursor ray, so the marker pass must keep seeing null there.
-    if (!VIEW_RIGS[state.viewRig].pickable) return;
-    state.picking.cursorTexPx = texPxOf(hover.at);
-    deps.scheduler.requestRender();
-  }
 
   function pump(): void {
     while (!state.picking.pickInFlight) {
@@ -90,10 +75,7 @@ export function createPickDriver(deps: PickDriverDeps): Destroyable {
       });
   }
 
-  const unsubscribe = store.subscribe(() => {
-    moveTerrainMarker();
-    pump();
-  });
+  const unsubscribe = store.subscribe(pump);
 
   return {
     destroy() {

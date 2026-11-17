@@ -6,7 +6,7 @@
  */
 
 import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
-import type { CosmicWebDensityFieldId } from '../../@types/data/volume/CosmicWebDensityFieldId';
+import type { CosmicWebDensityFieldId } from './@types/CosmicWebDensityFieldId';
 import type { CosmicWebDensityRuntime } from './@types/CosmicWebDensityRuntime';
 
 import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';
@@ -15,7 +15,7 @@ import { createAdditiveUpsample } from '../../services/gpu/passes/additiveUpsamp
 import { MCPM_ENTRY } from './sources/mcpm';
 import { POLYPHORM_2MRS_ENTRY } from './sources/polyphorm-2mrs';
 import { MCPM_WORKBENCH_ENTRY } from './sources/mcpm-workbench';
-import { createCosmicWebDensitySlot } from './load/createCosmicWebDensitySlot';
+import { createCosmicWebDensitySlot } from './densityCubes/load/createCosmicWebDensitySlot';
 
 export function create(deps: LayerCoreDeps): CosmicWebDensityRuntime {
   const renderer = createVolumeFieldRenderer<CosmicWebDensityFieldId>(

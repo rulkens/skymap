@@ -48,14 +48,15 @@ vi.mock('../../../../src/services/engine/frame/finishCubemapCapture', () => ({
 
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
+import { skyCapturesInBand } from '../../../../src/services/engine/frame/skyCapturesInBand';
 import { createFramePlannerResultStore } from '../../../../src/services/engine/frame/createFramePlannerResultStore';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
-import { starAggregatesPass } from '../../../../src/layers/starCatalog/passes/starAggregatesPass';
-import { starPointsPass } from '../../../../src/layers/starCatalog/passes/starPointsPass';
-import { starCatalogPass } from '../../../../src/layers/starCatalog/passes/starCatalogPass';
-import { starAggregateUpsamplePass } from '../../../../src/layers/starCatalog/passes/starAggregateUpsamplePass';
-import { starSpheresPass } from '../../../../src/layers/starCatalog/passes/starSpheresPass';
-import { fieldStarSpherePass } from '../../../../src/layers/starCatalog/passes/fieldStarSpherePass';
+import { starAggregatesPass } from '../../../../src/layers/starCatalog/survey/passes/starAggregatesPass';
+import { starPointsPass } from '../../../../src/layers/starCatalog/seededStars/passes/starPointsPass';
+import { starCatalogPass } from '../../../../src/layers/starCatalog/survey/passes/starCatalogPass';
+import { starAggregateUpsamplePass } from '../../../../src/layers/starCatalog/survey/passes/starAggregateUpsamplePass';
+import { starSpheresPass } from '../../../../src/layers/starCatalog/resolvedStars/passes/starSpheresPass';
+import { fieldStarSpherePass } from '../../../../src/layers/starCatalog/resolvedStars/passes/fieldStarSpherePass';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/FrameContentPlanner';
 import { PRELUDE } from '../../../../src/data/rendering/frameSections';
@@ -63,10 +64,9 @@ import { stubPlannersFor } from '../../../helpers/frame/stubPlannersFor';
 import { GALACTIC_CENTRE_ANCHOR } from '../../../../src/data/places/galacticCentre';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import {
-  ALL_CUBE_FACES,
-  CUBEMAP_CAPTURES,
-  SKY_CAPTURE_KEYS,
-} from '../../../../src/data/rendering/cubemapCaptures';
+  APP_CUBEMAP_CAPTURE_REGISTRY,
+  APP_SKY_CAPTURE_KEYS,
+} from '../../../../src/compositions/appCubemapCaptures';
 import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapCaptureRuntimes';
 import type { CaptureFace } from '../../../../src/@types/engine/frame/CaptureFace';
 import type { CaptureFaceContexts } from '../../../../src/@types/engine/frame/CaptureFaceContexts';
@@ -77,9 +77,15 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import type { StarCatalogRuntime } from '../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { CubeFace } from '../../../../src/@types/rendering/CubeFace';
 import type { SkyCaptureKey } from '../../../../src/@types/rendering/SkyCaptureKey';
+import {
+  ALL_CUBE_FACES,
+  CORE_CUBEMAP_CAPTURES,
+} from '../../../../src/data/rendering/cubemapCaptures';
 
 /** Every sky row's target id, so the mock serves whichever row bakes. */
-const CAPTURE_TARGET_IDS = SKY_CAPTURE_KEYS.map((key) => CUBEMAP_CAPTURES[key].target);
+const CAPTURE_TARGET_IDS: readonly string[] = APP_SKY_CAPTURE_KEYS.map(
+  (key) => APP_CUBEMAP_CAPTURE_REGISTRY[key].target,
+);
 
 // The starCatalog Layer's own passes join core's in the real program
 // (`createLayers`) — folded in here too, since the sky-capture roster names
@@ -103,7 +109,7 @@ const STUB_PLANNERS: readonly FrameContentPlanner<unknown>[] = [
   {
     name: 'structure-markers',
     scope: 'perView',
-    plan: () => ({ value: [], awake: false, settling: false }),
+    plan: () => ({ value: [], awake: false, settling: false, loading: false }),
   },
   ...stubPlannersFor(PRELUDE),
 ];
@@ -137,6 +143,7 @@ function makeState(overrides: Partial<EngineState> = {}): EngineState {
   return {
     // renderFrame looks up VIEW_RIGS[viewRig] for the program to walk.
     viewRig: 'mono',
+    frameIndex: 0,
     slabRows: [],
     // No mesh renderer ⇒ the probe scheduler idles; the sky sweeps are the subject here.
     gpu: { focusUniform: null, meshBodyRenderer: null },
@@ -144,7 +151,8 @@ function makeState(overrides: Partial<EngineState> = {}): EngineState {
       tonemap: { exposure: 1, curve: 0 },
       hdr: { enabled: false, knee: 0, headroom: 0 },
       bloom: { enabled: false },
-      debug: { renderStrategy: 'auto' },
+      film: { enabled: false },
+      debug: { renderStrategy: 'auto', disabledPasses: {} },
     },
     selection: { hover: null, select: null, focus: null },
     tier: 'medium',
@@ -162,6 +170,7 @@ function makeCtx(
   drawCamPos: readonly [number, number, number],
   faceSizePx = 256,
   layers: { awake?: boolean; settling?: boolean } = {},
+  nowMs = 1000,
 ): FrameView {
   // Frame-owned (`ReadyFrameContext`): `scheduleSkyCaptures` reads these off
   // `ctx.snapshot.x`, so they nest under `snapshot`, not the view's own `ctx.x`.
@@ -186,25 +195,28 @@ function makeCtx(
   const layerVotePlanner: FrameContentPlanner<void> = {
     name: '__test-layer-vote',
     scope: 'once',
-    plan: () => ({ value: undefined, awake: false, settling: false }),
+    plan: () => ({ value: undefined, awake: false, settling: false, loading: false }),
   };
   plans.put(layerVotePlanner, undefined, {
     value: undefined,
     awake: layers.awake ?? false,
     settling: layers.settling ?? false,
+    loading: false,
   });
+  const bodyStates = deriveBodyStates(0);
   return {
     snapshot: {
-      bodyStates: deriveBodyStates(0),
+      bodyStates,
       isReady: true,
       slabBodyCandidates: [],
       simDays: 0,
-      nowMs: 1000,
+      nowMs,
       focus: {},
       renderTargets,
       // Frame-wide: which targets hold this frame's content — the executor
       // unions into this as it opens each render step.
       renderedTargets: new Set<string>(),
+      skyCapturesInBand: skyCapturesInBand(drawCamPos, bodyStates),
       plans,
     },
     drawCamPos,
@@ -251,7 +263,7 @@ describe('renderFrame — cubemap-capture hand-off', () => {
   it('derives one frame via cubemapCaptureFrame(eye=camera), then each face via deriveView(faceViewSpec(faceSizePx=row size)), and threads the map into executeFrame', () => {
     const faceCtxByFace = new Map<CubeFace, FrameView>();
     deriveViewMock.mockImplementation((_snapshot: unknown, _cam: unknown, spec: ViewSpec) => {
-      const face = (spec.slot - CUBEMAP_CAPTURES.sgrAStar.viewSlotBase) as CubeFace;
+      const face = (spec.slot - APP_CUBEMAP_CAPTURE_REGISTRY.sgrAStar.viewSlotBase) as CubeFace;
       const ctx = { __face: face } as unknown as FrameView;
       faceCtxByFace.set(face, ctx);
       return ctx;
@@ -272,7 +284,7 @@ describe('renderFrame — cubemap-capture hand-off', () => {
     // second capture row would otherwise inherit the lens's.
     expect(cubemapCaptureFrameMock.mock.calls[0]![0]).toMatchObject({
       eyeMpc: camPos,
-      nearMpc: CUBEMAP_CAPTURES.sgrAStar.nearMpc,
+      nearMpc: APP_CUBEMAP_CAPTURE_REGISTRY.sgrAStar.nearMpc,
     });
 
     // Six faces off that one frame, each stamped with the row's slot base and size.
@@ -280,11 +292,13 @@ describe('renderFrame — cubemap-capture hand-off', () => {
     for (const call of deriveViewMock.mock.calls) {
       const spec = call[2] as ViewSpec;
       expect(spec.sizePx).toEqual({ width: 256, height: 256 });
-      expect(spec.slot - CUBEMAP_CAPTURES.sgrAStar.viewSlotBase).toBeGreaterThanOrEqual(0);
+      expect(spec.slot - APP_CUBEMAP_CAPTURE_REGISTRY.sgrAStar.viewSlotBase).toBeGreaterThanOrEqual(
+        0,
+      );
     }
     expect(
       deriveViewMock.mock.calls
-        .map((c) => (c[2] as ViewSpec).slot - CUBEMAP_CAPTURES.sgrAStar.viewSlotBase)
+        .map((c) => (c[2] as ViewSpec).slot - APP_CUBEMAP_CAPTURE_REGISTRY.sgrAStar.viewSlotBase)
         .sort((a, b) => a - b),
     ).toEqual([...ALL_CUBE_FACES]);
 
@@ -496,7 +510,7 @@ describe('renderFrame — cubemap-capture hand-off', () => {
     const state = makeState({
       subsystems: { fades: { isAnyAnimating: () => false } },
     } as unknown as Partial<EngineState>);
-    const settling = { settling: true };
+    const settling = { settling: true, loading: false };
     renderFrame(makeInput(makeCtx(GALACTIC_CENTRE_ANCHOR.positionMpc, 256, settling), state)); // band entry ⇒ bakes.
     deriveViewMock.mockClear();
 
@@ -583,6 +597,47 @@ describe('renderFrame — cubemap-capture hand-off', () => {
     renderFrame(makeInput(makeCtx([1000, 0, 0]), state)); // band close.
     renderFrame(makeInput(makeCtx(atTheSun), state)); // re-entry ⇒ bakes again.
     expect(deriveViewMock).toHaveBeenCalledTimes(6);
+  });
+
+  it('a row with a settling re-bake cap re-bakes a still-settling roster at most once per cap', () => {
+    // A thumbnail's 400 ms fade lands every few frames while the view turns; uncapped,
+    // each one re-drew the whole galaxy cloud six times for a sky only probes sample.
+    deriveViewMock.mockImplementation(
+      (_snapshot: unknown, _cam: unknown, spec: ViewSpec) =>
+        ({ __face: spec.slot }) as unknown as FrameView,
+    );
+    const atTheSun: readonly [number, number, number] = [0, 0, 0];
+    const settling = { settling: true };
+    const cap = CORE_CUBEMAP_CAPTURES.solarSystem.settlingRebakeMinMs;
+    const state = makeState();
+
+    renderFrame(makeInput(makeCtx(atTheSun, 256, settling, 1000), state)); // band entry ⇒ bakes.
+    expect(handedOffContexts('solarSystem').size).toBe(6);
+    deriveViewMock.mockClear();
+
+    renderFrame(makeInput(makeCtx(atTheSun, 256, settling, 1000 + cap - 1), state));
+    expect(deriveViewMock).not.toHaveBeenCalled();
+
+    renderFrame(makeInput(makeCtx(atTheSun, 256, settling, 1000 + cap), state));
+    expect(deriveViewMock).toHaveBeenCalledTimes(6);
+  });
+
+  it('a sky row unticked in the DebugPanel bakes nothing, and bakes on the first ticked frame', () => {
+    deriveViewMock.mockImplementation(
+      (_snapshot: unknown, _cam: unknown, spec: ViewSpec) =>
+        ({ __face: spec.slot }) as unknown as FrameView,
+    );
+    const atTheSun: readonly [number, number, number] = [0, 0, 0];
+    const state = makeState();
+    state.settings.debug.disabledPasses = { 'solarSystem·capture': true };
+
+    renderFrame(makeInput(makeCtx(atTheSun), state)); // band entry while unticked.
+    expect(deriveViewMock).not.toHaveBeenCalled();
+    executeFrameMock.mockClear();
+
+    state.settings.debug.disabledPasses = {};
+    renderFrame(makeInput(makeCtx(atTheSun), state));
+    expect(handedOffContexts('solarSystem').size).toBe(6);
   });
 
   it('band close then re-entry triggers a full six-face sweep', () => {

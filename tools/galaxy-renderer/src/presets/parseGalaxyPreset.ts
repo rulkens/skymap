@@ -13,7 +13,7 @@
  */
 
 import type { GalaxyParams } from '../../../../src/@types/galaxy/GalaxyParams';
-import type { GalaxyFieldTuning } from '../../../../src/@types/galaxy/GalaxyFieldTuning';
+import type { GalaxyFieldTuning } from '../../../../src/layers/milkyWay/field/mixture/@types/GalaxyFieldTuning';
 import type { RenderSettings } from '../../@types/engine/RenderSettings';
 import type { LodSettings } from '../../@types/engine/LodSettings';
 import type { ExtrasState } from '../../@types/state/ExtrasState';
@@ -56,7 +56,7 @@ export function parseGalaxyPreset(json: string): {
       render.ismMapStarsWeight = value;
     }
     // Pre-rename presets spell the `hii:extras` pass's divisor `hiiDivisor`,
-    // from before HII_TIERS gave shells/young/dig their own targets and
+    // from before shells/young/dig got their own targets and
     // divisors and left this one governing extras alone.
     else if (key === 'hiiDivisor') {
       render.extrasDivisor = value;

@@ -9,9 +9,12 @@
  */
 
 import { useEffect, useState, type ReactElement } from 'react';
-import type { CameraDebugSnapshot } from '../../@types/camera/CameraDebugSnapshot';
-import { clearOrientPeaks, watchOrientDeltas } from '../../services/engine/camera/orientDeltas';
-import { isWorldArm } from '../../services/engine/camera/rungs/isWorldArm';
+import type { CameraDebugSnapshot } from '../../@types/camera/debug/CameraDebugSnapshot';
+import {
+  clearOrientPeaks,
+  watchOrientDeltas,
+} from '../../services/engine/camera/orientation/orientDeltas';
+import { isWorldArm } from '../../services/engine/camera/arms/world/isWorldArm';
 import { selectCameraBase, selectCameraTuning } from '../../state/camera/selectors';
 import { shareUrlFor } from '../../state/url/shareUrlFor';
 import { useAppSelector, useAppStore } from '../../store/hooks';
@@ -40,7 +43,7 @@ function CameraStateSection({ cameraDebug }: CameraStateSectionProps): ReactElem
   // Read at click time only, never subscribed: a `useAppSelector((s) => s)`
   // here would re-render this section on every store change.
   const store = useAppStore();
-  // `camera.base` (not the 4 Hz snap) so this is never behind the poll; a
+  // `camera.intent.base` (not the 4 Hz snap) so this is never behind the poll; a
   // view's pose is only meaningful in the absolute/world arm — body- and
   // site-anchored poses carry no `target`/`yaw`/`pitch` to paste.
   const base = useAppSelector(selectCameraBase);

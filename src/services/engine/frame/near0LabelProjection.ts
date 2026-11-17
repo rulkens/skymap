@@ -13,7 +13,7 @@
 
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { Label2DProjection } from '../../../@types/rendering/Label2DProjection';
-import { rebaseViewProj } from '../../../utils/camera/rebaseViewProj';
+import { rebaseViewProj } from '../../../utils/camera/projection/rebaseViewProj';
 import { near0OverlayClipScale } from './near0OverlayClipScale';
 import { near0OverlayVpF32 } from './near0OverlayVpF32';
 import { NEAR0 } from './slabs';

@@ -31,6 +31,10 @@ body {
  * even before React mounts (so the page doesn't briefly show a smaller
  * default-sized canvas during boot).
  *
+ * `dvh`, not `vh`: mobile `100vh` assumes a hidden address bar, which never
+ * hides here (the page doesn't scroll), so the canvas ran below the screen
+ * and the view centre sat low, out of line with the `dvh`-sized dock.
+ *
  * `touch-action: none` is load-bearing on mobile.  Without it, the
  * browser claims any drag gesture after the first ~10 px of movement
  * for its native pan / pinch-zoom — at which point it fires a
@@ -45,7 +49,7 @@ body {
 #c {
   display: block;
   width: 100vw;
-  height: 100vh;
+  height: 100dvh;
   touch-action: none;
 }
 

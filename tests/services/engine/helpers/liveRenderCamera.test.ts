@@ -8,11 +8,11 @@ import { describe, it, expect } from 'vitest';
 
 import { liveRenderCamera } from '../../../../src/services/engine/helpers/liveRenderCamera';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
-import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
+import { absoluteArm } from '../../../../src/utils/camera/arms/absoluteArm';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
-import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
+import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/terrain/datumOnlyTerrainHeight';
 
 const PROJECTION = { fovYRad: 0.9, aspect: 16 / 9, near: 0.01, far: 1e4 };
 // The pose basis (settings) and the up-basis MUST differ, or a swap between the

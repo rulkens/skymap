@@ -29,8 +29,9 @@ import type { SlabRow } from '../frame/SlabRow';
 import type { VisibilityEntry } from '../layer/VisibilityEntry';
 import type { VisibilityGates } from './VisibilityGates';
 import type { SelectionKindRow } from '../layer/SelectionKindRow';
+import type { PickCodeAllocator } from '../selection/PickCodeAllocator';
 import type { Label3DProducer } from '../subsystems/Label3DProducer';
-import type { TerrainHeightAtLookup } from '../../camera/TerrainHeightAtLookup';
+import type { TerrainHeightAtLookup } from '../../camera/terrain/TerrainHeightAtLookup';
 import type { GatedOrbitTrailGroup } from '../frame/GatedOrbitTrailGroup';
 import type { RenderTargetSpec } from '../frame/RenderTargetSpec';
 import type { UiState } from '../../ui/UiState';
@@ -41,6 +42,8 @@ export type EngineState = {
   tier: Tier;
   /** Which `ViewRig` (`VIEW_RIGS`) `renderFrame` walks this frame. Seeded `'mono'`. */
   viewRig: ViewRigKey;
+  /** Frames rendered; `renderFrame` adds 1 first thing. Seeds the film grain. */
+  frameIndex: number;
   /** A getter onto `store.getState().selection`; the pick path dispatches the writes. */
   selection: SelectionState;
   /** A getter onto `store.getState().selectionRows` — the saga-reconciled display rows. */
@@ -53,11 +56,15 @@ export type EngineState = {
   /** True once `wireInput` seeded the first real camera pose. The gate every
    * pre-bootstrap bail reads; there is no boot camera object to read from. */
   booted: boolean;
-  /** Whether the last frame had a fade or label animation running; `settled()` polls it. */
+  /** Whether the last frame had a fade or label animation running; `isSceneSettled` reads it. */
   fadesAnimating: boolean;
+  /** Whether a Layer planner voted `loading` last frame; `isSceneSettled` reads it. */
+  layersLoading: boolean;
+  /** The largest `drawPxPerRad` over last frame's views; size-gated demand reads it. 0 before the first view. */
+  drawPxPerRad: number;
   /** Seeded with placeholders in `engine.ts`, filled by `wireInput`'s bootstrap seed. */
   cameraRuntime: CameraRuntime;
-  /** Per-`CUBEMAP_CAPTURES`-row bake bookkeeping, written by `scheduleSkyCaptures` / `scheduleProbeCapture`, read by each sky row's `allocateWhen`. */
+  /** Per-`APP_CUBEMAP_CAPTURE_REGISTRY`-row bake bookkeeping, written by `scheduleSkyCaptures` / `scheduleProbeCapture`, read by each sky row's `allocateWhen`. */
   cubemapCaptures: CubemapCaptureRuntimes;
   /** Bumped per galaxy-catalog commit (`wireGalaxyCatalogSourceSlot` is the sole writer); `scheduleSkyCaptures`' re-bake key. */
   contentVersion: number;
@@ -91,6 +98,8 @@ export type EngineState = {
   terrainHeightAt: TerrainHeightAtLookup;
   /** The composed resolver's dispatch table; NOT the saga display cache `selectionRows` above. */
   selectionKindRows: readonly SelectionKindRow[];
+  /** The engine's pick-code allocator; `createLayers` builds it, the debug overlay reads `codeIfAsked`. */
+  pickCodes: PickCodeAllocator | null;
   /** Seeded by `createEngine` because the `renderTargets` GPU-handle row runs before `createLayers`. */
   readonly layerTargets: readonly (readonly RenderTargetSpec[])[];
 };

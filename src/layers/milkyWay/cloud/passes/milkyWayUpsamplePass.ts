@@ -1,0 +1,24 @@
+/**
+ * milkyWayUpsamplePass — HDR composite of the half-res `mw-aggregate`
+ * offscreen (`milkyWayAggregatePass`'s star field). A plain additive blit is
+ * correct here — unlike `starAggregateUpsamplePass`, these records aren't
+ * Gaia photometry and need no LOD-symmetry fix — so this draws through its
+ * own handle. Runs immediately before `milkyWayPass`'s dust pass, so dust
+ * multiplies the upsampled starlight too; `enabled` is the producer's own
+ * `isMilkyWayCloudLive`, so the two can't disagree.
+ */
+
+import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
+import type { MilkyWayRuntime } from '../../@types/MilkyWayRuntime';
+import { createUpsamplePass } from '../../../../services/engine/frame/passes/createUpsamplePass';
+import { isMilkyWayCloudLive } from '../present/isMilkyWayCloudLive';
+
+export function milkyWayUpsamplePass(runtime: MilkyWayRuntime): ContentPass<'milkyWayDisk'> {
+  return createUpsamplePass<'milkyWayDisk'>({
+    name: 'milky-way-upsample',
+    sourceTargetId: 'mw-aggregate',
+    fade: 'milkyWayDisk',
+    handleOf: () => runtime.additiveUpsample,
+    enabled: (state, ctx, fade) => isMilkyWayCloudLive(state, ctx, fade, runtime.pickCode),
+  });
+}

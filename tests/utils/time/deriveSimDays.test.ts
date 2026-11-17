@@ -53,6 +53,19 @@ describe('deriveSimDays', () => {
     expect(deriveSimDays(time, 24_000)).toBe(101);
   });
 
+  it('runs backward when direction is -1', () => {
+    const time: TimeState = {
+      mode: 'manual',
+      anchor: { simDays: 100, realMs: 0 },
+      rateIndex: 4,
+      direction: -1,
+      paused: false,
+      profile: null,
+    };
+    // 1 hr/s for 12 real seconds = half a sim day earlier.
+    expect(deriveSimDays(time, 12_000)).toBe(99.5);
+  });
+
   describe('with a mission profile', () => {
     const profiled: TimeState = {
       mode: 'manual',

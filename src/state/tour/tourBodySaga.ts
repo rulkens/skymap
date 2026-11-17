@@ -44,6 +44,8 @@ import { clearSelection } from '../selection/selectionSlice';
 import { mergeSnapshot } from '../settings/mergeSnapshotAction';
 import { mergeSettingsSnapshot } from '../settings/mergeSettingsSnapshot';
 import { captureSettings } from '../scene/captureSettings';
+import { setFovYRad } from '../camera/cameraIntentSlice';
+import { DEFAULT_FOV_Y_RAD } from '../../services/engine/camera/framing/cameraFraming';
 import type { RootState } from '../../store/types';
 import type { Tour } from '../../@types/animation/tour/Tour';
 import type { BeatRange } from '../../@types/animation/tour/BeatRange';
@@ -116,6 +118,9 @@ export function* tourBodySaga(tour: Tour, range?: BeatRange): Generator {
           const live = yield* select((s: RootState) => s.settings);
           const baseline = mergeSettingsSnapshot(live, baselineSettings);
           yield* put(mergeSnapshot(computeSceneEntering(baseline, tour.beats, i)));
+          // Beats are authored at the default lens, which left the settings
+          // fold with the lens: each beat re-pins it, as the fold did.
+          yield* put(setFovYRad(DEFAULT_FOV_Y_RAD));
 
           // A windowed take opening mid-tour (from > 0) has just re-created
           // the past in one dispatch — but the store change is not what the
@@ -136,12 +141,14 @@ export function* tourBodySaga(tour: Tour, range?: BeatRange): Generator {
           if (firstEntry && range !== undefined && from > 0) {
             yield* delay(FOLD_SETTLE_MS);
           }
+          // The run's first beat is the cold load: it waits for its scene to settle.
+          const awaitSettled = firstEntry;
           firstEntry = false;
 
           // Delegate (not `call`) so the typed `BeatOutcome` return flows back;
           // cancellation from the outer `exit` race still propagates through the
           // yield* into the in-flight worker.
-          const outcome = yield* visitBeatSaga(tour.beats[i]!, i);
+          const outcome = yield* visitBeatSaga(tour.beats[i]!, i, { awaitSettled });
           // Prev clamps at the window's start (beat 0 on a full run) — a
           // windowed take never steps outside its range.
           i = outcome === 'prev' ? Math.max(from, i - 1) : i + 1;

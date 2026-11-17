@@ -25,7 +25,7 @@ construction).
 The URL-hash saga makes `hasDeepLink` derive its intent keys from `HASH_PARAM_SOURCES`
 (grill Q2). That means `buildInitialUiState` imports `state/url/hashParamSources.ts`, which
 transitively pulls in `selectionSlice`, `settings/core/orientationSlice`, `timeSlice`, their selectors, and
-`services/engine/helpers/buildFocusable`.
+`services/engine/selection/selectionKindOf` (through `state/selection/selectors`).
 
 Verified 2026-07-28: **no import cycle** — none of those modules import back into
 `state/ui/`. But the load-time graph of `uiSlice` widens considerably, and it is now

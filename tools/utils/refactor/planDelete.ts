@@ -34,7 +34,7 @@
  * file's only exported declaration and no meaningful top-level statement survives
  * its removal, the whole file is dropped, and its `tests/` mirror with it (the
  * mirror exists because the source does; orphaning it rots the parallel tree).
- * Mirror derivation reuses `expandTestMirrors` and the Project as the existence
+ * Mirror derivation reuses `expandCompanions` and the Project as the existence
  * oracle, exactly as `planRename` does — one definition of the mirror convention,
  * not two that can drift. A multi-export file keeps its remaining exports; only
  * the one declaration is removed.

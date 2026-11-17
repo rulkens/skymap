@@ -1,0 +1,102 @@
+import { describe, expect, it } from 'vitest';
+
+import { decodeStellarStreams } from '../../../src/layers/stellarStreams/catalog/utils/decodeStellarStreams';
+import type { VasilievStar } from '../../../tools/streams/@types/VasilievStar';
+import { buildStellarStreams } from '../../../tools/streams/buildStellarStreams';
+import { galstreamsTrackFixture as track } from '../../helpers/streams/galstreamsTrackFixture';
+import { maxDistanceToPolyline } from '../../../tools/utils/math/maxDistanceToPolyline';
+import { trackPositionsKpc } from '../../../tools/streams/utils/trackPositionsKpc';
+
+const stars: VasilievStar[] = Array.from({ length: 50 }, (_, i) => ({
+  x: 17,
+  y: 2,
+  z: -6,
+  vx: 230,
+  vy: -25,
+  vz: 215,
+  ra: 280 + i * 0.2,
+  dec: -30,
+  distanceKpc: 25 + i * 0.1,
+  tStripGyr: i < 20 ? 0 : -i * 0.05,
+}));
+const tracks = [
+  track({ name: 'Pal5', ref: 'a' }),
+  track({ name: 'GD-1', ref: 'b' }),
+  track({ name: 'AAU-ATLAS', ref: 'c' }),
+  track({ name: 'Sagittarius', ref: 'd' }),
+];
+
+describe('buildStellarStreams', () => {
+  it('the build writes a stream count equal to the meta length, Sagittarius first, slugs sorted after', () => {
+    const { bin, meta } = buildStellarStreams(stars, tracks, {});
+    const decoded = decodeStellarStreams(bin);
+    expect(meta.map((m) => m.id)).toEqual(['sagittarius', 'aau-atlas', 'gd-1', 'pal5']);
+    expect(decoded.streamCount).toBe(meta.length);
+    const perStream = new Array<number>(meta.length).fill(0);
+    for (let i = 0; i < decoded.particleCount; i++) perStream[decoded.records[i * 10 + 9]!]! += 1;
+    expect(perStream.every((n) => n > 0)).toBe(true);
+  });
+
+  it('the meta carries a measured [Fe/H] with its source, and none for a defaulted stream', () => {
+    const { meta } = buildStellarStreams(stars, tracks, {});
+    const byId = (id: string) => meta.find((m) => m.id === id)!;
+    expect(byId('pal5').metallicity).toEqual({ feh: -1.41, ref: 'Harris 1996, 2010 ed.' });
+    expect(byId('gd-1').metallicity).toBeNull();
+  });
+
+  it('the meta carries a published stellar mass with its source, and none where the table has none', () => {
+    const { meta } = buildStellarStreams(stars, tracks, {});
+    const byId = (id: string) => meta.find((m) => m.id === id)!;
+    expect(byId('gd-1').stellarMass).toEqual({
+      massMsun: 2e4,
+      ref: 'Koposov+ 2010',
+      partial: true,
+    });
+    expect(byId('pal5').stellarMass).toBeNull();
+  });
+
+  it('a stream with an article takes its title and extract as its description; every other description is null', () => {
+    const { meta } = buildStellarStreams(stars, tracks, {
+      sagittarius: { title: 'Sagittarius Stream', extract: 'A long stream.' },
+      'GD-1': { title: 'GD-1', extract: 'A moving group.' },
+      Pal5: { title: 'Pal 5 article', extract: '' },
+    });
+    const byId = (id: string) => meta.find((m) => m.id === id)!;
+    expect(byId('sagittarius')).toMatchObject({
+      wikipediaTitle: 'Sagittarius Stream',
+      description: 'A long stream.',
+    });
+    expect(byId('gd-1')).toMatchObject({ wikipediaTitle: 'GD-1', description: 'A moving group.' });
+    expect(byId('pal5').wikipediaTitle).toBe('Pal 5 article');
+    expect(byId('pal5').description).toBeNull();
+    expect(byId('aau-atlas')).toMatchObject({ wikipediaTitle: null, description: null });
+  });
+
+  it('a rebuild over the same inputs is byte-identical', () => {
+    const a = new Uint8Array(buildStellarStreams(stars, tracks, {}).bin);
+    const b = new Uint8Array(buildStellarStreams(stars, tracks, {}).bin);
+    expect(Buffer.from(a).equals(Buffer.from(b))).toBe(true);
+  });
+
+  it('every track lies inside its pick ribbon, a wiggle the point cap cannot follow included', () => {
+    const wiggly = track({
+      name: 'Pal5',
+      ref: 'a',
+      points: 400,
+      spanDeg: 300,
+      dec: Array.from({ length: 400 }, (_, i) => 4 * Math.sin(i * 0.7)),
+    });
+    const smooth = track({ name: 'GD-1', ref: 'b' });
+    const { meta } = buildStellarStreams(stars, [wiggly, smooth], {});
+    for (const t of [wiggly, smooth]) {
+      const m = meta.find((e) => e.names[0] === t.name)!;
+      const lineKpc = m.centrelineMpc.map(
+        (p) => p.map((v) => v * 1000) as [number, number, number],
+      );
+      const gapKpc = maxDistanceToPolyline(trackPositionsKpc(t), lineKpc);
+      expect(gapKpc).toBeLessThanOrEqual(m.ribbonWidthKpc / 2);
+    }
+    // The wiggle outruns the cap, so its ribbon had to widen past the stream's own width.
+    expect(meta.find((e) => e.id === 'pal5')!.ribbonWidthKpc).toBeGreaterThan(1);
+  });
+});

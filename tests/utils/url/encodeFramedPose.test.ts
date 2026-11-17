@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
-import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
+import type { FramedCameraPose } from '../../../src/@types/camera/pose/FramedCameraPose';
 import { asSceneBodyId } from '../../../src/utils/scene/asSceneBodyId';
 import { asSurfaceSiteId } from '../../../src/utils/scene/asSurfaceSiteId';
 
@@ -30,6 +30,20 @@ describe('encodeFramedPose', () => {
       },
     };
     expect(encodeFramedPose(site)).toBe('s,curiosity,1.2,0.3,12.5');
+  });
+
+  it('serializes a sky arm as the k-tagged form', () => {
+    const sky: FramedCameraPose = {
+      frame: {
+        sky: {
+          body: asSceneBodyId('earth'),
+          lonRad: 0.21859354349348772,
+          latRad: 0.9716130157244841,
+        },
+      },
+      pose: { azimuthRad: 3.14, altitudeRad: 1.05 },
+    };
+    expect(encodeFramedPose(sky)).toBe('k,earth,0.21859354349348772,0.9716130157244841,3.14,1.05');
   });
 
   it('serializes a world arm as the a-tagged form, defaulting an absent roll to 0', () => {

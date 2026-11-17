@@ -4,9 +4,9 @@ const ON = 'On';
 const OFF = 'Off';
 const SWITCH = 'On or off';
 const PANEL = 'src/components/SettingsPanel';
-const GALAXIES = 'src/layers/galaxyCatalog/ui/GalaxiesSection.tsx';
-const STARS = 'src/layers/starCatalog/ui/StarsSection.tsx';
-const STRUCTURES = 'src/layers/structure/ui/StructuresSection/StructuresSection.tsx';
+const GALAXIES = 'src/layers/galaxyCatalog/controls/ui/GalaxiesSection.tsx';
+const STARS = 'src/layers/starCatalog/controls/ui/StarsSection.tsx';
+const STRUCTURES = 'src/layers/structure/controls/ui/StructuresSection/StructuresSection.tsx';
 const LABELS = `${PANEL}/LabelsAndGuidesSection.tsx`;
 const DISPLAY = `${PANEL}/DisplaySection.tsx`;
 
@@ -302,7 +302,7 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
   {
     id: 'cosmic-web-density',
     title: 'Cosmic web density',
-    file: 'src/layers/cosmicWebDensity/ui/CosmicWebDensitySection.tsx',
+    file: 'src/layers/cosmicWebDensity/densityCubes/ui/CosmicWebDensitySection.tsx',
     rows: [
       {
         name: 'Cosmic web density',
@@ -345,7 +345,7 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
   {
     id: 'cosmic-web-filaments',
     title: 'Cosmic web filaments',
-    file: 'src/layers/cosmicWebFilaments/ui/CosmicWebFilamentsSection.tsx',
+    file: 'src/layers/cosmicWebFilaments/filaments/ui/CosmicWebFilamentsSection.tsx',
     rows: [
       {
         name: 'Cosmic web filaments',
@@ -370,7 +370,7 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
   {
     id: 'flow',
     title: 'Flow',
-    file: 'src/layers/flow/ui/FlowSection.tsx',
+    file: 'src/layers/flow/streamlines/ui/FlowSection.tsx',
     rows: [
       {
         name: 'Flow',
@@ -395,7 +395,7 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
   {
     id: 'satellites',
     title: 'Satellites',
-    file: 'src/layers/satellites/ui/SatellitesSection.tsx',
+    file: 'src/layers/satellites/controls/ui/SatellitesSection.tsx',
     rows: [
       {
         name: 'Satellites',
@@ -432,6 +432,67 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
         first: ON,
         state: 'satellites.items.other.enabled',
         firstValue: true,
+      },
+    ],
+  },
+  {
+    id: 'asteroids',
+    title: 'Asteroids',
+    file: 'src/layers/asteroids/controls/ui/AsteroidsSection.tsx',
+    rows: [
+      {
+        name: 'Asteroids',
+        control: 'switch',
+        does: 'Shows every numbered minor planet the Minor Planet Center lists, as points, when the camera is within 80 au of the Sun. Their file downloads only then, while the search is open, or while an asteroid is selected.',
+        values: SWITCH,
+        first: OFF,
+        state: 'asteroids.enabled',
+        firstValue: false,
+      },
+      {
+        name: 'Near-Earth asteroids',
+        control: 'switch',
+        does: 'Shows the asteroids whose orbits come within 1.3 au of the Sun.',
+        values: SWITCH,
+        first: ON,
+        state: 'asteroids.items.nearEarth.enabled',
+        firstValue: true,
+      },
+      {
+        name: 'Main belt',
+        control: 'switch',
+        does: 'Shows the asteroids between Mars and Jupiter, and those that cross the orbit of Mars.',
+        values: SWITCH,
+        first: ON,
+        state: 'asteroids.items.mainBelt.enabled',
+        firstValue: true,
+      },
+      {
+        name: 'Hildas',
+        control: 'switch',
+        does: 'Shows the asteroids that go round the Sun three times for every two of Jupiter’s orbits.',
+        values: SWITCH,
+        first: ON,
+        state: 'asteroids.items.hilda.enabled',
+        firstValue: true,
+      },
+      {
+        name: 'Jupiter trojans',
+        control: 'switch',
+        does: 'Shows the two swarms that share Jupiter’s orbit, 60° ahead of it and 60° behind.',
+        values: SWITCH,
+        first: ON,
+        state: 'asteroids.items.jupiterTrojan.enabled',
+        firstValue: true,
+      },
+      {
+        name: 'Brightness',
+        control: 'slider',
+        does: 'Multiplies the brightness of every asteroid.',
+        values: '0.01× to 4×, in steps of 0.05',
+        first: '1.0×',
+        state: 'asteroids.brightness',
+        firstValue: 1,
       },
     ],
   },
@@ -551,39 +612,72 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
         values: 'On, off, or a dash while they differ',
         first: 'A dash',
       },
-      label('Famous Galaxies', 'galaxyCatalogs.items.famousGalaxy.labelEnabled', 'the named galaxies'),
-      label('Galaxy clusters', 'structures.items.galaxy-cluster.labelEnabled', 'the galaxy clusters'),
-      label('Superclusters', 'structures.items.supercluster.labelEnabled', 'the superclusters'),
-      label('Voids', 'structures.items.void.labelEnabled', 'the voids'),
-      label('Galaxy groups', 'structures.items.galaxy-group.labelEnabled', 'the groups of galaxies'),
-      {
-        ...label('Milky Way', 'milkyWay.labelEnabled', ''),
-        does: 'Shows the name of the Milky Way.',
-      },
+      label(
+        'Famous Galaxies',
+        'galaxyCatalogs.items.famousGalaxy.labelEnabled',
+        'the named galaxies',
+      ),
       label('Famous Stars', 'starCatalogs.items.famousStar.labelEnabled', 'the named stars'),
-      label('Planets', 'bodies.items.planet.labelEnabled', 'the planets and the moons'),
-      {
-        ...label('Earth', 'bodies.items.earth.labelEnabled', ''),
-        does: 'Shows the name of Earth.',
-      },
       {
         ...label('Sun', 'starCatalogs.items.sun.labelEnabled', ''),
         does: 'Shows the name of the Sun.',
       },
       {
+        ...label('Milky Way', 'milkyWay.labelEnabled', ''),
+        does: 'Shows the name of the Milky Way.',
+      },
+      {
         ...label('Galactic Centre', 'blackHoles.items.sgr-a-star.labelEnabled', ''),
         does: 'Shows the name of Sagittarius A*.',
       },
-      label('Spacecraft', 'missions.items.craft.labelEnabled', 'the spacecraft and the other 3D models'),
+      label('Planets', 'bodies.items.planet.labelEnabled', 'the planets and the moons'),
+      {
+        ...label('Earth', 'bodies.items.earth.labelEnabled', ''),
+        does: 'Shows the name of Earth.',
+      },
+      label(
+        'Small bodies',
+        'bodies.items.small-body.labelEnabled',
+        'the asteroids Vesta and Bennu and the dwarf planet Ceres',
+      ),
+      label(
+        'Spacecraft',
+        'missions.items.craft.labelEnabled',
+        'the spacecraft and the other 3D models',
+      ),
+      label(
+        'Galaxy clusters',
+        'structures.items.galaxy-cluster.labelEnabled',
+        'the galaxy clusters',
+      ),
+      label('Superclusters', 'structures.items.supercluster.labelEnabled', 'the superclusters'),
+      label('Voids', 'structures.items.void.labelEnabled', 'the voids'),
+      label(
+        'Galaxy groups',
+        'structures.items.galaxy-group.labelEnabled',
+        'the groups of galaxies',
+      ),
       label('Open clusters', 'structures.items.open-cluster.labelEnabled', 'the open clusters'),
-      label('Globular clusters', 'structures.items.globular-cluster.labelEnabled', 'the globular clusters'),
+      label(
+        'Globular clusters',
+        'structures.items.globular-cluster.labelEnabled',
+        'the globular clusters',
+      ),
       {
         ...label('Nebulae', 'structures.items.nebula.labelEnabled', 'the nebulae'),
         first: OFF,
         firstValue: false,
       },
-      label('Galactic Centre', 'structures.items.gc-cluster.labelEnabled', 'the star clusters near the centre of the Milky Way'),
-      label('Exoplanet systems', 'structures.items.exoplanet-system.labelEnabled', 'the stars with known planets'),
+      label(
+        'Galactic Centre',
+        'structures.items.gc-cluster.labelEnabled',
+        'the star clusters near the centre of the Milky Way',
+      ),
+      label(
+        'Exoplanet systems',
+        'structures.items.exoplanet-system.labelEnabled',
+        'the stars with known planets',
+      ),
       label('Transients', 'structures.items.transient.labelEnabled', 'the transients'),
       {
         name: 'S-star trails',
@@ -628,6 +722,15 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
         values: SWITCH,
         first: OFF,
         state: 'localBubble.enabled',
+        firstValue: false,
+      },
+      {
+        name: 'Stellar streams',
+        control: 'switch',
+        does: 'Shows the stellar streams round the Milky Way: long trails of stars torn from dwarf galaxies and globular clusters. They come into view as the camera pulls back past about 13,000 light-years from the Sun. Their file is fetched the first time the switch goes on.',
+        values: SWITCH,
+        first: OFF,
+        state: 'stellarStreams.enabled',
         firstValue: false,
       },
       {
@@ -687,7 +790,8 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
         name: 'Tone curve',
         control: 'list',
         does: 'Chooses the curve that maps the light of the scene to the brightness of the screen. Linear clips everything above white; the others compress the bright end in different ways.',
-        values: 'Linear (baseline), Reinhard (natural), Asinh (filaments), Gamma 2.0, ACES (cinematic)',
+        values:
+          'Linear (baseline), Reinhard (natural), Asinh (filaments), Gamma 2.0, ACES (cinematic)',
         first: 'Reinhard (natural)',
         state: 'tonemap.curve',
         firstValue: 1,
@@ -705,10 +809,17 @@ export const DOCS_SETTINGS: readonly DocsSettingGroup[] = [
         name: 'Field of view',
         control: 'slider',
         does: 'Sets the angle the picture spans from top to bottom. A small angle works as a telephoto lens, a large one as a wide-angle lens.',
-        values: '0.5° to 100°, in steps of 0.5',
+        values: '0.5° to 120°, in steps of 0.5',
         first: '60°',
-        state: 'camera.fovDeg',
-        firstValue: 60,
+      },
+      {
+        name: 'Film look',
+        control: 'switch',
+        does: 'Adds grain, a wider glow and a softer lens, like a filmed shot.',
+        values: SWITCH,
+        first: OFF,
+        state: 'film.enabled',
+        firstValue: false,
       },
     ],
   },

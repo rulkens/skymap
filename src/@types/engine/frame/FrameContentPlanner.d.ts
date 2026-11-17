@@ -1,7 +1,7 @@
 /**
  * FrameContentPlanner — a CPU step in the frame program that prepares the data
  * a later GPU pass consumes: `structureMarkersPlanner` decides which marker
- * rings a view draws and returns their descriptors; `galaxyCatalogPlanner`
+ * rings a view draws and returns their descriptors; `galaxyDisksPlanner`
  * walks the disk LOD. Runs before any encoder opens, from a `{ kind: 'plan' }`
  * line in a section's program. `scope: 'once'` plans once for the whole frame
  * with every view in hand; `'perView'` plans once per view (a dome face, a VR
@@ -25,8 +25,9 @@ export type FrameContentPlanner<T, K extends ShowKey = ShowKey> = (
       readonly name: string;
       readonly scope: 'once';
       /** Fold the entry's distance band, measured at the anchor view `views[0]`, into the handed
-       *  value. Off by default: a planner whose output is a catalog fact rather than a draw list
-       *  (the survey planner's member count) must not lose sources by zoom. */
+       *  value. Set it on a planner whose output is drawn (`galaxyDisksPlanner`'s disk walk); leave
+       *  it off on one whose output is a catalog fact (`galaxyCatalogPlanner`'s member count),
+       *  which must not lose sources by zoom. */
       readonly hasDistanceBand?: true;
       plan(
         snapshot: ReadyFrameContext,

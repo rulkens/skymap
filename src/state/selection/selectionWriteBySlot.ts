@@ -13,12 +13,12 @@ import {
   updateSelectionFocus,
 } from './selectionSlice';
 import type { SelectionSlot } from '../../@types/engine/SelectionSlot';
-import type { SelectionRef } from '../../@types/engine/SelectionRef';
 import type { PayloadAction } from '@reduxjs/toolkit';
+import type { SelectionRefBase } from '../../@types/engine/selection/SelectionRefBase';
 
 export const SELECTION_WRITE_BY_SLOT: Record<
   SelectionSlot,
-  (ref: SelectionRef | null) => PayloadAction<SelectionRef | null>
+  (ref: SelectionRefBase | null) => PayloadAction<SelectionRefBase | null>
 > = {
   hover: updateSelectionHover,
   select: updateSelectionSelect,

@@ -43,7 +43,6 @@ import {
   DEFAULT_BLOOM_STRENGTH,
   DEFAULT_BLOOM_THRESHOLD,
   DEFAULT_EXPOSURE,
-  DEFAULT_FOV_DEG,
   DEFAULT_HDR_ENABLED,
   DEFAULT_HDR_KNEE,
   DEFAULT_HDR_HEADROOM,
@@ -56,6 +55,8 @@ import { initialState as missionsInitialState } from '../../../src/layers/missio
 import { initialState as sStarTrailsInitialState } from '../../../src/layers/starCatalog/state/sStarTrails/initialState';
 import { initialState as missionTrailsInitialState } from '../../../src/layers/missions/state/missionTrails/initialState';
 import { initialState as orbitTrailsInitialState } from '../../../src/layers/body/state/orbitTrails/initialState';
+import { initialState as surfaceTileDebugInitialState } from '../../../src/layers/body/state/surfaceTileDebug/initialState';
+import { initialState as terrainPickMarkerInitialState } from '../../../src/layers/body/state/terrainPickMarker/initialState';
 import { initialState as earthInitialState } from '../../../src/layers/body/state/earth/initialState';
 import { initialState as flowInitialState } from '../../../src/layers/flow/state/flow/initialState';
 import { initialState as volumesInitialState } from '../../../src/layers/cosmicWebDensity/state/cosmicWebDensity/initialState';
@@ -71,21 +72,26 @@ import { initialState as thumbnailsInitialState } from '../../../src/layers/gala
 import { initialState as starCatalogsInitialState } from '../../../src/layers/starCatalog/state/starCatalogs/initialState';
 import { initialState as filamentsInitialState } from '../../../src/layers/cosmicWebFilaments/state/cosmicWebFilaments/initialState';
 import { initialState as localBubbleInitialState } from '../../../src/layers/localBubble/state/localBubble/initialState';
+import { initialState as stellarStreamsInitialState } from '../../../src/layers/stellarStreams/state/stellarStreams/initialState';
+import { initialState as probeSpheresInitialState } from '../../../src/layers/probeSpheres/state/probeSpheres/initialState';
 import { initialState as satellitesInitialState } from '../../../src/layers/satellites/state/satellites/initialState';
+import { initialState as satelliteTuningInitialState } from '../../../src/layers/satellites/state/satelliteTuning/initialState';
+import { initialState as asteroidsInitialState } from '../../../src/layers/asteroids/state/asteroids/initialState';
+import { initialState as asteroidTuningInitialState } from '../../../src/layers/asteroids/state/asteroidTuning/initialState';
 import { initialState as constellationsInitialState } from '../../../src/layers/constellations/state/constellations/initialState';
-import { TERRAIN_PICK_MARKER_DEFAULT_RADIUS_M } from '../../../src/data/debug/terrainPickMarkerSliderFields';
 import { DEBUG_OVERLAY_ROWS } from '../../../src/data/debug/debugOverlayRows';
 import { DEFAULT_CAMERA_CONTROLS } from '../../../src/data/camera/openSpaceNavigation';
 import { DEFAULT_FOCUS_MOVES } from '../../../src/data/camera/focusMoveDefaults';
+import { DEFAULT_FILM } from '../../../src/data/film/filmDefaults';
 
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
 import type { DebugOverlayKey } from '../../../src/@types/data/debug/DebugOverlayKey';
-import type { GalaxyCatalogId } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
-import type { GalaxyCatalogItemSettings } from '../../../src/@types/settings/GalaxyCatalogItemSettings';
-import type { StarCatalogId } from '../../../src/@types/data/starCatalog/StarCatalogId';
-import type { StarCatalogItemSettings } from '../../../src/@types/settings/StarCatalogItemSettings';
+import type { GalaxyCatalogId } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
+import type { GalaxyCatalogItemSettings } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogItemSettings';
+import type { StarCatalogId } from '../../../src/layers/starCatalog/@types/StarCatalogId';
+import type { StarCatalogItemSettings } from '../../../src/layers/starCatalog/@types/StarCatalogItemSettings';
 import type { BodySourceId } from '../../../src/@types/data/body/BodySourceId';
-import type { BodyItemSettings } from '../../../src/@types/settings/BodyItemSettings';
+import type { BodyItemSettings } from '../../../src/layers/body/@types/BodyItemSettings';
 import type { StructureId } from '../../../src/@types/data/structure/StructureId';
 import type { StructureItemSettings } from '../../../src/@types/settings/StructureItemSettings';
 
@@ -96,9 +102,6 @@ export function makeSettingsFixture(
     orientation: DEFAULT_ORIENTATION,
     cameraControls: DEFAULT_CAMERA_CONTROLS,
     focusMoves: DEFAULT_FOCUS_MOVES,
-    camera: {
-      fovDeg: DEFAULT_FOV_DEG,
-    },
     galaxyCatalogs: {
       ...galaxyCatalogsInitialState,
       items: Object.fromEntries(
@@ -119,6 +122,7 @@ export function makeSettingsFixture(
       strength: DEFAULT_BLOOM_STRENGTH,
       threshold: DEFAULT_BLOOM_THRESHOLD,
     },
+    film: DEFAULT_FILM,
     bias: { ...biasInitialState },
     thumbnails: { ...thumbnailsInitialState },
     milkyWay: { ...milkyWayInitialState },
@@ -130,9 +134,20 @@ export function makeSettingsFixture(
     blackHoleLensingTuning: { ...blackHoleLensingTuningInitialState },
     cosmicWebFilaments: { ...filamentsInitialState },
     localBubble: { ...localBubbleInitialState },
+    probeSpheres: { ...probeSpheresInitialState },
     satellites: { ...satellitesInitialState },
+    satelliteTuning: { ...satelliteTuningInitialState },
+    asteroids: { ...asteroidsInitialState, items: { ...asteroidsInitialState.items } },
+    asteroidTuning: { ...asteroidTuningInitialState },
+    stellarStreams: {
+      ...stellarStreamsInitialState,
+      streak: { ...stellarStreamsInitialState.streak },
+      haze: { ...stellarStreamsInitialState.haze },
+    },
     constellations: { ...constellationsInitialState },
     orbitTrails: { ...orbitTrailsInitialState },
+    surfaceTileDebug: { overlays: { ...surfaceTileDebugInitialState.overlays } },
+    terrainPickMarker: { ...terrainPickMarkerInitialState },
     missions: { ...missionsInitialState },
     missionTrails: { ...missionTrailsInitialState },
     sStarTrails: { ...sStarTrailsInitialState },
@@ -157,8 +172,10 @@ export function makeSettingsFixture(
         DebugOverlayKey,
         boolean
       >,
-      terrainPickMarkerRadiusM: TERRAIN_PICK_MARKER_DEFAULT_RADIUS_M,
       disabledPasses: {},
+      matteWhite: false,
+      meshAmbient: 0,
+      meshSelfBounce: 0,
       renderStrategy: 'auto',
       clipPathInspect: {
         clipId: null,

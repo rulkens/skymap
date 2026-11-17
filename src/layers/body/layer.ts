@@ -10,43 +10,48 @@
  */
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';
-import { BODY_SLAB_ROWS } from './present/bodySlabRows';
+import { BODY_SLAB_ROWS } from './slabs/present/bodySlabRows';
 import { bodyLayerSettings } from './state/slices';
 import { bodyVisibility } from './visibility';
 import { create } from './create';
 import { destroy } from './destroy';
-import { earthPass } from './passes/earthPass';
-import { surfaceTilesPass } from './passes/surfaceTilesPass';
-import { terrainPickMarkerPass } from './passes/terrainPickMarkerPass';
-import { cloudShellPass } from './passes/cloudShellPass';
-import { planetsPass } from './passes/planetsPass';
-import { texturedBodiesPass } from './passes/texturedBodiesPass';
-import { ringsPass } from './passes/ringsPass';
-import { bodyGlintsPass } from './passes/bodyGlintsPass';
-import { atmosphereShellPass } from './passes/atmosphereShellPass';
-import { aerialPerspectivePass } from './passes/aerialPerspectivePass';
-import { bodyMeshesPass } from './passes/bodyMeshesPass';
-import { skyViewCompute } from './computes/skyViewCompute';
-import { aerialPerspectiveCompute } from './computes/aerialPerspectiveCompute';
-import { bodyAssetRows } from './load/bodyAssetRows';
+import { earthPass } from './earth/passes/earthPass';
+import { surfaceTilesPass } from './surfaceTiles/patch/passes/surfaceTilesPass';
+import { terrainPickMarkerPass } from './terrainPick/passes/terrainPickMarkerPass';
+import { cloudShellPass } from './clouds/passes/cloudShellPass';
+import { planetsPass } from './spheres/passes/planetsPass';
+import { texturedBodiesPass } from './spheres/passes/texturedBodiesPass';
+import { ringsPass } from './rings/passes/ringsPass';
+import { bodyGlintsPass } from './glints/passes/bodyGlintsPass';
+import { atmosphereShellPass } from './atmosphere/passes/atmosphereShellPass';
+import { aerialPerspectivePass } from './atmosphere/passes/aerialPerspectivePass';
+import { atmosphereProbeSkyPass } from './atmosphere/passes/atmosphereProbeSkyPass';
+import { atmosphereProbeShellPass } from './atmosphere/passes/atmosphereProbeShellPass';
+import { bodyMeshesPass } from './meshes/passes/bodyMeshesPass';
+import { skyViewCompute } from './atmosphere/computes/skyViewCompute';
+import { atmosphereRosterPlanner } from './atmosphere/present/atmosphereRosterPlanner';
+import { aerialPerspectiveCompute } from './atmosphere/computes/aerialPerspectiveCompute';
+import { bodyAssetRows } from './textures/load/bodyAssetRows';
 import { BODY_BODY_ROWS } from './bodies/bodyBodyRows';
 import { BODY_SOURCE_ROWS } from './sources/bodySourceRows';
-import { bodySelectionRow } from './present/bodySelectionRow';
-import { bodySearch } from './present/bodySearch';
-import { BODY_TRAIL_ELEMENTS } from './present/bodyTrailElements';
-import { produceSceneBodyCaptions } from './present/produceSceneBodyCaptions';
+import { bodySelectionRow } from './selection/bodySelectionRow';
+import { bodySelectionKinds } from './selection/kinds';
+import { bodySearch } from './selection/present/bodySearch';
+import { BODY_TRAIL_ELEMENTS } from './orbitTrails/data/bodyTrailElements';
+import { SMALL_BODY_TRAIL_IDS } from './orbitTrails/data/smallBodyTrailIds';
+import { produceSceneBodyCaptions } from './labels/present/produceSceneBodyCaptions';
 import { bodyLayerExhibits } from './exhibits/exhibits';
 import { NEAR0 } from '../../services/engine/frame/slabs';
-import BodyDetailCardContainer from '../../components/containers/BodyDetailCardContainer';
+import BodyDetailCardContainer from './card/ui/BodyDetailCardContainer';
 import CompactBodyCard from '../../components/InfoCard/CompactBodyCard/CompactBodyCard';
 import { surfaceTilePlanner } from './frame';
-import { watchDebugPanelWakeSaga } from './sagas/watchDebugPanelWakeSaga';
+import { watchDebugPanelWakeSaga } from './surfaceTiles/debug/sagas/watchDebugPanelWakeSaga';
 import { heightAt } from './heightAt';
-import { EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT } from './subsystems/surfaceTiles/surfaceTileStream';
-import { NO_TERRAIN_PICK_MARKER_READOUT } from './present/terrainPickMarkerReadoutOf';
-import SurfaceTileAtlasSectionContainer from './ui/SurfaceTileAtlasSectionContainer';
-import TerrainPickMarkerTuningSectionContainer from './ui/TerrainPickMarkerTuningSectionContainer';
-import EarthTuningSectionContainer from './ui/EarthTuningSectionContainer';
+import { EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT } from './surfaceTiles/stream/subsystems/surfaceTileStream';
+import { NO_TERRAIN_PICK_MARKER_READOUT } from './terrainPick/present/terrainPickMarkerReadoutOf';
+import SurfaceTileAtlasSectionContainer from './surfaceTiles/debug/ui/SurfaceTileAtlasSectionContainer';
+import TerrainPickMarkerTuningSectionContainer from './terrainPick/ui/TerrainPickMarkerTuningSectionContainer';
+import EarthTuningSectionContainer from './earth/ui/EarthTuningSectionContainer';
 import type { BodyFacts } from './@types/BodyFacts';
 
 export const bodyLayer = defineLayer({
@@ -74,25 +79,31 @@ export const bodyLayer = defineLayer({
     bodyGlintsPass(runtime),
     atmosphereShellPass(runtime),
     aerialPerspectivePass(runtime),
-    bodyMeshesPass,
+    atmosphereProbeSkyPass(runtime),
+    atmosphereProbeShellPass(runtime),
+    bodyMeshesPass(runtime),
   ],
   computes: (runtime) => [skyViewCompute(runtime), aerialPerspectiveCompute(runtime)],
   assets: bodyAssetRows,
-  planners: (runtime) => [surfaceTilePlanner(runtime)],
+  planners: (runtime) => [surfaceTilePlanner(runtime), atmosphereRosterPlanner],
   sagas: [watchDebugPanelWakeSaga],
   heightAt,
-  guides: () => ({
+  guides: (runtime) => ({
     screenLabels: [
       {
         slab: NEAR0,
         id: 'sceneBodyCaptions',
         label: 'body',
-        produceLabels: produceSceneBodyCaptions,
+        produceLabels: produceSceneBodyCaptions(runtime.pickCodes),
       },
     ],
-    orbitTrails: { show: 'orbitTrails', rows: BODY_TRAIL_ELEMENTS },
+    orbitTrails: {
+      show: 'orbitTrails',
+      rows: BODY_TRAIL_ELEMENTS,
+      selectedOnly: SMALL_BODY_TRAIL_IDS,
+    },
   }),
-  selection: () => [bodySelectionRow()],
+  selection: { kinds: bodySelectionKinds, rows: (runtime) => [bodySelectionRow(runtime)] },
   search: () => bodySearch(),
   ui: [
     { slot: 'labelsAndGuides', content: { toggle: 'orbitTrails', label: 'Orbit trails' } },

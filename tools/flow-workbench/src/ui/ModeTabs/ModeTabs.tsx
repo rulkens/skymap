@@ -7,7 +7,7 @@
  * the choice. Each tab is a shared Button (primary when active, ghost when not).
  */
 import type { ReactNode } from 'react';
-import type { FlowMode } from '../../../../../src/@types/data/flow/FlowMode';
+import type { FlowMode } from '../../../../../src/layers/flow/@types/FlowMode';
 import Button from '../../../../../src/components/common/Button/Button';
 import styles from './ModeTabs.module.css';
 

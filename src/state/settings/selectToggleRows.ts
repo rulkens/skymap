@@ -47,20 +47,22 @@ export function selectToggleRows(
       id: `toggle-label-${cat}`,
       label: CATEGORY_DISPLAY_INFO[cat].plural,
       enabled: labelValues[index]!,
-      set: (on: boolean) =>
+      set: (on: boolean) => [
         setVisibility({
           cluster: entry.cluster,
           ...(item !== undefined ? { item } : {}),
           field: 'labelEnabled',
           on,
         }),
+      ],
     })),
     ...layerRows.map((row, index) => ({
       id: `toggle-${row.toggle}`,
       label: row.label,
       enabled: layerValues[index]!,
-      set: (on: boolean) =>
+      set: (on: boolean) => [
         setVisibility({ cluster: visibilityClusterOf(entries[index]!), field: 'enabled', on }),
+      ],
     })),
   ]);
 }

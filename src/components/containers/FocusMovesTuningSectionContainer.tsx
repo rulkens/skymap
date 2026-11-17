@@ -6,7 +6,7 @@ import FocusMovesTuningSection from '../DebugPanel/FocusMovesTuningSection/Focus
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectFocusMoves } from '../../state/settings/selectors';
 import { setEasedDuration, setGeodesicTuning } from '../../state/settings/core/focusMovesSlice';
-import type { GeodesicTuning } from '../../@types/camera/GeodesicTuning';
+import type { GeodesicTuning } from '../../@types/camera/focusMotion/GeodesicTuning';
 
 function FocusMovesTuningSectionContainer(): ReactNode {
   const dispatch = useAppDispatch();

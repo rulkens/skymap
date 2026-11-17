@@ -1,7 +1,7 @@
 .root {
   max-width: var(--doc-measure);
   margin: 0 0 var(--stack);
-  padding-block: 1rem;
+  padding-block: var(--site-space-s);
   border-block: 1px solid var(--border-divider);
   color: var(--color-fg);
   font-variant-numeric: normal;
@@ -22,7 +22,7 @@
   }
 
   & math + math {
-    margin-top: 0.875rem;
+    margin-top: var(--site-space-s);
   }
 }
 

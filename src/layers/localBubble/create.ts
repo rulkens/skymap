@@ -9,8 +9,8 @@ import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
 import type { LocalBubbleRuntime } from './@types/LocalBubbleRuntime';
 
 import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';
-import { createLocalBubbleRenderer } from './render/localBubbleRenderer';
-import { createLocalBubbleSlot } from './load/localBubbleSlot';
+import { createLocalBubbleRenderer } from './shell/render/localBubbleRenderer';
+import { createLocalBubbleSlot } from './shell/load/localBubbleSlot';
 
 export function create(deps: LayerCoreDeps): LocalBubbleRuntime {
   const renderer = createLocalBubbleRenderer(deps.ctx.device, HDR_TARGET_FORMAT);

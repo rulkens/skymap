@@ -1,6 +1,7 @@
 /**
- * near0OverlayVpF32 — a NEAR0 overlay view-projection rescaled to emit clip
- * METRES and narrowed to f32; see `NEAR0_OVERLAY_CLIP_SCALE` for why.
+ * near0OverlayVpF32 — a NEAR0 overlay view-projection rescaled to emit clip in
+ * near-plane units (w = 1 at the near plane) and narrowed to f32; see
+ * `near0OverlayClipScale` for why.
  */
 
 import { narrowMat4 } from '../../../utils/math/narrowMat4';

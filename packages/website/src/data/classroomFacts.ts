@@ -33,7 +33,8 @@ export const CLASSROOM_FACTS: readonly Fact[] = [
     id: 'exhibit-notes',
     about: 'app',
     text: 'An exhibit prints its notes beside the view: a headline, what you are seeing, a few figures, and links to its sources.',
-    short: 'Each is one prepared view with notes beside it: what you are seeing, a few figures and links to the sources.',
+    short:
+      'Each is one prepared view with notes beside it: what you are seeing, a few figures and links to the sources.',
     source: `${REPO_BLOB}/src/components/ExhibitOverlay/ExhibitOverlay.tsx`,
     sourceLabel: `the exhibit’s layout, ${IN_REPO}`,
     checked: CHECKED,
@@ -63,7 +64,8 @@ export const CLASSROOM_FACTS: readonly Fact[] = [
     source: `${REPO_BLOB}/docs/DATA.md`,
     sourceLabel: `the data notes, ${IN_REPO}`,
     checked: CHECKED,
-    short: 'The planets, and the large moons of Jupiter, Saturn, Uranus and Neptune, are where they were, or will be, at the instant it shows, matching NASA’s positions for the years 1900 to 2100.',
+    short:
+      'The planets, and the large moons of Jupiter, Saturn, Uranus and Neptune, are where they were, or will be, at the instant it shows, matching NASA’s positions for the years 1900 to 2100.',
   },
   {
     id: 'io-lap',
@@ -71,7 +73,9 @@ export const CLASSROOM_FACTS: readonly Fact[] = [
     source: 'https://nssdc.gsfc.nasa.gov/planetary/factsheet/joviansatfact.html',
     sourceLabel: 'NASA Jovian satellite fact sheet',
     checked: CHECKED,
-    short: 'At 6 hours per second Io, the innermost of the four large moons, laps Jupiter in about 7 seconds.',
+    short:
+      'At 6 hours per second Io, the innermost of the four large moons, laps Jupiter in about 7 seconds.',
+    figure: { value: '1.77', measure: 'days for Io to go round Jupiter' },
   },
   {
     id: 'search-scope',
@@ -106,7 +110,8 @@ export const CLASSROOM_FACTS: readonly Fact[] = [
     source: `${REPO_BLOB}/data/seeds/planet_facts.seed.json`,
     sourceLabel: `the planets’ fact sheet, ${IN_REPO}`,
     checked: CHECKED,
-    short: 'A planet’s card lists its size, mass, gravity, day, year, temperature, moons and air. The values were typed in by hand, so checking one against another source is a lesson too.',
+    short:
+      'A planet’s card lists its size, mass, gravity, day, year, temperature, moons and air. The values were typed in by hand, so checking one against another source is a lesson too.',
   },
   {
     id: 'card-tooltips',
@@ -116,5 +121,14 @@ export const CLASSROOM_FACTS: readonly Fact[] = [
     sourceLabel: `the cards’ explanations, ${IN_REPO}`,
     checked: CHECKED,
     short: 'Underlined words on a card explain themselves when pointed at.',
+  },
+  {
+    // (384,400 − 6,371 − 1,737) km of gap over Earth's 12,742 km is 29.5; centre to centre over a diameter is 30.2.
+    id: 'earth-moon-in-earths',
+    text: 'The Moon is on average 384,400 km from Earth, and Earth is 12,742 km across, so about 30 Earths would fit in the gap between them.',
+    short: 'About 30. The Moon is on average 384,400 km away, and Earth is 12,742 km across.',
+    source: 'https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html',
+    sourceLabel: 'NASA Moon fact sheet',
+    checked: '2026-10-30',
   },
 ];

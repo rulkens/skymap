@@ -4,18 +4,18 @@ import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBo
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import type { SelectionKindRow } from '../../../../src/@types/engine/layer/SelectionKindRow';
-import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
-import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 import type { TransientBodyId } from '../../../../src/@types/scene/TransientBodyId';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import type { SelectionRefBase } from '../../../../src/@types/engine/selection/SelectionRefBase';
+import type { SelectionRowBase } from '../../../../src/@types/engine/selection/SelectionRowBase';
 
 const POSE_ID: TransientBodyId = 'transient:satellite-25544';
-const REF: SelectionRef = { type: 'satellite', noradId: 25544 };
+const REF: SelectionRefBase = { type: 'satellite', noradId: 25544 };
 const AT = CONST_J2000 + 3;
 const PLACED: Vec3 = [1e-5, 2e-5, 3e-5];
 const base = deriveBodyStates(AT);
 
-const movingRow = (positionMpc: Vec3, poseId: TransientBodyId = POSE_ID): SelectionRow =>
+const movingRow = (positionMpc: Vec3, poseId: TransientBodyId = POSE_ID): SelectionRowBase =>
   ({
     type: 'satellite',
     positionMpc,
@@ -27,10 +27,10 @@ const movingRow = (positionMpc: Vec3, poseId: TransientBodyId = POSE_ID): Select
       standoffRadii: 2,
       placedEachFrame: true,
     },
-  }) as unknown as SelectionRow;
+  }) as unknown as SelectionRowBase;
 
-const kindRow = (extracted: SelectionRow | null) => {
-  const extractRow = vi.fn((_ref: SelectionRef, _simDays: number) => extracted);
+const kindRow = (extracted: SelectionRowBase | null) => {
+  const extractRow = vi.fn((_ref: SelectionRefBase, _simDays: number) => extracted);
   return { row: { type: 'satellite', extractRow } as unknown as SelectionKindRow, extractRow };
 };
 
@@ -40,7 +40,7 @@ describe('placeLiveSelection', () => {
     const bodyRow = {
       type: 'body',
       driver: { poseId: earth, boundingRadiusM: 1, footprintRadiusM: 1, groundRadiusM: 1 },
-    } as unknown as SelectionRow;
+    } as unknown as SelectionRowBase;
     const { row } = kindRow(movingRow(PLACED));
     const out = placeLiveSelection(
       base,
@@ -55,7 +55,7 @@ describe('placeLiveSelection', () => {
     const clockOnly = {
       type: 'satellite',
       driver: { poseId: POSE_ID, followsSimClock: true },
-    } as unknown as SelectionRow;
+    } as unknown as SelectionRowBase;
     const { row } = kindRow(movingRow(PLACED));
     expect(placeLiveSelection(base, [{ ref: REF, row: clockOnly }], [row], AT)).toBe(base);
   });

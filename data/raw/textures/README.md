@@ -16,14 +16,14 @@ command rather than by hand.
 | Field      | Value                                                                             |
 | ---------- | --------------------------------------------------------------------------------- |
 | Fetch date | _(pending — filled by the maintainer's first full pull from `main`)_              |
-| Full size  | ~1.1 GB (~700 MB of native body tiers + the ~421 MB BMNG quadrant set)            |
+| Full size  | ~1.4 GB (~700 MB body tiers, ~421 MB BMNG, ~216 MB Black Marble, ~87 MB chroma)   |
 | Dev subset | ~7 MB (`--dev`: 2k SSS variants + 5400×2700 BMNG)                                 |
 | Checksums  | `textures.sha256` — one `<hex>  <filename>` line per file, written on first fetch |
 
 ## How to obtain
 
 ```
-npm run fetch-textures -- --confirm   # full ~1.1 GB pull (size-gated)
+npm run fetch-textures -- --confirm   # full ~1.4 GB pull (size-gated)
 npm run fetch-textures -- --dev        # ~7 MB visual-check subset, no confirm
 ```
 
@@ -88,6 +88,15 @@ URL and attribution string reads it from there.
 | ---------- | ------------------------------------------- | ----------- | ---------------- |
 | Full pull  | `world.topo.bathy.200408.3x21600x10800.jpg` | 21600×10800 | 27,216,225 bytes |
 | Dev subset | `world.topo.bathy.200408.3x5400x2700.jpg`   | 5400×2700   | 2,308,163 bytes  |
+
+### The other eleven months (cloud bake ice mask)
+
+`npm run fetch-cloud-inputs -- --confirm` also pulls the other eleven 21600×10800 equirects
+(`world.topo.bathy.2004MM.3x21600x10800.jpg`, about 30 MB each, 360 MB for all twelve). It pulls
+them and the clouds TIFF below from Skymap's R2 mirror (`data/raw/textures/<file>`, see
+`docs/DEPLOY.md`), not NASA, and refuses any file `textures.sha256` does not pin. The cloud bake cuts its ice mask from the month matching the bake date. The app never reads them: it
+uses only the vintage month above. One table (`tools/utils/io/BMNG_MONTHS.ts`) describes the
+twelve; same NASA media guidelines and credit.
 
 ### Quadrants (the surface tile pyramid's source)
 
@@ -165,7 +174,32 @@ NPP VIIRS (Black Marble 2016). NASA media guidelines: generally not subject to c
 (HTTP 200, `image/jpeg`, 8,106,233 bytes).
 
 ```
-https://eoimages.gsfc.nasa.gov/images/imagerecords/144000/144898/BlackMarble_2016_3km.jpg
+https://assets.science.nasa.gov/content/dam/science/esd/eo/images/imagerecords/144000/144898/BlackMarble_2016_3km.jpg
+```
+
+### Quadrants at 500 m (the surface tile pyramid's night source)
+
+The same A-D / 1-2 layout as the BMNG quadrants above: eight 21600×21600 JPGs
+compositing to 86400×43200 (about 464 m per texel), read by the night product of
+`build-surface-tiles` (levels z3-z7). Full pull only. Credit: **NASA Earth
+Observatory / NASA Goddard Space Flight Center**, Suomi NPP VIIRS. Verified live
+2026-11-06; sha256 per file is in `textures.sha256`.
+
+| File | Extent (lon × lat) | Size |
+| ---- | ------------------ | ---- |
+| `BlackMarble_2016_A1.jpg` | -180..-90 × 0..90 | 30,825,698 bytes |
+| `BlackMarble_2016_A2.jpg` | -180..-90 × -90..0 | 7,830,664 bytes |
+| `BlackMarble_2016_B1.jpg` | -90..0 × 0..90 | 29,472,401 bytes |
+| `BlackMarble_2016_B2.jpg` | -90..0 × -90..0 | 21,337,236 bytes |
+| `BlackMarble_2016_C1.jpg` | 0..90 × 0..90 | 59,097,456 bytes |
+| `BlackMarble_2016_C2.jpg` | 0..90 × -90..0 | 13,553,256 bytes |
+| `BlackMarble_2016_D1.jpg` | 90..180 × 0..90 | 39,122,860 bytes |
+| `BlackMarble_2016_D2.jpg` | 90..180 × -90..0 | 14,400,257 bytes |
+
+Quadrant total: 215,639,828 bytes (~216 MB). Same upstream directory as the 3 km file:
+
+```
+https://assets.science.nasa.gov/content/dam/science/esd/eo/images/imagerecords/144000/144898/BlackMarble_2016_<Q>.jpg
 ```
 
 ## Earth elevation map — NASA Visible Earth "Topography" (GEBCO_08)
@@ -192,12 +226,12 @@ https://eoimages.gsfc.nasa.gov/images/imagerecords/73000/73934/gebco_08_rev_elev
 
 ## Earth clouds map — NASA Visible Earth Blue Marble cloud composite
 
-Earth's `clouds` map (cloud shell, sRGB colour + luminance-derived alpha → PNG)
-is NASA's **Blue Marble** cloud composite — a white-cloud-on-black equirect with
-**no alpha channel**. `build-textures` derives opacity from luminance (white
-cloud → opaque, black sky → clear) and keeps the RGB as the cloud colour (see
-`writeCloudTier.ts`); it ships segmented as `earth-clouds-<px>.png` at the
-`large` (8k) tier (spec §9.1). sharp reads TIFF natively (the USGS moon sources
+Earth's `clouds` map (cloud shell, one grey channel → lossy WebP) is NASA's
+**Blue Marble** cloud composite — a white-cloud-on-black equirect with **no
+alpha channel**. Its grey is the coverage: `build-textures` writes it as one
+grey channel at quality 80, the daily cloud bake's format (see
+`writeCloudTier.ts`), and ships it as `earth-clouds-grey-<px>.webp` up to the
+`large` (8k) tier. sharp reads TIFF natively (the USGS moon sources
 are already `.tif`). Full-pull only — no dev variant.
 
 The 2048px JPG variant is too small for the 8k ceiling, and the two 21600px

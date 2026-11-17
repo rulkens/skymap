@@ -1,11 +1,8 @@
-import { APP_SOURCE_REGISTRY } from '../../src/compositions/appSources';
-import { flatGalaxyRecordSource } from '../../src/layers/galaxyCatalog/load/flatGalaxyRecordSource';
+import { GALAXY_CATALOG_SOURCE_RECORD } from '../../src/layers/galaxyCatalog/sources/galaxyCatalogSourceRecord';
+import { flatGalaxyRecordSource } from '../../src/layers/galaxyCatalog/records/load/flatGalaxyRecordSource';
 import type { GalaxyCatalog } from '../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import type { GalaxyCatalogRegistryEntry } from '../../src/@types/data/galaxyCatalog/GalaxyCatalogRegistryEntry';
-import type { GalaxyCatalogSourceType } from '../../src/@types/data/galaxyCatalog/GalaxyCatalogSourceType';
-import type { GalaxyRecordSource } from '../../src/@types/data/galaxyCatalog/GalaxyRecordSource';
-import type { SourceType } from '../../src/@types/data/SourceType';
-import type { FamousGalaxyMetaEntry } from '../../src/@types/loading/FamousGalaxyMetaEntry';
+import type { GalaxyCatalogId } from '../../src/layers/galaxyCatalog/@types/GalaxyCatalogId';
+import type { GalaxyRecordSource } from '../../src/layers/galaxyCatalog/records/@types/GalaxyRecordSource';
 
 /**
  * The flat record sources the galaxy slots would build over these catalogs, in
@@ -13,13 +10,12 @@ import type { FamousGalaxyMetaEntry } from '../../src/@types/loading/FamousGalax
  * consumer a `catalogs` map.
  */
 export function galaxyRecordsOver(
-  catalogs: ReadonlyMap<number, GalaxyCatalog>,
-  famousMeta: () => readonly FamousGalaxyMetaEntry[] = () => [],
-): Map<GalaxyCatalogSourceType, GalaxyRecordSource> {
-  const records = new Map<GalaxyCatalogSourceType, GalaxyRecordSource>();
+  catalogs: ReadonlyMap<GalaxyCatalogId, GalaxyCatalog>,
+): Map<GalaxyCatalogId, GalaxyRecordSource> {
+  const records = new Map<GalaxyCatalogId, GalaxyRecordSource>();
   for (const [source, catalog] of catalogs) {
-    const entry = APP_SOURCE_REGISTRY[source as SourceType] as GalaxyCatalogRegistryEntry;
-    records.set(entry.code, flatGalaxyRecordSource(entry, catalog, famousMeta));
+    const entry = GALAXY_CATALOG_SOURCE_RECORD[source as GalaxyCatalogId];
+    records.set(entry.id, flatGalaxyRecordSource(entry, catalog));
   }
   return records;
 }

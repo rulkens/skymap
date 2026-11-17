@@ -100,7 +100,9 @@ describe('satellite() moon elements', () => {
     for (const [id, periodDays] of Object.entries(periods)) {
       const el = elementsById(id);
       const radPerCty =
-        el.meanAnomalyRateRadPerCty! + el.argPeriapsisRateRadPerCty! + el.ascendingNodeRateRadPerCty!;
+        el.meanAnomalyRateRadPerCty! +
+        el.argPeriapsisRateRadPerCty! +
+        el.ascendingNodeRateRadPerCty!;
       const degPerDay = (radPerCty * 180) / Math.PI / 36_525;
       expect(Math.abs(degPerDay - 360 / periodDays), id).toBeLessThan(1e-9);
     }

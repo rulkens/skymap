@@ -21,8 +21,8 @@ import { SURFACE_FIXED_SITES } from '../../../data/bodies/surfaceFixedSites';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { orientationForBody } from '../../../data/bodies/orientationForBody';
 import { focusResolveOrder } from '../../../utils/scene/focusResolveOrder';
-import { siteGroundRadiusM } from '../../../utils/camera/siteGroundRadiusM';
-import { sitePointBodyFixed } from '../../../utils/camera/sitePointBodyFixed';
+import { siteGroundRadiusM } from '../../../utils/camera/arms/siteGroundRadiusM';
+import { sitePointBodyFixed } from '../../../utils/camera/arms/sitePointBodyFixed';
 import { addVec3 } from '../../../utils/math/addVec3';
 import { rotateVec3ByTightMat3 } from '../../../utils/math/rotateVec3ByTightMat3';
 import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
@@ -93,8 +93,8 @@ export function deriveBodyStates(simDays: number): ReadonlyMap<PositionedId, Bod
     // surface, which is exactly what a mesh body's hull is not.
     const { surface } = findByIdOrThrow(SCENE_CELESTIAL_BODIES, site.hostId, 'deriveBodyStates');
     const offsetM = rotateVec3ByTightMat3(
-      sitePointBodyFixed(site, siteGroundRadiusM(site, surface.datumRadiusM)),
       orientationForBody(site.hostId, simDays, positions),
+      sitePointBodyFixed(site, siteGroundRadiusM(site, surface.datumRadiusM)),
     );
     // Metres → Mpc BEFORE the host's heliocentric position joins in: adding
     // first would round a few-thousand-km offset off an au-scale magnitude.

@@ -9,10 +9,8 @@ import type { SourceEntryBase } from '../SourceEntryBase';
  * bespoke marker path.
  *
  * No on-disk asset (generated procedurally) and no per-record identity, so it
- * adds only `code` to the base.
+ * adds nothing to the base.
  */
 export type MilkyWaySourceEntry = SourceEntryBase & {
   readonly type: 'milkyWay';
-  /** Stable numeric tag; not persisted, only used as the registry key. */
-  readonly code: number;
 };

@@ -25,15 +25,15 @@ import {
   updateSelectionHover,
 } from '../../../src/state/selection/selectionSlice';
 import { selectionRoute } from '../../../src/store/constants';
-import { Source } from '../../../src/data/source';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
-import { bodySelectionRow } from '../../../src/layers/body/present/bodySelectionRow';
-import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
-import { galaxyCatalogSelectionRow } from '../../../src/layers/galaxyCatalog/present/galaxyCatalogSelectionRow';
-import { galaxyRowRuntime } from '../../support/selectionResolverOver';
+import { bodySelectionRow } from '../../../src/layers/body/selection/bodySelectionRow';
+import { NO_KINDS_OFF } from '../../support/noKindsOff';
+import { galaxyCatalogSelectionRow } from '../../../src/layers/galaxyCatalog/selection/galaxyCatalogSelectionRow';
+import { galaxyRowRuntime } from '../../support/layerPickCodes';
 import type { GalaxyRowFixture } from '../../support/selectionResolverOver';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
+import { bodyPickCodes } from '../../support/layerPickCodes';
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -41,7 +41,7 @@ const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 // dereferencing this — the default for tests that never seed a galaxy ref.
 /** The galaxyCatalog Layer's slice with nothing loaded — the default for the
  * cases that never seed a galaxy ref. */
-const NO_GALAXIES = { catalogs: new Map(), famousMeta: [] } as unknown as GalaxyRowFixture;
+const NO_GALAXIES = { catalogs: new Map() } as unknown as GalaxyRowFixture;
 
 // ─── Cloud fixture ─────────────────────────────────────────────────────────────
 
@@ -77,8 +77,11 @@ describe('watchTierSaga', () => {
     sagaMiddleware.run(watchTierSaga);
     sagaMiddleware.setContext({
       selection: composeSelectionRows(
-        () => [bodySelectionRow(), galaxyCatalogSelectionRow(galaxyRowRuntime(galaxies))],
-        () => ALL_KINDS_ENABLED,
+        () => [
+          bodySelectionRow({ pickCodes: bodyPickCodes() }),
+          galaxyCatalogSelectionRow(galaxyRowRuntime(galaxies)),
+        ],
+        () => NO_KINDS_OFF,
       ),
     });
     return built;
@@ -101,7 +104,7 @@ describe('watchTierSaga', () => {
     // Hover is the observable of the worker having run: the saga clears it
     // unconditionally on a real swap, so a surviving hover proves the
     // `prev === payload` guard returned before any of the swap duties.
-    const hover = { type: 'galaxyCatalog' as const, source: Source.SDSS, index: 0 };
+    const hover = { type: 'galaxyCatalog' as const, source: 'sdss', index: 0 };
     store.dispatch(updateSelectionHover(hover));
 
     store.dispatch(requestTier('large')); // already 'large'
@@ -123,20 +126,19 @@ describe('watchTierSaga', () => {
     // cloud in place and the re-anchor must resolve against the NEW one.
     const galaxies = {
       get catalogs() {
-        return new Map([[Source.SDSS, currentCloud]]);
+        return new Map([['sdss', currentCloud]]);
       },
-      famousMeta: [],
     } as unknown as GalaxyRowFixture;
 
     store = buildStore(galaxies);
-    store.dispatch(updateSelectionSelect({ type: 'galaxyCatalog', source: Source.SDSS, index: 0 }));
+    store.dispatch(updateSelectionSelect({ type: 'galaxyCatalog', source: 'sdss', index: 0 }));
 
     store.dispatch(requestTier('large'));
     await flush();
 
     // New cloud: objID 99n is absent — a cloud with a different objID.
     currentCloud = makeCloud(1n, 0, 1);
-    store.dispatch(engineSourceCountReported({ source: Source.SDSS, count: 1 }));
+    store.dispatch(engineSourceCountReported({ source: 'sdss', count: 1 }));
     await flush();
 
     const selectRef = store.getState()[selectionRoute].select;
@@ -172,15 +174,14 @@ describe('watchTierSaga', () => {
     // cloud in place and the re-anchor must resolve against the NEW one.
     const galaxies = {
       get catalogs() {
-        return new Map([[Source.SDSS, currentCloud]]);
+        return new Map([['sdss', currentCloud]]);
       },
-      famousMeta: [],
     } as unknown as GalaxyRowFixture;
 
     store = buildStore(galaxies);
     // select → objID_A at old index 0; focus → objID_B at old index 1.
-    store.dispatch(updateSelectionSelect({ type: 'galaxyCatalog', source: Source.SDSS, index: 0 }));
-    store.dispatch(updateSelectionFocus({ type: 'galaxyCatalog', source: Source.SDSS, index: 1 }));
+    store.dispatch(updateSelectionSelect({ type: 'galaxyCatalog', source: 'sdss', index: 0 }));
+    store.dispatch(updateSelectionFocus({ type: 'galaxyCatalog', source: 'sdss', index: 1 }));
 
     store.dispatch(requestTier('large'));
     await flush();
@@ -189,23 +190,23 @@ describe('watchTierSaga', () => {
     currentCloud = buildCloud(objIDsNew);
     // The saga awaits two count pulses (one per captured slot × same source).
     // Dispatch twice: the saga's for-loop takes one event per re-anchor.
-    store.dispatch(engineSourceCountReported({ source: Source.SDSS, count: 1 }));
+    store.dispatch(engineSourceCountReported({ source: 'sdss', count: 1 }));
     await flush();
-    store.dispatch(engineSourceCountReported({ source: Source.SDSS, count: 1 }));
+    store.dispatch(engineSourceCountReported({ source: 'sdss', count: 1 }));
     await flush();
 
     const state = store.getState()[selectionRoute];
     // select was objID_A (old index 0) → new index 1.
-    expect(state.select).toEqual({ type: 'galaxyCatalog', source: Source.SDSS, index: 1 });
+    expect(state.select).toEqual({ type: 'galaxyCatalog', source: 'sdss', index: 1 });
     // focus was objID_B (old index 1) → new index 0.
-    expect(state.focus).toEqual({ type: 'galaxyCatalog', source: Source.SDSS, index: 0 });
+    expect(state.focus).toEqual({ type: 'galaxyCatalog', source: 'sdss', index: 0 });
   });
 
   it('clears hover unconditionally across the swap', async () => {
     // hover is cleared by the saga across the swap, regardless of whether the
     // hovered source reloads or not.
     store = buildStore();
-    store.dispatch(updateSelectionHover({ type: 'galaxyCatalog', source: Source.SDSS, index: 0 }));
+    store.dispatch(updateSelectionHover({ type: 'galaxyCatalog', source: 'sdss', index: 0 }));
 
     store.dispatch(requestTier('large'));
     await flush();

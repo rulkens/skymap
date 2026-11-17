@@ -1,13 +1,11 @@
 /**
  * actionForRow — map a selected `ScoredRow` to the `PaletteAction` the container dispatches.
  * Focus kinds name the thing by URL deep-link id through the ONE `requestFocus` command
- * (`watchRequestFocusSaga` resolves the ref), so the palette never builds a ref. Alias rows reuse
- * `encodeGalaxyId` so the 'pgc-' grammar keeps one home. Fallback arms exist only so TS narrows.
+ * (`watchRequestFocusSaga` resolves the ref), so the palette never builds a ref. Alias rows carry
+ * their id, built by `buildAliasIndex`, so the 'pgc-' grammar keeps one home. Fallback arms exist
+ * only so TS narrows.
  */
 
-import { encodeGalaxyId } from '../../services/url/encodeGalaxyId';
-import { MILKY_WAY_FOCUS_ID } from '../../services/url/milkyWayFocusId';
-import { encodeStarFocusId } from '../../services/url/encodeStarFocusId';
 import type { ScoredRow } from '../../@types/palette/ScoredRow';
 import type { PaletteAction } from '../../@types/palette/PaletteAction';
 
@@ -20,32 +18,8 @@ function unreachableRow(): never {
 
 const ACTION_FOR_ROW: Record<ScoredRow['kind'], (row: ScoredRow) => PaletteAction> = {
   famous: (row) => ({ kind: 'focus', focusId: row.kind === 'famous' ? row.entry.id : '' }),
-  // ra/dec/distMpc are unused: a PGC objId (> 0) takes the catalog-id rung before the pos@ rung.
-  alias: (row) => ({
-    kind: 'focus',
-    focusId:
-      row.kind === 'alias'
-        ? encodeGalaxyId({
-            source: row.entry.source,
-            famousId: null,
-            // AliasIndexEntry.pgc is a number (Redux-serializable); encodeGalaxyId's
-            // ladder is shared with SDSS's 19-digit objID, which needs bigint.
-            objId: BigInt(row.entry.pgc),
-            ra: 0,
-            dec: 0,
-            distMpc: 0,
-          })
-        : '',
-  }),
+  alias: (row) => ({ kind: 'focus', focusId: row.kind === 'alias' ? row.entry.focusId : '' }),
   structure: (row) => ({ kind: 'focus', focusId: row.kind === 'structure' ? row.entry.id : '' }),
-  milkyWay: () => ({ kind: 'focus', focusId: MILKY_WAY_FOCUS_ID }),
-  starCatalog: (row) => ({
-    kind: 'focus',
-    focusId:
-      row.kind === 'starCatalog'
-        ? encodeStarFocusId({ type: 'starCatalog', source: row.source, index: row.index })
-        : '',
-  }),
   exhibit: (row) =>
     row.kind === 'exhibit' ? { kind: 'exhibit', exhibitId: row.exhibit.id } : unreachableRow(),
   tour: (row) => (row.kind === 'tour' ? { kind: 'tour', tourId: row.tour.id } : unreachableRow()),
@@ -59,6 +33,7 @@ const ACTION_FOR_ROW: Record<ScoredRow['kind'], (row: ScoredRow) => PaletteActio
           altKm: row.entry.altKm,
         }
       : unreachableRow(),
+  sky: (row) => (row.kind === 'sky' ? { kind: 'sky', spot: row.spot } : unreachableRow()),
 };
 
 export function actionForRow(row: ScoredRow): PaletteAction {

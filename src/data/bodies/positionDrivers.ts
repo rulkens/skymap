@@ -23,13 +23,17 @@ export const POSITION_DRIVERS: readonly PositionDriver[] = [
   ...ORBITAL_ELEMENTS.map(
     (elements): PositionDriver => ({ kind: 'orbit', id: elements.id, elements }),
   ),
-  ...SAMPLED_BODIES.map((body): PositionDriver => ({ kind: 'sampled', id: body.id, focusId: asSceneBodyId('sun') })),
+  ...SAMPLED_BODIES.map(
+    (body): PositionDriver => ({ kind: 'sampled', id: body.id, focusId: asSceneBodyId('sun') }),
+  ),
   ...SURFACE_FIXED_SITES.map((site): PositionDriver => ({ kind: 'surfaceFixed', ...site })),
 ];
 
 // Indexed, not walked: the per-frame callers (`frameContext`, `glintBandClass`)
 // would otherwise scan every anchor, S-star and site once per body per frame.
-const BY_ID = new Map<string, PositionDriver>(POSITION_DRIVERS.map((driver) => [driver.id, driver]));
+const BY_ID = new Map<string, PositionDriver>(
+  POSITION_DRIVERS.map((driver) => [driver.id, driver]),
+);
 
 export function positionDriverById(id: string): PositionDriver {
   const driver = BY_ID.get(id);

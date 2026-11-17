@@ -22,7 +22,7 @@ import package::lib::fullscreenTri::FullscreenOut;
 import package::lib::camera::cameraRayFromUv;
 import package::lib::util::rayPlaneY0;
 import package::lib::util::hueToRgb;
-import package::milkyWay::field::io::u;
+import package::milkyWay::field::io::uniforms;
 import package::milkyWay::ismMap::ismMapPresentLib::logPolarUv;
 import package::milkyWay::ismMap::ismMapPresentLib::ismMapEdgeFade;
 
@@ -32,7 +32,7 @@ const PI: f32 = 3.14159265358979;
 
 // This galaxy's log-radial grid bounds — same shape as ismMapPresent.wesl's
 // IsmMapGrid, written once per orientation-chain dispatch rather than every
-// frame like io.wesl's 'u' above.
+// frame like io.wesl's 'uniforms' above.
 struct OrientationGrid {
   rMin: f32,
   rMax: f32,
@@ -43,25 +43,22 @@ struct OrientationGrid {
 @group(0) @binding(3) var<uniform> grid: OrientationGrid;
 
 @vertex
-fn vs(@builtin(vertex_index) vi: u32) -> FullscreenOut {
-  return fullscreenVertex(vi);
+fn vs(@builtin(vertex_index) vertexIndex: u32) -> FullscreenOut {
+  return fullscreenVertex(vertexIndex);
 }
 
 @fragment
 fn fs(input: FullscreenOut) -> @location(0) vec4<f32> {
-  let tanHalfFov = u.params.x;
-  let aspect = u.params.y;
-  let shift = u.params.z;
-  let d = cameraRayFromUv(input.uv, u.camRight.xyz, u.camUp.xyz, u.camFwd.xyz, tanHalfFov, aspect, shift);
-  let o = u.eye.xyz;
+  let rayDir = cameraRayFromUv(input.uv, uniforms.camRight.xyz, uniforms.camUp.xyz, uniforms.camFwd.xyz, uniforms.frustum);
+  let rayOrigin = uniforms.eye.xyz;
 
   // Disc-plane (y=0) intersection; a ray parallel to or diverging from the
   // plane has nothing to show.
-  let t = rayPlaneY0(o, d);
-  if (t <= 0.0) {
+  let hitDistance = rayPlaneY0(rayOrigin, rayDir);
+  if (hitDistance <= 0.0) {
     return vec4<f32>(0.0);
   }
-  let hit = o + d * t;
+  let hit = rayOrigin + rayDir * hitDistance;
 
   let uvGrid = logPolarUv(hit, grid.rMin, grid.rMax);
   if (uvGrid.z < 0.5) {
@@ -88,5 +85,5 @@ fn fs(input: FullscreenOut) -> @location(0) vec4<f32> {
 
   // debugView.z is this view's own crossfade weight (io.wesl's debugView
   // doc), same role as dustPresent.wesl's debugView.x multiply.
-  return vec4<f32>(color * u.debugView.z, 0.0);
+  return vec4<f32>(color * uniforms.debugView.z, 0.0);
 }

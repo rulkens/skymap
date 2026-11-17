@@ -11,10 +11,9 @@ import type { CSSProperties } from 'react';
 import type { IconName } from '../../../../@types/IconName';
 import Icon from '../../../shared/links/Icon/Icon.tsx';
 import styles from './SectionNav.module.css';
+import { HEADING_ID } from './SectionNav.constants.ts';
 
 type SectionNavProps = { items: { href: string; label: string; icon: IconName }[] };
-
-const HEADING_ID = 'section-nav-label';
 
 function SectionNav({ items }: SectionNavProps) {
   return (

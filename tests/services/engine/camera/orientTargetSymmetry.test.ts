@@ -13,22 +13,22 @@ import { describe, it, expect } from 'vitest';
 
 import { DEFAULT_CAMERA_TUNING } from '../../../../src/data/camera/cameraTuning';
 
-import { bandRollTarget } from '../../../../src/services/engine/camera/frameAlignedRoll';
+import { bandRollTarget } from '../../../../src/services/engine/camera/arms/world/frameAlignedRoll';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
-import { blendedEnuAt } from '../../../../src/utils/camera/blendedEnuAt';
-import { bodyUpWeight } from '../../../../src/utils/camera/bodyUpWeight';
-import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
-import { frameUp } from '../../../../src/utils/camera/frameUp';
-import { imagePlaneBasis } from '../../../../src/utils/camera/imagePlaneBasis';
+import { blendedEnuAt } from '../../../../src/utils/camera/surfaceFrame/blendedEnuAt';
+import { bodyUpWeight } from '../../../../src/services/engine/camera/orientation/utils/bodyUpWeight';
+import { eyeMpcOf } from '../../../../src/utils/camera/orbitPose/eyeMpcOf';
+import { frameUp } from '../../../../src/utils/camera/orbitPose/frameUp';
+import { imagePlaneBasis } from '../../../../src/utils/camera/orbitPose/imagePlaneBasis';
 import { normalize3 } from '../../../../src/utils/math/normalize3';
 import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTightMat3';
-import { rotateVec3ByTightMat3T } from '../../../../src/utils/math/rotateVec3ByTightMat3T';
+import { rotateByTranspose } from '../../../../src/utils/math/rotateByTranspose';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
-import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
+import type { CameraPose } from '../../../../src/@types/camera/pose/CameraPose';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { asSceneBodyId } from '../../../../src/utils/scene/asSceneBodyId';
 import { angleBetween } from '../../../helpers/math/angleBetween';
@@ -84,10 +84,10 @@ describe.each(['log', 'lin'] as const)(
         // The engaged settle's reference north at the SAME standpoint/altitude,
         // built in body axes and rotated back to world.
         const luWorld = normalize3([-forward[0]!, -forward[1]!, -forward[2]!] as Vec3);
-        const luBody = rotateVec3ByTightMat3T(luWorld, EARTH.orientation);
-        const sceneUpBody = rotateVec3ByTightMat3T(UP_REF, EARTH.orientation);
+        const luBody = rotateByTranspose(EARTH.orientation, luWorld);
+        const sceneUpBody = rotateByTranspose(EARTH.orientation, UP_REF);
         const { north } = blendedEnuAt(luBody, bodyUpWeight(hr, tuning), sceneUpBody, null);
-        const engagedUp = rotateVec3ByTightMat3(north, EARTH.orientation);
+        const engagedUp = rotateVec3ByTightMat3(EARTH.orientation, north);
 
         expect(angleBetween(worldUp, engagedUp)).toBeLessThan(1e-6);
       }
