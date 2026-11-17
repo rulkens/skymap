@@ -25,5 +25,5 @@ export function projectLabel(v: Readonly<Vec3>, p: OutputProjection, out: Projec
   out.px[0] = p.centrePx[0] + p.focalPx * tx;
   out.px[1] = p.centrePx[1] - p.focalPx * ty;
   // focalPx · |v| / v.z, the scale across the line of sight at this anchor.
-  out.pxPerRad = p.focalPx * Math.hypot(tx, ty, 1);
+  out.pxPerRad = p.focalPx * Math.sqrt(tx * tx + ty * ty + 1);
 }

@@ -24,7 +24,7 @@ export function liftedAnchor(
   p: OutputProjection,
   out: ProjectedLabel,
 ): void {
-  const len = Math.hypot(v[0], v[1], v[2]);
+  const len = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
   dir[0] = v[0] / len;
   dir[1] = v[1] / len;
   dir[2] = v[2] / len;
@@ -43,7 +43,7 @@ export function liftedAnchor(
     turned[2] = c * dir[2] + s * tangent[2];
     projectLabel(turned, p, out);
     const moved = subject.visible
-      ? Math.hypot(out.px[0] - subject.px[0], out.px[1] - subject.px[1])
+      ? Math.sqrt((out.px[0] - subject.px[0]) ** 2 + (out.px[1] - subject.px[1]) ** 2)
       : 0;
     liftPx = Math.max(floorPx - moved, 0);
   } else {

@@ -28,7 +28,8 @@ const out: ProjectedLabel = { px: [0, 0], pxPerRad: 0, up: [0, 0], visible: fals
 export const projectRecords: LabelStage = (records, frame, { projection: p }) => {
   const { f32, u32 } = records;
   const m = p.viewFromWorld;
-  const [width, height] = p.sizePx;
+  const width = p.sizePx[0];
+  const height = p.sizePx[1];
   const minPx = LABEL_TEXT_PX.min * p.pxScale;
   const maxPx = LABEL_TEXT_PX.max * p.pxScale;
   for (let i = 0; i < records.count; i++) {
@@ -41,7 +42,7 @@ export const projectRecords: LabelStage = (records, frame, { projection: p }) =>
     }
     for (let r = 0; r < 3; r++)
       view[r] = m[r]! * world[0] + m[3 + r]! * world[1] + m[6 + r]! * world[2];
-    const distance = Math.hypot(world[0], world[1], world[2]);
+    const distance = Math.sqrt(world[0] * world[0] + world[1] * world[1] + world[2] * world[2]);
     const radius = f32[base + W.radiusMpc]!;
     const style =
       LABEL_STYLES[LABEL_STYLE_IDS[u32[base + W.style]! & LABEL_RECORD_FLAGS.styleMask]!];
@@ -56,7 +57,8 @@ export const projectRecords: LabelStage = (records, frame, { projection: p }) =>
     if (!out.visible) continue;
 
     frame.visible[i] = 1;
-    const [x, y] = out.px;
+    const x = out.px[0];
+    const y = out.px[1];
     frame.px[i * 2] = x;
     frame.px[i * 2 + 1] = y;
     frame.up[i * 2] = out.up[0];

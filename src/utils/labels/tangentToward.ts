@@ -13,7 +13,7 @@ export function tangentToward(d: Readonly<Vec3>, toward: Readonly<Vec3>, out: Ve
   const x = toward[0] - k * d[0];
   const y = toward[1] - k * d[1];
   const z = toward[2] - k * d[2];
-  const len = Math.hypot(x, y, z);
+  const len = Math.sqrt(x * x + y * y + z * z);
   if (len < PARALLEL_TANGENT_EPS) {
     out[0] = 0;
     out[1] = 0;
