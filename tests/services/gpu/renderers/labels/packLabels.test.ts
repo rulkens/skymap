@@ -4,7 +4,10 @@ import { parseFontMetrics } from '../../../../../src/services/gpu/labelLayout/fo
 import {
   GLYPH_INSTANCE_BYTES,
   LABEL_DATA_BYTES,
+  LABEL_DATA_OFFSETS,
 } from '../../../../../src/data/labels/labelBufferStrides';
+import { LABEL_LIFT } from '../../../../../src/data/labels/labelLift';
+import { textLayoutOf } from '../../../../../src/services/gpu/labelLayout/textLayoutOf';
 import type { Label2D } from '../../../../../src/@types/rendering/Label2D';
 import { LABEL_EM_PX_RETUNE } from '../../../../../src/data/labels/labelSizingDefaults';
 
@@ -34,7 +37,9 @@ const LABEL_SLOTS = LABEL_DATA_BYTES / 4;
 const GLYPH_SLOTS = GLYPH_INSTANCE_BYTES / 4;
 
 function pack(labels: Label2D[], maxGlyphs = 64) {
-  const labelF32 = new Float32Array(Math.max(labels.length, 1) * LABEL_SLOTS);
+  const labelBuf = new ArrayBuffer(Math.max(labels.length, 1) * LABEL_DATA_BYTES);
+  const labelF32 = new Float32Array(labelBuf);
+  const labelU32 = new Uint32Array(labelBuf);
   const glyphBuf = new ArrayBuffer(maxGlyphs * GLYPH_INSTANCE_BYTES);
   const glyphF32 = new Float32Array(glyphBuf);
   const glyphU32 = new Uint32Array(glyphBuf);
@@ -43,11 +48,12 @@ function pack(labels: Label2D[], maxGlyphs = 64) {
     metricsByFont: { cormorant: METRICS },
     layerIndexOf: { cormorant: 0 } as never,
     labelF32,
+    labelU32,
     glyphF32,
     glyphU32,
     maxGlyphs,
   });
-  return { buf: labelF32, glyphCount, glyphU32 };
+  return { buf: labelF32, u32: labelU32, glyphCount, glyphU32 };
 }
 
 function label(over: Partial<Label2D> & { id: string }): Label2D {
@@ -77,9 +83,7 @@ describe('packLabels glyphs', () => {
 describe('packLabels storage record', () => {
   it('strides records by 24 f32 slots (96 bytes)', () => {
     const { buf } = pack([label({ id: 'a' }), label({ id: 'b', worldPos: [7, 8, 9] })]);
-    // The trailing subjectPos vec4 needs 16-byte alignment, so the struct's 72
-    // written bytes round up to 96, not 80.
-    expect([buf[24], buf[25], buf[26]]).toEqual([7, 8, 9]);
+    expect([buf[LABEL_SLOTS], buf[LABEL_SLOTS + 1], buf[LABEL_SLOTS + 2]]).toEqual([7, 8, 9]);
   });
 
   it('packs worldEmMpc times the em retune in slot 3, which the shader no longer applies', () => {
@@ -100,14 +104,49 @@ describe('packLabels storage record', () => {
     expect([buf[4], buf[5], buf[6], buf[7]]).toEqual([1, 1, 1, 1]);
   });
 
-  it('defaults subjectPos to worldPos when occludeSubjectPos is unset', () => {
-    const { buf } = pack([label({ id: 'a', worldPos: [1, 2, 3] })]);
-    expect([buf[20], buf[21], buf[22], buf[23]]).toEqual([1, 2, 3, 0]);
-  });
+  describe('lift', () => {
+    const slot = (field: keyof typeof LABEL_DATA_OFFSETS) => LABEL_DATA_OFFSETS[field] / 4;
 
-  it('writes occludeSubjectPos at slots 20..22 when a producer sets it', () => {
-    const { buf } = pack([label({ id: 'a', worldPos: [1, 2, 3], occludeSubjectPos: [4, 5, 6] })]);
-    expect([buf[20], buf[21], buf[22]]).toEqual([4, 5, 6]);
+    it('writes the subject radius, the leader and where it starts', () => {
+      const { buf, u32 } = pack([
+        label({
+          id: 'a',
+          lift: {
+            radiusMpc: 0.5,
+            leader: { widthPx: 2.5, color: [1, 0, 0, 1], base: 'rim', gapPx: 4 },
+          },
+        }),
+      ]);
+      expect(buf[slot('radiusMpc')]).toBe(0.5);
+      expect(buf[slot('leaderGapPx')]).toBe(4);
+      expect(buf[slot('leaderWidthPx')]).toBe(2.5);
+      expect(u32[slot('lift')]).toBe(LABEL_LIFT.leaderFromRim);
+      expect(u32[slot('leaderRgba')]).toBe(0xff0000ff);
+    });
+
+    it("draws a leader without a colour of its own in the label's", () => {
+      const { u32 } = pack([
+        label({
+          id: 'a',
+          color: [0, 1, 0, 1],
+          lift: { radiusMpc: 0, leader: { widthPx: 1, base: 'centre', gapPx: 0 } },
+        }),
+      ]);
+      expect(u32[slot('lift')]).toBe(LABEL_LIFT.leaderFromCentre);
+      expect(u32[slot('leaderRgba')]).toBe(0xff00ff00);
+    });
+
+    it('marks an unlifted label so a recycled slot draws no stale leader', () => {
+      const { buf, u32 } = pack([label({ id: 'a' })]);
+      expect(u32[slot('lift')]).toBe(LABEL_LIFT.none);
+      expect(buf[slot('leaderWidthPx')]).toBe(0);
+    });
+
+    it("writes the text's ink bottom in atlas px", () => {
+      const a = label({ id: 'a' });
+      const { buf } = pack([a]);
+      expect(buf[slot('inkBottom')]).toBe(textLayoutOf({ cormorant: METRICS }, a).bbox!.maxY);
+    });
   });
 
   it('writes outlineColor (premultiplied) at slots 12..15', () => {

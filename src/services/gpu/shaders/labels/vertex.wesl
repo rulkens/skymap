@@ -1,10 +1,11 @@
 // labels/vertex.wesl — MSDF labels vertex stage.
 //
-// Projects the anchor through 'lib/projectLabel.wesl' and expands the
-// unit-corner attribute into a glyph quad in output px, along the projected
-// image-up and its perpendicular, written as NDC at w = 1.  'worldEmMpc'
-// (label.worldPos.w) is the em height in Mpc of world space; it becomes an
-// angle at the anchor's distance, then px, clamped to [minPx, maxPx].
+// Projects the subject through 'lib/projectLabel.wesl', lifts a lifted label's
+// anchor up the image by 'labelLiftPx', and expands the unit-corner attribute
+// into a glyph quad in output px, along the projected image-up and its
+// perpendicular, written as NDC at w = 1.  'worldEmMpc' (label.worldPos.w) is
+// the em height in Mpc of world space; it becomes an angle at the subject's
+// distance, then px, clamped to [minPx, maxPx].
 //
 // ## Quad expansion for the outline fringe
 //
@@ -19,6 +20,7 @@ import package::labels::io::Uniforms;
 import package::labels::io::LabelData;
 import package::labels::io::VsIn;
 import package::labels::io::VsOut;
+import package::labels::io::LIFT_NONE;
 import package::lib::projectLabel::ProjectedLabel;
 import package::lib::projectLabel::projectLabel;
 import package::lib::projectLabel::scaledLength;
@@ -31,6 +33,9 @@ const ATLAS_EM_PX: f32 = 84.0;
 const DISTANCE_RANGE_PX: f32 = 32.0;
 // Behind the near plane on every corner: a hidden label rasterises nothing.
 const HIDDEN_POS: vec4<f32> = vec4<f32>(0.0, 0.0, -1.0, 1.0);
+// Must equal the constants of the same names in leaderLineStyle.ts.
+const MIN_LABEL_CLEARANCE_PX: f32 = 28.0;
+const LEADER_LIFT_FACTOR: f32 = 1.5;
 
 @group(0) @binding(0) var<uniform> uniforms: Uniforms;
 @group(0) @binding(1) var<storage, read> labels: array<LabelData>;
@@ -39,29 +44,55 @@ fn viewOfSlabPoint(slabPos: vec3<f32>) -> vec3<f32> {
   return (uniforms.viewFromSlab * vec4<f32>(slabPos, 1.0)).xyz;
 }
 
+// The twin of 'utils/labels/labelLiftPx.ts'.
+fn labelLiftPx(subjectSizePx: f32, inkDropPx: f32) -> f32 {
+  return max(
+    max(MIN_LABEL_CLEARANCE_PX, LEADER_LIFT_FACTOR * subjectSizePx),
+    MIN_LABEL_CLEARANCE_PX + inkDropPx,
+  );
+}
+
+// A label placed for this frame: its subject on the image, its em in px, the
+// subject's apparent diameter and how far the text anchor sits above it.
+struct PlacedLabel {
+  subject: ProjectedLabel,
+  displayEmPx: f32,
+  subjectSizePx: f32,
+  liftPx: f32,
+};
+
+fn placeLabel(label: LabelData) -> PlacedLabel {
+  let viewVec = viewOfSlabPoint(label.worldPos.xyz);
+  var subject: ProjectedLabel = projectLabel(viewVec, uniforms.out);
+  subject.visible = subject.visible && viewVec.z >= uniforms.nearClipMpc;
+  let distance = scaledLength(viewVec);
+  // The em as an angle at the subject, then px; packLabels already folded the
+  // em retune in, as the CPU twin 'labelDisplayEmPx' applies it. A lifted
+  // label's text shares its subject's view depth, so its em is the same.
+  let pxPerEm = label.worldPos.w / distance * subject.pxPerRad;
+  let displayEmPx = clamp(pxPerEm, label.sizing.y, label.sizing.z);
+  // On the axis's scale, as the CPU's 'apparentSizePx' reads it.
+  let subjectSizePx = 2.0 * label.radiusMpc / distance * uniforms.out.focalPx;
+  var liftPx = 0.0;
+  if (label.lift != LIFT_NONE) {
+    liftPx = labelLiftPx(subjectSizePx, label.inkBottom * displayEmPx / ATLAS_EM_PX);
+  }
+  return PlacedLabel(subject, displayEmPx, subjectSizePx, liftPx);
+}
+
 // expandLabelQuad — the quad-expansion body shared by 'vs' (this file) and
 // 'vsOcclude' (vertexOcclude.wesl). Takes the RESOLVED occlude weight as a
 // parameter rather than reading 'label.occludeWeight' itself: 'vsOcclude'
-// resolves it beforehand by folding in an anchor-depth verdict against
+// resolves it beforehand by folding in a subject-depth verdict against
 // group(1) bindings this module must stay clear of (see vertexOcclude.wesl's
 // header for why). One definition of the corner math either way.
-fn expandLabelQuad(input: VsIn, label: LabelData, occludeWeight: f32) -> VsOut {
-  let worldEmMpc     = label.worldPos.w;
+fn expandLabelQuad(input: VsIn, label: LabelData, placed: PlacedLabel, occludeWeight: f32) -> VsOut {
   let outlineEmFrac  = label.sizing.x;
-  let minPx          = label.sizing.y;
-  let maxPx          = label.sizing.z;
   let fadeAlpha      = label.sizing.w;
 
-  let viewVec = viewOfSlabPoint(label.worldPos.xyz);
-  var anchor: ProjectedLabel = projectLabel(viewVec, uniforms.out);
-  anchor.visible = anchor.visible && viewVec.z >= uniforms.nearClipMpc;
-
-  // The em as an angle at the anchor, then px; packLabels already folded the
-  // em retune in, as the CPU twins 'labelScreenRect' and
-  // 'liftedLabelPlacement' apply it.
-  let pxPerEm = worldEmMpc / scaledLength(viewVec) * anchor.pxPerRad;
-  let displayEmPx = clamp(pxPerEm, minPx, maxPx);
-  let pxScale = displayEmPx / ATLAS_EM_PX;
+  var anchor = placed.subject;
+  anchor.px += anchor.up * placed.liftPx;
+  let pxScale = placed.displayEmPx / ATLAS_EM_PX;
 
   // Outline fringe in atlas px.  The on-screen fringe is
   // 'outlineEmFrac * displayEmPx' screen pixels, which divides by
@@ -128,5 +159,5 @@ fn expandLabelQuad(input: VsIn, label: LabelData, occludeWeight: f32) -> VsOut {
 @vertex
 fn vs(input: VsIn) -> VsOut {
   let label = labels[input.labelIndex];
-  return expandLabelQuad(input, label, label.occludeWeight);
+  return expandLabelQuad(input, label, placeLabel(label), label.occludeWeight);
 }

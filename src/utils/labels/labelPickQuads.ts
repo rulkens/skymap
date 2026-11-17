@@ -18,10 +18,8 @@ import { LABEL_PICK_GRACE_PADDING_PX } from '../../data/labels/labelPickGracePad
  * Screen rectangles for every label of `labels` that can take a click, in the
  * order they must be drawn: NEAREST SUBJECT FIRST, since every quad shares one
  * forced depth band and the depth test rejects equals, so the first instance
- * drawn owns a contested pixel. Depth is the label anchor's own `clipW` — for
- * a lifted label that's the lift's anchor, not the subject dot, which differs
- * by only a few screen px of parallax and never enough to reorder two labels
- * a user could tell apart.
+ * drawn owns a contested pixel. Depth is the subject's own `clipW`, which a
+ * lifted label shares: the lift moves the text on screen, not in depth.
  *
  * Each rect is the measured ink box (`labelScreenRect`) inflated by both the
  * grace padding and the painted outline's fringe (`includeOutline`) — a
@@ -37,7 +35,7 @@ export function labelPickQuads(args: {
   const pxPerRad = projection.output.focalPx;
   // Shared with the declutter arms (`label2DDirector`) — a label cannot be
   // decluttered against one screen position and clicked at another.
-  const projected = projectLabels(labels, projection);
+  const projected = projectLabels(labels, projection, measure);
 
   const rows: { quad: LabelPickQuad; clipW: number }[] = [];
   for (let i = 0; i < labels.length; i++) {

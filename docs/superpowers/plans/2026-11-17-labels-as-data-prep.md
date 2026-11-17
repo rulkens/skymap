@@ -114,9 +114,9 @@ fields; gains `lift?: { radiusMpc; gapPx; leader?: { lengthPx; widthPx; color } 
 producers set `lift` instead of calling `liftedLabelPlacement`. Declutter and pick use
 `liftedAnchor` (TS).
 
-- [ ] Test `a lifted label's declutter box sits where the shader draws it` (TS twin against the
+- [x] Test `a lifted label's declutter box sits where the shader draws it` (TS twin against the
       numbers Task 1 pinned).
-- [ ] Shots before/after at solar-system and local-group; label and leader pixels must match
+- [x] Shots before/after at solar-system and local-group; label and leader pixels must match
       within 1 px.
 
 ### Task 6: leaders draw in `labelRenderer`; the marker-line renderer goes

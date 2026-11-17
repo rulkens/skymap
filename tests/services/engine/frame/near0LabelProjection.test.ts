@@ -53,7 +53,7 @@ describe('near0LabelProjection', () => {
     const projection = near0LabelProjection(near0Ctx(), VIEW_RIGS.mono);
     // ~10 m ahead of the eye, a little off-axis so the comparison has signal.
     const anchor: Vec3 = [10 * M, 1 * M, 2 * M];
-    const [projected] = projectLabels([{ worldPos: anchor } as Label2D], projection);
+    const [projected] = projectLabels([{ worldPos: anchor } as Label2D], projection, () => null);
     const ref: ForwardProjectedPoint = {
       clipX: 0,
       clipY: 0,

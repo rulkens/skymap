@@ -185,6 +185,7 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
       projectLabels(
         [{ ...caption, worldPos: camRelAnchor }],
         near0LabelProjection(ctx, VIEW_RIGS.mono),
+        () => null,
       )[0]!.screenPx!,
     ),
   };

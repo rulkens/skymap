@@ -13,16 +13,25 @@ import {
   LABEL_WORLD_EM_MPC_DEFAULT,
 } from '../../../../data/labels/labelSizingDefaults';
 import { textLayoutOf } from '../../labelLayout/textLayoutOf';
-import { GLYPH_INSTANCE_BYTES, LABEL_DATA_BYTES } from '../../../../data/labels/labelBufferStrides';
+import {
+  GLYPH_INSTANCE_BYTES,
+  LABEL_DATA_BYTES,
+  LABEL_DATA_OFFSETS as AT,
+} from '../../../../data/labels/labelBufferStrides';
+import { LABEL_LIFT } from '../../../../data/labels/labelLift';
+import { packRgba8Unorm } from '../../../../utils/color/packRgba8Unorm';
+
+const WHITE = [1, 1, 1, 1] as const;
 
 /** Returns the glyph count written; glyphs past `maxGlyphs` are dropped. */
 export function packLabels(args: PackLabelsArgs): number {
-  const { labels, metricsByFont, layerIndexOf, labelF32, glyphF32, glyphU32, maxGlyphs } = args;
+  const { labels, metricsByFont, layerIndexOf, labelF32, labelU32, glyphF32, glyphU32, maxGlyphs } =
+    args;
   let glyphCount = 0;
 
   for (let li = 0; li < labels.length; li++) {
     const label = labels[li]!;
-    const quads = textLayoutOf(metricsByFont, label).quads;
+    const { quads, bbox } = textLayoutOf(metricsByFont, label);
 
     // Write the per-label storage record unconditionally — even when
     // `quads` is empty.  Keeping the per-label index stable
@@ -33,50 +42,57 @@ export function packLabels(args: PackLabelsArgs): number {
     // references it, the GPU never reads it).
     // Slot layout: see the byte table in labelBufferStrides.ts.
     const labelBase = li * (LABEL_DATA_BYTES / 4);
-    labelF32[labelBase + 0] = label.worldPos[0];
-    labelF32[labelBase + 1] = label.worldPos[1];
-    labelF32[labelBase + 2] = label.worldPos[2];
+    labelF32[labelBase + AT.worldPos / 4 + 0] = label.worldPos[0];
+    labelF32[labelBase + AT.worldPos / 4 + 1] = label.worldPos[1];
+    labelF32[labelBase + AT.worldPos / 4 + 2] = label.worldPos[2];
     // The retune rides the em here so the shader holds no copy of it.
-    labelF32[labelBase + 3] = (label.worldEmMpc ?? LABEL_WORLD_EM_MPC_DEFAULT) * LABEL_EM_PX_RETUNE;
+    labelF32[labelBase + AT.worldPos / 4 + 3] =
+      (label.worldEmMpc ?? LABEL_WORLD_EM_MPC_DEFAULT) * LABEL_EM_PX_RETUNE;
 
     // Public colour API is STRAIGHT RGBA — producers write the natural
     // form (`[1, 0, 0, 0.5]` is "half-transparent red"); the fragment
     // shader composites in premultiplied space, so we multiply r/g/b
     // by a here on the write boundary.
-    const color = label.color ?? [1, 1, 1, 1];
+    const color = label.color ?? WHITE;
     const ca = color[3]!;
-    labelF32[labelBase + 4] = color[0]! * ca;
-    labelF32[labelBase + 5] = color[1]! * ca;
-    labelF32[labelBase + 6] = color[2]! * ca;
-    labelF32[labelBase + 7] = ca;
+    labelF32[labelBase + AT.color / 4 + 0] = color[0]! * ca;
+    labelF32[labelBase + AT.color / 4 + 1] = color[1]! * ca;
+    labelF32[labelBase + AT.color / 4 + 2] = color[2]! * ca;
+    labelF32[labelBase + AT.color / 4 + 3] = ca;
 
-    labelF32[labelBase + 8] = label.outlineEmFrac ?? 0;
-    labelF32[labelBase + 9] = label.minPixelSize ?? LABEL_MIN_PX_DEFAULT;
-    labelF32[labelBase + 10] = label.maxPixelSize ?? LABEL_MAX_PX_DEFAULT;
-    labelF32[labelBase + 11] = label.fadeAlpha ?? 1;
+    labelF32[labelBase + AT.sizing / 4 + 0] = label.outlineEmFrac ?? 0;
+    labelF32[labelBase + AT.sizing / 4 + 1] = label.minPixelSize ?? LABEL_MIN_PX_DEFAULT;
+    labelF32[labelBase + AT.sizing / 4 + 2] = label.maxPixelSize ?? LABEL_MAX_PX_DEFAULT;
+    labelF32[labelBase + AT.sizing / 4 + 3] = label.fadeAlpha ?? 1;
 
     // outline colour — same straight → premultiplied conversion as fill.
     // Default [0,0,0,0] makes outlineEmFrac irrelevant (band alpha is 0).
     const outlineColor = label.outlineColor ?? [0, 0, 0, 0];
     const oa = outlineColor[3]!;
-    labelF32[labelBase + 12] = outlineColor[0]! * oa;
-    labelF32[labelBase + 13] = outlineColor[1]! * oa;
-    labelF32[labelBase + 14] = outlineColor[2]! * oa;
-    labelF32[labelBase + 15] = oa;
+    labelF32[labelBase + AT.outlineColor / 4 + 0] = outlineColor[0]! * oa;
+    labelF32[labelBase + AT.outlineColor / 4 + 1] = outlineColor[1]! * oa;
+    labelF32[labelBase + AT.outlineColor / 4 + 2] = outlineColor[2]! * oa;
+    labelF32[labelBase + AT.outlineColor / 4 + 3] = oa;
 
     // Default 1 = the per-pixel rule.
-    labelF32[labelBase + 16] = label.occludeWeight ?? 1;
+    labelF32[labelBase + AT.occludeWeight / 4] = label.occludeWeight ?? 1;
     // Default 0 leaves the sampled-depth channel inert: no scene texel is
     // nearer than the eye, and at weight 1 the `max` already saturates.
-    labelF32[labelBase + 17] = label.occludeNearKm ?? 0;
+    labelF32[labelBase + AT.occludeNearKm / 4] = label.occludeNearKm ?? 0;
 
-    // Falls back to worldPos when unset (every label the director never
-    // lifts, where the two already coincide) — see Label2D.occludeSubjectPos.
-    const subjectPos = label.occludeSubjectPos ?? label.worldPos;
-    labelF32[labelBase + 20] = subjectPos[0];
-    labelF32[labelBase + 21] = subjectPos[1];
-    labelF32[labelBase + 22] = subjectPos[2];
-    labelF32[labelBase + 23] = 0; // w unused
+    // The lift: every word is written, so a recycled slot keeps no stale leader.
+    const lift = label.lift;
+    const leader = lift?.leader;
+    labelU32[labelBase + AT.leaderRgba / 4] = packRgba8Unorm(leader?.color ?? color);
+    labelF32[labelBase + AT.inkBottom / 4] = bbox?.maxY ?? 0;
+    labelF32[labelBase + AT.radiusMpc / 4] = lift?.radiusMpc ?? 0;
+    labelF32[labelBase + AT.leaderGapPx / 4] = leader?.gapPx ?? 0;
+    labelU32[labelBase + AT.lift / 4] = !lift
+      ? LABEL_LIFT.none
+      : leader?.base === 'rim'
+        ? LABEL_LIFT.leaderFromRim
+        : LABEL_LIFT.leaderFromCentre;
+    labelF32[labelBase + AT.leaderWidthPx / 4] = leader?.widthPx ?? 0;
 
     const fontIndex = layerIndexOf[label.font];
 

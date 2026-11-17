@@ -11,7 +11,6 @@ import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CAPTION_PRIORITY_SCALE } from '../../../../src/data/labels/captionPriorityScale';
 import type { Label2DProducer } from '../../../../src/@types/engine/subsystems/Label2DProducer';
 import type { Label2D } from '../../../../src/@types/rendering/Label2D';
-import type { Label2DLeader } from '../../../../src/@types/rendering/Label2DLeader';
 import type { Label2DDirectorConfig } from '../../../../src/@types/engine/subsystems/Label2DDirectorConfig';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
@@ -132,17 +131,13 @@ const SAMPLE_LABEL: Label2D = {
   font: 'cormorant',
   pixelSize: 10,
 };
-const SAMPLE_LEADER: Label2DLeader = {
-  fromWorld: [0, 0, 0],
-  toWorld: [1, 0, 0],
-  pixelWidth: 1,
-  color: [1, 1, 1, 1],
-};
+// A scene-body caption's leader (`composeForegroundCaption`).
+const RIM_LEADER = { widthPx: 2.5, base: 'rim', gapPx: 4 } as const;
 
 describe('label2DDirector', () => {
   it('no-ops when renderers are not attached', () => {
     const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR, VIEW_RIGS.mono);
-    dir.registerProducer(makeProducer('p', [{ ...SAMPLE_LABEL, leader: SAMPLE_LEADER }]));
+    dir.registerProducer(makeProducer('p', [SAMPLE_LABEL]));
     expect(() => dir.runFrame(makeState(), makeCtx())).not.toThrow();
   });
 
@@ -205,7 +200,7 @@ describe('label2DDirector', () => {
     const labelStub = makeLabelStub();
     const lineStub = makeLineStub();
     dir.attachRenderers(labelStub as never, lineStub as never, defaultMeasure);
-    dir.registerProducer(makeProducer('p', [{ ...SAMPLE_LABEL, leader: SAMPLE_LEADER }]));
+    dir.registerProducer(makeProducer('p', [SAMPLE_LABEL]));
 
     // The envelope animates alpha during the first 300 ms, so flushes
     // legitimately repeat while ramping; the signature skip is asserted
@@ -214,7 +209,6 @@ describe('label2DDirector', () => {
     dir.runFrame(makeState(), makeCtx(300)); // settled at alpha 1
     dir.runFrame(makeState(), makeCtx(600)); // identical settled set → skip
     expect(labelStub.setLabels).toHaveBeenCalledTimes(2);
-    expect(lineStub.setLines).toHaveBeenCalledTimes(2);
   });
 
   it('reports the vote when any producer is awake', () => {
@@ -228,12 +222,10 @@ describe('label2DDirector', () => {
   });
 
   it('re-uploads when a label fadeAlpha changes (smooth fade transitions)', () => {
-    // Regression test for the youAreHere fade band: the marker line
-    // synthesizes from the label's own fadeAlpha, so a producer that flips
-    // fadeAlpha at a fixed id must re-upload both. If the signature only
-    // watched id+count, the GPU instance buffer would stay stuck at the
-    // first-frame fadeAlpha and the marker would appear at the wrong
-    // opacity.
+    // Regression test for the youAreHere fade band: a producer that flips
+    // fadeAlpha at a fixed id must re-upload. If the signature only watched
+    // id+count, the GPU buffer would stay stuck at the first-frame fadeAlpha
+    // and the label and its leader would draw at the wrong opacity.
     const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR, VIEW_RIGS.mono);
     const labelStub = makeLabelStub();
     const lineStub = makeLineStub();
@@ -245,7 +237,7 @@ describe('label2DDirector', () => {
     const producer: Label2DProducer = {
       id: 'p',
       produceLabels: () => ({
-        labels: [{ ...SAMPLE_LABEL, leader: SAMPLE_LEADER, fadeAlpha: alpha }],
+        labels: [{ ...SAMPLE_LABEL, fadeAlpha: alpha }],
         awake: alpha > 0 && alpha < 1,
       }),
     };
@@ -253,22 +245,18 @@ describe('label2DDirector', () => {
 
     dir.runFrame(makeState(), makeCtx(0)); // envelope 0 × 0.3 = 0
     expect(labelStub.setLabels).toHaveBeenCalledTimes(1);
-    expect(lineStub.setLines).toHaveBeenCalledTimes(1);
 
     dir.runFrame(makeState(), makeCtx(300)); // envelope settled → 0.3
     expect(labelStub.setLabels).toHaveBeenCalledTimes(2);
-    expect(lineStub.setLines).toHaveBeenCalledTimes(2);
 
     alpha = 0.7;
     dir.runFrame(makeState(), makeCtx(400)); // producer alpha change → 0.7
     expect(labelStub.setLabels).toHaveBeenCalledTimes(3);
-    expect(lineStub.setLines).toHaveBeenCalledTimes(3);
 
     // Settling at the same fadeAlpha should NOT re-upload — the
     // signature optimization still skips identical frames.
     dir.runFrame(makeState(), makeCtx(500));
     expect(labelStub.setLabels).toHaveBeenCalledTimes(3);
-    expect(lineStub.setLines).toHaveBeenCalledTimes(3);
   });
 
   it('re-uploads when a label colour changes at fixed id (hover highlight)', () => {
@@ -348,19 +336,6 @@ describe('label2DDirector', () => {
       expect(flushed.find((l) => l.id === 'c')!.color).toBeUndefined();
     });
 
-    it('the leader follows the label colour on the lifting (NEAR0) config', () => {
-      const lifted: Label2D = { ...BASE, lift: { subjectSizePx: 10 } };
-      const { flushed } = flushWith(
-        FOREGROUND_LABEL_DIRECTOR,
-        makeNear0Ctx(0),
-        makeHighlightState(null, 'earth'),
-        [lifted],
-      );
-      expect(flushed.leader).toBeDefined();
-      expect(flushed.leader!.color).toEqual(flushed.color);
-      expect(flushed.color![0]).toBeGreaterThan(0.9);
-    });
-
     it('re-uploads when only the hover changes at a fixed label set', () => {
       const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR, VIEW_RIGS.mono);
       const labelStub = makeLabelStub();
@@ -397,58 +372,30 @@ describe('label2DDirector', () => {
     expect(labelStub.setLabels).toHaveBeenCalledTimes(settled + 1);
   });
 
-  it("re-flushes when a leader's toWorld moves at fixed id and alpha", () => {
-    // Pins the fold's landmine: signatureOf's separate line term collapsed
-    // onto the label term, but must still key the leader's `toWorld` — the
-    // camera-derived leader endpoint (`labelLeaderLine`) moves every frame
-    // the camera does while the label's id, worldPos, and fadeAlpha stay
-    // constant. Without this term the connector would freeze at whatever
-    // geometry was uploaded the first visible frame.
+  it('re-uploads when the text ceiling changes at a fixed id (the famous distance ramp)', () => {
     const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR, VIEW_RIGS.mono);
     const labelStub = makeLabelStub();
-    const lineStub = makeLineStub();
-    dir.attachRenderers(labelStub as never, lineStub as never, defaultMeasure);
+    dir.attachRenderers(labelStub as never, makeLineStub() as never, defaultMeasure);
 
-    let tipY = 0.5;
-    const producer: Label2DProducer = {
+    let maxPixelSize = 150;
+    dir.registerProducer({
       id: 'p',
-      produceLabels: () => ({
-        labels: [{ ...SAMPLE_LABEL, leader: { ...SAMPLE_LEADER, toWorld: [0, tipY, 0] } }],
-        awake: false,
-      }),
-    };
-    dir.registerProducer(producer);
-
+      produceLabels: () => ({ labels: [{ ...SAMPLE_LABEL, maxPixelSize }], awake: false }),
+    });
     dir.runFrame(makeState(), makeCtx(0));
-    dir.runFrame(makeState(), makeCtx(300)); // settle
-    const settledCalls = lineStub.setLines.mock.calls.length;
+    dir.runFrame(makeState(), makeCtx(300));
+    dir.runFrame(makeState(), makeCtx(400));
+    const settled = labelStub.setLabels.mock.calls.length;
 
-    dir.runFrame(makeState(), makeCtx(600)); // identical endpoints → skip
-    expect(lineStub.setLines.mock.calls.length).toBe(settledCalls);
-
-    tipY = 0.6; // camera moved: the leader's tip lands elsewhere in world space
-    dir.runFrame(makeState(), makeCtx(900));
-    expect(lineStub.setLines.mock.calls.length).toBe(settledCalls + 1);
-    expect(lineStub.setLines).toHaveBeenLastCalledWith([
-      {
-        id: 'sample-label-anchor',
-        fromWorld: SAMPLE_LEADER.fromWorld,
-        toWorld: [0, 0.6, 0],
-        pixelWidth: SAMPLE_LEADER.pixelWidth,
-        color: SAMPLE_LEADER.color,
-        fadeAlpha: 1,
-      },
-    ]);
+    maxPixelSize = 120; // the camera drew back: the row moves no more, so this must key it
+    dir.runFrame(makeState(), makeCtx(500));
+    expect(labelStub.setLabels).toHaveBeenCalledTimes(settled + 1);
   });
 
-  it('re-uploads a label when its lifted anchor moves while it carries no leader', () => {
-    // Regression test for the suppressed-line gap: labels are placed by a
-    // screen-space lift (`liftedLabelPlacement`), so a lifted label's anchor
-    // is camera-derived and moves each frame while id and fadeAlpha stay
-    // constant. When the lift SUPPRESSES the leader (height ≤ 0) and no
-    // leader endpoint moves, nothing but the label's own `worldPos` keys
-    // the motion — without it in the signature the anchor would freeze and
-    // reproject/drift over the glyphs under orbit.
+  it('re-uploads a label when its anchor moves at a fixed id', () => {
+    // NEAR0 anchors are camera-relative and bodies move, while id and
+    // fadeAlpha stay constant: without `worldPos` in the signature the
+    // uploaded anchor would freeze and the text drift off its subject.
     const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR, VIEW_RIGS.mono);
     const labelStub = makeLabelStub();
     const lineStub = makeLineStub();
@@ -458,7 +405,7 @@ describe('label2DDirector', () => {
     const producer: Label2DProducer = {
       id: 'p',
       produceLabels: () => ({
-        labels: [{ ...SAMPLE_LABEL, worldPos: [0, anchorY, 0] }], // no leader — suppressed
+        labels: [{ ...SAMPLE_LABEL, worldPos: [0, anchorY, 0] }],
         awake: false,
       }),
     };
@@ -471,7 +418,7 @@ describe('label2DDirector', () => {
     dir.runFrame(makeState(), makeCtx(600)); // identical settled anchor → skip
     expect(labelStub.setLabels.mock.calls.length).toBe(settledCalls);
 
-    anchorY = 0.3; // camera moved: the lifted anchor lands elsewhere in world space
+    anchorY = 0.3; // the subject moved
     dir.runFrame(makeState(), makeCtx(900));
     expect(labelStub.setLabels.mock.calls.length).toBe(settledCalls + 1);
     expect(labelStub.setLabels).toHaveBeenLastCalledWith([
@@ -510,44 +457,6 @@ describe('label2DDirector', () => {
     dir.runFrame(makeState(), makeCtx(0));
     dir.runFrame(makeState(), makeCtx(300));
     expect(labelStub.setLabels).toHaveBeenLastCalledWith([big]);
-  });
-
-  it("drops a culled label's leader with it", () => {
-    // A culled label takes its leader with it BY CONSTRUCTION now that the
-    // leader lives on the label object — declutter no longer needs a
-    // separate line-filter pass.
-    const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR, VIEW_RIGS.mono);
-    const labelStub = makeLabelStub();
-    const lineStub = makeLineStub();
-    dir.attachRenderers(labelStub as never, lineStub as never, defaultMeasure);
-
-    const big: Label2D = {
-      ...SAMPLE_LABEL,
-      id: 'big',
-      declutterPriority: 100,
-      leader: SAMPLE_LEADER,
-    };
-    const small: Label2D = {
-      ...SAMPLE_LABEL,
-      id: 'small',
-      declutterPriority: 10,
-      leader: SAMPLE_LEADER,
-    };
-    dir.registerProducer(makeProducer('pbig', [big]));
-    dir.registerProducer(makeProducer('psmall', [small]));
-
-    dir.runFrame(makeState(), makeCtx(0));
-    dir.runFrame(makeState(), makeCtx(300));
-    expect(lineStub.setLines).toHaveBeenLastCalledWith([
-      {
-        id: 'big-anchor',
-        fromWorld: SAMPLE_LEADER.fromWorld,
-        toWorld: SAMPLE_LEADER.toWorld,
-        pixelWidth: SAMPLE_LEADER.pixelWidth,
-        color: SAMPLE_LEADER.color,
-        fadeAlpha: 1,
-      },
-    ]);
   });
 
   describe('rect-based declutter geometry', () => {
@@ -691,71 +600,6 @@ describe('label2DDirector', () => {
       expect(flushes[0]![0]!.fadeAlpha).toBe(0); // 0.5 × 0
       expect(flushes[1]![0]!.fadeAlpha).toBe(0.25); // 0.5 × 0.5
       expect(flushes[2]![0]!.fadeAlpha).toBe(0.5); // 0.5 × 1 — producer value survives
-    });
-
-    it("flushes a leader as a MarkerLine id'd `${label.id}-anchor` at the label's post-envelope alpha", () => {
-      // Also covers the fade-out tail: the remembered label carries its
-      // leader along, so the synthesized line fades out in lock-step
-      // without any separate "owned lines" bookkeeping.
-      const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR, VIEW_RIGS.mono);
-      const labelStub = makeLabelStub();
-      const lineStub = makeLineStub();
-      dir.attachRenderers(labelStub as never, lineStub as never, defaultMeasure);
-
-      // fadeAlpha: 0.8 so the flushed line's alpha (envelope × producer) is
-      // distinguishable from either factor alone.
-      const owner: Label2D = {
-        ...SAMPLE_LABEL,
-        id: 'owner',
-        leader: SAMPLE_LEADER,
-        fadeAlpha: 0.8,
-      };
-      let out: { labels: Label2D[] } = { labels: [owner] };
-      dir.registerProducer({ id: 'p', produceLabels: () => ({ ...out, awake: false }) });
-
-      dir.runFrame(makeState(), makeCtx(0));
-      dir.runFrame(makeState(), makeCtx(150)); // fade-in midpoint: envelope 0.5 × producer 0.8
-      expect(lineStub.setLines).toHaveBeenLastCalledWith([
-        {
-          id: 'owner-anchor',
-          fromWorld: SAMPLE_LEADER.fromWorld,
-          toWorld: SAMPLE_LEADER.toWorld,
-          pixelWidth: SAMPLE_LEADER.pixelWidth,
-          color: SAMPLE_LEADER.color,
-          fadeAlpha: 0.4,
-        },
-      ]);
-
-      dir.runFrame(makeState(), makeCtx(300)); // settled — envelope 1 × producer 0.8
-      expect(lineStub.setLines).toHaveBeenLastCalledWith([
-        {
-          id: 'owner-anchor',
-          fromWorld: SAMPLE_LEADER.fromWorld,
-          toWorld: SAMPLE_LEADER.toWorld,
-          pixelWidth: SAMPLE_LEADER.pixelWidth,
-          color: SAMPLE_LEADER.color,
-          fadeAlpha: 0.8,
-        },
-      ]);
-
-      out = { labels: [] }; // label disappears — the fade-out tail takes over
-      dir.runFrame(makeState(), makeCtx(450)); // tail begins from alpha 1
-      dir.runFrame(makeState(), makeCtx(600)); // halfway out — remembered leader re-emitted
-      expect(lineStub.setLines).toHaveBeenLastCalledWith([
-        {
-          id: 'owner-anchor',
-          fromWorld: SAMPLE_LEADER.fromWorld,
-          toWorld: SAMPLE_LEADER.toWorld,
-          pixelWidth: SAMPLE_LEADER.pixelWidth,
-          color: SAMPLE_LEADER.color,
-          fadeAlpha: 0.4,
-        },
-      ]);
-      expect(labelStub.setLabels).toHaveBeenLastCalledWith([{ ...owner, fadeAlpha: 0.4 }]);
-
-      dir.runFrame(makeState(), makeCtx(750)); // tail complete → label and line drop together
-      expect(labelStub.setLabels).toHaveBeenLastCalledWith([]);
-      expect(lineStub.setLines).toHaveBeenLastCalledWith([]);
     });
 
     it('keeps the loop awake while any envelope ramps, and goes quiet once settled', () => {
@@ -1071,7 +915,8 @@ describe('label2DDirector', () => {
         id: 'mars',
         declutterPriority: 20 * CAPTION_PRIORITY_SCALE,
         fadeAlpha: 1,
-        lift: { subjectSizePx: 400, lineBottomLiftPx: 204 },
+        // 400 px across at the centre's unit depth.
+        lift: { radiusMpc: 200 / makeNear0Ctx().drawPxPerRad, leader: RIM_LEADER },
       };
       const rover: Label2D = {
         ...SAMPLE_LABEL,
@@ -1079,7 +924,7 @@ describe('label2DDirector', () => {
         worldPos: [0, -0.002, 0],
         declutterPriority: 12 * CAPTION_PRIORITY_SCALE,
         fadeAlpha: 1,
-        lift: { subjectSizePx: 0, lineBottomLiftPx: 4 },
+        lift: { radiusMpc: 0, leader: RIM_LEADER },
       };
       dir.registerProducer(makeProducer('p', [planet, rover]));
 
@@ -1120,6 +965,7 @@ describe('label2DDirector', () => {
       const config: Label2DDirectorConfig = {
         project: identityLabelProjection,
         declutterPadPx: 8,
+        declutterLift: 'drawn',
         envelope: { mode: 'smoothstepRamp', durationMs: 300 },
         lift: null,
       };
@@ -1143,53 +989,6 @@ describe('label2DDirector', () => {
       expect(labelStub.setLabels).toHaveBeenLastCalledWith([]);
     });
 
-    it('the lift stage runs after the envelope, over survivors only', () => {
-      const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR, VIEW_RIGS.mono);
-      const labelStub = makeLabelStub();
-      const measure = vi.fn(defaultMeasure);
-      const lineStub = makeLineStub();
-      dir.attachRenderers(labelStub as never, lineStub as never, measure);
-
-      // Same world point — declutter culls one. Both carry `lift`, so if the
-      // lift stage ran over the PRE-declutter set, `measure` would be called
-      // for both a second time.
-      const big: Label2D = {
-        ...SAMPLE_LABEL,
-        id: 'big',
-        declutterPriority: 100,
-        fadeAlpha: 1,
-        lift: { subjectSizePx: 10 },
-      };
-      const small: Label2D = {
-        ...SAMPLE_LABEL,
-        id: 'small',
-        declutterPriority: 10,
-        fadeAlpha: 1,
-        lift: { subjectSizePx: 10 },
-      };
-      // A THIRD label, at a screen position far from the other two (so
-      // declutter never even considers it), whose producer target is 0.
-      // `fadeAlpha: 1` everywhere else makes lift-before-envelope
-      // indistinguishable from lift-after-envelope — this one only fails if
-      // the lift runs before the `alpha > 0` skip drops it.
-      const zeroTarget: Label2D = {
-        ...SAMPLE_LABEL,
-        id: 'zero',
-        worldPos: [0.9, 0.9, 0],
-        fadeAlpha: 0,
-        lift: { subjectSizePx: 10 },
-      };
-      dir.registerProducer(makeProducer('p', [big, small, zeroTarget]));
-
-      dir.runFrame(makeState(), makeNear0Ctx(0));
-
-      // Declutter measures each visible label once; the lift measures only
-      // its survivors. So `big` twice, `small` once (culled), `zero` never
-      // (zero alpha skips the declutter and the envelope drops it).
-      const callsFor = (l: Label2D) => measure.mock.calls.filter(([arg]) => arg === l).length;
-      expect([big, small, zeroTarget].map(callsFor)).toEqual([2, 1, 0]);
-    });
-
     it('a label without a lift field is emitted unlifted (the constellation-shaped case, by data absence)', () => {
       const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR, VIEW_RIGS.mono);
       const labelStub = makeLabelStub();
@@ -1204,7 +1003,7 @@ describe('label2DDirector', () => {
 
       dir.runFrame(makeState(), makeNear0Ctx(0));
 
-      // Once, by the declutter; an unlifted label never reaches the lift's measure.
+      // Once, by the declutter.
       expect(measure).toHaveBeenCalledTimes(1);
       expect(labelStub.setLabels).toHaveBeenLastCalledWith([constellationLike]);
     });

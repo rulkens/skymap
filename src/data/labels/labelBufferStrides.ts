@@ -1,23 +1,40 @@
 /**
- * Per-label storage buffer stride, matching `struct LabelData` in io.wesl:
+ * Per-label storage buffer layout, matching `struct LabelData` in io.wesl
+ * (`labelData.parity` holds the two equal):
  *
- *   bytes  0..15  worldPos      vec4<f32>  — xyz = world Mpc, w = worldEmMpc × LABEL_EM_PX_RETUNE
+ *   bytes  0..15  worldPos      vec4<f32>  — xyz = the subject, world Mpc; w = worldEmMpc × LABEL_EM_PX_RETUNE
  *   bytes 16..31  color         vec4<f32>  — premultiplied rgba (fill)
  *   bytes 32..47  sizing        vec4<f32>  — outlineEmFrac, minPx, maxPx, fadeAlpha
  *   bytes 48..63  outlineColor  vec4<f32>  — premultiplied rgba (outline stroke)
  *   bytes 64..67  occludeWeight f32        — share of the scene attenuation
  *   bytes 68..71  occludeNearKm f32        — the sampled-depth channel's cutoff
- *   bytes 80..95  subjectPos    vec4<f32>  — xyz = the depth verdict's own
- *                                             world point (falls back to
- *                                             worldPos), w unused
+ *   bytes 72..75  leaderRgba    u32        — the leader's colour, rgba8 (`pack4x8unorm`)
+ *   bytes 76..79  inkBottom     f32        — the text's ink bottom below its anchor, atlas px
+ *   bytes 80..83  radiusMpc     f32        — the subject's radius (sets the lift)
+ *   bytes 84..87  leaderGapPx   f32        — the leader's start above its base
+ *   bytes 88..91  lift          u32        — `LABEL_LIFT`: none, or where the leader starts
+ *   bytes 92..95  leaderWidthPx f32        — 0 = no leader
  *
- * The trailing vec4 needs 16-byte alignment, so bytes 72..79 are now genuine
- * padding ahead of it (not slack) and the stride is 96, not 72 rounded up.
  * `sizing.x` repurposes the legacy `pixelSize` slot (ignored by the shader
- * since the worldEmMpc migration) to carry `outlineEmFrac`, sparing a fresh
- * vec4 for one scalar.
+ * since the worldEmMpc migration) to carry `outlineEmFrac`.
  */
 export const LABEL_DATA_BYTES = 96;
+
+/** Byte offsets of the fields `packLabels` writes one by one. */
+export const LABEL_DATA_OFFSETS = {
+  worldPos: 0,
+  color: 16,
+  sizing: 32,
+  outlineColor: 48,
+  occludeWeight: 64,
+  occludeNearKm: 68,
+  leaderRgba: 72,
+  inkBottom: 76,
+  radiusMpc: 80,
+  leaderGapPx: 84,
+  lift: 88,
+  leaderWidthPx: 92,
+} as const;
 
 /**
  * Per-glyph instance buffer stride, matching `VsIn` attributes 1–5 in io.wesl:

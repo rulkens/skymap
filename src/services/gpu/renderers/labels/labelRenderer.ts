@@ -169,7 +169,8 @@ export function createLabelRenderer(
   let glyphBuf = new ArrayBuffer(0);
   let glyphF32 = new Float32Array(glyphBuf);
   let glyphU32 = new Uint32Array(glyphBuf);
-  let labelBuf = new Float32Array(0);
+  let labelF32 = new Float32Array(0);
+  let labelU32 = new Uint32Array(0);
 
   // Glyphs packed by the last `setLabels`; `draw` instances exactly this many.
   let currentGlyphCount = 0;
@@ -205,7 +206,9 @@ export function createLabelRenderer(
     glyphBuf = new ArrayBuffer(maxGlyphs * GLYPH_INSTANCE_BYTES);
     glyphF32 = new Float32Array(glyphBuf);
     glyphU32 = new Uint32Array(glyphBuf);
-    labelBuf = new Float32Array((capacity * LABEL_DATA_BYTES) / 4);
+    const labelBuf = new ArrayBuffer(capacity * LABEL_DATA_BYTES);
+    labelF32 = new Float32Array(labelBuf);
+    labelU32 = new Uint32Array(labelBuf);
 
     // WebGPU defers a destroyed buffer's reclaim past queued GPU work reading it.
     storageBuffer?.destroy();
@@ -447,7 +450,8 @@ export function createLabelRenderer(
       labels,
       metricsByFont,
       layerIndexOf,
-      labelF32: labelBuf,
+      labelF32,
+      labelU32,
       glyphF32,
       glyphU32,
       maxGlyphs,
@@ -457,7 +461,7 @@ export function createLabelRenderer(
       device.queue.writeBuffer(
         storageBuffer,
         0,
-        labelBuf,
+        labelF32,
         0,
         (labels.length * LABEL_DATA_BYTES) / 4,
       );

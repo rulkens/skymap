@@ -25,6 +25,7 @@ const CAPTION_ENVELOPE_SETTLE_EPS = 0.005;
 export const FOREGROUND_LABEL_DIRECTOR: Label2DDirectorConfig = {
   project: near0LabelProjection,
   declutterPadPx: 8,
+  declutterLift: 'proposed',
   envelope: {
     mode: 'exponentialApproach',
     tauMs: CAPTION_ENVELOPE_TAU_MS,

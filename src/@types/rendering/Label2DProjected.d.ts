@@ -1,7 +1,7 @@
 import type { Vec2 } from '../math/Vec2';
 
 /**
- * One label's screen-space anchor, resolved ONCE per frame by `projectLabels`
+ * One label's screen-space anchor (lifted, for a `lift`ed label), resolved ONCE per frame by `projectLabels`
  * and shared by every consumer that needs a label's screen position — the
  * COSMO/NEAR0 declutter arms (`label2DDirector`) and the pick-quad emitter
  * (`labelPickQuads`) — so a label can't decide screen position one way for
@@ -13,4 +13,6 @@ export type Label2DProjected = {
   readonly screenPx: Vec2 | null;
   readonly clipW: number;
   readonly onScreen: boolean;
+  /** A lifted label's subject's apparent diameter, px; 0 when unlifted. */
+  readonly subjectSizePx: number;
 };

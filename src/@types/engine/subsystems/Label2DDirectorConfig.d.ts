@@ -16,6 +16,13 @@ export type Label2DDirectorConfig = {
   readonly project: (ctx: FrameView, rig: ViewRig) => Label2DProjection;
   /** Screen px of gap two kept captions' measured text rects must clear. */
   readonly declutterPadPx: number;
+  /**
+   * Where declutter judges a lifted label: where its text is drawn (COSMO), or
+   * at its subject plus `proposedLiftPx` (NEAR0), the rule from when NEAR0
+   * lifted after declutter. Kept so moving the lift to the GPU changes no
+   * kept label; the label-sources work judges every label where it is drawn.
+   */
+  readonly declutterLift: 'drawn' | 'proposed';
   readonly envelope: Label2DEnvelopePolicy;
   /** `null` STATES the stance — not optional, so a third instance must decide. */
   readonly lift: Label2DLiftPolicy | null;

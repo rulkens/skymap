@@ -21,7 +21,6 @@ import type { Vec4 } from '../math/Vec4';
 import type { LabelAlignX } from './LabelAlignX';
 import type { LabelAlignY } from './LabelAlignY';
 import type { FontId } from '../data/FontId';
-import type { Label2DLeader } from './Label2DLeader';
 import type { Label2DLift } from './Label2DLift';
 
 export type Label2D = {
@@ -102,23 +101,12 @@ export type Label2D = {
    * Eye to the subject's NEAR surface (centre distance minus its radius), in
    * km: the cutoff of the SECOND occluder channel, which reads the sampled
    * scene depth and so sees the terrain the body spheres stop short of. The
-   * shader takes whichever channel fires. Judged once, at `occludeSubjectPos`
-   * (falling back to `worldPos`) in the vertex stage — not per rendered text
-   * pixel — so a caption hides whole instead of half-cut. Default 0 leaves it
+   * shader takes whichever channel fires. Judged once, at `worldPos` (the
+   * subject, even for a lifted caption) in the vertex stage — not per rendered
+   * text pixel — so a caption hides whole instead of half-cut. Default 0 leaves it
    * inert — right for every producer whose `occludeWeight` is already 1.
    */
   readonly occludeNearKm?: number;
-  /**
-   * World position the sampled-depth channel judges instead of `worldPos`,
-   * when set. A LIFTED caption's own `worldPos` sits screen-up from its
-   * subject (`label2DDirector`'s `applyLift`, unprojected at the lift target)
-   * — over terrain that reads nearer OR farther than the subject's own
-   * ground, which is the wrong question to ask. `applyLift` sets this to the
-   * pre-lift anchor (the same point its leader line's `fromWorld` end lerps
-   * from) for every label it lifts; an unlifted label leaves it undefined and
-   * the shader falls back to `worldPos`, where the two already coincide.
-   */
-  readonly occludeSubjectPos?: Vec3;
   /**
    * Horizontal alignment of the text relative to `worldPos`.
    * Default 'left' (text extends rightward from the anchor).
@@ -144,17 +132,7 @@ export type Label2D = {
    * the director's cross-producer declutter.  Absent → treated as 0 (lowest).
    */
   readonly declutterPriority?: number;
-  /**
-   * Optional anchor line, drawn from the subject dot up to this label. The
-   * director synthesizes one `MarkerLine` per surviving leader-carrying
-   * label at flush time (id `` `${label.id}-anchor` ``) — producers never
-   * push a separate line.
-   */
-  readonly leader?: Label2DLeader;
-  /**
-   * Optional proportional-lift parameters, read by `label2DDirector`'s lift
-   * stage (`config.lift`) when present.
-   */
+  /** Lifts the text off its subject at `worldPos`, with an optional leader line. */
   readonly lift?: Label2DLift;
   /**
    * The subject's fully-packed pick id — `packSelection(sourceCode, localIdx +

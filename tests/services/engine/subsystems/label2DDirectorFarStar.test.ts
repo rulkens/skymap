@@ -250,7 +250,7 @@ describe('label2DDirector — far-star caption/leader stability at Earth zoom', 
     expect(fromJump, `leader fromWorld jumped ${fromJump}`).toBeLessThan(EPS);
   });
 
-  it('bounds the lifted caption + leader endpoints inside the NEAR0 far plane', () => {
+  it('bounds the leader endpoints inside the NEAR0 far plane', () => {
     const star = farVisibleStar();
     const eye: Vec3 = [...EARTH_POS] as Vec3;
     const slab = makeRealNear0Slab(eye, star.worldPos);
@@ -272,9 +272,9 @@ describe('label2DDirector — far-star caption/leader stability at Earth zoom', 
 
     const len = (p: Vec3) => Math.hypot(p[0], p[1], p[2]);
     const farMpc = slab.far;
-    // The lifted geometry derives from the anchor pulled just inside the far plane, so every point sits
-    // within it (camera at the origin of the rebased frame); unclamped these are the raw ~1e-3 Mpc distance.
-    expect(len(cap!.worldPos as Vec3), 'caption beyond far plane').toBeLessThanOrEqual(farMpc);
+    // The leader derives from the anchor pulled just inside the far plane, so both ends sit within it
+    // (camera at the origin of the rebased frame); unclamped they are the raw ~1e-3 Mpc distance. The
+    // caption keeps the star's own position: the label shader projects and lifts it.
     expect(len(line!.toWorld as Vec3), 'leader top beyond far plane').toBeLessThanOrEqual(farMpc);
     expect(len(line!.fromWorld as Vec3), 'leader bottom beyond far plane').toBeLessThanOrEqual(
       farMpc,

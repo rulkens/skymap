@@ -15,6 +15,7 @@ import { cosmoLabelProjection } from '../../services/engine/frame/cosmoLabelProj
 export const COSMO_LABEL_DIRECTOR: Label2DDirectorConfig = {
   project: cosmoLabelProjection,
   declutterPadPx: 8,
+  declutterLift: 'drawn',
   envelope: { mode: 'smoothstepRamp', durationMs: 300 },
   lift: null,
 };

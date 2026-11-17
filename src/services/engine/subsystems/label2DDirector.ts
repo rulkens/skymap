@@ -3,7 +3,7 @@
  * setLabels/setLines calls, polling registered Label2DProducers each frame
  * and flushing the merged result once. `createLabel2DDirector(config, rig)` mints
  * one instance per slab (COSMO and NEAR0) — `Label2DDirectorConfig` supplies
- * the projection, declutter policy, envelope policy, and lift policy, so a
+ * the projection, declutter policy, envelope policy, and far-plane clamp, so a
  * second instance is data, not a second code path.
  *
  * ### Emphasis
@@ -15,17 +15,16 @@
  *
  * ### Highlight
  *
- * After the envelope and before the lift, a label whose `pickId` names the
- * hovered or selected ref has its colour blended toward white — one place for
- * every clickable caption, and the lift copies the colour onto the leader.
+ * After the envelope, a label whose `pickId` names the hovered or selected ref
+ * has its colour blended toward white — one place for every clickable caption;
+ * a caption's leader draws in its label's colour, so it follows.
  *
- * ### Envelope and lift are policy arms
+ * ### Envelope is a policy arm
  *
  * Both slabs declutter by padded text rects (`config.declutterPadPx`);
  * `config.envelope.mode` selects `smoothstepRamp` (COSMO) or
- * `exponentialApproach` (NEAR0). `config.lift`, when
- * non-null, runs a third stage after the envelope — see its own docblock
- * for why it is gated on data absence (`label.lift`) rather than a mode.
+ * `exponentialApproach` (NEAR0). A `lift`ed label is lifted by the label
+ * shader; declutter and pick read the same lift from `projectLabels`.
  *
  * ### Why a director?
  *
@@ -35,7 +34,7 @@
  *
  * ### Change detection
  *
- * The merged label/line arrays are signature-hashed (id-based string
+ * The merged label array is signature-hashed (id-based string
  * concatenation) and the GPU upload is skipped when the signature
  * matches the previous frame.  Hashing costs ~O(N labels), much cheaper
  * than the GPU buffer write that would otherwise happen every frame.
@@ -75,14 +74,11 @@
  *
  * ### Leader lines are synthesized, not carried
  *
- * A `Label2D` may carry an optional `leader` (`Label2DLeader`) instead of
- * producers emitting a sibling `MarkerLine[]`: since every anchor line is
- * 1:1 owned by exactly one label, folding it onto the label makes that
- * ownership structural rather than a string back-reference. `runFrame`
+ * A label's `lift` may carry a leader instead of producers emitting a sibling
+ * `MarkerLine[]`, so each line's ownership is structural. `runFrame`
  * synthesizes one `MarkerLine` per surviving leader-carrying label AFTER
- * declutter and the envelope have resolved the final label set, so a
- * culled or faded-out label's leader disappears with it by construction —
- * no separate line-side bookkeeping needed.
+ * declutter and the envelope have resolved the final label set, so a culled or
+ * faded-out label's leader disappears with it by construction.
  *
  * ### No layer load-in here — each producer owns its own
  *
@@ -124,9 +120,8 @@ import {
 import { labelScreenRect } from '../../../utils/labels/labelScreenRect';
 import { clampVec3Length } from '../../../utils/math/clampVec3Length';
 import { liftedLabelPlacement } from '../presentation/liftedLabelPlacement';
-import { FAMOUS_LABEL_STYLE } from '../presentation/famousLabelStyle';
-import { proposedLiftPx } from '../../../utils/labels/proposedLiftPx';
 import { whitenColor } from '../../../utils/labels/whitenColor';
+import { proposedLiftPx } from '../../../utils/labels/proposedLiftPx';
 import { encodeSelectionPick } from '../../../utils/selection/encodeSelectionPick';
 import { visibilityEntryOf } from '../../../utils/visibility/visibilityEntryOf';
 import { emphasisOf } from '../presentation/emphasisOf';
@@ -166,7 +161,7 @@ type ExponentialEnvelopeEntry = {
 
 /**
  * `declutter`'s result: the filtered survivor array (what `applySmoothstepEnvelope`
- * and the lift/flush stages consume) alongside a survivor-id set (what
+ * and the flush stage consume) alongside a survivor-id set (what
  * `applyExponentialEnvelope` additionally needs — see its docblock for why
  * it must see every emitted label, not just the survivors).
  */
@@ -203,10 +198,9 @@ function sortByDeclutterPriorityDesc(labels: readonly Label2D[]): number[] {
  * Off-screen labels (behind camera / outside the viewport) are accepted
  * unconditionally and never block, as are labels whose text lays out to no
  * ink and zero-`fadeAlpha` labels (nothing to show, so they must not cull a
- * visible caption).  A `lift`ed label is judged at its text's proposed lifted
- * position: the lift stage runs later, over survivors, so this is the one
- * place that keeps a planet's floated name from culling a rover standing at
- * the planet's own anchor.  A culled label's leader is culled with it BY CONSTRUCTION — the
+ * visible caption).  A `lift`ed label is judged above its subject
+ * (`config.declutterLift`), which keeps a planet's floated name from culling a
+ * rover standing at the planet's own anchor.  A culled label's leader is culled with it BY CONSTRUCTION — the
  * leader lives on the label object, so there is no separate line-side filter
  * to run.  Returns a fresh array in original input order (deterministic,
  * sort-independent).
@@ -217,6 +211,7 @@ function declutterByBboxOverlap(
   projected: readonly Label2DProjected[],
   projection: Label2DProjection,
   padPx: number,
+  liftedBy: (label: Label2D, p: Label2DProjected) => number,
 ): Label2D[] {
   const pxPerRad = projection.output.focalPx;
   // `labelScreenRect` is the shared CPU twin of the vertex shader's em clamp —
@@ -227,11 +222,10 @@ function declutterByBboxOverlap(
     if (!p.screenPx || (label.fadeAlpha ?? 1) === 0) return null;
     const bbox = measure(label);
     if (!bbox) return null;
-    const liftPx = label.lift === undefined ? 0 : proposedLiftPx(label.lift.subjectSizePx);
     return labelScreenRect({
       label,
       bbox,
-      screenPx: [p.screenPx[0], p.screenPx[1] - liftPx],
+      screenPx: [p.screenPx[0], p.screenPx[1] - liftedBy(label, p)],
       clipW: p.clipW,
       pxPerRad,
     });
@@ -308,84 +302,80 @@ export function createLabel2DDirector(
   }
 
   function signatureOf(labels: readonly Label2D[]): string {
-    // Cheap stable signature: per-label `id:fadeAlpha:worldPos[:leaderToWorld][:color][:pickId]`,
-    // joined. A label's synthesized leader line (see `synthesizeLines`) carries
-    // no state of its own beyond what's keyed here, so one term covers both.
-    //
-    // Re-upload triggers when ids/count change OR when any entry's
-    // `fadeAlpha` differs from the prior frame.  Including `fadeAlpha`
-    // matters because `produceMilkyWayLabel` keeps the same `id`
-    // across the fade band while the alpha smoothly transitions
-    // 0→1→0 as the camera moves; without this term, the GPU instance
-    // buffer would stay stuck at whatever alpha was uploaded the
-    // first frame the marker became visible.  (Symptom: marker
-    // appears at e.g. 0.1 alpha and never brightens as the camera
-    // closes in.)
-    //
-    // `worldPos` is included because labels are placed by a screen-space
-    // lift (`liftedLabelPlacement`): a lifted label's anchor is
-    // camera-derived and moves every frame the camera does, while its `id`
-    // and `fadeAlpha` stay constant.  Without this term the anchor would
-    // freeze at whatever world point was uploaded the first visible frame,
-    // and that fixed point would reproject and DRIFT over the glyphs as the
-    // camera orbits.  A moving leader would mask the gap — its `toWorld` is
-    // in the signature too, so a moved leader already forces a re-flush of
-    // the whole set — but the lift SUPPRESSES the leader when its height ≤ 0,
-    // and then nothing else keys the label's motion.  Keying the label's own
-    // position closes that gap: a camera-derived label re-uploads on its
-    // own, independent of whether its leader is present.  The glyph layout
-    // is memoised (`textLayoutOf`) and label counts are tiny, so
-    // the per-orbit-frame re-upload this implies is the intended cost;
-    // static-position producers (structures) keep their positions stable
-    // and still benefit from the skip.  `color` is keyed too: a hovered or
-    // selected structure label changes colour at a fixed id and position.
-    // So is `pickId`: focus strips it at a fixed id, and a stale one left
-    // uploaded would keep the label clickable.
-    //
-    // `leader.toWorld`, when present, is included for the same
-    // camera-derived reason: the leader lines (famous-galaxy connectors,
-    // the Milky Way stem) lift in screen space and un-project
-    // (`labelLeaderLine`), so their tips move with the camera while the
-    // owning label's id and fadeAlpha stay constant — without this term a
-    // connector would freeze at whatever geometry was uploaded the first
-    // visible frame.  Endpoints only move while the camera does, so the
-    // skip still fires on every static frame — exactly when it pays.
-    //
-    // Edge case: a producer mutating a label's `text` while keeping
-    // the same `id` will NOT trigger re-upload.  No current producer
-    // does this — the Milky Way label has constant text; structures derive text
-    // from the structure name which is part of the id space.
+    // Per label `id:fadeAlpha:worldPos:maxPixelSize[:color][:pickId]`, joined: the
+    // packed fields that change at a fixed id. Re-upload triggers when ids or
+    // count change or any of these does:
+    //   - `fadeAlpha`: the Milky Way label keeps its id across a distance fade;
+    //     unkeyed, the row would stay at its first-visible alpha.
+    //   - `worldPos`: NEAR0 captions are camera-relative and bodies move. A
+    //     lifted label's row no longer moves with the camera (the shader lifts),
+    //     so a still scene re-uploads nothing.
+    //   - `maxPixelSize`: the famous ceiling ramps with camera distance
+    //     (`famousLabelMaxPx`).
+    //   - `color`: hover and select whiten a label at a fixed id and position.
+    //   - `pickId`: focus strips it at a fixed id, and a stale one left
+    //     uploaded would keep the label clickable.
+    // Edge case: a producer mutating `text` at a fixed id does NOT re-upload; no
+    // producer does (text derives from the name, part of the id space).
     const lIds = labels
       .map((l) => {
-        const leaderKey = l.leader
-          ? `:${l.leader.toWorld[0]},${l.leader.toWorld[1]},${l.leader.toWorld[2]}`
-          : '';
         const colorKey = l.color ? `:${l.color.join(',')}` : '';
         const pickKey = l.pickId !== undefined ? `:${l.pickId}` : '';
-        return `${l.id}:${l.fadeAlpha ?? 1}:${l.worldPos[0]},${l.worldPos[1]},${l.worldPos[2]}${leaderKey}${colorKey}${pickKey}`;
+        return `${l.id}:${l.fadeAlpha ?? 1}:${l.worldPos[0]},${l.worldPos[1]},${l.worldPos[2]}:${l.maxPixelSize}${colorKey}${pickKey}`;
       })
       .join('|');
     return `L:${labels.length}:${lIds}`;
   }
 
   /**
-   * One `MarkerLine` per label carrying a `leader`, synthesized from the
-   * FINAL (post-declutter, post-envelope) label set — the flush contract in
-   * the module header. `id` is `` `${label.id}-anchor` ``; `fadeAlpha` is
-   * the label's own resolved alpha, so the connector fades in lock-step with
-   * its label with no separate multiplication to keep in sync.
+   * One `MarkerLine` per label whose `lift` carries a leader, from the FINAL
+   * (post-declutter, post-envelope) set, at the label's own resolved alpha. The
+   * endpoints are camera-derived (`liftedLabelPlacement` un-projects a screen
+   * lift), so this runs every frame; the label rows themselves no longer move
+   * with the camera. NEAR0 pulls the subject inside its far plane first, the
+   * inverse's ill-conditioning guard, rescaling the em to keep the text size.
    */
-  function synthesizeLines(labels: readonly Label2D[]): MarkerLine[] {
+  function synthesizeLines(labels: readonly Label2D[], ctx: FrameView): MarkerLine[] {
+    const projection = project(ctx);
+    const m = projection.viewFromSlab;
+    const policy = config.lift;
+    const far = policy ? ctx.slabs[policy.slab]!.far * policy.farClampFraction : Infinity;
     const lines: MarkerLine[] = [];
     for (const label of labels) {
-      const leader = label.leader;
+      const leader = label.lift?.leader;
       if (!leader) continue;
+      const anchor = label.worldPos;
+      const [x, y, z] = anchor;
+      const distMpc = Math.hypot(
+        m[0]! * x + m[4]! * y + m[8]! * z + m[12]!,
+        m[1]! * x + m[5]! * y + m[9]! * z + m[13]!,
+        m[2]! * x + m[6]! * y + m[10]! * z + m[14]!,
+      );
+      const subjectSizePx = ((2 * label.lift!.radiusMpc) / distMpc) * projection.output.focalPx;
+      const liftAnchor = clampVec3Length(anchor, far);
+      const anchorScale =
+        liftAnchor === anchor
+          ? 1
+          : Math.hypot(liftAnchor[0], liftAnchor[1], liftAnchor[2]) / Math.hypot(x, y, z);
+      const placement = liftedLabelPlacement({
+        anchorWorldPos: liftAnchor,
+        vp: projection.vp,
+        viewportPx: projection.output.sizePx,
+        pxPerRad: projection.output.focalPx,
+        subjectSizePx,
+        textBbox: measureText!(label),
+        worldEmMpc: (label.worldEmMpc ?? LABEL_WORLD_EM_MPC_DEFAULT) * anchorScale,
+        minPixelSize: label.minPixelSize ?? LABEL_MIN_PX_DEFAULT,
+        maxPixelSize: label.maxPixelSize ?? LABEL_MAX_PX_DEFAULT,
+        lineBottomLiftPx: (leader.base === 'rim' ? subjectSizePx / 2 : 0) + leader.gapPx,
+      });
+      if (placement?.line == null) continue;
       lines.push({
         id: `${label.id}-anchor`,
-        fromWorld: leader.fromWorld,
-        toWorld: leader.toWorld,
-        pixelWidth: leader.pixelWidth,
-        color: leader.color,
+        fromWorld: placement.line.fromWorld,
+        toWorld: placement.line.toWorld,
+        pixelWidth: leader.widthPx,
+        color: leader.color ?? label.color ?? [1, 1, 1, 1],
         fadeAlpha: label.fadeAlpha ?? 1,
         // Same subject, same depth verdict — both channels — so a connector
         // never fades into a disc its caption is allowed to paint over, nor
@@ -420,13 +410,15 @@ export function createLabel2DDirector(
 
   function declutter(labels: readonly Label2D[], ctx: FrameView): DeclutterResult {
     const projection = project(ctx);
-    const projected = projectLabels(labels, projection);
+    const drawn = config.declutterLift === 'drawn';
+    const projected = projectLabels(labels, projection, drawn ? measureText! : null);
     const survivors = declutterByBboxOverlap(
       measureText!,
       labels,
       projected,
       projection,
       config.declutterPadPx,
+      drawn ? () => 0 : (label, p) => (label.lift ? proposedLiftPx(p.subjectSizePx) : 0),
     );
     return { survivors, survivorIds: new Set(survivors.map((l) => l.id)) };
   }
@@ -622,100 +614,6 @@ export function createLabel2DDirector(
   }
 
   /**
-   * The lift stage (spec §4.4). Runs after the envelope, over survivors
-   * only, and only when `config.lift` is non-null. A label without a `lift`
-   * field skips the lift by ABSENCE OF DATA — never a `kind` test — so e.g.
-   * constellation captions (which anchor in empty space and have no subject
-   * to float above) simply never carry one.
-   */
-  function applyLift(labels: readonly Label2D[], ctx: FrameView): readonly Label2D[] {
-    const policy = config.lift;
-    if (!policy) return labels;
-    const slab = ctx.slabs[policy.slab];
-    if (!slab) throw new Error(`label2DDirector: no slab at index ${policy.slab}`);
-    const projection = project(ctx); // memoised per ctx — free here
-    const measure = measureText!;
-
-    const out: Label2D[] = [];
-    for (const label of labels) {
-      const lift = label.lift;
-      if (!lift) {
-        out.push(label);
-        continue;
-      }
-
-      // Pull the anchor inside the slab's far plane before the lift — the
-      // ill-conditioned-inverse guard: `liftedLabelPlacement` INVERTS the
-      // projection, and at deep zoom a NEAR0 anchor many orders of
-      // magnitude beyond a near-floored far plane makes `ndc_z` round to
-      // 1.0 within f64 error while the inverse's huge depth-row elements
-      // amplify the residual — the caption and both leader endpoints then
-      // hop every frame the camera moves. In the camera-relative frame (eye
-      // at the origin) a uniform length scale moves clip x/y/w together, so
-      // the screen position is IDENTICAL and only depth slides into the
-      // well-conditioned interior.
-      const anchor = label.worldPos;
-      const liftAnchor = clampVec3Length(anchor, slab.far * policy.farClampFraction);
-
-      // Obligatory companion to the clamp: the label shader sizes glyphs as
-      // `pxPerEm = worldEmMpc / clip.w`, so a PHYSICAL em at the clamped
-      // depth inflates by exactly the clamp ratio — scaling the em by the
-      // same ratio (read off the clamp's OUTPUT, never re-derived) restores
-      // `em / clip.w` to the true-depth value. `clampVec3Length` returns its
-      // input by reference when in range, making the near-body case an
-      // exact no-op instead of a hypot round-off away from 1.
-      const anchorScale =
-        liftAnchor === anchor
-          ? 1
-          : Math.hypot(liftAnchor[0], liftAnchor[1], liftAnchor[2]) /
-            Math.hypot(anchor[0], anchor[1], anchor[2]);
-      const liftEmMpc = (label.worldEmMpc ?? LABEL_WORLD_EM_MPC_DEFAULT) * anchorScale;
-
-      const placement = liftedLabelPlacement({
-        anchorWorldPos: liftAnchor,
-        vp: projection.vp,
-        viewportPx: projection.output.sizePx,
-        pxPerRad: projection.output.focalPx,
-        subjectSizePx: lift.subjectSizePx,
-        textBbox: measure(label),
-        worldEmMpc: liftEmMpc,
-        minPixelSize: label.minPixelSize ?? LABEL_MIN_PX_DEFAULT,
-        maxPixelSize: label.maxPixelSize ?? LABEL_MAX_PX_DEFAULT,
-        lineBottomLiftPx: lift.lineBottomLiftPx ?? 0,
-      });
-
-      if (placement === null) {
-        // Behind the camera: no projection to lift from. Emitted unlifted
-        // at the raw (unclamped) anchor, matching DEMAND rather than which
-        // side of the camera plane the anchor happens to sit on this frame;
-        // no connector, since there is no geometry.
-        out.push({ ...label, worldPos: anchor, leader: undefined });
-        continue;
-      }
-
-      out.push({
-        ...label,
-        worldPos: placement.labelWorldPos,
-        // The depth-occlusion verdict must be judged where the SUBJECT is,
-        // not at the lifted caption's own worldPos above — 'anchor' is the
-        // pre-lift point, the same one 'leader.fromWorld' lerps from.
-        occludeSubjectPos: anchor,
-        worldEmMpc: liftEmMpc,
-        leader:
-          placement.line === null
-            ? undefined
-            : {
-                fromWorld: placement.line.fromWorld,
-                toWorld: placement.line.toWorld,
-                pixelWidth: FAMOUS_LABEL_STYLE.pixelWidth,
-                color: label.color ?? [1, 1, 1, 1],
-              },
-      });
-    }
-    return out;
-  }
-
-  /**
    * Blend the hovered and selected subjects' labels toward white. Absent
    * colour is already white, and a label that needs no change passes through
    * by reference so the steady state allocates nothing.
@@ -775,25 +673,16 @@ export function createLabel2DDirector(
       ctx.snapshot.nowMs,
     );
 
-    // Highlight stage: before the lift, which copies the colour onto the leader.
-    const highlighted = applyHighlight(enveloped, state);
-
-    // Lift stage (NEAR0 only — a no-op array pass-through when
-    // `config.lift` is null): runs over survivors only, after the envelope
-    // has resolved the final alpha for each.
-    const labels = applyLift(highlighted, ctx);
-
-    // Flush contract: one MarkerLine per surviving leader-carrying label,
-    // derived from the FINAL (post-declutter, post-envelope, post-lift) set.
-    const lines = synthesizeLines(labels);
+    // Highlight stage: a caption's leader takes its label's colour, so it follows.
+    const labels = applyHighlight(enveloped, state);
 
     const sig = signatureOf(labels);
     if (sig !== prevSignature) {
       labelRenderer.setLabels(labels);
       flushedLabels = labels;
-      lineRenderer.setLines(lines);
       prevSignature = sig;
     }
+    lineRenderer.setLines(synthesizeLines(labels, ctx));
 
     return anyAwake || anyRamping;
   }

@@ -43,7 +43,6 @@
  */
 
 import type { Label2D } from '../../../../@types/rendering/Label2D';
-import type { Vec2 } from '../../../../@types/math/Vec2';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { LayerScreenLabel } from '../../../../@types/engine/layer/LayerScreenLabel';
 import type { Label2DProducerOutput } from '../../../../@types/engine/subsystems/Label2DProducerOutput';
@@ -56,8 +55,7 @@ import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
 import { focusedFamousIndex } from '../utils/focusedFamousIndex';
 import { famousDisplayName } from '../../../../services/engine/helpers/famousDisplayName';
 import { FAMOUS_LABEL_STYLE } from '../../../../services/engine/presentation/famousLabelStyle';
-import { liftedLabelPlacement } from '../../../../services/engine/presentation/liftedLabelPlacement';
-import { textLayoutOf } from '../../../../services/gpu/labelLayout/textLayoutOf';
+import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { smoothstep } from '../../../../utils/math/smoothstep';
 import { isPickableUnderFocus } from '../../../../utils/structure/isPickableUnderFocus';
 
@@ -167,14 +165,6 @@ export function produceFamousGalaxyLabels(
 
     const [cx, cy, cz] = ctx.drawCamPos;
     const style = FAMOUS_LABEL_STYLE;
-    // Hoisted once — every label this frame lifts through the same vp/viewport.
-    const vp: Float32Array = ctx.vp;
-    const viewportPx: Vec2 = [ctx.canvasSize.width, ctx.canvasSize.height];
-    // The memoized text layout is the one source for the caption's true ink
-    // bbox (which places the line top). Null only during bootstrap, when the
-    // director isn't flushing anyway — the chain then degrades to a bottom at
-    // the label anchor.
-    const fontAtlases = state.gpu.fontAtlases;
 
     // Identical for every famous label (no per-member focus exemption here), so
     // read once; folded into each label + anchor-line fadeAlpha below.
@@ -222,12 +212,8 @@ export function produceFamousGalaxyLabels(
       // catalog row the GPU stamps as `@builtin(instance_index)`.
       const subjectId = packSelection(famousCode, i + PICK_SENTINEL_OFFSET);
 
-      // Build the label BEFORE its geometry so `measure` reads the same font /
-      // text / alignment fields the final label carries — the measured ink
-      // bottom that positions the line top can never drift from what is drawn.
-      // `worldPos` here is provisional (the dot); the push below replaces it
-      // with the lifted anchor.
-      const label: Label2D = {
+      // The label shader lifts the text off the dot and draws the leader up to it.
+      labels.push({
         id: p.id,
         pickId: isPickableUnderFocus(p.worldPos, ctx.snapshot.focus) ? subjectId : undefined,
         subjectId,
@@ -245,40 +231,15 @@ export function produceFamousGalaxyLabels(
         outlineColor: [...style.outlineColor],
         outlineEmFrac: style.outlineEmFrac,
         declutterPriority,
-      };
-
-      // Single derivation chain (see `liftedLabelPlacement`): the lift is
-      // screen-space (world +Y offsets foreshorten or fall over the text), the
-      // line top derives from the measured text bottom minus the shared
-      // padding, and the line vanishes when no room remains. The endpoints are
-      // camera-derived per frame — safe because the cosmoLabelDirector's re-upload
-      // signature keys on the label's `leader.toWorld`, so moved geometry
-      // re-uploads instead of freezing at first-visible distance.
-      const placement = liftedLabelPlacement({
-        anchorWorldPos: p.worldPos,
-        vp,
-        viewportPx,
-        pxPerRad: ctx.drawPxPerRad,
-        subjectSizePx: sizePx,
-        textBbox: fontAtlases ? textLayoutOf(fontAtlases.metricsByFont, label).bbox : null,
-        worldEmMpc: p.labelWorldEmMpc,
-        minPixelSize: style.minPixelSize,
-        maxPixelSize,
-      });
-      // Behind the camera the projection is undefined — nothing visible to label.
-      if (placement === null) continue;
-
-      labels.push({
-        ...label,
-        worldPos: placement.labelWorldPos,
-        ...(placement.line !== null && {
+        lift: {
+          radiusMpc: (p.apparentDiameterKpc / 2) * SCALE_UNITS.KPC_TO_MPC,
           leader: {
-            fromWorld: placement.line.fromWorld,
-            toWorld: placement.line.toWorld,
-            pixelWidth: style.pixelWidth,
+            widthPx: style.pixelWidth,
             color: [...style.lineColor],
+            base: 'centre',
+            gapPx: 0,
           },
-        }),
+        },
       });
     }
 

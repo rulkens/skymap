@@ -19,6 +19,7 @@ import { subjectOccludedByBodies } from '../occlusion/subjectOccludedByBodies';
 import { subjectWithinRelief } from '../occlusion/subjectWithinRelief';
 import { SCALE_UNITS } from '../../data/scaleUnits';
 import { LEADER_LINE_BOTTOM_GAP_PX } from '../../services/engine/presentation/leaderLineStyle';
+import { FAMOUS_LABEL_STYLE } from '../../services/engine/presentation/famousLabelStyle';
 
 export function composeForegroundCaption(
   ctx: CaptionComposeContext,
@@ -73,9 +74,15 @@ export function composeForegroundCaption(
         ? -1
         : (distanceMpc - label.worldEmMpc) * SCALE_UNITS.MPC_TO_M * SCALE_UNITS.M_TO_KM,
     declutterPriority,
+    // The leader starts a constant gap above the body's rim and takes the
+    // caption's colour, highlight included.
     lift: {
-      subjectSizePx,
-      lineBottomLiftPx: subjectSizePx / 2 + LEADER_LINE_BOTTOM_GAP_PX,
+      radiusMpc: label.worldEmMpc,
+      leader: {
+        widthPx: FAMOUS_LABEL_STYLE.pixelWidth,
+        base: 'rim',
+        gapPx: LEADER_LINE_BOTTOM_GAP_PX,
+      },
     },
   };
 }

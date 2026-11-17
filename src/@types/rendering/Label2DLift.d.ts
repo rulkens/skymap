@@ -1,14 +1,25 @@
 /**
- * A label's proportional screen-space lift off its subject. Minted as part
- * of the leader fold (spec §3.2); read by `label2DDirector`'s lift stage
- * (`config.lift`, gated on this field's presence rather than a `kind` test)
- * when it calls `liftedLabelPlacement`. A label without this field skips the
- * lift entirely — absence of data, not a discriminant.
+ * A label's lift off its subject, applied by the label shader where the
+ * projection runs, so nothing here depends on the camera. The subject's
+ * apparent diameter `D` (from `radiusMpc`) sets the text's height above it:
+ * `labelLiftPx` is the rule, `labels/vertex.wesl` its WGSL twin. A label
+ * without this field draws at its anchor.
  */
 
+import type { Vec4 } from '../math/Vec4';
+
 export type Label2DLift = {
-  /** The labelled subject's apparent size in px — drives the proportional lift. */
-  readonly subjectSizePx: number;
-  /** Screen-px lift of the leader's BOTTOM off the subject. Default 0. */
-  readonly lineBottomLiftPx?: number;
+  readonly radiusMpc: number;
+  /** The connector up to the text; it vanishes when the text leaves it no room. */
+  readonly leader?: {
+    readonly widthPx: number;
+    /** As drawn (not premultiplied again). Default: the label's own colour. */
+    readonly color?: Vec4;
+    /**
+     * Where the line starts: `gapPx` above the subject's rim (the scene-body
+     * captions) or above its centre (famous galaxies, the Milky Way).
+     */
+    readonly base: 'rim' | 'centre';
+    readonly gapPx: number;
+  };
 };

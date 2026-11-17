@@ -7,8 +7,9 @@ export type PackLabelsArgs = {
   readonly metricsByFont: LoadedFontAtlases['metricsByFont'];
   /** FontId to texture-array layer, resolved once per label. */
   readonly layerIndexOf: Readonly<Record<FontId, number>>;
-  /** Per-label storage records; must hold `labels.length * LABEL_DATA_BYTES`. */
+  /** f32 and u32 views of the per-label records; must hold `labels.length * LABEL_DATA_BYTES`. */
   readonly labelF32: Float32Array;
+  readonly labelU32: Uint32Array;
   /** f32 and u32 views of ONE glyph-instance buffer. */
   readonly glyphF32: Float32Array;
   readonly glyphU32: Uint32Array;

@@ -41,6 +41,11 @@
 
 import package::lib::projectLabel::OutputProjection;
 
+// 'LabelData.lift' — must equal 'LABEL_LIFT' in src/data/labels/labelLift.ts.
+const LIFT_NONE: u32 = 0u;
+const LIFT_LEADER_FROM_CENTRE: u32 = 1u;
+const LIFT_LEADER_FROM_RIM: u32 = 2u;
+
 // Byte offsets in labelRenderer's LABEL_UNIFORM_OFFSETS.
 struct Uniforms {
   out: OutputProjection,
@@ -52,8 +57,10 @@ struct Uniforms {
   nearClipMpc: f32,
 };
 
+// Byte offsets in 'LABEL_DATA_OFFSETS' (src/data/labels/labelBufferStrides.ts).
 struct LabelData {
-  // worldPos.xyz = anchor in Mpc; worldPos.w = worldEmMpc × the em retune
+  // worldPos.xyz = the subject in Mpc (a lifted label's text sits above it);
+  // worldPos.w = worldEmMpc × the em retune
   // (PRIMARY size driver — em height in world-space Mpc, projected to pixels
   // by the vertex stage).
   worldPos: vec4<f32>,
@@ -68,19 +75,24 @@ struct LabelData {
   // collapses the outline band regardless of outlineEmFrac.
   outlineColor: vec4<f32>,
   // How much per-pixel scene attenuation the occlusion fragment variant
-  // applies (1 = fully, 0 = draw over the bodies).  Bytes 64..67.
+  // applies (1 = fully, 0 = draw over the bodies).
   occludeWeight: f32,
   // Eye to the subject's NEAR surface, km: the sampled-depth channel's cutoff
-  // (lib/sceneDepth.wesl).  Bytes 68..71, taken out of the padding the struct's
-  // vec4 alignment already held.
+  // (lib/sceneDepth.wesl), judged at worldPos.
   occludeNearKm: f32,
-  // World position the sampled-depth channel judges instead of 'worldPos':
-  // a LIFTED label's own worldPos sits screen-up over OTHER terrain than its
-  // subject (label2DDirector's applyLift), so occlusion is judged here
-  // instead.  xyz = world Mpc, same frame as worldPos; w unused (zero).
-  // Bytes 80..95 — bytes 72..79 are now genuine alignment padding ahead of
-  // this vec4, not slack; 'LABEL_DATA_BYTES' in labelRenderer.ts is 96.
-  subjectPos: vec4<f32>,
+  // The leader's colour as drawn, rgba8 ('pack4x8unorm' order).
+  leaderRgba: u32,
+  // The text's ink bottom below its anchor, atlas px (+y down): with the lift
+  // rule it keeps the ink clear of the subject and ends the leader under it.
+  inkBottom: f32,
+  // The subject's radius, Mpc: its apparent diameter sets the lift.
+  radiusMpc: f32,
+  // The leader's start, px above its base (the subject's rim or centre).
+  leaderGapPx: f32,
+  // LIFT_NONE, or where the leader starts.
+  lift: u32,
+  // 0 = no leader.
+  leaderWidthPx: f32,
 };
 
 struct VsIn {
