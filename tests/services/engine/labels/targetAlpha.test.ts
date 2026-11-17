@@ -8,6 +8,8 @@ import { resolveAnchors } from '../../../../src/services/engine/labels/resolveAn
 import { projectRecords } from '../../../../src/services/engine/labels/projectRecords';
 import { targetAlpha } from '../../../../src/services/engine/labels/targetAlpha';
 import { packPickWord } from '../../../../src/utils/labels/packPickWord';
+import { LABEL_DIRECTORS } from '../../../../src/data/labels/labelDirectors';
+import { COSMO } from '../../../../src/services/engine/frame/slabs';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { stageInputs, stageRecords } from '../../../helpers/labels/labelStageFixture';
 
@@ -52,6 +54,16 @@ describe('targetAlpha', () => {
     });
     expect(targets([at(0)], { occluders: [body(0)] }).target[0]).toBe(0);
     expect(targets([at(0)], { occluders: [body(0.3)] }).target[0]).toBe(1);
+  });
+
+  it('a far-scene label behind a body is hidden too', () => {
+    const body = {
+      positionMpc: [0, 0, -0.5] as [number, number, number],
+      radiusM: 0.05 / SCALE_UNITS.M_TO_MPC,
+      outerRadiusM: 0.05 / SCALE_UNITS.M_TO_MPC,
+    };
+    const director = LABEL_DIRECTORS.find((row) => row.slab === COSMO)!;
+    expect(targets([at(0)], { occluders: [body], director }).target[0]).toBe(0);
   });
 
   it("focused-only hides every label but the focused subject's", () => {

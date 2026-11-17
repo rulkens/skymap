@@ -7,7 +7,7 @@
  *  - the style's `appear` band over apparent diameter, unless the subject is hovered or selected
  *  - fades out as its subject fills the view (`overflowFade`), unless the style `keepsWhenFillingView`
  *  - the toggle's focus recession, unless it names the focused, hovered or selected subject
- *  - on the near slab, 0 while a body stands between the eye and the subject
+ *  - 0 while a body stands between the eye and the subject
  * A label is clickable while it shows and its subject is the focus or inside the focus sphere.
  */
 
@@ -20,7 +20,6 @@ import {
   LABEL_RECORD_WORDS,
 } from '../../../data/labels/labelRecordLayout';
 import { LABEL_STYLES, LABEL_STYLE_IDS } from '../../../data/labels/labelStyles';
-import { NEAR0 } from '../frame/slabs';
 import { fadeBand } from '../../../utils/math/fadeBand';
 import { smoothstep } from '../../../utils/math/smoothstep';
 import { overflowFade } from '../../../utils/scene/overflowFade';
@@ -41,7 +40,6 @@ export const targetAlpha: LabelStage = (records, frame, inputs) => {
   const { f32, u32 } = records;
   const { projection: p, focusPickId, hoveredPick, selectedPick } = inputs;
   const shortSidePx = Math.min(p.sizePx[0], p.sizePx[1]);
-  const nearSlab = inputs.director.slab === NEAR0;
   const nearHideMpc = inputs.director.nearHideMpc ?? 0;
   for (let k = 0; k < 3; k++) eye[k] = p.camHi[k]! + p.camLo[k]!;
   query.bodies = inputs.occluders;
@@ -77,7 +75,7 @@ export const targetAlpha: LabelStage = (records, frame, inputs) => {
     if (!(alpha > 0)) continue;
 
     for (let k = 0; k < 3; k++) subject[k] = f32[base + W.atHi + k]! + f32[base + W.atLo + k]!;
-    if (nearSlab && subjectOccludedByBodies(query)) continue;
+    if (subjectOccludedByBodies(query)) continue;
     frame.target[i] = alpha;
     frame.clickable[i] =
       pick !== 0 && (focused || isPickableUnderFocus(subject, inputs.focus)) ? 1 : 0;
