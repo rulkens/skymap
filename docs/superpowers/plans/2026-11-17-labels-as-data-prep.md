@@ -162,7 +162,13 @@ became `shaders/debugLines/` (the debug-line renderer still uses them, minus occ
 
 Types exactly as spec §3. Rows as spec §4, values copied from today's constants
 (`structureMarkerStyles.ts`, `famousLabelStyle.ts`, `stellarStreamLabelStyle.constants.ts`,
-`bodyCaption.ts`, `constellationCaptions.ts`, `produceLightTimeCaptions.ts`); structure
+`bodyCaption.ts`, `constellationCaptions.ts`, `produceLightTimeCaptions.ts`). `LabelStyleRow` is the
+spec §3 type as amended: `lift?: { radii; minPx }` and `leader?: { from: 'rim' | 'centre'; gapPx;
+widthPx; color }` replace `gapPx`. Values from Group B's rule (`src/utils/labels/labelLiftPx.ts`,
+`src/data/labels/labelLift.ts`): `caption` lift { radii: 3, minPx: 28 }, leader from the rim, gap 4;
+`famousGalaxy` and `milkyWay` the same lift, leader from the centre, gap 0; structure rows placed
+above and `lightTime` lift { radii: 1, minPx: 8 or 0 } with no leader. The leader's top stops 6 px
+under the text's ink bottom (`LEADER_LINE_PADDING_PX`). Structure
 appear thresholds are today's radii doubled. `LABEL_TEXT_PX = { min: 32, max: 72 }`. No test.
 
 ### Task 8: the record, its encoder, and anchors — **review: yes**
@@ -210,7 +216,9 @@ allocates nothing. `targetAlpha` implements the rules, one test each:
 - [ ] `a label with no position this frame has zero alpha`
 - [ ] `fade state survives a re-encode that reorders records`
 
-Both envelope policies stay selectable by the director row until Task 12.
+Both envelope policies stay selectable by the director row until Task 12. Declutter judges every
+label at its drawn position (Group B's transitional `declutterLift: 'proposed'` for NEAR0 goes in
+Task 10; the kept-label changes it causes are checked in Task 11).
 
 ### Task 10: the switch — renderer, directors and every Layer — **review: yes**
 

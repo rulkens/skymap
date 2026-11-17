@@ -34,8 +34,11 @@ So this work does two things in order: it makes labels data that a Layer describ
   `ArrayBuffer`, in the layout the shader reads. Per frame core writes only each record's alpha.
 - **D4. Styles are rows in one table.** A record carries a style index. The shader reads the same
   table.
-- **D5. Lift is an angle plus a pixel gap.** The angle is `asin(subjectRadius / distance)`, computed
-  where the projection runs; the gap comes from the style. Nothing in a record depends on the camera.
+- **D5. Lift is an angle with a pixel floor.** The angle is the style's `lift.radii` times
+  `asin(subjectRadius / distance)`, computed where the projection runs, and never less than
+  `lift.minPx`. Nothing in a record depends on the camera. (Found in group B: today's rule is
+  1.5 apparent diameters, at least 28 px, in screen space; the angle form replaces it in group C and
+  moves large subjects' captions by a few px, e.g. about 10 px for Earth from its surface pose.)
 - **D6. Rules that apply to every label** (owner, 2026-11-17), replacing per-Layer variants:
   1. A label fades out when its subject fills the view.
   2. A near-scene label hides behind bodies.
@@ -90,8 +93,14 @@ export type LabelStyleRow = {
   readonly textHeight: { readonly mpc: number } | { readonly timesRadius: number };
   readonly appear?: { readonly fromPx: number; readonly bandPx: number };
   readonly placement: 'centre' | 'above';
-  readonly gapPx?: number;
-  readonly leader?: { readonly widthPx: number; readonly color: Vec4 };
+  /** For 'above': the text sits `radii` subject angular radii above the subject's centre, and at
+   *  least `minPx` up. Today's rule is 1.5 diameters and 28 px, so captions use { radii: 3, minPx: 28 }. */
+  readonly lift?: { readonly radii: number; readonly minPx: number };
+  /** A line from the subject's rim (plus `gapPx`) or its centre to just under the text. */
+  readonly leader?: {
+    readonly from: 'rim' | 'centre'; readonly gapPx: number;
+    readonly widthPx: number; readonly color: Vec4;
+  };
   readonly priority: number;
 };
 ```
