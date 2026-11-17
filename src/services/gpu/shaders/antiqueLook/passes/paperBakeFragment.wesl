@@ -10,7 +10,7 @@ import package::antiqueLook::shared::paper::paperRelief;
 import package::antiqueLook::shared::paper::TONED;
 import package::antiqueLook::shared::paper::FOX;
 
-@group(0) @binding(0) var<uniform> u: AntiqueUniforms;
+@group(0) @binding(0) var<uniform> uniforms: AntiqueUniforms;
 @group(0) @binding(1) var tileTex: texture_2d<f32>;
 @group(0) @binding(2) var stainTex: texture_2d<f32>;
 @group(0) @binding(3) var repeatSamp: sampler;
@@ -21,11 +21,11 @@ const TEXEL_UNITS: f32 = 0.5;
 
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
-  let p = in.pos.xy / u.unit;
-  let tile = textureSampleLevel(tileTex, repeatSamp, p / (TEXEL_UNITS * f32(textureDimensions(tileTex).x)) + vec2<f32>(0.37, 0.61), 0.0);
+  let printPos = in.pos.xy / uniforms.unit;
+  let tile = textureSampleLevel(tileTex, repeatSamp, printPos / (TEXEL_UNITS * f32(textureDimensions(tileTex).x)) + vec2<f32>(0.37, 0.61), 0.0);
   let stain = textureSampleLevel(stainTex, repeatSamp, in.uv, 0.0);
-  if ((u.flags & FLAG_PAPER) == 0u) {
-    return vec4<f32>(paperColor(in.uv, p, u.seed), paperRelief(p, u.seed));
+  if ((uniforms.flags & FLAG_PAPER) == 0u) {
+    return vec4<f32>(paperColor(in.uv, printPos, uniforms.seed), paperRelief(printPos, uniforms.seed));
   }
   // The scan's margin is pinned to sRGB (243, 226, 204); a plate sits a shade darker.
   var col = tile.rgb * 0.95;

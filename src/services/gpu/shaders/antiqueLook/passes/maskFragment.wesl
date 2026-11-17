@@ -23,7 +23,7 @@ struct MaskDepth {
 @group(0) @binding(1) var depthTex: texture_2d<f32>;
 // The land map (r land share, g covered: Earth's oceans, Mars's dark albedo), or a 1×1 empty texture.
 @group(0) @binding(2) var landTex: texture_2d<f32>;
-@group(0) @binding(3) var<uniform> u: AntiqueUniforms;
+@group(0) @binding(3) var<uniform> uniforms: AntiqueUniforms;
 @group(0) @binding(4) var<uniform> plate: PlateBodies;
 @group(0) @binding(5) var<uniform> depthScale: MaskDepth;
 
@@ -38,79 +38,79 @@ const NEARER_SURFACE: f32 = 0.25;
 // body: clear of relief and oblateness (Earth's ~0.005), short of a low orbit (~0.03).
 const NEARER_RADII: f32 = 0.015;
 
-fn texelAt(tex: texture_2d<f32>, ip: vec2<i32>) -> vec4<f32> {
+fn texelAt(tex: texture_2d<f32>, texelPos: vec2<i32>) -> vec4<f32> {
   let size = vec2<i32>(textureDimensions(tex));
-  return textureLoad(tex, clamp(ip, vec2<i32>(0), size - 1), 0);
+  return textureLoad(tex, clamp(texelPos, vec2<i32>(0), size - 1), 0);
 }
 
-fn depthAt(ip: vec2<i32>) -> f32 {
-  return texelAt(depthTex, ip).r;
+fn depthAt(texelPos: vec2<i32>) -> f32 {
+  return texelAt(depthTex, texelPos).r;
 }
 
-fn cover(ip: vec2<i32>) -> f32 {
-  return select(texelAt(bodyTex, ip).a, f32(depthAt(ip) > 0.0), (u.flags & FLAG_DEPTH_COVER) != 0u);
+fn cover(texelPos: vec2<i32>) -> f32 {
+  return select(texelAt(bodyTex, texelPos).a, f32(depthAt(texelPos) > 0.0), (uniforms.flags & FLAG_DEPTH_COVER) != 0u);
 }
 
 // fragment.wesl's `viewRay`.
 fn viewRay(uv: vec2<f32>) -> vec3<f32> {
-  let top = mix(u.rayTL.xyz, u.rayTR.xyz, uv.x);
-  let bottom = mix(u.rayBL.xyz, u.rayBR.xyz, uv.x);
+  let top = mix(uniforms.rayTL.xyz, uniforms.rayTR.xyz, uv.x);
+  let bottom = mix(uniforms.rayBL.xyz, uniforms.rayBR.xyz, uv.x);
   return normalize(mix(top, bottom, uv.y));
 }
 
 // The depth holds a surface well in front of the nearest globe the plate casts here.
 // Reversed-Z infinite far: depth = near / view z, so the surface's range along the ray
 // is near / (depth · ray·forward), in that globe's radii once near is.
-fn nearerSurface(ip: vec2<i32>, uv: vec2<f32>) -> bool {
-  let depth = depthAt(ip);
+fn nearerSurface(texelPos: vec2<i32>, uv: vec2<f32>) -> bool {
+  let depth = depthAt(texelPos);
   if (depth <= 0.0) {
     return false;
   }
   let ray = viewRay(uv);
-  var t = 1e30;
+  var hitDistance = 1e30;
   var near = 0.0;
-  for (var i = 0u; i < min(plate.count, 4u); i++) {
-    let h = castPlateBody(ray, plate.items[i]);
-    if (h.t < t) {
-      t = h.t;
-      near = depthScale.nearRadii[i];
+  for (var bodyIndex = 0u; bodyIndex < min(plate.count, 4u); bodyIndex++) {
+    let hit = castPlateBody(ray, plate.items[bodyIndex]);
+    if (hit.t < hitDistance) {
+      hitDistance = hit.t;
+      near = depthScale.nearRadii[bodyIndex];
     }
   }
   let range = near / (depth * max(dot(ray, depthScale.forward.xyz), 1e-6));
-  return t < 1e30 && near > 0.0 && range < t - NEARER_RADII;
+  return hitDistance < 1e30 && near > 0.0 && range < hitDistance - NEARER_RADII;
 }
 
 // Where the scene's depth breaks: a rover against the ground behind it, a crater
 // rim against the plain beyond. Reversed-Z depth is linear in screen space across any
 // plane, so its second difference is ~0 on open ground at any slant and jumps at an
 // occluding edge: relative to the nearest tap, DEPTH_JUMP ≈ a 5% step in range.
-fn depthEdge(ip: vec2<i32>, o: i32) -> f32 {
-  let c = depthAt(ip);
-  let l = depthAt(ip - vec2<i32>(o, 0));
-  let r = depthAt(ip + vec2<i32>(o, 0));
-  let d = depthAt(ip - vec2<i32>(0, o));
-  let t = depthAt(ip + vec2<i32>(0, o));
-  let nearest = max(max(c, max(l, r)), max(d, t));
-  let jump = max(abs(l + r - 2.0 * c), abs(d + t - 2.0 * c)) / max(nearest, 1e-30);
+fn depthEdge(texelPos: vec2<i32>, reach: i32) -> f32 {
+  let depthCentre = depthAt(texelPos);
+  let depthLeft = depthAt(texelPos - vec2<i32>(reach, 0));
+  let depthRight = depthAt(texelPos + vec2<i32>(reach, 0));
+  let depthAbove = depthAt(texelPos - vec2<i32>(0, reach));
+  let depthBelow = depthAt(texelPos + vec2<i32>(0, reach));
+  let nearest = max(max(depthCentre, max(depthLeft, depthRight)), max(depthAbove, depthBelow));
+  let jump = max(abs(depthLeft + depthRight - 2.0 * depthCentre), abs(depthAbove + depthBelow - 2.0 * depthCentre)) / max(nearest, 1e-30);
   return smoothstep(DEPTH_JUMP * 0.7, DEPTH_JUMP * 1.3, jump);
 }
 
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
-  let ip = vec2<i32>(in.pos.xy);
-  let land = texelAt(landTex, ip).rg;
-  let nearer = nearerSurface(ip, in.uv);
+  let texelPos = vec2<i32>(in.pos.xy);
+  let land = texelAt(landTex, texelPos).rg;
+  let nearer = nearerSurface(texelPos, in.uv);
   // The limb is inked one print unit across the cover's edge.
-  let o = i32(round(u.unit));
-  let gx = cover(ip + vec2<i32>(o, 0)) - cover(ip - vec2<i32>(o, 0));
-  let gy = cover(ip + vec2<i32>(0, o)) - cover(ip - vec2<i32>(0, o));
-  var limb = smoothstep(0.25, 0.7, length(vec2<f32>(gx, gy)));
+  let reach = i32(round(uniforms.unit));
+  let gradX = cover(texelPos + vec2<i32>(reach, 0)) - cover(texelPos - vec2<i32>(reach, 0));
+  let gradY = cover(texelPos + vec2<i32>(0, reach)) - cover(texelPos - vec2<i32>(0, reach));
+  var limb = smoothstep(0.25, 0.7, length(vec2<f32>(gradX, gradY)));
   // Depth's own edges ink where it is the cover, and on a nearer body: its outline over
   // the globe behind (a one-sided step) and its own parts. Not on a cast globe's relief.
-  let inside = (u.flags & FLAG_DEPTH_COVER) != 0u;
+  let inside = (uniforms.flags & FLAG_DEPTH_COVER) != 0u;
   if (inside || nearer) {
-    limb = max(limb, depthEdge(ip, o));
+    limb = max(limb, depthEdge(texelPos, reach));
   }
   let mapped = select(step(0.5, land.g), NEARER_SURFACE, nearer);
-  return vec4<f32>(cover(ip), select(land.r, 0.0, nearer), mapped, limb);
+  return vec4<f32>(cover(texelPos), select(land.r, 0.0, nearer), mapped, limb);
 }

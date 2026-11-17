@@ -13,15 +13,16 @@ import { ANTIQUE_PRINT_SHOULDER } from '../../../../src/data/rendering/antiqueLo
 
 function shoulderFromShader(): (x: number, knee: number, top: number) => number {
   const lib = readShaderSource('src/services/gpu/shaders/lib/tonemap.wesl');
-  const body = /fn printShoulder\(x: f32, knee: f32, top: f32\) -> f32 \{([\s\S]*?)\n\}/.exec(
-    lib,
-  )?.[1];
+  const body =
+    /fn printShoulder\(postExposure: f32, knee: f32, top: f32\) -> f32 \{([\s\S]*?)\n\}/.exec(
+      lib,
+    )?.[1];
   if (body === undefined) throw new Error('lib/tonemap.wesl lacks printShoulder');
   const fn = new Function(
     'pow',
     'max',
     'select',
-    'x',
+    'postExposure',
     'knee',
     'top',
     body.replace(/\blet\b/g, 'const'),

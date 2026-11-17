@@ -17,14 +17,14 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // Sky cells only (wash.a < 0): a lit globe's light must not spill into the
   // sky's outline colour round its limb.
   var sum = vec3<f32>(0.0);
-  var n = 0.0;
-  for (var j = 0; j < 4; j++) {
-    for (var i = 0; i < 4; i++) {
-      let w = textureLoad(washTex, clamp(origin + vec2<i32>(i, j), vec2<i32>(0), size - 1), 0);
-      let sky = select(1.0, 0.0, w.a >= 0.0);
-      sum += w.rgb * sky;
-      n += sky;
+  var skyCount = 0.0;
+  for (var tapY = 0; tapY < 4; tapY++) {
+    for (var tapX = 0; tapX < 4; tapX++) {
+      let washTexel = textureLoad(washTex, clamp(origin + vec2<i32>(tapX, tapY), vec2<i32>(0), size - 1), 0);
+      let sky = select(1.0, 0.0, washTexel.a >= 0.0);
+      sum += washTexel.rgb * sky;
+      skyCount += sky;
     }
   }
-  return vec4<f32>(sum / max(n, 1.0), select(-1.0, 1.0, n > 0.0));
+  return vec4<f32>(sum / max(skyCount, 1.0), select(-1.0, 1.0, skyCount > 0.0));
 }

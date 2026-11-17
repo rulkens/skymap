@@ -81,98 +81,98 @@ struct JupiterPrintIn {
   discPx: f32, // apparent radius, device px
 }
 
-// Radius of the Red Spot at the ball normal `n`, 1 on its outline, in its tangent plane
+// Radius of the Red Spot at the ball `normal`, 1 on its outline, in its tangent plane
 // at the spot's centre `spot` (`pole` the north pole). Far side: huge.
-fn redSpotRadius(n: vec3<f32>, pole: vec3<f32>, spot: vec3<f32>) -> f32 {
+fn redSpotRadius(normal: vec3<f32>, pole: vec3<f32>, spot: vec3<f32>) -> f32 {
   let east = normalize(cross(pole, spot));
-  let facing = dot(n, spot);
-  let o = abs(vec2<f32>(dot(n, east), dot(n, cross(spot, east))) / max(facing, 1e-3) / SPOT_AXES);
-  let e = select(2.0, SPOT_NORTH_POWER, dot(n, cross(spot, east)) > 0.0);
-  return select(1e3, pow(pow(o.x, e) + pow(o.y, e), 1.0 / e), facing > 0.2);
+  let facing = dot(normal, spot);
+  let spotOffset = abs(vec2<f32>(dot(normal, east), dot(normal, cross(spot, east))) / max(facing, 1e-3) / SPOT_AXES);
+  let exponent = select(2.0, SPOT_NORTH_POWER, dot(normal, cross(spot, east)) > 0.0);
+  return select(1e3, pow(pow(spotOffset.x, exponent) + pow(spotOffset.y, exponent), 1.0 / exponent), facing > 0.2);
 }
 
 // The lightness an engraver reads off the colour: the belts' ochre and brown sit near
 // the zones' white in luma, so the weakest channel weighs in, as saturation reads dark;
 // the wash is linear, and its square root stands in for the eye's response.
 fn plainLuma(wash: texture_2d_array<f32>, samp: sampler, layer: i32, uv: vec2<f32>) -> f32 {
-  let c = textureSampleLevel(wash, samp, uv, layer, 0.0).rgb;
-  return sqrt(max(mix(luma(c), min(c.r, min(c.g, c.b)), 0.5), 0.0));
+  let rgb = textureSampleLevel(wash, samp, uv, layer, 0.0).rgb;
+  return sqrt(max(mix(luma(rgb), min(rgb.r, min(rgb.g, rgb.b)), 0.5), 0.0));
 }
 
-fn jupiterPrint(col: vec3<f32>, cover: f32, j: JupiterPrintIn, wash: texture_2d_array<f32>, samp: sampler,
+fn jupiterPrint(col: vec3<f32>, cover: f32, printIn: JupiterPrintIn, wash: texture_2d_array<f32>, samp: sampler,
                 layer: i32) -> BodyPrint {
-  let scale = max(FEATURE_SCALE.x * j.discPx, FEATURE_SCALE.y);
-  let along = vec2<f32>(-j.across.y, j.across.x) * scale * FEATURE_REACH * j.pxUv;
+  let scale = max(FEATURE_SCALE.x * printIn.discPx, FEATURE_SCALE.y);
+  let along = vec2<f32>(-printIn.across.y, printIn.across.x) * scale * FEATURE_REACH * printIn.pxUv;
   // The feature's own lightness, smoothed at its scale, and its slope from the same taps.
-  let e = scale * j.pxUv;
-  let c = plainLuma(wash, samp, layer, j.uv);
-  let xp = plainLuma(wash, samp, layer, j.uv + vec2<f32>(e.x, 0.0));
-  let xm = plainLuma(wash, samp, layer, j.uv - vec2<f32>(e.x, 0.0));
-  let yp = plainLuma(wash, samp, layer, j.uv + vec2<f32>(0.0, e.y));
-  let ym = plainLuma(wash, samp, layer, j.uv - vec2<f32>(0.0, e.y));
-  let l = (2.0 * c + xp + xm + yp + ym) / 6.0;
-  let lPerUnit = length(vec2<f32>(xp - xm, yp - ym)) / scale * j.pxUnits;
-  let band = 0.5 * (plainLuma(wash, samp, layer, j.uv + along) + plainLuma(wash, samp, layer, j.uv - along));
+  let tapStep = scale * printIn.pxUv;
+  let centreLuma = plainLuma(wash, samp, layer, printIn.uv);
+  let lumaXPlus = plainLuma(wash, samp, layer, printIn.uv + vec2<f32>(tapStep.x, 0.0));
+  let lumaXMinus = plainLuma(wash, samp, layer, printIn.uv - vec2<f32>(tapStep.x, 0.0));
+  let lumaYPlus = plainLuma(wash, samp, layer, printIn.uv + vec2<f32>(0.0, tapStep.y));
+  let lumaYMinus = plainLuma(wash, samp, layer, printIn.uv - vec2<f32>(0.0, tapStep.y));
+  let smoothedLuma = (2.0 * centreLuma + lumaXPlus + lumaXMinus + lumaYPlus + lumaYMinus) / 6.0;
+  let lPerUnit = length(vec2<f32>(lumaXPlus - lumaXMinus, lumaYPlus - lumaYMinus)) / scale * printIn.pxUnits;
+  let band = 0.5 * (plainLuma(wash, samp, layer, printIn.uv + along) + plainLuma(wash, samp, layer, printIn.uv - along));
   // The light is sought across the bands, where the zones are.
-  let reach = j.across * LIGHT_REACH * j.discPx * j.pxUv;
-  let light = max(max(l, max(plainLuma(wash, samp, layer, j.uv + reach), plainLuma(wash, samp, layer, j.uv - reach))),
-    max(plainLuma(wash, samp, layer, j.uv + 0.5 * reach), plainLuma(wash, samp, layer, j.uv - 0.5 * reach)));
-  let feature = (l - band) / light;
+  let reach = printIn.across * LIGHT_REACH * printIn.discPx * printIn.pxUv;
+  let light = max(max(smoothedLuma, max(plainLuma(wash, samp, layer, printIn.uv + reach), plainLuma(wash, samp, layer, printIn.uv - reach))),
+    max(plainLuma(wash, samp, layer, printIn.uv + 0.5 * reach), plainLuma(wash, samp, layer, printIn.uv - 0.5 * reach)));
+  let feature = (smoothedLuma - band) / light;
 
-  let ratio = c / light * (1.0 + LIMB_LIFT.z * smoothstep(LIMB_LIFT.x, LIMB_LIFT.y, j.ndv));
-  let big = smoothstep(SMALL_GLOBE.x, SMALL_GLOBE.y, j.discPx);
+  let ratio = centreLuma / light * (1.0 + LIMB_LIFT.z * smoothstep(LIMB_LIFT.x, LIMB_LIFT.y, printIn.ndv));
+  let big = smoothstep(SMALL_GLOBE.x, SMALL_GLOBE.y, printIn.discPx);
   let zone = mix(ZONE_TONE.x, ZONE_TONE.y, big);
-  let t = (TONE_OF_LUMA.x - ratio) / (TONE_OF_LUMA.x - TONE_OF_LUMA.y);
-  let plain = zone + t * (TONE_OF_LUMA.z - zone) - FEATURE_RELIEF * feature;
+  let toneMix = (TONE_OF_LUMA.x - ratio) / (TONE_OF_LUMA.x - TONE_OF_LUMA.y);
+  let plain = zone + toneMix * (TONE_OF_LUMA.z - zone) - FEATURE_RELIEF * feature;
   // A pale oval lies open in its belt.
   var tone = max(plain, zone) * (1.0 - 0.8 * smoothstep(FEATURE_EDGE.x, FEATURE_EDGE.x + 0.05, feature));
-  tone = max(tone + LIMB.z * smoothstep(LIMB.x, LIMB.y, j.ndv), SHADE_SHARE * j.shade);
+  tone = max(tone + LIMB.z * smoothstep(LIMB.x, LIMB.y, printIn.ndv), SHADE_SHARE * printIn.shade);
   let detail = smoothstep(DETAIL_SCALE.x, DETAIL_SCALE.y, scale);
-  let spacing = j.spacing * mix(SPARSE, 1.0, big);
-  var form = j.form;
+  let spacing = printIn.spacing * mix(SPARSE, 1.0, big);
+  var form = printIn.form;
   form.x += spacing * (WAVE.x * (vnoise(vec2<f32>(form.y * WAVE.y, form.x * 0.01)) - 0.5)
     + WAVE.z * (vnoise(vec2<f32>(form.x / spacing * 0.15, 3.0)) - 0.5) + FLOW * detail * feature);
 
   // Near the spot only: its core, its collar's rings, its outline and its wash.
-  let near = j.spotQ < SPOT_NEAR;
-  var q = j.spotQ;
+  let near = printIn.spotQ < SPOT_NEAR;
+  var spotRadius = printIn.spotQ;
   var banded = 1.0;
   if (near) {
-    q *= 1.0 + 0.03 * (vnoise(j.p * 0.008) - 0.5);
-    let inside = 1.0 - smoothstep(0.97, 1.0, q);
+    spotRadius *= 1.0 + 0.03 * (vnoise(printIn.p * 0.008) - 0.5);
+    let inside = 1.0 - smoothstep(0.97, 1.0, spotRadius);
     tone = mix(tone, SPOT_CORE.x + SPOT_CORE.y * (plain - SPOT_CORE.x), inside);
     // The pale ring round the spot keeps the lightest ruling; the core's own lines stop
     // at the collar's first ring.
-    tone = mix(tone, zone, (1.0 - smoothstep(1.0, 1.2, q)) * (1.0 - inside));
-    banded = 1.0 - inside * smoothstep(SPOT_COLLAR.x - 0.3 * SPOT_RING_GAP * spacing * j.qPerUnit, SPOT_COLLAR.x, q);
+    tone = mix(tone, zone, (1.0 - smoothstep(1.0, 1.2, spotRadius)) * (1.0 - inside));
+    banded = 1.0 - inside * smoothstep(SPOT_COLLAR.x - 0.3 * SPOT_RING_GAP * spacing * printIn.qPerUnit, SPOT_COLLAR.x, spotRadius);
   }
-  var ink = crossHatch(form, j.p, min(tone, mix(TONE_CAP.x, TONE_CAP.y, big)), spacing, 0.0, j.pxUnits) * banded;
+  var ink = crossHatch(form, printIn.p, min(tone, mix(TONE_CAP.x, TONE_CAP.y, big)), spacing, 0.0, printIn.pxUnits) * banded;
   var laid = 0.0;
   if (near) {
     // The collar's rings swell outward, as the spot darkens to its rim.
-    let gap = SPOT_RING_GAP * spacing * j.qPerUnit;
-    let collar = smoothstep(SPOT_COLLAR.x - gap, SPOT_COLLAR.y, q) * step(q, SPOT_COLLAR.y + 0.5 * gap);
-    let ring = abs(fract((SPOT_COLLAR.y - q) / gap + 0.5) - 0.5) * gap / max(j.qPerUnit, 1e-6);
-    let lift = smoothstep(0.3, 0.45, vnoise(j.p * 0.03 + 11.0));
-    ink = max(ink, inkLine(ring, (0.9 + 1.8 * collar) * (0.85 + 0.3 * vnoise(j.p * 0.06)) * lift, j.pxUnits) * collar);
+    let gap = SPOT_RING_GAP * spacing * printIn.qPerUnit;
+    let collar = smoothstep(SPOT_COLLAR.x - gap, SPOT_COLLAR.y, spotRadius) * step(spotRadius, SPOT_COLLAR.y + 0.5 * gap);
+    let ring = abs(fract((SPOT_COLLAR.y - spotRadius) / gap + 0.5) - 0.5) * gap / max(printIn.qPerUnit, 1e-6);
+    let lift = smoothstep(0.3, 0.45, vnoise(printIn.p * 0.03 + 11.0));
+    ink = max(ink, inkLine(ring, (0.9 + 1.8 * collar) * (0.85 + 0.3 * vnoise(printIn.p * 0.06)) * lift, printIn.pxUnits) * collar);
     // The outline cut with the burin's pressure wandering and lifting along it.
-    let width = (1.3 + 1.2 * vnoise(j.p * 0.03)) * smoothstep(0.15, 0.3, vnoise(j.p * 0.02 + 3.0)) * mix(0.5, 1.0, big);
-    ink = max(ink, inkLine(abs(q - 1.0) / max(j.qPerUnit, 1e-6), width, j.pxUnits));
+    let width = (1.3 + 1.2 * vnoise(printIn.p * 0.03)) * smoothstep(0.15, 0.3, vnoise(printIn.p * 0.02 + 3.0)) * mix(0.5, 1.0, big);
+    ink = max(ink, inkLine(abs(spotRadius - 1.0) / max(printIn.qPerUnit, 1e-6), width, printIn.pxUnits));
     // Rose madder laid by hand: it pools where the core is darkest and thins out over
     // the collar, granular as watercolour on laid paper.
-    let grain = (0.6 + 0.8 * vnoise(j.p * 0.035)) * (0.7 + 0.6 * vnoise(j.p * 0.3));
-    let pool = mix(SPOT_WASH.y, SPOT_WASH.x, smoothstep(0.2, 0.8, q)) * grain * (0.6 + 0.8 * clamp(t, 0.0, 1.0));
-    laid = (1.0 - smoothstep(0.85, 1.0, q + 0.06 * (vnoise(j.p * 0.05) - 0.5))) * pool;
+    let grain = (0.6 + 0.8 * vnoise(printIn.p * 0.035)) * (0.7 + 0.6 * vnoise(printIn.p * 0.3));
+    let pool = mix(SPOT_WASH.y, SPOT_WASH.x, smoothstep(0.2, 0.8, spotRadius)) * grain * (0.6 + 0.8 * clamp(toneMix, 0.0, 1.0));
+    laid = (1.0 - smoothstep(0.85, 1.0, spotRadius + 0.06 * (vnoise(printIn.p * 0.05) - 0.5))) * pool;
   }
 
   // The outlines of what stands out of its band, clear of the spot's own, the limb and
   // the terminator, where the light itself steps; the burin lifts off now and then.
-  if (detail > 0.0 && q > 1.1 && j.ndv > 0.15 && j.shade < 0.4) {
-    let wobble = (0.8 + 0.5 * vnoise(j.p * 0.05)) * smoothstep(0.25, 0.4, vnoise(j.p * 0.03 + 7.0));
+  if (detail > 0.0 && spotRadius > 1.1 && printIn.ndv > 0.15 && printIn.shade < 0.4) {
+    let wobble = (0.8 + 0.5 * vnoise(printIn.p * 0.05)) * smoothstep(0.25, 0.4, vnoise(printIn.p * 0.03 + 7.0));
     let offEdge = select(feature - FEATURE_EDGE.x, -feature - FEATURE_EDGE.y, feature < 0.0);
     let edge = abs(offEdge) / max(lPerUnit / light, 1e-5);
-    ink = max(ink, inkLine(edge, wobble, j.pxUnits) * smoothstep(1.1, 1.3, q) * smoothstep(0.15, 0.3, j.ndv)
-      * (1.0 - smoothstep(0.15, 0.4, j.shade)) * detail);
+    ink = max(ink, inkLine(edge, wobble, printIn.pxUnits) * smoothstep(1.1, 1.3, spotRadius) * smoothstep(0.15, 0.3, printIn.ndv)
+      * (1.0 - smoothstep(0.15, 0.4, printIn.shade)) * detail);
   }
   return BodyPrint(applyWash(col, pigmentAt(ROSE_MADDER), laid * cover), ink);
 }

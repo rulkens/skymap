@@ -33,9 +33,9 @@ fn apparentMagnitude(absMag: f32, d2Mpc2: f32) -> f32 {
 }
 
 fn printPointNone() -> PrintPointOut {
-  var o: PrintPointOut;
-  o.pos = vec4<f32>(2.0, 2.0, 2.0, 1.0);
-  return o;
+  var result: PrintPointOut;
+  result.pos = vec4<f32>(2.0, 2.0, 2.0, 1.0);
+  return result;
 }
 
 fn printPoint(clip: vec4<f32>, mag: f32, opacity: f32) -> PrintPointOut {
@@ -46,10 +46,10 @@ fn printPoint(clip: vec4<f32>, mag: f32, opacity: f32) -> PrintPointOut {
   let depth = clamp(1.0 - (mag + 2.0) / 16.0, 0.0, 1.0);
   let faint = mag > PRINT_MAG_LIMIT;
   let weight = (PRINT_DOT_LIMIT - mag) / (PRINT_DOT_LIMIT - PRINT_MAG_LIMIT);
-  var o: PrintPointOut;
-  o.pos = vec4<f32>(clip.xy, depth * clip.w, clip.w);
-  o.point = vec4<f32>(clip.xy / clip.w, select(mag, weight, faint), select(1.0, 3.0, faint));
-  return o;
+  var result: PrintPointOut;
+  result.pos = vec4<f32>(clip.xy, depth * clip.w, clip.w);
+  result.point = vec4<f32>(clip.xy / clip.w, select(mag, weight, faint), select(1.0, 3.0, faint));
+  return result;
 }
 
 // A galaxy point's dot weight (0..1) from the intensity the plain frame draws it
@@ -67,8 +67,8 @@ fn printGalaxyPoint(clip: vec4<f32>, intensity: f32) -> PrintPointOut {
     return printPointNone();
   }
   let weight = galaxyDotWeight(intensity);
-  var o: PrintPointOut;
-  o.pos = vec4<f32>(clip.xy, (0.99 - 0.98 * weight) * clip.w, clip.w);
-  o.point = vec4<f32>(clip.xy / clip.w, weight, 2.0);
-  return o;
+  var result: PrintPointOut;
+  result.pos = vec4<f32>(clip.xy, (0.99 - 0.98 * weight) * clip.w, clip.w);
+  result.point = vec4<f32>(clip.xy / clip.w, weight, 2.0);
+  return result;
 }

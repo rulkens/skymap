@@ -18,7 +18,7 @@ import package::bodies::earth::antiqueMap::line::io::LineOut;
 import package::bodies::earth::antiqueMap::line::io::KIND_REALM;
 import package::bodies::earth::antiqueMap::line::io::KIND_PROVINCE;
 
-@group(0) @binding(0) var<uniform> u: AntiqueMapUniforms;
+@group(0) @binding(0) var<uniform> uniforms: AntiqueMapUniforms;
 
 // Style bits (`antiqueEarthMapFormat.ts`): width in 1/32 units, level, strip end.
 const WIDTH_SCALE: f32 = 32.0;
@@ -35,52 +35,52 @@ fn culled() -> LineOut {
 
 @vertex
 fn vs(
-  @builtin(vertex_index) vi: u32,
+  @builtin(vertex_index) vertexIndex: u32,
   @location(0) startAt: vec3<f32>,
   @location(1) startStyle: u32,
   @location(2) endAt: vec3<f32>,
   @location(3) endStyle: u32,
 ) -> LineOut {
   let level = f32((startStyle >> 12u) & 15u);
-  let fade = clamp(u.detail - level, 0.0, 1.0);
-  let a = lonLatToUnit(startAt.xy);
-  let b = lonLatToUnit(endAt.xy);
-  let ca = u.mvp * vec4<f32>(a, 1.0);
-  let cb = u.mvp * vec4<f32>(b, 1.0);
-  if ((startStyle & STRIP_END) != 0u || fade <= 0.0 || ca.w <= 0.0 || cb.w <= 0.0
-      || facing(a, u.camLocal) < 0.0 || facing(b, u.camLocal) < 0.0) {
+  let fade = clamp(uniforms.detail - level, 0.0, 1.0);
+  let startUnit = lonLatToUnit(startAt.xy);
+  let endUnit = lonLatToUnit(endAt.xy);
+  let startClip = uniforms.mvp * vec4<f32>(startUnit, 1.0);
+  let endClip = uniforms.mvp * vec4<f32>(endUnit, 1.0);
+  if ((startStyle & STRIP_END) != 0u || fade <= 0.0 || startClip.w <= 0.0 || endClip.w <= 0.0
+      || facing(startUnit, uniforms.camLocal) < 0.0 || facing(endUnit, uniforms.camLocal) < 0.0) {
     return culled();
   }
   let kind = (startStyle >> 8u) & 15u;
-  let pa = clipToPx(ca, u.viewportPx);
-  let pb = clipToPx(cb, u.viewportPx);
-  let wa = 0.5 * f32(startStyle & 255u) / WIDTH_SCALE * u.unitPx;
-  let wb = 0.5 * f32(endStyle & 255u) / WIDTH_SCALE * u.unitPx;
+  let startPx = clipToPx(startClip, uniforms.viewportPx);
+  let endPx = clipToPx(endClip, uniforms.viewportPx);
+  let startHalfWidthPx = 0.5 * f32(startStyle & 255u) / WIDTH_SCALE * uniforms.unitPx;
+  let endHalfWidthPx = 0.5 * f32(endStyle & 255u) / WIDTH_SCALE * uniforms.unitPx;
   var band = 0.0;
   if (kind == KIND_REALM) {
-    band = BAND_REALM * u.unitPx;
+    band = BAND_REALM * uniforms.unitPx;
   } else if (kind == KIND_PROVINCE) {
-    band = BAND_PROVINCE * u.unitPx;
+    band = BAND_PROVINCE * uniforms.unitPx;
   }
-  let reach = max(max(wa, wb), band) + 1.0;
-  let span = pb - pa;
+  let reach = max(max(startHalfWidthPx, endHalfWidthPx), band) + 1.0;
+  let span = endPx - startPx;
   let len = length(span);
-  let d = select(vec2<f32>(1.0, 0.0), span / len, len > 1e-4);
-  let n = vec2<f32>(-d.y, d.x);
+  let dir = select(vec2<f32>(1.0, 0.0), span / len, len > 1e-4);
+  let sideDir = vec2<f32>(-dir.y, dir.x);
   // Two triangles: corner k → (end, side).
   let corner = array<vec2<f32>, 6>(
     vec2<f32>(0.0, -1.0), vec2<f32>(1.0, -1.0), vec2<f32>(1.0, 1.0),
     vec2<f32>(0.0, -1.0), vec2<f32>(1.0, 1.0), vec2<f32>(0.0, 1.0),
-  )[vi % 6u];
+  )[vertexIndex % 6u];
   let atB = corner.x > 0.5;
-  let base = select(pa, pb, atB);
-  let px = base + n * corner.y * reach + d * select(-reach, reach, atB);
-  let c = select(ca, cb, atB);
+  let base = select(startPx, endPx, atB);
+  let cornerPx = base + sideDir * corner.y * reach + dir * select(-reach, reach, atB);
+  let cornerClip = select(startClip, endClip, atB);
   var out: LineOut;
-  out.clip = pxToClip(px, u.viewportPx, c.z, c.w);
-  out.ends = vec4<f32>(pa, pb);
+  out.clip = pxToClip(cornerPx, uniforms.viewportPx, cornerClip.z, cornerClip.w);
+  out.ends = vec4<f32>(startPx, endPx);
   out.arc = vec2<f32>(startAt.z, endAt.z);
-  out.widths = vec4<f32>(wa, wb, band, fade);
+  out.widths = vec4<f32>(startHalfWidthPx, endHalfWidthPx, band, fade);
   out.kind = kind;
   return out;
 }

@@ -92,28 +92,28 @@ const SHADOW_KEEP = vec2<f32>(0.85, 0.98);
 // crossing it, each line ends where its own ground goes dark, so the edge is the relief's.
 const MOON_HATCH_TURN: f32 = 0.7854;
 
-// The shade lines' screen family (phase, along, |d phase / d unit|) at `p` (print units).
-fn moonForm(p: vec2<f32>, hatchAngle: f32) -> vec3<f32> {
-  let a = hatchAngle + MOON_HATCH_TURN;
-  let n = vec2<f32>(-sin(a), cos(a));
-  return vec3<f32>(dot(p, n), dot(p, vec2<f32>(n.y, -n.x)), 1.0);
+// The shade lines' screen family (phase, along, |d phase / d unit|) at `pixelPos` (print units).
+fn moonForm(pixelPos: vec2<f32>, hatchAngle: f32) -> vec3<f32> {
+  let turnAngle = hatchAngle + MOON_HATCH_TURN;
+  let hatchNormal = vec2<f32>(-sin(turnAngle), cos(turnAngle));
+  return vec3<f32>(dot(pixelPos, hatchNormal), dot(pixelPos, vec2<f32>(hatchNormal.y, -hatchNormal.x)), 1.0);
 }
 
-fn moonAt(field: texture_2d_array<f32>, layer: i32, ip: vec2<i32>) -> vec4<f32> {
+fn moonAt(field: texture_2d_array<f32>, layer: i32, texelPos: vec2<i32>) -> vec4<f32> {
   if (layer < 0) {
     return vec4<f32>(0.0);
   }
   let size = vec2<i32>(textureDimensions(field));
-  return decodeMoonRow(textureLoad(field, clamp(ip, vec2<i32>(0), size - 1), layer, 0));
+  return decodeMoonRow(textureLoad(field, clamp(texelPos, vec2<i32>(0), size - 1), layer, 0));
 }
 
-fn moonToneAlong(field: texture_2d_array<f32>, layer: i32, ip: vec2<i32>, hatchAngle: f32, unit: f32,
+fn moonToneAlong(field: texture_2d_array<f32>, layer: i32, texelPos: vec2<i32>, hatchAngle: f32, unit: f32,
                  ndl: f32, ndv: f32, row: f32, plain: f32) -> MoonTone {
   let here = moonTone(ndl, ndv, row);
-  let a = hatchAngle + MOON_HATCH_TURN;
-  let o = vec2<i32>(round(vec2<f32>(cos(a), sin(a)) * unit * SHADE_DASH));
-  let ahead = moonTone(ndl, ndv, moonAt(field, layer, ip + o).g);
-  let behind = moonTone(ndl, ndv, moonAt(field, layer, ip - o).g);
+  let turnAngle = hatchAngle + MOON_HATCH_TURN;
+  let dashStep = vec2<i32>(round(vec2<f32>(cos(turnAngle), sin(turnAngle)) * unit * SHADE_DASH));
+  let ahead = moonTone(ndl, ndv, moonAt(field, layer, texelPos + dashStep).g);
+  let behind = moonTone(ndl, ndv, moonAt(field, layer, texelPos - dashStep).g);
   let cap = mix(MOON_SHADE_CAP, SEEN_CAP, smoothstep(SEEN_LUMA.x, SEEN_LUMA.y, plain));
   let eroded = max(0.5 * (ahead.tone + behind.tone), here.tone * smoothstep(SHADOW_KEEP.x, SHADOW_KEEP.y, here.shade));
   // The stipple's dusk averaged over the same taps: a pixel's own slope speckles in clumps.
@@ -128,15 +128,15 @@ fn moonShade(form: vec3<f32>, tone: f32, pxUnits: f32) -> f32 {
   if (tone < SHADE_START) {
     return 0.0;
   }
-  let v = form.x / MOON_PITCH;
-  let k = floor(v);
-  let t = clamp((tone - SHADE_START - 0.08 * hash21Hq(vec2<f32>(k, 3.1))) / (MOON_SHADE_CAP - SHADE_START), 0.0, 1.0);
+  let phase = form.x / MOON_PITCH;
+  let lineIndex = floor(phase);
+  let toneShare = clamp((tone - SHADE_START - 0.08 * hash21Hq(vec2<f32>(lineIndex, 3.1))) / (MOON_SHADE_CAP - SHADE_START), 0.0, 1.0);
   let local = MOON_PITCH / max(form.z, 1.0);
-  let odd = f32(i32(k) & 1);
+  let odd = f32(i32(lineIndex) & 1);
   let thin = mix(1.0, smoothstep(2.5, 4.0, local / pxUnits), odd);
-  let hw = min(0.5 * mix(SHADE_W.x, SHADE_W.y, t) * smoothstep(0.0, 0.15, t), 0.35 * local) * thin;
-  let d = abs(fract(v) - 0.5) * MOON_PITCH / max(form.z, 1e-3);
-  return (1.0 - smoothstep(hw - 0.5 * pxUnits, hw + 0.5 * pxUnits, d)) * step(0.15 * pxUnits, hw);
+  let halfWidth = min(0.5 * mix(SHADE_W.x, SHADE_W.y, toneShare) * smoothstep(0.0, 0.15, toneShare), 0.35 * local) * thin;
+  let dist = abs(fract(phase) - 0.5) * MOON_PITCH / max(form.z, 1e-3);
+  return (1.0 - smoothstep(halfWidth - 0.5 * pxUnits, halfWidth + 0.5 * pxUnits, dist)) * step(0.15 * pxUnits, halfWidth);
 }
 
 // The maria's level lines, on whole device px so every line prints alike: the albedo
@@ -144,25 +144,25 @@ fn moonShade(form: vec3<f32>, tone: f32, pxUnits: f32) -> f32 {
 // the hysteresis above and the wide albedo's support, ends staggered by the line's hash
 // and stepped down over the taps that still read sea. A line carries on over a bright
 // fleck with sea both sides (~12 px), so a sea shows no paper holes.
-fn moonMare(field: texture_2d_array<f32>, layer: i32, px: vec2<f32>, unit: f32, moon: MoonTone) -> f32 {
+fn moonMare(field: texture_2d_array<f32>, layer: i32, pixelPos: vec2<f32>, unit: f32, moon: MoonTone) -> f32 {
   let pitch = max(round(MOON_PITCH * unit), 3.0);
-  let k = floor(px.y / pitch);
-  let yc = k * pitch + floor(0.5 * pitch) + 0.5;
-  let stagger = 0.004 * (hash21Hq(vec2<f32>(k, 7.7)) - 0.5);
+  let lineIndex = floor(pixelPos.y / pitch);
+  let rowCentreY = lineIndex * pitch + floor(0.5 * pitch) + 0.5;
+  let stagger = 0.004 * (hash21Hq(vec2<f32>(lineIndex, 7.7)) - 0.5);
   var taps = array<f32, 5>();
   var darkest = 1.0;
   var wide = 0.0;
-  for (var j = 0; j < 5; j++) {
-    let s = moonAt(field, layer, vec2<i32>(i32(px.x + f32(j - 2) * MARE_TAP_UNITS * unit), i32(yc)));
+  for (var tapIndex = 0; tapIndex < 5; tapIndex++) {
+    let texel = moonAt(field, layer, vec2<i32>(i32(pixelPos.x + f32(tapIndex - 2) * MARE_TAP_UNITS * unit), i32(rowCentreY)));
     // Off the disc reads as highland, so a sea at the limb still ends in a taper.
-    taps[j] = select(0.5, s.r * s.r, s.g > 0.0);
-    darkest = min(darkest, taps[j]);
-    wide += select(0.7, s.a, s.g > 0.0);
+    taps[tapIndex] = select(0.5, texel.r * texel.r, texel.g > 0.0);
+    darkest = min(darkest, taps[tapIndex]);
+    wide += select(0.7, texel.a, texel.g > 0.0);
   }
   let shore = select(MARE_ON, MARE_OFF, darkest < MARE_ON + stagger) + stagger;
   var inSea = 0.0;
-  for (var j = 0; j < 5; j++) {
-    inSea += step(taps[j], shore);
+  for (var tapIndex = 0; tapIndex < 5; tapIndex++) {
+    inSea += step(taps[tapIndex], shore);
   }
   if ((taps[2] > shore && max(taps[0], taps[4]) > shore) || wide * wide / 25.0 > MARE_SUPPORT + stagger) {
     return 0.0;
@@ -173,19 +173,19 @@ fn moonMare(field: texture_2d_array<f32>, layer: i32, px: vec2<f32>, unit: f32, 
   let taper = clamp((inSea - 2.0) / 3.0, 0.0, 1.0);
   let share = mix(MARE_SHARE.x, MARE_SHARE.y, dark) * taper * night * (1.0 - moon.litSlope);
   let weight = round(share / MARE_SHARE.y * MARE_WEIGHTS);
-  let w = select(0.0, max(1.0, round(pitch * MARE_SHARE.y * weight / MARE_WEIGHTS)), weight > 0.0);
+  let lineWidth = select(0.0, max(1.0, round(pitch * MARE_SHARE.y * weight / MARE_WEIGHTS)), weight > 0.0);
   // An even weight sits half a px off the row's centre, so it covers whole px too.
-  let centre = yc + 0.5 * (1.0 - w % 2.0);
-  return step(abs(px.y - centre), 0.5 * w - 0.01);
+  let centre = rowCentreY + 0.5 * (1.0 - lineWidth % 2.0);
+  return step(abs(pixelPos.y - centre), 0.5 * lineWidth - 0.01);
 }
 
 // The plate's Moon arm: the mare lines (cleared inside a bright-floored crater, as the
-// pass flags it in b's 2s place: Aristarchus, Copernicus) under the rims, which drop out
+// pass flags it in rimBlue's 2s place: Aristarchus, Copernicus) under the rims, which drop out
 // in the deepest shade, where a line in a solid reads as mush.
-fn moonInk(field: texture_2d_array<f32>, layer: i32, px: vec2<f32>, unit: f32, moon: MoonTone, b: f32) -> f32 {
-  let clear = step(1.5, b);
-  let rims = (b - 2.0 * clear) * (1.0 - smoothstep(0.88, 0.98, moon.shade));
-  return max(moonMare(field, layer, px, unit, moon) * (1.0 - clear), rims);
+fn moonInk(field: texture_2d_array<f32>, layer: i32, pixelPos: vec2<f32>, unit: f32, moon: MoonTone, rimBlue: f32) -> f32 {
+  let clear = step(1.5, rimBlue);
+  let rims = (rimBlue - 2.0 * clear) * (1.0 - smoothstep(0.88, 0.98, moon.shade));
+  return max(moonMare(field, layer, pixelPos, unit, moon) * (1.0 - clear), rims);
 }
 
 // The ground's hachures, from the shared relief row (`fsMoonRelief`): down each steep
@@ -208,18 +208,18 @@ const GRAIN_SHADOW = vec2<f32>(0.85, 0.6);
 const GRAIN_DIM = vec2<f32>(0.34, 0.16);
 const DIM_TONE: f32 = 0.5;
 
-fn moonRelief(field: texture_2d<f32>, samp: sampler, px: vec2<f32>, relief: vec4<f32>, unit: f32,
+fn moonRelief(field: texture_2d<f32>, samp: sampler, pixelPos: vec2<f32>, relief: vec4<f32>, unit: f32,
               moon: MoonTone, row: vec4<f32>, plain: f32, wash: f32) -> f32 {
-  var ink = fallCrest(field, samp, px, unit);
+  var ink = fallCrest(field, samp, pixelPos, unit);
   if (relief.a > 0.0) {
     let share = min(relief.a * 1.5, 1.0) * mix(RELIEF_SHARE.x, RELIEF_SHARE.y, smoothstep(0.1, 0.5, moon.shade));
-    ink = max(ink, quantileCut(fallLines(field, samp, px, unit, false), share));
+    ink = max(ink, quantileCut(fallLines(field, samp, pixelPos, unit, false), share));
   }
   let darker = smoothstep(GRAIN_DARKER.x, GRAIN_DARKER.y, row.a - row.r);
   let highland = smoothstep(MARE_OFF, MARE_OFF + 0.04, row.r * row.r) * (1.0 - step(1.5, row.b));
   let shadow = smoothstep(GRAIN_SHADOW.x, GRAIN_SHADOW.y, plain / max(wash, 1e-3));
   let dim = DIM_TONE * smoothstep(GRAIN_DIM.x, GRAIN_DIM.y, wash);
-  let t = max(max(moon.dusk, darker), max(shadow, dim)) * (1.0 - smoothstep(SHADE_START, SHADE_START + 0.2, moon.tone));
-  let grain = scatter(px / unit, GRAIN_CELL, mix(GRAIN_SHARE.x, GRAIN_SHARE.y, t), mix(GRAIN_RADIUS.x, GRAIN_RADIUS.y, t));
+  let grainWeight = max(max(moon.dusk, darker), max(shadow, dim)) * (1.0 - smoothstep(SHADE_START, SHADE_START + 0.2, moon.tone));
+  let grain = scatter(pixelPos / unit, GRAIN_CELL, mix(GRAIN_SHARE.x, GRAIN_SHARE.y, grainWeight), mix(GRAIN_RADIUS.x, GRAIN_RADIUS.y, grainWeight));
   return max(ink, grain * highland);
 }

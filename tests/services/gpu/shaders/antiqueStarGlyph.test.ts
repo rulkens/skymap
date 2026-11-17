@@ -37,19 +37,19 @@ const RAY_REACH = Number(
 );
 
 function starGlyphFromShader(): (q: V2, r: number, rays: number) => number {
-  const body = /fn starGlyph\(q: vec2<f32>, r: f32, rays: f32\) -> f32 \{([\s\S]*?)\n\}/.exec(
+  const body = /fn starGlyph\(local: vec2<f32>, radius: f32, rays: f32\) -> f32 \{([\s\S]*?)\n\}/.exec(
     SOURCE,
   )?.[1];
   if (body === undefined) throw new Error('glyphs.wesl lacks starGlyph');
   const scope = { ...SHIMS, RAY_REACH };
   const fn = new Function(
     ...Object.keys(scope),
-    'q',
-    'r',
+    'local',
+    'radius',
     'rays',
     body.replace(/\blet\b/g, 'const'),
   );
-  return (q, r, rays) => fn(...Object.values(scope), q, r, rays);
+  return (local, radius, rays) => fn(...Object.values(scope), local, radius, rays);
 }
 
 describe('antique star glyph', () => {

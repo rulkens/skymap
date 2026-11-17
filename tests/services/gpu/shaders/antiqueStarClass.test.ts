@@ -52,7 +52,7 @@ function glyphClassFromShader(): (mag: number) => number {
   const glyphs = readShaderSource(`${DIR}/antiqueLook/glyphs/vertex.wesl`);
   const rank = /let rank = (.*);/.exec(glyphs)?.[1];
   if (rank === undefined) throw new Error('glyphs.wesl lacks its rank line');
-  const fn = new Function(...Object.keys(SHIMS), 's', `return ${rank};`);
+  const fn = new Function(...Object.keys(SHIMS), 'printPoint', `return ${rank};`);
   return (mag) => fn(...Object.values(SHIMS), { z: mag });
 }
 

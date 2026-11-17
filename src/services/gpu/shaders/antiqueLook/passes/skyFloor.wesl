@@ -31,35 +31,35 @@ var<workgroup> webCount: atomic<u32>;
 fn percentile(share: f32, count: u32, web: bool) -> f32 {
   let goal = share * f32(count);
   var below = 0.0;
-  for (var b = 0u; b < BINS; b++) {
-    let n = f32(select(atomicLoad(&histogram[b]), atomicLoad(&webHistogram[b]), web));
-    if (below + n >= goal) {
-      return (f32(b) + (goal - below) / max(n, 1.0)) / f32(BINS);
+  for (var bin = 0u; bin < BINS; bin++) {
+    let binCount = f32(select(atomicLoad(&histogram[bin]), atomicLoad(&webHistogram[bin]), web));
+    if (below + binCount >= goal) {
+      return (f32(bin) + (goal - below) / max(binCount, 1.0)) / f32(BINS);
     }
-    below += n;
+    below += binCount;
   }
   return 0.0;
 }
 
 @compute @workgroup_size(256)
-fn cs(@builtin(local_invocation_index) id: u32) {
+fn cs(@builtin(local_invocation_index) threadIndex: u32) {
   let size = textureDimensions(glowTex);
   let count = size.x * size.y;
-  for (var i = id; i < count; i += THREADS) {
-    let g = textureLoad(glowTex, vec2<u32>(i % size.x, i / size.x), 0);
-    if (g.a >= 0.0) {
-      atomicAdd(&histogram[min(u32(max(luma(g.rgb), 0.0) / RANGE * f32(BINS)), BINS - 1u)], 1u);
+  for (var texelIndex = threadIndex; texelIndex < count; texelIndex += THREADS) {
+    let glowTexel = textureLoad(glowTex, vec2<u32>(texelIndex % size.x, texelIndex / size.x), 0);
+    if (glowTexel.a >= 0.0) {
+      atomicAdd(&histogram[min(u32(max(luma(glowTexel.rgb), 0.0) / RANGE * f32(BINS)), BINS - 1u)], 1u);
       atomicAdd(&skyCount, 1u);
     }
-    let w = textureLoad(webLevelTex, vec2<u32>(i % size.x, i / size.x), 0);
-    if (w.g > 0.5) {
-      let t = (w.r - WEB_LEVEL_RANGE.x) / (WEB_LEVEL_RANGE.y - WEB_LEVEL_RANGE.x);
-      atomicAdd(&webHistogram[min(u32(max(t, 0.0) * f32(BINS)), BINS - 1u)], 1u);
+    let webTexel = textureLoad(webLevelTex, vec2<u32>(texelIndex % size.x, texelIndex / size.x), 0);
+    if (webTexel.g > 0.5) {
+      let levelFraction = (webTexel.r - WEB_LEVEL_RANGE.x) / (WEB_LEVEL_RANGE.y - WEB_LEVEL_RANGE.x);
+      atomicAdd(&webHistogram[min(u32(max(levelFraction, 0.0) * f32(BINS)), BINS - 1u)], 1u);
       atomicAdd(&webCount, 1u);
     }
   }
   workgroupBarrier();
-  if (id != 0u) {
+  if (threadIndex != 0u) {
     return;
   }
   // No sky at all (a globe filling the frame): nothing to engrave, floor at zero.

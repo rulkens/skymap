@@ -16,18 +16,18 @@ const DIRS = array<vec2<f32>, 8>(
 );
 
 // 0 on the open plate, 1 where a caption's knock-out clears it to paper.
-fn captionHalo(overlay: texture_2d<f32>, ip: vec2<i32>, unit: f32, centreAlpha: f32) -> f32 {
+fn captionHalo(overlay: texture_2d<f32>, texel: vec2<i32>, unit: f32, centreAlpha: f32) -> f32 {
   let last = vec2<i32>(textureDimensions(overlay)) - 1;
-  var a = centreAlpha;
+  var alpha = centreAlpha;
   // A var copy: naga, and maybe WebKit, refuse a runtime index into a const array.
   var dirs = DIRS;
-  for (var k = 0; k < 8; k++) {
-    let near = ip + vec2<i32>(round(dirs[k] * (0.5 * REACH * unit)));
-    let far = ip + vec2<i32>(round(dirs[k] * (REACH * unit)));
-    a = max(a, textureLoad(overlay, clamp(near, vec2<i32>(0), last), 0).a);
-    a = max(a, textureLoad(overlay, clamp(far, vec2<i32>(0), last), 0).a);
+  for (var dirIndex = 0; dirIndex < 8; dirIndex++) {
+    let near = texel + vec2<i32>(round(dirs[dirIndex] * (0.5 * REACH * unit)));
+    let far = texel + vec2<i32>(round(dirs[dirIndex] * (REACH * unit)));
+    alpha = max(alpha, textureLoad(overlay, clamp(near, vec2<i32>(0), last), 0).a);
+    alpha = max(alpha, textureLoad(overlay, clamp(far, vec2<i32>(0), last), 0).a);
   }
-  return smoothstep(0.05, 0.3, a);
+  return smoothstep(0.05, 0.3, alpha);
 }
 
 // Letter spacing wider than the halo (a sea's spaced capitals, MARE TRANQVILLITATIS)
@@ -35,14 +35,14 @@ fn captionHalo(overlay: texture_2d<f32>, ip: vec2<i32>, unit: f32, centreAlpha: 
 // on both sides along the line of type is cleared too, so a word sits on one knock-out.
 const BRIDGE = vec3<f32>(2.0, 4.5, 7.5);
 
-fn captionBridge(overlay: texture_2d<f32>, ip: vec2<i32>, unit: f32) -> f32 {
+fn captionBridge(overlay: texture_2d<f32>, texel: vec2<i32>, unit: f32) -> f32 {
   let last = vec2<i32>(textureDimensions(overlay)) - 1;
   var left = 0.0;
   var right = 0.0;
-  for (var k = 0; k < 3; k++) {
-    let o = vec2<i32>(i32(round(BRIDGE[k] * unit)), 0);
-    left = max(left, textureLoad(overlay, clamp(ip - o, vec2<i32>(0), last), 0).a);
-    right = max(right, textureLoad(overlay, clamp(ip + o, vec2<i32>(0), last), 0).a);
+  for (var tapIndex = 0; tapIndex < 3; tapIndex++) {
+    let tapOffset = vec2<i32>(i32(round(BRIDGE[tapIndex] * unit)), 0);
+    left = max(left, textureLoad(overlay, clamp(texel - tapOffset, vec2<i32>(0), last), 0).a);
+    right = max(right, textureLoad(overlay, clamp(texel + tapOffset, vec2<i32>(0), last), 0).a);
   }
   return smoothstep(0.05, 0.3, min(left, right));
 }

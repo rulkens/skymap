@@ -18,13 +18,13 @@ const BLOCK: f32 = 8.0;
 // ragged outlines where the halos' are round.
 const RING_REACH: f32 = 3.0;
 
-fn eroded(at: vec2<f32>, texel: vec2<f32>) -> vec4<f32> {
-  var v = textureSampleLevel(structuresTex, linear, at, 0.0);
-  for (var k = 0; k < 4; k++) {
-    let a = f32(k) * 1.5707963;
-    v = min(v, textureSampleLevel(structuresTex, linear, at + vec2<f32>(cos(a), sin(a)) * texel * RING_REACH, 0.0));
+fn eroded(sampleUv: vec2<f32>, texel: vec2<f32>) -> vec4<f32> {
+  var lowest = textureSampleLevel(structuresTex, linear, sampleUv, 0.0);
+  for (var tapIndex = 0; tapIndex < 4; tapIndex++) {
+    let angle = f32(tapIndex) * 1.5707963;
+    lowest = min(lowest, textureSampleLevel(structuresTex, linear, sampleUv + vec2<f32>(cos(angle), sin(angle)) * texel * RING_REACH, 0.0));
   }
-  return v;
+  return lowest;
 }
 
 @fragment
@@ -33,9 +33,9 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // Each tap sits between four texels, so 4×4 taps cover the BLOCK×BLOCK block.
   let origin = floor(in.pos.xy) * BLOCK;
   var sum = vec4<f32>(0.0);
-  for (var j = 0; j < 4; j++) {
-    for (var i = 0; i < 4; i++) {
-      sum += eroded((origin + (vec2<f32>(f32(i), f32(j)) + 0.5) * BLOCK / 4.0) * texel, texel);
+  for (var tapY = 0; tapY < 4; tapY++) {
+    for (var tapX = 0; tapX < 4; tapX++) {
+      sum += eroded((origin + (vec2<f32>(f32(tapX), f32(tapY)) + 0.5) * BLOCK / 4.0) * texel, texel);
     }
   }
   return sum / 16.0;

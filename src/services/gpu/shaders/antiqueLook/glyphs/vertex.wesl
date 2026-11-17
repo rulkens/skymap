@@ -11,7 +11,7 @@ import package::lib::util::hash21Hq;
 import package::antiqueLook::shared::pigments::luma;
 
 @group(0) @binding(0) var pointTex: texture_2d<f32>;
-@group(0) @binding(1) var<uniform> u: AntiqueUniforms;
+@group(0) @binding(1) var<uniform> uniforms: AntiqueUniforms;
 // The look's `mask` layer (`passes/maskFragment.wesl`): r body cover.
 @group(0) @binding(2) var maskTex: texture_2d<f32>;
 // The 1/16 glow and web level (`ANTIQUE_LOW_LAYERS`) and this frame's floors (`passes/skyFloor.wesl`):
@@ -33,16 +33,16 @@ const FIELD_QUIET_REACH = vec2<f32>(0.05, 0.12);
 // two rings of four points round it) a field galaxy's dot stands: 1 on or beside one.
 fn nearResolvedGalaxy(centre: vec2<f32>) -> f32 {
   let dims = vec2<i32>(textureDimensions(lowTex));
-  let c = centre / u.res * vec2<f32>(dims);
-  let lo = 1.8 * floors.x + 0.03;
-  let hi = 2.6 * floors.x + 0.05;
-  var near = smoothstep(lo, hi, luma(textureLoad(lowTex, clamp(vec2<i32>(c), vec2<i32>(0), dims - 1), GLOW_LAYER, 0).rgb));
-  for (var k = 0; k < 8; k++) {
-    let ring = select(FIELD_QUIET_REACH.x, FIELD_QUIET_REACH.y, k >= 4);
-    let a = f32(k) * 1.5707963 + select(0.0, 0.7853982, k >= 4);
-    let q = clamp(vec2<i32>(c + vec2<f32>(cos(a), sin(a)) * ring * f32(dims.y)), vec2<i32>(0), dims - 1);
-    let big = smoothstep(lo, hi, luma(textureLoad(lowTex, q, GLOW_LAYER, 0).rgb));
-    near = max(near, big * select(1.0, 0.6, k >= 4));
+  let lowCoord = centre / uniforms.res * vec2<f32>(dims);
+  let lowThreshold = 1.8 * floors.x + 0.03;
+  let highThreshold = 2.6 * floors.x + 0.05;
+  var near = smoothstep(lowThreshold, highThreshold, luma(textureLoad(lowTex, clamp(vec2<i32>(lowCoord), vec2<i32>(0), dims - 1), GLOW_LAYER, 0).rgb));
+  for (var tapIndex = 0; tapIndex < 8; tapIndex++) {
+    let ring = select(FIELD_QUIET_REACH.x, FIELD_QUIET_REACH.y, tapIndex >= 4);
+    let tapAngle = f32(tapIndex) * 1.5707963 + select(0.0, 0.7853982, tapIndex >= 4);
+    let tapCoord = clamp(vec2<i32>(lowCoord + vec2<f32>(cos(tapAngle), sin(tapAngle)) * ring * f32(dims.y)), vec2<i32>(0), dims - 1);
+    let big = smoothstep(lowThreshold, highThreshold, luma(textureLoad(lowTex, tapCoord, GLOW_LAYER, 0).rgb));
+    near = max(near, big * select(1.0, 0.6, tapIndex >= 4));
   }
   return near;
 }
@@ -55,30 +55,30 @@ const VOID_KEEP: f32 = 0.06;
 // The share of field galaxies the web's voids take here (`passes/webFragment.wesl` `fsLevel`; 0 off the cosmos).
 fn voidThinning(centre: vec2<f32>) -> f32 {
   let dims = vec2<i32>(textureDimensions(lowTex));
-  let c = clamp(vec2<i32>(centre / u.res * vec2<f32>(dims)), vec2<i32>(0), dims - 1);
-  let level = textureLoad(lowTex, c, WEB_LEVEL_LAYER, 0).rg;
+  let lowCoord = clamp(vec2<i32>(centre / uniforms.res * vec2<f32>(dims)), vec2<i32>(0), dims - 1);
+  let level = textureLoad(lowTex, lowCoord, WEB_LEVEL_LAYER, 0).rg;
   let ramp = floors.y + VOID_LEVELS;
   return (1.0 - VOID_KEEP) * (1.0 - smoothstep(ramp.x, ramp.y, level.x)) * level.y;
 }
 
 @vertex
-fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32) -> GlyphOut {
-  var o: GlyphOut;
-  o.pos = vec4<f32>(2.0, 2.0, 0.0, 1.0);
+fn vs(@builtin(vertex_index) vertexIndex: u32, @builtin(instance_index) instanceIndex: u32) -> GlyphOut {
+  var out: GlyphOut;
+  out.pos = vec4<f32>(2.0, 2.0, 0.0, 1.0);
   let dims = vec2<u32>(textureDimensions(pointTex));
-  let cell = vec2<u32>(ii % dims.x, ii / dims.x);
+  let cell = vec2<u32>(instanceIndex % dims.x, instanceIndex / dims.x);
   if (cell.y >= dims.y) {
-    return o;
+    return out;
   }
-  let s = textureLoad(pointTex, vec2<i32>(cell), 0);
-  if (s.w < 0.5) {
-    return o;
+  let printPoint = textureLoad(pointTex, vec2<i32>(cell), 0);
+  if (printPoint.w < 0.5) {
+    return out;
   }
-  let centre = vec2<f32>(s.x * 0.5 + 0.5, 0.5 - s.y * 0.5) * u.res;
+  let centre = vec2<f32>(printPoint.x * 0.5 + 0.5, 0.5 - printPoint.y * 0.5) * uniforms.res;
   // A star behind a body never prints: its point was drawn without the body's depth.
   let maskDims = vec2<i32>(textureDimensions(maskTex));
   if (textureLoad(maskTex, min(vec2<i32>(centre), maskDims - 1), 0).r > 0.5) {
-    return o;
+    return out;
   }
   // Seven classes by apparent magnitude, one per whole magnitude as Hevelius
   // and Flamsteed graded theirs: dots for the faintest three (m 5, 4, 3), then
@@ -86,29 +86,29 @@ fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32) -> Glyph
   // star's core (half its size) outgrows the largest dot, so every step reads.
   let radii = array<f32, 7>(1.0, 1.5, 2.1, 4.4, 5.4, 6.6, 8.0);
   let rayCounts = array<f32, 7>(0.0, 0.0, 0.0, 6.0, 8.0, 8.0, 16.0);
-  let rank = 5 - clamp(i32(round(s.z)), -1, 5);
+  let rank = 5 - clamp(i32(round(printPoint.z)), -1, 5);
   // Each star punched by hand: its own turn, and a slight unevenness of size.
   // A dot (shared/printPoint.wesl: w 2 a galaxy, 3 a faint star) swells with its weight, off the ladder.
-  let isDot = s.w > 1.5;
-  let dotRadius = select(GALAXY_DOT_RADIUS, STAR_DOT_RADIUS, s.w > 2.5);
+  let isDot = printPoint.w > 1.5;
+  let dotRadius = select(GALAXY_DOT_RADIUS, STAR_DOT_RADIUS, printPoint.w > 2.5);
   // Round a resolved galaxy most field galaxies go and the rest shrink, so the
   // subject is not lost in a speckle as loud as itself; a void empties of them
   // too, so the web's walls carry the field. Stars keep every dot.
   var quiet = 0.0;
-  if (isDot && s.w < 2.5) {
+  if (isDot && printPoint.w < 2.5) {
     quiet = nearResolvedGalaxy(centre);
     if (hash21Hq(floor(centre) + 29.3) < max(0.7 * quiet, voidThinning(centre))) {
-      return o;
+      return out;
     }
   }
-  let size = select(radii[rank], mix(dotRadius.x, dotRadius.y, s.z * s.z) * (1.0 - 0.35 * quiet), isDot);
-  let r = size * u.unit * (0.92 + 0.16 * hash21Hq(floor(centre) + 7.1));
+  let size = select(radii[rank], mix(dotRadius.x, dotRadius.y, printPoint.z * printPoint.z) * (1.0 - 0.35 * quiet), isDot);
+  let radius = size * uniforms.unit * (0.92 + 0.16 * hash21Hq(floor(centre) + 7.1));
   let rays = select(rayCounts[rank], 0.0, isDot);
-  let reach = select(1.5, RAY_REACH, rays > 0.0) * r + 2.0;
-  let corner = vec2<f32>(f32(vi & 1u), f32((vi >> 1u) & 1u)) * 2.0 - 1.0;
-  let px = centre + corner * reach;
-  o.pos = vec4<f32>(px.x / u.res.x * 2.0 - 1.0, 1.0 - px.y / u.res.y * 2.0, 0.0, 1.0);
-  o.centre = centre;
-  o.shape = vec4<f32>(r, rays, 0.0, hash21Hq(floor(centre)) * 6.2831853);
-  return o;
+  let reach = select(1.5, RAY_REACH, rays > 0.0) * radius + 2.0;
+  let corner = vec2<f32>(f32(vertexIndex & 1u), f32((vertexIndex >> 1u) & 1u)) * 2.0 - 1.0;
+  let pixelPos = centre + corner * reach;
+  out.pos = vec4<f32>(pixelPos.x / uniforms.res.x * 2.0 - 1.0, 1.0 - pixelPos.y / uniforms.res.y * 2.0, 0.0, 1.0);
+  out.centre = centre;
+  out.shape = vec4<f32>(radius, rays, 0.0, hash21Hq(floor(centre)) * 6.2831853);
+  return out;
 }

@@ -22,9 +22,9 @@ fn signFoot(kind: u32) -> f32 {
   return 0.0;
 }
 
-fn signInk(p: vec2<f32>, kind: u32, seed: f32, pxPerLocal: f32) -> vec2<f32> {
+fn signInk(localPos: vec2<f32>, kind: u32, seed: f32, pxPerLocal: f32) -> vec2<f32> {
   if ((kind & 15u) == SIGN_MOLEHILL) {
-    return molehill(p, seed * 97.0, pxPerLocal);
+    return molehill(localPos, seed * 97.0, pxPerLocal);
   }
-  return townSign(p, kind, pxPerLocal);
+  return townSign(localPos, kind, pxPerLocal);
 }

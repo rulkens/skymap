@@ -21,24 +21,24 @@ fn fs(in: DecorOut) -> DecorInk {
   let rect = orn.items[in.item].rect;
   let uv = mix(rect.xy, rect.zw, in.local * 0.5 + 0.5);
   // A title's ink stands in for the atlas's: it clears and inks the plate, unwashed.
-  let s = select(
+  let sprite = select(
     textureSampleLevel(atlas, linear, uv, 0.0),
     vec4<f32>(textureSample(letteringTex, linear, uv).r, 0.0, 0.0, 0.0),
     orn.items[in.item].lettering > 0.5,
   );
   let edge = max(abs(in.local.x), abs(in.local.y));
-  let o = orn.items[in.item].opacity * (1.0 - smoothstep(0.9, 1.0, edge));
+  let opacity = orn.items[in.item].opacity * (1.0 - smoothstep(0.9, 1.0, edge));
   let clears = orn.items[in.item].clears;
   // One ink with the plate: the scan's greys pushed to line or paper.
-  let ink = smoothstep(0.2, 0.55, s.r) * o;
+  let ink = smoothstep(0.2, 0.55, sprite.r) * opacity;
   // A constellation figure prints the scan's own lines through the mip chain:
   // shrunk, a line becomes coverage, turned here into the density whose INK^d
   // matches that coverage printed. Sampled above any branch (implicit derivatives).
   let cover = textureSampleBias(atlas, linear, uv, -0.5).r;
-  let figure = log2(1.0 - cover * FIGURE_COVER * (1.0 - INK_T)) / log2(INK_T) * o;
+  let figure = log2(1.0 - cover * FIGURE_COVER * (1.0 - INK_T)) / log2(INK_T) * opacity;
   // A clearing ornament (the cartouche) takes the plate back to paper under its
   // whole engraving, not just its fill.
-  let clear = max(s.g, smoothstep(0.05, 0.3, s.r)) * o * clears;
+  let clear = max(sprite.g, smoothstep(0.05, 0.3, sprite.r)) * opacity * clears;
   // Only the cartouche frame is washed (flat inside its outline, the atlas's b);
   // figures and beasts print as ink on bare paper. The brush strays
   // a little off the line and pools unevenly (the plate's own wash noise).
@@ -48,8 +48,8 @@ fn fs(in: DecorOut) -> DecorInk {
   // Pigment gathers where a wash dries, at its edge: a darker rim, no airbrush fade.
   let rim = 1.0 - abs(2.0 * brush.b - 1.0);
   // The stray only wanders inside the wash's own outline (`s.b`), never onto the paper past it.
-  let flat = min(brush.b + 0.35 * rim, 1.0) * smoothstep(0.0, 0.2, s.b);
-  let wash = flat * orn.items[in.item].washed * o;
+  let flat = min(brush.b + 0.35 * rim, 1.0) * smoothstep(0.0, 0.2, sprite.b);
+  let wash = flat * orn.items[in.item].washed * opacity;
   let hue = pigmentAt(orn.items[in.item].pigment);
   var out: DecorInk;
   out.ink = vec4<f32>(figure * (1.0 - clears), ink * clears, clear, wash);

@@ -16,13 +16,13 @@ const PIGMENTS: array<vec3<f32>, 8> = array<vec3<f32>, 8>(
   vec3<f32>(0.86, 0.55, 0.58), // rose madder
 );
 
-fn luma(c: vec3<f32>) -> f32 {
-  return dot(c, vec3<f32>(0.2126, 0.7152, 0.0722));
+fn luma(colour: vec3<f32>) -> f32 {
+  return dot(colour, vec3<f32>(0.2126, 0.7152, 0.0722));
 }
 
-// The pigment whose chroma direction best matches `c`'s; ochre when `c` is grey.
-fn nearestPigment(c: vec3<f32>) -> vec3<f32> {
-  let chroma = c - vec3<f32>(luma(c));
+// The pigment whose chroma direction best matches `colour`'s; ochre when `colour` is grey.
+fn nearestPigment(colour: vec3<f32>) -> vec3<f32> {
+  let chroma = colour - vec3<f32>(luma(colour));
   let len = length(chroma);
   if (len < 1e-3) {
     return PIGMENTS[6];
@@ -31,12 +31,12 @@ fn nearestPigment(c: vec3<f32>) -> vec3<f32> {
   var box = PIGMENTS;
   var best = box[6];
   var bestDot = -2.0;
-  for (var i = 0; i < SCENE_PIGMENT_COUNT; i++) {
-    let pc = box[i] - vec3<f32>(luma(box[i]));
-    let d = dot(chroma / len, normalize(pc));
-    if (d > bestDot) {
-      bestDot = d;
-      best = box[i];
+  for (var pigmentIndex = 0; pigmentIndex < SCENE_PIGMENT_COUNT; pigmentIndex++) {
+    let pigmentChroma = box[pigmentIndex] - vec3<f32>(luma(box[pigmentIndex]));
+    let alignment = dot(chroma / len, normalize(pigmentChroma));
+    if (alignment > bestDot) {
+      bestDot = alignment;
+      best = box[pigmentIndex];
     }
   }
   return best;
@@ -44,19 +44,19 @@ fn nearestPigment(c: vec3<f32>) -> vec3<f32> {
 
 // The outline colours a Dutch colourist laid on regions: verdigris, gamboge,
 // carmine or smalt, by hue. Ochre and red lead read as browning (tea-stain) there.
-fn regionPigment(c: vec3<f32>) -> vec3<f32> {
-  let chroma = c - vec3<f32>(luma(c));
+fn regionPigment(colour: vec3<f32>) -> vec3<f32> {
+  let chroma = colour - vec3<f32>(luma(colour));
   let len = max(length(chroma), 1e-3);
   var picks = array<i32, 4>(0, 2, 4, 5);
   var box = PIGMENTS;
   var best = box[4];
   var bestDot = -2.0;
-  for (var i = 0; i < 4; i++) {
-    let pc = box[picks[i]] - vec3<f32>(luma(box[picks[i]]));
-    let d = dot(chroma / len, normalize(pc));
-    if (d > bestDot) {
-      bestDot = d;
-      best = box[picks[i]];
+  for (var pickIndex = 0; pickIndex < 4; pickIndex++) {
+    let pigmentChroma = box[picks[pickIndex]] - vec3<f32>(luma(box[picks[pickIndex]]));
+    let alignment = dot(chroma / len, normalize(pigmentChroma));
+    if (alignment > bestDot) {
+      bestDot = alignment;
+      best = box[picks[pickIndex]];
     }
   }
   return best;
@@ -67,8 +67,8 @@ fn pigmentAt(index: f32) -> vec3<f32> {
   return box[clamp(i32(index), 0, PIGMENT_COUNT - 1)];
 }
 
-fn chromaOf(c: vec3<f32>) -> f32 {
-  return max(c.r, max(c.g, c.b)) - min(c.r, min(c.g, c.b));
+fn chromaOf(colour: vec3<f32>) -> f32 {
+  return max(colour.r, max(colour.g, colour.b)) - min(colour.r, min(colour.g, colour.b));
 }
 
 // A watercolour wash is a filter on the paper: multiply by the pigment's

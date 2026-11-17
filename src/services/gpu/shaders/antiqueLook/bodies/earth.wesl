@@ -32,39 +32,39 @@ struct EarthPrintIn {
 }
 
 // `cover` scales the washes: body coverage times the plate's inside.
-fn earthPrint(col: vec3<f32>, cover: f32, e: EarthPrintIn) -> BodyPrint {
-  let ocean = 1.0 - smoothstep(0.35, 0.65, e.landShare);
-  let coastPx = abs(e.landShare - 0.5) / e.landPerPx;
-  let coast = 1.0 - smoothstep(0.55 * e.unit, 0.55 * e.unit + 1.0, coastPx);
-  let waterFade = ocean * (1.0 - smoothstep(0.35, 0.8, e.tone));
+fn earthPrint(col: vec3<f32>, cover: f32, printIn: EarthPrintIn) -> BodyPrint {
+  let ocean = 1.0 - smoothstep(0.35, 0.65, printIn.landShare);
+  let coastPx = abs(printIn.landShare - 0.5) / printIn.landPerPx;
+  let coast = 1.0 - smoothstep(0.55 * printIn.unit, 0.55 * printIn.unit + 1.0, coastPx);
+  let waterFade = ocean * (1.0 - smoothstep(0.35, 0.8, printIn.tone));
   var water = 0.0;
   if (waterFade > 0.0) {
-    water = waterLines(e.p, e.seaD, e.seaPerUnit, e.pxUnits) * waterFade;
+    water = waterLines(printIn.p, printIn.seaD, printIn.seaPerUnit, printIn.pxUnits) * waterFade;
   }
   // Seas mostly paper, as Dutch colourists left them, smalt pooled along the
   // shore; land in Dutch outline colour, a band along each coast fading inward
   // to paper. The colourist's wash stops a little off the cut coast, by a slow wander.
-  let near = clamp(1.0 - e.seaD / 16.0, 0.0, 1.0);
-  let inland = seaDistance(1.0 - e.blurredShare);
-  let seaWash = (0.03 + 0.17 * pow(near, 1.5)) * (1.0 - smoothstep(0.35, 0.65, e.washShare));
+  let near = clamp(1.0 - printIn.seaD / 16.0, 0.0, 1.0);
+  let inland = seaDistance(1.0 - printIn.blurredShare);
+  let seaWash = (0.03 + 0.17 * pow(near, 1.5)) * (1.0 - smoothstep(0.35, 0.65, printIn.washShare));
   // Each realm takes its own pigment along its coasts and its borders alike;
   // land no realm claims stays paper (a generic ochre band read as foxing).
-  let code = i32(round(e.geo.r * 255.0));
+  let code = i32(round(printIn.geo.r * 255.0));
   let realm = code >= 1 && code <= 7;
-  let land = smoothstep(0.35, 0.6, e.washShare);
+  let land = smoothstep(0.35, 0.6, printIn.washShare);
   // A narrow band inside the line, as a colourist laid it: wide, it showed the land
   // row's blocky texels and pooled into clouds over the interior.
   // The smoothstep drops the blur's weak tails, which pooled as pink blobs far from any coast.
-  let coastBand = smoothstep(0.5, 1.0, clamp(1.0 - inland / 5.0, 0.0, 1.0)) * (0.85 + 0.3 * vnoise(e.p * 0.06 + 3.0));
-  let band = select(0.0, max(coastBand, e.geo.g * e.geo.g), realm);
+  let coastBand = smoothstep(0.5, 1.0, clamp(1.0 - inland / 5.0, 0.0, 1.0)) * (0.85 + 0.3 * vnoise(printIn.p * 0.06 + 3.0));
+  let band = select(0.0, max(coastBand, printIn.geo.g * printIn.geo.g), realm);
   let pigment = pigmentAt(f32(max(code - 1, 0)));
   var washed = applyWash(col, pigmentAt(5.0), seaWash * cover);
   washed = applyWash(washed, pigment, 0.5 * land * band * cover);
   // A sign's alpha is half its paper plus half its ink (`sign.wesl`): the paper clears
   // the engraving under the sign, the ink prints over it.
-  let signInk = clamp(2.0 * e.geo.a - 1.0, 0.0, 1.0);
-  let signPaper = clamp(2.0 * e.geo.a, 0.0, 1.0);
-  let lines = max(max(coast, water * 0.9), e.geo.b * smoothstep(0.2, 0.5, e.landShare));
+  let signInk = clamp(2.0 * printIn.geo.a - 1.0, 0.0, 1.0);
+  let signPaper = clamp(2.0 * printIn.geo.a, 0.0, 1.0);
+  let lines = max(max(coast, water * 0.9), printIn.geo.b * smoothstep(0.2, 0.5, printIn.landShare));
   return BodyPrint(washed, max(lines * (1.0 - signPaper), signInk));
 }
 
@@ -80,12 +80,12 @@ const EARTH_DETAIL_INK: f32 = 0.3;
 // The shade's share over which lines arrive and swell to their full width.
 const EARTH_SHADE_BAND = vec2<f32>(0.08, 0.55);
 
-fn earthRelief(field: texture_2d<f32>, px: vec2<f32>, relief: vec4<f32>, unit: f32, plain: f32, around: f32) -> f32 {
+fn earthRelief(field: texture_2d<f32>, pixelPos: vec2<f32>, relief: vec4<f32>, unit: f32, plain: f32, around: f32) -> f32 {
   if (relief.a <= 0.0) {
     return 0.0;
   }
   let detail = clamp((around - plain) / max(around, 1e-3) * 2.0, 0.0, 1.0);
   let share = EARTH_SHADE_INK * relief.a + EARTH_DETAIL_INK * detail * min(relief.a * 4.0, 1.0);
   let tone = 0.85 * smoothstep(EARTH_SHADE_BAND.x, EARTH_SHADE_BAND.y, share);
-  return contourLines(field, px, relief.b, unit, tone, 0.0);
+  return contourLines(field, pixelPos, relief.b, unit, tone, 0.0);
 }

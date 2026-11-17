@@ -14,7 +14,7 @@ struct AntiqueSigns {
   centres: array<vec4<f32>, 32>,
 }
 
-@group(0) @binding(0) var<uniform> u: AntiqueUniforms;
+@group(0) @binding(0) var<uniform> uniforms: AntiqueUniforms;
 @group(0) @binding(1) var<storage, read> signs: AntiqueSigns;
 // The look's `mask` layer (`mask.wesl`): r body cover.
 @group(0) @binding(2) var maskTex: texture_2d<f32>;
@@ -24,23 +24,23 @@ struct AntiqueSigns {
 const SIGN_RADIUS_UNITS: f32 = 4.0;
 
 @vertex
-fn vs(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32) -> SignOut {
-  var o: SignOut;
-  o.pos = vec4<f32>(2.0, 2.0, 0.0, 1.0);
-  if (ii >= signs.count) {
-    return o;
+fn vs(@builtin(vertex_index) vertexIndex: u32, @builtin(instance_index) instanceIndex: u32) -> SignOut {
+  var out: SignOut;
+  out.pos = vec4<f32>(2.0, 2.0, 0.0, 1.0);
+  if (instanceIndex >= signs.count) {
+    return out;
   }
-  let centre = signs.centres[ii].xy;
+  let centre = signs.centres[instanceIndex].xy;
   // A body hidden behind a globe prints no sign (its glint was drawn without the body's depth).
   let maskDims = vec2<i32>(textureDimensions(maskTex));
   if (textureLoad(maskTex, clamp(vec2<i32>(centre), vec2<i32>(0), maskDims - 1), 0).r > 0.5) {
-    return o;
+    return out;
   }
-  let r = SIGN_RADIUS_UNITS * u.unit;
-  let corner = vec2<f32>(f32(vi & 1u), f32((vi >> 1u) & 1u)) * 2.0 - 1.0;
-  let px = centre + corner * (1.3 * r + 2.0);
-  o.pos = vec4<f32>(px.x / u.res.x * 2.0 - 1.0, 1.0 - px.y / u.res.y * 2.0, 0.0, 1.0);
-  o.centre = centre;
-  o.r = r;
-  return o;
+  let radius = SIGN_RADIUS_UNITS * uniforms.unit;
+  let corner = vec2<f32>(f32(vertexIndex & 1u), f32((vertexIndex >> 1u) & 1u)) * 2.0 - 1.0;
+  let pixelPos = centre + corner * (1.3 * radius + 2.0);
+  out.pos = vec4<f32>(pixelPos.x / uniforms.res.x * 2.0 - 1.0, 1.0 - pixelPos.y / uniforms.res.y * 2.0, 0.0, 1.0);
+  out.centre = centre;
+  out.r = radius;
+  return out;
 }

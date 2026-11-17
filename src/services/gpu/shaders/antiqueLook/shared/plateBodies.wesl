@@ -28,8 +28,8 @@ const PRINT_MARS: u32 = 2u;
 const PRINT_MOON: u32 = 3u;
 const PRINT_JUPITER: u32 = 4u;
 
-fn printOf(b: PlateBody) -> u32 {
-  return u32(b.sun.w + 0.5);
+fn printOf(body: PlateBody) -> u32 {
+  return u32(body.sun.w + 0.5);
 }
 
 // A body module's say over its pixels: the colour after its washes, and its own ink.
@@ -58,77 +58,77 @@ struct BodyHit {
 // Where the ray meets the ball, the discriminant taken as r² − |m − b·rd|² (no
 // cancellation far out). A miss is clamped to the closest approach, so the
 // ball's coordinates continue smoothly past the limb (for one-sided gradients).
-fn ballNormal(ray: vec3<f32>, c: vec3<f32>) -> vec3<f32> {
-  let bc = dot(ray, c);
-  let off = c - bc * ray;
-  let t = bc - sqrt(max(1.0 - dot(off, off), 0.0));
-  return normalize(t * ray - c);
+fn ballNormal(ray: vec3<f32>, centre: vec3<f32>) -> vec3<f32> {
+  let alongRay = dot(ray, centre);
+  let off = centre - alongRay * ray;
+  let rayDistance = alongRay - sqrt(max(1.0 - dot(off, off), 0.0));
+  return normalize(rayDistance * ray - centre);
 }
 
-fn subsolarArc(n: vec3<f32>, l: vec3<f32>) -> f32 {
-  return atan2(length(cross(n, l)), dot(n, l));
+fn subsolarArc(surfaceNormal: vec3<f32>, towardSun: vec3<f32>) -> f32 {
+  return atan2(length(cross(surfaceNormal, towardSun)), dot(surfaceNormal, towardSun));
 }
 
-fn ballTheta(ray: vec3<f32>, b: PlateBody) -> f32 {
-  return subsolarArc(ballNormal(ray, b.centre.xyz), b.sun.xyz);
+fn ballTheta(ray: vec3<f32>, body: PlateBody) -> f32 {
+  return subsolarArc(ballNormal(ray, body.centre.xyz), body.sun.xyz);
 }
 
 // Latitude, radians, of where the ray meets the ball (`ring.xyz` the pole).
-fn ballLatitude(ray: vec3<f32>, b: PlateBody) -> f32 {
-  return asin(clamp(dot(ballNormal(ray, b.centre.xyz), b.ring.xyz), -1.0, 1.0));
+fn ballLatitude(ray: vec3<f32>, body: PlateBody) -> f32 {
+  return asin(clamp(dot(ballNormal(ray, body.centre.xyz), body.ring.xyz), -1.0, 1.0));
 }
 
-fn ringRho(ray: vec3<f32>, b: PlateBody) -> f32 {
-  let c = b.centre.xyz;
-  return length(dot(b.ring.xyz, c) / dot(ray, b.ring.xyz) * ray - c);
+fn ringRho(ray: vec3<f32>, body: PlateBody) -> f32 {
+  let centre = body.centre.xyz;
+  return length(dot(body.ring.xyz, centre) / dot(ray, body.ring.xyz) * ray - centre);
 }
 
-fn castPlateBody(ray: vec3<f32>, b: PlateBody) -> BodyHit {
-  var h = BodyHit(1e30, 0.0, 0.0, 0.0, 0.0, false, 0.0, false, 1e30, 0u);
-  let c = b.centre.xyz;
-  let l = b.sun.xyz;
-  let e = b.ringEdges;
-  let bc = dot(ray, c);
-  let off = c - bc * ray;
+fn castPlateBody(ray: vec3<f32>, body: PlateBody) -> BodyHit {
+  var hit = BodyHit(1e30, 0.0, 0.0, 0.0, 0.0, false, 0.0, false, 1e30, 0u);
+  let centre = body.centre.xyz;
+  let towardSun = body.sun.xyz;
+  let edges = body.ringEdges;
+  let alongRay = dot(ray, centre);
+  let off = centre - alongRay * ray;
   let disc = 1.0 - dot(off, off);
-  let tBall = select(1e30, bc - sqrt(max(disc, 0.0)), disc > 0.0 && bc > 0.0);
+  let tBall = select(1e30, alongRay - sqrt(max(disc, 0.0)), disc > 0.0 && alongRay > 0.0);
   var tRing = 1e30;
-  if (b.ring.w > 0.0) {
-    let tr = dot(b.ring.xyz, c) / dot(ray, b.ring.xyz);
-    h.rho = length(tr * ray - c);
-    if (tr > 0.0 && h.rho > e.x && h.rho < b.ring.w) {
-      tRing = tr;
+  if (body.ring.w > 0.0) {
+    let ringDistance = dot(body.ring.xyz, centre) / dot(ray, body.ring.xyz);
+    hit.rho = length(ringDistance * ray - centre);
+    if (ringDistance > 0.0 && hit.rho > edges.x && hit.rho < body.ring.w) {
+      tRing = ringDistance;
     }
   }
-  h.t = min(tBall, tRing);
-  if (h.t >= 1e30) {
-    return h;
+  hit.t = min(tBall, tRing);
+  if (hit.t >= 1e30) {
+    return hit;
   }
   // The C ring is gauze: over the ball, the ball's own tone shows through.
-  let gauze = tRing < tBall && tBall < 1e29 && h.rho < e.y;
-  h.onRing = tRing < tBall && !gauze;
-  let n = ballNormal(ray, c);
-  h.ndl = dot(n, l);
-  h.ndv = -dot(n, ray);
-  h.theta = subsolarArc(n, l);
-  if (h.onRing) {
-    let pr = tRing * ray - c;
-    let pl = dot(pr, l);
+  let gauze = tRing < tBall && tBall < 1e29 && hit.rho < edges.y;
+  hit.onRing = tRing < tBall && !gauze;
+  let surfaceNormal = ballNormal(ray, centre);
+  hit.ndl = dot(surfaceNormal, towardSun);
+  hit.ndv = -dot(surfaceNormal, ray);
+  hit.theta = subsolarArc(surfaceNormal, towardSun);
+  if (hit.onRing) {
+    let ringPoint = tRing * ray - centre;
+    let ringAlongSun = dot(ringPoint, towardSun);
     // Hatching thins to nothing at the cylinder's edge, as burin lines taper, so the
     // shadow is a soft-edged wedge, not a block with cut sides.
-    h.ballShadow = select(0.0, smoothstep(0.0, 0.4, 1.0 - length(pr - pl * l)), pl < 0.0);
-  } else if (b.ring.w > 0.0) {
-    let tt = -dot(n, b.ring.xyz) / dot(l, b.ring.xyz);
-    let r = length(n + tt * l);
-    h.ringShadow = tt > 0.0 && r > e.x && r < e.w && abs(r - e.z) > CASSINI_HALF;
+    hit.ballShadow = select(0.0, smoothstep(0.0, 0.4, 1.0 - length(ringPoint - ringAlongSun * towardSun)), ringAlongSun < 0.0);
+  } else if (body.ring.w > 0.0) {
+    let sunToRingPlane = -dot(surfaceNormal, body.ring.xyz) / dot(towardSun, body.ring.xyz);
+    let ringRadius = length(surfaceNormal + sunToRingPlane * towardSun);
+    hit.ringShadow = sunToRingPlane > 0.0 && ringRadius > edges.x && ringRadius < edges.w && abs(ringRadius - edges.z) > CASSINI_HALF;
   }
   // The outline: angle off the silhouette cone, times units per radian
   // (R / tan(asin(1/d))). Hidden where the ring passes in front of it.
-  let d = length(c);
-  let fromAxis = atan2(length(cross(ray, c)), bc);
-  h.edgeUnits = abs(fromAxis - asin(1.0 / d)) * b.centre.w * sqrt(max(d * d - 1.0, 0.0));
-  if (h.onRing && tRing < bc) {
-    h.edgeUnits = 1e30;
+  let centreDist = length(centre);
+  let fromAxis = atan2(length(cross(ray, centre)), alongRay);
+  hit.edgeUnits = abs(fromAxis - asin(1.0 / centreDist)) * body.centre.w * sqrt(max(centreDist * centreDist - 1.0, 0.0));
+  if (hit.onRing && tRing < alongRay) {
+    hit.edgeUnits = 1e30;
   }
-  return h;
+  return hit;
 }

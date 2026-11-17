@@ -21,23 +21,23 @@ struct AntiqueMapUniforms {
 
 // A geodetic lon/lat (radians) on the unit globe, the mesh's axes (`lonLatDegToDirection`).
 fn lonLatToUnit(lonLat: vec2<f32>) -> vec3<f32> {
-  let c = cos(lonLat.y);
-  return vec3<f32>(c * cos(lonLat.x), c * sin(lonLat.x), sin(lonLat.y));
+  let cosLat = cos(lonLat.y);
+  return vec3<f32>(cosLat * cos(lonLat.x), cosLat * sin(lonLat.x), sin(lonLat.y));
 }
 
 // > 0 where a point of the unit globe faces the eye: the far side is culled per
 // vertex and per fragment (the row has no depth; the globe is convex).
-fn facing(p: vec3<f32>, cam: vec3<f32>) -> f32 {
-  return dot(p, cam - p);
+fn facing(unitPoint: vec3<f32>, cam: vec3<f32>) -> f32 {
+  return dot(unitPoint, cam - unitPoint);
 }
 
 // Clip → framebuffer px (y down, as `@builtin(position)` reads in the fragment).
-fn clipToPx(c: vec4<f32>, viewport: vec2<f32>) -> vec2<f32> {
-  let ndc = c.xy / c.w;
+fn clipToPx(clip: vec4<f32>, viewport: vec2<f32>) -> vec2<f32> {
+  let ndc = clip.xy / clip.w;
   return vec2<f32>(ndc.x * 0.5 + 0.5, 0.5 - ndc.y * 0.5) * viewport;
 }
 
-fn pxToClip(px: vec2<f32>, viewport: vec2<f32>, z: f32, w: f32) -> vec4<f32> {
-  let ndc = vec2<f32>(px.x / viewport.x * 2.0 - 1.0, 1.0 - px.y / viewport.y * 2.0);
-  return vec4<f32>(ndc * w, z, w);
+fn pxToClip(pixelPos: vec2<f32>, viewport: vec2<f32>, clipZ: f32, clipW: f32) -> vec4<f32> {
+  let ndc = vec2<f32>(pixelPos.x / viewport.x * 2.0 - 1.0, 1.0 - pixelPos.y / viewport.y * 2.0);
+  return vec4<f32>(ndc * clipW, clipZ, clipW);
 }

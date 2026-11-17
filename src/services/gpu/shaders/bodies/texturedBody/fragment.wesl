@@ -90,22 +90,22 @@ const TILES = vec2<i32>(16, 9);
 
 // The rings that can reach the tile holding frag (device px), as a mask over their order.
 fn ringsAt(frag: vec2<f32>) -> vec2<u32> {
-  let t = clamp(vec2<i32>(frag / moon.tilePx), vec2<i32>(0), TILES - 1);
-  let k = t.y * TILES.x + t.x;
-  let v = moon.tiles[k / 2];
-  return select(v.xy, v.zw, (k & 1) == 1);
+  let tile = clamp(vec2<i32>(frag / moon.tilePx), vec2<i32>(0), TILES - 1);
+  let tileIndex = tile.y * TILES.x + tile.x;
+  let tileRings = moon.tiles[tileIndex / 2];
+  return select(tileRings.xy, tileRings.zw, (tileIndex & 1) == 1);
 }
 
 // The lowest ring left in the mask, which it clears.
 fn popRing(mask: ptr<function, vec2<u32>>) -> u32 {
   if ((*mask).x != 0u) {
-    let b = firstTrailingBit((*mask).x);
-    (*mask).x &= ~(1u << b);
-    return b;
+    let bit = firstTrailingBit((*mask).x);
+    (*mask).x &= ~(1u << bit);
+    return bit;
   }
-  let b = firstTrailingBit((*mask).y);
-  (*mask).y &= ~(1u << b);
-  return 32u + b;
+  let bit = firstTrailingBit((*mask).y);
+  (*mask).y &= ~(1u << bit);
+  return 32u + bit;
 }
 
 // Colour + analytic depth. No '@builtin(position)' anywhere in this struct --
@@ -153,8 +153,8 @@ const ALBEDO_BAND: f32 = 0.06;
 // counts only body pixels, so the sky's share is never read).
 @fragment
 fn fsAlbedoMask(in: TexturedBodyVSOut) -> @location(0) vec4<f32> {
-  let rd = normalize(in.localPos - uniforms.camPosLocal);
-  let surface = hitUnitSphere(uniforms.camPosLocal, rd, uniforms.camAltitudeSq);
+  let rayDir = normalize(in.localPos - uniforms.camPosLocal);
+  let surface = hitUnitSphere(uniforms.camPosLocal, rayDir, uniforms.camAltitudeSq);
   let uv = equirectUvFromDir(surface.point);
   let grad = equirectUvGradients(uv);
   let albedo = textureSampleGrad(bodyTexture, bodySampler, uv, grad.ddx, grad.ddy).rgb;
@@ -244,52 +244,52 @@ const MOON_CIRCUMFERENCE_KM: f32 = 10917.0;
 const MARE_CAP_KM: f32 = 40.0;
 const MARE_WIDE_CAP_KM: f32 = 300.0;
 
-fn capOnGround(d: vec2<f32>, cosLat: f32, capKm: f32) -> vec2<f32> {
-  let km = MOON_CIRCUMFERENCE_KM * length(vec2<f32>(d.x * cosLat, 0.5 * d.y));
-  return d * min(1.0, capKm / max(km, 1e-6));
+fn capOnGround(uvStep: vec2<f32>, cosLat: f32, capKm: f32) -> vec2<f32> {
+  let groundKm = MOON_CIRCUMFERENCE_KM * length(vec2<f32>(uvStep.x * cosLat, 0.5 * uvStep.y));
+  return uvStep * min(1.0, capKm / max(groundKm, 1e-6));
 }
 
 fn mareTap(uv: vec2<f32>, ddx: vec2<f32>, ddy: vec2<f32>, footprintPx: f32, floorTexels: f32, capKm: f32) -> f32 {
-  let g = max(max(length(ddx), length(ddy)), 1e-9);
-  let s = max(footprintPx, (1.0 / floorTexels) / g);
+  let gradLen = max(max(length(ddx), length(ddy)), 1e-9);
+  let footprintScale = max(footprintPx, (1.0 / floorTexels) / gradLen);
   let cosLat = max(sin(3.14159265 * uv.y), 0.05);
-  let rgb = textureSampleGrad(bodyTexture, bodySampler, uv, capOnGround(ddx * s, cosLat, capKm),
-    capOnGround(ddy * s, cosLat, capKm)).rgb;
+  let rgb = textureSampleGrad(bodyTexture, bodySampler, uv, capOnGround(ddx * footprintScale, cosLat, capKm),
+    capOnGround(ddy * footprintScale, cosLat, capKm)).rgb;
   return sqrt(dot(rgb, vec3<f32>(0.2126, 0.7152, 0.0722)));
 }
 
 fn mareAlbedo(uv: vec2<f32>, ddx: vec2<f32>, ddy: vec2<f32>) -> f32 {
   let cosLat = max(sin(3.14159265 * uv.y), 0.05);
-  let ox = capOnGround(ddx * MARE_TAP_PX, cosLat, MARE_CAP_KM);
-  let oy = capOnGround(ddy * MARE_TAP_PX, cosLat, MARE_CAP_KM);
-  return (2.0 * mareTap(uv, ddx, ddy, MARE_BLUR_PX, MARE_MIP_TEXELS, MARE_CAP_KM) + mareTap(uv + ox, ddx, ddy, MARE_BLUR_PX, MARE_MIP_TEXELS, MARE_CAP_KM)
-    + mareTap(uv - ox, ddx, ddy, MARE_BLUR_PX, MARE_MIP_TEXELS, MARE_CAP_KM) + mareTap(uv + oy, ddx, ddy, MARE_BLUR_PX, MARE_MIP_TEXELS, MARE_CAP_KM)
-    + mareTap(uv - oy, ddx, ddy, MARE_BLUR_PX, MARE_MIP_TEXELS, MARE_CAP_KM)) / 6.0;
+  let tapOffsetX = capOnGround(ddx * MARE_TAP_PX, cosLat, MARE_CAP_KM);
+  let tapOffsetY = capOnGround(ddy * MARE_TAP_PX, cosLat, MARE_CAP_KM);
+  return (2.0 * mareTap(uv, ddx, ddy, MARE_BLUR_PX, MARE_MIP_TEXELS, MARE_CAP_KM) + mareTap(uv + tapOffsetX, ddx, ddy, MARE_BLUR_PX, MARE_MIP_TEXELS, MARE_CAP_KM)
+    + mareTap(uv - tapOffsetX, ddx, ddy, MARE_BLUR_PX, MARE_MIP_TEXELS, MARE_CAP_KM) + mareTap(uv + tapOffsetY, ddx, ddy, MARE_BLUR_PX, MARE_MIP_TEXELS, MARE_CAP_KM)
+    + mareTap(uv - tapOffsetY, ddx, ddy, MARE_BLUR_PX, MARE_MIP_TEXELS, MARE_CAP_KM)) / 6.0;
 }
 
 // A ring yields its line and crescent to a younger ring holding the point: a fresher one
 // (curated weight a step heavier) or, as fresh, a smaller one, which lies on it.
-fn craterYouth(cr: MoonCrater) -> f32 {
-  return floor(cr.weight * 10.0 + 0.5) + 0.9 * (1.0 - min(cr.rho * 8.0, 1.0));
+fn craterYouth(crater: MoonCrater) -> f32 {
+  return floor(crater.weight * 10.0 + 0.5) + 0.9 * (1.0 - min(crater.rho * 8.0, 1.0));
 }
 
 // The Sun-side inner wall's hachures, Riccioli's dark crescent: strokes down the wall from
 // the rim, CRESCENT_PITCH units apart along it (a small ring at most CRESCENT_MAX_RAD, ~5),
 // longest toward the Sun, none past ~70° off it, each tapering to a point. theta: the
-// azimuth off the Sun, gTheta its rad per px; q: psi / rho.
+// azimuth off the Sun, gTheta its rad per px; ringRadii: psi / rho.
 const CRESCENT_PITCH: f32 = 4.2;
 const CRESCENT_MAX_RAD: f32 = 0.42;
 const CRESCENT_LEN: f32 = 0.42;
 const CRESCENT_W: f32 = 1.9;
 
-fn crescentInk(theta: f32, gTheta: f32, q: f32, rimUnits: f32, pxUnits: f32, seed: f32) -> f32 {
+fn crescentInk(theta: f32, gTheta: f32, ringRadii: f32, rimUnits: f32, pxUnits: f32, seed: f32) -> f32 {
   let pitch = min(CRESCENT_PITCH / rimUnits, CRESCENT_MAX_RAD);
-  let k = round(theta / pitch);
-  let reach = CRESCENT_LEN * smoothstep(0.35, 0.95, cos(k * pitch)) * (0.75 + 0.5 * hash21Hq(vec2<f32>(k, seed)));
-  let t = (1.0 - q) / max(reach, 1e-3);
-  let w = CRESCENT_W * (1.0 - t);
-  let d = abs(theta - k * pitch) / max(gTheta, 1e-9) * pxUnits;
-  return inkLine(d, w, pxUnits) * step(0.5 * pxUnits, w) * step(-0.05, t);
+  let strokeIndex = round(theta / pitch);
+  let reach = CRESCENT_LEN * smoothstep(0.35, 0.95, cos(strokeIndex * pitch)) * (0.75 + 0.5 * hash21Hq(vec2<f32>(strokeIndex, seed)));
+  let alongStroke = (1.0 - ringRadii) / max(reach, 1e-3);
+  let strokeWidth = CRESCENT_W * (1.0 - alongStroke);
+  let strokeDist = abs(theta - strokeIndex * pitch) / max(gTheta, 1e-9) * pxUnits;
+  return inkLine(strokeDist, strokeWidth, pxUnits) * step(0.5 * pxUnits, strokeWidth) * step(-0.05, alongStroke);
 }
 
 // A rayed crater's ejecta brightens the ground it fell on for ~300 km, which then reads as
@@ -314,32 +314,32 @@ const EJECTA_UNITS = vec2<f32>(10.0, 20.0);
 // Mirror MOON_PITCH (antiqueLook/bodies/moon.wesl): the mare lines' rows, print units.
 const MARE_PITCH_UNITS: f32 = 4.6;
 
-// n on the ground at q radii (> 1) from the crater; rhoUnits its radius in print units.
-fn ejectaInk(n: vec3<f32>, cr: MoonCrater, q: f32, rhoUnits: f32, pxUnits: f32, seed: f32) -> f32 {
+// surfaceNormal on the ground at radiiOut radii (> 1) from the crater; rhoUnits its radius in print units.
+fn ejectaInk(surfaceNormal: vec3<f32>, crater: MoonCrater, radiiOut: f32, rhoUnits: f32, pxUnits: f32, seed: f32) -> f32 {
   // A frame fixed to the ground round the centre, so each dot keeps its place.
-  let e1 = normalize(cross(cr.c, select(vec3<f32>(0.0, 0.0, 1.0), vec3<f32>(1.0, 0.0, 0.0), abs(cr.c.z) > 0.9)));
+  let frameAxis = normalize(cross(crater.c, select(vec3<f32>(0.0, 0.0, 1.0), vec3<f32>(1.0, 0.0, 0.0), abs(crater.c.z) > 0.9)));
   let lanes = max(round(6.2831853 * rhoUnits / EJECTA_PITCH), 8.0);
-  let a = (atan2(dot(n, cross(cr.c, e1)), dot(n, e1)) / 6.2831853 + 0.5) * lanes;
-  let r = (q - 1.0) * rhoUnits / EJECTA_STEP;
-  let cell = vec2<f32>(floor(a) % lanes, floor(r)) + seed;
-  let h = vec3<f32>(hash21Hq(cell), hash21Hq(cell + 17.3), hash21Hq(cell + 41.7));
-  let ac = floor(a) + 0.25 + 0.5 * h.x;
-  let rc = floor(r) + 0.3 + 0.4 * h.y;
-  let qc = 1.0 + rc * EJECTA_STEP / rhoUnits;
-  let kept = step(h.z, 0.7 * (1.0 - smoothstep(EJECTA.x, EJECTA.y, qc)) * smoothstep(EJECTA_UNITS.x, EJECTA_UNITS.y, rhoUnits));
-  let across = (a - ac) / lanes * 6.2831853 * q * rhoUnits;
-  let along = (r - rc) * EJECTA_STEP;
-  let size = mix(1.0, 0.65, smoothstep(1.0, EJECTA.y, qc));
-  let d = length(vec2<f32>(along / EJECTA_DOT.x, across / EJECTA_DOT.y));
-  let aa = 0.5 * pxUnits / EJECTA_DOT.y;
-  return kept * (1.0 - smoothstep(size - aa, size + aa, d));
+  let laneCoord = (atan2(dot(surfaceNormal, cross(crater.c, frameAxis)), dot(surfaceNormal, frameAxis)) / 6.2831853 + 0.5) * lanes;
+  let stepCoord = (radiiOut - 1.0) * rhoUnits / EJECTA_STEP;
+  let cell = vec2<f32>(floor(laneCoord) % lanes, floor(stepCoord)) + seed;
+  let cellHash = vec3<f32>(hash21Hq(cell), hash21Hq(cell + 17.3), hash21Hq(cell + 41.7));
+  let laneCentre = floor(laneCoord) + 0.25 + 0.5 * cellHash.x;
+  let stepCentre = floor(stepCoord) + 0.3 + 0.4 * cellHash.y;
+  let centreRadii = 1.0 + stepCentre * EJECTA_STEP / rhoUnits;
+  let kept = step(cellHash.z, 0.7 * (1.0 - smoothstep(EJECTA.x, EJECTA.y, centreRadii)) * smoothstep(EJECTA_UNITS.x, EJECTA_UNITS.y, rhoUnits));
+  let across = (laneCoord - laneCentre) / lanes * 6.2831853 * radiiOut * rhoUnits;
+  let along = (stepCoord - stepCentre) * EJECTA_STEP;
+  let size = mix(1.0, 0.65, smoothstep(1.0, EJECTA.y, centreRadii));
+  let dotDist = length(vec2<f32>(along / EJECTA_DOT.x, across / EJECTA_DOT.y));
+  let edgeSoftness = 0.5 * pxUnits / EJECTA_DOT.y;
+  return kept * (1.0 - smoothstep(size - edgeSoftness, size + edgeSoftness, dotDist));
 }
 
 // x rim ink (the nearest live ring's line, every crescent, the ejecta's dots), y inside a
 // crater's floor (0..1), z the reach of a sea crater's blanket (0..1), w 1 on a rayed
 // crater's ejecta out to a ragged EJECTA.x .. EJECTA.y radii, where the mare lines stop.
-// n the geometric normal, dNdx/dNdy its screen derivatives, rd the eye's ray.
-fn craterRims(n: vec3<f32>, dNdx: vec3<f32>, dNdy: vec3<f32>, sun: vec3<f32>, rd: vec3<f32>,
+// surfaceNormal the geometric normal, dNdx/dNdy its screen derivatives, rayDir the eye's ray.
+fn craterRims(surfaceNormal: vec3<f32>, dNdx: vec3<f32>, dNdy: vec3<f32>, sun: vec3<f32>, rayDir: vec3<f32>,
               unitsPerRad: f32, pxUnits: f32, frag: vec2<f32>) -> vec4<f32> {
   let near = ringsAt(frag);
   // The youngest ring holding the point inside 0.97 of its rim (small angles: psi² ~
@@ -350,22 +350,22 @@ fn craterRims(n: vec3<f32>, dNdx: vec3<f32>, dNdy: vec3<f32>, sun: vec3<f32>, rd
   var thrown = 0.0;
   var first = near;
   while (any(first != vec2<u32>(0u))) {
-    let i = popRing(&first);
-    let rho = moon.craters[i].rho;
-    let psi2 = 2.0 * (1.0 - dot(n, moon.craters[i].c));
+    let ringIndex = popRing(&first);
+    let rho = moon.craters[ringIndex].rho;
+    let psi2 = 2.0 * (1.0 - dot(surfaceNormal, moon.craters[ringIndex].c));
     if (psi2 < 0.94 * rho * rho) {
-      youngest = max(youngest, craterYouth(moon.craters[i]));
+      youngest = max(youngest, craterYouth(moon.craters[ringIndex]));
     }
-    if (moon.craters[i].onSea > 0.0 && psi2 < BLANKET.y * BLANKET.y * rho * rho) {
+    if (moon.craters[ringIndex].onSea > 0.0 && psi2 < BLANKET.y * BLANKET.y * rho * rho) {
       blanket = max(blanket, 1.0 - smoothstep(BLANKET.x, BLANKET.y, sqrt(max(psi2, 0.0)) / rho));
     }
-    if (moon.craters[i].weight > 1.0 && psi2 > rho * rho && psi2 < EJECTA.y * EJECTA.y * rho * rho
+    if (moon.craters[ringIndex].weight > 1.0 && psi2 > rho * rho && psi2 < EJECTA.y * EJECTA.y * rho * rho
         && rho * unitsPerRad > EJECTA_UNITS.x) {
-      let q = sqrt(psi2) / rho;
-      ejecta = max(ejecta, ejectaInk(n, moon.craters[i], q, rho * unitsPerRad, pxUnits, f32(i) * 3.7));
+      let radiiOut = sqrt(psi2) / rho;
+      ejecta = max(ejecta, ejectaInk(surfaceNormal, moon.craters[ringIndex], radiiOut, rho * unitsPerRad, pxUnits, f32(ringIndex) * 3.7));
       // Each mare line (its row as `moonMare` cuts them) stops at its own radius: a ragged edge.
-      let edge = mix(EJECTA.x, EJECTA.y, 0.4 + 0.5 * hash21Hq(vec2<f32>(floor(frag.y / max(round(MARE_PITCH_UNITS / pxUnits), 3.0)), f32(i))));
-      thrown = max(thrown, step(q, edge));
+      let edge = mix(EJECTA.x, EJECTA.y, 0.4 + 0.5 * hash21Hq(vec2<f32>(floor(frag.y / max(round(MARE_PITCH_UNITS / pxUnits), 3.0)), f32(ringIndex))));
+      thrown = max(thrown, step(radiiOut, edge));
     }
   }
   var ink = 0.0;
@@ -373,59 +373,59 @@ fn craterRims(n: vec3<f32>, dNdx: vec3<f32>, dNdy: vec3<f32>, sun: vec3<f32>, rd
   var inFloor = 0.0;
   var best = 1e9;
   // The Sun as seen on the plate: its sides of a crater hold even at full Moon.
-  let seen = sun - dot(sun, rd) * rd;
+  let seen = sun - dot(sun, rayDir) * rayDir;
   var second = near;
   while (any(second != vec2<u32>(0u))) {
-    let i = popRing(&second);
-    let cr = moon.craters[i];
-    let cosPsi = dot(n, cr.c);
+    let ringIndex = popRing(&second);
+    let crater = moon.craters[ringIndex];
+    let cosPsi = dot(surfaceNormal, crater.c);
     // A named crater's mark may outgrow its reach: it reaches ~110 km at least.
-    if (cosPsi < select(cr.cosReach, min(cr.cosReach, NAMED_REACH_COS), cr.named > 0.5) || craterYouth(cr) < youngest - 1e-3) {
+    if (cosPsi < select(crater.cosReach, min(crater.cosReach, NAMED_REACH_COS), crater.named > 0.5) || craterYouth(crater) < youngest - 1e-3) {
       continue;
     }
     // From the centre toward the point, in the crater's tangent plane.
-    let off = n - cosPsi * cr.c;
+    let off = surfaceNormal - cosPsi * crater.c;
     let sinPsi = sqrt(max(dot(off, off), 1e-12));
     let psi = atan2(sinPsi, cosPsi);
     // A named crater too small to ring is drawn as its name's mark, NAMED_MIN_UNITS across.
-    let rho = max(cr.rho, cr.named * 0.5 * NAMED_MIN_UNITS / unitsPerRad);
+    let rho = max(crater.rho, crater.named * 0.5 * NAMED_MIN_UNITS / unitsPerRad);
     let dUnits = 2.0 * rho * unitsPerRad;
-    let w = max(cr.weight, 0.6 * cr.named) * max(smoothstep(RIM_MIN_UNITS, RIM_FULL_UNITS, dUnits), cr.named);
-    let q = psi / rho;
-    inFloor = max(inFloor, 1.0 - smoothstep(0.75, 0.85, q));
-    // Azimuth off the seen Sun, and its rate per px (off's e1, e2 parts are n's).
-    let sc = seen - dot(seen, cr.c) * cr.c;
-    let scLen = length(sc);
-    let e1 = sc / max(scLen, 1e-6);
-    let e2 = cross(cr.c, e1);
-    let x = dot(n, e1);
-    let y = dot(n, e2);
-    let theta = atan2(y, x);
-    let gTheta = length(vec2<f32>(x * dot(e2, dNdx) - y * dot(e1, dNdx), x * dot(e2, dNdy) - y * dot(e1, dNdy)))
-      / max(x * x + y * y, 1e-12);
+    let ringWeight = max(crater.weight, 0.6 * crater.named) * max(smoothstep(RIM_MIN_UNITS, RIM_FULL_UNITS, dUnits), crater.named);
+    let radiiOut = psi / rho;
+    inFloor = max(inFloor, 1.0 - smoothstep(0.75, 0.85, radiiOut));
+    // Azimuth off the seen Sun, and its rate per px (off's sunAxis, crossAxis parts are surfaceNormal's).
+    let sunTangent = seen - dot(seen, crater.c) * crater.c;
+    let scLen = length(sunTangent);
+    let sunAxis = sunTangent / max(scLen, 1e-6);
+    let crossAxis = cross(crater.c, sunAxis);
+    let sunX = dot(surfaceNormal, sunAxis);
+    let sunY = dot(surfaceNormal, crossAxis);
+    let theta = atan2(sunY, sunX);
+    let gTheta = length(vec2<f32>(sunX * dot(crossAxis, dNdx) - sunY * dot(sunAxis, dNdx), sunX * dot(crossAxis, dNdy) - sunY * dot(sunAxis, dNdy)))
+      / max(sunX * sunX + sunY * sunY, 1e-12);
     let sided = smoothstep(0.02, 0.1, scLen);
     // |grad psi| per px: d psi = -dot(c, dN) / sin psi.
-    let gPx = length(vec2<f32>(dot(cr.c, dNdx), dot(cr.c, dNdy))) / sinPsi;
-    let seed = f32(i) * 7.31 + rho * 1e4;
-    crescent = max(crescent, crescentInk(theta, gTheta, q, rho / max(gPx, 1e-9) * pxUnits, pxUnits, seed) * sided
-      * smoothstep(0.05, 0.25, w));
-    let d = abs(psi - rho) / max(gPx, 1e-9) * pxUnits;
-    if (d < best && w > 0.01) {
-      best = d;
+    let gPx = length(vec2<f32>(dot(crater.c, dNdx), dot(crater.c, dNdy))) / sinPsi;
+    let seed = f32(ringIndex) * 7.31 + rho * 1e4;
+    crescent = max(crescent, crescentInk(theta, gTheta, radiiOut, rho / max(gPx, 1e-9) * pxUnits, pxUnits, seed) * sided
+      * smoothstep(0.05, 0.25, ringWeight));
+    let rimDistUnits = abs(psi - rho) / max(gPx, 1e-9) * pxUnits;
+    if (rimDistUnits < best && ringWeight > 0.01) {
+      best = rimDistUnits;
       // A fresh wall a firm cut, a rayed one (weight over 1) the plate's heaviest, a ruined
       // one fine and broken into arcs; every wall heavy on its shaded Sun side, fine on the
       // lit side, and broken there unless fresh.
       let side = mix(0.5, smoothstep(-0.5, 0.6, cos(theta)), sided);
-      let width = (mix(0.9, 1.5, smoothstep(0.5, 0.85, cr.weight)) + 0.9 * smoothstep(1.0, 1.3, cr.weight))
+      let width = (mix(0.9, 1.5, smoothstep(0.5, 0.85, crater.weight)) + 0.9 * smoothstep(1.0, 1.3, crater.weight))
         * mix(0.6, 1.4, side);
-      let f = (theta / 6.2831853 + 0.5) * RIM_ARCS;
-      let k = floor(f);
-      let h0 = hash21Hq(vec2<f32>(k % RIM_ARCS, seed));
-      let h1 = hash21Hq(vec2<f32>((k + 1.0) % RIM_ARCS, seed));
-      let arc = mix(h0, h1, smoothstep(0.0, 1.0, fract(f)));
-      let gap = min(0.7 * (1.0 - smoothstep(0.3, 0.7, cr.weight)) - 0.1
-        + 0.45 * (1.0 - side) * (1.0 - smoothstep(0.9, 1.2, cr.weight)), 0.55);
-      ink = inkLine(d, width, pxUnits) * smoothstep(0.05, 0.25, w) * smoothstep(gap - 0.06, gap + 0.06, arc);
+      let arcCoord = (theta / 6.2831853 + 0.5) * RIM_ARCS;
+      let arcIndex = floor(arcCoord);
+      let arcHashHere = hash21Hq(vec2<f32>(arcIndex % RIM_ARCS, seed));
+      let arcHashNext = hash21Hq(vec2<f32>((arcIndex + 1.0) % RIM_ARCS, seed));
+      let arc = mix(arcHashHere, arcHashNext, smoothstep(0.0, 1.0, fract(arcCoord)));
+      let gap = min(0.7 * (1.0 - smoothstep(0.3, 0.7, crater.weight)) - 0.1
+        + 0.45 * (1.0 - side) * (1.0 - smoothstep(0.9, 1.2, crater.weight)), 0.55);
+      ink = inkLine(rimDistUnits, width, pxUnits) * smoothstep(0.05, 0.25, ringWeight) * smoothstep(gap - 0.06, gap + 0.06, arc);
     }
   }
   return vec4<f32>(max(max(ink, crescent), ejecta), inFloor, blanket, thrown);
@@ -433,24 +433,24 @@ fn craterRims(n: vec3<f32>, dNdx: vec3<f32>, dNdy: vec3<f32>, sun: vec3<f32>, rd
 
 @fragment
 fn fsMoonPrint(in: TexturedBodyVSOut) -> @location(0) vec4<f32> {
-  let rd = normalize(in.localPos - uniforms.camPosLocal);
-  let surface = hitUnitSphere(uniforms.camPosLocal, rd, uniforms.camAltitudeSq);
-  let ng = surface.point;
-  let uv = equirectUvFromDir(ng);
+  let rayDir = normalize(in.localPos - uniforms.camPosLocal);
+  let surface = hitUnitSphere(uniforms.camPosLocal, rayDir, uniforms.camAltitudeSq);
+  let groundNormal = surface.point;
+  let uv = equirectUvFromDir(groundNormal);
   let grad = equirectUvGradients(uv);
-  let dNdx = dpdx(ng);
-  let dNdy = dpdy(ng);
+  let dNdx = dpdx(groundNormal);
+  let dNdy = dpdy(groundNormal);
   if (!surface.hit) {
     discard;
   }
   let sun = uniforms.sunDirLocal;
   let pxUnits = 1.0 / moon.unit;
   let unitsPerRad = moon.focalPx / surface.t * pxUnits;
-  let T = normalize(cross(vec3<f32>(0.0, 0.0, 1.0), ng));
-  let b = exp2(RELIEF_BIAS);
-  let nRelief = perturbNormal(ng, T, textureSampleGrad(normalTexture, bodySampler, uv, grad.ddx * b, grad.ddy * b).rg);
-  let rims = craterRims(ng, dNdx, dNdy, sun, rd, unitsPerRad, pxUnits, in.clip.xy);
-  let flat = dot(ng, sun);
+  let tangent = normalize(cross(vec3<f32>(0.0, 0.0, 1.0), groundNormal));
+  let reliefBias = exp2(RELIEF_BIAS);
+  let nRelief = perturbNormal(groundNormal, tangent, textureSampleGrad(normalTexture, bodySampler, uv, grad.ddx * reliefBias, grad.ddy * reliefBias).rg);
+  let rims = craterRims(groundNormal, dNdx, dNdy, sun, rayDir, unitsPerRad, pxUnits, in.clip.xy);
+  let flat = dot(groundNormal, sun);
   let lit = flat + SLOPE_GAIN * (dot(nRelief, sun) - flat);
   let day = smoothstep(-0.02, 0.06, lit);
   // A crater floor brighter than any sea keeps the plate's mare lines off it (b + 2).
@@ -487,14 +487,14 @@ const RELIEF_STEEP: f32 = 0.8;
 
 // x inside a ring to RING_INNER of its radius, y within RING_FLANK of one (small angles:
 // psi² ~ 2 (1 - cos psi)).
-fn ringZone(n: vec3<f32>, frag: vec2<f32>) -> vec2<bool> {
+fn ringZone(surfaceNormal: vec3<f32>, frag: vec2<f32>) -> vec2<bool> {
   var inner = false;
   var flank = false;
   var near = ringsAt(frag);
   while (any(near != vec2<u32>(0u))) {
-    let i = popRing(&near);
-    let rho = moon.craters[i].rho;
-    let psi2 = 2.0 * (1.0 - dot(n, moon.craters[i].c));
+    let ringIndex = popRing(&near);
+    let rho = moon.craters[ringIndex].rho;
+    let psi2 = 2.0 * (1.0 - dot(surfaceNormal, moon.craters[ringIndex].c));
     inner = inner || psi2 < RING_INNER * RING_INNER * rho * rho;
     flank = flank || psi2 < RING_FLANK * RING_FLANK * rho * rho;
   }
@@ -503,13 +503,13 @@ fn ringZone(n: vec3<f32>, frag: vec2<f32>) -> vec2<bool> {
 
 @fragment
 fn fsMoonRelief(in: TexturedBodyVSOut) -> @location(0) vec4<f32> {
-  let rd = normalize(in.localPos - uniforms.camPosLocal);
-  let surface = hitUnitSphere(uniforms.camPosLocal, rd, uniforms.camAltitudeSq);
-  let ng = surface.point;
-  let uv = equirectUvFromDir(ng);
+  let rayDir = normalize(in.localPos - uniforms.camPosLocal);
+  let surface = hitUnitSphere(uniforms.camPosLocal, rayDir, uniforms.camAltitudeSq);
+  let groundNormal = surface.point;
+  let uv = equirectUvFromDir(groundNormal);
   let grad = equirectUvGradients(uv);
-  let dNdx = dpdx(ng);
-  let dNdy = dpdy(ng);
+  let dNdx = dpdx(groundNormal);
+  let dNdy = dpdy(groundNormal);
   if (!surface.hit) {
     discard;
   }
@@ -518,12 +518,12 @@ fn fsMoonRelief(in: TexturedBodyVSOut) -> @location(0) vec4<f32> {
   if (resolved <= 0.0) {
     return vec4<f32>(0.0);
   }
-  let T = normalize(cross(vec3<f32>(0.0, 0.0, 1.0), ng));
-  let n = perturbNormal(ng, T, textureSampleGrad(normalTexture, bodySampler, uv, grad.ddx * RELIEF_SCALE,
+  let tangent = normalize(cross(vec3<f32>(0.0, 0.0, 1.0), groundNormal));
+  let reliefNormal = perturbNormal(groundNormal, tangent, textureSampleGrad(normalTexture, bodySampler, uv, grad.ddx * RELIEF_SCALE,
     grad.ddy * RELIEF_SCALE).rg);
-  let up = dot(n, ng);
+  let up = dot(reliefNormal, groundNormal);
   // The normal leans downhill: its tangent part is the fall line on the ground.
-  let downhill = (n - up * ng) * SLOPE_GAIN;
+  let downhill = (reliefNormal - up * groundNormal) * SLOPE_GAIN;
   let slope = smoothstep(RELIEF_SLOPE.x, RELIEF_SLOPE.y, atan2(length(downhill), up));
   // Onto the screen through the normal's own px derivatives (least squares in the plane).
   let gxx = dot(dNdx, dNdx);
@@ -532,10 +532,10 @@ fn fsMoonRelief(in: TexturedBodyVSOut) -> @location(0) vec4<f32> {
   let rhs = vec2<f32>(dot(downhill, dNdx), dot(downhill, dNdy));
   let onScreen = vec2<f32>(gyy * rhs.x - gxy * rhs.y, gxx * rhs.y - gxy * rhs.x);
   let fall = select(vec2<f32>(0.0), onScreen / max(length(onScreen), 1e-12), length(downhill) > 1e-4);
-  let noise = groundNoiseAt(ng * moon.radiusM, vec3<i32>(0), metresPerUnit);
-  let flat = dot(ng, uniforms.sunDirLocal);
-  let day = smoothstep(-0.02, 0.06, flat + SLOPE_GAIN * (dot(n, uniforms.sunDirLocal) - flat));
-  let zone = ringZone(ng, in.clip.xy);
+  let noise = groundNoiseAt(groundNormal * moon.radiusM, vec3<i32>(0), metresPerUnit);
+  let flat = dot(groundNormal, uniforms.sunDirLocal);
+  let day = smoothstep(-0.02, 0.06, flat + SLOPE_GAIN * (dot(reliefNormal, uniforms.sunDirLocal) - flat));
+  let zone = ringZone(groundNormal, in.clip.xy);
   let onRing = zone.x || (zone.y && slope > RELIEF_STEEP);
   let stroke = select(-RELIEF_FLAT, slope, slope > RELIEF_STROKE && onRing) * resolved * day;
   return vec4<f32>(fall, noise, stroke);

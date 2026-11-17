@@ -61,7 +61,7 @@ struct LeafRecord {
   // Mean star magnitude for an aggregate (mergeFluxAggregate).
   absMag: f32,
   bpRp: f32,
-  // Stars the record stands for: 1 for an own record.
+  // Stars the record stands for: 1 for an own leaf.
   subtreeStarCount: f32,
   // The node's fade for this stream, times the cut's source opacity.
   opacity: f32,
@@ -69,32 +69,32 @@ struct LeafRecord {
 
 // 'cutStream.blockShift' is 3 for the leaf list (blocks of 8 own records per
 // entry) and 0 for the aggregate list (one blob per entry, local 0).
-fn leafRecord(ii: u32) -> LeafRecord {
-  var r: LeafRecord;
+fn leafRecord(recordIndex: u32) -> LeafRecord {
+  var leaf: LeafRecord;
   let shift = cutStream.blockShift;
-  let entry = cutList[ii >> shift];
+  let entry = cutList[recordIndex >> shift];
   let nodeIdx = leafEntryNode(entry);
   let bits = cutNodes[nodeIdx].bits;
-  let local = (leafEntryBlock(entry) << shift) | (ii & ((1u << shift) - 1u));
-  r.isAgg = cutStream.isBlob == 1u;
+  let local = (leafEntryBlock(entry) << shift) | (recordIndex & ((1u << shift) - 1u));
+  leaf.isAgg = cutStream.isBlob == 1u;
   let ownCount = nodeOwnCount(bits);
-  r.live = r.isAgg || local < ownCount;
+  leaf.live = leaf.isAgg || local < ownCount;
   let originRelCamMpc = nodeMinCells(cutNodes[nodeIdx].grid, cut.camCell, cut.camFrac) * cut.cellEdgeMpc;
-  r.cellScaleMpc = nodeEdgeCells(bits) * cut.cellEdgeMpc;
+  leaf.cellScaleMpc = nodeEdgeCells(bits) * cut.cellEdgeMpc;
   // firstRecord is pool-absolute, so 'base' is too.
-  r.base = cutNodes[nodeIdx].firstRecord + select(local, ownCount, r.isAgg);
-  r.opacity = cutOpacity[nodeIdx * OPACITY_CHANNELS + cutStream.isBlob] * cut.opacity;
-  r.subtreeStarCount = select(1.0, f32(cutNodes[nodeIdx].blobCount), r.isAgg);
+  leaf.base = cutNodes[nodeIdx].firstRecord + select(local, ownCount, leaf.isAgg);
+  leaf.opacity = cutOpacity[nodeIdx * OPACITY_CHANNELS + cutStream.isBlob] * cut.opacity;
+  leaf.subtreeStarCount = select(1.0, f32(cutNodes[nodeIdx].blobCount), leaf.isAgg);
 
-  let w0 = records[r.base * 2u + 0u];
-  let w1 = records[r.base * 2u + 1u];
-  let offset = vec3<f32>(f32(w0 & OFFSET_MASK), f32(w0 >> GPU_Y_SHIFT), f32(w1 & OFFSET_MASK)) * OFFSET_SCALE;
-  r.worldRelCam = originRelCamMpc + offset * r.cellScaleMpc;
-  let absMagIdx = (w1 >> GPU_ABSMAG_SHIFT) & GPU_ABSMAG_MASK;
-  let colorIdx = (w1 >> GPU_COLOR_SHIFT) & GPU_COLOR_MASK;
-  r.absMag = STAR_ABSMAG_MIN + (f32(absMagIdx) + 0.5) * STAR_ABSMAG_STEP;
-  r.bpRp = STAR_COLORIDX_MIN + (f32(colorIdx) + 0.5) * STAR_COLORIDX_STEP;
-  return r;
+  let recordWord0 = records[leaf.base * 2u + 0u];
+  let recordWord1 = records[leaf.base * 2u + 1u];
+  let offset = vec3<f32>(f32(recordWord0 & OFFSET_MASK), f32(recordWord0 >> GPU_Y_SHIFT), f32(recordWord1 & OFFSET_MASK)) * OFFSET_SCALE;
+  leaf.worldRelCam = originRelCamMpc + offset * leaf.cellScaleMpc;
+  let absMagIdx = (recordWord1 >> GPU_ABSMAG_SHIFT) & GPU_ABSMAG_MASK;
+  let colorIdx = (recordWord1 >> GPU_COLOR_SHIFT) & GPU_COLOR_MASK;
+  leaf.absMag = STAR_ABSMAG_MIN + (f32(absMagIdx) + 0.5) * STAR_ABSMAG_STEP;
+  leaf.bpRp = STAR_COLORIDX_MIN + (f32(colorIdx) + 0.5) * STAR_COLORIDX_STEP;
+  return leaf;
 }
 
 // The cut's refine threshold (squared angular box size): the visual stage caps

@@ -6,12 +6,12 @@
 import package::bodies::earth::antiqueMap::io::AntiqueMapUniforms;
 import package::bodies::earth::antiqueMap::fill::io::FillOut;
 
-@group(0) @binding(0) var<uniform> u: AntiqueMapUniforms;
+@group(0) @binding(0) var<uniform> uniforms: AntiqueMapUniforms;
 
 @vertex
 fn vs(@location(0) position: vec4<f32>) -> FillOut {
   var out: FillOut;
-  out.clip = u.mvp * vec4<f32>(position.xyz, 1.0);
+  out.clip = uniforms.mvp * vec4<f32>(position.xyz, 1.0);
   out.local = position.xyz;
   out.code = position.w;
   return out;

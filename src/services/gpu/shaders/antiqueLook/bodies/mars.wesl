@@ -22,23 +22,23 @@ const MARS_WASH: f32 = 0.16;
 
 // `cover` scales the wash: body coverage times the plate's inside. `form` is the latitude
 // times `radius`, the globe's apparent radius (print units).
-fn marsPrint(col: vec3<f32>, cover: f32, lightness: f32, form: vec3<f32>, radius: f32, p: vec2<f32>, pxUnits: f32) -> BodyPrint {
-  let ink = latitudeHatch(form, max(radius, 1e-6), MARS_ALBEDO_TONE * (1.0 - lightness), p, pxUnits);
+fn marsPrint(col: vec3<f32>, cover: f32, lightness: f32, form: vec3<f32>, radius: f32, pixelPos: vec2<f32>, pxUnits: f32) -> BodyPrint {
+  let ink = latitudeHatch(form, max(radius, 1e-6), MARS_ALBEDO_TONE * (1.0 - lightness), pixelPos, pxUnits);
   return BodyPrint(applyWash(col, pigmentAt(3.0), MARS_WASH * cover), ink);
 }
 
 // Lines on whole fractions of MARS_LAT_STEP, the step halving each time the globe doubles
 // and cross-faded over the octave, as `isoLines` does: a phase of radius × latitude slid
 // every line with the apparent radius, so a pose a hair off redrew all the markings.
-fn latitudeHatch(form: vec3<f32>, radius: f32, tone: f32, p: vec2<f32>, pxUnits: f32) -> f32 {
+fn latitudeHatch(form: vec3<f32>, radius: f32, tone: f32, pixelPos: vec2<f32>, pxUnits: f32) -> f32 {
   let lat = form.x / radius;
-  let o = log2(radius * MARS_LAT_STEP / MARS_HATCH);
-  let o0 = floor(o);
+  let octave = log2(radius * MARS_LAT_STEP / MARS_HATCH);
+  let octaveFloor = floor(octave);
   var ink = 0.0;
-  for (var n = 0; n < 2; n++) {
-    let perRad = MARS_HATCH / MARS_LAT_STEP * exp2(o0 + f32(n));
+  for (var octaveIndex = 0; octaveIndex < 2; octaveIndex++) {
+    let perRad = MARS_HATCH / MARS_LAT_STEP * exp2(octaveFloor + f32(octaveIndex));
     let pinned = vec3<f32>(lat * perRad, form.y, form.z / radius * perRad);
-    ink += select(1.0 - (o - o0), o - o0, n == 1) * crossHatch(pinned, p, tone, MARS_HATCH, 0.0, pxUnits);
+    ink += select(1.0 - (octave - octaveFloor), octave - octaveFloor, octaveIndex == 1) * crossHatch(pinned, pixelPos, tone, MARS_HATCH, 0.0, pxUnits);
   }
   return ink;
 }

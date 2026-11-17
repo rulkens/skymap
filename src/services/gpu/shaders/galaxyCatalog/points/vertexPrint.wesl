@@ -14,18 +14,18 @@ import package::antiqueLook::shared::printPoint::PrintPointOut;
 import package::antiqueLook::shared::printPoint::printGalaxyPoint;
 import package::antiqueLook::shared::printPoint::printPointNone;
 
-@group(0) @binding(0) var<uniform> u: Uniforms;
+@group(0) @binding(0) var<uniform> uniforms: Uniforms;
 @group(2) @binding(0) var<uniform> source: SourceUniforms;
 @group(3) @binding(0) var<uniform> focus: FocusUniforms;
 
 @vertex
-fn vs(@builtin(instance_index) ii: u32, p: PerVertex) -> PrintPointOut {
-  let v = galaxyPointVertex(0u, ii, p, u, source, focus);
+fn vs(@builtin(instance_index) instanceIndex: u32, galaxy: PerVertex) -> PrintPointOut {
+  let galaxyVertex = galaxyPointVertex(0u, instanceIndex, galaxy, uniforms, source, focus);
   // The visual stage's cull: a clip position outside the NDC cube.
-  if (v.clip.x == 2.0 * v.clip.w) {
+  if (galaxyVertex.clip.x == 2.0 * galaxyVertex.clip.w) {
     return printPointNone();
   }
   // A highlight's tint is its colour times the intensity: its brightest channel stands in.
-  let tint = v.instanceTint.rgb;
-  return printGalaxyPoint(worldToClip(u.cam, p.position), max(tint.r, max(tint.g, tint.b)));
+  let tint = galaxyVertex.instanceTint.rgb;
+  return printGalaxyPoint(worldToClip(uniforms.cam, galaxy.position), max(tint.r, max(tint.g, tint.b)));
 }

@@ -120,8 +120,8 @@ fn applyAces(color: vec3<f32>) -> vec3<f32> {
 // to `knee`, then a slope-1 bend whose power-law tail approaches the curve's saturation
 // `top` without reaching it, so light 2–10× past the curve's white (a galaxy's bar) keeps
 // a gradient the plate can stipple. The swap chain never takes it.
-fn printShoulder(x: f32, knee: f32, top: f32) -> f32 {
+fn printShoulder(postExposure: f32, knee: f32, top: f32) -> f32 {
   let span = top - knee;
-  let t = max(x - knee, 0.0) / span;
-  return select(x, top - span * pow(1.0 + t / 0.5, -0.5), x > knee);
+  let overKnee = max(postExposure - knee, 0.0) / span;
+  return select(postExposure, top - span * pow(1.0 + overKnee / 0.5, -0.5), postExposure > knee);
 }

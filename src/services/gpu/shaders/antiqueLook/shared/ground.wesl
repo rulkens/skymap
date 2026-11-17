@@ -41,20 +41,20 @@ fn washLuma(wash: texture_2d_array<f32>, samp: sampler, uv: vec2<f32>, layer: i3
   return luma(textureSampleLevel(wash, samp, uv, layer, 0.0).rgb);
 }
 
-fn groundRelief(field: texture_2d<f32>, samp: sampler, px: vec2<f32>, relief: vec4<f32>, unit: f32,
+fn groundRelief(field: texture_2d<f32>, samp: sampler, pixelPos: vec2<f32>, relief: vec4<f32>, unit: f32,
                 wash: texture_2d_array<f32>, layer: i32) -> f32 {
   if (relief.a < -1.5) {
     return 0.0;
   }
   let res = vec2<f32>(textureDimensions(field));
-  let uv = px / res;
+  let uv = pixelPos / res;
   let around = washLuma(wash, samp, uv, layer);
   var mean = 0.0;
   var brightest = 0.0;
-  for (var k = 0; k < 8; k++) {
-    let a = f32(k) * 0.7853982 + 0.39;
-    let r = select(GROUND_SURROUND.x, GROUND_SURROUND.y, (k & 1) == 1);
-    let tap = washLuma(wash, samp, uv + vec2<f32>(cos(a) * res.y / res.x, sin(a)) * r, layer);
+  for (var tapIndex = 0; tapIndex < 8; tapIndex++) {
+    let tapAngle = f32(tapIndex) * 0.7853982 + 0.39;
+    let ringRadius = select(GROUND_SURROUND.x, GROUND_SURROUND.y, (tapIndex & 1) == 1);
+    let tap = washLuma(wash, samp, uv + vec2<f32>(cos(tapAngle) * res.y / res.x, sin(tapAngle)) * ringRadius, layer);
     mean += tap / 8.0;
     brightest = max(brightest, tap);
   }
@@ -65,30 +65,30 @@ fn groundRelief(field: texture_2d<f32>, samp: sampler, px: vec2<f32>, relief: ve
                       1.0 - smoothstep(GROUND_TONE_LUMA.x, GROUND_TONE_LUMA.y, around));
   let weight = min(abs(relief.a) * 1.5, 1.0);
   // A crest is too flat to be a landform itself: its line is sought on every pixel.
-  var ink = fallCrest(field, samp, px, unit);
+  var ink = fallCrest(field, samp, pixelPos, unit);
   let tone = max(GROUND_TONE * washShade, GROUND_LIT_CONTOUR * step(0.0, relief.a)) * weight;
-  ink = max(ink, contourLines(field, px, relief.b, unit, tone, GROUND_PHASE_STEP));
+  ink = max(ink, contourLines(field, pixelPos, relief.b, unit, tone, GROUND_PHASE_STEP));
   // The lit crest (a crater's rim, a ridge catching the light): a bright ridge in the
   // wash, from its Hessian over GROUND_CREST_SPAN units (a patch narrower draws none):
   // the centre a Newton step |gradient · v| / |λ| across, for the most negative curvature
   // λ and its direction v; drawn where the wash bends down that hard and stands brighter
   // than the plains round it, so the terrain's mottle draws no line.
-  let o = GROUND_CREST_SPAN * unit / res;
-  let e = washLuma(wash, samp, uv + vec2<f32>(o.x, 0.0), layer);
-  let w = washLuma(wash, samp, uv - vec2<f32>(o.x, 0.0), layer);
-  let so = washLuma(wash, samp, uv + vec2<f32>(0.0, o.y), layer);
-  let no = washLuma(wash, samp, uv - vec2<f32>(0.0, o.y), layer);
-  let se = washLuma(wash, samp, uv + o, layer);
-  let nw = washLuma(wash, samp, uv - o, layer);
-  let sw = washLuma(wash, samp, uv + vec2<f32>(-o.x, o.y), layer);
-  let ne = washLuma(wash, samp, uv + vec2<f32>(o.x, -o.y), layer);
-  let k = 1.0 / (GROUND_CREST_SPAN * GROUND_CREST_SPAN * max(mean, 1e-3));
-  let hxx = (e + w - 2.0 * around) * k;
-  let hyy = (so + no - 2.0 * around) * k;
-  let hxy = (se + nw - sw - ne) * 0.25 * k;
+  let crestOffsetUv = GROUND_CREST_SPAN * unit / res;
+  let eastLuma = washLuma(wash, samp, uv + vec2<f32>(crestOffsetUv.x, 0.0), layer);
+  let westLuma = washLuma(wash, samp, uv - vec2<f32>(crestOffsetUv.x, 0.0), layer);
+  let southLuma = washLuma(wash, samp, uv + vec2<f32>(0.0, crestOffsetUv.y), layer);
+  let northLuma = washLuma(wash, samp, uv - vec2<f32>(0.0, crestOffsetUv.y), layer);
+  let southEastLuma = washLuma(wash, samp, uv + crestOffsetUv, layer);
+  let northWestLuma = washLuma(wash, samp, uv - crestOffsetUv, layer);
+  let southWestLuma = washLuma(wash, samp, uv + vec2<f32>(-crestOffsetUv.x, crestOffsetUv.y), layer);
+  let northEastLuma = washLuma(wash, samp, uv + vec2<f32>(crestOffsetUv.x, -crestOffsetUv.y), layer);
+  let curvatureScale = 1.0 / (GROUND_CREST_SPAN * GROUND_CREST_SPAN * max(mean, 1e-3));
+  let hxx = (eastLuma + westLuma - 2.0 * around) * curvatureScale;
+  let hyy = (southLuma + northLuma - 2.0 * around) * curvatureScale;
+  let hxy = (southEastLuma + northWestLuma - southWestLuma - northEastLuma) * 0.25 * curvatureScale;
   let lambda = 0.5 * (hxx + hyy) - sqrt(0.25 * (hxx - hyy) * (hxx - hyy) + hxy * hxy);
   let across = normalize(vec2<f32>(hxy, lambda - hxx) + vec2<f32>(1e-6, 0.0));
-  let gradient = vec2<f32>(e - w, so - no) * (GROUND_CREST_SPAN * 0.5 * k);
+  let gradient = vec2<f32>(eastLuma - westLuma, southLuma - northLuma) * (GROUND_CREST_SPAN * 0.5 * curvatureScale);
   let off = abs(dot(gradient, across)) / max(-lambda, 1e-5);
   let crest = smoothstep(GROUND_CREST.x, GROUND_CREST.y, -lambda)
     * smoothstep(GROUND_CREST_LIT.x, GROUND_CREST_LIT.y, around / max(mean, 1e-3));

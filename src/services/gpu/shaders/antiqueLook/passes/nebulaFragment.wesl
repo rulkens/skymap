@@ -8,17 +8,17 @@ import package::antiqueLook::shared::pigments::luma;
 @group(0) @binding(0) var washTex: texture_2d<f32>;
 @group(0) @binding(1) var linear: sampler;
 
-// The plate's 9-tap pattern (centre 4, axes 2, diagonals 1) at `r` cells, sky-weighted.
-fn blur9(uv: vec2<f32>, texel: vec2<f32>, r: f32) -> f32 {
+// The plate's 9-tap pattern (centre 4, axes 2, diagonals 1) at `radiusCells` cells, sky-weighted.
+fn blur9(uv: vec2<f32>, texel: vec2<f32>, radiusCells: f32) -> f32 {
   var sum = 0.0;
   var weight = 0.0;
-  for (var k = 0; k < 9; k++) {
-    let a = f32(k) * 0.7853982;
-    let at = select(uv + vec2<f32>(cos(a), sin(a)) * texel * r, uv, k == 8);
-    let w = select(select(1.0, 2.0, (k & 1) == 0), 4.0, k == 8);
-    let s = textureSampleLevel(washTex, linear, at, 0.0);
-    let sky = clamp(-s.a, 0.0, 1.0) * w;
-    sum += luma(s.rgb) * sky;
+  for (var tapIndex = 0; tapIndex < 9; tapIndex++) {
+    let angle = f32(tapIndex) * 0.7853982;
+    let tapUv = select(uv + vec2<f32>(cos(angle), sin(angle)) * texel * radiusCells, uv, tapIndex == 8);
+    let tapWeight = select(select(1.0, 2.0, (tapIndex & 1) == 0), 4.0, tapIndex == 8);
+    let washTexel = textureSampleLevel(washTex, linear, tapUv, 0.0);
+    let sky = clamp(-washTexel.a, 0.0, 1.0) * tapWeight;
+    sum += luma(washTexel.rgb) * sky;
     weight += sky;
   }
   return sum / max(weight, 1e-3);

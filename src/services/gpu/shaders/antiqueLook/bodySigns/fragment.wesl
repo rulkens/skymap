@@ -7,12 +7,12 @@ const DOT_RADIUS: f32 = 0.24; // of the radius
 
 @fragment
 fn fs(in: SignOut) -> @location(0) vec4<f32> {
-  let d = length(in.pos.xy - in.centre);
-  let r = in.r;
-  let outer = 1.0 - smoothstep(r - 0.45, r + 0.45, d);
-  let inner = r * (1.0 - RING_WIDTH);
-  let ring = outer * smoothstep(inner - 0.45, inner + 0.45, d);
-  let core = 1.0 - smoothstep(r * DOT_RADIUS - 0.45, r * DOT_RADIUS + 0.45, d);
-  let knock = 1.0 - smoothstep(1.3 * r, 1.3 * r + 1.0, d);
+  let dist = length(in.pos.xy - in.centre);
+  let radius = in.r;
+  let outer = 1.0 - smoothstep(radius - 0.45, radius + 0.45, dist);
+  let inner = radius * (1.0 - RING_WIDTH);
+  let ring = outer * smoothstep(inner - 0.45, inner + 0.45, dist);
+  let core = 1.0 - smoothstep(radius * DOT_RADIUS - 0.45, radius * DOT_RADIUS + 0.45, dist);
+  let knock = 1.0 - smoothstep(1.3 * radius, 1.3 * radius + 1.0, dist);
   return vec4<f32>(max(ring, core), knock, 0.0, 0.0);
 }

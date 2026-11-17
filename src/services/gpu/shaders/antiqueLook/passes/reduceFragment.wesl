@@ -29,16 +29,16 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   var land = 0.0;
   var mappedCount = 0.0;
   var bodyCount = 0.0;
-  for (var j = 0; j < CELL; j++) {
-    for (var i = 0; i < CELL; i++) {
-      let q = min(origin + vec2<i32>(i, j), size - 1);
-      let c = textureLoad(printTex, q, 0).rgb;
-      let mask = textureLoad(maskTex, q, 0);
+  for (var blockY = 0; blockY < CELL; blockY++) {
+    for (var blockX = 0; blockX < CELL; blockX++) {
+      let texelPos = min(origin + vec2<i32>(blockX, blockY), size - 1);
+      let printColor = textureLoad(printTex, texelPos, 0).rgb;
+      let mask = textureLoad(maskTex, texelPos, 0);
       let body = mask.r;
-      bodySum += c * body;
-      skySum += c * (1.0 - body);
+      bodySum += printColor * body;
+      skySum += printColor * (1.0 - body);
       if (body < 0.5) {
-        skyDimmest = min(skyDimmest, luma(c));
+        skyDimmest = min(skyDimmest, luma(printColor));
       }
       let weight = body * step(0.5, mask.b);
       land += weight * mask.g;
@@ -46,17 +46,17 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
       bodyCount += body;
     }
   }
-  let n = f32(CELL * CELL);
+  let blockTexels = f32(CELL * CELL);
   // The sky's low band keeps only light that fills the block: its mean is held
   // to a little over its dimmest texel. A star (a point in dark sky) drops out,
   // since it belongs to the glyphs, while an extended glow keeps its full
   // brightness: a per-texel cap had flattened a galaxy's arms and gaps alike.
-  let skyCount = max(n - bodyCount, 0.0);
+  let skyCount = max(blockTexels - bodyCount, 0.0);
   var skyMean = skySum / max(skyCount, 1.0);
   let floorL = select(0.0, skyDimmest * FLOOR_K + 0.01, skyCount > 0.0);
   skyMean *= min(1.0, floorL / max(luma(skyMean), 1e-4));
   let sum = bodySum + skyMean * skyCount;
   // Sky blocks report land −1 so the coast halo stops at the limb, not mid-space.
   let share = select(LAND_UNMAPPED, land / max(mappedCount, 1e-3), mappedCount > 8.0);
-  return vec4<f32>(sum / n, select(-1.0, share, bodyCount > 8.0));
+  return vec4<f32>(sum / blockTexels, select(-1.0, share, bodyCount > 8.0));
 }
