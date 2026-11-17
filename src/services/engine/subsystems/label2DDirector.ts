@@ -1,10 +1,9 @@
 /**
- * label2DDirector — owns the labelRenderer + markerLineRenderer
- * setLabels/setLines calls, polling registered Label2DProducers each frame
- * and flushing the merged result once. `createLabel2DDirector(config, rig)` mints
- * one instance per slab (COSMO and NEAR0) — `Label2DDirectorConfig` supplies
- * the projection, declutter policy, envelope policy, and far-plane clamp, so a
- * second instance is data, not a second code path.
+ * label2DDirector — owns the labelRenderer's setLabels call, polling registered
+ * Label2DProducers each frame and flushing the merged result once.
+ * `createLabel2DDirector(config, rig)` mints one instance per slab (COSMO and
+ * NEAR0) — `Label2DDirectorConfig` supplies the projection, declutter policy and
+ * envelope policy, so a second instance is data, not a second code path.
  *
  * ### Emphasis
  *
@@ -28,7 +27,7 @@
  *
  * ### Why a director?
  *
- * Both renderers' set-methods REPLACE the full set; if two producers
+ * The renderer's setLabels REPLACES the full set; if two producers
  * each call setLabels with their own slice, the second wins and the
  * first vanishes.  The director merges first, flushes once.
  *
@@ -72,13 +71,11 @@
  * with the producer's layer load-in fade, which reads as one smooth
  * reveal).
  *
- * ### Leader lines are synthesized, not carried
+ * ### Leader lines ride their label
  *
- * A label's `lift` may carry a leader instead of producers emitting a sibling
- * `MarkerLine[]`, so each line's ownership is structural. `runFrame`
- * synthesizes one `MarkerLine` per surviving leader-carrying label AFTER
- * declutter and the envelope have resolved the final label set, so a culled or
- * faded-out label's leader disappears with it by construction.
+ * A label's `lift` may carry a leader, which the label renderer draws from the
+ * same row at the label's own alpha, so a culled or faded-out label's leader
+ * disappears with it by construction.
  *
  * ### No layer load-in here — each producer owns its own
  *
@@ -90,16 +87,14 @@
  *
  * ### Null-renderer guard
  *
- * Renderers attach asynchronously (after the font atlas fetch); the
- * director silently no-ops until both are present.  This mirrors the
+ * The renderer attaches asynchronously (after the font atlas fetch); the
+ * director silently no-ops until it is present.  This mirrors the
  * existing pattern at point-of-use in `filamentsPass`.
  */
 
 import type { LabelRenderer } from '../../../@types/rendering/LabelRenderer';
 import type { Label2D } from '../../../@types/rendering/Label2D';
-import type { MarkerLineRenderer } from '../../../@types/rendering/MarkerLineRenderer';
 import type { LabelBBox } from '../../../@types/rendering/LabelBBox';
-import type { MarkerLine } from '../../../@types/rendering/MarkerLine';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { ViewRig } from '../../../@types/engine/frame/ViewRig';
@@ -112,14 +107,7 @@ import type { Label2DProjected } from '../../../@types/rendering/Label2DProjecte
 import type { ScreenRectPx } from '../../../@types/rendering/ScreenRectPx';
 import { projectLabels } from '../../../utils/labels/projectLabels';
 import { smoothstep } from '../../../utils/math/smoothstep';
-import {
-  LABEL_MIN_PX_DEFAULT,
-  LABEL_MAX_PX_DEFAULT,
-  LABEL_WORLD_EM_MPC_DEFAULT,
-} from '../../../data/labels/labelSizingDefaults';
 import { labelScreenRect } from '../../../utils/labels/labelScreenRect';
-import { clampVec3Length } from '../../../utils/math/clampVec3Length';
-import { liftedLabelPlacement } from '../presentation/liftedLabelPlacement';
 import { whitenColor } from '../../../utils/labels/whitenColor';
 import { proposedLiftPx } from '../../../utils/labels/proposedLiftPx';
 import { encodeSelectionPick } from '../../../utils/selection/encodeSelectionPick';
@@ -264,7 +252,6 @@ export function createLabel2DDirector(
   rig: ViewRig,
 ): Label2DDirector {
   let labelRenderer: LabelRenderer | null = null;
-  let lineRenderer: MarkerLineRenderer | null = null;
   let measureText: ((label: Label2D) => LabelBBox | null) | null = null;
   // What `setLabels` last received — the passes read it for their gates and pick quads.
   let flushedLabels: readonly Label2D[] = [];
@@ -285,11 +272,9 @@ export function createLabel2DDirector(
 
   function attachRenderers(
     label: LabelRenderer,
-    line: MarkerLineRenderer,
     measure: (label: Label2D) => LabelBBox | null,
   ): void {
     labelRenderer = label;
-    lineRenderer = line;
     measureText = measure;
     prevSignature = null; // force the next frame to re-flush
     flushedLabels = []; // the new renderer holds nothing yet
@@ -325,66 +310,6 @@ export function createLabel2DDirector(
       })
       .join('|');
     return `L:${labels.length}:${lIds}`;
-  }
-
-  /**
-   * One `MarkerLine` per label whose `lift` carries a leader, from the FINAL
-   * (post-declutter, post-envelope) set, at the label's own resolved alpha. The
-   * endpoints are camera-derived (`liftedLabelPlacement` un-projects a screen
-   * lift), so this runs every frame; the label rows themselves no longer move
-   * with the camera. NEAR0 pulls the subject inside its far plane first, the
-   * inverse's ill-conditioning guard, rescaling the em to keep the text size.
-   */
-  function synthesizeLines(labels: readonly Label2D[], ctx: FrameView): MarkerLine[] {
-    const projection = project(ctx);
-    const m = projection.viewFromSlab;
-    const policy = config.lift;
-    const far = policy ? ctx.slabs[policy.slab]!.far * policy.farClampFraction : Infinity;
-    const lines: MarkerLine[] = [];
-    for (const label of labels) {
-      const leader = label.lift?.leader;
-      if (!leader) continue;
-      const anchor = label.worldPos;
-      const [x, y, z] = anchor;
-      const distMpc = Math.hypot(
-        m[0]! * x + m[4]! * y + m[8]! * z + m[12]!,
-        m[1]! * x + m[5]! * y + m[9]! * z + m[13]!,
-        m[2]! * x + m[6]! * y + m[10]! * z + m[14]!,
-      );
-      const subjectSizePx = ((2 * label.lift!.radiusMpc) / distMpc) * projection.output.focalPx;
-      const liftAnchor = clampVec3Length(anchor, far);
-      const anchorScale =
-        liftAnchor === anchor
-          ? 1
-          : Math.hypot(liftAnchor[0], liftAnchor[1], liftAnchor[2]) / Math.hypot(x, y, z);
-      const placement = liftedLabelPlacement({
-        anchorWorldPos: liftAnchor,
-        vp: projection.vp,
-        viewportPx: projection.output.sizePx,
-        pxPerRad: projection.output.focalPx,
-        subjectSizePx,
-        textBbox: measureText!(label),
-        worldEmMpc: (label.worldEmMpc ?? LABEL_WORLD_EM_MPC_DEFAULT) * anchorScale,
-        minPixelSize: label.minPixelSize ?? LABEL_MIN_PX_DEFAULT,
-        maxPixelSize: label.maxPixelSize ?? LABEL_MAX_PX_DEFAULT,
-        lineBottomLiftPx: (leader.base === 'rim' ? subjectSizePx / 2 : 0) + leader.gapPx,
-      });
-      if (placement?.line == null) continue;
-      lines.push({
-        id: `${label.id}-anchor`,
-        fromWorld: placement.line.fromWorld,
-        toWorld: placement.line.toWorld,
-        pixelWidth: leader.widthPx,
-        color: leader.color ?? label.color ?? [1, 1, 1, 1],
-        fadeAlpha: label.fadeAlpha ?? 1,
-        // Same subject, same depth verdict — both channels — so a connector
-        // never fades into a disc its caption is allowed to paint over, nor
-        // survives a ridge its caption clips against.
-        occludeWeight: label.occludeWeight,
-        occludeNearKm: label.occludeNearKm,
-      });
-    }
-    return lines;
   }
 
   /**
@@ -633,7 +558,7 @@ export function createLabel2DDirector(
   }
 
   function runFrame(state: EngineState, ctx: FrameView): boolean {
-    if (!labelRenderer || !lineRenderer) return false;
+    if (!labelRenderer) return false;
 
     // Collect outputs.  Producers are pure of state, so we just call
     // each and concatenate.  The director does NOT cache per-producer
@@ -682,7 +607,6 @@ export function createLabel2DDirector(
       flushedLabels = labels;
       prevSignature = sig;
     }
-    lineRenderer.setLines(synthesizeLines(labels, ctx));
 
     return anyAwake || anyRamping;
   }

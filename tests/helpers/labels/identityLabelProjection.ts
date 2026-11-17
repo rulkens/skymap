@@ -5,7 +5,6 @@
  * positions, `clipW` and em sizes all match what those fixtures were written for.
  */
 
-import { mat4d } from 'wgpu-matrix';
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 import type { Label2DProjection } from '../../../src/@types/rendering/Label2DProjection';
 
@@ -18,7 +17,6 @@ export function identityLabelProjection(ctx: FrameView): Label2DProjection {
   viewFromSlab[14] = 1;
   viewFromSlab[15] = 1;
   return {
-    vp: mat4d.identity() as Float64Array,
     output: {
       kind: 'pinhole',
       viewFromWorld: [1, 0, 0, 0, 1, 0, 0, 0, 1],

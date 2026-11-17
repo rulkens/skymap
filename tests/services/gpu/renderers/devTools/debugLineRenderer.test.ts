@@ -3,12 +3,12 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createDebugLineRenderer } from '../../../../../src/services/gpu/renderers/devTools/debugLineRenderer';
 
-// The renderer borrows markerLines' shaders, so its vertex state must feed
-// every `VsIn` location they declare — a missing one is a device-only
-// pipeline-validation error that no headless run surfaces otherwise.
+// Its vertex state must feed every `VsIn` location the shader declares — a
+// missing one is a device-only pipeline-validation error that no headless run
+// surfaces otherwise.
 function vsInLocations(): number[] {
   const io = readFileSync(
-    join(process.cwd(), 'src/services/gpu/shaders/markerLines/io.wesl'),
+    join(process.cwd(), 'src/services/gpu/shaders/debugLines/io.wesl'),
     'utf-8',
   );
   const body = io.slice(io.indexOf('struct VsIn'), io.indexOf('};', io.indexOf('struct VsIn')));
@@ -16,7 +16,7 @@ function vsInLocations(): number[] {
 }
 
 describe('DebugLineRenderer vertex state', () => {
-  it('feeds every VsIn location of the shared markerLines shader', () => {
+  it('feeds every VsIn location of its shader', () => {
     const pipelines: GPURenderPipelineDescriptor[] = [];
     const device = {
       createBindGroupLayout: vi.fn(() => ({})),

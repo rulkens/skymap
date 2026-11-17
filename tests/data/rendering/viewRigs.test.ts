@@ -14,7 +14,7 @@ describe('VIEW_RIGS', () => {
         target: 'swap',
         slab: COSMO,
         depth: { sample: 'foreground:0' },
-        passes: ['selection-ring', 'marker-lines', 'labels-cosmo'],
+        passes: ['selection-ring', 'labels-cosmo'],
       },
       {
         kind: 'render',

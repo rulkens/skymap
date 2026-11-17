@@ -6,9 +6,8 @@
  * unlike the general `Label`, where those fields are optional and fall back to
  * renderer defaults — carrying the declutter `priority` its owning Layer
  * authors. Narrowing the required fields
- * here states that guarantee once at the type, so the layer hands them to
- * `liftedLabelPlacement` (which requires plain `number`s) without a per-field
- * `?? default` that would silently mask a caption built without its colour or
+ * here states that guarantee once at the type, so the layer reads them
+ * without a per-field `?? default` that would silently mask a caption built without its colour or
  * clamps.
  *
  * Two producers build this shape and the layer merges both into ONE declutter +

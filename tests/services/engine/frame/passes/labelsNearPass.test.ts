@@ -11,9 +11,6 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { labelsNearPass } from '../../../../../src/services/engine/frame/passes/labelsNearPass';
-import { near0OverlayClipScale } from '../../../../../src/services/engine/frame/near0OverlayClipScale';
-import { near0OverlayVpF32 } from '../../../../../src/services/engine/frame/near0OverlayVpF32';
-import { rebaseViewProj } from '../../../../../src/utils/camera/projection/rebaseViewProj';
 import { createLabel2DDirector } from '../../../../../src/services/engine/subsystems/label2DDirector';
 import { VIEW_RIGS } from '../../../../../src/data/rendering/viewRigs';
 import { FOREGROUND_LABEL_DIRECTOR } from '../../../../../src/data/labels/foregroundLabelDirectorConfig';
@@ -25,20 +22,17 @@ import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { Label2DDirector } from '../../../../../src/@types/engine/subsystems/Label2DDirector';
 import type { LabelRenderer } from '../../../../../src/@types/rendering/LabelRenderer';
-import type { MarkerLineRenderer } from '../../../../../src/@types/rendering/MarkerLineRenderer';
 import type { Label2D } from '../../../../../src/@types/rendering/Label2D';
 import type { Label2DProjection } from '../../../../../src/@types/rendering/Label2DProjection';
 import type { Label2DProducer } from '../../../../../src/@types/engine/subsystems/Label2DProducer';
 
 const PASS_STUB = { draw: vi.fn() } as unknown as GPURenderPassEncoder;
 
-// A real NEAR0 slab (not mocked): the leader lines rebase its vp about the eye.
 const SLAB: Slab = makeSlab();
 
-// `draw` reads its `view` for the sampled depth the occlusion joint binds and
-// the slab the leader lines draw through. The captions' projection comes from
-// the director instead. A null row leaves the frame unresolved, which is what
-// pins the far-placeholder pairing below.
+// `draw` reads its `view` for the sampled depth the occlusion joint binds. The
+// captions' projection comes from the director instead. A null row leaves the
+// frame unresolved, which is what pins the far-placeholder pairing below.
 const VIEW_STUB = {
   slab: SLAB,
   sampledDepth: { view: {} as GPUTextureView, row: null },
@@ -51,7 +45,7 @@ const PROJECTION_STUB = { output: { sizePx: [1280, 720] } } as unknown as Label2
 const COLOR_VIEW = {} as GPUTextureView;
 const FAR_DEPTH_VIEW = {} as GPUTextureView;
 
-// What both renderers must receive as their occlusion joint.
+// What the renderer must receive as its occlusion joint.
 const SCENE_STUB = { colorView: COLOR_VIEW, depthView: FAR_DEPTH_VIEW, frame: null };
 
 function makeRenderer(): LabelRenderer {
@@ -63,26 +57,15 @@ function makeRenderer(): LabelRenderer {
   } as unknown as LabelRenderer;
 }
 
-function makeLineRenderer(): MarkerLineRenderer {
-  return {
-    label: 'foregroundMarkerLineRenderer',
-    setLines: vi.fn<() => void>(),
-    draw: vi.fn<(...args: unknown[]) => void>(),
-    lineCount: () => 0,
-    destroy: vi.fn(),
-  } as unknown as MarkerLineRenderer;
-}
-
 function makeState(
   renderer: LabelRenderer | null,
-  lineRenderer: MarkerLineRenderer | null = makeLineRenderer(),
   director: Pick<Label2DDirector, 'labels' | 'project'> = {
     labels: () => [],
     project: () => PROJECTION_STUB,
   },
 ): EngineState {
   return {
-    gpu: { labelRendererNear: renderer, markerLineRendererNear: lineRenderer },
+    gpu: { labelRendererNear: renderer },
     subsystems: { foregroundLabelDirector: director },
   } as unknown as EngineState;
 }
@@ -117,8 +100,7 @@ describe('labelsNearPass.enabled', () => {
       VIEW_RIGS.mono,
     );
     const labelRenderer = makeRenderer();
-    const lineRenderer = makeLineRenderer();
-    dir.attachRenderers(labelRenderer, lineRenderer, () => null);
+    dir.attachRenderers(labelRenderer, () => null);
 
     // A producer that ALWAYS emits one candidate — real producers never omit
     // a row, they drive it to invisible via `fadeAlpha` (Task 4/5's
@@ -147,7 +129,7 @@ describe('labelsNearPass.enabled', () => {
       selection: { hover: null, select: null },
       selectionKindRows: [],
     } as unknown as EngineState;
-    const layerState = makeState(labelRenderer, lineRenderer, dir);
+    const layerState = makeState(labelRenderer, dir);
 
     // Demand present: a brand-new id seeds AT its target — no ramp needed —
     // so the very first flush already carries it.
@@ -178,7 +160,7 @@ describe('labelsNearPass.enabled', () => {
 describe('labelsNearPass.draw', () => {
   it("draws the labels through the director's projection, the one it decluttered with", () => {
     const renderer = makeRenderer();
-    const state = makeState(renderer, null);
+    const state = makeState(renderer);
 
     labelsNearPass.draw(PASS_STUB, VIEW_STUB, makeCtx(), state);
 
@@ -186,37 +168,5 @@ describe('labelsNearPass.draw', () => {
     expect(drawSpy).toHaveBeenCalledTimes(1);
     expect(drawSpy.mock.calls[0]![1]).toBe(PROJECTION_STUB);
     expect(drawSpy.mock.calls[0]).toEqual([PASS_STUB, PROJECTION_STUB, SCENE_STUB]);
-  });
-
-  it('draws the leader lines through the camera-rebased NEAR0 vp, before the labels', () => {
-    const renderer = makeRenderer();
-    const lineRenderer = makeLineRenderer();
-    const state = makeState(renderer, lineRenderer);
-    const ctx = makeCtx();
-    const order: string[] = [];
-    (lineRenderer.draw as unknown as ReturnType<typeof vi.fn>).mockImplementation(() =>
-      order.push('line'),
-    );
-    (renderer.draw as unknown as ReturnType<typeof vi.fn>).mockImplementation(() =>
-      order.push('label'),
-    );
-
-    labelsNearPass.draw(PASS_STUB, VIEW_STUB, ctx, state);
-
-    const vpF32 = near0OverlayVpF32(
-      rebaseViewProj(SLAB.vp, ctx.drawCamPos),
-      near0OverlayClipScale(SLAB.near),
-    );
-    const lineDrawSpy = lineRenderer.draw as unknown as ReturnType<typeof vi.fn>;
-    expect(lineDrawSpy).toHaveBeenCalledTimes(1);
-    expect(lineDrawSpy.mock.calls[0]).toEqual([PASS_STUB, vpF32, [1280, 720], 900, SCENE_STUB]);
-    expect(order).toEqual(['line', 'label']);
-  });
-
-  it('draws captions even when the leader-line renderer is null (bootstrap gap)', () => {
-    const renderer = makeRenderer();
-    const state = makeState(renderer, null);
-    labelsNearPass.draw(PASS_STUB, VIEW_STUB, makeCtx(), state);
-    expect(renderer.draw as unknown as ReturnType<typeof vi.fn>).toHaveBeenCalledTimes(1);
   });
 });

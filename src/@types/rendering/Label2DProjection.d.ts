@@ -7,8 +7,6 @@ import type { OutputProjection } from './OutputProjection';
  * labels carry absolute hi/lo positions of their own.
  */
 export type Label2DProjection = {
-  /** proj·view for the lift stage's un-projection (`liftedLabelPlacement`), f64 where the slab has one. */
-  readonly vp: Float32Array | Float64Array;
   readonly output: OutputProjection;
   /** Slab anchor → view space (+z ahead), column-major 4×4, f64 and unscaled. */
   readonly viewFromSlab: Float64Array;

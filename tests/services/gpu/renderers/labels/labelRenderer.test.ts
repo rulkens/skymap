@@ -108,8 +108,8 @@ describe('LabelRenderer occlusion variant', () => {
     // (group(1) used but not in the layout) never surfaces in this headless
     // suite, so pin the entry point here.
     const { renderPipelines } = buildOccluding();
-    const plain = renderPipelines.find((p) => p.label === 'label-pipeline');
-    const occlude = renderPipelines.find((p) => p.label === 'label-pipeline-occlude');
+    const plain = renderPipelines.find((p) => p.label === 'label-pipeline-glyphs');
+    const occlude = renderPipelines.find((p) => p.label === 'label-pipeline-occlude-glyphs');
     expect(plain!.vertex.entryPoint).toBe('vs');
     expect(occlude!.vertex.entryPoint).toBe('vsOcclude');
   });
@@ -198,7 +198,6 @@ describe('LabelRenderer capacity growth', () => {
 
     const viewFromSlab = Float64Array.from({ length: 16 }, (_, i) => i + 1);
     r.draw(pass, {
-      vp: new Float32Array(16),
       output: {
         kind: 'pinhole',
         viewFromWorld: [1, 0, 0, 0, 1, 0, 0, 0, 1],

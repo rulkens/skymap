@@ -8,7 +8,7 @@
 // gets a distinct hue for free. localIdx hashes into BRIGHTNESS instead, so
 // adjacent instances of one source read as discrete points, not a blurred
 // patch. Pre-multiplied alpha (OVER blend) matches the rest of the UI
-// overlay stack (markerLines, labels, structureMarker).
+// overlay stack (debugLines, labels, structureMarker).
 
 import package::pickDebugOverlay::io::VSOut;
 import package::lib::selectionEncoding::PICK_SENTINEL_OFFSET;

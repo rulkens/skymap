@@ -19,7 +19,7 @@
  *
  * On tile-based GPUs (Apple Silicon M1/M2, Adreno, Mali) the render target
  * lives in tile-local memory for the duration of one open render pass — no DRAM
- * round-trip between draws. Premultiplied-OVER layers (marker-lines, labels)
+ * round-trip between draws. Premultiplied-OVER layers (labels)
  * read `dst.color` from the same tile their predecessor wrote into, so the OVER
  * blend is computed against fully-coherent state. The `'merged'` strategy keeps
  * a target's whole group in one `beginRenderPass`, preserving that coherency —

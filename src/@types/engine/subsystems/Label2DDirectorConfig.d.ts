@@ -2,7 +2,6 @@ import type { FrameView } from '../frame/FrameView';
 import type { ViewRig } from '../frame/ViewRig';
 import type { Label2DProjection } from '../../rendering/Label2DProjection';
 import type { Label2DEnvelopePolicy } from './Label2DEnvelopePolicy';
-import type { Label2DLiftPolicy } from './Label2DLiftPolicy';
 
 /**
  * Data-driven parameterization for `createLabel2DDirector` — one literal per
@@ -24,6 +23,4 @@ export type Label2DDirectorConfig = {
    */
   readonly declutterLift: 'drawn' | 'proposed';
   readonly envelope: Label2DEnvelopePolicy;
-  /** `null` STATES the stance — not optional, so a third instance must decide. */
-  readonly lift: Label2DLiftPolicy | null;
 };

@@ -324,7 +324,7 @@ function overlays({ selectionRings }: { readonly selectionRings: boolean }): Fra
       // which goes incoherent across the per-layer timing pass boundaries (additive rows
       // never read it). The Sun/Earth still occlude cosmological labels, via the
       // COVERAGE test against `foreground:0` depth, not draw order. `selection-ring`
-      // leads so lines and labels composite over its stroke.
+      // leads so leaders and labels composite over its stroke.
       //
       // `depth` is SAMPLED (swap is depthless): a caption clips along the last body row's
       // silhouette. Declared on BOTH swap lines because the overlays share one group(1)
@@ -334,9 +334,7 @@ function overlays({ selectionRings }: { readonly selectionRings: boolean }): Fra
         target: 'swap',
         slab: COSMO,
         depth: { sample: 'foreground:0' },
-        passes: selectionRings
-          ? ['selection-ring', 'marker-lines', 'labels-cosmo']
-          : ['marker-lines', 'labels-cosmo'],
+        passes: selectionRings ? ['selection-ring', 'labels-cosmo'] : ['labels-cosmo'],
       },
       // Near-field overlays, last, so scene-body captions land on top of the bodies.
       // `near0-selection-ring` is the NEAR0 sibling of the COSMO ring (COSMO's near plane

@@ -9,8 +9,6 @@
 // hdr' OVER composite already multiplies the foreground by, so any cutoff
 // over it gives one number two meanings.
 
-import package::lib::camera::CameraUniforms;
-import package::lib::camera::worldToClip;
 import package::lib::math::saturate;
 import package::lib::sceneDepthRay::FAR_DEPTH;
 import package::lib::sceneDepthRay::sceneRayDistance;
@@ -70,19 +68,6 @@ fn sceneDepthOccludes(fragXY: vec2f, nearKm: f32) -> f32 {
     depthFrame.camPosKm,
   );
   return select(0.0, 1.0, sceneKm < nearKm);
-}
-
-/**
- * The marker-line leaders' 'vsOcclude' body: projects 'worldPos' and flips NDC
- * into a uv (y DOWN, ndc.y points UP) for 'subjectDepthVerdictAtUv'.
- */
-fn subjectDepthVerdict(cam: CameraUniforms, worldPos: vec3<f32>, nearKm: f32) -> f32 {
-  let clip = worldToClip(cam, worldPos);
-  if (clip.w <= 0.0) {
-    return 0.0;
-  }
-  let ndc = clip.xy / clip.w;
-  return subjectDepthVerdictAtUv(vec2<f32>(ndc.x * 0.5 + 0.5, 0.5 - ndc.y * 0.5), nearKm);
 }
 
 /**

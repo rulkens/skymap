@@ -55,6 +55,7 @@ import type { GpuContext } from '../../../../@types/rendering/GpuContext';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { Label2D } from '../../../../@types/rendering/Label2D';
 import type { LabelRenderer } from '../../../../@types/rendering/LabelRenderer';
+import type { LabelPipelines } from '../../../../@types/rendering/LabelPipelines';
 import type { FontMetrics } from '../../../../@types/rendering/FontMetrics';
 import type { LoadedFontAtlases } from '../../../../@types/rendering/LoadedFontAtlases';
 import { FONT_IDS } from '../../../../data/fonts';
@@ -172,16 +173,17 @@ export function createLabelRenderer(
   let labelF32 = new Float32Array(0);
   let labelU32 = new Uint32Array(0);
 
-  // Glyphs packed by the last `setLabels`; `draw` instances exactly this many.
+  // Glyphs and labels packed by the last `setLabels`; `draw` instances exactly these.
   let currentGlyphCount = 0;
+  let currentLabelCount = 0;
 
   // ── GPU resources ────────────────────────────────────────────────────────
   //
-  // The occlusion instance builds BOTH pipelines and picks per-draw:
-  // `plainPipeline` (single BGL) whenever no scene colour is supplied this frame,
-  // `occludePipeline` (two BGLs, scene-attenuated fragment) when it is. A
-  // non-occlusion instance builds only `plainPipeline` and leaves the other null.
-  let occludePipeline: GPURenderPipeline | null = null;
+  // The occlusion instance builds BOTH pipeline pairs and picks per-draw:
+  // `plainPipelines` (single BGL) whenever no scene colour is supplied this frame,
+  // `occludePipelines` (two BGLs, scene-attenuated fragment) when it is. A
+  // non-occlusion instance builds only `plainPipelines` and leaves the other null.
+  let occludePipelines: LabelPipelines | null = null;
   let storageBuffer: GPUBuffer | null = null;
   let instanceBuffer: GPUBuffer | null = null;
   let bindGroup: GPUBindGroup | null = null;
@@ -285,13 +287,14 @@ export function createLabelRenderer(
 
   // ── Pipelines ────────────────────────────────────────────────────────
   //
-  // An occlusion instance builds BOTH pipelines and picks per-draw. `draw`
-  // selects `occludePipeline` only when handed a scene colour view THIS frame,
-  // and falls back to `plainPipeline` otherwise — so a frame in which no
+  // An occlusion instance builds BOTH pipeline pairs and picks per-draw. `draw`
+  // selects `occludePipelines` only when handed a scene colour view THIS frame,
+  // and falls back to `plainPipelines` otherwise — so a frame in which no
   // foreground body drew (hence no valid scene colour) still paints its
   // captions un-occluded through a VALID draw, rather than an occlusion draw
   // with group(1) left unbound. A non-occlusion instance builds only the
-  // plain pipeline.
+  // plain pair. Each pair is the glyphs plus the leaders: the same modules
+  // and layout, one instance per label instead of per glyph.
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'labels.vertex');
 
   // Both pipelines draw the identical geometry into the identical target;
@@ -321,21 +324,40 @@ export function createLabelRenderer(
   // existing HDR content at label-free pixels while the label alpha fades.
   const colorTargets: GPUColorTargetState[] = [{ format, blend: PREMULTIPLIED_OVER_BLEND }];
 
+  // Triangle-strip topology — the four unit corners form two triangles
+  // covering each quad with just 4 vertices (no index buffer needed). No
+  // depthStencil — labels are a pure UI overlay and do not participate in
+  // depth testing.
+  function pipelinePair(
+    label: string,
+    layout: GPUPipelineLayout,
+    vs: { module: GPUShaderModule; glyphs: string; leaders: string },
+    fs: { module: GPUShaderModule; glyphs: string; leaders: string },
+  ): LabelPipelines {
+    const pipeline = (entry: 'glyphs' | 'leaders', buffers: GPUVertexBufferLayout[]) =>
+      device.createRenderPipeline({
+        label: `${label}-${entry}`,
+        layout,
+        vertex: { module: vs.module, entryPoint: vs[entry], buffers },
+        fragment: { module: fs.module, entryPoint: fs[entry], targets: colorTargets },
+        primitive: { topology: 'triangle-strip' },
+      });
+    return {
+      glyphs: pipeline('glyphs', vertexBuffers),
+      leaders: pipeline('leaders', [UNIT_QUAD_VERTEX_LAYOUT]),
+    };
+  }
+
   const fsPlainModule = createShaderModuleWithDevLog(device, fsCode, 'labels.fragment');
-  const plainPipeline = device.createRenderPipeline({
-    label: 'label-pipeline',
-    layout: device.createPipelineLayout({
+  const plainPipelines = pipelinePair(
+    'label-pipeline',
+    device.createPipelineLayout({
       label: 'label-pipeline-layout',
       bindGroupLayouts: [bindGroupLayout],
     }),
-    vertex: { module: vsModule, entryPoint: 'vs', buffers: vertexBuffers },
-    fragment: { module: fsPlainModule, entryPoint: 'fs', targets: colorTargets },
-    // Triangle-strip topology — the four unit corners form two triangles
-    // covering the glyph quad with just 4 vertices (no index buffer needed).
-    primitive: { topology: 'triangle-strip' },
-    // No depthStencil — labels are a pure UI overlay and do not participate
-    // in depth testing.
-  });
+    { module: vsModule, glyphs: 'vs', leaders: 'vsLeader' },
+    { module: fsPlainModule, glyphs: 'fs', leaders: 'fsLeader' },
+  );
 
   if (occlusionCoverageBGL) {
     const fsOccludeModule = createShaderModuleWithDevLog(
@@ -353,17 +375,16 @@ export function createLabelRenderer(
       vsOccludeCode,
       'labels.vertexOcclude',
     );
-    occludePipeline = device.createRenderPipeline({
-      label: 'label-pipeline-occlude',
-      layout: device.createPipelineLayout({
+    occludePipelines = pipelinePair(
+      'label-pipeline-occlude',
+      device.createPipelineLayout({
         label: 'label-pipeline-occlude-layout',
         // group 0 = the label BGL; group 1 = the shared coverage joint.
         bindGroupLayouts: [bindGroupLayout, occlusionCoverageBGL],
       }),
-      vertex: { module: vsOccludeModule, entryPoint: 'vsOcclude', buffers: vertexBuffers },
-      fragment: { module: fsOccludeModule, entryPoint: 'fs', targets: colorTargets },
-      primitive: { topology: 'triangle-strip' },
-    });
+      { module: vsOccludeModule, glyphs: 'vsOcclude', leaders: 'vsLeaderOcclude' },
+      { module: fsOccludeModule, glyphs: 'fs', leaders: 'fsLeaderOcclude' },
+    );
   }
 
   // ── Buffers ──────────────────────────────────────────────────────────
@@ -446,6 +467,7 @@ export function createLabelRenderer(
       allocate(2 ** Math.ceil(Math.log2(labels.length)));
     }
 
+    currentLabelCount = labels.length;
     currentGlyphCount = packLabels({
       labels,
       metricsByFont,
@@ -482,7 +504,7 @@ export function createLabelRenderer(
     projection: Label2DProjection,
     scene?: OverlaySceneOcclusion,
   ): void {
-    if (!bindGroup || !instanceBuffer || currentGlyphCount === 0) return;
+    if (!bindGroup || !instanceBuffer || currentLabelCount === 0) return;
 
     const uni = new Float32Array(LABEL_UNIFORM_BYTES / 4);
     writeOutputProjection(uni, LABEL_UNIFORM_OFFSETS.output / 4, projection.output);
@@ -496,10 +518,12 @@ export function createLabelRenderer(
     // group(1) coverage joint rebuilt from them. With none (e.g. no foreground
     // body rendered this frame), it falls back to the plain pipeline and draws
     // the captions un-occluded — a valid draw, NOT an occlusion draw with
-    // group(1) left unbound. A non-occlusion instance (occludePipeline null)
+    // group(1) left unbound. A non-occlusion instance (occludePipelines null)
     // always takes the plain path.
-    if (occlusionCoverageBGL && occludePipeline && occlusionDepthFrameBuffer && scene) {
-      pass.setPipeline(occludePipeline);
+    let pipelines = plainPipelines;
+    if (occlusionCoverageBGL && occludePipelines && occlusionDepthFrameBuffer && scene) {
+      pipelines = occludePipelines;
+      pass.setPipeline(pipelines.leaders);
       pass.setBindGroup(0, bindGroup);
       writeOcclusionDepthFrame(
         device,
@@ -515,11 +539,16 @@ export function createLabelRenderer(
       );
       pass.setBindGroup(OCCLUSION_COVERAGE_GROUP_INDEX, coverageBindGroup);
     } else {
-      pass.setPipeline(plainPipeline);
+      pass.setPipeline(pipelines.leaders);
       pass.setBindGroup(0, bindGroup);
     }
     // Buffer slot 0: static corner quad (4 vertices, broadcast across instances).
     pass.setVertexBuffer(0, cornerBuffer);
+    // Leaders first, so the glyphs composite over the line where they meet: one
+    // quad per label, which the shader collapses when the label has none.
+    pass.draw(4, currentLabelCount, 0, 0);
+    if (currentGlyphCount === 0) return;
+    pass.setPipeline(pipelines.glyphs);
     // Buffer slot 1: per-glyph instance data.
     pass.setVertexBuffer(1, instanceBuffer);
     // 4 vertices per triangle-strip quad × N glyph instances.

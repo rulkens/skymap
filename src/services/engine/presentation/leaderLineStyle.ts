@@ -2,7 +2,7 @@
  * leaderLineStyle — the shared screen-space geometry constants for lifted
  * labels and their leader-line connectors (the famous-galaxy captions and the
  * Milky Way "You are here" marker — every producer that lifts a caption off a
- * dot via `liftedLabelPlacement`).
+ * dot).
  *
  * One home, one set of numbers: both producers must agree on what "a lifted
  * label" looks like — same proportional lift, same line-to-text gap — or the
@@ -36,7 +36,7 @@ export const LEADER_LIFT_FACTOR = 1.5;
  * sun/moon stagger) hangs its ENTIRE glyph block below — an anchor-only
  * floor would let the text swallow the whole lift, cover the dot, and
  * (through the derived line height going ≤ 0) suppress its own leader line.
- * `liftedLabelPlacement` therefore floors the anchor lift at this value AND
+ * The label shader therefore floors the anchor lift at this value AND
  * raises it further by the exact deficit whenever the measured ink bottom
  * would come within this clearance of the dot.
  *

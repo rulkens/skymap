@@ -8,7 +8,6 @@ import { projectLabels } from '../../../src/utils/labels/projectLabels';
 
 // View space = world space: a 2000×1000 pinhole, 1000 px per radian.
 const PROJECTION: Label2DProjection = {
-  vp: mat4d.identity() as Float64Array,
   viewFromSlab: mat4d.identity() as Float64Array,
   nearClipMpc: 0,
   output: {

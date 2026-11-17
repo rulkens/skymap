@@ -19,7 +19,6 @@ import { createFocusUniformBuffer } from '../../gpu/resources/createFocusUniform
 import { createLabelRenderer } from '../../gpu/renderers/labels/labelRenderer';
 import { createLabelPickRenderer } from '../../gpu/renderers/labels/labelPickRenderer';
 import { createLabel3DRenderer } from '../../gpu/renderers/labels3d/label3DRenderer';
-import { createMarkerLineRenderer } from '../../gpu/renderers/labels/markerLineRenderer';
 import { createDebugLineRenderer } from '../../gpu/renderers/devTools/debugLineRenderer';
 import { createSelectionRingRenderer } from '../../gpu/renderers/selectionRing/selectionRingRenderer';
 import { createPickDebugOverlay } from '../../gpu/passes/pickDebugOverlay';
@@ -59,7 +58,7 @@ export const GPU_HANDLE_ROWS = [
         state,
       ),
   },
-  // The 8 swap-chain-format rows, in buildSwapRenderers.ts order.
+  // The 6 swap-chain-format rows, in buildSwapRenderers.ts order.
   {
     key: 'labelRendererCosmo',
     rebuildOnSwapFormat: true,
@@ -67,14 +66,6 @@ export const GPU_HANDLE_ROWS = [
       createLabelRenderer(deps.ctx, {
         targetFormat: deps.ctx.format,
         atlases: deps.fontAtlases,
-        occludeAgainstScene: true,
-      }),
-  },
-  {
-    key: 'markerLineRendererCosmo',
-    rebuildOnSwapFormat: true,
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createMarkerLineRenderer(deps.ctx, deps.ctx.format, {
         occludeAgainstScene: true,
       }),
   },
@@ -105,14 +96,6 @@ export const GPU_HANDLE_ROWS = [
       createLabelRenderer(deps.ctx, {
         targetFormat: deps.ctx.format,
         atlases: deps.fontAtlases,
-        occludeAgainstScene: true,
-      }),
-  },
-  {
-    key: 'markerLineRendererNear',
-    rebuildOnSwapFormat: true,
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createMarkerLineRenderer(deps.ctx, deps.ctx.format, {
         occludeAgainstScene: true,
       }),
   },

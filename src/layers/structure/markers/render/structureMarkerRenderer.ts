@@ -34,7 +34,7 @@
  * Constructed with a null device for unit tests.  GPU resource
  * allocation is guarded by `if (device)` so `setMarkers` packs the
  * CPU scratch buffer + bumps the counter without touching the GPU.
- * Mirrors `markerLineRenderer.ts`'s null-device pattern.
+ * Mirrors `labelRenderer.ts`'s null-device pattern.
  *
  * ### Pipeline layout
  *

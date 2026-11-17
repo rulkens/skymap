@@ -1,6 +1,6 @@
 /**
  * proposedLiftPx — how far up the screen a lifted caption's text sits off its
- * subject, before the ink-clearance correction (`liftedLabelPlacement` step 1).
+ * subject, before the ink-clearance correction.
  * Shared with the NEAR0 separation cull, which must judge a caption where its
  * text is drawn: a rover under the sub-camera point projects onto its planet's
  * anchor while the planet's name floats a diameter and a half above.

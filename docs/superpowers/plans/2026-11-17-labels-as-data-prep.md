@@ -119,6 +119,18 @@ producers set `lift` instead of calling `liftedLabelPlacement`. Declutter and pi
 - [x] Shots before/after at solar-system and local-group; label and leader pixels must match
       within 1 px.
 
+As built (deviations from the text above):
+
+- The shader reproduces today's screen-space proportional lift (anchor = subject px + up x
+  `max(28, 1.5 D, 28 + inkDrop)`, D = the subject's apparent diameter), not `liftedAnchor`: the 3D
+  turn moves big or off-axis subjects by several px, which breaks "no visible change". The angle
+  and gap rule is Group C's behaviour change.
+- Row bytes 72..95 as laid out in `LABEL_DATA_OFFSETS`: `leaderRgba`, `inkBottom`, `radiusMpc`,
+  `leaderGapPx`, `lift` (kind), `leaderWidthPx`. No `leaderLengthPx`: the length is camera-derived,
+  so the shader computes it.
+- `Label2DDirectorConfig.declutterLift: 'drawn' | 'proposed'` is transitional: NEAR0 still judges
+  captions at subject + `proposedLiftPx`, COSMO at the drawn lift. Task 10 removes it.
+
 ### Task 6: leaders draw in `labelRenderer`; the marker-line renderer goes
 
 **Files:** `labelRenderer.ts`, `src/services/gpu/shaders/labels/leader.wesl` (new), delete
@@ -129,7 +141,12 @@ tests, and the `marker-lines` step in `frameSections.ts`. Keep `segmentQuad.wesl
 A second instanced draw over the label buffer: from the silhouette top to the text's bottom edge,
 `leaderWidthPx` wide, in the leader colour, faded by the label's alpha.
 
-- [ ] Shots as in Task 5.
+- [x] Shots as in Task 5.
+
+As built: the leader entries (`vsLeader`, `fsLeader` and the occluded pair) live in the existing
+`labels/{vertex,fragment}*.wesl` files, not a new `leader.wesl` (the folder convention bans two
+stages in one file, and this reuses the compiled modules). `shaders/markerLines/{io,vertex,fragment}`
+became `shaders/debugLines/` (the debug-line renderer still uses them, minus occlusion).
 
 **Gate B:** perf as Gate A. Expect one GPU pass fewer; report the label-path allocation with
 `scratchpad/allocProbe.mts`.

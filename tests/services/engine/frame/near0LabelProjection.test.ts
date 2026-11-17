@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { near0LabelProjection } from '../../../../src/services/engine/frame/near0LabelProjection';
 import { computeForegroundViewProj } from '../../../../src/utils/camera/projection/computeForegroundViewProj';
 import { forwardProjectPoint } from '../../../../src/utils/camera/projection/forwardProjectPoint';
+import { rebaseViewProj } from '../../../../src/utils/camera/projection/rebaseViewProj';
 import { foregroundFrustum } from '../../../../src/utils/camera/frustum/foregroundFrustum';
 import { symmetricFrustum } from '../../../../src/utils/camera/frustum/symmetricFrustum';
 import { projectLabels } from '../../../../src/utils/labels/projectLabels';
@@ -50,7 +51,9 @@ function near0Ctx(): FrameView {
 
 describe('near0LabelProjection', () => {
   it('puts a metre-range anchor on the pixel the f64 rebased vp puts it', () => {
-    const projection = near0LabelProjection(near0Ctx(), VIEW_RIGS.mono);
+    const ctx = near0Ctx();
+    const projection = near0LabelProjection(ctx, VIEW_RIGS.mono);
+    const vp = rebaseViewProj(ctx.slabs[NEAR0]!.vp, ctx.drawCamPos);
     // ~10 m ahead of the eye, a little off-axis so the comparison has signal.
     const anchor: Vec3 = [10 * M, 1 * M, 2 * M];
     const [projected] = projectLabels([{ worldPos: anchor } as Label2D], projection, () => null);
@@ -63,7 +66,7 @@ describe('near0LabelProjection', () => {
       screenY: 0,
       onScreen: false,
     };
-    forwardProjectPoint(projection.vp, ...anchor, projection.output.sizePx, ref);
+    forwardProjectPoint(vp, ...anchor, projection.output.sizePx, ref);
     expect(projected!.screenPx![0]).toBeCloseTo(ref.screenX, 6);
     expect(projected!.screenPx![1]).toBeCloseTo(ref.screenY, 6);
     // The declutter's em divisor: the anchor's view depth, as the vp's clip w was.

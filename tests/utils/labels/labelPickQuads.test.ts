@@ -25,7 +25,6 @@ const IDENTITY = new Float64Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 
 // label with worldEmMpc = depth to exactly one atlas em, so the bbox scales by
 // 1 (see labelScreenRect's own test).
 const PROJECTION: Label2DProjection = {
-  vp: IDENTITY,
   output: {
     kind: 'pinhole',
     viewFromWorld: [1, 0, 0, 0, 1, 0, 0, 0, 1],

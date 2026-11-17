@@ -56,8 +56,7 @@ export type EngineSubsystemHandles = {
    */
   assetQueue: PriorityQueue<void>;
   /**
-   * Label director — owns `labelRendererCosmo.setLabels` /
-   * `markerLineRendererCosmo.setLines`, polls every registered `Label2DProducer`
+   * Label director — owns `labelRendererCosmo.setLabels`, polls every registered `Label2DProducer`
    * each frame, merges outputs, and flushes once. Lets multiple overlays
    * (the Milky Way "you are here" pin, cluster structures, future
    * galaxy/void labels) coexist without stomping each other's full-set
@@ -65,7 +64,7 @@ export type EngineSubsystemHandles = {
    * `produceMilkyWayLabel` function (registered inline in `engine.ts`), not a
    * subsystem.
    *
-   * Constructed eagerly; the two renderers are wired during
+   * Constructed eagerly; the renderer is wired during
    * `phases/initGpu.ts` via `attachRenderers(...)` once the font-atlas
    * fetch completes. Producers register right after the state literal so
    * they're in place before the first frame.
@@ -73,11 +72,10 @@ export type EngineSubsystemHandles = {
   cosmoLabelDirector: Label2DDirector;
   /**
    * The NEAR0 sibling of `cosmoLabelDirector` — same `createLabel2DDirector`
-   * factory, `exponentialApproach`/lift arms instead of COSMO's
-   * `smoothstepRamp`/no-lift (`FOREGROUND_LABEL_DIRECTOR`
-   * in `src/data/labels/`). Attaches `labelRendererNear` +
-   * `markerLineRendererNear` at the same two sites `cosmoLabelDirector`
-   * attaches its own pair.
+   * factory, the `exponentialApproach` arm instead of COSMO's
+   * `smoothstepRamp` (`FOREGROUND_LABEL_DIRECTOR` in `src/data/labels/`).
+   * Attaches `labelRendererNear` at the same two sites `cosmoLabelDirector`
+   * attaches its own.
    */
   foregroundLabelDirector: Label2DDirector;
   /**

@@ -1,5 +1,5 @@
 /**
- * buildSwapRenderers — (re)builds the eight renderers whose pipelines are
+ * buildSwapRenderers — (re)builds the six renderers whose pipelines are
  * baked against the swap-chain colour-target format, deriving the set from
  * `GPU_HANDLE_ROWS`'s `rebuildOnSwapFormat` flag rather than a hand-written
  * list — see docs/superpowers/plans/2026-07-30-hdr-display-toggle.md for why
@@ -21,7 +21,7 @@ export function buildSwapRenderers(state: EngineState, format: GPUTextureFormat)
   const uiCtx = state.gpu.uiCtx!;
   const fontAtlases = state.gpu.fontAtlases!;
 
-  // fadeBgl/sourceBgl/focusBgl/envBrdfLut: none of the 8 rows below read them,
+  // fadeBgl/sourceBgl/focusBgl/envBrdfLut: none of the 6 rows below read them,
   // and the code this replaces never touched `state.gpu.fadeBgl` et al. here
   // either — getters keep that true instead of widening this call's state
   // requirement.

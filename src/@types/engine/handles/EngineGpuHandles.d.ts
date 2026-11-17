@@ -12,7 +12,6 @@ import type { RenderTargets } from '../../rendering/RenderTargets';
 import type { PickProgram } from '../frame/PickProgram';
 import type { LabelRenderer } from '../../rendering/LabelRenderer';
 import type { LabelPickRenderer } from '../../rendering/LabelPickRenderer';
-import type { MarkerLineRenderer } from '../../rendering/MarkerLineRenderer';
 import type { DebugLineRenderer } from '../../rendering/DebugLineRenderer';
 import type { SelectionRingRenderer } from '../../rendering/SelectionRingRenderer';
 import type { BloomPyramid } from '../../rendering/BloomPyramid';
@@ -127,16 +126,6 @@ export type EngineGpuHandles = {
    * The NEAR0 sibling of `labelPickRendererCosmo`, for the foreground body captions.
    */
   labelPickRendererNear: LabelPickRenderer | null;
-  /**
-   * Leader-line sibling of `labelRendererNear`, separate from `markerLineRendererCosmo`
-   * for the same one-view-projection reason. Drawn by `labelsNearPass`, which rebases
-   * its connectors camera-relative each frame.
-   */
-  markerLineRendererNear: MarkerLineRenderer | null;
-  /**
-   * Thick screen-space line overlay renderer; `markerLinesPass` null-checks it.
-   */
-  markerLineRendererCosmo: MarkerLineRenderer | null;
   /**
    * Debug-draw thick-line renderer for the clip-path inspector overlay, decoupled from
    * the label director; `clipPathDebugPass` feeds it a fresh `DebugLine[]` each frame.

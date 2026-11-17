@@ -6,7 +6,7 @@
  *
  * Its one caller is `starPointsPass`'s pick. The forward-projection
  * arithmetic itself lives in `forwardProjectPoint`, shared with
- * `label2DDirector` and `labelLeaderLine` — this wrapper just adapts that
+ * `label2DDirector` — this wrapper just adapts that
  * primitive's mutable-out shape to the `Vec2 | null` callers here expect.
  */
 

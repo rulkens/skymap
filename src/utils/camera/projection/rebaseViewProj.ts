@@ -44,12 +44,11 @@
  *
  * The rebased matrix has TWO consumers with different precision needs. The GPU
  * upload wants f32 — callers narrow via `narrowMat4` at the upload boundary,
- * the same convention every other f64 matrix seam follows. But the CPU-side
- * caption placement (`labelLeaderLine` via `liftedLabelPlacement`) INVERTS the
- * matrix, and at deep zoom the NEAR0 frustum is brutally ill-conditioned
+ * the same convention every other f64 matrix seam follows. But a CPU consumer
+ * that INVERTS the matrix needs f64: at deep zoom the NEAR0 frustum is brutally ill-conditioned
  * (near down at `MIN_NEAR_MPC` with anchors up to ~1e-6 Mpc beyond the far
  * floor): inverting the f32-narrowed matrix loses the depth structure and the
- * un-projected leader-line geometry distorts by tens of pixels. Returning f64
+ * un-projected geometry distorts by tens of pixels. Returning f64
  * keeps the inversion path exact; narrowing INSIDE this function would poison
  * it before the caller could choose.
  *

@@ -10,12 +10,10 @@ import { cosmoLabelProjection } from '../../services/engine/frame/cosmoLabelProj
  * disappear ramp: long enough to read as a fade rather than a flicker,
  * short enough that a focus handoff (outgoing label ramping down while the
  * incoming ramps up) completes within a single tour beat's attention span.
- * `lift: null` states COSMO's stance explicitly — it has none.
  */
 export const COSMO_LABEL_DIRECTOR: Label2DDirectorConfig = {
   project: cosmoLabelProjection,
   declutterPadPx: 8,
   declutterLift: 'drawn',
   envelope: { mode: 'smoothstepRamp', durationMs: 300 },
-  lift: null,
 };

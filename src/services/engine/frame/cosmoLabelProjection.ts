@@ -2,7 +2,7 @@
  * cosmoLabelProjection — the COSMO label director's `Label2DDirectorConfig.project`.
  *
  * COSMO anchors are absolute world Mpc, so `viewFromSlab` subtracts the eye.
- * `vp` stays for the lift stage. Memoised per `ctx` (the `preparedByCtx`
+ * Memoised per `ctx` (the `preparedByCtx`
  * pattern used elsewhere in `frame/passes/`) so the declutter, the draw and the
  * pick in one frame read one record.
  */
@@ -21,7 +21,6 @@ export function cosmoLabelProjection(ctx: FrameView, rig: ViewRig): Label2DProje
 
   const output = outputProjectionOf(ctx, rig);
   const projection: Label2DProjection = {
-    vp: ctx.vp,
     output,
     viewFromSlab: viewFromSlabOf(output.viewFromWorld, ctx.drawCamPos),
     // `ctx.vp`'s own near plane, which clipped these anchors before.

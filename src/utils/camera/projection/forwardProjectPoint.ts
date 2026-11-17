@@ -1,9 +1,7 @@
 /**
  * forwardProjectPoint — the column-major mat4·vec4 world→clip→screen step
- * shared by the label declutter loop (`label2DDirector`), the star pick
- * projection (`projectToScreenPx`), and the leader-line lift
- * (`labelLeaderLine`): three sites that must agree on this arithmetic and,
- * before this primitive, didn't call each other to guarantee it. Mutates the
+ * shared by the label declutter loop (`label2DDirector`) and the star pick
+ * projection (`projectToScreenPx`): two sites that must agree on this arithmetic. Mutates the
  * caller-owned `out` scratch rather than returning a fresh object, so a
  * per-label hot loop (`label2DDirector`'s `projectLabels`) allocates nothing.
  */

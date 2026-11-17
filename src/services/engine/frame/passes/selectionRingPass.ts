@@ -2,7 +2,7 @@
  * selectionRingPass — per-galaxy selection halo overlay.
  *
  * Lives at the HEAD of the swap-target layers (drawn post-tone-map) so
- * marker-lines and labels composite OVER the ring — labels carry information that should stay
+ * labels composite OVER the ring — labels carry information that should stay
  * legible when they overlap the stroke.
  *
  * ## CPU-side ringRadiusPx

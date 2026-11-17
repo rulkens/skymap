@@ -2,7 +2,7 @@
  * labelsCosmoPass — MSDF text label draw call.
  *
  * A swap-target layer, NOT an hdr-target one — see `passes/index.ts`
- * module header for why marker-lines + labels moved out of the HDR
+ * module header for why labels moved out of the HDR
  * sequence.  The swap render step opens one `beginRenderPass` on the
  * swap-chain texture and iterates the swap-target layers inside that
  * single pass, so this layer's `draw` writes directly to the
@@ -34,8 +34,8 @@
  *
  * ### Position among the swap-target layers
  *
- * Placed AFTER `markerLinesPass` so the label text composites over
- * the line where they overlap, preserving readability.
+ * Placed AFTER `selectionRingPass` so the label text composites over
+ * the ring where they overlap, preserving readability.
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';

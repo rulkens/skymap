@@ -21,6 +21,8 @@ import package::labels::io::LabelData;
 import package::labels::io::VsIn;
 import package::labels::io::VsOut;
 import package::labels::io::LIFT_NONE;
+import package::labels::io::LIFT_LEADER_FROM_RIM;
+import package::labels::io::LeaderVsOut;
 import package::lib::projectLabel::ProjectedLabel;
 import package::lib::projectLabel::projectLabel;
 import package::lib::projectLabel::scaledLength;
@@ -36,6 +38,7 @@ const HIDDEN_POS: vec4<f32> = vec4<f32>(0.0, 0.0, -1.0, 1.0);
 // Must equal the constants of the same names in leaderLineStyle.ts.
 const MIN_LABEL_CLEARANCE_PX: f32 = 28.0;
 const LEADER_LIFT_FACTOR: f32 = 1.5;
+const LEADER_LINE_PADDING_PX: f32 = 6.0;
 
 @group(0) @binding(0) var<uniform> uniforms: Uniforms;
 @group(0) @binding(1) var<storage, read> labels: array<LabelData>;
@@ -78,6 +81,35 @@ fn placeLabel(label: LabelData) -> PlacedLabel {
     liftPx = labelLiftPx(subjectSizePx, label.inkBottom * displayEmPx / ATLAS_EM_PX);
   }
   return PlacedLabel(subject, displayEmPx, subjectSizePx, liftPx);
+}
+
+// A leader's ends, px up the image from the subject: from its gap above the
+// rim (or the centre) to LEADER_LINE_PADDING_PX under the text's ink bottom.
+// The line is drawn only while that leaves it room (x < y).
+fn leaderSpanPx(label: LabelData, placed: PlacedLabel) -> vec2<f32> {
+  let inkDropPx = label.inkBottom * placed.displayEmPx / ATLAS_EM_PX;
+  let rimPx = select(0.0, placed.subjectSizePx * 0.5, label.lift == LIFT_LEADER_FROM_RIM);
+  return vec2<f32>(rimPx + label.leaderGapPx, placed.liftPx - inkDropPx - LEADER_LINE_PADDING_PX);
+}
+
+// expandLeaderQuad — one leader corner: corner.x runs bottom to top, corner.y
+// across the width. Shared by 'vsLeader' and 'vsLeaderOcclude', as
+// 'expandLabelQuad' is by the glyph entries.
+fn expandLeaderQuad(corner: vec2<f32>, label: LabelData, placed: PlacedLabel, occludeWeight: f32) -> LeaderVsOut {
+  let span = leaderSpanPx(label, placed);
+  let drawn = placed.subject.visible && label.lift != LIFT_NONE && label.leaderWidthPx > 0.0 && span.y > span.x;
+  let up = placed.subject.up;
+  let across = vec2<f32>(-up.y, up.x);
+  let leaderPx = placed.subject.px + up * mix(span.x, span.y, corner.x)
+    + across * (corner.y - 0.5) * label.leaderWidthPx;
+  let sizePx = uniforms.out.sizePx;
+  let ndc = vec2<f32>(leaderPx.x / sizePx.x * 2.0 - 1.0, 1.0 - leaderPx.y / sizePx.y * 2.0);
+  return LeaderVsOut(
+    select(HIDDEN_POS, vec4<f32>(ndc, 0.5, 1.0), drawn),
+    corner.y,
+    unpack4x8unorm(label.leaderRgba) * label.sizing.w,
+    occludeWeight,
+  );
 }
 
 // expandLabelQuad — the quad-expansion body shared by 'vs' (this file) and
@@ -160,4 +192,11 @@ fn expandLabelQuad(input: VsIn, label: LabelData, placed: PlacedLabel, occludeWe
 fn vs(input: VsIn) -> VsOut {
   let label = labels[input.labelIndex];
   return expandLabelQuad(input, label, placeLabel(label), label.occludeWeight);
+}
+
+// One leader per label, instanced over the label buffer.
+@vertex
+fn vsLeader(@location(0) corner: vec2<f32>, @builtin(instance_index) labelIndex: u32) -> LeaderVsOut {
+  let label = labels[labelIndex];
+  return expandLeaderQuad(corner, label, placeLabel(label), label.occludeWeight);
 }

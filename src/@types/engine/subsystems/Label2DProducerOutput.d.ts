@@ -1,9 +1,8 @@
 import type { Label2D } from '../../rendering/Label2D';
 
 /**
- * What a single producer wants to render on the next frame. Anchor lines
- * ride on individual labels' `leader` field — the director synthesizes the
- * drawn `MarkerLine`s at flush time, so producers emit no sibling array.
+ * What a single producer wants to render on the next frame. A label's leader
+ * line rides on its own `lift`, so producers emit no sibling array.
  */
 export type Label2DProducerOutput = {
   readonly labels: readonly Label2D[];

@@ -1,7 +1,5 @@
 import type { Label2DDirectorConfig } from '../../@types/engine/subsystems/Label2DDirectorConfig';
 import { near0LabelProjection } from '../../services/engine/frame/near0LabelProjection';
-import { NEAR0 } from '../../services/engine/frame/slabs';
-import { NEAR0_FAR_CLAMP_FRACTION } from '../../utils/camera/frustum/foregroundFrustum';
 
 // Envelope time constant (ms): ~95% of the gap closed within 3·tau (300 ms), the
 // COSMO director's smoothstep ramp duration. Exponential rather than
@@ -18,9 +16,7 @@ const CAPTION_ENVELOPE_SETTLE_EPS = 0.005;
  * (stellar streams, missions) overlap. `exponentialApproach`/τ 100 ms/ε 0.005 tracks a
  * continuously-moving distance-band target rather than a binary
  * appear/disappear cliff — see `applyExponentialEnvelope`'s docblock for why
- * that needs a different curve than COSMO's. `lift` clamps a lifted anchor
- * inside NEAR0's own far plane, at the same 1%-inside margin the foreground
- * layer's leader-line math has always used.
+ * that needs a different curve than COSMO's.
  */
 export const FOREGROUND_LABEL_DIRECTOR: Label2DDirectorConfig = {
   project: near0LabelProjection,
@@ -31,5 +27,4 @@ export const FOREGROUND_LABEL_DIRECTOR: Label2DDirectorConfig = {
     tauMs: CAPTION_ENVELOPE_TAU_MS,
     settleEps: CAPTION_ENVELOPE_SETTLE_EPS,
   },
-  lift: { slab: NEAR0, farClampFraction: NEAR0_FAR_CLAMP_FRACTION },
 };

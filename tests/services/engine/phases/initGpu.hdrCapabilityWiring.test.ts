@@ -121,10 +121,6 @@ vi.mock('../../../../src/services/gpu/renderers/labels/labelPickRenderer', () =>
   createLabelPickRenderer: vi.fn(() => makeStub('labelPickRenderer')),
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/labels/markerLineRenderer', () => ({
-  createMarkerLineRenderer: vi.fn(() => makeStub('markerLineRenderer')),
-}));
-
 vi.mock('../../../../src/services/gpu/renderers/devTools/debugLineRenderer', () => ({
   createDebugLineRenderer: vi.fn(() => makeStub('debugLineRenderer')),
 }));
@@ -199,8 +195,6 @@ function makeState(): EngineState {
       compositor: null,
       labelRendererCosmo: null,
       labelRendererNear: null,
-      markerLineRendererNear: null,
-      markerLineRendererCosmo: null,
       selectionRingRenderer: null,
       texturedDiskRenderer: null,
       proceduralDiskRenderer: null,

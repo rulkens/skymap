@@ -116,6 +116,16 @@ struct VsIn {
   @location(5) fontIndex: u32,
 };
 
+// A leader quad's varyings ('vsLeader').
+struct LeaderVsOut {
+  @builtin(position) pos: vec4<f32>,
+  // 0..1 across the line's width; linear, though the quad is at w = 1.
+  @location(0) @interpolate(linear) across: f32,
+  // The leader colour, pre-multiplied by the label's fadeAlpha.
+  @location(1) color: vec4<f32>,
+  @location(2) occludeWeight: f32,
+};
+
 struct VsOut {
   @builtin(position) pos: vec4<f32>,
   @location(0) uv: vec2<f32>,
