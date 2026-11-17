@@ -17,7 +17,7 @@ const TEXT = { font: 'cormorant', outline: OUTLINE } as const;
 const CLUSTER_APPEAR = { fromPx: 10, bandPx: 8 };
 const VOLUME_APPEAR = { fromPx: 56, bandPx: 40 };
 // A Milky Way structure's label sits on its ring's drawn top (ring radius × MARKER_RADIUS_RETUNE),
-// at least 8 px up (STRUCTURE_LABEL_ABOVE_GAP_PX).
+// at least 8 px up.
 const ABOVE_RING = { placement: 'above', lift: { radii: 0.57735, minPx: 8 } } as const;
 const CAPTION_LIFT = { radii: 3, minPx: 28 };
 

@@ -1,15 +1,7 @@
 /**
- * structureMarkerStyles — per-category visual style table for the extended
- * structures rendered as ring/halo markers and text labels.
- *
- * The per-`StructureId` marker styles travel with the structure
- * presentation producers (`produceStructureMarkers`, `produceStructureLabels`);
- * famous-galaxy styling lives in `famousLabelStyle`. Keeping the structure
- * styles here lets the producers' per-category math read a single local table
- * rather than a wider union that includes a kind they never emit.
- *
- * `StructureId` is the discriminant; every row is keyed by it so the table
- * and the type can't drift.
+ * structureMarkerStyles — per-category ring/halo style table, keyed by `StructureId` so the table
+ * and the type can't drift. A category's label style is its row in `LABEL_STYLES`
+ * (`STRUCTURE_LABEL_STYLES` names it).
  */
 
 import type { StructureId } from '../../../../@types/data/structure/StructureId';
@@ -17,22 +9,14 @@ import type { StructureMarkerStyle } from '../@types/StructureMarkerStyle';
 import { hexToGl } from '../../../../utils/color/hexToGl';
 
 /**
- * The fields the four Milky Way rows share; each row adds its colours and
- * `worldEmMpc`. The cosmic rows differ field by field, so they stay spelled out.
+ * The fields the four Milky Way rows share; each row adds its colours. The cosmic rows differ
+ * field by field, so they stay spelled out.
  */
-const MILKY_WAY_STYLE: Omit<
-  StructureMarkerStyle,
-  'labelColor' | 'worldEmMpc' | 'haloColor' | 'ringColor'
-> = {
-  minPixelSize: 35,
-  maxPixelSize: 150,
-  pixelWidth: 2,
+const MILKY_WAY_STYLE: Omit<StructureMarkerStyle, 'haloColor' | 'ringColor'> = {
   markerMaxApparentRadiusPx: 700,
   markerMaxApparentFadeBandPx: 400,
   markerMinApparentRadiusPx: 5,
   markerMinApparentFadeBandPx: 4,
-  outlineColor: [0, 0, 0, 0.1],
-  outlineEmFrac: 0.16,
 };
 
 /**
@@ -42,51 +26,30 @@ const MILKY_WAY_STYLE: Omit<
  */
 export const STRUCTURE_MARKER_STYLES = {
   'galaxy-cluster': {
-    labelColor: hexToGl('#FFD966'),
-    minPixelSize: 35,
-    maxPixelSize: 150,
-    worldEmMpc: 1.25,
-    pixelWidth: 2,
     haloColor: hexToGl('#B39947'),
     ringColor: hexToGl('#B39947'),
     markerMaxApparentRadiusPx: 700,
     markerMaxApparentFadeBandPx: 400,
     markerMinApparentRadiusPx: 5,
     markerMinApparentFadeBandPx: 4,
-    outlineColor: [0, 0, 0, 0.1],
-    outlineEmFrac: 0.16,
   },
   supercluster: {
     // Orange end of the warm ramp — saturated enough to read clearly
     // distinct from the cluster yellow, with group holding the pale end.
-    labelColor: hexToGl('#FFB86B'),
-    minPixelSize: 35,
-    maxPixelSize: 150,
-    worldEmMpc: 5.0,
-    pixelWidth: 2,
     haloColor: hexToGl('#A05F2E66'),
     ringColor: hexToGl('#A05F2E66'),
     markerMaxApparentRadiusPx: 700,
     markerMaxApparentFadeBandPx: 400,
     markerMinApparentRadiusPx: 28,
     markerMinApparentFadeBandPx: 20,
-    outlineColor: [0, 0, 0, 0.1],
-    outlineEmFrac: 0.16,
   },
   void: {
-    labelColor: hexToGl('#99D9F2'),
-    minPixelSize: 35,
-    maxPixelSize: 150,
-    worldEmMpc: 2.5,
-    pixelWidth: 2,
     haloColor: hexToGl('#73B3D9A5'),
     ringColor: hexToGl('#73B3D9'),
     markerMaxApparentRadiusPx: 700,
     markerMaxApparentFadeBandPx: 400,
     markerMinApparentRadiusPx: 28,
     markerMinApparentFadeBandPx: 20,
-    outlineColor: [0, 0, 0, 0.1],
-    outlineEmFrac: 0.16,
   },
   'galaxy-group': {
     // Pale end of the warm scale-ladder ramp: group (soft cream) → cluster
@@ -97,14 +60,7 @@ export const STRUCTURE_MARKER_STYLES = {
     // odd one out representing absence rather than a scale rung.
     // Dim + translucent so the 16 near-volume groups sit quietly under the
     // brighter cluster/SC family instead of collectively dominating the Local
-    // Volume. Lower luminance AND alpha on all three (label / ring / halo).
-    labelColor: hexToGl('#C2B488C8'),
-    minPixelSize: 35,
-    maxPixelSize: 150,
-    // Group labels are physically tiny — between famous-galaxy (0.0125) and
-    // cluster (1.25).
-    worldEmMpc: 0.3,
-    pixelWidth: 2,
+    // Volume. Lower luminance AND alpha on ring and halo (and the label's row).
     // Muted pale-gold halo, much fainter than the ring so the near foreground
     // reads as a soft glow rather than a solid disk — important for the Local
     // Group at the origin, where the halo is largest.
@@ -118,34 +74,24 @@ export const STRUCTURE_MARKER_STYLES = {
     // than lingering as a faint speck while you explore larger scales.
     markerMinApparentRadiusPx: 44,
     markerMinApparentFadeBandPx: 24,
-    outlineColor: [0, 0, 0, 0.1],
-    outlineEmFrac: 0.16,
   },
   'open-cluster': {
     ...MILKY_WAY_STYLE,
-    labelColor: hexToGl('#A3B3D1'),
-    worldEmMpc: 2e-6,
     haloColor: hexToGl('#7B8AAD38'),
     ringColor: hexToGl('#7B8AAD'),
   },
   'globular-cluster': {
     ...MILKY_WAY_STYLE,
-    labelColor: hexToGl('#C9A8FF'),
-    worldEmMpc: 8e-6,
     haloColor: hexToGl('#9A7FD942'),
     ringColor: hexToGl('#9A7FD9'),
   },
   nebula: {
     ...MILKY_WAY_STYLE,
-    labelColor: hexToGl('#FF8FA3'),
-    worldEmMpc: 2e-6,
     haloColor: hexToGl('#D96F8442'),
     ringColor: hexToGl('#D96F84'),
   },
   'gc-cluster': {
     ...MILKY_WAY_STYLE,
-    labelColor: hexToGl('#E8E8F0'),
-    worldEmMpc: 2e-6,
     haloColor: hexToGl('#B8B8C842'),
     ringColor: hexToGl('#B8B8C8'),
   },
