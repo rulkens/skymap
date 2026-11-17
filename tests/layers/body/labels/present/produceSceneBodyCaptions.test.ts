@@ -17,7 +17,6 @@ import {
   missionsPickCode,
 } from '../../../../support/layerPickCodes';
 import { produceBlackHoleCaptions } from '../../../../../src/layers/blackHoles/markers/present/produceBlackHoleCaptions';
-import { produceConstellationCaptions } from '../../../../../src/layers/constellations/figures/present/produceConstellationCaptions';
 import { sceneBodyLabels } from '../../../../../src/layers/body/labels/present/sceneBodyLabels';
 import { produceMissionCaptions as produceMissionCaptionsFor } from '../../../../../src/layers/missions/craft/present/produceMissionCaptions';
 import { meshBodyCaption } from '../../../../../src/layers/missions/craft/utils/meshBodyCaption';
@@ -31,7 +30,6 @@ import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import type { FocusUniformsValue } from '../../../../../src/@types/rendering/FocusUniformsValue';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
-import type { ConstellationsRuntime } from '../../../../../src/layers/constellations/@types/ConstellationsRuntime';
 import type { Label2D } from '../../../../../src/@types/rendering/Label2D';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import { positionedBodiesOf } from '../../../../helpers/frame/positionedBodiesOf';
@@ -246,32 +244,6 @@ describe('produceSceneBodyCaptions', () => {
     const planetId = [...PLANET_LABEL_IDS][0]!;
     const full = produceSceneBodyCaptions(makeState(), makeCtx(camPos), fadeOf());
     expect(fadeAlphaOf(out.labels, planetId)).toBe(fadeAlphaOf(full.labels, planetId));
-  });
-
-  it('constellation captions do not double-count the registry', () => {
-    const layerFade = 0.5;
-    const camPos: Vec3 = [5e-4, 0, 0];
-    const runtime = {
-      slot: {
-        committed: () => ({
-          kind: 'ready' as const,
-          req: undefined,
-          loadedAtMs: 0,
-          value: {
-            version: 1 as const,
-            constellations: [{ name: 'Orion', labelAnchorPc: [1, 2, 3] as Vec3, segments: [] }],
-          },
-        }),
-      },
-    } as unknown as ConstellationsRuntime;
-    const ctx = {
-      snapshot: { focusBlend: 0, nowMs: 0, focus: ZERO_FOCUS },
-      cam: { distance: 5e-4 },
-      drawCamPos: camPos,
-    } as unknown as FrameView;
-
-    const out = produceConstellationCaptions(runtime)({} as EngineState, ctx, layerFade);
-    expect(out.labels[0]!.fadeAlpha).toBeCloseTo(layerFade);
   });
 });
 

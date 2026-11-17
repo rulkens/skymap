@@ -10,15 +10,9 @@
  * without a per-field `?? default` that would silently mask a caption built without its colour or
  * clamps.
  *
- * Two producers build this shape and the layer merges both into ONE declutter +
- * envelope pass: `sceneBodyLabels` (Earth + the planets + the local star map)
- * and `constellationCaptions` (the stick-figure names). Sharing one type — kept
- * in its own module so neither producer imports the other — is what lets the
- * pipeline stay source-agnostic: it reads `priority`, `worldPos`, and the required
- * fields off every entry without caring which producer made it. The scene-body
- * captions ride a body anchor and hang off a leader line; the constellation
- * captions anchor in empty space at a figure centroid and emit direct, but both
- * are the same caption to the declutter and the alpha envelope.
+ * The NEAR0 caption producers build this shape and the director merges them
+ * into ONE declutter + envelope pass, reading `priority`, `worldPos` and the
+ * required fields off every entry without caring which producer made it.
  */
 
 import type { Label2D } from '../../../@types/rendering/Label2D';
