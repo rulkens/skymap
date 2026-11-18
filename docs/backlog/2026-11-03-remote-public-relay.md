@@ -23,3 +23,8 @@ Rulings "Transport, public site" and "Room code", Pairing, Build order step 3): 
 the existing Worker behind the same `RemoteTransport` contract, a 128-bit room token carried only in the QR,
 the Worker route, and join rate limits. Open: how each page picks its transport (local relay vs public),
 and what the docs page keeps of the clone-and-run steps once it lands.
+
+**Evidence, 2026-11-17 (on-site dome test).** The venue Wi-Fi kept its devices apart on every port tried
+(5173, 443, 8443, 8080), so a phone on the same network could not reach the dev-server relay. The remote
+worked end to end through a public address: a Cloudflare quick tunnel to the dev server, the relay
+advertising the tunnel origin, the phone on mobile data.
