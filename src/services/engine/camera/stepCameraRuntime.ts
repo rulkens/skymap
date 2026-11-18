@@ -376,6 +376,7 @@ export function stepCameraRuntime(
     tilt,
     intent: rootState.camera.intent,
     gestureHeld,
+    clipAuthored: winnerId === 'clip',
     ctx: foldCtx,
   });
   actions.push(...projected.actions);

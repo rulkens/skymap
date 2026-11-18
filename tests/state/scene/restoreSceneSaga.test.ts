@@ -149,6 +149,30 @@ describe('restoreSceneSaga', () => {
     expect(store.getState().selection.focus).toBeNull();
   });
 
+  // The reconciler re-extracts the focus row on every focus action, and a new row is a
+  // new focus to the follow rows: a tour landing on the viewer's own focus flew off it.
+  it('a focus the takeover left unchanged is not dispatched again', async () => {
+    const focusActions: unknown[] = [];
+    const sagaMiddleware = createSagaMiddleware();
+    const recorder = () => (next: (a: unknown) => unknown) => (action: unknown) => {
+      if ((action as { type: string }).type === updateSelectionFocus(null).type) {
+        focusActions.push(action);
+      }
+      return next(action);
+    };
+    const store = configureStore({
+      reducer: rootReducer,
+      middleware: (g) => g().concat(recorder, sagaMiddleware),
+    });
+    store.dispatch(updateSelectionFocus({ ...FOCUS_REF }));
+    focusActions.length = 0;
+
+    sagaMiddleware.run(restoreSceneSaga, makeSnapshot(FOCUS_REF));
+    await flush();
+
+    expect(focusActions).toEqual([]);
+  });
+
   it('dispatches settings BEFORE focus', async () => {
     const order: string[] = [];
     const sagaMiddleware = createSagaMiddleware();

@@ -619,7 +619,7 @@ describe('resolveClipFoci rewrites aimAlong to an aimAt bearing', () => {
 
   it('lands the same world bearing under two different bases — the basis drops out', () => {
     // Uses the real production constant (not an arbitrary literal) so this
-    // test also exercises the exact value both `openingTitle` and
+    // test also exercises the exact value both `youAreHere` and
     // `homeAgain` depend on — precision itself is pinned separately in
     // cameraFraming.test.ts (the derivation-guard test).
     const clip: ClipData = { timeline: [aimAlong(GALACTIC_DISC_FORWARD, 3)] };
